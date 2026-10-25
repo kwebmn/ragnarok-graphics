@@ -298,6 +298,7 @@ void Renderer11::noteDarkness(const FrameRecord& rec, const DrawCmd& d, const Dr
 void Renderer11::applyDarkness() {
     darknessLaid_ = true;
     if (darknessRec_.draws().empty()) return;
+    gradeNow();  // 3.0.5-beta.4: the colours put off meet the world before the darkness, as before
     flushBatch();  // the game's draws gathered so far are of its own vertices
     const std::vector<uint8_t>& v = darknessRec_.vertexBytes();
     const std::vector<uint16_t>& ix = darknessRec_.indices();

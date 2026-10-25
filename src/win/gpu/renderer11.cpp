@@ -235,6 +235,7 @@ Renderer11::~Renderer11() {
     drop(presentVs_);
     drop(presentPs_);
     drop(gradePs_);
+    drop(worldGradePs_);  // 3.0.5-beta.4
     drop(torchLightPs_);
     drop(nightPs_);
     drop(lightDataSrv_);
@@ -424,7 +425,7 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
         bool optional = false;  // 0.99: an effect's - without it the effect is not drawn, the game is
         bool safe = false;      // 2.2.2: made without the newest features (UAGFX_SAFE)
         bool lean = false;      // 2.5: with UAGFX_LEAN (draw_lean_ps: the world's extras left out)
-    } wants[55] = {{"draw_vs", vs, shaderSource(), {}},    {"draw_ps", ps, shaderSource(), {}},
+    } wants[56] = {{"draw_vs", vs, shaderSource(), {}},    {"draw_ps", ps, shaderSource(), {}},
                    {"present_vs", vs, shaderSource(), {}}, {"present_ps", ps, shaderSource(), {}},
                    {"clear_vs", vs, kClearSource, {}},     {"clear_ps", ps, kClearSource, {}},
                    {"grade_ps", ps, shaderSource(), {}},  // 0.59: the colours (Effects page)
@@ -470,7 +471,8 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
                    {"mirror_vs", vs, shaderSource(), {}, true},  // 2.5.9: the world's reflections in the water
                    {"mirror_ps", ps, shaderSource(), {}, true},
                    {"portal_draw_ps", ps, shaderSource(), {}, true},  // 2.7.54: the map warps shaded anew
-                   {"portal_draw_glow_ps", ps, shaderSource(), {}, true}};
+                   {"portal_draw_glow_ps", ps, shaderSource(), {}, true},
+                   {"world_grade_ps", ps, shaderSource(), {}, true}};  // 3.0.5-beta.4: made larger and coloured
     const uint64_t key = shader_cache::keyOf(std::string(shaderSource()) + kClearSource + "direct3d 11");
     std::vector<shader_cache::Shader> kept;
     {
@@ -609,6 +611,7 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
     if (wants[52].code.empty() || !psOf(wants[52], mirrorPs_)) mirrorPs_ = nullptr;
     if (wants[53].code.empty() || !psOf(wants[53], portalDrawPs_)) portalDrawPs_ = nullptr;  // 2.7.54
     if (wants[54].code.empty() || !psOf(wants[54], portalDrawGlowPs_)) portalDrawGlowPs_ = nullptr;
+    if (wants[55].code.empty() || !psOf(wants[55], worldGradePs_)) worldGradePs_ = nullptr;  // 3.0.5-beta.4
     if (!wants[1].safe && !wants[22].safe) {  // 2.5.16: none where the player's compiler took the draw shader badly
         std::vector<shader_cache::Shader> all;
         for (const Want& w : wants) all.push_back({w.entry, shader_cache::profileOf(w.profile, w.safe), w.code});
@@ -1055,7 +1058,8 @@ void Renderer11::bindTarget() {
 }
 
 void Renderer11::blit(ID3D11ShaderResourceView* src, int srcWidth, int srcHeight, const float srcRect[4],
-                      ID3D11RenderTargetView* dst, const Rect& dstRect, int dstWidth, int dstHeight, float sharpen) {
+                      ID3D11RenderTargetView* dst, const Rect& dstRect, int dstWidth, int dstHeight, float sharpen,
+                      ID3D11PixelShader* ps, const float grade[7]) {
     if (!src || !dst || dstRect.empty() || srcWidth <= 0 || srcHeight <= 0) return;
     targetBound_ = false;  // the game's draws bind theirs again
     ID3D11ShaderResourceView* none[2] = {nullptr, nullptr};
@@ -1080,6 +1084,7 @@ void Renderer11::blit(ID3D11ShaderResourceView* src, int srcWidth, int srcHeight
     c.footprint = std::max((srcRect[2] - srcRect[0]) / float(dstRect.width()),
                            (srcRect[3] - srcRect[1]) / float(dstRect.height()));
     c.sharpen = sharpen;
+    if (grade) std::copy(grade, grade + 7, c.reproject);  // 3.0.5-beta.4: world_grade_ps's r0-r6
     setConstants(c);
     StageSetup linearClamp;
     linearClamp.addressU = linearClamp.addressV = d3d7::TADDRESS_CLAMP;
@@ -1094,7 +1099,7 @@ void Renderer11::blit(ID3D11ShaderResourceView* src, int srcWidth, int srcHeight
     ctx_->IASetInputLayout(nullptr);
     ctx_->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
     ctx_->VSSetShader(presentVs_, nullptr, 0);
-    ctx_->PSSetShader(presentPs_, nullptr, 0);
+    ctx_->PSSetShader(ps ? ps : presentPs_, nullptr, 0);
     ctx_->VSSetConstantBuffers(0, 1, &constants_);
     ctx_->PSSetConstantBuffers(0, 1, &constants_);
     ctx_->PSSetShaderResources(0, 1, &src);
@@ -1241,6 +1246,7 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
     if (s.ui && worldDrawn_ && !weatherDone_) applyWeather();  // 2.5: in front of all of it
     if (s.ui && !darknessLaid_) applyDarkness();  // 2.6.18: blindness's darkness over all of it
     if (s.ui && glowDrawn_) addGlow();  // 1.0: the world's glow onto it, before the interface
+    if (s.ui && inWorld_) pmark("the world made larger");  // 3.0.5-beta.4: [debug] profile's own span
     if (s.ui) exitWorld();              // 2.5.16: the world made larger into the picture, the interface sharp
     if (s.ui) timeDraws(true, false);   // 2.5.15: the interface's span after the world's effects
     // 1.0: from the world's first draw that adds light, its draws write into the glow too
@@ -1924,8 +1930,20 @@ void Renderer11::exitWorld() {
     swapWorld();
     const Target& world = world_.target;
     const float all[4] = {0.0f, 0.0f, float(world.width), float(world.height)};
-    blit(world.srv, world.width, world.height, all, target_.rtv, Rect{0, 0, target_.width, target_.height},
-         target_.width, target_.height, worldSharpen_);
+    if (gradeLater_) {  // 3.0.5-beta.4: its colours put off to here - on the way, in the same pass (world_grade_ps)
+        gradeLater_ = false;
+        const float grade[7] = {float(std::clamp(effects_.gradeSaturation, 0, 200)) / 100.0f,
+                                float(std::clamp(effects_.gradeContrast, 50, 150)) / 100.0f,
+                                float(std::clamp(effects_.gradeBrightness, 50, 150)) / 100.0f,
+                                float(std::clamp(effects_.gradeWarmth, 0, 100) - 50) / 50.0f,
+                                float(std::clamp(effects_.gradeVignette, 0, 100)) / 100.0f,
+                                float(target_.width), float(target_.height)};
+        blit(world.srv, world.width, world.height, all, target_.rtv, Rect{0, 0, target_.width, target_.height},
+             target_.width, target_.height, -1.0f, worldGradePs_, grade);
+    } else {
+        blit(world.srv, world.width, world.height, all, target_.rtv, Rect{0, 0, target_.width, target_.height},
+             target_.width, target_.height, worldSharpen_);
+    }
     ctx_->OMSetRenderTargets(0, nullptr, nullptr);
     ctx_->ClearDepthStencilView(dsv_, D3D11_CLEAR_DEPTH, 1.0f, 0);  // the interface's own (its draws mostly keep none)
 }
@@ -2219,9 +2237,10 @@ void Renderer11::present(HWND window, int outputWidth, int outputHeight, const R
     exitWorld();  // 2.5.16: a frame without an interface: its world made larger now
     frameOpen_ = false;
     scaled_ = true;  // the start-up calibration is over by the first present (stage 3 spec §4.3)
-    // the world made larger gets a little sharpening of its own unless the present sharpens all of it - or the light
-    // modes want it plain (2.5.22: Catmull-Rom and CAS, 45 taps a pixel, cost more than the world they made larger)
-    worldSharpen_ = options.sharpen > 0.0f || (light_ & light::kPlainUpscale) ? -1.0f : 0.3f;
+    // the world made larger plainly, one tap a pixel (3.0.5-beta.4, R-DEYFZY: a Radeon 610M - the world at 75 % made
+    // larger 6-7 ms by Catmull-Rom and CAS, 45 taps a pixel, while drawing it smaller saved 1.5-2: the light modes'
+    // way since 2.5.22 for every smaller world now); the interface stays sharp at the picture's pixels
+    worldSharpen_ = -1.0f;
     // The source is in game pixels: into target pixels by each axis' own ratio (2.5.16: the picture's, the world's
     // smaller one made larger into it by now).
     const auto tx = [this](int x) { return float(double(x) * target_.width / gameWidth_); };
@@ -2241,6 +2260,7 @@ void Renderer11::present(HWND window, int outputWidth, int outputHeight, const R
     if (!options.screenshot.empty()) saveScreenshot(options.screenshot);  // 0.54
     pmark("the next frame's preparations");
     gradeDone_ = worldDrawn_ = false;  // 0.59: the next frame
+    gradeLater_ = false;  // 3.0.5-beta.4
     groundDrawn_ = shadowsDone_ = false;  // 0.60.1
     aoDone_ = false;  // 2.5.1
     fireSparks_.clear();
@@ -2358,9 +2378,25 @@ void Renderer11::keepDay(const Constants& c) {
 }
 
 void Renderer11::applyGrade() {
-    EffectSpan span(*this, kTimeGrade11);  // 0.89
     gradeDone_ = true;
     if (!effects_.grade || !gradePs_ || !target_.texture) return;
+    // 3.0.5-beta.4 (R-DEYFZY): the world drawn smaller - its colours in the pass that makes it larger (exitWorld),
+    // unless something is drawn over the world before that (gradeNow): what was drawn over the colours stays so
+    if (inWorld_ && worldGradePs_) {
+        gradeLater_ = true;
+        return;
+    }
+    gradePass();
+}
+
+void Renderer11::gradeNow() {
+    if (!gradeLater_) return;
+    gradeLater_ = false;
+    gradePass();
+}
+
+void Renderer11::gradePass() {
+    EffectSpan span(*this, kTimeGrade11);  // 0.89
     Constants c{};
     c.sharpen = float(std::clamp(effects_.gradeSaturation, 0, 200)) / 100.0f;
     c.footprint = float(std::clamp(effects_.gradeContrast, 50, 150)) / 100.0f;
@@ -3468,6 +3504,7 @@ void Renderer11::applyWeather() {
     const bool motes = !own && effects_.motes && effects_.motesAmount > 0 && !map_.empty() &&
                        (outdoors_ ? effects_.pollen : effects_.indoorDust);
     if (!weatherPs_ || (!own && !motes) || !target_.texture) return;
+    gradeNow();  // 3.0.5-beta.4: the colours put off meet the world before the weather, as before
     Constants c{};
     c.scale = float(scale_);
     c.uiPixels[0] = float(target_.width);

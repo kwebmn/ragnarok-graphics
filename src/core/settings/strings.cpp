@@ -122,14 +122,14 @@ constexpr Entry kTexts[] = {
     {Text::QualityWorldScale, "World resolution", "Роздільність світу", "Разрешение мира"},
     {Text::QualityWorldScaleHint,
      "Direct3D 11, for weaker cards: the world (the map, the characters, the effects) is drawn at this share of the "
-     "picture's size and made larger with sharpening; the interface and the text stay sharp. 100 % = as it is; 75 % "
-     "= about half the pixels, a little softer.",
+     "picture's size and made larger plainly (sharpening it cost a weak card more than the smaller world saved); the "
+     "interface and the text stay sharp. 100 % = as it is; 75 % = about half the pixels, softer.",
      "Direct3D 11, для слабших карт: світ (мапа, персонажі, ефекти) малюється в такій частці розміру картинки й "
-     "збільшується з різкістю; інтерфейс і текст лишаються чіткими. 100 % — як є; 75 % — приблизно вдвічі менше "
-     "точок, трохи м'якше.",
-     "Direct3D 11, для слабых карт: мир (карта, персонажи, эффекты) рисуется в такой доле размера картинки и "
-     "увеличивается с резкостью; интерфейс и текст остаются чёткими. 100 % — как есть; 75 % — примерно вдвое меньше "
-     "точек, чуть мягче."},
+     "просто збільшується (різкість коштувала слабкій карті більше, ніж заощаджував менший світ); інтерфейс і текст "
+     "лишаються чіткими. 100 % — як є; 75 % — приблизно вдвічі менше точок, м'якше.",
+     "Direct3D 11, для слабых карт: мир (карта, персонажи, эффекты) рисуется в такой доле размера картинки и просто "
+     "увеличивается (резкость стоила слабой карте больше, чем экономил меньший мир); интерфейс и текст остаются "
+     "чёткими. 100 % — как есть; 75 % — примерно вдвое меньше точек, мягче."},
     // 2.5.18
     {Text::QualityFullColour, "Full-colour textures", "Повноколірні текстури", "Полноцветные текстуры"},
     {Text::QualityFullColourHint,

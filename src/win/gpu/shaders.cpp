@@ -1154,18 +1154,34 @@ float4 ao_apply_ps(PresentOut i) : SV_Target {
 // 0.21, the picture's colours (grade): from its copy (t2) into the picture, before the interface. sharpen the
 // saturation (0-2), footprint the contrast and twin.x the brightness (0.5-1.5), twin.y the warmth (-1 colder to 1
 // warmer), twin.z the vignette (0-1); uiPixels.xy the world's size.
-float4 grade_ps(PresentOut i) : SV_Target {
-    float3 c = sceneColor.Load(int3(int2(i.pos.xy), 0)).rgb;
-    c = pow(max(c, 0.0), 1.0 / twinX);  // brighter middle tones, the white stays white
-    float k = footprint;
+// 3.0.5-beta.4: the colours of a pixel at `pos` of a picture `size` big (grade_ps, world_grade_ps)
+float3 gradeColour(float3 c, float2 pos, float2 size, float saturation, float contrast, float brightness,
+                   float warmth, float vignette) {
+    c = pow(max(c, 0.0), 1.0 / brightness);  // brighter middle tones, the white stays white
+    float k = contrast;
     c = k >= 1.0 ? lerp(c, c * c * (3.0 - 2.0 * c), saturate((k - 1.0) * 2.0))  // an S curve: nothing clips
                  : lerp(float3(0.5, 0.5, 0.5), c, k);
     float l = dot(c, float3(0.2126, 0.7152, 0.0722));
-    c = lerp(float3(l, l, l), c, sharpen);
-    c *= float3(1.0 + 0.1 * twinY, 1.0 + 0.02 * twinY, 1.0 - 0.1 * twinY);
-    float2 q = (i.pos.xy / uiPixels.xy - 0.5) * float2(uiPixels.x / uiPixels.y, 1.0);
-    c *= 1.0 - twinW * smoothstep(0.35, 1.0, length(q) * 1.15) * 0.8;
-    return float4(saturate(c), 1.0);
+    c = lerp(float3(l, l, l), c, saturation);
+    c *= float3(1.0 + 0.1 * warmth, 1.0 + 0.02 * warmth, 1.0 - 0.1 * warmth);
+    float2 q = (pos / size - 0.5) * float2(size.x / size.y, 1.0);
+    c *= 1.0 - vignette * smoothstep(0.35, 1.0, length(q) * 1.15) * 0.8;
+    return saturate(c);
+}
+
+float4 grade_ps(PresentOut i) : SV_Target {
+    float3 c = sceneColor.Load(int3(int2(i.pos.xy), 0)).rgb;
+    return float4(gradeColour(c, i.pos.xy, uiPixels.xy, sharpen, footprint, twinX, twinY, twinW), 1.0);
+}
+
+// 3.0.5-beta.4 (R-DEYFZY, a Radeon 610M: the world at 75 % made larger 6-7 ms, its colours another 0.9): Direct3D 11's
+// smaller world made larger by one tap and coloured on the way - the colours' copy and pass spared. r0-r4 the
+// colours' saturation, contrast, brightness, warmth and vignette, r5 and r6 the picture's size.
+float4 world_grade_ps(PresentOut i) : SV_Target {
+    float2 dx = ddx(i.uv);
+    float2 dy = ddy(i.uv);
+    float3 c = tex0.SampleGrad(samp0, clamp(i.uv, sourceClamp.xy, sourceClamp.zw), dx, dy).rgb;
+    return float4(gradeColour(c, i.pos.xy, float2(r5, r6), r0, r1, r2, r3, r4), 1.0);
 }
 
 // 2.7.20, the moon's beams (the user: «хочется чтобы было видно сам луч света луны на карте»): broad slanting bands

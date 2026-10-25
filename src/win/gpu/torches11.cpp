@@ -128,6 +128,7 @@ void Renderer11::applyFireflies() {
     std::vector<Fly11> flies;
     flies.swap(flies_);
     if (!firefliesWanted() || !depthViews() || !target_.rtv) return;
+    gradeNow();  // 3.0.5-beta.4: the colours put off meet the world before the fireflies, as before
     targetBound_ = false;
     ID3D11ShaderResourceView* none[4] = {nullptr, nullptr, nullptr, nullptr};
     ctx_->PSSetShaderResources(0, 4, none);

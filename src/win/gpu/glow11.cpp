@@ -109,6 +109,7 @@ void Renderer11::addGlow() {
     glowActive_ = glowDrawn_ = false;
     targetBound_ = false;  // the game's draws bind the target alone again
     if (!drawn || !glow_.texture || !glowLevels_ || !glowWanted()) return;
+    gradeNow();  // 3.0.5-beta.4: the colours put off meet the world before its glow is added, as before
     ID3D11ShaderResourceView* src = glow_.srv;
     int sw = glow_.width, sh = glow_.height;
     ID3D11BlendState* replace = blendState(false, D3D11_BLEND_ONE, D3D11_BLEND_ZERO, kAll);

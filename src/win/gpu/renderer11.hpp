@@ -225,6 +225,13 @@ private:
     bool takeFirefly(const FrameRecord& rec, const DrawCmd& d);
     void applyFireflies();
     void applyGrade();  // 0.59
+    // 3.0.5-beta.4 (R-DEYFZY): with the world drawn smaller its colours are put off (gradeLater_) to the pass that
+    // makes it larger (world_grade_ps) - the copy and the colours' own pass spared; a pass that draws over the world
+    // before that (the weather, the fireflies, the darkness, the glow) has them put on first (gradeNow), as before
+    void gradeNow();
+    void gradePass();
+    bool gradeLater_ = false;
+    ID3D11PixelShader* worldGradePs_ = nullptr;
     void applyNight();  // 0.63
     // 2.5: the low mists, the map's weather (or the motes) - Direct3D 12's haze.cpp and weather.cpp passes by the
     // same shaders, with the game's camera (setCamera) and the depth (t3) (2.7.17: the sky past the map's edge gone)
@@ -538,8 +545,10 @@ private:
     void draw(const FrameRecord& rec, const DrawCmd& d);
     // srcRect of a picture (its pixels) into dstRect of a target: bilinear when enlarged, the footprint's average
     // when shrunk; sharpen 0-1 sharpens (CAS), below 0 does not.
+    // 3.0.5-beta.4: `ps` in place of present_ps, `grade` its r0-r6 (world_grade_ps: the colours on the way)
     void blit(ID3D11ShaderResourceView* src, int srcWidth, int srcHeight, const float srcRect[4],
-              ID3D11RenderTargetView* dst, const Rect& dstRect, int dstWidth, int dstHeight, float sharpen);
+              ID3D11RenderTargetView* dst, const Rect& dstRect, int dstWidth, int dstHeight, float sharpen,
+              ID3D11PixelShader* ps = nullptr, const float grade[7] = nullptr);
     void bindTarget();  // the target, its depth, the game's viewport: for the game's draws
     void setConstants(const Constants& c);
     ID3D11BlendState* blendState(bool enable, uint32_t src, uint32_t dst, uint8_t writeMask);
