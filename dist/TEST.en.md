@@ -1,3 +1,20 @@
+# uaRO Graphics 3.0.5-beta.6 - what's new
+
+- **«Graphics test» in the game's console.** ~ → the second row «Graphics test: 75 s, the result goes to the developers»
+  → Space or Enter. Stand somewhere quiet on a map and keep still: for 75 seconds the driver itself shows «No effects»,
+  «Low», «Medium», «High» and your own settings in turn, 15 seconds each. Each time the camera turns once and zooms out
+  and back in on the same path, so different computers' results can be compared. The frame profile runs all the while.
+  Then your camera and your settings come back (the test never writes the settings file). The result is a short table:
+  FPS, the slowest tenth of the frames, the card's work a frame and the frame's three dearest parts. The settings app
+  sends it by itself as a «Graphics test» report, with no screenshots. The bottom of the game shows which set is on and
+  how long is left; ~ stops the test, and then nothing is sent. The test does not switch the graphics API or «A shader
+  for each state»: they need the game restarted, so they are only written into the report.
+- To check:
+  1. On a map (prt_fild08, say) run the test and wait for «Graphics test sent: R-…».
+  2. The settings app's «Reports» should list it as «Graphics test» with the table on top.
+  3. Run it again and press ~ halfway: «Graphics test stopped - nothing was sent» should show, and the camera comes
+     back.
+
 # uaRO Graphics 3.0.5-beta.5 — what is new
 
 - **The shots in reports in full quality.** Until now the shots were made smaller, to 1600 points, and squeezed into
