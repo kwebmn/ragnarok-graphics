@@ -1,3 +1,19 @@
+# uaRO Graphics 3.0.4-beta.26 — what is new
+
+- **"Own ground" is now a part of the "Remaster" mode** (you chose "Own ground into Remaster"). The name lost
+  "(prototype)", a new hint. It is on under "Effects quality" "High", and under "Auto" with a strong card (it was there
+  since beta.10 already - now on purpose). With it the houses, trees and water far off. Under "Custom" - as you set it.
+- **"Map light without steps" on the own ground too.** The smoothing of the baked light's blotches in a cell knew only
+  the game's 256×256 atlas; the own ground's atlas is wider, and the own ground went without it. Now the size comes
+  from the texture itself.
+- **"Hills without steps of light" all over the own ground (the own world's light).** It lights the slopes by the
+  map's sun, but took the slope from the cells the game drew: past its far edge the own ground was flat. Now the own
+  ground works out the same light by its own smooth slopes - near and far; the same sun, strength and night. The
+  light is baked into the vertices' colours, so a picture costs no more. Offline on prt_fild08: the slopes have
+  volume, no steps.
+- To check: prt_fild08 with the camera pulled out all the way - the hills far off have their sunny and shaded sides as
+  the near ones do; with "Hills without steps of light" and without it.
+
 # uaRO Graphics 3.0.4-beta.25 — what is new
 
 - **A check of the cut ship** (report R-GXHFX8, "the ship still comes out cut"). The beta.24 fix took away only part of
