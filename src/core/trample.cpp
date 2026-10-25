@@ -3,6 +3,8 @@
 #include <algorithm>
 #include <cmath>
 
+#include "core/round.hpp"
+
 namespace uagfx::trample {
 namespace {
 
@@ -22,7 +24,9 @@ void add(Hold& h, float dx, float dz, float age) {
     h.left *= 1.0f + (std::clamp(dd / 9.0f, 0.0f, 1.0f) - 1.0f) * (1.0f - age);
 }
 
-int8_t snorm(float v) { return int8_t(std::lround(std::clamp(v, -1.0f, 1.0f) * 127.0f)); }
+// 3.0.5-beta.9 (R-VMPQKX: lroundf a fifth of a Radeon 610M laptop's game thread on «Середні» - two values each of the
+// grid's 16384 texels a frame): roundAway, the same answers without the library's call
+int8_t snorm(float v) { return int8_t(roundAway(std::clamp(v, -1.0f, 1.0f) * 127.0f)); }
 float unsnorm(int8_t b) { return std::max(float(b) / 127.0f, -1.0f); }
 
 }  // namespace
@@ -62,10 +66,10 @@ void build(const std::deque<footsteps::Step>& steps, float now, float life, Grid
     for (const footsteps::Step& s : steps) {
         const float age = ageOf(s, now, life);
         if (age >= 1.0f) continue;
-        const int ix0 = std::max(0, int(std::floor((s.x - reach - out.originX) / out.cell)));
-        const int ix1 = std::min(n - 1, int(std::ceil((s.x + reach - out.originX) / out.cell)));
-        const int iz0 = std::max(0, int(std::floor((s.z - reach - out.originZ) / out.cell)));
-        const int iz1 = std::min(n - 1, int(std::ceil((s.z + reach - out.originZ) / out.cell)));
+        const int ix0 = std::max(0, floorInt((s.x - reach - out.originX) / out.cell));
+        const int ix1 = std::min(n - 1, ceilInt((s.x + reach - out.originX) / out.cell));
+        const int iz0 = std::max(0, floorInt((s.z - reach - out.originZ) / out.cell));
+        const int iz1 = std::min(n - 1, ceilInt((s.z + reach - out.originZ) / out.cell));
         for (int iz = iz0; iz <= iz1; ++iz)
             for (int ix = ix0; ix <= ix1; ++ix) {
                 float* t = &sums[(size_t(iz) * n + size_t(ix)) * 3];

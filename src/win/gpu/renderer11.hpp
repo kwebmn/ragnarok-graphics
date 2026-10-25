@@ -652,7 +652,8 @@ private:
     float fadeStart_ = -1.0f;  // the effects' clock when the map changed; below 0 none
     // 2.5.2: the footprints and the ripples; the chimneys' smoke and the lava
     ID3D11PixelShader* stepsPs_ = nullptr;
-    ID3D11Texture2D* stepsData_ = nullptr;  // two texels a step (steps_ps's t1)
+    ID3D11Texture2D* stepsData_ = nullptr;  // two texels a step (steps_ps's t1); 3.0.5-beta.9 its tiles' rows under
+    std::vector<float> stepsTexels_;        // what goes into it each frame (core/step_tiles.hpp fill)
     ID3D11ShaderResourceView* stepsDataSrv_ = nullptr;
     footsteps::Tracker footTracker_;
     trample::Grid trample_;                     // 2.6.8: the steps' hold on the grass, made once a frame

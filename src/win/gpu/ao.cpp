@@ -11,6 +11,7 @@
 #include "core/game_camera.hpp"
 #include "core/lightning.hpp"
 #include "core/region_look.hpp"
+#include "core/step_tiles.hpp"
 #include "win/gpu/impl.hpp"
 #include "win/log.hpp"
 
@@ -465,12 +466,31 @@ bool Renderer::Impl::applySteps() {
     EffectTime timing(*this, kTimeSteps);  // 3.0.5-beta.8: its own span (R-XCHNKD: 3.9 ms under «the game's interface»)
     const int kind = stepKind();
     const std::deque<footsteps::Step>& steps = footTracker.steps();
-    if (steps.empty() || !ensureScene("footprints")) return true;
+    if (steps.empty() || !viewToWorldValid || !ensureScene("footprints")) return true;
+    // 3.0.5-beta.9 (R-VMPQKX): the screen's tiles each with the steps that may show in it (core/step_tiles.hpp) -
+    // steps_ps goes through its pixel's tile's steps alone, only where any shows (the scissor)
+    const int w = sceneWidth, h = sceneHeight;
+    const camera::Projection proj = camera::projectionFor(gameWidth, gameHeight);
+    step_tiles::View view;
+    std::copy(viewToWorld, viewToWorld + 12, view.viewToWorld);
+    view.f0 = proj.f0;
+    view.f1 = proj.f1;
+    view.cx = proj.cx;
+    view.cy = proj.cy;
+    view.nearZ = proj.nearZ;
+    view.scale = float(upscale ? worldScale : scale);
+    view.jitterX = upscale ? jitter[0] : 0.0f;
+    view.jitterY = upscale ? jitter[1] : 0.0f;
+    view.width = w;
+    view.height = h;
+    const step_tiles::Tiles tiles = step_tiles::build(steps, view);
+    if (tiles.empty()) return true;  // none on the screen
     ID3D12PipelineState* pso = alphaPipeline(stepsPs, stepsPipelines, upscale ? 1 : samples, "footprints");
     if (!pso) return true;
     if (!stepsData) {
-        stepsData = createTexture2D(device, int(footsteps::Tracker::kMax * 2), 1, 1, DXGI_FORMAT_R32G32B32A32_FLOAT,
-                                    D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COPY_DEST, nullptr);
+        stepsData = createTexture2D(device, step_tiles::kTexelsPerRow, 1 + step_tiles::kMaxRows, 1,
+                                    DXGI_FORMAT_R32G32B32A32_FLOAT, D3D12_RESOURCE_FLAG_NONE,
+                                    D3D12_RESOURCE_STATE_COPY_DEST, nullptr);
         stepsDataSrv = stepsData ? allocSrv() : kNoSrv;
         if (!stepsData || stepsDataSrv == kNoSrv) {
             LOG_ERROR("footprints: no memory for their list: none");
@@ -481,39 +501,27 @@ bool Renderer::Impl::applySteps() {
         stepsDataState = D3D12_RESOURCE_STATE_COPY_DEST;
         device->CreateShaderResourceView(stepsData, nullptr, cpuSrvHandle(stepsDataSrv));
     }
-    const float now = waterTime(), life = stepLife();
-    float data[footsteps::Tracker::kMax * 2][4] = {};
-    size_t n = 0;
-    for (const footsteps::Step& s : steps) {
-        if (n >= footsteps::Tracker::kMax) break;
-        data[2 * n][0] = s.x;
-        data[2 * n][1] = s.y;
-        data[2 * n][2] = s.z;
-        data[2 * n][3] = s.angle;
-        data[2 * n + 1][0] = std::clamp((now - s.born) / life, 0.0f, 1.0f);
-        ++n;
-    }
-    const Upload u = allocUpload(sizeof data, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT);
+    const UINT pitch = UINT(step_tiles::kTexelsPerRow * 4 * sizeof(float));  // 2048: a multiple of 256
+    const UINT rows = UINT(1 + tiles.rows);
+    const Upload u = allocUpload(size_t(pitch) * rows, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT);
     if (!u.cpu) return true;
-    std::memcpy(u.cpu, data, sizeof data);
+    const size_t n = step_tiles::fill(steps, waterTime(), stepLife(), tiles, reinterpret_cast<float*>(u.cpu));
     D3D12_TEXTURE_COPY_LOCATION src{}, to{};
     src.pResource = slots[slot].upload;
     src.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
     src.PlacedFootprint.Offset = u.offset;
     src.PlacedFootprint.Footprint.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
-    src.PlacedFootprint.Footprint.Width = UINT(footsteps::Tracker::kMax * 2);
-    src.PlacedFootprint.Footprint.Height = 1;
+    src.PlacedFootprint.Footprint.Width = UINT(step_tiles::kTexelsPerRow);
+    src.PlacedFootprint.Footprint.Height = rows;
     src.PlacedFootprint.Footprint.Depth = 1;
-    src.PlacedFootprint.Footprint.RowPitch = UINT(sizeof data);  // 2048: a multiple of 256
+    src.PlacedFootprint.Footprint.RowPitch = pitch;
     to.pResource = stepsData;
     to.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
     if (!copySceneDepth()) return false;
     transition(stepsData, stepsDataState, D3D12_RESOURCE_STATE_COPY_DEST);
     list->CopyTextureRegion(&to, 0, 0, 0, &src, nullptr);
     transition(stepsData, stepsDataState, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-    const int w = sceneWidth, h = sceneHeight;
     Constants c{};
-    const camera::Projection proj = camera::projectionFor(gameWidth, gameHeight);
     const float pv[6] = {proj.f0, proj.f1, proj.cx, proj.cy, proj.nearZ, proj.farZ};
     std::copy(pv, pv + 6, c.projection);
     std::copy(viewToWorld, viewToWorld + 12, c.reproject);
@@ -526,12 +534,17 @@ bool Renderer::Impl::applySteps() {
     c.uiPixels[1] = float(h);
     c.footprint = float(n);
     c.twin[0] = float(kind);
+    c.twin[1] = float(tiles.columns);  // twinY by twinW tiles
+    c.twin[2] = float(tiles.rows);
     if (!stepsLogged)
-        LOG_INFO("footprints: %s on %s", kind == 1 ? "in the snow" : kind == 2 ? "in the sand" : "dust",
-                 mapName.c_str());
+        LOG_INFO("footprints: %s on %s (tiles of %d pixels, %dx%d)", kind == 1 ? "in the snow"
+                                                                     : kind == 2 ? "in the sand"
+                                                                                 : "dust",
+                 mapName.c_str(), step_tiles::kTile, tiles.columns, tiles.rows);
     stepsLogged = true;
     const UINT list1 = stepsDataSrv;
-    return worldPass(pso, w, h, c, sceneColorSrv, true, list1);
+    const D3D12_RECT clip{tiles.x0, tiles.y0, tiles.x1, tiles.y1};
+    return worldPass(pso, w, h, c, sceneColorSrv, true, list1, &clip);
 }
 
 void Renderer::Impl::releaseBloom() {

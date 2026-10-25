@@ -4,11 +4,15 @@
 #include <cmath>
 #include <unordered_map>
 
+#include "core/round.hpp"
+
 namespace uagfx::hills {
 
+// 3.0.5-beta.9: roundAway in place of std::round and std::lround - the same answers without the library's call (built
+// each frame, a few each of the ground's corners: lroundf the busiest place of a 610M laptop's game thread, R-VMPQKX)
 float pack(float nx, float nz) {
-    const float a = 1.0f + std::round((std::clamp(nx, -1.0f, 1.0f) * 0.5f + 0.5f) * 2046.0f);
-    const float b = std::round((std::clamp(nz, -1.0f, 1.0f) * 0.5f + 0.5f) * 4095.0f);
+    const float a = 1.0f + roundAwayF((std::clamp(nx, -1.0f, 1.0f) * 0.5f + 0.5f) * 2046.0f);
+    const float b = roundAwayF((std::clamp(nz, -1.0f, 1.0f) * 0.5f + 0.5f) * 4095.0f);
     return a * 4096.0f + b;
 }
 
@@ -45,7 +49,7 @@ Grid build(const std::vector<seams::Triangle>& ground) {
         if (len < 1e-6f || std::fabs(ny) < 0.5f * len) continue;  // a wall of a cliff, or nothing
         if (ny > 0.0f) nx = -nx, ny = -ny, nz = -nz;              // upwards (-y); its length its area's twice
         for (const seams::Vertex& v : t.v) {
-            const int ix = int(std::lround((v.pos[0] - px) / side)), iz = int(std::lround((v.pos[2] - pz) / side));
+            const int ix = int(roundAway((v.pos[0] - px) / side)), iz = int(roundAway((v.pos[2] - pz) / side));
             Sum& s = corners[keyOf(ix, iz)];
             s.x += nx;
             s.y += ny;
@@ -61,7 +65,7 @@ Grid build(const std::vector<seams::Triangle>& ground) {
     }
     if (corners.empty()) return g;
     // at most kMostSide a side, about the corners' middle
-    const int cx = int(std::lround(mx / double(faces))), cz = int(std::lround(mz / double(faces)));
+    const int cx = int(roundAway(mx / double(faces))), cz = int(roundAway(mz / double(faces)));
     x0 = std::max(x0, cx - kMostSide / 2);
     z0 = std::max(z0, cz - kMostSide / 2);
     x1 = std::min(x1, x0 + kMostSide - 1);

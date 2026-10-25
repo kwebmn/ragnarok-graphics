@@ -454,3 +454,53 @@ TEST(seams_none_round_a_patch_laid_by_hand) {
     CHECK(!touches(kept, 9u));                     // the mat keeps its straight edge
     CHECK(touches(kept, 5u));                      // the stone is no laid patch: seamed as before
 }
+
+namespace {
+
+// 3.0.5-beta.9: a view of `varied`'s world - the cells from (x0, z0), n a side, the ground back from the screen a hair
+// off (`noise` its seed) and its fog (the specular's alpha) by the camera's place
+std::vector<seams::Triangle> viewOf(const std::vector<seams::Triangle>& world, int worldSide, int x0, int z0, int n,
+                                    uint32_t noise, float camX, float camZ) {
+    std::vector<seams::Triangle> out;
+    uint32_t seed = noise;
+    for (int z = z0; z < z0 + n && z < worldSide; ++z)
+        for (int x = x0; x < x0 + n && x < worldSide; ++x)
+            for (int k = 0; k < 2; ++k) {
+                seams::Triangle t = world[size_t((z * worldSide + x) * 2 + k)];
+                for (seams::Vertex& v : t.v) {
+                    seed = seed * 1664525u + 1013904223u;
+                    v.pos[0] += float(int(seed >> 24) - 128) * 1e-6f;
+                    v.pos[1] += float(int((seed >> 16) & 255) - 128) * 1e-6f;
+                    const float d = std::hypot(v.pos[0] - camX, v.pos[2] - camZ);
+                    v.specular = (v.specular & 0x00FFFFFFu) | uint32_t(std::clamp(255.0f - d, 0.0f, 255.0f)) << 24;
+                }
+                out.push_back(t);
+            }
+    return out;
+}
+
+}  // namespace
+
+// 3.0.5-beta.9 (R-VMPQKX: the seams built again each frame the camera moved - most of a Radeon 610M laptop's game
+// thread on «Високі» with Direct3D 11; the user: «делай 1-3»): each edge's strips kept with what they were made of
+// and taken again where their cells are the same, their places and fog made anew from this frame's cells - the
+// strips exactly as built afresh, frame after frame of a camera going over the world
+TEST(seams_cache_takes_the_same_cells_strips_again_exactly_as_built_afresh) {
+    const int side = 24;
+    std::vector<seams::Triangle> world;
+    std::vector<uint32_t> textures;
+    varied(world, textures, side);
+    seams::Cache cache;
+    size_t frames = 0;
+    for (int f = 0; f < 12; ++f) {
+        // the camera goes along and turns: the view moves a cell now and then, the fog and the noise every frame
+        const std::vector<seams::Triangle> view =
+            viewOf(world, side, 2 + f / 3, 3 + f / 4, 14, 100u + uint32_t(f), 60.0f + 5.0f * float(f), 80.0f);
+        const uint64_t afresh = hashOf(seams::build(view, textures, 0.5f));
+        CHECK(hashOf(cache.build(view, textures, 0.5f)) == afresh);
+        ++frames;
+    }
+    CHECK_EQ(cache.made(), frames);  // each frame's ground differed
+    std::printf("  seams cache: %zu edges taken again in %zu frames\n", cache.reused(), frames);
+    CHECK(cache.reused() > 5000);  // the frames after the first: most of their ~560 edges' strips taken again
+}

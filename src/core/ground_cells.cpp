@@ -3,6 +3,10 @@
 #include <algorithm>
 #include <cmath>
 
+#include "core/round.hpp"
+
+// 3.0.5-beta.9: floorInt for int(std::floor(...)) - the same answers without the 32-bit build's x87 library call, six a
+// ground triangle each frame (R-VMPQKX)
 namespace uagfx::ground_cells {
 
 Grid build(const std::vector<seams::Triangle>& ground) {
@@ -23,13 +27,13 @@ Grid build(const std::vector<seams::Triangle>& ground) {
     for (const seams::Triangle& t : ground) {
         const float cx = (t.v[0].pos[0] + t.v[1].pos[0] + t.v[2].pos[0]) / 3.0f;
         const float cz = (t.v[0].pos[2] + t.v[1].pos[2] + t.v[2].pos[2]) / 3.0f;
-        x0 = std::min(x0, int(std::floor((cx - ox) / side)));
-        x1 = std::max(x1, int(std::floor((cx - ox) / side)));
-        z0 = std::min(z0, int(std::floor((cz - oz) / side)));
-        z1 = std::max(z1, int(std::floor((cz - oz) / side)));
+        x0 = std::min(x0, floorInt((cx - ox) / side));
+        x1 = std::max(x1, floorInt((cx - ox) / side));
+        z0 = std::min(z0, floorInt((cz - oz) / side));
+        z1 = std::max(z1, floorInt((cz - oz) / side));
     }
     // at most kMostSide a side, about the middle
-    const int midX = int(std::floor((float(mx) - ox) / side)), midZ = int(std::floor((float(mz) - oz) / side));
+    const int midX = floorInt((float(mx) - ox) / side), midZ = floorInt((float(mz) - oz) / side);
     x0 = std::max(x0, midX - kMostSide / 2);
     z0 = std::max(z0, midZ - kMostSide / 2);
     x1 = std::min(x1, x0 + kMostSide - 1);
@@ -54,7 +58,7 @@ Grid build(const std::vector<seams::Triangle>& ground) {
         if (std::fabs(ny) < 0.6f * std::sqrt(nx * nx + ny * ny + nz * nz)) continue;
         const float cx = (t.v[0].pos[0] + t.v[1].pos[0] + t.v[2].pos[0]) / 3.0f;
         const float cz = (t.v[0].pos[2] + t.v[1].pos[2] + t.v[2].pos[2]) / 3.0f;
-        const int ix = int(std::floor((cx - g.originX) / side)), iz = int(std::floor((cz - g.originZ) / side));
+        const int ix = floorInt((cx - g.originX) / side), iz = floorInt((cz - g.originZ) / side);
         if (ix < 0 || iz < 0 || ix >= g.width || iz >= g.height) continue;
         float* s = &g.span[(size_t(iz) * size_t(g.width) + size_t(ix)) * 2];
         for (const seams::Vertex& v : t.v) {
@@ -67,7 +71,7 @@ Grid build(const std::vector<seams::Triangle>& ground) {
 
 bool onGround(const Grid& g, float x, float y, float z, float slack) {
     if (g.side <= 0.0f) return true;
-    const int ix = int(std::floor((x - g.originX) / g.side)), iz = int(std::floor((z - g.originZ) / g.side));
+    const int ix = floorInt((x - g.originX) / g.side), iz = floorInt((z - g.originZ) / g.side);
     if (ix < 0 || iz < 0 || ix >= g.width || iz >= g.height) return true;
     const float* s = &g.span[(size_t(iz) * size_t(g.width) + size_t(ix)) * 2];
     return s[0] <= s[1] && y >= s[0] - slack && y <= s[1] + slack;

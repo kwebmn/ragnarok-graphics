@@ -2,6 +2,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <functional>
+#include <memory>
 #include <vector>
 
 namespace uagfx::seams {
@@ -46,14 +47,25 @@ float cellSide(const std::vector<Triangle>& ground);
 
 // 2.5.11: build()'s strips of the last ground, built again only when the ground, its textures or the width differ -
 // standing still, the game draws the same ground frame after frame (with Direct3D 11 on the game's own thread).
+// 3.0.5-beta.9 (R-VMPQKX: built afresh each frame the camera moved - most of a Radeon 610M laptop's game thread on
+// «Високі»): built again, each edge whose cells are as they were takes its strips again - their places and fog from
+// this frame's cell, the same as built afresh
 class Cache {
 public:
+    Cache();
+    ~Cache();
+    Cache(const Cache&) = delete;
+    Cache& operator=(const Cache&) = delete;
     // laidKey: changes as what laid() says changes (another map's patches, its axes found)
     const std::vector<Strip>& build(const std::vector<Triangle>& ground, const std::vector<uint32_t>& texture,
                                     float width, const Laid& laid = {}, uint64_t laidKey = 0);
     void clear();          // another map
     size_t made() const { return made_; }  // builds so far
+    size_t reused() const { return reused_; }  // 3.0.5-beta.9: edges whose strips were taken again, so far
 private:
+    struct Kept;
+    std::unique_ptr<Kept> kept_;
+    size_t reused_ = 0;
     std::vector<Triangle> ground_;
     std::vector<uint32_t> texture_;
     float width_ = -1.0f;

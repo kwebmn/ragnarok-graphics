@@ -31,6 +31,7 @@
 #include "core/region_look.hpp"
 #include "core/scale.hpp"
 #include "core/shader_cache.hpp"
+#include "core/step_tiles.hpp"
 #include "core/twin_grid.hpp"
 #include "core/water.hpp"
 #include "core/window_plan.hpp"
@@ -2550,10 +2551,25 @@ void Renderer11::applySteps() {
     const int kind = stepKind();
     const std::deque<footsteps::Step>& steps = footTracker_.steps();
     if (!kind || steps.empty() || !cameraValid_ || !target_.texture || !depthViews()) return;
+    // 3.0.5-beta.9 (R-VMPQKX: 4.1 ms of a Radeon 610M's frame): the screen's tiles each with the steps that may show in
+    // it (core/step_tiles.hpp) - steps_ps goes through its pixel's tile's steps alone, only where any shows
+    const camera::Projection proj = camera::projectionFor(gameWidth_, gameHeight_);
+    step_tiles::View view;
+    std::copy(viewToWorld_, viewToWorld_ + 12, view.viewToWorld);
+    view.f0 = proj.f0;
+    view.f1 = proj.f1;
+    view.cx = proj.cx;
+    view.cy = proj.cy;
+    view.nearZ = proj.nearZ;
+    view.scale = float(scale_);
+    view.width = target_.width;
+    view.height = target_.height;
+    const step_tiles::Tiles tiles = step_tiles::build(steps, view);
+    if (tiles.empty()) return;  // none on the screen
     if (!stepsData_) {
         D3D11_TEXTURE2D_DESC d{};
-        d.Width = UINT(footsteps::Tracker::kMax * 2);
-        d.Height = 1;
+        d.Width = UINT(step_tiles::kTexelsPerRow);
+        d.Height = UINT(1 + step_tiles::kMaxRows);
         d.MipLevels = d.ArraySize = 1;
         d.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
         d.SampleDesc.Count = 1;
@@ -2567,21 +2583,12 @@ void Renderer11::applySteps() {
             return;
         }
     }
-    const float now = waterTime(), life = stepLife();
-    float data[footsteps::Tracker::kMax * 2][4] = {};
-    size_t n = 0;
-    for (const footsteps::Step& s : steps) {
-        if (n >= footsteps::Tracker::kMax) break;
-        data[2 * n][0] = s.x;
-        data[2 * n][1] = s.y;
-        data[2 * n][2] = s.z;
-        data[2 * n][3] = s.angle;
-        data[2 * n + 1][0] = std::clamp((now - s.born) / life, 0.0f, 1.0f);
-        ++n;
-    }
-    ctx_->UpdateSubresource(stepsData_, 0, nullptr, data, UINT(sizeof data), 0);
+    const UINT pitch = UINT(step_tiles::kTexelsPerRow * 4 * sizeof(float));
+    stepsTexels_.resize(size_t(step_tiles::kTexelsPerRow) * 4 * size_t(1 + tiles.rows));
+    const size_t n = step_tiles::fill(steps, waterTime(), stepLife(), tiles, stepsTexels_.data());
+    const D3D11_BOX rows{0, 0, 0, UINT(step_tiles::kTexelsPerRow), UINT(1 + tiles.rows), 1};
+    ctx_->UpdateSubresource(stepsData_, 0, &rows, stepsTexels_.data(), pitch, 0);
     Constants c{};
-    const camera::Projection proj = camera::projectionFor(gameWidth_, gameHeight_);
     const float pv[6] = {proj.f0, proj.f1, proj.cx, proj.cy, proj.nearZ, proj.farZ};
     std::copy(pv, pv + 6, c.projection);
     std::copy(viewToWorld_, viewToWorld_ + 12, c.reproject);
@@ -2590,11 +2597,16 @@ void Renderer11::applySteps() {
     c.uiPixels[1] = float(target_.height);
     c.footprint = float(n);
     c.twin[0] = float(kind);
+    c.twin[1] = float(tiles.columns);  // twinY by twinW tiles
+    c.twin[2] = float(tiles.rows);
     if (!stepsLogged_)
-        LOG_INFO("footprints: %s on %s (Direct3D 11)", kind == 1 ? "in the snow" : kind == 2 ? "in the sand" : "dust",
-                 map_.c_str());
+        LOG_INFO("footprints: %s on %s (Direct3D 11, tiles of %d pixels, %dx%d)", kind == 1 ? "in the snow"
+                                                                                  : kind == 2 ? "in the sand"
+                                                                                              : "dust",
+                 map_.c_str(), step_tiles::kTile, tiles.columns, tiles.rows);
     stepsLogged_ = true;
-    worldPass(stepsPs_, c, 0, 1, depthSrv_, nullptr, stepsDataSrv_);
+    const RECT clip{tiles.x0, tiles.y0, tiles.x1, tiles.y1};
+    worldPass(stepsPs_, c, 0, 1, depthSrv_, nullptr, stepsDataSrv_, &clip);
 }
 
 // 2.5.3: as Direct3D 12's applyHeat (heat.cpp) - the spots of heat the torches' pass gathered (a texel each in

@@ -2309,29 +2309,42 @@ float4 mirror_ps(MirrorIn i) : SV_Target {
 // 0.80, footprints (ao.cpp applySteps): on the ground (the picture's depth, the camera backwards) about each step of
 // t1 - two texels: its place (xyz) and way (w), then its age 0-1 (x) - footprint how many; twinX the kind: 1 snow,
 // 2 sand (a foot's print, fading), 3 dust (a puff spreading and thinning). Blended over by its alpha.
+float stepPrint(int k, float3 w, int kind) {  // step k's print (its alpha) at the world's w
+    float4 s = tex1.Load(int3(2 * k, 0, 0));
+    if (abs(w.y - s.y) > 3.0) return 0.0;  // core/step_tiles.hpp's kRise
+    float2 d = w.xz - s.xz;
+    if (dot(d, d) > 40.0) return 0.0;  // its kReach
+    float age = tex1.Load(int3(2 * k + 1, 0, 0)).x;
+    if (kind == 3) {
+        float r = 1.0 + 4.0 * age;
+        float puff = exp(-dot(d, d) / (r * r)) * (1.0 - age) * (1.0 - age);
+        return puff * (0.7 + 0.3 * valueNoise(w.xz * 0.8 + s.xz));
+    }
+    float ca = cos(s.w), sa = sin(s.w);
+    float2 l = float2(d.x * ca + d.y * sa, -d.x * sa + d.y * ca);
+    float e = length(l / float2(1.6, 0.75));  // 2.7.35: half again as big (were 2.2 by 1 units)
+    return smoothstep(1.0, 0.65, e) * (1.0 - age * age);
+}
+
+// 3.0.5-beta.9 (R-VMPQKX: 4.1 ms of a Radeon 610M's frame - every pixel went through all 64 steps): t1's rows from the
+// second hold the screen's tiles of 64 pixels (core/step_tiles.hpp, twinY by twinW of them), a texel a tile - the steps
+// that may touch it as four 16-bit masks, whole numbers in its channels; a pixel goes through its tile's alone
 float4 steps_ps(PresentOut i) : SV_Target {
     int2 wp = int2(i.pos.xy);
+    int2 tile = min(wp / 64, int2(int(twinY + 0.5), int(twinW + 0.5)) - 1);
+    uint4 parts = uint4(tex1.Load(int3(tile.x, tile.y + 1, 0)) + 0.5);
+    if (all(parts == 0)) discard;
     if (sceneDepth.Load(int3(wp, 0)) >= 0.99999) discard;
     float3 v = viewAt(wp);
     float3 w = v.x * float3(r0, r1, r2) + v.y * float3(r3, r4, r5) + v.z * float3(r6, r7, r8) + float3(r9, r10, r11);
     int kind = int(twinX + 0.5);
     float a = 0.0;
-    int count = int(footprint);
-    [loop] for (int k = 0; k < count; ++k) {
-        float4 s = tex1.Load(int3(2 * k, 0, 0));
-        if (abs(w.y - s.y) > 3.0) continue;
-        float2 d = w.xz - s.xz;
-        if (dot(d, d) > 40.0) continue;
-        float age = tex1.Load(int3(2 * k + 1, 0, 0)).x;
-        if (kind == 3) {
-            float r = 1.0 + 4.0 * age;
-            float puff = exp(-dot(d, d) / (r * r)) * (1.0 - age) * (1.0 - age);
-            a = max(a, puff * (0.7 + 0.3 * valueNoise(w.xz * 0.8 + s.xz)));
-        } else {
-            float ca = cos(s.w), sa = sin(s.w);
-            float2 l = float2(d.x * ca + d.y * sa, -d.x * sa + d.y * ca);
-            float e = length(l / float2(1.6, 0.75));  // 2.7.35: half again as big (were 2.2 by 1 units)
-            a = max(a, smoothstep(1.0, 0.65, e) * (1.0 - age * age));
+    [loop] for (int part = 0; part < 4; ++part) {
+        uint bits = part == 0 ? parts.x : part == 1 ? parts.y : part == 2 ? parts.z : parts.w;
+        [loop] while (bits != 0) {
+            uint low = bits & (0u - bits);  // the lowest step left (no firstbitlow: shader model 4 too)
+            bits ^= low;
+            a = max(a, stepPrint(part * 16 + int(round(log2(float(low)))), w, kind));
         }
     }
     if (a < 0.01) discard;
