@@ -1,3 +1,16 @@
+# uaRO Graphics 3.0.4-beta.33 — what is new
+
+- **The far houses' and trees' colours from all of the game's models (R-5ZC9JX, prontera).** The own ground learns its
+  models' colours from the game: up to 600 triangles a picture. But they were the same first 600 every time: while
+  the camera stood, it learnt from those alone. A minute in Prontera, none of them matched ours - the far models'
+  colours learnt not at all (left approximate). Now the triangles go in turn: the next picture the next 600, and in a
+  few pictures all of the models round about are seen.
+- The picture drawn again (beta.32) in the same report: a minute still in Prontera - 100 % of the pictures drawn
+  again (was 0 %), the processor 2.8 ms a picture instead of 3.6. Now that the colours are learnt again, the picture
+  will be made anew once a second - about 1 ms once in 60 pictures.
+- To check: Prontera - stand a minute and send a report (the log: the share drawn again and how many of the game's
+  model triangles lie «where ours lie»).
+
 # uaRO Graphics 3.0.4-beta.32 — what is new
 
 - **The own ground draws its picture again in towns too (R-Q3W727, prontera).** While the camera stands, the own
