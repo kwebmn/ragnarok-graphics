@@ -406,13 +406,66 @@ bool Renderer::Impl::applyGrass() {
         c.sourceClamp[3] = float(g.width) + 1024.0f * float(g.height);
         cells = groundCellsSrv;
     }
-    if (!grassLogged)
-        LOG_INFO("grass: on %s, blades up to %.0f pixels%s%s", mapName.c_str(), c.twin[0],
-                 cells != kNoSrv ? ", on the map's ground only" : "",
-                 c.uiPixels[2] > 1.5f ? ", their roots on every second row" : "");
-    grassLogged = true;
     const UINT list1 = held ? trampleSrv : sceneColorSrv;
-    return worldPass(pso, w, h, c, sceneColorSrv, true, list1, nullptr, 3, cells);
+    // 3.0.5-beta.12: first where a blade's root can stand at all - each pixel once; grass_ps reads it (t0) before
+    // anything else of a root
+    const bool masked = ensureGrassMask(w, h) &&
+                        effectPass(grassMaskPipeline, grassMask, grassMaskState, rtvHandle(kRtvGrassMask), w, h, c,
+                                   sceneColorSrv, true, list1, nullptr, 3, cells);
+    if (lost) return false;
+    if (masked) {
+        transition(grassMask, grassMaskState, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+        c.sourceRect[0] = 1.0f;
+    }
+    if (!grassLogged)
+        LOG_INFO("grass: on %s, blades up to %.0f pixels%s%s%s", mapName.c_str(), c.twin[0],
+                 cells != kNoSrv ? ", on the map's ground only" : "",
+                 c.uiPixels[2] > 1.5f ? ", their roots on every second row" : "",
+                 masked ? ", the roots that can be one marked first" : "");
+    grassLogged = true;
+    return worldPass(pso, w, h, c, masked ? grassMaskSrv : sceneColorSrv, true, list1, nullptr, 3, cells);
+}
+
+// 3.0.5-beta.12: the grass's mask - R8 at the scene's size, its render target view and its shader view; made again
+// when the size changes, the old one freed once the lists that read it have run
+bool Renderer::Impl::ensureGrassMask(int w, int h) {
+    if (!grassMaskPs) return false;
+    if (!grassMaskPipeline && !grassMaskFailed) {
+        D3D12_GRAPHICS_PIPELINE_STATE_DESC p =
+            fullScreenPipeline(root, presentVs, grassMaskPs, DXGI_FORMAT_R8_UNORM, 1);
+        if (FAILED(device->CreateGraphicsPipelineState(&p, __uuidof(ID3D12PipelineState),
+                                                       reinterpret_cast<void**>(&grassMaskPipeline)))) {
+            grassMaskPipeline = nullptr;
+            grassMaskFailed = true;
+            LOG_ERROR("grass: its mask's pipeline failed - every root looked at, as before");
+        }
+    }
+    if (!grassMaskPipeline) return false;
+    if (grassMask && w == grassMaskWidth && h == grassMaskHeight) return true;
+    discard(grassMask);
+    grassMask = nullptr;
+    grassMaskWidth = w;
+    grassMaskHeight = h;
+    D3D12_CLEAR_VALUE none{};
+    none.Format = DXGI_FORMAT_R8_UNORM;
+    grassMask = createTexture2D(device, w, h, 1, DXGI_FORMAT_R8_UNORM, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET,
+                                D3D12_RESOURCE_STATE_RENDER_TARGET, &none);
+    grassMaskState = D3D12_RESOURCE_STATE_RENDER_TARGET;
+    if (!grassMask) {
+        LOG_ERROR("grass: no video memory for its mask at %dx%d - every root looked at, as before", w, h);
+        return false;
+    }
+    if (grassMaskSrv == kNoSrv) grassMaskSrv = allocSrv();
+    if (grassMaskSrv == kNoSrv) {
+        discard(grassMask);
+        grassMask = nullptr;
+        return false;
+    }
+    nameResource(grassMask, "grass mask");
+    device->CreateRenderTargetView(grassMask, nullptr, rtvHandle(kRtvGrassMask));
+    device->CreateShaderResourceView(grassMask, nullptr, cpuSrvHandle(grassMaskSrv));
+    LOG_INFO("grass: a mask of where roots can stand, %dx%d", w, h);
+    return true;
 }
 
 // 1.7: the living world's ground (ground_life_ps) - sand drifting over the desert, snow glittering, the walls of a damp

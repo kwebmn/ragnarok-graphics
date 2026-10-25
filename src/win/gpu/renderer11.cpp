@@ -205,6 +205,8 @@ Renderer11::~Renderer11() {
     drop(splashPs_);
     drop(groundLifePs_);  // 2.5.4
     drop(grassPs_);
+    drop(grassMaskPs_);  // 3.0.5-beta.12
+    dropTarget(grassMask_);
     drop(groundCellsSrv_);
     drop(groundCellsData_);
     drop(crittersVs_);  // 2.5.4
@@ -426,7 +428,7 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
         bool optional = false;  // 0.99: an effect's - without it the effect is not drawn, the game is
         bool safe = false;      // 2.2.2: made without the newest features (UAGFX_SAFE)
         bool lean = false;      // 2.5: with UAGFX_LEAN (draw_lean_ps: the world's extras left out)
-    } wants[56] = {{"draw_vs", vs, shaderSource(), {}},    {"draw_ps", ps, shaderSource(), {}},
+    } wants[57] = {{"draw_vs", vs, shaderSource(), {}},    {"draw_ps", ps, shaderSource(), {}},
                    {"present_vs", vs, shaderSource(), {}}, {"present_ps", ps, shaderSource(), {}},
                    {"clear_vs", vs, kClearSource, {}},     {"clear_ps", ps, kClearSource, {}},
                    {"grade_ps", ps, shaderSource(), {}},  // 0.59: the colours (Effects page)
@@ -473,7 +475,8 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
                    {"mirror_ps", ps, shaderSource(), {}, true},
                    {"portal_draw_ps", ps, shaderSource(), {}, true},  // 2.7.54: the map warps shaded anew
                    {"portal_draw_glow_ps", ps, shaderSource(), {}, true},
-                   {"world_grade_ps", ps, shaderSource(), {}, true}};  // 3.0.5-beta.4: made larger and coloured
+                   {"world_grade_ps", ps, shaderSource(), {}, true},  // 3.0.5-beta.4: made larger and coloured
+                   {"grass_mask_ps", ps, shaderSource(), {}, true}};  // 3.0.5-beta.12: where roots can stand
     const uint64_t key = shader_cache::keyOf(std::string(shaderSource()) + kClearSource + "direct3d 11");
     std::vector<shader_cache::Shader> kept;
     {
@@ -613,6 +616,7 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
     if (wants[53].code.empty() || !psOf(wants[53], portalDrawPs_)) portalDrawPs_ = nullptr;  // 2.7.54
     if (wants[54].code.empty() || !psOf(wants[54], portalDrawGlowPs_)) portalDrawGlowPs_ = nullptr;
     if (wants[55].code.empty() || !psOf(wants[55], worldGradePs_)) worldGradePs_ = nullptr;  // 3.0.5-beta.4
+    if (wants[56].code.empty() || !psOf(wants[56], grassMaskPs_)) grassMaskPs_ = nullptr;  // 3.0.5-beta.12
     if (!wants[1].safe && !wants[22].safe) {  // 2.5.16: none where the player's compiler took the draw shader badly
         std::vector<shader_cache::Shader> all;
         for (const Want& w : wants) all.push_back({w.entry, shader_cache::profileOf(w.profile, w.safe), w.code});
@@ -2466,7 +2470,7 @@ void Renderer11::passSamplers() {
 
 void Renderer11::maskPass(ID3D11PixelShader* ps, const Target& into, const Constants& c,
                           ID3D11ShaderResourceView* t0, ID3D11ShaderResourceView* depth,
-                          ID3D11ShaderResourceView* t2, ID3D11ShaderResourceView* t1) {
+                          ID3D11ShaderResourceView* t2, ID3D11ShaderResourceView* t1, ID3D11ShaderResourceView* t5) {
     targetBound_ = false;  // the next draw binds the target, the viewport and the game's shaders again
     ID3D11ShaderResourceView* none[4] = {nullptr, nullptr, nullptr, nullptr};
     ctx_->PSSetShaderResources(0, 4, none);
@@ -2491,8 +2495,10 @@ void Renderer11::maskPass(ID3D11PixelShader* ps, const Target& into, const Const
     passSamplers();
     ID3D11ShaderResourceView* views[4] = {t0, t1, t2, depth};
     ctx_->PSSetShaderResources(0, 4, views);
+    if (t5) ctx_->PSSetShaderResources(5, 1, &t5);  // 3.0.5-beta.12: the grass's ground cells (grass_mask_ps)
     ctx_->Draw(3, 0);
     ctx_->PSSetShaderResources(0, 4, none);
+    if (t5) ctx_->PSSetShaderResources(5, 1, none);
 }
 
 // 2.5.2 (actor_shadows.cpp noteFoot): a character's round shadow - its middle in the world, the feet this frame
@@ -2999,12 +3005,32 @@ void Renderer11::applyGrass() {
         c.sourceClamp[2] = 1.0f / g.side;
         c.sourceClamp[3] = float(g.width) + 1024.0f * float(g.height);
     }
+    ID3D11ShaderResourceView* cells = grid && groundCellsUp_ ? groundCellsSrv_ : nullptr;
+    // 3.0.5-beta.12 (the grass 10 ms of a Radeon 610M's frame): first where a blade's root can stand at all - each
+    // pixel once (grass_mask_ps); grass_ps reads it (t0) before anything else of a root
+    bool masked = false;
+    if (grassMaskPs_ && copyScene()) {
+        if (grassMask_.width != target_.width || grassMask_.height != target_.height) {
+            dropTarget(grassMask_);
+            if (!makeTarget(grassMask_, target_.width, target_.height, DXGI_FORMAT_R8_UNORM)) {
+                LOG_ERROR("grass: no video memory for its mask (Direct3D 11) - every root looked at, as before");
+                grassMaskPs_ = nullptr;  // not tried again
+            }
+        }
+        if (grassMaskPs_) {
+            maskPass(grassMaskPs_, grassMask_, c, nullptr, depthSrv_, scene_.srv, nullptr, cells);
+            c.sourceRect[0] = 1.0f;
+            masked = true;
+        }
+    }
     if (!grassLogged_)
-        LOG_INFO("grass: on %s, blades up to %.0f pixels%s, their roots on every second row (Direct3D 11)",
-                 map_.c_str(), c.twin[0], grid && groundCellsUp_ ? ", on the map's ground only" : "");
+        LOG_INFO("grass: on %s, blades up to %.0f pixels%s, their roots on every second row%s (Direct3D 11)",
+                 map_.c_str(), c.twin[0], cells ? ", on the map's ground only" : "",
+                 masked ? ", the roots that can be one marked first" : "");
     grassLogged_ = true;
-    worldPass(grassPs_, c, 1, 1, depthSrv_, nullptr, held ? trampleSrv_ : nullptr, nullptr,
-              grid && groundCellsUp_ ? groundCellsSrv_ : nullptr);
+    // copy 2: the picture's copy the mask was made from (made above), not made again
+    worldPass(grassPs_, c, masked ? 2 : 1, 1, depthSrv_, masked ? grassMask_.srv : nullptr,
+              held ? trampleSrv_ : nullptr, nullptr, cells);
 }
 
 // 2.5.4 (critters.cpp noteCrown): a tree's leaves drawn - its crown in the world, for the leaves falling from it

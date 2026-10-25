@@ -223,6 +223,7 @@ bool Renderer::Impl::createPipelines(std::string& error) {
                    {"bloom_down_ps", "ps_5_0", &bloomDownPs},
                    {"bloom_apply_ps", "ps_5_0", &bloomApplyPs},   {"steps_ps", "ps_5_0", &stepsPs},
                    {"grass_ps", "ps_5_0", &grassPs},              {"embers_ps", "ps_5_0", &embersPs},
+                   {"grass_mask_ps", "ps_5_0", &grassMaskPs},  // 3.0.5-beta.12
                    {"half_over_ps", "ps_5_0", &halfOverPs},
                    {"ground_life_ps", "ps_5_0", &groundLifePs},   {"critters_ps", "ps_5_0", &crittersPs},
                    {"critters_vs", "vs_5_0", &crittersVs},        {"material_ps", "ps_5_0", &materialPs},

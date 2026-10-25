@@ -126,7 +126,8 @@ constexpr UINT kRtvMaterial = kRtvFloor + 1;  // 1.8: a level of a texture's mat
 constexpr UINT kRtvMirror = kRtvMaterial + 1;  // 1.16: the world mirrored under the water
 constexpr UINT kRtvTorch = kRtvMirror + 1;  // 2.5: the torches' buffer of light
 constexpr UINT kRtvShafts = kRtvTorch + 1;  // 2.5.7: the light in the air at half the size
-constexpr UINT kRtvCount = kRtvShafts + 1;
+constexpr UINT kRtvGrassMask = kRtvShafts + 1;  // 3.0.5-beta.12: where a blade's root can stand (grass_mask_ps)
+constexpr UINT kRtvCount = kRtvGrassMask + 1;
 constexpr UINT kDsvTarget = 0;  // depth views: the target's, the world's (DLSS)
 constexpr UINT kDsvWorld = 1;
 constexpr UINT kDsvMirror = 3;  // 1.16: the mirrored world's depth
@@ -1375,6 +1376,16 @@ struct Renderer::Impl {
     ID3D12PipelineState* grassPipelines[4] = {};
     bool grassDone = false;
     bool grassLogged = false;
+    // 3.0.5-beta.12 (the grass 9-11 ms of a Radeon 610M's frame): the picture's pixels where a blade's root can stand,
+    // once a frame (grass_mask_ps, R8 at the scene's size) - grass_ps skips the others without reading them
+    ID3DBlob* grassMaskPs = nullptr;
+    ID3D12PipelineState* grassMaskPipeline = nullptr;
+    ID3D12Resource* grassMask = nullptr;
+    D3D12_RESOURCE_STATES grassMaskState = D3D12_RESOURCE_STATE_RENDER_TARGET;
+    UINT grassMaskSrv = kNoSrv;
+    int grassMaskWidth = 0, grassMaskHeight = 0;
+    bool grassMaskFailed = false;
+    bool ensureGrassMask(int w, int h);  // false: none (the grass looks at every root, as before)
     bool grassDue() const {
         return effects.grass && effects.grassAmount > 0 && grassPs && mapOutdoors && groundDrawn && !grassDone &&
                viewToWorldValid;

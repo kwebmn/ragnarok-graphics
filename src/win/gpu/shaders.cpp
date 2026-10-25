@@ -1902,6 +1902,78 @@ bool greenGround(int2 p, int2 last) {
     return c.g >= c.r * 1.04 && c.g >= c.b * 1.15 && c.g >= 0.12;
 }
 
+// 3.0.5-beta.12 (the user: «1 и 2» - the grass 9-11 ms of a Radeon 610M's frame, nine roots of ten a pixel looked at
+// thrown out by what their own place decides): grass_ps's tests of a root that its own place decides - the picture
+// green ground there, not under the water, a blade at that spot of the world (its hash), the root near the blade's
+// middle (a flower's head reaches further: grass_ps), not too small to see, a green patch round it, the map's own
+// ground - and what grass_ps goes on with: its view place, its colour, the blade's cell, its nearness, its height
+// before the steps tread it, whether a flower. grass_mask_ps puts it into a mask once a pixel; grass_ps reads the
+// mask first (tex0) - the same blades, most of its work gone.
+struct GrassRoot {
+    float3 v;
+    float3 rc;
+    float2 id;
+    float near;
+    float height;
+    bool flower;
+};
+
+bool grassRoot(int2 root, int2 last, out GrassRoot g) {
+    g = (GrassRoot)0;
+    float rd = sceneDepth.Load(int3(root, 0));
+    if (rd >= 0.99999) return false;
+    g.rc = sceneColor.Load(int3(root, 0)).rgb;
+    if (g.rc.g < g.rc.r * 1.04 || g.rc.g < g.rc.b * 1.15 || g.rc.g < 0.12) return false;  // not green ground
+    g.v = viewFrom(root, rd);
+    float3 w = g.v.x * float3(r0, r1, r2) + g.v.y * float3(r3, r4, r5) + g.v.z * float3(r6, r7, r8) +
+               float3(r9, r10, r11);
+    // 2.7.2: none on a pond's or a river's bed - under the water (uiPixels.w its level, up is -y; none known: far
+    // below): its green bed showed through the shallow water and grew blades over it (R-32CYUV, cmd_fild01)
+    if (w.y > uiPixels.w) return false;
+    float2 cell = w.xz * 2.0;  // a blade or none every half unit
+    g.id = floor(cell);
+    if (hash12(g.id) > twinY) return false;  // no blade here
+    float2 at = frac(cell) - (0.3 + 0.4 * float2(hash12(g.id + 11.3), hash12(g.id + 5.7)));
+    g.near = dot(at, at);
+    if (g.near > 0.2) return false;  // 2.7.29: off even a flower's head - before the patches' noise
+    // 2.7.4: thinned out, then none, as the camera goes far back - a blade stands on a disc about a ninth of a unit
+    // across, under a pixel there: its root came and went with every frame's jitter and the grass blinked
+    float disc = 0.11 * f0 * scale / max(g.v.z, 1.0);  // the disc's radius in the picture's pixels
+    if (hash12(g.id + 7.7) > smoothstep(0.8, 1.6, disc)) return false;
+    // 1.8.3: flowers in patches, a few in each (scattered over the whole field they were a speckle); 2.7.29: the
+    // patches' noise for a flower's root alone (an && of HLSL works both its sides out: for every root)
+    g.flower = false;
+    if (hash12(g.id + 31.7) < twinW) g.flower = valueNoise(w.xz * 0.07 + 3.3) > 0.72;
+    g.height = (0.45 + 0.55 * hash12(g.id + 2.1)) * (g.flower ? 1.15 : 1.0);
+    if (!g.flower && g.near > 0.05) return false;  // a blade's own spot (a flower's head: up to 0.2, grass_ps)
+    // 2.7.57 (the tester: «трава на брусчатке мигает когда идешь»): a root on a green patch, not a speck - the grass
+    // painted in the paving's cracks is a few pixels across: as the camera moved by parts of a pixel they came and
+    // went, and their blades with them. Green three of the game's pixels round it, each way.
+    int reach = max(int(3.0 * scale + 0.5), 3);
+    if (!greenGround(root + int2(reach, 0), last) || !greenGround(root - int2(reach, 0), last) ||
+        !greenGround(root + int2(0, reach), last) || !greenGround(root - int2(0, reach), last))
+        return false;
+    // 2.2.1: on the map's own ground only - sourceClamp the cells' grid (its corner, one over a side, the cells across
+    // + 1024 * down), t5 each cell's lowest and highest y: umbala's green decks and bridges stand above it (2.6.8:
+    // looked up only for a root that has a blade - most have none)
+    if (sourceClamp.z > 0.0) {
+        int cellsAcross = int(fmod(sourceClamp.w, 1024.0) + 0.5), cellsDown = int(sourceClamp.w / 1024.0);
+        int2 cellAt = int2(floor((w.xz - sourceClamp.xy) * sourceClamp.z));
+        if (all(cellAt >= int2(0, 0)) && cellAt.x < cellsAcross && cellAt.y < cellsDown) {
+            float2 cellSpan = mirrorTex.Load(int3(cellAt, 0)).rg;
+            if (cellSpan.x > cellSpan.y || w.y < cellSpan.x - 0.75 || w.y > cellSpan.y + 0.75) return false;
+        }
+    }
+    return true;
+}
+
+// 3.0.5-beta.12: each pixel as a blade's root, once: 1 where grassRoot finds one could stand (grass_ps then looks
+// at it), 0 where none can
+float grass_mask_ps(PresentOut i) : SV_Target {
+    GrassRoot g;
+    return grassRoot(int2(i.pos.xy), int2(uiPixels.xy) - 1, g) ? 1.0 : 0.0;
+}
+
 float4 grass_ps(PresentOut i) : SV_Target {
     int2 wp = int2(i.pos.xy);
     int2 last = int2(uiPixels.xy) - 1;
@@ -1935,62 +2007,23 @@ float4 grass_ps(PresentOut i) : SV_Target {
     // 2.7.29: the sway's wave once a pixel, not at every root (the user: «можешь оптимизировать?» - the grass 3-5 ms
     // of a frame at 4K)
     float swayAll = (sin(t * 1.7 + swayPhase) * 0.25 + lean * 0.5 + windLean) * twinX;
+    bool masked = sourceRect.x > 0.5;  // 3.0.5-beta.12: grass_mask_ps's mask in tex0
     [loop] for (int k = first; k >= 1; k -= every) {
         float up = float(k) / twinX;
         float sway = swayAll * up * up;
         int2 root = clamp(wp + int2(int(round(-sway)), k), int2(0, 0), last);
-        float rd = sceneDepth.Load(int3(root, 0));
-        if (rd >= 0.99999) continue;
-        float3 rc = sceneColor.Load(int3(root, 0)).rgb;
-        if (rc.g < rc.r * 1.04 || rc.g < rc.b * 1.15 || rc.g < 0.12) continue;  // not green ground
-        float3 v = viewFrom(root, rd);
-        if (hereZ < v.z - 1.0) continue;  // something in front of the blade
-        float3 w = v.x * float3(r0, r1, r2) + v.y * float3(r3, r4, r5) + v.z * float3(r6, r7, r8) +
-                   float3(r9, r10, r11);
-        // 2.7.2: none on a pond's or a river's bed - under the water (uiPixels.w its level, up is -y; none known: far
-        // below): its green bed showed through the shallow water and grew blades over it (R-32CYUV, cmd_fild01)
-        if (w.y > uiPixels.w) continue;
-        float2 cell = w.xz * 2.0;  // a blade or none every half unit
-        float2 id = floor(cell);
-        if (hash12(id) > twinY) continue;  // no blade here
-        float2 at = frac(cell) - (0.3 + 0.4 * float2(hash12(id + 11.3), hash12(id + 5.7)));
-        float near = dot(at, at);
-        if (near > 0.2) continue;  // 2.7.29: off even a flower's head - before the patches' noise
-        // 2.7.4: thinned out, then none, as the camera goes far back - a blade stands on a disc about a ninth of a
-        // unit across, under a pixel there: its root came and went with every frame's jitter and the grass blinked
-        float disc = 0.11 * f0 * scale / max(v.z, 1.0);  // the disc's radius in the picture's pixels
-        if (hash12(id + 7.7) > smoothstep(0.8, 1.6, disc)) continue;
-        // 1.8.3: flowers in patches, a few in each (scattered over the whole field they were a speckle); 2.7.29: the
-        // patches' noise for a flower's root alone (an && of HLSL works both its sides out: for every root)
-        bool flower = false;
-        if (hash12(id + 31.7) < twinW) flower = valueNoise(w.xz * 0.07 + 3.3) > 0.72;
-        float height = (0.45 + 0.55 * hash12(id + 2.1)) * (flower ? 1.15 : 1.0);
-        bool head = flower && up > height * 0.78;
-        if (near > (head ? 0.2 : 0.05)) continue;
-        // 2.7.57 (the tester: «трава на брусчатке мигает когда идешь»): a root on a green patch, not a speck - the
-        // grass painted in the paving's cracks is a few pixels across: as the camera moved by parts of a pixel they
-        // came and went, and their blades with them. Green three of the game's pixels round it, each way.
-        int reach = max(int(3.0 * scale + 0.5), 3);
-        if (!greenGround(root + int2(reach, 0), last) || !greenGround(root - int2(reach, 0), last) ||
-            !greenGround(root + int2(0, reach), last) || !greenGround(root - int2(0, reach), last))
-            continue;
-        // 2.2.1: on the map's own ground only - sourceClamp the cells' grid (its corner, one over a side, the cells
-        // across + 1024 * down), t5 each cell's lowest and highest y: umbala's green decks and bridges stand above it
-        // (2.6.8: looked up only for a root that has a blade - most have none)
-        if (sourceClamp.z > 0.0) {
-            int cellsAcross = int(fmod(sourceClamp.w, 1024.0) + 0.5), cellsDown = int(sourceClamp.w / 1024.0);
-            int2 cellAt = int2(floor((w.xz - sourceClamp.xy) * sourceClamp.z));
-            if (all(cellAt >= int2(0, 0)) && cellAt.x < cellsAcross && cellAt.y < cellsDown) {
-                float2 cellSpan = mirrorTex.Load(int3(cellAt, 0)).rg;
-                if (cellSpan.x > cellSpan.y || w.y < cellSpan.x - 0.75 || w.y > cellSpan.y + 0.75) continue;
-            }
-        }
-        height *= trod;  // trodden down
+        if (masked && tex0.Load(int3(root, 0)).r < 0.5) continue;  // none can stand there
+        GrassRoot g;
+        if (!grassRoot(root, last, g)) continue;
+        if (hereZ < g.v.z - 1.0) continue;  // something in front of the blade
+        bool head = g.flower && up > g.height * 0.78;
+        if (g.near > (head ? 0.2 : 0.05)) continue;
+        float height = g.height * trod;  // trodden down
         if (up > height) continue;
-        float3 colour = rc * lerp(0.65, 1.25, up / max(height, 1e-3));
-        if (head) colour = flowerColour(hash12(id + 17.9), int(sourceRect.y + 0.5)) * (0.75 + 0.4 * rc.g);
+        float3 colour = g.rc * lerp(0.65, 1.25, up / max(height, 1e-3));
+        if (head) colour = flowerColour(hash12(g.id + 17.9), int(sourceRect.y + 0.5)) * (0.75 + 0.4 * g.rc.g);
         if (twinH > 0.0 && up > height * 0.85) {  // a dew drop on the tip, now and then catching the sun
-            float seed = hash12(id + 43.1);
+            float seed = hash12(g.id + 43.1);
             float glint = pow(saturate(sin(t * (0.9 + seed * 1.7) + seed * 40.0)), 24.0) * step(0.8, seed);
             colour = lerp(colour, float3(1.0, 1.0, 0.97), glint * twinH);
         }

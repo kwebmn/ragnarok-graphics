@@ -443,7 +443,7 @@ private:
     // A pass into a small target of its own: t0 and the depth (t3) read, the whole target written
     void maskPass(ID3D11PixelShader* ps, const Target& into, const Constants& c, ID3D11ShaderResourceView* t0,
                   ID3D11ShaderResourceView* depth, ID3D11ShaderResourceView* t2 = nullptr,
-                  ID3D11ShaderResourceView* t1 = nullptr);
+                  ID3D11ShaderResourceView* t1 = nullptr, ID3D11ShaderResourceView* t5 = nullptr);
     void passSamplers();  // linear, clamped, at s0 and s1 - the passes' own
     // A pass over the whole picture: copy - 1 the picture copied now into t2 (sceneColor), 2 its copy as it is, 0
     // none; blend - 0 written whole, 1 blended over by its alpha, 2 multiplied in, 3 added, 4 premultiplied over;
@@ -688,6 +688,8 @@ private:
     // 2.5.4: the living ground, the grass
     ID3D11PixelShader* groundLifePs_ = nullptr;
     ID3D11PixelShader* grassPs_ = nullptr;
+    ID3D11PixelShader* grassMaskPs_ = nullptr;  // 3.0.5-beta.12: where a blade's root can stand (grass_mask_ps)
+    Target grassMask_;
     living::Place place_;
     seasons::Look year_;
     float waterLevel_ = 0.0f;  // the last water seen, its height in the world (up is -y)
