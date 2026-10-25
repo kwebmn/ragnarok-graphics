@@ -1,3 +1,23 @@
+# uaRO Graphics 3.0.5-beta.3 — what is new
+
+- **Direct3D 12: a shader for each state of the drawing.** As in Direct3D 11 since 2.5.16: each state of the game's
+  drawing (textures, transparency, fog, the interface) gets a small shader made for it in place of one big shader for
+  everything. On a laptop with a Radeon 610M the login picture cost 4.6 ms with Direct3D 12 and 0.85 ms with Direct3D 11
+  - now Direct3D 12 should draw the world and the interface as quickly. The shaders are made on a thread of their own
+  while the old one draws; the first start makes them for a minute or two, then they come from the cache. To compare:
+  «Debugging» → «A shader for each state» (at the next start of the game).
+- **«Keep the frame rate»: the grass not last when there is no way without it.** When the other effects together cannot
+  bring the frame rate back with the grass thinned (on a Radeon 610M the grass 20 ms, all the rest 13), the grass goes
+  at once, not after two and a half minutes at 15-20 frames. Otherwise as before: the grass last. An effect you turned
+  on yourself it still leaves alone.
+- **The frame measured more exactly.** The draw the interface begins with (the login picture) is no longer put on the
+  effect before it («lights and torches»).
+- To check on the laptop (measuring on, Direct3D 12):
+  1. Start the game, stay a minute at the login and in Prontera or on a field - «pipelines with the draw shaders of the
+     game's own states» in the log - send a report.
+  2. «Debugging» → untick «A shader for each state», start again, the same places and a report once more - to compare
+     before and after.
+
 # uaRO Graphics 3.0.5-beta.2 — what is new
 
 - **The frame measured, to find what slows it.** «Debugging» → «Measure where the game spends its time» now also cuts
