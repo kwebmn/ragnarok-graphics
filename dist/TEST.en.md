@@ -1,3 +1,18 @@
+# uaRO Graphics 3.0.5-beta.4 — what is new
+
+- **Direct3D 11: the smaller world made larger plainly - 6-7 ms a frame less on a weak card.** With «World resolution»
+  under 100 % the world is drawn smaller and made larger to the window's size. Making it larger with sharpening took 45
+  texture reads for each point and cost 6-7 ms on a Radeon 610M - more than the smaller world saved (1.5-2 ms). Now one
+  read, as in the super-light mode: the world a little softer, the interface and the text as sharp as they were. The
+  player with the HD 6570 (the world at 75 %) should gain the most.
+- **The colours in the same pass.** «Colour» with a smaller world is now laid on in the pass that makes it larger, not
+  by a copy and a pass of its own - about 1 ms less again. The weather, the fireflies, the blindness and the glow, when
+  they are drawn, lie over the colours as before.
+- **The frame's profile shows the world made larger apart** («the world made larger») - it was put on the weather
+  before.
+- To check on the laptop: «Graphics API» → Direct3D 11, «World resolution» 75 %, the «Auto» set, measuring on - a minute
+  on a field, a report. And whether the world became too soft.
+
 # uaRO Graphics 3.0.5-beta.3 — what is new
 
 - **Direct3D 12: a shader for each state of the drawing.** As in Direct3D 11 since 2.5.16: each state of the game's
