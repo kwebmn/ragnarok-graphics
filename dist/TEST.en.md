@@ -1,3 +1,14 @@
+# uaRO Graphics 3.0.4-beta.34 — what is new
+
+- **beta.33's turn of the models now really goes (R-37HNEB, prontera).** In beta.33 the game's model triangles were
+  to be looked at in turn, but the turn went back to the first every picture: a picture starts both at the present
+  and at the game's clearing of the screen right after it - and the second start, with no model between the two,
+  reset the turn. Hence «noted 360600» in the log again - the same 600 every picture - and 0 % matched. Now a picture
+  with none of the game's models leaves the turn as it was.
+- The log («own models», a map's 600th picture) now shows the turn going: how often all of the game's models were
+  looked at and how many a picture holds.
+- To check: Prontera - stand a minute and send a report.
+
 # uaRO Graphics 3.0.4-beta.33 — what is new
 
 - **The far houses' and trees' colours from all of the game's models (R-5ZC9JX, prontera).** The own ground learns its
