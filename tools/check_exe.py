@@ -68,11 +68,14 @@ ALLOWED = {
         # removal's copy of the app in %TEMP%, the process the update waits for (Windows NT)
         "GetTickCount", "SetFilePointerEx", "CopyFileW", "GetTempPathW", "GetCurrentProcessId",
         "SetEnvironmentVariableW",  # 2.11: UARO_LAUNCHER for the game the launcher starts (Windows NT)
+        # 3.0.5-beta.7: «Тест графіки» - its mark for the game (Windows NT), the last result's time (Windows 2000)
+        "SetEnvironmentVariableA", "FileTimeToLocalFileTime", "FileTimeToSystemTime",
     },
     "msvcrt.dll": {
         "__mb_cur_max", "__p__commode", "__p__fmode", "__p__wcmdln", "__set_app_type", "__setusermatherr",
         "__wgetmainargs", "__winitenv", "_amsg_exit", "_cexit", "_close", "_errno", "_filelengthi64", "_fileno",
-        "_initterm", "_iob", "_onexit", "_read", "_wfopen", "abort", "atoi", "calloc", "clock", "exit", "fclose",
+        "_initterm", "_iob", "_onexit", "_read", "_wfopen", "abort", "atof", "atoi", "calloc", "clock", "exit",
+        "fclose",
         "fflush",
         "fgetpos", "fopen", "fprintf", "fputc", "fputs", "fputwc", "fread", "free", "fsetpos", "fwprintf",
         "fwrite", "isalnum", "isupper", "iswctype", "isxdigit", "localeconv", "malloc", "memchr", "memcmp", "memcpy",
