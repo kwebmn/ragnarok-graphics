@@ -1,3 +1,17 @@
+# uaRO Graphics 3.0.4-beta.22 — what is new
+
+- **No black strip on the water any more** (report R-ZZN7GY, "the black strip on the water is still there"). The
+  beta.21 fix worked (the log has "214 of the game's 1365 parts ... raised"), but the strip stayed as thick as before -
+  so the cause was elsewhere, and it was mine. Past 1490 units the own ground writes its depth squeezed, since past the
+  game's edge (1500) the depth buffer has no room. Because of that, all the game draws between 1490 and 1500 came out
+  "behind" the own ground beyond it in the depth buffer, though it was really nearer. The game's water there hid
+  behind the black bed, and the water far off began only at 1500 - hence the strip. Now the water and the houses far
+  off are drawn from 1490, at the same depth as the own ground. Offline, on Alberta with the same arithmetic, the strip
+  came out exactly as in your picture, and with this fix it is gone. It also fixes what the picture does not show:
+  houses and ships that cross that distance lost a band of their hull.
+- To check (with "Own ground (prototype)"): `@warp alberta 193 146`, pull the camera out all the way and turn it to
+  the sea - no strip, the ship whole; the same on izlude.
+
 # uaRO Graphics 3.0.4-beta.21 — what is new
 
 - **No black strip between the game's water and the water far off** (report R-UBT67Q, "report with the water at the
