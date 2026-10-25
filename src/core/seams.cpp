@@ -6,6 +6,7 @@
 #include <iterator>
 #include <unordered_map>
 
+#include "core/hash64.hpp"
 #include "core/round.hpp"
 
 namespace uagfx::seams {
@@ -405,7 +406,7 @@ void onto(Strip& s, const Piece& p) {
 }
 
 // The pieces into the strips in the order they come: one strip a cell's group and the texture it shows
-void append(std::vector<Strip>& out, std::unordered_map<uint64_t, size_t>& strips, const Piece& p) {
+void append(std::vector<Strip>& out, std::unordered_map<uint64_t, size_t, Hash64>& strips, const Piece& p) {
     auto found = strips.find(stripOf(p.inside, p.shows));
     if (found == strips.end()) {
         found = strips.emplace(stripOf(p.inside, p.shows), out.size()).first;
@@ -543,7 +544,7 @@ bool edgesOf(const std::vector<Triangle>& ground, const std::vector<uint32_t>& t
 std::vector<Strip> build(const std::vector<Triangle>& ground, const std::vector<uint32_t>& texture, float width,
                          const Laid& laid) {
     std::vector<Strip> out;
-    std::unordered_map<uint64_t, size_t> strips;  // (inside, shows) -> its strip
+    std::unordered_map<uint64_t, size_t, Hash64> strips;  // (inside, shows) -> its strip
     CellMap cells;
     std::vector<uint32_t> order;
     Piece piece;
@@ -567,7 +568,7 @@ struct Cache::Kept {
         Piece pieces[2];
         uint64_t built = 0;  // the build it was last seen in
     };
-    std::unordered_map<uint64_t, Edge> edges;
+    std::unordered_map<uint64_t, Edge, Hash64> edges;  // 3.0.5-beta.11: Hash64
     CellMap cells;
     std::vector<uint32_t> order;
     // the strips by their group and texture, kept from build to build (nothing allocated a strip a frame): its place
@@ -577,7 +578,7 @@ struct Cache::Kept {
         uint64_t built = 0;
         Strip room;
     };
-    std::unordered_map<uint64_t, Slot> slots;
+    std::unordered_map<uint64_t, Slot, Hash64> slots;
     uint64_t builds = 0;
 };
 

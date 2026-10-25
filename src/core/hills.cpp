@@ -4,6 +4,7 @@
 #include <cmath>
 #include <unordered_map>
 
+#include "core/hash64.hpp"
 #include "core/round.hpp"
 
 namespace uagfx::hills {
@@ -34,7 +35,7 @@ Grid build(const std::vector<seams::Triangle>& ground) {
     struct Sum {
         double x = 0, y = 0, z = 0;
     };
-    std::unordered_map<int64_t, Sum> corners;
+    std::unordered_map<int64_t, Sum, Hash64> corners;  // 3.0.5-beta.11: Hash64 - x in the high half (32-bit)
     const auto keyOf = [](int ix, int iz) { return int64_t(ix) << 32 | int64_t(uint32_t(iz)); };
     int x0 = 1 << 30, x1 = -(1 << 30), z0 = 1 << 30, z1 = -(1 << 30);
     double mx = 0, mz = 0;
