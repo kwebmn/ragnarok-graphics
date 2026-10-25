@@ -1,3 +1,16 @@
+# uaRO Graphics 3.0.5-beta.20 - what's new
+
+- **No grass work where no blade can come from.** The grass pass went over every pixel of the screen - a town's paving,
+  a road, the sand, with no roots there. Now the picture is cut into 8x8 squares: two small passes mark which squares
+  can reach a marked root (down by a blade's length, aside by the sway at its most), and the grass leaves the other
+  squares' pixels at once. The same blades. Towns and roads gain the most; on a thick meadow hardly anything changes.
+- **No needless copy of the picture at night.** The night pass copied the whole picture for the torches' light every
+  time - even with no light in view. Now the light's pass makes the copy itself, only when it has something to light.
+  The same look.
+- Both under Direct3D 11 and Direct3D 12.
+- To check on the laptop: the «Graphics test» under Direct3D 11 in Prontera (a town - that is where the grass shows)
+  and, if handy, once more by the entrance of prt_fild08; by eye - the grass on a field and the flowers as before.
+
 # uaRO Graphics 3.0.5-beta.19 - what's new
 
 - **Weather as small quads.** Pollen, snow, rain, leaves and dust were drawn by a pass over the whole screen: each of
