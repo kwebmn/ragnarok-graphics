@@ -1,3 +1,68 @@
+# uaRO Graphics 3.0.4 — what is new
+
+The heart of this release is the own ground: uaRO Graphics draws the map's ground itself, and far off the houses,
+trees and water too. Also the time left on the buff icons, notifications while the game is behind, a free camera in
+buildings, a choice of the sound output device and grass on weak graphics cards.
+
+- **Own ground.** uaRO Graphics draws the map's ground from the map's file in place of the game: «Effects» → «Ground
+  and walls» → «Own ground». It is a part of «Remaster»: on under «Effects quality» «High» and under «Auto» with a
+  strong card; under «Custom» - as you set it. Direct3D 12 only.
+  - Smooth hills: the cells split into finer ones, the heights on a smooth curve; ledges and walls as in the game.
+  - The ground's textures in full colour (24 bits in place of 16), no shimmer far off. With «Grass and road seams
+    without steps» the edges of grass, road and sand wind instead of following the cells' squares.
+  - Past the edge where the game cuts the world (1500 units from the camera): the ground, «Houses and trees far off»,
+    the water and the lava with the game's waves; with «Modern water» the water far off is as near.
+  - «Hills without steps of light» lights the slopes all over the own ground, near and far; «Map light without steps»
+    works on it too.
+  - The colour and the fog come from the game's own picture, so the light is the game's. While the camera stands
+    still, the ready picture of the ground is drawn again.
+  - In the 32-bit game, with too little memory left, the driver lets go of the houses far off first, then of the
+    smooth ground.
+  - Known: in Alberta with the camera out all the way, a band across the ship may still show.
+- **The camera** («Game and chat» → «Camera»).
+  - «Free camera in buildings» (on): in inns, shops, guilds and castles the camera turns, tilts and zooms out as
+    outdoors.
+  - «Camera no further out than the character shows» (on): the camera stops at 1400, since past 1500 the game draws
+    no character, monsters or effects. Unticked, the game's own limit is back.
+  - Photo mode - Ctrl+Alt+F12: the game's interface, the cursor, the windows' panel and the frame counter go, the
+    world stays for a shot (Ctrl+Shift+F12). The same keys bring everything back.
+- **Time left on the buff icons.** Each icon at the screen's right edge shows how long the buff lasts: «45», «4:32»,
+  «29m» - white with a dark rim at the icon's foot. The durations come from the server's own data, the level from the
+  cast itself, another player's too; a recast starts the count again. «Game and chat» → «Buffs» → «Time left on the
+  buff icons».
+- **Notifications while the game is behind.** The game behind other windows or minimised, and someone whispers,
+  invites you to a party or a guild, offers a trade, asks to be your friend, or the character dies: the game's
+  taskbar button flashes and Windows shows who and what. A click on the notification brings the game back. Players
+  you ignore send none. «Game and chat» → «Notifications»: a box for each kind.
+- **Several game windows.** Another window's card on the windows' panel turns red when its character has died and
+  orange while it is hit; a blue dot - it got a whisper. «Game windows started by «Play»» (1–8): «Play» starts the
+  game that many times, one every second and a half; no logins or passwords are kept.
+- **The sound output device.** «Sound» → «Sound through uaRO Graphics» → «Sound output device» (in the Simple mode
+  «Main» → «Other»): «As in Windows» or any connected one - headphones, speakers, the monitor. It acts at once, in a
+  running game too. The chosen device turned off - the sound goes as in Windows, and back to it when it is there again.
+- **Sounds of the world** (off by default). Almost 26 thousand sounds the game's makers placed on 563 maps: birds,
+  brooks, waves, the wind, drops in caves. The old client loaded them and never played them. Now they sound by their
+  places, louder nearer. «Sound» → «Sound through uaRO Graphics» → «Sounds of the world».
+- **Grass on weak graphics cards.**
+  - A card weak by its memory (under 4 GB of its own, or Direct3D 11 only) is now judged by its speed. When for a
+    minute on a map it draws the weak set in half a frame at most, «Auto» gives it the medium set with the grass on
+    trial - a line on the screen tells. Three minutes without it holding the game back - the set stays; else the weak
+    set is back, and the trial is not made again.
+  - On such cards the grass is lighter: half the work, a little sparser.
+  - «Keep the frame rate» thins the grass first, then turns the other effects off by their cost, the grass last, and
+    says on the screen what it turned off. An effect you turned on yourself during the game it leaves alone.
+- **Trees no longer change as the camera turns.** A tree's shade from «Trees of different shades» and the autumn
+  patches from «Autumn and winter crowns» stay on the tree itself, from any side.
+- **Paving without a straight line of colour.** «Materials: stone, brick, bark» lays its patches without broken edges
+  (Alberta's pier had a straight edge of yellowish against bluish), and white and grey paving gets no bluish or
+  yellowish patches.
+- **The game's crash on the way to moscovia fixed.** The game's client drew the character's shadow during a map's
+  load before it had a game mode and crashed; now such a frame draws no shadow.
+- **The «Graphics card» row always shows** («Graphics» → «What draws the game»), grey with a single card.
+- **Linux and the Steam Deck (to be tried).** The driver tells Wine, Proton and the Steam Deck. Under Wine the
+  64-bit renderer (HD textures, DLSS) does not start, the game draws with its own renderer; to try it:
+  `[renderer] bridge_wine = 1`. The guide - docs/guides/steam-deck.uk.md.
+
 # uaRO Graphics 3.0.4-beta.36 — what is new
 
 - **A buff's timer starts anew when it is cast again (R-C8NYXS).** Renewing a buff, the server sends its icon first
