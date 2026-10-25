@@ -1,3 +1,17 @@
+# uaRO Graphics 3.0.5-beta.1 — what is new
+
+- **From a beta back to the release.** The channel «Release» chosen and a beta installed - the settings app now offers
+  to go back to the release, even when it is older than the beta. On «Play» and «Service» - the button «Back to the
+  release 3.0.4» (on «Play» also the big «Back to the release and play»), in the status line «back to the release 3.0.4
+  possible». The game asks before the login the same way: «The channel is «Release»: back to the release 3.0.4?» - «Go
+  back» or «Stay on the beta». The settings stay, and the beta is kept as the previous version: «Back to the previous
+  version» brings it back.
+- Before, «Release» offered only a newer version, and the beta stayed until the next release. Nothing changed on the
+  channel «Beta (testing)».
+- To check: «Play» → the channel «Beta (testing)», update to 3.0.5-beta.1; then the channel «Release» - «Back to the
+  release 3.0.4» shows. Close the settings app and start the game - the question before the login. Go back - 3.0.4 is
+  installed, and «Service» → «Back to the previous version (3.0.5-beta.1)» brings the beta back.
+
 # uaRO Graphics 3.0.4 — what is new
 
 The heart of this release is the own ground: uaRO Graphics draws the map's ground itself, and far off the houses,
