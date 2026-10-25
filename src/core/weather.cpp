@@ -1,5 +1,7 @@
 #include "core/weather.hpp"
 
+#include <cmath>
+
 #include "core/outdoors.hpp"
 
 namespace uagfx::weather {
@@ -27,5 +29,18 @@ Kind chosen(int choice, const std::string& map) {
 }
 
 bool hidesGameEffect(Kind sky, bool shown, int effectId) { return shown && sky == Kind::Snow && effectId == 162; }
+
+QuadCells quadCells(int kind, float width, float height) {
+    QuadCells q;
+    if (!(width > 0.0f && height > 0.0f)) return q;
+    const float side = kind == 1 ? 36.0f : kind == 2 ? 22.0f : kind == 3 ? 110.0f : kind == 4 ? 60.0f : 80.0f;
+    for (int layer = 0; layer < 3; ++layer) {
+        const float cell = side * (0.6f + 0.5f * float(layer));
+        const uint32_t across = uint32_t(std::ceil(width / cell)) + 2, down = uint32_t(std::ceil(height / cell)) + 2;
+        q.across[layer] = across;
+        q.count[layer] = across * down;
+    }
+    return q;
+}
 
 }  // namespace uagfx::weather

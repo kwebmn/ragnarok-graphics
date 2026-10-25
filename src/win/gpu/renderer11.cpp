@@ -220,6 +220,8 @@ Renderer11::~Renderer11() {
     drop(seamVertices_);
     drop(seamIndices_);
     drop(seamVs_);  // 3.0.5-beta.13
+    drop(weatherVs_);  // 3.0.5-beta.19
+    drop(weatherQuadPs_);
     drop(seamLayout_);
     for (SeamSlots11& s : seamSlots_) {
         drop(s.vertexSrv);
@@ -437,7 +439,7 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
         bool optional = false;  // 0.99: an effect's - without it the effect is not drawn, the game is
         bool safe = false;      // 2.2.2: made without the newest features (UAGFX_SAFE)
         bool lean = false;      // 2.5: with UAGFX_LEAN (draw_lean_ps: the world's extras left out)
-    } wants[58] = {{"draw_vs", vs, shaderSource(), {}},    {"draw_ps", ps, shaderSource(), {}},
+    } wants[60] = {{"draw_vs", vs, shaderSource(), {}},    {"draw_ps", ps, shaderSource(), {}},
                    {"present_vs", vs, shaderSource(), {}}, {"present_ps", ps, shaderSource(), {}},
                    {"clear_vs", vs, kClearSource, {}},     {"clear_ps", ps, kClearSource, {}},
                    {"grade_ps", ps, shaderSource(), {}},  // 0.59: the colours (Effects page)
@@ -486,7 +488,9 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
                    {"portal_draw_glow_ps", ps, shaderSource(), {}, true},
                    {"world_grade_ps", ps, shaderSource(), {}, true},  // 3.0.5-beta.4: made larger and coloured
                    {"grass_mask_ps", ps, shaderSource(), {}, true},  // 3.0.5-beta.12: where roots can stand
-                   {"seam_vs", vs, shaderSource(), {}, true}};       // 3.0.5-beta.13: the seams on the card
+                   {"seam_vs", vs, shaderSource(), {}, true},        // 3.0.5-beta.13: the seams on the card
+                   {"weather_vs", vs, shaderSource(), {}, true},     // 3.0.5-beta.19: the weather's quads
+                   {"weather_quad_ps", ps, shaderSource(), {}, true}};
     const uint64_t key = shader_cache::keyOf(std::string(shaderSource()) + kClearSource + "direct3d 11");
     std::vector<shader_cache::Shader> kept;
     {
@@ -628,6 +632,8 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
     if (wants[55].code.empty() || !psOf(wants[55], worldGradePs_)) worldGradePs_ = nullptr;  // 3.0.5-beta.4
     if (wants[56].code.empty() || !psOf(wants[56], grassMaskPs_)) grassMaskPs_ = nullptr;  // 3.0.5-beta.12
     if (wants[57].code.empty() || !vsOf(wants[57], seamVs_)) seamVs_ = nullptr;  // 3.0.5-beta.13
+    if (wants[58].code.empty() || !vsOf(wants[58], weatherVs_)) weatherVs_ = nullptr;  // 3.0.5-beta.19
+    if (wants[59].code.empty() || !psOf(wants[59], weatherQuadPs_)) weatherQuadPs_ = nullptr;
     if (!wants[1].safe && !wants[22].safe) {  // 2.5.16: none where the player's compiler took the draw shader badly
         std::vector<shader_cache::Shader> all;
         for (const Want& w : wants) all.push_back({w.entry, shader_cache::profileOf(w.profile, w.safe), w.code});
@@ -3606,20 +3612,56 @@ void Renderer11::applyWeather() {
         c.sourceRect[0] = (m[9] * m[0] + m[10] * m[1] + m[11] * m[2]) * perUnit;
         c.sourceRect[1] = (m[9] * m[3] + m[10] * m[4] + m[11] * m[5]) * perUnit;
     }
+    // 3.0.5-beta.19: the particles as small quads, each layer's cells over the picture (weather_vs) - sand over the
+    // whole picture as before (its air)
+    const int kind = int(c.twin[0] + 0.5f);
+    const bool quads = kind != int(weather::Kind::Sand) && weatherVs_ && weatherQuadPs_;
+    const weather::QuadCells cells =
+        weather::quadCells(kind, float(target_.width) / c.scale, float(target_.height) / c.scale);
+    const uint32_t particles = cells.count[0] + cells.count[1] + cells.count[2];
     if (!weatherLogged_)
-        LOG_INFO("weather: %s over %s (Direct3D 11)",
+        LOG_INFO("weather: %s over %s%s (Direct3D 11)",
                  motes ? (outdoors_ ? "pollen" : "dust")
                        : weather_ == weather::Kind::Snow   ? "snow"
                          : weather_ == weather::Kind::Rain ? "rain"
                          : weather_ == weather::Kind::Leaves ? "leaves"
                                                            : "sand",
-                 map_.c_str());
+                 map_.c_str(), quads ? (", " + std::to_string(particles) + " cells' particles as quads").c_str() : "");
     weatherLogged_ = true;
     if (windShared()) {  // 2.5.5: blown along the screen by the shared wind
         c.sourceRect[2] = weatherDrift_.x;
         c.sourceRect[3] = windScreenX_ * windNow_.strength * 60.0f;
     }
-    worldPass(weatherPs_, c, false, 1);
+    if (quads) {
+        c.reproject[0] = float(cells.count[0]);
+        c.reproject[1] = float(cells.count[0] + cells.count[1]);
+        for (int layer = 0; layer < 3; ++layer) c.reproject[2 + layer] = float(cells.across[layer]);
+        targetBound_ = false;  // the next draw binds the target, the viewport and the game's shaders again
+        ID3D11ShaderResourceView* none[4] = {nullptr, nullptr, nullptr, nullptr};
+        ctx_->PSSetShaderResources(0, 4, none);
+        ctx_->OMSetRenderTargets(1, &target_.rtv, nullptr);
+        const D3D11_VIEWPORT vp{0.0f, 0.0f, float(target_.width), float(target_.height), 0.0f, 1.0f};
+        ctx_->RSSetViewports(1, &vp);
+        const D3D11_RECT all{0, 0, target_.width, target_.height};
+        ctx_->RSSetScissorRects(1, &all);
+        setConstants(c);
+        ctx_->OMSetBlendState(blendState(true, d3d7::BLEND_SRCALPHA, d3d7::BLEND_INVSRCALPHA,
+                                         D3D11_COLOR_WRITE_ENABLE_RED | D3D11_COLOR_WRITE_ENABLE_GREEN |
+                                             D3D11_COLOR_WRITE_ENABLE_BLUE),
+                              nullptr, 0xFFFFFFFF);
+        ctx_->OMSetDepthStencilState(depthState(false, false, d3d7::CMP_ALWAYS), 0);
+        ctx_->RSSetState(rasterState(d3d7::CULL_NONE));
+        ctx_->IASetInputLayout(nullptr);
+        ctx_->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+        ctx_->VSSetShader(weatherVs_, nullptr, 0);
+        ctx_->PSSetShader(weatherQuadPs_, nullptr, 0);
+        ctx_->VSSetConstantBuffers(0, 1, &constants_);
+        ctx_->PSSetConstantBuffers(0, 1, &constants_);
+        passSamplers();
+        ctx_->Draw(6 * particles, 0);
+    } else {
+        worldPass(weatherPs_, c, false, 1);
+    }
     // 2.5.3 (weather.cpp 0.64): the rain's splashes on the ground, where it is known (the camera read)
     if (motes || weather_ != weather::Kind::Rain || !effects_.rainSplashes || !cameraValid_ || !splashPs_ ||
         !depthViews())

@@ -21,4 +21,14 @@ Kind chosen(int choice, const std::string& map);
 // map's snow sets going) where ours falls (`sky` the weather drawn, `shown` «Опади» on): two snows fell over Lutie
 bool hidesGameEffect(Kind sky, bool shown, int effectId);
 
+// 3.0.5-beta.19 (the user: «делай» - the pollen 2.37 ms of a Radeon 610M's frame for a full-screen pass): weather_vs's
+// cells, a quad each over its particle - each layer's cells across and all of them over a picture of width x height
+// game pixels: the kind's (shaders.cpp weatherLayer: 1 snow ... 5 pollen, 6 dust) cell side times the layer's depth,
+// two more each way for the layer's shift; none for a picture of no size
+struct QuadCells {
+    uint32_t across[3] = {0, 0, 0};
+    uint32_t count[3] = {0, 0, 0};
+};
+QuadCells quadCells(int kind, float width, float height);
+
 }  // namespace uagfx::weather

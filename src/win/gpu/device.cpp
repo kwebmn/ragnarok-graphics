@@ -1768,6 +1768,9 @@ void Renderer::Impl::destroy() {
     releaseCom(bloomApplyPs);
     releaseCom(floorReflectPs);
     for (ID3D12PipelineState*& p : weatherPipelines) releaseCom(p);  // 0.39
+    for (ID3D12PipelineState*& p : weatherQuadPipelines) releaseCom(p);  // 3.0.5-beta.19
+    releaseCom(weatherVs);
+    releaseCom(weatherQuadPs);
     for (ID3D12PipelineState*& p : splashPipelines) releaseCom(p);  // 0.64
     for (ID3D12PipelineState*& p : waterfallPipelines) releaseCom(p);  // 0.65
     releaseCom(waterfallPs);

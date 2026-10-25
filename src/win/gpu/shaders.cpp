@@ -2649,104 +2649,159 @@ float4 heat_ps(PresentOut i) : SV_Target {
 // game pixels) the more the nearer. twinX the kind (1 snow, 2 rain, 3 leaves, 4 sand; 0.70: 5 pollen, 6 dust - motes
 // drifting in the air), footprint how much (1 = 100 %),
 // sharpen the time, scale k. Blended over the picture by its alpha.
+// 3.0.5-beta.19 (the user: «делай» - R-CRSXXA: the pollen still 2.37 ms of a Radeon 610M's 22 on «Середні» with its
+// far particles left out: the full-screen pass's own work for each of two million pixels - its three layers' cells,
+// the kind's numbers, the presence's hash): the particles as small quads (weather_vs - six vertices a cell, the
+// layers far to near - each its particle's reach within its own cell), shaded by weather_quad_ps as weather_ps does
+// (one function): the pixels near a particle alone. Sand keeps weather_ps: its air lies over the whole picture.
+
+// A layer of the kind: how near it is (depth), its cells' side, its fall, how far the wind blows it, how many of its
+// cells hold a particle
+struct WeatherLayer {
+    float depth;
+    float cell;
+    float2 fall;
+    float blown;
+    float presence;
+};
+
+WeatherLayer weatherLayer(int kind, int layer, float t) {
+    WeatherLayer w;
+    w.depth = 0.6 + 0.5 * float(layer);
+    w.cell = (kind == 1 ? 36.0 : kind == 2 ? 22.0 : kind == 3 ? 110.0 : kind == 4 ? 60.0 : 80.0) * w.depth;
+    w.fall = kind == 1 ? float2(8.0 * sin(t * 0.21), 34.0)
+             : kind == 2 ? float2(-55.0, 520.0)
+             : kind == 3 ? float2(18.0, 26.0)
+             : kind == 4 ? float2(-300.0, 14.0)
+                         : float2(5.0, kind == 5 ? -3.0 : 2.0);
+    // 1.22: the shared wind blows it along the screen (sourceRect.z how far so far, .w how fast now)
+    w.blown = kind == 1 ? 1.0 : kind == 2 ? 0.6 : kind == 3 ? 1.6 : kind == 4 ? 2.5 : 0.4;
+    // 2.7.35: a few more leaves (the tester in Comodo: «Листопад плохо заметно»)
+    w.presence = kind == 3 ? 0.24 : kind == 4 ? 0.35 : kind >= 5 ? 0.3 : 0.55;
+    return w;
+}
+
+// a picture's place (game pixels) plus this: its place in the layer's cells
+float2 weatherShift(WeatherLayer w, float t) {
+    return sourceRect.xy * w.depth - w.fall * w.depth * t - float2(sourceRect.z * w.blown, 0.0) * w.depth;
+}
+
+// 3.0.5-beta.18 (R-H3QJBG): how far from its middle a particle reaches - its shape and its own motion at their most;
+// past it a pixel gets under 1e-4 of it (a leaf's: none). x and y apart (weather_vs's quad), the kind's own test in
+// weatherShare. fall: the layer's with the wind (rain's way).
+float2 weatherReach(int kind, float depth, float2 fall) {
+    if (kind == 1) return (3.01 * (0.9 + 0.8 * depth) + 4.0 * depth).xx;  // the flake and its sway
+    if (kind == 2) {  // the streak, 10 depth along its way, its across under 1e-4 within sqrt(2.83 depth)
+        float2 way = abs(normalize(fall));
+        float along = 10.0 * depth, across = sqrt(2.83 * depth);
+        return float2(along * way.x + across * way.y, along * way.y + across * way.x);
+    }
+    if (kind == 3) return float2(max(7.0 * depth, 1.2), 4.4 * depth);  // the leaf at its widest
+    if (kind == 4) return float2(70.02 * depth, 2.43 * depth);         // the ellipse under 1e-4
+    return (3.0 * (0.45 + 0.35 * depth) + 8.49 * depth).xx;            // the mote and its wander
+}
+
+// The particle of the cell of the layer that the place q (the picture's place plus weatherShift) lies in: its share
+// of the pixel (alpha; 0 none) and its colour. lit, litColour: the dust's light (weather_ps)
+float weatherShare(int kind, int layer, WeatherLayer w, float2 q, float t, float lit, float3 litColour,
+                   out float3 colour) {
+    colour = float3(1.0, 1.0, 1.0);
+    float2 id = floor(q / w.cell);
+    float2 f = frac(q / w.cell);
+    if (hash12(id + float2(91.0, 17.0) * float(layer + 1)) > w.presence * footprint) return 0.0;
+    float2 h = float2(hash12(id + float(layer) * 17.0), hash12(id * 1.7 + float(layer) * 3.1));
+    float2 d = (f - (0.2 + 0.6 * h)) * w.cell;  // from the particle, game pixels
+    float2 fall = w.fall + float2(sourceRect.w * w.blown, 0.0);
+    float depth = w.depth;
+    // 3.0.5-beta.18: a pixel the particle does not reach (weatherReach) goes on before the sines and the exp
+    bool close;
+    if (kind == 1) {
+        float reach = 3.01 * (0.9 + 0.8 * depth) + 4.0 * depth;
+        close = dot(d, d) <= reach * reach;
+    } else if (kind == 2) {
+        float2 way = normalize(fall);
+        float along = dot(d, way), across = dot(d, float2(-way.y, way.x));
+        close = abs(along) < 10.0 * depth && across * across <= 2.83 * depth;
+    } else if (kind == 3) {
+        close = abs(d.x) < max(7.0 * depth, 1.2) && abs(d.y) < 4.4 * depth;
+    } else if (kind == 4) {
+        float2 e = d / float2(26.0 * depth, 0.9 * depth);
+        close = dot(e, e) <= 7.25;
+    } else {
+        float reach = 3.0 * (0.45 + 0.35 * depth) + 8.49 * depth;
+        close = dot(d, d) <= reach * reach;
+    }
+    float share = 0.0;
+    [branch] if (close) {
+        float shape = 0.0;
+        float alpha = 0.0;
+        if (kind == 1) {  // snow: a soft flake, swaying
+            d.x += sin(t * 1.3 + h.x * 6.28) * 4.0 * depth;
+            float r = 0.9 + 0.8 * depth;
+            shape = exp(-dot(d, d) / (r * r));
+            alpha = 0.85;
+        } else if (kind == 2) {  // rain: a thin streak along its fall
+            float2 dir = normalize(fall);
+            float along = dot(d, dir), across = dot(d, float2(-dir.y, dir.x));
+            shape = exp(-across * across / (0.35 * depth)) * saturate(1.0 - abs(along) / (10.0 * depth));
+            colour = float3(0.78, 0.83, 0.92);
+            alpha = 0.32;
+        } else if (kind == 3) {  // a leaf: tumbling as it falls, its width turning
+            // 2.7.35: twice as big - 7 by 4 game pixels in the middle layer read as orange specks at 1080p
+            float turn = abs(sin(t * 2.1 + h.y * 6.28));
+            float2 e = d / float2(max(7.0 * depth * turn, 1.2), 4.4 * depth);
+            shape = saturate(1.0 - dot(e, e)) * 1.5;
+            colour = h.x < 0.4    ? float3(0.86, 0.45, 0.13)
+                     : h.x < 0.75 ? float3(0.58, 0.36, 0.16)
+                                  : float3(0.62, 0.66, 0.2);
+            alpha = 0.92;
+        } else if (kind == 4) {  // sand: a streak blown across
+            float2 e = d / float2(26.0 * depth, 0.9 * depth);
+            shape = exp(-dot(e, e));
+            colour = float3(0.86, 0.76, 0.56);
+            alpha = 0.14;
+        } else {  // a mote: wandering slowly, now catching the light, now not
+            d += float2(sin(t * 0.37 + h.x * 6.28), cos(t * 0.29 + h.y * 6.28)) * 6.0 * depth;
+            float r = 0.45 + 0.35 * depth;
+            shape = exp(-dot(d, d) / (r * r)) * (0.55 + 0.45 * sin(t * (0.8 + h.y) + h.x * 20.0));
+            colour = kind == 5 ? float3(1.0, 0.95, 0.75) : litColour;
+            alpha = kind == 5 ? 0.55 : min(0.35 * lit, 0.8);
+        }
+        share = saturate(shape) * alpha;
+    }
+    return share;
+}
+
+// 1.23, dust in the light (twinY): indoors the motes show where light falls on what is behind them (the picture's
+// copy, t0) - in the beams, by the torches - and hardly in the dark; tinted by that light. 2.6.20: lit, a mote is
+// lighter than what is behind it, and a third of it stays in the dark (by a torch's yellow wall the motes took the
+// wall's own colour and the dark put them out - on, the dust was gone)
+void weatherLight(int kind, float2 at, out float lit, out float3 litColour) {
+    lit = 1.0;
+    litColour = float3(0.85, 0.80, 0.70);
+    if (twinY > 0.0 && kind == 6) {
+        float3 under = tex0.Load(int3(int2(at), 0)).rgb;
+        float l = dot(under, float3(0.299, 0.587, 0.114));
+        lit = lerp(1.0, 0.3 + 2.1 * smoothstep(0.12, 0.55, l), twinY);
+        litColour = lerp(litColour, saturate(under * 1.6 + 0.35), 0.6 * twinY);
+    }
+}
+
 float4 weather_ps(PresentOut i) : SV_Target {
     float2 p = i.pos.xy / scale;  // game pixels
     float t = sharpen;
     int kind = int(twinX + 0.5);
     float3 sum = float3(0.0, 0.0, 0.0);
     float a = 0.0;
-    // 1.23, dust in the light (twinY): indoors the motes show where light falls on what is behind them (the
-    // picture's copy, t0) - in the beams, by the torches - and hardly in the dark; tinted by that light. 2.6.20: lit,
-    // a mote is lighter than what is behind it, and a third of it stays in the dark (by a torch's yellow wall the
-    // motes took the wall's own colour and the dark put them out - on, the dust was gone)
-    float lit = 1.0;
-    float3 litColour = float3(0.85, 0.80, 0.70);
-    if (twinY > 0.0 && kind == 6) {
-        float3 under = tex0.Load(int3(int2(i.pos.xy), 0)).rgb;
-        float l = dot(under, float3(0.299, 0.587, 0.114));
-        lit = lerp(1.0, 0.3 + 2.1 * smoothstep(0.12, 0.55, l), twinY);
-        litColour = lerp(litColour, saturate(under * 1.6 + 0.35), 0.6 * twinY);
-    }
+    float lit;
+    float3 litColour;
+    weatherLight(kind, i.pos.xy, lit, litColour);
     [unroll] for (int layer = 0; layer < 3; ++layer) {
-        float depth = 0.6 + 0.5 * float(layer);
-        float cell = (kind == 1 ? 36.0 : kind == 2 ? 22.0 : kind == 3 ? 110.0 : kind == 4 ? 60.0 : 80.0) * depth;
-        float2 fall = kind == 1 ? float2(8.0 * sin(t * 0.21), 34.0)
-                      : kind == 2 ? float2(-55.0, 520.0)
-                      : kind == 3 ? float2(18.0, 26.0)
-                      : kind == 4 ? float2(-300.0, 14.0)
-                                  : float2(5.0, kind == 5 ? -3.0 : 2.0);
-        // 1.22: the shared wind blows it along the screen (sourceRect.z how far so far, .w how fast now)
-        float blown = kind == 1 ? 1.0 : kind == 2 ? 0.6 : kind == 3 ? 1.6 : kind == 4 ? 2.5 : 0.4;
-        float2 q = p + sourceRect.xy * depth - fall * depth * t - float2(sourceRect.z * blown, 0.0) * depth;
-        fall.x += sourceRect.w * blown;
-        float2 id = floor(q / cell);
-        float2 f = frac(q / cell);
-        // 2.7.35: a few more leaves (the tester in Comodo: «Листопад плохо заметно»)
-        float presence = kind == 3 ? 0.24 : kind == 4 ? 0.35 : kind >= 5 ? 0.3 : 0.55;
-        if (hash12(id + float2(91.0, 17.0) * float(layer + 1)) > presence * footprint) continue;
-        float2 h = float2(hash12(id + float(layer) * 17.0), hash12(id * 1.7 + float(layer) * 3.1));
-        float2 d = (f - (0.2 + 0.6 * h)) * cell;  // from the particle, game pixels
-        // 3.0.5-beta.18 (R-H3QJBG: the pollen 2.55 ms of a Radeon 610M's 22 on «Середні» - every pixel of the screen
-        // worked out each layer's particle whole, its sines and its exp): a pixel farther from its cell's particle than
-        // the particle reaches - its shape and its own motion at their most - gets under 1e-4 of it (a leaf, none)
-        // and goes on to the next layer (a particle covers a few pixels of its cell's thousands)
-        bool close;
-        if (kind == 1) {
-            float reach = 3.01 * (0.9 + 0.8 * depth) + 4.0 * depth;  // the flake's sway at its most
-            close = dot(d, d) <= reach * reach;
-        } else if (kind == 2) {
-            float2 way = normalize(fall);
-            float along = dot(d, way), across = dot(d, float2(-way.y, way.x));
-            close = abs(along) < 10.0 * depth && across * across <= 2.83 * depth;
-        } else if (kind == 3) {
-            close = abs(d.x) < max(7.0 * depth, 1.2) && abs(d.y) < 4.4 * depth;  // the leaf at its widest
-        } else if (kind == 4) {
-            float2 e = d / float2(26.0 * depth, 0.9 * depth);
-            close = dot(e, e) <= 7.25;
-        } else {
-            float reach = 3.0 * (0.45 + 0.35 * depth) + 8.49 * depth;  // the mote's wander at its most
-            close = dot(d, d) <= reach * reach;
-        }
-        [branch] if (close) {
-            float shape = 0.0;
-            float3 colour = float3(1.0, 1.0, 1.0);
-            float alpha = 0.0;
-            if (kind == 1) {  // snow: a soft flake, swaying
-                d.x += sin(t * 1.3 + h.x * 6.28) * 4.0 * depth;
-                float r = 0.9 + 0.8 * depth;
-                shape = exp(-dot(d, d) / (r * r));
-                alpha = 0.85;
-            } else if (kind == 2) {  // rain: a thin streak along its fall
-                float2 dir = normalize(fall);
-                float along = dot(d, dir), across = dot(d, float2(-dir.y, dir.x));
-                shape = exp(-across * across / (0.35 * depth)) * saturate(1.0 - abs(along) / (10.0 * depth));
-                colour = float3(0.78, 0.83, 0.92);
-                alpha = 0.32;
-            } else if (kind == 3) {  // a leaf: tumbling as it falls, its width turning
-                // 2.7.35: twice as big - 7 by 4 game pixels in the middle layer read as orange specks at 1080p
-                float turn = abs(sin(t * 2.1 + h.y * 6.28));
-                float2 e = d / float2(max(7.0 * depth * turn, 1.2), 4.4 * depth);
-                shape = saturate(1.0 - dot(e, e)) * 1.5;
-                colour = h.x < 0.4    ? float3(0.86, 0.45, 0.13)
-                         : h.x < 0.75 ? float3(0.58, 0.36, 0.16)
-                                      : float3(0.62, 0.66, 0.2);
-                alpha = 0.92;
-            } else if (kind == 4) {  // sand: a streak blown across
-                float2 e = d / float2(26.0 * depth, 0.9 * depth);
-                shape = exp(-dot(e, e));
-                colour = float3(0.86, 0.76, 0.56);
-                alpha = 0.14;
-            } else {  // a mote: wandering slowly, now catching the light, now not
-                d += float2(sin(t * 0.37 + h.x * 6.28), cos(t * 0.29 + h.y * 6.28)) * 6.0 * depth;
-                float r = 0.45 + 0.35 * depth;
-                shape = exp(-dot(d, d) / (r * r)) * (0.55 + 0.45 * sin(t * (0.8 + h.y) + h.x * 20.0));
-                colour = kind == 5 ? float3(1.0, 0.95, 0.75) : litColour;
-                alpha = kind == 5 ? 0.55 : min(0.35 * lit, 0.8);
-            }
-            float s = saturate(shape) * alpha;
-            sum += colour * s;
-            a += s;
-        }
+        WeatherLayer w = weatherLayer(kind, layer, t);
+        float3 colour;
+        float s = weatherShare(kind, layer, w, p + weatherShift(w, t), t, lit, litColour, colour);
+        sum += colour * s;
+        a += s;
     }
     if (kind == 4) {  // and the air itself a little sandy
         sum += float3(0.86, 0.76, 0.56) * 0.05 * footprint;
@@ -2754,6 +2809,59 @@ float4 weather_ps(PresentOut i) : SV_Target {
     }
     if (a < 0.003) discard;
     return float4(sum / a, saturate(a));
+}
+
+// 3.0.5-beta.19: a cell of a layer each six vertices - the layers one after another, far to near (r0, r1: the first
+// cells of layers 1 and 2; r2-r4: each layer's cells across, from its cell under the picture's corner); a quad over its
+// particle's reach within its own cell, none for an empty cell
+struct WeatherQuad {
+    float4 pos : SV_Position;
+    nointerpolation float4 cell : TEXCOORD0;  // the cell (xy) and its layer (z)
+};
+
+WeatherQuad weather_vs(uint id : SV_VertexID) {
+    WeatherQuad o;
+    o.pos = float4(2.0, 2.0, 0.5, 1.0);  // past the target's right: nothing drawn
+    o.cell = float4(0.0, 0.0, 0.0, 0.0);
+    uint n = id / 6, v = id % 6;
+    uint layer = n < uint(r0) ? 0 : n < uint(r1) ? 1 : 2;
+    uint local = n - (layer == 0 ? 0 : layer == 1 ? uint(r0) : uint(r1));
+    uint across = uint(layer == 0 ? r2 : layer == 1 ? r3 : r4);
+    int kind = int(twinX + 0.5);
+    float t = sharpen;
+    WeatherLayer w = weatherLayer(kind, int(layer), t);
+    float2 shift = weatherShift(w, t);
+    float2 cell = floor(shift / w.cell) + float2(float(local % across), float(local / across));
+    if (hash12(cell + float2(91.0, 17.0) * float(layer + 1)) > w.presence * footprint) return o;  // an empty cell
+    float2 h = float2(hash12(cell + float(layer) * 17.0), hash12(cell * 1.7 + float(layer) * 3.1));
+    float2 middle = (cell + 0.2 + 0.6 * h) * w.cell - shift;  // the picture's game pixels
+    float2 reach = weatherReach(kind, w.depth, w.fall + float2(sourceRect.w * w.blown, 0.0));
+    float2 lo = max(middle - reach, cell * w.cell - shift), hi = min(middle + reach, (cell + 1.0) * w.cell - shift);
+    if (lo.x >= hi.x || lo.y >= hi.y) return o;
+    float2 corner = float2(v == 1 || v == 4 || v == 5 ? hi.x : lo.x, v == 2 || v == 3 || v == 5 ? hi.y : lo.y);
+    float2 px = corner * scale;  // target pixels
+    o.pos = float4(px.x * 2.0 / uiPixels.x - 1.0, 1.0 - px.y * 2.0 / uiPixels.y, 0.0, 1.0);
+    o.cell = float4(cell, float(layer), 0.0);
+    return o;
+}
+
+// 3.0.5-beta.19: a pixel of a particle's quad - weather_ps's share of its layer, for a pixel of its own cell only
+// (the cell beside it gives its pixels its own particle); blended over by its alpha
+float4 weather_quad_ps(WeatherQuad i) : SV_Target {
+    float2 p = i.pos.xy / scale;  // game pixels
+    float t = sharpen;
+    int kind = int(twinX + 0.5);
+    int layer = int(i.cell.z + 0.5);
+    WeatherLayer w = weatherLayer(kind, layer, t);
+    float2 q = p + weatherShift(w, t);
+    if (any(floor(q / w.cell) != i.cell.xy)) discard;
+    float lit;
+    float3 litColour;
+    weatherLight(kind, i.pos.xy, lit, litColour);
+    float3 colour;
+    float s = weatherShare(kind, layer, w, q, t, lit, litColour, colour);
+    if (s < 0.003) discard;
+    return float4(colour, s);
 }
 
 // 0.64, the rain's splashes: rings spreading where drops land, fixed on the ground - each pixel's place in the world

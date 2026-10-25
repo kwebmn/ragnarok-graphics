@@ -664,6 +664,9 @@ private:
     // 2.5: the mists and the weather (applyMist, applyWeather)
     ID3D11PixelShader* mistPs_ = nullptr;
     ID3D11PixelShader* weatherPs_ = nullptr;
+    // 3.0.5-beta.19: the particles as small quads (weather_vs, weather_quad_ps) - not sand's
+    ID3D11VertexShader* weatherVs_ = nullptr;
+    ID3D11PixelShader* weatherQuadPs_ = nullptr;
     bool mistDone_ = false, weatherDone_ = false;
     bool mistLogged_ = false, weatherLogged_ = false;
     bool outdoors_ = false;

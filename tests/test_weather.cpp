@@ -52,3 +52,21 @@ TEST(weather_ours_hides_the_games_snow) {
     CHECK(!weather::hidesGameEffect(Kind::Snow, true, 163));   // sakura - not snow
     CHECK(!weather::hidesGameEffect(Kind::Snow, true, 0));
 }
+
+// 3.0.5-beta.19 (the user: «делай» - the weather's particles as small quads): weather_vs's cells over the picture -
+// each layer's across and down by the kind's cell side times the layer's depth (shaders.cpp weatherLayer), two more
+// each way for the layer's shift
+TEST(weather_quads_cover_the_picture_by_each_layers_cells) {
+    const weather::QuadCells pollen = weather::quadCells(5, 1920.0f, 1080.0f);
+    CHECK_EQ(pollen.across[0], 42u);  // cells of 48 game pixels: 40 across and two more
+    CHECK_EQ(pollen.count[0], 42u * 25u);
+    CHECK_EQ(pollen.across[1], 24u);  // 88
+    CHECK_EQ(pollen.count[1], 24u * 15u);
+    CHECK_EQ(pollen.across[2], 17u);  // 128
+    CHECK_EQ(pollen.count[2], 17u * 11u);
+    const weather::QuadCells rain = weather::quadCells(2, 1920.0f, 1080.0f);
+    CHECK_EQ(rain.across[0], 148u);  // 13.2: the most of them
+    CHECK(rain.count[0] + rain.count[1] + rain.count[2] < 20000u);
+    const weather::QuadCells none = weather::quadCells(1, 0.0f, 0.0f);
+    CHECK_EQ(none.count[0] + none.count[1] + none.count[2], 0u);
+}

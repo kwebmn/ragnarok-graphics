@@ -35,11 +35,11 @@ ID3D12PipelineState* Renderer::Impl::mulPipeline(ID3DBlob*& ps, ID3D12PipelineSt
 }
 
 ID3D12PipelineState* Renderer::Impl::blendPipeline(ID3DBlob*& ps, ID3D12PipelineState* (&pipelines)[4], UINT n,
-                                                   const char* what, int mode) {
+                                                   const char* what, int mode, ID3DBlob* vs) {
     const UINT code = n >= 8 ? 3 : n >= 4 ? 2 : n >= 2 ? 1 : 0;
     if (pipelines[code] || !ps) return pipelines[code];
     D3D12_GRAPHICS_PIPELINE_STATE_DESC p =
-        fullScreenPipeline(root, presentVs, ps, DXGI_FORMAT_B8G8R8A8_UNORM, 1u << code);
+        fullScreenPipeline(root, vs ? vs : presentVs, ps, DXGI_FORMAT_B8G8R8A8_UNORM, 1u << code);
     D3D12_RENDER_TARGET_BLEND_DESC& b = p.BlendState.RenderTarget[0];
     b.BlendEnable = TRUE;
     b.SrcBlend = mode == 1 || mode == 3 ? D3D12_BLEND_ONE : mode == 2 ? D3D12_BLEND_ZERO : D3D12_BLEND_SRC_ALPHA;
@@ -99,12 +99,28 @@ bool Renderer::Impl::applyWeather() {
         if (!copySceneColor()) return false;
         c.twin[1] = 1.0f;
     }
+    // 3.0.5-beta.19: the particles as small quads, each layer's cells over the picture (weather_vs) - sand over the
+    // whole picture as before (its air)
+    const int kind = int(c.twin[0] + 0.5f);
+    ID3D12PipelineState* quads = kind == int(weather::Kind::Sand) || !weatherVs
+                                     ? nullptr
+                                     : blendPipeline(weatherQuadPs, weatherQuadPipelines, upscale ? 1 : samples,
+                                                     "weather's particles", 0, weatherVs);
+    const weather::QuadCells cells = weather::quadCells(kind, float(w) / c.scale, float(h) / c.scale);
+    const uint32_t particles = cells.count[0] + cells.count[1] + cells.count[2];
     if (!weatherLogged)
-        LOG_INFO("weather: %s over %s", motes ? (mapOutdoors ? "pollen" : "dust") : weatherName(mapWeather),
-                 mapName.c_str());
+        LOG_INFO("weather: %s over %s%s", motes ? (mapOutdoors ? "pollen" : "dust") : weatherName(mapWeather),
+                 mapName.c_str(),
+                 quads ? (", " + std::to_string(particles) + " cells' particles as quads").c_str() : "");
     weatherLogged = true;
-    if (!(worldPass(pso, w, h, c, sceneColorSrv, false)))
+    if (quads) {
+        c.reproject[0] = float(cells.count[0]);
+        c.reproject[1] = float(cells.count[0] + cells.count[1]);
+        for (int layer = 0; layer < 3; ++layer) c.reproject[2 + layer] = float(cells.across[layer]);
+        if (!worldPass(quads, w, h, c, sceneColorSrv, false, kNoSrv, nullptr, 6 * particles)) return false;
+    } else if (!(worldPass(pso, w, h, c, sceneColorSrv, false))) {
         return false;
+    }
     // 0.64: the rain's splashes on the ground, where it is known (the camera read)
     ID3D12PipelineState* splash = alphaPipeline(splashPs, splashPipelines, upscale ? 1 : samples, "rain's splashes");
     if (motes || mapWeather != weather::Kind::Rain || !effects.rainSplashes || !viewToWorldValid || !splash)

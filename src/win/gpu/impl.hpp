@@ -606,6 +606,10 @@ struct Renderer::Impl {
     // 0.39, the driver's own weather (weather.cpp) on the map's list (core/weather.hpp).
     ID3DBlob* weatherPs = nullptr;
     ID3D12PipelineState* weatherPipelines[4] = {};
+    // 3.0.5-beta.19: the particles as small quads (weather_vs, weather_quad_ps) - not sand's
+    ID3DBlob* weatherVs = nullptr;
+    ID3DBlob* weatherQuadPs = nullptr;
+    ID3D12PipelineState* weatherQuadPipelines[4] = {};
     ID3DBlob* splashPs = nullptr;  // 0.64: the rain's splashes
     ID3DBlob* waterfallPs = nullptr;  // 0.65: the maps' waterfalls (waterfalls.cpp)
     // 0.65: [display] hdr - the back buffer HDR10 (R10G10B10A2, PQ) where the window's monitor shows HDR
@@ -1011,9 +1015,10 @@ struct Renderer::Impl {
                                      const char* what);  // 0.73
     ID3D12PipelineState* mulPipeline(ID3DBlob*& ps, ID3D12PipelineState* (&pipelines)[4], UINT samples,
                                      const char* what);  // 0.77
-    // mode: 0 by alpha, 1 added, 2 multiplied, 3 premultiplied (0.86)
+    // mode: 0 by alpha, 1 added, 2 multiplied, 3 premultiplied (0.86); vs: present_vs's full-screen triangle unless
+    // given (3.0.5-beta.19: the weather's quads)
     ID3D12PipelineState* blendPipeline(ID3DBlob*& ps, ID3D12PipelineState* (&pipelines)[4], UINT samples,
-                                       const char* what, int mode);
+                                       const char* what, int mode, ID3DBlob* vs = nullptr);
     void notePortal(const FrameRecord& rec, const DrawCmd& d);
     bool applyHeat();  // once a frame, after the torches' pass and the mists; false: lost
     ID3D12PipelineState* heatPipeline(UINT samples);
