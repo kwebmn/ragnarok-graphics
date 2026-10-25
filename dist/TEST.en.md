@@ -1,3 +1,14 @@
+# uaRO Graphics 3.0.5-beta.19 - what's new
+
+- **Weather as small quads.** Pollen, snow, rain, leaves and dust were drawn by a pass over the whole screen: each of
+  two million pixels looked for its cell and particle in three layers - even where there are none. Now each particle
+  is a small quad over where it reaches, and only the pixels near particles work. The same look (the same function
+  works the particle out); only where two layers' particles overlap they blend one after the other rather than as a
+  sum - not to be seen. Sand stays a pass over the screen: it has a haze over the whole picture. Direct3D 11 and
+  Direct3D 12.
+- To check on the laptop: the «Graphics test» under Direct3D 11 from the same spot - «weather» on «Medium» was 2.37
+  ms; and by eye the pollen over a field, and snow, rain, falling leaves if they come, should look as before.
+
 # uaRO Graphics 3.0.5-beta.18 - what's new
 
 - **Lighter weather.** The pollen over a field cost 2.55 ms of a Radeon 610M's frame on «Medium»: every pixel of the
