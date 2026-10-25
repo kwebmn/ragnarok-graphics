@@ -1,3 +1,14 @@
+# uaRO Graphics 3.0.4-beta.36 — what is new
+
+- **A buff's timer starts anew when it is cast again (R-C8NYXS).** Renewing a buff, the server sends its icon first
+  and the cast after it (uAthena: `clif_skill_nodamage(..., sc_start(...))`). The driver waited for the cast before
+  the icon and took the icon sent again for a map change: the time went on. Now a cast just after its skill's icon
+  gives the icon its time anew from the icon's moment - and by the skill's level (the longest was taken before).
+- **The times on the icons themselves.** The game puts an icon with its middle at the layout's place; the times were
+  put as if it were its top left: 16 pixels down and right - on the next icon and under the screen's edge. Now the time
+  is on the foot of its icon, white in a dark rim, no black box.
+- To check: Blessing and Increase AGI - a time on each icon; cast one again a minute on - its time full again.
+
 # uaRO Graphics 3.0.4-beta.35 — what is new
 
 - **Grass on weak video cards.** Two things turned it off there: «Auto» took every card with under 4 GB of memory of
