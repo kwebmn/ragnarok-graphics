@@ -1,3 +1,18 @@
+# uaRO Graphics 3.0.5-beta.14 - what's new
+
+- **The «Graphics test» shows what exactly in «High» is dear for the video card.** After «High» the game goes the same
+  camera path twice more: «High without hills» and «High without materials» - the test now takes 105 seconds instead
+  of 75. Under the table comes a line «The card's cost within «High», ms» for four effects: «Grass and road seams
+  without steps», «Hills without steps of light», «Materials: stone, brick, bark», «World reflections in water». The
+  hills and the materials are drawn inside the ground and the houses themselves, so their cost shows only as the
+  difference with and without them; the seams and the reflections are measured on their own.
+- **A more exact measurement.** Under Direct3D 11 the seams' strips on the card and the world's reflections in water
+  are parts of their own now, not a part of «the game's world». Under Direct3D 12 DLSS's time is no longer counted into
+  the last effect before it: on the main computer «weather 3.10» on «High» and «colour 3.06» on «Low» were really DLSS
+  Quality (2.8 ms at 4K).
+- To check on the laptop: the «Graphics test» under Direct3D 11 - the line under the table shows which of the four
+  costs most.
+
 # uaRO Graphics 3.0.5-beta.13 - what's new
 
 - **«Grass and road seams without steps» on the video card (Direct3D 11).** The strips along the ground's cell edges were
