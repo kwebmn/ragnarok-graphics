@@ -1,3 +1,19 @@
+# uaRO Graphics 3.0.4-beta.23 — what is new
+
+- **No line on the water, no cut roofs near the far edge** (report R-W7A5XC, "the strip got smaller; also noticed the
+  roofs of the buildings disappear along the same line"). Both were first made again offline on Alberta with the
+  driver's own arithmetic, and both are gone with the fix.
+  - **The line on the water was the game's waves.** The game lifts and lowers its water at the cells' corners by up
+    to 0.6 units (its waves), while the water far off was flat. Where they met came short black gaps and overlaps,
+    cell by cell. Now the water far off has the same waves: the driver reads their phase every picture from the
+    game's first water cell, and the sine from the game's own table.
+  - **The cut roofs were the own ground's depth.** A triangle of the own ground across 1490 had the game's depth at
+    some corners and the squeezed one at others, and the graphics card carried it straight between them - nearer than
+    it really was. A quay's tall wall behind a house came out over its roof and over the water at its foot. Now such
+    triangles are cut at 1490, and each piece has one depth.
+- To check (with "Own ground (prototype)"): Alberta with the camera pulled out all the way, turned every way - no line on
+  the water, no holes in the roofs near the top edge.
+
 # uaRO Graphics 3.0.4-beta.22 — what is new
 
 - **No black strip on the water any more** (report R-ZZN7GY, "the black strip on the water is still there"). The
