@@ -1,3 +1,19 @@
+# uaRO Graphics 3.0.5-beta.13 - what's new
+
+- **«Grass and road seams without steps» on the video card (Direct3D 11).** The strips along the ground's cell edges were
+  still built, placed and turned by the camera on the processor every frame - on a Radeon 610M laptop that was most of
+  the game's work on «High». Now each piece of a strip is made once, in the world's places, and kept in the card's
+  memory; every frame the processor only says which pieces are in view and the fog at their cells' corners, and a
+  shader puts the camera on them. The look is the same.
+- **Found why the earlier store of strips (beta.9-beta.11) gave almost nothing.** It knew an edge by the numbers of the
+  cells' draws, and the game numbers them anew every frame the view moves. Now an edge is known by its cell's place.
+  The fix works under Direct3D 12 too, and where the card could not take the pieces (the processor makes the strips
+  then, as before).
+- In «Measure where the game spends its time» the strips are a part of their own now: «ground seams' strips».
+- To check on the laptop: the «Graphics test» under Direct3D 11 (on «High» the game's work was ~49 ms); and by eye - the
+  edges of grass and roads on a field (prt_fild08) should look as before, without flicker and without strips out of
+  place while the camera moves and turns.
+
 # uaRO Graphics 3.0.5-beta.12 - what's new
 
 - **Lighter grass.** Every pixel of the screen looked for a blade's root up to 16 pixels below it and for each candidate
