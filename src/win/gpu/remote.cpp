@@ -60,6 +60,7 @@ bool Remote::start(const BridgeOptions& o, std::string& error) {
                       " --dlss-jitter " + (o.dlssJitterInverted ? "inverted" : "normal") + " --dlss-motion " +
                       (o.dlssMotionInverted ? "inverted" : "normal") + " --fg " + std::to_string(o.frameGeneration) +
                       " --reflex " + (o.reflex ? "1" : "0") +  // 2.5.26
+                      " --variants " + (o.shaderVariants ? "1" : "0") +  // 3.0.5-beta.3: [debug] shader_variants
                       " --ai " + aiArgument(o.ai) + " --gpu \"" + (o.gpu.empty() ? "auto" : o.gpu) + "\"";
     STARTUPINFOA si{};
     si.cb = sizeof si;

@@ -129,13 +129,28 @@ std::string pickOther(const EffectSettings& e, const Costs& c, const std::set<st
 // 3.0.4-beta.35 (the user: «у людей отключается трава на слабых видеокартах»; R-EQDYNE, a Radeon 780M: the grass, 4.94
 // ms the costliest, went first): the grass thinned first when it is worth a millisecond (or nothing is measured), then
 // the others by their cost, the grass thinned once they are gone, and turned off last
-std::string pickToDrop(const EffectSettings& e, const Costs& c, const std::set<std::string>& dropped) {
+double othersCost(const EffectSettings& e, const Costs& c, const std::set<std::string>& dropped) {
+    double sum = 0.0;
+    std::set<std::string> passes;
+    for (const Costly& k : kCostly) {
+        if (std::string(k.key) == "grass" || !(e.*k.on) || dropped.count(k.key) || !*k.pass) continue;
+        const auto it = c.find(k.pass);
+        if (it != c.end() && passes.insert(k.pass).second) sum += it->second;
+    }
+    return sum;
+}
+
+// 3.0.5-beta.3 (R-UQKHFX, a Radeon 610M: the grass 20 ms of a 45 frames' frame, two and a half minutes at 15-26
+// frames while 15 others went first): the thinned grass off at once when the others cannot make the frame up
+std::string pickToDrop(const EffectSettings& e, const Costs& c, const std::set<std::string>& dropped, double overMs) {
     const bool grassOn = e.grass && !dropped.count("grass");
     const bool canThin = grassOn && !e.grassThin && !dropped.count("grass_thin");
     const auto grassCost = c.find("grass");
     if (canThin && (grassCost == c.end() || grassCost->second >= 1.0)) return "grass_thin";
     std::set<std::string> others = dropped;
     others.insert("grass");
+    if (grassOn && !canThin && grassCost != c.end() && overMs > 0.0 && othersCost(e, c, others) < overMs)
+        return "grass";
     const std::string other = pickOther(e, c, others);
     if (!other.empty()) return other;
     return canThin ? "grass_thin" : grassOn ? "grass" : "";

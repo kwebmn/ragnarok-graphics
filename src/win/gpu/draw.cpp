@@ -55,10 +55,11 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
         return;
     }
     const DrawSetup& s = rec.states()[d.state];
-    crumb(seamPass  ? "ground seams' strips"
-          : ownPass ? "the own ground"
-          : s.ui    ? "the game's interface"
-                    : "the game's world");
+    const char* const span = seamPass  ? "ground seams' strips"
+                             : ownPass ? "the own ground"
+                             : s.ui    ? "the game's interface"
+                                       : "the game's world";
+    crumb(span);
     // 1.9: the driver's own draws (no hooks, nothing noted); 3.0.4-beta.10 the own ground's
     const bool inner = seamPass || darknessPass || ownPass;
     // 2.6.18: blindness's darkness waits for the world's effects (applyDarkness)
@@ -276,7 +277,8 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
                               : lava      ? DrawShader::Lava
                               : warpDrawn ? DrawShader::Portal
                                           : DrawShader::Game;
-    ID3D12PipelineState* pso = pipelineFor(laid, d.fvf, coverage, toLayer, toGlow, water, mask, shader);
+    uint64_t psoKey = 0;  // 3.0.5-beta.3: the state's own draw shader is chosen by it (variantPipeline)
+    ID3D12PipelineState* pso = pipelineFor(laid, d.fvf, coverage, toLayer, toGlow, water, mask, shader, false, &psoKey);
     if (!pso) return;
     // AI textures have mip levels of their own, sampled also where the game uses none (its sprite cache, mipmaps
     // off in its options): four times the texels, shrunk on the screen, would shimmer.
@@ -359,6 +361,10 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
         }
     }
     const D3D12_GPU_DESCRIPTOR_HANDLE samplers = samplerTable(sampled[0], sampled[1], aniso, mipBias);
+    // 3.0.5-beta.3: back to this draw's own span after the passes it set off (finishWorld at the interface's first
+    // draw, the soft shadows and the grass at the world's first blended one, its material) - R-8Q9FJP's login screen
+    // showed its background under «lights and torches»
+    crumb(span);
     bindPass(toWorld ? (toGlow ? kPassWorldGlow : kPassWorld)
                      : toLayer ? kPassLayer : toGlow ? kPassTargetGlow : kPassTarget);
     worldDrawn = worldDrawn || toWorld;
@@ -570,9 +576,18 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
                       (c.stage1[1] & (1u << 26 | 1u << 27 | 1u << 28 | 1u << 30 | 1u << 31)) == 0 &&
                       (c.stage0[1] & (1u << 26 | 1u << 28)) == 0 && (c.alphaTest & 1u << 20) == 0;
     if (lean) {
-        ID3D12PipelineState* leanPso = pipelineFor(laid, d.fvf, coverage, toLayer, toGlow, water, mask, shader, true);
-        if (leanPso) pso = leanPso;
+        uint64_t leanKey = 0;
+        ID3D12PipelineState* leanPso =
+            pipelineFor(laid, d.fvf, coverage, toLayer, toGlow, water, mask, shader, true, &leanKey);
+        if (leanPso) {
+            pso = leanPso;
+            psoKey = leanKey;
+        }
     }
+    // 3.0.5-beta.3: the draw shader made for this state, once its pipeline is made (variants12.cpp); the one for every
+    // state meanwhile
+    if (shader == DrawShader::Game && !water)
+        if (ID3D12PipelineState* own = variantPipeline(psoKey, c)) pso = own;
     // 2.5: the draw goes on the gathered call when its state is the same and its vertices follow (draw_batch.hpp);
     // by itself as before: merging off, the game's own indices, a quad without the pattern
     next.pso = pso;

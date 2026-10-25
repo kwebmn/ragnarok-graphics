@@ -181,6 +181,7 @@ bool Renderer::Impl::begin() {
     }
     profileRead(s, slot);  // 3.0.5-beta.2
     profileStart();
+    collectVariants();  // 3.0.5-beta.3: the states' own draw shaders made meanwhile
     open = true;
     lastCrumb = nullptr;  // 1.9.4: each list its crumbs
     ++listSerial;
@@ -1626,6 +1627,7 @@ bool Renderer::Impl::ensureSwapChain(HWND hwnd, UINT w, UINT h, bool wantTearing
 
 void Renderer::Impl::destroy() {
     if (device && fence) waitIdle();
+    stopVariants();  // 3.0.5-beta.3: its thread makes pipelines on the device
     delete ai;  // its last results go into the texture pack
     ai = nullptr;
     releaseSwapChain();
@@ -2132,6 +2134,7 @@ bool Renderer::createTextureAs(uint32_t id, int width, int height, int levels) {
 
 void Renderer::setShaderVariants(bool on) {
     if (d3d11_) d3d11_->setShaderVariants(on);  // Direct3D 11's own thread is given it at its start
+    impl_->variantsWanted = on;  // 3.0.5-beta.3: Direct3D 12's too (uaro-render64.exe: its --variants)
 }
 
 void Renderer::setProfile(bool on) {  // 3.0.5-beta.2

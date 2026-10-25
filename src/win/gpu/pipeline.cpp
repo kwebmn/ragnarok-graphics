@@ -4,6 +4,7 @@
 #include <d3dcompiler.h>
 
 #include <algorithm>
+#include <iterator>
 #include <atomic>
 #include <cstring>
 #include <fstream>
@@ -246,8 +247,10 @@ bool Renderer::Impl::createPipelines(std::string& error) {
     QueryPerformanceCounter(&t1);
     LOG_INFO("shaders: %d kept from the last start, %d compiled, in %.0f ms", store.reused, store.compiled,
              double(t1.QuadPart - t0.QuadPart) * 1000.0 / double(freq.QuadPart));
+    // 3.0.5-beta.3: the game's states' own draw shaders kept from the last start stay in the cache (variants12.cpp)
+    startVariants(key, store.made, store.kept);
     if (store.compiled > 0 && !shaderCacheFile.empty())
-        keepShaders(shaderCacheFile, shader_cache::pack(key, store.made));
+        keepShaders(shaderCacheFile, shader_cache::pack(key, cacheShaders));
 
     D3D12_DESCRIPTOR_RANGE srvRange{};
     srvRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
@@ -488,7 +491,8 @@ bool Renderer::Impl::makeRoom(const StageSetup& s0, const StageSetup& s1, int an
 // Stage 4: the target's samples, and alpha to coverage when the draw asks for it (coverage). 0.18: toGlow, the
 // glow target as the second one.
 ID3D12PipelineState* Renderer::Impl::pipelineFor(const DrawSetup& s, uint32_t fvf, bool coverage, bool toLayer,
-                                                 bool toGlow, bool water, bool mask, DrawShader shader, bool lean) {
+                                                 bool toGlow, bool water, bool mask, DrawShader shader, bool lean,
+                                                 uint64_t* keyOut) {
     PipelineKey k = pipelineKey(s, fvf);
     k.lean = lean && !water && shader == DrawShader::Game;  // 2.5
     k.samples = uint8_t(toLayer ? 1 : samples);
@@ -499,23 +503,26 @@ ID3D12PipelineState* Renderer::Impl::pipelineFor(const DrawSetup& s, uint32_t fv
     k.mask = mask && !toLayer;
     k.shader = toLayer ? DrawShader::Game : shader;
     k.behind = behindGround(s, fvf, groundDrawn) && !toLayer;  // 2.6.3: a model, a step behind the ground
-    return pipelineForKey(packPipelineKey(k));
+    const uint64_t key = packPipelineKey(k);
+    if (keyOut) *keyOut = key;  // 3.0.5-beta.3: the state's own draw shader is chosen by it
+    return pipelineForKey(key);
 }
 
-ID3D12PipelineState* Renderer::Impl::pipelineForKey(uint64_t key) {
-    auto it = pipelines.find(key);
-    if (it != pipelines.end()) return it->second;
-    const PipelineKey k = unpackPipelineKey(key);
-
+// 3.0.5-beta.3: pipelineForKey's description, apart - the states' own draw shaders' pipelines (variants12.cpp)
+// are described alike on their thread, with `ps` in place of the key's draw shader.
+bool Renderer::Impl::describePipeline(const PipelineKey& k, D3D12_GRAPHICS_PIPELINE_STATE_DESC& p,
+                                      D3D12_INPUT_ELEMENT_DESC (&layout)[5],
+                                      const D3D12_SHADER_BYTECODE* ps) const {
     // FVF 0x1C4 has one UV set: TEXCOORD1 reads the same bytes as TEXCOORD0.
-    const D3D12_INPUT_ELEMENT_DESC layout[5] = {
+    const D3D12_INPUT_ELEMENT_DESC laid[5] = {
         {"POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
         {"COLOR", 0, DXGI_FORMAT_B8G8R8A8_UNORM, 0, 16, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
         {"COLOR", 1, DXGI_FORMAT_B8G8R8A8_UNORM, 0, 20, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
         {"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 24, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
         {"TEXCOORD", 1, DXGI_FORMAT_R32G32_FLOAT, 0, k.twoUv ? 32u : 24u, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
     };
-    D3D12_GRAPHICS_PIPELINE_STATE_DESC p{};
+    std::copy(std::begin(laid), std::end(laid), std::begin(layout));
+    p = D3D12_GRAPHICS_PIPELINE_STATE_DESC{};
     p.pRootSignature = root;
     p.BlendState.AlphaToCoverageEnable = k.alphaToCoverage ? TRUE : FALSE;
     p.VS = {drawVs->GetBufferPointer(), drawVs->GetBufferSize()};
@@ -557,16 +564,15 @@ ID3D12PipelineState* Renderer::Impl::pipelineForKey(uint64_t key) {
         (k.shader == DrawShader::Smoke && (!smokePs || !smokeGlowPs)) ||
         (k.shader == DrawShader::Ray && (!rayPs || !rayGlowPs)) ||
         (k.shader == DrawShader::Lava && (!lavaPs || !lavaGlowPs)) ||
-        (k.shader == DrawShader::Portal && (!portalDrawPs || !portalDrawGlowPs))) {
-        pipelines.emplace(key, nullptr);
-        return nullptr;
-    }
+        (k.shader == DrawShader::Portal && (!portalDrawPs || !portalDrawGlowPs)))
+        return false;
     if (k.glow) {  // 0.18: the light it adds into the glow target too, blended alike (one blend for both)
         p.PS = lean ? D3D12_SHADER_BYTECODE{drawGlowLeanPs->GetBufferPointer(), drawGlowLeanPs->GetBufferSize()}
                     : D3D12_SHADER_BYTECODE{drawGlowPs->GetBufferPointer(), drawGlowPs->GetBufferSize()};
         p.NumRenderTargets = 2;
         p.RTVFormats[1] = DXGI_FORMAT_R11G11B10_FLOAT;
     }
+    if (ps && k.shader == DrawShader::Game && !k.water) p.PS = *ps;  // 3.0.5-beta.3: the state's own
     if (k.mask) {  // 0.22.3: its coverage into the world's alpha too, gathered (DLSS's mask, composite())
         b.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
         b.SrcBlendAlpha = D3D12_BLEND_ONE;
@@ -611,6 +617,20 @@ ID3D12PipelineState* Renderer::Impl::pipelineForKey(uint64_t key) {
         p.DepthStencilState.DepthEnable = FALSE;
         p.DepthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ZERO;
         p.DSVFormat = DXGI_FORMAT_UNKNOWN;
+    }
+    return true;
+}
+
+ID3D12PipelineState* Renderer::Impl::pipelineForKey(uint64_t key) {
+    auto it = pipelines.find(key);
+    if (it != pipelines.end()) return it->second;
+    const PipelineKey k = unpackPipelineKey(key);
+    D3D12_GRAPHICS_PIPELINE_STATE_DESC p{};
+    D3D12_INPUT_ELEMENT_DESC layout[5];
+    // 0.18, 0.19: an effect whose shaders did not compile (a key saved by another run) builds nothing.
+    if (!describePipeline(k, p, layout)) {
+        pipelines.emplace(key, nullptr);
+        return nullptr;
     }
     ID3D12PipelineState* pso = nullptr;
     if (FAILED(device->CreateGraphicsPipelineState(&p, __uuidof(ID3D12PipelineState), reinterpret_cast<void**>(&pso)))) {

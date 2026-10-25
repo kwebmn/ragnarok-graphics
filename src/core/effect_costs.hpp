@@ -40,7 +40,13 @@ std::string passOf(const std::string& key);
 // ... - no pass to time); then the costliest measured over 0.05 ms; with nothing measured, the first of a list from
 // the usually costliest down. "" when none is left. (2.5.9: Direct3D 11 times its passes too.) 3.0.4-beta.35: the
 // grass apart - "grass_thin" first while it is worth a millisecond (or nothing is measured), turned off ("grass") last
-std::string pickToDrop(const EffectSettings& e, const Costs& c, const std::set<std::string>& dropped);
+// 3.0.5-beta.3: `overMs` - how far the card's work a frame is over keep_fps's (slowForCard's 85 % of a frame at its
+// target; below 0 unknown): the grass, thinned, goes first when the others left cost less together than that
+std::string pickToDrop(const EffectSettings& e, const Costs& c, const std::set<std::string>& dropped,
+                       double overMs = -1.0);
+// 3.0.5-beta.3: what the switches keep_fps may still turn off but the grass cost together, measured ones (a pass
+// shared by several switches once)
+double othersCost(const EffectSettings& e, const Costs& c, const std::set<std::string>& dropped);
 void drop(EffectSettings& e, const std::string& key);  // its switch off; "grass_thin": EffectSettings::grassThin
 // 3.0.4-beta.11 (R-EQDYNE): the switches keep_fps may turn off that are on in `now` and were off in `was` - turned on
 // by hand while the game runs (the console, the settings app): keep_fps leaves them for the rest of the game

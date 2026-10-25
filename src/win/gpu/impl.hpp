@@ -37,6 +37,8 @@
 #include "core/map_objects.hpp"
 #include "core/outdoors.hpp"
 #include "core/pipeline_key.hpp"
+#include "core/shader_cache.hpp"
+#include "core/shader_variants.hpp"
 #include "core/weather.hpp"
 #include "core/torch.hpp"
 #include "win/gpu/draw_constants.hpp"
@@ -839,11 +841,55 @@ struct Renderer::Impl {
     bool makeRoom(const StageSetup& s0, const StageSetup& s1, int aniso, UINT descriptors = 2, float bias = 0.0f,
                   bool fromDraw = false);
     D3D12_GPU_DESCRIPTOR_HANDLE sceneTable(UINT t2, UINT t3, UINT t4, UINT t5 = kNoSrv);  // 0.19, kRootScene
+    // 3.0.5-beta.3: `keyOut` - the pipeline's key (the state's own draw shader is chosen by it, variantPipeline)
     ID3D12PipelineState* pipelineFor(const DrawSetup& s, uint32_t fvf, bool coverage, bool toLayer = false,
                                      bool toGlow = false, bool water = false, bool mask = false,
-                                     DrawShader shader = DrawShader::Game, bool lean = false);  // 2.5: draw_lean_ps
+                                     DrawShader shader = DrawShader::Game, bool lean = false,  // 2.5: draw_lean_ps
+                                     uint64_t* keyOut = nullptr);
     bool createUpscalePipelines();  // the motion pass and the layer composite
     ID3D12PipelineState* pipelineForKey(uint64_t key);  // null when it cannot be built; remembered either way
+    // 3.0.5-beta.3: a key's pipeline as made - with `ps` in place of its own draw shader when given (variants12.cpp);
+    // false when a shader it needs did not compile. Read-only: the variants' thread describes them too.
+    bool describePipeline(const PipelineKey& k, D3D12_GRAPHICS_PIPELINE_STATE_DESC& p,
+                          D3D12_INPUT_ELEMENT_DESC (&layout)[5], const D3D12_SHADER_BYTECODE* ps = nullptr) const;
+    // 3.0.5-beta.3 (R-T4BZ6Q, R-8Q9FJP - a Radeon 610M: the login's picture 0.85 ms by Direct3D 11's draw shaders of
+    // each state, 4.6 ms by the one for every state): the game's states get their own draw shaders here too
+    // (core/shader_variants.hpp, as Direct3D 11's since 2.5.16) - made with their pipelines on a thread of their own
+    // as the states come, the pipeline for every state drawing meanwhile; kept in the shader cache (variants12.cpp)
+    struct VariantPso {
+        uint64_t pipeline = 0;
+        shader_variants::Key key;
+        bool operator==(const VariantPso& o) const { return pipeline == o.pipeline && key == o.key; }
+    };
+    struct VariantPsoHash {
+        size_t operator()(const VariantPso& v) const {
+            return size_t(shader_variants::hashOf(v.key) ^ (v.pipeline * 0x9E3779B97F4A7C15ull));
+        }
+    };
+    struct VariantMade {
+        VariantPso which;
+        ID3D12PipelineState* pso = nullptr;
+    };
+    bool variantsWanted = true;  // [debug] shader_variants
+    bool variantsUsable = false;
+    std::unordered_map<VariantPso, ID3D12PipelineState*, VariantPsoHash> variantPsos;  // null: asked, not made yet
+    // the states' shaders' code - their thread's after the start
+    std::unordered_map<shader_variants::Key, std::vector<uint8_t>, shader_variants::KeyHash> variantCode;
+    std::vector<VariantPso> variantJobs;
+    std::vector<VariantMade> variantDone;
+    std::vector<shader_cache::Shader> cacheShaders;  // the cache's: the start's shaders and the states' made since
+    uint64_t cacheKey = 0;
+    CRITICAL_SECTION variantLock{};
+    bool variantLockMade = false, variantStop = false;
+    HANDLE variantThread = nullptr, variantWake = nullptr;
+    unsigned variantsMade = 0, variantsLogged = 0;
+    void startVariants(uint64_t key, std::vector<shader_cache::Shader> made,
+                       const std::vector<shader_cache::Shader>& kept);
+    ID3D12PipelineState* variantPipeline(uint64_t pipelineKey, const Constants& c);  // null: none (yet)
+    void collectVariants();  // at a list's start: the pipelines made meanwhile
+    void stopVariants();
+    static DWORD WINAPI variantMain(void* self);
+    void variantLoop();
     // draw.cpp
     void prepareGeometry(const FrameRecord& rec);
     void draw(const FrameRecord& rec, const DrawCmd& d);

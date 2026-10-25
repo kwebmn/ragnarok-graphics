@@ -266,6 +266,7 @@ bool Context::open(std::string& error) {
         o.dlssMotionInverted = config.dlssMotionInverted;
         o.frameGeneration = config.dlss != "off" ? config.frameGeneration : 0;  // it uses DLSS's depth and motion
         o.reflex = config.reflex;  // 2.5.26
+        o.shaderVariants = config.shaderVariants;  // 3.0.5-beta.3: Direct3D 12's states' own draw shaders
         o.ai = config.ai;
         o.gpu = config.gpu;
         std::string why;
@@ -287,8 +288,9 @@ bool Context::open(std::string& error) {
     if (!config.stateCache) LOG_INFO("Direct3D 11: every state set again each draw ([debug] state_cache = 0)");
     renderer->setMergeDraws(config.mergeDraws);  // 0.90
     renderer->setShaderVariants(config.shaderVariants);  // 2.5.16
-    if (d3d11 && !config.shaderVariants)
-        LOG_INFO("Direct3D 11: every draw with the one shader for every state ([debug] shader_variants = 0)");
+    if (!config.shaderVariants)  // 3.0.5-beta.3: Direct3D 12's too
+        LOG_INFO("%s: every draw with the one shader for every state ([debug] shader_variants = 0)",
+                 d3d11 ? "Direct3D 11" : "Direct3D 12");
     if (!config.mergeDraws && !renderer->remote())  // 2.5: Direct3D 12 in this process gathers them too
         LOG_INFO("each of the game's draws by itself ([debug] merge_draws = 0)");
     renderer->preparePipelines(ourFile(layout::File::Pipelines));
@@ -1010,8 +1012,12 @@ void Context::keepFrameRate(const Config& config, HWND window) {
     for (const std::string& k : keepOff_) effect_costs::drop(fx, k);
     std::set<std::string> passed = keepOff_;  // 3.0.4-beta.11: and what the player turned on in this game
     passed.insert(keepByHand_.begin(), keepByHand_.end());
-    const std::string key = effect_costs::pickToDrop(fx, measured ? costs : effect_costs::Costs{}, passed);
+    // 3.0.5-beta.3: how far the card is over the frame keep_fps wants - the thinned grass goes first when the others
+    // cannot make that up (R-UQKHFX)
+    const double overMs = gpuMs >= 0.0 ? gpuMs - 0.85 * 1000.0 / double(config.keepFps) : -1.0;
+    const std::string key = effect_costs::pickToDrop(fx, measured ? costs : effect_costs::Costs{}, passed, overMs);
     if (key.empty()) return;
+    const double othersMs = key == "grass" && measured ? effect_costs::othersCost(fx, costs, passed) : 0.0;
     keepOff_.insert(key);
     effectsMade_ = false;  // 3.0.4-beta.35: the thinned grass is in the effects made
     const bool thin = key == "grass_thin";  // 3.0.4-beta.35: the grass thinned, not off
@@ -1022,6 +1028,9 @@ void Context::keepFrameRate(const Config& config, HWND window) {
     if (thin)
         LOG_INFO("keep_fps: %.0f fps, under %d%s - the grass thinned for this game (its roots on every second row)%s",
                  fps, config.keepFps, card, cost);
+    else if (othersMs > 0.0)  // 3.0.5-beta.3: the grass before the others - why
+        LOG_INFO("keep_fps: %.0f fps, under %d%s - effects.grass off for this game%s, before the others: they cost "
+                 "%.2f ms together, the card %.2f ms over", fps, config.keepFps, card, cost, othersMs, overMs);
     else
         LOG_INFO("keep_fps: %.0f fps, under %d%s - effects.%s off for this game%s", fps, config.keepFps, card,
                  key.c_str(), cost);

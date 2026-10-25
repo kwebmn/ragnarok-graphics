@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <cmath>
 #include <cstdio>
 #include <string>
 
@@ -116,4 +117,22 @@ TEST(effect_costs_keep_fps_thins_the_grass_first_and_turns_it_off_last) {
     own.grassThin = false;
     CHECK(effect_costs::pickToDrop(own, c, {"grass"}) == "ao");
     CHECK(effect_costs::pickToDrop(own, c, {"grass", "ao", "glow"}).empty());
+}
+
+TEST(effect_costs_keep_fps_turns_the_grass_off_first_when_the_others_cannot_make_up_the_frame) {
+    // 3.0.5-beta.3 (R-UQKHFX, a Radeon 610M: the grass 20 ms, thinned, of a 45 frames' frame - keep_fps two and a half
+    // minutes at 15-26 frames turning 15 others off before it; the user: «делай», what was turned on by hand stays)
+    EffectSettings e = effectsOff();
+    e.grass = e.grassThin = e.ao = e.weather = e.motes = e.shafts = e.bloom = e.grade = true;
+    const effect_costs::Costs c{{"grass", 20.0}, {"ao", 4.6}, {"weather", 2.8}, {"shafts", 2.4}, {"bloom", 1.6},
+                                {"grade", 1.3}};
+    // the others it may turn off: 12.7 ms together (the motes and the weather one pass)
+    CHECK(std::abs(effect_costs::othersCost(e, c, {"grass"}) - 12.7) < 1e-9);
+    CHECK(effect_costs::pickToDrop(e, c, {}, 26.0) == "grass");  // the card 26 ms over: the others cannot make it up
+    CHECK(effect_costs::pickToDrop(e, c, {}, 5.0) == "ao");      // they can: the grass last, as before
+    CHECK(effect_costs::pickToDrop(e, c, {}) == "ao");           // the card's time unknown: as before
+    CHECK(effect_costs::pickToDrop(e, c, {"grass"}, 26.0) == "ao");  // the grass turned on by hand: never
+    EffectSettings whole = e;  // not thinned yet: thinned first all the same
+    whole.grassThin = false;
+    CHECK(effect_costs::pickToDrop(whole, c, {}, 26.0) == "grass_thin");
 }

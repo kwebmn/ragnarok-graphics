@@ -1605,6 +1605,9 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
         std::memcpy(c.projection, proj, sizeof proj);
         std::memcpy(c.reproject, viewToWorld_, sizeof c.reproject);
     }
+    // 3.0.5-beta.3: [debug] profile - back to this draw's own span after the passes it set off (the night, the colours
+    // at the interface's first draw; the soft shadows, the grass at the world's first blended one)
+    pmark(effectName11(s.ui ? kTimeUi11 : kTimeWorld11));
     // 0.90: the draw call's state; the draw goes on the gathered call when it is the same and its vertices follow
     Issue is;
     is.c = c;
