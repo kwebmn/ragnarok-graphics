@@ -1,3 +1,21 @@
+# uaRO Graphics 3.0.5-beta.9 - what's new
+
+- **«Footprints in snow and sand» (dust under the feet on grass) tens of times lighter.** Until now every pixel of the
+  screen went through all 64 last steps - 4 ms of a Radeon 610M's frame already on «Low». Now the screen is cut into
+  squares of 64 pixels and a pixel goes through its square's steps alone; where there are none, nothing is worked out.
+  The picture is the same. Direct3D 11 and Direct3D 12.
+- **Grass under Direct3D 11 without needless processor work.** The trodden grass's grid rounded 49 thousand values a
+  frame through a slow library function - a fifth of the game's processor work on a Radeon 610M laptop on «Medium». The
+  rounding is our own now, with the same answers; likewise for «Hills without steps of light» and the ground's grid
+  under the grass.
+- **«Grass and road seams without steps» are not built anew every frame.** While the camera moves, each seam whose cells
+  did not change is taken again - only its place and fog from the frame - the same as built anew. And no thousands of
+  memory allocations a frame. On «High» under Direct3D 11 this was most of the processor's work.
+- To check on the laptop:
+  1. The «Graphics test» under Direct3D 11 and Direct3D 12 - to compare with the last ones (R-VMPQKX, R-XCHNKD).
+  2. Footprints: walk over grass (dust) and, if you can, snow or sand - they should look as before.
+  3. On «High» turn the camera over a field - the grass and road seams should hold still, no flicker.
+
 # uaRO Graphics 3.0.5-beta.8 - what's new
 
 - **«Graphics test»: the «Your settings» row now has the frame's dearest parts.** The test's last set lost its
