@@ -1,3 +1,20 @@
+# uaRO Graphics 3.0.4-beta.35 — what is new
+
+- **Grass on weak video cards.** Two things turned it off there: «Auto» took every card with under 4 GB of memory of
+  its own as weak (integrated graphics - a Radeon 780M shows 417 MB), and «Keep the frame rate» turned off the grass
+  first, the costliest (R-EQDYNE: 4.94 ms on a 780M). Now:
+  - **The card is judged by its speed.** A card weak by its memory that draws the weak set on a map for a minute with
+    its work at most half of a frame gets the medium set (the grass with it) on trial - a line on the screen says
+    so. Three minutes without the card holding the game back: the set stays for it from then on; else the weak set
+    comes back, not tried again. «Auto» only; the verdict in uaro-graphics\card-level.txt, the Effects page shows the
+    same level.
+  - **Lighter grass.** On cards weak by their memory the blades' roots are looked for on every second row: half the
+    work, the grass a little sparser.
+  - **«Keep the frame rate»** thins the grass first (when it costs a millisecond or more), then turns the other
+    effects off by their cost, the grass itself last.
+- To check on a strong card: Debugging -> «Take the card as weak», the «Auto» set, restart the game and be on a map
+  for a minute - the line «The card keeps up...»; three minutes later «the medium set kept» in the log. Then untick it.
+
 # uaRO Graphics 3.0.4-beta.34 — what is new
 
 - **beta.33's turn of the models now really goes (R-37HNEB, prontera).** In beta.33 the game's model triangles were
