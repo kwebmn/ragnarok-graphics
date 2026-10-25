@@ -92,6 +92,10 @@ Args parseArgs(const std::wstring& line) {
                 a.reportShot = next;
                 ++i;
             }
+        } else if (k == L"--test-report") {
+            a.mode = Args::Mode::TestReport;
+            a.testFile = next;
+            ++i;
         } else if (k == L"--map") {
             a.reportMap = next;
             ++i;
@@ -118,6 +122,7 @@ std::wstring argsLine(const Args& a) {
         case Args::Mode::Uninstall: s = L"--uninstall"; break;
         case Args::Mode::UninstallRun: s = L"--uninstall-run"; break;
         case Args::Mode::Setup: s = L"--setup"; break;
+        case Args::Mode::TestReport: s = L"--test-report \"" + a.testFile + L"\""; break;
     }
     if (a.quiet) s += L" --quiet";
     if (!a.dir.empty()) s += L" --dir \"" + a.dir + L"\"";

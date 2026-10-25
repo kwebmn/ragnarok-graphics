@@ -7,7 +7,10 @@ namespace uagfx::app {
 // window of its own: install (an older update.bat's install.bat), update, the question at the game's start,
 // rollback, repair, removal (and its second half from a copy in %TEMP%).
 struct Args {
-    enum class Mode { Settings, Watch, Install, Update, AskUpdate, Rollback, Repair, Uninstall, UninstallRun, Setup };
+    // 3.0.5-beta.6: TestReport - «Тест графіки»'s table sent without a window (app/report_send sendTestReport)
+    enum class Mode {
+        Settings, Watch, Install, Update, AskUpdate, Rollback, Repair, Uninstall, UninstallRun, Setup, TestReport
+    };
     Mode mode = Mode::Settings;
     unsigned long pid = 0;  // --watch N, --ask-update N, --after N: the process waited for
     bool quiet = false;     // --install --quiet (or /quiet): no message at the end
@@ -21,6 +24,7 @@ struct Args {
     std::wstring reportShot, reportMap;
     // 3.0.3-beta.1: --log-slot N - the game window whose logs these are (core/log_files slotted; 1-8, else 1)
     int logSlot = 1;
+    std::wstring testFile;  // 3.0.5-beta.6: --test-report "<file>" - the table the driver wrote
 };
 
 Args parseArgs(const std::wstring& line);

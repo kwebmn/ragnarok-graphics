@@ -775,6 +775,7 @@ std::wstring ReportsWindow::kindText(reports::Kind k) const {
         case reports::Kind::Crash: return t(Text::ReportKindCrash);
         case reports::Kind::Slow: return t(Text::ReportKindSlow);
         case reports::Kind::Other: return t(Text::ReportKindOther);
+        case reports::Kind::Test: return t(Text::ReportKindTest);  // 3.0.5-beta.6
         case reports::Kind::None: break;
     }
     return L"";
@@ -784,6 +785,7 @@ std::wstring ReportsWindow::titleOfReason(const std::string& reason) const {
     if (reason == "crash") return t(Text::ReportTitleCrash);
     if (reason == "start-failed") return t(Text::ReportTitleStartFailed);
     if (reason == "gpu-lost") return t(Text::ReportTitleGpuLost);
+    if (reason == "test") return t(Text::TestTitle);  // 3.0.5-beta.6
     return t(Text::ReportTitleNone);
 }
 

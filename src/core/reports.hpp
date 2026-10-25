@@ -8,7 +8,8 @@ namespace uagfx::reports {
 // GraphicsReportController): GET /api/graphics/reports/mine?computer=K, GET /api/graphics/reports/{code}?computer=K.
 // No login: the reports belong to the computer's random key (uaro-graphics\reports\computer.txt).
 enum class Status { New, Read, NeedInfo, Fixing, Fixed, Closed };
-enum class Kind { None, Graphics, Crash, Slow, Other };  // None: an automatic report, or one from before 2.13
+// None: an automatic report, or one from before 2.13; 3.0.5-beta.6: Test - «Тест графіки»'s (never the player's pick)
+enum class Kind { None, Graphics, Crash, Slow, Other, Test };
 
 struct Summary {
     std::string code, title, reason, fixedIn, at, updated;  // at / updated: ISO 8601 as the site writes them

@@ -16,6 +16,7 @@
 #include "app/update_run.hpp"
 #include "core/config.hpp"
 #include "core/log_files.hpp"
+#include "core/reports.hpp"
 #include "core/settings/log_digest.hpp"
 #include "core/usage.hpp"
 #include "core/version.hpp"
@@ -291,6 +292,29 @@ int watchGame(unsigned long pid, int logSlot) {
     // 2.13: kept for later when the site does not answer (app/reports), and in the tester's «Звернення»
     const NewReport r = sendNew(m.paths().dir, makeUpload(m, reason, true, "", {}, logSlot));
     return r.code.empty() && !r.queued ? 1 : 0;
+}
+
+int sendTestReport(const std::wstring& file, int logSlot) {
+    const std::wstring answer = file + L".sent";
+    std::string table;
+    if (!readFile(file, table) || table.empty()) {
+        writeFileAtomic(answer, "error: the test's result is missing");
+        return 1;
+    }
+    if (table.size() > report::kMostComment) {  // the site's words at most, whole lines
+        table.resize(report::kMostComment);
+        table.resize(table.rfind('\n') == std::string::npos ? table.size() : table.rfind('\n') + 1);
+    }
+    Model m;
+    report::Upload u = makeUpload(m, "test", false, table, {}, logSlot);
+    u.kind = reports::kindToken(reports::Kind::Test);
+    const NewReport r = sendNew(m.paths().dir, u);
+    const std::string said = !r.code.empty() ? r.code
+                             : r.queued      ? "error: " + (r.error.empty() ? std::string("no answer") : r.error) +
+                                              " - kept, it goes with the next report"
+                                             : "error: " + (r.error.empty() ? std::string("refused") : r.error);
+    writeFileAtomic(answer, said);
+    return r.code.empty() ? 1 : 0;
 }
 
 }  // namespace uagfx::app

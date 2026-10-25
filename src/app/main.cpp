@@ -38,6 +38,8 @@ int WINAPI wWinMain(HINSTANCE inst, HINSTANCE, PWSTR line, int show) {
         SetPriorityClass(GetCurrentProcess(), BELOW_NORMAL_PRIORITY_CLASS);
         return args.pid ? uagfx::app::watchGame(args.pid, args.logSlot) : 1;
     }
+    if (args.mode == uagfx::app::Args::Mode::TestReport)  // 3.0.5-beta.6: «Тест графіки»'s end, no window
+        return uagfx::app::sendTestReport(args.testFile, args.logSlot);
     INITCOMMONCONTROLSEX icc{sizeof icc, ICC_STANDARD_CLASSES | ICC_BAR_CLASSES | ICC_LISTVIEW_CLASSES |
                                           ICC_PROGRESS_CLASS};
     InitCommonControlsEx(&icc);

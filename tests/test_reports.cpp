@@ -117,3 +117,15 @@ TEST(reports_show_the_sites_time_in_the_players_clock) {
     reports::Civil local{2026, 10, 22, 21, 7, 0};
     CHECK_EQ(reports::shown(local), std::string("22.10.2026 21:07"));
 }
+
+// 3.0.5-beta.6: «Тест графіки»'s reports listed in «Звернення» as such
+TEST(reports_know_the_graphics_tests_kind) {
+    CHECK_EQ(std::string(reports::kindToken(reports::Kind::Test)), std::string("test"));
+    std::vector<reports::Summary> list;
+    std::string error;
+    CHECK(reports::parseList("{\"reports\":[{\"code\":\"R-7K3F2A\",\"kind\":\"test\",\"reason\":\"test\","
+                             "\"status\":\"new\",\"title\":\"Тест графіки\"}]}",
+                             list, error));
+    CHECK_EQ(int(list.size()), 1);
+    CHECK(list[0].kind == reports::Kind::Test);
+}

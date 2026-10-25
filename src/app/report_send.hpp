@@ -21,6 +21,10 @@ report::Upload makeUpload(const Model& m, const std::string& reason, bool automa
 // to end, and when its log says it went badly (report::reasonOfLog), sends a report - at most one in 6 hours. No
 // window.
 int watchGame(unsigned long pid, int logSlot = 1);
+// 3.0.5-beta.6: uaro-graphics.exe --test-report "<file>" [--log-slot N], started by the driver at the end of «Тест
+// графіки» (win/context_test.cpp): its table as the report's words, reason and kind "test", the logs and the settings
+// with it, no window; "<file>.sent" gets the report's code, or "error: <why>" - the game says it on the screen
+int sendTestReport(const std::wstring& file, int logSlot = 1);
 // 2.2.1: uaro-graphics\usage.jsonl (core/usage.hpp) to uaro.kiev.ua, with the player's leave ([stats] send) - once a
 // day (force: now). 2.2.2: the driver's file is taken whole first (renamed usage-sending.jsonl: a running game starts
 // a new one, nothing it writes meanwhile is lost), sent in parts, then deleted - a part not sent stays for the next

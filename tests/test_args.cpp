@@ -91,3 +91,14 @@ TEST(window_language_follows_windows_until_one_is_chosen) {
     CHECK(settings::windowLang(std::nullopt, 0x09) == settings::Lang::En);
     CHECK(settings::windowLang(settings::Lang::Ru, 0x22) == settings::Lang::Ru);  // the app's choice first
 }
+
+// 3.0.5-beta.6: «Тест графіки»'s end - the settings app sends its table without a window, for that game window's logs
+TEST(args_read_the_graphics_tests_report) {
+    const Args t = app::parseArgs(L"--test-report \"C:\\Ігри\\ua RO\\uaro-graphics\\graphics-test.txt\" --log-slot 2");
+    CHECK(t.mode == Args::Mode::TestReport);
+    CHECK(t.testFile == L"C:\\Ігри\\ua RO\\uaro-graphics\\graphics-test.txt");
+    CHECK_EQ(t.logSlot, 2);
+    CHECK(app::parseArgs(app::argsLine(t)).mode == Args::Mode::TestReport);
+    CHECK(app::parseArgs(app::argsLine(t)).testFile == t.testFile);
+    CHECK(app::argsLine(t) == L"--test-report \"C:\\Ігри\\ua RO\\uaro-graphics\\graphics-test.txt\" --log-slot 2");
+}

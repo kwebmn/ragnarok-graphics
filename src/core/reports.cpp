@@ -14,6 +14,7 @@ Kind kindOf(const std::string& token) {
     if (token == "crash") return Kind::Crash;
     if (token == "slow") return Kind::Slow;
     if (token == "other") return Kind::Other;
+    if (token == "test") return Kind::Test;
     return Kind::None;
 }
 
@@ -129,6 +130,7 @@ const char* kindToken(Kind k) {
         case Kind::Crash: return "crash";
         case Kind::Slow: return "slow";
         case Kind::Other: return "other";
+        case Kind::Test: return "test";
         case Kind::None: break;
     }
     return "";
