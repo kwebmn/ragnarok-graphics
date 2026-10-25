@@ -395,6 +395,40 @@ private:
     bool seamsDone_ = false, seamsLogged_ = false;
     bool seamsWanted() const { return effects_.groundSeams && cameraValid_ && outdoors_; }
     void applySeams();
+    // 3.0.5-beta.13 (the user: «Швы на видеокарте»): the strips' pieces kept on the card (core/seams.hpp Store) -
+    // each size's slots in a buffer of vertices (seam_vs's t6) and one of indices (t7), the pieces in view the
+    // instances of a draw a batch and size (seamInstances_); the processor's strips (seamsCache_) when the card's way
+    // is missing or failed
+    seams::Store seamStore_;
+    ID3D11VertexShader* seamVs_ = nullptr;
+    ID3D11InputLayout* seamLayout_ = nullptr;
+    struct SeamSlots11 {
+        ID3D11Buffer* vertices = nullptr;
+        ID3D11ShaderResourceView* vertexSrv = nullptr;
+        ID3D11Buffer* indices = nullptr;
+        ID3D11ShaderResourceView* indexSrv = nullptr;
+        uint32_t slots = 0;  // room for so many
+    };
+    SeamSlots11 seamSlots_[2];
+    ID3D11Buffer* seamInstances_ = nullptr;
+    UINT seamInstanceBytes_ = 0;
+    bool seamCardFailed_ = false;
+    std::string seamsMap_;  // the map whose pieces the store holds
+    int seamsLogIn_ = 0;    // frames to the map's line in the log
+    struct SeamDraw11 {     // a draw of pieces: their size, the first instance and how many, the corners of each
+        uint32_t size = 0, first = 0, count = 0, corners = 0;
+    };
+    SeamDraw11 seamDraw_;   // the one draw() issues now; count 0: the game's vertices
+    struct SeamBatch11 {    // applySeams' batch: the groups giving its state and textures, its pieces of each size
+        uint32_t in = 0, shows = 0;
+        std::vector<uint32_t> pieces[2];  // seamStore_.shown()'s
+    };
+    std::vector<SeamBatch11> seamBatches_;  // kept from frame to frame: no allocation a frame
+    std::vector<uint32_t> seamInClass_, seamShowsClass_, seamInKinds_, seamShowsKinds_, seamInstanceData_;
+    std::vector<SeamDraw11> seamDraws_;
+    bool seamsOnCard() const { return seamVs_ && seamLayout_ && !seamCardFailed_; }
+    bool applySeamsOnCard();  // false: the card's way failed (the processor's from now on)
+    bool ensureSeamSlots(uint32_t size, uint32_t slots);
     struct Caster11 {  // an opaque draw of the world: its corners in casterVerts_ (x, y, z, u, v, colour's bits)
         uint32_t first = 0, count = 0;
         uint32_t texture = 0;
@@ -827,6 +861,7 @@ private:
         ID3D11VertexShader* vs = nullptr;  // 0.99: the game's draw's, or the water's
         ID3D11PixelShader* ps = nullptr;
         uint32_t primitive = 0, firstIndex = 0, indexCount = 0;  // a draw by itself: its own
+        SeamDraw11 seam;  // 3.0.5-beta.13: the seams' pieces on the card (count 0: none)
         bool sameState(const Issue& o) const;
     };
     void flushBatch();     // the gathered draw call to the driver (3.0.5-beta.2: timed under [debug] profile)

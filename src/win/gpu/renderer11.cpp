@@ -219,6 +219,15 @@ Renderer11::~Renderer11() {
     drop(hillsData_);
     drop(seamVertices_);
     drop(seamIndices_);
+    drop(seamVs_);  // 3.0.5-beta.13
+    drop(seamLayout_);
+    for (SeamSlots11& s : seamSlots_) {
+        drop(s.vertexSrv);
+        drop(s.vertices);
+        drop(s.indexSrv);
+        drop(s.indices);
+    }
+    drop(seamInstances_);
     drop(mirrorVs_);
     drop(mirrorPs_);
     drop(mirrorLayout_);
@@ -428,7 +437,7 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
         bool optional = false;  // 0.99: an effect's - without it the effect is not drawn, the game is
         bool safe = false;      // 2.2.2: made without the newest features (UAGFX_SAFE)
         bool lean = false;      // 2.5: with UAGFX_LEAN (draw_lean_ps: the world's extras left out)
-    } wants[57] = {{"draw_vs", vs, shaderSource(), {}},    {"draw_ps", ps, shaderSource(), {}},
+    } wants[58] = {{"draw_vs", vs, shaderSource(), {}},    {"draw_ps", ps, shaderSource(), {}},
                    {"present_vs", vs, shaderSource(), {}}, {"present_ps", ps, shaderSource(), {}},
                    {"clear_vs", vs, kClearSource, {}},     {"clear_ps", ps, kClearSource, {}},
                    {"grade_ps", ps, shaderSource(), {}},  // 0.59: the colours (Effects page)
@@ -476,7 +485,8 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
                    {"portal_draw_ps", ps, shaderSource(), {}, true},  // 2.7.54: the map warps shaded anew
                    {"portal_draw_glow_ps", ps, shaderSource(), {}, true},
                    {"world_grade_ps", ps, shaderSource(), {}, true},  // 3.0.5-beta.4: made larger and coloured
-                   {"grass_mask_ps", ps, shaderSource(), {}, true}};  // 3.0.5-beta.12: where roots can stand
+                   {"grass_mask_ps", ps, shaderSource(), {}, true},  // 3.0.5-beta.12: where roots can stand
+                   {"seam_vs", vs, shaderSource(), {}, true}};       // 3.0.5-beta.13: the seams on the card
     const uint64_t key = shader_cache::keyOf(std::string(shaderSource()) + kClearSource + "direct3d 11");
     std::vector<shader_cache::Shader> kept;
     {
@@ -617,6 +627,7 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
     if (wants[54].code.empty() || !psOf(wants[54], portalDrawGlowPs_)) portalDrawGlowPs_ = nullptr;
     if (wants[55].code.empty() || !psOf(wants[55], worldGradePs_)) worldGradePs_ = nullptr;  // 3.0.5-beta.4
     if (wants[56].code.empty() || !psOf(wants[56], grassMaskPs_)) grassMaskPs_ = nullptr;  // 3.0.5-beta.12
+    if (wants[57].code.empty() || !vsOf(wants[57], seamVs_)) seamVs_ = nullptr;  // 3.0.5-beta.13
     if (!wants[1].safe && !wants[22].safe) {  // 2.5.16: none where the player's compiler took the draw shader badly
         std::vector<shader_cache::Shader> all;
         for (const Want& w : wants) all.push_back({w.entry, shader_cache::profileOf(w.profile, w.safe), w.code});
@@ -647,6 +658,12 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
             error = "the vertices' layout was refused";
             return false;
         }
+    }
+    if (seamVs_) {  // 3.0.5-beta.13: the seams' pieces on the card - an instance each (its slot, its fog), seam_vs
+        const D3D11_INPUT_ELEMENT_DESC layout[1] = {
+            {"TEXCOORD", 0, DXGI_FORMAT_R32G32B32A32_UINT, 0, 0, D3D11_INPUT_PER_INSTANCE_DATA, 1}};
+        if (FAILED(device_->CreateInputLayout(layout, 1, wants[57].code.data(), wants[57].code.size(), &seamLayout_)))
+            seamLayout_ = nullptr;
     }
     if (mirrorVs_) {  // 2.5.9: the mirror's corners (mirror11.cpp) - x y z, u v, the game's colour
         const D3D11_INPUT_ELEMENT_DESC layout[3] = {
@@ -1312,7 +1329,9 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
     // by this function (seamPass_), which makes no notes and no passes for them
     if (!seamPass_ && !s.ui && s.blend && !seamsDone_ && seamsWanted() && !groundTris_.empty()) {
         flushBatch();
+        pmark("ground seams' strips");  // 3.0.5-beta.13: [debug] profile's own span
         applySeams();
+        pmark(effectName11(kTimeWorld11));
     }
     const bool passes = !seamPass_ && !s.ui && s.blend && groundDrawn_;  // the passes before the characters
     if (passes && !aoDone_ && aoWanted()) {  // 2.5.1: before the characters (draw.cpp)
@@ -1644,6 +1663,11 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
     is.srvs[3] = hilly ? hillsSrv_ : nullptr;  // 2.5.9
     is.layout = layout_[d.fvf == d3d7::FVF_TL2 ? 1 : 0];
     is.vs = water ? waterVs_ : drawVs_;
+    if (seamPass_ && seamDraw_.count) {  // 3.0.5-beta.13: the seams' pieces on the card, an instance each
+        is.vs = seamVs_;
+        is.layout = seamLayout_;
+        is.seam = seamDraw_;
+    }
     // 2.5: a draw whose constants carry none of the world's extras takes the lean shader (as draw.cpp)
     const bool lean = !water && !smoke && !lava && !ray && !warpDrawn &&
                       (c.stage1[1] & (1u << 26 | 1u << 27 | 1u << 28 | 1u << 30 | 1u << 31)) == 0 &&
@@ -1667,7 +1691,7 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
     batch::Draw shape{batch::kindOf(d.primitive, d.vertexCount, d.indexCount != 0), d.vertexOffset, d.vertexCount,
                       uint32_t(stride)};
     // By itself as before: merging off, a soft particle (its depth bound for it alone), quads without the pattern.
-    if (!mergeDraws_ || soft || (shape.kind == batch::Kind::Quads && !quadIndices_))
+    if (!mergeDraws_ || soft || (shape.kind == batch::Kind::Quads && !quadIndices_) || is.seam.count)
         shape.kind = batch::Kind::Single;
     ++stats_.draws;
     if (batch_.joins(shape) && is.sameState(issue_)) {
@@ -1754,14 +1778,24 @@ void Renderer11::flushGathered() {
     // The record's vertices lie one draw after another: the buffer stays bound at the phase of the call's first
     // vertex within its stride, the call starting at its vertex number - bound again only when the stride or the
     // phase changes (a draw of the other vertex kind in between).
-    const UINT strideBytes = batch_.stride(), phase = batch_.firstByte() % strideBytes,
-               first = batch_.firstByte() / strideBytes;
-    if (need(all || vertices_ != bound_.vertexBuffer || strideBytes != bound_.stride || phase != bound_.phase))
-        ctx_->IASetVertexBuffers(0, 1, &vertices_, &strideBytes, &phase);
+    UINT strideBytes = batch_.stride(), phase = batch_.firstByte() % strideBytes,
+         first = batch_.firstByte() / strideBytes;
+    ID3D11Buffer* vertices = vertices_;
+    if (is.seam.count) {  // 3.0.5-beta.13: the seams' pieces on the card - their instances, their slots for seam_vs
+        vertices = seamInstances_;
+        strideBytes = 16;
+        phase = 0;
+        ID3D11ShaderResourceView* slots[2] = {seamSlots_[is.seam.size].vertexSrv, seamSlots_[is.seam.size].indexSrv};
+        ctx_->VSSetShaderResources(6, 2, slots);
+    }
+    if (need(all || vertices != bound_.vertexBuffer || strideBytes != bound_.stride || phase != bound_.phase))
+        ctx_->IASetVertexBuffers(0, 1, &vertices, &strideBytes, &phase);
     ID3D11Buffer* indices = kind == batch::Kind::Quads ? quadIndices_
                             : kind == batch::Kind::Single && is.indexCount ? indices_
                                                                            : nullptr;
-    if (indices) {
+    if (is.seam.count) {
+        ctx_->DrawInstanced(is.seam.corners, is.seam.count, 0, is.seam.first);
+    } else if (indices) {
         if (need(all || indices != bound_.indexBuffer)) ctx_->IASetIndexBuffer(indices, DXGI_FORMAT_R16_UINT, 0);
         bound_.indexBuffer = indices;
         if (kind == batch::Kind::Quads)
@@ -1787,7 +1821,7 @@ void Renderer11::flushGathered() {
     bound_.srvs[1] = is.srvs[1];
     bound_.layout = is.layout;
     bound_.topology = unsigned(topology);
-    bound_.vertexBuffer = vertices_;
+    bound_.vertexBuffer = vertices;
     bound_.stride = strideBytes;
     bound_.phase = phase;
     for (ID3D11ShaderResourceView* v : issue_.srvs)

@@ -40,6 +40,13 @@ inline void toView(const View& v, const float w[3], float out[3]) {
     out[1] = x * v.r[1] + y * v.r[4] + z * v.r[7];
     out[2] = x * v.r[2] + y * v.r[5] + z * v.r[8];
 }
+// 3.0.5-beta.13: toView's depth as one row - (x, y, z, 1) dot out
+inline void depthRow(const View& v, float out[4]) {
+    out[0] = v.r[2];
+    out[1] = v.r[5];
+    out[2] = v.r[8];
+    out[3] = -(v.eye[0] * v.r[2] + v.eye[1] * v.r[5] + v.eye[2] * v.r[8]);
+}
 
 // The depth the game gives a view depth zd (ProjectVertex 0x412cb0), and past its far plane, where it has none, the
 // room left below 1: the game's up to kSqueeze before the far plane, the rest squeezed in after it - the far ground

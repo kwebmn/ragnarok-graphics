@@ -431,15 +431,27 @@ struct Edge {
     bool creased, low;
 };
 
-// cells: filled from the ground; false when there are none (no strips)
+// The grid the cells' corners lie on: their side and its origin
+struct Grid {
+    float side = 0.0f, ox = 0.0f, oz = 0.0f;
+};
+
+// The ground's grid - its cells' side, the origin from its first triangle's corner; false: no cells
+bool gridOf(const std::vector<Triangle>& ground, Grid& g) {
+    g.side = cellSide(ground);
+    if (g.side < 0.5f || ground.empty()) return false;
+    g.ox = ground[0].v[0].pos[0] - std::floor(ground[0].v[0].pos[0] / g.side) * g.side;
+    g.oz = ground[0].v[0].pos[2] - std::floor(ground[0].v[0].pos[2] / g.side) * g.side;
+    return true;
+}
+
+// cells: filled from the ground on the grid (3.0.5-beta.13: the store's kept for the map); false when there are none
+// (no strips)
 template <typename Visit>
 bool edgesOf(const std::vector<Triangle>& ground, const std::vector<uint32_t>& texture, const Laid& laid,
-             CellMap& cells, std::vector<uint32_t>& order, Visit&& visit) {
-    const float side = cellSide(ground);
+             const Grid& grid, CellMap& cells, std::vector<uint32_t>& order, Visit&& visit) {
+    const float side = grid.side, ox = grid.ox, oz = grid.oz;
     if (side < 0.5f || ground.empty()) return false;
-    // The grid's origin: the cells' corners lie on it.
-    const float ox = ground[0].v[0].pos[0] - std::floor(ground[0].v[0].pos[0] / side) * side;
-    const float oz = ground[0].v[0].pos[2] - std::floor(ground[0].v[0].pos[2] / side) * side;
     cells.reset(ground.size());
     for (const Triangle& t : ground) {
         // the ground's own faces only: its walls (the cliffs' sides) stand up
@@ -548,7 +560,9 @@ std::vector<Strip> build(const std::vector<Triangle>& ground, const std::vector<
     CellMap cells;
     std::vector<uint32_t> order;
     Piece piece;
-    edgesOf(ground, texture, laid, cells, order, [&](const Edge& e) {
+    Grid grid;
+    if (!gridOf(ground, grid)) return out;
+    edgesOf(ground, texture, laid, grid, cells, order, [&](const Edge& e) {
         const Inputs in = inputsOf(*e.a, *e.b, e.ta, e.tb, e.nearby, e.creased, e.low, width);
         makePiece(*e.a, *e.b, *e.w, e.ix, e.iz, in, false, width, piece);
         append(out, strips, piece);
@@ -605,11 +619,19 @@ const std::vector<Strip>& Cache::build(const std::vector<Triangle>& ground, cons
         room.indices.clear();
     }
     strips_.clear();
-    edgesOf(ground, texture, laid, k.cells, k.order, [&](const Edge& e) {
-        const Inputs in = inputsOf(*e.a, *e.b, e.ta, e.tb, e.nearby, e.creased, e.low, width);
+    Grid grid;
+    if (gridOf(ground, grid)) edgesOf(ground, texture, laid, grid, k.cells, k.order, [&](const Edge& e) {
+        // 3.0.5-beta.13: known without the groups - the game's draws are numbered anew as the view moves
+        Inputs in = inputsOf(*e.a, *e.b, e.ta, e.tb, e.nearby, e.creased, e.low, width);
+        in.inside = in.shows = 0;
         Kept::Edge& kept = k.edges[uint64_t(e.key) * 4 + uint64_t(e.way)];
         if (kept.built && std::memcmp(&kept.in, &in, sizeof in) == 0) {
-            for (Piece& p : kept.pieces) p.refresh(*e.a);
+            for (Piece& p : kept.pieces) {
+                p.refresh(*e.a);
+                p.inside = e.a->group;
+            }
+            kept.pieces[0].shows = e.b->group;
+            kept.pieces[1].shows = e.a->group;
             ++reused_;
         } else {
             kept.in = in;
@@ -648,6 +670,186 @@ void Cache::clear() {
     known_ = false;
     kept_->edges.clear();
     kept_->slots.clear();
+}
+
+// 3.0.5-beta.13: an edge out of view so many builds gives its slots up (about 5 s of walking, a build a frame); the
+// edges are looked over for it every kSweepEvery builds
+constexpr uint64_t kKeptOnCard = 300, kSweepEvery = 64;
+
+struct Store::Kept {
+    struct Edge {
+        Inputs in;            // its groups 0: the pieces whatever the draws' numbers
+        float corners[4][3];  // its cell's corners when made: elsewhere now (another grid) - made anew
+        uint32_t slot[2] = {0, 0}, size[2] = {kPlain, kPlain}, indices[2] = {0, 0};
+        uint64_t seen = 0;    // the build it was last in view in; 0: new
+    };
+    std::unordered_map<uint64_t, Edge, Hash64> edges;
+    CellMap cells;
+    std::vector<uint32_t> order;
+    Grid grid;  // the map's: the cells' places stay as they are from build to build
+    bool gridKnown = false;
+    std::vector<uint32_t> free[2];  // slots given up, filled again first
+    uint32_t used[2] = {0, 0};
+    std::vector<uint32_t> freshSlots[2];
+    std::vector<CardVertex> freshVertices[2];
+    std::vector<uint16_t> freshIndices[2];
+    Piece piece;
+    uint64_t builds = 0;
+    size_t made = 0;
+
+    uint32_t take(uint32_t size) {
+        if (free[size].empty()) return used[size]++;
+        const uint32_t slot = free[size].back();
+        free[size].pop_back();
+        return slot;
+    }
+    // the piece made last into a slot of its size: its vertices for the card, each of the cell's corners' share of
+    // the fog by the place's (u, v) - a crease's cut between its two points', as refresh() takes its fog
+    void put(uint32_t size, uint32_t slot) {
+        freshSlots[size].push_back(slot);
+        const size_t v0 = freshVertices[size].size(), i0 = freshIndices[size].size();
+        freshVertices[size].resize(v0 + kSlotVertices[size]);
+        freshIndices[size].resize(i0 + kSlotIndices[size], 0);
+        float shares[kPieceMost][4];
+        for (size_t i = 0; i < piece.vertices.size(); ++i) {
+            const Piece::Origin& o = piece.origins[i];
+            if (o.n < 0) {
+                shares[i][0] = (1.0f - o.u) * (1.0f - o.v);
+                shares[i][1] = o.u * (1.0f - o.v);
+                shares[i][2] = (1.0f - o.u) * o.v;
+                shares[i][3] = o.u * o.v;
+            } else {
+                for (int c = 0; c < 4; ++c)
+                    shares[i][c] = lerpf(shares[size_t(o.n)][c], shares[size_t(o.m)][c], o.t);
+            }
+            const Vertex& v = piece.vertices[i];
+            CardVertex& out = freshVertices[size][v0 + i];
+            std::memcpy(out.pos, v.pos, sizeof out.pos);
+            out.diffuse = v.diffuse;
+            std::memcpy(out.uv0, v.uv0, sizeof out.uv0);
+            std::memcpy(out.uv1, v.uv1, sizeof out.uv1);
+            out.specular = v.specular & 0x00FFFFFFu;
+            for (int c = 0; c < 4; ++c)
+                out.share[c] = uint16_t(std::clamp(shares[i][c], 0.0f, 1.0f) * 65535.0f + 0.5f);
+        }
+        std::copy(piece.indices.begin(), piece.indices.end(), freshIndices[size].begin() + std::ptrdiff_t(i0));
+    }
+};
+
+Store::Store() : kept_(std::make_unique<Kept>()) {}
+Store::~Store() = default;
+
+const std::vector<uint32_t>& Store::freshSlots(uint32_t size) const { return kept_->freshSlots[size & 1]; }
+const std::vector<CardVertex>& Store::freshVertices(uint32_t size) const { return kept_->freshVertices[size & 1]; }
+const std::vector<uint16_t>& Store::freshIndices(uint32_t size) const { return kept_->freshIndices[size & 1]; }
+uint32_t Store::slotsUsed(uint32_t size) const { return kept_->used[size & 1]; }
+size_t Store::made() const { return kept_->made; }
+
+void Store::clear() {
+    Kept& k = *kept_;
+    k.edges.clear();
+    k.gridKnown = false;
+    for (int size = 0; size < 2; ++size) {
+        k.free[size].clear();
+        k.used[size] = 0;
+        k.freshSlots[size].clear();
+        k.freshVertices[size].clear();
+        k.freshIndices[size].clear();
+    }
+    shown_.clear();
+    ground_.clear();
+    texture_.clear();
+    known_ = false;
+}
+
+void Store::build(const std::vector<Triangle>& ground, const std::vector<uint32_t>& texture, float width,
+                  const float depth[4], float nearZ, const Laid& laid, uint64_t laidKey) {
+    Kept& k = *kept_;
+    for (int size = 0; size < 2; ++size) {
+        k.freshSlots[size].clear();
+        k.freshVertices[size].clear();
+        k.freshIndices[size].clear();
+    }
+    const size_t groundBytes = ground.size() * sizeof(Triangle), textureBytes = texture.size() * sizeof(uint32_t);
+    if (known_ && width == width_ && laidKey == laidKey_ && nearZ == nearZ_ &&
+        std::memcmp(depth, depth_, sizeof depth_) == 0 && ground.size() == ground_.size() &&
+        texture.size() == texture_.size() &&
+        (!groundBytes || std::memcmp(ground.data(), ground_.data(), groundBytes) == 0) &&
+        (!textureBytes || std::memcmp(texture.data(), texture_.data(), textureBytes) == 0))
+        return;  // the camera standing: the same pieces shown
+    if (known_ && (width != width_ || laidKey != laidKey_)) clear();  // the pieces were made of them
+    shown_.clear();
+    Grid now;
+    const bool cells = gridOf(ground, now);
+    // the grid fixed for the map, its cells' places with it; cells of another side - another ground
+    if (cells && k.gridKnown && std::fabs(now.side - k.grid.side) > 0.01f * k.grid.side) clear();
+    if (cells && !k.gridKnown) {
+        k.grid = now;
+        k.gridKnown = true;
+    }
+    const uint64_t at = ++k.builds;
+    if (at % kSweepEvery == 0)  // the edges long out of view give their slots up
+        for (auto it = k.edges.begin(); it != k.edges.end();) {
+            if (at - it->second.seen <= kKeptOnCard) {
+                ++it;
+                continue;
+            }
+            for (int i = 0; i < 2; ++i) k.free[it->second.size[i]].push_back(it->second.slot[i]);
+            it = k.edges.erase(it);
+        }
+    if (cells) edgesOf(ground, texture, laid, k.grid, k.cells, k.order, [&](const Edge& e) {
+        Inputs in = inputsOf(*e.a, *e.b, e.ta, e.tb, e.nearby, e.creased, e.low, width);
+        in.inside = in.shows = 0;
+        Kept::Edge& kept = k.edges[uint64_t(e.key) * 4 + uint64_t(e.way)];
+        bool same = kept.seen != 0 && std::memcmp(&kept.in, &in, sizeof in) == 0;
+        for (int c = 0; c < 4 && same; ++c)
+            for (int a = 0; a < 3; ++a) same = same && std::fabs(kept.corners[c][a] - e.a->corner[c].pos[a]) < 0.02f;
+        if (!same) {
+            kept.in = in;
+            for (int c = 0; c < 4; ++c) std::memcpy(kept.corners[c], e.a->corner[c].pos, sizeof kept.corners[c]);
+            for (int i = 0; i < 2; ++i) {
+                makePiece(*e.a, *e.b, *e.w, e.ix, e.iz, in, i == 1, i == 1 ? kBand * 2.0f : width, k.piece);
+                const uint32_t size = k.piece.vertices.size() <= kSlotVertices[kPlain] &&
+                                              k.piece.indices.size() <= kSlotIndices[kPlain]
+                                          ? kPlain
+                                          : kCut;
+                if (kept.seen == 0) {
+                    kept.slot[i] = k.take(size);
+                } else if (kept.size[i] != size) {
+                    k.free[kept.size[i]].push_back(kept.slot[i]);
+                    kept.slot[i] = k.take(size);
+                }
+                kept.size[i] = size;
+                kept.indices[i] = uint32_t(k.piece.indices.size());
+                k.put(size, kept.slot[i]);
+                ++k.made;
+            }
+        }
+        kept.seen = at;
+        uint32_t fog = 0;
+        for (int c = 0; c < 4; ++c) {
+            const float* p = e.a->corner[c].pos;
+            if (p[0] * depth[0] + p[1] * depth[1] + p[2] * depth[2] + depth[3] <= nearZ) return;  // too near
+            fog |= (e.a->corner[c].specular >> 24) << (8 * c);
+        }
+        Shown s;
+        for (int i = 0; i < 2; ++i) {
+            s.slot = kept.slot[i];
+            s.size = kept.size[i];
+            s.indices = kept.indices[i];
+            s.inside = e.a->group;
+            s.shows = i == 1 ? e.a->group : e.b->group;
+            s.fog = fog;
+            shown_.push_back(s);
+        }
+    });
+    ground_ = ground;
+    texture_ = texture;
+    width_ = width;
+    laidKey_ = laidKey;
+    nearZ_ = nearZ;
+    std::memcpy(depth_, depth, sizeof depth_);
+    known_ = true;
 }
 
 }  // namespace uagfx::seams

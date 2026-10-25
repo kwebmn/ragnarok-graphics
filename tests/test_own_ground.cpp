@@ -324,3 +324,22 @@ TEST(own_ground_lights_its_corners_once_and_its_points_between_them) {
     CHECK(own_ground::lightAt({}, g.width, g.height, g.zoom, 0.0f, 0.0f) == 1.0f);  // none: no light
 }
 
+
+// 3.0.5-beta.13: the view's depth of a world place as one row (the seams on the card leave out a cell at the near
+// plane by it) - toView's depth, for a camera turned and tilted
+TEST(own_ground_depth_row_is_the_views_depth_of_a_place) {
+    const float c = std::cos(0.7f), s = std::sin(0.7f), ct = std::cos(-0.6f), st = std::sin(-0.6f);
+    // the view's ways in the world: turned about y by 0.7, tilted about its x by -0.6
+    const float m[12] = {c, 0, -s, s * st, ct, c * st, s * ct, -st, c * ct, 120.0f, -80.0f, 300.0f};
+    own_ground::View v;
+    CHECK(own_ground::viewOf(m, v));
+    float row[4];
+    own_ground::depthRow(v, row);
+    for (float x : {-50.0f, 0.0f, 400.0f})
+        for (float z : {-200.0f, 10.0f, 900.0f}) {
+            const float w[3] = {x, 7.0f, z};
+            float view[3];
+            own_ground::toView(v, w, view);
+            CHECK(std::fabs(w[0] * row[0] + w[1] * row[1] + w[2] * row[2] + row[3] - view[2]) < 1e-3f);
+        }
+}

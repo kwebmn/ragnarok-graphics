@@ -108,6 +108,53 @@ PsIn draw_vs(VsIn i) {
     return o;
 }
 
+// 3.0.5-beta.13 (the user: «Швы на видеокарте»): a piece of a strip across the ground's seams, kept in the card's
+// memory in the world's places (core/seams.hpp Store) - the camera put on it here as applySeams put it on the
+// processor, a little towards the camera, then as draw_vs; its fog from its cell's four corners this frame by each
+// one's share kept with the vertex. An instance a piece: its slot's first vertex and index, its indices (the
+// instance's corners past them draw nothing) and the corners' fog. Direct3D 11's (its slots t6, t7 of the vertex
+// shader's own).
+Buffer<uint4> seamVertices : register(t6);  // three a vertex (core/seams.hpp CardVertex)
+Buffer<uint> seamIndices : register(t7);
+struct SeamIn {
+    uint corner : SV_VertexID;
+    uint4 piece : TEXCOORD0;
+};
+float4 colourOf(uint c) {  // a Direct3D 7 colour (A8R8G8B8) as a vertex's COLOR reads it
+    return float4(float((c >> 16) & 255), float((c >> 8) & 255), float(c & 255), float(c >> 24)) / 255.0;
+}
+PsIn seam_vs(SeamIn i) {
+    PsIn o = (PsIn)0;
+    o.pos = float4(2.0, 2.0, 0.5, 1.0);  // past the target's right
+    if (i.corner >= i.piece.z) return o;
+    uint at = (i.piece.x + seamIndices.Load(int(i.piece.y + i.corner))) * 3;
+    uint4 a = seamVertices.Load(int(at));
+    uint4 b = seamVertices.Load(int(at + 1));
+    uint4 c = seamVertices.Load(int(at + 2));
+    // into the view: the world less the camera's place, through the inverse of its ways (r0-r8, the view's in the
+    // world, its rows) - the inverse's columns the rows' crossings over the determinant
+    float3 ra = float3(r0, r1, r2), rb = float3(r3, r4, r5), rc = float3(r6, r7, r8);
+    float3 w = asfloat(a.xyz) - float3(r9, r10, r11);
+    float3 v = float3(dot(w, cross(rb, rc)), dot(w, cross(rc, ra)), dot(w, cross(ra, rb))) / dot(ra, cross(rb, rc));
+    float zv = max(v.z, nearZ + 0.01);
+    float gx = v.x / zv * f0 + cx;
+    float gy = v.y / zv * f1 + cy;
+    float zd = max(zv - 0.15, nearZ + 0.005);  // on its cell's surface, not under it
+    float gz = farZ * (1.0 - nearZ / zd) / (farZ - nearZ);
+    float x = (gx * scale + 0.5 + jitterX) * 2.0 / targetSize.x - 1.0;
+    float y = 1.0 - (gy * scale + 0.5 + jitterY) * 2.0 / targetSize.y;
+    o.pos = float4(x * zv, y * zv, gz * zv, zv);
+    o.diffuse = colourOf(a.w);
+    o.specular = colourOf(c.x);
+    float4 share = float4(float(c.y & 65535), float(c.y >> 16), float(c.z & 65535), float(c.z >> 16)) / 65535.0;
+    uint f = i.piece.w;
+    float4 corners = float4(float(f & 255), float((f >> 8) & 255), float((f >> 16) & 255), float(f >> 24));
+    o.specular.a = floor(dot(share, corners) + 0.5) / 255.0;  // whole steps of 255, as the game's
+    o.uv0 = asfloat(b.xy);
+    o.uv1 = asfloat(b.zw);
+    return o;
+}
+
 float4 arg(uint a, float4 diffuse, float4 current, float4 tex, float4 specular) {
     uint sel = a & 15;
     float4 v = float4(1, 1, 1, 1);  // TFACTOR: the client never sets it, D3D7's default is white

@@ -75,4 +75,66 @@ private:
     size_t made_ = 0;
 };
 
+// 3.0.5-beta.13 (the user: «Швы на видеокарте» - with Direct3D 11 the strips were still most of a Radeon 610M
+// laptop's game thread on «Високі»: made, placed and turned by the camera on the processor each frame): each edge's
+// two pieces made once, in the world's places, into slots of the card's memory; a frame says only which pieces are
+// in view and their cells' fog, and the card puts the camera on them (seam_vs). An edge is known by its cell's place
+// on the map's grid and its way, not by the frame's groups - the game's draws of the cells are numbered anew as the
+// view moves, and beta.9's Cache, which knew its edges by them, took almost nothing again in the game.
+
+// A piece's vertex as the card reads it: three uint4 (seam_vs)
+struct CardVertex {
+    float pos[3] = {0, 0, 0};  // the world (up along -y)
+    uint32_t diffuse = 0;      // as Vertex's
+    float uv0[2] = {0, 0}, uv1[2] = {0, 0};
+    uint32_t specular = 0;     // as Vertex's without the fog (alpha 0): the shown piece's corners give it
+    uint16_t share[4] = {0, 0, 0, 0};  // each of the cell's corners' share of the fog, 65535 all of it
+    uint32_t spare = 0;
+};
+static_assert(sizeof(CardVertex) == 48, "three uint4 (seam_vs)");
+
+// The slots' two sizes: a piece whose triangles the crease cut none of (15 vertices, 16 triangles), and one it cut
+enum Size : uint32_t { kPlain = 0, kCut = 1 };
+constexpr uint32_t kSlotVertices[2] = {15, 47};
+constexpr uint32_t kSlotIndices[2] = {48, 144};
+
+// A piece in view, in the order drawn: each edge's piece of the neighbour's texture, then its cell's own band
+struct Shown {
+    uint32_t slot = 0;
+    uint32_t size = kPlain;
+    uint32_t indices = 0;            // its triangles' corners: the first ones of its slot's
+    uint32_t inside = 0, shows = 0;  // the groups of this frame, as a Strip's
+    uint32_t fog = 0;                // its cell's corners' fog this frame: corner k's specular alpha in bits 8k
+};
+
+class Store {
+public:
+    Store();
+    ~Store();
+    Store(const Store&) = delete;
+    Store& operator=(const Store&) = delete;
+    // depth: a place's depth in the view, (x, y, z, 1) dot depth - an edge whose cell reaches nearZ is left out
+    // (applySeams left out a strip with a corner there). laidKey as Cache's.
+    void build(const std::vector<Triangle>& ground, const std::vector<uint32_t>& texture, float width,
+               const float depth[4], float nearZ, const Laid& laid = {}, uint64_t laidKey = 0);
+    const std::vector<Shown>& shown() const { return shown_; }
+    // The slots the last build filled, of each size: their numbers, and their contents one slot after another
+    // (kSlotVertices and kSlotIndices of each, the indices from the slot's first vertex) - for the card
+    const std::vector<uint32_t>& freshSlots(uint32_t size) const;
+    const std::vector<CardVertex>& freshVertices(uint32_t size) const;
+    const std::vector<uint16_t>& freshIndices(uint32_t size) const;
+    uint32_t slotsUsed(uint32_t size) const;  // the card's room for the slots of a size: [0, this)
+    void clear();          // another map, or the card's memory lost: every piece made anew
+    size_t made() const;   // pieces made so far
+private:
+    struct Kept;
+    std::unique_ptr<Kept> kept_;
+    std::vector<Shown> shown_;
+    std::vector<Triangle> ground_;  // the last build's (Cache's): the same again - nothing to do
+    std::vector<uint32_t> texture_;
+    float width_ = -1.0f, depth_[4] = {0, 0, 0, 0}, nearZ_ = 0.0f;
+    uint64_t laidKey_ = 0;
+    bool known_ = false;
+};
+
 }  // namespace uagfx::seams
