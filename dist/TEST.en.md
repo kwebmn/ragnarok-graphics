@@ -1,3 +1,16 @@
+# uaRO Graphics 3.0.4-beta.31 — what is new
+
+- **A straight line across the paving and an odd tint (R-KZBBTN, alberta).** «Materials: stone, brick, bark» lays
+  large patches of lighter and darker, warmer and colder over the ground so that its tiles' repeats do not show. Their
+  noise was worked out through the sine of large numbers: a point of the noise's lattice reached from the cell on its
+  left and from the cell on its right got two values once the video card's compiler had it - and a patch broke along
+  a straight line (on Alberta's quay: yellowish on one side, bluish on the other). Now the noise is worked out in
+  whole numbers and breaks nowhere; the same for the patches on the trees' crowns. The patches' pattern is new.
+- **White and grey paving without bluish and yellowish patches.** The patches make warmer and colder only ground with
+  a colour of its own - grass, earth, sand, caves (as before); white and grey stone only a little lighter or darker.
+- To check: alberta by the ship, the camera close - the paving even, no straight edge of colour; prt_fild08 - the
+  grass in patches as before; prontera - the paving without noticeable blue or yellow.
+
 # uaRO Graphics 3.0.4-beta.30 — what is new
 
 - **The hills' light on the own ground costs less.** The slope and the light were worked out for each point of the
