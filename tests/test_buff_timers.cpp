@@ -56,3 +56,28 @@ TEST(buff_timers_what_an_icon_shows) {
     CHECK_EQ(buffs::label(300), std::string("1"));  // the last second still shows
     CHECK_EQ(buffs::label(0), std::string(""));
 }
+
+TEST(buff_timers_a_cast_told_after_its_icon) {
+    // 3.0.4-beta.36 (R-C8NYXS «когда каст обновляю отсчет не сбрасывается»): uAthena puts the icon on before it tells
+    // the cast - clif_skill_nodamage(src, bl, skill, lv, sc_start(...)) runs sc_start, its argument, first. A recast's
+    // icon came while the old time ran («sent again: its time goes on»), its cast after it: never anew; and a first
+    // cast's level never counted
+    constexpr uint16_t kIncreaseAgi = 29;
+    buffs::Timers t;
+    t.icon(kBlessingIcon, true, 1000);  // the icon, then its cast at level 7
+    t.cast(kBlessing, 7, 1004);
+    CHECK_EQ(t.left(kBlessingIcon, 1004), 180000u - 4u);  // the level's, from the icon's moment
+    t.icon(kBlessingIcon, true, 61000);  // cast again a minute on: the icon...
+    t.cast(kBlessing, 10, 61003);        // ...and its cast
+    CHECK_EQ(t.left(kBlessingIcon, 61003), 240000u - 3u);  // anew
+    t.icon(kBlessingIcon, true, 121000);  // a map change: the icon again, no cast - its time goes on
+    CHECK_EQ(t.left(kBlessingIcon, 121000), 180000u);
+    t.cast(kIncreaseAgi, 10, 121500);  // another skill's cast: not this icon's
+    CHECK_EQ(t.left(kBlessingIcon, 121500), 179500u);
+    t.cast(kBlessing, 10, 200000);  // a cast that put no icon on (a lower level refused): the time goes on
+    CHECK_EQ(t.left(kBlessingIcon, 200000), 101000u);
+    t.icon(kBlessingIcon, true, 300000);  // another character now: the last one's icons and casts gone
+    t.clear();
+    t.cast(kBlessing, 10, 300001);
+    CHECK_EQ(t.left(kBlessingIcon, 300001), 0u);
+}

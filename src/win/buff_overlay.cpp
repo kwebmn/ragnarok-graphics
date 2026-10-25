@@ -26,11 +26,16 @@ constexpr uint32_t kIconImage = 0x648BC0;  // CSession::IconImage(icon, pass): i
 const uint8_t kIconImageCode[] = {0x55, 0x8B, 0xEC, 0x8B, 0x45, 0x0C, 0x83, 0xF8, 0x03,
                                   0x0F, 0x87, 0x95, 0x05, 0x00, 0x00};
 constexpr int kIcon = 32, kStep = 35, kTop = 150, kBottomRoom = 50, kMostIcons = 64;
+// 3.0.4-beta.36 (R-C8NYXS «подписи под кастами както некрасиво смотрятся»): the layout's place is the icon's middle -
+// the game puts each icon as an effect of a 16 half side there (FUN_005d56a0: +0x2d8, +0x2e4 = 16.0f); taken for its
+// top left the times stood 16 down and right of their icons, over the next one and cut by the screen's edge (the
+// shot: the icon's left 1873 of the game's 1920, the layout's 1888)
+constexpr int kHalf = kIcon / 2, kFoot = 13;
 using ImageFn = const char*(__attribute__((thiscall)) *)(void* session, uint32_t icon, uint32_t pass);
 
 struct Slot {
     uint16_t icon;
-    int x, y;  // its top left, the game's pixels
+    int x, y;  // its middle, the game's pixels (3.0.4-beta.36)
 };
 
 struct State {
@@ -91,20 +96,21 @@ std::vector<Slot> layout() {
                 y = kStep;
                 inColumn = 0;
             }
-            out.push_back(Slot{uint16_t(*it), width - kIcon + x, y + kTop});
+            out.push_back(Slot{uint16_t(*it), width - kIcon + x, y + kTop});  // the game's +0x358, +0x35c
             keys.push_back(key);
             ++inColumn;
         }
     return out;
 }
 
-// The picture of the times: over the icons that have one, a dark foot under white words
+// The picture of the times: on the foot of each icon that has one, white words in a dark rim (3.0.4-beta.36: a dark
+// box under them covered a third of the icon)
 void render(State& s, const std::vector<Slot>& slots, const std::vector<std::string>& labels) {
     int x0 = 1 << 30, y0 = 1 << 30, x1 = -(1 << 30), y1 = -(1 << 30);
     for (size_t i = 0; i < slots.size(); ++i)
         if (!labels[i].empty()) {
-            x0 = std::min(x0, slots[i].x), y0 = std::min(y0, slots[i].y);
-            x1 = std::max(x1, slots[i].x + kIcon), y1 = std::max(y1, slots[i].y + kIcon);
+            x0 = std::min(x0, slots[i].x - kHalf), y0 = std::min(y0, slots[i].y - kHalf);
+            x1 = std::max(x1, slots[i].x + kHalf), y1 = std::max(y1, slots[i].y + kHalf + 2);  // the rim's room
         }
     s.picture = panel::Picture{};
     if (x1 <= x0) return;
@@ -117,13 +123,18 @@ void render(State& s, const std::vector<Slot>& slots, const std::vector<std::str
     std::vector<Words> words;
     for (size_t i = 0; i < slots.size(); ++i) {
         if (labels[i].empty()) continue;
-        const panel::Box foot{float(slots[i].x - x0) * k, float(slots[i].y - y0 + 20) * k, float(kIcon) * k,
-                              12.0f * k};
-        for (int py = int(foot.y); py < int(foot.y + foot.h) && py < s.picture.height; ++py)
-            for (int px = int(foot.x); px < int(foot.x + foot.w) && px < s.picture.width; ++px)
-                s.picture.px[size_t(py) * size_t(s.picture.width) + size_t(px)] = 0xA0000000u;
+        const panel::Box foot{float(slots[i].x - kHalf - x0) * k, float(slots[i].y + kHalf - kFoot - y0) * k,
+                              float(kIcon) * k, float(kFoot) * k};
         words.push_back(Words{foot, utf8Wide(labels[i]), 0xFFFFFF, 10.5f * k, true, DT_CENTER});
     }
+    const float rim = std::max(1.0f, std::round(k));  // the rim: the words in black a pixel each way first
+    for (int dy = -1; dy <= 1; ++dy)
+        for (int dx = -1; dx <= 1; ++dx) {
+            if (!dx && !dy) continue;
+            std::vector<Words> dark = words;
+            for (Words& w : dark) w.box.x += float(dx) * rim, w.box.y += float(dy) * rim, w.rgb = 0x000000;
+            drawWords(s.picture, dark);
+        }
     drawWords(s.picture, words);
     s.upload = true;
 }

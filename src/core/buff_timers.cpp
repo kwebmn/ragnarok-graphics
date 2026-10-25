@@ -20,22 +20,34 @@ uint32_t duration(uint16_t icon, uint16_t skill, uint16_t level) {
     return longest;
 }
 
-void Timers::cast(uint16_t skill, uint16_t level, uint64_t now) { last_ = Cast{true, skill, level, now}; }
+namespace {
+
+bool givenBy(uint16_t icon, uint16_t skill) {  // the skill gives this icon
+    for (size_t i = 0; i < kSkillBuffCount; ++i)
+        if (kSkillBuffs[i].icon == icon && kSkillBuffs[i].skill == skill) return true;
+    return false;
+}
+
+}  // namespace
+
+void Timers::cast(uint16_t skill, uint16_t level, uint64_t now) {
+    last_ = Cast{true, skill, level, now};
+    for (const auto& [icon, at] : onAt_) {  // 3.0.4-beta.36: its icon put on just before - the server's order
+        if (now < at || now - at > kCastWindowMs || !givenBy(icon, skill)) continue;
+        if (const uint32_t ms = duration(icon, skill, level)) ends_[icon] = at + ms;
+    }
+}
 
 void Timers::icon(uint16_t icon, bool on, uint64_t now) {
     if (!on) {
         ends_.erase(icon);
+        onAt_.erase(icon);
         return;
     }
+    onAt_[icon] = now;
     const bool fresh = last_.known && now >= last_.at && now - last_.at <= kCastWindowMs;
     uint32_t ms = 0;
-    if (fresh) {
-        ms = duration(icon, last_.skill, last_.level);
-        bool its = false;  // the cast was of a skill that gives this icon
-        for (size_t i = 0; i < kSkillBuffCount && !its; ++i)
-            its = kSkillBuffs[i].icon == icon && kSkillBuffs[i].skill == last_.skill;
-        if (!its) ms = 0;
-    }
+    if (fresh) ms = givenBy(icon, last_.skill) ? duration(icon, last_.skill, last_.level) : 0;
     const auto running = ends_.find(icon);
     if (!ms && running != ends_.end() && running->second > now) return;  // sent again: its time goes on
     if (!ms) ms = duration(icon, 0, 0);
