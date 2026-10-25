@@ -1,3 +1,11 @@
+# uaRO Graphics 3.0.4-beta.30 — what is new
+
+- **The hills' light on the own ground costs less.** The slope and the light were worked out for each point of the
+  ground (73 ns a point: a map's first picture ~3 ms dearer). Now the light is worked out once a corner of the cells
+  when it moves, and a point takes it between its cell's corners: 41 ns a point with all the rest, the first picture
+  only ~1 ms dearer. The same picture.
+- To check: as for beta.26 - the hills have volume near and far; maps start without a noticeable delay.
+
 # uaRO Graphics 3.0.4-beta.29 — what is new
 
 - **A smooth change from the smooth ground to the plain one.** Near, the own ground is smooth (a fine mesh); further
