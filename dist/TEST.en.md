@@ -1,10 +1,21 @@
+# uaRO Graphics 3.0.4-beta.29 — what is new
+
+- **A smooth change from the smooth ground to the plain one.** Near, the own ground is smooth (a fine mesh); further
+  off it is plain, cell by cell; pieces of ground change between them somewhere past 1000 units from the camera. The
+  smooth surface and the plain one part by up to a unit on slopes, so as you walked the slopes further off jumped a
+  little when a piece changed. Now over the last quarter of the way to the change the smooth ground settles onto the
+  plain one, and a piece changes onto it already: no jump, no crack at the seam. Offline on prt_fild08: the seam
+  level, no cracks.
+- To check: prt_fild08, walk up and down the slopes looking at the hills mid-screen - no jumps.
+
 # uaRO Graphics 3.0.4-beta.28 — what is new
 
 - **No hitch when the sun moves.** The hills' light on the own ground (beta.26) is baked into its colours and made
   again when the sun of the day's clock moves. All of the ground in view was made again in one picture (~10 ms) - a
   hitch could show every minute or two. Now eight pieces of ground a picture: the light hardly changes meanwhile, no
   seams.
-- To check: with "The sun moves by the clock" and "Hills without steps of light" on, stand on prt_fild08 for a few minutes - no
+- To check: with "The sun moves by the clock" and "Hills without steps of light" on, stand on prt_fild08 for a few
+  minutes - no
   hitch every minute.
 
 # uaRO Graphics 3.0.4-beta.27 — what is new
@@ -136,7 +147,8 @@
   clumps, were laid over the tree's box on the screen: as the camera turned, the leaves moved under them and the
   patches stood. Now they are on the leaves themselves (a place on their texture) and turn with the tree. The crown's
   volume and the rime on top stay by the camera - that is light.
-- To check: on prt_fild08 with "Autumn and winter crowns" on, turn the camera round the trees - which trees are yellow, and
+- To check: on prt_fild08 with "Autumn and winter crowns" on, turn the camera round the trees - which trees are yellow,
+  and
   where their patches are, should stay put.
 
 # uaRO Graphics 3.0.4-beta.18 — what is new
@@ -3213,7 +3225,8 @@ The auto setup ("Set up for this computer") now sets these too:
 - **The effects' glow in Direct3D 11.** The "Glow of effects" switch (with its sliders) now
   works in Direct3D 11 as in D3D12: skills, fire, auras shine with a soft halo. Water under the glow is drawn by its
   own shader. The log has `glow: ...x..., N levels (Direct3D 11)`.
-- How to check: Direct3D 11 on the Render page, turn on "Glow of effects", use fire skills or stand by a portal — a soft halo
+- How to check: Direct3D 11 on the Render page, turn on "Glow of effects", use fire skills or stand by a portal — a
+  soft halo
   around the bright effects; the frame counter Ctrl+Shift+F11 before and after (on a weak card the glow costs
   noticeably). Should the picture darken, flicker or effects vanish — turn the switch off and send a report.
 
