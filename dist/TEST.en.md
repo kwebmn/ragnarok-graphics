@@ -1,3 +1,17 @@
+# uaRO Graphics 3.0.5-beta.16 - what's new
+
+- **Lighter grass.** Two pieces of needless work gone, the same blades:
+  - the mark «a blade's root can stand here» was made for every row of the picture, though under Direct3D 11 (and
+    with the grass thinned) the roots are taken from every second row only - now it is half as big;
+  - for each marked root the grass went through all of its tests again (green ground around it, not under water, the
+    map's own ground) for every pixel above it, though the mark had passed them - now it takes only what the blade
+    itself needs.
+- **A more exact measurement.** The grass is two parts in the measurement now: «grass's roots» (the roots' mark) and
+  «grass» (the blades). Under Direct3D 11 the «living ground» is a part of its own - its time went into the soft
+  shadows until now («soft shadows 5.6» on «High», the shadows themselves about 3.3 ms).
+- To check on the laptop: the «Graphics test» under Direct3D 11 - the grass on «Medium» was 5.4 ms; and by eye: the
+  grass and the flowers on a field should look as before.
+
 # uaRO Graphics 3.0.5-beta.15 - what's new
 
 - **«Grass and road seams without steps» lighter for the video card.** The test on a Radeon 610M laptop showed the seams
