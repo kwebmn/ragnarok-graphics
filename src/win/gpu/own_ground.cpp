@@ -511,6 +511,7 @@ void Renderer::Impl::drawOwnModels(const own_ground::View& view, const camera::P
     const OwnGround* g = mapWorld.ownGround();
     if (!g || !effects.ownFarModels || !o.modelLikeKnown || g->models.chunks.empty()) return;
     o.learning.fit();
+    const float from = own_ground::ownFrom(p);  // 3.0.4-beta.22: where the own ground's depth is squeezed
     DrawSetup ms = o.modelLike;
     ms.cull = d3d7::CULL_NONE;
     ms.stage[0].mipFilter = d3d7::TFP_LINEAR;
@@ -546,7 +547,7 @@ void Renderer::Impl::drawOwnModels(const own_ground::View& view, const camera::P
         }
         float nearest = 0.0f, farthest = 0.0f;
         if (!own_ground::boxInView(view, p, gameWidth, gameHeight, lo, hi, kMostDepth, nearest, &farthest) ||
-            farthest < p.farZ)
+            farthest < from)
             continue;  // none of it past the far plane: the game's own
         for (uint32_t b = box.firstBatch; b < box.firstBatch + box.batchCount; ++b) {
             const terrain::Batch& bt = mesh.batches[b];
@@ -590,8 +591,8 @@ void Renderer::Impl::drawOwnModels(const own_ground::View& view, const camera::P
                 const uint32_t lv[3] = {mesh.indices[i], mesh.indices[i + 1], mesh.indices[i + 2]};
                 const float zd[3] = {seen[size_t(lv[0]) * 3 + 2], seen[size_t(lv[1]) * 3 + 2],
                                      seen[size_t(lv[2]) * 3 + 2]};
-                if (zd[0] < p.farZ && zd[1] < p.farZ && zd[2] < p.farZ) continue;  // the game's own
-                if (zd[0] >= p.farZ && zd[1] >= p.farZ && zd[2] >= p.farZ) {  // all of it: its corners as they are
+                if (zd[0] < from && zd[1] < from && zd[2] < from) continue;  // the game's own
+                if (zd[0] >= from && zd[1] >= from && zd[2] >= from) {  // all of it: its corners as they are
                     if (pd.verts.size() + 3 > 65535) {
                         emit(tex);
                         putAt.assign(bt.vertexCount, -1);
@@ -612,7 +613,7 @@ void Renderer::Impl::drawOwnModels(const own_ground::View& view, const camera::P
                 }
                 // across the far plane: the part past it (own_ground::pastDepth), its corners made anew
                 float share[4][3];
-                const int corners = own_ground::pastDepth(zd, p.farZ, share);
+                const int corners = own_ground::pastDepth(zd, from, share);
                 if (corners < 3) continue;
                 if (pd.verts.size() + 4 > 65535) {
                     emit(tex);
@@ -717,6 +718,7 @@ bool Renderer::Impl::drawOwnWater() {
     if (!own_ground::viewOf(viewToWorld, view)) return true;
     crumb("own water");
     const camera::Projection p = camera::projectionFor(gameWidth, gameHeight);
+    const float from = own_ground::ownFrom(p);  // 3.0.4-beta.22: where the own ground's depth is squeezed
     const map::Axes axes = mapWorld.axes().known() ? mapWorld.axes() : map::Axes{1, 1, 1};
     const float sign[3] = {float(axes.x), float(axes.y), float(axes.z)};
     const bool fogged = o.shading.fogged();
@@ -752,7 +754,7 @@ bool Renderer::Impl::drawOwnWater() {
         }
         float nearest = 0.0f, farthest = 0.0f;
         if (!own_ground::boxInView(view, p, gameWidth, gameHeight, lo, hi, kMostDepth, nearest, &farthest) ||
-            farthest < p.farZ)
+            farthest < from)
             continue;  // none of it past the far plane: the game's own
         const terrain::Batch& bt = mesh.batches[box.firstBatch];
         for (uint32_t i = bt.firstIndex; i + 3 <= bt.firstIndex + bt.indexCount; i += 3) {
@@ -764,9 +766,9 @@ bool Renderer::Impl::drawOwnWater() {
                 own_ground::toView(view, w, c[k]);
             }
             const float zd[3] = {c[0][2], c[1][2], c[2][2]};
-            if (zd[0] < p.farZ && zd[1] < p.farZ && zd[2] < p.farZ) continue;  // the game's own
+            if (zd[0] < from && zd[1] < from && zd[2] < from) continue;  // the game's own
             float share[4][3];
-            const int corners = own_ground::pastDepth(zd, p.farZ, share);
+            const int corners = own_ground::pastDepth(zd, from, share);
             if (corners < 3) continue;
             if (o.waterVerts.size() + 4 > 65535) emit();
             const size_t base = o.waterVerts.size();

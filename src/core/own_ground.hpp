@@ -45,6 +45,11 @@ inline void toView(const View& v, const float w[3], float out[3]) {
 // hides its own hills in order and nothing of the game's lies there
 constexpr float kSqueeze = 10.0f;
 float depthOf(const camera::Projection& p, float zd);
+// 3.0.4-beta.22 (R-ZZN7GY «всеравно осталась черная полоса на воде»): the view depth the own far models and water are
+// drawn from - where the squeeze begins: what the game draws past it (its water, its models up to the far plane) lies
+// behind the own ground's squeezed depth there, though nearer, and is hidden by it (the game's water between 1490 and
+// 1500 behind the own bed: a black strip, the far water beginning at 1500)
+inline float ownFrom(const camera::Projection& p) { return p.farZ - kSqueeze; }
 
 // A vertex of the own ground at its place in the map's file (the axes make it the world's) as the game would put it on
 // the screen - its colours and texture coordinates left; false behind the near plane

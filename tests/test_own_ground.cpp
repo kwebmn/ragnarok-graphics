@@ -214,3 +214,19 @@ TEST(own_ground_keeps_room_in_the_game_s_memory) {
     CHECK(own_ground::roomFor(100 * mb, 100 * mb, 50 * mb) == Room::None);
     CHECK(own_ground::roomFor(own_ground::kKeepFree, 0, 0) == Room::Whole);
 }
+
+TEST(own_ground_draws_its_own_from_where_its_depth_is_squeezed) {
+    // 3.0.4-beta.22 (R-ZZN7GY «всеравно осталась черная полоса на воде»): past kSqueeze before the far plane the own
+    // ground's depth is squeezed below 1 - a point of the game's there (its water, its models up to 1500) lies behind
+    // it in depth though nearer: the game's water between 1490 and 1500 hid behind the own bed, the far water began
+    // at 1500, a black strip. The own far water and models are drawn from there, their depth the own ground's
+    const camera::Projection p = camera::projectionFor(1920, 1080);
+    CHECK_EQ(own_ground::ownFrom(p), p.farZ - own_ground::kSqueeze);
+    const float a = p.farZ / (p.farZ - p.nearZ), b = p.farZ * p.nearZ / (p.farZ - p.nearZ);
+    const float gameWater = a - b / 1495.0f;  // the game's own water at 1495, its bed behind it at 1510
+    CHECK(own_ground::depthOf(p, 1510.0f) < gameWater);  // hidden by the bed: not the game's to draw there
+    CHECK(own_ground::depthOf(p, 1485.0f) == a - b / 1485.0f);  // nearer, the game's own depth: its water shows
+    const float from = own_ground::ownFrom(p);  // where the two meet, one depth on both sides
+    CHECK(std::fabs(own_ground::depthOf(p, from - 0.01f) - own_ground::depthOf(p, from + 0.01f)) < 1e-6f);
+}
+
