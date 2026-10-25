@@ -1,3 +1,14 @@
+# uaRO Graphics 3.0.4-beta.32 — what is new
+
+- **The own ground draws its picture again in towns too (R-Q3W727, prontera).** While the camera stands, the own
+  ground draws its last picture again instead of making it anew. But a minute still in Prontera made 3571 pictures of
+  3600 anew: the far houses' and trees' colours are learnt from the game, and the game lights its moving models anew
+  every picture - the cherry trees sway, the clock's hands and the signs turn. Now such colours reach the far models
+  at most once a second (they stand still - no difference to see), the picture drawn again meanwhile. Prontera,
+  standing: about 1 ms of the processor a picture less expected (of ~3.6 ms). The same picture.
+- To check: Prontera by the cherry trees - stand a minute still and send a report (the log tells the share of
+  pictures drawn again).
+
 # uaRO Graphics 3.0.4-beta.31 — what is new
 
 - **A straight line across the paving and an odd tint (R-KZBBTN, alberta).** «Materials: stone, brick, bark» lays
