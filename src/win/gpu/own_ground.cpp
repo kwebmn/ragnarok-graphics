@@ -612,7 +612,7 @@ void Renderer::Impl::noteOwnModels(const FrameRecord& rec, const DrawCmd& d) {
         o.modelLike = rec.states()[d.state];
         o.modelLikeKnown = true;
     }
-    constexpr uint32_t kMostNoted = 600;  // a picture's: the learning goes on over the pictures
+    using own_models::kMostNoted;  // a picture's: the learning goes on over the pictures, in turn (3.0.4-beta.33)
     if (o.modelsNoted >= kMostNoted) return;
     const std::vector<uint8_t>& vb = rec.vertexBytes();
     if (d.vertexOffset + size_t(d.vertexCount) * sizeof(own_ground::Tl1) > vb.size()) return;
@@ -641,7 +641,12 @@ void Renderer::Impl::noteOwnModels(const FrameRecord& rec, const DrawCmd& d) {
     };
     const bool strip = d.primitive == d3d7::PT_TRIANGLESTRIP;
     const uint32_t triangles = strip ? (n >= 3 ? n - 2 : 0) : n / 3;
+    if (o.modelsPassed + triangles <= o.modelsFrom) {  // 3.0.4-beta.33: before this picture's turn
+        o.modelsPassed += triangles;
+        return;
+    }
     for (uint32_t t = 0; t < triangles && o.modelsNoted < kMostNoted; ++t) {
+        if (o.modelsPassed++ < o.modelsFrom) continue;
         uint32_t k[3];
         const uint32_t base = strip ? t : t * 3;
         if (!vertexAt(base, k[0]) || !vertexAt(base + 1, k[1]) || !vertexAt(base + 2, k[2])) break;

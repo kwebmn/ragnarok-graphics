@@ -19,6 +19,13 @@ namespace uagfx::own_models {
 terrain::Mesh place(const std::vector<rsw::Model>& instances, const std::vector<const rsm::Model*>& files, int width,
                     int height, float zoom, std::vector<std::string>& textures);
 
+// 3.0.4-beta.33 (R-5ZC9JX, a minute still in prontera: «noted 360600, 0 (0 %) where ours lie»): the game's model
+// triangles noted a picture - at most kMostNoted, in turn: the next picture's from where this one's stopped, from the
+// first again once this one reached the game's last (noted fewer). The same first ones every picture had the learning
+// learn nothing while the camera stood, none of them ours
+constexpr uint32_t kMostNoted = 600;
+inline uint32_t nextNotedFrom(uint32_t from, uint32_t noted) { return noted < kMostNoted ? 0u : from + noted; }
+
 // The game's colours of its models, learnt from its own draws of them near (the own ground's way, own_ground::Shading):
 // a triangle of the game's where one of ours lies (its middle, then each corner within 0.3) gives our corners its
 // colours - and tells that ours stand where the game's do; the rest lit as the game lights those it drew, a line

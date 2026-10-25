@@ -95,3 +95,15 @@ TEST(own_models_learn_the_game_s_colours) {
     const uint32_t c = l.colourOf(unseen);
     CHECK(std::abs(int(c & 0xFF) - 0x50) <= 2);
 }
+
+TEST(own_models_note_the_game_s_triangles_in_turn) {
+    // 3.0.4-beta.33 (R-5ZC9JX, a minute still in prontera: «noted 360600, 0 (0 %) where ours lie»): at most
+    // kMostNoted of the game's model triangles a picture, the same first ones every picture while the camera stood -
+    // none of them ours, nothing learnt. Now in turn: the next picture from where this one stopped, from the first
+    // again once this one reached the game's last
+    using own_models::kMostNoted;
+    CHECK_EQ(own_models::nextNotedFrom(0, kMostNoted), kMostNoted);  // on to the next ones
+    CHECK_EQ(own_models::nextNotedFrom(3 * kMostNoted, kMostNoted), 4 * kMostNoted);
+    CHECK_EQ(own_models::nextNotedFrom(4 * kMostNoted, 250), 0u);  // the last reached: the first again
+    CHECK_EQ(own_models::nextNotedFrom(9 * kMostNoted, 0), 0u);    // fewer this picture: the first
+}

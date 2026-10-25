@@ -981,7 +981,9 @@ struct Renderer::Impl {
         ownState.decided = ownState.frame = ownState.drawn = ownState.likeTaken = false;  // 3.0.4-beta.10
         ownState.waterDrawn = ownState.waterGame = false;  // 3.0.4-beta.20
         ownState.shading.beginFrame();
-        ownState.modelsNoted = 0;  // 3.0.4-beta.14
+        // 3.0.4-beta.14; 3.0.4-beta.33: the game's model triangles noted in turn (own_models::nextNotedFrom)
+        ownState.modelsFrom = own_models::nextNotedFrom(ownState.modelsFrom, ownState.modelsNoted);
+        ownState.modelsNoted = ownState.modelsPassed = 0;
         // off for 10 s (the switch) - its textures and the map's own ground let go; for less (Pause, to compare) kept
         if (effects.ownGround) {
             ownOffSince = 0;
@@ -1192,6 +1194,7 @@ struct Renderer::Impl {
         };
         std::vector<ModelPending> modelPending;  // by texture
         uint32_t modelsNoted = 0;           // the game's model triangles noted this picture
+        uint32_t modelsFrom = 0, modelsPassed = 0;  // 3.0.4-beta.33: where this picture's turn starts; passed so far
         uint32_t modelFrames = 0;
         size_t modelsDrawn = 0;             // past the far plane, the last picture
         uint32_t frames = 0;        // drawn on this ground
