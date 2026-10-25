@@ -303,21 +303,35 @@ float3 spriteLight(float2 uv, float2 du, float2 dv, float3 c) {
     return c * f * float3(1.0 + 0.06 * warm, 1.0, 1.0 - 0.08 * warm);
 }
 
+// 3.0.4-beta.31 (R-KZBBTN: a straight line across alberta's paving, warm on its one side and cold on the other): a
+// lattice point's hash from its whole coordinates in integers (pcg2d, Jarzynski and Olano 2020) - the same however
+// a compiler orders the sums. The sine's (frac(sin(dot(p, k)) * 43758)) had a point reached from the cell on its
+// left and from the cell on its right as two sums rounded apart in their last bit: two values, the noise broken
+// along the lattice's line.
+float mhash(float2 p) {
+    uint2 v = asuint(int2(p)) * 1664525u + 1013904223u;
+    v.x += v.y * 1664525u;
+    v.y += v.x * 1664525u;
+    v ^= v >> 16u;
+    v.x += v.y * 1664525u;
+    v.y += v.x * 1664525u;
+    v ^= v >> 16u;
+    return float(v.x >> 8) * (1.0 / 16777216.0);
+}
+float mnoise(float2 p) {
+    float2 i = floor(p), f = frac(p);
+    f = f * f * (3.0 - 2.0 * f);
+    return lerp(lerp(mhash(i), mhash(i + float2(1, 0)), f.x), lerp(mhash(i + float2(0, 1)), mhash(i + 1.0), f.x), f.y);
+}
+
 // 1.7, the trees (draw_constants.hpp leafShading): a draw of leaves, its box sourceRect (game pixels). uiPixels.xy
 // the way to the sun on the screen, .z the crown's roundness (tree_volume) - lit as a ball from the sun's side, darker
 // in its middle; r4 the light through the leaves (leaf_light): a leaf with a hole a few pixels towards the sun is on
 // the crown's edge and glows warm green; sourceClamp.rgb the tree's own shade, r0-r2 the autumn's colour and r3 how
 // much (tree_tints), r5 rime on the crown's top.
-// 1.24: a smooth noise over the crown's own box (q: -1 to 1 across it) - the same patches however near the camera
-float leafNoise(float2 p) {
-    float2 i = floor(p), f = frac(p);
-    f = f * f * (3.0 - 2.0 * f);
-    float a = frac(sin(dot(i, float2(127.1, 311.7))) * 43758.5453);
-    float b = frac(sin(dot(i + float2(1.0, 0.0), float2(127.1, 311.7))) * 43758.5453);
-    float c = frac(sin(dot(i + float2(0.0, 1.0), float2(127.1, 311.7))) * 43758.5453);
-    float d = frac(sin(dot(i + float2(1.0, 1.0), float2(127.1, 311.7))) * 43758.5453);
-    return lerp(lerp(a, b, f.x), lerp(c, d, f.x), f.y);
-}
+// 1.24: a smooth noise over the crown's own box (q: -1 to 1 across it) - the same patches however near the camera.
+// 3.0.4-beta.31: the ground's (mnoise), its hash in integers - the sine's broke it along its lattice here too
+float leafNoise(float2 p) { return mnoise(p); }
 
 float3 leafLight(float2 pos, float2 uv, float2 du, float2 dv, float3 c) {
     float2 lo = sourceRect.xy * scale + 0.5 + float2(jitterX, jitterY);
@@ -379,13 +393,7 @@ float3 leafLight(float2 pos, float2 uv, float2 du, float2 dv, float3 c) {
 // sun's light here (0 indoors and at night), .y the gloss's. The game's light stays: what the relief adds is the
 // sunlit side brighter and the far side darker against the flat surface's, the hollows darker and the smooth stone
 // with a glint. Bit 29: the texture taken a little along the view by its height (parallax); bit 30, the ground: large
-// patches of shade over the world (r0-r11 the view -> the world) so that one tile's repeats do not show.
-float mhash(float2 p) { return frac(sin(dot(p, float2(127.1, 311.7))) * 43758.5453); }
-float mnoise(float2 p) {
-    float2 i = floor(p), f = frac(p);
-    f = f * f * (3.0 - 2.0 * f);
-    return lerp(lerp(mhash(i), mhash(i + float2(1, 0)), f.x), lerp(mhash(i + float2(0, 1)), mhash(i + 1.0), f.x), f.y);
-}
+// patches of shade over the world (r0-r11 the view -> the world) so that one tile's repeats do not show (mnoise).
 
 float3 materialLight(float3 c, float4 m, float3 P, float3 N, float3 T, float3 B, float seen) {
     float2 xy = m.xy * 2.0 - 1.0;
@@ -550,6 +558,11 @@ float4 shade(PsIn i) {
         float3 w = P.x * float3(r0, r1, r2) + P.y * float3(r3, r4, r5) + P.z * float3(r6, r7, r8) +
                    float3(r9, r10, r11);
         float warm = (mnoise(w.xz * 0.03 + 17.0) - 0.5) * 0.35;
+        // 3.0.4-beta.31 (R-KZBBTN: «непонятный оттенок» - alberta's white paving in bluish and yellowish patches):
+        // warmer and colder as much as the ground has a colour of its own - grass, earth and sand as before, white
+        // and grey stone only lighter and darker
+        float most = max(c.r, max(c.g, c.b));
+        warm *= smoothstep(0.06, 0.25, (most - min(c.r, min(c.g, c.b))) / max(most, 1e-3));
         c.rgb *= (0.88 + 0.24 * mnoise(w.xz * 0.012)) * float3(1.0 + warm * 0.6, 1.0 + warm * 0.15, 1.0 - warm * 0.5);
     }
     // 1.9, a strip across a seam of the ground (seams.cpp): the other cell's texture where the noise over the world
