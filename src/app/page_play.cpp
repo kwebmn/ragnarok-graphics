@@ -8,6 +8,7 @@
 #include "app/setting_ids.hpp"
 #include "app/status_info.hpp"
 #include "app/update.hpp"
+#include "core/graphics_test.hpp"
 #include "core/version.hpp"
 
 namespace uagfx::app {
@@ -23,8 +24,30 @@ constexpr int kSwitchOn = 2105;    // uaRO Graphics on again
 constexpr int kChannel = 2106;     // 3.0.1-beta.2 (the user): «Реліз» or «Бета» on the first page
 constexpr int kUpdateCheck = 2107;  // and «Перевірити оновлення»
 constexpr int kUpdateNow = 2108;    // 3.0.1-beta.4 (the user): «Оновити зараз» - updated, then this app, no game
+constexpr int kTestNow = 2109;    // 3.0.5-beta.7 (the user: «сделай»): «Запустити тест графіки»
+constexpr int kTestList = 2130;   // and the last test's table
 constexpr int kNewsFirst = 2110;  // + a news item's number: its "More"
 constexpr int kNewsMost = 10;
+
+// 3.0.5-beta.7: when a file was written ("" none) - its stamp, and its local time for the page
+std::wstring stampOf(const std::wstring& file) {
+    WIN32_FILE_ATTRIBUTE_DATA a{};
+    if (!GetFileAttributesExW(file.c_str(), GetFileExInfoStandard, &a)) return L"";
+    return std::to_wstring(a.ftLastWriteTime.dwHighDateTime) + L"." + std::to_wstring(a.ftLastWriteTime.dwLowDateTime) +
+           L"." + std::to_wstring(a.nFileSizeLow);
+}
+
+std::string localTimeOf(const std::wstring& file) {
+    WIN32_FILE_ATTRIBUTE_DATA a{};
+    FILETIME local{};
+    SYSTEMTIME t{};
+    if (!GetFileAttributesExW(file.c_str(), GetFileExInfoStandard, &a) ||
+        !FileTimeToLocalFileTime(&a.ftLastWriteTime, &local) || !FileTimeToSystemTime(&local, &t))
+        return "";
+    char text[32];
+    std::snprintf(text, sizeof text, "%02u.%02u.%04u %02u:%02u", t.wDay, t.wMonth, t.wYear, t.wHour, t.wMinute);
+    return text;
+}
 
 std::string megabytes(uint64_t bytes) {
     char text[32];
@@ -104,7 +127,60 @@ public:
         p.buttons({{kPlayNow, t(play), true, true}});  // 3.0.2: blue
         p.note(t(Text::PlayKeysLine));  // 3.0.2-beta.4: the game's keys, all of them on «Головне»
         rows_->buildRow(p, "launcher.direct_start");
+        p.gap();
+        buildTest(p);
     }
+
+    // 3.0.5-beta.7 (the user: «сделай»): «Тест графіки» - the game started for it alone (its first map runs the test,
+    // win/context_test.cpp), and the last test's table under it (uaro-graphics\graphics-test.txt; its .sent: the
+    // report's code, or why it did not go)
+    void buildTest(Panel& p) {
+        Model& m = host_.model();
+        p.heading(t(Text::TestTitle));
+        p.note(t(Text::PlayTestNote));
+        const bool running = m.now().gameRunning;
+        p.buttons({{kTestNow, t(Text::PlayTestButton), !running}});
+        if (running) p.note(t(Text::PlayTestRunning), Tone::Warn);
+        const std::wstring file = testFile();
+        testStamp_ = stampOf(file) + L"|" + stampOf(file + L".sent");
+        std::string text;
+        graphics_test::Table table;
+        if (!readFile(file, text) || !graphics_test::parseSummary(text, table)) {
+            p.note(t(Text::PlayTestNone));
+            return;
+        }
+        p.gap(4);
+        p.note(tf(Text::PlayTestLast, {localTimeOf(file)}), Tone::Normal);
+        p.note(wide(table.head));
+        static const int kWidths[] = {130, 45, 150, 95, 330};
+        std::vector<std::pair<std::wstring, int>> columns;
+        for (size_t c = 0; c < table.columns.size() && c < 5; ++c)
+            columns.emplace_back(wide(table.columns[c]), kWidths[c]);
+        HWND list = p.listView(kTestList, columns, int(table.rows.size()));
+        for (size_t r = 0; r < table.rows.size(); ++r) {
+            std::vector<std::string> cells = table.rows[r];
+            if (cells.size() == 2) cells = {cells[0], "—", "—", "—", cells[1]};  // not measured: the words, wide
+            for (size_t c = 0; c < cells.size(); ++c) {
+                const std::wstring cell = wide(cells[c]);
+                LVITEMW item{};
+                item.mask = LVIF_TEXT;
+                item.iItem = int(r);
+                item.iSubItem = int(c);
+                item.pszText = const_cast<wchar_t*>(cell.c_str());
+                SendMessageW(list, c == 0 ? LVM_INSERTITEMW : LVM_SETITEMTEXTW, c == 0 ? 0 : WPARAM(r),
+                             reinterpret_cast<LPARAM>(&item));
+            }
+        }
+        std::string said;
+        if (!readFile(file + L".sent", said)) return;
+        while (!said.empty() && (said.back() == '\n' || said.back() == '\r' || said.back() == ' ')) said.pop_back();
+        if (said.rfind("R-", 0) == 0)
+            p.note(tf(Text::PlayTestSent, {said}), Tone::Good);
+        else if (!said.empty())
+            p.note(tf(Text::PlayTestNotSent, {said.rfind("error: ", 0) == 0 ? said.substr(7) : said}), Tone::Warn);
+    }
+
+    std::wstring testFile() const { return host_.model().paths().dir + L"\\uaro-graphics\\graphics-test.txt"; }
 
     // 2.12: this start's own setup, the safe mode, uaRO Graphics switched off - each with its one press
     void buildCards(Panel& p) {
@@ -128,12 +204,15 @@ public:
         if (any) p.gap();
     }
 
-    bool ticks() const override { return asking_ || checking_ || patching_; }
+    bool ticks() const override { return true; }  // 3.0.5-beta.7: a test's result may come while the page is open
     void tick() override {
         const bool asking = launcherState().kind == LauncherState::Asking;
         const bool checking = updateState().kind == UpdateState::Checking;
         const bool patching = clientPatchState().kind == PatchState::Asking;
-        if (asking != asking_ || checking != checking_ || patching != patching_) host_.rebuild();  // an answer came
+        const std::wstring file = testFile();
+        const bool tested = stampOf(file) + L"|" + stampOf(file + L".sent") != testStamp_;
+        if (asking != asking_ || checking != checking_ || patching != patching_ || tested)
+            host_.rebuild();  // an answer came, or a test's result
     }
 
     void command(int id, int code) override {
@@ -146,6 +225,8 @@ public:
         Model& m = host_.model();
         if (id == kPlayNow) {
             host_.play();
+        } else if (id == kTestNow) {
+            host_.playTest();
         } else if (id == kUpdateCheck) {
             startUpdateCheck();
             host_.rebuild();
@@ -175,6 +256,7 @@ private:
     std::unique_ptr<Page> rows_;
     std::vector<std::string> urls_;  // the news' "More", in the page's order
     bool asking_ = false, checking_ = false, patching_ = false;
+    std::wstring testStamp_;  // the result's and its answer's, when the page was built
 };
 
 }  // namespace

@@ -36,6 +36,7 @@ public:
     settings::Mode mode() const override;
     void showNotes(const std::wstring& text) override;
     void play() override { doApply(true); }
+    void playTest() override { doApply(true, true); }  // 3.0.5-beta.7
     void openReports(bool fresh) override;
     // 2.13: uaro-graphics.exe --report (the game's Ctrl+Shift+F10): «Нове звернення» with its shot, the window up
     void reportAtStart(const ReportStart& s) {
@@ -78,7 +79,7 @@ private:
     std::wstring searchText() const;
     std::wstring windowLetters() const;  // Alt+letter of the window's own buttons
     void syncLibraries();  // 3.0.1-beta.5
-    void doApply(bool play);
+    void doApply(bool play, bool test = false);
     RECT pageArea() const;
 
     std::unique_ptr<Model> model_;

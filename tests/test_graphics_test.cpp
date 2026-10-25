@@ -227,3 +227,35 @@ TEST(graphics_test_summary_columns_line_up_by_letters) {
     CHECK_EQ(int(at.size()), 5);
     for (size_t k = 1; k < at.size(); ++k) CHECK_EQ(at[k], at[0]);
 }
+
+// 3.0.5-beta.7 (the user: «сделай» - the settings app's button): «Гра» shows the last test's table from
+// graphics-test.txt, read back into its cells (the columns are two spaces apart at least)
+TEST(graphics_test_summary_reads_back_into_its_cells) {
+    graphics_test::Head h;
+    h.version = "3.0.5-beta.7";
+    h.map = "prt_fild08";
+    graphics_test::PhaseResult r[graphics_test::kSets];
+    const double fps[] = {60.0, 60.0, 34.0, 0.0, 33.0}, slow[] = {57.0, 52.0, 28.0, 0.0, 27.0};
+    for (int p = 0; p < graphics_test::kSets; ++p) {
+        r[p].frames = p == 3 ? 0 : 700;
+        r[p].fps = fps[p];
+        r[p].slowFps = slow[p];
+        r[p].gpuMs = 6.2 + p;
+    }
+    std::map<int, graphics_test::Parts> parts;
+    parts[0].parts = {{"the game's world", 3.9}, {"the interface", 1.4}, {"the picture into the window", 0.5}};
+    const std::string text = graphics_test::summary(h, r, parts, settings::Lang::Uk);
+    graphics_test::Table t;
+    CHECK(graphics_test::parseSummary(text, t));
+    CHECK(t.head.rfind("Тест графіки · 3.0.5-beta.7 · prt_fild08", 0) == 0);
+    CHECK_EQ(int(t.columns.size()), 5);
+    CHECK(t.columns[0] == "Набір" && t.columns[2] == "найповільніша десята, FPS");
+    CHECK(t.columns[4] == "найдорожче на відеокарті, мс");
+    CHECK_EQ(int(t.rows.size()), 5);
+    CHECK(t.rows[0].size() == 5 && t.rows[0][0] == "Без ефектів" && t.rows[0][1] == "60" && t.rows[0][3] == "6.2");
+    CHECK(t.rows[0][4] == "the game's world 3.90, the interface 1.40, the picture into the window 0.50");
+    CHECK(t.rows[3].size() == 2 && t.rows[3][0] == "Високі" && t.rows[3][1] == "не виміряно");
+    CHECK(t.rows[4][0] == "Ваші налаштування" && t.rows[4][1] == "33");
+    CHECK(!graphics_test::parseSummary("", t));
+    CHECK(!graphics_test::parseSummary("a line of something else\n", t));
+}

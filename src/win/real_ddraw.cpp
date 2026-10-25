@@ -12,6 +12,7 @@
 
 #include "core/card_speed.hpp"
 #include "core/effect_groups.hpp"
+#include "core/graphics_test.hpp"
 #include "core/launcher.hpp"
 #include "core/log_files.hpp"
 #include "core/safe_mode.hpp"
@@ -127,12 +128,14 @@ std::string gameArguments() {
 
 // 2.11: UARO_LAUNCHER=1 - the launcher «Гра» (or the update's restart) started this game. Taken away: what the game
 // starts (the watcher, the questions) does not inherit it.
-bool takeLauncherMark() {
+bool takeMark(const char* name) {
     char mark[8] = {};
-    const DWORD n = GetEnvironmentVariableA(launcher::kStartedMark, mark, sizeof mark);
-    SetEnvironmentVariableA(launcher::kStartedMark, nullptr);
+    const DWORD n = GetEnvironmentVariableA(name, mark, sizeof mark);
+    SetEnvironmentVariableA(name, nullptr);
     return n == 1 && mark[0] == '1';
 }
+
+bool takeLauncherMark() { return takeMark(launcher::kStartedMark); }
 
 // Seconds since the file was written, -1 when it is not there.
 long secondsSince(const std::string& path) {
@@ -283,6 +286,11 @@ Startup decide() {
                      " - it plays", since);
         if (!redirect || !openLauncherInstead(dir)) askUpdateFirst(dir);
     }
+    // 3.0.5-beta.7: the settings app's «Тест графіки» started it - the test on its first map (win/context_test.cpp)
+    s.graphicsTest = takeMark(graphics_test::kStartMark);
+    if (s.graphicsTest)
+        LOG_INFO("test: «Тест графіки» asked by the settings app - it begins %.0f s after a map shows",
+                 graphics_test::kWaitS);
     LOG_INFO("display: high_resolution = %d, ui_filter = %s, render_scale = %d%%, sharpen = %d",
              s.config.highResolution ? 1 : 0, uiFilterToken(s.config.uiFilter), s.config.renderScale, s.config.sharpen);
     const WindowsVersion v = windowsVersion();

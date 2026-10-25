@@ -23,6 +23,7 @@ struct Startup {
     unsigned long long vramMb = 0;
     Computer computer;  // 2.5.15: the processor, the memory, the power (the log, the statistics)
     settings::Lang lang = settings::Lang::En;  // 2.15: the player's (the settings app's choice, else Windows')
+    bool graphicsTest = false;  // 3.0.5-beta.7: the settings app's «Тест графіки» started it (UARO_GRAPHICS_TEST)
 };
 const Startup& startup();
 

@@ -19,6 +19,7 @@
 #include "app/modes.hpp"
 #include "app/update.hpp"
 #include "app/update_window.hpp"
+#include "core/graphics_test.hpp"
 #include "core/settings/search.hpp"
 #include "core/update_check.hpp"
 #include "core/version.hpp"
@@ -833,7 +834,7 @@ void MainWindow::syncLibraries() {
     if (!r.log.empty()) model_->load();  // 3.0.1-beta.8: ROExt's dinput8.dll moved: its window now the driver's
 }
 
-void MainWindow::doApply(bool play) {
+void MainWindow::doApply(bool play, bool test) {
     std::wstring err = model_->apply(lang_);
     if (err.empty()) syncLibraries();  // a library's switch changed: put in now (the game closed)
     bool closing = false;
@@ -863,10 +864,14 @@ void MainWindow::doApply(bool play) {
             startClientPatchCheck(model_->paths().dir);
         }
         const UpdateState u = updateState();
+        // 3.0.5-beta.7: «Тест графіки» - the game (or the update that starts it) takes the mark; none after it
+        if (test) SetEnvironmentVariableA(graphics_test::kStartMark, "1");
         err = playNow(*model_, u.kind == UpdateState::Done ? u.offer : "", lang_, closing);
-        // 3.0.4-beta.4: a set of game windows - the rest one every 1.5 s (each its own log, place and panel card)
+        if (test) SetEnvironmentVariableA(graphics_test::kStartMark, nullptr);
+        // 3.0.4-beta.4: a set of game windows - the rest one every 1.5 s (each its own log, place and panel card);
+        // 3.0.5-beta.7: one window for the test - the others would draw beside it on the same card
         const bool started = err.empty() && !closing && u.kind != UpdateState::Done;  // the game itself started
-        moreGames_ = started ? model_->pendingConfig().windowStartCount - 1 : 0;
+        moreGames_ = started && !test ? model_->pendingConfig().windowStartCount - 1 : 0;
         if (moreGames_ > 0) SetTimer(hwnd_, kMoreGames, 1500, nullptr);
     }
     if (closing) {

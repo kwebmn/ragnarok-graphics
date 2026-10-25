@@ -429,6 +429,9 @@ enum class Text : uint16_t {
     TestRow, TestRunning, TestNeedsMap, TestStopped, TestSending, TestSent, TestNotSent, TestNoApp, TestTitle,
     TestColSet, TestColFps, TestColSlow, TestColCard, TestColDearest, TestSetOff, TestSetOwn, TestLimit, TestNoLimit,
     TestVsync, TestNotMeasured, ReportKindTest,
+    // 3.0.5-beta.7: «Тест графіки» from the settings app - the game's countdown, «Гра»'s button and the last result
+    TestWaitMap, TestCountdown, TestCancelled, PlayTestNote, PlayTestButton, PlayTestRunning, PlayTestLast,
+    PlayTestSent, PlayTestNotSent, PlayTestNone,
     Count
 };
 

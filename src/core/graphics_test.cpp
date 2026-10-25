@@ -256,4 +256,43 @@ std::string summary(const Head& h, const PhaseResult (&r)[kSets], const std::map
     return out;
 }
 
+bool parseSummary(const std::string& text, Table& out) {
+    std::vector<std::string> lines;
+    size_t from = 0;
+    while (from < text.size()) {
+        size_t end = text.find('\n', from);
+        if (end == std::string::npos) end = text.size();
+        std::string line = text.substr(from, end - from);
+        from = end + 1;
+        if (!line.empty() && line.back() == '\r') line.pop_back();
+        if (!line.empty()) lines.push_back(line);
+    }
+    // the cells of a row: two spaces or more between them
+    const auto cells = [](const std::string& line) {
+        std::vector<std::string> out;
+        size_t at = 0;
+        while (at < line.size()) {
+            const size_t gap = line.find("  ", at);
+            const std::string cell = line.substr(at, gap == std::string::npos ? std::string::npos : gap - at);
+            if (!cell.empty()) out.push_back(cell);
+            if (gap == std::string::npos) break;
+            at = line.find_first_not_of(' ', gap);
+            if (at == std::string::npos) break;
+        }
+        return out;
+    };
+    Table t;
+    if (lines.size() < 3) return false;
+    t.head = lines[0];
+    t.columns = cells(lines[1]);
+    if (t.columns.size() != 5) return false;
+    for (size_t i = 2; i < lines.size() && t.rows.size() < size_t(kSets); ++i) {
+        std::vector<std::string> row = cells(lines[i]);
+        if (row.size() != 2 && row.size() != t.columns.size()) return false;
+        t.rows.push_back(std::move(row));
+    }
+    out = std::move(t);
+    return true;
+}
+
 }  // namespace uagfx::graphics_test

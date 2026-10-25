@@ -14,6 +14,7 @@
 #include "win/context.hpp"
 #include "win/game_camera.hpp"
 #include "win/log.hpp"
+#include "win/map_start.hpp"
 #include "win/paths.hpp"
 #include "win/real_ddraw.hpp"
 
@@ -111,7 +112,53 @@ void Context::testStart() {
              ownLimits ? "the map's own limits" : outdoor ? "outdoors" : "a building", distance);
 }
 
+// 3.0.5-beta.7 (the user: «сделай» - the settings app's button): a game started by «Тест графіки» begins the test on
+// its first map once it has been there kWaitS seconds in front (a countdown on the screen); another map starts the
+// countdown again; ~ cancels it
+void Context::testCountdown(bool foreground) {
+    if (console_.open()) {
+        testWaiting_ = false;
+        LOG_INFO("test: the countdown cancelled - the console opened");
+        sayOnScreen(wide(said(Text::TestCancelled)));
+        return;
+    }
+    const std::string map = readGameMap();
+    const bool ready =
+        enhanced_ && foreground && !map.empty() && inGameWorld() && !mapStarting() && !mapLoad_.loading();
+    if (!ready) {
+        if (testLeftShown_ != -2) {  // said once: the test waits for a map
+            testLeftShown_ = -2;
+            testWaitMap_.clear();
+            testNote(said(Text::TestWaitMap));
+        }
+        return;
+    }
+    const double now = testClockS();
+    if (map != testWaitMap_) {  // a map now, or another one: the countdown from its start
+        testWaitMap_ = map;
+        testWaitSince_ = now;
+        testLeftShown_ = -1;
+        LOG_INFO("test: on %s - «Тест графіки» begins in %.0f s", map.c_str(), graphics_test::kWaitS);
+    }
+    const int left = int(std::ceil(graphics_test::kWaitS - (now - testWaitSince_)));
+    if (left <= 0) {
+        testWaiting_ = false;
+        testStart();
+        return;
+    }
+    if (left != testLeftShown_) {
+        testLeftShown_ = left;
+        testNote(said(Text::TestCountdown, {std::to_string(left)}));
+    }
+}
+
 void Context::testFrame(bool foreground) {
+    if (!testMarkTaken_) {
+        testMarkTaken_ = true;
+        testWaiting_ = startup().graphicsTest;
+        testLeftShown_ = -1;
+    }
+    if (testWaiting_) testCountdown(foreground);
     testWatchSent();
     if (testSendAt_ && GetTickCount64() >= testSendAt_) {
         testSendAt_ = 0;

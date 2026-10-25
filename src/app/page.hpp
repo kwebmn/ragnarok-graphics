@@ -46,6 +46,8 @@ public:
     // 2.11: the one way to the game (the bottom row's «Застосувати й грати», «Гра»'s «Грати»): the changes applied,
     // then an offered update first, then the game
     virtual void play() = 0;
+    // 3.0.5-beta.7: the same with «Тест графіки» - one game, which begins the test on its first map
+    virtual void playTest() = 0;
     // 2.13: the window «Звернення» (app/reports_window), with the new report's form at once (fresh)
     virtual void openReports(bool fresh) = 0;
 };

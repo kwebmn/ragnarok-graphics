@@ -4151,7 +4151,9 @@ constexpr Entry kTexts[] = {
      "• «Reports»: describe what went wrong, add screenshots - the developers answer there; in the game "
      "Ctrl+Shift+F10.\n"
      "• The gamepad: Xbox and PlayStation work at once, its buttons on «Gamepad».\n"
-     "• The game's libraries: our own in place of the old ones of the 2000s, each can be turned off on «Service».",
+     "• The game's libraries: our own in place of the old ones of the 2000s, each can be turned off on «Service».\n"
+     "• «Graphics test»: for 75 seconds the game goes through every effects set by itself and sends the developers "
+     "how it runs on your computer - on «Play» or in the game's console (~).",
      "• uaRO Graphics малює гру наново на вашій відеокарті: чітка картинка будь-якого розміру, згладжування, світло й "
      "ефекти, ШІ-текстури.\n"
      "• «Гра» відкривається перед грою: новини сервера й хто онлайн, оновлення, кнопка «Грати».\n"
@@ -4159,7 +4161,9 @@ constexpr Entry kTexts[] = {
      "оновлення графіки від адміністратора — із сайту.\n"
      "• «Звернення»: опишіть, що не так, додайте знімки — розробники відповідають там же; у грі Ctrl+Shift+F10.\n"
      "• Геймпад: Xbox і PlayStation працюють одразу, кнопки — на «Геймпад».\n"
-     "• Бібліотеки гри: свої замість старих, 2000-х років; кожну можна вимкнути на «Сервіс».",
+     "• Бібліотеки гри: свої замість старих, 2000-х років; кожну можна вимкнути на «Сервіс».\n"
+     "• «Тест графіки»: 75 секунд гра сама проходить усі набори ефектів і надсилає розробникам, як вона йде на вашому "
+     "комп'ютері — на «Гра» або в консолі гри (~).",
      "• uaRO Graphics рисует игру заново на вашей видеокарте: чёткая картинка любого размера, сглаживание, свет и "
      "эффекты, ИИ-текстуры.\n"
      "• «Игра» открывается перед игрой: новости сервера и кто онлайн, обновления, кнопка «Играть».\n"
@@ -4167,10 +4171,16 @@ constexpr Entry kTexts[] = {
      "обновления графики от администратора — с сайта.\n"
      "• «Обращения»: опишите, что не так, добавьте снимки — разработчики отвечают там же; в игре Ctrl+Shift+F10.\n"
      "• Геймпад: Xbox и PlayStation работают сразу, кнопки — на «Геймпад».\n"
-     "• Библиотеки игры: свои вместо старых, 2000-х годов; каждую можно выключить на «Сервис»."},
-    {Text::HelpViewPlay, "The server's news and who is online, the update channel and the updates, the «Play» button.",
-     "Новини сервера й хто онлайн, канал оновлень і оновлення, кнопка «Грати».",
-     "Новости сервера и кто онлайн, канал обновлений и обновления, кнопка «Играть»."},
+     "• Библиотеки игры: свои вместо старых, 2000-х годов; каждую можно выключить на «Сервис».\n"
+     "• «Тест графики»: 75 секунд игра сама проходит все наборы эффектов и отправляет разработчикам, как она идёт на "
+     "вашем компьютере — на «Игра» или в консоли игры (~)."},
+    {Text::HelpViewPlay,
+     "The server's news and who is online, the update channel and the updates, the «Play» button, the graphics test "
+     "and its last result.",
+     "Новини сервера й хто онлайн, канал оновлень і оновлення, кнопка «Грати», тест графіки та його останній "
+     "результат.",
+     "Новости сервера и кто онлайн, канал обновлений и обновления, кнопка «Играть», тест графики и его последний "
+     "результат."},
     {Text::HelpViewMain,
      "The most needed settings of the other pages on one page; the recommended settings in one press.",
      "Найпотрібніші налаштування інших сторінок на одній; рекомендовані налаштування — одним натиском.",
@@ -4633,6 +4643,29 @@ constexpr Entry kTexts[] = {
     {Text::TestVsync, "VSync", "VSync", "VSync"},
     {Text::TestNotMeasured, "not measured", "не виміряно", "не измерено"},
     {Text::ReportKindTest, "Graphics test", "Тест графіки", "Тест графики"},
+    {Text::TestWaitMap, "Graphics test: it begins 10 s after you enter a map",
+     "Тест графіки почнеться за 10 с після входу на карту", "Тест графики начнётся через 10 с после входа на карту"},
+    {Text::TestCountdown, "Graphics test begins in {1} s: stand somewhere quiet and keep still. ~ cancels it",
+     "Тест графіки почнеться за {1} с: станьте в спокійному місці й не рухайтеся. ~ — скасувати",
+     "Тест графики начнётся через {1} с: встаньте в спокойном месте и не двигайтесь. ~ — отменить"},
+    {Text::TestCancelled, "Graphics test cancelled", "Тест графіки скасовано", "Тест графики отменён"},
+    {Text::PlayTestNote,
+     "75 seconds: the game itself shows each effects set and sends the developers how it runs on this computer. The "
+     "game starts, and the test begins 10 seconds after you enter a map - stand somewhere quiet.",
+     "75 секунд: гра сама показує кожен набір ефектів і надсилає розробникам, як він іде на цьому комп'ютері. Гра "
+     "запуститься, а тест почнеться за 10 секунд після входу на карту — станьте в спокійному місці.",
+     "75 секунд: игра сама показывает каждый набор эффектов и отправляет разработчикам, как он идёт на этом "
+     "компьютере. Игра запустится, а тест начнётся через 10 секунд после входа на карту — встаньте в спокойном месте."},
+    {Text::PlayTestButton, "Run the graphics test", "Запустити тест графіки", "Запустить тест графики"},
+    {Text::PlayTestRunning, "The game is running: open its console (~) and choose «Graphics test».",
+     "Гра вже запущена: відкрийте в ній консоль (~) і виберіть «Тест графіки».",
+     "Игра уже запущена: откройте в ней консоль (~) и выберите «Тест графики»."},
+    {Text::PlayTestLast, "The last test, {1}:", "Останній тест, {1}:", "Последний тест, {1}:"},
+    {Text::PlayTestSent, "Sent to the developers: {1}.", "Надіслано розробникам: {1}.",
+     "Отправлено разработчикам: {1}."},
+    {Text::PlayTestNotSent, "Not sent: {1}.", "Не надіслано: {1}.", "Не отправлено: {1}."},
+    {Text::PlayTestNone, "No graphics test on this computer yet.", "На цьому комп'ютері тесту графіки ще не було.",
+     "На этом компьютере теста графики ещё не было."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

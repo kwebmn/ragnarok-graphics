@@ -97,5 +97,18 @@ struct Head {
 // dearest parts (the profile's, else its timed passes)
 std::string summary(const Head& h, const PhaseResult (&r)[kSets], const std::map<int, Parts>& parts,
                     settings::Lang lang);
+// 3.0.5-beta.7: that table read back (the settings app's «Гра» shows the last test): its first line, the columns'
+// headings, each set's cells (one not measured: its name and the words); false when the text is no such table
+struct Table {
+    std::string head;
+    std::vector<std::string> columns;
+    std::vector<std::vector<std::string>> rows;
+};
+bool parseSummary(const std::string& text, Table& out);
+
+// 3.0.5-beta.7: the settings app's «Тест графіки» starts the game with this in its environment; the driver begins the
+// test on the first map after kWaitS seconds there (a countdown on the screen: the player stands still)
+constexpr const char* kStartMark = "UARO_GRAPHICS_TEST";
+constexpr double kWaitS = 10.0;
 
 }  // namespace uagfx::graphics_test

@@ -159,6 +159,11 @@ private:
     void testSend();
     void testWatchSent();
     void testNote(const std::string& utf8);  // the frame counter's line, at once
+    // 3.0.5-beta.7: started by the settings app's «Тест графіки» - the test on the first map after kWaitS seconds
+    void testCountdown(bool foreground);
+    bool testMarkTaken_ = false, testWaiting_ = false;
+    double testWaitSince_ = 0.0;
+    std::string testWaitMap_;
     static double testClockS();              // QueryPerformanceCounter's seconds
     EffectSettings testSet(graphics_test::Set s) const;
     graphics_test::Run test_;
