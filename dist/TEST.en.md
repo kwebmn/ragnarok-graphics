@@ -1,3 +1,28 @@
+# uaRO Graphics 3.0.8 — what is new
+
+More notifications while the game is behind: an attack, a buff ending, the party, the chat, the connection, HP and SP
+back.
+
+- **New notifications while the game is behind.** In the configurator, page «Game», section «Notifications», under
+  «Notifications while the game is behind» - new boxes, all on by default:
+  - «An attack on the character» - when the character comes under attack (misses too): once, again only after half
+    a minute without hits. While it goes on, the game's taskbar button flashes.
+  - «A buff ending» - «Seconds before a buff ends» (10 s by default) before one of the character's buffs runs out -
+    its name (Blessing, Increase AGI, potions, food). Short buffs (under half a minute) are not told.
+  - «A death in the party» and «Low HP in the party» - of one of the party near; the threshold «Party HP threshold»
+    (30 % by default).
+  - «The party's chat» and «The guild's chat» - what the others write (not your own).
+  - «Your name in the chat» - when someone near writes the character's name in the common chat.
+  - «The connection to the server lost» - when the server closed the connection.
+  - «HP and SP back» - when HP and SP are both back after a real fall (sitting, a rest); back to how much - «Back to»
+    (50-100 %, 100 % by default).
+  - «Notification sound» - Windows' own sound with each notification; off - silent.
+- **Several game windows.** Each tells of its own character (an attack, buffs, the name, the connection, HP and SP);
+  the party's and the guild's news the main window alone - not one notification from each helper.
+- **The log explains the notifications.** For each event it shows why no notification came (the game in front, its box
+  off, not the main window) or that Windows took or refused it, and whether Windows shows notifications at all now -
+  a help with a report sent from the game.
+
 # uaRO Graphics 3.0.7-beta.8 — what is new
 
 - **Notifications: the log tells what happens to them.** When the game goes behind, the log says so. For each event
