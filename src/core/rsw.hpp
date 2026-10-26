@@ -52,6 +52,9 @@ struct World {
     // above); known false for a file without it
     int lightLongitude = 0, lightLatitude = 0;
     bool lightKnown = false;
+    // 3.0.7-beta.3: its colours (red, green, blue; 1 full) - uaRO.exe lights its ground's vertices with them
+    // (core/terrain.hpp Sun); the game's when a file has none
+    float lightDiffuse[3] = {1.0f, 1.0f, 1.0f}, lightAmbient[3] = {0.3f, 0.3f, 0.3f};
     std::vector<Light> lights;
     std::vector<Effect> effects;
     std::vector<Model> models;  // 2.0

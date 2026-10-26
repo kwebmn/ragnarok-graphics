@@ -278,6 +278,42 @@ void blendsOf(Builder& b, const Grid& grid, int x, int y, int n, const std::vect
 
 }  // namespace
 
+Sun sunOf(int longitude, int latitude, const float diffuse[3], const float ambient[3]) {
+    Sun s;
+    const float toRadians = 3.141592f * 0.0055555557f;  // as uaRO.exe has them
+    const float lon = float(longitude) * toRadians, lat = float(latitude) * toRadians;
+    s.way[0] = std::sin(lat) * std::sin(lon);
+    s.way[1] = std::cos(lat);
+    s.way[2] = std::sin(lat) * std::cos(lon);
+    std::copy(diffuse, diffuse + 3, s.diffuse);
+    std::copy(ambient, ambient + 3, s.ambient);
+    return s;
+}
+
+uint32_t lit(uint32_t surface, const Sun& sun, const float normal[3]) {
+    const float light = std::max(0.0f, normal[0] * sun.way[0] + normal[1] * sun.way[1] + normal[2] * sun.way[2]);
+    uint32_t out = 0xFF000000u;
+    for (int k = 0; k < 3; ++k) {  // red, green, blue
+        const int shift = 16 - 8 * k;
+        const float f = std::min(1.0f, light * sun.diffuse[k] + sun.ambient[k]);
+        out |= uint32_t(float((surface >> shift) & 0xFFu) * f) << shift;  // cut, as the game's __ftol
+    }
+    return out;
+}
+
+uint32_t wallLight(const gnd::Ground& g, int x, int y, bool right, const Sun& sun) {
+    if (x < 0 || y < 0 || x + (right ? 1 : 0) >= g.width || y + (right ? 0 : 1) >= g.height) return 0;
+    const gnd::Cell& c = g.cells[size_t(y) * size_t(g.width) + size_t(x)];
+    const int surface = right ? c.right : c.front;
+    if (surface < 0 || size_t(surface) >= g.surfaces.size()) return 0;
+    const gnd::Cell& next = g.cells[size_t(y + (right ? 0 : 1)) * size_t(g.width) + size_t(x + (right ? 1 : 0))];
+    const float into = next.h[0] <= c.h[2] ? 1.0f : -1.0f;
+    const float across[3] = {right ? into : 0.0f, 0.0f, right ? 0.0f : into};
+    return lit(g.surfaces[size_t(surface)].color, sun, across);
+}
+
+bool isWall(const Vertex& v) { return v.normal[1] == 0.0f; }  // a top's or a strip's is never 0 (-1 before its unit)
+
 Atlas lightmapAtlas(const gnd::Ground& g) {
     Atlas a;
     const int cols = kAtlasWidth / 8;
@@ -300,7 +336,8 @@ Atlas lightmapAtlas(const gnd::Ground& g) {
 }
 
 Mesh build(const gnd::Ground& g, int subdivide, const Atlas& atlas, const std::vector<uint8_t>* laid,
-           const std::vector<uint8_t>* resting) {
+           const std::vector<uint8_t>* resting, const Sun* sun) {
+    const Sun light = sun ? *sun : Sun{};
     const int n = std::clamp(subdivide, 1, 8);
     if (laid && laid->size() != g.cells.size()) laid = nullptr;
     if (resting && resting->size() != g.cells.size()) resting = nullptr;
@@ -357,7 +394,9 @@ Mesh build(const gnd::Ground& g, int subdivide, const Atlas& atlas, const std::v
             // corner k on vertex k as uaRO.exe lays them (FUN_004e4190); 3.0.7-beta.2 (R-V6ZHJX «на стенах не должно
             // быть полос»): a right side from (x + 1, y + 1) to (x + 1, y), not the other way - its picture and its
             // light had been turned round along it, each of c_tower2's walls lit the other way to the next
-            const auto wall = [&](int surface, const float* p0, const float* p1, const float* p2, const float* p3) {
+            // colour: the game's light on it (wallLight)
+            const auto wall = [&](int surface, const float* p0, const float* p1, const float* p2, const float* p3,
+                                  uint32_t colour) {
                 if (surface < 0 || size_t(surface) >= g.surfaces.size()) return;
                 const gnd::Surface& s = g.surfaces[size_t(surface)];
                 const float* p[4] = {p0, p1, p2, p3};
@@ -376,7 +415,7 @@ Mesh build(const gnd::Ground& g, int subdivide, const Atlas& atlas, const std::v
                     v.uv[0] = s.u[k];
                     v.uv[1] = s.v[k];
                     b.lightmapUv(s.lightmap, float(k & 1), float(k >> 1), v.lm);
-                    v.color = s.color;
+                    v.color = colour;  // 3.0.7-beta.3: the game's light on it, not the ground's beside it
                     part.vertices.push_back(v);
                 }
                 Builder::quad(part, first, first + 1, first + 2, first + 3);
@@ -390,13 +429,13 @@ Mesh build(const gnd::Ground& g, int subdivide, const Atlas& atlas, const std::v
                         const gnd::Cell& r = g.cells[size_t(y) * size_t(g.width) + size_t(x + 1)];
                         const float a[3] = {x1, c.h[3], z1}, b2[3] = {x1, c.h[1], z0}, d[3] = {x1, r.h[2], z1},
                                     e2[3] = {x1, r.h[0], z0};
-                        wall(c.right, a, b2, d, e2);
+                        wall(c.right, a, b2, d, e2, wallLight(g, x, y, true, light));
                     }
                     if (c.front >= 0 && y + 1 < g.height) {  // its far side to the next row's cell
                         const gnd::Cell& f = g.cells[size_t(y + 1) * size_t(g.width) + size_t(x)];
                         const float a[3] = {x0, c.h[2], z1}, b2[3] = {x1, c.h[3], z1}, d[3] = {x0, f.h[0], z1},
                                     e2[3] = {x1, f.h[1], z1};
-                        wall(c.front, a, b2, d, e2);
+                        wall(c.front, a, b2, d, e2, wallLight(g, x, y, false, light));
                     }
                 }
             if (b.parts.empty()) continue;

@@ -38,7 +38,7 @@ inline std::vector<uint8_t> rsw() {
     w.i32(3);
     w.i32(45);  // light: longitude, latitude, diffuse, ambient, opacity
     w.i32(45);
-    for (int i = 0; i < 6; ++i) w.f32(0.5f);
+    for (float f : {0.4f, 0.6f, 0.8f, 0.2f, 0.3f, 0.1f}) w.f32(f);
     w.f32(1.0f);
     for (int i = 0; i < 4; ++i) w.i32(0);  // the ground box
     w.i32(4);                              // objects

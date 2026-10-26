@@ -2,6 +2,8 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdio>
+#include <cstdlib>
 
 namespace uagfx::own_ground {
 
@@ -293,6 +295,39 @@ float lightAt(const std::vector<float>& lights, int width, int height, float zoo
     const float top = lights[at] + (lights[at + 1] - lights[at]) * fx;
     const float bottom = lights[at + row] + (lights[at + row + 1] - lights[at + row]) * fx;
     return top + (bottom - top) * fz;
+}
+
+void WallCheck::reset(int width, int height, float zoom) {
+    width_ = std::max(width, 0), height_ = std::max(height, 0), zoom_ = zoom > 0.0f ? zoom : 1.0f;
+    checked_.assign(size_t(width_) * size_t(height_) * 2, 0);
+    seen_ = alike_ = 0;
+    firstApart_.clear();
+}
+
+void WallCheck::note(const float lo[2], const float hi[2], uint32_t diffuse, const std::vector<uint32_t>& light) {
+    if (light.size() != checked_.size()) return;
+    const bool right = hi[0] - lo[0] < 1.0f;  // upright along z: a right side, its x a cell's edge
+    const float mx = (lo[0] + hi[0]) * 0.5f / zoom_ + float(width_) / 2.0f;
+    const float mz = (lo[1] + hi[1]) * 0.5f / zoom_ + float(height_) / 2.0f;
+    const int x = right ? int(std::lround(mx)) - 1 : int(std::floor(mx));
+    const int y = right ? int(std::floor(mz)) : int(std::lround(mz)) - 1;
+    if (x < 0 || y < 0 || x >= width_ || y >= height_) return;
+    const size_t k = (size_t(y) * size_t(width_) + size_t(x)) * 2 + (right ? 0 : 1);
+    const uint32_t ours = light[k];
+    if (!ours || checked_[k]) return;
+    checked_[k] = 1;
+    ++seen_;
+    bool close = true;
+    for (int c = 0; c < 24; c += 8)
+        close = close && std::abs(int((ours >> c) & 0xFF) - int((diffuse >> c) & 0xFF)) <= 2;
+    if (close) {
+        ++alike_;
+    } else if (firstApart_.empty()) {
+        char text[96];
+        std::snprintf(text, sizeof text, "%d,%d %s: the game's %08x, ours %08x", x, y,
+                      right ? "right side" : "far side", diffuse, ours);
+        firstApart_ = text;
+    }
 }
 
 }  // namespace uagfx::own_ground

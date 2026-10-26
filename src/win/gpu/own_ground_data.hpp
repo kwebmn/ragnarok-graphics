@@ -21,6 +21,9 @@ struct OwnGround {
     terrain::Atlas atlas;
     std::vector<float> cornerNormals;  // 3.0.4-beta.26: the cells' corners' (own_ground::cornerNormals) - its light
     unsigned restingCells = 0;  // 3.0.6-beta.3: the cells a model rests on (terrain::restingOn), for the log
+    // 3.0.7-beta.3 (R-YXZM7Y «посмотри насчет освещения стен»): the light the game gives its walls (terrain::wallLight,
+    // by the map's sun), 2 a cell - its right side's, its far side's (0 none): the game's own walls checked against it
+    std::vector<uint32_t> wallLight;
     struct Picture {
         int width = 0, height = 0;
         std::vector<std::vector<uint32_t>> levels;  // ARGB, the whole first, then each half

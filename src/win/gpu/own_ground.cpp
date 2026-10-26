@@ -25,6 +25,7 @@ constexpr float kMostDepth = 4000.0f;               // how far off the own groun
 // i7-8700 (R-N6FC5V)
 constexpr float kFinePixels = 40.0f;
 constexpr int kRelitAPicture = 8;  // 3.0.4-beta.28: chunks made again a picture when the hills' light moved
+constexpr unsigned kWallsChecked = 32;  // 3.0.7-beta.3: the game's walls seen before the log tells how many are alike
 constexpr float kMorphFrom = 0.75f;  // 3.0.4-beta.29: of fineDepth - the smooth ground eased onto the plain past it
 
 double msSince(const LARGE_INTEGER& from) {
@@ -121,6 +122,8 @@ bool Renderer::Impl::prepareOwnGround() {
         dropOwnGround();
         o.serial = g->serial;
         o.shading.reset(g->width, g->height, g->zoom);
+        o.wallCheck.reset(g->width, g->height, g->zoom);  // 3.0.7-beta.3
+        o.wallsTold = false;
         o.colours[0].assign(g->mesh.vertices.size(), 0);  // 3.0.4-beta.12: the colours made as the chunks show
         o.colours[1].assign(g->distant.vertices.size(), 0);
         o.fresh[0].assign(g->mesh.chunks.size(), 0);
@@ -239,7 +242,23 @@ void Renderer::Impl::noteOwnGround(const FrameRecord& rec, const DrawCmd& d) {
         lo[1] = std::min(lo[1], z), hi[1] = std::max(hi[1], z);
         o.shading.fog(vz, v[i].specular);
     }
-    if (hi[0] - lo[0] < 1.0f || hi[1] - lo[1] < 1.0f) return;  // a wall: upright
+    if (hi[0] - lo[0] < 1.0f || hi[1] - lo[1] < 1.0f) {  // a wall: upright
+        // 3.0.7-beta.3 (R-YXZM7Y «посмотри насчет освещения стен»): its colour against the light the own ground gives
+        // it (terrain::wallLight) - in the log once kWallsChecked walls of the map's are seen
+        const OwnGround* g = o.wallsTold ? nullptr : mapWorld.ownGround();
+        if (g && g->serial == o.serial) {
+            o.wallCheck.note(lo, hi, v[0].diffuse, g->wallLight);
+            if (o.wallCheck.seen() >= kWallsChecked) {
+                o.wallsTold = true;
+                const std::string& apart = o.wallCheck.firstApart();
+                LOG_INFO("own ground: %s's walls - %u of the game's seen, %u lit as ours (a channel 2 apart at "
+                         "most)%s%s",
+                         g->map.c_str(), o.wallCheck.seen(), o.wallCheck.alike(),
+                         apart.empty() ? "" : "; first apart: ", apart.c_str());
+            }
+        }
+        return;
+    }
     // 3.0.4-beta.15: the cell's first corner (its least x and z) gives its corner's colour; the others fill only
     for (uint32_t i = 0; i < n; ++i) {
         const bool first = at[i][0] - lo[0] < 0.5f && at[i][1] - lo[1] < 0.5f;
@@ -425,8 +444,12 @@ bool Renderer::Impl::drawOwnGround() {
                     const terrain::Batch& bt = mesh.batches[b];
                     for (uint32_t v = bt.firstVertex; v < bt.firstVertex + bt.vertexCount; ++v) {
                         const terrain::Vertex& tv = mesh.vertices[v];
-                        uint32_t c = o.shading.diffuseAt(tv.pos[0], tv.pos[2]);
-                        if (o.lightOn) {  // 3.0.4-beta.26: the smooth hills' light; 3.0.4-beta.30 the corners' between
+                        // 3.0.7-beta.3 (R-YXZM7Y): a wall in the game's light on it (terrain::wallLight), not the
+                        // ground's beside it
+                        const bool wall = terrain::isWall(tv);
+                        uint32_t c = wall ? tv.color : o.shading.diffuseAt(tv.pos[0], tv.pos[2]);
+                        if (o.lightOn && !wall) {  // 3.0.4-beta.26: the smooth hills' light; 3.0.4-beta.30 the corners'
+                                                   // between
                             const float light =
                                 own_ground::lightAt(o.cornerLight, g->width, g->height, g->zoom, tv.pos[0], tv.pos[2]);
                             uint32_t lit = c & 0xFF000000u;

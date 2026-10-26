@@ -1,4 +1,6 @@
 #include <cmath>
+#include <string>
+#include <vector>
 
 #include "core/game_camera.hpp"
 #include "core/gnd.hpp"
@@ -342,4 +344,36 @@ TEST(own_ground_depth_row_is_the_views_depth_of_a_place) {
             own_ground::toView(v, w, view);
             CHECK(std::fabs(w[0] * row[0] + w[1] * row[1] + w[2] * row[2] + row[3] - view[2]) < 1e-3f);
         }
+}
+
+// 3.0.7-beta.3 (R-YXZM7Y «посмотри насчет освещения стен»): the game's own walls checked against the light the own
+// ground gives them - for the log, the mechanism proved on the player's own maps
+TEST(own_ground_checks_the_game_s_walls_against_its_own) {
+    // 4 x 2 cells of 10 (x -20..20, z -10..10): cell (1, 0)'s right side lit 0xff4d4d4d, cell (2, 0)'s far side
+    // 0xff8c8c8c; 2 a cell, the right side's first
+    std::vector<uint32_t> light(4 * 2 * 2, 0u);
+    light[(0 * 4 + 1) * 2] = 0xFF4D4D4Du;
+    light[(0 * 4 + 2) * 2 + 1] = 0xFF8C8C8Cu;
+    own_ground::WallCheck w;
+    w.reset(4, 2, 10.0f);
+    // its right side: x = 0 (a hair off), z -10..0; the game's colour as ours, a channel 2 apart at most
+    const float rightLo[2] = {-0.02f, -10.0f}, rightHi[2] = {0.01f, 0.0f};
+    w.note(rightLo, rightHi, 0xFF4E4C4Du, light);
+    CHECK(w.seen() == 1 && w.alike() == 1);
+    w.note(rightLo, rightHi, 0xFF4D4D4Du, light);  // the same wall again: counted once
+    CHECK(w.seen() == 1 && w.alike() == 1);
+    // the far side of cell (2, 0): z = 0, x 0..10 - the game's another colour
+    const float farLo[2] = {0.0f, -0.01f}, farHi[2] = {10.0f, 0.02f};
+    w.note(farLo, farHi, 0xFF4D4D4Du, light);
+    CHECK(w.seen() == 2 && w.alike() == 1);
+    CHECK_EQ(w.firstApart(), std::string("2,0 far side: the game's ff4d4d4d, ours ff8c8c8c"));
+    // a wall the map has none of there, or off the map: not counted
+    const float noneLo[2] = {10.0f, 0.0f}, noneHi[2] = {10.0f, 10.0f};
+    w.note(noneLo, noneHi, 0xFF000000u, light);
+    const float offLo[2] = {500.0f, 500.0f}, offHi[2] = {500.0f, 510.0f};
+    w.note(offLo, offHi, 0xFF000000u, light);
+    CHECK_EQ(w.seen(), 2u);
+    // a new map: all anew
+    w.reset(4, 2, 10.0f);
+    CHECK(w.seen() == 0 && w.alike() == 0 && w.firstApart().empty());
 }

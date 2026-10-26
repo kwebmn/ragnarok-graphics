@@ -419,9 +419,26 @@ void MapWorld::loop() {
                     // 3.0.6-beta.3 (R-RSK2JR «дирка на сходах в комодо»): the ground after its models - where one
                     // rests on it, its smooth patch no higher than the game's plain cells
                     const std::vector<uint8_t> resting = terrain::restingOn(full, own->models);
-                    own->mesh = terrain::build(full, sizeof(void*) == 8 ? 3 : 2, own->atlas, laid, &resting);
-                    own->distant = terrain::build(full, 1, own->atlas);
+                    // 3.0.7-beta.3 (R-YXZM7Y «посмотри насчет освещения стен»): the walls lit as the game lights them
+                    // by the map's light (FUN_004e4190), not as the ground beside them - a wall turned from the sun
+                    // was up to twice as bright as the game's
+                    const terrain::Sun sun = w.lightKnown ? terrain::sunOf(w.lightLongitude, w.lightLatitude,
+                                                                           w.lightDiffuse, w.lightAmbient)
+                                                          : terrain::Sun{};
+                    own->mesh = terrain::build(full, sizeof(void*) == 8 ? 3 : 2, own->atlas, laid, &resting, &sun);
+                    own->distant = terrain::build(full, 1, own->atlas, nullptr, nullptr, &sun);
                     for (uint8_t r : resting) own->restingCells += r;
+                    own->wallLight.assign(full.cells.size() * 2, 0u);
+                    for (int y = 0; y < full.height; ++y)
+                        for (int x = 0; x < full.width; ++x)
+                            for (int side = 0; side < 2; ++side)
+                                own->wallLight[(size_t(y) * size_t(full.width) + size_t(x)) * 2 + size_t(side)] =
+                                    terrain::wallLight(full, x, y, side == 0, sun);
+                    LOG_INFO("own ground: %s's walls lit as the game lights them - its light's way %.3f %.3f %.3f "
+                             "(longitude %d, latitude %d%s), diffuse %.2f %.2f %.2f, all round %.2f %.2f %.2f",
+                             name.c_str(), sun.way[0], sun.way[1], sun.way[2], w.lightLongitude, w.lightLatitude,
+                             w.lightKnown ? "" : ", none in the file: the game's", sun.diffuse[0], sun.diffuse[1],
+                             sun.diffuse[2], sun.ambient[0], sun.ambient[1], sun.ambient[2]);
                     // 3.0.4-beta.20: its water (460 of the client's 921 maps have some; lava on 3)
                     if (w.waterKnown) {
                         own->water = terrain::water(full, w.waterLevel, w.waveHeight);

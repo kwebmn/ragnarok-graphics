@@ -1,5 +1,6 @@
 #pragma once
 #include <cstdint>
+#include <string>
 #include <vector>
 
 #include "core/game_camera.hpp"
@@ -146,6 +147,27 @@ private:
     bool fogged_ = false;
     float fogA_ = 255.0f, fogB_ = 0.0f;
     uint32_t specularRgb_ = 0;
+};
+
+// 3.0.7-beta.3 (R-YXZM7Y «посмотри насчет освещения стен»): the game's own walls against the light the own ground gives
+// them (terrain::wallLight) - an upright draw of the game's ground, its box in the file's places, found among the map's
+// walls (its right side: x a cell's edge; its far side: z), its colour and ours a channel 2 apart at most; each wall
+// once. For the log: the mechanism proved on the players' maps
+class WallCheck {
+public:
+    void reset(int width, int height, float zoom);
+    // its box (x, z), its colour; light: 2 a cell, row by row - its right side's, its far side's (0 none)
+    void note(const float lo[2], const float hi[2], uint32_t diffuse, const std::vector<uint32_t>& light);
+    unsigned seen() const { return seen_; }
+    unsigned alike() const { return alike_; }
+    const std::string& firstApart() const { return firstApart_; }  // "x,y right side: the game's …, ours …"
+
+private:
+    int width_ = 0, height_ = 0;
+    float zoom_ = 1.0f;
+    std::vector<uint8_t> checked_;
+    unsigned seen_ = 0, alike_ = 0;
+    std::string firstApart_;
 };
 
 }  // namespace uagfx::own_ground

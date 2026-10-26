@@ -304,6 +304,48 @@ TEST(terrain_walls_lay_their_corners_as_the_game) {
     }
 }
 
+// 3.0.7-beta.3 (R-YXZM7Y «посмотри насчет освещения стен», c_tower2): a wall lit as uaRO.exe lights it (FUN_004e4190)
+// - by its own way across, not as the ground beside it: the shot's walls turned from the sun were 1.6-1.8 times as
+// bright as the game's, the floors as bright
+TEST(terrain_walls_lit_as_the_game_lights_them) {
+    const gnd::Ground g = walled();
+    const terrain::Atlas atlas = terrain::lightmapAtlas(g);
+    const float diffuse[3] = {0.4f, 0.6f, 0.8f}, ambient[3] = {0.2f, 0.3f, 0.1f};
+    // longitude 240, latitude 60: the light goes (-0.75, 0.5, -0.433); cell (0, 0) the higher - its right side faces
+    // +x (0.75 of the light on it), its far side +z (0.433)
+    const terrain::Sun sun = terrain::sunOf(240, 60, diffuse, ambient);
+    CHECK(std::fabs(sun.way[0] + 0.75f) < 1e-4f && std::fabs(sun.way[1] - 0.5f) < 1e-4f &&
+          std::fabs(sun.way[2] + 0.4330127f) < 1e-4f);
+    for (int n : {1, 4}) {
+        const terrain::Mesh m = terrain::build(g, n, atlas, nullptr, nullptr, &sun);
+        int right = 0, far = 0, tops = 0;
+        for (const terrain::Vertex& v : m.vertices) {
+            if (!terrain::isWall(v)) {
+                ++tops;
+                continue;
+            }
+            // a channel: 255 times min(1, ambient + diffuse * light), cut
+            if (std::fabs(v.normal[0]) > 0.5f) {
+                ++right;
+                CHECK_EQ(v.color, 0xFF7FBFB2u);  // 127 191 178
+            } else {
+                ++far;
+                CHECK_EQ(v.color, 0xFF5F8E71u);  // 95 142 113
+            }
+        }
+        CHECK(right == 4 && far == 4 && tops > 0);
+    }
+    // turned from the sun: the light all round alone; the surface's own colour in it
+    const float up[3] = {0.0f, -1.0f, 0.0f};
+    CHECK_EQ(terrain::lit(0xFFFFFFFFu, sun, up), 0xFF334C19u);  // 51 76 25: 0.2 0.3 0.1
+    const float toward[3] = {-1.0f, 0.0f, 0.0f};
+    CHECK_EQ(terrain::lit(0xFF81FF40u, sun, toward), 0xFF40BF2Cu);  // 129 * 0.5, 255 * 0.75, 64 * 0.7
+    // a map without its light: the game's own - longitude and latitude 45, diffuse 1, ambient 0.3
+    const terrain::Sun plain{};
+    CHECK(std::fabs(plain.way[0] - 0.5f) < 1e-4f && std::fabs(plain.way[1] - 0.7071068f) < 1e-4f &&
+          std::fabs(plain.way[2] - 0.5f) < 1e-4f);
+}
+
 TEST(terrain_in_chunks_for_the_view) {
     // the renderer projects the chunks in view alone: each its own vertices and batches, all of them together the mesh
     const gnd::Ground g = parsed();

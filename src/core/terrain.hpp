@@ -61,14 +61,33 @@ struct Atlas {
 };
 Atlas lightmapAtlas(const gnd::Ground& g);
 
+// 3.0.7-beta.3 (R-YXZM7Y «посмотри насчет освещения стен»): the map's light as uaRO.exe lights its ground's vertices
+// (FUN_004e4190) - a surface's colour times min(1, ambient + diffuse * max(0, N . way)) a channel, cut, alpha 255. The
+// way its light goes from the .rsw's longitude and latitude (FUN_0043a200: turned about x by the latitude, then about y
+// by the longitude - (sin lat sin lon, cos lat, sin lat cos lon), +y down); N the game's - into the ground for a top,
+// across a wall into its higher side
+struct Sun {
+    float way[3] = {0.5f, 0.70710677f, 0.5f};  // the game's when a map has none: longitude and latitude 45
+    float diffuse[3] = {1.0f, 1.0f, 1.0f}, ambient[3] = {0.3f, 0.3f, 0.3f};
+};
+Sun sunOf(int longitude, int latitude, const float diffuse[3], const float ambient[3]);
+uint32_t lit(uint32_t surface, const Sun& sun, const float normal[3]);  // ARGB
+// The light the game gives a cell's right side (right) or its far side: lit by its normal into the higher side (the
+// next cell's first corner against this one's (x, y + 1), as FUN_004e4190 has it); 0 when it has none
+uint32_t wallLight(const gnd::Ground& g, int x, int y, bool right, const Sun& sun);
+// A wall's vertex - upright, its normal across: its colour the game's light on it (lit, by build), where a top's is
+// the game's own as the renderer learns it
+bool isWall(const Vertex& v);
+
 constexpr float kJoin = 0.5f;  // corners closer than this are one: whole ground
 // laid: a cell row by row 1 in a patch the map's makers laid by hand (core/ground_heights.hpp laidPatches) - no strips
 // round it, its edges as straight as the game draws them; the strips with `subdivide` 2 and more alone (none far off).
 // 3.0.6-beta.3 (R-RSK2JR «дирка на сходах в комодо»): resting, a cell row by row 1 where a model rests on it
 // (restingOn) - the smooth ground there no higher than the game's plain cells (the patch rose over the steps of
-// cmd_fild02's fortress stairs, 0.1 over their slope's cells); a point a cell shares takes it from either cell
+// cmd_fild02's fortress stairs, 0.1 over their slope's cells); a point a cell shares takes it from either cell.
+// 3.0.7-beta.3: sun, the map's light on its walls (none: the game's own)
 Mesh build(const gnd::Ground& g, int subdivide, const Atlas& atlas, const std::vector<uint8_t>* laid = nullptr,
-           const std::vector<uint8_t>* resting = nullptr);
+           const std::vector<uint8_t>* resting = nullptr, const Sun* sun = nullptr);
 // 3.0.6-beta.3: the cells a model's face lies on - from kRestReach over its plain cells to kRestUnder under them (the
 // patch rises at most a few units over them) - the models placed in the ground's places (own_models::place)
 constexpr float kRestReach = 4.0f, kRestUnder = 1.0f;
