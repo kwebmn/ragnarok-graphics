@@ -251,6 +251,9 @@ HRESULT Device7::record(D3DPRIMITIVETYPE type, DWORD fvf, const void* vertices, 
             ++plainAdds_;
             notePlainAdd(static_cast<const uint8_t*>(vertices), vertexCount, FrameRecord::stride(fvf), uint32_t(type),
                          setup.srcBlend);
+        } else if (setup.ui && setup.blend) {
+            noteOver(static_cast<const uint8_t*>(vertices), vertexCount, FrameRecord::stride(fvf), uint32_t(type),
+                     setup.srcBlend, setup.dstBlend);
         }
         const ULONGLONG now = GetTickCount64();
         if (now - skillsTold_ >= 10000) {
@@ -267,8 +270,17 @@ HRESULT Device7::record(D3DPRIMITIVETYPE type, DWORD fvf, const void* vertices, 
                          w.primitive, w.colourMin, w.colourMax, w.srcBlend, w.texWidth, w.texHeight, w.z0, w.z1,
                          wideAdds_);
             }
-            skillDraws_ = plainAdds_ = wideAdds_ = 0;
-            widestAdd_ = PlainAdd{};
+            if (wideOvers_) {
+                const PlainAdd& w = widestOver_;
+                LOG_INFO("effects: %u draws laid over the picture with the interface covering half of it or more; the "
+                         "widest %.0f,%.0f-%.0f,%.0f of the game's %ux%u, %u vertices (primitive %u), colours "
+                         "#%08X-#%08X, blend %u/%u, texture %dx%d",
+                         wideOvers_, w.x0, w.y0, w.x1, w.y1, unsigned(viewport_.dwWidth), unsigned(viewport_.dwHeight),
+                         w.vertices, w.primitive, w.colourMin, w.colourMax, w.srcBlend, w.dstBlend, w.texWidth,
+                         w.texHeight);
+            }
+            skillDraws_ = plainAdds_ = wideAdds_ = wideOvers_ = 0;
+            widestAdd_ = widestOver_ = PlainAdd{};
             skillsTold_ = now;
         }
     }
@@ -465,8 +477,7 @@ HRESULT STDMETHODCALLTYPE Device7::ValidateDevice(LPDWORD passes) {
     return D3D_OK;
 }
 
-void Device7::notePlainAdd(const uint8_t* vertices, uint32_t count, uint32_t stride, uint32_t primitive,
-                           uint32_t srcBlend) {
+Device7::PlainAdd Device7::measure(const uint8_t* vertices, uint32_t count, uint32_t stride) {
     PlainAdd a;
     a.x0 = a.y0 = a.z0 = 1e30f;
     a.x1 = a.y1 = a.z1 = -1e30f;
@@ -487,18 +498,37 @@ void Device7::notePlainAdd(const uint8_t* vertices, uint32_t count, uint32_t str
             lo[k] = std::min(lo[k], c), hi[k] = std::max(hi[k], c);
         }
     }
-    a.area = std::max(0.0f, a.x1 - a.x0) * std::max(0.0f, a.y1 - a.y0);
-    if (2.0f * a.area >= float(viewport_.dwWidth) * float(viewport_.dwHeight)) ++wideAdds_;
-    if (a.area <= widestAdd_.area) return;
-    a.vertices = count;
-    a.primitive = primitive;
-    a.srcBlend = srcBlend;
     for (int k = 0; k < 4; ++k) {
         a.colourMin |= uint32_t(lo[k]) << (24 - 8 * k);
         a.colourMax |= uint32_t(hi[k]) << (24 - 8 * k);
     }
+    a.area = std::max(0.0f, a.x1 - a.x0) * std::max(0.0f, a.y1 - a.y0);
+    a.vertices = count;
+    return a;
+}
+
+void Device7::notePlainAdd(const uint8_t* vertices, uint32_t count, uint32_t stride, uint32_t primitive,
+                           uint32_t srcBlend) {
+    PlainAdd a = measure(vertices, count, stride);
+    if (2.0f * a.area >= float(viewport_.dwWidth) * float(viewport_.dwHeight)) ++wideAdds_;
+    if (a.area <= widestAdd_.area) return;
+    a.primitive = primitive;
+    a.srcBlend = srcBlend;
     if (const Surface7* t = textures_[0]) a.texWidth = t->width(), a.texHeight = t->height();
     widestAdd_ = a;
+}
+
+void Device7::noteOver(const uint8_t* vertices, uint32_t count, uint32_t stride, uint32_t primitive,
+                       uint32_t srcBlend, uint32_t dstBlend) {
+    PlainAdd a = measure(vertices, count, stride);
+    if (2.0f * a.area < float(viewport_.dwWidth) * float(viewport_.dwHeight)) return;  // a window, a letter
+    ++wideOvers_;
+    if (a.area <= widestOver_.area) return;
+    a.primitive = primitive;
+    a.srcBlend = srcBlend;
+    a.dstBlend = dstBlend;
+    if (const Surface7* t = textures_[0]) a.texWidth = t->width(), a.texHeight = t->height();
+    widestOver_ = a;
 }
 
 }  // namespace uagfx::dx7

@@ -74,13 +74,21 @@ private:
     // covered half the game's picture or more: the facts before the wash is made softer
     struct PlainAdd {
         float x0 = 0, y0 = 0, x1 = 0, y1 = 0, z0 = 0, z1 = 0;
-        uint32_t vertices = 0, primitive = 0, srcBlend = 0, colourMin = 0, colourMax = 0;
+        uint32_t vertices = 0, primitive = 0, srcBlend = 0, dstBlend = 0, colourMin = 0, colourMax = 0;
         int texWidth = 0, texHeight = 0;
         float area = -1.0f;
     };
     PlainAdd widestAdd_;
     uint32_t wideAdds_ = 0;
+    // 3.0.9-beta.2: the white that stayed over the world after Berserk (R-5FB7PU: the night under it untouched, the
+    // game's own picture white too) lay over everything - a blended draw with the interface covering half the picture
+    // or more: the widest of those in the 10 s and how many
+    PlainAdd widestOver_;
+    uint32_t wideOvers_ = 0;
+    static PlainAdd measure(const uint8_t* vertices, uint32_t count, uint32_t stride);
     void notePlainAdd(const uint8_t* vertices, uint32_t count, uint32_t stride, uint32_t primitive, uint32_t srcBlend);
+    void noteOver(const uint8_t* vertices, uint32_t count, uint32_t stride, uint32_t primitive, uint32_t srcBlend,
+                  uint32_t dstBlend);
 };
 
 }  // namespace uagfx::dx7
