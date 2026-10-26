@@ -20,6 +20,14 @@ uint32_t duration(uint16_t icon, uint16_t skill, uint16_t level) {
     return longest;
 }
 
+const char* name(uint16_t icon) {
+    for (size_t i = 0; i < kSkillBuffCount; ++i)
+        if (kSkillBuffs[i].icon == icon) return kSkillBuffs[i].name;
+    for (size_t i = 0; i < kItemBuffCount; ++i)
+        if (kItemBuffs[i].icon == icon) return kItemBuffs[i].name;
+    return "";
+}
+
 namespace {
 
 bool givenBy(uint16_t icon, uint16_t skill) {  // the skill gives this icon
@@ -57,6 +65,34 @@ void Timers::icon(uint16_t icon, bool on, uint64_t now) {
 uint32_t Timers::left(uint16_t icon, uint64_t now) const {
     const auto it = ends_.find(icon);
     return it == ends_.end() || it->second <= now ? 0u : uint32_t(it->second - now);
+}
+
+std::vector<Timers::Running> Timers::running() const {
+    std::vector<Running> out;
+    for (const auto& [icon, end] : ends_) {
+        const auto on = onAt_.find(icon);
+        out.push_back(Running{icon, on != onAt_.end() && on->second <= end ? on->second : end, end});
+    }
+    return out;
+}
+
+std::vector<uint16_t> Ending::due(const Timers& t, uint64_t now, uint32_t withinMs) {
+    std::vector<uint16_t> out;
+    std::map<uint16_t, uint64_t> still;
+    for (const Timers::Running& r : t.running()) {
+        if (r.end <= now) continue;
+        const auto told = told_.find(r.icon);
+        if (told != told_.end() && told->second == r.end) {
+            still[r.icon] = r.end;
+            continue;
+        }
+        const uint64_t whole = r.end - r.from;
+        if (r.end - now > withinMs || whole < kLeastMs || whole < 2 * uint64_t(withinMs)) continue;
+        out.push_back(r.icon);
+        still[r.icon] = r.end;
+    }
+    told_.swap(still);
+    return out;
 }
 
 std::string label(uint32_t ms) {

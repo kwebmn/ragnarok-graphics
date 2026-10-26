@@ -1,4 +1,5 @@
 #include <string>
+#include <vector>
 
 #include "core/buff_timers.hpp"
 #include "test.hpp"
@@ -80,4 +81,37 @@ TEST(buff_timers_a_cast_told_after_its_icon) {
     t.clear();
     t.cast(kBlessing, 10, 300001);
     CHECK_EQ(t.left(kBlessingIcon, 300001), 0u);
+}
+
+// 3.0.7-beta.6 (the user's notification 5): a buff about to end told once, by its name from the server's data
+TEST(buff_timers_their_names) {
+    CHECK_EQ(std::string(buffs::name(kBlessingIcon)), std::string("Blessing"));
+    CHECK(std::string(buffs::name(kPotionIcon)).size() > 0);  // an item's: the item's name
+    CHECK_EQ(std::string(buffs::name(60000)), std::string(""));
+}
+
+TEST(buff_timers_one_about_to_end_told_once) {
+    buffs::Timers t;
+    buffs::Ending e;
+    t.cast(kBlessing, 1, 1000);  // 60 s
+    t.icon(kBlessingIcon, true, 1000);
+    CHECK(e.due(t, 40000, 10000).empty());  // 21 s left
+    const std::vector<uint16_t> now = e.due(t, 51500, 10000);  // 9.5 s left
+    CHECK(now.size() == 1 && now[0] == kBlessingIcon);
+    CHECK(e.due(t, 52000, 10000).empty());  // told
+    t.cast(kBlessing, 1, 55000);  // cast again: a new end, told again in its time
+    t.icon(kBlessingIcon, true, 55000);
+    CHECK(e.due(t, 60000, 10000).empty());
+    CHECK(e.due(t, 106000, 10000).size() == 1);
+    CHECK(e.due(t, 200000, 10000).empty());  // ended
+}
+
+TEST(buff_timers_a_short_one_not_told) {
+    buffs::Timers t;
+    buffs::Ending e;
+    t.cast(kBlessing, 1, 0);
+    t.icon(kBlessingIcon, true, 0);
+    CHECK(e.due(t, 55000, 40000).empty());  // 60 s long, asked 40 s before: no more than half of it - not told
+    t.icon(5, true, 0);  // Cloaking: 9 s at most - never a whole half minute
+    CHECK(e.due(t, 1000, 10000).empty());
 }

@@ -204,15 +204,18 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("camera zoom_limit", flag(running.cameraZoomLimit), flag(file.cameraZoomLimit)));
         n.cameraZoomLimit = file.cameraZoomLimit;
     }
-    {  // 3.0.4-beta.3: the notifications, each box
+    {  // 3.0.4-beta.3: the notifications, each box (3.0.7-beta.6: kNotifyBoxes, and the two thresholds)
         const NotifySettings &f = file.notify, &r = running.notify;
-        const std::pair<const char*, std::pair<bool, bool>> boxes[] = {
-            {"notify on", {r.on, f.on}},          {"whisper", {r.whisper, f.whisper}}, {"party", {r.party, f.party}},
-            {"trade", {r.trade, f.trade}},        {"guild", {r.guild, f.guild}},
-            {"friend", {r.friendAsk, f.friendAsk}}, {"death", {r.death, f.death}}};
-        for (const auto& b : boxes)
-            if (b.second.first != b.second.second)
-                u.applied.push_back(change(b.first, flag(b.second.first), flag(b.second.second)));
+        for (size_t i = 0; i < kNotifyBoxCount; ++i) {
+            const bool was = r.*kNotifyBoxes[i].field, now = f.*kNotifyBoxes[i].field;
+            const std::string name = std::string("notify ") + kNotifyBoxes[i].key;
+            if (was != now) u.applied.push_back(change(name.c_str(), flag(was), flag(now)));
+        }
+        if (r.buffSeconds != f.buffSeconds)
+            u.applied.push_back(change("notify buff_seconds", std::to_string(r.buffSeconds),
+                                       std::to_string(f.buffSeconds)));
+        if (r.partyHp != f.partyHp)
+            u.applied.push_back(change("notify party_hp", std::to_string(r.partyHp), std::to_string(f.partyHp)));
         n.notify = f;
     }
     if (file.sound.ambience != running.sound.ambience) {  // 3.0.4-beta.7: the maps' own sounds

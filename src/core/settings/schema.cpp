@@ -125,6 +125,29 @@ const std::vector<IniSetting>& iniSettings() {
          Text::NotifyKindHint, ""},
         {"notify", "death", Page::Game, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::NotifyDeath,
          Text::NotifyKindHint, ""},
+        // 3.0.7-beta.6 (the user chose 1, 5, 6, 7, 8, 9, 10 «и чтобы это в конфигураторе настраивалось»)
+        {"notify", "attack", Page::Game, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::NotifyAttack,
+         Text::NotifyAttackHint, ""},
+        {"notify", "buff_ending", Page::Game, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::NotifyBuffEnding,
+         Text::NotifyBuffEndingHint, ""},
+        {"notify", "buff_seconds", Page::Game, Control::Slider, kBuffSecondsLeast, kBuffSecondsMost, 1, {}, {},
+         Text::NotifyBuffSeconds, Text::NotifyBuffSecondsHint, " s"},
+        {"notify", "party_death", Page::Game, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::NotifyPartyDeath,
+         Text::NotifyPartyDeathHint, ""},
+        {"notify", "party_low_hp", Page::Game, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::NotifyPartyLowHp,
+         Text::NotifyPartyLowHpHint, ""},
+        {"notify", "party_hp", Page::Game, Control::Slider, kPartyHpLeast, kPartyHpMost, 5, {}, {},
+         Text::NotifyPartyHp, Text::NotifyPartyHpHint, " %"},
+        {"notify", "party_chat", Page::Game, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::NotifyPartyChat,
+         Text::NotifyChatHint, ""},
+        {"notify", "guild_chat", Page::Game, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::NotifyGuildChat,
+         Text::NotifyChatHint, ""},
+        {"notify", "mention", Page::Game, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::NotifyMention,
+         Text::NotifyMentionHint, ""},
+        {"notify", "disconnect", Page::Game, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::NotifyDisconnect,
+         Text::NotifyDisconnectHint, ""},
+        {"notify", "sound", Page::Game, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::NotifySound,
+         Text::NotifySoundHint, ""},
         {"renderer", "bridge", Page::Render, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::RenderBridge,
          Text::RenderBridgeHint, ""},
         // 2.12: Direct3D 11 without the risky parts, also by itself after two failed starts (core/safe_mode)
@@ -837,14 +860,11 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k.compare(0, 7, "notify.") == 0) {                   // 3.0.4-beta.3
         const NotifySettings& n = c.notify;
         const std::string w = k.substr(7);
-        const bool on = w == "on"        ? n.on
-                        : w == "whisper" ? n.whisper
-                        : w == "party"   ? n.party
-                        : w == "trade"   ? n.trade
-                        : w == "guild"   ? n.guild
-                        : w == "friend"  ? n.friendAsk
-                                         : n.death;
-        return on ? "1" : "0";
+        if (w == "buff_seconds") return std::to_string(n.buffSeconds);  // 3.0.7-beta.6
+        if (w == "party_hp") return std::to_string(n.partyHp);
+        for (size_t i = 0; i < kNotifyBoxCount; ++i)
+            if (w == kNotifyBoxes[i].key) return n.*kNotifyBoxes[i].field ? "1" : "0";
+        return "0";
     }
     if (k == "panel.layout") return panelLayoutToken(c.panelLayout);
     if (k == "panel.size") return std::to_string(c.panelSize);

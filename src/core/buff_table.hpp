@@ -10,10 +10,12 @@ namespace uagfx::buffs {
 struct SkillBuff {
     uint16_t icon, skill;
     uint32_t ms[10];
+    const char* name;  // 3.0.7-beta.6: the skill's words in skill_db ("Blessing")
 };
 struct ItemBuff {
     uint16_t icon;
     uint32_t ms;
+    const char* name;  // the item's of the longest time ("Concentration Potion")
 };
 extern const SkillBuff kSkillBuffs[];
 extern const size_t kSkillBuffCount;

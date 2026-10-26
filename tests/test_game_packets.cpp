@@ -123,8 +123,12 @@ TEST(game_packets_hits_on_a_unit) {
     act[26] = 2;  // sitting down: no hit
     CHECK(std::holds_alternative<std::monostate>(packets::parse(act.data(), act.size())));
     act[26] = 0;
-    put16(act, 22, 0);  // a miss
-    CHECK(std::holds_alternative<std::monostate>(packets::parse(act.data(), act.size())));
+    put16(act, 22, 0);  // 3.0.7-beta.6: a miss - an attack all the same (the notification), no damage (no mark)
+    const packets::Event me = packets::parse(act.data(), act.size());
+    const auto* m = std::get_if<packets::Hit>(&me);
+    CHECK(m && m->target == 2000123 && m->damage == 0);
+    act[26] = 11;  // dodged by luck: an attack too
+    CHECK(std::holds_alternative<packets::Hit>(packets::parse(act.data(), act.size())));
     std::vector<uint8_t> skill = packet(0x01de, 33);
     put16(skill, 2, 19);  // a bolt
     put32(skill, 4, 1100001);
@@ -139,4 +143,72 @@ TEST(game_packets_hits_on_a_unit) {
     const packets::Event oe = packets::parse(old.data(), old.size());
     const auto* o = std::get_if<packets::Hit>(&oe);
     CHECK(o && o->target == 2000123 && o->damage == 88);
+}
+
+TEST(game_packets_the_party_its_members_and_their_hp) {
+    // 3.0.7-beta.6 (the user's notification 6): who is in the party (its list, one joining), one leaving, their HP
+    std::vector<uint8_t> list = packet(0x00fb, 28 + 46 * 2);
+    put16(list, 2, uint16_t(list.size()));
+    putText(list, 4, "Heroes");
+    put32(list, 28, 2000123);
+    putText(list, 32, "Sora");
+    put32(list, 28 + 46, 2000456);
+    putText(list, 28 + 46 + 4, "Priest");
+    const packets::Event le = packets::parse(list.data(), list.size());
+    const auto* l = std::get_if<packets::PartyList>(&le);
+    CHECK(l && l->members.size() == 2);
+    if (l && l->members.size() == 2) {
+        CHECK(l->members[0].first == 2000123 && l->members[0].second == "Sora");
+        CHECK(l->members[1].first == 2000456 && l->members[1].second == "Priest");
+    }
+    put16(list, 2, uint16_t(list.size() + 46));  // naming more than there is
+    CHECK(std::holds_alternative<std::monostate>(packets::parse(list.data(), list.size())));
+    std::vector<uint8_t> joined = packet(0x01e9, 81);
+    put32(joined, 2, 2000789);
+    putText(joined, 15, "Heroes");
+    putText(joined, 39, "Sage");
+    const packets::Event je = packets::parse(joined.data(), joined.size());
+    const auto* j = std::get_if<packets::PartyMember>(&je);
+    CHECK(j && j->account == 2000789 && j->name == "Sage");
+    std::vector<uint8_t> left = packet(0x0105, 31);
+    put32(left, 2, 2000789);
+    putText(left, 6, "Sage");
+    const packets::Event ge = packets::parse(left.data(), left.size());
+    const auto* g = std::get_if<packets::PartyLeft>(&ge);
+    CHECK(g && g->account == 2000789);
+    std::vector<uint8_t> hp = packet(0x0106, 10);
+    put32(hp, 2, 2000456);
+    put16(hp, 6, 312);
+    put16(hp, 8, 4120);
+    const packets::Event he = packets::parse(hp.data(), hp.size());
+    const auto* h = std::get_if<packets::PartyHp>(&he);
+    CHECK(h && h->account == 2000456 && h->hp == 312 && h->most == 4120);
+    CHECK(std::holds_alternative<std::monostate>(packets::parse(hp.data(), 9)));  // cut short
+}
+
+TEST(game_packets_the_party_s_the_guild_s_and_the_near_chat) {
+    // 3.0.7-beta.6 (the user's notifications 7, 8): "Name : words" as the server sends them
+    const std::string said = "Priest : heal?";
+    std::vector<uint8_t> party = packet(0x0109, 8 + said.size() + 1);
+    put16(party, 2, uint16_t(party.size()));
+    put32(party, 4, 2000456);
+    putText(party, 8, said);
+    const packets::Event pe = packets::parse(party.data(), party.size());
+    const auto* p = std::get_if<packets::PartyChat>(&pe);
+    CHECK(p && p->account == 2000456 && p->text == said);
+    std::vector<uint8_t> guild = packet(0x017f, 4 + said.size() + 1);
+    put16(guild, 2, uint16_t(guild.size()));
+    putText(guild, 4, said);
+    const packets::Event ge = packets::parse(guild.data(), guild.size());
+    const auto* g = std::get_if<packets::GuildChat>(&ge);
+    CHECK(g && g->text == said);
+    std::vector<uint8_t> near = packet(0x008d, 8 + said.size() + 1);
+    put16(near, 2, uint16_t(near.size()));
+    put32(near, 4, 2000999);
+    putText(near, 8, said);
+    const packets::Event ne = packets::parse(near.data(), near.size());
+    const auto* n = std::get_if<packets::Chat>(&ne);
+    CHECK(n && n->unit == 2000999 && n->text == said);
+    put16(near, 2, uint16_t(near.size() + 10));  // longer than it is
+    CHECK(std::holds_alternative<std::monostate>(packets::parse(near.data(), near.size())));
 }

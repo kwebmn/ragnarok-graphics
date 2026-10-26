@@ -59,3 +59,110 @@ TEST(notify_its_words) {
     CHECK(!notify::text(settings::Lang::Uk, Kind::Guild, "Kyiv", "").empty());
     CHECK(!notify::text(settings::Lang::Ru, Kind::Friend, "Sage", "").empty());
 }
+
+// 3.0.7-beta.6 (the user chose 1, 5, 6, 7, 8, 9, 10 «и чтобы это в конфигураторе настраивалось»): an attack, a buff
+// ending, the party's deaths and low HP, the party's and the guild's chat, the name said near, the server gone, a
+// sound - each a box on the «Гра» page, the two thresholds sliders
+TEST(notify_the_new_kinds_in_the_configurator) {
+    const NotifySettings d = parseConfig("").notify;
+    CHECK(d.attack && d.buffEnding && d.partyDeath && d.partyLowHp && d.partyChat && d.guildChat && d.mention &&
+          d.disconnect && d.sound);
+    CHECK(d.buffSeconds == 10 && d.partyHp == 30);
+    const NotifySettings s = parseConfig("[notify]\nattack = 0\nbuff_ending = 0\nparty_death = 0\nparty_low_hp = 0\n"
+                                         "party_chat = 0\nguild_chat = 0\nmention = 0\ndisconnect = 0\nsound = 0\n"
+                                         "buff_seconds = 25\nparty_hp = 45\n")
+                                 .notify;
+    CHECK(!s.attack && !s.buffEnding && !s.partyDeath && !s.partyLowHp && !s.partyChat && !s.guildChat &&
+          !s.mention && !s.disconnect && !s.sound);
+    CHECK(s.buffSeconds == 25 && s.partyHp == 45);
+    const NotifySettings far = parseConfig("[notify]\nbuff_seconds = 999\nparty_hp = 1\n").notify;  // kept in range
+    CHECK(far.buffSeconds == 60 && far.partyHp == 10);
+    for (const char* k : {"notify.attack", "notify.buff_ending", "notify.party_death", "notify.party_low_hp",
+                          "notify.party_chat", "notify.guild_chat", "notify.mention", "notify.disconnect",
+                          "notify.sound", "notify.buff_seconds", "notify.party_hp"}) {
+        const settings::IniSetting* row = settings::findSetting(k);
+        CHECK(row != nullptr);
+        if (!row) continue;
+        CHECK(row->page == settings::Page::Game);
+        CHECK(appliesNow(k));
+        CHECK(settings::tokenOf(*row, parseConfig("")) == settings::tokenOf(*row, parseConfig("")));
+    }
+    const settings::IniSetting* seconds = settings::findSetting("notify.buff_seconds");
+    CHECK(seconds && seconds->control == settings::Control::Slider && settings::tokenOf(*seconds, parseConfig("")) ==
+                                                                          std::string("10"));
+    const settings::IniSetting* party = settings::findSetting("notify.party_hp");
+    CHECK(party && party->control == settings::Control::Slider && settings::tokenOf(*party, parseConfig("")) ==
+                                                                        std::string("30"));
+    const settings::IniSetting* attack = settings::findSetting("notify.attack");
+    CHECK(attack && attack->control == settings::Control::Check &&
+          settings::tokenOf(*attack, parseConfig("[notify]\nattack = 0\n")) == std::string("0"));
+    const LiveUpdate u = liveUpdate(parseConfig(""), parseConfig("[notify]\nattack = 0\nparty_hp = 50\n"));
+    CHECK(!u.next.notify.attack && u.next.notify.partyHp == 50 && u.waiting.empty() && u.applied.size() == 2);
+}
+
+TEST(notify_the_party_s_and_the_guild_s_from_the_main_window_alone) {
+    // several game windows (a helper in the same party and guild): what all of them hear told by the main one alone
+    // - the one in front, or last in front; what is this character's own by any of them
+    NotifySettings s;
+    using notify::Kind;
+    for (Kind k : {Kind::PartyChat, Kind::GuildChat, Kind::PartyDeath, Kind::PartyLowHp}) {
+        CHECK(notify::wanted(s, k, false, true));
+        CHECK(!notify::wanted(s, k, false, false));
+    }
+    for (Kind k : {Kind::Attack, Kind::BuffEnding, Kind::Mention, Kind::Disconnect, Kind::Whisper, Kind::Death})
+        CHECK(notify::wanted(s, k, false, false));
+    CHECK(!notify::wanted(s, Kind::Attack, true, true));  // in front: the player sees it
+    s.attack = false;
+    CHECK(!notify::wanted(s, Kind::Attack, false, true));
+}
+
+TEST(notify_the_new_words) {
+    using notify::Kind;
+    const auto en = [](Kind k, const std::string& who, const std::string& what) {
+        return notify::text(settings::Lang::En, k, who, what);
+    };
+    CHECK_EQ(en(Kind::Attack, "", "57"), std::string("The character is under attack: -57 HP"));
+    CHECK_EQ(en(Kind::Attack, "", ""), std::string("The character is under attack"));
+    CHECK_EQ(en(Kind::BuffEnding, "Blessing", "10"), std::string("Blessing ends in 10 s"));
+    CHECK_EQ(en(Kind::PartyDeath, "Priest", ""), std::string("Priest of the party died"));
+    CHECK_EQ(en(Kind::PartyLowHp, "Priest", "25"), std::string("Priest of the party: 25% HP"));
+    CHECK_EQ(en(Kind::PartyChat, "Priest", "heal?"), std::string("Party - Priest: heal?"));
+    CHECK_EQ(en(Kind::GuildChat, "Sage", "endow?"), std::string("Guild - Sage: endow?"));
+    CHECK_EQ(en(Kind::Mention, "Knight", "sora, here"), std::string("Your name in the chat - Knight: sora, here"));
+    CHECK_EQ(en(Kind::Disconnect, "", ""), std::string("The connection to the server is lost"));
+    for (settings::Lang l : {settings::Lang::Uk, settings::Lang::Ru})
+        for (Kind k : {Kind::Attack, Kind::BuffEnding, Kind::PartyDeath, Kind::PartyLowHp, Kind::PartyChat,
+                       Kind::GuildChat, Kind::Mention, Kind::Disconnect})
+            CHECK(!notify::text(l, k, "A", "1").empty());
+}
+
+TEST(notify_an_attack_once_then_after_a_calm) {
+    notify::Attacks a;
+    CHECK(a.hit(1000));                                   // the first hit: told
+    CHECK(!a.hit(2000));                                  // the fight goes on: the flashing says it
+    CHECK(!a.hit(2000 + notify::Attacks::kCalmMs - 1));   // a hit within the calm keeps it going
+    CHECK(a.hit(2000 + notify::Attacks::kCalmMs - 1 + notify::Attacks::kCalmMs));  // a calm, then attacked again
+}
+
+TEST(notify_who_said_what_in_the_chat) {
+    std::string who, what;
+    notify::speaker("Priest : heal? : now", who, what);
+    CHECK(who == "Priest" && what == "heal? : now");
+    notify::speaker("no name here", who, what);
+    CHECK(who.empty() && what == "no name here");
+}
+
+TEST(notify_the_character_s_name_said) {
+    // UTF-8, letters' case aside, a whole word (not inside another's name)
+    CHECK(notify::mentions("hey sora, come here", "Sora"));
+    CHECK(notify::mentions("SORA!", "Sora"));
+    CHECK(!notify::mentions("Soraya is here", "Sora"));
+    CHECK(!notify::mentions("hey Kasora", "Sora"));
+    CHECK(notify::mentions("Dark Knight, help", "Dark Knight"));
+    CHECK(notify::mentions("\xd0\xbf\xd1\x80\xd0\xb8\xd0\xb2\xd1\x96\xd1\x82, \xd0\x9e\xd0\x9a\xd0\xa1\xd0\x90\xd0\x9d"
+                           "\xd0\x90!",
+                           "\xd0\x9e\xd0\xba\xd1\x81\xd0\xb0\xd0\xbd\xd0\xb0"));  // «привіт, ОКСАНА!» - «Оксана»
+    CHECK(!notify::mentions("\xd0\x9e\xd0\xba\xd1\x81\xd0\xb0\xd0\xbd\xd0\xb0\xd0\xb4\xd0\xb7\xd0\xb5",
+                            "\xd0\x9e\xd0\xba\xd1\x81\xd0\xb0\xd0\xbd\xd0\xb0"));  // «Оксанадзе»: another name
+    CHECK(!notify::mentions("anything", ""));
+}

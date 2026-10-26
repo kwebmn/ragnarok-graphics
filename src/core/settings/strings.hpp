@@ -412,6 +412,12 @@ enum class Text : uint16_t {
     NotifyHeading, NotifyOn, NotifyOnHint, NotifyWhisper, NotifyParty, NotifyTrade, NotifyGuild, NotifyFriend,
     NotifyDeath, NotifyKindHint, NotifyWhisperText, NotifyPartyText, NotifyTradeText, NotifyGuildText,
     NotifyFriendText, NotifyDeathText,  // 3.0.4-beta.3: notifications from behind
+    NotifyAttack, NotifyAttackHint, NotifyBuffEnding, NotifyBuffEndingHint, NotifyBuffSeconds, NotifyBuffSecondsHint,
+    NotifyPartyDeath, NotifyPartyDeathHint, NotifyPartyLowHp, NotifyPartyLowHpHint, NotifyPartyHp, NotifyPartyHpHint,
+    NotifyPartyChat, NotifyGuildChat, NotifyChatHint, NotifyMention, NotifyMentionHint, NotifyDisconnect,
+    NotifyDisconnectHint, NotifySound, NotifySoundHint, NotifyAttackText, NotifyAttackHurtText, NotifyBuffEndingText,
+    NotifyPartyDeathText, NotifyPartyLowHpText, NotifyPartyChatText, NotifyGuildChatText, NotifyMentionText,
+    NotifyDisconnectText,  // 3.0.7-beta.6
     WindowsStartCount, WindowsStartCountHint,  // 3.0.4-beta.4: «Грати» for a set of windows
     CameraHeading, CameraIndoor, CameraIndoorHint, CameraPhotoNote,  // 3.0.4-beta.5: the camera, the photo mode
     BuffsHeading, BuffTimers, BuffTimersHint,  // 3.0.4-beta.6: the time left on the buff icons

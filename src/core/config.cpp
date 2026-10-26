@@ -15,6 +15,19 @@
 #include <sstream>
 
 namespace uagfx {
+
+const NotifyBox kNotifyBoxes[] = {
+    {"on", &NotifySettings::on},           {"whisper", &NotifySettings::whisper},
+    {"party", &NotifySettings::party},     {"trade", &NotifySettings::trade},
+    {"guild", &NotifySettings::guild},     {"friend", &NotifySettings::friendAsk},
+    {"death", &NotifySettings::death},     {"attack", &NotifySettings::attack},  // 3.0.7-beta.6 from here
+    {"buff_ending", &NotifySettings::buffEnding}, {"party_death", &NotifySettings::partyDeath},
+    {"party_low_hp", &NotifySettings::partyLowHp}, {"party_chat", &NotifySettings::partyChat},
+    {"guild_chat", &NotifySettings::guildChat},   {"mention", &NotifySettings::mention},
+    {"disconnect", &NotifySettings::disconnect},  {"sound", &NotifySettings::sound},
+};
+const size_t kNotifyBoxCount = sizeof kNotifyBoxes / sizeof kNotifyBoxes[0];
+
 namespace {
 
 std::string trim(const std::string& s) {
@@ -488,15 +501,12 @@ Config parseConfig(const std::string& text) {
             setBool(val, c.buffTimers);
         } else if (key.compare(0, 7, "notify.") == 0) {  // 3.0.4-beta.3
             const std::string k = key.substr(7);
-            bool* to = k == "on"       ? &c.notify.on
-                       : k == "whisper" ? &c.notify.whisper
-                       : k == "party"   ? &c.notify.party
-                       : k == "trade"   ? &c.notify.trade
-                       : k == "guild"   ? &c.notify.guild
-                       : k == "friend"  ? &c.notify.friendAsk
-                       : k == "death"   ? &c.notify.death
-                                        : nullptr;
-            if (to) setBool(val, *to);
+            for (size_t i = 0; i < kNotifyBoxCount; ++i)
+                if (k == kNotifyBoxes[i].key) setBool(val, c.notify.*kNotifyBoxes[i].field);
+            if (k == "buff_seconds")  // 3.0.7-beta.6
+                c.notify.buffSeconds = std::clamp(std::atoi(val.c_str()), kBuffSecondsLeast, kBuffSecondsMost);
+            else if (k == "party_hp")
+                c.notify.partyHp = std::clamp(std::atoi(val.c_str()), kPartyHpLeast, kPartyHpMost);
         } else if (key == "utility.mode") {  // 2.15: the Developer mode's keys
             c.developer = lower(val) == "developer";
         } else if (key == "renderer.safe_mode") {  // 2.12

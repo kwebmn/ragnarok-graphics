@@ -1,4 +1,5 @@
 #pragma once
+#include "core/buff_timers.hpp"
 #include "core/frame.hpp"
 #include "core/game_packets.hpp"
 
@@ -17,5 +18,7 @@ void packet(const packets::Event& e);
 void frame(bool on, float k);
 // At the scene's end (not in the photo mode)
 void draw(FrameRecord& record, gpu::Renderer& renderer);
+// 3.0.7-beta.6: the character's buffs counted (whether shown or not) - a buff ending told (win/notifier.cpp)
+const buffs::Timers& timers();
 
 }  // namespace uagfx::win::buffoverlay

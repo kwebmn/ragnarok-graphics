@@ -157,6 +157,8 @@ void packet(const packets::Event& e) {
     }
 }
 
+const buffs::Timers& timers() { return state().timers; }
+
 void frame(bool on, float k) {
     State& s = state();
     s.on = on && known();

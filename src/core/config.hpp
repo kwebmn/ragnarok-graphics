@@ -458,7 +458,21 @@ struct SoundSettings {
 struct NotifySettings {
     bool on = true;
     bool whisper = true, party = true, trade = true, guild = true, friendAsk = true, death = true;
+    // 3.0.7-beta.6 (the user chose 1, 5, 6, 7, 8, 9, 10): an attack on the character (once, again after a calm), a
+    // buff ending (buffSeconds before), one of the party near dead or under partyHp per cent, the party's and the
+    // guild's chat, the character's name said near, the server gone; sound - Windows' own with each notification
+    bool attack = true, buffEnding = true, partyDeath = true, partyLowHp = true, partyChat = true, guildChat = true,
+         mention = true, disconnect = true, sound = true;
+    int buffSeconds = 10, partyHp = 30;
 };
+// [notify]'s boxes by their ini words (3.0.7-beta.6: one list for the file, the configurator and the live update)
+struct NotifyBox {
+    const char* key;
+    bool NotifySettings::*field;
+};
+extern const NotifyBox kNotifyBoxes[];
+extern const size_t kNotifyBoxCount;
+constexpr int kBuffSecondsLeast = 3, kBuffSecondsMost = 60, kPartyHpLeast = 10, kPartyHpMost = 90;
 
 struct Config {
     Api api = Api::D3d12;

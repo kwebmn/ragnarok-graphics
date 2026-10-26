@@ -6,8 +6,12 @@
 #include <cstring>
 #include <string>
 #include <variant>
+#include <vector>
 
+#include "core/buff_timers.hpp"
 #include "core/notify.hpp"
+#include "core/party_watch.hpp"
+#include "win/buff_overlay.hpp"
 #include "win/code_page.hpp"
 #include "win/game_camera.hpp"
 #include "win/log.hpp"
@@ -29,11 +33,15 @@ using NotifyFn = BOOL(WINAPI*)(DWORD message, NOTIFYICONDATAW* data);
 struct State {
     HWND window = nullptr;
     bool front = true, logged = false, icon = false;
+    bool main = true;  // 3.0.7-beta.6: the main game window (what the party and the guild hear told by it alone)
     NotifySettings settings;
     unsigned codePage = CP_ACP;
     notify::Gate gate;
     NotifyFn shell = nullptr;
     bool shellTried = false;
+    notify::Attacks attacks;  // 3.0.7-beta.6
+    party::Watch party;
+    buffs::Ending ending;
 };
 
 State& state() {
@@ -81,7 +89,7 @@ void show(State& s, const std::string& words) {
     copy(d.szTip, sizeof d.szTip / sizeof d.szTip[0], title);
     copy(d.szInfoTitle, sizeof d.szInfoTitle / sizeof d.szInfoTitle[0], title);
     copy(d.szInfo, sizeof d.szInfo / sizeof d.szInfo[0], widened(words, CP_UTF8));
-    d.dwInfoFlags = NIIF_INFO;
+    d.dwInfoFlags = NIIF_INFO | (s.settings.sound ? 0u : DWORD(NIIF_NOSOUND));  // 3.0.7-beta.6: Windows' own sound
     s.icon = s.shell(s.icon ? NIM_MODIFY : NIM_ADD, &d) != FALSE || s.icon;
 }
 
@@ -97,7 +105,7 @@ void hide(State& s) {
 
 void tell(notify::Kind kind, const std::string& who, const std::string& what) {
     State& s = state();
-    if (!s.window || !notify::wanted(s.settings, kind, s.front)) return;
+    if (!s.window || !notify::wanted(s.settings, kind, s.front, s.main)) return;
     FLASHWINFO f{sizeof f, s.window, FLASHW_TRAY | FLASHW_TIMERNOFG, 0, 0};  // until it is in front again
     FlashWindowEx(&f);
     if (!s.gate.pass(kind, GetTickCount64())) return;  // a burst: the flashing says it
@@ -105,9 +113,20 @@ void tell(notify::Kind kind, const std::string& who, const std::string& what) {
     LOG_INFO("notify: %d told from behind", int(kind));
 }
 
+// 3.0.7-beta.6 (the user's notification 6): what the party watch saw - a death, a fall under the threshold
+void tellParty(const std::vector<party::News>& news) {
+    for (const party::News& n : news)
+        if (n.kind == party::News::Dead)
+            tell(notify::Kind::PartyDeath, n.name, "");
+        else
+            tell(notify::Kind::PartyLowHp, n.name, std::to_string(n.percent));
+}
+
+uint32_t ownAccount() { return knownGameBuild() ? *reinterpret_cast<const uint32_t*>(uintptr_t(kOwnAccount)) : 0; }
+
 }  // namespace
 
-void frame(HWND window, bool front, const Config& config) {
+void frame(HWND window, bool front, bool main, const Config& config) {
     State& s = state();
     if (!s.logged) {
         s.logged = true;
@@ -118,8 +137,23 @@ void frame(HWND window, bool front, const Config& config) {
     if (front && !s.front) hide(s);  // back: the player sees the game itself
     s.window = window;
     s.front = front;
+    s.main = main;
     s.settings = config.notify;
     s.codePage = gameCodePage(config);
+    // 3.0.7-beta.6 (the user's notification 5): a buff of the character's about to end - each once, in front too (the
+    // player sees it there), so a window put behind later does not tell of it
+    const uint64_t now = GetTickCount64();
+    const buffs::Timers& timers = buffoverlay::timers();
+    for (uint16_t icon : s.ending.due(timers, now, uint32_t(s.settings.buffSeconds) * 1000u)) {
+        const std::string name = buffs::name(icon);
+        if (!name.empty())
+            tell(notify::Kind::BuffEnding, name, std::to_string((timers.left(icon, now) + 999u) / 1000u));
+    }
+}
+
+void disconnected() {
+    LOG_INFO("notify: the server closed the connection");
+    tell(notify::Kind::Disconnect, "", "");
 }
 
 void packet(const packets::Event& e) {
@@ -131,7 +165,11 @@ void packet(const packets::Event& e) {
         windowmarks::whispered();  // 3.0.4-beta.4: on its card in the other windows' panels
         tell(notify::Kind::Whisper, w->from, w->text);
     } else if (const auto* h = std::get_if<packets::Hit>(&e)) {
-        if (own(h->target)) windowmarks::hit();
+        if (!own(h->target)) return;
+        if (h->damage > 0) windowmarks::hit();  // a miss (3.0.7-beta.6) no mark: nothing hurt
+        // 3.0.7-beta.6 (the user's notification 1): once, again after a calm
+        if (state().attacks.hit(GetTickCount64()))
+            tell(notify::Kind::Attack, "", h->damage > 0 ? std::to_string(h->damage) : std::string());
     } else if (const auto* p = std::get_if<packets::PartyInvite>(&e)) {
         tell(notify::Kind::Party, p->party, "");
     } else if (const auto* t = std::get_if<packets::TradeRequest>(&e)) {
@@ -144,7 +182,36 @@ void packet(const packets::Event& e) {
         if (v->type == 1 && own(v->id)) {
             windowmarks::died();
             tell(notify::Kind::Death, "", "");
+        } else if (v->type == 1) {  // 3.0.7-beta.6: one of the party seen dying
+            std::vector<party::News> news;
+            state().party.died(v->id, news);
+            tellParty(news);
         }
+    } else if (const auto* l = std::get_if<packets::PartyList>(&e)) {  // 3.0.7-beta.6 (the user's notification 6)
+        state().party.members(l->members, ownAccount());
+    } else if (const auto* m = std::get_if<packets::PartyMember>(&e)) {
+        state().party.joined(m->account, m->name);
+    } else if (const auto* gone = std::get_if<packets::PartyLeft>(&e)) {
+        state().party.left(gone->account);
+    } else if (const auto* hp = std::get_if<packets::PartyHp>(&e)) {
+        std::vector<party::News> news;
+        state().party.hp(hp->account, hp->hp, hp->most, state().settings.partyHp, news);
+        tellParty(news);
+    } else if (const auto* pc = std::get_if<packets::PartyChat>(&e)) {  // the user's notification 7
+        if (own(pc->account)) return;  // the party hears its own words back
+        std::string who, what;
+        notify::speaker(pc->text, who, what);
+        tell(notify::Kind::PartyChat, who, what);
+    } else if (const auto* gc = std::get_if<packets::GuildChat>(&e)) {
+        std::string who, what;
+        notify::speaker(gc->text, who, what);
+        if (who != readOwnName()) tell(notify::Kind::GuildChat, who, what);
+    } else if (const auto* c = std::get_if<packets::Chat>(&e)) {  // the user's notification 8: the name said near
+        if (own(c->unit)) return;
+        std::string who, what;
+        notify::speaker(c->text, who, what);
+        const std::string name = readOwnName();
+        if (!name.empty() && notify::mentions(fromGame(what), fromGame(name))) tell(notify::Kind::Mention, who, what);
     }
 }
 

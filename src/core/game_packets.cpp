@@ -15,6 +15,17 @@ std::string name(const uint8_t* p, size_t at) {
     return std::string(s, strnlen(s, 24));
 }
 
+// A packet of its own length (<len>.W at 2): its text from `at` to its end (or a nul); false - cut short or longer
+// than there is
+bool textOf(const uint8_t* p, size_t size, size_t at, std::string& out) {
+    if (size < at) return false;
+    const size_t len = rd16(p, 2);
+    if (len < at || len > size) return false;
+    const char* t = reinterpret_cast<const char*>(p + at);
+    out.assign(t, strnlen(t, len - at));
+    return true;
+}
+
 }  // namespace
 
 Event parse(const uint8_t* p, size_t size) {
@@ -48,24 +59,58 @@ Event parse(const uint8_t* p, size_t size) {
         case 0x011a:
             if (size < 15) return {};
             return SkillCast{rd16(p, 2), rd16(p, 4), rd32(p, 6), rd32(p, 10)};
-        case 0x008a: {  // 3.0.4-beta.4
+        case 0x008a: {  // 3.0.4-beta.4; 3.0.7-beta.6 a miss too (damage 0), dodged by luck (11)
             if (size < 29) return {};
             const uint8_t type = p[26];
             const int32_t damage = int16_t(rd16(p, 22));
-            if ((type != 0 && type != 4 && type != 8 && type != 10) || damage <= 0) return {};
+            if ((type != 0 && type != 4 && type != 8 && type != 10 && type != 11) || damage < 0) return {};
             return Hit{rd32(p, 2), rd32(p, 6), damage};
         }
         case 0x01de: {
             if (size < 33) return {};
             const int32_t damage = int32_t(rd32(p, 24));
-            if (damage <= 0) return {};
+            if (damage < 0) return {};
             return Hit{rd32(p, 4), rd32(p, 8), damage};
         }
         case 0x0114: {
             if (size < 31) return {};
             const int32_t damage = int16_t(rd16(p, 24));
-            if (damage <= 0) return {};
+            if (damage < 0) return {};
             return Hit{rd32(p, 4), rd32(p, 8), damage};
+        }
+        case 0x00fb: {  // 3.0.7-beta.6: the party's list
+            if (size < 28) return {};
+            const size_t len = rd16(p, 2);
+            if (len < 28 || len > size || (len - 28) % 46 != 0) return {};
+            PartyList l;
+            for (size_t at = 28; at + 46 <= len; at += 46) l.members.emplace_back(rd32(p, at), name(p, at + 4));
+            return l;
+        }
+        case 0x01e9:
+            if (size < 63) return {};
+            return PartyMember{rd32(p, 2), name(p, 39)};
+        case 0x0105:
+            if (size < 30) return {};
+            return PartyLeft{rd32(p, 2)};
+        case 0x0106:
+            if (size < 10) return {};
+            return PartyHp{rd32(p, 2), rd16(p, 6), rd16(p, 8)};
+        case 0x0109: {
+            PartyChat c;
+            if (size < 8 || !textOf(p, size, 8, c.text)) return {};
+            c.account = rd32(p, 4);
+            return c;
+        }
+        case 0x017f: {
+            GuildChat c;
+            if (!textOf(p, size, 4, c.text)) return {};
+            return c;
+        }
+        case 0x008d: {
+            Chat c;
+            if (size < 8 || !textOf(p, size, 8, c.text)) return {};
+            c.unit = rd32(p, 4);
+            return c;
         }
         default:
             return {};

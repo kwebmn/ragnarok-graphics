@@ -4478,16 +4478,19 @@ constexpr Entry kTexts[] = {
     {Text::NotifyOn, "Notifications while the game is behind",
      "Сповіщення, коли гра у фоні",
      "Уведомления, когда игра в фоне"},
-    {Text::NotifyOnHint,
-     "When the game window is behind others or minimised: its taskbar button flashes and Windows shows who wants "
-     "you - a whisper, an invitation, a trade, the character's death. A click on the notification brings the game "
-     "back. With several game windows each tells of its own.",
-     "Коли вікно гри за іншими вікнами чи згорнуте: його кнопка на панелі завдань блимає, а Windows показує, хто вас "
-     "кличе, — шепіт, запрошення, обмін, смерть персонажа. Клік по сповіщенню повертає гру. З кількома вікнами гри "
-     "кожне повідомляє про своє.",
-     "Когда окно игры за другими окнами или свёрнуто: его кнопка на панели задач мигает, а Windows показывает, кто "
-     "вас зовёт, — шёпот, приглашение, обмен, смерть персонажа. Щелчок по уведомлению возвращает игру. С несколькими "
-     "окнами игры каждое сообщает о своём."},
+    {Text::NotifyOnHint,  // 3.0.7-beta.6: the new kinds
+     "When the game window is behind others or minimised: its taskbar button flashes and Windows shows what wants "
+     "you - a whisper, an invitation, a trade, an attack, a buff ending, the party, the chat, the character's death, "
+     "the server gone. A click on the notification brings the game back. With several game windows each tells of its "
+     "own; the party's and the guild's news the main one alone.",
+     "Коли вікно гри за іншими вікнами чи згорнуте: його кнопка на панелі завдань блимає, а Windows показує, що "
+     "сталося, — шепіт, запрошення, обмін, атака, кінець бафу, група, чат, смерть персонажа, втрата зв'язку. Клік по "
+     "сповіщенню повертає гру. З кількома вікнами гри кожне повідомляє про своє, а новини групи й гільдії — лише "
+     "головне.",
+     "Когда окно игры за другими окнами или свёрнуто: его кнопка на панели задач мигает, а Windows показывает, что "
+     "случилось, — шёпот, приглашение, обмен, атака, конец бафа, группа, чат, смерть персонажа, потеря связи. Щелчок "
+     "по уведомлению возвращает игру. С несколькими окнами игры каждое сообщает о своём, а новости группы и гильдии — "
+     "только главное."},
     {Text::NotifyWhisper, "Whispers", "Шепіт", "Шёпот"},
     {Text::NotifyParty, "Party invitations", "Запрошення до групи", "Приглашения в группу"},
     {Text::NotifyTrade, "Trade offers", "Пропозиції обміну", "Предложения обмена"},
@@ -4504,6 +4507,74 @@ constexpr Entry kTexts[] = {
     {Text::NotifyFriendText, "{1} asks to be your friend", "{1} хоче додати вас у друзі",
      "{1} хочет добавить вас в друзья"},
     {Text::NotifyDeathText, "The character died", "Персонаж загинув", "Персонаж погиб"},
+    // 3.0.7-beta.6 (the user chose 1, 5, 6, 7, 8, 9, 10 «и чтобы это в конфигураторе настраивалось»)
+    {Text::NotifyAttack, "An attack on the character", "Атака на персонажа", "Атака на персонажа"},
+    {Text::NotifyAttackHint,
+     "When the character comes under attack (misses too): once, then again only after half a minute without hits.",
+     "Коли персонажа починають атакувати (і промахи теж): один раз, а знову — лише після пів хвилини без ударів.",
+     "Когда персонажа начинают атаковать (и промахи тоже): один раз, а снова — только после полуминуты без ударов."},
+    {Text::NotifyBuffEnding, "A buff ending", "Кінець бафу", "Конец бафа"},
+    {Text::NotifyBuffEndingHint,
+     "A few seconds before one of the character's buffs (Blessing, Increase AGI, food...) runs out - its name. Short "
+     "ones (under half a minute) are not told.",
+     "За кілька секунд до кінця бафу персонажа (Blessing, Increase AGI, їжа…) — його назва. Про короткі (менше пів "
+     "хвилини) не сповіщає.",
+     "За несколько секунд до конца бафа персонажа (Blessing, Increase AGI, еда…) — его название. О коротких (меньше "
+     "полуминуты) не уведомляет."},
+    {Text::NotifyBuffSeconds, "Seconds before a buff ends", "За скільки секунд до кінця бафу",
+     "За сколько секунд до конца бафа"},
+    {Text::NotifyBuffSecondsHint, "How long before a buff runs out to tell of it.",
+     "За скільки секунд до кінця бафу сповіщати.", "За сколько секунд до конца бафа уведомлять."},
+    {Text::NotifyPartyDeath, "A death in the party", "Смерть у групі", "Смерть в группе"},
+    {Text::NotifyPartyDeathHint,
+     "When one of the party near the character dies. With several game windows only the main one tells.",
+     "Коли гине хтось із групи поруч із персонажем. З кількома вікнами гри повідомляє лише головне.",
+     "Когда погибает кто-то из группы рядом с персонажем. С несколькими окнами игры сообщает только главное."},
+    {Text::NotifyPartyLowHp, "Low HP in the party", "Мало HP у групі", "Мало HP в группе"},
+    {Text::NotifyPartyLowHpHint,
+     "When one of the party near the character falls under the threshold. With several game windows only the main "
+     "one tells.",
+     "Коли в когось із групи поруч із персонажем HP падає нижче порогу. З кількома вікнами гри повідомляє лише "
+     "головне.",
+     "Когда у кого-то из группы рядом с персонажем HP падает ниже порога. С несколькими окнами игры сообщает только "
+     "главное."},
+    {Text::NotifyPartyHp, "Party HP threshold", "Поріг HP групи", "Порог HP группы"},
+    {Text::NotifyPartyHpHint, "Under how many per cent of HP to tell of one of the party.",
+     "Нижче скількох відсотків HP сповіщати про когось із групи.",
+     "Ниже скольких процентов HP уведомлять о ком-то из группы."},
+    {Text::NotifyPartyChat, "The party's chat", "Чат групи", "Чат группы"},
+    {Text::NotifyGuildChat, "The guild's chat", "Чат гільдії", "Чат гильдии"},
+    {Text::NotifyChatHint,
+     "What the others write there (not your own). With several game windows only the main one tells.",
+     "Що пишуть інші (не ви самі). З кількома вікнами гри повідомляє лише головне.",
+     "Что пишут другие (не вы сами). С несколькими окнами игры сообщает только главное."},
+    {Text::NotifyMention, "Your name in the chat", "Згадка імені в чаті", "Упоминание имени в чате"},
+    {Text::NotifyMentionHint, "When someone near writes the character's name in the common chat.",
+     "Коли хтось поруч пише ім'я персонажа в загальному чаті.",
+     "Когда кто-то рядом пишет имя персонажа в общем чате."},
+    {Text::NotifyDisconnect, "The connection to the server lost", "Втрата зв'язку із сервером",
+     "Потеря связи с сервером"},
+    {Text::NotifyDisconnectHint, "When the server closes the connection - the game is no longer online.",
+     "Коли сервер розриває з'єднання — гра вже не в мережі.",
+     "Когда сервер разрывает соединение — игра уже не в сети."},
+    {Text::NotifySound, "Notification sound", "Звук сповіщень", "Звук уведомлений"},
+    {Text::NotifySoundHint, "Windows' own sound with each notification. Off: silent.",
+     "Звук Windows разом із кожним сповіщенням. Вимкнено — без звуку.",
+     "Звук Windows вместе с каждым уведомлением. Выключено — без звука."},
+    {Text::NotifyAttackText, "The character is under attack", "Персонажа атакують", "Персонажа атакуют"},
+    {Text::NotifyAttackHurtText, "The character is under attack: -{1} HP", "Персонажа атакують: -{1} HP",
+     "Персонажа атакуют: -{1} HP"},
+    {Text::NotifyBuffEndingText, "{1} ends in {2} s", "{1} закінчується за {2} с", "{1} заканчивается через {2} с"},
+    {Text::NotifyPartyDeathText, "{1} of the party died", "У групі загинув персонаж {1}",
+     "В группе погиб персонаж {1}"},
+    {Text::NotifyPartyLowHpText, "{1} of the party: {2}% HP", "У персонажа {1} з групи {2}% HP",
+     "У персонажа {1} из группы {2}% HP"},
+    {Text::NotifyPartyChatText, "Party - {1}: {2}", "Група — {1}: {2}", "Группа — {1}: {2}"},
+    {Text::NotifyGuildChatText, "Guild - {1}: {2}", "Гільдія — {1}: {2}", "Гильдия — {1}: {2}"},
+    {Text::NotifyMentionText, "Your name in the chat - {1}: {2}", "Ваше ім'я в чаті — {1}: {2}",
+     "Ваше имя в чате — {1}: {2}"},
+    {Text::NotifyDisconnectText, "The connection to the server is lost", "Зв'язок із сервером втрачено",
+     "Связь с сервером потеряна"},
     // 3.0.4-beta.4: «Грати» starts a set of game windows
     {Text::WindowsStartCount, "Game windows started by «Play»",
      "Вікон гри за кнопкою «Грати»",
