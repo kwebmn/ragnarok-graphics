@@ -1690,6 +1690,9 @@ void Renderer::Impl::destroy() {
     for (ID3D12Resource*& r : aoTarget) releaseCom(r);  // 0.20
     releaseCom(aoPipeline);
     releaseCom(aoBlurPipeline);
+    releaseCom(aoDepth);  // 3.0.5-beta.21
+    releaseCom(aoDepthPipeline);
+    releaseCom(aoDepthPs);
     for (ID3D12PipelineState*& p : aoApplyPipelines) releaseCom(p);
     for (ID3D12PipelineState*& p : glowLightPipelines) releaseCom(p);
     for (ID3D12PipelineState*& p : gradePipelines) releaseCom(p);  // 0.21

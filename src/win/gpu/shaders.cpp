@@ -1141,6 +1141,20 @@ float3 viewAt(int2 wp) {  // the point of the view the world pixel wp shows (its
     return viewFrom(wp, sceneDepth.Load(int3(wp, 0)));
 }
 
+float3 viewFromZ(int2 wp, float z) {  // 3.0.5-beta.21: viewFrom with the view depth worked out already
+    float2 g = (float2(wp) - float2(jitterX, jitterY)) / scale;
+    return float3((g.x - cx) * z / f0, (g.y - cy) * z / f1, z);
+}
+
+// 3.0.5-beta.21 (the user: «продолжаем» - the soft shadows 3.3 ms of a Radeon 610M's 17 on «Середні»): the view
+// depth of each pixel of the shadows' mask once - its pixels' middle's, as ao_ps and ao_blur_ps took it from the
+// picture's depth, a load and a division each, about twenty times a pixel - for them to read (ao_ps t0, ao_blur_ps
+// t1): the same depths
+float ao_depth_ps(PresentOut i) : SV_Target {
+    int ratio = int(uiPixels.x / uiPixels.z + 0.5);
+    return viewDepth(sceneDepth.Load(int3(min(int2(i.pos.xy) * ratio + ratio / 2, int2(uiPixels.xy) - 1), 0)));
+}
+
 float ao_ps(PresentOut i) : SV_Target {
     const float3 kernel[12] = {
         float3(-0.0933, 0.0078, 0.0503), float3(-0.1224, 0.0021, 0.0252), float3(-0.0230, -0.1494, 0.0394),
@@ -1151,10 +1165,23 @@ float ao_ps(PresentOut i) : SV_Target {
     int2 last = int2(uiPixels.xy) - 1;
     int2 wp = min(int2(i.pos.xy) * ratio + ratio / 2, last);  // the middle of its pixels
     if (sceneDepth.Load(int3(wp, 0)) >= 0.99999) return 1.0;  // nothing drawn there
-    float3 p = viewAt(wp);
+    // 3.0.5-beta.21: it and the mask's pixels beside it by their depths from ao_depth_ps (t0) - two pixels of the
+    // picture apart at a half's size as before, four at a quarter's
+    int2 m = int2(i.pos.xy), mLast = int2(uiPixels.zw) - 1;
+    int2 ml = max(m - int2(1, 0), int2(0, 0)), mr = min(m + int2(1, 0), mLast);
+    int2 mu = max(m - int2(0, 1), int2(0, 0)), md = min(m + int2(0, 1), mLast);
+    float3 p = viewFromZ(wp, tex0.Load(int3(m, 0)).r);
     // The normal from the neighbours, each on the side nearer in depth, so that an edge does not bend it.
-    float3 l = viewAt(max(wp - int2(2, 0), int2(0, 0))), r = viewAt(min(wp + int2(2, 0), last));
-    float3 u = viewAt(max(wp - int2(0, 2), int2(0, 0))), d = viewAt(min(wp + int2(0, 2), last));
+    float3 l = viewFromZ(min(ml * ratio + ratio / 2, last), tex0.Load(int3(ml, 0)).r);
+    float3 r = viewFromZ(min(mr * ratio + ratio / 2, last), tex0.Load(int3(mr, 0)).r);
+    float3 u = viewFromZ(min(mu * ratio + ratio / 2, last), tex0.Load(int3(mu, 0)).r);
+    float3 d = viewFromZ(min(md * ratio + ratio / 2, last), tex0.Load(int3(md, 0)).r);
+    // at the mask's edge the neighbour past it is the pixel itself - the one on the other side, mirrored (no slope of
+    // nothing: the normal of none)
+    if (m.x == 0) l = 2.0 * p - r;
+    if (m.x == mLast.x) r = 2.0 * p - l;
+    if (m.y == 0) u = 2.0 * p - d;
+    if (m.y == mLast.y) d = 2.0 * p - u;
     float3 dx = abs(r.z - p.z) < abs(p.z - l.z) ? r - p : p - l;
     float3 dy = abs(d.z - p.z) < abs(p.z - u.z) ? d - p : p - u;
     float3 n = normalize(cross(dy, dx));
@@ -1184,12 +1211,12 @@ float ao_blur_ps(PresentOut i) : SV_Target {
     int2 p = int2(i.pos.xy);
     int2 dir = int2(sourceRect.xy);
     int2 last = int2(uiPixels.zw) - 1;
-    int ratio = int(uiPixels.x / uiPixels.z + 0.5);  // 0.39.3
-    float z0 = viewDepth(sceneDepth.Load(int3(min(p * ratio + ratio / 2, int2(uiPixels.xy) - 1), 0)));
+    // 3.0.5-beta.21: the mask's pixels' view depths from ao_depth_ps (t1) - their pixels' middles', as before
+    float z0 = tex1.Load(int3(p, 0)).r;
     float sum = 0.0, weights = 0.0;
     [unroll] for (int k = -4; k <= 4; ++k) {
         int2 q = clamp(p + dir * k, int2(0, 0), last);
-        float zq = viewDepth(sceneDepth.Load(int3(min(q * ratio + ratio / 2, int2(uiPixels.xy) - 1), 0)));
+        float zq = tex1.Load(int3(q, 0)).r;
         float w = exp(-float(k * k) / 8.0) * saturate(1.0 - abs(zq - z0) / (0.04 * z0 + 1.0));
         sum += tex0.Load(int3(q, 0)).r * w;
         weights += w;

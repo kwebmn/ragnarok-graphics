@@ -77,12 +77,14 @@ void Renderer::Impl::releaseAo() {
         if (r) s.garbage.push_back(r);
         r = nullptr;
     }
+    if (aoDepth) s.garbage.push_back(aoDepth);  // 3.0.5-beta.21
+    aoDepth = nullptr;
     aoWidth = aoHeight = 0;
 }
 
 // The shadows' two half-sized R8 targets and the pipelines; false when they cannot be made (logged once a size).
 bool Renderer::Impl::ensureAo(int w, int h) {
-    if (!aoPs || !aoBlurPs || !aoApplyPs) return false;  // its shaders did not compile (logged at the start)
+    if (!aoPs || !aoBlurPs || !aoApplyPs || !aoDepthPs) return false;  // its shaders did not compile (logged)
     if (!aoPipeline) {
         D3D12_GRAPHICS_PIPELINE_STATE_DESC p = fullScreenPipeline(root, presentVs, aoPs, DXGI_FORMAT_R8_UNORM, 1);
         if (FAILED(device->CreateGraphicsPipelineState(&p, __uuidof(ID3D12PipelineState),
@@ -92,7 +94,11 @@ bool Renderer::Impl::ensureAo(int w, int h) {
         if (FAILED(device->CreateGraphicsPipelineState(&p, __uuidof(ID3D12PipelineState),
                                                        reinterpret_cast<void**>(&aoBlurPipeline))))
             aoBlurPipeline = nullptr;
-        if (!aoPipeline || !aoBlurPipeline) {
+        p = fullScreenPipeline(root, presentVs, aoDepthPs, DXGI_FORMAT_R32_FLOAT, 1);  // 3.0.5-beta.21
+        if (FAILED(device->CreateGraphicsPipelineState(&p, __uuidof(ID3D12PipelineState),
+                                                       reinterpret_cast<void**>(&aoDepthPipeline))))
+            aoDepthPipeline = nullptr;
+        if (!aoPipeline || !aoBlurPipeline || !aoDepthPipeline) {
             LOG_ERROR("shadows: their pipelines failed: they stay off");
             return false;
         }
@@ -123,6 +129,22 @@ bool Renderer::Impl::ensureAo(int w, int h) {
         device->CreateRenderTargetView(aoTarget[i], nullptr, rtvHandle(kRtvAo + UINT(i)));
         device->CreateShaderResourceView(aoTarget[i], nullptr, cpuSrvHandle(aoSrv[i]));
     }
+    // 3.0.5-beta.21: their pixels' view depths
+    D3D12_CLEAR_VALUE depthClear{};
+    depthClear.Format = DXGI_FORMAT_R32_FLOAT;
+    aoDepth = createTexture2D(device, aw, ah, 1, DXGI_FORMAT_R32_FLOAT, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET,
+                              D3D12_RESOURCE_STATE_RENDER_TARGET, &depthClear);
+    aoDepthState = D3D12_RESOURCE_STATE_RENDER_TARGET;
+    if (aoDepth && aoDepthSrv == kNoSrv) aoDepthSrv = allocSrv();
+    if (!aoDepth || aoDepthSrv == kNoSrv) {
+        LOG_ERROR("shadows: no video memory for their depths at %dx%d: they stay off at this size", aw, ah);
+        releaseAo();
+        aoWidth = aw;  // remembered as failed
+        aoHeight = ah;
+        return false;
+    }
+    device->CreateRenderTargetView(aoDepth, nullptr, rtvHandle(kRtvAoDepth));
+    device->CreateShaderResourceView(aoDepth, nullptr, cpuSrvHandle(aoDepthSrv));
     aoFailed = false;
     LOG_INFO("shadows: %dx%d, from the depth of the %dx%d world", aw, ah, w, h);
     return true;
@@ -177,15 +199,20 @@ bool Renderer::Impl::applyAo() {
     // A cell of the map is ten units: the shadows reach 1.5 to 9 of them from a corner.
     c.footprint = 1.5f + 7.5f * float(std::clamp(effects.aoSize, 0, 100)) / 100.0f;
     c.sharpen = float(std::clamp(effects.aoStrength, 0, 100)) / 100.0f;
-    if (!effectPass(aoPipeline, aoTarget[0], aoState[0], rtvHandle(kRtvAo), aoWidth, aoHeight, c, sceneDepthSrv,
-                    true))  // t0 unread: the depth, in its shader state already
+    // 3.0.5-beta.21: each of their pixels' view depth once (ao_depth_ps), read by the shadows (t0) and the blur (t1)
+    if (!effectPass(aoDepthPipeline, aoDepth, aoDepthState, rtvHandle(kRtvAoDepth), aoWidth, aoHeight, c,
+                    sceneDepthSrv, true))
+        return false;
+    transition(aoDepth, aoDepthState, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+    if (!effectPass(aoPipeline, aoTarget[0], aoState[0], rtvHandle(kRtvAo), aoWidth, aoHeight, c, aoDepthSrv,
+                    true))
         return false;
     for (int i = 0; i < 2; ++i) {  // across, then down
         transition(aoTarget[i], aoState[i], D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
         c.sourceRect[0] = i == 0 ? 1.0f : 0.0f;
         c.sourceRect[1] = i == 0 ? 0.0f : 1.0f;
         if (!effectPass(aoBlurPipeline, aoTarget[1 - i], aoState[1 - i], rtvHandle(kRtvAo + UINT(1 - i)), aoWidth,
-                        aoHeight, c, aoSrv[i], true))
+                        aoHeight, c, aoSrv[i], true, aoDepthSrv))
             return false;
     }
     transition(aoTarget[0], aoState[0], D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);

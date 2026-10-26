@@ -207,6 +207,8 @@ Renderer11::~Renderer11() {
     drop(grassPs_);
     drop(grassMaskPs_);  // 3.0.5-beta.12
     dropTarget(grassMask_);
+    drop(aoDepthPs_);  // 3.0.5-beta.21
+    dropTarget(aoDepth_);
     drop(grassTilesPs_);  // 3.0.5-beta.20
     drop(grassNearPs_);
     dropTarget(grassTiles_);
@@ -442,7 +444,7 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
         bool optional = false;  // 0.99: an effect's - without it the effect is not drawn, the game is
         bool safe = false;      // 2.2.2: made without the newest features (UAGFX_SAFE)
         bool lean = false;      // 2.5: with UAGFX_LEAN (draw_lean_ps: the world's extras left out)
-    } wants[62] = {{"draw_vs", vs, shaderSource(), {}},    {"draw_ps", ps, shaderSource(), {}},
+    } wants[63] = {{"draw_vs", vs, shaderSource(), {}},    {"draw_ps", ps, shaderSource(), {}},
                    {"present_vs", vs, shaderSource(), {}}, {"present_ps", ps, shaderSource(), {}},
                    {"clear_vs", vs, kClearSource, {}},     {"clear_ps", ps, kClearSource, {}},
                    {"grade_ps", ps, shaderSource(), {}},  // 0.59: the colours (Effects page)
@@ -495,7 +497,8 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
                    {"weather_vs", vs, shaderSource(), {}, true},     // 3.0.5-beta.19: the weather's quads
                    {"weather_quad_ps", ps, shaderSource(), {}, true},
                    {"grass_tiles_ps", ps, shaderSource(), {}, true},  // 3.0.5-beta.20: the grass's tiles
-                   {"grass_near_ps", ps, shaderSource(), {}, true}};
+                   {"grass_near_ps", ps, shaderSource(), {}, true},
+                   {"ao_depth_ps", ps, shaderSource(), {}, true}};  // 3.0.5-beta.21: the shadows' depths
     const uint64_t key = shader_cache::keyOf(std::string(shaderSource()) + kClearSource + "direct3d 11");
     std::vector<shader_cache::Shader> kept;
     {
@@ -641,6 +644,7 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
     if (wants[59].code.empty() || !psOf(wants[59], weatherQuadPs_)) weatherQuadPs_ = nullptr;
     if (wants[60].code.empty() || !psOf(wants[60], grassTilesPs_)) grassTilesPs_ = nullptr;  // 3.0.5-beta.20
     if (wants[61].code.empty() || !psOf(wants[61], grassNearPs_)) grassNearPs_ = nullptr;
+    if (wants[62].code.empty() || !psOf(wants[62], aoDepthPs_)) aoDepthPs_ = nullptr;  // 3.0.5-beta.21
     if (!wants[1].safe && !wants[22].safe) {  // 2.5.16: none where the player's compiler took the draw shader badly
         std::vector<shader_cache::Shader> all;
         for (const Want& w : wants) all.push_back({w.entry, shader_cache::profileOf(w.profile, w.safe), w.code});
@@ -3550,6 +3554,14 @@ void Renderer11::applyAo() {
                 return;
             }
         }
+    if (aoDepth_.width != aw || aoDepth_.height != ah) {  // 3.0.5-beta.21: their pixels' view depths
+        dropTarget(aoDepth_);
+        if (!makeTarget(aoDepth_, aw, ah, DXGI_FORMAT_R32_FLOAT)) {
+            LOG_ERROR("shadows: no video memory for their depths at %dx%d (Direct3D 11)", aw, ah);
+            aoApplyPs_ = nullptr;
+            return;
+        }
+    }
     Constants c{};
     const camera::Projection proj = camera::projectionFor(gameWidth_, gameHeight_);
     const float pv[6] = {proj.f0, proj.f1, proj.cx, proj.cy, proj.nearZ, proj.farZ};
@@ -3561,11 +3573,13 @@ void Renderer11::applyAo() {
     c.uiPixels[3] = float(ah);
     c.footprint = 1.5f + 7.5f * float(std::clamp(effects_.aoSize, 0, 100)) / 100.0f;  // world units
     c.sharpen = float(std::clamp(effects_.aoStrength, 0, 100)) / 100.0f;
-    maskPass(aoPs_, aoTarget_[0], c, nullptr, depthSrv_);
+    // 3.0.5-beta.21: each of their pixels' view depth once (ao_depth_ps), read by the shadows (t0) and the blur (t1)
+    maskPass(aoDepthPs_, aoDepth_, c, nullptr, depthSrv_);
+    maskPass(aoPs_, aoTarget_[0], c, aoDepth_.srv, depthSrv_);
     for (int i = 0; i < 2; ++i) {  // across, then down
         c.sourceRect[0] = i == 0 ? 1.0f : 0.0f;
         c.sourceRect[1] = i == 0 ? 0.0f : 1.0f;
-        maskPass(aoBlurPs_, aoTarget_[1 - i], c, aoTarget_[i].srv, depthSrv_);
+        maskPass(aoBlurPs_, aoTarget_[1 - i], c, aoTarget_[i].srv, depthSrv_, nullptr, aoDepth_.srv);
     }
     if (!aoLogged_) LOG_INFO("shadows: %dx%d, from the depth of the %dx%d picture (Direct3D 11)", aw, ah, w, h);
     aoLogged_ = true;

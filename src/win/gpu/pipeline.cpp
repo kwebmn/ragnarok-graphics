@@ -203,6 +203,7 @@ bool Renderer::Impl::createPipelines(std::string& error) {
                    {"water_glow_ps", "ps_5_0", &waterGlowPs}, {"depth_copy_ps", "ps_5_0", &depthCopyPs},
                    {"depth_copy_ms_ps", "ps_5_0", &depthCopyMsPs}, {"ao_ps", "ps_5_0", &aoPs},
                    {"ao_blur_ps", "ps_5_0", &aoBlurPs},          {"ao_apply_ps", "ps_5_0", &aoApplyPs},
+                   {"ao_depth_ps", "ps_5_0", &aoDepthPs},  // 3.0.5-beta.21
                    {"grade_ps", "ps_5_0", &gradePs},              {"dof_blur_ps", "ps_5_0", &dofBlurPs},
                    {"mask_ps", "ps_5_0", &maskPs},
                    {"torch_light_vs", "vs_5_0", &torchLightVs},   {"torch_accum_ps", "ps_5_0", &torchAccumPs},

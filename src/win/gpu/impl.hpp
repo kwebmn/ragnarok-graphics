@@ -128,7 +128,8 @@ constexpr UINT kRtvTorch = kRtvMirror + 1;  // 2.5: the torches' buffer of light
 constexpr UINT kRtvShafts = kRtvTorch + 1;  // 2.5.7: the light in the air at half the size
 constexpr UINT kRtvGrassMask = kRtvShafts + 1;  // 3.0.5-beta.12: where a blade's root can stand (grass_mask_ps)
 constexpr UINT kRtvGrassTiles = kRtvGrassMask + 1;  // 3.0.5-beta.20: the picture's 8 x 8 tiles with a marked root
-constexpr UINT kRtvCount = kRtvGrassTiles + 1;
+constexpr UINT kRtvAoDepth = kRtvGrassTiles + 1;  // 3.0.5-beta.21: the soft shadows' pixels' view depths
+constexpr UINT kRtvCount = kRtvAoDepth + 1;
 constexpr UINT kDsvTarget = 0;  // depth views: the target's, the world's (DLSS)
 constexpr UINT kDsvWorld = 1;
 constexpr UINT kDsvMirror = 3;  // 1.16: the mirrored world's depth
@@ -475,6 +476,12 @@ struct Renderer::Impl {
     ID3D12PipelineState* aoPipeline = nullptr;
     ID3D12PipelineState* aoBlurPipeline = nullptr;
     ID3D12PipelineState* aoApplyPipelines[4] = {};
+    // 3.0.5-beta.21: each of their pixels' view depth once (ao_depth_ps, R32F at their size) for ao_ps and ao_blur_ps
+    ID3DBlob* aoDepthPs = nullptr;
+    ID3D12PipelineState* aoDepthPipeline = nullptr;
+    ID3D12Resource* aoDepth = nullptr;
+    D3D12_RESOURCE_STATES aoDepthState = D3D12_RESOURCE_STATE_RENDER_TARGET;
+    UINT aoDepthSrv = kNoSrv;
     // 0.21, the picture's colours (ao.cpp): once a frame, with the shadows' timing but once the world is drawn.
     bool gradeDone = false;
     ID3DBlob* gradePs = nullptr;

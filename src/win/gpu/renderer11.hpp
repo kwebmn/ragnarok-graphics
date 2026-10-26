@@ -473,7 +473,9 @@ private:
                 mapFadeNow() < 1.0f) &&
                bloomDownPs_ && dofBlurPs_ && bloomApplyPs_;
     }
-    bool aoWanted() const { return effects_.ao && effects_.aoStrength > 0 && aoPs_ && aoBlurPs_ && aoApplyPs_; }
+    bool aoWanted() const {
+        return effects_.ao && effects_.aoStrength > 0 && aoPs_ && aoBlurPs_ && aoApplyPs_ && aoDepthPs_;
+    }
     // A pass into a small target of its own: t0 and the depth (t3) read, the whole target written
     void maskPass(ID3D11PixelShader* ps, const Target& into, const Constants& c, ID3D11ShaderResourceView* t0,
                   ID3D11ShaderResourceView* depth, ID3D11ShaderResourceView* t2 = nullptr,
@@ -679,6 +681,8 @@ private:
     ID3D11PixelShader* aoBlurPs_ = nullptr;
     ID3D11PixelShader* aoApplyPs_ = nullptr;
     Target aoTarget_[2];
+    ID3D11PixelShader* aoDepthPs_ = nullptr;  // 3.0.5-beta.21: their pixels' view depths once (ao_depth_ps)
+    Target aoDepth_;
     bool aoDone_ = false, aoLogged_ = false;
     MapWorld mapWorld_;
     // 2.5.2: the bloom's two quarter-size targets and shaders; the new map's fade
