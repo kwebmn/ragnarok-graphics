@@ -1,3 +1,12 @@
+# uaRO Graphics 3.0.7-beta.1 — what is new
+
+- **«Hidden lights of the maps»: light without orbs.** The balls of light floating over the hidden lights (Manuk,
+  Splendide, Nidhoggur's nest, the towers) are no longer drawn; the light they throw on the ground, the walls and the
+  characters stays. The orbs come back with a new switch «Orbs in the air» under «Hidden lights of the maps», off by
+  default. Splendide's pools of light and the towers' dust as before.
+- To check: Manuk or man_fild02 with «Hidden lights of the maps» - no orbs, soft light round them; with «Orbs in the
+  air» - the orbs as before.
+
 # uaRO Graphics 3.0.6 — what is new
 
 Fixes from the players' reports: the world black after an hour of play, a hole on the stairs, washed-out sand. Also a
