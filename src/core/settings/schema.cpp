@@ -237,6 +237,8 @@ const std::vector<IniSetting>& iniSettings() {
          Text::FxFirefliesHint, "", &E::fireflies},
         {"effects", "fireflies_brightness", Page::Effects, Control::Slider, 0, 200, 10, {}, {},
          Text::FxFirefliesBrightness, Text::FxFirefliesBrightnessHint, " %", nullptr, &E::firefliesBrightness},
+        {"effects", "firefly_dots", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxFireflyDots,
+         Text::FxFireflyDotsHint, "", &E::fireflyDots},  // 3.0.7-beta.3: a part of fireflies
         {"effects", "map_glows", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxMapGlows,
          Text::FxMapGlowsHint, "", &E::mapGlows},
         {"effects", "map_glows_brightness", Page::Effects, Control::Slider, 0, 200, 10, {}, {},

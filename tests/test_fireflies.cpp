@@ -1,4 +1,7 @@
+#include <algorithm>
 #include <cmath>
+#include <cstdint>
+#include <vector>
 
 #include "core/fireflies.hpp"
 #include "test.hpp"
@@ -52,4 +55,30 @@ TEST(fireflies_keep_the_games_colour_or_glow_yellow_green) {
     CHECK(c[1] == 1.0f && c[0] > 0.6f && c[2] < 0.5f);
     fireflies::colourOf(0x80000000, c);  // black: the same
     CHECK(c[1] == 1.0f);
+}
+
+// 3.0.7-beta.3 (the user: «сделать как лампы, чтобы от них исходил свет и освещал карту дополнительно ... разным
+// светом»): the maps' fireflies as lamps at their places - which effects they are, each its own colour by its place
+TEST(fireflies_of_a_map_are_lamps_of_their_own_colours) {
+    CHECK(fireflies::isFirefly(45) && fireflies::isFirefly(713) && fireflies::isFirefly(714) &&
+          fireflies::isFirefly(946));
+    CHECK(!fireflies::isFirefly(47) && !fireflies::isFirefly(693) && !fireflies::isFirefly(0));
+    // the same place, the same colour; the places of a map - fireflies' colours, several of them
+    float a[3], b[3];
+    fireflies::lampColour(120.0f, -35.0f, a);
+    fireflies::lampColour(120.0f, -35.0f, b);
+    CHECK(a[0] == b[0] && a[1] == b[1] && a[2] == b[2]);
+    std::vector<uint32_t> seen;
+    for (int i = 0; i < 40; ++i) {
+        float c[3];
+        fireflies::lampColour(float(i * 37 % 200) - 100.0f, float(i * 53 % 300) - 150.0f, c);
+        // a firefly's: green the most or near it, its brightest channel 1, never blue the most
+        CHECK(std::max({c[0], c[1], c[2]}) == 1.0f && c[1] >= 0.69f && c[2] < 1.0f);
+        const uint32_t key = uint32_t(c[0] * 255.0f) << 16 | uint32_t(c[1] * 255.0f) << 8 | uint32_t(c[2] * 255.0f);
+        if (std::find(seen.begin(), seen.end(), key) == seen.end()) seen.push_back(key);
+    }
+    CHECK(seen.size() >= 4);
+    // a lamp's: its reach some three cells, softer than a map's lamp
+    CHECK(fireflies::kLampReach >= 20.0f && fireflies::kLampReach <= 40.0f);
+    CHECK(fireflies::kLampStrength > 0.12f && fireflies::kLampStrength < 0.48f);
 }

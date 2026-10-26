@@ -100,6 +100,7 @@ constexpr int kUpscaleGiveUp = 30;  // part 3: DLSS failing this many frames in 
 constexpr UINT kMaxTorches = 32;    // 0.23: torches drawn anew in a frame; the rest as the game draws them
 constexpr UINT kMaxLights = 64;     // 0.25: lights of the torches' pass - the torches' and the lamps'
 constexpr UINT kMaxFireflies = 96;  // 0.28: fireflies drawn anew in a frame
+constexpr size_t kFireflyLamps = 16;  // 3.0.7-beta.3: the maps' fireflies lighting as lamps, the nearest
 constexpr UINT kMaxHeat = 32;       // 0.35: spots of heat haze in a frame
 
 // Render target views: the target, the two swap chain buffers, the game-sized helper, a new target being filled;

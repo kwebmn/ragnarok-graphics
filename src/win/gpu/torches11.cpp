@@ -86,6 +86,7 @@ void Renderer11::noteFire(const FrameRecord& rec, const DrawCmd& d, float amount
 
 // 1.0.1: one of the game's fireflies (effect 45, known by the driver): its middle, size, fade and tint.
 bool Renderer11::takeFirefly(const FrameRecord& rec, const DrawCmd& d) {
+    if (!effects_.fireflyDots) return true;  // 3.0.7-beta.3 (as torches.cpp): their light alone, from their places
     if (flies_.size() >= 128) return false;
     const std::vector<uint8_t>& v = rec.vertexBytes();
     const size_t stride = FrameRecord::stride(d.fvf);
@@ -344,7 +345,7 @@ void Renderer11::applyTorchLight() {
     std::vector<Dot> dots;
     std::vector<Cloud> clouds;
     std::vector<Item> glowLights;
-    if (mapFlies) {
+    if (mapFlies && effects_.fireflyDots) {  // 3.0.7-beta.3: the fireflies themselves in the air
         const float user = float(std::clamp(effects_.firefliesBrightness, 0, 200)) / 100.0f;
         uint32_t index = 0;
         for (const rsw::Effect& e : layout->effects) {
@@ -625,6 +626,26 @@ void Renderer11::applyTorchLight() {
               [](const Item& a, const Item& b) { return a.view[2] < b.view[2]; });
     for (size_t i = 0; i < glowLights.size() && i < 24; ++i)  // 0.29: the nearest 24 of the maps' glows
         addLight(glowLights[i].view, glowLights[i].reach, glowLights[i].colour, glowLights[i].strength);
+    if (mapFlies) {  // 3.0.7-beta.3 (torches.cpp): the maps' fireflies each a lamp at its place, the nearest 16
+        const float user = float(std::clamp(effects_.firefliesBrightness, 0, 200)) / 100.0f;
+        std::vector<Item> flyLamps;
+        for (const rsw::Effect& e : layout->effects) {
+            if (!fireflies::isFirefly(e.id)) continue;
+            float v[3];
+            toView(map::toWorld(axes, map::Point{e.pos[0], e.pos[1], e.pos[2]}), v);
+            if (v[2] <= proj.nearZ - fireflies::kLampReach) continue;
+            const float vz = std::max(v[2], proj.nearZ);
+            if (!onScreen(v[0] / vz * proj.f0 + proj.cx, v[1] / vz * proj.f1 + proj.cy,
+                          fireflies::kLampReach * proj.f0 / vz + margin))
+                continue;
+            Item l{{v[0], v[1], v[2]}, fireflies::kLampReach, {1.0f, 1.0f, 1.0f}, fireflies::kLampStrength * user};
+            fireflies::lampColour(e.pos[0], e.pos[2], l.colour);
+            flyLamps.push_back(l);
+        }
+        std::sort(flyLamps.begin(), flyLamps.end(), [](const Item& a, const Item& b) { return a.view[2] < b.view[2]; });
+        for (size_t i = 0; i < flyLamps.size() && i < 16; ++i)
+            addLight(flyLamps[i].view, flyLamps[i].reach, flyLamps[i].colour, flyLamps[i].strength);
+    }
     if (lampsOn) {  // 2.5.1: the lamps the map's makers placed, the nearest to the camera first (as torches.cpp)
         const float lampStrength = 0.8f * float(std::clamp(effects_.lampsLight, 0, 200)) / 100.0f;
         std::vector<Item> lamps;

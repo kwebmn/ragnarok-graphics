@@ -960,13 +960,16 @@ constexpr Entry kTexts[] = {
      "Наскільки яскрава аура від того, як її малює гра: 100 % — як у грі, 0 % — немає.",
      "Насколько ярка аура от того, как её рисует игра: 100 % — как в игре, 0 % — нет."},
     {Text::FxFireflies, "The maps' fireflies", "Світлячки карт", "Светлячки карт"},
-    {Text::FxFirefliesHint,
-     "The maps' fireflies glow, flash now and then and light the ground a little around them. Also those the maps' "
-     "makers placed that the game never showed (once the map's file is read).",
-     "Світлячки на картах світяться, час від часу спалахують і трохи освітлюють землю довкола. Також ті, що їх "
-     "поставили автори карт, але гра ніколи не показувала (коли файл карти прочитано).",
-     "Светлячки на картах светятся, время от времени вспыхивают и немного освещают землю вокруг. Также те, что "
-     "поставили авторы карт, но игра никогда не показывала (когда файл карты прочитан)."},
+    {Text::FxFirefliesHint,  // 3.0.7-beta.3: lamps at their places, the fireflies themselves «Світлячки в повітрі»
+     "Each of the maps' fireflies lights the ground, the walls and the characters around its place like a lamp, in a "
+     "colour of its own. Also those the maps' makers placed that the game never showed (once the map's file is read). "
+     "Off: the game's own fireflies as the game draws them.",
+     "Кожен світлячок карти освітлює землю, стіни й персонажів довкола свого місця, як лампа, своїм кольором. Також "
+     "ті, що їх поставили автори карт, але гра ніколи не показувала (коли файл карти прочитано). Вимкнено — світлячки "
+     "гри такі, як їх малює гра.",
+     "Каждый светлячок карты освещает землю, стены и персонажей вокруг своего места, как лампа, своим цветом. Также "
+     "те, что поставили авторы карт, но игра никогда не показывала (когда файл карты прочитан). Выключено — "
+     "светлячки игры такие, как их рисует игра."},
     {Text::FxFirefliesBrightness, "Fireflies' brightness", "Яскравість світлячків", "Яркость светлячков"},
     {Text::FxFirefliesBrightnessHint,
      "How bright the fireflies and their light are.", "Наскільки яскраві світлячки та їхнє світло.",
@@ -3375,6 +3378,14 @@ constexpr Entry kTexts[] = {
      "стіни й персонажів.",
      "Шары света, висящие в воздухе над скрытыми огоньками. Выключено — только свет, который они бросают на землю, "
      "стены и персонажей."},
+    {Text::FxFireflyDots, "Fireflies in the air", "Світлячки в повітрі", "Светлячки в воздухе"},  // 3.0.7-beta.3
+    {Text::FxFireflyDotsHint,
+     "The fireflies themselves - glowing dots drifting and flashing in the air. Off: only the light they throw, the "
+     "game's own fireflies left out too.",
+     "Самі світлячки — вогники, що пливуть і спалахують у повітрі. Вимкнено — лише світло від них, світлячків гри "
+     "теж не видно.",
+     "Сами светлячки — огоньки, что плывут и вспыхивают в воздухе. Выключено — только свет от них, светлячков игры "
+     "тоже не видно."},
     {Text::FxPortalNew, "New portal", "Новий портал", "Новый портал"},  // 2.7.48
     {Text::FxPortalNewHint,
      "The warps drawn anew at full resolution as the game's own: the white band of each ring and its crown of light "

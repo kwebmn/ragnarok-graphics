@@ -153,6 +153,11 @@ struct EffectSettings {
     // flash now and then and light a little around them. On by default.
     bool fireflies = true;
     int firefliesBrightness = 100;  // %, 0-200
+    // 3.0.7-beta.3 (the user: «сделать как лампы, чтобы от них исходил свет и освещал карту дополнительно. а их
+    // убрать, разным светом»): with fireflies on, each lights the map from its place as a lamp, its own colour; the
+    // fireflies themselves drawn in the air (the game's anew) only with this on, the game's left out with it off. Off
+    // by default.
+    bool fireflyDots = false;
     // 0.29: the maps' hidden lights - glows, pools of light, the towers' dust the maps' makers placed and the game
     // never shows - drawn from the map's file. On by default.
     bool mapGlows = true;

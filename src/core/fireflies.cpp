@@ -42,4 +42,23 @@ void colourOf(uint32_t diffuse, float colour[3]) {
     colour[2] = b / top;
 }
 
+bool isFirefly(int effect) { return effect == 45 || effect == 713 || effect == 714 || effect == 946; }
+
+void lampColour(float x, float z, float colour[3]) {
+    static const float kColours[5][3] = {
+        {1.0f, 0.86f, 0.45f},  // warm yellow
+        {0.82f, 1.0f, 0.45f},  // yellow-green
+        {0.55f, 1.0f, 0.6f},   // green
+        {1.0f, 0.7f, 0.4f},    // amber
+        {0.6f, 1.0f, 0.9f},    // pale mint
+    };
+    // its place to the nearest unit, mixed (a 32-bit hash): one colour a firefly, neighbours apart
+    uint32_t h = uint32_t(int32_t(std::lround(x))) * 0x9E3779B1u ^ uint32_t(int32_t(std::lround(z))) * 0x85EBCA77u;
+    h ^= h >> 15;
+    h *= 0x2C1B3C6Du;
+    h ^= h >> 12;
+    const float* c = kColours[h % 5u];
+    std::copy(c, c + 3, colour);
+}
+
 }  // namespace uagfx::fireflies

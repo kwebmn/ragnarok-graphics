@@ -119,3 +119,20 @@ TEST(effect_hidden_lights_orbs_are_a_part_of_their_own_off_by_default) {
     CHECK(parseConfig("[effects]\nmap_glow_orbs = 1\n").effects.mapGlowOrbs);
     CHECK(effect_groups::memberOf("effects.map_glow_orbs") == nullptr);  // the effect's, not a group's
 }
+
+TEST(effect_fireflies_in_the_air_are_a_part_of_their_own_off_by_default) {
+    // 3.0.7-beta.3 (the user: «сделать как лампы, чтобы от них исходил свет и освещал карту дополнительно ... а их
+    // убрать»): the maps' fireflies light the map from their places as lamps (on with «Світлячки карт»); the fireflies
+    // themselves in the air - a box of their own under it, off unless turned on
+    CHECK(boxOf("effects.firefly_dots") == "effects.fireflies");
+    const IniSetting* s = findSetting("effects.firefly_dots");
+    CHECK(s != nullptr);
+    if (!s) return;
+    CHECK(s->control == Control::Check);
+    const Config defaults = parseConfig("");
+    CHECK(tokenOf(*s, defaults) == "0");
+    CHECK(!defaults.effects.fireflyDots && defaults.effects.fireflies);
+    CHECK(parseConfig("[effects]\nfirefly_dots = 1\n").effects.fireflyDots);
+    CHECK(!effectsOff().fireflyDots);
+    CHECK(effect_groups::memberOf("effects.firefly_dots") == nullptr);  // the effect's, not a group's
+}
