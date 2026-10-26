@@ -1,3 +1,13 @@
+# uaRO Graphics 3.0.5-beta.22 - what's new
+
+- **«Grass and road seams without steps» fade out far off.** On a field with many grass-to-road edges the seams cost
+  9.7 ms of a Radeon 610M's frame on «High» - as much where the camera is far and the cells on the screen are tiny and
+  the wandering line hardly shows. Now when a cell takes under 24 pixels of the picture the seams fade out, and under
+  12 they are gone: the edge there is the game's own. Nearer, everything as before. The faded pixels are left at once,
+  so far off the seams cost next to nothing. Direct3D 11 and Direct3D 12 (and the own ground's seams).
+- To check on the laptop: the «Graphics test» under Direct3D 11 from the same spot - the seams on «High» were 9.7 ms;
+  by eye - grass and road edges up close as before, and with the camera far back whether steps far off catch the eye.
+
 # uaRO Graphics 3.0.5-beta.21 - what's new
 
 - **Lighter soft shadows.** The shadows are worked out into a mask half the picture's size, and for each pixel of the
