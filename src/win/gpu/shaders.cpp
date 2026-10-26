@@ -1337,6 +1337,28 @@ float4 night_ps(PresentOut i) : SV_Target {
 // 0.78, bloom (ao.cpp applyBloom): the picture's bright parts at a quarter of its size - over footprint, the brighter
 // the more - blurred by dof_blur_ps, then added onto it (bloom_apply_ps: sharpen how much). 2.6.11: the filmic curve
 // over all (the highlights rolled off, an S-curve) gone at the player's word.
+// 3.0.6-beta.5 (R-N7WZE8, cmd_fild02's beach in the afternoon, the user: «от сяйва больше всего пересвет»): a place
+// glows only past what is round it - pale sand at 0.90-0.95 was over 0.88 everywhere, and the whole beach glowed
+// white. The brightness round it from sixteen taps on two rings (3 % and 7 % of the picture's height off); it glows
+// past the larger of footprint and that + 0.05: a fire or a lamp over darker ground as before, an even bright place
+// (sand, snow, a white wall in the sun) not at all
+static const float2 kBloomRing[8] = {float2(1.0, 0.0),   float2(0.7071, 0.7071),   float2(0.0, 1.0),
+                                     float2(-0.7071, 0.7071), float2(-1.0, 0.0),    float2(-0.7071, -0.7071),
+                                     float2(0.0, -1.0),  float2(0.7071, -0.7071)};
+static const float2 kBloomRingTurned[8] = {float2(0.9239, 0.3827),   float2(0.3827, 0.9239),  float2(-0.3827, 0.9239),
+                                           float2(-0.9239, 0.3827),  float2(-0.9239, -0.3827), float2(-0.3827, -0.9239),
+                                           float2(0.3827, -0.9239),  float2(0.9239, -0.3827)};
+
+float bloomAround(float2 c, float2 t) {
+    float near = 0.03 * uiPixels.y, far = 0.07 * uiPixels.y, sum = 0.0;
+    [unroll] for (int k = 0; k < 8; ++k) {
+        float3 a = sceneColor.SampleLevel(samp0, (c + kBloomRing[k] * near) * t, 0).rgb;
+        float3 b = sceneColor.SampleLevel(samp0, (c + kBloomRingTurned[k] * far) * t, 0).rgb;
+        sum += max(a.r, max(a.g, a.b)) + max(b.r, max(b.g, b.b));
+    }
+    return sum / 16.0;
+}
+
 float4 bloom_down_ps(PresentOut i) : SV_Target {
     float2 c = i.pos.xy * 4.0;
     float2 t = 1.0 / uiPixels.xy;
@@ -1346,7 +1368,7 @@ float4 bloom_down_ps(PresentOut i) : SV_Target {
                sceneColor.SampleLevel(samp0, (c + float2(1.0, 1.0)) * t, 0).rgb;
     s *= 0.25;
     float l = max(s.r, max(s.g, s.b));
-    float over = max(l - footprint, 0.0) / max(1.0 - footprint, 1e-3);
+    float over = max(l - max(footprint, bloomAround(c, t) + 0.05), 0.0) / max(1.0 - footprint, 1e-3);
     return float4(s * (over * over / max(l, 1e-3)), 1.0);
 }
 
