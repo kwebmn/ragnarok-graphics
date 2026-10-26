@@ -1,3 +1,21 @@
+# uaRO Graphics 3.0.6-beta.3 — what is new
+
+- **«Graphics test» waits until a set has loaded.** On a player's FirePro W5130M laptop «High» was measured while its
+  own ground and its pictures were still loading: that took 5-7 s and the test waited 3 s, hence 34 fps and stutter.
+  Now a set is measured once its renderer says all is made (the own ground, its pictures, the AI textures of what is
+  seen), a second after that. At most 30 s: past that it is measured as it is, and the log says so.
+- **Effects' costs in the test: «≈0» in place of a minus.** A difference within the card's noise (such as «Ground
+  relief» -0.3 on a computer held back by its processor) now shows as «≈0».
+- **Less work in the game's thread.** The frame for the 64-bit renderer (Direct3D 12, DLSS) is written by kinds at
+  once: written 8 times as fast, read twice as fast; the draws are recorded without a needless zeroing. On weak
+  processors about half a millisecond of every frame.
+- **A closer measurement.** «Measure where the game spends its time» now counts the driver's functions whole, with what
+  they call (memcpy and the like). The next test shows where to cut next.
+- **The forest beams' shader** is compiled at once at the optimisation level that works: level 3 fails inside the
+  Windows compiler on every computer. The same code, without a failed attempt at the first start.
+- To check: the «Graphics test» on Direct3D 12. The log may say «measured from N s» for «High», and the table's «High»
+  should be free of the loading's stutter.
+
 # uaRO Graphics 3.0.6-beta.2 — what is new
 
 - **The world black after an hour of play (Direct3D 12).** A player minimised the game, went to the browser, came
