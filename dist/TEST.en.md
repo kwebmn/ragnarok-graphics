@@ -1,3 +1,18 @@
+# uaRO Graphics 3.0.7-beta.3 — what is new
+
+- **Walls lit as in the game.** «Own ground» gave the walls the light of the floor beside them. The game lights each
+  wall by its own way to the map's sun, so in the game the walls turned from the sun are darker. On c_tower2 our walls
+  were 1.6-1.8 times as bright as the original. The walls now get the same light as in the game (as uaRO.exe works it
+  out), the floor as before. After entering a map the log has a line on how many of the game's walls matched ours.
+- **The maps' fireflies light like lamps.** Each of the maps' fireflies - those the game shows and the yellow ones it
+  never showed - now lights the ground, the walls and the characters around its place like a lamp, in a colour of its
+  own: warm yellow, yellow-green, green, amber or pale mint. The fireflies themselves are no longer seen in the air;
+  they come back with a new switch «Fireflies in the air» under «The maps' fireflies» (off by default). How strong the
+  light is - «Fireflies' brightness».
+- To check: c_tower2 - the walls as dark as in the original (the Pause key turns the improvements off and on); Byalan
+  (iz_dun00-02), Glast Heim, the Ant Hell or Nidhoggur's nest - soft coloured pools of light in place of the dots; with
+  «Fireflies in the air» the fireflies fly again.
+
 # uaRO Graphics 3.0.7-beta.2 — what is new
 
 - **Walls without stripes.** «Own ground» laid every wall running along one of the map's two axes the other way round:
