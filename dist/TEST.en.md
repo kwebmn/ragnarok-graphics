@@ -1,3 +1,31 @@
+# uaRO Graphics 3.0.6 — what is new
+
+Fixes from the players' reports: the world black after an hour of play, a hole on the stairs, washed-out sand. Also a
+more exact «Graphics test» and less work in the game's thread.
+
+- **The world black after an hour of play (Direct3D 12).** Whoever stood on one map when another hour from the game's
+  start went by saw a black world (only the interface and the pollen in the air) until the next map. The effects'
+  clock began its count anew every hour, and «Smooth map change» took the map for not begun yet. Now that clock never
+  starts anew. With it, on the hour's turn the steps in the sand and the snow no longer freeze and the flocks of birds
+  and butterflies no longer stay away for an hour.
+- **«Own ground»: no holes on stairs.** On the fortress stairs in Comodo a round patch of rock showed over the top
+  steps: the smooth ground bulged over the steep slope under the stairs. Now, where a model stands on the ground
+  (stairs, bridges, floors, walls), the ground rises no higher than the game's cells; the rest is as smooth as before.
+- **«Bloom of bright places» no longer washes out pale sand.** By day on beaches the sand went nearly white: it is a
+  little over the bloom's threshold, so the whole beach glowed. Now only what is clearly brighter than what is round
+  it glows: fire, lamps and glints as before, even pale sand, snow or a white wall in the sun not.
+- **«Graphics test»:**
+  - waits until a set has loaded (the own ground, its pictures, the AI textures), at most 30 s. On weak computers
+    «High» was measured while loading;
+  - an effect's cost within the card's noise shows as «≈0», not as a minus;
+  - the dearest part of the frame with DLSS or DLAA shows with its whole name.
+- **Less work in the game's thread (Direct3D 12, DLSS).** The frame for the 64-bit renderer is written 8 times as
+  fast and read twice as fast.
+- **A closer measurement.** «Measure where the game spends its time» counts the driver's functions whole, with what
+  they call.
+- **The forest beams' shader** is compiled at once at the optimisation level that works, without a failed attempt at
+  the first start.
+
 # uaRO Graphics 3.0.6-beta.5 — what is new
 
 - **«Bloom of bright places» no longer washes out pale sand.** On cmd_fild02's beach by day the sand went nearly
