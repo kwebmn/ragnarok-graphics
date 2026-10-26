@@ -220,6 +220,90 @@ TEST(terrain_lightmaps_in_one_atlas) {
     for (const terrain::Vertex& v : m.vertices) CHECK(v.lm[0] >= 0.0f && v.lm[0] <= 1.0f && v.lm[1] <= 1.0f);
 }
 
+namespace {
+
+// 3.0.7-beta.2 (R-V6ZHJX «на стенах не должно быть полос», c_tower2): 2 x 2 cells of 10, (0, 0) 10 over the rest
+// with a wall on its right side (surface 1, lightmap 1) and on its far side (surface 2, lightmap 2), each corner of
+// theirs its own texture coordinates
+gnd::Ground walled() {
+    Writer w;
+    w.bytes("GRGN", 4);
+    const uint8_t version[2] = {1, 7};
+    w.bytes(version, 2);
+    w.i32(2);
+    w.i32(2);
+    w.f32(10.0f);
+    w.i32(1);
+    w.i32(80);
+    w.text("wall.bmp", 80);
+    w.i32(3);
+    w.i32(8);
+    w.i32(8);
+    w.i32(1);
+    for (int l = 0; l < 3; ++l) {
+        for (int i = 0; i < 64; ++i) w.bytes("\xff", 1);
+        for (int i = 0; i < 64; ++i) w.bytes("\x10\x20\x30", 3);
+    }
+    w.i32(3);
+    for (int s = 0; s < 3; ++s) {
+        for (int k = 0; k < 4; ++k) w.f32(0.1f * float(s) + 0.01f * float(k));        // u: corner k
+        for (int k = 0; k < 4; ++k) w.f32(0.5f + 0.1f * float(s) + 0.01f * float(k));  // v
+        w.i16(0);
+        w.u16(uint16_t(s));
+        w.bytes("\xff\xff\xff\xff", 4);
+    }
+    const auto cell = [&](float h, int top, int front, int right) {
+        for (int k = 0; k < 4; ++k) w.f32(h);
+        w.i32(top), w.i32(front), w.i32(right);
+    };
+    cell(-10, 0, 2, 1);
+    cell(0, 0, -1, -1);
+    cell(0, 0, -1, -1);
+    cell(0, 0, -1, -1);
+    gnd::Ground g;
+    std::string error;
+    const std::vector<uint8_t> b = w.b;
+    CHECK(gnd::parse(b.data(), b.size(), g, error));
+    return g;
+}
+
+}  // namespace
+
+// The walls' corners as uaRO.exe lays them (FUN_004e4190): the surface's corner k - its texture's coordinates and its
+// lightmap's - on the wall's vertex k. A right side: 0 at (x + 1, y + 1) on the cell, 1 at (x + 1, y) on the cell, 2
+// and 3 the same on the next cell; a far side: 0 at (x, y + 1), 1 at (x + 1, y + 1) on the cell, 2 and 3 on the next
+// row's. The right sides laid the other way along them (3.0.4-beta.9 to 3.0.7-beta.1) had their pictures and light
+// turned round: each of c_tower2's walls lit the other way to the next, stripes along the wall
+TEST(terrain_walls_lay_their_corners_as_the_game) {
+    const gnd::Ground g = walled();
+    const terrain::Atlas atlas = terrain::lightmapAtlas(g);
+    CHECK_EQ(atlas.height, 8);
+    // the places of each wall's corners 0-3: x, height, z (the map's middle at the corner of cell (1, 1))
+    const float right[4][3] = {{0, -10, 0}, {0, -10, -10}, {0, 0, 0}, {0, 0, -10}};
+    const float far[4][3] = {{-10, -10, 0}, {0, -10, 0}, {-10, 0, 0}, {0, 0, 0}};
+    for (int n : {1, 4}) {
+        const terrain::Mesh m = terrain::build(g, n, atlas);
+        int seen = 0;
+        for (const terrain::Vertex& v : m.vertices) {
+            const bool isRight = std::fabs(v.normal[0]) > 0.5f, isFar = std::fabs(v.normal[2]) > 0.5f;
+            if (!isRight && !isFar) continue;
+            const int s = isRight ? 1 : 2;
+            const float(*at)[3] = isRight ? right : far;
+            int k = 0;
+            while (k < 4 && !(v.pos[0] == at[k][0] && v.pos[1] == at[k][1] && v.pos[2] == at[k][2])) ++k;
+            CHECK(k < 4);
+            if (k == 4) continue;
+            ++seen;
+            CHECK(std::fabs(v.uv[0] - (0.1f * float(s) + 0.01f * float(k))) < 1e-6f);
+            CHECK(std::fabs(v.uv[1] - (0.5f + 0.1f * float(s) + 0.01f * float(k))) < 1e-6f);
+            // its lightmap's 6 x 6 middle: corner 0 at its texel (1, 1), 1 at (7, 1), 2 at (1, 7), 3 at (7, 7)
+            CHECK(std::fabs(v.lm[0] - float(s * 8 + 1 + (k & 1) * 6) / 2048.0f) < 1e-6f);
+            CHECK(std::fabs(v.lm[1] - float(1 + (k >> 1) * 6) / 8.0f) < 1e-6f);
+        }
+        CHECK_EQ(seen, 8);
+    }
+}
+
 TEST(terrain_in_chunks_for_the_view) {
     // the renderer projects the chunks in view alone: each its own vertices and batches, all of them together the mesh
     const gnd::Ground g = parsed();

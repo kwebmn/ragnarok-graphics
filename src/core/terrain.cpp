@@ -353,7 +353,10 @@ Mesh build(const gnd::Ground& g, int subdivide, const Atlas& atlas, const std::v
                             Builder::quad(part, a, a + 1, a + uint32_t(n + 1), a + uint32_t(n + 2));
                         }
                 }
-            // The walls as the game has them: between a cell's side and its neighbour's, plain quads
+            // The walls as the game has them: between a cell's side and its neighbour's, plain quads - the surface's
+            // corner k on vertex k as uaRO.exe lays them (FUN_004e4190); 3.0.7-beta.2 (R-V6ZHJX «на стенах не должно
+            // быть полос»): a right side from (x + 1, y + 1) to (x + 1, y), not the other way - its picture and its
+            // light had been turned round along it, each of c_tower2's walls lit the other way to the next
             const auto wall = [&](int surface, const float* p0, const float* p1, const float* p2, const float* p3) {
                 if (surface < 0 || size_t(surface) >= g.surfaces.size()) return;
                 const gnd::Surface& s = g.surfaces[size_t(surface)];
@@ -385,8 +388,8 @@ Mesh build(const gnd::Ground& g, int subdivide, const Atlas& atlas, const std::v
                     const float z0 = (float(y) - half[1]) * g.zoom, z1 = z0 + g.zoom;
                     if (c.right >= 0 && x + 1 < g.width) {  // its right side down (or up) to the next cell's left
                         const gnd::Cell& r = g.cells[size_t(y) * size_t(g.width) + size_t(x + 1)];
-                        const float a[3] = {x1, c.h[1], z0}, b2[3] = {x1, c.h[3], z1}, d[3] = {x1, r.h[0], z0},
-                                    e2[3] = {x1, r.h[2], z1};
+                        const float a[3] = {x1, c.h[3], z1}, b2[3] = {x1, c.h[1], z0}, d[3] = {x1, r.h[2], z1},
+                                    e2[3] = {x1, r.h[0], z0};
                         wall(c.right, a, b2, d, e2);
                     }
                     if (c.front >= 0 && y + 1 < g.height) {  // its far side to the next row's cell
