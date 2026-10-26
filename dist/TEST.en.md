@@ -1,3 +1,14 @@
+# uaRO Graphics 3.0.7-beta.4 — what is new
+
+- **The map's sun on the same side as in the game.** The driver turned the sun from the map's file not as the game
+  does: the longitude's sine and cosine were swapped. On the 722 maps with longitude 45 that is the same thing, but on
+  some 200 others «Shadows from the sun and fire» fell, «Materials: stone, brick, bark» and «Hills without steps of
+  light» were lit from the wrong side, and «Houses and trees far off» got a rough light - on 79 maps (longitude 315:
+  pvp, job_sword1, force_map ...) the opposite way. The sun now goes as uaRO.exe turns it - the way the maps' own
+  painted shadows fall (checked on amatsu, alberta, prt_monk, niflheim, louyang, job_sword1, ecl_fild01).
+- To check: Amatsu, Alberta, Niflheim or Louyang - a character's shadow falls the way the shadows of houses and trees
+  painted on the ground do.
+
 # uaRO Graphics 3.0.7-beta.3 — what is new
 
 - **Walls lit as in the game.** «Own ground» gave the walls the light of the floor beside them. The game lights each
