@@ -1,3 +1,14 @@
+# uaRO Graphics 3.0.7-beta.5 — what is new
+
+- **No balls of light in the air.** The balls on c_tower2 were «Glowing air at fire and lamps»: the air glowed in a
+  ball around each lamp of the map's file, and those lamps often hang where no lamp is seen (the map's makers baked the
+  map's light with them) - the same around the hidden lights and the fireflies. The switch is now «Glowing air at
+  fire»: the air glows at torches, burning skills, lava and portals. The balls around lamps, lights and fireflies are a
+  switch of their own under it, «At lamps and lights», off by default. The lamps' light itself on the ground, the walls
+  and the characters as before.
+- To check: c_tower2 with «Glowing air at fire» - no grey balls in the dark over the walls any more; the air at the
+  torches glows as before.
+
 # uaRO Graphics 3.0.7-beta.4 — what is new
 
 - **The map's sun on the same side as in the game.** The driver turned the sun from the map's file not as the game
