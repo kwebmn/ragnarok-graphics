@@ -1,3 +1,12 @@
+# uaRO Graphics 3.0.6-beta.1 — what is new
+
+- **«Graphics test»: the dearest part of the frame with its whole name.** On graphics cards with DLSS or DLAA the column
+  «the dearest on the card» showed a stub «the world made larger) 3.34» in place of «the picture put together (DLSS,
+  TAA, the world made larger) 3.34»: that part's name holds commas, and the table cut the line at the commas
+  (R-7JQ6XX). Now the name is whole.
+- To check: on a computer with DLSS or DLAA run the «Graphics test» - the table's first part should read «the picture
+  put together (DLSS, TAA, the world made larger)».
+
 # uaRO Graphics 3.0.5 — what is new
 
 The heart of this release is speed on weak computers. On a laptop with a Radeon 610M (1080p, Direct3D 11) the
