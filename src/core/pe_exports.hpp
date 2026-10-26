@@ -25,4 +25,13 @@ const Export* exportAt(const std::vector<Export>& sorted, uint32_t rva);
 // Its code: from its first executable section's start to its last one's end; false when it is not a 32-bit PE.
 bool codeOf(const Read& read, uint32_t& begin, uint32_t& end);
 
+// 3.0.6-beta.3 (the game's thread on a FirePro laptop: the driver's share of it spread over its 64-byte places): a
+// module's functions by its unwind table (.eh_frame, mingw's: the section's name cut to ".eh_fram") - each one's place
+// and size, in the order of their places; empty without such a table. The profile tallies our module's samples by them.
+struct Function {
+    uint32_t rva = 0, size = 0;
+};
+std::vector<Function> functionsOf(const Read& read);
+const Function* functionAt(const std::vector<Function>& sorted, uint32_t rva);  // nullptr: in none
+
 }  // namespace uagfx::pe

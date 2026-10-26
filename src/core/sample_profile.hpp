@@ -5,6 +5,8 @@
 #include <utility>
 #include <vector>
 
+#include "core/pe_exports.hpp"
+
 namespace uagfx::profile {
 
 // 0.87, [debug] profile: where the game's thread spends its time - the driver samples it about a thousand times a
@@ -53,6 +55,9 @@ struct Sample {
     uint32_t caller = 0;  // outside uaRO.exe: the uaRO.exe address it was called from, 0 unknown
     std::string where;
     int step = -1;
+    // 3.0.6-beta.3: the place in the driver's own module it is under - its own, or (in Windows' code) the one that
+    // called out (memcpy from writeRecord); 0 none
+    uint32_t own = 0;
 };
 
 class Tally {
@@ -60,6 +65,9 @@ public:
     // exe: the index of uaRO.exe in them; self (2.5.5): the driver's own module's, tallied by place as offsets from
     // its base (its functions found in the build's link map afterwards); none: past the list
     void setModules(std::vector<Module> modules, size_t exe, size_t self = size_t(-1));
+    // 3.0.6-beta.3: the driver's own functions (its unwind table, pe::functionsOf) - its samples tallied by them too,
+    // each with the Windows code it called (a line «DDRAW.dll's functions with what they call»)
+    void setOwnFunctions(std::vector<pe::Function> functions) { ownFunctions_ = std::move(functions); }
     // A sample: where the thread was, and (outside uaRO.exe) the uaRO.exe address it was called from, 0 unknown.
     void add(uint32_t at, uint32_t caller);
     void add(const Sample& s);  // 3.0.2-beta.12
@@ -80,6 +88,8 @@ private:
     std::map<std::pair<uint32_t, std::string>, size_t> callers_;  // the caller's 16-byte span, where it went
     size_t self_ = size_t(-1);
     std::map<uint32_t, size_t> inSelf_;        // 2.5.5: 64-byte spans of the driver's own module, from its base
+    std::vector<pe::Function> ownFunctions_;   // 3.0.6-beta.3
+    std::map<uint32_t, size_t> ownTotals_;     // by the function's start (else its 64-byte span), from its base
     std::map<int, size_t> bySteps_;            // 3.0.2-beta.12: -1 under none
     size_t stepped_ = 0;                       // the samples under a step
 };

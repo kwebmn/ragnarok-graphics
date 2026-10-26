@@ -28,6 +28,13 @@ public:
         out_.resize(at + n);
         if (n) std::memcpy(out_.data() + at, p, n);
     }
+    // 3.0.6-beta.3 (R-ZSDWYU: bytes() the driver's busiest place in a FirePro laptop's game thread - eighteen calls a
+    // draw): the next n bytes, for the caller to fill - a kind's items at once (writeRecord)
+    uint8_t* grow(size_t n) {
+        const size_t at = out_.size();
+        out_.resize(at + n);
+        return out_.data() + at;
+    }
     void str(const std::string& s);
     void rect(const Rect& r) {
         i32(r.left);

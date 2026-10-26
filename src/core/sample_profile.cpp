@@ -86,6 +86,11 @@ void Tally::add(const Sample& s) {
     const int m = moduleOf(s.at);
     ++byWhere_[!s.where.empty() ? s.where : m >= 0 ? modules_[size_t(m)].name : std::string("(no module)")];
     if (m >= 0 && size_t(m) == self_) ++inSelf_[(s.at - modules_[size_t(m)].base) & ~63u];
+    if (s.own && self_ < modules_.size() && s.own - modules_[self_].base < modules_[self_].size) {  // 3.0.6-beta.3
+        const uint32_t rva = s.own - modules_[self_].base;
+        const pe::Function* f = pe::functionAt(ownFunctions_, rva);
+        ++ownTotals_[f ? f->rva : rva & ~63u];
+    }
     if (m >= 0 && size_t(m) == exe_) {
         ++inExe_[s.at & ~63u];
     } else if (s.caller) {
@@ -152,12 +157,25 @@ std::vector<std::string> Tally::report(const std::string& prefix, const std::str
         }
         lines.push_back(l);
     }
+    if (!ownTotals_.empty() && self_ < modules_.size()) {  // 3.0.6-beta.3
+        l = prefix + ": " + modules_[self_].name + "'s functions with what they call -";
+        k = 0;
+        for (const auto& [start, n] : sorted(ownTotals_)) {
+            if (k++ == top + 10) break;
+            char b[48];
+            const std::string share = percent(n, samples_);
+            std::snprintf(b, sizeof b, "%s +0x%06x %s", k > 1 ? "," : "", unsigned(start), share.c_str());
+            l += b;
+        }
+        lines.push_back(l);
+    }
     samples_ = 0;
     stepped_ = 0;
     byWhere_.clear();
     inExe_.clear();
     callers_.clear();
     inSelf_.clear();
+    ownTotals_.clear();
     bySteps_.clear();
     return lines;
 }

@@ -88,3 +88,24 @@ TEST(profile_step_the_innermost_known) {
     CHECK_EQ(std::string(profile::stepName(int(Step::Present))), std::string("showing a frame"));
     CHECK_EQ(std::string(profile::stepName(-1)), std::string("elsewhere"));
 }
+
+TEST(profile_tallies_our_own_functions_with_what_they_call) {
+    // 3.0.6-beta.3 (R-ZSDWYU: the driver's share of a FirePro laptop's game thread spread over its 64-byte places, the
+    // memcpy and memset it called counted apart as Windows'): by our module's functions (its unwind table), each with
+    // the Windows code it called - the sample's own place in ours, or the place in ours that called out
+    profile::Tally t;
+    t.setModules({{"uaRO.exe", 0x400000, 0x300000},
+                  {"DDRAW.dll", 0x6a000000, 0x400000},
+                  {"msvcrt.dll", 0x75000000, 0x100000}},
+                 0, 1);
+    t.setOwnFunctions({{0x12000, 0x400}, {0x13000, 0x2000}});
+    for (int k = 0; k < 3; ++k) t.add({0x6a012345, 0x4170a5, "", -1, 0x6a012345});  // in the first one
+    for (int k = 0; k < 2; ++k) t.add({0x75001234, 0x4170a5, "memcpy from DDRAW.dll", -1, 0x6a014000});
+    t.add({0x6a3000f0, 0, "", -1, 0x6a3000f0});  // in none of them: its 64-byte place
+    t.add({0x401000, 0, "", -1, 0});             // the game's own
+    bool found = false;
+    for (const std::string& l : t.report(10.0))
+        found = found || l.find("DDRAW.dll's functions with what they call - +0x012000 42.9%, +0x013000 28.6%, "
+                                "+0x3000c0 14.3%") != std::string::npos;
+    CHECK(found);
+}

@@ -101,3 +101,54 @@ TEST(pe_exports_a_name_at_the_images_end) {
     const std::vector<pe::Export> e = pe::exportsOf(m.reader());
     CHECK(e.size() == 2 && e[1].name == "Sleep");
 }
+
+namespace {
+
+// The image above with a third section: ".eh_fram" (as mingw's linker cuts ".eh_frame" to eight letters) - a CIE whose
+// augmentation "zR" gives its FDEs' places as pcrel sdata4 (0x1b), and three FDEs (the last one's place before the
+// first's), then the terminator
+Image unwound() {
+    Image m = sample();
+    m.u16(0x84 + 2, 3);
+    const uint32_t sec = 0x98 + 0xE0 + 80;
+    std::memcpy(&m.bytes[sec], ".eh_fram", 8);
+    m.u32(sec + 8, 0x200);
+    m.u32(sec + 12, 0x2800);
+    m.u32(sec + 36, 0x40000040);
+    uint32_t at = 0x2800;
+    const uint8_t cie[] = {0x01, 'z', 'R', 0x00, 0x01, 0x7c, 0x08, 0x01, 0x1b, 0x00, 0x00, 0x00};  // 12 bytes
+    m.u32(at, 4 + sizeof cie);  // length
+    m.u32(at + 4, 0);           // a CIE
+    std::memcpy(&m.bytes[at + 8], cie, sizeof cie);
+    const uint32_t cieAt = at;
+    at += 8 + sizeof cie;
+    const auto fde = [&](uint32_t begin, uint32_t size) {
+        m.u32(at, 12);                       // length: the CIE pointer, the place, the size
+        m.u32(at + 4, at + 4 - cieAt);       // back to the CIE
+        m.u32(at + 8, begin - (at + 8));     // pcrel: from this field's own place
+        m.u32(at + 12, size);
+        at += 16;
+    };
+    fde(0x1100, 0x40);
+    fde(0x1180, 0x100);
+    fde(0x1000, 0x20);
+    m.u32(at, 0);  // the end
+    return m;
+}
+
+}  // namespace
+
+TEST(pe_functions_from_the_unwind_table) {
+    // 3.0.6-beta.3 (the game's thread on a FirePro laptop: the driver's share spread over 64-byte places): our own
+    // module's functions by their unwind table (.eh_frame), so that the profile tallies samples by function
+    const Image m = unwound();
+    const std::vector<pe::Function> f = pe::functionsOf(m.reader());
+    CHECK_EQ(int(f.size()), 3);
+    CHECK(f.size() == 3 && f[0].rva == 0x1000 && f[0].size == 0x20 && f[1].rva == 0x1100 && f[2].rva == 0x1180 &&
+          f[2].size == 0x100);
+    CHECK(pe::functionAt(f, 0x1130) && pe::functionAt(f, 0x1130)->rva == 0x1100);
+    CHECK(pe::functionAt(f, 0x1279) && pe::functionAt(f, 0x1279)->rva == 0x1180);
+    CHECK(pe::functionAt(f, 0x1140) == nullptr);  // between two: none's
+    CHECK(pe::functionAt(f, 0x0fff) == nullptr);
+    CHECK(pe::functionsOf(sample().reader()).empty());  // no unwind table
+}

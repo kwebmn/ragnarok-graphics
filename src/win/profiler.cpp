@@ -114,6 +114,15 @@ public:
     }
     size_t exeIndex() const { return exe_ >= 0 ? size_t(exe_) : 0; }
     size_t ownIndex() const { return own_ >= 0 ? size_t(own_) : size_t(-1); }
+    int own() const { return own_; }
+    // 3.0.6-beta.3: our module's functions by its unwind table (read once: our module stays where it is)
+    const std::vector<pe::Function>& ownFunctions() {
+        if (!ownRead_ && own_ >= 0) {
+            ownRead_ = true;
+            ownFunctions_ = pe::functionsOf(reader(mods_[size_t(own_)].base, mods_[size_t(own_)].size));
+        }
+        return ownFunctions_;
+    }
 
     // Windows' function a place is in, by its module's exports (read the first time asked); "" when the nearest one
     // before it is too far to be its own (3.0.2-beta.13: 1 KB - beta.12 named the bridge's wait in ntdll's code of
@@ -153,6 +162,8 @@ private:
     std::vector<Module> mods_;
     int exe_ = -1, own_ = -1;
     std::unordered_map<uint32_t, bool> calls_;
+    bool ownRead_ = false;
+    std::vector<pe::Function> ownFunctions_;
 };
 
 // What a sample is (3.0.2-beta.12): its return addresses on the stack's copy, innermost first; outside uaRO.exe the
@@ -176,6 +187,7 @@ profile::Sample classify(Modules& mods, uint32_t at, const uint32_t* stack, size
                 s.caller = frames[k];
                 break;
             }
+    if (here >= 0 && here == mods.own()) s.own = at;  // 3.0.6-beta.3: in our module
     if (here >= 0 && mods[here].windows) {
         int inner = here, from = -1;
         uint32_t place = at;
@@ -183,6 +195,7 @@ profile::Sample classify(Modules& mods, uint32_t at, const uint32_t* stack, size
             const int m = mods.at(frames[k]);
             if (!mods[m].windows) {
                 from = m;
+                if (m == mods.own()) s.own = frames[k];  // 3.0.6-beta.3: Windows' code our function called
                 break;
             }
             inner = m;
@@ -314,12 +327,14 @@ void Profiler::sampleLoop() {
             if (on) {
                 mods.list();
                 tally.setModules(mods.forTally(), mods.exeIndex(), mods.ownIndex());
+                tally.setOwnFunctions(mods.ownFunctions());
             }
         }
         if (open && !windowLive) {
             windowLive = true;
             mods.list();  // the modules of now: the map's own may have come
             window.setModules(mods.forTally(), mods.exeIndex(), mods.ownIndex());
+            window.setOwnFunctions(mods.ownFunctions());
         }
         if (!on && !open) {
             WaitForSingleObject(wake_, 1000);
@@ -364,6 +379,7 @@ void Profiler::sampleLoop() {
                 since = now;
                 mods.list();  // modules come and go (the graphics driver's): listed anew for the next tally
                 tally.setModules(mods.forTally(), mods.exeIndex(), mods.ownIndex());
+                tally.setOwnFunctions(mods.ownFunctions());
             }
         }
     }

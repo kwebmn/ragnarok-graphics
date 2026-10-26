@@ -94,6 +94,69 @@ TEST(bridge_a_record_crosses_field_by_field) {
     CHECK_EQ(b.pixels()[b.slots()[1].own], 8u);
 }
 
+namespace {
+
+// A frame of many draws of both vertex kinds, with and without indices, its states, uploads, cells and target writes
+FrameRecord busyRecord() {
+    FrameRecord r = sampleRecord();
+    for (int k = 0; k < 40; ++k) {
+        DrawSetup s;
+        s.zEnable = k % 2 == 0;
+        s.zWrite = k % 3 == 0;
+        s.srcBlend = uint8_t(k % 13);
+        s.fogColor = 0x01020304u * uint32_t(k + 1);
+        s.stage[0].colorOp = uint8_t(k % 7);
+        DrawCmd d;
+        d.state = r.addState(s);
+        d.texture[0] = 0x40000000u + uint32_t(k);
+        d.texture[1] = k % 4 == 0 ? 0x40001000u + uint32_t(k) : 0;
+        d.keyed[0] = k % 5 == 0;
+        d.keyed[1] = k % 6 == 0;
+        d.effect = uint8_t(k % 9);
+        d.effectSeed = uint8_t(k * 37);
+        d.effectId = uint16_t(k * 1000 + 7);
+        d.primitive = k % 2 ? d3d7::PT_TRIANGLELIST : d3d7::PT_TRIANGLESTRIP;
+        d.fvf = k % 3 ? d3d7::FVF_TL1 : d3d7::FVF_TL2;
+        d.twin = uint32_t(k % 4);
+        d.twinTile[0] = -k;
+        d.twinTile[1] = k * 3;
+        d.twinScale = 1.0 + k * 0.125;
+        const uint32_t n = uint32_t(3 + k % 5);
+        std::vector<uint8_t> vertices(n * FrameRecord::stride(d.fvf));
+        for (size_t i = 0; i < vertices.size(); ++i) vertices[i] = uint8_t(i * 13 + k);
+        const uint16_t indices[6] = {0, 1, 2, 2, 1, 0};
+        r.draw(d, vertices.data(), n, k % 4 == 1 ? nullptr : indices, 6);
+        if (k % 10 == 0)
+            r.clear(ClearCmd{uint32_t(k), 0xFF000000u + uint32_t(k), 0.25f * float(k), Rect{k, 0, k + 5, 5}});
+    }
+    return r;
+}
+
+uint64_t fnv(const std::vector<uint8_t>& b) {
+    uint64_t h = 0xcbf29ce484222325ull;
+    for (uint8_t c : b) h = (h ^ c) * 0x100000001b3ull;
+    return h;
+}
+
+}  // namespace
+
+// 3.0.6-beta.3 (R-ZSDWYU: WireWriter::bytes the driver's busiest place in a FirePro laptop's game thread - eighteen
+// calls a draw): the record written by kinds at once is the same bytes as written field by field before
+TEST(bridge_a_busy_record_writes_the_same_bytes_as_before) {
+    const std::vector<uint8_t> bytes = bytesOf(busyRecord());
+    CHECK_EQ(bytes.size(), size_t(12655));                // as written field by field (3.0.6-beta.2)
+    CHECK_EQ(fnv(bytes), uint64_t(0xe639f9cd2a840b64ull));
+
+    FrameRecord back;
+    WireReader rd(bytes.data(), bytes.size());
+    CHECK(readRecord(rd, back) && rd.left() == 0);
+    CHECK(bytesOf(back) == bytes);
+    CHECK_EQ(back.draws().size(), size_t(41));
+    CHECK_EQ(back.draws()[40].twinScale, 1.0 + 39 * 0.125);
+    CHECK_EQ(int(back.draws()[40].effectId), 39 * 1000 + 7);
+    CHECK_EQ(back.draws()[2].indexCount, 0u);  // k 1: no indices
+}
+
 TEST(bridge_a_cells_own_colours_past_the_pixels_are_refused) {
     // 2.5.23: the cell's own colours must lie within the record's pixels
     FrameRecord a;

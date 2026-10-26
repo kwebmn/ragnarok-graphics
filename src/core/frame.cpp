@@ -35,8 +35,8 @@ void FrameRecord::draw(DrawCmd cmd, const void* vertices, uint32_t vertexCount, 
     const uint32_t bytes = vertexCount * stride(cmd.fvf);
     cmd.vertexOffset = uint32_t(vertices_.size());
     cmd.vertexCount = vertexCount;
-    vertices_.resize(vertices_.size() + bytes);
-    std::memcpy(vertices_.data() + cmd.vertexOffset, vertices, bytes);
+    const auto* from = static_cast<const uint8_t*>(vertices);
+    vertices_.insert(vertices_.end(), from, from + bytes);
     cmd.firstIndex = uint32_t(indices_.size());
     cmd.indexCount = indices ? indexCount : 0;
     if (indices) indices_.insert(indices_.end(), indices, indices + indexCount);
