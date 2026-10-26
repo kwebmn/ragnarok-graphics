@@ -1,3 +1,16 @@
+# uaRO Graphics 3.0.6-beta.2 — what is new
+
+- **The world black after an hour of play (Direct3D 12).** A player minimised the game, went to the browser, came
+  back - the world black, only the interface and the pollen in the air seen; after a portal all was right again. The
+  cause: Direct3D 12's effects' clock began its count anew every hour, and «Smooth map change» measured the time since
+  the map was entered by it - past such a turn it came out «not yet», and the world stayed dark until the next map.
+  Minimising had nothing to do with it: this happened to everyone standing on one map when another hour from the
+  game's start went by. Now that clock never starts anew. With it, on the same hour's turn the steps in the sand and
+  the snow no longer freeze, new flocks of birds and butterflies no longer stay away for an hour, and torches gone out
+  no longer stay in memory unseen.
+- To check: Direct3D 12, any set of effects with the «Game fixes» group on (as it is by default), come to a map and
+  play on it for over an hour from the game's start - the world should not go black.
+
 # uaRO Graphics 3.0.6-beta.1 — what is new
 
 - **«Graphics test»: the dearest part of the frame with its whole name.** On graphics cards with DLSS or DLAA the column
