@@ -42,6 +42,7 @@ struct State {
     notify::Attacks attacks;  // 3.0.7-beta.6
     party::Watch party;
     buffs::Ending ending;
+    notify::Recovery recovery;  // 3.0.7-beta.7
 };
 
 State& state() {
@@ -206,6 +207,10 @@ void packet(const packets::Event& e) {
         std::string who, what;
         notify::speaker(gc->text, who, what);
         if (who != readOwnName()) tell(notify::Kind::GuildChat, who, what);
+    } else if (const auto* st = std::get_if<packets::Status>(&e)) {  // 3.0.7-beta.7: HP and SP back
+        State& s = state();
+        if (s.recovery.status(st->type, st->value, s.settings.recoveredPercent))
+            tell(notify::Kind::Recovered, "", std::to_string(s.settings.recoveredPercent));
     } else if (const auto* c = std::get_if<packets::Chat>(&e)) {  // the user's notification 8: the name said near
         if (own(c->unit)) return;
         std::string who, what;

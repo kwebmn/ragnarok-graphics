@@ -22,6 +22,7 @@ bool wanted(const NotifySettings& s, Kind k, bool inFront, bool main) {
         case Kind::GuildChat: return s.guildChat && main;
         case Kind::Mention: return s.mention;
         case Kind::Disconnect: return s.disconnect;
+        case Kind::Recovered: return s.recovered;
     }
     return false;
 }
@@ -47,6 +48,7 @@ std::string text(settings::Lang lang, Kind k, const std::string& who, const std:
         case Kind::GuildChat: return say(Text::NotifyGuildChatText, {who, what});
         case Kind::Mention: return say(Text::NotifyMentionText, {who, what});
         case Kind::Disconnect: return settings::tr(lang, Text::NotifyDisconnectText);
+        case Kind::Recovered: return say(Text::NotifyRecoveredText, {what});
     }
     return {};
 }
@@ -64,6 +66,23 @@ bool Attacks::hit(uint64_t nowMs) {
     seen_ = true;
     last_ = nowMs;
     return tell;
+}
+
+bool Recovery::status(uint16_t type, uint32_t value, int percent) {
+    switch (type) {
+        case 5: hp_ = value; break;
+        case 6: hpMost_ = value; break;
+        case 7: sp_ = value; break;
+        case 8: spMost_ = value; break;
+        default: return false;
+    }
+    known_ |= 1u << (type - 5);
+    if (known_ != 15 || !hpMost_ || !spMost_) return false;  // not all four told yet: nothing to judge
+    const int64_t hp = int64_t(hp_) * 100 / hpMost_, sp = int64_t(sp_) * 100 / spMost_;
+    if (hp < percent - kRearm || sp < percent - kRearm) down_ = true;
+    if (!down_ || hp < percent || sp < percent) return false;
+    down_ = false;
+    return true;
 }
 
 void speaker(const std::string& line, std::string& who, std::string& what) {

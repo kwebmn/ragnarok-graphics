@@ -13,9 +13,10 @@ namespace uagfx::notify {
 // chat, the character's name said near, the server gone.
 enum class Kind : uint8_t {
     Whisper, Party, Trade, Guild, Friend, Death,
-    Attack, BuffEnding, PartyDeath, PartyLowHp, PartyChat, GuildChat, Mention, Disconnect
+    Attack, BuffEnding, PartyDeath, PartyLowHp, PartyChat, GuildChat, Mention, Disconnect,
+    Recovered  // 3.0.7-beta.7
 };
-constexpr int kKinds = 14;
+constexpr int kKinds = 15;
 
 // Whether to tell: notifications on, this kind on, the game window not in front (in front the player sees it). What
 // every game window of the party or the guild hears (its chat, its deaths and low HP) is told by the main window
@@ -35,6 +36,20 @@ public:
 private:
     uint64_t last_ = 0;
     bool seen_ = false;
+};
+
+// 3.0.7-beta.7 (the user: «надо сделать чтобы когда хп и сп восстановились»): the character's HP and SP as the
+// server tells them (0x00b0: 5 HP, 6 its most, 7 SP, 8 its most) - both back to `percent` of their most: told once,
+// again after one of them fell kRearm per cent under the mark
+class Recovery {
+public:
+    static constexpr int kRearm = 10;
+    bool status(uint16_t type, uint32_t value, int percent);  // true: tell
+
+private:
+    uint32_t hp_ = 0, hpMost_ = 0, sp_ = 0, spMost_ = 0;
+    unsigned known_ = 0;  // the four told yet (a bit each)
+    bool down_ = false;
 };
 
 // A chat line as the server sends it, "Name : words": who and what (none: who empty, what the whole)

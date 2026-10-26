@@ -128,6 +128,11 @@ const std::vector<IniSetting>& iniSettings() {
         // 3.0.7-beta.6 (the user chose 1, 5, 6, 7, 8, 9, 10 «и чтобы это в конфигураторе настраивалось»)
         {"notify", "attack", Page::Game, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::NotifyAttack,
          Text::NotifyAttackHint, ""},
+        // 3.0.7-beta.7 (the user: «надо сделать чтобы когда хп и сп восстановились»)
+        {"notify", "recovered", Page::Game, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::NotifyRecovered,
+         Text::NotifyRecoveredHint, ""},
+        {"notify", "recovered_percent", Page::Game, Control::Slider, kRecoveredLeast, kRecoveredMost, 5, {}, {},
+         Text::NotifyRecoveredPercent, Text::NotifyRecoveredPercentHint, " %"},
         {"notify", "buff_ending", Page::Game, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::NotifyBuffEnding,
          Text::NotifyBuffEndingHint, ""},
         {"notify", "buff_seconds", Page::Game, Control::Slider, kBuffSecondsLeast, kBuffSecondsMost, 1, {}, {},
@@ -862,6 +867,7 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
         const std::string w = k.substr(7);
         if (w == "buff_seconds") return std::to_string(n.buffSeconds);  // 3.0.7-beta.6
         if (w == "party_hp") return std::to_string(n.partyHp);
+        if (w == "recovered_percent") return std::to_string(n.recoveredPercent);  // 3.0.7-beta.7
         for (size_t i = 0; i < kNotifyBoxCount; ++i)
             if (w == kNotifyBoxes[i].key) return n.*kNotifyBoxes[i].field ? "1" : "0";
         return "0";

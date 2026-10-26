@@ -166,3 +166,42 @@ TEST(notify_the_character_s_name_said) {
                             "\xd0\x9e\xd0\xba\xd1\x81\xd0\xb0\xd0\xbd\xd0\xb0"));  // «Оксанадзе»: another name
     CHECK(!notify::mentions("anything", ""));
 }
+
+// 3.0.7-beta.7 (the user: «надо сделать чтобы когда хп и сп восстановились»): HP and SP both back - told once, again
+// after one of them fell well under the mark
+TEST(notify_hp_and_sp_back) {
+    notify::Recovery r;
+    CHECK(!r.status(5, 4000, 100));  // the most not known yet
+    CHECK(!r.status(6, 4000, 100));
+    CHECK(!r.status(8, 1000, 100));
+    CHECK(!r.status(7, 1000, 100));  // full as the game starts: nothing to tell
+    CHECK(!r.status(5, 3000, 100));  // 75 %: down
+    CHECK(!r.status(7, 500, 100));
+    CHECK(!r.status(5, 4000, 100));  // HP back, SP not yet
+    CHECK(r.status(7, 1000, 100));   // both: told
+    CHECK(!r.status(7, 990, 100));   // a little under: not again
+    CHECK(!r.status(7, 1000, 100));
+    CHECK(!r.status(5, 3500, 100));  // 87 %: well under (kRearm)
+    CHECK(r.status(5, 4000, 100));   // back: told again
+    CHECK(!r.status(5, 1000, 80));   // a mark of 80 %
+    CHECK(r.status(5, 3200, 80));
+    CHECK(!r.status(24, 5, 100));    // the weight and the rest: not HP or SP
+}
+
+TEST(notify_hp_and_sp_back_in_the_configurator) {
+    const NotifySettings d = parseConfig("").notify;
+    CHECK(d.recovered && d.recoveredPercent == 100);
+    const NotifySettings s = parseConfig("[notify]\nrecovered = 0\nrecovered_percent = 85\n").notify;
+    CHECK(!s.recovered && s.recoveredPercent == 85);
+    CHECK(parseConfig("[notify]\nrecovered_percent = 20\n").notify.recoveredPercent == 50);  // kept in range
+    const settings::IniSetting* box = settings::findSetting("notify.recovered");
+    CHECK(box && box->page == settings::Page::Game && box->control == settings::Control::Check);
+    const settings::IniSetting* mark = settings::findSetting("notify.recovered_percent");
+    CHECK(mark && mark->control == settings::Control::Slider && settings::tokenOf(*mark, parseConfig("")) ==
+                                                                      std::string("100"));
+    CHECK(appliesNow("notify.recovered") && appliesNow("notify.recovered_percent"));
+    CHECK(notify::wanted(NotifySettings{}, notify::Kind::Recovered, false, false));  // the character's own
+    CHECK_EQ(notify::text(settings::Lang::En, notify::Kind::Recovered, "", "100"),
+             std::string("HP and SP back to 100%"));
+    CHECK(!notify::text(settings::Lang::Uk, notify::Kind::Recovered, "", "100").empty());
+}

@@ -82,10 +82,16 @@ struct Chat {
     uint32_t unit = 0;
     std::string text;
 };
+// 3.0.7-beta.7 (the user: «когда хп и сп восстановились»): the character's own status - 0x00b0 <type>.W <value>.L
+// (5 HP, 6 its most, 7 SP, 8 its most, ...)
+struct Status {
+    uint16_t type = 0;
+    uint32_t value = 0;
+};
 
 using Event = std::variant<std::monostate, Whisper, PartyInvite, TradeRequest, GuildInvite, FriendRequest, StatusIcon,
                            Vanish, SkillCast, Hit, PartyList, PartyMember, PartyLeft, PartyHp, PartyChat, GuildChat,
-                           Chat>;
+                           Chat, Status>;
 
 // A packet as the game took it, `size` bytes of it readable: one of the above, or nothing (another packet, one cut
 // short or naming more bytes than there are).

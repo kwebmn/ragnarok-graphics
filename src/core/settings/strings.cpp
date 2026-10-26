@@ -4575,6 +4575,20 @@ constexpr Entry kTexts[] = {
      "Ваше имя в чате — {1}: {2}"},
     {Text::NotifyDisconnectText, "The connection to the server is lost", "Зв'язок із сервером втрачено",
      "Связь с сервером потеряна"},
+    // 3.0.7-beta.7 (the user: «надо сделать чтобы когда хп и сп восстановились»)
+    {Text::NotifyRecovered, "HP and SP back", "HP і SP відновилися", "HP и SP восстановились"},
+    {Text::NotifyRecoveredHint,
+     "When the character's HP and SP are both back (sitting, a rest) after one of them fell. Once, again after "
+     "another fall.",
+     "Коли HP і SP персонажа обидва відновилися (сидячи, після відпочинку), після того як щось із них просіло. Один "
+     "раз, знову — після наступного просідання.",
+     "Когда HP и SP персонажа оба восстановились (сидя, после отдыха), после того как что-то из них просело. Один "
+     "раз, снова — после следующего проседания."},
+    {Text::NotifyRecoveredPercent, "Back to", "Відновлення до", "Восстановление до"},
+    {Text::NotifyRecoveredPercentHint, "Of their most: 100 % - full HP and SP.",
+     "Від найбільшого: 100 % — повні HP і SP.", "От максимума: 100 % — полные HP и SP."},
+    {Text::NotifyRecoveredText, "HP and SP back to {1}%", "HP і SP відновилися до {1} %",
+     "HP и SP восстановились до {1} %"},
     // 3.0.4-beta.4: «Грати» starts a set of game windows
     {Text::WindowsStartCount, "Game windows started by «Play»",
      "Вікон гри за кнопкою «Грати»",

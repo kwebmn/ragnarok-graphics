@@ -464,6 +464,10 @@ struct NotifySettings {
     bool attack = true, buffEnding = true, partyDeath = true, partyLowHp = true, partyChat = true, guildChat = true,
          mention = true, disconnect = true, sound = true;
     int buffSeconds = 10, partyHp = 30;
+    // 3.0.7-beta.7 (the user: «надо сделать чтобы когда хп и сп восстановились»): HP and SP both back to
+    // recoveredPercent of their most
+    bool recovered = true;
+    int recoveredPercent = 100;
 };
 // [notify]'s boxes by their ini words (3.0.7-beta.6: one list for the file, the configurator and the live update)
 struct NotifyBox {
@@ -473,6 +477,7 @@ struct NotifyBox {
 extern const NotifyBox kNotifyBoxes[];
 extern const size_t kNotifyBoxCount;
 constexpr int kBuffSecondsLeast = 3, kBuffSecondsMost = 60, kPartyHpLeast = 10, kPartyHpMost = 90;
+constexpr int kRecoveredLeast = 50, kRecoveredMost = 100;
 
 struct Config {
     Api api = Api::D3d12;

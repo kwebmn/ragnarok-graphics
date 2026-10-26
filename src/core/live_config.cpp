@@ -216,6 +216,9 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
                                        std::to_string(f.buffSeconds)));
         if (r.partyHp != f.partyHp)
             u.applied.push_back(change("notify party_hp", std::to_string(r.partyHp), std::to_string(f.partyHp)));
+        if (r.recoveredPercent != f.recoveredPercent)  // 3.0.7-beta.7
+            u.applied.push_back(change("notify recovered_percent", std::to_string(r.recoveredPercent),
+                                       std::to_string(f.recoveredPercent)));
         n.notify = f;
     }
     if (file.sound.ambience != running.sound.ambience) {  // 3.0.4-beta.7: the maps' own sounds

@@ -106,6 +106,9 @@ Event parse(const uint8_t* p, size_t size) {
             if (!textOf(p, size, 4, c.text)) return {};
             return c;
         }
+        case 0x00b0:  // 3.0.7-beta.7
+            if (size < 8) return {};
+            return Status{rd16(p, 2), rd32(p, 4)};
         case 0x008d: {
             Chat c;
             if (size < 8 || !textOf(p, size, 8, c.text)) return {};

@@ -25,6 +25,7 @@ const NotifyBox kNotifyBoxes[] = {
     {"party_low_hp", &NotifySettings::partyLowHp}, {"party_chat", &NotifySettings::partyChat},
     {"guild_chat", &NotifySettings::guildChat},   {"mention", &NotifySettings::mention},
     {"disconnect", &NotifySettings::disconnect},  {"sound", &NotifySettings::sound},
+    {"recovered", &NotifySettings::recovered},  // 3.0.7-beta.7
 };
 const size_t kNotifyBoxCount = sizeof kNotifyBoxes / sizeof kNotifyBoxes[0];
 
@@ -507,6 +508,8 @@ Config parseConfig(const std::string& text) {
                 c.notify.buffSeconds = std::clamp(std::atoi(val.c_str()), kBuffSecondsLeast, kBuffSecondsMost);
             else if (k == "party_hp")
                 c.notify.partyHp = std::clamp(std::atoi(val.c_str()), kPartyHpLeast, kPartyHpMost);
+            else if (k == "recovered_percent")  // 3.0.7-beta.7
+                c.notify.recoveredPercent = std::clamp(std::atoi(val.c_str()), kRecoveredLeast, kRecoveredMost);
         } else if (key == "utility.mode") {  // 2.15: the Developer mode's keys
             c.developer = lower(val) == "developer";
         } else if (key == "renderer.safe_mode") {  // 2.12

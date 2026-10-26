@@ -212,3 +212,14 @@ TEST(game_packets_the_party_s_the_guild_s_and_the_near_chat) {
     put16(near, 2, uint16_t(near.size() + 10));  // longer than it is
     CHECK(std::holds_alternative<std::monostate>(packets::parse(near.data(), near.size())));
 }
+
+TEST(game_packets_the_character_s_own_status) {
+    // 3.0.7-beta.7 (the user: «когда хп и сп восстановились»): 0x00b0 <type>.W <value>.L - 5 HP, 6 its most, 7 SP, 8
+    std::vector<uint8_t> hp = packet(0x00b0, 8);
+    put16(hp, 2, 5);
+    put32(hp, 4, 3412);
+    const packets::Event e = packets::parse(hp.data(), hp.size());
+    const auto* s = std::get_if<packets::Status>(&e);
+    CHECK(s && s->type == 5 && s->value == 3412);
+    CHECK(std::holds_alternative<std::monostate>(packets::parse(hp.data(), 7)));  // cut short
+}

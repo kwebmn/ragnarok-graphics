@@ -418,6 +418,8 @@ enum class Text : uint16_t {
     NotifyDisconnectHint, NotifySound, NotifySoundHint, NotifyAttackText, NotifyAttackHurtText, NotifyBuffEndingText,
     NotifyPartyDeathText, NotifyPartyLowHpText, NotifyPartyChatText, NotifyGuildChatText, NotifyMentionText,
     NotifyDisconnectText,  // 3.0.7-beta.6
+    NotifyRecovered, NotifyRecoveredHint, NotifyRecoveredPercent, NotifyRecoveredPercentHint,
+    NotifyRecoveredText,  // 3.0.7-beta.7
     WindowsStartCount, WindowsStartCountHint,  // 3.0.4-beta.4: «Грати» for a set of windows
     CameraHeading, CameraIndoor, CameraIndoorHint, CameraPhotoNote,  // 3.0.4-beta.5: the camera, the photo mode
     BuffsHeading, BuffTimers, BuffTimersHint,  // 3.0.4-beta.6: the time left on the buff icons
