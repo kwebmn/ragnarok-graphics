@@ -39,14 +39,16 @@ void Renderer::Impl::releaseScene() {
     waterReady = false;
 }
 
-float Renderer::Impl::waterTime() {
+// 3.0.6-beta.2: the effects' seconds never go round - the new map's fade, the steps, the torches kept and the
+// creatures take ages from them (the hour round left the world black on a map entered later in the hour)
+double Renderer::Impl::effectSeconds() {
     LARGE_INTEGER now, freq;
     QueryPerformanceFrequency(&freq);
     QueryPerformanceCounter(&now);
-    if (!waterClock.QuadPart) waterClock = now;
-    const double s = double(now.QuadPart - waterClock.QuadPart) / double(freq.QuadPart);
-    return float(s - 3600.0 * double(int64_t(s / 3600.0)));  // an hour round: the floats keep their precision
+    return effectClock.seconds(now.QuadPart, freq.QuadPart);
 }
+
+float Renderer::Impl::waterTime() { return effect_clock::forShaders(effectSeconds()); }  // the floats' precision
 
 // The copies of the world's picture and depth at its own size (the target's, or under DLSS the world drawn
 // smaller), and the depth copy's pipelines; false when they cannot be made at this size (logged once).

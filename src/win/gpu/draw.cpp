@@ -524,7 +524,7 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
         if (ripplesWanted()) {  // 0.94: the three newest steps (x, z, age), one in each free vector
             float* slot[3] = {c.uiPixels, c.sourceRect, c.sourceClamp};
             int n = 0;
-            const float now = waterTime();
+            const float now = float(effectSeconds());  // 3.0.6-beta.2: the steps' clock, never round
             const std::deque<footsteps::Step>& steps = footTracker.steps();
             for (auto it = steps.rbegin(); it != steps.rend() && n < 3; ++it) {
                 const float age = now - it->born;

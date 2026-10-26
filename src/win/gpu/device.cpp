@@ -2110,7 +2110,7 @@ void Renderer::setMap(const std::string& map) {
     impl_->waterLevelKnown = false;  // 1.7
     impl_->critterWorld.setPlace(impl_->mapPlace);
     impl_->crittersTime = 0.0f;
-    if (!map.empty()) impl_->mapFadeStart = impl_->waterTime();  // 0.83: the world comes in from black
+    if (!map.empty()) impl_->mapFadeStart = impl_->effectSeconds();  // 0.83: the world comes in from black
     impl_->mapRegion = region_look::of(map, 100).region[0] != 0;  // 0.79: its look
     if (impl_->mapRegion) LOG_INFO("region: %s (%s)", region_look::of(map, 100).region, map.c_str());
     impl_->weatherLogged = false;

@@ -514,7 +514,7 @@ bool Renderer::Impl::applyTorches() {
     // frame without it bridged (torch::Keeper): the new flame jumped to another shape every couple of seconds
     std::vector<uint32_t> torchSeeds;
     for (const torch::Flame& f : flames) torchSeeds.push_back(torch::placeSeed(f, proj, viewToWorld, viewToWorldValid));
-    torchKeeper.update(flames, torchSeeds, double(time));
+    torchKeeper.update(flames, torchSeeds, effectSeconds());  // 3.0.6-beta.2: never round
     // 2.6.18: each of these stands for the game's two effects of its torch (torch::take) - lit, hot and drawn as the
     // two were (torch::kGameEffects); the torches the game does not show, added after them, are one each
     const size_t gameFlames = flames.size();

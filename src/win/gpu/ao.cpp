@@ -340,7 +340,7 @@ float Renderer::Impl::flashNow() const {
 // through up to 64 steps at every pixel (R-9K2F6E: the grass 22 ms of an HD 6570's frame)
 bool Renderer::Impl::uploadTrample() {
     if (trampleFailed) return false;
-    trample::build(footTracker.steps(), waterTime(), stepLife(), trample);
+    trample::build(footTracker.steps(), float(effectSeconds()), stepLife(), trample);  // 3.0.6-beta.2
     if (trample.texels.empty()) return false;
     constexpr UINT side = UINT(trample::Grid::kSide), pitch = side * 4;  // 512: rows a multiple of 256 apart
     if (!trampleData) {
@@ -647,7 +647,8 @@ bool Renderer::Impl::applySteps() {
     const UINT rows = UINT(1 + tiles.rows);
     const Upload u = allocUpload(size_t(pitch) * rows, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT);
     if (!u.cpu) return true;
-    const size_t n = step_tiles::fill(steps, waterTime(), stepLife(), tiles, reinterpret_cast<float*>(u.cpu));
+    const size_t n =  // 3.0.6-beta.2: the steps' clock, never round
+        step_tiles::fill(steps, float(effectSeconds()), stepLife(), tiles, reinterpret_cast<float*>(u.cpu));
     D3D12_TEXTURE_COPY_LOCATION src{}, to{};
     src.pResource = slots[slot].upload;
     src.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;

@@ -65,11 +65,12 @@ critters::Switches Renderer::Impl::critterSwitches() const {
 bool Renderer::Impl::applyCritters() {
     crittersDone = true;
     crumb("living creatures");
-    const float now = waterTime();
+    const double seconds = effectSeconds();  // 3.0.6-beta.2: never round - their next flights wait by it
+    const float now = effect_clock::forShaders(seconds);
     critters::Frame f;
-    f.now = double(now);
-    f.dt = crittersTime > 0.0f ? std::clamp(now - crittersTime, 0.0f, 0.1f) : 0.0f;
-    crittersTime = now;
+    f.now = seconds;
+    f.dt = crittersTime > 0.0 ? float(std::clamp(seconds - crittersTime, 0.0, 0.1)) : 0.0f;
+    crittersTime = seconds;
     const float* m = viewToWorld;
     const camera::Projection proj = camera::projectionFor(gameWidth, gameHeight);
     const float tz = cameraTargetZ;

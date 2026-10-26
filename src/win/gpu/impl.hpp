@@ -41,6 +41,7 @@
 #include "core/shader_variants.hpp"
 #include "core/weather.hpp"
 #include "core/torch.hpp"
+#include "core/effect_clock.hpp"
 #include "win/gpu/draw_constants.hpp"
 #include "win/gpu/frame_pacer.hpp"
 #include "win/gpu/renderer.hpp"
@@ -654,7 +655,7 @@ struct Renderer::Impl {
     LeafLook leafLook() const;  // 1.7: the trees' settings for leafShading (draw.cpp)
     std::vector<FireSpark> lavaCells;       // 0.31: this frame's cells of lava: their middles light around them
     bool lavaLogged = false;
-    LARGE_INTEGER waterClock{};  // the waves' time starts with the first water
+    effect_clock::Clock effectClock;  // the waves' time starts with the first water
     uint64_t waterCells = 0;     // drawn as modern water this run, for the log
     HMODULE api = nullptr;  // setApi
     // GPU time (0.10.4): timestamps around every list and the upscale, read when the slot comes round again, and a
@@ -1104,7 +1105,7 @@ struct Renderer::Impl {
         bloomDone = false;  // 0.78
         stepsDone = false;  // 0.80
         if (!frameFeet.empty()) {  // 0.94: the last frame's feet (they were drawn with it)
-            footTracker.update(frameFeet, waterTime(), stepLife());
+            footTracker.update(frameFeet, float(effectSeconds()), stepLife());  // 3.0.6-beta.2: never round
             frameFeet.clear();
         }
         grassDone = false;  // 0.81
@@ -1171,7 +1172,8 @@ struct Renderer::Impl {
     D3D12_RESOURCE_STATES crittersDataState = D3D12_RESOURCE_STATE_COPY_DEST;
     UINT crittersDataSrv = 0;
     bool crittersDone = false, crittersLogged = false;
-    float crittersTime = 0.0f, crittersStepsSeen = 0.0f;
+    double crittersTime = 0.0;  // 3.0.6-beta.2: the effects' seconds, never round
+    float crittersStepsSeen = 0.0f;
     critters::Switches critterSwitches() const;
     bool crittersWanted() const;
     bool crittersDue() const { return !crittersDone && groundDrawn && crittersWanted(); }
@@ -1490,11 +1492,10 @@ struct Renderer::Impl {
                 mapFadeNow() < 1.0f) &&
                bloomDownPs && bloomApplyPs && dofBlurPs;
     }
-    float mapFadeStart = -1.0f;  // 0.83: the effects' clock when the map changed; below 0 none
-    float mapFadeNow() const {  // 1 when done
-        if (!effects.mapFade || mapFadeStart < 0.0f) return 1.0f;
-        const float t = (const_cast<Impl*>(this)->waterTime() - mapFadeStart) / 0.7f;
-        return t >= 1.0f ? 1.0f : t <= 0.0f ? 0.0f : t * t * (3.0f - 2.0f * t);
+    double mapFadeStart = -1.0;  // 0.83: the effects' seconds when the map changed; below 0 none
+    float mapFadeNow() const {  // 1 when done; 3.0.6-beta.2: by the seconds that never go round
+        return effects.mapFade ? effect_clock::mapFade(const_cast<Impl*>(this)->effectSeconds(), mapFadeStart)
+                               : 1.0f;
     }
     bool bloomDue() const { return bloomWanted() && groundDrawn && !bloomDone; }
     bool applyBloom();  // once a frame, the world finished, before its colours; false: lost
@@ -1540,7 +1541,8 @@ struct Renderer::Impl {
                        : effectPass(pso, target, targetState, rtvHandle(kRtvTarget), w, h, c, srv0, scene, srv1, clip,
                                     vertices, sceneT5);
     }
-    float waterTime();            // seconds since the first water
+    float waterTime();            // seconds since the first water, an hour round (the shaders')
+    double effectSeconds();       // 3.0.6-beta.2: the same never round - the ages taken here
     ID3D12PipelineState* glowAddPipeline(UINT samples, bool upscaledFormat);
     ID3D12PipelineState* glowLightPipeline(UINT samples, bool upscaledFormat);
     // One full-screen pass of the glow: src (sampled linearly, clamped) into dst; blendFactor with glow_up_ps.
