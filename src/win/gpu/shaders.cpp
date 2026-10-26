@@ -268,15 +268,14 @@ float4 smoothLightmap(float2 uv, float4 sharp) {
     float2 t = uv * size;
     float2 lo = floor(t / 8.0) * 8.0 + 0.5;
     float2 hi = lo + 7.0;
+    // 3.0.5-beta.24 (the light 1.1 ms of a Radeon 610M's 16.5 on «Середні»): four taps a step of 1.06 texels each way
+    // diagonally - as wide a blur as the nine of the 1-2-1 tent 1.5 apart (each axis's spread 1.125 texels squared)
     float4 sum = float4(0.0, 0.0, 0.0, 0.0);
-    float weights = 0.0;
-    [unroll] for (int y = -1; y <= 1; ++y)
-        [unroll] for (int x = -1; x <= 1; ++x) {
-            float w = (x == 0 ? 2.0 : 1.0) * (y == 0 ? 2.0 : 1.0);
-            sum += tex1.SampleLevel(samp1, clamp(t + float2(x, y) * 1.5, lo, hi) / size, 0) * w;
-            weights += w;
-        }
-    float4 soft = sum / weights;
+    [unroll] for (int tap = 0; tap < 4; ++tap) {
+        float2 aside = float2((tap & 1) != 0 ? 1.06 : -1.06, (tap & 2) != 0 ? 1.06 : -1.06);
+        sum += tex1.SampleLevel(samp1, clamp(t + aside, lo, hi) / size, 0);
+    }
+    float4 soft = sum * 0.25;
     return float4(soft.rgb, lerp(sharp.a, soft.a, 0.3));
 }
 
@@ -297,13 +296,17 @@ float relief(float2 uv, float2 du, float2 dv, float seen) {
     // sampled from a blurred mip, where a texel either way gave nearly the same height and no relief at all
     float2 o = max(k, sqrt(area)) / size;
     const float3 luma = float3(0.2126, 0.7152, 0.0722);
-    float hl = dot(tex0.SampleGrad(samp0, uv - float2(o.x, 0.0), du, dv).rgb, luma);
-    float hr = dot(tex0.SampleGrad(samp0, uv + float2(o.x, 0.0), du, dv).rgb, luma);
-    float hu = dot(tex0.SampleGrad(samp0, uv - float2(0.0, o.y), du, dv).rgb, luma);
-    float hd = dot(tex0.SampleGrad(samp0, uv + float2(0.0, o.y), du, dv).rgb, luma);
+    // 3.0.5-beta.24 (the user: «делать» - the relief 1.6 ms of a Radeon 610M's 16.5 on «Середні»): three plain taps,
+    // the place and a step right and down, filtered alike at the mip level the larger of the pixel's steps asks - the
+    // four anisotropic taps either side cost the most of it; the slope taken forward (half a step aside), a little
+    // softer where the ground is seen at a slant (and faded there by `seen`)
+    float lod = 0.5 * log2(max(max(dot(tx, tx), dot(ty, ty)), 1e-8));
+    float hc = dot(tex0.SampleLevel(samp0, uv, lod).rgb, luma);
+    float hr = dot(tex0.SampleLevel(samp0, uv + float2(o.x, 0.0), lod).rgb, luma);
+    float hd = dot(tex0.SampleLevel(samp0, uv + float2(0.0, o.y), lod).rgb, luma);
     // The height across a game texel (or a screen pixel) against the picture's texels a screen pixel (tx, ty) and
     // their area: the texels go out, the relief the game's texture gives.
-    float2 g = float2(hr - hl, hd - hu) * 0.5;
+    float2 g = float2(hr - hc, hd - hc);
     float2 gs = float2(dot(g, tx), dot(g, ty)) / sqrt(max(area, 1e-6));
     // 2.2.2: a face seen nearly edge-on or its texture stretched (a step's side: the texels a pixel nearly in one
     // line, their area near nothing) had its slope blown up - dark and light flickered there as the camera turned: the
