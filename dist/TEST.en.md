@@ -1,3 +1,54 @@
+# uaRO Graphics 3.0.5 — what is new
+
+The heart of this release is speed on weak computers. On a laptop with a Radeon 610M (1080p, Direct3D 11) the
+«Medium» set now runs at 60 frames a second instead of 36, and «High» at 28 instead of 15; under Direct3D 12 at 43
+instead of 27 and 26 instead of 16. Also a «Graphics test» that measures and sends its result by itself, reports'
+screenshots in full quality and the way back from a beta to the release.
+
+- **Effects lighter for the graphics card.** The same picture with the needless work taken out. Direct3D 11 and
+  Direct3D 12. Milliseconds of a Radeon 610M's frame, before → now:
+  - Grass: 10.2 → 1.8. A pass of its own marks where a blade's root can stand at all, and the picture is cut into
+    8×8 squares: the grass does no work where no blade can come from - on paving, roads, sand. The blades are the same.
+  - Weather: 2.55 → 0.33. Pollen, snow, rain, leaves and dust are drawn as small squares around the particles instead
+    of a pass over the whole screen. Sand is as it was.
+  - «Footprints in snow and sand» (dust under the feet on grass): 4.1 → 0.2. Each point looks only at the steps near
+    it.
+  - «Grass and road seams without steps» on «High»: 7.0 → 4.2. Points where the neighbouring texture does not show are
+    dropped at once. Far off, where a ground cell is under 24 points on the screen, the seams fade out smoothly.
+  - «Ground relief»: 1.6 → 0.8 and «Map light without steps»: 1.1 → 0.4 - fewer texture reads. Nearly the same look,
+    a little softer where the ground is seen at a sharp angle.
+  - «Shadows in corners and at walls»: 3.3 → 3.0 - the scene's depth is worked out once instead of twenty times.
+  - Night: 2.0 → 1.6 - no copy of the whole picture when no torch light is in the frame.
+- **Less processor work under Direct3D 11.** On «High» the driver spent 50-66 ms of a frame, now about 10:
+  - the strips of «Grass and road seams without steps» are made once and kept in the card's memory instead of being
+    built by the processor every frame;
+  - the 32-bit game looked up the seams' and the hills' cells in tables that took only half of the key - hundreds
+    one after another;
+  - rounding went through a slow library function (the grass alone: 6.8 → 0.4 ms of the processor).
+- **«World resolution» below 100 % (Direct3D 11): 6-7 ms a frame less.** The smaller world is made larger with one
+  read instead of 45, and «Colour» is laid on in the same pass. The world is a little softer, the interface and text
+  stay sharp. Old cards like the HD 6570 gain the most.
+- **Direct3D 12: a shader for each state of drawing**, as in Direct3D 11. The login picture on a Radeon 610M is drawn
+  4.5 times faster. The shaders are made on a thread of their own: the first start takes a minute or two, then they
+  come from the cache. «Debugging» → «A shader for each state».
+- **«Keep the frame rate»** turns the grass off at once when the frame rate cannot come back without it (before: last,
+  after minutes of slowdown), and now sees the footprints too. An effect you turned on yourself is still left alone.
+- **«Graphics test».** In the game's console (~ → «Graphics test») or with the button «Run the graphics test» on the
+  «Game» page. Stand somewhere quiet and keep still: for 105 seconds the driver shows by itself «No effects», «Low»,
+  «Medium», «Medium without relief», «Medium without smooth light», «High» and «Your settings», the camera going the
+  same way each time. Then your camera and settings come back, and the table - FPS, the slowest tenth of the frames,
+  the card's and the processor's work, the dearest parts of the frame, the cost of single effects - goes to the
+  developers by itself as a «Graphics test» report. The last test shows on «Game». ~ stops the test, and then
+  nothing is sent.
+- **Frame profile.** «Debugging» → «Measure where the game spends its time» now cuts every frame into parts: the world,
+  the interface, each effect, the picture into the window - with the card's and the processor's time. Every 10
+  seconds the log gets «profile:» lines.
+- **Reports' screenshots in full quality.** After a report the app sends the originals as PNG (until now a JPEG cut
+  down to 1600 points), and the site shows them in place of the smaller ones.
+- **From a beta back to the release.** The channel «Release» chosen and a beta installed - the app offers «Back to the
+  release», even when the release is older than the beta; the game asks the same before the login. The settings stay,
+  and the beta is kept as the previous version.
+
 # uaRO Graphics 3.0.5-beta.24 - what's new
 
 - **Lighter «Ground relief».** The test showed its cost on «Medium»: 1.6 ms of a Radeon 610M's frame under Direct3D 11
