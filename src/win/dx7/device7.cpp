@@ -247,15 +247,28 @@ HRESULT Device7::record(D3DPRIMITIVETYPE type, DWORD fvf, const void* vertices, 
     if (c.enhanced()) {  // 2.7.37: what of the bright draws is made softer, now and then in the log
         if (tag.kind == effect_exe::Kind::Skill)
             ++skillDraws_;
-        else if (!setup.ui && setup.blend && setup.dstBlend == d3d7::BLEND_ONE && tag.kind == effect_exe::Kind::None)
+        else if (!setup.ui && setup.blend && setup.dstBlend == d3d7::BLEND_ONE && tag.kind == effect_exe::Kind::None) {
             ++plainAdds_;
+            notePlainAdd(static_cast<const uint8_t*>(vertices), vertexCount, FrameRecord::stride(fvf), uint32_t(type),
+                         setup.srcBlend);
+        }
         const ULONGLONG now = GetTickCount64();
         if (now - skillsTold_ >= 10000) {
             if (skillDraws_ || plainAdds_)
                 LOG_INFO("effects: in 10 s %u draws of skills at %d %% of the game's brightness; %u draws adding light "
                          "of no effect known, as the game draws them",
                          skillDraws_, fx.skillsSoft ? std::min(skillPercent, 100) : 100, plainAdds_);
-            skillDraws_ = plainAdds_ = 0;
+            if (widestAdd_.area >= 0.0f) {
+                const PlainAdd& w = widestAdd_;
+                LOG_INFO("effects: the widest of them %.0f,%.0f-%.0f,%.0f of the game's %ux%u, %u vertices "
+                         "(primitive %u), colours #%08X-#%08X, source blend %u, texture %dx%d, depth %.4f-%.4f; %u of "
+                         "them covered half the picture or more",
+                         w.x0, w.y0, w.x1, w.y1, unsigned(viewport_.dwWidth), unsigned(viewport_.dwHeight), w.vertices,
+                         w.primitive, w.colourMin, w.colourMax, w.srcBlend, w.texWidth, w.texHeight, w.z0, w.z1,
+                         wideAdds_);
+            }
+            skillDraws_ = plainAdds_ = wideAdds_ = 0;
+            widestAdd_ = PlainAdd{};
             skillsTold_ = now;
         }
     }
@@ -450,6 +463,42 @@ HRESULT STDMETHODCALLTYPE Device7::SetTextureStageState(DWORD stage, D3DTEXTURES
 HRESULT STDMETHODCALLTYPE Device7::ValidateDevice(LPDWORD passes) {
     if (passes) *passes = 1;
     return D3D_OK;
+}
+
+void Device7::notePlainAdd(const uint8_t* vertices, uint32_t count, uint32_t stride, uint32_t primitive,
+                           uint32_t srcBlend) {
+    PlainAdd a;
+    a.x0 = a.y0 = a.z0 = 1e30f;
+    a.x1 = a.y1 = a.z1 = -1e30f;
+    uint8_t lo[4] = {255, 255, 255, 255}, hi[4] = {0, 0, 0, 0};
+    for (uint32_t i = 0; i < count; ++i) {
+        const uint8_t* v = vertices + size_t(i) * stride;
+        float x, y, z;
+        uint32_t colour;
+        std::memcpy(&x, v, 4);
+        std::memcpy(&y, v + 4, 4);
+        std::memcpy(&z, v + 8, 4);
+        std::memcpy(&colour, v + 16, 4);
+        a.x0 = std::min(a.x0, x), a.x1 = std::max(a.x1, x);
+        a.y0 = std::min(a.y0, y), a.y1 = std::max(a.y1, y);
+        a.z0 = std::min(a.z0, z), a.z1 = std::max(a.z1, z);
+        for (int k = 0; k < 4; ++k) {
+            const uint8_t c = uint8_t(colour >> (24 - 8 * k));
+            lo[k] = std::min(lo[k], c), hi[k] = std::max(hi[k], c);
+        }
+    }
+    a.area = std::max(0.0f, a.x1 - a.x0) * std::max(0.0f, a.y1 - a.y0);
+    if (2.0f * a.area >= float(viewport_.dwWidth) * float(viewport_.dwHeight)) ++wideAdds_;
+    if (a.area <= widestAdd_.area) return;
+    a.vertices = count;
+    a.primitive = primitive;
+    a.srcBlend = srcBlend;
+    for (int k = 0; k < 4; ++k) {
+        a.colourMin |= uint32_t(lo[k]) << (24 - 8 * k);
+        a.colourMax |= uint32_t(hi[k]) << (24 - 8 * k);
+    }
+    if (const Surface7* t = textures_[0]) a.texWidth = t->width(), a.texHeight = t->height();
+    widestAdd_ = a;
 }
 
 }  // namespace uagfx::dx7

@@ -69,6 +69,18 @@ private:
     // draws made softer and the draws that add light of no effect known, told every 10 s
     uint32_t skillDraws_ = 0, plainAdds_ = 0;
     ULONGLONG skillsTold_ = 0;
+    // 3.0.9-beta.1 (the user on Berserk's yellow wash: «засветку оставить но сделать ее мягкой»): the widest of
+    // those draws in the 10 s - where it lies, its vertices, its colours, how it blends, its texture - and how many
+    // covered half the game's picture or more: the facts before the wash is made softer
+    struct PlainAdd {
+        float x0 = 0, y0 = 0, x1 = 0, y1 = 0, z0 = 0, z1 = 0;
+        uint32_t vertices = 0, primitive = 0, srcBlend = 0, colourMin = 0, colourMax = 0;
+        int texWidth = 0, texHeight = 0;
+        float area = -1.0f;
+    };
+    PlainAdd widestAdd_;
+    uint32_t wideAdds_ = 0;
+    void notePlainAdd(const uint8_t* vertices, uint32_t count, uint32_t stride, uint32_t primitive, uint32_t srcBlend);
 };
 
 }  // namespace uagfx::dx7
