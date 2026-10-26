@@ -1,3 +1,13 @@
+# uaRO Graphics 3.0.7-beta.2 — what is new
+
+- **Walls without stripes.** «Own ground» laid every wall running along one of the map's two axes the other way round:
+  its texture and the map's light on it were turned round along the wall. On c_tower2 each piece of a wall therefore
+  brightened the other way to the next one - vertical stripes along the long walls. The walls now lie as the game lays
+  them: the light runs smoothly along a wall as in the original, the textures' patterns go on across the joins. The
+  same on gl_church, prt_church, payon_in01 and the other maps with walls.
+- To check: c_tower2 (the Clock Tower's 2nd floor) - the long walls without stripes, the light along them smooth as
+  without our graphics; the walls in gl_church or prt_church as well.
+
 # uaRO Graphics 3.0.7-beta.1 — what is new
 
 - **«Hidden lights of the maps»: light without orbs.** The balls of light floating over the hidden lights (Manuk,
