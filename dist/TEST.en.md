@@ -1,3 +1,12 @@
+# uaRO Graphics 3.0.5-beta.23 - what's new
+
+- **The «Graphics test» measures «Medium» for weaker cards.** In place of «High without hills» and «High without
+  materials» (their cost is known: 3.2 and 3.6 ms of a Radeon 610M's frame) the test now goes through «Medium without
+  relief» and «Medium without smooth light». Under the table - «The card's cost within «Medium», ms» for «Ground relief»
+  and «Map light without steps» and, as before, «The card's cost within «High»» for the seams and the reflections. It
+  shows what of «Medium» is dearest for cards weaker than this laptop.
+- To check: the «Graphics test» under Direct3D 11 from the same spot by the entrance of prt_fild08.
+
 # uaRO Graphics 3.0.5-beta.22 - what's new
 
 - **«Grass and road seams without steps» fade out far off.** On a field with many grass-to-road edges the seams cost
