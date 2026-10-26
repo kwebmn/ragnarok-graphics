@@ -1,3 +1,30 @@
+# uaRO Graphics 3.0.7 — what is new
+
+Walls and the sun as in the game, fireflies as lamps, and no balls of light in the air: fixes from the reports on
+c_tower2.
+
+- **«Own ground»: walls without stripes.** The walls running along one of the map's axes lay the other way round:
+  their texture and the map's light on them were turned round along the wall, and vertical stripes ran along
+  c_tower2's long walls. The walls now lie as the game lays them, their patterns going on across the joins.
+- **«Own ground»: walls lit as in the game.** The walls took the light of the floor beside them, while the game lights
+  each wall by its own way to the map's sun. On c_tower2 the walls turned from the sun were 1.6-1.8 times as bright as
+  the original. Now as in the game; the floor as before.
+- **The map's sun on the same side as in the game.** The driver turned the sun from the map's file not as the game
+  does. On some 200 maps where the sun's longitude is not 45, «Shadows from the sun and fire», «Materials: stone,
+  brick, bark» and «Hills without steps of light» fell and were lit from the wrong side - on 79 maps the opposite way.
+  Now as uaRO.exe works it out and as the maps' own painted shadows fall.
+- **Hidden lights: light without the orbs.** The balls of light over the hidden lights (Manuk, Splendide, Nidhoggur's
+  nest, the towers) are not drawn; their light on the ground, the walls and the characters stays. The orbs come back
+  with «Orbs in the air» under «Hidden lights of the maps» (off by default).
+- **The maps' fireflies light like lamps.** Each of the maps' fireflies - those the game shows and the yellow ones it
+  never showed - lights the ground, the walls and the characters around its place in a colour of its own: warm
+  yellow, yellow-green, green, amber or pale mint. The fireflies themselves are not seen - «Fireflies in the air»
+  under «The maps' fireflies» brings them back (off by default). How strong the light is: «Fireflies' brightness».
+- **No balls of light in the air.** «Glowing air at fire and lamps» glowed in a ball around each lamp of the map's file
+  (they often hang where no lamp is seen) and around the hidden lights and the fireflies. The switch is now «Glowing
+  air at fire»: the air glows at torches, burning skills, lava and portals. The balls around lamps, lights and
+  fireflies are «At lamps and lights» under it (off by default).
+
 # uaRO Graphics 3.0.7-beta.5 — what is new
 
 - **No balls of light in the air.** The balls on c_tower2 were «Glowing air at fire and lamps»: the air glowed in a
