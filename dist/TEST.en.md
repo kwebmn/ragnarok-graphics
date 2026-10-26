@@ -1,3 +1,12 @@
+# uaRO Graphics 3.0.9-beta.1 — what is new
+
+- **The log: what the game washes the world with under Berserk.** Under Berserk the game floods the world with yellow
+  light, and the driver's effects take it nearly to white. To make that wash soft rather than take it away, the driver
+  writes into the log once every 10 s the widest of the game's draws that add light: where it lies, its colour, how it
+  blends and how many of them cover half the picture or more.
+- To check: on moc_fild11 turn Berserk on, stand some 15 s and send a report from the game; then leave Berserk and send
+  another.
+
 # uaRO Graphics 3.0.8 — what is new
 
 More notifications while the game is behind: an attack, a buff ending, the party, the chat, the connection, HP and SP
