@@ -1,3 +1,14 @@
+# uaRO Graphics 3.0.6-beta.4 — what is new
+
+- **«Own ground»: no hole on the stairs in Comodo.** On the fortress stairs of cmd_fild02 a round patch of rock showed
+  over the top steps. The stairs lie on a steep slope, and the smooth ground bulged 0.2-0.3 over the game's cells at
+  the slope's top edge, while the steps lie only 0.1 over them. Now, where a model stands on the ground (stairs,
+  bridges, floors, walls), the smooth ground rises no higher than the game's cells, and the stairs look as in the game
+  itself. The rest of the ground is as smooth as before. Checked offline on the real map: the ground now covers the
+  steps exactly where the game's cells do.
+- The log now says for each map how many cells lie under models (the line «own ground: … cells under models»).
+- To check: cmd_fild02, the same stairs from the same angle - no hole; and a look at other stairs and bridges.
+
 # uaRO Graphics 3.0.6-beta.3 — what is new
 
 - **«Graphics test» waits until a set has loaded.** On a player's FirePro W5130M laptop «High» was measured while its
