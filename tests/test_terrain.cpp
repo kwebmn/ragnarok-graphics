@@ -1,6 +1,9 @@
+#include <algorithm>
 #include <cmath>
 #include <cstring>
+#include <map>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "core/gnd.hpp"
@@ -432,3 +435,108 @@ TEST(terrain_knows_the_plain_ground_under_its_smooth_points) {
         CHECK(v.plain == v.pos[1]);
 }
 
+
+namespace {
+
+// A plateau (up along -y: 10 over the rest) whose last row of corners ends at a slope going down 5 a row - the slope's
+// top edge, where the Catmull-Rom patch rises over the plain cells (cmd_fild02's fortress stairs lie on such a slope)
+gnd::Ground slopeUnderStairs() {
+    gnd::Ground g = flat();
+    g.width = 8;
+    g.height = 8;
+    const auto corner = [](int j) { return j <= 4 ? -10.0f : -10.0f + 5.0f * float(j - 4); };
+    g.cells.assign(64, g.cells[0]);
+    for (int y = 0; y < 8; ++y)
+        for (int x = 0; x < 8; ++x) {
+            gnd::Cell& c = g.cells[size_t(y * 8 + x)];
+            c.top = 0;
+            c.front = c.right = -1;
+            c.h[0] = c.h[1] = corner(y);
+            c.h[2] = c.h[3] = corner(y + 1);
+        }
+    return g;
+}
+
+}  // namespace
+
+TEST(terrain_no_higher_than_the_plain_cells_where_a_model_rests) {
+    // 3.0.6-beta.3 (R-RSK2JR «дирка на сходах в комодо»: cmd_fild02's fortress stairs lie 0.1 over the plain cells of
+    // their slope, and the smooth ground rose 0.16-0.29 over their top step - the slope's rock in a round patch over
+    // the steps): where a model rests on the ground the smooth ground is no higher than the game's plain cells (up
+    // along -y), elsewhere as smooth as before, its points on the cells' shared edges the same from both cells
+    const gnd::Ground g = slopeUnderStairs();
+    const terrain::Atlas atlas = terrain::lightmapAtlas(g);
+    const auto above = [&](const terrain::Mesh& m, int row) {  // the most a ground point of a row rises over the plain
+        float most = 0.0f;
+        for (const terrain::Batch& b : m.batches) {
+            if (b.layer != terrain::kGround) continue;
+            for (uint32_t k = b.firstVertex; k < b.firstVertex + b.vertexCount; ++k) {
+                const terrain::Vertex& v = m.vertices[k];
+                const float gz = v.pos[2] / g.zoom + float(g.height) / 2.0f;
+                if (gz > float(row) + 1e-3f && gz < float(row + 1) - 1e-3f) most = std::max(most, v.plain - v.pos[1]);
+            }
+        }
+        return most;
+    };
+    const terrain::Mesh before = terrain::build(g, 3, atlas);
+    CHECK(above(before, 4) > 0.2f);  // the slope's top row: the patch over the plain cells
+    std::vector<uint8_t> resting(64, 0);
+    for (int x = 0; x < 8; ++x) resting[size_t(4 * 8 + x)] = 1;  // the stairs over row 4
+    const terrain::Mesh after = terrain::build(g, 3, atlas, nullptr, &resting);
+    CHECK(above(after, 4) < 1e-4f);
+    CHECK(above(after, 6) == above(before, 6));  // two rows off: as smooth as before
+    // no crack of its own: a place of the ground's points that had one height, whichever cell it was of, still has
+    // (the smooth cells' edges with the plain ones round the map's border part as before, a few of them no more)
+    const auto cracks = [](const terrain::Mesh& m) {
+        std::map<std::pair<int, int>, std::vector<float>> at;
+        for (const terrain::Batch& b : m.batches) {
+            if (b.layer != terrain::kGround) continue;
+            for (uint32_t k = b.firstVertex; k < b.firstVertex + b.vertexCount; ++k) {
+                const terrain::Vertex& v = m.vertices[k];
+                if (std::fabs(v.normal[1]) < 0.5f) continue;  // a wall
+                at[{int(std::lround(v.pos[0] * 3.0f)), int(std::lround(v.pos[2] * 3.0f))}].push_back(v.pos[1]);
+            }
+        }
+        std::vector<std::pair<int, int>> out;
+        for (const auto& [key, heights] : at)
+            for (float h : heights)
+                if (std::fabs(h - heights[0]) > 1e-4f) {
+                    out.push_back(key);
+                    break;
+                }
+        return out;
+    };
+    const std::vector<std::pair<int, int>> was = cracks(before), now = cracks(after);
+    CHECK(!was.empty());  // the border's, as before
+    for (const auto& k : now) CHECK(std::find(was.begin(), was.end(), k) != was.end());  // none new (some gone)
+}
+
+TEST(terrain_knows_where_a_model_rests_on_the_ground) {
+    // 3.0.6-beta.3: a cell a model's face lies on (from 4 over its plain cells to 1 under them) - not one high over it
+    // (a roof, a bridge's top far up) nor one not over it
+    const gnd::Ground g = slopeUnderStairs();
+    terrain::Mesh models;  // as own_models::place makes them: a batch a quad, its indices from its first vertex
+    const auto quad = [&](float x0, float z0, float x1, float z1, float y) {
+        terrain::Batch b;
+        b.firstVertex = uint32_t(models.vertices.size());
+        b.vertexCount = 4;
+        b.firstIndex = uint32_t(models.indices.size());
+        b.indexCount = 6;
+        const float corners[4][2] = {{x0, z0}, {x1, z0}, {x0, z1}, {x1, z1}};
+        for (const auto& c : corners) {
+            terrain::Vertex v{};
+            v.pos[0] = c[0], v.pos[1] = y, v.pos[2] = c[1];
+            models.vertices.push_back(v);
+        }
+        models.indices.insert(models.indices.end(), {0u, 1u, 2u, 1u, 3u, 2u});
+        models.batches.push_back(b);
+    };
+    // cells' places: x from (x - 4) * 10, z from (y - 4) * 10; row 4's plain ground -10 at its top edge to -5
+    quad(20.0f, -40.0f, 30.0f, -30.0f, -40.0f);  // a roof 30 over the plateau's cell (6, 0)
+    quad(-10.0f, 1.0f, 10.0f, 2.0f, -9.6f);   // a step 0.1 over row 4's plain at z 1..2 (cells 3 and 4 of it)
+    const std::vector<uint8_t> r = terrain::restingOn(g, models);
+    CHECK_EQ(r.size(), size_t(64));
+    CHECK(r[4 * 8 + 3] == 1 && r[4 * 8 + 4] == 1);
+    CHECK(r[4 * 8 + 2] == 0 && r[4 * 8 + 5] == 0 && r[3 * 8 + 3] == 0);
+    CHECK(r[0 * 8 + 6] == 0);
+}

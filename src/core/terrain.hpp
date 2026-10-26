@@ -63,8 +63,16 @@ Atlas lightmapAtlas(const gnd::Ground& g);
 
 constexpr float kJoin = 0.5f;  // corners closer than this are one: whole ground
 // laid: a cell row by row 1 in a patch the map's makers laid by hand (core/ground_heights.hpp laidPatches) - no strips
-// round it, its edges as straight as the game draws them; the strips with `subdivide` 2 and more alone (none far off)
-Mesh build(const gnd::Ground& g, int subdivide, const Atlas& atlas, const std::vector<uint8_t>* laid = nullptr);
+// round it, its edges as straight as the game draws them; the strips with `subdivide` 2 and more alone (none far off).
+// 3.0.6-beta.3 (R-RSK2JR «дирка на сходах в комодо»): resting, a cell row by row 1 where a model rests on it
+// (restingOn) - the smooth ground there no higher than the game's plain cells (the patch rose over the steps of
+// cmd_fild02's fortress stairs, 0.1 over their slope's cells); a point a cell shares takes it from either cell
+Mesh build(const gnd::Ground& g, int subdivide, const Atlas& atlas, const std::vector<uint8_t>* laid = nullptr,
+           const std::vector<uint8_t>* resting = nullptr);
+// 3.0.6-beta.3: the cells a model's face lies on - from kRestReach over its plain cells to kRestUnder under them (the
+// patch rises at most a few units over them) - the models placed in the ground's places (own_models::place)
+constexpr float kRestReach = 4.0f, kRestUnder = 1.0f;
+std::vector<uint8_t> restingOn(const gnd::Ground& g, const Mesh& models);
 
 // 3.0.4-beta.20 (the own ground on every map): the map's water as uaRO.exe lays it (0x4e59d0, core/water.hpp) - a
 // quad over each cell with a top a corner of which lies under the water's highest (its level less the waves' height;

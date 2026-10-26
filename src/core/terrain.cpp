@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 #include <map>
+#include <utility>
 
 namespace uagfx::terrain {
 namespace {
@@ -68,6 +69,33 @@ float plainAt(const gnd::Cell& c, float fu, float fv) {
     return c.h[3] + (c.h[2] - c.h[3]) * (1.0f - fu) + (c.h[1] - c.h[3]) * (1.0f - fv);
 }
 
+// 3.0.6-beta.3: a point of cell (x, y) at (fu, fv) kept no higher than the plain cells - its cell, or one it shares
+// (on an edge or a corner), has a model resting on it; then its plain height from the corners as one grid (the ones
+// the cells share), so that a shared point comes out the same from either cell
+bool underModel(const std::vector<uint8_t>* resting, const gnd::Ground& g, int x, int y, float fu, float fv) {
+    if (!resting) return false;
+    const int x0 = fu < 1e-4f ? x - 1 : x, x1 = fu > 1.0f - 1e-4f ? x + 1 : x;
+    const int y0 = fv < 1e-4f ? y - 1 : y, y1 = fv > 1.0f - 1e-4f ? y + 1 : y;
+    for (int cy = y0; cy <= y1; ++cy)
+        for (int cx = x0; cx <= x1; ++cx)
+            if (cx >= 0 && cy >= 0 && cx < g.width && cy < g.height &&
+                (*resting)[size_t(cy) * size_t(g.width) + size_t(cx)])
+                return true;
+    return false;
+}
+
+float jointPlainAt(const Grid& grid, int x, int y, float fu, float fv) {  // plainAt over the joined corners
+    const float h0 = grid.get(x, y), h1 = grid.get(x + 1, y), h2 = grid.get(x, y + 1), h3 = grid.get(x + 1, y + 1);
+    if (fu + fv <= 1.0f) return h0 + (h1 - h0) * fu + (h2 - h0) * fv;
+    return h3 + (h2 - h3) * (1.0f - fu) + (h1 - h3) * (1.0f - fv);
+}
+
+// 3.0.6-beta.3: heightAt kept no higher (up along -y) than the joined corners' plain cells where `keep`
+float surfaceAt(const gnd::Cell& c, const Grid& grid, int x, int y, float fu, float fv, bool smooth, bool keep) {
+    const float h = heightAt(c, grid, x, y, fu, fv, smooth);
+    return keep && smooth ? std::max(h, jointPlainAt(grid, x, y, fu, fv)) : h;
+}
+
 bool patchWhole(const Grid& grid, int x, int y) {
     for (int j = y - 1; j <= y + 2; ++j)
         for (int i = x - 1; i <= x + 2; ++i)
@@ -125,7 +153,8 @@ struct Builder {
 };
 
 // 3.0.4-beta.12: the strips inside cell (x, y) along its edges with the neighbours that look different (terrain.hpp)
-void blendsOf(Builder& b, const Grid& grid, int x, int y, int n, const std::vector<uint8_t>* laid) {
+void blendsOf(Builder& b, const Grid& grid, int x, int y, int n, const std::vector<uint8_t>* laid,
+              const std::vector<uint8_t>* resting) {
     const gnd::Ground& g = b.g;
     const auto cellAt = [&](int cx, int cy) -> const gnd::Cell* {
         if (cx < 0 || cy < 0 || cx >= g.width || cy >= g.height) return nullptr;
@@ -184,7 +213,7 @@ void blendsOf(Builder& b, const Grid& grid, int x, int y, int n, const std::vect
         };
         const auto placed = [&](float fu, float fv, Vertex& v) {
             v.pos[0] = (float(x) + fu - half[0]) * g.zoom;
-            v.pos[1] = heightAt(*c, grid, x, y, fu, fv, smooth);
+            v.pos[1] = surfaceAt(*c, grid, x, y, fu, fv, smooth, underModel(resting, g, x, y, fu, fv));  // 3.0.6-beta.3
             v.pos[2] = (float(y) + fv - half[1]) * g.zoom;
             v.plain = plainAt(*c, fu, fv);
             v.normal[0] = 0.0f, v.normal[1] = -1.0f, v.normal[2] = 0.0f;
@@ -270,9 +299,11 @@ Atlas lightmapAtlas(const gnd::Ground& g) {
     return a;
 }
 
-Mesh build(const gnd::Ground& g, int subdivide, const Atlas& atlas, const std::vector<uint8_t>* laid) {
+Mesh build(const gnd::Ground& g, int subdivide, const Atlas& atlas, const std::vector<uint8_t>* laid,
+           const std::vector<uint8_t>* resting) {
     const int n = std::clamp(subdivide, 1, 8);
     if (laid && laid->size() != g.cells.size()) laid = nullptr;
+    if (resting && resting->size() != g.cells.size()) resting = nullptr;
     const Grid grid = joinedCorners(g);
     const float half[2] = {float(g.width) / 2.0f, float(g.height) / 2.0f};
     const float step = 1.0f / float(n), e = 0.05f;
@@ -294,16 +325,18 @@ Mesh build(const gnd::Ground& g, int subdivide, const Atlas& atlas, const std::v
                             const float fu = float(i) * step, fv = float(j) * step;
                             Vertex v{};
                             v.pos[0] = (float(x) + fu - half[0]) * g.zoom;
-                            v.pos[1] = heightAt(c, grid, x, y, fu, fv, smooth);
+                            // 3.0.6-beta.3: under a model no higher than the plain cells (its slope taken the same)
+                            const bool keep = underModel(resting, g, x, y, fu, fv);
+                            v.pos[1] = surfaceAt(c, grid, x, y, fu, fv, smooth, keep);
                             v.pos[2] = (float(y) + fv - half[1]) * g.zoom;
                             v.plain = n > 1 ? plainAt(c, fu, fv) : v.pos[1];
                             // its slope: the height's change along x and z (world units)
                             const float u0 = std::max(fu - e, 0.0f), u1 = std::min(fu + e, 1.0f);
                             const float w0 = std::max(fv - e, 0.0f), w1 = std::min(fv + e, 1.0f);
-                            const float dx = (heightAt(c, grid, x, y, u1, fv, smooth) -
-                                              heightAt(c, grid, x, y, u0, fv, smooth)) / ((u1 - u0) * g.zoom);
-                            const float dz = (heightAt(c, grid, x, y, fu, w1, smooth) -
-                                              heightAt(c, grid, x, y, fu, w0, smooth)) / ((w1 - w0) * g.zoom);
+                            const float dx = (surfaceAt(c, grid, x, y, u1, fv, smooth, keep) -
+                                              surfaceAt(c, grid, x, y, u0, fv, smooth, keep)) / ((u1 - u0) * g.zoom);
+                            const float dz = (surfaceAt(c, grid, x, y, fu, w1, smooth, keep) -
+                                              surfaceAt(c, grid, x, y, fu, w0, smooth, keep)) / ((w1 - w0) * g.zoom);
                             v.normal[0] = dx, v.normal[1] = -1.0f, v.normal[2] = dz;
                             normalize(v.normal);
                             const float top = s.u[0] + (s.u[1] - s.u[0]) * fu, bottom = s.u[2] + (s.u[3] - s.u[2]) * fu;
@@ -366,7 +399,7 @@ Mesh build(const gnd::Ground& g, int subdivide, const Atlas& atlas, const std::v
             if (b.parts.empty()) continue;
             if (n > 1)  // 3.0.4-beta.12: the strips between the cells that look different
                 for (int y = cy0; y < cy1; ++y)
-                    for (int x = cx0; x < cx1; ++x) blendsOf(b, grid, x, y, n, laid);
+                    for (int x = cx0; x < cx1; ++x) blendsOf(b, grid, x, y, n, laid, resting);
             Chunk ch;
             ch.cellX = cx0;
             ch.cellY = cy0;
@@ -398,6 +431,52 @@ Mesh build(const gnd::Ground& g, int subdivide, const Atlas& atlas, const std::v
             m.chunks.push_back(ch);
         }
     return m;
+}
+
+std::vector<uint8_t> restingOn(const gnd::Ground& g, const Mesh& models) {
+    std::vector<uint8_t> out(g.cells.size(), 0);
+    const float half[2] = {float(g.width) / 2.0f, float(g.height) / 2.0f};
+    static const float kAt[3] = {0.15f, 0.5f, 0.85f};  // each cell looked at in 3 x 3 places
+    // a batch's indices count from its first vertex (terrain::Batch)
+    std::vector<std::pair<size_t, uint32_t>> triangles;  // each triangle's first index, its batch's first vertex
+    for (const Batch& b : models.batches)
+        for (uint32_t i = 0; i + 2 < b.indexCount; i += 3)
+            triangles.emplace_back(size_t(b.firstIndex) + i, b.firstVertex);
+    for (const auto& [t, base] : triangles) {
+        const float* p[3] = {nullptr, nullptr, nullptr};
+        bool bad = t + 2 >= models.indices.size();
+        for (int k = 0; k < 3 && !bad; ++k) {
+            const size_t i = size_t(base) + models.indices[t + size_t(k)];
+            bad = i >= models.vertices.size();
+            if (!bad) p[k] = models.vertices[i].pos;
+        }
+        if (bad) continue;
+        const float d = (p[1][2] - p[2][2]) * (p[0][0] - p[2][0]) + (p[2][0] - p[1][0]) * (p[0][2] - p[2][2]);
+        if (std::fabs(d) < 1e-6f) continue;  // upright: seen edge-on from above
+        const float lo[2] = {std::min({p[0][0], p[1][0], p[2][0]}), std::min({p[0][2], p[1][2], p[2][2]})};
+        const float hi[2] = {std::max({p[0][0], p[1][0], p[2][0]}), std::max({p[0][2], p[1][2], p[2][2]})};
+        const int x0 = std::max(0, int(std::floor(lo[0] / g.zoom + half[0])));
+        const int x1 = std::min(g.width - 1, int(std::floor(hi[0] / g.zoom + half[0])));
+        const int y0 = std::max(0, int(std::floor(lo[1] / g.zoom + half[1])));
+        const int y1 = std::min(g.height - 1, int(std::floor(hi[1] / g.zoom + half[1])));
+        for (int y = y0; y <= y1; ++y)
+            for (int x = x0; x <= x1; ++x) {
+                const size_t at = size_t(y) * size_t(g.width) + size_t(x);
+                const gnd::Cell& c = g.cells[at];
+                if (out[at] || c.top < 0) continue;
+                for (int s = 0; s < 9 && !out[at]; ++s) {
+                    const float fu = kAt[s % 3], fv = kAt[s / 3];
+                    const float wx = (float(x) + fu - half[0]) * g.zoom, wz = (float(y) + fv - half[1]) * g.zoom;
+                    const float a = ((p[1][2] - p[2][2]) * (wx - p[2][0]) + (p[2][0] - p[1][0]) * (wz - p[2][2])) / d;
+                    const float b = ((p[2][2] - p[0][2]) * (wx - p[2][0]) + (p[0][0] - p[2][0]) * (wz - p[2][2])) / d;
+                    if (a < 0.0f || b < 0.0f || a + b > 1.0f) continue;
+                    const float face = a * p[0][1] + b * p[1][1] + (1.0f - a - b) * p[2][1];
+                    const float plain = plainAt(c, fu, fv);
+                    out[at] = face >= plain - kRestReach && face <= plain + kRestUnder;  // up along -y
+                }
+            }
+    }
+    return out;
 }
 
 Mesh water(const gnd::Ground& g, float level, float waveHeight) {

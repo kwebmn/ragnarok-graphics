@@ -325,8 +325,6 @@ void MapWorld::loop() {
                     own->cornerNormals = own_ground::cornerNormals(full);  // 3.0.4-beta.26: the smooth hills' light
                     // 3.0.4-beta.12: the strips between the cells, none round a patch laid by hand
                     const std::vector<uint8_t>* laid = ground.laid.size() == full.cells.size() ? &ground.laid : nullptr;
-                    own->mesh = terrain::build(full, sizeof(void*) == 8 ? 3 : 2, own->atlas, laid);
-                    own->distant = terrain::build(full, 1, own->atlas);
                     // a file of the game's: the data folder first, then its archives (names as written, or lower case)
                     const auto readGame = [&](const std::string& entry, std::vector<uint8_t>& out) {
                         const std::string low = lower(entry);
@@ -418,6 +416,12 @@ void MapWorld::loop() {
                     LOG_INFO("own ground: %s's models - %u placed from %u of %u files, %u triangles, %u textures",
                              name.c_str(), unsigned(w.models.size()), own->modelFilesRead, own->modelFiles,
                              unsigned(own->models.indices.size() / 3), unsigned(own->modelTextures.size()));
+                    // 3.0.6-beta.3 (R-RSK2JR «дирка на сходах в комодо»): the ground after its models - where one
+                    // rests on it, its smooth patch no higher than the game's plain cells
+                    const std::vector<uint8_t> resting = terrain::restingOn(full, own->models);
+                    own->mesh = terrain::build(full, sizeof(void*) == 8 ? 3 : 2, own->atlas, laid, &resting);
+                    own->distant = terrain::build(full, 1, own->atlas);
+                    for (uint8_t r : resting) own->restingCells += r;
                     // 3.0.4-beta.20: its water (460 of the client's 921 maps have some; lava on 3)
                     if (w.waterKnown) {
                         own->water = terrain::water(full, w.waterLevel, w.waveHeight);
@@ -445,9 +449,10 @@ void MapWorld::loop() {
                                      unsigned(own->water.vertices.size() / 4), unsigned(own->waterPictures.size()));
                     }
                     LOG_INFO("own ground: %s - %u cells' worth in %u chunks, %u triangles, %u of %u textures, "
-                             "lightmaps %dx%d", name.c_str(), unsigned(full.cells.size()),
-                             unsigned(own->mesh.chunks.size()), unsigned(own->mesh.indices.size() / 3), found,
-                             unsigned(full.textures.size()), own->atlas.width, own->atlas.height);
+                             "lightmaps %dx%d; %u cells under models kept no higher than the game's",
+                             name.c_str(), unsigned(full.cells.size()), unsigned(own->mesh.chunks.size()),
+                             unsigned(own->mesh.indices.size() / 3), found, unsigned(full.textures.size()),
+                             own->atlas.width, own->atlas.height, own->restingCells);
                     // 3.0.4-beta.20: room left in the game's memory (core/own_ground.hpp roomFor) - the far models let
                     // go, then the smooth ground, then all of it
                     MEMORYSTATUSEX mem{};

@@ -20,6 +20,7 @@ struct OwnGround {
                             // windef.h makes it nothing)
     terrain::Atlas atlas;
     std::vector<float> cornerNormals;  // 3.0.4-beta.26: the cells' corners' (own_ground::cornerNormals) - its light
+    unsigned restingCells = 0;  // 3.0.6-beta.3: the cells a model rests on (terrain::restingOn), for the log
     struct Picture {
         int width = 0, height = 0;
         std::vector<std::vector<uint32_t>> levels;  // ARGB, the whole first, then each half
