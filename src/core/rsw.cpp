@@ -140,6 +140,14 @@ void turn(float p[3], int axis, float degrees) {
 
 }  // namespace
 
+void lightWay(int longitude, int latitude, float way[3]) {
+    const float toRadians = 3.141592f * 0.0055555557f;  // as uaRO.exe has them
+    const float lon = float(longitude) * toRadians, lat = float(latitude) * toRadians;
+    way[0] = std::sin(lat) * std::sin(lon);
+    way[1] = std::cos(lat);
+    way[2] = std::sin(lat) * std::cos(lon);
+}
+
 void placeInMap(const Model& at, float p[3]) {
     for (int a = 0; a < 3; ++a) p[a] *= at.scale[a];
     turn(p, 1, at.rot[1]);

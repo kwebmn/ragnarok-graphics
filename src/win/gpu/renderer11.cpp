@@ -3367,10 +3367,11 @@ bool Renderer11::mapSun(float toSun[3]) const {
     const rsw::World* w = mapWorld_.world();
     const map::Axes axes = mapWorld_.axes();
     if (!w || !w->lightKnown || !axes.known()) return false;
-    const float lon = float(w->lightLongitude) * 0.0174533f, lat = float(w->lightLatitude) * 0.0174533f;
-    toSun[0] = float(axes.x) * -std::cos(lon) * std::sin(lat);
-    toSun[1] = -std::cos(lat);
-    toSun[2] = float(axes.z) * -std::sin(lon) * std::sin(lat);
+    float way[3];  // 3.0.7-beta.4 (actor_shadows.cpp): as uaRO.exe turns the file's (rsw::lightWay)
+    rsw::lightWay(w->lightLongitude, w->lightLatitude, way);
+    toSun[0] = float(axes.x) * -way[0];
+    toSun[1] = -way[1];
+    toSun[2] = float(axes.z) * -way[2];
     return true;
 }
 

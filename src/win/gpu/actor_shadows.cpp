@@ -161,12 +161,14 @@ bool Renderer::Impl::mapSun(float toSun[3]) const {
     const rsw::World* w = mapWorld.world();
     const map::Axes axes = mapWorld.axes();
     if (!w || !w->lightKnown || !axes.known()) return false;
-    // as the client turns the file's light into its way (longitude about up, latitude from straight above), the
-    // file's room up along -y: the way to the light
-    const float lon = float(w->lightLongitude) * 0.0174533f, lat = float(w->lightLatitude) * 0.0174533f;
-    toSun[0] = float(axes.x) * -std::cos(lon) * std::sin(lat);
-    toSun[1] = -std::cos(lat);
-    toSun[2] = float(axes.z) * -std::sin(lon) * std::sin(lat);
+    // the way to the light, against the way it goes as uaRO.exe turns the file's (rsw::lightWay; 3.0.7-beta.4: sin and
+    // cos of the longitude had been the other way round - the painted shadows fell elsewhere on 200 maps), the file's
+    // room up along -y
+    float way[3];
+    rsw::lightWay(w->lightLongitude, w->lightLatitude, way);
+    toSun[0] = float(axes.x) * -way[0];
+    toSun[1] = -way[1];
+    toSun[2] = float(axes.z) * -way[2];
     return true;
 }
 

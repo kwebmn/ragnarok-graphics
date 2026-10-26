@@ -5,6 +5,8 @@
 #include <map>
 #include <utility>
 
+#include "core/rsw.hpp"
+
 namespace uagfx::terrain {
 namespace {
 
@@ -280,11 +282,7 @@ void blendsOf(Builder& b, const Grid& grid, int x, int y, int n, const std::vect
 
 Sun sunOf(int longitude, int latitude, const float diffuse[3], const float ambient[3]) {
     Sun s;
-    const float toRadians = 3.141592f * 0.0055555557f;  // as uaRO.exe has them
-    const float lon = float(longitude) * toRadians, lat = float(latitude) * toRadians;
-    s.way[0] = std::sin(lat) * std::sin(lon);
-    s.way[1] = std::cos(lat);
-    s.way[2] = std::sin(lat) * std::cos(lon);
+    rsw::lightWay(longitude, latitude, s.way);
     std::copy(diffuse, diffuse + 3, s.diffuse);
     std::copy(ambient, ambient + 3, s.ambient);
     return s;

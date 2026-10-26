@@ -406,12 +406,10 @@ void MapWorld::loop() {
                     for (const std::string& t : modelTextureNames) own->modelTextures.push_back(picture(t, true));
                     own->modelFiles = unsigned(modelNames.size());
                     for (bool ok : filesOk) own->modelFilesRead += ok ? 1 : 0;
-                    if (w.lightKnown) {  // the way to the light as the client turns the file's (Impl::mapSun)
-                        const float lon = float(w.lightLongitude) * 0.0174533f;
-                        const float lat = float(w.lightLatitude) * 0.0174533f;
-                        own->toLight[0] = -std::cos(lon) * std::sin(lat);
-                        own->toLight[1] = -std::cos(lat);
-                        own->toLight[2] = -std::sin(lon) * std::sin(lat);
+                    if (w.lightKnown) {  // the way to the light as uaRO.exe turns the file's (3.0.7-beta.4)
+                        float way[3];
+                        rsw::lightWay(w.lightLongitude, w.lightLatitude, way);
+                        for (int k = 0; k < 3; ++k) own->toLight[k] = -way[k];
                     }
                     LOG_INFO("own ground: %s's models - %u placed from %u of %u files, %u triangles, %u textures",
                              name.c_str(), unsigned(w.models.size()), own->modelFilesRead, own->modelFiles,

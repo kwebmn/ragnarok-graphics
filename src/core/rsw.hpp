@@ -64,6 +64,13 @@ struct World {
 // false (and why) when it is not a map file; a file cut short or an unknown object keeps what came before it.
 bool parse(const uint8_t* data, size_t size, World& out, std::string& error);
 
+// 3.0.7-beta.4: the way the map's light goes, as uaRO.exe turns the file's longitude and latitude (FUN_0043a200:
+// about x by the latitude, then about y by the longitude) - (sin lat sin lon, cos lat, sin lat cos lon), +y down, in
+// the file's places; the way the maps' painted shadows fall (amatsu, longitude 10: darkest 90 degrees from +x towards
+// +z; prt_monk 30: 67.5; job_sword1 315: 135). Impl::mapSun had sin and cos of the longitude the other way round -
+// the same at 45 (722 of the client's maps), turned at the rest (79 maps of 315 the other way)
+void lightWay(int longitude, int latitude, float way[3]);
+
 // 3.0.1-beta.3 (grass_beds), 3.0.4-beta.14 shared: a point of a model as it stands (core/rsm.hpp's frame) where the map
 // puts it - scaled, turned about y, x and z (degrees), moved to its place
 void placeInMap(const Model& at, float p[3]);

@@ -1,3 +1,4 @@
+#include <cmath>
 #include <cstring>
 #include <string>
 #include <vector>
@@ -72,4 +73,19 @@ TEST(rsw_water_of_a_map) {
     CHECK(w.waterKnown);
     CHECK(w.waterLevel == -5.0f && w.waveHeight == 1.0f && w.waveSpeed == 2.0f && w.wavePitch == 50.0f);
     CHECK_EQ(w.waterAnim, 3);
+}
+
+TEST(rsw_light_goes_the_way_the_game_turns_it) {
+    // 3.0.7-beta.4: as uaRO.exe turns the file's longitude and latitude (FUN_0043a200: about x by the latitude, then
+    // about y by the longitude) - (sin lat sin lon, cos lat, sin lat cos lon), +y down; the way the maps' painted
+    // shadows fall (amatsu 10: darkest at 90 degrees from +x towards +z, job_sword1 315: at 135)
+    const auto goes = [](int longitude, int latitude, float x, float y, float z) {
+        float way[3];
+        rsw::lightWay(longitude, latitude, way);
+        return std::fabs(way[0] - x) < 1e-4f && std::fabs(way[1] - y) < 1e-4f && std::fabs(way[2] - z) < 1e-4f;
+    };
+    CHECK(goes(45, 45, 0.5f, 0.7071068f, 0.5f));
+    CHECK(goes(315, 45, -0.5f, 0.7071068f, 0.5f));      // 79 maps: the light towards -x, +z
+    CHECK(goes(10, 90, 0.1736482f, 0.0f, 0.9848078f));  // nearly along +z, from the side
+    CHECK(goes(0, 0, 0.0f, 1.0f, 0.0f));                 // straight down
 }
