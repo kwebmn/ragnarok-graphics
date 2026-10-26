@@ -61,16 +61,17 @@ void Context::testNote(const std::string& utf8) {
 }
 
 // A set as the Effects page would draw it: the player's file with that set, every group on at its full strength (the
-// same on every computer); the player's own as it is. 3.0.5-beta.14: «Високі» without its smooth hills, without its
-// materials
+// same on every computer); the player's own as it is. 3.0.5-beta.14: a set without one of its effects (3.0.5-beta.23:
+// «Середні» without the relief, without the smooth light)
 EffectSettings Context::testSet(graphics_test::Set s) const {
     using graphics_test::Set;
     EffectSettings file = config.effects;
     if (s != Set::Own) {
-        file.preset = s == Set::Off      ? EffectPreset::Off
-                      : s == Set::Low    ? EffectPreset::Weak
-                      : s == Set::Medium ? EffectPreset::Medium
-                                         : EffectPreset::Strong;
+        const bool medium = s == Set::Medium || s == Set::MediumNoRelief || s == Set::MediumNoSmoothLight;
+        file.preset = s == Set::Off   ? EffectPreset::Off
+                      : s == Set::Low ? EffectPreset::Weak
+                      : medium        ? EffectPreset::Medium
+                                      : EffectPreset::Strong;
         for (int g = 0; g < kEffectGroups; ++g) {
             file.groups[g] = true;
             file.groupStrength[g] = 100;
@@ -81,8 +82,8 @@ EffectSettings Context::testSet(graphics_test::Set s) const {
         }
     }
     EffectSettings e = madeEffects(file);
-    if (s == Set::HighNoHills) e.smoothHills = false;
-    if (s == Set::HighNoMaterials) e.materials = false;
+    if (s == Set::MediumNoRelief) e.relief = false;
+    if (s == Set::MediumNoSmoothLight) e.smoothLight = false;
     return e;
 }
 
@@ -207,9 +208,9 @@ void Context::testFrame(bool foreground) {
     const int left = std::max(0, int(std::ceil(double(kSets) * graphics_test::kPhaseS - (now - test_.startS()))));
     if (left != testLeftShown_) {
         testLeftShown_ = left;
-        static const Text kNames[kSets] = {Text::TestSetOff,         Text::FxPresetWeak,
-                                           Text::FxPresetMedium,     Text::FxPresetStrong,
-                                           Text::TestSetHighNoHills, Text::TestSetHighNoMaterials,
+        static const Text kNames[kSets] = {Text::TestSetOff,           Text::FxPresetWeak,
+                                           Text::FxPresetMedium,       Text::TestSetMediumNoRelief,
+                                           Text::TestSetMediumNoLight, Text::FxPresetStrong,
                                            Text::TestSetOwn};
         testNote(said(Text::TestRunning, {said(kNames[step.phase]), std::to_string(step.phase + 1),
                                           std::to_string(kSets), std::to_string(left)}));

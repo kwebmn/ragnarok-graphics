@@ -4666,10 +4666,13 @@ constexpr Entry kTexts[] = {
     {Text::PlayTestNotSent, "Not sent: {1}.", "Не надіслано: {1}.", "Не отправлено: {1}."},
     {Text::PlayTestNone, "No graphics test on this computer yet.", "На цьому комп'ютері тесту графіки ще не було.",
      "На этом компьютере теста графики ещё не было."},
-    {Text::TestSetHighNoHills, "High without hills", "Високі без пагорбів", "Высокие без холмов"},
-    {Text::TestSetHighNoMaterials, "High without materials", "Високі без матеріалів", "Высокие без материалов"},
+    {Text::TestSetMediumNoRelief, "Medium without relief", "Середні без рельєфу", "Средние без рельефа"},
+    {Text::TestSetMediumNoLight, "Medium without smooth light", "Середні без згладжування світла",
+     "Средние без сглаживания света"},
     {Text::TestCosts, "The card's cost within «High», ms: {1}", "Ціна у «Високих» на відеокарті, мс: {1}",
      "Цена в «Высоких» на видеокарте, мс: {1}"},
+    {Text::TestCostsMedium, "The card's cost within «Medium», ms: {1}", "Ціна у «Середніх» на відеокарті, мс: {1}",
+     "Цена в «Средних» на видеокарте, мс: {1}"},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

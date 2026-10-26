@@ -432,8 +432,9 @@ enum class Text : uint16_t {
     // 3.0.5-beta.7: «Тест графіки» from the settings app - the game's countdown, «Гра»'s button and the last result
     TestWaitMap, TestCountdown, TestCancelled, PlayTestNote, PlayTestButton, PlayTestRunning, PlayTestLast,
     PlayTestSent, PlayTestNotSent, PlayTestNone,
-    // 3.0.5-beta.14: «Високі» twice more - without the hills, without the materials - and what four of it cost
-    TestSetHighNoHills, TestSetHighNoMaterials, TestCosts,
+    // 3.0.5-beta.14: what effects cost the card - 3.0.5-beta.23: «Середні» without the relief, without the smooth
+    // light, and the lines of «Середні»'s and «Високі»'s costs
+    TestSetMediumNoRelief, TestSetMediumNoLight, TestCosts, TestCostsMedium,
     Count
 };
 
