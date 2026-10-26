@@ -92,13 +92,14 @@ bool compile(ShaderStore& store, pD3DCompile fn, const char* entry, const char* 
     HRESULT hr = E_FAIL;
     std::string said;    // what the compiler said the first time
     bool safe = false;   // 2.2.2: made on the last try, without the newest features
-    for (int i = 0; i < 4 && FAILED(hr); ++i) {
+    const int first = shader_cache::firstTry(entry);  // 3.0.6-beta.3: ray_glow_ps at level 1 at once
+    for (int i = first; i < 4 && FAILED(hr); ++i) {
         ID3DBlob* errors = nullptr;
         out = nullptr;
         const D3D_SHADER_MACRO* macros = i == 3 ? (lean ? kLeanSafe : kSafe) : lean ? kLean : nullptr;
         hr = fn(src, std::strlen(src), "uaro-graphics.hlsl", macros, nullptr, entry, profile, kLevels[i], 0, &out,
                 &errors);
-        if (FAILED(hr) && i == 0) {
+        if (FAILED(hr) && i == first) {
             said = errors ? std::string(static_cast<const char*>(errors->GetBufferPointer()), errors->GetBufferSize())
                           : std::string("compile failed");
             error = std::string("shader ") + entry + ": " + said;
@@ -109,7 +110,7 @@ bool compile(ShaderStore& store, pD3DCompile fn, const char* entry, const char* 
             safe = true;
             noteSafeShader();
         }
-        else if (SUCCEEDED(hr) && i > 0)  // 0.39.3: a line of it is enough then
+        else if (SUCCEEDED(hr) && i > first)  // 0.39.3: a line of it is enough then
             LOG_INFO("shader %s: compiled with less optimisation - %s", entry, errorLine(said).c_str());
         releaseCom(errors);
     }

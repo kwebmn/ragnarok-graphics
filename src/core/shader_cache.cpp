@@ -1,5 +1,7 @@
 #include "core/shader_cache.hpp"
 
+#include <cstring>
+
 namespace uagfx::shader_cache {
 namespace {
 
@@ -60,6 +62,8 @@ uint64_t keyOf(const std::string& source) {
     static const char kSettings[] = "uaro-graphics shaders: optimisation 3, then 1, then none";
     return fnv(source.data(), source.size(), fnv(kSettings, sizeof kSettings - 1));
 }
+
+int firstTry(const char* entry) { return entry && std::strcmp(entry, "ray_glow_ps") == 0 ? 1 : 0; }
 
 std::vector<uint8_t> pack(uint64_t key, const std::vector<Shader>& shaders) {
     std::vector<uint8_t> out;

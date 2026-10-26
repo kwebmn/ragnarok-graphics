@@ -69,3 +69,12 @@ TEST(shader_cache_keeps_whether_a_shader_lost_its_newest_features) {
     CHECK(!uagfx::shader_cache::matches(safe, "draw_ps", "vs_5_0", lost));
     CHECK(!uagfx::shader_cache::matches(plain, "glow_ps", "ps_5_0", lost));
 }
+
+// 3.0.6-beta.3: ray_glow_ps's optimiser level 3 fails inside FXC on every computer seen (R-7JQ6XX's RTX 3060, R-ZSDWYU's
+// FirePro, the user's RTX 5060 Ti and Radeon 610M: «argument pulled into unrelated predicate») and level 1, tried next,
+// made it each time - begun there: the same code, no failed attempt at a first start; the others from level 3
+TEST(shader_cache_begins_the_ray_glow_at_level_one) {
+    CHECK_EQ(shader_cache::firstTry("ray_glow_ps"), 1);
+    CHECK_EQ(shader_cache::firstTry("ray_ps"), 0);
+    CHECK_EQ(shader_cache::firstTry("draw_ps"), 0);
+}

@@ -538,7 +538,8 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
                 {"UAGFX_LEAN", "1"}, {"UAGFX_SAFE", "1"}, {nullptr, nullptr}};
             HRESULT hr = E_FAIL;
             std::string said;
-            for (int i = 0; i < 4 && FAILED(hr); ++i) {
+            const int first = shader_cache::firstTry(w.entry);  // 3.0.6-beta.3: ray_glow_ps at level 1 at once
+            for (int i = first; i < 4 && FAILED(hr); ++i) {
                 ID3DBlob* code = nullptr;
                 ID3DBlob* errors = nullptr;
                 const D3D_SHADER_MACRO* macros = i == 3 ? (w.lean ? kLeanSafe : kSafe) : w.lean ? kLean : nullptr;
@@ -549,7 +550,7 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
                     w.safe = true;
                     noteSafeShader();
                 }
-                if (FAILED(hr) && i == 0 && errors)
+                if (FAILED(hr) && i == first && errors)
                     said = std::string(static_cast<const char*>(errors->GetBufferPointer()), errors->GetBufferSize());
                 if (SUCCEEDED(hr) && code) {
                     const auto* p = static_cast<const uint8_t*>(code->GetBufferPointer());

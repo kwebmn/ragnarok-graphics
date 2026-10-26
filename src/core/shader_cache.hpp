@@ -23,6 +23,10 @@ std::string profileOf(const std::string& profile, bool safe);
 // Whether a kept shader is the one wanted (entry and profile); `safe`: compiled so.
 bool matches(const Shader& s, const std::string& entry, const std::string& profile, bool& safe);
 std::vector<uint8_t> pack(uint64_t key, const std::vector<Shader>& shaders);
+// 3.0.6-beta.3: the optimiser levels are tried in turn (3, 1, none, then without the newest features); which of them
+// to begin with for an entry - 1 for ray_glow_ps, whose level 3 fails inside FXC on every computer seen and whose level
+// 1 made it each time (the same code, no failed attempt at a first start), 0 for the others
+int firstTry(const char* entry);
 std::vector<Shader> unpack(uint64_t key, const std::vector<uint8_t>& file);
 
 }  // namespace uagfx::shader_cache
