@@ -1,3 +1,11 @@
+# uaRO Graphics 3.0.9-beta.2 — what is new
+
+- **The log: a white wash over the world.** Once after Berserk the screen stayed white, in «pause» too, and the night
+  did not darken it - the white lay over everything. The driver now writes into the log once every 10 s the game's draws
+  that, with the interface, cover half the picture or more: how many, where the widest lies, its colour and how it
+  blends.
+- If the screen washes out again, just send a report from the game - the log will show what washes it.
+
 # uaRO Graphics 3.0.9-beta.1 — what is new
 
 - **The log: what the game washes the world with under Berserk.** Under Berserk the game floods the world with yellow
