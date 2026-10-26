@@ -1,3 +1,23 @@
+# uaRO Graphics 3.0.7-beta.6 — what is new
+
+- **New notifications while the game is behind.** In the configurator, page «Game», section «Notifications», under
+  «Notifications while the game is behind» - new boxes, all on by default:
+  - «An attack on the character» - when the character comes under attack (misses too): once, again only after half
+    a minute without hits. While it goes on, the game's taskbar button flashes.
+  - «A buff ending» - «Seconds before a buff ends» (10 s by default) before one of the character's buffs runs out -
+    its name (Blessing, Increase AGI, potions, food). Short buffs (under half a minute) are not told.
+  - «A death in the party» and «Low HP in the party» - of one of the party near; the threshold «Party HP threshold»
+    (30 % by default).
+  - «The party's chat» and «The guild's chat» - what the others write (not your own).
+  - «Your name in the chat» - when someone near writes the character's name in the common chat.
+  - «The connection to the server lost» - when the server closed the connection.
+  - «Notification sound» - Windows' own sound with each notification; off - silent.
+- With several game windows each tells of its own character (an attack, buffs, the name, the connection); the
+  party's and the guild's news the main window alone - not one notification from each helper.
+- To check: minimise the game and let a monster attack the character; cast Blessing and minimise - a notification
+  10 s before it ends; write to the party or the guild from another character; change the thresholds in the
+  configurator.
+
 # uaRO Graphics 3.0.7 — what is new
 
 Walls and the sun as in the game, fireflies as lamps, and no balls of light in the air: fixes from the reports on
