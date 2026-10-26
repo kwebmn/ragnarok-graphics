@@ -1,3 +1,12 @@
+# uaRO Graphics 3.0.7-beta.8 — what is new
+
+- **Notifications: the log tells what happens to them.** When the game goes behind, the log says so. For each event
+  (an attack, a buff ending, HP and SP...) it shows why no notification came - the game in front, its box off, not the
+  main window - or that Windows took or refused it, and whether Windows shows notifications at all now (a full-screen
+  program, the presentation mode and the like).
+- To check: minimise the game (Alt+Tab), wait for an event (a monster's attack, HP and SP back, a whisper) and send a
+  report from the game.
+
 # uaRO Graphics 3.0.7-beta.7 — what is new
 
 - **The notification «HP and SP back».** While the game is behind and the character's HP and SP are both back (sitting,
