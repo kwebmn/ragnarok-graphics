@@ -1588,15 +1588,15 @@ constexpr Entry kTexts[] = {
     {Text::FxFloorReflectStrengthHint, "How much the floor reflects; in the rain more.",
      "Наскільки підлога відбиває; під дощем більше.",
      "Насколько пол отражает; под дождём больше."},
-    {Text::FxShafts,
-     "Glowing air at fire and lamps", "Сяюче повітря біля вогню й ламп", "Светящийся воздух у огня и ламп"},
+    {Text::FxShafts,  // 3.0.7-beta.5: the lamps' a part of their own (shafts_lamps)
+     "Glowing air at fire", "Сяюче повітря біля вогню", "Светящийся воздух у огня"},
     {Text::FxShaftsHint,
-     "The air glows around torches, lamps and burning skills, as in a light mist (walls in front hide it); on the "
-     "fields rays of light stream from the sky past the edge of the map. Direct3D 12.",
-     "Повітря світиться навколо факелів, ламп і палаючих умінь, як у легкому серпанку (стіни попереду його ховають); "
-     "на полях промені світла ллються з неба за краєм карти. Direct3D 12.",
-     "Воздух светится вокруг факелов, ламп и горящих умений, как в лёгкой дымке (стены впереди его прячут); на полях "
-     "лучи света льются с неба за краем карты. Direct3D 12."},
+     "The air glows around torches, burning skills, lava and portals, as in a light mist (walls in front hide it); on "
+     "the fields rays of light stream from the sky past the edge of the map. Direct3D 12.",
+     "Повітря світиться навколо факелів, палаючих умінь, лави й порталів, як у легкому серпанку (стіни попереду його "
+     "ховають); на полях промені світла ллються з неба за краєм карти. Direct3D 12.",
+     "Воздух светится вокруг факелов, горящих умений, лавы и порталов, как в лёгкой дымке (стены впереди его "
+     "прячут); на полях лучи света льются с неба за краем карты. Direct3D 12."},
     {Text::FxShaftsStrength, "Light in the air strength",
      "Сила світла в повітрі",
      "Сила света в воздухе"},
@@ -3386,6 +3386,14 @@ constexpr Entry kTexts[] = {
      "теж не видно.",
      "Сами светлячки — огоньки, что плывут и вспыхивают в воздухе. Выключено — только свет от них, светлячков игры "
      "тоже не видно."},
+    {Text::FxShaftsLamps, "At lamps and lights", "Біля ламп і вогників", "У ламп и огоньков"},  // 3.0.7-beta.5
+    {Text::FxShaftsLampsHint,
+     "The air glows around the maps' lamps, hidden lights and fireflies too - balls of light in the air, often where "
+     "no lamp is seen.",
+     "Повітря світиться ще й навколо ламп карт, прихованих вогників і світлячків — кулі світла в повітрі, часто там, "
+     "де лампи не видно.",
+     "Воздух светится ещё и вокруг ламп карт, скрытых огоньков и светлячков — шары света в воздухе, часто там, где "
+     "лампы не видно."},
     {Text::FxPortalNew, "New portal", "Новий портал", "Новый портал"},  // 2.7.48
     {Text::FxPortalNewHint,
      "The warps drawn anew at full resolution as the game's own: the white band of each ring and its crown of light "

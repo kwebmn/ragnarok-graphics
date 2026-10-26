@@ -208,6 +208,7 @@ EffectSettings effectsOff() {
     e.portalNew = false;  // 2.7.48
     e.mapGlowOrbs = false;  // 3.0.7-beta.1
     e.fireflyDots = false;  // 3.0.7-beta.3
+    e.shaftsLamps = false;  // 3.0.7-beta.5
     e.skyRays = e.treeSeasons = e.dragonflies = false;
     e.nightNow = 0;
     e.dayNow = -1;

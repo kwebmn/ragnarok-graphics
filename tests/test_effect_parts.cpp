@@ -136,3 +136,20 @@ TEST(effect_fireflies_in_the_air_are_a_part_of_their_own_off_by_default) {
     CHECK(!effectsOff().fireflyDots);
     CHECK(effect_groups::memberOf("effects.firefly_dots") == nullptr);  // the effect's, not a group's
 }
+
+TEST(effect_glowing_air_at_lamps_is_a_part_of_its_own_off_by_default) {
+    // 3.0.7-beta.5 (R-PB9EME «посмотри на скрине остались шарики», c_tower2): the air glowing about a lamp of the map's
+    // - a ball of light in the air where no lamp is seen (the .rsw's lights bake the map's light); the same about the
+    // hidden lights and the fireflies - a box of its own under «Сяюче повітря біля вогню», off; the fire's stays
+    CHECK(boxOf("effects.shafts_lamps") == "effects.shafts");
+    const IniSetting* s = findSetting("effects.shafts_lamps");
+    CHECK(s != nullptr);
+    if (!s) return;
+    CHECK(s->control == Control::Check);
+    const Config defaults = parseConfig("");
+    CHECK(tokenOf(*s, defaults) == "0");
+    CHECK(!defaults.effects.shaftsLamps);
+    CHECK(parseConfig("[effects]\nshafts = 1\nshafts_lamps = 1\n").effects.shaftsLamps);
+    CHECK(!effectsOff().shaftsLamps);
+    CHECK(effect_groups::memberOf("effects.shafts_lamps") == nullptr);  // the effect's, not a group's
+}

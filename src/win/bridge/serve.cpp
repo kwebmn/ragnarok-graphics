@@ -193,6 +193,7 @@ bool Server::dispatch(Msg type, const uint8_t* data, uint32_t size) {
             e.grassThin = rd.u8() != 0;  // 3.0.4-beta.35
             e.mapGlowOrbs = rd.u8() != 0;  // 3.0.7-beta.1
             e.fireflyDots = rd.u8() != 0;  // 3.0.7-beta.3
+            e.shaftsLamps = rd.u8() != 0;  // 3.0.7-beta.5
             if (rd.ok()) renderer_.setEffects(e);
             break;
         }

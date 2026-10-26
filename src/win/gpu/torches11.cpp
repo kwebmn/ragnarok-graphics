@@ -501,26 +501,6 @@ void Renderer11::applyTorchLight() {
         }
         skillAirEnd_ = count;
     }
-    {  // 0.28: the fireflies light a little around them, the nearest 16 (2.5.2: the map's dots, its orbs and pools)
-        std::vector<size_t> order(dots.size());
-        for (size_t i = 0; i < order.size(); ++i) order[i] = i;
-        std::sort(order.begin(), order.end(), [&](size_t a, size_t b) { return dots[a].vz < dots[b].vz; });
-        for (size_t i = 0, used = 0; i < order.size() && used < 16; ++i) {
-            const Dot& f = dots[order[i]];
-            if (f.bright < 0.05f) continue;
-            const float view[3] = {(f.gx - proj.cx) * f.vz / proj.f0, (f.gy - proj.cy) * f.vz / proj.f1, f.vz};
-            addLight(view, 12.0f, f.colour, 0.12f * f.bright);
-            ++used;
-        }
-    }
-    if (nightFlies)  // 2.7.18 (torches.cpp): the fireflies in the grass at night light the ground under them
-        for (const NightGlow11& g : nightGlows_) {
-            float view[3];
-            toView(g.at, view);
-            if (view[2] <= proj.nearZ) continue;
-            static const float kGreen[3] = {0.75f, 1.0f, 0.42f};
-            addLight(view, 9.0f, kGreen, 0.12f * g.lit);
-        }
     if (!lavaCells.empty()) {  // 0.31 (torches.cpp): the lava's heat by place (96 px cells), the nearest 12
         struct Pool {
             float view[3] = {0, 0, 0};
@@ -580,6 +560,29 @@ void Renderer11::applyTorchLight() {
             }
         }
     }
+    // 3.0.7-beta.5 (torches.cpp): the air glows about the fire's lights alone - the torches, the skills, the lava, the
+    // portals, all before this; the fireflies', the hidden lights' and the lamps' after it with shafts_lamps only
+    const int airLights = count;
+    {  // 0.28: the fireflies light a little around them, the nearest 16 (2.5.2: the map's dots, its orbs and pools)
+        std::vector<size_t> order(dots.size());
+        for (size_t i = 0; i < order.size(); ++i) order[i] = i;
+        std::sort(order.begin(), order.end(), [&](size_t a, size_t b) { return dots[a].vz < dots[b].vz; });
+        for (size_t i = 0, used = 0; i < order.size() && used < 16; ++i) {
+            const Dot& f = dots[order[i]];
+            if (f.bright < 0.05f) continue;
+            const float view[3] = {(f.gx - proj.cx) * f.vz / proj.f0, (f.gy - proj.cy) * f.vz / proj.f1, f.vz};
+            addLight(view, 12.0f, f.colour, 0.12f * f.bright);
+            ++used;
+        }
+    }
+    if (nightFlies)  // 2.7.18 (torches.cpp): the fireflies in the grass at night light the ground under them
+        for (const NightGlow11& g : nightGlows_) {
+            float view[3];
+            toView(g.at, view);
+            if (view[2] <= proj.nearZ) continue;
+            static const float kGreen[3] = {0.75f, 1.0f, 0.42f};
+            addLight(view, 9.0f, kGreen, 0.12f * g.lit);
+        }
     // 0.30 (torches.cpp): the forest's beams, gathered by place (cells of 64 game pixels): dust drifting in each,
     // light where it falls - the nearest 12
     if (!rayParts.empty()) {
@@ -725,7 +728,7 @@ void Renderer11::applyTorchLight() {
     };
     if (light) {  // the light from the list (torch_light_ps: t1 the list, t2 the copy, t3 the depth)
         ctx_->UpdateSubresource(lightData_, 0, nullptr, data, UINT(sizeof data), 0);
-        shaftLights_ = count;  // 2.5.5: the light in the air reads the list too
+        shaftLights_ = effects_.shaftsLamps ? count : std::min(airLights, count);  // 2.5.5; 3.0.7-beta.5 the fire's
         Constants lc = c;
         lc.footprint = float(count);
         lc.sourceRect[0] = effects_.roundLight ? 1.0f : 0.0f;  // 0.84

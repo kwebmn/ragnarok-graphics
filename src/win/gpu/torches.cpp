@@ -800,28 +800,6 @@ bool Renderer::Impl::applyTorches() {
                  orbPlaces);
     }
     fireSparks.clear();
-    // 0.28: the fireflies light a little around them, the nearest 16.
-    if (!flies.empty()) {
-        std::vector<size_t> order(flies.size());
-        for (size_t i = 0; i < order.size(); ++i) order[i] = i;
-        std::sort(order.begin(), order.end(), [&](size_t a, size_t b) { return flies[a].vz < flies[b].vz; });
-        for (size_t i = 0, used = 0; i < order.size() && used < 16 && lights.size() < kMaxLights; ++i) {
-            const Fly& f = flies[order[i]];
-            if (f.bright < 0.05f) continue;
-            const float vx = (f.gx - proj.cx) * f.vz / proj.f0, vy = (f.gy - proj.cy) * f.vz / proj.f1;
-            lights.push_back(
-                LightItem{{vx, vy, f.vz}, 0.12f * f.bright, {f.colour[0], f.colour[1], f.colour[2]}, 12.0f});
-            ++used;
-        }
-    }
-    // 2.7.18: the fireflies in the grass at night light the ground under them a little, pulsing with their glow
-    if (nightGlowsWanted())
-        for (const NightGlow& g : nightGlows) {
-            if (lights.size() >= kMaxLights) break;
-            const map::Point v = toView(viewToWorld, g.at);
-            if (v.z <= proj.nearZ) continue;
-            lights.push_back(LightItem{{v.x, v.y, v.z}, 0.12f * g.lit, {0.75f, 1.0f, 0.42f}, 9.0f});
-        }
     // 0.31: the lava's heat, gathered by place (cells of 96 game pixels): the nearest 12 light around, breathing.
     if (!lavaCells.empty() && lavaWanted()) {
         struct Pool {
@@ -887,6 +865,32 @@ bool Renderer::Impl::applyTorches() {
         }
     }
     portalSparks.clear();
+    // 3.0.7-beta.5 (R-PB9EME «посмотри на скрине остались шарики»): the air glows about these alone (the fire's - the
+    // torches, the skills, the lava, the portals); the lights after them - the fireflies', the hidden lights', the
+    // lamps' - with effects.shafts_lamps only: a lamp of the map's file glowed in the air where none is seen
+    const UINT airLights = UINT(lights.size());
+    // 0.28: the fireflies light a little around them, the nearest 16.
+    if (!flies.empty()) {
+        std::vector<size_t> order(flies.size());
+        for (size_t i = 0; i < order.size(); ++i) order[i] = i;
+        std::sort(order.begin(), order.end(), [&](size_t a, size_t b) { return flies[a].vz < flies[b].vz; });
+        for (size_t i = 0, used = 0; i < order.size() && used < 16 && lights.size() < kMaxLights; ++i) {
+            const Fly& f = flies[order[i]];
+            if (f.bright < 0.05f) continue;
+            const float vx = (f.gx - proj.cx) * f.vz / proj.f0, vy = (f.gy - proj.cy) * f.vz / proj.f1;
+            lights.push_back(
+                LightItem{{vx, vy, f.vz}, 0.12f * f.bright, {f.colour[0], f.colour[1], f.colour[2]}, 12.0f});
+            ++used;
+        }
+    }
+    // 2.7.18: the fireflies in the grass at night light the ground under them a little, pulsing with their glow
+    if (nightGlowsWanted())
+        for (const NightGlow& g : nightGlows) {
+            if (lights.size() >= kMaxLights) break;
+            const map::Point v = toView(viewToWorld, g.at);
+            if (v.z <= proj.nearZ) continue;
+            lights.push_back(LightItem{{v.x, v.y, v.z}, 0.12f * g.lit, {0.75f, 1.0f, 0.42f}, 9.0f});
+        }
     // 0.29: the maps' hidden lights, the nearest 24.
     std::sort(glowLights.begin(), glowLights.end(),
               [](const LightItem& a, const LightItem& b) { return a.view[2] < b.view[2]; });
@@ -1014,7 +1018,8 @@ bool Renderer::Impl::applyTorches() {
         list->CopyTextureRegion(&to, 0, 0, 0, &src, nullptr);
         transition(torchData, torchDataState, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
         c.footprint = float(lights.size());
-        shaftLights = UINT(lights.size());  // 0.73: for the light in the air
+        // 0.73: for the light in the air - 3.0.7-beta.5: the fire's first, the rest with shafts_lamps
+        shaftLights = effects.shaftsLamps ? UINT(lights.size()) : std::min(airLights, UINT(lights.size()));
         c.sourceRect[0] = effects.roundLight ? 1.0f : 0.0f;  // 0.84
         c.sharpen = effects.rimLight ? 0.6f * float(std::clamp(effects.rimStrength, 0, 200)) / 100.0f : 0.0f;  // 0.68
         const D3D12_RECT lit = clipped(lx0, ly0, lx1, ly1, w, h);

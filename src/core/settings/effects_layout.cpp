@@ -45,7 +45,7 @@ const EffectLayout kEffects[] = {
     {"effects.motes", {"effects.pollen", "effects.indoor_dust"}, {"effects.motes_amount"}, {}, 0},  // 0.70
     {"effects.relief", {}, {"effects.relief_strength"}, {}, 0},  // 0.71
     {"effects.floor_reflections", {}, {"effects.floor_reflect_strength"}, {}, 0},  // 0.72
-    {"effects.shafts", {"effects.sky_rays"}, {"effects.shafts_strength"}, {}, 0},  // 0.73
+    {"effects.shafts", {"effects.sky_rays", "effects.shafts_lamps"}, {"effects.shafts_strength"}, {}, 0},  // 0.73
     {"effects.day_cycle", {}, {}, {}, 0},  // 0.74
     {"effects.torch",
      {"effects.torch_flame"},

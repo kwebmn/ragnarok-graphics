@@ -311,6 +311,8 @@ const std::vector<IniSetting>& iniSettings() {
          Text::FxShaftsHint, "", &E::shafts},
         {"effects", "shafts_strength", Page::Effects, Control::Slider, 0, 200, 10, {}, {}, Text::FxShaftsStrength,
          Text::FxShaftsStrengthHint, " %", nullptr, &E::shaftsStrength},
+        {"effects", "shafts_lamps", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxShaftsLamps,
+         Text::FxShaftsLampsHint, "", &E::shaftsLamps},  // 3.0.7-beta.5: a part of shafts
         {"effects", "day_cycle", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxDayCycle,
          Text::FxDayCycleHint, "", &E::dayCycle},
         {"effects", "bloom", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxBloom,
