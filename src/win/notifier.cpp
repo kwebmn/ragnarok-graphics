@@ -29,6 +29,8 @@ constexpr UINT kIconId = 1;
 
 using IgnoredFn = int(__attribute__((thiscall)) *)(void* session, const char* name);
 using NotifyFn = BOOL(WINAPI*)(DWORD message, NOTIFYICONDATAW* data);
+using QuietFn = HRESULT(WINAPI*)(int* state);  // SHQueryUserNotificationState
+constexpr uint64_t kWhyEveryMs = 60000;  // 3.0.7-beta.8: a kind seen but not told - in the log once a minute
 
 struct State {
     HWND window = nullptr;
@@ -43,7 +45,36 @@ struct State {
     party::Watch party;
     buffs::Ending ending;
     notify::Recovery recovery;  // 3.0.7-beta.7
+    // 3.0.7-beta.8 (the user: «мне кажется что уведомления не выводятся»): what the log tells of it - each kind seen
+    // and not told (when last), Windows' own state of notifications
+    uint64_t whyAt[notify::kKinds] = {};
+    QuietFn quiet = nullptr;
 };
+
+const char* kindName(notify::Kind k) {
+    static const char* const kNames[] = {"a whisper",  "a party invitation", "a trade",       "a guild invitation",
+                                         "a friend",   "the death",          "an attack",     "a buff ending",
+                                         "a death in the party", "low HP in the party", "the party's chat",
+                                         "the guild's chat", "the name said", "the server gone", "HP and SP back"};
+    static_assert(sizeof kNames / sizeof kNames[0] == notify::kKinds, "a name a kind");
+    return kNames[int(k)];
+}
+
+// Windows' notifications now (SHQueryUserNotificationState): whether it shows them at all
+const char* quietState(State& s) {
+    int q = 0;
+    if (!s.quiet || FAILED(s.quiet(&q))) return "its state not known";
+    switch (q) {
+        case 1: return "the screen saver or a locked screen: held";
+        case 2: return "a full-screen program busy: held";
+        case 3: return "a Direct3D full-screen program: held";
+        case 4: return "the presentation mode: held";
+        case 5: return "accepting notifications";
+        case 6: return "the quiet time of a new user: held";
+        case 7: return "a Windows app in full screen: held";
+        default: return "an unknown state";
+    }
+}
 
 State& state() {
     static State s;
@@ -68,15 +99,17 @@ bool ignored(const std::string& name) {
     return fn(reinterpret_cast<void*>(uintptr_t(kSession)), padded) != 0;
 }
 
-// The balloon: the character's name above, the words below; the game's own icon
-void show(State& s, const std::string& words) {
+// The balloon: the character's name above, the words below; the game's own icon. 3.0.7-beta.8: whether Windows took it
+bool show(State& s, const std::string& words) {
     if (!s.shellTried) {
         s.shellTried = true;
         const HMODULE shell = LoadLibraryA("shell32.dll");
         const FARPROC fn = shell ? GetProcAddress(shell, "Shell_NotifyIconW") : nullptr;
         s.shell = reinterpret_cast<NotifyFn>(reinterpret_cast<void*>(fn));
+        const FARPROC q = shell ? GetProcAddress(shell, "SHQueryUserNotificationState") : nullptr;
+        s.quiet = reinterpret_cast<QuietFn>(reinterpret_cast<void*>(q));
     }
-    if (!s.shell || !s.window) return;
+    if (!s.shell || !s.window) return false;
     NOTIFYICONDATAW d{};
     d.cbSize = sizeof d;
     d.hWnd = s.window;
@@ -91,7 +124,9 @@ void show(State& s, const std::string& words) {
     copy(d.szInfoTitle, sizeof d.szInfoTitle / sizeof d.szInfoTitle[0], title);
     copy(d.szInfo, sizeof d.szInfo / sizeof d.szInfo[0], widened(words, CP_UTF8));
     d.dwInfoFlags = NIIF_INFO | (s.settings.sound ? 0u : DWORD(NIIF_NOSOUND));  // 3.0.7-beta.6: Windows' own sound
-    s.icon = s.shell(s.icon ? NIM_MODIFY : NIM_ADD, &d) != FALSE || s.icon;
+    const bool took = s.shell(s.icon ? NIM_MODIFY : NIM_ADD, &d) != FALSE;
+    s.icon = took || s.icon;
+    return took;
 }
 
 void hide(State& s) {
@@ -106,12 +141,27 @@ void hide(State& s) {
 
 void tell(notify::Kind kind, const std::string& who, const std::string& what) {
     State& s = state();
-    if (!s.window || !notify::wanted(s.settings, kind, s.front, s.main)) return;
+    if (!s.window) return;
+    if (!notify::wanted(s.settings, kind, s.front, s.main)) {
+        // 3.0.7-beta.8 (the user: «мне кажется что уведомления не выводятся»): why not, a kind once a minute
+        const uint64_t now = GetTickCount64();
+        uint64_t& at = s.whyAt[int(kind)];
+        if (!at || now - at >= kWhyEveryMs) {
+            at = now;
+            const char* why = !s.settings.on                                        ? "the notifications off"
+                              : s.front                                             ? "the game in front"
+                              : notify::wanted(s.settings, kind, false, true) ? "not the main game window"
+                                                                                    : "its box off";
+            LOG_INFO("notify: %s seen - not told: %s", kindName(kind), why);
+        }
+        return;
+    }
     FLASHWINFO f{sizeof f, s.window, FLASHW_TRAY | FLASHW_TIMERNOFG, 0, 0};  // until it is in front again
     FlashWindowEx(&f);
     if (!s.gate.pass(kind, GetTickCount64())) return;  // a burst: the flashing says it
-    show(s, notify::text(startup().lang, kind, fromGame(who), fromGame(what)));
-    LOG_INFO("notify: %d told from behind", int(kind));
+    const bool took = show(s, notify::text(startup().lang, kind, fromGame(who), fromGame(what)));
+    LOG_INFO("notify: %s told from behind - Windows %s it (error %lu), Windows' notifications: %s", kindName(kind),
+             took ? "took" : "refused", took ? 0ul : (unsigned long)GetLastError(), quietState(s));
 }
 
 // 3.0.7-beta.6 (the user's notification 6): what the party watch saw - a death, a fall under the threshold
@@ -136,6 +186,9 @@ void frame(HWND window, bool front, bool main, const Config& config) {
                                              : "not this uaRO.exe's packet loop - no notifications from the game");
     }
     if (front && !s.front) hide(s);  // back: the player sees the game itself
+    if (!front && s.front && s.window)  // 3.0.7-beta.8: the log tells when the game went behind
+        LOG_INFO("notify: the game behind - told from now (%s, the main game window %s)",
+                 config.notify.on ? "notifications on" : "notifications off", main ? "yes" : "no");
     s.window = window;
     s.front = front;
     s.main = main;
