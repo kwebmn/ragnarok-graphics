@@ -1,3 +1,16 @@
+# uaRO Graphics 3.0.5-beta.24 - what's new
+
+- **Lighter «Ground relief».** The test showed its cost on «Medium»: 1.6 ms of a Radeon 610M's frame under Direct3D 11
+  and 2.8 ms under Direct3D 12. It took four taps of the ground's texture round the pixel, each with full anisotropic
+  filtering. Now three plain ones: the pixel itself and a step right and down. The relief is nearly the same: half a
+  texel aside and a little softer where the ground is seen at a slant.
+- **Lighter «Map light without steps».** Its cost was 1.1 and 1.4 ms. The lightmap's blur took nine taps; now four - a
+  blur as wide, only its shape a little different. It helps «Low» too.
+- Direct3D 11 and Direct3D 12.
+- To check on the laptop: the «Graphics test» under Direct3D 11 from the same spot - the line «The card's cost within
+  «Medium»» had «Ground relief» 1.6, «Map light without steps» 1.1; by eye - the ground's cracks and pebbles and the
+  torches' pools of light as before.
+
 # uaRO Graphics 3.0.5-beta.23 - what's new
 
 - **The «Graphics test» measures «Medium» for weaker cards.** In place of «High without hills» and «High without
