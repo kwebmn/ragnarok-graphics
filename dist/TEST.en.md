@@ -1,3 +1,14 @@
+# uaRO Graphics 3.0.5-beta.21 - what's new
+
+- **Lighter soft shadows.** The shadows are worked out into a mask half the picture's size, and for each pixel of the
+  mask the scene's depth was read and worked out anew about twenty times: for the surface's slope and in two blurs.
+  Now a small pass of its own works out each mask pixel's depth once, and the shadows and the blur take it ready. Up
+  to 1080p the shadows are the same; at 4K the neighbours for the slope are taken a little wider - hardly to be seen.
+  And the screen's edge: in the outermost column and row the slope could come out undefined - now the neighbour on the
+  other side is taken there. Direct3D 11 and Direct3D 12.
+- To check on the laptop: the «Graphics test» under Direct3D 11 from the same spot - «soft shadows» on «Medium» were
+  3.34 ms; by eye - the shadows under trees, walls and by houses as before.
+
 # uaRO Graphics 3.0.5-beta.20 - what's new
 
 - **No grass work where no blade can come from.** The grass pass went over every pixel of the screen - a town's paving,
