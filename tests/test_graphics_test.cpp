@@ -167,6 +167,21 @@ TEST(graphics_test_reads_the_tagged_profile_lines_back_from_a_log) {
     CHECK(near(parts.at(3).cardMs, 22.5) && parts.at(3).parts[1].first == "ao");
 }
 
+// R-7JQ6XX (RTX 3060, DLAA): a part's own name may hold commas - it stays whole, not cut at its last comma
+TEST(graphics_test_keeps_a_part_whose_name_has_commas_whole) {
+    const std::string log =
+        "07:28:14.668 INFO  profile [test 1/7 off]: the card 4.14 ms a frame - the picture put together (DLSS, TAA, "
+        "the world made larger) 3.34, the picture into the window (the display letting go of it) 0.34, "
+        "the game's world 0.24 (ms)\n";
+    const std::map<int, graphics_test::Parts> parts = graphics_test::profileParts(log);
+    CHECK_EQ(int(parts.size()), 1);
+    CHECK_EQ(int(parts.at(0).parts.size()), 3);
+    CHECK(parts.at(0).parts[0].first == "the picture put together (DLSS, TAA, the world made larger)");
+    CHECK(near(parts.at(0).parts[0].second, 3.34));
+    CHECK(parts.at(0).parts[1].first == "the picture into the window (the display letting go of it)");
+    CHECK(parts.at(0).parts[2].first == "the game's world" && near(parts.at(0).parts[2].second, 0.24));
+}
+
 TEST(graphics_test_summary_is_a_short_table_of_the_sets) {
     graphics_test::Head h;
     h.version = "3.0.5-beta.6";

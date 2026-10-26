@@ -187,18 +187,26 @@ std::map<int, Parts> profileParts(const std::string& log) {
         const size_t list = line.find(kList, card);
         std::string rest = list == std::string::npos ? "" : line.substr(list + kList.size());
         if (rest.size() >= 5 && rest.compare(rest.size() - 5, 5, " (ms)") == 0) rest.resize(rest.size() - 5);
+        // a part is "<name> <ms>"; a name may hold commas itself ("the picture put together (DLSS, TAA, the world
+        // made larger)"), so a piece that does not end in a number is the head of the next one, not a part
         size_t at = 0;
+        std::string carry;
         while (at < rest.size()) {
             size_t comma = rest.find(", ", at);
             if (comma == std::string::npos) comma = rest.size();
-            const std::string item = rest.substr(at, comma - at);
+            std::string item = rest.substr(at, comma - at);
+            if (!carry.empty()) item = carry + ", " + item;
             at = comma + 2;
             const size_t space = item.rfind(' ');
-            if (space == std::string::npos || space == 0) continue;
             char* stop = nullptr;
-            const double ms = std::strtod(item.c_str() + space + 1, &stop);
-            if (stop && *stop == '\0' && stop != item.c_str() + space + 1)
+            const bool named = space != std::string::npos && space != 0;
+            const double ms = named ? std::strtod(item.c_str() + space + 1, &stop) : 0.0;
+            if (stop && *stop == '\0' && stop != item.c_str() + space + 1) {
                 p.parts.emplace_back(item.substr(0, space), ms);
+                carry.clear();
+            } else {
+                carry = item;
+            }
         }
         out[n - 1] = p;
     }
