@@ -3367,6 +3367,14 @@ constexpr Entry kTexts[] = {
      "як у комети.",
      "Голубой шар Ruwach, кружащий вокруг героя, — маленький яркий шарик в начале своего голубого шлейфа, как у "
      "кометы."},
+    {Text::FxMapGlowOrbs, "Orbs in the air", "Кулі вогників у повітрі", "Шары огоньков в воздухе"},  // 3.0.7-beta.1
+    {Text::FxMapGlowOrbsHint,
+     "The hidden lights' balls of light floating in the air. Off: only the light they throw on the ground, the walls "
+     "and the characters.",
+     "Кулі світла, що висять у повітрі над прихованими вогниками. Вимкнено — лише світло, яке вони кидають на землю, "
+     "стіни й персонажів.",
+     "Шары света, висящие в воздухе над скрытыми огоньками. Выключено — только свет, который они бросают на землю, "
+     "стены и персонажей."},
     {Text::FxPortalNew, "New portal", "Новий портал", "Новый портал"},  // 2.7.48
     {Text::FxPortalNewHint,
      "The warps drawn anew at full resolution as the game's own: the white band of each ring and its crown of light "

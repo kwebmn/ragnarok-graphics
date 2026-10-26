@@ -2257,7 +2257,7 @@ void Renderer::setEffects(const EffectSettings& e) {
     LOG_INFO("effects: smooth map light %s; torches %s, new flame %s, brightness %d%%, glow %d%%, light %d%%, flicker "
              "%d%%; chimney smoke %s, density %d%%; lamps %s, light %d%%; fire of skills lights %s, %d%%, "
              "the others %s; "
-             "fireflies %s, %d%%; hidden lights %s, %d%%; forest beams %s, %d%%; lava %s, %d%%; "
+             "fireflies %s, %d%%; hidden lights %s, %d%%, their orbs %s; forest beams %s, %d%%; lava %s, %d%%; "
              "characters' shadows %s, %d%%; heat haze %s, %d%%; portals %s, %d%%; "
              "weather %s, %d%%; shadows %s, "
              "strength %d%%, size %d%%; glow %s, strength %d%%, size %d%%, light %d%%; "
@@ -2267,7 +2267,8 @@ void Renderer::setEffects(const EffectSettings& e) {
              e.torchGlow, e.torchLight, e.torchFlicker, e.smoke ? "on" : "off", e.smokeDensity, e.lamps ? "on" : "off",
              e.lampsLight, e.fireLight ? "on" : "off", e.fireLightStrength, e.skillColours ? "on" : "off",
              e.fireflies ? "on" : "off",
-             e.firefliesBrightness, e.mapGlows ? "on" : "off", e.mapGlowsBrightness, e.rays ? "on" : "off",
+             e.firefliesBrightness, e.mapGlows ? "on" : "off", e.mapGlowsBrightness, e.mapGlowOrbs ? "on" : "off",
+             e.rays ? "on" : "off",
              e.raysBrightness, e.lava ? "on" : "off", e.lavaBrightness, e.actorShadows ? "on" : "off",
              e.actorShadowsStrength,
              e.heat ? "on" : "off", e.heatStrength, e.portals ? "on" : "off", e.portalsStrength,

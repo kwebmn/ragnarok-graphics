@@ -610,6 +610,8 @@ bool Renderer::Impl::applyTorches() {
                 if (clouds.size() < 32 && dustPs)
                     clouds.push_back(Cloud{gx, gy, v.z, perUnit, g.size, seed, 0.35f * user,
                                            {g.colour[0], g.colour[1], g.colour[2]}});
+            } else if (g.shape == map_glows::Shape::Orb && !effects.mapGlowOrbs) {
+                // 3.0.7-beta.1 (the user: «чтобы подсвечивали но не рисовались сами шары»): its light alone
             } else if (flies.size() < kMaxFireflies + 64) {
                 const bool pool = g.shape == map_glows::Shape::Pool;
                 Fly f{gx, gy, v.z, g.size * perUnit, (pool ? 0.18f : 0.75f) * breath * user,

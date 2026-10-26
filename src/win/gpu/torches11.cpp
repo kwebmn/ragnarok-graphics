@@ -384,6 +384,8 @@ void Renderer11::applyTorchLight() {
                 if (clouds.size() < 32 && dustPs_)
                     clouds.push_back(Cloud{gx, gy, v[2], perUnit, g.size, seed, 0.35f * user,
                                            {g.colour[0], g.colour[1], g.colour[2]}});
+            } else if (g.shape == map_glows::Shape::Orb && !effects_.mapGlowOrbs) {
+                // 3.0.7-beta.1 (as torches.cpp): its light alone
             } else if (dots.size() < 96 + 64) {
                 const bool pool = g.shape == map_glows::Shape::Pool;
                 dots.push_back(Dot{gx, gy, v[2], g.size * perUnit, (pool ? 0.18f : 0.75f) * breath * user,

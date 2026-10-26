@@ -241,6 +241,8 @@ const std::vector<IniSetting>& iniSettings() {
          Text::FxMapGlowsHint, "", &E::mapGlows},
         {"effects", "map_glows_brightness", Page::Effects, Control::Slider, 0, 200, 10, {}, {},
          Text::FxMapGlowsBrightness, Text::FxMapGlowsBrightnessHint, " %", nullptr, &E::mapGlowsBrightness},
+        {"effects", "map_glow_orbs", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxMapGlowOrbs,
+         Text::FxMapGlowOrbsHint, "", &E::mapGlowOrbs},  // 3.0.7-beta.1: a part of map_glows
         {"effects", "rays", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxRays, Text::FxRaysHint,
          "", &E::rays},
         {"effects", "rays_brightness", Page::Effects, Control::Slider, 0, 200, 10, {}, {}, Text::FxRaysBrightness,

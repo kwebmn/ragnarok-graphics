@@ -157,6 +157,9 @@ struct EffectSettings {
     // never shows - drawn from the map's file. On by default.
     bool mapGlows = true;
     int mapGlowsBrightness = 100;  // %, 0-200
+    // 3.0.7-beta.1 (the user: «чтобы подсвечивали но не рисовались сами шары»): their orbs drawn in the air; off -
+    // the light they throw alone. Off by default.
+    bool mapGlowOrbs = false;
     // 0.30: the forest's beams of light (Umbala, Geffenia, Glast Heim) - soft ends, light shimmering as through
     // moving leaves, dust in them, light where they fall. On by default.
     bool rays = true;

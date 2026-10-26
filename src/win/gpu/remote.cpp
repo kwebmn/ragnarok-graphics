@@ -467,6 +467,7 @@ void Remote::setEffects(const EffectSettings& e) {
     w.u8(e.ownGround ? 1 : 0);  // 3.0.4-beta.10
     w.u8(e.ownFarModels ? 1 : 0);  // 3.0.4-beta.14
     w.u8(e.grassThin ? 1 : 0);  // 3.0.4-beta.35
+    w.u8(e.mapGlowOrbs ? 1 : 0);  // 3.0.7-beta.1
     if (send(Msg::SetEffects, buffer_)) {
         effects_ = e;
         effectsSent_ = true;

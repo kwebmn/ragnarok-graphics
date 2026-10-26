@@ -55,7 +55,7 @@ const EffectLayout kEffects[] = {
     {"effects.smoke", {}, {"effects.smoke_density"}, {}, 1},
     {"effects.lamps", {}, {"effects.lamps_light"}, {}, 1},
     {"effects.fireflies", {}, {"effects.fireflies_brightness"}, {}, 1},
-    {"effects.map_glows", {}, {"effects.map_glows_brightness"}, {}, 1},
+    {"effects.map_glows", {"effects.map_glow_orbs"}, {"effects.map_glows_brightness"}, {}, 1},
     {"effects.rays", {}, {"effects.rays_brightness"}, {}, 1},
     {"effects.lava", {}, {"effects.lava_brightness"}, {}, 1},
     {"effects.portals", {"effects.portal_new"}, {"effects.portals_strength"}, {}, 1},  // 2.7.48 the new portal

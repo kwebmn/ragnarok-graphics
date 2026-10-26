@@ -104,3 +104,18 @@ TEST(effect_new_trees_are_gone) {
     }
     CHECK(parseConfig("[effects]\nnew_trees = 1\nanime_trees = 1\n").effects == parseConfig("").effects);
 }
+
+TEST(effect_hidden_lights_orbs_are_a_part_of_their_own_off_by_default) {
+    // 3.0.7-beta.1 (the user: «чтобы подсвечивали но не рисовались сами шары»): the hidden lights' orbs in the air - a
+    // box of their own under «Приховані вогники карт», off unless turned on: the light they throw stays
+    CHECK(boxOf("effects.map_glow_orbs") == "effects.map_glows");
+    const IniSetting* s = findSetting("effects.map_glow_orbs");
+    CHECK(s != nullptr);
+    if (!s) return;
+    CHECK(s->control == Control::Check);
+    const Config defaults = parseConfig("");
+    CHECK(tokenOf(*s, defaults) == "0");
+    CHECK(!defaults.effects.mapGlowOrbs && defaults.effects.mapGlows);
+    CHECK(parseConfig("[effects]\nmap_glow_orbs = 1\n").effects.mapGlowOrbs);
+    CHECK(effect_groups::memberOf("effects.map_glow_orbs") == nullptr);  // the effect's, not a group's
+}
