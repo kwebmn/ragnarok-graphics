@@ -1,3 +1,12 @@
+# uaRO Graphics 3.0.6-beta.5 — what is new
+
+- **«Bloom of bright places» no longer washes out pale sand.** On cmd_fild02's beach by day the sand went nearly
+  white: its brightness of 0.90-0.95 is over the bloom's threshold of 0.88, so the whole beach glowed. Now a place
+  glows only when it is clearly brighter than what is round it. Fire, lamps and glints over darker ground glow as
+  before; an even bright surface (sand, snow, a white wall in the sun) does not. On the shots: the washed places on the
+  beach from 40 % of the picture down to 1.7 %, the fire pillar in the dungeon glowing just as it did.
+- To check: the same beach in Comodo by day on «High»; and a look that fire and lamps at night glow as before.
+
 # uaRO Graphics 3.0.6-beta.4 — what is new
 
 - **«Own ground»: no hole on the stairs in Comodo.** On the fortress stairs of cmd_fild02 a round patch of rock showed
