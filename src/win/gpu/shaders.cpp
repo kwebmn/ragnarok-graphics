@@ -513,14 +513,18 @@ float4 shade(PsIn i) {
     // line both sides agree on. 3.0.5-beta.15 (R-R9XBKP: the strips 7.0 ms of a Radeon 610M's 42 on «Високі», the
     // dearest part): worked out first - a neighbour's strip's pixel the noise leaves the cell's own texture shows
     // nothing (its alpha), and is left before its textures, materials and hills (the most of a strip)
-    float seamOther = 1.0;
+    // 3.0.5-beta.22 (the user: «сделай» - the strips 9.7 ms of a Radeon 610M's 37 on «Високі» where the field's
+    // seams are many): far off they fade out - full while a cell (ten units) is 24 pixels of the picture or more,
+    // none under 12, where the wandering line was hardly to be seen and cost the same: the game's own edge there
+    float seamOther = 1.0, seamNear = 1.0;
     if (((stage1.y >> 31) & 1) != 0) {
         float3 w = P.x * float3(r0, r1, r2) + P.y * float3(r3, r4, r5) + P.z * float3(r6, r7, r8) +
                    float3(r9, r10, r11);
         float n = mnoise(w.xz * 0.22) * 0.65 + mnoise(w.xz * 0.7 + 5.1) * 0.35;
         float side = i.specular.g > 0.5 ? 1.0 : -1.0;
-        seamOther = smoothstep(-0.05, 0.05, i.diffuse.a - 0.5 + side * (n - 0.5) * 0.9);
-        if (i.specular.r <= 0.5 && seamOther < 0.001) discard;  // under half a step of 255 over the ground
+        seamNear = smoothstep(12.0, 24.0, 10.0 * f0 * scale / max(pz, 1.0));
+        seamOther = smoothstep(-0.05, 0.05, i.diffuse.a - 0.5 + side * (n - 0.5) * 0.9) * seamNear;
+        if ((i.specular.r <= 0.5 ? seamOther : seamNear) < 0.001) discard;  // under half a step of 255
     }
     bool material = ((stage1.y >> 28) & 1) != 0;
     float4 m = float4(0.5, 0.5, 0.5, 0.0);
@@ -633,7 +637,7 @@ float4 shade(PsIn i) {
         // 1.25: the own band whole at the edge (drawn first, applySeams) - partly see-through, the texture's dark rim
         // under it showed through the neighbour's strip as a line along the cells (the desert's "cracks")
         // 2.0.2: whole over the rim only, then fading out - whole over all of it, its mirror's axis showed
-        c.a = own ? 1.0 - smoothstep(0.3, 0.9, i.specular.b) : seamOther;
+        c.a = own ? (1.0 - smoothstep(0.3, 0.9, i.specular.b)) * seamNear : seamOther;
     }
 #endif
     if (fogEnable == 2) c.rgb = lerp(c.rgb, fogColor.rgb, fogColor.a);  // 2.3: uaRO Studio's X-ray, the state's colour
