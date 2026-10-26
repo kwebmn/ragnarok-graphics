@@ -57,6 +57,9 @@ public:
     void setOwnGround(bool wanted);
     const OwnGround* ownGround() const { return own_ && own_->map == shown_ ? own_.get() : nullptr; }
     void ownPicturesUp();
+    // 3.0.6-beta.3: the last read asked for not taken yet (asked, under way, or done and not polled) - «Тест графіки»
+    // waits for the own world's
+    bool reading() const { return asked_ != taken_; }
 
 private:
     struct Shared;
@@ -79,6 +82,7 @@ private:
     std::vector<rsw::Light> lamps_;
     std::vector<map::Point> seen_;    // where torches were seen, until the axes are known
     bool ownWanted_ = false;          // 3.0.4-beta.10
+    uint32_t asked_ = 0, taken_ = 0;  // 3.0.6-beta.3: the reads' numbers - the last asked for, the last taken
     std::unique_ptr<OwnGround> own_;
     uint32_t ownSerial_ = 0;
 };

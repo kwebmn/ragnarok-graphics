@@ -65,6 +65,52 @@ TEST(graphics_test_runs_each_set_settling_then_measured_and_ends_once) {
     }
 }
 
+// 3.0.6-beta.3 (R-ZSDWYU: «Високі» measured while its own world and their pictures still went up - 3 s settled, that
+// took 5-7 s on a FirePro W5130M laptop): a set settles on while its renderer says it still makes its things, then a
+// second more, and is measured 12 s from there; at most 30 s of settling, then measured as it is (said so)
+TEST(graphics_test_settles_a_set_while_its_renderer_still_makes_its_things) {
+    Run run;
+    run.start(0.0);
+    double began[graphics_test::kSets], ended[graphics_test::kSets], settled[graphics_test::kSets];
+    bool capped[graphics_test::kSets] = {};
+    for (int p = 0; p < graphics_test::kSets; ++p) began[p] = ended[p] = settled[p] = -1.0;
+    int finished = 0;
+    for (double t = 0.0; t < 300.0 && run.running(); t += 0.01) {
+        // the first set's things made until 7.4 s, the second's never; the others' at once
+        const bool loading = t < 7.4 || (t >= 20.0 && began[1] < 0.0);
+        const Step s = run.frame(t, 10.0, loading);
+        if (s.measureBegins) {
+            began[s.phase] = t;
+            settled[s.phase] = s.settledS;
+            capped[s.phase] = s.settleCapped;
+        }
+        if (s.measureEnds) ended[s.ended] = t;
+        finished += s.finished ? 1 : 0;
+    }
+    CHECK(near(began[0], 8.4, 0.02));  // a second after the last word of it
+    CHECK(near(settled[0], 8.4, 0.02) && !capped[0]);
+    CHECK(near(ended[0], 20.4, 0.02));  // 12 s measured
+    CHECK(near(began[1], 50.4, 0.02));  // never done: 30 s after the set began, measured as it is
+    CHECK(near(settled[1], 30.0, 0.02) && capped[1]);
+    CHECK(near(began[2], 65.4, 0.02) && near(settled[2], 3.0, 0.02) && !capped[2]);  // the others as before
+    CHECK(near(ended[6], 50.4 + 12.0 + 5 * 15.0, 0.02));
+    CHECK_EQ(finished, 1);
+    CHECK(near(run.result(0).seconds, 12.0, 0.05) && near(run.result(1).seconds, 12.0, 0.05));
+}
+
+// the countdown on the screen: the sets not begun at 15 s each, the one shown by its own times
+TEST(graphics_test_counts_the_seconds_left_by_the_sets_own_times) {
+    Run run;
+    run.start(0.0);
+    CHECK(near(run.secondsLeft(0.0), 105.0));
+    run.frame(0.0, 10.0, true);
+    CHECK(near(run.secondsLeft(1.0), 104.0));
+    run.frame(5.0, 10.0, true);   // settling on past its 3 s
+    CHECK(near(run.secondsLeft(5.0), 90.0 + 12.0));
+    run.frame(6.0, 10.0, false);  // quiet from 5 s: measured from 6 s
+    CHECK(near(run.secondsLeft(10.0), 90.0 + 8.0));
+}
+
 TEST(graphics_test_measures_the_slowest_tenth_of_the_frames_as_frames_a_second) {
     Run run;
     run.start(0.0);

@@ -24,6 +24,9 @@ struct GpuTiming {
     // 2.5.26: NVIDIA Reflex holds the renderer's frames until the card is about to be free - the game then draws no
     // frame ahead of the screen (Remote::present)
     bool reflex = false;
+    // 3.0.6-beta.3: the renderer still makes the effects' one-time things - the own world read and its pictures going
+    // up, the AI textures' pictures of what is drawn read from the pack («Тест графіки» measures a set once done)
+    bool loading = false;
 };
 
 inline void writeTiming(bridge::WireWriter& w, const GpuTiming& t) {
@@ -41,6 +44,7 @@ inline void writeTiming(bridge::WireWriter& w, const GpuTiming& t) {
     }
     w.f32(float(t.shown));  // 2.5.24
     w.u8(t.reflex ? 1 : 0);  // 2.5.26
+    w.u8(t.loading ? 1 : 0);  // 3.0.6-beta.3
 }
 
 inline bool readTiming(bridge::WireReader& rd, GpuTiming& t) {
@@ -58,6 +62,7 @@ inline bool readTiming(bridge::WireReader& rd, GpuTiming& t) {
     }
     r.shown = rd.f32();  // 2.5.24
     r.reflex = rd.u8() != 0;  // 2.5.26
+    r.loading = rd.u8() != 0;  // 3.0.6-beta.3
     if (!rd.ok()) return false;
     t = r;
     return true;

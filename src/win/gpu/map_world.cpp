@@ -46,6 +46,7 @@ struct MapWorld::Shared {
     std::unique_ptr<OwnGround> doneOwn;
     bool doneOk = false;
     bool doneReady = false;
+    uint32_t askSerial = 0, doneSerial = 0;  // 3.0.6-beta.3: each ask's number, the finished read's
 };
 
 MapWorld::MapWorld() : shared_(new Shared) {
@@ -102,6 +103,7 @@ void MapWorld::ask(const std::string& name) {
     EnterCriticalSection(&shared_->lock);
     shared_->wanted = name;
     shared_->asked = true;
+    asked_ = ++shared_->askSerial;
     LeaveCriticalSection(&shared_->lock);
     if (!thread_) thread_ = CreateThread(nullptr, 0, &MapWorld::threadMain, this, 0, nullptr);
     SetEvent(shared_->wake);
@@ -140,6 +142,7 @@ void MapWorld::poll() {
         if (own_) own_->serial = ++ownSerial_;
         ready_ = shared_->doneOk;
         ++reads_;
+        taken_ = shared_->doneSerial;
     }
     shared_->doneReady = shared_->doneReady && !fresh;
     LeaveCriticalSection(&shared_->lock);
@@ -224,6 +227,7 @@ void MapWorld::loop() {
         const bool stop = shared_->stop;
         const bool asked = shared_->asked;
         const std::string name = shared_->wanted, dir = shared_->gameDir;
+        const uint32_t serial = shared_->askSerial;
         shared_->asked = false;
         LeaveCriticalSection(&shared_->lock);
         if (stop) return;
@@ -512,6 +516,7 @@ void MapWorld::loop() {
         shared_->doneOwn = std::move(own);
         shared_->doneOk = ok;
         shared_->doneReady = true;
+        shared_->doneSerial = serial;
         LeaveCriticalSection(&shared_->lock);
     }
 }

@@ -865,6 +865,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     }
     GpuTiming gpuNow;  // 2.2.1: the card's work a frame - the counter's and the console's
     const bool timed = renderer->gpuTiming(gpuNow);
+    rendererLoading_ = timed && gpuNow.loading;  // 3.0.6-beta.3: «Тест графіки» measures a set once it is done
     fps_.setGpu(timed ? &gpuNow : nullptr);
     fps_.present(window, fpsShown_ && !photo_);  // 3.0.4-beta.5: not in the photo mode's picture
     if (test_.running()) {  // 3.0.5-beta.6: the card's work of the set shown; the statistics leave the test out

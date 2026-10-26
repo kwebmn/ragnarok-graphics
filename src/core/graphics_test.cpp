@@ -100,46 +100,65 @@ void Run::start(double nowS) {
     startS_ = nowS;
 }
 
-Step Run::frame(double nowS, double frameMs) {
+Step Run::frame(double nowS, double frameMs, bool loading) {
     Step s;
     if (!running_) return s;
-    const double elapsed = std::max(0.0, nowS - startS_);
-    const int phase = int(elapsed / kPhaseS);
-    if (phase != phase_) {
-        if (phase_ >= 0 && measuring_) {
-            s.measureEnds = true;
-            s.ended = phase_;
-        }
+    if (phase_ < 0) {  // the first set
+        phase_ = 0;
+        phaseStartS_ = startS_;
+        loadingSeenS_ = -1.0;
+        s.setBegins = true;
+    }
+    if (measuring_ && nowS >= measureStartS_ + kMeasureS) {  // its window over: the next set from its end on
+        s.measureEnds = true;
+        s.ended = phase_;
         measuring_ = false;
-        if (phase >= kSets) {
+        if (phase_ + 1 >= kSets) {
             s.phase = kSets - 1;
             s.finished = true;
             running_ = false;
             return s;
         }
-        phase_ = phase;
+        ++phase_;
+        phaseStartS_ = measureStartS_ + kMeasureS;
+        loadingSeenS_ = -1.0;
         s.setBegins = true;
     }
     s.phase = phase_;
-    const double within = elapsed - double(phase_) * kPhaseS;
-    if (within >= kSettleS) {
-        s.measureBegins = !measuring_;
-        measuring_ = true;
+    if (!measuring_) {  // settling: its kSettleS, and on while its renderer makes its things, kQuietS after
+        if (loading) loadingSeenS_ = nowS;
+        const double quiet = loadingSeenS_ >= 0.0 ? loadingSeenS_ + kQuietS : 0.0;
+        const bool capped = quiet > phaseStartS_ + kSettleMostS;
+        const double from = capped ? phaseStartS_ + kSettleMostS : std::max(phaseStartS_ + kSettleS, quiet);
+        if (nowS >= from) {
+            measuring_ = true;
+            measureStartS_ = from;
+            s.measureBegins = true;
+            s.settledS = from - phaseStartS_;
+            s.settleCapped = capped;
+        }
+    }
+    if (measuring_) {
         s.measuring = true;
-        s.u = std::clamp((within - kSettleS) / kMeasureS, 0.0, 1.0);
+        s.u = std::clamp((nowS - measureStartS_) / kMeasureS, 0.0, 1.0);
         frameMs_[phase_].push_back(frameMs);
     }
     return s;
 }
 
+double Run::secondsLeft(double nowS) const {
+    if (!running_ || phase_ < 0) return double(kSets) * kPhaseS;
+    const double rest = double(kSets - 1 - phase_) * kPhaseS;
+    if (measuring_) return rest + std::max(0.0, measureStartS_ + kMeasureS - nowS);
+    return rest + std::max(0.0, phaseStartS_ + kSettleS - nowS) + kMeasureS;
+}
+
 void Run::gpu(double nowS, double gpuMs, const std::map<std::string, double>& effects) {
-    if (!running_ || gpuMs < 0.0) return;
-    const double elapsed = nowS - startS_;
-    const int phase = elapsed >= 0.0 ? int(elapsed / kPhaseS) : -1;
-    if (phase < 0 || phase >= kSets || elapsed - double(phase) * kPhaseS < kSettleS + kGpuSkipS) return;
-    gpuSum_[phase] += gpuMs;
-    ++gpuSamples_[phase];
-    for (const auto& [name, ms] : effects) effectSums_[phase][name] += ms;
+    // the set measured now, from a second into its window (the card's half-second averages may hold the settling)
+    if (!running_ || gpuMs < 0.0 || !measuring_ || nowS < measureStartS_ + kGpuSkipS) return;
+    gpuSum_[phase_] += gpuMs;
+    ++gpuSamples_[phase_];
+    for (const auto& [name, ms] : effects) effectSums_[phase_][name] += ms;
 }
 
 PhaseResult Run::result(int phase) const {

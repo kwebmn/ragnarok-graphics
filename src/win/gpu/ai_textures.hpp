@@ -69,6 +69,9 @@ public:
     // With the frame's list open, before its present: a slice. 1.5.4: foreground false - the game behind other
     // windows draws 15 frames a second (save_power), so a generating network takes up to kBackgroundMs of each.
     void work(bool foreground = true);
+    // 3.0.6-beta.3: the pack's pictures of the textures drawn lately still read or waiting to go up (not those read
+    // ahead, not the network's) - «Тест графіки» measures a set once they are in
+    size_t pending() const;
     bool shown = true;                              // Pause: the game's own textures
     uint8_t kindsShown = 0xFF;  // 2.2.1: the kinds shown ([ai] as the file has it now; bits as ai::Kind)
     bool kindShown(uint8_t kind) const { return kind >= 8 || (kindsShown >> kind & 1) != 0; }

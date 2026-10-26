@@ -24,6 +24,11 @@ constexpr double kSettleS = 3.0;    // a set's first seconds, not measured: its 
 constexpr double kMeasureS = 12.0;  // then measured: the camera turns once, goes out and back in
 constexpr double kPhaseS = kSettleS + kMeasureS;
 constexpr double kGpuSkipS = 1.0;  // the card's half-second averages that may still hold the settling's frames
+// 3.0.6-beta.3 (R-ZSDWYU: «Високі» measured while its own world's pictures still went up on a FirePro W5130M laptop -
+// 5-7 s of it): a set settles on while its renderer says it still makes the set's things (GpuTiming::loading), and
+// kQuietS more; at most kSettleMostS, then measured as it is
+constexpr double kQuietS = 1.0;
+constexpr double kSettleMostS = 30.0;
 
 const char* setWord(Set s);  // "off", "low", "medium", "medium-no-relief", "medium-no-smooth-light", "high", "own"
 std::string tagOf(int phase);  // the profile's tag of a set's measured window: "test 2/7 low"
@@ -56,6 +61,9 @@ struct Step {
     bool finished = false;  // the last set measured: the player's settings back, the result made
     bool measuring = false;
     double u = 0.0;  // the camera's path while measuring, 0..1
+    // 3.0.6-beta.3: with measureBegins - how long the set settled (s), and whether it was still loading at the end
+    double settledS = 0.0;
+    bool settleCapped = false;
 };
 
 class Run {
@@ -64,8 +72,10 @@ public:
     bool running() const { return running_; }
     void stop() { running_ = false; }
     double startS() const { return startS_; }
-    // each present of the game: the time now (s) and since the last present (ms)
-    Step frame(double nowS, double frameMs);
+    // each present of the game: the time now (s) and since the last present (ms); loading: its renderer's last word -
+    // the set's things still being made (3.0.6-beta.3)
+    Step frame(double nowS, double frameMs, bool loading = false);
+    double secondsLeft(double nowS) const;  // the test's, about: the sets not begun at their 15 s each
     // a new measurement of the card's (GpuTiming): its ms a frame and its timed passes' at nowS
     void gpu(double nowS, double gpuMs, const std::map<std::string, double>& effects);
     PhaseResult result(int phase) const;
@@ -75,6 +85,8 @@ private:
     double startS_ = 0.0;
     int phase_ = -1;
     bool measuring_ = false;
+    double phaseStartS_ = 0.0, measureStartS_ = 0.0;  // 3.0.6-beta.3: the set's own times, its settling as long as
+    double loadingSeenS_ = -1.0;                       // its renderer said it was loading (the last time it did)
     std::vector<double> frameMs_[kSets];
     double gpuSum_[kSets] = {};
     int gpuSamples_[kSets] = {};

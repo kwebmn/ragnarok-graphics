@@ -2169,6 +2169,14 @@ void AiTextures::observe(UINT slot, double ms) {
     budget_ = std::clamp(budget_ * 0.5 + want * 0.5, 5e7, 5e10);
 }
 
+size_t AiTextures::pending() const {
+    size_t n = 0;
+    for (const auto& [id, item] : items_)
+        n += item.state == Item::Waiting && !item.later && (item.loading || !item.argb.empty()) &&
+             frame_ - item.lastUse < 30;
+    return n;
+}
+
 void AiTextures::logNow(bool final) {
     const ULONGLONG now = GetTickCount64();
     if (!final && now - lastLog_ < 30000) return;

@@ -19,6 +19,7 @@ TEST(gpu_timing_goes_over_the_bridge_whole) {
     t.safeShaders = 3;  // 2.2.2: compiled without their newest features in that process
     t.shown = 3.875;    // 2.5.24: frames shown a frame of the game with frame generation
     t.reflex = true;    // 2.5.26: NVIDIA Reflex holds the renderer's frames - the game draws none ahead
+    t.loading = true;   // 3.0.6-beta.3: the set's things still made («Тест графіки» settles on)
     std::vector<uint8_t> bytes;
     bridge::WireWriter w(bytes);
     writeTiming(w, t);
@@ -30,6 +31,7 @@ TEST(gpu_timing_goes_over_the_bridge_whole) {
     CHECK_EQ(back.safeShaders, 3);
     CHECK_EQ(back.shown, 3.875);
     CHECK(back.reflex);
+    CHECK(back.loading);
     bridge::WireReader cut(bytes.data(), 6);  // cut short: nothing taken
     GpuTiming none;
     CHECK(!readTiming(cut, none) && none.gpuMs < 0.0);

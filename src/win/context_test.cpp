@@ -126,10 +126,12 @@ void Context::testStart() {
     testSendAt_ = testSentUntil_ = 0;
     testFx_ = testSet(graphics_test::Set::Off);  // the game's draws ask effects() before the next present's step
     test_.start(testLastS_);
-    LOG_INFO("test: «Тест графіки» on %s at the world's %.0f, %.0f - %d sets, each %.0f s settling and %.0f s "
-             "measured; the camera turns once from %.0f degrees, %.0f to %.0f and back (%s; it was at %.0f)",
-             map.c_str(), double(at[0]), double(at[2]), kSets, graphics_test::kSettleS, graphics_test::kMeasureS, yaw,
-             testFrom_, testTo_, ownLimits ? "the map's own limits" : outdoor ? "outdoors" : "a building", distance);
+    LOG_INFO("test: «Тест графіки» on %s at the world's %.0f, %.0f - %d sets, each %.0f s settling (on while its "
+             "renderer makes its things, up to %.0f s) and %.0f s measured; the camera turns once from %.0f degrees, "
+             "%.0f to %.0f and back (%s; it was at %.0f)",
+             map.c_str(), double(at[0]), double(at[2]), kSets, graphics_test::kSettleS, graphics_test::kSettleMostS,
+             graphics_test::kMeasureS, yaw, testFrom_, testTo_,
+             ownLimits ? "the map's own limits" : outdoor ? "outdoors" : "a building", distance);
 }
 
 // 3.0.5-beta.7 (the user: «сделай» - the settings app's button): a game started by «Тест графіки» begins the test on
@@ -192,7 +194,7 @@ void Context::testFrame(bool foreground) {
                                                                       : nullptr;
     if (why) return testStop(why);
     const double now = testClockS();
-    const graphics_test::Step step = test_.frame(now, (now - testLastS_) * 1000.0);
+    const graphics_test::Step step = test_.frame(now, (now - testLastS_) * 1000.0, rendererLoading_);
     testLastS_ = now;
     if (step.measureEnds) renderer->profileCut(graphics_test::tagOf(step.ended), true);
     if (step.finished) return testFinish();
@@ -202,10 +204,14 @@ void Context::testFrame(bool foreground) {
                  graphics_test::kSettleS);
     }
     if (step.measureBegins) renderer->profileCut("", true);  // the settling's frames dropped
+    if (step.measureBegins && step.settledS > graphics_test::kSettleS + 0.05)  // 3.0.6-beta.3 (R-ZSDWYU)
+        LOG_INFO("test: %s - measured from %.1f s: its renderer was still making its things (the own world, the AI "
+                 "textures' pictures)%s", graphics_test::tagOf(step.phase).c_str(), step.settledS,
+                 step.settleCapped ? " - not done by then, measured as it is" : "");
     // settling: the game eases the camera to the path's start; measured: written as shown, the same on every computer
     const graphics_test::Pose p = graphics_test::poseAt(testStart_.yaw, testFrom_, testTo_, step.u);
     writeCameraPose(p.yaw, p.distance, step.measuring);
-    const int left = std::max(0, int(std::ceil(double(kSets) * graphics_test::kPhaseS - (now - test_.startS()))));
+    const int left = std::max(0, int(std::ceil(test_.secondsLeft(now))));
     if (left != testLeftShown_) {
         testLeftShown_ = left;
         static const Text kNames[kSets] = {Text::TestSetOff,           Text::FxPresetWeak,

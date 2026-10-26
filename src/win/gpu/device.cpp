@@ -313,6 +313,9 @@ void Renderer::Impl::noteGpuFrame() {
         recent.upscaler = upscaler && recentUpscale ? upscaler->name() : "";
         recent.shown = upscaler ? upscaler->shownPerFrame() : 0.0;  // 2.5.24: frame generation's
         recent.reflex = upscaler && upscaler->latencyMarkers();       // 2.5.26
+        // 3.0.6-beta.3: the own world read or its pictures going up, the AI textures' pictures of what is drawn
+        recent.loading = (ownGroundWanted() && (mapWorld.reading() || (ownState.serial && !ownState.up))) ||
+                         (ai && ai->pending() > 0);
         recent.effects.clear();
         for (UINT e = 0; e < kEffectTimes; ++e) {
             if (recentEffect[e]) recent.effects[passName(e).key] = double(recentEffect[e]) * ms;

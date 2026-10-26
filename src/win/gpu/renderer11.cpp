@@ -3837,6 +3837,7 @@ void Renderer11::timeFrame() {
                                                              "glow", "water", "floor", "grass", "world",
                                                              "interface"};
         recent_.gpuMs = recentMs_ / recentFrames_;
+        recent_.loading = ai_ && ai_->pending() > 0;  // 3.0.6-beta.3: the AI textures' pictures of what is drawn
         recent_.effects.clear();
         for (int e = 0; e < kEffectTimes11; ++e) {
             // the effects' costs (keep_fps, the console) and the world's (2.5.16: keep_fps turns the world's

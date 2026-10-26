@@ -187,6 +187,12 @@ void Ai11::noteUpload(uint32_t id, int width, int height, const UploadCmd& u, co
     if (pictures_->knownKind(item.key, kind)) begin(id, item, kind, true);  // ahead: on its way before it is drawn
 }
 
+size_t Ai11::pending() const {
+    size_t n = 0;
+    for (const auto& [id, item] : items_) n += item.state == Item::Waiting && frame_ - item.lastUse < 30;
+    return n;
+}
+
 void Ai11::begin(uint32_t id, Item& item, ai::Kind kind, bool ahead) {
     item.kind = kind;
     item.ui = kind == ai::Kind::Icons;  // through noteUpload only the interface's big pictures have this kind

@@ -173,6 +173,7 @@ private:
     std::string testMap_;
     double testLastS_ = 0.0;
     uint32_t testGpuSerial_ = 0;
+    bool rendererLoading_ = false;  // 3.0.6-beta.3: its last word (GpuTiming::loading) - a test's set settles on
     int testLeftShown_ = -1;      // the progress line's seconds as last shown
     uint64_t testSendAt_ = 0;     // the result made then: the renderers' last lines in their logs first
     uint64_t testSentUntil_ = 0;  // the settings app's answer looked for till then
