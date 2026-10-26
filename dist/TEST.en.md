@@ -1,3 +1,11 @@
+# uaRO Graphics 3.0.7-beta.7 — what is new
+
+- **The notification «HP and SP back».** While the game is behind and the character's HP and SP are both back (sitting,
+  a rest), a notification comes - only after HP or SP fell well; once, again after the next fall. In the
+  configurator: page «Game», section «Notifications» - «HP and SP back» (on by default) and «Back to» (50-100 %, 100 %
+  by default - full HP and SP).
+- To check: spend SP and take a few hits, sit down, minimise the game - a notification once HP and SP are full.
+
 # uaRO Graphics 3.0.7-beta.6 — what is new
 
 - **New notifications while the game is behind.** In the configurator, page «Game», section «Notifications», under
