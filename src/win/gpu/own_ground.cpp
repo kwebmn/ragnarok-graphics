@@ -388,7 +388,15 @@ bool Renderer::Impl::drawOwnGround() {
         bs.zWrite = false;
         bs.zFunc = seamsView == 2 ? d3d7::CMP_ALWAYS : d3d7::CMP_LESSEQUAL;
         bs.alphaTest = false;
-        const uint32_t state = o.rec.addState(st), blendState = o.rec.addState(bs);
+        // 3.0.9-beta.3 (R-6JBVTG: magenta strips along Izlude's bridge and wall): a texture with the game's
+        // see-through magenta (keyed away when read, OwnGround::Picture::keyed) - its clear texels cut, as the game's
+        // colour key drops them
+        DrawSetup ks = st;
+        ks.colorKey = true;
+        ks.alphaTest = true;
+        ks.alphaFunc = d3d7::CMP_GREATEREQUAL;
+        ks.alphaRef = 0x80;
+        const uint32_t state = o.rec.addState(st), blendState = o.rec.addState(bs), keyedState = o.rec.addState(ks);
         for (std::vector<OwnState::Pending>& layer : o.pending) {
             layer.resize(o.ids.size() + 1);
             for (OwnState::Pending& pd : layer) pd.verts.clear(), pd.idx.clear();
@@ -398,8 +406,10 @@ bool Renderer::Impl::drawOwnGround() {
             OwnState::Pending& pd = o.pending[layer][t];
             if (!pd.idx.empty()) {
                 DrawCmd cmd;
-                cmd.state = layer == terrain::kGround ? state : blendState;
+                const bool keyed = t < g->textures.size() && g->textures[t].keyed;
+                cmd.state = layer == terrain::kGround ? (keyed ? keyedState : state) : blendState;
                 cmd.texture[0] = t < o.ids.size() ? o.ids[t] : 0;
+                cmd.keyed[0] = keyed;
                 cmd.texture[1] = o.atlas;
                 cmd.primitive = d3d7::PT_TRIANGLELIST;
                 cmd.fvf = d3d7::FVF_TL2;

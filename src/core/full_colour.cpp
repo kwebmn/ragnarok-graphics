@@ -84,4 +84,14 @@ const uint32_t* aiTexels(const UploadCmd& u, const uint32_t* pixels, std::vector
     return keep.data();
 }
 
+bool keyMagenta(std::vector<uint32_t>& argb) {
+    bool any = false;
+    for (uint32_t& c : argb)
+        if (((c >> 16) & 0xFFu) >= 0xFEu && ((c >> 8) & 0xFFu) <= 3u && (c & 0xFFu) >= 0xFEu) {
+            c = 0x00080808u;
+            any = true;
+        }
+    return any;
+}
+
 }  // namespace uagfx::full_colour

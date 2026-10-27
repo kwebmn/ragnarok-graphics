@@ -339,7 +339,8 @@ void MapWorld::loop() {
                         return got;
                     };
                     // a texture in full colour with its mipmaps, each half of the one before; `keyed`: the magenta
-                    // see-through (3.0.4-beta.14, the models' leaves and fences, as the game keys them)
+                    // see-through (3.0.4-beta.14, the models' leaves and fences, as the game keys them; 3.0.9-beta.3
+                    // the ground's too - R-6JBVTG, Izlude's bridge and wall)
                     const auto picture = [&](const std::string& name, bool keyed) {
                         OwnGround::Picture pic;
                         std::vector<uint8_t> tb;
@@ -356,10 +357,7 @@ void MapWorld::loop() {
                             pw <= 0 || ph <= 0)
                             return pic;
                         // keyed to the game's own see-through texel (0x0421 in its 16 bits): the AI textures know it
-                        if (keyed && !tga)
-                            for (uint32_t& c : argb)
-                                if (((c >> 16) & 0xFF) >= 0xFE && ((c >> 8) & 0xFF) <= 3 && (c & 0xFF) >= 0xFE)
-                                    c = 0x00080808u;
+                        if (keyed && !tga) pic.keyed = full_colour::keyMagenta(argb);
                         pic.width = pw;
                         pic.height = ph;
                         pic.levels.push_back(std::move(argb));
@@ -375,7 +373,7 @@ void MapWorld::loop() {
                     };
                     unsigned found = 0;
                     for (const std::string& t : full.textures) {
-                        own->textures.push_back(picture(t, false));
+                        own->textures.push_back(picture(t, true));
                         found += own->textures.back().levels.empty() ? 0 : 1;
                     }
                     // 3.0.4-beta.14: its models, each file read once, placed as the map places them

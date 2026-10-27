@@ -84,3 +84,19 @@ TEST(full_colour_mips_by_alpha) {
     CHECK_EQ(full_colour::mergeMip(PixelFormat::A4R4G4B4, 0x88102030u, 0x80112233u), 0x80112233u);
     CHECK_EQ(full_colour::mergeMip(PixelFormat::A4R4G4B4, 0x88102030u, 0u), 0x88102030u);
 }
+
+// 3.0.9-beta.3 (R-6JBVTG, Izlude's bridge: magenta strips on the own ground): the game's see-through magenta made clear
+// in a decoded picture, as the game keys its textures - the bridge's and the wall's ground textures have 6-8 % of it
+TEST(full_colour_keys_the_games_magenta) {
+    std::vector<uint32_t> argb = {0xFFFF00FFu, 0xFFFE03FEu, 0xFF00FF00u, 0xFFFF10FFu, 0xFF808080u};
+    CHECK(full_colour::keyMagenta(argb));
+    CHECK_EQ(argb[0], 0x00080808u);
+    CHECK_EQ(argb[1], 0x00080808u);
+    CHECK_EQ(argb[2], 0xFF00FF00u);  // green stays
+    CHECK_EQ(argb[3], 0xFFFF10FFu);  // pink, not the key
+    CHECK_EQ(argb[4], 0xFF808080u);
+    std::vector<uint32_t> plain = {0xFF102030u, 0xFFFFFFFFu};
+    CHECK(!full_colour::keyMagenta(plain));
+    CHECK_EQ(plain[0], 0xFF102030u);
+    CHECK_EQ(plain[1], 0xFFFFFFFFu);
+}

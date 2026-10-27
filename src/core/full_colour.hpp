@@ -38,6 +38,10 @@ uint32_t mergeMip(PixelFormat f, uint32_t argb, uint32_t full);
 // The next level of a full-colour picture: four texels' average weighted by their alpha (a transparent one lends no
 // colour), the alpha their mean.
 void halve(const std::vector<uint32_t>& in, int w, int h, std::vector<uint32_t>& out, int& ow, int& oh);
+// 3.0.9-beta.3: the game's see-through magenta (red and blue 0xFE or more, green 3 or less) in a decoded picture made
+// clear, the colour under it near black (0x00080808), as the game keys its textures (0x0421 in its 16 bits: the AI
+// textures know it); true when the picture had any (R-6JBVTG: Izlude's bridge and wall ground textures, 6-8 % of it)
+bool keyMagenta(std::vector<uint32_t>& argb);
 
 // What a texel of an upload in full colour was in the 16-bit texture (f): the AI textures know a texture by those.
 uint32_t gameTexel(PixelFormat f, uint32_t texel);

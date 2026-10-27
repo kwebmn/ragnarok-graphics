@@ -27,6 +27,7 @@ struct OwnGround {
     struct Picture {
         int width = 0, height = 0;
         std::vector<std::vector<uint32_t>> levels;  // ARGB, the whole first, then each half
+        bool keyed = false;  // 3.0.9-beta.3: it had the game's see-through magenta, made clear (keyMagenta)
     };
     std::vector<Picture> textures;  // the .gnd's, by index; 0 x 0 not found
     // 3.0.4-beta.14 (the user chose «Дома и деревья вдали»): the map's models placed (core/own_models.hpp), their
