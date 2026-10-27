@@ -1,3 +1,10 @@
+# uaRO Graphics 3.0.9-beta.3 — what is new
+
+- **«Own ground»: no magenta strips.** Some ground textures have see-through places marked in magenta (in Izlude the
+  bridge and the wall: 6-8 % of the texture). The game makes them see-through, while «Own ground» drew them magenta -
+  bright magenta strips ran along Izlude's bridge and wall. Those places are now see-through, as in the game.
+- To check: Izlude, the bridge by the water (as in report R-6JBVTG) - no magenta strips.
+
 # uaRO Graphics 3.0.9-beta.2 — what is new
 
 - **The log: a white wash over the world.** Once after Berserk the screen stayed white, in «pause» too, and the night
