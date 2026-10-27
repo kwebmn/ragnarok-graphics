@@ -32,6 +32,8 @@ ALLOWED = {
         "CreateCompatibleBitmap", "CreateCompatibleDC", "DeleteDC", "GetObjectW", "SetBrushOrgEx", "SetStretchBltMode",
         "StretchBlt",
         "BitBlt", "CreateSolidBrush",  # 1.6.2: the preview's window
+        # 3.0.9-beta.5: «Звернення» as a messenger - the cards, the bubbles, the rules (all since Windows NT)
+        "CreatePen", "Ellipse", "GetStockObject", "LineTo", "MoveToEx", "RoundRect", "SetBkColor",
     },
     "kernel32.dll": {
         "SystemTimeToTzSpecificLocalTime",  # 2.13: the site's times in the player's clock
@@ -104,6 +106,8 @@ ALLOWED = {
     },
     "user32.dll": {
         "GetClipboardData", "IsClipboardFormatAvailable", "UpdateWindow",  # 2.13: Ctrl+V of a screenshot
+        # 3.0.9-beta.5: «Звернення»'s chat - its class, a thumbnail under the mouse (all since Windows NT)
+        "GetClassInfoExW", "GetCursorPos", "GetParent", "OffsetRect", "PtInRect",
         "IsWindowEnabled", "IsWindowVisible",  # 2.10: the progress window's Cancel, the status bar's Update
         # 1.6.2: the preview's window
         "BeginPaint", "EndPaint", "FillRect", "InvalidateRect", "ReleaseCapture", "ScreenToClient", "SetCapture",
