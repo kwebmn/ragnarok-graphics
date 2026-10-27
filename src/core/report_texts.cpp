@@ -30,4 +30,19 @@ std::string hint(settings::Lang l, const reports::Answer& a) {
     return settings::tr(l, Text::CardNew);
 }
 
+std::string listLine(settings::Lang l, const reports::Summary& s) {
+    if (!s.lastText.empty()) {
+        std::string words = s.lastText;
+        for (char& ch : words)
+            if (ch == '\n' || ch == '\r' || ch == '\t') ch = ' ';
+        return std::string(settings::tr(l, s.lastAuthor == "dev" ? Text::ReportDev : Text::ReportYou)) + ": " + words;
+    }
+    reports::Answer a;
+    a.status = s.status;
+    a.fixedIn = s.fixedIn;
+    if (s.status == reports::Status::New) return settings::tr(l, Text::ListWaitsDev);
+    if (s.status == reports::Status::NeedInfo || s.status == reports::Status::Fixed) return hint(l, a);
+    return status(l, s.status, s.fixedIn);
+}
+
 }  // namespace uagfx::reporttexts

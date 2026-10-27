@@ -124,6 +124,7 @@ bool parseConversation(const std::string& text, Conversation& out, std::string& 
     c.fixedIn = v["fixed_in"].asString();
     c.version = v["version"].asString();
     c.at = v["at"].asString();
+    c.devSeenAt = v["dev_seen_at"].asString();
     c.status = statusOf(v["status"].asString());
     c.kind = kindOf(v["kind"].asString());
     c.automatic = v["auto"].asBool();

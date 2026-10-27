@@ -12,5 +12,8 @@ namespace uagfx::reporttexts {
 std::string status(settings::Lang l, reports::Status s, const std::string& fixedIn);
 std::string strip(settings::Lang l, const reports::Answer& a);
 std::string hint(settings::Lang l, const reports::Answer& a);
+// 3.0.9-beta.5: «Звернення»'s list - a report's second line: the last message's start with its author («Розробник:
+// …», «Ви: …»), else what its status means
+std::string listLine(settings::Lang l, const reports::Summary& s);
 
 }  // namespace uagfx::reporttexts

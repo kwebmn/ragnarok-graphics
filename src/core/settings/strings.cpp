@@ -3782,9 +3782,9 @@ constexpr Entry kTexts[] = {
     {Text::ReportsColDate, "Updated",
      "Оновлено",
      "Обновлено"},
-    {Text::ReportStatusNew, "New",
-     "Нове",
-     "Новое"},
+    {Text::ReportStatusNew, "Sent",  // 3.0.9-beta.5: the player's word (the admin's stays «Нове»)
+     "Надіслано",
+     "Отправлено"},
     {Text::ReportStatusRead, "Read",
      "Прочитано",
      "Прочитано"},
@@ -4812,6 +4812,18 @@ constexpr Entry kTexts[] = {
      "скажет карточка в самой игре."},
     {Text::NotifyAnswerText, "Answer to the report {1}: {2}", "Відповідь на звернення {1}: {2}",
      "Ответ на обращение {1}: {2}"},
+    // 3.0.9-beta.5: «Звернення» as a messenger
+    {Text::TabOpen, "Open · {1}", "Відкриті · {1}", "Открытые · {1}"},
+    {Text::TabClosed, "Closed · {1}", "Закриті · {1}", "Закрытые · {1}"},
+    {Text::TalkDevRead, "The developer read it · {1}", "Розробник прочитав · {1}", "Разработчик прочитал · {1}"},
+    {Text::TalkSend, "Send · Ctrl+Enter", "Надіслати · Ctrl+Enter", "Отправить · Ctrl+Enter"},
+    {Text::TalkPaste, "Paste · Ctrl+V", "Вставити · Ctrl+V", "Вставить · Ctrl+V"},
+    {Text::TalkFacts, "{1} · driver {2} · sent {3}", "{1} · драйвер {2} · надіслано {3}",
+     "{1} · драйвер {2} · отправлено {3}"},
+    {Text::ListWaitsDev, "Waits for the developer", "Чекає на розробника", "Ждёт разработчика"},
+    {Text::TalkWaitsBar, "The developer waits for your answer: {1}", "Розробник чекає на вашу відповідь: {1}",
+     "Разработчик ждёт вашего ответа: {1}"},
+    {Text::TalkAutomatic, "automatic", "автоматичне", "автоматическое"},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

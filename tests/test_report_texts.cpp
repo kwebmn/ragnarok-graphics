@@ -26,3 +26,19 @@ TEST(report_texts_say_what_to_do) {
     CHECK_EQ(reporttexts::hint(Lang::Uk, a), std::string("Відкрийте, щоб прочитати відповідь."));
     CHECK_EQ(reporttexts::status(Lang::Uk, reports::Status::Closed, ""), std::string("Закрито"));
 }
+
+// 3.0.9-beta.5: the list's second line - the last message's start with its author, else what the status means
+TEST(report_texts_tell_the_lists_second_line) {
+    reports::Summary s;
+    s.status = reports::Status::NeedInfo;
+    s.lastAuthor = "dev";
+    s.lastText = "Надішліть\nз Pause";
+    CHECK_EQ(reporttexts::listLine(Lang::Uk, s), std::string("Розробник: Надішліть з Pause"));
+    s.lastAuthor = "player";
+    CHECK_EQ(reporttexts::listLine(Lang::Uk, s), std::string("Ви: Надішліть з Pause"));
+    s.lastText.clear();
+    CHECK_EQ(reporttexts::listLine(Lang::Uk, s), std::string("Розробник чекає на вашу відповідь."));
+    s.status = reports::Status::New;
+    CHECK_EQ(reporttexts::listLine(Lang::Uk, s), std::string("Чекає на розробника"));
+    CHECK_EQ(reporttexts::status(Lang::Uk, reports::Status::New, ""), std::string("Надіслано"));  // the player's word
+}

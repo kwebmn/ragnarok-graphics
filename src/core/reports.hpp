@@ -40,6 +40,7 @@ struct Message {
 };
 struct Conversation {
     std::string code, reason, fixedIn, version, at;
+    std::string devSeenAt;  // 3.0.9-beta.5: when the developer last opened it ("" unknown: an older site)
     Status status = Status::New;
     Kind kind = Kind::None;
     bool automatic = false;
