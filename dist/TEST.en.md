@@ -1,3 +1,18 @@
+# uaRO Graphics 3.0.9-beta.5 — what is new
+
+- **«Reports» as a messenger.** What you wrote, what the developer answered and where the report is:
+  - on the left — the reports as cards with the tabs «Open» / «Closed»: an orange dot for a new answer, the title,
+    the status in colour, the time and the last message's start;
+  - top right — the report's title, its status and its path: Sent → Read → Needs information → Being fixed → Fixed →
+    Closed, the current step marked;
+  - the conversation as bubbles: yours on the right, the developer's on the left; screenshots as thumbnails in their
+    message (a click opens one); a status change as a thin line across;
+  - when the developer waits for your answer — an orange bar with the question over the answer box;
+  - «Send · Ctrl+Enter», «Paste · Ctrl+V»; «Add a screenshot…» opens in the game's ScreenShot folder.
+- The status «New» is now «Sent» for you.
+- To check: open «Reports» — cards in the list, bubbles in the conversation, the screenshots' thumbnails come and open
+  on a click; Ctrl+Enter sends the answer.
+
 # uaRO Graphics 3.0.9-beta.4 — what is new
 
 - **A report's answer shows where you are.** When the developer answers, you learn of it at once:
