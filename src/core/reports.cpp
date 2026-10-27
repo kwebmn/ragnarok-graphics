@@ -1,6 +1,8 @@
 #include "core/reports.hpp"
 
+#include <algorithm>
 #include <cstdio>
+#include <utility>
 
 #include "core/json.hpp"
 #include "core/update_check.hpp"
@@ -86,6 +88,22 @@ bool parseList(const std::string& text, std::vector<Summary>& out, std::string& 
         s.kind = kindOf(r["kind"].asString());
         s.automatic = r["auto"].asBool();
         s.unread = int(r["unread"].asInt());
+        const json::Value& a = r["answer"];  // 3.0.9-beta.4
+        if (a.type() == json::Value::Object) {
+            s.hasAnswer = true;
+            s.answer.id = a["id"].asInt();
+            s.answer.code = s.code;
+            s.answer.text = a["text"].asString();
+            s.answer.at = a["at"].asString();
+            s.answer.status = s.status;
+            s.answer.fixedIn = s.fixedIn;
+        }
+        const json::Value& last = r["last"];
+        if (last.type() == json::Value::Object) {
+            s.lastAuthor = last["author"].asString();
+            s.lastText = last["text"].asString();
+            s.lastAt = last["at"].asString();
+        }
         list.push_back(s);
     }
     out = list;
@@ -161,6 +179,27 @@ int unreadOf(const std::vector<Summary>& list) {
     int n = 0;
     for (const Summary& s : list) n += s.unread > 0 ? s.unread : 0;
     return n;
+}
+
+std::vector<Answer> answersOf(const std::vector<Summary>& list) {
+    std::vector<std::pair<long long, Answer>> found;  // the time as one number (UTC), the answer
+    for (const Summary& s : list) {
+        if (s.unread <= 0) continue;
+        Answer a = s.hasAnswer ? s.answer : Answer{};
+        a.code = s.code;
+        a.status = s.status;
+        a.fixedIn = s.fixedIn;
+        if (a.at.empty()) a.at = s.updated;
+        Civil c;
+        const long long when = utcOf(a.at, c) ? ((((c.year * 13LL + c.month) * 32 + c.day) * 24 + c.hour) * 60 +
+                                                 c.minute) * 60 + c.second
+                                              : -1;
+        found.emplace_back(when, a);
+    }
+    std::stable_sort(found.begin(), found.end(), [](const auto& x, const auto& y) { return x.first > y.first; });
+    std::vector<Answer> out;
+    for (auto& f : found) out.push_back(std::move(f.second));
+    return out;
 }
 
 bool canConfirm(const Conversation& c, const std::string& installedVersion) {

@@ -11,12 +11,25 @@ enum class Status { New, Read, NeedInfo, Fixing, Fixed, Closed };
 // None: an automatic report, or one from before 2.13; 3.0.5-beta.6: Test - «Тест графіки»'s (never the player's pick)
 enum class Kind { None, Graphics, Crash, Slow, Other, Test };
 
+// 3.0.9-beta.4: an answer of the developer's not seen yet - what the game's card, the Windows notification and the
+// launcher's strip tell of (answersOf; uaro-graphics\reports\answers.json, core/report_answers)
+struct Answer {
+    long long id = 0;                     // the site's message; 0 from a site without "answer" (before 3.0.9-beta.4)
+    std::string code, text, at, fixedIn;  // text: its start (300 characters at most), "" when none came
+    Status status = Status::New;          // the report's now
+};
+
 struct Summary {
     std::string code, title, reason, fixedIn, at, updated;  // at / updated: ISO 8601 as the site writes them
     Status status = Status::New;
     Kind kind = Kind::None;
     bool automatic = false;
     int unread = 0;  // the developer's messages not seen yet
+    // 3.0.9-beta.4: the newest of them (the site's "answer"), and the last message's author ("player", "dev"; "" none),
+    // start and time - the list's second line
+    bool hasAnswer = false;
+    Answer answer;
+    std::string lastAuthor, lastText, lastAt;
 };
 struct Message {
     bool fromDev = false;
@@ -41,6 +54,9 @@ const char* kindToken(Kind k);  // "graphics", "crash", "slow", "other"; "" for 
 const char* statusToken(Status s);
 Status statusOf(const std::string& token);  // New for what it does not know
 int unreadOf(const std::vector<Summary>& list);
+// 3.0.9-beta.4: the unread reports' answers, newest first (a site without "answer": one per unread report, no words,
+// its update time)
+std::vector<Answer> answersOf(const std::vector<Summary>& list);
 // «Підтверджую» / «Ще є» once the fix is here: «Виправлено в X» and this install at X or later.
 bool canConfirm(const Conversation& c, const std::string& installedVersion);
 

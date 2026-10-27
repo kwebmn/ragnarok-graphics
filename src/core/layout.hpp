@@ -44,6 +44,9 @@ constexpr const char* kWindowPlaces = "uaro-graphics\\uaro-windows.txt";
 // reports the site did not take yet (queued-*.json, sent at the app's next start)
 constexpr const char* kReports = "uaro-graphics\\reports";
 constexpr const char* kComputerKey = "uaro-graphics\\reports\\computer.txt";
+// 3.0.9-beta.4: the developer's answers not seen yet, as the game's watcher last heard them (core/report_answers) -
+// the driver shows them in the game
+constexpr const char* kAnswers = "uaro-graphics\\reports\\answers.json";
 // 2.14: the client patcher (app/client_patch): the list of the game's files last put, and where they arrive first
 constexpr const char* kClientPatchRecord = "uaro-graphics\\client-patch.txt";
 constexpr const char* kClientPatchWork = "uaro-graphics\\update\\client";

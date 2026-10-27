@@ -129,3 +129,66 @@ TEST(reports_know_the_graphics_tests_kind) {
     CHECK_EQ(int(list.size()), 1);
     CHECK(list[0].kind == reports::Kind::Test);
 }
+
+// 3.0.9-beta.4: the site's answer to show (the newest dev message not seen) and the last message's start
+TEST(reports_list_reads_the_answer_and_the_last_message) {
+    const char* const json =
+        "{\"reports\":["
+        "{\"code\":\"R-7BDUE3\",\"status\":\"need_info\",\"unread\":1,\"updated\":\"2026-10-27T00:31:00+00:00\","
+        "\"answer\":{\"id\":218,\"text\":\"\\u041d\\u0430\\u0434\\u0456\\u0448\\u043b\\u0456\\u0442\\u044c\","
+        "\"status\":\"need_info\",\"at\":\"2026-10-27T00:31:00+00:00\"},"
+        "\"last\":{\"author\":\"dev\",\"text\":\"\\u041d\\u0430\",\"at\":\"2026-10-27T00:31:00+00:00\"}},"
+        "{\"code\":\"R-6JBVTG\",\"status\":\"new\",\"unread\":0,\"answer\":null,\"last\":null}]}";
+    std::vector<reports::Summary> list;
+    std::string error;
+    CHECK(reports::parseList(json, list, error));
+    CHECK_EQ(list.size(), size_t(2));
+    CHECK(list[0].hasAnswer);
+    CHECK_EQ(list[0].answer.id, 218LL);
+    CHECK_EQ(list[0].answer.text, std::string("Надішліть"));
+    CHECK_EQ(list[0].answer.at, std::string("2026-10-27T00:31:00+00:00"));
+    CHECK_EQ(list[0].lastAuthor, std::string("dev"));
+    CHECK_EQ(list[0].lastText, std::string("На"));
+    CHECK_EQ(list[0].lastAt, std::string("2026-10-27T00:31:00+00:00"));
+    CHECK(!list[1].hasAnswer);
+    CHECK_EQ(list[1].lastAuthor, std::string(""));
+}
+
+// The answers the game and the launcher tell of: the unread ones, newest first; a site without "answer" (before
+// 3.0.9-beta.4's) still gives one per unread report - no words, its update time
+TEST(reports_answers_of_the_unread_newest_first) {
+    std::vector<reports::Summary> list(4);
+    list[0].code = "R-AAAAA1";
+    list[0].unread = 1;
+    list[0].status = reports::Status::NeedInfo;
+    list[0].hasAnswer = true;
+    list[0].answer.id = 218;
+    list[0].answer.text = "з Pause";
+    list[0].answer.at = "2026-10-27T00:31:00+00:00";
+    list[1].code = "R-BBBBB2";  // read: none
+    list[1].updated = "2026-10-27T09:00:00+00:00";
+    list[2].code = "R-CCCCC3";  // an older site's: no answer field
+    list[2].unread = 2;
+    list[2].status = reports::Status::Fixed;
+    list[2].fixedIn = "3.0.9-beta.4";
+    list[2].updated = "2026-10-27T05:00:00+00:00";
+    list[3].code = "R-DDDDD4";
+    list[3].unread = 1;
+    list[3].hasAnswer = true;
+    list[3].answer.id = 5;
+    list[3].answer.at = "2026-10-27T03:00:00+03:00";  // 00:00 UTC: the oldest
+    const std::vector<reports::Answer> a = reports::answersOf(list);
+    CHECK_EQ(a.size(), size_t(3));
+    if (a.size() != 3) return;
+    CHECK_EQ(a[0].code, std::string("R-CCCCC3"));
+    CHECK_EQ(a[0].id, 0LL);
+    CHECK_EQ(a[0].text, std::string(""));
+    CHECK(a[0].status == reports::Status::Fixed);
+    CHECK_EQ(a[0].fixedIn, std::string("3.0.9-beta.4"));
+    CHECK_EQ(a[0].at, std::string("2026-10-27T05:00:00+00:00"));
+    CHECK_EQ(a[1].code, std::string("R-AAAAA1"));
+    CHECK_EQ(a[1].id, 218LL);
+    CHECK_EQ(a[1].text, std::string("з Pause"));
+    CHECK(a[1].status == reports::Status::NeedInfo);
+    CHECK_EQ(a[2].code, std::string("R-DDDDD4"));
+}
