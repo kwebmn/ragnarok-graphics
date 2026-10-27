@@ -726,10 +726,12 @@ void ReportsWindow::addFile(bool toReply) {
     filter += L"*.jpg;*.jpeg;*.png;*.bmp";
     filter.push_back(L'\0');
     filter.push_back(L'\0');
+    const std::wstring shots = model_.paths().dir + L"\\ScreenShot";  // 3.0.9-beta.5: the game's own shots first
     OPENFILENAMEW o{};
     o.lStructSize = sizeof o;
     o.hwndOwner = hwnd_;
     o.lpstrFilter = filter.c_str();
+    o.lpstrInitialDir = shots.c_str();
     o.lpstrFile = file;
     o.nMaxFile = MAX_PATH;
     o.Flags = OFN_EXPLORER | OFN_FILEMUSTEXIST | OFN_NOCHANGEDIR | OFN_HIDEREADONLY;
