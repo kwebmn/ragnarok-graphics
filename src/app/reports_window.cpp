@@ -2,15 +2,22 @@
 
 #include <commctrl.h>
 #include <commdlg.h>
+#include <objbase.h>
 
 #include <algorithm>
+#include <cstdio>
+#include <memory>
+#include <tuple>
 
+#include "app/chat_view.hpp"
 #include "app/files.hpp"
 #include "app/report_send.hpp"
 #include "app/reports.hpp"
 #include "app/shots.hpp"
 #include "app/text.hpp"
 #include "app/ui.hpp"
+#include "core/report_talk.hpp"
+#include "core/report_texts.hpp"
 #include "core/version.hpp"
 
 namespace uagfx::app {
@@ -24,23 +31,54 @@ constexpr UINT kLoad = WM_APP + 1;  // the site asked once the window is on the 
 constexpr size_t kMostPicked = 6;
 constexpr size_t kGameShots = 12;
 
+// 3.0.9-beta.5: the conversation as a chat (app/chat_view: kHead, kChat), the list as cards with two tabs
 enum Id {
-    kNew = 100, kRefresh, kList, kHint, kHeader, kNote, kConfirm, kStill, kTalk, kShotsLabel, kShots, kOpenShot,
-    kReplyLabel, kReply, kAddShot, kAttached, kSend, kNewHeading, kWhatLabel, kWhat, kKindLabel, kKind0, kKind1,
-    kKind2, kKind3, kPickLabel, kPick, kAddFile, kPaste, kGoes, kCancel, kSendNew, kStatus, kClose,
+    kNew = 100, kRefresh, kList, kHint, kHead, kNote, kConfirm, kStill, kChat, kReplyLabel, kReply, kAddShot,
+    kPasteReply, kAttached, kSend, kNewHeading, kWhatLabel, kWhat, kKindLabel, kKind0, kKind1, kKind2, kKind3,
+    kPickLabel, kPick, kAddFile, kPaste, kGoes, kCancel, kSendNew, kStatus, kClose, kTabOpen, kTabClosed,
 };
+
+// A status's chip: its ground and its words (the support canvas' colours)
+struct Tone {
+    COLORREF ground, words;
+};
+Tone toneOf(reports::Status s) {
+    switch (s) {
+        case reports::Status::Read: return {RGB(227, 236, 251), RGB(29, 79, 168)};
+        case reports::Status::NeedInfo: return {RGB(253, 235, 214), RGB(138, 75, 0)};
+        case reports::Status::Fixing: return {RGB(236, 230, 251), RGB(91, 63, 168)};
+        case reports::Status::Fixed: return {RGB(223, 243, 230), RGB(29, 107, 58)};
+        case reports::Status::Closed: return {RGB(236, 239, 244), RGB(93, 104, 128)};
+        case reports::Status::New: break;
+    }
+    return {RGB(236, 239, 244), RGB(74, 85, 104)};
+}
+
+// The chat's screenshots fetched and made small on a thread of their own, each posted to the chat as it comes
+struct ThumbJob {
+    HWND view = nullptr;
+    unsigned generation = 0;
+    std::string key, code;
+    SIZE size{};
+    std::vector<std::tuple<size_t, size_t, std::string>> shots;  // the chat's item, the shot in it, its name
+};
+
+DWORD WINAPI fetchThumbs(void* p) {
+    std::unique_ptr<ThumbJob> job(static_cast<ThumbJob*>(p));
+    const HRESULT com = CoInitializeEx(nullptr, COINIT_MULTITHREADED);  // WIC
+    for (const auto& s : job->shots) {
+        if (!IsWindow(job->view)) break;
+        std::string bytes, error;
+        if (!fetchShot(job->key, job->code, std::get<2>(s), bytes, error)) continue;
+        if (HBITMAP bmp = jpegThumb(bytes, int(job->size.cx), int(job->size.cy)))
+            postChatThumb(job->view, job->generation, std::get<0>(s), std::get<1>(s), bmp);
+    }
+    if (SUCCEEDED(com)) CoUninitialize();
+    return 0;
+}
 
 const reports::Kind kKinds[] = {reports::Kind::Graphics, reports::Kind::Crash, reports::Kind::Slow,
                                 reports::Kind::Other};
-
-std::wstring crlf(const std::wstring& text) {  // a multi-line edit breaks at "\r\n" only
-    std::wstring out;
-    for (wchar_t ch : text) {
-        if (ch == L'\r') continue;
-        out += ch == L'\n' ? std::wstring(L"\r\n") : std::wstring(1, ch);
-    }
-    return out;
-}
 
 std::wstring fileNameOf(const std::wstring& path) {
     const size_t slash = path.find_last_of(L"\\/");
@@ -89,12 +127,16 @@ public:
         if (thumbs_) ImageList_Destroy(thumbs_);
         if (font_) DeleteObject(font_);
         if (bold_) DeleteObject(bold_);
+        if (strong_) DeleteObject(strong_);
+        if (barBrush_) DeleteObject(barBrush_);
+        if (cardsBrush_) DeleteObject(cardsBrush_);
     }
 
     HWND create(HWND owner);
     void attach(HWND h) { hwnd_ = h; }  // at WM_NCCREATE: the messages of the creation have the window
     LRESULT proc(UINT msg, WPARAM wp, LPARAM lp);
-    bool pasteKey(const MSG& msg);  // Ctrl+V with a picture in the clipboard: taken here
+    // Ctrl+V with a picture in the clipboard, 3.0.9-beta.5: Ctrl+Enter in the answer (it goes) - taken here
+    bool keys(const MSG& msg);
     int unread() const { return loaded_ ? reports::unreadOf(list_) : -1; }
     std::vector<reports::Answer> answers() const { return reports::answersOf(list_); }  // 3.0.9-beta.4
 
@@ -118,7 +160,9 @@ private:
     void fillTalk();
     void sendReply();
     void verdict(bool fixed);
-    void openShot();
+    void openShot(size_t item, size_t shot);  // 3.0.9-beta.5: a thumbnail of the chat clicked
+    void drawCard(const DRAWITEMSTRUCT* d);
+    std::wstring shortTime(const std::string& iso) const;
     void startNew();
     void addPick(const Pick& p, bool ticked);
     void addFile(bool toReply);
@@ -138,14 +182,19 @@ private:
     int dpi_;
     ReportStart start_;
     HWND hwnd_ = nullptr;
-    HFONT font_ = nullptr, bold_ = nullptr;
+    HFONT font_ = nullptr, bold_ = nullptr, strong_ = nullptr;  // strong_: bold at the text's size (the cards)
     HIMAGELIST thumbs_ = nullptr;
     Pane pane_ = Pane::Hint;
     std::string key_;
     bool loaded_ = false, filling_ = false;
     std::vector<reports::Summary> list_;
     reports::Conversation talk_;
-    std::vector<std::pair<std::string, std::string>> shotRefs_;  // the conversation's shots: code, name
+    std::vector<std::vector<std::string>> chatShots_;  // the chat's items' shots (names of the conversation's)
+    std::vector<size_t> shownItems_;  // the list's rows: list_'s reports of the tab
+    bool closedTab_ = false;
+    unsigned generation_ = 0;  // the chat's filling, for the thumbnails that come late
+    HBRUSH barBrush_ = nullptr, cardsBrush_ = nullptr;
+    COLORREF barGround_ = RGB(255, 244, 232), barWords_ = RGB(70, 40, 0);
     std::vector<std::pair<std::string, std::string>> attached_;  // the reply's: name, JPEG
     std::vector<Pick> picks_;
     int pasted_ = 0;
@@ -154,17 +203,19 @@ private:
 HWND ReportsWindow::make(const wchar_t* cls, const std::wstring& text, DWORD style, int id, DWORD ex) {
     HWND c = CreateWindowExW(ex, cls, text.c_str(), WS_CHILD | style, 0, 0, 10, 10, hwnd_,
                              reinterpret_cast<HMENU>(static_cast<INT_PTR>(id)), GetModuleHandleW(nullptr), nullptr);
-    SendMessageW(c, WM_SETFONT, reinterpret_cast<WPARAM>(id == kHeader || id == kNewHeading ? bold_ : font_), TRUE);
+    SendMessageW(c, WM_SETFONT, reinterpret_cast<WPARAM>(id == kNewHeading ? bold_ : font_), TRUE);
     return c;
 }
 
 HWND ReportsWindow::create(HWND owner) {
     font_ = makeFont(dpi_, false);
     bold_ = makeFont(dpi_, true, 115);
+    strong_ = makeFont(dpi_, true);
+    cardsBrush_ = CreateSolidBrush(RGB(241, 244, 249));
     key_ = computerKey(model_.paths().dir);
     RECT o;
     GetWindowRect(owner, &o);
-    const int w = at(980), h = at(660);
+    const int w = at(1040), h = at(700);
     hwnd_ = CreateWindowExW(WS_EX_DLGMODALFRAME | WS_EX_CONTROLPARENT, kClass, t(Text::ReportsTitle).c_str(),
                             WS_POPUP | WS_CAPTION | WS_SYSMENU | WS_THICKFRAME | WS_MAXIMIZEBOX,
                             o.left + (o.right - o.left - w) / 2, o.top + (o.bottom - o.top - h) / 2, w, h, owner,
@@ -173,37 +224,29 @@ HWND ReportsWindow::create(HWND owner) {
     const DWORD tab = WS_TABSTOP;
     make(L"BUTTON", t(Text::ReportsNew), WS_VISIBLE | tab | BS_PUSHBUTTON, kNew);
     make(L"BUTTON", t(Text::ReportsRefresh), WS_VISIBLE | tab | BS_PUSHBUTTON, kRefresh);
-    HWND list = make(WC_LISTVIEWW, L"",
-                     WS_VISIBLE | tab | LVS_REPORT | LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_NOSORTHEADER, kList,
-                     WS_EX_CLIENTEDGE);
-    SendMessageW(list, LVM_SETEXTENDEDLISTVIEWSTYLE, 0, LVS_EX_FULLROWSELECT | LVS_EX_DOUBLEBUFFER);
-    const std::pair<Text, int> columns[] = {{Text::ReportsColStatus, 150}, {Text::ReportsColTitle, 170},
-                                            {Text::ReportsColDate, 112}};
-    for (int i = 0; i < 3; ++i) {
-        const std::wstring name = t(columns[i].first);
-        LVCOLUMNW c{};
-        c.mask = LVCF_TEXT | LVCF_WIDTH;
-        c.cx = at(columns[i].second);
-        c.pszText = const_cast<wchar_t*>(name.c_str());
-        SendMessageW(list, LVM_INSERTCOLUMNW, i, reinterpret_cast<LPARAM>(&c));
-    }
+    // 3.0.9-beta.5: «Відкриті» / «Закриті», the list as cards (drawn here: drawCard)
+    make(L"BUTTON", tf(Text::TabOpen, {"0"}), WS_VISIBLE | tab | BS_AUTORADIOBUTTON | BS_PUSHLIKE | WS_GROUP, kTabOpen);
+    make(L"BUTTON", tf(Text::TabClosed, {"0"}), WS_VISIBLE | BS_AUTORADIOBUTTON | BS_PUSHLIKE, kTabClosed);
+    SendMessageW(GetDlgItem(hwnd_, kTabOpen), BM_SETCHECK, BST_CHECKED, 0);
+    HWND list = make(L"LISTBOX", L"",
+                     WS_VISIBLE | tab | WS_GROUP | WS_VSCROLL | LBS_NOTIFY | LBS_NOINTEGRALHEIGHT | LBS_OWNERDRAWFIXED,
+                     kList);
+    SendMessageW(list, LB_SETITEMHEIGHT, 0, at(86));
     make(L"STATIC", t(Text::ReportsPick), WS_VISIBLE | SS_LEFT | SS_NOPREFIX, kHint);
-    // the conversation
-    make(L"STATIC", L"", SS_LEFT | SS_NOPREFIX | SS_ENDELLIPSIS, kHeader);
-    make(L"STATIC", L"", SS_LEFT | SS_NOPREFIX, kNote);
+    // the conversation: its head, the chat, the bar of what is awaited, the answer
+    makeTalkHead(hwnd_, kHead, font_, strong_, dpi_);
+    makeChatView(hwnd_, kChat, font_, strong_, dpi_);
+    make(L"STATIC", L"", SS_LEFT | SS_NOPREFIX | SS_EDITCONTROL, kNote);
     make(L"BUTTON", t(Text::ReportConfirm), tab | BS_PUSHBUTTON, kConfirm);
     make(L"BUTTON", t(Text::ReportStillThere), tab | BS_PUSHBUTTON, kStill);
-    make(L"EDIT", L"", tab | WS_VSCROLL | ES_MULTILINE | ES_READONLY | ES_AUTOVSCROLL, kTalk, WS_EX_CLIENTEDGE);
-    make(L"STATIC", t(Text::ReportShotsHeading), SS_LEFT | SS_NOPREFIX, kShotsLabel);
-    make(L"LISTBOX", L"", tab | WS_VSCROLL | LBS_NOTIFY | LBS_NOINTEGRALHEIGHT, kShots, WS_EX_CLIENTEDGE);
-    make(L"BUTTON", t(Text::ReportOpenShot), tab | BS_PUSHBUTTON, kOpenShot);
     make(L"STATIC", t(Text::ReportReplyLabel), SS_LEFT | SS_NOPREFIX, kReplyLabel);
     HWND reply = make(L"EDIT", L"", tab | WS_VSCROLL | ES_MULTILINE | ES_AUTOVSCROLL | ES_WANTRETURN, kReply,
                       WS_EX_CLIENTEDGE);
     SendMessageW(reply, EM_SETLIMITTEXT, 4000, 0);
     make(L"BUTTON", t(Text::ReportAddShot), tab | BS_PUSHBUTTON, kAddShot);
-    make(L"STATIC", L"", SS_LEFT | SS_NOPREFIX | SS_CENTERIMAGE, kAttached);
-    markPrimary(make(L"BUTTON", t(Text::ReportSendButton), tab | BS_PUSHBUTTON, kSend));  // 3.0.2: blue
+    make(L"BUTTON", t(Text::TalkPaste), tab | BS_PUSHBUTTON, kPasteReply);
+    make(L"STATIC", L"", SS_LEFT | SS_NOPREFIX | SS_CENTERIMAGE | SS_ENDELLIPSIS, kAttached);
+    markPrimary(make(L"BUTTON", t(Text::TalkSend), tab | BS_PUSHBUTTON, kSend));  // 3.0.2: blue
     // the new report
     make(L"STATIC", t(Text::ReportNewHeading), SS_LEFT | SS_NOPREFIX, kNewHeading);
     make(L"STATIC", t(Text::ReportComment) + L" (" + t(Text::ReportCommentCue) + L")", SS_LEFT | SS_NOPREFIX,
@@ -243,46 +286,48 @@ void ReportsWindow::layout() {
     const auto move = [&](int id, int x, int y, int cw, int ch) {
         MoveWindow(GetDlgItem(hwnd_, id), x, y, std::max(0, cw), std::max(0, ch), TRUE);
     };
-    const int leftW = std::min(at(440), (w - 3 * pad) * 2 / 5);
-    move(kNew, pad, pad, at(200), bh);
-    move(kRefresh, pad + at(200) + gap, pad, at(110), bh);
-    const int bottom = h - pad - bh;
-    move(kList, pad, pad + bh + gap, leftW, bottom - gap - (pad + bh + gap));
+    const int leftW = std::min(at(340), (w - 3 * pad) * 2 / 5);
+    move(kNew, pad, pad, leftW - at(110) - gap, bh);
+    move(kRefresh, pad + leftW - at(110), pad, at(110), bh);
+    const int tabsY = pad + bh + gap, half = (leftW - gap / 2) / 2;
+    move(kTabOpen, pad, tabsY, half, at(28));
+    move(kTabClosed, pad + leftW - half, tabsY, half, at(28));
+    const int bottom = h - pad - bh, listY = tabsY + at(28) + gap;
+    move(kList, pad, listY, leftW, bottom - gap - listY);
     move(kStatus, pad, bottom, w - 3 * pad - at(120), bh);
     move(kClose, w - pad - at(120), bottom, at(120), bh);
     const int x = 2 * pad + leftW, rw = w - x - pad, top = pad, end = bottom - gap;
     move(kHint, x, top + at(4), rw, at(80));
     if (pane_ == Pane::Talk) {
-        int y = top;
-        move(kHeader, x, y, rw, at(24));
-        y += at(24) + gap / 2;
-        if (shown(kNote)) {
-            move(kNote, x, y, rw, at(38));
-            y += at(38);
-            if (shown(kConfirm)) {
+        // 3.0.9-beta.5: the head, the chat, the bar of what is awaited (with «Підтверджую» / «Ще є»), the answer
+        const int headH = at(86);
+        move(kHead, x, top, rw, headH);
+        const bool bar = shown(kNote), confirm = shown(kConfirm);
+        const int replyH = line + at(64) + gap + bh;
+        const int barH = bar ? at(46) + (confirm ? bh + gap / 2 : 0) + gap : 0;
+        const int chatY = top + headH + gap / 2;
+        const int chatH = std::max(at(80), end - chatY - barH - replyH - gap);
+        move(kChat, x, chatY, rw, chatH);
+        int y = chatY + chatH + gap;
+        if (bar) {
+            move(kNote, x, y, rw, at(46));
+            y += at(46);
+            if (confirm) {
+                y += gap / 2;
                 move(kConfirm, x, y, at(150), bh);
                 move(kStill, x + at(150) + gap, y, at(150), bh);
                 y += bh;
             }
             y += gap;
         }
-        const bool shots = shown(kShots);
-        const int replyH = line + at(76) + gap + bh, shotsH = shots ? line + at(64) + gap : 0;
-        const int talkH = std::max(at(80), end - y - replyH - shotsH - gap);
-        move(kTalk, x, y, rw, talkH);
-        y += talkH + gap;
-        if (shots) {
-            move(kShotsLabel, x, y, rw, line);
-            move(kShots, x, y + line, rw - at(180) - gap, at(64));
-            move(kOpenShot, x + rw - at(180), y + line, at(180), bh);
-            y += line + at(64) + gap;
-        }
         move(kReplyLabel, x, y, rw, line);
-        move(kReply, x, y + line, rw, at(76));
-        y += line + at(76) + gap;
-        move(kAddShot, x, y, at(170), bh);
-        move(kAttached, x + at(170) + gap, y, rw - at(170) - at(140) - 2 * gap, bh);
-        move(kSend, x + rw - at(140), y, at(140), bh);
+        move(kReply, x, y + line, rw, at(64));
+        y += line + at(64) + gap;
+        move(kAddShot, x, y, at(160), bh);
+        move(kPasteReply, x + at(160) + gap, y, at(160), bh);
+        const int sendW = at(200);
+        move(kAttached, x + 2 * (at(160) + gap), y, rw - 2 * (at(160) + gap) - sendW - gap, bh);
+        move(kSend, x + rw - sendW, y, sendW, bh);
     } else if (pane_ == Pane::New) {
         int y = top;
         move(kNewHeading, x, y, rw, at(24));
@@ -311,15 +356,14 @@ void ReportsWindow::layout() {
 
 void ReportsWindow::show(Pane p) {
     pane_ = p;
-    const int talk[] = {kHeader, kTalk, kReplyLabel, kReply, kAddShot, kAttached, kSend};
+    const int talk[] = {kHead, kChat, kReplyLabel, kReply, kAddShot, kPasteReply, kAttached, kSend};
     const int fresh[] = {kNewHeading, kWhatLabel, kWhat, kKindLabel, kKind0, kKind1, kKind2, kKind3, kPickLabel, kPick,
                          kAddFile, kPaste, kGoes, kCancel, kSendNew};
     for (int id : talk) ShowWindow(GetDlgItem(hwnd_, id), p == Pane::Talk ? SW_SHOW : SW_HIDE);
     for (int id : fresh) ShowWindow(GetDlgItem(hwnd_, id), p == Pane::New ? SW_SHOW : SW_HIDE);
     ShowWindow(GetDlgItem(hwnd_, kHint), p == Pane::Hint ? SW_SHOW : SW_HIDE);
     if (p != Pane::Talk)
-        for (int id : {kNote, kConfirm, kStill, kShotsLabel, kShots, kOpenShot})
-            ShowWindow(GetDlgItem(hwnd_, id), SW_HIDE);
+        for (int id : {kNote, kConfirm, kStill}) ShowWindow(GetDlgItem(hwnd_, id), SW_HIDE);
     layout();
     InvalidateRect(hwnd_, nullptr, TRUE);
 }
@@ -353,41 +397,34 @@ void ReportsWindow::load() {
 }
 
 void ReportsWindow::fillList() {
+    // 3.0.9-beta.5: the tab's reports as cards (drawCard); the tabs' numbers
     HWND list = GetDlgItem(hwnd_, kList);
     filling_ = true;
-    SendMessageW(list, LVM_DELETEALLITEMS, 0, 0);
+    SendMessageW(list, LB_RESETCONTENT, 0, 0);
+    shownItems_.clear();
+    size_t open = 0, closed = 0;
     for (size_t i = 0; i < list_.size(); ++i) {
-        const reports::Summary& s = list_[i];
-        const std::wstring texts[] = {statusText(s.status, s.fixedIn),
-                                      (s.unread > 0 ? L"● " : L"") + titleOf(s),
-                                      wide(localTime(s.updated.empty() ? s.at : s.updated))};
-        LVITEMW item{};
-        item.mask = LVIF_TEXT;
-        item.iItem = int(i);
-        item.pszText = const_cast<wchar_t*>(texts[0].c_str());
-        SendMessageW(list, LVM_INSERTITEMW, 0, reinterpret_cast<LPARAM>(&item));
-        for (int col = 1; col < 3; ++col) {
-            item.iSubItem = col;
-            item.pszText = const_cast<wchar_t*>(texts[col].c_str());
-            SendMessageW(list, LVM_SETITEMTEXTW, i, reinterpret_cast<LPARAM>(&item));
-        }
-        if (pane_ == Pane::Talk && s.code == talk_.code) {
-            item.mask = LVIF_STATE;
-            item.iSubItem = 0;
-            item.state = item.stateMask = LVIS_SELECTED | LVIS_FOCUSED;
-            SendMessageW(list, LVM_SETITEMSTATE, i, reinterpret_cast<LPARAM>(&item));
-        }
+        const bool inClosed = talk::closedTab(list_[i].status);
+        ++(inClosed ? closed : open);
+        if (inClosed != closedTab_) continue;
+        const LRESULT row = SendMessageW(list, LB_ADDSTRING, 0, LPARAM(i));
+        shownItems_.push_back(i);
+        if (pane_ == Pane::Talk && list_[i].code == talk_.code) SendMessageW(list, LB_SETCURSEL, WPARAM(row), 0);
     }
+    SetWindowTextW(GetDlgItem(hwnd_, kTabOpen), tf(Text::TabOpen, {std::to_string(open)}).c_str());
+    SetWindowTextW(GetDlgItem(hwnd_, kTabClosed), tf(Text::TabClosed, {std::to_string(closed)}).c_str());
     filling_ = false;
 }
 
 void ReportsWindow::openSelected() {
-    const LRESULT i = SendMessageW(GetDlgItem(hwnd_, kList), LVM_GETNEXTITEM, WPARAM(-1), LVNI_SELECTED);
-    if (i < 0 || size_t(i) >= list_.size()) return;
+    const LRESULT row = SendMessageW(GetDlgItem(hwnd_, kList), LB_GETCURSEL, 0, 0);
+    if (row < 0 || size_t(row) >= shownItems_.size()) return;
+    const size_t i = shownItems_[size_t(row)];
+    if (i >= list_.size()) return;
     if (pane_ == Pane::New && newTouched() && MessageBoxW(hwnd_, t(Text::ReportDiscard).c_str(),
                                                          t(Text::ReportsTitle).c_str(), MB_YESNO) != IDYES)
         return;
-    openCode(list_[size_t(i)].code);
+    openCode(list_[i].code);
 }
 
 void ReportsWindow::openCode(const std::string& code) {
@@ -401,6 +438,12 @@ void ReportsWindow::openCode(const std::string& code) {
         return;
     }
     talk_ = c;
+    const bool closed = talk::closedTab(c.status);  // 3.0.9-beta.5: its tab, so its card is in the list
+    if (closed != closedTab_) {
+        closedTab_ = closed;
+        SendMessageW(GetDlgItem(hwnd_, kTabOpen), BM_SETCHECK, closed ? BST_UNCHECKED : BST_CHECKED, 0);
+        SendMessageW(GetDlgItem(hwnd_, kTabClosed), BM_SETCHECK, closed ? BST_CHECKED : BST_UNCHECKED, 0);
+    }
     for (reports::Summary& s : list_)
         if (s.code == code) s.unread = 0;  // the site marked it read
     if (loaded_) noteAnswersOf(model_.paths().dir, list_);  // 3.0.9-beta.4: a running game's card goes
@@ -412,42 +455,88 @@ void ReportsWindow::openCode(const std::string& code) {
 }
 
 void ReportsWindow::fillTalk() {
+    // 3.0.9-beta.5 (the support canvas' screen 1): the head (title, status, facts, path), the chat, the bar
     const reports::Conversation& c = talk_;
-    std::wstring head = wide(c.code);
-    if (c.kind != reports::Kind::None) head += L" · " + kindText(c.kind);
-    head += L" · " + statusText(c.status, c.fixedIn);
-    SetWindowTextW(GetDlgItem(hwnd_, kHeader), head.c_str());
-    std::wstring text;
-    if (c.automatic) text += tf(Text::ReportAutoSent, {utf8(titleOfReason(c.reason))}) + L"\r\n\r\n";
-    shotRefs_.clear();
-    HWND shots = GetDlgItem(hwnd_, kShots);
-    SendMessageW(shots, LB_RESETCONTENT, 0, 0);
-    for (const reports::Message& msg : c.messages) {
-        const std::wstring who = msg.fromDev ? t(Text::ReportDev) : t(Text::ReportYou);
-        const std::wstring when = wide(localTime(msg.at));
-        text += who + L" · " + when + L"\r\n";
-        if (msg.hasStatus) text += tf(Text::ReportEventStatus, {utf8(statusText(msg.status, c.fixedIn))}) + L"\r\n";
-        if (!msg.text.empty()) text += crlf(wide(msg.text)) + L"\r\n";
-        if (!msg.shots.empty()) text += tf(Text::ReportShotsCount, {std::to_string(msg.shots.size())}) + L"\r\n";
-        text += L"\r\n";
-        for (const std::string& name : msg.shots) {
-            const std::wstring row = who + L" · " + when + L" · " + wide(name);
-            SendMessageW(shots, LB_ADDSTRING, 0, reinterpret_cast<LPARAM>(row.c_str()));
-            shotRefs_.emplace_back(c.code, name);
-        }
+    TalkHead head;
+    head.title = wide(c.code);
+    for (const reports::Summary& s : list_)
+        if (s.code == c.code) head.title = titleOf(s);
+    head.chip = statusText(c.status, c.fixedIn);
+    const Tone tone = toneOf(c.status);
+    head.chipGround = tone.ground;
+    head.chipWords = tone.words;
+    std::wstring what = wide(c.code);
+    if (c.kind != reports::Kind::None) what += L" · " + kindText(c.kind);
+    head.facts = tf(Text::TalkFacts, {utf8(what), c.version.empty() ? "?" : c.version, localTime(c.at)});
+    for (const talk::Step& s : talk::steps(c)) {
+        const std::wstring name = s.status == reports::Status::Fixed
+                                      ? (c.fixedIn.empty() ? t(Text::StepFixed) : statusText(s.status, c.fixedIn))
+                                      : statusText(s.status, c.fixedIn);
+        head.steps.push_back(TalkStep{name, s.done, s.current});
     }
-    HWND talk = GetDlgItem(hwnd_, kTalk);
-    SetWindowTextW(talk, text.c_str());
-    SendMessageW(talk, EM_LINESCROLL, 0, 100000);  // the newest at the bottom, in view
-    const bool hasShots = !shotRefs_.empty();
-    for (int id : {kShotsLabel, kShots, kOpenShot}) ShowWindow(GetDlgItem(hwnd_, id), hasShots ? SW_SHOW : SW_HIDE);
-    if (hasShots) SendMessageW(shots, LB_SETCURSEL, 0, 0);
+    setTalkHead(GetDlgItem(hwnd_, kHead), head);
+    // the chat: its items, and the shots fetched on a thread
+    std::vector<ChatItem> items;
+    chatShots_.clear();
+    auto* job = new ThumbJob;
+    job->view = GetDlgItem(hwnd_, kChat);
+    job->generation = ++generation_;
+    job->key = key_;
+    job->code = c.code;
+    job->size = chatThumbSize(dpi_);
+    for (const talk::Item& it : talk::timeline(c)) {
+        ChatItem item;
+        std::vector<std::string> shots;
+        if (it.kind == talk::Item::AutoSent) {
+            item.text = tf(Text::ReportAutoSent, {utf8(titleOfReason(c.reason))});
+        } else if (it.kind == talk::Item::DevRead) {
+            item.text = tf(Text::TalkDevRead, {localTime(c.devSeenAt)});
+        } else if (it.kind == talk::Item::Status) {
+            const reports::Message& m = c.messages[it.message];
+            item.text = tf(Text::ReportEventStatus, {utf8(statusText(m.status, c.fixedIn))});
+            item.tone = m.status == reports::Status::NeedInfo ? RGB(138, 75, 0)
+                        : m.status == reports::Status::Fixed  ? RGB(29, 107, 58)
+                                                              : RGB(93, 104, 128);
+        } else {
+            const reports::Message& m = c.messages[it.message];
+            item.kind = m.fromDev ? ChatItem::Theirs : ChatItem::Mine;
+            item.head = (m.fromDev ? t(Text::ReportDev) : t(Text::ReportYou)) + L" · " + wide(localTime(m.at));
+            item.text = wide(m.text);
+            item.shots = m.shots.size();
+            shots = m.shots;
+            for (size_t k = 0; k < m.shots.size(); ++k) job->shots.emplace_back(items.size(), k, m.shots[k]);
+        }
+        items.push_back(item);
+        chatShots_.push_back(shots);
+    }
+    setChat(job->view, items, job->generation);
+    HANDLE thread = job->shots.empty() ? nullptr : CreateThread(nullptr, 0, fetchThumbs, job, 0, nullptr);
+    if (thread)
+        CloseHandle(thread);
+    else
+        delete job;
+    // the bar: what the developer waits for, or the fix to confirm
     const bool confirm = reports::canConfirm(c, kVersion);
     const bool fixed = c.status == reports::Status::Fixed && !c.fixedIn.empty();
-    SetWindowTextW(GetDlgItem(hwnd_, kNote), confirm ? tf(Text::ReportConfirmNote, {c.fixedIn}).c_str()
-                                             : fixed ? tf(Text::ReportFixedWait, {c.fixedIn}).c_str()
-                                                     : L"");
-    ShowWindow(GetDlgItem(hwnd_, kNote), confirm || fixed ? SW_SHOW : SW_HIDE);
+    std::wstring bar;
+    if (c.status == reports::Status::NeedInfo) {
+        std::string question;
+        for (const reports::Message& m : c.messages)
+            if (m.fromDev && !m.text.empty()) question = m.text;
+        for (char& ch : question)
+            if (ch == '\n' || ch == '\r') ch = ' ';
+        bar = question.empty() ? t(Text::CardWaits) : tf(Text::TalkWaitsBar, {question});
+        barGround_ = RGB(255, 244, 232);
+        barWords_ = RGB(90, 50, 0);
+    } else if (confirm || fixed) {
+        bar = confirm ? tf(Text::ReportConfirmNote, {c.fixedIn}) : tf(Text::ReportFixedWait, {c.fixedIn});
+        barGround_ = RGB(223, 243, 230);
+        barWords_ = RGB(20, 80, 40);
+    }
+    if (barBrush_) DeleteObject(barBrush_);
+    barBrush_ = CreateSolidBrush(barGround_);
+    SetWindowTextW(GetDlgItem(hwnd_, kNote), bar.c_str());
+    ShowWindow(GetDlgItem(hwnd_, kNote), bar.empty() ? SW_HIDE : SW_SHOW);
     for (int id : {kConfirm, kStill}) ShowWindow(GetDlgItem(hwnd_, id), confirm ? SW_SHOW : SW_HIDE);
     SetWindowTextW(GetDlgItem(hwnd_, kAttached), L"");
     layout();
@@ -488,21 +577,109 @@ void ReportsWindow::verdict(bool fixed) {
     openCode(talk_.code);
 }
 
-void ReportsWindow::openShot() {
-    const LRESULT i = SendMessageW(GetDlgItem(hwnd_, kShots), LB_GETCURSEL, 0, 0);
-    if (i < 0 || size_t(i) >= shotRefs_.size()) return;
-    const auto& ref = shotRefs_[size_t(i)];
+void ReportsWindow::openShot(size_t item, size_t shot) {
+    if (item >= chatShots_.size() || shot >= chatShots_[item].size()) return;
+    const std::string& name = chatShots_[item][shot];
     HCURSOR old = SetCursor(LoadCursorW(nullptr, IDC_WAIT));
     std::string bytes, error;
-    const bool ok = fetchShot(key_, ref.first, ref.second, bytes, error);
+    const bool ok = fetchShot(key_, talk_.code, name, bytes, error);
     SetCursor(old);
     wchar_t temp[MAX_PATH] = {};
     if (!ok || !GetTempPathW(MAX_PATH, temp)) {
         status(tf(Text::ReportsOffline, {error}));
         return;
     }
-    const std::wstring path = std::wstring(temp) + L"uaro-" + wide(ref.first) + L"-" + wide(ref.second);
+    const std::wstring path = std::wstring(temp) + L"uaro-" + wide(talk_.code) + L"-" + wide(name);
     if (writeFileAtomic(path, bytes)) openInShell(path);
+}
+
+// 3.0.9-beta.5: a report's card in the list - the unread dot, its title, the time; its status in a chip; the last
+// message's start
+void ReportsWindow::drawCard(const DRAWITEMSTRUCT* d) {
+    if (d->itemID == UINT(-1) || size_t(d->itemData) >= list_.size()) return;
+    const reports::Summary& s = list_[size_t(d->itemData)];
+    HDC dc = d->hDC;
+    FillRect(dc, &d->rcItem, cardsBrush_);
+    const RECT card{d->rcItem.left + at(6), d->rcItem.top + at(4), d->rcItem.right - at(6), d->rcItem.bottom - at(4)};
+    const bool chosen = (d->itemState & ODS_SELECTED) != 0;
+    HBRUSH white = CreateSolidBrush(RGB(255, 255, 255));
+    HPEN edge = CreatePen(PS_SOLID, chosen ? 2 : 1, chosen ? RGB(159, 187, 232) : RGB(227, 231, 239));
+    HGDIOBJ oldBrush = SelectObject(dc, white), oldPen = SelectObject(dc, edge);
+    RoundRect(dc, card.left, card.top, card.right, card.bottom, at(12), at(12));
+    SetBkMode(dc, TRANSPARENT);
+    int x = card.left + at(10);
+    const int y1 = card.top + at(8);
+    if (s.unread > 0) {  // a new answer: the orange dot
+        HBRUSH dot = CreateSolidBrush(RGB(217, 115, 13));
+        HPEN none = CreatePen(PS_NULL, 0, 0);
+        SelectObject(dc, dot);
+        SelectObject(dc, none);
+        Ellipse(dc, x, y1 + at(5), x + at(9), y1 + at(14));
+        SelectObject(dc, white);
+        SelectObject(dc, edge);
+        DeleteObject(dot);
+        DeleteObject(none);
+        x += at(15);
+    }
+    HGDIOBJ oldFont = SelectObject(dc, font_);
+    const std::wstring when = shortTime(s.updated.empty() ? s.at : s.updated);
+    SIZE whenSize{};
+    GetTextExtentPoint32W(dc, when.c_str(), int(when.size()), &whenSize);
+    RECT time{card.right - at(10) - whenSize.cx, y1, card.right - at(10), y1 + at(18)};
+    SetTextColor(dc, RGB(93, 104, 128));
+    DrawTextW(dc, when.c_str(), int(when.size()), &time, DT_RIGHT | DT_SINGLELINE | DT_VCENTER | DT_NOPREFIX);
+    SelectObject(dc, strong_);
+    RECT title{x, y1, time.left - at(8), y1 + at(18)};
+    const std::wstring name = titleOf(s);
+    SetTextColor(dc, RGB(27, 35, 51));
+    DrawTextW(dc, name.c_str(), int(name.size()), &title,
+              DT_LEFT | DT_SINGLELINE | DT_VCENTER | DT_NOPREFIX | DT_END_ELLIPSIS);
+    // the status's chip, «автоматичне» after it
+    const int y2 = y1 + at(23);
+    const std::wstring chipText = statusText(s.status, s.fixedIn);
+    SIZE chipSize{};
+    GetTextExtentPoint32W(dc, chipText.c_str(), int(chipText.size()), &chipSize);
+    const Tone tone = toneOf(s.status);
+    RECT chip{card.left + at(10), y2, card.left + at(10) + chipSize.cx + at(14), y2 + at(19)};
+    HBRUSH chipBrush = CreateSolidBrush(tone.ground);
+    HPEN chipPen = CreatePen(PS_SOLID, 1, tone.ground);
+    SelectObject(dc, chipBrush);
+    SelectObject(dc, chipPen);
+    RoundRect(dc, chip.left, chip.top, chip.right, chip.bottom, at(8), at(8));
+    SetTextColor(dc, tone.words);
+    DrawTextW(dc, chipText.c_str(), int(chipText.size()), &chip, DT_CENTER | DT_SINGLELINE | DT_VCENTER | DT_NOPREFIX);
+    SelectObject(dc, font_);
+    if (s.automatic) {
+        RECT automatic{chip.right + at(8), y2, card.right - at(10), y2 + at(19)};
+        SetTextColor(dc, RGB(93, 104, 128));
+        const std::wstring word = t(Text::TalkAutomatic);
+        DrawTextW(dc, word.c_str(), int(word.size()), &automatic, DT_LEFT | DT_SINGLELINE | DT_VCENTER | DT_NOPREFIX);
+    }
+    // the last message's start
+    RECT last{card.left + at(10), y2 + at(23), card.right - at(10), y2 + at(41)};
+    const std::wstring line = wide(reporttexts::listLine(lang_, s));
+    SetTextColor(dc, RGB(93, 104, 128));
+    DrawTextW(dc, line.c_str(), int(line.size()), &last, DT_LEFT | DT_SINGLELINE | DT_VCENTER | DT_NOPREFIX |
+                                                             DT_END_ELLIPSIS);
+    SelectObject(dc, oldFont);
+    SelectObject(dc, oldBrush);
+    SelectObject(dc, oldPen);
+    DeleteObject(white);
+    DeleteObject(edge);
+    DeleteObject(chipBrush);
+    DeleteObject(chipPen);
+}
+
+// The list's time: "00:31" today, else "26.10"
+std::wstring ReportsWindow::shortTime(const std::string& iso) const {
+    const std::string shown = localTime(iso);  // "22.10.2026 21:57"
+    if (shown.size() < 16) return wide(shown);
+    SYSTEMTIME now{};
+    GetLocalTime(&now);
+    char today[16];
+    std::snprintf(today, sizeof today, "%02u.%02u.%04u", unsigned(now.wDay), unsigned(now.wMonth),
+                  unsigned(now.wYear));
+    return wide(shown.compare(0, 10, today) == 0 ? shown.substr(11, 5) : shown.substr(0, 5));
 }
 
 void ReportsWindow::startNew() {
@@ -677,8 +854,14 @@ void ReportsWindow::sendNewReport() {
     }
 }
 
-bool ReportsWindow::pasteKey(const MSG& msg) {
-    if (msg.message != WM_KEYDOWN || msg.wParam != 'V' || !(GetKeyState(VK_CONTROL) & 0x8000)) return false;
+bool ReportsWindow::keys(const MSG& msg) {
+    if (msg.message != WM_KEYDOWN || !(GetKeyState(VK_CONTROL) & 0x8000)) return false;
+    // 3.0.9-beta.5: Ctrl+Enter in the answer - it goes
+    if (msg.wParam == VK_RETURN && pane_ == Pane::Talk && msg.hwnd == GetDlgItem(hwnd_, kReply)) {
+        sendReply();
+        return true;
+    }
+    if (msg.wParam != 'V') return false;
     if (pane_ == Pane::Hint || !IsClipboardFormatAvailable(CF_BITMAP) || IsClipboardFormatAvailable(CF_UNICODETEXT))
         return false;  // text goes into the field as always
     paste(pane_ == Pane::Talk);
@@ -703,10 +886,7 @@ LRESULT ReportsWindow::proc(UINT msg, WPARAM wp, LPARAM lp) {
             const NMHDR* n = reinterpret_cast<const NMHDR*>(lp);
             LRESULT drawn = 0;
             if (drawPrimary(n, drawn)) return drawn;  // 3.0.2: «Надіслати» blue
-            if (n->idFrom == kList && n->code == LVN_ITEMCHANGED && !filling_) {
-                const NMLISTVIEW* v = reinterpret_cast<const NMLISTVIEW*>(lp);
-                if ((v->uNewState & LVIS_SELECTED) && !(v->uOldState & LVIS_SELECTED)) openSelected();
-            } else if (n->idFrom == kPick && n->code == LVN_GETEMPTYMARKUP) {  // no game shots: what makes them
+            if (n->idFrom == kPick && n->code == LVN_GETEMPTYMARKUP) {  // no game shots: what makes them
                 NMLVEMPTYMARKUP* m = reinterpret_cast<NMLVEMPTYMARKUP*>(lp);
                 m->dwFlags = EMF_CENTERED;
                 const std::wstring text = t(Text::ReportNoGameShots);
@@ -727,17 +907,41 @@ LRESULT ReportsWindow::proc(UINT msg, WPARAM wp, LPARAM lp) {
             }
             return 0;
         }
+        case WM_DRAWITEM:  // 3.0.9-beta.5: the list's cards
+            if (wp == WPARAM(kList)) {
+                drawCard(reinterpret_cast<const DRAWITEMSTRUCT*>(lp));
+                return TRUE;
+            }
+            break;
+        case WM_CTLCOLORSTATIC:  // 3.0.9-beta.5: the bar of what is awaited on its own ground
+            if (reinterpret_cast<HWND>(lp) == GetDlgItem(hwnd_, kNote) && barBrush_) {
+                HDC dc = reinterpret_cast<HDC>(wp);
+                SetTextColor(dc, barWords_);
+                SetBkColor(dc, barGround_);
+                return reinterpret_cast<LRESULT>(barBrush_);
+            }
+            break;
+        case kChatShot:  // a thumbnail of the chat clicked: the shot itself
+            openShot(size_t(wp), size_t(lp));
+            return 0;
         case WM_COMMAND: {
             const int id = LOWORD(wp), code = HIWORD(wp);
-            if (id == kShots && code == LBN_DBLCLK) openShot();
+            if (id == kList && code == LBN_SELCHANGE && !filling_) openSelected();
             if (code != BN_CLICKED) return 0;
             switch (id) {
+                case kTabOpen:
+                case kTabClosed:
+                    if (closedTab_ != (id == kTabClosed)) {
+                        closedTab_ = id == kTabClosed;
+                        fillList();
+                    }
+                    break;
+                case kPasteReply: paste(true); break;
                 case kNew: startNew(); break;
                 case kRefresh: load(); break;
                 case kSend: sendReply(); break;
                 case kConfirm: verdict(true); break;
                 case kStill: verdict(false); break;
-                case kOpenShot: openShot(); break;
                 case kAddShot: addFile(true); break;
                 case kAddFile: addFile(false); break;
                 case kPaste: paste(false); break;
@@ -840,7 +1044,7 @@ int showReports(HWND owner, const Model& m, Lang l, int dpi, const ReportStart& 
             if (got == 0) PostQuitMessage(int(msg.wParam));
             break;
         }
-        if (w.pasteKey(msg)) continue;
+        if (w.keys(msg)) continue;
         if (IsDialogMessageW(win, &msg)) continue;  // Tab, Esc
         TranslateMessage(&msg);
         DispatchMessageW(&msg);

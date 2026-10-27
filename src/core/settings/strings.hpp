@@ -452,6 +452,7 @@ enum class Text : uint16_t {
     NotifyAnswer, NotifyAnswerHint, NotifyAnswerText,
     // 3.0.9-beta.5: «Звернення» as a messenger - the tabs, the chat's lines, the reply's buttons, the list's lines
     TabOpen, TabClosed, TalkDevRead, TalkSend, TalkPaste, TalkFacts, ListWaitsDev, TalkWaitsBar, TalkAutomatic,
+    StepFixed,
     Count
 };
 

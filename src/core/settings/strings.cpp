@@ -4824,6 +4824,7 @@ constexpr Entry kTexts[] = {
     {Text::TalkWaitsBar, "The developer waits for your answer: {1}", "Розробник чекає на вашу відповідь: {1}",
      "Разработчик ждёт вашего ответа: {1}"},
     {Text::TalkAutomatic, "automatic", "автоматичне", "автоматическое"},
+    {Text::StepFixed, "Fixed", "Виправлено", "Исправлено"},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 
