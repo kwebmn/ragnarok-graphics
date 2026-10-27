@@ -363,11 +363,11 @@ enum class Text : uint16_t {
     SwitchOff, SwitchOn, SwitchOffNote, SwitchedOff,  // 2.12
     StartRenderer, StartDlss, StartShadersLoad, StartShadersBuild, StartAiTextures, StartFirstHint,  // 2.12
     ReportsButton, ReportsButtonUnread, ReportsTitle, ReportsNew, ReportsRefresh, ReportsLoading,
-    ReportsOffline, ReportsWaiting, ReportsEmpty, ReportsPick, ReportsColStatus, ReportsColTitle,
-    ReportsColDate, ReportStatusNew, ReportStatusRead, ReportStatusNeedInfo, ReportStatusFixing,
+    ReportsOffline, ReportsWaiting, ReportsEmpty, ReportsPick,
+    ReportStatusNew, ReportStatusRead, ReportStatusNeedInfo, ReportStatusFixing,
     ReportStatusFixed, ReportStatusClosed, ReportKindGraphics, ReportKindCrash, ReportKindSlow,
     ReportKindOther, ReportTitleCrash, ReportTitleStartFailed, ReportTitleGpuLost, ReportTitleNone, ReportYou,
-    ReportDev, ReportEventStatus, ReportAutoSent, ReportShotsCount, ReportShotsHeading, ReportOpenShot,
+    ReportDev, ReportEventStatus, ReportAutoSent,
     ReportReplyLabel, ReportAddShot, ReportAttached, ReportSendButton, ReportCancel, ReportConfirmNote,
     ReportFixedWait, ReportConfirm, ReportStillThere, ReportSentOk, ReportNotSent, ReportNeedWords,
     ReportShotFailed, ReportNewHeading, ReportKindLabel, ReportShotsPick, ReportNoGameShots, ReportAddFile,
