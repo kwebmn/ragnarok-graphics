@@ -119,6 +119,13 @@ private:
     bool reportsOpen_ = false;
     ReportStart reportStart_;
     void retextReports();
+    // 3.0.9-beta.4: «Є відповідь на звернення» - an orange strip under the header while an answer is not read
+    std::vector<reports::Answer> answers_;
+    HWND answerText_ = nullptr, answerOpen_ = nullptr;
+    HBRUSH answerBrush_ = nullptr;
+    bool answerShown() const { return !answers_.empty(); }
+    int answerTop() const;
+    void updateAnswers(const std::vector<reports::Answer>& list);
     HFONT bold_ = nullptr;      // the list's chosen entry
     int listSel_ = -1;          // the list's entry chosen before (past the heading the way the arrow went)
     HBRUSH listBrush_ = nullptr;

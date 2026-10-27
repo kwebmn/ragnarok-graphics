@@ -96,6 +96,7 @@ public:
     LRESULT proc(UINT msg, WPARAM wp, LPARAM lp);
     bool pasteKey(const MSG& msg);  // Ctrl+V with a picture in the clipboard: taken here
     int unread() const { return loaded_ ? reports::unreadOf(list_) : -1; }
+    std::vector<reports::Answer> answers() const { return reports::answersOf(list_); }  // 3.0.9-beta.4
 
 private:
     enum class Pane { Hint, Talk, New };
@@ -344,6 +345,11 @@ void ReportsWindow::load() {
     if (pane_ == Pane::Hint)
         SetWindowTextW(GetDlgItem(hwnd_, kHint), t(list_.empty() ? Text::ReportsEmpty : Text::ReportsPick).c_str());
     SetCursor(old);
+    if (!start_.code.empty()) {  // 3.0.9-beta.4: the game's answer card - its conversation at once
+        const std::string code = start_.code;
+        start_.code.clear();
+        openCode(code);
+    }
 }
 
 void ReportsWindow::fillList() {
@@ -397,6 +403,7 @@ void ReportsWindow::openCode(const std::string& code) {
     talk_ = c;
     for (reports::Summary& s : list_)
         if (s.code == code) s.unread = 0;  // the site marked it read
+    if (loaded_) noteAnswersOf(model_.paths().dir, list_);  // 3.0.9-beta.4: a running game's card goes
     attached_.clear();
     SetWindowTextW(GetDlgItem(hwnd_, kReply), L"");
     show(Pane::Talk);
@@ -806,7 +813,8 @@ LRESULT CALLBACK reportsProc(HWND h, UINT msg, WPARAM wp, LPARAM lp) {
 
 }  // namespace
 
-int showReports(HWND owner, const Model& m, Lang l, int dpi, const ReportStart& start) {
+int showReports(HWND owner, const Model& m, Lang l, int dpi, const ReportStart& start,
+                std::vector<reports::Answer>* answers) {
     HINSTANCE inst = GetModuleHandleW(nullptr);
     static bool registered = false;
     if (!registered) {
@@ -839,6 +847,7 @@ int showReports(HWND owner, const Model& m, Lang l, int dpi, const ReportStart& 
     }
     EnableWindow(owner, TRUE);
     SetForegroundWindow(owner);
+    if (answers && w.unread() >= 0) *answers = w.answers();
     return w.unread();
 }
 

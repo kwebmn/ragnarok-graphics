@@ -12,6 +12,13 @@ namespace uagfx::app {
 // reports belong to the computer's random key. A report the site did not take waits in uaro-graphics\reports\ and
 // goes at the app's next start. Errors in English.
 std::string computerKey(const std::wstring& dir);  // uaro-graphics\reports\computer.txt, made once
+// 3.0.9-beta.4: this computer's key when it has one ("" - it never sent a report), never made by asking
+std::string existingComputerKey(const std::wstring& dir);
+// The developer's answers not seen yet into uaro-graphics\reports\answers.json (core/report_answers) for the game:
+// asked from the site with this computer's key (the game's watcher); false - no key, or no answer (the file stays)
+bool noteAnswers(const std::wstring& dir);
+// The same from a list asked already (the app's start, «Звернення» after a conversation was opened)
+void noteAnswersOf(const std::wstring& dir, const std::vector<reports::Summary>& list);
 bool listReports(const std::string& key, std::vector<reports::Summary>& out, std::string& error);
 bool openReport(const std::string& key, const std::string& code, reports::Conversation& out, std::string& error);
 // The player's answer: the text and the shots they picked (a name -> a JPEG's bytes)

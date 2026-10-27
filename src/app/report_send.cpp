@@ -27,6 +27,7 @@ namespace {
 using namespace settings;
 
 constexpr long long kAutoEvery = 6 * 3600;  // an automatic report at most once in 6 hours
+constexpr DWORD kAnswersEveryMs = 10 * 60 * 1000;  // 3.0.9-beta.4: the developer's answers asked again while it runs
 
 std::string hresult(long hr) {
     char buf[16];
@@ -270,14 +271,19 @@ void usageState(const std::wstring& dir, std::string& lastSent, unsigned long lo
 int watchGame(unsigned long pid, int logSlot) {
     // 2.10: the update check of every game's start: uaro-graphics\update.ini for the next start's question
     checkNow(exeFolder());
+    // 3.0.9-beta.4: the developer's answers for the game's card - at its start, then every 10 minutes while it runs;
+    // only on a computer that sent a report (no key: no question)
+    const bool answers = !existingComputerKey(exeFolder()).empty();
+    if (answers) noteAnswers(exeFolder());
     std::string ini;
     readFile(ourFile(exeFolder(), layout::File::Ini), ini);
     const Config config = parseConfig(ini);
-    if (!config.reportAuto && !config.statsSend) return 0;  // nothing more to watch for
+    if (!config.reportAuto && !config.statsSend && !answers) return 0;  // nothing more to watch for
     HANDLE game = OpenProcess(SYNCHRONIZE, FALSE, pid);
     if (!game) return 0;
-    WaitForSingleObject(game, INFINITE);
+    while (WaitForSingleObject(game, answers ? kAnswersEveryMs : INFINITE) == WAIT_TIMEOUT) noteAnswers(exeFolder());
     CloseHandle(game);
+    if (!config.reportAuto && !config.statsSend) return 0;
     Sleep(2000);  // the log closed and flushed
     std::string ignored;
     sendUsage(exeFolder(), false, ignored);  // 2.2.1: the statistics, with the player's leave

@@ -1,9 +1,11 @@
 #include "app/args.hpp"
 
 #include <cwchar>
+#include <string>
 #include <vector>
 
 #include "core/log_files.hpp"
+#include "core/report_answers.hpp"
 
 namespace uagfx::app {
 namespace {
@@ -99,6 +101,11 @@ Args parseArgs(const std::wstring& line) {
         } else if (k == L"--map") {
             a.reportMap = next;
             ++i;
+        } else if (k == L"--answer") {
+            std::string code;  // the site's codes are ASCII
+            for (wchar_t ch : next) code += ch > 0 && ch < 128 ? char(ch) : '?';
+            if (answers::plainCode(code)) a.answer = next;
+            ++i;
         } else if (k == L"--log-slot") {
             const unsigned long slot = number(next);
             a.logSlot = slot >= 1 && slot <= unsigned(logfiles::kSlots) ? int(slot) : 1;
@@ -133,6 +140,7 @@ std::wstring argsLine(const Args& a) {
     if (a.report) s += a.reportShot.empty() ? L" --report" : L" --report \"" + a.reportShot + L"\"";
     if (!a.reportMap.empty()) s += L" --map " + a.reportMap;
     if (a.logSlot > 1) s += L" --log-slot " + std::to_wstring(a.logSlot);
+    if (!a.answer.empty()) s += L" --answer " + a.answer;
     if (a.then == Args::Then::Game || !a.gameArgs.empty()) s += L" -- " + a.gameArgs;
     return s;
 }

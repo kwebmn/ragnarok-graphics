@@ -5,6 +5,7 @@
 
 #include "app/files.hpp"
 #include "app/reports.hpp"
+#include "core/report_answers.hpp"
 #include "fake_windows.hpp"
 #include "test.hpp"
 
@@ -137,4 +138,30 @@ TEST(still_there_keeps_the_players_screenshots) {
     CHECK(app::sendStillThere(key, "R-ABCDEF", "", "Still there", {}, error));  // no shots: the verdict
     CHECK_EQ(w.posts.back().path, std::string("/api/graphics/reports/R-ABCDEF/verdict"));
     CHECK(w.posts.back().body.find("\"fixed\":false") != std::string::npos);
+}
+
+// 3.0.9-beta.4: the game's watcher asks for answers only on a computer that sent a report (its key is there - never
+// made by asking), and keeps them in uaro-graphics\reports\answers.json for the driver
+TEST(the_watcher_keeps_the_answers_for_the_game) {
+    fake::Windows& w = fake::reset();
+    const std::wstring dir = app::exeFolder();
+    CHECK_EQ(app::existingComputerKey(dir), std::string(""));
+    CHECK(w.files.find(fake::path(kKeyFile)) == w.files.end());  // not made by looking
+    CHECK(!app::noteAnswers(dir));                              // no key: no question to the site
+    const std::string key = app::computerKey(dir);
+    CHECK_EQ(app::existingComputerKey(dir), key);
+    w.web["/api/graphics/reports/mine?computer=" + key] =
+        "{\"reports\":[{\"code\":\"R-7BDUE3\",\"status\":\"need_info\",\"unread\":1,"
+        "\"updated\":\"2026-10-27T00:31:00+00:00\",\"answer\":{\"id\":218,\"text\":\"Pause\",\"status\":\"need_info\","
+        "\"at\":\"2026-10-27T00:31:00+00:00\"}},{\"code\":\"R-6JBVTG\",\"status\":\"new\",\"unread\":0}]}";
+    CHECK(app::noteAnswers(dir));
+    const std::string& file = w.files[fake::path(L"uaro-graphics\\reports\\answers.json")];
+    std::vector<reports::Answer> got;
+    CHECK(answers::read(file, got));
+    CHECK_EQ(got.size(), size_t(1));
+    if (got.size() == 1) CHECK_EQ(answers::key(got[0]), std::string("R-7BDUE3#218"));
+    w.web.clear();  // the site gone: the answers it gave stay
+    CHECK(!app::noteAnswers(dir));
+    CHECK(answers::read(w.files[fake::path(L"uaro-graphics\\reports\\answers.json")], got));
+    CHECK_EQ(got.size(), size_t(1));
 }

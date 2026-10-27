@@ -446,6 +446,10 @@ enum class Text : uint16_t {
     // 3.0.5-beta.14: what effects cost the card - 3.0.5-beta.23: «Середні» without the relief, without the smooth
     // light, and the lines of «Середні»'s and «Високі»'s costs
     TestSetMediumNoRelief, TestSetMediumNoLight, TestCosts, TestCostsMedium,
+    // 3.0.9-beta.4: the developer's answers where the player is - the app's strip, the game's card, the notification
+    AnswerStrip, AnswerWaits, AnswerUpdate, AnswerNew, AnswerOpen,
+    CardTitle, CardLater, CardFrom, CardWaits, CardUpdate, CardNew,
+    NotifyAnswer, NotifyAnswerHint, NotifyAnswerText,
     Count
 };
 

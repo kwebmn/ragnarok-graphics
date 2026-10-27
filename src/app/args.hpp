@@ -25,6 +25,9 @@ struct Args {
     // 3.0.3-beta.1: --log-slot N - the game window whose logs these are (core/log_files slotted; 1-8, else 1)
     int logSlot = 1;
     std::wstring testFile;  // 3.0.5-beta.6: --test-report "<file>" - the table the driver wrote
+    // 3.0.9-beta.4: --answer R-XXXXXX - the game's answer card («Відкрити»): «Звернення» on that conversation; only a
+    // code of the site's (core/report_answers plainCode), else none
+    std::wstring answer;
 };
 
 Args parseArgs(const std::wstring& line);

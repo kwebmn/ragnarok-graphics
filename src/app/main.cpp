@@ -57,6 +57,10 @@ int WINAPI wWinMain(HINSTANCE inst, HINSTANCE, PWSTR line, int show) {
             start.map = uagfx::app::utf8(args.reportMap);
             start.logSlot = args.logSlot;  // 3.0.3-beta.1: the game window's logs
             window.reportAtStart(start);
+        } else if (!args.answer.empty()) {  // 3.0.9-beta.4: the game's answer card - «Звернення» on that one
+            uagfx::app::ReportStart start;
+            start.code = uagfx::app::utf8(args.answer);
+            window.reportAtStart(start);
         }
         code = window.run(inst, show);
     }

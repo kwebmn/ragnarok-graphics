@@ -20,6 +20,8 @@
 #include "app/update.hpp"
 #include "app/update_window.hpp"
 #include "core/graphics_test.hpp"
+#include "core/report_answers.hpp"
+#include "core/report_texts.hpp"
 #include "core/settings/search.hpp"
 #include "core/update_check.hpp"
 #include "core/version.hpp"
@@ -50,6 +52,8 @@ constexpr int kStrip = 26;         // 2.6: the status bar's height at 96 DPI
 constexpr int kStripUpdate = 45;   // 2.10: the status bar's "Update"
 constexpr int kHeader = 52;        // 2.6: the header's height at 96 DPI
 constexpr int kList = 200;         // the list's width
+constexpr int kAnswerOpen = 46;    // 3.0.9-beta.4: the answer strip's «Відкрити»
+constexpr int kAnswerStrip = 40;   // its height at 96 DPI
 constexpr UINT kRebuild = WM_APP + 1;
 constexpr UINT kShowPage = WM_APP + 7;  // 1.6: wParam the page; 2.6: the view, lParam its tab
 constexpr UINT kAskStats = WM_APP + 8;  // 2.2.1: once, the window shown: may the statistics (and the reports) go
@@ -58,6 +62,7 @@ constexpr UINT kOpenReports = WM_APP + 10;  // 2.13: --report - «Нове зв�
 constexpr UINT kChecked = WM_APP + 11;  // 3.0.1-beta.8: a start check's answer is in (app/check_notify)
 // 2.13: WM_COPYDATA of a second app the game's Ctrl+Shift+F10 started: "<shot>\n<map>" in UTF-8
 constexpr ULONG_PTR kReportData = 0x52505254;
+constexpr ULONG_PTR kAnswerData = 0x52504E41;  // 3.0.9-beta.4: a second app's --answer (the code)
 
 // 2.2.1: the day's statistics, on a thread of its own (the network may take seconds); the folder's copy its own.
 DWORD WINAPI sendStats(void* folder) {
@@ -75,7 +80,11 @@ constexpr UINT_PTR kMoreGames = 4;    // 3.0.4-beta.4: the set's next game windo
 
 int MainWindow::run(HINSTANCE inst, int show) {
     if (HWND other = FindWindowW(kClass, nullptr)) {  // one settings app at a time: two would write over each other
-        if (startReport_) {  // 2.13: the open app makes the game's report
+        if (startReport_ && !reportStart_.code.empty()) {  // 3.0.9-beta.4: the open app shows the game's answer
+            std::string& code = reportStart_.code;
+            COPYDATASTRUCT cd{kAnswerData, DWORD(code.size()), code.data()};
+            SendMessageW(other, WM_COPYDATA, 0, reinterpret_cast<LPARAM>(&cd));
+        } else if (startReport_) {  // 2.13: the open app makes the game's report
             const std::string text = utf8(reportStart_.shot) + "\n" + reportStart_.map;
             COPYDATASTRUCT cd{kReportData, DWORD(text.size()), const_cast<char*>(text.data())};
             SendMessageW(other, WM_COPYDATA, 0, reinterpret_cast<LPARAM>(&cd));
@@ -299,6 +308,12 @@ void MainWindow::create() {
     ShowWindow(stripUpdate_, SW_HIDE);
     stripBrush_ = CreateSolidBrush(RGB(243, 243, 243));
     report_ = child(L"BUTTON", BS_PUSHBUTTON | WS_TABSTOP | WS_GROUP, kReportButton);
+    answerText_ = child(L"STATIC", SS_LEFT | SS_CENTERIMAGE | SS_NOPREFIX | SS_ENDELLIPSIS, 0);  // 3.0.9-beta.4
+    answerOpen_ = child(L"BUTTON", BS_PUSHBUTTON | WS_TABSTOP, kAnswerOpen);
+    markPrimary(answerOpen_);
+    ShowWindow(answerText_, SW_HIDE);
+    ShowWindow(answerOpen_, SW_HIDE);
+    answerBrush_ = CreateSolidBrush(RGB(255, 244, 232));
     listBrush_ = CreateSolidBrush(RGB(247, 247, 247));
     lineBrush_ = CreateSolidBrush(RGB(227, 227, 227));
     chosenBrush_ = CreateSolidBrush(RGB(230, 230, 230));
@@ -371,9 +386,9 @@ RECT MainWindow::pageArea() const {
                 rowTop() - px(9 + 8, dpi_)};
 }
 
-int MainWindow::contentTop() const {
-    return px(kHeader, dpi_) + 1 + (model_->system().elevated ? px(48, dpi_) : 0);
-}
+int MainWindow::answerTop() const { return px(kHeader, dpi_) + 1 + (model_->system().elevated ? px(48, dpi_) : 0); }
+
+int MainWindow::contentTop() const { return answerTop() + (answerShown() ? px(kAnswerStrip, dpi_) : 0); }
 
 int MainWindow::rowTop() const {
     RECT c;
@@ -387,7 +402,7 @@ void MainWindow::layout() {
     const int w = c.right;
     auto at = [&](int v) { return px(v, dpi_); };
     for (HWND ctl : {sidebar_, langBox_, banner_, status_, apply_, play_, undo_, close_, report_, search_, modes_[0],
-                     modes_[1], modes_[2], stripLeft_, stripRight_})
+                     modes_[1], modes_[2], stripLeft_, stripRight_, answerText_, answerOpen_})
         SendMessageW(ctl, WM_SETFONT, reinterpret_cast<WPARAM>(font_), TRUE);
     // 2.6: the modes, the search (what the rest leaves of 300), "Report a problem" and the language on the right
     int x = at(16);
@@ -403,6 +418,9 @@ void MainWindow::layout() {
     MoveWindow(langBox_, w - at(16) - at(130), at(14), at(130), at(240), TRUE);
     MoveWindow(report_, w - at(16 + 130 + 12 + 170), at(11), at(170), at(30), TRUE);
     MoveWindow(banner_, at(16), at(kHeader) + at(5), w - at(32), at(40), TRUE);
+    const int ay = answerTop();  // 3.0.9-beta.4: the answer strip, under the header (and the banner)
+    MoveWindow(answerOpen_, w - at(16 + 120), ay + at(6), at(120), at(28), TRUE);
+    MoveWindow(answerText_, at(16), ay, w - at(16 + 120 + 12 + 16), at(kAnswerStrip), TRUE);
     const int top = contentTop();
     const int by = rowTop();
     MoveWindow(sidebar_, 0, top + at(8), at(kList), by - at(9) - top - at(8), TRUE);
@@ -447,6 +465,12 @@ void MainWindow::paint() {
     FillRect(dc, &foot, lineBrush_);
     FillRect(dc, &strip, stripBrush_);
     FillRect(dc, &stripLine, lineBrush_);
+    if (answerShown()) {  // 3.0.9-beta.4: the answer strip's ground and its line
+        const RECT answer{0, answerTop(), c.right, answerTop() + px(kAnswerStrip, dpi_)};
+        const RECT answerLine{0, answer.bottom - 1, c.right, answer.bottom};
+        FillRect(dc, &answer, answerBrush_);
+        FillRect(dc, &answerLine, lineBrush_);
+    }
     EndPaint(hwnd_, &ps);
 }
 
@@ -614,6 +638,7 @@ void MainWindow::retext() {
     fillList();
     for (int i = 0; i < kModeCount; ++i) SetWindowTextW(modes_[i], wtr(lang_, modeName(Mode(i))).c_str());
     retextReports();
+    updateAnswers(answers_);  // 3.0.9-beta.4: the strip's words in the new language
     SetWindowTextW(stripUpdate_, wtr(lang_, updateState().back ? Text::UpdateBackDo : Text::UpdateDo).c_str());
     SendMessageW(search_, EM_SETCUEBANNER, TRUE, reinterpret_cast<LPARAM>(wtr(lang_, Text::SearchCue).c_str()));
     SetWindowTextW(banner_, wtr(lang_, Text::ElevatedBanner).c_str());
@@ -729,13 +754,29 @@ void MainWindow::openReports(bool fresh) {
     s.fresh = s.fresh || fresh;
     startReport_ = false;
     reportsOpen_ = true;
-    const int unread = showReports(hwnd_, *model_, lang_, dpi_, s);
+    std::vector<reports::Answer> answers;
+    const int unread = showReports(hwnd_, *model_, lang_, dpi_, s, &answers);
     reportsOpen_ = false;
     if (unread >= 0) {
         unread_ = unread;
         unreadFromWindow_ = true;
+        updateAnswers(answers);
     }
     retextReports();
+}
+
+// 3.0.9-beta.4: the strip «Є відповідь на звернення R-XXXXXX · <status> — <what to do>» for the newest answer
+void MainWindow::updateAnswers(const std::vector<reports::Answer>& list) {
+    const bool was = answerShown();
+    answers_ = list;
+    const bool now = answerShown();
+    if (now) {
+        SetWindowTextW(answerText_, wide(reporttexts::strip(lang_, answers_.front())).c_str());
+        SetWindowTextW(answerOpen_, wtr(lang_, Text::AnswerOpen).c_str());
+    }
+    ShowWindow(answerText_, now ? SW_SHOW : SW_HIDE);
+    ShowWindow(answerOpen_, now ? SW_SHOW : SW_HIDE);
+    if (was != now) layout();  // the list and the page start under it
 }
 
 void MainWindow::retextReports() {
@@ -928,6 +969,11 @@ LRESULT MainWindow::handle(UINT msg, WPARAM wp, LPARAM lp) {
                     message(wtrf(lang_, Text::UpdateError, {err}), true);
             } else if (id == kReportButton && code == BN_CLICKED) {
                 openReports(false);
+            } else if (id == kAnswerOpen && code == BN_CLICKED && answerShown()) {  // 3.0.9-beta.4: that answer
+                reportStart_ = ReportStart{};
+                reportStart_.code = answers_.front().code;
+                startReport_ = true;
+                openReports(false);
             } else if (id >= kTabFirst && id < kTabFirst + tabCount(shown_) && code == BN_CLICKED) {
                 if (id - kTabFirst != tab_) {
                     tab_ = id - kTabFirst;
@@ -997,6 +1043,11 @@ LRESULT MainWindow::handle(UINT msg, WPARAM wp, LPARAM lp) {
             HDC dc = reinterpret_cast<HDC>(wp);
             HWND ctl = reinterpret_cast<HWND>(lp);
             Tone tone = Tone::Normal;
+            if (ctl == answerText_) {  // 3.0.9-beta.4: the answer strip's words on its orange
+                SetTextColor(dc, RGB(70, 40, 0));
+                SetBkMode(dc, TRANSPARENT);
+                return reinterpret_cast<LRESULT>(answerBrush_);
+            }
             if (ctl == stripLeft_ || ctl == stripRight_) {  // 2.6: the status bar's ground
                 SetTextColor(dc, RGB(85, 85, 85));
                 SetBkMode(dc, TRANSPARENT);
@@ -1045,10 +1096,19 @@ LRESULT MainWindow::handle(UINT msg, WPARAM wp, LPARAM lp) {
             if (rebuilds_.arrived()) buildPage();
             return 0;
         case kOpenReports:  // 2.13: --report; a box over the window: the timer opens it after
-            if (startReport_ && !reportsOpen_ && IsWindowEnabled(hwnd_)) openReports(true);
+            if (startReport_ && !reportsOpen_ && IsWindowEnabled(hwnd_)) openReports(reportStart_.code.empty());
             return 0;
         case WM_COPYDATA: {  // 2.13: a second app's --report
             const COPYDATASTRUCT* cd = reinterpret_cast<const COPYDATASTRUCT*>(lp);
+            if (cd && cd->dwData == kAnswerData && !reportsOpen_) {  // 3.0.9-beta.4: its --answer
+                const std::string code(static_cast<const char*>(cd->lpData), cd->cbData);
+                if (!answers::plainCode(code)) return FALSE;
+                reportStart_ = ReportStart{};
+                reportStart_.code = code;
+                startReport_ = true;
+                PostMessageW(hwnd_, kOpenReports, 0, 0);
+                return TRUE;
+            }
             if (!cd || cd->dwData != kReportData || reportsOpen_) return FALSE;
             const std::string text(static_cast<const char*>(cd->lpData), cd->cbData);
             const size_t nl = text.find('\n');
@@ -1066,6 +1126,7 @@ LRESULT MainWindow::handle(UINT msg, WPARAM wp, LPARAM lp) {
             if (!unreadFromWindow_ && reportsUnread() != unread_) {
                 unread_ = reportsUnread();
                 retextReports();
+                updateAnswers(reportsAnswers());  // 3.0.9-beta.4
             }
             return 0;
         case kAskMachine: {  // 2.12: the settings picked again for the new card or screen, if the player wants
@@ -1126,8 +1187,10 @@ LRESULT MainWindow::handle(UINT msg, WPARAM wp, LPARAM lp) {
                 if (!unreadFromWindow_ && reportsUnread() != unread_) {  // 2.13: the start's check came back
                     unread_ = reportsUnread();
                     retextReports();
+                    updateAnswers(reportsAnswers());  // 3.0.9-beta.4
                 }
-                if (startReport_ && !reportsOpen_ && IsWindowEnabled(hwnd_)) openReports(true);  // 2.13: --report
+                if (startReport_ && !reportsOpen_ && IsWindowEnabled(hwnd_))  // 2.13: --report; 3.0.9-beta.4: --answer
+                    openReports(reportStart_.code.empty());
             }
             if (wp == kTickTimer && current_) current_->tick();
             if (wp == kMoreGames) {  // 3.0.4-beta.4

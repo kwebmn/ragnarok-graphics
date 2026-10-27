@@ -102,3 +102,18 @@ TEST(args_read_the_graphics_tests_report) {
     CHECK(app::parseArgs(app::argsLine(t)).testFile == t.testFile);
     CHECK(app::argsLine(t) == L"--test-report \"C:\\Ігри\\ua RO\\uaro-graphics\\graphics-test.txt\" --log-slot 2");
 }
+
+// 3.0.9-beta.4: the game's answer card («Відкрити») - «Звернення» opened on that conversation; the site's codes only
+TEST(args_answer_round_trip) {
+    const Args r = app::parseArgs(L"--answer R-7BDUE3");
+    CHECK(r.mode == Args::Mode::Settings);
+    CHECK(r.answer == L"R-7BDUE3");
+    CHECK(!r.report);
+    Args a;
+    a.answer = L"R-ZZT0K1";
+    const Args b = app::parseArgs(app::argsLine(a));
+    CHECK(b.mode == Args::Mode::Settings && b.answer == L"R-ZZT0K1");
+    CHECK(app::parseArgs(L"--answer r-7bdue3").answer.empty());
+    CHECK(app::parseArgs(L"--answer \"R-7BDUE3 --x\"").answer.empty());
+    CHECK(app::parseArgs(L"--answer").answer.empty());
+}

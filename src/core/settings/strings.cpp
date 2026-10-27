@@ -4785,6 +4785,33 @@ constexpr Entry kTexts[] = {
      "Цена в «Высоких» на видеокарте, мс: {1}"},
     {Text::TestCostsMedium, "The card's cost within «Medium», ms: {1}", "Ціна у «Середніх» на відеокарті, мс: {1}",
      "Цена в «Средних» на видеокарте, мс: {1}"},
+    // 3.0.9-beta.4: the developer's answers where the player is
+    {Text::AnswerStrip, "An answer to the report {1} · {2} — {3}", "Є відповідь на звернення {1} · {2} — {3}",
+     "Есть ответ на обращение {1} · {2} — {3}"},
+    {Text::AnswerWaits, "the developer waits for your answer.", "розробник чекає на вашу відповідь.",
+     "разработчик ждёт вашего ответа."},
+    {Text::AnswerUpdate, "update and check.", "оновіться й перевірте.", "обновитесь и проверьте."},
+    {Text::AnswerNew, "a new answer from the developer.", "нова відповідь розробника.", "новый ответ разработчика."},
+    {Text::AnswerOpen, "Open", "Відкрити", "Открыть"},
+    {Text::CardTitle, "Answer to the report", "Відповідь на звернення", "Ответ на обращение"},
+    {Text::CardLater, "Later", "Пізніше", "Позже"},
+    {Text::CardFrom, "Developer · {1}", "Розробник · {1}", "Разработчик · {1}"},
+    {Text::CardWaits, "The developer waits for your answer.", "Розробник чекає на вашу відповідь.",
+     "Разработчик ждёт вашего ответа."},
+    {Text::CardUpdate, "Fixed in {1} — update and check.", "Виправлено в {1} — оновіться й перевірте.",
+     "Исправлено в {1} — обновитесь и проверьте."},
+    {Text::CardNew, "Open it to read the answer.", "Відкрийте, щоб прочитати відповідь.",
+     "Откройте, чтобы прочитать ответ."},
+    {Text::NotifyAnswer, "Answers to reports", "Відповіді на звернення", "Ответы на обращения"},
+    {Text::NotifyAnswerHint,
+     "The developer answered your report: told while the game is behind other windows; in front, a card in the game "
+     "tells of it.",
+     "Розробник відповів на ваше звернення: сповіщення, коли гра за іншими вікнами; коли гра попереду, про це скаже "
+     "картка в самій грі.",
+     "Разработчик ответил на ваше обращение: уведомление, когда игра за другими окнами; когда игра впереди, об этом "
+     "скажет карточка в самой игре."},
+    {Text::NotifyAnswerText, "Answer to the report {1}: {2}", "Відповідь на звернення {1}: {2}",
+     "Ответ на обращение {1}: {2}"},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

@@ -9,6 +9,7 @@
 #include "app/text.hpp"
 #include "core/json.hpp"
 #include "core/layout.hpp"
+#include "core/report_answers.hpp"
 
 namespace uagfx::app {
 namespace {
@@ -114,17 +115,39 @@ void noteQueued(const std::wstring& dir, const std::string& body, const std::str
 
 }  // namespace
 
-std::string computerKey(const std::wstring& dir) {
-    const std::wstring file = join(dir, wide(layout::kComputerKey));
+std::string existingComputerKey(const std::wstring& dir) {
     std::string key;
-    if (readFile(file, key)) {
-        while (!key.empty() && (key.back() == '\n' || key.back() == '\r' || key.back() == ' ')) key.pop_back();
-        if (validKey(key)) return key;
-    }
+    if (!readFile(join(dir, wide(layout::kComputerKey)), key)) return "";
+    while (!key.empty() && (key.back() == '\n' || key.back() == '\r' || key.back() == ' ')) key.pop_back();
+    return validKey(key) ? key : "";
+}
+
+std::string computerKey(const std::wstring& dir) {
+    std::string key = existingComputerKey(dir);
+    if (!key.empty()) return key;
     key = randomKey();
     makeReportsFolder(dir);
-    writeFileAtomic(file, key);
+    writeFileAtomic(join(dir, wide(layout::kComputerKey)), key);
     return key;
+}
+
+void noteAnswersOf(const std::wstring& dir, const std::vector<reports::Summary>& list) {
+    const std::wstring file = join(dir, wide(layout::kAnswers));
+    const std::string text = answers::write(reports::answersOf(list));
+    std::string was;
+    if (readFile(file, was) && was == text) return;  // the same: its time stays (the driver reads it by its time)
+    makeReportsFolder(dir);
+    writeFileAtomic(file, text);
+}
+
+bool noteAnswers(const std::wstring& dir) {
+    const std::string key = existingComputerKey(dir);
+    if (key.empty()) return false;
+    std::vector<reports::Summary> list;
+    std::string error;
+    if (!listReports(key, list, error)) return false;
+    noteAnswersOf(dir, list);
+    return true;
 }
 
 bool listReports(const std::string& key, std::vector<reports::Summary>& out, std::string& error) {
