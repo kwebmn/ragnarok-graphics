@@ -205,3 +205,16 @@ TEST(notify_hp_and_sp_back_in_the_configurator) {
              std::string("HP and SP back to 100%"));
     CHECK(!notify::text(settings::Lang::Uk, notify::Kind::Recovered, "", "100").empty());
 }
+
+// 3.0.9-beta.4: the developer answered a report - told from behind as the rest ([notify] report_answer); in front the
+// game's own card tells of it
+TEST(notify_tells_of_a_reports_answer) {
+    const NotifySettings d = parseConfig("").notify;
+    CHECK(d.reportAnswer);
+    CHECK(notify::wanted(d, notify::Kind::Answer, false, false));  // any game window: the player's own report
+    CHECK(!notify::wanted(d, notify::Kind::Answer, true));
+    CHECK(!notify::wanted(parseConfig("[notify]\nreport_answer = 0\n").notify, notify::Kind::Answer, false));
+    CHECK_EQ(notify::text(settings::Lang::Uk, notify::Kind::Answer, "R-7BDUE3", "Потрібна інформація"),
+             std::string("Відповідь на звернення R-7BDUE3: Потрібна інформація"));
+    CHECK(settings::findSetting("notify.report_answer") != nullptr);  // in the settings app with the other kinds
+}

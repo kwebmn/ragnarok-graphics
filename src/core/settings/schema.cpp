@@ -153,6 +153,9 @@ const std::vector<IniSetting>& iniSettings() {
          Text::NotifyDisconnectHint, ""},
         {"notify", "sound", Page::Game, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::NotifySound,
          Text::NotifySoundHint, ""},
+        // 3.0.9-beta.4: the developer answered a report
+        {"notify", "report_answer", Page::Game, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::NotifyAnswer,
+         Text::NotifyAnswerHint, ""},
         {"renderer", "bridge", Page::Render, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::RenderBridge,
          Text::RenderBridgeHint, ""},
         // 2.12: Direct3D 11 without the risky parts, also by itself after two failed starts (core/safe_mode)

@@ -1,6 +1,8 @@
 #pragma once
 #include <windows.h>
 
+#include <string>
+
 #include "core/config.hpp"
 #include "core/game_packets.hpp"
 
@@ -20,6 +22,9 @@ void packet(const packets::Event& e);
 // 3.0.7-beta.6 (the user's notification 9): the server closed the connection (the game's poll of it failed,
 // win/packet_tap.cpp)
 void disconnected();
+// 3.0.9-beta.4: the developer answered the report `code` (its status's name, UTF-8) - told as the rest, from behind
+// (win/answer_card: in front its card in the game tells of it)
+void answer(const std::string& code, const std::string& status);
 // The tray icon's word: a click on the notification - the game to the front. True: it was its.
 bool message(HWND window, UINT m, WPARAM wp, LPARAM lp);
 // The game's window going: its icon taken away

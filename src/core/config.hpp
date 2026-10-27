@@ -468,6 +468,7 @@ struct NotifySettings {
     // recoveredPercent of their most
     bool recovered = true;
     int recoveredPercent = 100;
+    bool reportAnswer = true;  // 3.0.9-beta.4: the developer answered a report (the game's card when in front)
 };
 // [notify]'s boxes by their ini words (3.0.7-beta.6: one list for the file, the configurator and the live update)
 struct NotifyBox {

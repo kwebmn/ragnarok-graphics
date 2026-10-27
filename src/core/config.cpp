@@ -26,6 +26,7 @@ const NotifyBox kNotifyBoxes[] = {
     {"guild_chat", &NotifySettings::guildChat},   {"mention", &NotifySettings::mention},
     {"disconnect", &NotifySettings::disconnect},  {"sound", &NotifySettings::sound},
     {"recovered", &NotifySettings::recovered},  // 3.0.7-beta.7
+    {"report_answer", &NotifySettings::reportAnswer},  // 3.0.9-beta.4
 };
 const size_t kNotifyBoxCount = sizeof kNotifyBoxes / sizeof kNotifyBoxes[0];
 

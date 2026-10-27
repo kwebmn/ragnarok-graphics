@@ -14,9 +14,10 @@ namespace uagfx::notify {
 enum class Kind : uint8_t {
     Whisper, Party, Trade, Guild, Friend, Death,
     Attack, BuffEnding, PartyDeath, PartyLowHp, PartyChat, GuildChat, Mention, Disconnect,
-    Recovered  // 3.0.7-beta.7
+    Recovered,  // 3.0.7-beta.7
+    Answer      // 3.0.9-beta.4: the developer answered a report (who: its code, what: its status)
 };
-constexpr int kKinds = 15;
+constexpr int kKinds = 16;
 
 // Whether to tell: notifications on, this kind on, the game window not in front (in front the player sees it). What
 // every game window of the party or the guild hears (its chat, its deaths and low HP) is told by the main window

@@ -23,6 +23,7 @@ bool wanted(const NotifySettings& s, Kind k, bool inFront, bool main) {
         case Kind::Mention: return s.mention;
         case Kind::Disconnect: return s.disconnect;
         case Kind::Recovered: return s.recovered;
+        case Kind::Answer: return s.reportAnswer;
     }
     return false;
 }
@@ -49,6 +50,7 @@ std::string text(settings::Lang lang, Kind k, const std::string& who, const std:
         case Kind::Mention: return say(Text::NotifyMentionText, {who, what});
         case Kind::Disconnect: return settings::tr(lang, Text::NotifyDisconnectText);
         case Kind::Recovered: return say(Text::NotifyRecoveredText, {what});
+        case Kind::Answer: return say(Text::NotifyAnswerText, {who, what});
     }
     return {};
 }

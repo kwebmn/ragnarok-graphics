@@ -25,6 +25,7 @@
 #include "win/map_start.hpp"
 #include "win/pick_hook.hpp"
 #include "win/server_night.hpp"
+#include "win/answer_card.hpp"
 #include "win/buff_overlay.hpp"
 #include "win/notifier.hpp"
 #include "win/platform.hpp"
@@ -517,6 +518,7 @@ void Context::endScene() {
     if (photo_) record.dropInterface();  // 3.0.4-beta.5: the photo mode - the world alone
     if (drawn && renderer && !photo_) buffoverlay::draw(record, *renderer);  // 3.0.4-beta.6: the buffs' times
     if (panelSlot_.endScene(drawn) && renderer && !photo_) {
+        answercard::draw(record, *renderer);  // 3.0.9-beta.4: the developer's answer
         windowSwitch_.draw(record, *renderer);
         record.takeWork();  // the driver's own draws are not the game's
     }
@@ -538,6 +540,7 @@ void Context::behind() {
     mainWindow_ = frontGame_.main(false);
     soundFrame(false, mainWindow_ || config.windowOthersMusic, mainWindow_ || config.windowOthersSounds);
     notifier::frame(window, false, mainWindow_, config);  // 3.0.4-beta.3
+    answercard::behind(window);                            // 3.0.9-beta.4: a new answer told from behind
 }
 
 void Context::present(const Rect& source, bool waitForVblank) {
@@ -546,7 +549,10 @@ void Context::present(const Rect& source, bool waitForVblank) {
     // 3.0.3-beta.12: put into the game's scene at its EndScene; here only into a picture drawn without one
     const bool drawnAnew = record.takeWork() > 0;
     drawSparkles();  // 2.7.14: a frame with no interface draw
-    if (panelSlot_.present(drawnAnew) && renderer && !photo_) windowSwitch_.draw(record, *renderer);
+    if (panelSlot_.present(drawnAnew) && renderer && !photo_) {
+        answercard::draw(record, *renderer);  // 3.0.9-beta.4
+        windowSwitch_.draw(record, *renderer);
+    }
     record.takeWork();  // the driver's own draws are not the game's
     flush();
     effectFrame();  // 0.27: the effects' primitives of the next frame
@@ -659,7 +665,9 @@ void Context::present(const Rect& source, bool waitForVblank) {
     // 2.13: Ctrl+Shift+F10 - «Звернення»: the same shot, then the settings app's «Нове звернення» with it and the map
     const bool reportDown = window && GetForegroundWindow() == window && GetAsyncKeyState(VK_CONTROL) < 0 &&
                             GetAsyncKeyState(VK_SHIFT) < 0 && GetAsyncKeyState(VK_F10) < 0;
-    const bool shotNow = shotKey_.pressed(shotDown), reportNow = reportKey_.pressed(reportDown);
+    const bool shotNow = shotKey_.pressed(shotDown);
+    // 3.0.9-beta.4: while the answer card shows, the same key opens the answer - no «Нове звернення» then
+    const bool reportNow = reportKey_.pressed(reportDown) && !answercard::openByKey();
     std::string screenshot;
     if (shotNow || reportNow) {
         const std::string folder = gameDir() + "\\ScreenShot";
@@ -727,6 +735,9 @@ void Context::present(const Rect& source, bool waitForVblank) {
                             scaleMade_ ? plan.targetWidth : shadow.width(),
                             scaleMade_ ? plan.targetHeight : shadow.height(), gameFullscreen);
     buffoverlay::frame(config.buffTimers, float(scaleMade_ ? plan.k : 1.0));  // 3.0.4-beta.6: the buffs' times
+    // 3.0.9-beta.4: the developer's answer - its card at this frame's scale, drawn into the next present's record
+    answercard::frame(window, scaleMade_ ? plan.k : 1.0, scaleMade_ ? plan.targetWidth : shadow.width(),
+                      scaleMade_ ? plan.targetHeight : shadow.height());
     // 2.5.16: [quality] world_scale - Direct3D 11 draws the world smaller and makes it larger before the interface;
     // Pause draws it whole (the game's own picture to compare with)
     renderer->setWorldScale(enhanced_ ? std::min(config.worldScale, light_.worldScaleMax) / 100.0 : 1.0);

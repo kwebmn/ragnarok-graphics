@@ -52,8 +52,10 @@ void shape(Picture& p, const Box& around, const Distance& distance, uint32_t fil
         }
 }
 
-void roundRect(Picture& p, const Box& b, float r, uint32_t fill, float fillA, uint32_t edgeRgb = 0, float edgeA = 0,
-               float edge = 0) {
+}  // namespace
+
+void roundRect(Picture& p, const Box& b, float r, uint32_t fill, float fillA, uint32_t edgeRgb, float edgeA,
+               float edge) {
     shape(p, b, [&](float x, float y) { return roundBox(x, y, b, r); }, fill, fillA, edgeRgb, edgeA, edge);
 }
 
@@ -61,6 +63,8 @@ void circle(Picture& p, float cx, float cy, float r, uint32_t rgb, float a) {
     shape(p, Box{cx - r, cy - r, 2 * r, 2 * r},
           [&](float x, float y) { return std::hypot(x - cx, y - cy) - r; }, rgb, a, 0, 0, 0);
 }
+
+namespace {
 
 void line(Picture& p, float ax, float ay, float bx, float by, float r, uint32_t rgb, float a) {
     const float dx = bx - ax, dy = by - ay, len2 = dx * dx + dy * dy;

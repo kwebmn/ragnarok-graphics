@@ -55,7 +55,8 @@ const char* kindName(notify::Kind k) {
     static const char* const kNames[] = {"a whisper",  "a party invitation", "a trade",       "a guild invitation",
                                          "a friend",   "the death",          "an attack",     "a buff ending",
                                          "a death in the party", "low HP in the party", "the party's chat",
-                                         "the guild's chat", "the name said", "the server gone", "HP and SP back"};
+                                         "the guild's chat", "the name said", "the server gone", "HP and SP back",
+                                         "a report's answer"};
     static_assert(sizeof kNames / sizeof kNames[0] == notify::kKinds, "a name a kind");
     return kNames[int(k)];
 }
@@ -139,7 +140,8 @@ void hide(State& s) {
     s.icon = false;
 }
 
-void tell(notify::Kind kind, const std::string& who, const std::string& what) {
+// 3.0.9-beta.4: the words made already (a report's answer: UTF-8, not the game's code page)
+void tellWords(notify::Kind kind, const std::string& words) {
     State& s = state();
     if (!s.window) return;
     if (!notify::wanted(s.settings, kind, s.front, s.main)) {
@@ -159,9 +161,13 @@ void tell(notify::Kind kind, const std::string& who, const std::string& what) {
     FLASHWINFO f{sizeof f, s.window, FLASHW_TRAY | FLASHW_TIMERNOFG, 0, 0};  // until it is in front again
     FlashWindowEx(&f);
     if (!s.gate.pass(kind, GetTickCount64())) return;  // a burst: the flashing says it
-    const bool took = show(s, notify::text(startup().lang, kind, fromGame(who), fromGame(what)));
+    const bool took = show(s, words);
     LOG_INFO("notify: %s told from behind - Windows %s it (error %lu), Windows' notifications: %s", kindName(kind),
              took ? "took" : "refused", took ? 0ul : (unsigned long)GetLastError(), quietState(s));
+}
+
+void tell(notify::Kind kind, const std::string& who, const std::string& what) {
+    tellWords(kind, notify::text(startup().lang, kind, fromGame(who), fromGame(what)));
 }
 
 // 3.0.7-beta.6 (the user's notification 6): what the party watch saw - a death, a fall under the threshold
@@ -203,6 +209,10 @@ void frame(HWND window, bool front, bool main, const Config& config) {
         if (!name.empty())
             tell(notify::Kind::BuffEnding, name, std::to_string((timers.left(icon, now) + 999u) / 1000u));
     }
+}
+
+void answer(const std::string& code, const std::string& status) {
+    tellWords(notify::Kind::Answer, notify::text(startup().lang, notify::Kind::Answer, code, status));
 }
 
 void disconnected() {

@@ -89,6 +89,27 @@ void startReport(const std::string& shot, const std::string& map) {
     LOG_INFO("report: «Нове звернення» with %s%s%s", shot.c_str(), map.empty() ? "" : " on ", map.c_str());
 }
 
+// 3.0.9-beta.4: the game's answer card - «Звернення» on that conversation (the code is the site's: answers::read)
+void startAnswer(const std::string& code) {
+    const std::string dir = gameDir();
+    const std::string exe = dir + "\\uaro-graphics.exe";
+    if (!fileExists(exe)) {
+        LOG_INFO("answers: uaro-graphics.exe is not next to the game - %s not opened", code.c_str());
+        return;
+    }
+    std::string line = "\"" + exe + "\" --answer " + code;
+    STARTUPINFOA si{};
+    si.cb = sizeof si;
+    PROCESS_INFORMATION pi{};
+    if (!CreateProcessA(exe.c_str(), &line[0], nullptr, nullptr, FALSE, 0, nullptr, dir.c_str(), &si, &pi)) {
+        LOG_ERROR("answers: uaro-graphics.exe would not start (error %lu)", GetLastError());
+        return;
+    }
+    AllowSetForegroundWindow(pi.dwProcessId);
+    CloseHandle(pi.hThread);
+    CloseHandle(pi.hProcess);
+}
+
 bool startTestReport(const std::string& file) {
     const std::string exe = gameDir() + "\\uaro-graphics.exe";
     if (!fileExists(exe)) {

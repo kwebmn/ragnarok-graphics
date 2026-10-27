@@ -148,6 +148,11 @@ struct MenuChange {
 bool menuPick(Config& c, MenuHit hit, MenuChange& change);
 // A colour (0xRRGGBB) at an opacity over a premultiplied pixel: the words' coverage over the picture
 void over(uint32_t& pixel, uint32_t rgb, float opacity);
+// 3.0.9-beta.4: the panel's shapes for the driver's other pictures (core/answer_card) - a rounded box filled (and a
+// ring `edge` wide inside its border) and a circle, their edges smooth, over what the picture has
+void roundRect(Picture& p, const Box& b, float r, uint32_t fill, float fillA, uint32_t edgeRgb = 0, float edgeA = 0,
+               float edge = 0);
+void circle(Picture& p, float cx, float cy, float r, uint32_t rgb, float a);
 // A bar's colour (0xRRGGBB): red under 25 % as the game's own gauges (0x4490d0); else green HP, blue SP
 uint32_t barColour(int percent, bool hp);
 constexpr uint32_t kText = 0xECEFF5, kMuted = 0x969EAE, kOnBadge = 0x0F172A;  // the words' colours

@@ -2,6 +2,7 @@
 
 #include <algorithm>
 
+#include "win/answer_card.hpp"
 #include "win/code_page.hpp"
 #include "win/game_camera.hpp"
 #include "win/log.hpp"
@@ -26,6 +27,7 @@ LRESULT CALLBACK gameProc(HWND w, UINT m, WPARAM wp, LPARAM lp) {
         if (notifier::message(w, m, wp, lp)) return 0;  // 3.0.4-beta.3: a click on a notification
         if (m == WM_DESTROY) notifier::gone(w);
         LRESULT answer = 0;  // 3.0.3-beta.8: the mouse over the panel in the game's picture is the panel's
+        if (answercard::mouse(w, m, lp, answer)) return answer;  // 3.0.9-beta.4: and over the answer card the card's
         if (g_switch->mouse(w, m, lp, answer)) return answer;
     }
     return CallWindowProcA(g_original, w, m, wp, lp);

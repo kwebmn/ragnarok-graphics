@@ -75,7 +75,7 @@ void WindowPanel::frame(HWND game, bool main, Config& config, double k, int targ
         if (shown_) {
             if (dragging_ && GetCapture() == game) ReleaseCapture();
             dragging_ = false;
-            uapad::gamewindow::setBlocked(nullptr, false);
+            uapad::gamewindow::setBlocked(uapad::gamewindow::Blocker::Panel, nullptr, false);
         }
         shown_ = false;
         closeMenu();
@@ -255,7 +255,8 @@ void WindowPanel::block(HWND game) {
     const RECT r{LONG(int64_t(x_) * client.right / targetW_), LONG(int64_t(y_) * client.bottom / targetH_),
                  LONG(int64_t(x_ + geometry_.width) * client.right / targetW_ + 1),
                  LONG(int64_t(y_ + geometry_.height) * client.bottom / targetH_ + 1)};
-    uapad::gamewindow::setBlocked(&r, dragging_ || menuOpen_);  // its menu open: every click is its or closes it
+    // its menu open: every click is its or closes it
+    uapad::gamewindow::setBlocked(uapad::gamewindow::Blocker::Panel, &r, dragging_ || menuOpen_);
 }
 
 bool WindowPanel::mouse(HWND game, UINT m, LPARAM lp, LRESULT& result) {
