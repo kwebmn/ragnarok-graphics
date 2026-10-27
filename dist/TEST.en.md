@@ -1,3 +1,16 @@
+# uaRO Graphics 3.0.9-beta.4 — what is new
+
+- **A report's answer shows where you are.** When the developer answers, you learn of it at once:
+  - **in the game** — a card «Answer to the report» at the top centre with the status and the developer's words.
+    «Open» (or Ctrl+Shift+F10 while the card shows) opens that report in «Reports»; «Later» hides the card until the
+    next game start;
+  - **while the game is behind other windows or minimised** — a Windows notification, as for whispers. Turned off in
+    «Game» → «Notifications» → «Answers to reports»;
+  - **in the app** (and on the page «Play» that uaRO.exe opens) — an orange strip «An answer to the report» with
+    «Open».
+- The game asks for answers at its start and then every 10 minutes, only on a computer that has sent a report.
+- To check: send a report, wait for an answer and start the game — the card shows; press «Open».
+
 # uaRO Graphics 3.0.9-beta.3 — what is new
 
 - **«Own ground»: no magenta strips.** Some ground textures have see-through places marked in magenta (in Izlude the
