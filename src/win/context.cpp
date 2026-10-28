@@ -26,6 +26,7 @@
 #include "win/pick_hook.hpp"
 #include "win/server_night.hpp"
 #include "win/answer_card.hpp"
+#include "win/minimap_proto.hpp"
 #include "win/buff_overlay.hpp"
 #include "win/notifier.hpp"
 #include "win/platform.hpp"
@@ -518,6 +519,7 @@ void Context::endScene() {
     if (photo_) record.dropInterface();  // 3.0.4-beta.5: the photo mode - the world alone
     if (drawn && renderer && !photo_) buffoverlay::draw(record, *renderer);  // 3.0.4-beta.6: the buffs' times
     if (panelSlot_.endScene(drawn) && renderer && !photo_) {
+        minimapproto::draw(record, *renderer);  // 3.0.11-beta.1: the new minimap (prototype)
         answercard::draw(record, *renderer);  // 3.0.9-beta.4: the developer's answer
         windowSwitch_.draw(record, *renderer);
         record.takeWork();  // the driver's own draws are not the game's
@@ -550,6 +552,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     const bool drawnAnew = record.takeWork() > 0;
     drawSparkles();  // 2.7.14: a frame with no interface draw
     if (panelSlot_.present(drawnAnew) && renderer && !photo_) {
+        minimapproto::draw(record, *renderer);  // 3.0.11-beta.1
         answercard::draw(record, *renderer);  // 3.0.9-beta.4
         windowSwitch_.draw(record, *renderer);
     }
@@ -738,6 +741,10 @@ void Context::present(const Rect& source, bool waitForVblank) {
     // 3.0.9-beta.4: the developer's answer - its card at this frame's scale, drawn into the next present's record
     answercard::frame(window, scaleMade_ ? plan.k : 1.0, scaleMade_ ? plan.targetWidth : shadow.width(),
                       scaleMade_ ? plan.targetHeight : shadow.height());
+    // 3.0.11-beta.1: [interface] minimap - the new interface's minimap prototype in the game's own one's corner
+    minimapproto::frame(window, config.newMinimap, scaleMade_ ? plan.k : 1.0,
+                        scaleMade_ ? plan.targetWidth : shadow.width(),
+                        scaleMade_ ? plan.targetHeight : shadow.height());
     // 2.5.16: [quality] world_scale - Direct3D 11 draws the world smaller and makes it larger before the interface;
     // Pause draws it whole (the game's own picture to compare with)
     renderer->setWorldScale(enhanced_ ? std::min(config.worldScale, light_.worldScaleMax) / 100.0 : 1.0);

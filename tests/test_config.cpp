@@ -845,3 +845,16 @@ TEST(config_buff_timers) {
     CHECK(appliesNow("buffs.timers"));
     CHECK(!liveUpdate(parseConfig(""), parseConfig("[buffs]\ntimers = 0\n")).next.buffTimers);
 }
+
+TEST(config_interface_minimap) {
+    // 3.0.11-beta.1: the new interface's minimap prototype - off unless asked for, changed in a running game
+    CHECK(!parseConfig("").newMinimap);
+    CHECK(parseConfig("[interface]\nminimap = 1\n").newMinimap);
+    CHECK(!parseConfig("[interface]\nminimap = 0\n").newMinimap);
+    const settings::IniSetting* s = settings::findSetting("interface.minimap");
+    CHECK(s != nullptr);
+    if (s) CHECK_EQ(settings::tokenOf(*s, parseConfig("[interface]\nminimap = 1\n")), std::string("1"));
+    const LiveUpdate u = liveUpdate(parseConfig(""), parseConfig("[interface]\nminimap = 1\n"));
+    CHECK(u.waiting.empty() && u.applied.size() == 1 && u.applied[0] == "minimap 0 -> 1");
+    CHECK(appliesNow("interface.minimap"));
+}

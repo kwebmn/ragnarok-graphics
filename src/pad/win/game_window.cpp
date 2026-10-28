@@ -14,8 +14,10 @@ struct Framed {  // the window as the client made it, while it is borderless
 };
 Framed g_framed;
 bool g_clipped = false;
-bool g_blocked[2] = {}, g_blockedAll[2] = {};  // 3.0.3-beta.8: setBlocked; 3.0.9-beta.4: the panel's, the card's
-RECT g_blockedRect[2]{};
+// 3.0.3-beta.8: setBlocked; 3.0.9-beta.4: the panel's, the card's; 3.0.11-beta.1: the new minimap's
+constexpr int kBlockers = 3;
+bool g_blocked[kBlockers] = {}, g_blockedAll[kBlockers] = {};
+RECT g_blockedRect[kBlockers]{};
 
 LRESULT CALLBACK proc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
     if (msg == WM_SETCURSOR && LOWORD(lp) != HTCLIENT) return DefWindowProcA(hwnd, msg, wp, lp);
@@ -105,7 +107,7 @@ void releaseCursor() {
 }
 
 void setBlocked(Blocker who, const RECT* rect, bool all) {
-    const int i = who == Blocker::Card ? 1 : 0;
+    const int i = who == Blocker::Minimap ? 2 : who == Blocker::Card ? 1 : 0;
     g_blocked[i] = rect != nullptr;
     if (rect) g_blockedRect[i] = *rect;
     g_blockedAll[i] = all;
@@ -117,7 +119,7 @@ bool cursorOverGame(HWND game, POINT screen) {
     if (!game || !GetClientRect(game, &client) || !ScreenToClient(game, &p) || !PtInRect(&client, p)) return false;
     // 3.0.3-beta.8: the driver's panel of the game windows drawn in the game's picture - a click on it is the
     // panel's, and while it is dragged the held button is not the game's anywhere
-    for (int i = 0; i < 2; ++i)
+    for (int i = 0; i < kBlockers; ++i)
         if (g_blockedAll[i] || (g_blocked[i] && PtInRect(&g_blockedRect[i], p))) return false;
     // Any window of the client's own process counts: a graphics wrapper may present the picture in a window
     // of its own over the game's. A window of another program on top does not.

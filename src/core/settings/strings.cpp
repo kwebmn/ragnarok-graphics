@@ -4407,6 +4407,17 @@ constexpr Entry kTexts[] = {
     {Text::PanelMenuOpacity, "Opacity", "Непрозорість", "Непрозрачность"},
     {Text::PanelMenuHide, "Hide the panel · Ctrl+Alt+0", "Сховати панель · Ctrl+Alt+0", "Спрятать панель · Ctrl+Alt+0"},
     {Text::WindowsPanelIcons, "Icons", "Іконки", "Иконки"},
+    // 3.0.11-beta.1: the new interface's minimap prototype (stage 1)
+    {Text::InterfaceMinimap, "New minimap (prototype)", "Нова мінікарта (прототип)", "Новая миникарта (прототип)"},
+    {Text::InterfaceMinimapHint,
+     "A test of the new interface: the game's own minimap is hidden and a new one stands in its corner - the map round "
+     "the character and the character's cell under it (compare it with /where). A click on it does not walk the "
+     "character. Off - the game's minimap is back.",
+     "Перевірка нового інтерфейсу: мінікарта гри ховається, а в її куті стоїть нова - мапа навколо персонажа і "
+     "клітинка персонажа під нею (порівняйте з /where). Клік по ній не веде персонажа. Вимкнено - мінікарта гри "
+     "повертається.",
+     "Проверка нового интерфейса: миникарта игры прячется, а в её углу стоит новая - карта вокруг персонажа и клетка "
+     "персонажа под ней (сравните с /where). Клик по ней не ведёт персонажа. Выключено - миникарта игры возвращается."},
     // 3.0.4-beta.1: the output device ([sound] output)
     {Text::SoundOutput, "Sound output device",
      "Пристрій виводу звуку",

@@ -13,6 +13,7 @@
 #include "core/ai/texture_cache.hpp"
 #include "core/char_name.hpp"
 #include "core/game_camera.hpp"
+#include "core/minimap_proto.hpp"
 #include "win/log.hpp"
 
 namespace uagfx::win {
@@ -242,6 +243,76 @@ bool readGameCursor(int& x, int& y) {
     x = at[0];
     y = at[1];
     return true;
+}
+
+namespace {
+
+// 3.0.11-beta.1: uaRO.exe's UI window manager (0x727ED8) and its window 14 (the minimap's zoom buttons; the game's
+// mode draws the minimap while it exists, FUN_0055c220), its DeleteWindow / MakeWindow (thiscall, the window's number):
+// the calls of the Ctrl+Tab handler at 0x46CB67 / 0x46CB7B
+constexpr uint32_t kWindowMgr = 0x727ED8, kMinimapWindow = kWindowMgr + 0x7C, kModeMinimapAllowed = 0x280;
+constexpr uint32_t kDeleteWindow = 0x4D1E60, kMakeWindow = 0x4D42D0;
+constexpr int kMinimapId = 14;
+const uint8_t kDeleteCode[] = {0x55, 0x8B, 0xEC, 0x51, 0x56, 0x8B, 0xF1, 0x57, 0x33, 0xFF, 0x39, 0x7E, 0x70};
+const uint8_t kMakeCode[] = {0x55, 0x8B, 0xEC, 0x6A, 0xFF, 0x68, 0x36, 0xE2,
+                             0x68, 0x00, 0x64, 0xA1, 0x00, 0x00, 0x00, 0x00};
+using WindowFn = uint32_t(__attribute__((thiscall)) *)(void* manager, int id);
+// The world's place of the player and of the map's cells (FUN_0055c220): mode+0xC4 the world; world+0x3C the player
+// (x +4, z +0xC); world+0x40 the map's cells (width +0x110, height +0x114, a cell's size +0x118)
+constexpr uint32_t kModeWorld = 0xC4, kWorldPlayer = 0x3C, kWorldCells = 0x40, kCellsSize = 0x110;
+
+bool sameCode(uint32_t at, const uint8_t* code, size_t size) {
+    uint8_t now[32];
+    return size <= sizeof now && read(at, now, size) && std::memcmp(now, code, size) == 0;
+}
+
+bool knownWindowCalls() {
+    static int known = -1;
+    if (known < 0)
+        known = knownBuild() && sameCode(kDeleteWindow, kDeleteCode, sizeof kDeleteCode) &&
+                sameCode(kMakeWindow, kMakeCode, sizeof kMakeCode);
+    return known == 1;
+}
+
+}  // namespace
+
+bool readPlayerCell(int& x, int& y, int& width, int& height) {
+    uint32_t world = 0, player = 0, cells = 0;
+    float at[3];
+    int size[3];
+    const uint32_t mode = gameMode();
+    if (!mode || !read(mode + kModeWorld, &world, 4) || !read(world + kWorldPlayer, &player, 4) ||
+        !read(world + kWorldCells, &cells, 4) || !read(player + 4, at, sizeof at) ||
+        !read(cells + kCellsSize, size, sizeof size))
+        return false;
+    minimap::Cell c;
+    if (!minimap::cellOf(at[0], at[2], size[0], size[1], size[2], c)) return false;
+    x = c.x;
+    y = c.y;
+    width = size[0];
+    height = size[1];
+    return true;
+}
+
+bool gameMinimapShown() {
+    uint32_t window = 0;
+    return gameMode() && read(kMinimapWindow, &window, 4) && window != 0;
+}
+
+bool hideGameMinimap() {
+    if (!knownWindowCalls() || !gameMinimapShown()) return false;
+    reinterpret_cast<WindowFn>(uintptr_t(kDeleteWindow))(reinterpret_cast<void*>(uintptr_t(kWindowMgr)), kMinimapId);
+    return !gameMinimapShown();
+}
+
+bool showGameMinimap() {
+    uint32_t allowed = 0;
+    const uint32_t mode = gameMode();
+    if (!knownWindowCalls() || !mode || gameMinimapShown() || !read(mode + kModeMinimapAllowed, &allowed, 4) ||
+        !allowed)
+        return false;
+    reinterpret_cast<WindowFn>(uintptr_t(kMakeWindow))(reinterpret_cast<void*>(uintptr_t(kWindowMgr)), kMinimapId);
+    return gameMinimapShown();
 }
 
 std::string readGameMap() {

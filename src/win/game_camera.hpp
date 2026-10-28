@@ -15,6 +15,15 @@ bool readCameraTargetDepth(float& z);
 // AI textures (0.12): the map the game shows ("prontera"), from the same game mode as the camera; "" when there is no
 // world (the login, the character list) or the exe is another build.
 std::string readGameMap();
+// 3.0.11-beta.1 (the new interface's minimap prototype): the player's cell by the game's own minimap formula
+// (core/minimap_proto cellOf) and the map's cells; false outside a world or in another build
+bool readPlayerCell(int& x, int& y, int& width, int& height);
+// The game's own minimap: it is drawn while its UI window 14 exists (UIWindowMgr+0x7C); hidden and made again as
+// Ctrl+Tab does (UI command 0x99: DeleteWindow / MakeWindow of window 14, the latter only where the map has one) -
+// false when not done (another build, nothing to do). On the game's thread.
+bool gameMinimapShown();
+bool hideGameMinimap();
+bool showGameMinimap();
 // 2.3, uaRO Studio's pick: the game's own cursor in its pixels; false in another build of the exe.
 bool readGameCursor(int& x, int& y);
 // 3.0.2-beta.12: uaRO.exe is the build these addresses (and the profile's steps, core/sample_profile.hpp) belong to

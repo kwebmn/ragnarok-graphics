@@ -481,6 +481,8 @@ Config parseConfig(const std::string& text) {
             if (val == "off") c.windowKeys = WindowKeys::Off;
         } else if (key == "panel.show") {  // 3.0.3-beta.8: the game windows' panel
             setBool(val, c.panelShow);
+        } else if (key == "interface.minimap") {  // 3.0.11-beta.1: the new interface's minimap prototype
+            setBool(val, c.newMinimap);
         } else if (key == "panel.hidden") {
             setBool(val, c.panelHidden);
         } else if (key == "panel.layout") {

@@ -530,6 +530,9 @@ struct Config {
     // %); hidden (Ctrl+Alt+0, its cross) and place ("x y", core/window_panel's Place; "" its first place) written by
     // the driver
     bool panelShow = true, panelHidden = false;
+    // 3.0.11-beta.1: [interface] minimap - the new interface's minimap prototype (stage 1): the game's own hidden, the
+    // driver's panel in its corner with the player's cell (core/minimap_proto)
+    bool newMinimap = false;
     PanelLayout panelLayout = PanelLayout::Row;
     int panelSize = 100, panelOpacity = 90;
     std::string panelPlace;
