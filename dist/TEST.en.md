@@ -1,3 +1,13 @@
+# uaRO Graphics 3.0.9-beta.7 — what is new
+
+- **«World resolution» is 100 % for everyone.** The automatic setup gave old cards (Direct3D 11 without 12) 75 %:
+  the world was drawn smaller and made larger, and the character looked smeared when the camera was far.
+  - Once, at the first game start (or when the settings app opens), a value under 100 % goes back to 100 %.
+  - The automatic setup now gives 100 % on every card.
+  - A share you choose yourself after this stays.
+- To check: on an old card the settings app's page «Quality» shows «World resolution» 100 %; the log has
+  «world_scale 75 -> 100 once».
+
 # uaRO Graphics 3.0.9-beta.6 — what is new
 
 - **«New report» — simpler and friendlier.**
