@@ -1,3 +1,10 @@
+# uaRO Graphics 3.0.10-beta.1 — what is new
+
+- **«Reports»: screenshots in the conversation.** The thumbnails show again (fixed on the site — 3.0.9 too): no grey
+  boxes and «No connection to uaro.kiev.ua … 404». A thumbnail is the small JPEG, so it comes at once; a click opens
+  the screenshot in its original quality (the PNG, when the app sent it).
+- To check: «Reports» → a report with a screenshot — the thumbnail comes at once; a click opens it in «Photos».
+
 # uaRO Graphics 3.0.9 — what is new
 
 New support: a report's answer shows in the game, «Reports» as a messenger, a new report made simpler. And «World
