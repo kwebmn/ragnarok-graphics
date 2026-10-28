@@ -113,7 +113,15 @@ private:
     HWND search_ = nullptr;     // the search's field; its text, once taken, shows the search's page
     std::wstring query_;
     int unread_ = -1;               // 2.13: the developers' answers not read yet (-1 unknown)
-    bool unreadFromWindow_ = false;  // the window's count is newer than the start's check
+    // 3.0.10-beta.3 (the owner: «сделай» - the app learns of answers every 5 minutes, minimised too): the checks'
+    // answers taken (reportsRound), the newest answer known (-1: none yet), Windows' notification of a new one
+    int roundTaken_ = 0;
+    long long knownAnswer_ = -1;
+    bool noticeIcon_ = false;  // our icon in the notification area while its answer waits
+    std::string noticeCode_;   // the report its click opens
+    void takeChecked();
+    void showNotice(const reports::Answer& a);
+    void hideNotice();
     int moreGames_ = 0;              // 3.0.4-beta.4: game windows of the set still to start
     bool startReport_ = false;  // «Нове звернення» to open once the window is free (no box over it)
     bool reportsOpen_ = false;

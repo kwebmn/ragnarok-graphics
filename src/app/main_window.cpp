@@ -2,6 +2,7 @@
 
 #include <commctrl.h>
 #include <commdlg.h>
+#include <shellapi.h>
 #include <shlobj.h>
 
 #include <algorithm>
@@ -20,6 +21,7 @@
 #include "app/update.hpp"
 #include "app/update_window.hpp"
 #include "core/graphics_test.hpp"
+#include "core/notify.hpp"
 #include "core/report_answers.hpp"
 #include "core/report_texts.hpp"
 #include "core/settings/search.hpp"
@@ -60,6 +62,7 @@ constexpr UINT kAskStats = WM_APP + 8;  // 2.2.1: once, the window shown: may th
 constexpr UINT kAskMachine = WM_APP + 9;  // 2.12: the card or the screen changed since the settings were picked
 constexpr UINT kOpenReports = WM_APP + 10;  // 2.13: --report - «Нове звернення» once the window is up
 constexpr UINT kChecked = WM_APP + 11;  // 3.0.1-beta.8: a start check's answer is in (app/check_notify)
+constexpr UINT kNotice = WM_APP + 12;   // 3.0.10-beta.3: our notification's icon - its balloon or itself clicked
 // 2.13: WM_COPYDATA of a second app the game's Ctrl+Shift+F10 started: "<shot>\n<map>" in UTF-8
 constexpr ULONG_PTR kReportData = 0x52505254;
 constexpr ULONG_PTR kAnswerData = 0x52504E41;  // 3.0.9-beta.4: a second app's --answer (the code)
@@ -75,6 +78,8 @@ constexpr UINT_PTR kTimer = 1;
 constexpr UINT_PTR kTickTimer = 2;  // 0.43: a page's tick()
 constexpr UINT_PTR kSearchTimer = 3;  // 2.6: the search runs once the typing stops for a moment
 constexpr UINT_PTR kMoreGames = 4;    // 3.0.4-beta.4: the set's next game window ([windows] start_count)
+constexpr UINT_PTR kAnswersTimer = 5;  // 3.0.10-beta.3: the developer's answers asked again (recheckReports)
+constexpr UINT kAnswersEveryMs = 5 * 60 * 1000;
 
 }  // namespace
 
@@ -371,6 +376,7 @@ void MainWindow::create() {
     startReportsCheck(model_->paths().dir, computerKey(model_->paths().dir));
     buildPage();
     SetTimer(hwnd_, kTimer, 2000, nullptr);  // whether the game was started or closed meanwhile
+    SetTimer(hwnd_, kAnswersTimer, kAnswersEveryMs, nullptr);  // 3.0.10-beta.3
     // 2.12: a fresh install set up for this computer at once («Гра» says so), a changed card or screen asked about
     if (model_->startSetup(lang_) == settings::FirstStart::Ask) PostMessageW(hwnd_, kAskMachine, 0, 0);
     PostMessageW(hwnd_, kAskStats, 0, 0);
@@ -754,15 +760,77 @@ void MainWindow::openReports(bool fresh) {
     s.fresh = s.fresh || fresh;
     startReport_ = false;
     reportsOpen_ = true;
+    hideNotice();  // 3.0.10-beta.3: the answers are read now
     std::vector<reports::Answer> answers;
     const int unread = showReports(hwnd_, *model_, lang_, dpi_, s, &answers);
     reportsOpen_ = false;
+    roundTaken_ = reportsRound();  // the window's count is newer than the checks done meanwhile
     if (unread >= 0) {
         unread_ = unread;
-        unreadFromWindow_ = true;
         updateAnswers(answers);
+        knownAnswer_ = std::max(knownAnswer_, answers::newestId(answers));
     }
     retextReports();
+}
+
+// 3.0.10-beta.3: a check's answer (the start's, then one every 5 minutes) - the button's number, the strip, and a new
+// answer told by Windows' notification while the player is elsewhere (answers::toAnnounce)
+void MainWindow::takeChecked() {
+    const int round = reportsRound();
+    if (round == roundTaken_ || reportsOpen_) return;
+    roundTaken_ = round;
+    const int unread = reportsUnread();
+    if (unread < 0) return;  // the site did not answer yet
+    const std::vector<reports::Answer> list = reportsAnswers();
+    unread_ = unread;
+    retextReports();
+    updateAnswers(list);
+    const Config& c = model_->now().config;
+    const bool front = GetForegroundWindow() == hwnd_ && !IsIconic(hwnd_);
+    const bool wanted = notify::wanted(c.notify, notify::Kind::Answer, false, true);
+    if (const auto a = answers::toAnnounce(list, knownAnswer_, wanted, model_->now().gameRunning, front))
+        showNotice(*a);
+    knownAnswer_ = std::max(knownAnswer_, answers::newestId(list));
+}
+
+void MainWindow::showNotice(const reports::Answer& a) {
+    // its words: «Відповідь на звернення R-XXXXXX: <status>» over the developer's words (or what to do), one line
+    std::string words = a.text.empty() ? reporttexts::hint(lang_, a) : a.text;
+    for (char& ch : words)
+        if (ch == '\n' || ch == '\r') ch = ' ';
+    const std::wstring title =
+        wide(notify::text(lang_, notify::Kind::Answer, a.code, reporttexts::status(lang_, a.status, a.fixedIn)));
+    const auto put = [](wchar_t* to, size_t room, const std::wstring& from) {
+        const size_t n = std::min(from.size(), room - 1);
+        std::copy(from.begin(), from.begin() + std::ptrdiff_t(n), to);
+        to[n] = L'\0';
+    };
+    NOTIFYICONDATAW d{};
+    d.cbSize = sizeof d;
+    d.hWnd = hwnd_;
+    d.uID = 1;
+    d.uFlags = NIF_ICON | NIF_TIP | NIF_MESSAGE | NIF_INFO;
+    d.uCallbackMessage = kNotice;
+    const HICON icon = reinterpret_cast<HICON>(GetClassLongPtrW(hwnd_, GCLP_HICON));
+    d.hIcon = icon ? icon : LoadIconW(nullptr, reinterpret_cast<LPCWSTR>(IDI_APPLICATION));
+    put(d.szTip, sizeof d.szTip / sizeof d.szTip[0], title);
+    put(d.szInfoTitle, sizeof d.szInfoTitle / sizeof d.szInfoTitle[0], title);
+    put(d.szInfo, sizeof d.szInfo / sizeof d.szInfo[0], wide(words));
+    d.dwInfoFlags = NIIF_INFO | (model_->now().config.notify.sound ? 0u : DWORD(NIIF_NOSOUND));  // [notify] sound
+    noticeIcon_ = Shell_NotifyIconW(noticeIcon_ ? NIM_MODIFY : NIM_ADD, &d) != FALSE || noticeIcon_;
+    noticeCode_ = a.code;
+    FLASHWINFO f{sizeof f, hwnd_, FLASHW_TRAY | FLASHW_TIMERNOFG, 0, 0};  // the taskbar button until it is in front
+    FlashWindowEx(&f);
+}
+
+void MainWindow::hideNotice() {
+    if (!noticeIcon_) return;
+    NOTIFYICONDATAW d{};
+    d.cbSize = sizeof d;
+    d.hWnd = hwnd_;
+    d.uID = 1;
+    Shell_NotifyIconW(NIM_DELETE, &d);
+    noticeIcon_ = false;
 }
 
 // 3.0.9-beta.4: the strip «Є відповідь на звернення R-XXXXXX · <status> — <what to do>» for the newest answer
@@ -1095,6 +1163,18 @@ LRESULT MainWindow::handle(UINT msg, WPARAM wp, LPARAM lp) {
         case kRebuild:
             if (rebuilds_.arrived()) buildPage();
             return 0;
+        case kNotice:  // 3.0.10-beta.3: the notification or its icon clicked - that conversation
+            if (LOWORD(lp) == NIN_BALLOONUSERCLICK || LOWORD(lp) == WM_LBUTTONUP) {
+                if (IsIconic(hwnd_)) ShowWindow(hwnd_, SW_RESTORE);
+                SetForegroundWindow(hwnd_);
+                if (!noticeCode_.empty() && !reportsOpen_) {
+                    reportStart_ = ReportStart{};
+                    reportStart_.code = noticeCode_;
+                    startReport_ = true;
+                    PostMessageW(hwnd_, kOpenReports, 0, 0);
+                }
+            }
+            return 0;
         case kOpenReports:  // 2.13: --report; a box over the window: the timer opens it after
             if (startReport_ && !reportsOpen_ && IsWindowEnabled(hwnd_)) openReports(reportStart_.code.empty());
             return 0;
@@ -1123,11 +1203,7 @@ LRESULT MainWindow::handle(UINT msg, WPARAM wp, LPARAM lp) {
         case kChecked:  // 3.0.1-beta.8: a start check's answer - the strip and the page now, not at the next timer
             updateStrip();
             if (current_) current_->tick();
-            if (!unreadFromWindow_ && reportsUnread() != unread_) {
-                unread_ = reportsUnread();
-                retextReports();
-                updateAnswers(reportsAnswers());  // 3.0.9-beta.4
-            }
+            takeChecked();  // 3.0.10-beta.3: the number, the strip, a new answer's notification
             return 0;
         case kAskMachine: {  // 2.12: the settings picked again for the new card or screen, if the player wants
             const settings::Machine x = model_->machine();
@@ -1184,15 +1260,12 @@ LRESULT MainWindow::handle(UINT msg, WPARAM wp, LPARAM lp) {
             if (wp == kTimer) {
                 if (model_->refreshRunning()) rebuild();  // the game started or closed
                 updateStrip();  // the update's check, the pack's builder
-                if (!unreadFromWindow_ && reportsUnread() != unread_) {  // 2.13: the start's check came back
-                    unread_ = reportsUnread();
-                    retextReports();
-                    updateAnswers(reportsAnswers());  // 3.0.9-beta.4
-                }
+                takeChecked();  // 2.13: the start's check came back; 3.0.10-beta.3: or one of every 5 minutes
                 if (startReport_ && !reportsOpen_ && IsWindowEnabled(hwnd_))  // 2.13: --report; 3.0.9-beta.4: --answer
                     openReports(reportStart_.code.empty());
             }
             if (wp == kTickTimer && current_) current_->tick();
+            if (wp == kAnswersTimer && !reportsOpen_) recheckReports();  // 3.0.10-beta.3
             if (wp == kMoreGames) {  // 3.0.4-beta.4
                 const std::wstring e = moreGames_ > 0 ? model_->launchGame(lang_) : L"";
                 if (--moreGames_ <= 0 || !e.empty()) KillTimer(hwnd_, kMoreGames);
@@ -1252,6 +1325,8 @@ LRESULT MainWindow::handle(UINT msg, WPARAM wp, LPARAM lp) {
         case WM_DESTROY:
             KillTimer(hwnd_, kTimer);
             KillTimer(hwnd_, kTickTimer);
+            KillTimer(hwnd_, kAnswersTimer);  // 3.0.10-beta.3
+            hideNotice();
             if (statsThread_) {  // 2.2.2: a send under way finishes (its files whole), at most 3 s more
                 WaitForSingleObject(statsThread_, 3000);
                 CloseHandle(statsThread_);

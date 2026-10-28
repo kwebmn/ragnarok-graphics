@@ -352,6 +352,7 @@ public:
     // Ctrl+V with a picture in the clipboard, 3.0.9-beta.5: Ctrl+Enter in the answer (it goes) - taken here
     bool keys(const MSG& msg);
     int unread() const { return loaded_ ? reports::unreadOf(list_) : -1; }
+    int reportCount() const { return loaded_ ? int(list_.size()) : -1; }  // 3.0.10-beta.3
     std::vector<reports::Answer> answers() const { return reports::answersOf(list_); }  // 3.0.9-beta.4
 
 private:
@@ -1550,6 +1551,7 @@ int showReports(HWND owner, const Model& m, Lang l, int dpi, const ReportStart& 
     }
     EnableWindow(owner, TRUE);
     SetForegroundWindow(owner);
+    reportsKnown(w.reportCount());  // 3.0.10-beta.3: the app's checks every 5 minutes for a first report too
     if (answers && w.unread() >= 0) *answers = w.answers();
     return w.unread();
 }

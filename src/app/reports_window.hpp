@@ -27,6 +27,12 @@ int showReports(HWND owner, const Model& m, settings::Lang l, int dpi, const Rep
 // The header's «Звернення (N)»: at the app's start, on a thread of its own - the waiting reports sent, the list asked.
 // `key`: computerKey's, made before the thread (two first-time makers would part with different keys).
 void startReportsCheck(const std::wstring& dir, const std::string& key);
+// 3.0.10-beta.3 (the owner: «сделай» - the app, minimised, learns of answers too): the check again (the main window
+// every 5 minutes) - only on a computer whose reports the site knows, one at a time; reportsRound() counts the checks
+// done, each wakes the window (kChecked) with its unread and answers
+void recheckReports();
+int reportsRound();
+void reportsKnown(int count);  // «Звернення» closed with this many reports in its list (-1: not loaded)
 int reportsUnread();  // -1 while asking or when the site did not answer
 // 3.0.9-beta.4: the answers not read yet, newest first, as the start's check found them (none while asking) - the
 // main window's strip «Є відповідь на звернення»; the check also keeps them for the game (answers.json)

@@ -1,4 +1,5 @@
 #pragma once
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -18,5 +19,13 @@ bool read(const std::string& json, std::vector<reports::Answer>& out);
 // without ids "R-XXXXXX@time"
 std::string key(const reports::Answer& a);
 bool plainCode(const std::string& code);  // "R-" and six of A-Z, 0-9: the site's own
+// 3.0.10-beta.3 (the owner: «сделай» - the app, minimised, asks the site every 5 minutes): the answer its Windows
+// notification tells of after a check - the newest one newer than `known` (the newest of the checks before; -1: no
+// check yet - the start's tells of nothing, its strip does), when the player wants such notifications, the game is not
+// running (its own watcher tells then) and the app is not in front (its strip says it). Answers without an id (a site
+// before 3.0.9-beta.4) are never newer.
+std::optional<reports::Answer> toAnnounce(const std::vector<reports::Answer>& list, long long known, bool wanted,
+                                          bool gameRunning, bool appInFront);
+long long newestId(const std::vector<reports::Answer>& list);  // 0: none
 
 }  // namespace uagfx::answers

@@ -57,3 +57,25 @@ TEST(report_answers_refuse_what_is_not_theirs) {
     CHECK(!answers::plainCode("R-zzt0k1"));
     CHECK(!answers::plainCode(""));
 }
+
+TEST(report_answers_the_app_tells_of_a_new_one) {
+    // 3.0.10-beta.3 (the owner: «сделай» - the app, minimised, asks every 5 minutes): the newest answer newer than the
+    // checks before, told by a Windows notification only when the player wants them, the game is not running (its
+    // watcher tells then) and the app is not in front (its strip says it)
+    reports::Answer a;
+    a.id = 240;
+    a.code = "R-6E8NUY";
+    const std::vector<reports::Answer> list{a};
+    CHECK(!answers::toAnnounce(list, -1, true, false, false));  // the start's check: the strip, no notification
+    const auto told = answers::toAnnounce(list, 239, true, false, false);
+    CHECK(told && told->id == 240 && told->code == "R-6E8NUY");
+    CHECK(!answers::toAnnounce(list, 240, true, false, false));  // told already
+    CHECK(!answers::toAnnounce(list, 239, false, false, false));  // «Відповіді на звернення» off
+    CHECK(!answers::toAnnounce(list, 239, true, true, false));   // the game runs: its card or its notification
+    CHECK(!answers::toAnnounce(list, 239, true, false, true));   // the app in front: its strip
+    reports::Answer old;  // a site without ids: newer or not is not known
+    old.code = "R-ABCDEF";
+    CHECK(!answers::toAnnounce({old}, 0, true, false, false));
+    CHECK_EQ(answers::newestId(list), 240LL);
+    CHECK_EQ(answers::newestId({}), 0LL);
+}
