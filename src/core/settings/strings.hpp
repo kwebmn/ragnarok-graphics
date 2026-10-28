@@ -459,6 +459,8 @@ enum class Text : uint16_t {
     NewTitle, NewSubtitle, NewPlaceholder, NewKindLabel, NewShots, NewShotGame, NewShotRemove, NewPrivacy,
     NewPrivacyMore, NewSendHint, NewMapFromGame, SentTitle, SentBody, SentOpen, SentDone, QueuedTitle, QueuedBody,
     PickerTitle, PickerAdd,
+    // 3.0.11-beta.5: the game's reference pack on «Інтерфейс» (app/reference_pack)
+    ReferenceThere, ReferenceNone,
     Count
 };
 

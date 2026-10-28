@@ -47,6 +47,10 @@ constexpr const char* kComputerKey = "uaro-graphics\\reports\\computer.txt";
 // 3.0.9-beta.4: the developer's answers not seen yet, as the game's watcher last heard them (core/report_answers) -
 // the driver shows them in the game
 constexpr const char* kAnswers = "uaro-graphics\\reports\\answers.json";
+// 3.0.11-beta.5: the game's reference (core/reference_pack) - the site's pack of its game database and pack.json, the
+// manifest of the pack there; the game's watcher keeps it fresh
+constexpr const char* kReference = "uaro-graphics\\reference";
+constexpr const char* kReferenceManifest = "uaro-graphics\\reference\\pack.json";
 // 2.14: the client patcher (app/client_patch): the list of the game's files last put, and where they arrive first
 constexpr const char* kClientPatchRecord = "uaro-graphics\\client-patch.txt";
 constexpr const char* kClientPatchWork = "uaro-graphics\\update\\client";

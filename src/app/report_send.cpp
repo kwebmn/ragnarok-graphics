@@ -11,6 +11,7 @@
 #include "app/app_disk.hpp"
 #include "app/download.hpp"
 #include "app/files.hpp"
+#include "app/reference_pack.hpp"
 #include "app/reports.hpp"
 #include "app/text.hpp"
 #include "app/update_run.hpp"
@@ -278,6 +279,11 @@ int watchGame(unsigned long pid, int logSlot) {
     std::string ini;
     readFile(ourFile(exeFolder(), layout::File::Ini), ini);
     const Config config = parseConfig(ini);
+    // 3.0.11-beta.5: the game's reference pack, the new interface on - only when the site has another one
+    if (config.newMinimap) {
+        std::string error;
+        noteReference(exeFolder(), error);
+    }
     if (!config.reportAuto && !config.statsSend && !answers) return 0;  // nothing more to watch for
     HANDLE game = OpenProcess(SYNCHRONIZE, FALSE, pid);
     if (!game) return 0;

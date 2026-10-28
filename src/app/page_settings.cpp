@@ -6,6 +6,7 @@
 #include <utility>
 
 #include "app/page.hpp"
+#include "app/reference_pack.hpp"
 #include "app/setting_ids.hpp"
 #include "core/dlss_size.hpp"
 #include "core/gpu_order.hpp"
@@ -135,6 +136,13 @@ public:
             case settings::Page::Interface:  // 3.0.11-beta.3 (the owner: its own item «Інтерфейс»)
                 p.note(t(Text::InterfaceNote));
                 buildRows(p);
+                // 3.0.11-beta.5: the game's reference pack there (the game's watcher fetches it)
+                if (const auto pack = referenceThere(host_.model().paths().dir)) {
+                    p.note(tf(Text::ReferenceThere, {refpack::dateOf(*pack), pack->commit.substr(0, 8),
+                                                     std::to_string((pack->size + 1023) / 1024)}));
+                } else {
+                    p.note(t(Text::ReferenceNone));
+                }
                 return;
             case settings::Page::Chat:
                 regRows(p, [](const RegSetting& s) { return *s.subkey && s.control == Control::Check; });  // whispers

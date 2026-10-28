@@ -4853,6 +4853,17 @@ constexpr Entry kTexts[] = {
      "ничего делать не нужно."},
     {Text::PickerTitle, "Game screenshots of the last week", "Знімки гри за тиждень", "Снимки игры за неделю"},
     {Text::PickerAdd, "Add", "Додати", "Добавить"},
+    // 3.0.11-beta.5: the game's reference pack ({1} the server's data day, {2} its commit, {3} KB)
+    {Text::ReferenceThere,
+     "Game reference: the server's data of {1} (commit {2}), {3} KB, from uaro.kiev.ua - it updates by itself when "
+     "the game starts.",
+     "Довідник гри: дані сервера від {1} (коміт {2}), {3} КБ з uaro.kiev.ua - оновлюється сам під час запуску гри.",
+     "Справочник игры: данные сервера от {1} (коммит {2}), {3} КБ с uaro.kiev.ua - обновляется сам при запуске "
+     "игры."},
+    {Text::ReferenceNone,
+     "Game reference: not here yet - it comes from uaro.kiev.ua when the game starts with the new minimap on.",
+     "Довідник гри ще не завантажено: він приходить з uaro.kiev.ua під час запуску гри з увімкненою новою мінікартою.",
+     "Справочник игры ещё не загружен: он приходит с uaro.kiev.ua при запуске игры с включённой новой миникартой."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 
