@@ -1,3 +1,15 @@
+# uaRO Graphics 3.0.11-beta.1 — what is new
+
+- **A prototype of the new minimap (the new interface's first step).** Turned on in «Game» → «New minimap
+  (prototype)» (`[interface] minimap = 1`), off by default. The game's own minimap hides the way Ctrl+Tab hides it, and
+  a new one stands in its corner: the map round the character, the character as a white dot, the map's name and the
+  character's cell under it. A click on the new minimap does not walk the character. Off — the game's minimap is back.
+- It checks three things: the old minimap is gone and takes no clicks; the cell under the map is the one `/where`
+  says; a click on the new minimap does not move the character. The log tells what happened (lines `minimap:`).
+- To check: turn it on, walk round Prontera and a field, type `/where` and compare with the cell under the minimap;
+  click the minimap; go to another map; press Ctrl+Tab; turn it off — the old minimap is back. Send a report from the
+  game.
+
 # uaRO Graphics 3.0.10 — what is new
 
 «Reports» came alive: screenshots in the conversation, new answers without switching, notifications even while the app
