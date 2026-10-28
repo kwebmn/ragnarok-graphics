@@ -1,3 +1,33 @@
+# uaRO Graphics 3.0.9 — what is new
+
+New support: a report's answer shows in the game, «Reports» as a messenger, a new report made simpler. And «World
+resolution» is 100 % for everyone now.
+
+- **A report's answer shows where you are.** When the developer answers, you learn of it at once:
+  - **in the game** — a card «Answer to the report» at the top centre with the status and the developer's words.
+    «Open» (or Ctrl+Shift+F10 while the card shows) opens that report; «Later» hides the card until the next game
+    start;
+  - **while the game is behind other windows or minimised** — a Windows notification, as for whispers. Turned off in
+    «Game» → «Notifications» → «Answers to reports»;
+  - **in the app** (and on the page «Play» that uaRO.exe opens) — an orange strip «An answer to the report» with
+    «Open».
+  The game asks for answers at its start and then every 10 minutes, only on a computer that has sent a report.
+- **«Reports» as a messenger.** On the left the reports as cards with the tabs «Open» / «Closed» (an orange dot: a new
+  answer). On the right the report's status and path: Sent → Read → Needs information → Being fixed → Fixed → Closed.
+  The conversation as bubbles, screenshots as thumbnails in their message; when the developer waits for your answer —
+  an orange bar with the question. «Send · Ctrl+Enter», «Paste · Ctrl+V».
+- **«New report» made simpler.** One question «What happened?» with an example inside the field. The game's
+  screenshot (Ctrl+Shift+F10) is attached already and shown as a picture; «+ Game screenshot…» shows the screenshots
+  of the week as tiles, and a file or Ctrl+V can be added too (6 at most). After sending — «Thank you! The report is
+  sent» with its code; without internet — «Kept - it goes by itself».
+- **«World resolution» is 100 % for everyone.** The automatic setup gave old cards (Direct3D 11 without 12) 75 %: the
+  world was drawn smaller and made larger, and the character looked smeared when the camera was far. Now 100 % on
+  every card; a value under 100 % goes back to 100 % once. A share you choose yourself after this stays.
+- **«Own ground»: no magenta strips.** Bright magenta strips ran along Izlude's bridge and wall — the places of
+  textures the game makes see-through. They are see-through now, as in the game.
+- **The wash under Berserk.** If the world washes out white under Berserk or after it, send a report from the game:
+  the log now records what washes it.
+
 # uaRO Graphics 3.0.9-beta.7 — what is new
 
 - **«World resolution» is 100 % for everyone.** The automatic setup gave old cards (Direct3D 11 without 12) 75 %:
