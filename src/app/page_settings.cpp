@@ -101,6 +101,13 @@ public:
                     p.note(t(Text::RoextNote));
                     buildRows(p, "roext", false);
                 }
+                // 3.0.11-beta.2 (the owner: «я не разобрался где включить карту» - beta.1 listed [interface]
+                // nowhere): the new interface's own section, first after the game's settings
+                if (anyListed("interface")) {
+                    p.gap();
+                    p.heading(t(Text::InterfaceHeading));
+                    buildRows(p, "interface");
+                }
                 // 3.0.3-beta.4: several game windows ([windows]) - their own heading, whatever ROExt is
                 if (anyListed("windows")) {
                     p.gap();

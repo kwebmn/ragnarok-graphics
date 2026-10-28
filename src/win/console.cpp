@@ -156,6 +156,11 @@ void Console::build(Lang lang, const Config& config) {
         rows_.push_back(Row{Kind::Box, "frames.fps_counter", 0});  // the frame counter (Ctrl+Shift+F11 as well)
         // 3.0.5-beta.6: «Тест графіки» - not the first row, where the console opens: a Space there starts nothing
         rows_.push_back(Row{Kind::Test, "", 0});
+        // 3.0.11-beta.2: the new interface's minimap prototype - on and off in the game (the owner could not find it)
+        if (settingOf("interface.minimap")) {
+            rows_.push_back(Row{Kind::Heading, tr(lang, Text::InterfaceHeading), 0});
+            rows_.push_back(Row{Kind::Box, "interface.minimap", 0});
+        }
         // 3.0.3-beta.8: the game windows' panel (the user: on or off in the console too)
         if (settingOf("panel.show")) {
             rows_.push_back(Row{Kind::Heading, tr(lang, Text::PanelHeading), 0});
