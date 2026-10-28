@@ -1,3 +1,13 @@
+# uaRO Graphics 3.0.11-beta.5 — what is new
+
+- **The game's reference comes from uaro.kiev.ua.** The site now takes its game database (items, monsters, drops,
+  spawns, warps, Kafra and NPC routes, shops, pets, crafting) straight from the server's repository, the way the server
+  loads it, and keeps it up to date by itself. With the new minimap on, the game's start fetches that database as one
+  pack (about 270 KB) into `uaro-graphics\reference\` — only when the site has a newer one. While the site is down,
+  the copy there stays. The new interface's panels will read it.
+- To check: start the game with «Interface» → «New minimap (prototype)» on, then open «Interface» in the app — the line
+  under the switches says «Game reference: the server's data of 2026-10-23 (commit d68ea17e), 264 KB».
+
 # uaRO Graphics 3.0.11-beta.4 — what is new
 
 - **Ctrl+Tab switches the new minimap** («Interface» → «New minimap (prototype)») the way the game switched its own:
