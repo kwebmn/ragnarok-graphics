@@ -119,7 +119,7 @@ enum class Text : uint16_t {
     // 0.50.2: the graphics card
     RenderGpu, RenderGpuHint, RenderGpuAuto, RenderGpuItem, RenderGpuMissing,
     // 0.51: reports to the developers
-    ReportHeading, ReportNote, ReportComment, ReportCommentCue, ReportAuto, ReportAutoHint,
+    ReportHeading, ReportNote, ReportAuto, ReportAutoHint,
     // 0.53 (the site's download gone in 2.5.28)
     PackMakeHeading,
     // 0.54
@@ -370,9 +370,8 @@ enum class Text : uint16_t {
     ReportDev, ReportEventStatus, ReportAutoSent,
     ReportReplyLabel, ReportAddShot, ReportAttached, ReportSendButton, ReportCancel, ReportConfirmNote,
     ReportFixedWait, ReportConfirm, ReportStillThere, ReportSentOk, ReportNotSent, ReportNeedWords,
-    ReportShotFailed, ReportNewHeading, ReportKindLabel, ReportShotsPick, ReportNoGameShots, ReportAddFile,
-    ReportPaste, ReportPasteNone, ReportTooMany, ReportMapLine, ReportNewSent, ReportNewQueued,
-    ReportNewRefused, ReportPictures, ReportDiscard, ReportsOpen,  // 2.13: «Звернення»
+    ReportShotFailed, ReportNewHeading, ReportNoGameShots, ReportAddFile, ReportPasteNone, ReportTooMany,
+    ReportMapLine, ReportNewSent, ReportNewRefused, ReportPictures, ReportDiscard, ReportsOpen,  // 2.13: «Звернення»
     StartReportHint,  // 2.13: the splash names «Звернення»'s key
     PlayPatchLine, PlayPatchNote, PatchApplying, PatchFailed,  // 2.14: the client patch
     PackFromClient, CompareOffNote,  // 2.15: nothing extra
@@ -453,6 +452,10 @@ enum class Text : uint16_t {
     // 3.0.9-beta.5: «Звернення» as a messenger - the tabs, the chat's lines, the reply's buttons, the list's lines
     TabOpen, TabClosed, TalkDevRead, TalkSend, TalkPaste, TalkFacts, ListWaitsDev, TalkWaitsBar, TalkAutomatic,
     StepFixed,
+    // 3.0.9-beta.6: «Нове звернення» friendlier - one question, the screenshots as pictures, «Дякуємо» after it
+    NewTitle, NewSubtitle, NewPlaceholder, NewKindLabel, NewShots, NewShotGame, NewShotRemove, NewPrivacy,
+    NewPrivacyMore, NewSendHint, NewMapFromGame, SentTitle, SentBody, SentOpen, SentDone, QueuedTitle, QueuedBody,
+    PickerTitle, PickerAdd,
     Count
 };
 

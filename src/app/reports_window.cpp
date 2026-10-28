@@ -32,11 +32,191 @@ constexpr size_t kMostPicked = 6;
 constexpr size_t kGameShots = 12;
 
 // 3.0.9-beta.5: the conversation as a chat (app/chat_view: kHead, kChat), the list as cards with two tabs
+// 3.0.9-beta.6: the new report friendlier - one question, its screenshots as pictures, «Дякуємо» after it (kSent*)
 enum Id {
     kNew = 100, kRefresh, kList, kHint, kHead, kNote, kConfirm, kStill, kChat, kReplyLabel, kReply, kAddShot,
-    kPasteReply, kAttached, kSend, kNewHeading, kWhatLabel, kWhat, kKindLabel, kKind0, kKind1, kKind2, kKind3,
-    kPickLabel, kPick, kAddFile, kPaste, kGoes, kCancel, kSendNew, kStatus, kClose, kTabOpen, kTabClosed,
+    kPasteReply, kAttached, kSend, kNewHeading, kNewTitle, kNewSub, kWhat, kKindLabel, kKind0, kKind1, kKind2, kKind3,
+    kPickLabel, kPick, kShotGame, kAddFile, kPaste, kShotRemove, kGoes, kPrivacy, kPrivacyMore, kSendHint, kCancel,
+    kSendNew, kStatus, kClose, kTabOpen, kTabClosed, kSentIcon, kSentTitle, kSentBody, kSentOpen, kSentDone,
+    kPickerList = 300, kPickerAdd, kPickerCancel,
 };
+
+constexpr COLORREF kMuted = RGB(93, 104, 128), kLink = RGB(29, 79, 168);
+const wchar_t kPickerClass[] = L"uaroGraphicsShotPicker";
+
+// A multi-line edit's grey words while it is empty (its cue): the edit's own procedure, then the words over it
+WNDPROC g_editProc = nullptr;
+std::wstring g_cue;
+
+LRESULT CALLBACK cueProc(HWND w, UINT m, WPARAM wp, LPARAM lp) {
+    const LRESULT r = CallWindowProcW(g_editProc, w, m, wp, lp);
+    if (m == WM_SETFOCUS || m == WM_KILLFOCUS || (m == WM_COMMAND && HIWORD(wp) == EN_CHANGE))
+        InvalidateRect(w, nullptr, TRUE);
+    if (m == WM_PAINT && GetWindowTextLengthW(w) == 0 && !g_cue.empty()) {
+        HDC dc = GetDC(w);
+        RECT rect{};
+        SendMessageW(w, EM_GETRECT, 0, reinterpret_cast<LPARAM>(&rect));
+        HGDIOBJ old = SelectObject(dc, reinterpret_cast<HFONT>(SendMessageW(w, WM_GETFONT, 0, 0)));
+        SetTextColor(dc, RGB(138, 148, 168));
+        SetBkMode(dc, TRANSPARENT);
+        DrawTextW(dc, g_cue.c_str(), int(g_cue.size()), &rect, DT_WORDBREAK | DT_NOPREFIX | DT_EDITCONTROL);
+        SelectObject(dc, old);
+        ReleaseDC(w, dc);
+    }
+    return r;
+}
+
+// 3.0.9-beta.6: «+ Знімок гри…» - the game's screenshots of the last week as pictures; the chosen ones come back
+class ShotPicker {
+public:
+    ShotPicker(std::vector<std::wstring> paths, Lang l, int dpi, HFONT font)
+        : paths_(std::move(paths)), lang_(l), dpi_(dpi), font_(font) {}
+    ~ShotPicker() {
+        if (images_) ImageList_Destroy(images_);
+    }
+    std::vector<std::wstring> run(HWND owner);
+    LRESULT proc(UINT msg, WPARAM wp, LPARAM lp);
+    void attach(HWND h) { hwnd_ = h; }
+
+private:
+    int at(int v) const { return px(v, dpi_); }
+    void layout();
+    void take();
+
+    std::vector<std::wstring> paths_, chosen_;
+    Lang lang_;
+    int dpi_;
+    HFONT font_;
+    HWND hwnd_ = nullptr;
+    HIMAGELIST images_ = nullptr;
+    bool done_ = false;
+};
+
+LRESULT CALLBACK pickerProc(HWND h, UINT msg, WPARAM wp, LPARAM lp) {
+    if (msg == WM_NCCREATE) {
+        const CREATESTRUCTW* cs = reinterpret_cast<const CREATESTRUCTW*>(lp);
+        SetWindowLongPtrW(h, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(cs->lpCreateParams));
+        static_cast<ShotPicker*>(cs->lpCreateParams)->attach(h);
+    }
+    ShotPicker* p = reinterpret_cast<ShotPicker*>(GetWindowLongPtrW(h, GWLP_USERDATA));
+    if (!p || msg == WM_NCCREATE || msg == WM_CREATE) return DefWindowProcW(h, msg, wp, lp);
+    return p->proc(msg, wp, lp);
+}
+
+std::vector<std::wstring> ShotPicker::run(HWND owner) {
+    WNDCLASSEXW wc{};
+    wc.cbSize = sizeof wc;
+    if (!GetClassInfoExW(GetModuleHandleW(nullptr), kPickerClass, &wc)) {
+        wc.cbSize = sizeof wc;
+        wc.lpfnWndProc = pickerProc;
+        wc.hInstance = GetModuleHandleW(nullptr);
+        wc.hCursor = LoadCursorW(nullptr, MAKEINTRESOURCEW(32512));  // IDC_ARROW
+        wc.hbrBackground = reinterpret_cast<HBRUSH>(COLOR_BTNFACE + 1);
+        wc.lpszClassName = kPickerClass;
+        RegisterClassExW(&wc);
+    }
+    RECT o{};
+    GetWindowRect(owner, &o);
+    const int w = at(760), h = at(540);
+    const std::wstring title = wide(settings::tr(lang_, Text::PickerTitle));
+    CreateWindowExW(WS_EX_DLGMODALFRAME | WS_EX_CONTROLPARENT, kPickerClass, title.c_str(),
+                    WS_POPUP | WS_CAPTION | WS_SYSMENU | WS_THICKFRAME, o.left + (o.right - o.left - w) / 2,
+                    o.top + (o.bottom - o.top - h) / 2, w, h, owner, nullptr, GetModuleHandleW(nullptr), this);
+    if (!hwnd_) return {};
+    const auto make = [&](const wchar_t* cls, const std::wstring& text, DWORD style, int id, DWORD ex = 0) {
+        HWND c = CreateWindowExW(ex, cls, text.c_str(), WS_CHILD | WS_VISIBLE | style, 0, 0, 10, 10, hwnd_,
+                                 reinterpret_cast<HMENU>(static_cast<INT_PTR>(id)), GetModuleHandleW(nullptr), nullptr);
+        SendMessageW(c, WM_SETFONT, reinterpret_cast<WPARAM>(font_), TRUE);
+        return c;
+    };
+    HWND list = make(WC_LISTVIEWW, L"", WS_TABSTOP | LVS_ICON | LVS_SHOWSELALWAYS | LVS_AUTOARRANGE, kPickerList,
+                     WS_EX_CLIENTEDGE);
+    SendMessageW(list, LVM_SETEXTENDEDLISTVIEWSTYLE, 0, LVS_EX_DOUBLEBUFFER);
+    images_ = ImageList_Create(at(160), at(90), ILC_COLOR32, 8, 8);
+    SendMessageW(list, LVM_SETIMAGELIST, LVSIL_NORMAL, reinterpret_cast<LPARAM>(images_));
+    for (size_t i = 0; i < paths_.size(); ++i) {
+        HBITMAP bmp = shotThumb(paths_[i], at(160), at(90));
+        const int image = bmp ? ImageList_Add(images_, bmp, nullptr) : -1;
+        if (bmp) DeleteObject(bmp);
+        const size_t slash = paths_[i].find_last_of(L"\\/");
+        std::wstring name = slash == std::wstring::npos ? paths_[i] : paths_[i].substr(slash + 1);
+        LVITEMW item{};
+        item.mask = LVIF_TEXT | LVIF_IMAGE;
+        item.iItem = int(i);
+        item.iImage = image;
+        item.pszText = &name[0];
+        SendMessageW(list, LVM_INSERTITEMW, 0, reinterpret_cast<LPARAM>(&item));
+    }
+    if (!paths_.empty()) {  // the newest chosen already: Enter takes it
+        LVITEMW first{};
+        first.stateMask = first.state = LVIS_SELECTED | LVIS_FOCUSED;
+        SendMessageW(list, LVM_SETITEMSTATE, 0, reinterpret_cast<LPARAM>(&first));
+    }
+    markPrimary(make(L"BUTTON", wide(settings::tr(lang_, Text::PickerAdd)), WS_TABSTOP | BS_DEFPUSHBUTTON, kPickerAdd));
+    make(L"BUTTON", wide(settings::tr(lang_, Text::ReportCancel)), WS_TABSTOP | BS_PUSHBUTTON, kPickerCancel);
+    layout();
+    EnableWindow(owner, FALSE);
+    ShowWindow(hwnd_, SW_SHOW);
+    SetFocus(list);
+    MSG msg;
+    while (!done_ && IsWindow(hwnd_)) {
+        const BOOL got = GetMessageW(&msg, nullptr, 0, 0);
+        if (got <= 0) {
+            if (got == 0) PostQuitMessage(int(msg.wParam));
+            break;
+        }
+        if (IsDialogMessageW(hwnd_, &msg)) continue;  // Enter, Esc, Tab
+        TranslateMessage(&msg);
+        DispatchMessageW(&msg);
+    }
+    EnableWindow(owner, TRUE);
+    if (IsWindow(hwnd_)) DestroyWindow(hwnd_);
+    SetForegroundWindow(owner);
+    return chosen_;
+}
+
+void ShotPicker::layout() {
+    RECT c{};
+    GetClientRect(hwnd_, &c);
+    const int pad = at(12), bh = at(30), bw = at(130);
+    MoveWindow(GetDlgItem(hwnd_, kPickerList), pad, pad, c.right - 2 * pad, c.bottom - 3 * pad - bh, TRUE);
+    MoveWindow(GetDlgItem(hwnd_, kPickerAdd), c.right - pad - 2 * bw - at(8), c.bottom - pad - bh, bw, bh, TRUE);
+    MoveWindow(GetDlgItem(hwnd_, kPickerCancel), c.right - pad - bw, c.bottom - pad - bh, bw, bh, TRUE);
+}
+
+void ShotPicker::take() {
+    HWND list = GetDlgItem(hwnd_, kPickerList);
+    for (int i = int(SendMessageW(list, LVM_GETNEXTITEM, WPARAM(-1), LVNI_SELECTED)); i >= 0;
+         i = int(SendMessageW(list, LVM_GETNEXTITEM, WPARAM(i), LVNI_SELECTED)))
+        if (size_t(i) < paths_.size()) chosen_.push_back(paths_[size_t(i)]);
+    done_ = true;
+}
+
+LRESULT ShotPicker::proc(UINT msg, WPARAM wp, LPARAM lp) {
+    switch (msg) {
+        case WM_SIZE: layout(); return 0;
+        case WM_GETMINMAXINFO: {
+            MINMAXINFO* mm = reinterpret_cast<MINMAXINFO*>(lp);
+            mm->ptMinTrackSize.x = at(480);
+            mm->ptMinTrackSize.y = at(360);
+            return 0;
+        }
+        case WM_NOTIFY: {
+            const NMHDR* n = reinterpret_cast<const NMHDR*>(lp);
+            LRESULT drawn = 0;
+            if (drawPrimary(n, drawn)) return drawn;
+            if (n->idFrom == kPickerList && n->code == NM_DBLCLK) take();
+            return 0;
+        }
+        case WM_COMMAND:
+            if (LOWORD(wp) == kPickerAdd || LOWORD(wp) == IDOK) take();
+            if (LOWORD(wp) == kPickerCancel || LOWORD(wp) == IDCANCEL) done_ = true;
+            return 0;
+        case WM_CLOSE: done_ = true; return 0;
+        default: break;
+    }
+    return DefWindowProcW(hwnd_, msg, wp, lp);
+}
 
 // A status's chip: its ground and its words (the support canvas' colours)
 struct Tone {
@@ -128,6 +308,7 @@ public:
         if (font_) DeleteObject(font_);
         if (bold_) DeleteObject(bold_);
         if (strong_) DeleteObject(strong_);
+        if (big_) DeleteObject(big_);
         if (barBrush_) DeleteObject(barBrush_);
         if (cardsBrush_) DeleteObject(cardsBrush_);
     }
@@ -141,7 +322,7 @@ public:
     std::vector<reports::Answer> answers() const { return reports::answersOf(list_); }  // 3.0.9-beta.4
 
 private:
-    enum class Pane { Hint, Talk, New };
+    enum class Pane { Hint, Talk, New, Sent };  // 3.0.9-beta.6: Sent - «Дякуємо» after a new one
 
     std::wstring t(Text x) const { return wtr(lang_, x); }
     std::wstring tf(Text x, const std::vector<std::string>& args) const { return wtrf(lang_, x, args); }
@@ -164,12 +345,17 @@ private:
     void drawCard(const DRAWITEMSTRUCT* d);
     std::wstring shortTime(const std::string& iso) const;
     void startNew();
-    void addPick(const Pick& p, bool ticked);
+    bool addPick(const Pick& p);  // 3.0.9-beta.6: attached (6 at most), its thumbnail in the list
+    void pickGameShots();
+    void removePick();
+    void retextPicks();
+    void toggleKind(int id);
+    void showSent(const std::string& code, bool queued);
+    void drawSentIcon(const DRAWITEMSTRUCT* d) const;
     void addFile(bool toReply);
     void paste(bool toReply);
     void attach(const std::string& jpeg);  // to the reply
     void sendNewReport();
-    bool picksTicked(std::vector<size_t>& ticked) const;
     bool newTouched() const;
 
     std::wstring statusText(reports::Status s, const std::string& fixedIn) const;
@@ -183,6 +369,9 @@ private:
     ReportStart start_;
     HWND hwnd_ = nullptr;
     HFONT font_ = nullptr, bold_ = nullptr, strong_ = nullptr;  // strong_: bold at the text's size (the cards)
+    HFONT big_ = nullptr;  // 3.0.9-beta.6: «Що трапилося?», «Дякуємо!»
+    std::string sentCode_;  // the new report's, for «Відкрити переписку»
+    bool sentQueued_ = false;
     HIMAGELIST thumbs_ = nullptr;
     Pane pane_ = Pane::Hint;
     std::string key_;
@@ -211,6 +400,7 @@ HWND ReportsWindow::create(HWND owner) {
     font_ = makeFont(dpi_, false);
     bold_ = makeFont(dpi_, true, 115);
     strong_ = makeFont(dpi_, true);
+    big_ = makeFont(dpi_, true, 160);
     cardsBrush_ = CreateSolidBrush(RGB(241, 244, 249));
     key_ = computerKey(model_.paths().dir);
     RECT o;
@@ -247,29 +437,47 @@ HWND ReportsWindow::create(HWND owner) {
     make(L"BUTTON", t(Text::TalkPaste), tab | BS_PUSHBUTTON, kPasteReply);
     make(L"STATIC", L"", SS_LEFT | SS_NOPREFIX | SS_CENTERIMAGE | SS_ENDELLIPSIS, kAttached);
     markPrimary(make(L"BUTTON", t(Text::TalkSend), tab | BS_PUSHBUTTON, kSend));  // 3.0.2: blue
-    // the new report
-    make(L"STATIC", t(Text::ReportNewHeading), SS_LEFT | SS_NOPREFIX, kNewHeading);
-    make(L"STATIC", t(Text::ReportComment) + L" (" + t(Text::ReportCommentCue) + L")", SS_LEFT | SS_NOPREFIX,
-         kWhatLabel);
+    // the new report (3.0.9-beta.6: one question and its words' example inside the field, «Про що це?» toggles one
+    // may leave, the screenshots attached as pictures, one calm line of what goes with it)
+    std::wstring label = t(Text::ReportNewHeading);
+    CharUpperBuffW(&label[0], DWORD(label.size()));
+    make(L"STATIC", label, SS_LEFT | SS_NOPREFIX, kNewHeading);
+    SendMessageW(make(L"STATIC", t(Text::NewTitle), SS_LEFT | SS_NOPREFIX, kNewTitle), WM_SETFONT,
+                 reinterpret_cast<WPARAM>(big_), TRUE);
+    make(L"STATIC", t(Text::NewSubtitle), SS_LEFT | SS_NOPREFIX | SS_ENDELLIPSIS, kNewSub);
     HWND what = make(L"EDIT", L"", tab | WS_VSCROLL | ES_MULTILINE | ES_AUTOVSCROLL | ES_WANTRETURN, kWhat,
                      WS_EX_CLIENTEDGE);
     SendMessageW(what, EM_SETLIMITTEXT, 2000, 0);  // 4000 bytes of UTF-8 (report::kMostComment) in any language
-    make(L"STATIC", t(Text::ReportKindLabel), SS_LEFT | SS_NOPREFIX, kKindLabel);
+    g_cue = t(Text::NewPlaceholder);
+    g_editProc = reinterpret_cast<WNDPROC>(SetWindowLongPtrW(what, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(cueProc)));
+    make(L"STATIC", t(Text::NewKindLabel), SS_LEFT | SS_NOPREFIX | SS_CENTERIMAGE, kKindLabel);
     const Text kinds[] = {Text::ReportKindGraphics, Text::ReportKindCrash, Text::ReportKindSlow,
                           Text::ReportKindOther};
-    for (int i = 0; i < 4; ++i)
-        make(L"BUTTON", t(kinds[i]), tab | BS_AUTORADIOBUTTON | (i ? 0 : WS_GROUP), kKind0 + i);
-    make(L"STATIC", t(Text::ReportShotsPick), SS_LEFT | SS_NOPREFIX | WS_GROUP, kPickLabel);
-    HWND pick = make(WC_LISTVIEWW, L"", tab | LVS_ICON | LVS_SHOWSELALWAYS | LVS_AUTOARRANGE, kPick,
+    for (int i = 0; i < 4; ++i)  // toggles of one choice, none allowed (toggleKind)
+        make(L"BUTTON", t(kinds[i]), tab | BS_AUTOCHECKBOX | BS_PUSHLIKE | (i ? 0 : WS_GROUP), kKind0 + i);
+    make(L"STATIC", L"", SS_LEFT | SS_NOPREFIX | WS_GROUP, kPickLabel);
+    HWND pick = make(WC_LISTVIEWW, L"", tab | LVS_ICON | LVS_SHOWSELALWAYS | LVS_AUTOARRANGE | LVS_SINGLESEL, kPick,
                      WS_EX_CLIENTEDGE);
-    SendMessageW(pick, LVM_SETEXTENDEDLISTVIEWSTYLE, 0, LVS_EX_CHECKBOXES | LVS_EX_DOUBLEBUFFER);
-    thumbs_ = ImageList_Create(at(160), at(90), ILC_COLOR32, 8, 8);
+    SendMessageW(pick, LVM_SETEXTENDEDLISTVIEWSTYLE, 0, LVS_EX_DOUBLEBUFFER);
+    thumbs_ = ImageList_Create(at(192), at(108), ILC_COLOR32, 8, 8);
     SendMessageW(pick, LVM_SETIMAGELIST, LVSIL_NORMAL, reinterpret_cast<LPARAM>(thumbs_));
+    make(L"BUTTON", t(Text::NewShotGame), tab | BS_PUSHBUTTON, kShotGame);
     make(L"BUTTON", t(Text::ReportAddFile), tab | BS_PUSHBUTTON, kAddFile);
-    make(L"BUTTON", t(Text::ReportPaste), tab | BS_PUSHBUTTON, kPaste);
+    make(L"BUTTON", t(Text::TalkPaste), tab | BS_PUSHBUTTON, kPaste);
+    make(L"BUTTON", t(Text::NewShotRemove), tab | BS_PUSHBUTTON | WS_DISABLED, kShotRemove);
     make(L"STATIC", L"", SS_LEFT | SS_NOPREFIX, kGoes);
+    make(L"STATIC", t(Text::NewPrivacy), SS_LEFT | SS_NOPREFIX | SS_ENDELLIPSIS, kPrivacy);
+    make(L"STATIC", t(Text::NewPrivacyMore), SS_LEFT | SS_NOPREFIX | SS_NOTIFY, kPrivacyMore);
+    make(L"STATIC", t(Text::NewSendHint), SS_LEFT | SS_NOPREFIX | SS_CENTERIMAGE, kSendHint);
     make(L"BUTTON", t(Text::ReportCancel), tab | BS_PUSHBUTTON, kCancel);
     markPrimary(make(L"BUTTON", t(Text::ReportSendButton), tab | BS_PUSHBUTTON, kSendNew));
+    // 3.0.9-beta.6: «Дякуємо!» - the report sent (or kept for later): what comes next
+    make(L"STATIC", L"", SS_OWNERDRAW, kSentIcon);
+    SendMessageW(make(L"STATIC", L"", SS_CENTER | SS_NOPREFIX, kSentTitle), WM_SETFONT, reinterpret_cast<WPARAM>(big_),
+                 TRUE);
+    make(L"STATIC", L"", SS_CENTER | SS_NOPREFIX, kSentBody);
+    markPrimary(make(L"BUTTON", t(Text::SentOpen), tab | BS_PUSHBUTTON, kSentOpen));
+    make(L"BUTTON", t(Text::SentDone), tab | BS_PUSHBUTTON, kSentDone);
     // the bottom row
     make(L"STATIC", L"", WS_VISIBLE | SS_LEFT | SS_NOPREFIX | SS_CENTERIMAGE | SS_ENDELLIPSIS, kStatus);
     make(L"BUTTON", t(Text::Close), WS_VISIBLE | tab | BS_PUSHBUTTON, kClose);
@@ -329,38 +537,92 @@ void ReportsWindow::layout() {
         move(kAttached, x + 2 * (at(160) + gap), y, rw - 2 * (at(160) + gap) - sendW - gap, bh);
         move(kSend, x + rw - sendW, y, sendW, bh);
     } else if (pane_ == Pane::New) {
+        // 3.0.9-beta.6: the question, its field, «Про що це?», the screenshots, the calm line, the buttons
+        const auto textWidth = [&](int id) {
+            HWND ctl = GetDlgItem(hwnd_, id);
+            wchar_t buf[256] = {};
+            const int n = GetWindowTextW(ctl, buf, 256);
+            HDC dc = GetDC(ctl);
+            HGDIOBJ old = SelectObject(dc, reinterpret_cast<HFONT>(SendMessageW(ctl, WM_GETFONT, 0, 0)));
+            SIZE size{};
+            GetTextExtentPoint32W(dc, buf, n, &size);
+            SelectObject(dc, old);
+            ReleaseDC(ctl, dc);
+            return int(size.cx);
+        };
+        const bool map = !start_.map.empty();
         int y = top;
-        move(kNewHeading, x, y, rw, at(24));
-        y += at(24) + gap / 2;
-        move(kWhatLabel, x, y, rw, line);
-        move(kWhat, x, y + line, rw, at(92));
-        y += line + at(92) + gap;
+        move(kNewHeading, x, y, rw, at(18));
+        y += at(18);
+        move(kNewTitle, x, y, rw, at(38));
+        y += at(38);
+        move(kNewSub, x, y, rw, line);
+        y += line + gap;
+        move(kWhat, x, y, rw, at(88));
+        y += at(88) + gap;
         move(kKindLabel, x, y, rw, line);
-        y += line;
-        for (int i = 0; i < 4; ++i) move(kKind0 + i, x + (i % 2) * (rw / 2), y + (i / 2) * at(24), rw / 2, at(24));
-        y += 2 * at(24) + gap;
+        y += line + gap / 2;
+        int cx = x;
+        for (int i = 0; i < 4; ++i) {  // each as wide as its words
+            const int w = textWidth(kKind0 + i) + at(28);
+            move(kKind0 + i, cx, y, w, at(30));
+            cx += w + gap;
+        }
+        y += at(30) + gap;
         move(kPickLabel, x, y, rw, line);
         y += line;
-        const int goesH = at(54), tail = bh + gap + goesH + gap + bh;
-        const int pickH = std::max(at(110), end - y - tail);
+        const int tailH = bh + gap + (map ? line : 0) + gap + line + gap + bh;  // buttons, map, the line, send row
+        const int pickH = std::max(at(150), end - y - tailH);
         move(kPick, x, y, rw, pickH);
         y += pickH + gap;
-        move(kAddFile, x, y, at(170), bh);
-        move(kPaste, x + at(170) + gap, y, at(190), bh);
+        int bx = x;
+        for (const auto& b : {std::make_pair(kShotGame, 170), std::make_pair(kAddFile, 150),
+                              std::make_pair(kPaste, 170), std::make_pair(kShotRemove, 120)}) {
+            move(b.first, bx, y, at(b.second), bh);
+            bx += at(b.second) + gap;
+        }
         y += bh + gap;
-        move(kGoes, x, y, rw, goesH);
-        move(kCancel, x + rw - 2 * at(140) - gap, end - bh, at(140), bh);
-        move(kSendNew, x + rw - at(140), end - bh, at(140), bh);
+        if (map) {
+            move(kGoes, x, y, rw, line);
+            y += line;
+        }
+        y += gap;
+        const int moreW = textWidth(kPrivacyMore) + at(8);
+        move(kPrivacy, x, y, std::max(0, rw - moreW - gap), line);
+        move(kPrivacyMore, x + rw - moreW, y, moreW, line);
+        move(kSendHint, x, end - bh, rw - 2 * at(150) - 2 * gap, bh);
+        move(kCancel, x + rw - 2 * at(150) - gap, end - bh, at(150), bh);
+        move(kSendNew, x + rw - at(150), end - bh, at(150), bh);
+    } else if (pane_ == Pane::Sent) {  // 3.0.9-beta.6: «Дякуємо!» in the middle
+        const int icon = at(72), midY = top + std::max(at(40), (end - top) / 2 - at(130));
+        move(kSentIcon, x + (rw - icon) / 2, midY, icon, icon);
+        int y = midY + icon + at(18);
+        move(kSentTitle, x, y, rw, at(40));
+        y += at(44);
+        move(kSentBody, x + rw / 8, y, rw - rw / 4, at(60));
+        y += at(70);
+        const int bw = at(200);
+        if (sentQueued_) {
+            move(kSentDone, x + (rw - bw) / 2, y, bw, at(34));
+        } else {
+            move(kSentOpen, x + rw / 2 - bw - gap / 2, y, bw, at(34));
+            move(kSentDone, x + rw / 2 + gap / 2, y, bw, at(34));
+        }
     }
 }
 
 void ReportsWindow::show(Pane p) {
     pane_ = p;
     const int talk[] = {kHead, kChat, kReplyLabel, kReply, kAddShot, kPasteReply, kAttached, kSend};
-    const int fresh[] = {kNewHeading, kWhatLabel, kWhat, kKindLabel, kKind0, kKind1, kKind2, kKind3, kPickLabel, kPick,
-                         kAddFile, kPaste, kGoes, kCancel, kSendNew};
+    const int fresh[] = {kNewHeading, kNewTitle, kNewSub, kWhat, kKindLabel, kKind0, kKind1, kKind2, kKind3,
+                         kPickLabel, kPick, kShotGame, kAddFile, kPaste, kShotRemove, kGoes, kPrivacy, kPrivacyMore,
+                         kSendHint, kCancel, kSendNew};
+    const int sent[] = {kSentIcon, kSentTitle, kSentBody, kSentDone};
     for (int id : talk) ShowWindow(GetDlgItem(hwnd_, id), p == Pane::Talk ? SW_SHOW : SW_HIDE);
     for (int id : fresh) ShowWindow(GetDlgItem(hwnd_, id), p == Pane::New ? SW_SHOW : SW_HIDE);
+    for (int id : sent) ShowWindow(GetDlgItem(hwnd_, id), p == Pane::Sent ? SW_SHOW : SW_HIDE);
+    ShowWindow(GetDlgItem(hwnd_, kSentOpen), p == Pane::Sent && !sentQueued_ ? SW_SHOW : SW_HIDE);
+    if (p == Pane::New && start_.map.empty()) ShowWindow(GetDlgItem(hwnd_, kGoes), SW_HIDE);  // no map: no line
     ShowWindow(GetDlgItem(hwnd_, kHint), p == Pane::Hint ? SW_SHOW : SW_HIDE);
     if (p != Pane::Talk)
         for (int id : {kNote, kConfirm, kStill}) ShowWindow(GetDlgItem(hwnd_, id), SW_HIDE);
@@ -685,38 +947,125 @@ std::wstring ReportsWindow::shortTime(const std::string& iso) const {
 void ReportsWindow::startNew() {
     if (pane_ != Pane::New) {
         SetWindowTextW(GetDlgItem(hwnd_, kWhat), L"");
-        for (int i = 0; i < 4; ++i) SendMessageW(GetDlgItem(hwnd_, kKind0 + i), BM_SETCHECK, i == 0, 0);
+        // 3.0.9-beta.6: «Про що це?» - from the game «Графіка» already, else none (it may stay none)
+        for (int i = 0; i < 4; ++i)
+            SendMessageW(GetDlgItem(hwnd_, kKind0 + i), BM_SETCHECK,
+                         i == 0 && !start_.shot.empty() ? BST_CHECKED : BST_UNCHECKED, 0);
         picks_.clear();
         SendMessageW(GetDlgItem(hwnd_, kPick), LVM_DELETEALLITEMS, 0, 0);
         ImageList_RemoveAll(thumbs_);
-        if (!start_.shot.empty()) addPick(Pick{start_.shot, "", fileNameOf(start_.shot), ""}, true);
-        for (const std::wstring& path : gameShots(model_.paths().dir, kGameShots))
-            if (path != start_.shot) addPick(Pick{path, "", fileNameOf(path), ""}, false);
-        std::wstring goes = t(Text::ReportNote);
-        if (!start_.map.empty()) goes += L"\r\n" + tf(Text::ReportMapLine, {start_.map});
-        SetWindowTextW(GetDlgItem(hwnd_, kGoes), goes.c_str());
+        if (!start_.shot.empty()) addPick(Pick{start_.shot, "", fileNameOf(start_.shot), ""});
+        const std::wstring map = start_.map.empty() ? L"" : tf(Text::NewMapFromGame, {start_.map});
+        SetWindowTextW(GetDlgItem(hwnd_, kGoes), map.c_str());
+        retextPicks();
     }
     show(Pane::New);
     SetFocus(GetDlgItem(hwnd_, kWhat));
 }
 
-void ReportsWindow::addPick(const Pick& p, bool ticked) {
-    HBITMAP bmp = p.path.empty() ? jpegThumb(p.jpeg, at(160), at(90)) : shotThumb(p.path, at(160), at(90));
+bool ReportsWindow::addPick(const Pick& p) {
+    if (picks_.size() >= kMostPicked) {
+        status(t(Text::ReportTooMany));
+        return false;
+    }
+    HBITMAP bmp = p.path.empty() ? jpegThumb(p.jpeg, at(192), at(108)) : shotThumb(p.path, at(192), at(108));
     const int image = bmp ? ImageList_Add(thumbs_, bmp, nullptr) : -1;
     if (bmp) DeleteObject(bmp);
-    HWND pick = GetDlgItem(hwnd_, kPick);
     LVITEMW item{};
     item.mask = LVIF_TEXT | LVIF_IMAGE;
     item.iItem = int(picks_.size());
     item.iImage = image;
     item.pszText = const_cast<wchar_t*>(p.name.c_str());
     picks_.push_back(p);
-    const LRESULT index = SendMessageW(pick, LVM_INSERTITEMW, 0, reinterpret_cast<LPARAM>(&item));
-    if (ticked) {
-        filling_ = true;
-        ListView_SetCheckState(pick, int(index), TRUE);
-        filling_ = false;
+    SendMessageW(GetDlgItem(hwnd_, kPick), LVM_INSERTITEMW, 0, reinterpret_cast<LPARAM>(&item));
+    retextPicks();
+    return true;
+}
+
+// 3.0.9-beta.6: the game's screenshots of the week not attached yet, as pictures to choose from
+void ReportsWindow::pickGameShots() {
+    std::vector<std::wstring> paths;
+    for (const std::wstring& path : gameShots(model_.paths().dir, kGameShots)) {
+        bool attached = false;
+        for (const Pick& p : picks_) attached = attached || p.path == path;
+        if (!attached) paths.push_back(path);
     }
+    if (paths.empty()) {
+        MessageBoxW(hwnd_, t(Text::ReportNoGameShots).c_str(), t(Text::PickerTitle).c_str(),
+                    MB_OK | MB_ICONINFORMATION);
+        return;
+    }
+    ShotPicker picker(paths, lang_, dpi_, font_);
+    for (const std::wstring& path : picker.run(hwnd_))
+        if (!addPick(Pick{path, "", fileNameOf(path), ""})) break;
+}
+
+void ReportsWindow::removePick() {
+    HWND pick = GetDlgItem(hwnd_, kPick);
+    const LRESULT i = SendMessageW(pick, LVM_GETNEXTITEM, WPARAM(-1), LVNI_SELECTED);
+    if (i < 0 || size_t(i) >= picks_.size()) return;
+    SendMessageW(pick, LVM_DELETEITEM, WPARAM(i), 0);  // its picture stays in the image list, unused
+    picks_.erase(picks_.begin() + i);
+    retextPicks();
+}
+
+// «Знімки · N з 6»; «Прибрати» while one is chosen; the adding buttons while there is room
+void ReportsWindow::retextPicks() {
+    SetWindowTextW(GetDlgItem(hwnd_, kPickLabel), tf(Text::NewShots, {std::to_string(picks_.size())}).c_str());
+    const bool chosen = SendMessageW(GetDlgItem(hwnd_, kPick), LVM_GETNEXTITEM, WPARAM(-1), LVNI_SELECTED) >= 0;
+    EnableWindow(GetDlgItem(hwnd_, kShotRemove), chosen);
+    const bool room = picks_.size() < kMostPicked;
+    for (int id : {kShotGame, kAddFile, kPaste}) EnableWindow(GetDlgItem(hwnd_, id), room);
+}
+
+// «Про що це?»: one at most - a toggle pressed lets the others go; pressed again, none
+void ReportsWindow::toggleKind(int id) {
+    if (SendMessageW(GetDlgItem(hwnd_, id), BM_GETCHECK, 0, 0) != BST_CHECKED) return;
+    for (int i = 0; i < 4; ++i)
+        if (kKind0 + i != id) SendMessageW(GetDlgItem(hwnd_, kKind0 + i), BM_SETCHECK, BST_UNCHECKED, 0);
+}
+
+// 3.0.9-beta.6: «Дякуємо! Звернення надіслано» with its code and what comes next, or «Збережено — піде само»
+void ReportsWindow::showSent(const std::string& code, bool queued) {
+    sentCode_ = code;
+    sentQueued_ = queued;
+    SetWindowTextW(GetDlgItem(hwnd_, kSentTitle), t(queued ? Text::QueuedTitle : Text::SentTitle).c_str());
+    const std::wstring body = queued ? t(Text::QueuedBody) : wide(code) + L"\r\n" + t(Text::SentBody);
+    SetWindowTextW(GetDlgItem(hwnd_, kSentBody), body.c_str());
+    fillList();
+    show(Pane::Sent);
+    InvalidateRect(GetDlgItem(hwnd_, kSentIcon), nullptr, TRUE);
+    SetFocus(GetDlgItem(hwnd_, queued ? kSentDone : kSentOpen));
+}
+
+// A circle of the outcome's colour: a tick (sent), a clock (kept for later)
+void ReportsWindow::drawSentIcon(const DRAWITEMSTRUCT* d) const {
+    HDC dc = d->hDC;
+    const RECT r = d->rcItem;
+    FillRect(dc, &r, GetSysColorBrush(COLOR_BTNFACE));
+    const int w = r.right - r.left, h = r.bottom - r.top;
+    HBRUSH ground = CreateSolidBrush(sentQueued_ ? RGB(253, 235, 214) : RGB(223, 243, 230));
+    HPEN none = CreatePen(PS_NULL, 0, 0);
+    HPEN ink = CreatePen(PS_SOLID, std::max(2, w / 14), sentQueued_ ? RGB(138, 75, 0) : RGB(29, 107, 58));
+    HGDIOBJ oldBrush = SelectObject(dc, ground), oldPen = SelectObject(dc, none);
+    Ellipse(dc, r.left, r.top, r.right, r.bottom);
+    SelectObject(dc, ink);
+    if (sentQueued_) {
+        SelectObject(dc, GetStockObject(HOLLOW_BRUSH));
+        Ellipse(dc, r.left + w / 4, r.top + h / 4, r.right - w / 4, r.bottom - h / 4);
+        MoveToEx(dc, r.left + w / 2, r.top + h * 3 / 8, nullptr);
+        LineTo(dc, r.left + w / 2, r.top + h / 2);
+        LineTo(dc, r.left + w * 5 / 8, r.top + h * 9 / 16);
+    } else {
+        MoveToEx(dc, r.left + w * 3 / 10, r.top + h / 2, nullptr);
+        LineTo(dc, r.left + w * 9 / 20, r.top + h * 13 / 20);
+        LineTo(dc, r.left + w * 7 / 10, r.top + h * 7 / 20);
+    }
+    SelectObject(dc, oldBrush);
+    SelectObject(dc, oldPen);
+    DeleteObject(ground);
+    DeleteObject(none);
+    DeleteObject(ink);
 }
 
 void ReportsWindow::addFile(bool toReply) {
@@ -744,9 +1093,7 @@ void ReportsWindow::addFile(bool toReply) {
             attach(jpeg);
         return;
     }
-    std::vector<size_t> ticked;
-    picksTicked(ticked);
-    addPick(Pick{file, "", fileNameOf(file), ""}, ticked.size() < kMostPicked);
+    addPick(Pick{file, "", fileNameOf(file), ""});
 }
 
 void ReportsWindow::paste(bool toReply) {
@@ -759,10 +1106,7 @@ void ReportsWindow::paste(bool toReply) {
         attach(jpeg);
         return;
     }
-    std::vector<size_t> ticked;
-    picksTicked(ticked);
-    addPick(Pick{L"", jpeg, L"Ctrl+V " + std::to_wstring(++pasted_), clipboardPng(hwnd_)},
-            ticked.size() < kMostPicked);
+    addPick(Pick{L"", jpeg, L"Ctrl+V " + std::to_wstring(++pasted_), clipboardPng(hwnd_)});
 }
 
 void ReportsWindow::attach(const std::string& jpeg) {
@@ -775,37 +1119,22 @@ void ReportsWindow::attach(const std::string& jpeg) {
     SetWindowTextW(GetDlgItem(hwnd_, kAttached), text.c_str());
 }
 
-bool ReportsWindow::picksTicked(std::vector<size_t>& ticked) const {
-    ticked.clear();
-    HWND pick = GetDlgItem(hwnd_, kPick);
-    for (size_t i = 0; i < picks_.size(); ++i)
-        if (ListView_GetCheckState(pick, int(i))) ticked.push_back(i);
-    return !ticked.empty();
-}
+
 
 bool ReportsWindow::newTouched() const {
-    std::vector<size_t> ticked;
-    picksTicked(ticked);
-    return GetWindowTextLengthW(GetDlgItem(hwnd_, kWhat)) > 0 || ticked.size() > (start_.shot.empty() ? 0u : 1u);
+    return GetWindowTextLengthW(GetDlgItem(hwnd_, kWhat)) > 0 || picks_.size() > (start_.shot.empty() ? 0u : 1u);
 }
 
 void ReportsWindow::sendNewReport() {
     const std::wstring what = textOf(GetDlgItem(hwnd_, kWhat));
-    std::vector<size_t> ticked;
-    picksTicked(ticked);
-    if (ticked.size() > kMostPicked) {
-        status(t(Text::ReportTooMany));
-        return;
-    }
-    if (what.empty() && ticked.empty()) {
+    if (what.empty() && picks_.empty()) {
         status(t(Text::ReportNeedWords));
         return;
     }
     HCURSOR old = SetCursor(LoadCursorW(nullptr, IDC_WAIT));
     std::vector<std::pair<std::string, std::string>> shots;
     std::vector<std::pair<std::string, std::string>> originals;  // 3.0.5-beta.5: the same in full, sent after it
-    for (size_t i : ticked) {
-        const Pick& p = picks_[i];
+    for (const Pick& p : picks_) {  // 3.0.9-beta.6: every attached one
         std::string jpeg = p.path.empty() ? p.jpeg : shotJpeg(p.path);
         if (jpeg.empty()) {
             SetCursor(old);
@@ -844,12 +1173,11 @@ void ReportsWindow::sendNewReport() {
             list_ = list;
             loaded_ = true;
         }
-        openCode(r.code);
+        showSent(r.code, false);  // 3.0.9-beta.6: «Дякуємо!» and what comes next
     } else if (r.queued) {
         SetCursor(old);
         start_ = ReportStart{};
-        status(t(Text::ReportNewQueued));
-        show(Pane::Hint);
+        showSent("", true);
     } else {
         SetCursor(old);
         status(tf(Text::ReportNewRefused, {r.error}));
@@ -858,9 +1186,13 @@ void ReportsWindow::sendNewReport() {
 
 bool ReportsWindow::keys(const MSG& msg) {
     if (msg.message != WM_KEYDOWN || !(GetKeyState(VK_CONTROL) & 0x8000)) return false;
-    // 3.0.9-beta.5: Ctrl+Enter in the answer - it goes
+    // 3.0.9-beta.5: Ctrl+Enter in the answer - it goes; 3.0.9-beta.6: in the new report's words too
     if (msg.wParam == VK_RETURN && pane_ == Pane::Talk && msg.hwnd == GetDlgItem(hwnd_, kReply)) {
         sendReply();
+        return true;
+    }
+    if (msg.wParam == VK_RETURN && pane_ == Pane::New && msg.hwnd == GetDlgItem(hwnd_, kWhat)) {
+        sendNewReport();
         return true;
     }
     if (msg.wParam != 'V') return false;
@@ -888,41 +1220,46 @@ LRESULT ReportsWindow::proc(UINT msg, WPARAM wp, LPARAM lp) {
             const NMHDR* n = reinterpret_cast<const NMHDR*>(lp);
             LRESULT drawn = 0;
             if (drawPrimary(n, drawn)) return drawn;  // 3.0.2: «Надіслати» blue
-            if (n->idFrom == kPick && n->code == LVN_GETEMPTYMARKUP) {  // no game shots: what makes them
-                NMLVEMPTYMARKUP* m = reinterpret_cast<NMLVEMPTYMARKUP*>(lp);
-                m->dwFlags = EMF_CENTERED;
-                const std::wstring text = t(Text::ReportNoGameShots);
-                const size_t n = std::min(text.size(), size_t(L_MAX_URL_LENGTH - 1));
-                std::copy(text.begin(), text.begin() + std::ptrdiff_t(n), m->szMarkup);
-                m->szMarkup[n] = L'\0';
-                return TRUE;
-            } else if (n->idFrom == kPick && n->code == LVN_ITEMCHANGED && !filling_) {
-                const NMLISTVIEW* v = reinterpret_cast<const NMLISTVIEW*>(lp);
-                const bool nowTicked = ((v->uNewState & LVIS_STATEIMAGEMASK) >> 12) == 2;
-                std::vector<size_t> ticked;
-                if (nowTicked && picksTicked(ticked) && ticked.size() > kMostPicked) {
-                    filling_ = true;
-                    ListView_SetCheckState(n->hwndFrom, v->iItem, FALSE);  // a seventh: not taken
-                    filling_ = false;
-                    status(t(Text::ReportTooMany));
-                }
-            }
+            // 3.0.9-beta.6: the attached screenshots - one chosen: «Прибрати» (and Delete) takes it off
+            if (n->idFrom == kPick && n->code == LVN_ITEMCHANGED) retextPicks();
+            if (n->idFrom == kPick && n->code == LVN_KEYDOWN &&
+                reinterpret_cast<const NMLVKEYDOWN*>(lp)->wVKey == VK_DELETE)
+                removePick();
             return 0;
         }
-        case WM_DRAWITEM:  // 3.0.9-beta.5: the list's cards
+        case WM_SETCURSOR:  // 3.0.9-beta.6: «Що саме?» is a link
+            if (reinterpret_cast<HWND>(wp) == GetDlgItem(hwnd_, kPrivacyMore)) {
+                SetCursor(LoadCursorW(nullptr, MAKEINTRESOURCEW(32649)));  // IDC_HAND
+                return TRUE;
+            }
+            break;
+        case WM_DRAWITEM:  // 3.0.9-beta.5: the list's cards; 3.0.9-beta.6: «Дякуємо»'s circle
+            if (wp == WPARAM(kSentIcon)) {
+                drawSentIcon(reinterpret_cast<const DRAWITEMSTRUCT*>(lp));
+                return TRUE;
+            }
             if (wp == WPARAM(kList)) {
                 drawCard(reinterpret_cast<const DRAWITEMSTRUCT*>(lp));
                 return TRUE;
             }
             break;
-        case WM_CTLCOLORSTATIC:  // 3.0.9-beta.5: the bar of what is awaited on its own ground
-            if (reinterpret_cast<HWND>(lp) == GetDlgItem(hwnd_, kNote) && barBrush_) {
-                HDC dc = reinterpret_cast<HDC>(wp);
+        case WM_CTLCOLORSTATIC: {  // 3.0.9-beta.5: the bar of what is awaited on its own ground
+            HDC dc = reinterpret_cast<HDC>(wp);
+            const HWND ctl = reinterpret_cast<HWND>(lp);
+            if (ctl == GetDlgItem(hwnd_, kNote) && barBrush_) {
                 SetTextColor(dc, barWords_);
                 SetBkColor(dc, barGround_);
                 return reinterpret_cast<LRESULT>(barBrush_);
             }
+            const int id = GetDlgCtrlID(ctl);  // 3.0.9-beta.6: the new report's quiet words and its link
+            if (id == kNewHeading || id == kNewSub || id == kKindLabel || id == kPrivacy || id == kSendHint ||
+                id == kPrivacyMore) {
+                SetTextColor(dc, id == kPrivacyMore ? kLink : kMuted);
+                SetBkMode(dc, TRANSPARENT);
+                return reinterpret_cast<LRESULT>(GetSysColorBrush(COLOR_BTNFACE));
+            }
             break;
+        }
         case kChatShot:  // a thumbnail of the chat clicked: the shot itself
             openShot(size_t(wp), size_t(lp));
             return 0;
@@ -939,6 +1276,24 @@ LRESULT ReportsWindow::proc(UINT msg, WPARAM wp, LPARAM lp) {
                     }
                     break;
                 case kPasteReply: paste(true); break;
+                case kKind0:
+                case kKind1:
+                case kKind2:
+                case kKind3: toggleKind(id); break;  // 3.0.9-beta.6
+                case kShotGame: pickGameShots(); break;
+                case kShotRemove: removePick(); break;
+                case kPrivacyMore:  // what exactly goes with it
+                    MessageBoxW(hwnd_, t(Text::ReportNote).c_str(), t(Text::NewPrivacyMore).c_str(),
+                                MB_OK | MB_ICONINFORMATION);
+                    break;
+                case kSentOpen:
+                    if (!sentCode_.empty()) openCode(sentCode_);
+                    break;
+                case kSentDone:
+                    SetWindowTextW(GetDlgItem(hwnd_, kHint),
+                                   t(list_.empty() ? Text::ReportsEmpty : Text::ReportsPick).c_str());
+                    show(Pane::Hint);
+                    break;
                 case kNew: startNew(); break;
                 case kRefresh: load(); break;
                 case kSend: sendReply(); break;

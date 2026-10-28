@@ -108,6 +108,7 @@ ALLOWED = {
         "GetClipboardData", "IsClipboardFormatAvailable", "UpdateWindow",  # 2.13: Ctrl+V of a screenshot
         # 3.0.9-beta.5: «Звернення»'s chat - its class, a thumbnail under the mouse (all since Windows NT)
         "GetClassInfoExW", "GetCursorPos", "GetParent", "OffsetRect", "PtInRect",
+        "CallWindowProcW", "CharUpperBuffW",  # 3.0.9-beta.6: the new report's cue words, its label (Windows NT)
         "IsWindowEnabled", "IsWindowVisible",  # 2.10: the progress window's Cancel, the status bar's Update
         # 1.6.2: the preview's window
         "BeginPaint", "EndPaint", "FillRect", "InvalidateRect", "ReleaseCapture", "ScreenToClient", "SetCapture",
