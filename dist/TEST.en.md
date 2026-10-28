@@ -1,3 +1,11 @@
+# uaRO Graphics 3.0.11-beta.4 — what is new
+
+- **Ctrl+Tab switches the new minimap** («Interface» → «New minimap (prototype)») the way the game switched its own:
+  opaque → see-through → hidden → opaque again. Hidden, it takes no clicks. The game does not get that Ctrl+Tab, so
+  the old minimap does not flash.
+- To check: press Ctrl+Tab three times — the minimap turns see-through, goes, comes back. The log has the lines
+  `minimap: Ctrl+Tab`.
+
 # uaRO Graphics 3.0.11-beta.3 — what is new
 
 - **Its own item «Interface» in the app.** It is in every mode, «Simple» too, right after «Effects». It holds the
