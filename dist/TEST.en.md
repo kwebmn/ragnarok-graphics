@@ -1,3 +1,20 @@
+# uaRO Graphics 3.0.10 — what is new
+
+«Reports» came alive: screenshots in the conversation, new answers without switching, notifications even while the app
+is minimised.
+
+- **Screenshots in the conversation.** The thumbnails show again — no grey boxes and «No connection to uaro.kiev.ua …
+  404». A thumbnail is the small JPEG, so it comes at once; a click opens the screenshot in its original quality.
+- **New answers come by themselves.** While «Reports» is open the app asks the site every 15 seconds — and at once when
+  the window comes back to the front; the open conversation follows without switching to another report. What you are
+  writing and the screenshots attached stay. «Refresh» reads the open conversation too.
+- **The yellow bar «The developer waits for your answer»** reads in any window: it grows with its words up to three
+  lines, longer ones end with «…» (all of them are in the conversation above).
+- **The app learns of answers while minimised.** Every 5 minutes it asks the site: the number on «Reports» and the strip
+  «An answer to the report» follow. When the game is not running and the app is not in front, a Windows notification
+  tells of a new answer; a click opens the conversation. While the game runs the game tells, as before. Turned off in
+  «Game» → «Notifications» → «Answers to reports».
+
 # uaRO Graphics 3.0.10-beta.3 — what is new
 
 - **The app learns of answers while minimised too.** While the app is open (minimised or behind other windows too) it
