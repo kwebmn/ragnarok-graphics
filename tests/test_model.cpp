@@ -33,6 +33,9 @@ void backup(const std::wstring& name, const std::string& ini) {
     w.files[dir + L"\\personal.reg"] = toRegFile(personal, app::gameKeyPaths().personalRoot);
 }
 
+// 3.0.9-beta.7: the mark of the world scale's reset, written to a file read without it
+const std::vector<IniEdit> kMarked{{"utility", "world_scale_reset", "1"}};
+
 // A key of an ini as readIni gives it; "<none>" when it is not there.
 std::string valueOf(const std::string& ini, const std::string& sectionKey) {
     const auto v = readIni(ini);
@@ -72,7 +75,8 @@ TEST(model_restoring_the_oldest_of_twenty_backups_keeps_it) {
     CHECK(oldest == L"2026-10-01-120000");
     CHECK(m.restore(oldest, Lang::En).empty());
     CHECK(w.folders.count(fake::path(kBackups + L"\\" + oldest)) > 0);
-    CHECK_EQ(w.files[fake::path(kIni)], std::string("[quality]\r\nsharpen = 0\r\n"));
+    // 3.0.9-beta.7: as it was, with the world scale's mark the app writes when it reads a file without it
+    CHECK_EQ(w.files[fake::path(kIni)], applyIniEdits("[quality]\r\nsharpen = 0\r\n", kMarked));
 }
 
 TEST(model_a_backup_keeps_the_twenty_newest) {
@@ -731,11 +735,32 @@ TEST(model_settles_an_old_files_groups_at_its_start) {
     CHECK(!effect_groups::hasLegacy(m.now().config.effects));
     CHECK(!m.now().config.effects.grass);
     CHECK(w.folders.count(fake::path(kBackups)) == 1);
-    // a file of the new groups is left as it is
-    const std::string fresh = "[effects]\r\npreset = auto\r\ngroup_plants = 0\r\n";
+    // a file of the new groups is left as it is (3.0.9-beta.7: with the world scale's mark - a file of now)
+    const std::string fresh =
+        "[effects]\r\npreset = auto\r\ngroup_plants = 0\r\n[utility]\r\nworld_scale_reset = 1\r\n";
     w.files[fake::path(kIni)] = fresh;
     m.load();
     CHECK(w.files[fake::path(kIni)] == fresh);
+}
+
+TEST(model_takes_the_old_world_scale_back_at_its_start) {
+    // 3.0.9-beta.7 (the owner, R-3FS6YX): the old cards' 75 % of the automatic setup back to 100 once, when the app
+    // opens; the share the player picks after it stays
+    fake::Windows& w = fake::reset();
+    w.files[fake::path(kIni)] = "[quality]\r\nworld_scale = 75\r\n";
+    app::Model m;
+    const std::string ini = w.files[fake::path(kIni)];
+    CHECK_EQ(valueOf(ini, "quality.world_scale"), std::string("100"));
+    CHECK_EQ(valueOf(ini, "utility.world_scale_reset"), std::string("1"));
+    CHECK_EQ(m.token(setting("quality.world_scale")), std::string("100"));
+    CHECK_EQ(m.now().config.worldScale, 100);
+    w.files[fake::path(kIni)] = "[quality]\r\nworld_scale = 75\r\n[utility]\r\nworld_scale_reset = 1\r\n";
+    m.load();
+    CHECK_EQ(valueOf(w.files[fake::path(kIni)], "quality.world_scale"), std::string("75"));
+    // no file: nothing written
+    fake::Windows& empty = fake::reset();
+    app::Model none;
+    CHECK(empty.files.count(fake::path(kIni)) == 0);
 }
 
 TEST(model_moves_a_2x_install_into_uaro_graphics) {
@@ -767,7 +792,7 @@ TEST(model_restoring_a_2x_backup_writes_the_ini_in_uaro_graphics) {
     backup(L"2026-10-01-120000", "[quality]\r\nsharpen = 5\r\n");  // its files.txt names 2.x's root ini
     app::Model m;
     CHECK(m.restore(L"2026-10-01-120000", Lang::En).empty());
-    CHECK_EQ(w.files[fake::path(kIni)], std::string("[quality]\r\nsharpen = 5\r\n"));
+    CHECK_EQ(w.files[fake::path(kIni)], applyIniEdits("[quality]\r\nsharpen = 5\r\n", kMarked));
     CHECK(w.files.count(fake::path(L"uaro-graphics.ini")) == 0);
 }
 

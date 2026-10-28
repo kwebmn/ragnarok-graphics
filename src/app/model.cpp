@@ -126,6 +126,10 @@ void Model::load() {
     s.programFiles = underProgramFiles(paths_.dir);
     now_ = s;
     settleOldGroups();
+    // 3.0.9-beta.7: the old cards' 75 % of the automatic setup back to 100 once (the driver too, at the game's start)
+    if (now_.iniExists)
+        if (const std::vector<IniEdit> edits = worldScaleReset(readIni(now_.iniText)); !edits.empty())
+            writeIni(edits, Lang::En);
 }
 
 int Model::cardLevel() const {
@@ -494,7 +498,8 @@ std::vector<IniEdit> Model::keptAcross() const {
     for (const char* key : {"send", "id"})
         if (const auto it = now.find(std::string("stats.") + key); it != now.end())
             keep.push_back({"stats", key, it->second});
-    for (const char* key : {"mode", "window", "seen", "report_asked"})  // 2.6: the app's own
+    // 2.6: the app's own; 3.0.9-beta.7: the world scale's mark - a share chosen after it stays
+    for (const char* key : {"mode", "window", "seen", "report_asked", "world_scale_reset"})
         if (const auto it = now.find(std::string("utility.") + key); it != now.end())
             keep.push_back({"utility", key, it->second});
     // 3.0.0-beta.1: the answer about the automatic reports, once given - else a reset would take it back unasked

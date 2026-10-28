@@ -16,6 +16,7 @@
 #include "core/launcher.hpp"
 #include "core/log_files.hpp"
 #include "core/safe_mode.hpp"
+#include "core/settings/auto_setup.hpp"
 #include "core/settings/ini_edit.hpp"
 #include "win/start_screen.hpp"
 #include "core/settings/report.hpp"
@@ -282,6 +283,19 @@ Startup decide() {
         LOG_INFO("log: game window %d - another game runs beside it; its logs end in -%d (uaro-render64-%d.log, "
                  "uaro-pad-%d.log)", slot, slot, slot, slot);
     for (const std::string& line : moved) LOG_INFO("%s", line.c_str());
+    // 3.0.9-beta.7 (the owner, R-3FS6YX): the old cards' 75 % of the automatic setup back to 100 once, before anything
+    // reads the world's share (the settings app does the same when it opens)
+    if (haveIni)
+        if (const std::vector<settings::IniEdit> edits = settings::worldScaleReset(settings::readIni(ini));
+            !edits.empty()) {
+            const bool written = editIniFile(iniPath, edits);
+            if (s.config.worldScale < 100)
+                LOG_INFO("settings: [quality] world_scale %d -> 100 once, the world whole for everyone (3.0.9)%s",
+                         s.config.worldScale, written ? "" : " - uaro-graphics.ini not written: this game only");
+            else if (!written)
+                LOG_ERROR("settings: uaro-graphics.ini could not be written ([utility] world_scale_reset)");
+            s.config.worldScale = 100;
+        }
     LOG_INFO("%s", padMountedText());  // 2.9
     logRoext();                         // 3.0.1-beta.8
     logUpdates();                       // 3.0.2-beta.5

@@ -74,8 +74,8 @@ TEST(auto_setup_an_old_radeon_on_direct3d_11) {
     CHECK(valueOf(a, "effects", "actor_shadows") == "0");  // 0.90.3: costly in a crowd
     CHECK(valueOf(a, "renderer", "api") == "d3d11");
     CHECK(valueOf(a, "quality", "render_scale") == "100");
-    // 2.5.16: the world at 75 % of the picture, the interface sharp (R-DUMAMX: 35 frames with every improvement off)
-    CHECK(valueOf(a, "quality", "world_scale") == "75");
+    // 3.0.9-beta.7 (the owner, R-3FS6YX: the character smeared at 75 %): the world whole on every card
+    CHECK(valueOf(a, "quality", "world_scale") == "100");
     CHECK(valueOf(a, "quality", "msaa") == "0");
     CHECK(valueOf(a, "quality", "dlss") == "off" && valueOf(a, "frames", "frame_generation") == "off");
     CHECK(valueOf(a, "renderer", "bridge") == "0");
@@ -237,4 +237,22 @@ TEST(first_start_decides_by_the_install_and_the_machine) {
     CHECK(firstStart(false, "RTX|8192|1920x1080", "UHD|128|1920x1080") == FirstStart::Ask);
     Machine m = rtx5060();
     CHECK_EQ(machineKey(m), std::string("NVIDIA GeForce RTX 5060 Ti|16384|3840x2160"));
+}
+
+TEST(world_scale_reset_takes_the_old_share_back_once) {
+    // 3.0.9-beta.7: a file of 2.5.16-3.0.9-beta.6 with the old cards' 75 % - 100 and the mark, in one write
+    const std::vector<IniEdit> e = worldScaleReset(readIni("[quality]\nworld_scale = 75\n"));
+    CHECK(e.size() == 2);
+    CHECK(e.size() == 2 && e[0].section == "quality" && e[0].key == "world_scale" && e[0].value == "100");
+    CHECK(e.size() == 2 && e[1].section == "utility" && e[1].key == "world_scale_reset" && e[1].value == "1");
+    // marked: the share the player picks after it stays
+    CHECK(worldScaleReset(readIni("[quality]\nworld_scale = 75\n[utility]\nworld_scale_reset = 1\n")).empty());
+    // whole already, or not in the file: the mark alone (a share picked later is the player's)
+    for (const char* text : {"[quality]\nworld_scale = 100\n", "[quality]\nrender_scale = 100\n", ""}) {
+        const std::vector<IniEdit> m = worldScaleReset(readIni(text));
+        CHECK(m.size() == 1 && m[0].section == "utility" && m[0].key == "world_scale_reset" && m[0].value == "1");
+    }
+    // any share under 100 the file held
+    const std::vector<IniEdit> low = worldScaleReset(readIni("[quality]\nworld_scale = 50\n"));
+    CHECK(low.size() == 2 && low[0].value == "100");
 }

@@ -1,4 +1,5 @@
 #pragma once
+#include <map>
 #include <string>
 #include <vector>
 
@@ -62,5 +63,10 @@ std::string machineKey(const Machine& m);  // "adapter|vramMb|WxH"
 FirstStart firstStart(bool usedBefore, const std::string& kept, const std::string& now);
 // "high", "middle", ...: for the log and the tests.
 const char* tierName(Tier t);
+// 3.0.9-beta.7 (the owner, R-3FS6YX «розмазує модель чара»): the world whole for everyone - a [quality] world_scale
+// under 100 (the old cards' 75 % of the automatic setup since 2.5.16) back to 100 once, with [utility]
+// world_scale_reset marking it done, so that a share the player picks after it stays. The edits for a file's keys
+// (readIni); none once marked. The driver at the game's start and the settings app when it opens.
+std::vector<IniEdit> worldScaleReset(const std::map<std::string, std::string>& ini);
 
 }  // namespace uagfx::settings
