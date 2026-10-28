@@ -1,3 +1,18 @@
+# uaRO Graphics 3.0.11-beta.6 — what is new
+
+- **Hints on the new minimap** («Interface» → three new switches under «New minimap (prototype)»), from the game's
+  reference (3.0.11-beta.5 fetches it from uaro.kiev.ua when the game starts):
+  - NPC marks: dots in the colours of the site's map (Kafra pink, healers green, shops blue…); the pointer over a dot
+    names the NPC on the line under the map;
+  - warps: red rings where a warp leads to another map; the pointer over a ring says where («→ Prontera Field
+    (prt_fild07)»);
+  - monsters under the minimap: who lives on the map and how many the server keeps there; ★ — a boss and its respawn
+    after death (Satan Morroc on moc_fild20: 120 min).
+  Each switch works at once, in the console (~) too.
+- To check: on prt_fild08 the list says Poring 100, Lunatic 40, Pupa 20, Drops 10, and the rings stand at the map's
+  edges; the pointer over the ring by Prontera's gate shows «→ Prontera City (prontera)». The
+  log has the line `reference: the pack of 2026-10-23 …`.
+
 # uaRO Graphics 3.0.11-beta.5 — what is new
 
 - **The game's reference comes from uaro.kiev.ua.** The site now takes its game database (items, monsters, drops,
