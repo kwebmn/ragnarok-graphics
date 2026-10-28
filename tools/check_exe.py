@@ -104,6 +104,7 @@ ALLOWED = {
     "shell32.dll": {
         "SHGetFolderPathW", "ShellExecuteExW", "ShellExecuteW",
         "SHBrowseForFolderW", "SHGetPathFromIDListW",  # 2.5.19: the palettes' folder (Windows 2000 and later)
+        "Shell_NotifyIconW",  # 3.0.10-beta.3: a new answer's notification while the app is behind (Windows NT 4)
     },
     "user32.dll": {
         "GetClipboardData", "IsClipboardFormatAvailable", "UpdateWindow",  # 2.13: Ctrl+V of a screenshot
@@ -113,6 +114,8 @@ ALLOWED = {
         "IsWindowEnabled", "IsWindowVisible",  # 2.10: the progress window's Cancel, the status bar's Update
         # 3.0.10-beta.2: «Звернення» reads a new answer only while it is in front (both since Windows NT)
         "GetForegroundWindow", "IsIconic",
+        # 3.0.10-beta.3: the app's notification of a new answer - its icon, the taskbar button flashing (Windows 2000)
+        "FlashWindowEx", "GetClassLongW",
         # 1.6.2: the preview's window
         "BeginPaint", "EndPaint", "FillRect", "InvalidateRect", "ReleaseCapture", "ScreenToClient", "SetCapture",
         "SetCursor",  # 0.51: waiting for uaro.kiev.ua
