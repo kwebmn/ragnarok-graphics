@@ -1,3 +1,13 @@
+# uaRO Graphics 3.0.11-beta.3 — what is new
+
+- **Its own item «Interface» in the app.** It is in every mode, «Simple» too, right after «Effects». It holds the
+  switches of the new interface's parts; one so far — «New minimap (prototype)». Each works at once, in a running game
+  too.
+- In the game the switch is in the console (~) as before: the section «The new interface» under the graphics test's
+  row.
+- To check: the app → «Interface» → «New minimap (prototype)» — in the game the old minimap goes, the new one with the
+  character's cell stands in its corner.
+
 # uaRO Graphics 3.0.11-beta.2 — what is new
 
 - **The switch «New minimap (prototype)» shows now.** In 3.0.11-beta.1 no page listed it.
