@@ -28,6 +28,7 @@ ALLOWED = {
         "CreateDIBSection",  # 2.13: the screenshots' thumbnails
         "CreateFontIndirectW", "DeleteObject", "GetDeviceCaps", "GetTextExtentPoint32W", "SelectObject",
         "SetBkMode", "SetTextColor",
+        "GetTextMetricsW",  # 3.0.10-beta.2: «Звернення»'s bar fitted to three lines (since Windows NT)
         # 1.6.1: the preview's zoom (all of them since Windows 2000)
         "CreateCompatibleBitmap", "CreateCompatibleDC", "DeleteDC", "GetObjectW", "SetBrushOrgEx", "SetStretchBltMode",
         "StretchBlt",
@@ -110,6 +111,8 @@ ALLOWED = {
         "GetClassInfoExW", "GetCursorPos", "GetParent", "OffsetRect", "PtInRect",
         "CallWindowProcW", "CharUpperBuffW",  # 3.0.9-beta.6: the new report's cue words, its label (Windows NT)
         "IsWindowEnabled", "IsWindowVisible",  # 2.10: the progress window's Cancel, the status bar's Update
+        # 3.0.10-beta.2: «Звернення» reads a new answer only while it is in front (both since Windows NT)
+        "GetForegroundWindow", "IsIconic",
         # 1.6.2: the preview's window
         "BeginPaint", "EndPaint", "FillRect", "InvalidateRect", "ReleaseCapture", "ScreenToClient", "SetCapture",
         "SetCursor",  # 0.51: waiting for uaro.kiev.ua
