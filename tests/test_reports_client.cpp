@@ -118,6 +118,14 @@ TEST(the_list_and_the_conversation_come_from_the_site) {
     std::string bytes;
     CHECK(app::fetchShot(key, "R-ABCDEF", "m4-a.png", bytes, error));
     CHECK_EQ(bytes, std::string("\x89PNG"));
+    // 3.0.10-beta.1 (the owner: «миниатюра маленький джипег»): a thumbnail takes the report's small JPEG; the shot
+    // opened asks for its original in full (full=1)
+    w.web["/api/graphics/reports/R-ABCDEF/shots/shot1.jpe?computer=" + key] = "small";
+    w.web["/api/graphics/reports/R-ABCDEF/shots/shot1.jpe?computer=" + key + "&full=1"] = "full";
+    CHECK(app::fetchShot(key, "R-ABCDEF", "shot1.jpe", bytes, error));
+    CHECK_EQ(bytes, std::string("small"));
+    CHECK(app::fetchShot(key, "R-ABCDEF", "shot1.jpe", bytes, error, true));
+    CHECK_EQ(bytes, std::string("full"));
 }
 
 TEST(still_there_keeps_the_players_screenshots) {

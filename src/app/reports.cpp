@@ -228,12 +228,13 @@ bool sendOriginal(const std::string& key, const std::string& code, const std::st
 }
 
 bool fetchShot(const std::string& key, const std::string& code, const std::string& name, std::string& bytes,
-               std::string& error) {
+               std::string& error, bool full) {
     if (!validCode(code) || name.find_first_of("/\\?&#%") != std::string::npos) {
         error = "not a shot of a report: " + name;
         return false;
     }
-    return fetchPath(reportPath(code) + "/shots/" + name + "?computer=" + key, bytes, error, kMostShot);
+    return fetchPath(reportPath(code) + "/shots/" + name + "?computer=" + key + (full ? "&full=1" : ""), bytes, error,
+                     kMostShot);
 }
 
 NewReport sendNew(const std::wstring& dir, const report::Upload& u) {

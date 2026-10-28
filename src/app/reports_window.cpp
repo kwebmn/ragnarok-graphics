@@ -844,7 +844,7 @@ void ReportsWindow::openShot(size_t item, size_t shot) {
     const std::string& name = chatShots_[item][shot];
     HCURSOR old = SetCursor(LoadCursorW(nullptr, IDC_WAIT));
     std::string bytes, error;
-    const bool ok = fetchShot(key_, talk_.code, name, bytes, error);
+    const bool ok = fetchShot(key_, talk_.code, name, bytes, error, true);  // 3.0.10-beta.1: the original
     SetCursor(old);
     wchar_t temp[MAX_PATH] = {};
     if (!ok || !GetTempPathW(MAX_PATH, temp)) {

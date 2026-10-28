@@ -37,9 +37,10 @@ bool sendStillThere(const std::string& key, const std::string& code, const std::
 // the JPEG's place from then on
 bool sendOriginal(const std::string& key, const std::string& code, const std::string& name, const std::string& png,
                   std::string& error);
-// A shot of a conversation (the player's or the developer's), for the app to open
+// A shot of a conversation (the player's or the developer's), for the app to open; 3.0.10-beta.1: full - a report's
+// shot in its original quality (the PNG the app sent after it), else the report's small JPEG (the chat's thumbnails)
 bool fetchShot(const std::string& key, const std::string& code, const std::string& name, std::string& bytes,
-               std::string& error);
+               std::string& error, bool full = false);
 
 struct NewReport {
     std::string code;     // the site's, "" when it did not take it
