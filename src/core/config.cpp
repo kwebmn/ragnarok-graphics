@@ -483,6 +483,12 @@ Config parseConfig(const std::string& text) {
             setBool(val, c.panelShow);
         } else if (key == "interface.minimap") {  // 3.0.11-beta.1: the new interface's minimap prototype
             setBool(val, c.newMinimap);
+        } else if (key == "interface.minimap_npcs") {  // 3.0.11-beta.6: its hints
+            setBool(val, c.minimapNpcs);
+        } else if (key == "interface.minimap_warps") {
+            setBool(val, c.minimapWarps);
+        } else if (key == "interface.minimap_mobs") {
+            setBool(val, c.minimapMobs);
         } else if (key == "panel.hidden") {
             setBool(val, c.panelHidden);
         } else if (key == "panel.layout") {

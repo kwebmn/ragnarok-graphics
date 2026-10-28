@@ -533,6 +533,9 @@ struct Config {
     // 3.0.11-beta.1: [interface] minimap - the new interface's minimap prototype (stage 1): the game's own hidden, the
     // driver's panel in its corner with the player's cell (core/minimap_proto)
     bool newMinimap = false;
+    // 3.0.11-beta.6: [interface] minimap_npcs / minimap_warps / minimap_mobs - its hints from the game's reference
+    // (core/reference_index): the NPCs as dots, the warps to other maps as rings, the map's monsters under it
+    bool minimapNpcs = true, minimapWarps = true, minimapMobs = true;
     PanelLayout panelLayout = PanelLayout::Row;
     int panelSize = 100, panelOpacity = 90;
     std::string panelPlace;

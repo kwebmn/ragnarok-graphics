@@ -75,3 +75,42 @@ TEST(minimap_proto_ctrl_tab_goes_round_as_the_games) {
     CHECK(minimap::opacity(minimap::Look::Faded) > 0.5f && minimap::opacity(minimap::Look::Faded) < 0.8f);
     CHECK(minimap::opacity(minimap::Look::Hidden) == 0.0f);
 }
+
+TEST(minimap_proto_makes_room_for_the_monsters_under_it) {
+    // 3.0.11-beta.6: lines of 14 under the map's line at scale 1, and a little room under the last
+    const minimap::Geometry g = minimap::geometry(1920, 1080, 1.0f, 3);
+    CHECK_EQ(g.lineH, 14);
+    CHECK_EQ(g.listH, 3 * 14 + 4);
+    CHECK(minimap::inside(g, float(g.x + 5), float(g.y + g.size + g.textH + g.listH - 1)));  // the list keeps clicks
+    CHECK(!minimap::inside(g, float(g.x + 5), float(g.y + g.size + g.textH + g.listH + 1)));
+    CHECK_EQ(minimap::geometry(1920, 1080, 1.0f).listH, 0);
+    panel::Picture pic;
+    minimap::paint(pic, g, {}, 0, 0, minimap::MapSize{100, 100}, minimap::Cell{50, 50}, 100);
+    CHECK_EQ(pic.height, g.size + g.textH + g.listH);
+}
+
+TEST(minimap_proto_marks_the_npcs_and_the_warps) {
+    const minimap::Geometry g = minimap::geometry(1280, 720, 1.0f);  // 160 px for 100 cells
+    const minimap::MapSize map{100, 100};
+    const minimap::Cell player{50, 50};
+    const std::vector<minimap::Mark> marks{{minimap::Cell{30, 70}, 0xD6336C, false},  // a Kafra up left
+                                           {minimap::Cell{80, 20}, 0, true},          // a warp down right
+                                           {minimap::Cell{300, 300}, 0x00FF00, false}};  // off the map's view
+    panel::Picture pic;
+    minimap::paint(pic, g, {}, 0, 0, map, player, 100, marks);
+    const auto at = [&](float x, float y) { return pic.px[size_t(y) * size_t(pic.width) + size_t(x)]; };
+    const minimap::View v = minimap::view(map, player, 100, g.size);
+    float px = 0, py = 0;
+    minimap::cellToPanel(v, map, minimap::Cell{30, 70}, px, py);
+    const uint32_t kafra = at(px, py);
+    CHECK(((kafra >> 16) & 0xFF) > 0xC0 && ((kafra >> 8) & 0xFF) < 0x60);  // its pink
+    minimap::cellToPanel(v, map, minimap::Cell{80, 20}, px, py);
+    const uint32_t warp = at(px, py);
+    CHECK((warp & 0xFF) > 0xE0 && ((warp >> 8) & 0xFF) > 0xE0);  // the ring's white middle
+    CHECK(minimap::markAt(g, map, player, 100, marks, px + 1, py - 1) == 1);  // the pointer by it names it
+    minimap::cellToPanel(v, map, minimap::Cell{30, 70}, px, py);
+    CHECK(minimap::markAt(g, map, player, 100, marks, px, py) == 0);
+    CHECK(minimap::markAt(g, map, player, 100, marks, 80, 80) == -1);  // the player's middle: none near
+    CHECK(minimap::markAt(g, map, player, 100, marks, 80, float(g.size) + 5) == -1);  // the line: not the map
+}
+

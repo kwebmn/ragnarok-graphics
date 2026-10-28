@@ -170,6 +170,18 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("minimap", flag(running.newMinimap), flag(file.newMinimap)));
         n.newMinimap = file.newMinimap;
     }
+    if (file.minimapNpcs != running.minimapNpcs) {  // 3.0.11-beta.6: the minimap's hints, at once
+        u.applied.push_back(change("minimap_npcs", flag(running.minimapNpcs), flag(file.minimapNpcs)));
+        n.minimapNpcs = file.minimapNpcs;
+    }
+    if (file.minimapWarps != running.minimapWarps) {
+        u.applied.push_back(change("minimap_warps", flag(running.minimapWarps), flag(file.minimapWarps)));
+        n.minimapWarps = file.minimapWarps;
+    }
+    if (file.minimapMobs != running.minimapMobs) {
+        u.applied.push_back(change("minimap_mobs", flag(running.minimapMobs), flag(file.minimapMobs)));
+        n.minimapMobs = file.minimapMobs;
+    }
     if (file.panelShow != running.panelShow) {  // 3.0.3-beta.8: the game windows' panel
         u.applied.push_back(change("show", flag(running.panelShow), flag(file.panelShow)));
         n.panelShow = file.panelShow;
@@ -294,7 +306,7 @@ bool appliesNow(const std::string& k) {
            k == "debug.profile" || k == "debug.xray" || k == "debug.seams_view" || k == "frames.fps_counter" ||
            k == "stats.send" || k.compare(0, 8, "windows.") == 0 || k.compare(0, 8, "effects.") == 0 ||
            k.compare(0, 6, "panel.") == 0 ||  // 3.0.3-beta.8
-           k == "interface.minimap" ||        // 3.0.11-beta.1
+           k.compare(0, 10, "interface.") == 0 ||  // 3.0.11-beta.1: the minimap; 3.0.11-beta.6: its hints
            k == "sound.output" ||             // 3.0.4-beta.1: the music and the sounds move at once
            k == "sound.ambience" || k == "sound.ambience_volume" ||  // 3.0.4-beta.7
            k.compare(0, 7, "notify.") == 0 ||  // 3.0.4-beta.3

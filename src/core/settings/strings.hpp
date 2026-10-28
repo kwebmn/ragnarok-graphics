@@ -461,6 +461,9 @@ enum class Text : uint16_t {
     PickerTitle, PickerAdd,
     // 3.0.11-beta.5: the game's reference pack on «Інтерфейс» (app/reference_pack)
     ReferenceThere, ReferenceNone,
+    // 3.0.11-beta.6: the minimap's hints - their switches and the words on it
+    InterfaceMinimapNpcs, InterfaceMinimapNpcsHint, InterfaceMinimapWarps, InterfaceMinimapWarpsHint,
+    InterfaceMinimapMobs, InterfaceMinimapMobsHint, MinimapRespawn, MinimapMore, MinimapNoReference, MinimapNoMonsters,
     Count
 };
 

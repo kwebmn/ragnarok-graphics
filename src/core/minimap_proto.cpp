@@ -6,8 +6,13 @@
 namespace uagfx::minimap {
 namespace {
 
-constexpr float kSide = 160, kLine = 18, kMargin = 8;  // at scale 1, the target's pixels
+constexpr float kSide = 160, kLine = 18, kMargin = 8, kListLine = 14;  // at scale 1, the target's pixels
 constexpr uint32_t kGround = 0xFF141922, kBand = 0xFF0D1016;
+constexpr uint32_t kWarp = 0xFF4D6D;  // a warp's ring
+
+float markRadius(const Geometry& g, bool warp) {
+    return std::max(warp ? 2.2f : 1.7f, float(g.size) / (warp ? 64 : 85));
+}
 
 }  // namespace
 
@@ -21,19 +26,22 @@ bool cellOf(float worldX, float worldZ, int width, int height, int cellSize, Cel
     return true;
 }
 
-Geometry geometry(int targetW, int targetH, float scale) {
+Geometry geometry(int targetW, int targetH, float scale, int listLines) {
     const float s = std::max(0.5f, scale);
     Geometry g;
     g.size = int(std::lround(kSide * s));
     g.textH = int(std::lround(kLine * s));
+    g.lineH = int(std::lround(kListLine * s));
+    g.listH = listLines > 0 ? g.lineH * listLines + int(std::lround(4 * s)) : 0;  // a little room under the last
     const int m = int(std::lround(kMargin * s));
     g.x = std::max(0, targetW - m - g.size);
-    g.y = std::min(m, std::max(0, targetH - g.size - g.textH));
+    g.y = std::min(m, std::max(0, targetH - g.size - g.textH - g.listH));
     return g;
 }
 
 bool inside(const Geometry& g, float x, float y) {
-    return x >= float(g.x) && x < float(g.x + g.size) && y >= float(g.y) && y < float(g.y + g.size + g.textH);
+    return x >= float(g.x) && x < float(g.x + g.size) && y >= float(g.y) &&
+           y < float(g.y + g.size + g.textH + g.listH);
 }
 
 View view(const MapSize& map, const Cell& player, int cells, int size) {
@@ -52,9 +60,9 @@ void cellToPanel(const View& v, const MapSize&, const Cell& c, float& px, float&
 }
 
 void paint(panel::Picture& out, const Geometry& g, const std::vector<uint32_t>& argb, int imgW, int imgH,
-           const MapSize& map, const Cell& player, int cells) {
+           const MapSize& map, const Cell& player, int cells, const std::vector<Mark>& marks) {
     out.width = g.size;
-    out.height = g.size + g.textH;
+    out.height = g.size + g.textH + g.listH;
     out.px.assign(size_t(out.width) * size_t(out.height), kBand);
     const View v = view(map, player, cells, g.size);
     const bool picture = imgW > 0 && imgH > 0 && map.w > 0 && map.h > 0 && v.cellPx > 0 &&
@@ -74,10 +82,39 @@ void paint(panel::Picture& out, const Geometry& g, const std::vector<uint32_t>& 
         }
     }
     float px = 0, py = 0;
+    for (const Mark& mk : marks) {  // 3.0.11-beta.6: the hints, under the player's mark
+        cellToPanel(v, map, mk.cell, px, py);
+        const float r = markRadius(g, mk.warp);
+        if (px < -r || py < -r || px > float(g.size) + r || py > float(g.size) + r) continue;
+        panel::circle(out, px, py, r + 1.0f, 0x000000, 0.8f);
+        panel::circle(out, px, py, r, mk.warp ? kWarp : mk.rgb, 1.0f);
+        if (mk.warp) panel::circle(out, px, py, r * 0.45f, 0xFFFFFF, 1.0f);
+    }
+    if (g.textH + g.listH > 0)  // the map's box ends where the line starts (a mark at the edge never spills into it)
+        std::fill(out.px.begin() + std::ptrdiff_t(g.size) * out.width, out.px.end(), kBand);
     cellToPanel(v, map, player, px, py);
     const float r = std::max(2.5f, float(g.size) / 50.0f);
     panel::circle(out, px, py, r + 1.5f, 0x000000, 0.85f);  // the player: white with a dark edge
     panel::circle(out, px, py, r, 0xFFFFFF, 1.0f);
+}
+
+int markAt(const Geometry& g, const MapSize& map, const Cell& player, int cells, const std::vector<Mark>& marks,
+           float x, float y) {
+    if (x < 0 || y < 0 || x >= float(g.size) || y >= float(g.size)) return -1;
+    const View v = view(map, player, cells, g.size);
+    int best = -1;
+    float bestD = 0;
+    for (size_t i = 0; i < marks.size(); ++i) {
+        float px = 0, py = 0;
+        cellToPanel(v, map, marks[i].cell, px, py);
+        const float reach = markRadius(g, marks[i].warp) + std::max(3.0f, float(g.size) / 40);  // a hand's width more
+        const float d = (px - x) * (px - x) + (py - y) * (py - y);
+        if (d <= reach * reach && (best < 0 || d < bestD)) {
+            best = int(i);
+            bestD = d;
+        }
+    }
+    return best;
 }
 
 Look next(Look l) {

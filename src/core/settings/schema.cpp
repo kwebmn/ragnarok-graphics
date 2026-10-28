@@ -96,6 +96,13 @@ const std::vector<IniSetting>& iniSettings() {
         // 3.0.11-beta.1: the new interface's minimap prototype (stage 1) - off unless asked for
         {"interface", "minimap", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::InterfaceMinimap,
          Text::InterfaceMinimapHint, ""},
+        // 3.0.11-beta.6: its hints from the game's reference - each its own switch
+        {"interface", "minimap_npcs", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {},
+         Text::InterfaceMinimapNpcs, Text::InterfaceMinimapNpcsHint, ""},
+        {"interface", "minimap_warps", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {},
+         Text::InterfaceMinimapWarps, Text::InterfaceMinimapWarpsHint, ""},
+        {"interface", "minimap_mobs", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {},
+         Text::InterfaceMinimapMobs, Text::InterfaceMinimapMobsHint, ""},
         // 3.0.3-beta.8: the game windows' panel in the game's picture - a section of its own («Панель вікон»)
         {"panel", "show", Page::Game, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::WindowsPanel,
          Text::WindowsPanelHint, ""},
@@ -866,6 +873,9 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "windows.switch_keys") return windowKeysToken(c.windowKeys);  // 3.0.3-beta.6
     if (k == "panel.show") return c.panelShow ? "1" : "0";  // 3.0.3-beta.8
     if (k == "interface.minimap") return c.newMinimap ? "1" : "0";  // 3.0.11-beta.1
+    if (k == "interface.minimap_npcs") return c.minimapNpcs ? "1" : "0";  // 3.0.11-beta.6
+    if (k == "interface.minimap_warps") return c.minimapWarps ? "1" : "0";
+    if (k == "interface.minimap_mobs") return c.minimapMobs ? "1" : "0";
     if (k == "windows.start_count") return std::to_string(c.windowStartCount);  // 3.0.4-beta.4
     if (k == "camera.indoor") return c.cameraIndoor ? "1" : "0";                // 3.0.4-beta.5
     if (k == "camera.zoom_limit") return c.cameraZoomLimit ? "1" : "0";         // 3.0.4-beta.17

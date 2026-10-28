@@ -19,12 +19,13 @@ struct Cell {
 bool cellOf(float worldX, float worldZ, int width, int height, int cellSize, Cell& out);
 
 // The panel in the target's top right corner, where the game's own minimap was: 160 px a side and a line of 18 under
-// it at scale 1, 8 px from the edges (the target's pixels)
+// it at scale 1, 8 px from the edges (the target's pixels); 3.0.11-beta.6: `listLines` lines of 14 more under that
+// (the map's monsters)
 struct Geometry {
-    int size = 0, x = 0, y = 0, textH = 0;
+    int size = 0, x = 0, y = 0, textH = 0, listH = 0, lineH = 0;
 };
-Geometry geometry(int targetW, int targetH, float scale);
-bool inside(const Geometry& g, float x, float y);  // the map's box or its line under it
+Geometry geometry(int targetW, int targetH, float scale, int listLines = 0);
+bool inside(const Geometry& g, float x, float y);  // the map's box, its line or its list under it
 
 struct MapSize {
     int w = 0, h = 0;
@@ -36,11 +37,20 @@ struct View {
 };
 View view(const MapSize& map, const Cell& player, int cells, int size);
 void cellToPanel(const View& v, const MapSize& map, const Cell& c, float& px, float& py);  // a cell's centre
+// 3.0.11-beta.6: a hint's mark on the map - an NPC (a dot of its kind's colour) or a warp to another map (a ring)
+struct Mark {
+    Cell cell;
+    uint32_t rgb = 0;
+    bool warp = false;
+};
 // The panel's picture (premultiplied): the map's picture (ARGB as decoded, the whole map, rows north first; the game's
-// magenta see-through) through the view, a dark ground where it has none, the player's mark, the band of the line
-// under the map (its words go over it by GDI)
+// magenta see-through) through the view, a dark ground where it has none, the marks, the player's mark over them, the
+// band of the line and the list under the map (their words go over it by GDI)
 void paint(panel::Picture& out, const Geometry& g, const std::vector<uint32_t>& mapArgb, int mapW, int mapH,
-           const MapSize& map, const Cell& player, int cells);
+           const MapSize& map, const Cell& player, int cells, const std::vector<Mark>& marks = {});
+// The mark under a point of the panel (its pixels, the map's box): the nearest within its reach, -1 none
+int markAt(const Geometry& g, const MapSize& map, const Cell& player, int cells, const std::vector<Mark>& marks,
+           float x, float y);
 
 // 3.0.11-beta.4 (the owner: «на Ctrl+Tab ничего не происходит»): Ctrl+Tab goes round the game's own way - opaque,
 // see-through (the game's 0xAA of 0xFF), hidden

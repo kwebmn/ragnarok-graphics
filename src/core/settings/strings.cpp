@@ -4864,6 +4864,29 @@ constexpr Entry kTexts[] = {
      "Game reference: not here yet - it comes from uaro.kiev.ua when the game starts with the new minimap on.",
      "Довідник гри ще не завантажено: він приходить з uaro.kiev.ua під час запуску гри з увімкненою новою мінікартою.",
      "Справочник игры ещё не загружен: он приходит с uaro.kiev.ua при запуске игры с включённой новой миникартой."},
+    // 3.0.11-beta.6: the minimap's hints from the game's reference
+    {Text::InterfaceMinimapNpcs, "NPC marks on the minimap", "Мітки NPC на мінікарті", "Метки NPC на миникарте"},
+    {Text::InterfaceMinimapNpcsHint,
+     "Dots in the colours of the site's map: Kafra, healers, shops, smiths, armour, inns, guides, job masters, ships. "
+     "The pointer over a dot names it. From the game's reference (uaro.kiev.ua).",
+     "Крапки в кольорах карти сайту: Кафра, лікарі, крамниці, ковалі, броня, заїжджі двори, провідники, майстри "
+     "професій, кораблі. Курсор на крапці називає NPC. Дані - з довідника гри (uaro.kiev.ua).",
+     "Точки в цветах карты сайта: Кафра, лекари, лавки, кузнецы, броня, постоялые дворы, проводники, мастера "
+     "профессий, корабли. Курсор на точке называет NPC. Данные - из справочника игры (uaro.kiev.ua)."},
+    {Text::InterfaceMinimapWarps, "Warps on the minimap", "Переходи на мінікарті", "Переходы на миникарте"},
+    {Text::InterfaceMinimapWarpsHint,
+     "Red rings where a warp leads to another map; the pointer over a ring names that map.",
+     "Червоні кільця там, де перехід веде на іншу карту; курсор на кільці називає ту карту.",
+     "Красные кольца там, где переход ведёт на другую карту; курсор на кольце называет ту карту."},
+    {Text::InterfaceMinimapMobs, "Monsters under the minimap", "Монстри під мінікартою", "Монстры под миникартой"},
+    {Text::InterfaceMinimapMobsHint,
+     "The map's monsters and how many of them the server keeps here; ★ - a boss and its respawn after death.",
+     "Монстри цієї карти і скільки їх тримає тут сервер; ★ - бос і його респавн після смерті.",
+     "Монстры этой карты и сколько их держит здесь сервер; ★ - босс и его респавн после смерти."},
+    {Text::MinimapRespawn, "{1} min", "{1} хв", "{1} мин"},
+    {Text::MinimapMore, "and {1} more", "і ще {1}", "и ещё {1}"},
+    {Text::MinimapNoReference, "No game reference yet", "Довідника гри ще немає", "Справочника игры ещё нет"},
+    {Text::MinimapNoMonsters, "No monsters here", "Монстрів тут немає", "Монстров здесь нет"},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

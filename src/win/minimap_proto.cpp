@@ -4,24 +4,37 @@
 
 #include <algorithm>
 #include <cstdio>
+#include <map>
 #include <memory>
 #include <string>
 #include <vector>
 
 #include "core/minimap_proto.hpp"
 #include "core/pack_source.hpp"
+#include "core/reference_index.hpp"
+#include "core/settings/strings.hpp"
 #include "pad/win/game_window.hpp"
 #include "win/game_camera.hpp"
 #include "win/game_files.hpp"
 #include "win/log.hpp"
 #include "win/paths.hpp"
 #include "win/picture_draw.hpp"
+#include "win/real_ddraw.hpp"
+#include "win/reference_load.hpp"
 
 namespace uagfx::win::minimapproto {
 namespace {
 
 constexpr int kCells = 100;  // the view: 100 cells across, as the minimap test's cards
 const std::string kUi = "\xC0\xAF\xC0\xFA\xC0\xCE\xC5\xCD\xC6\xE4\xC0\xCC\xBD\xBA";  // 유저인터페이스
+constexpr size_t kMostLines = 8;            // 3.0.11-beta.6: the monsters under the map at most (the last «і ще N»)
+constexpr int kBossRespawnMs = 600000;      // a boss's respawn told from 10 minutes (the site's MVP timers' bound)
+constexpr uint32_t kBossText = 0xF5C451;    // a boss's name
+
+struct Line {  // a monster under the map: its name, its count (a boss's respawn)
+    std::wstring left, right;
+    bool boss = false;
+};
 
 struct State {
     bool on = false, shown = false, dirty = true, upload = true;
@@ -42,6 +55,17 @@ struct State {
     int texW = 0, texH = 0, targetW = 0, targetH = 0;
     float k = 0, scale = 1;
     std::unique_ptr<gamefiles::Reader> files;
+    // 3.0.11-beta.6: the hints - from this reference's map, as the switches want them
+    Show show;
+    std::shared_ptr<const refindex::Index> index;
+    std::string hintsMap;
+    bool hintsMade = false;
+    std::vector<minimap::Mark> marks;
+    std::vector<std::string> labels;  // the mark's words under the pointer
+    std::vector<Line> lines;
+    int hover = -1;
+    std::map<std::string, std::string> mapNames;  // the client's data\mapnametable.txt
+    bool namesRead = false;
 };
 
 State& state() {
@@ -65,18 +89,99 @@ void loadPicture(State& s) {
     LOG_INFO("minimap: %s has no picture of its own - the ground alone", s.map.c_str());
 }
 
+// 3.0.11-beta.6: the client's names of maps (data\mapnametable.txt) for the warps' words, read once
+void readNames(State& s) {
+    if (s.namesRead) return;
+    s.namesRead = true;
+    if (!s.files) s.files = std::make_unique<gamefiles::Reader>(gameDir());
+    std::vector<uint8_t> bytes;
+    if (s.files->read("data\\mapnametable.txt", bytes, nullptr))
+        s.mapNames = refindex::mapNames(std::string(bytes.begin(), bytes.end()));
+    LOG_INFO("minimap: %zu names of maps from the client's mapnametable.txt", s.mapNames.size());
+}
+
+std::wstring tr(settings::Text t) { return utf8Wide(settings::tr(startup().lang, t)); }
+
+// 3.0.11-beta.6: the map's hints from the reference - marks with their words, the monsters' lines
+void buildHints(State& s) {
+    s.marks.clear();
+    s.labels.clear();
+    s.lines.clear();
+    s.hover = -1;
+    s.hintsMap = s.map;
+    s.hintsMade = true;
+    const refindex::MapHints* h = nullptr;
+    if (s.index) {
+        const auto it = s.index->maps.find(s.map);
+        if (it != s.index->maps.end()) h = &it->second;
+    }
+    if (h && s.show.npcs) {
+        for (const refindex::Npc& n : h->npcs) {
+            s.marks.push_back(minimap::Mark{minimap::Cell{n.x, n.y}, refindex::colorOf(n.kind), false});
+            s.labels.push_back(n.name);
+        }
+    }
+    if (h && s.show.warps) {
+        readNames(s);
+        for (const refindex::Warp& w : h->warps) {
+            const auto name = s.mapNames.find(w.dest);
+            s.marks.push_back(minimap::Mark{minimap::Cell{w.x, w.y}, 0, true});
+            const std::string where =
+                name != s.mapNames.end() ? refindex::shortName(name->second) + " (" + w.dest + ")" : w.dest;
+            s.labels.push_back("\xE2\x86\x92 " + where);  // «→ Prontera Field (prt_fild07)»
+        }
+    }
+    if (!s.show.mobs) return;
+    if (!s.index) {
+        s.lines.push_back(Line{tr(settings::Text::MinimapNoReference), L"", false});
+        return;
+    }
+    if (!h || h->mobs.empty()) {
+        s.lines.push_back(Line{tr(settings::Text::MinimapNoMonsters), L"", false});
+        return;
+    }
+    const size_t room = h->mobs.size() > kMostLines ? kMostLines - 1 : h->mobs.size();
+    for (size_t i = 0; i < room; ++i) {
+        const refindex::MobOnMap& m = h->mobs[i];
+        const auto mob = s.index->mobs.find(m.id);
+        const std::string name = mob != s.index->mobs.end() ? mob->second.name : "#" + std::to_string(m.id);
+        const bool boss = mob != s.index->mobs.end() && mob->second.boss;
+        std::wstring right = std::to_wstring(m.count);
+        if (boss && m.respawnMs >= kBossRespawnMs)
+            right = utf8Wide(settings::fmt(settings::tr(startup().lang, settings::Text::MinimapRespawn),
+                                           {std::to_string((m.respawnMs + 30000) / 60000)}));
+        s.lines.push_back(Line{utf8Wide((boss ? "\xE2\x98\x85 " : "") + name), right, boss});
+    }
+    if (room < h->mobs.size())
+        s.lines.push_back(Line{utf8Wide(settings::fmt(settings::tr(startup().lang, settings::Text::MinimapMore),
+                                                      {std::to_string(h->mobs.size() - room)})), L"", false});
+}
+
 void render(State& s) {
-    s.geometry = minimap::geometry(s.targetW, s.targetH, s.scale);
-    minimap::paint(s.picture, s.geometry, s.argb, s.picW, s.picH, s.size, s.cell, kCells);
+    s.geometry = minimap::geometry(s.targetW, s.targetH, s.scale, int(s.lines.size()));
+    minimap::paint(s.picture, s.geometry, s.argb, s.picW, s.picH, s.size, s.cell, kCells, s.marks);
     char text[96];
     if (s.cellKnown)
         std::snprintf(text, sizeof text, "%s  %d, %d", s.map.c_str(), s.cell.x, s.cell.y);
     else
         std::snprintf(text, sizeof text, "%s", s.map.c_str());
     const float sc = s.scale;
-    drawWords(s.picture, {Words{panel::Box{4 * sc, float(s.geometry.size), float(s.geometry.size) - 8 * sc,
-                                           float(s.geometry.textH)},
-                                utf8Wide(text), panel::kText, 12.5f * sc, false, DT_CENTER}});
+    const minimap::Geometry& g = s.geometry;
+    const bool hovered = s.hover >= 0 && size_t(s.hover) < s.labels.size();  // 3.0.11-beta.6: the mark's words
+    std::vector<Words> words{Words{panel::Box{4 * sc, float(g.size), float(g.size) - 8 * sc, float(g.textH)},
+                                   utf8Wide(hovered ? s.labels[size_t(s.hover)] : std::string(text)),
+                                   hovered ? kBossText : panel::kText, 12.5f * sc, hovered, DT_CENTER}};
+    const float split = (float(g.size) - 8 * sc) * 0.68f;
+    for (size_t i = 0; i < s.lines.size(); ++i) {  // the map's monsters: the name left, the count right
+        const float y = float(g.size + g.textH) + float(i) * float(g.lineH);
+        const Line& l = s.lines[i];
+        words.push_back(Words{panel::Box{4 * sc, y, l.right.empty() ? float(g.size) - 8 * sc : split, float(g.lineH)},
+                              l.left, l.boss ? kBossText : panel::kText, 11.5f * sc, l.boss, DT_LEFT});
+        if (!l.right.empty())
+            words.push_back(Words{panel::Box{4 * sc + split, y, float(g.size) - 8 * sc - split, float(g.lineH)},
+                                  l.right, panel::kMuted, 11.5f * sc, false, DT_RIGHT});
+    }
+    drawWords(s.picture, words);
     if (s.look == minimap::Look::Faded) panel::fade(s.picture, minimap::opacity(s.look));  // Ctrl+Tab's see-through
     s.dirty = false;
     s.upload = true;
@@ -96,7 +201,7 @@ void block(const State& s, HWND game) {  // the mouse's clicks there are the pan
     const minimap::Geometry& g = s.geometry;
     const RECT r{LONG(int64_t(g.x) * client.right / s.targetW), LONG(int64_t(g.y) * client.bottom / s.targetH),
                  LONG(int64_t(g.x + g.size) * client.right / s.targetW + 1),
-                 LONG(int64_t(g.y + g.size + g.textH) * client.bottom / s.targetH + 1)};
+                 LONG(int64_t(g.y + g.size + g.textH + g.listH) * client.bottom / s.targetH + 1)};  // and its list
     uapad::gamewindow::setBlocked(uapad::gamewindow::Blocker::Minimap, &r, false);
 }
 
@@ -104,8 +209,9 @@ void unblock() { uapad::gamewindow::setBlocked(uapad::gamewindow::Blocker::Minim
 
 }  // namespace
 
-void frame(HWND game, bool on, double k, int targetWidth, int targetHeight) {
+void frame(HWND game, const Show& show, double k, int targetWidth, int targetHeight) {
     State& s = state();
+    const bool on = show.on;
     if (!on) {
         if (s.shown) unblock();
         s.shown = false;
@@ -173,6 +279,23 @@ void frame(HWND game, bool on, double k, int targetWidth, int targetHeight) {
         if (s.shown) unblock();
         s.shown = false;
         return;
+    }
+    // 3.0.11-beta.6: the hints - made again for another map, another reference read, other switches
+    const auto index = reference::index();
+    if (!s.hintsMade || s.hintsMap != s.map || index != s.index || show.npcs != s.show.npcs ||
+        show.warps != s.show.warps || show.mobs != s.show.mobs) {
+        s.index = index;
+        s.show = show;
+        buildHints(s);
+        s.dirty = true;
+    }
+    int cx = 0, cy = 0, hover = -1;  // the mark under the game's cursor names itself on the line
+    if (!s.marks.empty() && readGameCursor(cx, cy))
+        hover = minimap::markAt(s.geometry, s.size, s.cell, kCells, s.marks, float(cx) * float(k) - float(s.geometry.x),
+                                float(cy) * float(k) - float(s.geometry.y));
+    if (hover != s.hover) {
+        s.hover = hover;
+        s.dirty = true;
     }
     if (s.dirty) render(s);
     s.shown = true;
