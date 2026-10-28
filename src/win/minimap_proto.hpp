@@ -17,5 +17,8 @@ namespace uagfx::win::minimapproto {
 void frame(HWND game, bool on, double k, int targetWidth, int targetHeight);
 void draw(FrameRecord& record, gpu::Renderer& renderer);
 bool mouse(HWND game, UINT m, LPARAM lp, LRESULT& result);
+// 3.0.11-beta.4 (the owner: «на Ctrl+Tab ничего не происходит»): Ctrl+Tab while the prototype is on - its look goes
+// round as the game's own minimap's (opaque, see-through, hidden); true: the key is the prototype's, not the game's
+bool key(unsigned vk);
 
 }  // namespace uagfx::win::minimapproto

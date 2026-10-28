@@ -65,3 +65,13 @@ TEST(minimap_proto_paints_the_map_round_the_player) {
     minimap::paint(none, g, {}, 0, 0, map, minimap::Cell{50, 50}, 100);
     CHECK(none.width == g.size && none.px.size() == size_t(none.width) * size_t(none.height));
 }
+
+TEST(minimap_proto_ctrl_tab_goes_round_as_the_games) {
+    // 3.0.11-beta.4 (the owner: «на Ctrl+Tab ничего не происходит»): the game's own round - opaque, see-through, hidden
+    CHECK(minimap::next(minimap::Look::Opaque) == minimap::Look::Faded);
+    CHECK(minimap::next(minimap::Look::Faded) == minimap::Look::Hidden);
+    CHECK(minimap::next(minimap::Look::Hidden) == minimap::Look::Opaque);
+    CHECK(minimap::opacity(minimap::Look::Opaque) == 1.0f);
+    CHECK(minimap::opacity(minimap::Look::Faded) > 0.5f && minimap::opacity(minimap::Look::Faded) < 0.8f);
+    CHECK(minimap::opacity(minimap::Look::Hidden) == 0.0f);
+}

@@ -25,6 +25,7 @@ const std::string kUi = "\xC0\xAF\xC0\xFA\xC0\xCE\xC5\xCD\xC6\xE4\xC0\xCC\xBD\xB
 
 struct State {
     bool on = false, shown = false, dirty = true, upload = true;
+    minimap::Look look = minimap::Look::Opaque;  // 3.0.11-beta.4: Ctrl+Tab's round
     bool hidOld = false;      // the game's own window 14 deleted by us (the game makes it again on a new map)
     bool hideFailed = false;  // told once a map
     std::string map;
@@ -34,6 +35,7 @@ struct State {
     minimap::Cell cell;
     bool cellKnown = false;
     int clicks = 0;  // kept from the game on this map
+    int remade = 0;  // 3.0.11-beta.4: the game made its own again on this map after we hid it (a Ctrl+Tab it saw)
     minimap::Geometry geometry;
     panel::Picture picture;
     uint32_t texture = 0;
@@ -75,6 +77,7 @@ void render(State& s) {
     drawWords(s.picture, {Words{panel::Box{4 * sc, float(s.geometry.size), float(s.geometry.size) - 8 * sc,
                                            float(s.geometry.textH)},
                                 utf8Wide(text), panel::kText, 12.5f * sc, false, DT_CENTER}});
+    if (s.look == minimap::Look::Faded) panel::fade(s.picture, minimap::opacity(s.look));  // Ctrl+Tab's see-through
     s.dirty = false;
     s.upload = true;
 }
@@ -129,6 +132,7 @@ void frame(HWND game, bool on, double k, int targetWidth, int targetHeight) {
     if (map != s.map) {
         s.map = map;
         s.clicks = 0;
+        s.remade = 0;
         s.cellKnown = false;
         s.hideFailed = false;
         loadPicture(s);
@@ -136,6 +140,10 @@ void frame(HWND game, bool on, double k, int targetWidth, int targetHeight) {
     }
     // the game's own minimap, each time the game makes it again (a new map, Ctrl+Tab): hidden as Ctrl+Tab hides it
     if (gameMinimapShown()) {
+        const bool again = s.hidOld && s.cellKnown;  // hidden on this map before: the game made it again
+        if (again && s.remade++ < 3)
+            LOG_INFO("minimap: the game made its own again on %s - a Ctrl+Tab it saw past ours, or the map anew",
+                     map.c_str());
         if (hideGameMinimap()) {
             if (!s.hidOld) LOG_INFO("minimap: the game's own hidden on %s (its UI window 14 deleted)", map.c_str());
             s.hidOld = true;
@@ -161,9 +169,24 @@ void frame(HWND game, bool on, double k, int targetWidth, int targetHeight) {
         s.targetH = targetHeight;
         s.dirty = true;
     }
+    if (s.look == minimap::Look::Hidden) {  // Ctrl+Tab hid it: neither drawn nor taking clicks
+        if (s.shown) unblock();
+        s.shown = false;
+        return;
+    }
     if (s.dirty) render(s);
     s.shown = true;
     block(s, game);
+}
+
+bool key(unsigned vk) {
+    State& s = state();
+    if (!s.on || vk != VK_TAB || !(GetKeyState(VK_CONTROL) & 0x8000)) return false;
+    s.look = minimap::next(s.look);
+    s.dirty = true;
+    static const char* const kNames[] = {"opaque", "see-through", "hidden"};
+    LOG_INFO("minimap: Ctrl+Tab - the new minimap %s", kNames[int(s.look)]);
+    return true;
 }
 
 void draw(FrameRecord& record, gpu::Renderer& renderer) {

@@ -80,4 +80,22 @@ void paint(panel::Picture& out, const Geometry& g, const std::vector<uint32_t>& 
     panel::circle(out, px, py, r, 0xFFFFFF, 1.0f);
 }
 
+Look next(Look l) {
+    switch (l) {
+        case Look::Opaque: return Look::Faded;
+        case Look::Faded: return Look::Hidden;
+        case Look::Hidden: break;
+    }
+    return Look::Opaque;
+}
+
+float opacity(Look l) {
+    switch (l) {
+        case Look::Opaque: return 1.0f;
+        case Look::Faded: return float(0xAA) / float(0xFF);  // the game's see-through minimap: 0xAAFFFFFF
+        case Look::Hidden: break;
+    }
+    return 0.0f;
+}
+
 }  // namespace uagfx::minimap

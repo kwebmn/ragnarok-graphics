@@ -42,4 +42,10 @@ void cellToPanel(const View& v, const MapSize& map, const Cell& c, float& px, fl
 void paint(panel::Picture& out, const Geometry& g, const std::vector<uint32_t>& mapArgb, int mapW, int mapH,
            const MapSize& map, const Cell& player, int cells);
 
+// 3.0.11-beta.4 (the owner: «на Ctrl+Tab ничего не происходит»): Ctrl+Tab goes round the game's own way - opaque,
+// see-through (the game's 0xAA of 0xFF), hidden
+enum class Look { Opaque, Faded, Hidden };
+Look next(Look l);
+float opacity(Look l);
+
 }  // namespace uagfx::minimap

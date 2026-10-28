@@ -22,6 +22,7 @@ uint32_t g_diedAt = 0, g_hitAt = 0, g_whisperAt = 0;  // 3.0.4-beta.4: windowmar
 
 LRESULT CALLBACK gameProc(HWND w, UINT m, WPARAM wp, LPARAM lp) {
     if (g_switch) {
+        if (m == WM_KEYDOWN && minimapproto::key(unsigned(wp))) return 0;  // 3.0.11-beta.4: Ctrl+Tab, the new minimap's
         if ((m == WM_KEYDOWN || m == WM_SYSKEYDOWN) && g_switch->key(unsigned(wp), lp)) return 0;
         if (m == WM_ACTIVATE && g_switch->activate(w, wp)) return 1;  // the game's own answer to it
         if (m == WM_TIMER && g_switch->timer(w, wp)) return 0;
