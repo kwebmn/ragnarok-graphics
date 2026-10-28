@@ -1,6 +1,7 @@
 #pragma once
 #include <cstddef>
 #include <cstdint>
+#include <string>
 #include <vector>
 
 #include "core/reports.hpp"
@@ -26,5 +27,11 @@ struct Step {
 };
 std::vector<Step> steps(const reports::Conversation& c);
 bool closedTab(reports::Status s);  // «Закриті»: closed only («Виправлено» waits for the player's word)
+// 3.0.10-beta.2: the shown conversation is behind the list's summary of it (an answer not seen, a newer last message,
+// another status or version) - read it again
+bool behind(const reports::Summary& now, const reports::Conversation& shown);
+// 3.0.10-beta.2: the bar's words when the developer waits - their last words in one run (lines joined, spaces made one,
+// a signature line «— …» at the end left out); "" when they wrote none
+std::string waitsText(const reports::Conversation& c);
 
 }  // namespace uagfx::talk

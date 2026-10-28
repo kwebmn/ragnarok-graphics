@@ -94,3 +94,49 @@ TEST(report_talk_reads_when_the_developer_saw_it) {
     CHECK(reports::parseConversation("{\"code\":\"R-7BDUE3\",\"status\":\"new\",\"messages\":[]}", c, error));
     CHECK_EQ(c.devSeenAt, std::string(""));  // a site before 3.0.9-beta.5's
 }
+
+TEST(report_talk_knows_when_the_shown_one_is_behind) {
+    // 3.0.10-beta.2 (the owner: the open conversation showed a new answer only after another was opened and this one
+    // again): the list asked every few seconds tells whether the shown conversation is behind the site
+    reports::Conversation shown;
+    shown.status = reports::Status::Fixed;
+    shown.fixedIn = "3.0.10-beta.1";
+    shown.messages.push_back(said(false, "тест", "2026-10-28T19:04:02+00:00"));
+    shown.messages.push_back(said(true, "Дякуємо за перевірку!", "2026-10-28T19:34:50+00:00"));
+    reports::Summary now;
+    now.status = reports::Status::Fixed;
+    now.fixedIn = "3.0.10-beta.1";
+    now.lastAuthor = "dev";
+    now.lastAt = "2026-10-28T19:34:50+00:00";
+    CHECK(!talk::behind(now, shown));
+    now.lastAt = "2026-10-28T19:36:09+00:00";  // the developer wrote again
+    CHECK(talk::behind(now, shown));
+    now.lastAt = "2026-10-28T19:34:50+00:00";
+    now.unread = 1;  // an answer not seen
+    CHECK(talk::behind(now, shown));
+    now.unread = 0;
+    now.status = reports::Status::NeedInfo;  // a status set without words
+    CHECK(talk::behind(now, shown));
+    now.status = reports::Status::Fixed;
+    now.fixedIn = "3.0.10-beta.2";
+    CHECK(talk::behind(now, shown));
+    reports::Conversation none;  // nothing shown yet, the list has a message
+    CHECK(talk::behind(now, none));
+}
+
+TEST(report_talk_words_the_bar_of_what_is_awaited) {
+    // 3.0.10-beta.2 (the owner: the yellow bar did not fit): the developer's last words in one run - lines joined,
+    // spaces made one, the signature («— команда uaRO») left out; the window fits it into its lines
+    reports::Conversation c;
+    c.messages.push_back(said(false, "тест", "2026-10-28T19:04:02+00:00"));
+    c.messages.push_back(said(true,
+                              "Ще одне питання: де ви побачили відповідь?\n\n1. Картка в грі.\r\n"
+                              "2.  Сповіщення.\n\n— команда uaRO",
+                              "2026-10-28T19:36:09+00:00"));
+    c.messages.push_back(said(true, "", "2026-10-28T19:37:00+00:00"));  // a status alone: not the question
+    CHECK_EQ(talk::waitsText(c),
+             std::string("Ще одне питання: де ви побачили відповідь? 1. Картка в грі. 2. Сповіщення."));
+    reports::Conversation quiet;
+    quiet.messages.push_back(said(false, "тест", "2026-10-28T19:04:02+00:00"));
+    CHECK_EQ(talk::waitsText(quiet), std::string(""));
+}

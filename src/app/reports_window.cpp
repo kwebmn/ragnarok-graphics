@@ -28,6 +28,12 @@ using settings::Text;
 
 const wchar_t kClass[] = L"uaroGraphicsReports";
 constexpr UINT kLoad = WM_APP + 1;  // the site asked once the window is on the screen
+// 3.0.10-beta.2 (the owner: a new answer showed only after another conversation was opened and this one again): the
+// list asked every 15 s on a thread (kPolled back, lParam a Polled of ours to delete), at once when the window comes
+// to the front; the open conversation read again when the list says it is behind and the window is in front
+constexpr UINT kPolled = WM_APP + 2;
+constexpr UINT_PTR kPollTimer = 1;
+constexpr UINT kPollMs = 15000;
 constexpr size_t kMostPicked = 6;
 constexpr size_t kGameShots = 12;
 
@@ -243,6 +249,33 @@ struct ThumbJob {
     std::vector<std::tuple<size_t, size_t, std::string>> shots;  // the chat's item, the shot in it, its name
 };
 
+// 3.0.10-beta.2: the list asked on a thread of its own and posted back - the window never waits for the site
+struct Polled {
+    HWND window = nullptr;
+    std::string key;
+    bool ok = false;
+    std::vector<reports::Summary> list;
+};
+
+DWORD WINAPI pollList(void* p) {
+    auto* job = static_cast<Polled*>(p);
+    std::string error;
+    job->ok = listReports(job->key, job->list, error);
+    if (!PostMessageW(job->window, kPolled, 0, reinterpret_cast<LPARAM>(job))) delete job;
+    return 0;
+}
+
+// The cards would look the same (the list filled again only when not)
+bool sameCards(const std::vector<reports::Summary>& a, const std::vector<reports::Summary>& b) {
+    if (a.size() != b.size()) return false;
+    for (size_t i = 0; i < a.size(); ++i)
+        if (a[i].code != b[i].code || a[i].status != b[i].status || a[i].unread != b[i].unread ||
+            a[i].updated != b[i].updated || a[i].lastAt != b[i].lastAt || a[i].title != b[i].title ||
+            a[i].fixedIn != b[i].fixedIn)
+            return false;
+    return true;
+}
+
 DWORD WINAPI fetchThumbs(void* p) {
     std::unique_ptr<ThumbJob> job(static_cast<ThumbJob*>(p));
     const HRESULT com = CoInitializeEx(nullptr, COINIT_MULTITHREADED);  // WIC
@@ -335,10 +368,14 @@ private:
     void layout();
     void show(Pane p);
     void load();
-    void fillList();
+    void fillList(bool keepScroll = false);
     void openSelected();
     void openCode(const std::string& code);
     void fillTalk();
+    void poll();                  // 3.0.10-beta.2: the list asked on a thread (pollList)
+    void polled(Polled* p);       // its answer: the cards, and the open conversation when it is behind
+    void refreshTalk();           // the open conversation read again, the reply's words and screenshots kept
+    int fitBar(int width);        // the bar's words in three lines at most (barText_); its height
     void sendReply();
     void verdict(bool fixed);
     void openShot(size_t item, size_t shot);  // 3.0.9-beta.5: a thumbnail of the chat clicked
@@ -387,6 +424,9 @@ private:
     std::vector<std::pair<std::string, std::string>> attached_;  // the reply's: name, JPEG
     std::vector<Pick> picks_;
     int pasted_ = 0;
+    bool polling_ = false;   // 3.0.10-beta.2
+    ULONGLONG polledAt_ = 0;
+    std::wstring barText_;  // the bar's words in full (fitBar shows what fits)
 };
 
 HWND ReportsWindow::make(const wchar_t* cls, const std::wstring& text, DWORD style, int id, DWORD ex) {
@@ -483,6 +523,7 @@ HWND ReportsWindow::create(HWND owner) {
     make(L"BUTTON", t(Text::Close), WS_VISIBLE | tab | BS_PUSHBUTTON, kClose);
     show(Pane::Hint);
     if (start_.fresh) startNew();
+    SetTimer(hwnd_, kPollTimer, kPollMs, nullptr);  // 3.0.10-beta.2
     return hwnd_;
 }
 
@@ -511,15 +552,16 @@ void ReportsWindow::layout() {
         const int headH = at(86);
         move(kHead, x, top, rw, headH);
         const bool bar = shown(kNote), confirm = shown(kConfirm);
+        const int noteH = bar ? fitBar(rw) : 0;  // 3.0.10-beta.2: as tall as its words, three lines at most
         const int replyH = line + at(64) + gap + bh;
-        const int barH = bar ? at(46) + (confirm ? bh + gap / 2 : 0) + gap : 0;
+        const int barH = bar ? noteH + (confirm ? bh + gap / 2 : 0) + gap : 0;
         const int chatY = top + headH + gap / 2;
         const int chatH = std::max(at(80), end - chatY - barH - replyH - gap);
         move(kChat, x, chatY, rw, chatH);
         int y = chatY + chatH + gap;
         if (bar) {
-            move(kNote, x, y, rw, at(46));
-            y += at(46);
+            move(kNote, x, y, rw, noteH);
+            y += noteH;
             if (confirm) {
                 y += gap / 2;
                 move(kConfirm, x, y, at(150), bh);
@@ -658,10 +700,11 @@ void ReportsWindow::load() {
     }
 }
 
-void ReportsWindow::fillList() {
+void ReportsWindow::fillList(bool keepScroll) {
     // 3.0.9-beta.5: the tab's reports as cards (drawCard); the tabs' numbers
     HWND list = GetDlgItem(hwnd_, kList);
     filling_ = true;
+    const LRESULT top = SendMessageW(list, LB_GETTOPINDEX, 0, 0);  // 3.0.10-beta.2: a poll's refill keeps the place
     SendMessageW(list, LB_RESETCONTENT, 0, 0);
     shownItems_.clear();
     size_t open = 0, closed = 0;
@@ -673,6 +716,7 @@ void ReportsWindow::fillList() {
         shownItems_.push_back(i);
         if (pane_ == Pane::Talk && list_[i].code == talk_.code) SendMessageW(list, LB_SETCURSEL, WPARAM(row), 0);
     }
+    if (keepScroll && top > 0) SendMessageW(list, LB_SETTOPINDEX, WPARAM(top), 0);
     SetWindowTextW(GetDlgItem(hwnd_, kTabOpen), tf(Text::TabOpen, {std::to_string(open)}).c_str());
     SetWindowTextW(GetDlgItem(hwnd_, kTabClosed), tf(Text::TabClosed, {std::to_string(closed)}).c_str());
     filling_ = false;
@@ -782,11 +826,7 @@ void ReportsWindow::fillTalk() {
     const bool fixed = c.status == reports::Status::Fixed && !c.fixedIn.empty();
     std::wstring bar;
     if (c.status == reports::Status::NeedInfo) {
-        std::string question;
-        for (const reports::Message& m : c.messages)
-            if (m.fromDev && !m.text.empty()) question = m.text;
-        for (char& ch : question)
-            if (ch == '\n' || ch == '\r') ch = ' ';
+        const std::string question = talk::waitsText(c);  // 3.0.10-beta.2: one run, the signature left out
         bar = question.empty() ? t(Text::CardWaits) : tf(Text::TalkWaitsBar, {question});
         barGround_ = RGB(255, 244, 232);
         barWords_ = RGB(90, 50, 0);
@@ -797,11 +837,101 @@ void ReportsWindow::fillTalk() {
     }
     if (barBrush_) DeleteObject(barBrush_);
     barBrush_ = CreateSolidBrush(barGround_);
-    SetWindowTextW(GetDlgItem(hwnd_, kNote), bar.c_str());
+    barText_ = bar;  // 3.0.10-beta.2: layout() shows what fits (fitBar)
     ShowWindow(GetDlgItem(hwnd_, kNote), bar.empty() ? SW_HIDE : SW_SHOW);
     for (int id : {kConfirm, kStill}) ShowWindow(GetDlgItem(hwnd_, id), confirm ? SW_SHOW : SW_HIDE);
     SetWindowTextW(GetDlgItem(hwnd_, kAttached), L"");
     layout();
+}
+
+void ReportsWindow::poll() {
+    if (polling_ || key_.empty()) return;
+    auto* job = new Polled;
+    job->window = hwnd_;
+    job->key = key_;
+    HANDLE thread = CreateThread(nullptr, 0, pollList, job, 0, nullptr);
+    if (!thread) {
+        delete job;
+        return;
+    }
+    CloseHandle(thread);
+    polling_ = true;
+}
+
+void ReportsWindow::polled(Polled* p) {
+    std::unique_ptr<Polled> job(p);
+    polling_ = false;
+    polledAt_ = GetTickCount64();
+    if (!job->ok) return;  // quietly: the next tick asks again
+    const bool same = loaded_ && sameCards(list_, job->list);
+    list_ = std::move(job->list);
+    loaded_ = true;
+    if (!same) fillList(true);
+    // read only while it is seen: an answer read behind the game's window would never get the game's card
+    if (pane_ != Pane::Talk || GetForegroundWindow() != hwnd_ || IsIconic(hwnd_)) return;
+    for (const reports::Summary& s : list_)
+        if (s.code == talk_.code && talk::behind(s, talk_)) {
+            refreshTalk();
+            return;
+        }
+}
+
+void ReportsWindow::refreshTalk() {
+    reports::Conversation c;
+    std::string error;
+    if (talk_.code.empty() || !openReport(key_, talk_.code, c, error)) return;  // the next tick tries again
+    talk_ = c;
+    const bool closed = talk::closedTab(c.status);  // its card's tab, as openCode
+    const bool moved = closed != closedTab_;
+    if (moved) {
+        closedTab_ = closed;
+        SendMessageW(GetDlgItem(hwnd_, kTabOpen), BM_SETCHECK, closed ? BST_UNCHECKED : BST_CHECKED, 0);
+        SendMessageW(GetDlgItem(hwnd_, kTabClosed), BM_SETCHECK, closed ? BST_CHECKED : BST_UNCHECKED, 0);
+    }
+    for (reports::Summary& s : list_)
+        if (s.code == c.code) s.unread = 0;  // the site marked it read
+    if (loaded_) noteAnswersOf(model_.paths().dir, list_);  // a running game's card goes
+    fillTalk();
+    if (!attached_.empty())  // fillTalk empties the line; the screenshots stay attached
+        SetWindowTextW(GetDlgItem(hwnd_, kAttached),
+                       tf(Text::ReportAttached, {std::to_string(attached_.size())}).c_str());
+    fillList(!moved);
+}
+
+int ReportsWindow::fitBar(int width) {
+    // 3.0.10-beta.2 (the owner: the yellow bar did not fit in a window not maximised): its words in at most three
+    // lines of its width, cut at a word with «…» past them (the whole of them is in the chat above)
+    HWND ctl = GetDlgItem(hwnd_, kNote);
+    HDC dc = GetDC(ctl);
+    HGDIOBJ old = SelectObject(dc, reinterpret_cast<HFONT>(SendMessageW(ctl, WM_GETFONT, 0, 0)));
+    TEXTMETRICW tm{};
+    GetTextMetricsW(dc, &tm);
+    const auto height = [&](const std::wstring& text) {
+        RECT r{0, 0, std::max(1, width), 0};
+        DrawTextW(dc, text.c_str(), int(text.size()), &r, DT_CALCRECT | DT_WORDBREAK | DT_EDITCONTROL | DT_NOPREFIX);
+        return int(r.bottom);
+    };
+    const int most = 3 * int(tm.tmHeight);
+    std::wstring words = barText_;
+    if (height(words) > most) {
+        std::vector<size_t> ends;  // where each word ends
+        for (size_t i = 1; i < barText_.size(); ++i)
+            if (barText_[i] == L' ' && barText_[i - 1] != L' ') ends.push_back(i);
+        size_t lo = 0, hi = ends.size();  // the most words that fit with «…»
+        while (lo < hi) {
+            const size_t mid = (lo + hi + 1) / 2;
+            if (height(barText_.substr(0, ends[mid - 1]) + L"\u2026") <= most)
+                lo = mid;
+            else
+                hi = mid - 1;
+        }
+        words = (lo ? barText_.substr(0, ends[lo - 1]) : std::wstring()) + L"\u2026";
+    }
+    const int h = std::min(height(words), most);
+    SelectObject(dc, old);
+    ReleaseDC(ctl, dc);
+    SetWindowTextW(ctl, words.c_str());
+    return h + at(8);
 }
 
 void ReportsWindow::sendReply() {
@@ -1216,6 +1346,15 @@ LRESULT ReportsWindow::proc(UINT msg, WPARAM wp, LPARAM lp) {
         case kLoad:
             load();
             return 0;
+        case WM_TIMER:  // 3.0.10-beta.2: the site asked again
+            if (wp == kPollTimer) poll();
+            return 0;
+        case WM_ACTIVATE:  // 3.0.10-beta.2: back in front - asked at once, not at the next tick
+            if (LOWORD(wp) != WA_INACTIVE && loaded_ && GetTickCount64() - polledAt_ > 3000) poll();
+            break;
+        case kPolled:
+            polled(reinterpret_cast<Polled*>(lp));
+            return 0;
         case WM_NOTIFY: {
             const NMHDR* n = reinterpret_cast<const NMHDR*>(lp);
             LRESULT drawn = 0;
@@ -1295,7 +1434,10 @@ LRESULT ReportsWindow::proc(UINT msg, WPARAM wp, LPARAM lp) {
                     show(Pane::Hint);
                     break;
                 case kNew: startNew(); break;
-                case kRefresh: load(); break;
+                case kRefresh:  // 3.0.10-beta.2: the open conversation too
+                    load();
+                    if (pane_ == Pane::Talk) refreshTalk();
+                    break;
                 case kSend: sendReply(); break;
                 case kConfirm: verdict(true); break;
                 case kStill: verdict(false); break;
