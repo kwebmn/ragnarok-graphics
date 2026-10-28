@@ -1,3 +1,18 @@
+# uaRO Graphics 3.0.9-beta.6 — what is new
+
+- **«New report» — simpler and friendlier.**
+  - One question «What happened?» with an example inside the field.
+  - The game's screenshot (Ctrl+Shift+F10) is attached already and shown as a picture. No ticks: «+ Game
+    screenshot…» shows the game's screenshots of the week as tiles, there are «Add a file…» and «Paste · Ctrl+V» too;
+    «Remove» (or Delete) takes the chosen one off. 6 at most.
+  - «What is it about?» — buttons you may leave; from the game «Graphics» is chosen already.
+  - The long paragraph of what goes with the report is one line now; the whole text — under «What exactly?».
+  - Ctrl+Enter sends.
+  - After sending — «Thank you! The report is sent» with its code and «Open the conversation» / «Done». No
+    internet — «Kept - it goes by itself».
+- To check: Ctrl+Shift+F10 in the game — the screenshot is in the report already; «+ Game screenshot…» — tiles; after
+  sending — «Thank you!».
+
 # uaRO Graphics 3.0.9-beta.5 — what is new
 
 - **«Reports» as a messenger.** What you wrote, what the developer answered and where the report is:
