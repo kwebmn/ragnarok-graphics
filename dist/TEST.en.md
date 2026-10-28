@@ -1,3 +1,16 @@
+# uaRO Graphics 3.0.10-beta.2 — what is new
+
+- **«Reports» sees new answers by itself.** While the window is open the app asks the site every 15 seconds — and at
+  once when the window comes back to the front. The open conversation is read again as soon as something new is in it
+  (an answer, a status): no more switching to another report and back. It reads only while the window is in front —
+  else the answer would turn «read» and the game would not show its card. «Refresh» reads the open conversation too.
+  What you are writing and the screenshots attached stay.
+- **The yellow bar «The developer waits for your answer» reads in any window.** It grows with its words — up to three
+  lines of the window's width; longer words end at a word with «…» (all of them are in the conversation above). The
+  signature «— команда uaRO» stays out of the bar.
+- To check: open a conversation, let the developer answer — the answer comes in ~15 s by itself; in a small window the
+  bar with the question reads.
+
 # uaRO Graphics 3.0.10-beta.1 — what is new
 
 - **«Reports»: screenshots in the conversation.** The thumbnails show again (fixed on the site — 3.0.9 too): no grey
