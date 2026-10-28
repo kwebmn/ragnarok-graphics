@@ -12,7 +12,18 @@ bool listed(const std::vector<Page>& pages, Page p) { return std::find(pages.beg
 }  // namespace
 
 TEST(nav_simple_lists_main_effects_pad) {
-    CHECK(viewsOf(Mode::Simple) == std::vector<View>({View::Play, View::Main, View::Effects, View::Pad, View::Help}));
+    // 3.0.11-beta.3 (the owner: «отдельный пункт в конфигураторе сделай - Интерфейс»): the new interface's own item
+    CHECK(viewsOf(Mode::Simple) ==
+          std::vector<View>({View::Play, View::Main, View::Effects, View::Interface, View::Pad, View::Help}));
+}
+
+TEST(nav_the_new_interface_has_its_own_item) {
+    CHECK(viewName(View::Interface) == Text::ViewInterface);
+    CHECK(partsOf(View::Interface, 0) == std::vector<Page>({Page::Interface}));
+    CHECK(placeOf(Page::Interface).view == View::Interface && tabCount(View::Interface) == 1);
+    CHECK(!developerView(View::Interface));
+    const IniSetting* s = findSetting("interface.minimap");
+    CHECK(s && s->page == Page::Interface && placeOf(*s).view == View::Interface);
 }
 
 // 3.0.2-beta.6 (the user: a description of every function): «Довідка» last in every mode's list, before Debug
@@ -28,7 +39,7 @@ TEST(nav_help_in_every_mode) {
 TEST(nav_detailed_lists_eight_pages) {
     CHECK(viewsOf(Mode::Detailed) == std::vector<View>({View::Play, View::Graphics, View::Screen, View::Effects,
                                                         View::Ai, View::Sound, View::Pad, View::GameChat,
-                                                        View::Service, View::Help}));
+                                                        View::Interface, View::Service, View::Help}));
 }
 
 // 2.11: the launcher «Гра» first in every mode - the app opens on it

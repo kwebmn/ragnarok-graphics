@@ -151,6 +151,7 @@ Text helpOf(View v) {
         case View::Sound: return Text::HelpViewSound;
         case View::Pad: return Text::HelpViewPad;
         case View::GameChat: return Text::HelpViewGameChat;
+        case View::Interface: return Text::HelpViewInterface;  // 3.0.11-beta.3
         case View::Service: return Text::HelpViewService;
         case View::Debug: return Text::HelpViewDebug;
         case View::Help: break;

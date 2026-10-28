@@ -628,6 +628,7 @@ std::unique_ptr<Page> MainWindow::makeView() {
         case settings::View::Sound: return makeSettingsPage(*this, {P::Sound});
         case settings::View::Pad: return makePadPage(*this);
         case settings::View::GameChat: return makeSettingsPage(*this, {P::Game, P::Chat});
+        case settings::View::Interface: return makeSettingsPage(*this, {P::Interface});  // 3.0.11-beta.3
         case settings::View::Service: {
             std::vector<std::unique_ptr<Page>> parts;
             parts.push_back(makeServicePage(*this));

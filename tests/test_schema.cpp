@@ -115,7 +115,8 @@ TEST(schema_live_keys_are_the_specs) {
 TEST(schema_pages_follow_the_spec) {
     // Stage 2 spec §6.1 with 0.6.2: Sound, Game, and Chat and login after Frames - the last holds the whisper, login
     // and chat macro rows the Game page has no room for.
-    CHECK_EQ(kPageCount, 17);  // 2.11: Launcher, the rows of «Гра»
+    CHECK_EQ(kPageCount, 18);  // 2.11: Launcher, the rows of «Гра»; 3.0.11-beta.3: Interface, the new interface's
+    CHECK(pageName(Page::Interface) == Text::InterfaceHeading);
     CHECK(pageName(Page::Sound) == Text::PageSound);
     CHECK(pageName(Page::Game) == Text::PageGame);
     CHECK(pageName(Page::Chat) == Text::PageChat);

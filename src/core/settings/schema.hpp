@@ -15,9 +15,10 @@ namespace uagfx::settings {
 // switches - the Developer mode's page.
 enum class Page : uint8_t {
     Render, Screen, Quality, Smoothing, Effects, Ai, AiCache, Pack, Frames, Sound, Pad, Game, Chat, Diagnostics,
-    Service, Debug, Launcher  // 2.11: the launcher «Гра»'s rows
+    Service, Debug, Launcher,  // 2.11: the launcher «Гра»'s rows
+    Interface                  // 3.0.11-beta.3: the new interface's switches (its own item)
 };
-constexpr int kPageCount = 17;
+constexpr int kPageCount = 18;
 Text pageName(Page p);
 
 enum class Control : uint8_t { Check, Slider, Choice, Number, Line };  // Line: a line of text

@@ -4419,6 +4419,20 @@ constexpr Entry kTexts[] = {
      "Проверка нового интерфейса: миникарта игры прячется, а в её углу стоит новая - карта вокруг персонажа и клетка "
      "персонажа под ней (сравните с /where). Клик по ней не ведёт персонажа. Выключено - миникарта игры возвращается."},
     {Text::InterfaceHeading, "The new interface", "Новий інтерфейс", "Новый интерфейс"},  // 3.0.11-beta.2
+    {Text::ViewInterface, "Interface", "Інтерфейс", "Интерфейс"},  // 3.0.11-beta.3: its own item
+    {Text::HelpViewInterface,
+     "The game's new interface, built part by part: each part has its switch here to try it out before it stays.",
+     "Новий інтерфейс гри, який ми робимо частинами: кожна частина має тут свій перемикач, щоб спробувати її, перш ніж "
+     "вона залишиться.",
+     "Новый интерфейс игры, который мы делаем по частям: у каждой части здесь свой переключатель, чтобы попробовать "
+     "её, прежде чем она останется."},
+    {Text::InterfaceNote,
+     "Parts of the new interface to try. Each switch works at once, in a running game too; off brings the game's own "
+     "part back. In the game the console (~) has them too.",
+     "Частини нового інтерфейсу, щоб спробувати. Кожен перемикач діє одразу, і в запущеній грі; вимкнено - частина гри "
+     "повертається. У грі вони є і в консолі (~).",
+     "Части нового интерфейса, чтобы попробовать. Каждый переключатель действует сразу, и в запущенной игре; "
+     "выключено - часть игры возвращается. В игре они есть и в консоли (~)."},
     // 3.0.4-beta.1: the output device ([sound] output)
     {Text::SoundOutput, "Sound output device",
      "Пристрій виводу звуку",

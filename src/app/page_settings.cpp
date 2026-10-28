@@ -101,13 +101,6 @@ public:
                     p.note(t(Text::RoextNote));
                     buildRows(p, "roext", false);
                 }
-                // 3.0.11-beta.2 (the owner: «я не разобрался где включить карту» - beta.1 listed [interface]
-                // nowhere): the new interface's own section, first after the game's settings
-                if (anyListed("interface")) {
-                    p.gap();
-                    p.heading(t(Text::InterfaceHeading));
-                    buildRows(p, "interface");
-                }
                 // 3.0.3-beta.4: several game windows ([windows]) - their own heading, whatever ROExt is
                 if (anyListed("windows")) {
                     p.gap();
@@ -139,6 +132,10 @@ public:
                     buildRows(p, "notify");
                 }
                 break;
+            case settings::Page::Interface:  // 3.0.11-beta.3 (the owner: its own item «Інтерфейс»)
+                p.note(t(Text::InterfaceNote));
+                buildRows(p);
+                return;
             case settings::Page::Chat:
                 regRows(p, [](const RegSetting& s) { return *s.subkey && s.control == Control::Check; });  // whispers
                 p.note(t(Text::ChatFriendsNote));

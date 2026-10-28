@@ -27,6 +27,7 @@ Text pageName(Page p) {
         case Page::Diagnostics: return Text::PageDiagnostics;
         case Page::Debug: return Text::PageDebug;
         case Page::Launcher: return Text::ViewPlay;
+        case Page::Interface: return Text::InterfaceHeading;  // 3.0.11-beta.3
         case Page::Service: break;
     }
     return Text::PageService;
@@ -93,7 +94,7 @@ const std::vector<IniSetting>& iniSettings() {
          {Text::WindowsKeysAll, Text::WindowsKeysBack, Text::WindowsKeysOff}, Text::WindowsKeys,
          Text::WindowsKeysHint, ""},  // 3.0.3-beta.6: the keys that switch the game windows
         // 3.0.11-beta.1: the new interface's minimap prototype (stage 1) - off unless asked for
-        {"interface", "minimap", Page::Game, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::InterfaceMinimap,
+        {"interface", "minimap", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::InterfaceMinimap,
          Text::InterfaceMinimapHint, ""},
         // 3.0.3-beta.8: the game windows' panel in the game's picture - a section of its own («Панель вікон»)
         {"panel", "show", Page::Game, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::WindowsPanel,

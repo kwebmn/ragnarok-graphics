@@ -64,6 +64,7 @@ Text viewName(View v) {
         case View::Sound: return Text::PageSound;
         case View::Pad: return Text::PagePad;
         case View::GameChat: return Text::ViewGameChat;
+        case View::Interface: return Text::ViewInterface;  // 3.0.11-beta.3
         case View::Service: return Text::PageService;
         case View::Play: return Text::ViewPlay;
         case View::Help: return Text::ViewHelp;
@@ -73,9 +74,9 @@ Text viewName(View v) {
 }
 
 std::vector<View> viewsOf(Mode m) {
-    if (m == Mode::Simple) return {View::Play, View::Main, View::Effects, View::Pad, View::Help};
-    std::vector<View> list{View::Play,  View::Graphics, View::Screen,   View::Effects, View::Ai,
-                           View::Sound, View::Pad,      View::GameChat, View::Service, View::Help};
+    if (m == Mode::Simple) return {View::Play, View::Main, View::Effects, View::Interface, View::Pad, View::Help};
+    std::vector<View> list{View::Play,     View::Graphics,  View::Screen,  View::Effects, View::Ai, View::Sound,
+                           View::Pad,      View::GameChat,  View::Interface, View::Service, View::Help};
     if (m == Mode::Developer) list.push_back(View::Debug);
     return list;
 }
@@ -105,6 +106,7 @@ std::vector<Page> partsOf(View v, int tab) {
         case View::Sound: return {Page::Sound};
         case View::Pad: return {Page::Pad};
         case View::GameChat: return {Page::Game, Page::Chat};
+        case View::Interface: return {Page::Interface};
         case View::Service: return {Page::Service, Page::Diagnostics};
         case View::Play: return {Page::Launcher};
         case View::Help: return {};
@@ -128,6 +130,7 @@ Place placeOf(Page p) {
         case Page::Pad: return {View::Pad, 0};
         case Page::Game:
         case Page::Chat: return {View::GameChat, 0};
+        case Page::Interface: return {View::Interface, 0};
         case Page::Debug: return {View::Debug, 0};
         case Page::Launcher: return {View::Play, 0};
         case Page::Diagnostics:
@@ -168,7 +171,8 @@ std::vector<std::string> developerKeys() {
 
 Mode levelOf(const IniSetting& s) {
     const std::string k = sectionKey(s);
-    if (mainKey(k) || effectsSimple(k)) return Mode::Simple;
+    // 3.0.11-beta.3: the new interface's switches in every mode (its own item is in the simple list too)
+    if (mainKey(k) || effectsSimple(k) || k.compare(0, 10, "interface.") == 0) return Mode::Simple;
     if (s.page == Page::Debug || std::strcmp(s.section, "debug") == 0) return Mode::Developer;
     for (const char* d : kDeveloperKeys)
         if (k == d) return Mode::Developer;
