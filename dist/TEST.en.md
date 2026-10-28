@@ -1,3 +1,17 @@
+# uaRO Graphics 3.0.10-beta.3 — what is new
+
+- **The app learns of answers while minimised too.** While the app is open (minimised or behind other windows too) it
+  asks the site every 5 minutes for answers to your reports: the number on «Reports» and the orange strip «An answer to
+  the report» follow.
+- **A Windows notification of a new answer** when the game is not running and the app is not in front: «Answer to the
+  report R-XXXXXX: <status>» with the developer's words. A click on it (or on the icon by the clock) opens that
+  conversation; the app's taskbar button flashes. While the game runs the game tells of it as before (its card or its
+  notification). Turned off in the same place: «Game» → «Notifications» → «Answers to reports»; its sound — «Sound of
+  notifications».
+- Only a computer that has sent a report asks.
+- To check: close «Reports», minimise the app (no game running) — after the developer answers, the notification comes
+  within 5 minutes; a click opens the conversation.
+
 # uaRO Graphics 3.0.10-beta.2 — what is new
 
 - **«Reports» sees new answers by itself.** While the window is open the app asks the site every 15 seconds — and at
