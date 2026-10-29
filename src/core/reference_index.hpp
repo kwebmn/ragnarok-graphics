@@ -68,6 +68,7 @@ struct Mob {
     bool boss = false;  // mode & 0x20 (MVPs and the bosses of the site's MVP timers)
     int hp = 0, baseExp = 0, jobExp = 0, size = 0, race = 0, element = 0, elementLv = 1;  // 3.0.11-beta.7
     std::vector<Drop> drops;
+    std::string sprite;  // 3.0.11-beta.14: the server's sprite name (mob_db), lower case; "" in older packs
 };
 struct Item {  // 3.0.11-beta.7
     std::string name, aegis;
@@ -141,6 +142,9 @@ uint32_t colorOf(NpcKind k);
 std::map<std::string, std::string> mapNames(const std::string& text);
 // A name for the minimap's one line: up to its first comma («Prontera City, Capitol of Rune-Midgard» - «Prontera City»)
 std::string shortName(const std::string& name);
+// 3.0.11-beta.14: the client's sprite files a monster may have, the likeliest first: the server's sprite name, it
+// without an event's «_» or a variant's prefix (m_desert_wolf - desert_wolf: the client draws them alike), its name
+std::vector<std::string> spriteNames(const Mob& m);
 
 // 3.0.11-beta.7: the search of «Довідник» - every word of the query a part of the name (case folded, any order: the
 // console's rule), monsters, items and maps (by the code and the client's name); the closest first in each kind:

@@ -13,6 +13,7 @@ constexpr uint32_t kGround = 0x12161E, kBand = 0x0D1016, kField = 0x1B212C, kFie
 constexpr uint32_t kRule = 0x2A3342, kHover = 0x1F2733, kTileFill = 0x1A2029, kTileHot = 0x232B37;
 constexpr uint32_t kTrack = 0x161B23, kThumb = 0x3A4556;
 constexpr float kWorldLeast = 300;                         // 3.0.11-beta.11: the world map's row at the least
+constexpr float kPortrait = 84;                            // 3.0.11-beta.14: a card's picture row
 constexpr uint32_t kRoute = 0x5AC8FA, kBadge = 0x0D1016;  // the minimap's way colour; the players' badge
 
 int px(float v, float s) { return int(std::lround(v * s)); }
@@ -25,6 +26,7 @@ int heightOf(refpages::Style st, float s) {
         case refpages::Style::Note: return px(kNote, s);
         case refpages::Style::Tile: return px(kTile, s);
         case refpages::Style::World: return px(kWorldLeast, s);  // place() gives it the body's rest
+        case refpages::Style::Portrait: return px(kPortrait, s);
         case refpages::Style::Row: break;
     }
     return px(kRow, s);
@@ -94,6 +96,18 @@ std::vector<Placed> place(const Layout& L, const refpages::Page& p, int& total) 
 int clampScroll(int scroll, int total, int bodyH) { return std::clamp(scroll, 0, std::max(0, total - bodyH)); }
 
 bool shown(const Layout& L, const Placed& r, int scroll) { return r.y - scroll >= 0 && r.y - scroll + r.h <= L.bodyH; }
+
+int portraitSide(const Layout& L) { return px(kPortrait, L.s); }
+
+namespace {
+
+const panel::Picture* pictureOf(const Look& look, const refpages::Row& row) {
+    if (!look.pictures || row.picture.empty()) return nullptr;
+    const auto it = look.pictures->find(row.picture);
+    return it == look.pictures->end() || it->second.width <= 0 ? nullptr : &it->second;
+}
+
+}  // namespace
 
 worldmap::Fit worldFit(const worldmap::Sheet& sheet, const Placed& row) {
     return worldmap::fit(sheet.w, sheet.h, row.w, row.h);
@@ -230,6 +244,30 @@ void paint(panel::Picture& out, const Layout& L, const refpages::Page& p, const 
             paintWorld(out, b, look.world, s);
             continue;
         }
+        if (row.style == refpages::Style::Portrait) {  // 3.0.11-beta.14: the picture over a soft square
+            if (const panel::Picture* pic = pictureOf(look, row)) {
+                panel::roundRect(out, panel::Box{b.x, b.y + 2 * s, b.h - 4 * s, b.h - 4 * s}, 8 * s, kTileFill, 1.0f,
+                                 kRule, 1.0f, std::max(1.0f, s));
+                const int ox = int(b.x + (b.h - 4 * s - float(pic->width)) / 2);
+                const int oy = int(b.y + 2 * s + (b.h - 4 * s - float(pic->height)) / 2);
+                for (int y = 0; y < pic->height; ++y) {
+                    const int ty = oy + y;
+                    if (ty < 0 || ty >= out.height) continue;
+                    for (int x = 0; x < pic->width; ++x) {
+                        const int tx = ox + x;
+                        const uint32_t c = pic->px[size_t(y) * size_t(pic->width) + size_t(x)];
+                        if (tx < 0 || tx >= out.width || (c >> 24) == 0) continue;
+                        uint32_t& d = out.px[size_t(ty) * size_t(out.width) + size_t(tx)];
+                        const uint32_t a = c >> 24, keep = 255 - a;  // premultiplied over
+                        auto ch = [&](int sh) {
+                            return std::min<uint32_t>(255, ((c >> sh) & 0xFF) + ((d >> sh) & 0xFF) * keep / 255);
+                        };
+                        d = 0xFF000000u | ch(16) << 16 | ch(8) << 8 | ch(0);
+                    }
+                }
+            }
+            continue;
+        }
         if (hot) panel::roundRect(out, panel::Box{b.x - 6 * s, b.y, b.w + 12 * s, b.h}, 4 * s, kHover, 1.0f);
         if (row.style == refpages::Style::Heading)
             fill(out, panel::Box{b.x, b.y + b.h - std::max(1.0f, s), b.w, std::max(1.0f, s)}, kRule);
@@ -294,6 +332,14 @@ std::vector<Words> words(const Layout& L, const refpages::Page& p, const std::ve
             case refpages::Style::Note:
                 out.push_back(Words{panel::Box{x, y, w, h}, row.left, panel::kMuted, 13.5f * s, false, Align::Left});
                 break;
+            case refpages::Style::Portrait: {  // two lines beside the picture (from the start without one)
+                const float tx = pictureOf(look, row) ? x + h + 10 * s : x;
+                out.push_back(Words{panel::Box{tx, y + h * 0.18f, w - (tx - x), h * 0.32f}, row.left, panel::kText,
+                                    14 * s, false, Align::Left});
+                out.push_back(Words{panel::Box{tx, y + h * 0.52f, w - (tx - x), h * 0.3f}, row.right, panel::kMuted,
+                                    13 * s, false, Align::Left});
+                break;
+            }
             case refpages::Style::World:  // the players' numbers in their badges
                 if (look.world.sheet && look.world.players) {
                     const worldmap::Fit f = worldmap::fit(look.world.sheet->w, look.world.sheet->h, int(w), int(h));

@@ -55,7 +55,12 @@ struct Look {
     Under hover;
     bool backShown = false;
     WorldLook world;
+    // 3.0.11-beta.14: the Portraits' pictures by their rows' keys, each the row's height square (premultiplied; none:
+    // the words from the row's start)
+    const std::map<std::string, panel::Picture>* pictures = nullptr;
 };
+// A Portrait's picture's side for a layout (the row's height)
+int portraitSide(const Layout& L);
 // The window's shapes (premultiplied): its ground and frame, the header, the search field, the rows' grounds (the
 // tiles, the row under the pointer, the headings' rules, the NPCs' dots), the footer, the scroll bar
 void paint(panel::Picture& out, const Layout& L, const refpages::Page& p, const std::vector<Placed>& rows, int scroll,

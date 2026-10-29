@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <cstring>
 #include <tuple>
 
 #include "core/json.hpp"
@@ -94,7 +95,8 @@ namespace {
 int at(const json::Value& a, size_t i, int fallback = 0) { return int(a[i].asInt(fallback)); }
 
 void readMobs(const json::Value& v, Index& ix) {
-    // {id: [name, lv, hp, exp, jexp, size, race, ele, ele lv, boss, drops, mvp drops, card | null]}
+    // {id: [name, lv, hp, exp, jexp, size, race, ele, ele lv, boss, drops, mvp drops, card | null, sprite]} - the
+    // sprite's name the site's newer packs have (3.0.11-beta.14)
     for (const auto& m : v["mobs"].members()) {
         const int id = std::atoi(m.first.c_str());
         const json::Value& a = m.second;
@@ -115,6 +117,7 @@ void readMobs(const json::Value& v, Index& ix) {
                 if (at(d, 0) > 0) mob.drops.push_back(Drop{at(d, 0), at(d, 1), kind});
         if (a[size_t(12)].type() == json::Value::Array && at(a[size_t(12)], 0) > 0)
             mob.drops.push_back(Drop{at(a[size_t(12)], 0), at(a[size_t(12)], 1), 2});
+        if (a.items().size() > 13) mob.sprite = lower(a[size_t(13)].asString());
         ix.mobs[id] = std::move(mob);
     }
 }
@@ -268,6 +271,28 @@ std::map<std::string, std::string> mapNames(const std::string& text) {
 
 std::string shortName(const std::string& name) {
     return trim(name.substr(0, name.find(',')));
+}
+
+std::vector<std::string> spriteNames(const Mob& m) {
+    std::vector<std::string> out;
+    auto add = [&](const std::string& n) {
+        if (!n.empty() && std::find(out.begin(), out.end(), n) == out.end()) out.push_back(n);
+    };
+    if (!m.sprite.empty()) {
+        add(m.sprite);
+        std::string t = m.sprite;
+        while (!t.empty() && t.back() == '_') t.pop_back();  // FABRE_ - an event's Fabre: the Fabre's look
+        add(t);
+        for (const char* p : {"meta_", "provoke_", "conceive_", "mutant_", "event_", "l_", "m_", "g_", "e_", "c_"})
+            if (t.rfind(p, 0) == 0) add(t.substr(std::strlen(p)));
+    }
+    std::string fromName;  // «Archer Skeleton» - archer_skeleton: the packs before 3.0.11-beta.14 have no sprite
+    for (char c : lower(m.name)) {
+        if (std::isalnum(static_cast<unsigned char>(c))) fromName += c;
+        else if (c == ' ' || c == '-' || c == '_') fromName += '_';
+    }
+    add(fromName);
+    return out;
 }
 
 namespace {

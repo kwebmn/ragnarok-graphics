@@ -25,13 +25,16 @@ struct Link {
     int id = 0;       // a monster's, an item's, a shop's (its place in the index) or a section's
     std::string map;  // a map's code
 };
-enum class Style : uint8_t { Title, Sub, Heading, Row, Note, Tile, World };  // World: the world map's picture
+// World: the world map's picture; Portrait (3.0.11-beta.14): a card's picture (the monster's first frame, the item's
+// icon) with its two lines beside it - `left` and `right`, one under the other
+enum class Style : uint8_t { Title, Sub, Heading, Row, Note, Tile, World, Portrait };
 struct Row {
     Style style = Style::Row;
     std::string left, right;  // UTF-8: the row's words, and a note on its right (a tile: its count and its line)
     Link link;
     bool gold = false;   // a boss, the place the player is
     uint32_t dot = 0;    // 0xRRGGBB of a mark before the words (an NPC's kind), 0 none
+    std::string picture;  // 3.0.11-beta.14: a Portrait's - "mob:<id>", "item:<id>" (win/reference_window finds it)
 };
 struct Page {
     std::string name;  // what «Назад до …» calls it

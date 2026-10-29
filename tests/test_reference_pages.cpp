@@ -97,7 +97,8 @@ TEST(reference_pages_a_monsters_card) {
     const refindex::Index ix = index();
     const refpages::Page p = refpages::mob(ix, Lang::Uk, 1002, ctx("prt_fild05"));
     CHECK(p.rows[0].style == refpages::Style::Title && p.rows[0].left == "Poring" && p.rows[0].right == "Lv 1");
-    CHECK(p.rows[1].left.find("HP 50 · Вода 1 · Рослина · Середній") == 0);
+    CHECK(p.rows[1].left == "HP 50 · Вода 1 · Рослина · Середній");
+    CHECK(p.rows[1].style == refpages::Style::Portrait && p.rows[1].picture == "mob:1002");  // 3.0.11-beta.14
     // «Де знайти»: the player's map first (marked), then by count
     const size_t where = indexOf(p, "Де знайти");
     CHECK(p.rows[where + 1].link.map == "prt_fild05" && p.rows[where + 1].gold);
@@ -125,6 +126,7 @@ TEST(reference_pages_an_items_card) {
     const refpages::Page p = refpages::item(ix, Lang::Uk, 601, ctx(""));
     CHECK(p.rows[0].left == "Fly Wing" && p.rows[0].right == "Вживане");
     CHECK(p.rows[1].left == "вага 0,5 · ціна 60 z");
+    CHECK(p.rows[1].picture == "item:601" && p.rows[1].right == "Wing_Of_Fly");
     const size_t by = indexOf(p, "З кого випадає");
     CHECK_EQ(p.rows[by].right, std::string("2"));
     CHECK(p.rows[by + 1].left == "Satan Morroc" && p.rows[by + 1].gold);  // 90 % before 1,5 %

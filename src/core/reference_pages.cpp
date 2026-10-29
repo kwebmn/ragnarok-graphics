@@ -547,12 +547,13 @@ Page mob(const refindex::Index& ix, Lang l, int id, const Context& c, unsigned o
     title.right = sayf(l, Text::RefLevel, {std::to_string(m.lv)});
     title.gold = m.boss;
     p.rows.push_back(title);
-    Row sub;
-    sub.style = Style::Sub;
+    Row sub;  // 3.0.11-beta.14: beside its picture (the client's sprite)
+    sub.style = Style::Portrait;
+    sub.picture = "mob:" + std::to_string(id);
     sub.left = sayf(l, Text::RefHp, {number(m.hp, l)}) + " · " + elementName(m.element, l) + " " +
-               std::to_string(m.elementLv) + " · " + raceName(m.race, l) + " · " + sizeName(m.size, l) + " · " +
-               sayf(l, Text::RefExp, {number(m.baseExp, l), number(m.jobExp, l)});
-    if (m.boss) sub.left += " · ★ " + say(l, Text::RefBoss);
+               std::to_string(m.elementLv) + " · " + raceName(m.race, l) + " · " + sizeName(m.size, l);
+    sub.right = sayf(l, Text::RefExp, {number(m.baseExp, l), number(m.jobExp, l)});
+    if (m.boss) sub.right += " · ★ " + say(l, Text::RefBoss);
     p.rows.push_back(sub);
 
     const auto where = ix.spawnsOf.find(id);
@@ -616,8 +617,10 @@ Page item(const refindex::Index& ix, Lang l, int id, const Context& c, unsigned 
     title.left = i.name + (i.slots > 0 ? " [" + std::to_string(i.slots) + "]" : "");
     title.right = typeName(i.type, l);
     p.rows.push_back(title);
-    Row sub;
-    sub.style = Style::Sub;
+    Row sub;  // 3.0.11-beta.14: beside its icon (the client's)
+    sub.style = Style::Portrait;
+    sub.picture = "item:" + std::to_string(id);
+    sub.right = i.aegis;
     sub.left = sayf(l, Text::RefWeight, {number(i.weight / 10, l) + (i.weight % 10 ? (l == Lang::En ? "." : ",") +
                                                                                        std::to_string(i.weight % 10)
                                                                                  : "")});

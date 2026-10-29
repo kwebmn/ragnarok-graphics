@@ -4,18 +4,23 @@
 
 #include <algorithm>
 #include <ctime>
+#include <map>
 #include <memory>
 #include <string>
 #include <vector>
 
+#include "core/pack_source.hpp"
 #include "core/reference_pages.hpp"
 #include "core/reference_route.hpp"
 #include "core/reference_window.hpp"
 #include "core/settings/strings.hpp"
+#include "core/sprite_file.hpp"
 #include "pad/win/game_window.hpp"
 #include "win/game_camera.hpp"
+#include "win/game_files.hpp"
 #include "win/log.hpp"
 #include "win/minimap_proto.hpp"
+#include "win/paths.hpp"
 #include "win/picture_draw.hpp"
 #include "win/real_ddraw.hpp"
 #include "win/reference_load.hpp"
@@ -53,6 +58,11 @@ struct State {
     std::shared_ptr<const reference::World> world;  // 3.0.11-beta.11: the world map (null: not made yet)
     panel::Picture worldPicture;                    // its picture at its row's size
     std::string worldHover;                         // the map under the pointer there
+    // 3.0.11-beta.14: the cards' pictures - the client's sprites and item icons, found once each (none: an empty one)
+    std::unique_ptr<gamefiles::Reader> files;
+    std::map<std::string, panel::Picture> pictures;
+    std::map<int, std::string> itemFiles;  // the client's data\idnum2itemresnametable.txt: item -> its icon's name
+    bool itemFilesRead = false;
     std::string here;
     panel::Picture picture;
     uint32_t texture = 0;
@@ -66,6 +76,89 @@ State& state() {
 }
 
 std::string say(Text t) { return settings::tr(startup().lang, t); }
+
+// 3.0.11-beta.14: a card's picture - a monster's standing frame from its sprite (data\sprite\몬스터 or npc), an
+// item's icon (data\texture\유저인터페이스\item) - fitted into the Portrait's square
+const std::string kMonsters = "\xB8\xF3\xBD\xBA\xC5\xCD";                         // 몬스터
+const std::string kUi = "\xC0\xAF\xC0\xFA\xC0\xCE\xC5\xCD\xC6\xE4\xC0\xCC\xBD\xBA";  // 유저인터페이스
+
+bool readFile(State& s, const std::string& entry, std::string& out) {
+    if (!s.files) s.files = std::make_unique<gamefiles::Reader>(gameDir());
+    std::vector<uint8_t> bytes;
+    if (!s.files->read(entry, bytes, nullptr)) return false;
+    out.assign(bytes.begin(), bytes.end());
+    return true;
+}
+
+panel::Picture asPicture(const spritefile::Image& im) {
+    panel::Picture p;
+    p.width = im.w;
+    p.height = im.h;
+    p.px = im.argb;
+    return p;
+}
+
+void loadPicture(State& s, const std::string& key, int side) {
+    if (s.pictures.count(key) || !s.index) return;
+    panel::Picture& out = s.pictures[key];  // empty until found: not looked for again
+    const int box = std::max(16, side - int(8 * s.layout.s));  // the square less its edge (paint: 4 each way)
+    if (key.rfind("mob:", 0) == 0) {
+        const auto m = s.index->mobs.find(std::atoi(key.c_str() + 4));
+        if (m == s.index->mobs.end()) return;
+        for (const std::string& name : refindex::spriteNames(m->second))
+            for (const std::string& folder : {kMonsters, std::string("npc")}) {
+                const std::string base = "data\\sprite\\" + folder + "\\" + name;
+                std::string spr, act;
+                spritefile::Sprite sp;
+                spritefile::Act ac;
+                spritefile::Image im;
+                if (!readFile(s, base + ".spr", spr) || !readFile(s, base + ".act", act) ||
+                    !spritefile::readSpr(spr, sp) || !spritefile::readAct(act, ac) ||
+                    !spritefile::frameImage(sp, ac, 0, 0, im))
+                    continue;
+                out = asPicture(spritefile::fitted(im, box, box));
+                LOG_INFO("reference: %s's picture - %s.spr (%dx%d)", m->second.name.c_str(), base.c_str(), im.w, im.h);
+                return;
+            }
+        LOG_INFO("reference: no sprite for %s (#%d) among %zu names", m->second.name.c_str(), m->first,
+                 refindex::spriteNames(m->second).size());
+        return;
+    }
+    if (key.rfind("item:", 0) == 0) {
+        if (!s.itemFilesRead) {  // «501#빨간포션#» a line
+            s.itemFilesRead = true;
+            std::string text;
+            if (readFile(s, "data\\idnum2itemresnametable.txt", text)) {
+                size_t at = 0;
+                while (at < text.size()) {
+                    size_t end = text.find('\n', at);
+                    if (end == std::string::npos) end = text.size();
+                    const std::string line = text.substr(at, end - at);
+                    at = end + 1;
+                    const size_t a = line.find('#'), b = a == std::string::npos ? a : line.find('#', a + 1);
+                    if (b != std::string::npos && a > 0)
+                        s.itemFiles[std::atoi(line.c_str())] = line.substr(a + 1, b - a - 1);
+                }
+            }
+            LOG_INFO("reference: %zu item icons named by the client's idnum2itemresnametable.txt", s.itemFiles.size());
+        }
+        const auto f = s.itemFiles.find(std::atoi(key.c_str() + 5));
+        if (f == s.itemFiles.end()) return;
+        std::string bmp;
+        std::vector<uint32_t> argb;
+        int w = 0, h = 0;
+        if (!readFile(s, "data\\texture\\" + kUi + "\\item\\" + f->second + ".bmp", bmp) ||
+            !pack::decodeBmp(reinterpret_cast<const uint8_t*>(bmp.data()), bmp.size(), argb, w, h))
+            return;
+        spritefile::Image im;
+        im.w = w;
+        im.h = h;
+        im.argb = std::move(argb);
+        for (uint32_t& c : im.argb)  // the game's magenta: see-through
+            if ((c & 0xFFFFFF) == 0xFF00FF) c = 0;
+        out = asPicture(spritefile::fitted(im, std::min(box, 72), std::min(box, 72)));
+    }
+}
 
 void makePage(State& s) {
     const settings::Lang l = startup().lang;
@@ -97,6 +190,9 @@ void makePage(State& s) {
     s.rows = refwin::place(s.layout, s.page, s.total);
     s.scroll = refwin::clampScroll(s.scroll, s.total, s.layout.bodyH);
     s.madeAt = GetTickCount64();
+    for (const refpages::Row& r : s.page.rows)  // 3.0.11-beta.14
+        if (r.style == refpages::Style::Portrait && !r.picture.empty())
+            loadPicture(s, r.picture, refwin::portraitSide(s.layout));
     for (size_t i = 0; i < s.rows.size() && i < s.page.rows.size(); ++i) {  // 3.0.11-beta.11: the world's picture
         const refwin::Placed& r = s.rows[i];
         if (s.page.rows[i].style != refpages::Style::World || !s.world) continue;
@@ -209,7 +305,7 @@ refwin::WorldLook worldLook(const State& s) {
 
 void render(State& s) {
     const settings::Lang l = startup().lang;
-    refwin::Look look{s.hover, !s.back.empty(), worldLook(s)};
+    refwin::Look look{s.hover, !s.back.empty(), worldLook(s), &s.pictures};
     refwin::paint(s.picture, s.layout, s.page, s.rows, s.scroll, s.total, look);
     refwin::Texts t;
     t.title = say(Text::RefTitle);
@@ -292,6 +388,7 @@ void frame(HWND game, bool enabled, double k, int targetWidth, int targetHeight)
         s.targetW = targetWidth;
         s.targetH = targetHeight;
         s.layout = refwin::layout(targetWidth, targetHeight, std::clamp(float(k), 0.75f, 6.0f));
+        s.pictures.clear();  // 3.0.11-beta.14: their size is the layout's
         s.wantPage = true;
     }
     const auto index = reference::index();
