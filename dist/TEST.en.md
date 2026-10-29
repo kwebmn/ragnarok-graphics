@@ -1,3 +1,11 @@
+# uaRO Graphics 3.0.11-beta.23 — what is new
+
+- **«Reference» from the pad**: uaRO Pad's menu (Start → buttons) has a new action «Reference (uaRO Graphics)» — any
+  button may have it; a press opens «Reference», another closes it (with «Reference (prototype) - Ctrl+F» on). Then
+  the D-pad, A, B, Start, LB/RB drive it (of beta.21).
+- To check: Start → the buttons' tab → on a free button (R3, say) «Reference (uaRO Graphics)» → save → press it in the
+  game.
+
 # uaRO Graphics 3.0.11-beta.22 — what is new
 
 - **Search by number**: a number in «Reference» finds the item and the monster of that id («601» — Fly Wing, «1002»
