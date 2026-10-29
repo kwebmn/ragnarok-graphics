@@ -45,8 +45,9 @@ std::vector<Placed> place(const Layout& L, const refpages::Page& p, int& total);
 int clampScroll(int scroll, int total, int bodyH);
 bool shown(const Layout& L, const Placed& r, int scroll);  // the whole row in the body
 
-// 3.0.11-beta.26: the header's star; the rail's sections (row: its index)
-enum class Part : uint8_t { None, Close, Back, Search, Row, Body, Tile, Star, Rail };
+// 3.0.11-beta.26: the header's star; the rail's sections (row: its index); 3.0.11-beta.30 «Головна» (the header's
+// button and its title)
+enum class Part : uint8_t { None, Close, Back, Search, Row, Body, Tile, Star, Rail, Home };
 struct Under {
     Part part = Part::None;
     int row = -1;   // Part::Row: a row that leads somewhere; Part::Tile: the world map's row
@@ -81,10 +82,12 @@ struct Texts {
     std::string pack, live;           // the data's chips at the bottom ("" none)
     Live liveState = Live::None;
     std::string keys;                 // at the bottom's right
+    bool home = false;                // 3.0.11-beta.30: «Головна» in the header (every page but the first screen)
 };
 // Where the header's and the bottom's parts are (the window's pixels; w 0: none)
 struct Chrome {
     panel::Box title, back, search, kbd, star, close, keys;
+    panel::Box home;  // 3.0.11-beta.30: «Головна» - the first screen (w 0: on it)
     std::vector<panel::Box> crumbs;  // the way's parts shown and a «›» between each two
     size_t crumbFirst = 0;           // the first part shown (the earlier ones do not fit)
     std::vector<panel::Box> chips;   // the pack's, the live data's (w 0: none)

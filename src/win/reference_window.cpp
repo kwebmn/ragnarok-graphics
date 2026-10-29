@@ -631,6 +631,7 @@ refwin::Texts textsOf(const State& s) {
         t.live = say(Text::RefLiveOff);
         t.liveState = refwin::Live::Off;
     }
+    t.home = s.at.go != refpages::Go::None || !s.query.empty();  // 3.0.11-beta.30: «Головна» but on it
     t.keys = say(isCard(s.at)                                       ? Text::RefKeysCard
                  : s.at.go == refpages::Go::World && s.at.id == 0 ? Text::RefKeysWorld  // 3.0.11-beta.29
                                                                   : Text::RefKeysList);
@@ -944,6 +945,7 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
             const refwin::Under u = refwin::under(s.layout, s.page, s.rows, s.scroll, s.chrome, wx, wy, &view);
             if (u.part == refwin::Part::Close) close(s);
             if (u.part == refwin::Part::Back) goBack(s);
+            if (u.part == refwin::Part::Home) goFirst(s);  // 3.0.11-beta.30: the first screen
             if (u.part == refwin::Part::Star) go(s, refpages::Link{refpages::Go::Star, 0, ""});  // 3.0.11-beta.26
             if (u.part == refwin::Part::Rail && u.row == 0) goFirst(s);
             if (u.part == refwin::Part::Rail && u.row > 0 && size_t(u.row) < s.page.rail.size())

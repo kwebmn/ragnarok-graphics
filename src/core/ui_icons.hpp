@@ -10,6 +10,7 @@ namespace uagfx::uiicons {
 enum class Icon : uint8_t {
     Search, Monster, Item, Location, Quest, Npc, Mvp, Pet, Craft, World, Tables, Back, External, Route,
     Dungeon, Minus, Plus, Expand, Warn,  // 3.0.11-beta.29: the world map's
+    Home,                                // 3.0.11-beta.30: the first screen
     kCount
 };
 

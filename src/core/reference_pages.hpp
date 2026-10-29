@@ -90,7 +90,9 @@ enum Part : int {
     // 3.0.11-beta.17: the other sections a player may fold
     Way, Timers, Market, QuestFor, Kafra, PetOf, CraftOf, QuestNpc, QuestItems, QuestSteps, QuestReward
 };
-constexpr size_t kFew = 5;
+// 3.0.11-beta.30 (the owner: «пускай будет весь список, разворачивать имеет смысл если там больше 20 позиций»): 20,
+// and a list kFewMore longer whole (no «усі 23 ›» for three more)
+constexpr size_t kFew = 20, kFewMore = 5;
 
 // 3.0.11-beta.9: whether a way can be followed on the minimap (the new one on) and the one followed now
 struct Follow {

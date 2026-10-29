@@ -221,7 +221,7 @@ bool iconNamed(const std::string& key, uiicons::Icon& icon) {
         {"ui:world", uiicons::Icon::World}, {"ui:tables", uiicons::Icon::Tables},
         {"ui:search", uiicons::Icon::Search}, {"ui:dungeon", uiicons::Icon::Dungeon},
         {"ui:minus", uiicons::Icon::Minus}, {"ui:plus", uiicons::Icon::Plus},
-        {"ui:expand", uiicons::Icon::Expand},
+        {"ui:expand", uiicons::Icon::Expand}, {"ui:home", uiicons::Icon::Home},
     };
     for (const auto& [name, i] : kNames)
         if (key == name) {
@@ -368,6 +368,10 @@ Chrome chrome(const Layout& L, const refpages::Page& p, const Texts& t) {
     float x = 18 * s;
     c.title = panel::Box{x, 0, width(t.title, 16, true), H};
     x += c.title.w + 12 * s;
+    if (t.home) {  // 3.0.11-beta.30 (the owner: «нету кнопки перейти на главный экран справочника»)
+        c.home = panel::Box{x, (H - 32 * s) / 2, 32 * s, 32 * s};
+        x += c.home.w + 8 * s;
+    }
     c.close = panel::Box{W - 10 * s - side, (H - side) / 2, side, side};
     float right = c.close.x - 8 * s;
     c.starred = p.star;
@@ -620,6 +624,7 @@ Under under(const Layout& L, const refpages::Page& p, const std::vector<Placed>&
             float x, float y, const WorldLook* world) {
     if (x < 0 || y < 0 || x >= float(L.w) || y >= float(L.h)) return Under{};
     if (c.close.w > 0 && c.close.contains(x, y)) return Under{Part::Close, -1};
+    if (c.home.w > 0 && (c.home.contains(x, y) || c.title.contains(x, y))) return Under{Part::Home, -1};
     if (c.back.w > 0 && c.back.contains(x, y)) return Under{Part::Back, -1};
     if (c.star.w > 0 && c.star.contains(x, y)) return Under{Part::Star, -1};
     if (c.search.w > 0 && c.search.contains(x, y)) return Under{Part::Search, -1};
@@ -1014,6 +1019,11 @@ void chromeShapes(panel::Picture& out, const Layout& L, const Look& look) {
     const Part hover = look.hover.part;
     fill(out, panel::Box{0, float(L.header) - edge, float(L.w), edge}, kWhite, kLineA);
     fill(out, panel::Box{0, float(L.h - L.footer), float(L.w), edge}, kWhite, kLineA);
+    if (c.home.w > 0) {  // 3.0.11-beta.30: «Головна»
+        panel::roundRect(out, c.home, 9 * s, kWhite, hover == Part::Home ? 0.12f : kCellA);
+        uiicons::draw(out, uiicons::Icon::Home, c.home.x + (c.home.w - 17 * s) / 2, c.home.y + (c.home.h - 17 * s) / 2,
+                      17 * s, kText, 1.0f, 2.2f);
+    }
     if (c.back.w > 0) {
         panel::roundRect(out, c.back, 9 * s, kWhite, hover == Part::Back ? 0.12f : kCellA);
         uiicons::draw(out, uiicons::Icon::Back, c.back.x + 8 * s, c.back.y + (c.back.h - 16 * s) / 2, 16 * s, kText,
@@ -1380,6 +1390,7 @@ std::vector<Rect> hotAreas(const Layout& L, const refpages::Page& p, const std::
     const Chrome& c = look.chrome;
     const Part part = look.hover.part;
     if (part == Part::Back && c.back.w > 0) out.push_back(pixelsOf(L, c.back));
+    if (part == Part::Home && c.home.w > 0) out.push_back(pixelsOf(L, c.home));  // 3.0.11-beta.30
     if (part == Part::Close && c.close.w > 0) out.push_back(pixelsOf(L, c.close));
     if (part == Part::Star && c.star.w > 0) out.push_back(pixelsOf(L, c.star));
     if (part == Part::Search && c.search.w > 0) out.push_back(pixelsOf(L, c.search));

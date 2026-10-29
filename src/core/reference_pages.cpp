@@ -81,7 +81,7 @@ std::string mobNote(const refindex::Index& ix, Lang l, int id) {
 
 // A long section's rows: all of them when opened, else the first kFew and «усі N ›» that opens it
 void capped(Page& p, std::vector<Row> rows, Part part, unsigned opened, Lang l) {
-    const bool all = ((opened >> unsigned(part)) & 1u) || rows.size() <= kFew + 1;
+    const bool all = ((opened >> unsigned(part)) & 1u) || rows.size() <= kFew + kFewMore;
     const size_t n = all ? rows.size() : kFew;
     for (size_t i = 0; i < n; ++i) p.rows.push_back(std::move(rows[i]));
     if (!all)
@@ -542,7 +542,8 @@ namespace {
 
 // 3.0.11-beta.28: the groups of the search's results that open (their Go::Expand bits)
 enum FoundGroup : int { ByNumber, FoundMobs, FoundItems, FoundAegis, FoundMaps, FoundQuests, FoundNpcs };
-constexpr size_t kFewFound = 8;  // a group's results until «ще N ›» opens it (the concept's v21_search)
+// a group's results until «ще N ›» opens it (the concept's v21_search had 8; 3.0.11-beta.30 the owner's 20 - kFew)
+constexpr size_t kFewFound = kFew;
 
 // 3.0.11-beta.28: the query's words in `text` between `from` and `to` (bytes), each where the search finds it first
 // (the case folded alike: the places are the text's own letters), the ones that overlap joined
@@ -708,7 +709,7 @@ Page found(const refindex::Index& ix, Lang l, const std::string& query, const Co
         head.left = title;
         head.right = aside;
         p.rows.push_back(std::move(head));
-        const bool open = ((opened >> unsigned(g)) & 1u) || count <= kFewFound + 1;
+        const bool open = ((opened >> unsigned(g)) & 1u) || count <= kFewFound + kFewMore;
         const size_t n = open ? count : kFewFound;
         for (size_t i = 0; i < n; ++i) p.rows.push_back(make(i));
         if (n < count) {
@@ -1752,13 +1753,13 @@ Page open(const refindex::Index& ix, Lang l, const Link& link, const Context& c,
 }
 
 Page withRail(Page p, const refindex::Index& ix, Lang l, const Link& at) {
-    Row all;  // the search's, the first screen's
-    all.style = Style::Tile;
-    all.left = say(l, Text::RefRailAll);
-    all.icon = "ui:search";
-    p.rail = {all};
-    for (Row& r : home(ix, l).rows)
-        if (r.style == Style::Tile && r.link.go != Go::World) p.rail.push_back(std::move(r));
+    Row first;  // the first screen's (3.0.11-beta.30, the owner: «нету кнопки перейти на главный экран справочника»)
+    first.style = Style::Tile;
+    first.left = say(l, Text::RefRailHome);
+    first.icon = "ui:home";
+    p.rail = {first};
+    for (Row& r : home(ix, l).rows)  // 3.0.11-beta.30: all ten, the world map's too
+        if (r.style == Style::Tile) p.rail.push_back(std::move(r));
     // the page's own section: a card's kind, a section's (its parts: the bosses MVP, the shops and Kafra the NPCs',
     // the cards and the types the items')
     int section = -1;

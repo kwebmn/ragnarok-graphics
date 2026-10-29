@@ -73,7 +73,7 @@ TEST(reference_pages_words_for_numbers) {
     CHECK_EQ(refpages::respawn(600000, Lang::Uk), std::string("10 хв"));
     CHECK_EQ(refpages::respawn(7200000, Lang::Uk), std::string("2 год"));
     CHECK_EQ(refpages::respawn(41400000, Lang::Uk), std::string("11 год 30 хв"));
-    CHECK_EQ(refpages::elementName(1, Lang::Uk), std::string("Вода"));
+    CHECK_EQ(refpages::elementName(1, Lang::Uk), std::string("Water"));  // 3.0.11-beta.30: the game's names
     CHECK_EQ(refpages::raceName(3, Lang::En), std::string("Plant"));
     CHECK_EQ(refpages::typeName(6, Lang::Uk), std::string("Картка"));
 }
@@ -114,8 +114,8 @@ TEST(reference_pages_a_monsters_card) {
     const refpages::Page p = refpages::mob(ix, Lang::Uk, 1002, ctx("prt_fild05"));
     CHECK(p.rows[0].style == refpages::Style::Title && p.rows[0].left == "Poring" && p.rows[0].right.empty());
     // 3.0.11-beta.26: the concept's head - its tags (the level, the element), its line
-    CHECK(p.rows[1].tags.size() == 2 && p.rows[1].tags[0] == "Lv 1" && p.rows[1].tags[1] == "el1:Вода 1");
-    CHECK_EQ(p.rows[1].left, std::string("Рослина · Середній · HP 50 · досвід 2 / 1"));
+    CHECK(p.rows[1].tags.size() == 2 && p.rows[1].tags[0] == "Lv 1" && p.rows[1].tags[1] == "el1:Water 1");
+    CHECK_EQ(p.rows[1].left, std::string("Plant · Medium · HP 50 · досвід 2 / 1"));  // 3.0.11-beta.30: the game's
     CHECK(p.rows[1].style == refpages::Style::Portrait && p.rows[1].picture == "mob:1002");  // 3.0.11-beta.14
     // «Де знайти»: the player's map first (marked), then by count
     const size_t where = indexOf(p, "Де знайти");
@@ -193,23 +193,33 @@ TEST(reference_pages_a_maps_card) {
 }
 
 TEST(reference_pages_long_sections_open_by_their_row) {
-    // a monster on eight maps: the first five and «усі 8 ›», which opens the section in place
-    std::string spawns;
-    for (int i = 0; i < 8; ++i)
-        spawns += std::string(i ? "," : "") + "\"m" + std::to_string(i) + "\":[[1,8,0,0,0,0,0]]";
+    // 3.0.11-beta.30 (the owner: «пускай будет весь список, разворачивать имеет смысл если там больше 20 позиций»):
+    // a monster on 30 maps - the first 20 and «усі 30 ›», which opens the section in place; on 25 - all of them
+    const auto onMaps = [](int maps) {
+        std::string spawns;
+        for (int i = 0; i < maps; ++i)
+            spawns += std::string(i ? "," : "") + "\"m" + std::to_string(i) + "\":[[1,8,0,0,0,0,0]]";
+        return spawns;
+    };
+    refindex::Index all;
+    CHECK(refindex::build(R"({"v":1,"data":1,"mobs":{"1":["A",1,1,0,0,0,0,0,1,0,[],[],null]},"spawns":{)" +
+                              onMaps(25) + R"(},"routes":[],"npcs":[]})",
+                          all));
+    CHECK(rowWith(refpages::mob(all, Lang::Uk, 1, ctx("m6")), "усі 25 ›") == nullptr);
+    const std::string spawns = onMaps(30);
     refindex::Index ix;
     CHECK(refindex::build(R"({"v":1,"data":1,"mobs":{"1":["A",1,1,0,0,0,0,0,1,0,[],[],null]},"spawns":{)" + spawns +
                               R"(},"routes":[],"npcs":[]})",
                           ix));
     const refpages::Page closed = refpages::mob(ix, Lang::Uk, 1, ctx("m6"));
     const size_t where = indexOf(closed, "Де знайти");
-    CHECK_EQ(closed.rows[where].right, std::string("8"));
+    CHECK_EQ(closed.rows[where].right, std::string("30"));
     CHECK(closed.rows[where + 1].link.map == "m6");  // the player's map first, before the cut
     const refpages::Row& more = closed.rows[where + 1 + refpages::kFew];
-    CHECK(more.left == "усі 8 ›" && more.link.go == refpages::Go::Expand && more.link.id == refpages::Where);
+    CHECK(more.left == "усі 30 ›" && more.link.go == refpages::Go::Expand && more.link.id == refpages::Where);
     const refpages::Page open = refpages::mob(ix, Lang::Uk, 1, ctx("m6"), 1u << refpages::Where);
-    CHECK_EQ(open.rows.size(), closed.rows.size() + 8 - refpages::kFew - 1);
-    CHECK(rowWith(open, "усі 8 ›") == nullptr);
+    CHECK_EQ(open.rows.size(), closed.rows.size() + 30 - refpages::kFew - 1);
+    CHECK(rowWith(open, "усі 30 ›") == nullptr);
 }
 
 TEST(reference_window_lays_itself_out) {
@@ -418,8 +428,8 @@ TEST(reference_pages_damage_by_element) {
     const refpages::Page p = refpages::mob(ix, Lang::Uk, 1002, ctx(""));  // Poring: water 1
     const size_t at = indexOf(p, "Шкода стихіями");
     CHECK(at != size_t(-1));
-    CHECK_EQ(p.rows[at].right, std::string("Вода 1 · Вітер 175 %"));  // 3.0.11-beta.26: says the most
-    CHECK(p.rows[at + 1].style == refpages::Style::Chip && p.rows[at + 1].left == "Вітер");  // the most first
+    CHECK_EQ(p.rows[at].right, std::string("Water 1 · Wind 175 %"));  // 3.0.11-beta.26: says the most
+    CHECK(p.rows[at + 1].style == refpages::Style::Chip && p.rows[at + 1].left == "Wind");  // the most first
     CHECK_EQ(p.rows[at + 1].right, std::string("175 %"));
     CHECK(p.rows[at + 1].tone == 1 && p.rows[at + 1].dot == refpages::elementColour(4));
     CHECK_EQ(p.rows[at + 10].right, std::string("25 %"));  // all ten as chips: water on water, the least
@@ -458,7 +468,7 @@ TEST(reference_pages_sections_fold_by_choice) {
     CHECK(open.rows[drops].link.go == refpages::Go::None && open.rows[drops].share == 50);
     const size_t ele = indexOf(open, "Шкода стихіями");
     CHECK(open.rows[ele].link.go == refpages::Go::Fold && open.rows[ele].link.id == refpages::Elements);
-    CHECK(open.rows[ele + 1].left == "Вітер" && !open.rows[ele].closed);
+    CHECK(open.rows[ele + 1].left == "Wind" && !open.rows[ele].closed);
     c.folded = 1u << refpages::Elements | 1u << refpages::Drops;
     const refpages::Page shut = refpages::open(ix, Lang::Uk, poring, c);
     const size_t at = indexOf(shut, "Шкода стихіями");
@@ -535,9 +545,9 @@ TEST(reference_concept_sections_and_words) {
     CHECK_EQ(tables.name, std::string("Таблиці"));
     CHECK(indexOf(tables, "Стихії атаки проти захисту рівня 1") != size_t(-1));
     CHECK(indexOf(tables, "Стихії атаки проти захисту рівня 4") != size_t(-1));
-    const refpages::Row* fire = rowWith(tables, "Вогонь");  // level 1: fire against earth 150 %, water 50 %
-    CHECK(fire && fire->right.find("Земля 150 %") != std::string::npos);
-    CHECK(fire && fire->right.find("Вода 50 %") != std::string::npos);
+    const refpages::Row* fire = rowWith(tables, "Fire");  // level 1: fire against earth 150 %, water 50 %
+    CHECK(fire && fire->right.find("Earth 150 %") != std::string::npos);
+    CHECK(fire && fire->right.find("Water 50 %") != std::string::npos);
     // the blocks' names in capitals, the first screen's words
     const std::vector<refpages::Link> recent{{refpages::Go::Mob, 1002, ""}};
     refpages::Context c = ctx("");
@@ -579,8 +589,9 @@ TEST(reference_concept_cards) {
     const refwin::Layout L = refwin::layout(1920, 1080, 1.0f);
     const refpages::Link poringAt{refpages::Go::Mob, 1002, ""};
     refpages::Page p = refpages::withRail(refpages::mob(ix, Lang::Uk, 1002, ctx("prontera")), ix, Lang::Uk, poringAt);
-    CHECK_EQ(p.rail.size(), size_t(10));  // «Усе» and the first screen's sections but the world map
-    CHECK(p.rail[0].left == "Усе" && p.rail[0].icon == "ui:search");
+    CHECK_EQ(p.rail.size(), size_t(11));  // 3.0.11-beta.30: «Головна» and all the first screen's sections
+    CHECK(p.rail[0].left == "Головна" && p.rail[0].icon == "ui:home" && p.rail[0].link.go == refpages::Go::None);
+    CHECK(p.rail[9].left == "Карта світу" && p.rail[9].link.go == refpages::Go::World);
     CHECK(p.railOn == 1 && p.rail[1].left == "Монстри");
     const auto litFor = [&](const refpages::Link& k) {
         return refpages::withRail(refpages::Page{}, ix, Lang::Uk, k).railOn;
@@ -597,7 +608,7 @@ TEST(reference_concept_cards) {
     refwin::Texts t;
     t.title = "Довідник";
     const refwin::Chrome c = refwin::chrome(L, p, t);
-    CHECK(c.rail.size() == 10 && c.railW == 204.0f && !c.narrow);
+    CHECK(c.rail.size() == 11 && c.railW == 204.0f && !c.narrow);
     for (const refwin::Placed& r : rows) CHECK(r.x >= int(c.railW));  // the body right of the rail
     CHECK(refwin::under(L, p, rows, 0, c, c.rail[3].x + 20, c.rail[3].y + 10).part == refwin::Part::Rail);
     CHECK_EQ(refwin::under(L, p, rows, 0, c, c.rail[3].x + 20, c.rail[3].y + 10).row, 3);
@@ -626,14 +637,14 @@ TEST(reference_concept_cards) {
     for (const refwin::Words& w : refwin::words(L, shut, shutRows, 0, t, look)) {
         arrow = arrow || w.text == "▸";
         capital = capital || w.text == "ДЕ ЗНАЙТИ";
-        tag = tag || w.text == "Вода 1";
+        tag = tag || w.text == "Water 1";
         rail = rail || w.text == "Предмети";
     }
     CHECK(arrow && capital && tag && rail);
     // a narrow window: the rail's icons alone
     const refwin::Layout narrow = refwin::layout(1100, 700, 1.0f);
     const refwin::Chrome thin = refwin::chrome(narrow, shut, t);
-    CHECK(thin.narrow && thin.railW == 58.0f && thin.rail.size() == 10);
+    CHECK(thin.narrow && thin.railW == 58.0f && thin.rail.size() == 11);
     bool named = false;
     refwin::Look slim;
     slim.chrome = thin;
@@ -739,29 +750,29 @@ TEST(reference_search_concept_other_names) {
 
 TEST(reference_search_concept_more_and_forms) {
     refindex::Index ix;
-    for (int i = 0; i < 12; ++i) {  // twelve stones; the first four sold in 1, 3, 5 and 21 shops
-        ix.items[100 + i] = refindex::Item{"Stone " + std::string(1, char('A' + i)), "Stone", 3, 10, 1, 0};
+    for (int i = 0; i < 30; ++i) {  // thirty stones; the first four sold in 1, 3, 5 and 21 shops
+        const std::string name = "Stone " + std::string(1, char('A' + i / 10)) + std::string(1, char('a' + i % 10));
+        ix.items[100 + i] = refindex::Item{name, "Stone", 3, 10, 1, 0};
         const int shops[] = {1, 3, 5, 21};
         if (i < 4)
             for (int s = 0; s < shops[i]; ++s) ix.soldAt[100 + i].emplace_back(s, 10);
     }
     const refpages::Page p = refpages::found(ix, Lang::Uk, "stone");
-    CHECK(p.rows[1].style == refpages::Style::Group && p.rows[1].left == "Предмети · 12");
-    CHECK(p.rows[2].left == "Stone D" && p.rows[2].sub == "10 z · 21 крамниця");  // the most shops first
+    CHECK(p.rows[1].style == refpages::Style::Group && p.rows[1].left == "Предмети · 30");
+    CHECK(p.rows[2].left == "Stone Ad" && p.rows[2].sub == "10 z · 21 крамниця");  // the most shops first
     CHECK_EQ(p.rows[3].sub, std::string("10 z · 5 крамниць"));
     CHECK_EQ(p.rows[4].sub, std::string("10 z · 3 крамниці"));
     CHECK_EQ(p.rows[5].sub, std::string("10 z · 1 крамниця"));
     CHECK(p.rows[6].sub.empty());  // «Інше» unsaid, nothing else to say
-    CHECK(p.rows[10].style == refpages::Style::More && p.rows[10].left == "ще 4 ›");
-    CHECK(p.rows[10].link.go == refpages::Go::Expand);
-    const refpages::Page open = refpages::found(ix, Lang::Uk, "stone", {}, 1u << unsigned(p.rows[10].link.id));
-    CHECK(open.rows[13].style == refpages::Style::Result && open.rows[14].style == refpages::Style::Hint);
-    CHECK_EQ(refpages::found(ix, Lang::En, "stone a").rows[2].sub, std::string("10 z · 1 shop"));
-    ix.items.erase(111);  // nine: all of them, no «ще 1 ›»
-    ix.items.erase(110);
-    ix.items.erase(109);
-    const refpages::Page nine = refpages::found(ix, Lang::Uk, "stone");
-    CHECK(nine.rows[10].style == refpages::Style::Result && nine.rows[11].style == refpages::Style::Hint);
+    // 3.0.11-beta.30 (the owner: «разворачивать имеет смысл если там больше 20 позиций»): 20, «ще 10 ›»
+    CHECK(p.rows[22].style == refpages::Style::More && p.rows[22].left == "ще 10 ›");
+    CHECK(p.rows[22].link.go == refpages::Go::Expand);
+    const refpages::Page open = refpages::found(ix, Lang::Uk, "stone", {}, 1u << unsigned(p.rows[22].link.id));
+    CHECK(open.rows[31].style == refpages::Style::Result && open.rows[32].style == refpages::Style::Hint);
+    CHECK_EQ(refpages::found(ix, Lang::En, "stone aa").rows[2].sub, std::string("10 z · 1 shop"));
+    for (int i = 125; i < 130; ++i) ix.items.erase(i);  // 25: all of them, no «ще 5 ›»
+    const refpages::Page most = refpages::found(ix, Lang::Uk, "stone");
+    CHECK(most.rows[26].style == refpages::Style::Result && most.rows[27].style == refpages::Style::Hint);
 }
 
 TEST(reference_search_concept_window) {
@@ -818,5 +829,42 @@ TEST(reference_search_concept_window) {
             for (const Rect& r : refwin::hotAreas(L, p, rows, 0, *l))
                 refwin::repaint(partial, L, p, rows, 0, total, hover, r);
         CHECK(partial.px == over.px);
+    }
+}
+
+// 3.0.11-beta.30 (the owner: «нету кнопки перейти на главный экран справочника где все иконками и чтобы можно было
+// выйти оттуда например сразу на карту мира»): «Головна» in the header (and its title) on every page but the first
+// screen - the world map's too; its hover painted again alone
+TEST(reference_home_button) {
+    const refindex::Index ix = index();
+    const refpages::Page card = refpages::mob(ix, Lang::Uk, 1002, ctx(""));
+    for (const float k : {1.0f, 2.0f}) {
+        const refwin::Layout L = refwin::layout(int(1920 * k), int(1080 * k), k);
+        refwin::Texts t;
+        t.title = "Довідник";
+        t.back = "Назад до Довідник";
+        const refwin::Chrome none = refwin::chrome(L, card, t);
+        CHECK(none.home.w == 0);
+        CHECK(refwin::under(L, card, {}, 0, none, none.title.x + 4, none.title.y + 10).part != refwin::Part::Home);
+        t.home = true;
+        const refwin::Chrome c = refwin::chrome(L, card, t);
+        CHECK(c.home.w > 0 && c.home.x > c.title.x + c.title.w && c.back.x > c.home.x + c.home.w);
+        int total = 0;
+        const std::vector<refwin::Placed> rows = refwin::place(L, card, total);
+        CHECK(refwin::under(L, card, rows, 0, c, c.home.x + 5, c.home.y + 5).part == refwin::Part::Home);
+        CHECK(refwin::under(L, card, rows, 0, c, c.title.x + 4, c.title.y + 10).part == refwin::Part::Home);
+        refwin::Look was;
+        was.chrome = c;
+        refwin::Look now = was;
+        now.hover = refwin::Under{refwin::Part::Home, -1};
+        panel::Picture partial;
+        refwin::paint(partial, L, card, rows, 0, total, was);
+        for (const refwin::Look* l : {&was, &now})
+            for (const Rect& a : refwin::hotAreas(L, card, rows, 0, *l))
+                refwin::repaint(partial, L, card, rows, 0, total, now, a);
+        panel::Picture whole;
+        refwin::paint(whole, L, card, rows, 0, total, now);
+        CHECK(partial.px == whole.px);
+        CHECK(!refwin::hotAreas(L, card, rows, 0, now).empty());
     }
 }

@@ -505,7 +505,7 @@ enum class Text : uint16_t {
     RefKeysList, RefKeysCard, RefLiveNow, RefLiveOff, RefKindMob, RefKindItem, RefKindMap, RefKindQuest, RefFavEmpty,
     RefTableElements, RefTableRest,
     RefElementsHeal,  // 3.0.11-beta.26: a card's elements' line - what heals it
-    RefRailAll,       // 3.0.11-beta.26: the rail's first, the search
+    RefRailHome,      // 3.0.11-beta.26: the rail's first (3.0.11-beta.30: the first screen, «Головна»)
     RefRouteSteps,    // 3.0.11-beta.26: a way's steps, a section of their own
     // 3.0.11-beta.28: the concept's search results - the group by service names, «ще N ›», the groups' notes, the
     // lines (another name, a service name, the shops, the monsters it drops from, the maps: words by «|» forms), an
