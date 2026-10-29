@@ -1,3 +1,11 @@
+# uaRO Graphics 3.0.11-beta.22 — what is new
+
+- **Search by number**: a number in «Reference» finds the item and the monster of that id («601» — Fly Wing, «1002»
+  — Poring), as @iteminfo and @mobinfo call them.
+- An item's card tells what an NPC pays for it («sells for 30 z», half its price).
+- The pictures and icons «Reference» keeps in memory are 2000 at most — a long browse takes none of the game's memory.
+- To check: Ctrl+F → «601» — «Number 601: Fly Wing»; the Fly Wing card — «weight 1 · price 60 z · sells for 30 z».
+
 # uaRO Graphics 3.0.11-beta.21 — what is new
 
 - **«Reference» by the arrows and the pad**: ↑ and ↓ pick a row (lit as the one under the pointer), Enter opens the
