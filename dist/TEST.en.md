@@ -1,3 +1,13 @@
+# uaRO Graphics 3.0.11-beta.14 — what is new
+
+- **Pictures in «Reference»**: a monster's card shows the monster as it stands in the game (the first frame of the
+  client's own sprites, data\sprite\몬스터), an item's card its icon (data\texture\…\item, by the client's
+  idnum2itemresnametable.txt). Beside the picture — HP, element, race, size and experience.
+- A monster's sprite name comes from the server's database (mob_db) — the site gives it in the pack after its update
+  (the same one as the timers and the market); till then from the monster's name (some two thirds are found so).
+- To check: Ctrl+F → «poring» — a pink Poring left of «HP 50 · Water 1 · …»; «baphomet» — Baphomet; «fly wing» — the
+  wing. The log has the lines `reference: Poring's picture - data\sprite\…\poring.spr` and `… item icons named …`.
+
 # uaRO Graphics 3.0.11-beta.13 — what is new
 
 - **«Damage by element» in a monster's card**: how much per cent of an attack of each element it takes — by the
