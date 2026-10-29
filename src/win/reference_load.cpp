@@ -136,7 +136,8 @@ DWORD WINAPI makeWorld(void*) {
     const bool ok = readTextFile(layout::join(gameDir(), layout::kReferenceWorld), text) &&
                     worldmap::parse(text, w->sheet);
     if (ok) {
-        w->argb.assign(size_t(w->sheet.w) * size_t(w->sheet.h), worldmap::kGround);
+        const int d = World::detail;
+        w->argb.assign(size_t(w->sheet.w * d) * size_t(w->sheet.h * d), worldmap::kGround);
         gamefiles::Reader files(gameDir());
         size_t put = 0;
         std::vector<uint8_t> bytes;
@@ -146,7 +147,8 @@ DWORD WINAPI makeWorld(void*) {
             if (!files.read("data\\texture\\" + kUi + "\\map\\" + t.map + ".bmp", bytes, nullptr) ||
                 !pack::decodeBmp(bytes.data(), bytes.size(), argb, pw, ph))
                 continue;
-            worldmap::put(w->argb, w->sheet.w, w->sheet.h, t, argb, pw, ph);
+            const worldmap::Tile big{t.map, t.l * d, t.t * d, t.w * d, t.h * d};
+            worldmap::put(w->argb, w->sheet.w * d, w->sheet.h * d, big, argb, pw, ph);
             ++put;
         }
         LOG_INFO("reference: the world map - %zu maps on the sheet, %zu with the game's pictures, made in %llu ms",

@@ -313,8 +313,22 @@ void route(const refindex::Index& ix, Lang l, Page& p, const std::string& here, 
     if (better) routeHead(l, p, paid, paidName, code, follow);
     if ((walk.found && walk.conditional) || (better && paid.conditional))
         p.rows.push_back(note(say(l, Text::RefRouteConditionNote)));
+    p.rows.push_back(linked(say(l, Text::RefOnWorld), "", Link{Go::World, 0, "to:" + code}));  // 3.0.11-beta.29
     if (walk.found) routeSteps(ix, l, p, walk, Text::RefRouteWalk, Route1, opened);
     if (better) routeSteps(ix, l, p, paid, paidName, Route2, opened);
+}
+
+// 3.0.11-beta.29: a town - the server's «town» flag, else (uAthena has none) a Kafra there and ten monsters at the most
+bool isTown(const refindex::Index& ix, const std::string& code) {
+    const auto it = ix.maps.find(code);
+    if (it == ix.maps.end()) return false;
+    const refindex::MapHints& m = it->second;
+    if (std::find(m.flags.begin(), m.flags.end(), "town") != m.flags.end()) return true;
+    int mobs = 0;
+    for (const refindex::MobOnMap& o : m.mobs) mobs += o.count;
+    return mobs <= 10 && std::any_of(m.npcs.begin(), m.npcs.end(), [](const refindex::Npc& n) {
+               return n.kind == refindex::NpcKind::Kafra;
+           });
 }
 
 std::string mapNote(const refindex::Index& ix, Lang l, const std::string& code) {
@@ -663,10 +677,7 @@ Row itemFound(const refindex::Index& ix, Lang l, const refindex::Hit& h, const s
 Row mapFound(const refindex::Index& ix, Lang l, const std::string& code, const Context& c, const std::string& query) {
     std::vector<std::string> parts;
     if (code == c.here) parts.push_back(say(l, Text::RefYouHere));
-    const auto it = ix.maps.find(code);
-    if (it != ix.maps.end() &&
-        std::find(it->second.flags.begin(), it->second.flags.end(), "town") != it->second.flags.end())
-        parts.push_back(say(l, Text::RefFlagTown));
+    if (isTown(ix, code)) parts.push_back(say(l, Text::RefFlagTown));
     parts.push_back(mapNote(ix, l, code));
     if (c.players) {
         const auto now = c.players->find(code);
@@ -1409,69 +1420,291 @@ std::map<std::string, int> worldMarks(const refindex::Index& ix, const std::stri
     return out;
 }
 
+namespace {
+
+// A map's short name: the client's up to its first comma («Prontera City»), else its code
+std::string mapShort(const refindex::Index& ix, const std::string& code) {
+    const auto named = ix.mapNames.find(code);
+    const std::string name = named == ix.mapNames.end() ? "" : refindex::shortName(named->second);
+    return name.empty() ? code : name;
+}
+
+Row styled(Style st, const std::string& left, Link to = {}) {
+    Row r;
+    r.style = st;
+    r.left = left;
+    r.link = std::move(to);
+    return r;
+}
+
+// 3.0.11-beta.29: the concept's bar over the world map (v19_route) - its two tabs, the players now, its zoom
+void worldBar(Page& p, Lang l, const Context& c, const std::string& marks, int tab) {
+    Row world = styled(Style::Tab, say(l, Text::RefWorld), Link{Go::World, 0, tab == 0 ? marks : ""});
+    world.icon = "ui:location";
+    world.gold = tab == 0;
+    p.rows.push_back(std::move(world));
+    Row dungeons = styled(Style::Tab, say(l, Text::RefDungeons), Link{Go::World, 1, ""});
+    dungeons.icon = "ui:dungeon";
+    dungeons.gold = tab == 1;
+    p.rows.push_back(std::move(dungeons));
+    if (c.players) {
+        int all = 0;
+        for (const auto& [map, n] : *c.players) all += std::max(0, n);
+        Row now = styled(Style::Tab, sayf(l, Text::RefOnline, {number(all, l)}));
+        now.dot = 0x3CCF7C;  // the concept's live green
+        p.rows.push_back(std::move(now));
+    }
+    if (tab != 0 || !c.world) return;
+    const std::pair<const char*, int> tools[] = {{"ui:minus", -1}, {"ui:expand", 0}, {"ui:plus", 1}};
+    for (const auto& [icon, by] : tools) {
+        Row r = styled(Style::Tool, "", Link{Go::Zoom, by, ""});
+        r.icon = icon;
+        p.rows.push_back(std::move(r));
+    }
+}
+
+Row legend(Lang l, Text words, const char* mark) {
+    Row r = styled(Style::Legend, say(l, words));
+    r.icon = mark;
+    return r;
+}
+
+// The panel's lists at the most: they fit beside the map with no scroll (that would move the map too)
+constexpr size_t kPanelSteps = 8, kPanelMaps = 12, kPanelInside = 5;
+
+// The target's panel: «Шлях до …», from where, the ways to choose, the warning, the steps, what the marks mean, the
+// buttons («Вести на міні-карті», «Скинути»)
+void wayPanel(const refindex::Index& ix, Lang l, const Context& c, const std::string& code, int variant, Page& p) {
+    p.name = say(l, Text::RefRouteShort);
+    p.rows.push_back(styled(Style::Caption, sayf(l, Text::RefRouteTo, {mapShort(ix, code)})));
+    std::string from = c.here.empty() ? "?" : mapShort(ix, c.here);
+    if (c.x >= 0 && c.y >= 0) from += " · " + std::to_string(c.x) + ", " + std::to_string(c.y);
+    p.rows.push_back(styled(Style::Sub, sayf(l, Text::RefRouteFromAt, {from})));
+    int chosen = variant;
+    const refroute::Route r = worldRoute(ix, c, code, chosen);
+    if (!r.found) {
+        p.rows.push_back(note(say(l, Text::RefRouteNone)));
+        p.rows.push_back(styled(Style::Button, say(l, Text::RefReset), Link{Go::World, 0, ""}));
+        return;
+    }
+    for (int v = 0; v < 2; ++v) {  // the ways to choose: on foot, paying (when it is a way of its own)
+        int which = v;
+        const refroute::Route way = v == chosen ? r : worldRoute(ix, c, code, which);
+        if (!way.found || which != v || (v == 1 && !way.paid)) continue;
+        std::string right = sayf(l, Text::RefRouteMoves, {std::to_string(way.steps.size())});
+        if (way.zeny > 0) right += " · " + sayf(l, Text::RefZeny, {number(way.zeny, l)});
+        if (way.priceUnknown) right += " · " + say(l, Text::RefRouteVaries);
+        const Text name = v == 0 ? Text::RefRouteWalk : way.kafra ? Text::RefRouteKafra : Text::RefRouteNpc;
+        Row row = styled(Style::Row, say(l, name), Link{Go::World, 0, "to:" + code + (v == 0 ? ":w" : ":k")});
+        row.right = right;
+        row.gold = v == chosen;
+        row.dot = refindex::colorOf(v == 0 ? refindex::NpcKind::Warp : refindex::NpcKind::Kafra);
+        p.rows.push_back(std::move(row));
+    }
+    p.rows.push_back(styled(Style::Warn, say(l, r.conditional ? Text::RefRouteConditionNote : Text::RefRouteWarn)));
+    for (size_t i = 0; i < r.steps.size() && i < kPanelSteps; ++i) {
+        const refindex::Move& m = r.steps[i].move;
+        Row step = styled(Style::Step, refindex::mapTitle(ix, m.to), toMap(m.to));
+        step.right = std::to_string(i + 1);
+        step.sub = noteOf(r.steps[i], l);
+        step.tone = m.paid ? 1 : 0;
+        p.rows.push_back(std::move(step));
+    }
+    if (r.steps.size() > kPanelSteps)  // the rest on the minimap as it leads
+        p.rows.push_back(note(sayf(l, Text::RefMoreN, {std::to_string(r.steps.size() - kPanelSteps)})));
+    p.rows.push_back(legend(l, Text::RefLegendRoute, "mark:route"));
+    p.rows.push_back(legend(l, Text::RefLegendJump, "mark:jump"));
+    if (c.follow.can) {  // the way on the minimap (3.0.11-beta.9's), the chosen one
+        const bool followed = c.follow.map == code && c.follow.walk == (chosen == 0);
+        Row follow = styled(Style::Button, say(l, followed ? Text::RefFollowOff : Text::RefFollowOn),
+                            Link{Go::Follow, chosen == 0 ? 0 : 1, code});
+        follow.gold = !followed;
+        p.rows.push_back(std::move(follow));
+    }
+    p.rows.push_back(styled(Style::Button, say(l, Text::RefReset), Link{Go::World, 0, ""}));
+}
+
+}  // namespace
+
+bool worldTarget(const std::string& marks, std::string& code, int& variant) {
+    if (marks.rfind("to:", 0) != 0 || marks.size() < 4) return false;
+    code = marks.substr(3);
+    variant = -1;
+    if (code.size() > 2 && code[code.size() - 2] == ':') {
+        variant = code.back() == 'w' ? 0 : code.back() == 'k' ? 1 : -1;
+        code.resize(code.size() - 2);
+    }
+    return !code.empty();
+}
+
+refroute::Route worldRoute(const refindex::Index& ix, const Context& c, const std::string& code, int& variant) {
+    if (!ix.graph || c.here.empty()) return {};
+    const refroute::Route walk = refroute::find(ix, c.here, c.x, c.y, code, true);
+    const refroute::Route paid = refroute::find(ix, c.here, c.x, c.y, code, false);
+    if (variant < 0) {  // the better, as «Як дістатися» says it: paying when it saves a condition or moves
+        const bool better = paid.found && paid.paid &&
+                            (!walk.found || std::make_pair(conditions(paid), paid.steps.size()) <
+                                                std::make_pair(conditions(walk), walk.steps.size()));
+        variant = better ? 1 : 0;
+    }
+    if (variant == 1 && !(paid.found && paid.paid)) variant = 0;  // no paid way of its own
+    return variant == 1 ? paid : walk;
+}
+
+std::vector<Hop> worldHops(const refindex::Index& ix, Lang l, const refroute::Route& r) {
+    std::vector<Hop> out;
+    for (const refroute::Step& st : r.steps) {
+        const refindex::Move& m = st.move;
+        if (m.to == st.from) continue;  // the stairs within a map
+        Hop h{st.from, m.to, m.how != refindex::How::Warp, ""};
+        if (h.jump) {  // «Kafra · 1 200 z»
+            h.label = m.how == refindex::How::Kafra ? std::string("Kafra") : m.npc;
+            if (m.price > 0) h.label += " · " + sayf(l, Text::RefZeny, {number(m.price, l)});
+        }
+        (void)ix;
+        out.push_back(std::move(h));
+    }
+    return out;
+}
+
+std::vector<std::string> worldTip(const refindex::Index& ix, Lang l, const std::string& map, const Context& c) {
+    if (map.empty()) return {};
+    const std::string name = mapShort(ix, map), kinds = mapNote(ix, l, map);
+    std::string line = name != map ? map : "";  // its code under its name ("" when it has none to say)
+    if (!kinds.empty()) line += (line.empty() ? "" : " · ") + kinds;
+    std::vector<std::string> out{name, line};
+    if (c.players) {
+        const auto now = c.players->find(map);
+        if (now != c.players->end() && now->second > 0)
+            out.push_back(sayf(l, Text::RefPlayersNow, {std::to_string(now->second)}));
+    }
+    return out;
+}
+
+WorldWay worldWayOf(const refindex::Index& ix, Lang l, const Context& c, const std::string& marks) {
+    WorldWay w;
+    if (!c.here.empty()) w.hereLabel = sayf(l, Text::RefHereLabel, {mapShort(ix, c.here)});
+    int variant = -1;
+    refroute::Route r;
+    if (worldTarget(marks, w.target, variant)) {
+        r = worldRoute(ix, c, w.target, variant);
+    } else if (!c.follow.map.empty() && ix.graph && !c.here.empty()) {  // the way followed on the minimap
+        w.target = c.follow.map;
+        r = refroute::find(ix, c.here, c.x, c.y, w.target, c.follow.walk);
+    }
+    if (w.target.empty()) return w;
+    w.hops = worldHops(ix, l, r);
+    const bool on = c.world && worldmap::tileOf(*c.world, w.target);
+    w.targetLabel = on ? mapShort(ix, w.target) : sayf(l, Text::RefToDungeon, {mapShort(ix, w.target)});
+    return w;
+}
+
+bool worldFocus(const worldmap::Sheet& sheet, const WorldWay& way, const std::map<std::string, int>& marks, float& l,
+                float& t, float& r, float& b) {
+    l = t = 1e9f;
+    r = b = -1e9f;
+    auto add = [&](const std::string& map) {
+        if (const worldmap::Tile* tile = map.empty() ? nullptr : worldmap::tileOf(sheet, map)) {
+            l = std::min(l, float(tile->l));
+            t = std::min(t, float(tile->t));
+            r = std::max(r, float(tile->l + tile->w));
+            b = std::max(b, float(tile->t + tile->h));
+        }
+    };
+    for (const Hop& h : way.hops) {
+        add(h.from);
+        add(h.to);
+    }
+    add(way.target);
+    for (const auto& [map, n] : marks) add(map);
+    return r > l && b > t;
+}
+
+std::vector<std::pair<std::string, std::string>> worldLabels(const refindex::Index& ix) {
+    std::vector<std::pair<std::string, std::string>> out;
+    for (const auto& [code, hints] : ix.maps)
+        if (isTown(ix, code)) out.emplace_back(code, mapShort(ix, code));
+    std::sort(out.begin(), out.end());
+    return out;
+}
+
 Page world(const refindex::Index& ix, Lang l, const Context& c, const std::string& marks) {
     Page p;
     p.name = say(l, Text::RefWorld);
-    Row title;
-    title.style = Style::Title;
-    title.left = say(l, Text::RefWorld);
-    const int mob = marks.rfind("mob:", 0) == 0 ? std::atoi(marks.c_str() + 4) : 0;
-    const int item = marks.rfind("item:", 0) == 0 ? std::atoi(marks.c_str() + 5) : 0;
-    if (mob > 0) title.left = sayf(l, Text::RefWorldOf, {mobName(ix, mob)});  // 3.0.11-beta.19
-    if (item > 0) title.left = sayf(l, Text::RefWorldOf, {itemName(ix, item)});  // 3.0.11-beta.20
-    title.right = say(l, Text::RefDungeons) + " ›";
-    title.link = Link{Go::World, 1, ""};
-    p.rows.push_back(title);
+    worldBar(p, l, c, marks, 0);  // 3.0.11-beta.29: the concept's v19_route - its bar, the map, a panel at its right
     if (!c.world) {
         p.rows.push_back(note(say(l, Text::RefWorldNone)));
         return p;
     }
-    Row picture;
-    picture.style = Style::World;
-    p.rows.push_back(picture);
-    const std::map<std::string, int> marked = worldMarks(ix, marks);
-    const worldmap::Tile* t = c.hover.empty() ? nullptr : worldmap::tileOf(*c.world, c.hover);
-    if (!t) {
-        p.rows.push_back(note(say(l, Text::RefWorldHelp)));
-    } else {
-        std::string line = refindex::mapTitle(ix, t->map);
-        const auto m = marked.find(t->map);
-        if (m != marked.end())
-            line += " · " + (mob > 0 ? mobName(ix, mob) + " ×" + std::to_string(m->second)
-                                     : sayf(l, Text::RefDroppersHere, {std::to_string(m->second)}));
-        const std::string more = mapLine(ix, l, t->map, c);
-        if (!more.empty()) line += " · " + more;
-        if (t->map == c.here) line += " · " + say(l, Text::RefYouHere);
-        p.rows.push_back(note(line));
+    p.rows.push_back(styled(Style::World, ""));
+    std::string code;
+    int variant = -1;
+    if (worldTarget(marks, code, variant)) {
+        wayPanel(ix, l, c, code, variant, p);
+        return p;
     }
-    std::vector<Row> under;  // the marked maps not on the world's sheet: dungeons, rooms
-    for (const auto& [map, n] : marked)
-        if (!worldmap::tileOf(*c.world, map))
-            under.push_back(linked(refindex::mapTitle(ix, map), "×" + std::to_string(n), toMap(map)));
-    if (!under.empty()) {
-        p.rows.push_back(heading(say(l, Text::RefAlsoInside), std::to_string(under.size())));
-        for (Row& r : under) p.rows.push_back(std::move(r));
+    const int mob = marks.rfind("mob:", 0) == 0 ? std::atoi(marks.c_str() + 4) : 0;
+    const int item = marks.rfind("item:", 0) == 0 ? std::atoi(marks.c_str() + 5) : 0;
+    if (mob > 0 || item > 0) {  // 3.0.11-beta.19, .20: a monster's maps, an item's droppers' - the most first
+        p.rows.push_back(styled(Style::Caption,
+                                sayf(l, Text::RefWorldOf, {mob > 0 ? mobName(ix, mob) : itemName(ix, item)})));
+        const std::map<std::string, int> marked = worldMarks(ix, marks);
+        if (item > 0) {  // the numbers: its droppers there
+            int all = 0;
+            for (const auto& [map, n] : marked) all += n;
+            p.rows.push_back(styled(Style::Sub, sayf(l, Text::RefDroppersHere, {std::to_string(all)})));
+        }
+        std::vector<std::pair<int, std::string>> on, under;  // on the sheet; dungeons and rooms
+        for (const auto& [map, n] : marked) (worldmap::tileOf(*c.world, map) ? on : under).emplace_back(-n, map);
+        std::sort(on.begin(), on.end());
+        std::sort(under.begin(), under.end());
+        for (size_t i = 0; i < on.size() && i < kPanelMaps; ++i)
+            p.rows.push_back(linked(refindex::mapTitle(ix, on[i].second), "×" + std::to_string(-on[i].first),
+                                    toMap(on[i].second)));
+        if (on.size() > kPanelMaps)  // the rest are marked on the map
+            p.rows.push_back(note(sayf(l, Text::RefMoreN, {std::to_string(on.size() - kPanelMaps)})));
+        if (!under.empty()) {
+            p.rows.push_back(heading(say(l, Text::RefAlsoInside), std::to_string(under.size())));
+            for (size_t i = 0; i < under.size() && i < kPanelInside; ++i)
+                p.rows.push_back(linked(refindex::mapTitle(ix, under[i].second), "×" + std::to_string(-under[i].first),
+                                        toMap(under[i].second)));
+            if (under.size() > kPanelInside)
+                p.rows.push_back(note(sayf(l, Text::RefMoreN, {std::to_string(under.size() - kPanelInside)})));
+        }
+        return p;
     }
+    p.rows.push_back(styled(Style::Caption, say(l, Text::RefWorld)));
+    p.rows.push_back(text(say(l, Text::RefWorldHelp)));
+    if (c.players && !c.players->empty()) {  // where the players are now
+        std::vector<std::pair<int, std::string>> busy;
+        for (const auto& [map, n] : *c.players)
+            if (n > 0) busy.emplace_back(-n, map);
+        std::sort(busy.begin(), busy.end());
+        if (!busy.empty()) p.rows.push_back(heading(say(l, Text::RefTopPlayers)));
+        for (size_t i = 0; i < busy.size() && i < 8; ++i)
+            p.rows.push_back(linked(refindex::mapTitle(ix, busy[i].second), std::to_string(-busy[i].first),
+                                    toMap(busy[i].second)));
+    }
+    p.rows.push_back(legend(l, Text::RefYouHere, "mark:here"));
+    p.rows.push_back(legend(l, Text::RefLegendPlayers, "mark:players"));
+    if (!c.follow.map.empty()) p.rows.push_back(legend(l, Text::RefLegendRoute, "mark:route"));
     return p;
 }
 
 Page dungeons(const refindex::Index& ix, Lang l, const Context& c) {
     Page p;
     p.name = say(l, Text::RefDungeons);
-    Row title;
-    title.style = Style::Title;
-    title.left = say(l, Text::RefDungeons);
-    title.right = say(l, Text::RefWorld) + " ›";
-    title.link = Link{Go::World, 0, ""};
-    p.rows.push_back(title);
+    worldBar(p, l, c, "", 1);  // 3.0.11-beta.29: the world map's tabs over the list
     if (!c.world) {
         p.rows.push_back(note(say(l, Text::RefWorldNone)));
         return p;
     }
     std::string group;
+    bool first = true;
     for (const worldmap::Dungeon& d : c.world->dungeons) {
-        if (d.group != group || p.rows.size() == 1) {
+        if (d.group != group || first) {
             group = d.group;
+            first = false;
             p.rows.push_back(heading(group.empty() ? d.map : group));
         }
         Row r = linked(refindex::mapTitle(ix, d.map), mapLine(ix, l, d.map, c), toMap(d.map));
@@ -1610,7 +1843,8 @@ Page card(const refindex::Index& ix, Lang l, const Link& link, const Context& c,
         case Go::Star:
         case Go::None:
         case Go::Expand:
-        case Go::Follow: break;
+        case Go::Follow:
+        case Go::Zoom: break;
     }
     return home(ix, l);
 }

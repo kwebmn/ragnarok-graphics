@@ -1,4 +1,6 @@
 // 3.0.11-beta.11: the world map of «Довідник» - the site's sheet (core/world_map), its page and its row in the window
+#include <algorithm>
+#include <cmath>
 #include <map>
 #include <string>
 #include <vector>
@@ -58,43 +60,103 @@ TEST(world_map_tiles_put_on_the_sheet) {
     CHECK_EQ(out.px[size_t((12 + 10) * 50 + 10)], 0xFF20A040u);
 }
 
+// 3.0.11-beta.29: the concept's zoom (v19_route) - a view's fit, zooming round the pointer, the view on a part, the
+// sheet smooth when zoomed in
+TEST(world_map_view_zoom_and_pan) {
+    const worldmap::Fit whole = worldmap::view(100, 50, 200, 200, 1, -1, -1);  // as fit: s 2, centred down
+    CHECK(whole.s == 2.0f && whole.x == 0.0f && whole.y == 50.0f);
+    const worldmap::Fit z = worldmap::view(100, 50, 200, 100, 2, 25, 25);  // the box's middle on (25, 25)
+    CHECK(z.s == 4.0f && z.x == 0.0f && z.y == -50.0f);
+    CHECK_EQ(worldmap::view(100, 50, 200, 100, 2, 95, 25).x, -200.0f);  // pulled back: no sea past the right edge
+    CHECK_EQ(worldmap::view(100, 50, 200, 200, 99, -1, -1).s, 2.0f * worldmap::kMostZoom);
+    float zoom = 1, cx = -1, cy = -1;
+    worldmap::zoomAt(100, 50, 200, 100, zoom, cx, cy, 60, 40, 2);  // (60, 40) is the sheet's (30, 20): kept there
+    CHECK(zoom == 2.0f);
+    const worldmap::Fit after = worldmap::view(100, 50, 200, 100, zoom, cx, cy);
+    CHECK(std::abs((60 - after.x) / after.s - 30) < 0.01f && std::abs((40 - after.y) / after.s - 20) < 0.01f);
+    worldmap::viewOn(100, 50, 200, 100, 10, 10, 20, 20, zoom, cx, cy);  // a part 10 x 10, a margin round it
+    CHECK(std::abs(zoom - 100.0f / 26) < 0.01f && cx == 15.0f && cy == 15.0f);
+    worldmap::viewOn(100, 50, 200, 100, 0, 0, 100, 50, zoom, cx, cy);  // all of it: no zoom
+    CHECK_EQ(zoom, 1.0f);
+    std::vector<uint32_t> two{0xFF000000, 0xFFFFFFFF};  // black and white, four times as big: between them grey
+    panel::Picture out;
+    worldmap::scaled(out, two, 2, 1, 8, 4, worldmap::Fit{4, 0, 0});
+    CHECK(out.px[0] == 0xFF000000u && out.px[7] == 0xFFFFFFFFu);
+    CHECK((out.px[3] & 0xFF) > 60 && (out.px[3] & 0xFF) < 130 && (out.px[4] & 0xFF) > (out.px[3] & 0xFF));
+}
+
+size_t worldRow(const refpages::Page& p) {
+    for (size_t i = 0; i < p.rows.size(); ++i)
+        if (p.rows[i].style == refpages::Style::World) return i;
+    return size_t(-1);
+}
+
 TEST(reference_world_pages) {
     worldmap::Sheet sh;
     CHECK(worldmap::parse(kSheet, sh));
     refindex::Index ix;
     CHECK(refindex::build(R"({"v":1,"data":1,"commit":"c","date":"d","items":{},"mobs":{},"spawns":{},"routes":[],
-        "shops":[],"npcs":[],"pets":[],"craft":[],"flags":{}})", ix));
+        "shops":[],"npcs":[["prontera",150,180,"Kafra Employee",113]],"pets":[],"craft":[],"flags":{}})", ix));
+    ix.mapNames = refindex::mapNames("prt_fild08.rsw#Prontera Field #\nprontera.rsw#Prontera City, Capitol#");
     refpages::Context c;
     c.here = "prontera";
     const refpages::Page none = refpages::world(ix, Lang::Uk, c);
-    CHECK_EQ(none.rows.size(), size_t(2));  // no sheet yet: a note
-    CHECK(none.rows[1].style == refpages::Style::Note);
+    CHECK_EQ(none.rows.size(), size_t(3));  // no sheet yet: its tabs, a note
+    CHECK(none.rows[2].style == refpages::Style::Note);
     c.world = &sh;
+    // 3.0.11-beta.29, the concept's v19_route: the bar (its tabs, the zoom), the map, the panel at its right
     const refpages::Page w = refpages::world(ix, Lang::Uk, c);
-    CHECK(w.rows[0].style == refpages::Style::Title && w.rows[0].link.go == refpages::Go::World);
-    CHECK_EQ(w.rows[0].link.id, 1);  // its «Підземелля ›»
-    CHECK(w.rows[1].style == refpages::Style::World);
-    CHECK(w.rows[2].style == refpages::Style::Note);
-    std::map<std::string, int> players{{"prt_fild08", 4}};
+    CHECK(w.rows[0].style == refpages::Style::Tab && w.rows[0].gold && w.rows[0].link.go == refpages::Go::World);
+    CHECK(w.rows[1].style == refpages::Style::Tab && w.rows[1].link.id == 1 && w.rows[1].icon == "ui:dungeon");
+    CHECK(w.rows[2].style == refpages::Style::Tool && w.rows[2].link.go == refpages::Go::Zoom);
+    CHECK(w.rows[2].link.id == -1 && w.rows[3].link.id == 0 && w.rows[4].link.id == 1);
+    CHECK_EQ(worldRow(w), size_t(5));
+    CHECK(w.rows[6].style == refpages::Style::Caption && w.rows[6].left == "Карта світу");
+    CHECK(w.rows.back().style == refpages::Style::Legend);
+    std::map<std::string, int> players{{"prt_fild08", 4}, {"prontera", 12}};
     c.players = &players;
-    c.hover = "prt_fild08";
+    c.hover = "prt_fild08";  // the pointer's map no longer changes the page: its card is over the map
     const refpages::Page h = refpages::world(ix, Lang::Uk, c);
-    CHECK_EQ(h.rows[2].left, std::string("prt_fild08 · гравців зараз: 4"));
+    CHECK(h.rows[2].style == refpages::Style::Tab && h.rows[2].left == "16 онлайн" && h.rows[2].dot != 0);
+    const size_t top = size_t(std::find_if(h.rows.begin(), h.rows.end(), [](const refpages::Row& r) {
+                                  return r.left == "Найбільше гравців зараз";
+                              }) - h.rows.begin());
+    CHECK(top < h.rows.size() && h.rows[top + 1].link.map == "prontera" && h.rows[top + 1].right == "12");
+    const std::vector<std::string> tip = refpages::worldTip(ix, Lang::Uk, "prt_fild08", c);
+    CHECK(tip.size() == 3 && tip[0] == "Prontera Field" && tip[1] == "prt_fild08" && tip[2] == "гравців зараз: 4");
+    const std::vector<std::string> bare = refpages::worldTip(ix, Lang::Uk, "izlude", c);  // no name, no one there
+    CHECK(bare.size() == 2 && bare[0] == "izlude" && bare[1].empty());
+    const auto towns = refpages::worldLabels(ix);  // a Kafra and no monsters: a town
+    CHECK(towns.size() == 1 && towns[0].first == "prontera");
     const refpages::Page d = refpages::dungeons(ix, Lang::Uk, c);
-    CHECK(d.rows[1].style == refpages::Style::Heading && d.rows[1].left == "Prontera Culvert");
-    CHECK(d.rows[2].link.go == refpages::Go::Map && d.rows[2].link.map == "prt_sewb1");
-    CHECK(d.rows[4].style == refpages::Style::Heading && d.rows[4].left == "Payon Cave");
+    CHECK(d.rows[0].style == refpages::Style::Tab && !d.rows[0].gold && d.rows[1].gold);
+    CHECK(d.rows[3].style == refpages::Style::Heading && d.rows[3].left == "Prontera Culvert");
+    CHECK(d.rows[4].link.go == refpages::Go::Map && d.rows[4].link.map == "prt_sewb1");
     const refpages::Page home = refpages::home(ix, Lang::Uk);
     CHECK(home.rows[10].link.go == refpages::Go::World && home.rows[10].icon == "ui:world");  // the ninth tile
-    // the window: the map's row takes the body's rest; the tile under the pointer
-    const refwin::Layout L = refwin::layout(1920, 1080, 1.0f);
-    int total = 0;
-    const auto rows = refwin::place(L, w, total);
-    CHECK(rows[1].h > 500 && total <= L.bodyH);
-    const worldmap::Fit f = refwin::worldFit(sh, rows[1]);
-    const float x = float(rows[1].x) + f.x + 15 * f.s, y = float(L.bodyY + rows[1].y) + f.y + 15 * f.s;
-    const refwin::Under u = refwin::under(L, w, rows, 0, refwin::Chrome{}, x, y, &sh);
-    CHECK(u.part == refwin::Part::Tile && u.row == 1 && u.tile == 0);
+    // the window: the bar's line, the map at the left to the body's bottom, the panel at its right, the zoom's
+    // buttons at the map's right; the tile under the pointer at a zoom
+    for (const float k : {1.0f, 2.0f}) {
+        const refwin::Layout L = refwin::layout(int(1920 * k), int(1080 * k), k);
+        int total = 0;
+        const auto rows = refwin::place(L, w, total);
+        const refwin::Placed& map = rows[5];
+        CHECK(map.h > int(500 * k) && map.y + map.h <= L.bodyH && total <= L.bodyH);
+        CHECK(rows[0].y == rows[2].y && rows[0].x == map.x && rows[1].x > rows[0].x + rows[0].w);
+        CHECK_EQ(rows[4].x + rows[4].w, map.x + map.w);  // «+» at the map's right
+        CHECK(rows[6].x >= map.x + map.w + int(16 * k) && rows[6].w == int(std::lround(380 * k)));
+        refwin::WorldLook look;
+        look.sheet = &sh;
+        for (const float zoom : {1.0f, 2.0f}) {
+            look.zoom = zoom;
+            look.cx = 20;
+            look.cy = 20;
+            const worldmap::Fit f = refwin::worldView(look, map);
+            const float x = float(map.x) + f.x + 15 * f.s, y = float(L.bodyY + map.y) + f.y + 15 * f.s;
+            const refwin::Under u = refwin::under(L, w, rows, 0, refwin::Chrome{}, x, y, &look);
+            CHECK(u.part == refwin::Part::Tile && u.row == 5 && u.tile == 0);
+        }
+    }
 }
 
 // 3.0.11-beta.19: a monster's maps on the world map - its numbers there, the ones off the sheet listed under it
@@ -113,7 +175,9 @@ TEST(reference_world_marks_a_monster) {
     refpages::Context c;
     c.world = &sh;
     const refpages::Page p = refpages::world(ix, Lang::Uk, c, "mob:1002");
-    CHECK_EQ(p.rows[0].left, std::string("Poring на карті світу"));
+    const refpages::Row& caption = p.rows[worldRow(p) + 1];  // 3.0.11-beta.29: the panel's title, its maps under it
+    CHECK(caption.style == refpages::Style::Caption && caption.left == "Poring на карті світу");
+    CHECK(p.rows[worldRow(p) + 2].left == "prt_fild08" && p.rows[worldRow(p) + 2].right == "×100");
     size_t inside = size_t(-1);
     for (size_t i = 0; i < p.rows.size(); ++i)
         if (p.rows[i].left == "Підземелля й приміщення") inside = i;
@@ -145,8 +209,8 @@ TEST(reference_world_marks_an_items_droppers) {
 
 // 3.0.11-beta.25 (R-77TCM7:
 // «когда по меню вожу, лагат курсор и фпс падает»): another map under the pointer
-// on the world map - its page made again, only the rows that changed and the two maps' frames painted again: the
-// picture as painted whole
+// on the world map - only the two maps' frames and cards painted again (3.0.11-beta.29: the page no longer changes,
+// at any zoom): the picture as painted whole
 TEST(reference_world_hover_repaint_matches_the_whole) {
     worldmap::Sheet sh;
     CHECK(worldmap::parse(kSheet, sh));
@@ -158,63 +222,57 @@ TEST(reference_world_hover_repaint_matches_the_whole) {
     c.here = "prontera";
     c.world = &sh;
     c.players = &players;
-    int steps = 0, differing = 0, moved = 0;
-    for (const float k : {1.0f, 2.0f}) {
-        const refwin::Layout L = refwin::layout(int(1920 * k), int(1080 * k), k);
-        c.hover.clear();
-        refpages::Page was = refpages::world(ix, Lang::Uk, c);
-        int total = 0;
-        const std::vector<refwin::Placed> rows = refwin::place(L, was, total);
-        panel::Picture sheet;  // the tiles fitted into the row: a pattern
-        sheet.width = rows[1].w;
-        sheet.height = rows[1].h;
-        sheet.px.resize(size_t(sheet.width) * size_t(sheet.height));
-        for (size_t i = 0; i < sheet.px.size(); ++i) sheet.px[i] = 0xFF000000u | uint32_t(i * 2654435761u >> 8);
-        refwin::Look look;
-        refwin::Texts texts;
-        texts.back = "Назад до Довідник";
-        look.chrome = refwin::chrome(L, was, texts);
-        look.world.picture = &sheet;
-        look.world.sheet = &sh;
-        look.world.here = "prontera";
-        look.world.players = &players;
-        look.world.hereX = 12;
-        look.world.hereY = 15;
-        panel::Picture partial;
-        refwin::paint(partial, L, was, rows, 0, total, look);
-        for (const char* map : {"prt_fild08", "izlude", "prontera", "", "prt_fild08"}) {
-            c.hover = map;
-            const refpages::Page now = refpages::world(ix, Lang::Uk, c);
-            int nowTotal = 0;
-            const std::vector<refwin::Placed> nowRows = refwin::place(L, now, nowTotal);
-            bool same = nowRows.size() == rows.size() && nowTotal == total;
-            for (size_t i = 0; same && i < rows.size(); ++i)
-                same = rows[i].x == nowRows[i].x && rows[i].y == nowRows[i].y && rows[i].h == nowRows[i].h;
-            if (!same) ++moved;
-            refwin::Look nowLook = look;
-            nowLook.world.hover = map;
-            std::vector<Rect> areas;
-            for (size_t i = 0; i < now.rows.size() && i < was.rows.size(); ++i)
-                if (!refwin::sameRow(now.rows[i], was.rows[i]))
-                    areas.push_back(refwin::rowArea(L, now, nowRows, 0, int(i)));
-            areas.push_back(refwin::worldArea(L, nowRows, 0, 1, sh, look.world.hover));
-            areas.push_back(refwin::worldArea(L, nowRows, 0, 1, sh, map));
-            for (const Rect& a : areas)
-                if (!a.empty()) refwin::repaint(partial, L, now, nowRows, 0, nowTotal, nowLook, a);
-            panel::Picture whole;
-            refwin::paint(whole, L, now, nowRows, 0, nowTotal, nowLook);
-            ++steps;
-            if (partial.px != whole.px) ++differing;
-            was = now;
-            look = nowLook;
+    int steps = 0, differing = 0;
+    const refpages::Page page = refpages::world(ix, Lang::Uk, c);
+    const int at = int(worldRow(page));
+    for (const float k : {1.0f, 2.0f})
+        for (const float zoom : {1.0f, 3.0f}) {
+            const refwin::Layout L = refwin::layout(int(1920 * k), int(1080 * k), k);
+            int total = 0;
+            const std::vector<refwin::Placed> rows = refwin::place(L, page, total);
+            panel::Picture sheet;  // the tiles at the view in the row: a pattern
+            sheet.width = rows[size_t(at)].w;
+            sheet.height = rows[size_t(at)].h;
+            sheet.px.resize(size_t(sheet.width) * size_t(sheet.height));
+            for (size_t i = 0; i < sheet.px.size(); ++i) sheet.px[i] = 0xFF000000u | uint32_t(i * 2654435761u >> 8);
+            refwin::Look look;
+            refwin::Texts texts;
+            texts.back = "Назад до Довідник";
+            look.chrome = refwin::chrome(L, page, texts);
+            look.world.picture = &sheet;
+            look.world.sheet = &sh;
+            look.world.here = "prontera";
+            look.world.players = &players;
+            look.world.hereX = 12;
+            look.world.hereY = 15;
+            look.world.hereLabel = "Ви тут · Prontera";
+            look.world.labels = {{"prontera", "Prontera"}, {"izlude", "Izlude"}};
+            look.world.zoom = zoom;
+            look.world.cx = 25;
+            look.world.cy = 25;
+            panel::Picture partial;
+            refwin::paint(partial, L, page, rows, 0, total, look);
+            for (const char* map : {"prt_fild08", "izlude", "prontera", "", "prt_fild08"}) {
+                refwin::Look now = look;
+                now.world.hover = map;
+                now.world.tip = refpages::worldTip(ix, Lang::Uk, map, c);
+                for (const refwin::Look* l : {&look, &now})
+                    if (const Rect a = refwin::worldArea(L, rows, 0, at, l->world); !a.empty())
+                        refwin::repaint(partial, L, page, rows, 0, total, now, a);
+                panel::Picture whole;
+                refwin::paint(whole, L, page, rows, 0, total, now);
+                ++steps;
+                if (partial.px != whole.px) ++differing;
+                look = now;
+            }
         }
-    }
-    CHECK_EQ(steps, 10);
-    CHECK_EQ(moved, 0);  // the pointer's map told in the same row: the places kept
+    CHECK_EQ(steps, 20);
     CHECK_EQ(differing, 0);
-    CHECK(!refwin::sameRow(refpages::Row{}, refpages::world(ix, Lang::Uk, c).rows[0]));
     refpages::Row a, b;
     b.icon = "item:501";
     CHECK(refwin::sameRow(a, a) && !refwin::sameRow(a, b));
-    CHECK(refwin::worldArea(refwin::layout(1920, 1080, 1.0f), {}, 0, 1, sh, "prontera").empty());
+    refwin::WorldLook none;
+    none.sheet = &sh;
+    none.hover = "prontera";
+    CHECK(refwin::worldArea(refwin::layout(1920, 1080, 1.0f), {}, 0, 1, none).empty());
 }

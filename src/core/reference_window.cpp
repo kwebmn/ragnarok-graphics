@@ -20,6 +20,8 @@ constexpr float kIcon = 24;         // 3.0.11-beta.15: an item's icon in a row (
 // 3.0.11-beta.28: the concept's search results (v21_search) - a result's line, the gap under it, a group's and
 // «ще N ›»'s lines, nothing found's; the query's marks (its <mark>: gold .28)
 constexpr float kResultH = 50, kResultGap = 4, kGroupH = 28, kMoreH = 28, kEmptyH = 150;
+// 3.0.11-beta.29: the concept's world map (v19_route) - its bar's line, its panel at the right, the panel's rows
+constexpr float kBarH = 34, kPanelW = 380, kPanelGap = 20, kStepH = 44, kButtonH = 36;
 constexpr uint32_t kMark = 0xE9C47C;
 constexpr float kMarkA = 0.28f;
 // The concept's colours: the window's glass (--card), white over it (--cell .06, --line .09, --line2 .15, the tiles
@@ -49,6 +51,13 @@ int heightOf(refpages::Style st, float s) {
         case refpages::Style::Group: return px(kGroupH, s);
         case refpages::Style::More: return px(kMoreH, s);
         case refpages::Style::Empty: return px(kEmptyH, s);
+        case refpages::Style::Tab:  // 3.0.11-beta.29
+        case refpages::Style::Tool: return px(kBarH, s);
+        case refpages::Style::Caption: return px(30, s);
+        case refpages::Style::Step: return px(kStepH, s);
+        case refpages::Style::Legend: return px(24, s);
+        case refpages::Style::Button: return px(kButtonH, s);
+        case refpages::Style::Warn:  // place() gives it its lines
         case refpages::Style::Block:  // place() gives it its rows
         case refpages::Style::Row: break;
     }
@@ -210,7 +219,9 @@ bool iconNamed(const std::string& key, uiicons::Icon& icon) {
         {"ui:npc", uiicons::Icon::Npc}, {"ui:mvp", uiicons::Icon::Mvp},
         {"ui:pet", uiicons::Icon::Pet}, {"ui:craft", uiicons::Icon::Craft},
         {"ui:world", uiicons::Icon::World}, {"ui:tables", uiicons::Icon::Tables},
-        {"ui:search", uiicons::Icon::Search},
+        {"ui:search", uiicons::Icon::Search}, {"ui:dungeon", uiicons::Icon::Dungeon},
+        {"ui:minus", uiicons::Icon::Minus}, {"ui:plus", uiicons::Icon::Plus},
+        {"ui:expand", uiicons::Icon::Expand},
     };
     for (const auto& [name, i] : kNames)
         if (key == name) {
@@ -218,6 +229,48 @@ bool iconNamed(const std::string& key, uiicons::Icon& icon) {
             return true;
         }
     return false;
+}
+
+// 3.0.11-beta.29: a bar's tab (its icon, its words) or its chip (its dot, its words); a panel's button
+float tabWidth(const Layout& L, const refpages::Row& r) {
+    const float s = L.s, words = std::ceil(L.measure(r.left, 13.5f * s, true)) + 2;
+    if (r.link.go == refpages::Go::None) return 12 * s + 8 * s + 7 * s + words + 12 * s;  // its dot
+    return 14 * s + 16 * s + 8 * s + words + 14 * s;  // its icon
+}
+float buttonWidth(const Layout& L, const refpages::Row& r) {
+    return std::ceil(L.measure(r.left, 14 * L.s, true)) + 2 + 32 * L.s;
+}
+
+// Words wrapped in a width: their lines' height (13 px words, 19 px a line)
+int wrappedHeight(const Layout& L, const std::string& words, float width) {
+    const float wide = L.measure(words, 13 * L.s, false) * 1.08f;
+    return px(19, L.s) * std::max(1, int(std::ceil(wide / std::max(1.0f, width))));
+}
+
+// The bar of the world map's pages: its tabs and its chip from the left, its zoom's buttons at the map's right
+// (`mapRight`); the rows after it
+size_t placeBar(const Layout& L, const refpages::Page& p, int x, int mapRight, int& y, std::vector<Placed>& out) {
+    const float s = L.s;
+    size_t i = 0;
+    std::vector<size_t> tools;
+    for (; i < p.rows.size(); ++i) {
+        const refpages::Row& r = p.rows[i];
+        if (r.style == refpages::Style::Tool) {
+            tools.push_back(i);
+            continue;
+        }
+        if (r.style != refpages::Style::Tab) break;
+        const int w = int(tabWidth(L, r));
+        out[i] = Placed{x, y, w, px(kBarH, s)};
+        x += w + px(8, s);
+    }
+    for (auto t = tools.rbegin(); t != tools.rend(); ++t) {
+        mapRight -= px(kBarH, s);
+        out[*t] = Placed{mapRight, y, px(kBarH, s), px(kBarH, s)};
+        mapRight -= px(6, s);
+    }
+    if (i > 0) y += px(kBarH, s) + px(12, s);
+    return i;
 }
 
 // A block at (x, y), `w` wide, and its rows inside it: the chips flowing, the others one under another; its height
@@ -391,11 +444,64 @@ std::vector<Placed> place(const Layout& L, const refpages::Page& p, int& total) 
     const size_t n = p.rows.size();
     std::vector<Placed> out(n);
     const Column col = columnOf(L, p);  // 3.0.11-beta.26: right of the rail
-    int others = px(kTop, s);  // 3.0.11-beta.11: the world map's row takes what the other rows leave of the body
-    for (const refpages::Row& r : p.rows)
-        if (r.style != refpages::Style::World) others += heightOf(r.style, s);
     int y = px(kTop, s);
-    for (size_t i = 0; i < n;) {
+    // 3.0.11-beta.29, the concept's world map (v19_route): its bar, the map at the left, the panel at its right
+    const auto world = std::find_if(p.rows.begin(), p.rows.end(),
+                                    [](const refpages::Row& r) { return r.style == refpages::Style::World; });
+    const int panelW = world == p.rows.end() ? 0 : std::min(px(kPanelW, s), col.w * 2 / 5);
+    const int mapW = panelW ? col.w - panelW - px(kPanelGap, s) : col.w;
+    size_t start = placeBar(L, p, col.x, col.x + mapW, y, out);
+    if (world != p.rows.end()) {
+        const size_t at = size_t(world - p.rows.begin());
+        for (; start < at; ++start) {  // anything between the bar and the map
+            out[start] = Placed{col.x, y, mapW, heightOf(p.rows[start].style, s)};
+            y += out[start].h;
+        }
+        out[at] = Placed{col.x, y, mapW, std::max(px(kWorldLeast, s), L.bodyH - y - px(12, s))};
+        const int px0 = col.x + mapW + px(kPanelGap, s);
+        int py = px(kTop, s), bx = px0;
+        bool buttons = false;  // a line of buttons going on
+        for (size_t j = at + 1; j < n; ++j) {
+            const refpages::Row& r = p.rows[j];
+            if (r.style == refpages::Style::Button) {
+                const int w = int(buttonWidth(L, r));
+                if (buttons && bx + w > px0 + panelW) {
+                    py += px(kButtonH + 8, s);
+                    bx = px0;
+                }
+                if (!buttons) py += px(6, s);
+                out[j] = Placed{bx, py, w, px(kButtonH, s)};
+                bx += w + px(8, s);
+                buttons = true;
+                continue;
+            }
+            if (buttons) {
+                py += px(kButtonH + 12, s);
+                bx = px0;
+                buttons = false;
+            }
+            int h = heightOf(r.style, s);
+            if (r.style == refpages::Style::Warn) h = wrappedHeight(L, r.left, float(panelW) - 46 * s) + px(22, s);
+            if (r.style == refpages::Style::Text) h = textHeight(r.left, panelW, s);
+            if (r.style == refpages::Style::Row) h = px(34, s);
+            out[j] = Placed{px0, py, panelW, h};
+            int gap = 0;
+            if (r.style == refpages::Style::Sub || r.style == refpages::Style::Warn) gap = px(12, s);
+            if (r.style == refpages::Style::Text) gap = px(10, s);
+            if (r.style == refpages::Style::Legend && j + 1 < n && p.rows[j + 1].style != refpages::Style::Legend)
+                gap = px(10, s);
+            if (r.style == refpages::Style::Row && j + 1 < n && p.rows[j + 1].style != refpages::Style::Row)
+                gap = px(10, s);
+            py += h + gap;
+        }
+        if (buttons) py += px(kButtonH, s);
+        total = std::max(out[at].y + out[at].h, py) + px(8, s);
+        return out;
+    }
+    int others = y;  // 3.0.11-beta.11: the world map's row takes what the other rows leave of the body
+    for (size_t i = start; i < n; ++i)
+        if (p.rows[i].style != refpages::Style::World) others += heightOf(p.rows[i].style, s);
+    for (size_t i = start; i < n;) {
         const refpages::Row& r = p.rows[i];
         if (r.style == refpages::Style::Tile) {  // 3.0.11-beta.26: five to a line
             const int gap = px(kTileGap, s), h = px(kTileH, s), w = (col.w - 4 * gap) / 5;
@@ -506,8 +612,12 @@ worldmap::Fit worldFit(const worldmap::Sheet& sheet, const Placed& row) {
     return worldmap::fit(sheet.w, sheet.h, row.w, row.h);
 }
 
+worldmap::Fit worldView(const WorldLook& w, const Placed& row) {
+    return w.sheet ? worldmap::view(w.sheet->w, w.sheet->h, row.w, row.h, w.zoom, w.cx, w.cy) : worldmap::Fit{};
+}
+
 Under under(const Layout& L, const refpages::Page& p, const std::vector<Placed>& rows, int scroll, const Chrome& c,
-            float x, float y, const worldmap::Sheet* sheet) {
+            float x, float y, const WorldLook* world) {
     if (x < 0 || y < 0 || x >= float(L.w) || y >= float(L.h)) return Under{};
     if (c.close.w > 0 && c.close.contains(x, y)) return Under{Part::Close, -1};
     if (c.back.w > 0 && c.back.contains(x, y)) return Under{Part::Back, -1};
@@ -521,8 +631,8 @@ Under under(const Layout& L, const refpages::Page& p, const std::vector<Placed>&
         const Placed& r = rows[i];
         const bool in = x >= float(r.x) && x < float(r.x + r.w) && by >= float(r.y) && by < float(r.y + r.h);
         if (!in) continue;
-        if (sheet && p.rows[i].style == refpages::Style::World) {  // 3.0.11-beta.11: a map on the world map
-            const int t = worldmap::tileAt(*sheet, worldFit(*sheet, r), x - float(r.x), by - float(r.y));
+        if (world && world->sheet && p.rows[i].style == refpages::Style::World) {  // a map on the world map
+            const int t = worldmap::tileAt(*world->sheet, worldView(*world, r), x - float(r.x), by - float(r.y));
             return t >= 0 ? Under{Part::Tile, int(i), t} : Under{Part::Body, -1};
         }
         if (p.rows[i].style == refpages::Style::Search) return Under{Part::Search, -1};
@@ -562,67 +672,297 @@ panel::Box tileBox(const worldmap::Tile& t, const worldmap::Fit& f, float ox, fl
     return panel::Box{ox + f.x + float(t.l) * f.s, oy + f.y + float(t.t) * f.s, float(t.w) * f.s, float(t.h) * f.s};
 }
 
-// The world map's row: its picture, the way followed, your map, the one under the pointer, the players' badges
-void paintWorld(panel::Picture& out, const panel::Box& b, const WorldLook& w, float s) {
+// 3.0.11-beta.29: a teleport's arc (the concept's dashed one) - between two maps' middles, bowed up by a fifth of it
+struct Arc {
+    float ax, ay, cx, cy, bx, by;
+    void at(float t, float& x, float& y) const {
+        const float u = 1 - t;
+        x = u * u * ax + 2 * u * t * cx + t * t * bx;
+        y = u * u * ay + 2 * u * t * cy + t * t * by;
+    }
+};
+Arc arcOf(float ax, float ay, float bx, float by) {
+    const float dx = bx - ax, dy = by - ay, len = std::sqrt(dx * dx + dy * dy);
+    float nx = len > 0 ? -dy / len : 0, ny = len > 0 ? dx / len : 0;
+    if (ny > 0) {  // up the picture
+        nx = -nx;
+        ny = -ny;
+    }
+    return Arc{ax, ay, (ax + bx) / 2 + nx * len * 0.22f, (ay + by) / 2 + ny * len * 0.22f, bx, by};
+}
+
+// 3.0.11-beta.29: what goes over the world map with words - the players' pills, the towns' names, «Ви тут», the
+// pin's name, the teleports' prices, the card of the map under the pointer: shapes() draws their grounds, words()
+// their words (one place for both)
+enum class Over : uint8_t { Players, Town, Here, Pin, Jump, Mark, Tip };
+struct OverItem {
+    Over kind;
+    panel::Box box;
+    std::vector<std::string> words;
+};
+
+struct WorldPlace {  // a look's sheet in its row: where a map's middle is
+    const WorldLook& w;
+    worldmap::Fit f;
+    float ox, oy;
+    bool centre(const std::string& map, float& x, float& y) const {
+        const worldmap::Tile* t = map.empty() || !w.sheet ? nullptr : worldmap::tileOf(*w.sheet, map);
+        if (!t) return false;
+        const panel::Box tb = tileBox(*t, f, ox, oy);
+        x = tb.x + tb.w / 2;
+        y = tb.y + tb.h / 2;
+        return true;
+    }
+    // the pin's map: the target, else the way's last map on the sheet (a dungeon's way in)
+    std::string pinMap() const {
+        if (w.target.empty()) return "";
+        float x = 0, y = 0;
+        if (centre(w.target, x, y)) return w.target;
+        for (auto h = w.hops.rbegin(); h != w.hops.rend(); ++h) {
+            if (centre(h->to, x, y)) return h->to;
+            if (centre(h->from, x, y)) return h->from;
+        }
+        return "";
+    }
+};
+
+// A line of the card of the map under the pointer: from its top (its name 19 high, the others 18; an empty second
+// line left out)
+float tipLine(const std::vector<std::string>& lines, size_t k, float s) {
+    float y = 10 * s;
+    for (size_t j = 0; j < k && j < lines.size(); ++j)
+        if (j == 0 || !lines[j].empty()) y += j == 0 ? 19 * s : 18 * s;
+    return y;
+}
+
+panel::Box keptIn(panel::Box b, const panel::Box& in) {
+    b.x = std::clamp(b.x, in.x + 4, std::max(in.x + 4, in.x + in.w - b.w - 4));
+    b.y = std::clamp(b.y, in.y + 4, std::max(in.y + 4, in.y + in.h - b.h - 4));
+    return b;
+}
+
+std::vector<OverItem> overItems(const Layout& L, const WorldLook& w, const panel::Box& b) {
+    std::vector<OverItem> out;
+    if (!w.sheet) return out;
+    const float s = L.s;
+    const WorldPlace at{w, worldmap::view(w.sheet->w, w.sheet->h, int(b.w), int(b.h), w.zoom, w.cx, w.cy),
+                        float(int(b.x)), float(int(b.y))};
+    const auto wide = [&](const std::string& words, float size, bool bold) {
+        return std::ceil(L.measure(words, size * s, bold)) + 2;
+    };
+    const std::string pin = at.pinMap();
+    if (w.players && w.marks.empty())  // the players now: a green pill at a tile's corner (a dot when it is small)
+        for (const worldmap::Tile& t : w.sheet->world) {
+            const auto n = w.players->find(t.map);
+            if (n == w.players->end() || n->second <= 0) continue;
+            const panel::Box tb = tileBox(t, at.f, at.ox, at.oy);
+            if (tb.w < 30 * s) {
+                out.push_back(OverItem{Over::Players, panel::Box{tb.x + tb.w - 7 * s, tb.y + 1 * s, 6 * s, 6 * s}, {}});
+                continue;
+            }
+            const std::string count = std::to_string(n->second);
+            const float pw = 21 * s + wide(count, 11, true), ph = 17 * s;
+            out.push_back(OverItem{Over::Players, panel::Box{tb.x + tb.w - pw - 3 * s, tb.y + 3 * s, pw, ph}, {count}});
+        }
+    for (const auto& [map, n] : w.marks) {  // 3.0.11-beta.19: a monster's numbers - gold pills in the middle
+        float x = 0, y = 0;
+        if (!at.centre(map, x, y)) continue;
+        const std::string count = std::to_string(n);
+        const float pw = 14 * s + wide(count, 11, true), ph = 18 * s;
+        out.push_back(OverItem{Over::Mark, panel::Box{x - pw / 2, y - ph / 2, pw, ph}, {count}});
+    }
+    for (const auto& [map, name] : w.labels) {  // the towns' names on their tiles, big enough to hold them
+        const worldmap::Tile* t = map == w.here || map == pin ? nullptr : worldmap::tileOf(*w.sheet, map);
+        if (!t) continue;
+        const panel::Box tb = tileBox(*t, at.f, at.ox, at.oy);
+        const float lw = wide(name, 12, true) + 14 * s, lh = 21 * s;
+        if (tb.w < 64 * s || lw > tb.w + 30 * s) continue;
+        const panel::Box label{tb.x + (tb.w - lw) / 2, tb.y + tb.h - lh - 4 * s, lw, lh};
+        out.push_back(OverItem{Over::Town, label, {name}});
+    }
+    for (const refpages::Hop& h : w.hops) {  // a teleport's price at its arc's top
+        float ax = 0, ay = 0, bx = 0, by = 0;
+        if (!h.jump || h.label.empty() || !at.centre(h.from, ax, ay) || !at.centre(h.to, bx, by)) continue;
+        float mx = 0, my = 0;
+        arcOf(ax, ay, bx, by).at(0.5f, mx, my);
+        const float lw = wide(h.label, 12, true) + 16 * s, lh = 22 * s;
+        out.push_back(OverItem{Over::Jump, keptIn(panel::Box{mx - lw / 2, my - lh - 6 * s, lw, lh}, b), {h.label}});
+    }
+    if (!w.hereLabel.empty()) {  // «Ви тут · …» under your place
+        float x = 0, y = 0;
+        const bool cell = w.hereX >= 0 && w.hereY >= 0;
+        if (cell) {
+            x = at.ox + at.f.x + w.hereX * at.f.s;
+            y = at.oy + at.f.y + w.hereY * at.f.s;
+        }
+        if (cell || at.centre(w.here, x, y)) {
+            const float lw = wide(w.hereLabel, 12, true) + 18 * s, lh = 23 * s;
+            out.push_back(OverItem{Over::Here, keptIn(panel::Box{x - lw / 2, y + 12 * s, lw, lh}, b), {w.hereLabel}});
+        }
+    }
+    float px0 = 0, py0 = 0;
+    if (!pin.empty() && at.centre(pin, px0, py0)) {  // the pin's words over it (a dungeon's: «… → підземелля»)
+        const std::string words = !w.targetLabel.empty() ? w.targetLabel : "";
+        if (!words.empty()) {
+            const float lw = wide(words, 12, true) + 18 * s, lh = 23 * s;
+            out.push_back(OverItem{Over::Pin, keptIn(panel::Box{px0 - lw / 2, py0 - 26 * s - lh - 6 * s, lw, lh}, b),
+                                   {words}});
+        }
+    }
+    if (!w.hover.empty() && !w.tip.empty()) {  // the card of the map under the pointer, by its tile
+        if (const worldmap::Tile* t = worldmap::tileOf(*w.sheet, w.hover)) {
+            const panel::Box tb = tileBox(*t, at.f, at.ox, at.oy);
+            float cw = 0;
+            for (size_t k = 0; k < w.tip.size(); ++k)
+                cw = std::max(cw, wide((k == 2 ? "● " : "") + w.tip[k], k == 0 ? 13.5f : 12.5f, k != 1));
+            const float ch = tipLine(w.tip, w.tip.size(), s) + 10 * s;
+            panel::Box card{tb.x + 8 * s, tb.y + tb.h + 6 * s, cw + 24 * s, ch};
+            if (card.y + card.h > b.y + b.h - 4) card.y = tb.y - card.h - 6 * s;
+            out.push_back(OverItem{Over::Tip, keptIn(card, b), w.tip});
+        }
+    }
+    // only what is inside the map's row whole (its words are not cut at the edge as the map's shapes are), and
+    // nothing under the card of the map under the pointer (their words would show through it)
+    const auto tip = std::find_if(out.begin(), out.end(), [](const OverItem& o) { return o.kind == Over::Tip; });
+    const panel::Box card = tip == out.end() ? panel::Box{} : tip->box;
+    out.erase(std::remove_if(out.begin(), out.end(), [&](const OverItem& o) {
+                  const panel::Box& ob = o.box;
+                  const bool under = o.kind != Over::Tip && card.w > 0 && ob.x < card.x + card.w &&
+                                     card.x < ob.x + ob.w && ob.y < card.y + card.h && card.y < ob.y + ob.h;
+                  return under || ob.x < b.x || ob.y < b.y || ob.x + ob.w > b.x + b.w || ob.y + ob.h > b.y + b.h;
+              }),
+              out.end());
+    return out;
+}
+
+constexpr uint32_t kWay = 0xF2C14E, kJump = 0xFF7EB6, kPill = 0x2FA562, kDark = 0x0B0E14;
+constexpr uint32_t kWarn = 0xF0A050, kWarnWords = 0xFFD3A1;  // the concept's warning (its --warn)
+
+// The world map's row: its picture at the view, the way (gold; its teleports pink dashed arcs), the maps marked,
+// your map, the one under the pointer, then the grounds of what has words (overItems)
+void paintWorld(panel::Picture& out, const Layout& L, const panel::Box& b, const WorldLook& w) {
+    const float s = L.s;
     if (!w.picture || !w.sheet || w.picture->width != int(b.w) || w.picture->height != int(b.h)) return;
     const int top = std::max(0, out.clipY0), bottom = std::min(out.height, out.clipY1);
     const int left = std::max(0, out.clipX0), right = std::min(out.width, out.clipX1);
     for (int y = 0; y < w.picture->height; ++y) {
         const int ty = int(b.y) + y;
         if (ty < top || ty >= bottom) continue;
-        for (int x = 0; x < w.picture->width; ++x) {
-            const int tx = int(b.x) + x;
-            if (tx >= left && tx < right)
-                out.px[size_t(ty) * size_t(out.width) + size_t(tx)] =
-                    w.picture->px[size_t(y) * size_t(w.picture->width) + size_t(x)];
-        }
+        const int x0 = std::max(0, left - int(b.x)), x1 = std::min(w.picture->width, right - int(b.x));
+        if (x1 > x0)
+            std::copy(w.picture->px.begin() + std::ptrdiff_t(size_t(y) * size_t(w.picture->width) + size_t(x0)),
+                      w.picture->px.begin() + std::ptrdiff_t(size_t(y) * size_t(w.picture->width) + size_t(x1)),
+                      out.px.begin() + std::ptrdiff_t(size_t(ty) * size_t(out.width) + size_t(int(b.x) + x0)));
     }
-    const worldmap::Fit f = worldmap::fit(w.sheet->w, w.sheet->h, int(b.w), int(b.h));
-    const float ox = float(int(b.x)), oy = float(int(b.y));
-    auto centre = [&](const std::string& map, float& x, float& y) {
-        const worldmap::Tile* t = worldmap::tileOf(*w.sheet, map);
-        if (!t) return false;
-        const panel::Box tb = tileBox(*t, f, ox, oy);
-        x = tb.x + tb.w / 2;
-        y = tb.y + tb.h / 2;
-        return true;
-    };
-    float px0 = 0, py0 = 0, px1 = 0, py1 = 0;  // the way followed: from map to map (those on the world sheet)
-    bool have = false;
-    for (const std::string& m : w.route) {
-        if (!centre(m, px1, py1)) continue;
-        if (have && (px1 != px0 || py1 != py0)) {
-            line(out, px0, py0, px1, py1, 3.5f * s + 2, 0x000000, 0.5f);
-            line(out, px0, py0, px1, py1, 3.5f * s, kRoute, 1.0f);
-        }
-        px0 = px1;
-        py0 = py1;
-        have = true;
-    }
+    const int clipX0 = out.clipX0, clipY0 = out.clipY0, clipX1 = out.clipX1, clipY1 = out.clipY1;
+    out.clipX0 = std::max(out.clipX0, int(b.x));  // nothing of the map's past its row
+    out.clipY0 = std::max(out.clipY0, int(b.y));
+    out.clipX1 = std::min(out.clipX1, int(b.x + b.w));
+    out.clipY1 = std::min(out.clipY1, int(b.y + b.h));
+    const WorldPlace at{w, worldmap::view(w.sheet->w, w.sheet->h, int(b.w), int(b.h), w.zoom, w.cx, w.cy),
+                        float(int(b.x)), float(int(b.y))};
+    for (const auto& [map, n] : w.marks)  // 3.0.11-beta.19: the monster's maps framed in gold
+        if (const worldmap::Tile* t = worldmap::tileOf(*w.sheet, map))
+            outline(out, tileBox(*t, at.f, at.ox, at.oy), 2 * s, kGold, 1.0f);
     if (const worldmap::Tile* t = worldmap::tileOf(*w.sheet, w.here))
-        outline(out, tileBox(*t, f, ox, oy), 2.5f * s, kGold, 1.0f);
-    if (const worldmap::Tile* t = w.hover.empty() ? nullptr : worldmap::tileOf(*w.sheet, w.hover))
-        outline(out, tileBox(*t, f, ox, oy), 2 * s, 0xFFFFFF, 0.9f);
-    if (w.hereX >= 0 && w.hereY >= 0) {  // you
-        const float x = ox + f.x + w.hereX * f.s, y = oy + f.y + w.hereY * f.s;
-        panel::circle(out, x, y, 5 * s + 1.5f, 0x000000, 0.85f);
-        panel::circle(out, x, y, 5 * s, 0xFFFFFF, 1.0f);
-    }
-    if (w.players && w.marks.empty())  // a monster's marks instead of the players while it is shown
-        for (const worldmap::Tile& t : w.sheet->world) {
-            const auto n = w.players->find(t.map);
-            if (n == w.players->end() || n->second <= 0) continue;
-            const panel::Box tb = tileBox(t, f, ox, oy);
-            panel::circle(out, tb.x + tb.w - 2 * s, tb.y + 2 * s, 9 * s + 1, kRoute, 0.9f);
-            panel::circle(out, tb.x + tb.w - 2 * s, tb.y + 2 * s, 9 * s, kBadge, 1.0f);
+        outline(out, tileBox(*t, at.f, at.ox, at.oy), 2.5f * s, kGold, 1.0f);
+    for (const refpages::Hop& h : w.hops) {  // the way: gold over a dark edge; a teleport a dashed pink arc
+        float ax = 0, ay = 0, bx = 0, by = 0;
+        if (!at.centre(h.from, ax, ay) || !at.centre(h.to, bx, by) || (ax == bx && ay == by)) continue;
+        if (!h.jump) {
+            line(out, ax, ay, bx, by, 6.5f * s, kBlack, 0.55f);
+            line(out, ax, ay, bx, by, 4 * s, kWay, 1.0f);
+            continue;
         }
-    for (const auto& [map, n] : w.marks) {  // 3.0.11-beta.19: the monster's maps - gold frames, its numbers
-        const worldmap::Tile* t = worldmap::tileOf(*w.sheet, map);
-        if (!t) continue;
-        const panel::Box tb = tileBox(*t, f, ox, oy);
-        outline(out, tb, 2 * s, kGold, 1.0f);
-        panel::circle(out, tb.x + tb.w / 2, tb.y + tb.h / 2, 11 * s + 1, kGold, 0.95f);
-        panel::circle(out, tb.x + tb.w / 2, tb.y + tb.h / 2, 11 * s, kBadge, 1.0f);
+        const Arc arc = arcOf(ax, ay, bx, by);
+        const float len = std::sqrt((bx - ax) * (bx - ax) + (by - ay) * (by - ay)) * 1.1f;
+        const int steps = std::max(8, int(len / (3 * s)));
+        float walked = 0, x0 = ax, y0 = ay;
+        for (int k = 1; k <= steps; ++k) {
+            float x1 = 0, y1 = 0;
+            arc.at(float(k) / float(steps), x1, y1);
+            const float piece = std::sqrt((x1 - x0) * (x1 - x0) + (y1 - y0) * (y1 - y0));
+            if (std::fmod(walked, 15 * s) < 9 * s) {  // dashes 9 on, 6 off
+                line(out, x0, y0, x1, y1, 5 * s, kBlack, 0.35f);
+                line(out, x0, y0, x1, y1, 3 * s, kJump, 1.0f);
+            }
+            walked += piece;
+            x0 = x1;
+            y0 = y1;
+        }
+    }
+    if (const worldmap::Tile* t = w.hover.empty() ? nullptr : worldmap::tileOf(*w.sheet, w.hover))
+        outline(out, tileBox(*t, at.f, at.ox, at.oy), 2 * s, kWhite, 0.9f);
+    float pinX = 0, pinY = 0;
+    if (at.centre(at.pinMap(), pinX, pinY)) {  // the way's end: a gold pin
+        line(out, pinX, pinY - 12 * s, pinX, pinY - 1 * s, 5 * s, kWay, 1.0f);
+        panel::circle(out, pinX, pinY - 19 * s, 10 * s + 1.5f, kBlack, 0.6f);
+        panel::circle(out, pinX, pinY - 19 * s, 10 * s, kWay, 1.0f);
+        panel::circle(out, pinX, pinY - 19 * s, 3.5f * s, kDark, 1.0f);
+    }
+    if (w.hereX >= 0 && w.hereY >= 0) {  // you
+        const float x = at.ox + at.f.x + w.hereX * at.f.s, y = at.oy + at.f.y + w.hereY * at.f.s;
+        panel::circle(out, x, y, 5 * s + 1.5f, kBlack, 0.85f);
+        panel::circle(out, x, y, 5 * s, kWhite, 1.0f);
+    }
+    for (const OverItem& o : overItems(L, w, b)) {
+        const panel::Box& ob = o.box;
+        switch (o.kind) {
+            case Over::Players:
+                if (o.words.empty()) {
+                    panel::circle(out, ob.x + ob.w / 2, ob.y + ob.h / 2, ob.w / 2, kLiveDot, 1.0f);
+                    break;
+                }
+                panel::roundRect(out, ob, ob.h / 2, kPill, 0.94f);
+                uiicons::draw(out, uiicons::Icon::Npc, ob.x + 4 * s, ob.y + (ob.h - 11 * s) / 2, 11 * s, kWhite, 1.0f,
+                              2.4f);
+                break;
+            case Over::Mark: panel::roundRect(out, ob, ob.h / 2, kWay, 0.96f, kBlack, 0.5f, 1.0f); break;
+            case Over::Town: panel::roundRect(out, ob, 6 * s, kDark, 0.82f); break;
+            case Over::Here:
+            case Over::Pin: panel::roundRect(out, ob, 7 * s, kDark, 0.9f, kWay, 0.9f, 1.5f * s); break;
+            case Over::Jump: panel::roundRect(out, ob, 7 * s, kDark, 0.9f, kJump, 0.8f, 1.2f * s); break;
+            case Over::Tip:
+                panel::roundRect(out, ob, 9 * s, kCard, 0.97f, kWhite, kLine2A, std::max(1.0f, s));
+                if (o.words.size() > 2)  // the players' line: its green dot
+                    panel::circle(out, ob.x + 15 * s, ob.y + tipLine(o.words, 2, s) + 9 * s, 3.5f * s, kLiveDot, 1.0f);
+                break;
+        }
+    }
+    out.clipX0 = clipX0;
+    out.clipY0 = clipY0;
+    out.clipX1 = clipX1;
+    out.clipY1 = clipY1;
+}
+
+// The words of what goes over the world map (overItems), a row's at (x, y)
+void worldWords(std::vector<Words>& out, const Layout& L, const WorldLook& w, const panel::Box& b) {
+    const float s = L.s;
+    for (const OverItem& o : overItems(L, w, b)) {
+        const panel::Box& ob = o.box;
+        if (o.words.empty()) continue;
+        switch (o.kind) {
+            case Over::Players:
+                out.push_back(Words{panel::Box{ob.x + 17 * s, ob.y, ob.w - 20 * s, ob.h}, o.words[0], kWhite, 11 * s,
+                                    true, Align::Left});
+                break;
+            case Over::Mark:
+                out.push_back(Words{ob, o.words[0], 0x17120A, 11 * s, true, Align::Center});
+                break;
+            case Over::Town: out.push_back(Words{ob, o.words[0], kWhite, 12 * s, true, Align::Center}); break;
+            case Over::Here:
+            case Over::Pin: out.push_back(Words{ob, o.words[0], kAccent2, 12 * s, true, Align::Center}); break;
+            case Over::Jump: out.push_back(Words{ob, o.words[0], kJump, 12 * s, true, Align::Center}); break;
+            case Over::Tip:
+                for (size_t k = 0; k < o.words.size(); ++k) {
+                    if (o.words[k].empty()) continue;
+                    const panel::Box line{ob.x + 12 * s + (k == 2 ? 12 * s : 0), ob.y + tipLine(o.words, k, s),
+                                          ob.w - 24 * s, k == 0 ? 19 * s : 18 * s};
+                    out.push_back(Words{line, o.words[k], k == 0 ? kText : k == 1 ? kMuted : kLiveDot,
+                                        k == 0 ? 13.5f * s : 12.5f * s, k != 1, Align::Left});
+                }
+                break;
+        }
     }
 }
 
@@ -789,7 +1129,7 @@ void shapes(panel::Picture& out, const Layout& L, const refpages::Page& p, const
                 }
                 continue;
             case refpages::Style::World:
-                paintWorld(out, b, look.world, s);
+                paintWorld(out, L, b, look.world);
                 continue;
             case refpages::Style::Result: {  // 3.0.11-beta.28: picked - gold, its bar; under the pointer - lighter
                 if (look.selected == int(i)) {
@@ -823,6 +1163,62 @@ void shapes(panel::Picture& out, const Layout& L, const refpages::Page& p, const
                               1.8f);
                 continue;
             case refpages::Style::Group:
+                continue;
+            case refpages::Style::Tab:  // 3.0.11-beta.29: the world map's tab (the page's gold) or its green chip
+                if (row.link.go == refpages::Go::None) {
+                    panel::roundRect(out, b, b.h / 2, kLiveDot, 0.12f);
+                    panel::circle(out, b.x + 16 * s, b.y + b.h / 2, 4 * s, row.dot ? row.dot : kLiveDot, 1.0f);
+                    continue;
+                }
+                if (row.gold)
+                    panel::roundRect(out, b, 9 * s, kAccent, kSelA, kAccent, kRingA, edge);
+                else
+                    panel::roundRect(out, b, 9 * s, kWhite, on ? 0.10f : kCellA);
+                if (iconNamed(row.icon, icon))
+                    uiicons::draw(out, icon, b.x + 14 * s, b.y + (b.h - 16 * s) / 2, 16 * s,
+                                  row.gold ? kAccent2 : kMuted, 1.0f, 2.0f);
+                continue;
+            case refpages::Style::Tool:  // its zoom's
+                panel::roundRect(out, b, 8 * s, kWhite, on ? 0.12f : kCellA);
+                if (iconNamed(row.icon, icon))
+                    uiicons::draw(out, icon, b.x + (b.w - 16 * s) / 2, b.y + (b.h - 16 * s) / 2, 16 * s, kText, 1.0f,
+                                  2.2f);
+                continue;
+            case refpages::Style::Caption:
+                continue;
+            case refpages::Style::Warn:
+                panel::roundRect(out, b, 9 * s, kWarn, 0.10f, kWarn, 0.35f, edge);
+                uiicons::draw(out, uiicons::Icon::Warn, b.x + 11 * s, b.y + 11 * s, 16 * s, kWarn, 1.0f, 2.0f);
+                continue;
+            case refpages::Style::Step: {  // its number in a circle (a paid move's pink), a line under it
+                if (on) panel::roundRect(out, b, 8 * s, kWhite, 0.05f);
+                const float cx = b.x + 14 * s, cy = b.y + b.h / 2;
+                panel::circle(out, cx, cy, 11 * s, row.tone > 0 ? kJump : kWhite, row.tone > 0 ? 0.9f : 0.10f);
+                fill(out, panel::Box{b.x + 36 * s, b.y + b.h - edge, b.w - 36 * s, edge}, kWhite, kLineA);
+                continue;
+            }
+            case refpages::Style::Legend: {  // the mark it tells of
+                const float y = b.y + b.h / 2, x0 = b.x + 2 * s, x1 = b.x + 26 * s;
+                if (row.icon == "mark:route") {
+                    line(out, x0, y, x1, y, 6.5f * s, kBlack, 0.55f);
+                    line(out, x0, y, x1, y, 4 * s, kWay, 1.0f);
+                } else if (row.icon == "mark:jump") {
+                    line(out, x0, y, x0 + 9 * s, y, 3 * s, kJump, 1.0f);
+                    line(out, x0 + 15 * s, y, x1, y, 3 * s, kJump, 1.0f);
+                } else if (row.icon == "mark:players") {
+                    panel::roundRect(out, panel::Box{x0, y - 8.5f * s, 24 * s, 17 * s}, 8.5f * s, kPill, 0.94f);
+                    uiicons::draw(out, uiicons::Icon::Npc, x0 + 6.5f * s, y - 5.5f * s, 11 * s, kWhite, 1.0f, 2.4f);
+                } else if (row.icon == "mark:here") {
+                    panel::circle(out, x0 + 12 * s, y, 5 * s + 1.5f, kBlack, 0.85f);
+                    panel::circle(out, x0 + 12 * s, y, 5 * s, kWhite, 1.0f);
+                }
+                continue;
+            }
+            case refpages::Style::Button:
+                if (row.gold)
+                    panel::roundRect(out, b, 9 * s, kAccent, on ? 0.18f : 0.10f, kAccent2, 0.85f, 1.5f * s);
+                else
+                    panel::roundRect(out, b, 9 * s, kWhite, on ? 0.12f : kCellA);
                 continue;
             case refpages::Style::Hint:
                 if (closing(p, i)) fill(out, panel::Box{b.x, b.y, b.w, edge}, kWhite, kLineA);
@@ -939,15 +1335,26 @@ bool sameRow(const refpages::Row& a, const refpages::Row& b) {
            a.sub == b.sub && a.share == b.share && a.marks == b.marks && a.subMarks == b.subMarks;
 }
 
-Rect worldArea(const Layout& L, const std::vector<Placed>& rows, int scroll, int row, const worldmap::Sheet& sheet,
-               const std::string& map) {
-    const worldmap::Tile* t = map.empty() ? nullptr : worldmap::tileOf(sheet, map);
+Rect worldArea(const Layout& L, const std::vector<Placed>& rows, int scroll, int row, const WorldLook& w) {
+    const worldmap::Tile* t = w.hover.empty() || !w.sheet ? nullptr : worldmap::tileOf(*w.sheet, w.hover);
     if (!t || row < 0 || size_t(row) >= rows.size() || !shown(L, rows[size_t(row)], scroll)) return Rect{};
     const Placed& r = rows[size_t(row)];
-    const worldmap::Fit f = worldmap::fit(sheet.w, sheet.h, r.w, r.h);
-    const panel::Box tb = tileBox(*t, f, float(r.x), float(L.bodyY + r.y - scroll));
+    const panel::Box b{float(r.x), float(L.bodyY + r.y - scroll), float(r.w), float(r.h)};
+    const panel::Box tb = tileBox(*t, worldView(w, r), float(int(b.x)), float(int(b.y)));
     const float out = 2.5f * L.s / 2 + 2;  // the widest frame drawn on a map (yours), its smooth edge
-    return pixelsOf(L, panel::Box{tb.x - out, tb.y - out, tb.w + 2 * out, tb.h + 2 * out});
+    float x0 = tb.x - out, y0 = tb.y - out, x1 = tb.x + tb.w + out, y1 = tb.y + tb.h + out;
+    for (const OverItem& o : overItems(L, w, b))  // 3.0.11-beta.29: its card
+        if (o.kind == Over::Tip) {
+            x0 = std::min(x0, o.box.x - 2);
+            y0 = std::min(y0, o.box.y - 2);
+            x1 = std::max(x1, o.box.x + o.box.w + 2);
+            y1 = std::max(y1, o.box.y + o.box.h + 2);
+        }
+    x0 = std::max(x0, b.x);  // the map's own row
+    y0 = std::max(y0, b.y);
+    x1 = std::min(x1, b.x + b.w);
+    y1 = std::min(y1, b.y + b.h);
+    return x1 > x0 && y1 > y0 ? pixelsOf(L, panel::Box{x0, y0, x1 - x0, y1 - y0}) : Rect{};
 }
 
 Rect rowArea(const Layout& L, const refpages::Page& p, const std::vector<Placed>& rows, int scroll, int i) {
@@ -958,7 +1365,9 @@ Rect rowArea(const Layout& L, const refpages::Page& p, const std::vector<Placed>
     const refpages::Style st = row ? row->style : refpages::Style::Row;
     // their own: a tile, a chip, a frame's heading (its line); 3.0.11-beta.26 a row inside a frame: its band
     if (st == refpages::Style::Tile || st == refpages::Style::Chip || st == refpages::Style::Result ||
-        st == refpages::Style::More || (row && framed(*row)))  // 3.0.11-beta.28: a result's band its own box
+        st == refpages::Style::More || st == refpages::Style::Tab || st == refpages::Style::Tool ||
+        st == refpages::Style::Step || st == refpages::Style::Button ||
+        (row && framed(*row)))  // 3.0.11-beta.28: a result's band its own box; 3.0.11-beta.29 the world map's
         return pixelsOf(L, panel::Box{float(r.x), float(L.bodyY + r.y - scroll), float(r.w), float(r.h)});
     const float band = (r.in ? 8 : 6) * s;
     return pixelsOf(L,
@@ -1132,6 +1541,41 @@ std::vector<Words> words(const Layout& L, const refpages::Page& p, const std::ve
                 out.push_back(tip);
                 break;
             }
+            case refpages::Style::Tab: {  // 3.0.11-beta.29: the world map's bar
+                const bool chip = row.link.go == refpages::Go::None;
+                const float tx = x + (chip ? 27 * s : 38 * s);
+                out.push_back(Words{panel::Box{tx, y, x + w - tx - 8 * s, h}, row.left,
+                                    chip ? kLiveDot : row.gold ? kAccent2 : kText, 13.5f * s, true, Align::Left});
+                break;
+            }
+            case refpages::Style::Tool:
+                break;
+            case refpages::Style::Caption:
+                out.push_back(Words{panel::Box{x, y, w, h}, row.left, kText, 16 * s, true, Align::Left});
+                break;
+            case refpages::Style::Warn: {
+                Words warn{panel::Box{x + 34 * s, y + 11 * s, w - 46 * s, h - 22 * s}, row.left, kWarnWords, 13 * s,
+                           false, Align::Left};
+                warn.wrap = true;
+                out.push_back(warn);
+                break;
+            }
+            case refpages::Style::Step:
+                out.push_back(Words{panel::Box{x + 3 * s, y, 22 * s, h}, row.right, row.tone > 0 ? kDark : kText,
+                                    12 * s, true, Align::Center});
+                out.push_back(Words{panel::Box{x + 36 * s, y + 4 * s, w - 40 * s, 19 * s}, row.left, kText, 14 * s,
+                                    true, Align::Left});
+                out.push_back(Words{panel::Box{x + 36 * s, y + 23 * s, w - 40 * s, 16 * s}, row.sub, kMuted,
+                                    12.5f * s, false, Align::Left});
+                break;
+            case refpages::Style::Legend:
+                out.push_back(Words{panel::Box{x + 36 * s, y, w - 36 * s, h}, row.left, kMuted, 12.5f * s, false,
+                                    Align::Left});
+                break;
+            case refpages::Style::Button:
+                out.push_back(Words{panel::Box{x, y, w, h}, row.left, row.gold ? kAccent2 : kText, 14 * s, true,
+                                    Align::Center});
+                break;
             case refpages::Style::Tile: {  // its icon, its name, its count at the right, what it holds under them
                 const float countW = row.right.empty() ? 0 : std::ceil(L.measure(row.right, 13 * s, true)) + 2;
                 const float tx = x + 16 * s + 21 * s + 10 * s;
@@ -1209,26 +1653,8 @@ std::vector<Words> words(const Layout& L, const refpages::Page& p, const std::ve
                                     Align::Left});
                 break;
             }
-            case refpages::Style::World:  // the players' numbers in their badges
-                if (look.world.sheet && !look.world.marks.empty()) {  // 3.0.11-beta.19: the monster's numbers
-                    const worldmap::Fit f = worldmap::fit(look.world.sheet->w, look.world.sheet->h, int(w), int(h));
-                    for (const auto& [map, n] : look.world.marks) {
-                        const worldmap::Tile* tile = worldmap::tileOf(*look.world.sheet, map);
-                        if (!tile) continue;
-                        const panel::Box tb = tileBox(*tile, f, float(int(x)), float(int(y)));
-                        const panel::Box badge{tb.x + tb.w / 2 - 11 * s, tb.y + tb.h / 2 - 9 * s, 22 * s, 18 * s};
-                        out.push_back(Words{badge, std::to_string(n), kGold, 10.5f * s, true, Align::Center});
-                    }
-                } else if (look.world.sheet && look.world.players) {
-                    const worldmap::Fit f = worldmap::fit(look.world.sheet->w, look.world.sheet->h, int(w), int(h));
-                    for (const worldmap::Tile& tile : look.world.sheet->world) {
-                        const auto n = look.world.players->find(tile.map);
-                        if (n == look.world.players->end() || n->second <= 0) continue;
-                        const panel::Box tb = tileBox(tile, f, float(int(x)), float(int(y)));
-                        out.push_back(Words{panel::Box{tb.x + tb.w - 11 * s, tb.y - 7 * s, 18 * s, 18 * s},
-                                            std::to_string(n->second), kText, 11 * s, true, Align::Center});
-                    }
-                }
+            case refpages::Style::World:  // 3.0.11-beta.29: the words over the map (overItems)
+                worldWords(out, L, look.world, panel::Box{x, y, w, h});
                 break;
             case refpages::Style::Row: {
                 const float indent = !row.icon.empty() ? float(iconSide(L)) + 6 * s : row.dot ? 16 * s : 0;

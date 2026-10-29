@@ -512,6 +512,11 @@ enum class Text : uint16_t {
     // NPC's kind, nothing found
     RefFoundAegis, RefFoundMore, RefOftenFirst, RefNearFirst, RefOtherName, RefServiceName, RefShopsN, RefDropsFrom,
     RefFromMobsN, RefMapsN, RefKindNpc, RefNothingFor, RefNothingHint,
+    // 3.0.11-beta.29: the concept's world map (v19_route) - the players now, the way's panel, the marks' legend, the
+    // most players, the labels on the map, its keys
+    RefOnline, RefRouteTo, RefRouteShort, RefRouteFromAt, RefRouteWarn, RefFollowOn, RefFollowOff, RefReset,
+    RefLegendRoute, RefLegendJump, RefLegendPlayers, RefTopPlayers, RefToDungeon, RefHereLabel, RefKeysWorld,
+    RefMoreN,  // 3.0.11-beta.29: the rest of a panel's list (on the map, on the minimap)
     Count
 };
 

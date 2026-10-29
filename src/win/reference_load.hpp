@@ -23,7 +23,9 @@ std::shared_ptr<const reflive::Live> live();
 // minimaps put on it, made on a thread of its own at the first ask (and again when the sheet changes); null until then
 struct World {
     worldmap::Sheet sheet;
-    std::vector<uint32_t> argb;  // sheet.w x sheet.h
+    // 3.0.11-beta.29: the maps' pictures at `detail` times the sheet's size (the world map zoomed in: sharp)
+    static constexpr int detail = 2;
+    std::vector<uint32_t> argb;  // sheet.w * detail x sheet.h * detail
 };
 std::shared_ptr<const World> world();
 

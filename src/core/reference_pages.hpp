@@ -22,8 +22,9 @@ namespace uagfx::refpages {
 // Kafra (again: no more); World (3.0.11-beta.11): the world map - id 0 the world, 1 the dungeons; Quests, Quest
 // (3.0.11-beta.16): the site's quests by kinds, one quest (its place in the index)
 // Fold (3.0.11-beta.17): a card's section folded or unfolded by the player (id: its Part) - in every card alike;
-// Star (3.0.11-beta.18): the card in «Обране» or out of it
-enum class Go : uint8_t { None, Mob, Item, Map, Shop, Section, Expand, Follow, World, Quests, Quest, Fold, Star };
+// Star (3.0.11-beta.18): the card in «Обране» or out of it; Zoom (3.0.11-beta.29): the world map's zoom (the window's)
+// - id -1 out, 0 the whole map, 1 in
+enum class Go : uint8_t { None, Mob, Item, Map, Shop, Section, Expand, Follow, World, Quests, Quest, Fold, Star, Zoom };
 struct Link {
     Go go = Go::None;
     int id = 0;       // a monster's, an item's, a shop's (its place in the index) or a section's
@@ -39,8 +40,14 @@ struct Link {
 // 3.0.11-beta.28, the concept's search results (v21_search): Result - one found (`icon`, `left` its name, `sub` its
 // line, `right` its kind, `marks` the query in them); Group - their kind's capitals and count (`right` a note at its
 // right); More - «ще N ›» that opens the group; Empty - nothing found (`left` its line, `sub` what to try)
+// 3.0.11-beta.29, the concept's world map (v19_route): Tab - its bar's tab (`icon`, `gold` the page's) or its chip (no
+// link: `dot`); Tool - its zoom's button (`icon`); Caption - the panel's title; Warn - a warning's box (`left`
+// wrapped); Step - a way's step (`right` its number, `left` where to, `sub` how, `tone` 1 paid); Legend - what a mark
+// on the map means (`icon` "mark:route", "mark:jump", "mark:players", "mark:here"); Button - the panel's (`gold` the
+// main one)
 enum class Style : uint8_t {
-    Title, Sub, Heading, Row, Note, Tile, World, Portrait, Text, Search, Hint, Block, Chip, Result, Group, More, Empty
+    Title, Sub, Heading, Row, Note, Tile, World, Portrait, Text, Search, Hint, Block, Chip, Result, Group, More, Empty,
+    Tab, Tool, Caption, Warn, Step, Legend, Button
 };
 using Marks = std::vector<std::pair<uint16_t, uint16_t>>;  // byte ranges [from, to) of the words
 struct Row {
@@ -136,10 +143,39 @@ Page shop(const refindex::Index& ix, settings::Lang l, int index);
 // 3.0.11-beta.16: the site's quests by kinds, a quest's card (who gives it, what it takes, its steps, its reward)
 Page quests(const refindex::Index& ix, settings::Lang l);
 Page quest(const refindex::Index& ix, settings::Lang l, int index);
-// 3.0.11-beta.11: the world map (its picture row, the tile under the pointer told under it) and the dungeons by groups;
-// `marks` (3.0.11-beta.19): "mob:<id>" - the monster's maps marked on it with its numbers there, its dungeons under it;
-// "item:<id>" (3.0.11-beta.20) - the maps of the monsters dropping it, how many of them
+// 3.0.11-beta.11: the world map (its picture row) and the dungeons by groups; `marks` (3.0.11-beta.19): "mob:<id>" -
+// the monster's maps marked on it with its numbers there, its dungeons apart; "item:<id>" (3.0.11-beta.20) - the
+// maps of the monsters dropping it, how many of them; 3.0.11-beta.29 the concept's v19_route: its bar (the tabs, the
+// players now, the zoom), the map, a panel at its right - "to:<code>" (":w" on foot, ":k" paying) the way there
 Page world(const refindex::Index& ix, settings::Lang l, const Context& c, const std::string& marks = "");
+// 3.0.11-beta.29: a way's move on the world map - from a map to the next; `jump` a teleport (Kafra's, an NPC's - a
+// dashed arc; `label` its words)
+struct Hop {
+    std::string from, to;
+    bool jump = false;
+    std::string label;
+};
+// A world map's target in its marks ("to:<code>"; `variant` -1 the better way, 0 on foot, 1 paying)
+bool worldTarget(const std::string& marks, std::string& code, int& variant);
+// The way chosen there from the player's place (`variant` -1: the better - set to the one taken)
+refroute::Route worldRoute(const refindex::Index& ix, const Context& c, const std::string& code, int& variant);
+std::vector<Hop> worldHops(const refindex::Index& ix, settings::Lang l, const refroute::Route& r);
+// A map's card on the world map under the pointer: its name, its code and monsters' kinds ("" none to say), the players
+// there now (none: no third line)
+std::vector<std::string> worldTip(const refindex::Index& ix, settings::Lang l, const std::string& map,
+                                  const Context& c);
+// The towns' names written on their tiles (code, name)
+std::vector<std::pair<std::string, std::string>> worldLabels(const refindex::Index& ix);
+// What the world map shows of a page's way (its target's, else the way followed on the minimap): its moves, its end,
+// the end's pin's words (a dungeon's «… → підземелля»), the player's words («Ви тут · …»)
+struct WorldWay {
+    std::vector<Hop> hops;
+    std::string target, targetLabel, hereLabel;
+};
+WorldWay worldWayOf(const refindex::Index& ix, settings::Lang l, const Context& c, const std::string& marks);
+// The part of the sheet a way and the maps marked take (false: none on the sheet) - the view zoomed on it
+bool worldFocus(const worldmap::Sheet& sheet, const WorldWay& way, const std::map<std::string, int>& marks, float& l,
+                float& t, float& r, float& b);
 // The maps a world map's `marks` names, with the numbers to show on them
 std::map<std::string, int> worldMarks(const refindex::Index& ix, const std::string& marks);
 Page dungeons(const refindex::Index& ix, settings::Lang l, const Context& c);

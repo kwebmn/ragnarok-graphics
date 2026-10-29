@@ -52,16 +52,23 @@ struct Under {
     int row = -1;   // Part::Row: a row that leads somewhere; Part::Tile: the world map's row
     int tile = -1;  // 3.0.11-beta.11: Part::Tile - the world map's tile (worldmap::Sheet::world)
 };
-// 3.0.11-beta.11: the world map's row - its picture and what goes over it
+// 3.0.11-beta.11: the world map's row - its picture and what goes over it; 3.0.11-beta.29 the concept's v19_route: the
+// view zoomed and moved, the players' green pills, the towns' names, «Ви тут», the way in gold with its teleports'
+// dashed arcs, its end's pin, the card of the map under the pointer
 struct WorldLook {
-    const panel::Picture* picture = nullptr;  // the tiles fitted into the row (its size; win/reference_window)
+    const panel::Picture* picture = nullptr;  // the sheet at the view in the row (its size; win/reference_window)
     const worldmap::Sheet* sheet = nullptr;
     std::string here;
     float hereX = -1, hereY = -1;              // the player on the sheet (-1 not known)
-    std::vector<std::string> route;           // the followed way's maps, from here on
+    std::vector<refpages::Hop> hops;          // 3.0.11-beta.29: the way shown, its moves from here on
+    std::string target;                       // its end (off the sheet - a dungeon: the pin on its last map there)
     const std::map<std::string, int>* players = nullptr;
     std::string hover;                        // the tile under the pointer
     std::map<std::string, int> marks;         // 3.0.11-beta.19: maps marked (a monster's) with their numbers
+    float zoom = 1, cx = -1, cy = -1;          // 3.0.11-beta.29: the view (worldmap::view)
+    std::vector<std::pair<std::string, std::string>> labels;  // the towns' names on their tiles (refpages)
+    std::vector<std::string> tip;             // the card of the map under the pointer (refpages::worldTip)
+    std::string hereLabel, targetLabel;       // «Ви тут · …»; the pin's («Glast Heim → підземелля»), "" none
 };
 // 3.0.11-beta.26: the words around the page - the header's and the bottom's
 enum class Live : uint8_t { None, Fresh, Off };  // the site's live data: not asked for, fresh, no link
@@ -90,11 +97,12 @@ struct Chrome {
     bool narrow = false;
 };
 Chrome chrome(const Layout& L, const refpages::Page& p, const Texts& t);
-// What is under a point of the window (its own pixels); `sheet`: the world map's tiles under the pointer
+// What is under a point of the window (its own pixels); `world`: the world map's tiles under the pointer (at its view)
 Under under(const Layout& L, const refpages::Page& p, const std::vector<Placed>& rows, int scroll, const Chrome& c,
-            float x, float y, const worldmap::Sheet* sheet = nullptr);
-// The world map's fit in its row (the row's own pixels)
+            float x, float y, const WorldLook* world = nullptr);
+// The world map's fit in its row (the row's own pixels); 3.0.11-beta.29: at a look's view
 worldmap::Fit worldFit(const worldmap::Sheet& sheet, const Placed& row);
+worldmap::Fit worldView(const WorldLook& w, const Placed& row);
 
 struct Look {
     Under hover;
@@ -129,8 +137,8 @@ Rect rowArea(const Layout& L, const refpages::Page& p, const std::vector<Placed>
 // on the world map's row `row` is drawn (empty: the map not on the sheet, the row not shown whole): the world map's
 // pointer moved to another map, its page made again, only what changed is painted again
 bool sameRow(const refpages::Row& a, const refpages::Row& b);
-Rect worldArea(const Layout& L, const std::vector<Placed>& rows, int scroll, int row, const worldmap::Sheet& sheet,
-               const std::string& map);
+// 3.0.11-beta.29: of the look's map under the pointer - its frame and its card (empty: none, the row not shown)
+Rect worldArea(const Layout& L, const std::vector<Placed>& rows, int scroll, int row, const WorldLook& w);
 
 enum class Align : uint8_t { Left, Right, Center };
 struct Words {

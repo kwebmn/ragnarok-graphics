@@ -5076,10 +5076,9 @@ constexpr Entry kTexts[] = {
      "Карта світу приходить з uaro.kiev.ua під час запуску гри - її ще немає.",
      "Карта мира приходит с uaro.kiev.ua при запуске игры - её ещё нет."},
     {Text::RefWorldHelp,
-     "Your map in gold, the way followed in blue, the number - players now; a click on a map opens its card.",
-     "Ваша карта - золотом, шлях, яким ведуть, - блакитним, число - гравці зараз; клацання по карті відкриває картку.",
-     "Ваша карта - золотом, путь, по которому ведут, - голубым, число - игроки сейчас; щелчок по карте открывает "
-     "карточку."},
+     "Point at a map - its name and players; a click opens its card. Drag to move it, the wheel zooms.",
+     "Наведіть на локацію - її назва й гравці; клацання відкриває її картку. Тягніть мишею, колесо - зум.",
+     "Наведите на локацию - её название и игроки; щелчок открывает её карточку. Тяните мышью, колесо - зум."},
     // 3.0.11-beta.12: the players' public MVP timers, the site's market (core/reference_live)
     {Text::RefTimers, "Players' timers", "Таймери гравців", "Таймеры игроков"},
     {Text::RefTimerSoon, "in {1}", "через {1}", "через {1}"},
@@ -5207,6 +5206,32 @@ constexpr Entry kTexts[] = {
      "The names are English, as in the game. Try a part of a name: «wing», «poring».",
      "Назви в довіднику англійською, як у грі. Спробуйте частину назви: «wing», «poring».",
      "Названия в справочнике английские, как в игре. Попробуйте часть названия: «wing», «poring»."},
+    // 3.0.11-beta.29: the concept's world map (v19_route)
+    {Text::RefOnline, "{1} online", "{1} онлайн", "{1} онлайн"},
+    {Text::RefRouteTo, "The way to {1}", "Шлях до {1}", "Путь до {1}"},
+    {Text::RefRouteShort, "The way", "Шлях", "Путь"},
+    {Text::RefRouteFromAt, "From: {1}", "Від: {1}", "От: {1}"},
+    {Text::RefRouteWarn,
+     "NPCs' moves with conditions, events and closed passages are not counted. Whether a move is open to you, the "
+     "game does not know.",
+     "Не враховано переходи через NPC з умовами, події й закриті проходи. "
+     "Чи доступний перехід саме вам — гра не знає.",
+     "Не учтены переходы через NPC с условиями, события и закрытые проходы. "
+     "Доступен ли переход именно вам — игра не знает."},
+    {Text::RefFollowOn, "✓ Lead on the minimap", "✓ Вести на міні-карті", "✓ Вести на мини-карте"},
+    {Text::RefFollowOff, "Stop leading", "Не вести", "Не вести"},
+    {Text::RefReset, "Reset", "Скинути", "Сбросить"},
+    {Text::RefLegendRoute, "the way from where you are", "шлях від вашої позиції", "путь от вашей позиции"},
+    {Text::RefLegendJump, "a teleport: Kafra or an NPC", "телепорт: Kafra чи NPC", "телепорт: Kafra или NPC"},
+    {Text::RefLegendPlayers, "players on the map now", "гравців на карті зараз", "игроков на карте сейчас"},
+    {Text::RefTopPlayers, "Most players now", "Найбільше гравців зараз", "Больше всего игроков сейчас"},
+    {Text::RefToDungeon, "{1} → dungeon", "{1} → підземелля", "{1} → подземелье"},
+    {Text::RefHereLabel, "You are here · {1}", "Ви тут · {1}", "Вы здесь · {1}"},
+    {Text::RefKeysWorld,
+     "Click — a map's card · drag — move · wheel — zoom · Esc close",
+     "Клік — картка · тягніть — зсув · колесо — зум · Esc закрити",
+     "Клик — карточка · тяните — сдвиг · колесо — зум · Esc закрыть"},
+    {Text::RefMoreN, "and {1} more", "і ще {1}", "и ещё {1}"},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

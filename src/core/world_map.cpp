@@ -61,31 +61,114 @@ Fit fit(int sheetW, int sheetH, int boxW, int boxH) {
     return f;
 }
 
+Fit view(int sheetW, int sheetH, int boxW, int boxH, float zoom, float cx, float cy) {
+    Fit f = fit(sheetW, sheetH, boxW, boxH);
+    if (f.s <= 0) return f;
+    f.s *= std::clamp(zoom, 1.0f, kMostZoom);
+    if (cx < 0 || cy < 0) {
+        cx = float(sheetW) / 2;
+        cy = float(sheetH) / 2;
+    }
+    const float w = float(sheetW) * f.s, h = float(sheetH) * f.s;
+    const float x = float(boxW) / 2 - cx * f.s, y = float(boxH) / 2 - cy * f.s;
+    f.x = w <= float(boxW) ? (float(boxW) - w) / 2 : std::clamp(x, float(boxW) - w, 0.0f);
+    f.y = h <= float(boxH) ? (float(boxH) - h) / 2 : std::clamp(y, float(boxH) - h, 0.0f);
+    return f;
+}
+
+void zoomAt(int sheetW, int sheetH, int boxW, int boxH, float& zoom, float& cx, float& cy, float px, float py,
+            float by) {
+    const Fit was = view(sheetW, sheetH, boxW, boxH, zoom, cx, cy);
+    if (was.s <= 0) return;
+    const float sx = (px - was.x) / was.s, sy = (py - was.y) / was.s;  // the sheet's point under the pointer
+    zoom = std::clamp(zoom * by, 1.0f, kMostZoom);
+    const float s = fit(sheetW, sheetH, boxW, boxH).s * zoom;
+    cx = sx + (float(boxW) / 2 - px) / s;  // that point under the pointer again
+    cy = sy + (float(boxH) / 2 - py) / s;
+}
+
+void viewOn(int sheetW, int sheetH, int boxW, int boxH, float l, float t, float r, float b, float& zoom, float& cx,
+            float& cy) {
+    const float base = fit(sheetW, sheetH, boxW, boxH).s;
+    const float w = std::max(r - l, 1.0f) * 1.3f, h = std::max(b - t, 1.0f) * 1.3f;  // a margin round it
+    zoom = base > 0 ? std::clamp(std::min(float(boxW) / (w * base), float(boxH) / (h * base)), 1.0f, kMostZoom) : 1;
+    cx = (l + r) / 2;
+    cy = (t + b) / 2;
+}
+
 void scaled(panel::Picture& out, const std::vector<uint32_t>& sheet, int sheetW, int sheetH, int boxW, int boxH,
             const Fit& f) {
     out.width = std::max(0, boxW);
     out.height = std::max(0, boxH);
     out.px.assign(size_t(out.width) * size_t(out.height), kGround);
-    if (f.s <= 0 || sheet.size() < size_t(sheetW) * size_t(sheetH)) return;
+    if (f.s <= 0 || sheetW <= 0 || sheetH <= 0 || sheet.size() < size_t(sheetW) * size_t(sheetH)) return;
+    if (f.s > 1) {  // 3.0.11-beta.29: zoomed in - each pixel between its four nearest of the sheet
+        // each column's two sheet pixels and their weight once (every row alike); off the sheet: the ground
+        struct Pair {
+            int a, b;
+            uint32_t w;  // of b, in 256ths
+        };
+        const auto pairOf = [&](int i, float origin, int size, Pair& p) {
+            float v = (float(i) + 0.5f - origin) / f.s - 0.5f;
+            if (v < -0.5f || v > float(size) - 0.5f) return false;
+            v = std::clamp(v, 0.0f, float(size - 1));  // the edges' own colour to the very edge
+            p.a = int(v);
+            p.b = std::min(p.a + 1, size - 1);
+            p.w = uint32_t((v - float(p.a)) * 256);
+            return true;
+        };
+        std::vector<Pair> cols(size_t(out.width));
+        std::vector<uint8_t> on(size_t(out.width));
+        for (int x = 0; x < out.width; ++x) on[size_t(x)] = pairOf(x, f.x, sheetW, cols[size_t(x)]);
+        // two channels at once (red and blue, then green): 255 x 256 fits each one's 16 bits
+        const auto mix = [](uint32_t p, uint32_t q, uint32_t w) {
+            const uint32_t rb = (((p & 0xFF00FFu) * (256 - w) + (q & 0xFF00FFu) * w) >> 8) & 0xFF00FFu;
+            const uint32_t g = (((p & 0x00FF00u) * (256 - w) + (q & 0x00FF00u) * w) >> 8) & 0x00FF00u;
+            return rb | g;
+        };
+        for (int y = 0; y < out.height; ++y) {
+            Pair row{};
+            if (!pairOf(y, f.y, sheetH, row)) continue;
+            const uint32_t* top = sheet.data() + size_t(row.a) * size_t(sheetW);
+            const uint32_t* low = sheet.data() + size_t(row.b) * size_t(sheetW);
+            uint32_t* dst = out.px.data() + size_t(y) * size_t(out.width);
+            for (int x = 0; x < out.width; ++x) {
+                if (!on[size_t(x)]) continue;
+                const Pair& c = cols[size_t(x)];
+                dst[x] = 0xFF000000u | mix(mix(top[c.a], top[c.b], c.w), mix(low[c.a], low[c.b], c.w), row.w);
+            }
+        }
+        return;
+    }
+    // the sheet's pixels under each column and row once (a box's average: the tiles' small things kept smooth)
+    const auto spanOf = [&](int i, float origin, int size, int& from, int& to) {
+        const float v0 = (float(i) - origin) / f.s, v1 = (float(i) + 1 - origin) / f.s;
+        if (v1 <= 0 || v0 >= float(size)) return false;
+        from = std::clamp(int(v0), 0, size - 1);
+        to = std::clamp(int(std::ceil(v1)), from + 1, size);
+        return true;
+    };
+    std::vector<int> ax(size_t(out.width)), bx(size_t(out.width));
+    std::vector<uint8_t> on(size_t(out.width));
+    for (int x = 0; x < out.width; ++x) on[size_t(x)] = spanOf(x, f.x, sheetW, ax[size_t(x)], bx[size_t(x)]);
     for (int y = 0; y < out.height; ++y) {
-        const float sy0 = (float(y) - f.y) / f.s, sy1 = (float(y) + 1 - f.y) / f.s;
-        if (sy1 <= 0 || sy0 >= float(sheetH)) continue;
+        int ay = 0, by = 0;
+        if (!spanOf(y, f.y, sheetH, ay, by)) continue;
+        uint32_t* dst = out.px.data() + size_t(y) * size_t(out.width);
         for (int x = 0; x < out.width; ++x) {
-            const float sx0 = (float(x) - f.x) / f.s, sx1 = (float(x) + 1 - f.x) / f.s;
-            if (sx1 <= 0 || sx0 >= float(sheetW)) continue;
-            // the sheet's pixels under this one (a box's average: the tiles' small things kept smooth)
-            const int ax = std::clamp(int(sx0), 0, sheetW - 1), bx = std::clamp(int(std::ceil(sx1)), ax + 1, sheetW);
-            const int ay = std::clamp(int(sy0), 0, sheetH - 1), by = std::clamp(int(std::ceil(sy1)), ay + 1, sheetH);
+            if (!on[size_t(x)]) continue;
             uint32_t r = 0, g = 0, b = 0, n = 0;
-            for (int py = ay; py < by; ++py)
-                for (int px = ax; px < bx; ++px) {
-                    const uint32_t c = sheet[size_t(py) * size_t(sheetW) + size_t(px)];
+            for (int py = ay; py < by; ++py) {
+                const uint32_t* src = sheet.data() + size_t(py) * size_t(sheetW);
+                for (int px = ax[size_t(x)]; px < bx[size_t(x)]; ++px) {
+                    const uint32_t c = src[px];
                     r += (c >> 16) & 0xFF;
                     g += (c >> 8) & 0xFF;
                     b += c & 0xFF;
                     ++n;
                 }
-            out.px[size_t(y) * size_t(out.width) + size_t(x)] = 0xFF000000 | (r / n) << 16 | (g / n) << 8 | (b / n);
+            }
+            dst[x] = 0xFF000000 | (r / n) << 16 | (g / n) << 8 | (b / n);
         }
     }
 }

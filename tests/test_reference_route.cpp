@@ -1,5 +1,6 @@
 // 3.0.11-beta.8: the routes of «Довідник» - the maps' walkable parts (core/walk_grid) and the way over the pack's moves
 // on them (core/reference_route), and «Як дістатися» in a map's card.
+#include <algorithm>
 #include <cmath>
 #include <memory>
 #include <string>
@@ -8,8 +9,10 @@
 #include "core/reference_live.hpp"
 #include "core/reference_pages.hpp"
 #include "core/reference_route.hpp"
+#include "core/reference_window.hpp"
 #include "core/route_follow.hpp"
 #include "core/walk_grid.hpp"
+#include "core/world_map.hpp"
 #include "test.hpp"
 
 using namespace uagfx;
@@ -138,13 +141,15 @@ TEST(reference_pages_map_card_says_how_to_get_there) {
     CHECK_EQ(cave.rows[at].right, std::string("з town"));
     CHECK_EQ(cave.rows[at + 1].left, std::string("Пішки"));
     CHECK_EQ(cave.rows[at + 1].right, std::string("переходів: 4"));
+    // 3.0.11-beta.29: the way on the world map (the concept's v19_route)
+    CHECK(cave.rows[at + 2].link.go == refpages::Go::World && cave.rows[at + 2].link.map == "to:cave");
     // 3.0.11-beta.26: its steps a section of their own after the main blocks
-    CHECK(cave.rows[at + 2].style == refpages::Style::Heading && cave.rows[at + 2].left == "Кроки · Пішки");
-    CHECK(cave.rows[at + 2].fold == refpages::Route1 && cave.rows[at + 2].right == "переходів: 4");
-    CHECK_EQ(cave.rows[at + 3].left, std::string("1. → field"));
-    CHECK_EQ(cave.rows[at + 3].right, std::string("вихід 1, 1"));
-    CHECK(cave.rows[at + 3].link.go == refpages::Go::Map && cave.rows[at + 3].link.map == "field");
-    CHECK_EQ(cave.rows[at + 5].right, std::string("перехід 1, 8"));  // the stairs
+    CHECK(cave.rows[at + 3].style == refpages::Style::Heading && cave.rows[at + 3].left == "Кроки · Пішки");
+    CHECK(cave.rows[at + 3].fold == refpages::Route1 && cave.rows[at + 3].right == "переходів: 4");
+    CHECK_EQ(cave.rows[at + 4].left, std::string("1. → field"));
+    CHECK_EQ(cave.rows[at + 4].right, std::string("вихід 1, 1"));
+    CHECK(cave.rows[at + 4].link.go == refpages::Go::Map && cave.rows[at + 4].link.map == "field");
+    CHECK_EQ(cave.rows[at + 6].right, std::string("перехід 1, 8"));  // the stairs
     const refpages::Page isle = refpages::map(*ix, Lang::Uk, "isle", ctx("town"));
     bool kafra = false, walk = false;
     for (const refpages::Row& r : isle.rows) {
@@ -273,4 +278,98 @@ TEST(reference_route_how_far_each_map_is) {
     CHECK_EQ(far.at("town").moves, 0);
     CHECK(refroute::movesFrom(*ix, "nowhere").empty());
     CHECK_EQ(refroute::movesFrom(*ix, "tower", 8, 3).at("cave").moves, 1);  // the upper floor
+}
+
+// 3.0.11-beta.29, the concept's v19_route: the world map's way to a map - the panel (the ways to choose, the warning,
+// the steps, the buttons), the moves on the map (a teleport's arc and its price), the pin of a target off the sheet
+TEST(reference_world_way) {
+    const auto ix = index();
+    worldmap::Sheet sh;
+    CHECK(worldmap::parse(R"({"W":100,"H":60,"world":[{"id":"town","l":10,"t":10,"w":20,"h":20},
+        {"id":"field","l":40,"t":10,"w":20,"h":20},{"id":"isle","l":70,"t":30,"w":20,"h":20}],"dungeon":[]})", sh));
+    refpages::Follow follow;
+    follow.can = true;
+    refpages::Context c = ctx("town", follow);
+    c.world = &sh;
+    std::string code;
+    int variant = 0;
+    CHECK(refpages::worldTarget("to:prt_fild08:k", code, variant) && code == "prt_fild08" && variant == 1);
+    CHECK(refpages::worldTarget("to:isle", code, variant) && code == "isle" && variant == -1);
+    CHECK(!refpages::worldTarget("mob:1002", code, variant));
+    const refpages::Page p = refpages::world(*ix, Lang::Uk, c, "to:tower");
+    CHECK_EQ(p.name, std::string("Шлях"));
+    size_t at = 0;
+    while (at < p.rows.size() && p.rows[at].style != refpages::Style::Caption) ++at;
+    CHECK(at < p.rows.size() && p.rows[at].left == "Шлях до tower" && p.rows[at + 1].left == "Від: town");
+    // on foot the one way there (picked); its warning, its steps, what the marks mean, the buttons
+    CHECK(p.rows[at + 2].left == "Пішки" && p.rows[at + 2].gold && p.rows[at + 2].link.map == "to:tower:w");
+    CHECK_EQ(p.rows[at + 2].right, std::string("переходів: 2"));
+    CHECK(p.rows[at + 3].style == refpages::Style::Warn);
+    CHECK(p.rows[at + 4].style == refpages::Style::Step && p.rows[at + 4].right == "1");
+    CHECK_EQ(p.rows[at + 4].left, std::string("field"));
+    CHECK(p.rows[at + 5].left == "tower" && p.rows[at + 5].sub == "вихід 8, 8" && p.rows[at + 5].tone == 0);
+    CHECK(p.rows.back().style == refpages::Style::Button && p.rows.back().link.go == refpages::Go::World);
+    const refpages::Row& lead = p.rows[p.rows.size() - 2];
+    CHECK(lead.style == refpages::Style::Button && lead.gold && lead.link.go == refpages::Go::Follow);
+    CHECK(lead.link.id == 0 && lead.link.map == "tower");
+    // to the isle Eden's officer leads elsewhere too (no way): by Kafra alone - its price, its step pink
+    // by Kafra: a teleport - its arc's words; the step pink
+    const refpages::Page k = refpages::world(*ix, Lang::Uk, c, "to:isle");
+    size_t kat = 0;
+    while (kat < k.rows.size() && k.rows[kat].style != refpages::Style::Caption) ++kat;
+    CHECK(k.rows[kat + 2].left == "Через Kafra" && k.rows[kat + 2].gold);
+    CHECK(k.rows[kat + 3].style == refpages::Style::Warn);
+    CHECK_EQ(k.rows[kat + 2].right, std::string("переходів: 1 · 1 200 z"));
+    const refpages::WorldWay kafra = refpages::worldWayOf(*ix, Lang::Uk, c, "to:isle:k");
+    CHECK(kafra.hops.size() == 1 && kafra.hops[0].jump && kafra.hops[0].label == "Kafra · 1 200 z");
+    CHECK(kafra.target == "isle" && kafra.targetLabel == "isle" && kafra.hereLabel == "Ви тут · town");
+    bool pink = false;
+    for (const refpages::Row& r : k.rows) pink = pink || (r.style == refpages::Style::Step && r.tone == 1);
+    CHECK(pink);
+    // the tower is off the sheet: its pin on the field (the last map of the way there), «… → підземелля»
+    const refpages::WorldWay tower = refpages::worldWayOf(*ix, Lang::Uk, c, "to:tower");
+    CHECK(tower.hops.size() == 2 && !tower.hops[0].jump && tower.hops[1].to == "tower");
+    CHECK_EQ(tower.targetLabel, std::string("tower → підземелля"));
+    float l = 0, t = 0, r = 0, b = 0;
+    CHECK(refpages::worldFocus(sh, tower, {}, l, t, r, b) && l == 10 && t == 10 && r == 60 && b == 30);
+    // a location's card leads to its way on the world map
+    const refpages::Page card = refpages::map(*ix, Lang::Uk, "isle", c);
+    CHECK(std::any_of(card.rows.begin(), card.rows.end(), [](const refpages::Row& row) {
+        return row.link.go == refpages::Go::World && row.link.map == "to:isle";
+    }));
+    // the window: the gold way, a teleport's words, the pin's words - inside the map, none under the pointer's card
+    const refwin::Layout L = refwin::layout(1920, 1080, 1.0f);
+    int total = 0;
+    const auto rows = refwin::place(L, k, total);
+    size_t map = 0;
+    while (k.rows[map].style != refpages::Style::World) ++map;
+    panel::Picture sheet;
+    sheet.width = rows[map].w;
+    sheet.height = rows[map].h;
+    sheet.px.assign(size_t(sheet.width) * size_t(sheet.height), 0xFF181B57u);
+    refwin::Look look;
+    look.world.picture = &sheet;
+    look.world.sheet = &sh;
+    look.world.here = "town";
+    look.world.hops = kafra.hops;
+    look.world.target = kafra.target;
+    look.world.targetLabel = "isle";
+    look.world.hereLabel = kafra.hereLabel;
+    look.world.hover = "field";
+    look.world.tip = {"field", "field · видів монстрів: 2"};
+    refwin::Texts texts;
+    const std::vector<refwin::Words> words = refwin::words(L, k, rows, 0, texts, look);
+    const panel::Box box{float(rows[map].x), float(L.bodyY + rows[map].y), float(rows[map].w), float(rows[map].h)};
+    bool price = false, here = false, tip = false;
+    for (const refwin::Words& w : words) {
+        price = price || w.text == "Kafra · 1 200 z";
+        here = here || w.text == "Ви тут · town";
+        tip = tip || w.text == "field · видів монстрів: 2";
+        if (w.text == "Kafra · 1 200 z" || w.text == "Ви тут · town")
+            CHECK(w.box.x >= box.x && w.box.y >= box.y && w.box.x + w.box.w <= box.x + box.w);
+    }
+    CHECK(price && here && tip);
+    panel::Picture pic;
+    refwin::paint(pic, L, k, rows, 0, total, look);
+    CHECK_EQ(pic.width, L.w);
 }

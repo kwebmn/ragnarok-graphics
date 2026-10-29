@@ -8,7 +8,9 @@
 namespace uagfx::uiicons {
 
 enum class Icon : uint8_t {
-    Search, Monster, Item, Location, Quest, Npc, Mvp, Pet, Craft, World, Tables, Back, External, Route, kCount
+    Search, Monster, Item, Location, Quest, Npc, Mvp, Pet, Craft, World, Tables, Back, External, Route,
+    Dungeon, Minus, Plus, Expand, Warn,  // 3.0.11-beta.29: the world map's
+    kCount
 };
 
 // The icon over a picture (inside its clip): its 24 x 24 drawing `size` pixels wide with its top left at (x, y), its
