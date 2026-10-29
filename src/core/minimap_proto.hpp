@@ -43,11 +43,23 @@ struct Mark {
     uint32_t rgb = 0;
     bool warp = false;
 };
+// 3.0.11-beta.9: the way followed (core/route_follow) - its next move's cell: a line from the player to it and a ring
+// on it; out of the view the line to the box's edge, a dot there
+struct Goal {
+    bool shown = false;
+    Cell cell;
+};
+constexpr uint32_t kRouteRgb = 0x5AC8FA;  // the way's line, ring and words
 // The panel's picture (premultiplied): the map's picture (ARGB as decoded, the whole map, rows north first; the game's
-// magenta see-through) through the view, a dark ground where it has none, the marks, the player's mark over them, the
-// band of the line and the list under the map (their words go over it by GDI)
+// magenta see-through) through the view, a dark ground where it has none, the marks, the way's line, the player's mark
+// over them, the band of the line and the list under the map (their words go over it by GDI)
 void paint(panel::Picture& out, const Geometry& g, const std::vector<uint32_t>& mapArgb, int mapW, int mapH,
-           const MapSize& map, const Cell& player, int cells, const std::vector<Mark>& marks = {});
+           const MapSize& map, const Cell& player, int cells, const std::vector<Mark>& marks = {},
+           const Goal& goal = {});
+// Where the line from the player to the goal ends in the box (the panel's pixels): the goal itself in the view
+// (true), else the point on the box's edge (an inset in) toward it (false)
+bool goalPoint(const Geometry& g, const MapSize& map, const Cell& player, int cells, const Cell& goal, float& x,
+               float& y);
 // The mark under a point of the panel (its pixels, the map's box): the nearest within its reach, -1 none
 int markAt(const Geometry& g, const MapSize& map, const Cell& player, int cells, const std::vector<Mark>& marks,
            float x, float y);

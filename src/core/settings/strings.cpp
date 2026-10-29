@@ -5058,6 +5058,12 @@ constexpr Entry kTexts[] = {
      "No way from here is known: the moves may be in scripts the reference does not read.",
      "Звідси шляху не знайдено: переходи можуть бути в скриптах, яких довідник не читає.",
      "Отсюда путь не найден: переходы могут быть в скриптах, которых справочник не читает."},
+    // 3.0.11-beta.9: the way followed on the minimap (core/route_follow)
+    {Text::RefRouteFollow, "on the minimap ›", "вести ›", "вести ›"},
+    {Text::RefRouteFollowing, "followed · stop ›", "веду · зупинити ›", "веду · остановить ›"},
+    {Text::MinimapRouteLeft, "{1} left", "ще {1}", "ещё {1}"},
+    {Text::MinimapRouteThere, "You are there", "Ви на місці", "Вы на месте"},
+    {Text::MinimapRouteNone, "No way from here", "Звідси шляху немає", "Отсюда пути нет"},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

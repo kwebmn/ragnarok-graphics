@@ -1,10 +1,13 @@
 // 3.0.11-beta.8: the routes of «Довідник» - the maps' walkable parts (core/walk_grid) and the way over the pack's moves
 // on them (core/reference_route), and «Як дістатися» in a map's card.
+#include <cmath>
 #include <memory>
 #include <string>
 
+#include "core/minimap_proto.hpp"
 #include "core/reference_pages.hpp"
 #include "core/reference_route.hpp"
+#include "core/route_follow.hpp"
 #include "core/walk_grid.hpp"
 #include "test.hpp"
 
@@ -145,4 +148,72 @@ TEST(reference_pages_map_card_says_how_to_get_there) {
     bool none = false;
     for (const refpages::Row& r : nowhere.rows) none = none || r.left.find("Звідси шляху не знайдено") == 0;
     CHECK(none);
+}
+
+// 3.0.11-beta.9: the way followed on the minimap (core/route_follow) and its line (core/minimap_proto)
+TEST(route_follow_made_again_wherever_the_player_goes) {
+    const auto ix = index();
+    routefollow::Follow f;
+    f.active = true;
+    f.target = "cave";
+    CHECK(routefollow::update(f, *ix, "town", 1, 1));
+    CHECK_EQ(f.route.steps.size(), size_t(4));
+    CHECK_EQ(routefollow::next(f, "town")->move.to, std::string("field"));
+    CHECK(!routefollow::update(f, *ix, "town", 2, 2));  // the same part, near: the same way
+    CHECK(routefollow::update(f, *ix, "field", 8, 8));   // a step on
+    CHECK_EQ(routefollow::next(f, "field")->move.to, std::string("tower"));
+    CHECK(routefollow::update(f, *ix, "tower", 1, 1));   // the lower floor: the stairs first
+    CHECK_EQ(routefollow::next(f, "tower")->move.to, std::string("tower"));
+    CHECK(routefollow::update(f, *ix, "tower", 8, 3));   // up the stairs: another part
+    CHECK_EQ(f.route.steps.size(), size_t(1));
+    CHECK(routefollow::update(f, *ix, "cave", 5, 5));    // there
+    CHECK(f.route.found && f.route.steps.empty());
+    CHECK(routefollow::next(f, "cave") == nullptr);
+    CHECK(!routefollow::update(f, *ix, "cave", 20, 20));  // no cells known there: by the distance alone
+    CHECK(routefollow::update(f, *ix, "cave", 61, 20));
+    routefollow::Follow off;
+    CHECK(!routefollow::update(off, *ix, "town", 1, 1));  // not followed: nothing made
+}
+
+TEST(minimap_goal_line_and_its_end) {
+    const minimap::Geometry g = minimap::geometry(1920, 1080, 1.0f);
+    const minimap::MapSize map{400, 400};
+    const minimap::Cell player{200, 200};
+    float x = 0, y = 0;
+    CHECK(minimap::goalPoint(g, map, player, 100, minimap::Cell{220, 200}, x, y));  // in the view: the cell itself
+    CHECK(x > float(g.size) / 2 + 20 && x < float(g.size) && std::fabs(y - float(g.size) / 2) < 2);
+    CHECK(!minimap::goalPoint(g, map, player, 100, minimap::Cell{390, 200}, x, y));  // east, out of it: the edge
+    CHECK(x > float(g.size) - 8 && x < float(g.size) && std::fabs(y - float(g.size) / 2) < 2);
+    CHECK(!minimap::goalPoint(g, map, player, 100, minimap::Cell{200, 10}, x, y));  // south: the bottom edge
+    CHECK(y > float(g.size) - 8 && std::fabs(x - float(g.size) / 2) < 2);
+    panel::Picture with, without;
+    const std::vector<uint32_t> none;
+    minimap::paint(without, g, none, 0, 0, map, player, 100);
+    minimap::paint(with, g, none, 0, 0, map, player, 100, {}, minimap::Goal{true, minimap::Cell{230, 200}});
+    const size_t mid = size_t(g.size / 2) * size_t(with.width) + size_t(g.size / 2 + g.size / 5);  // on the line
+    CHECK(with.px[mid] != without.px[mid]);
+    CHECK((with.px[mid] & 0xFF) > 0x80);  // the way's light blue over the dark ground (0x22 blue)
+    const size_t off = size_t(g.size / 4) * size_t(with.width) + size_t(g.size / 4);  // away from it
+    CHECK_EQ(with.px[off], without.px[off]);
+}
+
+TEST(reference_pages_route_rows_follow_the_way) {
+    const auto ix = index();
+    refpages::Follow f;
+    f.can = true;
+    const refpages::Page p = refpages::map(*ix, Lang::Uk, "cave", "town", 0, -1, -1, f);
+    const refpages::Row* walk = nullptr;
+    for (const refpages::Row& r : p.rows)
+        if (r.left == "Пішки") walk = &r;
+    CHECK(walk != nullptr);
+    CHECK_EQ(walk->right, std::string("переходів: 4 · вести ›"));
+    CHECK(walk->link.go == refpages::Go::Follow && walk->link.id == 0 && walk->link.map == "cave");
+    CHECK(!walk->gold);
+    f.map = "cave";
+    const refpages::Page q = refpages::map(*ix, Lang::Uk, "cave", "town", 0, -1, -1, f);
+    for (const refpages::Row& r : q.rows)
+        if (r.left == "Пішки") CHECK(r.gold && r.right == "переходів: 4 · веду · зупинити ›");
+    const refpages::Page none = refpages::map(*ix, Lang::Uk, "cave", "town");  // the new minimap off: no link
+    for (const refpages::Row& r : none.rows)
+        if (r.left == "Пішки") CHECK(r.link.go == refpages::Go::None && r.right == "переходів: 4");
 }

@@ -13,6 +13,7 @@
 #include "pad/win/game_window.hpp"
 #include "win/game_camera.hpp"
 #include "win/log.hpp"
+#include "win/minimap_proto.hpp"
 #include "win/picture_draw.hpp"
 #include "win/real_ddraw.hpp"
 #include "win/reference_load.hpp"
@@ -70,7 +71,10 @@ void makePage(State& s) {
     } else if (s.at.go != refpages::Go::None) {
         int x = -1, y = -1, w = 0, h = 0;  // 3.0.11-beta.8: the routes start from the part of the map one is in
         if (!readPlayerCell(x, y, w, h)) x = y = -1;
-        s.page = refpages::open(*s.index, l, s.at, s.here, s.opened, x, y);
+        refpages::Follow follow;  // 3.0.11-beta.9: «вести ›» with the new minimap on
+        follow.can = minimapproto::canFollow();
+        minimapproto::following(follow.map, follow.walk);
+        s.page = refpages::open(*s.index, l, s.at, s.here, s.opened, x, y, follow);
     } else if (!s.query.empty()) {
         s.page = refpages::found(*s.index, l, s.query);
     } else {
@@ -83,10 +87,24 @@ void makePage(State& s) {
     s.dirty = true;
 }
 
+void close(State& s);
+
 void go(State& s, const refpages::Link& to) {
     if (to.go == refpages::Go::Expand) {  // «усі N ›»: the section in full, in place
         s.opened |= 1u << unsigned(to.id);
         makePage(s);
+        return;
+    }
+    if (to.go == refpages::Go::Follow) {  // 3.0.11-beta.9: the way on the minimap - the window gives way to it
+        std::string target;
+        bool walk = true;
+        if (minimapproto::following(target, walk) && target == to.map && walk == (to.id == 0)) {
+            minimapproto::unfollow();
+            makePage(s);  // «вести ›» again
+        } else {
+            minimapproto::follow(to.map, to.id == 0);
+            close(s);
+        }
         return;
     }
     s.back.push_back(Entry{s.at, s.query, s.page.name, s.scroll, s.opened});
@@ -374,6 +392,13 @@ void openMap(const std::string& code) {
     if (!s.enabled || code.empty()) return;
     openWindow(s, refpages::Link{refpages::Go::Map, 0, code});
     LOG_INFO("reference: %s's card from the minimap's line", code.c_str());
+}
+
+void openMob(int id) {
+    State& s = state();
+    if (!s.enabled || id <= 0) return;
+    openWindow(s, refpages::Link{refpages::Go::Mob, id, ""});
+    LOG_INFO("reference: monster %d's card from the minimap's list", id);
 }
 
 }  // namespace uagfx::win::referencewin

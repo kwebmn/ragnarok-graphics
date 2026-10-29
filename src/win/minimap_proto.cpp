@@ -13,6 +13,7 @@
 #include "core/pack_source.hpp"
 #include "core/reference_index.hpp"
 #include "core/reference_pages.hpp"
+#include "core/route_follow.hpp"
 #include "core/settings/strings.hpp"
 #include "pad/win/game_window.hpp"
 #include "win/game_camera.hpp"
@@ -36,7 +37,10 @@ constexpr uint32_t kBossText = 0xF5C451;    // a boss's name
 struct Line {  // a monster under the map: its name, its count (a boss's respawn)
     std::wstring left, right;
     bool boss = false;
+    int mob = 0;         // 3.0.11-beta.9: its id - a click opens its card (0: «і ще N», the map's card)
+    bool route = false;  // 3.0.11-beta.9: the way's line (its colour; a click opens the target's card)
 };
+constexpr ULONGLONG kThereMs = 8000;  // 3.0.11-beta.9: «Ви на місці» shown so long, then the way ends
 
 struct State {
     bool on = false, shown = false, dirty = true, upload = true;
@@ -68,6 +72,10 @@ struct State {
     int hover = -1;
     std::map<std::string, std::string> mapNames;  // the client's data\mapnametable.txt
     bool namesRead = false;
+    // 3.0.11-beta.9: the way followed - its lines first under the map
+    routefollow::Follow follow;
+    ULONGLONG arrivedAt = 0;
+    std::vector<Line> routeLines;
 };
 
 State& state() {
@@ -150,16 +158,80 @@ void buildHints(State& s) {
         const bool boss = mob != s.index->mobs.end() && mob->second.boss;
         std::wstring right = std::to_wstring(m.count);
         if (boss && m.respawnMs >= kBossRespawnMs) right = utf8Wide(refpages::respawn(m.respawnMs, startup().lang));
-        s.lines.push_back(Line{utf8Wide((boss ? "\xE2\x98\x85 " : "") + name), right, boss});
+        s.lines.push_back(Line{utf8Wide((boss ? "\xE2\x98\x85 " : "") + name), right, boss, m.id});
     }
     if (room < h->mobs.size())
         s.lines.push_back(Line{utf8Wide(settings::fmt(settings::tr(startup().lang, settings::Text::MinimapMore),
                                                       {std::to_string(h->mobs.size() - room)})), L"", false});
 }
 
+// 3.0.11-beta.9: a map's short name for the way's line: the client's, else its code
+std::string shortTitle(State& s, const std::string& code) {
+    readNames(s);
+    const auto name = s.mapNames.find(code);
+    const std::string short_ = name == s.mapNames.end() ? "" : refindex::shortName(name->second);
+    return short_.empty() ? code : short_;
+}
+
+void buildRoute(State& s) {
+    s.routeLines.clear();
+    if (!s.follow.active) return;
+    const std::string to = shortTitle(s, s.follow.target);
+    if (s.map == s.follow.target) {
+        s.routeLines.push_back(Line{tr(settings::Text::MinimapRouteThere), L"", true, 0, true});
+        s.routeLines.push_back(Line{utf8Wide(to), L"", false, 0, true});
+        return;
+    }
+    const refroute::Step* step = routefollow::next(s.follow, s.map);
+    if (!step) {
+        s.routeLines.push_back(Line{tr(settings::Text::MinimapRouteNone), L"", false, 0, true});
+        s.routeLines.push_back(Line{utf8Wide("\xE2\x86\x92 " + to), L"", false, 0, true});
+        return;
+    }
+    const std::string left = settings::fmt(settings::tr(startup().lang, settings::Text::MinimapRouteLeft),
+                                           {std::to_string(s.follow.route.steps.size())});
+    s.routeLines.push_back(Line{utf8Wide("\xE2\x86\x92 " + shortTitle(s, step->move.to)), utf8Wide(left), false, 0,
+                                true});
+    s.routeLines.push_back(Line{utf8Wide(refpages::stepNote(*step, startup().lang)), L"", false, 0, true});
+}
+
+// The way followed now on this map: made again when the player went elsewhere; «Ви на місці» a while, then the end
+void followFrame(State& s) {
+    if (!s.follow.active || !s.index) return;
+    bool changed = routefollow::update(s.follow, *s.index, s.map, s.cellKnown ? s.cell.x : -1,
+                                       s.cellKnown ? s.cell.y : -1);
+    if (changed) {
+        const refroute::Step* step = routefollow::next(s.follow, s.map);
+        LOG_INFO("route: to %s from %s at %d, %d - %s", s.follow.target.c_str(), s.map.c_str(), s.cell.x, s.cell.y,
+                 step ? (std::to_string(s.follow.route.steps.size()) + " moves, the next to " + step->move.to + " at " +
+                         std::to_string(step->move.x) + ", " + std::to_string(step->move.y)).c_str()
+                      : s.map == s.follow.target ? "there" : "no way from here");
+    }
+    if (s.map == s.follow.target) {
+        const ULONGLONG now = GetTickCount64();
+        if (!s.arrivedAt) {
+            s.arrivedAt = now;
+            changed = true;
+        } else if (now - s.arrivedAt > kThereMs) {
+            LOG_INFO("route: there (%s) - the way ends", s.follow.target.c_str());
+            s.follow = routefollow::Follow{};
+            changed = true;
+        }
+    }
+    if (changed) {
+        buildRoute(s);
+        s.dirty = true;
+    }
+}
+
 void render(State& s) {
-    s.geometry = minimap::geometry(s.targetW, s.targetH, s.scale, int(s.lines.size()));
-    minimap::paint(s.picture, s.geometry, s.argb, s.picW, s.picH, s.size, s.cell, kCells, s.marks);
+    std::vector<Line> lines = s.routeLines;  // 3.0.11-beta.9: the way first, then the monsters
+    lines.insert(lines.end(), s.lines.begin(), s.lines.end());
+    s.geometry = minimap::geometry(s.targetW, s.targetH, s.scale, int(lines.size()));
+    minimap::Goal goal;
+    if (const refroute::Step* step = routefollow::next(s.follow, s.map); step && s.cellKnown)
+        goal = minimap::Goal{true, minimap::Cell{step->move.x, step->move.y}};
+    minimap::paint(s.picture, s.geometry, s.argb, s.picW, s.picH, s.size, s.cell, kCells, s.marks, goal);
     char text[96];
     if (s.cellKnown)
         std::snprintf(text, sizeof text, "%s  %d, %d", s.map.c_str(), s.cell.x, s.cell.y);
@@ -172,11 +244,12 @@ void render(State& s) {
                                    utf8Wide(hovered ? s.labels[size_t(s.hover)] : std::string(text)),
                                    hovered ? kBossText : panel::kText, 12.5f * sc, hovered, DT_CENTER}};
     const float split = (float(g.size) - 8 * sc) * 0.68f;
-    for (size_t i = 0; i < s.lines.size(); ++i) {  // the map's monsters: the name left, the count right
+    for (size_t i = 0; i < lines.size(); ++i) {  // the map's monsters: the name left, the count right
         const float y = float(g.size + g.textH) + float(i) * float(g.lineH);
-        const Line& l = s.lines[i];
+        const Line& l = lines[i];
+        const uint32_t colour = l.route ? (l.boss ? kBossText : minimap::kRouteRgb) : l.boss ? kBossText : panel::kText;
         words.push_back(Words{panel::Box{4 * sc, y, l.right.empty() ? float(g.size) - 8 * sc : split, float(g.lineH)},
-                              l.left, l.boss ? kBossText : panel::kText, 11.5f * sc, l.boss, DT_LEFT});
+                              l.left, colour, 11.5f * sc, l.boss, DT_LEFT});
         if (!l.right.empty())
             words.push_back(Words{panel::Box{4 * sc + split, y, float(g.size) - 8 * sc - split, float(g.lineH)},
                                   l.right, panel::kMuted, 11.5f * sc, false, DT_RIGHT});
@@ -284,11 +357,13 @@ void frame(HWND game, const Show& show, double k, int targetWidth, int targetHei
     const auto index = reference::index();
     if (!s.hintsMade || s.hintsMap != s.map || index != s.index || show.npcs != s.show.npcs ||
         show.warps != s.show.warps || show.mobs != s.show.mobs) {
+        if (index != s.index) s.follow.map.clear();  // 3.0.11-beta.9: the way made again over the new pack
         s.index = index;
         s.show = show;
         buildHints(s);
         s.dirty = true;
     }
+    followFrame(s);
     int cx = 0, cy = 0, hover = -1;  // the mark under the game's cursor names itself on the line
     if (!s.marks.empty() && readGameCursor(cx, cy))
         hover = minimap::markAt(s.geometry, s.size, s.cell, kCells, s.marks, float(cx) * float(k) - float(s.geometry.x),
@@ -333,11 +408,53 @@ bool mouse(HWND game, UINT m, LPARAM lp, LRESULT& result) {
     if (m == WM_LBUTTONDOWN && s.clicks++ == 0)  // the check of the prototype: the character did not walk
         LOG_INFO("minimap: a click on the new minimap kept from the game (the player at %d, %d on %s)", s.cell.x,
                  s.cell.y, s.map.c_str());
-    // 3.0.11-beta.7: the line with the map's name - its card in «Довідник» (when it is on)
-    if (m == WM_LBUTTONDOWN && ty >= float(s.geometry.y + s.geometry.size) &&
-        ty < float(s.geometry.y + s.geometry.size + s.geometry.textH))
+    // 3.0.11-beta.7: the line with the map's name - its card in «Довідник» (when it is on); 3.0.11-beta.9: the lines
+    // under it - the way's: the target's card (its «зупинити ›»), a monster's: its card, «і ще N»: the map's
+    const float listTop = float(s.geometry.y + s.geometry.size + s.geometry.textH);
+    if (m == WM_LBUTTONDOWN && ty >= float(s.geometry.y + s.geometry.size) && ty < listTop)
         referencewin::openMap(s.map);
+    if (m == WM_LBUTTONDOWN && ty >= listTop && s.geometry.lineH > 0) {
+        const size_t i = size_t((ty - listTop) / float(s.geometry.lineH));
+        if (i < s.routeLines.size()) {
+            referencewin::openMap(s.follow.target);
+        } else if (i - s.routeLines.size() < s.lines.size()) {
+            const Line& l = s.lines[i - s.routeLines.size()];
+            if (l.mob > 0) referencewin::openMob(l.mob);
+            else referencewin::openMap(s.map);
+        }
+    }
     result = 0;
+    return true;
+}
+
+bool canFollow() { return state().on; }
+
+void follow(const std::string& target, bool walk) {
+    State& s = state();
+    s.follow = routefollow::Follow{};
+    s.follow.active = !target.empty();
+    s.follow.target = target;
+    s.follow.walk = walk;
+    s.arrivedAt = 0;
+    LOG_INFO("route: the way to %s %s followed on the minimap", target.c_str(), walk ? "on foot" : "by Kafra");
+    followFrame(s);
+    s.dirty = true;
+}
+
+void unfollow() {
+    State& s = state();
+    if (!s.follow.active) return;
+    LOG_INFO("route: the way to %s no more followed", s.follow.target.c_str());
+    s.follow = routefollow::Follow{};
+    s.routeLines.clear();
+    s.dirty = true;
+}
+
+bool following(std::string& target, bool& walk) {
+    const State& s = state();
+    if (!s.follow.active) return false;
+    target = s.follow.target;
+    walk = s.follow.walk;
     return true;
 }
 

@@ -1,6 +1,8 @@
 #pragma once
 #include <windows.h>
 
+#include <string>
+
 #include "core/frame.hpp"
 
 namespace uagfx::gpu {
@@ -24,5 +26,12 @@ bool mouse(HWND game, UINT m, LPARAM lp, LRESULT& result);
 // 3.0.11-beta.4 (the owner: «на Ctrl+Tab ничего не происходит»): Ctrl+Tab while the prototype is on - its look goes
 // round as the game's own minimap's (opaque, see-through, hidden); true: the key is the prototype's, not the game's
 bool key(unsigned vk);
+// 3.0.11-beta.9: «вести ›» in a map's card (core/route_follow) - that way on the new minimap: a line to its next move,
+// two lines under the map (where to, how many moves left, where to take the move); made again wherever the player
+// goes; «Ви на місці» on the map, then it stops. canFollow: the new minimap on
+bool canFollow();
+void follow(const std::string& target, bool walk);
+void unfollow();
+bool following(std::string& target, bool& walk);  // false: none
 
 }  // namespace uagfx::win::minimapproto

@@ -74,7 +74,7 @@ void capped(Page& p, std::vector<Row> rows, Part part, unsigned opened, Lang l) 
 }
 
 // 3.0.11-beta.8: a move of a route - where to take it: a warp's cell, the NPC with its price
-std::string stepNote(const refroute::Step& st, Lang l) {
+std::string noteOf(const refroute::Step& st, Lang l) {
     const refindex::Move& m = st.move;
     const std::string cell = std::to_string(m.x) + ", " + std::to_string(m.y);
     std::string s = m.how == refindex::How::Warp
@@ -87,12 +87,18 @@ std::string stepNote(const refroute::Step& st, Lang l) {
 }
 
 void routeRows(const refindex::Index& ix, Lang l, Page& p, const refroute::Route& r, Text name, Part part,
-               unsigned opened) {
+               unsigned opened, const std::string& code, const Follow& follow) {
     std::string right = sayf(l, Text::RefRouteMoves, {std::to_string(r.steps.size())});
     if (r.zeny > 0) right += " · " + sayf(l, Text::RefZeny, {number(r.zeny, l)});
     if (r.priceUnknown) right += " · " + say(l, Text::RefRouteVaries);
     Row head;
     head.left = say(l, name);
+    if (follow.can) {  // 3.0.11-beta.9: this way on the minimap («вести ›»; followed: «веду · зупинити ›»)
+        const bool walk = name == Text::RefRouteWalk, followed = follow.map == code && follow.walk == walk;
+        right += " · " + say(l, followed ? Text::RefRouteFollowing : Text::RefRouteFollow);
+        head.link = Link{Go::Follow, walk ? 0 : 1, code};
+        head.gold = followed;
+    }
     head.right = right;
     head.dot = refindex::colorOf(name == Text::RefRouteWalk    ? refindex::NpcKind::Warp  // the minimap's colours
                                  : name == Text::RefRouteKafra ? refindex::NpcKind::Kafra
@@ -101,7 +107,7 @@ void routeRows(const refindex::Index& ix, Lang l, Page& p, const refroute::Route
     std::vector<Row> rows;
     for (size_t i = 0; i < r.steps.size(); ++i) {
         const refindex::Move& m = r.steps[i].move;
-        rows.push_back(linked(std::to_string(i + 1) + ". → " + refindex::mapTitle(ix, m.to), stepNote(r.steps[i], l),
+        rows.push_back(linked(std::to_string(i + 1) + ". → " + refindex::mapTitle(ix, m.to), noteOf(r.steps[i], l),
                               toMap(m.to)));
     }
     capped(p, std::move(rows), part, opened, l);
@@ -116,7 +122,7 @@ int conditions(const refroute::Route& r) {
 // «Як дістатися» from the player's map: on foot (free moves) and, when paying saves moves or a condition, by Kafra
 // (or an NPC); the concept's rule - both to choose, no walking for the player
 void route(const refindex::Index& ix, Lang l, Page& p, const std::string& here, int hx, int hy,
-           const std::string& code, unsigned opened) {
+           const std::string& code, unsigned opened, const Follow& follow) {
     if (!ix.graph) return;
     const refroute::Route walk = refroute::find(ix, here, hx, hy, code, true);
     const refroute::Route paid = refroute::find(ix, here, hx, hy, code, false);
@@ -128,8 +134,9 @@ void route(const refindex::Index& ix, Lang l, Page& p, const std::string& here, 
         p.rows.push_back(note(say(l, Text::RefRouteNone)));
         return;
     }
-    if (walk.found) routeRows(ix, l, p, walk, Text::RefRouteWalk, Route1, opened);
-    if (better) routeRows(ix, l, p, paid, paid.kafra ? Text::RefRouteKafra : Text::RefRouteNpc, Route2, opened);
+    if (walk.found) routeRows(ix, l, p, walk, Text::RefRouteWalk, Route1, opened, code, follow);
+    if (better)
+        routeRows(ix, l, p, paid, paid.kafra ? Text::RefRouteKafra : Text::RefRouteNpc, Route2, opened, code, follow);
     if ((walk.found && walk.conditional) || (better && paid.conditional))
         p.rows.push_back(note(say(l, Text::RefRouteConditionNote)));
 }
@@ -170,6 +177,8 @@ std::string respawn(int ms, Lang l) {
     if (all % 60 == 0) return sayf(l, Text::RefHours, {std::to_string(all / 60)});
     return sayf(l, Text::RefHoursMinutes, {std::to_string(all / 60), std::to_string(all % 60)});
 }
+
+std::string stepNote(const refroute::Step& step, Lang l) { return noteOf(step, l); }
 
 std::string elementName(int e, Lang l) {
     static const Text kNames[] = {Text::RefEle0, Text::RefEle1, Text::RefEle2, Text::RefEle3, Text::RefEle4,
@@ -562,7 +571,7 @@ Page item(const refindex::Index& ix, Lang l, int id, unsigned opened) {
 }
 
 Page map(const refindex::Index& ix, Lang l, const std::string& code, const std::string& here, unsigned opened, int hx,
-         int hy) {
+         int hy, const Follow& follow) {
     Page p;
     p.name = refindex::mapTitle(ix, code);
     const auto named = ix.mapNames.find(code);
@@ -586,7 +595,7 @@ Page map(const refindex::Index& ix, Lang l, const std::string& code, const std::
     }
     if (code == here) sub.left += (sub.left.empty() ? "" : " · ") + say(l, Text::RefYouHere);
     if (!sub.left.empty()) p.rows.push_back(sub);
-    if (!here.empty() && here != code) route(ix, l, p, here, hx, hy, code, opened);
+    if (!here.empty() && here != code) route(ix, l, p, here, hx, hy, code, opened, follow);
     if (it == ix.maps.end()) return p;
     const refindex::MapHints& h = it->second;
     if (!h.mobs.empty()) {
@@ -671,15 +680,16 @@ Page shop(const refindex::Index& ix, Lang l, int index) {
 }
 
 Page open(const refindex::Index& ix, Lang l, const Link& link, const std::string& here, unsigned opened, int hx,
-          int hy) {
+          int hy, const Follow& follow) {
     switch (link.go) {
         case Go::Mob: return mob(ix, l, link.id, here, opened);
         case Go::Item: return item(ix, l, link.id, opened);
-        case Go::Map: return map(ix, l, link.map, here, opened, hx, hy);
+        case Go::Map: return map(ix, l, link.map, here, opened, hx, hy, follow);
         case Go::Shop: return shop(ix, l, link.id);
         case Go::Section: return section(ix, l, link.id);
         case Go::None:
-        case Go::Expand: break;
+        case Go::Expand:
+        case Go::Follow: break;
     }
     return home(ix, l);
 }

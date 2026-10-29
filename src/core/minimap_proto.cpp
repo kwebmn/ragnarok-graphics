@@ -14,6 +14,33 @@ float markRadius(const Geometry& g, bool warp) {
     return std::max(warp ? 2.2f : 1.7f, float(g.size) / (warp ? 64 : 85));
 }
 
+// 3.0.11-beta.9: a smooth line `width` wide and a ring - each pixel's coverage by its distance (the map's box alone)
+void segment(panel::Picture& p, int box, float x0, float y0, float x1, float y1, float width, uint32_t rgb, float a) {
+    const float half = width / 2, dx = x1 - x0, dy = y1 - y0, len2 = dx * dx + dy * dy;
+    const int left = std::max(0, int(std::floor(std::min(x0, x1) - half - 1)));
+    const int right = std::min(box - 1, int(std::ceil(std::max(x0, x1) + half + 1)));
+    const int top = std::max(0, int(std::floor(std::min(y0, y1) - half - 1)));
+    const int bottom = std::min(box - 1, int(std::ceil(std::max(y0, y1) + half + 1)));
+    for (int y = top; y <= bottom; ++y)
+        for (int x = left; x <= right; ++x) {
+            const float px = float(x) + 0.5f - x0, py = float(y) + 0.5f - y0;
+            const float t = len2 > 0 ? std::clamp((px * dx + py * dy) / len2, 0.0f, 1.0f) : 0.0f;
+            const float ex = px - t * dx, ey = py - t * dy;
+            const float cover = std::clamp(half + 0.5f - std::sqrt(ex * ex + ey * ey), 0.0f, 1.0f);
+            if (cover > 0) panel::over(p.px[size_t(y) * size_t(p.width) + size_t(x)], rgb, cover * a);
+        }
+}
+
+void ring(panel::Picture& p, int box, float cx, float cy, float r, float width, uint32_t rgb, float a) {
+    const float reach = r + width;
+    for (int y = std::max(0, int(cy - reach - 1)); y <= std::min(box - 1, int(cy + reach + 1)); ++y)
+        for (int x = std::max(0, int(cx - reach - 1)); x <= std::min(box - 1, int(cx + reach + 1)); ++x) {
+            const float d = std::hypot(float(x) + 0.5f - cx, float(y) + 0.5f - cy);
+            const float cover = std::clamp(width / 2 + 0.5f - std::fabs(d - r), 0.0f, 1.0f);
+            if (cover > 0) panel::over(p.px[size_t(y) * size_t(p.width) + size_t(x)], rgb, cover * a);
+        }
+}
+
 }  // namespace
 
 bool cellOf(float worldX, float worldZ, int width, int height, int cellSize, Cell& out) {
@@ -59,8 +86,29 @@ void cellToPanel(const View& v, const MapSize&, const Cell& c, float& px, float&
     py = (v.top - (float(c.y) + 0.5f)) * v.cellPx;
 }
 
+bool goalPoint(const Geometry& g, const MapSize& map, const Cell& player, int cells, const Cell& goal, float& x,
+               float& y) {
+    const View v = view(map, player, cells, g.size);
+    float px = 0, py = 0;
+    cellToPanel(v, map, player, px, py);
+    cellToPanel(v, map, goal, x, y);
+    const float edge = float(g.size), inset = std::max(3.0f, edge / 40);
+    if (x >= 0 && y >= 0 && x < edge && y < edge) return true;
+    // the way out of the box from the player toward it: the nearest crossing of the box's sides, an inset in
+    float t = 1;
+    const float dx = x - px, dy = y - py;
+    if (dx > 0) t = std::min(t, (edge - inset - px) / dx);
+    if (dx < 0) t = std::min(t, (inset - px) / dx);
+    if (dy > 0) t = std::min(t, (edge - inset - py) / dy);
+    if (dy < 0) t = std::min(t, (inset - py) / dy);
+    t = std::max(0.0f, t);
+    x = px + dx * t;
+    y = py + dy * t;
+    return false;
+}
+
 void paint(panel::Picture& out, const Geometry& g, const std::vector<uint32_t>& argb, int imgW, int imgH,
-           const MapSize& map, const Cell& player, int cells, const std::vector<Mark>& marks) {
+           const MapSize& map, const Cell& player, int cells, const std::vector<Mark>& marks, const Goal& goal) {
     out.width = g.size;
     out.height = g.size + g.textH + g.listH;
     out.px.assign(size_t(out.width) * size_t(out.height), kBand);
@@ -89,6 +137,21 @@ void paint(panel::Picture& out, const Geometry& g, const std::vector<uint32_t>& 
         panel::circle(out, px, py, r + 1.0f, 0x000000, 0.8f);
         panel::circle(out, px, py, r, mk.warp ? kWarp : mk.rgb, 1.0f);
         if (mk.warp) panel::circle(out, px, py, r * 0.45f, 0xFFFFFF, 1.0f);
+    }
+    if (goal.shown) {  // 3.0.11-beta.9: the way's next move - a line from the player to it, dark under it
+        float gx = 0, gy = 0, sx = 0, sy = 0;
+        const bool there = goalPoint(g, map, player, cells, goal.cell, gx, gy);
+        cellToPanel(v, map, player, sx, sy);
+        const float w = std::max(1.5f, float(g.size) / 90), r = std::max(3.0f, float(g.size) / 30);
+        segment(out, g.size, sx, sy, gx, gy, w + 2, 0x000000, 0.55f);
+        segment(out, g.size, sx, sy, gx, gy, w, kRouteRgb, 1.0f);
+        if (there) {
+            ring(out, g.size, gx, gy, r, w + 2, 0x000000, 0.55f);
+            ring(out, g.size, gx, gy, r, w, kRouteRgb, 1.0f);
+        } else {
+            panel::circle(out, gx, gy, w * 1.6f + 1, 0x000000, 0.6f);
+            panel::circle(out, gx, gy, w * 1.6f, kRouteRgb, 1.0f);
+        }
     }
     if (g.textH + g.listH > 0)  // the map's box ends where the line starts (a mark at the edge never spills into it)
         std::fill(out.px.begin() + std::ptrdiff_t(g.size) * out.width, out.px.end(), kBand);

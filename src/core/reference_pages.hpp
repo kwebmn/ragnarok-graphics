@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "core/reference_index.hpp"
+#include "core/reference_route.hpp"
 #include "core/settings/strings.hpp"
 
 namespace uagfx::refpages {
@@ -13,7 +14,9 @@ namespace uagfx::refpages {
 // monster, an item, a map and a shop. A page is rows of words; each row may lead to another page. No Windows here:
 // win/reference_window lays the rows out and draws them.
 
-enum class Go : uint8_t { None, Mob, Item, Map, Shop, Section, Expand };  // Expand: a card's long section in full
+// Expand: a card's long section in full; Follow (3.0.11-beta.9): the way to `map` on the minimap - id 0 on foot, 1 by
+// Kafra (again: no more)
+enum class Go : uint8_t { None, Mob, Item, Map, Shop, Section, Expand, Follow };
 struct Link {
     Go go = Go::None;
     int id = 0;       // a monster's, an item's, a shop's (its place in the index) or a section's
@@ -42,6 +45,13 @@ enum Part : int {
 };
 constexpr size_t kFew = 5;
 
+// 3.0.11-beta.9: whether a way can be followed on the minimap (the new one on) and the one followed now
+struct Follow {
+    bool can = false;
+    std::string map;   // where the followed way leads ("" none)
+    bool walk = true;  // on foot (else by Kafra)
+};
+
 Page home(const refindex::Index& ix, settings::Lang l);
 Page found(const refindex::Index& ix, settings::Lang l, const std::string& query);
 Page section(const refindex::Index& ix, settings::Lang l, int id);
@@ -50,10 +60,10 @@ Page section(const refindex::Index& ix, settings::Lang l, int id);
 Page mob(const refindex::Index& ix, settings::Lang l, int id, const std::string& here, unsigned opened = 0);
 Page item(const refindex::Index& ix, settings::Lang l, int id, unsigned opened = 0);
 Page map(const refindex::Index& ix, settings::Lang l, const std::string& code, const std::string& here,
-         unsigned opened = 0, int hx = -1, int hy = -1);
+         unsigned opened = 0, int hx = -1, int hy = -1, const Follow& follow = {});
 Page shop(const refindex::Index& ix, settings::Lang l, int index);
 Page open(const refindex::Index& ix, settings::Lang l, const Link& link, const std::string& here,
-          unsigned opened = 0, int hx = -1, int hy = -1);  // by its kind
+          unsigned opened = 0, int hx = -1, int hy = -1, const Follow& follow = {});  // by its kind
 
 // Words for numbers: 1 200 (en 1,200); a chance kept in 0.01 % - «70 %», «1,5 %», «0,01 %» (en «1.5 %»)
 std::string number(long long v, settings::Lang l);
@@ -64,5 +74,7 @@ std::string sizeName(int size, settings::Lang l);
 std::string typeName(int type, settings::Lang l);
 // A respawn after death: «90 хв», from two hours «2 год», «11 год 30 хв»
 std::string respawn(int ms, settings::Lang l);
+// 3.0.11-beta.8: where a route's move is taken - «вихід 156, 22», «Kafra 146, 86 · 1 200 z», «перехід 52, 136»
+std::string stepNote(const refroute::Step& step, settings::Lang l);
 
 }  // namespace uagfx::refpages

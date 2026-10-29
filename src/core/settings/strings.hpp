@@ -482,6 +482,8 @@ enum class Text : uint16_t {
     // 3.0.11-beta.8: «Як дістатися» in a map's card (core/reference_route)
     RefRoute, RefRouteFrom, RefRouteWalk, RefRouteKafra, RefRouteNpc, RefRouteMoves, RefRouteExit, RefRouteStairs,
     RefRouteVaries, RefRouteCondition, RefRouteConditionNote, RefRouteNone,
+    // 3.0.11-beta.9: the way followed on the minimap
+    RefRouteFollow, RefRouteFollowing, MinimapRouteLeft, MinimapRouteThere, MinimapRouteNone,
     Count
 };
 
