@@ -68,6 +68,13 @@ TEST(char_status_reads_the_blocks) {
     CHECK_EQ(s.hpMost, 1000);
     CHECK_EQ(s.sp, 40);
     CHECK_EQ(s.spMost, 100);
+    CHECK(s.zeny == 0 && s.statusPoints == 0 && s.skillPoints == 0);
+    // 3.0.11-beta.36: the character block's - its zeny, its free stat and skill points
+    put(plain, charstatus::kPlainAt, charstatus::kZeny, 1482300);
+    put(plain, charstatus::kPlainAt, charstatus::kStatusPoints, 3);
+    put(plain, charstatus::kPlainAt, charstatus::kSkillPoints, 1);
+    const charstatus::Status z = charstatus::fromMemory(plain, masked);
+    CHECK(z.zeny == 1482300 && z.statusPoints == 3 && z.skillPoints == 1 && z.baseLevel == 87);
 }
 
 TEST(char_status_an_index_out_of_the_places_reads_nothing) {

@@ -552,4 +552,20 @@ void paint(Picture& out, const Geometry& g, const std::vector<Card>& cards, Part
     }
 }
 
+float wordsWidth(const std::string& utf8, float px, bool bold) {
+    float em = 0;
+    for (size_t i = 0; i < utf8.size();) {
+        const unsigned char c = static_cast<unsigned char>(utf8[i]);
+        const size_t n = c < 0x80 ? 1 : c < 0xE0 ? 2 : c < 0xF0 ? 3 : 4;
+        if (c == ' ' || c == '.' || c == ',' || c == ':' || c == '\'' || c == '|' || c == 'i' || c == 'l')
+            em += 0.32f;
+        else if (n == 1)
+            em += c >= 'A' && c <= 'Z' ? 0.68f : 0.58f;
+        else
+            em += 0.64f;  // Cyrillic, the middle dot, dashes
+        i += n;
+    }
+    return em * px * (bold ? 1.08f : 1.0f);
+}
+
 }  // namespace uagfx::panel

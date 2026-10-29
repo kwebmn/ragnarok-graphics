@@ -83,6 +83,9 @@ Status fromMemory(const uint8_t* plain, const uint8_t* masked) {
     s.jobNext = at(plain, kPlainAt, kJobNext);
     s.weight = at(plain, kPlainAt, kWeight);
     s.weightMost = at(plain, kPlainAt, kWeightMost);
+    s.zeny = at(plain, kPlainAt, kZeny);  // 3.0.11-beta.36
+    s.statusPoints = at(plain, kPlainAt, kStatusPoints);
+    s.skillPoints = at(plain, kPlainAt, kSkillPoints);
     s.hp = unmasked(masked, kHp, kHpIndex);
     s.hpMost = unmasked(masked, kHpMost, kHpMostIndex);
     s.sp = unmasked(masked, kSp, kSpIndex);

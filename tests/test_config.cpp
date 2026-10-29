@@ -895,3 +895,21 @@ TEST(config_reads_the_buffs_look) {
     const LiveUpdate u = liveUpdate(parseConfig(""), parseConfig("[interface]\nbuffs = column\n"));
     CHECK(u.next.buffs == BuffsLook::Column);
 }
+
+// 3.0.11-beta.36 (the owner: «кольца или полоски на выбор. приступай»): [interface] character - the game's own Basic
+// Info window (off), the character block with bars, with rings; a choice of «Інтерфейс», applied at once
+TEST(config_reads_the_character_block) {
+    CHECK(parseConfig("").character == CharacterLook::Off);
+    CHECK(parseConfig("[interface]\ncharacter = bars\n").character == CharacterLook::Bars);
+    CHECK(parseConfig("[interface]\ncharacter = rings\n").character == CharacterLook::Rings);
+    CHECK(parseConfig("[interface]\ncharacter = boxes\n").character == CharacterLook::Off);
+    const settings::IniSetting* s = settings::findSetting("interface.character");
+    CHECK(s != nullptr);
+    if (!s) return;
+    CHECK(s->page == settings::Page::Interface && s->control == settings::Control::Choice);
+    CHECK_EQ(settings::tokenOf(*s, parseConfig("[interface]\ncharacter = rings\n")), std::string("rings"));
+    CHECK_EQ(settings::tokenOf(*s, parseConfig("")), std::string("off"));
+    CHECK(appliesNow("interface.character"));
+    const LiveUpdate u = liveUpdate(parseConfig(""), parseConfig("[interface]\ncharacter = bars\n"));
+    CHECK(u.next.character == CharacterLook::Bars);
+}

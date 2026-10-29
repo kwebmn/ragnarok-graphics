@@ -11,6 +11,8 @@ constexpr uint32_t kPlainAt = 0x771F90;
 constexpr size_t kPlainSize = 0xC8;  // to the job's next at 0x772054
 constexpr uint32_t kBaseExp = 0x771F90, kBaseLevel = 0x771F94, kBaseNext = 0x771F9C, kJobLevel = 0x771FA0;
 constexpr uint32_t kJobExp = 0x772044, kWeight = 0x772048, kWeightMost = 0x772050, kJobNext = 0x772054;
+// 3.0.11-beta.36: the character block's - the free stat points, the free skill points, the zeny (the same handlers)
+constexpr uint32_t kStatusPoints = 0x771F98, kSkillPoints = 0x771FA4, kZeny = 0x772038;
 // HP, SP and their most: each in one of 12 places (chosen anew at every change), masked with one of 12 keys - the
 // value at kX + 4 * [kXIndex], its key at kKeys + 4 * [kKeyIndex]; FUN_0063a670 masks, FUN_0063a7d0 unmasks
 constexpr uint32_t kMaskedAt = 0x772BCC;
@@ -44,6 +46,7 @@ struct Status {
     int baseExp = 0, baseNext = 0, jobExp = 0, jobNext = 0;  // next 0: the last level
     int hp = 0, hpMost = 0, sp = 0, spMost = 0;
     int weight = 0, weightMost = 0;
+    int zeny = 0, statusPoints = 0, skillPoints = 0;  // 3.0.11-beta.36
 };
 // From the blocks read at kPlainAt (kPlainSize bytes) and kMaskedAt (kMaskedSize); an index out of the 12 places
 // leaves its number 0

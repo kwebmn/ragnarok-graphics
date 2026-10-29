@@ -466,7 +466,9 @@ enum class Text : uint16_t {
     InterfaceMinimapMobs, InterfaceMinimapMobsHint, InterfaceMinimapWay, InterfaceMinimapWayHint,
     InterfaceMinimapWaySteps, InterfaceMinimapWayLine, InterfaceMinimapWayOff, InterfaceBuffs, InterfaceBuffsHint,
     InterfaceBuffsOff, InterfaceBuffsColumn, InterfaceBuffsRow, BuffsNames, BuffsHideNames, BuffsMore, BuffsStar,
-    BuffsUnstar, MinimapRespawn, MinimapMore,
+    BuffsUnstar, InterfaceCharacter, InterfaceCharacterHint, InterfaceCharacterOff, InterfaceCharacterBars,
+    InterfaceCharacterRings, CharWeight, CharPoints, CharLowHp, CharStats, CharEquip, CharItems, CharSkills,
+    CharFriends, CharOptions, MinimapRespawn, MinimapMore,
     MinimapNoReference, MinimapNoMonsters,
     // 3.0.11-beta.7: «Довідник» - its switch, the window's words, the cards' words
     InterfaceReference, InterfaceReferenceHint, RefTitle, RefSearchHint, RefBack, RefFooter, RefNoData,

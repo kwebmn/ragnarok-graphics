@@ -4912,6 +4912,31 @@ constexpr Entry kTexts[] = {
     {Text::BuffsMore, "{1} more", "ще {1}", "ещё {1}"},
     {Text::BuffsStar, "click: to favourites", "клік — в обрані", "клик — в избранное"},
     {Text::BuffsUnstar, "click: off favourites", "клік — прибрати з обраних", "клик — убрать из избранного"},
+    // 3.0.11-beta.36: the character block (stage 7 of the new interface)
+    {Text::InterfaceCharacter, "Character block", "Блок персонажа", "Блок персонажа"},
+    {Text::InterfaceCharacterHint,
+     "The character at the screen's top left instead of the game's window with HP and SP: the full block (the "
+     "portrait, the levels, the weight, the zeny, HP, SP, the experience, the windows' buttons), the compact one - "
+     "with bars or rings - or a ring icon; a click on the portrait goes round them. Low HP: red and a short warning. "
+     "As in the game: the game's own window.",
+     "Персонаж у лівому верхньому куті замість вікна гри з HP і SP: повний блок (портрет, рівні, вага, зені, HP, SP, "
+     "досвід, кнопки вікон), компактний — смужками або кільцями — чи значок-кільця; клік по портрету перемикає їх. "
+     "Мало HP — червоним і коротке попередження. Як у грі — вікно самої гри.",
+     "Персонаж в левом верхнем углу вместо окна игры с HP и SP: полный блок (портрет, уровни, вес, зени, HP, SP, "
+     "опыт, кнопки окон), компактный — полосками или кольцами — или значок-кольца; клик по портрету переключает их. "
+     "Мало HP — красным и короткое предупреждение. Как в игре — окно самой игры."},
+    {Text::InterfaceCharacterOff, "As in the game", "Як у грі", "Как в игре"},
+    {Text::InterfaceCharacterBars, "Bars", "Смужками", "Полосками"},
+    {Text::InterfaceCharacterRings, "Rings", "Кільцями", "Кольцами"},
+    {Text::CharWeight, "Weight", "Вага", "Вес"},
+    {Text::CharPoints, "point|points", "очко|очки|очок", "очко|очка|очков"},  // forms: one, a few, many
+    {Text::CharLowHp, "Low HP \xC2\xB7 {1} %", "Мало HP \xC2\xB7 {1} %", "Мало HP \xC2\xB7 {1} %"},
+    {Text::CharStats, "Stats \xC2\xB7 Alt+A", "Характеристики \xC2\xB7 Alt+A", "Характеристики \xC2\xB7 Alt+A"},
+    {Text::CharEquip, "Equipment \xC2\xB7 Alt+Q", "Спорядження \xC2\xB7 Alt+Q", "Снаряжение \xC2\xB7 Alt+Q"},
+    {Text::CharItems, "Items \xC2\xB7 Alt+E", "Речі \xC2\xB7 Alt+E", "Вещи \xC2\xB7 Alt+E"},
+    {Text::CharSkills, "Skills \xC2\xB7 Alt+S", "Навички \xC2\xB7 Alt+S", "Навыки \xC2\xB7 Alt+S"},
+    {Text::CharFriends, "Friends \xC2\xB7 Alt+Z", "Друзі \xC2\xB7 Alt+Z", "Друзья \xC2\xB7 Alt+Z"},
+    {Text::CharOptions, "Options \xC2\xB7 Alt+O", "Налаштування \xC2\xB7 Alt+O", "Настройки \xC2\xB7 Alt+O"},
     {Text::MinimapRespawn, "{1} min", "{1} хв", "{1} мин"},
     {Text::MinimapMore, "and {1} more", "і ще {1}", "и ещё {1}"},
     {Text::MinimapNoReference, "No game reference yet", "Довідника гри ще немає", "Справочника игры ещё нет"},

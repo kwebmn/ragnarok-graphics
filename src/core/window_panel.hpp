@@ -155,6 +155,8 @@ void over(uint32_t& pixel, uint32_t rgb, float opacity);
 void roundRect(Picture& p, const Box& b, float r, uint32_t fill, float fillA, uint32_t edgeRgb = 0, float edgeA = 0,
                float edge = 0);
 void circle(Picture& p, float cx, float cy, float r, uint32_t rgb, float a);
+// 3.0.11-beta.35: words' width as GDI draws them at `px` (an estimate a little wide: boxes made from it hold the words)
+float wordsWidth(const std::string& utf8, float px, bool bold);
 // A bar's colour (0xRRGGBB): red under 25 % as the game's own gauges (0x4490d0); else green HP, blue SP
 uint32_t barColour(int percent, bool hp);
 constexpr uint32_t kText = 0xECEFF5, kMuted = 0x969EAE, kOnBadge = 0x0F172A;  // the words' colours

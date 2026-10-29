@@ -71,6 +71,8 @@ constexpr const char* kReferenceFavourites = "uaro-graphics\\reference-favourite
 constexpr const char* kMinimapState = "uaro-graphics\\minimap-state.txt";
 // 3.0.11-beta.35: the buffs' column - its names shown, its favourites («names 0|1», «favourites 10 12» lines)
 constexpr const char* kBuffsState = "uaro-graphics\\buffs-state.txt";
+// 3.0.11-beta.36: the character block's view («view full|compact|icon»)
+constexpr const char* kCharacterState = "uaro-graphics\\character-state.txt";
 // 2.14: the client patcher (app/client_patch): the list of the game's files last put, and where they arrive first
 constexpr const char* kClientPatchRecord = "uaro-graphics\\client-patch.txt";
 constexpr const char* kClientPatchWork = "uaro-graphics\\update\\client";

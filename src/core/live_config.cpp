@@ -191,6 +191,11 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("buffs", buffsLookToken(running.buffs), buffsLookToken(file.buffs)));
         n.buffs = file.buffs;
     }
+    if (file.character != running.character) {  // 3.0.11-beta.36: the character block, at once
+        u.applied.push_back(
+            change("character", characterLookToken(running.character), characterLookToken(file.character)));
+        n.character = file.character;
+    }
     if (file.referenceWindow != running.referenceWindow) {  // 3.0.11-beta.7: «Довідник», at once
         u.applied.push_back(change("reference", flag(running.referenceWindow), flag(file.referenceWindow)));
         n.referenceWindow = file.referenceWindow;

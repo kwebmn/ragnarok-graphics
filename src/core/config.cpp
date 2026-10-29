@@ -497,6 +497,10 @@ Config parseConfig(const std::string& text) {
             if (val == "off") c.buffs = BuffsLook::Off;
             if (val == "column") c.buffs = BuffsLook::Column;
             if (val == "row") c.buffs = BuffsLook::Row;
+        } else if (key == "interface.character") {  // 3.0.11-beta.36: the character block
+            if (val == "off") c.character = CharacterLook::Off;
+            if (val == "bars") c.character = CharacterLook::Bars;
+            if (val == "rings") c.character = CharacterLook::Rings;
         } else if (key == "interface.reference") {  // 3.0.11-beta.7: «Довідник»
             setBool(val, c.referenceWindow);
         } else if (key == "panel.hidden") {
@@ -799,6 +803,10 @@ const char* wayOnGroundToken(WayOnGround w) {
 
 const char* buffsLookToken(BuffsLook b) {
     return b == BuffsLook::Column ? "column" : b == BuffsLook::Row ? "row" : "off";
+}
+
+const char* characterLookToken(CharacterLook c) {
+    return c == CharacterLook::Bars ? "bars" : c == CharacterLook::Rings ? "rings" : "off";
 }
 
 const char* panelLayoutToken(PanelLayout l) {
