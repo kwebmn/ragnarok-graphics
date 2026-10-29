@@ -283,7 +283,7 @@ void paint(panel::Picture& out, const Layout& L, const refpages::Page& p, const 
         if (!shown(L, r, scroll)) continue;
         const panel::Box b{float(r.x), float(L.bodyY + r.y - scroll), float(r.w), float(r.h)};
         const refpages::Row& row = p.rows[i];
-        const bool hot = look.hover.part == Part::Row && look.hover.row == int(i);
+        const bool hot = (look.hover.part == Part::Row && look.hover.row == int(i)) || look.selected == int(i);
         if (row.style == refpages::Style::Tile) {
             panel::roundRect(out, b, 8 * s, hot ? kTileHot : kTileFill, 1.0f, hot ? kFieldEdge : kRule, 1.0f,
                              std::max(1.0f, s));
@@ -342,7 +342,7 @@ std::vector<Words> words(const Layout& L, const refpages::Page& p, const std::ve
         if (!shown(L, r, scroll)) continue;
         const refpages::Row& row = p.rows[i];
         const float x = float(r.x), y = float(L.bodyY + r.y - scroll), w = float(r.w), h = float(r.h);
-        const bool hot = look.hover.part == Part::Row && look.hover.row == int(i);
+        const bool hot = (look.hover.part == Part::Row && look.hover.row == int(i)) || look.selected == int(i);
         const bool link = row.link.go != refpages::Go::None;
         switch (row.style) {
             case refpages::Style::Tile:

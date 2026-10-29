@@ -59,6 +59,7 @@ struct Look {
     // 3.0.11-beta.14: the Portraits' pictures by their rows' keys, each the row's height square (premultiplied; none:
     // the words from the row's start)
     const std::map<std::string, panel::Picture>* pictures = nullptr;
+    int selected = -1;  // 3.0.11-beta.21: the row the arrows picked (drawn as the one under the pointer)
 };
 // A Portrait's picture's side for a layout (the row's height); 3.0.11-beta.15: a row's icon's (its pictures' key
 // "icon:" + the row's icon)

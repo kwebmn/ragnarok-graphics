@@ -25,5 +25,10 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result);
 // under it - the monster's card
 void openMap(const std::string& code);
 void openMob(int id);
+// 3.0.11-beta.21: uaRO Pad (src/pad) while the window is open - its D-pad picks a row, A opens it, B goes back (the
+// first page: closes), Start closes, the bumpers scroll; the character does nothing meanwhile
+bool isOpen();
+enum class PadCommand { Up, Down, Enter, Back, Close, PageUp, PageDown };
+void padCommand(PadCommand c);
 
 }  // namespace uagfx::win::referencewin

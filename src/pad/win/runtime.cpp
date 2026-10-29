@@ -38,6 +38,7 @@
 #include "pad/win/pads.hpp"
 #include "win/disk.hpp"
 #include "win/paths.hpp"
+#include "win/reference_window.hpp"
 
 namespace uapad::runtime {
 namespace {
@@ -350,6 +351,23 @@ bool saveLayouts() {
 
 // The settings menu behind Start. True while the menu had the pad this tick (the tick it closes included,
 // so the button that closed it does not reach the game as a new press).
+// 3.0.11-beta.21: «Довідник» (uaRO Graphics' reference window) open - the pad's buttons are its: the D-pad picks a
+// row, A opens it, B goes back, Start closes it, the bumpers scroll; the character waits meanwhile
+bool referencePad(const PadState& pad) {
+    State& s = S();
+    const uint16_t buttons = pad.connected ? pad.buttons : 0;
+    const uint16_t down = uint16_t(buttons & ~s.prevPadButtons);
+    s.prevPadButtons = buttons;
+    using uagfx::win::referencewin::PadCommand;
+    const std::pair<uint16_t, PadCommand> keys[] = {
+        {kPadUp, PadCommand::Up},       {kPadDown, PadCommand::Down},     {kPadA, PadCommand::Enter},
+        {kPadB, PadCommand::Back},      {kPadStart, PadCommand::Close},   {kPadLB, PadCommand::PageUp},
+        {kPadRB, PadCommand::PageDown}};
+    for (const auto& [button, command] : keys)
+        if (down & button) uagfx::win::referencewin::padCommand(command);
+    return true;
+}
+
 bool runMenu(const PadState& pad, const ViewInfo& view, DWORD now) {
     State& s = S();
     const uint16_t buttons = pad.connected ? pad.buttons : 0;
@@ -486,7 +504,9 @@ void tick() {
         s.bridge.reset();
     }
     followTheMouse(view.focused, now);
-    view.paused = runMenu(pad, view, now);
+    // 3.0.11-beta.21: the reference window's while it is open, else the pad's own menu (Start)
+    view.paused =
+        uagfx::win::referencewin::isOpen() && !S().menu.isOpen() ? referencePad(pad) : runMenu(pad, view, now);
     if (s.npcSupported) view.dialog = clientnpc::read();
     double clientTurn = 0;
     if (s.cameraSupported && clientcamera::readTurn(clientTurn))

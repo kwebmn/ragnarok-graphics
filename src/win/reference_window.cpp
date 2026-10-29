@@ -71,6 +71,7 @@ struct State {
     bool foldedRead = false;
     // 3.0.11-beta.18: the cards opened lately (the latest first) and the starred ones, kept in files
     std::vector<refpages::Link> recent, favourites;
+    int sel = -1;  // 3.0.11-beta.21: the row picked by the arrows (or the pad's D-pad), -1 none
     std::string here;
     panel::Picture picture;
     uint32_t texture = 0;
@@ -202,6 +203,8 @@ void makePage(State& s) {
     s.rows = refwin::place(s.layout, s.page, s.total);
     s.scroll = refwin::clampScroll(s.scroll, s.total, s.layout.bodyH);
     s.madeAt = GetTickCount64();
+    if (s.sel >= int(s.page.rows.size()) || (s.sel >= 0 && s.page.rows[size_t(s.sel)].link.go == refpages::Go::None))
+        s.sel = -1;
     for (const refpages::Row& r : s.page.rows)  // 3.0.11-beta.14
         if (r.style == refpages::Style::Portrait && !r.picture.empty())
             loadPicture(s, r.picture, refwin::portraitSide(s.layout));
@@ -298,8 +301,41 @@ void go(State& s, const refpages::Link& to) {
     s.at = to;
     s.scroll = 0;
     s.opened = 0;
+    s.sel = -1;
     noteRecent(s);  // 3.0.11-beta.18
     makePage(s);
+}
+
+// 3.0.11-beta.21: the arrows' (and the pad's D-pad's) row - the next one that leads somewhere, kept in view
+void step(State& s, int by) {
+    const int n = int(s.page.rows.size());
+    int i = s.sel;
+    for (int k = 0; k < n; ++k) {
+        i = i < 0 ? (by > 0 ? 0 : n - 1) : i + by;
+        if (i < 0 || i >= n) return;
+        if (s.page.rows[size_t(i)].link.go != refpages::Go::None) break;
+    }
+    if (i < 0 || i >= n || s.page.rows[size_t(i)].link.go == refpages::Go::None) return;
+    s.sel = i;
+    const refwin::Placed& r = s.rows[size_t(i)];
+    if (r.y < s.scroll) s.scroll = refwin::clampScroll(r.y - r.h, s.total, s.layout.bodyH);
+    if (r.y + r.h > s.scroll + s.layout.bodyH)
+        s.scroll = refwin::clampScroll(r.y + 2 * r.h - s.layout.bodyH, s.total, s.layout.bodyH);
+    s.dirty = true;
+}
+
+// Enter (the pad's A): the picked row, else the first that leads to a card
+void enter(State& s) {
+    if (s.sel >= 0 && size_t(s.sel) < s.page.rows.size()) {
+        go(s, s.page.rows[size_t(s.sel)].link);
+        return;
+    }
+    for (const refpages::Row& r : s.page.rows)
+        if (r.link.go != refpages::Go::None && r.link.go != refpages::Go::Fold && r.link.go != refpages::Go::Expand &&
+            r.link.go != refpages::Go::Star) {
+            go(s, r.link);
+            return;
+        }
 }
 
 void goBack(State& s) {
@@ -385,6 +421,7 @@ refwin::WorldLook worldLook(const State& s) {
 void render(State& s) {
     const settings::Lang l = startup().lang;
     refwin::Look look{s.hover, !s.back.empty(), worldLook(s), &s.pictures};
+    look.selected = s.sel;  // 3.0.11-beta.21
     refwin::paint(s.picture, s.layout, s.page, s.rows, s.scroll, s.total, look);
     refwin::Texts t;
     t.title = say(Text::RefTitle);
@@ -558,7 +595,6 @@ bool key(UINT m, WPARAM wp, LPARAM) {
     }
     if (!s.open) return false;
     if (m == WM_KEYDOWN || m == WM_SYSKEYDOWN) {
-        const int line = std::max(1, s.layout.bodyH / 12);
         switch (wp) {
             case VK_ESCAPE:
                 close(s);
@@ -582,19 +618,14 @@ bool key(UINT m, WPARAM wp, LPARAM) {
                     typed(s);
                 }
                 return true;
-            case VK_RETURN:  // the first row that leads somewhere (a heading folds: not that)
-                for (const refpages::Row& r : s.page.rows)
-                    if (r.link.go != refpages::Go::None && r.link.go != refpages::Go::Fold &&
-                        r.link.go != refpages::Go::Expand) {
-                        go(s, r.link);
-                        break;
-                    }
+            case VK_RETURN:  // the picked row, else the first that leads to a card
+                enter(s);
                 s.skipChar = 13;
                 return true;
             case VK_PRIOR: scrollBy(s, -s.layout.bodyH * 9 / 10); return true;
             case VK_NEXT: scrollBy(s, s.layout.bodyH * 9 / 10); return true;
-            case VK_UP: scrollBy(s, -line); return true;
-            case VK_DOWN: scrollBy(s, line); return true;
+            case VK_UP: step(s, -1); return true;  // 3.0.11-beta.21: a row up, a row down
+            case VK_DOWN: step(s, +1); return true;
             case VK_HOME: scrollBy(s, -s.total); return true;
             case VK_END: scrollBy(s, s.total); return true;
             default: break;
@@ -658,6 +689,25 @@ void openMap(const std::string& code) {
     if (!s.enabled || code.empty()) return;
     openWindow(s, refpages::Link{refpages::Go::Map, 0, code});
     LOG_INFO("reference: %s's card from the minimap's line", code.c_str());
+}
+
+bool isOpen() { return state().open && state().shown; }
+
+void padCommand(PadCommand c) {
+    State& s = state();
+    if (!s.open) return;
+    switch (c) {
+        case PadCommand::Up: step(s, -1); break;
+        case PadCommand::Down: step(s, +1); break;
+        case PadCommand::Enter: enter(s); break;
+        case PadCommand::Back:
+            if (s.back.empty()) close(s);
+            else goBack(s);
+            break;
+        case PadCommand::Close: close(s); break;
+        case PadCommand::PageUp: scrollBy(s, -s.layout.bodyH * 9 / 10); break;
+        case PadCommand::PageDown: scrollBy(s, s.layout.bodyH * 9 / 10); break;
+    }
 }
 
 void openMob(int id) {

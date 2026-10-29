@@ -5042,9 +5042,12 @@ constexpr Entry kTexts[] = {
     {Text::RefHoursMinutes, "{1} h {2} min", "{1} год {2} хв", "{1} ч {2} мин"},
     {Text::RefAll, "all {1} ›", "усі {1} ›", "все {1} ›"},
     {Text::RefKeys,
-     "Esc or Ctrl+F closes it · Alt+← or the mouse's back button goes back · Enter opens the first found",
-     "Esc чи Ctrl+F - закрити · Alt+← чи бокова кнопка миші - назад · Enter - перше знайдене",
-     "Esc или Ctrl+F - закрыть · Alt+← или боковая кнопка мыши - назад · Enter - первое найденное"},
+     "Esc or Ctrl+F closes it · Alt+← or the mouse's back button goes back · ↑↓ and Enter pick and open (the pad: "
+     "D-pad, A, B)",
+     "Esc чи Ctrl+F - закрити · Alt+← чи бокова кнопка миші - назад · ↑↓ і Enter - вибрати й відкрити (пад: D-pad, "
+     "A, B)",
+     "Esc или Ctrl+F - закрыть · Alt+← или боковая кнопка мыши - назад · ↑↓ и Enter - выбрать и открыть (пад: "
+     "D-pad, A, B)"},
     // 3.0.11-beta.8: «Як дістатися» (core/reference_pages, reference_route)
     {Text::RefRoute, "How to get there", "Як дістатися", "Как добраться"},
     {Text::RefRouteFrom, "from {1}", "з {1}", "из {1}"},
