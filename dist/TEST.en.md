@@ -1,3 +1,14 @@
+# uaRO Graphics 3.0.11-beta.16 — what is new
+
+- **Quests in «Reference»** (after the site's update — a new quests.json and the quests' file; the app takes them at
+  the game's start, only when something changed on the site): the tile «Quests · 60» on the first screen — by kinds
+  (job changes, headgear, access to towns, events, other); a quest's card — its description, «Who gives it» (the NPC
+  and the map, «How to get there» from there), «What it takes» (the items with icons and how many), «Steps» and
+  «Reward» — in the interface's language (no translation: English); long text breaks at words.
+- An item's card has «For quests»: the quests that take it, and how many; the search finds quests by their titles.
+- To check (after the site's update): Ctrl+F → the «Quests» tile → «Ayothaya Access»: 9 steps, «What it takes —
+  Engagement Ring ×1»; «Engagement Ring» → «For quests».
+
 # uaRO Graphics 3.0.11-beta.15 — what is new
 
 - **Item icons in «Reference»'s lists**: each item has its icon from the client before it («What it drops», the
