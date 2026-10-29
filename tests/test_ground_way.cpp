@@ -1,4 +1,4 @@
-// 3.0.11-beta.32: the way followed drawn on the ground (core/ground_way) - the .gat's heights, the way's points along
+// 3.0.11-beta.31: the way followed drawn on the ground (core/ground_way) - the .gat's heights, the way's points along
 // the ground a cell apart at the most, the strip placed on the screen as the game places its own vertices
 #include <algorithm>
 #include <cmath>

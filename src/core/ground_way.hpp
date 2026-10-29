@@ -8,7 +8,7 @@
 
 namespace uagfx::groundway {
 
-// 3.0.11-beta.32 (the owner: «на самой локации нету линии по которой идти надо, только на карте»): the way followed
+// 3.0.11-beta.31 (the owner: «на самой локации нету линии по которой идти надо, только на карте»): the way followed
 // drawn on the ground itself - its cells (core/walk_path, the minimap's) put into the game's world by the minimap's
 // formula backwards and the map's .gat heights, a strip of quads a little over the ground, each corner placed on the
 // screen as the game places its own vertices (ProjectVertex: own_ground::placeView) with the frame's camera; drawn

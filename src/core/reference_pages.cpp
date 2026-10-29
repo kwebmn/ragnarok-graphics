@@ -67,6 +67,13 @@ std::string itemName(const refindex::Index& ix, int id) {
     const auto it = ix.items.find(id);
     return it == ix.items.end() ? "#" + std::to_string(id) : it->second.name;
 }
+// A map's short name: the client's up to its first comma («Prontera City»), else its code
+std::string mapShort(const refindex::Index& ix, const std::string& code) {
+    const auto named = ix.mapNames.find(code);
+    const std::string name = named == ix.mapNames.end() ? "" : refindex::shortName(named->second);
+    return name.empty() ? code : name;
+}
+
 std::string minutes(Lang l, int ms) { return respawn(ms, l); }
 
 // A monster's line on a list: «Lv 12 · prt_fild08» (its first map) - two Porings of other ids told apart
@@ -300,7 +307,7 @@ void route(const refindex::Index& ix, Lang l, Page& p, const std::string& here, 
     if (!ix.graph) return;
     const refroute::Route walk = refroute::find(ix, here, hx, hy, code, true);
     const refroute::Route paid = refroute::find(ix, here, hx, hy, code, false);
-    p.rows.push_back(heading(say(l, Text::RefRoute), sayf(l, Text::RefRouteFrom, {here}), Way));
+    p.rows.push_back(heading(say(l, Text::RefRoute), sayf(l, Text::RefRouteFrom, {mapShort(ix, here)}), Way));
     const bool better = paid.found && paid.paid &&
                         (!walk.found || std::make_pair(conditions(paid), paid.steps.size()) <
                                             std::make_pair(conditions(walk), walk.steps.size()));
@@ -318,12 +325,65 @@ void route(const refindex::Index& ix, Lang l, Page& p, const std::string& here, 
     if (better) routeSteps(ix, l, p, paid, paidName, Route2, opened);
 }
 
-// 3.0.11-beta.29: a town - the server's «town» flag, else (uAthena has none) a Kafra there and ten monsters at the most
+// 3.0.11-beta.28: a number with its word in the form it takes («42 крамниці», «з 143 монстрів»): the text's forms
+// apart by «|» - English one|more, Ukrainian and Russian one|few|many
+std::string counted(Lang l, size_t n, Text t) {
+    const std::string forms = say(l, t);
+    const size_t form = l == Lang::En                                                 ? (n == 1 ? 0 : 1)
+                        : n % 10 == 1 && n % 100 != 11                                ? 0
+                        : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14) ? 1
+                                                                                       : 2;
+    size_t b = 0;
+    for (size_t k = 0; k < form; ++k) {
+        const size_t bar = forms.find('|', b);
+        if (bar == std::string::npos) break;
+        b = bar + 1;
+    }
+    return number(static_cast<long long>(n), l) + " " + forms.substr(b, forms.find('|', b) - b);
+}
+
+// 3.0.11-beta.32: names with their numbers in order («AGI+2» before «AGI+10», «Level 9 Cookbook» before «Level 10»)
+bool naturalLess(const std::string& a, const std::string& b) {
+    const auto digit = [](char ch) { return std::isdigit(static_cast<unsigned char>(ch)) != 0; };
+    size_t i = 0, j = 0;
+    while (i < a.size() && j < b.size()) {
+        if (digit(a[i]) && digit(b[j])) {
+            size_t ie = i, je = j;
+            while (ie < a.size() && digit(a[ie])) ++ie;
+            while (je < b.size() && digit(b[je])) ++je;
+            while (i + 1 < ie && a[i] == '0') ++i;  // by value: no leading zeros, the longer the more
+            while (j + 1 < je && b[j] == '0') ++j;
+            if (ie - i != je - j) return ie - i < je - j;
+            if (const int c = a.compare(i, ie - i, b, j, je - j)) return c < 0;
+            i = ie;
+            j = je;
+        } else if (a[i] != b[j]) {
+            return static_cast<unsigned char>(a[i]) < static_cast<unsigned char>(b[j]);
+        } else {
+            ++i;
+            ++j;
+        }
+    }
+    return a.size() - i < b.size() - j;
+}
+// (a name, an id) in that order, the same names by their ids
+bool byNatural(const std::pair<std::string, int>& a, const std::pair<std::string, int>& b) {
+    return naturalLess(a.first, b.first) || (!naturalLess(b.first, a.first) && a.second < b.second);
+}
+
+// 3.0.11-beta.29: a town - the server's «town» flag, else (uAthena has none) a Kafra there and ten monsters at the
+// most; 3.0.11-beta.32: not a guild's castle (its Kafra), a house or an arena, nor a passage between two places
+// («izlu2dun»)
 bool isTown(const refindex::Index& ix, const std::string& code) {
     const auto it = ix.maps.find(code);
     if (it == ix.maps.end()) return false;
     const refindex::MapHints& m = it->second;
-    if (std::find(m.flags.begin(), m.flags.end(), "town") != m.flags.end()) return true;
+    const auto flag = [&](const char* f) { return std::find(m.flags.begin(), m.flags.end(), f) != m.flags.end(); };
+    if (flag("town")) return true;
+    if (flag("gvg_castle") || flag("gvg") || flag("gvg_dungeon") || flag("indoors") || flag("pvp")) return false;
+    const auto letter = [](char ch) { return std::isalpha(static_cast<unsigned char>(ch)) != 0; };
+    for (size_t i = 1; i + 1 < code.size(); ++i)
+        if (code[i] == '2' && letter(code[i - 1]) && letter(code[i + 1])) return false;
     int mobs = 0;
     for (const refindex::MobOnMap& o : m.mobs) mobs += o.count;
     return mobs <= 10 && std::any_of(m.npcs.begin(), m.npcs.end(), [](const refindex::Npc& n) {
@@ -334,7 +394,7 @@ bool isTown(const refindex::Index& ix, const std::string& code) {
 std::string mapNote(const refindex::Index& ix, Lang l, const std::string& code) {
     const auto m = ix.maps.find(code);
     if (m == ix.maps.end() || m->second.mobs.empty()) return "";
-    return sayf(l, Text::RefMobKinds, {std::to_string(m->second.mobs.size())});
+    return counted(l, m->second.mobs.size(), Text::RefMobKinds);  // 3.0.11-beta.32: «7 видів монстрів»
 }
 
 }  // namespace
@@ -363,7 +423,7 @@ std::string chance(int rate, Lang l) {
 
 std::string respawn(int ms, Lang l) {
     const int all = (ms + 30000) / 60000;
-    if (all < 120) return sayf(l, Text::MinimapRespawn, {std::to_string(all)});
+    if (all < 60) return sayf(l, Text::MinimapRespawn, {std::to_string(all)});  // 3.0.11-beta.32: «1 год 57 хв»
     if (all % 60 == 0) return sayf(l, Text::RefHours, {std::to_string(all / 60)});
     return sayf(l, Text::RefHoursMinutes, {std::to_string(all / 60), std::to_string(all % 60)});
 }
@@ -435,7 +495,7 @@ Page home(const refindex::Index& ix, Lang l, const Context& c) {
     for (const auto& m : ix.mobs)
         if (ix.spawnsOf.count(m.first) && isMvp(m.second)) ++mvps;
     for (const auto& m : ix.maps) {
-        if (!m.second.mobs.empty()) ++maps;
+        if (!m.second.mobs.empty() || isTown(ix, m.first)) ++maps;  // 3.0.11-beta.32: the towns too
         for (const refindex::Teleport& t : m.second.teleports)
             if (t.kafra) {
                 ++kafra;
@@ -578,23 +638,6 @@ Marks marksIn(const std::string& text, const std::string& query, size_t from = 0
     return out;
 }
 
-// 3.0.11-beta.28: a number with its word in the form it takes («42 крамниці», «з 143 монстрів»): the text's forms
-// apart by «|» - English one|more, Ukrainian and Russian one|few|many
-std::string counted(Lang l, size_t n, Text t) {
-    const std::string forms = say(l, t);
-    const size_t form = l == Lang::En                                                 ? (n == 1 ? 0 : 1)
-                        : n % 10 == 1 && n % 100 != 11                                ? 0
-                        : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14) ? 1
-                                                                                       : 2;
-    size_t b = 0;
-    for (size_t k = 0; k < form; ++k) {
-        const size_t bar = forms.find('|', b);
-        if (bar == std::string::npos) break;
-        b = bar + 1;
-    }
-    return number(static_cast<long long>(n), l) + " " + forms.substr(b, forms.find('|', b) - b);
-}
-
 // 3.0.11-beta.28: one found as the concept's row: its icon, its name with the query marked, its line, its kind
 Row result(const std::string& name, const std::string& sub, Text kind, Link to, std::string icon,
            const std::string& query, Lang l) {
@@ -630,18 +673,25 @@ size_t distinct(const List& list, int (*of)(const typename List::value_type&)) {
     return seen.size();
 }
 
-// A monster: the other name it was found by, MVP or a boss, its level, on how many maps
-Row mobFound(const refindex::Index& ix, Lang l, const refindex::Hit& h, const std::string& query) {
-    const refindex::Mob& m = ix.mobs.at(h.id);
+// A monster's line: MVP or a boss, its level, on how many maps (3.0.11-beta.32: the monsters' list too)
+std::string mobLine(const refindex::Index& ix, Lang l, int id) {
+    const refindex::Mob& m = ix.mobs.at(id);
     std::vector<std::string> parts;
-    if (h.by == 1) parts.push_back(sayf(l, Text::RefOtherName, {m.other}));
     if (isMvp(m)) parts.push_back("MVP");
     else if (m.boss) parts.push_back(say(l, Text::RefBoss));
     parts.push_back(sayf(l, Text::RefLevel, {std::to_string(m.lv)}));
-    const auto where = ix.spawnsOf.find(h.id);
+    const auto where = ix.spawnsOf.find(id);
     if (where != ix.spawnsOf.end() && !where->second.empty())
         parts.push_back(counted(l, where->second.size(), Text::RefMapsN));
-    Row r = result(m.name, joined(parts), Text::RefKindMob, toMob(h.id), "mob:" + std::to_string(h.id), query, l);
+    return joined(parts);
+}
+
+// A monster: the other name it was found by, then its line
+Row mobFound(const refindex::Index& ix, Lang l, const refindex::Hit& h, const std::string& query) {
+    const refindex::Mob& m = ix.mobs.at(h.id);
+    const std::string line = mobLine(ix, l, h.id);
+    const std::string sub = h.by == 1 ? joined({sayf(l, Text::RefOtherName, {m.other}), line}) : line;
+    Row r = result(m.name, sub, Text::RefKindMob, toMob(h.id), "mob:" + std::to_string(h.id), query, l);
     r.gold = m.boss;
     if (h.by == 1) markedIn(r, m.other, query);
     return r;
@@ -810,8 +860,8 @@ std::vector<Row> shopRows(const refindex::Index& ix, Lang l) {
         list.emplace_back(refindex::mapTitle(ix, ix.shops[s].map), ix.shops[s].name, int(s));
     std::sort(list.begin(), list.end());
     for (const auto& [title, name, s] : list) {
-        const std::string goods = std::to_string(ix.shops[size_t(s)].items.size());
-        out.push_back(linked(name + " · " + title, sayf(l, Text::RefItemsCount, {goods}), Link{Go::Shop, s, ""}));
+        const std::string goods = counted(l, ix.shops[size_t(s)].items.size(), Text::RefItemsCount);  // «2 товари»
+        out.push_back(linked(name + " · " + title, goods, Link{Go::Shop, s, ""}));
     }
     return out;
 }
@@ -839,13 +889,14 @@ std::vector<Row> kafraRows(const refindex::Index& ix) {
 
 Page section(const refindex::Index& ix, Lang l, int id, const Context& c) {
     Page p;
+    if (id == 100 + 6) id = Cards;  // 3.0.11-beta.32: «Предмети» › «Картка» - the cards' own list (in three)
     if (id >= 100) {  // the items of one type, by name
         p.name = typeName(id - 100, l);
         p.rows.push_back(heading(p.name));
         std::vector<std::pair<std::string, int>> list;
         for (const auto& i : ix.items)
             if (i.second.type == id - 100) list.emplace_back(i.second.name, i.first);
-        std::sort(list.begin(), list.end());
+        std::sort(list.begin(), list.end(), byNatural);
         for (const auto& [name, item] : list) {
             const auto by = ix.droppedBy.find(item);
             const auto at = ix.soldAt.find(item);
@@ -857,16 +908,25 @@ Page section(const refindex::Index& ix, Lang l, int id, const Context& c) {
         return p;
     }
     switch (id) {
-        case Mobs: {
+        case Mobs: {  // 3.0.11-beta.32: those met on maps by their levels first, the rest (events' and summons'
+                      // copies - «Baphomet Lv 1») apart; each its picture, its line
             p.name = say(l, Text::RefSecMobs);
-            p.rows.push_back(heading(p.name));
-            std::vector<std::tuple<int, std::string, int>> list;  // level, name, id
-            for (const auto& m : ix.mobs) list.emplace_back(m.second.lv, m.second.name, m.first);
-            std::sort(list.begin(), list.end());
-            for (const auto& [lv, name, mob] : list) {
-                Row r = linked(name, mobNote(ix, l, mob), toMob(mob));
-                r.gold = ix.mobs.at(mob).boss;
-                p.rows.push_back(std::move(r));
+            std::vector<std::tuple<int, std::string, int>> on, nowhere;  // level, name, id
+            for (const auto& m : ix.mobs)
+                (ix.spawnsOf.count(m.first) ? on : nowhere).emplace_back(m.second.lv, m.second.name, m.first);
+            std::sort(on.begin(), on.end());
+            std::sort(nowhere.begin(), nowhere.end());
+            const std::pair<Text, const std::vector<std::tuple<int, std::string, int>>*> groups[] = {
+                {Text::RefMobsOnMaps, &on}, {Text::RefMobsNowhere, &nowhere}};
+            for (const auto& [title, list] : groups) {
+                if (list->empty()) continue;
+                p.rows.push_back(heading(sayf(l, title, {std::to_string(list->size())})));
+                for (const auto& [lv, name, mob] : *list) {
+                    Row r = linked(name, mobLine(ix, l, mob), toMob(mob));
+                    r.icon = "mob:" + std::to_string(mob);
+                    r.gold = ix.mobs.at(mob).boss;
+                    p.rows.push_back(std::move(r));
+                }
             }
             break;
         }
@@ -896,6 +956,7 @@ Page section(const refindex::Index& ix, Lang l, int id, const Context& c) {
                 }
                 Row r = linked(name, right, toMob(mob));
                 r.gold = true;
+                r.icon = "mob:" + std::to_string(mob);  // 3.0.11-beta.32: its picture
                 p.rows.push_back(std::move(r));
             }
             break;
@@ -910,31 +971,63 @@ Page section(const refindex::Index& ix, Lang l, int id, const Context& c) {
                                         Link{Go::Section, 100 + type, ""}));
             break;
         }
-        case Cards: {
+        case Cards: {  // 3.0.11-beta.32: those monsters drop first, then the other cards, the enchantments («AGI+1» -
+                       // the server's cards too) apart; their numbers in order
             p.name = say(l, Text::RefSecCards);
-            p.rows.push_back(heading(p.name));
-            std::vector<std::pair<std::string, int>> list;
+            std::vector<std::pair<std::string, int>> dropped, other, enchants;
             for (const auto& i : ix.items)
-                if (i.second.type == 6) list.emplace_back(i.second.name, i.first);
-            std::sort(list.begin(), list.end());
-            for (const auto& [name, card] : list) {
-                const auto by = ix.droppedBy.find(card);
-                const std::string right = by == ix.droppedBy.end()
-                                              ? ""
-                                              : mobName(ix, by->second.front().mob) + " · " +
-                                                    chance(by->second.front().rate, l);
-                p.rows.push_back(linked(name, right, toItem(card)));
+                if (i.second.type == 6)
+                    (ix.droppedBy.count(i.first)                       ? dropped
+                     : i.second.name.find("Card") != std::string::npos ? other
+                                                                       : enchants)
+                        .emplace_back(i.second.name, i.first);
+            const std::pair<Text, std::vector<std::pair<std::string, int>>*> groups[] = {
+                {Text::RefCardsDropped, &dropped}, {Text::RefCardsOther, &other}, {Text::RefCardsEnchants, &enchants}};
+            for (const auto& [title, list] : groups) {
+                if (list->empty()) continue;
+                std::sort(list->begin(), list->end(), byNatural);
+                p.rows.push_back(heading(sayf(l, title, {std::to_string(list->size())})));
+                for (const auto& [name, card] : *list) {
+                    const auto by = ix.droppedBy.find(card);
+                    const std::string right = by == ix.droppedBy.end()
+                                                  ? ""
+                                                  : mobName(ix, by->second.front().mob) + " · " +
+                                                        chance(by->second.front().rate, l);
+                    p.rows.push_back(linked(name, right, toItem(card)));
+                }
             }
             break;
         }
-        case Maps: {
+        case Maps: {  // 3.0.11-beta.32: the towns first (they were not here: no monsters) - Kafra, their shops
             p.name = say(l, Text::RefSecMaps);
-            p.rows.push_back(heading(p.name));
-            std::vector<std::pair<std::string, std::string>> list;  // the title, the code
+            std::vector<std::pair<std::string, std::string>> towns, fields;  // the title, the code
             for (const auto& m : ix.maps)
-                if (!m.second.mobs.empty()) list.emplace_back(refindex::mapTitle(ix, m.first), m.first);
-            std::sort(list.begin(), list.end());
-            for (const auto& [title, code] : list) p.rows.push_back(linked(title, mapNote(ix, l, code), toMap(code)));
+                if (isTown(ix, m.first)) towns.emplace_back(refindex::mapTitle(ix, m.first), m.first);
+                else if (!m.second.mobs.empty()) fields.emplace_back(refindex::mapTitle(ix, m.first), m.first);
+            const auto byTitle = [](const std::pair<std::string, std::string>& a,
+                                    const std::pair<std::string, std::string>& b) {  // «dewata» among the names
+                const auto low = [](char ch) { return std::tolower(static_cast<unsigned char>(ch)); };
+                return std::lexicographical_compare(a.first.begin(), a.first.end(), b.first.begin(), b.first.end(),
+                                                    [&](char x, char y) { return low(x) < low(y); });
+            };
+            std::sort(towns.begin(), towns.end(), byTitle);
+            std::sort(fields.begin(), fields.end(), byTitle);
+            if (!towns.empty()) p.rows.push_back(heading(sayf(l, Text::RefTowns, {std::to_string(towns.size())})));
+            for (const auto& [title, code] : towns) {
+                const refindex::MapHints& m = ix.maps.at(code);
+                const bool kafra = std::any_of(m.npcs.begin(), m.npcs.end(), [](const refindex::Npc& n) {
+                    return n.kind == refindex::NpcKind::Kafra;
+                });
+                const size_t shops = size_t(std::count_if(ix.shops.begin(), ix.shops.end(),
+                                                          [&](const refindex::Shop& s) { return s.map == code; }));
+                std::string right = kafra ? "Kafra" : "";
+                if (shops) right += (right.empty() ? "" : " · ") + counted(l, shops, Text::RefShopsN);
+                if (right.empty()) right = mapNote(ix, l, code);
+                p.rows.push_back(linked(title, right, toMap(code)));
+            }
+            if (!fields.empty())
+                p.rows.push_back(heading(sayf(l, Text::RefMapsWithMobs, {std::to_string(fields.size())})));
+            for (const auto& [title, code] : fields) p.rows.push_back(linked(title, mapNote(ix, l, code), toMap(code)));
             break;
         }
         case Shops:
@@ -956,29 +1049,42 @@ Page section(const refindex::Index& ix, Lang l, int id, const Context& c) {
             break;
         case Tables:  // 3.0.11-beta.26: the concept's «Таблиці» - the server's element table, each level
             p.name = say(l, Text::RefSecTables);
-            for (int lv = 1; lv <= 4; ++lv) {
+            for (int lv = 1; lv <= 4; ++lv) {  // 3.0.11-beta.32: a grid - the attack's lines, the defence's columns
                 p.rows.push_back(heading(sayf(l, Text::RefTableElements, {std::to_string(lv)})));
+                Row head;
+                head.style = Style::Grid;
+                head.gold = true;
+                for (int defence = 0; defence < 10; ++defence) head.tags.push_back(elementName(defence, l));  // whole
+                p.rows.push_back(std::move(head));
                 for (int attack = 0; attack < 10; ++attack) {
-                    std::string right;
-                    for (int defence = 0; defence < 10; ++defence) {
-                        const int pct = elementDamage(attack, defence, lv);
-                        if (pct == 100) continue;
-                        right += (right.empty() ? "" : " · ") + elementName(defence, l) + " " +
-                                 (pct < 0 ? sayf(l, Text::RefElementHeals, {std::to_string(-pct)})
-                                          : std::to_string(pct) + " %");
-                    }
-                    p.rows.push_back(linked(elementName(attack, l), right.empty() ? say(l, Text::RefTableRest) : right,
-                                            Link{}));
+                    Row line;
+                    line.style = Style::Grid;
+                    line.left = elementName(attack, l);
+                    for (int defence = 0; defence < 10; ++defence)
+                        line.tags.push_back(std::to_string(elementDamage(attack, defence, lv)));
+                    p.rows.push_back(std::move(line));
                 }
+                p.rows.push_back(note(say(l, Text::RefTableHelp)));
             }
             break;
         case Pets: {
             p.name = say(l, Text::RefSecPets);
             p.rows.push_back(heading(p.name));
-            for (const refindex::Pet& pet : ix.pets)
-                p.rows.push_back(linked(mobName(ix, pet.mob), say(l, Text::RefPetLure) + ": " + itemName(ix, pet.lure),
-                                        toMob(pet.mob)));
-            std::sort(p.rows.begin() + 1, p.rows.end(), [](const Row& a, const Row& b) { return a.left < b.left; });
+            std::vector<std::tuple<std::string, int, size_t>> list;  // the name, the level, the pet
+            for (size_t k = 0; k < ix.pets.size(); ++k) {
+                const auto m = ix.mobs.find(ix.pets[k].mob);
+                list.emplace_back(mobName(ix, ix.pets[k].mob), m == ix.mobs.end() ? 0 : m->second.lv, k);
+            }
+            std::sort(list.begin(), list.end());
+            for (const auto& [name, lv, k] : list) {  // 3.0.11-beta.32: three «Goblin» told apart by their levels
+                const refindex::Pet& pet = ix.pets[k];
+                std::string right = lv > 0 ? sayf(l, Text::RefLevel, {std::to_string(lv)}) : "";
+                if (pet.lure > 0)  // none: no «#0»
+                    right += (right.empty() ? "" : " · ") + say(l, Text::RefPetLure) + ": " + itemName(ix, pet.lure);
+                Row r = linked(name, right, toMob(pet.mob));
+                r.icon = "mob:" + std::to_string(pet.mob);
+                p.rows.push_back(std::move(r));
+            }
             break;
         }
         case Crafting: {
@@ -1213,6 +1319,9 @@ Page map(const refindex::Index& ix, Lang l, const std::string& code, const Conte
             if (std::find(it->second.flags.begin(), it->second.flags.end(), flag) != it->second.flags.end())
                 hero.tags.push_back(say(l, words));
     }
+    if (std::find(hero.tags.begin(), hero.tags.end(), say(l, Text::RefFlagTown)) == hero.tags.end() &&
+        isTown(ix, code))  // 3.0.11-beta.32: uAthena's maps have no «town» flag - a Kafra and few monsters tell it
+        hero.tags.insert(hero.tags.begin() + 1, say(l, Text::RefFlagTown));
     if (code == here) hero.tags.push_back("gold:" + say(l, Text::RefYouHere));
     if (c.players) {  // 3.0.11-beta.10: the site's «Онлайн» now
         const auto now = c.players->find(code);
@@ -1287,7 +1396,7 @@ Page map(const refindex::Index& ix, Lang l, const std::string& code, const Conte
         std::vector<Row> rows;
         for (int s : shops)
             rows.push_back(linked(ix.shops[size_t(s)].name,
-                                  sayf(l, Text::RefItemsCount, {std::to_string(ix.shops[size_t(s)].items.size())}),
+                                  counted(l, ix.shops[size_t(s)].items.size(), Text::RefItemsCount),
                                   Link{Go::Shop, s, ""}));
         capped(p, std::move(rows), ShopsHere, opened, l);
     }
@@ -1422,13 +1531,6 @@ std::map<std::string, int> worldMarks(const refindex::Index& ix, const std::stri
 }
 
 namespace {
-
-// A map's short name: the client's up to its first comma («Prontera City»), else its code
-std::string mapShort(const refindex::Index& ix, const std::string& code) {
-    const auto named = ix.mapNames.find(code);
-    const std::string name = named == ix.mapNames.end() ? "" : refindex::shortName(named->second);
-    return name.empty() ? code : name;
-}
 
 Row styled(Style st, const std::string& left, Link to = {}) {
     Row r;

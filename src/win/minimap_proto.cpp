@@ -257,7 +257,7 @@ void buildRoute(State& s) {
     s.routeLines.push_back(minimap::Line{refpages::stepNote(*step, startup().lang), ""});
 }
 
-// 3.0.11-beta.32: the way on the ground itself (win/ground_way) - the same cells as the minimap's line
+// 3.0.11-beta.31: the way on the ground itself (win/ground_way) - the same cells as the minimap's line
 void toGround(const State& s) {
     std::vector<std::pair<int, int>> cells;
     for (const minimap::Cell& c : s.path) cells.emplace_back(c.x, c.y);
@@ -480,7 +480,7 @@ void frame(HWND game, const Show& show, double k, int targetWidth, int targetHei
         if (s.shown) unblock();
         s.shown = false;
         s.big = false;
-        win::groundway::set("", {});  // 3.0.11-beta.32: no way on the ground either
+        win::groundway::set("", {});  // 3.0.11-beta.31: no way on the ground either
         if (s.on) {  // switched off: the game's own back where the map has one
             s.on = false;
             const bool back = s.hidOld && showGameMinimap();

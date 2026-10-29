@@ -45,9 +45,11 @@ struct Link {
 // wrapped); Step - a way's step (`right` its number, `left` where to, `sub` how, `tone` 1 paid); Legend - what a mark
 // on the map means (`icon` "mark:route", "mark:jump", "mark:players", "mark:here"); Button - the panel's (`gold` the
 // main one)
+// 3.0.11-beta.32: Grid - a table's line (the elements' «Таблиці»): `left` its name, `tags` its cells (per cents: their
+// colours by them), `gold` the columns' names
 enum class Style : uint8_t {
     Title, Sub, Heading, Row, Note, Tile, World, Portrait, Text, Search, Hint, Block, Chip, Result, Group, More, Empty,
-    Tab, Tool, Caption, Warn, Step, Legend, Button
+    Tab, Tool, Caption, Warn, Step, Legend, Button, Grid
 };
 using Marks = std::vector<std::pair<uint16_t, uint16_t>>;  // byte ranges [from, to) of the words
 struct Row {

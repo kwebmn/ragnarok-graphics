@@ -503,7 +503,7 @@ enum class Text : uint16_t {
     // sections, the keys and the data's chips at the bottom, the chips' kinds, «Обране» empty, the tables
     RefFind, RefSearchExplain, RefSecServices, RefSecServicesHint, RefSecTables, RefSecTablesHint, RefWorldHintN,
     RefKeysList, RefKeysCard, RefLiveNow, RefLiveOff, RefKindMob, RefKindItem, RefKindMap, RefKindQuest, RefFavEmpty,
-    RefTableElements, RefTableRest,
+    RefTableElements,
     RefElementsHeal,  // 3.0.11-beta.26: a card's elements' line - what heals it
     RefRailHome,      // 3.0.11-beta.26: the rail's first (3.0.11-beta.30: the first screen, «Головна»)
     RefRouteSteps,    // 3.0.11-beta.26: a way's steps, a section of their own
@@ -517,6 +517,9 @@ enum class Text : uint16_t {
     RefOnline, RefRouteTo, RefRouteShort, RefRouteFromAt, RefRouteWarn, RefFollowOn, RefFollowOff, RefReset,
     RefLegendRoute, RefLegendJump, RefLegendPlayers, RefTopPlayers, RefToDungeon, RefHereLabel, RefKeysWorld,
     RefMoreN,  // 3.0.11-beta.29: the rest of a panel's list (on the map, on the minimap)
+    // 3.0.11-beta.32: the monsters' list in two (met on maps, never), the element table's line under it
+    RefMobsOnMaps, RefMobsNowhere, RefTableHelp, RefTowns, RefMapsWithMobs, RefCardsDropped, RefCardsOther,
+    RefCardsEnchants,
     Count
 };
 

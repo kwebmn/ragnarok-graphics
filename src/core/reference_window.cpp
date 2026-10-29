@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdlib>
 
 #include "core/ui_icons.hpp"
 
@@ -57,6 +58,7 @@ int heightOf(refpages::Style st, float s) {
         case refpages::Style::Step: return px(kStepH, s);
         case refpages::Style::Legend: return px(24, s);
         case refpages::Style::Button: return px(kButtonH, s);
+        case refpages::Style::Grid: return px(28, s);  // 3.0.11-beta.32
         case refpages::Style::Warn:  // place() gives it its lines
         case refpages::Style::Block:  // place() gives it its rows
         case refpages::Style::Row: break;
@@ -978,6 +980,37 @@ bool hot(const Look& look, size_t i) {
     return (look.hover.part == Part::Row && look.hover.row == int(i)) || look.selected == int(i);
 }
 
+// 3.0.11-beta.32: a table's cell (refpages Style::Grid): its box, the colour of its per cent (more green, less red,
+// below 0 - it heals - violet, 100 none)
+panel::Box gridCell(const panel::Box& row, size_t k, size_t n, float s) {
+    const float label = 104 * s, w = (row.w - label) / float(std::max<size_t>(1, n));
+    return panel::Box{row.x + label + float(k) * w + 1.5f * s, row.y + 2 * s, w - 3 * s, row.h - 4 * s};
+}
+// A column's name (bold) whole when it fits `width`, else its longest beginning that does - 3 letters at the least
+std::string gridHead(const Layout& L, const std::string& name, float size, float width) {
+    std::string out = name;
+    size_t letters = 0;
+    for (const char c : out) letters += (uint8_t(c) & 0xC0) != 0x80;
+    while (letters > 3 && L.measure(out, size, true) > width) {
+        size_t cut = out.size() - 1;
+        while (cut > 0 && (uint8_t(out[cut]) & 0xC0) == 0x80) --cut;  // the last letter's first byte
+        out.resize(cut);
+        --letters;
+    }
+    return out;
+}
+void gridTint(int v, uint32_t& ground, float& a, uint32_t& words) {
+    if (v > 100) {
+        ground = 0x5BD36C, a = std::clamp(0.12f + float(v - 100) / 300.0f, 0.12f, 0.5f), words = 0x8FE39C;
+    } else if (v < 0) {
+        ground = 0xB28CFF, a = std::clamp(0.2f + float(-v) / 300.0f, 0.2f, 0.5f), words = 0xD8C2FF;
+    } else if (v < 100) {
+        ground = 0xFF5A4E, a = std::clamp(0.10f + float(100 - v) / 280.0f, 0.1f, 0.45f), words = 0xFF9A8F;
+    } else {
+        ground = 0xFFFFFF, a = 0.035f, words = kMuted;
+    }
+}
+
 // 3.0.11-beta.28: a result's parts (the concept's v21_search: its icon's 28 px, its name 14.5 px over its line
 // 12.5 px, its kind at its right)
 struct ResultBoxes {
@@ -1229,6 +1262,15 @@ void shapes(panel::Picture& out, const Layout& L, const refpages::Page& p, const
                     panel::roundRect(out, b, 9 * s, kAccent, on ? 0.18f : 0.10f, kAccent2, 0.85f, 1.5f * s);
                 else
                     panel::roundRect(out, b, 9 * s, kWhite, on ? 0.12f : kCellA);
+                continue;
+            case refpages::Style::Grid:  // 3.0.11-beta.32: the cells' tints; the columns' names on none
+                if (!row.gold)
+                    for (size_t k = 0; k < row.tags.size(); ++k) {
+                        uint32_t ground = 0, words = 0;
+                        float a = 0;
+                        gridTint(std::atoi(row.tags[k].c_str()), ground, a, words);
+                        panel::roundRect(out, gridCell(b, k, row.tags.size(), s), 4 * s, ground, a);
+                    }
                 continue;
             case refpages::Style::Hint:
                 if (closing(p, i)) fill(out, panel::Box{b.x, b.y, b.w, edge}, kWhite, kLineA);
@@ -1586,6 +1628,18 @@ std::vector<Words> words(const Layout& L, const refpages::Page& p, const std::ve
             case refpages::Style::Button:
                 out.push_back(Words{panel::Box{x, y, w, h}, row.left, row.gold ? kAccent2 : kText, 14 * s, true,
                                     Align::Center});
+                break;
+            case refpages::Style::Grid:  // 3.0.11-beta.32: its name, its cells (the columns' names cut to theirs)
+                out.push_back(Words{panel::Box{x, y, 100 * s, h}, row.left, kText, 13.5f * s, false, Align::Left});
+                for (size_t k = 0; k < row.tags.size(); ++k) {
+                    const panel::Box cell = gridCell(panel::Box{x, y, w, h}, k, row.tags.size(), s);
+                    uint32_t ground = 0, colour = kMuted;
+                    float a = 0;
+                    if (!row.gold) gridTint(std::atoi(row.tags[k].c_str()), ground, a, colour);
+                    const std::string text =
+                        row.gold ? gridHead(L, row.tags[k], 12.5f * s, cell.w - 4 * s) : row.tags[k];
+                    out.push_back(Words{cell, text, row.gold ? kMuted : colour, 12.5f * s, row.gold, Align::Center});
+                }
                 break;
             case refpages::Style::Tile: {  // its icon, its name, its count at the right, what it holds under them
                 const float countW = row.right.empty() ? 0 : std::ceil(L.measure(row.right, 13 * s, true)) + 2;

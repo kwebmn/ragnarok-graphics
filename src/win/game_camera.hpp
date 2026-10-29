@@ -18,7 +18,7 @@ std::string readGameMap();
 // 3.0.11-beta.1 (the new interface's minimap prototype): the player's cell by the game's own minimap formula
 // (core/minimap_proto cellOf) and the map's cells; false outside a world or in another build
 bool readPlayerCell(int& x, int& y, int& width, int& height);
-// 3.0.11-beta.32: the player's place in the game's world (x, its height y - up along -y -, z) and the map's cells
+// 3.0.11-beta.31: the player's place in the game's world (x, its height y - up along -y -, z) and the map's cells
 // (their count across and down, a cell's world size)
 bool readPlayerWorld(float at[3], int& width, int& height, int& cellSize);
 // The game's own minimap: it is drawn while its UI window 14 exists (UIWindowMgr+0x7C); hidden and made again as

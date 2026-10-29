@@ -7,7 +7,7 @@
 
 namespace uagfx::win::groundway {
 
-// 3.0.11-beta.32 (the owner: «на самой локации нету линии по которой идти надо, только на карте»): the way followed
+// 3.0.11-beta.31 (the owner: «на самой локации нету линии по которой идти надо, только на карте»): the way followed
 // on the new minimap drawn on the ground itself (core/ground_way) - in gold over a dark edge, against the depth with
 // the world (the characters and the walls before it hide it), before the interface. On the game's thread.
 

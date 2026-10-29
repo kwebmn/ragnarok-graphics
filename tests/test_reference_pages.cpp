@@ -545,9 +545,25 @@ TEST(reference_concept_sections_and_words) {
     CHECK_EQ(tables.name, std::string("Таблиці"));
     CHECK(indexOf(tables, "Стихії атаки проти захисту рівня 1") != size_t(-1));
     CHECK(indexOf(tables, "Стихії атаки проти захисту рівня 4") != size_t(-1));
-    const refpages::Row* fire = rowWith(tables, "Fire");  // level 1: fire against earth 150 %, water 50 %
-    CHECK(fire && fire->right.find("Earth 150 %") != std::string::npos);
-    CHECK(fire && fire->right.find("Water 50 %") != std::string::npos);
+    const refpages::Row* fire = rowWith(tables, "Fire");  // 3.0.11-beta.32: a grid - fire against earth 150, water 50
+    CHECK(fire && fire->style == refpages::Style::Grid && fire->tags.size() == 10);
+    CHECK(fire && fire->tags[2] == "150" && fire->tags[1] == "50" && fire->tags[0] == "100");
+    CHECK(tables.rows[1].style == refpages::Style::Grid && tables.rows[1].gold && tables.rows[1].tags[3] == "Fire");
+    CHECK(tables.rows[1].tags[0] == "Neutral");  // the columns' whole names: the window cuts them only when narrow
+    const auto columnHead = [&](const refwin::Layout& L) {
+        int total = 0;
+        const std::vector<refwin::Placed> placed = refwin::place(L, tables, total);
+        refwin::Texts none;
+        refwin::Look plain;
+        plain.chrome = refwin::chrome(L, tables, none);
+        for (const refwin::Words& w : refwin::words(L, tables, placed, 0, none, plain))
+            if (w.bold && w.text.rfind("Neu", 0) == 0) return w;
+        return refwin::Words{};
+    };
+    CHECK_EQ(columnHead(refwin::layout(1920, 1080, 1.0f)).text, std::string("Neutral"));
+    const refwin::Layout slim = refwin::layout(800, 600, 1.0f);
+    const refwin::Words cut = columnHead(slim);
+    CHECK(cut.text.size() >= 3 && cut.text.size() < 7 && slim.measure(cut.text, cut.px, true) <= cut.box.w);
     // the blocks' names in capitals, the first screen's words
     const std::vector<refpages::Link> recent{{refpages::Go::Mob, 1002, ""}};
     refpages::Context c = ctx("");
@@ -717,7 +733,7 @@ TEST(reference_search_concept_results) {
     CHECK(city && city->sub == "місто" && city->icon == "ui:location" && city->right == "локація");
     const refpages::Page fields = refpages::found(ix, Lang::Uk, "field", ctx("prt_fild08"));
     const refpages::Row* field = rowWith(fields, "Prontera Field (prt_fild08)");
-    CHECK(field && field->sub == "ви тут · видів монстрів: 1" && field->gold);
+    CHECK(field && field->sub == "ви тут · 1 вид монстрів" && field->gold);
     // nothing: what was not found and what to try
     const refpages::Page none = refpages::found(ix, Lang::En, "zzz");
     CHECK(none.rows.size() == 2 && none.rows[1].style == refpages::Style::Empty);
@@ -867,4 +883,83 @@ TEST(reference_home_button) {
         CHECK(partial.px == whole.px);
         CHECK(!refwin::hotAreas(L, card, rows, 0, now).empty());
     }
+}
+
+// 3.0.11-beta.32: the monsters' list - those met on maps first, by their levels, each its picture and its line (the
+// events' and summons' copies apart)
+TEST(reference_mobs_list_groups) {
+    const refindex::Index ix = index();
+    const refpages::Page p = refpages::section(ix, Lang::Uk, refpages::Mobs);
+    CHECK(p.rows[0].style == refpages::Style::Heading && p.rows[0].left == "На картах · 2");
+    const refpages::Row* poring = rowWith(p, "Poring");
+    CHECK(poring && poring->icon == "mob:1002" && poring->right == "Lv 1 · 2 карти");
+    const refpages::Row* morroc = rowWith(p, "Satan Morroc");
+    CHECK(morroc && morroc->gold && morroc->right == "MVP · Lv 99 · 1 карта");
+    refindex::Index more = index();
+    more.mobs[1999] = refindex::Mob{};
+    more.mobs[1999].name = "Event Copy";
+    const refpages::Page split = refpages::section(more, Lang::Uk, refpages::Mobs);
+    CHECK(indexOf(split, "Не трапляються на картах (події, виклики) · 1") != size_t(-1));
+}
+
+// 3.0.11-beta.32 (the owner: «есть еще куча подобных мелочей, посмотри по ним еще»): the lists' small things - the
+// hours past an hour, the counts in their words, the towns among the locations, the cards in three (the enchantments
+// apart, their numbers in order), the pets told apart (their levels, no «#0» lure)
+TEST(reference_lists_polish) {
+    CHECK_EQ(refpages::respawn(117 * 60000, Lang::Uk), std::string("1 год 57 хв"));
+    CHECK_EQ(refpages::respawn(90 * 60000, Lang::Uk), std::string("1 год 30 хв"));
+    CHECK_EQ(refpages::respawn(60 * 60000, Lang::Uk), std::string("1 год"));
+    CHECK_EQ(refpages::respawn(59 * 60000, Lang::Uk), std::string("59 хв"));
+    refindex::Index ix = index();
+    const auto starting = [](const refpages::Page& p, const std::string& head) -> const refpages::Row* {
+        for (const refpages::Row& r : p.rows)
+            if (r.left.rfind(head, 0) == 0) return &r;
+        return nullptr;
+    };
+    const refpages::Page services = refpages::section(ix, Lang::Uk, refpages::Services);
+    const refpages::Row* tools = starting(services, "Tool Dealer · Prontera");
+    CHECK(tools && tools->right == "2 товари");
+    const refpages::Page maps = refpages::section(ix, Lang::Uk, refpages::Maps);
+    CHECK(maps.rows.size() > 2 && maps.rows[0].left == "Міста · 1" && maps.rows[0].style == refpages::Style::Heading);
+    const refpages::Row* prontera = starting(maps, "Prontera City");
+    CHECK(prontera && prontera->right == "Kafra · 1 крамниця");
+    const refpages::Row* field = starting(maps, "Prontera Field");
+    CHECK(field && field->right == "1 вид монстрів");
+    CHECK(indexOf(maps, "З монстрами · 3") != size_t(-1));
+    const refpages::Page home = refpages::home(ix, Lang::Uk, refpages::Context{});
+    const refpages::Row* places = rowWith(home, "Локації");
+    CHECK(places && places->right == "4");  // the towns counted too
+    {  // a guild's castle and a passage have their Kafra too - not towns
+        refindex::Index more = index();
+        refindex::Npc kafra;
+        kafra.name = "Kafra Staff";
+        kafra.kind = refindex::NpcKind::Kafra;
+        more.maps["gefg_cas01"].npcs.push_back(kafra);
+        more.maps["gefg_cas01"].flags = {"gvg_castle", "nomemo"};
+        more.maps["izlu2dun"].npcs.push_back(kafra);
+        more.maps["aldeba_in"].npcs.push_back(kafra);
+        more.maps["aldeba_in"].flags = {"indoors"};
+        more.maps["brasilis"].npcs.push_back(kafra);
+        const refpages::Page towns = refpages::section(more, Lang::Uk, refpages::Maps);
+        CHECK(towns.rows[0].left == "Міста · 2" && starting(towns, "brasilis") && !starting(towns, "gefg_cas01"));
+        CHECK(!starting(towns, "izlu2dun") && !starting(towns, "aldeba_in"));
+        CHECK(towns.rows[1].left == "brasilis");  // among the names whatever their letters' case
+    }
+    // the cards: dropped, not dropped, the enchantments - «AGI+2» before «AGI+10»
+    ix.items[4002] = refindex::Item{"Fabre Card", "Fabre_Card", 6};
+    ix.items[4700] = refindex::Item{"AGI+10", "Agility10", 6};
+    ix.items[4701] = refindex::Item{"AGI+2", "Agility2", 6};
+    const refpages::Page cards = refpages::section(ix, Lang::Uk, refpages::Cards);
+    CHECK(indexOf(cards, "Випадають з монстрів · 1") != size_t(-1));
+    CHECK(indexOf(cards, "Не випадають з монстрів (події, квести) · 1") != size_t(-1));
+    CHECK(indexOf(cards, "Зачарування · 2") != size_t(-1));
+    CHECK(indexOf(cards, "AGI+2") < indexOf(cards, "AGI+10") && indexOf(cards, "AGI+10") != size_t(-1));
+    CHECK(indexOf(cards, "Poring Card") < indexOf(cards, "Fabre Card"));
+    // the pets: their levels, their pictures, no lure when there is none
+    ix.pets.push_back(refindex::Pet{1917, 0, 0, 0, 0});
+    const refpages::Page pets = refpages::section(ix, Lang::Uk, refpages::Pets);
+    const refpages::Row* poring = rowWith(pets, "Poring");
+    CHECK(poring && poring->right == "Lv 1 · приманка: Apple" && poring->icon == "mob:1002");
+    const refpages::Row* morroc = rowWith(pets, "Satan Morroc");
+    CHECK(morroc && morroc->right == "Lv 99");
 }
