@@ -1,3 +1,11 @@
+# uaRO Graphics 3.0.11-beta.17 — what is new
+
+- **The cards' sections fold by your choice**: a click on a section's heading («Where to find», «What it drops»,
+  «Damage by element», «How to get there», «NPCs» and so on) folds it — in every card at once, and so it stays in the
+  next games (uaro-graphics\reference-folded.txt); a folded heading has «›», a click unfolds it.
+- To check: Ctrl+F → «poring» → a click on «Damage by element» — the section folds; «baphomet» — folded there too;
+  after the game's restart — the same.
+
 # uaRO Graphics 3.0.11-beta.16 — what is new
 
 - **Quests in «Reference»** (after the site's update — a new quests.json and the quests' file; the app takes them at
