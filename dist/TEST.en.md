@@ -1,3 +1,10 @@
+# uaRO Graphics 3.0.11-beta.37 — what is new
+
+- **The buffs and the character block come with the new minimap.** The new minimap stands where the game draws its
+  buff icons and covered them — no buffs could be seen. Now with the new minimap on, «Buffs on the character» is
+  «Column» and «Character block» is «Bars», unless you chose otherwise in «Interface» (your choice stays).
+- To check: with the new minimap the buffs stand in a column under it, the character block at the top left.
+
 # uaRO Graphics 3.0.11-beta.36 — what is new
 
 - **The character block (stage 7 of the new interface).** «Interface» has a new choice «Character block»: «Bars» or
