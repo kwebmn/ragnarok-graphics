@@ -1,3 +1,15 @@
+# uaRO Graphics 3.0.11-beta.38 — what is new
+
+- **The target card (stage 7 of the new interface).** The monster your character fights, in a short card at the
+  top middle: its picture, name, level and element. Point at it — its race and size, HP and experience, the elements
+  hurting it most and those healing it. A click opens its card in «Reference».
+- The target is the one your character hits, and when you hit none — the one hitting you. The card goes when the
+  monster dies or is out of sight, and after 12 seconds without hits. It stands under the game's windows when the
+  hotkeys' bar is there.
+- «Interface» has «Target card»; with the new minimap it is on by itself.
+- To check: hit a monster — the card at the top; point at it, click it. The log's line `target: <name> (#<id>,
+  Lv …) - the actor … the character hits`.
+
 # uaRO Graphics 3.0.11-beta.37 — what is new
 
 - **The buffs and the character block come with the new minimap.** The new minimap stands where the game draws its
