@@ -22,7 +22,8 @@ struct Show {
 };
 void frame(HWND game, const Show& show, double k, int targetWidth, int targetHeight);
 void draw(FrameRecord& record, gpu::Renderer& renderer);
-bool mouse(HWND game, UINT m, LPARAM lp, LRESULT& result);
+// 3.0.11-beta.31: and the wheel over the map zooms it; the big map's clicks first
+bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result);
 // 3.0.11-beta.4 (the owner: «на Ctrl+Tab ничего не происходит»): Ctrl+Tab while the prototype is on - its look goes
 // round as the game's own minimap's (opaque, see-through, hidden); true: the key is the prototype's, not the game's
 bool key(unsigned vk);

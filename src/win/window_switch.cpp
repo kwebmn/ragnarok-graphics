@@ -33,7 +33,7 @@ LRESULT CALLBACK gameProc(HWND w, UINT m, WPARAM wp, LPARAM lp) {
         LRESULT answer = 0;  // 3.0.3-beta.8: the mouse over the panel in the game's picture is the panel's
         if (answercard::mouse(w, m, lp, answer)) return answer;  // 3.0.9-beta.4: and over the answer card the card's
         if (referencewin::mouse(w, m, wp, lp, answer)) return answer;  // 3.0.11-beta.7: over «Довідник» its own
-        if (minimapproto::mouse(w, m, lp, answer)) return answer;  // 3.0.11-beta.1: the new minimap's
+        if (minimapproto::mouse(w, m, wp, lp, answer)) return answer;  // 3.0.11-beta.1: the new minimap's
         if (g_switch->mouse(w, m, lp, answer)) return answer;
     }
     return CallWindowProcA(g_original, w, m, wp, lp);

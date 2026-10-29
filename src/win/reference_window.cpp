@@ -397,16 +397,16 @@ void go(State& s, const refpages::Link& to) {
         makePage(s);
         return;
     }
-    if (to.go == refpages::Go::Follow) {  // 3.0.11-beta.9: the way on the minimap - the window gives way to it
+    if (to.go == refpages::Go::Follow) {  // 3.0.11-beta.9: the way on the minimap
         std::string target;
         bool walk = true;
-        if (minimapproto::following(target, walk) && target == to.map && walk == (to.id == 0)) {
+        if (minimapproto::following(target, walk) && target == to.map && walk == (to.id == 0))
             minimapproto::unfollow();
-            makePage(s);  // «вести ›» again
-        } else {
+        else
             minimapproto::follow(to.map, to.id == 0);
-            close(s);
-        }
+        // 3.0.11-beta.31 (the owner: «когда выбрать маршрут то справочник закрывается»): the window stays, its page
+        // says it is followed («веду · зупинити ›», «Не вести»)
+        makePage(s);
         return;
     }
     int from = s.sel;  // 3.0.11-beta.28: a result opened by a click - picked when back at the results

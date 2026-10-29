@@ -192,25 +192,23 @@ TEST(route_follow_made_again_wherever_the_player_goes) {
 }
 
 TEST(minimap_goal_line_and_its_end) {
-    const minimap::Geometry g = minimap::geometry(1920, 1080, 1.0f);
-    const minimap::MapSize map{400, 400};
-    const minimap::Cell player{200, 200};
-    float x = 0, y = 0;
-    CHECK(minimap::goalPoint(g, map, player, 100, minimap::Cell{220, 200}, x, y));  // in the view: the cell itself
-    CHECK(x > float(g.size) / 2 + 20 && x < float(g.size) && std::fabs(y - float(g.size) / 2) < 2);
-    CHECK(!minimap::goalPoint(g, map, player, 100, minimap::Cell{390, 200}, x, y));  // east, out of it: the edge
-    CHECK(x > float(g.size) - 8 && x < float(g.size) && std::fabs(y - float(g.size) / 2) < 2);
-    CHECK(!minimap::goalPoint(g, map, player, 100, minimap::Cell{200, 10}, x, y));  // south: the bottom edge
-    CHECK(y > float(g.size) - 8 && std::fabs(x - float(g.size) / 2) < 2);
+    // 3.0.11-beta.31: the way's line (its cells, core/walk_path) ends at the square's edge when its next move is past
+    // it; nothing of it west of the player
+    const minimap::Layout L = minimap::layout(1920, 1080, 1.0f, false, 0);
+    minimap::Scene sc;
+    sc.map = minimap::MapSize{400, 400};
+    sc.player = minimap::Cell{200, 200};
+    sc.path = {minimap::Cell{200, 200}, minimap::Cell{390, 200}};  // east, out of the view
+    minimap::Scene bare = sc;
+    bare.path.clear();
     panel::Picture with, without;
-    const std::vector<uint32_t> none;
-    minimap::paint(without, g, none, 0, 0, map, player, 100);
-    minimap::paint(with, g, none, 0, 0, map, player, 100, {}, minimap::Goal{true, minimap::Cell{230, 200}});
-    const size_t mid = size_t(g.size / 2) * size_t(with.width) + size_t(g.size / 2 + g.size / 5);  // on the line
-    CHECK(with.px[mid] != without.px[mid]);
-    CHECK((with.px[mid] & 0xFF) > 0x80);  // the way's light blue over the dark ground (0x22 blue)
-    const size_t off = size_t(g.size / 4) * size_t(with.width) + size_t(g.size / 4);  // away from it
-    CHECK_EQ(with.px[off], without.px[off]);
+    minimap::paint(with, L, sc, minimap::Texts{});
+    minimap::paint(without, L, bare, minimap::Texts{});
+    const int row = int(L.map.h / 2);
+    const auto px = [](const panel::Picture& p, int x, int y) { return p.px[size_t(y) * size_t(p.width) + size_t(x)]; };
+    CHECK(px(with, int(L.map.w) - 4, row) != px(without, int(L.map.w) - 4, row));  // to the edge
+    CHECK(px(with, int(L.map.w / 4), row) == px(without, int(L.map.w / 4), row));  // not behind the player
+    CHECK(px(with, 4, int(L.map.h) + 4) == px(without, 4, int(L.map.h) + 4));      // nothing past the square
 }
 
 TEST(reference_pages_route_rows_follow_the_way) {

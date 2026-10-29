@@ -294,6 +294,20 @@ bool readPlayerCell(int& x, int& y, int& width, int& height) {
     return true;
 }
 
+bool readPlayerWorld(float at[3], int& width, int& height, int& cellSize) {
+    uint32_t world = 0, player = 0, cells = 0;
+    int size[3];
+    const uint32_t mode = gameMode();
+    if (!mode || !read(mode + kModeWorld, &world, 4) || !read(world + kWorldPlayer, &player, 4) ||
+        !read(world + kWorldCells, &cells, 4) || !read(player + 4, at, 3 * sizeof(float)) ||
+        !read(cells + kCellsSize, size, sizeof size) || size[0] <= 0 || size[1] <= 0 || size[2] <= 0)
+        return false;
+    width = size[0];
+    height = size[1];
+    cellSize = size[2];
+    return std::isfinite(at[0]) && std::isfinite(at[1]) && std::isfinite(at[2]);
+}
+
 bool gameMinimapShown() {
     uint32_t window = 0;
     return gameMode() && read(kMinimapWindow, &window, 4) && window != 0;

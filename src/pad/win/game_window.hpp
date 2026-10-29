@@ -20,7 +20,8 @@ bool cursorOverGame(HWND game, POINT screen);
 // client pixels (Windows' size of them), whose clicks are not the game's; all: none of them is (the panel dragged);
 // nullptr: no panel. On the game's thread, as the gate. 3.0.9-beta.4: the answer card's too, each its own;
 // 3.0.11-beta.1: the new minimap's (prototype). 3.0.11-beta.24: `game` - the window the rectangle is in
-enum class Blocker { Panel, Card, Minimap, Reference };  // 3.0.11-beta.7: «Довідник»
+// 3.0.11-beta.7: «Довідник»; 3.0.11-beta.31: the new minimap's big map
+enum class Blocker { Panel, Card, Minimap, Reference, BigMap };
 void setBlocked(Blocker who, HWND game, const RECT* rect, bool all);
 // 3.0.11-beta.24: the part the game's own cursor is over (x, y of the game's width x height picture), -1 for none:
 // the world under it is not the cursor's then (win/world_mouse). On the game's thread.

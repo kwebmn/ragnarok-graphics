@@ -18,7 +18,7 @@ Framed g_framed;
 bool g_clipped = false;
 // 3.0.3-beta.8: setBlocked; 3.0.9-beta.4: the panel's, the card's; 3.0.11-beta.1: the new minimap's; 3.0.11-beta.7:
 // «Довідник»'s (in Blocker's order)
-constexpr int kBlockers = 4;
+constexpr int kBlockers = 5;
 Blocked g_parts[kBlockers];
 HWND g_partsWindow = nullptr;  // 3.0.11-beta.24: the window their rectangles are in
 

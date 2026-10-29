@@ -1,5 +1,6 @@
 #pragma once
 #include <cstdint>
+#include <string>
 #include <vector>
 
 #include "core/window_panel.hpp"
@@ -10,6 +11,11 @@ namespace uagfx::minimap {
 // minimap = 1) - the game's own minimap hidden (its UI window 14 deleted as Ctrl+Tab does), the driver's panel in its
 // corner: the map's picture round the player, the player's mark, the player's cell under it (to set against /where),
 // the mouse over it kept from the game. The parts of it that need no Windows.
+// 3.0.11-beta.31 (the owner: «нету кнопочок + и -, нету возможности карту развернуть на весь екран», «описание под
+// картой надо иметь возможность сворачивать», «поработать над дизайном карты»): the concept's look (v19_town, the
+// tc_* cards) - a square with gold corners, the player's arrow where the camera looks and its view, the portals, the
+// way in gold along the walked cells; its zoom, its bar under it (the name, the cell, ▾ the details), the way's bar,
+// and the map big in the screen's middle.
 
 struct Cell {
     int x = 0, y = 0;  // the map's cell: x east, y north (the .gat's, as /where says it)
@@ -17,15 +23,6 @@ struct Cell {
 // The player's cell by uaRO.exe's own minimap formula (FUN_0055c220, single precision): x / cell + (w / 2) and
 // z / cell + (h / 2), each cut toward zero (__ftol); false when it is not a place on the map (no world, another build)
 bool cellOf(float worldX, float worldZ, int width, int height, int cellSize, Cell& out);
-
-// The panel in the target's top right corner, where the game's own minimap was: 160 px a side and a line of 18 under
-// it at scale 1, 8 px from the edges (the target's pixels); 3.0.11-beta.6: `listLines` lines of 14 more under that
-// (the map's monsters)
-struct Geometry {
-    int size = 0, x = 0, y = 0, textH = 0, listH = 0, lineH = 0;
-};
-Geometry geometry(int targetW, int targetH, float scale, int listLines = 0);
-bool inside(const Geometry& g, float x, float y);  // the map's box, its line or its list under it
 
 struct MapSize {
     int w = 0, h = 0;
@@ -37,32 +34,95 @@ struct View {
 };
 View view(const MapSize& map, const Cell& player, int cells, int size);
 void cellToPanel(const View& v, const MapSize& map, const Cell& c, float& px, float& py);  // a cell's centre
-// 3.0.11-beta.6: a hint's mark on the map - an NPC (a dot of its kind's colour) or a warp to another map (a ring)
+
+// 3.0.11-beta.31: the zoom - the cells across the square round the player, the last step the whole map
+constexpr int kZoomCells[] = {40, 60, 100, 150, 220};
+constexpr int kZoomSteps = 6;  // those and the whole map
+constexpr int kZoomFirst = 2;  // 100 cells, as before
+int cellsAt(int step, const MapSize& map);
+
+// The panel in the target's top right corner, where the game's own minimap was: the map's square (200 px at scale 1,
+// 10 from the edges), its buttons in its bottom left corner (+, −, the big map), the bar under it, the way's bar, the
+// details (the map's monsters). The boxes in the panel's own pixels; w 0: not there
+struct Layout {
+    float s = 1;
+    int x = 0, y = 0, w = 0, h = 0;  // the panel in the target
+    panel::Box map, zoomIn, zoomOut, expand, caption, fold, route, stop, list;
+    float lineH = 0;
+};
+Layout layout(int targetW, int targetH, float scale, bool route, int listLines);
+enum class Part : uint8_t { None, Map, ZoomIn, ZoomOut, Expand, Caption, Fold, Route, Stop, List };
+Part partAt(const Layout& L, float x, float y);
+enum class BigPart : uint8_t { None, Header, Close, Map };  // the big map's (below)
+int lineAt(const Layout& L, float y);  // the details' line under y, -1 none
+
+// What the map shows
+enum class Glyph : uint8_t { Dot, Kafra, Warp };
 struct Mark {
     Cell cell;
     uint32_t rgb = 0;
-    bool warp = false;
+    Glyph glyph = Glyph::Dot;
+    std::string label;  // its words: under the pointer; on the big map a warp's and a Kafra's always
 };
-// 3.0.11-beta.9: the way followed (core/route_follow) - its next move's cell: a line from the player to it and a ring
-// on it; out of the view the line to the box's edge, a dot there
-struct Goal {
-    bool shown = false;
-    Cell cell;
+struct Scene {
+    const std::vector<uint32_t>* argb = nullptr;  // the map's own picture (the game's), the whole map, rows north first
+    int imgW = 0, imgH = 0;
+    MapSize map;
+    Cell player;
+    float lookX = 0, lookY = 0;  // where the camera looks along the ground (east, north); 0, 0 not known: a dot
+    int cells = 100;             // the zoom
+    std::vector<Mark> marks;
+    std::vector<Cell> path;  // the way over this map, from the player on (walkpath)
+    bool pin = false;        // the way's next move: a gold pin there
+    Cell pinCell;
+    int hoverMark = -1;  // the mark under the pointer: a ring round it
+    Part hover = Part::None;
+    BigPart bigHover = BigPart::None;
+    float opacity = 1;  // Ctrl+Tab's see-through
 };
-constexpr uint32_t kRouteRgb = 0x5AC8FA;  // the way's line, ring and words
-// The panel's picture (premultiplied): the map's picture (ARGB as decoded, the whole map, rows north first; the game's
-// magenta see-through) through the view, a dark ground where it has none, the marks, the way's line, the player's mark
-// over them, the band of the line and the list under the map (their words go over it by GDI)
-void paint(panel::Picture& out, const Geometry& g, const std::vector<uint32_t>& mapArgb, int mapW, int mapH,
-           const MapSize& map, const Cell& player, int cells, const std::vector<Mark>& marks = {},
-           const Goal& goal = {});
-// Where the line from the player to the goal ends in the box (the panel's pixels): the goal itself in the view
-// (true), else the point on the box's edge (an inset in) toward it (false)
-bool goalPoint(const Geometry& g, const MapSize& map, const Cell& player, int cells, const Cell& goal, float& x,
-               float& y);
-// The mark under a point of the panel (its pixels, the map's box): the nearest within its reach, -1 none
-int markAt(const Geometry& g, const MapSize& map, const Cell& player, int cells, const std::vector<Mark>& marks,
-           float x, float y);
+constexpr uint32_t kRouteRgb = 0xF2C14E;  // 3.0.11-beta.31: the way's gold (the concept's; was blue)
+
+// The words over the panel (win/minimap_proto draws them by GDI)
+enum class Align : uint8_t { Left, Right, Center };
+struct Words {
+    panel::Box box;
+    std::string text;  // UTF-8
+    uint32_t rgb = 0xECEFF5;
+    float px = 12;
+    bool bold = false;
+    Align align = Align::Left;
+};
+struct Line {
+    std::string left, right;
+    uint32_t leftRgb = 0, rightRgb = 0;  // 0: the text's, the muted
+    bool bold = false;
+};
+struct Texts {
+    std::string name, cell;   // the bar's: the map's short name, the player's cell
+    bool folded = false;      // the details hidden: ▸
+    std::vector<Line> route;  // the way's bar: its two lines
+    std::vector<Line> list;   // the details
+};
+// The panel's picture (premultiplied: see-through round its parts), the words over it
+void paint(panel::Picture& out, const Layout& L, const Scene& sc, const Texts& t);
+std::vector<Words> words(const Layout& L, const Scene& sc, const Texts& t);
+// The mark under a point of the panel (its pixels, the map's square): the nearest within its reach, -1 none
+int markAt(const Layout& L, const Scene& sc, float x, float y);
+
+// 3.0.11-beta.31 (the owner: «развернуть на весь екран»): the map big in the target's middle - the whole map fitted,
+// its marks with their words, the way, the player; its bar (the name, the cell, ×)
+struct Big {
+    float s = 1;
+    int x = 0, y = 0, w = 0, h = 0;  // in the target
+    panel::Box header, close, map;   // its own pixels
+};
+Big bigLayout(int targetW, int targetH, float scale, const MapSize& map);
+BigPart bigPartAt(const Big& b, float x, float y);
+// The map's picture alone at the big map's size (made once a map and a size) and the rest over a copy of it
+void paintBigMap(panel::Picture& out, const Big& b, const Scene& sc);
+void paintBig(panel::Picture& out, const panel::Picture& map, const Big& b, const Scene& sc);
+std::vector<Words> bigWords(const Big& b, const Scene& sc, const std::string& title, const std::string& cell);
+int bigMarkAt(const Big& b, const Scene& sc, float x, float y);
 
 // 3.0.11-beta.4 (the owner: «на Ctrl+Tab ничего не происходит»): Ctrl+Tab goes round the game's own way - opaque,
 // see-through (the game's 0xAA of 0xFF), hidden

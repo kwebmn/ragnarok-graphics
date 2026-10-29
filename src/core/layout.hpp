@@ -67,6 +67,8 @@ constexpr const char* kReferenceFolded = "uaro-graphics\\reference-folded.txt";
 // 3.0.11-beta.18: «Довідник»'s cards opened lately and the starred ones (a line a card: refpages::linkText)
 constexpr const char* kReferenceRecent = "uaro-graphics\\reference-recent.txt";
 constexpr const char* kReferenceFavourites = "uaro-graphics\\reference-favourites.txt";
+// 3.0.11-beta.31: the new minimap's zoom and whether its details are folded («zoom N», «folded 0|1» lines)
+constexpr const char* kMinimapState = "uaro-graphics\\minimap-state.txt";
 // 2.14: the client patcher (app/client_patch): the list of the game's files last put, and where they arrive first
 constexpr const char* kClientPatchRecord = "uaro-graphics\\client-patch.txt";
 constexpr const char* kClientPatchWork = "uaro-graphics\\update\\client";
