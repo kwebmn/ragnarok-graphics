@@ -8,6 +8,7 @@
 
 #include "pad/win/client_mouse.hpp"
 #include "pad/win/game_window.hpp"
+#include "win/hotbar.hpp"
 #include "win/log.hpp"
 
 namespace uagfx::win {
@@ -26,6 +27,13 @@ constexpr uint32_t kCall = 0x566C9A;
 // (mode [0x39], [0x3a]) and from there names an NPC and sets its cursor without asking whose the cursor is
 using PickFn = void*(__attribute__((thiscall)) *)(uint32_t world, float x, float y);
 constexpr uint32_t kPick = 0x4F9890, kPickCall = 0x566DFA;
+// 3.0.11-beta.40: a skill or an item dragged and let go - the game mode's drop (its message 0x12, FUN_005707d0) asks
+// the windows' manager for a shown window there (FUN_004ccef0: ECX the manager, x, y, the drag; ret 0xC, AL taken);
+// none, an item goes on the ground (its count's dialog). Over a part of the driver's: the hotbar takes it into its
+// cell, the rest as a window that takes nothing (the base window's drop FUN_004c9910: the drag ended)
+using DropFn = int(__attribute__((thiscall)) *)(uint32_t manager, int x, int y, uint32_t drag);
+using NoDropFn = void(__attribute__((thiscall)) *)(uint32_t window, int x, int y, uint32_t drag);
+constexpr uint32_t kDrop = 0x4CCEF0, kDropCall = 0x57357B, kNoDrop = 0x4C9910;
 
 // The bytes the call, the answer's use and both functions are made of in the build this knows.
 struct Known {
@@ -42,15 +50,21 @@ const Known kKnown[] = {
     {0x566DED, "\xB9\xF0\xB5\x74\x00\xD9\x5D\xF8\x8B\x55\xF8\x52\x50\xE8\x91\x2A\xF9\xFF", 18},
     {0x566DFF, "\x8B\x1D\xE4\x7F\x72\x00\x8B\xF8", 8},
     {0x4F9890, "\x55\x8B\xEC\x83\xEC\x08\x53\x56\x8B\xF1\x57", 11},  // the pick's: this in ESI, its list
+    // 3.0.11-beta.40: push the drag, y, x; mov ecx,manager; call the manager's drop; test al,al
+    {0x573573, "\x56\x50\x51\xB9\xD8\x7E\x72\x00\xE8\x70\x99\xF5\xFF\x84\xC0", 15},
+    {0x4CCEF0, "\x55\x8B\xEC\x51\x53\x56\x8B\x71\x38\x57", 10},  // the manager's drop: its list
+    // the base window's drop: mov ecx,mode; push 0 x3; push 0x13; call [mode's +0x14]; ret 0xC
+    {0x4C9910, "\x8B\x0D\x7C\xB5\x74\x00\x6A\x00\x6A\x00\x6A\x00\x8B\x01\x6A\x13\xFF\x50\x14\xC2\x0C\x00", 22},
 };
 
 // In Blocker's order (3.0.11-beta.33: the big map was left out - the world reacted under it)
 const char* const kParts[] = {"the windows' panel", "the answer card", "the new minimap", "«Довідник»",
                               "the new minimap's big map", "the buffs' column", "the character block",
-                              "the target's card", "the party's panel"};
+                              "the target's card", "the party's panel", "the hotbar"};
 static_assert(std::size(kParts) == size_t(uapad::gamewindow::kBlockerCount), "a name for each part");
 unsigned g_told = 0;    // the parts whose first cursor over them is logged
 unsigned g_hidden = 0;  // 3.0.11-beta.33: the parts whose first actor hidden under them is logged
+int g_drops = 0;        // 3.0.11-beta.40: the drops over the parts logged
 
 int __attribute__((thiscall)) windowsInput(uint32_t manager) {
     const int answer = reinterpret_cast<InputFn>(uintptr_t(kInput))(manager);
@@ -82,6 +96,22 @@ void* __attribute__((thiscall)) pickedActor(uint32_t world, float x, float y) {
                  "cursor through it", kParts[part], int(x), int(y));
     }
     return nullptr;
+}
+
+// 3.0.11-beta.40: a drag let go over a part of the driver's is a window's drop, not the ground's
+int __attribute__((thiscall)) droppedOn(uint32_t manager, int x, int y, uint32_t drag) {
+    const int answer = reinterpret_cast<DropFn>(uintptr_t(kDrop))(manager, x, y, drag);
+    if (answer & 0xFF) return answer;  // a window of the game's own took it
+    int cx = 0, cy = 0, width = 0, height = 0;
+    if (!uapad::clientmouse::read(cx, cy, width, height)) return answer;
+    const int part = uapad::gamewindow::blockedUnder(x, y, width, height);
+    if (part < 0 || part >= int(std::size(kParts))) return answer;
+    const bool taken = part == int(uapad::gamewindow::Blocker::Hotbar) && hotbarwin::drop(x, y, drag);
+    if (!taken) reinterpret_cast<NoDropFn>(uintptr_t(kNoDrop))(0, x, y, drag);
+    if (g_drops++ < 10)
+        LOG_INFO("world mouse: a drag let go over %s (%d, %d) - %s", kParts[part], x, y,
+                 taken ? "the hotbar took it into its cell" : "a window that takes nothing, not the ground's drop");
+    return 1;
 }
 
 // A call's 4 bytes after its E8 to `to`
@@ -121,14 +151,16 @@ bool installWorldMouse() {
         return false;
     }
     if (!redirect(kCall, reinterpret_cast<const void*>(&windowsInput)) ||
-        !redirect(kPickCall, reinterpret_cast<const void*>(&pickedActor))) {
+        !redirect(kPickCall, reinterpret_cast<const void*>(&pickedActor)) ||
+        !redirect(kDropCall, reinterpret_cast<const void*>(&droppedOn))) {
         LOG_INFO("world mouse: the world reacts to the cursor under the driver's parts too - the game's code cannot "
                  "be changed (error %lu)", GetLastError());
         return false;
     }
     done = 1;
     LOG_INFO("world mouse: the driver's parts in the picture are windows for the game (uaRO.exe 0x%X), the world's "
-             "actors under them hidden (0x%X) - the world under them does not react to the cursor", kCall, kPickCall);
+             "actors under them hidden (0x%X), a drag let go over them a window's (0x%X) - the world under them does "
+             "not react to the cursor", kCall, kPickCall, kDropCall);
     return true;
 }
 

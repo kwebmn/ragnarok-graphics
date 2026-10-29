@@ -856,10 +856,10 @@ TEST(config_interface_minimap) {
     if (s) CHECK_EQ(settings::tokenOf(*s, parseConfig("[interface]\nminimap = 1\n")), std::string("1"));
     const LiveUpdate u = liveUpdate(parseConfig(""), parseConfig("[interface]\nminimap = 1\n"));
     // 3.0.11-beta.37: the buffs' column and the character block come with it; 3.0.11-beta.38: the target's card too;
-    // 3.0.11-beta.39: the party's panel
-    CHECK(u.waiting.empty() && u.applied.size() == 5 && u.applied[0] == "minimap 0 -> 1");
-    CHECK(u.applied[1] == "buffs off -> column" && u.applied[2] == "party 0 -> 1" && u.applied[3] == "target 0 -> 1" &&
-          u.applied[4] == "character off -> bars");
+    // 3.0.11-beta.39: the party's panel; 3.0.11-beta.40: the hotbar
+    CHECK(u.waiting.empty() && u.applied.size() == 6 && u.applied[0] == "minimap 0 -> 1");
+    CHECK(u.applied[1] == "buffs off -> column" && u.applied[2] == "hotbar 0 -> 1" && u.applied[3] == "party 0 -> 1" &&
+          u.applied[4] == "target 0 -> 1" && u.applied[5] == "character off -> bars");
     CHECK(appliesNow("interface.minimap"));
 }
 
@@ -963,4 +963,19 @@ TEST(config_reads_the_party_panel) {
     CHECK(s->page == settings::Page::Interface && s->control == settings::Control::Check);
     CHECK(appliesNow("interface.party"));
     CHECK(liveUpdate(parseConfig(""), parseConfig("[interface]\nparty = 1\n")).next.partyPanel);
+}
+
+// 3.0.11-beta.40 (the owner: «делай дальше» - stage 8, the hotbar first): [interface] hotbar - the hotkeys' bar
+// redrawn at the bottom middle; it comes with the new minimap as the other parts do, unless the file names it
+TEST(config_reads_the_hotbar) {
+    CHECK(!parseConfig("").hotbar);
+    CHECK(parseConfig("[interface]\nhotbar = 1\n").hotbar);
+    CHECK(parseConfig("[interface]\nminimap = 1\n").hotbar);
+    CHECK(!parseConfig("[interface]\nminimap = 1\nhotbar = 0\n").hotbar);
+    const settings::IniSetting* s = settings::findSetting("interface.hotbar");
+    CHECK(s != nullptr);
+    if (!s) return;
+    CHECK(s->page == settings::Page::Interface && s->control == settings::Control::Check);
+    CHECK(appliesNow("interface.hotbar"));
+    CHECK(liveUpdate(parseConfig(""), parseConfig("[interface]\nhotbar = 1\n")).next.hotbar);
 }

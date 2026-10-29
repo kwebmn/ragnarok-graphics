@@ -111,6 +111,9 @@ const std::vector<IniSetting>& iniSettings() {
         {"interface", "buffs", Page::Interface, Control::Choice, 0, 0, 0, {"off", "column", "row"},
          {Text::InterfaceBuffsOff, Text::InterfaceBuffsColumn, Text::InterfaceBuffsRow}, Text::InterfaceBuffs,
          Text::InterfaceBuffsHint, ""},
+        // 3.0.11-beta.40: the hotkeys' bar
+        {"interface", "hotbar", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::InterfaceHotbar,
+         Text::InterfaceHotbarHint, ""},
         // 3.0.11-beta.39: the party's panel
         {"interface", "party", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::InterfaceParty,
          Text::InterfacePartyHint, ""},
@@ -902,6 +905,7 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "interface.character") return characterLookToken(c.character);  // 3.0.11-beta.36
     if (k == "interface.target") return c.targetCard ? "1" : "0";              // 3.0.11-beta.38
     if (k == "interface.party") return c.partyPanel ? "1" : "0";               // 3.0.11-beta.39
+    if (k == "interface.hotbar") return c.hotbar ? "1" : "0";                  // 3.0.11-beta.40
     if (k == "interface.reference") return c.referenceWindow ? "1" : "0";  // 3.0.11-beta.7
     if (k == "windows.start_count") return std::to_string(c.windowStartCount);  // 3.0.4-beta.4
     if (k == "camera.indoor") return c.cameraIndoor ? "1" : "0";                // 3.0.4-beta.5

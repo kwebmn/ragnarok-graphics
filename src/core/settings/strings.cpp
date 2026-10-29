@@ -4964,6 +4964,25 @@ constexpr Entry kTexts[] = {
      "Группа слева вверху под персонажем: имя каждого (корона у лидера), процент HP и его полоска; мало HP — красным "
      "со знаком восклицания; на другой карте — название карты, не в игре — слово оффлайн. SP сервер не присылает."},
     {Text::PartyOffline, "offline", "офлайн", "оффлайн"},
+    // 3.0.11-beta.40: the hotkeys' bar (stage 8 of the new interface)
+    {Text::InterfaceHotbar, "Hotbar", "Панель навичок", "Панель навыков"},
+    {Text::InterfaceHotbarHint,
+     "The game's hotkeys bar at the bottom middle: F1-F9 of the row (F12 goes round them), in the battle mode its "
+     "three rows Q, A, Z; each cell's key, a skill's level, an item's count in the bag; a click uses it. Skills and "
+     "items are dragged onto its cells; the pencil shows the game's own bar to take one away or move it.",
+     "Панель клавіш гри внизу посередині: F1-F9 ряду (F12 перемикає ряди), у бойовому режимі — три ряди Q, A, Z; у "
+     "клітинці клавіша, рівень навички, кількість предмета в сумці; клік — використати. Навички й предмети "
+     "перетягуються на клітинки; олівець показує панель гри, щоб прибрати чи переставити.",
+     "Панель клавиш игры внизу посередине: F1-F9 ряда (F12 переключает ряды), в боевом режиме — три ряда Q, A, Z; в "
+     "ячейке клавиша, уровень навыка, количество предмета в сумке; клик — использовать. Навыки и предметы "
+     "перетаскиваются на ячейки; карандаш показывает панель игры, чтобы убрать или переставить."},
+    {Text::HotbarBattle, "battle mode", "бойовий режим", "боевой режим"},
+    {Text::HotbarBattleHint, "letters: skills and items \xC2\xB7 Enter: the chat",
+     "літери — навички й предмети \xC2\xB7 Enter — чат", "буквы — навыки и предметы \xC2\xB7 Enter — чат"},
+    {Text::HotbarEdit, "the game's bar: take away, move", "панель гри: прибрати, переставити",
+     "панель игры: убрать, переставить"},
+    {Text::HotbarDone, "done: back to this bar", "готово: назад до цієї панелі", "готово: назад к этой панели"},
+    {Text::HotbarUse, "click: use it", "клік — використати", "клик — использовать"},
     {Text::MinimapRespawn, "{1} min", "{1} хв", "{1} мин"},
     {Text::MinimapMore, "and {1} more", "і ще {1}", "и ещё {1}"},
     {Text::MinimapNoReference, "No game reference yet", "Довідника гри ще немає", "Справочника игры ещё нет"},

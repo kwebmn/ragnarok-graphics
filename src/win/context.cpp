@@ -34,6 +34,7 @@
 #include "win/char_block.hpp"
 #include "win/code_page.hpp"
 #include "win/party_panel.hpp"
+#include "win/hotbar.hpp"
 #include "win/target_card.hpp"
 #include "win/notifier.hpp"
 #include "win/platform.hpp"
@@ -533,6 +534,7 @@ void Context::endScene() {
         charpanel::draw(record, *renderer);     // 3.0.11-beta.36: the character block
         targetpanel::draw(record, *renderer);   // 3.0.11-beta.38: the target's card
         partywin::draw(record, *renderer);      // 3.0.11-beta.39: the party's panel
+        hotbarwin::draw(record, *renderer);     // 3.0.11-beta.40: the hotbar
         answercard::draw(record, *renderer);  // 3.0.9-beta.4: the developer's answer
         windowSwitch_.draw(record, *renderer);
         referencewin::draw(record, *renderer);  // 3.0.11-beta.7: «Довідник», over the rest
@@ -571,6 +573,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
         charpanel::draw(record, *renderer);     // 3.0.11-beta.36
         targetpanel::draw(record, *renderer);   // 3.0.11-beta.38
         partywin::draw(record, *renderer);      // 3.0.11-beta.39
+        hotbarwin::draw(record, *renderer);     // 3.0.11-beta.40
         answercard::draw(record, *renderer);  // 3.0.9-beta.4
         windowSwitch_.draw(record, *renderer);
         referencewin::draw(record, *renderer);  // 3.0.11-beta.7
@@ -784,6 +787,10 @@ void Context::present(const Rect& source, bool waitForVblank) {
     partywin::frame(window, config.partyPanel, gameCodePage(config), scaleMade_ ? plan.k : 1.0,
                     scaleMade_ ? plan.targetWidth : shadow.width(),
                     scaleMade_ ? plan.targetHeight : shadow.height());
+    // 3.0.11-beta.40: [interface] hotbar - the hotkeys' bar at the bottom middle, the game's own hidden
+    hotbarwin::frame(window, config.hotbar, gameCodePage(config), scaleMade_ ? plan.k : 1.0,
+                     scaleMade_ ? plan.targetWidth : shadow.width(),
+                     scaleMade_ ? plan.targetHeight : shadow.height());
     // 3.0.11-beta.7: [interface] reference - «Довідник» (Ctrl+F)
     referencewin::frame(window, config.referenceWindow, scaleMade_ ? plan.k : 1.0,
                         scaleMade_ ? plan.targetWidth : shadow.width(),

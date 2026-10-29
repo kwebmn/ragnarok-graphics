@@ -7,6 +7,7 @@
 #include "win/buff_column.hpp"
 #include "win/char_block.hpp"
 #include "win/party_panel.hpp"
+#include "win/hotbar.hpp"
 #include "win/target_card.hpp"
 #include "win/minimap_proto.hpp"
 #include "win/reference_window.hpp"
@@ -59,6 +60,7 @@ LRESULT CALLBACK gameProc(HWND w, UINT m, WPARAM wp, LPARAM lp) {
             charpanel::mouse(w, m, wp, lp, answer) ||     // 3.0.11-beta.36: the character block's
             targetpanel::mouse(w, m, wp, lp, answer) ||   // 3.0.11-beta.38: the target's card's
             partywin::mouse(w, m, wp, lp, answer) ||      // 3.0.11-beta.39: the party's panel's
+            hotbarwin::mouse(w, m, wp, lp, answer) ||     // 3.0.11-beta.40: the hotbar's
             g_switch->mouse(w, m, lp, answer)) {
             claimed(m);  // 3.0.11-beta.33: its press stays the part's until let go
             return answer;

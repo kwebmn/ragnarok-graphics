@@ -559,6 +559,9 @@ struct Config {
     // 3.0.11-beta.39: [interface] party - the party's panel at the top left (core/party_panel): each member's HP per
     // cent with its bar, its map when elsewhere
     bool partyPanel = false;
+    // 3.0.11-beta.40: [interface] hotbar - stage 8 of the new interface: the hotkeys' bar at the bottom middle
+    // (core/hotbar_panel), the game's own hidden
+    bool hotbar = false;
     // 3.0.11-beta.7: [interface] reference - «Довідник» (win/reference_window): Ctrl+F in the game
     bool referenceWindow = false;
     PanelLayout panelLayout = PanelLayout::Row;
