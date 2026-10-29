@@ -67,7 +67,8 @@ TEST(reference_quests_manifest_and_file) {
 TEST(reference_quests_pages) {
     const refindex::Index ix = index();
     const refpages::Page home = refpages::home(ix, Lang::Uk);
-    CHECK(indexOf(home, "Квести · 2") != size_t(-1));
+    const size_t tile = indexOf(home, "Квести");  // 3.0.11-beta.26: its name, its count at its right
+    CHECK(tile != size_t(-1) && home.rows[tile].right == "2" && home.rows[tile].link.go == refpages::Go::Quests);
     const refpages::Page list = refpages::quests(ix, Lang::Uk);
     CHECK(list.rows[0].style == refpages::Style::Heading && list.rows[0].left == "Доступ до міст");
     CHECK_EQ(list.rows[1].left, std::string("Доступ до Ayothaya"));

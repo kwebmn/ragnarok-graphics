@@ -467,8 +467,8 @@ enum class Text : uint16_t {
     // 3.0.11-beta.7: «Довідник» - its switch, the window's words, the cards' words
     InterfaceReference, InterfaceReferenceHint, RefTitle, RefSearchHint, RefBack, RefFooter, RefNoData, RefNothing,
     RefSecMobs, RefSecMobsHint, RefSecBosses, RefSecBossesHint, RefSecItems, RefSecItemsHint, RefSecCards,
-    RefSecCardsHint, RefSecMaps, RefSecMapsHint, RefSecShops, RefSecShopsHint, RefSecTeleports, RefSecTeleportsHint,
-    RefSecPets, RefSecPetsHint, RefSecCraft, RefSecCraftHint, RefFoundMobs, RefFoundItems, RefFoundMaps, RefShownOf,
+    RefSecMaps, RefSecMapsHint, RefSecShops, RefSecTeleports, RefSecPets, RefSecPetsHint, RefSecCraft, RefSecCraftHint,
+    RefFoundMobs, RefFoundItems, RefFoundMaps, RefShownOf,
     RefWhere, RefDrops, RefDroppedBy, RefSoldAt, RefCraftOf, RefUsedIn, RefPet, RefWhoHere, RefExits, RefTeleports,
     RefShopsHere, RefNpcs, RefShopItems, RefLevel, RefHp, RefExp, RefWeight, RefPrice, RefSlots, RefYouHere,
     RefNowhere, RefNoDrops, RefMvpReward, RefZeny, RefPetLure, RefPetEgg, RefPetFood, RefPetEquip, RefBoss,
@@ -478,13 +478,13 @@ enum class Text : uint16_t {
     RefRace7, RefRace8, RefRace9, RefSize0, RefSize1, RefSize2, RefFlagTown, RefFlagPvp, RefFlagGvg,
     RefFlagNoTeleport, RefFlagNoMemo, RefFlagNoSave,
     RefHours, RefHoursMinutes,  // 3.0.11-beta.7: a long respawn
-    RefAll, RefKeys,            // a long section's «усі N ›»; the keys on the first screen
+    RefAll,                     // a long section's «усі N ›»
     // 3.0.11-beta.8: «Як дістатися» in a map's card (core/reference_route)
     RefRoute, RefRouteFrom, RefRouteWalk, RefRouteKafra, RefRouteNpc, RefRouteMoves, RefRouteExit, RefRouteStairs,
     RefRouteVaries, RefRouteCondition, RefRouteConditionNote, RefRouteNone,
     // 3.0.11-beta.9: the way followed on the minimap
     RefRouteFollow, RefRouteFollowing, MinimapRouteLeft, MinimapRouteThere, MinimapRouteNone,
-    RefPlayersNow, RefOnlineNow,  // 3.0.11-beta.10: the site's «Онлайн»
+    RefPlayersNow,  // 3.0.11-beta.10: the site's «Онлайн»
     RefWorld, RefWorldHint, RefDungeons, RefWorldNone, RefWorldHelp,  // 3.0.11-beta.11: the world map
     // 3.0.11-beta.12: the players' public MVP timers, the site's market
     RefTimers, RefTimerSoon, RefTimerDue, RefTimerAgo, RefTimerNoMap, RefMarket, RefMarketFrom, RefMarketLots,
@@ -495,10 +495,15 @@ enum class Text : uint16_t {
     RefSecQuests, RefSecQuestsHint, RefFoundQuests, RefQuestNpc, RefQuestItems, RefQuestSteps, RefQuestRewards,
     RefQuestFor, RefQuestLevel, RefQuestJobs, RefQuestHeadgear, RefQuestAccess, RefQuestEvents, RefQuestOther,
     RefQuestsNone,
-    RefRecent, RefFavourites, RefStar, RefStarred,  // 3.0.11-beta.18: the first screen's recent and starred cards
-    RefOnWorld, RefWorldOf, RefAlsoInside,          // 3.0.11-beta.19: a monster's maps on the world map
-    RefDroppersHere, RefFresh,                      // 3.0.11-beta.20: an item's droppers there; the data's age
-    RefSells, RefById,                              // 3.0.11-beta.22: an NPC buys it for; found by its number
+    RefRecent, RefFavourites,               // 3.0.11-beta.18: the first screen's recent and starred cards
+    RefOnWorld, RefWorldOf, RefAlsoInside,  // 3.0.11-beta.19: a monster's maps on the world map
+    RefDroppersHere,                        // 3.0.11-beta.20: an item's droppers there
+    RefSells, RefById,                      // 3.0.11-beta.22: an NPC buys it for; found by its number
+    // 3.0.11-beta.26: the concept's look - the header's search, the search's explanation, the first screen's new
+    // sections, the keys and the data's chips at the bottom, the chips' kinds, «Обране» empty, the tables
+    RefFind, RefSearchExplain, RefSecServices, RefSecServicesHint, RefSecTables, RefSecTablesHint, RefWorldHintN,
+    RefKeysList, RefKeysCard, RefLiveNow, RefLiveOff, RefKindMob, RefKindItem, RefKindMap, RefKindQuest, RefFavEmpty,
+    RefTableElements, RefTableRest,
     Count
 };
 

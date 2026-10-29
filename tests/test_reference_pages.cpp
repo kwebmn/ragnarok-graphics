@@ -79,19 +79,32 @@ TEST(reference_pages_words_for_numbers) {
 
 TEST(reference_pages_home_and_search) {
     const refindex::Index ix = index();
+    // 3.0.11-beta.26: the concept's first screen - its search and its line, ten tiles, «Обране» (empty: a word)
     const refpages::Page home = refpages::home(ix, Lang::Uk);
-    CHECK_EQ(home.rows.size(), size_t(refpages::kSections) + 2);  // the tiles, the world map's, the keys' line
-    CHECK(home.rows.back().style == refpages::Style::Note);
-    CHECK(home.rows[0].style == refpages::Style::Tile && home.rows[0].left == "Монстри · 2");
-    CHECK(home.rows[0].link.go == refpages::Go::Section && home.rows[0].link.id == refpages::Mobs);
+    CHECK_EQ(home.rows.size(), size_t(14));
+    CHECK(home.rows[0].style == refpages::Style::Search && home.rows[0].right == "Ctrl+F");
+    CHECK(home.rows[1].style == refpages::Style::Hint);
+    CHECK(home.rows[2].style == refpages::Style::Tile && home.rows[2].left == "Монстри");
+    CHECK(home.rows[2].right == "2" && home.rows[2].icon == "ui:monster");
+    CHECK_EQ(home.rows[2].sub, std::string("рівень, стихія, де водяться, що падає"));
+    CHECK(home.rows[2].link.go == refpages::Go::Section && home.rows[2].link.id == refpages::Mobs);
+    const char* names[] = {"Монстри", "Предмети", "Локації",     "Квести",
+                           "NPC і послуги", "MVP", "Пети", "Крафт",
+                           "Карта світу", "Таблиці"};  // the concept's order
+    for (size_t i = 0; i < 10; ++i) CHECK_EQ(home.rows[2 + i].left, std::string(names[i]));
+    CHECK(home.rows[10].link.go == refpages::Go::World && home.rows[10].right.empty());
+    CHECK(home.rows[12].style == refpages::Style::Block && home.rows[12].left == "Обране");
+    CHECK_EQ(home.rows[12].share, 0);
+    CHECK(home.rows[13].style == refpages::Style::Note);
     const refpages::Page found = refpages::found(ix, Lang::Uk, "por");
-    CHECK(found.rows[0].style == refpages::Style::Heading);
+    CHECK(found.rows[0].style == refpages::Style::Search && found.rows[0].right == "Esc");
+    CHECK(found.rows[1].style == refpages::Style::Heading);
     const refpages::Row* poring = rowWith(found, "Poring");
     CHECK(poring && poring->link.go == refpages::Go::Mob && poring->link.id == 1002);
     CHECK(rowWith(found, "Poring Card") != nullptr);  // the items too
     CHECK(rowWith(refpages::found(ix, Lang::Uk, "prontera city"), "Prontera City (prontera)") != nullptr);  // a map
     const refpages::Page none = refpages::found(ix, Lang::Uk, "nothing like it");
-    CHECK(none.rows.size() == 1 && none.rows[0].style == refpages::Style::Note);
+    CHECK(none.rows.size() == 2 && none.rows[1].style == refpages::Style::Note);
 }
 
 TEST(reference_pages_a_monsters_card) {
@@ -201,17 +214,31 @@ TEST(reference_window_lays_itself_out) {
     const refpages::Page home = refpages::home(ix, Lang::Uk);
     int total = 0;
     const std::vector<refwin::Placed> rows = refwin::place(L, home, total);
-    CHECK(rows[0].y == rows[2].y && rows[3].y > rows[0].y && rows[1].x > rows[0].x);  // three tiles to a line
-    CHECK(total > rows[8].y);
+    // 3.0.11-beta.26: the concept's - the search, its line, five tiles to a line, «Обране» under them
+    CHECK(rows[0].y < rows[1].y && rows[1].y < rows[2].y && rows[0].h == 54);
+    CHECK(rows[2].y == rows[6].y && rows[7].y > rows[2].y && rows[3].x > rows[2].x && rows[7].x == rows[2].x);
+    CHECK(rows[12].y > rows[7].y + rows[7].h && rows[12].w == rows[0].w && rows[13].y > rows[12].y);
+    CHECK(total > rows[12].y + rows[12].h);
+    refwin::Texts t;
+    t.title = "Довідник";
+    const refwin::Chrome first = refwin::chrome(L, home, t);
+    CHECK(first.back.w == 0 && first.search.w == 0 && first.star.w == 0 && first.close.w > 0);  // its own field
     // clicks: ×, the field, a tile; nothing outside
-    CHECK(refwin::under(L, home, rows, 0, false, float(L.w - 10), 10).part == refwin::Part::Close);
-    CHECK(refwin::under(L, home, rows, 0, false, 200, float(L.header + 10)).part == refwin::Part::Search);
-    const refwin::Under tile = refwin::under(L, home, rows, 0, false, float(rows[4].x + 20),
+    CHECK(refwin::under(L, home, rows, 0, first, float(L.w - 20), 30).part == refwin::Part::Close);
+    CHECK(refwin::under(L, home, rows, 0, first, 200, float(L.bodyY + rows[0].y + 20)).part == refwin::Part::Search);
+    const refwin::Under tile = refwin::under(L, home, rows, 0, first, float(rows[4].x + 20),
                                              float(L.bodyY + rows[4].y + 20));
     CHECK(tile.part == refwin::Part::Row && tile.row == 4);
-    CHECK(refwin::under(L, home, rows, 0, false, -5, 10).part == refwin::Part::None);
-    CHECK(refwin::under(L, home, rows, 0, false, 30, 10).part != refwin::Part::Back);  // no «Назад» on the first page
-    CHECK(refwin::under(L, home, rows, 0, true, 30, 10).part == refwin::Part::Back);
+    CHECK(refwin::under(L, home, rows, 0, first, -5, 10).part == refwin::Part::None);
+    CHECK(refwin::under(L, home, rows, 0, first, 130, 30).part != refwin::Part::Back);  // none on the first
+    t.back = "Назад до Довідник";
+    t.crumbs = {"Монстри", "Poring"};
+    const refpages::Page poring = refpages::mob(ix, Lang::Uk, 1002, ctx("prontera"));
+    const refwin::Chrome card = refwin::chrome(L, poring, t);
+    CHECK(card.back.w > 0 && card.search.w > 0 && card.crumbs.size() == 3);  // two parts and a «›»
+    CHECK(card.back.x > first.title.x + first.title.w && card.search.x > card.crumbs.back().x);
+    CHECK(refwin::under(L, poring, rows, 0, card, card.back.x + 10, 30).part == refwin::Part::Back);
+    CHECK(refwin::under(L, poring, rows, 0, card, card.search.x + 30, 30).part == refwin::Part::Search);
     CHECK_EQ(refwin::clampScroll(-40, total, L.bodyH), 0);
     CHECK_EQ(refwin::clampScroll(100000, 2000, 500), 1500);
 }
@@ -227,14 +254,16 @@ TEST(reference_window_paints_and_words_its_rows) {
     CHECK(pic.width == L.w && pic.height == L.h && pic.px.size() == size_t(L.w) * size_t(L.h));
     refwin::Texts t;
     t.title = "Довідник";
-    t.query = "por";
-    t.footer = "Пакет даних";
-    const std::vector<refwin::Words> words = refwin::words(L, p, rows, 0, t, refwin::Look{});
+    t.find = "Пошук у довіднику";
+    t.pack = "Пакет даних";
+    refwin::Look look;
+    look.chrome = refwin::chrome(L, p, t);
+    const std::vector<refwin::Words> words = refwin::words(L, p, rows, 0, t, look);
     bool title = false, typed = false, poring = false;
     for (const refwin::Words& w : words) {
         title = title || w.text == "Довідник";
-        typed = typed || w.text == "por|";
-        poring = poring || (w.text == "Poring" && w.px == 24.0f);
+        typed = typed || w.text == "Пошук у довіднику";  // 3.0.11-beta.26: the header's search on a card
+        poring = poring || (w.text == "Poring" && w.px == 26.0f);
         CHECK(w.box.x >= 0 && w.box.y >= 0 && w.box.x + w.box.w <= float(L.w) + 0.5f);
         CHECK(w.box.y + w.box.h <= float(L.h));
     }
@@ -266,8 +295,11 @@ TEST(reference_window_hover_repaint_matches_the_whole) {
                                          {refwin::Part::Back, -1},
                                          {refwin::Part::Row, links.back()},
                                          {}};
+            refwin::Texts texts;
+            texts.title = "Довідник";
+            texts.back = "Назад до Довідник";
             refwin::Look was;
-            was.backShown = true;
+            was.chrome = refwin::chrome(L, p, texts);
             was.selected = links.back();
             panel::Picture partial;
             refwin::paint(partial, L, p, rows, 0, total, was);
@@ -314,7 +346,9 @@ TEST(reference_window_hot_areas) {
     CHECK(!one.empty() && one[0].right <= L.w && one[0].bottom <= L.h && one[0].left >= 0);
     look.hover = refwin::Under{refwin::Part::Back, -1};
     CHECK(refwin::hotAreas(L, p, rows, 0, look).empty());  // no «back» on the first page
-    look.backShown = true;
+    refwin::Texts back;
+    back.back = "Назад до Довідник";
+    look.chrome = refwin::chrome(L, p, back);
     look.selected = 1;
     CHECK_EQ(refwin::hotAreas(L, p, rows, 0, look).size(), size_t(2));
 }
@@ -438,25 +472,91 @@ TEST(reference_pages_recent_and_starred) {
     refpages::Context c = ctx("");
     c.recent = &recent;
     c.favourites = &starred;
-    const refpages::Page home = refpages::home(ix, Lang::Uk, 0, c);
+    const refpages::Page home = refpages::home(ix, Lang::Uk, c);
+    // 3.0.11-beta.26: the concept's two blocks side by side - the recent (1.4) and the starred (1), their chips
     const size_t fav = indexOf(home, "Обране"), lately = indexOf(home, "Нещодавні");
-    CHECK(fav != size_t(-1) && lately != size_t(-1) && fav < lately);
+    CHECK(fav != size_t(-1) && lately != size_t(-1) && lately < fav);
+    CHECK(home.rows[lately].style == refpages::Style::Block && home.rows[lately].share == 58);
+    CHECK(home.rows[fav].style == refpages::Style::Block && home.rows[fav].share == 42);
+    const refpages::Row& p0 = home.rows[lately + 1];
+    CHECK(p0.style == refpages::Style::Chip && p0.left == "Poring");
+    CHECK(p0.sub == "монстр" && p0.icon == "mob:1002");
+    CHECK(home.rows[lately + 2].left == "Prontera Field" && home.rows[lately + 2].icon == "ui:location");  // no code
+    CHECK_EQ(lately + 3, fav);  // the one the index has not: left out
     CHECK(home.rows[fav + 1].left == "Fly Wing" && home.rows[fav + 1].icon == "item:601");
-    CHECK(home.rows[lately + 1].left == "Poring" && home.rows[lately + 2].left == "Prontera Field (prt_fild08)");
-    CHECK(home.rows[lately + 3].style != refpages::Style::Row || home.rows[lately + 3].left != "#9999");
+    CHECK(home.rows[fav + 1].sub == "предмет" && home.rows[fav + 1].link.id == 601);
+    int total = 0;
+    const refwin::Layout L = refwin::layout(1920, 1080, 1.0f);
+    const std::vector<refwin::Placed> rows = refwin::place(L, home, total);
+    CHECK(rows[lately].y == rows[fav].y && rows[fav].x > rows[lately].x + rows[lately].w);  // side by side
+    CHECK(rows[lately].h == rows[fav].h && rows[lately].w > rows[fav].w);
+    CHECK(rows[lately + 2].x > rows[lately + 1].x && rows[lately + 2].y == rows[lately + 1].y);  // chips in a line
+    CHECK(rows[lately + 1].x >= rows[lately].x && rows[fav + 1].x >= rows[fav].x);
+    // a card's star: in the header (the page's), not a row
     const refpages::Page wing = refpages::open(ix, Lang::Uk, refpages::Link{refpages::Go::Item, 601, ""}, c);
-    CHECK(wing.rows[1].link.go == refpages::Go::Star && wing.rows[1].gold);  // starred
+    CHECK_EQ(wing.star, 1);  // starred
     const refpages::Page poring = refpages::open(ix, Lang::Uk, refpages::Link{refpages::Go::Mob, 1002, ""}, c);
-    CHECK(poring.rows[1].link.go == refpages::Go::Star && !poring.rows[1].gold);
-    CHECK_EQ(poring.rows[1].left, std::string("Додати в обране ›"));
+    CHECK_EQ(poring.star, 0);
+    CHECK(rowWith(poring, "Додати в обране ›") == nullptr);
+    CHECK_EQ(refpages::home(ix, Lang::Uk).star, -1);
 }
 
 // 3.0.11-beta.22: a number finds the item and the monster of that id
 TEST(reference_pages_found_by_number) {
     const refindex::Index ix = index();
-    const refpages::Page wing = refpages::found(ix, Lang::Uk, "601");
-    CHECK(wing.rows[0].left == "Номер 601" && wing.rows[1].left == "Fly Wing" && wing.rows[1].link.id == 601);
+    const refpages::Page wing = refpages::found(ix, Lang::Uk, "601");  // 3.0.11-beta.26: under the search's field
+    CHECK(wing.rows[1].left == "Номер 601" && wing.rows[2].left == "Fly Wing" && wing.rows[2].link.id == 601);
     const refpages::Page poring = refpages::found(ix, Lang::Uk, "1002");
-    CHECK(poring.rows[1].left == "Poring" && poring.rows[1].link.go == refpages::Go::Mob);
+    CHECK(poring.rows[2].left == "Poring" && poring.rows[2].link.go == refpages::Go::Mob);
     CHECK(indexOf(refpages::found(ix, Lang::Uk, "7"), "Номер 7") == size_t(-1));  // no such id: nothing for it
+}
+
+// 3.0.11-beta.26 (the owner:
+// «у нас оно отличается от того как это выглядит в концепте»):
+// the concept's sections, its blocks' capitals, the header's way that keeps its last parts when it does not fit
+TEST(reference_concept_sections_and_words) {
+    const refindex::Index ix = index();
+    const refpages::Page services = refpages::section(ix, Lang::Uk, refpages::Services);
+    CHECK_EQ(services.name, std::string("NPC і послуги"));
+    CHECK(indexOf(services, "Телепорти Kafra") != size_t(-1));
+    CHECK(indexOf(services, "Крамниці") != size_t(-1));
+    const refpages::Page tables = refpages::section(ix, Lang::Uk, refpages::Tables);
+    CHECK_EQ(tables.name, std::string("Таблиці"));
+    CHECK(indexOf(tables, "Стихії атаки проти захисту рівня 1") != size_t(-1));
+    CHECK(indexOf(tables, "Стихії атаки проти захисту рівня 4") != size_t(-1));
+    const refpages::Row* fire = rowWith(tables, "Вогонь");  // level 1: fire against earth 150 %, water 50 %
+    CHECK(fire && fire->right.find("Земля 150 %") != std::string::npos);
+    CHECK(fire && fire->right.find("Вода 50 %") != std::string::npos);
+    // the blocks' names in capitals, the first screen's words
+    const std::vector<refpages::Link> recent{{refpages::Go::Mob, 1002, ""}};
+    refpages::Context c = ctx("");
+    c.recent = &recent;
+    const refpages::Page home = refpages::home(ix, Lang::Uk, c);
+    const refwin::Layout L = refwin::layout(1920, 1080, 1.0f);
+    int total = 0;
+    const std::vector<refwin::Placed> rows = refwin::place(L, home, total);
+    refwin::Texts t;
+    t.title = "Довідник";
+    t.hint = "Пошук: монстр, предмет, карта, квест, NPC";
+    refwin::Look look;
+    look.chrome = refwin::chrome(L, home, t);
+    bool lately = false, starred = false, hint = false, key = false;
+    for (const refwin::Words& w : refwin::words(L, home, rows, 0, t, look)) {
+        lately = lately || w.text == "НЕЩОДАВНІ";
+        starred = starred || w.text == "ОБРАНЕ";
+        hint = hint || (w.text == t.hint && w.px == 17.0f);
+        key = key || w.text == "Ctrl+F";
+    }
+    CHECK(lately && starred && hint && key);
+    // a narrow window keeps the way's last parts
+    const refwin::Layout narrow = refwin::layout(1024, 768, 1.0f);
+    const refpages::Page poring = refpages::mob(ix, Lang::Uk, 1002, ctx("prontera"));
+    t.back = "Назад до Monster Section With A Long Name";
+    t.crumbs = {"Монстри з дуже довгою назвою", "Ще одна довга сторінка",
+                "Prontera Field", "Poring"};
+    const refwin::Chrome c1 = refwin::chrome(narrow, poring, t);
+    CHECK(c1.crumbFirst > 0 && !c1.crumbs.empty());
+    CHECK(c1.crumbs.back().x + c1.crumbs.back().w <= c1.search.x);
+    const refwin::Chrome c2 = refwin::chrome(L, poring, t);
+    CHECK(c2.crumbFirst <= c1.crumbFirst);
 }

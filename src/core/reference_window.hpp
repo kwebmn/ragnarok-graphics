@@ -12,16 +12,27 @@
 namespace uagfx::refwin {
 
 // 3.0.11-beta.7: the «Довідник» window's shapes (win/reference_window draws it): 1270 x 850 at 1080p (the concept's),
-// centred, smaller on a small screen; a header with «‹ Назад до …» and ×, the search field, the page's rows scrolled
-// (the first screen's tiles three to a line), the data pack's line at the bottom. The target's pixels throughout.
+// centred, smaller on a small screen; the page's rows scrolled. The target's pixels throughout.
+// 3.0.11-beta.26 (the owner:
+// «у нас оно отличается от того как это выглядит в концепте»):
+// the concept 2.3's style A, its mock-ups v23_ref_home and v23_ref_monster - a dark glass window (90 %), its title
+// at the left of the header with «‹ Назад до …» and the way here, the search and the star at the right on
+// the cards (the first screen and the results have the search's own big field), the data's chips and the keys at
+// the bottom; the first screen's tiles five to a line with their icons, framed blocks of chips.
+
+// The words' width at a size (the target's pixels): GDI's in the driver (win/picture_draw), guessed by the letters
+// without a font (tests, previews)
+using Measure = float (*)(const std::string& utf8, float px, bool bold);
+float guessWidth(const std::string& utf8, float px, bool bold);
 
 struct Layout {
     int x = 0, y = 0, w = 0, h = 0;  // the window
-    int header = 0, search = 0, footer = 0, pad = 0;
+    int header = 0, footer = 0, pad = 0;
     int bodyY = 0, bodyH = 0;  // the scrolled part, from the window's top
     float s = 1;
+    Measure measure = guessWidth;  // 3.0.11-beta.26: the chips' and the way's words
 };
-Layout layout(int targetW, int targetH, float scale);
+Layout layout(int targetW, int targetH, float scale, Measure measure = guessWidth);
 
 struct Placed {  // a row's place in the body: from the body's top before the scroll
     int x = 0, y = 0, w = 0, h = 0;
@@ -30,7 +41,7 @@ std::vector<Placed> place(const Layout& L, const refpages::Page& p, int& total);
 int clampScroll(int scroll, int total, int bodyH);
 bool shown(const Layout& L, const Placed& r, int scroll);  // the whole row in the body
 
-enum class Part : uint8_t { None, Close, Back, Search, Row, Body, Tile };
+enum class Part : uint8_t { None, Close, Back, Search, Row, Body, Tile, Star };  // 3.0.11-beta.26: the header's star
 struct Under {
     Part part = Part::None;
     int row = -1;   // Part::Row: a row that leads somewhere; Part::Tile: the world map's row
@@ -47,15 +58,38 @@ struct WorldLook {
     std::string hover;                        // the tile under the pointer
     std::map<std::string, int> marks;         // 3.0.11-beta.19: maps marked (a monster's) with their numbers
 };
+// 3.0.11-beta.26: the words around the page - the header's and the bottom's
+enum class Live : uint8_t { None, Fresh, Off };  // the site's live data: not asked for, fresh, no link
+struct Texts {
+    std::string title;                // «Довідник»
+    std::string back;                 // «Назад до …» ("" on the first screen)
+    std::vector<std::string> crumbs;  // the way here, the page's own the last
+    std::string query, hint;          // typed; the big search's words while nothing is
+    std::string find;                 // the header's search's words (the cards and the lists)
+    std::string pack, live;           // the data's chips at the bottom ("" none)
+    Live liveState = Live::None;
+    std::string keys;                 // at the bottom's right
+};
+// Where the header's and the bottom's parts are (the window's pixels; w 0: none)
+struct Chrome {
+    panel::Box title, back, search, kbd, star, close, keys;
+    std::vector<panel::Box> crumbs;  // the way's parts shown and a «›» between each two
+    size_t crumbFirst = 0;           // the first part shown (the earlier ones do not fit)
+    std::vector<panel::Box> chips;   // the pack's, the live data's (w 0: none)
+    Live live = Live::None;
+    int starred = -1;  // the page's star: -1 none, 0 not starred, 1 starred
+    float caret = 0;   // the big search's caret, from its field's left
+};
+Chrome chrome(const Layout& L, const refpages::Page& p, const Texts& t);
 // What is under a point of the window (its own pixels); `sheet`: the world map's tiles under the pointer
-Under under(const Layout& L, const refpages::Page& p, const std::vector<Placed>& rows, int scroll, bool backShown,
+Under under(const Layout& L, const refpages::Page& p, const std::vector<Placed>& rows, int scroll, const Chrome& c,
             float x, float y, const worldmap::Sheet* sheet = nullptr);
 // The world map's fit in its row (the row's own pixels)
 worldmap::Fit worldFit(const worldmap::Sheet& sheet, const Placed& row);
 
 struct Look {
     Under hover;
-    bool backShown = false;
+    Chrome chrome;  // 3.0.11-beta.26 (was: «back» shown)
     WorldLook world;
     // 3.0.11-beta.14: the Portraits' pictures by their rows' keys, each the row's height square (premultiplied; none:
     // the words from the row's start)
@@ -79,8 +113,9 @@ void repaint(panel::Picture& out, const Layout& L, const refpages::Page& p, cons
 // and the one the arrows picked (with its band). Another hover changes these of the old look and the new one only.
 std::vector<Rect> hotAreas(const Layout& L, const refpages::Page& p, const std::vector<Placed>& rows, int scroll,
                            const Look& look);
-// A row's area as hotAreas has it (with its band; empty when the row is not shown whole) - a row whose icon came
-Rect rowArea(const Layout& L, const std::vector<Placed>& rows, int scroll, int i);
+// A row's area as hotAreas has it (a row's with its band, a tile's or a chip's its own; empty when the row is not
+// shown whole) - a row whose icon came
+Rect rowArea(const Layout& L, const refpages::Page& p, const std::vector<Placed>& rows, int scroll, int i);
 // 3.0.11-beta.25: a row drawn the same as another (its style, words, link, marks, pictures) - and where a map's frame
 // on the world map's row `row` is drawn (empty: the map not on the sheet, the row not shown whole): the world map's
 // pointer moved to another map, its page made again, only what changed is painted again
@@ -98,13 +133,11 @@ struct Words {
     Align align = Align::Left;
     bool wrap = false;  // 3.0.11-beta.16: a Text row's lines broken at words
 };
-struct Texts {
-    std::string title, back, query, hint, footer;  // the header's, «‹ Назад до …» ("" none), typed, the field's hint
-};
 std::vector<Words> words(const Layout& L, const refpages::Page& p, const std::vector<Placed>& rows, int scroll,
                          const Texts& t, const Look& look);
 
-// The colours of the words
-constexpr uint32_t kAccent = 0x8FB8FF, kGold = 0xF5C451, kLink = 0xC9DBFF;
+// The concept's style A colours (its kit: --text, --muted, --faint, --accent, --accent2)
+constexpr uint32_t kText = 0xECEFF5, kMuted = 0x9AA3B5, kFaint = 0x7D8597, kAccent = 0xC9A55B, kAccent2 = 0xE6CB8A;
+constexpr uint32_t kGold = kAccent2, kLink = kText;  // a boss and a link's words
 
 }  // namespace uagfx::refwin

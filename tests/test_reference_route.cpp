@@ -255,8 +255,6 @@ TEST(reference_live_counts_from_the_site) {
     c.players = &players;
     const refpages::Page cave = refpages::map(*ix, Lang::Uk, "cave", c);
     CHECK(cave.rows[1].style == refpages::Style::Sub && cave.rows[1].left == "гравців зараз: 5");
-    const refpages::Page home = refpages::home(*ix, Lang::Uk, 104);
-    CHECK_EQ(home.rows[home.rows.size() - 2].left, std::string("Зараз у грі: 104"));
 }
 
 // 3.0.11-beta.12: how far each map is from the player's (core/reference_route movesFrom) - on foot, or fewer paying

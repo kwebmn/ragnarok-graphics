@@ -3,19 +3,26 @@
 #include <algorithm>
 #include <cmath>
 
+#include "core/ui_icons.hpp"
+
 namespace uagfx::refwin {
 namespace {
 
-// At scale 1 (1080p), the target's pixels
-constexpr float kW = 1270, kH = 850, kHeader = 44, kSearch = 50, kFooter = 28, kPad = 18, kEdgeRoom = 20;
-constexpr float kTitleRow = 46, kSub = 26, kHeading = 38, kRow = 26, kNote = 24, kTile = 78, kGap = 10;
-constexpr uint32_t kGround = 0x12161E, kBand = 0x0D1016, kField = 0x1B212C, kFieldEdge = 0x4C8DFF;
-constexpr uint32_t kRule = 0x2A3342, kHover = 0x1F2733, kTileFill = 0x1A2029, kTileHot = 0x232B37;
-constexpr uint32_t kTrack = 0x161B23, kThumb = 0x3A4556;
-constexpr float kWorldLeast = 300;                         // 3.0.11-beta.11: the world map's row at the least
-constexpr float kPortrait = 84;                            // 3.0.11-beta.14: a card's picture row
-constexpr float kTextLine = 19;  // 3.0.11-beta.16: a Text row's line (13.5 px words)
-constexpr float kIcon = 24;                                // 3.0.11-beta.15: an item's icon in a row (1:1 at 1080p)
+// At scale 1 (1080p), the target's pixels. 3.0.11-beta.26: the concept's style A (its kit's sizes)
+constexpr float kW = 1270, kH = 850, kHeader = 62, kFooter = 44, kPadX = 30, kTop = 22, kEdgeRoom = 20, kRadius = 10;
+constexpr float kTitleRow = 46, kSub = 26, kHeading = 38, kRow = 26, kNote = 24, kGroupGap = 18;
+constexpr float kSearchH = 54, kTileH = 92, kTileGap = 12, kChipH = 38, kChipGap = 8, kChipPic = 26;
+constexpr float kBlockPadX = 16, kBlockPadY = 14, kBlockTitle = 18, kBlockTitleGap = 10;
+constexpr float kWorldLeast = 300;  // 3.0.11-beta.11: the world map's row at the least
+constexpr float kPortrait = 84;     // 3.0.11-beta.14: a card's picture row
+constexpr float kTextLine = 19;     // 3.0.11-beta.16: a Text row's line (13.5 px words)
+constexpr float kIcon = 24;         // 3.0.11-beta.15: an item's icon in a row (1:1 at 1080p)
+// The concept's colours: the window's glass (--card), white over it (--cell .06, --line .09, --line2 .15, the tiles
+// .04, the blocks .035), the gold (--accent) of the picked (--sel .16) and its ring (.55)
+constexpr uint32_t kCard = 0x10141C, kWhite = 0xFFFFFF, kBlack = 0x000000;
+constexpr float kCardA = 0.90f, kCellA = 0.06f, kLineA = 0.09f, kLine2A = 0.15f, kTileA = 0.04f, kBlockA = 0.035f;
+constexpr float kSelA = 0.16f, kRingA = 0.55f;
+constexpr uint32_t kPackDot = 0x9AA3B5, kLiveDot = 0x3CCF7C, kOffDot = 0x5D6475;  // the bottom's chips' dots
 constexpr uint32_t kRoute = 0x5AC8FA, kBadge = 0x0D1016;  // the minimap's way colour; the players' badge
 
 int px(float v, float s) { return int(std::lround(v * s)); }
@@ -26,42 +33,61 @@ int heightOf(refpages::Style st, float s) {
         case refpages::Style::Sub: return px(kSub, s);
         case refpages::Style::Heading: return px(kHeading, s);
         case refpages::Style::Note: return px(kNote, s);
-        case refpages::Style::Tile: return px(kTile, s);
+        case refpages::Style::Tile: return px(kTileH, s);
         case refpages::Style::World: return px(kWorldLeast, s);  // place() gives it the body's rest
         case refpages::Style::Portrait: return px(kPortrait, s);
         case refpages::Style::Text: return px(kTextLine, s);  // place() gives it its lines
+        case refpages::Style::Search: return px(kSearchH, s);
+        case refpages::Style::Hint: return px(20, s);
+        case refpages::Style::Chip: return px(kChipH, s);
+        case refpages::Style::Block:  // place() gives it its rows
         case refpages::Style::Row: break;
     }
     return px(kRow, s);
 }
 
-panel::Box backBox(const Layout& L) { return panel::Box{float(L.pad) * 0.5f, 0, float(L.w) * 0.42f, float(L.header)}; }
-panel::Box closeBox(const Layout& L) {
-    return panel::Box{float(L.w - L.header), 0, float(L.header), float(L.header)};
+void fill(panel::Picture& p, const panel::Box& b, uint32_t rgb, float a = 1.0f) { panel::roundRect(p, b, 0, rgb, a); }
+
+// UTF-8's code points (the blocks' names are the concept's capitals: Latin, Cyrillic with Є, І, Ї, Ґ)
+uint32_t next(const std::string& s, size_t& i) {
+    const unsigned char c = static_cast<unsigned char>(s[i]);
+    int more = c >= 0xF0 ? 3 : c >= 0xE0 ? 2 : c >= 0xC0 ? 1 : 0;
+    uint32_t cp = more == 3 ? c & 0x07u : more == 2 ? c & 0x0Fu : more == 1 ? c & 0x1Fu : c;
+    ++i;
+    for (; more > 0 && i < s.size() && (static_cast<unsigned char>(s[i]) & 0xC0) == 0x80; --more, ++i)
+        cp = (cp << 6) | (static_cast<unsigned char>(s[i]) & 0x3Fu);
+    return cp;
 }
-panel::Box fieldBox(const Layout& L) {
-    return panel::Box{float(L.pad), float(L.header) + 7 * L.s, float(L.w - 2 * L.pad), float(L.search) - 14 * L.s};
+
+void put(std::string& out, uint32_t cp) {
+    if (cp < 0x80) {
+        out += char(cp);
+    } else if (cp < 0x800) {
+        out += char(0xC0 | (cp >> 6));
+        out += char(0x80 | (cp & 0x3F));
+    } else if (cp < 0x10000) {
+        out += char(0xE0 | (cp >> 12));
+        out += char(0x80 | ((cp >> 6) & 0x3F));
+        out += char(0x80 | (cp & 0x3F));
+    } else {
+        out += char(0xF0 | (cp >> 18));
+        out += char(0x80 | ((cp >> 12) & 0x3F));
+        out += char(0x80 | ((cp >> 6) & 0x3F));
+        out += char(0x80 | (cp & 0x3F));
+    }
 }
 
-void fill(panel::Picture& p, const panel::Box& b, uint32_t rgb) { panel::roundRect(p, b, 0, rgb, 1.0f); }
-
-}  // namespace
-
-Layout layout(int targetW, int targetH, float scale) {
-    Layout L;
-    L.s = std::max(0.5f, scale);
-    const int room = px(kEdgeRoom, L.s);
-    L.w = std::max(200, std::min(px(kW, L.s), targetW - 2 * room));
-    L.h = std::max(200, std::min(px(kH, L.s), targetH - 2 * room));
-    L.x = std::max(0, (targetW - L.w) / 2);
-    L.y = std::max(0, (targetH - L.h) / 2);
-    L.header = px(kHeader, L.s);
-    L.search = px(kSearch, L.s);
-    L.footer = px(kFooter, L.s);
-    L.pad = px(kPad, L.s);
-    L.bodyY = L.header + L.search;
-    L.bodyH = std::max(0, L.h - L.bodyY - L.footer);
-    return L;
+std::string capitals(const std::string& utf8) {
+    std::string out;
+    for (size_t i = 0; i < utf8.size();) {
+        uint32_t cp = next(utf8, i);
+        if (cp >= 'a' && cp <= 'z') cp -= 32;
+        else if (cp >= 0x430 && cp <= 0x44F) cp -= 0x20;  // а-я
+        else if (cp >= 0x450 && cp <= 0x45F) cp -= 0x50;  // ѐ-џ: ё, є, і, ї
+        else if (cp == 0x491) cp = 0x490;                  // ґ
+        put(out, cp);
+    }
+    return out;
 }
 
 // 3.0.11-beta.16: a Text row's height - its lines guessed from its letters (GDI breaks them: a letter some 0.56 of
@@ -75,36 +101,234 @@ int textHeight(const std::string& words, int width, float s) {
     return px(kTextLine, s) * lines + px(8, s);
 }
 
-std::vector<Placed> place(const Layout& L, const refpages::Page& p, int& total) {
-    std::vector<Placed> out;
-    out.reserve(p.rows.size());
-    const int innerW = L.w - 2 * L.pad - px(10, L.s);  // room for the scroll bar
-    const int gap = px(kGap, L.s);
-    const int tileW = (innerW - 2 * gap) / 3;
-    int y = px(6, L.s), tile = 0;
-    int others = 0;  // 3.0.11-beta.11: the world map's row takes what the other rows leave of the body
-    for (const refpages::Row& r : p.rows)
-        if (r.style != refpages::Style::World) others += heightOf(r.style, L.s);
-    for (const refpages::Row& r : p.rows) {
-        int h = heightOf(r.style, L.s);
-        if (r.style == refpages::Style::World) h = std::max(h, L.bodyH - others - px(20, L.s));
-        if (r.style == refpages::Style::Text) h = textHeight(r.left, innerW, L.s);
-        if (r.style == refpages::Style::Tile) {
-            const int col = tile % 3;
-            if (col == 0 && tile > 0) y += h + gap;
-            out.push_back(Placed{L.pad + col * (tileW + gap), y, tileW, h});
-            ++tile;
+// The rows a block holds: those after it up to the next block, tile, field, title, section or picture
+size_t blockEnd(const refpages::Page& p, size_t block) {
+    size_t j = block + 1;
+    for (; j < p.rows.size(); ++j) {
+        const refpages::Style st = p.rows[j].style;
+        if (st == refpages::Style::Block || st == refpages::Style::Tile || st == refpages::Style::Search ||
+            st == refpages::Style::Title || st == refpages::Style::Heading || st == refpages::Style::World ||
+            st == refpages::Style::Portrait)
+            break;
+    }
+    return j;
+}
+
+// A chip's width: its picture, its name, «· its kind», within the block
+float chipWidth(const Layout& L, const refpages::Row& r, float most) {
+    const float s = L.s;
+    float w = 6 * s + kChipPic * s + 8 * s + L.measure(r.left, 13.5f * s, false) + 10 * s;
+    if (!r.sub.empty()) w += 5 * s + L.measure("· " + r.sub, 12 * s, false);
+    return std::min(std::ceil(w), most);
+}
+
+// A Search row's key at its right («Ctrl+F», «Esc»)
+panel::Box searchKey(const Layout& L, const panel::Box& field, const std::string& key) {
+    const float s = L.s, w = std::max(24 * s, std::ceil(L.measure(key, 13 * s, true)) + 12 * s), h = 24 * s;
+    return panel::Box{field.x + field.w - 14 * s - w, field.y + (field.h - h) / 2, w, h};
+}
+
+// A row's «ui:<name>» icon (the tiles', the chips' of a location and a quest)
+bool iconNamed(const std::string& key, uiicons::Icon& icon) {
+    static const std::pair<const char*, uiicons::Icon> kNames[] = {
+        {"ui:monster", uiicons::Icon::Monster}, {"ui:item", uiicons::Icon::Item},
+        {"ui:location", uiicons::Icon::Location}, {"ui:quest", uiicons::Icon::Quest},
+        {"ui:npc", uiicons::Icon::Npc}, {"ui:mvp", uiicons::Icon::Mvp},
+        {"ui:pet", uiicons::Icon::Pet}, {"ui:craft", uiicons::Icon::Craft},
+        {"ui:world", uiicons::Icon::World}, {"ui:tables", uiicons::Icon::Tables},
+    };
+    for (const auto& [name, i] : kNames)
+        if (key == name) {
+            icon = i;
+            return true;
+        }
+    return false;
+}
+
+// A block at (x, y), `w` wide, and its rows inside it: the chips flowing, the others one under another; its height
+int placeBlock(const Layout& L, const refpages::Page& p, size_t block, size_t end, int x, int y, int w,
+               std::vector<Placed>& out) {
+    const float s = L.s;
+    const int padX = px(kBlockPadX, s), padY = px(kBlockPadY, s), innerW = w - 2 * padX, chipH = px(kChipH, s);
+    const int gap = px(kChipGap, s);
+    int cy = y + padY + px(kBlockTitle, s) + px(kBlockTitleGap, s), cx = x + padX;
+    bool chips = false;  // a line of chips going on
+    for (size_t j = block + 1; j < end; ++j) {
+        const refpages::Row& r = p.rows[j];
+        if (r.style == refpages::Style::Chip) {
+            const int cw = int(chipWidth(L, r, float(innerW)));
+            if (chips && cx + cw > x + padX + innerW) {
+                cy += chipH + gap;
+                cx = x + padX;
+            }
+            out[j] = Placed{cx, cy, cw, chipH};
+            cx += cw + gap;
+            chips = true;
             continue;
         }
-        if (tile > 0) {  // after the tiles' last line
-            y += heightOf(refpages::Style::Tile, L.s) + gap;
-            tile = 0;
+        if (chips) {
+            cy += chipH + gap;
+            cx = x + padX;
+            chips = false;
         }
-        out.push_back(Placed{L.pad, y, innerW, h});
-        y += h;
+        const int h = r.style == refpages::Style::Text ? textHeight(r.left, innerW, s) : heightOf(r.style, s);
+        out[j] = Placed{x + padX, cy, innerW, h};
+        cy += h;
     }
-    if (tile > 0) y += heightOf(refpages::Style::Tile, L.s) + gap;
-    total = y + px(8, L.s);
+    if (chips) cy += chipH;
+    const int h = cy + padY - y;
+    out[block] = Placed{x, y, w, h};
+    return h;
+}
+
+}  // namespace
+
+float guessWidth(const std::string& utf8, float px, bool bold) {
+    float em = 0;
+    for (size_t i = 0; i < utf8.size();) {
+        const uint32_t cp = next(utf8, i);
+        if (cp == ' ') em += 0.27f;
+        else if (cp >= '0' && cp <= '9') em += 0.56f;
+        else if (cp >= 'A' && cp <= 'Z') em += 0.63f;
+        else if (cp >= 'a' && cp <= 'z') em += 0.52f;
+        else if (cp >= 0x410 && cp <= 0x42F) em += 0.66f;  // the Cyrillic capitals
+        else if (cp >= 0x400 && cp <= 0x4FF) em += 0.56f;
+        else if (cp < 0x80) em += 0.32f;  // signs
+        else em += 0.62f;
+    }
+    return em * px * (bold ? 1.05f : 1.0f) * 1.1f;  // rather wider: a preview's font is no narrower
+}
+
+Layout layout(int targetW, int targetH, float scale, Measure measure) {
+    Layout L;
+    L.s = std::max(0.5f, scale);
+    L.measure = measure ? measure : guessWidth;
+    const int room = px(kEdgeRoom, L.s);
+    L.w = std::max(200, std::min(px(kW, L.s), targetW - 2 * room));
+    L.h = std::max(200, std::min(px(kH, L.s), targetH - 2 * room));
+    L.x = std::max(0, (targetW - L.w) / 2);
+    L.y = std::max(0, (targetH - L.h) / 2);
+    L.header = px(kHeader, L.s);
+    L.footer = px(kFooter, L.s);
+    L.pad = px(kPadX, L.s);
+    L.bodyY = L.header;
+    L.bodyH = std::max(0, L.h - L.bodyY - L.footer);
+    return L;
+}
+
+Chrome chrome(const Layout& L, const refpages::Page& p, const Texts& t) {
+    Chrome c;
+    const float s = L.s, H = float(L.header), W = float(L.w), side = 34 * s;
+    const auto width = [&](const std::string& words, float size, bool bold) {
+        return words.empty() ? 0.0f : std::ceil(L.measure(words, size * s, bold)) + 2;
+    };
+    float x = 18 * s;
+    c.title = panel::Box{x, 0, width(t.title, 16, true), H};
+    x += c.title.w + 12 * s;
+    c.close = panel::Box{W - 10 * s - side, (H - side) / 2, side, side};
+    float right = c.close.x - 8 * s;
+    c.starred = p.star;
+    if (p.star >= 0) {
+        c.star = panel::Box{right - side, (H - side) / 2, side, side};
+        right = c.star.x - 10 * s;
+    }
+    const bool field = std::any_of(p.rows.begin(), p.rows.end(),
+                                   [](const refpages::Row& r) { return r.style == refpages::Style::Search; });
+    if (!field) {  // the cards' and the lists' search, in the header (v23_ref_monster)
+        const float w = std::min(360 * s, std::max(160 * s, (right - x) * 0.45f)), h = 36 * s;
+        c.search = panel::Box{right - w, (H - h) / 2, w, h};
+        const float kw = std::max(24 * s, width("Ctrl+F", 13, true) + 8 * s);
+        c.kbd = panel::Box{c.search.x + c.search.w - 6 * s - kw, c.search.y + (h - 24 * s) / 2, kw, 24 * s};
+        right = c.search.x - 12 * s;
+    }
+    if (!t.back.empty()) {
+        const float w = std::min(8 * s + 16 * s + 6 * s + width(t.back, 14, true) + 12 * s,
+                                 std::max(0.0f, right - x) * 0.55f);
+        c.back = panel::Box{x, (H - 32 * s) / 2, w, 32 * s};
+        x += w + 12 * s;
+    }
+    // the way here: its last parts that fit, a «›» between each two
+    const float sep = width("›", 14.5f, false);
+    const auto wide = [&](size_t from) {
+        float w = 0;
+        for (size_t i = from; i < t.crumbs.size(); ++i)
+            w += (i > from ? 16 * s + sep : 0) + width(t.crumbs[i], 14.5f, i + 1 == t.crumbs.size());
+        return w;
+    };
+    while (c.crumbFirst + 1 < t.crumbs.size() && x + wide(c.crumbFirst) > right) ++c.crumbFirst;
+    for (size_t i = c.crumbFirst; i < t.crumbs.size(); ++i) {
+        if (i > c.crumbFirst) {
+            c.crumbs.push_back(panel::Box{x + 8 * s, 0, sep, H});
+            x += 16 * s + sep;
+        }
+        const float w = std::min(width(t.crumbs[i], 14.5f, i + 1 == t.crumbs.size()), std::max(0.0f, right - x));
+        c.crumbs.push_back(panel::Box{x, 0, w, H});
+        x += w;
+    }
+    // the bottom: the data's chips at its left, the keys at its right
+    const float fy = float(L.h - L.footer), ch = 22 * s;
+    float cx = 18 * s;
+    for (const std::string* chip : {&t.pack, &t.live}) {
+        if (chip->empty()) {
+            c.chips.push_back(panel::Box{});
+            continue;
+        }
+        const float w = 9 * s + 7 * s + 6 * s + width(*chip, 12, true) + 9 * s;
+        c.chips.push_back(panel::Box{cx, fy + (float(L.footer) - ch) / 2, w, ch});
+        cx += w + 12 * s;
+    }
+    const float kw = width(t.keys, 12.5f, false);
+    c.keys = panel::Box{W - 18 * s - kw, fy, kw, float(L.footer)};
+    c.live = t.liveState;
+    c.caret = 18 * s + 20 * s + 12 * s + (t.query.empty() ? -4 * s : width(t.query, 17, false));
+    return c;
+}
+
+std::vector<Placed> place(const Layout& L, const refpages::Page& p, int& total) {
+    const float s = L.s;
+    const size_t n = p.rows.size();
+    std::vector<Placed> out(n);
+    const int padX = L.pad, innerW = L.w - 2 * padX;  // the scroll bar in the right padding
+    int others = px(kTop, s);  // 3.0.11-beta.11: the world map's row takes what the other rows leave of the body
+    for (const refpages::Row& r : p.rows)
+        if (r.style != refpages::Style::World) others += heightOf(r.style, s);
+    int y = px(kTop, s);
+    for (size_t i = 0; i < n;) {
+        const refpages::Row& r = p.rows[i];
+        if (r.style == refpages::Style::Tile) {  // 3.0.11-beta.26: five to a line
+            const int gap = px(kTileGap, s), h = px(kTileH, s), w = (innerW - 4 * gap) / 5;
+            int k = 0;
+            for (; i < n && p.rows[i].style == refpages::Style::Tile; ++i, ++k)
+                out[i] = Placed{padX + (k % 5) * (w + gap), y + (k / 5) * (h + gap), w, h};
+            y += (k + 4) / 5 * (h + gap) - gap + px(kGroupGap, s);
+            continue;
+        }
+        if (r.style == refpages::Style::Block) {  // 3.0.11-beta.26: a block, and the next one beside it
+            const size_t end = blockEnd(p, i);
+            const bool pair = r.share > 0 && end < n && p.rows[end].style == refpages::Style::Block &&
+                              p.rows[end].share > 0;
+            const int gap = px(kTileGap, s);
+            const int w1 = pair ? (innerW - gap) * r.share / (r.share + p.rows[end].share) : innerW;
+            int h = placeBlock(L, p, i, end, padX, y, w1, out);
+            size_t next = end;
+            if (pair) {
+                next = blockEnd(p, end);
+                h = std::max(h, placeBlock(L, p, end, next, padX + w1 + gap, y, innerW - gap - w1, out));
+                out[i].h = out[end].h = h;
+            }
+            y += h + px(kGroupGap, s);
+            i = next;
+            continue;
+        }
+        int h = heightOf(r.style, s);
+        if (r.style == refpages::Style::World) h = std::max(h, L.bodyH - others - px(20, s));
+        if (r.style == refpages::Style::Text) h = textHeight(r.left, innerW, s);
+        out[i] = Placed{padX, y, innerW, h};
+        y += h + (r.style == refpages::Style::Search ? px(10, s) : r.style == refpages::Style::Hint ? px(kGroupGap, s)
+                                                                                                    : 0);
+        ++i;
+    }
+    total = y + px(8, s);
     return out;
 }
 
@@ -129,7 +353,8 @@ const panel::Picture* iconOf(const Look& look, const refpages::Row& row) {
     return it == look.pictures->end() || it->second.width <= 0 ? nullptr : &it->second;
 }
 
-// A premultiplied picture over the window's (opaque) one (3.0.11-beta.25: inside its clip)
+// A premultiplied picture over the window's one (3.0.11-beta.25: inside its clip; 3.0.11-beta.26: the glass under
+// it keeps showing where the picture lets it)
 void blit(panel::Picture& out, const panel::Picture& pic, int ox, int oy) {
     const int top = std::max(0, out.clipY0), bottom = std::min(out.height, out.clipY1);
     const int left = std::max(0, out.clipX0), right = std::min(out.width, out.clipX1);
@@ -145,7 +370,7 @@ void blit(panel::Picture& out, const panel::Picture& pic, int ox, int oy) {
             auto ch = [&](int sh) {
                 return std::min<uint32_t>(255, ((c >> sh) & 0xFF) + ((d >> sh) & 0xFF) * keep / 255);
             };
-            d = 0xFF000000u | ch(16) << 16 | ch(8) << 8 | ch(0);
+            d = ch(24) << 24 | ch(16) << 16 | ch(8) << 8 | ch(0);
         }
     }
 }
@@ -156,22 +381,26 @@ worldmap::Fit worldFit(const worldmap::Sheet& sheet, const Placed& row) {
     return worldmap::fit(sheet.w, sheet.h, row.w, row.h);
 }
 
-Under under(const Layout& L, const refpages::Page& p, const std::vector<Placed>& rows, int scroll, bool backShown,
+Under under(const Layout& L, const refpages::Page& p, const std::vector<Placed>& rows, int scroll, const Chrome& c,
             float x, float y, const worldmap::Sheet* sheet) {
     if (x < 0 || y < 0 || x >= float(L.w) || y >= float(L.h)) return Under{};
-    if (closeBox(L).contains(x, y)) return Under{Part::Close, -1};
-    if (backShown && backBox(L).contains(x, y)) return Under{Part::Back, -1};
-    if (y >= float(L.header) && y < float(L.bodyY)) return Under{Part::Search, -1};
+    if (c.close.w > 0 && c.close.contains(x, y)) return Under{Part::Close, -1};
+    if (c.back.w > 0 && c.back.contains(x, y)) return Under{Part::Back, -1};
+    if (c.star.w > 0 && c.star.contains(x, y)) return Under{Part::Star, -1};
+    if (c.search.w > 0 && c.search.contains(x, y)) return Under{Part::Search, -1};
     if (y < float(L.bodyY) || y >= float(L.bodyY + L.bodyH)) return Under{};
     const float by = y - float(L.bodyY) + float(scroll);
     for (size_t i = 0; i < rows.size() && i < p.rows.size(); ++i) {
         const Placed& r = rows[i];
         const bool in = x >= float(r.x) && x < float(r.x + r.w) && by >= float(r.y) && by < float(r.y + r.h);
-        if (in && sheet && p.rows[i].style == refpages::Style::World) {  // 3.0.11-beta.11: a map on the world map
+        if (!in) continue;
+        if (sheet && p.rows[i].style == refpages::Style::World) {  // 3.0.11-beta.11: a map on the world map
             const int t = worldmap::tileAt(*sheet, worldFit(*sheet, r), x - float(r.x), by - float(r.y));
             return t >= 0 ? Under{Part::Tile, int(i), t} : Under{Part::Body, -1};
         }
-        if (p.rows[i].link.go != refpages::Go::None && in && shown(L, r, scroll)) return Under{Part::Row, int(i)};
+        if (p.rows[i].style == refpages::Style::Search) return Under{Part::Search, -1};
+        if (p.rows[i].link.go != refpages::Go::None && shown(L, r, scroll)) return Under{Part::Row, int(i)};
+        // a block's ground: its chips are the rows after it
     }
     return Under{Part::Body, -1};
 }
@@ -270,60 +499,119 @@ void paintWorld(panel::Picture& out, const panel::Box& b, const WorldLook& w, fl
     }
 }
 
-}  // namespace
-
-namespace {
-
 constexpr int kAnywhere = 1 << 30;  // panel::Picture's clip by default
 
-// Everything over the window's ground - inside the picture's clip (paint: all of it; repaint: a part)
+// A row under the pointer or picked (3.0.11-beta.21)
+bool hot(const Look& look, size_t i) {
+    return (look.hover.part == Part::Row && look.hover.row == int(i)) || look.selected == int(i);
+}
+
+// The header's and the bottom's shapes (3.0.11-beta.26)
+void chromeShapes(panel::Picture& out, const Layout& L, const Look& look) {
+    const float s = L.s, edge = std::max(1.0f, s);
+    const Chrome& c = look.chrome;
+    const Part hover = look.hover.part;
+    fill(out, panel::Box{0, float(L.header) - edge, float(L.w), edge}, kWhite, kLineA);
+    fill(out, panel::Box{0, float(L.h - L.footer), float(L.w), edge}, kWhite, kLineA);
+    if (c.back.w > 0) {
+        panel::roundRect(out, c.back, 9 * s, kWhite, hover == Part::Back ? 0.12f : kCellA);
+        uiicons::draw(out, uiicons::Icon::Back, c.back.x + 8 * s, c.back.y + (c.back.h - 16 * s) / 2, 16 * s, kText,
+                      1.0f, 2.4f);
+    }
+    if (c.search.w > 0) {
+        panel::roundRect(out, c.search, 9 * s, kBlack, 0.35f, kWhite, hover == Part::Search ? 0.30f : kLine2A, edge);
+        uiicons::draw(out, uiicons::Icon::Search, c.search.x + 12 * s, c.search.y + (c.search.h - 16 * s) / 2,
+                      16 * s, kMuted, 1.0f, 2.2f);
+        panel::roundRect(out, c.kbd, 5 * s, kWhite, kCellA);
+    }
+    if (c.star.w > 0) panel::roundRect(out, c.star, 9 * s, kWhite, hover == Part::Star ? 0.12f : kCellA);
+    if (hover == Part::Close) panel::roundRect(out, c.close, 9 * s, kWhite, kCellA);
+    for (size_t k = 0; k < c.chips.size(); ++k) {
+        const panel::Box& b = c.chips[k];
+        if (b.w <= 0) continue;
+        panel::roundRect(out, b, b.h / 2, kWhite, kCellA);
+        const uint32_t dot = k == 0 ? kPackDot : c.live == Live::Fresh ? kLiveDot : kOffDot;
+        panel::circle(out, b.x + 12.5f * s, b.y + b.h / 2, 3.5f * s, dot, 1.0f);
+    }
+}
+
+// Everything over the transparent picture - inside its clip (paint: all of it; repaint: a part)
 void shapes(panel::Picture& out, const Layout& L, const refpages::Page& p, const std::vector<Placed>& rows, int scroll,
             int total, const Look& look) {
-    const float s = L.s;
-    fill(out, panel::Box{0, 0, float(L.w), float(L.header)}, kBand);
-    if (look.backShown && look.hover.part == Part::Back) fill(out, backBox(L), kHover);
-    if (look.hover.part == Part::Close) fill(out, closeBox(L), 0x5A2330);
-    panel::roundRect(out, fieldBox(L), 6 * s, kField, 1.0f, kFieldEdge, 0.9f, std::max(1.0f, 1.5f * s));
+    const float s = L.s, edge = std::max(1.0f, s);
+    // 3.0.11-beta.26: the concept's dark glass, its line around
+    panel::roundRect(out, panel::Box{0, 0, float(L.w), float(L.h)}, kRadius * s, kCard, kCardA, kWhite, kLineA, edge);
+    chromeShapes(out, L, look);
     for (size_t i = 0; i < rows.size() && i < p.rows.size(); ++i) {
         const Placed& r = rows[i];
         if (!shown(L, r, scroll)) continue;
         const panel::Box b{float(r.x), float(L.bodyY + r.y - scroll), float(r.w), float(r.h)};
         const refpages::Row& row = p.rows[i];
-        const bool hot = (look.hover.part == Part::Row && look.hover.row == int(i)) || look.selected == int(i);
-        if (row.style == refpages::Style::Tile) {
-            panel::roundRect(out, b, 8 * s, hot ? kTileHot : kTileFill, 1.0f, hot ? kFieldEdge : kRule, 1.0f,
-                             std::max(1.0f, s));
-            continue;
-        }
-        if (row.style == refpages::Style::World) {
-            paintWorld(out, b, look.world, s);
-            continue;
-        }
-        if (row.style == refpages::Style::Portrait) {  // 3.0.11-beta.14: the picture over a soft square
-            if (const panel::Picture* pic = pictureOf(look, row)) {
-                panel::roundRect(out, panel::Box{b.x, b.y + 2 * s, b.h - 4 * s, b.h - 4 * s}, 8 * s, kTileFill, 1.0f,
-                                 kRule, 1.0f, std::max(1.0f, s));
-                blit(out, *pic, int(b.x + (b.h - 4 * s - float(pic->width)) / 2),
-                     int(b.y + 2 * s + (b.h - 4 * s - float(pic->height)) / 2));
+        const bool on = hot(look, i);
+        uiicons::Icon icon = uiicons::Icon::Search;
+        switch (row.style) {
+            case refpages::Style::Search: {  // the concept's big field: gold edged, its icon, its caret, its key
+                panel::roundRect(out, b, 12 * s, kBlack, 0.38f, kAccent, 1.0f, 1.5f * s);
+                uiicons::draw(out, uiicons::Icon::Search, b.x + 18 * s, b.y + (b.h - 20 * s) / 2, 20 * s, kMuted, 1.0f,
+                              2.2f);
+                fill(out, panel::Box{b.x + look.chrome.caret, b.y + (b.h - 24 * s) / 2, 2 * s, 24 * s}, kAccent2);
+                if (!row.right.empty()) panel::roundRect(out, searchKey(L, b, row.right), 5 * s, kWhite, kCellA);
+                continue;
             }
-            continue;
+            case refpages::Style::Tile:
+                if (on)
+                    panel::roundRect(out, b, 12 * s, kAccent, kSelA, kAccent, kRingA, edge);
+                else
+                    panel::roundRect(out, b, 12 * s, kWhite, kTileA, kWhite, kLineA, edge);
+                if (iconNamed(row.icon, icon))
+                    uiicons::draw(out, icon, b.x + 16 * s, b.y + 14 * s + 1.5f * s, 21 * s, kAccent2, 1.0f, 2.0f);
+                continue;
+            case refpages::Style::Block:
+                panel::roundRect(out, b, 12 * s, kWhite, kBlockA, kWhite, kLineA, edge);
+                continue;
+            case refpages::Style::Chip:
+                if (on)
+                    panel::roundRect(out, b, 9 * s, kAccent, kSelA, kAccent, kRingA, edge);
+                else
+                    panel::roundRect(out, b, 9 * s, kWhite, kCellA);
+                if (iconNamed(row.icon, icon)) {
+                    uiicons::draw(out, icon, b.x + 6 * s + 3 * s, b.y + (b.h - 20 * s) / 2, 20 * s, kMuted, 1.0f, 2.0f);
+                } else if (const panel::Picture* pic = iconOf(look, row)) {
+                    const float side = kChipPic * s;
+                    blit(out, *pic, int(b.x + 6 * s + (side - float(pic->width)) / 2),
+                         int(b.y + (b.h - float(pic->height)) / 2));
+                }
+                continue;
+            case refpages::Style::World:
+                paintWorld(out, b, look.world, s);
+                continue;
+            case refpages::Style::Portrait:  // 3.0.11-beta.14: the picture over a soft square
+                if (const panel::Picture* pic = pictureOf(look, row)) {
+                    panel::roundRect(out, panel::Box{b.x, b.y + 2 * s, b.h - 4 * s, b.h - 4 * s}, 12 * s, kBlack,
+                                     0.32f);
+                    blit(out, *pic, int(b.x + (b.h - 4 * s - float(pic->width)) / 2),
+                         int(b.y + 2 * s + (b.h - 4 * s - float(pic->height)) / 2));
+                }
+                continue;
+            default:
+                break;
         }
-        if (hot) panel::roundRect(out, panel::Box{b.x - 6 * s, b.y, b.w + 12 * s, b.h}, 4 * s, kHover, 1.0f);
+        if (on) {  // the concept's picked row: gold-tinted, its gold edge at the left
+            panel::roundRect(out, panel::Box{b.x - 6 * s, b.y, b.w + 12 * s, b.h}, 4 * s, kAccent, kSelA);
+            fill(out, panel::Box{b.x - 6 * s, b.y, 3 * s, b.h}, kAccent);
+        }
         if (row.style == refpages::Style::Heading)
-            fill(out, panel::Box{b.x, b.y + b.h - std::max(1.0f, s), b.w, std::max(1.0f, s)}, kRule);
+            fill(out, panel::Box{b.x, b.y + b.h - edge, b.w, edge}, kWhite, kLineA);
         if (row.dot) panel::circle(out, b.x + 6 * s, b.y + b.h / 2, 4 * s, row.dot, 1.0f);
-        if (const panel::Picture* icon = iconOf(look, row))  // 3.0.11-beta.15: an item's icon
-            blit(out, *icon, int(b.x), int(b.y + (b.h - float(icon->height)) / 2));
+        if (const panel::Picture* pic = iconOf(look, row))  // 3.0.11-beta.15: an item's icon
+            blit(out, *pic, int(b.x), int(b.y + (b.h - float(pic->height)) / 2));
     }
-    fill(out, panel::Box{0, float(L.h - L.footer), float(L.w), float(L.footer)}, kBand);
-    if (total > L.bodyH && L.bodyH > 0) {  // the scroll bar
-        const float trackX = float(L.w) - 10 * s, trackY = float(L.bodyY) + 4 * s, trackH = float(L.bodyH) - 8 * s;
-        panel::roundRect(out, panel::Box{trackX, trackY, 5 * s, trackH}, 2.5f * s, kTrack, 1.0f);
+    if (total > L.bodyH && L.bodyH > 0) {  // the scroll bar: the concept's thumb
+        const float trackY = float(L.bodyY) + 10 * s, trackH = float(L.bodyH) - 20 * s;
         const float thumbH = std::max(24 * s, trackH * float(L.bodyH) / float(total));
         const float at = trackY + (trackH - thumbH) * float(scroll) / float(std::max(1, total - L.bodyH));
-        panel::roundRect(out, panel::Box{trackX, at, 5 * s, thumbH}, 2.5f * s, kThumb, 1.0f);
+        panel::roundRect(out, panel::Box{float(L.w) - 12 * s, at, 6 * s, thumbH}, 3 * s, kWhite, 0.22f);
     }
-    panel::roundRect(out, panel::Box{0, 0, float(L.w), float(L.h)}, 0, 0, 0.0f, kRule, 1.0f, std::max(1.0f, s));
 }
 
 // A box of the window in its whole pixels, a pixel more each way (the shapes' smooth edges), inside the window
@@ -338,7 +626,7 @@ void paint(panel::Picture& out, const Layout& L, const refpages::Page& p, const 
            int total, const Look& look) {
     out.width = L.w;
     out.height = L.h;
-    out.px.assign(size_t(L.w) * size_t(L.h), 0xFF000000u | kGround);
+    out.px.assign(size_t(L.w) * size_t(L.h), 0u);  // 3.0.11-beta.26: the glass's rounded corners see through
     out.clipX0 = out.clipY0 = 0;
     out.clipX1 = out.clipY1 = kAnywhere;
     shapes(out, L, p, rows, scroll, total, look);
@@ -355,7 +643,7 @@ void repaint(panel::Picture& out, const Layout& L, const refpages::Page& p, cons
     if (a.empty()) return;
     for (int y = a.top; y < a.bottom; ++y) {
         const auto row = out.px.begin() + std::ptrdiff_t(size_t(y) * size_t(L.w));
-        std::fill(row + a.left, row + a.right, 0xFF000000u | kGround);
+        std::fill(row + a.left, row + a.right, 0u);
     }
     out.clipX0 = a.left;
     out.clipY0 = a.top;
@@ -368,7 +656,8 @@ void repaint(panel::Picture& out, const Layout& L, const refpages::Page& p, cons
 
 bool sameRow(const refpages::Row& a, const refpages::Row& b) {
     return a.style == b.style && a.left == b.left && a.right == b.right && refpages::sameCard(a.link, b.link) &&
-           a.gold == b.gold && a.dot == b.dot && a.picture == b.picture && a.icon == b.icon && a.fold == b.fold;
+           a.gold == b.gold && a.dot == b.dot && a.picture == b.picture && a.icon == b.icon && a.fold == b.fold &&
+           a.sub == b.sub && a.share == b.share;
 }
 
 Rect worldArea(const Layout& L, const std::vector<Placed>& rows, int scroll, int row, const worldmap::Sheet& sheet,
@@ -382,21 +671,28 @@ Rect worldArea(const Layout& L, const std::vector<Placed>& rows, int scroll, int
     return pixelsOf(L, panel::Box{tb.x - out, tb.y - out, tb.w + 2 * out, tb.h + 2 * out});
 }
 
-Rect rowArea(const Layout& L, const std::vector<Placed>& rows, int scroll, int i) {
+Rect rowArea(const Layout& L, const refpages::Page& p, const std::vector<Placed>& rows, int scroll, int i) {
     if (i < 0 || size_t(i) >= rows.size() || !shown(L, rows[size_t(i)], scroll)) return Rect{};
     const Placed& r = rows[size_t(i)];
     const float s = L.s;
+    const refpages::Style st = size_t(i) < p.rows.size() ? p.rows[size_t(i)].style : refpages::Style::Row;
+    if (st == refpages::Style::Tile || st == refpages::Style::Chip || st == refpages::Style::Block)  // their own
+        return pixelsOf(L, panel::Box{float(r.x), float(L.bodyY + r.y - scroll), float(r.w), float(r.h)});
     return pixelsOf(L, panel::Box{float(r.x) - 6 * s, float(L.bodyY + r.y - scroll), float(r.w) + 12 * s, float(r.h)});
 }
 
 std::vector<Rect> hotAreas(const Layout& L, const refpages::Page& p, const std::vector<Placed>& rows, int scroll,
                            const Look& look) {
     std::vector<Rect> out;
-    if (look.backShown && look.hover.part == Part::Back) out.push_back(pixelsOf(L, backBox(L)));
-    if (look.hover.part == Part::Close) out.push_back(pixelsOf(L, closeBox(L)));
-    for (const int i : {look.hover.part == Part::Row ? look.hover.row : -1, look.selected})
+    const Chrome& c = look.chrome;
+    const Part part = look.hover.part;
+    if (part == Part::Back && c.back.w > 0) out.push_back(pixelsOf(L, c.back));
+    if (part == Part::Close && c.close.w > 0) out.push_back(pixelsOf(L, c.close));
+    if (part == Part::Star && c.star.w > 0) out.push_back(pixelsOf(L, c.star));
+    if (part == Part::Search && c.search.w > 0) out.push_back(pixelsOf(L, c.search));
+    for (const int i : {part == Part::Row ? look.hover.row : -1, look.selected})
         if (i >= 0 && size_t(i) < p.rows.size())
-            if (const Rect a = rowArea(L, rows, scroll, i); !a.empty()) out.push_back(a);
+            if (const Rect a = rowArea(L, p, rows, scroll, i); !a.empty()) out.push_back(a);
     return out;
 }
 
@@ -404,99 +700,157 @@ std::vector<Words> words(const Layout& L, const refpages::Page& p, const std::ve
                          const Texts& t, const Look& look) {
     std::vector<Words> out;
     const float s = L.s;
-    out.push_back(Words{panel::Box{float(L.w) * 0.3f, 0, float(L.w) * 0.4f, float(L.header)}, t.title, panel::kText,
-                        17 * s, true, Align::Center});
-    if (look.backShown && !t.back.empty())
-        out.push_back(Words{backBox(L), "‹ " + t.back, look.hover.part == Part::Back ? kAccent : panel::kMuted, 14 * s,
-                            false, Align::Left});
-    out.push_back(Words{closeBox(L), "×", look.hover.part == Part::Close ? panel::kText : panel::kMuted, 22 * s, false,
-                        Align::Center});
-    const panel::Box field = fieldBox(L);
-    const panel::Box typed{field.x + 12 * s, field.y, field.w - 24 * s, field.h};
-    if (t.query.empty())
-        out.push_back(Words{typed, "| " + t.hint, panel::kMuted, 15.5f * s, false, Align::Left});
-    else
-        out.push_back(Words{typed, t.query + "|", panel::kText, 15.5f * s, false, Align::Left});
+    const Chrome& c = look.chrome;
+    const Part part = look.hover.part;
+    // the header (3.0.11-beta.26): the title, «Назад до …», the way here, the search, the star, the cross
+    out.push_back(Words{c.title, t.title, kText, 16 * s, true, Align::Left});
+    if (c.back.w > 0)
+        out.push_back(Words{panel::Box{c.back.x + 30 * s, c.back.y, c.back.w - 42 * s, c.back.h}, t.back, kText,
+                            14 * s, true, Align::Left});
+    for (size_t k = 0; k < c.crumbs.size(); ++k) {
+        const size_t i = c.crumbFirst + k / 2;
+        if (k % 2 == 1) {
+            out.push_back(Words{c.crumbs[k], "›", kFaint, 14.5f * s, false, Align::Left});
+        } else if (i < t.crumbs.size()) {
+            const bool last = i + 1 == t.crumbs.size();
+            out.push_back(Words{c.crumbs[k], t.crumbs[i], last ? kText : kMuted, 14.5f * s, last, Align::Left});
+        }
+    }
+    if (c.search.w > 0) {
+        const float x = c.search.x + 37 * s;
+        out.push_back(Words{panel::Box{x, c.search.y, c.kbd.x - 8 * s - x, c.search.h}, t.find, kFaint, 14 * s, false,
+                            Align::Left});
+        out.push_back(Words{c.kbd, "Ctrl+F", kText, 13 * s, true, Align::Center});
+    }
+    if (c.star.w > 0)
+        out.push_back(Words{c.star, c.starred > 0 ? "★" : "☆", c.starred > 0 ? kAccent2 : kFaint, 17 * s, false,
+                            Align::Center});
+    out.push_back(Words{c.close, "✕", part == Part::Close ? kText : kFaint, 16 * s, false, Align::Center});
+    for (size_t k = 0; k < c.chips.size(); ++k) {
+        const panel::Box& b = c.chips[k];
+        if (b.w <= 0) continue;
+        out.push_back(Words{panel::Box{b.x + 22 * s, b.y, b.w - 30 * s, b.h}, k == 0 ? t.pack : t.live, kMuted, 12 * s,
+                            true, Align::Left});
+    }
+    if (c.keys.w > 0) out.push_back(Words{c.keys, t.keys, kFaint, 12.5f * s, false, Align::Right});
     for (size_t i = 0; i < rows.size() && i < p.rows.size(); ++i) {
         const Placed& r = rows[i];
         if (!shown(L, r, scroll)) continue;
         const refpages::Row& row = p.rows[i];
         const float x = float(r.x), y = float(L.bodyY + r.y - scroll), w = float(r.w), h = float(r.h);
-        const bool hot = (look.hover.part == Part::Row && look.hover.row == int(i)) || look.selected == int(i);
         const bool link = row.link.go != refpages::Go::None;
         switch (row.style) {
-            case refpages::Style::Tile:
-                out.push_back(Words{panel::Box{x + 14 * s, y + 8 * s, w - 28 * s, h * 0.5f - 6 * s}, row.left,
-                                    hot ? kAccent : panel::kText, 16 * s, true, Align::Left});
-                out.push_back(Words{panel::Box{x + 14 * s, y + h * 0.5f, w - 28 * s, h * 0.5f - 8 * s}, row.right,
-                                    panel::kMuted, 13 * s, false, Align::Left});
+            case refpages::Style::Search: {
+                const panel::Box b{x, y, w, h};
+                const panel::Box key = searchKey(L, b, row.right);
+                const float tx = x + 50 * s;
+                if (t.query.empty())
+                    out.push_back(Words{panel::Box{tx, y, key.x - 10 * s - tx, h}, t.hint, kFaint, 17 * s, false,
+                                        Align::Left});
+                else
+                    out.push_back(Words{panel::Box{tx, y, key.x - 10 * s - tx, h}, t.query, kText, 17 * s, false,
+                                        Align::Left});
+                if (!row.right.empty()) out.push_back(Words{key, row.right, kText, 13 * s, true, Align::Center});
                 break;
+            }
+            case refpages::Style::Hint:
+                out.push_back(Words{panel::Box{x, y, w, h}, row.left, kMuted, 13 * s, false, Align::Left});
+                break;
+            case refpages::Style::Tile: {  // its icon, its name, its count at the right, what it holds under them
+                const float countW = row.right.empty() ? 0 : std::ceil(L.measure(row.right, 13 * s, true)) + 2;
+                const float tx = x + 16 * s + 21 * s + 10 * s;
+                out.push_back(Words{panel::Box{tx, y + 14 * s, x + w - 16 * s - countW - 6 * s - tx, 24 * s}, row.left,
+                                    kText, 16 * s, true, Align::Left});
+                if (countW > 0)
+                    out.push_back(Words{panel::Box{x + w - 16 * s - countW, y + 14 * s, countW, 24 * s}, row.right,
+                                        kMuted, 13 * s, true, Align::Right});
+                Words sub{panel::Box{x + 16 * s, y + 14 * s + 24 * s + 4 * s, w - 32 * s, 38 * s}, row.sub, kMuted,
+                          13 * s, false, Align::Left};
+                sub.wrap = true;
+                out.push_back(sub);
+                break;
+            }
+            case refpages::Style::Block:
+                out.push_back(Words{panel::Box{x + 16 * s, y + 14 * s, (w - 32 * s) * 0.65f, 18 * s},
+                                    capitals(row.left), kMuted, 13 * s, true, Align::Left});
+                if (!row.right.empty())
+                    out.push_back(Words{panel::Box{x + 16 * s, y + 14 * s, w - 32 * s, 18 * s}, row.right, kAccent2,
+                                        13 * s, true, Align::Right});
+                break;
+            case refpages::Style::Chip: {
+                const float tx = x + 6 * s + kChipPic * s + 8 * s;
+                const float nameW = std::min(std::ceil(L.measure(row.left, 13.5f * s, false)) + 2, x + w - 10 * s - tx);
+                out.push_back(Words{panel::Box{tx, y, nameW, h}, row.left, kText, 13.5f * s, false, Align::Left});
+                if (!row.sub.empty() && tx + nameW + 5 * s < x + w - 10 * s)
+                    out.push_back(Words{panel::Box{tx + nameW + 3 * s, y, x + w - 8 * s - (tx + nameW + 3 * s), h},
+                                        "· " + row.sub, kMuted, 12 * s, false, Align::Left});
+                break;
+            }
             case refpages::Style::Title:
-                out.push_back(Words{panel::Box{x, y, w * 0.72f, h}, row.left, row.gold ? kGold : panel::kText, 24 * s,
-                                    true, Align::Left});
-                out.push_back(Words{panel::Box{x + w * 0.72f, y, w * 0.28f, h}, row.right, panel::kMuted, 15 * s, false,
+                out.push_back(Words{panel::Box{x, y, w * 0.72f, h}, row.left, row.gold ? kGold : kText, 26 * s, true,
+                                    Align::Left});
+                out.push_back(Words{panel::Box{x + w * 0.72f, y, w * 0.28f, h}, row.right, kMuted, 15 * s, false,
                                     Align::Right});
                 break;
             case refpages::Style::Sub:
-                out.push_back(Words{panel::Box{x, y, w, h}, row.left, panel::kMuted, 13.5f * s, false, Align::Left});
+                out.push_back(Words{panel::Box{x, y, w, h}, row.left, kMuted, 13.5f * s, false, Align::Left});
                 break;
-            case refpages::Style::Heading:
-                out.push_back(Words{panel::Box{x, y, w * 0.8f, h}, row.left, kAccent, 15.5f * s, true, Align::Left});
-                out.push_back(Words{panel::Box{x + w * 0.8f, y, w * 0.2f, h}, row.right, panel::kMuted, 13 * s, false,
+            case refpages::Style::Heading:  // 3.0.11-beta.26: the concept's capitals of a section
+                out.push_back(Words{panel::Box{x, y, w * 0.8f, h}, capitals(row.left), kMuted, 13 * s, true,
+                                    Align::Left});
+                out.push_back(Words{panel::Box{x + w * 0.8f, y, w * 0.2f, h}, row.right, kAccent2, 13 * s, true,
                                     Align::Right});
                 break;
             case refpages::Style::Note:
-                out.push_back(Words{panel::Box{x, y, w, h}, row.left, panel::kMuted, 13.5f * s, false, Align::Left});
+                out.push_back(Words{panel::Box{x, y, w, h}, row.left, kMuted, 13.5f * s, false, Align::Left});
                 break;
             case refpages::Style::Text: {  // 3.0.11-beta.16
-                Words t{panel::Box{x, y + 3 * s, w, h - 6 * s}, row.left, panel::kText, 13.5f * s, false, Align::Left};
-                t.wrap = true;
-                out.push_back(t);
+                Words words{panel::Box{x, y + 3 * s, w, h - 6 * s}, row.left, kText, 13.5f * s, false, Align::Left};
+                words.wrap = true;
+                out.push_back(words);
                 break;
             }
             case refpages::Style::Portrait: {  // two lines beside the picture (from the start without one)
                 const float tx = pictureOf(look, row) ? x + h + 10 * s : x;
-                out.push_back(Words{panel::Box{tx, y + h * 0.18f, w - (tx - x), h * 0.32f}, row.left, panel::kText,
-                                    14 * s, false, Align::Left});
-                out.push_back(Words{panel::Box{tx, y + h * 0.52f, w - (tx - x), h * 0.3f}, row.right, panel::kMuted,
-                                    13 * s, false, Align::Left});
+                out.push_back(Words{panel::Box{tx, y + h * 0.18f, w - (tx - x), h * 0.32f}, row.left, kText, 14 * s,
+                                    false, Align::Left});
+                out.push_back(Words{panel::Box{tx, y + h * 0.52f, w - (tx - x), h * 0.3f}, row.right, kMuted, 13 * s,
+                                    false, Align::Left});
                 break;
             }
             case refpages::Style::World:  // the players' numbers in their badges
                 if (look.world.sheet && !look.world.marks.empty()) {  // 3.0.11-beta.19: the monster's numbers
                     const worldmap::Fit f = worldmap::fit(look.world.sheet->w, look.world.sheet->h, int(w), int(h));
                     for (const auto& [map, n] : look.world.marks) {
-                        const worldmap::Tile* t = worldmap::tileOf(*look.world.sheet, map);
-                        if (!t) continue;
-                        const panel::Box tb = tileBox(*t, f, float(int(x)), float(int(y)));
+                        const worldmap::Tile* tile = worldmap::tileOf(*look.world.sheet, map);
+                        if (!tile) continue;
+                        const panel::Box tb = tileBox(*tile, f, float(int(x)), float(int(y)));
                         const panel::Box badge{tb.x + tb.w / 2 - 11 * s, tb.y + tb.h / 2 - 9 * s, 22 * s, 18 * s};
                         out.push_back(Words{badge, std::to_string(n), kGold, 10.5f * s, true, Align::Center});
                     }
                 } else if (look.world.sheet && look.world.players) {
                     const worldmap::Fit f = worldmap::fit(look.world.sheet->w, look.world.sheet->h, int(w), int(h));
-                    for (const worldmap::Tile& t : look.world.sheet->world) {
-                        const auto n = look.world.players->find(t.map);
+                    for (const worldmap::Tile& tile : look.world.sheet->world) {
+                        const auto n = look.world.players->find(tile.map);
                         if (n == look.world.players->end() || n->second <= 0) continue;
-                        const panel::Box tb = tileBox(t, f, float(int(x)), float(int(y)));
+                        const panel::Box tb = tileBox(tile, f, float(int(x)), float(int(y)));
                         out.push_back(Words{panel::Box{tb.x + tb.w - 11 * s, tb.y - 7 * s, 18 * s, 18 * s},
-                                            std::to_string(n->second), panel::kText, 11 * s, true, Align::Center});
+                                            std::to_string(n->second), kText, 11 * s, true, Align::Center});
                     }
                 }
                 break;
             case refpages::Style::Row: {
                 const float indent = !row.icon.empty() ? float(iconSide(L)) + 6 * s : row.dot ? 16 * s : 0;
                 const float split = w * 0.6f;
-                const uint32_t rgb = row.gold ? kGold : hot ? kAccent : link ? kLink : panel::kText;
+                const uint32_t rgb = row.gold ? kGold : link ? kLink : kText;
                 out.push_back(Words{panel::Box{x + indent, y, split - indent - 8 * s, h}, row.left, rgb, 14 * s,
                                     row.gold, Align::Left});
-                out.push_back(Words{panel::Box{x + split, y, w - split, h}, row.right, panel::kMuted, 13 * s, false,
+                out.push_back(Words{panel::Box{x + split, y, w - split, h}, row.right, kMuted, 13 * s, false,
                                     Align::Right});
                 break;
             }
         }
     }
-    out.push_back(Words{panel::Box{float(L.pad), float(L.h - L.footer), float(L.w - 2 * L.pad), float(L.footer)},
-                        t.footer, panel::kMuted, 12.5f * s, false, Align::Center});
     return out;
 }
 

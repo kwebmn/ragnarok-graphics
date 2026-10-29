@@ -31,24 +31,32 @@ struct Link {
 // World: the world map's picture; Portrait (3.0.11-beta.14): a card's picture (the monster's first frame, the item's
 // icon) with its two lines beside it - `left` and `right`, one under the other
 // Text (3.0.11-beta.16): words that wrap - a quest's description, its steps (`left`)
-enum class Style : uint8_t { Title, Sub, Heading, Row, Note, Tile, World, Portrait, Text };
+// 3.0.11-beta.26, the concept's look: Search - the search's own big field (the first screen, the results; `right` its
+// key); Hint - a line under it; Tile - `left` its name, `right` its count, `sub` what it holds, `icon` "ui:<name>";
+// Block - a framed group of the rows after it (`left` its name, `right` a note at its right; `share` > 0: beside the
+// next block, the line's share in per cent); Chip - a card in a block's chips (`left`, `sub` its kind, `picture`)
+enum class Style : uint8_t { Title, Sub, Heading, Row, Note, Tile, World, Portrait, Text, Search, Hint, Block, Chip };
 struct Row {
     Style style = Style::Row;
-    std::string left, right;  // UTF-8: the row's words, and a note on its right (a tile: its count and its line)
+    std::string left, right;  // UTF-8: the row's words, and a note on its right (a tile: its count)
     Link link;
     bool gold = false;   // a boss, the place the player is
     uint32_t dot = 0;    // 0xRRGGBB of a mark before the words (an NPC's kind), 0 none
     std::string picture;  // 3.0.11-beta.14: a Portrait's - "mob:<id>", "item:<id>" (win/reference_window finds it)
     std::string icon;     // 3.0.11-beta.15: a small picture before the words - "item:<id>" (every row of an item)
     int fold = -1;        // 3.0.11-beta.17: a section's heading the player folds (its Part), -1 none
+    std::string sub;      // 3.0.11-beta.26: a tile's line, a chip's kind
+    int share = 0;        // 3.0.11-beta.26: a block beside the next one - its share of the line, per cent
 };
 struct Page {
     std::string name;  // what «Назад до …» calls it
     std::vector<Row> rows;
+    int star = -1;  // 3.0.11-beta.26: a card's star in the header - -1 none, 0 not starred, 1 in «Обране»
 };
 
-// Sections of the first screen (Go::Section's ids); items by their type are 100 + the type
-enum Section : int { Mobs, Bosses, Items, Cards, Maps, Shops, Teleports, Pets, Crafting, kSections };
+// Sections of the first screen (Go::Section's ids); items by their type are 100 + the type; 3.0.11-beta.26 the
+// concept's «NPC і послуги» (the shops and Kafra) and «Таблиці» (the elements)
+enum Section : int { Mobs, Bosses, Items, Cards, Maps, Shops, Teleports, Pets, Crafting, Services, Tables, kSections };
 // A card's long sections show their first kFew rows and «усі N ›» (Go::Expand, its bit) until opened (the concept:
 // the main things first - «Де знайти» and «Що випадає» - the rest below without a long scroll)
 enum Part : int {
@@ -89,8 +97,9 @@ bool sameCard(const Link& a, const Link& b);
 std::string linkText(const Link& link);           // «m 1002», «p prt_fild08» - a line of the kept lists
 bool linkOf(const std::string& line, Link& out);  // back; false: not one
 
-// `online`: the server's players now (3.0.11-beta.10; 0 not known); `c` (3.0.11-beta.18): its recent and starred
-Page home(const refindex::Index& ix, settings::Lang l, int online = 0, const Context& c = {});
+// `c` (3.0.11-beta.18): its recent and starred; 3.0.11-beta.26 the concept's: the search, ten sections, the recent
+// and the starred as chips (the players now: the window's bottom)
+Page home(const refindex::Index& ix, settings::Lang l, const Context& c = {});
 // `c` (3.0.11-beta.15): the NPCs found the nearest to the player's map first, and how far
 Page found(const refindex::Index& ix, settings::Lang l, const std::string& query, const Context& c = {});
 Page section(const refindex::Index& ix, settings::Lang l, int id, const Context& c = {});

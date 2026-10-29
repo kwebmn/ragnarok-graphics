@@ -92,10 +92,20 @@ void roundRect(Picture& p, const Box& b, float r, uint32_t fill, float fillA, ui
         }
         rim(y, x0, in0);
         uint32_t* row = p.px.data() + size_t(y) * size_t(p.width);
-        if (fillA >= 1.0f)
+        if (fillA >= 1.0f) {
             std::fill(row + in0, row + in1, opaque);
-        else if (fillA > 0.0f)
-            for (int x = in0; x < in1; ++x) over(row[x], fill, fillA);
+        } else if (fillA > 0.0f) {  // 3.0.11-beta.26: see-through over what is mostly one colour - each once
+            uint32_t from = 0, to = 0;
+            bool known = false;
+            for (int x = in0; x < in1; ++x) {
+                if (!known || row[x] != from) {
+                    from = to = row[x];
+                    over(to, fill, fillA);
+                    known = true;
+                }
+                row[x] = to;
+            }
+        }
         rim(y, in1, x1);
     }
 }

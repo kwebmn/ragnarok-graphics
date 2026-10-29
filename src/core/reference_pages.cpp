@@ -342,6 +342,11 @@ int elementDamage(int attack, int defence, int level) {
     return kAttrFix[level - 1][attack][defence];
 }
 
+// 3.0.11-beta.26: an MVP - a monster with an MVP's reward (the concept's «MVP» section; a boss of mode 0x20 may not)
+bool isMvp(const refindex::Mob& m) {
+    return std::any_of(m.drops.begin(), m.drops.end(), [](const refindex::Drop& d) { return d.kind == 1; });
+}
+
 std::string elementName(int e, Lang l) {
     static const Text kNames[] = {Text::RefEle0, Text::RefEle1, Text::RefEle2, Text::RefEle3, Text::RefEle4,
                                   Text::RefEle5, Text::RefEle6, Text::RefEle7, Text::RefEle8, Text::RefEle9};
@@ -373,14 +378,16 @@ std::string typeName(int t, Lang l) {
     }
 }
 
-Page home(const refindex::Index& ix, Lang l, int online, const Context& c) {
+Page home(const refindex::Index& ix, Lang l, const Context& c) {
     Page p;
     p.name = say(l, Text::RefTitle);
-    size_t bosses = 0, cards = 0, maps = 0, kafra = 0;
+    // 3.0.11-beta.26 (the owner:
+    // «у нас оно отличается от того как это выглядит в концепте»):
+    // the concept's first screen (v23_ref_home) - its search, ten sections in its order, the recent and the
+    // starred cards as chips
+    size_t mvps = 0, maps = 0, kafra = 0;
     for (const auto& m : ix.mobs)
-        if (m.second.boss && ix.spawnsOf.count(m.first)) ++bosses;
-    for (const auto& i : ix.items)
-        if (i.second.type == 6) ++cards;
+        if (ix.spawnsOf.count(m.first) && isMvp(m.second)) ++mvps;
     for (const auto& m : ix.maps) {
         if (!m.second.mobs.empty()) ++maps;
         for (const refindex::Teleport& t : m.second.teleports)
@@ -389,60 +396,109 @@ Page home(const refindex::Index& ix, Lang l, int online, const Context& c) {
                 break;
             }
     }
-    const std::tuple<Section, Text, Text, size_t> tiles[] = {
-        {Mobs, Text::RefSecMobs, Text::RefSecMobsHint, ix.mobs.size()},
-        {Bosses, Text::RefSecBosses, Text::RefSecBossesHint, bosses},
-        {Items, Text::RefSecItems, Text::RefSecItemsHint, ix.items.size()},
-        {Cards, Text::RefSecCards, Text::RefSecCardsHint, cards},
-        {Maps, Text::RefSecMaps, Text::RefSecMapsHint, maps},
-        {Shops, Text::RefSecShops, Text::RefSecShopsHint, ix.shops.size()},
-        {Teleports, Text::RefSecTeleports, Text::RefSecTeleportsHint, kafra},
-        {Pets, Text::RefSecPets, Text::RefSecPetsHint, ix.pets.size()},
-        {Crafting, Text::RefSecCraft, Text::RefSecCraftHint, ix.craft.size()},
+    Row search;
+    search.style = Style::Search;
+    search.right = "Ctrl+F";
+    p.rows.push_back(search);
+    Row hint;
+    hint.style = Style::Hint;
+    hint.left = say(l, Text::RefSearchExplain);
+    p.rows.push_back(hint);
+    const std::string world = c.world ? sayf(l, Text::RefWorldHintN, {std::to_string(c.world->world.size()),
+                                                                      std::to_string(c.world->dungeons.size())})
+                                      : say(l, Text::RefWorldHint);
+    const auto count = [&](size_t n) { return number(static_cast<long long>(n), l); };
+    const struct {
+        const char* icon;
+        Text name;
+        std::string sub, count;
+        Link link;
+    } tiles[] = {
+        {"monster", Text::RefSecMobs, say(l, Text::RefSecMobsHint), count(ix.mobs.size()), Link{Go::Section, Mobs, ""}},
+        {"item", Text::RefSecItems, say(l, Text::RefSecItemsHint), count(ix.items.size()),
+         Link{Go::Section, Items, ""}},
+        {"location", Text::RefSecMaps, say(l, Text::RefSecMapsHint), count(maps), Link{Go::Section, Maps, ""}},
+        {"quest", Text::RefSecQuests, say(l, Text::RefSecQuestsHint), ix.quests.empty() ? "" : count(ix.quests.size()),
+         Link{Go::Quests, 0, ""}},
+        {"npc", Text::RefSecServices, say(l, Text::RefSecServicesHint), count(ix.shops.size() + kafra),
+         Link{Go::Section, Services, ""}},
+        {"mvp", Text::RefSecBosses, say(l, Text::RefSecBossesHint), count(mvps), Link{Go::Section, Bosses, ""}},
+        {"pet", Text::RefSecPets, say(l, Text::RefSecPetsHint), count(ix.pets.size()), Link{Go::Section, Pets, ""}},
+        {"craft", Text::RefSecCraft, say(l, Text::RefSecCraftHint), count(ix.craft.size()),
+         Link{Go::Section, Crafting, ""}},
+        {"world", Text::RefWorld, world, "", Link{Go::World, 0, ""}},
+        {"tables", Text::RefSecTables, say(l, Text::RefSecTablesHint), "", Link{Go::Section, Tables, ""}},
     };
-    for (const auto& [id, name, hint, count] : tiles) {
+    for (const auto& t : tiles) {
         Row r;
         r.style = Style::Tile;
-        r.left = say(l, name) + " · " + number(static_cast<long long>(count), l);
-        r.right = say(l, hint);
-        r.link = Link{Go::Section, int(id), ""};
+        r.left = say(l, t.name);
+        r.right = t.count;
+        r.sub = t.sub;
+        r.icon = std::string("ui:") + t.icon;
+        r.link = t.link;
         p.rows.push_back(std::move(r));
     }
-    if (!ix.quests.empty()) {  // 3.0.11-beta.16: the site's quests
-        Row r;
-        r.style = Style::Tile;
-        r.left = say(l, Text::RefSecQuests) + " · " + number(static_cast<long long>(ix.quests.size()), l);
-        r.right = say(l, Text::RefSecQuestsHint);
-        r.link = Link{Go::Quests, 0, ""};
-        p.rows.push_back(std::move(r));
-    }
-    Row world;  // 3.0.11-beta.11: the tenth - the world map
-    world.style = Style::Tile;
-    world.left = say(l, Text::RefWorld);
-    world.right = say(l, Text::RefWorldHint);
-    world.link = Link{Go::World, 0, ""};
-    p.rows.push_back(std::move(world));
-    const std::pair<const std::vector<Link>*, Text> lists[] = {{c.favourites, Text::RefFavourites},  // 3.0.11-beta.18
-                                                               {c.recent, Text::RefRecent}};
-    for (const auto& [list, name] : lists) {
-        if (!list || list->empty()) continue;
-        std::vector<Row> rows;
+    const auto chips = [&](const std::vector<Link>* list) {
+        std::vector<Row> out;
+        if (!list) return out;
         for (const Link& k : *list) {
-            const std::string t = titleOf(ix, l, k);
-            if (!t.empty()) rows.push_back(linked(t, "", k));
+            Row chip;
+            chip.style = Style::Chip;
+            chip.left = titleOf(ix, l, k);
+            if (chip.left.empty()) continue;
+            chip.link = k;
+            switch (k.go) {
+                case Go::Mob:
+                    chip.sub = say(l, Text::RefKindMob);
+                    chip.icon = "mob:" + std::to_string(k.id);
+                    break;
+                case Go::Item:
+                    chip.sub = say(l, Text::RefKindItem);
+                    chip.icon = "item:" + std::to_string(k.id);
+                    break;
+                case Go::Map: {
+                    chip.sub = say(l, Text::RefKindMap);
+                    chip.icon = "ui:location";
+                    const size_t code = chip.left.rfind(" (");  // «Glast Heim Churchyard», its code on its card
+                    if (code != std::string::npos && code > 0) chip.left.resize(code);
+                    break;
+                }
+                default:
+                    chip.sub = say(l, Text::RefKindQuest);
+                    chip.icon = "ui:quest";
+                    break;
+            }
+            out.push_back(std::move(chip));
         }
-        if (rows.empty()) continue;
-        p.rows.push_back(heading(say(l, name)));
-        for (Row& r : rows) p.rows.push_back(std::move(r));
+        return out;
+    };
+    const std::vector<Row> recent = chips(c.recent), starred = chips(c.favourites);  // 3.0.11-beta.18
+    if (!recent.empty()) {
+        Row b;
+        b.style = Style::Block;
+        b.left = say(l, Text::RefRecent);
+        b.share = 58;  // the concept's 1.4 : 1
+        p.rows.push_back(b);
+        p.rows.insert(p.rows.end(), recent.begin(), recent.end());
     }
-    if (online > 0) p.rows.push_back(note(sayf(l, Text::RefOnlineNow, {number(online, l)})));  // 3.0.11-beta.10
-    p.rows.push_back(note(say(l, Text::RefKeys)));
+    Row b;
+    b.style = Style::Block;
+    b.left = say(l, Text::RefFavourites);
+    b.share = recent.empty() ? 0 : 42;
+    p.rows.push_back(b);
+    if (starred.empty()) p.rows.push_back(note(say(l, Text::RefFavEmpty)));
+    p.rows.insert(p.rows.end(), starred.begin(), starred.end());
     return p;
 }
 
 Page found(const refindex::Index& ix, Lang l, const std::string& query, const Context& c) {
     Page p;
     p.name = "«" + query + "»";
+    Row field;  // 3.0.11-beta.26: the concept's results under the search's own field (v21_search), Esc its key
+    field.style = Style::Search;
+    field.right = "Esc";
+    p.rows.push_back(field);
     const bool digits = !query.empty() && query.size() <= 6 &&
                         std::all_of(query.begin(), query.end(), [](char ch) { return ch >= '0' && ch <= '9'; });
     if (digits) {  // 3.0.11-beta.22: a number - the item and the monster of that id (as @iteminfo, @mobinfo say them)
@@ -526,9 +582,46 @@ Page found(const refindex::Index& ix, Lang l, const std::string& query, const Co
         }
         shown(std::min(npcs.size(), kMostFound), f.npcsAll);
     }
-    if (p.rows.empty()) p.rows.push_back(note(say(l, Text::RefNothing)));
+    if (p.rows.size() == 1) p.rows.push_back(note(say(l, Text::RefNothing)));  // the search's field alone
     return p;
 }
+
+namespace {
+
+// The shops by their maps' names; Kafra's teleports by the towns (3.0.11-beta.26: «NPC і послуги» has both)
+std::vector<Row> shopRows(const refindex::Index& ix, Lang l) {
+    std::vector<Row> out;
+    std::vector<std::tuple<std::string, std::string, int>> list;  // the map's title, the shop, its index
+    for (size_t s = 0; s < ix.shops.size(); ++s)
+        list.emplace_back(refindex::mapTitle(ix, ix.shops[s].map), ix.shops[s].name, int(s));
+    std::sort(list.begin(), list.end());
+    for (const auto& [title, name, s] : list) {
+        const std::string goods = std::to_string(ix.shops[size_t(s)].items.size());
+        out.push_back(linked(name + " · " + title, sayf(l, Text::RefItemsCount, {goods}), Link{Go::Shop, s, ""}));
+    }
+    return out;
+}
+
+std::vector<Row> kafraRows(const refindex::Index& ix) {
+    std::vector<Row> out;
+    for (const auto& m : ix.maps) {
+        std::set<std::string> dests;
+        for (const refindex::Teleport& t : m.second.teleports)
+            if (t.kafra) dests.insert(t.dest);
+        if (dests.empty()) continue;
+        std::string right;
+        for (const std::string& d : dests) {
+            const auto named = ix.mapNames.find(d);
+            const std::string name = named == ix.mapNames.end() ? d : refindex::shortName(named->second);
+            right += (right.empty() ? "" : ", ") + name;
+        }
+        out.push_back(linked(refindex::mapTitle(ix, m.first), right, toMap(m.first)));
+    }
+    std::sort(out.begin(), out.end(), [](const Row& a, const Row& b) { return a.left < b.left; });
+    return out;
+}
+
+}  // namespace
 
 Page section(const refindex::Index& ix, Lang l, int id, const Context& c) {
     Page p;
@@ -569,7 +662,7 @@ Page section(const refindex::Index& ix, Lang l, int id, const Context& c) {
             std::vector<std::tuple<int, std::string, int>> list;  // the longest respawn first
             for (const auto& m : ix.mobs) {
                 const auto where = ix.spawnsOf.find(m.first);
-                if (!m.second.boss || where == ix.spawnsOf.end()) continue;
+                if (!isMvp(m.second) || where == ix.spawnsOf.end()) continue;  // 3.0.11-beta.26: «MVP»
                 int longest = 0;
                 for (const refindex::Where& w : where->second) longest = std::max(longest, w.respawnMs);
                 list.emplace_back(-longest, m.second.name, m.first);
@@ -630,39 +723,41 @@ Page section(const refindex::Index& ix, Lang l, int id, const Context& c) {
             for (const auto& [title, code] : list) p.rows.push_back(linked(title, mapNote(ix, l, code), toMap(code)));
             break;
         }
-        case Shops: {
+        case Shops:
             p.name = say(l, Text::RefSecShops);
             p.rows.push_back(heading(p.name));
-            std::vector<std::tuple<std::string, std::string, int>> list;  // the map's title, the shop, its index
-            for (size_t s = 0; s < ix.shops.size(); ++s)
-                list.emplace_back(refindex::mapTitle(ix, ix.shops[s].map), ix.shops[s].name, int(s));
-            std::sort(list.begin(), list.end());
-            for (const auto& [title, name, s] : list) {
-                const std::string goods = std::to_string(ix.shops[size_t(s)].items.size());
-                p.rows.push_back(
-                    linked(name + " · " + title, sayf(l, Text::RefItemsCount, {goods}), Link{Go::Shop, s, ""}));
-            }
+            for (Row& r : shopRows(ix, l)) p.rows.push_back(std::move(r));
             break;
-        }
-        case Teleports: {
+        case Teleports:
             p.name = say(l, Text::RefSecTeleports);
             p.rows.push_back(heading(p.name));
-            for (const auto& m : ix.maps) {
-                std::set<std::string> dests;
-                for (const refindex::Teleport& t : m.second.teleports)
-                    if (t.kafra) dests.insert(t.dest);
-                if (dests.empty()) continue;
-                std::string right;
-                for (const std::string& d : dests) {
-                    const auto named = ix.mapNames.find(d);
-                    const std::string name = named == ix.mapNames.end() ? d : refindex::shortName(named->second);
-                    right += (right.empty() ? "" : ", ") + name;
-                }
-                p.rows.push_back(linked(refindex::mapTitle(ix, m.first), right, toMap(m.first)));
-            }
-            std::sort(p.rows.begin() + 1, p.rows.end(), [](const Row& a, const Row& b) { return a.left < b.left; });
+            for (Row& r : kafraRows(ix)) p.rows.push_back(std::move(r));
             break;
-        }
+        case Services:  // 3.0.11-beta.26: the concept's «NPC і послуги» - the shops and Kafra
+            p.name = say(l, Text::RefSecServices);
+            p.rows.push_back(heading(say(l, Text::RefSecTeleports)));
+            for (Row& r : kafraRows(ix)) p.rows.push_back(std::move(r));
+            p.rows.push_back(heading(say(l, Text::RefSecShops)));
+            for (Row& r : shopRows(ix, l)) p.rows.push_back(std::move(r));
+            break;
+        case Tables:  // 3.0.11-beta.26: the concept's «Таблиці» - the server's element table, each level
+            p.name = say(l, Text::RefSecTables);
+            for (int lv = 1; lv <= 4; ++lv) {
+                p.rows.push_back(heading(sayf(l, Text::RefTableElements, {std::to_string(lv)})));
+                for (int attack = 0; attack < 10; ++attack) {
+                    std::string right;
+                    for (int defence = 0; defence < 10; ++defence) {
+                        const int pct = elementDamage(attack, defence, lv);
+                        if (pct == 100) continue;
+                        right += (right.empty() ? "" : " · ") + elementName(defence, l) + " " +
+                                 (pct < 0 ? sayf(l, Text::RefElementHeals, {std::to_string(-pct)})
+                                          : std::to_string(pct) + " %");
+                    }
+                    p.rows.push_back(linked(elementName(attack, l), right.empty() ? say(l, Text::RefTableRest) : right,
+                                            Link{}));
+                }
+            }
+            break;
         case Pets: {
             p.name = say(l, Text::RefSecPets);
             p.rows.push_back(heading(p.name));
@@ -1177,14 +1272,11 @@ Page card(const refindex::Index& ix, Lang l, const Link& link, const Context& c,
 Page open(const refindex::Index& ix, Lang l, const Link& link, const Context& c, unsigned opened) {
     Page p = folded(card(ix, l, link, c, opened), c.folded);
     const bool card = link.go == Go::Mob || link.go == Go::Item || link.go == Go::Map || link.go == Go::Quest;
-    if (card && c.favourites && !p.rows.empty() && p.rows[0].style == Style::Title) {  // 3.0.11-beta.18
-        const bool starred = std::any_of(c.favourites->begin(), c.favourites->end(),
-                                         [&](const Link& f) { return sameCard(f, link); });
-        Row star = note(say(l, starred ? Text::RefStarred : Text::RefStar));
-        star.link = Link{Go::Star, 0, ""};
-        star.gold = starred;
-        p.rows.insert(p.rows.begin() + 1, std::move(star));
-    }
+    if (card && c.favourites && !p.rows.empty() && p.rows[0].style == Style::Title)  // 3.0.11-beta.18
+        p.star = std::any_of(c.favourites->begin(), c.favourites->end(),  // 3.0.11-beta.26: the header's star
+                             [&](const Link& f) { return sameCard(f, link); })
+                     ? 1
+                     : 0;
     return p;
 }
 

@@ -85,7 +85,7 @@ TEST(reference_world_pages) {
     CHECK(d.rows[2].link.go == refpages::Go::Map && d.rows[2].link.map == "prt_sewb1");
     CHECK(d.rows[4].style == refpages::Style::Heading && d.rows[4].left == "Payon Cave");
     const refpages::Page home = refpages::home(ix, Lang::Uk);
-    CHECK(home.rows[refpages::kSections].link.go == refpages::Go::World);  // the tenth tile
+    CHECK(home.rows[10].link.go == refpages::Go::World && home.rows[10].icon == "ui:world");  // the ninth tile
     // the window: the map's row takes the body's rest; the tile under the pointer
     const refwin::Layout L = refwin::layout(1920, 1080, 1.0f);
     int total = 0;
@@ -93,7 +93,7 @@ TEST(reference_world_pages) {
     CHECK(rows[1].h > 500 && total <= L.bodyH);
     const worldmap::Fit f = refwin::worldFit(sh, rows[1]);
     const float x = float(rows[1].x) + f.x + 15 * f.s, y = float(L.bodyY + rows[1].y) + f.y + 15 * f.s;
-    const refwin::Under u = refwin::under(L, w, rows, 0, true, x, y, &sh);
+    const refwin::Under u = refwin::under(L, w, rows, 0, refwin::Chrome{}, x, y, &sh);
     CHECK(u.part == refwin::Part::Tile && u.row == 1 && u.tile == 0);
 }
 
@@ -171,7 +171,9 @@ TEST(reference_world_hover_repaint_matches_the_whole) {
         sheet.px.resize(size_t(sheet.width) * size_t(sheet.height));
         for (size_t i = 0; i < sheet.px.size(); ++i) sheet.px[i] = 0xFF000000u | uint32_t(i * 2654435761u >> 8);
         refwin::Look look;
-        look.backShown = true;
+        refwin::Texts texts;
+        texts.back = "Назад до Довідник";
+        look.chrome = refwin::chrome(L, was, texts);
         look.world.picture = &sheet;
         look.world.sheet = &sh;
         look.world.here = "prontera";
@@ -193,7 +195,8 @@ TEST(reference_world_hover_repaint_matches_the_whole) {
             nowLook.world.hover = map;
             std::vector<Rect> areas;
             for (size_t i = 0; i < now.rows.size() && i < was.rows.size(); ++i)
-                if (!refwin::sameRow(now.rows[i], was.rows[i])) areas.push_back(refwin::rowArea(L, nowRows, 0, int(i)));
+                if (!refwin::sameRow(now.rows[i], was.rows[i]))
+                    areas.push_back(refwin::rowArea(L, now, nowRows, 0, int(i)));
             areas.push_back(refwin::worldArea(L, nowRows, 0, 1, sh, look.world.hover));
             areas.push_back(refwin::worldArea(L, nowRows, 0, 1, sh, map));
             for (const Rect& a : areas)
