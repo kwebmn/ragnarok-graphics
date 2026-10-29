@@ -855,10 +855,11 @@ TEST(config_interface_minimap) {
     CHECK(s != nullptr);
     if (s) CHECK_EQ(settings::tokenOf(*s, parseConfig("[interface]\nminimap = 1\n")), std::string("1"));
     const LiveUpdate u = liveUpdate(parseConfig(""), parseConfig("[interface]\nminimap = 1\n"));
-    // 3.0.11-beta.37: the buffs' column and the character block come with it; 3.0.11-beta.38: the target's card too
-    CHECK(u.waiting.empty() && u.applied.size() == 4 && u.applied[0] == "minimap 0 -> 1");
-    CHECK(u.applied[1] == "buffs off -> column" && u.applied[2] == "target 0 -> 1" &&
-          u.applied[3] == "character off -> bars");
+    // 3.0.11-beta.37: the buffs' column and the character block come with it; 3.0.11-beta.38: the target's card too;
+    // 3.0.11-beta.39: the party's panel
+    CHECK(u.waiting.empty() && u.applied.size() == 5 && u.applied[0] == "minimap 0 -> 1");
+    CHECK(u.applied[1] == "buffs off -> column" && u.applied[2] == "party 0 -> 1" && u.applied[3] == "target 0 -> 1" &&
+          u.applied[4] == "character off -> bars");
     CHECK(appliesNow("interface.minimap"));
 }
 
@@ -947,4 +948,19 @@ TEST(config_reads_the_target_card) {
     CHECK_EQ(settings::tokenOf(*s, parseConfig("[interface]\nminimap = 1\n")), std::string("1"));
     CHECK(appliesNow("interface.target"));
     CHECK(liveUpdate(parseConfig(""), parseConfig("[interface]\ntarget = 1\n")).next.targetCard);
+}
+
+// 3.0.11-beta.39 (the owner: «делай» - the party): [interface] party - the party's panel at the top left; it comes with
+// the new minimap as the other parts do, unless the file names it
+TEST(config_reads_the_party_panel) {
+    CHECK(!parseConfig("").partyPanel);
+    CHECK(parseConfig("[interface]\nparty = 1\n").partyPanel);
+    CHECK(parseConfig("[interface]\nminimap = 1\n").partyPanel);
+    CHECK(!parseConfig("[interface]\nminimap = 1\nparty = 0\n").partyPanel);
+    const settings::IniSetting* s = settings::findSetting("interface.party");
+    CHECK(s != nullptr);
+    if (!s) return;
+    CHECK(s->page == settings::Page::Interface && s->control == settings::Control::Check);
+    CHECK(appliesNow("interface.party"));
+    CHECK(liveUpdate(parseConfig(""), parseConfig("[interface]\nparty = 1\n")).next.partyPanel);
 }

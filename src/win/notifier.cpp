@@ -252,7 +252,9 @@ void packet(const packets::Event& e) {
             tellParty(news);
         }
     } else if (const auto* l = std::get_if<packets::PartyList>(&e)) {  // 3.0.7-beta.6 (the user's notification 6)
-        state().party.members(l->members, ownAccount());
+        std::vector<std::pair<uint32_t, std::string>> members;  // 3.0.11-beta.39: the seats' accounts and names
+        for (const packets::PartySeat& seat : l->seats) members.emplace_back(seat.account, seat.name);
+        state().party.members(members, ownAccount());
     } else if (const auto* m = std::get_if<packets::PartyMember>(&e)) {
         state().party.joined(m->account, m->name);
     } else if (const auto* gone = std::get_if<packets::PartyLeft>(&e)) {

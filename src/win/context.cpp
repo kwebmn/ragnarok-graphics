@@ -32,6 +32,8 @@
 #include "win/buff_column.hpp"
 #include "win/buff_overlay.hpp"
 #include "win/char_block.hpp"
+#include "win/code_page.hpp"
+#include "win/party_panel.hpp"
 #include "win/target_card.hpp"
 #include "win/notifier.hpp"
 #include "win/platform.hpp"
@@ -530,6 +532,7 @@ void Context::endScene() {
         buffcolumn::draw(record, *renderer);    // 3.0.11-beta.35: the buffs' column under it
         charpanel::draw(record, *renderer);     // 3.0.11-beta.36: the character block
         targetpanel::draw(record, *renderer);   // 3.0.11-beta.38: the target's card
+        partywin::draw(record, *renderer);      // 3.0.11-beta.39: the party's panel
         answercard::draw(record, *renderer);  // 3.0.9-beta.4: the developer's answer
         windowSwitch_.draw(record, *renderer);
         referencewin::draw(record, *renderer);  // 3.0.11-beta.7: «Довідник», over the rest
@@ -567,6 +570,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
         buffcolumn::draw(record, *renderer);    // 3.0.11-beta.35
         charpanel::draw(record, *renderer);     // 3.0.11-beta.36
         targetpanel::draw(record, *renderer);   // 3.0.11-beta.38
+        partywin::draw(record, *renderer);      // 3.0.11-beta.39
         answercard::draw(record, *renderer);  // 3.0.9-beta.4
         windowSwitch_.draw(record, *renderer);
         referencewin::draw(record, *renderer);  // 3.0.11-beta.7
@@ -776,6 +780,10 @@ void Context::present(const Rect& source, bool waitForVblank) {
     targetpanel::frame(window, config.targetCard, scaleMade_ ? plan.k : 1.0,
                        scaleMade_ ? plan.targetWidth : shadow.width(),
                        scaleMade_ ? plan.targetHeight : shadow.height());
+    // 3.0.11-beta.39: [interface] party - the party's panel under the character block
+    partywin::frame(window, config.partyPanel, gameCodePage(config), scaleMade_ ? plan.k : 1.0,
+                    scaleMade_ ? plan.targetWidth : shadow.width(),
+                    scaleMade_ ? plan.targetHeight : shadow.height());
     // 3.0.11-beta.7: [interface] reference - «Довідник» (Ctrl+F)
     referencewin::frame(window, config.referenceWindow, scaleMade_ ? plan.k : 1.0,
                         scaleMade_ ? plan.targetWidth : shadow.width(),

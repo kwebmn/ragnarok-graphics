@@ -152,24 +152,35 @@ TEST(game_packets_the_party_its_members_and_their_hp) {
     putText(list, 4, "Heroes");
     put32(list, 28, 2000123);
     putText(list, 32, "Sora");
+    putText(list, 28 + 28, "prontera.gat");  // 3.0.11-beta.39: its map, the leader (0), online (0)
+    list[28 + 44] = 0;
+    list[28 + 45] = 0;
     put32(list, 28 + 46, 2000456);
     putText(list, 28 + 46 + 4, "Priest");
+    putText(list, 28 + 46 + 28, "gef_fild01.gat");
+    list[28 + 46 + 44] = 1;
+    list[28 + 46 + 45] = 1;  // offline
     const packets::Event le = packets::parse(list.data(), list.size());
     const auto* l = std::get_if<packets::PartyList>(&le);
-    CHECK(l && l->members.size() == 2);
-    if (l && l->members.size() == 2) {
-        CHECK(l->members[0].first == 2000123 && l->members[0].second == "Sora");
-        CHECK(l->members[1].first == 2000456 && l->members[1].second == "Priest");
+    CHECK(l && l->seats.size() == 2);
+    if (l && l->seats.size() == 2) {
+        CHECK(l->seats[0].account == 2000123 && l->seats[0].name == "Sora" && l->seats[0].map == "prontera");
+        CHECK(l->seats[0].leader && l->seats[0].online);
+        CHECK(l->seats[1].account == 2000456 && l->seats[1].name == "Priest" && l->seats[1].map == "gef_fild01");
+        CHECK(!l->seats[1].leader && !l->seats[1].online);
     }
     put16(list, 2, uint16_t(list.size() + 46));  // naming more than there is
     CHECK(std::holds_alternative<std::monostate>(packets::parse(list.data(), list.size())));
     std::vector<uint8_t> joined = packet(0x01e9, 81);
     put32(joined, 2, 2000789);
+    put32(joined, 6, 1);  // not the leader
+    joined[14] = 0;       // online
     putText(joined, 15, "Heroes");
     putText(joined, 39, "Sage");
+    putText(joined, 63, "payon.gat");
     const packets::Event je = packets::parse(joined.data(), joined.size());
     const auto* j = std::get_if<packets::PartyMember>(&je);
-    CHECK(j && j->account == 2000789 && j->name == "Sage");
+    CHECK(j && j->account == 2000789 && j->name == "Sage" && j->map == "payon" && !j->leader && j->online);
     std::vector<uint8_t> left = packet(0x0105, 31);
     put32(left, 2, 2000789);
     putText(left, 6, "Sage");

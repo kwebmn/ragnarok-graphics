@@ -4953,6 +4953,17 @@ constexpr Entry kTexts[] = {
     {Text::TargetHeals, "Healed by: {1}", "Лікують: {1}", "Лечат: {1}"},
     {Text::TargetBook, "Click: its card in the reference", "Клік — картка в довіднику",
      "Клик — карточка в справочнике"},
+    // 3.0.11-beta.39: the party's panel (stage 7 of the new interface)
+    {Text::InterfaceParty, "Party", "Група", "Группа"},
+    {Text::InterfacePartyHint,
+     "The party at the screen's top left under the character: each member's name (a crown on the leader), HP per "
+     "cent and its bar; low HP red with an exclamation mark; on another map - its map, offline - the word. The server "
+     "sends no SP.",
+     "Група ліворуч угорі під персонажем: ім'я кожного (корона в лідера), відсоток HP і його смужка; мало HP — "
+     "червоним зі знаком оклику; на іншій карті — назва карти, не в грі — слово офлайн. SP сервер не надсилає.",
+     "Группа слева вверху под персонажем: имя каждого (корона у лидера), процент HP и его полоска; мало HP — красным "
+     "со знаком восклицания; на другой карте — название карты, не в игре — слово оффлайн. SP сервер не присылает."},
+    {Text::PartyOffline, "offline", "офлайн", "оффлайн"},
     {Text::MinimapRespawn, "{1} min", "{1} хв", "{1} мин"},
     {Text::MinimapMore, "and {1} more", "і ще {1}", "и ещё {1}"},
     {Text::MinimapNoReference, "No game reference yet", "Довідника гри ще немає", "Справочника игры ещё нет"},

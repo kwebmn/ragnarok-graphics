@@ -556,6 +556,9 @@ struct Config {
     // 3.0.11-beta.38: [interface] target - the target's card at the top middle (core/target_card): the monster the
     // character fights, its element and what hurts it; its card in «Довідник» by a click
     bool targetCard = false;
+    // 3.0.11-beta.39: [interface] party - the party's panel at the top left (core/party_panel): each member's HP per
+    // cent with its bar, its map when elsewhere
+    bool partyPanel = false;
     // 3.0.11-beta.7: [interface] reference - «Довідник» (win/reference_window): Ctrl+F in the game
     bool referenceWindow = false;
     PanelLayout panelLayout = PanelLayout::Row;

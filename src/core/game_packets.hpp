@@ -55,12 +55,21 @@ struct Hit {
 // {<account>.L <nick>.24B <map>.16B <leader>.B <offline>.B}.46B* from 28; 0x01e9 one joining or changed (<account>.L
 // at 2, <nick>.24B at 39); 0x0105 one gone <account>.L <nick>.24B <type>.B; 0x0106 one's HP <account>.L <hp>.W
 // <most>.W (both a per cent when the most is over 32767), sent to those near
+// 3.0.11-beta.39 (the party's panel): each seat's map (without its .gat), whether the leader, whether online - the
+// list's <map>.16B at 28, <leader>.B at 44 (0 the leader), <offline>.B at 45 of each; 0x01e9 <leader>.L at 6,
+// <offline>.B at 14, <map>.16B at 63
+struct PartySeat {
+    uint32_t account = 0;
+    std::string name, map;
+    bool leader = false, online = true;
+};
 struct PartyList {
-    std::vector<std::pair<uint32_t, std::string>> members;  // account, name
+    std::vector<PartySeat> seats;
 };
 struct PartyMember {
     uint32_t account = 0;
-    std::string name;
+    std::string name, map;
+    bool leader = false, online = true;
 };
 struct PartyLeft {
     uint32_t account = 0;

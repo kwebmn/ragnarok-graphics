@@ -20,5 +20,7 @@ namespace uagfx::win::charpanel {
 void frame(HWND game, CharacterLook look, double k, int targetWidth, int targetHeight);
 void draw(FrameRecord& record, gpu::Renderer& renderer);
 bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result);
+// 3.0.11-beta.39: its block's box in the target while it shows (the party's panel stands under it); false: not shown
+bool panelBox(int& x, int& y, int& w, int& h);
 
 }  // namespace uagfx::win::charpanel

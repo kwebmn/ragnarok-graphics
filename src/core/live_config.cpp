@@ -191,6 +191,10 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("buffs", buffsLookToken(running.buffs), buffsLookToken(file.buffs)));
         n.buffs = file.buffs;
     }
+    if (file.partyPanel != running.partyPanel) {  // 3.0.11-beta.39: the party's panel, at once
+        u.applied.push_back(change("party", flag(running.partyPanel), flag(file.partyPanel)));
+        n.partyPanel = file.partyPanel;
+    }
     if (file.targetCard != running.targetCard) {  // 3.0.11-beta.38: the target's card, at once
         u.applied.push_back(change("target", flag(running.targetCard), flag(file.targetCard)));
         n.targetCard = file.targetCard;

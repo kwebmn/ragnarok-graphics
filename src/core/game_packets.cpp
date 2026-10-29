@@ -15,6 +15,14 @@ std::string name(const uint8_t* p, size_t at) {
     return std::string(s, strnlen(s, 24));
 }
 
+// 3.0.11-beta.39: a map's name of 16 bytes, its «.gat» off
+std::string mapAt(const uint8_t* p, size_t at) {
+    const char* s = reinterpret_cast<const char*>(p + at);
+    std::string m(s, strnlen(s, 16));
+    if (m.size() > 4 && m.compare(m.size() - 4, 4, ".gat") == 0) m.resize(m.size() - 4);
+    return m;
+}
+
 // A packet of its own length (<len>.W at 2): its text from `at` to its end (or a nul); false - cut short or longer
 // than there is
 bool textOf(const uint8_t* p, size_t size, size_t at, std::string& out) {
@@ -83,12 +91,17 @@ Event parse(const uint8_t* p, size_t size) {
             const size_t len = rd16(p, 2);
             if (len < 28 || len > size || (len - 28) % 46 != 0) return {};
             PartyList l;
-            for (size_t at = 28; at + 46 <= len; at += 46) l.members.emplace_back(rd32(p, at), name(p, at + 4));
+            for (size_t at = 28; at + 46 <= len; at += 46)
+                l.seats.push_back(
+                    PartySeat{rd32(p, at), name(p, at + 4), mapAt(p, at + 28), p[at + 44] == 0, p[at + 45] == 0});
             return l;
         }
-        case 0x01e9:
+        case 0x01e9: {
             if (size < 63) return {};
-            return PartyMember{rd32(p, 2), name(p, 39)};
+            PartyMember m{rd32(p, 2), name(p, 39), "", rd32(p, 6) == 0, p[14] == 0};
+            if (size >= 79) m.map = mapAt(p, 63);
+            return m;
+        }
         case 0x0105:
             if (size < 30) return {};
             return PartyLeft{rd32(p, 2)};

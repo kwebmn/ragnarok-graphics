@@ -171,6 +171,8 @@ void Console::build(Lang lang, const Config& config) {
                 rows_.push_back(Row{Kind::Choice, "interface.character", 0});
             if (settingOf("interface.target"))  // 3.0.11-beta.38: the target's card
                 rows_.push_back(Row{Kind::Box, "interface.target", 0});
+            if (settingOf("interface.party"))  // 3.0.11-beta.39: the party's panel
+                rows_.push_back(Row{Kind::Box, "interface.party", 0});
         }
         // 3.0.3-beta.8: the game windows' panel (the user: on or off in the console too)
         if (settingOf("panel.show")) {

@@ -7,6 +7,7 @@
 
 #include "core/game_packets.hpp"
 #include "win/buff_overlay.hpp"
+#include "win/party_panel.hpp"
 #include "win/target_card.hpp"
 #include "win/notifier.hpp"
 
@@ -64,6 +65,7 @@ uint16_t __attribute__((thiscall)) take(void* connection, const uint8_t* packet)
         notifier::packet(e);
         buffoverlay::packet(e);  // 3.0.4-beta.6
         targetpanel::packet(e);  // 3.0.11-beta.38: the target's card - who the character fights
+        partywin::packet(e);     // 3.0.11-beta.39: the party's panel
     }
     return id;
 }

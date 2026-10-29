@@ -341,6 +341,16 @@ void frame(HWND game, CharacterLook look, double k, int targetWidth, int targetH
     block(s, game);
 }
 
+bool panelBox(int& x, int& y, int& w, int& h) {
+    const State& s = state();
+    if (!s.shown) return false;
+    x = s.layout.x + int(s.layout.block.x);
+    y = s.layout.y + int(s.layout.block.y);
+    w = int(std::ceil(s.layout.block.w));
+    h = int(std::ceil(s.layout.block.h));
+    return true;
+}
+
 void draw(FrameRecord& record, gpu::Renderer& renderer) {
     State& s = state();
     if (!s.shown || s.k <= 0 || s.picture.width <= 0 || s.picture.height <= 0) return;
