@@ -1,3 +1,17 @@
+# uaRO Graphics 3.0.11-beta.27 — what is new
+
+- **«Reference» as in the concept — the second stage, the cards**: the sections' rail at the left with icons and
+  numbers (the page's lit, «All» the first screen); a card's head — its picture, name, tags (the level, the element
+  in its colour, MVP) and a line under them.
+- The main two blocks side by side: a monster's «Where to find» and «Drops», an item's «Dropped by» and «Where to
+  buy», a location's «Who is here» and «How to get there» (on foot, by Kafra — moves and price); a quest's blocks
+  the whole width. Names are links with a gold underline, the per cents and numbers gold.
+- The other sections fold (▸/▾) with their summary on their line; «Damage by element» as coloured chips (green —
+  more, red — heals); a way's steps as sections «Steps · On foot», «Steps · By Kafra». A location's picture is its
+  minimap.
+- To check: Ctrl+F → a monster, an item, a location: the rail at the left, two blocks side by side, a click on
+  «Damage by element» folds it.
+
 # uaRO Graphics 3.0.11-beta.26 — what is new
 
 - **«Reference» as in the concept — the first stage**: a dark glass window; the title at the left, «‹ Back to …» and
