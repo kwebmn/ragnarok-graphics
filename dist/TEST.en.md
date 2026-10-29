@@ -1,3 +1,18 @@
+# uaRO Graphics 3.0.11-beta.35 — what is new
+
+- **New buffs (stage 7 of the new interface).** «Interface» has a new choice «Buffs on the character»: «Column» —
+  the buffs at the right edge under the minimap, «Row» — a row under it, «As in the game» — the game's own icons
+  (the default). The game's icons are hidden then.
+- Each icon in a ring of its time left, the time under it; under 10 seconds in orange. Point at one — its name and
+  time.
+- **Favourites:** a click on an icon puts it first and larger (a click again — back). Debuffs (Decrease AGI,
+  Quagmire, Lex Aeterna, overweight…) stand last in red rings and are never hidden.
+- «names» over the column opens the list «icon — name — time», «hide names» — back; the choice is kept. What does
+  not fit goes into «N more» at the bottom (a click opens the list).
+- To check: «Buffs on the character» → «Column», cast a few buffs — the game's icons are gone, the column stands
+  under the minimap; click an icon, «names». The log's lines `buffs: the game's own status icons hidden for the
+  column` and `buffs: icon … - effect\…tga`.
+
 # uaRO Graphics 3.0.11-beta.34 — what is new
 
 - **The way is no longer made again at every step.** «Reference» keeps the way it laid while you walk it (even when
