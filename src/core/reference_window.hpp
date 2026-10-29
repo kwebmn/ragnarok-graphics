@@ -36,12 +36,17 @@ Layout layout(int targetW, int targetH, float scale, Measure measure = guessWidt
 
 struct Placed {  // a row's place in the body: from the body's top before the scroll
     int x = 0, y = 0, w = 0, h = 0;
+    // 3.0.11-beta.26: a block's or a section's whole frame (its heading's own line is h: what a click finds), 0 none;
+    // a row inside one
+    int boxH = 0;
+    bool in = false;
 };
 std::vector<Placed> place(const Layout& L, const refpages::Page& p, int& total);
 int clampScroll(int scroll, int total, int bodyH);
 bool shown(const Layout& L, const Placed& r, int scroll);  // the whole row in the body
 
-enum class Part : uint8_t { None, Close, Back, Search, Row, Body, Tile, Star };  // 3.0.11-beta.26: the header's star
+// 3.0.11-beta.26: the header's star; the rail's sections (row: its index)
+enum class Part : uint8_t { None, Close, Back, Search, Row, Body, Tile, Star, Rail };
 struct Under {
     Part part = Part::None;
     int row = -1;   // Part::Row: a row that leads somewhere; Part::Tile: the world map's row
@@ -79,6 +84,10 @@ struct Chrome {
     Live live = Live::None;
     int starred = -1;  // the page's star: -1 none, 0 not starred, 1 starred
     float caret = 0;   // the big search's caret, from its field's left
+    std::vector<panel::Box> rail;  // the page's rail's sections, at the window's left (refpages::Page::rail)
+    int railOn = -1;
+    float railW = 0;     // its width (0 no rail); narrow: its icons alone
+    bool narrow = false;
 };
 Chrome chrome(const Layout& L, const refpages::Page& p, const Texts& t);
 // What is under a point of the window (its own pixels); `sheet`: the world map's tiles under the pointer

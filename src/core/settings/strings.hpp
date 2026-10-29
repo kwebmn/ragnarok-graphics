@@ -504,6 +504,9 @@ enum class Text : uint16_t {
     RefFind, RefSearchExplain, RefSecServices, RefSecServicesHint, RefSecTables, RefSecTablesHint, RefWorldHintN,
     RefKeysList, RefKeysCard, RefLiveNow, RefLiveOff, RefKindMob, RefKindItem, RefKindMap, RefKindQuest, RefFavEmpty,
     RefTableElements, RefTableRest,
+    RefElementsHeal,  // 3.0.11-beta.26: a card's elements' line - what heals it
+    RefRailAll,       // 3.0.11-beta.26: the rail's first, the search
+    RefRouteSteps,    // 3.0.11-beta.26: a way's steps, a section of their own
     Count
 };
 

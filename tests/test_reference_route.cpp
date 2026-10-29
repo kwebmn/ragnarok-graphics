@@ -138,10 +138,13 @@ TEST(reference_pages_map_card_says_how_to_get_there) {
     CHECK_EQ(cave.rows[at].right, std::string("з town"));
     CHECK_EQ(cave.rows[at + 1].left, std::string("Пішки"));
     CHECK_EQ(cave.rows[at + 1].right, std::string("переходів: 4"));
-    CHECK_EQ(cave.rows[at + 2].left, std::string("1. → field"));
-    CHECK_EQ(cave.rows[at + 2].right, std::string("вихід 1, 1"));
-    CHECK(cave.rows[at + 2].link.go == refpages::Go::Map && cave.rows[at + 2].link.map == "field");
-    CHECK_EQ(cave.rows[at + 4].right, std::string("перехід 1, 8"));  // the stairs
+    // 3.0.11-beta.26: its steps a section of their own after the main blocks
+    CHECK(cave.rows[at + 2].style == refpages::Style::Heading && cave.rows[at + 2].left == "Кроки · Пішки");
+    CHECK(cave.rows[at + 2].fold == refpages::Route1 && cave.rows[at + 2].right == "переходів: 4");
+    CHECK_EQ(cave.rows[at + 3].left, std::string("1. → field"));
+    CHECK_EQ(cave.rows[at + 3].right, std::string("вихід 1, 1"));
+    CHECK(cave.rows[at + 3].link.go == refpages::Go::Map && cave.rows[at + 3].link.map == "field");
+    CHECK_EQ(cave.rows[at + 5].right, std::string("перехід 1, 8"));  // the stairs
     const refpages::Page isle = refpages::map(*ix, Lang::Uk, "isle", ctx("town"));
     bool kafra = false, walk = false;
     for (const refpages::Row& r : isle.rows) {
@@ -254,7 +257,7 @@ TEST(reference_live_counts_from_the_site) {
     refpages::Context c = ctx("town");
     c.players = &players;
     const refpages::Page cave = refpages::map(*ix, Lang::Uk, "cave", c);
-    CHECK(cave.rows[1].style == refpages::Style::Sub && cave.rows[1].left == "гравців зараз: 5");
+    CHECK(cave.rows[1].style == refpages::Style::Portrait && cave.rows[1].left == "гравців зараз: 5");
 }
 
 // 3.0.11-beta.12: how far each map is from the player's (core/reference_route movesFrom) - on foot, or fewer paying

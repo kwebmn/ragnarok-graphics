@@ -110,8 +110,10 @@ TEST(reference_pages_home_and_search) {
 TEST(reference_pages_a_monsters_card) {
     const refindex::Index ix = index();
     const refpages::Page p = refpages::mob(ix, Lang::Uk, 1002, ctx("prt_fild05"));
-    CHECK(p.rows[0].style == refpages::Style::Title && p.rows[0].left == "Poring" && p.rows[0].right == "Lv 1");
-    CHECK(p.rows[1].left == "HP 50 · Вода 1 · Рослина · Середній");
+    CHECK(p.rows[0].style == refpages::Style::Title && p.rows[0].left == "Poring" && p.rows[0].right.empty());
+    // 3.0.11-beta.26: the concept's head - its tags (the level, the element), its line
+    CHECK(p.rows[1].tags.size() == 2 && p.rows[1].tags[0] == "Lv 1" && p.rows[1].tags[1] == "el1:Вода 1");
+    CHECK_EQ(p.rows[1].left, std::string("Рослина · Середній · HP 50 · досвід 2 / 1"));
     CHECK(p.rows[1].style == refpages::Style::Portrait && p.rows[1].picture == "mob:1002");  // 3.0.11-beta.14
     // «Де знайти»: the player's map first (marked), then by count
     const size_t where = indexOf(p, "Де знайти");
@@ -138,9 +140,10 @@ TEST(reference_pages_a_monsters_card) {
 TEST(reference_pages_an_items_card) {
     const refindex::Index ix = index();
     const refpages::Page p = refpages::item(ix, Lang::Uk, 601, ctx(""));
-    CHECK(p.rows[0].left == "Fly Wing" && p.rows[0].right == "Вживане");
+    CHECK(p.rows[0].left == "Fly Wing" && p.rows[0].right.empty());
     CHECK(p.rows[1].left == "вага 0,5 · ціна 60 z · продаж 30 z");  // 3.0.11-beta.22: an NPC pays half
-    CHECK(p.rows[1].picture == "item:601" && p.rows[1].right == "Wing_Of_Fly");
+    CHECK(p.rows[1].picture == "item:601" && p.rows[1].tags.size() == 2);  // 3.0.11-beta.26: the concept's tags
+    CHECK(p.rows[1].tags[0] == "Вживане" && p.rows[1].tags[1] == "Wing_Of_Fly");
     const size_t by = indexOf(p, "З кого випадає");
     CHECK_EQ(p.rows[by].right, std::string("2"));
     CHECK(p.rows[by + 1].left == "Satan Morroc" && p.rows[by + 1].gold);  // 90 % before 1,5 %
@@ -162,8 +165,12 @@ TEST(reference_pages_an_items_card) {
 TEST(reference_pages_a_maps_card) {
     const refindex::Index ix = index();
     const refpages::Page p = refpages::map(ix, Lang::Uk, "prontera", ctx("prontera"));
-    CHECK(p.rows[0].left == "Prontera City" && p.rows[0].right == "prontera" && p.rows[0].gold);
-    CHECK(p.rows[1].left == "Prontera City, Capitol of Rune-Midgard · місто · без запам'ятовування · ви тут");
+    CHECK(p.rows[0].left == "Prontera City" && p.rows[0].gold);
+    // 3.0.11-beta.26: the concept's head - its minimap, its code and its marks as tags, its full name
+    CHECK(p.rows[1].style == refpages::Style::Portrait && p.rows[1].picture == "map:prontera");
+    CHECK_EQ(p.rows[1].left, std::string("Prontera City, Capitol of Rune-Midgard"));
+    CHECK(p.rows[1].tags.size() == 4 && p.rows[1].tags[0] == "prontera" && p.rows[1].tags[1] == "місто");
+    CHECK(p.rows[1].tags[3] == "gold:ви тут");
     const size_t tp = indexOf(p, "Телепорти");
     CHECK_EQ(p.rows[tp].right, std::string("1"));  // two Kafra rows to the same place, once
     CHECK(p.rows[tp + 1].left == "Kafra → Izlude Town (izlude)" && p.rows[tp + 1].right == "600 z");
@@ -409,13 +416,12 @@ TEST(reference_pages_damage_by_element) {
     const refpages::Page p = refpages::mob(ix, Lang::Uk, 1002, ctx(""));  // Poring: water 1
     const size_t at = indexOf(p, "Шкода стихіями");
     CHECK(at != size_t(-1));
-    CHECK_EQ(p.rows[at].right, std::string("Вода 1"));
-    CHECK_EQ(p.rows[at + 1].left, std::string("Вітер"));  // the most first
+    CHECK_EQ(p.rows[at].right, std::string("Вода 1 · Вітер 175 %"));  // 3.0.11-beta.26: says the most
+    CHECK(p.rows[at + 1].style == refpages::Style::Chip && p.rows[at + 1].left == "Вітер");  // the most first
     CHECK_EQ(p.rows[at + 1].right, std::string("175 %"));
-    CHECK(p.rows[at + 1].gold);
-    CHECK_EQ(p.rows[at + 6].left, std::string("усі 10 ›"));
-    const refpages::Page all = refpages::mob(ix, Lang::Uk, 1002, ctx(""), 1u << refpages::Elements);
-    CHECK_EQ(all.rows[at + 10].right, std::string("25 %"));  // water on water, the least
+    CHECK(p.rows[at + 1].tone == 1 && p.rows[at + 1].dot == refpages::elementColour(4));
+    CHECK_EQ(p.rows[at + 10].right, std::string("25 %"));  // all ten as chips: water on water, the least
+    CHECK_EQ(p.rows[at + 10].tone, 0);
 }
 
 // 3.0.11-beta.15: the NPCs found by their names (the nearest first), a map's nearest Kafra, the items' icons
@@ -445,16 +451,18 @@ TEST(reference_pages_sections_fold_by_choice) {
     refpages::Context c = ctx("");
     const refpages::Link poring{refpages::Go::Mob, 1002, ""};
     const refpages::Page open = refpages::open(ix, Lang::Uk, poring, c);
-    const size_t drops = indexOf(open, "Що випадає");
-    CHECK(open.rows[drops].link.go == refpages::Go::Fold && open.rows[drops].link.id == refpages::Drops);
-    CHECK(open.rows[drops + 1].left == "Jellopy");
-    c.folded = 1u << refpages::Drops;
+    const size_t drops = indexOf(open, "Що випадає");  // 3.0.11-beta.26: a main block - it never folds
+    CHECK(open.rows[drops].link.go == refpages::Go::None && open.rows[drops].share == 50);
+    const size_t ele = indexOf(open, "Шкода стихіями");
+    CHECK(open.rows[ele].link.go == refpages::Go::Fold && open.rows[ele].link.id == refpages::Elements);
+    CHECK(open.rows[ele + 1].left == "Вітер" && !open.rows[ele].closed);
+    c.folded = 1u << refpages::Elements | 1u << refpages::Drops;
     const refpages::Page shut = refpages::open(ix, Lang::Uk, poring, c);
-    const size_t at = indexOf(shut, "Що випадає");
-    CHECK_EQ(shut.rows[at].right, std::string("›"));
-    CHECK(at + 1 == shut.rows.size() || shut.rows[at + 1].style == refpages::Style::Heading);  // its rows gone
-    CHECK(indexOf(shut, "Jellopy") == size_t(-1));
-    CHECK(indexOf(shut, "Де знайти") != size_t(-1));  // the others as they were
+    const size_t at = indexOf(shut, "Шкода стихіями");
+    CHECK(shut.rows[at].closed && shut.rows[at].right == open.rows[ele].right);  // drawn ▸, its line kept
+    CHECK(at + 1 == shut.rows.size() || shut.rows[at + 1].style == refpages::Style::Heading);  // its chips gone
+    CHECK(indexOf(shut, "Jellopy") != size_t(-1));  // a main block's rows stay
+    CHECK(indexOf(shut, "Де знайти") != size_t(-1));
 }
 
 // 3.0.11-beta.18: «Нещодавні» and «Обране» on the first screen, a card's star
@@ -559,4 +567,103 @@ TEST(reference_concept_sections_and_words) {
     CHECK(c1.crumbs.back().x + c1.crumbs.back().w <= c1.search.x);
     const refwin::Chrome c2 = refwin::chrome(L, poring, t);
     CHECK(c2.crumbFirst <= c1.crumbFirst);
+}
+
+// 3.0.11-beta.26, stage 2: the concept's cards (v23_ref_monster) - the rail of sections at the left, the card's head,
+// its two main blocks side by side, the rest in sections that fold
+TEST(reference_concept_cards) {
+    const refindex::Index ix = index();
+    const refwin::Layout L = refwin::layout(1920, 1080, 1.0f);
+    const refpages::Link poringAt{refpages::Go::Mob, 1002, ""};
+    refpages::Page p = refpages::withRail(refpages::mob(ix, Lang::Uk, 1002, ctx("prontera")), ix, Lang::Uk, poringAt);
+    CHECK_EQ(p.rail.size(), size_t(10));  // «Усе» and the first screen's sections but the world map
+    CHECK(p.rail[0].left == "Усе" && p.rail[0].icon == "ui:search");
+    CHECK(p.railOn == 1 && p.rail[1].left == "Монстри");
+    const auto litFor = [&](const refpages::Link& k) {
+        return refpages::withRail(refpages::Page{}, ix, Lang::Uk, k).railOn;
+    };
+    CHECK_EQ(litFor(refpages::Link{refpages::Go::Item, 601, ""}), 2);
+    CHECK_EQ(litFor(refpages::Link{refpages::Go::Map, 0, "prontera"}), 3);
+    CHECK_EQ(litFor(refpages::Link{refpages::Go::Quest, 0, ""}), 4);
+    CHECK_EQ(litFor(refpages::Link{refpages::Go::Shop, 0, ""}), 5);
+    CHECK_EQ(litFor(refpages::Link{refpages::Go::Section, refpages::Bosses, ""}), 6);
+    CHECK_EQ(litFor(refpages::Link{refpages::Go::Section, 106, ""}), 2);  // the cards: an items' type
+    CHECK_EQ(litFor(refpages::Link{}), 0);  // the search's results
+    int total = 0;
+    const std::vector<refwin::Placed> rows = refwin::place(L, p, total);
+    refwin::Texts t;
+    t.title = "Довідник";
+    const refwin::Chrome c = refwin::chrome(L, p, t);
+    CHECK(c.rail.size() == 10 && c.railW == 204.0f && !c.narrow);
+    for (const refwin::Placed& r : rows) CHECK(r.x >= int(c.railW));  // the body right of the rail
+    CHECK(refwin::under(L, p, rows, 0, c, c.rail[3].x + 20, c.rail[3].y + 10).part == refwin::Part::Rail);
+    CHECK_EQ(refwin::under(L, p, rows, 0, c, c.rail[3].x + 20, c.rail[3].y + 10).row, 3);
+    // the head: the picture at its left, the name beside it
+    CHECK(rows[1].h == 112 && rows[0].x == rows[1].x + 112 + 18);
+    // the main blocks side by side, the same height; the elements' section under them, its chips inside it
+    const size_t where = indexOf(p, "Де знайти"), drops = indexOf(p, "Що випадає");
+    const size_t ele = indexOf(p, "Шкода стихіями");
+    CHECK(rows[where].y == rows[drops].y && rows[drops].x > rows[where].x + rows[where].w);
+    CHECK(rows[where].boxH == rows[drops].boxH && rows[where].boxH > rows[where].h);
+    CHECK(rows[ele].y >= rows[where].y + rows[where].boxH && rows[ele].h == 46 && rows[ele].boxH > rows[ele].h);
+    CHECK(rows[ele + 1].in && rows[ele + 1].y > rows[ele].y && rows[ele + 2].x > rows[ele + 1].x);  // chips in a line
+    CHECK(rows[where + 1].in && rows[where + 1].x > rows[where].x);
+    // a folded section: its line alone
+    refpages::Context folded = ctx("prontera");
+    folded.folded = 1u << refpages::Elements;
+    const refpages::Page shut =
+        refpages::withRail(refpages::open(ix, Lang::Uk, poringAt, folded), ix, Lang::Uk, poringAt);
+    const std::vector<refwin::Placed> shutRows = refwin::place(L, shut, total);
+    const size_t at = indexOf(shut, "Шкода стихіями");
+    CHECK(shut.rows[at].closed && shutRows[at].boxH == shutRows[at].h);
+    // the words: ▸ for the folded, the block's capitals, the head's tags, the rail's names
+    refwin::Look look;
+    look.chrome = refwin::chrome(L, shut, t);
+    bool arrow = false, capital = false, tag = false, rail = false;
+    for (const refwin::Words& w : refwin::words(L, shut, shutRows, 0, t, look)) {
+        arrow = arrow || w.text == "▸";
+        capital = capital || w.text == "ДЕ ЗНАЙТИ";
+        tag = tag || w.text == "Вода 1";
+        rail = rail || w.text == "Предмети";
+    }
+    CHECK(arrow && capital && tag && rail);
+    // a narrow window: the rail's icons alone
+    const refwin::Layout narrow = refwin::layout(1100, 700, 1.0f);
+    const refwin::Chrome thin = refwin::chrome(narrow, shut, t);
+    CHECK(thin.narrow && thin.railW == 58.0f && thin.rail.size() == 10);
+    bool named = false;
+    refwin::Look slim;
+    slim.chrome = thin;
+    for (const refwin::Words& w : refwin::words(narrow, shut, refwin::place(narrow, shut, total), 0, t, slim))
+        named = named || w.text == "Предмети";
+    CHECK(!named);
+}
+
+TEST(reference_concept_rail_hover_repaints_its_section) {
+    const refindex::Index ix = index();
+    const refpages::Link at{refpages::Go::Item, 601, ""};
+    const refpages::Page p = refpages::withRail(refpages::item(ix, Lang::Uk, 601, ctx("")), ix, Lang::Uk, at);
+    for (const float k : {1.0f, 1.5f}) {
+        const refwin::Layout L = refwin::layout(int(1920 * k), int(1080 * k), k);
+        int total = 0;
+        const std::vector<refwin::Placed> rows = refwin::place(L, p, total);
+        refwin::Texts t;
+        t.title = "Довідник";
+        t.back = "Назад до Довідник";
+        refwin::Look was;
+        was.chrome = refwin::chrome(L, p, t);
+        panel::Picture partial;
+        refwin::paint(partial, L, p, rows, 0, total, was);
+        for (const int i : {3, 7, 0, 5}) {
+            refwin::Look now = was;
+            now.hover = refwin::Under{refwin::Part::Rail, i};
+            for (const refwin::Look* l : {&was, &now})
+                for (const Rect& a : refwin::hotAreas(L, p, rows, 0, *l))
+                    refwin::repaint(partial, L, p, rows, 0, total, now, a);
+            panel::Picture whole;
+            refwin::paint(whole, L, p, rows, 0, total, now);
+            CHECK(partial.px == whole.px);
+            was = now;
+        }
+    }
 }

@@ -140,6 +140,20 @@ void loadPicture(State& s, const std::string& key, int side) {
                  refindex::spriteNames(m->second).size());
         return;
     }
+    if (key.rfind("map:", 0) == 0) {  // 3.0.11-beta.26: a location's - its minimap (the client's)
+        std::string bmp;
+        std::vector<uint32_t> argb;
+        int w = 0, h = 0;
+        if (!readFile(s, "data\\texture\\" + kUi + "\\map\\" + key.substr(4) + ".bmp", bmp) ||
+            !pack::decodeBmp(reinterpret_cast<const uint8_t*>(bmp.data()), bmp.size(), argb, w, h))
+            return;
+        spritefile::Image im;
+        im.w = w;
+        im.h = h;
+        im.argb = std::move(argb);
+        out = asPicture(spritefile::fitted(im, box, box));
+        return;
+    }
     const bool icon = key.rfind("icon:item:", 0) == 0;  // 3.0.11-beta.15: a row's icon, its own size
     if (key.rfind("item:", 0) == 0 || icon) {
         if (!s.itemFilesRead) {  // «501#빨간포션#» a line
@@ -206,6 +220,8 @@ void makePage(State& s) {
                  : !s.query.empty()            ? refpages::found(*s.index, l, s.query, c)  // 3.0.11-beta.15: NPCs
                                                : refpages::home(*s.index, l, c);
     }
+    const bool first = s.at.go == refpages::Go::None && s.query.empty();  // 3.0.11-beta.26: the concept's rail
+    if (s.index && !first && s.at.go != refpages::Go::World) s.page = refpages::withRail(s.page, *s.index, l, s.at);
     s.rows = refwin::place(s.layout, s.page, s.total);
     s.scroll = refwin::clampScroll(s.scroll, s.total, s.layout.bodyH);
     s.madeAt = GetTickCount64();
@@ -309,6 +325,18 @@ void go(State& s, const refpages::Link& to) {
     s.opened = 0;
     s.sel = -1;
     noteRecent(s);  // 3.0.11-beta.18
+    makePage(s);
+}
+
+// 3.0.11-beta.26: the rail's «Усе» - the first screen (the search emptied), the page left kept for «Назад»
+void goFirst(State& s) {
+    if (s.at.go == refpages::Go::None && s.query.empty()) return;
+    s.back.push_back(Entry{s.at, s.query, s.page.name, s.scroll, s.opened});
+    s.at = refpages::Link{};
+    s.query.clear();
+    s.scroll = 0;
+    s.opened = 0;
+    s.sel = -1;
     makePage(s);
 }
 
@@ -798,6 +826,9 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
             if (u.part == refwin::Part::Close) close(s);
             if (u.part == refwin::Part::Back) goBack(s);
             if (u.part == refwin::Part::Star) go(s, refpages::Link{refpages::Go::Star, 0, ""});  // 3.0.11-beta.26
+            if (u.part == refwin::Part::Rail && u.row == 0) goFirst(s);
+            if (u.part == refwin::Part::Rail && u.row > 0 && size_t(u.row) < s.page.rail.size())
+                go(s, s.page.rail[size_t(u.row)].link);
             if (u.part == refwin::Part::Row) go(s, s.page.rows[size_t(u.row)].link);
             if (u.part == refwin::Part::Tile && s.world)  // 3.0.11-beta.11: a map on the world map - its card
                 go(s, refpages::Link{refpages::Go::Map, 0, s.world->sheet.world[size_t(u.tile)].map});

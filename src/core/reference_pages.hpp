@@ -46,12 +46,21 @@ struct Row {
     std::string icon;     // 3.0.11-beta.15: a small picture before the words - "item:<id>" (every row of an item)
     int fold = -1;        // 3.0.11-beta.17: a section's heading the player folds (its Part), -1 none
     std::string sub;      // 3.0.11-beta.26: a tile's line, a chip's kind
-    int share = 0;        // 3.0.11-beta.26: a block beside the next one - its share of the line, per cent
+    // 3.0.11-beta.26: a block beside the next one - its share of the line, per cent (100: a block alone); a card's
+    // section heading with a share is one of its main blocks (never folded), without one a section that folds
+    int share = 0;
+    bool closed = false;            // 3.0.11-beta.26: a folded section's heading (drawn ▸, the rows left out)
+    int tone = 0;                   // 3.0.11-beta.26: a chip's number - 1 good (green), -1 heals (red)
+    std::vector<std::string> tags;  // 3.0.11-beta.26: a card's picture row's tags («elN:» an element's, «gold:»)
 };
 struct Page {
     std::string name;  // what «Назад до …» calls it
     std::vector<Row> rows;
     int star = -1;  // 3.0.11-beta.26: a card's star in the header - -1 none, 0 not starred, 1 in «Обране»
+    // 3.0.11-beta.26: the concept's sections at the window's left (v23_ref_monster): «Усе», then each (Tile rows:
+    // `left`, `right` its count, `icon`, `link`), the page's own one lit (-1 none)
+    std::vector<Row> rail;
+    int railOn = -1;
 };
 
 // Sections of the first screen (Go::Section's ids); items by their type are 100 + the type; 3.0.11-beta.26 the
@@ -103,6 +112,9 @@ Page home(const refindex::Index& ix, settings::Lang l, const Context& c = {});
 // `c` (3.0.11-beta.15): the NPCs found the nearest to the player's map first, and how far
 Page found(const refindex::Index& ix, settings::Lang l, const std::string& query, const Context& c = {});
 Page section(const refindex::Index& ix, settings::Lang l, int id, const Context& c = {});
+// 3.0.11-beta.26: a page with the concept's sections at its left, the one `at` belongs to lit (a monster's card the
+// monsters', an item's the items', ...; the search's «Усе»)
+Page withRail(Page p, const refindex::Index& ix, settings::Lang l, const Link& at);
 // `here`: the player's map (it comes first in «Де знайти», marked; a map's card shows the way from it - 3.0.11-beta.8)
 // `opened`: bits of Part shown in full
 Page mob(const refindex::Index& ix, settings::Lang l, int id, const Context& c, unsigned opened = 0);
@@ -135,6 +147,7 @@ std::string respawn(int ms, settings::Lang l);
 // 3.0.11-beta.13: the server's element table (db/attr_fix.txt, src/core/attr_fix.inc) - the per cent of an attack of
 // `attack`'s element a monster of `defence`'s element at `level` (1-4) takes; below 0 it heals; 100 when out of range
 int elementDamage(int attack, int defence, int level);
+uint32_t elementColour(int element);  // 3.0.11-beta.26: the concept's dot of an element
 // 3.0.11-beta.8: where a route's move is taken - «вихід 156, 22», «Kafra 146, 86 · 1 200 z», «перехід 52, 136»
 std::string stepNote(const refroute::Step& step, settings::Lang l);
 

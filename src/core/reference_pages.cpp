@@ -152,21 +152,29 @@ void timers(const refindex::Index& ix, Lang l, Page& p, int mob, const Context& 
 
 // «Шкода стихіями»: how much of each element's attack the monster takes (the server's table), the most first - the
 // skills and the weapons to take on it; below 0 the attack heals it (attribute_recover)
-void elements(Lang l, Page& p, const refindex::Mob& m, unsigned opened) {
+void elements(Lang l, Page& p, const refindex::Mob& m) {
     std::vector<std::pair<int, int>> by;  // element, per cent
     for (int e = 0; e < 10; ++e) by.emplace_back(e, elementDamage(e, m.element, m.elementLv));
     std::stable_sort(by.begin(), by.end(), [](const auto& a, const auto& b) { return a.second > b.second; });
-    p.rows.push_back(heading(say(l, Text::RefElements),
-                             elementName(m.element, l) + " " + std::to_string(m.elementLv), Elements));
-    std::vector<Row> rows;
+    // 3.0.11-beta.26: the concept's - its line says the most and what heals; its elements as chips, each its dot
+    std::string most, heals;
+    for (const auto& [e, pct] : by) {
+        if (by.front().second > 100 && pct == by.front().second) most += (most.empty() ? "" : ", ") + elementName(e, l);
+        if (pct < 0) heals += (heals.empty() ? "" : ", ") + elementName(e, l);
+    }
+    std::string line = elementName(m.element, l) + " " + std::to_string(m.elementLv);
+    if (!most.empty()) line += " · " + most + " " + std::to_string(by.front().second) + " %";
+    if (!heals.empty()) line += " · " + sayf(l, Text::RefElementsHeal, {heals});
+    p.rows.push_back(heading(say(l, Text::RefElements), line, Elements));
     for (const auto& [e, pct] : by) {
         Row r;
+        r.style = Style::Chip;
         r.left = elementName(e, l);
         r.right = pct < 0 ? sayf(l, Text::RefElementHeals, {std::to_string(-pct)}) : std::to_string(pct) + " %";
-        r.gold = pct >= 150;
-        rows.push_back(std::move(r));
+        r.tone = pct < 0 ? -1 : pct > 100 ? 1 : 0;
+        r.dot = elementColour(e);
+        p.rows.push_back(std::move(r));
     }
-    capped(p, std::move(rows), Elements, opened, l);
 }
 
 // «На ринку сайту»: the cheapest of the active lots, how many lots and pieces
@@ -243,8 +251,9 @@ std::string noteOf(const refroute::Step& st, Lang l) {
     return s;
 }
 
-void routeRows(const refindex::Index& ix, Lang l, Page& p, const refroute::Route& r, Text name, Part part,
-               unsigned opened, const std::string& code, const Follow& follow) {
+// A way's line: its name, its moves and price, «вести ›» (3.0.11-beta.26: in the main block; its steps
+// under it apart)
+void routeHead(Lang l, Page& p, const refroute::Route& r, Text name, const std::string& code, const Follow& follow) {
     std::string right = sayf(l, Text::RefRouteMoves, {std::to_string(r.steps.size())});
     if (r.zeny > 0) right += " · " + sayf(l, Text::RefZeny, {number(r.zeny, l)});
     if (r.priceUnknown) right += " · " + say(l, Text::RefRouteVaries);
@@ -261,6 +270,13 @@ void routeRows(const refindex::Index& ix, Lang l, Page& p, const refroute::Route
                                  : name == Text::RefRouteKafra ? refindex::NpcKind::Kafra
                                                                : refindex::NpcKind::Guide);
     p.rows.push_back(head);
+}
+
+// 3.0.11-beta.26: a way's steps - a section of the card that folds, after its main blocks
+void routeSteps(const refindex::Index& ix, Lang l, Page& p, const refroute::Route& r, Text name, Part part,
+                unsigned opened) {
+    p.rows.push_back(heading(sayf(l, Text::RefRouteSteps, {say(l, name)}),
+                             sayf(l, Text::RefRouteMoves, {std::to_string(r.steps.size())}), part));
     std::vector<Row> rows;
     for (size_t i = 0; i < r.steps.size(); ++i) {
         const refindex::Move& m = r.steps[i].move;
@@ -291,11 +307,13 @@ void route(const refindex::Index& ix, Lang l, Page& p, const std::string& here, 
         p.rows.push_back(note(say(l, Text::RefRouteNone)));
         return;
     }
-    if (walk.found) routeRows(ix, l, p, walk, Text::RefRouteWalk, Route1, opened, code, follow);
-    if (better)
-        routeRows(ix, l, p, paid, paid.kafra ? Text::RefRouteKafra : Text::RefRouteNpc, Route2, opened, code, follow);
+    const Text paidName = paid.kafra ? Text::RefRouteKafra : Text::RefRouteNpc;
+    if (walk.found) routeHead(l, p, walk, Text::RefRouteWalk, code, follow);
+    if (better) routeHead(l, p, paid, paidName, code, follow);
     if ((walk.found && walk.conditional) || (better && paid.conditional))
         p.rows.push_back(note(say(l, Text::RefRouteConditionNote)));
+    if (walk.found) routeSteps(ix, l, p, walk, Text::RefRouteWalk, Route1, opened);
+    if (better) routeSteps(ix, l, p, paid, paidName, Route2, opened);
 }
 
 std::string mapNote(const refindex::Index& ix, Lang l, const std::string& code) {
@@ -340,6 +358,19 @@ std::string stepNote(const refroute::Step& step, Lang l) { return noteOf(step, l
 int elementDamage(int attack, int defence, int level) {
     if (attack < 0 || attack > 9 || defence < 0 || defence > 9 || level < 1 || level > 4) return 100;
     return kAttrFix[level - 1][attack][defence];
+}
+
+// 3.0.11-beta.26: a card's main block - beside the next one at a share of the line (100: alone); it never folds
+void asMain(Row& heading, int share) {
+    heading.share = share;
+    heading.link = Link{};
+}
+
+// 3.0.11-beta.26: an element's colour (the concept's chips' dots)
+uint32_t elementColour(int e) {
+    static const uint32_t kColours[] = {0xC4C9D4, 0x7CC0FF, 0xD8B26A, 0xFF8A5C, 0x9FE0C0,
+                                        0x8BD36A, 0xFFF1A8, 0x9D8CC6, 0xC9A6FF, 0xB9A3D9};
+    return e >= 0 && e <= 9 ? kColours[e] : 0xC4C9D4;
 }
 
 // 3.0.11-beta.26: an MVP - a monster with an MVP's reward (the concept's «MVP» section; a boss of mode 0x20 may not)
@@ -795,20 +826,24 @@ Page mob(const refindex::Index& ix, Lang l, int id, const Context& c, unsigned o
     Row title;
     title.style = Style::Title;
     title.left = m.name;
-    title.right = sayf(l, Text::RefLevel, {std::to_string(m.lv)});
     title.gold = m.boss;
     p.rows.push_back(title);
-    Row sub;  // 3.0.11-beta.14: beside its picture (the client's sprite)
-    sub.style = Style::Portrait;
-    sub.picture = "mob:" + std::to_string(id);
-    sub.left = sayf(l, Text::RefHp, {number(m.hp, l)}) + " · " + elementName(m.element, l) + " " +
-               std::to_string(m.elementLv) + " · " + raceName(m.race, l) + " · " + sizeName(m.size, l);
-    sub.right = sayf(l, Text::RefExp, {number(m.baseExp, l), number(m.jobExp, l)});
-    if (m.boss) sub.right += " · ★ " + say(l, Text::RefBoss);
-    p.rows.push_back(sub);
+    Row hero;  // 3.0.11-beta.14: beside its picture (the client's sprite); 3.0.11-beta.26 the concept's tags, its line
+    hero.style = Style::Portrait;
+    hero.picture = "mob:" + std::to_string(id);
+    hero.tags = {sayf(l, Text::RefLevel, {std::to_string(m.lv)}), "el" + std::to_string(m.element) + ":" +
+                                                                     elementName(m.element, l) + " " +
+                                                                     std::to_string(m.elementLv)};
+    if (isMvp(m)) hero.tags.push_back("gold:MVP");
+    else if (m.boss) hero.tags.push_back("gold:" + say(l, Text::RefBoss));
+    hero.left = raceName(m.race, l) + " · " + sizeName(m.size, l) + " · " + sayf(l, Text::RefHp, {number(m.hp, l)}) +
+                " · " + sayf(l, Text::RefExp, {number(m.baseExp, l), number(m.jobExp, l)});
+    p.rows.push_back(hero);
 
+    // the concept's two main blocks side by side: where it lives, what it drops; the rest folds
     const auto where = ix.spawnsOf.find(id);
     p.rows.push_back(heading(say(l, Text::RefWhere), "", Where));
+    asMain(p.rows.back(), 50);
     if (where == ix.spawnsOf.end() || where->second.empty()) {
         p.rows.push_back(note(say(l, Text::RefNowhere)));
     } else {
@@ -827,13 +862,13 @@ Page mob(const refindex::Index& ix, Lang l, int id, const Context& c, unsigned o
             r.gold = w.map == here;
             rows.push_back(std::move(r));
         }
-        p.rows.back().right = std::to_string(list.size());
+        for (Row& r : p.rows)  // the heading's count: its maps
+            if (r.style == Style::Heading && r.fold == Where) r.right = std::to_string(list.size());
         capped(p, std::move(rows), Where, opened, l);
         p.rows.push_back(linked(say(l, Text::RefOnWorld), "", Link{Go::World, 0, "mob:" + std::to_string(id)}));
     }
-    timers(ix, l, p, id, c);  // 3.0.11-beta.12
-    elements(l, p, m, opened);  // 3.0.11-beta.13
-    p.rows.push_back(heading(say(l, Text::RefDrops), "", Drops));
+    p.rows.push_back(heading(say(l, Text::RefDrops), m.drops.empty() ? "" : std::to_string(m.drops.size()), Drops));
+    asMain(p.rows.back(), 50);
     if (m.drops.empty()) p.rows.push_back(note(say(l, Text::RefNoDrops)));
     std::vector<refindex::Drop> drops = m.drops;
     std::stable_sort(drops.begin(), drops.end(), [](const refindex::Drop& a, const refindex::Drop& b) {
@@ -846,6 +881,8 @@ Page mob(const refindex::Index& ix, Lang l, int id, const Context& c, unsigned o
         dropRows.push_back(linked(itemName(ix, d.item), right, toItem(d.item)));
     }
     capped(p, std::move(dropRows), Drops, opened, l);
+    elements(l, p, m);          // 3.0.11-beta.13
+    timers(ix, l, p, id, c);    // 3.0.11-beta.12
     for (const refindex::Pet& pet : ix.pets) {  // a pet: what tames it, its egg, its food, its accessory
         if (pet.mob != id) continue;
         p.rows.push_back(heading(say(l, Text::RefPet), "", PetOf));
@@ -867,35 +904,27 @@ Page item(const refindex::Index& ix, Lang l, int id, const Context& c, unsigned 
     Row title;
     title.style = Style::Title;
     title.left = i.name + (i.slots > 0 ? " [" + std::to_string(i.slots) + "]" : "");
-    title.right = typeName(i.type, l);
     p.rows.push_back(title);
-    Row sub;  // 3.0.11-beta.14: beside its icon (the client's)
-    sub.style = Style::Portrait;
-    sub.picture = "item:" + std::to_string(id);
-    sub.right = i.aegis;
-    sub.left = sayf(l, Text::RefWeight, {number(i.weight / 10, l) + (i.weight % 10 ? (l == Lang::En ? "." : ",") +
-                                                                                       std::to_string(i.weight % 10)
-                                                                                 : "")});
-    if (i.buy > 0) sub.left += " · " + sayf(l, Text::RefPrice, {number(i.buy, l)});
-    if (i.buy > 1) sub.left += " · " + sayf(l, Text::RefSells, {number(i.buy / 2, l)});  // 3.0.11-beta.22: to an NPC
-    if (i.slots > 0) sub.left += " · " + sayf(l, Text::RefSlots, {std::to_string(i.slots)});
-    p.rows.push_back(sub);
-    market(l, p, id, c);  // 3.0.11-beta.12
-    const auto needed = ix.questsOf.find(id);  // 3.0.11-beta.16: the quests that take it
-    if (needed != ix.questsOf.end()) {
-        p.rows.push_back(heading(say(l, Text::RefQuestFor), std::to_string(needed->second.size()), QuestFor));
-        for (int q : needed->second) {
-            int n = 0;
-            for (const auto& [item, k] : ix.quests[size_t(q)].items)
-                if (item == id) n = k;
-            p.rows.push_back(linked(refquests::textOf(ix.quests[size_t(q)].title, questLang(l)), "×" + number(n, l),
-                                    toQuest(q)));
-        }
-    }
+    Row hero;  // 3.0.11-beta.14: beside its icon (the client's); 3.0.11-beta.26 the concept's tags, its line
+    hero.style = Style::Portrait;
+    hero.picture = "item:" + std::to_string(id);
+    hero.tags = {typeName(i.type, l)};
+    if (!i.aegis.empty()) hero.tags.push_back(i.aegis);
+    hero.left = sayf(l, Text::RefWeight, {number(i.weight / 10, l) + (i.weight % 10 ? (l == Lang::En ? "." : ",") +
+                                                                                        std::to_string(i.weight % 10)
+                                                                                  : "")});
+    if (i.buy > 0) hero.left += " · " + sayf(l, Text::RefPrice, {number(i.buy, l)});
+    if (i.buy > 1) hero.left += " · " + sayf(l, Text::RefSells, {number(i.buy / 2, l)});  // 3.0.11-beta.22: an NPC's
+    if (i.slots > 0) hero.left += " · " + sayf(l, Text::RefSlots, {std::to_string(i.slots)});
+    p.rows.push_back(hero);
 
+    // the concept's main blocks: who drops it, where to buy it (side by side when both); the rest folds
     const auto by = ix.droppedBy.find(id);
+    const auto at = ix.soldAt.find(id);
+    const int share = by != ix.droppedBy.end() && at != ix.soldAt.end() ? 50 : 100;
     if (by != ix.droppedBy.end()) {
         p.rows.push_back(heading(say(l, Text::RefDroppedBy), std::to_string(by->second.size()), DroppedBy));
+        asMain(p.rows.back(), share);
         std::vector<Row> rows;
         for (const refindex::Source& s : by->second) {
             std::string right = chance(s.rate, l);
@@ -908,9 +937,9 @@ Page item(const refindex::Index& ix, Lang l, int id, const Context& c, unsigned 
         capped(p, std::move(rows), DroppedBy, opened, l);
         p.rows.push_back(linked(say(l, Text::RefOnWorld), "", Link{Go::World, 0, "item:" + std::to_string(id)}));
     }
-    const auto at = ix.soldAt.find(id);
     if (at != ix.soldAt.end()) {
         p.rows.push_back(heading(say(l, Text::RefSoldAt), std::to_string(at->second.size()), SoldAt));
+        asMain(p.rows.back(), share);
         // 3.0.11-beta.12: of the cheapest the nearest first (your map's, then by the moves from it)
         const auto moves =
             here.empty() ? std::unordered_map<std::string, refroute::Far>{} : refroute::movesFrom(ix, here);
@@ -936,6 +965,18 @@ Page item(const refindex::Index& ix, Lang l, int id, const Context& c, unsigned 
             rows.push_back(std::move(r));
         }
         capped(p, std::move(rows), SoldAt, opened, l);
+    }
+    market(l, p, id, c);                       // 3.0.11-beta.12
+    const auto needed = ix.questsOf.find(id);  // 3.0.11-beta.16: the quests that take it
+    if (needed != ix.questsOf.end()) {
+        p.rows.push_back(heading(say(l, Text::RefQuestFor), std::to_string(needed->second.size()), QuestFor));
+        for (int q : needed->second) {
+            int n = 0;
+            for (const auto& [item, k] : ix.quests[size_t(q)].items)
+                if (item == id) n = k;
+            p.rows.push_back(linked(refquests::textOf(ix.quests[size_t(q)].title, questLang(l)), "×" + number(n, l),
+                                    toQuest(q)));
+        }
     }
     const auto made = ix.craftOf.find(id);
     if (made != ix.craftOf.end()) {
@@ -973,34 +1014,46 @@ Page map(const refindex::Index& ix, Lang l, const std::string& code, const Conte
     Row title;
     title.style = Style::Title;
     title.left = named == ix.mapNames.end() ? code : refindex::shortName(named->second);
-    title.right = code;
     title.gold = code == here;
     p.rows.push_back(title);
     const auto it = ix.maps.find(code);
-    Row sub;
-    sub.style = Style::Sub;
-    if (named != ix.mapNames.end() && refindex::shortName(named->second) != named->second) sub.left = named->second;
+    Row hero;  // 3.0.11-beta.26: the concept's - its minimap's picture (the client's), its tags, its line
+    hero.style = Style::Portrait;
+    hero.picture = "map:" + code;
+    hero.tags = {code};
+    if (named != ix.mapNames.end() && refindex::shortName(named->second) != named->second) hero.left = named->second;
     if (it != ix.maps.end()) {
         const std::pair<const char*, Text> flags[] = {
             {"town", Text::RefFlagTown},         {"pvp", Text::RefFlagPvp},        {"gvg", Text::RefFlagGvg},
             {"noteleport", Text::RefFlagNoTeleport}, {"nomemo", Text::RefFlagNoMemo}, {"nosave", Text::RefFlagNoSave}};
         for (const auto& [flag, words] : flags)
             if (std::find(it->second.flags.begin(), it->second.flags.end(), flag) != it->second.flags.end())
-                sub.left += (sub.left.empty() ? "" : " · ") + say(l, words);
+                hero.tags.push_back(say(l, words));
     }
-    if (code == here) sub.left += (sub.left.empty() ? "" : " · ") + say(l, Text::RefYouHere);
+    if (code == here) hero.tags.push_back("gold:" + say(l, Text::RefYouHere));
     if (c.players) {  // 3.0.11-beta.10: the site's «Онлайн» now
         const auto now = c.players->find(code);
         if (now != c.players->end() && now->second > 0)
-            sub.left += (sub.left.empty() ? "" : " · ") + sayf(l, Text::RefPlayersNow, {std::to_string(now->second)});
+            hero.left +=
+                (hero.left.empty() ? "" : " · ") + sayf(l, Text::RefPlayersNow, {std::to_string(now->second)});
     }
-    if (!sub.left.empty()) p.rows.push_back(sub);
-    if (!here.empty() && here != code) route(ix, l, p, here, c.x, c.y, code, opened, c.follow);
-    kafraNear(ix, l, p, code);  // 3.0.11-beta.15
-    if (it == ix.maps.end()) return p;
+    p.rows.push_back(hero);
+    // the concept's main blocks: who is here, how to get here (side by side when both); the rest folds
+    const bool way = !here.empty() && here != code && ix.graph;
+    const bool who = it != ix.maps.end() && !it->second.mobs.empty();
+    if (!who && way) {
+        const size_t at = p.rows.size();
+        route(ix, l, p, here, c.x, c.y, code, opened, c.follow);
+        if (p.rows.size() > at) asMain(p.rows[at], 100);
+    }
+    if (it == ix.maps.end()) {
+        kafraNear(ix, l, p, code);  // 3.0.11-beta.15
+        return p;
+    }
     const refindex::MapHints& h = it->second;
-    if (!h.mobs.empty()) {
+    if (who) {
         p.rows.push_back(heading(say(l, Text::RefWhoHere), std::to_string(h.mobs.size()), WhoHere));
+        asMain(p.rows.back(), way ? 50 : 100);
         std::vector<Row> rows;
         for (const refindex::MobOnMap& o : h.mobs) {
             const auto m = ix.mobs.find(o.id);
@@ -1010,10 +1063,17 @@ Page map(const refindex::Index& ix, Lang l, const std::string& code, const Conte
                 right += " · " + minutes(l, o.respawnMs);
             Row r = linked(mobName(ix, o.id), right, toMob(o.id));
             r.gold = m != ix.mobs.end() && m->second.boss;
+            r.icon = "mob:" + std::to_string(o.id);  // 3.0.11-beta.26: the concept's - its picture before it
             rows.push_back(std::move(r));
         }
         capped(p, std::move(rows), WhoHere, opened, l);
     }
+    if (who && way) {
+        const size_t at = p.rows.size();
+        route(ix, l, p, here, c.x, c.y, code, opened, c.follow);
+        if (p.rows.size() > at) asMain(p.rows[at], 50);
+    }
+    kafraNear(ix, l, p, code);  // 3.0.11-beta.15
     std::vector<std::string> exits;
     for (const refindex::Warp& w : h.warps)
         if (std::find(exits.begin(), exits.end(), w.dest) == exits.end()) exits.push_back(w.dest);
@@ -1124,15 +1184,18 @@ Page quest(const refindex::Index& ix, Lang l, int index) {
     Row title;
     title.style = Style::Title;
     title.left = p.name;
-    title.right = q.minLevel > 0 ? sayf(l, Text::RefQuestLevel, {std::to_string(q.minLevel)}) : "";
     p.rows.push_back(title);
-    Row sub;
-    sub.style = Style::Sub;
-    sub.left = categoryName(q.category, l);
-    p.rows.push_back(sub);
+    Row hero;  // 3.0.11-beta.26: the concept's - its tags (the kind, the level), who gives it and where
+    hero.style = Style::Portrait;
+    hero.tags = {categoryName(q.category, l)};
+    if (q.minLevel > 0) hero.tags.push_back(sayf(l, Text::RefQuestLevel, {std::to_string(q.minLevel)}));
+    hero.left = q.npc + (q.npcMap.empty() ? "" : (q.npc.empty() ? "" : " · ") + refindex::mapTitle(ix, q.npcMap));
+    p.rows.push_back(hero);
     if (!refquests::textOf(q.summary, ql).empty()) p.rows.push_back(text(refquests::textOf(q.summary, ql)));
+    // the concept's: each part a block the whole width (none folds)
     if (!q.npc.empty()) {
         p.rows.push_back(heading(say(l, Text::RefQuestNpc), "", QuestNpc));
+        asMain(p.rows.back(), 100);
         Row r = q.npcMap.empty() ? linked(q.npc, "", Link{}) : linked(q.npc, refindex::mapTitle(ix, q.npcMap),
                                                                          toMap(q.npcMap));
         r.dot = refindex::colorOf(refindex::NpcKind::Guide);
@@ -1140,17 +1203,20 @@ Page quest(const refindex::Index& ix, Lang l, int index) {
     }
     if (!q.items.empty()) {
         p.rows.push_back(heading(say(l, Text::RefQuestItems), std::to_string(q.items.size()), QuestItems));
+        asMain(p.rows.back(), 100);
         for (const auto& [item, n] : q.items)
             p.rows.push_back(linked(itemName(ix, item), "×" + number(n, l), toItem(item)));
     }
     const std::vector<std::string>& steps = refquests::listOf(q.steps, ql);
     if (!steps.empty()) {
         p.rows.push_back(heading(say(l, Text::RefQuestSteps), std::to_string(steps.size()), QuestSteps));
+        asMain(p.rows.back(), 100);
         for (size_t i = 0; i < steps.size(); ++i) p.rows.push_back(text(std::to_string(i + 1) + ". " + steps[i]));
     }
     const std::vector<std::string>& rewards = refquests::listOf(q.rewards, ql);
     if (!rewards.empty()) {
         p.rows.push_back(heading(say(l, Text::RefQuestRewards), "", QuestReward));
+        asMain(p.rows.back(), 100);
         for (const std::string& r : rewards) p.rows.push_back(text(r));
     }
     return p;
@@ -1255,8 +1321,9 @@ Page folded(Page p, unsigned bits) {
         const bool head = r.style == Style::Heading || r.style == Style::Title || r.style == Style::Portrait;
         if (head) skip = false;
         if (skip) continue;
-        if (r.style == Style::Heading && r.fold >= 0 && ((bits >> unsigned(r.fold)) & 1u)) {
-            r.right = r.right.empty() ? "›" : r.right + " ›";
+        // 3.0.11-beta.26: drawn closed (▸); a card's main block (a share) never folds
+        if (r.style == Style::Heading && r.fold >= 0 && r.share == 0 && ((bits >> unsigned(r.fold)) & 1u)) {
+            r.closed = true;
             skip = true;
         }
         rows.push_back(std::move(r));
@@ -1277,6 +1344,40 @@ Page open(const refindex::Index& ix, Lang l, const Link& link, const Context& c,
                              [&](const Link& f) { return sameCard(f, link); })
                      ? 1
                      : 0;
+    return p;
+}
+
+Page withRail(Page p, const refindex::Index& ix, Lang l, const Link& at) {
+    Row all;  // the search's, the first screen's
+    all.style = Style::Tile;
+    all.left = say(l, Text::RefRailAll);
+    all.icon = "ui:search";
+    p.rail = {all};
+    for (Row& r : home(ix, l).rows)
+        if (r.style == Style::Tile && r.link.go != Go::World) p.rail.push_back(std::move(r));
+    // the page's own section: a card's kind, a section's (its parts: the bosses MVP, the shops and Kafra the NPCs',
+    // the cards and the types the items')
+    int section = -1;
+    Go go = at.go;
+    switch (at.go) {
+        case Go::Mob: section = Mobs; break;
+        case Go::Item: section = Items; break;
+        case Go::Map: section = Maps; break;
+        case Go::Shop: section = Services; break;
+        case Go::Quest: go = Go::Quests; break;
+        case Go::Section:
+            section = at.id >= 100 || at.id == Cards ? Items
+                      : at.id == Shops || at.id == Teleports ? Services
+                                                             : at.id;
+            break;
+        default: break;
+    }
+    p.railOn = 0;
+    for (size_t i = 1; i < p.rail.size(); ++i) {
+        const Link& k = p.rail[i].link;
+        if ((go == Go::Quests && k.go == Go::Quests) || (section >= 0 && k.go == Go::Section && k.id == section))
+            p.railOn = int(i);
+    }
     return p;
 }
 

@@ -5185,6 +5185,9 @@ constexpr Entry kTexts[] = {
      "Стихії атаки проти захисту рівня {1}",
      "Стихии атаки против защиты уровня {1}"},
     {Text::RefTableRest, "the rest: 100 %", "решта: 100 %", "остальное: 100 %"},
+    {Text::RefElementsHeal, "heal it: {1}", "лікують: {1}", "лечат: {1}"},
+    {Text::RefRailAll, "All", "Усе", "Всё"},
+    {Text::RefRouteSteps, "Steps · {1}", "Кроки · {1}", "Шаги · {1}"},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 
