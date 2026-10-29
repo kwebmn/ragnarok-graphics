@@ -1,4 +1,5 @@
 #pragma once
+#include <string>
 
 namespace uagfx::win {
 
@@ -9,5 +10,9 @@ namespace uagfx::win {
 void installUpdates();
 // Its lines for the driver's log, which opens later (real_ddraw)
 void logUpdates();
+// 3.0.11-beta.15: a file of the game's as the game itself finds it (its CFileMgr::GetData: updates\ first when
+// mounted, then DATA.INI's archives in its order with its own names - zips, GRFs) - the driver's own pictures (the
+// reference's sprites and icons). The game's thread only; false: another uaRO.exe build, or no such file.
+bool readGameFile(const std::string& name, std::string& out);
 
 }  // namespace uagfx::win

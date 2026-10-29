@@ -149,16 +149,17 @@ std::vector<std::string> spriteNames(const Mob& m);
 // 3.0.11-beta.7: the search of «Довідник» - every word of the query a part of the name (case folded, any order: the
 // console's rule), monsters, items and maps (by the code and the client's name); the closest first in each kind:
 // the whole name, then its start or a word's start, then anywhere; then items found in more places, monsters met on
-// maps (the lower first), maps with monsters
-enum class Kind : uint8_t { Mob, Item, Map };
+// maps (the lower first), maps with monsters; 3.0.11-beta.15: the NPCs by their names, all of them (`most` is the
+// other kinds')
+enum class Kind : uint8_t { Mob, Item, Map, Npc };  // Npc (3.0.11-beta.15): `map`'s NPC number `id`
 struct Hit {
     Kind kind = Kind::Mob;
     int id = 0;        // a monster's or an item's
     std::string map;   // a map's code
 };
 struct Found {
-    std::vector<Hit> mobs, items, maps;
-    size_t mobsAll = 0, itemsAll = 0, mapsAll = 0;  // before `most` cut each list
+    std::vector<Hit> mobs, items, maps, npcs;
+    size_t mobsAll = 0, itemsAll = 0, mapsAll = 0, npcsAll = 0;  // before `most` cut each list
 };
 Found search(const Index& ix, const std::string& query, size_t most);
 // A map's name to show: the client's short one with the code («Prontera Field (prt_fild07)»), else the code

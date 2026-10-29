@@ -191,4 +191,21 @@ void logUpdates() {
     for (const std::string& line : g_lines) LOG_INFO("%s", line.c_str());
 }
 
+bool readGameFile(const std::string& name, std::string& out) {
+    constexpr uintptr_t kFileMgr = 0x74BA18;  // the game's CFileMgr (its pak list at +4, «loose first» at +0xC)
+    static const bool knownBuild = known(updates_exe::kGetData, updates_exe::kGetDataBytes);
+    void* const self = reinterpret_cast<void*>(kFileMgr);
+    uint32_t size = 0;
+    void* data = nullptr;
+    if (g_getData) data = getData(self, name.c_str(), &size);  // hooked: the updates, then the game's own
+    else if (knownBuild)
+        data = reinterpret_cast<GetDataFn>(uintptr_t(updates_exe::kGetData))(self, name.c_str(), &size);
+    else
+        return false;
+    if (!data) return false;
+    out.assign(static_cast<const char*>(data), size);
+    VirtualFree(data, 0, MEM_RELEASE);  // as the game's own FUN_0050d080
+    return true;
+}
+
 }  // namespace uagfx::win

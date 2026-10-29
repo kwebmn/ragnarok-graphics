@@ -490,6 +490,7 @@ enum class Text : uint16_t {
     RefTimers, RefTimerSoon, RefTimerDue, RefTimerAgo, RefTimerNoMap, RefMarket, RefMarketFrom, RefMarketLots,
     MinimapTimerDue,
     RefElements, RefElementHeals,  // 3.0.11-beta.13: the server's element table in a monster's card
+    RefFoundNpcs, RefKafraNear, RefHere,  // 3.0.11-beta.15: the NPCs found, the nearest Kafra
     Count
 };
 

@@ -14,6 +14,7 @@ constexpr uint32_t kRule = 0x2A3342, kHover = 0x1F2733, kTileFill = 0x1A2029, kT
 constexpr uint32_t kTrack = 0x161B23, kThumb = 0x3A4556;
 constexpr float kWorldLeast = 300;                         // 3.0.11-beta.11: the world map's row at the least
 constexpr float kPortrait = 84;                            // 3.0.11-beta.14: a card's picture row
+constexpr float kIcon = 24;                                // 3.0.11-beta.15: an item's icon in a row (1:1 at 1080p)
 constexpr uint32_t kRoute = 0x5AC8FA, kBadge = 0x0D1016;  // the minimap's way colour; the players' badge
 
 int px(float v, float s) { return int(std::lround(v * s)); }
@@ -98,6 +99,7 @@ int clampScroll(int scroll, int total, int bodyH) { return std::clamp(scroll, 0,
 bool shown(const Layout& L, const Placed& r, int scroll) { return r.y - scroll >= 0 && r.y - scroll + r.h <= L.bodyH; }
 
 int portraitSide(const Layout& L) { return px(kPortrait, L.s); }
+int iconSide(const Layout& L) { return px(kIcon, L.s); }
 
 namespace {
 
@@ -105,6 +107,31 @@ const panel::Picture* pictureOf(const Look& look, const refpages::Row& row) {
     if (!look.pictures || row.picture.empty()) return nullptr;
     const auto it = look.pictures->find(row.picture);
     return it == look.pictures->end() || it->second.width <= 0 ? nullptr : &it->second;
+}
+
+const panel::Picture* iconOf(const Look& look, const refpages::Row& row) {
+    if (!look.pictures || row.icon.empty()) return nullptr;
+    const auto it = look.pictures->find("icon:" + row.icon);
+    return it == look.pictures->end() || it->second.width <= 0 ? nullptr : &it->second;
+}
+
+// A premultiplied picture over the window's (opaque) one
+void blit(panel::Picture& out, const panel::Picture& pic, int ox, int oy) {
+    for (int y = 0; y < pic.height; ++y) {
+        const int ty = oy + y;
+        if (ty < 0 || ty >= out.height) continue;
+        for (int x = 0; x < pic.width; ++x) {
+            const int tx = ox + x;
+            const uint32_t c = pic.px[size_t(y) * size_t(pic.width) + size_t(x)];
+            if (tx < 0 || tx >= out.width || (c >> 24) == 0) continue;
+            uint32_t& d = out.px[size_t(ty) * size_t(out.width) + size_t(tx)];
+            const uint32_t keep = 255 - (c >> 24);
+            auto ch = [&](int sh) {
+                return std::min<uint32_t>(255, ((c >> sh) & 0xFF) + ((d >> sh) & 0xFF) * keep / 255);
+            };
+            d = 0xFF000000u | ch(16) << 16 | ch(8) << 8 | ch(0);
+        }
+    }
 }
 
 }  // namespace
@@ -248,23 +275,8 @@ void paint(panel::Picture& out, const Layout& L, const refpages::Page& p, const 
             if (const panel::Picture* pic = pictureOf(look, row)) {
                 panel::roundRect(out, panel::Box{b.x, b.y + 2 * s, b.h - 4 * s, b.h - 4 * s}, 8 * s, kTileFill, 1.0f,
                                  kRule, 1.0f, std::max(1.0f, s));
-                const int ox = int(b.x + (b.h - 4 * s - float(pic->width)) / 2);
-                const int oy = int(b.y + 2 * s + (b.h - 4 * s - float(pic->height)) / 2);
-                for (int y = 0; y < pic->height; ++y) {
-                    const int ty = oy + y;
-                    if (ty < 0 || ty >= out.height) continue;
-                    for (int x = 0; x < pic->width; ++x) {
-                        const int tx = ox + x;
-                        const uint32_t c = pic->px[size_t(y) * size_t(pic->width) + size_t(x)];
-                        if (tx < 0 || tx >= out.width || (c >> 24) == 0) continue;
-                        uint32_t& d = out.px[size_t(ty) * size_t(out.width) + size_t(tx)];
-                        const uint32_t a = c >> 24, keep = 255 - a;  // premultiplied over
-                        auto ch = [&](int sh) {
-                            return std::min<uint32_t>(255, ((c >> sh) & 0xFF) + ((d >> sh) & 0xFF) * keep / 255);
-                        };
-                        d = 0xFF000000u | ch(16) << 16 | ch(8) << 8 | ch(0);
-                    }
-                }
+                blit(out, *pic, int(b.x + (b.h - 4 * s - float(pic->width)) / 2),
+                     int(b.y + 2 * s + (b.h - 4 * s - float(pic->height)) / 2));
             }
             continue;
         }
@@ -272,6 +284,8 @@ void paint(panel::Picture& out, const Layout& L, const refpages::Page& p, const 
         if (row.style == refpages::Style::Heading)
             fill(out, panel::Box{b.x, b.y + b.h - std::max(1.0f, s), b.w, std::max(1.0f, s)}, kRule);
         if (row.dot) panel::circle(out, b.x + 6 * s, b.y + b.h / 2, 4 * s, row.dot, 1.0f);
+        if (const panel::Picture* icon = iconOf(look, row))  // 3.0.11-beta.15: an item's icon
+            blit(out, *icon, int(b.x), int(b.y + (b.h - float(icon->height)) / 2));
     }
     fill(out, panel::Box{0, float(L.h - L.footer), float(L.w), float(L.footer)}, kBand);
     if (total > L.bodyH && L.bodyH > 0) {  // the scroll bar
@@ -353,7 +367,7 @@ std::vector<Words> words(const Layout& L, const refpages::Page& p, const std::ve
                 }
                 break;
             case refpages::Style::Row: {
-                const float indent = row.dot ? 16 * s : 0;
+                const float indent = !row.icon.empty() ? float(iconSide(L)) + 6 * s : row.dot ? 16 * s : 0;
                 const float split = w * 0.6f;
                 const uint32_t rgb = row.gold ? kGold : hot ? kAccent : link ? kLink : panel::kText;
                 out.push_back(Words{panel::Box{x + indent, y, split - indent - 8 * s, h}, row.left, rgb, 14 * s,

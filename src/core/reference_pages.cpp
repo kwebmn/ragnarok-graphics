@@ -43,6 +43,7 @@ Row linked(const std::string& left, const std::string& right, Link to) {
     Row r;
     r.left = left;
     r.right = right;
+    if (to.go == Go::Item) r.icon = "item:" + std::to_string(to.id);  // 3.0.11-beta.15: its icon before it
     r.link = std::move(to);
     return r;
 }
@@ -159,6 +160,47 @@ std::string farNote(const refroute::Far& f, Lang l) {
     std::string s = sayf(l, Text::RefRouteMoves, {std::to_string(f.moves)});
     if (f.paid) s += f.kafra ? " · Kafra" : " · NPC";
     return s;
+}
+
+// 3.0.11-beta.15: «Kafra поруч» - the Kafra nearest to a map (on it, or the fewest moves away): storage, save,
+// teleports
+void kafraNear(const refindex::Index& ix, Lang l, Page& p, const std::string& code) {
+    auto kafraOn = [&](const std::string& map) -> const refindex::Npc* {
+        const auto it = ix.maps.find(map);
+        if (it == ix.maps.end()) return nullptr;
+        for (const refindex::Npc& n : it->second.npcs)
+            if (n.kind == refindex::NpcKind::Kafra) return &n;
+        return nullptr;
+    };
+    Row r;
+    if (const refindex::Npc* here = kafraOn(code)) {
+        p.rows.push_back(heading(say(l, Text::RefKafraNear)));
+        r.left = here->name;
+        r.right = say(l, Text::RefHere) + " · " + std::to_string(here->x) + ", " + std::to_string(here->y);
+        r.dot = refindex::colorOf(here->kind);
+        p.rows.push_back(std::move(r));
+        return;
+    }
+    const auto moves = refroute::movesFrom(ix, code);
+    std::string best;
+    const refindex::Npc* npc = nullptr;
+    int bestKey = INT_MAX;
+    for (const auto& [map, far] : moves) {
+        const refindex::Npc* n = kafraOn(map);
+        const int key = far.moves * 2 + (far.paid ? 1 : 0);
+        if (n && (key < bestKey || (key == bestKey && map < best))) {
+            bestKey = key;
+            best = map;
+            npc = n;
+        }
+    }
+    if (!npc) return;
+    p.rows.push_back(heading(say(l, Text::RefKafraNear)));
+    r = linked(refindex::mapTitle(ix, best),
+               farNote(moves.at(best), l) + " · " + std::to_string(npc->x) + ", " + std::to_string(npc->y),
+               toMap(best));
+    r.dot = refindex::colorOf(npc->kind);
+    p.rows.push_back(std::move(r));
 }
 
 // 3.0.11-beta.8: a move of a route - where to take it: a warp's cell, the NPC with its price
@@ -350,7 +392,7 @@ Page home(const refindex::Index& ix, Lang l, int online) {
     return p;
 }
 
-Page found(const refindex::Index& ix, Lang l, const std::string& query) {
+Page found(const refindex::Index& ix, Lang l, const std::string& query, const Context& c) {
     Page p;
     p.name = "«" + query + "»";
     const refindex::Found f = refindex::search(ix, query, kMostFound);
@@ -377,6 +419,34 @@ Page found(const refindex::Index& ix, Lang l, const std::string& query) {
         for (const refindex::Hit& h : f.maps)
             p.rows.push_back(linked(refindex::mapTitle(ix, h.map), mapNote(ix, l, h.map), toMap(h.map)));
         shown(f.maps.size(), f.mapsAll);
+    }
+    if (!f.npcs.empty()) {  // 3.0.11-beta.15: the nearest to the player's map first («kafra» - the Kafra to walk to)
+        const auto moves =
+            c.here.empty() ? std::unordered_map<std::string, refroute::Far>{}
+                           : refroute::movesFrom(ix, c.here, c.x, c.y);
+        auto far = [&](const std::string& map) {
+            if (map == c.here) return 0;
+            const auto m = moves.find(map);
+            return m == moves.end() ? INT_MAX : m->second.moves * 2 + (m->second.paid ? 1 : 0);
+        };
+        std::vector<refindex::Hit> npcs = f.npcs;
+        std::stable_sort(npcs.begin(), npcs.end(), [&](const refindex::Hit& a, const refindex::Hit& b) {
+            return far(a.map) < far(b.map);
+        });
+        p.rows.push_back(heading(sayf(l, Text::RefFoundNpcs, {std::to_string(f.npcsAll)})));
+        for (size_t i = 0; i < npcs.size() && i < kMostFound; ++i) {
+            const refindex::Hit& h = npcs[i];
+            const refindex::Npc& n = ix.maps.at(h.map).npcs[size_t(h.id)];
+            std::string right =
+                refindex::mapTitle(ix, h.map) + " · " + std::to_string(n.x) + ", " + std::to_string(n.y);
+            const auto m = moves.find(h.map);
+            if (h.map == c.here) right = say(l, Text::RefYouHere) + " · " + right;
+            else if (m != moves.end()) right += " · " + farNote(m->second, l);
+            Row r = linked(n.name, right, toMap(h.map));
+            r.dot = refindex::colorOf(n.kind);
+            p.rows.push_back(std::move(r));
+        }
+        shown(std::min(npcs.size(), kMostFound), f.npcsAll);
     }
     if (p.rows.empty()) p.rows.push_back(note(say(l, Text::RefNothing)));
     return p;
@@ -731,6 +801,7 @@ Page map(const refindex::Index& ix, Lang l, const std::string& code, const Conte
     }
     if (!sub.left.empty()) p.rows.push_back(sub);
     if (!here.empty() && here != code) route(ix, l, p, here, c.x, c.y, code, opened, c.follow);
+    kafraNear(ix, l, p, code);  // 3.0.11-beta.15
     if (it == ix.maps.end()) return p;
     const refindex::MapHints& h = it->second;
     if (!h.mobs.empty()) {

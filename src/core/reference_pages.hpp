@@ -35,6 +35,7 @@ struct Row {
     bool gold = false;   // a boss, the place the player is
     uint32_t dot = 0;    // 0xRRGGBB of a mark before the words (an NPC's kind), 0 none
     std::string picture;  // 3.0.11-beta.14: a Portrait's - "mob:<id>", "item:<id>" (win/reference_window finds it)
+    std::string icon;     // 3.0.11-beta.15: a small picture before the words - "item:<id>" (every row of an item)
 };
 struct Page {
     std::string name;  // what «Назад до …» calls it
@@ -72,7 +73,8 @@ struct Context {
 
 // `online`: the server's players now (3.0.11-beta.10; 0 not known)
 Page home(const refindex::Index& ix, settings::Lang l, int online = 0);
-Page found(const refindex::Index& ix, settings::Lang l, const std::string& query);
+// `c` (3.0.11-beta.15): the NPCs found the nearest to the player's map first, and how far
+Page found(const refindex::Index& ix, settings::Lang l, const std::string& query, const Context& c = {});
 Page section(const refindex::Index& ix, settings::Lang l, int id);
 // `here`: the player's map (it comes first in «Де знайти», marked; a map's card shows the way from it - 3.0.11-beta.8)
 // `opened`: bits of Part shown in full

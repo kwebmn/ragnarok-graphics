@@ -4,6 +4,7 @@
 
 #include "core/reference_live.hpp"
 #include "core/reference_pages.hpp"
+#include "core/reference_route.hpp"
 #include "core/reference_window.hpp"
 #include "test.hpp"
 
@@ -155,8 +156,14 @@ TEST(reference_pages_a_maps_card) {
     CHECK(p.rows[tp + 1].left == "Kafra → Izlude Town (izlude)" && p.rows[tp + 1].right == "600 z");
     CHECK(p.rows[tp + 1].link.map == "izlude");
     CHECK(rowWith(p, "Tool Dealer") != nullptr);
-    const refpages::Row* kafra = rowWith(p, "Kafra Employee");
-    CHECK(kafra && kafra->dot == 0xD6336C && kafra->right == "150, 180");
+    const size_t near = indexOf(p, "Kafra поруч");  // 3.0.11-beta.15: on this very map
+    CHECK(near != size_t(-1) && p.rows[near + 1].left == "Kafra Employee");
+    CHECK_EQ(p.rows[near + 1].right, std::string("тут · 150, 180"));
+    const refpages::Row& kafra = p.rows[p.rows.size() - 1];  // the NPCs' list, the last
+    CHECK(kafra.left == "Kafra Employee" && kafra.dot == 0xD6336C && kafra.right == "150, 180");
+    const refpages::Page izlude = refpages::map(ix, Lang::Uk, "izlude", ctx(""));  // none there: by the teleport
+    const size_t far = indexOf(izlude, "Kafra поруч");
+    CHECK(far == size_t(-1));  // the way back is not known to the pack: no Kafra found
     const refpages::Page field = refpages::map(ix, Lang::Uk, "prt_fild08", ctx(""));
     const size_t exits = indexOf(field, "Виходи");
     CHECK_EQ(field.rows[exits].right, std::string("1"));  // two warps to Prontera, one exit
@@ -297,4 +304,25 @@ TEST(reference_pages_damage_by_element) {
     CHECK_EQ(p.rows[at + 6].left, std::string("усі 10 ›"));
     const refpages::Page all = refpages::mob(ix, Lang::Uk, 1002, ctx(""), 1u << refpages::Elements);
     CHECK_EQ(all.rows[at + 10].right, std::string("25 %"));  // water on water, the least
+}
+
+// 3.0.11-beta.15: the NPCs found by their names (the nearest first), a map's nearest Kafra, the items' icons
+TEST(reference_pages_npcs_kafra_and_icons) {
+    refindex::Index ix = index();
+    ix.graph = refroute::prepare(ix);
+    const refpages::Page found = refpages::found(ix, Lang::Uk, "kafra", ctx("prt_fild08"));
+    const size_t npcs = indexOf(found, "NPC: 1");
+    CHECK(npcs != size_t(-1));
+    CHECK_EQ(found.rows[npcs + 1].left, std::string("Kafra Employee"));
+    CHECK_EQ(found.rows[npcs + 1].right, std::string("Prontera City (prontera) · 150, 180 · переходів: 1"));
+    CHECK(found.rows[npcs + 1].link.go == refpages::Go::Map && found.rows[npcs + 1].link.map == "prontera");
+    const refpages::Page field = refpages::map(ix, Lang::Uk, "prt_fild08", ctx(""));
+    const size_t near = indexOf(field, "Kafra поруч");
+    CHECK(near != size_t(-1));
+    CHECK_EQ(field.rows[near + 1].left, std::string("Prontera City (prontera)"));
+    CHECK_EQ(field.rows[near + 1].right, std::string("переходів: 1 · 150, 180"));
+    const refpages::Page poring = refpages::mob(ix, Lang::Uk, 1002, ctx(""));
+    const size_t drops = indexOf(poring, "Що випадає");
+    CHECK_EQ(poring.rows[drops + 1].icon, std::string("item:909"));  // Jellopy's icon before it
+    CHECK(poring.rows[1].icon.empty());
 }

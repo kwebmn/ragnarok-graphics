@@ -24,6 +24,7 @@
 #include "win/picture_draw.hpp"
 #include "win/real_ddraw.hpp"
 #include "win/reference_load.hpp"
+#include "win/updates_hook.hpp"
 
 namespace uagfx::win::referencewin {
 namespace {
@@ -83,6 +84,7 @@ const std::string kMonsters = "\xB8\xF3\xBD\xBA\xC5\xCD";                       
 const std::string kUi = "\xC0\xAF\xC0\xFA\xC0\xCE\xC5\xCD\xC6\xE4\xC0\xCC\xBD\xBA";  // 유저인터페이스
 
 bool readFile(State& s, const std::string& entry, std::string& out) {
+    if (readGameFile(entry, out)) return true;  // 3.0.11-beta.15: as the game finds it (its zips too)
     if (!s.files) s.files = std::make_unique<gamefiles::Reader>(gameDir());
     std::vector<uint8_t> bytes;
     if (!s.files->read(entry, bytes, nullptr)) return false;
@@ -124,7 +126,8 @@ void loadPicture(State& s, const std::string& key, int side) {
                  refindex::spriteNames(m->second).size());
         return;
     }
-    if (key.rfind("item:", 0) == 0) {
+    const bool icon = key.rfind("icon:item:", 0) == 0;  // 3.0.11-beta.15: a row's icon, its own size
+    if (key.rfind("item:", 0) == 0 || icon) {
         if (!s.itemFilesRead) {  // «501#빨간포션#» a line
             s.itemFilesRead = true;
             std::string text;
@@ -142,7 +145,7 @@ void loadPicture(State& s, const std::string& key, int side) {
             }
             LOG_INFO("reference: %zu item icons named by the client's idnum2itemresnametable.txt", s.itemFiles.size());
         }
-        const auto f = s.itemFiles.find(std::atoi(key.c_str() + 5));
+        const auto f = s.itemFiles.find(std::atoi(key.c_str() + (icon ? 10 : 5)));
         if (f == s.itemFiles.end()) return;
         std::string bmp;
         std::vector<uint32_t> argb;
@@ -156,7 +159,8 @@ void loadPicture(State& s, const std::string& key, int side) {
         im.argb = std::move(argb);
         for (uint32_t& c : im.argb)  // the game's magenta: see-through
             if ((c & 0xFFFFFF) == 0xFF00FF) c = 0;
-        out = asPicture(spritefile::fitted(im, std::min(box, 72), std::min(box, 72)));
+        out = icon ? asPicture(spritefile::fitted(im, side, side, 1))
+                   : asPicture(spritefile::fitted(im, std::min(box, 72), std::min(box, 72)));
     }
 }
 
@@ -169,7 +173,7 @@ void makePage(State& s) {
         r.style = refpages::Style::Note;
         r.left = say(Text::RefNoData);
         s.page.rows.push_back(r);
-    } else if (s.at.go != refpages::Go::None) {
+    } else if (s.at.go != refpages::Go::None || !s.query.empty()) {
         refpages::Context c;
         c.here = s.here;
         int w = 0, h = 0;  // 3.0.11-beta.8: the routes start from the part of the map one is in
@@ -181,9 +185,8 @@ void makePage(State& s) {
         c.hover = s.worldHover;
         c.live = s.live.get();  // 3.0.11-beta.12
         c.now = static_cast<long long>(std::time(nullptr));
-        s.page = refpages::open(*s.index, l, s.at, c, s.opened);
-    } else if (!s.query.empty()) {
-        s.page = refpages::found(*s.index, l, s.query);
+        s.page = s.at.go != refpages::Go::None ? refpages::open(*s.index, l, s.at, c, s.opened)
+                                               : refpages::found(*s.index, l, s.query, c);  // 3.0.11-beta.15: NPCs
     } else {
         s.page = refpages::home(*s.index, l, s.online ? s.online->online : 0);
     }
@@ -429,6 +432,15 @@ void frame(HWND game, bool enabled, double k, int targetWidth, int targetHeight)
     }
     if (hover.part != s.hover.part || hover.row != s.hover.row || hover.tile != s.hover.tile) {
         s.hover = hover;
+        s.dirty = true;
+    }
+    int budget = 8;  // 3.0.11-beta.15: the icons of the rows in view, a few a frame (a long list never stalls)
+    for (size_t i = 0; i < s.rows.size() && i < s.page.rows.size() && budget > 0; ++i) {
+        const refpages::Row& r = s.page.rows[i];
+        if (r.icon.empty() || !refwin::shown(s.layout, s.rows[i], s.scroll) || s.pictures.count("icon:" + r.icon))
+            continue;
+        loadPicture(s, "icon:" + r.icon, refwin::iconSide(s.layout));
+        --budget;
         s.dirty = true;
     }
     if (s.dirty) render(s);

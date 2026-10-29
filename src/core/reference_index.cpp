@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <cstdint>
 #include <cstring>
 #include <tuple>
 
@@ -318,14 +319,14 @@ Found search(const Index& ix, const std::string& query, size_t most) {
         std::string name;
         Hit hit;
     };
-    auto finish = [&](std::vector<Scored>& list, std::vector<Hit>& hits, size_t& all) {
+    auto finish = [&](std::vector<Scored>& list, std::vector<Hit>& hits, size_t& all, size_t cut) {
         std::sort(list.begin(), list.end(), [](const Scored& a, const Scored& b) {
             if (a.close != b.close) return a.close < b.close;
             if (a.rank != b.rank) return a.rank < b.rank;
             return a.name < b.name;
         });
         all = list.size();
-        for (size_t i = 0; i < list.size() && i < most; ++i) hits.push_back(list[i].hit);
+        for (size_t i = 0; i < list.size() && i < cut; ++i) hits.push_back(list[i].hit);
     };
     std::vector<Scored> mobs, items, maps;
     for (const auto& m : ix.mobs) {
@@ -352,9 +353,18 @@ Found search(const Index& ix, const std::string& query, size_t most) {
         const int close = std::min(byCode ? closeness(m.first, q) : 9, byName ? closeness(name, q) : 9);  // either
         maps.push_back(Scored{close, m.second.mobs.empty() ? 1 : 0, m.first, Hit{Kind::Map, 0, m.first}});
     }
-    finish(mobs, f.mobs, f.mobsAll);
-    finish(items, f.items, f.itemsAll);
-    finish(maps, f.maps, f.mapsAll);
+    std::vector<Scored> npcs;  // 3.0.11-beta.15: the NPCs by their names (all of them: the page puts the nearest first)
+    for (const auto& m : ix.maps)
+        for (size_t n = 0; n < m.second.npcs.size(); ++n) {
+            const std::string name = settings::foldCase(m.second.npcs[n].name);
+            if (name.empty() || !settings::textMatches(name, q)) continue;
+            npcs.push_back(
+                Scored{closeness(name, q), 0, m.second.npcs[n].name + m.first, Hit{Kind::Npc, int(n), m.first}});
+        }
+    finish(mobs, f.mobs, f.mobsAll, most);
+    finish(items, f.items, f.itemsAll, most);
+    finish(maps, f.maps, f.mapsAll, most);
+    finish(npcs, f.npcs, f.npcsAll, SIZE_MAX);
     return f;
 }
 

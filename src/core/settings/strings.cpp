@@ -5102,6 +5102,10 @@ constexpr Entry kTexts[] = {
     // 3.0.11-beta.13: the server's element table (db/attr_fix.txt)
     {Text::RefElements, "Damage by element", "Шкода стихіями", "Урон стихиями"},
     {Text::RefElementHeals, "heals {1} %", "лікує {1} %", "лечит {1} %"},
+    // 3.0.11-beta.15: the NPCs found by their names, a map's nearest Kafra
+    {Text::RefFoundNpcs, "NPCs: {1}", "NPC: {1}", "NPC: {1}"},
+    {Text::RefKafraNear, "The nearest Kafra", "Kafra поруч", "Kafra рядом"},
+    {Text::RefHere, "here", "тут", "здесь"},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 
