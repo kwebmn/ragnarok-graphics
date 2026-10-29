@@ -1,3 +1,19 @@
+# uaRO Graphics 3.0.11-beta.8 — what is new
+
+- **«How to get there» in a map's card** (the «Reference» window, Ctrl+F): the way from the map you stand on:
+  - «On foot» — the free moves (the maps' exits, the stairs within a map, NPCs that take you for free): how many moves
+    and where each is (exit 156, 22);
+  - «By Kafra» — when a Kafra teleport (or a paid NPC) makes the way shorter: the moves and the price (Kafra 146, 86 ·
+    1,200 z);
+  - a move with a condition (a quest, an item) only when there is no other way, and marked «a condition»; an NPC that
+    leads now here, now there (Eden's way out, the Clock Tower's random warps) is never a step;
+  - the way goes only where one really gets: the parts of one map (the Geffen tower's floors, que_ng's two guilds)
+    are joined by its stairs alone — by the server's maps cell by cell (a new file uaro-graphics\walkable.bin, 1.3 MB);
+  - a map's name in a step opens its card; a long way shows 5 steps and «all N ›».
+- To check: Ctrl+F → «pay_dun00» → the Payon Cave card: «On foot» 7 moves by prt_fild08 and moc_fild01, «By Kafra» 3
+  moves · 1,200 z; from Geffen to «gef_dun00» 5 moves, three of them the tower's stairs. The log has the line
+  `reference: the walkable parts of 697 maps`.
+
 # uaRO Graphics 3.0.11-beta.7 — what is new
 
 - **The game's reference in the game** («Interface» → «Reference (prototype) - Ctrl+F», off by default): Ctrl+F opens
