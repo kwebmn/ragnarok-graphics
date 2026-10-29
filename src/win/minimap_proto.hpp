@@ -23,6 +23,8 @@ struct Show {
     WayOnGround way = WayOnGround::Steps;  // 3.0.11-beta.33: [interface] minimap_way - the way on the ground
 };
 void frame(HWND game, const Show& show, double k, int targetWidth, int targetHeight);
+// 3.0.11-beta.35: its panel's box in the target while it shows (the buffs' column stands under it); false: not shown
+bool panelBox(int& x, int& y, int& w, int& h);
 void draw(FrameRecord& record, gpu::Renderer& renderer);
 // 3.0.11-beta.31: and the wheel over the map zooms it; the big map's clicks first
 bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result);

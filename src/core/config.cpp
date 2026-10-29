@@ -493,6 +493,10 @@ Config parseConfig(const std::string& text) {
             if (val == "steps") c.minimapWay = WayOnGround::Steps;
             if (val == "line") c.minimapWay = WayOnGround::Line;
             if (val == "off") c.minimapWay = WayOnGround::Off;
+        } else if (key == "interface.buffs") {  // 3.0.11-beta.35: the buffs' column
+            if (val == "off") c.buffs = BuffsLook::Off;
+            if (val == "column") c.buffs = BuffsLook::Column;
+            if (val == "row") c.buffs = BuffsLook::Row;
         } else if (key == "interface.reference") {  // 3.0.11-beta.7: «Довідник»
             setBool(val, c.referenceWindow);
         } else if (key == "panel.hidden") {
@@ -791,6 +795,10 @@ const char* windowKeysToken(WindowKeys k) {
 
 const char* wayOnGroundToken(WayOnGround w) {
     return w == WayOnGround::Line ? "line" : w == WayOnGround::Off ? "off" : "steps";
+}
+
+const char* buffsLookToken(BuffsLook b) {
+    return b == BuffsLook::Column ? "column" : b == BuffsLook::Row ? "row" : "off";
 }
 
 const char* panelLayoutToken(PanelLayout l) {

@@ -46,7 +46,7 @@ const Known kKnown[] = {
 
 // In Blocker's order (3.0.11-beta.33: the big map was left out - the world reacted under it)
 const char* const kParts[] = {"the windows' panel", "the answer card", "the new minimap", "«Довідник»",
-                              "the new minimap's big map"};
+                              "the new minimap's big map", "the buffs' column"};
 static_assert(std::size(kParts) == size_t(uapad::gamewindow::kBlockerCount), "a name for each part");
 unsigned g_told = 0;    // the parts whose first cursor over them is logged
 unsigned g_hidden = 0;  // 3.0.11-beta.33: the parts whose first actor hidden under them is logged

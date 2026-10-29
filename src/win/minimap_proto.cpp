@@ -750,6 +750,16 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
 
 bool canFollow() { return state().on; }
 
+bool panelBox(int& x, int& y, int& w, int& h) {
+    const State& s = state();
+    if (!s.shown || s.look == minimap::Look::Hidden || s.layout.w <= 0) return false;
+    x = s.layout.x;
+    y = s.layout.y;
+    w = s.layout.w;
+    h = s.layout.h;
+    return true;
+}
+
 void follow(const std::string& target, bool walk) {
     State& s = state();
     s.follow = routefollow::Follow{};

@@ -29,6 +29,7 @@
 #include "win/answer_card.hpp"
 #include "win/minimap_proto.hpp"
 #include "win/reference_window.hpp"
+#include "win/buff_column.hpp"
 #include "win/buff_overlay.hpp"
 #include "win/notifier.hpp"
 #include "win/platform.hpp"
@@ -335,6 +336,7 @@ bool Context::open(std::string& error) {
     installMapStartHook();             // 3.0.2-beta.15: a map's loading known whatever its camera holds
     installPickHook(config.fastPick);  // 0.89: the cell under the mouse without testing the whole map
     installWorldMouse();               // 3.0.11-beta.24: the driver's parts are windows for the game's cursor
+    buffcolumn::installBuffIcons();    // 3.0.11-beta.35: the game's status icons hidden for the buffs' column
     installFastFtol(config.fastFtol);  // 2.5.20: float to integer without switching the x87
     installChatFix();                  // 2.6.12: Enter in the chat box while a map loads (R-PVF8AV)
     installShadowFix();                // 3.0.4-beta.9: a shadow drawn while a map loads (R-VBDSCP)
@@ -523,6 +525,7 @@ void Context::endScene() {
     if (drawn && renderer && !photo_) buffoverlay::draw(record, *renderer);  // 3.0.4-beta.6: the buffs' times
     if (panelSlot_.endScene(drawn) && renderer && !photo_) {
         minimapproto::draw(record, *renderer);  // 3.0.11-beta.1: the new minimap (prototype)
+        buffcolumn::draw(record, *renderer);    // 3.0.11-beta.35: the buffs' column under it
         answercard::draw(record, *renderer);  // 3.0.9-beta.4: the developer's answer
         windowSwitch_.draw(record, *renderer);
         referencewin::draw(record, *renderer);  // 3.0.11-beta.7: «Довідник», over the rest
@@ -557,6 +560,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     drawSparkles();  // 2.7.14: a frame with no interface draw
     if (panelSlot_.present(drawnAnew) && renderer && !photo_) {
         minimapproto::draw(record, *renderer);  // 3.0.11-beta.1
+        buffcolumn::draw(record, *renderer);    // 3.0.11-beta.35
         answercard::draw(record, *renderer);  // 3.0.9-beta.4
         windowSwitch_.draw(record, *renderer);
         referencewin::draw(record, *renderer);  // 3.0.11-beta.7
@@ -742,7 +746,8 @@ void Context::present(const Rect& source, bool waitForVblank) {
         windowSwitch_.frame(window, mainWindow_, config, scaleMade_ ? plan.k : 1.0,
                             scaleMade_ ? plan.targetWidth : shadow.width(),
                             scaleMade_ ? plan.targetHeight : shadow.height(), gameFullscreen);
-    buffoverlay::frame(config.buffTimers, float(scaleMade_ ? plan.k : 1.0));  // 3.0.4-beta.6: the buffs' times
+    // 3.0.4-beta.6: the buffs' times on the game's icons - none while the buffs' column hides them (3.0.11-beta.35)
+    buffoverlay::frame(config.buffTimers && !buffcolumn::hidingGameIcons(), float(scaleMade_ ? plan.k : 1.0));
     // 3.0.9-beta.4: the developer's answer - its card at this frame's scale, drawn into the next present's record
     answercard::frame(window, scaleMade_ ? plan.k : 1.0, scaleMade_ ? plan.targetWidth : shadow.width(),
                       scaleMade_ ? plan.targetHeight : shadow.height());
@@ -753,6 +758,10 @@ void Context::present(const Rect& source, bool waitForVblank) {
                         scaleMade_ ? plan.k : 1.0,
                         scaleMade_ ? plan.targetWidth : shadow.width(),
                         scaleMade_ ? plan.targetHeight : shadow.height());
+    // 3.0.11-beta.35: [interface] buffs - the buffs' column under the new minimap, the game's icons hidden
+    buffcolumn::frame(window, config.buffs, scaleMade_ ? plan.k : 1.0,
+                      scaleMade_ ? plan.targetWidth : shadow.width(),
+                      scaleMade_ ? plan.targetHeight : shadow.height());
     // 3.0.11-beta.7: [interface] reference - «Довідник» (Ctrl+F)
     referencewin::frame(window, config.referenceWindow, scaleMade_ ? plan.k : 1.0,
                         scaleMade_ ? plan.targetWidth : shadow.width(),

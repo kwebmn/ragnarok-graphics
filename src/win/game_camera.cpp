@@ -80,6 +80,8 @@ bool knownGameBuild() { return knownBuild(); }
 
 bool inGameWorld() { return gameMode() != 0; }
 
+uint32_t readGameMode() { return gameMode(); }
+
 bool readGame(uint32_t address, void* out, size_t size) { return read(address, out, size); }
 
 bool readCameraPose(float& yaw, float& distance) {

@@ -45,6 +45,9 @@ void limitZoom(bool wanted);
 void raiseWaterBoxes(bool wanted);
 // 3.0.4-beta.6: the game shows its world (not the login or the character list); false in another build of the exe
 bool inGameWorld();
+// 3.0.11-beta.35: the game mode's object while it shows its world; 0 at the login and the character list, or in
+// another build of the exe
+uint32_t readGameMode();
 // 3.0.5-beta.6 (the graphics test, core/graphics_test.hpp): the camera's turn and distance - the targets the game eases
 // toward; false outside its world or in another build of the exe
 bool readCameraPose(float& yaw, float& distance);

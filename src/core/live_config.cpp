@@ -187,6 +187,10 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
             change("minimap_way", wayOnGroundToken(running.minimapWay), wayOnGroundToken(file.minimapWay)));
         n.minimapWay = file.minimapWay;
     }
+    if (file.buffs != running.buffs) {  // 3.0.11-beta.35: the buffs' column, at once
+        u.applied.push_back(change("buffs", buffsLookToken(running.buffs), buffsLookToken(file.buffs)));
+        n.buffs = file.buffs;
+    }
     if (file.referenceWindow != running.referenceWindow) {  // 3.0.11-beta.7: «Довідник», at once
         u.applied.push_back(change("reference", flag(running.referenceWindow), flag(file.referenceWindow)));
         n.referenceWindow = file.referenceWindow;

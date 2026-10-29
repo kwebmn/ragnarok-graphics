@@ -4,6 +4,7 @@
 
 #include "pad/win/game_window.hpp"
 #include "win/answer_card.hpp"
+#include "win/buff_column.hpp"
 #include "win/minimap_proto.hpp"
 #include "win/reference_window.hpp"
 #include "win/code_page.hpp"
@@ -51,6 +52,7 @@ LRESULT CALLBACK gameProc(HWND w, UINT m, WPARAM wp, LPARAM lp) {
         if (answercard::mouse(w, m, lp, answer) ||       // 3.0.9-beta.4: and over the answer card the card's
             referencewin::mouse(w, m, wp, lp, answer) ||  // 3.0.11-beta.7: over «Довідник» its own
             minimapproto::mouse(w, m, wp, lp, answer) ||  // 3.0.11-beta.1: the new minimap's
+            buffcolumn::mouse(w, m, wp, lp, answer) ||    // 3.0.11-beta.35: the buffs' column's
             g_switch->mouse(w, m, lp, answer)) {
             claimed(m);  // 3.0.11-beta.33: its press stays the part's until let go
             return answer;

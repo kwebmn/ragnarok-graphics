@@ -877,3 +877,21 @@ TEST(config_reads_the_way_on_the_ground) {
     const LiveUpdate u = liveUpdate(parseConfig(""), parseConfig("[interface]\nminimap_way = off\n"));
     CHECK(u.next.minimapWay == WayOnGround::Off);
 }
+
+// 3.0.11-beta.35 (stage 7 of the new interface, the owner's approved buffs column, the row a choice): [interface] buffs
+// - the game's own icons (off), the driver's column, its row; a choice of «Інтерфейс», applied at once
+TEST(config_reads_the_buffs_look) {
+    CHECK(parseConfig("").buffs == BuffsLook::Off);
+    CHECK(parseConfig("[interface]\nbuffs = column\n").buffs == BuffsLook::Column);
+    CHECK(parseConfig("[interface]\nbuffs = row\n").buffs == BuffsLook::Row);
+    CHECK(parseConfig("[interface]\nbuffs = grid\n").buffs == BuffsLook::Off);
+    const settings::IniSetting* s = settings::findSetting("interface.buffs");
+    CHECK(s != nullptr);
+    if (!s) return;
+    CHECK(s->page == settings::Page::Interface && s->control == settings::Control::Choice);
+    CHECK_EQ(settings::tokenOf(*s, parseConfig("[interface]\nbuffs = row\n")), std::string("row"));
+    CHECK_EQ(settings::tokenOf(*s, parseConfig("")), std::string("off"));
+    CHECK(appliesNow("interface.buffs"));
+    const LiveUpdate u = liveUpdate(parseConfig(""), parseConfig("[interface]\nbuffs = column\n"));
+    CHECK(u.next.buffs == BuffsLook::Column);
+}
