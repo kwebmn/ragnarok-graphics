@@ -1,3 +1,10 @@
+# uaRO Graphics 3.0.11-beta.13 — what is new
+
+- **«Damage by element» in a monster's card**: how much per cent of an attack of each element it takes — by the
+  server's table (its db/attr_fix.txt), the most first; 150 % and more in gold; when an attack heals the monster (on
+  this server it does, attribute_recover) — «heals 25 %». It shows which skills and weapons to take on it.
+- To check: Ctrl+F → «poring» (Water 1) — first «Wind 175 %»; «all 10 ›» — down to «Water 25 %».
+
 # uaRO Graphics 3.0.11-beta.12 — what is new
 
 - **The site's MVP timers and market in the game** (after the site's update — a new page /api/public/game/live.json;
