@@ -1,9 +1,12 @@
 #pragma once
 #include <cstdint>
 #include <map>
+#include <memory>
 #include <string>
 #include <unordered_map>
 #include <vector>
+
+#include "core/walk_grid.hpp"
 
 namespace uagfx::refindex {
 
@@ -33,6 +36,21 @@ struct Teleport {
     int dx = 0, dy = 0;
     int price = -1;  // zeny; -1 none known (free or changing)
     bool kafra = false, conditional = false;
+};
+// 3.0.11-beta.8: every way off a spot of a map for the routes (core/reference_route) - the warps, the NPCs' and
+// Kafra's moves, and the ones within the map (a tower's stairs) too
+enum class How : uint8_t { Warp, Npc, Kafra };
+struct Move {
+    int x = 0, y = 0;  // the warp's cell or the NPC's
+    std::string to;    // the map it puts you on (this one for the stairs)
+    int dx = 0, dy = 0;
+    How how = How::Warp;
+    std::string npc;  // the NPC's name (a warp's own: not shown)
+    int price = -1;   // zeny; -1 free or not known
+    bool paid = false;         // Kafra's; an NPC's with a price or one that varies
+    bool conditional = false;  // the script checks something (a quest, an item)
+    bool depends = false;      // where it leads depends on something: one free NPC to several maps - Eden's way
+                               // back, the Clock Tower's random warps, Ant Hell's exits; never a route's move
 };
 struct MobOnMap {
     int id = 0;
@@ -73,6 +91,7 @@ struct MapHints {
     std::vector<MobOnMap> mobs;  // the bosses first, then by count, then by name
     std::vector<Teleport> teleports;  // 3.0.11-beta.7: Kafra's and the NPCs' from here
     std::vector<std::string> flags;   // 3.0.11-beta.7: town, pvp, noteleport, ...
+    std::vector<Move> moves;          // 3.0.11-beta.8
 };
 struct Where {  // a monster's map
     std::string map;
@@ -82,6 +101,12 @@ struct Source {  // who drops an item
     int mob = 0, rate = 0;
     uint8_t kind = 0;
 };
+}  // namespace uagfx::refindex
+namespace uagfx::refroute {
+struct Graph;
+}
+namespace uagfx::refindex {
+
 struct Index {
     long long data = 0;  // the pack's stamp
     std::string commit, date;
@@ -98,6 +123,10 @@ struct Index {
     std::unordered_map<int, std::vector<Where>> spawnsOf;              // monster -> maps, the most first
     std::unordered_map<int, std::vector<int>> craftOf;                 // item -> craft rows making it
     std::unordered_map<int, std::vector<int>> usedIn;                  // item -> craft rows taking it
+    // 3.0.11-beta.8: the maps' walkable parts (uaro-graphics\walkable.bin; none: routes by whole maps) and the
+    // routes' graph made from them once (core/reference_route: prepare)
+    std::shared_ptr<const walkgrid::Grids> walk;
+    std::shared_ptr<const refroute::Graph> graph;
 };
 
 // gzip (RFC 1952): one member, its CRC-32 and size checked; false when it is not one

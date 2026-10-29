@@ -5039,6 +5039,25 @@ constexpr Entry kTexts[] = {
      "Esc or Ctrl+F closes it · Alt+← or the mouse's back button goes back · Enter opens the first found",
      "Esc чи Ctrl+F - закрити · Alt+← чи бокова кнопка миші - назад · Enter - перше знайдене",
      "Esc или Ctrl+F - закрыть · Alt+← или боковая кнопка мыши - назад · Enter - первое найденное"},
+    // 3.0.11-beta.8: «Як дістатися» (core/reference_pages, reference_route)
+    {Text::RefRoute, "How to get there", "Як дістатися", "Как добраться"},
+    {Text::RefRouteFrom, "from {1}", "з {1}", "из {1}"},
+    {Text::RefRouteWalk, "On foot", "Пішки", "Пешком"},
+    {Text::RefRouteKafra, "By Kafra", "Через Kafra", "Через Kafra"},
+    {Text::RefRouteNpc, "By an NPC", "Через NPC", "Через NPC"},
+    {Text::RefRouteMoves, "moves: {1}", "переходів: {1}", "переходов: {1}"},
+    {Text::RefRouteExit, "exit {1}", "вихід {1}", "выход {1}"},
+    {Text::RefRouteStairs, "passage {1}", "перехід {1}", "переход {1}"},
+    {Text::RefRouteVaries, "the price varies", "ціна різна", "цена разная"},
+    {Text::RefRouteCondition, "a condition", "умова", "условие"},
+    {Text::RefRouteConditionNote,
+     "A move on the way has a condition: the NPC may want a quest or an item, or leads elsewhere.",
+     "На шляху є перехід з умовою: NPC може вимагати квест чи предмет або вести деінде.",
+     "На пути есть переход с условием: NPC может требовать квест или предмет либо вести в другое место."},
+    {Text::RefRouteNone,
+     "No way from here is known: the moves may be in scripts the reference does not read.",
+     "Звідси шляху не знайдено: переходи можуть бути в скриптах, яких довідник не читає.",
+     "Отсюда путь не найден: переходы могут быть в скриптах, которых справочник не читает."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

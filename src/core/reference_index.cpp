@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <tuple>
 
 #include "core/json.hpp"
 #include "core/settings/search.hpp"
@@ -178,7 +179,17 @@ bool build(const std::string& text, Index& out) {
     }
     for (const json::Value& r : v["routes"].items()) {  // [map, x, y, dest, dx, dy, kind w|k|s, name, price, flags]
         const std::string map = r[size_t(0)].asString(), dest = r[size_t(3)].asString(), kind = r[size_t(6)].asString();
-        if (map.empty() || dest.empty() || dest == map) continue;
+        if (map.empty() || dest.empty()) continue;
+        if (kind == "w" || kind == "k" || kind == "s") {  // 3.0.11-beta.8: the routes' moves, the ones within too
+            const json::Value& price = r[size_t(8)];
+            Move m{at(r, 1), at(r, 2), dest, at(r, 4), at(r, 5), kind == "w" ? How::Warp : kind == "k" ? How::Kafra
+                                                                                                        : How::Npc,
+                   r[size_t(7)].asString(), price.type() == json::Value::Number ? int(price.asInt(0)) : -1};
+            m.paid = m.how == How::Kafra || (m.how == How::Npc && (m.price > 0 || (at(r, 9) & 2) != 0));
+            m.conditional = (at(r, 9) & 1) != 0;
+            ix.maps[map].moves.push_back(std::move(m));
+        }
+        if (dest == map) continue;
         if (kind == "w") {
             ix.maps[map].warps.push_back(Warp{at(r, 1), at(r, 2), dest, at(r, 4), at(r, 5)});
         } else if (kind == "k" || kind == "s") {  // 3.0.11-beta.7: Kafra's and the NPCs' teleports
@@ -209,6 +220,17 @@ bool build(const std::string& text, Index& out) {
                 int(n[size_t(4)].asInt(0))};
         npc.kind = kindOf(npc.name);
         ix.maps[map].npcs.push_back(std::move(npc));
+    }
+    for (auto& m : ix.maps) {  // a free NPC leading to several maps: where depends on something (Eden's way back)
+        std::map<std::tuple<int, int, std::string>, std::vector<std::string>> leads;
+        for (const Move& mv : m.second.moves) {
+            if (mv.how != How::Npc || mv.paid) continue;
+            auto& to = leads[std::make_tuple(mv.x, mv.y, mv.npc)];
+            if (std::find(to.begin(), to.end(), mv.to) == to.end()) to.push_back(mv.to);
+        }
+        for (Move& mv : m.second.moves)
+            if (mv.how == How::Npc && !mv.paid && leads[std::make_tuple(mv.x, mv.y, mv.npc)].size() >= 2)
+                mv.depends = true;
     }
     for (auto& m : ix.maps) {
         std::stable_sort(m.second.mobs.begin(), m.second.mobs.end(), [&](const MobOnMap& a, const MobOnMap& b) {

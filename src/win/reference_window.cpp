@@ -68,7 +68,9 @@ void makePage(State& s) {
         r.left = say(Text::RefNoData);
         s.page.rows.push_back(r);
     } else if (s.at.go != refpages::Go::None) {
-        s.page = refpages::open(*s.index, l, s.at, s.here, s.opened);
+        int x = -1, y = -1, w = 0, h = 0;  // 3.0.11-beta.8: the routes start from the part of the map one is in
+        if (!readPlayerCell(x, y, w, h)) x = y = -1;
+        s.page = refpages::open(*s.index, l, s.at, s.here, s.opened, x, y);
     } else if (!s.query.empty()) {
         s.page = refpages::found(*s.index, l, s.query);
     } else {
@@ -215,7 +217,11 @@ void frame(HWND game, bool enabled, double k, int targetWidth, int targetHeight)
         s.shown = false;
         return;
     }
-    s.here = readGameMap();
+    const std::string here = readGameMap();
+    if (here != s.here) {  // 3.0.11-beta.8: «ви тут» and the routes are from the player's map
+        s.here = here;
+        s.wantPage = true;
+    }
     if (float(k) != s.k || targetWidth != s.targetW || targetHeight != s.targetH) {
         s.k = float(k);
         s.targetW = targetWidth;

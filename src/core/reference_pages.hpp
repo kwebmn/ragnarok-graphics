@@ -36,21 +36,24 @@ struct Page {
 enum Section : int { Mobs, Bosses, Items, Cards, Maps, Shops, Teleports, Pets, Crafting, kSections };
 // A card's long sections show their first kFew rows and «усі N ›» (Go::Expand, its bit) until opened (the concept:
 // the main things first - «Де знайти» and «Що випадає» - the rest below without a long scroll)
-enum Part : int { Where, Drops, DroppedBy, SoldAt, WhoHere, Exits, Teleports2, Npcs, ShopsHere, UsedIn };
+enum Part : int {
+    Where, Drops, DroppedBy, SoldAt, WhoHere, Exits, Teleports2, Npcs, ShopsHere, UsedIn,
+    Route1, Route2  // 3.0.11-beta.8: «Як дістатися» on foot, by Kafra
+};
 constexpr size_t kFew = 5;
 
 Page home(const refindex::Index& ix, settings::Lang l);
 Page found(const refindex::Index& ix, settings::Lang l, const std::string& query);
 Page section(const refindex::Index& ix, settings::Lang l, int id);
-// `here`: the player's map (it comes first in «Де знайти», marked)
-// `opened`: bits of Part shown in full
+// `here`: the player's map (it comes first in «Де знайти», marked; a map's card shows the way from it - 3.0.11-beta.8)
+// `opened`: bits of Part shown in full; `hx`, `hy`: the player's cell (-1 not known)
 Page mob(const refindex::Index& ix, settings::Lang l, int id, const std::string& here, unsigned opened = 0);
 Page item(const refindex::Index& ix, settings::Lang l, int id, unsigned opened = 0);
 Page map(const refindex::Index& ix, settings::Lang l, const std::string& code, const std::string& here,
-         unsigned opened = 0);
+         unsigned opened = 0, int hx = -1, int hy = -1);
 Page shop(const refindex::Index& ix, settings::Lang l, int index);
 Page open(const refindex::Index& ix, settings::Lang l, const Link& link, const std::string& here,
-          unsigned opened = 0);  // by its kind
+          unsigned opened = 0, int hx = -1, int hy = -1);  // by its kind
 
 // Words for numbers: 1 200 (en 1,200); a chance kept in 0.01 % - «70 %», «1,5 %», «0,01 %» (en «1.5 %»)
 std::string number(long long v, settings::Lang l);

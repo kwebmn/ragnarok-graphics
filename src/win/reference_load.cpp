@@ -7,6 +7,8 @@
 
 #include "core/layout.hpp"
 #include "core/reference_pack.hpp"
+#include "core/reference_route.hpp"
+#include "core/walk_grid.hpp"
 #include "win/game_files.hpp"
 #include "win/log.hpp"
 #include "win/paths.hpp"
@@ -37,6 +39,24 @@ unsigned long long writeTime(const std::string& path) {
     return (static_cast<unsigned long long>(a.ftLastWriteTime.dwHighDateTime) << 32) | a.ftLastWriteTime.dwLowDateTime;
 }
 
+// 3.0.11-beta.8: the maps' walkable parts - the package's file, read once (by the pack's thread, one at a time)
+std::shared_ptr<const walkgrid::Grids> walkable() {
+    static std::shared_ptr<const walkgrid::Grids> grids;
+    static bool tried = false;
+    if (tried) return grids;
+    tried = true;
+    const std::string path = layout::join(gameDir(), layout::kWalkable);
+    std::string file;
+    auto read = std::make_shared<walkgrid::Grids>();
+    if (readTextFile(path, file) && walkgrid::read(file, *read)) {
+        grids = std::move(read);
+        LOG_INFO("reference: the walkable parts of %zu maps (%s)", grids->size(), layout::kWalkable);
+    } else {
+        LOG_INFO("reference: %s cannot be read - the routes go by whole maps", path.c_str());
+    }
+    return grids;
+}
+
 DWORD WINAPI readPack(void*) {  // its own thread: the pack's JSON is a megabyte
     const ULONGLONG started = GetTickCount64();
     std::string text, gz, json;
@@ -53,11 +73,14 @@ DWORD WINAPI readPack(void*) {  // its own thread: the pack's JSON is a megabyte
             std::vector<uint8_t> bytes;
             if (files.read("data\\mapnametable.txt", bytes, nullptr))
                 index->mapNames = refindex::mapNames(std::string(bytes.begin(), bytes.end()));
+            index->walk = walkable();  // 3.0.11-beta.8: and the routes' graph over them, once a pack
+            index->graph = refroute::prepare(*index);
         }
         if (ok)
-            LOG_INFO("reference: the pack of %s (commit %s): %zu maps, %zu monsters, read in %llu ms",
+            LOG_INFO("reference: the pack of %s (commit %s): %zu maps, %zu monsters, %zu route nodes, read in %llu ms",
                      refpack::dateOf(m).c_str(), m.commit.substr(0, 8).c_str(), index->maps.size(),
-                     index->mobs.size(), static_cast<unsigned long long>(GetTickCount64() - started));
+                     index->mobs.size(), index->graph ? index->graph->nodes.size() : size_t(0),
+                     static_cast<unsigned long long>(GetTickCount64() - started));
         else
             LOG_INFO("reference: %s is not the pack its manifest names (or not whole) - none read", pack.c_str());
     }

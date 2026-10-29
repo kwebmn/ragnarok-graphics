@@ -479,6 +479,9 @@ enum class Text : uint16_t {
     RefFlagNoTeleport, RefFlagNoMemo, RefFlagNoSave,
     RefHours, RefHoursMinutes,  // 3.0.11-beta.7: a long respawn
     RefAll, RefKeys,            // a long section's «усі N ›»; the keys on the first screen
+    // 3.0.11-beta.8: «Як дістатися» in a map's card (core/reference_route)
+    RefRoute, RefRouteFrom, RefRouteWalk, RefRouteKafra, RefRouteNpc, RefRouteMoves, RefRouteExit, RefRouteStairs,
+    RefRouteVaries, RefRouteCondition, RefRouteConditionNote, RefRouteNone,
     Count
 };
 
