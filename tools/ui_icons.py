@@ -49,6 +49,9 @@ ICONS = [
                 '<path d="M15.5 5.6a3 3 0 0 1 0 5.8M17 14a5.5 5.5 0 0 1 3.5 5.5"/>'),
     ('Gear', '<circle cx="12" cy="12" r="3"/>'
              '<path d="M12 3.5v3M12 17.5v3M3.5 12h3M17.5 12h3M6 6l2.1 2.1M15.9 15.9L18 18M6 18l2.1-2.1M15.9 8.1L18 6"/>'),
+    # 3.0.11-beta.40: the hotbar's edit button (the game's own bar back to drag skills and items into it), its done
+    ('Edit', '<path d="M4.5 19.5h4l10-10-4-4-10 10z"/><path d="M13 7l4 4"/>'),
+    ('Done', '<path d="M5 12.5l4.5 4.5L19 7.5"/>'),
 ]
 
 NUMBER = r'[-+]?(?:\d*\.\d+|\d+\.?)(?:[eE][-+]?\d+)?'
