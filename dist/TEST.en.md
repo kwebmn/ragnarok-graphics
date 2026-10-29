@@ -1,3 +1,17 @@
+# uaRO Graphics 3.0.11-beta.34 — what is new
+
+- **The way is no longer made again at every step.** «Reference» keeps the way it laid while you walk it (even when
+  the game takes your character a little aside — first slantwise, then straight, as it walks) and lays a new one only
+  when you are 5 cells off it or the goal is another. The minimap's line no longer jerks — it just gets shorter
+  behind you.
+- **The footprints stay where they are on the ground.** They were counted from the character's feet, and all of them
+  jumped at each step; now from the way's end. The ones you come to fade out under your feet; a new way comes in
+  softly and the old one fades out (the footprints on the same places stay as they were).
+- **The footprints are blue**, with a dark blue edge — seen on grass, on snow and in dungeons alike.
+- To check: «on the minimap ›» to a location and walk — the footprints do not jump, the minimap's line does not jerk.
+  The log's lines `route: the way on … kept 10 steps so far` and, when you step off it, `route: the way on … made
+  again from …`.
+
 # uaRO Graphics 3.0.11-beta.33 — what is new
 
 - **The cursor over «Reference» no longer sees the NPCs under the window.** The game looked for a character under the
