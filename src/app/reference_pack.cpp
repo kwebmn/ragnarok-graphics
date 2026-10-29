@@ -1,17 +1,21 @@
 #include "app/reference_pack.hpp"
 
+#include <ctime>
 #include <vector>
 
 #include "app/download.hpp"
 #include "app/files.hpp"
 #include "app/text.hpp"
 #include "core/layout.hpp"
+#include "core/reference_live.hpp"
 
 namespace uagfx::app {
 
 namespace {
 
 constexpr const char* kManifestPath = "/api/public/game/pack.json";
+constexpr const char* kOnlinePath = "/api/public/online.json";  // 3.0.11-beta.10: the site's «Онлайн»
+constexpr long long kOnlineAgain = 90;  // seconds: younger counts are kept (several game windows, several watchers)
 
 std::wstring folderOf(const std::wstring& dir) { return dir + L"\\" + wide(layout::kReference); }
 std::wstring manifestOf(const std::wstring& dir) { return dir + L"\\" + wide(layout::kReferenceManifest); }
@@ -61,6 +65,28 @@ bool noteReference(const std::wstring& dir, std::string& error) {
     }
     for (const std::wstring& n : listFolder(folder, false)) {  // older packs and pieces of cut downloads go
         if (n != name && n.rfind(L"pack-", 0) == 0) deleteFile(folder + L"\\" + n);
+    }
+    return true;
+}
+
+bool noteOnline(const std::wstring& dir, std::string& error) {
+    std::string text;
+    reflive::Online there;  // another game window's watcher asked a moment ago: once for all of them
+    const long long now = static_cast<long long>(std::time(nullptr));
+    if (readFile(dir + L"\\" + wide(layout::kReferenceOnline), text) && reflive::read(text, there) &&
+        now - there.at >= 0 && now - there.at < kOnlineAgain)
+        return true;
+    if (!fetchPath(kOnlinePath, text, error, 1u << 20)) return false;
+    reflive::Online o;
+    if (!reflive::fromSite(text, now, o)) {
+        error = "uaro.kiev.ua: not the players online";
+        return false;
+    }
+    makeFolder(dir + L"\\" + wide(layout::kOurs));
+    makeFolder(folderOf(dir));
+    if (!writeFileAtomic(dir + L"\\" + wide(layout::kReferenceOnline), reflive::write(o))) {
+        error = "the players online could not be written";
+        return false;
     }
     return true;
 }

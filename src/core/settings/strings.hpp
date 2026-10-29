@@ -484,6 +484,7 @@ enum class Text : uint16_t {
     RefRouteVaries, RefRouteCondition, RefRouteConditionNote, RefRouteNone,
     // 3.0.11-beta.9: the way followed on the minimap
     RefRouteFollow, RefRouteFollowing, MinimapRouteLeft, MinimapRouteThere, MinimapRouteNone,
+    RefPlayersNow, RefOnlineNow,  // 3.0.11-beta.10: the site's «Онлайн»
     Count
 };
 

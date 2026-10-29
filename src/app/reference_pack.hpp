@@ -12,5 +12,8 @@ namespace uagfx::app {
 bool noteReference(const std::wstring& dir, std::string& error);
 // The manifest of the pack there (the app shows it): none when there is no pack.json or no pack beside it.
 std::optional<refpack::Manifest> referenceThere(const std::wstring& dir);
+// 3.0.11-beta.10: the players on each map now (core/reference_live) from the site into the reference's online.json -
+// the watcher's, every 2 minutes while the game runs; false and why when the site does not answer
+bool noteOnline(const std::wstring& dir, std::string& error);
 
 }  // namespace uagfx::app

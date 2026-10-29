@@ -5,6 +5,7 @@
 #include <string>
 
 #include "core/minimap_proto.hpp"
+#include "core/reference_live.hpp"
 #include "core/reference_pages.hpp"
 #include "core/reference_route.hpp"
 #include "core/route_follow.hpp"
@@ -15,6 +16,13 @@ using namespace uagfx;
 using settings::Lang;
 
 namespace {
+
+refpages::Context ctx(const std::string& here, const refpages::Follow& follow = {}) {
+    refpages::Context c;
+    c.here = here;
+    c.follow = follow;
+    return c;
+}
 
 // town -> field -> tower (two floors, joined by stairs) -> cave; town -> isle by Kafra alone; a Guide in town who
 // takes you to the cave if something (a quest) allows; Eden's officer in town, free, to the field or the isle
@@ -122,7 +130,7 @@ TEST(reference_route_kafra_and_nearest_warp) {
 
 TEST(reference_pages_map_card_says_how_to_get_there) {
     const auto ix = index();
-    const refpages::Page cave = refpages::map(*ix, Lang::Uk, "cave", "town");
+    const refpages::Page cave = refpages::map(*ix, Lang::Uk, "cave", ctx("town"));
     size_t at = size_t(-1);
     for (size_t i = 0; i < cave.rows.size(); ++i)
         if (cave.rows[i].left == "Як дістатися") at = i;
@@ -134,7 +142,7 @@ TEST(reference_pages_map_card_says_how_to_get_there) {
     CHECK_EQ(cave.rows[at + 2].right, std::string("вихід 1, 1"));
     CHECK(cave.rows[at + 2].link.go == refpages::Go::Map && cave.rows[at + 2].link.map == "field");
     CHECK_EQ(cave.rows[at + 4].right, std::string("перехід 1, 8"));  // the stairs
-    const refpages::Page isle = refpages::map(*ix, Lang::Uk, "isle", "town");
+    const refpages::Page isle = refpages::map(*ix, Lang::Uk, "isle", ctx("town"));
     bool kafra = false, walk = false;
     for (const refpages::Row& r : isle.rows) {
         if (r.left == "Через Kafra") kafra = r.right == "переходів: 1 · 1 200 z";
@@ -142,9 +150,9 @@ TEST(reference_pages_map_card_says_how_to_get_there) {
         if (r.left == "1. → isle") CHECK_EQ(r.right, std::string("Kafra 5, 5 · 1 200 z"));
     }
     CHECK(kafra && !walk);
-    const refpages::Page here = refpages::map(*ix, Lang::Uk, "town", "town");
+    const refpages::Page here = refpages::map(*ix, Lang::Uk, "town", ctx("town"));
     for (const refpages::Row& r : here.rows) CHECK(r.left != "Як дістатися");
-    const refpages::Page nowhere = refpages::map(*ix, Lang::Uk, "town", "cave");  // the cave has no way out
+    const refpages::Page nowhere = refpages::map(*ix, Lang::Uk, "town", ctx("cave"));  // the cave has no way out
     bool none = false;
     for (const refpages::Row& r : nowhere.rows) none = none || r.left.find("Звідси шляху не знайдено") == 0;
     CHECK(none);
@@ -201,7 +209,7 @@ TEST(reference_pages_route_rows_follow_the_way) {
     const auto ix = index();
     refpages::Follow f;
     f.can = true;
-    const refpages::Page p = refpages::map(*ix, Lang::Uk, "cave", "town", 0, -1, -1, f);
+    const refpages::Page p = refpages::map(*ix, Lang::Uk, "cave", ctx("town", f));
     const refpages::Row* walk = nullptr;
     for (const refpages::Row& r : p.rows)
         if (r.left == "Пішки") walk = &r;
@@ -210,10 +218,43 @@ TEST(reference_pages_route_rows_follow_the_way) {
     CHECK(walk->link.go == refpages::Go::Follow && walk->link.id == 0 && walk->link.map == "cave");
     CHECK(!walk->gold);
     f.map = "cave";
-    const refpages::Page q = refpages::map(*ix, Lang::Uk, "cave", "town", 0, -1, -1, f);
+    const refpages::Page q = refpages::map(*ix, Lang::Uk, "cave", ctx("town", f));
     for (const refpages::Row& r : q.rows)
         if (r.left == "Пішки") CHECK(r.gold && r.right == "переходів: 4 · веду · зупинити ›");
-    const refpages::Page none = refpages::map(*ix, Lang::Uk, "cave", "town");  // the new minimap off: no link
+    const refpages::Page none = refpages::map(*ix, Lang::Uk, "cave", ctx("town"));  // the new minimap off: no link
     for (const refpages::Row& r : none.rows)
         if (r.left == "Пішки") CHECK(r.link.go == refpages::Go::None && r.right == "переходів: 4");
+}
+
+// 3.0.11-beta.10: the players now (core/reference_live) - the site's online.json kept as counts, in a map's card
+TEST(reference_live_counts_from_the_site) {
+    const char* site = R"({"online":104,"peak":183,"count":103,"byMap":[
+        {"code":"mjolnir_01","name":"Mjolnir Field 1","players":[{"name":"A","class":"Monk","level":87}],"count":10},
+        {"code":"prontera","name":"Prontera","players":[],"count":3},{"code":"","count":2},
+        {"code":"x\"y","count":1}]})";
+    reflive::Online o;
+    CHECK(reflive::fromSite(site, 1000, o));
+    CHECK_EQ(o.online, 104);
+    CHECK_EQ(o.at, 1000LL);
+    CHECK_EQ(o.maps.size(), size_t(3));
+    CHECK_EQ(o.maps["mjolnir_01"], 10);
+    const std::string file = reflive::write(o);
+    CHECK(file.find("Monk") == std::string::npos && file.find("\"A\"") == std::string::npos);  // no names kept
+    CHECK(file.find("\"xy\":1") != std::string::npos);  // a code with anything else: left out of it
+    reflive::Online back;
+    CHECK(reflive::read(file, back));
+    CHECK_EQ(back.maps["prontera"], 3);
+    CHECK_EQ(back.online, 104);
+    CHECK(reflive::fresh(back, 1000 + 600));
+    CHECK(!reflive::fresh(back, 1000 + 601));
+    CHECK(!reflive::fromSite("{\"online\":1}", 1, o));
+    CHECK(!reflive::read("{\"v\":2}", o));
+    const auto ix = index();
+    std::map<std::string, int> players{{"cave", 5}};
+    refpages::Context c = ctx("town");
+    c.players = &players;
+    const refpages::Page cave = refpages::map(*ix, Lang::Uk, "cave", c);
+    CHECK(cave.rows[1].style == refpages::Style::Sub && cave.rows[1].left == "гравців зараз: 5");
+    const refpages::Page home = refpages::home(*ix, Lang::Uk, 104);
+    CHECK_EQ(home.rows[home.rows.size() - 2].left, std::string("Зараз у грі: 104"));
 }

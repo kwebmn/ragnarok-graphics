@@ -54,6 +54,8 @@ constexpr const char* kReferenceManifest = "uaro-graphics\\reference\\pack.json"
 // 3.0.11-beta.8: the server's maps cell by cell for the reference's routes (core/walk_grid, tools/walk_grids.py) -
 // the package's file, not the watcher's
 constexpr const char* kWalkable = "uaro-graphics\\walkable.bin";
+// 3.0.11-beta.10: the players on each map now (core/reference_live) - the game's watcher writes it every 2 minutes
+constexpr const char* kReferenceOnline = "uaro-graphics\\reference\\online.json";
 // 2.14: the client patcher (app/client_patch): the list of the game's files last put, and where they arrive first
 constexpr const char* kClientPatchRecord = "uaro-graphics\\client-patch.txt";
 constexpr const char* kClientPatchWork = "uaro-graphics\\update\\client";

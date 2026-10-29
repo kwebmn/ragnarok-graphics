@@ -29,6 +29,7 @@ using namespace settings;
 
 constexpr long long kAutoEvery = 6 * 3600;  // an automatic report at most once in 6 hours
 constexpr DWORD kAnswersEveryMs = 10 * 60 * 1000;  // 3.0.9-beta.4: the developer's answers asked again while it runs
+constexpr DWORD kOnlineEveryMs = 2 * 60 * 1000;    // 3.0.11-beta.10: the players on the maps (the site's «Онлайн»)
 
 std::string hresult(long hr) {
     char buf[16];
@@ -281,14 +282,27 @@ int watchGame(unsigned long pid, int logSlot) {
     const Config config = parseConfig(ini);
     // 3.0.11-beta.5: the game's reference pack, the new interface on (3.0.11-beta.7: or «Довідник») - only when the
     // site has another one
-    if (config.newMinimap || config.referenceWindow) {
+    // 3.0.11-beta.10: and the players on each map now, every 2 minutes while the game runs (core/reference_live)
+    const bool live = config.newMinimap || config.referenceWindow;
+    if (live) {
         std::string error;
         noteReference(exeFolder(), error);
+        noteOnline(exeFolder(), error);
     }
-    if (!config.reportAuto && !config.statsSend && !answers) return 0;  // nothing more to watch for
+    if (!config.reportAuto && !config.statsSend && !answers && !live) return 0;  // nothing more to watch for
     HANDLE game = OpenProcess(SYNCHRONIZE, FALSE, pid);
     if (!game) return 0;
-    while (WaitForSingleObject(game, answers ? kAnswersEveryMs : INFINITE) == WAIT_TIMEOUT) noteAnswers(exeFolder());
+    ULONGLONG answered = GetTickCount64();
+    while (WaitForSingleObject(game, live ? kOnlineEveryMs : answers ? kAnswersEveryMs : INFINITE) == WAIT_TIMEOUT) {
+        if (live) {
+            std::string error;
+            noteOnline(exeFolder(), error);
+        }
+        if (answers && GetTickCount64() - answered >= kAnswersEveryMs) {
+            answered = GetTickCount64();
+            noteAnswers(exeFolder());
+        }
+    }
     CloseHandle(game);
     if (!config.reportAuto && !config.statsSend) return 0;
     Sleep(2000);  // the log closed and flushed

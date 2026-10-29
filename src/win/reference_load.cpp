@@ -2,6 +2,7 @@
 
 #include <windows.h>
 
+#include <ctime>
 #include <string>
 #include <vector>
 
@@ -92,7 +93,31 @@ DWORD WINAPI readPack(void*) {  // its own thread: the pack's JSON is a megabyte
     return 0;
 }
 
+struct Live {  // 3.0.11-beta.10: online.json, small - read on the game's thread when it changes
+    std::shared_ptr<const reflive::Online> current;
+    unsigned long long stamp = 0;
+    ULONGLONG lookedAt = 0;
+};
+
 }  // namespace
+
+std::shared_ptr<const reflive::Online> online() {
+    static Live l;  // the game's thread alone (the window, the minimap)
+    const ULONGLONG now = GetTickCount64();
+    if (l.lookedAt == 0 || now - l.lookedAt >= kLookEveryMs) {
+        l.lookedAt = now;
+        const std::string path = layout::join(gameDir(), layout::kReferenceOnline);
+        const unsigned long long stamp = writeTime(path);
+        std::string text;
+        auto read = std::make_shared<reflive::Online>();
+        if (stamp && stamp != l.stamp && readTextFile(path, text) && reflive::read(text, *read)) {
+            l.stamp = stamp;
+            l.current = std::move(read);
+        }
+    }
+    if (!l.current || !reflive::fresh(*l.current, static_cast<long long>(std::time(nullptr)))) return nullptr;
+    return l.current;
+}
 
 std::shared_ptr<const refindex::Index> index() {
     Loader& l = loader();

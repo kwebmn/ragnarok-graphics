@@ -45,6 +45,7 @@ struct State {
     refwin::Layout layout;
     refwin::Under hover;
     std::shared_ptr<const refindex::Index> index;
+    std::shared_ptr<const reflive::Online> online;  // 3.0.11-beta.10: the players now (null: none fresh)
     std::string here;
     panel::Picture picture;
     uint32_t texture = 0;
@@ -69,16 +70,18 @@ void makePage(State& s) {
         r.left = say(Text::RefNoData);
         s.page.rows.push_back(r);
     } else if (s.at.go != refpages::Go::None) {
-        int x = -1, y = -1, w = 0, h = 0;  // 3.0.11-beta.8: the routes start from the part of the map one is in
-        if (!readPlayerCell(x, y, w, h)) x = y = -1;
-        refpages::Follow follow;  // 3.0.11-beta.9: «вести ›» with the new minimap on
-        follow.can = minimapproto::canFollow();
-        minimapproto::following(follow.map, follow.walk);
-        s.page = refpages::open(*s.index, l, s.at, s.here, s.opened, x, y, follow);
+        refpages::Context c;
+        c.here = s.here;
+        int w = 0, h = 0;  // 3.0.11-beta.8: the routes start from the part of the map one is in
+        if (!readPlayerCell(c.x, c.y, w, h)) c.x = c.y = -1;
+        c.follow.can = minimapproto::canFollow();  // 3.0.11-beta.9: «вести ›» with the new minimap on
+        minimapproto::following(c.follow.map, c.follow.walk);
+        if (s.online) c.players = &s.online->maps;  // 3.0.11-beta.10
+        s.page = refpages::open(*s.index, l, s.at, c, s.opened);
     } else if (!s.query.empty()) {
         s.page = refpages::found(*s.index, l, s.query);
     } else {
-        s.page = refpages::home(*s.index, l);
+        s.page = refpages::home(*s.index, l, s.online ? s.online->online : 0);
     }
     s.rows = refwin::place(s.layout, s.page, s.total);
     s.scroll = refwin::clampScroll(s.scroll, s.total, s.layout.bodyH);
@@ -250,6 +253,11 @@ void frame(HWND game, bool enabled, double k, int targetWidth, int targetHeight)
     const auto index = reference::index();
     if (index != s.index) {
         s.index = index;
+        s.wantPage = true;
+    }
+    const auto online = reference::online();
+    if (online != s.online) {
+        s.online = online;
         s.wantPage = true;
     }
     if (s.wantPage) makePage(s);

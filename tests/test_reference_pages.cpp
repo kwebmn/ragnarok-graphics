@@ -11,6 +11,13 @@ using settings::Lang;
 
 namespace {
 
+refpages::Context ctx(const std::string& here, const refpages::Follow& follow = {}) {
+    refpages::Context c;
+    c.here = here;
+    c.follow = follow;
+    return c;
+}
+
 // A pack cut down: Poring (here on prt_fild08 and on prt_fild05), a boss, items with drops, two shops, crafting, a pet
 const char* kPack = R"({"v":1,"data":5,"commit":"d68ea17ea5b8","date":"2026-10-23T19:20:17+03:00",
 "items":{"909":["Jellopy","Jellopy",3,6,1,0,0],"512":["Apple","Apple",0,15,2,0,0],
@@ -137,7 +144,7 @@ TEST(reference_pages_an_items_card) {
 
 TEST(reference_pages_a_maps_card) {
     const refindex::Index ix = index();
-    const refpages::Page p = refpages::map(ix, Lang::Uk, "prontera", "prontera");
+    const refpages::Page p = refpages::map(ix, Lang::Uk, "prontera", ctx("prontera"));
     CHECK(p.rows[0].left == "Prontera City" && p.rows[0].right == "prontera" && p.rows[0].gold);
     CHECK(p.rows[1].left == "Prontera City, Capitol of Rune-Midgard · місто · без запам'ятовування · ви тут");
     const size_t tp = indexOf(p, "Телепорти");
@@ -147,7 +154,7 @@ TEST(reference_pages_a_maps_card) {
     CHECK(rowWith(p, "Tool Dealer") != nullptr);
     const refpages::Row* kafra = rowWith(p, "Kafra Employee");
     CHECK(kafra && kafra->dot == 0xD6336C && kafra->right == "150, 180");
-    const refpages::Page field = refpages::map(ix, Lang::Uk, "prt_fild08", "");
+    const refpages::Page field = refpages::map(ix, Lang::Uk, "prt_fild08", ctx(""));
     const size_t exits = indexOf(field, "Виходи");
     CHECK_EQ(field.rows[exits].right, std::string("1"));  // two warps to Prontera, one exit
     CHECK(field.rows[exits + 1].link.map == "prontera");

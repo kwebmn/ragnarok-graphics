@@ -211,7 +211,7 @@ std::string typeName(int t, Lang l) {
     }
 }
 
-Page home(const refindex::Index& ix, Lang l) {
+Page home(const refindex::Index& ix, Lang l, int online) {
     Page p;
     p.name = say(l, Text::RefTitle);
     size_t bosses = 0, cards = 0, maps = 0, kafra = 0;
@@ -246,6 +246,7 @@ Page home(const refindex::Index& ix, Lang l) {
         r.link = Link{Go::Section, int(id), ""};
         p.rows.push_back(std::move(r));
     }
+    if (online > 0) p.rows.push_back(note(sayf(l, Text::RefOnlineNow, {number(online, l)})));  // 3.0.11-beta.10
     p.rows.push_back(note(say(l, Text::RefKeys)));
     return p;
 }
@@ -570,8 +571,8 @@ Page item(const refindex::Index& ix, Lang l, int id, unsigned opened) {
     return p;
 }
 
-Page map(const refindex::Index& ix, Lang l, const std::string& code, const std::string& here, unsigned opened, int hx,
-         int hy, const Follow& follow) {
+Page map(const refindex::Index& ix, Lang l, const std::string& code, const Context& c, unsigned opened) {
+    const std::string& here = c.here;
     Page p;
     p.name = refindex::mapTitle(ix, code);
     const auto named = ix.mapNames.find(code);
@@ -594,8 +595,13 @@ Page map(const refindex::Index& ix, Lang l, const std::string& code, const std::
                 sub.left += (sub.left.empty() ? "" : " · ") + say(l, words);
     }
     if (code == here) sub.left += (sub.left.empty() ? "" : " · ") + say(l, Text::RefYouHere);
+    if (c.players) {  // 3.0.11-beta.10: the site's «Онлайн» now
+        const auto now = c.players->find(code);
+        if (now != c.players->end() && now->second > 0)
+            sub.left += (sub.left.empty() ? "" : " · ") + sayf(l, Text::RefPlayersNow, {std::to_string(now->second)});
+    }
     if (!sub.left.empty()) p.rows.push_back(sub);
-    if (!here.empty() && here != code) route(ix, l, p, here, hx, hy, code, opened, follow);
+    if (!here.empty() && here != code) route(ix, l, p, here, c.x, c.y, code, opened, c.follow);
     if (it == ix.maps.end()) return p;
     const refindex::MapHints& h = it->second;
     if (!h.mobs.empty()) {
@@ -679,12 +685,11 @@ Page shop(const refindex::Index& ix, Lang l, int index) {
     return p;
 }
 
-Page open(const refindex::Index& ix, Lang l, const Link& link, const std::string& here, unsigned opened, int hx,
-          int hy, const Follow& follow) {
+Page open(const refindex::Index& ix, Lang l, const Link& link, const Context& c, unsigned opened) {
     switch (link.go) {
-        case Go::Mob: return mob(ix, l, link.id, here, opened);
+        case Go::Mob: return mob(ix, l, link.id, c.here, opened);
         case Go::Item: return item(ix, l, link.id, opened);
-        case Go::Map: return map(ix, l, link.map, here, opened, hx, hy, follow);
+        case Go::Map: return map(ix, l, link.map, c, opened);
         case Go::Shop: return shop(ix, l, link.id);
         case Go::Section: return section(ix, l, link.id);
         case Go::None:

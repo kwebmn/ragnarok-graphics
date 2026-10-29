@@ -1,5 +1,6 @@
 #pragma once
 #include <cstdint>
+#include <map>
 #include <string>
 #include <vector>
 
@@ -51,19 +52,26 @@ struct Follow {
     std::string map;   // where the followed way leads ("" none)
     bool walk = true;  // on foot (else by Kafra)
 };
+// Where the player is and what the window knows now - a map's card says more with it
+struct Context {
+    std::string here;    // the player's map
+    int x = -1, y = -1;  // the player's cell (-1 not known): the routes start from that part of the map
+    Follow follow;
+    const std::map<std::string, int>* players = nullptr;  // 3.0.11-beta.10: players on each map now (the site's)
+};
 
-Page home(const refindex::Index& ix, settings::Lang l);
+// `online`: the server's players now (3.0.11-beta.10; 0 not known)
+Page home(const refindex::Index& ix, settings::Lang l, int online = 0);
 Page found(const refindex::Index& ix, settings::Lang l, const std::string& query);
 Page section(const refindex::Index& ix, settings::Lang l, int id);
 // `here`: the player's map (it comes first in «Де знайти», marked; a map's card shows the way from it - 3.0.11-beta.8)
-// `opened`: bits of Part shown in full; `hx`, `hy`: the player's cell (-1 not known)
+// `opened`: bits of Part shown in full
 Page mob(const refindex::Index& ix, settings::Lang l, int id, const std::string& here, unsigned opened = 0);
 Page item(const refindex::Index& ix, settings::Lang l, int id, unsigned opened = 0);
-Page map(const refindex::Index& ix, settings::Lang l, const std::string& code, const std::string& here,
-         unsigned opened = 0, int hx = -1, int hy = -1, const Follow& follow = {});
+Page map(const refindex::Index& ix, settings::Lang l, const std::string& code, const Context& c, unsigned opened = 0);
 Page shop(const refindex::Index& ix, settings::Lang l, int index);
-Page open(const refindex::Index& ix, settings::Lang l, const Link& link, const std::string& here,
-          unsigned opened = 0, int hx = -1, int hy = -1, const Follow& follow = {});  // by its kind
+Page open(const refindex::Index& ix, settings::Lang l, const Link& link, const Context& c,
+          unsigned opened = 0);  // by its kind
 
 // Words for numbers: 1 200 (en 1,200); a chance kept in 0.01 % - «70 %», «1,5 %», «0,01 %» (en «1.5 %»)
 std::string number(long long v, settings::Lang l);

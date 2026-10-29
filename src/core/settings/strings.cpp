@@ -5064,6 +5064,9 @@ constexpr Entry kTexts[] = {
     {Text::MinimapRouteLeft, "{1} left", "ще {1}", "ещё {1}"},
     {Text::MinimapRouteThere, "You are there", "Ви на місці", "Вы на месте"},
     {Text::MinimapRouteNone, "No way from here", "Звідси шляху немає", "Отсюда пути нет"},
+    // 3.0.11-beta.10: the players now (core/reference_live, the site's «Онлайн»)
+    {Text::RefPlayersNow, "players now: {1}", "гравців зараз: {1}", "игроков сейчас: {1}"},
+    {Text::RefOnlineNow, "In the game now: {1}", "Зараз у грі: {1}", "Сейчас в игре: {1}"},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 
