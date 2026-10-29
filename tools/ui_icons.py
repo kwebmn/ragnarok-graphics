@@ -52,6 +52,8 @@ ICONS = [
     # 3.0.11-beta.40: the hotbar's edit button (the game's own bar back to drag skills and items into it), its done
     ('Edit', '<path d="M4.5 19.5h4l10-10-4-4-10 10z"/><path d="M13 7l4 4"/>'),
     ('Done', '<path d="M5 12.5l4.5 4.5L19 7.5"/>'),
+    # 3.0.11-beta.41: the chat's channel - a chevron down beside its name (a click goes round them)
+    ('Down', '<path d="M6.5 9.5l5.5 5.5 5.5-5.5"/>'),
 ]
 
 NUMBER = r'[-+]?(?:\d*\.\d+|\d+\.?)(?:[eE][-+]?\d+)?'

@@ -13,6 +13,7 @@ enum class Icon : uint8_t {
     Home,                                // 3.0.11-beta.30: the first screen
     Stats, Equip, Bag, Skill, Friends, Gear,  // 3.0.11-beta.36: the character block's buttons
     Edit, Done,                               // 3.0.11-beta.40: the hotbar's
+    Down,                                     // 3.0.11-beta.41: the chat's channel
     kCount
 };
 

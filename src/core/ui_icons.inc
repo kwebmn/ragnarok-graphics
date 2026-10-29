@@ -322,7 +322,8 @@ constexpr float kIconPoints[][2] = {
     {6.000f, 6.000f}, {8.100f, 8.100f}, {15.900f, 15.900f}, {18.000f, 18.000f}, {6.000f, 18.000f},
     {8.100f, 15.900f}, {15.900f, 8.100f}, {18.000f, 6.000f}, {4.500f, 19.500f}, {8.500f, 19.500f},
     {18.500f, 9.500f}, {14.500f, 5.500f}, {4.500f, 15.500f}, {13.000f, 7.000f}, {17.000f, 11.000f},
-    {5.000f, 12.500f}, {9.500f, 17.000f}, {19.000f, 7.500f},
+    {5.000f, 12.500f}, {9.500f, 17.000f}, {19.000f, 7.500f}, {6.500f, 9.500f}, {12.000f, 15.000f},
+    {17.500f, 9.500f},
 };
 struct IconLine {
     uint16_t first, count;  // in kIconPoints
@@ -409,6 +410,7 @@ constexpr IconLine kIconLines[] = {
     {1598, 5, true},
     {1603, 2, false},
     {1605, 3, false},
+    {1608, 3, false},
 };
 constexpr struct {
     uint16_t first, count;  // in kIconLines
@@ -441,4 +443,5 @@ constexpr struct {
     {68, 9},  // Gear
     {77, 2},  // Edit
     {79, 1},  // Done
+    {80, 1},  // Down
 };
