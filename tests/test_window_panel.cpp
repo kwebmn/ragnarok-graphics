@@ -1,5 +1,6 @@
 // 3.0.3-beta.7: the panel of the game windows - laid out at a scale, hit, kept at its place in any window, its shapes
 // drawn (core/window_panel)
+#include <algorithm>
 #include <cmath>
 #include <cstring>
 #include <string>
@@ -456,4 +457,79 @@ TEST(window_panel_marks_a_card) {
         const uint32_t orange = at(pic, hurt.x + hurt.w / 2, hurt.y + 0.6f);
         CHECK(redOf(orange) > blueOf(orange) + 80 && greenOf(orange) > blueOf(orange) + 30);
     }
+}
+
+namespace {
+
+// The rule a rounded box was drawn by before 3.0.11-beta.25, a pixel at a time: its distance, filled by what is
+// inside, the ring `edge` wide inside its border
+float slowRoundBox(float px, float py, const panel::Box& b, float r) {
+    r = std::min(r, std::min(b.w, b.h) / 2);
+    const float qx = std::fabs(px - (b.x + b.w / 2)) - (b.w / 2 - r);
+    const float qy = std::fabs(py - (b.y + b.h / 2)) - (b.h / 2 - r);
+    const float ox = std::max(qx, 0.0f), oy = std::max(qy, 0.0f);
+    return std::sqrt(ox * ox + oy * oy) + std::min(std::max(qx, qy), 0.0f) - r;
+}
+
+float slowCover(float d) { return std::clamp(0.5f - d, 0.0f, 1.0f); }
+
+void slowRoundRect(panel::Picture& p, const panel::Box& b, float r, uint32_t fill, float fillA, uint32_t edgeRgb,
+                   float edgeA, float edge) {
+    const int x0 = std::max(0, int(std::floor(b.x)) - 1), y0 = std::max(0, int(std::floor(b.y)) - 1);
+    const int x1 = std::min(p.width, int(std::ceil(b.x + b.w)) + 1);
+    const int y1 = std::min(p.height, int(std::ceil(b.y + b.h)) + 1);
+    for (int y = y0; y < y1; ++y)
+        for (int x = x0; x < x1; ++x) {
+            const float d = slowRoundBox(float(x) + 0.5f, float(y) + 0.5f, b, r);
+            const float inside = slowCover(d);
+            if (inside <= 0.0f) continue;
+            uint32_t& px = p.px[size_t(y) * size_t(p.width) + size_t(x)];
+            panel::over(px, fill, fillA * inside);
+            if (edgeA > 0.0f) panel::over(px, edgeRgb, edgeA * (inside - slowCover(d + edge)));
+        }
+}
+
+}  // namespace
+
+// 3.0.11-beta.25 (R-77TCM7: «когда по меню вожу, лагат курсор и фпс падает» -
+// «Довідник» painted in 290 ms at 4K): the rows' inside of a rounded box filled as one run changes no pixel
+// of the rule it was drawn by
+TEST(round_rect_runs_match_the_distance_rule) {
+    uint32_t seed = 12345;
+    const auto rnd = [&](float lo, float hi) {
+        seed = seed * 1664525u + 1013904223u;
+        return lo + (hi - lo) * float(seed >> 8) / float(1u << 24);
+    };
+    int differing = 0;
+    for (int n = 0; n < 400; ++n) {
+        panel::Picture fast, slow;
+        fast.width = slow.width = 96;
+        fast.height = slow.height = 80;
+        fast.px.assign(size_t(96) * 80, 0xFF102030u + uint32_t(n));
+        slow.px = fast.px;
+        const panel::Box b{rnd(-12, 60), rnd(-12, 50), n % 7 == 0 ? rnd(0, 2) : rnd(0, 110), rnd(0, 90)};
+        const float r = n % 5 == 0 ? 0.0f : rnd(0, 34);
+        const float fillA = n % 4 == 0 ? 1.0f : n % 4 == 1 ? 0.0f : rnd(0, 1.2f);
+        const float edgeA = n % 3 == 0 ? 0.0f : rnd(0, 1);
+        const float edge = n % 6 == 0 ? 0.0f : rnd(0.5f, 5);
+        const uint32_t fill = 0xFFA0B0C0u - uint32_t(n) * 0x010203u, edgeRgb = 0x00405060u + uint32_t(n);
+        panel::roundRect(fast, b, r, fill, fillA, edgeRgb, edgeA, edge);
+        slowRoundRect(slow, b, r, fill, fillA, edgeRgb, edgeA, edge);
+        if (fast.px != slow.px) ++differing;
+    }
+    CHECK_EQ(differing, 0);
+}
+
+TEST(round_rect_whole_picture_box_matches_the_distance_rule) {  // the window's frame: no fill, a ring inside its border
+    panel::Picture fast, slow;
+    fast.width = slow.width = 300;
+    fast.height = slow.height = 200;
+    fast.px.assign(size_t(300) * 200, 0xFF181B57u);
+    slow.px = fast.px;
+    panel::roundRect(fast, panel::Box{0, 0, 300, 200}, 0, 0, 0.0f, 0x2A2F3Au, 1.0f, 2.0f);
+    slowRoundRect(slow, panel::Box{0, 0, 300, 200}, 0, 0, 0.0f, 0x2A2F3Au, 1.0f, 2.0f);
+    CHECK(fast.px == slow.px);
+    panel::roundRect(fast, panel::Box{10.5f, 7.25f, 250.3f, 120.7f}, 16, 0x223344u, 1.0f, 0x5566FFu, 1.0f, 2.0f);
+    slowRoundRect(slow, panel::Box{10.5f, 7.25f, 250.3f, 120.7f}, 16, 0x223344u, 1.0f, 0x5566FFu, 1.0f, 2.0f);
+    CHECK(fast.px == slow.px);
 }

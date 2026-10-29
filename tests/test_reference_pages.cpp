@@ -241,6 +241,84 @@ TEST(reference_window_paints_and_words_its_rows) {
     CHECK(title && typed && poring);
 }
 
+// 3.0.11-beta.25 (R-77TCM7:
+// «когда по меню вожу, лагат курсор и фпс падает»): another row under the pointer
+// repaints only the old highlights' areas and the new ones' - the picture as painted whole
+TEST(reference_window_hover_repaint_matches_the_whole) {
+    const refindex::Index ix = index();
+    int steps = 0, differing = 0, outside = 0;
+    for (const float k : {1.0f, 1.5f, 2.0f}) {
+        const refwin::Layout L = refwin::layout(int(1920 * k), int(1080 * k), k);
+        const refpages::Page pages[] = {refpages::home(ix, Lang::Uk),
+                                        refpages::mob(ix, Lang::Uk, 1002, ctx("prontera")),
+                                        refpages::found(ix, Lang::Uk, "po")};
+        for (const refpages::Page& p : pages) {
+            int total = 0;
+            const std::vector<refwin::Placed> rows = refwin::place(L, p, total);
+            std::vector<int> links;
+            for (size_t i = 0; i < p.rows.size(); ++i)
+                if (p.rows[i].link.go != refpages::Go::None && refwin::shown(L, rows[i], 0)) links.push_back(int(i));
+            if (links.size() < 2) continue;
+            const refwin::Under seq[] = {{},
+                                         {refwin::Part::Row, links[0]},
+                                         {refwin::Part::Row, links[1]},
+                                         {refwin::Part::Close, -1},
+                                         {refwin::Part::Back, -1},
+                                         {refwin::Part::Row, links.back()},
+                                         {}};
+            refwin::Look was;
+            was.backShown = true;
+            was.selected = links.back();
+            panel::Picture partial;
+            refwin::paint(partial, L, p, rows, 0, total, was);
+            for (const refwin::Under& u : seq) {
+                refwin::Look now = was;
+                now.hover = u;
+                for (const refwin::Look* l : {&was, &now})
+                    for (const Rect& a : refwin::hotAreas(L, p, rows, 0, *l)) {
+                        const std::vector<uint32_t> before = partial.px;
+                        refwin::repaint(partial, L, p, rows, 0, total, now, a);
+                        for (int y = 0; y < L.h; y += 3)  // nothing out of the area: only it goes to the card
+                            for (int x = 0; x < L.w; ++x) {
+                                const size_t i = size_t(y) * size_t(L.w) + size_t(x);
+                                const bool in = x >= a.left && x < a.right && y >= a.top && y < a.bottom;
+                                if (!in && partial.px[i] != before[i]) ++outside;
+                            }
+                    }
+                panel::Picture whole;
+                refwin::paint(whole, L, p, rows, 0, total, now);
+                ++steps;
+                if (partial.px != whole.px) ++differing;
+                was = now;
+            }
+        }
+    }
+    CHECK(steps >= 14);
+    CHECK_EQ(differing, 0);
+    CHECK_EQ(outside, 0);
+}
+
+TEST(reference_window_hot_areas) {
+    const refindex::Index ix = index();
+    const refwin::Layout L = refwin::layout(1920, 1080, 1.0f);
+    const refpages::Page p = refpages::home(ix, Lang::Uk);
+    int total = 0;
+    const std::vector<refwin::Placed> rows = refwin::place(L, p, total);
+    refwin::Look look;
+    CHECK(refwin::hotAreas(L, p, rows, 0, look).empty());
+    look.hover = refwin::Under{refwin::Part::Row, 0};
+    const std::vector<Rect> one = refwin::hotAreas(L, p, rows, 0, look);
+    CHECK_EQ(one.size(), size_t(1));
+    CHECK(!one.empty() && one[0].left <= rows[0].x && one[0].right >= rows[0].x + rows[0].w);
+    CHECK(!one.empty() && one[0].top <= L.bodyY + rows[0].y && one[0].bottom >= L.bodyY + rows[0].y + rows[0].h);
+    CHECK(!one.empty() && one[0].right <= L.w && one[0].bottom <= L.h && one[0].left >= 0);
+    look.hover = refwin::Under{refwin::Part::Back, -1};
+    CHECK(refwin::hotAreas(L, p, rows, 0, look).empty());  // no «back» on the first page
+    look.backShown = true;
+    look.selected = 1;
+    CHECK_EQ(refwin::hotAreas(L, p, rows, 0, look).size(), size_t(2));
+}
+
 // 3.0.11-beta.12: the site's live data (core/reference_live) - the players' public MVP timers, the market - in the
 // cards
 TEST(reference_live_timers_and_market) {

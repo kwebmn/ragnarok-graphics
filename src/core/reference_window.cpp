@@ -129,15 +129,17 @@ const panel::Picture* iconOf(const Look& look, const refpages::Row& row) {
     return it == look.pictures->end() || it->second.width <= 0 ? nullptr : &it->second;
 }
 
-// A premultiplied picture over the window's (opaque) one
+// A premultiplied picture over the window's (opaque) one (3.0.11-beta.25: inside its clip)
 void blit(panel::Picture& out, const panel::Picture& pic, int ox, int oy) {
+    const int top = std::max(0, out.clipY0), bottom = std::min(out.height, out.clipY1);
+    const int left = std::max(0, out.clipX0), right = std::min(out.width, out.clipX1);
     for (int y = 0; y < pic.height; ++y) {
         const int ty = oy + y;
-        if (ty < 0 || ty >= out.height) continue;
+        if (ty < top || ty >= bottom) continue;
         for (int x = 0; x < pic.width; ++x) {
             const int tx = ox + x;
             const uint32_t c = pic.px[size_t(y) * size_t(pic.width) + size_t(x)];
-            if (tx < 0 || tx >= out.width || (c >> 24) == 0) continue;
+            if (tx < left || tx >= right || (c >> 24) == 0) continue;
             uint32_t& d = out.px[size_t(ty) * size_t(out.width) + size_t(tx)];
             const uint32_t keep = 255 - (c >> 24);
             auto ch = [&](int sh) {
@@ -179,10 +181,10 @@ namespace {
 // 3.0.11-beta.11: a smooth line `width` wide, a rectangle's outline - the world map's marks (the picture's pixels)
 void line(panel::Picture& p, float x0, float y0, float x1, float y1, float width, uint32_t rgb, float a) {
     const float half = width / 2, dx = x1 - x0, dy = y1 - y0, len2 = dx * dx + dy * dy;
-    const int left = std::max(0, int(std::floor(std::min(x0, x1) - half - 1)));
-    const int right = std::min(p.width - 1, int(std::ceil(std::max(x0, x1) + half + 1)));
-    const int top = std::max(0, int(std::floor(std::min(y0, y1) - half - 1)));
-    const int bottom = std::min(p.height - 1, int(std::ceil(std::max(y0, y1) + half + 1)));
+    const int left = std::max({0, p.clipX0, int(std::floor(std::min(x0, x1) - half - 1))});
+    const int right = std::min({p.width, p.clipX1, int(std::ceil(std::max(x0, x1) + half + 1)) + 1}) - 1;
+    const int top = std::max({0, p.clipY0, int(std::floor(std::min(y0, y1) - half - 1))});
+    const int bottom = std::min({p.height, p.clipY1, int(std::ceil(std::max(y0, y1) + half + 1)) + 1}) - 1;
     for (int y = top; y <= bottom; ++y)
         for (int x = left; x <= right; ++x) {
             const float px0 = float(x) + 0.5f - x0, py0 = float(y) + 0.5f - y0;
@@ -207,12 +209,14 @@ panel::Box tileBox(const worldmap::Tile& t, const worldmap::Fit& f, float ox, fl
 // The world map's row: its picture, the way followed, your map, the one under the pointer, the players' badges
 void paintWorld(panel::Picture& out, const panel::Box& b, const WorldLook& w, float s) {
     if (!w.picture || !w.sheet || w.picture->width != int(b.w) || w.picture->height != int(b.h)) return;
+    const int top = std::max(0, out.clipY0), bottom = std::min(out.height, out.clipY1);
+    const int left = std::max(0, out.clipX0), right = std::min(out.width, out.clipX1);
     for (int y = 0; y < w.picture->height; ++y) {
         const int ty = int(b.y) + y;
-        if (ty < 0 || ty >= out.height) continue;
+        if (ty < top || ty >= bottom) continue;
         for (int x = 0; x < w.picture->width; ++x) {
             const int tx = int(b.x) + x;
-            if (tx >= 0 && tx < out.width)
+            if (tx >= left && tx < right)
                 out.px[size_t(ty) * size_t(out.width) + size_t(tx)] =
                     w.picture->px[size_t(y) * size_t(w.picture->width) + size_t(x)];
         }
@@ -268,11 +272,13 @@ void paintWorld(panel::Picture& out, const panel::Box& b, const WorldLook& w, fl
 
 }  // namespace
 
-void paint(panel::Picture& out, const Layout& L, const refpages::Page& p, const std::vector<Placed>& rows, int scroll,
-           int total, const Look& look) {
-    out.width = L.w;
-    out.height = L.h;
-    out.px.assign(size_t(L.w) * size_t(L.h), 0xFF000000u | kGround);
+namespace {
+
+constexpr int kAnywhere = 1 << 30;  // panel::Picture's clip by default
+
+// Everything over the window's ground - inside the picture's clip (paint: all of it; repaint: a part)
+void shapes(panel::Picture& out, const Layout& L, const refpages::Page& p, const std::vector<Placed>& rows, int scroll,
+            int total, const Look& look) {
     const float s = L.s;
     fill(out, panel::Box{0, 0, float(L.w), float(L.header)}, kBand);
     if (look.backShown && look.hover.part == Part::Back) fill(out, backBox(L), kHover);
@@ -318,6 +324,80 @@ void paint(panel::Picture& out, const Layout& L, const refpages::Page& p, const 
         panel::roundRect(out, panel::Box{trackX, at, 5 * s, thumbH}, 2.5f * s, kThumb, 1.0f);
     }
     panel::roundRect(out, panel::Box{0, 0, float(L.w), float(L.h)}, 0, 0, 0.0f, kRule, 1.0f, std::max(1.0f, s));
+}
+
+// A box of the window in its whole pixels, a pixel more each way (the shapes' smooth edges), inside the window
+Rect pixelsOf(const Layout& L, const panel::Box& b) {
+    return Rect{std::clamp(int(std::floor(b.x)) - 1, 0, L.w), std::clamp(int(std::floor(b.y)) - 1, 0, L.h),
+                std::clamp(int(std::ceil(b.x + b.w)) + 1, 0, L.w), std::clamp(int(std::ceil(b.y + b.h)) + 1, 0, L.h)};
+}
+
+}  // namespace
+
+void paint(panel::Picture& out, const Layout& L, const refpages::Page& p, const std::vector<Placed>& rows, int scroll,
+           int total, const Look& look) {
+    out.width = L.w;
+    out.height = L.h;
+    out.px.assign(size_t(L.w) * size_t(L.h), 0xFF000000u | kGround);
+    out.clipX0 = out.clipY0 = 0;
+    out.clipX1 = out.clipY1 = kAnywhere;
+    shapes(out, L, p, rows, scroll, total, look);
+}
+
+void repaint(panel::Picture& out, const Layout& L, const refpages::Page& p, const std::vector<Placed>& rows,
+             int scroll, int total, const Look& look, const Rect& area) {
+    if (out.width != L.w || out.height != L.h || out.px.size() != size_t(L.w) * size_t(L.h)) {
+        paint(out, L, p, rows, scroll, total, look);
+        return;
+    }
+    const Rect a{std::clamp(area.left, 0, L.w), std::clamp(area.top, 0, L.h), std::clamp(area.right, 0, L.w),
+                 std::clamp(area.bottom, 0, L.h)};
+    if (a.empty()) return;
+    for (int y = a.top; y < a.bottom; ++y) {
+        const auto row = out.px.begin() + std::ptrdiff_t(size_t(y) * size_t(L.w));
+        std::fill(row + a.left, row + a.right, 0xFF000000u | kGround);
+    }
+    out.clipX0 = a.left;
+    out.clipY0 = a.top;
+    out.clipX1 = a.right;
+    out.clipY1 = a.bottom;
+    shapes(out, L, p, rows, scroll, total, look);
+    out.clipX0 = out.clipY0 = 0;
+    out.clipX1 = out.clipY1 = kAnywhere;
+}
+
+bool sameRow(const refpages::Row& a, const refpages::Row& b) {
+    return a.style == b.style && a.left == b.left && a.right == b.right && refpages::sameCard(a.link, b.link) &&
+           a.gold == b.gold && a.dot == b.dot && a.picture == b.picture && a.icon == b.icon && a.fold == b.fold;
+}
+
+Rect worldArea(const Layout& L, const std::vector<Placed>& rows, int scroll, int row, const worldmap::Sheet& sheet,
+               const std::string& map) {
+    const worldmap::Tile* t = map.empty() ? nullptr : worldmap::tileOf(sheet, map);
+    if (!t || row < 0 || size_t(row) >= rows.size() || !shown(L, rows[size_t(row)], scroll)) return Rect{};
+    const Placed& r = rows[size_t(row)];
+    const worldmap::Fit f = worldmap::fit(sheet.w, sheet.h, r.w, r.h);
+    const panel::Box tb = tileBox(*t, f, float(r.x), float(L.bodyY + r.y - scroll));
+    const float out = 2.5f * L.s / 2 + 2;  // the widest frame drawn on a map (yours), its smooth edge
+    return pixelsOf(L, panel::Box{tb.x - out, tb.y - out, tb.w + 2 * out, tb.h + 2 * out});
+}
+
+Rect rowArea(const Layout& L, const std::vector<Placed>& rows, int scroll, int i) {
+    if (i < 0 || size_t(i) >= rows.size() || !shown(L, rows[size_t(i)], scroll)) return Rect{};
+    const Placed& r = rows[size_t(i)];
+    const float s = L.s;
+    return pixelsOf(L, panel::Box{float(r.x) - 6 * s, float(L.bodyY + r.y - scroll), float(r.w) + 12 * s, float(r.h)});
+}
+
+std::vector<Rect> hotAreas(const Layout& L, const refpages::Page& p, const std::vector<Placed>& rows, int scroll,
+                           const Look& look) {
+    std::vector<Rect> out;
+    if (look.backShown && look.hover.part == Part::Back) out.push_back(pixelsOf(L, backBox(L)));
+    if (look.hover.part == Part::Close) out.push_back(pixelsOf(L, closeBox(L)));
+    for (const int i : {look.hover.part == Part::Row ? look.hover.row : -1, look.selected})
+        if (i >= 0 && size_t(i) < p.rows.size())
+            if (const Rect a = rowArea(L, rows, scroll, i); !a.empty()) out.push_back(a);
+    return out;
 }
 
 std::vector<Words> words(const Layout& L, const refpages::Page& p, const std::vector<Placed>& rows, int scroll,

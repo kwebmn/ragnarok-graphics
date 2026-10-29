@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 
+#include "core/image.hpp"
 #include "core/reference_pages.hpp"
 #include "core/window_panel.hpp"
 #include "core/world_map.hpp"
@@ -69,6 +70,23 @@ int iconSide(const Layout& L);
 // tiles, the row under the pointer, the headings' rules, the NPCs' dots), the footer, the scroll bar
 void paint(panel::Picture& out, const Layout& L, const refpages::Page& p, const std::vector<Placed>& rows, int scroll,
            int total, const Look& look);
+// 3.0.11-beta.25 (R-77TCM7: «когда по меню вожу, лагат курсор и фпс падает» -
+// the whole window painted again, 290 ms at 4K, for each row the pointer went to): what paint makes, made again only
+// in `area` of a picture paint made at this layout (else all of it) - the rest kept
+void repaint(panel::Picture& out, const Layout& L, const refpages::Page& p, const std::vector<Placed>& rows,
+             int scroll, int total, const Look& look, const Rect& area);
+// Where a look's highlights are drawn, the window's pixels: «back» and the cross under the pointer, the row under it
+// and the one the arrows picked (with its band). Another hover changes these of the old look and the new one only.
+std::vector<Rect> hotAreas(const Layout& L, const refpages::Page& p, const std::vector<Placed>& rows, int scroll,
+                           const Look& look);
+// A row's area as hotAreas has it (with its band; empty when the row is not shown whole) - a row whose icon came
+Rect rowArea(const Layout& L, const std::vector<Placed>& rows, int scroll, int i);
+// 3.0.11-beta.25: a row drawn the same as another (its style, words, link, marks, pictures) - and where a map's frame
+// on the world map's row `row` is drawn (empty: the map not on the sheet, the row not shown whole): the world map's
+// pointer moved to another map, its page made again, only what changed is painted again
+bool sameRow(const refpages::Row& a, const refpages::Row& b);
+Rect worldArea(const Layout& L, const std::vector<Placed>& rows, int scroll, int row, const worldmap::Sheet& sheet,
+               const std::string& map);
 
 enum class Align : uint8_t { Left, Right, Center };
 struct Words {

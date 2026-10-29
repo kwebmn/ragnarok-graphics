@@ -73,6 +73,8 @@ struct State {
     // 3.0.11-beta.18: the cards opened lately (the latest first) and the starred ones, kept in files
     std::vector<refpages::Link> recent, favourites;
     int sel = -1;  // 3.0.11-beta.21: the row picked by the arrows (or the pad's D-pad), -1 none
+    // 3.0.11-beta.25 (R-77TCM7): the highlights' areas to paint again, and those painted but not on the card yet
+    std::vector<Rect> hot, parts;
     std::string here;
     panel::Picture picture;
     uint32_t texture = 0;
@@ -309,6 +311,50 @@ void go(State& s, const refpages::Link& to) {
 }
 
 // 3.0.11-beta.21: the arrows' (and the pad's D-pad's) row - the next one that leads somewhere, kept in view
+// 3.0.11-beta.25 (R-77TCM7: «когда по меню вожу, лагат курсор и фпс падает»): the
+// highlights moved - another row under the pointer, another one picked - so their old areas and their new ones are
+// painted again, not the whole window (290 ms at 4K for each row the pointer went to)
+void highlight(State& s, const refwin::Under& hover, int sel) {
+    for (int pass = 0; pass < 2 && !s.dirty; ++pass) {
+        refwin::Look look;
+        look.hover = s.hover;
+        look.backShown = !s.back.empty();
+        look.selected = s.sel;
+        for (const Rect& a : refwin::hotAreas(s.layout, s.page, s.rows, s.scroll, look)) s.hot.push_back(a);
+        s.hover = hover;
+        s.sel = sel;
+    }
+    s.hover = hover;
+    s.sel = sel;
+}
+
+// 3.0.11-beta.25 (R-77TCM7): the world map's pointer on another map and its page made again (makePage) - when the
+// rows keep their places, only those that changed and the two maps' frames are painted again
+void worldMoved(State& s, const refpages::Page& was, const std::vector<refwin::Placed>& wasRows, int wasScroll,
+                int wasSel, const std::string& wasMap) {
+    if (!s.world || s.scroll != wasScroll || s.sel != wasSel || s.rows.size() != wasRows.size() ||
+        s.page.rows.size() != was.rows.size())
+        return;
+    for (size_t i = 0; i < s.rows.size(); ++i) {
+        const refwin::Placed &a = s.rows[i], &b = wasRows[i];
+        if (a.x != b.x || a.y != b.y || a.w != b.w || a.h != b.h) return;
+    }
+    std::vector<Rect> areas;
+    for (size_t i = 0; i < s.rows.size(); ++i) {
+        if (s.page.rows[i].style == refpages::Style::World) {
+            const std::string* maps[] = {&wasMap, &s.worldHover};
+            for (const std::string* m : maps) {
+                const Rect a = refwin::worldArea(s.layout, s.rows, s.scroll, int(i), s.world->sheet, *m);
+                if (!a.empty()) areas.push_back(a);
+            }
+        } else if (!refwin::sameRow(s.page.rows[i], was.rows[i])) {
+            if (const Rect a = refwin::rowArea(s.layout, s.rows, s.scroll, int(i)); !a.empty()) areas.push_back(a);
+        }
+    }
+    s.dirty = false;
+    s.hot.insert(s.hot.end(), areas.begin(), areas.end());
+}
+
 void step(State& s, int by) {
     const int n = int(s.page.rows.size());
     int i = s.sel;
@@ -318,11 +364,17 @@ void step(State& s, int by) {
         if (s.page.rows[size_t(i)].link.go != refpages::Go::None) break;
     }
     if (i < 0 || i >= n || s.page.rows[size_t(i)].link.go == refpages::Go::None) return;
-    s.sel = i;
     const refwin::Placed& r = s.rows[size_t(i)];
-    if (r.y < s.scroll) s.scroll = refwin::clampScroll(r.y - r.h, s.total, s.layout.bodyH);
-    if (r.y + r.h > s.scroll + s.layout.bodyH)
-        s.scroll = refwin::clampScroll(r.y + 2 * r.h - s.layout.bodyH, s.total, s.layout.bodyH);
+    int scroll = s.scroll;
+    if (r.y < scroll) scroll = refwin::clampScroll(r.y - r.h, s.total, s.layout.bodyH);
+    if (r.y + r.h > scroll + s.layout.bodyH)
+        scroll = refwin::clampScroll(r.y + 2 * r.h - s.layout.bodyH, s.total, s.layout.bodyH);
+    if (scroll == s.scroll) {
+        highlight(s, s.hover, i);
+        return;
+    }
+    s.sel = i;
+    s.scroll = scroll;
     s.dirty = true;
 }
 
@@ -420,11 +472,20 @@ refwin::WorldLook worldLook(const State& s) {
     return w;
 }
 
-void render(State& s) {
-    const settings::Lang l = startup().lang;
-    refwin::Look look{s.hover, !s.back.empty(), worldLook(s), &s.pictures};
+// What the window is painted with - 3.0.11-beta.25: the world map's only on its page (its way found anew each time)
+refwin::Look lookOf(const State& s) {
+    refwin::Look look{s.hover, !s.back.empty(), {}, &s.pictures};
+    for (const refpages::Row& r : s.page.rows)
+        if (r.style == refpages::Style::World) {
+            look.world = worldLook(s);
+            break;
+        }
     look.selected = s.sel;  // 3.0.11-beta.21
-    refwin::paint(s.picture, s.layout, s.page, s.rows, s.scroll, s.total, look);
+    return look;
+}
+
+std::vector<Words> wordsOf(const State& s, const refwin::Look& look) {
+    const settings::Lang l = startup().lang;
     refwin::Texts t;
     t.title = say(Text::RefTitle);
     if (!s.back.empty()) t.back = settings::fmt(settings::tr(l, Text::RefBack), {s.back.back().name});
@@ -444,9 +505,29 @@ void render(State& s) {
                                                                                                           : DT_LEFT;
         gdi.push_back(Words{w.box, utf8Wide(w.text), w.rgb, w.px, w.bold, align, w.wrap});
     }
-    drawWords(s.picture, gdi);
+    return gdi;
+}
+
+void render(State& s) {
+    const refwin::Look look = lookOf(s);
+    refwin::paint(s.picture, s.layout, s.page, s.rows, s.scroll, s.total, look);
+    drawWords(s.picture, wordsOf(s, look));
     s.dirty = false;
     s.upload = true;
+    s.hot.clear();
+    s.parts.clear();
+}
+
+// 3.0.11-beta.25: the highlights' areas only (highlight) - painted again, their words, sent to the card by draw
+void renderHot(State& s) {
+    const refwin::Look look = lookOf(s);
+    const std::vector<Words> gdi = wordsOf(s, look);
+    for (const Rect& a : s.hot) {
+        refwin::repaint(s.picture, s.layout, s.page, s.rows, s.scroll, s.total, look, a);
+        drawWords(s.picture, gdi, a);
+        s.parts.push_back(a);
+    }
+    s.hot.clear();
 }
 
 bool toWindow(const State& s, HWND game, POINT client, float& wx, float& wy) {
@@ -547,13 +628,19 @@ void frame(HWND game, bool enabled, double k, int targetWidth, int targetHeight)
     const std::string map = hover.part == refwin::Part::Tile && s.world ? s.world->sheet.world[size_t(hover.tile)].map
                                                                         : std::string();
     if (map != s.worldHover) {  // the world map's tile under the pointer: told under the map
+        // 3.0.11-beta.25 (R-77TCM7): when the page made again keeps its rows' places, only the rows that changed and
+        // the two maps' frames are painted again (the whole world map at 4K: 23 ms and more for each map)
+        const bool clean = !s.dirty && s.world;
+        const refpages::Page was = clean ? s.page : refpages::Page{};
+        const std::vector<refwin::Placed> wasRows = clean ? s.rows : std::vector<refwin::Placed>{};
+        const int wasScroll = s.scroll, wasSel = s.sel;
+        const std::string wasMap = s.worldHover;
         s.worldHover = map;
         makePage(s);
+        if (clean) worldMoved(s, was, wasRows, wasScroll, wasSel, wasMap);
     }
-    if (hover.part != s.hover.part || hover.row != s.hover.row || hover.tile != s.hover.tile) {
-        s.hover = hover;
-        s.dirty = true;
-    }
+    if (hover.part != s.hover.part || hover.row != s.hover.row || hover.tile != s.hover.tile)
+        highlight(s, hover, s.sel);
     int budget = 8;  // 3.0.11-beta.15: the icons of the rows in view, a few a frame (a long list never stalls)
     for (size_t i = 0; i < s.rows.size() && i < s.page.rows.size() && budget > 0; ++i) {
         const refpages::Row& r = s.page.rows[i];
@@ -561,9 +648,16 @@ void frame(HWND game, bool enabled, double k, int targetWidth, int targetHeight)
             continue;
         loadPicture(s, "icon:" + r.icon, refwin::iconSide(s.layout));
         --budget;
-        s.dirty = true;
+        // 3.0.11-beta.25 (R-77TCM7): the rows with this icon painted again, not the whole window - a long list's
+        // icons come a few a frame
+        for (size_t j = i; j < s.rows.size() && j < s.page.rows.size() && !s.dirty; ++j)
+            if (s.page.rows[j].icon == r.icon)
+                if (const Rect a = refwin::rowArea(s.layout, s.rows, s.scroll, int(j)); !a.empty()) s.hot.push_back(a);
     }
-    if (s.dirty) render(s);
+    if (s.dirty)
+        render(s);
+    else if (!s.hot.empty())
+        renderHot(s);
     s.shown = true;
     block(s, game);
 }
@@ -573,6 +667,22 @@ void draw(FrameRecord& record, gpu::Renderer& renderer) {
     if (!s.shown || s.picture.width <= 0 || s.k <= 0) return;
     int cursor = -1, cx = 0, cy = 0;  // under the game's own cursor
     if (readGameCursor(cx, cy)) cursor = panel::cursorDraw(record, float(cx), float(cy));
+    // 3.0.11-beta.25 (R-77TCM7): the areas painted again since the last frame - only they go to the card (all of the
+    // picture when its texture is not there yet)
+    if (!s.upload && s.texture && s.texW == s.picture.width && s.texH == s.picture.height) {
+        std::vector<uint32_t> px;
+        for (const Rect& a : s.parts) {
+            if (a.empty()) continue;
+            px.resize(size_t(a.width()) * size_t(a.height()));
+            for (int y = a.top; y < a.bottom; ++y)
+                std::copy_n(s.picture.px.begin() + std::ptrdiff_t(size_t(y) * size_t(s.picture.width) + size_t(a.left)),
+                            a.width(), px.begin() + std::ptrdiff_t(size_t(y - a.top) * size_t(a.width())));
+            record.upload(s.texture, 0, a, px.data());
+        }
+    } else if (!s.parts.empty()) {
+        s.upload = true;
+    }
+    s.parts.clear();
     drawPicture(record, renderer, s.picture, s.texture, s.texW, s.texH, s.upload, s.layout.x, s.layout.y, s.k);
     if (cursor >= 0) record.moveLastBefore(record.commands().size() - size_t(cursor) - 1, size_t(cursor));
 }

@@ -14,50 +14,70 @@
 namespace uagfx::win {
 
 void drawWords(panel::Picture& pic, const std::vector<Words>& words) {
-    if (pic.width <= 0 || pic.height <= 0) return;
+    drawWords(pic, words, Rect{0, 0, pic.width, pic.height});
+}
+
+void drawWords(panel::Picture& pic, const std::vector<Words>& words, const Rect& area) {
+    const Rect a{std::max(0, area.left), std::max(0, area.top), std::min(pic.width, area.right),
+                 std::min(pic.height, area.bottom)};
+    if (a.empty() || pic.px.size() != size_t(pic.width) * size_t(pic.height)) return;
+    const int w = a.width(), h = a.height();
     HDC screen = GetDC(nullptr);
     HDC dc = CreateCompatibleDC(screen);
     BITMAPINFO bi{};
     bi.bmiHeader.biSize = sizeof bi.bmiHeader;
-    bi.bmiHeader.biWidth = pic.width;
-    bi.bmiHeader.biHeight = -pic.height;
+    bi.bmiHeader.biWidth = w;
+    bi.bmiHeader.biHeight = -h;
     bi.bmiHeader.biPlanes = 1;
     bi.bmiHeader.biBitCount = 32;
     void* bits = nullptr;
     HBITMAP bmp = CreateDIBSection(dc, &bi, DIB_RGB_COLORS, &bits, nullptr, 0);
     if (bmp && bits) {
         HGDIOBJ oldBmp = SelectObject(dc, bmp);
-        std::memset(bits, 0, size_t(pic.width) * size_t(pic.height) * 4);
+        HGDIOBJ oldFont = nullptr;
+        std::memset(bits, 0, size_t(w) * size_t(h) * 4);
         SetBkMode(dc, TRANSPARENT);
         SetTextColor(dc, RGB(255, 255, 255));
-        for (const Words& w : words) {
-            if (w.text.empty() || w.box.w <= 0) continue;
-            HFONT font = CreateFontW(-std::max(8, int(std::lround(w.px))), 0, 0, 0, w.bold ? FW_SEMIBOLD : FW_NORMAL,
-                                     FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
-                                     ANTIALIASED_QUALITY, DEFAULT_PITCH, L"Segoe UI");
-            HGDIOBJ oldFont = SelectObject(dc, font);
-            RECT r{LONG(std::lround(w.box.x)), LONG(std::lround(w.box.y)), LONG(std::lround(w.box.x + w.box.w)),
-                   LONG(std::lround(w.box.y + w.box.h))};
-            DrawTextW(dc, w.text.c_str(), int(w.text.size()), &r,
-                      (w.wrap ? DT_WORDBREAK | DT_TOP : DT_SINGLELINE | DT_VCENTER | DT_END_ELLIPSIS) | DT_NOPREFIX |
-                          w.align);
-            SelectObject(dc, oldFont);
-            DeleteObject(font);
+        // 3.0.11-beta.25 (R-77TCM7): a font for each size and weight, not for each of the words
+        std::vector<std::pair<int, HFONT>> fonts;  // the height, negative for a bold one
+        for (const Words& word : words) {
+            if (word.text.empty() || word.box.w <= 0) continue;
+            const panel::Box& b = word.box;
+            RECT r{LONG(std::lround(b.x)) - a.left, LONG(std::lround(b.y)) - a.top,
+                   LONG(std::lround(b.x + b.w)) - a.left, LONG(std::lround(b.y + b.h)) - a.top};
+            if (r.right <= 0 || r.bottom <= 0 || r.left >= w || r.top >= h) continue;  // not over the area
+            const int height = std::max(8, int(std::lround(word.px)));
+            const int key = word.bold ? -height : height;
+            HFONT font = nullptr;
+            for (const auto& [k, f] : fonts)
+                if (k == key) font = f;
+            if (!font) {
+                font = CreateFontW(-height, 0, 0, 0, word.bold ? FW_SEMIBOLD : FW_NORMAL, FALSE, FALSE, FALSE,
+                                   DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, ANTIALIASED_QUALITY,
+                                   DEFAULT_PITCH, L"Segoe UI");
+                fonts.emplace_back(key, font);
+            }
+            const HGDIOBJ was = SelectObject(dc, font);
+            if (!oldFont) oldFont = was;
+            DrawTextW(dc, word.text.c_str(), int(word.text.size()), &r,
+                      (word.wrap ? DT_WORDBREAK | DT_TOP : DT_SINGLELINE | DT_VCENTER | DT_END_ELLIPSIS) | DT_NOPREFIX |
+                          word.align);
         }
         GdiFlush();
         const auto* cover = static_cast<const uint32_t*>(bits);
-        for (const Words& w : words) {
-            const int x0 = std::max(0, int(w.box.x)), y0 = std::max(0, int(w.box.y));
-            const int x1 = std::min(pic.width, int(std::ceil(w.box.x + w.box.w)));
-            const int y1 = std::min(pic.height, int(std::ceil(w.box.y + w.box.h)));
+        for (const Words& word : words) {
+            const int x0 = std::max(a.left, int(word.box.x)), y0 = std::max(a.top, int(word.box.y));
+            const int x1 = std::min(a.right, int(std::ceil(word.box.x + word.box.w)));
+            const int y1 = std::min(a.bottom, int(std::ceil(word.box.y + word.box.h)));
             for (int y = y0; y < y1; ++y)
                 for (int x = x0; x < x1; ++x) {
-                    const size_t i = size_t(y) * size_t(pic.width) + size_t(x);
-                    const uint32_t c = cover[i];
+                    const uint32_t c = cover[size_t(y - a.top) * size_t(w) + size_t(x - a.left)];
                     const uint32_t v = std::max({c & 0xFF, (c >> 8) & 0xFF, (c >> 16) & 0xFF});
-                    if (v) panel::over(pic.px[i], w.rgb, float(v) / 255.0f);
+                    if (v) panel::over(pic.px[size_t(y) * size_t(pic.width) + size_t(x)], word.rgb, float(v) / 255.0f);
                 }
         }
+        if (oldFont) SelectObject(dc, oldFont);
+        for (const auto& [k, f] : fonts) DeleteObject(f);
         SelectObject(dc, oldBmp);
     }
     if (bmp) DeleteObject(bmp);

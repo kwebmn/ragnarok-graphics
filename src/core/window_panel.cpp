@@ -38,9 +38,10 @@ float cover(float d) { return std::clamp(0.5f - d, 0.0f, 1.0f); }
 template <typename Distance>
 void shape(Picture& p, const Box& around, const Distance& distance, uint32_t fill, float fillA, uint32_t edgeRgb,
            float edgeA, float edge) {
-    const int x0 = std::max(0, int(std::floor(around.x)) - 1), y0 = std::max(0, int(std::floor(around.y)) - 1);
-    const int x1 = std::min(p.width, int(std::ceil(around.x + around.w)) + 1);
-    const int y1 = std::min(p.height, int(std::ceil(around.y + around.h)) + 1);
+    const int x0 = std::max({0, p.clipX0, int(std::floor(around.x)) - 1});
+    const int y0 = std::max({0, p.clipY0, int(std::floor(around.y)) - 1});
+    const int x1 = std::min({p.width, p.clipX1, int(std::ceil(around.x + around.w)) + 1});
+    const int y1 = std::min({p.height, p.clipY1, int(std::ceil(around.y + around.h)) + 1});
     for (int y = y0; y < y1; ++y)
         for (int x = x0; x < x1; ++x) {
             const float d = distance(float(x) + 0.5f, float(y) + 0.5f);
@@ -56,7 +57,47 @@ void shape(Picture& p, const Box& around, const Distance& distance, uint32_t fil
 
 void roundRect(Picture& p, const Box& b, float r, uint32_t fill, float fillA, uint32_t edgeRgb, float edgeA,
                float edge) {
-    shape(p, b, [&](float x, float y) { return roundBox(x, y, b, r); }, fill, fillA, edgeRgb, edgeA, edge);
+    // 3.0.11-beta.25 (R-77TCM7, «Довідник» painted in 290 ms at 4K): a row's inside - every pixel of it
+    // filled whole and none of the ring, by the distance - is one run; the rule pixel by pixel is left for the rim, a
+    // pixel more of it at each end of the run
+    const int x0 = std::max({0, p.clipX0, int(std::floor(b.x)) - 1});
+    const int y0 = std::max({0, p.clipY0, int(std::floor(b.y)) - 1});
+    const int x1 = std::min({p.width, p.clipX1, int(std::ceil(b.x + b.w)) + 1});
+    const int y1 = std::min({p.height, p.clipY1, int(std::ceil(b.y + b.h)) + 1});
+    const float rr = std::min(r, std::min(b.w, b.h) / 2), cx = b.x + b.w / 2, cy = b.y + b.h / 2;
+    // inside whole and out of the ring: the distance at most this, the corners' centres this far
+    const float reach = rr - 0.5f - (edgeA > 0.0f ? edge : 0.0f);
+    const uint32_t opaque = 0xFF000000u | (fill & 0xFFFFFFu);
+    const auto rim = [&](int y, int from, int to) {
+        for (int x = from; x < to; ++x) {
+            const float d = roundBox(float(x) + 0.5f, float(y) + 0.5f, b, r);
+            const float inside = cover(d);
+            if (inside <= 0.0f) continue;
+            uint32_t& px = p.px[size_t(y) * size_t(p.width) + size_t(x)];
+            over(px, fill, fillA * inside);
+            if (edgeA > 0.0f) over(px, edgeRgb, edgeA * (inside - cover(d + edge)));
+        }
+    };
+    for (int y = y0; y < y1; ++y) {
+        int in0 = x1, in1 = x1;  // the run [in0, in1)
+        const float qy = std::fabs(float(y) + 0.5f - cy) - (b.h / 2 - rr);
+        if (qy <= reach - 1.0f) {
+            const float half = b.w / 2 - rr + (qy <= 0.0f ? reach : std::sqrt(reach * reach - qy * qy)) - 1.0f;
+            const int from = std::max(x0, int(std::ceil(cx - half - 0.5f)));
+            const int to = std::min(x1, int(std::floor(cx + half - 0.5f)) + 1);
+            if (half > 0.0f && from < to) {
+                in0 = from;
+                in1 = to;
+            }
+        }
+        rim(y, x0, in0);
+        uint32_t* row = p.px.data() + size_t(y) * size_t(p.width);
+        if (fillA >= 1.0f)
+            std::fill(row + in0, row + in1, opaque);
+        else if (fillA > 0.0f)
+            for (int x = in0; x < in1; ++x) over(row[x], fill, fillA);
+        rim(y, in1, x1);
+    }
 }
 
 void circle(Picture& p, float cx, float cy, float r, uint32_t rgb, float a) {

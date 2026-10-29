@@ -67,6 +67,8 @@ struct Card {
 struct Picture {
     int width = 0, height = 0;
     std::vector<uint32_t> px;  // premultiplied 0xAARRGGBB, rows top down
+    // 3.0.11-beta.25: the pixels the shapes may change - [clipX0, clipX1) x [clipY0, clipY1); all of them by default
+    int clipX0 = 0, clipY0 = 0, clipX1 = 1 << 30, clipY1 = 1 << 30;
 };
 // `hovered`: the top row's button under the cursor (Close, Layout); `layout`: the cards' now - the button shows the
 // other one

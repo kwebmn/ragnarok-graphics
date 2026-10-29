@@ -1,4 +1,5 @@
 // 3.0.11-beta.11: the world map of «Довідник» - the site's sheet (core/world_map), its page and its row in the window
+#include <map>
 #include <string>
 #include <vector>
 
@@ -140,4 +141,77 @@ TEST(reference_world_marks_an_items_droppers) {
     for (const refpages::Row& r : card.rows)
         link = link || (r.link.go == refpages::Go::World && r.link.map == "item:909");
     CHECK(link);
+}
+
+// 3.0.11-beta.25 (R-77TCM7:
+// «когда по меню вожу, лагат курсор и фпс падает»): another map under the pointer
+// on the world map - its page made again, only the rows that changed and the two maps' frames painted again: the
+// picture as painted whole
+TEST(reference_world_hover_repaint_matches_the_whole) {
+    worldmap::Sheet sh;
+    CHECK(worldmap::parse(kSheet, sh));
+    refindex::Index ix;
+    CHECK(refindex::build(R"({"v":1,"data":1,"commit":"c","date":"d","items":{},"mobs":{},"spawns":{},"routes":[],
+        "shops":[],"npcs":[],"pets":[],"craft":[],"flags":{}})", ix));
+    std::map<std::string, int> players{{"prt_fild08", 4}, {"prontera", 12}};
+    refpages::Context c;
+    c.here = "prontera";
+    c.world = &sh;
+    c.players = &players;
+    int steps = 0, differing = 0, moved = 0;
+    for (const float k : {1.0f, 2.0f}) {
+        const refwin::Layout L = refwin::layout(int(1920 * k), int(1080 * k), k);
+        c.hover.clear();
+        refpages::Page was = refpages::world(ix, Lang::Uk, c);
+        int total = 0;
+        const std::vector<refwin::Placed> rows = refwin::place(L, was, total);
+        panel::Picture sheet;  // the tiles fitted into the row: a pattern
+        sheet.width = rows[1].w;
+        sheet.height = rows[1].h;
+        sheet.px.resize(size_t(sheet.width) * size_t(sheet.height));
+        for (size_t i = 0; i < sheet.px.size(); ++i) sheet.px[i] = 0xFF000000u | uint32_t(i * 2654435761u >> 8);
+        refwin::Look look;
+        look.backShown = true;
+        look.world.picture = &sheet;
+        look.world.sheet = &sh;
+        look.world.here = "prontera";
+        look.world.players = &players;
+        look.world.hereX = 12;
+        look.world.hereY = 15;
+        panel::Picture partial;
+        refwin::paint(partial, L, was, rows, 0, total, look);
+        for (const char* map : {"prt_fild08", "izlude", "prontera", "", "prt_fild08"}) {
+            c.hover = map;
+            const refpages::Page now = refpages::world(ix, Lang::Uk, c);
+            int nowTotal = 0;
+            const std::vector<refwin::Placed> nowRows = refwin::place(L, now, nowTotal);
+            bool same = nowRows.size() == rows.size() && nowTotal == total;
+            for (size_t i = 0; same && i < rows.size(); ++i)
+                same = rows[i].x == nowRows[i].x && rows[i].y == nowRows[i].y && rows[i].h == nowRows[i].h;
+            if (!same) ++moved;
+            refwin::Look nowLook = look;
+            nowLook.world.hover = map;
+            std::vector<Rect> areas;
+            for (size_t i = 0; i < now.rows.size() && i < was.rows.size(); ++i)
+                if (!refwin::sameRow(now.rows[i], was.rows[i])) areas.push_back(refwin::rowArea(L, nowRows, 0, int(i)));
+            areas.push_back(refwin::worldArea(L, nowRows, 0, 1, sh, look.world.hover));
+            areas.push_back(refwin::worldArea(L, nowRows, 0, 1, sh, map));
+            for (const Rect& a : areas)
+                if (!a.empty()) refwin::repaint(partial, L, now, nowRows, 0, nowTotal, nowLook, a);
+            panel::Picture whole;
+            refwin::paint(whole, L, now, nowRows, 0, nowTotal, nowLook);
+            ++steps;
+            if (partial.px != whole.px) ++differing;
+            was = now;
+            look = nowLook;
+        }
+    }
+    CHECK_EQ(steps, 10);
+    CHECK_EQ(moved, 0);  // the pointer's map told in the same row: the places kept
+    CHECK_EQ(differing, 0);
+    CHECK(!refwin::sameRow(refpages::Row{}, refpages::world(ix, Lang::Uk, c).rows[0]));
+    refpages::Row a, b;
+    b.icon = "item:501";
+    CHECK(refwin::sameRow(a, a) && !refwin::sameRow(a, b));
+    CHECK(refwin::worldArea(refwin::layout(1920, 1080, 1.0f), {}, 0, 1, sh, "prontera").empty());
 }

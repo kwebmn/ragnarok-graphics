@@ -29,6 +29,8 @@ struct Words {
 // The words, white on black by GDI into a picture of its size: each one's coverage in its own colour over the
 // picture's shapes (the words' boxes do not overlap)
 void drawWords(panel::Picture& pic, const std::vector<Words>& words);
+// 3.0.11-beta.25: the same over `area` of the picture only (the words there, the rest of the picture kept)
+void drawWords(panel::Picture& pic, const std::vector<Words>& words, const Rect& area);
 // A picture as it is into the frame: its texture made for its size, uploaded when it changed, one quad with its top
 // left at (x, y) in the target's pixels over the game's interface
 void drawPicture(FrameRecord& record, gpu::Renderer& renderer, const panel::Picture& pic, uint32_t& texture, int& texW,
