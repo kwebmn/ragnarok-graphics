@@ -1,3 +1,18 @@
+# uaRO Graphics 3.0.11-beta.11 — what is new
+
+- **The world map in «Reference»** (the first screen's tenth tile): the world of the maps' own minimaps, as on the site
+  (the layout from uaro.kiev.ua, the pictures the client's own minimaps):
+  - your map in a gold frame, you a white dot on it;
+  - the way followed («on the minimap ›» of beta.9) a light blue line from map to map;
+  - the numbers on the maps — players now (of beta.10);
+  - point at a map — its name, its kinds of monsters, players under the map; a click opens its card (with «How to get
+    there»);
+  - «Dungeons ›» — the dungeons by groups, as on the site, with the same numbers.
+- To check: Ctrl+F → «World map»: the gold frame where you are; with «on the minimap ›» on — a light blue line to the
+  target; a click on Prontera opens its card. The log has the line
+  `reference: the world map - 184 maps on the sheet, …`.
+- The Ukrainian words «впускає» are «випадає» now.
+
 # uaRO Graphics 3.0.11-beta.10 — what is new
 
 - **Players now** — from the site's public «Online» page: while the game runs, the app (its game watcher) asks
