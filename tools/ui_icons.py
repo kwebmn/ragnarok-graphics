@@ -39,6 +39,16 @@ ICONS = [
     ('Warn', '<path d="M12 4l9 16H3z"/><path d="M12 10v4.5M12 17.5v.3"/>'),
     # 3.0.11-beta.30: «Головна» - the first screen of «Довідник» (the header's button, the rail's first)
     ('Home', '<path d="M4 11.5L12 4.5l8 7"/><path d="M6.5 9.8V20h11V9.8"/><path d="M10 20v-5.5h4V20"/>'),
+    # 3.0.11-beta.36: the character block's buttons - the game's Basic Info window's: its stats (Alt+A), its gear
+    # (Alt+Q), its items (Alt+E), its skills (Alt+S), its friends (Alt+Z), the options (Alt+O)
+    ('Stats', '<path d="M5 20v-7M10 20V5M15 20v-10M20 20V8"/>'),
+    ('Equip', '<path d="M12 3.5l7 2.8v5.2c0 4.4-2.9 7.9-7 9.5-4.1-1.6-7-5.1-7-9.5V6.3z"/>'),
+    ('Bag', '<path d="M5.5 8.5h13l-1.2 11.5H6.7z"/><path d="M9 8.5V7a3 3 0 0 1 6 0v1.5"/>'),
+    ('Skill', '<path d="M13.5 3L5.5 13.5h6L10.5 21l8-10.5h-6z"/>'),
+    ('Friends', '<circle cx="9" cy="8.5" r="3"/><path d="M3.5 19.5a5.5 5.5 0 0 1 11 0"/>'
+                '<path d="M15.5 5.6a3 3 0 0 1 0 5.8M17 14a5.5 5.5 0 0 1 3.5 5.5"/>'),
+    ('Gear', '<circle cx="12" cy="12" r="3"/>'
+             '<path d="M12 3.5v3M12 17.5v3M3.5 12h3M17.5 12h3M6 6l2.1 2.1M15.9 15.9L18 18M6 18l2.1-2.1M15.9 8.1L18 6"/>'),
 ]
 
 NUMBER = r'[-+]?(?:\d*\.\d+|\d+\.?)(?:[eE][-+]?\d+)?'
