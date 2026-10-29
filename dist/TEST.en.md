@@ -1,3 +1,16 @@
+# uaRO Graphics 3.0.11-beta.15 — what is new
+
+- **Item icons in «Reference»'s lists**: each item has its icon from the client before it («What it drops», the
+  search, the sections, the shops, the crafting); the icons of the rows in view come a few a frame — long lists never
+  stall.
+- **NPCs by their names**: «kafra», «healer», «sailor» — the group «NPCs: N», the nearest to your map first, with the
+  map, the cell and «moves: N»; a click opens the map's card (with «How to get there» and «on the minimap ›»).
+- **«The nearest Kafra» in a map's card**: the Kafra on this map («here · 146, 89») or the one the fewest moves away.
+- The pictures and icons are looked for as the game itself does (its CFileMgr: DATA.INI's archives, zips too) — more
+  are found than in beta.14.
+- To check: Ctrl+F → «poring» → «What it drops» with icons; «kafra» — the nearest Kafra first; the prt_fild08 card —
+  «The nearest Kafra: Prontera City · moves: 1».
+
 # uaRO Graphics 3.0.11-beta.14 — what is new
 
 - **Pictures in «Reference»**: a monster's card shows the monster as it stands in the game (the first frame of the
