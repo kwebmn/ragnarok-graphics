@@ -1,3 +1,12 @@
+# uaRO Graphics 3.0.11-beta.24 — what is new
+
+- **The cursor over our windows — as over the game's**: the world under «Reference», «New minimap (prototype)», «The
+  windows' panel in the game» and the report answer's card no longer reacts to the cursor — no sword over a monster,
+  no talk over an NPC, no names under it; the cursor is the arrow, as over the inventory. Clicks there never reached
+  the world.
+- To check: Ctrl+F, put «Reference» over monsters or NPCs and move the cursor over it — the arrow stays, nothing under
+  the window lights up; outside it all is as before. The log uaro-graphics.log has «world mouse» lines.
+
 # uaRO Graphics 3.0.11-beta.23 — what is new
 
 - **«Reference» from the pad**: uaRO Pad's menu (Start → buttons) has a new action «Reference (uaRO Graphics)» — any
