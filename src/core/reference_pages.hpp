@@ -20,8 +20,9 @@ namespace uagfx::refpages {
 // Expand: a card's long section in full; Follow (3.0.11-beta.9): the way to `map` on the minimap - id 0 on foot, 1 by
 // Kafra (again: no more); World (3.0.11-beta.11): the world map - id 0 the world, 1 the dungeons; Quests, Quest
 // (3.0.11-beta.16): the site's quests by kinds, one quest (its place in the index)
-// Fold (3.0.11-beta.17): a card's section folded or unfolded by the player (id: its Part) - in every card alike
-enum class Go : uint8_t { None, Mob, Item, Map, Shop, Section, Expand, Follow, World, Quests, Quest, Fold };
+// Fold (3.0.11-beta.17): a card's section folded or unfolded by the player (id: its Part) - in every card alike;
+// Star (3.0.11-beta.18): the card in «Обране» or out of it
+enum class Go : uint8_t { None, Mob, Item, Map, Shop, Section, Expand, Follow, World, Quests, Quest, Fold, Star };
 struct Link {
     Go go = Go::None;
     int id = 0;       // a monster's, an item's, a shop's (its place in the index) or a section's
@@ -76,10 +77,20 @@ struct Context {
     const reflive::Live* live = nullptr;     // 3.0.11-beta.12: the players' public MVP timers, the site's market
     long long now = 0;                       // unix time: the timers' minutes
     unsigned folded = 0;                     // 3.0.11-beta.17: the sections (Part bits) the player folded
+    // 3.0.11-beta.18: the cards opened last (the latest first) and the ones the player starred - the first screen's;
+    // a card says whether it is starred
+    const std::vector<Link>* recent = nullptr;
+    const std::vector<Link>* favourites = nullptr;
 };
+// 3.0.11-beta.18: a card's name for the first screen's lists («Poring», «Fly Wing», «Prontera Field (prt_fild08)»);
+// "" when the index has no such
+std::string titleOf(const refindex::Index& ix, settings::Lang l, const Link& link);
+bool sameCard(const Link& a, const Link& b);
+std::string linkText(const Link& link);           // «m 1002», «p prt_fild08» - a line of the kept lists
+bool linkOf(const std::string& line, Link& out);  // back; false: not one
 
-// `online`: the server's players now (3.0.11-beta.10; 0 not known)
-Page home(const refindex::Index& ix, settings::Lang l, int online = 0);
+// `online`: the server's players now (3.0.11-beta.10; 0 not known); `c` (3.0.11-beta.18): its recent and starred
+Page home(const refindex::Index& ix, settings::Lang l, int online = 0, const Context& c = {});
 // `c` (3.0.11-beta.15): the NPCs found the nearest to the player's map first, and how far
 Page found(const refindex::Index& ix, settings::Lang l, const std::string& query, const Context& c = {});
 Page section(const refindex::Index& ix, settings::Lang l, int id);

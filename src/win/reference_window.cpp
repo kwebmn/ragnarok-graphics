@@ -34,6 +34,7 @@ namespace {
 using settings::Text;
 
 constexpr size_t kMostTyped = 40;
+constexpr size_t kMostRecent = 8, kMostKept = 40;  // 3.0.11-beta.18: «Нещодавні», «Обране» at most
 
 struct Entry {  // a page left for another: what «Назад» brings back
     refpages::Link at;
@@ -68,6 +69,8 @@ struct State {
     bool itemFilesRead = false;
     unsigned folded = 0;  // 3.0.11-beta.17: the sections the player folded (refpages::Part bits), kept in a file
     bool foldedRead = false;
+    // 3.0.11-beta.18: the cards opened lately (the latest first) and the starred ones, kept in files
+    std::vector<refpages::Link> recent, favourites;
     std::string here;
     panel::Picture picture;
     uint32_t texture = 0;
@@ -177,7 +180,7 @@ void makePage(State& s) {
         r.style = refpages::Style::Note;
         r.left = say(Text::RefNoData);
         s.page.rows.push_back(r);
-    } else if (s.at.go != refpages::Go::None || !s.query.empty()) {
+    } else {
         refpages::Context c;
         c.here = s.here;
         int w = 0, h = 0;  // 3.0.11-beta.8: the routes start from the part of the map one is in
@@ -190,10 +193,11 @@ void makePage(State& s) {
         c.live = s.live.get();  // 3.0.11-beta.12
         c.now = static_cast<long long>(std::time(nullptr));
         c.folded = s.folded;  // 3.0.11-beta.17
+        c.recent = &s.recent;  // 3.0.11-beta.18
+        c.favourites = &s.favourites;
         s.page = s.at.go != refpages::Go::None ? refpages::open(*s.index, l, s.at, c, s.opened)
-                                               : refpages::found(*s.index, l, s.query, c);  // 3.0.11-beta.15: NPCs
-    } else {
-        s.page = refpages::home(*s.index, l, s.online ? s.online->online : 0);
+                 : !s.query.empty()            ? refpages::found(*s.index, l, s.query, c)  // 3.0.11-beta.15: NPCs
+                                               : refpages::home(*s.index, l, s.online ? s.online->online : 0, c);
     }
     s.rows = refwin::place(s.layout, s.page, s.total);
     s.scroll = refwin::clampScroll(s.scroll, s.total, s.layout.bodyH);
@@ -216,9 +220,56 @@ void makePage(State& s) {
 
 void close(State& s);
 
+// 3.0.11-beta.18: a kept list of cards (one a line: refpages::linkText) - read once, written when it changes
+void keepList(const std::vector<refpages::Link>& list, const char* file) {
+    std::string text;
+    for (const refpages::Link& k : list) text += refpages::linkText(k) + "\n";
+    const std::string path = layout::join(gameDir(), file);
+    if (!writeFileAtomic(path, text)) LOG_INFO("reference: %s cannot be written", path.c_str());
+}
+
+void readList(std::vector<refpages::Link>& list, const char* file) {
+    std::string text;
+    if (!readTextFile(layout::join(gameDir(), file), text)) return;
+    size_t at = 0;
+    while (at < text.size() && list.size() < kMostKept) {
+        size_t end = text.find('\n', at);
+        if (end == std::string::npos) end = text.size();
+        std::string line = text.substr(at, end - at);
+        at = end + 1;
+        if (!line.empty() && line.back() == '\r') line.pop_back();
+        refpages::Link k;
+        if (refpages::linkOf(line, k)) list.push_back(k);
+    }
+}
+
+bool isCard(const refpages::Link& k) {
+    return k.go == refpages::Go::Mob || k.go == refpages::Go::Item || k.go == refpages::Go::Map ||
+           k.go == refpages::Go::Quest;
+}
+
+void noteRecent(State& s) {  // the card opened now: first of «Нещодавні»
+    if (!isCard(s.at)) return;
+    s.recent.erase(std::remove_if(s.recent.begin(), s.recent.end(),
+                                  [&](const refpages::Link& k) { return refpages::sameCard(k, s.at); }),
+                   s.recent.end());
+    s.recent.insert(s.recent.begin(), s.at);
+    if (s.recent.size() > kMostRecent) s.recent.resize(kMostRecent);
+    keepList(s.recent, layout::kReferenceRecent);
+}
+
 void go(State& s, const refpages::Link& to) {
     if (to.go == refpages::Go::Expand) {  // «усі N ›»: the section in full, in place
         s.opened |= 1u << unsigned(to.id);
+        makePage(s);
+        return;
+    }
+    if (to.go == refpages::Go::Star) {  // 3.0.11-beta.18: the card shown into «Обране» or out of it
+        const auto it = std::find_if(s.favourites.begin(), s.favourites.end(),
+                                     [&](const refpages::Link& k) { return refpages::sameCard(k, s.at); });
+        if (it != s.favourites.end()) s.favourites.erase(it);
+        else if (isCard(s.at) && s.favourites.size() < kMostKept) s.favourites.insert(s.favourites.begin(), s.at);
+        keepList(s.favourites, layout::kReferenceFavourites);
         makePage(s);
         return;
     }
@@ -247,6 +298,7 @@ void go(State& s, const refpages::Link& to) {
     s.at = to;
     s.scroll = 0;
     s.opened = 0;
+    noteRecent(s);  // 3.0.11-beta.18
     makePage(s);
 }
 
@@ -285,6 +337,8 @@ void openWindow(State& s, const refpages::Link& at) {
         std::string text;
         if (readTextFile(layout::join(gameDir(), layout::kReferenceFolded), text))
             s.folded = unsigned(std::strtoul(text.c_str(), nullptr, 10));
+        readList(s.recent, layout::kReferenceRecent);  // 3.0.11-beta.18
+        readList(s.favourites, layout::kReferenceFavourites);
     }
     s.open = true;
     s.query.clear();
@@ -294,6 +348,7 @@ void openWindow(State& s, const refpages::Link& at) {
     s.opened = 0;
     s.wantPage = true;
     s.dirty = true;
+    noteRecent(s);  // 3.0.11-beta.18: a card from the minimap's lines too
 }
 
 void close(State& s) {

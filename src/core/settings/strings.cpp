@@ -5125,6 +5125,14 @@ constexpr Entry kTexts[] = {
      "The quests come from uaro.kiev.ua when the game starts - not here yet.",
      "Квести приходять з uaro.kiev.ua під час запуску гри - їх ще немає.",
      "Квесты приходят с uaro.kiev.ua при запуске игры - их ещё нет."},
+    // 3.0.11-beta.18: the first screen's recent and starred cards
+    {Text::RefRecent, "Opened lately", "Нещодавні", "Недавние"},
+    {Text::RefFavourites, "Starred", "Обране", "Избранное"},
+    {Text::RefStar, "Star it ›", "Додати в обране ›", "Добавить в избранное ›"},
+    {Text::RefStarred,
+     "★ Starred (a click: out)",
+     "★ В обраному (клацання - прибрати)",
+     "★ В избранном (щелчок - убрать)"},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

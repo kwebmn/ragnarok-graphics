@@ -495,6 +495,7 @@ enum class Text : uint16_t {
     RefSecQuests, RefSecQuestsHint, RefFoundQuests, RefQuestNpc, RefQuestItems, RefQuestSteps, RefQuestRewards,
     RefQuestFor, RefQuestLevel, RefQuestJobs, RefQuestHeadgear, RefQuestAccess, RefQuestEvents, RefQuestOther,
     RefQuestsNone,
+    RefRecent, RefFavourites, RefStar, RefStarred,  // 3.0.11-beta.18: the first screen's recent and starred cards
     Count
 };
 

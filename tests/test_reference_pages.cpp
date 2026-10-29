@@ -344,3 +344,31 @@ TEST(reference_pages_sections_fold_by_choice) {
     CHECK(indexOf(shut, "Jellopy") == size_t(-1));
     CHECK(indexOf(shut, "Де знайти") != size_t(-1));  // the others as they were
 }
+
+// 3.0.11-beta.18: «Нещодавні» and «Обране» on the first screen, a card's star
+TEST(reference_pages_recent_and_starred) {
+    const refindex::Index ix = index();
+    refpages::Link k;
+    CHECK(refpages::linkOf("m 1002", k) && k.go == refpages::Go::Mob && k.id == 1002);
+    CHECK(refpages::linkOf("p prt_fild08", k) && k.go == refpages::Go::Map && k.map == "prt_fild08");
+    CHECK(!refpages::linkOf("p prt fild08", k));
+    CHECK(!refpages::linkOf("x 1", k));
+    CHECK_EQ(refpages::linkText(refpages::Link{refpages::Go::Item, 601, ""}), std::string("i 601"));
+    const std::vector<refpages::Link> recent{{refpages::Go::Mob, 1002, ""}, {refpages::Go::Map, 0, "prt_fild08"},
+                                             {refpages::Go::Mob, 9999, ""}};  // one the index has not: left out
+    const std::vector<refpages::Link> starred{{refpages::Go::Item, 601, ""}};
+    refpages::Context c = ctx("");
+    c.recent = &recent;
+    c.favourites = &starred;
+    const refpages::Page home = refpages::home(ix, Lang::Uk, 0, c);
+    const size_t fav = indexOf(home, "Обране"), lately = indexOf(home, "Нещодавні");
+    CHECK(fav != size_t(-1) && lately != size_t(-1) && fav < lately);
+    CHECK(home.rows[fav + 1].left == "Fly Wing" && home.rows[fav + 1].icon == "item:601");
+    CHECK(home.rows[lately + 1].left == "Poring" && home.rows[lately + 2].left == "Prontera Field (prt_fild08)");
+    CHECK(home.rows[lately + 3].style != refpages::Style::Row || home.rows[lately + 3].left != "#9999");
+    const refpages::Page wing = refpages::open(ix, Lang::Uk, refpages::Link{refpages::Go::Item, 601, ""}, c);
+    CHECK(wing.rows[1].link.go == refpages::Go::Star && wing.rows[1].gold);  // starred
+    const refpages::Page poring = refpages::open(ix, Lang::Uk, refpages::Link{refpages::Go::Mob, 1002, ""}, c);
+    CHECK(poring.rows[1].link.go == refpages::Go::Star && !poring.rows[1].gold);
+    CHECK_EQ(poring.rows[1].left, std::string("Додати в обране ›"));
+}

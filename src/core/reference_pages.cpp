@@ -1,8 +1,10 @@
 #include "core/reference_pages.hpp"
 
 #include <algorithm>
+#include <cctype>
 #include <climits>
 #include <cstdio>
+#include <cstdlib>
 #include <map>
 #include <set>
 #include <tuple>
@@ -371,7 +373,7 @@ std::string typeName(int t, Lang l) {
     }
 }
 
-Page home(const refindex::Index& ix, Lang l, int online) {
+Page home(const refindex::Index& ix, Lang l, int online, const Context& c) {
     Page p;
     p.name = say(l, Text::RefTitle);
     size_t bosses = 0, cards = 0, maps = 0, kafra = 0;
@@ -420,6 +422,19 @@ Page home(const refindex::Index& ix, Lang l, int online) {
     world.right = say(l, Text::RefWorldHint);
     world.link = Link{Go::World, 0, ""};
     p.rows.push_back(std::move(world));
+    const std::pair<const std::vector<Link>*, Text> lists[] = {{c.favourites, Text::RefFavourites},  // 3.0.11-beta.18
+                                                               {c.recent, Text::RefRecent}};
+    for (const auto& [list, name] : lists) {
+        if (!list || list->empty()) continue;
+        std::vector<Row> rows;
+        for (const Link& k : *list) {
+            const std::string t = titleOf(ix, l, k);
+            if (!t.empty()) rows.push_back(linked(t, "", k));
+        }
+        if (rows.empty()) continue;
+        p.rows.push_back(heading(say(l, name)));
+        for (Row& r : rows) p.rows.push_back(std::move(r));
+    }
     if (online > 0) p.rows.push_back(note(sayf(l, Text::RefOnlineNow, {number(online, l)})));  // 3.0.11-beta.10
     p.rows.push_back(note(say(l, Text::RefKeys)));
     return p;
@@ -1103,7 +1118,59 @@ Page card(const refindex::Index& ix, Lang l, const Link& link, const Context& c,
 }  // namespace
 
 Page open(const refindex::Index& ix, Lang l, const Link& link, const Context& c, unsigned opened) {
-    return folded(card(ix, l, link, c, opened), c.folded);
+    Page p = folded(card(ix, l, link, c, opened), c.folded);
+    const bool card = link.go == Go::Mob || link.go == Go::Item || link.go == Go::Map || link.go == Go::Quest;
+    if (card && c.favourites && !p.rows.empty() && p.rows[0].style == Style::Title) {  // 3.0.11-beta.18
+        const bool starred = std::any_of(c.favourites->begin(), c.favourites->end(),
+                                         [&](const Link& f) { return sameCard(f, link); });
+        Row star = note(say(l, starred ? Text::RefStarred : Text::RefStar));
+        star.link = Link{Go::Star, 0, ""};
+        star.gold = starred;
+        p.rows.insert(p.rows.begin() + 1, std::move(star));
+    }
+    return p;
+}
+
+std::string titleOf(const refindex::Index& ix, Lang l, const Link& link) {
+    switch (link.go) {
+        case Go::Mob: return ix.mobs.count(link.id) ? ix.mobs.at(link.id).name : "";
+        case Go::Item: return ix.items.count(link.id) ? ix.items.at(link.id).name : "";
+        case Go::Map: return link.map.empty() ? "" : refindex::mapTitle(ix, link.map);
+        case Go::Quest:
+            return link.id >= 0 && size_t(link.id) < ix.quests.size()
+                       ? refquests::textOf(ix.quests[size_t(link.id)].title, questLang(l))
+                       : "";
+        default: return "";
+    }
+}
+
+bool sameCard(const Link& a, const Link& b) { return a.go == b.go && a.id == b.id && a.map == b.map; }
+
+std::string linkText(const Link& link) {
+    switch (link.go) {
+        case Go::Mob: return "m " + std::to_string(link.id);
+        case Go::Item: return "i " + std::to_string(link.id);
+        case Go::Map: return "p " + link.map;
+        case Go::Quest: return "q " + std::to_string(link.id);
+        default: return "";
+    }
+}
+
+bool linkOf(const std::string& line, Link& out) {
+    if (line.size() < 3 || line[1] != ' ') return false;
+    const std::string rest = line.substr(2);
+    switch (line[0]) {
+        case 'm': out = Link{Go::Mob, std::atoi(rest.c_str()), ""}; return out.id > 0;
+        case 'i': out = Link{Go::Item, std::atoi(rest.c_str()), ""}; return out.id > 0;
+        case 'q': out = Link{Go::Quest, std::atoi(rest.c_str()), ""}; return out.id >= 0;
+        case 'p': {
+            for (char ch : rest)
+                if (!std::isalnum(static_cast<unsigned char>(ch)) && ch != '_' && ch != '-') return false;
+            out = Link{Go::Map, 0, rest};
+            return true;
+        }
+        default: return false;
+    }
 }
 
 namespace {
@@ -1119,6 +1186,7 @@ Page card(const refindex::Index& ix, Lang l, const Link& link, const Context& c,
         case Go::Quests: return quests(ix, l);
         case Go::Quest: return quest(ix, l, link.id);
         case Go::Fold:
+        case Go::Star:
         case Go::None:
         case Go::Expand:
         case Go::Follow: break;
