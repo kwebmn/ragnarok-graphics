@@ -3,9 +3,11 @@
 #include <windows.h>
 
 #include <string>
+#include <vector>
 
 #include "core/layout.hpp"
 #include "core/reference_pack.hpp"
+#include "win/game_files.hpp"
 #include "win/log.hpp"
 #include "win/paths.hpp"
 
@@ -46,6 +48,12 @@ DWORD WINAPI readPack(void*) {  // its own thread: the pack's JSON is a megabyte
         const std::string pack = layout::join(gameDir(), std::string(layout::kReference) + "\\" + refpack::fileName(m));
         ok = readTextFile(pack, gz) && refpack::verify(gz, m) && refindex::gunzip(gz, json) &&
              refindex::build(json, *index);
+        if (ok) {  // 3.0.11-beta.7: the client's names of the maps, for «Довідник»
+            gamefiles::Reader files(gameDir());
+            std::vector<uint8_t> bytes;
+            if (files.read("data\\mapnametable.txt", bytes, nullptr))
+                index->mapNames = refindex::mapNames(std::string(bytes.begin(), bytes.end()));
+        }
         if (ok)
             LOG_INFO("reference: the pack of %s (commit %s): %zu maps, %zu monsters, read in %llu ms",
                      refpack::dateOf(m).c_str(), m.commit.substr(0, 8).c_str(), index->maps.size(),

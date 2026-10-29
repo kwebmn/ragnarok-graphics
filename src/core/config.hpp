@@ -536,6 +536,8 @@ struct Config {
     // 3.0.11-beta.6: [interface] minimap_npcs / minimap_warps / minimap_mobs - its hints from the game's reference
     // (core/reference_index): the NPCs as dots, the warps to other maps as rings, the map's monsters under it
     bool minimapNpcs = true, minimapWarps = true, minimapMobs = true;
+    // 3.0.11-beta.7: [interface] reference - «Довідник» (win/reference_window): Ctrl+F in the game
+    bool referenceWindow = false;
     PanelLayout panelLayout = PanelLayout::Row;
     int panelSize = 100, panelOpacity = 90;
     std::string panelPlace;

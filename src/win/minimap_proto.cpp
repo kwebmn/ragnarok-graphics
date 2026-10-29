@@ -12,6 +12,7 @@
 #include "core/minimap_proto.hpp"
 #include "core/pack_source.hpp"
 #include "core/reference_index.hpp"
+#include "core/reference_pages.hpp"
 #include "core/settings/strings.hpp"
 #include "pad/win/game_window.hpp"
 #include "win/game_camera.hpp"
@@ -21,6 +22,7 @@
 #include "win/picture_draw.hpp"
 #include "win/real_ddraw.hpp"
 #include "win/reference_load.hpp"
+#include "win/reference_window.hpp"
 
 namespace uagfx::win::minimapproto {
 namespace {
@@ -147,9 +149,7 @@ void buildHints(State& s) {
         const std::string name = mob != s.index->mobs.end() ? mob->second.name : "#" + std::to_string(m.id);
         const bool boss = mob != s.index->mobs.end() && mob->second.boss;
         std::wstring right = std::to_wstring(m.count);
-        if (boss && m.respawnMs >= kBossRespawnMs)
-            right = utf8Wide(settings::fmt(settings::tr(startup().lang, settings::Text::MinimapRespawn),
-                                           {std::to_string((m.respawnMs + 30000) / 60000)}));
+        if (boss && m.respawnMs >= kBossRespawnMs) right = utf8Wide(refpages::respawn(m.respawnMs, startup().lang));
         s.lines.push_back(Line{utf8Wide((boss ? "\xE2\x98\x85 " : "") + name), right, boss});
     }
     if (room < h->mobs.size())
@@ -333,6 +333,10 @@ bool mouse(HWND game, UINT m, LPARAM lp, LRESULT& result) {
     if (m == WM_LBUTTONDOWN && s.clicks++ == 0)  // the check of the prototype: the character did not walk
         LOG_INFO("minimap: a click on the new minimap kept from the game (the player at %d, %d on %s)", s.cell.x,
                  s.cell.y, s.map.c_str());
+    // 3.0.11-beta.7: the line with the map's name - its card in «Довідник» (when it is on)
+    if (m == WM_LBUTTONDOWN && ty >= float(s.geometry.y + s.geometry.size) &&
+        ty < float(s.geometry.y + s.geometry.size + s.geometry.textH))
+        referencewin::openMap(s.map);
     result = 0;
     return true;
 }

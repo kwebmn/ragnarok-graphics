@@ -27,6 +27,7 @@
 #include "win/server_night.hpp"
 #include "win/answer_card.hpp"
 #include "win/minimap_proto.hpp"
+#include "win/reference_window.hpp"
 #include "win/buff_overlay.hpp"
 #include "win/notifier.hpp"
 #include "win/platform.hpp"
@@ -522,6 +523,7 @@ void Context::endScene() {
         minimapproto::draw(record, *renderer);  // 3.0.11-beta.1: the new minimap (prototype)
         answercard::draw(record, *renderer);  // 3.0.9-beta.4: the developer's answer
         windowSwitch_.draw(record, *renderer);
+        referencewin::draw(record, *renderer);  // 3.0.11-beta.7: «Довідник», over the rest
         record.takeWork();  // the driver's own draws are not the game's
     }
     flush();
@@ -555,6 +557,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
         minimapproto::draw(record, *renderer);  // 3.0.11-beta.1
         answercard::draw(record, *renderer);  // 3.0.9-beta.4
         windowSwitch_.draw(record, *renderer);
+        referencewin::draw(record, *renderer);  // 3.0.11-beta.7
     }
     record.takeWork();  // the driver's own draws are not the game's
     flush();
@@ -744,6 +747,10 @@ void Context::present(const Rect& source, bool waitForVblank) {
     // 3.0.11-beta.1: [interface] minimap - the new interface's minimap prototype in the game's own one's corner
     minimapproto::frame(window, {config.newMinimap, config.minimapNpcs, config.minimapWarps, config.minimapMobs},
                         scaleMade_ ? plan.k : 1.0,
+                        scaleMade_ ? plan.targetWidth : shadow.width(),
+                        scaleMade_ ? plan.targetHeight : shadow.height());
+    // 3.0.11-beta.7: [interface] reference - «Довідник» (Ctrl+F)
+    referencewin::frame(window, config.referenceWindow, scaleMade_ ? plan.k : 1.0,
                         scaleMade_ ? plan.targetWidth : shadow.width(),
                         scaleMade_ ? plan.targetHeight : shadow.height());
     // 2.5.16: [quality] world_scale - Direct3D 11 draws the world smaller and makes it larger before the interface;

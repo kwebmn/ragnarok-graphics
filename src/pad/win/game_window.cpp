@@ -14,8 +14,9 @@ struct Framed {  // the window as the client made it, while it is borderless
 };
 Framed g_framed;
 bool g_clipped = false;
-// 3.0.3-beta.8: setBlocked; 3.0.9-beta.4: the panel's, the card's; 3.0.11-beta.1: the new minimap's
-constexpr int kBlockers = 3;
+// 3.0.3-beta.8: setBlocked; 3.0.9-beta.4: the panel's, the card's; 3.0.11-beta.1: the new minimap's; 3.0.11-beta.7:
+// «Довідник»'s
+constexpr int kBlockers = 4;
 bool g_blocked[kBlockers] = {}, g_blockedAll[kBlockers] = {};
 RECT g_blockedRect[kBlockers]{};
 
@@ -107,7 +108,7 @@ void releaseCursor() {
 }
 
 void setBlocked(Blocker who, const RECT* rect, bool all) {
-    const int i = who == Blocker::Minimap ? 2 : who == Blocker::Card ? 1 : 0;
+    const int i = who == Blocker::Reference ? 3 : who == Blocker::Minimap ? 2 : who == Blocker::Card ? 1 : 0;
     g_blocked[i] = rect != nullptr;
     if (rect) g_blockedRect[i] = *rect;
     g_blockedAll[i] = all;

@@ -182,6 +182,10 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("minimap_mobs", flag(running.minimapMobs), flag(file.minimapMobs)));
         n.minimapMobs = file.minimapMobs;
     }
+    if (file.referenceWindow != running.referenceWindow) {  // 3.0.11-beta.7: «Довідник», at once
+        u.applied.push_back(change("reference", flag(running.referenceWindow), flag(file.referenceWindow)));
+        n.referenceWindow = file.referenceWindow;
+    }
     if (file.panelShow != running.panelShow) {  // 3.0.3-beta.8: the game windows' panel
         u.applied.push_back(change("show", flag(running.panelShow), flag(file.panelShow)));
         n.panelShow = file.panelShow;

@@ -464,6 +464,21 @@ enum class Text : uint16_t {
     // 3.0.11-beta.6: the minimap's hints - their switches and the words on it
     InterfaceMinimapNpcs, InterfaceMinimapNpcsHint, InterfaceMinimapWarps, InterfaceMinimapWarpsHint,
     InterfaceMinimapMobs, InterfaceMinimapMobsHint, MinimapRespawn, MinimapMore, MinimapNoReference, MinimapNoMonsters,
+    // 3.0.11-beta.7: «Довідник» - its switch, the window's words, the cards' words
+    InterfaceReference, InterfaceReferenceHint, RefTitle, RefSearchHint, RefBack, RefFooter, RefNoData, RefNothing,
+    RefSecMobs, RefSecMobsHint, RefSecBosses, RefSecBossesHint, RefSecItems, RefSecItemsHint, RefSecCards,
+    RefSecCardsHint, RefSecMaps, RefSecMapsHint, RefSecShops, RefSecShopsHint, RefSecTeleports, RefSecTeleportsHint,
+    RefSecPets, RefSecPetsHint, RefSecCraft, RefSecCraftHint, RefFoundMobs, RefFoundItems, RefFoundMaps, RefShownOf,
+    RefWhere, RefDrops, RefDroppedBy, RefSoldAt, RefCraftOf, RefUsedIn, RefPet, RefWhoHere, RefExits, RefTeleports,
+    RefShopsHere, RefNpcs, RefShopItems, RefLevel, RefHp, RefExp, RefWeight, RefPrice, RefSlots, RefYouHere,
+    RefNowhere, RefNoDrops, RefMvpReward, RefZeny, RefPetLure, RefPetEgg, RefPetFood, RefPetEquip, RefBoss,
+    RefItemsCount, RefMobKinds, RefType0, RefType2, RefType3, RefType4, RefType5, RefType6, RefType7,
+    RefType8, RefType10, RefType11, RefType18, RefTypeOther, RefEle0, RefEle1, RefEle2, RefEle3, RefEle4, RefEle5,
+    RefEle6, RefEle7, RefEle8, RefEle9, RefRace0, RefRace1, RefRace2, RefRace3, RefRace4, RefRace5, RefRace6,
+    RefRace7, RefRace8, RefRace9, RefSize0, RefSize1, RefSize2, RefFlagTown, RefFlagPvp, RefFlagGvg,
+    RefFlagNoTeleport, RefFlagNoMemo, RefFlagNoSave,
+    RefHours, RefHoursMinutes,  // 3.0.11-beta.7: a long respawn
+    RefAll, RefKeys,            // a long section's «усі N ›»; the keys on the first screen
     Count
 };
 

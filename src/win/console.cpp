@@ -160,7 +160,8 @@ void Console::build(Lang lang, const Config& config) {
         if (settingOf("interface.minimap")) {
             rows_.push_back(Row{Kind::Heading, tr(lang, Text::InterfaceHeading), 0});
             rows_.push_back(Row{Kind::Box, "interface.minimap", 0});
-            for (const char* k : {"interface.minimap_npcs", "interface.minimap_warps", "interface.minimap_mobs"})
+            for (const char* k : {"interface.minimap_npcs", "interface.minimap_warps", "interface.minimap_mobs",
+                                  "interface.reference"})
                 if (settingOf(k)) rows_.push_back(Row{Kind::Box, k, 0});  // 3.0.11-beta.6: its hints
         }
         // 3.0.3-beta.8: the game windows' panel (the user: on or off in the console too)

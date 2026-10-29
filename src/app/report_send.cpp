@@ -279,8 +279,9 @@ int watchGame(unsigned long pid, int logSlot) {
     std::string ini;
     readFile(ourFile(exeFolder(), layout::File::Ini), ini);
     const Config config = parseConfig(ini);
-    // 3.0.11-beta.5: the game's reference pack, the new interface on - only when the site has another one
-    if (config.newMinimap) {
+    // 3.0.11-beta.5: the game's reference pack, the new interface on (3.0.11-beta.7: or «Довідник») - only when the
+    // site has another one
+    if (config.newMinimap || config.referenceWindow) {
         std::string error;
         noteReference(exeFolder(), error);
     }

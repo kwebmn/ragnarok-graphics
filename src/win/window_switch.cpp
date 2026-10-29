@@ -4,6 +4,7 @@
 
 #include "win/answer_card.hpp"
 #include "win/minimap_proto.hpp"
+#include "win/reference_window.hpp"
 #include "win/code_page.hpp"
 #include "win/game_camera.hpp"
 #include "win/log.hpp"
@@ -22,6 +23,7 @@ uint32_t g_diedAt = 0, g_hitAt = 0, g_whisperAt = 0;  // 3.0.4-beta.4: windowmar
 
 LRESULT CALLBACK gameProc(HWND w, UINT m, WPARAM wp, LPARAM lp) {
     if (g_switch) {
+        if (referencewin::key(m, wp, lp)) return 0;  // 3.0.11-beta.7: Ctrl+F, and every key while «Довідник» is open
         if (m == WM_KEYDOWN && minimapproto::key(unsigned(wp))) return 0;  // 3.0.11-beta.4: Ctrl+Tab, the new minimap's
         if ((m == WM_KEYDOWN || m == WM_SYSKEYDOWN) && g_switch->key(unsigned(wp), lp)) return 0;
         if (m == WM_ACTIVATE && g_switch->activate(w, wp)) return 1;  // the game's own answer to it
@@ -30,6 +32,7 @@ LRESULT CALLBACK gameProc(HWND w, UINT m, WPARAM wp, LPARAM lp) {
         if (m == WM_DESTROY) notifier::gone(w);
         LRESULT answer = 0;  // 3.0.3-beta.8: the mouse over the panel in the game's picture is the panel's
         if (answercard::mouse(w, m, lp, answer)) return answer;  // 3.0.9-beta.4: and over the answer card the card's
+        if (referencewin::mouse(w, m, wp, lp, answer)) return answer;  // 3.0.11-beta.7: over «Довідник» its own
         if (minimapproto::mouse(w, m, lp, answer)) return answer;  // 3.0.11-beta.1: the new minimap's
         if (g_switch->mouse(w, m, lp, answer)) return answer;
     }

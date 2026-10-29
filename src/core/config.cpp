@@ -489,6 +489,8 @@ Config parseConfig(const std::string& text) {
             setBool(val, c.minimapWarps);
         } else if (key == "interface.minimap_mobs") {
             setBool(val, c.minimapMobs);
+        } else if (key == "interface.reference") {  // 3.0.11-beta.7: «Довідник»
+            setBool(val, c.referenceWindow);
         } else if (key == "panel.hidden") {
             setBool(val, c.panelHidden);
         } else if (key == "panel.layout") {
