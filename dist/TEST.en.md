@@ -1,3 +1,11 @@
+# uaRO Graphics 3.0.11-beta.19 — what is new
+
+- **A monster on the world map**: a monster's card has «On the world map ›» under «Where to find»: the world map with
+  gold frames on every map it lives on and how many live there; under it the dungeons and rooms with it (not on the
+  world map itself). Pointing at a map tells its name and «Poring ×70», a click opens its card with «How to get there».
+- To check: Ctrl+F → «poring» → «On the world map ›» — frames on the fields of Prontera, Geffen and Payon, under it
+  «Dungeons and rooms: Labyrinth Forest ×5 …».
+
 # uaRO Graphics 3.0.11-beta.18 — what is new
 
 - **«Starred» and «Opened lately» on «Reference»'s first screen**: under the tiles — the cards marked with a star and
