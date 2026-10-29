@@ -1,3 +1,20 @@
+# uaRO Graphics 3.0.11-beta.40 — what is new
+
+- **The hotbar (stage 8 of the new interface).** At the bottom middle — the game's hotkeys bar redrawn: nine cells
+  F1-F9 of the row shown with the row's number (F12 goes round the rows as before). Each cell — its icon, its key, a
+  skill's level, an item's count in the bag; none left — the icon dimmed and «0». Pointed at — the name in a tip, a
+  click — used as its key would. In the game's battle mode (/battlemode) — all three rows with the letters Q, A, Z.
+- A skill from the skills window and an item from the bag can be dragged right onto a cell of the new bar. To take
+  one away or move it — the pencil on the right: the game's own bar shows, the tick beside it — back.
+- An item let go over any new part of the interface (the minimap, the character block, the buffs…) no longer falls
+  on the ground.
+- With the chat window at the bottom left, the bar moves to the right of it.
+- «Interface» has «Hotbar»; with the new minimap it is on by itself.
+- To check: the cells show what the old bar did; a click on a skill and on a potion — as the F key; F12 — another
+  row; a potion dragged from the bag onto a cell — it is there; the pencil — the old bar shows, the tick — it hides.
+  The log's lines `hotbar: the game's slots - ...`, `hotbar: the cell F1 (...) used through the game's bar` and
+  `hotbar: a drop on the cell ...`.
+
 # uaRO Graphics 3.0.11-beta.39 — what is new
 
 - **The party (stage 7 of the new interface).** At the top left under the character block — the party's members:
