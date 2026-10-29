@@ -44,6 +44,7 @@ struct WorldLook {
     std::vector<std::string> route;           // the followed way's maps, from here on
     const std::map<std::string, int>* players = nullptr;
     std::string hover;                        // the tile under the pointer
+    std::map<std::string, int> marks;         // 3.0.11-beta.19: maps marked (a monster's) with their numbers
 };
 // What is under a point of the window (its own pixels); `sheet`: the world map's tiles under the pointer
 Under under(const Layout& L, const refpages::Page& p, const std::vector<Placed>& rows, int scroll, bool backShown,

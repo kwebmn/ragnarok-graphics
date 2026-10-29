@@ -5133,6 +5133,10 @@ constexpr Entry kTexts[] = {
      "★ Starred (a click: out)",
      "★ В обраному (клацання - прибрати)",
      "★ В избранном (щелчок - убрать)"},
+    // 3.0.11-beta.19: a monster's maps on the world map
+    {Text::RefOnWorld, "On the world map ›", "Показати на карті світу ›", "Показать на карте мира ›"},
+    {Text::RefWorldOf, "{1} on the world map", "{1} на карті світу", "{1} на карте мира"},
+    {Text::RefAlsoInside, "Dungeons and rooms", "Підземелля й приміщення", "Подземелья и помещения"},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

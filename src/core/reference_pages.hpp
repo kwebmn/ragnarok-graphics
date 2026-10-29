@@ -104,8 +104,11 @@ Page shop(const refindex::Index& ix, settings::Lang l, int index);
 // 3.0.11-beta.16: the site's quests by kinds, a quest's card (who gives it, what it takes, its steps, its reward)
 Page quests(const refindex::Index& ix, settings::Lang l);
 Page quest(const refindex::Index& ix, settings::Lang l, int index);
-// 3.0.11-beta.11: the world map (its picture row, the tile under the pointer told under it) and the dungeons by groups
-Page world(const refindex::Index& ix, settings::Lang l, const Context& c);
+// 3.0.11-beta.11: the world map (its picture row, the tile under the pointer told under it) and the dungeons by groups;
+// `marks` (3.0.11-beta.19): "mob:<id>" - the monster's maps marked on it with its numbers there, its dungeons under it
+Page world(const refindex::Index& ix, settings::Lang l, const Context& c, const std::string& marks = "");
+// The maps a world map's `marks` names, with the numbers to show on them
+std::map<std::string, int> worldMarks(const refindex::Index& ix, const std::string& marks);
 Page dungeons(const refindex::Index& ix, settings::Lang l, const Context& c);
 Page open(const refindex::Index& ix, settings::Lang l, const Link& link, const Context& c,
           unsigned opened = 0);  // by its kind

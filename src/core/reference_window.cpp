@@ -248,7 +248,7 @@ void paintWorld(panel::Picture& out, const panel::Box& b, const WorldLook& w, fl
         panel::circle(out, x, y, 5 * s + 1.5f, 0x000000, 0.85f);
         panel::circle(out, x, y, 5 * s, 0xFFFFFF, 1.0f);
     }
-    if (w.players)
+    if (w.players && w.marks.empty())  // a monster's marks instead of the players while it is shown
         for (const worldmap::Tile& t : w.sheet->world) {
             const auto n = w.players->find(t.map);
             if (n == w.players->end() || n->second <= 0) continue;
@@ -256,6 +256,14 @@ void paintWorld(panel::Picture& out, const panel::Box& b, const WorldLook& w, fl
             panel::circle(out, tb.x + tb.w - 2 * s, tb.y + 2 * s, 9 * s + 1, kRoute, 0.9f);
             panel::circle(out, tb.x + tb.w - 2 * s, tb.y + 2 * s, 9 * s, kBadge, 1.0f);
         }
+    for (const auto& [map, n] : w.marks) {  // 3.0.11-beta.19: the monster's maps - gold frames, its numbers
+        const worldmap::Tile* t = worldmap::tileOf(*w.sheet, map);
+        if (!t) continue;
+        const panel::Box tb = tileBox(*t, f, ox, oy);
+        outline(out, tb, 2 * s, kGold, 1.0f);
+        panel::circle(out, tb.x + tb.w / 2, tb.y + tb.h / 2, 11 * s + 1, kGold, 0.95f);
+        panel::circle(out, tb.x + tb.w / 2, tb.y + tb.h / 2, 11 * s, kBadge, 1.0f);
+    }
 }
 
 }  // namespace
@@ -375,7 +383,16 @@ std::vector<Words> words(const Layout& L, const refpages::Page& p, const std::ve
                 break;
             }
             case refpages::Style::World:  // the players' numbers in their badges
-                if (look.world.sheet && look.world.players) {
+                if (look.world.sheet && !look.world.marks.empty()) {  // 3.0.11-beta.19: the monster's numbers
+                    const worldmap::Fit f = worldmap::fit(look.world.sheet->w, look.world.sheet->h, int(w), int(h));
+                    for (const auto& [map, n] : look.world.marks) {
+                        const worldmap::Tile* t = worldmap::tileOf(*look.world.sheet, map);
+                        if (!t) continue;
+                        const panel::Box tb = tileBox(*t, f, float(int(x)), float(int(y)));
+                        const panel::Box badge{tb.x + tb.w / 2 - 11 * s, tb.y + tb.h / 2 - 9 * s, 22 * s, 18 * s};
+                        out.push_back(Words{badge, std::to_string(n), kGold, 10.5f * s, true, Align::Center});
+                    }
+                } else if (look.world.sheet && look.world.players) {
                     const worldmap::Fit f = worldmap::fit(look.world.sheet->w, look.world.sheet->h, int(w), int(h));
                     for (const worldmap::Tile& t : look.world.sheet->world) {
                         const auto n = look.world.players->find(t.map);

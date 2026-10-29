@@ -713,6 +713,7 @@ Page mob(const refindex::Index& ix, Lang l, int id, const Context& c, unsigned o
         }
         p.rows.back().right = std::to_string(list.size());
         capped(p, std::move(rows), Where, opened, l);
+        p.rows.push_back(linked(say(l, Text::RefOnWorld), "", Link{Go::World, 0, "mob:" + std::to_string(id)}));
     }
     timers(ix, l, p, id, c);  // 3.0.11-beta.12
     elements(l, p, m, opened);  // 3.0.11-beta.13
@@ -1037,12 +1038,24 @@ Page quest(const refindex::Index& ix, Lang l, int index) {
     return p;
 }
 
-Page world(const refindex::Index& ix, Lang l, const Context& c) {
+std::map<std::string, int> worldMarks(const refindex::Index& ix, const std::string& marks) {
+    std::map<std::string, int> out;
+    if (marks.rfind("mob:", 0) == 0) {
+        const auto where = ix.spawnsOf.find(std::atoi(marks.c_str() + 4));
+        if (where != ix.spawnsOf.end())
+            for (const refindex::Where& w : where->second) out[w.map] += w.count;
+    }
+    return out;
+}
+
+Page world(const refindex::Index& ix, Lang l, const Context& c, const std::string& marks) {
     Page p;
     p.name = say(l, Text::RefWorld);
     Row title;
     title.style = Style::Title;
     title.left = say(l, Text::RefWorld);
+    const int mob = marks.rfind("mob:", 0) == 0 ? std::atoi(marks.c_str() + 4) : 0;
+    if (mob > 0) title.left = sayf(l, Text::RefWorldOf, {mobName(ix, mob)});  // 3.0.11-beta.19
     title.right = say(l, Text::RefDungeons) + " ›";
     title.link = Link{Go::World, 1, ""};
     p.rows.push_back(title);
@@ -1053,16 +1066,27 @@ Page world(const refindex::Index& ix, Lang l, const Context& c) {
     Row picture;
     picture.style = Style::World;
     p.rows.push_back(picture);
+    const std::map<std::string, int> marked = worldMarks(ix, marks);
     const worldmap::Tile* t = c.hover.empty() ? nullptr : worldmap::tileOf(*c.world, c.hover);
     if (!t) {
         p.rows.push_back(note(say(l, Text::RefWorldHelp)));
-        return p;
+    } else {
+        std::string line = refindex::mapTitle(ix, t->map);
+        const auto m = marked.find(t->map);
+        if (m != marked.end()) line += " · " + mobName(ix, mob) + " ×" + std::to_string(m->second);
+        const std::string more = mapLine(ix, l, t->map, c);
+        if (!more.empty()) line += " · " + more;
+        if (t->map == c.here) line += " · " + say(l, Text::RefYouHere);
+        p.rows.push_back(note(line));
     }
-    std::string line = refindex::mapTitle(ix, t->map);
-    const std::string more = mapLine(ix, l, t->map, c);
-    if (!more.empty()) line += " · " + more;
-    if (t->map == c.here) line += " · " + say(l, Text::RefYouHere);
-    p.rows.push_back(note(line));
+    std::vector<Row> under;  // the marked maps not on the world's sheet: dungeons, rooms
+    for (const auto& [map, n] : marked)
+        if (!worldmap::tileOf(*c.world, map))
+            under.push_back(linked(refindex::mapTitle(ix, map), "×" + std::to_string(n), toMap(map)));
+    if (!under.empty()) {
+        p.rows.push_back(heading(say(l, Text::RefAlsoInside), std::to_string(under.size())));
+        for (Row& r : under) p.rows.push_back(std::move(r));
+    }
     return p;
 }
 
@@ -1182,7 +1206,7 @@ Page card(const refindex::Index& ix, Lang l, const Link& link, const Context& c,
         case Go::Map: return map(ix, l, link.map, c, opened);
         case Go::Shop: return shop(ix, l, link.id);
         case Go::Section: return section(ix, l, link.id);
-        case Go::World: return link.id == 1 ? dungeons(ix, l, c) : world(ix, l, c);
+        case Go::World: return link.id == 1 ? dungeons(ix, l, c) : world(ix, l, c, link.map);
         case Go::Quests: return quests(ix, l);
         case Go::Quest: return quest(ix, l, link.id);
         case Go::Fold:

@@ -95,3 +95,32 @@ TEST(reference_world_pages) {
     const refwin::Under u = refwin::under(L, w, rows, 0, true, x, y, &sh);
     CHECK(u.part == refwin::Part::Tile && u.row == 1 && u.tile == 0);
 }
+
+// 3.0.11-beta.19: a monster's maps on the world map - its numbers there, the ones off the sheet listed under it
+TEST(reference_world_marks_a_monster) {
+    worldmap::Sheet sh;
+    CHECK(worldmap::parse(kSheet, sh));
+    refindex::Index ix;
+    CHECK(refindex::build(R"({"v":1,"data":1,"commit":"c","date":"d","items":{},
+        "mobs":{"1002":["Poring",1,50,2,1,1,3,1,1,0,[],[],null]},
+        "spawns":{"prt_fild08":[[1002,100,0,0,0,0,0]],"prt_sewb1":[[1002,5,0,0,0,0,0]]},"routes":[],"shops":[],
+        "npcs":[],"pets":[],"craft":[],"flags":{}})", ix));
+    const auto marks = refpages::worldMarks(ix, "mob:1002");
+    CHECK_EQ(marks.size(), size_t(2));
+    CHECK_EQ(marks.at("prt_fild08"), 100);
+    CHECK(refpages::worldMarks(ix, "").empty());
+    refpages::Context c;
+    c.world = &sh;
+    const refpages::Page p = refpages::world(ix, Lang::Uk, c, "mob:1002");
+    CHECK_EQ(p.rows[0].left, std::string("Poring на карті світу"));
+    size_t inside = size_t(-1);
+    for (size_t i = 0; i < p.rows.size(); ++i)
+        if (p.rows[i].left == "Підземелля й приміщення") inside = i;
+    CHECK(inside != size_t(-1));
+    CHECK(p.rows[inside + 1].left == "prt_sewb1" && p.rows[inside + 1].right == "×5");  // not on the sheet
+    const refpages::Page card = refpages::mob(ix, Lang::Uk, 1002, c);
+    bool link = false;
+    for (const refpages::Row& r : card.rows)
+        link = link || (r.link.go == refpages::Go::World && r.link.map == "mob:1002");
+    CHECK(link);
+}

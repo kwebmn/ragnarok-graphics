@@ -365,6 +365,7 @@ refwin::WorldLook worldLook(const State& s) {
     w.sheet = &s.world->sheet;
     w.here = s.here;
     w.hover = s.worldHover;
+    if (s.at.go == refpages::Go::World) w.marks = refpages::worldMarks(*s.index, s.at.map);  // 3.0.11-beta.19
     if (s.online) w.players = &s.online->maps;
     int x = -1, y = -1, mw = 0, mh = 0;
     const bool cell = readPlayerCell(x, y, mw, mh);
