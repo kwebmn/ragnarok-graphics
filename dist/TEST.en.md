@@ -1,3 +1,17 @@
+# uaRO Graphics 3.0.11-beta.28 — what is new
+
+- **«Reference» as in the concept — the third stage, the search results**: groups «MONSTERS · 7», «ITEMS · 89» with
+  a note at the right («the commonest first», «the nearest first»); each row has its icon, its name with the found
+  word on a gold ground, a line under it (the price and the shops, how many monsters drop it; the level and on how
+  many maps; «town», «you are here») and at the right what it is («item», «monster», «location», «quest», «NPC»).
+- A group shows its first 8, the rest behind «N more ›» (a click or Enter opens all, up to 100). The first result
+  is picked at once — Enter opens it, the arrows go on.
+- New: items by their service names — a group of their own («peco wing» finds Peco Peco Feather:
+  Peco_Wing_Feather); monsters by their other kRO names («wander man» — Wanderer) once the site updates its pack.
+  Nothing found — what to try.
+- The search is faster: 1 ms a key instead of 16–18 ms.
+- To check: Ctrl+F → «wing», «poring», «prontera», «xyz»: the groups, the gold marks of the word, «N more ›», Enter.
+
 # uaRO Graphics 3.0.11-beta.27 — what is new
 
 - **«Reference» as in the concept — the second stage, the cards**: the sections' rail at the left with icons and
