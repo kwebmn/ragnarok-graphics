@@ -31,6 +31,12 @@ ICONS = [
                  '<path d="M19 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h5"/>'),
     ('Route', '<circle cx="6" cy="18" r="2.5"/><circle cx="18" cy="6" r="2.5"/>'
               '<path d="M8.5 18H15a3 3 0 0 0 0-6H9a3 3 0 0 1 0-6h6.5"/>'),
+    # 3.0.11-beta.29, the world map's (v19_route): its dungeons' tab, its zoom's buttons, the panel's warning
+    ('Dungeon', '<path d="M4 20V9l3-2 3 2 2-1.5L14 9l3-2 3 2v11z"/><path d="M10 20v-4.5a2 2 0 0 1 4 0V20"/>'),
+    ('Minus', '<path d="M6 12h12"/>'),
+    ('Plus', '<path d="M12 6v12M6 12h12"/>'),
+    ('Expand', '<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>'),
+    ('Warn', '<path d="M12 4l9 16H3z"/><path d="M12 10v4.5M12 17.5v.3"/>'),
 ]
 
 NUMBER = r'[-+]?(?:\d*\.\d+|\d+\.?)(?:[eE][-+]?\d+)?'
