@@ -17,6 +17,7 @@ namespace {
 constexpr const char* kManifestPath = "/api/public/game/pack.json";
 constexpr const char* kOnlinePath = "/api/public/online.json";  // 3.0.11-beta.10: the site's «Онлайн»
 constexpr const char* kWorldPath = "/assets/worldmap/worldmap.json";  // 3.0.11-beta.11: the site's world map
+constexpr const char* kLivePath = "/api/public/game/live.json";  // 3.0.11-beta.12: MVP timers, the market
 constexpr long long kOnlineAgain = 90;  // seconds: younger counts are kept (several game windows, several watchers)
 
 std::wstring folderOf(const std::wstring& dir) { return dir + L"\\" + wide(layout::kReference); }
@@ -85,6 +86,28 @@ bool noteWorld(const std::wstring& dir, std::string& error) {
     makeFolder(folderOf(dir));
     if (!writeFileAtomic(file, text)) {
         error = "the world map could not be written";
+        return false;
+    }
+    return true;
+}
+
+bool noteLive(const std::wstring& dir, std::string& error) {
+    std::string text;
+    reflive::Live there;  // another game window's watcher asked a moment ago
+    const long long now = static_cast<long long>(std::time(nullptr));
+    const std::wstring file = dir + L"\\" + wide(layout::kReferenceLive);
+    if (readFile(file, text) && reflive::read(text, there) && now - there.at >= 0 && now - there.at < kOnlineAgain)
+        return true;
+    if (!fetchPath(kLivePath, text, error, 4u << 20)) return false;
+    reflive::Live l;
+    if (!reflive::fromSite(text, now, l)) {
+        error = "uaro.kiev.ua: not the game's live data";
+        return false;
+    }
+    makeFolder(dir + L"\\" + wide(layout::kOurs));
+    makeFolder(folderOf(dir));
+    if (!writeFileAtomic(file, reflive::write(l))) {
+        error = "the game's live data could not be written";
         return false;
     }
     return true;

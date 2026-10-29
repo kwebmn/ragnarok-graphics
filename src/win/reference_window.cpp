@@ -3,6 +3,7 @@
 #include <windowsx.h>
 
 #include <algorithm>
+#include <ctime>
 #include <memory>
 #include <string>
 #include <vector>
@@ -47,6 +48,8 @@ struct State {
     refwin::Under hover;
     std::shared_ptr<const refindex::Index> index;
     std::shared_ptr<const reflive::Online> online;  // 3.0.11-beta.10: the players now (null: none fresh)
+    std::shared_ptr<const reflive::Live> live;      // 3.0.11-beta.12: MVP timers, the market (null: none fresh)
+    ULONGLONG madeAt = 0;                           // the page's minutes: made again each minute with timers
     std::shared_ptr<const reference::World> world;  // 3.0.11-beta.11: the world map (null: not made yet)
     panel::Picture worldPicture;                    // its picture at its row's size
     std::string worldHover;                         // the map under the pointer there
@@ -83,6 +86,8 @@ void makePage(State& s) {
         if (s.online) c.players = &s.online->maps;  // 3.0.11-beta.10
         if (s.world) c.world = &s.world->sheet;     // 3.0.11-beta.11
         c.hover = s.worldHover;
+        c.live = s.live.get();  // 3.0.11-beta.12
+        c.now = static_cast<long long>(std::time(nullptr));
         s.page = refpages::open(*s.index, l, s.at, c, s.opened);
     } else if (!s.query.empty()) {
         s.page = refpages::found(*s.index, l, s.query);
@@ -91,6 +96,7 @@ void makePage(State& s) {
     }
     s.rows = refwin::place(s.layout, s.page, s.total);
     s.scroll = refwin::clampScroll(s.scroll, s.total, s.layout.bodyH);
+    s.madeAt = GetTickCount64();
     for (size_t i = 0; i < s.rows.size() && i < s.page.rows.size(); ++i) {  // 3.0.11-beta.11: the world's picture
         const refwin::Placed& r = s.rows[i];
         if (s.page.rows[i].style != refpages::Style::World || !s.world) continue;
@@ -296,6 +302,11 @@ void frame(HWND game, bool enabled, double k, int targetWidth, int targetHeight)
     const auto online = reference::online();
     if (online != s.online) {
         s.online = online;
+        s.wantPage = true;
+    }
+    const auto live = reference::live();  // 3.0.11-beta.12: and the timers' minutes go on
+    if (live != s.live || (s.live && GetTickCount64() - s.madeAt >= 60000)) {
+        s.live = live;
         s.wantPage = true;
     }
     if (s.at.go == refpages::Go::World) {  // 3.0.11-beta.11: made at the first look at it

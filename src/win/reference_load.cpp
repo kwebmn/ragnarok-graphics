@@ -153,6 +153,26 @@ struct Live {  // 3.0.11-beta.10: online.json, small - read on the game's thread
 
 }  // namespace
 
+std::shared_ptr<const reflive::Live> live() {
+    static std::shared_ptr<const reflive::Live> current;  // the game's thread alone
+    static unsigned long long stamp = 0;
+    static ULONGLONG lookedAt = 0;
+    const ULONGLONG now = GetTickCount64();
+    if (lookedAt == 0 || now - lookedAt >= kLookEveryMs) {
+        lookedAt = now;
+        const std::string path = layout::join(gameDir(), layout::kReferenceLive);
+        const unsigned long long time = writeTime(path);
+        std::string text;
+        auto read = std::make_shared<reflive::Live>();
+        if (time && time != stamp && readTextFile(path, text) && reflive::read(text, *read)) {
+            stamp = time;
+            current = std::move(read);
+        }
+    }
+    if (!current || !reflive::fresh(*current, static_cast<long long>(std::time(nullptr)))) return nullptr;
+    return current;
+}
+
 std::shared_ptr<const reflive::Online> online() {
     static Live l;  // the game's thread alone (the window, the minimap)
     const ULONGLONG now = GetTickCount64();

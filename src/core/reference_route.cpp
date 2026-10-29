@@ -152,4 +152,82 @@ Route find(const refindex::Index& ix, const std::string& from, int x, int y, con
     return r;
 }
 
+namespace {
+
+// From the player's map to every node: the cost and the edge it came by (free moves alone when `walk`)
+struct Reach {
+    std::vector<Cost> best;
+    std::vector<const Graph::Edge*> by;
+    std::vector<uint32_t> from;
+};
+
+Reach reach(const refindex::Index& ix, const Graph& g, const std::string& map, int x, int y, bool walk) {
+    Reach r;
+    r.best.assign(g.nodes.size(), Cost{INT_MAX, INT_MAX, LLONG_MAX});
+    r.by.assign(g.nodes.size(), nullptr);
+    r.from.assign(g.nodes.size(), UINT32_MAX);
+    const auto start = g.ofMap.find(map);
+    if (start == g.ofMap.end()) return r;
+    using Item = std::pair<Cost, uint32_t>;
+    std::priority_queue<Item, std::vector<Item>, std::greater<Item>> open;
+    const walkgrid::Grid* grid = gridOf(ix, map);
+    std::vector<uint8_t> mine;
+    if (grid && grid->partCount > 0 && x >= 0 && y >= 0) mine = grid->around(x, y, kLandReach);
+    for (uint32_t i = 0; i < start->second.second; ++i) {
+        const uint32_t node = start->second.first + i;
+        if (!mine.empty() && g.nodes[node].part != mine.front()) continue;
+        r.best[node] = Cost{0, 0, 0};
+        open.push({r.best[node], node});
+    }
+    while (!open.empty()) {
+        const auto [cost, node] = open.top();
+        open.pop();
+        if (cost != r.best[node]) continue;
+        for (const Graph::Edge& e : g.out[node]) {
+            if (e.move->conditional || (walk && e.move->paid)) continue;
+            const Cost next = cost + costOf(*e.move);
+            if (next < r.best[e.to]) {
+                r.best[e.to] = next;
+                r.by[e.to] = &e;
+                r.from[e.to] = node;
+                open.push({next, e.to});
+            }
+        }
+    }
+    return r;
+}
+
+// Each map's cheapest node
+std::unordered_map<std::string, uint32_t> nearestNodes(const Graph& g, const Reach& r) {
+    std::unordered_map<std::string, uint32_t> out;
+    for (uint32_t n = 0; n < g.nodes.size(); ++n) {
+        if (std::get<1>(r.best[n]) == INT_MAX) continue;
+        const auto it = out.find(g.nodes[n].map);
+        if (it == out.end() || r.best[n] < r.best[it->second]) out[g.nodes[n].map] = n;
+    }
+    return out;
+}
+
+}  // namespace
+
+std::unordered_map<std::string, Far> movesFrom(const refindex::Index& ix, const std::string& from, int x, int y) {
+    std::unordered_map<std::string, Far> out;
+    if (!ix.graph) return out;
+    const Graph& g = *ix.graph;
+    const Reach foot = reach(ix, g, from, x, y, true), any = reach(ix, g, from, x, y, false);
+    const auto walked = nearestNodes(g, foot);
+    for (const auto& [map, node] : nearestNodes(g, any)) {
+        Far f;
+        f.moves = std::get<1>(any.best[node]);
+        const auto w = walked.find(map);
+        if (w == walked.end() || std::get<1>(foot.best[w->second]) > f.moves) {
+            f.paid = true;
+            for (uint32_t n = node; any.by[n]; n = any.from[n])
+                f.kafra = f.kafra || any.by[n]->move->how == refindex::How::Kafra;
+        }
+        out.emplace(map, f);
+    }
+    return out;
+}
+
 }  // namespace uagfx::refroute

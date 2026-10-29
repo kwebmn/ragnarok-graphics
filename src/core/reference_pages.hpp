@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "core/reference_index.hpp"
+#include "core/reference_live.hpp"
 #include "core/reference_route.hpp"
 #include "core/world_map.hpp"
 #include "core/settings/strings.hpp"
@@ -61,6 +62,8 @@ struct Context {
     const std::map<std::string, int>* players = nullptr;  // 3.0.11-beta.10: players on each map now (the site's)
     const worldmap::Sheet* world = nullptr;  // 3.0.11-beta.11: the site's world map sheet (null: not here yet)
     std::string hover;                       // 3.0.11-beta.11: the world map's tile under the pointer
+    const reflive::Live* live = nullptr;     // 3.0.11-beta.12: the players' public MVP timers, the site's market
+    long long now = 0;                       // unix time: the timers' minutes
 };
 
 // `online`: the server's players now (3.0.11-beta.10; 0 not known)
@@ -69,8 +72,9 @@ Page found(const refindex::Index& ix, settings::Lang l, const std::string& query
 Page section(const refindex::Index& ix, settings::Lang l, int id);
 // `here`: the player's map (it comes first in «Де знайти», marked; a map's card shows the way from it - 3.0.11-beta.8)
 // `opened`: bits of Part shown in full
-Page mob(const refindex::Index& ix, settings::Lang l, int id, const std::string& here, unsigned opened = 0);
-Page item(const refindex::Index& ix, settings::Lang l, int id, unsigned opened = 0);
+Page mob(const refindex::Index& ix, settings::Lang l, int id, const Context& c, unsigned opened = 0);
+// «Де купити» (3.0.11-beta.12): of the cheapest the nearest to the player's map first, and how far
+Page item(const refindex::Index& ix, settings::Lang l, int id, const Context& c, unsigned opened = 0);
 Page map(const refindex::Index& ix, settings::Lang l, const std::string& code, const Context& c, unsigned opened = 0);
 Page shop(const refindex::Index& ix, settings::Lang l, int index);
 // 3.0.11-beta.11: the world map (its picture row, the tile under the pointer told under it) and the dungeons by groups

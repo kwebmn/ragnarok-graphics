@@ -5089,6 +5089,16 @@ constexpr Entry kTexts[] = {
      "Ваша карта - золотом, шлях, яким ведуть, - блакитним, число - гравці зараз; клацання по карті відкриває картку.",
      "Ваша карта - золотом, путь, по которому ведут, - голубым, число - игроки сейчас; щелчок по карте открывает "
      "карточку."},
+    // 3.0.11-beta.12: the players' public MVP timers, the site's market (core/reference_live)
+    {Text::RefTimers, "Players' timers", "Таймери гравців", "Таймеры игроков"},
+    {Text::RefTimerSoon, "in {1}", "через {1}", "через {1}"},
+    {Text::RefTimerDue, "should be up", "вже має бути", "уже должен быть"},
+    {Text::RefTimerAgo, "killed {1} ago", "вбито {1} тому", "убит {1} назад"},
+    {Text::RefTimerNoMap, "the map not told", "карту не вказано", "карта не указана"},
+    {Text::RefMarket, "On the site's market", "На ринку сайту", "На рынке сайта"},
+    {Text::RefMarketFrom, "from {1}", "від {1}", "от {1}"},
+    {Text::RefMarketLots, "lots: {1} · pieces: {2}", "лотів: {1} · штук: {2}", "лотов: {1} · штук: {2}"},
+    {Text::MinimapTimerDue, "up", "вже", "уже"},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

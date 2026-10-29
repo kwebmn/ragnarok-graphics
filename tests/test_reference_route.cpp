@@ -258,3 +258,18 @@ TEST(reference_live_counts_from_the_site) {
     const refpages::Page home = refpages::home(*ix, Lang::Uk, 104);
     CHECK_EQ(home.rows[home.rows.size() - 2].left, std::string("Зараз у грі: 104"));
 }
+
+// 3.0.11-beta.12: how far each map is from the player's (core/reference_route movesFrom) - on foot, or fewer paying
+TEST(reference_route_how_far_each_map_is) {
+    const auto ix = index();
+    const auto far = refroute::movesFrom(*ix, "town");
+    CHECK_EQ(far.at("field").moves, 1);
+    CHECK(!far.at("field").paid);
+    CHECK_EQ(far.at("cave").moves, 4);  // the Guide's way has a condition: not counted
+    CHECK(!far.at("cave").paid);
+    CHECK_EQ(far.at("isle").moves, 1);  // by Kafra alone
+    CHECK(far.at("isle").paid && far.at("isle").kafra);
+    CHECK_EQ(far.at("town").moves, 0);
+    CHECK(refroute::movesFrom(*ix, "nowhere").empty());
+    CHECK_EQ(refroute::movesFrom(*ix, "tower", 8, 3).at("cave").moves, 1);  // the upper floor
+}

@@ -486,6 +486,9 @@ enum class Text : uint16_t {
     RefRouteFollow, RefRouteFollowing, MinimapRouteLeft, MinimapRouteThere, MinimapRouteNone,
     RefPlayersNow, RefOnlineNow,  // 3.0.11-beta.10: the site's «Онлайн»
     RefWorld, RefWorldHint, RefDungeons, RefWorldNone, RefWorldHelp,  // 3.0.11-beta.11: the world map
+    // 3.0.11-beta.12: the players' public MVP timers, the site's market
+    RefTimers, RefTimerSoon, RefTimerDue, RefTimerAgo, RefTimerNoMap, RefMarket, RefMarketFrom, RefMarketLots,
+    MinimapTimerDue,
     Count
 };
 

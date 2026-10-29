@@ -1,10 +1,12 @@
 #include "core/reference_pages.hpp"
 
 #include <algorithm>
+#include <climits>
 #include <cstdio>
 #include <map>
 #include <set>
 #include <tuple>
+#include <unordered_map>
 
 #include "core/reference_route.hpp"
 
@@ -71,6 +73,69 @@ void capped(Page& p, std::vector<Row> rows, Part part, unsigned opened, Lang l) 
     for (size_t i = 0; i < n; ++i) p.rows.push_back(std::move(rows[i]));
     if (!all)
         p.rows.push_back(linked(sayf(l, Text::RefAll, {std::to_string(rows.size())}), "", Link{Go::Expand, part, ""}));
+}
+
+// 3.0.11-beta.12: a time as the respawns are told («23 хв», «2 год 5 хв»), a minute at the least
+std::string respawnText(long long seconds, Lang l) {
+    const long long ms = std::max<long long>(seconds, 60) * 1000;
+    return respawn(int(std::min<long long>(ms, INT_MAX)), l);  // up to some 596 hours
+}
+
+// 3.0.11-beta.12: a monster's respawn on a map after death, as the pack has it (the map not told: its first), 0 none
+long long respawnOn(const refindex::Index& ix, int mob, const std::string& map) {
+    const auto where = ix.spawnsOf.find(mob);
+    if (where == ix.spawnsOf.end() || where->second.empty()) return 0;
+    for (const refindex::Where& w : where->second)
+        if (w.map == map) return w.respawnMs;
+    return map.empty() ? where->second.front().respawnMs : 0;
+}
+
+// «Таймери гравців»: the public timers of the site's MVP page (the latest a map) - when it comes back by the server's
+// respawn, how long ago it was killed
+void timers(const refindex::Index& ix, Lang l, Page& p, int mob, const Context& c) {
+    if (!c.live || c.now <= 0) return;
+    std::vector<const reflive::Timer*> latest;
+    for (const reflive::Timer& t : c.live->timers)
+        if (t.mob == mob && std::none_of(latest.begin(), latest.end(), [&](const reflive::Timer* o) {
+                return o->map == t.map;
+            }))
+            latest.push_back(&t);
+    if (latest.empty()) return;
+    p.rows.push_back(heading(say(l, Text::RefTimers), std::to_string(latest.size())));
+    for (const reflive::Timer* t : latest) {
+        const long long ago = std::max(0LL, c.now - t->killed);
+        const long long respawn = respawnOn(ix, mob, t->map) / 1000;
+        std::string right = sayf(l, Text::RefTimerAgo, {respawnText(ago, l)});
+        if (respawn > 0) {
+            const long long left = t->killed + respawn - c.now;
+            right = (left > 0 ? sayf(l, Text::RefTimerSoon, {respawnText(left, l)}) : say(l, Text::RefTimerDue)) +
+                    " · " + right;
+        }
+        Row r = t->map.empty() ? linked(say(l, Text::RefTimerNoMap), right, Link{})
+                               : linked(refindex::mapTitle(ix, t->map), right, toMap(t->map));
+        r.gold = respawn > 0 && t->killed + respawn <= c.now;
+        p.rows.push_back(std::move(r));
+    }
+}
+
+// «На ринку сайту»: the cheapest of the active lots, how many lots and pieces
+void market(Lang l, Page& p, int item, const Context& c) {
+    if (!c.live) return;
+    const auto m = c.live->market.find(item);
+    if (m == c.live->market.end()) return;
+    p.rows.push_back(heading(say(l, Text::RefMarket)));
+    Row r;
+    r.left = sayf(l, Text::RefMarketFrom, {sayf(l, Text::RefZeny, {number(m->second.cheapest, l)})});
+    r.right = sayf(l, Text::RefMarketLots, {std::to_string(m->second.lots), std::to_string(m->second.pieces)});
+    r.gold = true;
+    p.rows.push_back(std::move(r));
+}
+
+// 3.0.11-beta.12: how far a map is - «переходів: 3», by paying «переходів: 1 · Kafra»
+std::string farNote(const refroute::Far& f, Lang l) {
+    std::string s = sayf(l, Text::RefRouteMoves, {std::to_string(f.moves)});
+    if (f.paid) s += f.kafra ? " · Kafra" : " · NPC";
+    return s;
 }
 
 // 3.0.11-beta.8: a move of a route - where to take it: a warp's cell, the NPC with its price
@@ -441,7 +506,8 @@ Page section(const refindex::Index& ix, Lang l, int id) {
     return p;
 }
 
-Page mob(const refindex::Index& ix, Lang l, int id, const std::string& here, unsigned opened) {
+Page mob(const refindex::Index& ix, Lang l, int id, const Context& c, unsigned opened) {
+    const std::string& here = c.here;
     Page p;
     const auto it = ix.mobs.find(id);
     if (it == ix.mobs.end()) return p;
@@ -468,11 +534,15 @@ Page mob(const refindex::Index& ix, Lang l, int id, const std::string& here, uns
     } else {
         std::vector<refindex::Where> list = where->second;
         std::stable_partition(list.begin(), list.end(), [&](const refindex::Where& w) { return w.map == here; });
+        const auto moves =
+            here.empty() ? std::unordered_map<std::string, refroute::Far>{} : refroute::movesFrom(ix, here);
         std::vector<Row> rows;
         for (const refindex::Where& w : list) {
             std::string right = "×" + std::to_string(w.count);
             if (w.respawnMs >= 600000) right += " · " + minutes(l, w.respawnMs);
             if (w.map == here) right = say(l, Text::RefYouHere) + " · " + right;
+            const auto far = moves.find(w.map);  // 3.0.11-beta.12: how far from here
+            if (w.map != here && far != moves.end()) right += " · " + farNote(far->second, l);
             Row r = linked(refindex::mapTitle(ix, w.map), right, toMap(w.map));
             r.gold = w.map == here;
             rows.push_back(std::move(r));
@@ -480,6 +550,7 @@ Page mob(const refindex::Index& ix, Lang l, int id, const std::string& here, uns
         p.rows.back().right = std::to_string(list.size());
         capped(p, std::move(rows), Where, opened, l);
     }
+    timers(ix, l, p, id, c);  // 3.0.11-beta.12
     p.rows.push_back(heading(say(l, Text::RefDrops)));
     if (m.drops.empty()) p.rows.push_back(note(say(l, Text::RefNoDrops)));
     std::vector<refindex::Drop> drops = m.drops;
@@ -504,7 +575,8 @@ Page mob(const refindex::Index& ix, Lang l, int id, const std::string& here, uns
     return p;
 }
 
-Page item(const refindex::Index& ix, Lang l, int id, unsigned opened) {
+Page item(const refindex::Index& ix, Lang l, int id, const Context& c, unsigned opened) {
+    const std::string& here = c.here;
     Page p;
     const auto it = ix.items.find(id);
     if (it == ix.items.end()) return p;
@@ -523,6 +595,7 @@ Page item(const refindex::Index& ix, Lang l, int id, unsigned opened) {
     if (i.buy > 0) sub.left += " · " + sayf(l, Text::RefPrice, {number(i.buy, l)});
     if (i.slots > 0) sub.left += " · " + sayf(l, Text::RefSlots, {std::to_string(i.slots)});
     p.rows.push_back(sub);
+    market(l, p, id, c);  // 3.0.11-beta.12
 
     const auto by = ix.droppedBy.find(id);
     if (by != ix.droppedBy.end()) {
@@ -541,11 +614,29 @@ Page item(const refindex::Index& ix, Lang l, int id, unsigned opened) {
     const auto at = ix.soldAt.find(id);
     if (at != ix.soldAt.end()) {
         p.rows.push_back(heading(say(l, Text::RefSoldAt), std::to_string(at->second.size())));
+        // 3.0.11-beta.12: of the cheapest the nearest first (your map's, then by the moves from it)
+        const auto moves =
+            here.empty() ? std::unordered_map<std::string, refroute::Far>{} : refroute::movesFrom(ix, here);
+        auto far = [&](const std::string& map) {  // on foot before paying for as many moves
+            if (map == here) return 0;
+            const auto m = moves.find(map);
+            return m == moves.end() ? INT_MAX : m->second.moves * 2 + (m->second.paid ? 1 : 0);
+        };
+        std::vector<std::pair<int, int>> sold = at->second;
+        std::stable_sort(sold.begin(), sold.end(), [&](const std::pair<int, int>& a, const std::pair<int, int>& b) {
+            if (a.second != b.second) return a.second < b.second;
+            return far(ix.shops[size_t(a.first)].map) < far(ix.shops[size_t(b.first)].map);
+        });
         std::vector<Row> rows;
-        for (const auto& [s, price] : at->second) {
+        for (const auto& [s, price] : sold) {
             const refindex::Shop& shop = ix.shops[size_t(s)];
-            rows.push_back(linked(shop.name + " · " + refindex::mapTitle(ix, shop.map),
-                                  sayf(l, Text::RefZeny, {number(price, l)}), Link{Go::Shop, s, ""}));
+            std::string right = sayf(l, Text::RefZeny, {number(price, l)});
+            const auto m = moves.find(shop.map);
+            if (shop.map == here) right = say(l, Text::RefYouHere) + " · " + right;
+            else if (m != moves.end()) right += " · " + farNote(m->second, l);
+            Row r = linked(shop.name + " · " + refindex::mapTitle(ix, shop.map), right, Link{Go::Shop, s, ""});
+            r.gold = shop.map == here;
+            rows.push_back(std::move(r));
         }
         capped(p, std::move(rows), SoldAt, opened, l);
     }
@@ -763,8 +854,8 @@ Page dungeons(const refindex::Index& ix, Lang l, const Context& c) {
 
 Page open(const refindex::Index& ix, Lang l, const Link& link, const Context& c, unsigned opened) {
     switch (link.go) {
-        case Go::Mob: return mob(ix, l, link.id, c.here, opened);
-        case Go::Item: return item(ix, l, link.id, opened);
+        case Go::Mob: return mob(ix, l, link.id, c, opened);
+        case Go::Item: return item(ix, l, link.id, c, opened);
         case Go::Map: return map(ix, l, link.map, c, opened);
         case Go::Shop: return shop(ix, l, link.id);
         case Go::Section: return section(ix, l, link.id);

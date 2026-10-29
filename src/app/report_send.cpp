@@ -289,6 +289,7 @@ int watchGame(unsigned long pid, int logSlot) {
         noteReference(exeFolder(), error);
         noteWorld(exeFolder(), error);  // 3.0.11-beta.11
         noteOnline(exeFolder(), error);
+        noteLive(exeFolder(), error);  // 3.0.11-beta.12
     }
     if (!config.reportAuto && !config.statsSend && !answers && !live) return 0;  // nothing more to watch for
     HANDLE game = OpenProcess(SYNCHRONIZE, FALSE, pid);
@@ -298,6 +299,7 @@ int watchGame(unsigned long pid, int logSlot) {
         if (live) {
             std::string error;
             noteOnline(exeFolder(), error);
+            noteLive(exeFolder(), error);
         }
         if (answers && GetTickCount64() - answered >= kAnswersEveryMs) {
             answered = GetTickCount64();

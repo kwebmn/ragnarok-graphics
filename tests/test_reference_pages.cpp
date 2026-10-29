@@ -2,6 +2,7 @@
 // (core/reference_window): what a card says and where its rows lead, the words for numbers, the layout and the clicks.
 #include <string>
 
+#include "core/reference_live.hpp"
 #include "core/reference_pages.hpp"
 #include "core/reference_window.hpp"
 #include "test.hpp"
@@ -94,7 +95,7 @@ TEST(reference_pages_home_and_search) {
 
 TEST(reference_pages_a_monsters_card) {
     const refindex::Index ix = index();
-    const refpages::Page p = refpages::mob(ix, Lang::Uk, 1002, "prt_fild05");
+    const refpages::Page p = refpages::mob(ix, Lang::Uk, 1002, ctx("prt_fild05"));
     CHECK(p.rows[0].style == refpages::Style::Title && p.rows[0].left == "Poring" && p.rows[0].right == "Lv 1");
     CHECK(p.rows[1].left.find("HP 50 · Вода 1 · Рослина · Середній") == 0);
     // «Де знайти»: the player's map first (marked), then by count
@@ -110,7 +111,7 @@ TEST(reference_pages_a_monsters_card) {
     const refpages::Row* lure = rowWith(p, "Apple");  // the pet's taming item (the drop row comes first)
     CHECK(lure != nullptr);
     CHECK(indexOf(p, "Улюбленець") != size_t(-1));
-    const refpages::Page boss = refpages::mob(ix, Lang::Uk, 1917, "");
+    const refpages::Page boss = refpages::mob(ix, Lang::Uk, 1917, ctx(""));
     CHECK(boss.rows[0].gold);
     CHECK(rowWith(boss, "Morroc Field (moc_fild20)") == nullptr);  // no client name known: the code
     const refpages::Row* there = rowWith(boss, "moc_fild20");
@@ -121,7 +122,7 @@ TEST(reference_pages_a_monsters_card) {
 
 TEST(reference_pages_an_items_card) {
     const refindex::Index ix = index();
-    const refpages::Page p = refpages::item(ix, Lang::Uk, 601);
+    const refpages::Page p = refpages::item(ix, Lang::Uk, 601, ctx(""));
     CHECK(p.rows[0].left == "Fly Wing" && p.rows[0].right == "Вживане");
     CHECK(p.rows[1].left == "вага 0,5 · ціна 60 z");
     const size_t by = indexOf(p, "З кого випадає");
@@ -131,13 +132,13 @@ TEST(reference_pages_an_items_card) {
     const size_t at = indexOf(p, "Де купити");
     CHECK(p.rows[at + 1].left == "Tool Dealer · Izlude Town (izlude)" && p.rows[at + 1].right == "55 z");  // cheaper
     CHECK(p.rows[at + 1].link.go == refpages::Go::Shop);
-    const refpages::Page sword = refpages::item(ix, Lang::Uk, 1101);
+    const refpages::Page sword = refpages::item(ix, Lang::Uk, 1101, ctx(""));
     CHECK(sword.rows[0].left == "Sword [3]");
     const size_t made = indexOf(sword, "З чого зробити");
     CHECK(sword.rows[made + 1].left == "Iron" && sword.rows[made + 1].right == "×1");
-    const refpages::Page iron = refpages::item(ix, Lang::Uk, 998);
+    const refpages::Page iron = refpages::item(ix, Lang::Uk, 998, ctx(""));
     CHECK(rowWith(iron, "Sword") != nullptr);  // «Входить у крафт»
-    const refpages::Page juice = refpages::item(ix, Lang::Uk, 531);
+    const refpages::Page juice = refpages::item(ix, Lang::Uk, 531, ctx(""));
     const refpages::Row* pet = rowWith(juice, "Poring");
     CHECK(pet && pet->right == "корм" && pet->link.go == refpages::Go::Mob);
 }
@@ -169,13 +170,13 @@ TEST(reference_pages_long_sections_open_by_their_row) {
     CHECK(refindex::build(R"({"v":1,"data":1,"mobs":{"1":["A",1,1,0,0,0,0,0,1,0,[],[],null]},"spawns":{)" + spawns +
                               R"(},"routes":[],"npcs":[]})",
                           ix));
-    const refpages::Page closed = refpages::mob(ix, Lang::Uk, 1, "m6");
+    const refpages::Page closed = refpages::mob(ix, Lang::Uk, 1, ctx("m6"));
     const size_t where = indexOf(closed, "Де знайти");
     CHECK_EQ(closed.rows[where].right, std::string("8"));
     CHECK(closed.rows[where + 1].link.map == "m6");  // the player's map first, before the cut
     const refpages::Row& more = closed.rows[where + 1 + refpages::kFew];
     CHECK(more.left == "усі 8 ›" && more.link.go == refpages::Go::Expand && more.link.id == refpages::Where);
-    const refpages::Page open = refpages::mob(ix, Lang::Uk, 1, "m6", 1u << refpages::Where);
+    const refpages::Page open = refpages::mob(ix, Lang::Uk, 1, ctx("m6"), 1u << refpages::Where);
     CHECK_EQ(open.rows.size(), closed.rows.size() + 8 - refpages::kFew - 1);
     CHECK(rowWith(open, "усі 8 ›") == nullptr);
 }
@@ -209,7 +210,7 @@ TEST(reference_window_lays_itself_out) {
 TEST(reference_window_paints_and_words_its_rows) {
     const refindex::Index ix = index();
     const refwin::Layout L = refwin::layout(1920, 1080, 1.0f);
-    const refpages::Page p = refpages::mob(ix, Lang::Uk, 1002, "prt_fild08");
+    const refpages::Page p = refpages::mob(ix, Lang::Uk, 1002, ctx("prt_fild08"));
     int total = 0;
     const std::vector<refwin::Placed> rows = refwin::place(L, p, total);
     panel::Picture pic;
@@ -229,4 +230,48 @@ TEST(reference_window_paints_and_words_its_rows) {
         CHECK(w.box.y + w.box.h <= float(L.h));
     }
     CHECK(title && typed && poring);
+}
+
+// 3.0.11-beta.12: the site's live data (core/reference_live) - the players' public MVP timers, the market - in the
+// cards
+TEST(reference_live_timers_and_market) {
+    const char* site = R"({"v":1,"at":5,"mvp":[[1917,"moc_fild20",1000],[1917,"moc_fild20",400],[1002,"",900],
+        [0,"x",1],[1917,"moc fild\"20",1]],"market":[[601,55,3,40],[909,0,1,1],[512,15,0,0]]})";
+    reflive::Live live;
+    CHECK(reflive::fromSite(site, 2000, live));
+    CHECK_EQ(live.at, 2000LL);
+    CHECK_EQ(live.timers.size(), size_t(4));        // a timer of no monster left out
+    CHECK_EQ(live.timers.front().killed, 1000LL);   // the latest first
+    CHECK_EQ(live.timers.back().map, std::string("mocfild20"));  // a map's code: nothing else kept
+    CHECK_EQ(live.market.size(), size_t(1));        // no price, no lots: left out
+    CHECK_EQ(live.market.at(601).cheapest, 55LL);
+    reflive::Live back;
+    CHECK(reflive::read(reflive::write(live), back));
+    CHECK_EQ(back.timers.size(), size_t(4));
+    CHECK_EQ(back.market.at(601).pieces, 40);
+    CHECK(reflive::timerOf(back, 1917, "moc_fild20")->killed == 1000);
+    CHECK(reflive::timerOf(back, 1002, "prt_fild08") != nullptr);  // a timer without a map: any map
+    CHECK(reflive::timerOf(back, 1003) == nullptr);
+    CHECK(!reflive::fromSite("{\"v\":1,\"mvp\":[]}", 1, live));
+
+    const refindex::Index ix = index();
+    refpages::Context c = ctx("");
+    c.live = &back;
+    c.now = 1000 + 30 * 60;  // half an hour after the kill; Satan Morroc's respawn there: 11 h 30 min
+    const refpages::Page boss = refpages::mob(ix, Lang::Uk, 1917, c);
+    const size_t at = indexOf(boss, "Таймери гравців");
+    CHECK(at != size_t(-1));
+    CHECK_EQ(boss.rows[at + 1].right, std::string("через 11 год · вбито 30 хв тому"));
+    CHECK(!boss.rows[at + 1].gold);
+    c.now = 1000 + 12 * 3600;
+    const refpages::Page due = refpages::mob(ix, Lang::Uk, 1917, c);
+    CHECK_EQ(due.rows[at + 1].right, std::string("вже має бути · вбито 12 год тому"));
+    CHECK(due.rows[at + 1].gold);
+    const refpages::Page wing = refpages::item(ix, Lang::Uk, 601, c);
+    const size_t m = indexOf(wing, "На ринку сайту");
+    CHECK(m != size_t(-1));
+    CHECK_EQ(wing.rows[m + 1].left, std::string("від 55 z"));
+    CHECK_EQ(wing.rows[m + 1].right, std::string("лотів: 3 · штук: 40"));
+    CHECK(indexOf(refpages::item(ix, Lang::Uk, 909, c), "На ринку сайту") == size_t(-1));
+    CHECK(indexOf(refpages::mob(ix, Lang::Uk, 1917, ctx("")), "Таймери гравців") == size_t(-1));  // none read
 }

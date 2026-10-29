@@ -47,5 +47,14 @@ struct Route {
 // From the player's map (x, y: the player's cell, -1 not known: from any part of it) to the map `to`; `walk`: the
 // free moves alone. Of several moves alike (one map to another, one price) the nearest to where the last one put you.
 Route find(const refindex::Index& ix, const std::string& from, int x, int y, const std::string& to, bool walk);
+// 3.0.11-beta.12: how far every map reached without a condition is from the player's map (x, y as find's) - «Де
+// знайти» and «Де купити» say it: the moves on foot; when paying makes it fewer, those and whether by Kafra
+struct Far {
+    int moves = 0;
+    bool paid = false;   // fewer by paying (moves: the paid way's)
+    bool kafra = false;  // that way has Kafra's teleport (else an NPC's)
+};
+std::unordered_map<std::string, Far> movesFrom(const refindex::Index& ix, const std::string& from, int x = -1,
+                                               int y = -1);
 
 }  // namespace uagfx::refroute

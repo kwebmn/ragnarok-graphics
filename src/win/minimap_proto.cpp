@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <cstdio>
+#include <ctime>
 #include <map>
 #include <memory>
 #include <string>
@@ -12,6 +13,7 @@
 #include "core/minimap_proto.hpp"
 #include "core/pack_source.hpp"
 #include "core/reference_index.hpp"
+#include "core/reference_live.hpp"
 #include "core/reference_pages.hpp"
 #include "core/route_follow.hpp"
 #include "core/settings/strings.hpp"
@@ -39,6 +41,7 @@ struct Line {  // a monster under the map: its name, its count (a boss's respawn
     bool boss = false;
     int mob = 0;         // 3.0.11-beta.9: its id - a click opens its card (0: «і ще N», the map's card)
     bool route = false;  // 3.0.11-beta.9: the way's line (its colour; a click opens the target's card)
+    bool timer = false;  // 3.0.11-beta.12: the right words a player's public timer (its colour)
 };
 constexpr ULONGLONG kThereMs = 8000;  // 3.0.11-beta.9: «Ви на місці» shown so long, then the way ends
 
@@ -72,6 +75,9 @@ struct State {
     int hover = -1;
     std::map<std::string, std::string> mapNames;  // the client's data\mapnametable.txt
     bool namesRead = false;
+    // 3.0.11-beta.12: the players' public MVP timers - the bosses' lines say when, made again each minute
+    std::shared_ptr<const reflive::Live> live;
+    ULONGLONG hintsAt = 0;
     // 3.0.11-beta.9: the way followed - its lines first under the map
     routefollow::Follow follow;
     ULONGLONG arrivedAt = 0;
@@ -158,7 +164,23 @@ void buildHints(State& s) {
         const bool boss = mob != s.index->mobs.end() && mob->second.boss;
         std::wstring right = std::to_wstring(m.count);
         if (boss && m.respawnMs >= kBossRespawnMs) right = utf8Wide(refpages::respawn(m.respawnMs, startup().lang));
-        s.lines.push_back(Line{utf8Wide((boss ? "\xE2\x98\x85 " : "") + name), right, boss, m.id});
+        bool timer = false;  // 3.0.11-beta.12: a player's public timer of it here - when it comes back
+        if (boss && s.live && m.respawnMs > 0) {
+            const reflive::Timer* t = nullptr;
+            for (const reflive::Timer& o : s.live->timers)  // the latest first
+                if (o.mob == m.id && o.map == s.map) {
+                    t = &o;
+                    break;
+                }
+            if (t) {
+                const long long left = t->killed + m.respawnMs / 1000 - static_cast<long long>(std::time(nullptr));
+                right = left > 0 ? utf8Wide(refpages::respawn(int(std::max<long long>(left, 60) * 1000),
+                                                              startup().lang))
+                                 : tr(settings::Text::MinimapTimerDue);
+                timer = true;
+            }
+        }
+        s.lines.push_back(Line{utf8Wide((boss ? "\xE2\x98\x85 " : "") + name), right, boss, m.id, false, timer});
     }
     if (room < h->mobs.size())
         s.lines.push_back(Line{utf8Wide(settings::fmt(settings::tr(startup().lang, settings::Text::MinimapMore),
@@ -252,7 +274,8 @@ void render(State& s) {
                               l.left, colour, 11.5f * sc, l.boss, DT_LEFT});
         if (!l.right.empty())
             words.push_back(Words{panel::Box{4 * sc + split, y, float(g.size) - 8 * sc - split, float(g.lineH)},
-                                  l.right, panel::kMuted, 11.5f * sc, false, DT_RIGHT});
+                                  l.right, l.timer ? minimap::kRouteRgb : panel::kMuted, 11.5f * sc, l.timer,
+                                  DT_RIGHT});
     }
     drawWords(s.picture, words);
     if (s.look == minimap::Look::Faded) panel::fade(s.picture, minimap::opacity(s.look));  // Ctrl+Tab's see-through
@@ -355,8 +378,13 @@ void frame(HWND game, const Show& show, double k, int targetWidth, int targetHei
     }
     // 3.0.11-beta.6: the hints - made again for another map, another reference read, other switches
     const auto index = reference::index();
+    const auto live = reference::live();  // 3.0.11-beta.12
+    const ULONGLONG now = GetTickCount64();
     if (!s.hintsMade || s.hintsMap != s.map || index != s.index || show.npcs != s.show.npcs ||
-        show.warps != s.show.warps || show.mobs != s.show.mobs) {
+        show.warps != s.show.warps || show.mobs != s.show.mobs || live != s.live ||
+        (s.live && now - s.hintsAt >= 60000)) {
+        s.live = live;
+        s.hintsAt = now;
         if (index != s.index) s.follow.map.clear();  // 3.0.11-beta.9: the way made again over the new pack
         s.index = index;
         s.show = show;

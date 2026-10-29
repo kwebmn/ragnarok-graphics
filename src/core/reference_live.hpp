@@ -1,6 +1,7 @@
 #pragma once
 #include <map>
 #include <string>
+#include <vector>
 
 namespace uagfx::reflive {
 
@@ -22,5 +23,32 @@ bool fromSite(const std::string& json, long long now, Online& out);
 std::string write(const Online& o);
 bool read(const std::string& text, Online& out);
 bool fresh(const Online& o, long long now);
+
+// 3.0.11-beta.12 (the owner: «таймері и рінок делай»): the site's live data for the game, its public
+// /api/public/game/live.json - the players' MVP timers they shared with all (public: the boss, the map, when it was
+// killed; no names, no accounts) and the site's market (its active fixed-price lots: per item the cheapest, the lots,
+// the pieces). The watcher keeps it with the counts, every 2 minutes; the driver reads
+// uaro-graphics\reference\live.json.
+struct Timer {
+    int mob = 0;
+    std::string map;       // "" not told
+    long long killed = 0;  // unix time
+};
+struct Market {
+    int item = 0;
+    long long cheapest = 0;  // zeny (a lot sold by the piece: one piece's)
+    int lots = 0, pieces = 0;
+};
+struct Live {
+    long long at = 0;
+    std::vector<Timer> timers;  // the latest first
+    std::map<int, Market> market;
+};
+bool fromSite(const std::string& json, long long now, Live& out);
+std::string write(const Live& l);
+bool read(const std::string& text, Live& out);
+bool fresh(const Live& l, long long now);
+// The latest timer of a monster (on a map: "" any map); null none
+const Timer* timerOf(const Live& l, int mob, const std::string& map = "");
 
 }  // namespace uagfx::reflive
