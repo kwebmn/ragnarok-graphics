@@ -1,3 +1,21 @@
+# uaRO Graphics 3.0.11-beta.32 — what is new
+
+Small things of «Reference» found after the last beta:
+
+- **Monsters** — the list in two: «On the maps» (by level, with a picture, a line «boss · Lv 12 · 5 maps») and «Met
+  on no map (events', summons')» — the events' copies no longer mixed with the usual ones.
+- **Tables** — the elements a real table now: columns with the elements' names, the cells in colours (over 100
+  green, under red, below 0 it heals, violet) and a line under it. In a narrow window the names are shortened.
+- **Locations** — the **towns** at last (they were not on the list at all): «Towns» with Kafra and the number of
+  shops, then «With monsters». The guilds' castles and passages like Byalan Island are no longer taken for towns.
+- **Cards** — in three: «Dropped by monsters», «Not dropped by monsters (events, quests)» and «Enchantments» (AGI+1,
+  STR+2…), the numbers in order (AGI+2 before AGI+10). «Items → Card» opens the same list.
+- **Pets** — each one's level (the three «Goblin» told apart), pictures, no «lure: #0».
+- **MVP** — times over an hour in hours: «1 h 57 min» instead of «117 min»; pictures by the names.
+- The counts in their words: «2 items», «7 kinds of monsters», «1 shop».
+- A town's card says «town»; «How to get there» says where the way starts.
+- To check: Ctrl+F → «Tables», «Locations», «Monsters», «Pets», «MVP», «Items → Card».
+
 # uaRO Graphics 3.0.11-beta.31 — what is new
 
 - **The new minimap — a new look** (as in the concept): a 220 px square with gold corners, a bar under it with the
