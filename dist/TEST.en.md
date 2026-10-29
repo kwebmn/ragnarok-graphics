@@ -1,3 +1,12 @@
+# uaRO Graphics 3.0.11-beta.20 — what is new
+
+- **«Bosses and MVPs» — the hunters' board**: the bosses' list has, beside the respawn, a players' timer when someone
+  opened it to all on the site: «in 23 min» or «should be up» (after the site's update).
+- **An item on the world map**: an item's card has «On the world map ›» under «Dropped by»: where to farm it — the
+  maps of the monsters dropping it, and how many of them live there.
+- «Reference»'s bottom line tells how fresh the site's live data is («the site's live data 2 min ago»).
+- To check: Ctrl+F → «jellopy» → «On the world map ›» — Prontera's fields with numbers; the tile «Bosses and MVPs».
+
 # uaRO Graphics 3.0.11-beta.19 — what is new
 
 - **A monster on the world map**: a monster's card has «On the world map ›» under «Where to find»: the world map with
