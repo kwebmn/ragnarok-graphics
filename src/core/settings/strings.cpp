@@ -5099,6 +5099,9 @@ constexpr Entry kTexts[] = {
     {Text::RefMarketFrom, "from {1}", "від {1}", "от {1}"},
     {Text::RefMarketLots, "lots: {1} · pieces: {2}", "лотів: {1} · штук: {2}", "лотов: {1} · штук: {2}"},
     {Text::MinimapTimerDue, "up", "вже", "уже"},
+    // 3.0.11-beta.13: the server's element table (db/attr_fix.txt)
+    {Text::RefElements, "Damage by element", "Шкода стихіями", "Урон стихиями"},
+    {Text::RefElementHeals, "heals {1} %", "лікує {1} %", "лечит {1} %"},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

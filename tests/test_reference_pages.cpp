@@ -275,3 +275,24 @@ TEST(reference_live_timers_and_market) {
     CHECK(indexOf(refpages::item(ix, Lang::Uk, 909, c), "На ринку сайту") == size_t(-1));
     CHECK(indexOf(refpages::mob(ix, Lang::Uk, 1917, ctx("")), "Таймери гравців") == size_t(-1));  // none read
 }
+
+// 3.0.11-beta.13: the server's element table (db/attr_fix.txt) in a monster's card
+TEST(reference_pages_damage_by_element) {
+    CHECK_EQ(refpages::elementDamage(4, 1, 1), 175);  // wind on water 1
+    CHECK_EQ(refpages::elementDamage(3, 1, 1), 50);   // fire on water 1
+    CHECK_EQ(refpages::elementDamage(6, 6, 3), -50);  // holy on holy 3: it heals
+    CHECK_EQ(refpages::elementDamage(0, 8, 1), 25);   // neutral on a ghost
+    CHECK_EQ(refpages::elementDamage(10, 1, 1), 100);
+    CHECK_EQ(refpages::elementDamage(1, 1, 5), 100);
+    const refindex::Index ix = index();
+    const refpages::Page p = refpages::mob(ix, Lang::Uk, 1002, ctx(""));  // Poring: water 1
+    const size_t at = indexOf(p, "Шкода стихіями");
+    CHECK(at != size_t(-1));
+    CHECK_EQ(p.rows[at].right, std::string("Вода 1"));
+    CHECK_EQ(p.rows[at + 1].left, std::string("Вітер"));  // the most first
+    CHECK_EQ(p.rows[at + 1].right, std::string("175 %"));
+    CHECK(p.rows[at + 1].gold);
+    CHECK_EQ(p.rows[at + 6].left, std::string("усі 10 ›"));
+    const refpages::Page all = refpages::mob(ix, Lang::Uk, 1002, ctx(""), 1u << refpages::Elements);
+    CHECK_EQ(all.rows[at + 10].right, std::string("25 %"));  // water on water, the least
+}

@@ -489,6 +489,7 @@ enum class Text : uint16_t {
     // 3.0.11-beta.12: the players' public MVP timers, the site's market
     RefTimers, RefTimerSoon, RefTimerDue, RefTimerAgo, RefTimerNoMap, RefMarket, RefMarketFrom, RefMarketLots,
     MinimapTimerDue,
+    RefElements, RefElementHeals,  // 3.0.11-beta.13: the server's element table in a monster's card
     Count
 };
 

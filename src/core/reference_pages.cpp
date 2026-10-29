@@ -16,6 +16,10 @@ using settings::Lang;
 using settings::Text;
 
 namespace {
+#include "core/attr_fix.inc"  // 3.0.11-beta.13: kAttrFix, tools/attr_fix.py from the server's db/attr_fix.txt
+}  // namespace
+
+namespace {
 
 constexpr size_t kMostFound = 30;  // a search's group at most (the rest: «перші 30 з 89»)
 
@@ -116,6 +120,25 @@ void timers(const refindex::Index& ix, Lang l, Page& p, int mob, const Context& 
         r.gold = respawn > 0 && t->killed + respawn <= c.now;
         p.rows.push_back(std::move(r));
     }
+}
+
+// «Шкода стихіями»: how much of each element's attack the monster takes (the server's table), the most first - the
+// skills and the weapons to take on it; below 0 the attack heals it (attribute_recover)
+void elements(Lang l, Page& p, const refindex::Mob& m, unsigned opened) {
+    std::vector<std::pair<int, int>> by;  // element, per cent
+    for (int e = 0; e < 10; ++e) by.emplace_back(e, elementDamage(e, m.element, m.elementLv));
+    std::stable_sort(by.begin(), by.end(), [](const auto& a, const auto& b) { return a.second > b.second; });
+    p.rows.push_back(heading(say(l, Text::RefElements),
+                             elementName(m.element, l) + " " + std::to_string(m.elementLv)));
+    std::vector<Row> rows;
+    for (const auto& [e, pct] : by) {
+        Row r;
+        r.left = elementName(e, l);
+        r.right = pct < 0 ? sayf(l, Text::RefElementHeals, {std::to_string(-pct)}) : std::to_string(pct) + " %";
+        r.gold = pct >= 150;
+        rows.push_back(std::move(r));
+    }
+    capped(p, std::move(rows), Elements, opened, l);
 }
 
 // «На ринку сайту»: the cheapest of the active lots, how many lots and pieces
@@ -244,6 +267,11 @@ std::string respawn(int ms, Lang l) {
 }
 
 std::string stepNote(const refroute::Step& step, Lang l) { return noteOf(step, l); }
+
+int elementDamage(int attack, int defence, int level) {
+    if (attack < 0 || attack > 9 || defence < 0 || defence > 9 || level < 1 || level > 4) return 100;
+    return kAttrFix[level - 1][attack][defence];
+}
 
 std::string elementName(int e, Lang l) {
     static const Text kNames[] = {Text::RefEle0, Text::RefEle1, Text::RefEle2, Text::RefEle3, Text::RefEle4,
@@ -551,6 +579,7 @@ Page mob(const refindex::Index& ix, Lang l, int id, const Context& c, unsigned o
         capped(p, std::move(rows), Where, opened, l);
     }
     timers(ix, l, p, id, c);  // 3.0.11-beta.12
+    elements(l, p, m, opened);  // 3.0.11-beta.13
     p.rows.push_back(heading(say(l, Text::RefDrops)));
     if (m.drops.empty()) p.rows.push_back(note(say(l, Text::RefNoDrops)));
     std::vector<refindex::Drop> drops = m.drops;

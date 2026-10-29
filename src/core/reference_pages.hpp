@@ -44,7 +44,8 @@ enum Section : int { Mobs, Bosses, Items, Cards, Maps, Shops, Teleports, Pets, C
 // the main things first - «Де знайти» and «Що випадає» - the rest below without a long scroll)
 enum Part : int {
     Where, Drops, DroppedBy, SoldAt, WhoHere, Exits, Teleports2, Npcs, ShopsHere, UsedIn,
-    Route1, Route2  // 3.0.11-beta.8: «Як дістатися» on foot, by Kafra
+    Route1, Route2,  // 3.0.11-beta.8: «Як дістатися» on foot, by Kafra
+    Elements         // 3.0.11-beta.13: «Шкода стихіями»
 };
 constexpr size_t kFew = 5;
 
@@ -92,6 +93,9 @@ std::string sizeName(int size, settings::Lang l);
 std::string typeName(int type, settings::Lang l);
 // A respawn after death: «90 хв», from two hours «2 год», «11 год 30 хв»
 std::string respawn(int ms, settings::Lang l);
+// 3.0.11-beta.13: the server's element table (db/attr_fix.txt, src/core/attr_fix.inc) - the per cent of an attack of
+// `attack`'s element a monster of `defence`'s element at `level` (1-4) takes; below 0 it heals; 100 when out of range
+int elementDamage(int attack, int defence, int level);
 // 3.0.11-beta.8: where a route's move is taken - «вихід 156, 22», «Kafra 146, 86 · 1 200 z», «перехід 52, 136»
 std::string stepNote(const refroute::Step& step, settings::Lang l);
 
