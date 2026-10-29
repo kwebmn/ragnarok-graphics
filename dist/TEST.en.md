@@ -1,3 +1,14 @@
+# uaRO Graphics 3.0.11-beta.30 — what is new
+
+- **«Reference»: a «Home» button** (a house) in the header on every page but the first screen itself — the world
+  map's too; the header's «Reference» title also leads to the first screen with the sections' icons. The sections'
+  rail at the left starts with «Home» and has «World map» too.
+- Elements, races and sizes of monsters by the game's own names in every language: Fire, Wind, Water, Undead…
+- The cards' lists (drops, where to find, dropped by…) shown whole; «all N ›» only for lists longer than 20 rows.
+  The search's groups alike: 20 a group, then «N more ›».
+- To check: a monster's card → the house in the header and «Home» at the left → the first screen; «World map» from
+  the rail; «Damage by element» in English; the drops without «all N ›».
+
 # uaRO Graphics 3.0.11-beta.29 — what is new
 
 - **The world map as in the concept — the fourth stage**: tabs «World map» / «Dungeons» on top, a green «N online»
