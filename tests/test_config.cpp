@@ -855,9 +855,10 @@ TEST(config_interface_minimap) {
     CHECK(s != nullptr);
     if (s) CHECK_EQ(settings::tokenOf(*s, parseConfig("[interface]\nminimap = 1\n")), std::string("1"));
     const LiveUpdate u = liveUpdate(parseConfig(""), parseConfig("[interface]\nminimap = 1\n"));
-    // 3.0.11-beta.37: the buffs' column and the character block come with it
-    CHECK(u.waiting.empty() && u.applied.size() == 3 && u.applied[0] == "minimap 0 -> 1");
-    CHECK(u.applied[1] == "buffs off -> column" && u.applied[2] == "character off -> bars");
+    // 3.0.11-beta.37: the buffs' column and the character block come with it; 3.0.11-beta.38: the target's card too
+    CHECK(u.waiting.empty() && u.applied.size() == 4 && u.applied[0] == "minimap 0 -> 1");
+    CHECK(u.applied[1] == "buffs off -> column" && u.applied[2] == "target 0 -> 1" &&
+          u.applied[3] == "character off -> bars");
     CHECK(appliesNow("interface.minimap"));
 }
 
@@ -930,4 +931,20 @@ TEST(config_new_interface_parts_come_with_the_minimap) {
     CHECK(s != nullptr && settings::tokenOf(*s, on) == "column");  // the app shows what is in effect
     const LiveUpdate u = liveUpdate(parseConfig(""), on);  // the minimap switched on: they come at once
     CHECK(u.next.buffs == BuffsLook::Column && u.next.character == CharacterLook::Bars);
+}
+
+// 3.0.11-beta.38 (the owner: «делай карточку цели»): [interface] target - the target's card at the top middle; it
+// comes with the new minimap as the other parts do, unless the file names it
+TEST(config_reads_the_target_card) {
+    CHECK(!parseConfig("").targetCard);
+    CHECK(parseConfig("[interface]\ntarget = 1\n").targetCard);
+    CHECK(parseConfig("[interface]\nminimap = 1\n").targetCard);
+    CHECK(!parseConfig("[interface]\nminimap = 1\ntarget = 0\n").targetCard);
+    const settings::IniSetting* s = settings::findSetting("interface.target");
+    CHECK(s != nullptr);
+    if (!s) return;
+    CHECK(s->page == settings::Page::Interface && s->control == settings::Control::Check);
+    CHECK_EQ(settings::tokenOf(*s, parseConfig("[interface]\nminimap = 1\n")), std::string("1"));
+    CHECK(appliesNow("interface.target"));
+    CHECK(liveUpdate(parseConfig(""), parseConfig("[interface]\ntarget = 1\n")).next.targetCard);
 }

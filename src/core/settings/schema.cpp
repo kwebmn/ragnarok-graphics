@@ -111,6 +111,9 @@ const std::vector<IniSetting>& iniSettings() {
         {"interface", "buffs", Page::Interface, Control::Choice, 0, 0, 0, {"off", "column", "row"},
          {Text::InterfaceBuffsOff, Text::InterfaceBuffsColumn, Text::InterfaceBuffsRow}, Text::InterfaceBuffs,
          Text::InterfaceBuffsHint, ""},
+        // 3.0.11-beta.38: the target's card
+        {"interface", "target", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::InterfaceTarget,
+         Text::InterfaceTargetHint, ""},
         // 3.0.11-beta.36: the character block - the game's own window, with bars, with rings
         {"interface", "character", Page::Interface, Control::Choice, 0, 0, 0, {"off", "bars", "rings"},
          {Text::InterfaceCharacterOff, Text::InterfaceCharacterBars, Text::InterfaceCharacterRings},
@@ -894,6 +897,7 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "interface.minimap_way") return wayOnGroundToken(c.minimapWay);  // 3.0.11-beta.33
     if (k == "interface.buffs") return buffsLookToken(c.buffs);               // 3.0.11-beta.35
     if (k == "interface.character") return characterLookToken(c.character);  // 3.0.11-beta.36
+    if (k == "interface.target") return c.targetCard ? "1" : "0";              // 3.0.11-beta.38
     if (k == "interface.reference") return c.referenceWindow ? "1" : "0";  // 3.0.11-beta.7
     if (k == "windows.start_count") return std::to_string(c.windowStartCount);  // 3.0.4-beta.4
     if (k == "camera.indoor") return c.cameraIndoor ? "1" : "0";                // 3.0.4-beta.5

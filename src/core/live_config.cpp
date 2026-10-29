@@ -191,6 +191,10 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("buffs", buffsLookToken(running.buffs), buffsLookToken(file.buffs)));
         n.buffs = file.buffs;
     }
+    if (file.targetCard != running.targetCard) {  // 3.0.11-beta.38: the target's card, at once
+        u.applied.push_back(change("target", flag(running.targetCard), flag(file.targetCard)));
+        n.targetCard = file.targetCard;
+    }
     if (file.character != running.character) {  // 3.0.11-beta.36: the character block, at once
         u.applied.push_back(
             change("character", characterLookToken(running.character), characterLookToken(file.character)));

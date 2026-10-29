@@ -23,6 +23,7 @@
 #include "win/game_files.hpp"
 #include "win/log.hpp"
 #include "win/minimap_proto.hpp"
+#include "win/monster_picture.hpp"
 #include "win/paths.hpp"
 #include "win/picture_draw.hpp"
 #include "win/real_ddraw.hpp"
@@ -106,7 +107,6 @@ std::string say(Text t) { return settings::tr(startup().lang, t); }
 
 // 3.0.11-beta.14: a card's picture - a monster's standing frame from its sprite (data\sprite\몬스터 or npc), an
 // item's icon (data\texture\유저인터페이스\item) - fitted into the Portrait's square
-const std::string kMonsters = "\xB8\xF3\xBD\xBA\xC5\xCD";                         // 몬스터
 const std::string kUi = "\xC0\xAF\xC0\xFA\xC0\xCE\xC5\xCD\xC6\xE4\xC0\xCC\xBD\xBA";  // 유저인터페이스
 
 bool readFile(State& s, const std::string& entry, std::string& out) {
@@ -135,21 +135,11 @@ void loadPicture(State& s, const std::string& key, int side) {
     if (key.rfind("mob:", 0) == 0 || mobIcon) {
         const auto m = s.index->mobs.find(std::atoi(key.c_str() + (mobIcon ? 9 : 4)));
         if (m == s.index->mobs.end()) return;
-        for (const std::string& name : refindex::spriteNames(m->second))
-            for (const std::string& folder : {kMonsters, std::string("npc")}) {
-                const std::string base = "data\\sprite\\" + folder + "\\" + name;
-                std::string spr, act;
-                spritefile::Sprite sp;
-                spritefile::Act ac;
-                spritefile::Image im;
-                if (!readFile(s, base + ".spr", spr) || !readFile(s, base + ".act", act) ||
-                    !spritefile::readSpr(spr, sp) || !spritefile::readAct(act, ac) ||
-                    !spritefile::frameImage(sp, ac, 0, 0, im))
-                    continue;
-                out = asPicture(spritefile::fitted(im, box, box));
-                LOG_INFO("reference: %s's picture - %s.spr (%dx%d)", m->second.name.c_str(), base.c_str(), im.w, im.h);
-                return;
-            }
+        std::string from;
+        if (monsterPicture(m->second, box, out, &from)) {  // 3.0.11-beta.38: win/monster_picture
+            LOG_INFO("reference: %s's picture - %s", m->second.name.c_str(), from.c_str());
+            return;
+        }
         LOG_INFO("reference: no sprite for %s (#%d) among %zu names", m->second.name.c_str(), m->first,
                  refindex::spriteNames(m->second).size());
         return;

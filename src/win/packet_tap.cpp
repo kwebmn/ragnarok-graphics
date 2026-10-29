@@ -7,6 +7,7 @@
 
 #include "core/game_packets.hpp"
 #include "win/buff_overlay.hpp"
+#include "win/target_card.hpp"
 #include "win/notifier.hpp"
 
 namespace uagfx::win {
@@ -62,6 +63,7 @@ uint16_t __attribute__((thiscall)) take(void* connection, const uint8_t* packet)
     if (!std::holds_alternative<std::monostate>(e)) {
         notifier::packet(e);
         buffoverlay::packet(e);  // 3.0.4-beta.6
+        targetpanel::packet(e);  // 3.0.11-beta.38: the target's card - who the character fights
     }
     return id;
 }

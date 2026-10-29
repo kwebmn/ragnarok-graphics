@@ -4937,6 +4937,22 @@ constexpr Entry kTexts[] = {
     {Text::CharSkills, "Skills \xC2\xB7 Alt+S", "Навички \xC2\xB7 Alt+S", "Навыки \xC2\xB7 Alt+S"},
     {Text::CharFriends, "Friends \xC2\xB7 Alt+Z", "Друзі \xC2\xB7 Alt+Z", "Друзья \xC2\xB7 Alt+Z"},
     {Text::CharOptions, "Options \xC2\xB7 Alt+O", "Налаштування \xC2\xB7 Alt+O", "Настройки \xC2\xB7 Alt+O"},
+    // 3.0.11-beta.38: the target's card (stage 7 of the new interface)
+    {Text::InterfaceTarget, "Target card", "Картка цілі", "Карточка цели"},
+    {Text::InterfaceTargetHint,
+     "The monster the character fights, in a short card at the screen's top middle: its picture, name, level and "
+     "element; pointed at - its race, size, HP, experience, the elements that hurt it most and those that heal it. "
+     "A click opens its card in the reference.",
+     "Монстр, з яким б'ється персонаж, у короткій картці вгорі посередині: картинка, ім'я, рівень і стихія; "
+     "наведіть — раса, розмір, HP, досвід, стихії, що б'ють його найсильніше, і ті, що його лікують. Клік відкриває "
+     "його картку в довіднику.",
+     "Монстр, с которым дерётся персонаж, в короткой карточке вверху посередине: картинка, имя, уровень и стихия; "
+     "наведите — раса, размер, HP, опыт, стихии, бьющие его сильнее всего, и те, что его лечат. Клик открывает его "
+     "карточку в справочнике."},
+    {Text::TargetWeak, "Weak to: {1}", "Слабкий до: {1}", "Слаб к: {1}"},
+    {Text::TargetHeals, "Healed by: {1}", "Лікують: {1}", "Лечат: {1}"},
+    {Text::TargetBook, "Click: its card in the reference", "Клік — картка в довіднику",
+     "Клик — карточка в справочнике"},
     {Text::MinimapRespawn, "{1} min", "{1} хв", "{1} мин"},
     {Text::MinimapMore, "and {1} more", "і ще {1}", "и ещё {1}"},
     {Text::MinimapNoReference, "No game reference yet", "Довідника гри ще немає", "Справочника игры ещё нет"},

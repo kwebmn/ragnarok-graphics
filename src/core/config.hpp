@@ -553,6 +553,9 @@ struct Config {
     // 3.0.11-beta.36: [interface] character - the character block at the top left (core/char_block), the game's Basic
     // Info window hidden; its compact look bars or rings (the owner: «кольца или полоски на выбор»)
     CharacterLook character = CharacterLook::Off;
+    // 3.0.11-beta.38: [interface] target - the target's card at the top middle (core/target_card): the monster the
+    // character fights, its element and what hurts it; its card in «Довідник» by a click
+    bool targetCard = false;
     // 3.0.11-beta.7: [interface] reference - «Довідник» (win/reference_window): Ctrl+F in the game
     bool referenceWindow = false;
     PanelLayout panelLayout = PanelLayout::Row;
