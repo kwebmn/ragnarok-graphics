@@ -1,3 +1,18 @@
+# uaRO Graphics 3.0.11-beta.12 — what is new
+
+- **The site's MVP timers and market in the game** (after the site's update — a new page /api/public/game/live.json;
+  the app takes it with the players now, every 2 minutes):
+  - a boss's card — «Players' timers»: those the players opened to all (public) on the «MVP timers» page — the map,
+    «in 73 min» or «should be up» (in gold) and «killed 47 min ago»; no players' names;
+  - the list under the new minimap: in the line of a boss someone noted on this map — how long yet (light blue) or
+    «up»;
+  - an item's card — «On the site's market»: from what price (a lot by the piece: one piece's), how many lots and
+    pieces.
+- **How far**: «Where to find» and «Where to buy» say how many moves from your map on foot, and when Kafra makes it
+  fewer «moves: 2 · Kafra»; in «Where to buy» of the cheapest the nearest first.
+- To check: Ctrl+F → «fly wing» — «Where to buy» with «moves: N»; after the site's update — «On the site's market» for
+  an item on the market; a timer opened to all on the site — in the boss's card.
+
 # uaRO Graphics 3.0.11-beta.11 — what is new
 
 - **The world map in «Reference»** (the first screen's tenth tile): the world of the maps' own minimaps, as on the site
