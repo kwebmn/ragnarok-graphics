@@ -50,6 +50,7 @@ struct SkillCast {  // 0x011a: <skill>.W <level>.W <target>.L <source>.L <result
 struct Hit {
     uint32_t source = 0, target = 0;
     int32_t damage = 0;
+    uint16_t skill = 0;  // 3.0.11-beta.41 (the chat's «Бій»): a skill's (0x01de, 0x0114 <skill>.W at 2); 0 an attack
 };
 // 3.0.7-beta.6 (the user's notifications 6, 7, 8; uAthena clif.c): the party - 0x00fb its list <len>.W <party>.24B
 // {<account>.L <nick>.24B <map>.16B <leader>.B <offline>.B}.46B* from 28; 0x01e9 one joining or changed (<account>.L
@@ -98,9 +99,20 @@ struct Status {
     uint32_t value = 0;
 };
 
+// 3.0.11-beta.41 (the chat's «Бій»): an item into the bag - 0x00a0 <index>.W <amount>.W <item>.W .. <result>.B at 22
+// (0 taken; 1 the bag full ...); the character's experience - 0x00b1 <type>.W <value>.L (1 base, 2 job, 0x14 zeny)
+struct Pickup {
+    uint16_t item = 0, amount = 0;
+    bool ok = false;
+};
+struct StatusLong {
+    uint16_t type = 0;
+    uint32_t value = 0;
+};
+
 using Event = std::variant<std::monostate, Whisper, PartyInvite, TradeRequest, GuildInvite, FriendRequest, StatusIcon,
                            Vanish, SkillCast, Hit, PartyList, PartyMember, PartyLeft, PartyHp, PartyChat, GuildChat,
-                           Chat, Status>;
+                           Chat, Status, Pickup, StatusLong>;
 
 // A packet as the game took it, `size` bytes of it readable: one of the above, or nothing (another packet, one cut
 // short or naming more bytes than there are).

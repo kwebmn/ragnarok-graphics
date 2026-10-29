@@ -10,5 +10,7 @@ namespace uagfx::win {
 unsigned gameCodePage(const Config& config);
 std::wstring widened(const std::string& text, unsigned codePage);
 std::string utf8Of(const std::wstring& text);
+// 3.0.11-beta.41: Unicode as a text of the code page (the chat's whisper's name into the game's field)
+std::string narrowed(const std::wstring& text, unsigned codePage);
 
 }  // namespace uagfx::win

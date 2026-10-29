@@ -4983,6 +4983,36 @@ constexpr Entry kTexts[] = {
      "панель игры: убрать, переставить"},
     {Text::HotbarDone, "done: back to this bar", "готово: назад до цієї панелі", "готово: назад к этой панели"},
     {Text::HotbarUse, "click: use it", "клік — використати", "клик — использовать"},
+    // 3.0.11-beta.41: the chat (stage 8 of the new interface)
+    {Text::InterfaceChat, "Chat", "Чат", "Чат"},
+    {Text::InterfaceChatHint,
+     "The chat at the bottom left with its tabs: all, the party, the guild, whispers, trade (those near selling or "
+     "buying) and the battle (hits, kills, experience, pick-ups); each channel its colour; idle, it dims to its last "
+     "lines. Type as before; Tab or a click on the channel goes round near, the party, the guild, a whisper; a click "
+     "on a name whispers to them. F10 its height, Alt+F10 away until you type.",
+     "Чат унизу ліворуч із вкладками: усі, група, гільдія, шепіт, торг (хто поруч продає чи купує) і бій (удари, "
+     "перемоги, досвід, підібране); кожен канал своїм кольором; без нових рядків тьмяніє до останніх. Пишіть як "
+     "раніше; Tab або клік на каналі — по колу: усі, група, гільдія, шепіт; клік на імені — шепіт йому. F10 — "
+     "висота, Alt+F10 — сховати, поки не почнете писати.",
+     "Чат внизу слева со вкладками: все, группа, гильдия, шёпот, торг (кто рядом продаёт или покупает) и бой "
+     "(удары, победы, опыт, подобранное); каждый канал своим цветом; без новых строк тускнеет до последних. Пишите "
+     "как раньше; Tab или клик на канале — по кругу: все, группа, гильдия, шёпот; клик на имени — шёпот ему. F10 — "
+     "высота, Alt+F10 — спрятать, пока не начнёте писать."},
+    {Text::ChatTabAll, "All", "Усі", "Все"},
+    {Text::ChatTabParty, "Party", "Група", "Группа"},
+    {Text::ChatTabGuild, "Guild", "Гільдія", "Гильдия"},
+    {Text::ChatTabWhisper, "Whisper", "Шепіт", "Шёпот"},
+    {Text::ChatTabTrade, "Trade", "Торг", "Торг"},
+    {Text::ChatTabBattle, "Battle", "Бій", "Бой"},
+    {Text::ChatFrom, "from {1}", "від {1}", "от {1}"},
+    {Text::ChatTo, "to {1}", "до {1}", "к {1}"},
+    {Text::ChatHintSend, "Enter: send \xC2\xB7 Tab: the channel", "Enter — надіслати \xC2\xB7 Tab — канал",
+     "Enter — отправить \xC2\xB7 Tab — канал"},
+    {Text::ChatHintType, "Enter: type \xC2\xB7 Tab: the channel", "Enter — писати \xC2\xB7 Tab — канал",
+     "Enter — писать \xC2\xB7 Tab — канал"},
+    {Text::ChatKilled, "{1} defeated", "{1} переможено", "{1} побеждён"},
+    {Text::ChatPicked, "Picked up: {1}", "Підібрано: {1}", "Подобрано: {1}"},
+    {Text::ChatMiss, "miss", "промах", "промах"},
     {Text::MinimapRespawn, "{1} min", "{1} хв", "{1} мин"},
     {Text::MinimapMore, "and {1} more", "і ще {1}", "и ещё {1}"},
     {Text::MinimapNoReference, "No game reference yet", "Довідника гри ще немає", "Справочника игры ещё нет"},

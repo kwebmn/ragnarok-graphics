@@ -234,3 +234,38 @@ TEST(game_packets_the_character_s_own_status) {
     CHECK(s && s->type == 5 && s->value == 3412);
     CHECK(std::holds_alternative<std::monostate>(packets::parse(hp.data(), 7)));  // cut short
 }
+
+// 3.0.11-beta.41 (the chat's «Бій»): a skill's hit names its skill; an item picked up (0x00a0); the experience
+// (0x00b1 <type>.W <value>.L: 1 base, 2 job)
+TEST(game_packets_the_battle_log) {
+    std::vector<uint8_t> skill = packet(0x01de, 33);
+    put16(skill, 2, 46);  // Double Strafe
+    put32(skill, 4, 1100001);
+    put32(skill, 8, 2000123);
+    put32(skill, 24, 640);
+    const packets::Event se = packets::parse(skill.data(), skill.size());
+    const auto* s = std::get_if<packets::Hit>(&se);
+    CHECK(s && s->skill == 46 && s->damage == 640);
+    std::vector<uint8_t> act = packet(0x008a, 29);
+    put32(act, 2, 1100001);
+    put16(act, 22, 12);
+    const packets::Event ae = packets::parse(act.data(), act.size());
+    CHECK(std::get_if<packets::Hit>(&ae) && std::get_if<packets::Hit>(&ae)->skill == 0);
+    std::vector<uint8_t> got = packet(0x00a0, 23);
+    put16(got, 2, 7);    // its place in the bag
+    put16(got, 4, 3);    // how many
+    put16(got, 6, 909);  // Jellopy
+    const packets::Event ge = packets::parse(got.data(), got.size());
+    const auto* g = std::get_if<packets::Pickup>(&ge);
+    CHECK(g && g->item == 909 && g->amount == 3 && g->ok);
+    got[22] = 1;  // the bag full: none taken
+    const packets::Event fe = packets::parse(got.data(), got.size());
+    CHECK(std::get_if<packets::Pickup>(&fe) && !std::get_if<packets::Pickup>(&fe)->ok);
+    CHECK(std::holds_alternative<std::monostate>(packets::parse(got.data(), 22)));  // cut short
+    std::vector<uint8_t> exp = packet(0x00b1, 8);
+    put16(exp, 2, 1);
+    put32(exp, 4, 123456);
+    const packets::Event ee = packets::parse(exp.data(), exp.size());
+    const auto* e = std::get_if<packets::StatusLong>(&ee);
+    CHECK(e && e->type == 1 && e->value == 123456);
+}

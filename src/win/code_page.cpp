@@ -24,4 +24,12 @@ std::string utf8Of(const std::wstring& text) {
     return s;
 }
 
+std::string narrowed(const std::wstring& text, unsigned codePage) {
+    const int n = WideCharToMultiByte(codePage, 0, text.data(), int(text.size()), nullptr, 0, nullptr, nullptr);
+    if (n <= 0) return "";
+    std::string s(size_t(n), '\0');
+    WideCharToMultiByte(codePage, 0, text.data(), int(text.size()), &s[0], n, nullptr, nullptr);
+    return s;
+}
+
 }  // namespace uagfx::win

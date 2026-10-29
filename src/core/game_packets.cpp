@@ -78,13 +78,13 @@ Event parse(const uint8_t* p, size_t size) {
             if (size < 33) return {};
             const int32_t damage = int32_t(rd32(p, 24));
             if (damage < 0) return {};
-            return Hit{rd32(p, 4), rd32(p, 8), damage};
+            return Hit{rd32(p, 4), rd32(p, 8), damage, rd16(p, 2)};
         }
         case 0x0114: {
             if (size < 31) return {};
             const int32_t damage = int16_t(rd16(p, 24));
             if (damage < 0) return {};
-            return Hit{rd32(p, 4), rd32(p, 8), damage};
+            return Hit{rd32(p, 4), rd32(p, 8), damage, rd16(p, 2)};
         }
         case 0x00fb: {  // 3.0.7-beta.6: the party's list
             if (size < 28) return {};
@@ -119,6 +119,12 @@ Event parse(const uint8_t* p, size_t size) {
             if (!textOf(p, size, 4, c.text)) return {};
             return c;
         }
+        case 0x00a0:  // 3.0.11-beta.41
+            if (size < 23) return {};
+            return Pickup{rd16(p, 6), rd16(p, 4), p[22] == 0};
+        case 0x00b1:
+            if (size < 8) return {};
+            return StatusLong{rd16(p, 2), rd32(p, 4)};
         case 0x00b0:  // 3.0.7-beta.7
             if (size < 8) return {};
             return Status{rd16(p, 2), rd32(p, 4)};

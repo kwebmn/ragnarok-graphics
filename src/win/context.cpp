@@ -35,6 +35,7 @@
 #include "win/code_page.hpp"
 #include "win/party_panel.hpp"
 #include "win/hotbar.hpp"
+#include "win/chat_window.hpp"
 #include "win/target_card.hpp"
 #include "win/notifier.hpp"
 #include "win/platform.hpp"
@@ -342,6 +343,7 @@ bool Context::open(std::string& error) {
     installPickHook(config.fastPick);  // 0.89: the cell under the mouse without testing the whole map
     installWorldMouse();               // 3.0.11-beta.24: the driver's parts are windows for the game's cursor
     buffcolumn::installBuffIcons();    // 3.0.11-beta.35: the game's status icons hidden for the buffs' column
+    chatwin::install();                // 3.0.11-beta.41: the game's chat lines read for the new chat
     installFastFtol(config.fastFtol);  // 2.5.20: float to integer without switching the x87
     installChatFix();                  // 2.6.12: Enter in the chat box while a map loads (R-PVF8AV)
     installShadowFix();                // 3.0.4-beta.9: a shadow drawn while a map loads (R-VBDSCP)
@@ -535,6 +537,7 @@ void Context::endScene() {
         targetpanel::draw(record, *renderer);   // 3.0.11-beta.38: the target's card
         partywin::draw(record, *renderer);      // 3.0.11-beta.39: the party's panel
         hotbarwin::draw(record, *renderer);     // 3.0.11-beta.40: the hotbar
+        chatwin::draw(record, *renderer);       // 3.0.11-beta.41: the chat
         answercard::draw(record, *renderer);  // 3.0.9-beta.4: the developer's answer
         windowSwitch_.draw(record, *renderer);
         referencewin::draw(record, *renderer);  // 3.0.11-beta.7: «Довідник», over the rest
@@ -574,6 +577,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
         targetpanel::draw(record, *renderer);   // 3.0.11-beta.38
         partywin::draw(record, *renderer);      // 3.0.11-beta.39
         hotbarwin::draw(record, *renderer);     // 3.0.11-beta.40
+        chatwin::draw(record, *renderer);       // 3.0.11-beta.41
         answercard::draw(record, *renderer);  // 3.0.9-beta.4
         windowSwitch_.draw(record, *renderer);
         referencewin::draw(record, *renderer);  // 3.0.11-beta.7
@@ -787,6 +791,11 @@ void Context::present(const Rect& source, bool waitForVblank) {
     partywin::frame(window, config.partyPanel, gameCodePage(config), scaleMade_ ? plan.k : 1.0,
                     scaleMade_ ? plan.targetWidth : shadow.width(),
                     scaleMade_ ? plan.targetHeight : shadow.height());
+    // 3.0.11-beta.41: [interface] chat - the chat at the bottom left, the game's own out of sight (before the hotbar:
+    // it keeps clear of it)
+    chatwin::frame(window, config.chat, gameCodePage(config), scaleMade_ ? plan.k : 1.0,
+                   scaleMade_ ? plan.targetWidth : shadow.width(),
+                   scaleMade_ ? plan.targetHeight : shadow.height());
     // 3.0.11-beta.40: [interface] hotbar - the hotkeys' bar at the bottom middle, the game's own hidden
     hotbarwin::frame(window, config.hotbar, gameCodePage(config), scaleMade_ ? plan.k : 1.0,
                      scaleMade_ ? plan.targetWidth : shadow.width(),

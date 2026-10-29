@@ -8,6 +8,7 @@
 #include "win/char_block.hpp"
 #include "win/party_panel.hpp"
 #include "win/hotbar.hpp"
+#include "win/chat_window.hpp"
 #include "win/target_card.hpp"
 #include "win/minimap_proto.hpp"
 #include "win/reference_window.hpp"
@@ -46,6 +47,7 @@ void claimed(UINT m) {
 LRESULT CALLBACK gameProc(HWND w, UINT m, WPARAM wp, LPARAM lp) {
     if (g_switch) {
         if (referencewin::key(m, wp, lp)) return 0;  // 3.0.11-beta.7: Ctrl+F, and every key while «Довідник» is open
+        if (chatwin::key(m, wp, lp)) return 0;       // 3.0.11-beta.41: the new chat's F10, Alt+F10 and Tab
         if (m == WM_KEYDOWN && minimapproto::key(unsigned(wp))) return 0;  // 3.0.11-beta.4: Ctrl+Tab, the new minimap's
         if ((m == WM_KEYDOWN || m == WM_SYSKEYDOWN) && g_switch->key(unsigned(wp), lp)) return 0;
         if (m == WM_ACTIVATE && g_switch->activate(w, wp)) return 1;  // the game's own answer to it
@@ -61,6 +63,7 @@ LRESULT CALLBACK gameProc(HWND w, UINT m, WPARAM wp, LPARAM lp) {
             targetpanel::mouse(w, m, wp, lp, answer) ||   // 3.0.11-beta.38: the target's card's
             partywin::mouse(w, m, wp, lp, answer) ||      // 3.0.11-beta.39: the party's panel's
             hotbarwin::mouse(w, m, wp, lp, answer) ||     // 3.0.11-beta.40: the hotbar's
+            chatwin::mouse(w, m, wp, lp, answer) ||       // 3.0.11-beta.41: the chat's
             g_switch->mouse(w, m, lp, answer)) {
             claimed(m);  // 3.0.11-beta.33: its press stays the part's until let go
             return answer;

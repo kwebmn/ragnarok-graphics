@@ -856,10 +856,10 @@ TEST(config_interface_minimap) {
     if (s) CHECK_EQ(settings::tokenOf(*s, parseConfig("[interface]\nminimap = 1\n")), std::string("1"));
     const LiveUpdate u = liveUpdate(parseConfig(""), parseConfig("[interface]\nminimap = 1\n"));
     // 3.0.11-beta.37: the buffs' column and the character block come with it; 3.0.11-beta.38: the target's card too;
-    // 3.0.11-beta.39: the party's panel; 3.0.11-beta.40: the hotbar
-    CHECK(u.waiting.empty() && u.applied.size() == 6 && u.applied[0] == "minimap 0 -> 1");
-    CHECK(u.applied[1] == "buffs off -> column" && u.applied[2] == "hotbar 0 -> 1" && u.applied[3] == "party 0 -> 1" &&
-          u.applied[4] == "target 0 -> 1" && u.applied[5] == "character off -> bars");
+    // 3.0.11-beta.39: the party's panel; 3.0.11-beta.40: the hotbar; 3.0.11-beta.41: the chat
+    CHECK(u.waiting.empty() && u.applied.size() == 7 && u.applied[0] == "minimap 0 -> 1");
+    CHECK(u.applied[1] == "buffs off -> column" && u.applied[2] == "chat 0 -> 1" && u.applied[3] == "hotbar 0 -> 1" &&
+          u.applied[4] == "party 0 -> 1" && u.applied[5] == "target 0 -> 1" && u.applied[6] == "character off -> bars");
     CHECK(appliesNow("interface.minimap"));
 }
 
@@ -978,4 +978,19 @@ TEST(config_reads_the_hotbar) {
     CHECK(s->page == settings::Page::Interface && s->control == settings::Control::Check);
     CHECK(appliesNow("interface.hotbar"));
     CHECK(liveUpdate(parseConfig(""), parseConfig("[interface]\nhotbar = 1\n")).next.hotbar);
+}
+
+// 3.0.11-beta.41 (the owner: «делай чат»): [interface] chat - the chat redrawn at the bottom left; it comes with the
+// new minimap as the other parts do, unless the file names it
+TEST(config_reads_the_chat) {
+    CHECK(!parseConfig("").chat);
+    CHECK(parseConfig("[interface]\nchat = 1\n").chat);
+    CHECK(parseConfig("[interface]\nminimap = 1\n").chat);
+    CHECK(!parseConfig("[interface]\nminimap = 1\nchat = 0\n").chat);
+    const settings::IniSetting* s = settings::findSetting("interface.chat");
+    CHECK(s != nullptr);
+    if (!s) return;
+    CHECK(s->page == settings::Page::Interface && s->control == settings::Control::Check);
+    CHECK(appliesNow("interface.chat"));
+    CHECK(liveUpdate(parseConfig(""), parseConfig("[interface]\nchat = 1\n")).next.chat);
 }

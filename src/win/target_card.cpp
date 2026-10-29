@@ -312,6 +312,8 @@ void draw(FrameRecord& record, gpu::Renderer& renderer) {
     if (cursor >= 0) record.moveLastBefore(record.commands().size() - size_t(cursor) - 1, size_t(cursor));
 }
 
+int actorClass(uint32_t id) { return classOf(id); }
+
 bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     State& s = state();
     if (!s.shown) return false;

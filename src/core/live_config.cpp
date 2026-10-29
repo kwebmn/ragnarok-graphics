@@ -191,6 +191,10 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("buffs", buffsLookToken(running.buffs), buffsLookToken(file.buffs)));
         n.buffs = file.buffs;
     }
+    if (file.chat != running.chat) {  // 3.0.11-beta.41: the chat, at once
+        u.applied.push_back(change("chat", flag(running.chat), flag(file.chat)));
+        n.chat = file.chat;
+    }
     if (file.hotbar != running.hotbar) {  // 3.0.11-beta.40: the hotkeys' bar, at once
         u.applied.push_back(change("hotbar", flag(running.hotbar), flag(file.hotbar)));
         n.hotbar = file.hotbar;

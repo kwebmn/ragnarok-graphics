@@ -21,5 +21,7 @@ void packet(const packets::Event& e);
 void frame(HWND game, bool on, double k, int targetWidth, int targetHeight);
 void draw(FrameRecord& record, gpu::Renderer& renderer);
 bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result);
+// 3.0.11-beta.41: the class of the world's actor with this id (the chat's battle log names monsters by it); -1 none
+int actorClass(uint32_t id);
 
 }  // namespace uagfx::win::targetpanel

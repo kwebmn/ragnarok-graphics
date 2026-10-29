@@ -470,7 +470,9 @@ enum class Text : uint16_t {
     InterfaceCharacterRings, CharWeight, CharPoints, CharLowHp, CharStats, CharEquip, CharItems, CharSkills,
     CharFriends, CharOptions, InterfaceTarget, InterfaceTargetHint, TargetWeak, TargetHeals, TargetBook,
     InterfaceParty, InterfacePartyHint, PartyOffline, InterfaceHotbar, InterfaceHotbarHint, HotbarBattle,
-    HotbarBattleHint, HotbarEdit, HotbarDone, HotbarUse,
+    HotbarBattleHint, HotbarEdit, HotbarDone, HotbarUse, InterfaceChat, InterfaceChatHint, ChatTabAll, ChatTabParty,
+    ChatTabGuild, ChatTabWhisper, ChatTabTrade, ChatTabBattle, ChatFrom, ChatTo, ChatHintSend, ChatHintType,
+    ChatKilled, ChatPicked, ChatMiss,
     MinimapRespawn, MinimapMore,
     MinimapNoReference, MinimapNoMonsters,
     // 3.0.11-beta.7: «Довідник» - its switch, the window's words, the cards' words

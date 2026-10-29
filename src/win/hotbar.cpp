@@ -7,7 +7,6 @@
 #include <cstdint>
 #include <cstring>
 #include <map>
-#include <memory>
 #include <string>
 #include <vector>
 
@@ -17,14 +16,13 @@
 #include "core/settings/strings.hpp"
 #include "pad/win/client_bar.hpp"
 #include "pad/win/game_window.hpp"
+#include "win/chat_window.hpp"
+#include "win/client_tables.hpp"
 #include "win/code_page.hpp"
 #include "win/game_camera.hpp"
-#include "win/game_files.hpp"
 #include "win/log.hpp"
-#include "win/paths.hpp"
 #include "win/picture_draw.hpp"
 #include "win/real_ddraw.hpp"
-#include "win/updates_hook.hpp"
 
 namespace uagfx::win::hotbarwin {
 namespace {
@@ -77,10 +75,7 @@ struct State {
     std::map<std::string, int> bag;
     ULONGLONG readAt = 0;
     std::string told;  // the slots last logged
-    bool tablesRead = false;
-    std::map<std::string, std::string> skillNames, itemNames, itemFiles;
     std::map<std::string, Icon> icons;  // by the file
-    std::unique_ptr<gamefiles::Reader> files;
     std::vector<hb::Cell> cells;
     hb::Layout layout;
     int hover = -1, pressed = -1;
@@ -161,26 +156,6 @@ void holdGameBar(State& s, bool on) {
     }
 }
 
-bool readFile(State& s, const std::string& entry, std::string& out) {
-    if (readGameFile(entry, out)) return true;  // as the game finds it (its zips too)
-    if (!s.files) s.files = std::make_unique<gamefiles::Reader>(gameDir());
-    std::vector<uint8_t> bytes;
-    if (!s.files->read(entry, bytes, nullptr)) return false;
-    out.assign(bytes.begin(), bytes.end());
-    return true;
-}
-
-void readTables(State& s) {
-    if (s.tablesRead) return;
-    s.tablesRead = true;
-    std::string text;
-    if (readFile(s, "data\\skillnametable.txt", text)) s.skillNames = hb::nameTable(text);
-    if (readFile(s, "data\\idnum2itemdisplaynametable.txt", text)) s.itemNames = hb::nameTable(text);
-    if (readFile(s, "data\\idnum2itemresnametable.txt", text)) s.itemFiles = hb::nameTable(text);
-    LOG_INFO("hotbar: the client's tables - %zu skills' names, %zu items' names, %zu items' icons",
-             s.skillNames.size(), s.itemNames.size(), s.itemFiles.size());
-}
-
 // One pass over the bag: each identified item's count by its number (as the game finds a slot's item by its name)
 std::map<std::string, int> readBag() {
     std::map<std::string, int> out;
@@ -229,7 +204,7 @@ const panel::Picture* iconOf(State& s, const std::string& file, int side) {
         ic.looked = true;
         std::string bytes;
         const std::string entry = "data\\texture\\" + kUi + "\\item\\" + file + ".bmp";
-        const bool read = readFile(s, entry, bytes);
+        const bool read = clienttables::readClientFile(entry, bytes);
         if (!read || !pack::decodeBmp(reinterpret_cast<const uint8_t*>(bytes.data()), bytes.size(), ic.argb, ic.w,
                                       ic.h)) {
             ic.argb.clear();
@@ -251,26 +226,37 @@ hb::Cell cellOf(State& s, int slot, const std::string& key, unsigned codePage) {
     const Slot& at = s.slots[slot];
     const int side = hb::iconSide(s.mode, s.scale);
     if (at.what.kind == hb::Slot::Kind::Skill) {
-        const auto n = s.skillNames.find(at.what.id);
-        c.name = n != s.skillNames.end() ? hb::spaced(n->second) : at.what.id;
+        const auto& skills = clienttables::skillNames();
+        const auto n = skills.find(at.what.id);
+        c.name = n != skills.end() ? hb::spaced(n->second) : at.what.id;
         c.level = at.level;
         c.icon = iconOf(s, hb::lowered(at.what.id), side);
     } else if (at.what.kind == hb::Slot::Kind::Item) {
-        const auto n = s.itemNames.find(at.what.id);
-        c.name = n != s.itemNames.end() ? utf8Of(widened(hb::spaced(n->second), codePage)) : "#" + at.what.id;
+        const auto& items = clienttables::itemNames();
+        const auto n = items.find(at.what.id);
+        c.name = n != items.end() ? utf8Of(widened(hb::spaced(n->second), codePage)) : "#" + at.what.id;
         const auto b = s.bag.find(at.what.id);
         c.count = b != s.bag.end() ? b->second : 0;
-        const auto f = s.itemFiles.find(at.what.id);
-        if (f != s.itemFiles.end()) c.icon = iconOf(s, f->second, side);
+        const auto& files = clienttables::itemFiles();
+        const auto f = files.find(at.what.id);
+        if (f != files.end()) c.icon = iconOf(s, f->second, side);
     }
     return c;
 }
 
-// The game's shown windows over the box (the target's pixels): the right edge and the top of those; false none
+// The game's shown windows over the box (the target's pixels), and the new chat (3.0.11-beta.41): the right edge and
+// the top of those; false none
 bool windowsOver(const State& s, float x0, float y0, float x1, float y1, float& right, float& top) {
     const uint32_t head = read32(kWindowMgr + kWindows), bar = gameBar();
     if (!head || s.k <= 0) return false;
     bool any = false;
+    int cx = 0, cy = 0, cw = 0, ch = 0;
+    if (chatwin::panelBox(cx, cy, cw, ch) && float(cx) < x1 && float(cx + cw) > x0 && float(cy) < y1 &&
+        float(cy + ch) > y0) {
+        right = float(cx + cw);
+        top = float(cy);
+        any = true;
+    }
     uint32_t node = read32(head);
     for (size_t n = 0; node && node != head && n < kMostNodes; ++n, node = read32(node)) {
         const uint32_t window = read32(node + 8);
@@ -405,7 +391,6 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     s.scale = scale;
     s.targetW = targetWidth;
     s.targetH = targetHeight;
-    readTables(s);
     const ULONGLONG now = GetTickCount64();
     if (now - s.readAt >= kReadMs) {
         s.readAt = now;
