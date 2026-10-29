@@ -23,6 +23,11 @@ MouseGate::Out MouseGate::filter(uint8_t buttons, bool overGame, bool focusClick
     return out;
 }
 
+void MouseGate::claim(uint8_t buttons) {
+    blocked_ |= buttons;
+    passing_ &= uint8_t(~buttons);
+}
+
 void MouseGate::reset() {
     passing_ = 0;
     blocked_ = 0;

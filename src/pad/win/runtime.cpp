@@ -75,6 +75,7 @@ struct State {
     bool mouseSupported = false;  // the client's cursor and resolution can be read from its memory
     bool loggedExact = false;
     MouseGate gate;             // the real mouse's clicks and wheel reach the game only over it
+    int claimsLogged = 0;       // 3.0.11-beta.33: «a press a part of the driver's took» lines
     MouseKeys mouseKeys;        // the middle and side buttons as F1-F9
     bool loggedLock = false;
     bool cameraSupported = false;  // the client's camera can be read and turned in its memory
@@ -633,10 +634,19 @@ void onMouseState(DWORD cb, LPVOID data) {
         // only clicks and the wheel over the game window reach it, and not the click that activated it.
         // The open menu is not the game. The window's coming to the front is checked on every poll: the first
         // poll after a click on the window carries that click.
+        const uint8_t took = gamewindow::takeClaimed();  // 3.0.11-beta.33: presses the driver's parts took
         if (s.cfg.mouseFreedom) {
             const DWORD now = GetTickCount();
             s.gate.watch(GetForegroundWindow() == s.hwnd, now);
             const bool over = !s.menu.isOpen() && gamewindow::cursorOverGame(s.hwnd, screen);
+            if (took) {
+                s.gate.claim(took);
+                if ((raw & took) && over && s.claimsLogged < 3) {  // without it the game had it (the part gone)
+                    ++s.claimsLogged;
+                    LOG_INFO("mouse: a press a part of the driver's took (buttons 0x%x) kept from the game - the part "
+                             "was gone before the game looked (its close button)", unsigned(raw & took));
+                }
+            }
             const MouseGate::Out pass = s.gate.filter(raw, over, s.cfg.focusClick, now);
             for (int i = 0; i < 4; ++i) st->rgbButtons[i] = (pass.buttons >> i) & 1 ? 0x80 : 0x00;
             if (!pass.wheel) st->lZ = 0;

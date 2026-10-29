@@ -476,6 +476,7 @@ void setZoom(State& s, int step) {
 void frame(HWND game, const Show& show, double k, int targetWidth, int targetHeight) {
     State& s = state();
     const bool on = show.on;
+    win::groundway::look(show.way);  // 3.0.11-beta.33: footprints, the strip or none
     if (!on) {
         if (s.shown) unblock();
         s.shown = false;

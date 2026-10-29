@@ -91,3 +91,68 @@ TEST(ground_way_strip_on_the_screen) {
     CHECK_EQ(groundway::strip({{0, 10, 5}, {0, 10, 100}, {0, 10, 200}}, view, p, 2.0f, 0xFFFFFFFFu, 0, behind),
              size_t(6));
 }
+
+// 3.0.11-beta.33 (the owner: «полоска с маршрутом может лучше бы была выполнена такими типа следами типа шажков»): the
+// way as footprints - left and right in turn a stride apart, each to its side, its toes along the way
+TEST(ground_way_prints_along_the_way) {
+    const std::vector<groundway::Point> line{{0, 0, 0}, {20, 0, 0}, {20, 0, 20}};  // east 20, then north 20
+    const std::vector<groundway::Print> p = groundway::prints(line, 2.5f, 0.5f, 3.0f, 100.0f);
+    CHECK_EQ(p.size(), size_t(15));  // at 3, 5.5 ... 38 of the way's 40
+    CHECK(std::fabs(p[0].at - 3.0f) < 1e-4f && std::fabs(p[1].at - 5.5f) < 1e-4f);
+    CHECK(p[0].left != p[1].left && p[1].left != p[2].left);  // in turn
+    // the first: 3 along the first leg, its toes east, half a unit to its side
+    CHECK(std::fabs(p[0].fx - 1) < 1e-3f && std::fabs(p[0].fz) < 1e-3f);
+    CHECK(std::fabs(p[0].x - 3) < 1e-3f && std::fabs(std::fabs(p[0].z) - 0.5f) < 1e-3f);
+    CHECK((p[0].z > 0) == p[0].left);  // the left of a way east is north (x east, z north)
+    // on the second leg the toes go north
+    const groundway::Print& late = p.back();
+    CHECK(late.at > 30 && std::fabs(late.fz - 1) < 1e-3f && std::fabs(std::fabs(late.x - 20) - 0.5f) < 1e-3f);
+    // none past `most`, none on a way shorter than `skip`
+    CHECK_EQ(groundway::prints(line, 2.5f, 0.5f, 3.0f, 10.0f).size(), size_t(3));  // 3, 5.5, 8
+    CHECK(groundway::prints({{0, 0, 0}, {2, 0, 0}}, 2.5f, 0.5f, 3.0f, 100.0f).empty());
+    CHECK(groundway::prints({{0, 0, 0}}, 2.5f, 0.5f, 0.0f, 100.0f).empty());
+}
+
+TEST(ground_way_print_shape) {
+    groundway::Print east;
+    east.x = 10;
+    east.z = 20;
+    const std::vector<groundway::Point> s = groundway::printShape(east, 0.0f);
+    CHECK_EQ(s.size(), size_t(groundway::kSoleSides + groundway::kHeelSides));
+    float soleX = 0, heelX = 0, most = 0;
+    for (int i = 0; i < groundway::kSoleSides; ++i) soleX += s[size_t(i)].x / groundway::kSoleSides;
+    for (int i = groundway::kSoleSides; i < int(s.size()); ++i) heelX += s[size_t(i)].x / groundway::kHeelSides;
+    for (const groundway::Point& q : s) most = std::max(most, std::fabs(q.z - 20));
+    CHECK(soleX > 10 && heelX < 10);  // the sole ahead (east), the heel behind
+    CHECK(most < 0.5f);               // narrower than a cell's tenth each side (a cell is 5)
+    const std::vector<groundway::Point> grown = groundway::printShape(east, 0.2f);
+    float wider = 0;
+    for (const groundway::Point& q : grown) wider = std::max(wider, std::fabs(q.z - 20));
+    CHECK(std::fabs(wider - most - 0.2f) < 0.02f);  // the edge 0.2 all round
+}
+
+TEST(ground_way_footprints_on_the_screen) {
+    groundway::Heights g;
+    CHECK(groundway::parseGat(gat(20, 20, [](int, int) { return -2.0f; }), g));  // flat, 2 over 0 (up: -y)
+    const float view[12] = {1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0};  // as the strip's test: x right, y down, z ahead
+    camera::Projection p;
+    p.f0 = p.f1 = 100;
+    p.cx = 320;
+    p.cy = 240;
+    p.nearZ = 10;
+    p.farZ = 1500;
+    groundway::Print ahead;  // a print 30 ahead (cell 5: the map's middle cell 10 at z 0 - this one 6 cells north)
+    ahead.z = 30;
+    ahead.fz = 1;
+    ahead.fx = 0;
+    std::vector<groundway::Vertex> v;
+    const size_t n = groundway::footprints({ahead}, g, 5, 1.0f, 0.1f, 0.0f, view, p, 0xE6F2C14Eu, 0.0f, v);
+    CHECK_EQ(n, size_t((groundway::kSoleSides + groundway::kHeelSides) * 3));  // each oval a fan round its middle
+    // on the ground: y -2.1 at z ~30 - under the middle of the screen by 100 * 2.1 / 30
+    float y = 0;
+    for (const groundway::Vertex& q : v) y += q.y / float(v.size());
+    CHECK(std::fabs(y - (240 - 100 * 2.1f / 30)) < 0.6f && v[0].diffuse == 0xE6F2C14Eu);
+    groundway::Print off = ahead;  // off the map: nothing
+    off.z = 500;
+    CHECK_EQ(groundway::footprints({off}, g, 5, 1.0f, 0.1f, 0.0f, view, p, 0xE6F2C14Eu, 0.0f, v), size_t(0));
+}

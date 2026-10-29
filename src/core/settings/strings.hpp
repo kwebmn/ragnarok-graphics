@@ -463,7 +463,9 @@ enum class Text : uint16_t {
     ReferenceThere, ReferenceNone,
     // 3.0.11-beta.6: the minimap's hints - their switches and the words on it
     InterfaceMinimapNpcs, InterfaceMinimapNpcsHint, InterfaceMinimapWarps, InterfaceMinimapWarpsHint,
-    InterfaceMinimapMobs, InterfaceMinimapMobsHint, MinimapRespawn, MinimapMore, MinimapNoReference, MinimapNoMonsters,
+    InterfaceMinimapMobs, InterfaceMinimapMobsHint, InterfaceMinimapWay, InterfaceMinimapWayHint,
+    InterfaceMinimapWaySteps, InterfaceMinimapWayLine, InterfaceMinimapWayOff, MinimapRespawn, MinimapMore,
+    MinimapNoReference, MinimapNoMonsters,
     // 3.0.11-beta.7: «Довідник» - its switch, the window's words, the cards' words
     InterfaceReference, InterfaceReferenceHint, RefTitle, RefSearchHint, RefBack, RefFooter, RefNoData,
     RefSecMobs, RefSecMobsHint, RefSecBosses, RefSecBossesHint, RefSecItems, RefSecItemsHint, RefSecCards,

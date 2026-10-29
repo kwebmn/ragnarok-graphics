@@ -18,6 +18,8 @@ enum class UiFilter { Sharp, Smooth };  // [display] ui_filter: how magnified in
 // 3.0.3-beta.6: [windows] switch_keys - Ctrl+Tab and Ctrl+Alt+1-8 (all), Ctrl+Tab alone (back) or none (off)
 enum class WindowKeys : uint8_t { All, Back, Off };
 enum class PanelLayout : uint8_t { Row, Column, Icons };  // 3.0.3-beta.8: [panel] layout; 3.0.3-beta.11 icons
+// 3.0.11-beta.33: [interface] minimap_way - the way followed on the ground: footprints (steps), a strip (line), none
+enum class WayOnGround : uint8_t { Steps, Line, Off };
 // [display] window_art (0.41): how crisp text enlarges the windows' buttons, frames and labels - xBR (core/xbr.hpp),
 // the AI (with [ai] ui_pieces) or as the game's pixels.
 enum class WindowArt { Xbr, Ai, Pixels };
@@ -536,6 +538,9 @@ struct Config {
     // 3.0.11-beta.6: [interface] minimap_npcs / minimap_warps / minimap_mobs - its hints from the game's reference
     // (core/reference_index): the NPCs as dots, the warps to other maps as rings, the map's monsters under it
     bool minimapNpcs = true, minimapWarps = true, minimapMobs = true;
+    // 3.0.11-beta.33: [interface] minimap_way - the way followed drawn on the ground (win/ground_way): as footprints
+    // (the owner: «такими типа следами типа шажков»), as the strip of 3.0.11-beta.31, or not
+    WayOnGround minimapWay = WayOnGround::Steps;
     // 3.0.11-beta.7: [interface] reference - «Довідник» (win/reference_window): Ctrl+F in the game
     bool referenceWindow = false;
     PanelLayout panelLayout = PanelLayout::Row;
@@ -670,6 +675,7 @@ const char* apiToken(Api a);
 const char* displayModeToken(DisplayMode m);
 const char* uiFilterToken(UiFilter f);
 const char* windowKeysToken(WindowKeys k);  // 3.0.3-beta.6
+const char* wayOnGroundToken(WayOnGround w);  // 3.0.11-beta.33
 const char* panelLayoutToken(PanelLayout l);  // 3.0.3-beta.7
 const char* windowArtToken(WindowArt a);
 

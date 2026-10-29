@@ -58,6 +58,28 @@ std::vector<Point> along(const std::vector<std::pair<int, int>>& cells, const He
     return out;
 }
 
+namespace {
+
+// A world point on the screen as the game places its own vertices, its depth as of `bias` units nearer along its ray
+// (its place on the screen kept); false behind the near plane
+bool placed(const float w[3], const float view[12], const camera::Projection& p, float bias, uint32_t argb,
+            Vertex& v) {
+    float c[3] = {w[0] * view[0] + w[1] * view[3] + w[2] * view[6] + view[9],
+                  w[0] * view[1] + w[1] * view[4] + w[2] * view[7] + view[10],
+                  w[0] * view[2] + w[1] * view[5] + w[2] * view[8] + view[11]};
+    own_ground::Tl2 t{};
+    if (!own_ground::placeView(p, c, t)) return false;
+    const float len = std::sqrt(c[0] * c[0] + c[1] * c[1] + c[2] * c[2]);  // nearer along the ray: its depth alone
+    const float k = len > bias ? 1.0f - bias / len : 1.0f;
+    for (float& q : c) q *= k;
+    own_ground::Tl2 nearer{};
+    if (!own_ground::placeView(p, c, nearer)) nearer = t;
+    v = Vertex{t.x, t.y, nearer.z, t.rhw, argb, 0u, 0.0f, 0.0f};
+    return true;
+}
+
+}  // namespace
+
 size_t strip(const std::vector<Point>& points, const float view[12], const camera::Projection& p, float width,
              uint32_t argb, float bias, std::vector<Vertex>& out) {
     const size_t before = out.size();
@@ -86,18 +108,7 @@ size_t strip(const std::vector<Point>& points, const float view[12], const camer
     }
     const auto place = [&](const Point& q, float side, size_t i, Vertex& v) {
         const float w[3] = {q.x + sx[i] * side, q.y, q.z + sz[i] * side};
-        float c[3] = {w[0] * view[0] + w[1] * view[3] + w[2] * view[6] + view[9],
-                      w[0] * view[1] + w[1] * view[4] + w[2] * view[7] + view[10],
-                      w[0] * view[2] + w[1] * view[5] + w[2] * view[8] + view[11]};
-        own_ground::Tl2 t{};
-        if (!own_ground::placeView(p, c, t)) return false;
-        const float len = std::sqrt(c[0] * c[0] + c[1] * c[1] + c[2] * c[2]);  // nearer along the ray: its depth alone
-        const float k = len > bias ? 1.0f - bias / len : 1.0f;
-        for (float& q : c) q *= k;
-        own_ground::Tl2 nearer{};
-        if (!own_ground::placeView(p, c, nearer)) nearer = t;
-        v = Vertex{t.x, t.y, nearer.z, t.rhw, argb, 0u, 0.0f, 0.0f};
-        return true;
+        return placed(w, view, p, bias, argb, v);
     };
     const float half = width / 2;
     for (size_t i = 0; i + 1 < points.size(); ++i) {
@@ -106,6 +117,99 @@ size_t strip(const std::vector<Point>& points, const float view[12], const camer
             !place(points[i + 1], half, i + 1, d))
             continue;  // behind the near plane
         out.insert(out.end(), {a, b, c, b, d, c});
+    }
+    return out.size() - before;
+}
+
+std::vector<Print> prints(const std::vector<Point>& points, float stride, float apart, float skip, float most) {
+    std::vector<Print> out;
+    if (points.size() < 2 || !(stride > 0)) return out;
+    std::vector<float> run(points.size(), 0.0f);  // the way's length up to each point
+    for (size_t i = 1; i < points.size(); ++i)
+        run[i] = run[i - 1] + std::hypot(points[i].x - points[i - 1].x, points[i].z - points[i - 1].z);
+    const auto at = [&](float s, float& x, float& z) {  // the place `s` along
+        s = std::clamp(s, 0.0f, run.back());
+        const size_t i = std::min(size_t(std::upper_bound(run.begin(), run.end(), s) - run.begin()), run.size() - 1);
+        const size_t a = i ? i - 1 : 0;
+        const float len = run[i] - run[a], t = len > 1e-6f ? (s - run[a]) / len : 0.0f;
+        x = points[a].x + (points[i].x - points[a].x) * t;
+        z = points[a].z + (points[i].z - points[a].z) * t;
+    };
+    bool left = true;
+    for (float s = skip; s <= std::min(most, run.back()) + 1e-4f; s += stride, left = !left) {
+        Print print;
+        print.at = s;
+        print.left = left;
+        float bx = 0, bz = 0, ax = 0, az = 0, x = 0, z = 0;
+        at(s - 2.0f, bx, bz);  // its toes along the way about it (a bend turns them, not jerks them)
+        at(s + 2.0f, ax, az);
+        at(s, x, z);
+        const float len = std::hypot(ax - bx, az - bz);
+        if (len < 1e-4f) continue;
+        print.fx = (ax - bx) / len;
+        print.fz = (az - bz) / len;
+        const float side = left ? apart : -apart;  // the left of (fx, fz) is (-fz, fx)
+        print.x = x - print.fz * side;
+        print.z = z + print.fx * side;
+        out.push_back(print);
+    }
+    return out;
+}
+
+std::vector<Point> printShape(const Print& print, float grow) {
+    // in world units along its toes (f) and across (r): the sole round f 0.40 (0.80 x 0.44), the heel round f -0.85
+    // (0.40 x 0.36) - some 2.5 long, half a cell
+    struct Oval {
+        float f, along, across;
+        int sides;
+    };
+    const Oval ovals[] = {{0.40f, 0.80f, 0.44f, kSoleSides}, {-0.85f, 0.40f, 0.36f, kHeelSides}};
+    const float rx = print.fz, rz = -print.fx;  // across: its right
+    std::vector<Point> out;
+    for (const Oval& o : ovals)
+        for (int k = 0; k < o.sides; ++k) {
+            const float a = 6.2831853f * float(k) / float(o.sides);
+            const float f = o.f + (o.along + grow) * std::cos(a), r = (o.across + grow) * std::sin(a);
+            out.push_back(Point{print.x + print.fx * f + rx * r, 0.0f, print.z + print.fz * f + rz * r});
+        }
+    return out;
+}
+
+size_t footprints(const std::vector<Print>& prints, const Heights& g, int cellSize, float sign, float lift, float grow,
+                  const float view[12], const camera::Projection& p, uint32_t argb, float bias,
+                  std::vector<Vertex>& out) {
+    const size_t before = out.size();
+    if (cellSize <= 0) return 0;
+    const auto onGround = [&](float x, float z, Vertex& v) {
+        float h = 0;
+        if (!g.at(x / float(cellSize) + float(g.w / 2), z / float(cellSize) + float(g.h / 2), h)) return false;
+        const float w[3] = {x, sign * h - lift, z};
+        return placed(w, view, p, bias, argb, v);
+    };
+    std::vector<Vertex> one;
+    for (const Print& print : prints) {
+        const std::vector<Point> shape = printShape(print, grow);
+        one.clear();
+        bool whole = true;
+        size_t first = 0;
+        for (const int sides : {kSoleSides, kHeelSides}) {
+            float mx = 0, mz = 0;  // the oval's middle
+            for (int k = 0; k < sides; ++k) {
+                mx += shape[first + size_t(k)].x / float(sides);
+                mz += shape[first + size_t(k)].z / float(sides);
+            }
+            Vertex middle{};
+            whole = whole && onGround(mx, mz, middle);
+            for (int k = 0; k < sides && whole; ++k) {
+                const Point& a = shape[first + size_t(k)];
+                const Point& b = shape[first + size_t((k + 1) % sides)];
+                Vertex va{}, vb{};
+                whole = onGround(a.x, a.z, va) && onGround(b.x, b.z, vb);
+                one.insert(one.end(), {middle, va, vb});
+            }
+            first += size_t(sides);
+        }
+        if (whole) out.insert(out.end(), one.begin(), one.end());
     }
     return out.size() - before;
 }

@@ -2,6 +2,7 @@
 
 #include <algorithm>
 
+#include "pad/win/game_window.hpp"
 #include "win/answer_card.hpp"
 #include "win/minimap_proto.hpp"
 #include "win/reference_window.hpp"
@@ -21,6 +22,22 @@ WindowSwitch* g_switch = nullptr;
 WNDPROC g_original = nullptr;
 uint32_t g_diedAt = 0, g_hitAt = 0, g_whisperAt = 0;  // 3.0.4-beta.4: windowmarks' (the game's thread)
 
+// 3.0.11-beta.33 (the owner: «при нажатии на кнопку закрыть справочник персонаж идет по локации»): a press one of the
+// driver's parts took is not the game's until it is let go - the game reads the mouse (DirectInput) after this
+// message, when the part may be gone already (its ✕ shuts it on the press), and saw the button go down over the world
+void claimed(UINT m) {
+    const bool swapped = GetSystemMetrics(SM_SWAPBUTTON) != 0;  // the messages' left is the device's right then
+    switch (m) {
+        case WM_LBUTTONDOWN:
+        case WM_LBUTTONDBLCLK: uapad::gamewindow::claimPress(swapped ? 2 : 1); break;
+        case WM_RBUTTONDOWN:
+        case WM_RBUTTONDBLCLK: uapad::gamewindow::claimPress(swapped ? 1 : 2); break;
+        case WM_MBUTTONDOWN:
+        case WM_MBUTTONDBLCLK: uapad::gamewindow::claimPress(4); break;
+        default: break;
+    }
+}
+
 LRESULT CALLBACK gameProc(HWND w, UINT m, WPARAM wp, LPARAM lp) {
     if (g_switch) {
         if (referencewin::key(m, wp, lp)) return 0;  // 3.0.11-beta.7: Ctrl+F, and every key while «Довідник» is open
@@ -31,10 +48,13 @@ LRESULT CALLBACK gameProc(HWND w, UINT m, WPARAM wp, LPARAM lp) {
         if (notifier::message(w, m, wp, lp)) return 0;  // 3.0.4-beta.3: a click on a notification
         if (m == WM_DESTROY) notifier::gone(w);
         LRESULT answer = 0;  // 3.0.3-beta.8: the mouse over the panel in the game's picture is the panel's
-        if (answercard::mouse(w, m, lp, answer)) return answer;  // 3.0.9-beta.4: and over the answer card the card's
-        if (referencewin::mouse(w, m, wp, lp, answer)) return answer;  // 3.0.11-beta.7: over «Довідник» its own
-        if (minimapproto::mouse(w, m, wp, lp, answer)) return answer;  // 3.0.11-beta.1: the new minimap's
-        if (g_switch->mouse(w, m, lp, answer)) return answer;
+        if (answercard::mouse(w, m, lp, answer) ||       // 3.0.9-beta.4: and over the answer card the card's
+            referencewin::mouse(w, m, wp, lp, answer) ||  // 3.0.11-beta.7: over «Довідник» its own
+            minimapproto::mouse(w, m, wp, lp, answer) ||  // 3.0.11-beta.1: the new minimap's
+            g_switch->mouse(w, m, lp, answer)) {
+            claimed(m);  // 3.0.11-beta.33: its press stays the part's until let go
+            return answer;
+        }
     }
     return CallWindowProcA(g_original, w, m, wp, lp);
 }

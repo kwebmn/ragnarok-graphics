@@ -23,6 +23,10 @@ constexpr float kLift = 0.5f;  // world units over the ground
 constexpr float kBias = 1.5f;  // its depth that much nearer the camera: over the ground's own bumps, under the rest
 constexpr float kWidth = 1.6f, kEdge = 2.8f;  // the gold, its dark edge (a cell is 5)
 constexpr uint32_t kGold = 0xEBF2C14E, kShade = 0x66000000;
+// 3.0.11-beta.33: the footprints - a stride apart, to each side of the way, the first clear of the player's feet, none
+// farther than the camera shows (60 cells), their dark edge all round
+constexpr float kStride = 3.2f, kApart = 0.75f, kSkip = 4.5f, kMost = 300.0f, kPrintEdge = 0.22f, kPrintLift = 0.3f;
+constexpr uint32_t kPrintGold = 0xE6F2C14E, kPrintShade = 0x59000000;
 
 struct State {
     std::string map;  // the cells' map
@@ -39,6 +43,8 @@ struct State {
     std::unique_ptr<gamefiles::Reader> files;
     std::vector<uagfx::groundway::Vertex> verts;
     int drawsLogged = 0;
+    WayOnGround way = WayOnGround::Steps;  // 3.0.11-beta.33
+    std::vector<uagfx::groundway::Print> prints;  // made with the points
 };
 
 State& state() {
@@ -108,11 +114,19 @@ void set(const std::string& map, const std::vector<std::pair<int, int>>& cells) 
     s.pointsMade = false;
 }
 
+void look(WayOnGround way) {
+    State& s = state();
+    if (way == s.way) return;
+    s.way = way;
+    s.drawsLogged = 0;  // the next draws logged again in the new look
+    LOG_INFO("ground way: drawn as %s", wayOnGroundToken(way));
+}
+
 void newFrame() { state().drawn = false; }
 
 void draw(FrameRecord& record, int width, int height) {
     State& s = state();
-    if (s.drawn || s.cells.size() < 2 || width <= 0 || height <= 0) return;
+    if (s.drawn || s.way == WayOnGround::Off || s.cells.size() < 2 || width <= 0 || height <= 0) return;
     s.drawn = true;
     if (s.heightsMap != s.map) readHeights(s);
     if (!s.heightsRead || s.off) return;
@@ -125,6 +139,7 @@ void draw(FrameRecord& record, int width, int height) {
     }
     if (!s.pointsMade || cellSize != s.cellSize) {
         s.points = uagfx::groundway::along(s.cells, s.heights, cellSize, kLift, s.sign);
+        s.prints = uagfx::groundway::prints(s.points, kStride, kApart, kSkip, kMost);
         s.pointsMade = true;
         s.cellSize = cellSize;
     }
@@ -132,8 +147,16 @@ void draw(FrameRecord& record, int width, int height) {
     if (s.points.size() < 2 || !readGameCamera(view)) return;
     const camera::Projection p = camera::projectionFor(width, height);
     s.verts.clear();
-    const size_t shade = uagfx::groundway::strip(s.points, view, p, kEdge, kShade, kBias, s.verts);
-    uagfx::groundway::strip(s.points, view, p, kWidth, kGold, kBias + 0.2f, s.verts);
+    size_t shade = 0;
+    if (s.way == WayOnGround::Steps) {  // 3.0.11-beta.33: the footprints - the dark under, the gold over
+        shade = uagfx::groundway::footprints(s.prints, s.heights, cellSize, s.sign, kPrintLift, kPrintEdge, view, p,
+                                             kPrintShade, kBias, s.verts);
+        uagfx::groundway::footprints(s.prints, s.heights, cellSize, s.sign, kPrintLift, 0.0f, view, p, kPrintGold,
+                                     kBias + 0.2f, s.verts);
+    } else {
+        shade = uagfx::groundway::strip(s.points, view, p, kEdge, kShade, kBias, s.verts);
+        uagfx::groundway::strip(s.points, view, p, kWidth, kGold, kBias + 0.2f, s.verts);
+    }
     if (s.verts.empty()) return;
     DrawCmd cmd;
     cmd.state = record.addState(stripSetup());
@@ -143,8 +166,9 @@ void draw(FrameRecord& record, int width, int height) {
     record.draw(cmd, s.verts.data(), uint32_t(s.verts.size()), nullptr, 0);
     if (s.drawsLogged < 2) {
         ++s.drawsLogged;
-        LOG_INFO("ground way: drawn on %s - %zu points, %zu triangles (the edge's %zu)", s.map.c_str(),
-                 s.points.size(), s.verts.size() / 3, shade / 3);
+        LOG_INFO("ground way: drawn on %s as %s - %zu points, %zu footprints, %zu triangles (the edge's %zu)",
+                 s.map.c_str(), wayOnGroundToken(s.way), s.points.size(), s.prints.size(), s.verts.size() / 3,
+                 shade / 3);
     }
 }
 

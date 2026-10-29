@@ -858,3 +858,22 @@ TEST(config_interface_minimap) {
     CHECK(u.waiting.empty() && u.applied.size() == 1 && u.applied[0] == "minimap 0 -> 1");
     CHECK(appliesNow("interface.minimap"));
 }
+
+// 3.0.11-beta.33 (the owner: «полоска с маршрутом может лучше бы была выполнена такими типа следами типа шажков»):
+// [interface] minimap_way - the way on the ground as footprints (steps), the strip (line) or none; a choice of
+// «Інтерфейс», applied at once
+TEST(config_reads_the_way_on_the_ground) {
+    CHECK(parseConfig("").minimapWay == WayOnGround::Steps);
+    CHECK(parseConfig("[interface]\nminimap_way = line\n").minimapWay == WayOnGround::Line);
+    CHECK(parseConfig("[interface]\nminimap_way = off\n").minimapWay == WayOnGround::Off);
+    CHECK(parseConfig("[interface]\nminimap_way = dots\n").minimapWay == WayOnGround::Steps);
+    const settings::IniSetting* s = settings::findSetting("interface.minimap_way");
+    CHECK(s != nullptr);
+    if (!s) return;
+    CHECK(s->page == settings::Page::Interface && s->control == settings::Control::Choice);
+    CHECK_EQ(settings::tokenOf(*s, parseConfig("[interface]\nminimap_way = line\n")), std::string("line"));
+    CHECK_EQ(settings::tokenOf(*s, parseConfig("")), std::string("steps"));
+    CHECK(appliesNow("interface.minimap_way"));
+    const LiveUpdate u = liveUpdate(parseConfig(""), parseConfig("[interface]\nminimap_way = off\n"));
+    CHECK(u.next.minimapWay == WayOnGround::Off);
+}

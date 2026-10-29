@@ -18,9 +18,10 @@ Framed g_framed;
 bool g_clipped = false;
 // 3.0.3-beta.8: setBlocked; 3.0.9-beta.4: the panel's, the card's; 3.0.11-beta.1: the new minimap's; 3.0.11-beta.7:
 // «Довідник»'s (in Blocker's order)
-constexpr int kBlockers = 5;
+constexpr int kBlockers = kBlockerCount;
 Blocked g_parts[kBlockers];
 HWND g_partsWindow = nullptr;  // 3.0.11-beta.24: the window their rectangles are in
+uint8_t g_claimed = 0;          // 3.0.11-beta.33: claimPress's since the last poll
 
 LRESULT CALLBACK proc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
     if (msg == WM_SETCURSOR && LOWORD(lp) != HTCLIENT) return DefWindowProcA(hwnd, msg, wp, lp);
@@ -126,6 +127,14 @@ int blockedUnder(int x, int y, int width, int height) {
     RECT client{};
     if (!g_partsWindow || !GetClientRect(g_partsWindow, &client)) return -1;
     return blockedAtGame(g_parts, kBlockers, client.right, client.bottom, x, y, width, height);
+}
+
+void claimPress(uint8_t buttons) { g_claimed |= buttons; }
+
+uint8_t takeClaimed() {
+    const uint8_t was = g_claimed;
+    g_claimed = 0;
+    return was;
 }
 
 bool cursorOverGame(HWND game, POINT screen) {

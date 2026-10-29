@@ -103,6 +103,10 @@ const std::vector<IniSetting>& iniSettings() {
          Text::InterfaceMinimapWarps, Text::InterfaceMinimapWarpsHint, ""},
         {"interface", "minimap_mobs", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {},
          Text::InterfaceMinimapMobs, Text::InterfaceMinimapMobsHint, ""},
+        // 3.0.11-beta.33: the way followed on the ground - footprints, a strip or none
+        {"interface", "minimap_way", Page::Interface, Control::Choice, 0, 0, 0, {"steps", "line", "off"},
+         {Text::InterfaceMinimapWaySteps, Text::InterfaceMinimapWayLine, Text::InterfaceMinimapWayOff},
+         Text::InterfaceMinimapWay, Text::InterfaceMinimapWayHint, ""},
         // 3.0.11-beta.7: «Довідник» - Ctrl+F in the game
         {"interface", "reference", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::InterfaceReference,
          Text::InterfaceReferenceHint, ""},
@@ -879,6 +883,7 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "interface.minimap_npcs") return c.minimapNpcs ? "1" : "0";  // 3.0.11-beta.6
     if (k == "interface.minimap_warps") return c.minimapWarps ? "1" : "0";
     if (k == "interface.minimap_mobs") return c.minimapMobs ? "1" : "0";
+    if (k == "interface.minimap_way") return wayOnGroundToken(c.minimapWay);  // 3.0.11-beta.33
     if (k == "interface.reference") return c.referenceWindow ? "1" : "0";  // 3.0.11-beta.7
     if (k == "windows.start_count") return std::to_string(c.windowStartCount);  // 3.0.4-beta.4
     if (k == "camera.indoor") return c.cameraIndoor ? "1" : "0";                // 3.0.4-beta.5

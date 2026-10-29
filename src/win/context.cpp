@@ -747,7 +747,9 @@ void Context::present(const Rect& source, bool waitForVblank) {
     answercard::frame(window, scaleMade_ ? plan.k : 1.0, scaleMade_ ? plan.targetWidth : shadow.width(),
                       scaleMade_ ? plan.targetHeight : shadow.height());
     // 3.0.11-beta.1: [interface] minimap - the new interface's minimap prototype in the game's own one's corner
-    minimapproto::frame(window, {config.newMinimap, config.minimapNpcs, config.minimapWarps, config.minimapMobs},
+    minimapproto::frame(window,
+                        {config.newMinimap, config.minimapNpcs, config.minimapWarps, config.minimapMobs,
+                         config.minimapWay},
                         scaleMade_ ? plan.k : 1.0,
                         scaleMade_ ? plan.targetWidth : shadow.width(),
                         scaleMade_ ? plan.targetHeight : shadow.height());

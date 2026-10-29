@@ -182,6 +182,11 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("minimap_mobs", flag(running.minimapMobs), flag(file.minimapMobs)));
         n.minimapMobs = file.minimapMobs;
     }
+    if (file.minimapWay != running.minimapWay) {  // 3.0.11-beta.33: the way on the ground, at once
+        u.applied.push_back(
+            change("minimap_way", wayOnGroundToken(running.minimapWay), wayOnGroundToken(file.minimapWay)));
+        n.minimapWay = file.minimapWay;
+    }
     if (file.referenceWindow != running.referenceWindow) {  // 3.0.11-beta.7: «Довідник», at once
         u.applied.push_back(change("reference", flag(running.referenceWindow), flag(file.referenceWindow)));
         n.referenceWindow = file.referenceWindow;

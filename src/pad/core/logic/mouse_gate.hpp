@@ -25,6 +25,9 @@ public:
     // `buttons`: bit i = rgbButtons[i] down. `overGame`: the Windows cursor is over the game's client area and
     // nothing covers it there. The click that brought the window to the front stays out unless `focusClick`.
     Out filter(uint8_t buttons, bool overGame, bool focusClick, uint32_t nowMs);
+    // 3.0.11-beta.33: a press a part of the driver's took in its own window message - out until it is let go,
+    // whatever is under the cursor at the next poll (the part may be gone by then: its close button)
+    void claim(uint8_t buttons);
     void reset();  // forget the held buttons
 
 private:

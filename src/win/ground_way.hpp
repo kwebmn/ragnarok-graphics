@@ -3,6 +3,7 @@
 #include <utility>
 #include <vector>
 
+#include "core/config.hpp"
 #include "core/frame.hpp"
 
 namespace uagfx::win::groundway {
@@ -13,6 +14,10 @@ namespace uagfx::win::groundway {
 
 // The way's cells on the map the player is on now (the minimap's, made again as the player walks); none: nothing
 void set(const std::string& map, const std::vector<std::pair<int, int>>& cells);
+// 3.0.11-beta.33 (the owner: «полоска с маршрутом может лучше бы была выполнена такими типа следами типа шажков, как
+// сделано в новых версиях ро клиента»): [interface] minimap_way - footprints (core/ground_way prints), the strip of
+// 3.0.11-beta.31, or none
+void look(WayOnGround way);
 // A frame begins (BeginScene): the way drawn once in it
 void newFrame();
 // Before the frame's first interface draw (Device7::record), or at its present when it had none: the strip with the

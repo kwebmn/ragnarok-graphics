@@ -51,4 +51,27 @@ using Vertex = own_ground::Tl1;
 size_t strip(const std::vector<Point>& points, const float view[12], const camera::Projection& p, float width,
              uint32_t argb, float bias, std::vector<Vertex>& out);
 
+// 3.0.11-beta.33 (the owner: «полоска с маршрутом может лучше бы была выполнена такими типа следами типа шажков, как
+// сделано в новых версиях ро клиента»): the way as footprints - left and right in turn a stride apart, each to its
+// side of the way, its toes along it
+struct Print {
+    float x = 0, z = 0;    // its middle, the game's world
+    float fx = 1, fz = 0;  // its toes' way along the ground (a unit)
+    bool left = false;     // on the way's left (x east, z north)
+    float at = 0;          // how far along the way (world units)
+};
+// The prints along the way's points (as along() gives them): `stride` world units apart, `apart` to their sides; the
+// first `skip` units left out (under the player), none past `most`
+std::vector<Print> prints(const std::vector<Point>& points, float stride, float apart, float skip, float most);
+// A print's outline: an oval sole ahead, then an oval heel behind (kSoleSides and kHeelSides points round), `grow`
+// world units bigger all round (its dark edge); world x and z (y 0)
+constexpr int kSoleSides = 10, kHeelSides = 8;
+std::vector<Point> printShape(const Print& print, float grow);
+// The prints as triangles on the ground - each oval a fan round its middle, every corner on the map's heights (`g`,
+// `cellSize`, `sign`, `lift` as along()'s) placed on the screen as strip() places its own; a print off the map or with
+// a corner behind the near plane left out
+size_t footprints(const std::vector<Print>& prints, const Heights& g, int cellSize, float sign, float lift, float grow,
+                  const float view[12], const camera::Projection& p, uint32_t argb, float bias,
+                  std::vector<Vertex>& out);
+
 }  // namespace uagfx::groundway

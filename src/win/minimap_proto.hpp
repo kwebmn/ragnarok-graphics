@@ -3,6 +3,7 @@
 
 #include <string>
 
+#include "core/config.hpp"
 #include "core/frame.hpp"
 
 namespace uagfx::gpu {
@@ -19,6 +20,7 @@ namespace uagfx::win::minimapproto {
 // (win/reference_load) - the NPCs and the warps on it (the pointer over one names it), the map's monsters under it.
 struct Show {
     bool on = false, npcs = true, warps = true, mobs = true;
+    WayOnGround way = WayOnGround::Steps;  // 3.0.11-beta.33: [interface] minimap_way - the way on the ground
 };
 void frame(HWND game, const Show& show, double k, int targetWidth, int targetHeight);
 void draw(FrameRecord& record, gpu::Renderer& renderer);

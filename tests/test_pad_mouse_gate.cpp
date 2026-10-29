@@ -201,3 +201,21 @@ TEST(blocked_game_cursor_no_sizes_is_nothing) {
     CHECK_EQ(blockedAtGame(parts, 1, 1600, 900, 5, 5, 0, 450), -1);
     CHECK_EQ(blockedAtGame(parts, 1, 1600, 900, 5, 5, 800, -1), -1);
 }
+
+// 3.0.11-beta.33 (the owner: «при нажатии на кнопку закрыть справочник персонаж идет по локации»): a press a part of
+// the driver's took in its own window message (its ✕: the part gone before the game's next poll) stays out until it
+// is let go, whatever is under the cursor at the poll
+TEST(gate_a_press_a_part_took_stays_out) {
+    MouseGate g;
+    g.claim(kLmb);  // «Довідник»'s ✕: the window shut on the press, the game polls after it
+    CHECK_EQ(g.filter(kLmb, true, false, 0).buttons, 0);
+    CHECK_EQ(g.filter(kLmb, true, false, 10).buttons, 0);  // held: still out
+    CHECK_EQ(g.filter(0, true, false, 20).buttons, 0);
+    CHECK_EQ(g.filter(kLmb, true, false, 30).buttons, kLmb);  // a new press over the game
+    CHECK_EQ(g.filter(0, true, false, 35).buttons, 0);
+    g.claim(kLmb);  // a click let go before the poll: nothing left of it
+    CHECK_EQ(g.filter(0, true, false, 40).buttons, 0);
+    CHECK_EQ(g.filter(kLmb, true, false, 50).buttons, kLmb);
+    g.claim(kRmb);  // the other button's own press only
+    CHECK_EQ(g.filter(kLmb | kRmb, true, false, 60).buttons, kLmb);
+}

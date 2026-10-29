@@ -489,6 +489,10 @@ Config parseConfig(const std::string& text) {
             setBool(val, c.minimapWarps);
         } else if (key == "interface.minimap_mobs") {
             setBool(val, c.minimapMobs);
+        } else if (key == "interface.minimap_way") {  // 3.0.11-beta.33: the way on the ground
+            if (val == "steps") c.minimapWay = WayOnGround::Steps;
+            if (val == "line") c.minimapWay = WayOnGround::Line;
+            if (val == "off") c.minimapWay = WayOnGround::Off;
         } else if (key == "interface.reference") {  // 3.0.11-beta.7: «Довідник»
             setBool(val, c.referenceWindow);
         } else if (key == "panel.hidden") {
@@ -783,6 +787,10 @@ const char* uiFilterToken(UiFilter f) { return f == UiFilter::Smooth ? "smooth" 
 
 const char* windowKeysToken(WindowKeys k) {
     return k == WindowKeys::Back ? "back" : k == WindowKeys::Off ? "off" : "all";
+}
+
+const char* wayOnGroundToken(WayOnGround w) {
+    return w == WayOnGround::Line ? "line" : w == WayOnGround::Off ? "off" : "steps";
 }
 
 const char* panelLayoutToken(PanelLayout l) {

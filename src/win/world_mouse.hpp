@@ -7,8 +7,10 @@ namespace uagfx::win {
 // minimap, «Довідник») are windows of the game's for its cursor - the world under them shows no names,
 // no sword or talk cursor, and takes no click. uaRO.exe's game mode asks its windows' manager first each frame
 // (0x4CCFB0: 0 the world under the cursor, 1 a window, 2 a window the world shows through); over a part of ours
-// its answer is 1, and the cursor the arrow a plain window of the game's sets (0x4C9D10). False, with a log line,
-// when the exe is another build.
+// its answer is 1, and the cursor the arrow a plain window of the game's sets (0x4C9D10). 3.0.11-beta.33 (the owner:
+// «поверх диалога справочника мышкой курсор видит нпс на локации»): and the game's pick of the actor under the cursor
+// (0x566DFA -> 0x4F9890) finds none under a part - its hover kept the last monster or player pointed at and named an
+// NPC under the part past that answer. False, with a log line, when the exe is another build.
 bool installWorldMouse();
 
 }  // namespace uagfx::win
