@@ -37,6 +37,8 @@ ICONS = [
     ('Plus', '<path d="M12 6v12M6 12h12"/>'),
     ('Expand', '<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>'),
     ('Warn', '<path d="M12 4l9 16H3z"/><path d="M12 10v4.5M12 17.5v.3"/>'),
+    # 3.0.11-beta.30: «Головна» - the first screen of «Довідник» (the header's button, the rail's first)
+    ('Home', '<path d="M4 11.5L12 4.5l8 7"/><path d="M6.5 9.8V20h11V9.8"/><path d="M10 20v-5.5h4V20"/>'),
 ]
 
 NUMBER = r'[-+]?(?:\d*\.\d+|\d+\.?)(?:[eE][-+]?\d+)?'
