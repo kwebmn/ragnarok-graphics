@@ -1,3 +1,22 @@
+# uaRO Graphics 3.0.11-beta.41 — what is new
+
+- **The chat (stage 8 of the new interface).** At the bottom left — a new chat in place of the old window: the tabs
+  «All», «Party», «Guild», «Whisper», «Trade», «Battle», each channel its colour, a tab's count of new lines. «Trade» —
+  those near selling or buying; «Battle» — the character's hits and those on it, kills with their experience, what
+  was picked up (kills and pick-ups in «All» too).
+- Type as before: the game itself takes the words (its old chat window works on, off the screen), the new chat shows
+  them in its row. Tab or a click on the channel goes round: all, the party, the guild, a whisper (then type the
+  name); a click on a name in the chat whispers to them, «×» takes the whisper away.
+- With no new lines the chat dims to its last three. F10 — its height, Alt+F10 — away until you type; the wheel —
+  the history.
+- An item let go over the new chat does not fall on the ground, as over the other new parts.
+- «Interface» has «Chat»; with the new minimap it is on by itself.
+- To check: lines near, the party's, the guild's, whispers and announcements in their tabs and colours; the typed
+  words and the caret in the chat's row, Enter sends; Tab changes the channel (a party message goes to the party); a
+  click on a name whispers; the battle in «Battle». The log's lines `chat: the game's lines read ...`,
+  `chat: a line from ...`, `chat: the game's chat window (...) moved off the screen`, `chat: the game's input read
+  - ...`.
+
 # uaRO Graphics 3.0.11-beta.40 — what is new
 
 - **The hotbar (stage 8 of the new interface).** At the bottom middle — the game's hotkeys bar redrawn: nine cells
