@@ -443,6 +443,19 @@ Page home(const refindex::Index& ix, Lang l, int online, const Context& c) {
 Page found(const refindex::Index& ix, Lang l, const std::string& query, const Context& c) {
     Page p;
     p.name = "«" + query + "»";
+    const bool digits = !query.empty() && query.size() <= 6 &&
+                        std::all_of(query.begin(), query.end(), [](char ch) { return ch >= '0' && ch <= '9'; });
+    if (digits) {  // 3.0.11-beta.22: a number - the item and the monster of that id (as @iteminfo, @mobinfo say them)
+        const int id = std::atoi(query.c_str());
+        if (ix.items.count(id) || ix.mobs.count(id)) p.rows.push_back(heading(sayf(l, Text::RefById, {query})));
+        if (ix.items.count(id))
+            p.rows.push_back(linked(itemName(ix, id), typeName(ix.items.at(id).type, l), toItem(id)));
+        if (ix.mobs.count(id)) {
+            Row r = linked(mobName(ix, id), mobNote(ix, l, id), toMob(id));
+            r.gold = ix.mobs.at(id).boss;
+            p.rows.push_back(std::move(r));
+        }
+    }
     const refindex::Found f = refindex::search(ix, query, kMostFound);
     const auto shown = [&](size_t n, size_t all) {
         if (all > n) p.rows.push_back(note(sayf(l, Text::RefShownOf, {std::to_string(n), std::to_string(all)})));
@@ -769,6 +782,7 @@ Page item(const refindex::Index& ix, Lang l, int id, const Context& c, unsigned 
                                                                                        std::to_string(i.weight % 10)
                                                                                  : "")});
     if (i.buy > 0) sub.left += " · " + sayf(l, Text::RefPrice, {number(i.buy, l)});
+    if (i.buy > 1) sub.left += " · " + sayf(l, Text::RefSells, {number(i.buy / 2, l)});  // 3.0.11-beta.22: to an NPC
     if (i.slots > 0) sub.left += " · " + sayf(l, Text::RefSlots, {std::to_string(i.slots)});
     p.rows.push_back(sub);
     market(l, p, id, c);  // 3.0.11-beta.12

@@ -35,6 +35,7 @@ using settings::Text;
 
 constexpr size_t kMostTyped = 40;
 constexpr size_t kMostRecent = 8, kMostKept = 40;  // 3.0.11-beta.18: «Нещодавні», «Обране» at most
+constexpr size_t kMostPictures = 2000;             // 3.0.11-beta.22: the cards' pictures and icons kept at most
 
 struct Entry {  // a page left for another: what «Назад» brings back
     refpages::Link at;
@@ -110,6 +111,7 @@ panel::Picture asPicture(const spritefile::Image& im) {
 
 void loadPicture(State& s, const std::string& key, int side) {
     if (s.pictures.count(key) || !s.index) return;
+    if (s.pictures.size() >= kMostPictures) s.pictures.clear();  // 3.0.11-beta.22: a long browse never piles up
     panel::Picture& out = s.pictures[key];  // empty until found: not looked for again
     const int box = std::max(16, side - int(8 * s.layout.s));  // the square less its edge (paint: 4 each way)
     if (key.rfind("mob:", 0) == 0) {

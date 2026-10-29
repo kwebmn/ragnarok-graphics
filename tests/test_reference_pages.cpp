@@ -126,7 +126,7 @@ TEST(reference_pages_an_items_card) {
     const refindex::Index ix = index();
     const refpages::Page p = refpages::item(ix, Lang::Uk, 601, ctx(""));
     CHECK(p.rows[0].left == "Fly Wing" && p.rows[0].right == "Вживане");
-    CHECK(p.rows[1].left == "вага 0,5 · ціна 60 z");
+    CHECK(p.rows[1].left == "вага 0,5 · ціна 60 z · продаж 30 z");  // 3.0.11-beta.22: an NPC pays half
     CHECK(p.rows[1].picture == "item:601" && p.rows[1].right == "Wing_Of_Fly");
     const size_t by = indexOf(p, "З кого випадає");
     CHECK_EQ(p.rows[by].right, std::string("2"));
@@ -371,4 +371,14 @@ TEST(reference_pages_recent_and_starred) {
     const refpages::Page poring = refpages::open(ix, Lang::Uk, refpages::Link{refpages::Go::Mob, 1002, ""}, c);
     CHECK(poring.rows[1].link.go == refpages::Go::Star && !poring.rows[1].gold);
     CHECK_EQ(poring.rows[1].left, std::string("Додати в обране ›"));
+}
+
+// 3.0.11-beta.22: a number finds the item and the monster of that id
+TEST(reference_pages_found_by_number) {
+    const refindex::Index ix = index();
+    const refpages::Page wing = refpages::found(ix, Lang::Uk, "601");
+    CHECK(wing.rows[0].left == "Номер 601" && wing.rows[1].left == "Fly Wing" && wing.rows[1].link.id == 601);
+    const refpages::Page poring = refpages::found(ix, Lang::Uk, "1002");
+    CHECK(poring.rows[1].left == "Poring" && poring.rows[1].link.go == refpages::Go::Mob);
+    CHECK(indexOf(refpages::found(ix, Lang::Uk, "7"), "Номер 7") == size_t(-1));  // no such id: nothing for it
 }

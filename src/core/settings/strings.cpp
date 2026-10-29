@@ -5146,6 +5146,9 @@ constexpr Entry kTexts[] = {
      "монстрів, з яких випадає: {1}",
      "монстров, с которых падает: {1}"},
     {Text::RefFresh, "the site's live data {1} ago", "живі дані сайту {1} тому", "живые данные сайта {1} назад"},
+    // 3.0.11-beta.22: what an NPC pays for it (half its price); the item and the monster of a number
+    {Text::RefSells, "sells for {1} z", "продаж {1} z", "продажа {1} z"},
+    {Text::RefById, "Number {1}", "Номер {1}", "Номер {1}"},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 
