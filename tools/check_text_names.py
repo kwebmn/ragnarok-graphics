@@ -21,6 +21,8 @@ ALLOW = {
     "Звіти графіки", "Оновлення клієнта", "Нові", "Чекають на відповідь", "Роздається",
     # the game and the words of a text, not names
     "Miss", "проявлення", "проявления",
+    # 3.0.11-beta.28: what to type in «Довідник»'s search - the game's names
+    "wing fly", "poring",
 }
 
 
