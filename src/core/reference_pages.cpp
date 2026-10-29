@@ -5,6 +5,7 @@
 #include <climits>
 #include <cstdio>
 #include <cstdlib>
+#include <functional>
 #include <map>
 #include <set>
 #include <tuple>
@@ -24,7 +25,7 @@ namespace {
 
 namespace {
 
-constexpr size_t kMostFound = 30;  // a search's group at most (the rest: «перші 30 з 89»)
+constexpr size_t kMostFound = 100;  // a search's group at most (3.0.11-beta.28: opened; «перші 100 з 340»)
 
 std::string say(Lang l, Text t) { return settings::tr(l, t); }
 std::string sayf(Lang l, Text t, std::vector<std::string> args) { return settings::fmt(settings::tr(l, t), args); }
@@ -523,68 +524,234 @@ Page home(const refindex::Index& ix, Lang l, const Context& c) {
     return p;
 }
 
-Page found(const refindex::Index& ix, Lang l, const std::string& query, const Context& c) {
+namespace {
+
+// 3.0.11-beta.28: the groups of the search's results that open (their Go::Expand bits)
+enum FoundGroup : int { ByNumber, FoundMobs, FoundItems, FoundAegis, FoundMaps, FoundQuests, FoundNpcs };
+constexpr size_t kFewFound = 8;  // a group's results until «ще N ›» opens it (the concept's v21_search)
+
+// 3.0.11-beta.28: the query's words in `text` between `from` and `to` (bytes), each where the search finds it first
+// (the case folded alike: the places are the text's own letters), the ones that overlap joined
+Marks marksIn(const std::string& text, const std::string& query, size_t from = 0, size_t to = std::string::npos) {
+    to = std::min(to, text.size());
+    std::string folded;
+    std::vector<std::pair<size_t, size_t>> at;  // each folded byte's letter in the text: its first byte, its end
+    for (size_t i = from; i < to;) {
+        size_t j = i + 1;
+        while (j < to && (static_cast<unsigned char>(text[j]) & 0xC0) == 0x80) ++j;
+        const std::string letter = settings::foldCase(text.substr(i, j - i));
+        for (size_t k = 0; k < letter.size(); ++k) at.emplace_back(i, j);
+        folded += letter;
+        i = j;
+    }
+    std::vector<std::pair<size_t, size_t>> places;
+    const std::string q = settings::foldCase(query);
+    for (size_t b = 0; b < q.size();) {
+        const size_t e = std::min(q.find(' ', b), q.size());
+        const size_t k = e > b ? folded.find(q.substr(b, e - b)) : std::string::npos;
+        if (k != std::string::npos) places.emplace_back(at[k].first, at[k + (e - b) - 1].second);
+        b = e + 1;
+    }
+    std::sort(places.begin(), places.end());
+    Marks out;
+    for (const auto& [b, e] : places) {
+        if (!out.empty() && b <= out.back().second)
+            out.back().second = uint16_t(std::max<size_t>(out.back().second, e));
+        else
+            out.emplace_back(uint16_t(b), uint16_t(e));
+    }
+    return out;
+}
+
+// 3.0.11-beta.28: a number with its word in the form it takes («42 крамниці», «з 143 монстрів»): the text's forms
+// apart by «|» - English one|more, Ukrainian and Russian one|few|many
+std::string counted(Lang l, size_t n, Text t) {
+    const std::string forms = say(l, t);
+    const size_t form = l == Lang::En                                                 ? (n == 1 ? 0 : 1)
+                        : n % 10 == 1 && n % 100 != 11                                ? 0
+                        : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14) ? 1
+                                                                                       : 2;
+    size_t b = 0;
+    for (size_t k = 0; k < form; ++k) {
+        const size_t bar = forms.find('|', b);
+        if (bar == std::string::npos) break;
+        b = bar + 1;
+    }
+    return number(static_cast<long long>(n), l) + " " + forms.substr(b, forms.find('|', b) - b);
+}
+
+// 3.0.11-beta.28: one found as the concept's row: its icon, its name with the query marked, its line, its kind
+Row result(const std::string& name, const std::string& sub, Text kind, Link to, std::string icon,
+           const std::string& query, Lang l) {
+    Row r;
+    r.style = Style::Result;
+    r.left = name;
+    r.sub = sub;
+    r.right = say(l, kind);
+    r.icon = std::move(icon);
+    r.link = std::move(to);
+    r.marks = marksIn(name, query);
+    return r;
+}
+
+// A result found by another name than its own: the query marked there, in its line
+void markedIn(Row& r, const std::string& name, const std::string& query) {
+    r.marks.clear();
+    const size_t at = r.sub.find(name);
+    if (at != std::string::npos) r.subMarks = marksIn(r.sub, query, at, at + name.size());
+}
+
+std::string joined(const std::vector<std::string>& parts) {
+    std::string out;
+    for (const std::string& part : parts)
+        if (!part.empty()) out += (out.empty() ? "" : " · ") + part;
+    return out;
+}
+
+template <typename List>
+size_t distinct(const List& list, int (*of)(const typename List::value_type&)) {
+    std::set<int> seen;
+    for (const auto& v : list) seen.insert(of(v));
+    return seen.size();
+}
+
+// A monster: the other name it was found by, MVP or a boss, its level, on how many maps
+Row mobFound(const refindex::Index& ix, Lang l, const refindex::Hit& h, const std::string& query) {
+    const refindex::Mob& m = ix.mobs.at(h.id);
+    std::vector<std::string> parts;
+    if (h.by == 1) parts.push_back(sayf(l, Text::RefOtherName, {m.other}));
+    if (isMvp(m)) parts.push_back("MVP");
+    else if (m.boss) parts.push_back(say(l, Text::RefBoss));
+    parts.push_back(sayf(l, Text::RefLevel, {std::to_string(m.lv)}));
+    const auto where = ix.spawnsOf.find(h.id);
+    if (where != ix.spawnsOf.end() && !where->second.empty())
+        parts.push_back(counted(l, where->second.size(), Text::RefMapsN));
+    Row r = result(m.name, joined(parts), Text::RefKindMob, toMob(h.id), "mob:" + std::to_string(h.id), query, l);
+    r.gold = m.boss;
+    if (h.by == 1) markedIn(r, m.other, query);
+    return r;
+}
+
+// An item: its service name when found by it; else the cheapest shop's price and the shops (or its kind), and from
+// how many monsters it drops
+Row itemFound(const refindex::Index& ix, Lang l, const refindex::Hit& h, const std::string& query) {
+    const refindex::Item& it = ix.items.at(h.id);
+    std::vector<std::string> parts;
+    if (h.by == 2) {
+        parts.push_back(sayf(l, Text::RefServiceName, {it.aegis}));
+    } else {
+        const auto at = ix.soldAt.find(h.id);
+        if (at != ix.soldAt.end() && !at->second.empty()) {
+            parts.push_back(number(at->second.front().second, l) + " z");
+            parts.push_back(counted(l, distinct(at->second, +[](const std::pair<int, int>& s) { return s.first; }),
+                                    Text::RefShopsN));
+        } else if (it.type != 3) {  // not «Інше»
+            parts.push_back(typeName(it.type, l));
+        }
+        const auto by = ix.droppedBy.find(h.id);
+        if (by != ix.droppedBy.end() && !by->second.empty()) {
+            const size_t mobs = distinct(by->second, +[](const refindex::Source& s) { return s.mob; });
+            parts.push_back(sayf(l, Text::RefDropsFrom, {counted(l, mobs, Text::RefFromMobsN)}));
+        }
+    }
+    Row r = result(it.name, joined(parts), Text::RefKindItem, toItem(h.id), "item:" + std::to_string(h.id), query, l);
+    if (h.by == 2) markedIn(r, it.aegis, query);
+    return r;
+}
+
+// A location: the player's, a town, its monsters' kinds, the players there now
+Row mapFound(const refindex::Index& ix, Lang l, const std::string& code, const Context& c, const std::string& query) {
+    std::vector<std::string> parts;
+    if (code == c.here) parts.push_back(say(l, Text::RefYouHere));
+    const auto it = ix.maps.find(code);
+    if (it != ix.maps.end() &&
+        std::find(it->second.flags.begin(), it->second.flags.end(), "town") != it->second.flags.end())
+        parts.push_back(say(l, Text::RefFlagTown));
+    parts.push_back(mapNote(ix, l, code));
+    if (c.players) {
+        const auto now = c.players->find(code);
+        if (now != c.players->end() && now->second > 0)
+            parts.push_back(sayf(l, Text::RefPlayersNow, {std::to_string(now->second)}));
+    }
+    Row r = result(refindex::mapTitle(ix, code), joined(parts), Text::RefKindMap, toMap(code), "ui:location", query, l);
+    r.gold = code == c.here;
+    return r;
+}
+
+}  // namespace
+
+Page found(const refindex::Index& ix, Lang l, const std::string& query, const Context& c, unsigned opened) {
     Page p;
     p.name = "«" + query + "»";
     Row field;  // 3.0.11-beta.26: the concept's results under the search's own field (v21_search), Esc its key
     field.style = Style::Search;
     field.right = "Esc";
     p.rows.push_back(field);
+    // 3.0.11-beta.28: a group - its capitals and its note, its first kFewFound results (only the rows shown made)
+    // and «ще N ›» that opens it; `count` the results it may show (kMostFound at most) of `all` found
+    auto group = [&](FoundGroup g, const std::string& title, const std::string& aside, size_t count, size_t all,
+                     const std::function<Row(size_t)>& make) {
+        if (count == 0) return;
+        Row head;
+        head.style = Style::Group;
+        head.left = title;
+        head.right = aside;
+        p.rows.push_back(std::move(head));
+        const bool open = ((opened >> unsigned(g)) & 1u) || count <= kFewFound + 1;
+        const size_t n = open ? count : kFewFound;
+        for (size_t i = 0; i < n; ++i) p.rows.push_back(make(i));
+        if (n < count) {
+            Row more;
+            more.style = Style::More;
+            more.left = sayf(l, Text::RefFoundMore, {std::to_string(count - n)});
+            more.link = Link{Go::Expand, int(g), ""};
+            p.rows.push_back(std::move(more));
+        } else if (all > count) {
+            p.rows.push_back(note(sayf(l, Text::RefShownOf, {std::to_string(count), std::to_string(all)})));
+        }
+    };
     const bool digits = !query.empty() && query.size() <= 6 &&
                         std::all_of(query.begin(), query.end(), [](char ch) { return ch >= '0' && ch <= '9'; });
     if (digits) {  // 3.0.11-beta.22: a number - the item and the monster of that id (as @iteminfo, @mobinfo say them)
         const int id = std::atoi(query.c_str());
-        if (ix.items.count(id) || ix.mobs.count(id)) p.rows.push_back(heading(sayf(l, Text::RefById, {query})));
-        if (ix.items.count(id))
-            p.rows.push_back(linked(itemName(ix, id), typeName(ix.items.at(id).type, l), toItem(id)));
-        if (ix.mobs.count(id)) {
-            Row r = linked(mobName(ix, id), mobNote(ix, l, id), toMob(id));
-            r.gold = ix.mobs.at(id).boss;
-            p.rows.push_back(std::move(r));
-        }
+        std::vector<Row> rows;
+        if (ix.items.count(id)) rows.push_back(itemFound(ix, l, refindex::Hit{refindex::Kind::Item, id, ""}, query));
+        if (ix.mobs.count(id)) rows.push_back(mobFound(ix, l, refindex::Hit{refindex::Kind::Mob, id, ""}, query));
+        group(ByNumber, sayf(l, Text::RefById, {query}), "", rows.size(), rows.size(),
+              [&](size_t i) { return rows[i]; });
     }
     const refindex::Found f = refindex::search(ix, query, kMostFound);
-    const auto shown = [&](size_t n, size_t all) {
-        if (all > n) p.rows.push_back(note(sayf(l, Text::RefShownOf, {std::to_string(n), std::to_string(all)})));
-    };
-    if (!f.mobs.empty()) {
-        p.rows.push_back(heading(sayf(l, Text::RefFoundMobs, {std::to_string(f.mobsAll)})));
-        for (const refindex::Hit& h : f.mobs) {
-            Row r = linked(mobName(ix, h.id), mobNote(ix, l, h.id), toMob(h.id));
-            r.gold = ix.mobs.at(h.id).boss;
-            p.rows.push_back(std::move(r));
-        }
-        shown(f.mobs.size(), f.mobsAll);
-    }
-    if (!f.items.empty()) {
-        p.rows.push_back(heading(sayf(l, Text::RefFoundItems, {std::to_string(f.itemsAll)})));
-        for (const refindex::Hit& h : f.items)
-            p.rows.push_back(linked(itemName(ix, h.id), typeName(ix.items.at(h.id).type, l), toItem(h.id)));
-        shown(f.items.size(), f.itemsAll);
-    }
-    if (!f.maps.empty()) {
-        p.rows.push_back(heading(sayf(l, Text::RefFoundMaps, {std::to_string(f.mapsAll)})));
-        for (const refindex::Hit& h : f.maps)
-            p.rows.push_back(linked(refindex::mapTitle(ix, h.map), mapNote(ix, l, h.map), toMap(h.map)));
-        shown(f.maps.size(), f.mapsAll);
-    }
-    std::vector<int> qs;  // 3.0.11-beta.16: the quests by their titles (the interface's language and English)
+    group(FoundMobs, sayf(l, Text::RefFoundMobs, {std::to_string(f.mobsAll)}), "", f.mobs.size(), f.mobsAll,
+          [&](size_t i) { return mobFound(ix, l, f.mobs[i], query); });
+    group(FoundItems, sayf(l, Text::RefFoundItems, {std::to_string(f.itemsAll)}), say(l, Text::RefOftenFirst),
+          f.items.size(), f.itemsAll, [&](size_t i) { return itemFound(ix, l, f.items[i], query); });
+    group(FoundAegis, sayf(l, Text::RefFoundAegis, {std::to_string(f.aegisAll)}), "", f.aegis.size(), f.aegisAll,
+          [&](size_t i) { return itemFound(ix, l, f.aegis[i], query); });  // 3.0.11-beta.28
+    group(FoundMaps, sayf(l, Text::RefFoundMaps, {std::to_string(f.mapsAll)}), "", f.maps.size(), f.mapsAll,
+          [&](size_t i) { return mapFound(ix, l, f.maps[i].map, c, query); });
+    std::vector<std::pair<size_t, bool>> quests;  // 3.0.11-beta.16: by their titles (the interface's, English's)
+    size_t questsAll = 0;
     const std::string folded = settings::foldCase(query);
     for (size_t i = 0; i < ix.quests.size(); ++i) {
         const refquests::Quest& q = ix.quests[i];
-        if (settings::textMatches(settings::foldCase(refquests::textOf(q.title, questLang(l))), folded) ||
-            settings::textMatches(settings::foldCase(q.title[refquests::En]), folded))
-            qs.push_back(int(i));
+        const bool own = settings::textMatches(settings::foldCase(refquests::textOf(q.title, questLang(l))), folded);
+        if (!own && !settings::textMatches(settings::foldCase(q.title[refquests::En]), folded)) continue;
+        if (++questsAll <= kMostFound) quests.emplace_back(i, own);
     }
-    if (!qs.empty()) {
-        p.rows.push_back(heading(sayf(l, Text::RefFoundQuests, {std::to_string(qs.size())})));
-        for (size_t i = 0; i < qs.size() && i < kMostFound; ++i) {
-            const refquests::Quest& q = ix.quests[size_t(qs[i])];
-            p.rows.push_back(linked(refquests::textOf(q.title, questLang(l)), categoryName(q.category, l),
-                                    toQuest(qs[i])));
-        }
-        shown(std::min(qs.size(), kMostFound), qs.size());
-    }
+    group(FoundQuests, sayf(l, Text::RefFoundQuests, {std::to_string(questsAll)}), "", quests.size(), questsAll,
+          [&](size_t k) {
+              const auto [i, own] = quests[k];
+              const refquests::Quest& q = ix.quests[i];
+              std::vector<std::string> parts;
+              if (!own) parts.push_back(q.title[refquests::En]);  // found by its English title: that title, marked
+              parts.push_back(categoryName(q.category, l));
+              if (q.minLevel > 0) parts.push_back(sayf(l, Text::RefQuestLevel, {std::to_string(q.minLevel)}));
+              parts.push_back(q.npc);
+              const std::string& title = refquests::textOf(q.title, questLang(l));
+              Row r = result(title, joined(parts), Text::RefKindQuest, toQuest(int(i)), "ui:quest", query, l);
+              if (!own) markedIn(r, q.title[refquests::En], query);
+              return r;
+          });
     if (!f.npcs.empty()) {  // 3.0.11-beta.15: the nearest to the player's map first («kafra» - the Kafra to walk to)
         const auto moves =
             c.here.empty() ? std::unordered_map<std::string, refroute::Far>{}
@@ -598,22 +765,26 @@ Page found(const refindex::Index& ix, Lang l, const std::string& query, const Co
         std::stable_sort(npcs.begin(), npcs.end(), [&](const refindex::Hit& a, const refindex::Hit& b) {
             return far(a.map) < far(b.map);
         });
-        p.rows.push_back(heading(sayf(l, Text::RefFoundNpcs, {std::to_string(f.npcsAll)})));
-        for (size_t i = 0; i < npcs.size() && i < kMostFound; ++i) {
-            const refindex::Hit& h = npcs[i];
-            const refindex::Npc& n = ix.maps.at(h.map).npcs[size_t(h.id)];
-            std::string right =
-                refindex::mapTitle(ix, h.map) + " · " + std::to_string(n.x) + ", " + std::to_string(n.y);
-            const auto m = moves.find(h.map);
-            if (h.map == c.here) right = say(l, Text::RefYouHere) + " · " + right;
-            else if (m != moves.end()) right += " · " + farNote(m->second, l);
-            Row r = linked(n.name, right, toMap(h.map));
-            r.dot = refindex::colorOf(n.kind);
-            p.rows.push_back(std::move(r));
-        }
-        shown(std::min(npcs.size(), kMostFound), f.npcsAll);
+        group(FoundNpcs, sayf(l, Text::RefFoundNpcs, {std::to_string(f.npcsAll)}),
+              c.here.empty() ? "" : say(l, Text::RefNearFirst), std::min(npcs.size(), kMostFound), f.npcsAll,
+              [&](size_t i) {
+                  const refindex::Hit& h = npcs[i];
+                  const refindex::Npc& n = ix.maps.at(h.map).npcs[size_t(h.id)];
+                  std::string sub =
+                      refindex::mapTitle(ix, h.map) + " · " + std::to_string(n.x) + ", " + std::to_string(n.y);
+                  const auto m = moves.find(h.map);
+                  if (h.map == c.here) sub = say(l, Text::RefYouHere) + " · " + sub;
+                  else if (m != moves.end()) sub += " · " + farNote(m->second, l);
+                  Row r = result(n.name, sub, Text::RefKindNpc, toMap(h.map), "ui:npc", query, l);
+                  r.dot = refindex::colorOf(n.kind);
+                  return r;
+              });
     }
-    if (p.rows.size() == 1) p.rows.push_back(note(say(l, Text::RefNothing)));  // the search's field alone
+    Row end;  // 3.0.11-beta.28: how the search finds (a line above it), or nothing found and what to try
+    end.style = p.rows.size() == 1 ? Style::Empty : Style::Hint;
+    end.left = p.rows.size() == 1 ? sayf(l, Text::RefNothingFor, {query}) : say(l, Text::RefSearchExplain);
+    if (end.style == Style::Empty) end.sub = say(l, Text::RefNothingHint);
+    p.rows.push_back(std::move(end));
     return p;
 }
 

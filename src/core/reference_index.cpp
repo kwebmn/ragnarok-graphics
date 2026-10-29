@@ -119,6 +119,12 @@ void readMobs(const json::Value& v, Index& ix) {
         if (a[size_t(12)].type() == json::Value::Array && at(a[size_t(12)], 0) > 0)
             mob.drops.push_back(Drop{at(a[size_t(12)], 0), at(a[size_t(12)], 1), 2});
         if (a.items().size() > 13) mob.sprite = lower(a[size_t(13)].asString());
+        if (a.items().size() > 14) {  // 3.0.11-beta.28: kRO's name - the site's newer packs, "" when the same
+            mob.other = a[size_t(14)].asString();
+            std::string same = lower(mob.other);
+            std::replace(same.begin(), same.end(), '_', ' ');
+            if (same == lower(mob.name)) mob.other.clear();
+        }
         ix.mobs[id] = std::move(mob);
     }
 }
@@ -245,6 +251,16 @@ bool build(const std::string& text, Index& out) {
             return ma.name < mb.name;
         });
     }
+    for (auto& m : ix.mobs) {  // 3.0.11-beta.28: the names folded once - not on each key of the search
+        m.second.folded = settings::foldCase(m.second.name);
+        m.second.otherFolded = settings::foldCase(m.second.other);
+    }
+    for (auto& i : ix.items) {
+        i.second.folded = settings::foldCase(i.second.name);
+        i.second.aegisFolded = settings::foldCase(i.second.aegis);
+    }
+    for (auto& m : ix.maps)
+        for (Npc& n : m.second.npcs) n.folded = settings::foldCase(n.name);
     link(ix);
     out = std::move(ix);
     return true;
@@ -308,6 +324,21 @@ int closeness(const std::string& name, const std::string& query) {
     return 2;
 }
 
+// 3.0.11-beta.28: every word of the query (folded, apart by spaces) in a folded name - settings::textMatches without
+// folding both again for each name (the search's 16 ms a key)
+bool hasAll(const std::string& folded, const std::vector<std::string>& words) {
+    for (const std::string& w : words)
+        if (folded.find(w) == std::string::npos) return false;
+    return !words.empty();
+}
+
+// A name folded: build()'s, else folded now (an index made by hand)
+const std::string& foldedOf(const std::string& kept, const std::string& name, std::string& scratch) {
+    if (!kept.empty() || name.empty()) return kept;
+    scratch = settings::foldCase(name);
+    return scratch;
+}
+
 }  // namespace
 
 Found search(const Index& ix, const std::string& query, size_t most) {
@@ -316,53 +347,74 @@ Found search(const Index& ix, const std::string& query, size_t most) {
     if (q.empty()) return f;
     struct Scored {
         int close, rank;
-        std::string name;
+        const std::string* name;  // 3.0.11-beta.28: the index's own (no copies), then a map's code (an NPC's)
+        const std::string* tie;
         Hit hit;
     };
     auto finish = [&](std::vector<Scored>& list, std::vector<Hit>& hits, size_t& all, size_t cut) {
-        std::sort(list.begin(), list.end(), [](const Scored& a, const Scored& b) {
+        const auto before = [](const Scored& a, const Scored& b) {
             if (a.close != b.close) return a.close < b.close;
             if (a.rank != b.rank) return a.rank < b.rank;
-            return a.name < b.name;
-        });
+            if (*a.name != *b.name) return *a.name < *b.name;
+            return a.tie && b.tie && *a.tie < *b.tie;
+        };
+        const size_t n = std::min(cut, list.size());  // 3.0.11-beta.28: the first `cut` in order, the rest left
+        std::partial_sort(list.begin(), list.begin() + std::ptrdiff_t(n), list.end(), before);
         all = list.size();
-        for (size_t i = 0; i < list.size() && i < cut; ++i) hits.push_back(list[i].hit);
+        for (size_t i = 0; i < n; ++i) hits.push_back(list[i].hit);
     };
-    std::vector<Scored> mobs, items, maps;
+    std::vector<std::string> words;
+    for (size_t b = 0; b < q.size();) {
+        const size_t e = std::min(q.find_first_of(" \t", b), q.size());
+        if (e > b) words.push_back(q.substr(b, e - b));
+        b = e + 1;
+    }
+    std::vector<Scored> mobs, items, maps, aegis;
+    std::string scratch, scratch2;
     for (const auto& m : ix.mobs) {
-        const std::string name = settings::foldCase(m.second.name);
-        if (!settings::textMatches(name, q)) continue;
+        const std::string& name = foldedOf(m.second.folded, m.second.name, scratch);
+        const bool byName = hasAll(name, words);
+        const std::string& other = byName ? scratch2 : foldedOf(m.second.otherFolded, m.second.other, scratch2);
+        if (!byName && (other.empty() || !hasAll(other, words))) continue;
         const auto where = ix.spawnsOf.find(m.first);
         const int rank = (where == ix.spawnsOf.end() ? 1000 : 0) + m.second.lv;  // met somewhere, the lower first
-        mobs.push_back(Scored{closeness(name, q), rank, m.second.name, Hit{Kind::Mob, m.first, ""}});
+        mobs.push_back(Scored{closeness(byName ? name : other, q), rank, &m.second.name, nullptr,
+                              Hit{Kind::Mob, m.first, "", uint8_t(byName ? 0 : 1)}});
     }
     for (const auto& i : ix.items) {
-        const std::string name = settings::foldCase(i.second.name);
-        if (!settings::textMatches(name, q)) continue;
+        const std::string& name = foldedOf(i.second.folded, i.second.name, scratch);
+        const bool byName = hasAll(name, words);
+        scratch2.clear();
+        const std::string& service = byName ? scratch2 : foldedOf(i.second.aegisFolded, i.second.aegis, scratch2);
+        if (!byName && (service.empty() || !hasAll(service, words))) continue;
         const auto by = ix.droppedBy.find(i.first);
         const auto at = ix.soldAt.find(i.first);
         const int places = int((by == ix.droppedBy.end() ? 0 : by->second.size()) +
                                (at == ix.soldAt.end() ? 0 : at->second.size()));
-        items.push_back(Scored{closeness(name, q), -places, i.second.name, Hit{Kind::Item, i.first, ""}});
+        (byName ? items : aegis)
+            .push_back(Scored{closeness(byName ? name : service, q), -places, &i.second.name, nullptr,
+                              Hit{Kind::Item, i.first, "", uint8_t(byName ? 0 : 2)}});
     }
     for (const auto& m : ix.maps) {
         const auto named = ix.mapNames.find(m.first);
         const std::string name = named == ix.mapNames.end() ? "" : settings::foldCase(named->second);
-        const bool byCode = settings::textMatches(m.first, q), byName = !name.empty() && settings::textMatches(name, q);
+        const std::string code = settings::foldCase(m.first);
+        const bool byCode = hasAll(code, words), byName = !name.empty() && hasAll(name, words);
         if (!byCode && !byName) continue;
-        const int close = std::min(byCode ? closeness(m.first, q) : 9, byName ? closeness(name, q) : 9);  // either
-        maps.push_back(Scored{close, m.second.mobs.empty() ? 1 : 0, m.first, Hit{Kind::Map, 0, m.first}});
+        const int close = std::min(byCode ? closeness(code, q) : 9, byName ? closeness(name, q) : 9);  // either
+        maps.push_back(Scored{close, m.second.mobs.empty() ? 1 : 0, &m.first, nullptr, Hit{Kind::Map, 0, m.first}});
     }
     std::vector<Scored> npcs;  // 3.0.11-beta.15: the NPCs by their names (all of them: the page puts the nearest first)
     for (const auto& m : ix.maps)
         for (size_t n = 0; n < m.second.npcs.size(); ++n) {
-            const std::string name = settings::foldCase(m.second.npcs[n].name);
-            if (name.empty() || !settings::textMatches(name, q)) continue;
-            npcs.push_back(
-                Scored{closeness(name, q), 0, m.second.npcs[n].name + m.first, Hit{Kind::Npc, int(n), m.first}});
+            const std::string& name = foldedOf(m.second.npcs[n].folded, m.second.npcs[n].name, scratch);
+            if (name.empty() || !hasAll(name, words)) continue;
+            npcs.push_back(Scored{closeness(name, q), 0, &m.second.npcs[n].name, &m.first,
+                                  Hit{Kind::Npc, int(n), m.first}});
         }
     finish(mobs, f.mobs, f.mobsAll, most);
     finish(items, f.items, f.itemsAll, most);
+    finish(aegis, f.aegis, f.aegisAll, most);
     finish(maps, f.maps, f.mapsAll, most);
     finish(npcs, f.npcs, f.npcsAll, SIZE_MAX);
     return f;

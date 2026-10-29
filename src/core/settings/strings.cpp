@@ -4919,7 +4919,6 @@ constexpr Entry kTexts[] = {
      "чи довідником.",
      "Справочника игры здесь ещё нет: он приходит с uaro.kiev.ua при запуске игры с включённой новой миникартой "
      "или справочником."},
-    {Text::RefNothing, "Nothing found", "Нічого не знайдено", "Ничего не найдено"},
     {Text::RefSecMobs, "Monsters", "Монстри", "Монстры"},
     {Text::RefSecMobsHint,
      "level, element, where they live, what they drop",
@@ -4955,7 +4954,7 @@ constexpr Entry kTexts[] = {
      "что сделать, из чего, кто умеет"},
     {Text::RefFoundMobs, "Monsters · {1}", "Монстри · {1}", "Монстры · {1}"},
     {Text::RefFoundItems, "Items · {1}", "Предмети · {1}", "Предметы · {1}"},
-    {Text::RefFoundMaps, "Maps · {1}", "Карти · {1}", "Карты · {1}"},
+    {Text::RefFoundMaps, "Locations · {1}", "Локації · {1}", "Локации · {1}"},
     {Text::RefShownOf,
      "the first {1} of {2} - type more of the name",
      "перші {1} з {2} - уточніть назву",
@@ -5095,7 +5094,7 @@ constexpr Entry kTexts[] = {
     {Text::RefElements, "Damage by element", "Шкода стихіями", "Урон стихиями"},
     {Text::RefElementHeals, "heals {1} %", "лікує {1} %", "лечит {1} %"},
     // 3.0.11-beta.15: the NPCs found by their names, a map's nearest Kafra
-    {Text::RefFoundNpcs, "NPCs: {1}", "NPC: {1}", "NPC: {1}"},
+    {Text::RefFoundNpcs, "NPCs · {1}", "NPC · {1}", "NPC · {1}"},
     {Text::RefKafraNear, "The nearest Kafra", "Kafra поруч", "Kafra рядом"},
     {Text::RefHere, "here", "тут", "здесь"},
     // 3.0.11-beta.16: the site's quests (core/reference_quests)
@@ -5104,7 +5103,7 @@ constexpr Entry kTexts[] = {
      "who gives it, what to bring, the steps",
      "хто дає, що принести, кроки",
      "кто даёт, что принести, шаги"},
-    {Text::RefFoundQuests, "Quests: {1}", "Квести: {1}", "Квесты: {1}"},
+    {Text::RefFoundQuests, "Quests · {1}", "Квести · {1}", "Квесты · {1}"},
     {Text::RefQuestNpc, "Who gives it", "Хто дає", "Кто даёт"},
     {Text::RefQuestItems, "What it takes", "Що потрібно", "Что нужно"},
     {Text::RefQuestSteps, "Steps", "Кроки", "Шаги"},
@@ -5138,11 +5137,11 @@ constexpr Entry kTexts[] = {
     // 3.0.11-beta.26: the concept's look (core/reference_window: the header, the first screen, the bottom's chips)
     {Text::RefFind, "Search the reference", "Пошук у довіднику", "Поиск в справочнике"},
     {Text::RefSearchExplain,
-     "Finds by a part of the name: «wing» finds Fly Wing; capital and small letters the same. The names are English, "
-     "as in the game.",
-     "Шукає за частиною назви: «wing» знайде Fly Wing; "
+     "Finds by a part of the name, the words in any order: «wing fly» finds Fly Wing; capital and small letters the "
+     "same. The names are English, as in the game.",
+     "Шукає за частиною назви, слова в будь-якому порядку: «wing fly» знайде Fly Wing; "
      "великі й малі літери однакові. Назви англійською, як у грі.",
-     "Ищет по части названия: «wing» найдёт Fly Wing; "
+     "Ищет по части названия, слова в любом порядке: «wing fly» найдёт Fly Wing; "
      "большие и малые буквы одинаковы. "
      "Названия английские, как в игре."},
     {Text::RefSecServices, "NPCs and services", "NPC і послуги", "NPC и услуги"},
@@ -5188,6 +5187,26 @@ constexpr Entry kTexts[] = {
     {Text::RefElementsHeal, "heal it: {1}", "лікують: {1}", "лечат: {1}"},
     {Text::RefRailAll, "All", "Усе", "Всё"},
     {Text::RefRouteSteps, "Steps · {1}", "Кроки · {1}", "Шаги · {1}"},
+    // 3.0.11-beta.28: the concept's search results (v21_search)
+    {Text::RefFoundAegis,
+     "By the service name · {1}",
+     "За службовою назвою · {1}",
+     "По служебному названию · {1}"},
+    {Text::RefFoundMore, "{1} more ›", "ще {1} ›", "ещё {1} ›"},
+    {Text::RefOftenFirst, "the commonest first", "частіші — вище", "частые — выше"},
+    {Text::RefNearFirst, "the nearest first", "ближчі — вище", "ближние — выше"},
+    {Text::RefOtherName, "other name: {1}", "друга назва: {1}", "другое название: {1}"},
+    {Text::RefServiceName, "service name {1}", "службова назва {1}", "служебное название {1}"},
+    {Text::RefShopsN, "shop|shops", "крамниця|крамниці|крамниць", "магазин|магазина|магазинов"},
+    {Text::RefDropsFrom, "drops from {1}", "падає з {1}", "падает с {1}"},
+    {Text::RefFromMobsN, "monster|monsters", "монстра|монстрів|монстрів", "монстра|монстров|монстров"},
+    {Text::RefMapsN, "map|maps", "карта|карти|карт", "карта|карты|карт"},
+    {Text::RefKindNpc, "NPC", "NPC", "NPC"},
+    {Text::RefNothingFor, "Nothing found for «{1}»", "За «{1}» нічого не знайдено", "По «{1}» ничего не найдено"},
+    {Text::RefNothingHint,
+     "The names are English, as in the game. Try a part of a name: «wing», «poring».",
+     "Назви в довіднику англійською, як у грі. Спробуйте частину назви: «wing», «poring».",
+     "Названия в справочнике английские, как в игре. Попробуйте часть названия: «wing», «poring»."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

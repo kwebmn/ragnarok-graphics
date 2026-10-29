@@ -465,7 +465,7 @@ enum class Text : uint16_t {
     InterfaceMinimapNpcs, InterfaceMinimapNpcsHint, InterfaceMinimapWarps, InterfaceMinimapWarpsHint,
     InterfaceMinimapMobs, InterfaceMinimapMobsHint, MinimapRespawn, MinimapMore, MinimapNoReference, MinimapNoMonsters,
     // 3.0.11-beta.7: «Довідник» - its switch, the window's words, the cards' words
-    InterfaceReference, InterfaceReferenceHint, RefTitle, RefSearchHint, RefBack, RefFooter, RefNoData, RefNothing,
+    InterfaceReference, InterfaceReferenceHint, RefTitle, RefSearchHint, RefBack, RefFooter, RefNoData,
     RefSecMobs, RefSecMobsHint, RefSecBosses, RefSecBossesHint, RefSecItems, RefSecItemsHint, RefSecCards,
     RefSecMaps, RefSecMapsHint, RefSecShops, RefSecTeleports, RefSecPets, RefSecPetsHint, RefSecCraft, RefSecCraftHint,
     RefFoundMobs, RefFoundItems, RefFoundMaps, RefShownOf,
@@ -507,6 +507,11 @@ enum class Text : uint16_t {
     RefElementsHeal,  // 3.0.11-beta.26: a card's elements' line - what heals it
     RefRailAll,       // 3.0.11-beta.26: the rail's first, the search
     RefRouteSteps,    // 3.0.11-beta.26: a way's steps, a section of their own
+    // 3.0.11-beta.28: the concept's search results - the group by service names, «ще N ›», the groups' notes, the
+    // lines (another name, a service name, the shops, the monsters it drops from, the maps: words by «|» forms), an
+    // NPC's kind, nothing found
+    RefFoundAegis, RefFoundMore, RefOftenFirst, RefNearFirst, RefOtherName, RefServiceName, RefShopsN, RefDropsFrom,
+    RefFromMobsN, RefMapsN, RefKindNpc, RefNothingFor, RefNothingHint,
     Count
 };
 

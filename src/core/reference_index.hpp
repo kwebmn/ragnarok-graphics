@@ -24,6 +24,7 @@ struct Npc {
     std::string name;  // as the site cleans it: before «#» and «::»
     int sprite = 0;
     NpcKind kind = NpcKind::Other;
+    std::string folded{};  // 3.0.11-beta.28: its name case folded once by build() (the search's; "" not yet)
 };
 struct Warp {
     int x = 0, y = 0;
@@ -70,10 +71,14 @@ struct Mob {
     int hp = 0, baseExp = 0, jobExp = 0, size = 0, race = 0, element = 0, elementLv = 1;  // 3.0.11-beta.7
     std::vector<Drop> drops;
     std::string sprite;  // 3.0.11-beta.14: the server's sprite name (mob_db), lower case; "" in older packs
+    // 3.0.11-beta.28: its other name - kRO's where the game says iRO's («Wander Man» of Wanderer); "" none or the same
+    std::string other;
+    std::string folded{}, otherFolded{};  // 3.0.11-beta.28: both case folded once by build() ("" not yet)
 };
 struct Item {  // 3.0.11-beta.7
     std::string name, aegis;
     int type = 0, buy = 0, weight = 0, slots = 0;
+    std::string folded{}, aegisFolded{};  // 3.0.11-beta.28: both case folded once by build() ("" not yet)
 };
 struct Shop {
     std::string map, name;
@@ -155,15 +160,19 @@ std::vector<std::string> spriteNames(const Mob& m);
 // the whole name, then its start or a word's start, then anywhere; then items found in more places, monsters met on
 // maps (the lower first), maps with monsters; 3.0.11-beta.15: the NPCs by their names, all of them (`most` is the
 // other kinds')
+// 3.0.11-beta.28 (the concept's v21_search): monsters by their other names too, the items by their service names
+// (aegis) when their names have it not - a list of their own
 enum class Kind : uint8_t { Mob, Item, Map, Npc };  // Npc (3.0.11-beta.15): `map`'s NPC number `id`
 struct Hit {
     Kind kind = Kind::Mob;
     int id = 0;        // a monster's or an item's
     std::string map;   // a map's code
+    uint8_t by = 0;    // 3.0.11-beta.28: found by its name 0, by a monster's other name 1, an item's service name 2
 };
 struct Found {
     std::vector<Hit> mobs, items, maps, npcs;
-    size_t mobsAll = 0, itemsAll = 0, mapsAll = 0, npcsAll = 0;  // before `most` cut each list
+    std::vector<Hit> aegis;  // 3.0.11-beta.28: the items whose service names alone have it (Peco_Wing_Feather)
+    size_t mobsAll = 0, itemsAll = 0, mapsAll = 0, npcsAll = 0, aegisAll = 0;  // before `most` cut each list
 };
 Found search(const Index& ix, const std::string& query, size_t most);
 // A map's name to show: the client's short one with the code («Prontera Field (prt_fild07)»), else the code

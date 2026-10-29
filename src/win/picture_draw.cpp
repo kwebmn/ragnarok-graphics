@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstring>
+#include <vector>
 
 #include "core/d3d7.hpp"
 #include "core/effect_exe.hpp"
@@ -132,16 +133,33 @@ void drawPicture(FrameRecord& record, gpu::Renderer& renderer, const panel::Pict
 
 int wordsWidth(const std::wstring& text, float px, bool bold) {
     if (text.empty()) return 0;
-    HDC dc = CreateCompatibleDC(nullptr);
-    HFONT font = CreateFontW(-std::max(8, int(std::lround(px))), 0, 0, 0, bold ? FW_SEMIBOLD : FW_NORMAL, FALSE, FALSE,
-                             FALSE, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, ANTIALIASED_QUALITY,
-                             DEFAULT_PITCH, L"Segoe UI");
-    HGDIOBJ old = SelectObject(dc, font);
+    // 3.0.11-beta.28: the DC and each size's font kept (the search's marks measure their words on every paint)
+    struct Kept {
+        int height;
+        bool bold;
+        HFONT font;
+    };
+    thread_local HDC dc = CreateCompatibleDC(nullptr);
+    thread_local std::vector<Kept> fonts;
+    const int height = std::max(8, int(std::lround(px)));
+    HFONT font = nullptr;
+    for (const Kept& k : fonts)
+        if (k.height == height && k.bold == bold) font = k.font;
+    if (!font) {
+        font = CreateFontW(-height, 0, 0, 0, bold ? FW_SEMIBOLD : FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET,
+                           OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, ANTIALIASED_QUALITY, DEFAULT_PITCH, L"Segoe UI");
+        if (!font) return 0;
+        if (fonts.size() >= 32) {  // never one selected: each measure puts the stock font back
+            DeleteObject(fonts.front().font);
+            fonts.erase(fonts.begin());
+        }
+        fonts.push_back(Kept{height, bold, font});
+    }
+    if (!dc) return 0;
+    SelectObject(dc, font);
     SIZE size{};
     GetTextExtentPoint32W(dc, text.c_str(), int(text.size()), &size);
-    SelectObject(dc, old);
-    DeleteObject(font);
-    DeleteDC(dc);
+    SelectObject(dc, GetStockObject(SYSTEM_FONT));
     return int(size.cx);
 }
 

@@ -2,6 +2,7 @@
 #include <cstdint>
 #include <map>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "core/reference_index.hpp"
@@ -35,7 +36,13 @@ struct Link {
 // key); Hint - a line under it; Tile - `left` its name, `right` its count, `sub` what it holds, `icon` "ui:<name>";
 // Block - a framed group of the rows after it (`left` its name, `right` a note at its right; `share` > 0: beside the
 // next block, the line's share in per cent); Chip - a card in a block's chips (`left`, `sub` its kind, `picture`)
-enum class Style : uint8_t { Title, Sub, Heading, Row, Note, Tile, World, Portrait, Text, Search, Hint, Block, Chip };
+// 3.0.11-beta.28, the concept's search results (v21_search): Result - one found (`icon`, `left` its name, `sub` its
+// line, `right` its kind, `marks` the query in them); Group - their kind's capitals and count (`right` a note at its
+// right); More - «ще N ›» that opens the group; Empty - nothing found (`left` its line, `sub` what to try)
+enum class Style : uint8_t {
+    Title, Sub, Heading, Row, Note, Tile, World, Portrait, Text, Search, Hint, Block, Chip, Result, Group, More, Empty
+};
+using Marks = std::vector<std::pair<uint16_t, uint16_t>>;  // byte ranges [from, to) of the words
 struct Row {
     Style style = Style::Row;
     std::string left, right;  // UTF-8: the row's words, and a note on its right (a tile: its count)
@@ -52,6 +59,7 @@ struct Row {
     bool closed = false;            // 3.0.11-beta.26: a folded section's heading (drawn ▸, the rows left out)
     int tone = 0;                   // 3.0.11-beta.26: a chip's number - 1 good (green), -1 heals (red)
     std::vector<std::string> tags;  // 3.0.11-beta.26: a card's picture row's tags («elN:» an element's, «gold:»)
+    Marks marks, subMarks;          // 3.0.11-beta.28: a result's query in `left`, in `sub`
 };
 struct Page {
     std::string name;  // what «Назад до …» calls it
@@ -110,7 +118,10 @@ bool linkOf(const std::string& line, Link& out);  // back; false: not one
 // and the starred as chips (the players now: the window's bottom)
 Page home(const refindex::Index& ix, settings::Lang l, const Context& c = {});
 // `c` (3.0.11-beta.15): the NPCs found the nearest to the player's map first, and how far
-Page found(const refindex::Index& ix, settings::Lang l, const std::string& query, const Context& c = {});
+// 3.0.11-beta.28 the concept's (v21_search): each kind a group of its first 8 and «ще N ›» (Go::Expand: `opened`'s
+// bits), the query marked in the names; the items found by their service names apart; nothing - what to try
+Page found(const refindex::Index& ix, settings::Lang l, const std::string& query, const Context& c = {},
+           unsigned opened = 0);
 Page section(const refindex::Index& ix, settings::Lang l, int id, const Context& c = {});
 // 3.0.11-beta.26: a page with the concept's sections at its left, the one `at` belongs to lit (a monster's card the
 // monsters', an item's the items', ...; the search's «Усе»)

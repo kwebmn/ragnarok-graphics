@@ -90,7 +90,12 @@ TEST(reference_quests_pages) {
     CHECK(ring.rows[needed + 2].left == "Bunny Band" && ring.rows[needed + 2].right == "×2");
     CHECK(ring.rows[needed + 2].link.go == refpages::Go::Quest && ring.rows[needed + 2].link.id == 1);
     const refpages::Page found = refpages::found(ix, Lang::Uk, "bunny");
-    CHECK(indexOf(found, "Квести: 1") != size_t(-1));
+    CHECK(indexOf(found, "Квести · 1") != size_t(-1));
     const refpages::Page en = refpages::found(ix, Lang::Uk, "access");  // English titles found too
     CHECK(indexOf(en, "Доступ до Ayothaya") != size_t(-1));
+    // 3.0.11-beta.28: found by its English title - that title first in its line, the query marked there
+    const refpages::Row& access = en.rows[indexOf(en, "Доступ до Ayothaya")];
+    CHECK(access.style == refpages::Style::Result && access.icon == "ui:quest" && access.right == "квест");
+    CHECK(access.sub.rfind("Ayothaya Access · ", 0) == 0 && access.marks.empty());
+    CHECK((access.subMarks == refpages::Marks{{9, 15}}));
 }

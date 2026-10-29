@@ -42,6 +42,7 @@ struct Entry {  // a page left for another: what «Назад» brings back
     std::string query, name;
     int scroll = 0;
     unsigned opened = 0;  // its long sections opened
+    int sel = -1;         // 3.0.11-beta.28: the row that led away (picked again on the way back)
 };
 
 struct State {
@@ -217,7 +218,7 @@ void makePage(State& s) {
         c.recent = &s.recent;  // 3.0.11-beta.18
         c.favourites = &s.favourites;
         s.page = s.at.go != refpages::Go::None ? refpages::open(*s.index, l, s.at, c, s.opened)
-                 : !s.query.empty()            ? refpages::found(*s.index, l, s.query, c)  // 3.0.11-beta.15: NPCs
+                 : !s.query.empty()            ? refpages::found(*s.index, l, s.query, c, s.opened)
                                                : refpages::home(*s.index, l, c);
     }
     const bool first = s.at.go == refpages::Go::None && s.query.empty();  // 3.0.11-beta.26: the concept's rail
@@ -227,6 +228,12 @@ void makePage(State& s) {
     s.madeAt = GetTickCount64();
     if (s.sel >= int(s.page.rows.size()) || (s.sel >= 0 && s.page.rows[size_t(s.sel)].link.go == refpages::Go::None))
         s.sel = -1;
+    if (s.sel < 0 && s.at.go == refpages::Go::None && !s.query.empty())  // 3.0.11-beta.28: the first result picked:
+        for (size_t i = 0; i < s.page.rows.size(); ++i)                    // Enter's (the concept's v21_search)
+            if (s.page.rows[i].style == refpages::Style::Result) {
+                s.sel = int(i);
+                break;
+            }
     for (const refpages::Row& r : s.page.rows)  // 3.0.11-beta.14
         if (r.style == refpages::Style::Portrait && !r.picture.empty())
             loadPicture(s, r.picture, refwin::portraitSide(s.layout));
@@ -319,7 +326,13 @@ void go(State& s, const refpages::Link& to) {
         }
         return;
     }
-    s.back.push_back(Entry{s.at, s.query, s.page.name, s.scroll, s.opened});
+    int from = s.sel;  // 3.0.11-beta.28: a result opened by a click - picked when back at the results
+    for (size_t i = 0; i < s.page.rows.size(); ++i)
+        if (refpages::sameCard(s.page.rows[i].link, to)) {
+            from = int(i);
+            break;
+        }
+    s.back.push_back(Entry{s.at, s.query, s.page.name, s.scroll, s.opened, from});
     s.at = to;
     s.scroll = 0;
     s.opened = 0;
@@ -431,15 +444,15 @@ void goBack(State& s) {
     s.query = e.query;
     s.scroll = e.scroll;
     s.opened = e.opened;
+    s.sel = e.sel;
     makePage(s);
 }
 
 void typed(State& s) {  // the query changed: its results (a card left for them comes back by «Назад»)
-    if (s.at.go != refpages::Go::None) {
-        s.back.push_back(Entry{s.at, "", s.page.name, s.scroll, s.opened});
-        s.at = refpages::Link{};
-        s.opened = 0;
-    }
+    if (s.at.go != refpages::Go::None) s.back.push_back(Entry{s.at, "", s.page.name, s.scroll, s.opened});
+    s.at = refpages::Link{};
+    s.opened = 0;  // 3.0.11-beta.28: the groups closed, the first result picked again
+    s.sel = -1;
     s.scroll = 0;
     makePage(s);
 }

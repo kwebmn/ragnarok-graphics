@@ -17,6 +17,11 @@ constexpr float kWorldLeast = 300;  // 3.0.11-beta.11: the world map's row at th
 constexpr float kPortrait = 112;    // 3.0.11-beta.14: a card's picture (3.0.11-beta.26: the concept's head, 112)
 constexpr float kTextLine = 19;     // 3.0.11-beta.16: a Text row's line (13.5 px words)
 constexpr float kIcon = 24;         // 3.0.11-beta.15: an item's icon in a row (1:1 at 1080p)
+// 3.0.11-beta.28: the concept's search results (v21_search) - a result's line, the gap under it, a group's and
+// «ще N ›»'s lines, nothing found's; the query's marks (its <mark>: gold .28)
+constexpr float kResultH = 50, kResultGap = 4, kGroupH = 28, kMoreH = 28, kEmptyH = 150;
+constexpr uint32_t kMark = 0xE9C47C;
+constexpr float kMarkA = 0.28f;
 // The concept's colours: the window's glass (--card), white over it (--cell .06, --line .09, --line2 .15, the tiles
 // .04, the blocks .035), the gold (--accent) of the picked (--sel .16) and its ring (.55)
 constexpr uint32_t kCard = 0x10141C, kWhite = 0xFFFFFF, kBlack = 0x000000;
@@ -40,6 +45,10 @@ int heightOf(refpages::Style st, float s) {
         case refpages::Style::Search: return px(kSearchH, s);
         case refpages::Style::Hint: return px(20, s);
         case refpages::Style::Chip: return px(kChipH, s);
+        case refpages::Style::Result: return px(kResultH, s);  // 3.0.11-beta.28
+        case refpages::Style::Group: return px(kGroupH, s);
+        case refpages::Style::More: return px(kMoreH, s);
+        case refpages::Style::Empty: return px(kEmptyH, s);
         case refpages::Style::Block:  // place() gives it its rows
         case refpages::Style::Row: break;
     }
@@ -108,6 +117,11 @@ bool framed(const refpages::Row& r) {
 
 // A card's section that folds: its own line (▸/▾), its rows under it when open
 bool folds(const refpages::Row& r) { return r.style == refpages::Style::Heading && r.share == 0 && r.fold >= 0; }
+
+// 3.0.11-beta.28: the results' last line - how the search finds (a hint not right under the search: a line above it)
+bool closing(const refpages::Page& p, size_t i) {
+    return p.rows[i].style == refpages::Style::Hint && i > 0 && p.rows[i - 1].style != refpages::Style::Search;
+}
 
 // The rows a frame holds: those after it up to the next frame, heading, tile, field, title or picture
 size_t blockEnd(const refpages::Page& p, size_t block) {
@@ -422,9 +436,21 @@ std::vector<Placed> place(const Layout& L, const refpages::Page& p, int& total) 
         int h = heightOf(r.style, s);
         if (r.style == refpages::Style::World) h = std::max(h, L.bodyH - others - px(20, s));
         if (r.style == refpages::Style::Text) h = textHeight(r.left, col.w, s);
+        if (r.style == refpages::Style::Group && i > 0 && p.rows[i - 1].style != refpages::Style::Search)
+            y += px(10, s);  // 3.0.11-beta.28: the next group apart
+        if (closing(p, i)) {  // its line, then its words' lines
+            const float wide = L.measure(r.left, 13 * s, false) * 1.08f;
+            h = px(14, s) + px(19, s) * std::max(1, int(std::ceil(wide / float(std::max(1, col.w)))));
+            y += px(6, s);
+        }
         out[i] = Placed{col.x, y, col.w, h};
-        y += h + (r.style == refpages::Style::Search ? px(10, s) : r.style == refpages::Style::Hint ? px(kGroupGap, s)
-                                                                                                    : 0);
+        int gap = 0;
+        if (r.style == refpages::Style::Search) gap = px(10, s);
+        else if (r.style == refpages::Style::Hint) gap = px(kGroupGap, s);
+        else if (r.style == refpages::Style::Result || r.style == refpages::Style::Group ||
+                 r.style == refpages::Style::More)
+            gap = px(kResultGap, s);
+        y += h + gap;
         ++i;
     }
     total = y + px(8, s);
@@ -607,6 +633,40 @@ bool hot(const Look& look, size_t i) {
     return (look.hover.part == Part::Row && look.hover.row == int(i)) || look.selected == int(i);
 }
 
+// 3.0.11-beta.28: a result's parts (the concept's v21_search: its icon's 28 px, its name 14.5 px over its line
+// 12.5 px, its kind at its right)
+struct ResultBoxes {
+    panel::Box icon, name, sub, kind;
+};
+ResultBoxes resultBoxes(const Layout& L, const refpages::Row& row, const panel::Box& b) {
+    const float s = L.s;
+    const float kindW = row.right.empty() ? 0 : std::ceil(L.measure(row.right, 12 * s, false)) + 2;
+    const float tx = b.x + 48 * s, right = b.x + b.w - 8 * s - (kindW > 0 ? kindW + 12 * s : 0);
+    ResultBoxes r;
+    r.icon = panel::Box{b.x + 8 * s, b.y + (b.h - 28 * s) / 2, 28 * s, 28 * s};
+    r.kind = panel::Box{b.x + b.w - 8 * s - kindW, b.y, kindW, b.h};
+    if (row.sub.empty()) {
+        r.name = panel::Box{tx, b.y, right - tx, b.h};
+    } else {
+        r.name = panel::Box{tx, b.y + 7 * s, right - tx, 19 * s};
+        r.sub = panel::Box{tx, b.y + 28 * s, right - tx, 16 * s};
+    }
+    return r;
+}
+
+// The query's words marked in a line of words (`box`: where they are drawn, at its left, in its middle)
+void marked(panel::Picture& out, const Layout& L, const std::string& text, const refpages::Marks& marks,
+            const panel::Box& box, float size, bool bold) {
+    const float s = L.s, middle = box.y + box.h / 2;
+    for (const auto& [from, to] : marks) {
+        if (from >= to || to > text.size()) continue;
+        const float x0 = box.x + (from ? L.measure(text.substr(0, from), size, bold) : 0) - 1 * s;
+        const float x1 = std::min(box.x + box.w, box.x + L.measure(text.substr(0, to), size, bold) + 1 * s);
+        if (x1 > x0) panel::roundRect(out, panel::Box{x0, middle - size * 0.62f, x1 - x0, size * 1.24f}, 3 * s, kMark,
+                                      kMarkA);
+    }
+}
+
 // The header's and the bottom's shapes (3.0.11-beta.26)
 void chromeShapes(panel::Picture& out, const Layout& L, const Look& look) {
     const float s = L.s, edge = std::max(1.0f, s);
@@ -731,6 +791,42 @@ void shapes(panel::Picture& out, const Layout& L, const refpages::Page& p, const
             case refpages::Style::World:
                 paintWorld(out, b, look.world, s);
                 continue;
+            case refpages::Style::Result: {  // 3.0.11-beta.28: picked - gold, its bar; under the pointer - lighter
+                if (look.selected == int(i)) {
+                    panel::roundRect(out, b, 9 * s, kAccent, kSelA);
+                    panel::roundRect(out, panel::Box{b.x, b.y + 5 * s, 3 * s, b.h - 10 * s}, 1.5f * s, kAccent, 1.0f);
+                } else if (on) {
+                    panel::roundRect(out, b, 9 * s, kWhite, 0.05f);
+                }
+                const ResultBoxes parts = resultBoxes(L, row, b);
+                if (iconNamed(row.icon, icon)) {
+                    uiicons::draw(out, icon, parts.icon.x + 4 * s, parts.icon.y + 4 * s, 20 * s,
+                                  row.dot ? row.dot : kMuted, 1.0f, 2.0f);
+                } else if (const panel::Picture* pic = iconOf(look, row)) {
+                    blit(out, *pic, int(parts.icon.x + (parts.icon.w - float(pic->width)) / 2),
+                         int(parts.icon.y + (parts.icon.h - float(pic->height)) / 2));
+                }
+                marked(out, L, row.left, row.marks, parts.name, 14.5f * s, true);
+                if (!row.sub.empty()) marked(out, L, row.sub, row.subMarks, parts.sub, 12.5f * s, false);
+                continue;
+            }
+            case refpages::Style::More:  // 3.0.11-beta.28: «ще N ›»
+                if (look.selected == int(i)) {
+                    panel::roundRect(out, b, 9 * s, kAccent, kSelA);
+                    panel::roundRect(out, panel::Box{b.x, b.y + 5 * s, 3 * s, b.h - 10 * s}, 1.5f * s, kAccent, 1.0f);
+                } else if (on) {
+                    panel::roundRect(out, b, 9 * s, kWhite, 0.05f);
+                }
+                continue;
+            case refpages::Style::Empty:  // 3.0.11-beta.28: nothing found - the search's sign over the words
+                uiicons::draw(out, uiicons::Icon::Search, b.x + (b.w - 34 * s) / 2, b.y + 18 * s, 34 * s, kMuted, 1.0f,
+                              1.8f);
+                continue;
+            case refpages::Style::Group:
+                continue;
+            case refpages::Style::Hint:
+                if (closing(p, i)) fill(out, panel::Box{b.x, b.y, b.w, edge}, kWhite, kLineA);
+                continue;
             case refpages::Style::Portrait: {  // 3.0.11-beta.26: a card's head - its picture, its tags
                 const float side = 112 * s;
                 if (!row.picture.empty()) {
@@ -840,7 +936,7 @@ void repaint(panel::Picture& out, const Layout& L, const refpages::Page& p, cons
 bool sameRow(const refpages::Row& a, const refpages::Row& b) {
     return a.style == b.style && a.left == b.left && a.right == b.right && refpages::sameCard(a.link, b.link) &&
            a.gold == b.gold && a.dot == b.dot && a.picture == b.picture && a.icon == b.icon && a.fold == b.fold &&
-           a.sub == b.sub && a.share == b.share;
+           a.sub == b.sub && a.share == b.share && a.marks == b.marks && a.subMarks == b.subMarks;
 }
 
 Rect worldArea(const Layout& L, const std::vector<Placed>& rows, int scroll, int row, const worldmap::Sheet& sheet,
@@ -861,7 +957,8 @@ Rect rowArea(const Layout& L, const refpages::Page& p, const std::vector<Placed>
     const refpages::Row* row = size_t(i) < p.rows.size() ? &p.rows[size_t(i)] : nullptr;
     const refpages::Style st = row ? row->style : refpages::Style::Row;
     // their own: a tile, a chip, a frame's heading (its line); 3.0.11-beta.26 a row inside a frame: its band
-    if (st == refpages::Style::Tile || st == refpages::Style::Chip || (row && framed(*row)))
+    if (st == refpages::Style::Tile || st == refpages::Style::Chip || st == refpages::Style::Result ||
+        st == refpages::Style::More || (row && framed(*row)))  // 3.0.11-beta.28: a result's band its own box
         return pixelsOf(L, panel::Box{float(r.x), float(L.bodyY + r.y - scroll), float(r.w), float(r.h)});
     const float band = (r.in ? 8 : 6) * s;
     return pixelsOf(L,
@@ -997,8 +1094,44 @@ std::vector<Words> words(const Layout& L, const refpages::Page& p, const std::ve
                 break;
             }
             case refpages::Style::Hint:
+                if (closing(p, i)) {  // 3.0.11-beta.28: the results' last - its lines under its line
+                    Words rules{panel::Box{x, y + 12 * s, w, h - 12 * s}, row.left, kMuted, 13 * s, false, Align::Left};
+                    rules.wrap = true;
+                    out.push_back(rules);
+                    break;
+                }
                 out.push_back(Words{panel::Box{x, y, w, h}, row.left, kMuted, 13 * s, false, Align::Left});
                 break;
+            case refpages::Style::Result: {  // 3.0.11-beta.28: its name (a boss's gold), its line, its kind
+                const ResultBoxes parts = resultBoxes(L, row, panel::Box{x, y, w, h});
+                out.push_back(Words{parts.name, row.left, row.gold ? kGold : kText, 14.5f * s, true, Align::Left});
+                if (!row.sub.empty())
+                    out.push_back(Words{parts.sub, row.sub, kMuted, 12.5f * s, false, Align::Left});
+                if (parts.kind.w > 0)
+                    out.push_back(Words{parts.kind, row.right, kFaint, 12 * s, false, Align::Right});
+                break;
+            }
+            case refpages::Style::Group:  // 3.0.11-beta.28: the kind's capitals and count, its note at its right
+                out.push_back(Words{panel::Box{x, y + 8 * s, w * 0.6f, 20 * s}, capitals(row.left), kMuted, 12 * s,
+                                    true, Align::Left});
+                if (!row.right.empty())
+                    out.push_back(Words{panel::Box{x + w * 0.6f, y + 8 * s, w * 0.4f, 20 * s}, row.right, kMuted,
+                                        12 * s, true, Align::Right});
+                break;
+            case refpages::Style::More:
+                out.push_back(Words{panel::Box{x + 8 * s, y, w - 16 * s, h}, row.left,
+                                    hot(look, i) ? kText : kMuted, 13 * s, false, Align::Left});
+                break;
+            case refpages::Style::Empty: {  // 3.0.11-beta.28: what was not found, what to try
+                out.push_back(Words{panel::Box{x, y + 60 * s, w, 24 * s}, row.left, kText, 16 * s, true,
+                                    Align::Center});
+                const float wide = std::min(w, 440 * s);
+                Words tip{panel::Box{x + (w - wide) / 2, y + 90 * s, wide, h - 90 * s}, row.sub, kMuted, 13.5f * s,
+                          false, Align::Center};
+                tip.wrap = true;
+                out.push_back(tip);
+                break;
+            }
             case refpages::Style::Tile: {  // its icon, its name, its count at the right, what it holds under them
                 const float countW = row.right.empty() ? 0 : std::ceil(L.measure(row.right, 13 * s, true)) + 2;
                 const float tx = x + 16 * s + 21 * s + 10 * s;

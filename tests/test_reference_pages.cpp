@@ -1,5 +1,6 @@
 // 3.0.11-beta.7: «Довідник» - its pages from the reference pack (core/reference_pages) and its window's shapes
 // (core/reference_window): what a card says and where its rows lead, the words for numbers, the layout and the clicks.
+#include <cmath>
 #include <string>
 
 #include "core/reference_live.hpp"
@@ -98,13 +99,14 @@ TEST(reference_pages_home_and_search) {
     CHECK(home.rows[13].style == refpages::Style::Note);
     const refpages::Page found = refpages::found(ix, Lang::Uk, "por");
     CHECK(found.rows[0].style == refpages::Style::Search && found.rows[0].right == "Esc");
-    CHECK(found.rows[1].style == refpages::Style::Heading);
+    CHECK(found.rows[1].style == refpages::Style::Group);  // 3.0.11-beta.28: the concept's groups of results
     const refpages::Row* poring = rowWith(found, "Poring");
     CHECK(poring && poring->link.go == refpages::Go::Mob && poring->link.id == 1002);
     CHECK(rowWith(found, "Poring Card") != nullptr);  // the items too
     CHECK(rowWith(refpages::found(ix, Lang::Uk, "prontera city"), "Prontera City (prontera)") != nullptr);  // a map
     const refpages::Page none = refpages::found(ix, Lang::Uk, "nothing like it");
-    CHECK(none.rows.size() == 2 && none.rows[1].style == refpages::Style::Note);
+    CHECK(none.rows.size() == 2 && none.rows[1].style == refpages::Style::Empty);
+    CHECK_EQ(none.rows[1].left, std::string("За «nothing like it» нічого не знайдено"));
 }
 
 TEST(reference_pages_a_monsters_card) {
@@ -429,10 +431,11 @@ TEST(reference_pages_npcs_kafra_and_icons) {
     refindex::Index ix = index();
     ix.graph = refroute::prepare(ix);
     const refpages::Page found = refpages::found(ix, Lang::Uk, "kafra", ctx("prt_fild08"));
-    const size_t npcs = indexOf(found, "NPC: 1");
-    CHECK(npcs != size_t(-1));
+    const size_t npcs = indexOf(found, "NPC · 1");
+    CHECK(npcs != size_t(-1) && found.rows[npcs].right == "ближчі — вище");
     CHECK_EQ(found.rows[npcs + 1].left, std::string("Kafra Employee"));
-    CHECK_EQ(found.rows[npcs + 1].right, std::string("Prontera City (prontera) · 150, 180 · переходів: 1"));
+    CHECK_EQ(found.rows[npcs + 1].sub, std::string("Prontera City (prontera) · 150, 180 · переходів: 1"));
+    CHECK(found.rows[npcs + 1].right == "NPC" && found.rows[npcs + 1].icon == "ui:npc");
     CHECK(found.rows[npcs + 1].link.go == refpages::Go::Map && found.rows[npcs + 1].link.map == "prontera");
     const refpages::Page field = refpages::map(ix, Lang::Uk, "prt_fild08", ctx(""));
     const size_t near = indexOf(field, "Kafra поруч");
@@ -665,5 +668,155 @@ TEST(reference_concept_rail_hover_repaints_its_section) {
             CHECK(partial.px == whole.px);
             was = now;
         }
+    }
+}
+
+// 3.0.11-beta.28: the concept's search results (v21_search) - groups of results with their lines and kinds, the query
+// marked, «ще N ›» that opens a group, the items by their service names apart, the monsters by their other names
+TEST(reference_search_concept_results) {
+    const refindex::Index ix = index();
+    const refpages::Page wing = refpages::found(ix, Lang::Uk, "wing");
+    CHECK(wing.rows[1].style == refpages::Style::Group && wing.rows[1].left == "Предмети · 1");
+    CHECK_EQ(wing.rows[1].right, std::string("частіші — вище"));
+    const refpages::Row& fly = wing.rows[2];
+    CHECK(fly.style == refpages::Style::Result && fly.left == "Fly Wing" && fly.right == "предмет");
+    CHECK_EQ(fly.sub, std::string("55 z · 2 крамниці · падає з 2 монстрів"));  // the cheaper shop's price
+    CHECK(fly.icon == "item:601" && fly.link.go == refpages::Go::Item && fly.link.id == 601);
+    CHECK((fly.marks == refpages::Marks{{4, 8}} && fly.subMarks.empty()));
+    CHECK(wing.rows.back().style == refpages::Style::Hint);  // how the search finds, at the end
+    // any order, any case; two words over one place - one mark
+    CHECK((refpages::found(ix, Lang::Uk, "WING fly").rows[2].marks == (refpages::Marks{{0, 3}, {4, 8}})));
+    CHECK((refpages::found(ix, Lang::Uk, "win wing").rows[2].marks == refpages::Marks{{4, 8}}));
+    // the service name's group: its name has it not («Wing_Of_Fly»), marked in its line
+    const refpages::Page of = refpages::found(ix, Lang::Uk, "of");
+    const size_t aegis = indexOf(of, "За службовою назвою · 1");
+    CHECK(aegis != size_t(-1) && of.rows[aegis + 1].left == "Fly Wing");
+    CHECK_EQ(of.rows[aegis + 1].sub, std::string("службова назва Wing_Of_Fly"));
+    CHECK((of.rows[aegis + 1].marks.empty() && of.rows[aegis + 1].subMarks == refpages::Marks{{33, 35}}));
+    // a monster: MVP, its level, its maps; a boss's name gold
+    const refpages::Page morroc = refpages::found(ix, Lang::Uk, "morroc");
+    const refpages::Row* satan = rowWith(morroc, "Satan Morroc");
+    CHECK(satan && satan->sub == "MVP · Lv 99 · 1 карта" && satan->gold && satan->icon == "mob:1917");
+    const refpages::Page porings = refpages::found(ix, Lang::Uk, "poring");
+    const refpages::Row* poring = rowWith(porings, "Poring");
+    CHECK(poring && poring->sub == "Lv 1 · 2 карти" && poring->right == "монстр");
+    // a location: a town, its monsters' kinds
+    const refpages::Page towns = refpages::found(ix, Lang::Uk, "prontera");
+    const refpages::Row* city = rowWith(towns, "Prontera City (prontera)");
+    CHECK(city && city->sub == "місто" && city->icon == "ui:location" && city->right == "локація");
+    const refpages::Page fields = refpages::found(ix, Lang::Uk, "field", ctx("prt_fild08"));
+    const refpages::Row* field = rowWith(fields, "Prontera Field (prt_fild08)");
+    CHECK(field && field->sub == "ви тут · видів монстрів: 1" && field->gold);
+    // nothing: what was not found and what to try
+    const refpages::Page none = refpages::found(ix, Lang::En, "zzz");
+    CHECK(none.rows.size() == 2 && none.rows[1].style == refpages::Style::Empty);
+    CHECK_EQ(none.rows[1].left, std::string("Nothing found for «zzz»"));
+    CHECK(none.rows[1].sub.find("«wing»") != std::string::npos);
+}
+
+TEST(reference_search_concept_other_names) {
+    std::string pack = kPack;
+    const std::string card = "[4001,1]],\n";
+    pack.replace(pack.find(card), card.size(), "[4001,1],\"poring\",\"Pink Jelly\"],\n");
+    refindex::Index ix;
+    CHECK(refindex::build(pack, ix));
+    CHECK_EQ(ix.mobs.at(1002).other, std::string("Pink Jelly"));
+    CHECK(ix.mobs.at(1917).other.empty());  // an older pack's monster
+    const refindex::Found f = refindex::search(ix, "pink", 10);
+    CHECK(f.mobs.size() == 1 && f.mobs[0].id == 1002 && f.mobs[0].by == 1);
+    const refpages::Page p = refpages::found(ix, Lang::Uk, "pink");
+    const refpages::Row& r = p.rows[2];
+    CHECK(r.left == "Poring" && r.marks.empty());
+    CHECK_EQ(r.sub, std::string("друга назва: Pink Jelly · Lv 1 · 2 карти"));
+    CHECK((r.subMarks == refpages::Marks{{23, 27}}));  // «друга назва: » is 23 bytes
+    // the same name in other letters is no other name
+    std::string same = kPack;
+    same.replace(same.find(card), card.size(), "[4001,1],\"poring\",\"PORING\"],\n");
+    refindex::Index ix2;
+    CHECK(refindex::build(same, ix2));
+    CHECK(ix2.mobs.at(1002).other.empty());
+}
+
+TEST(reference_search_concept_more_and_forms) {
+    refindex::Index ix;
+    for (int i = 0; i < 12; ++i) {  // twelve stones; the first four sold in 1, 3, 5 and 21 shops
+        ix.items[100 + i] = refindex::Item{"Stone " + std::string(1, char('A' + i)), "Stone", 3, 10, 1, 0};
+        const int shops[] = {1, 3, 5, 21};
+        if (i < 4)
+            for (int s = 0; s < shops[i]; ++s) ix.soldAt[100 + i].emplace_back(s, 10);
+    }
+    const refpages::Page p = refpages::found(ix, Lang::Uk, "stone");
+    CHECK(p.rows[1].style == refpages::Style::Group && p.rows[1].left == "Предмети · 12");
+    CHECK(p.rows[2].left == "Stone D" && p.rows[2].sub == "10 z · 21 крамниця");  // the most shops first
+    CHECK_EQ(p.rows[3].sub, std::string("10 z · 5 крамниць"));
+    CHECK_EQ(p.rows[4].sub, std::string("10 z · 3 крамниці"));
+    CHECK_EQ(p.rows[5].sub, std::string("10 z · 1 крамниця"));
+    CHECK(p.rows[6].sub.empty());  // «Інше» unsaid, nothing else to say
+    CHECK(p.rows[10].style == refpages::Style::More && p.rows[10].left == "ще 4 ›");
+    CHECK(p.rows[10].link.go == refpages::Go::Expand);
+    const refpages::Page open = refpages::found(ix, Lang::Uk, "stone", {}, 1u << unsigned(p.rows[10].link.id));
+    CHECK(open.rows[13].style == refpages::Style::Result && open.rows[14].style == refpages::Style::Hint);
+    CHECK_EQ(refpages::found(ix, Lang::En, "stone a").rows[2].sub, std::string("10 z · 1 shop"));
+    ix.items.erase(111);  // nine: all of them, no «ще 1 ›»
+    ix.items.erase(110);
+    ix.items.erase(109);
+    const refpages::Page nine = refpages::found(ix, Lang::Uk, "stone");
+    CHECK(nine.rows[10].style == refpages::Style::Result && nine.rows[11].style == refpages::Style::Hint);
+}
+
+TEST(reference_search_concept_window) {
+    const refindex::Index ix = index();
+    const refpages::Page p = refpages::withRail(refpages::found(ix, Lang::Uk, "wing"), ix, Lang::Uk, refpages::Link{});
+    for (const float k : {1.0f, 2.0f}) {
+        const refwin::Layout L = refwin::layout(int(1920 * k), int(1080 * k), k);
+        int total = 0;
+        const std::vector<refwin::Placed> rows = refwin::place(L, p, total);
+        CHECK_EQ(rows[2].h, int(std::lround(50 * k)));  // a result's line
+        CHECK_EQ(rows[1].h, int(std::lround(28 * k)));  // its group's
+        const size_t last = p.rows.size() - 1;
+        CHECK(rows[last].y >= rows[2].y + rows[2].h && rows[last].h >= int(std::lround(33 * k)));
+        refwin::Texts t;
+        t.title = "Довідник";
+        t.query = "wing";
+        refwin::Look look;
+        look.chrome = refwin::chrome(L, p, t);
+        look.selected = 2;
+        const std::vector<refwin::Words> words = refwin::words(L, p, rows, 0, t, look);
+        bool name = false, sub = false, kind = false, group = false;
+        for (const refwin::Words& w : words) {
+            name |= w.text == "Fly Wing" && w.bold && std::abs(w.px - 14.5f * k) < 0.01f;
+            sub |= w.text == p.rows[2].sub && w.rgb == refwin::kMuted;
+            kind |= w.text == "предмет" && w.align == refwin::Align::Right && w.rgb == refwin::kFaint;
+            group |= w.text == "ПРЕДМЕТИ · 1";
+        }
+        CHECK(name && sub && kind && group);
+        // the picked result gold, its bar at its left; the one under the pointer only lighter
+        panel::Picture picked, over;
+        refwin::paint(picked, L, p, rows, 0, total, look);
+        refwin::Look hover = look;
+        hover.selected = -1;
+        hover.hover = refwin::Under{refwin::Part::Row, 2};
+        refwin::paint(over, L, p, rows, 0, total, hover);
+        const int y = L.bodyY + rows[2].y + rows[2].h / 2;
+        const auto at = [&](const panel::Picture& pic, int x) {
+            return pic.px[size_t(y) * size_t(pic.width) + size_t(x)];
+        };
+        const int band = rows[2].x + rows[2].w - int(40 * k), bar = rows[2].x + 1;
+        CHECK(((at(picked, band) >> 16) & 0xFF) > (at(picked, band) & 0xFF) + 4);  // gold: more red than blue
+        CHECK(((at(over, band) >> 16) & 0xFF) <= (at(over, band) & 0xFF) + 4);
+        CHECK(((at(picked, bar) >> 16) & 0xFF) > 150);
+        // the query's mark: gold under «Wing»
+        const float markX = float(rows[2].x) + 48 * k + L.measure("Fly ", 14.5f * k, true) + 6 * k;
+        const int markY = L.bodyY + rows[2].y + int(16.5f * k);
+        const uint32_t mark = hover.selected < 0 ? over.px[size_t(markY) * size_t(over.width) + size_t(markX)] : 0;
+        CHECK(((mark >> 16) & 0xFF) > (mark & 0xFF) + 8);
+        // a result's band is its own box; its repaint as the whole
+        const Rect a = refwin::rowArea(L, p, rows, 0, 2);
+        CHECK(a.left <= rows[2].x && a.right >= rows[2].x + rows[2].w);
+        panel::Picture partial = picked;
+        for (const refwin::Look* l : {&look, &hover})
+            for (const Rect& r : refwin::hotAreas(L, p, rows, 0, *l))
+                refwin::repaint(partial, L, p, rows, 0, total, hover, r);
+        CHECK(partial.px == over.px);
     }
 }
