@@ -1,3 +1,21 @@
+# uaRO Graphics 3.0.11-beta.7 — what is new
+
+- **The game's reference in the game** («Interface» → «Reference (prototype) - Ctrl+F», off by default): Ctrl+F opens
+  a window over the game with uaro.kiev.ua's database (what 3.0.11-beta.5 fetches when the game starts):
+  - search: type a part of a name — monsters, items, maps, shops; letters come in Latin with any keyboard layout (the
+    names in the database are English), Enter opens the first found;
+  - a monster's card: level, HP, element, race, size, experience; «Where to find» — your map first, in gold, and how
+    many live there; «What it drops» with the chances; the pet (lure, egg, food);
+  - an item's card: «Dropped by» (chance, level, where it lives), «Where to buy» (NPC, map, price), crafting;
+  - a map's card: «Who is here», «Exits», NPCs and shops; the map's name from the client's mapnametable;
+  - long sections show 5 lines and «all N ›»;
+  - a name in a card opens its own card; Esc or Ctrl+F closes it, Alt+← or the mouse's back button goes back, the
+    wheel and PgUp/PgDn scroll;
+  - a click on a monster in the list under the new minimap opens its card.
+- To check: Ctrl+F → «poring» → Poring: «Where to find» starts with your map (on prt_fild08 «you are here · ×100»);
+  «What it drops» has Jellopy 70 %; «all 8 ›» opens the whole list; a click on Jellopy opens the item, Alt+← comes
+  back. While the window is open, keys and clicks inside it do not reach the game.
+
 # uaRO Graphics 3.0.11-beta.6 — what is new
 
 - **Hints on the new minimap** («Interface» → three new switches under «New minimap (prototype)»), from the game's
