@@ -394,6 +394,11 @@ void render(State& s) {
     if (s.index)
         t.footer = settings::fmt(settings::tr(l, Text::RefFooter),
                                  {s.index->date.substr(0, 10), s.index->commit.substr(0, 8)});
+    if (s.index && s.online) {  // 3.0.11-beta.20: how fresh the players now (and the timers, the market) are
+        const long long age = std::max<long long>(0, static_cast<long long>(std::time(nullptr)) - s.online->at);
+        t.footer += " · " + settings::fmt(settings::tr(l, Text::RefFresh),
+                                          {refpages::respawn(int(std::max<long long>(age, 60) * 1000), l)});
+    }
     std::vector<Words> gdi;
     for (const refwin::Words& w : refwin::words(s.layout, s.page, s.rows, s.scroll, t, look)) {
         const UINT align = w.align == refwin::Align::Right ? DT_RIGHT : w.align == refwin::Align::Center ? DT_CENTER

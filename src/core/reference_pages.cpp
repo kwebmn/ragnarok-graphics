@@ -517,7 +517,7 @@ Page found(const refindex::Index& ix, Lang l, const std::string& query, const Co
     return p;
 }
 
-Page section(const refindex::Index& ix, Lang l, int id) {
+Page section(const refindex::Index& ix, Lang l, int id, const Context& c) {
     Page p;
     if (id >= 100) {  // the items of one type, by name
         p.name = typeName(id - 100, l);
@@ -566,6 +566,14 @@ Page section(const refindex::Index& ix, Lang l, int id) {
                 const refindex::Where& w = ix.spawnsOf.at(mob).front();
                 std::string right = refindex::mapTitle(ix, w.map);
                 if (-neg >= 600000) right += " · " + minutes(l, -neg);
+                // 3.0.11-beta.20: the board of MVP hunters - a player's public timer of it (the latest)
+                const reflive::Timer* t = c.live ? reflive::timerOf(*c.live, mob) : nullptr;
+                const long long respawn = t ? respawnOn(ix, mob, t->map) / 1000 : 0;
+                if (t && respawn > 0 && c.now > 0) {
+                    const long long left = t->killed + respawn - c.now;
+                    right += " · " + (left > 0 ? sayf(l, Text::RefTimerSoon, {respawnText(left, l)})
+                                               : say(l, Text::RefTimerDue));
+                }
                 Row r = linked(name, right, toMob(mob));
                 r.gold = true;
                 p.rows.push_back(std::move(r));
@@ -789,6 +797,7 @@ Page item(const refindex::Index& ix, Lang l, int id, const Context& c, unsigned 
             rows.push_back(std::move(r));
         }
         capped(p, std::move(rows), DroppedBy, opened, l);
+        p.rows.push_back(linked(say(l, Text::RefOnWorld), "", Link{Go::World, 0, "item:" + std::to_string(id)}));
     }
     const auto at = ix.soldAt.find(id);
     if (at != ix.soldAt.end()) {
@@ -1040,10 +1049,16 @@ Page quest(const refindex::Index& ix, Lang l, int index) {
 
 std::map<std::string, int> worldMarks(const refindex::Index& ix, const std::string& marks) {
     std::map<std::string, int> out;
-    if (marks.rfind("mob:", 0) == 0) {
-        const auto where = ix.spawnsOf.find(std::atoi(marks.c_str() + 4));
+    auto addMob = [&](int mob) {
+        const auto where = ix.spawnsOf.find(mob);
         if (where != ix.spawnsOf.end())
             for (const refindex::Where& w : where->second) out[w.map] += w.count;
+    };
+    if (marks.rfind("mob:", 0) == 0) addMob(std::atoi(marks.c_str() + 4));
+    if (marks.rfind("item:", 0) == 0) {  // 3.0.11-beta.20: where to farm it - its droppers' maps, how many of them
+        const auto by = ix.droppedBy.find(std::atoi(marks.c_str() + 5));
+        if (by != ix.droppedBy.end())
+            for (const refindex::Source& s : by->second) addMob(s.mob);
     }
     return out;
 }
@@ -1055,7 +1070,9 @@ Page world(const refindex::Index& ix, Lang l, const Context& c, const std::strin
     title.style = Style::Title;
     title.left = say(l, Text::RefWorld);
     const int mob = marks.rfind("mob:", 0) == 0 ? std::atoi(marks.c_str() + 4) : 0;
+    const int item = marks.rfind("item:", 0) == 0 ? std::atoi(marks.c_str() + 5) : 0;
     if (mob > 0) title.left = sayf(l, Text::RefWorldOf, {mobName(ix, mob)});  // 3.0.11-beta.19
+    if (item > 0) title.left = sayf(l, Text::RefWorldOf, {itemName(ix, item)});  // 3.0.11-beta.20
     title.right = say(l, Text::RefDungeons) + " ›";
     title.link = Link{Go::World, 1, ""};
     p.rows.push_back(title);
@@ -1073,7 +1090,9 @@ Page world(const refindex::Index& ix, Lang l, const Context& c, const std::strin
     } else {
         std::string line = refindex::mapTitle(ix, t->map);
         const auto m = marked.find(t->map);
-        if (m != marked.end()) line += " · " + mobName(ix, mob) + " ×" + std::to_string(m->second);
+        if (m != marked.end())
+            line += " · " + (mob > 0 ? mobName(ix, mob) + " ×" + std::to_string(m->second)
+                                     : sayf(l, Text::RefDroppersHere, {std::to_string(m->second)}));
         const std::string more = mapLine(ix, l, t->map, c);
         if (!more.empty()) line += " · " + more;
         if (t->map == c.here) line += " · " + say(l, Text::RefYouHere);
@@ -1205,7 +1224,7 @@ Page card(const refindex::Index& ix, Lang l, const Link& link, const Context& c,
         case Go::Item: return item(ix, l, link.id, c, opened);
         case Go::Map: return map(ix, l, link.map, c, opened);
         case Go::Shop: return shop(ix, l, link.id);
-        case Go::Section: return section(ix, l, link.id);
+        case Go::Section: return section(ix, l, link.id, c);
         case Go::World: return link.id == 1 ? dungeons(ix, l, c) : world(ix, l, c, link.map);
         case Go::Quests: return quests(ix, l);
         case Go::Quest: return quest(ix, l, link.id);

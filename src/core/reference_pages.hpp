@@ -93,7 +93,7 @@ bool linkOf(const std::string& line, Link& out);  // back; false: not one
 Page home(const refindex::Index& ix, settings::Lang l, int online = 0, const Context& c = {});
 // `c` (3.0.11-beta.15): the NPCs found the nearest to the player's map first, and how far
 Page found(const refindex::Index& ix, settings::Lang l, const std::string& query, const Context& c = {});
-Page section(const refindex::Index& ix, settings::Lang l, int id);
+Page section(const refindex::Index& ix, settings::Lang l, int id, const Context& c = {});
 // `here`: the player's map (it comes first in «Де знайти», marked; a map's card shows the way from it - 3.0.11-beta.8)
 // `opened`: bits of Part shown in full
 Page mob(const refindex::Index& ix, settings::Lang l, int id, const Context& c, unsigned opened = 0);
@@ -105,7 +105,8 @@ Page shop(const refindex::Index& ix, settings::Lang l, int index);
 Page quests(const refindex::Index& ix, settings::Lang l);
 Page quest(const refindex::Index& ix, settings::Lang l, int index);
 // 3.0.11-beta.11: the world map (its picture row, the tile under the pointer told under it) and the dungeons by groups;
-// `marks` (3.0.11-beta.19): "mob:<id>" - the monster's maps marked on it with its numbers there, its dungeons under it
+// `marks` (3.0.11-beta.19): "mob:<id>" - the monster's maps marked on it with its numbers there, its dungeons under it;
+// "item:<id>" (3.0.11-beta.20) - the maps of the monsters dropping it, how many of them
 Page world(const refindex::Index& ix, settings::Lang l, const Context& c, const std::string& marks = "");
 // The maps a world map's `marks` names, with the numbers to show on them
 std::map<std::string, int> worldMarks(const refindex::Index& ix, const std::string& marks);

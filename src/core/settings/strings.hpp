@@ -497,6 +497,7 @@ enum class Text : uint16_t {
     RefQuestsNone,
     RefRecent, RefFavourites, RefStar, RefStarred,  // 3.0.11-beta.18: the first screen's recent and starred cards
     RefOnWorld, RefWorldOf, RefAlsoInside,          // 3.0.11-beta.19: a monster's maps on the world map
+    RefDroppersHere, RefFresh,                      // 3.0.11-beta.20: an item's droppers there; the data's age
     Count
 };
 

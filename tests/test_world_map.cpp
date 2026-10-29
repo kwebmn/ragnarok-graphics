@@ -124,3 +124,20 @@ TEST(reference_world_marks_a_monster) {
         link = link || (r.link.go == refpages::Go::World && r.link.map == "mob:1002");
     CHECK(link);
 }
+
+// 3.0.11-beta.20: an item on the world map - where to farm it (its droppers' maps)
+TEST(reference_world_marks_an_items_droppers) {
+    refindex::Index ix;
+    CHECK(refindex::build(R"({"v":1,"data":1,"commit":"c","date":"d","items":{"909":["Jellopy","Jellopy",3,6,1,0,0]},
+        "mobs":{"1002":["Poring",1,50,2,1,1,3,1,1,0,[[909,7000]],[],null],"1113":["Drops",2,55,4,3,1,3,3,1,0,
+        [[909,7000]],[],null]},"spawns":{"prt_fild08":[[1002,100,0,0,0,0,0],[1113,10,0,0,0,0,0]],
+        "prt_fild05":[[1113,40,0,0,0,0,0]]},"routes":[],"shops":[],"npcs":[],"pets":[],"craft":[],"flags":{}})", ix));
+    const auto marks = refpages::worldMarks(ix, "item:909");
+    CHECK_EQ(marks.at("prt_fild08"), 110);  // Poring and Drops there
+    CHECK_EQ(marks.at("prt_fild05"), 40);
+    const refpages::Page card = refpages::item(ix, Lang::Uk, 909, refpages::Context{});
+    bool link = false;
+    for (const refpages::Row& r : card.rows)
+        link = link || (r.link.go == refpages::Go::World && r.link.map == "item:909");
+    CHECK(link);
+}

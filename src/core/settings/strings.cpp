@@ -5137,6 +5137,12 @@ constexpr Entry kTexts[] = {
     {Text::RefOnWorld, "On the world map ›", "Показати на карті світу ›", "Показать на карте мира ›"},
     {Text::RefWorldOf, "{1} on the world map", "{1} на карті світу", "{1} на карте мира"},
     {Text::RefAlsoInside, "Dungeons and rooms", "Підземелля й приміщення", "Подземелья и помещения"},
+    // 3.0.11-beta.20: an item's droppers on a map; how fresh the site's live data is
+    {Text::RefDroppersHere,
+     "monsters dropping it: {1}",
+     "монстрів, з яких випадає: {1}",
+     "монстров, с которых падает: {1}"},
+    {Text::RefFresh, "the site's live data {1} ago", "живі дані сайту {1} тому", "живые данные сайта {1} назад"},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 
