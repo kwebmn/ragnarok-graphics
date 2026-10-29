@@ -1,3 +1,13 @@
+# uaRO Graphics 3.0.11-beta.39 — what is new
+
+- **The party (stage 7 of the new interface).** At the top left under the character block — the party's members:
+  the name (a crown on the leader), the HP per cent and a bar under the name. Low HP (under 30 %) — red with «!»,
+  the row edged red. One on another map — its map instead of HP, one not in the game — «offline». The server sends
+  no SP of the members.
+- «Interface» has «Party»; with the new minimap it is on by itself.
+- To check: in a party — the panel under the character block; a member near you — its HP changes, one gone to
+  another map — its map's name. The log's line `party: its list - N others`.
+
 # uaRO Graphics 3.0.11-beta.38 — what is new
 
 - **The target card (stage 7 of the new interface).** The monster your character fights, in a short card at the
