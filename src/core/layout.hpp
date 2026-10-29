@@ -60,6 +60,8 @@ constexpr const char* kReferenceOnline = "uaro-graphics\\reference\\online.json"
 constexpr const char* kReferenceWorld = "uaro-graphics\\reference\\worldmap.json";
 // 3.0.11-beta.12: the players' public MVP timers and the site's market (core/reference_live) - with online.json
 constexpr const char* kReferenceLive = "uaro-graphics\\reference\\live.json";
+// 3.0.11-beta.16: the site's quests (core/reference_quests) - their manifest; the file beside it
+constexpr const char* kReferenceQuests = "uaro-graphics\\reference\\quests.json";
 // 2.14: the client patcher (app/client_patch): the list of the game's files last put, and where they arrive first
 constexpr const char* kClientPatchRecord = "uaro-graphics\\client-patch.txt";
 constexpr const char* kClientPatchWork = "uaro-graphics\\update\\client";

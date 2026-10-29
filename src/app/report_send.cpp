@@ -287,7 +287,8 @@ int watchGame(unsigned long pid, int logSlot) {
     if (live) {
         std::string error;
         noteReference(exeFolder(), error);
-        noteWorld(exeFolder(), error);  // 3.0.11-beta.11
+        noteWorld(exeFolder(), error);   // 3.0.11-beta.11
+        noteQuests(exeFolder(), error);  // 3.0.11-beta.16
         noteOnline(exeFolder(), error);
         noteLive(exeFolder(), error);  // 3.0.11-beta.12
     }

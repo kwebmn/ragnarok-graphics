@@ -5106,6 +5106,25 @@ constexpr Entry kTexts[] = {
     {Text::RefFoundNpcs, "NPCs: {1}", "NPC: {1}", "NPC: {1}"},
     {Text::RefKafraNear, "The nearest Kafra", "Kafra поруч", "Kafra рядом"},
     {Text::RefHere, "here", "тут", "здесь"},
+    // 3.0.11-beta.16: the site's quests (core/reference_quests)
+    {Text::RefSecQuests, "Quests", "Квести", "Квесты"},
+    {Text::RefSecQuestsHint, "jobs, headgear, towns", "професії, убори, доступ до міст", "профессии, уборы, города"},
+    {Text::RefFoundQuests, "Quests: {1}", "Квести: {1}", "Квесты: {1}"},
+    {Text::RefQuestNpc, "Who gives it", "Хто дає", "Кто даёт"},
+    {Text::RefQuestItems, "What it takes", "Що потрібно", "Что нужно"},
+    {Text::RefQuestSteps, "Steps", "Кроки", "Шаги"},
+    {Text::RefQuestRewards, "Reward", "Нагорода", "Награда"},
+    {Text::RefQuestFor, "For quests", "Для квестів", "Для квестов"},
+    {Text::RefQuestLevel, "from Lv {1}", "від Lv {1}", "от Lv {1}"},
+    {Text::RefQuestJobs, "Job changes", "Зміна професії", "Смена профессии"},
+    {Text::RefQuestHeadgear, "Headgear", "Головні убори", "Головные уборы"},
+    {Text::RefQuestAccess, "Access to towns", "Доступ до міст", "Доступ к городам"},
+    {Text::RefQuestEvents, "Events", "Події", "События"},
+    {Text::RefQuestOther, "Other", "Інше", "Другое"},
+    {Text::RefQuestsNone,
+     "The quests come from uaro.kiev.ua when the game starts - not here yet.",
+     "Квести приходять з uaro.kiev.ua під час запуску гри - їх ще немає.",
+     "Квесты приходят с uaro.kiev.ua при запуске игры - их ещё нет."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

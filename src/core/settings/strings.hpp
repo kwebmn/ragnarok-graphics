@@ -491,6 +491,10 @@ enum class Text : uint16_t {
     MinimapTimerDue,
     RefElements, RefElementHeals,  // 3.0.11-beta.13: the server's element table in a monster's card
     RefFoundNpcs, RefKafraNear, RefHere,  // 3.0.11-beta.15: the NPCs found, the nearest Kafra
+    // 3.0.11-beta.16: the site's quests
+    RefSecQuests, RefSecQuestsHint, RefFoundQuests, RefQuestNpc, RefQuestItems, RefQuestSteps, RefQuestRewards,
+    RefQuestFor, RefQuestLevel, RefQuestJobs, RefQuestHeadgear, RefQuestAccess, RefQuestEvents, RefQuestOther,
+    RefQuestsNone,
     Count
 };
 

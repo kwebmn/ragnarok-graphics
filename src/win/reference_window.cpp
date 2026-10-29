@@ -322,7 +322,7 @@ void render(State& s) {
     for (const refwin::Words& w : refwin::words(s.layout, s.page, s.rows, s.scroll, t, look)) {
         const UINT align = w.align == refwin::Align::Right ? DT_RIGHT : w.align == refwin::Align::Center ? DT_CENTER
                                                                                                           : DT_LEFT;
-        gdi.push_back(Words{w.box, utf8Wide(w.text), w.rgb, w.px, w.bold, align});
+        gdi.push_back(Words{w.box, utf8Wide(w.text), w.rgb, w.px, w.bold, align, w.wrap});
     }
     drawWords(s.picture, gdi);
     s.dirty = false;

@@ -1,6 +1,7 @@
 #include "app/reference_pack.hpp"
 
 #include <ctime>
+#include <optional>
 #include <vector>
 
 #include "app/download.hpp"
@@ -8,6 +9,7 @@
 #include "app/text.hpp"
 #include "core/layout.hpp"
 #include "core/reference_live.hpp"
+#include "core/reference_quests.hpp"
 #include "core/world_map.hpp"
 
 namespace uagfx::app {
@@ -18,6 +20,7 @@ constexpr const char* kManifestPath = "/api/public/game/pack.json";
 constexpr const char* kOnlinePath = "/api/public/online.json";  // 3.0.11-beta.10: the site's «Онлайн»
 constexpr const char* kWorldPath = "/assets/worldmap/worldmap.json";  // 3.0.11-beta.11: the site's world map
 constexpr const char* kLivePath = "/api/public/game/live.json";  // 3.0.11-beta.12: MVP timers, the market
+constexpr const char* kQuestsPath = "/api/public/game/quests.json";  // 3.0.11-beta.16: the quests' manifest
 constexpr long long kOnlineAgain = 90;  // seconds: younger counts are kept (several game windows, several watchers)
 
 std::wstring folderOf(const std::wstring& dir) { return dir + L"\\" + wide(layout::kReference); }
@@ -69,6 +72,40 @@ bool noteReference(const std::wstring& dir, std::string& error) {
     for (const std::wstring& n : listFolder(folder, false)) {  // older packs and pieces of cut downloads go
         if (n != name && n.rfind(L"pack-", 0) == 0) deleteFile(folder + L"\\" + n);
     }
+    return true;
+}
+
+bool noteQuests(const std::wstring& dir, std::string& error) {
+    std::string text;
+    if (!fetchPath(kQuestsPath, text, error, 4u << 10)) return false;
+    refquests::Manifest site;
+    if (!refquests::parse(text, site)) {
+        error = "uaro.kiev.ua: not the quests' manifest";
+        return false;
+    }
+    const std::wstring folder = folderOf(dir), manifest = dir + L"\\" + wide(layout::kReferenceQuests);
+    std::optional<refquests::Manifest> there;
+    std::string old;
+    refquests::Manifest m;
+    if (readFile(manifest, old) && refquests::parse(old, m)) there = m;
+    const long long have = there ? fileSize(folder + L"\\" + wide(refquests::fileName(*there))) : -1;
+    if (!refquests::needs(site, there, have)) return true;
+    makeFolder(dir + L"\\" + wide(layout::kOurs));
+    makeFolder(folder);
+    const std::wstring name = wide(refquests::fileName(site)), file = folder + L"\\" + name;
+    if (!downloadPath(refquests::sitePath(site), file, [](uint64_t, uint64_t) { return true; }, error)) return false;
+    std::string bytes;
+    if (!readFile(file, bytes) || !refquests::verify(bytes, site)) {
+        deleteFile(file);
+        error = "uaro.kiev.ua: the quests differ from their manifest (size or SHA-256)";
+        return false;
+    }
+    if (!writeFileAtomic(manifest, refquests::write(site))) {
+        error = "the quests' manifest could not be written";
+        return false;
+    }
+    for (const std::wstring& n : listFolder(folder, false))  // older quests and pieces of cut downloads go
+        if (n != name && n.rfind(L"quests-", 0) == 0) deleteFile(folder + L"\\" + n);
     return true;
 }
 

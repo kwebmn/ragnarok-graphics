@@ -17,6 +17,9 @@ std::optional<refpack::Manifest> referenceThere(const std::wstring& dir);
 bool noteOnline(const std::wstring& dir, std::string& error);
 // 3.0.11-beta.11: the site's world map sheet (core/world_map) into the reference's worldmap.json - at the game's start
 bool noteWorld(const std::wstring& dir, std::string& error);
+// 3.0.11-beta.16: the site's quests (core/reference_quests) into the reference's folder - at the game's start, only
+// when the site has others
+bool noteQuests(const std::wstring& dir, std::string& error);
 // 3.0.11-beta.12: the players' public MVP timers and the site's market (core/reference_live) into live.json - with
 // the counts, every 2 minutes; false and why (the site without it yet: an older site)
 bool noteLive(const std::wstring& dir, std::string& error);

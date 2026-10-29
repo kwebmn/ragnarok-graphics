@@ -18,8 +18,9 @@ namespace uagfx::refpages {
 // win/reference_window lays the rows out and draws them.
 
 // Expand: a card's long section in full; Follow (3.0.11-beta.9): the way to `map` on the minimap - id 0 on foot, 1 by
-// Kafra (again: no more); World (3.0.11-beta.11): the world map - id 0 the world, 1 the dungeons
-enum class Go : uint8_t { None, Mob, Item, Map, Shop, Section, Expand, Follow, World };
+// Kafra (again: no more); World (3.0.11-beta.11): the world map - id 0 the world, 1 the dungeons; Quests, Quest
+// (3.0.11-beta.16): the site's quests by kinds, one quest (its place in the index)
+enum class Go : uint8_t { None, Mob, Item, Map, Shop, Section, Expand, Follow, World, Quests, Quest };
 struct Link {
     Go go = Go::None;
     int id = 0;       // a monster's, an item's, a shop's (its place in the index) or a section's
@@ -27,7 +28,8 @@ struct Link {
 };
 // World: the world map's picture; Portrait (3.0.11-beta.14): a card's picture (the monster's first frame, the item's
 // icon) with its two lines beside it - `left` and `right`, one under the other
-enum class Style : uint8_t { Title, Sub, Heading, Row, Note, Tile, World, Portrait };
+// Text (3.0.11-beta.16): words that wrap - a quest's description, its steps (`left`)
+enum class Style : uint8_t { Title, Sub, Heading, Row, Note, Tile, World, Portrait, Text };
 struct Row {
     Style style = Style::Row;
     std::string left, right;  // UTF-8: the row's words, and a note on its right (a tile: its count and its line)
@@ -83,6 +85,9 @@ Page mob(const refindex::Index& ix, settings::Lang l, int id, const Context& c, 
 Page item(const refindex::Index& ix, settings::Lang l, int id, const Context& c, unsigned opened = 0);
 Page map(const refindex::Index& ix, settings::Lang l, const std::string& code, const Context& c, unsigned opened = 0);
 Page shop(const refindex::Index& ix, settings::Lang l, int index);
+// 3.0.11-beta.16: the site's quests by kinds, a quest's card (who gives it, what it takes, its steps, its reward)
+Page quests(const refindex::Index& ix, settings::Lang l);
+Page quest(const refindex::Index& ix, settings::Lang l, int index);
 // 3.0.11-beta.11: the world map (its picture row, the tile under the pointer told under it) and the dungeons by groups
 Page world(const refindex::Index& ix, settings::Lang l, const Context& c);
 Page dungeons(const refindex::Index& ix, settings::Lang l, const Context& c);

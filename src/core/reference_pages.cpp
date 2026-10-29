@@ -9,6 +9,7 @@
 #include <unordered_map>
 
 #include "core/reference_route.hpp"
+#include "core/settings/search.hpp"
 
 namespace uagfx::refpages {
 
@@ -79,6 +80,26 @@ void capped(Page& p, std::vector<Row> rows, Part part, unsigned opened, Lang l) 
     if (!all)
         p.rows.push_back(linked(sayf(l, Text::RefAll, {std::to_string(rows.size())}), "", Link{Go::Expand, part, ""}));
 }
+
+// 3.0.11-beta.16: the quests' language of the interface's, a quest's kind in words
+int questLang(Lang l) { return l == Lang::Ru ? refquests::Ru : l == Lang::En ? refquests::En : refquests::Uk; }
+
+std::string categoryName(const std::string& c, Lang l) {
+    if (c == "jobchange") return say(l, Text::RefQuestJobs);
+    if (c == "headgear") return say(l, Text::RefQuestHeadgear);
+    if (c == "access") return say(l, Text::RefQuestAccess);
+    if (c == "event") return say(l, Text::RefQuestEvents);
+    return say(l, Text::RefQuestOther);
+}
+
+Row text(const std::string& words) {
+    Row r;
+    r.style = Style::Text;
+    r.left = words;
+    return r;
+}
+
+Link toQuest(int index) { return Link{Go::Quest, index, ""}; }
 
 // 3.0.11-beta.12: a time as the respawns are told («23 хв», «2 год 5 хв»), a minute at the least
 std::string respawnText(long long seconds, Lang l) {
@@ -381,6 +402,14 @@ Page home(const refindex::Index& ix, Lang l, int online) {
         r.link = Link{Go::Section, int(id), ""};
         p.rows.push_back(std::move(r));
     }
+    if (!ix.quests.empty()) {  // 3.0.11-beta.16: the site's quests
+        Row r;
+        r.style = Style::Tile;
+        r.left = say(l, Text::RefSecQuests) + " · " + number(static_cast<long long>(ix.quests.size()), l);
+        r.right = say(l, Text::RefSecQuestsHint);
+        r.link = Link{Go::Quests, 0, ""};
+        p.rows.push_back(std::move(r));
+    }
     Row world;  // 3.0.11-beta.11: the tenth - the world map
     world.style = Style::Tile;
     world.left = say(l, Text::RefWorld);
@@ -419,6 +448,23 @@ Page found(const refindex::Index& ix, Lang l, const std::string& query, const Co
         for (const refindex::Hit& h : f.maps)
             p.rows.push_back(linked(refindex::mapTitle(ix, h.map), mapNote(ix, l, h.map), toMap(h.map)));
         shown(f.maps.size(), f.mapsAll);
+    }
+    std::vector<int> qs;  // 3.0.11-beta.16: the quests by their titles (the interface's language and English)
+    const std::string folded = settings::foldCase(query);
+    for (size_t i = 0; i < ix.quests.size(); ++i) {
+        const refquests::Quest& q = ix.quests[i];
+        if (settings::textMatches(settings::foldCase(refquests::textOf(q.title, questLang(l))), folded) ||
+            settings::textMatches(settings::foldCase(q.title[refquests::En]), folded))
+            qs.push_back(int(i));
+    }
+    if (!qs.empty()) {
+        p.rows.push_back(heading(sayf(l, Text::RefFoundQuests, {std::to_string(qs.size())})));
+        for (size_t i = 0; i < qs.size() && i < kMostFound; ++i) {
+            const refquests::Quest& q = ix.quests[size_t(qs[i])];
+            p.rows.push_back(linked(refquests::textOf(q.title, questLang(l)), categoryName(q.category, l),
+                                    toQuest(qs[i])));
+        }
+        shown(std::min(qs.size(), kMostFound), qs.size());
     }
     if (!f.npcs.empty()) {  // 3.0.11-beta.15: the nearest to the player's map first («kafra» - the Kafra to walk to)
         const auto moves =
@@ -698,6 +744,17 @@ Page item(const refindex::Index& ix, Lang l, int id, const Context& c, unsigned 
     if (i.slots > 0) sub.left += " · " + sayf(l, Text::RefSlots, {std::to_string(i.slots)});
     p.rows.push_back(sub);
     market(l, p, id, c);  // 3.0.11-beta.12
+    const auto needed = ix.questsOf.find(id);  // 3.0.11-beta.16: the quests that take it
+    if (needed != ix.questsOf.end()) {
+        p.rows.push_back(heading(say(l, Text::RefQuestFor), std::to_string(needed->second.size())));
+        for (int q : needed->second) {
+            int n = 0;
+            for (const auto& [item, k] : ix.quests[size_t(q)].items)
+                if (item == id) n = k;
+            p.rows.push_back(linked(refquests::textOf(ix.quests[size_t(q)].title, questLang(l)), "×" + number(n, l),
+                                    toQuest(q)));
+        }
+    }
 
     const auto by = ix.droppedBy.find(id);
     if (by != ix.droppedBy.end()) {
@@ -900,6 +957,67 @@ std::string mapLine(const refindex::Index& ix, Lang l, const std::string& code, 
 
 }  // namespace
 
+Page quests(const refindex::Index& ix, Lang l) {
+    Page p;
+    p.name = say(l, Text::RefSecQuests);
+    const int ql = questLang(l);
+    std::string kind;
+    for (size_t i = 0; i < ix.quests.size(); ++i) {  // the site's order: by kind, then level
+        const refquests::Quest& q = ix.quests[i];
+        const std::string name = categoryName(q.category, l);
+        if (name != kind) {
+            kind = name;
+            p.rows.push_back(heading(name));
+        }
+        std::string right = q.minLevel > 0 ? sayf(l, Text::RefQuestLevel, {std::to_string(q.minLevel)}) : "";
+        if (!q.npcMap.empty()) right += (right.empty() ? "" : " · ") + q.npcMap;
+        p.rows.push_back(linked(refquests::textOf(q.title, ql), right, toQuest(int(i))));
+    }
+    if (p.rows.empty()) p.rows.push_back(note(say(l, Text::RefQuestsNone)));
+    return p;
+}
+
+Page quest(const refindex::Index& ix, Lang l, int index) {
+    Page p;
+    if (index < 0 || size_t(index) >= ix.quests.size()) return p;
+    const refquests::Quest& q = ix.quests[size_t(index)];
+    const int ql = questLang(l);
+    p.name = refquests::textOf(q.title, ql);
+    Row title;
+    title.style = Style::Title;
+    title.left = p.name;
+    title.right = q.minLevel > 0 ? sayf(l, Text::RefQuestLevel, {std::to_string(q.minLevel)}) : "";
+    p.rows.push_back(title);
+    Row sub;
+    sub.style = Style::Sub;
+    sub.left = categoryName(q.category, l);
+    p.rows.push_back(sub);
+    if (!refquests::textOf(q.summary, ql).empty()) p.rows.push_back(text(refquests::textOf(q.summary, ql)));
+    if (!q.npc.empty()) {
+        p.rows.push_back(heading(say(l, Text::RefQuestNpc)));
+        Row r = q.npcMap.empty() ? linked(q.npc, "", Link{}) : linked(q.npc, refindex::mapTitle(ix, q.npcMap),
+                                                                         toMap(q.npcMap));
+        r.dot = refindex::colorOf(refindex::NpcKind::Guide);
+        p.rows.push_back(std::move(r));
+    }
+    if (!q.items.empty()) {
+        p.rows.push_back(heading(say(l, Text::RefQuestItems), std::to_string(q.items.size())));
+        for (const auto& [item, n] : q.items)
+            p.rows.push_back(linked(itemName(ix, item), "×" + number(n, l), toItem(item)));
+    }
+    const std::vector<std::string>& steps = refquests::listOf(q.steps, ql);
+    if (!steps.empty()) {
+        p.rows.push_back(heading(say(l, Text::RefQuestSteps), std::to_string(steps.size())));
+        for (size_t i = 0; i < steps.size(); ++i) p.rows.push_back(text(std::to_string(i + 1) + ". " + steps[i]));
+    }
+    const std::vector<std::string>& rewards = refquests::listOf(q.rewards, ql);
+    if (!rewards.empty()) {
+        p.rows.push_back(heading(say(l, Text::RefQuestRewards)));
+        for (const std::string& r : rewards) p.rows.push_back(text(r));
+    }
+    return p;
+}
+
 Page world(const refindex::Index& ix, Lang l, const Context& c) {
     Page p;
     p.name = say(l, Text::RefWorld);
@@ -963,6 +1081,8 @@ Page open(const refindex::Index& ix, Lang l, const Link& link, const Context& c,
         case Go::Shop: return shop(ix, l, link.id);
         case Go::Section: return section(ix, l, link.id);
         case Go::World: return link.id == 1 ? dungeons(ix, l, c) : world(ix, l, c);
+        case Go::Quests: return quests(ix, l);
+        case Go::Quest: return quest(ix, l, link.id);
         case Go::None:
         case Go::Expand:
         case Go::Follow: break;

@@ -6,6 +6,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include "core/reference_quests.hpp"
 #include "core/walk_grid.hpp"
 
 namespace uagfx::refindex {
@@ -124,6 +125,9 @@ struct Index {
     std::unordered_map<int, std::vector<Where>> spawnsOf;              // monster -> maps, the most first
     std::unordered_map<int, std::vector<int>> craftOf;                 // item -> craft rows making it
     std::unordered_map<int, std::vector<int>> usedIn;                  // item -> craft rows taking it
+    // 3.0.11-beta.16: the site's quests (core/reference_quests; read with the pack) and the items they take
+    std::vector<refquests::Quest> quests;
+    std::unordered_map<int, std::vector<int>> questsOf;  // item -> quests taking it
     // 3.0.11-beta.8: the maps' walkable parts (uaro-graphics\walkable.bin; none: routes by whole maps) and the
     // routes' graph made from them once (core/reference_route: prepare)
     std::shared_ptr<const walkgrid::Grids> walk;

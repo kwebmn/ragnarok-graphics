@@ -39,7 +39,8 @@ void drawWords(panel::Picture& pic, const std::vector<Words>& words) {
             RECT r{LONG(std::lround(w.box.x)), LONG(std::lround(w.box.y)), LONG(std::lround(w.box.x + w.box.w)),
                    LONG(std::lround(w.box.y + w.box.h))};
             DrawTextW(dc, w.text.c_str(), int(w.text.size()), &r,
-                      DT_SINGLELINE | DT_VCENTER | DT_NOPREFIX | DT_END_ELLIPSIS | w.align);
+                      (w.wrap ? DT_WORDBREAK | DT_TOP : DT_SINGLELINE | DT_VCENTER | DT_END_ELLIPSIS) | DT_NOPREFIX |
+                          w.align);
             SelectObject(dc, oldFont);
             DeleteObject(font);
         }

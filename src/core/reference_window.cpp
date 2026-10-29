@@ -14,6 +14,7 @@ constexpr uint32_t kRule = 0x2A3342, kHover = 0x1F2733, kTileFill = 0x1A2029, kT
 constexpr uint32_t kTrack = 0x161B23, kThumb = 0x3A4556;
 constexpr float kWorldLeast = 300;                         // 3.0.11-beta.11: the world map's row at the least
 constexpr float kPortrait = 84;                            // 3.0.11-beta.14: a card's picture row
+constexpr float kTextLine = 19;  // 3.0.11-beta.16: a Text row's line (13.5 px words)
 constexpr float kIcon = 24;                                // 3.0.11-beta.15: an item's icon in a row (1:1 at 1080p)
 constexpr uint32_t kRoute = 0x5AC8FA, kBadge = 0x0D1016;  // the minimap's way colour; the players' badge
 
@@ -28,6 +29,7 @@ int heightOf(refpages::Style st, float s) {
         case refpages::Style::Tile: return px(kTile, s);
         case refpages::Style::World: return px(kWorldLeast, s);  // place() gives it the body's rest
         case refpages::Style::Portrait: return px(kPortrait, s);
+        case refpages::Style::Text: return px(kTextLine, s);  // place() gives it its lines
         case refpages::Style::Row: break;
     }
     return px(kRow, s);
@@ -62,6 +64,17 @@ Layout layout(int targetW, int targetH, float scale) {
     return L;
 }
 
+// 3.0.11-beta.16: a Text row's height - its lines guessed from its letters (GDI breaks them: a letter some 0.56 of
+// the words' size, a line a little short for the words it breaks at)
+int textHeight(const std::string& words, int width, float s) {
+    size_t letters = 0;
+    for (unsigned char c : words)
+        if ((c & 0xC0) != 0x80) ++letters;
+    const float perLine = std::max(10.0f, float(width) / (13.5f * s * 0.56f));
+    const int lines = std::max(1, int(std::ceil(float(letters) * 1.08f / perLine)));
+    return px(kTextLine, s) * lines + px(8, s);
+}
+
 std::vector<Placed> place(const Layout& L, const refpages::Page& p, int& total) {
     std::vector<Placed> out;
     out.reserve(p.rows.size());
@@ -75,6 +88,7 @@ std::vector<Placed> place(const Layout& L, const refpages::Page& p, int& total) 
     for (const refpages::Row& r : p.rows) {
         int h = heightOf(r.style, L.s);
         if (r.style == refpages::Style::World) h = std::max(h, L.bodyH - others - px(20, L.s));
+        if (r.style == refpages::Style::Text) h = textHeight(r.left, innerW, L.s);
         if (r.style == refpages::Style::Tile) {
             const int col = tile % 3;
             if (col == 0 && tile > 0) y += h + gap;
@@ -346,6 +360,12 @@ std::vector<Words> words(const Layout& L, const refpages::Page& p, const std::ve
             case refpages::Style::Note:
                 out.push_back(Words{panel::Box{x, y, w, h}, row.left, panel::kMuted, 13.5f * s, false, Align::Left});
                 break;
+            case refpages::Style::Text: {  // 3.0.11-beta.16
+                Words t{panel::Box{x, y + 3 * s, w, h - 6 * s}, row.left, panel::kText, 13.5f * s, false, Align::Left};
+                t.wrap = true;
+                out.push_back(t);
+                break;
+            }
             case refpages::Style::Portrait: {  // two lines beside the picture (from the start without one)
                 const float tx = pictureOf(look, row) ? x + h + 10 * s : x;
                 out.push_back(Words{panel::Box{tx, y + h * 0.18f, w - (tx - x), h * 0.32f}, row.left, panel::kText,

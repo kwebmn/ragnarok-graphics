@@ -76,6 +76,7 @@ struct Words {
     float px = 14;
     bool bold = false;
     Align align = Align::Left;
+    bool wrap = false;  // 3.0.11-beta.16: a Text row's lines broken at words
 };
 struct Texts {
     std::string title, back, query, hint, footer;  // the header's, «‹ Назад до …» ("" none), typed, the field's hint

@@ -9,6 +9,7 @@
 #include "core/layout.hpp"
 #include "core/pack_source.hpp"
 #include "core/reference_pack.hpp"
+#include "core/reference_quests.hpp"
 #include "core/reference_route.hpp"
 #include "core/walk_grid.hpp"
 #include "win/game_files.hpp"
@@ -59,6 +60,22 @@ std::shared_ptr<const walkgrid::Grids> walkable() {
     return grids;
 }
 
+// 3.0.11-beta.16: the site's quests beside the pack (the watcher's quests.json and its file), and the items they take
+void readQuests(refindex::Index& ix) {
+    std::string text, gz, json;
+    refquests::Manifest m;
+    if (!readTextFile(layout::join(gameDir(), layout::kReferenceQuests), text) || !refquests::parse(text, m)) return;
+    const std::string file = layout::join(gameDir(), std::string(layout::kReference) + "\\" + refquests::fileName(m));
+    if (!readTextFile(file, gz) || !refquests::verify(gz, m) || !refindex::gunzip(gz, json) ||
+        !refquests::read(json, ix.quests)) {
+        LOG_INFO("reference: %s is not the quests their manifest names - none read", file.c_str());
+        return;
+    }
+    for (size_t q = 0; q < ix.quests.size(); ++q)
+        for (const auto& [item, n] : ix.quests[q].items) ix.questsOf[item].push_back(int(q));
+    LOG_INFO("reference: %zu quests of the site", ix.quests.size());
+}
+
 DWORD WINAPI readPack(void*) {  // its own thread: the pack's JSON is a megabyte
     const ULONGLONG started = GetTickCount64();
     std::string text, gz, json;
@@ -77,6 +94,7 @@ DWORD WINAPI readPack(void*) {  // its own thread: the pack's JSON is a megabyte
                 index->mapNames = refindex::mapNames(std::string(bytes.begin(), bytes.end()));
             index->walk = walkable();  // 3.0.11-beta.8: and the routes' graph over them, once a pack
             index->graph = refroute::prepare(*index);
+            readQuests(*index);  // 3.0.11-beta.16
         }
         if (ok)
             LOG_INFO("reference: the pack of %s (commit %s): %zu maps, %zu monsters, %zu route nodes, read in %llu ms",
@@ -218,7 +236,10 @@ std::shared_ptr<const refindex::Index> index() {
     const ULONGLONG now = GetTickCount64();
     if (!l.busy && (l.lookedAt == 0 || now - l.lookedAt >= kLookEveryMs)) {
         l.lookedAt = now;
-        const unsigned long long stamp = writeTime(layout::join(gameDir(), layout::kReferenceManifest));
+        const unsigned long long packTime = writeTime(layout::join(gameDir(), layout::kReferenceManifest));
+        // 3.0.11-beta.16: and the quests' manifest - either changed, the whole read again
+        const unsigned long long stamp =
+            packTime ? packTime + writeTime(layout::join(gameDir(), layout::kReferenceQuests)) : 0;
         if (!stamp && !l.toldNone) {
             l.toldNone = true;
             LOG_INFO("reference: none here yet (%s) - the game's watcher fetches it with the new minimap on",
