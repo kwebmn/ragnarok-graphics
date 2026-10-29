@@ -1,3 +1,13 @@
+# uaRO Graphics 3.0.11-beta.25 — what is new
+
+- **«Reference» without the cursor's jerks** (report R-77TCM7): when the cursor goes to another tile or row, the window
+  is no longer painted again whole — only the old row and the new one, and only they go to the video card (at 4K with
+  the interface at 200 % each such move painted the whole window for about 0.3 s). The same on «World map» (two maps
+  and the row under the map), with the arrows ↑↓ and as the icons come.
+- The whole window is painted many times faster too (at 4K 14 ms instead of 290), the words' fonts one per size.
+- To check: Ctrl+F, move the cursor over the tiles, the search's rows and «World map» — the cursor does not hang, the
+  FPS does not drop.
+
 # uaRO Graphics 3.0.11-beta.24 — what is new
 
 - **The cursor over our windows — as over the game's**: the world under «Reference», «New minimap (prototype)», «The
