@@ -1,3 +1,12 @@
+# uaRO Graphics 3.0.11-beta.18 — what is new
+
+- **«Starred» and «Opened lately» on «Reference»'s first screen**: under the tiles — the cards marked with a star and
+  the 8 opened last (monsters, items, maps, quests); a click opens the card. Under each card's name — «Star it ›»,
+  and in a starred one «★ Starred» (a click takes it out). Both lists stay between games
+  (uaro-graphics\reference-favourites.txt, reference-recent.txt).
+- To check: Ctrl+F → «poring» → «Star it ›» → Esc, Ctrl+F — the first screen has «Starred: Poring» and «Opened lately:
+  Poring».
+
 # uaRO Graphics 3.0.11-beta.17 — what is new
 
 - **The cards' sections fold by your choice**: a click on a section's heading («Where to find», «What it drops»,
