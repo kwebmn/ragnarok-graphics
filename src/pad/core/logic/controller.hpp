@@ -53,6 +53,7 @@ struct TickOutput {
     std::vector<std::string> notes;  // decisions worth a log line
     std::vector<DialogCommand> dialog;  // 0.7: for the NPC window, in order
     std::optional<int> number;          // 0.7: the number to put into the NPC's number field
+    bool reference = false;             // 3.0.11-beta.22: «Довідник» opened or closed (win/reference_window)
 };
 
 // The left stick walks, the right stick picks a monster, Back switches the pad off; every other button does

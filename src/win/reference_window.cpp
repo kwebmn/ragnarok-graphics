@@ -712,6 +712,16 @@ void padCommand(PadCommand c) {
     }
 }
 
+void toggleFromPad() {
+    State& s = state();
+    if (!s.enabled) {
+        LOG_INFO("reference: a pad button asked for it - off ([interface] reference = 0)");
+        return;
+    }
+    if (s.open) close(s);
+    else openWindow(s, refpages::Link{});
+}
+
 void openMob(int id) {
     State& s = state();
     if (!s.enabled || id <= 0) return;

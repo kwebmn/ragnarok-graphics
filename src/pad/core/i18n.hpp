@@ -61,6 +61,7 @@ enum class Text : uint16_t {
     HintWait,
     HintMenu,
     HintNumber,
+    Reference,  // 3.0.11-beta.22: the action opening uaRO Graphics' «Довідник»
     Count
 };
 

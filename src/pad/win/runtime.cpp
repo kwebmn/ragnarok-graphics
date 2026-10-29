@@ -523,6 +523,7 @@ void tick() {
     if (!view.focused) s.pendingZoom = 0;
     for (const std::string& note : out.notes) LOG_INFO("%s", note.c_str());
     answerNpc(out, view, pad);
+    if (out.reference) uagfx::win::referencewin::toggleFromPad();  // 3.0.11-beta.22: a button bound to it
     for (const std::string& line : s.session->takeLog()) LOG_INFO("%s", line.c_str());
     if (s.cfg.rumble && out.rumble != Rumble::None) s.pad.rumble(out.rumble, now);
     s.pad.update(now);

@@ -35,26 +35,28 @@ TEST(bindings_default_is_the_hunter_layout) {
 }
 
 TEST(bindings_action_ring_wraps) {
-    CHECK(nextAction(kind(Action::Kind::None), -1) == kind(Action::Kind::Talk));
+    CHECK(nextAction(kind(Action::Kind::None), -1) == kind(Action::Kind::Reference));  // 3.0.11-beta.22: the last
     CHECK(nextAction(kind(Action::Kind::Attack), +1) == slot(0));
     CHECK(nextAction(slot(0), -1) == kind(Action::Kind::Attack));
     CHECK(nextAction(slot(26), +1) == kind(Action::Kind::Pickup));
     CHECK(nextAction(kind(Action::Kind::ClearTarget), +1) == kind(Action::Kind::CameraToggle));
     CHECK(nextAction(kind(Action::Kind::CameraToggle), +1) == kind(Action::Kind::Talk));
-    CHECK(nextAction(kind(Action::Kind::Talk), +1) == kind(Action::Kind::None));
+    CHECK(nextAction(kind(Action::Kind::Talk), +1) == kind(Action::Kind::Reference));
+    CHECK(nextAction(kind(Action::Kind::Reference), +1) == kind(Action::Kind::None));
     Action a = kind(Action::Kind::None);
-    for (int i = 0; i < 34; ++i) a = nextAction(a, +1);
-    CHECK(a == kind(Action::Kind::None));  // 34 actions in the ring
+    for (int i = 0; i < 35; ++i) a = nextAction(a, +1);
+    CHECK(a == kind(Action::Kind::None));  // 35 actions in the ring
 }
 
 TEST(bindings_tokens_round_trip) {
     Action a = kind(Action::Kind::None);
-    for (int i = 0; i < 33; ++i) {
+    for (int i = 0; i < 35; ++i) {
         const auto back = parseAction(actionToken(a));
         CHECK(back && *back == a);
         a = nextAction(a, +1);
     }
     CHECK(actionToken(slot(11)) == "slot 12");
+    CHECK(actionToken(kind(Action::Kind::Reference)) == "reference");  // 3.0.11-beta.22
     CHECK(!parseAction("slot 0"));
     CHECK(!parseAction("slot 28"));
     CHECK(!parseAction("jump"));

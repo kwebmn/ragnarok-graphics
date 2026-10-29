@@ -11,7 +11,7 @@ namespace uapad {
 namespace {
 
 constexpr int kSlots = 27;
-constexpr int kRing = 2 + kSlots + 5;  // none, attack, 27 slots, pickup, sit, untarget, camera, talk
+constexpr int kRing = 2 + kSlots + 6;  // none, attack, 27 slots, pickup, sit, untarget, camera, talk, reference
 
 const char* const kTokens[kBindableCount] = {"A",  "B",  "X",  "Y",     "LB",   "RB",   "LT",
                                              "RT", "UP", "RIGHT", "DOWN", "LEFT", "L3", "R3"};
@@ -28,6 +28,7 @@ int ringIndex(Action a) {
         case Action::Kind::ClearTarget: return 4 + kSlots;
         case Action::Kind::CameraToggle: return 5 + kSlots;
         case Action::Kind::Talk: return 6 + kSlots;
+        case Action::Kind::Reference: return 7 + kSlots;
     }
     return 0;
 }
@@ -40,7 +41,8 @@ Action fromRing(int i) {
     if (i == 3 + kSlots) return Action{Action::Kind::SitStand, 0};
     if (i == 4 + kSlots) return Action{Action::Kind::ClearTarget, 0};
     if (i == 5 + kSlots) return Action{Action::Kind::CameraToggle, 0};
-    return Action{Action::Kind::Talk, 0};
+    if (i == 6 + kSlots) return Action{Action::Kind::Talk, 0};
+    return Action{Action::Kind::Reference, 0};
 }
 
 std::string trim(const std::string& s) {
@@ -170,6 +172,7 @@ std::string actionToken(Action a) {
         case Action::Kind::ClearTarget: return "untarget";
         case Action::Kind::CameraToggle: return "camera";
         case Action::Kind::Talk: return "talk";
+        case Action::Kind::Reference: return "reference";
     }
     return "none";
 }
@@ -183,6 +186,7 @@ std::optional<Action> parseAction(const std::string& token) {
     if (t == "untarget") return Action{Action::Kind::ClearTarget, 0};
     if (t == "camera") return Action{Action::Kind::CameraToggle, 0};
     if (t == "talk") return Action{Action::Kind::Talk, 0};
+    if (t == "reference") return Action{Action::Kind::Reference, 0};
     if (t.rfind("slot ", 0) == 0) {
         const std::string digits = trim(t.substr(5));
         char* end = nullptr;
@@ -208,6 +212,7 @@ std::string actionLabel(Action a, Lang lang) {
         case Action::Kind::ClearTarget: return tr(lang, Text::ClearTarget);
         case Action::Kind::CameraToggle: return tr(lang, Text::CameraToggle);
         case Action::Kind::Talk: return tr(lang, Text::Talk);
+        case Action::Kind::Reference: return tr(lang, Text::Reference);
     }
     return "—";
 }

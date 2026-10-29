@@ -65,6 +65,7 @@ const Entry kTexts[] = {
      "↑ ↓: выбор  ·  {A}: OK  ·  {B}: отмена"},
     {"↑ ↓: ±1  ·  {LB} / {RB}: ±10  ·  ← →: ±100  ·  {A}: OK", "↑ ↓: ±1  ·  {LB} / {RB}: ±10  ·  ← →: ±100  ·  {A}: OK",
      "↑ ↓: ±1  ·  {LB} / {RB}: ±10  ·  ← →: ±100  ·  {A}: OK"},
+    {"Reference (uaRO Graphics)", "Довідник (uaRO Graphics)", "Справочник (uaRO Graphics)"},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "every Text needs its translations");
 

@@ -13,7 +13,8 @@ namespace uapad {
 
 // What a gamepad button does.
 struct Action {
-    enum class Kind : uint8_t { None, Attack, Slot, Pickup, SitStand, ClearTarget, CameraToggle, Talk };
+    // Reference (3.0.11-beta.22): uaRO Graphics' «Довідник» window opened or closed (win/reference_window)
+    enum class Kind : uint8_t { None, Attack, Slot, Pickup, SitStand, ClearTarget, CameraToggle, Talk, Reference };
     Kind kind = Kind::None;
     uint8_t slot = 0;  // Kind::Slot: hotkey index 0-26 (row slot / 9 + 1, key F(slot % 9 + 1))
 };
@@ -30,7 +31,8 @@ using Bindings = std::array<Action, kBindableCount>;  // by position in kBindabl
 
 Bindings defaultBindings();  // the 0.2 hunter layout
 // The action after (dir > 0) or before `a` in the menu's ring: none, attack, slots 1-27, pickup, sit, untarget,
-// camera (the right stick: targets <-> camera), talk (0.7: to the nearest NPC).
+// camera (the right stick: targets <-> camera), talk (0.7: to the nearest NPC), reference (3.0.11-beta.22: the
+// «Довідник» window).
 Action nextAction(Action a, int dir);
 
 const char* buttonToken(size_t i);  // in the file: "A", "LB", "UP"...

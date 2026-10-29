@@ -30,5 +30,7 @@ void openMob(int id);
 bool isOpen();
 enum class PadCommand { Up, Down, Enter, Back, Close, PageUp, PageDown };
 void padCommand(PadCommand c);
+// 3.0.11-beta.22: a pad button bound to «Довідник» (uaRO Pad's action «reference») - open it, or close it
+void toggleFromPad();
 
 }  // namespace uagfx::win::referencewin

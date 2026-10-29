@@ -397,6 +397,9 @@ void Controller::fire(const Action& a, bool repeat, const WorldState& world, uin
         case Action::Kind::Talk:
             if (!repeat) talk(world, now, out);
             break;
+        case Action::Kind::Reference:
+            if (!repeat) out.reference = true;
+            break;
     }
 }
 
