@@ -855,7 +855,9 @@ TEST(config_interface_minimap) {
     CHECK(s != nullptr);
     if (s) CHECK_EQ(settings::tokenOf(*s, parseConfig("[interface]\nminimap = 1\n")), std::string("1"));
     const LiveUpdate u = liveUpdate(parseConfig(""), parseConfig("[interface]\nminimap = 1\n"));
-    CHECK(u.waiting.empty() && u.applied.size() == 1 && u.applied[0] == "minimap 0 -> 1");
+    // 3.0.11-beta.37: the buffs' column and the character block come with it
+    CHECK(u.waiting.empty() && u.applied.size() == 3 && u.applied[0] == "minimap 0 -> 1");
+    CHECK(u.applied[1] == "buffs off -> column" && u.applied[2] == "character off -> bars");
     CHECK(appliesNow("interface.minimap"));
 }
 
@@ -912,4 +914,20 @@ TEST(config_reads_the_character_block) {
     CHECK(appliesNow("interface.character"));
     const LiveUpdate u = liveUpdate(parseConfig(""), parseConfig("[interface]\ncharacter = bars\n"));
     CHECK(u.next.character == CharacterLook::Bars);
+}
+
+// 3.0.11-beta.37 (R-TWU5W8: «не появились ни касты ни новый блок персонажа» - both new parts off, and the new minimap
+// over the game's buff icons hid them): with the new minimap on, the buffs' column and the character block come with it
+// unless the file says otherwise
+TEST(config_new_interface_parts_come_with_the_minimap) {
+    const Config on = parseConfig("[interface]\nminimap = 1\n");
+    CHECK(on.buffs == BuffsLook::Column && on.character == CharacterLook::Bars);
+    const Config chosen = parseConfig("[interface]\nminimap = 1\nbuffs = off\ncharacter = rings\n");
+    CHECK(chosen.buffs == BuffsLook::Off && chosen.character == CharacterLook::Rings);
+    const Config off = parseConfig("[interface]\nminimap = 0\n");
+    CHECK(off.buffs == BuffsLook::Off && off.character == CharacterLook::Off);
+    const settings::IniSetting* s = settings::findSetting("interface.buffs");
+    CHECK(s != nullptr && settings::tokenOf(*s, on) == "column");  // the app shows what is in effect
+    const LiveUpdate u = liveUpdate(parseConfig(""), on);  // the minimap switched on: they come at once
+    CHECK(u.next.buffs == BuffsLook::Column && u.next.character == CharacterLook::Bars);
 }

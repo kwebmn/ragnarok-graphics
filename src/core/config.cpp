@@ -378,6 +378,7 @@ Config parseConfig(const std::string& text) {
     // 0.13-0.15's [ai] sprites: all four kinds of sprites, where none of their own keys is in the file.
     int oldSprites = -1;
     bool newSprites = false;
+    bool buffsSet = false, characterSet = false;  // 3.0.11-beta.37: the new interface's parts asked for by name
     std::istringstream in(text);
     std::string line;
     std::string section;
@@ -494,10 +495,12 @@ Config parseConfig(const std::string& text) {
             if (val == "line") c.minimapWay = WayOnGround::Line;
             if (val == "off") c.minimapWay = WayOnGround::Off;
         } else if (key == "interface.buffs") {  // 3.0.11-beta.35: the buffs' column
+            buffsSet = val == "off" || val == "column" || val == "row";
             if (val == "off") c.buffs = BuffsLook::Off;
             if (val == "column") c.buffs = BuffsLook::Column;
             if (val == "row") c.buffs = BuffsLook::Row;
         } else if (key == "interface.character") {  // 3.0.11-beta.36: the character block
+            characterSet = val == "off" || val == "bars" || val == "rings";
             if (val == "off") c.character = CharacterLook::Off;
             if (val == "bars") c.character = CharacterLook::Bars;
             if (val == "rings") c.character = CharacterLook::Rings;
@@ -730,6 +733,10 @@ Config parseConfig(const std::string& text) {
     if (!newBudget && oldBudget) c.ai.budget = legacy.budget;
     if (!newDenoise && oldDenoise) c.ai.denoise = legacy.denoise;
     c.aiNow = c.ai;
+    // 3.0.11-beta.37 (R-TWU5W8 «не появились ни касты ни новый блок персонажа»): the new minimap on - the new
+    // interface's parts with it, unless the file names them (the minimap stands over the game's buff icons)
+    if (c.newMinimap && !buffsSet) c.buffs = BuffsLook::Column;
+    if (c.newMinimap && !characterSet) c.character = CharacterLook::Bars;
     return c;
 }
 
