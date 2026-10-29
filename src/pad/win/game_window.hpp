@@ -19,9 +19,12 @@ bool cursorOverGame(HWND game, POINT screen);
 // 3.0.3-beta.8: the driver's panel of the game windows in the game's picture - its rectangle in the game window's
 // client pixels (Windows' size of them), whose clicks are not the game's; all: none of them is (the panel dragged);
 // nullptr: no panel. On the game's thread, as the gate. 3.0.9-beta.4: the answer card's too, each its own;
-// 3.0.11-beta.1: the new minimap's (prototype)
+// 3.0.11-beta.1: the new minimap's (prototype). 3.0.11-beta.24: `game` - the window the rectangle is in
 enum class Blocker { Panel, Card, Minimap, Reference };  // 3.0.11-beta.7: «Довідник»
-void setBlocked(Blocker who, const RECT* rect, bool all);
+void setBlocked(Blocker who, HWND game, const RECT* rect, bool all);
+// 3.0.11-beta.24: the part the game's own cursor is over (x, y of the game's width x height picture), -1 for none:
+// the world under it is not the cursor's then (win/world_mouse). On the game's thread.
+int blockedUnder(int x, int y, int width, int height);
 // Presses or lets go F1-F9 (1-9) as if on the keyboard: the client gets it like any key press.
 void sendFKey(int key, bool down);
 // Lets the cursor go if we confined it (the client is closing).

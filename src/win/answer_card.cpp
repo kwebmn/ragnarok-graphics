@@ -96,7 +96,7 @@ void hide(State& s) {
     if (!s.shown) return;
     s.shown = false;
     s.hover = s.pressed = card::Part::None;
-    uapad::gamewindow::setBlocked(uapad::gamewindow::Blocker::Card, nullptr, false);
+    uapad::gamewindow::setBlocked(uapad::gamewindow::Blocker::Card, nullptr, nullptr, false);
 }
 
 uint32_t chipWords(reports::Status st) {  // the status's name, lighter than its chip
@@ -193,7 +193,7 @@ void block(const State& s, HWND game) {  // the pad's clicks there are the card'
     const RECT r{LONG(int64_t(s.x) * client.right / s.targetW), LONG(int64_t(s.y) * client.bottom / s.targetH),
                  LONG(int64_t(s.x + s.geometry.width) * client.right / s.targetW + 1),
                  LONG(int64_t(s.y + s.geometry.height) * client.bottom / s.targetH + 1)};
-    uapad::gamewindow::setBlocked(uapad::gamewindow::Blocker::Card, &r, false);
+    uapad::gamewindow::setBlocked(uapad::gamewindow::Blocker::Card, game, &r, false);
 }
 
 void open(State& s, const char* by) {

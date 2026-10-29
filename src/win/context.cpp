@@ -24,6 +24,7 @@
 #include "win/hit_hook.hpp"
 #include "win/map_start.hpp"
 #include "win/pick_hook.hpp"
+#include "win/world_mouse.hpp"
 #include "win/server_night.hpp"
 #include "win/answer_card.hpp"
 #include "win/minimap_proto.hpp"
@@ -333,6 +334,7 @@ bool Context::open(std::string& error) {
     if (!config.remix) installTextureHook();
     installMapStartHook();             // 3.0.2-beta.15: a map's loading known whatever its camera holds
     installPickHook(config.fastPick);  // 0.89: the cell under the mouse without testing the whole map
+    installWorldMouse();               // 3.0.11-beta.24: the driver's parts are windows for the game's cursor
     installFastFtol(config.fastFtol);  // 2.5.20: float to integer without switching the x87
     installChatFix();                  // 2.6.12: Enter in the chat box while a map loads (R-PVF8AV)
     installShadowFix();                // 3.0.4-beta.9: a shadow drawn while a map loads (R-VBDSCP)

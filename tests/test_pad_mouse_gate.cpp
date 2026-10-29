@@ -143,3 +143,61 @@ TEST(background_sleep_only_when_idle_and_behind) {
     CHECK_EQ(backgroundSleepMs(false, false, false, 10), 0);  // messages waiting
     CHECK_EQ(backgroundSleepMs(true, false, false, 0), 0);    // switched off
 }
+
+// 3.0.11-beta.24: the driver's parts in the game's picture are the game's windows for its cursor - the world
+// under them does not react to it (the owner: «курсор мишки поверх интерфейса
+// реагирует еще и на мир»)
+TEST(blocked_point_inside_a_part_is_its) {
+    Blocked parts[2];
+    parts[1] = Blocked{true, false, 100, 50, 300, 150};
+    CHECK_EQ(blockedAt(parts, 2, 100, 50), 1);
+    CHECK_EQ(blockedAt(parts, 2, 299, 149), 1);
+    CHECK_EQ(blockedAt(parts, 2, 300, 100), -1);  // right and bottom outside, as Windows' rectangles
+    CHECK_EQ(blockedAt(parts, 2, 200, 150), -1);
+    CHECK_EQ(blockedAt(parts, 2, 99, 100), -1);
+}
+
+TEST(blocked_part_off_is_nothing) {
+    Blocked parts[1];
+    parts[0] = Blocked{false, false, 0, 0, 1000, 1000};
+    CHECK_EQ(blockedAt(parts, 1, 10, 10), -1);
+}
+
+TEST(blocked_all_takes_the_whole_window) {  // the panel dragged, its menu open
+    Blocked parts[3];
+    parts[2] = Blocked{true, true, 0, 0, 10, 10};
+    CHECK_EQ(blockedAt(parts, 3, 900, 700), 2);
+}
+
+TEST(blocked_first_part_wins) {
+    Blocked parts[2];
+    parts[0] = Blocked{true, false, 0, 0, 100, 100};
+    parts[1] = Blocked{true, false, 50, 50, 200, 200};
+    CHECK_EQ(blockedAt(parts, 2, 60, 60), 0);
+    CHECK_EQ(blockedAt(parts, 2, 150, 150), 1);
+}
+
+TEST(blocked_game_cursor_in_its_own_pixels) {  // the game 800x450 in a client area of 1600x900
+    Blocked parts[1];
+    parts[0] = Blocked{true, false, 800, 400, 1000, 500};
+    CHECK_EQ(blockedAtGame(parts, 1, 1600, 900, 450, 220, 800, 450), 0);   // 900, 440 in the window
+    CHECK_EQ(blockedAtGame(parts, 1, 1600, 900, 399, 220, 800, 450), -1);  // 798
+    CHECK_EQ(blockedAtGame(parts, 1, 1600, 900, 500, 220, 800, 450), -1);  // 1000: outside
+    CHECK_EQ(blockedAtGame(parts, 1, 1600, 900, 450, 249, 800, 450), 0);   // 498
+    CHECK_EQ(blockedAtGame(parts, 1, 1600, 900, 450, 250, 800, 450), -1);  // 500
+}
+
+TEST(blocked_game_cursor_same_size) {
+    Blocked parts[1];
+    parts[0] = Blocked{true, false, 10, 10, 20, 20};
+    CHECK_EQ(blockedAtGame(parts, 1, 1024, 768, 15, 15, 1024, 768), 0);
+    CHECK_EQ(blockedAtGame(parts, 1, 1024, 768, 20, 15, 1024, 768), -1);
+}
+
+TEST(blocked_game_cursor_no_sizes_is_nothing) {
+    Blocked parts[1];
+    parts[0] = Blocked{true, true, 0, 0, 10, 10};
+    CHECK_EQ(blockedAtGame(parts, 1, 0, 900, 5, 5, 800, 450), -1);
+    CHECK_EQ(blockedAtGame(parts, 1, 1600, 900, 5, 5, 0, 450), -1);
+    CHECK_EQ(blockedAtGame(parts, 1, 1600, 900, 5, 5, 800, -1), -1);
+}

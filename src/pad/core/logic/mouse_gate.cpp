@@ -72,4 +72,17 @@ int backgroundSleepMs(bool queueEmpty, bool foreground, bool minimized, int slee
     return !foreground || minimized ? sleepMs : 0;
 }
 
+int blockedAt(const Blocked* parts, int count, int x, int y) {
+    for (int i = 0; i < count; ++i) {
+        const Blocked& b = parts[i];
+        if (b.all || (b.on && x >= b.left && x < b.right && y >= b.top && y < b.bottom)) return i;
+    }
+    return -1;
+}
+
+int blockedAtGame(const Blocked* parts, int count, int clientW, int clientH, int x, int y, int width, int height) {
+    if (clientW <= 0 || clientH <= 0 || width <= 0 || height <= 0) return -1;
+    return blockedAt(parts, count, int(int64_t(x) * clientW / width), int(int64_t(y) * clientH / height));
+}
+
 }  // namespace uapad

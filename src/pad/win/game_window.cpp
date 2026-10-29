@@ -1,5 +1,7 @@
 #include "pad/win/game_window.hpp"
 
+#include "pad/core/logic/mouse_gate.hpp"
+
 namespace uapad::gamewindow {
 namespace {
 
@@ -15,10 +17,10 @@ struct Framed {  // the window as the client made it, while it is borderless
 Framed g_framed;
 bool g_clipped = false;
 // 3.0.3-beta.8: setBlocked; 3.0.9-beta.4: the panel's, the card's; 3.0.11-beta.1: the new minimap's; 3.0.11-beta.7:
-// «Довідник»'s
+// «Довідник»'s (in Blocker's order)
 constexpr int kBlockers = 4;
-bool g_blocked[kBlockers] = {}, g_blockedAll[kBlockers] = {};
-RECT g_blockedRect[kBlockers]{};
+Blocked g_parts[kBlockers];
+HWND g_partsWindow = nullptr;  // 3.0.11-beta.24: the window their rectangles are in
 
 LRESULT CALLBACK proc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
     if (msg == WM_SETCURSOR && LOWORD(lp) != HTCLIENT) return DefWindowProcA(hwnd, msg, wp, lp);
@@ -107,11 +109,23 @@ void releaseCursor() {
     g_clipped = false;
 }
 
-void setBlocked(Blocker who, const RECT* rect, bool all) {
-    const int i = who == Blocker::Reference ? 3 : who == Blocker::Minimap ? 2 : who == Blocker::Card ? 1 : 0;
-    g_blocked[i] = rect != nullptr;
-    if (rect) g_blockedRect[i] = *rect;
-    g_blockedAll[i] = all;
+void setBlocked(Blocker who, HWND game, const RECT* rect, bool all) {
+    Blocked& b = g_parts[static_cast<int>(who)];
+    b.on = rect != nullptr;
+    b.all = all;
+    if (rect) {
+        b.left = rect->left;
+        b.top = rect->top;
+        b.right = rect->right;
+        b.bottom = rect->bottom;
+        if (game) g_partsWindow = game;
+    }
+}
+
+int blockedUnder(int x, int y, int width, int height) {
+    RECT client{};
+    if (!g_partsWindow || !GetClientRect(g_partsWindow, &client)) return -1;
+    return blockedAtGame(g_parts, kBlockers, client.right, client.bottom, x, y, width, height);
 }
 
 bool cursorOverGame(HWND game, POINT screen) {
@@ -120,8 +134,7 @@ bool cursorOverGame(HWND game, POINT screen) {
     if (!game || !GetClientRect(game, &client) || !ScreenToClient(game, &p) || !PtInRect(&client, p)) return false;
     // 3.0.3-beta.8: the driver's panel of the game windows drawn in the game's picture - a click on it is the
     // panel's, and while it is dragged the held button is not the game's anywhere
-    for (int i = 0; i < kBlockers; ++i)
-        if (g_blockedAll[i] || (g_blocked[i] && PtInRect(&g_blockedRect[i], p))) return false;
+    if (blockedAt(g_parts, kBlockers, p.x, p.y) >= 0) return false;
     // Any window of the client's own process counts: a graphics wrapper may present the picture in a window
     // of its own over the game's. A window of another program on top does not.
     const HWND under = WindowFromPoint(screen);

@@ -391,7 +391,7 @@ void openWindow(State& s, const refpages::Link& at) {
 
 void close(State& s) {
     s.open = false;
-    if (s.shown) uapad::gamewindow::setBlocked(uapad::gamewindow::Blocker::Reference, nullptr, false);
+    if (s.shown) uapad::gamewindow::setBlocked(uapad::gamewindow::Blocker::Reference, nullptr, nullptr, false);
     s.shown = false;
 }
 
@@ -468,7 +468,7 @@ void block(const State& s, HWND game) {
     const RECT r{LONG(int64_t(L.x) * client.right / s.targetW), LONG(int64_t(L.y) * client.bottom / s.targetH),
                  LONG(int64_t(L.x + L.w) * client.right / s.targetW + 1),
                  LONG(int64_t(L.y + L.h) * client.bottom / s.targetH + 1)};
-    uapad::gamewindow::setBlocked(uapad::gamewindow::Blocker::Reference, &r, false);
+    uapad::gamewindow::setBlocked(uapad::gamewindow::Blocker::Reference, game, &r, false);
 }
 
 // A key's own character for the search (the names are English): letters, digits, the space and a few signs by the
@@ -497,7 +497,7 @@ void frame(HWND game, bool enabled, double k, int targetWidth, int targetHeight)
         LOG_INFO("reference: off ([interface] reference = 0) - the window closed");
     }
     if (!s.open || !game || k <= 0 || targetWidth <= 0 || targetHeight <= 0) {
-        if (s.shown) uapad::gamewindow::setBlocked(uapad::gamewindow::Blocker::Reference, nullptr, false);
+        if (s.shown) uapad::gamewindow::setBlocked(uapad::gamewindow::Blocker::Reference, nullptr, nullptr, false);
         s.shown = false;
         return;
     }

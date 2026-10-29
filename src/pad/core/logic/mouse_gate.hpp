@@ -56,4 +56,19 @@ private:
 // behind another one or minimized, else 0.
 int backgroundSleepMs(bool queueEmpty, bool foreground, bool minimized, int sleepMs);
 
+// A part of the driver's own in the game's picture (the windows' panel, the answer card, the new minimap,
+// «Довідник»): its clicks are not the game's (3.0.3-beta.8), and 3.0.11-beta.24 the world under it does not
+// react to the game's cursor, as under the game's own windows. Its rectangle in the game window's client pixels
+// (Windows' size of them), right and bottom outside; all: the whole window is its now (the panel dragged, its
+// menu open).
+struct Blocked {
+    bool on = false;
+    bool all = false;
+    int left = 0, top = 0, right = 0, bottom = 0;
+};
+// The part over a point of the game window's client area (the first of them), -1 for none.
+int blockedAt(const Blocked* parts, int count, int x, int y);
+// The same for the game's own cursor: x, y of its width x height picture in a client area of clientW x clientH.
+int blockedAtGame(const Blocked* parts, int count, int clientW, int clientH, int x, int y, int width, int height);
+
 }  // namespace uapad

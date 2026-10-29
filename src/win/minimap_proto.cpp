@@ -298,10 +298,10 @@ void block(const State& s, HWND game) {  // the mouse's clicks there are the pan
     const RECT r{LONG(int64_t(g.x) * client.right / s.targetW), LONG(int64_t(g.y) * client.bottom / s.targetH),
                  LONG(int64_t(g.x + g.size) * client.right / s.targetW + 1),
                  LONG(int64_t(g.y + g.size + g.textH + g.listH) * client.bottom / s.targetH + 1)};  // and its list
-    uapad::gamewindow::setBlocked(uapad::gamewindow::Blocker::Minimap, &r, false);
+    uapad::gamewindow::setBlocked(uapad::gamewindow::Blocker::Minimap, game, &r, false);
 }
 
-void unblock() { uapad::gamewindow::setBlocked(uapad::gamewindow::Blocker::Minimap, nullptr, false); }
+void unblock() { uapad::gamewindow::setBlocked(uapad::gamewindow::Blocker::Minimap, nullptr, nullptr, false); }
 
 }  // namespace
 
