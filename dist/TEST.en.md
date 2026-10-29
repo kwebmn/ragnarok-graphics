@@ -1,3 +1,17 @@
+# uaRO Graphics 3.0.11-beta.26 — what is new
+
+- **«Reference» as in the concept — the first stage**: a dark glass window; the title at the left, «‹ Back to …» and
+  the way here («Monsters › Poring»), on a card the search with Ctrl+F and ☆ in the header; at the bottom the «Data
+  pack» and «Live data» chips (a green dot: fresh, how many players are in the game) and the keys.
+- The first screen: a big search in a gold frame, 10 tiles with icons and numbers — Monsters, Items, Locations,
+  Quests, NPCs and services, MVP, Pets, Crafting, World map, Tables; «Opened lately» and «Starred» as cards with
+  pictures side by side. New sections «NPCs and services» (Kafra and shops) and «Tables» (elements by defence
+  level); «MVP» — the MVPs only.
+- ☆ in a card's header stars it (instead of the «Star it ›» row).
+- Next betas: the cards (the sections' rail, the header with the picture, blocks), the search's results, the world map.
+- To check: Ctrl+F — the look of the concept's mock-up; a tile under the pointer — a gold frame; open Poring —
+  «‹ Back to Reference», the way, ☆ stars it.
+
 # uaRO Graphics 3.0.11-beta.25 — what is new
 
 - **«Reference» without the cursor's jerks** (report R-77TCM7): when the cursor goes to another tile or row, the window
