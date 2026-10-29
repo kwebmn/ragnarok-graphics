@@ -1,3 +1,20 @@
+# uaRO Graphics 3.0.11-beta.36 — what is new
+
+- **The character block (stage 7 of the new interface).** «Interface» has a new choice «Character block»: «Bars» or
+  «Rings» — the block at the top left instead of the game's window with HP and SP; «As in the game» — the game's own
+  window (the default).
+- The full block: the portrait (your character's head, its hair colour), the name and class, the Base and Job
+  levels, the weight (orange from 50 %), the zeny, the free points, HP and SP with their numbers, the experience with
+  a tick each 10 % and the game's window buttons (stats, equipment, items, skills, friends, options — point at one to
+  see its key).
+- A click on the portrait: full → compact (bars or rings, as chosen) → an icon → full; the view is kept. Over the
+  rings and the icon — the HP and SP numbers and the levels.
+- Low HP (under a quarter): red and a short warning «! Low HP · N %».
+- To check: «Character block» → «Bars»; the game's window with HP and SP is gone, the block stands at the top left;
+  click the portrait; the «Items» button opens and closes the items window. The log's lines `character: the game's
+  Basic Info window hidden`, `character: the portrait - …spr` and `character: the Basic Info window's button 0x80
+  pressed through the window`.
+
 # uaRO Graphics 3.0.11-beta.35 — what is new
 
 - **New buffs (stage 7 of the new interface).** «Interface» has a new choice «Buffs on the character»: «Column» —
