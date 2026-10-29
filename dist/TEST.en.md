@@ -1,3 +1,14 @@
+# uaRO Graphics 3.0.11-beta.10 — what is new
+
+- **Players now** — from the site's public «Online» page: while the game runs, the app (its game watcher) asks
+  uaro.kiev.ua every 2 minutes how many players are on each map and keeps the numbers alone — no names
+  (uaro-graphics\reference\online.json). With the new minimap or «Reference» on:
+  - a map's card says «players now: 5»;
+  - the first screen of «Reference» says «In the game now: 104»;
+  - when the site does not answer for 10 minutes, no numbers are shown.
+- To check: Ctrl+F — the first screen has «In the game now: …» (the site's number); the card of a map with players
+  now (the site: Rankings → Online) says «players now: N».
+
 # uaRO Graphics 3.0.11-beta.9 — what is new
 
 - **The way followed on the new minimap**: in a map's card («Reference», Ctrl+F) the rows «On foot» and «By Kafra»
