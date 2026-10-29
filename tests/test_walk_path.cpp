@@ -1,5 +1,6 @@
 // 3.0.11-beta.31: the way across a map over the walked cells (core/walk_path) - round a wall, to an NPC standing on
 // its cell, never across a wall's corner, its corners cut where a straight line keeps to walkable cells
+#include <cmath>
 #include <string>
 #include <vector>
 
@@ -91,4 +92,86 @@ TEST(walk_path_no_corner_cutting) {
     const walkpath::Field o = walkpath::fieldTo(open, {1, 1});
     CHECK_EQ(o.at(0, 0), 14u);  // one diagonal: 1.4 cells
     CHECK_EQ(walkpath::pathFrom(o, open, {0, 0}).size(), size_t(2));
+}
+
+// 3.0.11-beta.34 (the owner: «каждый шаг перестраивается маршрут», «каждый раз перестраивается линия, можно так чтобы
+// она не очень дергалась»): the way kept while the player keeps to it - where on it the player is, what is left of it
+TEST(walk_path_place_on_the_way) {
+    const std::vector<std::pair<float, float>> way{{0, 0}, {10, 0}, {10, 10}};  // east 10, then north 10
+    walkpath::OnWay p = walkpath::onWay(way, 4, 1, 0, 2, 8);
+    CHECK(std::fabs(p.at - 4) < 1e-4f && std::fabs(p.off - 1) < 1e-4f && p.leg == 0);
+    CHECK(std::fabs(p.x - 4) < 1e-4f && std::fabs(p.y) < 1e-4f);
+    // looked for no farther than `ahead` past where the player was: (10, 6) is 16 along, the window ends at 8
+    p = walkpath::onWay(way, 10, 6, 0, 2, 8);
+    CHECK(std::fabs(p.at - 8) < 1e-4f && std::fabs(p.off - std::hypot(2.0f, 6.0f)) < 1e-4f);
+    p = walkpath::onWay(way, 10, 6, 12, 2, 8);
+    CHECK(std::fabs(p.at - 16) < 1e-4f && p.off < 1e-4f && p.leg == 1);
+    // a way that comes back near itself: the leg back (2 cells over) is not jumped to while the player is on the first
+    const std::vector<std::pair<float, float>> u{{0, 0}, {0, 10}, {2, 10}, {2, 0}};
+    p = walkpath::onWay(u, 1.6f, 3, 3, 2, 8);
+    CHECK(std::fabs(p.at - 3) < 1e-4f && std::fabs(p.off - 1.6f) < 1e-4f && p.leg == 0);
+    p = walkpath::onWay(u, 1.6f, 3, 3, 2, 30);  // looked for far enough: the nearer leg back
+    CHECK(std::fabs(p.at - 19) < 1e-4f && std::fabs(p.off - 0.4f) < 1e-4f && p.leg == 2);
+    // a place as near on two legs (a corner): the earlier
+    p = walkpath::onWay(way, 10, 0, 0, 2, 30);
+    CHECK(std::fabs(p.at - 10) < 1e-4f && p.leg == 0);
+    CHECK(walkpath::onWay({}, 1, 1, 0, 2, 8).off < 0);  // no way
+    p = walkpath::onWay({{3, 4}}, 0, 0, 0, 2, 8);         // a way of one place
+    CHECK(p.at == 0 && std::fabs(p.off - 5) < 1e-4f);
+}
+
+TEST(walk_path_the_rest_of_the_way) {
+    const std::vector<walkpath::Cell> way{{0, 0}, {10, 0}, {10, 10}};
+    walkpath::OnWay p;
+    p.leg = 0;
+    p.off = 1;
+    CHECK(walkpath::rest(way, {4, 1}, p) == std::vector<walkpath::Cell>({{4, 1}, {10, 0}, {10, 10}}));
+    p.leg = 1;
+    CHECK(walkpath::rest(way, {9, 5}, p) == std::vector<walkpath::Cell>({{9, 5}, {10, 10}}));
+    p.leg = 0;  // the player on the corner itself: once
+    CHECK(walkpath::rest(way, {10, 0}, p) == std::vector<walkpath::Cell>({{10, 0}, {10, 10}}));
+}
+
+TEST(walk_path_kept_while_followed) {
+    const walkpath::Cells c = cellsFrom({
+        "....................",  // y 9
+        "....................",  // y 8: the gap over the wall
+        "..........#.........",
+        "..........#.........",
+        "..........#.........",
+        "..........#.........",
+        "..........#.........",
+        "..........#.........",
+        "..........#.........",
+        "..........#.........",  // y 0
+    });
+    const walkpath::Field f = walkpath::fieldTo(c, {18, 1});
+    walkpath::Kept k;
+    CHECK(walkpath::keep(k, f, c, {2, 1}, 3.0f));  // made: from the player, straightened
+    CHECK(k.way.size() >= 3 && k.way.front() == walkpath::Cell(2, 1) && k.way.back() == walkpath::Cell(18, 1));
+    CHECK(k.rest == k.way && k.at == 0);
+    const std::vector<walkpath::Cell> made = k.way;
+    // a step along it, then one aside of it: the same way, cut at the player
+    const walkpath::Cell second = made[1];
+    const walkpath::Cell along{2 + (second.first - 2) / 2, 1 + (second.second - 1) / 2};
+    CHECK(!walkpath::keep(k, f, c, along, 3.0f));
+    CHECK(k.way == made && k.at > 0 && k.off < 1.0f);
+    CHECK(k.rest.front() == along && k.rest.back() == walkpath::Cell(18, 1) && k.rest.size() == made.size());
+    const walkpath::Cell aside{along.first + 1, along.second};
+    CHECK(!walkpath::keep(k, f, c, aside, 3.0f) && k.way == made && k.rest.front() == aside);
+    // far off it: made again from there
+    CHECK(walkpath::keep(k, f, c, {2, 9}, 3.0f));
+    CHECK(k.way.front() == walkpath::Cell(2, 9) && k.way.back() == walkpath::Cell(18, 1) && k.at == 0);
+    // another goal: made again
+    const walkpath::Cell from = k.way.front();
+    CHECK(walkpath::keep(k, walkpath::fieldTo(c, {18, 9}), c, from, 3.0f));
+    CHECK(k.way.back() == walkpath::Cell(18, 9));
+    // no way to the goal over the cells (none known, or none reach it): a straight line to it, kept as any
+    const walkpath::Field none = walkpath::fieldTo(c, {50, 50});
+    CHECK(walkpath::keep(k, none, c, {2, 1}, 3.0f));
+    CHECK(k.way == std::vector<walkpath::Cell>({{2, 1}, {50, 50}}) && k.rest == k.way);
+    CHECK(!walkpath::keep(k, none, c, {3, 2}, 3.0f) && k.way.front() == walkpath::Cell(2, 1));
+    const walkpath::Cells unknown;
+    CHECK(walkpath::keep(k, walkpath::fieldTo(unknown, {7, 7}), unknown, {1, 1}, 3.0f));
+    CHECK(k.way == std::vector<walkpath::Cell>({{1, 1}, {7, 7}}));
 }

@@ -93,24 +93,56 @@ TEST(ground_way_strip_on_the_screen) {
 }
 
 // 3.0.11-beta.33 (the owner: «полоска с маршрутом может лучше бы была выполнена такими типа следами типа шажков»): the
-// way as footprints - left and right in turn a stride apart, each to its side, its toes along the way
+// way as footprints - left and right in turn a stride apart, each to its side, its toes along the way.
+// 3.0.11-beta.34 (the owner: «каждый раз перестраивается линия, можно так чтобы она не очень дергалась»): counted back
+// from the way's end - a print stays where it is on the ground while the player walks the way
 TEST(ground_way_prints_along_the_way) {
     const std::vector<groundway::Point> line{{0, 0, 0}, {20, 0, 0}, {20, 0, 20}};  // east 20, then north 20
-    const std::vector<groundway::Print> p = groundway::prints(line, 2.5f, 0.5f, 3.0f, 100.0f);
-    CHECK_EQ(p.size(), size_t(15));  // at 3, 5.5 ... 38 of the way's 40
-    CHECK(std::fabs(p[0].at - 3.0f) < 1e-4f && std::fabs(p[1].at - 5.5f) < 1e-4f);
+    const std::vector<groundway::Print> p = groundway::prints(line, 2.5f, 0.5f);
+    CHECK_EQ(p.size(), size_t(17));  // at 0, 2.5 ... 40: the way's 40 from its end back
+    CHECK(std::fabs(p[0].at) < 1e-4f && std::fabs(p[1].at - 2.5f) < 1e-4f && std::fabs(p.back().at - 40) < 1e-4f);
     CHECK(p[0].left != p[1].left && p[1].left != p[2].left);  // in turn
-    // the first: 3 along the first leg, its toes east, half a unit to its side
+    // the first: at the way's start, its toes east, half a unit to its side
     CHECK(std::fabs(p[0].fx - 1) < 1e-3f && std::fabs(p[0].fz) < 1e-3f);
-    CHECK(std::fabs(p[0].x - 3) < 1e-3f && std::fabs(std::fabs(p[0].z) - 0.5f) < 1e-3f);
+    CHECK(std::fabs(p[0].x) < 1e-3f && std::fabs(std::fabs(p[0].z) - 0.5f) < 1e-3f);
     CHECK((p[0].z > 0) == p[0].left);  // the left of a way east is north (x east, z north)
     // on the second leg the toes go north
     const groundway::Print& late = p.back();
     CHECK(late.at > 30 && std::fabs(late.fz - 1) < 1e-3f && std::fabs(std::fabs(late.x - 20) - 0.5f) < 1e-3f);
-    // none past `most`, none on a way shorter than `skip`
-    CHECK_EQ(groundway::prints(line, 2.5f, 0.5f, 3.0f, 10.0f).size(), size_t(3));  // 3, 5.5, 8
-    CHECK(groundway::prints({{0, 0, 0}, {2, 0, 0}}, 2.5f, 0.5f, 3.0f, 100.0f).empty());
-    CHECK(groundway::prints({{0, 0, 0}}, 2.5f, 0.5f, 0.0f, 100.0f).empty());
+    CHECK(groundway::prints({{0, 0, 0}}, 2.5f, 0.5f).empty());
+    // the way's tail (the player 7.3 along it): the very same prints from there on - each where it was, the same foot
+    const std::vector<groundway::Print> tail = groundway::prints(groundway::cut(line, 7.3f), 2.5f, 0.5f);
+    CHECK_EQ(tail.size(), size_t(14));  // 7.5, 10 ... 40 of the whole way
+    for (const groundway::Print& t : tail) {
+        const groundway::Print& q = p[size_t(std::lround((t.at + 7.3f) / 2.5f))];
+        CHECK(std::fabs(t.x - q.x) < 1e-3f && std::fabs(t.z - q.z) < 1e-3f && t.left == q.left);
+        CHECK(std::fabs(t.fx - q.fx) < 1e-3f && std::fabs(t.fz - q.fz) < 1e-3f);
+    }
+}
+
+TEST(ground_way_cut_at_the_player) {
+    const std::vector<groundway::Point> line{{0, -1, 0}, {20, -3, 0}, {20, -3, 20}};
+    const std::vector<groundway::Point> c = groundway::cut(line, 7.5f);
+    CHECK_EQ(c.size(), size_t(3));
+    CHECK(std::fabs(c[0].x - 7.5f) < 1e-4f && std::fabs(c[0].z) < 1e-4f && std::fabs(c[0].y + 1.75f) < 1e-4f);
+    CHECK(c[1].x == 20 && c[2].z == 20);
+    CHECK_EQ(groundway::cut(line, 0).size(), size_t(3));
+    CHECK_EQ(groundway::cut(line, 25).size(), size_t(2));  // on the second leg
+    CHECK_EQ(groundway::cut(line, 99).size(), size_t(1));  // past its end: the end alone
+    CHECK(groundway::cut({}, 3).empty());
+}
+
+TEST(ground_way_prints_ahead_of_the_player) {
+    const std::vector<groundway::Point> line{{0, 0, 0}, {100, 0, 0}};
+    const std::vector<groundway::Print> all = groundway::prints(line, 2.5f, 0.5f);  // at 0, 2.5 ... 100
+    // the player 10 along: none nearer than 4.5 ahead, none past 30 ahead; they fade in over 2 at both ends
+    const std::vector<groundway::Print> a = groundway::ahead(all, 10, 4.5f, 30, 2);
+    CHECK(!a.empty() && a.front().at >= 14.5f - 1e-4f && a.back().at <= 40 + 1e-4f);
+    CHECK_EQ(a.size(), size_t(10));  // 15, 17.5 ... 37.5
+    CHECK(std::fabs(a.front().alpha - 0.25f) < 1e-4f);  // 15: 5 ahead, half a unit into the fade
+    CHECK(std::fabs(a[1].alpha - 1) < 1e-4f && std::fabs(a.back().alpha - 1) < 1e-4f);
+    CHECK(std::fabs(groundway::ahead(all, 10, 4.5f, 29, 2).back().alpha - 0.75f) < 1e-4f);  // 37.5 of 39: 1.5 left
+    CHECK(groundway::ahead(all, 99, 4.5f, 30, 2).empty());
 }
 
 TEST(ground_way_print_shape) {
@@ -155,4 +187,29 @@ TEST(ground_way_footprints_on_the_screen) {
     groundway::Print off = ahead;  // off the map: nothing
     off.z = 500;
     CHECK_EQ(groundway::footprints({off}, g, 5, 1.0f, 0.1f, 0.0f, view, p, 0xE6F2C14Eu, 0.0f, v), size_t(0));
+}
+
+TEST(ground_way_footprints_fade) {
+    groundway::Heights g;
+    CHECK(groundway::parseGat(gat(20, 20, [](int, int) { return -2.0f; }), g));
+    const float view[12] = {1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0};
+    camera::Projection p;
+    p.f0 = p.f1 = 100;
+    p.cx = 320;
+    p.cy = 240;
+    p.nearZ = 10;
+    p.farZ = 1500;
+    groundway::Print half;
+    half.z = 30;
+    half.fz = 1;
+    half.fx = 0;
+    half.alpha = 0.5f;
+    std::vector<groundway::Vertex> v;
+    CHECK(groundway::footprints({half}, g, 5, 1.0f, 0.1f, 0.0f, view, p, 0xE65AC8FAu, 0.0f, v) > 0);
+    CHECK_EQ(v[0].diffuse, 0x735AC8FAu);  // 0xE6 halved
+    groundway::Print gone = half;  // faded out: nothing
+    gone.alpha = 0;
+    CHECK_EQ(groundway::footprints({gone}, g, 5, 1.0f, 0.1f, 0.0f, view, p, 0xE65AC8FAu, 0.0f, v), size_t(0));
+    CHECK_EQ(groundway::faded(0xE65AC8FAu, 0.25f), 0x3A5AC8FAu);
+    CHECK_EQ(groundway::faded(0xE65AC8FAu, 2.0f), 0xE65AC8FAu);
 }

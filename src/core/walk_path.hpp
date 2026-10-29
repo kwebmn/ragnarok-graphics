@@ -44,4 +44,31 @@ bool clear(const Cells& c, Cell a, Cell b);
 // The path with fewer corners: from each point on, the farthest one a straight line reaches over walkable cells
 std::vector<Cell> straightened(const Cells& c, const std::vector<Cell>& path);
 
+// 3.0.11-beta.34 (the owner: «каждый шаг перестраивается маршрут», «каждый раз перестраивается линия, можно так чтобы
+// она не очень дергалась»): the way kept while the player keeps to it, not made again from each cell they step on -
+// it was straightened from the player's cell anew each step, its corners and the footprints along it jumping.
+// Where on a way (its corners, any units) the player at (x, y) is: the nearest place on its legs, looked for from
+// `from` (how far along it they were) `back` behind to `ahead` past it - a way that comes back near itself is not
+// jumped along; as near on two legs: the earlier
+struct OnWay {
+    float at = 0;        // how far along the way
+    float off = -1;      // from (x, y) to that place; -1: no way
+    size_t leg = 0;      // the leg it is on: from corner `leg` to `leg + 1`
+    float x = 0, y = 0;  // the place
+};
+OnWay onWay(const std::vector<std::pair<float, float>>& way, float x, float y, float from, float back, float ahead);
+// What is left of a way for the player on `player` at `p`: their cell, then the corners past their place
+std::vector<Cell> rest(const std::vector<Cell>& way, Cell player, const OnWay& p);
+// The way kept for the player: made again (pathFrom the player, straightened; none over the cells - none known, none
+// reaching the goal - a straight line to it) for another goal or when the player is farther than `off` cells from it
+// (looked for kBack cells behind where they were to kAhead past it); true then
+constexpr float kBack = 2, kAhead = 8;
+struct Kept {
+    std::vector<Cell> way;   // as made: from the player's cell then
+    Cell goal{-1, -1};       // the field's it was made for
+    float at = 0, off = 0;   // how far along it the player is, how far off it (cells)
+    std::vector<Cell> rest;  // what is left of it (rest())
+};
+bool keep(Kept& k, const Field& f, const Cells& c, Cell player, float off);
+
 }  // namespace uagfx::walkpath

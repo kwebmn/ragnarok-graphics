@@ -121,25 +121,45 @@ size_t strip(const std::vector<Point>& points, const float view[12], const camer
     return out.size() - before;
 }
 
-std::vector<Print> prints(const std::vector<Point>& points, float stride, float apart, float skip, float most) {
-    std::vector<Print> out;
-    if (points.size() < 2 || !(stride > 0)) return out;
-    std::vector<float> run(points.size(), 0.0f);  // the way's length up to each point
+namespace {
+
+// The way's length up to each point along the ground (x, z)
+std::vector<float> runOf(const std::vector<Point>& points) {
+    std::vector<float> run(points.size(), 0.0f);
     for (size_t i = 1; i < points.size(); ++i)
         run[i] = run[i - 1] + std::hypot(points[i].x - points[i - 1].x, points[i].z - points[i - 1].z);
+    return run;
+}
+
+// The place `s` along the way: its leg's end point (index) and how far into the leg (0..1)
+void legAt(const std::vector<float>& run, float s, size_t& i, float& t) {
+    s = std::clamp(s, 0.0f, run.back());
+    i = std::min(size_t(std::upper_bound(run.begin(), run.end(), s) - run.begin()), run.size() - 1);
+    const size_t a = i ? i - 1 : 0;
+    const float len = run[i] - run[a];
+    t = len > 1e-6f ? (s - run[a]) / len : 0.0f;
+}
+
+}  // namespace
+
+std::vector<Print> prints(const std::vector<Point>& points, float stride, float apart) {
+    std::vector<Print> out;
+    if (points.size() < 2 || !(stride > 0)) return out;
+    const std::vector<float> run = runOf(points);
     const auto at = [&](float s, float& x, float& z) {  // the place `s` along
-        s = std::clamp(s, 0.0f, run.back());
-        const size_t i = std::min(size_t(std::upper_bound(run.begin(), run.end(), s) - run.begin()), run.size() - 1);
+        size_t i = 0;
+        float t = 0;
+        legAt(run, s, i, t);
         const size_t a = i ? i - 1 : 0;
-        const float len = run[i] - run[a], t = len > 1e-6f ? (s - run[a]) / len : 0.0f;
         x = points[a].x + (points[i].x - points[a].x) * t;
         z = points[a].z + (points[i].z - points[a].z) * t;
     };
-    bool left = true;
-    for (float s = skip; s <= std::min(most, run.back()) + 1e-4f; s += stride, left = !left) {
+    const int n = int(std::floor(run.back() / stride + 1e-4f));
+    for (int k = n; k >= 0; --k) {  // from the way's start on, each counted back from its end
         Print print;
-        print.at = s;
-        print.left = left;
+        print.at = std::max(0.0f, run.back() - float(k) * stride);
+        print.left = k % 2 == 0;
+        const float s = print.at;
         float bx = 0, bz = 0, ax = 0, az = 0, x = 0, z = 0;
         at(s - 2.0f, bx, bz);  // its toes along the way about it (a bend turns them, not jerks them)
         at(s + 2.0f, ax, az);
@@ -148,12 +168,44 @@ std::vector<Print> prints(const std::vector<Point>& points, float stride, float 
         if (len < 1e-4f) continue;
         print.fx = (ax - bx) / len;
         print.fz = (az - bz) / len;
-        const float side = left ? apart : -apart;  // the left of (fx, fz) is (-fz, fx)
+        const float side = print.left ? apart : -apart;  // the left of (fx, fz) is (-fz, fx)
         print.x = x - print.fz * side;
         print.z = z + print.fx * side;
         out.push_back(print);
     }
     return out;
+}
+
+std::vector<Point> cut(const std::vector<Point>& points, float at) {
+    if (points.size() < 2) return points;
+    const std::vector<float> run = runOf(points);
+    size_t i = 0;
+    float t = 0;
+    legAt(run, at, i, t);
+    const size_t a = i ? i - 1 : 0;
+    if (at >= run.back()) return {points.back()};
+    std::vector<Point> out{Point{points[a].x + (points[i].x - points[a].x) * t,
+                                 points[a].y + (points[i].y - points[a].y) * t,
+                                 points[a].z + (points[i].z - points[a].z) * t}};
+    out.insert(out.end(), points.begin() + std::ptrdiff_t(i), points.end());
+    return out;
+}
+
+std::vector<Print> ahead(const std::vector<Print>& prints, float at, float skip, float most, float fade) {
+    std::vector<Print> out;
+    for (const Print& p : prints) {
+        const float d = p.at - at;
+        const float k = fade > 0 ? std::min({1.0f, (d - skip) / fade, (most - d) / fade}) : (d >= skip && d <= most);
+        if (!(k > 0)) continue;
+        out.push_back(p);
+        out.back().alpha = p.alpha * k;
+    }
+    return out;
+}
+
+uint32_t faded(uint32_t argb, float k) {
+    const float a = float(argb >> 24) * std::clamp(k, 0.0f, 1.0f);
+    return (argb & 0xFFFFFFu) | (uint32_t(std::lround(a)) << 24);
 }
 
 std::vector<Point> printShape(const Print& print, float grow) {
@@ -180,14 +232,17 @@ size_t footprints(const std::vector<Print>& prints, const Heights& g, int cellSi
                   std::vector<Vertex>& out) {
     const size_t before = out.size();
     if (cellSize <= 0) return 0;
+    uint32_t colour = argb;  // the print's own
     const auto onGround = [&](float x, float z, Vertex& v) {
         float h = 0;
         if (!g.at(x / float(cellSize) + float(g.w / 2), z / float(cellSize) + float(g.h / 2), h)) return false;
         const float w[3] = {x, sign * h - lift, z};
-        return placed(w, view, p, bias, argb, v);
+        return placed(w, view, p, bias, colour, v);
     };
     std::vector<Vertex> one;
     for (const Print& print : prints) {
+        colour = faded(argb, print.alpha);
+        if (!(colour >> 24)) continue;
         const std::vector<Point> shape = printShape(print, grow);
         one.clear();
         bool whole = true;

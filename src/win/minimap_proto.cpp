@@ -95,6 +95,10 @@ struct State {
     walkpath::Field field;
     std::vector<minimap::Cell> path;
     minimap::Cell pathFrom{-1, -1};
+    // 3.0.11-beta.34 (the owner: «каждый шаг перестраивается маршрут»): the way kept while the player keeps to it
+    walkpath::Kept kept;
+    int keptSteps = 0;  // the player's cells on it since it was made
+    int keptLogged = 0;  // on this map
     // 3.0.11-beta.31 (the owner: «нету возможности карту развернуть на весь екран»): the map big in the middle
     bool big = false, bigDirty = true, bigUpload = true;
     minimap::Big bigLayout;
@@ -257,20 +261,29 @@ void buildRoute(State& s) {
     s.routeLines.push_back(minimap::Line{refpages::stepNote(*step, startup().lang), ""});
 }
 
-// 3.0.11-beta.31: the way on the ground itself (win/ground_way) - the same cells as the minimap's line
+// 3.0.11-beta.31: the way on the ground itself (win/ground_way) - the same cells as the minimap's line.
+// 3.0.11-beta.34: the way kept, whole - the ground cuts it at the player's place itself (not their cell)
 void toGround(const State& s) {
     std::vector<std::pair<int, int>> cells;
-    for (const minimap::Cell& c : s.path) cells.emplace_back(c.x, c.y);
+    if (s.path.size() >= 2) cells = s.kept.way.size() >= 2 ? s.kept.way : std::vector<std::pair<int, int>>{};
     win::groundway::set(s.map, cells);
 }
 
 // 3.0.11-beta.31: the way over the walked cells to the next move's cell - its distances made once a goal, its cells
-// from the player each time the player is on another cell; no cells known for the map: a straight line
+// from the player each time the player is on another cell; no cells known for the map: a straight line.
+// 3.0.11-beta.34 (the owner: «каждый шаг перестраивается маршрут», «каждый раз перестраивается линия, можно так чтобы
+// она не очень дергалась»): the way kept while the player keeps to it (walkpath::keep) - the minimap's line cut at
+// them, made again only for another goal or the player 5 cells off it (the game walks to a click diagonal first, then
+// straight: off a long leg by a fifth of it - offline, a click 8 to 21 cells ahead along the way: 3 cells made it again
+// 15 times in 40 walks, 5 never)
+constexpr float kOffCells = 5;
+
 void makePath(State& s) {
     const refroute::Step* step = s.cellKnown ? routefollow::next(s.follow, s.map) : nullptr;
     if (!step) {
         if (!s.path.empty()) s.dirty = true;
         s.path.clear();
+        s.kept = walkpath::Kept{};
         toGround(s);
         return;
     }
@@ -279,27 +292,45 @@ void makePath(State& s) {
         s.cellsMap = s.map;
         s.cells = walkpath::Cells{};
         s.field = walkpath::Field{};
+        s.kept = walkpath::Kept{};
+        s.keptLogged = 0;
         if (s.index && s.index->walk) {
             const auto it = s.index->walk->find(s.map);
             if (it != s.index->walk->end()) s.cells = walkpath::cellsOf(it->second);
         }
     }
     const bool newGoal = s.field.goal != walkpath::Cell{goal.x, goal.y} || s.field.w != s.cells.w;
-    if (newGoal && s.cells.w > 0) {
+    if (newGoal) {  // its distances (none with no cells known: the goal alone, the way straight to it)
         const ULONGLONG t0 = GetTickCount64();
         s.field = walkpath::fieldTo(s.cells, walkpath::Cell{goal.x, goal.y});
-        LOG_INFO("route: the walked cells of %s to %d, %d measured in %llu ms", s.map.c_str(), goal.x, goal.y,
-                 static_cast<unsigned long long>(GetTickCount64() - t0));
+        s.kept = walkpath::Kept{};
+        if (s.cells.w > 0)
+            LOG_INFO("route: the walked cells of %s to %d, %d measured in %llu ms", s.map.c_str(), goal.x, goal.y,
+                     static_cast<unsigned long long>(GetTickCount64() - t0));
     }
     if (!newGoal && s.pathFrom.x == s.cell.x && s.pathFrom.y == s.cell.y) return;
     s.pathFrom = s.cell;
-    s.path.clear();
-    if (s.cells.w > 0) {
-        for (const walkpath::Cell& c : walkpath::straightened(
-                 s.cells, walkpath::pathFrom(s.field, s.cells, walkpath::Cell{s.cell.x, s.cell.y})))
-            s.path.push_back(minimap::Cell{c.first, c.second});
+    const float wasOff = s.kept.off, wasAt = s.kept.at;
+    const bool had = s.kept.way.size() >= 2;
+    if (walkpath::keep(s.kept, s.field, s.cells, walkpath::Cell{s.cell.x, s.cell.y}, kOffCells)) {
+        if (s.keptLogged < 12) {
+            ++s.keptLogged;
+            if (had)
+                LOG_INFO("route: the way on %s made again from %d, %d - %zu corners (the one before kept %d steps, "
+                         "%.1f cells along; the player off it by more than %.0f cells, %.1f the step before)",
+                         s.map.c_str(), s.cell.x, s.cell.y, s.kept.way.size(), s.keptSteps, wasAt, kOffCells, wasOff);
+            else
+                LOG_INFO("route: the way on %s made from %d, %d - %zu corners%s", s.map.c_str(), s.cell.x, s.cell.y,
+                         s.kept.way.size(), s.cells.w > 0 ? "" : " (no walked cells known: straight to the goal)");
+        }
+        s.keptSteps = 0;
+    } else if (++s.keptSteps == 10 && s.keptLogged < 12) {
+        ++s.keptLogged;
+        LOG_INFO("route: the way on %s kept 10 steps so far - cut at the player, not made again (%.1f cells along it, "
+                 "%.1f off it)", s.map.c_str(), s.kept.at, s.kept.off);
     }
-    if (s.path.empty()) s.path = {s.cell, goal};  // no walked cells known (or none reach it): straight to it
+    s.path.clear();
+    for (const walkpath::Cell& c : s.kept.rest) s.path.push_back(minimap::Cell{c.first, c.second});
     s.dirty = true;
     s.bigDirty = true;
     toGround(s);
@@ -727,6 +758,7 @@ void follow(const std::string& target, bool walk) {
     s.follow.walk = walk;
     s.arrivedAt = 0;
     s.pathFrom = minimap::Cell{-1, -1};
+    s.kept = walkpath::Kept{};  // 3.0.11-beta.34: chosen again: made again
     LOG_INFO("route: the way to %s %s followed on the minimap", target.c_str(), walk ? "on foot" : "by Kafra");
     followFrame(s);
     s.dirty = s.bigDirty = true;
@@ -739,6 +771,7 @@ void unfollow() {
     s.follow = routefollow::Follow{};
     s.routeLines.clear();
     s.path.clear();
+    s.kept = walkpath::Kept{};
     s.dirty = s.bigDirty = true;
     toGround(s);
 }

@@ -59,17 +59,27 @@ struct Print {
     float fx = 1, fz = 0;  // its toes' way along the ground (a unit)
     bool left = false;     // on the way's left (x east, z north)
     float at = 0;          // how far along the way (world units)
+    float alpha = 1;       // 3.0.11-beta.34: its colour's alpha times this (faded in and out)
 };
-// The prints along the way's points (as along() gives them): `stride` world units apart, `apart` to their sides; the
-// first `skip` units left out (under the player), none past `most`
-std::vector<Print> prints(const std::vector<Point>& points, float stride, float apart, float skip, float most);
+// The prints along the way's points (as along() gives them): `stride` world units apart, `apart` to their sides.
+// 3.0.11-beta.34 (the owner: «каждый раз перестраивается линия, можно так чтобы она не очень дергалась»): counted back
+// from the way's end - the way kept as the player walks it and cut at them, each print stays where it is on the ground
+// (they were counted from the player's feet: all of them moved at each step)
+std::vector<Print> prints(const std::vector<Point>& points, float stride, float apart);
+// The way's points from `at` along it on (the first one put there; the ground's distances, as prints() counts them)
+std::vector<Point> cut(const std::vector<Point>& points, float at);
+// The prints the player at `at` along the way sees: from `skip` ahead of them (under their feet none) to `most` ahead,
+// each faded in over `fade` at both ends (a print they come to fades out under them, a far one comes in softly)
+std::vector<Print> ahead(const std::vector<Print>& prints, float at, float skip, float most, float fade);
+// A colour's alpha times k (0..1)
+uint32_t faded(uint32_t argb, float k);
 // A print's outline: an oval sole ahead, then an oval heel behind (kSoleSides and kHeelSides points round), `grow`
 // world units bigger all round (its dark edge); world x and z (y 0)
 constexpr int kSoleSides = 10, kHeelSides = 8;
 std::vector<Point> printShape(const Print& print, float grow);
 // The prints as triangles on the ground - each oval a fan round its middle, every corner on the map's heights (`g`,
-// `cellSize`, `sign`, `lift` as along()'s) placed on the screen as strip() places its own; a print off the map or with
-// a corner behind the near plane left out
+// `cellSize`, `sign`, `lift` as along()'s) placed on the screen as strip() places its own, `argb` faded by its alpha;
+// a print off the map, faded out or with a corner behind the near plane left out
 size_t footprints(const std::vector<Print>& prints, const Heights& g, int cellSize, float sign, float lift, float grow,
                   const float view[12], const camera::Projection& p, uint32_t argb, float bias,
                   std::vector<Vertex>& out);
