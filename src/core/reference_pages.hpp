@@ -20,7 +20,8 @@ namespace uagfx::refpages {
 // Expand: a card's long section in full; Follow (3.0.11-beta.9): the way to `map` on the minimap - id 0 on foot, 1 by
 // Kafra (again: no more); World (3.0.11-beta.11): the world map - id 0 the world, 1 the dungeons; Quests, Quest
 // (3.0.11-beta.16): the site's quests by kinds, one quest (its place in the index)
-enum class Go : uint8_t { None, Mob, Item, Map, Shop, Section, Expand, Follow, World, Quests, Quest };
+// Fold (3.0.11-beta.17): a card's section folded or unfolded by the player (id: its Part) - in every card alike
+enum class Go : uint8_t { None, Mob, Item, Map, Shop, Section, Expand, Follow, World, Quests, Quest, Fold };
 struct Link {
     Go go = Go::None;
     int id = 0;       // a monster's, an item's, a shop's (its place in the index) or a section's
@@ -38,6 +39,7 @@ struct Row {
     uint32_t dot = 0;    // 0xRRGGBB of a mark before the words (an NPC's kind), 0 none
     std::string picture;  // 3.0.11-beta.14: a Portrait's - "mob:<id>", "item:<id>" (win/reference_window finds it)
     std::string icon;     // 3.0.11-beta.15: a small picture before the words - "item:<id>" (every row of an item)
+    int fold = -1;        // 3.0.11-beta.17: a section's heading the player folds (its Part), -1 none
 };
 struct Page {
     std::string name;  // what «Назад до …» calls it
@@ -51,7 +53,9 @@ enum Section : int { Mobs, Bosses, Items, Cards, Maps, Shops, Teleports, Pets, C
 enum Part : int {
     Where, Drops, DroppedBy, SoldAt, WhoHere, Exits, Teleports2, Npcs, ShopsHere, UsedIn,
     Route1, Route2,  // 3.0.11-beta.8: «Як дістатися» on foot, by Kafra
-    Elements         // 3.0.11-beta.13: «Шкода стихіями»
+    Elements,        // 3.0.11-beta.13: «Шкода стихіями»
+    // 3.0.11-beta.17: the other sections a player may fold
+    Way, Timers, Market, QuestFor, Kafra, PetOf, CraftOf, QuestNpc, QuestItems, QuestSteps, QuestReward
 };
 constexpr size_t kFew = 5;
 
@@ -71,6 +75,7 @@ struct Context {
     std::string hover;                       // 3.0.11-beta.11: the world map's tile under the pointer
     const reflive::Live* live = nullptr;     // 3.0.11-beta.12: the players' public MVP timers, the site's market
     long long now = 0;                       // unix time: the timers' minutes
+    unsigned folded = 0;                     // 3.0.11-beta.17: the sections (Part bits) the player folded
 };
 
 // `online`: the server's players now (3.0.11-beta.10; 0 not known)

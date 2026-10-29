@@ -326,3 +326,21 @@ TEST(reference_pages_npcs_kafra_and_icons) {
     CHECK_EQ(poring.rows[drops + 1].icon, std::string("item:909"));  // Jellopy's icon before it
     CHECK(poring.rows[1].icon.empty());
 }
+
+// 3.0.11-beta.17: the sections the player folds - in every card alike (the heading alone, «›»)
+TEST(reference_pages_sections_fold_by_choice) {
+    const refindex::Index ix = index();
+    refpages::Context c = ctx("");
+    const refpages::Link poring{refpages::Go::Mob, 1002, ""};
+    const refpages::Page open = refpages::open(ix, Lang::Uk, poring, c);
+    const size_t drops = indexOf(open, "Що випадає");
+    CHECK(open.rows[drops].link.go == refpages::Go::Fold && open.rows[drops].link.id == refpages::Drops);
+    CHECK(open.rows[drops + 1].left == "Jellopy");
+    c.folded = 1u << refpages::Drops;
+    const refpages::Page shut = refpages::open(ix, Lang::Uk, poring, c);
+    const size_t at = indexOf(shut, "Що випадає");
+    CHECK_EQ(shut.rows[at].right, std::string("›"));
+    CHECK(at + 1 == shut.rows.size() || shut.rows[at + 1].style == refpages::Style::Heading);  // its rows gone
+    CHECK(indexOf(shut, "Jellopy") == size_t(-1));
+    CHECK(indexOf(shut, "Де знайти") != size_t(-1));  // the others as they were
+}

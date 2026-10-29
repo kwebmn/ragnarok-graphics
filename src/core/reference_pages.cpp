@@ -27,11 +27,15 @@ constexpr size_t kMostFound = 30;  // a search's group at most (the rest: «пе
 std::string say(Lang l, Text t) { return settings::tr(l, t); }
 std::string sayf(Lang l, Text t, std::vector<std::string> args) { return settings::fmt(settings::tr(l, t), args); }
 
-Row heading(const std::string& words, const std::string& right = "") {
+Row heading(const std::string& words, const std::string& right = "", int fold = -1) {
     Row r;
     r.style = Style::Heading;
     r.left = words;
     r.right = right;
+    if (fold >= 0) {  // 3.0.11-beta.17: a click folds it (in every card)
+        r.fold = fold;
+        r.link = Link{Go::Fold, fold, ""};
+    }
     return r;
 }
 Row note(const std::string& words) {
@@ -127,7 +131,7 @@ void timers(const refindex::Index& ix, Lang l, Page& p, int mob, const Context& 
             }))
             latest.push_back(&t);
     if (latest.empty()) return;
-    p.rows.push_back(heading(say(l, Text::RefTimers), std::to_string(latest.size())));
+    p.rows.push_back(heading(say(l, Text::RefTimers), std::to_string(latest.size()), Timers));
     for (const reflive::Timer* t : latest) {
         const long long ago = std::max(0LL, c.now - t->killed);
         const long long respawn = respawnOn(ix, mob, t->map) / 1000;
@@ -151,7 +155,7 @@ void elements(Lang l, Page& p, const refindex::Mob& m, unsigned opened) {
     for (int e = 0; e < 10; ++e) by.emplace_back(e, elementDamage(e, m.element, m.elementLv));
     std::stable_sort(by.begin(), by.end(), [](const auto& a, const auto& b) { return a.second > b.second; });
     p.rows.push_back(heading(say(l, Text::RefElements),
-                             elementName(m.element, l) + " " + std::to_string(m.elementLv)));
+                             elementName(m.element, l) + " " + std::to_string(m.elementLv), Elements));
     std::vector<Row> rows;
     for (const auto& [e, pct] : by) {
         Row r;
@@ -168,7 +172,7 @@ void market(Lang l, Page& p, int item, const Context& c) {
     if (!c.live) return;
     const auto m = c.live->market.find(item);
     if (m == c.live->market.end()) return;
-    p.rows.push_back(heading(say(l, Text::RefMarket)));
+    p.rows.push_back(heading(say(l, Text::RefMarket), "", Market));
     Row r;
     r.left = sayf(l, Text::RefMarketFrom, {sayf(l, Text::RefZeny, {number(m->second.cheapest, l)})});
     r.right = sayf(l, Text::RefMarketLots, {std::to_string(m->second.lots), std::to_string(m->second.pieces)});
@@ -195,7 +199,7 @@ void kafraNear(const refindex::Index& ix, Lang l, Page& p, const std::string& co
     };
     Row r;
     if (const refindex::Npc* here = kafraOn(code)) {
-        p.rows.push_back(heading(say(l, Text::RefKafraNear)));
+        p.rows.push_back(heading(say(l, Text::RefKafraNear), "", Kafra));
         r.left = here->name;
         r.right = say(l, Text::RefHere) + " · " + std::to_string(here->x) + ", " + std::to_string(here->y);
         r.dot = refindex::colorOf(here->kind);
@@ -216,7 +220,7 @@ void kafraNear(const refindex::Index& ix, Lang l, Page& p, const std::string& co
         }
     }
     if (!npc) return;
-    p.rows.push_back(heading(say(l, Text::RefKafraNear)));
+    p.rows.push_back(heading(say(l, Text::RefKafraNear), "", Kafra));
     r = linked(refindex::mapTitle(ix, best),
                farNote(moves.at(best), l) + " · " + std::to_string(npc->x) + ", " + std::to_string(npc->y),
                toMap(best));
@@ -277,7 +281,7 @@ void route(const refindex::Index& ix, Lang l, Page& p, const std::string& here, 
     if (!ix.graph) return;
     const refroute::Route walk = refroute::find(ix, here, hx, hy, code, true);
     const refroute::Route paid = refroute::find(ix, here, hx, hy, code, false);
-    p.rows.push_back(heading(say(l, Text::RefRoute), sayf(l, Text::RefRouteFrom, {here})));
+    p.rows.push_back(heading(say(l, Text::RefRoute), sayf(l, Text::RefRouteFrom, {here}), Way));
     const bool better = paid.found && paid.paid &&
                         (!walk.found || std::make_pair(conditions(paid), paid.steps.size()) <
                                             std::make_pair(conditions(walk), walk.steps.size()));
@@ -673,7 +677,7 @@ Page mob(const refindex::Index& ix, Lang l, int id, const Context& c, unsigned o
     p.rows.push_back(sub);
 
     const auto where = ix.spawnsOf.find(id);
-    p.rows.push_back(heading(say(l, Text::RefWhere)));
+    p.rows.push_back(heading(say(l, Text::RefWhere), "", Where));
     if (where == ix.spawnsOf.end() || where->second.empty()) {
         p.rows.push_back(note(say(l, Text::RefNowhere)));
     } else {
@@ -697,7 +701,7 @@ Page mob(const refindex::Index& ix, Lang l, int id, const Context& c, unsigned o
     }
     timers(ix, l, p, id, c);  // 3.0.11-beta.12
     elements(l, p, m, opened);  // 3.0.11-beta.13
-    p.rows.push_back(heading(say(l, Text::RefDrops)));
+    p.rows.push_back(heading(say(l, Text::RefDrops), "", Drops));
     if (m.drops.empty()) p.rows.push_back(note(say(l, Text::RefNoDrops)));
     std::vector<refindex::Drop> drops = m.drops;
     std::stable_sort(drops.begin(), drops.end(), [](const refindex::Drop& a, const refindex::Drop& b) {
@@ -712,7 +716,7 @@ Page mob(const refindex::Index& ix, Lang l, int id, const Context& c, unsigned o
     capped(p, std::move(dropRows), Drops, opened, l);
     for (const refindex::Pet& pet : ix.pets) {  // a pet: what tames it, its egg, its food, its accessory
         if (pet.mob != id) continue;
-        p.rows.push_back(heading(say(l, Text::RefPet)));
+        p.rows.push_back(heading(say(l, Text::RefPet), "", PetOf));
         const std::pair<int, Text> parts[] = {{pet.lure, Text::RefPetLure}, {pet.egg, Text::RefPetEgg},
                                               {pet.food, Text::RefPetFood}, {pet.equip, Text::RefPetEquip}};
         for (const auto& [item, what] : parts)
@@ -746,7 +750,7 @@ Page item(const refindex::Index& ix, Lang l, int id, const Context& c, unsigned 
     market(l, p, id, c);  // 3.0.11-beta.12
     const auto needed = ix.questsOf.find(id);  // 3.0.11-beta.16: the quests that take it
     if (needed != ix.questsOf.end()) {
-        p.rows.push_back(heading(say(l, Text::RefQuestFor), std::to_string(needed->second.size())));
+        p.rows.push_back(heading(say(l, Text::RefQuestFor), std::to_string(needed->second.size()), QuestFor));
         for (int q : needed->second) {
             int n = 0;
             for (const auto& [item, k] : ix.quests[size_t(q)].items)
@@ -758,7 +762,7 @@ Page item(const refindex::Index& ix, Lang l, int id, const Context& c, unsigned 
 
     const auto by = ix.droppedBy.find(id);
     if (by != ix.droppedBy.end()) {
-        p.rows.push_back(heading(say(l, Text::RefDroppedBy), std::to_string(by->second.size())));
+        p.rows.push_back(heading(say(l, Text::RefDroppedBy), std::to_string(by->second.size()), DroppedBy));
         std::vector<Row> rows;
         for (const refindex::Source& s : by->second) {
             std::string right = chance(s.rate, l);
@@ -772,7 +776,7 @@ Page item(const refindex::Index& ix, Lang l, int id, const Context& c, unsigned 
     }
     const auto at = ix.soldAt.find(id);
     if (at != ix.soldAt.end()) {
-        p.rows.push_back(heading(say(l, Text::RefSoldAt), std::to_string(at->second.size())));
+        p.rows.push_back(heading(say(l, Text::RefSoldAt), std::to_string(at->second.size()), SoldAt));
         // 3.0.11-beta.12: of the cheapest the nearest first (your map's, then by the moves from it)
         const auto moves =
             here.empty() ? std::unordered_map<std::string, refroute::Far>{} : refroute::movesFrom(ix, here);
@@ -801,14 +805,14 @@ Page item(const refindex::Index& ix, Lang l, int id, const Context& c, unsigned 
     }
     const auto made = ix.craftOf.find(id);
     if (made != ix.craftOf.end()) {
-        p.rows.push_back(heading(say(l, Text::RefCraftOf)));
+        p.rows.push_back(heading(say(l, Text::RefCraftOf), "", CraftOf));
         for (int c : made->second)
             for (const auto& [mat, n] : ix.craft[size_t(c)].mats)
                 p.rows.push_back(linked(itemName(ix, mat), "×" + std::to_string(n), toItem(mat)));
     }
     const auto used = ix.usedIn.find(id);
     if (used != ix.usedIn.end()) {
-        p.rows.push_back(heading(say(l, Text::RefUsedIn), std::to_string(used->second.size())));
+        p.rows.push_back(heading(say(l, Text::RefUsedIn), std::to_string(used->second.size()), UsedIn));
         std::vector<Row> rows;
         for (int c : used->second) {
             const int made = ix.craft[size_t(c)].item;
@@ -820,7 +824,7 @@ Page item(const refindex::Index& ix, Lang l, int id, const Context& c, unsigned 
         const Text what = pet.lure == id ? Text::RefPetLure : pet.egg == id ? Text::RefPetEgg
                         : pet.food == id ? Text::RefPetFood : pet.equip == id ? Text::RefPetEquip : Text::Count;
         if (what == Text::Count) continue;
-        p.rows.push_back(heading(say(l, Text::RefPet)));
+        p.rows.push_back(heading(say(l, Text::RefPet), "", PetOf));
         p.rows.push_back(linked(mobName(ix, pet.mob), say(l, what), toMob(pet.mob)));
     }
     if (p.rows.size() == 2) p.rows.push_back(note(say(l, Text::RefNowhere)));
@@ -862,7 +866,7 @@ Page map(const refindex::Index& ix, Lang l, const std::string& code, const Conte
     if (it == ix.maps.end()) return p;
     const refindex::MapHints& h = it->second;
     if (!h.mobs.empty()) {
-        p.rows.push_back(heading(say(l, Text::RefWhoHere), std::to_string(h.mobs.size())));
+        p.rows.push_back(heading(say(l, Text::RefWhoHere), std::to_string(h.mobs.size()), WhoHere));
         std::vector<Row> rows;
         for (const refindex::MobOnMap& o : h.mobs) {
             const auto m = ix.mobs.find(o.id);
@@ -880,7 +884,7 @@ Page map(const refindex::Index& ix, Lang l, const std::string& code, const Conte
     for (const refindex::Warp& w : h.warps)
         if (std::find(exits.begin(), exits.end(), w.dest) == exits.end()) exits.push_back(w.dest);
     if (!exits.empty()) {
-        p.rows.push_back(heading(say(l, Text::RefExits), std::to_string(exits.size())));
+        p.rows.push_back(heading(say(l, Text::RefExits), std::to_string(exits.size()), Exits));
         std::vector<Row> rows;
         for (const std::string& d : exits)
             rows.push_back(linked("→ " + refindex::mapTitle(ix, d), mapNote(ix, l, d), toMap(d)));
@@ -891,7 +895,7 @@ Page map(const refindex::Index& ix, Lang l, const std::string& code, const Conte
         if (std::find(teleports.begin(), teleports.end(), std::make_tuple(t.npc, t.dest, t.price)) == teleports.end())
             teleports.emplace_back(t.npc, t.dest, t.price);
     if (!teleports.empty()) {
-        p.rows.push_back(heading(say(l, Text::RefTeleports), std::to_string(teleports.size())));
+        p.rows.push_back(heading(say(l, Text::RefTeleports), std::to_string(teleports.size()), Teleports2));
         std::vector<Row> rows;
         for (const auto& [npc, dest, price] : teleports)
             rows.push_back(linked(npc + " → " + refindex::mapTitle(ix, dest),
@@ -902,7 +906,7 @@ Page map(const refindex::Index& ix, Lang l, const std::string& code, const Conte
     for (size_t s = 0; s < ix.shops.size(); ++s)
         if (ix.shops[s].map == code) shops.push_back(int(s));
     if (!shops.empty()) {
-        p.rows.push_back(heading(say(l, Text::RefShopsHere), std::to_string(shops.size())));
+        p.rows.push_back(heading(say(l, Text::RefShopsHere), std::to_string(shops.size()), ShopsHere));
         std::vector<Row> rows;
         for (int s : shops)
             rows.push_back(linked(ix.shops[size_t(s)].name,
@@ -911,7 +915,7 @@ Page map(const refindex::Index& ix, Lang l, const std::string& code, const Conte
         capped(p, std::move(rows), ShopsHere, opened, l);
     }
     if (!h.npcs.empty()) {
-        p.rows.push_back(heading(say(l, Text::RefNpcs), std::to_string(h.npcs.size())));
+        p.rows.push_back(heading(say(l, Text::RefNpcs), std::to_string(h.npcs.size()), Npcs));
         std::vector<Row> rows;
         for (const refindex::Npc& n : h.npcs) {
             Row r;
@@ -994,25 +998,25 @@ Page quest(const refindex::Index& ix, Lang l, int index) {
     p.rows.push_back(sub);
     if (!refquests::textOf(q.summary, ql).empty()) p.rows.push_back(text(refquests::textOf(q.summary, ql)));
     if (!q.npc.empty()) {
-        p.rows.push_back(heading(say(l, Text::RefQuestNpc)));
+        p.rows.push_back(heading(say(l, Text::RefQuestNpc), "", QuestNpc));
         Row r = q.npcMap.empty() ? linked(q.npc, "", Link{}) : linked(q.npc, refindex::mapTitle(ix, q.npcMap),
                                                                          toMap(q.npcMap));
         r.dot = refindex::colorOf(refindex::NpcKind::Guide);
         p.rows.push_back(std::move(r));
     }
     if (!q.items.empty()) {
-        p.rows.push_back(heading(say(l, Text::RefQuestItems), std::to_string(q.items.size())));
+        p.rows.push_back(heading(say(l, Text::RefQuestItems), std::to_string(q.items.size()), QuestItems));
         for (const auto& [item, n] : q.items)
             p.rows.push_back(linked(itemName(ix, item), "×" + number(n, l), toItem(item)));
     }
     const std::vector<std::string>& steps = refquests::listOf(q.steps, ql);
     if (!steps.empty()) {
-        p.rows.push_back(heading(say(l, Text::RefQuestSteps), std::to_string(steps.size())));
+        p.rows.push_back(heading(say(l, Text::RefQuestSteps), std::to_string(steps.size()), QuestSteps));
         for (size_t i = 0; i < steps.size(); ++i) p.rows.push_back(text(std::to_string(i + 1) + ". " + steps[i]));
     }
     const std::vector<std::string>& rewards = refquests::listOf(q.rewards, ql);
     if (!rewards.empty()) {
-        p.rows.push_back(heading(say(l, Text::RefQuestRewards)));
+        p.rows.push_back(heading(say(l, Text::RefQuestRewards), "", QuestReward));
         for (const std::string& r : rewards) p.rows.push_back(text(r));
     }
     return p;
@@ -1073,7 +1077,38 @@ Page dungeons(const refindex::Index& ix, Lang l, const Context& c) {
     return p;
 }
 
+namespace {
+
+// 3.0.11-beta.17: the sections the player folded - their headings alone («29 ›»), their rows left out
+Page folded(Page p, unsigned bits) {
+    if (!bits) return p;
+    std::vector<Row> rows;
+    bool skip = false;
+    for (Row& r : p.rows) {
+        const bool head = r.style == Style::Heading || r.style == Style::Title || r.style == Style::Portrait;
+        if (head) skip = false;
+        if (skip) continue;
+        if (r.style == Style::Heading && r.fold >= 0 && ((bits >> unsigned(r.fold)) & 1u)) {
+            r.right = r.right.empty() ? "›" : r.right + " ›";
+            skip = true;
+        }
+        rows.push_back(std::move(r));
+    }
+    p.rows = std::move(rows);
+    return p;
+}
+
+Page card(const refindex::Index& ix, Lang l, const Link& link, const Context& c, unsigned opened);
+
+}  // namespace
+
 Page open(const refindex::Index& ix, Lang l, const Link& link, const Context& c, unsigned opened) {
+    return folded(card(ix, l, link, c, opened), c.folded);
+}
+
+namespace {
+
+Page card(const refindex::Index& ix, Lang l, const Link& link, const Context& c, unsigned opened) {
     switch (link.go) {
         case Go::Mob: return mob(ix, l, link.id, c, opened);
         case Go::Item: return item(ix, l, link.id, c, opened);
@@ -1083,11 +1118,14 @@ Page open(const refindex::Index& ix, Lang l, const Link& link, const Context& c,
         case Go::World: return link.id == 1 ? dungeons(ix, l, c) : world(ix, l, c);
         case Go::Quests: return quests(ix, l);
         case Go::Quest: return quest(ix, l, link.id);
+        case Go::Fold:
         case Go::None:
         case Go::Expand:
         case Go::Follow: break;
     }
     return home(ix, l);
 }
+
+}  // namespace
 
 }  // namespace uagfx::refpages

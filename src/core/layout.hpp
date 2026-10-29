@@ -62,6 +62,8 @@ constexpr const char* kReferenceWorld = "uaro-graphics\\reference\\worldmap.json
 constexpr const char* kReferenceLive = "uaro-graphics\\reference\\live.json";
 // 3.0.11-beta.16: the site's quests (core/reference_quests) - their manifest; the file beside it
 constexpr const char* kReferenceQuests = "uaro-graphics\\reference\\quests.json";
+// 3.0.11-beta.17: the sections of «Довідник»'s cards the player folded (a number: refpages::Part bits)
+constexpr const char* kReferenceFolded = "uaro-graphics\\reference-folded.txt";
 // 2.14: the client patcher (app/client_patch): the list of the game's files last put, and where they arrive first
 constexpr const char* kClientPatchRecord = "uaro-graphics\\client-patch.txt";
 constexpr const char* kClientPatchWork = "uaro-graphics\\update\\client";

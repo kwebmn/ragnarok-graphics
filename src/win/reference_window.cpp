@@ -3,12 +3,14 @@
 #include <windowsx.h>
 
 #include <algorithm>
+#include <cstdlib>
 #include <ctime>
 #include <map>
 #include <memory>
 #include <string>
 #include <vector>
 
+#include "core/layout.hpp"
 #include "core/pack_source.hpp"
 #include "core/reference_pages.hpp"
 #include "core/reference_route.hpp"
@@ -64,6 +66,8 @@ struct State {
     std::map<std::string, panel::Picture> pictures;
     std::map<int, std::string> itemFiles;  // the client's data\idnum2itemresnametable.txt: item -> its icon's name
     bool itemFilesRead = false;
+    unsigned folded = 0;  // 3.0.11-beta.17: the sections the player folded (refpages::Part bits), kept in a file
+    bool foldedRead = false;
     std::string here;
     panel::Picture picture;
     uint32_t texture = 0;
@@ -185,6 +189,7 @@ void makePage(State& s) {
         c.hover = s.worldHover;
         c.live = s.live.get();  // 3.0.11-beta.12
         c.now = static_cast<long long>(std::time(nullptr));
+        c.folded = s.folded;  // 3.0.11-beta.17
         s.page = s.at.go != refpages::Go::None ? refpages::open(*s.index, l, s.at, c, s.opened)
                                                : refpages::found(*s.index, l, s.query, c);  // 3.0.11-beta.15: NPCs
     } else {
@@ -214,6 +219,15 @@ void close(State& s);
 void go(State& s, const refpages::Link& to) {
     if (to.go == refpages::Go::Expand) {  // «усі N ›»: the section in full, in place
         s.opened |= 1u << unsigned(to.id);
+        makePage(s);
+        return;
+    }
+    if (to.go == refpages::Go::Fold) {  // 3.0.11-beta.17: a section folded or back, in every card, kept for later
+        s.folded ^= 1u << unsigned(to.id);
+        const std::string path = layout::join(gameDir(), layout::kReferenceFolded);
+        const std::string text = std::to_string(s.folded) + "\n";
+        if (!writeFileAtomic(path, text.data(), text.size()))
+            LOG_INFO("reference: %s cannot be written", path.c_str());
         makePage(s);
         return;
     }
@@ -266,6 +280,12 @@ void scrollBy(State& s, int pixels) {
 }
 
 void openWindow(State& s, const refpages::Link& at) {
+    if (!s.foldedRead) {  // 3.0.11-beta.17: the player's folded sections, from the last games
+        s.foldedRead = true;
+        std::string text;
+        if (readTextFile(layout::join(gameDir(), layout::kReferenceFolded), text))
+            s.folded = unsigned(std::strtoul(text.c_str(), nullptr, 10));
+    }
     s.open = true;
     s.query.clear();
     s.back.clear();
@@ -501,9 +521,10 @@ bool key(UINT m, WPARAM wp, LPARAM) {
                     typed(s);
                 }
                 return true;
-            case VK_RETURN:  // the first row that leads somewhere
+            case VK_RETURN:  // the first row that leads somewhere (a heading folds: not that)
                 for (const refpages::Row& r : s.page.rows)
-                    if (r.link.go != refpages::Go::None) {
+                    if (r.link.go != refpages::Go::None && r.link.go != refpages::Go::Fold &&
+                        r.link.go != refpages::Go::Expand) {
                         go(s, r.link);
                         break;
                     }
