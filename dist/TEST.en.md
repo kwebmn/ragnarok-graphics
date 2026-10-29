@@ -1,3 +1,19 @@
+# uaRO Graphics 3.0.11-beta.33 — what is new
+
+- **The cursor over «Reference» no longer sees the NPCs under the window.** The game looked for a character under the
+  cursor through any window and kept the last monster or player you pointed at — so NPCs' names and the talk cursor
+  showed under the window. Now the game sees no one under uaRO Graphics' parts (the reference, the minimap and its
+  big map, the windows' panel, the answer card).
+- **The reference's cross no longer walks your character.** The window shut on the press and the game read the
+  button after that — a press on the ground. Now a press one of our parts took does not reach the game until the
+  button is let go (the big map's «✕» and the windows' panel menu alike).
+- Under the big map (since beta.31) the world no longer reacts to the cursor either — it was left off the list.
+- **The way on the ground as footprints**: instead of the solid strip, left and right footprints in turn, toes toward
+  the goal. «Interface» has a new choice «The way on the ground»: «Footprints», «A line» or «Off».
+- To check: open the reference over an NPC and move the mouse — no names, no talk cursor; close it with the cross —
+  the character stays; «on the minimap ›» to a location — footprints on the ground. The log's lines `world mouse:
+  under «Довідник» the game pointed at an actor …` and `mouse: a press a part of the driver's took …`.
+
 # uaRO Graphics 3.0.11-beta.32 — what is new
 
 Small things of «Reference» found after the last beta:
