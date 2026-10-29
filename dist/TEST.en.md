@@ -1,3 +1,12 @@
+# uaRO Graphics 3.0.11-beta.21 — what is new
+
+- **«Reference» by the arrows and the pad**: ↑ and ↓ pick a row (lit as the one under the pointer), Enter opens the
+  picked one (none picked: the first found); PgUp/PgDn scroll.
+- While «Reference» is open the gamepad (uaRO Pad) drives it: the D-pad picks a row, A opens it, B goes back (on the
+  first page closes it), Start closes it, LB/RB scroll; the character stands meanwhile. «Reference» opens by Ctrl+F or
+  a click under the minimap for now.
+- To check: Ctrl+F → «poring» → ↓ ↓ → Enter opens the picked row; with the pad — the D-pad and A.
+
 # uaRO Graphics 3.0.11-beta.20 — what is new
 
 - **«Bosses and MVPs» — the hunters' board**: the bosses' list has, beside the respawn, a players' timer when someone
