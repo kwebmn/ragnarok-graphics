@@ -1,3 +1,18 @@
+# uaRO Graphics 3.0.11-beta.29 — what is new
+
+- **The world map as in the concept — the fourth stage**: tabs «World map» / «Dungeons» on top, a green «N online»
+  and the zoom's buttons (−, the whole map, +); the wheel zooms round the pointer, the mouse drags the map, a click
+  without a drag opens the location's card. The maps' pictures are twice as sharp.
+- On the map: green pills with the players' numbers, the towns' names on their tiles, «You are here · …», the card
+  of the location under the pointer (its name, code and monsters' kinds, the players now).
+- **The way on the map**: a location's card has «On the world map ›» in «How to get there». The map zooms on the way
+  itself: a gold line, a Kafra teleport a pink dashed arc with its price, a gold pin at the end (a dungeon's at its
+  way in, «… → dungeon»). At the right: «The way to …», from where, the ways (On foot / By Kafra — a click), the
+  warning, the numbered steps, the legend, «✓ Lead on the minimap» and «Reset».
+- A monster or an item «on the world map» — the maps listed with their numbers at the right, gold marks on the map.
+- To check: Ctrl+F → «World map»: the wheel, dragging, the −/+ buttons; a location's card → «On the world map ›» →
+  the way, «On foot» / «By Kafra», «Lead on the minimap».
+
 # uaRO Graphics 3.0.11-beta.28 — what is new
 
 - **«Reference» as in the concept — the third stage, the search results**: groups «MONSTERS · 7», «ITEMS · 89» with
