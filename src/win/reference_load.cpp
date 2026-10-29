@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "core/layout.hpp"
+#include "core/pack_source.hpp"
 #include "core/reference_pack.hpp"
 #include "core/reference_route.hpp"
 #include "core/walk_grid.hpp"
@@ -93,6 +94,57 @@ DWORD WINAPI readPack(void*) {  // its own thread: the pack's JSON is a megabyte
     return 0;
 }
 
+// 3.0.11-beta.11: the world map, made once a sheet on a thread of its own (some 180 minimaps from the game's files)
+struct WorldMaker {
+    CRITICAL_SECTION lock;
+    WorldMaker() { InitializeCriticalSection(&lock); }
+    std::shared_ptr<const World> current;
+    bool busy = false;
+    unsigned long long stamp = 0;
+    ULONGLONG lookedAt = 0;
+};
+
+WorldMaker& worldMaker() {
+    static WorldMaker w;
+    return w;
+}
+
+const std::string kUi = "\xC0\xAF\xC0\xFA\xC0\xCE\xC5\xCD\xC6\xE4\xC0\xCC\xBD\xBA";  // 유저인터페이스
+
+DWORD WINAPI makeWorld(void*) {
+    const ULONGLONG started = GetTickCount64();
+    std::string text;
+    auto w = std::make_shared<World>();
+    const bool ok = readTextFile(layout::join(gameDir(), layout::kReferenceWorld), text) &&
+                    worldmap::parse(text, w->sheet);
+    if (ok) {
+        w->argb.assign(size_t(w->sheet.w) * size_t(w->sheet.h), worldmap::kGround);
+        gamefiles::Reader files(gameDir());
+        size_t put = 0;
+        std::vector<uint8_t> bytes;
+        std::vector<uint32_t> argb;
+        for (const worldmap::Tile& t : w->sheet.world) {
+            int pw = 0, ph = 0;
+            if (!files.read("data\\texture\\" + kUi + "\\map\\" + t.map + ".bmp", bytes, nullptr) ||
+                !pack::decodeBmp(bytes.data(), bytes.size(), argb, pw, ph))
+                continue;
+            worldmap::put(w->argb, w->sheet.w, w->sheet.h, t, argb, pw, ph);
+            ++put;
+        }
+        LOG_INFO("reference: the world map - %zu maps on the sheet, %zu with the game's pictures, made in %llu ms",
+                 w->sheet.world.size(), put, static_cast<unsigned long long>(GetTickCount64() - started));
+    } else {
+        LOG_INFO("reference: no world map (%s) yet - the watcher fetches it at the game's start",
+                 layout::kReferenceWorld);
+    }
+    WorldMaker& m = worldMaker();
+    EnterCriticalSection(&m.lock);
+    if (ok) m.current = std::move(w);
+    m.busy = false;
+    LeaveCriticalSection(&m.lock);
+    return 0;
+}
+
 struct Live {  // 3.0.11-beta.10: online.json, small - read on the game's thread when it changes
     std::shared_ptr<const reflive::Online> current;
     unsigned long long stamp = 0;
@@ -117,6 +169,27 @@ std::shared_ptr<const reflive::Online> online() {
     }
     if (!l.current || !reflive::fresh(*l.current, static_cast<long long>(std::time(nullptr)))) return nullptr;
     return l.current;
+}
+
+std::shared_ptr<const World> world() {
+    WorldMaker& m = worldMaker();
+    EnterCriticalSection(&m.lock);
+    const ULONGLONG now = GetTickCount64();
+    if (!m.busy && (m.lookedAt == 0 || now - m.lookedAt >= kLookEveryMs)) {
+        m.lookedAt = now;
+        const unsigned long long stamp = writeTime(layout::join(gameDir(), layout::kReferenceWorld));
+        if (stamp && stamp != m.stamp) {
+            const HANDLE t = CreateThread(nullptr, 0, &makeWorld, nullptr, 0, nullptr);
+            if (t) {
+                m.stamp = stamp;
+                m.busy = true;
+                CloseHandle(t);
+            }
+        }
+    }
+    std::shared_ptr<const World> current = m.current;
+    LeaveCriticalSection(&m.lock);
+    return current;
 }
 
 std::shared_ptr<const refindex::Index> index() {

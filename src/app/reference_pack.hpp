@@ -15,5 +15,7 @@ std::optional<refpack::Manifest> referenceThere(const std::wstring& dir);
 // 3.0.11-beta.10: the players on each map now (core/reference_live) from the site into the reference's online.json -
 // the watcher's, every 2 minutes while the game runs; false and why when the site does not answer
 bool noteOnline(const std::wstring& dir, std::string& error);
+// 3.0.11-beta.11: the site's world map sheet (core/world_map) into the reference's worldmap.json - at the game's start
+bool noteWorld(const std::wstring& dir, std::string& error);
 
 }  // namespace uagfx::app

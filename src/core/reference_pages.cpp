@@ -246,6 +246,12 @@ Page home(const refindex::Index& ix, Lang l, int online) {
         r.link = Link{Go::Section, int(id), ""};
         p.rows.push_back(std::move(r));
     }
+    Row world;  // 3.0.11-beta.11: the tenth - the world map
+    world.style = Style::Tile;
+    world.left = say(l, Text::RefWorld);
+    world.right = say(l, Text::RefWorldHint);
+    world.link = Link{Go::World, 0, ""};
+    p.rows.push_back(std::move(world));
     if (online > 0) p.rows.push_back(note(sayf(l, Text::RefOnlineNow, {number(online, l)})));  // 3.0.11-beta.10
     p.rows.push_back(note(say(l, Text::RefKeys)));
     return p;
@@ -685,6 +691,76 @@ Page shop(const refindex::Index& ix, Lang l, int index) {
     return p;
 }
 
+namespace {
+
+// A map's line on the world's lists: its monsters' kinds and its players now
+std::string mapLine(const refindex::Index& ix, Lang l, const std::string& code, const Context& c) {
+    std::string s = mapNote(ix, l, code);
+    if (c.players) {
+        const auto now = c.players->find(code);
+        if (now != c.players->end() && now->second > 0)
+            s += (s.empty() ? "" : " · ") + sayf(l, Text::RefPlayersNow, {std::to_string(now->second)});
+    }
+    return s;
+}
+
+}  // namespace
+
+Page world(const refindex::Index& ix, Lang l, const Context& c) {
+    Page p;
+    p.name = say(l, Text::RefWorld);
+    Row title;
+    title.style = Style::Title;
+    title.left = say(l, Text::RefWorld);
+    title.right = say(l, Text::RefDungeons) + " ›";
+    title.link = Link{Go::World, 1, ""};
+    p.rows.push_back(title);
+    if (!c.world) {
+        p.rows.push_back(note(say(l, Text::RefWorldNone)));
+        return p;
+    }
+    Row picture;
+    picture.style = Style::World;
+    p.rows.push_back(picture);
+    const worldmap::Tile* t = c.hover.empty() ? nullptr : worldmap::tileOf(*c.world, c.hover);
+    if (!t) {
+        p.rows.push_back(note(say(l, Text::RefWorldHelp)));
+        return p;
+    }
+    std::string line = refindex::mapTitle(ix, t->map);
+    const std::string more = mapLine(ix, l, t->map, c);
+    if (!more.empty()) line += " · " + more;
+    if (t->map == c.here) line += " · " + say(l, Text::RefYouHere);
+    p.rows.push_back(note(line));
+    return p;
+}
+
+Page dungeons(const refindex::Index& ix, Lang l, const Context& c) {
+    Page p;
+    p.name = say(l, Text::RefDungeons);
+    Row title;
+    title.style = Style::Title;
+    title.left = say(l, Text::RefDungeons);
+    title.right = say(l, Text::RefWorld) + " ›";
+    title.link = Link{Go::World, 0, ""};
+    p.rows.push_back(title);
+    if (!c.world) {
+        p.rows.push_back(note(say(l, Text::RefWorldNone)));
+        return p;
+    }
+    std::string group;
+    for (const worldmap::Dungeon& d : c.world->dungeons) {
+        if (d.group != group || p.rows.size() == 1) {
+            group = d.group;
+            p.rows.push_back(heading(group.empty() ? d.map : group));
+        }
+        Row r = linked(refindex::mapTitle(ix, d.map), mapLine(ix, l, d.map, c), toMap(d.map));
+        r.gold = d.map == c.here;
+        p.rows.push_back(std::move(r));
+    }
+    return p;
+}
+
 Page open(const refindex::Index& ix, Lang l, const Link& link, const Context& c, unsigned opened) {
     switch (link.go) {
         case Go::Mob: return mob(ix, l, link.id, c.here, opened);
@@ -692,6 +768,7 @@ Page open(const refindex::Index& ix, Lang l, const Link& link, const Context& c,
         case Go::Map: return map(ix, l, link.map, c, opened);
         case Go::Shop: return shop(ix, l, link.id);
         case Go::Section: return section(ix, l, link.id);
+        case Go::World: return link.id == 1 ? dungeons(ix, l, c) : world(ix, l, c);
         case Go::None:
         case Go::Expand:
         case Go::Follow: break;

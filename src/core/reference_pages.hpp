@@ -6,6 +6,7 @@
 
 #include "core/reference_index.hpp"
 #include "core/reference_route.hpp"
+#include "core/world_map.hpp"
 #include "core/settings/strings.hpp"
 
 namespace uagfx::refpages {
@@ -16,14 +17,14 @@ namespace uagfx::refpages {
 // win/reference_window lays the rows out and draws them.
 
 // Expand: a card's long section in full; Follow (3.0.11-beta.9): the way to `map` on the minimap - id 0 on foot, 1 by
-// Kafra (again: no more)
-enum class Go : uint8_t { None, Mob, Item, Map, Shop, Section, Expand, Follow };
+// Kafra (again: no more); World (3.0.11-beta.11): the world map - id 0 the world, 1 the dungeons
+enum class Go : uint8_t { None, Mob, Item, Map, Shop, Section, Expand, Follow, World };
 struct Link {
     Go go = Go::None;
     int id = 0;       // a monster's, an item's, a shop's (its place in the index) or a section's
     std::string map;  // a map's code
 };
-enum class Style : uint8_t { Title, Sub, Heading, Row, Note, Tile };
+enum class Style : uint8_t { Title, Sub, Heading, Row, Note, Tile, World };  // World: the world map's picture
 struct Row {
     Style style = Style::Row;
     std::string left, right;  // UTF-8: the row's words, and a note on its right (a tile: its count and its line)
@@ -58,6 +59,8 @@ struct Context {
     int x = -1, y = -1;  // the player's cell (-1 not known): the routes start from that part of the map
     Follow follow;
     const std::map<std::string, int>* players = nullptr;  // 3.0.11-beta.10: players on each map now (the site's)
+    const worldmap::Sheet* world = nullptr;  // 3.0.11-beta.11: the site's world map sheet (null: not here yet)
+    std::string hover;                       // 3.0.11-beta.11: the world map's tile under the pointer
 };
 
 // `online`: the server's players now (3.0.11-beta.10; 0 not known)
@@ -70,6 +73,9 @@ Page mob(const refindex::Index& ix, settings::Lang l, int id, const std::string&
 Page item(const refindex::Index& ix, settings::Lang l, int id, unsigned opened = 0);
 Page map(const refindex::Index& ix, settings::Lang l, const std::string& code, const Context& c, unsigned opened = 0);
 Page shop(const refindex::Index& ix, settings::Lang l, int index);
+// 3.0.11-beta.11: the world map (its picture row, the tile under the pointer told under it) and the dungeons by groups
+Page world(const refindex::Index& ix, settings::Lang l, const Context& c);
+Page dungeons(const refindex::Index& ix, settings::Lang l, const Context& c);
 Page open(const refindex::Index& ix, settings::Lang l, const Link& link, const Context& c,
           unsigned opened = 0);  // by its kind
 

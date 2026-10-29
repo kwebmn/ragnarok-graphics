@@ -485,6 +485,7 @@ enum class Text : uint16_t {
     // 3.0.11-beta.9: the way followed on the minimap
     RefRouteFollow, RefRouteFollowing, MinimapRouteLeft, MinimapRouteThere, MinimapRouteNone,
     RefPlayersNow, RefOnlineNow,  // 3.0.11-beta.10: the site's «Онлайн»
+    RefWorld, RefWorldHint, RefDungeons, RefWorldNone, RefWorldHelp,  // 3.0.11-beta.11: the world map
     Count
 };
 

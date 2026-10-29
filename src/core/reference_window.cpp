@@ -12,6 +12,8 @@ constexpr float kTitleRow = 46, kSub = 26, kHeading = 38, kRow = 26, kNote = 24,
 constexpr uint32_t kGround = 0x12161E, kBand = 0x0D1016, kField = 0x1B212C, kFieldEdge = 0x4C8DFF;
 constexpr uint32_t kRule = 0x2A3342, kHover = 0x1F2733, kTileFill = 0x1A2029, kTileHot = 0x232B37;
 constexpr uint32_t kTrack = 0x161B23, kThumb = 0x3A4556;
+constexpr float kWorldLeast = 300;                         // 3.0.11-beta.11: the world map's row at the least
+constexpr uint32_t kRoute = 0x5AC8FA, kBadge = 0x0D1016;  // the minimap's way colour; the players' badge
 
 int px(float v, float s) { return int(std::lround(v * s)); }
 
@@ -22,6 +24,7 @@ int heightOf(refpages::Style st, float s) {
         case refpages::Style::Heading: return px(kHeading, s);
         case refpages::Style::Note: return px(kNote, s);
         case refpages::Style::Tile: return px(kTile, s);
+        case refpages::Style::World: return px(kWorldLeast, s);  // place() gives it the body's rest
         case refpages::Style::Row: break;
     }
     return px(kRow, s);
@@ -63,8 +66,12 @@ std::vector<Placed> place(const Layout& L, const refpages::Page& p, int& total) 
     const int gap = px(kGap, L.s);
     const int tileW = (innerW - 2 * gap) / 3;
     int y = px(6, L.s), tile = 0;
+    int others = 0;  // 3.0.11-beta.11: the world map's row takes what the other rows leave of the body
+    for (const refpages::Row& r : p.rows)
+        if (r.style != refpages::Style::World) others += heightOf(r.style, L.s);
     for (const refpages::Row& r : p.rows) {
-        const int h = heightOf(r.style, L.s);
+        int h = heightOf(r.style, L.s);
+        if (r.style == refpages::Style::World) h = std::max(h, L.bodyH - others - px(20, L.s));
         if (r.style == refpages::Style::Tile) {
             const int col = tile % 3;
             if (col == 0 && tile > 0) y += h + gap;
@@ -88,8 +95,12 @@ int clampScroll(int scroll, int total, int bodyH) { return std::clamp(scroll, 0,
 
 bool shown(const Layout& L, const Placed& r, int scroll) { return r.y - scroll >= 0 && r.y - scroll + r.h <= L.bodyH; }
 
+worldmap::Fit worldFit(const worldmap::Sheet& sheet, const Placed& row) {
+    return worldmap::fit(sheet.w, sheet.h, row.w, row.h);
+}
+
 Under under(const Layout& L, const refpages::Page& p, const std::vector<Placed>& rows, int scroll, bool backShown,
-            float x, float y) {
+            float x, float y, const worldmap::Sheet* sheet) {
     if (x < 0 || y < 0 || x >= float(L.w) || y >= float(L.h)) return Under{};
     if (closeBox(L).contains(x, y)) return Under{Part::Close, -1};
     if (backShown && backBox(L).contains(x, y)) return Under{Part::Back, -1};
@@ -98,12 +109,101 @@ Under under(const Layout& L, const refpages::Page& p, const std::vector<Placed>&
     const float by = y - float(L.bodyY) + float(scroll);
     for (size_t i = 0; i < rows.size() && i < p.rows.size(); ++i) {
         const Placed& r = rows[i];
-        if (p.rows[i].link.go != refpages::Go::None && x >= float(r.x) && x < float(r.x + r.w) && by >= float(r.y) &&
-            by < float(r.y + r.h) && shown(L, r, scroll))
-            return Under{Part::Row, int(i)};
+        const bool in = x >= float(r.x) && x < float(r.x + r.w) && by >= float(r.y) && by < float(r.y + r.h);
+        if (in && sheet && p.rows[i].style == refpages::Style::World) {  // 3.0.11-beta.11: a map on the world map
+            const int t = worldmap::tileAt(*sheet, worldFit(*sheet, r), x - float(r.x), by - float(r.y));
+            return t >= 0 ? Under{Part::Tile, int(i), t} : Under{Part::Body, -1};
+        }
+        if (p.rows[i].link.go != refpages::Go::None && in && shown(L, r, scroll)) return Under{Part::Row, int(i)};
     }
     return Under{Part::Body, -1};
 }
+
+namespace {
+
+// 3.0.11-beta.11: a smooth line `width` wide, a rectangle's outline - the world map's marks (the picture's pixels)
+void line(panel::Picture& p, float x0, float y0, float x1, float y1, float width, uint32_t rgb, float a) {
+    const float half = width / 2, dx = x1 - x0, dy = y1 - y0, len2 = dx * dx + dy * dy;
+    const int left = std::max(0, int(std::floor(std::min(x0, x1) - half - 1)));
+    const int right = std::min(p.width - 1, int(std::ceil(std::max(x0, x1) + half + 1)));
+    const int top = std::max(0, int(std::floor(std::min(y0, y1) - half - 1)));
+    const int bottom = std::min(p.height - 1, int(std::ceil(std::max(y0, y1) + half + 1)));
+    for (int y = top; y <= bottom; ++y)
+        for (int x = left; x <= right; ++x) {
+            const float px0 = float(x) + 0.5f - x0, py0 = float(y) + 0.5f - y0;
+            const float t = len2 > 0 ? std::clamp((px0 * dx + py0 * dy) / len2, 0.0f, 1.0f) : 0.0f;
+            const float ex = px0 - t * dx, ey = py0 - t * dy;
+            const float cover = std::clamp(half + 0.5f - std::sqrt(ex * ex + ey * ey), 0.0f, 1.0f);
+            if (cover > 0) panel::over(p.px[size_t(y) * size_t(p.width) + size_t(x)], rgb, cover * a);
+        }
+}
+
+void outline(panel::Picture& p, const panel::Box& b, float width, uint32_t rgb, float a) {
+    line(p, b.x, b.y, b.x + b.w, b.y, width, rgb, a);
+    line(p, b.x + b.w, b.y, b.x + b.w, b.y + b.h, width, rgb, a);
+    line(p, b.x + b.w, b.y + b.h, b.x, b.y + b.h, width, rgb, a);
+    line(p, b.x, b.y + b.h, b.x, b.y, width, rgb, a);
+}
+
+panel::Box tileBox(const worldmap::Tile& t, const worldmap::Fit& f, float ox, float oy) {
+    return panel::Box{ox + f.x + float(t.l) * f.s, oy + f.y + float(t.t) * f.s, float(t.w) * f.s, float(t.h) * f.s};
+}
+
+// The world map's row: its picture, the way followed, your map, the one under the pointer, the players' badges
+void paintWorld(panel::Picture& out, const panel::Box& b, const WorldLook& w, float s) {
+    if (!w.picture || !w.sheet || w.picture->width != int(b.w) || w.picture->height != int(b.h)) return;
+    for (int y = 0; y < w.picture->height; ++y) {
+        const int ty = int(b.y) + y;
+        if (ty < 0 || ty >= out.height) continue;
+        for (int x = 0; x < w.picture->width; ++x) {
+            const int tx = int(b.x) + x;
+            if (tx >= 0 && tx < out.width)
+                out.px[size_t(ty) * size_t(out.width) + size_t(tx)] =
+                    w.picture->px[size_t(y) * size_t(w.picture->width) + size_t(x)];
+        }
+    }
+    const worldmap::Fit f = worldmap::fit(w.sheet->w, w.sheet->h, int(b.w), int(b.h));
+    const float ox = float(int(b.x)), oy = float(int(b.y));
+    auto centre = [&](const std::string& map, float& x, float& y) {
+        const worldmap::Tile* t = worldmap::tileOf(*w.sheet, map);
+        if (!t) return false;
+        const panel::Box tb = tileBox(*t, f, ox, oy);
+        x = tb.x + tb.w / 2;
+        y = tb.y + tb.h / 2;
+        return true;
+    };
+    float px0 = 0, py0 = 0, px1 = 0, py1 = 0;  // the way followed: from map to map (those on the world sheet)
+    bool have = false;
+    for (const std::string& m : w.route) {
+        if (!centre(m, px1, py1)) continue;
+        if (have && (px1 != px0 || py1 != py0)) {
+            line(out, px0, py0, px1, py1, 3.5f * s + 2, 0x000000, 0.5f);
+            line(out, px0, py0, px1, py1, 3.5f * s, kRoute, 1.0f);
+        }
+        px0 = px1;
+        py0 = py1;
+        have = true;
+    }
+    if (const worldmap::Tile* t = worldmap::tileOf(*w.sheet, w.here))
+        outline(out, tileBox(*t, f, ox, oy), 2.5f * s, kGold, 1.0f);
+    if (const worldmap::Tile* t = w.hover.empty() ? nullptr : worldmap::tileOf(*w.sheet, w.hover))
+        outline(out, tileBox(*t, f, ox, oy), 2 * s, 0xFFFFFF, 0.9f);
+    if (w.hereX >= 0 && w.hereY >= 0) {  // you
+        const float x = ox + f.x + w.hereX * f.s, y = oy + f.y + w.hereY * f.s;
+        panel::circle(out, x, y, 5 * s + 1.5f, 0x000000, 0.85f);
+        panel::circle(out, x, y, 5 * s, 0xFFFFFF, 1.0f);
+    }
+    if (w.players)
+        for (const worldmap::Tile& t : w.sheet->world) {
+            const auto n = w.players->find(t.map);
+            if (n == w.players->end() || n->second <= 0) continue;
+            const panel::Box tb = tileBox(t, f, ox, oy);
+            panel::circle(out, tb.x + tb.w - 2 * s, tb.y + 2 * s, 9 * s + 1, kRoute, 0.9f);
+            panel::circle(out, tb.x + tb.w - 2 * s, tb.y + 2 * s, 9 * s, kBadge, 1.0f);
+        }
+}
+
+}  // namespace
 
 void paint(panel::Picture& out, const Layout& L, const refpages::Page& p, const std::vector<Placed>& rows, int scroll,
            int total, const Look& look) {
@@ -124,6 +224,10 @@ void paint(panel::Picture& out, const Layout& L, const refpages::Page& p, const 
         if (row.style == refpages::Style::Tile) {
             panel::roundRect(out, b, 8 * s, hot ? kTileHot : kTileFill, 1.0f, hot ? kFieldEdge : kRule, 1.0f,
                              std::max(1.0f, s));
+            continue;
+        }
+        if (row.style == refpages::Style::World) {
+            paintWorld(out, b, look.world, s);
             continue;
         }
         if (hot) panel::roundRect(out, panel::Box{b.x - 6 * s, b.y, b.w + 12 * s, b.h}, 4 * s, kHover, 1.0f);
@@ -189,6 +293,18 @@ std::vector<Words> words(const Layout& L, const refpages::Page& p, const std::ve
                 break;
             case refpages::Style::Note:
                 out.push_back(Words{panel::Box{x, y, w, h}, row.left, panel::kMuted, 13.5f * s, false, Align::Left});
+                break;
+            case refpages::Style::World:  // the players' numbers in their badges
+                if (look.world.sheet && look.world.players) {
+                    const worldmap::Fit f = worldmap::fit(look.world.sheet->w, look.world.sheet->h, int(w), int(h));
+                    for (const worldmap::Tile& t : look.world.sheet->world) {
+                        const auto n = look.world.players->find(t.map);
+                        if (n == look.world.players->end() || n->second <= 0) continue;
+                        const panel::Box tb = tileBox(t, f, float(int(x)), float(int(y)));
+                        out.push_back(Words{panel::Box{tb.x + tb.w - 11 * s, tb.y - 7 * s, 18 * s, 18 * s},
+                                            std::to_string(n->second), panel::kText, 11 * s, true, Align::Center});
+                    }
+                }
                 break;
             case refpages::Style::Row: {
                 const float indent = row.dot ? 16 * s : 0;

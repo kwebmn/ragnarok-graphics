@@ -1,0 +1,97 @@
+// 3.0.11-beta.11: the world map of «Довідник» - the site's sheet (core/world_map), its page and its row in the window
+#include <string>
+#include <vector>
+
+#include "core/reference_pages.hpp"
+#include "core/reference_window.hpp"
+#include "core/world_map.hpp"
+#include "test.hpp"
+
+using namespace uagfx;
+using settings::Lang;
+
+namespace {
+
+const char* kSheet = R"({"W":100,"H":50,
+"world":[{"id":"prontera","l":10,"t":10,"w":20,"h":20},{"id":"prt_fild08","l":10,"t":30,"w":20,"h":20},
+         {"id":"izlude","l":40,"t":10,"w":10,"h":10},{"id":"bad","l":0,"t":0,"w":0,"h":5}],
+"dungeon":[{"id":"prt_sewb1","group":"Prontera Culvert"},{"id":"prt_sewb2","group":"Prontera Culvert"},
+           {"id":"pay_dun00","group":"Payon Cave"}]})";
+
+}  // namespace
+
+TEST(world_map_sheet_tiles_and_fit) {
+    worldmap::Sheet sh;
+    CHECK(worldmap::parse(kSheet, sh));
+    CHECK_EQ(sh.w, 100);
+    CHECK_EQ(sh.world.size(), size_t(3));  // a tile without a size left out
+    CHECK_EQ(sh.dungeons.size(), size_t(3));
+    CHECK_EQ(sh.dungeons[2].group, std::string("Payon Cave"));
+    CHECK(!worldmap::parse("{\"W\":0,\"H\":5,\"world\":[]}", sh));
+    CHECK(worldmap::parse(kSheet, sh));
+    const worldmap::Fit f = worldmap::fit(sh.w, sh.h, 200, 200);  // twice as big, centred down the height
+    CHECK(f.s == 2.0f && f.x == 0.0f && f.y == 50.0f);
+    CHECK_EQ(worldmap::tileAt(sh, f, 2 * 15, 50 + 2 * 15), 0);   // prontera
+    CHECK_EQ(worldmap::tileAt(sh, f, 2 * 45, 50 + 2 * 12), 2);   // izlude
+    CHECK_EQ(worldmap::tileAt(sh, f, 2 * 80, 50 + 2 * 40), -1);  // the sea
+    CHECK(worldmap::tileOf(sh, "prt_fild08") == &sh.world[1]);
+    float x = 0, y = 0;
+    CHECK(worldmap::cellOnSheet(sh.world[0], 400, 400, 200, 399, x, y));  // north up: y 399 is the tile's top row
+    CHECK(x > 19.9f && x < 20.1f && y >= 10.0f && y < 10.1f);
+    CHECK(!worldmap::cellOnSheet(sh.world[0], 400, 400, 400, 0, x, y));
+}
+
+TEST(world_map_tiles_put_on_the_sheet) {
+    worldmap::Sheet sh;
+    CHECK(worldmap::parse(kSheet, sh));
+    std::vector<uint32_t> sheet(size_t(sh.w) * size_t(sh.h), worldmap::kGround);
+    std::vector<uint32_t> picture(40 * 40, 0xFF20A040);  // a green field, two rows of the game's magenta on top
+    for (int i = 0; i < 80; ++i) picture[size_t(i)] = 0xFFFF00FF;
+    worldmap::put(sheet, sh.w, sh.h, sh.world[0], picture, 40, 40);
+    CHECK_EQ(sheet[size_t(20 * sh.w + 20)], 0xFF20A040u);  // inside
+    CHECK_EQ(sheet[size_t(10 * sh.w + 20)], worldmap::kGround);  // its top row: magenta, the sea shows
+    CHECK_EQ(sheet[size_t(5 * sh.w + 5)], worldmap::kGround);    // outside it
+    panel::Picture out;
+    worldmap::scaled(out, sheet, sh.w, sh.h, 50, 50, worldmap::fit(sh.w, sh.h, 50, 50));  // half: averaged
+    CHECK_EQ(out.width, 50);
+    CHECK_EQ(out.px[size_t((12 + 10) * 50 + 10)], 0xFF20A040u);
+}
+
+TEST(reference_world_pages) {
+    worldmap::Sheet sh;
+    CHECK(worldmap::parse(kSheet, sh));
+    refindex::Index ix;
+    CHECK(refindex::build(R"({"v":1,"data":1,"commit":"c","date":"d","items":{},"mobs":{},"spawns":{},"routes":[],
+        "shops":[],"npcs":[],"pets":[],"craft":[],"flags":{}})", ix));
+    refpages::Context c;
+    c.here = "prontera";
+    const refpages::Page none = refpages::world(ix, Lang::Uk, c);
+    CHECK_EQ(none.rows.size(), size_t(2));  // no sheet yet: a note
+    CHECK(none.rows[1].style == refpages::Style::Note);
+    c.world = &sh;
+    const refpages::Page w = refpages::world(ix, Lang::Uk, c);
+    CHECK(w.rows[0].style == refpages::Style::Title && w.rows[0].link.go == refpages::Go::World);
+    CHECK_EQ(w.rows[0].link.id, 1);  // its «Підземелля ›»
+    CHECK(w.rows[1].style == refpages::Style::World);
+    CHECK(w.rows[2].style == refpages::Style::Note);
+    std::map<std::string, int> players{{"prt_fild08", 4}};
+    c.players = &players;
+    c.hover = "prt_fild08";
+    const refpages::Page h = refpages::world(ix, Lang::Uk, c);
+    CHECK_EQ(h.rows[2].left, std::string("prt_fild08 · гравців зараз: 4"));
+    const refpages::Page d = refpages::dungeons(ix, Lang::Uk, c);
+    CHECK(d.rows[1].style == refpages::Style::Heading && d.rows[1].left == "Prontera Culvert");
+    CHECK(d.rows[2].link.go == refpages::Go::Map && d.rows[2].link.map == "prt_sewb1");
+    CHECK(d.rows[4].style == refpages::Style::Heading && d.rows[4].left == "Payon Cave");
+    const refpages::Page home = refpages::home(ix, Lang::Uk);
+    CHECK(home.rows[refpages::kSections].link.go == refpages::Go::World);  // the tenth tile
+    // the window: the map's row takes the body's rest; the tile under the pointer
+    const refwin::Layout L = refwin::layout(1920, 1080, 1.0f);
+    int total = 0;
+    const auto rows = refwin::place(L, w, total);
+    CHECK(rows[1].h > 500 && total <= L.bodyH);
+    const worldmap::Fit f = refwin::worldFit(sh, rows[1]);
+    const float x = float(rows[1].x) + f.x + 15 * f.s, y = float(L.bodyY + rows[1].y) + f.y + 15 * f.s;
+    const refwin::Under u = refwin::under(L, w, rows, 0, true, x, y, &sh);
+    CHECK(u.part == refwin::Part::Tile && u.row == 1 && u.tile == 0);
+}

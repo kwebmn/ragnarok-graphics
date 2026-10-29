@@ -8,6 +8,7 @@
 #include "app/text.hpp"
 #include "core/layout.hpp"
 #include "core/reference_live.hpp"
+#include "core/world_map.hpp"
 
 namespace uagfx::app {
 
@@ -15,6 +16,7 @@ namespace {
 
 constexpr const char* kManifestPath = "/api/public/game/pack.json";
 constexpr const char* kOnlinePath = "/api/public/online.json";  // 3.0.11-beta.10: the site's «Онлайн»
+constexpr const char* kWorldPath = "/assets/worldmap/worldmap.json";  // 3.0.11-beta.11: the site's world map
 constexpr long long kOnlineAgain = 90;  // seconds: younger counts are kept (several game windows, several watchers)
 
 std::wstring folderOf(const std::wstring& dir) { return dir + L"\\" + wide(layout::kReference); }
@@ -65,6 +67,25 @@ bool noteReference(const std::wstring& dir, std::string& error) {
     }
     for (const std::wstring& n : listFolder(folder, false)) {  // older packs and pieces of cut downloads go
         if (n != name && n.rfind(L"pack-", 0) == 0) deleteFile(folder + L"\\" + n);
+    }
+    return true;
+}
+
+bool noteWorld(const std::wstring& dir, std::string& error) {
+    std::string text, there;
+    if (!fetchPath(kWorldPath, text, error, 1u << 20)) return false;
+    worldmap::Sheet sheet;
+    if (!worldmap::parse(text, sheet)) {
+        error = "uaro.kiev.ua: not the world map's sheet";
+        return false;
+    }
+    const std::wstring file = dir + L"\\" + wide(layout::kReferenceWorld);
+    if (readFile(file, there) && there == text) return true;
+    makeFolder(dir + L"\\" + wide(layout::kOurs));
+    makeFolder(folderOf(dir));
+    if (!writeFileAtomic(file, text)) {
+        error = "the world map could not be written";
+        return false;
     }
     return true;
 }

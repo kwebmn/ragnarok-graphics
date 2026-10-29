@@ -56,6 +56,8 @@ constexpr const char* kReferenceManifest = "uaro-graphics\\reference\\pack.json"
 constexpr const char* kWalkable = "uaro-graphics\\walkable.bin";
 // 3.0.11-beta.10: the players on each map now (core/reference_live) - the game's watcher writes it every 2 minutes
 constexpr const char* kReferenceOnline = "uaro-graphics\\reference\\online.json";
+// 3.0.11-beta.11: the site's world map sheet (core/world_map) - the watcher fetches it at the game's start
+constexpr const char* kReferenceWorld = "uaro-graphics\\reference\\worldmap.json";
 // 2.14: the client patcher (app/client_patch): the list of the game's files last put, and where they arrive first
 constexpr const char* kClientPatchRecord = "uaro-graphics\\client-patch.txt";
 constexpr const char* kClientPatchWork = "uaro-graphics\\update\\client";

@@ -1,10 +1,12 @@
 #pragma once
 #include <cstdint>
+#include <map>
 #include <string>
 #include <vector>
 
 #include "core/reference_pages.hpp"
 #include "core/window_panel.hpp"
+#include "core/world_map.hpp"
 
 namespace uagfx::refwin {
 
@@ -27,18 +29,32 @@ std::vector<Placed> place(const Layout& L, const refpages::Page& p, int& total);
 int clampScroll(int scroll, int total, int bodyH);
 bool shown(const Layout& L, const Placed& r, int scroll);  // the whole row in the body
 
-enum class Part : uint8_t { None, Close, Back, Search, Row, Body };
+enum class Part : uint8_t { None, Close, Back, Search, Row, Body, Tile };
 struct Under {
     Part part = Part::None;
-    int row = -1;  // Part::Row: a row that leads somewhere
+    int row = -1;   // Part::Row: a row that leads somewhere; Part::Tile: the world map's row
+    int tile = -1;  // 3.0.11-beta.11: Part::Tile - the world map's tile (worldmap::Sheet::world)
 };
-// What is under a point of the window (its own pixels)
+// 3.0.11-beta.11: the world map's row - its picture and what goes over it
+struct WorldLook {
+    const panel::Picture* picture = nullptr;  // the tiles fitted into the row (its size; win/reference_window)
+    const worldmap::Sheet* sheet = nullptr;
+    std::string here;
+    float hereX = -1, hereY = -1;              // the player on the sheet (-1 not known)
+    std::vector<std::string> route;           // the followed way's maps, from here on
+    const std::map<std::string, int>* players = nullptr;
+    std::string hover;                        // the tile under the pointer
+};
+// What is under a point of the window (its own pixels); `sheet`: the world map's tiles under the pointer
 Under under(const Layout& L, const refpages::Page& p, const std::vector<Placed>& rows, int scroll, bool backShown,
-            float x, float y);
+            float x, float y, const worldmap::Sheet* sheet = nullptr);
+// The world map's fit in its row (the row's own pixels)
+worldmap::Fit worldFit(const worldmap::Sheet& sheet, const Placed& row);
 
 struct Look {
     Under hover;
     bool backShown = false;
+    WorldLook world;
 };
 // The window's shapes (premultiplied): its ground and frame, the header, the search field, the rows' grounds (the
 // tiles, the row under the pointer, the headings' rules, the NPCs' dots), the footer, the scroll bar

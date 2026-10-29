@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "core/reference_pages.hpp"
+#include "core/reference_route.hpp"
 #include "core/reference_window.hpp"
 #include "core/settings/strings.hpp"
 #include "pad/win/game_window.hpp"
@@ -46,6 +47,9 @@ struct State {
     refwin::Under hover;
     std::shared_ptr<const refindex::Index> index;
     std::shared_ptr<const reflive::Online> online;  // 3.0.11-beta.10: the players now (null: none fresh)
+    std::shared_ptr<const reference::World> world;  // 3.0.11-beta.11: the world map (null: not made yet)
+    panel::Picture worldPicture;                    // its picture at its row's size
+    std::string worldHover;                         // the map under the pointer there
     std::string here;
     panel::Picture picture;
     uint32_t texture = 0;
@@ -77,6 +81,8 @@ void makePage(State& s) {
         c.follow.can = minimapproto::canFollow();  // 3.0.11-beta.9: «вести ›» with the new minimap on
         minimapproto::following(c.follow.map, c.follow.walk);
         if (s.online) c.players = &s.online->maps;  // 3.0.11-beta.10
+        if (s.world) c.world = &s.world->sheet;     // 3.0.11-beta.11
+        c.hover = s.worldHover;
         s.page = refpages::open(*s.index, l, s.at, c, s.opened);
     } else if (!s.query.empty()) {
         s.page = refpages::found(*s.index, l, s.query);
@@ -85,6 +91,14 @@ void makePage(State& s) {
     }
     s.rows = refwin::place(s.layout, s.page, s.total);
     s.scroll = refwin::clampScroll(s.scroll, s.total, s.layout.bodyH);
+    for (size_t i = 0; i < s.rows.size() && i < s.page.rows.size(); ++i) {  // 3.0.11-beta.11: the world's picture
+        const refwin::Placed& r = s.rows[i];
+        if (s.page.rows[i].style != refpages::Style::World || !s.world) continue;
+        if (s.worldPicture.width != r.w || s.worldPicture.height != r.h) {
+            const worldmap::Sheet& sh = s.world->sheet;
+            worldmap::scaled(s.worldPicture, s.world->argb, sh.w, sh.h, r.w, r.h, refwin::worldFit(sh, r));
+        }
+    }
     s.hover = refwin::Under{};
     s.wantPage = false;
     s.dirty = true;
@@ -163,9 +177,33 @@ void close(State& s) {
     s.shown = false;
 }
 
+// 3.0.11-beta.11: what goes over the world map - you, the way followed, the players now, the map under the pointer
+refwin::WorldLook worldLook(const State& s) {
+    refwin::WorldLook w;
+    if (!s.world || !s.index) return w;
+    w.picture = &s.worldPicture;
+    w.sheet = &s.world->sheet;
+    w.here = s.here;
+    w.hover = s.worldHover;
+    if (s.online) w.players = &s.online->maps;
+    int x = -1, y = -1, mw = 0, mh = 0;
+    const bool cell = readPlayerCell(x, y, mw, mh);
+    if (const worldmap::Tile* t = worldmap::tileOf(s.world->sheet, s.here); t && cell)
+        worldmap::cellOnSheet(*t, mw, mh, x, y, w.hereX, w.hereY);
+    std::string target;
+    bool walk = true;
+    if (minimapproto::following(target, walk)) {
+        const refroute::Route r = refroute::find(*s.index, s.here, cell ? x : -1, cell ? y : -1, target, walk);
+        w.route.push_back(s.here);
+        for (const refroute::Step& st : r.steps)
+            if (w.route.back() != st.move.to) w.route.push_back(st.move.to);
+    }
+    return w;
+}
+
 void render(State& s) {
     const settings::Lang l = startup().lang;
-    refwin::Look look{s.hover, !s.back.empty()};
+    refwin::Look look{s.hover, !s.back.empty(), worldLook(s)};
     refwin::paint(s.picture, s.layout, s.page, s.rows, s.scroll, s.total, look);
     refwin::Texts t;
     t.title = say(Text::RefTitle);
@@ -260,13 +298,28 @@ void frame(HWND game, bool enabled, double k, int targetWidth, int targetHeight)
         s.online = online;
         s.wantPage = true;
     }
+    if (s.at.go == refpages::Go::World) {  // 3.0.11-beta.11: made at the first look at it
+        const auto world = reference::world();
+        if (world != s.world) {
+            s.world = world;
+            s.worldPicture = panel::Picture{};
+            s.wantPage = true;
+        }
+    }
     if (s.wantPage) makePage(s);
     int cx = 0, cy = 0;  // the row under the game's cursor (it is drawn over the window)
     refwin::Under hover;
     if (readGameCursor(cx, cy))
         hover = refwin::under(s.layout, s.page, s.rows, s.scroll, !s.back.empty(),
-                              float(cx) * float(k) - float(s.layout.x), float(cy) * float(k) - float(s.layout.y));
-    if (hover.part != s.hover.part || hover.row != s.hover.row) {
+                              float(cx) * float(k) - float(s.layout.x), float(cy) * float(k) - float(s.layout.y),
+                              s.world ? &s.world->sheet : nullptr);
+    const std::string map = hover.part == refwin::Part::Tile && s.world ? s.world->sheet.world[size_t(hover.tile)].map
+                                                                        : std::string();
+    if (map != s.worldHover) {  // the world map's tile under the pointer: told under the map
+        s.worldHover = map;
+        makePage(s);
+    }
+    if (hover.part != s.hover.part || hover.row != s.hover.row || hover.tile != s.hover.tile) {
         s.hover = hover;
         s.dirty = true;
     }
@@ -368,10 +421,13 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
             break;
         case WM_LBUTTONDOWN:
         case WM_LBUTTONDBLCLK: {
-            const refwin::Under u = refwin::under(s.layout, s.page, s.rows, s.scroll, !s.back.empty(), wx, wy);
+            const refwin::Under u = refwin::under(s.layout, s.page, s.rows, s.scroll, !s.back.empty(), wx, wy,
+                                                  s.world ? &s.world->sheet : nullptr);
             if (u.part == refwin::Part::Close) close(s);
             if (u.part == refwin::Part::Back) goBack(s);
             if (u.part == refwin::Part::Row) go(s, s.page.rows[size_t(u.row)].link);
+            if (u.part == refwin::Part::Tile && s.world)  // 3.0.11-beta.11: a map on the world map - its card
+                go(s, refpages::Link{refpages::Go::Map, 0, s.world->sheet.world[size_t(u.tile)].map});
             break;
         }
         case WM_XBUTTONDOWN:

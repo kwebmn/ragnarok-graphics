@@ -78,7 +78,7 @@ TEST(reference_pages_words_for_numbers) {
 TEST(reference_pages_home_and_search) {
     const refindex::Index ix = index();
     const refpages::Page home = refpages::home(ix, Lang::Uk);
-    CHECK_EQ(home.rows.size(), size_t(refpages::kSections) + 1);  // the tiles and the keys' line
+    CHECK_EQ(home.rows.size(), size_t(refpages::kSections) + 2);  // the tiles, the world map's, the keys' line
     CHECK(home.rows.back().style == refpages::Style::Note);
     CHECK(home.rows[0].style == refpages::Style::Tile && home.rows[0].left == "Монстри · 2");
     CHECK(home.rows[0].link.go == refpages::Go::Section && home.rows[0].link.id == refpages::Mobs);
