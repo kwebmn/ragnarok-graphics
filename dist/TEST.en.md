@@ -1,3 +1,20 @@
+# uaRO Graphics 3.0.11-beta.9 — what is new
+
+- **The way followed on the new minimap**: in a map's card («Reference», Ctrl+F) the rows «On foot» and «By Kafra»
+  have «on the minimap ›» (with «New minimap (prototype)» on). A click closes the window and the minimap shows:
+  - a light blue line from you to the next move and a ring on it; a move past the minimap's edge — the line to the
+    edge toward it;
+  - two lines under the map: where the move leads and how many are left («→ Payon Town · 2 left»), and where it is
+    («Kafra 146, 86 · 1,200 z», «exit 233, 16»);
+  - the way is made again wherever you go (a teleport, a death, another exit, a tower's stairs); there — «You are
+    there» for 8 seconds, and the way ends.
+  A click on the way's lines opens the target's card, where «followed · stop ›» ends it.
+- A click on a monster in the list under the minimap opens its card («and N more» — the map's card). The notes of
+  beta.7 told of it, but it did not work.
+- To check: on prt_fild08 Ctrl+F → «pay_dun00» → «By Kafra … on the minimap ›»: the line leads to the north exit to
+  prontera, under the map «→ Prontera City · 4 left»; in Prontera — to the Kafra by the south gate. The log has the
+  lines `route: …`.
+
 # uaRO Graphics 3.0.11-beta.8 — what is new
 
 - **«How to get there» in a map's card** (the «Reference» window, Ctrl+F): the way from the map you stand on:
