@@ -1,3 +1,18 @@
+# uaRO Graphics 3.0.11-beta.31 — what is new
+
+- **The new minimap — a new look** (as in the concept): a 220 px square with gold corners, a bar under it with the
+  location's name and your cell, you a blue arrow where the camera looks with its view; portals blue rings, Kafra a
+  pink «K». The map smoothed, no blocks.
+- **The + and − buttons** (the map's bottom left) and the mouse wheel over it — from 40 cells to the whole location.
+  The «⤢» button — **the map on the whole screen**: all of the location, the portals named («→ Prontera City»), the
+  way, you; closed by «✕», Esc or «⤢» again; a click on a portal opens its location in «Reference».
+- **The details under the map fold** («▾» at the bar's right), kept for the next games; the monsters in a box apart.
+- **The way goes round obstacles**: the line to the portal along walkable cells (not straight through walls), gold.
+- **The way drawn on the ground itself**: a gold strip from you to the portal; characters and walls before it hide it.
+- «Lead on the minimap» in «Reference» no longer closes the window — the page says it is followed.
+- To check: Ctrl+F → a location → «Lead»; on the minimap + / − / the wheel, «⤢», «▾»; the line on the ground; the
+  log's `ground way:` and `minimap: the camera looks …` lines (the arrow the camera's way).
+
 # uaRO Graphics 3.0.11-beta.30 — what is new
 
 - **«Reference»: a «Home» button** (a house) in the header on every page but the first screen itself — the world
