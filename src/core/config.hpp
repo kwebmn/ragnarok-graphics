@@ -553,6 +553,9 @@ struct Config {
     // 3.0.11-beta.65: [interface] minimap_reach - the concept's «Подсветка, куда можно дойти», an experiment (off): the
     // minimap and its big map dim what the player cannot reach on foot (walkgrid parts)
     bool minimapReach = false;
+    // 3.0.11-beta.72 (the owner: «сами картинки карт маленькие и не аккуратные»): [interface] minimap_hd - the map's
+    // picture four times bigger when the game has one (the AI pack's, the old client's texture_x4.zip); on
+    bool minimapHd = true;
     // 3.0.11-beta.35: [interface] buffs - stage 7 of the new interface (the HUD, the buffs first; the owner's approved
     // column, the row a choice): the game's own status icons hidden, the driver's under the minimap (core/buff_panel)
     BuffsLook buffs = BuffsLook::Off;

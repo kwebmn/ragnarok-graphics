@@ -4913,6 +4913,16 @@ constexpr Entry kTexts[] = {
      "Новая миникарта и её большая карта затемняют всё, куда отсюда не дойти пешком, — другие части карты (этажи, "
      "островки, уступы) по данным самого сервера. Эксперимент: люди, монстры и ловушки не учтены; после телепорта "
      "подсветка появляется, как только игра знает вашу клетку."},
+    // 3.0.11-beta.72 (the owner: «сами картинки карт маленькие и не аккуратные»)
+    {Text::InterfaceMinimapHd, "Sharp map pictures", "Чіткі картинки карт", "Чёткие картинки карт"},
+    {Text::InterfaceMinimapHdHint,
+     "The new minimap and its big map take the map's picture four times bigger when the game has one - from the AI "
+     "texture pack (uaro-textures.zip) or the old client's texture_x4.zip. Off: the game's own picture, 512 x 512.",
+     "Нова мінікарта та її велика карта беруть картинку карти вчетверо більшу, якщо вона є в грі, — з пака текстур "
+     "ШІ (uaro-textures.zip) або з texture_x4.zip старого клієнта. Вимкнено: власна картинка гри, 512 x 512.",
+     "Новая миникарта и её большая карта берут картинку карты в четыре раза больше, если она есть в игре, — из пака "
+     "текстур ИИ (uaro-textures.zip) или из texture_x4.zip старого клиента. Выключено: собственная картинка игры, "
+     "512 x 512."},
     // 3.0.11-beta.33
     {Text::InterfaceMinimapWay, "The way on the ground", "Шлях на землі", "Путь на земле"},
     {Text::InterfaceMinimapWayHint,

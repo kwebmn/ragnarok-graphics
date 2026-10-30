@@ -883,6 +883,22 @@ TEST(config_reads_the_reach_on_the_minimap) {
     CHECK(u.next.minimapReach);
 }
 
+// 3.0.11-beta.72 (the owner: «сами картинки карт маленькие и не аккуратные»): [interface] minimap_hd - the map's
+// picture four times bigger when the game has one (the AI pack's, the old client's texture_x4.zip); on by default, a
+// box of «Інтерфейс», applied at once
+TEST(config_reads_the_sharp_map_pictures) {
+    CHECK(parseConfig("").minimapHd);
+    CHECK(!parseConfig("[interface]\nminimap_hd = 0\n").minimapHd);
+    const settings::IniSetting* s = settings::findSetting("interface.minimap_hd");
+    CHECK(s != nullptr);
+    if (!s) return;
+    CHECK(s->page == settings::Page::Interface && s->control == settings::Control::Check);
+    CHECK_EQ(settings::tokenOf(*s, parseConfig("[interface]\nminimap_hd = 0\n")), std::string("0"));
+    CHECK(appliesNow("interface.minimap_hd"));
+    const LiveUpdate u = liveUpdate(parseConfig(""), parseConfig("[interface]\nminimap_hd = 0\n"));
+    CHECK(!u.next.minimapHd);
+}
+
 // 3.0.11-beta.33 (the owner: «полоска с маршрутом может лучше бы была выполнена такими типа следами типа шажков»):
 // [interface] minimap_way - the way on the ground as footprints (steps), the strip (line) or none; a choice of
 // «Інтерфейс», applied at once

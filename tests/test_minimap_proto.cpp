@@ -233,123 +233,95 @@ TEST(minimap_proto_way_zoom_and_big_map) {
     CHECK_EQ(minimap::bigMarkAt(b, sc, b.map.x + wx, b.map.y + wy), 0);
 }
 
-namespace {
-
-// The map's pixels as 3.0.11-beta.31..56 worked them out pixel by pixel (minimap_proto.cpp mapPixels then) - the
-// faster one must give the very same picture
-void mapPixelsBefore(panel::Picture& out, const panel::Box& box, const minimap::Scene& sc, const minimap::View& v) {
-    const bool picture = sc.argb && sc.imgW > 0 && sc.imgH > 0 && sc.map.w > 0 && sc.map.h > 0 && v.cellPx > 0 &&
-                         sc.argb->size() >= size_t(sc.imgW) * size_t(sc.imgH);
-    for (int y = 0; y < int(box.h); ++y) {
-        const int ty = int(box.y) + y;
-        if (ty < 0 || ty >= out.height) continue;
-        const float cy = v.top - (float(y) + 0.5f) / v.cellPx;
-        for (int x = 0; x < int(box.w); ++x) {
-            const int tx = int(box.x) + x;
-            if (tx < 0 || tx >= out.width) continue;
-            uint32_t c = 0xFF141922;
-            const float cx = v.left + (float(x) + 0.5f) / v.cellPx;
-            if (picture && cx >= 0 && cy >= 0 && cx < float(sc.map.w) && cy < float(sc.map.h)) {
-                const float fx = std::clamp(cx / float(sc.map.w) * float(sc.imgW) - 0.5f, 0.0f, float(sc.imgW - 1));
-                const float fy = std::clamp((float(sc.map.h) - cy) / float(sc.map.h) * float(sc.imgH) - 0.5f, 0.0f,
-                                            float(sc.imgH - 1));
-                const int x0 = int(fx), y0 = int(fy), x1 = std::min(x0 + 1, sc.imgW - 1),
-                          y1 = std::min(y0 + 1, sc.imgH - 1);
-                const auto px = [&](int ix, int iy) { return (*sc.argb)[size_t(iy) * size_t(sc.imgW) + size_t(ix)]; };
-                const auto keyed = [](uint32_t q) { return (q & 0xFFFFFF) == 0xFF00FF || (q >> 24) == 0; };
-                const uint32_t q[4] = {px(x0, y0), px(x1, y0), px(x0, y1), px(x1, y1)};
-                const float wx = fx - float(x0), wy = fy - float(y0);
-                if (keyed(q[0]) || keyed(q[1]) || keyed(q[2]) || keyed(q[3])) {
-                    const uint32_t n = q[(wy >= 0.5f ? 2 : 0) + (wx >= 0.5f ? 1 : 0)];
-                    if (!keyed(n)) c = 0xFF000000 | (n & 0xFFFFFF);
-                } else {
-                    uint32_t mixed = 0xFF000000;
-                    for (int sh = 0; sh <= 16; sh += 8) {
-                        const float top = float((q[0] >> sh) & 0xFF) * (1 - wx) + float((q[1] >> sh) & 0xFF) * wx;
-                        const float low = float((q[2] >> sh) & 0xFF) * (1 - wx) + float((q[3] >> sh) & 0xFF) * wx;
-                        mixed |= uint32_t(top * (1 - wy) + low * wy + 0.5f) << sh;
-                    }
-                    c = mixed;
-                }
-            }
-            out.px[size_t(ty) * size_t(out.width) + size_t(tx)] = c;
-        }
-    }
+// 3.0.11-beta.72 (the owner: «сами картинки карт маленькие и не аккуратные», «розовые полосы по краям»): the game's
+// magenta and the pinkish pixels an upscale smudges round it are see-through; the map's picture premultiplied and
+// halved level by level
+TEST(minimap_proto_pink_keyed_and_levels) {
+    CHECK(minimap::keyedPink(0xFFFF00FF) && minimap::keyedPink(0xFFFA14F0) && minimap::keyedPink(0x00123456));
+    CHECK(!minimap::keyedPink(0xFFC878C8) && !minimap::keyedPink(0xFF20A040) && !minimap::keyedPink(0xFF808080));
+    std::vector<uint32_t> argb(4 * 4, 0xFF20A040);
+    argb[0] = 0xFFFF00FF;  // magenta in the top left corner
+    argb[1] = 0xFFF010E8;  // and an upscale's pink by it
+    const minimap::MapPicture m = minimap::prepare(argb, 4, 4);
+    CHECK_EQ(m.levels.size(), size_t(3));  // 4, 2, 1
+    if (m.levels.size() != 3) return;
+    CHECK(m.levels[0].w == 4 && m.levels[1].w == 2 && m.levels[2].w == 1);
+    CHECK(m.levels[0].px[0] == 0u && m.levels[0].px[1] == 0u && m.levels[0].px[5] == 0xFF20A040u);
+    const uint32_t corner = m.levels[1].px[0];  // two see-through of four: half covered, its colour green
+    CHECK((corner >> 24) >= 0x7E && (corner >> 24) <= 0x81 && ((corner >> 8) & 0xFF) > ((corner >> 16) & 0xFF));
 }
 
-// A map's picture of the game's colours, its magenta (see-through) and a few pixels with no alpha
-std::vector<uint32_t> noisyPicture(int w, int h, uint32_t seed) {
-    std::vector<uint32_t> out(size_t(w) * size_t(h));
-    for (uint32_t& p : out) {
-        seed = seed * 1664525u + 1013904223u;
-        const uint32_t pick = seed >> 28;
-        p = pick == 0 ? 0xFFFF00FFu : pick == 1 ? (seed & 0x00FFFFFFu) : 0xFF000000u | (seed >> 4 & 0xFFFFFFu);
+// 3.0.11-beta.72: a lossy upscale's pink fringe (texture_x4.zip: its first ring round the key 98.6 % pinkish, the
+// second 35.8 %, further in 0.1 %) - pinkish within two pixels of the key see-through too; further in, a purple stays
+TEST(minimap_proto_prepare_drops_the_pink_fringe) {
+    std::vector<uint32_t> argb(16 * 8, 0xFF20A040);
+    for (int y = 0; y < 8; ++y) {
+        argb[size_t(y * 16 + 0)] = 0xFFFF00FF;   // the key, the first column
+        argb[size_t(y * 16 + 1)] = 0xFFA050A0;   // the first ring
+        argb[size_t(y * 16 + 2)] = 0xFF604060;   // the second
+        argb[size_t(y * 16 + 3)] = 0xFF604060;   // the third: kept
+        argb[size_t(y * 16 + 10)] = 0xFFA050A0;  // a purple far from the key: kept
     }
-    return out;
+    const minimap::MapPicture m = minimap::prepare(argb, 16, 8);
+    CHECK(!m.levels.empty());
+    if (m.levels.empty()) return;
+    const std::vector<uint32_t>& px = m.levels[0].px;
+    CHECK_EQ(px[size_t(3 * 16 + 1)], 0u);
+    CHECK_EQ(px[size_t(3 * 16 + 2)], 0u);
+    CHECK_EQ(px[size_t(3 * 16 + 3)], 0xFF604060u);
+    CHECK_EQ(px[size_t(3 * 16 + 10)], 0xFFA050A0u);
+    CHECK_EQ(px[size_t(3 * 16 + 5)], 0xFF20A040u);
 }
 
-}  // namespace
+// 3.0.11-beta.72: an AI picture's soft edge (the pack's pictures keep the key as alpha) - premultiplied, not opaque
+TEST(minimap_proto_prepare_keeps_soft_alpha) {
+    std::vector<uint32_t> argb = {0x80FF0000, 0xFF0000FF, 0x00FFFFFF, 0x40404040};
+    const minimap::MapPicture m = minimap::prepare(argb, 2, 2);
+    CHECK_EQ(m.levels.size(), size_t(2));
+    const uint32_t half = m.levels[0].px[0];
+    CHECK_EQ(half >> 24, 0x80u);
+    CHECK(((half >> 16) & 0xFF) >= 0x7F && ((half >> 16) & 0xFF) <= 0x81 && (half & 0xFFFF) == 0);
+    CHECK_EQ(m.levels[0].px[1], 0xFF0000FFu);
+    CHECK_EQ(m.levels[0].px[2], 0u);
+    CHECK_EQ(m.levels[0].px[3] >> 24, 0x40u);
+    CHECK(((m.levels[0].px[3] >> 16) & 0xFF) <= 0x11);
+}
 
-// 3.0.11-beta.57 (R-T942DZ: the minimap painted again at each step - 15.6 ms at 4K): the map's pixels worked out
-// faster, the same as before to the last bit - the big map (the whole map fitted) and the minimap round the player,
-// its view past the map's edge too (the ground's colour there)
-TEST(minimap_proto_map_pixels_as_before) {
-    struct Case {
-        int imgW, imgH;
-        minimap::MapSize map;
-        int targetW, targetH;
-        float scale;
-    };
-    const Case cases[] = {{512, 512, {400, 400}, 3839, 2159, 2.0f}, {512, 512, {312, 392}, 1920, 1080, 1.0f},
-                          {333, 257, {50, 80}, 1280, 720, 1.5f},   {2, 3, {100, 100}, 1280, 720, 1.0f},
-                          {1, 1, {40, 30}, 1920, 1080, 1.25f}};
-    uint32_t seed = 7;
-    for (const Case& c : cases) {
-        const std::vector<uint32_t> argb = noisyPicture(c.imgW, c.imgH, seed += 101);
-        minimap::Scene sc;
-        sc.argb = &argb;
-        sc.imgW = c.imgW;
-        sc.imgH = c.imgH;
-        sc.map = c.map;
-        const minimap::Big b = minimap::bigLayout(c.targetW, c.targetH, c.scale, c.map);
-        panel::Picture now, before;
-        minimap::paintBigMap(now, b, sc);
-        before.width = now.width;
-        before.height = now.height;
-        before.px.assign(now.px.size(), 0xFF141922);
-        minimap::View whole;
-        whole.cellPx = b.map.w / float(c.map.w);
-        whole.top = float(c.map.h);
-        mapPixelsBefore(before, panel::Box{0, 0, b.map.w, b.map.h}, sc, whole);
-        CHECK(now.px == before.px);
-        // the minimap: zoomed in (the view inside the map), the whole map (past its edges), the player in a corner
-        const minimap::Layout L = minimap::layout(c.targetW, c.targetH, c.scale, false, 0);
-        for (const auto& [player, step] : {std::pair{minimap::Cell{c.map.w / 2, c.map.h / 2}, minimap::kZoomFirst},
-                                           std::pair{minimap::Cell{c.map.w / 3, c.map.h - 2}, minimap::kZoomSteps - 1},
-                                           std::pair{minimap::Cell{1, 1}, 0}}) {
-            sc.player = player;
-            sc.cells = minimap::cellsAt(step, c.map);
-            minimap::paint(now, L, sc, minimap::Texts{});
-            before = panel::Picture{};
-            before.width = now.width;
-            before.height = now.height;
-            before.px.assign(now.px.size(), 0u);
-            mapPixelsBefore(before, L.map, sc, minimap::view(sc.map, sc.player, sc.cells, int(L.map.w)));
-            // away from the square's rim, its corners, its buttons and the player's mark
-            float mx = 0, my = 0;
-            minimap::cellToPanel(minimap::view(sc.map, sc.player, sc.cells, int(L.map.w)), sc.map, sc.player, mx, my);
-            const float reach = 12 * L.s + 3;
-            int same = 0, other = 0;
-            for (int y = int(L.map.h * 0.1f); y < int(L.map.h * 0.4f); ++y)
-                for (int x = int(L.map.w * 0.2f); x < int(L.map.w * 0.9f); ++x) {
-                    if (std::hypot(float(x) + 0.5f - mx, float(y) + 0.5f - my) < reach) continue;
-                    const size_t i = size_t(y) * size_t(now.width) + size_t(x);
-                    ++(now.px[i] == before.px[i] ? same : other);
-                }
-            CHECK(same > 0);
-            CHECK_EQ(other, 0);
-        }
+// The map's edge into the ground smooth and never pink; far out the picture's level whose pixels match the view's
+TEST(minimap_proto_edges_smooth_and_far_levels) {
+    // a field of green, the game's magenta round it with an upscale's pink between them
+    std::vector<uint32_t> argb(64 * 64, 0xFFFF00FF);
+    for (int y = 8; y < 56; ++y)
+        for (int x = 8; x < 56; ++x) argb[size_t(y * 64 + x)] = 0xFF20A040;
+    for (int i = 7; i < 57; ++i) argb[size_t(7 * 64 + i)] = argb[size_t(i * 64 + 7)] = 0xFFE628DC;  // pinkish
+    minimap::Scene sc;
+    sc.argb = &argb;
+    sc.imgW = sc.imgH = 64;
+    sc.map = minimap::MapSize{64, 64};
+    const minimap::Big b = minimap::bigLayout(1920, 1080, 1.0f, sc.map);
+    panel::Picture pic;
+    minimap::paintBigMap(pic, b, sc);
+    int pink = 0, blend = 0;
+    for (const uint32_t c : pic.px) {
+        const int r = int((c >> 16) & 0xFF), g = int((c >> 8) & 0xFF), bl = int(c & 0xFF);
+        pink += r > g + 40 && bl > g + 40 && r > 0x60;  // a pink tint anywhere
+        blend += g > 0x30 && g < 0x90;                  // a step between the field and the ground
     }
+    CHECK_EQ(pink, 0);
+    CHECK(blend > 0);
+    // a fine checkerboard far out: its average grey, no shimmer of whole black or white
+    std::vector<uint32_t> board(512 * 512);
+    for (int y = 0; y < 512; ++y)
+        for (int x = 0; x < 512; ++x) board[size_t(y * 512 + x)] = (x + y) % 2 ? 0xFFFFFFFF : 0xFF000000;
+    const minimap::MapPicture m = minimap::prepare(board, 512, 512);
+    minimap::Scene far;
+    far.picture = &m;
+    far.map = minimap::MapSize{128, 128};
+    const minimap::Big fb = minimap::bigLayout(400, 300, 1.0f, far.map);  // about 2 pixels a cell: 512 -> ~250
+    minimap::paintBigMap(pic, fb, far);
+    int extreme = 0;
+    for (const uint32_t c : pic.px) extreme += (c & 0xFF) < 0x40 || (c & 0xFF) > 0xC0;
+    CHECK_EQ(extreme, 0);
 }
 
 // 3.0.11-beta.57: the camera's fan worked out only near it - the arrow and its fan as before, turned every way

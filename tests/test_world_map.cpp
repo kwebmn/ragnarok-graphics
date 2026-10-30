@@ -72,6 +72,20 @@ TEST(world_map_thumbnail) {
     CHECK(worldmap::thumbnail(picture, 40, 20, 0).width == 0 && worldmap::thumbnail({}, 0, 0, 16).width == 0);
 }
 
+// 3.0.11-beta.72 (the owner: «розовые полосы по краям»): the pinkish pixels round the game's magenta see-through too
+TEST(world_map_pinkish_is_see_through) {
+    worldmap::Sheet sh;
+    CHECK(worldmap::parse(kSheet, sh));
+    std::vector<uint32_t> sheet(size_t(sh.w) * size_t(sh.h), worldmap::kGround);
+    std::vector<uint32_t> picture(40 * 40, 0xFF20A040);  // a green field, its top two rows a smudged magenta
+    for (int i = 0; i < 80; ++i) picture[size_t(i)] = i % 2 ? 0xFFF010E8 : 0xFFFA14F0;
+    worldmap::put(sheet, sh.w, sh.h, sh.world[0], picture, 40, 40);
+    CHECK_EQ(sheet[size_t(10 * sh.w + 20)], worldmap::kGround);  // the sea shows, no pink
+    CHECK_EQ(sheet[size_t(20 * sh.w + 20)], 0xFF20A040u);
+    const panel::Picture t = worldmap::thumbnail(picture, 40, 40, 20);
+    CHECK_EQ(t.px[size_t(0 * 20 + 5)], worldmap::kGround);
+}
+
 // 3.0.11-beta.29: the concept's zoom (v19_route) - a view's fit, zooming round the pointer, the view on a part, the
 // sheet smooth when zoomed in
 TEST(world_map_view_zoom_and_pan) {

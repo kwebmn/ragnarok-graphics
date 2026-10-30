@@ -186,6 +186,10 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("minimap_reach", flag(running.minimapReach), flag(file.minimapReach)));
         n.minimapReach = file.minimapReach;
     }
+    if (file.minimapHd != running.minimapHd) {  // 3.0.11-beta.72: the maps' pictures, at once
+        u.applied.push_back(change("minimap_hd", flag(running.minimapHd), flag(file.minimapHd)));
+        n.minimapHd = file.minimapHd;
+    }
     if (file.minimapWay != running.minimapWay) {  // 3.0.11-beta.33: the way on the ground, at once
         u.applied.push_back(
             change("minimap_way", wayOnGroundToken(running.minimapWay), wayOnGroundToken(file.minimapWay)));

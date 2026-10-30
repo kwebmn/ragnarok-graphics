@@ -56,6 +56,25 @@ Part partAt(const Layout& L, float x, float y);
 enum class BigPart : uint8_t { None, Header, Close, Map };  // the big map's (below)
 int lineAt(const Layout& L, float y);  // the details' line under y, -1 none
 
+// 3.0.11-beta.72 (the owner: «сами картинки карт маленькие и не аккуратные», «розовые полосы по краям»): the map's
+// picture ready to be shown - the game's magenta and the pinkish pixels an upscale smudges round it see-through
+// (keyedPink; and pinkish ones within two pixels of the key - a lossy WebP's fringe), premultiplied, halved down
+// level by level (each pixel the average of four): a view takes the smallest level with as many pixels a cell as it
+// shows, between its four nearest pixels - the edges smooth into the ground, no pink, no shimmer far out
+struct MapPicture {
+    struct Level {
+        int w = 0, h = 0;
+        std::vector<uint32_t> px;  // premultiplied
+    };
+    std::vector<Level> levels;  // the picture's own size first
+};
+// See-through: no alpha, or min(red, blue) over green by more than 110 (inline: the world map's too, without the rest)
+inline bool keyedPink(uint32_t argb) {
+    const int r = int((argb >> 16) & 0xFF), g = int((argb >> 8) & 0xFF), b = int(argb & 0xFF);
+    return !(argb >> 24) || (r < b ? r : b) - g > 110;
+}
+MapPicture prepare(const std::vector<uint32_t>& argb, int width, int height);
+
 // What the map shows
 enum class Glyph : uint8_t { Dot, Kafra, Warp };
 struct Mark {
@@ -67,6 +86,7 @@ struct Mark {
 struct Scene {
     const std::vector<uint32_t>* argb = nullptr;  // the map's own picture (the game's), the whole map, rows north first
     int imgW = 0, imgH = 0;
+    const MapPicture* picture = nullptr;  // 3.0.11-beta.72: it prepared (prepare); none: argb's made each painting
     MapSize map;
     Cell player;
     float lookX = 0, lookY = 0;  // where the camera looks along the ground (east, north); 0, 0 not known: a dot

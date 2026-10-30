@@ -4,6 +4,7 @@
 #include <cmath>
 
 #include "core/json.hpp"
+#include "core/minimap_proto.hpp"
 
 namespace uagfx::worldmap {
 
@@ -41,7 +42,7 @@ void put(std::vector<uint32_t>& sheet, int sheetW, int sheetH, const Tile& t, co
                 for (int px = x0; px < std::min(x1, w); ++px) {
                     const uint32_t c = argb[size_t(py) * size_t(w) + size_t(px)];
                     ++all;
-                    if ((c & 0xFFFFFF) == 0xFF00FF || (c >> 24) == 0) continue;  // the game's see-through
+                    if (minimap::keyedPink(c)) continue;  // the game's see-through (3.0.11-beta.72: and its smudges)
                     r += (c >> 16) & 0xFF;
                     g += (c >> 8) & 0xFF;
                     b += c & 0xFF;

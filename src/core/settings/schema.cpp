@@ -106,6 +106,9 @@ const std::vector<IniSetting>& iniSettings() {
         // 3.0.11-beta.65: where one can walk from here - the concept's experiment
         {"interface", "minimap_reach", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {},
          Text::InterfaceMinimapReach, Text::InterfaceMinimapReachHint, ""},
+        // 3.0.11-beta.72: the maps' pictures four times bigger when the game has them
+        {"interface", "minimap_hd", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {},
+         Text::InterfaceMinimapHd, Text::InterfaceMinimapHdHint, ""},
         // 3.0.11-beta.33: the way followed on the ground - footprints, a strip or none
         {"interface", "minimap_way", Page::Interface, Control::Choice, 0, 0, 0, {"steps", "line", "off"},
          {Text::InterfaceMinimapWaySteps, Text::InterfaceMinimapWayLine, Text::InterfaceMinimapWayOff},
@@ -946,6 +949,7 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "interface.minimap_warps") return c.minimapWarps ? "1" : "0";
     if (k == "interface.minimap_mobs") return c.minimapMobs ? "1" : "0";
     if (k == "interface.minimap_reach") return c.minimapReach ? "1" : "0";  // 3.0.11-beta.65
+    if (k == "interface.minimap_hd") return c.minimapHd ? "1" : "0";        // 3.0.11-beta.72
     if (k == "interface.minimap_way") return wayOnGroundToken(c.minimapWay);  // 3.0.11-beta.33
     if (k == "interface.buffs") return buffsLookToken(c.buffs);               // 3.0.11-beta.35
     if (k == "interface.buffs_overflow") return buffsOverflowToken(c.buffsOverflow);  // 3.0.11-beta.63

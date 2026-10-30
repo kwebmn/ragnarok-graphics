@@ -173,9 +173,6 @@ void roundCorners(panel::Picture& p, const panel::Box& b, float r) {
         }
 }
 
-// The map's picture through a view into a box of the picture: each pixel its cell's (the game's magenta: none).
-// 3.0.11-beta.57 (R-T942DZ: the minimap painted again at each step, 15.6 ms at 4K): what a column or a row of the box
-// takes from the picture worked out once for it, not for each of its pixels - the same numbers, the same picture
 // 3.0.11-beta.65: a cell not reached on foot - its picture at 40 %, still seen
 uint32_t dimmed(uint32_t argb) {
     uint32_t out = argb & 0xFF000000;
@@ -183,14 +180,96 @@ uint32_t dimmed(uint32_t argb) {
     return out;
 }
 
+// 3.0.11-beta.72: two pixels mixed, `t` of 256 the second's share - the four channels at once, two in each half
+uint32_t mix(uint32_t a, uint32_t b, uint32_t t) {
+    const uint32_t rb = ((a & 0x00FF00FFu) * (256 - t) + (b & 0x00FF00FFu) * t) >> 8;
+    const uint32_t ag = ((a >> 8) & 0x00FF00FFu) * (256 - t) + ((b >> 8) & 0x00FF00FFu) * t;
+    return (rb & 0x00FF00FFu) | (ag & 0xFF00FF00u);
+}
+
+// A premultiplied pixel over the ground (its channels never past its alpha: no carry between them)
+uint32_t overGround(uint32_t p) {
+    const uint32_t a = p >> 24, keep = 256 - a - (a >> 7);
+    const uint32_t rb = (((kGround & 0x00FF00FFu) * keep) >> 8) & 0x00FF00FFu;
+    const uint32_t g = (((kGround >> 8) & 0xFFu) * keep) & 0xFF00u;
+    return 0xFF000000u | ((p & 0x00FFFFFFu) + rb + g);
+}
+
+}  // namespace
+
+MapPicture prepare(const std::vector<uint32_t>& argb, int width, int height) {
+    MapPicture m;
+    if (width <= 0 || height <= 0 || argb.size() < size_t(width) * size_t(height)) return m;
+    MapPicture::Level first{width, height, std::vector<uint32_t>(size_t(width) * size_t(height))};
+    std::vector<uint8_t> key(first.px.size());
+    for (size_t i = 0; i < key.size(); ++i) key[i] = keyedPink(argb[i]);
+    // a lossy upscale's pink fringe (texture_x4.zip: the first ring round the key 98.6 % pinkish, the second 35.8 %,
+    // further in 0.1 % - the maps' own colours): pinkish within two pixels of the key
+    const auto fringe = [&](int x, int y) {
+        for (int v = std::max(0, y - 2); v <= std::min(height - 1, y + 2); ++v)
+            for (int u = std::max(0, x - 2); u <= std::min(width - 1, x + 2); ++u)
+                if (key[size_t(v) * size_t(width) + size_t(u)]) return true;
+        return false;
+    };
+    for (int y = 0; y < height; ++y)
+        for (int x = 0; x < width; ++x) {  // the game's pictures opaque but for their key, the AI's soft
+            const size_t i = size_t(y) * size_t(width) + size_t(x);
+            const uint32_t c = argb[i], a = c >> 24;
+            const int r = int((c >> 16) & 0xFF), g = int((c >> 8) & 0xFF), b = int(c & 0xFF);
+            if (key[i] || (std::min(r, b) - g > 20 && fringe(x, y))) continue;
+            uint32_t p = a << 24;
+            for (int sh = 0; sh <= 16; sh += 8) p |= ((((c >> sh) & 0xFF) * a + 127) / 255) << sh;
+            first.px[i] = p;
+        }
+    m.levels.push_back(std::move(first));
+    while (m.levels.back().w > 1 || m.levels.back().h > 1) {  // halved down to a pixel: each the average of four
+        const MapPicture::Level& up = m.levels.back();
+        MapPicture::Level next{std::max(1, up.w / 2), std::max(1, up.h / 2), {}};
+        next.px.resize(size_t(next.w) * size_t(next.h));
+        for (int y = 0; y < next.h; ++y) {
+            const uint32_t* a = up.px.data() + size_t(std::min(2 * y, up.h - 1)) * size_t(up.w);
+            const uint32_t* b = up.px.data() + size_t(std::min(2 * y + 1, up.h - 1)) * size_t(up.w);
+            for (int x = 0; x < next.w; ++x) {
+                const int x0 = std::min(2 * x, up.w - 1), x1 = std::min(2 * x + 1, up.w - 1);
+                uint32_t out = 0;
+                for (int sh = 0; sh <= 24; sh += 8) {
+                    const uint32_t sum = ((a[x0] >> sh) & 0xFF) + ((a[x1] >> sh) & 0xFF) + ((b[x0] >> sh) & 0xFF) +
+                                         ((b[x1] >> sh) & 0xFF);
+                    out |= ((sum + 2) / 4) << sh;
+                }
+                next.px[size_t(y) * size_t(next.w) + size_t(x)] = out;
+            }
+        }
+        m.levels.push_back(std::move(next));
+    }
+    return m;
+}
+
+namespace {
+
+// The map's picture through a view into a box of the picture: each pixel its cell's (the game's magenta: none).
+// 3.0.11-beta.57 (R-T942DZ: the minimap painted again at each step, 15.6 ms at 4K): what a column or a row of the box
+// takes from the picture worked out once for it, not for each of its pixels - the same numbers, the same picture
 void mapPixels(panel::Picture& out, const panel::Box& box, const Scene& sc, const View& v) {
-    const bool picture = sc.argb && sc.imgW > 0 && sc.imgH > 0 && sc.map.w > 0 && sc.map.h > 0 && v.cellPx > 0 &&
-                         sc.argb->size() >= size_t(sc.imgW) * size_t(sc.imgH);
+    // 3.0.11-beta.72: the prepared picture (made here of argb for a scene without one - the tests); the smallest level
+    // with as many pixels a cell as the view shows
+    MapPicture made;
+    const MapPicture* pic = sc.picture;
+    if (!pic && sc.argb && sc.imgW > 0 && sc.imgH > 0 && sc.argb->size() >= size_t(sc.imgW) * size_t(sc.imgH)) {
+        made = prepare(*sc.argb, sc.imgW, sc.imgH);
+        pic = &made;
+    }
+    const MapPicture::Level* lv = nullptr;
+    if (pic && !pic->levels.empty() && sc.map.w > 0 && sc.map.h > 0 && v.cellPx > 0) {
+        const float need = v.cellPx * float(sc.map.w);
+        for (const MapPicture::Level& l : pic->levels)
+            if (!lv || float(l.w) >= need * 0.999f) lv = &l;
+    }
     struct Column {
-        int at;     // the out picture's x
-        bool in;    // over the map
-        int x0, x1;  // the picture's two columns
-        float wx;    // between them
+        int at;      // the out picture's x
+        bool in;     // over the map
+        int x0, x1;  // the level's two columns
+        uint32_t wx;  // between them, of 256
         int cell;    // 3.0.11-beta.65: the map's cell column under it
     };
     // 3.0.11-beta.65: the cells not reached from the player dimmed (the reached ones as they are)
@@ -205,52 +284,40 @@ void mapPixels(panel::Picture& out, const panel::Box& box, const Scene& sc, cons
         Column c{tx, false, 0, 0, 0, 0};
         const float cx = v.left + (float(x) + 0.5f) / v.cellPx;
         c.cell = std::clamp(int(std::floor(cx)), 0, std::max(0, sc.map.w - 1));
-        if (picture && cx >= 0 && cx < float(sc.map.w)) {
-            // 3.0.11-beta.31: between the picture's four nearest pixels (no blocks when zoomed in)
-            const float fx = std::clamp(cx / float(sc.map.w) * float(sc.imgW) - 0.5f, 0.0f, float(sc.imgW - 1));
+        if (lv && cx >= 0 && cx < float(sc.map.w)) {
+            const float fx = std::clamp(cx / float(sc.map.w) * float(lv->w) - 0.5f, 0.0f, float(lv->w - 1));
             c.in = true;
             c.x0 = int(fx);
-            c.x1 = std::min(c.x0 + 1, sc.imgW - 1);
-            c.wx = fx - float(c.x0);
+            c.x1 = std::min(c.x0 + 1, lv->w - 1);
+            c.wx = std::min(256u, uint32_t((fx - float(c.x0)) * 256.0f + 0.5f));
         }
         columns.push_back(c);
     }
-    const auto keyed = [](uint32_t q) { return (q & 0xFFFFFF) == 0xFF00FF || (q >> 24) == 0; };
     for (int y = 0; y < int(box.h); ++y) {
         const int ty = int(box.y) + y;
         if (ty < 0 || ty >= out.height) continue;
         uint32_t* row = out.px.data() + size_t(ty) * size_t(out.width);
         const float cy = v.top - (float(y) + 0.5f) / v.cellPx;
-        if (!picture || !(cy >= 0 && cy < float(sc.map.h))) {
+        if (!lv || !(cy >= 0 && cy < float(sc.map.h))) {
             for (const Column& c : columns) row[c.at] = kGround;
             continue;
         }
-        const float fy = std::clamp((float(sc.map.h) - cy) / float(sc.map.h) * float(sc.imgH) - 0.5f, 0.0f,
-                                    float(sc.imgH - 1));
-        const int y0 = int(fy), y1 = std::min(y0 + 1, sc.imgH - 1);
-        const float wy = fy - float(y0);
-        const uint32_t* top = sc.argb->data() + size_t(y0) * size_t(sc.imgW);
-        const uint32_t* low = sc.argb->data() + size_t(y1) * size_t(sc.imgW);
+        const float fy = std::clamp((float(sc.map.h) - cy) / float(sc.map.h) * float(lv->h) - 0.5f, 0.0f,
+                                    float(lv->h - 1));
+        const int y0 = int(fy), y1 = std::min(y0 + 1, lv->h - 1);
+        const uint32_t wy = std::min(256u, uint32_t((fy - float(y0)) * 256.0f + 0.5f));
+        const uint32_t* top = lv->px.data() + size_t(y0) * size_t(lv->w);
+        const uint32_t* low = lv->px.data() + size_t(y1) * size_t(lv->w);
         const uint8_t* reached =  // 3.0.11-beta.65: this row's cells
             reach ? reach->data() + size_t(std::clamp(int(std::floor(cy)), 0, sc.map.h - 1)) * size_t(sc.map.w)
                   : nullptr;
         for (const Column& c : columns) {
             uint32_t pixel = kGround;
             if (c.in) {
-                const uint32_t q[4] = {top[c.x0], top[c.x1], low[c.x0], low[c.x1]};
-                if (keyed(q[0]) || keyed(q[1]) || keyed(q[2]) || keyed(q[3])) {  // the game's magenta: the nearest
-                    const uint32_t n = q[(wy >= 0.5f ? 2 : 0) + (c.wx >= 0.5f ? 1 : 0)];
-                    if (!keyed(n)) pixel = 0xFF000000 | (n & 0xFFFFFF);
-                } else {
-                    uint32_t mixed = 0xFF000000;
-                    for (int sh = 0; sh <= 16; sh += 8) {
-                        const float t = float((q[0] >> sh) & 0xFF) * (1 - c.wx) + float((q[1] >> sh) & 0xFF) * c.wx;
-                        const float l = float((q[2] >> sh) & 0xFF) * (1 - c.wx) + float((q[3] >> sh) & 0xFF) * c.wx;
-                        mixed |= uint32_t(t * (1 - wy) + l * wy + 0.5f) << sh;
-                    }
-                    pixel = mixed;
-                }
-                if (reached && !reached[c.cell] && pixel != kGround) pixel = dimmed(pixel);
+                // between the four nearest, premultiplied - a see-through one adds nothing: the ground shows there
+                const uint32_t p = mix(mix(top[c.x0], top[c.x1], c.wx), mix(low[c.x0], low[c.x1], c.wx), wy);
+                pixel = overGround(p);
+                if (reached && !reached[c.cell] && (p >> 24)) pixel = dimmed(pixel);
             }
             row[c.at] = pixel;
         }

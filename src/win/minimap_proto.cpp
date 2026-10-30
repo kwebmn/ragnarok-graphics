@@ -28,6 +28,7 @@
 #include "win/game_files.hpp"
 #include "win/ground_way.hpp"
 #include "win/log.hpp"
+#include "win/map_hd.hpp"
 #include "win/paths.hpp"
 #include "win/picture_draw.hpp"
 #include "win/real_ddraw.hpp"
@@ -58,8 +59,14 @@ struct State {
     bool hidOld = false;      // the game's own window 14 deleted by us (the game makes it again on a new map)
     bool hideFailed = false;  // told once a map
     std::string map;
-    std::vector<uint32_t> argb;  // the map's own minimap picture (the game's), the whole map
+    // the map's own minimap picture (the game's), the whole map. 3.0.11-beta.72 (the owner: «сами картинки карт
+    // маленькие и не аккуратные», «розовые полосы по краям»): prepared (core minimap::prepare - its pinkish edges
+    // see-through, halved down level by level), and four times bigger once found (win/map_hd, [interface] minimap_hd)
+    minimap::MapPicture prepared;
     int picW = 0, picH = 0;
+    std::vector<uint8_t> bmp;  // its file: the AI pack's keys
+    std::shared_ptr<const minimap::MapPicture> hd;
+    bool hdOn = true, hdAsked = false;
     minimap::MapSize size;
     minimap::Cell cell;
     bool cellKnown = false;
@@ -141,17 +148,22 @@ State& state() {
 }
 
 void loadPicture(State& s) {
-    s.argb.clear();
+    s.prepared = minimap::MapPicture{};
     s.picW = s.picH = 0;
+    s.bmp.clear();
+    s.hd.reset();
+    s.hdAsked = false;
     if (!s.files) s.files = std::make_unique<gamefiles::Reader>(gameDir());
     std::vector<uint8_t> bytes;
+    std::vector<uint32_t> argb;
     std::string from;
     const std::string entry = "data\\texture\\" + kUi + "\\map\\" + s.map + ".bmp";
-    if (s.files->read(entry, bytes, &from) && pack::decodeBmp(bytes.data(), bytes.size(), s.argb, s.picW, s.picH)) {
+    if (s.files->read(entry, bytes, &from) && pack::decodeBmp(bytes.data(), bytes.size(), argb, s.picW, s.picH)) {
+        s.prepared = minimap::prepare(argb, s.picW, s.picH);
+        s.bmp = std::move(bytes);
         LOG_INFO("minimap: %s's picture %dx%d from %s", s.map.c_str(), s.picW, s.picH, from.c_str());
         return;
     }
-    s.argb.clear();
     s.picW = s.picH = 0;
     LOG_INFO("minimap: %s has no picture of its own - the ground alone", s.map.c_str());
 }
@@ -562,11 +574,33 @@ void reachFrame(State& s, bool on) {
     }
 }
 
+// 3.0.11-beta.72: the map's picture shown - four times bigger once found ([interface] minimap_hd), else the game's
+const minimap::MapPicture* shownPicture(const State& s) {
+    const minimap::MapPicture* p = s.hdOn && s.hd ? s.hd.get() : &s.prepared;
+    return p->levels.empty() ? nullptr : p;
+}
+
+// 3.0.11-beta.72: asked once a map with the switch on, shown when the thread has it (off: the game's at once)
+void hdFrame(State& s, bool on) {
+    if (on != s.hdOn) {
+        s.hdOn = on;
+        s.dirty = s.bigDirty = true;
+        LOG_INFO("minimap: the maps' bigger pictures %s ([interface] minimap_hd)", on ? "on" : "off");
+    }
+    if (!on) return;
+    if (!s.hdAsked) {
+        s.hdAsked = true;
+        maphd::ask(s.map, s.bmp);
+    }
+    if (std::shared_ptr<const minimap::MapPicture> p = maphd::take(s.map)) {
+        s.hd = std::move(p);
+        s.dirty = s.bigDirty = true;
+    }
+}
+
 minimap::Scene sceneOf(const State& s) {
     minimap::Scene sc;
-    sc.argb = &s.argb;
-    sc.imgW = s.picW;
-    sc.imgH = s.picH;
+    sc.picture = shownPicture(s);  // 3.0.11-beta.72 (no argb: never prepared again at each painting)
     sc.map = s.size;
     sc.player = s.cell;
     sc.lookX = s.lookX;
@@ -627,8 +661,9 @@ void renderBig(State& s) {
     s.bigLayout = minimap::bigLayout(s.targetW, s.targetH, s.scale, s.size);
     const uicost::Paint cost("big map", s.bigLayout.w, s.bigLayout.h);  // 3.0.11-beta.55 (beta.57: its size known)
     s.bigPaintedAt = GetTickCount64();
+    const int picture = sc.picture ? sc.picture->levels.front().w : 0;  // 3.0.11-beta.72: the game's or the bigger
     const std::string key = s.map + "|" + std::to_string(s.bigLayout.w) + "x" + std::to_string(s.bigLayout.h) + "|" +
-                            std::to_string(s.picW) + "|" + std::to_string(s.reach.empty() ? -1 : int(s.reachPart));
+                            std::to_string(picture) + "|" + std::to_string(s.reach.empty() ? -1 : int(s.reachPart));
     if (key != s.bigMapOf) {  // the map's picture at its size: made once
         s.bigMapOf = key;
         minimap::paintBigMap(s.bigMap, s.bigLayout, sc);
@@ -736,6 +771,7 @@ void frame(HWND game, const Show& show, double k, int targetWidth, int targetHei
         s.dirty = s.bigDirty = true;
         s.paintedAt = s.bigPaintedAt = 0;  // 3.0.11-beta.57: another map's at once, not the last one's a while
     }
+    hdFrame(s, show.hd);  // 3.0.11-beta.72
     // the game's own minimap, each time the game makes it again (a new map, Ctrl+Tab): hidden as Ctrl+Tab hides it
     if (gameMinimapShown()) {
         const bool again = s.hidOld && s.cellKnown;  // hidden on this map before: the game made it again

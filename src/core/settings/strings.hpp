@@ -467,6 +467,7 @@ enum class Text : uint16_t {
     InterfaceMinimapNpcs, InterfaceMinimapNpcsHint, InterfaceMinimapWarps, InterfaceMinimapWarpsHint,
     InterfaceMinimapMobs, InterfaceMinimapMobsHint,
     InterfaceMinimapReach, InterfaceMinimapReachHint,  // 3.0.11-beta.65
+    InterfaceMinimapHd, InterfaceMinimapHdHint,        // 3.0.11-beta.72
     InterfaceMinimapWay, InterfaceMinimapWayHint,
     InterfaceMinimapWaySteps, InterfaceMinimapWayLine, InterfaceMinimapWayOff, InterfaceBuffs, InterfaceBuffsHint,
     InterfaceBuffsOff, InterfaceBuffsColumn, InterfaceBuffsRow, BuffsNames, BuffsHideNames, BuffsMore, BuffsStar,
