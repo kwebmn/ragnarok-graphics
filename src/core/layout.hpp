@@ -91,6 +91,8 @@ constexpr const char* kHudLayout = "uaro-graphics\\hud-layout.txt";
 constexpr const char* kHotbarBars = "uaro-graphics\\hotbar-bars.txt";
 // 3.0.11-beta.79: the party's panel folded or not («folded 0|1»)
 constexpr const char* kPartyState = "uaro-graphics\\party-state.txt";
+// 3.0.11-beta.80: the party's members' looks as last seen («<account> <sex> <hair> <colour> <class> <level>» lines)
+constexpr const char* kPartyLooks = "uaro-graphics\\party-looks.txt";
 constexpr const char* kStatsState = "uaro-graphics\\stats-state.txt";
 // 2.14: the client patcher (app/client_patch): the list of the game's files last put, and where they arrive first
 constexpr const char* kClientPatchRecord = "uaro-graphics\\client-patch.txt";

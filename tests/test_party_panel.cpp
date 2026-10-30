@@ -95,3 +95,55 @@ TEST(party_panel_header_folds) {
     CHECK(std::any_of(fw.begin(), fw.end(), [](const partypanel::Words& x) { return x.text == "\xE2\x96\xB8"; }));
     CHECK(std::none_of(fw.begin(), fw.end(), [](const partypanel::Words& x) { return x.text == "Tor"; }));
 }
+
+// 3.0.11-beta.80 (the owner: «иконки можно сделать как лица персонажей?»): a member's face in its round, no letter
+TEST(party_panel_faces) {
+    std::vector<partypanel::Member> m = party();
+    panel::Picture face;
+    face.width = face.height = 20;
+    face.px.assign(400, 0xFFC08040u);  // premultiplied, opaque
+    m[0].face = &face;
+    const partypanel::Layout L = partypanel::layout(m.size(), 0, 0, 1.0f);
+    panel::Picture p;
+    p.width = L.w;
+    p.height = L.h;
+    p.px.assign(size_t(L.w) * size_t(L.h), 0u);
+    partypanel::paint(p, L, m, 30);
+    const partypanel::Row& r = L.rows[0];
+    const uint32_t middle =
+        p.px[size_t(int(r.round.y + r.round.h / 2)) * size_t(p.width) + size_t(int(r.round.x + r.round.w / 2))];
+    CHECK(((middle >> 16) & 0xFF) > 0xA0 && ((middle >> 8) & 0xFF) > 0x60 && (middle & 0xFF) < 0x60);
+    const uint32_t corner = p.px[size_t(int(r.round.y + 1)) * size_t(p.width) + size_t(int(r.round.x + 1))];
+    CHECK(((corner >> 16) & 0xFF) < 0x80);  // the round clips it: its corner not the face's
+    const std::vector<partypanel::Words> w = partypanel::words(L, m, 30, "офлайн", "Група");
+    CHECK(std::none_of(w.begin(), w.end(), [](const partypanel::Words& x) { return x.text == "T"; }));
+    CHECK(std::any_of(w.begin(), w.end(), [](const partypanel::Words& x) { return x.text == "M"; }));  // no face: M
+}
+
+// 3.0.11-beta.80 (the owner: «чтобы видить какие касты стоят у персонажей какимито маленькими иконками»): a member's
+// buffs as small icons under its bar, each with its time left under it when known; the row a line taller
+TEST(party_panel_member_buffs) {
+    std::vector<partypanel::Member> m = party();
+    panel::Picture icon;
+    icon.width = icon.height = 14;
+    icon.px.assign(14 * 14, 0xFF2050E0u);
+    m[0].buffs = {{&icon, 0.5f}, {&icon, -1.0f}};
+    const partypanel::Layout plain = partypanel::layout(partypanel::rowsOf(party()), 0, 0, 1.0f);
+    const partypanel::Layout L = partypanel::layout(partypanel::rowsOf(m), 0, 0, 1.0f);
+    CHECK(L.rows[0].box.h > plain.rows[0].box.h && L.rows[1].box.h == plain.rows[1].box.h && L.h > plain.h);
+    CHECK(L.rows[0].buffs.size() == 2 && inside(L.rows[0].box, L.rows[0].buffs[1]));
+    CHECK(L.rows[0].buffs[0].y >= L.rows[0].bar.y + L.rows[0].bar.h);
+    panel::Picture p;
+    p.width = L.w;
+    p.height = L.h;
+    p.px.assign(size_t(L.w) * size_t(L.h), 0u);
+    partypanel::paint(p, L, m, 30);
+    const panel::Box& b = L.rows[0].buffs[0];
+    const uint32_t c = p.px[size_t(int(b.y + b.h / 2)) * size_t(p.width) + size_t(int(b.x + b.w / 2))];
+    CHECK((c & 0xFF) > 0xC0 && ((c >> 16) & 0xFF) < 0x60);  // its icon
+    // more than fit: as many as the row holds
+    m[0].buffs.assign(40, partypanel::Buff{&icon, 0.3f});
+    const partypanel::Layout many = partypanel::layout(partypanel::rowsOf(m), 0, 0, 1.0f);
+    CHECK(!many.rows[0].buffs.empty() && many.rows[0].buffs.size() < 40);
+    CHECK(inside(many.rows[0].box, many.rows[0].buffs.back()));
+}

@@ -118,9 +118,19 @@ struct Casting {
     uint32_t ms = 0;
 };
 
+// 3.0.11-beta.80 (the owner: «иконки можно сделать как лица персонажей?»): a character in sight, as uAthena's
+// PACKETVER 7 sends it (clif.c clif_set0078/007b and their spawn): 0x022a standing and 0x022b come in - <unit>.L at 2,
+// <class>.W at 16, <hair>.W at 18, <hair colour>.W at 30, <sex>.B at 49, <level>.W at 56 (0x022b: at 55); 0x022c
+// walking - the hair colour at 34, the sex at 53, the level at 62. A player's unit is its account
+struct Appear {
+    uint32_t id = 0;
+    uint16_t job = 0, hair = 0, hairColour = 0, level = 0;
+    uint8_t sex = 0;
+};
+
 using Event = std::variant<std::monostate, Whisper, PartyInvite, TradeRequest, GuildInvite, FriendRequest, StatusIcon,
                            Vanish, SkillCast, Hit, PartyList, PartyMember, PartyLeft, PartyHp, PartyChat, GuildChat,
-                           Chat, Status, Pickup, StatusLong, Casting>;
+                           Chat, Status, Pickup, StatusLong, Casting, Appear>;
 
 // A packet as the game took it, `size` bytes of it readable: one of the above, or nothing (another packet, one cut
 // short or naming more bytes than there are).

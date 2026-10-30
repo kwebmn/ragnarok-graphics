@@ -288,3 +288,39 @@ TEST(packets_casting) {
     CHECK(k && k->source == 2000123 && k->target == 110000456 && k->skill == 19 && k->ms == 1650);
     CHECK(std::holds_alternative<std::monostate>(packets::parse(c.data(), 23)));  // cut short
 }
+
+// 3.0.11-beta.80 (the owner: «иконки можно сделать как лица персонажей?»): a character in sight - 0x022a (standing),
+// 0x022b (come in), 0x022c (walking) as uAthena's PACKETVER 7 sends them: its class, hair, hair colour, sex, level
+TEST(game_packets_a_character_in_sight) {
+    std::vector<uint8_t> idle(58, 0);
+    idle[0] = 0x2a, idle[1] = 0x02;
+    put32(idle, 2, 2000123);
+    put16(idle, 16, 8);    // Priest
+    put16(idle, 18, 12);   // hair style
+    put16(idle, 30, 4);    // hair colour
+    idle[49] = 1;          // a man
+    put16(idle, 56, 85);
+    const packets::Event e = packets::parse(idle.data(), idle.size());
+    const auto* standing = std::get_if<packets::Appear>(&e);
+    CHECK(standing && standing->id == 2000123 && standing->job == 8 && standing->hair == 12 &&
+          standing->hairColour == 4 && standing->sex == 1 && standing->level == 85);
+    std::vector<uint8_t> spawn(idle.begin(), idle.begin() + 57);  // the level moved to 55
+    spawn[0] = 0x2b;
+    put16(spawn, 55, 85);
+    const packets::Event e2 = packets::parse(spawn.data(), spawn.size());
+    const auto* come = std::get_if<packets::Appear>(&e2);
+    CHECK(come && come->id == 2000123 && come->hair == 12 && come->level == 85);
+    std::vector<uint8_t> walk(64, 0);
+    walk[0] = 0x2c, walk[1] = 0x02;
+    put32(walk, 2, 2000124);
+    put16(walk, 16, 4008);
+    put16(walk, 18, 3);
+    put16(walk, 34, 7);
+    walk[53] = 0;
+    put16(walk, 62, 99);
+    const packets::Event e3 = packets::parse(walk.data(), walk.size());
+    const auto* walking = std::get_if<packets::Appear>(&e3);
+    CHECK(walking && walking->id == 2000124 && walking->job == 4008 && walking->hair == 3 && walking->hairColour == 7 &&
+          walking->sex == 0 && walking->level == 99);
+    CHECK(std::holds_alternative<std::monostate>(packets::parse(walk.data(), 40)));  // cut short: nothing
+}

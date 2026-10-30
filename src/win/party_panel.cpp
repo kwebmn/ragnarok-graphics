@@ -6,18 +6,22 @@
 #include <cmath>
 #include <cstdint>
 #include <map>
+#include <sstream>
 #include <string>
 #include <variant>
 #include <vector>
 
 #include "core/layout.hpp"
+#include "core/buff_timers.hpp"
 #include "core/party_panel.hpp"
 #include "core/settings/strings.hpp"
 #include "core/ui_style.hpp"
 #include "pad/win/game_window.hpp"
+#include "win/buff_column.hpp"
 #include "win/char_block.hpp"
 #include "win/code_page.hpp"
 #include "win/game_camera.hpp"
+#include "win/head_picture.hpp"
 #include "win/hud_edit.hpp"
 #include "win/log.hpp"
 #include "win/paths.hpp"
@@ -41,9 +45,32 @@ struct Seat {
     int hp = -1, most = 0;
 };
 
+// 3.0.11-beta.80 (the owner: «иконки можно сделать как лица персонажей?»): a member's looks as last seen in sight
+// (0x022a/b/c) - its face made of them (win/head_picture); kept across games
+struct Look {
+    int sex = 0, hair = 0, colour = 0, job = 0, level = 0;
+    bool operator==(const Look& o) const {
+        return sex == o.sex && hair == o.hair && colour == o.colour && job == o.job && level == o.level;
+    }
+};
+
+// 3.0.11-beta.80 (the owner: «чтобы видить какие касты стоят у персонажей»): a member's buffs as the server told them
+// to those near it (0x0196, uAthena's clif_status_change sends AREA), their times by the casts seen (0x011a, as the
+// character's own - core/buff_timers)
+struct Buffs {
+    buffs::Timers timers;
+    std::map<uint16_t, uint64_t> on;  // icon -> when put on
+};
+
 struct State {
+    std::map<uint32_t, Buffs> buffs;  // 3.0.11-beta.80: by the account
     std::vector<uint32_t> order;
     std::map<uint32_t, Seat> seats;
+    std::map<uint32_t, Look> looks;  // 3.0.11-beta.80: by the account
+    bool looksRead = false;
+    ULONGLONG looksChangedAt = 0;    // to keep (0: kept)
+    std::map<std::string, panel::Picture> faces;  // by sex:hair:colour:side
+    int facesTold = 0;
     bool on = false, shown = false;
     float k = 0, scale = 1;
     int targetW = 0, targetH = 0;
@@ -70,6 +97,47 @@ uint32_t read32(uint32_t at) {
 }
 
 uint32_t own() { return read32(kOwnAccount); }
+
+void readLooks(State& s) {
+    if (s.looksRead) return;
+    s.looksRead = true;
+    std::string text;
+    if (!readTextFile(layout::join(gameDir(), layout::kPartyLooks), text)) return;
+    std::istringstream in(text);
+    uint32_t account = 0;
+    Look l;
+    while (in >> account >> l.sex >> l.hair >> l.colour >> l.job >> l.level) s.looks[account] = l;
+}
+
+void keepLooks(State& s) {
+    std::string text;
+    for (const auto& [account, l] : s.looks)
+        text += std::to_string(account) + ' ' + std::to_string(l.sex) + ' ' + std::to_string(l.hair) + ' ' +
+                std::to_string(l.colour) + ' ' + std::to_string(l.job) + ' ' + std::to_string(l.level) + '\n';
+    if (!writeFileAtomic(layout::join(gameDir(), layout::kPartyLooks), text))
+        LOG_INFO("party: %s cannot be written", layout::kPartyLooks);
+}
+
+// A member's face: its head as last seen, made once a look and a size
+const panel::Picture* faceOf(State& s, uint32_t account, int side, const std::string& name) {
+    const auto it = s.looks.find(account);
+    if (it == s.looks.end() || side <= 0) return nullptr;
+    const Look& l = it->second;
+    const std::string key = std::to_string(l.sex) + ':' + std::to_string(l.hair) + ':' + std::to_string(l.colour) +
+                            ':' + std::to_string(side);
+    auto f = s.faces.find(key);
+    if (f == s.faces.end()) {
+        if (s.faces.size() > 64) s.faces.clear();  // a long game's many parties never pile up
+        f = s.faces.emplace(key, panel::Picture{}).first;
+        std::string from;
+        const bool made = headpicture::make(l.sex, l.hair, l.colour, side, f->second, &from);
+        if (s.facesTold < 20) {
+            ++s.facesTold;
+            LOG_INFO("party: %s's face - %s", name.c_str(), made ? from.c_str() : (from + ", its letter").c_str());
+        }
+    }
+    return f->second.width > 0 ? &f->second : nullptr;
+}
 
 void readState(State& s) {
     if (s.stateRead) return;
@@ -170,6 +238,7 @@ void packet(const packets::Event& e) {
             s.seats.clear();
             s.order.clear();
         } else if (s.seats.erase(gone->account)) {
+            s.buffs.erase(gone->account);
             s.order.erase(std::remove(s.order.begin(), s.order.end(), gone->account), s.order.end());
         }
     } else if (const auto* hp = std::get_if<packets::PartyHp>(&e)) {
@@ -177,6 +246,26 @@ void packet(const packets::Event& e) {
         if (it != s.seats.end()) {
             it->second.hp = hp->hp;
             it->second.most = hp->most;
+        }
+    } else if (const auto* icon = std::get_if<packets::StatusIcon>(&e)) {  // 3.0.11-beta.80: a member's buff
+        if (s.seats.count(icon->id)) {
+            Buffs& b = s.buffs[icon->id];
+            const uint64_t now = GetTickCount64();
+            b.timers.icon(icon->icon, icon->on, now);
+            if (icon->on) b.on[icon->icon] = now;
+            else b.on.erase(icon->icon);
+        }
+    } else if (const auto* cast = std::get_if<packets::SkillCast>(&e)) {  // its time: a cast seen on it
+        if (s.seats.count(cast->target)) s.buffs[cast->target].timers.cast(cast->skill, cast->level, GetTickCount64());
+    } else if (const auto* a = std::get_if<packets::Appear>(&e)) {  // 3.0.11-beta.80: a member in sight - its looks
+        if (s.seats.count(a->id) && a->hair > 0) {
+            readLooks(s);
+            const Look l{a->sex ? 1 : 0, a->hair, a->hairColour, a->job, a->level};
+            Look& was = s.looks[a->id];
+            if (!(was == l)) {
+                was = l;
+                if (!s.looksChangedAt) s.looksChangedAt = GetTickCount64();
+            }
         }
     } else if (const auto* v = std::get_if<packets::Vanish>(&e)) {
         const auto it = s.seats.find(v->id);
@@ -195,14 +284,48 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
         return;
     }
     readState(s);
+    readLooks(s);
+    if (s.looksChangedAt && GetTickCount64() - s.looksChangedAt > 2000) {  // 3.0.11-beta.80: the looks seen, kept
+        s.looksChangedAt = 0;
+        keepLooks(s);
+    }
     const std::string here = readGameMap();
     s.members.clear();
+    const float partScale = uistyle::partScale(k) * hudedit::sizeOf(hudlayout::Part::Party);
+    const int faceSide = int(std::lround(20 * partScale)), buffSide = int(std::lround(14 * partScale));
     for (const uint32_t account : s.order) {
         const auto it = s.seats.find(account);
         if (it == s.seats.end()) continue;
         const Seat& seat = it->second;
         pp::Member m;
         m.name = utf8Of(widened(seat.name, codePage));
+        m.face = faceOf(s, account, faceSide, m.name);  // 3.0.11-beta.80
+        if (const auto bf = s.buffs.find(account); bf != s.buffs.end()) {  // 3.0.11-beta.80: its buffs
+            const bool nearby = seat.online && (seat.map.empty() || seat.map == here);  // (`near`: Windows' macro)
+            if (!nearby) {
+                s.buffs.erase(bf);  // not near: the server tells it no more
+            } else {
+                const uint64_t now = GetTickCount64();
+                const std::vector<buffs::Timers::Running> running = bf->second.timers.running();
+                for (auto on = bf->second.on.begin(); on != bf->second.on.end();) {
+                    float left = -1;
+                    bool over = false;
+                    for (const buffs::Timers::Running& r : running)
+                        if (r.icon == on->first && r.end > r.from) {
+                            over = now >= r.end + 2000;  // its time out and no word of it: gone
+                            left = std::clamp(float(double(r.end > now ? r.end - now : 0) / double(r.end - r.from)),
+                                              0.0f, 1.0f);
+                        }
+                    if (over) {
+                        on = bf->second.on.erase(on);
+                        continue;
+                    }
+                    if (const panel::Picture* pic = buffcolumn::iconPicture(on->first, buffSide))
+                        m.buffs.push_back(pp::Buff{pic, left});
+                    ++on;
+                }
+            }
+        }
         m.leader = seat.leader;
         m.online = seat.online;
         if (!seat.map.empty() && seat.map != here) m.where = seat.map;
@@ -214,14 +337,17 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     s.scale = scale;
     s.targetW = targetWidth;
     s.targetH = targetHeight;
-    s.layout = pp::layout(s.members.size(), int(std::lround(10 * scale)), topOf(k, scale), scale, s.folded);
+    s.layout = pp::layout(pp::rowsOf(s.members), int(std::lround(10 * scale)), topOf(k, scale), scale, s.folded);
     hudedit::place(hudlayout::Part::Party, float(k), targetWidth, targetHeight, s.layout.w, s.layout.h, s.layout.x,
                    s.layout.y);  // 3.0.11-beta.75: where the player put it
     std::string key = std::to_string(s.layout.w) + 'x' + std::to_string(s.layout.h) + ';' + std::to_string(scale) +
                       (s.folded ? ";f;" : ";;");
     for (const pp::Member& m : s.members)
         key += m.name + '|' + m.where + '|' + (m.leader ? "L" : "") + (m.online ? "" : "o") +
-               std::to_string(m.percent) + ';';
+               std::to_string(m.percent) + (m.face ? std::to_string(uintptr_t(m.face)) : "") + ';';
+    for (const pp::Member& m : s.members)  // 3.0.11-beta.80: its buffs, their times by twentieths
+        for (const pp::Buff& b : m.buffs)
+            key += std::to_string(uintptr_t(b.icon)) + ':' + std::to_string(int(b.left * 20)) + ',';
     if (const std::string drawn = key + '#' + std::to_string(uistyle::generation()); drawn != s.key) {  // its grounds
         s.key = drawn;
         render(s);

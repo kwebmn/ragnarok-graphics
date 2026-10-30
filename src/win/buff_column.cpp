@@ -539,4 +539,14 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     return true;
 }
 
+const panel::Picture* iconPicture(uint16_t icon, int side) {
+    State& s = state();
+    const auto image = reinterpret_cast<ImageFn>(uintptr_t(kIconImage));
+    void* session = reinterpret_cast<void*>(uintptr_t(kSession));
+    for (uint32_t pass = 0; pass < 5; ++pass)
+        if (const char* file = image(session, icon, pass); file && *file)
+            return pictureOf(s, GameIcon{icon, file}, side);
+    return nullptr;
+}
+
 }  // namespace uagfx::win::buffcolumn

@@ -13,16 +13,26 @@ namespace uagfx::partypanel {
 // map's name instead, offline its word, no bar. Its SP never: the server sends none (clif_party_hp). The parts that
 // need no Windows; the words go over it by GDI (win/party_panel).
 
+// 3.0.11-beta.80 (the owner: «чтобы видить какие касты стоят у персонажей какимито маленькими иконками»): a buff on a
+// member (the server tells its icons to those near it - uAthena clif_status_change AREA), its time when a cast told it
+struct Buff {
+    const panel::Picture* icon = nullptr;  // premultiplied, about its box's side
+    float left = -1;                       // its time left, a share (0..1); < 0 not known
+};
+
 struct Member {
     std::string name;    // UTF-8
     std::string where;   // its map's words when not the character's map; "" here
     bool leader = false, online = true;
     int percent = -1;    // HP; < 0 not known
+    const panel::Picture* face = nullptr;  // 3.0.11-beta.80: its head (premultiplied) in its round; null: its letter
+    std::vector<Buff> buffs;               // 3.0.11-beta.80: its buffs as last told
 };
 bool low(const Member& m, int threshold);  // here, online, known and under the threshold
 
 struct Row {
     panel::Box box, round, name, value, bar;
+    std::vector<panel::Box> buffs;  // 3.0.11-beta.80: its buffs' icons under its bar (as many as the row holds)
 };
 struct Layout {
     float s = 1;
@@ -35,6 +45,9 @@ struct Layout {
     bool folded = false;
 };
 Layout layout(size_t members, int left, int top, float scale, bool folded = false);
+// 3.0.11-beta.80: each row's buffs counted - a row with any a line taller
+std::vector<int> rowsOf(const std::vector<Member>& members);
+Layout layout(const std::vector<int>& buffs, int left, int top, float scale, bool folded = false);
 enum class Part : uint8_t { None, Fold, Header, Row };
 struct Hit {
     Part part = Part::None;

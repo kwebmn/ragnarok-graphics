@@ -1,8 +1,11 @@
 #pragma once
 #include <windows.h>
 
+#include <cstdint>
+
 #include "core/config.hpp"
 #include "core/frame.hpp"
+#include "core/window_panel.hpp"
 
 namespace uagfx::gpu {
 class Renderer;
@@ -28,5 +31,9 @@ bool hidingGameIcons();
 // 3.0.11-beta.70: its glass's left (the furthest column's) and top in the target while it shows - the tracker stands
 // left of it; false: not shown
 bool glassBox(int& left, int& top);
+
+// 3.0.11-beta.80 (the party's members' buffs): a status icon's picture at `side` - the game's file for it (its image
+// function's five groups), as the column's own (the AI pack's when it has one); null none
+const panel::Picture* iconPicture(uint16_t icon, int side);
 
 }  // namespace uagfx::win::buffcolumn

@@ -19,7 +19,7 @@
 #include "core/ui_style.hpp"
 #include "pad/win/game_window.hpp"
 #include "win/game_camera.hpp"
-#include "win/game_files.hpp"
+#include "win/head_picture.hpp"
 #include "win/hud_edit.hpp"
 #include "win/log.hpp"
 #include "win/paths.hpp"
@@ -41,16 +41,10 @@ constexpr uint32_t kShown = 0x38, kSendMsgSlot = 0x94, kSendMsg = 0x46C980;
 constexpr int kButtonMsg = 6;
 using SendMsgFn = int(__attribute__((thiscall)) *)(uint32_t self, uint32_t sender, int msg, int a, int b, int c);
 // The session's character: its class, its sex (+0x1CA4, which GetSex FUN_006425b0 keeps in +0x770), its head and
-// hair colour; the session's tables FUN_0062e7b0 names a head's sprite by - the sexes' folders (+0x840), the heads'
-// names (+0x850 a man's, +0x860 a woman's), the sexes' endings (+0x8A0)
-constexpr uint32_t kSession = 0x771148, kJob = 0x771F8C, kSex = 0x772DEC, kHead = 0x7718F4, kHairColour = 0x771910;
-constexpr uint32_t kFolders = kSession + 0x840, kManHeads = kSession + 0x850, kWomanHeads = kSession + 0x860;
-constexpr uint32_t kEndings = kSession + 0x8A0;
+// hair colour (its head's sprite: win/head_picture)
+constexpr uint32_t kJob = 0x771F8C, kSex = 0x772DEC, kHead = 0x7718F4, kHairColour = 0x771910;
 constexpr ULONGLONG kWarnMs = 2000;  // the low HP warning's
 constexpr ULONGLONG kTipMs = 400, kPressMs = 160;  // 3.0.11-beta.51: the concept's tip after 0.4 s; a press shown
-const std::string kHuman = "\xC0\xCE\xB0\xA3\xC1\xB7\\\xB8\xD3\xB8\xAE\xC5\xEB\\";  // 인간족\머리통\ (CP949)
-const std::string kHairPalettes = "\xB8\xD3\xB8\xAE\\\xB8\xD3\xB8\xAE";            // 머리\머리
-const std::string kMan = "\xB3\xB2", kWoman = "\xBF\xA9";                            // 남, 여
 
 struct State {
     CharacterLook look = CharacterLook::Off;
@@ -66,7 +60,6 @@ struct State {
     std::string key;  // what the picture shows
     std::string portraitKey;
     panel::Picture portrait;
-    std::unique_ptr<gamefiles::Reader> files;
     panel::Picture picture;
     uint32_t texture = 0;
     int texW = 0, texH = 0;
@@ -99,13 +92,6 @@ std::string say(settings::Text t) { return settings::tr(startup().lang, t); }
 uint32_t read32(uint32_t at) {
     uint32_t v = 0;
     return readGame(at, &v, 4) ? v : 0;
-}
-
-std::string readString(uint32_t at) {
-    char buf[64] = {};
-    if (!at || !readGame(at, buf, sizeof buf - 1)) return "";
-    buf[sizeof buf - 1] = 0;
-    return buf;
 }
 
 // UI window 0 when it is the Basic Info window of this build
@@ -164,58 +150,21 @@ void keepState(const State& s) {
         LOG_INFO("character: %s cannot be written", path.c_str());
 }
 
-bool readFile(State& s, const std::string& entry, std::string& out) {
-    if (readGameFile(entry, out)) return true;  // as the game finds it (its zips too)
-    if (!s.files) s.files = std::make_unique<gamefiles::Reader>(gameDir());
-    std::vector<uint8_t> bytes;
-    if (!s.files->read(entry, bytes, nullptr)) return false;
-    out.assign(bytes.begin(), bytes.end());
-    return true;
-}
-
-// The portrait: the head's first frame (standing, facing down) in its hair colour, fitted into `side`
+// The portrait: the head's first frame (standing, facing down) in its hair colour, fitted into `side` (3.0.11-beta.80:
+// win/head_picture, the party's faces too)
 void makePortrait(State& s, int side) {
     const int sex = int(read32(kSex)) != 0 ? 1 : 0;  // as FUN_0062e7b0: not 0 - a man
-    int head = int(read32(kHead));
+    const int head = int(read32(kHead));
     const int colour = int(read32(kHairColour));
-    if (head <= 0) head = 1;  // FUN_00639900's for none
     const std::string key = std::to_string(sex) + ':' + std::to_string(head) + ':' + std::to_string(colour) + ':' +
                             std::to_string(side);
     if (key == s.portraitKey) return;
     s.portraitKey = key;
-    s.portrait = panel::Picture{};
-    std::string folder = readString(read32(read32(kFolders) + 4 * uint32_t(sex)));
-    std::string name = readString(read32(read32(sex ? kManHeads : kWomanHeads) + 4 * uint32_t(head)));
-    std::string ending = readString(read32(read32(kEndings) + 4 * uint32_t(sex)));
-    if (folder.empty() || name.empty()) {  // the plain heads' names, as the game's own "%d_남.spr"
-        folder = sex ? kMan : kWoman;
-        name = std::to_string(head);
-        ending = "_" + folder;
-    }
-    const std::string base = "data\\sprite\\" + kHuman + folder + "\\" + name + ending;
-    std::string spr, act;
-    if (!readFile(s, base + ".spr", spr) || !readFile(s, base + ".act", act)) {
-        LOG_INFO("character: no head sprite %s.spr - the portrait the name's letter", base.c_str());
-        return;
-    }
-    std::string pal;
-    const std::string palName =
-        "data\\palette\\" + kHairPalettes + name + ending + "_" + std::to_string(colour) + ".pal";
-    if (colour > 0 && readFile(s, palName, pal) && pal.size() >= 1024 && spr.size() > 1024)
-        spr.replace(spr.size() - 1024, 1024, pal, 0, 1024);  // the hair colour in the sprite's palette, as the game
-    spritefile::Sprite sp;
-    spritefile::Act ac;
-    spritefile::Image im;
-    if (!spritefile::readSpr(spr, sp) || !spritefile::readAct(act, ac) || !spritefile::frameImage(sp, ac, 0, 0, im)) {
-        LOG_INFO("character: the head sprite %s.spr not read - the portrait the name's letter", base.c_str());
-        return;
-    }
-    const spritefile::Image fit = spritefile::fitted(im, side, side);
-    s.portrait.width = fit.w;
-    s.portrait.height = fit.h;
-    s.portrait.px = fit.argb;
-    LOG_INFO("character: the portrait - %s.spr (%dx%d)%s", base.c_str(), im.w, im.h,
-             pal.empty() ? "" : (", the hair colour " + std::to_string(colour)).c_str());
+    std::string from;
+    if (headpicture::make(sex, head, colour, side, s.portrait, &from))
+        LOG_INFO("character: the portrait - %s", from.c_str());
+    else
+        LOG_INFO("character: %s - the portrait the name's letter", from.c_str());
 }
 
 cb::Texts texts() {
