@@ -1,3 +1,22 @@
+# uaRO Graphics 3.0.11-beta.45 — what is new
+
+- **«Hotbar»: the cells' states, as in the concept.**
+  - A skill the game waits a target for (its key pressed, the game waits for a click on a monster or the ground) has
+    a gold frame.
+  - Too little SP — the icon grey, a blue «SP» plate; its tip «No SP · needs 24, you have 12». The price is the
+    server's table's for the level on the bar (for the level learned — what the server itself sent).
+  - Forbidden on this map — a crossed circle, the reason in its tip: Fly Wing and Teleport where teleporting is off;
+    Butterfly Wing where there is no way back to the save point; branches, portals, Ice Wall; the guilds' war maps.
+    The rules are the server code's, the maps' flags the reference's (no pack downloaded — no such state).
+  - A press (a click or the key F1–F9, the battle mode's letters) — the cell goes 1 point down and darker for a
+    moment.
+  - Its tip shows once the cursor has stayed on a cell for 0.4 s.
+- No cooldown (the dark sector) yet: the server does not tell the client its skills' delays, and guessing them from
+  DEX, Bragi and cards would show what is not so.
+- To check: press a skill with a target (Double Strafe, Heal) — the frame while the game waits for the click; spend
+  the SP — the «SP» plate and the tip's numbers; inside Prontera's houses (prt_in), where teleporting is off — Fly Wing crossed out. The log:
+  `hotbar: SP prices`, `hotbar: the game waits for the target of the skill ...`, `hotbar: on <map> ... «не тут»`.
+
 # uaRO Graphics 3.0.11-beta.44 — what is new
 
 - **«Items»: a use is seen.** A double click on an item now answers in its cell: a gold ring opens out of it, «−1»
