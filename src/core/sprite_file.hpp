@@ -1,5 +1,6 @@
 #pragma once
 #include <cstdint>
+#include <functional>
 #include <string>
 #include <vector>
 
@@ -38,6 +39,10 @@ bool readAct(const std::string& bytes, Act& out);
 
 // An action's frame put together (its layers in order, over each other) and cut to what it shows; false: nothing
 bool frameImage(const Sprite& s, const Act& a, size_t action, size_t frame, Image& out);
+// 3.0.11-beta.76: the same `factor` times its size - each palette layer's picture from `bigger` (its index) when it
+// gives one (factor times that picture: the AI pack's frame), else the picture itself stretched
+bool frameImageScaled(const Sprite& s, const Act& a, size_t action, size_t frame, int factor,
+                      const std::function<const Image*(int index)>& bigger, Image& out);
 // A picture fitted into a w x h box (premultiplied ARGB, see-through around it): small ones grown by whole steps (the
 // pixels kept sharp, at most `most` times), big ones shrunk smoothly
 Image fitted(const Image& in, int w, int h, int most = 3);

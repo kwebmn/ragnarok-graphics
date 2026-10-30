@@ -156,7 +156,12 @@ bool readAct(const std::string& bytes, Act& out) {
 }
 
 bool frameImage(const Sprite& s, const Act& a, size_t action, size_t frame, Image& out) {
-    if (action >= a.actions.size() || frame >= a.actions[action].size()) return false;
+    return frameImageScaled(s, a, action, frame, 1, nullptr, out);
+}
+
+bool frameImageScaled(const Sprite& s, const Act& a, size_t action, size_t frame, int factor,
+                      const std::function<const Image*(int index)>& bigger, Image& out) {
+    if (action >= a.actions.size() || frame >= a.actions[action].size() || factor < 1) return false;
     const Frame& fr = a.actions[action][frame];
     struct Placed {
         const Image* im;
@@ -165,13 +170,16 @@ bool frameImage(const Sprite& s, const Act& a, size_t action, size_t frame, Imag
     };
     std::vector<Placed> placed;
     float left = 1e9f, top = 1e9f, right = -1e9f, bottom = -1e9f;
+    const float f = float(factor);
     for (const Layer& ly : fr.layers) {
         const std::vector<Image>& list = ly.type == 1 ? s.truecolour : s.palette;
         if (ly.index < 0 || size_t(ly.index) >= list.size()) continue;
-        const Image& im = list[size_t(ly.index)];
-        const float w = float(im.w) * std::fabs(ly.scaleX), h = float(im.h) * std::fabs(ly.scaleY);
+        const Image& own = list[size_t(ly.index)];
+        const Image* big = ly.type == 1 || !bigger ? nullptr : bigger(ly.index);
+        const Image& im = big && big->w > 0 && big->h > 0 ? *big : own;  // 3.0.11-beta.76: the pack's when given
+        const float w = float(own.w) * f * std::fabs(ly.scaleX), h = float(own.h) * f * std::fabs(ly.scaleY);
         if (w < 1 || h < 1) continue;
-        const float x0 = float(ly.x) - w / 2, y0 = float(ly.y) - h / 2;
+        const float x0 = float(ly.x) * f - w / 2, y0 = float(ly.y) * f - h / 2;
         placed.push_back(Placed{&im, &ly, x0, y0, w, h});
         left = std::min(left, x0);
         top = std::min(top, y0);

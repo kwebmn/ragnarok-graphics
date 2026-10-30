@@ -84,3 +84,29 @@ TEST(zip_reads_an_archive_in_memory) {
     zip::Index cut;
     CHECK(!cut.openBytes(whole.substr(0, whole.size() - 10), [](const std::string&) { return true; }, error));
 }
+
+// 3.0.11-beta.76: the entries a filter does not keep, each told with its place (the AI pack's sprites' compact table,
+// win/pack_pictures), and read again by that place
+TEST(zip_tells_the_rest_and_reads_by_place) {
+    const std::vector<Item> items = {{"ui/24x24/aa.webp", {1, 2, 3}, false},
+                                     {"sprites/64x64/bb.webp", {4, 5, 6, 7}, false},
+                                     {"sprites/32x32/cc.webp", {8}, true}};
+    const std::vector<uint8_t> bytes = makeZip(items);
+    const std::string path = zipPath();
+    std::FILE* f = std::fopen(path.c_str(), "wb");
+    std::fwrite(bytes.data(), 1, bytes.size(), f);
+    std::fclose(f);
+    zip::Index z;
+    std::string error;
+    std::vector<std::pair<std::string, zip::Place>> rest;
+    CHECK(z.open(path, [](const std::string& n) { return n.rfind("ui\\", 0) == 0; }, error,
+                 [&](const std::string& n, const zip::Place& p) { rest.emplace_back(n, p); }));
+    CHECK_EQ(z.count(), size_t(1));
+    CHECK_EQ(rest.size(), size_t(2));
+    std::vector<uint8_t> out;
+    for (const auto& [name, place] : rest) {
+        CHECK(z.read(place, out, error));
+        CHECK(out == (name == "sprites\\64x64\\bb.webp" ? items[1].data : items[2].data));
+    }
+    std::remove(path.c_str());
+}

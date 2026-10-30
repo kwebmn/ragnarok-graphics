@@ -29,6 +29,9 @@ bool ofInterface(const uint8_t* bmp, size_t size, std::vector<uint32_t>& argb, i
 // The pack's picture of a game texture (a status icon's .tga) by its texture key (core/pack_source worldTexture)
 bool ofTexture(const uint8_t* data, size_t size, bool tga, std::vector<uint32_t>& argb, int& width, int& height,
                std::string* name = nullptr);
+// 3.0.11-beta.76: the pack's picture of a sprite's frame in its cache cell, by its key (core/pack_source spriteFrames:
+// "64x64\0123456789abcdef") - the sprites' entries kept in a table of their own, 24 bytes each (~290 000 of them)
+bool ofSprite(const std::string& key, std::vector<uint32_t>& argb, int& width, int& height);
 // A worker thread's: waits for the directory (at most `ms`); false - no pack, or not read in time
 bool waitRead(unsigned ms);
 

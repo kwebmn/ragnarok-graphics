@@ -125,3 +125,32 @@ TEST(reference_sprite_names_of_a_monster) {
     m.name = "Goblin (Dagger)";
     CHECK(refindex::spriteNames(m) == std::vector<std::string>({"goblin_dagger"}));
 }
+
+// 3.0.11-beta.76 (the owner: «иконки ... и всего остального ... грузить в текстур которые обработаны»): a frame put
+// together 4 times bigger - a palette picture from the AI pack's frame when there is one, else stretched
+TEST(sprite_file_frame_bigger) {
+    spritefile::Sprite sp;
+    CHECK(spritefile::readSpr(spr(), sp));
+    spritefile::Act a;
+    CHECK(spritefile::readAct(act(1, false), a));
+    spritefile::Image big;  // the pack's picture of palette picture 0: 12 x 8, blue left, white right
+    big.w = 12;
+    big.h = 8;
+    big.argb.assign(96, 0xFF0000FFu);
+    for (int y = 0; y < 8; ++y)
+        for (int x = 6; x < 12; ++x) big.argb[size_t(y * 12 + x)] = 0xFFFFFFFFu;
+    spritefile::Image im;
+    CHECK(spritefile::frameImageScaled(sp, a, 0, 0, 4, [&](int i) { return i == 0 ? &big : nullptr; }, im));
+    CHECK(im.w == 12 && im.h == 8);
+    CHECK_EQ(im.argb[size_t(3 * 12 + 2)], 0xFF0000FFu);
+    CHECK_EQ(im.argb[size_t(3 * 12 + 9)], 0xFFFFFFFFu);
+    CHECK(spritefile::readAct(act(1, true), a));  // mirrored: white on the left now
+    CHECK(spritefile::frameImageScaled(sp, a, 0, 0, 4, [&](int i) { return i == 0 ? &big : nullptr; }, im));
+    CHECK_EQ(im.argb[size_t(3 * 12 + 2)], 0xFFFFFFFFu);
+    // none from the pack: the frame's own, 4 times (red at x 1: 4..7)
+    CHECK(spritefile::readAct(act(1, false), a));
+    CHECK(spritefile::frameImageScaled(sp, a, 0, 0, 4, [](int) { return nullptr; }, im));
+    CHECK(im.w == 12 && im.h == 8);
+    CHECK_EQ(im.argb[size_t(1 * 12 + 5)], 0xFFFF0000u);
+    CHECK_EQ(im.argb[size_t(1 * 12 + 1)], 0u);
+}

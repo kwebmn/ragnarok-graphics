@@ -25,6 +25,7 @@ struct Picture {
     // 0.49: a .jpg's - the picture in the texture's top left corner, found by its likeness (near_picture.hpp); 0
     // for the rest, found by their keys.
     int contentWidth = 0, contentHeight = 0;
+    int frame = -1;  // 3.0.11-beta.76: a sprite's palette frame it is (spriteFrames); -1 none
 };
 
 // The game's BMP reader: 8-bit (its palette at 0x36) or 24-bit, bottom-up; every pixel opaque.
@@ -46,6 +47,8 @@ bool worldTexture(const uint8_t* data, size_t size, bool tga, Picture& out, bool
 bool lowerDetail(const Picture& in, int div, Picture& out);
 bool interfacePicture(const uint8_t* data, size_t size, Picture& out);
 // The palette frames of a sprite file (SPR), with its own palette or another (1024 bytes, a dye's).
-bool spriteFrames(const uint8_t* data, size_t size, std::vector<Picture>& out, const uint8_t* palette = nullptr);
+// 3.0.11-beta.76: `only` - those frames alone (by their number; the others' keys not worked out)
+bool spriteFrames(const uint8_t* data, size_t size, std::vector<Picture>& out, const uint8_t* palette = nullptr,
+                  const std::vector<int>* only = nullptr);
 
 }  // namespace uagfx::pack

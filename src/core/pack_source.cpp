@@ -150,7 +150,8 @@ bool interfacePicture(const uint8_t* data, size_t size, Picture& out) {
     return true;
 }
 
-bool spriteFrames(const uint8_t* data, size_t size, std::vector<Picture>& out, const uint8_t* palette) {
+bool spriteFrames(const uint8_t* data, size_t size, std::vector<Picture>& out, const uint8_t* palette,
+                  const std::vector<int>* only) {
     out.clear();
     if (!data || size < 8 || data[0] != 'S' || data[1] != 'P') return false;
     const uint32_t version = uint32_t(data[3]) << 8 | data[2];
@@ -177,8 +178,10 @@ bool spriteFrames(const uint8_t* data, size_t size, std::vector<Picture>& out, c
         at += length;
         const int cw = spriteCell(w), ch = spriteCell(h);
         if (w <= 0 || h <= 0 || !cw || !ch) continue;  // not in the sprite cache
+        if (only && std::find(only->begin(), only->end(), int(f)) == only->end()) continue;  // 3.0.11-beta.76
         Picture p;
         p.group = Group::Sprites;
+        p.frame = int(f);  // 3.0.11-beta.76
         p.width = cw;
         p.height = ch;
         p.argb.assign(size_t(cw) * size_t(ch), 0);

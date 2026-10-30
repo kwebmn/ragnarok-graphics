@@ -4928,12 +4928,14 @@ constexpr Entry kTexts[] = {
     {Text::InterfacePackIcons, "Icons from the AI texture pack", "Іконки з пака текстур ШІ",
      "Иконки из пака текстур ИИ"},
     {Text::InterfacePackIconsHint,
-     "The new interface's icons - skills, items, status effects - drawn from the AI texture pack's pictures, four "
-     "times bigger than the game's, wherever the pack has them (uaro-textures.zip). Off: the game's own small icons.",
-     "Іконки нового інтерфейсу — навички, предмети, ефекти — малюються з картинок пака текстур ШІ, вчетверо більших за "
-     "ігрові, там, де пак їх має (uaro-textures.zip). Вимкнено: власні маленькі іконки гри.",
-     "Иконки нового интерфейса — навыки, предметы, эффекты — рисуются из картинок пака текстур ИИ, в четыре раза "
-     "больше игровых, там, где пак их имеет (uaro-textures.zip). Выключено: собственные маленькие иконки игры."},
+     "The new interface's icons and pictures - skills, items, status effects, monsters - drawn from the AI texture "
+     "pack's pictures, four times bigger than the game's, wherever the pack has them (uaro-textures.zip). Off: the "
+     "game's own small ones.",
+     "Іконки й картинки нового інтерфейсу — навички, предмети, ефекти, монстри — малюються з картинок пака текстур ШІ, "
+     "вчетверо більших за ігрові, там, де пак їх має (uaro-textures.zip). Вимкнено: власні маленькі картинки гри.",
+     "Иконки и картинки нового интерфейса — навыки, предметы, эффекты, монстры — рисуются из картинок пака текстур "
+     "ИИ, в четыре раза больше игровых, там, где пак их имеет (uaro-textures.zip). Выключено: собственные маленькие "
+     "картинки игры."},
     // 3.0.11-beta.75 (the owner: «некоторые интерфейсы хотелось бы чтобы можно было бы двигать и настраивать»)
     {Text::HudEditTitle, "Interface layout", "Розміщення інтерфейсу", "Размещение интерфейса"},
     {Text::HudEditHint, "Drag a part with the mouse \xC2\xB7 wheel: its size \xC2\xB7 right click: as it was",

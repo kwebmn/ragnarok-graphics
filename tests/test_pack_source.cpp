@@ -181,6 +181,7 @@ TEST(pack_source_sprite_frames_in_their_cache_cells) {
     CHECK_EQ(int(frames.size()), 1);
     const pack::Picture& f = frames[0];
     CHECK(f.group == pack::Group::Sprites && f.width == 32 && f.height == 32);  // its cache cell
+    CHECK_EQ(f.frame, 0);  // 3.0.11-beta.76: the sprite's own frame it is
     CHECK(f.argb[0] == 0 && f.argb[1] == 0);
     CHECK_EQ(f.argb[2], 0xFF081018u);        // 10, 20, 30 at 5 bits
     CHECK_EQ(f.argb[32], 0x00080808u);       // magenta: the game's 0x421
@@ -188,4 +189,28 @@ TEST(pack_source_sprite_frames_in_their_cache_cells) {
     CHECK_EQ(f.argb[3], 0u);                 // past the frame: nothing
     CHECK(pack::spriteCell(32) == 32 && pack::spriteCell(33) == 64 && pack::spriteCell(256) == 256);
     CHECK_EQ(pack::spriteCell(257), 0);
+}
+
+// 3.0.11-beta.76: a sprite's frames - those asked for alone, each with its number
+TEST(pack_source_sprite_frames_asked_for) {
+    std::vector<uint8_t> s = {'S', 'P', 1, 2};
+    put16(s, 2);  // palette frames
+    put16(s, 0);
+    for (int i = 0; i < 2; ++i) {
+        put16(s, 2);
+        put16(s, 1);
+        const std::vector<uint8_t> frame = {uint8_t(1 + i), 1};
+        put16(s, uint32_t(frame.size()));
+        s.insert(s.end(), frame.begin(), frame.end());
+    }
+    std::vector<uint8_t> pal(1024, 0);
+    pal[4] = 10, pal[8] = 200;
+    s.insert(s.end(), pal.begin(), pal.end());
+    std::vector<pack::Picture> frames;
+    CHECK(pack::spriteFrames(s.data(), s.size(), frames));
+    CHECK(frames.size() == 2u && frames[0].frame == 0 && frames[1].frame == 1 && frames[0].key != frames[1].key);
+    const std::vector<int> second = {1};
+    std::vector<pack::Picture> one;
+    CHECK(pack::spriteFrames(s.data(), s.size(), one, nullptr, &second));
+    CHECK(one.size() == 1u && one[0].frame == 1 && one[0].key == frames[1].key);
 }

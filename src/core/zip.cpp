@@ -62,6 +62,11 @@ std::string normalName(const std::string& name) {
 }
 
 bool Index::open(const std::string& path, const std::function<bool(const std::string&)>& keep, std::string& error) {
+    return open(path, keep, error, nullptr);
+}
+
+bool Index::open(const std::string& path, const std::function<bool(const std::string&)>& keep, std::string& error,
+                 const std::function<void(const std::string&, const Place&)>& rest) {
     entries_.clear();
     bytes_.reset();
     path_ = path;
@@ -72,7 +77,7 @@ bool Index::open(const std::string& path, const std::function<bool(const std::st
         return false;
     }
     return scan(fileSize(file.f), [&](uint64_t at, void* d, size_t n) { return readAt(file.f, at, d, n); }, keep,
-                error);
+                error, rest);
 }
 
 bool Index::openBytes(std::string bytes, const std::function<bool(const std::string&)>& keep, std::string& error) {
@@ -84,7 +89,7 @@ bool Index::openBytes(std::string bytes, const std::function<bool(const std::str
 }
 
 bool Index::scan(uint64_t size, const ReadAt& readAt, const std::function<bool(const std::string&)>& keep,
-                 std::string& error) {
+                 std::string& error, const Rest& rest) {
     const std::string& path = path_;
     // The end of the central directory: in the last 64 KB and 22 bytes (its comment at most 65535).
     const uint64_t tail = std::min<uint64_t>(size, 65557);
@@ -162,6 +167,7 @@ bool Index::scan(uint64_t size, const ReadAt& readAt, const std::function<bool(c
         }
         const std::string name = normalName(std::string(reinterpret_cast<const char*>(h + 46), nameLen));
         if (keep(name)) entries_[name] = en;
+        else if (rest) rest(name, en);  // 3.0.11-beta.76
         p += whole;
     }
     return true;
@@ -174,7 +180,14 @@ bool Index::read(const std::string& name, std::vector<uint8_t>& out, std::string
         error = name + " is not in " + path_;
         return false;
     }
-    const Entry& en = it->second;
+    if (read(it->second, out, error)) return true;
+    error = name + ": " + error;
+    return false;
+}
+
+bool Index::read(const Place& en, std::vector<uint8_t>& out, std::string& error) const {
+    out.clear();
+    const std::string name = "the entry at " + std::to_string(en.local);
     if ((en.method != 0 && en.method != 8) || en.size > (uint64_t(256) << 20) ||
         en.compressed > (uint64_t(256) << 20)) {
         error = name + ": not stored or deflated, or too big";

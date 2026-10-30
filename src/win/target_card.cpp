@@ -22,6 +22,7 @@
 #include "win/hud_edit.hpp"
 #include "win/log.hpp"
 #include "win/monster_picture.hpp"
+#include "win/pack_pictures.hpp"
 #include "win/picture_draw.hpp"
 #include "win/real_ddraw.hpp"
 #include "win/reference_load.hpp"
@@ -54,6 +55,7 @@ struct State {
     tc::Layout layout;
     bool hover = false, hoverBook = false;
     std::map<std::pair<int, int>, panel::Picture> pictures;  // by monster and side
+    int picturesFor = -2;  // 3.0.11-beta.76: win/pack_pictures' iconsStamp() they were made for
     std::string key;
     panel::Picture picture;
     uint32_t texture = 0;
@@ -105,6 +107,10 @@ int windowsOver(int x0, int y0, int x1, int y1) {
 }
 
 const panel::Picture* pictureOf(State& s, const refindex::Mob& mob, int id, int side) {
+    if (const int made = packpictures::iconsStamp(); made != s.picturesFor) {  // 3.0.11-beta.76: the pack's frames
+        s.picturesFor = made;
+        s.pictures.clear();
+    }
     const auto key = std::make_pair(id, side);
     auto it = s.pictures.find(key);
     if (it == s.pictures.end()) {
