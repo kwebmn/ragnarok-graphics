@@ -506,4 +506,9 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     return true;
 }
 
+void beforeGameDraw() {
+    State& s = state();
+    if (s.look != CharacterLook::Off && inGameWorld()) holdGameWindow(s, true);
+}
+
 }  // namespace uagfx::win::charpanel

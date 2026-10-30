@@ -26,5 +26,7 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result);
 bool key(UINT m, WPARAM wp, LPARAM lp);
 // Its box in the target while it shows (the hotbar keeps clear of it); false: not shown
 bool panelBox(int& x, int& y, int& w, int& h);
+// 3.0.11-beta.53: just before the game draws its windows (win/windows_draw) - its own chat kept out of sight
+void beforeGameDraw();
 
 }  // namespace uagfx::win::chatwin

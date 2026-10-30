@@ -739,4 +739,9 @@ bool key(UINT m, WPARAM wp, LPARAM lp) {
     return false;
 }
 
+void beforeGameDraw() {
+    State& s = state();
+    if (s.on && inGameWorld()) holdOldChat(s, true);
+}
+
 }  // namespace uagfx::win::chatwin

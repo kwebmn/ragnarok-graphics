@@ -661,4 +661,9 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     return true;
 }
 
+void beforeGameDraw() {
+    State& s = state();
+    if (s.on && s.known && inGameWorld()) holdGameBar(s, true);
+}
+
 }  // namespace uagfx::win::hotbarwin

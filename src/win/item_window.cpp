@@ -657,4 +657,10 @@ bool key(UINT m, WPARAM wp, LPARAM lp) {
 
 bool shown() { return state().shown; }
 
+void beforeGameDraw() {
+    State& s = state();
+    if (!s.on || !inGameWorld()) return;
+    if (const uint32_t window = gameWindow()) hold(s, window, true);
+}
+
 }  // namespace uagfx::win::itemswin

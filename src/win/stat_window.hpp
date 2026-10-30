@@ -19,5 +19,7 @@ void frame(HWND game, bool on, double k, int targetWidth, int targetHeight);
 void draw(FrameRecord& record, gpu::Renderer& renderer);
 bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result);
 bool shown();  // 3.0.11-beta.49: open on the screen now (the world dimmed under it)
+// 3.0.11-beta.53: just before the game draws its windows (win/windows_draw) - its own one hidden, never a frame
+void beforeGameDraw();
 
 }  // namespace uagfx::win::statswin

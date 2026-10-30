@@ -24,6 +24,8 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result);
 // 3.0.11-beta.45: a key of its cells pressed (F1-F9; the battle mode's letters while the chat does not take them) - the
 // cell shown pressed; the key stays the game's
 void key(UINT m, WPARAM wp, LPARAM lp);
+// 3.0.11-beta.53: just before the game draws its windows (win/windows_draw) - its own bar hidden (shown while edited)
+void beforeGameDraw();
 // A skill or an item dragged from the game's windows and let go at the game's (x, y) over one of its cells (`drag`: the
 // game mode's drag, + 0x32C): the game's own bar takes it as dropped on that cell (its drop, vtable + 0x2C - the slot
 // set, the drag ended; the battle mode's row the cell's); false: not over a cell (win/world_mouse asks)

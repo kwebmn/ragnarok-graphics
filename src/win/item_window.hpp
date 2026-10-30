@@ -27,5 +27,7 @@ bool key(UINT m, WPARAM wp, LPARAM lp);  // its search's keys while it has them
 // cart, the gear); false: not over it
 bool drop(int x, int y, uint32_t drag);
 bool shown();  // 3.0.11-beta.49: open on the screen now (the world dimmed under it)
+// 3.0.11-beta.53: just before the game draws its windows (win/windows_draw) - its own «Речі» hidden, never a frame
+void beforeGameDraw();
 
 }  // namespace uagfx::win::itemswin

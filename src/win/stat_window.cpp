@@ -360,4 +360,10 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     return true;
 }
 
+void beforeGameDraw() {
+    State& s = state();
+    if (!s.on || !inGameWorld()) return;
+    if (const uint32_t window = gameWindow()) hold(s, window, true);
+}
+
 }  // namespace uagfx::win::statswin

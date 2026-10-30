@@ -22,5 +22,7 @@ void draw(FrameRecord& record, gpu::Renderer& renderer);
 bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result);
 // 3.0.11-beta.39: its block's box in the target while it shows (the party's panel stands under it); false: not shown
 bool panelBox(int& x, int& y, int& w, int& h);
+// 3.0.11-beta.53: just before the game draws its windows (win/windows_draw) - its Basic Info hidden, never a frame
+void beforeGameDraw();
 
 }  // namespace uagfx::win::charpanel

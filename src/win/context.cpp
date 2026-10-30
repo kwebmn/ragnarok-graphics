@@ -59,6 +59,7 @@
 #include "win/profiler.hpp"
 #include "win/real_ddraw.hpp"
 #include "win/window_mode.hpp"
+#include "win/windows_draw.hpp"
 #include "win/world_dim.hpp"
 
 namespace uagfx::win {
@@ -349,6 +350,7 @@ bool Context::open(std::string& error) {
     installMapStartHook();             // 3.0.2-beta.15: a map's loading known whatever its camera holds
     installPickHook(config.fastPick);  // 0.89: the cell under the mouse without testing the whole map
     installWorldMouse();               // 3.0.11-beta.24: the driver's parts are windows for the game's cursor
+    installWindowsDraw();              // 3.0.11-beta.53: the replaced windows hidden before the game draws them
     buffcolumn::installBuffIcons();    // 3.0.11-beta.35: the game's status icons hidden for the buffs' column
     chatwin::install();                // 3.0.11-beta.41: the game's chat lines read for the new chat
     installFastFtol(config.fastFtol);  // 2.5.20: float to integer without switching the x87
