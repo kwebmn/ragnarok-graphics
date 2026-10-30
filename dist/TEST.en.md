@@ -1,3 +1,18 @@
+# uaRO Graphics 3.0.11-beta.63 — what is new
+
+- **Debuffs no longer run off the screen** (the concept, «Edge cases»: «debuffs are seen at any scale»). Before,
+  when there were more debuffs than the buffs' column held (a big scale, a small window), they ran down past the
+  edge. Now those that do not fit open a second column on the left — for debuffs only; the buffs' row likewise opens
+  a second row under it.
+- **A new choice «Buffs that do not fit»** (the «Interface» section in the app, «The new interface» in the game's
+  console) — the concept's question 17: «Under «N more»» (the default: the extra ones hide under the button, a click
+  shows them all with names) or «In a second column» (nothing hidden: the extra ones stand in a column on the left,
+  in the row — in a second row).
+- The «N more» button is now the column's whole width and 28 pixels high, as in the concept.
+- To check: in the game's console set the interface size to 130 % and take many buffs — with «Under «N more»» the
+  extra ones are under the button, with «In a second column» a second column on the left. In the log:
+  `buffs: 1 further columns`.
+
 # uaRO Graphics 3.0.11-beta.62 — what is new
 
 - **Fixed: on cards of Direct3D 11 alone (a Radeon HD 6570 and the like) the app shows the effects set the autopilot
