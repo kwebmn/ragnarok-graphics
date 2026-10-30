@@ -1,3 +1,16 @@
+# uaRO Graphics 3.0.11-beta.69 — what is new
+
+- **The state of «Reference»'s data** (the concept, question 21: the data's states and «Details» by a click). The
+  chips at the window's bottom now tell it all:
+  - «Data pack · date · server …», and when the pack is over 14 days old — «may be out of date»;
+  - «Live · N in the game · X ago» (fresh), «Live data · 3 h ago · may be out of date» (the link gone, an orange dot)
+    or «no link» (none came yet).
+- A click on a chip opens the page «Reference data»: what the pack holds (on your PC, works without a link), which
+  server it is from and how fresh; what the live data is (the site's market, MVP kills, players on the maps) and its
+  state. Stale live data is not shown in the cards; the page says so.
+- To check: in «Reference» click a chip at the bottom left; close the app for an hour — the live data turns «may be
+  out of date».
+
 # uaRO Graphics 3.0.11-beta.68 — what is new
 
 - **«Your bar»** (the concept: «Your bar: Fire Bolt ×2…»; your answer to question 9 — «a great idea, needed»). The
