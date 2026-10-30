@@ -25,7 +25,7 @@ void putRound(panel::Picture& out, const panel::Picture& pic, const panel::Box& 
         for (int x = 0; x < pic.width; ++x) {
             const int tx = ox + x, ty = oy + y;
             if (tx < 0 || ty < 0 || tx >= out.width || ty >= out.height) continue;
-            const float k = cover(std::hypot(float(tx) + 0.5f - cx, float(ty) + 0.5f - cy) - r);
+            const float k = cover(panel::length(float(tx) + 0.5f - cx, float(ty) + 0.5f - cy) - r);
             uint32_t c = pic.px[size_t(y) * size_t(pic.width) + size_t(x)];
             if (k <= 0 || !(c >> 24)) continue;
             if (k < 1) {

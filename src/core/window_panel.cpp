@@ -112,7 +112,7 @@ void roundRect(Picture& p, const Box& b, float r, uint32_t fill, float fillA, ui
 
 void circle(Picture& p, float cx, float cy, float r, uint32_t rgb, float a) {
     shape(p, Box{cx - r, cy - r, 2 * r, 2 * r},
-          [&](float x, float y) { return std::hypot(x - cx, y - cy) - r; }, rgb, a, 0, 0, 0);
+          [&](float x, float y) { return length(x - cx, y - cy) - r; }, rgb, a, 0, 0, 0);
 }
 
 namespace {
@@ -123,7 +123,7 @@ void line(Picture& p, float ax, float ay, float bx, float by, float r, uint32_t 
     shape(p, around,
           [&](float x, float y) {
               const float t = len2 > 0 ? std::clamp(((x - ax) * dx + (y - ay) * dy) / len2, 0.0f, 1.0f) : 0.0f;
-              return std::hypot(x - (ax + t * dx), y - (ay + t * dy)) - r;
+              return length(x - (ax + t * dx), y - (ay + t * dy)) - r;
           },
           rgb, a, 0, 0, 0);
 }
@@ -495,7 +495,7 @@ void fade(Picture& p, float opacity) {
     if (opacity >= 1.0f) return;
     const float a = std::max(opacity, 0.0f);
     for (uint32_t& px : p.px) {
-        const auto scaled = [&](int shift) { return uint32_t(std::lround(float((px >> shift) & 0xFF) * a)) << shift; };
+        const auto scaled = [&](int shift) { return uint32_t(roundOf(float((px >> shift) & 0xFF) * a)) << shift; };
         px = scaled(24) | scaled(16) | scaled(8) | scaled(0);
     }
 }
@@ -505,9 +505,9 @@ void over(uint32_t& dst, uint32_t rgb, float a) {
     a = std::min(a, 1.0f);
     const float keep = 1.0f - a;
     const auto channel = [&](int shift) {
-        return std::lround(float((rgb >> shift) & 0xFF) * a + float((dst >> shift) & 0xFF) * keep);
+        return roundOf(float((rgb >> shift) & 0xFF) * a + float((dst >> shift) & 0xFF) * keep);  // 3.0.11-beta.73
     };
-    const long alpha = std::lround(255.0f * a + float(dst >> 24) * keep);
+    const long alpha = roundOf(255.0f * a + float(dst >> 24) * keep);
     dst = uint32_t(alpha) << 24 | uint32_t(channel(16)) << 16 | uint32_t(channel(8)) << 8 | uint32_t(channel(0));
 }
 

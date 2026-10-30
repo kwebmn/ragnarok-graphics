@@ -44,7 +44,7 @@ void ring(panel::Picture& p, float cx, float cy, float r, float width, uint32_t 
     const float reach = r + width;
     for (int y = std::max(0, int(cy - reach - 1)); y <= std::min(p.height - 1, int(cy + reach + 1)); ++y)
         for (int x = std::max(0, int(cx - reach - 1)); x <= std::min(p.width - 1, int(cx + reach + 1)); ++x) {
-            const float d = std::hypot(float(x) + 0.5f - cx, float(y) + 0.5f - cy);
+            const float d = panel::length(float(x) + 0.5f - cx, float(y) + 0.5f - cy);  // 3.0.11-beta.73: inline
             const float cover = std::clamp(width / 2 + 0.5f - std::fabs(d - r), 0.0f, 1.0f);
             if (cover > 0) panel::over(p.px[size_t(y) * size_t(p.width) + size_t(x)], rgb, cover * a);
         }
@@ -104,7 +104,7 @@ void player(panel::Picture& p, const panel::Box& clip, float x, float y, float l
         for (int px = std::max(int(clip.x), int(x - reach)); px <= std::min(int(clip.x + clip.w) - 1, int(x + reach));
              ++px) {
             if (px < 0 || py < 0 || px >= p.width || py >= p.height) continue;
-            const float vx = float(px) + 0.5f - x, vy = float(py) + 0.5f - y, d = std::hypot(vx, vy);
+            const float vx = float(px) + 0.5f - x, vy = float(py) + 0.5f - y, d = panel::length(vx, vy);
             if (d > reach || d < 1) continue;
             const float along = (vx * fx + vy * fy) / d;
             if (along < outside) continue;
@@ -157,7 +157,7 @@ void roundCorners(panel::Picture& p, const panel::Box& b, float r) {
     const int x0 = int(b.x), y0 = int(b.y), x1 = int(b.x + b.w), y1 = int(b.y + b.h), rr = int(std::ceil(r));
     const auto cut = [&](int x, int y, float cx, float cy) {
         if (x < 0 || y < 0 || x >= p.width || y >= p.height) return;
-        const float d = std::hypot(float(x) + 0.5f - cx, float(y) + 0.5f - cy);
+        const float d = panel::length(float(x) + 0.5f - cx, float(y) + 0.5f - cy);
         const float keep = std::clamp(r + 0.5f - d, 0.0f, 1.0f);
         if (keep >= 1) return;
         uint32_t& c = p.px[size_t(y) * size_t(p.width) + size_t(x)];

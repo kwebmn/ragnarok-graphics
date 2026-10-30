@@ -68,9 +68,9 @@ panel::Picture vignette(int w, int h, uint32_t rgb, float alpha, float depth) {
             if (edge >= reach) continue;
             const float t = 1 - edge / reach;
             const float a = std::clamp(alpha * t * t, 0.0f, 1.0f);
-            const auto ch = [&](int sh) { return uint32_t(std::lround(float((rgb >> sh) & 0xFF) * a)); };
+            const auto ch = [&](int sh) { return uint32_t(panel::roundOf(float((rgb >> sh) & 0xFF) * a)); };
             p.px[size_t(y) * size_t(w) + size_t(x)] =
-                uint32_t(std::lround(a * 255)) << 24 | ch(16) << 16 | ch(8) << 8 | ch(0);
+                uint32_t(panel::roundOf(a * 255)) << 24 | ch(16) << 16 | ch(8) << 8 | ch(0);
         }
     return p;
 }
@@ -94,10 +94,10 @@ panel::Picture shadow(int w, int h, float radius, float spread, float alpha) {
             const float qx = std::fabs(float(x) + 0.5f - cx) - (hx - r);
             const float qy = std::fabs(float(y) + 0.5f - cy) - (hy - r);
             const float out =
-                std::hypot(std::max(qx, 0.0f), std::max(qy, 0.0f)) + std::min(std::max(qx, qy), 0.0f) - r;
+                panel::length(std::max(qx, 0.0f), std::max(qy, 0.0f)) + std::min(std::max(qx, qy), 0.0f) - r;
             if (out <= 0 || out >= spread) continue;
             const float t = 1 - out / spread;
-            const uint32_t a = uint32_t(std::lround(std::clamp(alpha * t * t, 0.0f, 1.0f) * 255));
+            const uint32_t a = uint32_t(panel::roundOf(std::clamp(alpha * t * t, 0.0f, 1.0f) * 255));
             p.px[size_t(y) * size_t(p.width) + size_t(x)] = a << 24;  // black, premultiplied
         }
     return p;

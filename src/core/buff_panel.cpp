@@ -74,7 +74,7 @@ void arc(panel::Picture& p, const panel::Box& b, float r, float part, uint32_t r
             if (k <= 0) continue;
             float turn = std::atan2(px - cx, cy - py) / 6.2831853f;  // clockwise from twelve o'clock
             if (turn < 0) turn += 1;
-            const float dist = std::hypot(px - cx, py - cy);
+            const float dist = panel::length(px - cx, py - cy);
             const float soft = std::clamp((part - turn) * 6.2831853f * std::max(dist, 1.0f) + 0.5f, 0.0f, 1.0f);
             if (soft > 0) panel::over(p.px[size_t(y) * size_t(p.width) + size_t(x)], rgb, k * soft);
         }

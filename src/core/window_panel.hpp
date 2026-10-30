@@ -1,4 +1,5 @@
 #pragma once
+#include <cmath>
 #include <cstdint>
 #include <string>
 #include <vector>
@@ -153,6 +154,15 @@ struct MenuChange {
 bool menuPick(Config& c, MenuHit hit, MenuChange& change);
 // A colour (0xRRGGBB) at an opacity over a premultiplied pixel: the words' coverage over the picture
 void over(uint32_t& pixel, uint32_t rgb, float opacity);
+// 3.0.11-beta.73 (R-WXNNU2: the minimap painted in 13 ms in the game, 3.5 ms in the tests' build): the 32-bit build's
+// lroundf and hypotf are library calls on the x87 (its control word changed for each) - a pixel's own inline: the same
+// numbers as std::lround (|v| < 2^23), a distance as the root of the squares
+inline long roundOf(float v) {  // no branches: a blend's channels are random (5.7 ns an over, 36 with branches)
+    const long t = long(v);         // toward zero
+    const float f = v - float(t);
+    return t + long(f >= 0.5f) - long(f <= -0.5f);
+}
+inline float length(float x, float y) { return std::sqrt(x * x + y * y); }
 // 3.0.9-beta.4: the panel's shapes for the driver's other pictures (core/answer_card) - a rounded box filled (and a
 // ring `edge` wide inside its border) and a circle, their edges smooth, over what the picture has
 void roundRect(Picture& p, const Box& b, float r, uint32_t fill, float fillA, uint32_t edgeRgb = 0, float edgeA = 0,

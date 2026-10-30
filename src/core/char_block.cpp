@@ -29,7 +29,7 @@ void ring(panel::Picture& p, float cx, float cy, float outer, float width, float
     if (share <= 0) return;
     for (int y = std::max(0, int(cy - outer) - 1); y < std::min(p.height, int(cy + outer) + 2); ++y)
         for (int x = std::max(0, int(cx - outer) - 1); x < std::min(p.width, int(cx + outer) + 2); ++x) {
-            const float px = float(x) + 0.5f, py = float(y) + 0.5f, r = std::hypot(px - cx, py - cy);
+            const float px = float(x) + 0.5f, py = float(y) + 0.5f, r = panel::length(px - cx, py - cy);
             const float k = cover(r - outer) * cover(outer - width - r);
             if (k <= 0) continue;
             float soft = 1;
@@ -50,7 +50,7 @@ void putRound(panel::Picture& out, const panel::Picture& pic, const panel::Box& 
         for (int x = 0; x < pic.width; ++x) {
             const int tx = ox + x, ty = oy + y;
             if (tx < 0 || ty < 0 || tx >= out.width || ty >= out.height) continue;
-            const float k = cover(std::hypot(float(tx) + 0.5f - cx, float(ty) + 0.5f - cy) - r);
+            const float k = cover(panel::length(float(tx) + 0.5f - cx, float(ty) + 0.5f - cy) - r);
             uint32_t c = pic.px[size_t(y) * size_t(pic.width) + size_t(x)];
             if (k <= 0 || !(c >> 24)) continue;
             if (k < 1) {

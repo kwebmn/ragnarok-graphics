@@ -579,3 +579,20 @@ TEST(window_panel_words_width_by_plex) {
     CHECK(panel::wordsWidth("\xE2\x98\x85", 12, false) >= 9.0f);  // ★ - Segoe UI's, not Plex's
     CHECK(panel::wordsWidth("", 12, false) == 0.0f);
 }
+
+// 3.0.11-beta.73 (R-WXNNU2: the minimap painted in 13 ms in the game, 3.5 ms in the tests' build - the 32-bit build's
+// lroundf and hypotf are x87 library calls): a pixel's rounding inline, the same numbers as std::lround
+TEST(window_panel_rounds_as_lround) {
+    for (const float v : {0.0f, 0.5f, 1.5f, 2.5f, -0.5f, -1.5f, -2.5f, 0.49999997f, -0.49999997f, 254.5f, 255.49998f,
+                          127.50001f, 1e-30f, -1e-30f, 8388607.0f, -8388607.0f})
+        CHECK_EQ(panel::roundOf(v), std::lround(v));
+    int differ = 0;
+    for (int i = -300 * 256; i <= 300 * 256; ++i) {
+        const float v = float(i) / 256.0f;
+        differ += panel::roundOf(v) != std::lround(v);
+        differ += panel::roundOf(std::nextafter(v, 1e9f)) != std::lround(std::nextafter(v, 1e9f));
+        differ += panel::roundOf(std::nextafter(v, -1e9f)) != std::lround(std::nextafter(v, -1e9f));
+    }
+    CHECK_EQ(differ, 0);
+    CHECK(std::fabs(panel::length(3, 4) - 5.0f) < 1e-6f && panel::length(0, 0) == 0.0f);
+}
