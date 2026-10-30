@@ -1,3 +1,16 @@
+# uaRO Graphics 3.0.11-beta.67 — what is new
+
+- **«Text size»** — a new choice in the app's «Interface» section and in «The new interface» of the game's console
+  (the concept: «the text scale — a setting of its own, 80–150 %»): 80, 90, 100, 115, 130 or 150 %. The windows you
+  read in — the chat, «Reference», «Items», «Status» — grow or shrink together with their words, on top of «Interface
+  size»; the panels, icons and the minimap stay as they were. It changes at once, no restart.
+- «Reference» now lays itself out again at once when «Interface size» or «Text size» changes (before, a new value
+  reached the open window only after the game's resolution changed).
+- **A small screen:** when the «Reference» window is narrow, the sections' rail on the left folds to its icons (as
+  before), and now pointing at an icon shows the section's name in a tip beside it.
+- To check: in the game's console «Text size» 130 % — the chat and «Reference» larger, the minimap and buffs the
+  same; the game in a 1024 × 768 window — in «Reference» point at a section's icon on the left.
+
 # uaRO Graphics 3.0.11-beta.66 — what is new
 
 - **The new interface writes in IBM Plex Sans** — the face all the concept's mock-ups are drawn in («the font —
