@@ -1,3 +1,13 @@
+# uaRO Graphics 3.0.11-beta.47 — what is new
+
+- **The new interface's opacity, as in the concept.** The panels' ground — the character block, the minimap's bar and
+  list, the buffs, the party, the target's card, the hotbar — is now 80 % (it was 86–92 %), the windows' «Items»,
+  «Status» and «Reference» 90 %. Both can be changed: «Panels' opacity» (50–100 %) and «Windows' opacity» (80–100 %) —
+  in the app's «Interface» section and in the game's console; the change shows at once. The chat follows the panels
+  but is never more see-through than 80 %, so that its channels' colours read. The words, icons and tips stay whole.
+- To check: in the game's console move «Panels' opacity» to 50 % — the world shows through the character block, the
+  buffs, the hotbar; to 100 % — the grounds solid; «Windows' opacity» — the same for «Items» and «Reference».
+
 # uaRO Graphics 3.0.11-beta.46 — what is new
 
 - **The new interface moves, as in the concept.** The target's card shows and goes smoothly (0.12 s, 4 points); the
