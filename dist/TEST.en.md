@@ -1,3 +1,16 @@
+# uaRO Graphics 3.0.11-beta.46 — what is new
+
+- **The new interface moves, as in the concept.** The target's card shows and goes smoothly (0.12 s, 4 points); the
+  character block changes its look smoothly after a click on the portrait (0.16 s); at a new level (Base or Job) the
+  block's edge flares gold once (0.6 s); the «! Low HP · N %» warning slides in from above (0.18 s) and fades
+  (0.24 s). What matters in a fight — HP, SP, the hotbar cells' states — changes at once, without motion.
+- **Low HP: the portrait glows red** (in the block with bars; the rings have their own glow).
+- A new switch «Interface motion» (the «Interface» section in the app, «The new interface» in the game's console): off — everything at
+  once.
+- To check: pick a monster and walk away — the card comes and goes smoothly; a click on the portrait — the look
+  changes smoothly; a new level — the gold flare (in the log `character: a new level - Base ..., Job ...: the block's
+  edge flares`); HP under a quarter — the red glow round the portrait and the warning sliding in.
+
 # uaRO Graphics 3.0.11-beta.45 — what is new
 
 - **«Hotbar»: the cells' states, as in the concept.**
