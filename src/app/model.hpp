@@ -78,6 +78,7 @@ public:
     const SystemInfo& system() const { return system_; }
     // 2.2: the card's level for the automatic set, as the driver finds it (effect_groups::cardLevel)
     int cardLevel() const;
+    int memoryLevel() const;  // 3.0.11-beta.58: the card's level by its memory alone (effect_groups::cardLevel)
     const Paths& paths() const { return paths_; }
 
     // uaro-graphics.ini keys: the player's change, else the file's value.

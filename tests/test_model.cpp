@@ -33,8 +33,10 @@ void backup(const std::wstring& name, const std::string& ini) {
     w.files[dir + L"\\personal.reg"] = toRegFile(personal, app::gameKeyPaths().personalRoot);
 }
 
-// 3.0.9-beta.7: the mark of the world scale's reset, written to a file read without it
-const std::vector<IniEdit> kMarked{{"utility", "world_scale_reset", "1"}};
+// 3.0.9-beta.7: the mark of the world scale's reset, written to a file read without it; 3.0.11-beta.58: and the
+// autopilot's move (a file without a set is on the automatic one: keep_fps 60 with it) with its mark
+const std::vector<IniEdit> kMarked{
+    {"utility", "world_scale_reset", "1"}, {"frames", "keep_fps", "60"}, {"utility", "autopilot", "1"}};
 
 // A key of an ini as readIni gives it; "<none>" when it is not there.
 std::string valueOf(const std::string& ini, const std::string& sectionKey) {
@@ -736,8 +738,8 @@ TEST(model_settles_an_old_files_groups_at_its_start) {
     CHECK(!m.now().config.effects.grass);
     CHECK(w.folders.count(fake::path(kBackups)) == 1);
     // a file of the new groups is left as it is (3.0.9-beta.7: with the world scale's mark - a file of now)
-    const std::string fresh =
-        "[effects]\r\npreset = auto\r\ngroup_plants = 0\r\n[utility]\r\nworld_scale_reset = 1\r\n";
+    const std::string fresh = "[effects]\r\npreset = auto\r\ngroup_plants = 0\r\n[utility]\r\nworld_scale_reset = 1\r\n"
+                              "autopilot = 1\r\n";  // 3.0.11-beta.58: and the autopilot's mark
     w.files[fake::path(kIni)] = fresh;
     m.load();
     CHECK(w.files[fake::path(kIni)] == fresh);
@@ -901,4 +903,44 @@ TEST(rows_follow_the_card_the_game_draws_on) {
     CHECK(fitsMachine("quality.dlss", m.machine()));  // auto: the fast one
     m.setToken(setting("renderer.gpu"), "Intel(R) UHD Graphics");
     CHECK(!fitsMachine("quality.dlss", m.machine()));
+}
+
+// 3.0.11-beta.58 (the autopilot): an install set up before goes over to the automatic set when the app opens (the
+// driver too, at the game's start) - its card's memory's set and keep_fps 45 to auto and 60; the player's own set stays
+TEST(model_moves_an_untouched_install_to_the_autopilot_at_its_start) {
+    fake::Windows& w = fake::reset();
+    aCard(w, "AMD Radeon RX 550", 0x1002, 2048);  // weak by its memory: the setup gave it «Низькі»
+    w.folders.insert(fake::path(L"uaro-graphics"));
+    w.files[fake::path(kIni)] =
+        "[effects]\r\npreset = weak\r\n[frames]\r\nkeep_fps = 45\r\n[utility]\r\nlanguage = uk\r\n";
+    app::Model m;
+    const std::string ini = w.files[fake::path(kIni)];
+    CHECK_EQ(valueOf(ini, "effects.preset"), std::string("auto"));
+    CHECK_EQ(valueOf(ini, "frames.keep_fps"), std::string("60"));
+    CHECK_EQ(valueOf(ini, "utility.autopilot"), std::string("1"));
+    w.files[fake::path(kIni)] = "[effects]\r\npreset = strong\r\n[utility]\r\nlanguage = uk\r\n";  // picked by hand
+    app::Model own;
+    CHECK_EQ(valueOf(w.files[fake::path(kIni)], "effects.preset"), std::string("strong"));
+    CHECK_EQ(valueOf(w.files[fake::path(kIni)], "utility.autopilot"), std::string("1"));
+}
+
+// 3.0.11-beta.58 (the autopilot): a fresh install, a new card or a new screen has its card judged again - the driver's
+// verdict for the card before goes; the same machine keeps it
+TEST(model_forgets_the_card_verdict_for_a_new_machine) {
+    fake::Windows& w = fake::reset();
+    aCard(w, "NVIDIA GeForce RTX 4070", 0x10de, 12282);
+    w.folders.insert(fake::path(L"uaro-graphics"));
+    const std::wstring record = fake::path(L"uaro-graphics\\card-level.txt");
+    w.files[record] = "v2 1 1 NVIDIA GeForce GTX 750\n";
+    app::Model m;
+    CHECK(m.startSetup(Lang::Uk) == FirstStart::Apply);
+    CHECK(w.files.count(record) == 0);
+    w.files[record] = "v2 3 1 NVIDIA GeForce RTX 4070\n";
+    app::Model same;
+    CHECK(same.startSetup(Lang::Uk) == FirstStart::Nothing);
+    CHECK(w.files.count(record) == 1);
+    w.system.d3d12.adapter = "AMD Radeon RX 7800 XT";
+    app::Model other;
+    CHECK(other.startSetup(Lang::Uk) == FirstStart::Ask);
+    CHECK(w.files.count(record) == 0);
 }

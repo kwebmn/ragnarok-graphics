@@ -4679,6 +4679,10 @@ constexpr Entry kTexts[] = {
     {Text::CardSlowNote, "The card cannot keep up with the set «{1}»: «{2}» now",
      "Відеокарта не встигає з набором «{1}» — тепер «{2}»",
      "Видеокарта не успевает с набором «{1}» — теперь «{2}»"},
+    {Text::AutopilotNote, "Effects for this graphics card: «{1}» · aiming at {2} frames a second",
+     "Ефекти під цю відеокарту: «{1}» · ціль — {2} кадрів за секунду",
+     "Эффекты под эту видеокарту: «{1}» · цель — {2} кадров в секунду"},
+    {Text::AutopilotChange, "Change", "Змінити", "Изменить"},
     {Text::FxOwnFarModels, "Houses and trees far off", "Будинки й дерева вдалині", "Дома и деревья вдали"},
     {Text::FxOwnFarModelsHint,
      "With the own ground, the map's houses, trees and rocks drawn by uaRO Graphics from the map's files past the edge "
@@ -5580,6 +5584,11 @@ Lang windowLang(std::optional<Lang> chosen, unsigned primaryLanguage) {
 const char* tr(Lang l, Text t) {
     const Entry& e = kTexts[size_t(t)];
     return l == Lang::Uk ? e.uk : l == Lang::Ru ? e.ru : e.en;
+}
+
+Text effectsSetText(int level) {
+    static const Text kSets[] = {Text::TestSetOff, Text::FxPresetWeak, Text::FxPresetMedium, Text::FxPresetStrong};
+    return kSets[level < 0 ? 0 : level > 3 ? 3 : level];
 }
 
 std::string fmt(const std::string& pattern, const std::vector<std::string>& args) {

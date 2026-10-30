@@ -1198,11 +1198,7 @@ void Context::judgeCard(const Config& config, double fps, double gpuMs) {
     const Startup& s = startup();
     const settings::Lang lang = s.lang;
     const int now = judge().level();
-    const auto setName = [lang](int level) {
-        static const settings::Text kNames[] = {settings::Text::TestSetOff, settings::Text::FxPresetWeak,
-                                                settings::Text::FxPresetMedium, settings::Text::FxPresetStrong};
-        return settings::tr(lang, kNames[std::clamp(level, 0, card_speed::kTopLevel)]);
-    };
+    const auto setName = [lang](int level) { return settings::tr(lang, settings::effectsSetText(level)); };
     switch (step) {
         case card_speed::Step::Raise:  // not written: a game ended on trial starts the next one on the set before
             LOG_INFO("card level: %s keeps up - its own work %.1f ms a frame of %.1f, %.0f fps, for a minute on the "

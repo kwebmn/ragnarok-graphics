@@ -36,6 +36,7 @@ constexpr const char* kOriginals = "uaro-graphics\\original";
 constexpr const char* kRedirected = "uaro-graphics\\cache\\launcher-redirect.txt";
 // 2.12: the safe mode's (core/safe_mode): the failed starts in a row; why the game starts safe (the app shows it and
 // removes it - «Звичайний режим»)
+constexpr const char* kCardLevel = "uaro-graphics\\card-level.txt";  // 3.0.4-beta.35: the card judge's verdict
 constexpr const char* kFailedStarts = "uaro-graphics\\cache\\failed-starts.txt";
 constexpr const char* kSafeModeNote = "uaro-graphics\\cache\\safe-mode.txt";
 // 3.0.11-beta.56 (the owner: «сделать» - how many installs there are): this install's random number for the site's

@@ -126,22 +126,29 @@ void Model::load() {
     s.programFiles = underProgramFiles(paths_.dir);
     now_ = s;
     settleOldGroups();
-    // 3.0.9-beta.7: the old cards' 75 % of the automatic setup back to 100 once (the driver too, at the game's start)
-    if (now_.iniExists)
-        if (const std::vector<IniEdit> edits = worldScaleReset(readIni(now_.iniText)); !edits.empty())
-            writeIni(edits, Lang::En);
+    // 3.0.9-beta.7: the old cards' 75 % of the automatic setup back to 100 once; 3.0.11-beta.58 (the autopilot): an
+    // install set up before goes over to the automatic set once - in one write (the driver too, at the game's start)
+    if (now_.iniExists) {
+        const auto ini = readIni(now_.iniText);
+        std::vector<IniEdit> edits = worldScaleReset(ini);
+        for (const IniEdit& e : autopilotOnce(ini, memoryLevel())) edits.push_back(e);
+        if (!edits.empty()) writeIni(edits, Lang::En);
+    }
 }
 
-int Model::cardLevel() const {
+int Model::memoryLevel() const {
     const bool d3d12 = system_.d3d12Probed && system_.d3d12.ok &&
                        token(*findSetting("renderer.api")) != "d3d11";
     const bool weak = token(*findSetting("debug.weak_card")) == "1";  // 3.0.4-beta.35: taken as weak, to try it
-    const int memory = weak ? 1 : effect_groups::cardLevel(d3d12, system_.d3d12.vramMb);
+    return weak ? 1 : effect_groups::cardLevel(d3d12, system_.d3d12.vramMb);
+}
+
+int Model::cardLevel() const {
     // 3.0.4-beta.35: a card judged by how it draws in the game (the driver's uaro-graphics\card-level.txt);
     // 3.0.11-beta.58: every card's, over the whole ladder
     std::string judged;
-    readFile(paths_.dir + L"\\uaro-graphics\\card-level.txt", judged);
-    return card_speed::startOf(memory, system_.d3d12.adapter, judged).level;
+    readFile(ourPlace(paths_.dir, layout::kCardLevel), judged);
+    return card_speed::startOf(memoryLevel(), system_.d3d12.adapter, judged).level;
 }
 
 void Model::settleOldGroups() {
@@ -694,6 +701,8 @@ std::wstring Model::recordMachine(Lang l) { return writeIni({{"utility", "machin
 
 FirstStart Model::startSetup(Lang l) {
     const FirstStart f = firstStart(usedBefore(), machineKept(), machineKey(machine()));
+    // 3.0.11-beta.58 (the autopilot): a fresh install, a new card or screen - the card judged again by how it draws
+    if (f == FirstStart::Apply || f == FirstStart::Ask) deleteFile(ourPlace(paths_.dir, layout::kCardLevel));
     if (f == FirstStart::Apply) {
         bool uiChanged = false;
         lastAuto_ = pendAutoSetup(uiChanged);

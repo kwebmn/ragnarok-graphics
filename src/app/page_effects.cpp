@@ -274,16 +274,15 @@ private:
         host_.rebuild();
     }
 
-    // The set's list: "auto" names the level it takes on this card.
+    // The set's list: "auto" names the level it takes on this card (3.0.11-beta.58: the whole ladder, «Без ефектів»)
     std::vector<std::wstring> presetItems(int& selected) const {
-        static const Text kLevels[] = {Text::FxPresetWeak, Text::FxPresetWeak, Text::FxPresetMedium,
-                                       Text::FxPresetStrong};
         const IniSetting& preset = setting("effects.preset");
         const std::string word = host_.model().token(preset);
         std::vector<std::wstring> items;
         selected = 0;
         for (int i = 0; i < 6; ++i) {
-            items.push_back(i == 0 ? tf(Text::FxPresetAuto, {utf8(t(kLevels[cardLevel()]))}) : t(preset.choices[i]));
+            items.push_back(i == 0 ? tf(Text::FxPresetAuto, {utf8(t(effectsSetText(cardLevel())))})
+                                   : t(preset.choices[i]));
             if (word == kPresets[i]) selected = i;
         }
         return items;

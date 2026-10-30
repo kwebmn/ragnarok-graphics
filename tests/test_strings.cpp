@@ -60,3 +60,16 @@ TEST(strings_newest_texts_in_their_places) {
     CHECK_EQ(en(Text::ViewHelp), std::string("Help"));
     CHECK(en(Text::HelpEffectsMore).rfind("Each group holds its effects", 0) == 0);
 }
+
+// 3.0.11-beta.58 (the autopilot): the ladder's sets by their level - the driver's notes, the Effects page's «Авто: {1}»
+// and «Гра»'s line name them alike
+TEST(effects_set_text_names_the_ladder) {
+    CHECK(effectsSetText(0) == Text::TestSetOff);
+    CHECK(effectsSetText(1) == Text::FxPresetWeak);
+    CHECK(effectsSetText(2) == Text::FxPresetMedium);
+    CHECK(effectsSetText(3) == Text::FxPresetStrong);
+    CHECK(effectsSetText(-1) == Text::TestSetOff);
+    CHECK(effectsSetText(9) == Text::FxPresetStrong);
+    CHECK(std::string(tr(Lang::Uk, effectsSetText(0))) == "Без ефектів");
+    CHECK(std::string(tr(Lang::Uk, effectsSetText(3))) == "Високі");
+}

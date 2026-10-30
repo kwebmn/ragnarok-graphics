@@ -432,6 +432,7 @@ enum class Text : uint16_t {
     CardRaisedNote,                // 3.0.4-beta.35: a weak card keeps up - the medium set on trial (3.0.11-beta.58)
     CardLoweredNote,               // 3.0.4-beta.35: the medium set too much for it - the weak set back (3.0.11-beta.58)
     CardSlowNote,                  // 3.0.11-beta.58: a card not judged yet holding the game back - a set lower
+    AutopilotNote, AutopilotChange,  // 3.0.11-beta.58: «Гра»'s line of the automatic set and its button
     FxOwnFarModels, FxOwnFarModelsHint,  // 3.0.4-beta.14: a part of the own ground
     CameraZoomLimit, CameraZoomLimitHint,  // 3.0.4-beta.17: the camera no further out than the character is drawn
     // 3.0.5-beta.1: «Реліз» chosen over a beta - the release offered back (update::backToRelease)
@@ -557,6 +558,9 @@ enum class Text : uint16_t {
 };
 
 const char* tr(Lang l, Text t);  // UTF-8
+// 3.0.11-beta.58 (the autopilot): a set of the effects' ladder by its level - 0 «Без ефектів», 1 «Низькі», 2
+// «Середні», 3 «Високі» (out of it: the nearest)
+Text effectsSetText(int level);
 // "{1}", "{2}", ... replaced by the arguments.
 std::string fmt(const std::string& pattern, const std::vector<std::string>& args);
 

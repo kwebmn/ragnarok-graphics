@@ -26,6 +26,7 @@ constexpr int kUpdateCheck = 2107;  // and «Перевірити оновлен
 constexpr int kUpdateNow = 2108;    // 3.0.1-beta.4 (the user): «Оновити зараз» - updated, then this app, no game
 constexpr int kTestNow = 2109;    // 3.0.5-beta.7 (the user: «сделай»): «Запустити тест графіки»
 constexpr int kTestList = 2130;   // and the last test's table
+constexpr int kAutopilotChange = 2131;  // 3.0.11-beta.58: the automatic set's line - the Effects page
 constexpr int kNewsFirst = 2110;  // + a news item's number: its "More"
 constexpr int kNewsMost = 10;
 
@@ -201,6 +202,15 @@ public:
             p.buttons({{kSwitchOn, t(Text::SwitchOn)}});
             any = true;
         }
+        // 3.0.11-beta.58 (the autopilot): the automatic set judged by how the card draws - the one now, the target
+        const Config& c = m.now().config;
+        if (c.effects.preset == EffectPreset::Auto && c.api != Api::System && !c.safeMode && !m.safeModeNoted()) {
+            const int target = c.fpsLimit > 0 ? c.fpsLimit : 60;
+            p.note(tf(Text::AutopilotNote, {utf8(t(effectsSetText(m.cardLevel()))), std::to_string(target)}),
+                   Tone::Good);
+            p.buttons({{kAutopilotChange, t(Text::AutopilotChange)}});
+            any = true;
+        }
         if (any) p.gap();
     }
 
@@ -232,6 +242,8 @@ public:
             host_.rebuild();
         } else if (id == kUpdateNow) {
             updateAndReopen(host_, false);  // the button says it: no question
+        } else if (id == kAutopilotChange) {
+            host_.showPage(settings::Page::Effects);
         } else if (id == kPicked && m.lastAutoSetup()) {
             host_.message(autoSetupText(m.machine(), *m.lastAutoSetup(), false, host_.lang()), false);
         } else if (id == kNormalMode || id == kSwitchOn) {
