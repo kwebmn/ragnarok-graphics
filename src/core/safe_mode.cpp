@@ -2,31 +2,21 @@
 
 #include <string>
 
+#include "core/log_files.hpp"
 #include "core/report_upload.hpp"
 
 namespace uagfx::safe {
 
 namespace {
 
-// The time of day (seconds) of the log's line holding `at`: its "HH:MM:SS" start; -1 none
-int stampAt(const std::string& log, size_t at) {
-    const size_t line = at == 0 ? 0 : log.rfind('\n', at - 1) + 1;  // npos + 1: the first line
-    if (line + 8 > log.size()) return -1;
-    const char* p = log.data() + line;
-    const auto digits = [&](int i) { return p[i] >= '0' && p[i] <= '9' && p[i + 1] >= '0' && p[i + 1] <= '9'; };
-    if (!digits(0) || p[2] != ':' || !digits(3) || p[5] != ':' || !digits(6)) return -1;
-    const auto two = [&](int i) { return (p[i] - '0') * 10 + (p[i + 1] - '0'); };
-    return two(0) * 3600 + two(3) * 60 + two(6);
-}
-
 // When the game ended badly: the crash's, the card's loss or the renderer's line; a game not closed - its last line
 int badEndAt(const std::string& log) {
     for (const char* mark : {"crash: exception 0x", "the GPU device was removed", "the graphics card was lost",
                              "the uaRO renderer could not start"})
-        if (const size_t at = log.find(mark); at != std::string::npos) return stampAt(log, at);
+        if (const size_t at = log.find(mark); at != std::string::npos) return logfiles::secondsAt(log, at);
     size_t end = log.size();
     while (end > 0 && (log[end - 1] == '\n' || log[end - 1] == '\r')) --end;
-    return end == 0 ? -1 : stampAt(log, end - 1);
+    return end == 0 ? -1 : logfiles::secondsAt(log, end - 1);
 }
 
 }  // namespace
@@ -36,7 +26,7 @@ Start judge(const std::string& previousLog) {
     const size_t picture = previousLog.find(kFirstPicture);
     if (picture == std::string::npos) return bad ? Start::Failed : Start::Unknown;
     if (!bad) return Start::Fine;
-    const int shown = stampAt(previousLog, picture), ended = badEndAt(previousLog);
+    const int shown = logfiles::secondsAt(previousLog, picture), ended = badEndAt(previousLog);
     if (shown < 0 || ended < 0) return Start::Fine;  // no times: as before
     const int seconds = ended >= shown ? ended - shown : ended + 86400 - shown;
     return seconds <= kEarlySeconds ? Start::FailedEarly : Start::Fine;

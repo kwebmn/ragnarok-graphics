@@ -14,5 +14,7 @@ std::string slotted(const std::string& path, int slot);  // slot 1 (or less): th
 std::string previous(const std::string& path);  // the previous game's log: "x\a.log" -> "x\a.prev.log"
 std::string part(const std::string& path);      // the start of a long one: "x\a.log" -> "x\a.1.log"
 std::string folderOf(const std::string& path);  // "x\y\a.log" -> "x\y"; "" with no backslash
+// 3.0.11-beta.61: the time of day (seconds) of the log's line holding `at`, by its "HH:MM:SS" start; -1 none
+int secondsAt(const std::string& log, size_t at);
 
 }  // namespace uagfx::logfiles

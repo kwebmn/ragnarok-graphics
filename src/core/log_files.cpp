@@ -36,4 +36,14 @@ std::string folderOf(const std::string& path) {
     return slash == std::string::npos ? std::string() : path.substr(0, slash);
 }
 
+int secondsAt(const std::string& log, size_t at) {
+    const size_t line = at == 0 ? 0 : log.rfind('\n', at - 1) + 1;  // npos + 1: the first line
+    if (line + 8 > log.size()) return -1;
+    const char* p = log.data() + line;
+    const auto digits = [&](int i) { return p[i] >= '0' && p[i] <= '9' && p[i + 1] >= '0' && p[i + 1] <= '9'; };
+    if (!digits(0) || p[2] != ':' || !digits(3) || p[5] != ':' || !digits(6)) return -1;
+    const auto two = [&](int i) { return (p[i] - '0') * 10 + (p[i + 1] - '0'); };
+    return two(0) * 3600 + two(3) * 60 + two(6);
+}
+
 }  // namespace uagfx::logfiles
