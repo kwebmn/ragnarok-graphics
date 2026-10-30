@@ -26,7 +26,7 @@ GTX 1050 Ti); every player at 1080p or below with the 60-frame limit and VSync; 
 
 1. **The set by the card's measured speed, both ways.** The automatic set moves over the whole ladder - «Без
    ефектів» (0), «Низькі» (1), «Середні» (2), «Високі» (3) - to the highest one the card holds at the 60-frame target
-   with room to spare, judged on the maps; the verdict kept per card and screen size.
+   with room to spare, judged on the maps; the verdict kept per card (judged again on a new card or screen).
 2. **keep_fps 60 for every class** (the super-light mode's own 0 stays): the in-game net for heavy scenes.
 3. **The safe mode also after a bad end in the first 5 minutes after the first picture**; a new version tries the
    normal mode again.
@@ -60,10 +60,11 @@ game back counts - `effect_costs::slowForCard`); a player's own choice overridde
   (`hasRoom`) for 12 windows in a row, the level under 3 and not settled -> one level up on trial. Trial: 36 windows (3 minutes); 2 windows in a row slow for the card -> back down, that level failed
   (settled); 36 windows -> kept (not settled while under 3: the next game may try higher). Down while not on trial: 3
   windows in a row slow for the card at a level above 0 -> one level down, settled.
-- The record (`uaro-graphics\card-level.txt`): `<level> <settled 0|1> <WxH> <adapter>`, WxH the render target's (a
-  record of another size does not count: the memory level again); the old `<level> <adapter>`
-  (levels 1-2) still read - as the start level, not settled, any size. The driver writes it at each step; the
-  settings app reads it for «Авто: {1}».
+- The record (`uaro-graphics\card-level.txt`): `v2 <level> <settled 0|1> <adapter>`; the old `<level> <adapter>`
+  (levels 1-2) still read - as the start level, not settled. No screen size in it: the render target is known only
+  after the first picture, while the set is needed before; a new card or screen is the settings app's changed machine
+  (`[utility] machine` holds the adapter and the screen), and then the app deletes the record - judged again. The
+  driver writes it at Keep, Back and Lower; the settings app reads it for «Авто: {1}».
 - The driver (`Context::judgeCard`): every class with the `auto` set (not only level 1); a level changed in a window
   resets keep_fps's slow count that window (no double reaction). On-screen notes for up on trial, kept, back down,
   lowered - in the three languages.
