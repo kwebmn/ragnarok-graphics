@@ -136,6 +136,8 @@ void Model::load() {
     }
 }
 
+bool Model::playedHere() const { return fileExists(paths_.log); }
+
 int Model::memoryLevel() const {
     const bool d3d12 = system_.d3d12Probed && system_.d3d12.ok &&
                        token(*findSetting("renderer.api")) != "d3d11";
@@ -700,7 +702,7 @@ std::string Model::machineKept() const {
 std::wstring Model::recordMachine(Lang l) { return writeIni({{"utility", "machine", machineKey(machine())}}, l); }
 
 FirstStart Model::startSetup(Lang l) {
-    const FirstStart f = firstStart(usedBefore(), machineKept(), machineKey(machine()));
+    const FirstStart f = firstStart(usedBefore(), machineKept(), machineKey(machine()), playedHere());
     // 3.0.11-beta.58 (the autopilot): a fresh install, a new card or screen - the card judged again by how it draws
     if (f == FirstStart::Apply || f == FirstStart::Ask) deleteFile(ourPlace(paths_.dir, layout::kCardLevel));
     if (f == FirstStart::Apply) {

@@ -236,12 +236,12 @@ TEST(auto_setup_takes_the_fast_card_of_a_laptop) {
 }
 
 // 2.12: the app's start - a fresh install set up at once, a used one only recorded, a changed card or screen asked.
-TEST(first_start_decides_by_the_install_and_the_machine) {
-    CHECK(firstStart(false, "", "RTX|8192|1920x1080") == FirstStart::Apply);
-    CHECK(firstStart(true, "", "RTX|8192|1920x1080") == FirstStart::Record);
-    CHECK(firstStart(true, "RTX|8192|1920x1080", "RTX|8192|1920x1080") == FirstStart::Nothing);
-    CHECK(firstStart(true, "RTX|8192|1920x1080", "RTX|8192|2560x1440") == FirstStart::Ask);
-    CHECK(firstStart(false, "RTX|8192|1920x1080", "UHD|128|1920x1080") == FirstStart::Ask);
+TEST(first_start_decides_by_the_install_and_the_machine) {  // an install where the game was played
+    CHECK(firstStart(false, "", "RTX|8192|1920x1080", true) == FirstStart::Apply);
+    CHECK(firstStart(true, "", "RTX|8192|1920x1080", true) == FirstStart::Record);
+    CHECK(firstStart(true, "RTX|8192|1920x1080", "RTX|8192|1920x1080", true) == FirstStart::Nothing);
+    CHECK(firstStart(true, "RTX|8192|1920x1080", "RTX|8192|2560x1440", true) == FirstStart::Ask);
+    CHECK(firstStart(false, "RTX|8192|1920x1080", "UHD|128|1920x1080", true) == FirstStart::Ask);
     Machine m = rtx5060();
     CHECK_EQ(machineKey(m), std::string("NVIDIA GeForce RTX 5060 Ti|16384|3840x2160"));
 }
@@ -287,4 +287,15 @@ TEST(autopilot_once_moves_the_untouched_sets) {
     CHECK(valueIn(e, "effects", "preset") == "-" && valueIn(e, "frames", "keep_fps") == "60");
     CHECK_EQ(autopilotOnce(readIni("[effects]\npreset = auto\n[frames]\nkeep_fps = 50\n"), 2).size(), size_t(1));
     CHECK(autopilotOnce(readIni("[effects]\npreset = weak\n[utility]\nautopilot = 1\n"), 1).empty());
+}
+
+// 3.0.11-beta.60 (the autopilot): an installed client copied with another computer's settings (its packer's machine
+// recorded) where no game was played yet is set up for this one silently; one played here is asked, as before
+TEST(first_start_sets_up_a_copied_install_silently) {
+    CHECK(firstStart(true, "RTX|8192|1920x1080", "UHD|128|1920x1080", false) == FirstStart::Apply);
+    CHECK(firstStart(false, "RTX|8192|1920x1080", "UHD|128|1920x1080", false) == FirstStart::Apply);
+    CHECK(firstStart(true, "RTX|8192|1920x1080", "UHD|128|1920x1080", true) == FirstStart::Ask);
+    CHECK(firstStart(true, "RTX|8192|1920x1080", "RTX|8192|1920x1080", false) == FirstStart::Nothing);
+    CHECK(firstStart(false, "", "UHD|128|1920x1080", false) == FirstStart::Apply);
+    CHECK(firstStart(true, "", "UHD|128|1920x1080", false) == FirstStart::Record);
 }

@@ -869,6 +869,7 @@ TEST(first_start_leaves_a_used_install_alone) {
     CHECK(!valueOf(ini, "utility.machine").empty());
     CHECK(!m.lastAutoSetup());
     w.system.d3d12.adapter = "AMD Radeon RX 7800 XT";  // another card in the computer
+    w.files[fake::path(L"uaro-graphics\\logs\\uaro-graphics.log")] = "a game played here\r\n";  // 3.0.11-beta.60
     app::Model again;
     CHECK(again.startSetup(Lang::Uk) == FirstStart::Ask);
     CHECK_EQ(valueOf(w.files[fake::path(kIni)], "quality.sharpen"), std::string("13"));
@@ -940,7 +941,26 @@ TEST(model_forgets_the_card_verdict_for_a_new_machine) {
     CHECK(same.startSetup(Lang::Uk) == FirstStart::Nothing);
     CHECK(w.files.count(record) == 1);
     w.system.d3d12.adapter = "AMD Radeon RX 7800 XT";
+    w.files[fake::path(L"uaro-graphics\\logs\\uaro-graphics.log")] = "a game played here\r\n";
     app::Model other;
     CHECK(other.startSetup(Lang::Uk) == FirstStart::Ask);
     CHECK(w.files.count(record) == 0);
+}
+
+// 3.0.11-beta.60 (the autopilot): a client packed with its packer's settings - another machine recorded, no game played
+// here (no driver's log) - is set up for this computer silently
+TEST(model_sets_a_copied_install_up_silently) {
+    fake::Windows& w = fake::reset();
+    aCard(w, "AMD Radeon HD 6570", 0x1002, 2048);
+    w.folders.insert(fake::path(L"uaro-graphics"));
+    w.files[fake::path(kIni)] = "[utility]\r\nlanguage = uk\r\nmachine = NVIDIA GeForce RTX 5060 Ti|16311|3840x2160\r\n"
+                                "[quality]\r\nmsaa = 8\r\n";
+    app::Model m;
+    CHECK(!m.playedHere());
+    CHECK(m.startSetup(Lang::Uk) == FirstStart::Apply);
+    CHECK(m.lastAutoSetup().has_value());
+    CHECK(valueOf(w.files[fake::path(kIni)], "utility.machine").rfind("AMD Radeon HD 6570|", 0) == 0);
+    w.files[fake::path(L"uaro-graphics\\logs\\uaro-graphics.log")] = "a game played here\r\n";
+    app::Model played;
+    CHECK(played.playedHere());
 }

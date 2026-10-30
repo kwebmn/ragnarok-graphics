@@ -1220,7 +1220,9 @@ LRESULT MainWindow::handle(UINT msg, WPARAM wp, LPARAM lp) {
             return 0;
         }
         case kAskStats: {  // 2.2.1: asked once; then the day's statistics go in the background (not while it plays)
-            if (!model_->statsAsked()) {
+            // 3.0.11-beta.60 (the autopilot): nothing asked before the first game - a new player plays first
+            const bool played = model_->playedHere();
+            if (played && !model_->statsAsked()) {
                 const bool yes = box(wtr(lang_, Text::StatsAsk), MB_YESNO | MB_ICONQUESTION) == IDYES;
                 const std::wstring err = model_->setStats(yes, lang_);
                 if (!err.empty()) message(err, true);
@@ -1228,7 +1230,7 @@ LRESULT MainWindow::handle(UINT msg, WPARAM wp, LPARAM lp) {
             }
             // 3.0.0-beta.1 (decision 5): the report by itself when a game ends badly - asked once, «Так» preselected
             // (the box's first button); one who turned it on already is not asked
-            if (!model_->reportAsked()) {
+            if (played && !model_->reportAsked()) {
                 const bool yes = model_->now().config.reportAuto ||
                                  box(wtr(lang_, Text::ReportAutoAsk), MB_YESNO | MB_ICONQUESTION) == IDYES;
                 const std::wstring err = model_->setReportAuto(yes, lang_);

@@ -60,7 +60,9 @@ bool strongIntegrated(const std::string& adapter);
 // card at once; a used one's card and screen are only recorded ([utility] machine); a changed one is asked about.
 enum class FirstStart { Nothing, Apply, Ask, Record };
 std::string machineKey(const Machine& m);  // "adapter|vramMb|WxH"
-FirstStart firstStart(bool usedBefore, const std::string& kept, const std::string& now);
+// 3.0.11-beta.60 (the autopilot): `playedHere` - the driver's log is in this folder; another machine recorded where no
+// game was played yet is an installed client copied with its packer's settings: set up silently, not asked
+FirstStart firstStart(bool usedBefore, const std::string& kept, const std::string& now, bool playedHere);
 // "high", "middle", ...: for the log and the tests.
 const char* tierName(Tier t);
 // 3.0.9-beta.7 (the owner, R-3FS6YX «розмазує модель чара»): the world whole for everyone - a [quality] world_scale
