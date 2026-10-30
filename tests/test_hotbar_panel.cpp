@@ -19,8 +19,19 @@ bool inside(const panel::Box& outer, const panel::Box& inner) {
 }
 
 hotbar::Texts texts() {
-    return hotbar::Texts{"бойовий режим", "літери — навички й предмети \xC2\xB7 Enter — чат", "редагувати панель гри",
-                         "готово", "клік — використати"};
+    hotbar::Texts t{"бойовий режим", "літери — навички й предмети \xC2\xB7 Enter — чат", "редагувати панель гри",
+                    "готово", "клік — використати"};
+    t.noSp = "Немає SP \xC2\xB7 потрібно {1}, у вас {2}";
+    t.notHere = "Не тут \xC2\xB7 {1}";
+    t.reasons.assign(size_t(hotbar::NotHere::kCount), "");
+    t.reasons[size_t(hotbar::NotHere::Teleport)] = "на цій карті телепорт заборонено";
+    return t;
+}
+
+hotbar::Show hovering(int cell) {
+    hotbar::Show s;
+    s.hover = cell;
+    return s;
 }
 
 }  // namespace
@@ -93,23 +104,25 @@ TEST(hotbar_picture_and_words) {
     p.width = L.w;
     p.height = L.h;
     p.px.assign(size_t(L.w) * size_t(L.h), 0u);
-    hotbar::paint(p, L, cells, 0, false, texts());
+    hotbar::paint(p, L, cells, hovering(0), texts());
     const auto at = [&](const panel::Box& b) {
         return p.px[size_t(int(b.y + b.h / 2)) * size_t(p.width) + size_t(int(b.x + b.w / 2))];
     };
     const uint32_t lit = at(L.cells[1]), dim = at(L.cells[2]);
     CHECK((lit & 0xFF) > 0xA0 && (dim & 0xFF) < (lit & 0xFF) / 2);  // the icon there, dimmed with none in the bag
-    const panel::Box& c0 = L.cells[0];
-    const uint32_t edge = p.px[size_t(int(c0.y + c0.h / 2)) * size_t(p.width) + size_t(int(c0.x))];  // pointed at
-    CHECK(((edge >> 16) & 0xFF) > 0x90 && ((edge >> 8) & 0xFF) > 0x70);
-    const std::vector<hotbar::Words> w = hotbar::words(L, cells, 0, 0, false, texts());
+    const auto edgeOf = [&](const panel::Picture& pic, const panel::Box& c) {
+        return pic.px[size_t(int(c.y + c.h / 2)) * size_t(pic.width) + size_t(int(c.x))];
+    };
+    const uint32_t hot = edgeOf(p, L.cells[0]), plain = edgeOf(p, L.cells[3]);  // pointed at: a lighter edge
+    CHECK(((hot >> 8) & 0xFF) > ((plain >> 8) & 0xFF) + 8);
+    const std::vector<hotbar::Words> w = hotbar::words(L, cells, 0, hovering(0), texts());
     const auto has = [&](const std::string& text) {
         return std::find_if(w.begin(), w.end(), [&](const hotbar::Words& x) { return x.text == text; }) != w.end();
     };
     CHECK(has("F1") && has("F9") && has("38") && has("0") && has("10") && has("1") && has("F12"));
     CHECK(has("Double Strafe \xC2\xB7 Lv 10") && has("клік — використати"));
     const std::vector<hotbar::Words> b = hotbar::words(hotbar::layout(hotbar::Mode::Battle, 400, 300, 1.0f),
-                                                       std::vector<hotbar::Cell>(27), 0, -1, false, texts());
+                                                       std::vector<hotbar::Cell>(27), 0, hovering(-1), texts());
     const auto inB = [&](const std::string& text) {
         return std::find_if(b.begin(), b.end(), [&](const hotbar::Words& x) { return x.text == text; }) != b.end();
     };
@@ -131,4 +144,101 @@ TEST(hotbar_tables_and_slots) {
     CHECK(hotbar::slotOf("").kind == hotbar::Slot::Kind::None);
     CHECK(hotbar::slotOf("nothing").kind == hotbar::Slot::Kind::None);
     CHECK(hotbar::slotOf("##").kind == hotbar::Slot::Kind::None);
+}
+
+// 3.0.11-beta.45: the concept's cell states - pressed, chosen (a skill waits for its target), no SP, «не тут»; the
+// tip after its while only
+TEST(hotbar_cell_states) {
+    const hotbar::Layout L = hotbar::layout(hotbar::Mode::Normal, 400, 200, 1.0f);
+    panel::Picture icon;
+    icon.width = icon.height = 32;
+    icon.px.assign(32 * 32, 0xFF3060C0u);
+    std::vector<hotbar::Cell> cells(9);
+    for (int i = 0; i < 9; ++i) {
+        cells[size_t(i)].key = "F" + std::to_string(i + 1);
+        cells[size_t(i)].name = "Skill " + std::to_string(i + 1);
+        cells[size_t(i)].level = 5;
+        cells[size_t(i)].icon = &icon;
+    }
+    cells[1].selected = true;
+    cells[2].spNeed = 24;
+    cells[2].spHave = 12;
+    cells[3].notHere = hotbar::NotHere::Teleport;
+    cells[4].spNeed = 10;
+    cells[4].spHave = 30;  // enough
+    panel::Picture p;
+    p.width = L.w;
+    p.height = L.h;
+    p.px.assign(size_t(L.w) * size_t(L.h), 0u);
+    hotbar::Show show;
+    show.pressed = 0;
+    hotbar::paint(p, L, cells, show, texts());
+    const auto px = [&](float x, float y) { return p.px[size_t(int(y)) * size_t(p.width) + size_t(int(x))]; };
+    const panel::Box& c1 = L.cells[1];
+    const uint32_t gold = px(c1.x + 0.5f, c1.y + c1.h / 2);  // chosen: the gold outline
+    CHECK(((gold >> 16) & 0xFF) > 0x90 && ((gold >> 8) & 0xFF) > 0x70 && (gold & 0xFF) < ((gold >> 16) & 0xFF));
+    const uint32_t full = px(L.cells[5].x + 24, L.cells[5].y + 24), dry = px(L.cells[2].x + 24, L.cells[2].y + 24);
+    const uint32_t enough = px(L.cells[4].x + 24, L.cells[4].y + 24);
+    CHECK((dry & 0xFF) < (full & 0xFF) && ((dry >> 16) & 0xFF) > ((dry & 0xFF) + 1) / 2);  // dimmed and grey
+    CHECK(enough == full);  // SP enough: as any other
+    const std::vector<hotbar::Words> w = hotbar::words(L, cells, 0, show, texts());
+    const auto find = [&](const std::string& text, size_t from = 0) -> const hotbar::Words* {
+        for (size_t i = from; i < w.size(); ++i)
+            if (w[i].text == text) return &w[i];
+        return nullptr;
+    };
+    const hotbar::Words* f1 = find("F1");
+    const hotbar::Words* f2 = find("F2");
+    CHECK(f1 && f2 && std::fabs(f1->box.y - f2->box.y - 1.0f) < 1e-3f);  // pressed: 1 px lower
+    int sps = 0;
+    for (const hotbar::Words& x : w) sps += x.text == "SP";
+    CHECK(sps == 1);  // the «SP» plate on the cell with too little only
+    // the tips: why it cannot be used, else how
+    const auto tipOf = [&](int cell) {
+        hotbar::Show h;
+        h.hover = cell;
+        const std::vector<hotbar::Words> t = hotbar::words(L, cells, 0, h, texts());
+        return t.back().text;
+    };
+    CHECK(tipOf(2) == "Немає SP \xC2\xB7 потрібно 24, у вас 12");
+    CHECK(tipOf(3) == "Не тут \xC2\xB7 на цій карті телепорт заборонено");
+    CHECK(tipOf(4) == "клік — використати");
+    hotbar::Show early;  // pointed at, its while not over: no tip
+    early.hover = 2;
+    early.tip = false;
+    const std::vector<hotbar::Words> none = hotbar::words(L, cells, 0, early, texts());
+    const auto useLine = [](const hotbar::Words& x) { return x.text == "клік — використати"; };
+    CHECK(std::none_of(none.begin(), none.end(), useLine));
+    CHECK(none.size() + 2 == hotbar::words(L, cells, 0, hovering(2), texts()).size());
+}
+
+// The server's rules over the map's flags (uAthena pc_isUseitem, skill_not_ok, db/skill_nocast_db.txt)
+TEST(hotbar_not_here_rules) {
+    using hotbar::NotHere;
+    const auto item = [](const char* n) { return hotbar::slotOf(n); };
+    const auto skill = [](const std::string& n) { return hotbar::slotOf("##" + n); };
+    const std::vector<std::string> plain, noTp{"noteleport", "nomemo"}, war{"gvg"}, pvp{"pvp"};
+    const std::vector<std::string> noReturn{"noreturn"}, noBranch{"nobranch"}, noSkill{"noskill", "nowarp"};
+    CHECK(hotbar::notHere(item("601"), plain) == NotHere::No);
+    CHECK(hotbar::notHere(item("601"), noTp) == NotHere::Teleport);
+    CHECK(hotbar::notHere(item("601"), war) == NotHere::GuildWar);
+    CHECK(hotbar::notHere(item("602"), noTp) == NotHere::No);
+    CHECK(hotbar::notHere(item("602"), noReturn) == NotHere::Return);
+    CHECK(hotbar::notHere(item("604"), noBranch) == NotHere::Branch);
+    CHECK(hotbar::notHere(item("12103"), war) == NotHere::GuildWar);
+    CHECK(hotbar::notHere(item("605"), war) == NotHere::GuildWar);
+    CHECK(hotbar::notHere(item("501"), noSkill) == NotHere::No);
+    CHECK(hotbar::notHere(skill("AL_TELEPORT"), noTp) == NotHere::Teleport);
+    CHECK(hotbar::notHere(skill("AL_TELEPORT"), war) == NotHere::GuildWar);
+    CHECK(hotbar::notHere(skill("AL_TELEPORT"), noSkill) == NotHere::No);  // the server lets it through noskill
+    CHECK(hotbar::notHere(skill("AL_WARP"), noSkill) == NotHere::Warp);
+    CHECK(hotbar::notHere(skill("WE_CALLPARTNER"), noTp) == NotHere::Call);
+    CHECK(hotbar::notHere(skill("MC_VENDING"), noSkill) == NotHere::No);
+    CHECK(hotbar::notHere(skill("AC_DOUBLE"), noSkill) == NotHere::Skills);
+    CHECK(hotbar::notHere(skill("AC_DOUBLE"), war) == NotHere::No);
+    CHECK(hotbar::notHere(skill("CG_HERMODE"), plain) == NotHere::OnlyGuildWar);
+    CHECK(hotbar::notHere(skill("CG_HERMODE"), pvp) == NotHere::OnlyGuildWar);
+    CHECK(hotbar::notHere(skill("CG_HERMODE"), war) == NotHere::No);
+    CHECK(hotbar::notHere(skill("CG_HERMODE"), {"gvg_castle"}) == NotHere::No);  // a castle: its war unknown
+    CHECK(hotbar::notHere(hotbar::slotOf(""), noSkill) == NotHere::No);
 }

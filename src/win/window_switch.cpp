@@ -53,6 +53,7 @@ LRESULT CALLBACK gameProc(HWND w, UINT m, WPARAM wp, LPARAM lp) {
         if (referencewin::key(m, wp, lp)) return 0;  // 3.0.11-beta.7: Ctrl+F, and every key while «Довідник» is open
         if (itemswin::key(m, wp, lp)) return 0;      // 3.0.11-beta.42: «Речі»'s search while it types
         if (chatwin::key(m, wp, lp)) return 0;       // 3.0.11-beta.41: the new chat's F10, Alt+F10 and Tab
+        hotbarwin::key(m, wp, lp);                   // 3.0.11-beta.45: its cells' keys shown pressed (still the game's)
         if (m == WM_KEYDOWN && minimapproto::key(unsigned(wp))) return 0;  // 3.0.11-beta.4: Ctrl+Tab, the new minimap's
         if ((m == WM_KEYDOWN || m == WM_SYSKEYDOWN) && g_switch->key(unsigned(wp), lp)) return 0;
         if (m == WM_ACTIVATE && g_switch->activate(w, wp)) return 1;  // the game's own answer to it

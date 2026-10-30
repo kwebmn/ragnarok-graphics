@@ -11,9 +11,11 @@
 #include <vector>
 
 #include "core/buff_panel.hpp"
+#include "core/char_status.hpp"
 #include "core/hotbar_panel.hpp"
 #include "core/pack_source.hpp"
 #include "core/settings/strings.hpp"
+#include "core/skill_costs.hpp"
 #include "pad/win/client_bar.hpp"
 #include "pad/win/game_window.hpp"
 #include "win/chat_window.hpp"
@@ -23,6 +25,7 @@
 #include "win/log.hpp"
 #include "win/picture_draw.hpp"
 #include "win/real_ddraw.hpp"
+#include "win/reference_load.hpp"
 
 namespace uagfx::win::hotbarwin {
 namespace {
@@ -47,6 +50,16 @@ constexpr int kUseMsg = 0x29, kSlots = 27;
 constexpr uint32_t kDropSlot = 0x2C, kBarDrop = 0x46DAE0;
 constexpr int kCellX0 = 4, kCellW = 29, kCellY = 12;
 using DropFn = void(__attribute__((thiscall)) *)(uint32_t self, int x, int y, uint32_t drag);
+// 3.0.11-beta.45 (the concept's cell states): the session's skills (a list: a node's next at +0; its id +0xC, its
+// learned level +0x14, that level's SP +0x18 - FUN_00643040 keeps 0x010f's there), the bar's own each slot's skill id
+// (+0x64) and whether it is a skill (+0xD0) - SendMsg 0x17 fills them anew at each change, 0x29 uses them; the game
+// mode (its class's vtable) waiting for a skill's target: its state +0x3C4 (1 a place, 2 an enemy, 3, 4 a friend, 5
+// a trap - SendMsg 0x4F; 0 none) and that skill's id +0x3C8; the chat's input taking the keys (the battle mode's
+// letters are the chat's then, FUN_004d8f10)
+constexpr uint32_t kSkills = kSession + 0x2D8, kSkillId = 0xC, kSkillLevel = 0x14, kSkillSp = 0x18;
+constexpr uint32_t kBarIds = 0x64, kBarIsSkill = 0xD0;
+constexpr uint32_t kModeClass = 0x69F388, kWaitState = 0x3C4, kWaitSkill = 0x3C8, kChatTyping = 0x772D58;
+constexpr ULONGLONG kTipMs = 400;  // the concept's: a tip after 0.4 s
 constexpr ULONGLONG kReadMs = 150, kPressMs = 160;
 constexpr size_t kMostNodes = 1024;
 using SendMsgFn = int(__attribute__((thiscall)) *)(uint32_t self, uint32_t sender, int msg, int a, int b, int c);
@@ -62,6 +75,11 @@ struct Icon {
 struct Slot {
     hb::Slot what;
     int level = 0;
+    int skillId = 0;  // 3.0.11-beta.45: the game's bar's
+};
+
+struct Learned {
+    int level = 0, sp = 0;
 };
 
 struct State {
@@ -73,6 +91,15 @@ struct State {
     int row = 0;
     Slot slots[kSlots];
     std::map<std::string, int> bag;
+    std::map<int, Learned> skills;  // 3.0.11-beta.45: by the skill's id
+    int sp = -1, waiting = 0;       // the SP there (-1 unknown), the skill the game waits a target for
+    std::string map;                // the map's code, its flags the reference's
+    std::vector<std::string> flags;
+    ULONGLONG hoverSince = 0;
+    int lastHover = -1;
+    bool pricesTold = false;
+    int waitsTold = 0, barredTold = 0;
+    std::string barred;  // the cells «не тут» last logged
     ULONGLONG readAt = 0;
     std::string told;  // the slots last logged
     std::map<std::string, Icon> icons;  // by the file
@@ -177,13 +204,72 @@ std::map<std::string, int> readBag() {
     return out;
 }
 
+// 3.0.11-beta.45: the session's skills - each learned one's level and that level's SP, as 0x010f gave them
+std::map<int, Learned> readSkills() {
+    std::map<int, Learned> out;
+    const uint32_t head = read32(kSkills);
+    if (!head) return out;
+    uint32_t node = read32(head);
+    for (size_t n = 0; node && node != head && n < kMostNodes; ++n, node = read32(node)) {
+        uint8_t raw[kSkillSp + 4] = {};
+        if (!readGame(node, raw, sizeof raw)) break;
+        int32_t id = 0, level = 0, sp = 0;
+        std::memcpy(&id, raw + kSkillId, 4);
+        std::memcpy(&level, raw + kSkillLevel, 4);
+        std::memcpy(&sp, raw + kSkillSp, 4);
+        if (id > 0 && id < 0x10000 && level >= 0 && level < 100) out[id] = Learned{level, sp};
+    }
+    return out;
+}
+
+// Once: whether the server's table and the game's own words of the learned levels' prices agree
+void tellPrices(State& s) {
+    if (s.pricesTold || s.skills.empty()) return;
+    s.pricesTold = true;
+    int same = 0, unknown = 0;
+    std::string differ;
+    for (const auto& [id, l] : s.skills) {
+        if (l.level <= 0) continue;
+        const int table = skillcost::sp(id, l.level);
+        if (table < 0) ++unknown;
+        else if (table == l.sp) ++same;
+        else if (differ.size() < 160)
+            differ += " " + std::to_string(id) + " Lv" + std::to_string(l.level) + " " + std::to_string(table) + "/" +
+                      std::to_string(l.sp);
+    }
+    LOG_INFO("hotbar: SP prices - the server's table and the game's own agree for %d learned skills, %d not in the "
+             "table%s%s",
+             same, unknown, differ.empty() ? "" : "; differ (id, level, table/game):", differ.c_str());
+}
+
+// The skill the game waits a target for (its mode's state), 0 none
+int waitingSkill() {
+    const uint32_t mode = readGameMode();
+    if (!mode || read32(mode) != kModeClass) return 0;
+    const uint32_t state = read32(mode + kWaitState);
+    return state >= 1 && state <= 5 ? int(read32(mode + kWaitSkill)) : 0;
+}
+
 void readSlots(State& s) {
+    const uint32_t bar = gameBar();
     for (int j = 0; j < kSlots; ++j) {
         s.slots[j].what = hb::slotOf(readText(kSlotNames + 16 * uint32_t(j)));
         const int level = int(read32(kSlotLevels + 4 * uint32_t(j)));
         s.slots[j].level = level > 0 && level < 100 ? level : 0;
+        const bool skill = bar && read32(bar + kBarIsSkill + 4 * uint32_t(j));
+        s.slots[j].skillId = skill ? int(read32(bar + kBarIds + 4 * uint32_t(j)) & 0xFFFF) : 0;
     }
     s.bag = readBag();
+    s.skills = readSkills();
+    tellPrices(s);
+    charstatus::Status st;
+    s.sp = readOwnStatus(st) && st.spMost > 0 ? st.sp : -1;
+    s.map = readGameMap();
+    s.flags.clear();
+    if (const std::shared_ptr<const refindex::Index> ix = reference::index()) {
+        const auto m = ix->maps.find(s.map);
+        if (m != ix->maps.end()) s.flags = m->second.flags;
+    }
     std::string told;
     for (int j = 0; j < kSlots; ++j) {
         const Slot& slot = s.slots[j];
@@ -231,6 +317,16 @@ hb::Cell cellOf(State& s, int slot, const std::string& key, unsigned codePage) {
         c.name = n != skills.end() ? hb::spaced(n->second) : at.what.id;
         c.level = at.level;
         c.icon = iconOf(s, hb::lowered(at.what.id), side);
+        c.selected = s.waiting > 0 && at.skillId == s.waiting;
+        const auto learned = s.skills.find(at.skillId);
+        const int level = at.level > 0 ? at.level : learned != s.skills.end() ? learned->second.level : 0;
+        int price = at.skillId > 0 ? skillcost::sp(at.skillId, level) : -1;
+        if (learned != s.skills.end() && learned->second.level == level && learned->second.sp > 0)
+            price = learned->second.sp;  // the server's own word for the level learned
+        if (s.sp >= 0 && price > 0) {
+            c.spNeed = price;
+            c.spHave = s.sp;
+        }
     } else if (at.what.kind == hb::Slot::Kind::Item) {
         const auto& items = clienttables::itemNames();
         const auto n = items.find(at.what.id);
@@ -241,6 +337,7 @@ hb::Cell cellOf(State& s, int slot, const std::string& key, unsigned codePage) {
         const auto f = files.find(at.what.id);
         if (f != files.end()) c.icon = iconOf(s, f->second, side);
     }
+    c.notHere = hb::notHere(at.what, s.flags);
     return c;
 }
 
@@ -304,8 +401,23 @@ void place(State& s) {
 }
 
 hb::Texts texts() {
-    return hb::Texts{say(settings::Text::HotbarBattle), say(settings::Text::HotbarBattleHint),
-                     say(settings::Text::HotbarEdit), say(settings::Text::HotbarDone), say(settings::Text::HotbarUse)};
+    hb::Texts t{say(settings::Text::HotbarBattle), say(settings::Text::HotbarBattleHint),
+                say(settings::Text::HotbarEdit), say(settings::Text::HotbarDone), say(settings::Text::HotbarUse)};
+    t.noSp = say(settings::Text::HotbarNoSp);
+    t.notHere = say(settings::Text::HotbarNotHere);
+    t.reasons.assign(size_t(hb::NotHere::kCount), "");
+    const std::pair<hb::NotHere, settings::Text> reasons[] = {
+        {hb::NotHere::Teleport, settings::Text::HotbarNoTeleport},
+        {hb::NotHere::Return, settings::Text::HotbarNoReturn},
+        {hb::NotHere::Warp, settings::Text::HotbarNoWarp},
+        {hb::NotHere::Branch, settings::Text::HotbarNoBranch},
+        {hb::NotHere::IceWall, settings::Text::HotbarNoIceWall},
+        {hb::NotHere::Call, settings::Text::HotbarNoCall},
+        {hb::NotHere::Skills, settings::Text::HotbarNoSkills},
+        {hb::NotHere::GuildWar, settings::Text::HotbarGuildWar},
+        {hb::NotHere::OnlyGuildWar, settings::Text::HotbarOnlyGuildWar}};
+    for (const auto& [why, words] : reasons) t.reasons[size_t(why)] = say(words);
+    return t;
 }
 
 std::vector<Words> gdiWords(const std::vector<hb::Words>& in) {
@@ -319,16 +431,36 @@ std::vector<Words> gdiWords(const std::vector<hb::Words>& in) {
     return out;
 }
 
-void render(State& s, int hover) {
+void render(State& s, const hb::Show& show) {
     s.picture = panel::Picture{};
     s.picture.width = s.layout.w;
     s.picture.height = s.layout.h;
     if (s.layout.w <= 0 || s.layout.h <= 0) return;
     s.picture.px.assign(size_t(s.layout.w) * size_t(s.layout.h), 0u);
     const hb::Texts t = texts();
-    hb::paint(s.picture, s.layout, s.cells, hover, s.hoverEdit, t);
-    drawWords(s.picture, gdiWords(hb::words(s.layout, s.cells, s.row, hover, s.hoverEdit, t)));
+    hb::paint(s.picture, s.layout, s.cells, show, t);
+    drawWords(s.picture, gdiWords(hb::words(s.layout, s.cells, s.row, show, t)));
     s.upload = true;
+}
+
+// The states' changes in the log: the game waiting a target (the first ones), the cells the map forbids
+void tellStates(State& s, int waitingWas) {
+    if (s.waiting != waitingWas && s.waiting > 0 && s.waitsTold < 10) {
+        ++s.waitsTold;
+        std::string cell = "none of its cells";
+        for (const hb::Cell& c : s.cells)
+            if (c.selected) cell = "its cell " + c.key + " outlined";
+        LOG_INFO("hotbar: the game waits for the target of the skill %d - %s", s.waiting, cell.c_str());
+    }
+    std::string barred;
+    for (const hb::Cell& c : s.cells)
+        if (c.notHere != hb::NotHere::No) barred += " " + c.key + "=" + std::to_string(int(c.notHere));
+    if (barred != s.barred && s.barredTold < 20) {
+        ++s.barredTold;
+        s.barred = barred;
+        LOG_INFO("hotbar: on %s (flags %zu) «не тут»:%s", s.map.c_str(), s.flags.size(),
+                 barred.empty() ? " none" : barred.c_str());
+    }
 }
 
 void block(const State& s, HWND game) {  // the mouse's clicks over it are its own, not the world's
@@ -388,6 +520,8 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
         s.readAt = now;
         readSlots(s);
     }
+    const int waitingWas = s.waiting;
+    s.waiting = waitingSkill();
     uint8_t row = 0;
     s.row = readGame(kRow, &row, 1) && row < 3 ? row : 0;
     s.mode = s.editing ? hb::Mode::Editing : read32(kBattle) ? hb::Mode::Battle : hb::Mode::Normal;
@@ -409,19 +543,51 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
         if (h.part == hb::Part::Cell) s.hover = h.cell;
         s.hoverEdit = h.part == hb::Part::Edit;
     }
-    const int lit = now < s.pressedUntil ? s.pressed : s.hover;
+    if (s.hover != s.lastHover) {
+        s.lastHover = s.hover;
+        s.hoverSince = now;
+    }
+    hb::Show show;
+    show.hover = s.hover;
+    show.pressed = now < s.pressedUntil ? s.pressed : -1;
+    show.tip = s.hover >= 0 && now - s.hoverSince >= kTipMs;
+    show.hoverEdit = s.hoverEdit;
+    tellStates(s, waitingWas);
     std::string key = std::to_string(int(s.mode)) + ';' + std::to_string(s.row) + ';' + std::to_string(scale) + ';' +
-                      std::to_string(s.layout.x) + ',' + std::to_string(s.layout.y) + ';' + std::to_string(lit) +
-                      (s.hoverEdit ? "e" : "") + (lit != s.hover ? "p" : "") + ';';
-    for (const hb::Cell& c : s.cells)
+                      std::to_string(s.layout.x) + ',' + std::to_string(s.layout.y) + ';' + std::to_string(show.hover) +
+                      ',' + std::to_string(show.pressed) + (show.tip ? "t" : "") + (s.hoverEdit ? "e" : "") + ';';
+    for (size_t i = 0; i < s.cells.size(); ++i) {
+        const hb::Cell& c = s.cells[i];
         key += c.key + '|' + c.name + '|' + std::to_string(c.level) + '|' + std::to_string(c.count) +
-               (c.icon ? "i" : "") + ';';
+               (c.icon ? "i" : "") + (c.selected ? "s" : "") + (c.spHave < c.spNeed ? "d" : "") +
+               std::to_string(int(c.notHere)) + ';';
+        if (int(i) == show.hover && show.tip)  // its tip's numbers
+            key += std::to_string(c.spNeed) + '/' + std::to_string(c.spHave) + ';';
+    }
     if (key != s.key) {
         s.key = key;
-        render(s, lit);
+        render(s, show);
     }
     s.shown = true;
     block(s, game);
+}
+
+void key(UINT m, WPARAM wp, LPARAM lp) {
+    State& s = state();
+    if (!s.shown || m != WM_KEYDOWN || (lp & (LPARAM(1) << 30))) return;  // a key held: its first press only
+    int cell = -1;
+    if (s.mode == hb::Mode::Normal && wp >= VK_F1 && wp <= VK_F9) {
+        cell = int(wp - VK_F1);
+    } else if (s.mode == hb::Mode::Battle && !read32(kChatTyping)) {
+        // FUN_004d8f10's scan codes: Q..O the shown row 1, A..L the second, Z..M , . the third
+        const unsigned scan = unsigned(lp >> 16) & 0xFF;
+        if (scan >= 0x10 && scan <= 0x18) cell = int(scan - 0x10);
+        else if (scan >= 0x1E && scan <= 0x26) cell = 9 + int(scan - 0x1E);
+        else if (scan >= 0x2C && scan <= 0x34) cell = 18 + int(scan - 0x2C);
+    }
+    if (cell < 0 || cell >= int(s.cells.size())) return;
+    s.pressed = cell;
+    s.pressedUntil = GetTickCount64() + kPressMs;
 }
 
 bool drop(int x, int y, uint32_t drag) {

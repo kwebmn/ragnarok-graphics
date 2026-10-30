@@ -470,7 +470,11 @@ enum class Text : uint16_t {
     InterfaceCharacterRings, CharWeight, CharPoints, CharLowHp, CharStats, CharEquip, CharItems, CharSkills,
     CharFriends, CharOptions, InterfaceTarget, InterfaceTargetHint, TargetWeak, TargetHeals, TargetBook,
     InterfaceParty, InterfacePartyHint, PartyOffline, InterfaceHotbar, InterfaceHotbarHint, HotbarBattle,
-    HotbarBattleHint, HotbarEdit, HotbarDone, HotbarUse, InterfaceChat, InterfaceChatHint, ChatTabAll, ChatTabParty,
+    HotbarBattleHint, HotbarEdit, HotbarDone, HotbarUse,
+    // 3.0.11-beta.45: the hotbar's cell states - no SP, «не тут» and why
+    HotbarNoSp, HotbarNotHere, HotbarNoTeleport, HotbarNoReturn, HotbarNoWarp, HotbarNoBranch, HotbarNoIceWall,
+    HotbarNoCall, HotbarNoSkills, HotbarGuildWar, HotbarOnlyGuildWar, InterfaceChat, InterfaceChatHint, ChatTabAll,
+    ChatTabParty,
     ChatTabGuild, ChatTabWhisper, ChatTabTrade, ChatTabBattle, ChatFrom, ChatTo, ChatHintSend, ChatHintType,
     ChatKilled, ChatPicked, ChatMiss, InterfaceItems, InterfaceItemsHint, InterfaceStatus, InterfaceStatusHint,
     ItemsTitle, ItemsTabItems, ItemsTabGear, ItemsTabEtc, ItemsSearch, ItemsUse, ItemsWear, ItemsCard, ItemsInfo,

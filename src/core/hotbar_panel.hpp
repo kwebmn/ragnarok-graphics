@@ -17,12 +17,24 @@ namespace uagfx::hotbar {
 
 enum class Mode : uint8_t { Normal, Battle, Editing };
 
+// 3.0.11-beta.45 (the concept's cell states; the owner: «занимаемся доработками интерфейса»): why the map forbids a
+// slot - the server's own rules (uAthena pc_isUseitem, skill_not_ok and db/skill_nocast_db.txt) over the map's flags
+// in the reference pack; a war of the guilds' castle (gvg_castle counts only while it goes) and the restricted zones
+// (their numbers are not in the pack) are not judged
+enum class NotHere : uint8_t {
+    No, Teleport, Return, Warp, Branch, IceWall, Call, Skills, GuildWar, OnlyGuildWar,
+    kCount
+};
+
 struct Cell {
     std::string key;    // «F1», «Q», «,»
     std::string name;   // its skill's or item's words; "" an empty cell
     int level = 0;      // a skill's
     int count = -1;     // an item's in the bag (0: none there); -1 not an item
     const panel::Picture* icon = nullptr;  // at iconSide(), premultiplied
+    bool selected = false;       // 3.0.11-beta.45: the game waits for this skill's target - a gold outline 2 px
+    int spNeed = 0, spHave = 0;  // a skill's SP price and the SP there: more needed than had - dimmed, a blue «SP»
+    NotHere notHere = NotHere::No;  // greyed, a crossed circle, the reason in its tip
 };
 int iconSide(Mode mode, float scale);
 
@@ -58,9 +70,18 @@ struct Texts {
     std::string battleHint;  // «літери — навички й предмети · Enter — чат»
     std::string edit, done;  // the button's tips: «редагувати панель гри», «готово»
     std::string use;         // the cell's tip's second line: «клік — використати»
+    std::string noSp;        // 3.0.11-beta.45: «Немає SP · потрібно {1}, у вас {2}»
+    std::string notHere;     // «Не тут · {1}»
+    std::vector<std::string> reasons;  // by NotHere: «на цій карті телепорт заборонено», ...
 };
-void paint(panel::Picture& out, const Layout& L, const std::vector<Cell>& cells, int hover, bool hoverEdit,
-           const Texts& t);
+// What the mouse and the keys do to it now
+struct Show {
+    int hover = -1;          // the cell under the cursor: its backing lighter, its edge 20 %
+    int pressed = -1;        // 3.0.11-beta.45: the cell pressed (a click, its key): 1 px down, its backing darker
+    bool tip = true;         // the hovered cell's tip (the window part shows it after 0.4 s)
+    bool hoverEdit = false;  // the edit button under the cursor
+};
+void paint(panel::Picture& out, const Layout& L, const std::vector<Cell>& cells, const Show& show, const Texts& t);
 
 enum class Align : uint8_t { Left, Right, Center };
 struct Words {
@@ -72,8 +93,7 @@ struct Words {
     Align align = Align::Left;
 };
 // `row`: the game's row shown in the normal mode (0-2)
-std::vector<Words> words(const Layout& L, const std::vector<Cell>& cells, int row, int hover, bool hoverEdit,
-                         const Texts& t);
+std::vector<Words> words(const Layout& L, const std::vector<Cell>& cells, int row, const Show& show, const Texts& t);
 
 // The game's tables of a key and its words a line (data\skillnametable.txt "AC_DOUBLE#Double_Strafe#",
 // data\idnum2itemdisplaynametable.txt and idnum2itemresnametable.txt "501#Red_Potion#"); the "//" lines skipped
@@ -88,5 +108,7 @@ struct Slot {
     std::string id;  // the skill's name, the item's number
 };
 Slot slotOf(const std::string& raw);
+// 3.0.11-beta.45: whether this map (its flags: "noteleport", "gvg", ...) forbids the slot
+NotHere notHere(const Slot& slot, const std::vector<std::string>& mapFlags);
 
 }  // namespace uagfx::hotbar

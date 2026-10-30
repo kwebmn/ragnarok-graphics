@@ -4969,13 +4969,19 @@ constexpr Entry kTexts[] = {
     {Text::InterfaceHotbarHint,
      "The game's hotkeys bar at the bottom middle: F1-F9 of the row (F12 goes round them), in the battle mode its "
      "three rows Q, A, Z; each cell's key, a skill's level, an item's count in the bag; a click uses it. Skills and "
-     "items are dragged onto its cells; the pencil shows the game's own bar to take one away or move it.",
+     "items are dragged onto its cells; the pencil shows the game's own bar to take one away or move it. A skill "
+     "waiting for its target has a gold frame; one with too little SP a blue SP; one the map forbids a crossed "
+     "circle, the reason in its tip.",
      "Панель клавіш гри внизу посередині: F1-F9 ряду (F12 перемикає ряди), у бойовому режимі — три ряди Q, A, Z; у "
      "клітинці клавіша, рівень навички, кількість предмета в сумці; клік — використати. Навички й предмети "
-     "перетягуються на клітинки; олівець показує панель гри, щоб прибрати чи переставити.",
+     "перетягуються на клітинки; олівець показує панель гри, щоб прибрати чи переставити. Навичка, що чекає ціль, — "
+     "у золотій рамці; якщо SP не вистачає — синя плашка SP; заборонене на карті — перекреслене коло, причина в "
+     "підказці.",
      "Панель клавиш игры внизу посередине: F1-F9 ряда (F12 переключает ряды), в боевом режиме — три ряда Q, A, Z; в "
      "ячейке клавиша, уровень навыка, количество предмета в сумке; клик — использовать. Навыки и предметы "
-     "перетаскиваются на ячейки; карандаш показывает панель игры, чтобы убрать или переставить."},
+     "перетаскиваются на ячейки; карандаш показывает панель игры, чтобы убрать или переставить. Навык, ждущий цель, — "
+     "в золотой рамке; если SP не хватает — синяя плашка SP; запрещённое на карте — перечёркнутый круг, причина в "
+     "подсказке."},
     {Text::HotbarBattle, "battle mode", "бойовий режим", "боевой режим"},
     {Text::HotbarBattleHint, "letters: skills and items \xC2\xB7 Enter: the chat",
      "літери — навички й предмети \xC2\xB7 Enter — чат", "буквы — навыки и предметы \xC2\xB7 Enter — чат"},
@@ -4983,6 +4989,27 @@ constexpr Entry kTexts[] = {
      "панель игры: убрать, переставить"},
     {Text::HotbarDone, "done: back to this bar", "готово: назад до цієї панелі", "готово: назад к этой панели"},
     {Text::HotbarUse, "click: use it", "клік — використати", "клик — использовать"},
+    // 3.0.11-beta.45: the hotbar's cell states
+    {Text::HotbarNoSp, "No SP \xC2\xB7 needs {1}, you have {2}", "Немає SP \xC2\xB7 потрібно {1}, у вас {2}",
+     "Нет SP \xC2\xB7 нужно {1}, у вас {2}"},
+    {Text::HotbarNotHere, "Not here \xC2\xB7 {1}", "Не тут \xC2\xB7 {1}", "Не здесь \xC2\xB7 {1}"},
+    {Text::HotbarNoTeleport, "no teleporting on this map", "на цій карті телепорт заборонено",
+     "на этой карте телепорт запрещён"},
+    {Text::HotbarNoReturn, "no way back to the save point from this map",
+     "з цієї карти не повернутися на точку збереження", "с этой карты не вернуться на точку сохранения"},
+    {Text::HotbarNoWarp, "no portals on this map", "на цій карті портали заборонено",
+     "на этой карте порталы запрещены"},
+    {Text::HotbarNoBranch, "no branches on this map", "на цій карті гілки заборонено", "на этой карте ветки запрещены"},
+    {Text::HotbarNoIceWall, "no Ice Wall on this map", "на цій карті Ice Wall заборонено",
+     "на этой карте Ice Wall запрещён"},
+    {Text::HotbarNoCall, "nobody can be called to this map", "на цю карту не покликати",
+     "на эту карту не позвать"},
+    {Text::HotbarNoSkills, "no skills on this map", "на цій карті навички заборонено",
+     "на этой карте навыки запрещены"},
+    {Text::HotbarGuildWar, "not on the guilds' war maps", "не діє на картах війни гільдій",
+     "не действует на картах войны гильдий"},
+    {Text::HotbarOnlyGuildWar, "only on the guilds' war maps", "лише на картах війни гільдій",
+     "только на картах войны гильдий"},
     // 3.0.11-beta.41: the chat (stage 8 of the new interface)
     {Text::InterfaceChat, "Chat", "Чат", "Чат"},
     {Text::InterfaceChatHint,

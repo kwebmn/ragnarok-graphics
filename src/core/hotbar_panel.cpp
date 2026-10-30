@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 
+#include "core/settings/strings.hpp"
 #include "core/ui_icons.hpp"
 
 namespace uagfx::hotbar {
@@ -14,6 +15,9 @@ constexpr float kCell = 48, kCellBattle = 44, kGap = 4, kPad = 6, kRowW = 34, kL
 constexpr float kHeaderH = 22, kTipH = 42;
 constexpr uint32_t kCard = 0x10141C, kWhite = 0xFFFFFF, kBlack = 0x000000;
 constexpr uint32_t kGold = 0xC9A55B, kGold2 = 0xE6CB8A, kText = 0xECEFF5, kMuted = 0x9AA3B5, kRed = 0xC0392B;
+// 3.0.11-beta.45: the «SP» plate (the SP bar's blue), the tips' lines of no SP and of «не тут» (the concept's red for
+// small words, 4.9:1)
+constexpr uint32_t kSpBlue = 0x3D7EEB, kSpWords = 0x9CC3FF, kNotHereWords = 0xFF9A8F;
 
 const char* const kBattleKeys[3][9] = {{"Q", "W", "E", "R", "T", "Y", "U", "I", "O"},
                                        {"A", "S", "D", "F", "G", "H", "J", "K", "L"},
@@ -21,8 +25,8 @@ const char* const kBattleKeys[3][9] = {{"Q", "W", "E", "R", "T", "Y", "U", "I", 
 
 float cellSide(Mode m) { return m == Mode::Battle ? kCellBattle : kCell; }
 
-// A premultiplied picture centred in a box, its alpha times `k`
-void put(panel::Picture& out, const panel::Picture& pic, const panel::Box& box, float k) {
+// A premultiplied picture centred in a box, its alpha times `k` (`grey`: its colours as their brightness)
+void put(panel::Picture& out, const panel::Picture& pic, const panel::Box& box, float k, bool grey = false) {
     const int ox = int(std::lround(box.x + (box.w - float(pic.width)) / 2));
     const int oy = int(std::lround(box.y + (box.h - float(pic.height)) / 2));
     for (int y = 0; y < pic.height; ++y)
@@ -30,6 +34,10 @@ void put(panel::Picture& out, const panel::Picture& pic, const panel::Box& box, 
             const int tx = ox + x, ty = oy + y;
             if (tx < 0 || ty < 0 || tx >= out.width || ty >= out.height) continue;
             uint32_t c = pic.px[size_t(y) * size_t(pic.width) + size_t(x)];
+            if (grey) {
+                const uint32_t v = (((c >> 16) & 0xFF) * 77 + ((c >> 8) & 0xFF) * 150 + (c & 0xFF) * 29) >> 8;
+                c = (c & 0xFF000000u) | v << 16 | v << 8 | v;
+            }
             if (k < 1) {
                 const auto ch = [&](int sh) { return uint32_t(float((c >> sh) & 0xFF) * k + 0.5f); };
                 c = ch(24) << 24 | ch(16) << 16 | ch(8) << 8 | ch(0);
@@ -50,20 +58,45 @@ panel::Box levelBox(const panel::Box& cell, int level, float s) {
     return panel::Box{cell.x + 2 * s, cell.y + cell.h - 15 * s, w, 13 * s};
 }
 
-// The hovered cell's tip: its words, its box over the bar
-std::vector<std::string> tipLines(const Cell& c, const Texts& t) {
+bool noSp(const Cell& c) { return c.spNeed > 0 && c.spHave < c.spNeed; }
+
+// The cell as shown: pressed, 1 px lower
+panel::Box shown(const Layout& L, size_t i, const Show& show) {
+    panel::Box b = L.cells[i];
+    if (int(i) == show.pressed) b.y += 1 * L.s;
+    return b;
+}
+
+// The «SP» plate at the cell's top right (no SP for it)
+panel::Box spBox(const panel::Box& cell, float s) {
+    const float w = panel::wordsWidth("SP", 11 * s, true) + 6 * s;
+    return panel::Box{cell.x + cell.w - w - 2 * s, cell.y + 2 * s, w, 13 * s};
+}
+
+// The hovered cell's tip: its words (the second line why it cannot be used, else how to use it), its box over the bar
+struct TipLine {
+    std::string text;
+    uint32_t rgb = kMuted;
+};
+std::vector<TipLine> tipLines(const Cell& c, const Texts& t) {
     if (c.name.empty()) return {};
     std::string first = c.name;
     if (c.level > 0) first += " \xC2\xB7 Lv " + std::to_string(c.level);
     if (c.count >= 0) first += " \xC2\xB7 \xC3\x97" + std::to_string(c.count);
-    return {first, t.use};
+    const size_t why = size_t(c.notHere);
+    if (c.notHere != NotHere::No && why < t.reasons.size())
+        return {{first, kText}, {settings::fmt(t.notHere, {t.reasons[why]}), kNotHereWords}};
+    if (noSp(c))
+        return {{first, kText},
+                {settings::fmt(t.noSp, {std::to_string(c.spNeed), std::to_string(c.spHave)}), kSpWords}};
+    return {{first, kText}, {t.use, kMuted}};
 }
 
-panel::Box tipBox(const Layout& L, int hover, const std::vector<std::string>& lines) {
+panel::Box tipBox(const Layout& L, int hover, const std::vector<TipLine>& lines) {
     if (hover < 0 || hover >= int(L.cells.size()) || lines.empty()) return panel::Box{};
     float w = 0;
     for (size_t i = 0; i < lines.size(); ++i)
-        w = std::max(w, panel::wordsWidth(lines[i], (i ? 11.5f : 13) * L.s, i == 0));
+        w = std::max(w, panel::wordsWidth(lines[i].text, (i ? 11.5f : 13) * L.s, i == 0));
     w += 20 * L.s;
     const panel::Box& c = L.cells[size_t(hover)];
     const float x = std::clamp(c.x + c.w / 2 - w / 2, 0.0f, std::max(0.0f, float(L.w) - w));
@@ -139,8 +172,7 @@ Hit hitTest(const Layout& L, float x, float y) {
     return L.glass.contains(x, y) ? Hit{Part::Body, -1} : Hit{};
 }
 
-void paint(panel::Picture& out, const Layout& L, const std::vector<Cell>& cells, int hover, bool hoverEdit,
-           const Texts& t) {
+void paint(panel::Picture& out, const Layout& L, const std::vector<Cell>& cells, const Show& show, const Texts& t) {
     const float s = L.s;
     panel::roundRect(out, L.glass, 10 * s, kCard, 0.86f, kWhite, 0.09f, 1.0f * s);
     if (L.header.w > 0) {  // the battle mode's chip
@@ -149,12 +181,22 @@ void paint(panel::Picture& out, const Layout& L, const std::vector<Cell>& cells,
     }
     if (L.row.w > 0) panel::roundRect(out, L.row, 7 * s, kWhite, 0.04f);
     for (size_t i = 0; i < L.cells.size(); ++i) {
-        const panel::Box& b = L.cells[i];
+        const panel::Box b = shown(L, i, show);
         const Cell* c = i < cells.size() ? &cells[i] : nullptr;
-        const bool hot = int(i) == hover;
-        panel::roundRect(out, b, 7 * s, kWhite, hot ? 0.10f : 0.05f, hot ? kGold : kWhite, hot ? 0.95f : 0.10f,
-                         (hot ? 1.5f : 1.0f) * s);
-        if (c && c->icon && c->icon->width > 0) put(out, *c->icon, b, c->count == 0 ? 0.3f : 1.0f);
+        const bool hot = int(i) == show.hover, down = int(i) == show.pressed, chosen = c && c->selected;
+        // the concept's states: plain 5 % with a 10 % edge, hovered lighter with 20 %, pressed darker, chosen gold
+        const uint32_t edge = chosen ? kGold : kWhite;
+        const float edgeA = chosen ? 1.0f : hot ? 0.20f : 0.10f, edgeW = (chosen ? 2.0f : 1.0f) * s;
+        if (down) panel::roundRect(out, b, 7 * s, kBlack, 0.30f, edge, edgeA, edgeW);
+        else panel::roundRect(out, b, 7 * s, kWhite, hot ? 0.10f : 0.05f, edge, edgeA, edgeW);
+        const bool barred = c && c->notHere != NotHere::No, dry = c && !barred && noSp(*c);
+        if (c && c->icon && c->icon->width > 0)
+            put(out, *c->icon, b, barred ? 0.45f : dry ? 0.5f : c->count == 0 ? 0.3f : 1.0f, barred || dry);
+        if (barred) {  // a crossed circle over its icon
+            const float side = std::min(b.w, b.h) * 0.7f;
+            uiicons::draw(out, uiicons::Icon::Blocked, b.x + (b.w - side) / 2, b.y + (b.h - side) / 2, side, kText,
+                          0.9f, 2.0f);
+        }
         if (c && !c->key.empty())  // its key's plate
             panel::roundRect(out, panel::Box{b.x + 2 * s, b.y + 2 * s, panel::wordsWidth(c->key, 11 * s, true) + 6 * s,
                                              13 * s},
@@ -166,21 +208,23 @@ void paint(panel::Picture& out, const Layout& L, const std::vector<Cell>& cells,
             panel::roundRect(out, panel::Box{b.x + b.w - w - 2 * s, b.y + b.h - 15 * s, w, 13 * s}, 3 * s, kBlack,
                              0.62f);
         }
+        if (dry) panel::roundRect(out, spBox(b, s), 3 * s, kSpBlue, 0.95f);  // its «SP» plate
     }
     const float icon = 16 * s;
-    panel::roundRect(out, L.edit, 7 * s, kWhite, hoverEdit ? 0.14f : 0.06f, kGold, hoverEdit ? 0.8f : 0.0f, 1.0f * s);
+    panel::roundRect(out, L.edit, 7 * s, kWhite, show.hoverEdit ? 0.14f : 0.06f, kGold, show.hoverEdit ? 0.8f : 0.0f,
+                     1.0f * s);
     uiicons::draw(out, L.mode == Mode::Editing ? uiicons::Icon::Done : uiicons::Icon::Edit,
                   L.edit.x + (L.edit.w - icon) / 2, L.edit.y + (L.edit.h - icon) / 2, icon,
-                  hoverEdit || L.mode == Mode::Editing ? kGold2 : kMuted, 1.0f, 2.0f);
-    const std::vector<std::string> lines =
-        hover >= 0 && hover < int(cells.size()) ? tipLines(cells[size_t(hover)], t) : std::vector<std::string>{};
-    const panel::Box tip = tipBox(L, hover, lines);
+                  show.hoverEdit || L.mode == Mode::Editing ? kGold2 : kMuted, 1.0f, 2.0f);
+    const std::vector<TipLine> lines = show.tip && show.hover >= 0 && show.hover < int(cells.size())
+                                           ? tipLines(cells[size_t(show.hover)], t)
+                                           : std::vector<TipLine>{};
+    const panel::Box tip = tipBox(L, show.hover, lines);
     if (tip.w > 0) panel::roundRect(out, tip, 8 * s, kCard, 0.94f, kWhite, 0.12f, 1.0f * s);
-    if (hoverEdit) panel::roundRect(out, editTip(L, t), 8 * s, kCard, 0.94f, kWhite, 0.12f, 1.0f * s);
+    if (show.hoverEdit) panel::roundRect(out, editTip(L, t), 8 * s, kCard, 0.94f, kWhite, 0.12f, 1.0f * s);
 }
 
-std::vector<Words> words(const Layout& L, const std::vector<Cell>& cells, int row, int hover, bool hoverEdit,
-                         const Texts& t) {
+std::vector<Words> words(const Layout& L, const std::vector<Cell>& cells, int row, const Show& show, const Texts& t) {
     std::vector<Words> out;
     const float s = L.s;
     if (L.row.w > 0) {
@@ -199,7 +243,7 @@ std::vector<Words> words(const Layout& L, const std::vector<Cell>& cells, int ro
     for (size_t r = 0; r < L.rowLabels.size(); ++r)
         out.push_back(Words{L.rowLabels[r], std::to_string(gameRow(int(r)) + 1), kText, 13 * s, true, Align::Center});
     for (size_t i = 0; i < L.cells.size() && i < cells.size(); ++i) {
-        const panel::Box& b = L.cells[i];
+        const panel::Box b = shown(L, i, show);
         const Cell& c = cells[i];
         if (!c.key.empty())
             out.push_back(Words{panel::Box{b.x + 2 * s, b.y + 2 * s, panel::wordsWidth(c.key, 11 * s, true) + 6 * s,
@@ -213,14 +257,17 @@ std::vector<Words> words(const Layout& L, const std::vector<Cell>& cells, int ro
         }
         if (c.level > 0)
             out.push_back(Words{levelBox(b, c.level, s), std::to_string(c.level), kText, 11 * s, true, Align::Center});
+        if (c.notHere == NotHere::No && noSp(c))
+            out.push_back(Words{spBox(b, s), "SP", kWhite, 11 * s, true, Align::Center});
     }
-    const std::vector<std::string> lines =
-        hover >= 0 && hover < int(cells.size()) ? tipLines(cells[size_t(hover)], t) : std::vector<std::string>{};
-    const panel::Box tip = tipBox(L, hover, lines);
+    const std::vector<TipLine> lines = show.tip && show.hover >= 0 && show.hover < int(cells.size())
+                                           ? tipLines(cells[size_t(show.hover)], t)
+                                           : std::vector<TipLine>{};
+    const panel::Box tip = tipBox(L, show.hover, lines);
     for (size_t i = 0; tip.w > 0 && i < lines.size(); ++i)
         out.push_back(Words{panel::Box{tip.x + 10 * s, tip.y + (4 + 18 * float(i)) * s, tip.w - 20 * s, 17 * s},
-                            lines[i], i ? kMuted : kText, (i ? 11.5f : 13) * s, i == 0, Align::Left});
-    if (hoverEdit)
+                            lines[i].text, lines[i].rgb, (i ? 11.5f : 13) * s, i == 0, Align::Left});
+    if (show.hoverEdit)
         out.push_back(Words{editTip(L, t), L.mode == Mode::Editing ? t.done : t.edit, kText, 12 * s, false,
                             Align::Center});
     return out;
@@ -263,6 +310,35 @@ Slot slotOf(const std::string& raw) {
         s.id = raw;
     }
     return s;
+}
+
+NotHere notHere(const Slot& slot, const std::vector<std::string>& mapFlags) {
+    const auto has = [&](const char* flag) {
+        return std::find(mapFlags.begin(), mapFlags.end(), flag) != mapFlags.end();
+    };
+    const bool war = has("gvg");  // map_flag_gvg without a castle's war (unknown here)
+    if (slot.kind == Slot::Kind::Item) {  // pc_isUseitem
+        const std::string& n = slot.id;
+        if (n == "605") return war ? NotHere::GuildWar : NotHere::No;  // Anodyne
+        if (n == "601") return has("noteleport") ? NotHere::Teleport : war ? NotHere::GuildWar : NotHere::No;
+        if (n == "602") return has("noreturn") ? NotHere::Return : NotHere::No;  // Butterfly Wing
+        if (n == "604" || n == "12024" || n == "12103" || n == "12109")  // the branches, Red Pouch, Poring Box
+            return has("nobranch") ? NotHere::Branch : war ? NotHere::GuildWar : NotHere::No;
+        return NotHere::No;
+    }
+    if (slot.kind != Slot::Kind::Skill) return NotHere::No;
+    const std::string& k = slot.id;  // skill_not_ok: db/skill_nocast_db.txt's 4 (a war of the guilds) first
+    for (const char* inWar : {"AL_TELEPORT", "AL_WARP", "WZ_ICEWALL", "TF_BACKSLIDING", "HP_ASSUMPTIO", "HP_BASILICA",
+                              "CG_MOONLIT", "CR_CULTIVATION"})
+        if (k == inWar && war) return NotHere::GuildWar;
+    if (k == "CG_HERMODE" && !war && !has("gvg_dungeon") && !has("gvg_castle"))  // its 1 and 2: the wars' maps only
+        return NotHere::OnlyGuildWar;
+    if (k == "AL_WARP") return has("nowarp") ? NotHere::Warp : NotHere::No;
+    if (k == "AL_TELEPORT") return has("noteleport") ? NotHere::Teleport : NotHere::No;
+    if (k == "MC_VENDING" || k == "MC_IDENTIFY") return NotHere::No;
+    if ((k == "WE_CALLPARTNER" || k == "WE_CALLPARENT" || k == "WE_CALLBABY") && has("nomemo")) return NotHere::Call;
+    if (k == "WZ_ICEWALL" && has("noicewall")) return NotHere::IceWall;
+    return has("noskill") ? NotHere::Skills : NotHere::No;
 }
 
 }  // namespace uagfx::hotbar
