@@ -1,3 +1,16 @@
+# uaRO Graphics 3.0.11-beta.44 — what is new
+
+- **«Items»: a use is seen.** A double click on an item now answers in its cell: a gold ring opens out of it, «−1»
+  rises over it («worn» for gear), and when the last one is used its icon does not vanish at once but fades. The
+  effect on the character (a potion's sparks, the green numbers) is drawn by the game itself on the server's answer —
+  as from the old window or the F keys.
+- A drag begins once the cursor has gone 10 points (it was 6) — a double click no longer turns into a drag through a
+  shaking hand.
+- To check: a double click on a potion — the ring and «−1» over the cell, the potion's effect on the character; on
+  the last one — its icon fades; on a weapon — «worn». If an item vanishes with no effect on the character, send a
+  report: the log tells whether it was a use (`items: a double click on #... - used`) or a throw on the ground
+  (`items: #... dragged and let go`).
+
 # uaRO Graphics 3.0.11-beta.43 — what is new
 
 - **«Items»: the clicks.** The close button, the double click, the drag and the right click did not work. The new
