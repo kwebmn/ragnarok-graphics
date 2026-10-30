@@ -1,3 +1,8 @@
+# uaRO Graphics 3.0.11-beta.62 — what is new
+
+- **Fixed: on cards of Direct3D 11 alone (a Radeon HD 6570 and the like) the app shows the effects set the autopilot
+  really picked**, not the one by the card's memory — in the «Game» page's line and in «Auto: …» on the Effects page.
+
 # uaRO Graphics 3.0.11-beta.61 — what is new
 
 - **How the first game went — seen on the site.** On a new install (the game never started there) the app tells
