@@ -5,6 +5,7 @@
 #include <utility>
 #include <vector>
 
+#include "core/bar_hint.hpp"
 #include "core/reference_index.hpp"
 #include "core/reference_live.hpp"
 #include "core/reference_route.hpp"
@@ -117,6 +118,9 @@ struct Context {
     // a card says whether it is starred
     const std::vector<Link>* recent = nullptr;
     const std::vector<Link>* favourites = nullptr;
+    // 3.0.11-beta.68 (the concept's «Ваша панель: Fire Bolt ×2…»): the skills on the player's hotbar - a monster's
+    // card says their elements' multipliers on it (core/bar_hint); null: not read
+    const std::vector<barhint::Skill>* bar = nullptr;
 };
 // 3.0.11-beta.18: a card's name for the first screen's lists («Poring», «Fly Wing», «Prontera Field (prt_fild08)»);
 // "" when the index has no such

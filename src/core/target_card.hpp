@@ -24,11 +24,15 @@ struct Data {
     std::string weak;     // «Fire 200 %, Holy 200 %» - the most hurting, from 150 %
     std::string heals;    // «Poison, Dark» - those that heal it
     const panel::Picture* picture = nullptr;  // its standing frame fitted into the round; none: a dark round
+    // 3.0.11-beta.68 (the concept's «карточка цели со строкой «Ваша панель»»): the hotbar's skills' element
+    // multipliers on it («Fire Bolt ×2 · Jupitel Thunder ×1», core/bar_hint); "" none
+    std::string bar;
 };
 struct Texts {
     std::string weak;   // «Слабкий до: {1}»
     std::string heals;  // «Лікують: {1}»
     std::string book;   // the book's tip: «Картка в довіднику»
+    std::string bar;    // 3.0.11-beta.68: «Ваша панель: {1}»
 };
 
 struct Layout {

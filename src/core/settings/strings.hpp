@@ -564,6 +564,8 @@ enum class Text : uint16_t {
     RefCardsEnchants,
     // 3.0.11-beta.64: the world map's dungeon box, its counts
     RefDungeonOf, RefLocationsN, RefDungeonsN,
+    // 3.0.11-beta.68: the concept's «Ваша панель» - the hotbar's skills against a monster's element
+    RefYourBar, RefBarHeals, TargetYourBar,
     Count
 };
 

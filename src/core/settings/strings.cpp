@@ -5593,6 +5593,12 @@ constexpr Entry kTexts[] = {
     {Text::RefDungeonOf, "{1} dungeon", "Підземелля {1}", "Подземелье {1}"},
     {Text::RefLocationsN, "location|locations", "локація|локації|локацій", "локация|локации|локаций"},
     {Text::RefDungeonsN, "dungeon|dungeons", "підземелля|підземелля|підземель", "подземелье|подземелья|подземелий"},
+    // 3.0.11-beta.68 (the concept's «Ваша панель: Fire Bolt ×2…»): the skills on the hotbar - their elements'
+    // multipliers on this monster, not a forecast of the damage
+    {Text::RefYourBar, "Your bar (element multiplier): {1}", "Ваша панель (множник стихії): {1}",
+     "Ваша панель (множитель стихии): {1}"},
+    {Text::RefBarHeals, "heals it", "лікує", "лечит"},
+    {Text::TargetYourBar, "Your bar: {1}", "Ваша панель: {1}", "Ваша панель: {1}"},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

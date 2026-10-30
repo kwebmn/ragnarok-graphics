@@ -160,7 +160,7 @@ void timers(const refindex::Index& ix, Lang l, Page& p, int mob, const Context& 
 
 // «Шкода стихіями»: how much of each element's attack the monster takes (the server's table), the most first - the
 // skills and the weapons to take on it; below 0 the attack heals it (attribute_recover)
-void elements(Lang l, Page& p, const refindex::Mob& m) {
+void elements(Lang l, Page& p, const refindex::Mob& m, const std::vector<barhint::Skill>* bar) {
     std::vector<std::pair<int, int>> by;  // element, per cent
     for (int e = 0; e < 10; ++e) by.emplace_back(e, elementDamage(e, m.element, m.elementLv));
     std::stable_sort(by.begin(), by.end(), [](const auto& a, const auto& b) { return a.second > b.second; });
@@ -183,6 +183,10 @@ void elements(Lang l, Page& p, const refindex::Mob& m) {
         r.dot = elementColour(e);
         p.rows.push_back(std::move(r));
     }
+    // 3.0.11-beta.68 (the concept's «Ваша панель: Fire Bolt ×2…» - the owner: «отличная идея, нужна»): the skills on
+    // the player's hotbar - their elements' multipliers on it, «множник стихії», not the damage
+    const std::string yours = bar ? barhint::line(barhint::against(*bar, m.element, m.elementLv), l) : "";
+    if (!yours.empty()) p.rows.push_back(note(sayf(l, Text::RefYourBar, {yours})));
 }
 
 // «На ринку сайту»: the cheapest of the active lots, how many lots and pieces
@@ -1170,7 +1174,7 @@ Page mob(const refindex::Index& ix, Lang l, int id, const Context& c, unsigned o
         dropRows.push_back(linked(itemName(ix, d.item), right, toItem(d.item)));
     }
     capped(p, std::move(dropRows), Drops, opened, l);
-    elements(l, p, m);          // 3.0.11-beta.13
+    elements(l, p, m, c.bar);   // 3.0.11-beta.13; 3.0.11-beta.68 the hotbar's skills on it
     timers(ix, l, p, id, c);    // 3.0.11-beta.12
     for (const refindex::Pet& pet : ix.pets) {  // a pet: what tames it, its egg, its food, its accessory
         if (pet.mob != id) continue;

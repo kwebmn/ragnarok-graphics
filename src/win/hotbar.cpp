@@ -494,6 +494,18 @@ bool use(const State& s, int cell) {
 
 }  // namespace
 
+std::vector<barhint::Skill> barSkills() {
+    std::vector<barhint::Skill> out;
+    const auto& names = clienttables::skillNames();
+    for (int j = 0; j < kSlots; ++j) {
+        const hb::Slot slot = hb::slotOf(readText(kSlotNames + 16 * uint32_t(j)));
+        if (slot.kind != hb::Slot::Kind::Skill || slot.id.empty()) continue;
+        const auto n = names.find(slot.id);
+        out.push_back(barhint::Skill{slot.id, n != names.end() ? hb::spaced(n->second) : slot.id});
+    }
+    return out;
+}
+
 void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int targetHeight) {
     State& s = state();
     if (on != s.on) {

@@ -4,6 +4,7 @@
 #include <string>
 
 #include "core/reference_live.hpp"
+#include "core/bar_hint.hpp"
 #include "core/reference_pages.hpp"
 #include "core/reference_route.hpp"
 #include "core/reference_window.hpp"
@@ -434,6 +435,22 @@ TEST(reference_pages_damage_by_element) {
     CHECK(p.rows[at + 1].tone == 1 && p.rows[at + 1].dot == refpages::elementColour(4));
     CHECK_EQ(p.rows[at + 10].right, std::string("25 %"));  // all ten as chips: water on water, the least
     CHECK_EQ(p.rows[at + 10].tone, 0);
+    CHECK(at + 11 >= p.rows.size() || p.rows[at + 11].left.rfind("Ваша панель", 0) != 0);  // no bar known: none
+    // 3.0.11-beta.68 (the concept's «Ваша панель: Fire Bolt ×2…»): the hotbar's skills on it, after the chips
+    refpages::Context c = ctx("");
+    const std::vector<barhint::Skill> bar{{"MG_FIREBOLT", "Fire Bolt"}, {"AL_BLESSING", "Blessing"},
+                                          {"WZ_JUPITEL", "Jupitel Thunder"}};
+    c.bar = &bar;
+    const refpages::Page withBar = refpages::mob(ix, Lang::Uk, 1002, c);
+    const size_t yours = indexOf(withBar, "Шкода стихіями") + 11;
+    CHECK(yours < withBar.rows.size());
+    if (yours >= withBar.rows.size()) return;
+    CHECK_EQ(withBar.rows[yours].left, std::string("Ваша панель (множник стихії): Jupitel Thunder \xC3\x97" "1,75 "
+                                                   "\xC2\xB7 Fire Bolt \xC3\x97" "0,5"));
+    std::vector<barhint::Skill> none{{"AL_BLESSING", "Blessing"}};  // nothing of an element of its own: no line
+    c.bar = &none;
+    const refpages::Page plain = refpages::mob(ix, Lang::Uk, 1002, c);
+    CHECK_EQ(plain.rows.size(), p.rows.size());
 }
 
 // 3.0.11-beta.15: the NPCs found by their names (the nearest first), a map's nearest Kafra, the items' icons

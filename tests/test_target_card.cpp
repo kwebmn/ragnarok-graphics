@@ -103,3 +103,26 @@ TEST(target_card_picture_and_words) {
     const auto book = [](const targetcard::Words& x) { return x.text == "Картка в довіднику"; };
     CHECK(std::none_of(quiet.begin(), quiet.end(), book));
 }
+
+// 3.0.11-beta.68 (the concept's stage 7: «карточка цели со строкой «Ваша панель»»): the hotbar's skills on it in its
+// details - after what heals it, before the click's line; none known, no line
+TEST(target_card_your_bar) {
+    targetcard::Data d = zombie();
+    d.bar = "Fire Bolt \xC3\x97" "2 \xC2\xB7 Jupitel Thunder \xC3\x97" "1";
+    targetcard::Texts t = texts();
+    t.bar = "Ваша панель: {1}";
+    const targetcard::Layout L = targetcard::layout(d, t, 960, 10, 1.0f, true);
+    const std::vector<targetcard::Words> w = targetcard::words(L, d, t, false);
+    const auto find = [&](const std::string& text) {
+        return std::find_if(w.begin(), w.end(), [&](const targetcard::Words& x) { return x.text == text; });
+    };
+    const auto bar = find("Ваша панель: " + d.bar), heals = find("Лікують: Poison, Dark"),
+               book = find("Картка в довіднику");
+    CHECK(bar != w.end() && heals != w.end() && book != w.end());
+    if (bar == w.end() || heals == w.end() || book == w.end()) return;
+    CHECK(inside(L.details, bar->box) && bar->box.y > heals->box.y && bar->box.y < book->box.y);
+    CHECK(L.details.w >= targetcard::layout(zombie(), texts(), 960, 10, 1.0f, true).details.w);
+    d.bar.clear();
+    for (const targetcard::Words& x : targetcard::words(targetcard::layout(d, t, 960, 10, 1.0f, true), d, t, false))
+        CHECK(x.text.rfind("Ваша панель", 0) != 0);
+}

@@ -22,6 +22,7 @@
 #include "pad/win/game_window.hpp"
 #include "win/game_camera.hpp"
 #include "win/game_files.hpp"
+#include "win/hotbar.hpp"
 #include "win/log.hpp"
 #include "win/minimap_proto.hpp"
 #include "win/monster_picture.hpp"
@@ -104,6 +105,7 @@ struct State {
     uint32_t texture = 0;
     int texW = 0, texH = 0, targetW = 0, targetH = 0;
     float k = 0, scale = 0;  // 3.0.11-beta.67: the layout's (uistyle::readingScale)
+    std::vector<barhint::Skill> bar;  // 3.0.11-beta.68: the hotbar's skills, read with each page
 };
 
 State& state() {
@@ -244,6 +246,7 @@ refpages::Context contextOf(const State& s) {
     c.folded = s.folded;  // 3.0.11-beta.17
     c.recent = &s.recent;  // 3.0.11-beta.18
     c.favourites = &s.favourites;
+    c.bar = &s.bar;        // 3.0.11-beta.68: the hotbar's skills (read with each page)
     return c;
 }
 
@@ -297,6 +300,7 @@ void makePage(State& s) {
         r.left = say(Text::RefNoData);
         s.page.rows.push_back(r);
     } else {
+        s.bar = hotbarwin::barSkills();  // 3.0.11-beta.68: a monster's card says the bar's skills on it
         const refpages::Context c = contextOf(s);
         s.page = s.at.go != refpages::Go::None ? refpages::open(*s.index, l, s.at, c, s.opened)
                  : !s.query.empty()            ? refpages::found(*s.index, l, s.query, c, s.opened)

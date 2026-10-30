@@ -10,6 +10,7 @@
 #include <variant>
 #include <vector>
 
+#include "core/bar_hint.hpp"
 #include "core/reference_pages.hpp"
 #include "core/settings/strings.hpp"
 #include "core/target_card.hpp"
@@ -17,6 +18,7 @@
 #include "core/ui_style.hpp"
 #include "pad/win/game_window.hpp"
 #include "win/game_camera.hpp"
+#include "win/hotbar.hpp"
 #include "win/log.hpp"
 #include "win/monster_picture.hpp"
 #include "win/picture_draw.hpp"
@@ -120,7 +122,8 @@ const panel::Picture* pictureOf(State& s, const refindex::Mob& mob, int id, int 
 tc::Texts texts() {
     const settings::Lang l = startup().lang;
     return tc::Texts{settings::tr(l, settings::Text::TargetWeak), settings::tr(l, settings::Text::TargetHeals),
-                     settings::tr(l, settings::Text::TargetBook)};
+                     settings::tr(l, settings::Text::TargetBook),
+                     settings::tr(l, settings::Text::TargetYourBar)};  // 3.0.11-beta.68
 }
 
 std::vector<Words> gdiWords(const std::vector<tc::Words>& in) {
@@ -203,6 +206,8 @@ void describe(tc::Data& d, const refindex::Mob& m, int id) {
     for (const int e : w.heals) heals.push_back(refpages::elementName(e, l));
     d.weak = joined(weak);
     d.heals = joined(heals);
+    // 3.0.11-beta.68 (the concept's «карточка цели со строкой «Ваша панель»»): the hotbar's skills on it
+    d.bar = barhint::line(barhint::against(hotbarwin::barSkills(), m.element, m.elementLv), l, 3);
 }
 
 }  // namespace

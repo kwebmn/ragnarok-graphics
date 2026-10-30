@@ -2,7 +2,9 @@
 #include <windows.h>
 
 #include <cstdint>
+#include <vector>
 
+#include "core/bar_hint.hpp"
 #include "core/frame.hpp"
 
 namespace uagfx::gpu {
@@ -30,5 +32,8 @@ void beforeGameDraw();
 // game mode's drag, + 0x32C): the game's own bar takes it as dropped on that cell (its drop, vtable + 0x2C - the slot
 // set, the drag ended; the battle mode's row the cell's); false: not over a cell (win/world_mouse asks)
 bool drop(int x, int y, uint32_t drag);
+// 3.0.11-beta.68 (the concept's «Ваша панель: Fire Bolt ×2…»): the skills in the game's bar now (its 27 slots, as the
+// session keeps them - the new bar shown or not), each with its name as the game shows it; in the slots' order
+std::vector<barhint::Skill> barSkills();
 
 }  // namespace uagfx::win::hotbarwin

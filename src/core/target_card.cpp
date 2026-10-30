@@ -71,6 +71,7 @@ std::vector<std::pair<std::string, uint32_t>> lines(const Data& d, const Texts& 
     if (!d.numbers.empty()) out.emplace_back(d.numbers, kMuted);
     if (!d.weak.empty()) out.emplace_back(replaced(t.weak, d.weak), 0xE6CB8A);
     if (!d.heals.empty()) out.emplace_back(replaced(t.heals, d.heals), 0xFF9A8F);
+    if (!d.bar.empty() && !t.bar.empty()) out.emplace_back(replaced(t.bar, d.bar), kText);  // 3.0.11-beta.68
     if (!t.book.empty()) out.emplace_back(t.book, kMuted);
     return out;
 }
