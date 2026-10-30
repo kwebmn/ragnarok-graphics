@@ -1,3 +1,17 @@
+# uaRO Graphics 3.0.11-beta.43 — what is new
+
+- **«Items»: the clicks.** The close button, the double click, the drag and the right click did not work. The new
+  windows, the hotbar and the chat now take a click where the game's cursor stands (where it is seen and where the
+  cell lights up), not from the point of Windows' message.
+- **Dragging out of «Items» rewritten.** A press on an item began the game's own drag at once, but the game never saw
+  the button come up and the item stuck to the cursor. Now the item follows the cursor, and when the button comes up
+  the game itself puts it where the cursor is: onto the hotbar, into the storage, on the ground.
+- The log tells where the first presses land and what came of them — if something still does not work, send a report
+  from the game.
+- To check: the close button closes «Items»; a double click on a potion — drunk; a potion dragged onto the hotbar; a
+  right click — the item's card. The log's lines `items: a press ... part N`, `items: its close - ...`,
+  `items: a double click on #...`, `items: #... dragged and let go - ...`, `items: #...'s card ...`.
+
 # uaRO Graphics 3.0.11-beta.42 — what is new
 
 - **The windows «Items» and «Status» (stage 8 of the new interface).** They open as before (Alt+E, Alt+A, the
