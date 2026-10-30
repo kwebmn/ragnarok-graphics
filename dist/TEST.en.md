@@ -1,3 +1,17 @@
+# uaRO Graphics 3.0.11-beta.54 — what is new
+
+- **The new interface no longer stutters in a fight at 4K with the render scale at 200 %** (your report R-PVZH5M:
+  «the graphics slow down a little when you hit monsters»). The panels were painted at the inner picture's size
+  (7678×4319) — the character block was 1488×1200 points, painted again at each HP change. Now the new panels and
+  windows are painted at the screen's size and shown exactly twice as large: four times fewer points to paint and to
+  send to the renderer (the same look). The words' fonts are no longer made anew at each painting.
+- **A small screen: everything fits** (report R-JK5455: «took a small screen and not all the interface's parts
+  fitted»). A new choice «Interface size» (the «Interface» section in the app, «The new interface» in the game's
+  console): «Auto» — full size from a game of 1280×720 up, smaller on a smaller one (896×672 — 70 %), but never so small
+  its words get hard to read; or 70, 85, 100, 115, 130 %. «Reference», «Items», «Status» now fit a small screen.
+- To check: the same game at 896×672 — all panels smaller, «Reference» fits; 4K with the render at 200 % — a fight
+  without stutters (the log's «the game's thread busy ... ms a frame» every 30 s should not grow in a fight as before).
+
 # uaRO Graphics 3.0.11-beta.53 — what is new
 
 - **The game's old window no longer flashes** (your word: «when you open the inventory the old one flashes for a
