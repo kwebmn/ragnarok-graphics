@@ -1,3 +1,18 @@
+# uaRO Graphics 3.0.11-beta.55 — what is new
+
+- **The world's dimming under windows is off by default** (your word: «sometimes the interface has to stay open in
+  the game, it gets in the way»). «Items», «Status» and «Reference» can now stay open while playing — the world does
+  not darken, the character block does not shrink. The switch «Dim the world under windows» stays in the «Interface»
+  section — for those who like it.
+- **The big windows' shadow is made five times faster**: opening «Status» for the first time at 4K used to hold the
+  game for 46 ms, «Reference» for 79 ms; now 9 and 17.
+- **The log tells what the new interface costs** (report R-9PP79T: «the graphics slow down with the new
+  interface»): every 30 s a line `interface: pictures painted in 30 s - ...` — which part was painted again how often
+  and how many milliseconds it took; a long painting (over 8 ms) is told at once. On R-9PP79T: in Prontera the card is
+  busy 22 ms a frame (13–15 on another map) — the town's effects at an inner picture of 7678×4319 (4K and the render at
+  200 %), while the game's thread, where the interface is painted, takes only 4.4 ms a frame.
+- To check: send a report when it slows down again — the log will show whether it is the interface.
+
 # uaRO Graphics 3.0.11-beta.54 — what is new
 
 - **The new interface no longer stutters in a fight at 4K with the render scale at 200 %** (your report R-PVZH5M:
