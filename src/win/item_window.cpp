@@ -25,6 +25,7 @@
 #include "win/paths.hpp"
 #include "win/picture_draw.hpp"
 #include "win/real_ddraw.hpp"
+#include "win/ui_cost.hpp"
 #include "win/window_shadow.hpp"
 
 namespace uagfx::win::itemswin {
@@ -258,6 +259,7 @@ std::vector<Words> gdiWords(const std::vector<iw::Words>& in) {
 }
 
 void render(State& s) {
+    const uicost::Paint cost("«Речі»", s.layout.w, s.layout.h);  // 3.0.11-beta.55
     s.picture = panel::Picture{};
     s.picture.width = s.layout.w;
     s.picture.height = s.layout.h;

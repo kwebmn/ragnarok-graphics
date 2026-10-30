@@ -27,6 +27,7 @@
 #include "win/picture_draw.hpp"
 #include "win/real_ddraw.hpp"
 #include "win/reference_load.hpp"
+#include "win/ui_cost.hpp"
 
 namespace uagfx::win::hotbarwin {
 namespace {
@@ -437,6 +438,7 @@ std::vector<Words> gdiWords(const std::vector<hb::Words>& in) {
 }
 
 void render(State& s, const hb::Show& show) {
+    const uicost::Paint cost("hotbar", s.layout.w, s.layout.h);  // 3.0.11-beta.55
     s.picture = panel::Picture{};
     s.picture.width = s.layout.w;
     s.picture.height = s.layout.h;

@@ -55,6 +55,7 @@
 #include "win/log.hpp"
 #include "win/low_hp_edge.hpp"
 #include "win/thread_time.hpp"
+#include "win/ui_cost.hpp"
 #include "win/paths.hpp"
 #include "win/picture_draw.hpp"
 #include "win/profiler.hpp"
@@ -1324,6 +1325,9 @@ void Context::logStats(bool final) {
         LOG_INFO("%u frames in %.1f s (%.1f fps), %u reads of the frame from the GPU%s%s%s", stats_.frames,
                  ms / 1000.0, ms ? stats_.frames * 1000.0 / ms : 0.0, stats_.readBacks, crisp::stats().c_str(), busy,
                  full);
+    // 3.0.11-beta.55 (R-9PP79T): the new interface's pictures painted meanwhile, and what they cost
+    if (const std::string paints = uicost::take(); !paints.empty())
+        LOG_INFO("interface: pictures painted in %.0f s - %s", ms / 1000.0, paints.c_str());
     stats_ = Stats{};
     stats_.since = now;
     stats_.cpuMs = threadCpuMs();

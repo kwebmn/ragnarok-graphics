@@ -73,8 +73,12 @@ panel::Picture shadow(int w, int h, float radius, float spread, float alpha) {
     p.px.assign(size_t(p.width) * size_t(p.height), 0u);
     const float hx = float(w) / 2, hy = float(h) / 2, cx = float(m) + hx, cy = float(m) + hy;
     const float r = std::clamp(radius, 0.0f, std::min(hx, hy));
+    // 3.0.11-beta.55 (R-9PP79T): the rows beside the box's straight sides have their shadow only left and right of it
+    // (46 ms for a window of 1520 x 1200 pixel by pixel, the first time it opened)
+    const int sideFrom = m + int(std::ceil(r)), sideTo = m + h - int(std::ceil(r));
     for (int y = 0; y < p.height; ++y)
         for (int x = 0; x < p.width; ++x) {
+            if (y >= sideFrom && y < sideTo && x == m) x = m + w;  // the box itself: no shadow under it
             // the distance out of the rounded box (its signed distance, outside only)
             const float qx = std::fabs(float(x) + 0.5f - cx) - (hx - r);
             const float qy = std::fabs(float(y) + 0.5f - cy) - (hy - r);

@@ -17,6 +17,7 @@
 #include "win/log.hpp"
 #include "win/picture_draw.hpp"
 #include "win/real_ddraw.hpp"
+#include "win/ui_cost.hpp"
 
 namespace uagfx::win::castwin {
 namespace {
@@ -116,6 +117,7 @@ std::vector<Words> gdiWords(const std::vector<cb::Words>& in) {
 }
 
 void render(State& s) {
+    const uicost::Paint cost("cast", s.layout.w, s.layout.h);  // 3.0.11-beta.55
     s.picture = panel::Picture{};
     s.picture.width = s.layout.w;
     s.picture.height = s.layout.h;

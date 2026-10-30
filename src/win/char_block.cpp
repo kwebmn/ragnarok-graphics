@@ -24,6 +24,7 @@
 #include "win/paths.hpp"
 #include "win/picture_draw.hpp"
 #include "win/real_ddraw.hpp"
+#include "win/ui_cost.hpp"
 #include "win/updates_hook.hpp"
 #include "win/world_dim.hpp"
 
@@ -242,6 +243,7 @@ std::vector<Words> gdiWords(const std::vector<cb::Words>& in) {
 
 // The warning's picture and the flare's: the block's size, its place (made again when what they show changes)
 void renderWarning(State& s) {
+    const uicost::Paint cost("character block's warning", s.layout.w, s.layout.h);  // 3.0.11-beta.55
     const cb::Texts t = texts();
     const std::string key = std::to_string(s.layout.w) + 'x' + std::to_string(s.layout.h) + ';' +
                             std::to_string(int(s.layout.view)) + ';' + std::to_string(s.data.hp) + '/' +
@@ -259,6 +261,7 @@ void renderWarning(State& s) {
 }
 
 void renderFlare(State& s) {
+    const uicost::Paint cost("character block's flare", s.layout.w, s.layout.h);  // 3.0.11-beta.55
     const std::string key = std::to_string(s.layout.w) + 'x' + std::to_string(s.layout.h) + ';' +
                             std::to_string(int(s.layout.view)) + ',' + std::to_string(int(s.layout.look));
     if (key == s.flare.key) return;
@@ -273,6 +276,7 @@ void renderFlare(State& s) {
 }
 
 void render(State& s) {
+    const uicost::Paint cost("character block", s.layout.w, s.layout.h);  // 3.0.11-beta.55
     s.picture = panel::Picture{};
     s.picture.width = s.layout.w;
     s.picture.height = s.layout.h;

@@ -29,6 +29,7 @@
 #include "win/picture_draw.hpp"
 #include "win/real_ddraw.hpp"
 #include "win/reference_load.hpp"
+#include "win/ui_cost.hpp"
 #include "win/updates_hook.hpp"
 #include "win/window_shadow.hpp"
 
@@ -644,6 +645,7 @@ std::vector<Words> wordsOf(const State& s, const refwin::Look& look) {
 }
 
 void render(State& s) {
+    const uicost::Paint cost("«Довідник»", s.layout.w, s.layout.h);  // 3.0.11-beta.55
     s.chrome = refwin::chrome(s.layout, s.page, textsOf(s));  // 3.0.11-beta.26
     const refwin::Look look = lookOf(s);
     refwin::paint(s.picture, s.layout, s.page, s.rows, s.scroll, s.total, look);
@@ -656,6 +658,7 @@ void render(State& s) {
 
 // 3.0.11-beta.25: the highlights' areas only (highlight) - painted again, their words, sent to the card by draw
 void renderHot(State& s) {
+    const uicost::Paint cost("«Довідник»'s rows", s.layout.w, s.layout.h);  // 3.0.11-beta.55
     const refwin::Look look = lookOf(s);
     const std::vector<Words> gdi = wordsOf(s, look);
     for (const Rect& a : s.hot) {

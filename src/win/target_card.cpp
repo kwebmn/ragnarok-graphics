@@ -23,6 +23,7 @@
 #include "win/real_ddraw.hpp"
 #include "win/reference_load.hpp"
 #include "win/reference_window.hpp"
+#include "win/ui_cost.hpp"
 
 namespace uagfx::win::targetpanel {
 namespace {
@@ -134,6 +135,7 @@ std::vector<Words> gdiWords(const std::vector<tc::Words>& in) {
 }
 
 void render(State& s) {
+    const uicost::Paint cost("target's card", s.layout.w, s.layout.h);  // 3.0.11-beta.55
     s.picture = panel::Picture{};
     s.picture.width = s.layout.w;
     s.picture.height = s.layout.h;

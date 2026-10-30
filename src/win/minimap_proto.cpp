@@ -32,6 +32,7 @@
 #include "win/real_ddraw.hpp"
 #include "win/reference_load.hpp"
 #include "win/reference_window.hpp"
+#include "win/ui_cost.hpp"
 
 namespace uagfx::win::minimapproto {
 namespace {
@@ -421,6 +422,7 @@ std::vector<Words> gdiWords(const std::vector<minimap::Words>& in) {
 }
 
 void render(State& s) {
+    const uicost::Paint cost("minimap", s.layout.w, s.layout.h);  // 3.0.11-beta.55
     minimap::Texts t;
     t.name = shortTitle(s, s.map);
     if (s.cellKnown) t.cell = std::to_string(s.cell.x) + ", " + std::to_string(s.cell.y);
@@ -439,6 +441,7 @@ void render(State& s) {
 }
 
 void renderBig(State& s) {
+    const uicost::Paint cost("big map", s.bigLayout.w, s.bigLayout.h);  // 3.0.11-beta.55
     const minimap::Scene sc = sceneOf(s);
     s.bigLayout = minimap::bigLayout(s.targetW, s.targetH, s.scale, s.size);
     const std::string key = s.map + "|" + std::to_string(s.bigLayout.w) + "x" + std::to_string(s.bigLayout.h) + "|" +

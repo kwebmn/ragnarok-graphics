@@ -577,7 +577,8 @@ struct Config {
     // 3.0.11-beta.48: [interface] cast - the character's cast over the hero in the new look (core/cast_bar), the
     // game's own gauge hidden while it shows
     bool castLabel = false;
-    // 3.0.11-beta.49: [interface] dim_world - the world dimmed while the new windows are open (win/world_dim)
+    // 3.0.11-beta.49: [interface] dim_world - the world dimmed while the new windows are open (win/world_dim);
+    // 3.0.11-beta.55 off unless asked for (the owner: windows stay open in play, the dimming was in the way)
     bool dimWorld = false;
     // 3.0.11-beta.50: [interface] low_hp_edge 0-100 - the screen's edges red at low HP, its strength (0: none)
     int lowHpEdge = 0;
