@@ -68,5 +68,10 @@ const char* tierName(Tier t);
 // world_scale_reset marking it done, so that a share the player picks after it stays. The edits for a file's keys
 // (readIni); none once marked. The driver at the game's start and the settings app when it opens.
 std::vector<IniEdit> worldScaleReset(const std::map<std::string, std::string>& ini);
+// 3.0.11-beta.58 (the autopilot, the owner: «делай»): an install set up before it moves over once ([utility]
+// autopilot = 1) - its effects set as its card's memory gave it (1 weak, 2 medium, 3 strong) to the automatic one, and
+// with the automatic set (not the super-light mode) keep_fps 0 or 45 to 60; a set the player picked stays. The driver
+// at the game's start and the settings app when it opens.
+std::vector<IniEdit> autopilotOnce(const std::map<std::string, std::string>& ini, int memoryLevel);
 
 }  // namespace uagfx::settings

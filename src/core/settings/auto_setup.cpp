@@ -32,6 +32,27 @@ void set(std::vector<IniEdit>& e, const char* section, const char* key, const st
 
 }  // namespace
 
+std::vector<IniEdit> autopilotOnce(const std::map<std::string, std::string>& ini, int memoryLevel) {
+    if (ini.count("utility.autopilot")) return {};
+    const auto value = [&](const char* key, const char* absent) {
+        const auto it = ini.find(key);
+        return it == ini.end() ? std::string(absent) : it->second;
+    };
+    static const char* const kSets[] = {"off", "weak", "medium", "strong"};
+    std::vector<IniEdit> e;
+    const std::string preset = value("effects.preset", "auto");
+    bool automatic = preset == "auto";
+    if (memoryLevel >= 1 && memoryLevel <= 3 && preset == kSets[memoryLevel]) {  // as its setup gave it
+        e.push_back({"effects", "preset", "auto"});
+        automatic = true;
+    }
+    const std::string keep = value("frames.keep_fps", "0");
+    if (automatic && value("quality.super_light", "0") != "1" && (keep == "0" || keep == "45"))
+        e.push_back({"frames", "keep_fps", "60"});
+    e.push_back({"utility", "autopilot", "1"});
+    return e;
+}
+
 std::vector<IniEdit> worldScaleReset(const std::map<std::string, std::string>& ini) {
     if (ini.count("utility.world_scale_reset")) return {};
     std::vector<IniEdit> e;
@@ -114,12 +135,12 @@ AutoSetup autoSetup(const Machine& m) {
     const bool taa =
         m.vendor != kNvidia && (a.tier == Tier::High || (a.tier == Tier::Middle && pixels <= 2560LL * 1440));
     set(e, "quality", "taa", taa ? "1" : "0");
-    // 0.76: a card short of a strong one keeps 45 frames a second - the costliest effects go off when it cannot
-    const bool keep = small || a.tier == Tier::Middle;
-    set(e, "frames", "keep_fps", keep ? "45" : "0");
-    // 2.2: the Effects page's set by the card - its own switches as the set says
-    set(e, "effects", "preset",
-        a.tier == Tier::NoDriver ? "off" : a.tier == Tier::Middle ? "medium" : a.tier == Tier::High ? "strong" : "weak");
+    // 0.76: a card keeps its frames - the costliest effects go off when it cannot; 3.0.11-beta.58 (the autopilot):
+    // every card at 60, the strong one too (an old card of 8 GB is strong by its memory alone)
+    set(e, "frames", "keep_fps", a.tier == Tier::NoDriver ? "0" : "60");
+    // 2.2: the Effects page's set by the card; 3.0.11-beta.58: the automatic one - the card's memory's to start with,
+    // then judged by how it draws (core/card_speed)
+    set(e, "effects", "preset", a.tier == Tier::NoDriver ? "off" : "auto");
     // The effects of the Effects page: Direct3D 12's. A small card keeps the light ones.
     if (a.tier == Tier::Low || a.tier == Tier::IntegratedStrong)
         for (const char* k : {"ao", "rays", "heat", "weather", "glow"})

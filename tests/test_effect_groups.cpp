@@ -102,11 +102,13 @@ TEST(effect_groups_auto_setup_picks_the_set) {
             if (e.section == "effects" && e.key == "preset") return e.value;
         return std::string();
     };
-    CHECK(word(settings::autoSetup(m)) == "strong");
+    // 3.0.11-beta.58 (the autopilot): the automatic set on every card with a driver - its memory's level to start
+    // with, then judged by how it draws (core/card_speed)
+    CHECK(word(settings::autoSetup(m)) == "auto");
     m.vramMb = 6144;
-    CHECK(word(settings::autoSetup(m)) == "medium");
+    CHECK(word(settings::autoSetup(m)) == "auto");
     m.vramMb = 2048;
-    CHECK(word(settings::autoSetup(m)) == "weak");
+    CHECK(word(settings::autoSetup(m)) == "auto");
     m.vendor = 0x1414;  // no driver
     CHECK(word(settings::autoSetup(m)) == "off");
 }

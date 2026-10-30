@@ -147,14 +147,20 @@ TEST(auto_setup_taa_for_cards_without_dlss) {
 }
 
 TEST(auto_setup_keeps_the_frame_rate_on_smaller_cards) {
-    // 0.76: [frames] keep_fps 45 short of a strong card; a strong one decides itself.
-    CHECK(valueOf(autoSetup(rtx5060()), "frames", "keep_fps") == "0");
+    // 0.76: [frames] keep_fps short of a strong card; 3.0.11-beta.58 (the autopilot): 60 on every card, the strong one
+    // too, and the automatic set - judged by how the card draws (core/card_speed)
+    CHECK(valueOf(autoSetup(rtx5060()), "frames", "keep_fps") == "60");
+    CHECK(valueOf(autoSetup(rtx5060()), "effects", "preset") == "auto");
     Machine old = rtx5060();
     old.vendor = 0x1002;
     old.d3d12 = false;
     old.d3d11Level = 0xb000;
     old.vramMb = 1024;
-    CHECK(valueOf(autoSetup(old), "frames", "keep_fps") == "45");
+    CHECK(valueOf(autoSetup(old), "frames", "keep_fps") == "60");
+    CHECK(valueOf(autoSetup(old), "effects", "preset") == "auto");
+    Machine middle = rtx5060();
+    middle.vramMb = 6144;
+    CHECK(valueOf(autoSetup(middle), "effects", "preset") == "auto");
 }
 
 namespace {
@@ -186,6 +192,7 @@ TEST(auto_setup_weak_integrated_is_super_light) {
     CHECK_EQ(valueOf(a, "quality", "msaa"), std::string("0"));
     CHECK_EQ(valueOf(a, "frames", "fps_limit"), std::string("60"));
     CHECK_EQ(valueOf(a, "frames", "battery_saver"), std::string("1"));
+    CHECK_EQ(valueOf(a, "frames", "keep_fps"), std::string("0"));  // its own way to 60 frames
     CHECK(a.ai && !a.aiWorld && valueOf(a, "ai", "scale") == "2");
     CHECK_EQ(valueOf(a, "quality", "dlss"), std::string("off"));
     Machine desktop = integratedCard("AMD Radeon(TM) Vega 8 Graphics");
@@ -202,8 +209,8 @@ TEST(auto_setup_strong_integrated_is_low_with_msaa_2) {
         CHECK(a.tier == Tier::IntegratedStrong);
         CHECK(a.preset == Preset::Speed);
         CHECK_EQ(valueOf(a, "quality", "msaa"), std::string("2"));
-        CHECK_EQ(valueOf(a, "effects", "preset"), std::string("weak"));
-        CHECK_EQ(valueOf(a, "frames", "keep_fps"), std::string("45"));
+        CHECK_EQ(valueOf(a, "effects", "preset"), std::string("auto"));  // 3.0.11-beta.58: the autopilot's
+        CHECK_EQ(valueOf(a, "frames", "keep_fps"), std::string("60"));
         CHECK_EQ(valueOf(a, "quality", "super_light"), std::string("0"));
     }
 }
@@ -255,4 +262,29 @@ TEST(world_scale_reset_takes_the_old_share_back_once) {
     // any share under 100 the file held
     const std::vector<IniEdit> low = worldScaleReset(readIni("[quality]\nworld_scale = 50\n"));
     CHECK(low.size() == 2 && low[0].value == "100");
+}
+
+// 3.0.11-beta.58 (the autopilot): an install set up before it - its set as its card's memory gave it, keep_fps 45 or
+// 0 - goes over to the automatic set and 60 frames, once; a set the player picked, the custom one and the super-light
+// mode stay theirs
+TEST(autopilot_once_moves_the_untouched_sets) {
+    const auto valueIn = [](const std::vector<IniEdit>& e, const char* section, const char* key) {
+        for (const IniEdit& x : e)
+            if (x.section == section && x.key == key) return x.value;
+        return std::string("-");
+    };
+    std::vector<IniEdit> e = autopilotOnce(readIni("[effects]\npreset = weak\n[frames]\nkeep_fps = 45\n"), 1);
+    CHECK(valueIn(e, "effects", "preset") == "auto" && valueIn(e, "frames", "keep_fps") == "60");
+    CHECK(valueIn(e, "utility", "autopilot") == "1");
+    e = autopilotOnce(readIni("[effects]\npreset = strong\n[frames]\nkeep_fps = 0\n"), 3);
+    CHECK(valueIn(e, "effects", "preset") == "auto" && valueIn(e, "frames", "keep_fps") == "60");
+    e = autopilotOnce(readIni("[effects]\npreset = medium\n[frames]\nkeep_fps = 0\n"), 3);  // the player's own
+    CHECK(valueIn(e, "effects", "preset") == "-" && valueIn(e, "frames", "keep_fps") == "-");
+    CHECK(valueIn(e, "utility", "autopilot") == "1");
+    CHECK_EQ(autopilotOnce(readIni("[effects]\npreset = custom\n"), 2).size(), size_t(1));
+    CHECK_EQ(autopilotOnce(readIni("[effects]\npreset = off\n[quality]\nsuper_light = 1\n"), 1).size(), size_t(1));
+    e = autopilotOnce(readIni(""), 2);  // the file's own defaults: the automatic set already
+    CHECK(valueIn(e, "effects", "preset") == "-" && valueIn(e, "frames", "keep_fps") == "60");
+    CHECK_EQ(autopilotOnce(readIni("[effects]\npreset = auto\n[frames]\nkeep_fps = 50\n"), 2).size(), size_t(1));
+    CHECK(autopilotOnce(readIni("[effects]\npreset = weak\n[utility]\nautopilot = 1\n"), 1).empty());
 }
