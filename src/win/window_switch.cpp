@@ -50,6 +50,24 @@ void claimed(UINT m) {
     }
 }
 
+// The driver's parts' mouse, the topmost first: true - the message was one of theirs
+bool partsMouse(HWND w, UINT m, WPARAM wp, LPARAM lp, LRESULT& answer) {
+    return hudedit::mouse(w, m, wp, lp, answer) ||      // 3.0.11-beta.75: all of it while the parts are framed
+           answercard::mouse(w, m, lp, answer) ||       // 3.0.9-beta.4: and over the answer card the card's
+           referencewin::mouse(w, m, wp, lp, answer) ||  // 3.0.11-beta.7: over «Довідник» its own
+           statswin::mouse(w, m, wp, lp, answer) ||      // 3.0.11-beta.42: the windows over the panels
+           itemswin::mouse(w, m, wp, lp, answer) ||
+           minimapproto::mouse(w, m, wp, lp, answer) ||  // 3.0.11-beta.1: the new minimap's
+           buffcolumn::mouse(w, m, wp, lp, answer) ||    // 3.0.11-beta.35: the buffs' column's
+           trackerwin::mouse(w, m, wp, lp, answer) ||    // 3.0.11-beta.70: the tracker's
+           charpanel::mouse(w, m, wp, lp, answer) ||     // 3.0.11-beta.36: the character block's
+           targetpanel::mouse(w, m, wp, lp, answer) ||   // 3.0.11-beta.38: the target's card's
+           partywin::mouse(w, m, wp, lp, answer) ||      // 3.0.11-beta.39: the party's panel's
+           hotbarwin::mouse(w, m, wp, lp, answer) ||     // 3.0.11-beta.40: the hotbar's
+           chatwin::mouse(w, m, wp, lp, answer) ||       // 3.0.11-beta.41: the chat's
+           (g_switch && g_switch->mouse(w, m, lp, answer));
+}
+
 LRESULT CALLBACK gameProc(HWND w, UINT m, WPARAM wp, LPARAM lp) {
     if (g_switch) {
         if (hudedit::key(m, wp, lp)) return 0;  // 3.0.11-beta.75: Ctrl+Shift+L - «Розміщення інтерфейсу», its Esc
@@ -73,21 +91,25 @@ LRESULT CALLBACK gameProc(HWND w, UINT m, WPARAM wp, LPARAM lp) {
             LOG_INFO("windows: a press (0x%X) at (%d, %d) of a %ldx%ld client, the game's cursor at (%d, %d)", m,
                      GET_X_LPARAM(lp), GET_Y_LPARAM(lp), client.right, client.bottom, cx, cy);
         }
+        // 3.0.11-beta.77 (the owner: «чтобы без быстрых кнопок можно было двигать, чтобы сразу все мышкой»): a press
+        // on a part held till it moves (the part dragged) or is let go (the part's click after all, given first)
+        switch (hudedit::gate(w, m, wp, lp)) {
+            case hudedit::Gate::Take:
+                claimed(m);
+                return 0;
+            case hudedit::Gate::PressFirst: {
+                UINT pm = 0;
+                WPARAM pwp = 0;
+                LPARAM plp = 0;
+                hudedit::heldPress(pm, pwp, plp);
+                LRESULT unused = 0;
+                if (partsMouse(w, pm, pwp, plp, unused)) claimed(pm);
+                break;
+            }
+            case hudedit::Gate::Pass: break;
+        }
         LRESULT answer = 0;  // 3.0.3-beta.8: the mouse over the panel in the game's picture is the panel's
-        if (hudedit::mouse(w, m, wp, lp, answer) ||      // 3.0.11-beta.75: all of it while the parts are placed
-            answercard::mouse(w, m, lp, answer) ||       // 3.0.9-beta.4: and over the answer card the card's
-            referencewin::mouse(w, m, wp, lp, answer) ||  // 3.0.11-beta.7: over «Довідник» its own
-            statswin::mouse(w, m, wp, lp, answer) ||      // 3.0.11-beta.42: the windows over the panels
-            itemswin::mouse(w, m, wp, lp, answer) ||
-            minimapproto::mouse(w, m, wp, lp, answer) ||  // 3.0.11-beta.1: the new minimap's
-            buffcolumn::mouse(w, m, wp, lp, answer) ||    // 3.0.11-beta.35: the buffs' column's
-            trackerwin::mouse(w, m, wp, lp, answer) ||    // 3.0.11-beta.70: the tracker's
-            charpanel::mouse(w, m, wp, lp, answer) ||     // 3.0.11-beta.36: the character block's
-            targetpanel::mouse(w, m, wp, lp, answer) ||   // 3.0.11-beta.38: the target's card's
-            partywin::mouse(w, m, wp, lp, answer) ||      // 3.0.11-beta.39: the party's panel's
-            hotbarwin::mouse(w, m, wp, lp, answer) ||     // 3.0.11-beta.40: the hotbar's
-            chatwin::mouse(w, m, wp, lp, answer) ||       // 3.0.11-beta.41: the chat's
-            g_switch->mouse(w, m, lp, answer)) {
+        if (partsMouse(w, m, wp, lp, answer)) {
             claimed(m);  // 3.0.11-beta.33: its press stays the part's until let go
             return answer;
         }

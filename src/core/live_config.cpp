@@ -194,6 +194,10 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("pack_icons", flag(running.packIcons), flag(file.packIcons)));
         n.packIcons = file.packIcons;
     }
+    if (file.lockLayout != running.lockLayout) {  // 3.0.11-beta.77: the parts kept where they are, at once
+        u.applied.push_back(change("lock_layout", flag(running.lockLayout), flag(file.lockLayout)));
+        n.lockLayout = file.lockLayout;
+    }
     if (file.minimapWay != running.minimapWay) {  // 3.0.11-beta.33: the way on the ground, at once
         u.applied.push_back(
             change("minimap_way", wayOnGroundToken(running.minimapWay), wayOnGroundToken(file.minimapWay)));

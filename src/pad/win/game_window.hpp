@@ -28,6 +28,8 @@ enum class Blocker { Panel, Card, Minimap, Reference, BigMap, Buffs, Character, 
 // 3.0.11-beta.33: their number (win/world_mouse names each)
 constexpr int kBlockerCount = int(Blocker::HudEdit) + 1;
 void setBlocked(Blocker who, HWND game, const RECT* rect, bool all);
+// 3.0.11-beta.77: a part's rectangle as it set it (the client's pixels) - false while it has none
+bool blockerRect(Blocker who, RECT& out);
 // 3.0.11-beta.24: the part the game's own cursor is over (x, y of the game's width x height picture), -1 for none:
 // the world under it is not the cursor's then (win/world_mouse). On the game's thread.
 int blockedUnder(int x, int y, int width, int height);

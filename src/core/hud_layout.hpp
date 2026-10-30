@@ -44,5 +44,8 @@ struct Snapped {
 };
 Snapped snap(const Box& moving, const std::vector<Box>& others, int targetW, int targetH, int within);
 float stepped(float size, int steps);  // the wheel's: by kSizeStep, kept within
+// 3.0.11-beta.77 (the owner: «некоторые окна налазят одно на другое и мешают»): a part let go over others - moved the
+// least way out of them all (`gap` apart), kept on the screen; as it is when clear, or when no place is free
+Box clearOf(const Box& moving, const std::vector<Box>& others, int targetW, int targetH, int gap);
 
 }  // namespace uagfx::hudlayout

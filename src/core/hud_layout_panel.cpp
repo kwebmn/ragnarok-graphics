@@ -70,6 +70,20 @@ void paintFrame(panel::Picture& out, int w, int h, float scale, Look look, float
                          6 * s, kCard, 0.92f);
 }
 
+void paintGrip(panel::Picture& out, int side, float scale, bool hover) {
+    out.width = out.height = std::max(0, side);
+    out.px.assign(size_t(out.width) * size_t(out.height), 0u);
+    if (side <= 0) return;
+    const float s = std::max(0.5f, scale), f = float(side);
+    panel::roundRect(out, panel::Box{0, 0, f, f}, f / 4, kCard, hover ? 0.95f : 0.8f, kAccent2, hover ? 1.0f : 0.7f,
+                     std::max(1.0f, s));
+    const float r = std::max(0.8f, 1.1f * s);
+    for (int row = 0; row < 3; ++row)  // ⋰ - the three corners' dots of a resize handle
+        for (int col = 2 - row; col < 3; ++col)
+            panel::circle(out, f * (0.3f + 0.2f * float(col)), f * (0.3f + 0.2f * float(row)), r, kAccent2,
+                          hover ? 1.0f : 0.8f);
+}
+
 std::vector<Words> frameWords(int w, int h, float scale, const std::string& name, int percent) {
     const float s = std::max(0.5f, scale);
     std::string text = name;

@@ -123,6 +123,13 @@ void setBlocked(Blocker who, HWND game, const RECT* rect, bool all) {
     }
 }
 
+bool blockerRect(Blocker who, RECT& out) {
+    const Blocked& b = g_parts[static_cast<int>(who)];
+    if (!b.on) return false;
+    out = RECT{b.left, b.top, b.right, b.bottom};
+    return true;
+}
+
 int blockedUnder(int x, int y, int width, int height) {
     RECT client{};
     if (!g_partsWindow || !GetClientRect(g_partsWindow, &client)) return -1;

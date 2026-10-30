@@ -560,6 +560,9 @@ struct Config {
     // которые обработаны»): [interface] pack_icons - the panels' icons (skills, items, status icons) from the AI
     // texture pack when it has them (win/pack_pictures); on
     bool packIcons = true;
+    // 3.0.11-beta.77 (the owner: «чтобы без быстрых кнопок можно было двигать, чтобы сразу все мышкой»): [interface]
+    // lock_layout - the new interface's parts kept where they are: no dragging, no sizing grip (win/hud_edit); off
+    bool lockLayout = false;
     // 3.0.11-beta.35: [interface] buffs - stage 7 of the new interface (the HUD, the buffs first; the owner's approved
     // column, the row a choice): the game's own status icons hidden, the driver's under the minimap (core/buff_panel)
     BuffsLook buffs = BuffsLook::Off;

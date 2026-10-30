@@ -499,6 +499,8 @@ Config parseConfig(const std::string& text) {
             setBool(val, c.minimapHd);
         } else if (key == "interface.pack_icons") {  // 3.0.11-beta.74: the panels' icons from the AI pack
             setBool(val, c.packIcons);
+        } else if (key == "interface.lock_layout") {  // 3.0.11-beta.77: the parts kept where they are
+            setBool(val, c.lockLayout);
         } else if (key == "interface.minimap_mobs") {
             setBool(val, c.minimapMobs);
         } else if (key == "interface.minimap_way") {  // 3.0.11-beta.33: the way on the ground

@@ -812,6 +812,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     uistyle::setText(float(config.textSize) / 100.0f);  // 3.0.11-beta.67: [interface] text_size
     // 3.0.11-beta.74: [interface] pack_icons - the panels' icons from the AI texture pack; drawn again once it is read
     packpictures::setIconsOn(config.packIcons);
+    hudedit::setLocked(config.lockLayout);  // 3.0.11-beta.77: [interface] lock_layout
     uistyle::setPictures(packpictures::iconsStamp());
     // 3.0.11-beta.1: [interface] minimap - the new interface's minimap prototype in the game's own one's corner
     minimapproto::frame(window,

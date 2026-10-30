@@ -35,6 +35,8 @@ std::vector<Words> barWords(const Bar& b, const BarTexts& t);
 enum class Look : uint8_t { Idle, Hover, Dragged };
 // tagWidth: its tag's words' width (the target's pixels) - a dark tag under them
 void paintFrame(panel::Picture& out, int w, int h, float scale, Look look, float tagWidth);
+// 3.0.11-beta.77: the sizing grip at the corner of the part under the pointer
+void paintGrip(panel::Picture& out, int side, float scale, bool hover);
 // Its tag's words: the part's name, its size past 100 % («Мінікарта · 110 %»)
 std::vector<Words> frameWords(int w, int h, float scale, const std::string& name, int percent);
 

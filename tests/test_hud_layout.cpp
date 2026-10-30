@@ -105,4 +105,35 @@ TEST(hud_layout_bar_and_frames) {
     const std::vector<hudlayout::Words> fw = hudlayout::frameWords(300, 200, 1.0f, "Мінікарта", 110);
     CHECK(!fw.empty() && fw[0].text == "Мінікарта · 110 %");
     CHECK(hudlayout::frameWords(300, 200, 1.0f, "Чат", 100)[0].text == "Чат");
+    // 3.0.11-beta.77: the sizing grip off a part's corner - a dark square, gold dots across it
+    panel::Picture g;
+    hudlayout::paintGrip(g, 28, 2.0f, true);
+    CHECK(g.width == 28 && g.height == 28 && (g.px[size_t(14) * 28 + 14] >> 24) > 0xC0);
+    int gold = 0;
+    for (const uint32_t c : g.px) gold += ((c >> 16) & 0xFF) > 0xA0 && ((c >> 8) & 0xFF) > 0x80;
+    CHECK(gold > 10);
+}
+
+// 3.0.11-beta.77 (the owner: «некоторые окна налазят одно на другое и мешают»): a part let go over another one moves
+// the least way out of it (and of the rest), kept on the screen
+TEST(hud_layout_keeps_clear_of_the_others) {
+    const std::vector<hudlayout::Box> others = {{1000, 200, 300, 100}};
+    // its left edge 20 inside the other's right edge: out to the right (the shortest way)
+    hudlayout::Box b = hudlayout::clearOf({1280, 230, 200, 80}, others, 1920, 1080, 4);
+    CHECK(b.x == 1304 && b.y == 230);
+    // mostly under it: down
+    b = hudlayout::clearOf({1050, 280, 200, 80}, others, 1920, 1080, 4);
+    CHECK(b.x == 1050 && b.y == 304);
+    // clear already: as it is
+    b = hudlayout::clearOf({100, 100, 200, 80}, others, 1920, 1080, 4);
+    CHECK(b.x == 100 && b.y == 100);
+    // out of one into another: out of both
+    const std::vector<hudlayout::Box> two = {{1000, 200, 300, 100}, {1300, 180, 200, 140}};
+    b = hudlayout::clearOf({1280, 230, 200, 80}, two, 1920, 1080, 4);
+    for (const hudlayout::Box& o : two)
+        CHECK(b.x + b.w <= o.x || b.x >= o.x + o.w || b.y + b.h <= o.y || b.y >= o.y + o.h);
+    CHECK(b.x >= 0 && b.y >= 0 && b.x + b.w <= 1920 && b.y + b.h <= 1080);
+    // no way out on the screen: as it is
+    b = hudlayout::clearOf({10, 10, 100, 100}, {{0, 0, 1920, 1080}}, 1920, 1080, 4);
+    CHECK(b.x == 10 && b.y == 10);
 }

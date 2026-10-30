@@ -914,6 +914,20 @@ TEST(config_reads_the_pack_icons) {
     CHECK(!u.next.packIcons);
 }
 
+// 3.0.11-beta.77 (the owner: «чтобы без быстрых кнопок можно было двигать, чтобы сразу все мышкой»): [interface]
+// lock_layout - the parts kept where they are (no dragging); off by default, a box of «Інтерфейс», applied at once
+TEST(config_reads_the_layout_lock) {
+    CHECK(!parseConfig("").lockLayout);
+    CHECK(parseConfig("[interface]\nlock_layout = 1\n").lockLayout);
+    const settings::IniSetting* s = settings::findSetting("interface.lock_layout");
+    CHECK(s != nullptr);
+    if (!s) return;
+    CHECK(s->page == settings::Page::Interface && s->control == settings::Control::Check);
+    CHECK_EQ(settings::tokenOf(*s, parseConfig("[interface]\nlock_layout = 1\n")), std::string("1"));
+    CHECK(appliesNow("interface.lock_layout"));
+    CHECK(liveUpdate(parseConfig(""), parseConfig("[interface]\nlock_layout = 1\n")).next.lockLayout);
+}
+
 // 3.0.11-beta.33 (the owner: «полоска с маршрутом может лучше бы была выполнена такими типа следами типа шажков»):
 // [interface] minimap_way - the way on the ground as footprints (steps), the strip (line) or none; a choice of
 // «Інтерфейс», applied at once

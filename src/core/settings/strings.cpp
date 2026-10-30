@@ -4954,13 +4954,24 @@ constexpr Entry kTexts[] = {
     {Text::ConsoleHudEdit, "Arrange the interface (Ctrl+Shift+L)", "Розмістити інтерфейс (Ctrl+Shift+L)",
      "Разместить интерфейс (Ctrl+Shift+L)"},
     {Text::InterfaceLayoutNote,
-     "The parts' places and sizes: Ctrl+Shift+L in the game (or the console's row) - drag them with the mouse, the "
-     "wheel sizes them, a right click puts one back.",
-     "Місця й розміри частин: у грі Ctrl+Shift+L (або рядок у консолі) — тягніть їх мишею, колесо змінює розмір, "
-     "правий клік повертає частину на місце.",
-     "Места и размеры частей: в игре Ctrl+Shift+L (или строка в консоли) — тяните их мышью, колесо меняет размер, "
-     "правый клик возвращает часть на место."},
+     "The parts' places and sizes: in the game drag a part with the mouse (a click stays a click), the grip at its "
+     "corner sizes it, twice on the grip puts it back; Ctrl+Shift+L shows them all framed.",
+     "Місця й розміри частин: у грі потягніть частину мишею (клік лишається кліком), куточок біля неї змінює розмір, "
+     "подвійний клік по куточку повертає її на місце; Ctrl+Shift+L показує їх усі в рамках.",
+     "Места и размеры частей: в игре потяните часть мышью (клик остаётся кликом), уголок рядом с ней меняет размер, "
+     "двойной клик по уголку возвращает её на место; Ctrl+Shift+L показывает их все в рамках."},
     {Text::HudEditUnseen, "not shown now", "зараз не видно", "сейчас не видно"},
+    // 3.0.11-beta.77 (the owner: «чтобы без быстрых кнопок можно было двигать, чтобы сразу все мышкой»)
+    {Text::InterfaceLockLayout, "Lock the parts' places", "Закріпити розташування частин",
+     "Закрепить расположение частей"},
+    {Text::InterfaceLockLayoutHint,
+     "The new interface's parts move with the mouse: drag one to put it elsewhere (a click stays a click), the grip at "
+     "its corner sizes it, twice on the grip puts it back. On: they stay where they are.",
+     "Частини нового інтерфейсу рухаються мишею: потягніть частину, щоб поставити її деінде (клік лишається кліком), "
+     "куточок біля неї змінює розмір, подвійний клік по куточку повертає її на місце. Увімкнено: вони стоять на місці.",
+     "Части нового интерфейса двигаются мышью: потяните часть, чтобы поставить её в другое место (клик остаётся "
+     "кликом), уголок рядом с ней меняет размер, двойной клик по уголку возвращает её на место. Включено: они стоят на "
+     "месте."},
     // 3.0.11-beta.33
     {Text::InterfaceMinimapWay, "The way on the ground", "Шлях на землі", "Путь на земле"},
     {Text::InterfaceMinimapWayHint,

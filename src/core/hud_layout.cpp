@@ -101,6 +101,48 @@ Snapped snap(const Box& m, const std::vector<Box>& others, int targetW, int targ
     return Snapped{m.x + (bx.line >= 0 ? bx.shift : 0), m.y + (by.line >= 0 ? by.shift : 0), bx.line, by.line};
 }
 
+Box clearOf(const Box& moving, const std::vector<Box>& others, int targetW, int targetH, int gap) {
+    const auto overlaps = [&](const Box& b) {
+        for (const Box& o : others)
+            if (b.x < o.x + o.w && b.x + b.w > o.x && b.y < o.y + o.h && b.y + b.h > o.y) return true;
+        return false;
+    };
+    if (!overlaps(moving)) return moving;
+    const auto kept = [&](Box b) {
+        b.x = std::clamp(b.x, 0, std::max(0, targetW - b.w));
+        b.y = std::clamp(b.y, 0, std::max(0, targetH - b.h));
+        return b;
+    };
+    const auto far = [&](const Box& b) {
+        return int64_t(b.x - moving.x) * (b.x - moving.x) + int64_t(b.y - moving.y) * (b.y - moving.y);
+    };
+    // beside each of the others, then beside them again from there: the nearest place clear of them all
+    std::vector<Box> tried{moving};
+    Box best = moving;
+    int64_t bestFar = -1;
+    for (int round = 0; round < 3 && bestFar < 0; ++round) {
+        std::vector<Box> next;
+        for (const Box& from : tried)
+            for (const Box& o : others)
+                for (const Box& b : {Box{o.x - from.w - gap, from.y, from.w, from.h},
+                                     Box{o.x + o.w + gap, from.y, from.w, from.h},
+                                     Box{from.x, o.y - from.h - gap, from.w, from.h},
+                                     Box{from.x, o.y + o.h + gap, from.w, from.h}}) {
+                    const Box c = kept(b);
+                    if (!overlaps(c)) {
+                        if (bestFar < 0 || far(c) < bestFar) {
+                            best = c;
+                            bestFar = far(c);
+                        }
+                    } else if (next.size() < 256) {
+                        next.push_back(c);
+                    }
+                }
+        tried = std::move(next);
+    }
+    return best;
+}
+
 float stepped(float size, int steps) {
     const float v = std::round((size + float(steps) * kSizeStep) / kSizeStep) * kSizeStep;
     return within(v);
