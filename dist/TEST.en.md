@@ -1,3 +1,16 @@
+# uaRO Graphics 3.0.11-beta.73 — what is new
+
+- **The new interface paints faster.** In your report (R-WXNNU2, «minimap test») the minimap took 13 ms to paint,
+  while the same code in the test build takes 3.5 ms. The cause: in the 32-bit build every blended pixel of the panels
+  was rounded and measured its distance through slow library functions (x87). Now it is worked out in place — the
+  same pixels, and blending a pixel on the server became nearly twice as fast (5.7 ns instead of 10). It touches all
+  the panels: the minimap, the buffs, the skill bar, the target card, the character's circle.
+- The map pictures of beta.72 passed by your report: Morocc's 2048x2048 picture came from the AI texture pack in
+  0.16 s in the background, no pink. The pack has pictures for 668 of the client's 670 maps (only cmd_fild and
+  um_fild01 lack one).
+- To check: run about with the new minimap and send a report — the log lines `interface: the minimap's picture (…)
+  painted in … ms` should be well under 13 ms.
+
 # uaRO Graphics 3.0.11-beta.72 — what is new
 
 - **Sharper map pictures** (your «the map pictures themselves are small and untidy»). When the game has a map's
