@@ -39,8 +39,20 @@ void drawPicture(FrameRecord& record, gpu::Renderer& renderer, const panel::Pict
 // 3.0.11-beta.50: a picture stretched over (x, y, w, h) of the target, sampled smoothly (the low HP edge)
 void drawStretched(FrameRecord& record, gpu::Renderer& renderer, const panel::Picture& pic, uint32_t& texture,
                    int& texW, int& texH, bool& upload, int x, int y, int w, int h, float k, float opacity = 1.0f);
-// 3.0.11-beta.49: a black shade `alpha` over (x, y, w, h) of the target - one untextured quad (the world dimmed under
-// the windows)
+// 3.0.11-beta.54 (R-PVZH5M: «графика чегото притормаживает когда бьешь мобов» - at 4K with the render scale 200 % the
+// character block alone was 1488 x 1200 pixels, painted again at each HP change): the new interface's parts paint at
+// the screen's own resolution - with a whole render scale r (200 %) their k and places are the target's / r and each
+// texel of theirs shows as r x r target pixels (the target's extra pixels are the world's supersampling): r² fewer
+// pixels to paint and to send. The stretch set each frame before the parts' frames (1: none); drawPart as drawPicture,
+// drawPartStretched as drawStretched, at it
+void setPartStretch(int stretch);
+int partStretch();
+void drawPart(FrameRecord& record, gpu::Renderer& renderer, const panel::Picture& pic, uint32_t& texture, int& texW,
+              int& texH, bool& upload, int x, int y, float k, float opacity = 1.0f);
+void drawPartStretched(FrameRecord& record, gpu::Renderer& renderer, const panel::Picture& pic, uint32_t& texture,
+                       int& texW, int& texH, bool& upload, int x, int y, int w, int h, float k, float opacity = 1.0f);
+// 3.0.11-beta.49: a black shade `alpha` over (x, y, w, h) - one untextured quad (the world dimmed under the windows);
+// 3.0.11-beta.54 a part's: its pixels, at the parts' stretch
 void drawShade(FrameRecord& record, int x, int y, int w, int h, float k, float alpha);
 // The words' width at a size (the target's pixels), as drawWords draws them
 int wordsWidth(const std::wstring& text, float px, bool bold);

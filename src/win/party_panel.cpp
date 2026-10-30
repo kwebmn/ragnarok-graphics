@@ -191,7 +191,7 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
         if (seat.most > 0 && seat.hp >= 0) m.percent = int(int64_t(seat.hp) * 100 / seat.most);
         s.members.push_back(m);
     }
-    const float scale = std::clamp(float(k), 0.75f, 6.0f);
+    const float scale = uistyle::partScale(k);
     s.k = float(k);
     s.scale = scale;
     s.targetW = targetWidth;
@@ -214,7 +214,7 @@ void draw(FrameRecord& record, gpu::Renderer& renderer) {
     if (!s.shown || s.k <= 0 || s.picture.width <= 0 || s.picture.height <= 0) return;
     int cursor = -1, cx = 0, cy = 0;  // under the game's own cursor, as the minimap
     if (readGameCursor(cx, cy)) cursor = panel::cursorDraw(record, float(cx), float(cy));
-    drawPicture(record, renderer, s.picture, s.texture, s.texW, s.texH, s.upload, s.layout.x, s.layout.y, s.k);
+    drawPart(record, renderer, s.picture, s.texture, s.texW, s.texH, s.upload, s.layout.x, s.layout.y, s.k);
     if (cursor >= 0) record.moveLastBefore(record.commands().size() - size_t(cursor) - 1, size_t(cursor));
 }
 

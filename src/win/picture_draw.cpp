@@ -39,8 +39,13 @@ void drawWords(panel::Picture& pic, const std::vector<Words>& words, const Rect&
         std::memset(bits, 0, size_t(w) * size_t(h) * 4);
         SetBkMode(dc, TRANSPARENT);
         SetTextColor(dc, RGB(255, 255, 255));
-        // 3.0.11-beta.25 (R-77TCM7): a font for each size and weight, not for each of the words
-        std::vector<std::pair<int, HFONT>> fonts;  // the height, negative for a bold one
+        // 3.0.11-beta.25 (R-77TCM7): a font for each size and weight, not for each of the words; 3.0.11-beta.54
+        // (R-PVZH5M): kept from one picture to the next (a part's picture painted again made all of them anew)
+        thread_local std::vector<std::pair<int, HFONT>> fonts;  // the height, negative for a bold one
+        if (fonts.size() > 32) {  // a few sizes in use at a time: past that all go (none selected anywhere now)
+            for (const auto& f : fonts) DeleteObject(f.second);
+            fonts.clear();
+        }
         for (const Words& word : words) {
             if (word.text.empty() || word.box.w <= 0) continue;
             const panel::Box& b = word.box;
@@ -77,8 +82,7 @@ void drawWords(panel::Picture& pic, const std::vector<Words>& words, const Rect&
                     if (v) panel::over(pic.px[size_t(y) * size_t(pic.width) + size_t(x)], word.rgb, float(v) / 255.0f);
                 }
         }
-        if (oldFont) SelectObject(dc, oldFont);
-        for (const auto& [k, f] : fonts) DeleteObject(f);
+        if (oldFont) SelectObject(dc, oldFont);  // the fonts kept for the next picture
         SelectObject(dc, oldBmp);
     }
     if (bmp) DeleteObject(bmp);
@@ -93,7 +97,8 @@ namespace {
 // A picture's quad at (x, y, w, h) of the target: its texture made for its size and uploaded when it changed;
 // `smooth` - sampled between its texels (stretched), else a texel a target pixel
 void drawQuad(FrameRecord& record, gpu::Renderer& renderer, const panel::Picture& pic, uint32_t& texture, int& texW,
-              int& texH, bool& upload, int x, int y, int w, int h, bool smooth, float k, float opacity) {
+              int& texH, bool& upload, int x, int y, int w, int h, bool smooth, float k, float opacity,
+              int stretch = 1) {
     if (pic.width <= 0 || pic.height <= 0 || opacity <= 0 || w <= 0 || h <= 0) return;
     if (!texture || texW != pic.width || texH != pic.height) {
         if (texture) renderer.releaseTexture(texture);
@@ -127,9 +132,11 @@ void drawQuad(FrameRecord& record, gpu::Renderer& renderer, const panel::Picture
     cmd.effect = uint8_t(effect_exe::Kind::Panel);  // sampled as it is (draw.cpp, renderer11.cpp)
     cmd.primitive = d3d7::PT_TRIANGLELIST;
     cmd.fvf = d3d7::FVF_TL1;
-    // a game x lands at x * k + 0.5 in the target (shaders.cpp draw_vs): the quad's edges on the target's pixel edges
-    const float x0 = (float(x) - 0.5f) / k, y0 = (float(y) - 0.5f) / k;
-    const float x1 = (float(x + w) - 0.5f) / k, y1 = (float(y + h) - 0.5f) / k;
+    // a game x lands at x * k + 0.5 in the target (shaders.cpp draw_vs): the quad's edges on the target's pixel edges -
+    // 3.0.11-beta.54: (x, y, w, h) and k a part's, its target pixel edges at x * stretch
+    const float half = 0.5f / float(stretch);
+    const float x0 = (float(x) - half) / k, y0 = (float(y) - half) / k;
+    const float x1 = (float(x + w) - half) / k, y1 = (float(y + h) - half) / k;
     const uint32_t a = faint ? uint32_t(std::lround(std::clamp(opacity, 0.0f, 1.0f) * 255)) : 255u;
     const uint32_t white = a << 24 | a << 16 | a << 8 | a;
     const glint::Vertex v[6] = {{x0, y0, 0, 1, white, 0, 0, 0}, {x1, y0, 0, 1, white, 0, 1, 0},
@@ -150,8 +157,27 @@ void drawStretched(FrameRecord& record, gpu::Renderer& renderer, const panel::Pi
     drawQuad(record, renderer, pic, texture, texW, texH, upload, x, y, w, h, true, k, opacity);
 }
 
+namespace {
+int g_partStretch = 1;  // 3.0.11-beta.54: the game's thread's
+}  // namespace
+
+void setPartStretch(int stretch) { g_partStretch = std::clamp(stretch, 1, 4); }
+int partStretch() { return g_partStretch; }
+
+void drawPart(FrameRecord& record, gpu::Renderer& renderer, const panel::Picture& pic, uint32_t& texture, int& texW,
+              int& texH, bool& upload, int x, int y, float k, float opacity) {
+    drawQuad(record, renderer, pic, texture, texW, texH, upload, x, y, pic.width, pic.height, false, k, opacity,
+             g_partStretch);
+}
+
+void drawPartStretched(FrameRecord& record, gpu::Renderer& renderer, const panel::Picture& pic, uint32_t& texture,
+                       int& texW, int& texH, bool& upload, int x, int y, int w, int h, float k, float opacity) {
+    drawQuad(record, renderer, pic, texture, texW, texH, upload, x, y, w, h, true, k, opacity, g_partStretch);
+}
+
 void drawShade(FrameRecord& record, int x, int y, int w, int h, float k, float alpha) {
     if (w <= 0 || h <= 0 || alpha <= 0 || k <= 0) return;
+    const float half = 0.5f / float(g_partStretch);  // 3.0.11-beta.54: a part's - in its pixels
     DrawSetup s;  // the vertices' colour alone, premultiplied
     s.ui = true;
     s.blend = true;
@@ -165,8 +191,8 @@ void drawShade(FrameRecord& record, int x, int y, int w, int h, float k, float a
     cmd.effect = uint8_t(effect_exe::Kind::Panel);  // at the target's pixels, as the pictures
     cmd.primitive = d3d7::PT_TRIANGLELIST;
     cmd.fvf = d3d7::FVF_TL1;
-    const float x0 = (float(x) - 0.5f) / k, y0 = (float(y) - 0.5f) / k;
-    const float x1 = (float(x + w) - 0.5f) / k, y1 = (float(y + h) - 0.5f) / k;
+    const float x0 = (float(x) - half) / k, y0 = (float(y) - half) / k;
+    const float x1 = (float(x + w) - half) / k, y1 = (float(y + h) - half) / k;
     const uint32_t c = uint32_t(std::lround(std::clamp(alpha, 0.0f, 1.0f) * 255)) << 24;
     const glint::Vertex v[6] = {{x0, y0, 0, 1, c, 0, 0, 0}, {x1, y0, 0, 1, c, 0, 1, 0}, {x0, y1, 0, 1, c, 0, 0, 1},
                                 {x1, y0, 0, 1, c, 0, 1, 0}, {x1, y1, 0, 1, c, 0, 1, 1}, {x0, y1, 0, 1, c, 0, 0, 1}};

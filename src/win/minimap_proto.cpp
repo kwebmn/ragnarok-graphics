@@ -580,7 +580,7 @@ void frame(HWND game, const Show& show, double k, int targetWidth, int targetHei
         s.lookY = north;
         s.dirty = s.bigDirty = true;
     }
-    const float scale = std::clamp(float(k), 0.75f, 6.0f);
+    const float scale = uistyle::partScale(k);
     if (float(k) != s.k || scale != s.scale || targetWidth != s.targetW || targetHeight != s.targetH) {
         s.k = float(k);
         s.scale = scale;
@@ -669,11 +669,11 @@ void draw(FrameRecord& record, gpu::Renderer& renderer) {
     if (readGameCursor(cx, cy)) cursor = panel::cursorDraw(record, float(cx), float(cy));
     size_t mine = 0;
     if (s.look != minimap::Look::Hidden && s.picture.width > 0 && s.picture.height > 0) {
-        drawPicture(record, renderer, s.picture, s.texture, s.texW, s.texH, s.upload, s.layout.x, s.layout.y, s.k);
+        drawPart(record, renderer, s.picture, s.texture, s.texW, s.texH, s.upload, s.layout.x, s.layout.y, s.k);
         ++mine;
     }
     if (s.big && s.bigPicture.width > 0) {  // 3.0.11-beta.31: the big map over the rest of the game's picture
-        drawPicture(record, renderer, s.bigPicture, s.bigTexture, s.bigTexW, s.bigTexH, s.bigUpload, s.bigLayout.x,
+        drawPart(record, renderer, s.bigPicture, s.bigTexture, s.bigTexW, s.bigTexH, s.bigUpload, s.bigLayout.x,
                     s.bigLayout.y, s.k);
         ++mine;
     }

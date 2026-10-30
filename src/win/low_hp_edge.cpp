@@ -75,7 +75,7 @@ void draw(FrameRecord& record, gpu::Renderer& renderer) {
     if (s.opacity <= 0 || s.k <= 0 || s.targetW <= 0 || s.targetH <= 0 || s.picture.width <= 0) return;
     const size_t world = record.firstInterface();  // where the world ends: the edge goes there
     const size_t before = record.commands().size();
-    drawStretched(record, renderer, s.picture, s.texture, s.texW, s.texH, s.upload, 0, 0, s.targetW, s.targetH, s.k,
+    drawPartStretched(record, renderer, s.picture, s.texture, s.texW, s.texH, s.upload, 0, 0, s.targetW, s.targetH, s.k,
                   s.opacity);
     const size_t added = record.commands().size() - before;  // its upload too, when it went now
     if (added) record.moveLastBefore(added, world);

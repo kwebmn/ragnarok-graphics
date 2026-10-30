@@ -376,7 +376,7 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
         return;
     }
     readState(s);
-    const float scale = std::clamp(float(k), 0.75f, 6.0f);
+    const float scale = uistyle::partScale(k);
     s.k = float(k);
     s.scale = scale;
     s.targetW = targetWidth;
@@ -451,7 +451,7 @@ void draw(FrameRecord& record, gpu::Renderer& renderer) {
     const panel::Box& g = s.layout.glass;  // 3.0.11-beta.49: its shadow under it
     s.shadow.draw(record, renderer, s.layout.x + int(g.x), s.layout.y + int(g.y), int(g.w), int(g.h), 12 * s.scale,
                   s.scale, s.k);
-    drawPicture(record, renderer, s.picture, s.texture, s.texW, s.texH, s.upload, s.layout.x, s.layout.y, s.k);
+    drawPart(record, renderer, s.picture, s.texture, s.texW, s.texH, s.upload, s.layout.x, s.layout.y, s.k);
     const panel::Picture* icon = s.dragging && s.press >= 0 && size_t(s.press) < s.items.size()
                                      ? s.items[size_t(s.press)].icon
                                      : nullptr;
@@ -463,7 +463,7 @@ void draw(FrameRecord& record, gpu::Renderer& renderer) {
         }
         const int x = int(std::lround(float(cx) * s.k)) - icon->width / 2;
         const int y = int(std::lround(float(cy) * s.k)) - icon->height / 2;
-        drawPicture(record, renderer, s.dragIcon, s.dragTexture, s.dragW, s.dragH, s.dragUpload, x, y, s.k);
+        drawPart(record, renderer, s.dragIcon, s.dragTexture, s.dragW, s.dragH, s.dragUpload, x, y, s.k);
     }
     if (cursor >= 0) record.moveLastBefore(record.commands().size() - size_t(cursor) - 1, size_t(cursor));
 }

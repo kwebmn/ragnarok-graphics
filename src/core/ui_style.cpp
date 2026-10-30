@@ -8,6 +8,7 @@ namespace uagfx::uistyle {
 namespace {
 
 std::atomic<int> g_panel{kPanelDefault}, g_window{kWindowDefault}, g_generation{0};
+std::atomic<float> g_size{1.0f};
 
 }  // namespace
 
@@ -23,6 +24,24 @@ float panel() { return float(g_panel) / 100.0f; }
 float window() { return float(g_window) / 100.0f; }
 float chat() { return std::max(0.8f, panel()); }
 int generation() { return g_generation; }
+
+float autoSize(int gameW, int gameH, double windowScale) {
+    if (gameW <= 0 || gameH <= 0) return 1.0f;
+    const float share = std::min(float(gameW) / float(kFullW), float(gameH) / float(kFullH));
+    const float legible = windowScale > 0 ? float(11.0 / (14.0 * windowScale)) : 1.0f;  // 14 words at 11 or more
+    return std::clamp(std::max(share, legible), 0.6f, 1.0f);
+}
+
+void setSize(float size) {
+    size = std::clamp(size, 0.5f, 1.5f);
+    if (std::fabs(size - g_size.load()) < 1e-4f) return;
+    g_size = size;
+    ++g_generation;
+}
+
+float size() { return g_size; }
+
+float partScale(double k) { return std::clamp(float(k) * size(), 0.5f, 6.0f); }
 
 panel::Picture vignette(int w, int h, uint32_t rgb, float alpha, float depth) {
     panel::Picture p;

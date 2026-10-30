@@ -199,6 +199,11 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("status", flag(running.statusWindow), flag(file.statusWindow)));
         n.statusWindow = file.statusWindow;
     }
+    if (file.uiSize != running.uiSize) {  // 3.0.11-beta.54: the new interface's size, at once
+        const auto token = [](int v) { return v > 0 ? std::to_string(v) : std::string("auto"); };
+        u.applied.push_back(change("size", token(running.uiSize), token(file.uiSize)));
+        n.uiSize = file.uiSize;
+    }
     if (file.lowHpEdge != running.lowHpEdge) {  // 3.0.11-beta.50: the low HP edge, at once
         u.applied.push_back(
             change("low_hp_edge", std::to_string(running.lowHpEdge), std::to_string(file.lowHpEdge)));

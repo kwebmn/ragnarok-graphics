@@ -56,6 +56,7 @@
 #include "win/low_hp_edge.hpp"
 #include "win/thread_time.hpp"
 #include "win/paths.hpp"
+#include "win/picture_draw.hpp"
 #include "win/profiler.hpp"
 #include "win/real_ddraw.hpp"
 #include "win/window_mode.hpp"
@@ -787,61 +788,48 @@ void Context::present(const Rect& source, bool waitForVblank) {
     // 3.0.9-beta.4: the developer's answer - its card at this frame's scale, drawn into the next present's record
     answercard::frame(window, scaleMade_ ? plan.k : 1.0, scaleMade_ ? plan.targetWidth : shadow.width(),
                       scaleMade_ ? plan.targetHeight : shadow.height());
+    // 3.0.11-beta.54: the new interface's parts - at the screen's own resolution when the render scale is a whole r
+    // (their pixels r x r of the target: R-PVZH5M's 4K at 200 % painted them 4 times over) and at their size (auto:
+    // smaller on a small game, R-JK5455); their k, width and height these
+    const int stretch =
+        scaleMade_ && plan.r > 1.5 && std::fabs(plan.r - std::round(plan.r)) < 1e-3 ? int(std::lround(plan.r)) : 1;
+    setPartStretch(stretch);
+    const double pk = (scaleMade_ ? plan.k : 1.0) / stretch;
+    const int pw = (scaleMade_ ? plan.targetWidth : shadow.width()) / stretch;
+    const int ph = (scaleMade_ ? plan.targetHeight : shadow.height()) / stretch;
+    uistyle::setSize(config.uiSize > 0 ? float(config.uiSize) / 100.0f
+                                       : uistyle::autoSize(shadow.width(), shadow.height(), scaleMade_ ? plan.s : 1.0));
     // 3.0.11-beta.1: [interface] minimap - the new interface's minimap prototype in the game's own one's corner
     minimapproto::frame(window,
                         {config.newMinimap, config.minimapNpcs, config.minimapWarps, config.minimapMobs,
                          config.minimapWay},
-                        scaleMade_ ? plan.k : 1.0,
-                        scaleMade_ ? plan.targetWidth : shadow.width(),
-                        scaleMade_ ? plan.targetHeight : shadow.height());
+                        pk, pw, ph);
     // 3.0.11-beta.35: [interface] buffs - the buffs' column under the new minimap, the game's icons hidden
-    buffcolumn::frame(window, config.buffs, scaleMade_ ? plan.k : 1.0,
-                      scaleMade_ ? plan.targetWidth : shadow.width(),
-                      scaleMade_ ? plan.targetHeight : shadow.height());
+    buffcolumn::frame(window, config.buffs, pk, pw, ph);
     motion::setOn(config.animations);  // 3.0.11-beta.46: [interface] animations - the new interface's motion
     uistyle::set(config.hudOpacity, config.windowOpacity);  // 3.0.11-beta.47: its grounds
     // 3.0.11-beta.36: [interface] character - the character block at the top left, the game's Basic Info hidden
-    charpanel::frame(window, config.character, scaleMade_ ? plan.k : 1.0,
-                     scaleMade_ ? plan.targetWidth : shadow.width(),
-                     scaleMade_ ? plan.targetHeight : shadow.height());
+    charpanel::frame(window, config.character, pk, pw, ph);
     // 3.0.11-beta.38: [interface] target - the target's card at the top middle
-    targetpanel::frame(window, config.targetCard, scaleMade_ ? plan.k : 1.0,
-                       scaleMade_ ? plan.targetWidth : shadow.width(),
-                       scaleMade_ ? plan.targetHeight : shadow.height());
+    targetpanel::frame(window, config.targetCard, pk, pw, ph);
     // 3.0.11-beta.39: [interface] party - the party's panel under the character block
-    partywin::frame(window, config.partyPanel, gameCodePage(config), scaleMade_ ? plan.k : 1.0,
-                    scaleMade_ ? plan.targetWidth : shadow.width(),
-                    scaleMade_ ? plan.targetHeight : shadow.height());
+    partywin::frame(window, config.partyPanel, gameCodePage(config), pk, pw, ph);
     // 3.0.11-beta.41: [interface] chat - the chat at the bottom left, the game's own out of sight (before the hotbar:
     // it keeps clear of it)
-    chatwin::frame(window, config.chat, gameCodePage(config), scaleMade_ ? plan.k : 1.0,
-                   scaleMade_ ? plan.targetWidth : shadow.width(),
-                   scaleMade_ ? plan.targetHeight : shadow.height());
+    chatwin::frame(window, config.chat, gameCodePage(config), pk, pw, ph);
     // 3.0.11-beta.49: [interface] dim_world - the world dimmed while the new windows are open
-    worlddim::frame(config.dimWorld, scaleMade_ ? plan.k : 1.0, scaleMade_ ? plan.targetWidth : shadow.width(),
-                    scaleMade_ ? plan.targetHeight : shadow.height());
+    worlddim::frame(config.dimWorld, pk, pw, ph);
     // 3.0.11-beta.50: [interface] low_hp_edge - the screen's edges red at low HP (0: none)
-    lowhpedge::frame(config.lowHpEdge, scaleMade_ ? plan.k : 1.0, scaleMade_ ? plan.targetWidth : shadow.width(),
-                     scaleMade_ ? plan.targetHeight : shadow.height());
+    lowhpedge::frame(config.lowHpEdge, pk, pw, ph);
     // 3.0.11-beta.48: [interface] cast - the character's cast over the hero, the game's own gauge hidden
-    castwin::frame(window, config.castLabel, gameCodePage(config), scaleMade_ ? plan.k : 1.0,
-                   scaleMade_ ? plan.targetWidth : shadow.width(),
-                   scaleMade_ ? plan.targetHeight : shadow.height());
+    castwin::frame(window, config.castLabel, gameCodePage(config), pk, pw, ph);
     // 3.0.11-beta.40: [interface] hotbar - the hotkeys' bar at the bottom middle, the game's own hidden
-    hotbarwin::frame(window, config.hotbar, gameCodePage(config), scaleMade_ ? plan.k : 1.0,
-                     scaleMade_ ? plan.targetWidth : shadow.width(),
-                     scaleMade_ ? plan.targetHeight : shadow.height());
+    hotbarwin::frame(window, config.hotbar, gameCodePage(config), pk, pw, ph);
     // 3.0.11-beta.42: [interface] items and status - «Речі» and «Характеристики» while the game's own are open
-    itemswin::frame(window, config.itemsWindow, gameCodePage(config), scaleMade_ ? plan.k : 1.0,
-                    scaleMade_ ? plan.targetWidth : shadow.width(),
-                    scaleMade_ ? plan.targetHeight : shadow.height());
-    statswin::frame(window, config.statusWindow, scaleMade_ ? plan.k : 1.0,
-                    scaleMade_ ? plan.targetWidth : shadow.width(),
-                    scaleMade_ ? plan.targetHeight : shadow.height());
+    itemswin::frame(window, config.itemsWindow, gameCodePage(config), pk, pw, ph);
+    statswin::frame(window, config.statusWindow, pk, pw, ph);
     // 3.0.11-beta.7: [interface] reference - «Довідник» (Ctrl+F)
-    referencewin::frame(window, config.referenceWindow, scaleMade_ ? plan.k : 1.0,
-                        scaleMade_ ? plan.targetWidth : shadow.width(),
-                        scaleMade_ ? plan.targetHeight : shadow.height());
+    referencewin::frame(window, config.referenceWindow, pk, pw, ph);
     // 2.5.16: [quality] world_scale - Direct3D 11 draws the world smaller and makes it larger before the interface;
     // Pause draws it whole (the game's own picture to compare with)
     renderer->setWorldScale(enhanced_ ? std::min(config.worldScale, light_.worldScaleMax) / 100.0 : 1.0);

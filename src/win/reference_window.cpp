@@ -727,7 +727,7 @@ void frame(HWND game, bool enabled, double k, int targetWidth, int targetHeight)
         s.k = float(k);
         s.targetW = targetWidth;
         s.targetH = targetHeight;
-        s.layout = refwin::layout(targetWidth, targetHeight, std::clamp(float(k), 0.75f, 6.0f), measured);
+        s.layout = refwin::layout(targetWidth, targetHeight, uistyle::partScale(k), measured);
         s.pictures.clear();  // 3.0.11-beta.14: their size is the layout's
         s.wantPage = true;
     }
@@ -846,7 +846,7 @@ void draw(FrameRecord& record, gpu::Renderer& renderer) {
     s.parts.clear();
     const float sc = s.layout.s;  // 3.0.11-beta.49: its shadow under it (its ground the whole picture)
     s.shadow.draw(record, renderer, s.layout.x, s.layout.y, s.picture.width, s.picture.height, 10 * sc, sc, s.k);
-    drawPicture(record, renderer, s.picture, s.texture, s.texW, s.texH, s.upload, s.layout.x, s.layout.y, s.k);
+    drawPart(record, renderer, s.picture, s.texture, s.texW, s.texH, s.upload, s.layout.x, s.layout.y, s.k);
     if (cursor >= 0) record.moveLastBefore(record.commands().size() - size_t(cursor) - 1, size_t(cursor));
 }
 

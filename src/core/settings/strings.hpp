@@ -483,7 +483,10 @@ enum class Text : uint16_t {
     // 3.0.11-beta.49: the world dimmed under the windows
     InterfaceDimWorld, InterfaceDimWorldHint,
     // 3.0.11-beta.50: the screen's edges red at low HP
-    InterfaceLowHpEdge, InterfaceLowHpEdgeHint, InterfaceChat, InterfaceChatHint, ChatTabAll,
+    InterfaceLowHpEdge, InterfaceLowHpEdgeHint,
+    // 3.0.11-beta.54: the new interface's size
+    InterfaceSize, InterfaceSizeHint, InterfaceSizeAuto, InterfaceSize70, InterfaceSize85, InterfaceSize100,
+    InterfaceSize115, InterfaceSize130, InterfaceChat, InterfaceChatHint, ChatTabAll,
     ChatTabParty,
     ChatTabGuild, ChatTabWhisper, ChatTabTrade, ChatTabBattle, ChatFrom, ChatTo, ChatHintSend, ChatHintType,
     ChatKilled, ChatPicked, ChatMiss, InterfaceItems, InterfaceItemsHint, InterfaceStatus, InterfaceStatusHint,

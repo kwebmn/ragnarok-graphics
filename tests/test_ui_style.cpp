@@ -49,3 +49,24 @@ TEST(ui_style_vignette) {
     CHECK((at(80, 0) >> 24) > 90);                                       // the top edge too
     CHECK(uistyle::vignette(0, 90, 0xFF2D23, 0.4f, 0.3f).width == 0);
 }
+
+// 3.0.11-beta.54 (R-JK5455): the new interface's size - full at 1280 x 720 and up, smaller on a small game, never under
+// 60 % nor so small its words fall under 11 of the screen's pixels
+TEST(ui_style_size) {
+    CHECK(uistyle::autoSize(1920, 1080, 1.0) == 1.0f && uistyle::autoSize(1280, 720, 1.0) == 1.0f);
+    CHECK(std::fabs(uistyle::autoSize(896, 672, 2.0) - 0.7f) < 1e-4f);    // R-JK5455's: 896 x 672 in a 1792 window
+    CHECK(std::fabs(uistyle::autoSize(1024, 768, 2.0) - 0.8f) < 1e-4f);
+    CHECK(std::fabs(uistyle::autoSize(896, 672, 1.0) - 11.0f / 14) < 1e-4f);  // a pixel a pixel: kept legible
+    CHECK(std::fabs(uistyle::autoSize(640, 480, 2.0) - 0.6f) < 1e-4f);    // never under 60 %
+    CHECK(uistyle::autoSize(0, 0, 1.0) == 1.0f);
+    const int was = uistyle::generation();
+    uistyle::setSize(0.7f);
+    CHECK(std::fabs(uistyle::size() - 0.7f) < 1e-6f && uistyle::generation() != was);
+    CHECK(std::fabs(uistyle::partScale(4.0) - 2.8f) < 1e-4f && std::fabs(uistyle::partScale(0.5) - 0.5f) < 1e-4f);
+    const int now = uistyle::generation();
+    uistyle::setSize(0.7f);  // the same: nothing to draw again
+    CHECK(uistyle::generation() == now);
+    uistyle::setSize(3.0f);
+    CHECK(std::fabs(uistyle::size() - 1.5f) < 1e-6f);
+    uistyle::setSize(1.0f);
+}

@@ -581,6 +581,9 @@ struct Config {
     bool dimWorld = false;
     // 3.0.11-beta.50: [interface] low_hp_edge 0-100 - the screen's edges red at low HP, its strength (0: none)
     int lowHpEdge = 0;
+    // 3.0.11-beta.54: [interface] size - the new interface's size against the concept's: 0 auto (smaller on a small
+    // game, core/ui_style autoSize), else 50-150 per cent
+    int uiSize = 0;
     // 3.0.11-beta.7: [interface] reference - «Довідник» (win/reference_window): Ctrl+F in the game
     bool referenceWindow = false;
     PanelLayout panelLayout = PanelLayout::Row;

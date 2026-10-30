@@ -18,7 +18,7 @@ void WindowShadow::draw(FrameRecord& record, gpu::Renderer& renderer, int x, int
         picture = uistyle::shadow(width, height, radius, float(spread), 0.45f);
         upload = true;
     }
-    drawPicture(record, renderer, picture, texture, texW, texH, upload, x - spread,
+    drawPart(record, renderer, picture, texture, texW, texH, upload, x - spread,
                 y - spread + int(std::lround(4 * s)), k);
 }
 

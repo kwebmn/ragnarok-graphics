@@ -336,7 +336,7 @@ void frame(HWND game, CharacterLook look, double k, int targetWidth, int targetH
         hide(s);
         return;
     }
-    const float scale = std::clamp(float(k), 0.75f, 6.0f);
+    const float scale = uistyle::partScale(k);
     s.k = float(k);
     s.scale = scale;
     s.targetW = targetWidth;
@@ -441,12 +441,12 @@ void draw(FrameRecord& record, gpu::Renderer& renderer) {
     if (readGameCursor(cx, cy)) cursor = panel::cursorDraw(record, float(cx), float(cy));
     const ULONGLONG now = GetTickCount64();
     const auto layer = [&](State::Layer& l, int x, int y, float a) {
-        drawPicture(record, renderer, l.picture, l.texture, l.texW, l.texH, l.upload, x, y, s.k, a);
+        drawPart(record, renderer, l.picture, l.texture, l.texW, l.texH, l.upload, x, y, s.k, a);
     };
     // 3.0.11-beta.46: a view changed - the one before fading out under the new one coming in (160 ms)
     const float a = motion::fadeIn(now, s.changedAt, motion::kBlockMs);
     if (a < 1 && s.before.picture.width > 0) layer(s.before, s.before.x, s.before.y, 1 - a);
-    drawPicture(record, renderer, s.picture, s.texture, s.texW, s.texH, s.upload, s.layout.x, s.layout.y, s.k, a);
+    drawPart(record, renderer, s.picture, s.texture, s.texW, s.texH, s.upload, s.layout.x, s.layout.y, s.k, a);
     if (now < s.warnUntil && s.warning.picture.width > 0) {  // from 8 px over its place in 180 ms; its last 240 out
         float w = 1, shift = 0;
         const ULONGLONG outAt = s.warnUntil - motion::kToastOutMs;

@@ -1081,3 +1081,17 @@ TEST(config_reads_the_low_hp_edge) {
     CHECK(s->page == settings::Page::Interface && s->control == settings::Control::Slider);
     CHECK(appliesNow("interface.low_hp_edge"));
 }
+
+// 3.0.11-beta.54 (R-JK5455): [interface] size - auto unless a per cent is named
+TEST(config_reads_the_interface_size) {
+    CHECK(parseConfig("").uiSize == 0 && parseConfig("[interface]\nsize = auto\n").uiSize == 0);
+    CHECK(parseConfig("[interface]\nsize = 85\n").uiSize == 85);
+    CHECK(parseConfig("[interface]\nsize = 400\n").uiSize == 150);
+    const settings::IniSetting* s = settings::findSetting("interface.size");
+    CHECK(s != nullptr);
+    if (!s) return;
+    CHECK(s->page == settings::Page::Interface && s->control == settings::Control::Choice);
+    CHECK_EQ(settings::tokenOf(*s, parseConfig("[interface]\nsize = 115\n")), std::string("115"));
+    CHECK_EQ(settings::tokenOf(*s, parseConfig("")), std::string("auto"));
+    CHECK(appliesNow("interface.size"));
+}

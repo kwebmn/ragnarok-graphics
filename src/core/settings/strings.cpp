@@ -5064,6 +5064,21 @@ constexpr Entry kTexts[] = {
      "100 %.",
      "Пока HP меньше четверти, края экрана светятся красным; насколько сильно — от 0 (нет, как по умолчанию) до "
      "100 %."},
+    // 3.0.11-beta.54: the new interface's size
+    {Text::InterfaceSize, "Interface size", "Розмір інтерфейсу", "Размер интерфейса"},
+    {Text::InterfaceSizeHint,
+     "How large the new interface's panels and windows are. Auto: full size from a game of 1280 x 720 up, smaller on a "
+     "smaller one (896 x 672: 70 %), never so small its words get hard to read.",
+     "Наскільки великі панелі й вікна нового інтерфейсу. Авто: повний розмір від гри 1280 x 720 і більше, на меншій — "
+     "менший (896 x 672: 70 %), але ніколи не настільки, щоб слова стало важко читати.",
+     "Насколько велики панели и окна нового интерфейса. Авто: полный размер от игры 1280 x 720 и больше, на меньшей — "
+     "меньше (896 x 672: 70 %), но никогда не настолько, чтобы слова стало трудно читать."},
+    {Text::InterfaceSizeAuto, "Auto", "Авто", "Авто"},
+    {Text::InterfaceSize70, "70 %", "70 %", "70 %"},
+    {Text::InterfaceSize85, "85 %", "85 %", "85 %"},
+    {Text::InterfaceSize100, "100 %", "100 %", "100 %"},
+    {Text::InterfaceSize115, "115 %", "115 %", "115 %"},
+    {Text::InterfaceSize130, "130 %", "130 %", "130 %"},
     // 3.0.11-beta.41: the chat (stage 8 of the new interface)
     {Text::InterfaceChat, "Chat", "Чат", "Чат"},
     {Text::InterfaceChatHint,

@@ -17,6 +17,16 @@ float window();  // 0.8..1
 float chat();    // the panels', at least 0.8
 int generation();  // another number each time they change: the parts draw their pictures again
 
+// 3.0.11-beta.54 (R-JK5455: «взял маленький екран а там не все елементы интерфейса влезли»): the new interface's
+// size - its parts are the concept's at the game's 1920 x 1080 (a concept pixel a game pixel); a game smaller than
+// 1280 x 720 has them smaller in its share (896 x 672: 70 %), never below 60 %, nor so small that the words' 14 come
+// out under 11 of the screen's pixels (`windowScale`: the screen's pixels a game pixel); [interface] size names one
+constexpr int kFullW = 1280, kFullH = 720;
+float autoSize(int gameW, int gameH, double windowScale);
+void setSize(float size);  // a part's size against the concept's (0.5-1.5); changes draw the parts again
+float size();
+float partScale(double k);  // a part's scale in its picture's pixels: k times size(), 0.5-6
+
 // 3.0.11-beta.49 (the concept: «тень только у окон»): a window's shadow - dark at a rounded box's edge (`alpha`),
 // fading out `spread` away, none under the box itself (its glass stays as it is); the picture (w + 2 spread) x
 // (h + 2 spread), premultiplied, the box at (spread, spread)
