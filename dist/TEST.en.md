@@ -1,3 +1,16 @@
+# uaRO Graphics 3.0.11-beta.70 — what is new
+
+- **«Tracking»** — a panel left of the buffs' column (the concept: «keep in view — what to pin (a quest, a way, an
+  item to collect), the player chooses»). It holds what you pinned:
+  - a quest — the «Track» button at the end of its card in «Reference» (it turns «✓ Tracked»): what to bring, how
+    many and whom to give it, no counters (as you decided);
+  - the way the new minimap leads («Lead on the minimap»): where next and where the move is;
+  - an item to collect — «Track collecting» in an item's card: who drops it most and how likely.
+- ▾ folds the panel to the names, ✕ at the top hides it until you pin something new; a click on a name opens its
+  card, the ✕ by a name lets it go. What is pinned is kept between games.
+- A new switch «Tracking» in the app's «Interface» section and in the game's console (on with the new minimap).
+- To check: Ctrl+F → «Quests» → any quest → «Track» at the bottom of the card; the panel left of the buffs.
+
 # uaRO Graphics 3.0.11-beta.69 — what is new
 
 - **The state of «Reference»'s data** (the concept, question 21: the data's states and «Details» by a click). The
