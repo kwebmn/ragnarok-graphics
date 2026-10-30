@@ -36,6 +36,8 @@
 #include "win/party_panel.hpp"
 #include "win/hotbar.hpp"
 #include "win/chat_window.hpp"
+#include "win/item_window.hpp"
+#include "win/stat_window.hpp"
 #include "win/target_card.hpp"
 #include "win/notifier.hpp"
 #include "win/platform.hpp"
@@ -538,6 +540,8 @@ void Context::endScene() {
         partywin::draw(record, *renderer);      // 3.0.11-beta.39: the party's panel
         hotbarwin::draw(record, *renderer);     // 3.0.11-beta.40: the hotbar
         chatwin::draw(record, *renderer);       // 3.0.11-beta.41: the chat
+        itemswin::draw(record, *renderer);      // 3.0.11-beta.42: «Речі»
+        statswin::draw(record, *renderer);      // 3.0.11-beta.42: «Характеристики»
         answercard::draw(record, *renderer);  // 3.0.9-beta.4: the developer's answer
         windowSwitch_.draw(record, *renderer);
         referencewin::draw(record, *renderer);  // 3.0.11-beta.7: «Довідник», over the rest
@@ -578,6 +582,8 @@ void Context::present(const Rect& source, bool waitForVblank) {
         partywin::draw(record, *renderer);      // 3.0.11-beta.39
         hotbarwin::draw(record, *renderer);     // 3.0.11-beta.40
         chatwin::draw(record, *renderer);       // 3.0.11-beta.41
+        itemswin::draw(record, *renderer);      // 3.0.11-beta.42
+        statswin::draw(record, *renderer);
         answercard::draw(record, *renderer);  // 3.0.9-beta.4
         windowSwitch_.draw(record, *renderer);
         referencewin::draw(record, *renderer);  // 3.0.11-beta.7
@@ -800,6 +806,13 @@ void Context::present(const Rect& source, bool waitForVblank) {
     hotbarwin::frame(window, config.hotbar, gameCodePage(config), scaleMade_ ? plan.k : 1.0,
                      scaleMade_ ? plan.targetWidth : shadow.width(),
                      scaleMade_ ? plan.targetHeight : shadow.height());
+    // 3.0.11-beta.42: [interface] items and status - «Речі» and «Характеристики» while the game's own are open
+    itemswin::frame(window, config.itemsWindow, gameCodePage(config), scaleMade_ ? plan.k : 1.0,
+                    scaleMade_ ? plan.targetWidth : shadow.width(),
+                    scaleMade_ ? plan.targetHeight : shadow.height());
+    statswin::frame(window, config.statusWindow, scaleMade_ ? plan.k : 1.0,
+                    scaleMade_ ? plan.targetWidth : shadow.width(),
+                    scaleMade_ ? plan.targetHeight : shadow.height());
     // 3.0.11-beta.7: [interface] reference - «Довідник» (Ctrl+F)
     referencewin::frame(window, config.referenceWindow, scaleMade_ ? plan.k : 1.0,
                         scaleMade_ ? plan.targetWidth : shadow.width(),

@@ -856,10 +856,12 @@ TEST(config_interface_minimap) {
     if (s) CHECK_EQ(settings::tokenOf(*s, parseConfig("[interface]\nminimap = 1\n")), std::string("1"));
     const LiveUpdate u = liveUpdate(parseConfig(""), parseConfig("[interface]\nminimap = 1\n"));
     // 3.0.11-beta.37: the buffs' column and the character block come with it; 3.0.11-beta.38: the target's card too;
-    // 3.0.11-beta.39: the party's panel; 3.0.11-beta.40: the hotbar; 3.0.11-beta.41: the chat
-    CHECK(u.waiting.empty() && u.applied.size() == 7 && u.applied[0] == "minimap 0 -> 1");
-    CHECK(u.applied[1] == "buffs off -> column" && u.applied[2] == "chat 0 -> 1" && u.applied[3] == "hotbar 0 -> 1" &&
-          u.applied[4] == "party 0 -> 1" && u.applied[5] == "target 0 -> 1" && u.applied[6] == "character off -> bars");
+    // 3.0.11-beta.39: the party's panel; 3.0.11-beta.40: the hotbar; 3.0.11-beta.41: the chat; 3.0.11-beta.42: the
+    // windows
+    CHECK(u.waiting.empty() && u.applied.size() == 9 && u.applied[0] == "minimap 0 -> 1");
+    CHECK(u.applied[1] == "buffs off -> column" && u.applied[2] == "items 0 -> 1" && u.applied[3] == "status 0 -> 1");
+    CHECK(u.applied[4] == "chat 0 -> 1" && u.applied[5] == "hotbar 0 -> 1" && u.applied[6] == "party 0 -> 1" &&
+          u.applied[7] == "target 0 -> 1" && u.applied[8] == "character off -> bars");
     CHECK(appliesNow("interface.minimap"));
 }
 
@@ -993,4 +995,21 @@ TEST(config_reads_the_chat) {
     CHECK(s->page == settings::Page::Interface && s->control == settings::Control::Check);
     CHECK(appliesNow("interface.chat"));
     CHECK(liveUpdate(parseConfig(""), parseConfig("[interface]\nchat = 1\n")).next.chat);
+}
+
+// 3.0.11-beta.42 (the owner: «делай окна»): [interface] items and status - «Речі» and «Характеристики» redrawn; they
+// come with the new minimap as the other parts do, unless the file names them
+TEST(config_reads_the_windows) {
+    CHECK(!parseConfig("").itemsWindow && !parseConfig("").statusWindow);
+    CHECK(parseConfig("[interface]\nitems = 1\n").itemsWindow && parseConfig("[interface]\nstatus = 1\n").statusWindow);
+    const Config c = parseConfig("[interface]\nminimap = 1\nstatus = 0\n");
+    CHECK(c.itemsWindow && !c.statusWindow);
+    for (const char* key : {"interface.items", "interface.status"}) {
+        const settings::IniSetting* s = settings::findSetting(key);
+        CHECK(s != nullptr);
+        if (!s) continue;
+        CHECK(s->page == settings::Page::Interface && s->control == settings::Control::Check);
+        CHECK(appliesNow(key));
+    }
+    CHECK(liveUpdate(parseConfig(""), parseConfig("[interface]\nitems = 1\n")).next.itemsWindow);
 }

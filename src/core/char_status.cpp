@@ -86,6 +86,25 @@ Status fromMemory(const uint8_t* plain, const uint8_t* masked) {
     s.zeny = at(plain, kPlainAt, kZeny);  // 3.0.11-beta.36
     s.statusPoints = at(plain, kPlainAt, kStatusPoints);
     s.skillPoints = at(plain, kPlainAt, kSkillPoints);
+    for (int i = 0; i < 6; ++i) {  // 3.0.11-beta.42
+        s.statBase[i] = at(plain, kPlainAt, kStatBase + 4 * uint32_t(i));
+        s.statBonus[i] = at(plain, kPlainAt, kStatBonus + 4 * uint32_t(i));
+        s.statNeed[i] = at(plain, kPlainAt, kStatNeed + 4 * uint32_t(i));
+    }
+    s.atk = at(plain, kPlainAt, kAtk);
+    s.atk2 = at(plain, kPlainAt, kAtk2);
+    s.matkMin = at(plain, kPlainAt, kMatkMin);
+    s.matkMax = at(plain, kPlainAt, kMatkMax);
+    s.hit = at(plain, kPlainAt, kHit);
+    s.crit = at(plain, kPlainAt, kCrit);
+    s.def = at(plain, kPlainAt, kDef);
+    s.def2 = at(plain, kPlainAt, kDef2);
+    s.mdef = at(plain, kPlainAt, kMdef);
+    s.mdef2 = at(plain, kPlainAt, kMdef2);
+    s.flee = at(plain, kPlainAt, kFlee);
+    s.flee2 = at(plain, kPlainAt, kFlee2);
+    const int amotion = at(plain, kPlainAt, kAmotion);
+    s.aspd = amotion > 0 && amotion < 2000 ? (2000 - amotion) / 10 : 0;
     s.hp = unmasked(masked, kHp, kHpIndex);
     s.hpMost = unmasked(masked, kHpMost, kHpMostIndex);
     s.sp = unmasked(masked, kSp, kSpIndex);

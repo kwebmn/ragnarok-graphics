@@ -111,6 +111,11 @@ const std::vector<IniSetting>& iniSettings() {
         {"interface", "buffs", Page::Interface, Control::Choice, 0, 0, 0, {"off", "column", "row"},
          {Text::InterfaceBuffsOff, Text::InterfaceBuffsColumn, Text::InterfaceBuffsRow}, Text::InterfaceBuffs,
          Text::InterfaceBuffsHint, ""},
+        // 3.0.11-beta.42: the windows
+        {"interface", "items", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::InterfaceItems,
+         Text::InterfaceItemsHint, ""},
+        {"interface", "status", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::InterfaceStatus,
+         Text::InterfaceStatusHint, ""},
         // 3.0.11-beta.41: the chat
         {"interface", "chat", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::InterfaceChat,
          Text::InterfaceChatHint, ""},
@@ -910,6 +915,8 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "interface.party") return c.partyPanel ? "1" : "0";               // 3.0.11-beta.39
     if (k == "interface.hotbar") return c.hotbar ? "1" : "0";                  // 3.0.11-beta.40
     if (k == "interface.chat") return c.chat ? "1" : "0";                      // 3.0.11-beta.41
+    if (k == "interface.items") return c.itemsWindow ? "1" : "0";              // 3.0.11-beta.42
+    if (k == "interface.status") return c.statusWindow ? "1" : "0";
     if (k == "interface.reference") return c.referenceWindow ? "1" : "0";  // 3.0.11-beta.7
     if (k == "windows.start_count") return std::to_string(c.windowStartCount);  // 3.0.4-beta.4
     if (k == "camera.indoor") return c.cameraIndoor ? "1" : "0";                // 3.0.4-beta.5

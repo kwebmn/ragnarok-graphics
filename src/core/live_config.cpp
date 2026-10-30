@@ -191,6 +191,14 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("buffs", buffsLookToken(running.buffs), buffsLookToken(file.buffs)));
         n.buffs = file.buffs;
     }
+    if (file.itemsWindow != running.itemsWindow) {  // 3.0.11-beta.42: «Речі», at once
+        u.applied.push_back(change("items", flag(running.itemsWindow), flag(file.itemsWindow)));
+        n.itemsWindow = file.itemsWindow;
+    }
+    if (file.statusWindow != running.statusWindow) {  // 3.0.11-beta.42: «Характеристики», at once
+        u.applied.push_back(change("status", flag(running.statusWindow), flag(file.statusWindow)));
+        n.statusWindow = file.statusWindow;
+    }
     if (file.chat != running.chat) {  // 3.0.11-beta.41: the chat, at once
         u.applied.push_back(change("chat", flag(running.chat), flag(file.chat)));
         n.chat = file.chat;

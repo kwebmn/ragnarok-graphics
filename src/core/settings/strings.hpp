@@ -472,7 +472,11 @@ enum class Text : uint16_t {
     InterfaceParty, InterfacePartyHint, PartyOffline, InterfaceHotbar, InterfaceHotbarHint, HotbarBattle,
     HotbarBattleHint, HotbarEdit, HotbarDone, HotbarUse, InterfaceChat, InterfaceChatHint, ChatTabAll, ChatTabParty,
     ChatTabGuild, ChatTabWhisper, ChatTabTrade, ChatTabBattle, ChatFrom, ChatTo, ChatHintSend, ChatHintType,
-    ChatKilled, ChatPicked, ChatMiss,
+    ChatKilled, ChatPicked, ChatMiss, InterfaceItems, InterfaceItemsHint, InterfaceStatus, InterfaceStatusHint,
+    ItemsTitle, ItemsTabItems, ItemsTabGear, ItemsTabEtc, ItemsSearch, ItemsUse, ItemsWear, ItemsCard, ItemsInfo,
+    StatsTitle, StatsFree, StatsColumnStat, StatsColumnBase, StatsColumnBonus, StatsColumnTotal, StatsColumnCost,
+    StatsBattle, StatsCast, StatsMaxed, StatsCost, StatsShort, StatsTop, StatsEffectStr, StatsEffectAgi,
+    StatsEffectVit, StatsEffectInt, StatsEffectDex, StatsEffectLuk, StatsHint,
     MinimapRespawn, MinimapMore,
     MinimapNoReference, MinimapNoMonsters,
     // 3.0.11-beta.7: «Довідник» - its switch, the window's words, the cards' words

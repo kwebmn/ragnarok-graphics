@@ -381,6 +381,7 @@ Config parseConfig(const std::string& text) {
     bool buffsSet = false, characterSet = false;  // 3.0.11-beta.37: the new interface's parts asked for by name
     bool targetSet = false, partySet = false;     // 3.0.11-beta.38, 3.0.11-beta.39
     bool hotbarSet = false, chatSet = false;      // 3.0.11-beta.40, 3.0.11-beta.41
+    bool itemsSet = false, statusSet = false;     // 3.0.11-beta.42
     std::istringstream in(text);
     std::string line;
     std::string section;
@@ -501,6 +502,12 @@ Config parseConfig(const std::string& text) {
             if (val == "off") c.buffs = BuffsLook::Off;
             if (val == "column") c.buffs = BuffsLook::Column;
             if (val == "row") c.buffs = BuffsLook::Row;
+        } else if (key == "interface.items") {  // 3.0.11-beta.42: «Речі»
+            itemsSet = val == "0" || val == "1" || val == "on" || val == "off" || val == "true" || val == "false";
+            setBool(val, c.itemsWindow);
+        } else if (key == "interface.status") {  // 3.0.11-beta.42: «Характеристики»
+            statusSet = val == "0" || val == "1" || val == "on" || val == "off" || val == "true" || val == "false";
+            setBool(val, c.statusWindow);
         } else if (key == "interface.chat") {  // 3.0.11-beta.41: the chat
             chatSet = val == "0" || val == "1" || val == "on" || val == "off" || val == "true" || val == "false";
             setBool(val, c.chat);
@@ -755,6 +762,8 @@ Config parseConfig(const std::string& text) {
     if (c.newMinimap && !partySet) c.partyPanel = true;   // 3.0.11-beta.39
     if (c.newMinimap && !hotbarSet) c.hotbar = true;      // 3.0.11-beta.40
     if (c.newMinimap && !chatSet) c.chat = true;          // 3.0.11-beta.41
+    if (c.newMinimap && !itemsSet) c.itemsWindow = true;  // 3.0.11-beta.42
+    if (c.newMinimap && !statusSet) c.statusWindow = true;
     return c;
 }
 

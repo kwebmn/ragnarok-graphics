@@ -9,6 +9,8 @@
 #include "win/party_panel.hpp"
 #include "win/hotbar.hpp"
 #include "win/chat_window.hpp"
+#include "win/item_window.hpp"
+#include "win/stat_window.hpp"
 #include "win/target_card.hpp"
 #include "win/minimap_proto.hpp"
 #include "win/reference_window.hpp"
@@ -47,6 +49,7 @@ void claimed(UINT m) {
 LRESULT CALLBACK gameProc(HWND w, UINT m, WPARAM wp, LPARAM lp) {
     if (g_switch) {
         if (referencewin::key(m, wp, lp)) return 0;  // 3.0.11-beta.7: Ctrl+F, and every key while «Довідник» is open
+        if (itemswin::key(m, wp, lp)) return 0;      // 3.0.11-beta.42: «Речі»'s search while it types
         if (chatwin::key(m, wp, lp)) return 0;       // 3.0.11-beta.41: the new chat's F10, Alt+F10 and Tab
         if (m == WM_KEYDOWN && minimapproto::key(unsigned(wp))) return 0;  // 3.0.11-beta.4: Ctrl+Tab, the new minimap's
         if ((m == WM_KEYDOWN || m == WM_SYSKEYDOWN) && g_switch->key(unsigned(wp), lp)) return 0;
@@ -57,6 +60,8 @@ LRESULT CALLBACK gameProc(HWND w, UINT m, WPARAM wp, LPARAM lp) {
         LRESULT answer = 0;  // 3.0.3-beta.8: the mouse over the panel in the game's picture is the panel's
         if (answercard::mouse(w, m, lp, answer) ||       // 3.0.9-beta.4: and over the answer card the card's
             referencewin::mouse(w, m, wp, lp, answer) ||  // 3.0.11-beta.7: over «Довідник» its own
+            statswin::mouse(w, m, wp, lp, answer) ||      // 3.0.11-beta.42: the windows over the panels
+            itemswin::mouse(w, m, wp, lp, answer) ||
             minimapproto::mouse(w, m, wp, lp, answer) ||  // 3.0.11-beta.1: the new minimap's
             buffcolumn::mouse(w, m, wp, lp, answer) ||    // 3.0.11-beta.35: the buffs' column's
             charpanel::mouse(w, m, wp, lp, answer) ||     // 3.0.11-beta.36: the character block's

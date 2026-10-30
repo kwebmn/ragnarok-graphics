@@ -9,6 +9,7 @@
 #include "pad/win/client_mouse.hpp"
 #include "pad/win/game_window.hpp"
 #include "win/hotbar.hpp"
+#include "win/item_window.hpp"
 #include "win/log.hpp"
 
 namespace uagfx::win {
@@ -60,7 +61,8 @@ const Known kKnown[] = {
 // In Blocker's order (3.0.11-beta.33: the big map was left out - the world reacted under it)
 const char* const kParts[] = {"the windows' panel", "the answer card", "the new minimap", "«Довідник»",
                               "the new minimap's big map", "the buffs' column", "the character block",
-                              "the target's card", "the party's panel", "the hotbar", "the chat"};
+                              "the target's card", "the party's panel", "the hotbar", "the chat",
+                              "the new «Речі»", "the new «Характеристики»"};
 static_assert(std::size(kParts) == size_t(uapad::gamewindow::kBlockerCount), "a name for each part");
 unsigned g_told = 0;    // the parts whose first cursor over them is logged
 unsigned g_hidden = 0;  // 3.0.11-beta.33: the parts whose first actor hidden under them is logged
@@ -106,11 +108,13 @@ int __attribute__((thiscall)) droppedOn(uint32_t manager, int x, int y, uint32_t
     if (!uapad::clientmouse::read(cx, cy, width, height)) return answer;
     const int part = uapad::gamewindow::blockedUnder(x, y, width, height);
     if (part < 0 || part >= int(std::size(kParts))) return answer;
-    const bool taken = part == int(uapad::gamewindow::Blocker::Hotbar) && hotbarwin::drop(x, y, drag);
+    // 3.0.11-beta.42: «Речі» gives it to the game's own window (from the storage, the cart, the gear into the bag)
+    const bool taken = (part == int(uapad::gamewindow::Blocker::Hotbar) && hotbarwin::drop(x, y, drag)) ||
+                       (part == int(uapad::gamewindow::Blocker::Items) && itemswin::drop(x, y, drag));
     if (!taken) reinterpret_cast<NoDropFn>(uintptr_t(kNoDrop))(0, x, y, drag);
     if (g_drops++ < 10)
         LOG_INFO("world mouse: a drag let go over %s (%d, %d) - %s", kParts[part], x, y,
-                 taken ? "the hotbar took it into its cell" : "a window that takes nothing, not the ground's drop");
+                 taken ? "the part took it" : "a window that takes nothing, not the ground's drop");
     return 1;
 }
 

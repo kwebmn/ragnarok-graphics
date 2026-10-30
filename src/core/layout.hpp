@@ -73,6 +73,10 @@ constexpr const char* kMinimapState = "uaro-graphics\\minimap-state.txt";
 constexpr const char* kBuffsState = "uaro-graphics\\buffs-state.txt";
 // 3.0.11-beta.36: the character block's view («view full|compact|icon»)
 constexpr const char* kCharacterState = "uaro-graphics\\character-state.txt";
+// 3.0.11-beta.42: the new windows «Речі» and «Характеристики» - their places («at 0.1 0.13» a share of the free room
+// to the left and the top), «Речі»'s tab («tab 0|1|2»)
+constexpr const char* kItemsState = "uaro-graphics\\items-state.txt";
+constexpr const char* kStatsState = "uaro-graphics\\stats-state.txt";
 // 2.14: the client patcher (app/client_patch): the list of the game's files last put, and where they arrive first
 constexpr const char* kClientPatchRecord = "uaro-graphics\\client-patch.txt";
 constexpr const char* kClientPatchWork = "uaro-graphics\\update\\client";

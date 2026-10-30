@@ -75,6 +75,22 @@ TEST(char_status_reads_the_blocks) {
     put(plain, charstatus::kPlainAt, charstatus::kSkillPoints, 1);
     const charstatus::Status z = charstatus::fromMemory(plain, masked);
     CHECK(z.zeny == 1482300 && z.statusPoints == 3 && z.skillPoints == 1 && z.baseLevel == 87);
+    // 3.0.11-beta.42 («Характеристики»): the stats, their bonuses and prices, the battle's numbers
+    put(plain, charstatus::kPlainAt, charstatus::kStatBase + 4 * 4, 74);   // DEX
+    put(plain, charstatus::kPlainAt, charstatus::kStatBonus + 4 * 4, 10);
+    put(plain, charstatus::kPlainAt, charstatus::kStatNeed + 4 * 4, 9);
+    put(plain, charstatus::kPlainAt, charstatus::kStatBase, 1);            // STR
+    put(plain, charstatus::kPlainAt, charstatus::kAtk, 28);
+    put(plain, charstatus::kPlainAt, charstatus::kAtk2, 17);
+    put(plain, charstatus::kPlainAt, charstatus::kMatkMin, 334);
+    put(plain, charstatus::kPlainAt, charstatus::kMatkMax, 550);
+    put(plain, charstatus::kPlainAt, charstatus::kHit, 156);
+    put(plain, charstatus::kPlainAt, charstatus::kFlee2, 1);
+    put(plain, charstatus::kPlainAt, charstatus::kAmotion, 390);
+    const charstatus::Status st = charstatus::fromMemory(plain, masked);
+    CHECK(st.statBase[4] == 74 && st.statBonus[4] == 10 && st.statNeed[4] == 9 && st.statBase[0] == 1);
+    CHECK(st.atk == 28 && st.atk2 == 17 && st.matkMin == 334 && st.matkMax == 550 && st.hit == 156 && st.flee2 == 1);
+    CHECK(st.aspd == 161);
 }
 
 TEST(char_status_an_index_out_of_the_places_reads_nothing) {

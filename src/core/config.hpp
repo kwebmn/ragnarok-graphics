@@ -565,6 +565,9 @@ struct Config {
     // 3.0.11-beta.41: [interface] chat - stage 8: the chat at the bottom left with its tabs (core/chat_panel), the
     // game's own out of sight
     bool chat = false;
+    // 3.0.11-beta.42: [interface] items and status - stage 8's windows: «Речі» (core/item_window) and
+    // «Характеристики» (core/stat_window) in place of the game's own while they are open
+    bool itemsWindow = false, statusWindow = false;
     // 3.0.11-beta.7: [interface] reference - «Довідник» (win/reference_window): Ctrl+F in the game
     bool referenceWindow = false;
     PanelLayout panelLayout = PanelLayout::Row;

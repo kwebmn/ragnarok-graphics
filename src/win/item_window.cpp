@@ -1,0 +1,530 @@
+#include "win/item_window.hpp"
+
+#include <windowsx.h>
+
+#include <algorithm>
+#include <cmath>
+#include <cstdint>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <string>
+#include <vector>
+
+#include "core/char_status.hpp"
+#include "core/hotbar_panel.hpp"
+#include "core/item_window.hpp"
+#include "core/layout.hpp"
+#include "core/settings/strings.hpp"
+#include "pad/win/game_window.hpp"
+#include "win/client_tables.hpp"
+#include "win/code_page.hpp"
+#include "win/game_camera.hpp"
+#include "win/log.hpp"
+#include "win/paths.hpp"
+#include "win/picture_draw.hpp"
+#include "win/real_ddraw.hpp"
+
+namespace uagfx::win::itemswin {
+namespace {
+
+namespace iw = uagfx::itemwin;
+
+// uaRO.exe's: the windows' manager's «Речі» (UI window 8, its class's vtable, its SendMsg FUN_004b9df0 - message 6
+// with 0x87 its close button - and its drop FUN_004ba530), a window's shown flag; the item card's window (0xC, its
+// message 0x18 an ITEM_INFO), MakeWindow FUN_004d42d0
+constexpr uint32_t kWindowMgr = 0x727ED8, kItemsAt = kWindowMgr + 0x8C, kItemsClass = 0x69B8A0;
+constexpr uint32_t kShown = 0x38, kSendMsgSlot = 0x94, kItemsSendMsg = 0x4B9DF0, kDropSlot = 0x2C;
+constexpr uint32_t kItemsDrop = 0x4BA530, kMakeWindow = 0x4D42D0;
+constexpr int kButtonMsg = 6, kCloseButton = 0x87, kItemCard = 0xC, kShowItem = 0x18;
+// The game mode (its SendMsg FUN_005707d0 at vtable + 0x14) and what its window sends it (FUN_004b9a10, FUN_004b98b0):
+// use, wear, a card into a slot, arrows, a drag begun
+constexpr uint32_t kModeNow = 0x74B57C, kModeMsgSlot = 0x14, kModeMsg = 0x5707D0;
+constexpr int kUseMsg = 0x1D, kWearMsg = 0x14, kCardMsg = 0x88, kAmmoMsg = 100, kDragMsg = 0x11;
+// The bag: the session's list (a node's next at +0), each node's ITEM_INFO at +8, 72 bytes - its kind +0, where it is
+// worn +4, the bag's place +8, worn now +0xC, its count +0x10, its number's words (an std::string: c_str +0x30, its
+// length +0x34), identified +0x3C, refine +0x40
+constexpr uint32_t kBag = 0x771148 + 0xF1C, kInfo = 8;
+constexpr size_t kInfoSize = 0x48, kMostNodes = 256;
+constexpr ULONGLONG kReadMs = 200, kConfirmMs = 3000, kBlinkMs = 530;
+constexpr size_t kMostTyped = 24;
+
+using SendMsgFn = int(__attribute__((thiscall)) *)(uint32_t self, uint32_t sender, int msg, int a, int b, int c);
+using ModeMsgFn = int(__attribute__((thiscall)) *)(uint32_t mode, int msg, int a, int b, int c);
+using MakeFn = uint32_t(__attribute__((thiscall)) *)(uint32_t manager, int id);
+using DropFn = void(__attribute__((thiscall)) *)(uint32_t self, int x, int y, uint32_t drag);
+
+struct State {
+    bool on = false, shown = false, hid = false, stateRead = false, skipChar = false;
+    unsigned codePage = 0;
+    float k = 0, scale = 1;
+    int targetW = 0, targetH = 0;
+    float fx = 0.08f, fy = 0.23f;  // its place: a share of the free room to its left and above it (the concept's)
+    std::vector<iw::Item> items;
+    std::vector<uint32_t> infos;  // each item's ITEM_INFO in the game's memory (its card's)
+    ULONGLONG readAt = 0;
+    iw::Show show;
+    iw::Layout layout;
+    std::vector<int> shownItems;
+    std::string key;
+    panel::Picture picture;
+    uint32_t texture = 0;
+    int texW = 0, texH = 0;
+    bool upload = false;
+    bool moving = false;
+    float grabX = 0, grabY = 0;
+    int lastCell = -1, armed = 0;
+    ULONGLONG lastClick = 0, armedAt = 0;
+    int told = 0;
+};
+
+State& state() {
+    static State s;
+    return s;
+}
+
+std::string say(settings::Text t) { return settings::tr(startup().lang, t); }
+
+uint32_t read32(uint32_t at) {
+    uint32_t v = 0;
+    return readGame(at, &v, 4) ? v : 0;
+}
+
+bool write32(uint32_t at, uint32_t v) {
+    SIZE_T n = 0;
+    return WriteProcessMemory(GetCurrentProcess(), reinterpret_cast<void*>(uintptr_t(at)), &v, 4, &n) && n == 4;
+}
+
+uint32_t rd32(const uint8_t* p, size_t at) {
+    uint32_t v = 0;
+    std::memcpy(&v, p + at, 4);
+    return v;
+}
+
+uint32_t gameWindow() {
+    const uint32_t w = read32(kItemsAt);
+    return w && read32(w) == kItemsClass ? w : 0;
+}
+
+// Its shown flag held at 0 while the new one shows it, back after
+void hold(State& s, uint32_t window, bool on) {
+    if (!window) {
+        s.hid = false;
+        return;
+    }
+    if (on) {
+        if (read32(window + kShown) && write32(window + kShown, 0) && !s.hid) {
+            LOG_INFO("items: the game's «Речі» window hidden for the new one (its shown flag 0)");
+            s.hid = true;
+        }
+    } else if (s.hid) {
+        write32(window + kShown, 1);
+        s.hid = false;
+        LOG_INFO("items: the game's «Речі» window back");
+    }
+}
+
+bool modeMsg(int msg, int a, int b) {
+    const uint32_t mode = read32(kModeNow);
+    if (!mode || !inGameWorld() || read32(read32(mode) + kModeMsgSlot) != kModeMsg) return false;
+    reinterpret_cast<ModeMsgFn>(uintptr_t(kModeMsg))(mode, msg, a, b, 0);
+    return true;
+}
+
+void readState(State& s) {
+    if (s.stateRead) return;
+    s.stateRead = true;
+    std::string text;
+    if (!readTextFile(layout::join(gameDir(), layout::kItemsState), text)) return;
+    float x = 0, y = 0;
+    int tab = 0;
+    for (size_t at = 0; at < text.size();) {
+        size_t end = text.find('\n', at);
+        if (end == std::string::npos) end = text.size();
+        const std::string line = text.substr(at, end - at);
+        at = end + 1;
+        if (std::sscanf(line.c_str(), "at %f %f", &x, &y) == 2 && x >= 0 && x <= 1 && y >= 0 && y <= 1) {
+            s.fx = x;
+            s.fy = y;
+        } else if (std::sscanf(line.c_str(), "tab %d", &tab) == 1 && tab >= 0 && tab < iw::kTabs) {
+            s.show.tab = iw::Tab(tab);
+        }
+    }
+}
+
+void keepState(const State& s) {
+    char text[64];
+    std::snprintf(text, sizeof text, "at %.4f %.4f\ntab %d\n", s.fx, s.fy, int(s.show.tab));
+    const std::string path = layout::join(gameDir(), layout::kItemsState);
+    if (!writeFileAtomic(path, std::string(text))) LOG_INFO("items: %s cannot be written", path.c_str());
+}
+
+// The bag as the session has it, the worn ones out (their window is the gear's)
+void readBag(State& s) {
+    s.items.clear();
+    s.infos.clear();
+    const auto& names = clienttables::itemNames();
+    const auto& unknown = clienttables::unknownNames();
+    const auto& files = clienttables::itemFiles();
+    const uint32_t head = read32(kBag);
+    if (!head) return;
+    uint32_t node = read32(head);
+    for (size_t n = 0; node && node != head && n < kMostNodes; ++n, node = read32(node)) {
+        uint8_t raw[kInfoSize] = {};
+        if (!readGame(node + kInfo, raw, sizeof raw)) break;
+        const uint32_t index = rd32(raw, 0x08), worn = rd32(raw, 0x0C), ptr = rd32(raw, 0x30), len = rd32(raw, 0x34);
+        if (!index || worn || !ptr || !len || len > 16) continue;
+        char digits[17] = {};
+        if (!readGame(ptr, digits, len)) continue;
+        iw::Item it;
+        it.index = int(index);
+        it.id = std::atoi(digits);
+        it.type = int(rd32(raw, 0x00));
+        it.location = int(rd32(raw, 0x04));
+        it.count = int(rd32(raw, 0x10));
+        it.identified = raw[0x3C] != 0;
+        const int refine = int(rd32(raw, 0x40));
+        it.refine = refine > 0 && refine <= 20 ? refine : 0;
+        const std::string id = std::to_string(it.id);
+        std::string words;  // an unidentified one's own words, else the item's
+        if (!it.identified) {
+            const auto u = unknown.find(id);
+            if (u != unknown.end()) words = u->second;
+        }
+        if (words.empty()) {
+            const auto w = names.find(id);
+            if (w != names.end()) words = w->second;
+        }
+        it.name = words.empty() ? "#" + id : utf8Of(widened(hotbar::spaced(words), s.codePage));
+        const auto f = files.find(id);
+        if (f != files.end()) it.icon = clienttables::icon(f->second, iw::iconSide(s.scale), 4 * s.scale);
+        s.items.push_back(it);
+        s.infos.push_back(node + kInfo);
+    }
+}
+
+iw::Texts texts() {
+    iw::Texts t;
+    t.title = say(settings::Text::ItemsTitle);
+    t.hotkey = "Alt+E";
+    t.tabs[0] = say(settings::Text::ItemsTabItems);
+    t.tabs[1] = say(settings::Text::ItemsTabGear);
+    t.tabs[2] = say(settings::Text::ItemsTabEtc);
+    t.search = say(settings::Text::ItemsSearch);
+    t.weight = say(settings::Text::CharWeight);
+    t.use = say(settings::Text::ItemsUse);
+    t.wear = say(settings::Text::ItemsWear);
+    t.card = say(settings::Text::ItemsCard);
+    t.info = say(settings::Text::ItemsInfo);
+    return t;
+}
+
+float measure(const std::string& utf8Text, float px, bool bold) {
+    return float(wordsWidth(utf8Wide(utf8Text), px, bold));
+}
+
+std::vector<Words> gdiWords(const std::vector<iw::Words>& in) {
+    std::vector<Words> out;
+    for (const iw::Words& w : in)
+        out.push_back(Words{w.box, utf8Wide(w.text), w.rgb, w.px, w.bold,
+                            UINT(w.align == iw::Align::Right    ? DT_RIGHT
+                                 : w.align == iw::Align::Center ? DT_CENTER
+                                                                : DT_LEFT),
+                            false});
+    return out;
+}
+
+void render(State& s) {
+    s.picture = panel::Picture{};
+    s.picture.width = s.layout.w;
+    s.picture.height = s.layout.h;
+    if (s.layout.w <= 0 || s.layout.h <= 0) return;
+    s.picture.px.assign(size_t(s.layout.w) * size_t(s.layout.h), 0u);
+    const iw::Texts t = texts();
+    iw::paint(s.picture, s.layout, s.items, s.shownItems, s.show, t, measure);
+    drawWords(s.picture, gdiWords(iw::words(s.layout, s.items, s.shownItems, s.show, t, measure)));
+    s.upload = true;
+}
+
+bool toTarget(const State& s, HWND game, int x, int y, float& tx, float& ty) {
+    RECT client{};
+    if (!GetClientRect(game, &client) || client.right <= 0 || client.bottom <= 0) return false;
+    tx = float(x) * float(s.targetW) / float(client.right);  // Windows' size of the window (uaRO.exe is not DPI-aware)
+    ty = float(y) * float(s.targetH) / float(client.bottom);
+    return true;
+}
+
+void block(const State& s, HWND game) {  // the mouse's clicks over it are its own, not the world's
+    RECT client{};
+    if (s.targetW <= 0 || s.targetH <= 0 || !GetClientRect(game, &client)) return;
+    const panel::Box& b = s.layout.glass;
+    const float x0 = float(s.layout.x) + b.x, y0 = float(s.layout.y) + b.y;
+    const RECT r{LONG(int64_t(x0) * client.right / s.targetW), LONG(int64_t(y0) * client.bottom / s.targetH),
+                 LONG(int64_t(x0 + b.w) * client.right / s.targetW + 1),
+                 LONG(int64_t(y0 + b.h) * client.bottom / s.targetH + 1)};
+    uapad::gamewindow::setBlocked(uapad::gamewindow::Blocker::Items, game, &r, false);
+}
+
+void hide(State& s) {
+    if (s.shown) uapad::gamewindow::setBlocked(uapad::gamewindow::Blocker::Items, nullptr, nullptr, false);
+    s.shown = false;
+    s.moving = false;
+}
+
+void place(State& s) {
+    const iw::Texts t = texts();
+    s.layout = iw::layout(0, 0, s.scale, t, measure);
+    const int roomX = std::max(0, s.targetW - s.layout.w), roomY = std::max(0, s.targetH - s.layout.h);
+    s.layout.x = int(std::lround(s.fx * float(roomX)));
+    s.layout.y = int(std::lround(s.fy * float(roomY)));
+}
+
+// What a double click on it does, as the game's own window: used, worn, a card into a slot, arrows worn; the items
+// the game asks about first used on a second double click within 3 s
+const char* use(State& s, const iw::Item& it) {
+    switch (iw::useOf(it)) {
+        case iw::Use::Use: return modeMsg(kUseMsg, it.index, 0) ? "used" : "not used (the game mode not found)";
+        case iw::Use::Wear: return modeMsg(kWearMsg, it.index, it.location) ? "worn" : "not worn";
+        case iw::Use::Card: return modeMsg(kCardMsg, it.index, 0) ? "a card to put in" : "not put";
+        case iw::Use::Ammo: return modeMsg(kAmmoMsg, it.index, it.location) ? "the arrows worn" : "not worn";
+        case iw::Use::Confirm: {
+            const ULONGLONG now = GetTickCount64();
+            if (s.armed == it.index && now - s.armedAt < kConfirmMs) {
+                s.armed = 0;
+                return modeMsg(kUseMsg, it.index, 0) ? "used (asked twice)" : "not used";
+            }
+            s.armed = it.index;
+            s.armedAt = now;
+            return "asked once - again to use";
+        }
+        case iw::Use::None: break;
+    }
+    return "nothing to do with it";
+}
+
+void card(const State& s, size_t at) {
+    if (at >= s.infos.size()) return;
+    const uint32_t window = reinterpret_cast<MakeFn>(uintptr_t(kMakeWindow))(kWindowMgr, kItemCard);
+    const uint32_t send = window ? read32(read32(window) + kSendMsgSlot) : 0;
+    if (send) reinterpret_cast<SendMsgFn>(uintptr_t(send))(window, 0, kShowItem, int(s.infos[at]), 0, 0);
+}
+
+void closeGameWindow() {
+    const uint32_t window = gameWindow();
+    if (window && read32(read32(window) + kSendMsgSlot) == kItemsSendMsg)
+        reinterpret_cast<SendMsgFn>(uintptr_t(kItemsSendMsg))(window, 0, kButtonMsg, kCloseButton, 0, 0);
+}
+
+char letterOf(WPARAM vk, bool shift) {
+    if (vk >= 'A' && vk <= 'Z') return char(shift ? vk : vk - 'A' + 'a');
+    if (vk >= '0' && vk <= '9' && !shift) return char(vk);
+    if (vk >= VK_NUMPAD0 && vk <= VK_NUMPAD9) return char('0' + (vk - VK_NUMPAD0));
+    switch (vk) {
+        case VK_SPACE: return ' ';
+        case VK_OEM_MINUS: return shift ? '_' : '-';
+        case VK_OEM_7: return '\'';
+        case VK_OEM_PERIOD: return '.';
+        default: return 0;
+    }
+}
+
+}  // namespace
+
+void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int targetHeight) {
+    State& s = state();
+    s.codePage = codePage;
+    if (on != s.on) {
+        s.on = on;
+        s.key.clear();
+        LOG_INFO("items: [interface] items = %d", on ? 1 : 0);
+    }
+    const bool world = inGameWorld();
+    const uint32_t window = world ? gameWindow() : 0;
+    if (world) hold(s, window, on);
+    if (!on || !window || !game || k <= 0 || targetWidth <= 0 || targetHeight <= 0) {
+        s.show.typing = false;
+        hide(s);
+        return;
+    }
+    readState(s);
+    const float scale = std::clamp(float(k), 0.75f, 6.0f);
+    s.k = float(k);
+    s.scale = scale;
+    s.targetW = targetWidth;
+    s.targetH = targetHeight;
+    const ULONGLONG now = GetTickCount64();
+    if (now - s.readAt >= kReadMs || s.items.empty()) {
+        s.readAt = now;
+        readBag(s);
+        charstatus::Status st;
+        if (readOwnStatus(st)) {
+            s.show.weight = st.weight;
+            s.show.weightMost = st.weightMost;
+            s.show.zeny = st.zeny;
+        }
+    }
+    place(s);
+    s.shownItems = iw::shownOf(s.items, s.show.tab, s.show.search);
+    s.show.scroll = std::clamp(s.show.scroll, 0, iw::mostScroll(s.layout, s.shownItems.size()));
+    s.show.caretOn = (now / kBlinkMs) % 2 == 0;
+    s.show.hover = -1;
+    s.show.hoverTab = -1;
+    s.show.hoverClose = false;
+    int cx = 0, cy = 0;
+    if (readGameCursor(cx, cy) && !s.moving) {
+        const float lx = float(cx) * float(k) - float(s.layout.x), ly = float(cy) * float(k) - float(s.layout.y);
+        const iw::Hit h = iw::hitTest(s.layout, s.shownItems.size(), s.show.scroll, lx, ly);
+        if (h.part == iw::Part::Cell) s.show.hover = h.index;
+        if (h.part == iw::Part::Tab) s.show.hoverTab = h.index;
+        s.show.hoverClose = h.part == iw::Part::Close;
+    }
+    std::string key = std::to_string(s.layout.x) + ',' + std::to_string(s.layout.y) + ';' + std::to_string(scale) +
+                      ';' + std::to_string(int(s.show.tab)) + ';' + std::to_string(s.show.scroll) + ';' +
+                      std::to_string(s.show.hover) + ',' + std::to_string(s.show.hoverTab) +
+                      (s.show.hoverClose ? "x" : "") + ';' + s.show.search + (s.show.typing ? "|t" : "") +
+                      (s.show.typing && s.show.caretOn ? "c" : "") + ';' + std::to_string(s.show.weight) + '/' +
+                      std::to_string(s.show.weightMost) + ';' + std::to_string(s.show.zeny) + ';';
+    for (const iw::Item& it : s.items)
+        key += std::to_string(it.index) + ':' + std::to_string(it.id) + 'x' + std::to_string(it.count) + '+' +
+               std::to_string(it.refine) + (it.identified ? "" : "?") + (it.icon ? "i" : "") + ',';
+    if (key != s.key) {
+        s.key = key;
+        render(s);
+    }
+    s.shown = true;
+    block(s, game);
+}
+
+void draw(FrameRecord& record, gpu::Renderer& renderer) {
+    State& s = state();
+    if (!s.shown || s.k <= 0 || s.picture.width <= 0 || s.picture.height <= 0) return;
+    int cursor = -1, cx = 0, cy = 0;  // under the game's own cursor, as the minimap
+    if (readGameCursor(cx, cy)) cursor = panel::cursorDraw(record, float(cx), float(cy));
+    drawPicture(record, renderer, s.picture, s.texture, s.texW, s.texH, s.upload, s.layout.x, s.layout.y, s.k);
+    if (cursor >= 0) record.moveLastBefore(record.commands().size() - size_t(cursor) - 1, size_t(cursor));
+}
+
+bool drop(int x, int y, uint32_t drag) {
+    State& s = state();
+    if (!s.shown || s.k <= 0) return false;
+    const float tx = float(x) * s.k - float(s.layout.x), ty = float(y) * s.k - float(s.layout.y);
+    if (!s.layout.glass.contains(tx, ty)) return false;
+    const uint32_t window = gameWindow();
+    if (!window || read32(read32(window) + kDropSlot) != kItemsDrop) return false;
+    reinterpret_cast<DropFn>(uintptr_t(kItemsDrop))(window, 0, 0, drag);
+    if (s.told++ < 12) LOG_INFO("items: a drag let go over «Речі» - given to the game's own window's drop");
+    s.readAt = 0;
+    return true;
+}
+
+bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
+    State& s = state();
+    if (!s.shown) return false;
+    POINT p{GET_X_LPARAM(lp), GET_Y_LPARAM(lp)};
+    if (m == WM_MOUSEWHEEL && !ScreenToClient(game, &p)) return false;  // the wheel's point is the screen's
+    float tx = 0, ty = 0;
+    if (!toTarget(s, game, p.x, p.y, tx, ty)) return false;
+    if (s.moving) {  // its title dragged: it follows the cursor, inside the screen
+        if (m == WM_MOUSEMOVE || m == WM_LBUTTONUP) {
+            const int roomX = std::max(1, s.targetW - s.layout.w), roomY = std::max(1, s.targetH - s.layout.h);
+            s.fx = std::clamp((tx - s.grabX) / float(roomX), 0.0f, 1.0f);
+            s.fy = std::clamp((ty - s.grabY) / float(roomY), 0.0f, 1.0f);
+            if (m == WM_LBUTTONUP) {
+                s.moving = false;
+                keepState(s);
+            }
+            result = 0;
+            return true;
+        }
+    }
+    const iw::Hit h = iw::hitTest(s.layout, s.shownItems.size(), s.show.scroll, tx - float(s.layout.x),
+                                  ty - float(s.layout.y));
+    if (h.part == iw::Part::None) {
+        if (m == WM_LBUTTONDOWN || m == WM_RBUTTONDOWN) s.show.typing = false;  // a click elsewhere: the search lets go
+        return false;
+    }
+    result = 0;
+    if (m == WM_MOUSEWHEEL) {
+        const int by = GET_WHEEL_DELTA_WPARAM(wp) > 0 ? -1 : 1;
+        s.show.scroll = std::clamp(s.show.scroll + by, 0, iw::mostScroll(s.layout, s.shownItems.size()));
+        return true;
+    }
+    if (m == WM_RBUTTONDOWN && h.part == iw::Part::Cell && h.index < int(s.shownItems.size())) {
+        card(s, size_t(s.shownItems[size_t(h.index)]));
+        return true;
+    }
+    if (m != WM_LBUTTONDOWN && m != WM_LBUTTONDBLCLK) return true;
+    if (h.part != iw::Part::Search) s.show.typing = false;
+    switch (h.part) {
+        case iw::Part::Close:
+            closeGameWindow();
+            break;
+        case iw::Part::Tab:
+            s.show.tab = iw::Tab(h.index);
+            s.show.scroll = 0;
+            keepState(s);
+            break;
+        case iw::Part::Search:
+            s.show.typing = true;
+            break;
+        case iw::Part::Cell: {
+            if (h.index >= int(s.shownItems.size())) break;
+            const iw::Item& it = s.items[size_t(s.shownItems[size_t(h.index)])];
+            const ULONGLONG now = GetTickCount64();
+            if ((h.index == s.lastCell && now - s.lastClick <= GetDoubleClickTime()) || m == WM_LBUTTONDBLCLK) {
+                const char* did = use(s, it);
+                s.lastCell = -1;
+                if (s.told++ < 12) LOG_INFO("items: a double click on #%d (kind %d) - %s", it.id, it.type, did);
+                s.readAt = 0;
+            } else {  // a press drags it as the game's own window does
+                s.lastCell = h.index;
+                s.lastClick = now;
+                modeMsg(kDragMsg, it.index, it.count);
+            }
+            break;
+        }
+        case iw::Part::Title:
+            s.moving = true;
+            s.grabX = tx - float(s.layout.x);
+            s.grabY = ty - float(s.layout.y);
+            break;
+        default:
+            break;
+    }
+    s.key.clear();
+    return true;
+}
+
+bool key(UINT m, WPARAM wp, LPARAM lp) {
+    State& s = state();
+    (void)lp;
+    if (!s.shown || !s.show.typing) return false;
+    if (m == WM_KEYDOWN || m == WM_SYSKEYDOWN) {
+        const bool ctrl = GetKeyState(VK_CONTROL) < 0, alt = GetKeyState(VK_MENU) < 0;
+        if (alt) return false;  // Alt+E and the rest: the game's
+        switch (wp) {
+            case VK_ESCAPE:
+            case VK_RETURN:
+                s.show.typing = false;
+                return true;
+            case VK_BACK:
+                if (!s.show.search.empty()) s.show.search.pop_back();
+                s.show.scroll = 0;
+                return true;
+            case VK_DELETE:
+                s.show.search.clear();
+                return true;
+            default:
+                break;
+        }
+        const char c = ctrl ? 0 : letterOf(wp, GetKeyState(VK_SHIFT) < 0);
+        if (c && s.show.search.size() < kMostTyped) {
+            s.show.search += c;
+            s.show.scroll = 0;
+        }
+        return true;  // every key the search's while it types (not the chat's, not the skills')
+    }
+    return m == WM_KEYUP || m == WM_CHAR || m == WM_DEADCHAR;
+}
+
+}  // namespace uagfx::win::itemswin
