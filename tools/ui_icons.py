@@ -54,6 +54,8 @@ ICONS = [
     ('Done', '<path d="M5 12.5l4.5 4.5L19 7.5"/>'),
     # 3.0.11-beta.41: the chat's channel - a chevron down beside its name (a click goes round them)
     ('Down', '<path d="M6.5 9.5l5.5 5.5 5.5-5.5"/>'),
+    # 3.0.11-beta.45: the hotbar's «не тут» - a crossed circle over a skill or an item the map forbids
+    ('Blocked', '<circle cx="12" cy="12" r="8.5"/><path d="M6 6l12 12"/>'),
 ]
 
 NUMBER = r'[-+]?(?:\d*\.\d+|\d+\.?)(?:[eE][-+]?\d+)?'

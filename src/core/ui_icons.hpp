@@ -14,6 +14,7 @@ enum class Icon : uint8_t {
     Stats, Equip, Bag, Skill, Friends, Gear,  // 3.0.11-beta.36: the character block's buttons
     Edit, Done,                               // 3.0.11-beta.40: the hotbar's
     Down,                                     // 3.0.11-beta.41: the chat's channel
+    Blocked,                                  // 3.0.11-beta.45: the hotbar's «не тут»
     kCount
 };
 
