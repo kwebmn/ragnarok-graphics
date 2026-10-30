@@ -25,5 +25,8 @@ void draw(FrameRecord& record, gpu::Renderer& renderer);
 bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result);
 // The game's icons hidden for the column: the times on them ([buffs] timers) have none to go on
 bool hidingGameIcons();
+// 3.0.11-beta.70: its glass's left (the furthest column's) and top in the target while it shows - the tracker stands
+// left of it; false: not shown
+bool glassBox(int& left, int& top);
 
 }  // namespace uagfx::win::buffcolumn

@@ -5628,6 +5628,28 @@ constexpr Entry kTexts[] = {
      "{1} назад · могут быть устаревшими, в карточках не показаны"},
     {Text::RefDataLiveNone, "none came yet - the rest of the cards works without them",
      "ще не приходили — решта карток працює без них", "ещё не приходили — остальные карточки работают без них"},
+    // 3.0.11-beta.70: the tracker panel (the concept's «держать перед глазами»)
+    {Text::RefTrack, "Track", "Відстежувати", "Отслеживать"},
+    {Text::RefTracked, "✓ Tracked", "✓ Відстежується", "✓ Отслеживается"},
+    {Text::RefTrackItem, "Track collecting", "Відстежувати збір", "Отслеживать сбор"},
+    {Text::RefTrackedItem, "✓ Collecting tracked", "✓ Збір відстежується", "✓ Сбор отслеживается"},
+    {Text::TrackerTitle, "Tracking", "Відстеження", "Отслеживание"},
+    {Text::TrackerQuest, "quest", "квест", "квест"},
+    {Text::TrackerRoute, "way", "шлях", "путь"},
+    {Text::TrackerItem, "collect", "збір", "сбор"},
+    {Text::TrackerGiveTo, "Give to: {1}", "Здати: {1}", "Сдать: {1}"},
+    {Text::TrackerMore, "{1} more", "ще {1}", "ещё {1}"},
+    {Text::InterfaceTracker, "Tracking", "Відстеження", "Отслеживание"},
+    {Text::InterfaceTrackerHint,
+     "What you pin stays in a panel left of the buffs: a quest («Track» in its card) - what to bring and whom to give "
+     "it, the way the minimap leads, an item to collect - who drops it most. ▾ folds it to the names, ✕ hides it "
+     "until you pin something again; a click on a name opens its card.",
+     "Те, що ви закріпили, — у панелі ліворуч від бафів: квест («Відстежувати» в його картці) — що принести й кому "
+     "здати, шлях, яким веде мінікарта, річ для збору — хто її найчастіше кидає. ▾ згортає до назв, ✕ ховає, доки "
+     "не закріпите щось знову; клік по назві відкриває картку.",
+     "То, что вы закрепили, — в панели слева от бафов: квест («Отслеживать» в его карточке) — что принести и кому "
+     "сдать, путь, которым ведёт миникарта, вещь для сбора — кто её чаще всего роняет. ▾ сворачивает до названий, ✕ "
+     "прячет, пока не закрепите что-то снова; клик по названию открывает карточку."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

@@ -1042,3 +1042,30 @@ TEST(reference_data_states) {
         refwin::under(L, home, rows, 0, ch, ch.chips[1].x + ch.chips[1].w / 2, ch.chips[1].y + ch.chips[1].h / 2);
     CHECK(u.part == refwin::Part::Chip && u.row == 1);
 }
+
+// 3.0.11-beta.70 (the concept: «что закрепить (квест, путь, вещь для сбора)»): an item monsters drop - its card's pin
+// for collecting it, at its end; one no monster drops: none
+TEST(reference_pages_track_an_item) {
+    const refindex::Index ix = index();
+    refpages::Context c = ctx("");
+    const refpages::Row pin = refpages::item(ix, Lang::Uk, 909, c).rows.back();  // Jellopy: Poring drops it
+    CHECK(pin.style == refpages::Style::Button && pin.left == "Відстежувати збір" && !pin.gold);
+    CHECK(pin.link.go == refpages::Go::Track && pin.link.id == 1 && pin.link.map == "909");
+    const std::vector<int> tracked{909};
+    c.trackedItems = &tracked;
+    const refpages::Row on = refpages::item(ix, Lang::Uk, 909, c).rows.back();
+    CHECK(on.left == "\xE2\x9C\x93 Збір відстежується" && on.gold);
+    CHECK(ix.droppedBy.find(1101) == ix.droppedBy.end());  // a Sword: no monster drops it
+    const refpages::Page none = refpages::item(ix, Lang::Uk, 1101, c);
+    CHECK(!none.rows.empty() && none.rows.back().link.go != refpages::Go::Track);
+}
+
+// 3.0.11-beta.70: the tracker's entry of an item to collect - who drops it most, at what rate
+TEST(reference_pages_tracked_item_entry) {
+    const refindex::Index ix = index();
+    const std::vector<tracker::Entry> e = refpages::trackedEntries(ix, Lang::Uk, {}, {909, 999999});
+    CHECK_EQ(e.size(), size_t(1));
+    if (e.empty()) return;
+    CHECK(e[0].kind == tracker::Kind::Item && e[0].title == "Jellopy" && e[0].tag == "збір");
+    CHECK(!e[0].lines.empty() && e[0].lines[0].text == "Poring" && e[0].lines[0].right == "70 %");
+}

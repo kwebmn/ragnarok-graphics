@@ -252,6 +252,10 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("hotbar", flag(running.hotbar), flag(file.hotbar)));
         n.hotbar = file.hotbar;
     }
+    if (file.tracker != running.tracker) {  // 3.0.11-beta.70: the tracker, at once
+        u.applied.push_back(change("tracker", flag(running.tracker), flag(file.tracker)));
+        n.tracker = file.tracker;
+    }
     if (file.partyPanel != running.partyPanel) {  // 3.0.11-beta.39: the party's panel, at once
         u.applied.push_back(change("party", flag(running.partyPanel), flag(file.partyPanel)));
         n.partyPanel = file.partyPanel;

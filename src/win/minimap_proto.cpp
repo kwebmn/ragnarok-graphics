@@ -817,6 +817,12 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
 
 bool canFollow() { return state().on; }
 
+std::vector<std::pair<std::string, std::string>> routeLines() {
+    std::vector<std::pair<std::string, std::string>> out;
+    for (const minimap::Line& l : state().routeLines) out.emplace_back(l.left, l.right);
+    return out;
+}
+
 bool panelBox(int& x, int& y, int& w, int& h) {
     const State& s = state();
     if (!s.shown || s.look == minimap::Look::Hidden || s.layout.w <= 0) return false;

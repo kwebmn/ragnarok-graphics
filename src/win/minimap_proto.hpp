@@ -2,6 +2,8 @@
 #include <windows.h>
 
 #include <string>
+#include <utility>
+#include <vector>
 
 #include "core/config.hpp"
 #include "core/frame.hpp"
@@ -39,5 +41,8 @@ bool canFollow();
 void follow(const std::string& target, bool walk);
 void unfollow();
 bool following(std::string& target, bool& walk);  // false: none
+// 3.0.11-beta.70: the way's two lines as the minimap shows them under it (where to next, how many moves; where to take
+// it) - the tracker's way; empty: none followed
+std::vector<std::pair<std::string, std::string>> routeLines();
 
 }  // namespace uagfx::win::minimapproto

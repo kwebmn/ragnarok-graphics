@@ -857,11 +857,13 @@ TEST(config_interface_minimap) {
     const LiveUpdate u = liveUpdate(parseConfig(""), parseConfig("[interface]\nminimap = 1\n"));
     // 3.0.11-beta.37: the buffs' column and the character block come with it; 3.0.11-beta.38: the target's card too;
     // 3.0.11-beta.39: the party's panel; 3.0.11-beta.40: the hotbar; 3.0.11-beta.41: the chat; 3.0.11-beta.42: the
-    // windows; 3.0.11-beta.48: the cast's label (3.0.11-beta.49's dimmed world no longer comes with it: beta.55)
-    CHECK(u.waiting.empty() && u.applied.size() == 10 && u.applied[0] == "minimap 0 -> 1");
+    // windows; 3.0.11-beta.48: the cast's label (3.0.11-beta.49's dimmed world no longer comes with it: beta.55);
+    // 3.0.11-beta.70: the tracker
+    CHECK(u.waiting.empty() && u.applied.size() == 11 && u.applied[0] == "minimap 0 -> 1");
     CHECK(u.applied[1] == "buffs off -> column" && u.applied[2] == "items 0 -> 1" && u.applied[3] == "status 0 -> 1");
     CHECK(u.applied[4] == "cast 0 -> 1" && u.applied[5] == "chat 0 -> 1" && u.applied[6] == "hotbar 0 -> 1");
-    CHECK(u.applied[7] == "party 0 -> 1" && u.applied[8] == "target 0 -> 1" && u.applied[9] == "character off -> bars");
+    CHECK(u.applied[7] == "tracker 0 -> 1" && u.applied[8] == "party 0 -> 1" && u.applied[9] == "target 0 -> 1");
+    CHECK(u.applied[10] == "character off -> bars");
     CHECK(appliesNow("interface.minimap"));
 }
 
@@ -1000,6 +1002,21 @@ TEST(config_reads_the_party_panel) {
     CHECK(s->page == settings::Page::Interface && s->control == settings::Control::Check);
     CHECK(appliesNow("interface.party"));
     CHECK(liveUpdate(parseConfig(""), parseConfig("[interface]\nparty = 1\n")).next.partyPanel);
+}
+
+// 3.0.11-beta.70 (the concept's tracker, «держать перед глазами»): [interface] tracker - the pinned quests, way and
+// items left of the buffs; it comes with the new minimap as the other parts do, unless the file names it
+TEST(config_reads_the_tracker) {
+    CHECK(!parseConfig("").tracker);
+    CHECK(parseConfig("[interface]\ntracker = 1\n").tracker);
+    CHECK(parseConfig("[interface]\nminimap = 1\n").tracker);
+    CHECK(!parseConfig("[interface]\nminimap = 1\ntracker = 0\n").tracker);
+    const settings::IniSetting* s = settings::findSetting("interface.tracker");
+    CHECK(s != nullptr);
+    if (!s) return;
+    CHECK(s->page == settings::Page::Interface && s->control == settings::Control::Check);
+    CHECK(appliesNow("interface.tracker"));
+    CHECK(liveUpdate(parseConfig(""), parseConfig("[interface]\ntracker = 1\n")).next.tracker);
 }
 
 // 3.0.11-beta.40 (the owner: «делай дальше» - stage 8, the hotbar first): [interface] hotbar - the hotkeys' bar

@@ -351,6 +351,16 @@ bool installBuffIcons() {
 
 bool hidingGameIcons() { return g_hide; }
 
+bool glassBox(int& left, int& top) {
+    const State& s = state();
+    if (!s.shown || s.layout.w <= 0) return false;
+    const panel::Box& furthest = s.layout.lines.empty() || s.layout.look == bp::Look::Row ? s.layout.body
+                                                                                          : s.layout.lines.back();
+    left = s.layout.x + int(std::floor(std::min(furthest.x, s.layout.body.x)));
+    top = s.layout.y + int(std::floor(s.layout.look == bp::Look::Row ? 0.0f : s.layout.toggle.y));
+    return true;
+}
+
 void frame(HWND game, BuffsLook look, BuffsOverflow overflow, double k, int targetWidth, int targetHeight) {
     State& s = state();
     if (look != s.look) {

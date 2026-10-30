@@ -9,6 +9,7 @@
 #include "core/reference_index.hpp"
 #include "core/reference_live.hpp"
 #include "core/reference_route.hpp"
+#include "core/tracker_panel.hpp"
 #include "core/world_map.hpp"
 #include "core/settings/strings.hpp"
 
@@ -25,7 +26,10 @@ namespace uagfx::refpages {
 // Fold (3.0.11-beta.17): a card's section folded or unfolded by the player (id: its Part) - in every card alike;
 // Star (3.0.11-beta.18): the card in «Обране» or out of it; Zoom (3.0.11-beta.29): the world map's zoom (the window's)
 // - id -1 out, 0 the whole map, 1 in
-enum class Go : uint8_t { None, Mob, Item, Map, Shop, Section, Expand, Follow, World, Quests, Quest, Fold, Star, Zoom };
+// Track (3.0.11-beta.70): a pin of the tracker panel - id 0 a quest (map: its slug), 1 an item to collect (map: its id)
+enum class Go : uint8_t {
+    None, Mob, Item, Map, Shop, Section, Expand, Follow, World, Quests, Quest, Fold, Star, Zoom, Track
+};
 struct Link {
     Go go = Go::None;
     int id = 0;       // a monster's, an item's, a shop's (its place in the index) or a section's
@@ -89,6 +93,11 @@ enum Section : int { Mobs, Bosses, Items, Cards, Maps, Shops, Teleports, Pets, C
 constexpr int kDataSection = 90;
 constexpr long long kPackStaleDays = 14;  // the concept's «Порог «могут быть застаревшими» — 14 дней»
 bool packStale(const refindex::Index& ix, long long now);  // the pack's date older than kPackStaleDays at `now`
+// 3.0.11-beta.70 (the concept's tracker): the entries of what the player pinned - each quest (its title, the items to
+// bring with how many - no counts of the bag, the owner's - and whom to give them), each item to collect (who drops
+// it most: three, their rates); those the pack has not left out
+std::vector<tracker::Entry> trackedEntries(const refindex::Index& ix, settings::Lang l,
+                                           const std::vector<std::string>& quests, const std::vector<int>& items);
 // A card's long sections show their first kFew rows and «усі N ›» (Go::Expand, its bit) until opened (the concept:
 // the main things first - «Де знайти» and «Що випадає» - the rest below without a long scroll)
 enum Part : int {
@@ -128,6 +137,10 @@ struct Context {
     const std::vector<barhint::Skill>* bar = nullptr;
     // 3.0.11-beta.69 (the concept's question 21): when the newest live data came (unix; stale or not), 0 none yet
     long long liveAt = 0;
+    // 3.0.11-beta.70 (the concept's tracker): what the player pinned - the quests' slugs, the items to collect; a
+    // quest's and an item's card say it with their pin
+    const std::vector<std::string>* trackedQuests = nullptr;
+    const std::vector<int>* trackedItems = nullptr;
 };
 // 3.0.11-beta.18: a card's name for the first screen's lists («Poring», «Fly Wing», «Prontera Field (prt_fild08)»);
 // "" when the index has no such
@@ -157,7 +170,7 @@ Page map(const refindex::Index& ix, settings::Lang l, const std::string& code, c
 Page shop(const refindex::Index& ix, settings::Lang l, int index);
 // 3.0.11-beta.16: the site's quests by kinds, a quest's card (who gives it, what it takes, its steps, its reward)
 Page quests(const refindex::Index& ix, settings::Lang l);
-Page quest(const refindex::Index& ix, settings::Lang l, int index);
+Page quest(const refindex::Index& ix, settings::Lang l, int index, const Context& c = {});
 // 3.0.11-beta.11: the world map (its picture row) and the dungeons by groups; `marks` (3.0.11-beta.19): "mob:<id>" -
 // the monster's maps marked on it with its numbers there, its dungeons apart; "item:<id>" (3.0.11-beta.20) - the
 // maps of the monsters dropping it, how many of them; 3.0.11-beta.29 the concept's v19_route: its bar (the tabs, the

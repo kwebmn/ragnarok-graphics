@@ -177,6 +177,8 @@ void Console::build(Lang lang, const Config& config) {
                 rows_.push_back(Row{Kind::Box, "interface.target", 0});
             if (settingOf("interface.party"))  // 3.0.11-beta.39: the party's panel
                 rows_.push_back(Row{Kind::Box, "interface.party", 0});
+            if (settingOf("interface.tracker"))  // 3.0.11-beta.70: the tracker
+                rows_.push_back(Row{Kind::Box, "interface.tracker", 0});
             if (settingOf("interface.hotbar"))  // 3.0.11-beta.40: the hotkeys' bar
                 rows_.push_back(Row{Kind::Box, "interface.hotbar", 0});
             if (settingOf("interface.chat"))  // 3.0.11-beta.41: the chat

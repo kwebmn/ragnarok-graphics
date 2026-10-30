@@ -44,6 +44,7 @@
 #include "win/item_window.hpp"
 #include "win/stat_window.hpp"
 #include "win/target_card.hpp"
+#include "win/tracker.hpp"
 #include "win/notifier.hpp"
 #include "win/platform.hpp"
 #include "win/shadow_patch.hpp"
@@ -548,6 +549,7 @@ void Context::endScene() {
         lowhpedge::draw(record, *renderer);     // 3.0.11-beta.50: the low HP edge, there too
         castwin::draw(record, *renderer);       // 3.0.11-beta.48: the cast over the hero, under the panels
         minimapproto::draw(record, *renderer);  // 3.0.11-beta.1: the new minimap (prototype)
+        trackerwin::draw(record, *renderer);    // 3.0.11-beta.70: the tracker (under the buffs' tips)
         buffcolumn::draw(record, *renderer);    // 3.0.11-beta.35: the buffs' column under it
         charpanel::draw(record, *renderer);     // 3.0.11-beta.36: the character block
         targetpanel::draw(record, *renderer);   // 3.0.11-beta.38: the target's card
@@ -593,6 +595,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
         lowhpedge::draw(record, *renderer);     // 3.0.11-beta.50
         castwin::draw(record, *renderer);       // 3.0.11-beta.48
         minimapproto::draw(record, *renderer);  // 3.0.11-beta.1
+        trackerwin::draw(record, *renderer);    // 3.0.11-beta.70
         buffcolumn::draw(record, *renderer);    // 3.0.11-beta.35
         charpanel::draw(record, *renderer);     // 3.0.11-beta.36
         targetpanel::draw(record, *renderer);   // 3.0.11-beta.38
@@ -810,6 +813,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
                         pk, pw, ph);
     // 3.0.11-beta.35: [interface] buffs - the buffs' column under the new minimap, the game's icons hidden
     buffcolumn::frame(window, config.buffs, config.buffsOverflow, pk, pw, ph);
+    trackerwin::frame(window, config.tracker, pk, pw, ph);  // 3.0.11-beta.70: left of the buffs' column
     motion::setOn(config.animations);  // 3.0.11-beta.46: [interface] animations - the new interface's motion
     uistyle::set(config.hudOpacity, config.windowOpacity);  // 3.0.11-beta.47: its grounds
     // 3.0.11-beta.36: [interface] character - the character block at the top left, the game's Basic Info hidden

@@ -569,6 +569,9 @@ enum class Text : uint16_t {
     // 3.0.11-beta.69: the data's states (the concept's question 21) - the chips' and their page's
     RefFooterStale, RefLiveStale, RefDataTitle, RefDataPack, RefDataPackWhat, RefDataPackFresh, RefDataPackStale,
     RefDataLive, RefDataLiveWhat, RefDataLiveFresh, RefDataLiveStale, RefDataLiveNone,
+    // 3.0.11-beta.70: the tracker panel (the concept's «Відстеження») - the cards' pins, the panel's words, its switch
+    RefTrack, RefTracked, RefTrackItem, RefTrackedItem, TrackerTitle, TrackerQuest, TrackerRoute, TrackerItem,
+    TrackerGiveTo, TrackerMore, InterfaceTracker, InterfaceTrackerHint,
     Count
 };
 

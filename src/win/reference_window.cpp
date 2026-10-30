@@ -30,6 +30,7 @@
 #include "win/picture_draw.hpp"
 #include "win/real_ddraw.hpp"
 #include "win/reference_load.hpp"
+#include "win/tracker.hpp"
 #include "win/ui_cost.hpp"
 #include "win/updates_hook.hpp"
 #include "win/window_shadow.hpp"
@@ -248,6 +249,8 @@ refpages::Context contextOf(const State& s) {
     c.favourites = &s.favourites;
     c.bar = &s.bar;        // 3.0.11-beta.68: the hotbar's skills (read with each page)
     c.liveAt = reference::onlineSeen();  // 3.0.11-beta.69: the data's page - the live data's age
+    c.trackedQuests = &trackerwin::quests();  // 3.0.11-beta.70: the cards' pins
+    c.trackedItems = &trackerwin::items();
     return c;
 }
 
@@ -420,6 +423,12 @@ void go(State& s, const refpages::Link& to) {
         const std::string text = std::to_string(s.folded) + "\n";
         if (!writeFileAtomic(path, text.data(), text.size()))
             LOG_INFO("reference: %s cannot be written", path.c_str());
+        makePage(s);
+        return;
+    }
+    if (to.go == refpages::Go::Track) {  // 3.0.11-beta.70: a quest's or an item's pin in the tracker - the card stays
+        if (to.id == 0) trackerwin::toggleQuest(to.map);
+        else trackerwin::toggleItem(std::atoi(to.map.c_str()));
         makePage(s);
         return;
     }
@@ -1110,6 +1119,25 @@ void openMob(int id) {
     if (!s.enabled || id <= 0) return;
     openWindow(s, refpages::Link{refpages::Go::Mob, id, ""});
     LOG_INFO("reference: monster %d's card from the minimap's list", id);
+}
+
+void openQuest(const std::string& slug) {
+    State& s = state();
+    const auto ix = reference::index();
+    if (!s.enabled || !ix) return;
+    for (size_t i = 0; i < ix->quests.size(); ++i)
+        if (ix->quests[i].slug == slug) {
+            openWindow(s, refpages::Link{refpages::Go::Quest, int(i), ""});
+            LOG_INFO("reference: the quest %s's card from the tracker", slug.c_str());
+            return;
+        }
+}
+
+void openItem(int id) {
+    State& s = state();
+    if (!s.enabled || id <= 0) return;
+    openWindow(s, refpages::Link{refpages::Go::Item, id, ""});
+    LOG_INFO("reference: item %d's card from the tracker", id);
 }
 
 }  // namespace uagfx::win::referencewin

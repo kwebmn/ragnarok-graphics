@@ -25,6 +25,9 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result);
 // under it - the monster's card
 void openMap(const std::string& code);
 void openMob(int id);
+// 3.0.11-beta.70: the tracker's entries - a pinned quest's card (by its slug), an item's
+void openQuest(const std::string& slug);
+void openItem(int id);
 // 3.0.11-beta.21: uaRO Pad (src/pad) while the window is open - its D-pad picks a row, A opens it, B goes back (the
 // first page: closes), Start closes, the bumpers scroll; the character does nothing meanwhile
 bool isOpen();

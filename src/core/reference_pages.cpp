@@ -932,6 +932,37 @@ bool packStale(const refindex::Index& ix, long long now) {
     return now - daysFrom(y, m, d) * 86400 > kPackStaleDays * 86400;
 }
 
+std::vector<tracker::Entry> trackedEntries(const refindex::Index& ix, Lang l, const std::vector<std::string>& quests,
+                                           const std::vector<int>& items) {
+    std::vector<tracker::Entry> out;
+    for (const std::string& slug : quests) {
+        const auto q = std::find_if(ix.quests.begin(), ix.quests.end(),
+                                    [&](const refquests::Quest& x) { return x.slug == slug; });
+        if (q == ix.quests.end()) continue;
+        tracker::Entry e{tracker::Kind::Quest, refquests::textOf(q->title, questLang(l)), say(l, Text::TrackerQuest),
+                         {}};
+        for (const auto& [item, n] : q->items)
+            e.lines.push_back(tracker::Line{itemName(ix, item), "\xC3\x97" + number(n, l), false});
+        if (!q->npc.empty()) {
+            const std::string where = q->npcMap.empty() ? "" : " \xC2\xB7 " + mapShort(ix, q->npcMap);
+            e.lines.push_back(tracker::Line{sayf(l, Text::TrackerGiveTo, {q->npc + where}), "", true});
+        }
+        out.push_back(std::move(e));
+    }
+    for (const int id : items) {
+        const auto it = ix.items.find(id);
+        const auto by = ix.droppedBy.find(id);
+        if (it == ix.items.end() || by == ix.droppedBy.end()) continue;
+        std::vector<refindex::Source> most = by->second;
+        std::stable_sort(most.begin(), most.end(), [](const auto& a, const auto& b) { return a.rate > b.rate; });
+        tracker::Entry e{tracker::Kind::Item, it->second.name, say(l, Text::TrackerItem), {}};
+        for (size_t k = 0; k < most.size() && k < 3; ++k)
+            e.lines.push_back(tracker::Line{mobName(ix, most[k].mob), chance(most[k].rate, l), false});
+        out.push_back(std::move(e));
+    }
+    return out;
+}
+
 Page section(const refindex::Index& ix, Lang l, int id, const Context& c) {
     if (id == kDataSection) return dataPage(ix, l, c);  // 3.0.11-beta.69
     Page p;
@@ -1338,6 +1369,17 @@ Page item(const refindex::Index& ix, Lang l, int id, const Context& c, unsigned 
         p.rows.push_back(linked(mobName(ix, pet.mob), say(l, what), toMob(pet.mob)));
     }
     if (p.rows.size() == 2) p.rows.push_back(note(say(l, Text::RefNowhere)));
+    // 3.0.11-beta.70 (the concept: «что закрепить (квест, путь, вещь для сбора)»): one monsters drop - collecting it
+    if (by != ix.droppedBy.end()) {
+        const bool on = c.trackedItems && std::find(c.trackedItems->begin(), c.trackedItems->end(), id) !=
+                                              c.trackedItems->end();
+        Row pin;
+        pin.style = Style::Button;
+        pin.left = say(l, on ? Text::RefTrackedItem : Text::RefTrackItem);
+        pin.link = Link{Go::Track, 1, std::to_string(id)};
+        pin.gold = on;
+        p.rows.push_back(std::move(pin));
+    }
     return p;
 }
 
@@ -1513,7 +1555,7 @@ Page quests(const refindex::Index& ix, Lang l) {
     return p;
 }
 
-Page quest(const refindex::Index& ix, Lang l, int index) {
+Page quest(const refindex::Index& ix, Lang l, int index, const Context& c) {
     Page p;
     if (index < 0 || size_t(index) >= ix.quests.size()) return p;
     const refquests::Quest& q = ix.quests[size_t(index)];
@@ -1557,6 +1599,15 @@ Page quest(const refindex::Index& ix, Lang l, int index) {
         asMain(p.rows.back(), 100);
         for (const std::string& r : rewards) p.rows.push_back(text(r));
     }
+    // 3.0.11-beta.70 (the concept: «Единственная кнопка — «✓ Відстежується»: закрепить квест в панели отслеживания»)
+    const bool on = c.trackedQuests && std::find(c.trackedQuests->begin(), c.trackedQuests->end(), q.slug) !=
+                                           c.trackedQuests->end();
+    Row pin;
+    pin.style = Style::Button;
+    pin.left = say(l, on ? Text::RefTracked : Text::RefTrack);
+    pin.link = Link{Go::Track, 0, q.slug};
+    pin.gold = on;
+    p.rows.push_back(std::move(pin));
     return p;
 }
 
@@ -2027,13 +2078,14 @@ Page card(const refindex::Index& ix, Lang l, const Link& link, const Context& c,
         case Go::Section: return section(ix, l, link.id, c);
         case Go::World: return link.id == 1 ? dungeons(ix, l, c) : world(ix, l, c, link.map);
         case Go::Quests: return quests(ix, l);
-        case Go::Quest: return quest(ix, l, link.id);
+        case Go::Quest: return quest(ix, l, link.id, c);
         case Go::Fold:
         case Go::Star:
         case Go::None:
         case Go::Expand:
         case Go::Follow:
-        case Go::Zoom: break;
+        case Go::Zoom:
+        case Go::Track: break;
     }
     return home(ix, l);
 }

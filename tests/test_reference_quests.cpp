@@ -1,9 +1,11 @@
 // 3.0.11-beta.16: the site's quests in «Довідник» (core/reference_quests) - their manifest, the file, the pages.
 #include <string>
+#include <vector>
 
 #include "core/reference_pages.hpp"
 #include "core/reference_quests.hpp"
 #include "core/sha256.hpp"
+#include "core/tracker_panel.hpp"
 #include "test.hpp"
 
 using namespace uagfx;
@@ -98,4 +100,35 @@ TEST(reference_quests_pages) {
     CHECK(access.style == refpages::Style::Result && access.icon == "ui:quest" && access.right == "квест");
     CHECK(access.sub.rfind("Ayothaya Access · ", 0) == 0 && access.marks.empty());
     CHECK((access.subMarks == refpages::Marks{{9, 15}}));
+}
+
+// 3.0.11-beta.70 (the concept: «Единственная кнопка — «✓ Відстежується»: закрепить квест в панели отслеживания»): the
+// quest card's pin at its end, its state from the tracked
+TEST(reference_quests_track) {
+    const refindex::Index ix = index();
+    refpages::Context c;
+    const refpages::Page q = refpages::quest(ix, Lang::Uk, 1, c);
+    const refpages::Row& pin = q.rows.back();
+    CHECK(pin.style == refpages::Style::Button && pin.left == "Відстежувати" && !pin.gold);
+    CHECK(pin.link.go == refpages::Go::Track && pin.link.id == 0 && pin.link.map == "bunny-band");
+    const std::vector<std::string> tracked{"bunny-band"};
+    c.trackedQuests = &tracked;
+    const refpages::Row on = refpages::quest(ix, Lang::Uk, 1, c).rows.back();
+    CHECK(on.left == "\xE2\x9C\x93 Відстежується" && on.gold && on.link.go == refpages::Go::Track);
+    CHECK(refpages::quest(ix, Lang::Uk, 0, c).rows.back().left == "Відстежувати");  // another quest: not tracked
+}
+
+// 3.0.11-beta.70: the tracker's entry of a pinned quest - its title, «квест», what to bring (no counts: the owner's),
+// whom to give it; a slug the pack has not: none
+TEST(reference_quests_tracked_entries) {
+    const refindex::Index ix = index();
+    const std::vector<tracker::Entry> e = refpages::trackedEntries(ix, Lang::Uk, {"bunny-band", "gone-quest"}, {});
+    CHECK_EQ(e.size(), size_t(1));
+    if (e.empty()) return;
+    CHECK(e[0].kind == tracker::Kind::Quest && e[0].title == "Bunny Band" && e[0].tag == "квест");
+    CHECK_EQ(e[0].lines.size(), size_t(3));
+    if (e[0].lines.size() != 3) return;
+    CHECK(e[0].lines[0].text == "Feather" && e[0].lines[0].right == "\xC3\x97" "100");
+    CHECK(e[0].lines[1].text == "Old Ring" && e[0].lines[1].right == "\xC3\x97" "2");
+    CHECK(e[0].lines[2].strong && e[0].lines[2].text.rfind("Здати: Kafra", 0) == 0);
 }

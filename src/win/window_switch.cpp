@@ -14,6 +14,7 @@
 #include "win/item_window.hpp"
 #include "win/stat_window.hpp"
 #include "win/target_card.hpp"
+#include "win/tracker.hpp"
 #include "win/minimap_proto.hpp"
 #include "win/reference_window.hpp"
 #include "win/code_page.hpp"
@@ -77,6 +78,7 @@ LRESULT CALLBACK gameProc(HWND w, UINT m, WPARAM wp, LPARAM lp) {
             itemswin::mouse(w, m, wp, lp, answer) ||
             minimapproto::mouse(w, m, wp, lp, answer) ||  // 3.0.11-beta.1: the new minimap's
             buffcolumn::mouse(w, m, wp, lp, answer) ||    // 3.0.11-beta.35: the buffs' column's
+            trackerwin::mouse(w, m, wp, lp, answer) ||    // 3.0.11-beta.70: the tracker's
             charpanel::mouse(w, m, wp, lp, answer) ||     // 3.0.11-beta.36: the character block's
             targetpanel::mouse(w, m, wp, lp, answer) ||   // 3.0.11-beta.38: the target's card's
             partywin::mouse(w, m, wp, lp, answer) ||      // 3.0.11-beta.39: the party's panel's
