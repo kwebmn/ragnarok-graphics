@@ -1,3 +1,16 @@
+# uaRO Graphics 3.0.11-beta.64 — what is new
+
+- **The world map on Ctrl+M** (as in the concept's mock-up). Ctrl+M opens «Reference» right on the world map, Ctrl+M
+  again closes it. The game itself does not use this key (its M works with Alt only), and in the chat Ctrl+M does not
+  send the line.
+- **A way into a dungeon — its maps at the world map's bottom left** (mock-up v19_route, «Glast Heim dungeon»). When
+  a way leads into a dungeon that is not on the world map, a box shows in the map's corner: the way in on the world
+  map and then each map of the dungeon up to the target with its minimap and name (e.g. Glast Heim → St. Abbey →
+  Churchyard), gold arrows between them, the target highlighted. A click on a map in the box opens its card.
+- Under the «World map» caption — how many locations and dungeons it has («184 locations · 128 dungeons»).
+- To check: Ctrl+M in the game; in the card of Glast Heim Churchyard — «On the world map ›»: the box at the
+  bottom left, a click on St. Abbey. In the log: `reference: Ctrl+M - the world map opened`.
+
 # uaRO Graphics 3.0.11-beta.63 — what is new
 
 - **Debuffs no longer run off the screen** (the concept, «Edge cases»: «debuffs are seen at any scale»). Before,
