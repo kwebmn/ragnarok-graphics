@@ -1,4 +1,5 @@
 #pragma once
+#include <cstddef>
 #include <string>
 
 namespace uagfx::win::uicost {
@@ -16,9 +17,27 @@ public:
 private:
     const char* part_;
     long long start_;
+    double words_;  // 3.0.11-beta.57: the words' time so far, at its start
     int width_, height_;
 };
-// "char block 14 x 2.3 ms (4.1 at most), chat 3 x 5.0 ms (7.2 at most) - 61 ms in all" since the last; "" none
+// 3.0.11-beta.57 (R-T942DZ: the minimap 15.6 ms a painting, the character block 13-19 - their shapes 2-3 of it):
+// drawWords timed apart - each part's paintings tell the words' share; and how many words GDI drew anew, how many
+// were kept from before
+class Words {
+public:
+    Words();
+    ~Words();
+    Words(const Words&) = delete;
+    Words& operator=(const Words&) = delete;
+    void counted(int fresh, int kept, size_t keptBytes);
+
+private:
+    long long start_;
+    int fresh_ = 0, kept_ = 0;
+    size_t bytes_ = 0;
+};
+// "char block 14 x 2.3 ms (4.1 at most, words 0.3), chat 3 x 5.0 ms (7.2 at most, words 1.1) - 61 ms in all; words:
+// 12 drawn anew, 830 kept (0.4 MB)" since the last; "" none
 std::string take();
 
 }  // namespace uagfx::win::uicost

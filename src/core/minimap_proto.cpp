@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <vector>
 
 #include "core/ui_icons.hpp"
 #include "core/ui_style.hpp"
@@ -94,6 +95,8 @@ void player(panel::Picture& p, const panel::Box& clip, float x, float y, float l
     }
     const float dx = lookX / len, dy = -lookY / len;  // north up
     const float reach = size * 3.6f, half = 0.66f;      // the view: 38 degrees each way
+    // 3.0.11-beta.57: well outside the fan by its cosine - no arc cosine for four pixels of five
+    const float outside = std::cos(half) - 1e-3f;
     for (int py = std::max(int(clip.y), int(y - reach)); py <= std::min(int(clip.y + clip.h) - 1, int(y + reach));
          ++py)
         for (int px = std::max(int(clip.x), int(x - reach)); px <= std::min(int(clip.x + clip.w) - 1, int(x + reach));
@@ -101,7 +104,9 @@ void player(panel::Picture& p, const panel::Box& clip, float x, float y, float l
             if (px < 0 || py < 0 || px >= p.width || py >= p.height) continue;
             const float vx = float(px) + 0.5f - x, vy = float(py) + 0.5f - y, d = std::hypot(vx, vy);
             if (d > reach || d < 1) continue;
-            const float angle = std::acos(std::clamp((vx * dx + vy * dy) / d, -1.0f, 1.0f));
+            const float along = (vx * dx + vy * dy) / d;
+            if (along < outside) continue;
+            const float angle = std::acos(std::clamp(along, -1.0f, 1.0f));
             const float edge = std::clamp((half - angle) * reach * 0.5f, 0.0f, 1.0f);  // soft at its sides
             const float fall = 1.0f - d / reach;
             if (edge > 0) panel::over(p.px[size_t(py) * size_t(p.width) + size_t(px)], kCone, 0.42f * edge * fall);
@@ -165,45 +170,69 @@ void roundCorners(panel::Picture& p, const panel::Box& b, float r) {
         }
 }
 
-// The map's picture through a view into a box of the picture: each pixel its cell's (the game's magenta: none)
+// The map's picture through a view into a box of the picture: each pixel its cell's (the game's magenta: none).
+// 3.0.11-beta.57 (R-T942DZ: the minimap painted again at each step, 15.6 ms at 4K): what a column or a row of the box
+// takes from the picture worked out once for it, not for each of its pixels - the same numbers, the same picture
 void mapPixels(panel::Picture& out, const panel::Box& box, const Scene& sc, const View& v) {
     const bool picture = sc.argb && sc.imgW > 0 && sc.imgH > 0 && sc.map.w > 0 && sc.map.h > 0 && v.cellPx > 0 &&
                          sc.argb->size() >= size_t(sc.imgW) * size_t(sc.imgH);
+    struct Column {
+        int at;     // the out picture's x
+        bool in;    // over the map
+        int x0, x1;  // the picture's two columns
+        float wx;    // between them
+    };
+    std::vector<Column> columns;
+    columns.reserve(size_t(std::max(0, int(box.w))));
+    for (int x = 0; x < int(box.w); ++x) {
+        const int tx = int(box.x) + x;
+        if (tx < 0 || tx >= out.width) continue;
+        Column c{tx, false, 0, 0, 0};
+        const float cx = v.left + (float(x) + 0.5f) / v.cellPx;
+        if (picture && cx >= 0 && cx < float(sc.map.w)) {
+            // 3.0.11-beta.31: between the picture's four nearest pixels (no blocks when zoomed in)
+            const float fx = std::clamp(cx / float(sc.map.w) * float(sc.imgW) - 0.5f, 0.0f, float(sc.imgW - 1));
+            c.in = true;
+            c.x0 = int(fx);
+            c.x1 = std::min(c.x0 + 1, sc.imgW - 1);
+            c.wx = fx - float(c.x0);
+        }
+        columns.push_back(c);
+    }
+    const auto keyed = [](uint32_t q) { return (q & 0xFFFFFF) == 0xFF00FF || (q >> 24) == 0; };
     for (int y = 0; y < int(box.h); ++y) {
         const int ty = int(box.y) + y;
         if (ty < 0 || ty >= out.height) continue;
+        uint32_t* row = out.px.data() + size_t(ty) * size_t(out.width);
         const float cy = v.top - (float(y) + 0.5f) / v.cellPx;
-        for (int x = 0; x < int(box.w); ++x) {
-            const int tx = int(box.x) + x;
-            if (tx < 0 || tx >= out.width) continue;
-            uint32_t c = kGround;
-            const float cx = v.left + (float(x) + 0.5f) / v.cellPx;
-            if (picture && cx >= 0 && cy >= 0 && cx < float(sc.map.w) && cy < float(sc.map.h)) {
-                // 3.0.11-beta.31: between the picture's four nearest pixels (no blocks when zoomed in); the game's
-                // magenta among them - the nearest alone
-                const float fx = std::clamp(cx / float(sc.map.w) * float(sc.imgW) - 0.5f, 0.0f, float(sc.imgW - 1));
-                const float fy = std::clamp((float(sc.map.h) - cy) / float(sc.map.h) * float(sc.imgH) - 0.5f, 0.0f,
-                                            float(sc.imgH - 1));
-                const int x0 = int(fx), y0 = int(fy), x1 = std::min(x0 + 1, sc.imgW - 1),
-                          y1 = std::min(y0 + 1, sc.imgH - 1);
-                const auto px = [&](int ix, int iy) { return (*sc.argb)[size_t(iy) * size_t(sc.imgW) + size_t(ix)]; };
-                const auto keyed = [](uint32_t q) { return (q & 0xFFFFFF) == 0xFF00FF || (q >> 24) == 0; };
-                const uint32_t q[4] = {px(x0, y0), px(x1, y0), px(x0, y1), px(x1, y1)};
-                const float wx = fx - float(x0), wy = fy - float(y0);
-                if (keyed(q[0]) || keyed(q[1]) || keyed(q[2]) || keyed(q[3])) {
-                    const uint32_t n = q[(wy >= 0.5f ? 2 : 0) + (wx >= 0.5f ? 1 : 0)];
-                    if (!keyed(n)) c = 0xFF000000 | (n & 0xFFFFFF);
+        if (!picture || !(cy >= 0 && cy < float(sc.map.h))) {
+            for (const Column& c : columns) row[c.at] = kGround;
+            continue;
+        }
+        const float fy = std::clamp((float(sc.map.h) - cy) / float(sc.map.h) * float(sc.imgH) - 0.5f, 0.0f,
+                                    float(sc.imgH - 1));
+        const int y0 = int(fy), y1 = std::min(y0 + 1, sc.imgH - 1);
+        const float wy = fy - float(y0);
+        const uint32_t* top = sc.argb->data() + size_t(y0) * size_t(sc.imgW);
+        const uint32_t* low = sc.argb->data() + size_t(y1) * size_t(sc.imgW);
+        for (const Column& c : columns) {
+            uint32_t pixel = kGround;
+            if (c.in) {
+                const uint32_t q[4] = {top[c.x0], top[c.x1], low[c.x0], low[c.x1]};
+                if (keyed(q[0]) || keyed(q[1]) || keyed(q[2]) || keyed(q[3])) {  // the game's magenta: the nearest
+                    const uint32_t n = q[(wy >= 0.5f ? 2 : 0) + (c.wx >= 0.5f ? 1 : 0)];
+                    if (!keyed(n)) pixel = 0xFF000000 | (n & 0xFFFFFF);
                 } else {
                     uint32_t mixed = 0xFF000000;
                     for (int sh = 0; sh <= 16; sh += 8) {
-                        const float top = float((q[0] >> sh) & 0xFF) * (1 - wx) + float((q[1] >> sh) & 0xFF) * wx;
-                        const float low = float((q[2] >> sh) & 0xFF) * (1 - wx) + float((q[3] >> sh) & 0xFF) * wx;
-                        mixed |= uint32_t(top * (1 - wy) + low * wy + 0.5f) << sh;
+                        const float t = float((q[0] >> sh) & 0xFF) * (1 - c.wx) + float((q[1] >> sh) & 0xFF) * c.wx;
+                        const float l = float((q[2] >> sh) & 0xFF) * (1 - c.wx) + float((q[3] >> sh) & 0xFF) * c.wx;
+                        mixed |= uint32_t(t * (1 - wy) + l * wy + 0.5f) << sh;
                     }
-                    c = mixed;
+                    pixel = mixed;
                 }
             }
-            out.px[size_t(ty) * size_t(out.width) + size_t(tx)] = c;
+            row[c.at] = pixel;
         }
     }
 }

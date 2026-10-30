@@ -79,6 +79,9 @@ Point tipPlace(const Box& tile, int w, int h, int roomW, int roomH, float scale)
 void paintTip(Picture& out, int w, int h, float scale);  // its ground; its words go over it by GDI
 // The whole picture (premultiplied) at an opacity: [panel] opacity
 void fade(Picture& p, float opacity);
+// 3.0.11-beta.57 (R-T942DZ): a part's picture blank at w x h for its painting - see-through, its clip all of it - in
+// the memory it had (a megabyte at 4K, not taken anew page by page at each painting); false: w or h none
+bool blank(Picture& p, int w, int h);
 // 3.0.3-beta.9 (the user: the mouse over the panel «меняет цвет»): the command of the game's own cursor in a frame -
 // its last small interface quad over the cursor's point (game pixels) among the frame's last draws; -1 none (the
 // panel then goes over everything, Windows' arrow over it). 3.0.3-beta.11 (R-45N3WS: still dark on prontera): uaRO.exe

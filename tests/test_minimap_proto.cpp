@@ -1,5 +1,7 @@
 // 3.0.11-beta.1: the new interface's minimap prototype (stage 1, the owner's «давай» 2026-10-28) - the player's cell by
 // uaRO.exe's own formula, the panel in the old one's corner, the view round the player, the picture
+#include <algorithm>
+#include <cmath>
 #include <vector>
 
 #include "core/minimap_proto.hpp"
@@ -200,4 +202,146 @@ TEST(minimap_proto_way_zoom_and_big_map) {
     whole.top = 100;
     minimap::cellToPanel(whole, sc.map, minimap::Cell{20, 80}, wx, wy);
     CHECK_EQ(minimap::bigMarkAt(b, sc, b.map.x + wx, b.map.y + wy), 0);
+}
+
+namespace {
+
+// The map's pixels as 3.0.11-beta.31..56 worked them out pixel by pixel (minimap_proto.cpp mapPixels then) - the
+// faster one must give the very same picture
+void mapPixelsBefore(panel::Picture& out, const panel::Box& box, const minimap::Scene& sc, const minimap::View& v) {
+    const bool picture = sc.argb && sc.imgW > 0 && sc.imgH > 0 && sc.map.w > 0 && sc.map.h > 0 && v.cellPx > 0 &&
+                         sc.argb->size() >= size_t(sc.imgW) * size_t(sc.imgH);
+    for (int y = 0; y < int(box.h); ++y) {
+        const int ty = int(box.y) + y;
+        if (ty < 0 || ty >= out.height) continue;
+        const float cy = v.top - (float(y) + 0.5f) / v.cellPx;
+        for (int x = 0; x < int(box.w); ++x) {
+            const int tx = int(box.x) + x;
+            if (tx < 0 || tx >= out.width) continue;
+            uint32_t c = 0xFF141922;
+            const float cx = v.left + (float(x) + 0.5f) / v.cellPx;
+            if (picture && cx >= 0 && cy >= 0 && cx < float(sc.map.w) && cy < float(sc.map.h)) {
+                const float fx = std::clamp(cx / float(sc.map.w) * float(sc.imgW) - 0.5f, 0.0f, float(sc.imgW - 1));
+                const float fy = std::clamp((float(sc.map.h) - cy) / float(sc.map.h) * float(sc.imgH) - 0.5f, 0.0f,
+                                            float(sc.imgH - 1));
+                const int x0 = int(fx), y0 = int(fy), x1 = std::min(x0 + 1, sc.imgW - 1),
+                          y1 = std::min(y0 + 1, sc.imgH - 1);
+                const auto px = [&](int ix, int iy) { return (*sc.argb)[size_t(iy) * size_t(sc.imgW) + size_t(ix)]; };
+                const auto keyed = [](uint32_t q) { return (q & 0xFFFFFF) == 0xFF00FF || (q >> 24) == 0; };
+                const uint32_t q[4] = {px(x0, y0), px(x1, y0), px(x0, y1), px(x1, y1)};
+                const float wx = fx - float(x0), wy = fy - float(y0);
+                if (keyed(q[0]) || keyed(q[1]) || keyed(q[2]) || keyed(q[3])) {
+                    const uint32_t n = q[(wy >= 0.5f ? 2 : 0) + (wx >= 0.5f ? 1 : 0)];
+                    if (!keyed(n)) c = 0xFF000000 | (n & 0xFFFFFF);
+                } else {
+                    uint32_t mixed = 0xFF000000;
+                    for (int sh = 0; sh <= 16; sh += 8) {
+                        const float top = float((q[0] >> sh) & 0xFF) * (1 - wx) + float((q[1] >> sh) & 0xFF) * wx;
+                        const float low = float((q[2] >> sh) & 0xFF) * (1 - wx) + float((q[3] >> sh) & 0xFF) * wx;
+                        mixed |= uint32_t(top * (1 - wy) + low * wy + 0.5f) << sh;
+                    }
+                    c = mixed;
+                }
+            }
+            out.px[size_t(ty) * size_t(out.width) + size_t(tx)] = c;
+        }
+    }
+}
+
+// A map's picture of the game's colours, its magenta (see-through) and a few pixels with no alpha
+std::vector<uint32_t> noisyPicture(int w, int h, uint32_t seed) {
+    std::vector<uint32_t> out(size_t(w) * size_t(h));
+    for (uint32_t& p : out) {
+        seed = seed * 1664525u + 1013904223u;
+        const uint32_t pick = seed >> 28;
+        p = pick == 0 ? 0xFFFF00FFu : pick == 1 ? (seed & 0x00FFFFFFu) : 0xFF000000u | (seed >> 4 & 0xFFFFFFu);
+    }
+    return out;
+}
+
+}  // namespace
+
+// 3.0.11-beta.57 (R-T942DZ: the minimap painted again at each step - 15.6 ms at 4K): the map's pixels worked out
+// faster, the same as before to the last bit - the big map (the whole map fitted) and the minimap round the player,
+// its view past the map's edge too (the ground's colour there)
+TEST(minimap_proto_map_pixels_as_before) {
+    struct Case {
+        int imgW, imgH;
+        minimap::MapSize map;
+        int targetW, targetH;
+        float scale;
+    };
+    const Case cases[] = {{512, 512, {400, 400}, 3839, 2159, 2.0f}, {512, 512, {312, 392}, 1920, 1080, 1.0f},
+                          {333, 257, {50, 80}, 1280, 720, 1.5f},   {2, 3, {100, 100}, 1280, 720, 1.0f},
+                          {1, 1, {40, 30}, 1920, 1080, 1.25f}};
+    uint32_t seed = 7;
+    for (const Case& c : cases) {
+        const std::vector<uint32_t> argb = noisyPicture(c.imgW, c.imgH, seed += 101);
+        minimap::Scene sc;
+        sc.argb = &argb;
+        sc.imgW = c.imgW;
+        sc.imgH = c.imgH;
+        sc.map = c.map;
+        const minimap::Big b = minimap::bigLayout(c.targetW, c.targetH, c.scale, c.map);
+        panel::Picture now, before;
+        minimap::paintBigMap(now, b, sc);
+        before.width = now.width;
+        before.height = now.height;
+        before.px.assign(now.px.size(), 0xFF141922);
+        minimap::View whole;
+        whole.cellPx = b.map.w / float(c.map.w);
+        whole.top = float(c.map.h);
+        mapPixelsBefore(before, panel::Box{0, 0, b.map.w, b.map.h}, sc, whole);
+        CHECK(now.px == before.px);
+        // the minimap: zoomed in (the view inside the map), the whole map (past its edges), the player in a corner
+        const minimap::Layout L = minimap::layout(c.targetW, c.targetH, c.scale, false, 0);
+        for (const auto& [player, step] : {std::pair{minimap::Cell{c.map.w / 2, c.map.h / 2}, minimap::kZoomFirst},
+                                           std::pair{minimap::Cell{c.map.w / 3, c.map.h - 2}, minimap::kZoomSteps - 1},
+                                           std::pair{minimap::Cell{1, 1}, 0}}) {
+            sc.player = player;
+            sc.cells = minimap::cellsAt(step, c.map);
+            minimap::paint(now, L, sc, minimap::Texts{});
+            before = panel::Picture{};
+            before.width = now.width;
+            before.height = now.height;
+            before.px.assign(now.px.size(), 0u);
+            mapPixelsBefore(before, L.map, sc, minimap::view(sc.map, sc.player, sc.cells, int(L.map.w)));
+            // away from the square's rim, its corners, its buttons and the player's mark
+            float mx = 0, my = 0;
+            minimap::cellToPanel(minimap::view(sc.map, sc.player, sc.cells, int(L.map.w)), sc.map, sc.player, mx, my);
+            const float reach = 12 * L.s + 3;
+            int same = 0, other = 0;
+            for (int y = int(L.map.h * 0.1f); y < int(L.map.h * 0.4f); ++y)
+                for (int x = int(L.map.w * 0.2f); x < int(L.map.w * 0.9f); ++x) {
+                    if (std::hypot(float(x) + 0.5f - mx, float(y) + 0.5f - my) < reach) continue;
+                    const size_t i = size_t(y) * size_t(now.width) + size_t(x);
+                    ++(now.px[i] == before.px[i] ? same : other);
+                }
+            CHECK(same > 0);
+            CHECK_EQ(other, 0);
+        }
+    }
+}
+
+// 3.0.11-beta.57: the camera's fan worked out only near it - the arrow and its fan as before, turned every way
+TEST(minimap_proto_view_fan_as_before) {
+    const minimap::Layout L = minimap::layout(1920, 1080, 2.0f, false, 0);
+    minimap::Scene sc;
+    sc.map = minimap::MapSize{100, 100};
+    sc.player = minimap::Cell{50, 50};
+    panel::Picture pic;
+    for (int i = 0; i < 16; ++i) {
+        const float a = float(i) * 0.3927f + 0.05f;  // round the circle
+        sc.lookX = std::cos(a);
+        sc.lookY = std::sin(a);
+        minimap::paint(pic, L, sc, minimap::Texts{});
+        // ahead of the arrow (past its tip) the fan's blue over the ground; behind it the ground alone
+        float px = 0, py = 0;
+        minimap::cellToPanel(minimap::view(sc.map, sc.player, sc.cells, int(L.map.w)), sc.map, sc.player, px, py);
+        const float ahead = 9.5f * L.s * 2.2f, dx = sc.lookX, dy = -sc.lookY;
+        const uint32_t fan = pic.px[size_t(py + dy * ahead) * size_t(pic.width) + size_t(px + dx * ahead)];
+        const uint32_t back = pic.px[size_t(py - dy * ahead) * size_t(pic.width) + size_t(px - dx * ahead)];
+        CHECK((fan & 0xFF) > (back & 0xFF) + 0x10);
+        CHECK(back == 0xFF141922u);
+    }
 }

@@ -439,11 +439,7 @@ std::vector<Words> gdiWords(const std::vector<hb::Words>& in) {
 
 void render(State& s, const hb::Show& show) {
     const uicost::Paint cost("hotbar", s.layout.w, s.layout.h);  // 3.0.11-beta.55
-    s.picture = panel::Picture{};
-    s.picture.width = s.layout.w;
-    s.picture.height = s.layout.h;
-    if (s.layout.w <= 0 || s.layout.h <= 0) return;
-    s.picture.px.assign(size_t(s.layout.w) * size_t(s.layout.h), 0u);
+    if (!panel::blank(s.picture, s.layout.w, s.layout.h)) return;  // 3.0.11-beta.57: in the memory it had
     const hb::Texts t = texts();
     hb::paint(s.picture, s.layout, s.cells, show, t);
     drawWords(s.picture, gdiWords(hb::words(s.layout, s.cells, s.row, show, t)));

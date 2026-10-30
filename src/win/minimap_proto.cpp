@@ -110,7 +110,12 @@ struct State {
     std::string bigMapOf;
     uint32_t bigTexture = 0;
     int bigTexW = 0, bigTexH = 0;
+    // 3.0.11-beta.57 (R-T942DZ: in Prontera 108 paintings in 30 s, 183 on prt_fild08 - each step and each degree
+    // the camera turned): painted again at most each kPaintEveryMs, what changed meanwhile in the one after
+    ULONGLONG paintedAt = 0, bigPaintedAt = 0;
 };
+
+constexpr ULONGLONG kPaintEveryMs = 33;
 
 State& state() {
     static State s;
@@ -422,7 +427,6 @@ std::vector<Words> gdiWords(const std::vector<minimap::Words>& in) {
 }
 
 void render(State& s) {
-    const uicost::Paint cost("minimap", s.layout.w, s.layout.h);  // 3.0.11-beta.55
     minimap::Texts t;
     t.name = shortTitle(s, s.map);
     if (s.cellKnown) t.cell = std::to_string(s.cell.x) + ", " + std::to_string(s.cell.y);
@@ -432,6 +436,8 @@ void render(State& s) {
         t.list.push_back(minimap::Line{l.left, l.right, l.boss ? kBossText : 0u,
                                        l.timer ? minimap::kRouteRgb : 0u, l.boss});
     s.layout = minimap::layout(s.targetW, s.targetH, s.scale, !t.route.empty(), s.folded ? 0 : int(t.list.size()));
+    const uicost::Paint cost("minimap", s.layout.w, s.layout.h);  // 3.0.11-beta.55 (beta.57: its size known)
+    s.paintedAt = GetTickCount64();
     const minimap::Scene sc = sceneOf(s);
     minimap::paint(s.picture, s.layout, sc, t);
     drawWords(s.picture, gdiWords(minimap::words(s.layout, sc, t)));
@@ -441,9 +447,10 @@ void render(State& s) {
 }
 
 void renderBig(State& s) {
-    const uicost::Paint cost("big map", s.bigLayout.w, s.bigLayout.h);  // 3.0.11-beta.55
     const minimap::Scene sc = sceneOf(s);
     s.bigLayout = minimap::bigLayout(s.targetW, s.targetH, s.scale, s.size);
+    const uicost::Paint cost("big map", s.bigLayout.w, s.bigLayout.h);  // 3.0.11-beta.55 (beta.57: its size known)
+    s.bigPaintedAt = GetTickCount64();
     const std::string key = s.map + "|" + std::to_string(s.bigLayout.w) + "x" + std::to_string(s.bigLayout.h) + "|" +
                             std::to_string(s.picW);
     if (key != s.bigMapOf) {  // the map's picture at its size: made once
@@ -495,6 +502,7 @@ void setBig(State& s, bool open) {
     if (s.big == open) return;
     s.big = open;
     s.bigDirty = true;
+    s.bigPaintedAt = 0;  // 3.0.11-beta.57: opened - painted at once
     s.bigPart = minimap::BigPart::None;
     LOG_INFO("minimap: the big map %s", open ? "opened" : "closed");
 }
@@ -549,6 +557,7 @@ void frame(HWND game, const Show& show, double k, int targetWidth, int targetHei
         s.lookX = s.lookY = 0;
         loadPicture(s);
         s.dirty = s.bigDirty = true;
+        s.paintedAt = s.bigPaintedAt = 0;  // 3.0.11-beta.57: another map's at once, not the last one's a while
     }
     // the game's own minimap, each time the game makes it again (a new map, Ctrl+Tab): hidden as Ctrl+Tab hides it
     if (gameMinimapShown()) {
@@ -644,8 +653,9 @@ void frame(HWND game, const Show& show, double k, int targetWidth, int targetHei
         s.style = uistyle::generation();
         s.dirty = true;
     }
-    if (s.dirty) render(s);
-    if (s.big && s.bigDirty) renderBig(s);
+    // 3.0.11-beta.57: at most each kPaintEveryMs (the first at once)
+    if (s.dirty && (s.picture.width <= 0 || now - s.paintedAt >= kPaintEveryMs)) render(s);
+    if (s.big && s.bigDirty && (s.bigPicture.width <= 0 || now - s.bigPaintedAt >= kPaintEveryMs)) renderBig(s);
     s.shown = true;
     block(s, game);
 }

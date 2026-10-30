@@ -478,6 +478,19 @@ bool menuPick(Config& c, MenuHit hit, MenuChange& change) {
     }
 }
 
+bool blank(Picture& p, int w, int h) {
+    p.width = std::max(0, w);
+    p.height = std::max(0, h);
+    p.clipX0 = p.clipY0 = 0;
+    p.clipX1 = p.clipY1 = 1 << 30;
+    if (p.width == 0 || p.height == 0) {
+        p.px.clear();
+        return false;
+    }
+    p.px.assign(size_t(p.width) * size_t(p.height), 0u);
+    return true;
+}
+
 void fade(Picture& p, float opacity) {
     if (opacity >= 1.0f) return;
     const float a = std::max(opacity, 0.0f);

@@ -450,11 +450,7 @@ std::vector<Words> gdiWords(const std::vector<cp::Words>& in) {
 
 void render(State& s) {
     const uicost::Paint cost("chat", s.layout.w, s.layout.h);  // 3.0.11-beta.55
-    s.picture = panel::Picture{};
-    s.picture.width = s.layout.w;
-    s.picture.height = s.layout.h;
-    if (s.layout.w <= 0 || s.layout.h <= 0) return;
-    s.picture.px.assign(size_t(s.layout.w) * size_t(s.layout.h), 0u);
+    if (!panel::blank(s.picture, s.layout.w, s.layout.h)) return;  // 3.0.11-beta.57: in the memory it had
     const cp::Texts t = texts();
     cp::paint(s.picture, s.layout, s.rows, s.input, s.show, t, measure);
     drawWords(s.picture, gdiWords(cp::words(s.layout, s.rows, s.input, s.show, t, measure)));

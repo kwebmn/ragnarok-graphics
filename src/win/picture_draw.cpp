@@ -3,6 +3,9 @@
 #include <algorithm>
 #include <cmath>
 #include <cstring>
+#include <string>
+#include <unordered_map>
+#include <utility>
 #include <vector>
 
 #include "core/d3d7.hpp"
@@ -11,8 +14,152 @@
 #include "core/states.hpp"
 #include "win/code_page.hpp"
 #include "win/gpu/renderer.hpp"
+#include "win/ui_cost.hpp"
 
 namespace uagfx::win {
+
+namespace {
+
+// 3.0.11-beta.57 (R-T942DZ: at 4K the minimap's picture took 15.6 ms each step, the character block's 13-19 ms -
+// their shapes 2-3 of it): the rest was the words by GDI - the screen's DC, a DIB of the whole picture and every word
+// drawn again each time. Now each word's coverage is kept by what makes it (its text, size and weight, how it sits in
+// its box, the box's size): GDI draws it once, in a DIB kept for that, and the pictures after take it as it is
+struct Coverage {
+    int x0 = 0, y0 = 0, x1 = 0, y1 = 0;  // its lit part in its box (x1 <= x0: none)
+    std::vector<uint8_t> cover;          // the lit part's pixels, each its brightest channel (white on black)
+    size_t bytes = 0;                    // what keeping it takes
+    unsigned long long used = 0;
+};
+
+struct WordsGdi {
+    HDC dc = nullptr;
+    HBITMAP dib = nullptr;
+    uint32_t* bits = nullptr;
+    int w = 0, h = 0;
+    std::vector<std::pair<int, HFONT>> fonts;  // the height, negative for a bold one
+    std::unordered_map<std::wstring, Coverage> kept;
+    size_t keptBytes = 0;
+    unsigned long long clock = 0;  // a drawWords call each
+};
+
+WordsGdi& wordsGdi() {
+    thread_local WordsGdi g;
+    return g;
+}
+
+constexpr size_t kKeptBytes = size_t(4) << 20;  // past that the words unused longest go, down to 3/4 of it
+
+// 3.0.11-beta.25 (R-77TCM7): a font for each size and weight, not for each of the words; 3.0.11-beta.54 (R-PVZH5M):
+// kept from one picture to the next
+HFONT fontOf(WordsGdi& g, int height, bool bold) {
+    const int key = bold ? -height : height;
+    for (const auto& [k, f] : g.fonts)
+        if (k == key) return f;
+    if (g.fonts.size() >= 32) {  // a few sizes in use at a time: past that all go (the stock font in the DC first)
+        SelectObject(g.dc, GetStockObject(SYSTEM_FONT));
+        for (const auto& f : g.fonts) DeleteObject(f.second);
+        g.fonts.clear();
+    }
+    HFONT font = CreateFontW(-height, 0, 0, 0, bold ? FW_SEMIBOLD : FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET,
+                             OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, ANTIALIASED_QUALITY, DEFAULT_PITCH, L"Segoe UI");
+    if (font) g.fonts.emplace_back(key, font);
+    return font;
+}
+
+// The DC and its DIB, w x h at least: made bigger only when a word needs more
+bool room(WordsGdi& g, int w, int h) {
+    if (!g.dc) {
+        g.dc = CreateCompatibleDC(nullptr);
+        if (!g.dc) return false;
+        SetBkMode(g.dc, TRANSPARENT);
+        SetTextColor(g.dc, RGB(255, 255, 255));
+    }
+    if (g.bits && w <= g.w && h <= g.h) return true;
+    BITMAPINFO bi{};
+    bi.bmiHeader.biSize = sizeof bi.bmiHeader;
+    bi.bmiHeader.biWidth = std::max(w, g.w);
+    bi.bmiHeader.biHeight = -std::max(h, g.h);
+    bi.bmiHeader.biPlanes = 1;
+    bi.bmiHeader.biBitCount = 32;
+    void* bits = nullptr;
+    HBITMAP dib = CreateDIBSection(g.dc, &bi, DIB_RGB_COLORS, &bits, nullptr, 0);
+    if (!dib || !bits) {
+        if (dib) DeleteObject(dib);
+        return false;
+    }
+    SelectObject(g.dc, dib);  // the one before out of the DC: it can go
+    if (g.dib) DeleteObject(g.dib);
+    g.dib = dib;
+    g.bits = static_cast<uint32_t*>(bits);
+    g.w = std::max(w, g.w);
+    g.h = std::max(h, g.h);
+    return true;
+}
+
+// A word drawn by GDI in its box (w x h, at the DIB's corner): its coverage, cut to its lit part
+bool drawnAnew(WordsGdi& g, const Words& word, int height, int w, int h, UINT format, Coverage& out) {
+    if (!room(g, w, h)) return false;
+    const HFONT font = fontOf(g, height, word.bold);
+    if (!font) return false;
+    for (int y = 0; y < h; ++y) std::memset(g.bits + size_t(y) * size_t(g.w), 0, size_t(w) * 4);
+    SelectObject(g.dc, font);
+    RECT r{0, 0, w, h};
+    DrawTextW(g.dc, word.text.c_str(), int(word.text.size()), &r, format);
+    GdiFlush();
+    int x0 = w, y0 = h, x1 = 0, y1 = 0;
+    for (int y = 0; y < h; ++y) {
+        const uint32_t* row = g.bits + size_t(y) * size_t(g.w);
+        for (int x = 0; x < w; ++x)
+            if (row[x] & 0xFFFFFF) {
+                x0 = std::min(x0, x);
+                x1 = std::max(x1, x + 1);
+                y0 = std::min(y0, y);
+                y1 = std::max(y1, y + 1);
+            }
+    }
+    out = Coverage{};
+    if (x1 > x0) {
+        out.x0 = x0;
+        out.y0 = y0;
+        out.x1 = x1;
+        out.y1 = y1;
+        out.cover.resize(size_t(x1 - x0) * size_t(y1 - y0));
+        uint8_t* to = out.cover.data();
+        for (int y = y0; y < y1; ++y) {
+            const uint32_t* row = g.bits + size_t(y) * size_t(g.w);
+            for (int x = x0; x < x1; ++x) {
+                const uint32_t c = row[x];
+                *to++ = uint8_t(std::max({c & 0xFF, (c >> 8) & 0xFF, (c >> 16) & 0xFF}));
+            }
+        }
+    }
+    return true;
+}
+
+// What makes a word's coverage: its text, then a fixed tail - its size and weight, its format, its box's size
+std::wstring keyOf(const Words& word, int height, UINT format, int w, int h) {
+    std::wstring key = word.text;
+    key.push_back(L'\x1F');
+    for (const unsigned v : {unsigned(height) | (word.bold ? 0x8000u : 0u), unsigned(format & 0xFFFF),
+                             unsigned(format >> 16), unsigned(w), unsigned(h)})
+        key.push_back(wchar_t(v & 0xFFFF));
+    return key;
+}
+
+void forgetOld(WordsGdi& g) {
+    std::vector<std::pair<unsigned long long, const std::wstring*>> ages;
+    ages.reserve(g.kept.size());
+    for (const auto& [key, c] : g.kept) ages.emplace_back(c.used, &key);
+    std::sort(ages.begin(), ages.end(), [](const auto& a, const auto& b) { return a.first < b.first; });
+    for (const auto& [used, key] : ages) {
+        if (g.keptBytes <= kKeptBytes / 4 * 3 || used == g.clock) break;  // never this picture's own
+        const auto it = g.kept.find(*key);
+        g.keptBytes -= it->second.bytes;
+        g.kept.erase(it);
+    }
+}
+
+}  // namespace
 
 void drawWords(panel::Picture& pic, const std::vector<Words>& words) {
     drawWords(pic, words, Rect{0, 0, pic.width, pic.height});
@@ -22,72 +169,44 @@ void drawWords(panel::Picture& pic, const std::vector<Words>& words, const Rect&
     const Rect a{std::max(0, area.left), std::max(0, area.top), std::min(pic.width, area.right),
                  std::min(pic.height, area.bottom)};
     if (a.empty() || pic.px.size() != size_t(pic.width) * size_t(pic.height)) return;
-    const int w = a.width(), h = a.height();
-    HDC screen = GetDC(nullptr);
-    HDC dc = CreateCompatibleDC(screen);
-    BITMAPINFO bi{};
-    bi.bmiHeader.biSize = sizeof bi.bmiHeader;
-    bi.bmiHeader.biWidth = w;
-    bi.bmiHeader.biHeight = -h;
-    bi.bmiHeader.biPlanes = 1;
-    bi.bmiHeader.biBitCount = 32;
-    void* bits = nullptr;
-    HBITMAP bmp = CreateDIBSection(dc, &bi, DIB_RGB_COLORS, &bits, nullptr, 0);
-    if (bmp && bits) {
-        HGDIOBJ oldBmp = SelectObject(dc, bmp);
-        HGDIOBJ oldFont = nullptr;
-        std::memset(bits, 0, size_t(w) * size_t(h) * 4);
-        SetBkMode(dc, TRANSPARENT);
-        SetTextColor(dc, RGB(255, 255, 255));
-        // 3.0.11-beta.25 (R-77TCM7): a font for each size and weight, not for each of the words; 3.0.11-beta.54
-        // (R-PVZH5M): kept from one picture to the next (a part's picture painted again made all of them anew)
-        thread_local std::vector<std::pair<int, HFONT>> fonts;  // the height, negative for a bold one
-        if (fonts.size() > 32) {  // a few sizes in use at a time: past that all go (none selected anywhere now)
-            for (const auto& f : fonts) DeleteObject(f.second);
-            fonts.clear();
+    uicost::Words cost;  // 3.0.11-beta.57: the words' share of a part's painting
+    WordsGdi& g = wordsGdi();
+    ++g.clock;
+    int fresh = 0, again = 0;
+    for (const Words& word : words) {
+        if (word.text.empty() || word.box.w <= 0) continue;
+        const panel::Box& b = word.box;
+        const int left = int(std::lround(b.x)), top = int(std::lround(b.y));
+        const int w = int(std::lround(b.x + b.w)) - left, h = int(std::lround(b.y + b.h)) - top;
+        if (w <= 0 || h <= 0 || left + w <= a.left || top + h <= a.top || left >= a.right || top >= a.bottom)
+            continue;  // nothing to show, or not over the area
+        const int height = std::max(8, int(std::lround(word.px)));
+        const UINT format = (word.wrap ? DT_WORDBREAK | DT_TOP : DT_SINGLELINE | DT_VCENTER | DT_END_ELLIPSIS) |
+                            DT_NOPREFIX | word.align;
+        std::wstring key = keyOf(word, height, format, w, h);
+        auto it = g.kept.find(key);
+        if (it == g.kept.end()) {
+            Coverage c;
+            if (!drawnAnew(g, word, height, w, h, format, c)) continue;
+            c.bytes = c.cover.size() + key.size() * sizeof(wchar_t) + 64;
+            g.keptBytes += c.bytes;
+            it = g.kept.emplace(std::move(key), std::move(c)).first;
+            ++fresh;
+        } else {
+            ++again;
         }
-        for (const Words& word : words) {
-            if (word.text.empty() || word.box.w <= 0) continue;
-            const panel::Box& b = word.box;
-            RECT r{LONG(std::lround(b.x)) - a.left, LONG(std::lround(b.y)) - a.top,
-                   LONG(std::lround(b.x + b.w)) - a.left, LONG(std::lround(b.y + b.h)) - a.top};
-            if (r.right <= 0 || r.bottom <= 0 || r.left >= w || r.top >= h) continue;  // not over the area
-            const int height = std::max(8, int(std::lround(word.px)));
-            const int key = word.bold ? -height : height;
-            HFONT font = nullptr;
-            for (const auto& [k, f] : fonts)
-                if (k == key) font = f;
-            if (!font) {
-                font = CreateFontW(-height, 0, 0, 0, word.bold ? FW_SEMIBOLD : FW_NORMAL, FALSE, FALSE, FALSE,
-                                   DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, ANTIALIASED_QUALITY,
-                                   DEFAULT_PITCH, L"Segoe UI");
-                fonts.emplace_back(key, font);
-            }
-            const HGDIOBJ was = SelectObject(dc, font);
-            if (!oldFont) oldFont = was;
-            DrawTextW(dc, word.text.c_str(), int(word.text.size()), &r,
-                      (word.wrap ? DT_WORDBREAK | DT_TOP : DT_SINGLELINE | DT_VCENTER | DT_END_ELLIPSIS) | DT_NOPREFIX |
-                          word.align);
+        Coverage& c = it->second;
+        c.used = g.clock;
+        const int lit = c.x1 - c.x0;  // each coverage over the picture in the word's colour, inside the area
+        for (int y = std::max(a.top, top + c.y0); y < std::min(a.bottom, top + c.y1); ++y) {
+            const uint8_t* from = c.cover.data() + size_t(y - top - c.y0) * size_t(lit);
+            uint32_t* row = pic.px.data() + size_t(y) * size_t(pic.width);
+            for (int x = std::max(a.left, left + c.x0); x < std::min(a.right, left + c.x1); ++x)
+                if (const uint8_t v = from[x - left - c.x0]) panel::over(row[x], word.rgb, float(v) / 255.0f);
         }
-        GdiFlush();
-        const auto* cover = static_cast<const uint32_t*>(bits);
-        for (const Words& word : words) {
-            const int x0 = std::max(a.left, int(word.box.x)), y0 = std::max(a.top, int(word.box.y));
-            const int x1 = std::min(a.right, int(std::ceil(word.box.x + word.box.w)));
-            const int y1 = std::min(a.bottom, int(std::ceil(word.box.y + word.box.h)));
-            for (int y = y0; y < y1; ++y)
-                for (int x = x0; x < x1; ++x) {
-                    const uint32_t c = cover[size_t(y - a.top) * size_t(w) + size_t(x - a.left)];
-                    const uint32_t v = std::max({c & 0xFF, (c >> 8) & 0xFF, (c >> 16) & 0xFF});
-                    if (v) panel::over(pic.px[size_t(y) * size_t(pic.width) + size_t(x)], word.rgb, float(v) / 255.0f);
-                }
-        }
-        if (oldFont) SelectObject(dc, oldFont);  // the fonts kept for the next picture
-        SelectObject(dc, oldBmp);
     }
-    if (bmp) DeleteObject(bmp);
-    DeleteDC(dc);
-    ReleaseDC(nullptr, screen);
+    if (g.keptBytes > kKeptBytes) forgetOld(g);
+    cost.counted(fresh, again, g.keptBytes);
 }
 
 std::wstring utf8Wide(const std::string& s) { return widened(s, CP_UTF8); }

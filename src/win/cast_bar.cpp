@@ -118,11 +118,7 @@ std::vector<Words> gdiWords(const std::vector<cb::Words>& in) {
 
 void render(State& s) {
     const uicost::Paint cost("cast", s.layout.w, s.layout.h);  // 3.0.11-beta.55
-    s.picture = panel::Picture{};
-    s.picture.width = s.layout.w;
-    s.picture.height = s.layout.h;
-    if (s.layout.w <= 0 || s.layout.h <= 0) return;
-    s.picture.px.assign(size_t(s.layout.w) * size_t(s.layout.h), 0u);
+    if (!panel::blank(s.picture, s.layout.w, s.layout.h)) return;  // 3.0.11-beta.57: in the memory it had
     cb::paint(s.picture, s.layout, s.data);
     drawWords(s.picture, gdiWords(cb::words(s.layout, s.data)));
     s.upload = true;

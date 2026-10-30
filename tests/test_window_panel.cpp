@@ -533,3 +533,24 @@ TEST(round_rect_whole_picture_box_matches_the_distance_rule) {  // the window's 
     slowRoundRect(slow, panel::Box{10.5f, 7.25f, 250.3f, 120.7f}, 16, 0x223344u, 1.0f, 0x5566FFu, 1.0f, 2.0f);
     CHECK(fast.px == slow.px);
 }
+
+// 3.0.11-beta.57 (R-T942DZ): a part's picture made blank for its next painting in the memory it had - see-through, its
+// clip the whole picture again; nothing to paint: false
+TEST(window_panel_blank_keeps_its_memory) {
+    panel::Picture p;
+    CHECK(panel::blank(p, 300, 200));
+    CHECK(p.width == 300 && p.height == 200 && p.px.size() == 60000u);
+    p.px[123] = 0xFF112233u;
+    p.clipX0 = 10;
+    p.clipY1 = 50;
+    const uint32_t* memory = p.px.data();
+    CHECK(panel::blank(p, 300, 200));
+    CHECK(p.px.data() == memory);  // not taken anew
+    CHECK(p.px[123] == 0u && p.clipX0 == 0 && p.clipY0 == 0 && p.clipX1 == (1 << 30) && p.clipY1 == (1 << 30));
+    CHECK(panel::blank(p, 200, 100));  // smaller: the same memory still
+    CHECK(p.px.data() == memory && p.px.size() == 20000u);
+    CHECK(!panel::blank(p, 0, 100));
+    CHECK(p.width == 0 && p.px.empty());
+    CHECK(!panel::blank(p, 100, -5));
+    CHECK(p.height == 0 && p.px.empty());
+}

@@ -277,11 +277,7 @@ void renderFlare(State& s) {
 
 void render(State& s) {
     const uicost::Paint cost("character block", s.layout.w, s.layout.h);  // 3.0.11-beta.55
-    s.picture = panel::Picture{};
-    s.picture.width = s.layout.w;
-    s.picture.height = s.layout.h;
-    if (s.layout.w <= 0 || s.layout.h <= 0) return;
-    s.picture.px.assign(size_t(s.layout.w) * size_t(s.layout.h), 0u);
+    if (!panel::blank(s.picture, s.layout.w, s.layout.h)) return;  // 3.0.11-beta.57: in the memory it had
     const cb::Texts t = texts();
     cb::paint(s.picture, s.layout, s.data, t, s.show);
     drawWords(s.picture, gdiWords(cb::words(s.layout, s.data, t, s.show)));
