@@ -568,6 +568,9 @@ struct Config {
     // 3.0.11-beta.42: [interface] items and status - stage 8's windows: «Речі» (core/item_window) and
     // «Характеристики» (core/stat_window) in place of the game's own while they are open
     bool itemsWindow = false, statusWindow = false;
+    // 3.0.11-beta.46: [interface] animations - the new interface's motion (core/ui_motion): the target's card, the
+    // character block's views, a new level's flare, the low HP warning sliding in; 0: all at once
+    bool animations = true;
     // 3.0.11-beta.7: [interface] reference - «Довідник» (win/reference_window): Ctrl+F in the game
     bool referenceWindow = false;
     PanelLayout panelLayout = PanelLayout::Row;

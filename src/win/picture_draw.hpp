@@ -32,9 +32,10 @@ void drawWords(panel::Picture& pic, const std::vector<Words>& words);
 // 3.0.11-beta.25: the same over `area` of the picture only (the words there, the rest of the picture kept)
 void drawWords(panel::Picture& pic, const std::vector<Words>& words, const Rect& area);
 // A picture as it is into the frame: its texture made for its size, uploaded when it changed, one quad with its top
-// left at (x, y) in the target's pixels over the game's interface
+// left at (x, y) in the target's pixels over the game's interface (3.0.11-beta.46: `opacity` under 1 - the whole
+// picture fainter, the interface's motion)
 void drawPicture(FrameRecord& record, gpu::Renderer& renderer, const panel::Picture& pic, uint32_t& texture, int& texW,
-                 int& texH, bool& upload, int x, int y, float k);
+                 int& texH, bool& upload, int x, int y, float k, float opacity = 1.0f);
 // The words' width at a size (the target's pixels), as drawWords draws them
 int wordsWidth(const std::wstring& text, float px, bool bold);
 std::wstring utf8Wide(const std::string& s);

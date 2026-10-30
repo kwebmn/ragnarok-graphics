@@ -199,6 +199,10 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("status", flag(running.statusWindow), flag(file.statusWindow)));
         n.statusWindow = file.statusWindow;
     }
+    if (file.animations != running.animations) {  // 3.0.11-beta.46: the new interface's motion, at once
+        u.applied.push_back(change("animations", flag(running.animations), flag(file.animations)));
+        n.animations = file.animations;
+    }
     if (file.chat != running.chat) {  // 3.0.11-beta.41: the chat, at once
         u.applied.push_back(change("chat", flag(running.chat), flag(file.chat)));
         n.chat = file.chat;

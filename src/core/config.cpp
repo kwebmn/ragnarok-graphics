@@ -508,6 +508,8 @@ Config parseConfig(const std::string& text) {
         } else if (key == "interface.status") {  // 3.0.11-beta.42: «Характеристики»
             statusSet = val == "0" || val == "1" || val == "on" || val == "off" || val == "true" || val == "false";
             setBool(val, c.statusWindow);
+        } else if (key == "interface.animations") {  // 3.0.11-beta.46: the new interface's motion
+            setBool(val, c.animations);
         } else if (key == "interface.chat") {  // 3.0.11-beta.41: the chat
             chatSet = val == "0" || val == "1" || val == "on" || val == "off" || val == "true" || val == "false";
             setBool(val, c.chat);

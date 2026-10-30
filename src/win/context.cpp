@@ -13,6 +13,7 @@
 #include "core/settings/ini_edit.hpp"
 #include "core/settings/schema.hpp"
 #include "core/texture_levels.hpp"
+#include "core/ui_motion.hpp"
 #include "core/version.hpp"
 #include "win/blind_patch.hpp"
 #include "win/chat_patch.hpp"
@@ -785,6 +786,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     buffcolumn::frame(window, config.buffs, scaleMade_ ? plan.k : 1.0,
                       scaleMade_ ? plan.targetWidth : shadow.width(),
                       scaleMade_ ? plan.targetHeight : shadow.height());
+    motion::setOn(config.animations);  // 3.0.11-beta.46: [interface] animations - the new interface's motion
     // 3.0.11-beta.36: [interface] character - the character block at the top left, the game's Basic Info hidden
     charpanel::frame(window, config.character, scaleMade_ ? plan.k : 1.0,
                      scaleMade_ ? plan.targetWidth : shadow.width(),

@@ -5010,6 +5010,17 @@ constexpr Entry kTexts[] = {
      "не действует на картах войны гильдий"},
     {Text::HotbarOnlyGuildWar, "only on the guilds' war maps", "лише на картах війни гільдій",
      "только на картах войны гильдий"},
+    // 3.0.11-beta.46: the new interface's motion
+    {Text::InterfaceAnimations, "Interface motion", "Анімації інтерфейсу", "Анимации интерфейса"},
+    {Text::InterfaceAnimationsHint,
+     "The new interface moves a little: the target's card shows and goes smoothly, the character block changes its "
+     "look smoothly, its edge flares gold at a new level, the low HP warning slides in from above. Off: everything at "
+     "once.",
+     "Новий інтерфейс трохи рухається: картка цілі з'являється й зникає плавно, блок персонажа плавно змінює вигляд, "
+     "на новому рівні його край спалахує золотом, попередження про мало HP виїжджає згори. Вимкнено — усе одразу.",
+     "Новый интерфейс немного двигается: карточка цели появляется и исчезает плавно, блок персонажа плавно меняет "
+     "вид, на новом уровне его край вспыхивает золотом, предупреждение о малом HP выезжает сверху. Выключено — всё "
+     "сразу."},
     // 3.0.11-beta.41: the chat (stage 8 of the new interface)
     {Text::InterfaceChat, "Chat", "Чат", "Чат"},
     {Text::InterfaceChatHint,

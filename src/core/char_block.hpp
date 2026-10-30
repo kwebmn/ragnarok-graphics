@@ -80,8 +80,14 @@ struct Show {
     int hoverButton = -1;
     bool hoverBlock = false;  // the rings and the icon: their numbers in a tip
     bool warning = false;     // the low HP warning (its first 2 seconds)
+    bool warningApart = false;  // 3.0.11-beta.46: its place kept (a tip under it), the warning drawn apart
 };
 void paint(panel::Picture& out, const Layout& L, const Data& d, const Texts& t, const Show& show);
+// 3.0.11-beta.46 (the concept's motion): the low HP warning alone - its own picture of the block's size, so that it
+// slides in from above and fades (win/char_block); nothing when the HP is not low
+void paintWarning(panel::Picture& out, const Layout& L, const Data& d, const Texts& t);
+// A new level: the block's edge in gold (the rings: a gold ring round them), drawn over the block flaring once
+void paintFlare(panel::Picture& out, const Layout& L);
 
 enum class Align : uint8_t { Left, Right, Center };
 struct Words {
@@ -93,5 +99,6 @@ struct Words {
     Align align = Align::Left;
 };
 std::vector<Words> words(const Layout& L, const Data& d, const Texts& t, const Show& show);
+std::vector<Words> warningWords(const Layout& L, const Data& d, const Texts& t);  // paintWarning's
 
 }  // namespace uagfx::charblock

@@ -401,8 +401,12 @@ void place(State& s) {
 }
 
 hb::Texts texts() {
-    hb::Texts t{say(settings::Text::HotbarBattle), say(settings::Text::HotbarBattleHint),
-                say(settings::Text::HotbarEdit), say(settings::Text::HotbarDone), say(settings::Text::HotbarUse)};
+    hb::Texts t;
+    t.battle = say(settings::Text::HotbarBattle);
+    t.battleHint = say(settings::Text::HotbarBattleHint);
+    t.edit = say(settings::Text::HotbarEdit);
+    t.done = say(settings::Text::HotbarDone);
+    t.use = say(settings::Text::HotbarUse);
     t.noSp = say(settings::Text::HotbarNoSp);
     t.notHere = say(settings::Text::HotbarNotHere);
     t.reasons.assign(size_t(hb::NotHere::kCount), "");

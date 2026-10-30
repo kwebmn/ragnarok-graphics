@@ -174,3 +174,42 @@ TEST(char_block_picture) {
     w = charblock::words(R, d, t, hover);
     CHECK(has("72") && has("HP 2\xC2\xA0" "060 / 4\xC2\xA0" "120") && has("SP 812 / 1\xC2\xA0" "560"));
 }
+
+// 3.0.11-beta.46 (the concept's motion and low HP): the portrait glows red, the warning apart in its own picture (its
+// place kept for the tip under it), a new level's gold edge
+TEST(char_block_low_hp_glow_warning_apart_and_flare) {
+    const charblock::Texts t = texts();
+    charblock::Data d = sora();
+    d.hp = 742;
+    const charblock::Layout L = charblock::layout(charblock::View::Full, charblock::Look::Bars, 0, 0, 1.0f);
+    panel::Picture p = canvas(L);
+    charblock::Show apart;
+    apart.warning = apart.warningApart = true;
+    charblock::paint(p, L, d, t, apart);
+    const panel::Box& pic = L.portrait;
+    const uint32_t glow = pixel(p, pic.x + pic.w / 2, pic.y - 1.5f);  // just over the portrait's top
+    CHECK(red(glow) > 0x90 && red(glow) > 2 * green(glow));
+    const std::vector<charblock::Words> w = charblock::words(L, d, t, apart);
+    CHECK(std::none_of(w.begin(), w.end(), [](const charblock::Words& x) { return x.text.rfind("! ", 0) == 0; }));
+    CHECK(pixel(p, L.under.x + 30, L.under.y + 15) == 0u);  // the warning's place empty in the block's picture
+    panel::Picture warn = canvas(L);
+    charblock::paintWarning(warn, L, d, t);
+    CHECK(pixel(warn, L.under.x + 30, L.under.y + 15) != 0u && pixel(warn, pic.x + pic.w / 2, pic.y + 2) == 0u);
+    const std::vector<charblock::Words> ww = charblock::warningWords(L, d, t);
+    CHECK(ww.size() == 1 && ww[0].text == "! Мало HP \xC2\xB7 18 %");
+    d.hp = 3000;  // not low: no glow, no warning
+    panel::Picture fine = canvas(L);
+    charblock::paint(fine, L, d, t, charblock::Show{});
+    CHECK(red(pixel(fine, pic.x + pic.w / 2, pic.y - 1.5f)) < 0x40);
+    CHECK(charblock::warningWords(L, d, t).empty());
+    panel::Picture flare = canvas(L);  // a new level: the edge gold
+    charblock::paintFlare(flare, L);
+    const uint32_t edge = pixel(flare, L.block.x + L.block.w / 2, L.block.y + 0.5f);
+    CHECK(red(edge) > 0xB0 && green(edge) > 0x90 && blue(edge) < green(edge));
+    CHECK((pixel(flare, L.block.x + L.block.w / 2, L.block.y + L.block.h / 2) >> 24) < 0x40);  // its middle clear
+    const charblock::Layout R = charblock::layout(charblock::View::Compact, charblock::Look::Rings, 0, 0, 1.0f);
+    panel::Picture ring = canvas(R);
+    charblock::paintFlare(ring, R);
+    const uint32_t gold = pixel(ring, R.cx, R.cy - R.hpR - 2);
+    CHECK(red(gold) > 0xB0 && green(gold) > 0x90);
+}

@@ -89,8 +89,8 @@ void drawWords(panel::Picture& pic, const std::vector<Words>& words, const Rect&
 std::wstring utf8Wide(const std::string& s) { return widened(s, CP_UTF8); }
 
 void drawPicture(FrameRecord& record, gpu::Renderer& renderer, const panel::Picture& pic, uint32_t& texture, int& texW,
-                 int& texH, bool& upload, int x, int y, float k) {
-    if (pic.width <= 0 || pic.height <= 0) return;
+                 int& texH, bool& upload, int x, int y, float k, float opacity) {
+    if (pic.width <= 0 || pic.height <= 0 || opacity <= 0) return;
     if (!texture || texW != pic.width || texH != pic.height) {
         if (texture) renderer.releaseTexture(texture);
         texture = renderer.createTexture(pic.width, pic.height, 1);
@@ -109,8 +109,10 @@ void drawPicture(FrameRecord& record, gpu::Renderer& renderer, const panel::Pict
     s.blend = true;
     s.srcBlend = d3d7::BLEND_ONE;
     s.dstBlend = d3d7::BLEND_INVSRCALPHA;
-    s.stage[0].colorOp = s.stage[0].alphaOp = d3d7::TOP_SELECTARG1;
+    const bool faint = opacity < 1;  // the texture times the vertices' colour: premultiplied, all four channels
+    s.stage[0].colorOp = s.stage[0].alphaOp = faint ? d3d7::TOP_MODULATE : d3d7::TOP_SELECTARG1;
     s.stage[0].colorArg1 = s.stage[0].alphaArg1 = d3d7::TA_TEXTURE;
+    s.stage[0].colorArg2 = s.stage[0].alphaArg2 = d3d7::TA_DIFFUSE;
     s.stage[0].addressU = s.stage[0].addressV = d3d7::TADDRESS_CLAMP;
     s.stage[0].magFilter = d3d7::TFG_POINT;
     s.stage[0].minFilter = d3d7::TFN_POINT;
@@ -124,7 +126,8 @@ void drawPicture(FrameRecord& record, gpu::Renderer& renderer, const panel::Pict
     // a game x lands at x * k + 0.5 in the target (shaders.cpp draw_vs): the quad's edges on the target's pixel edges
     const float x0 = (float(x) - 0.5f) / k, y0 = (float(y) - 0.5f) / k;
     const float x1 = (float(x + texW) - 0.5f) / k, y1 = (float(y + texH) - 0.5f) / k;
-    const uint32_t white = 0xFFFFFFFFu;
+    const uint32_t a = faint ? uint32_t(std::lround(std::clamp(opacity, 0.0f, 1.0f) * 255)) : 255u;
+    const uint32_t white = a << 24 | a << 16 | a << 8 | a;
     const glint::Vertex v[6] = {{x0, y0, 0, 1, white, 0, 0, 0}, {x1, y0, 0, 1, white, 0, 1, 0},
                                 {x0, y1, 0, 1, white, 0, 0, 1}, {x1, y0, 0, 1, white, 0, 1, 0},
                                 {x1, y1, 0, 1, white, 0, 1, 1}, {x0, y1, 0, 1, white, 0, 0, 1}};

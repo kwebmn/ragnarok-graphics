@@ -473,7 +473,9 @@ enum class Text : uint16_t {
     HotbarBattleHint, HotbarEdit, HotbarDone, HotbarUse,
     // 3.0.11-beta.45: the hotbar's cell states - no SP, «не тут» and why
     HotbarNoSp, HotbarNotHere, HotbarNoTeleport, HotbarNoReturn, HotbarNoWarp, HotbarNoBranch, HotbarNoIceWall,
-    HotbarNoCall, HotbarNoSkills, HotbarGuildWar, HotbarOnlyGuildWar, InterfaceChat, InterfaceChatHint, ChatTabAll,
+    HotbarNoCall, HotbarNoSkills, HotbarGuildWar, HotbarOnlyGuildWar,
+    // 3.0.11-beta.46: the new interface's motion
+    InterfaceAnimations, InterfaceAnimationsHint, InterfaceChat, InterfaceChatHint, ChatTabAll,
     ChatTabParty,
     ChatTabGuild, ChatTabWhisper, ChatTabTrade, ChatTabBattle, ChatFrom, ChatTo, ChatHintSend, ChatHintType,
     ChatKilled, ChatPicked, ChatMiss, InterfaceItems, InterfaceItemsHint, InterfaceStatus, InterfaceStatusHint,

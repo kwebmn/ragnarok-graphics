@@ -1013,3 +1013,15 @@ TEST(config_reads_the_windows) {
     }
     CHECK(liveUpdate(parseConfig(""), parseConfig("[interface]\nitems = 1\n")).next.itemsWindow);
 }
+
+// 3.0.11-beta.46 (the concept's motion): [interface] animations - on unless the file says 0, at once
+TEST(config_reads_the_animations) {
+    CHECK(parseConfig("").animations && parseConfig("[interface]\nanimations = 1\n").animations);
+    CHECK(!parseConfig("[interface]\nanimations = 0\n").animations);
+    const settings::IniSetting* s = settings::findSetting("interface.animations");
+    CHECK(s != nullptr);
+    if (!s) return;
+    CHECK(s->page == settings::Page::Interface && s->control == settings::Control::Check);
+    CHECK(appliesNow("interface.animations"));
+    CHECK(!liveUpdate(parseConfig(""), parseConfig("[interface]\nanimations = 0\n")).next.animations);
+}

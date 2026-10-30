@@ -15,6 +15,7 @@
 #include "core/layout.hpp"
 #include "core/settings/strings.hpp"
 #include "core/sprite_file.hpp"
+#include "core/ui_motion.hpp"
 #include "pad/win/game_window.hpp"
 #include "win/game_camera.hpp"
 #include "win/game_files.hpp"
@@ -66,6 +67,18 @@ struct State {
     int texW = 0, texH = 0;
     bool upload = false;
     int clicksLogged = 0;
+    // 3.0.11-beta.46 (the concept's motion): a picture of its own with its texture - the view before a change (fading
+    // out under the new one), the low HP warning (sliding in, fading out), a new level's gold edge (flaring once)
+    struct Layer {
+        panel::Picture picture;
+        uint32_t texture = 0;
+        int texW = 0, texH = 0, x = 0, y = 0;
+        bool upload = false;
+        std::string key;
+    };
+    Layer before, warning, flare;
+    ULONGLONG changedAt = 0, warnAt = 0, levelAt = 0;
+    int lastBase = 0, lastJob = 0;
 };
 
 State& state() {
@@ -221,6 +234,38 @@ std::vector<Words> gdiWords(const std::vector<cb::Words>& in) {
     return out;
 }
 
+// The warning's picture and the flare's: the block's size, its place (made again when what they show changes)
+void renderWarning(State& s) {
+    const cb::Texts t = texts();
+    const std::string key = std::to_string(s.layout.w) + 'x' + std::to_string(s.layout.h) + ';' +
+                            std::to_string(int(s.layout.view)) + ';' + std::to_string(s.data.hp) + '/' +
+                            std::to_string(s.data.hpMost);
+    if (key == s.warning.key) return;
+    s.warning.key = key;
+    panel::Picture& p = s.warning.picture;
+    p = panel::Picture{};
+    p.width = s.layout.w;
+    p.height = s.layout.h;
+    p.px.assign(size_t(p.width) * size_t(p.height), 0u);
+    cb::paintWarning(p, s.layout, s.data, t);
+    drawWords(p, gdiWords(cb::warningWords(s.layout, s.data, t)));
+    s.warning.upload = true;
+}
+
+void renderFlare(State& s) {
+    const std::string key = std::to_string(s.layout.w) + 'x' + std::to_string(s.layout.h) + ';' +
+                            std::to_string(int(s.layout.view)) + ',' + std::to_string(int(s.layout.look));
+    if (key == s.flare.key) return;
+    s.flare.key = key;
+    panel::Picture& p = s.flare.picture;
+    p = panel::Picture{};
+    p.width = s.layout.w;
+    p.height = s.layout.h;
+    p.px.assign(size_t(p.width) * size_t(p.height), 0u);
+    cb::paintFlare(p, s.layout);
+    s.flare.upload = true;
+}
+
 void render(State& s) {
     s.picture = panel::Picture{};
     s.picture.width = s.layout.w;
@@ -276,6 +321,7 @@ void frame(HWND game, CharacterLook look, double k, int targetWidth, int targetH
     if (world) holdGameWindow(s, on);
     if (!on || !world || !game || k <= 0 || targetWidth <= 0 || targetHeight <= 0) {
         hide(s);
+        s.lastBase = s.lastJob = 0;  // another character next: no flare for its levels
         return;
     }
     readState(s);
@@ -311,12 +357,21 @@ void frame(HWND game, CharacterLook look, double k, int targetWidth, int targetH
     const ULONGLONG now = GetTickCount64();
     const bool low = cb::lowHp(d);
     if (low && !s.wasLow) {
+        s.warnAt = now;
         s.warnUntil = now + kWarnMs;
         LOG_INFO("character: low HP - %d of %d", d.hp, d.hpMost);
     }
     s.wasLow = low;
+    if (s.lastBase > 0 && (d.baseLevel > s.lastBase || d.jobLevel > s.lastJob)) {  // a new level: the gold edge
+        s.levelAt = now;
+        LOG_INFO("character: a new level - Base %d, Job %d%s", d.baseLevel, d.jobLevel,
+                 motion::on() ? ": the block's edge flares" : "");
+    }
+    s.lastBase = d.baseLevel;
+    s.lastJob = d.jobLevel;
     cb::Show show;
     show.warning = now < s.warnUntil;
+    show.warningApart = true;  // 3.0.11-beta.46: its own picture
     int cx = 0, cy = 0;
     if (readGameCursor(cx, cy)) {
         const cb::Hit h = cb::hitTest(s.layout, float(cx) * float(k) - float(s.layout.x),
@@ -337,6 +392,8 @@ void frame(HWND game, CharacterLook look, double k, int targetWidth, int targetH
         s.key = key;
         render(s);
     }
+    if (show.warning) renderWarning(s);
+    if (now - s.levelAt < motion::kLevelMs) renderFlare(s);
     s.shown = true;
     block(s, game);
 }
@@ -356,7 +413,27 @@ void draw(FrameRecord& record, gpu::Renderer& renderer) {
     if (!s.shown || s.k <= 0 || s.picture.width <= 0 || s.picture.height <= 0) return;
     int cursor = -1, cx = 0, cy = 0;  // under the game's own cursor, as the minimap
     if (readGameCursor(cx, cy)) cursor = panel::cursorDraw(record, float(cx), float(cy));
-    drawPicture(record, renderer, s.picture, s.texture, s.texW, s.texH, s.upload, s.layout.x, s.layout.y, s.k);
+    const ULONGLONG now = GetTickCount64();
+    const auto layer = [&](State::Layer& l, int x, int y, float a) {
+        drawPicture(record, renderer, l.picture, l.texture, l.texW, l.texH, l.upload, x, y, s.k, a);
+    };
+    // 3.0.11-beta.46: a view changed - the one before fading out under the new one coming in (160 ms)
+    const float a = motion::fadeIn(now, s.changedAt, motion::kBlockMs);
+    if (a < 1 && s.before.picture.width > 0) layer(s.before, s.before.x, s.before.y, 1 - a);
+    drawPicture(record, renderer, s.picture, s.texture, s.texW, s.texH, s.upload, s.layout.x, s.layout.y, s.k, a);
+    if (now < s.warnUntil && s.warning.picture.width > 0) {  // from 8 px over its place in 180 ms; its last 240 out
+        float w = 1, shift = 0;
+        const ULONGLONG outAt = s.warnUntil - motion::kToastOutMs;
+        if (motion::on() && now < outAt) {
+            w = motion::fadeIn(now, s.warnAt, motion::kToastInMs);
+            shift = -(1 - w) * 8 * s.scale;
+        } else if (motion::on()) {
+            w = motion::fadeOut(now, outAt, motion::kToastOutMs);
+        }
+        if (w > 0) layer(s.warning, s.layout.x, s.layout.y + int(std::lround(shift)), w);
+    }
+    const float f = motion::flare(now, s.levelAt, motion::kLevelMs);  // a new level: once, 600 ms
+    if (f > 0 && s.flare.picture.width > 0) layer(s.flare, s.layout.x, s.layout.y, f);
     if (cursor >= 0) record.moveLastBefore(record.commands().size() - size_t(cursor) - 1, size_t(cursor));
 }
 
@@ -375,6 +452,13 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     if (h.part == cb::Part::None) return false;
     if (m == WM_LBUTTONDOWN) {
         if (h.part == cb::Part::Portrait) {  // full, compact, the icon, full again
+            if (motion::on() && s.picture.width > 0) {  // 3.0.11-beta.46: the view before fades out
+                s.before.picture = s.picture;
+                s.before.x = s.layout.x;
+                s.before.y = s.layout.y;
+                s.before.upload = true;
+                s.changedAt = GetTickCount64();
+            }
             s.view = cb::nextView(s.view);
             keepState(s);
             s.key.clear();

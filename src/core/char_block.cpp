@@ -305,6 +305,10 @@ void paint(panel::Picture& out, const Layout& L, const Data& d, const Texts& t, 
     panel::circle(out, p.x + p.w / 2, p.y + p.h / 2, p.w / 2, kTile, 1.0f);
     if (d.portrait && d.portrait->width > 0) putRound(out, *d.portrait, p);
     ring(out, p.x + p.w / 2, p.y + p.h / 2, p.w / 2, 1.5f * s, 1, kWhite, 0.35f);
+    if (low && !rings(L)) {  // 3.0.11-beta.46: the concept's - the portrait glows red (the rings have their own glow)
+        ring(out, p.x + p.w / 2, p.y + p.h / 2, p.w / 2 + 3 * s, 3 * s, 1, kHpLow, 0.8f);  // its radius the outer
+        ring(out, p.x + p.w / 2, p.y + p.h / 2, p.w / 2 + 7 * s, 4 * s, 1, kHpLow, 0.25f);
+    }
     if (rings(L)) {
         panel::roundRect(out, L.badge, L.badge.h / 2, kCard, 0.95f, kGold, 1.0f, 1.2f * s);
         if (d.statusPoints > 0) {
@@ -321,9 +325,29 @@ void paint(panel::Picture& out, const Layout& L, const Data& d, const Texts& t, 
         }
     }
     const panel::Box warn = warnBox(L, d, t, show);
-    if (warn.w > 0) panel::roundRect(out, warn, 9 * s, kWarnGround, 0.92f, kHpLow, 0.8f, 1.0f * s);
+    if (warn.w > 0 && !show.warningApart)
+        panel::roundRect(out, warn, 9 * s, kWarnGround, 0.92f, kHpLow, 0.8f, 1.0f * s);
     const panel::Box tip = tipBox(L, d, t, show, warn);
     if (tip.w > 0) panel::roundRect(out, tip, 8 * s, kCard, 0.94f, kWhite, 0.12f, 1.0f * s);
+}
+
+void paintWarning(panel::Picture& out, const Layout& L, const Data& d, const Texts& t) {
+    Show show;
+    show.warning = true;
+    const panel::Box warn = warnBox(L, d, t, show);
+    if (warn.w > 0) panel::roundRect(out, warn, 9 * L.s, kWarnGround, 0.92f, kHpLow, 0.8f, 1.0f * L.s);
+}
+
+void paintFlare(panel::Picture& out, const Layout& L) {
+    const float s = L.s;
+    if (rings(L)) {
+        ring(out, L.cx, L.cy, L.hpR + 2 * s, 2.5f * s, 1, kGold2, 1.0f);
+        ring(out, L.cx, L.cy, L.hpR - L.hpW, 1.5f * s, 1, kGold2, 0.5f);
+        return;
+    }
+    panel::roundRect(out, L.block, kRadius * s, kGold, 0.0f, kGold2, 1.0f, 2.0f * s);
+    const panel::Box in{L.block.x + 2 * s, L.block.y + 2 * s, L.block.w - 4 * s, L.block.h - 4 * s};
+    panel::roundRect(out, in, (kRadius - 2) * s, kGold, 0.10f, kGold, 0.45f, 2.0f * s);
 }
 
 std::vector<Words> words(const Layout& L, const Data& d, const Texts& t, const Show& show) {
@@ -389,7 +413,7 @@ std::vector<Words> words(const Layout& L, const Data& d, const Texts& t, const S
                                 Align::Right});
     }
     const panel::Box warn = warnBox(L, d, t, show);
-    if (warn.w > 0)
+    if (warn.w > 0 && !show.warningApart)
         out.push_back(Words{warn, "! " + replaced(t.lowHp, std::to_string(lowPercent(d))), kText, 13 * s, true,
                             Align::Center});
     const panel::Box tip = tipBox(L, d, t, show, warn);
@@ -398,6 +422,15 @@ std::vector<Words> words(const Layout& L, const Data& d, const Texts& t, const S
         out.push_back(Words{panel::Box{tip.x + 10 * s, tip.y + (4 + 17 * float(i)) * s, tip.w - 20 * s, 17 * s},
                             lines[i], i == 0 ? kText : kMuted, 13 * s, i == 0, Align::Left});
     return out;
+}
+
+std::vector<Words> warningWords(const Layout& L, const Data& d, const Texts& t) {
+    Show show;
+    show.warning = true;
+    const panel::Box warn = warnBox(L, d, t, show);
+    if (warn.w <= 0) return {};
+    return {Words{warn, "! " + replaced(t.lowHp, std::to_string(lowPercent(d))), kText, 13 * L.s, true,
+                  Align::Center}};
 }
 
 }  // namespace uagfx::charblock

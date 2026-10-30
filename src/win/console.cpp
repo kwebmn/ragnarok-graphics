@@ -179,6 +179,8 @@ void Console::build(Lang lang, const Config& config) {
                 rows_.push_back(Row{Kind::Box, "interface.chat", 0});
             for (const char* key : {"interface.items", "interface.status"})  // 3.0.11-beta.42: the windows
                 if (settingOf(key)) rows_.push_back(Row{Kind::Box, key, 0});
+            if (settingOf("interface.animations"))  // 3.0.11-beta.46: the new interface's motion
+                rows_.push_back(Row{Kind::Box, "interface.animations", 0});
         }
         // 3.0.3-beta.8: the game windows' panel (the user: on or off in the console too)
         if (settingOf("panel.show")) {

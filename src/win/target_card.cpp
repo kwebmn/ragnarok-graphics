@@ -13,6 +13,7 @@
 #include "core/reference_pages.hpp"
 #include "core/settings/strings.hpp"
 #include "core/target_card.hpp"
+#include "core/ui_motion.hpp"
 #include "pad/win/game_window.hpp"
 #include "win/game_camera.hpp"
 #include "win/log.hpp"
@@ -54,6 +55,7 @@ struct State {
     int texW = 0, texH = 0;
     bool upload = false;
     int told = 0;
+    ULONGLONG shownAt = 0, goneAt = 0;  // 3.0.11-beta.46: the concept's motion - it fades in and out, 4 px
 };
 
 State& state() {
@@ -162,7 +164,10 @@ void block(const State& s, HWND game) {  // the mouse's clicks on the card are i
 }
 
 void hide(State& s) {
-    if (s.shown) uapad::gamewindow::setBlocked(uapad::gamewindow::Blocker::Target, nullptr, nullptr, false);
+    if (s.shown) {
+        uapad::gamewindow::setBlocked(uapad::gamewindow::Blocker::Target, nullptr, nullptr, false);
+        s.goneAt = GetTickCount64();  // its last picture fades out
+    }
     s.shown = false;
     s.hover = s.hoverBook = false;
 }
@@ -299,16 +304,24 @@ void frame(HWND game, bool on, double k, int targetWidth, int targetHeight) {
         s.key = key;
         render(s);
     }
+    if (!s.shown) s.shownAt = now;
     s.shown = true;
     block(s, game);
 }
 
 void draw(FrameRecord& record, gpu::Renderer& renderer) {
     State& s = state();
-    if (!s.shown || s.k <= 0 || s.picture.width <= 0 || s.picture.height <= 0) return;
+    if (s.k <= 0 || s.picture.width <= 0 || s.picture.height <= 0) return;
+    // 3.0.11-beta.46: coming, from 4 px over its place; going, 4 px up out of sight ([interface] animations)
+    const ULONGLONG now = GetTickCount64();
+    const float a = s.shown ? motion::fadeIn(now, s.shownAt, motion::kCardMs)
+                            : motion::fadeOut(now, s.goneAt, motion::kCardMs);
+    if (a <= 0) return;
+    const int shift = int(std::lround(-(1 - a) * motion::kCardShift * s.scale));
     int cursor = -1, cx = 0, cy = 0;  // under the game's own cursor, as the minimap
     if (readGameCursor(cx, cy)) cursor = panel::cursorDraw(record, float(cx), float(cy));
-    drawPicture(record, renderer, s.picture, s.texture, s.texW, s.texH, s.upload, s.layout.x, s.layout.y, s.k);
+    drawPicture(record, renderer, s.picture, s.texture, s.texW, s.texH, s.upload, s.layout.x, s.layout.y + shift, s.k,
+                a);
     if (cursor >= 0) record.moveLastBefore(record.commands().size() - size_t(cursor) - 1, size_t(cursor));
 }
 

@@ -116,6 +116,9 @@ const std::vector<IniSetting>& iniSettings() {
          Text::InterfaceItemsHint, ""},
         {"interface", "status", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::InterfaceStatus,
          Text::InterfaceStatusHint, ""},
+        // 3.0.11-beta.46: the new interface's motion
+        {"interface", "animations", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::InterfaceAnimations,
+         Text::InterfaceAnimationsHint, ""},
         // 3.0.11-beta.41: the chat
         {"interface", "chat", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::InterfaceChat,
          Text::InterfaceChatHint, ""},
@@ -917,6 +920,7 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "interface.chat") return c.chat ? "1" : "0";                      // 3.0.11-beta.41
     if (k == "interface.items") return c.itemsWindow ? "1" : "0";              // 3.0.11-beta.42
     if (k == "interface.status") return c.statusWindow ? "1" : "0";
+    if (k == "interface.animations") return c.animations ? "1" : "0";  // 3.0.11-beta.46
     if (k == "interface.reference") return c.referenceWindow ? "1" : "0";  // 3.0.11-beta.7
     if (k == "windows.start_count") return std::to_string(c.windowStartCount);  // 3.0.4-beta.4
     if (k == "camera.indoor") return c.cameraIndoor ? "1" : "0";                // 3.0.4-beta.5

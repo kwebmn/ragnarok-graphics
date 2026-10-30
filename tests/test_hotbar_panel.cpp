@@ -19,8 +19,12 @@ bool inside(const panel::Box& outer, const panel::Box& inner) {
 }
 
 hotbar::Texts texts() {
-    hotbar::Texts t{"бойовий режим", "літери — навички й предмети \xC2\xB7 Enter — чат", "редагувати панель гри",
-                    "готово", "клік — використати"};
+    hotbar::Texts t;
+    t.battle = "бойовий режим";
+    t.battleHint = "літери — навички й предмети \xC2\xB7 Enter — чат";
+    t.edit = "редагувати панель гри";
+    t.done = "готово";
+    t.use = "клік — використати";
     t.noSp = "Немає SP \xC2\xB7 потрібно {1}, у вас {2}";
     t.notHere = "Не тут \xC2\xB7 {1}";
     t.reasons.assign(size_t(hotbar::NotHere::kCount), "");
