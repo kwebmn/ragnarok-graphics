@@ -1,3 +1,18 @@
+# uaRO Graphics 3.0.11-beta.80 — what is new
+
+- **The party members' faces** (your «can the icons be the characters' faces?»). Each member's round now holds its head
+  — the hair style and colour as in the game (the same as the character block's portrait). The looks are taken once
+  the member has been in sight (the character appear packets) and kept (uaro-graphics\party-looks.txt) — the face stays
+  when it is on another map and after a restart. On another map the face is fainter. One never seen yet — its name's
+  letter for now.
+- **The casts on the members** (your «to see which casts are on the characters with small icons»). Under the HP bar —
+  small icons of the member's buffs (Blessing, Increase AGI and so on, debuffs too). The server tells them to everyone
+  near, so they show for those on your map nearby. When the cast was seen (someone put it on in front of you), a thin
+  gold line of the time left is under the icon, red at its last tenth.
+- The members' HP as before — the bar and the per cent (the server sends it for those on your map).
+- To check: gather a party, come near — the members have faces; put Blessing or Increase AGI on a member — an icon with
+  its time line. In the log: `party: …'s face - …`.
+
 # uaRO Graphics 3.0.11-beta.79 — what is new
 
 - **Dragging without jumps** (your «when I drag the interface the window jumps a lot»). There were three causes:
