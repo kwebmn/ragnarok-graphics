@@ -1,3 +1,21 @@
+# uaRO Graphics 3.0.11-beta.78 — what is new
+
+- **Each character has its own skill bar** (your «the skill bar shows the wrong skills, from other accounts, and skills
+  the character does not have»). The cause is the game itself: it keeps the hotkeys bar in the registry by the
+  character's place on the selection screen (page × 3 + position) and the langtype, with no account in it — so the
+  first character of any account shares one bar. Now the driver keeps each character's bar by its name
+  (uaro-graphics\hotbar-bars.txt) and puts it in when the character comes into the game, with the game's own functions —
+  so the F-keys, the game's bar and the new one all work with it.
+- **A character's first time:** the bar the game loaded is taken, with the skills the character does not have (not
+  learned) taken out. From then on any change you make to the bar is kept for that character.
+- **A skill the character does not have** is grey on the new bar with a crossed circle; its tip says «The character
+  does not have this skill».
+- The switch «Each character's own skill bar» in «Interface» (on); it works with the game's own bar too, not only the
+  new one.
+- To check: enter with different characters (and from different accounts) — each its own bar; change a skill on the bar,
+  come in again — it is there. In the log: `hotbar: … met the first time - … skills it has not learned taken out`,
+  `hotbar: …'s own bar put back - … cells`, `hotbar: …'s own bar kept`.
+
 # uaRO Graphics 3.0.11-beta.77 — what is new
 
 - **The interface's parts move with the mouse straight away, no keys** (your «I wanted to move them without hotkeys,
