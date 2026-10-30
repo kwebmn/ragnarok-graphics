@@ -1,3 +1,17 @@
+# uaRO Graphics 3.0.11-beta.76 — what is new
+
+- **Monster pictures from the AI texture pack** (more of your «load ... everything else from the processed textures
+  where possible»). In «Reference» (monster cards and lists) and on the «Target card» a monster is put together from
+  the pack's frames — four times bigger than the game's — and scaled down into its frame: smooth and detailed instead
+  of stretched pixels, and bigger in its frame. Checked on your client's own files: Poring, Lunatic, Orc Warrior and
+  Baphomet — all their frames are in the pack.
+- For it the pack keeps a compact table of the sprites' frames of its own (about 290 thousand, ~7 MB of memory), read
+  in the same pass in the background at the start.
+- The switch is the same — «Icons from the AI texture pack» in «Interface».
+- To check: open «Reference» on monsters and target a monster — the picture is sharp. In the log: `pack pictures: …
+  and … sprite frames known in … ms`, `reference: …'s picture - … the AI texture pack's 1 frames 4x`, `target: …'s
+  picture - … the AI texture pack's …`.
+
 # uaRO Graphics 3.0.11-beta.75 — what is new
 
 - **The interface's parts can be moved and sized** (your «some interfaces should be movable and configurable»).
