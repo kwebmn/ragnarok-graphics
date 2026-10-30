@@ -247,6 +247,7 @@ refpages::Context contextOf(const State& s) {
     c.recent = &s.recent;  // 3.0.11-beta.18
     c.favourites = &s.favourites;
     c.bar = &s.bar;        // 3.0.11-beta.68: the hotbar's skills (read with each page)
+    c.liveAt = reference::onlineSeen();  // 3.0.11-beta.69: the data's page - the live data's age
     return c;
 }
 
@@ -650,7 +651,10 @@ refwin::Texts textsOf(const State& s) {
     t.query = s.query;
     t.hint = say(Text::RefSearchHint);
     t.find = say(Text::RefFind);
-    if (s.index)
+    const long long now = static_cast<long long>(std::time(nullptr));
+    if (s.index && refpages::packStale(*s.index, now))  // 3.0.11-beta.69: past 14 days - it may be out of date
+        t.pack = settings::fmt(settings::tr(l, Text::RefFooterStale), {s.index->date.substr(0, 10)});
+    else if (s.index)
         t.pack = settings::fmt(settings::tr(l, Text::RefFooter),
                                {s.index->date.substr(0, 10), s.index->commit.substr(0, 8)});
     if (s.online) {  // 3.0.11-beta.20: how fresh the players now (and the timers, the market) are
@@ -659,6 +663,10 @@ refwin::Texts textsOf(const State& s) {
                                {refpages::number(s.online->online, l),
                                 refpages::respawn(int(std::max<long long>(age, 60) * 1000), l)});
         t.liveState = refwin::Live::Fresh;
+    } else if (const long long seen = reference::onlineSeen(); seen > 0) {  // 3.0.11-beta.69: came, now stale
+        const long long age = std::min<long long>(std::max<long long>(now - seen, 60), 2000000);
+        t.live = settings::fmt(settings::tr(l, Text::RefLiveStale), {refpages::respawn(int(age * 1000), l)});
+        t.liveState = refwin::Live::Stale;
     } else {
         t.live = say(Text::RefLiveOff);
         t.liveState = refwin::Live::Off;
@@ -1010,6 +1018,8 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
             if (u.part == refwin::Part::Rail && u.row > 0 && size_t(u.row) < s.page.rail.size())
                 go(s, s.page.rail[size_t(u.row)].link);
             if (u.part == refwin::Part::Row) go(s, s.page.rows[size_t(u.row)].link);
+            if (u.part == refwin::Part::Chip)  // 3.0.11-beta.69: the data's page - its states, «Подробиці»
+                go(s, refpages::Link{refpages::Go::Section, refpages::kDataSection, ""});
             if (u.part == refwin::Part::Chain && u.tile >= 0 && size_t(u.tile) < s.way.chain.size())  // .64: its card
                 go(s, refpages::Link{refpages::Go::Map, 0, s.way.chain[size_t(u.tile)].first});
             const int row = worldRow(s);  // 3.0.11-beta.29: a press on the world map - a drag, or a click on letting go

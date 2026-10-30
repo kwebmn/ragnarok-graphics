@@ -566,6 +566,9 @@ enum class Text : uint16_t {
     RefDungeonOf, RefLocationsN, RefDungeonsN,
     // 3.0.11-beta.68: the concept's «Ваша панель» - the hotbar's skills against a monster's element
     RefYourBar, RefBarHeals, TargetYourBar,
+    // 3.0.11-beta.69: the data's states (the concept's question 21) - the chips' and their page's
+    RefFooterStale, RefLiveStale, RefDataTitle, RefDataPack, RefDataPackWhat, RefDataPackFresh, RefDataPackStale,
+    RefDataLive, RefDataLiveWhat, RefDataLiveFresh, RefDataLiveStale, RefDataLiveNone,
     Count
 };
 

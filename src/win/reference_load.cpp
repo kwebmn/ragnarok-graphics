@@ -193,8 +193,13 @@ std::shared_ptr<const reflive::Live> live() {
     return current;
 }
 
-std::shared_ptr<const reflive::Online> online() {
+Live& onlineFile() {
     static Live l;  // the game's thread alone (the window, the minimap)
+    return l;
+}
+
+std::shared_ptr<const reflive::Online> online() {
+    Live& l = onlineFile();
     const ULONGLONG now = GetTickCount64();
     if (l.lookedAt == 0 || now - l.lookedAt >= kLookEveryMs) {
         l.lookedAt = now;
@@ -209,6 +214,12 @@ std::shared_ptr<const reflive::Online> online() {
     }
     if (!l.current || !reflive::fresh(*l.current, static_cast<long long>(std::time(nullptr)))) return nullptr;
     return l.current;
+}
+
+long long onlineSeen() {
+    online();  // read again when due
+    const Live& l = onlineFile();
+    return l.current ? l.current->at : 0;
 }
 
 std::shared_ptr<const World> world() {

@@ -84,6 +84,11 @@ struct Page {
 // Sections of the first screen (Go::Section's ids); items by their type are 100 + the type; 3.0.11-beta.26 the
 // concept's «NPC і послуги» (the shops and Kafra) and «Таблиці» (the elements)
 enum Section : int { Mobs, Bosses, Items, Cards, Maps, Shops, Teleports, Pets, Crafting, Services, Tables, kSections };
+// 3.0.11-beta.69 (the concept's question 21: the data's states, «Подробиці» by a click): the page the window's bottom
+// chips open (Go::Section) - the pack's date, server and age, the live data's state
+constexpr int kDataSection = 90;
+constexpr long long kPackStaleDays = 14;  // the concept's «Порог «могут быть застаревшими» — 14 дней»
+bool packStale(const refindex::Index& ix, long long now);  // the pack's date older than kPackStaleDays at `now`
 // A card's long sections show their first kFew rows and «усі N ›» (Go::Expand, its bit) until opened (the concept:
 // the main things first - «Де знайти» and «Що випадає» - the rest below without a long scroll)
 enum Part : int {
@@ -121,6 +126,8 @@ struct Context {
     // 3.0.11-beta.68 (the concept's «Ваша панель: Fire Bolt ×2…»): the skills on the player's hotbar - a monster's
     // card says their elements' multipliers on it (core/bar_hint); null: not read
     const std::vector<barhint::Skill>* bar = nullptr;
+    // 3.0.11-beta.69 (the concept's question 21): when the newest live data came (unix; stale or not), 0 none yet
+    long long liveAt = 0;
 };
 // 3.0.11-beta.18: a card's name for the first screen's lists («Poring», «Fly Wing», «Prontera Field (prt_fild08)»);
 // "" when the index has no such

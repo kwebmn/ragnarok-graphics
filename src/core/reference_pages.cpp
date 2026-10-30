@@ -891,7 +891,49 @@ std::vector<Row> kafraRows(const refindex::Index& ix) {
 
 }  // namespace
 
+namespace {
+
+// 3.0.11-beta.69: the days from 1970-01-01 to a date (Howard Hinnant's days_from_civil)
+long long daysFrom(int y, int m, int d) {
+    y -= m <= 2;
+    const long long era = (y >= 0 ? y : y - 399) / 400;
+    const long long yoe = y - era * 400;
+    const long long doy = (153 * (m + (m > 2 ? -3 : 9)) + 2) / 5 + d - 1;
+    const long long doe = yoe * 365 + yoe / 4 - yoe / 100 + doy;
+    return era * 146097 + doe - 719468;
+}
+
+// The data's page: the pack - its date, its server, its age; the live data - fresh, stale (its age), none yet
+Page dataPage(const refindex::Index& ix, Lang l, const Context& c) {
+    Page p;
+    p.name = say(l, Text::RefDataTitle);
+    p.rows.push_back(heading(p.name));
+    p.rows.push_back(heading(say(l, Text::RefDataPack), ix.date.substr(0, 10)));
+    p.rows.push_back(note(say(l, Text::RefDataPackWhat)));
+    const Text packAge = packStale(ix, c.now) ? Text::RefDataPackStale : Text::RefDataPackFresh;
+    p.rows.push_back(text(sayf(l, packAge, {ix.commit.substr(0, 8)})));
+    const long long age = c.liveAt > 0 ? std::max<long long>(60, c.now - c.liveAt) : 0;
+    const std::string ago = age > 0 ? respawn(int(std::min<long long>(age, 2000000) * 1000), l) : "";  // 23 days
+    const std::string state = c.liveAt <= 0                       ? say(l, Text::RefDataLiveNone)
+                              : c.now - c.liveAt <= reflive::kFreshSeconds ? sayf(l, Text::RefDataLiveFresh, {ago})
+                                                                            : sayf(l, Text::RefDataLiveStale, {ago});
+    p.rows.push_back(heading(say(l, Text::RefDataLive), state));
+    p.rows.push_back(note(say(l, Text::RefDataLiveWhat)));
+    return p;
+}
+
+}  // namespace
+
+bool packStale(const refindex::Index& ix, long long now) {
+    int y = 0, m = 0, d = 0;
+    if (ix.date.size() < 10 || std::sscanf(ix.date.c_str(), "%4d-%2d-%2d", &y, &m, &d) != 3 || m < 1 || m > 12 ||
+        d < 1 || d > 31)
+        return false;
+    return now - daysFrom(y, m, d) * 86400 > kPackStaleDays * 86400;
+}
+
 Page section(const refindex::Index& ix, Lang l, int id, const Context& c) {
+    if (id == kDataSection) return dataPage(ix, l, c);  // 3.0.11-beta.69
     Page p;
     if (id == 100 + 6) id = Cards;  // 3.0.11-beta.32: «Предмети» › «Картка» - the cards' own list (in three)
     if (id >= 100) {  // the items of one type, by name

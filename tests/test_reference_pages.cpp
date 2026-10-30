@@ -1,5 +1,6 @@
 // 3.0.11-beta.7: «Довідник» - its pages from the reference pack (core/reference_pages) and its window's shapes
 // (core/reference_window): what a card says and where its rows lead, the words for numbers, the layout and the clicks.
+#include <algorithm>
 #include <cmath>
 #include <string>
 
@@ -997,4 +998,47 @@ TEST(reference_lists_polish) {
     CHECK(poring && poring->right == "Lv 1 · приманка: Apple" && poring->icon == "mob:1002");
     const refpages::Row* morroc = rowWith(pets, "Satan Morroc");
     CHECK(morroc && morroc->right == "Lv 99");
+}
+
+// 3.0.11-beta.69 (the concept's question 21: the data's states and «Подробиці» by a click): the page the bottom's
+// chips open - the pack (its date and server, «може бути застарілим» past 14 days) and the live data (fresh, stale
+// with its age, none yet); the chips' words the same states
+TEST(reference_data_states) {
+    const refindex::Index ix = index();  // the pack of 2026-10-23
+    refpages::Context c = ctx("");
+    c.now = 1793361600;  // 2026-10-30 12:00 UTC: a week on
+    c.liveAt = c.now - 120;
+    const refpages::Link at{refpages::Go::Section, refpages::kDataSection, ""};
+    const auto has = [](const refpages::Page& p, const std::string& words) {
+        return std::any_of(p.rows.begin(), p.rows.end(), [&](const refpages::Row& r) {
+            return r.left.find(words) != std::string::npos || r.right.find(words) != std::string::npos;
+        });
+    };
+    const refpages::Page fresh = refpages::open(ix, Lang::Uk, at, c);
+    CHECK_EQ(fresh.name, std::string("Дані довідника"));
+    CHECK(has(fresh, "2026-10-23") && has(fresh, "d68ea17e") && has(fresh, "оновлено 2 хв тому"));
+    CHECK(!has(fresh, "застаріл"));
+    c.liveAt = c.now - 3 * 3600;  // the link gone 3 hours ago: the last, its age, may be out of date
+    const refpages::Page stale = refpages::open(ix, Lang::Uk, at, c);
+    CHECK(has(stale, "3 год тому") && has(stale, "можуть бути застарілими"));
+    c.liveAt = 0;  // none came
+    CHECK(has(refpages::open(ix, Lang::Uk, at, c), "ще не приходили"));
+    c.now = 1794312000;  // 2026-11-10: the pack 18 days old
+    CHECK(has(refpages::open(ix, Lang::Uk, at, c), "може бути застарілим"));
+    CHECK(refpages::packStale(ix, c.now) && !refpages::packStale(ix, 1793361600));
+    // the chips: the live one says its state; a click on a chip opens this page
+    const refwin::Layout L = refwin::layout(1920, 1080, 1.0f);
+    refwin::Texts t;
+    t.title = "Довідник";
+    t.pack = "Пакет даних \xC2\xB7 2026-10-23";
+    t.live = "Живі дані \xC2\xB7 3 год тому \xC2\xB7 можуть бути застарілими";
+    t.liveState = refwin::Live::Stale;
+    const refpages::Page home = refpages::home(ix, Lang::Uk, c);
+    const refwin::Chrome ch = refwin::chrome(L, home, t);
+    CHECK(ch.chips.size() == 2 && ch.chips[1].w > 0 && ch.live == refwin::Live::Stale);
+    int total = 0;
+    const std::vector<refwin::Placed> rows = refwin::place(L, home, total);
+    const refwin::Under u =
+        refwin::under(L, home, rows, 0, ch, ch.chips[1].x + ch.chips[1].w / 2, ch.chips[1].y + ch.chips[1].h / 2);
+    CHECK(u.part == refwin::Part::Chip && u.row == 1);
 }

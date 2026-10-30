@@ -32,6 +32,7 @@ constexpr uint32_t kCard = 0x10141C, kWhite = 0xFFFFFF, kBlack = 0x000000;
 constexpr float kCellA = 0.06f, kLineA = 0.09f, kLine2A = 0.15f, kTileA = 0.04f, kBlockA = 0.035f;
 constexpr float kSelA = 0.16f, kRingA = 0.55f;
 constexpr uint32_t kPackDot = 0x9AA3B5, kLiveDot = 0x3CCF7C, kOffDot = 0x5D6475;  // the bottom's chips' dots
+constexpr uint32_t kStaleDot = 0xF0A050;  // 3.0.11-beta.69: live data past its minutes - the concept's warning
 constexpr uint32_t kRoute = 0x5AC8FA, kBadge = 0x0D1016;  // the minimap's way colour; the players' badge
 
 int px(float v, float s) { return int(std::lround(v * s)); }
@@ -680,6 +681,8 @@ Under under(const Layout& L, const refpages::Page& p, const std::vector<Placed>&
     if (c.search.w > 0 && c.search.contains(x, y)) return Under{Part::Search, -1};
     for (size_t i = 0; i < c.rail.size(); ++i)  // 3.0.11-beta.26: the rail's sections
         if (c.rail[i].contains(x, y)) return Under{Part::Rail, int(i)};
+    for (size_t i = 0; i < c.chips.size(); ++i)  // 3.0.11-beta.69: the data's chips - their page by a click
+        if (c.chips[i].w > 0 && c.chips[i].contains(x, y)) return Under{Part::Chip, int(i)};
     if (y < float(L.bodyY) || y >= float(L.bodyY + L.bodyH) || (c.railW > 0 && x < c.railW)) return Under{};
     const float by = y - float(L.bodyY) + float(scroll);
     for (size_t i = 0; i < rows.size() && i < p.rows.size(); ++i) {
@@ -1189,8 +1192,12 @@ void chromeShapes(panel::Picture& out, const Layout& L, const Look& look) {
     for (size_t k = 0; k < c.chips.size(); ++k) {
         const panel::Box& b = c.chips[k];
         if (b.w <= 0) continue;
-        panel::roundRect(out, b, b.h / 2, kWhite, kCellA);
-        const uint32_t dot = k == 0 ? kPackDot : c.live == Live::Fresh ? kLiveDot : kOffDot;
+        const bool over = hover == Part::Chip && look.hover.row == int(k);  // 3.0.11-beta.69: a click opens their page
+        panel::roundRect(out, b, b.h / 2, kWhite, over ? 0.14f : kCellA);
+        const uint32_t dot = k == 0              ? kPackDot
+                             : c.live == Live::Fresh ? kLiveDot
+                             : c.live == Live::Stale ? kStaleDot
+                                                     : kOffDot;
         panel::circle(out, b.x + 12.5f * s, b.y + b.h / 2, 3.5f * s, dot, 1.0f);
     }
 }
@@ -1567,6 +1574,8 @@ std::vector<Rect> hotAreas(const Layout& L, const refpages::Page& p, const std::
     if (part == Part::Home && c.home.w > 0) out.push_back(pixelsOf(L, c.home));  // 3.0.11-beta.30
     if (part == Part::Close && c.close.w > 0) out.push_back(pixelsOf(L, c.close));
     if (part == Part::Star && c.star.w > 0) out.push_back(pixelsOf(L, c.star));
+    if (part == Part::Chip && look.hover.row >= 0 && size_t(look.hover.row) < c.chips.size())  // 3.0.11-beta.69
+        out.push_back(pixelsOf(L, c.chips[size_t(look.hover.row)]));
     if (part == Part::Search && c.search.w > 0) out.push_back(pixelsOf(L, c.search));
     if (part == Part::Rail && look.hover.row >= 0 && size_t(look.hover.row) < c.rail.size())  // 3.0.11-beta.26
         out.push_back(pixelsOf(L, c.rail[size_t(look.hover.row)]));

@@ -47,8 +47,9 @@ bool shown(const Layout& L, const Placed& r, int scroll);  // the whole row in t
 
 // 3.0.11-beta.26: the header's star; the rail's sections (row: its index); 3.0.11-beta.30 «Головна» (the header's
 // button and its title)
-// 3.0.11-beta.64: Chain - a map of the world map's dungeon box (WorldLook::chain)
-enum class Part : uint8_t { None, Close, Back, Search, Row, Body, Tile, Star, Rail, Home, Chain };
+// 3.0.11-beta.64: Chain - a map of the world map's dungeon box (WorldLook::chain); 3.0.11-beta.69: Chip - a bottom's
+// data chip (row: 0 the pack's, 1 the live data's), «Подробиці» by a click
+enum class Part : uint8_t { None, Close, Back, Search, Row, Body, Tile, Star, Rail, Home, Chain, Chip };
 struct Under {
     Part part = Part::None;
     int row = -1;   // Part::Row: a row that leads somewhere; Part::Tile: the world map's row
@@ -84,7 +85,8 @@ struct WorldLook {
 };
 int chainSide(const Layout& L);  // 3.0.11-beta.64: the dungeon box's pictures' side (64 at scale 1)
 // 3.0.11-beta.26: the words around the page - the header's and the bottom's
-enum class Live : uint8_t { None, Fresh, Off };  // the site's live data: not asked for, fresh, no link
+// the site's live data: not asked for, fresh, no link; 3.0.11-beta.69 stale - came, but past its minutes
+enum class Live : uint8_t { None, Fresh, Off, Stale };
 struct Texts {
     std::string title;                // «Довідник»
     std::string back;                 // «Назад до …» ("" on the first screen)
