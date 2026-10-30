@@ -9,6 +9,7 @@ namespace {
 
 std::atomic<int> g_panel{kPanelDefault}, g_window{kWindowDefault}, g_generation{0};
 std::atomic<float> g_size{1.0f}, g_text{1.0f};  // 3.0.11-beta.67: the reading windows' text
+std::atomic<int> g_pictures{-1};                 // 3.0.11-beta.74
 
 }  // namespace
 
@@ -24,6 +25,10 @@ float panel() { return float(g_panel) / 100.0f; }
 float window() { return float(g_window) / 100.0f; }
 float chat() { return std::max(0.8f, panel()); }
 int generation() { return g_generation; }
+
+void setPictures(int source) {
+    if (g_pictures.exchange(source) != source) ++g_generation;
+}
 
 float autoSize(int gameW, int gameH, double windowScale) {
     if (gameW <= 0 || gameH <= 0) return 1.0f;

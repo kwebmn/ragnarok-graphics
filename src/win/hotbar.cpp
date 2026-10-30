@@ -13,7 +13,6 @@
 #include "core/buff_panel.hpp"
 #include "core/char_status.hpp"
 #include "core/hotbar_panel.hpp"
-#include "core/pack_source.hpp"
 #include "core/settings/strings.hpp"
 #include "core/skill_costs.hpp"
 #include "core/ui_style.hpp"
@@ -65,14 +64,6 @@ constexpr ULONGLONG kTipMs = 400;  // the concept's: a tip after 0.4 s
 constexpr ULONGLONG kReadMs = 150, kPressMs = 160;
 constexpr size_t kMostNodes = 1024;
 using SendMsgFn = int(__attribute__((thiscall)) *)(uint32_t self, uint32_t sender, int msg, int a, int b, int c);
-const std::string kUi = "\xC0\xAF\xC0\xFA\xC0\xCE\xC5\xCD\xC6\xE4\xC0\xCC\xBD\xBA";  // 유저인터페이스
-
-struct Icon {
-    bool looked = false;
-    std::vector<uint32_t> argb;
-    int w = 0, h = 0;
-    std::map<int, panel::Picture> sized;
-};
 
 struct Slot {
     hb::Slot what;
@@ -104,7 +95,6 @@ struct State {
     std::string barred;  // the cells «не тут» last logged
     ULONGLONG readAt = 0;
     std::string told;  // the slots last logged
-    std::map<std::string, Icon> icons;  // by the file
     std::vector<hb::Cell> cells;
     hb::Layout layout;
     int hover = -1, pressed = -1;
@@ -115,7 +105,7 @@ struct State {
     uint32_t texture = 0;
     int texW = 0, texH = 0;
     bool upload = false;
-    int usesLogged = 0, iconsLogged = 0;
+    int usesLogged = 0;
 };
 
 State& state() {
@@ -285,27 +275,9 @@ void readSlots(State& s) {
     }
 }
 
+// 3.0.11-beta.74: the shared icons (win/client_tables - the AI pack's when it has them, else the game's own)
 const panel::Picture* iconOf(State& s, const std::string& file, int side) {
-    if (file.empty() || side <= 0) return nullptr;
-    Icon& ic = s.icons[file];
-    if (!ic.looked) {
-        ic.looked = true;
-        std::string bytes;
-        const std::string entry = "data\\texture\\" + kUi + "\\item\\" + file + ".bmp";
-        const bool read = clienttables::readClientFile(entry, bytes);
-        if (!read || !pack::decodeBmp(reinterpret_cast<const uint8_t*>(bytes.data()), bytes.size(), ic.argb, ic.w,
-                                      ic.h)) {
-            ic.argb.clear();
-            if (s.iconsLogged++ < 20)
-                LOG_INFO("hotbar: the icon %s.bmp %s - an empty cell's look", file.c_str(),
-                         read ? "not a .bmp the driver reads" : "not found");
-        }
-    }
-    if (ic.argb.empty()) return nullptr;
-    auto it = ic.sized.find(side);
-    if (it == ic.sized.end())
-        it = ic.sized.emplace(side, buffpanel::iconPicture(ic.argb, ic.w, ic.h, false, side, 4 * s.scale)).first;
-    return &it->second;
+    return clienttables::icon(file, side, 4 * s.scale);
 }
 
 hb::Cell cellOf(State& s, int slot, const std::string& key, unsigned codePage) {

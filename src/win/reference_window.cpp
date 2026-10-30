@@ -20,12 +20,14 @@
 #include "core/sprite_file.hpp"
 #include "core/ui_style.hpp"
 #include "pad/win/game_window.hpp"
+#include "win/client_tables.hpp"
 #include "win/game_camera.hpp"
 #include "win/game_files.hpp"
 #include "win/hotbar.hpp"
 #include "win/log.hpp"
 #include "win/minimap_proto.hpp"
 #include "win/monster_picture.hpp"
+#include "win/pack_pictures.hpp"
 #include "win/paths.hpp"
 #include "win/picture_draw.hpp"
 #include "win/real_ddraw.hpp"
@@ -56,6 +58,7 @@ struct State {
     WindowShadow shadow;  // 3.0.11-beta.49
     bool enabled = false, open = false, shown = false, dirty = true, upload = true, wantPage = true;
     int style = -1;  // 3.0.11-beta.47: core/ui_style's generation painted
+    int iconsMade = -2;  // 3.0.11-beta.74: win/pack_pictures' iconsStamp() the pictures were made for
     WPARAM skipChar = 0;  // the character of the key that opened or closed it: neither typed nor the game's
     std::string query;    // typed (ASCII: the names are English)
     refpages::Link at;    // the page: Go::None - the search's (the first screen when nothing is typed)
@@ -213,18 +216,9 @@ void loadPicture(State& s, const std::string& key, int side) {
         }
         const auto f = s.itemFiles.find(std::atoi(key.c_str() + (icon ? 10 : 5)));
         if (f == s.itemFiles.end()) return;
-        std::string bmp;
-        std::vector<uint32_t> argb;
-        int w = 0, h = 0;
-        if (!readFile(s, "data\\texture\\" + kUi + "\\item\\" + f->second + ".bmp", bmp) ||
-            !pack::decodeBmp(reinterpret_cast<const uint8_t*>(bmp.data()), bmp.size(), argb, w, h))
-            return;
+        // 3.0.11-beta.74: the AI texture pack's icon when it has one (win/client_tables), else the game's
         spritefile::Image im;
-        im.w = w;
-        im.h = h;
-        im.argb = std::move(argb);
-        for (uint32_t& c : im.argb)  // the game's magenta: see-through
-            if ((c & 0xFFFFFF) == 0xFF00FF) c = 0;
+        if (!clienttables::iconPixels(f->second, im.argb, im.w, im.h)) return;
         out = icon ? asPicture(spritefile::fitted(im, side, side, 1))
                    : asPicture(spritefile::fitted(im, std::min(box, 72), std::min(box, 72)));
     }
@@ -874,6 +868,11 @@ void frame(HWND game, bool enabled, double k, int targetWidth, int targetHeight)
     }
     if (s.style != uistyle::generation()) {  // 3.0.11-beta.47: its ground another opacity
         s.style = uistyle::generation();
+        s.dirty = true;
+    }
+    if (const int icons = packpictures::iconsStamp(); icons != s.iconsMade) {  // 3.0.11-beta.74: the pack's icons
+        s.iconsMade = icons;
+        s.pictures.clear();
         s.dirty = true;
     }
     if (s.dirty)

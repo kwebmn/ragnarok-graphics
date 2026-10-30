@@ -32,6 +32,7 @@
 #include "win/server_night.hpp"
 #include "win/answer_card.hpp"
 #include "win/minimap_proto.hpp"
+#include "win/pack_pictures.hpp"
 #include "win/reference_window.hpp"
 #include "win/buff_column.hpp"
 #include "win/buff_overlay.hpp"
@@ -806,6 +807,9 @@ void Context::present(const Rect& source, bool waitForVblank) {
     uistyle::setSize(config.uiSize > 0 ? float(config.uiSize) / 100.0f
                                        : uistyle::autoSize(shadow.width(), shadow.height(), scaleMade_ ? plan.s : 1.0));
     uistyle::setText(float(config.textSize) / 100.0f);  // 3.0.11-beta.67: [interface] text_size
+    // 3.0.11-beta.74: [interface] pack_icons - the panels' icons from the AI texture pack; drawn again once it is read
+    packpictures::setIconsOn(config.packIcons);
+    uistyle::setPictures(packpictures::iconsStamp());
     // 3.0.11-beta.1: [interface] minimap - the new interface's minimap prototype in the game's own one's corner
     minimapproto::frame(window,
                         {config.newMinimap, config.minimapNpcs, config.minimapWarps, config.minimapMobs,

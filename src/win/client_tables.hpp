@@ -1,6 +1,8 @@
 #pragma once
+#include <cstdint>
 #include <map>
 #include <string>
+#include <vector>
 
 #include "core/window_panel.hpp"
 
@@ -18,6 +20,12 @@ const std::map<std::string, std::string>& unknownNames();
 // 3.0.11-beta.42: an item's or a skill's icon by its file (data\texture\유저인터페이스\item\<file>.bmp, its magenta
 // keyed out) at `side` square, its corners rounded `radius`, premultiplied; read once a file (none: null, logged)
 const panel::Picture* icon(const std::string& file, int side, float radius);
+// 3.0.11-beta.74 (the owner: «иконки скилов, предметов, и всего остального также по возможности грузить в текстур
+// которые обработаны»): an item's or a skill's icon's pixels - the AI texture pack's (4x the game's, its own alpha)
+// when it has one and [interface] pack_icons is on (win/pack_pictures), else the game's .bmp with its magenta
+// see-through; straight alpha. `from`: where from, or why none (for the log)
+bool iconPixels(const std::string& file, std::vector<uint32_t>& argb, int& width, int& height,
+                std::string* from = nullptr);
 // A client's file as the game finds it (its zips and updates too), else from the game's folder's archives
 bool readClientFile(const std::string& entry, std::string& out);
 

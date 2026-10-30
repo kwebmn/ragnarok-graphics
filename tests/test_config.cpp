@@ -899,6 +899,21 @@ TEST(config_reads_the_sharp_map_pictures) {
     CHECK(!u.next.minimapHd);
 }
 
+// 3.0.11-beta.74 (the owner: «иконки скилов, предметов, и всего остального также по возможности грузить в текстур
+// которые обработаны»): [interface] pack_icons - the panels' icons from the AI texture pack; on, a box of «Інтерфейс»
+TEST(config_reads_the_pack_icons) {
+    CHECK(parseConfig("").packIcons);
+    CHECK(!parseConfig("[interface]\npack_icons = 0\n").packIcons);
+    const settings::IniSetting* s = settings::findSetting("interface.pack_icons");
+    CHECK(s != nullptr);
+    if (!s) return;
+    CHECK(s->page == settings::Page::Interface && s->control == settings::Control::Check);
+    CHECK_EQ(settings::tokenOf(*s, parseConfig("[interface]\npack_icons = 0\n")), std::string("0"));
+    CHECK(appliesNow("interface.pack_icons"));
+    const LiveUpdate u = liveUpdate(parseConfig(""), parseConfig("[interface]\npack_icons = 0\n"));
+    CHECK(!u.next.packIcons);
+}
+
 // 3.0.11-beta.33 (the owner: «полоска с маршрутом может лучше бы была выполнена такими типа следами типа шажков»):
 // [interface] minimap_way - the way on the ground as footprints (steps), the strip (line) or none; a choice of
 // «Інтерфейс», applied at once

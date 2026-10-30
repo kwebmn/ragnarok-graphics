@@ -24,6 +24,7 @@
 #include "win/game_camera.hpp"
 #include "win/game_files.hpp"
 #include "win/log.hpp"
+#include "win/pack_pictures.hpp"
 #include "win/minimap_proto.hpp"
 #include "win/paths.hpp"
 #include "win/picture_draw.hpp"
@@ -97,11 +98,11 @@ bool relayout() {
 }
 
 struct Icon {  // a status icon's .tga as the game's files have it, and its pictures by side
-    bool looked = false;
+    int madeFor = -2;  // 3.0.11-beta.74: packpictures::iconsStamp() it was read for (-2 never)
     std::vector<uint32_t> argb;
     int w = 0, h = 0;
     bool alpha = false;
-    std::map<int, panel::Picture> sized;
+    std::map<int, panel::Picture> sized;  // made again in their places
 };
 
 struct GameIcon {
@@ -225,24 +226,41 @@ bool readFile(State& s, const std::string& entry, std::string& out) {
 
 const panel::Picture* pictureOf(State& s, const GameIcon& g, int side) {
     Icon& ic = s.icons[g.file];
-    if (!ic.looked) {
-        ic.looked = true;
+    // 3.0.11-beta.74: the AI texture pack's picture when it has one ([interface] pack_icons), read again when that
+    // changes (the pack read, the switch)
+    if (const int want = packpictures::iconsStamp(); want != ic.madeFor) {
+        const bool first = ic.madeFor == -2;
+        ic.madeFor = want;
+        ic.argb.clear();
+        ic.w = ic.h = 0;
+        ic.alpha = false;
         std::string bytes;
         const std::string entry = "data\\texture\\" + g.file;
         const bool read = readFile(s, entry, bytes);
-        if (!read || !pack::decodeTga(reinterpret_cast<const uint8_t*>(bytes.data()), bytes.size(), ic.argb, ic.w,
-                                      ic.h, ic.alpha)) {
-            ic.argb.clear();
+        const auto* data = reinterpret_cast<const uint8_t*>(bytes.data());
+        std::string name;
+        if (read && want > 0 && packpictures::ofTexture(data, bytes.size(), true, ic.argb, ic.w, ic.h, &name)) {
+            ic.alpha = true;
             if (s.iconsLogged < 40) {
+                ++s.iconsLogged;
+                LOG_INFO("buffs: icon %u (%s) - the AI texture pack's %s %dx%d", g.icon, nameOf(g).c_str(),
+                         name.c_str(), ic.w, ic.h);
+            }
+        } else if (!read || !pack::decodeTga(data, bytes.size(), ic.argb, ic.w, ic.h, ic.alpha)) {
+            ic.argb.clear();
+            if (first && s.iconsLogged < 40) {
                 ++s.iconsLogged;
                 LOG_INFO("buffs: icon %u's picture %s %s - a dark tile in its place", g.icon, entry.c_str(),
                          read ? "not a .tga the driver reads" : "not found");
             }
-        } else if (s.iconsLogged < 40) {
+        } else if (first && s.iconsLogged < 40) {
             ++s.iconsLogged;
             LOG_INFO("buffs: icon %u (%s) - %s %dx%d%s", g.icon, nameOf(g).c_str(), entry.c_str(), ic.w, ic.h,
                      ic.alpha ? "" : ", its magenta keyed out");
         }
+        for (auto& [at, picture] : ic.sized)
+            picture = ic.argb.empty() ? panel::Picture{}
+                                      : bp::iconPicture(ic.argb, ic.w, ic.h, ic.alpha, at, 5 * s.scale);
     }
     if (ic.argb.empty() || side <= 0) return nullptr;
     auto it = ic.sized.find(side);

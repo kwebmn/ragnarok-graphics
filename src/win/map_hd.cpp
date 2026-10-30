@@ -4,13 +4,11 @@
 
 #include <utility>
 
-#include "core/layout.hpp"
-#include "core/pack_source.hpp"
-#include "core/texture_pack.hpp"
 #include "core/webp_image.hpp"
 #include "core/zip.hpp"
 #include "win/game_files.hpp"
 #include "win/log.hpp"
+#include "win/pack_pictures.hpp"
 #include "win/paths.hpp"
 
 namespace uagfx::win::maphd {
@@ -30,9 +28,8 @@ struct Worker {
     bool waiting = false;
     std::string doneMap;  // the last made, till handed
     std::shared_ptr<const minimap::MapPicture> done;
-    // the thread's alone (one at a time: busy)
-    bool packTried = false, zipsTried = false;
-    std::unique_ptr<zip::Index> pack;
+    // the thread's alone (one at a time: busy). 3.0.11-beta.74: the pack's directory shared (win/pack_pictures)
+    bool zipsTried = false;
     std::vector<std::unique_ptr<zip::Index>> zips;
     std::vector<std::string> zipNames;
 };
@@ -45,29 +42,6 @@ Worker& worker() {
 std::string lower(std::string s) {
     for (char& c : s) c = c >= 'A' && c <= 'Z' ? char(c - 'A' + 'a') : c;
     return s;
-}
-
-// The AI pack's interface pictures, its directory read once a game
-void openPack(Worker& w) {
-    if (w.packTried) return;
-    w.packTried = true;
-    const std::string path = ourFile(gameDir(), layout::File::Pack);
-    if (GetFileAttributesA(path.c_str()) == INVALID_FILE_ATTRIBUTES) {
-        LOG_INFO("minimap: no AI texture pack (%s) - the maps' bigger pictures from the game's zips alone",
-                 path.c_str());
-        return;
-    }
-    const std::string ui = std::string(pack::groupName(pack::Group::Ui)) + "\\";
-    auto index = std::make_unique<zip::Index>();
-    std::string why;
-    const ULONGLONG t0 = GetTickCount64();
-    if (!index->open(path, [&ui](const std::string& n) { return n.compare(0, ui.size(), ui) == 0; }, why)) {
-        LOG_INFO("minimap: the AI texture pack cannot be read for the maps' pictures (%s)", why.c_str());
-        return;
-    }
-    LOG_INFO("minimap: the AI texture pack's %zu interface pictures known in %llu ms (the maps' bigger pictures)",
-             index->count(), static_cast<unsigned long long>(GetTickCount64() - t0));
-    w.pack = std::move(index);
 }
 
 // DATA.INI's zips with maps' pictures (the old client's texture_x4.zip), their directories read once a game
@@ -92,36 +66,28 @@ void openZips(Worker& w) {
 
 std::shared_ptr<const minimap::MapPicture> find(Worker& w, const std::string& map, const std::vector<uint8_t>& bmp) {
     const ULONGLONG t0 = GetTickCount64();
-    std::vector<uint8_t> file;
-    std::string from, why;
-    openPack(w);
-    if (w.pack && !bmp.empty()) {  // by the keys the pack's builder gave the game's own picture
-        std::vector<std::string> keys;
-        pack::Picture p;
-        if (pack::interfacePicture(bmp.data(), bmp.size(), p)) keys.push_back(p.key);
-        if (pack::worldTexture(bmp.data(), bmp.size(), false, p)) keys.push_back(p.key);
-        for (const std::string& key : keys) {
-            const std::string name = zip::normalName(pack::pictureName(pack::Group::Ui, key));
-            if (w.pack->has(name) && w.pack->read(name, file, why)) {
-                from = "the AI texture pack (" + name + ")";
-                break;
-            }
-        }
-    }
-    if (file.empty()) {
-        openZips(w);
-        const std::string name = kZipFolder + lower(map) + ".webp";
-        for (size_t i = 0; i < w.zips.size() && file.empty(); ++i)
-            if (w.zips[i]->has(name) && w.zips[i]->read(name, file, why)) from = w.zipNames[i];
-    }
-    if (file.empty()) {
-        LOG_INFO("minimap: %s - no picture bigger than the game's (the AI pack %s, %zu zips with maps' pictures)",
-                 map.c_str(), w.pack ? "has none of it" : "not here", w.zips.size());
-        return nullptr;
-    }
     std::vector<uint32_t> argb;
     int width = 0, height = 0;
-    if (!webp::decode(file.data(), file.size(), argb, width, height) || width < kLeast || height < kLeast) {
+    std::string from, name, why;
+    // by the keys the pack's builder gave the game's own picture (3.0.11-beta.74: the shared directory)
+    const bool pack = packpictures::waitRead(15000);
+    if (pack && !bmp.empty() && packpictures::ofInterface(bmp.data(), bmp.size(), argb, width, height, &name))
+        from = "the AI texture pack (" + name + ")";
+    if (from.empty()) {
+        openZips(w);
+        const std::string entry = kZipFolder + lower(map) + ".webp";
+        std::vector<uint8_t> file;
+        for (size_t i = 0; i < w.zips.size() && from.empty(); ++i)
+            if (w.zips[i]->has(entry) && w.zips[i]->read(entry, file, why) &&
+                webp::decode(file.data(), file.size(), argb, width, height))
+                from = w.zipNames[i];
+    }
+    if (from.empty()) {
+        LOG_INFO("minimap: %s - no picture bigger than the game's (the AI pack %s, %zu zips with maps' pictures)",
+                 map.c_str(), pack ? "has none of it" : "not here", w.zips.size());
+        return nullptr;
+    }
+    if (width < kLeast || height < kLeast) {
         LOG_INFO("minimap: %s's picture from %s not taken (%dx%d)", map.c_str(), from.c_str(), width, height);
         return nullptr;
     }

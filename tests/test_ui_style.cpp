@@ -91,3 +91,18 @@ TEST(ui_style_text_size) {
     uistyle::setText(1.0f);
     uistyle::setSize(1.0f);
 }
+
+// 3.0.11-beta.74 (the owner: «иконки ... грузить в текстур которые обработаны»): the panels' pictures' source (the AI
+// pack read, [interface] pack_icons) - another one draws the parts again, the same one nothing
+TEST(ui_style_pictures_source) {
+    uistyle::setPictures(-1);
+    const int g = uistyle::generation();
+    uistyle::setPictures(-1);
+    CHECK_EQ(uistyle::generation(), g);
+    uistyle::setPictures(1);
+    CHECK(uistyle::generation() != g);
+    const int h = uistyle::generation();
+    uistyle::setPictures(1);
+    CHECK_EQ(uistyle::generation(), h);
+    uistyle::setPictures(-1);
+}

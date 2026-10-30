@@ -190,6 +190,10 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("minimap_hd", flag(running.minimapHd), flag(file.minimapHd)));
         n.minimapHd = file.minimapHd;
     }
+    if (file.packIcons != running.packIcons) {  // 3.0.11-beta.74: the panels' icons, at once
+        u.applied.push_back(change("pack_icons", flag(running.packIcons), flag(file.packIcons)));
+        n.packIcons = file.packIcons;
+    }
     if (file.minimapWay != running.minimapWay) {  // 3.0.11-beta.33: the way on the ground, at once
         u.applied.push_back(
             change("minimap_way", wayOnGroundToken(running.minimapWay), wayOnGroundToken(file.minimapWay)));

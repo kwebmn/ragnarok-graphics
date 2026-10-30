@@ -4923,6 +4923,17 @@ constexpr Entry kTexts[] = {
      "Новая миникарта и её большая карта берут картинку карты в четыре раза больше, если она есть в игре, — из пака "
      "текстур ИИ (uaro-textures.zip) или из texture_x4.zip старого клиента. Выключено: собственная картинка игры, "
      "512 x 512."},
+    // 3.0.11-beta.74 (the owner: «иконки скилов, предметов, и всего остального также по возможности грузить в текстур
+    // которые обработаны»)
+    {Text::InterfacePackIcons, "Icons from the AI texture pack", "Іконки з пака текстур ШІ",
+     "Иконки из пака текстур ИИ"},
+    {Text::InterfacePackIconsHint,
+     "The new interface's icons - skills, items, status effects - drawn from the AI texture pack's pictures, four "
+     "times bigger than the game's, wherever the pack has them (uaro-textures.zip). Off: the game's own small icons.",
+     "Іконки нового інтерфейсу — навички, предмети, ефекти — малюються з картинок пака текстур ШІ, вчетверо більших за "
+     "ігрові, там, де пак їх має (uaro-textures.zip). Вимкнено: власні маленькі іконки гри.",
+     "Иконки нового интерфейса — навыки, предметы, эффекты — рисуются из картинок пака текстур ИИ, в четыре раза "
+     "больше игровых, там, где пак их имеет (uaro-textures.zip). Выключено: собственные маленькие иконки игры."},
     // 3.0.11-beta.33
     {Text::InterfaceMinimapWay, "The way on the ground", "Шлях на землі", "Путь на земле"},
     {Text::InterfaceMinimapWayHint,
