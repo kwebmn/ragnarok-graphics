@@ -1,3 +1,9 @@
+# uaRO Graphics 3.0.11-beta.52 — what is new
+
+- **«Cast over the hero»: safer.** When a cast ends the game takes its old gauge away itself; the driver no longer
+  touches it after that (before, turning «Cast over the hero» off right after a cast could show a gauge that was
+  gone). Only the live gauge is shown back.
+
 # uaRO Graphics 3.0.11-beta.51 — what is new
 
 - **Tips by the concept's rule: after 0.4 s.** In the character block (the windows' buttons, the rings' numbers), the
