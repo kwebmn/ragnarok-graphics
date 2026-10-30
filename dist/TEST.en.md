@@ -1,3 +1,21 @@
+# uaRO Graphics 3.0.11-beta.42 — what is new
+
+- **The windows «Items» and «Status» (stage 8 of the new interface).** They open as before (Alt+E, Alt+A, the
+  character block's buttons) in the new look; the game's old windows are hidden.
+- «Items»: the tabs «Items», «Gear», «Other», a search by the name, a grid of eight cells a row with the counts and
+  the refines, the weight and the zeny under it. A double click uses or wears, a press drags (onto the hotbar, the
+  storage, the ground), a right click shows the item's card. Items from the storage, the cart and the gear are let
+  go right over the window.
+- «Status»: base, bonus, total and the next point's price, a «+» where the free points pay for it; the battle's
+  numbers beside (ATK, MATK, HIT, FLEE, CRIT, DEF, MDEF, ASPD, the cast's time); the line under them tells about the
+  stat pointed at: its price and what a point gives by the game's formulas.
+- Both windows move by their titles and keep their places.
+- «Interface» has «Items» and «Status»; with the new minimap they are on by themselves.
+- To check: Alt+E — the new window; a double click on a potion — drunk, on a weapon — worn; a potion dragged onto
+  the hotbar; a right click — the card; the storage: an item dragged into «Items». Alt+A — «+» adds a point. The
+  log's lines `items: the game's «Речі» window hidden ...`, `items: a double click on #501 ... - used`,
+  `stats: STR +1 asked as the game's own «+»`.
+
 # uaRO Graphics 3.0.11-beta.41 — what is new
 
 - **The chat (stage 8 of the new interface).** At the bottom left — a new chat in place of the old window: the tabs
