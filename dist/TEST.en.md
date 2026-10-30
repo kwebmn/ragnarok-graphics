@@ -1,3 +1,14 @@
+# uaRO Graphics 3.0.11-beta.49 — what is new
+
+- **Open windows, as in the concept.** While «Items», «Status» or «Reference» is open, the world behind them darkens
+  smoothly (by 35 %); the game's windows, the new interface's panels and the words over the heroes stay as they are.
+  The full character block shrinks to its compact look meanwhile and comes back when the windows close.
+- **Windows cast a shadow.** «Items», «Status» and «Reference» cast a soft shadow — easier to tell from the panels.
+- A new switch «Dim the world under windows» (the «Interface» section in the app, «The new interface» in the game's
+  console); on by itself with the new minimap.
+- To check: Alt+E — the world behind «Items» darkens, the character block goes compact, the minimap, the buffs and
+  the hotbar do not darken; close it — all comes back. In the log: `dim: the world dimmed under the windows`.
+
 # uaRO Graphics 3.0.11-beta.48 — what is new
 
 - **The cast over the hero in the new look** (the concept; your word on version 4: «the cast over the hero as a strip,
