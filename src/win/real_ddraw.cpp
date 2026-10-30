@@ -11,6 +11,7 @@
 #include <string>
 
 #include "core/card_speed.hpp"
+#include "core/first_game.hpp"
 #include "core/effect_groups.hpp"
 #include "core/graphics_test.hpp"
 #include "core/launcher.hpp"
@@ -205,7 +206,7 @@ void writeSmallFile(const std::string& path, const std::string& text) {
 // 2.12: the safe mode (core/safe_mode) - the last start judged by its log, the failed ones in a row counted; two, or
 // [renderer] safe_mode = 1, and this start's settings go safe. An automatic one stays (its note) until the settings
 // app's «Звичайний режим» removes the note.
-void safeModeFirst(const std::string& dir, Config& config) {
+bool safeModeFirst(const std::string& dir, Config& config) {
     std::string previous, kept;
     // 3.0.3-beta.1: the last game of this log's slot - a second window's start judges the second window's last one
     const std::string log =
@@ -227,11 +228,12 @@ void safeModeFirst(const std::string& dir, Config& config) {
     const int inRow = safe::failedInRow(std::atoi(kept.c_str()), safe::judge(previous));
     writeSmallFile(counter, std::to_string(inRow));
     const bool noted = fileExists(note);
-    if (!noted && !safe::needed(inRow, config.safeMode)) return;
+    if (!noted && !safe::needed(inRow, config.safeMode)) return false;
     if (!noted && !config.safeMode) writeSmallFile(note, safe::noteText(inRow, kVersion));
     safe::apply(config);
     LOG_INFO("safe mode (%s): Direct3D 11, no effects, AI textures, DLSS, 64-bit renderer",
              config.safeMode ? "[renderer] safe_mode = 1" : "the last starts failed - the settings app tells");
+    return true;
 }
 
 // 2.10: the last check (the watcher's, at an earlier start) found an update - the question before the login window,
@@ -309,7 +311,7 @@ Startup decide() {
     logRoext();                         // 3.0.1-beta.8
     logUpdates();                       // 3.0.2-beta.5
     for (const char* folder : layout::kMadeAtStart) makeFolders(layout::join(dir, folder));
-    safeModeFirst(dir, s.config);  // 2.12: before anything reads the renderer's settings
+    const bool safeStart = safeModeFirst(dir, s.config);  // 2.12: before anything reads the renderer's settings
     {  // 2.12: the start panel in the player's language - the settings app's choice, else Windows'
         const auto keys = settings::readIni(ini);
         const auto chosen = keys.find("utility.language");
@@ -417,6 +419,22 @@ Startup decide() {
              s.cardSettled                   ? " (judged by its speed)"
              : s.cardLevel != s.memoryLevel ? " (by its speed so far - judged on the maps on)"
                                             : " (by its memory - its speed judged on the maps)");
+    // 3.0.11-beta.61 (the autopilot): an install's first game (no game's log before it) noted at its start - its
+    // first minute on the maps by the game (Context::noteFirstGame), its end by the settings app's watcher, sent once
+    // with the install's anonymous mark (core/first_game)
+    const std::string firstGame = layout::join(dir, layout::kFirstGame);
+    const std::string thisLog =
+        wlog::path().empty() ? layout::join(dir, layout::now(layout::File::DriverLog)) : wlog::path();
+    if (!fileExists(firstGame) && !fileExists(logfiles::previous(thisLog))) {
+        firstgame::Outcome o;
+        o.version = kVersion;
+        o.cls = "L" + std::to_string(s.memoryLevel) + " " +
+                (s.choice.renderer != Renderer::Uaro ? "system" : s.choice.api == Api::D3d11 ? "d3d11" : "d3d12");
+        o.safe = safeStart;
+        writeSmallFile(firstGame, firstgame::format(o));  // uaro-graphics\cache made at the start (layout)
+        LOG_INFO("first game on this install (%s%s): its outcome goes once with the install's anonymous mark",
+                 o.cls.c_str(), safeStart ? ", the safe mode" : "");
+    }
     // 2.2.1: also for the statistics - sent when the game ends, with the player's leave
     startWatcher(dir);  // 2.10: always - the update check; reports and statistics as the settings say
     LOG_INFO("renderer: %s%s (%s)", rendererName(s.choice.renderer),

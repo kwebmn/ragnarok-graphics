@@ -217,6 +217,10 @@ private:
     // over keep_fps's windows - only those on a map the whole window (the game's camera read every frame)
     card_speed::Judge& judge() const;
     void judgeCard(const Config& config, double fps, double gpuMs);
+    // 3.0.11-beta.61 (the autopilot): an install's first game - its first minute on the maps into its outcome
+    void noteFirstGame(const Config& config, double fps);
+    std::vector<double> firstMapFps_;
+    bool firstGameNoted_ = false;
     void sayOnScreen(const std::wstring& note);
     mutable card_speed::Judge judge_{0, true};
     mutable bool judgeMade_ = false;

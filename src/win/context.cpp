@@ -7,6 +7,8 @@
 #include "core/effect_costs.hpp"
 #include "core/effect_exe.hpp"
 #include "core/effect_groups.hpp"
+#include "core/first_game.hpp"
+#include "core/layout.hpp"
 #include "core/live_config.hpp"
 #include "core/outdoors.hpp"
 #include "core/scale.hpp"
@@ -1128,7 +1130,10 @@ void Context::keepFrameRate(const Config& config, HWND window) {
     keepOnMap_ = onMap;
     GpuTiming gpu;  // 2.2.2: the card's own work - a game slow for the processor's part keeps its effects
     const double gpuMs = renderer && renderer->gpuTiming(gpu) ? gpu.gpuMs : -1.0;
-    if (windowOnMap) judgeCard(config, fps, gpuMs);
+    if (windowOnMap) {
+        judgeCard(config, fps, gpuMs);
+        noteFirstGame(config, fps);  // 3.0.11-beta.61
+    }
     if (config.keepFps <= 0) return;
     keepSlow_ = effect_costs::slowForCard(fps, config.keepFps, gpuMs) ? keepSlow_ + 1 : 0;
     if (keepSlow_ < 2) return;
@@ -1226,6 +1231,26 @@ void Context::judgeCard(const Config& config, double fps, double gpuMs) {
     }
     writeFileAtomic(gameDir() + "\\uaro-graphics\\card-level.txt",
                     card_speed::format({now, judge().settled(), s.adapter}));
+}
+
+// 3.0.11-beta.61 (the autopilot): the first game's first minute on the maps - its windows' median frames and the
+// effects set then, into the outcome written at its start (an install's first game only: no file, nothing)
+void Context::noteFirstGame(const Config& config, double fps) {
+    if (firstGameNoted_) return;
+    firstMapFps_.push_back(fps);
+    if (firstMapFps_.size() < size_t(card_speed::kRaiseWindows)) return;
+    firstGameNoted_ = true;
+    const std::string path = layout::join(gameDir(), layout::kFirstGame);
+    std::string text;
+    firstgame::Outcome o;
+    if (!readTextFile(path, text) || !firstgame::parse(text, o) || o.map || firstgame::complete(o)) return;
+    std::vector<double> v = firstMapFps_;
+    std::nth_element(v.begin(), v.begin() + std::ptrdiff_t(v.size() / 2), v.end());
+    o.map = true;
+    o.fps = int(v[v.size() / 2] + 0.5);
+    o.level = effect_groups::setLevel(config.effects.preset, cardLevel());
+    writeFileAtomic(path, firstgame::format(o));
+    LOG_INFO("first game: a minute on the maps - %d frames a second (the median), the effects set %d", o.fps, o.level);
 }
 
 void Context::watchSettings() {
