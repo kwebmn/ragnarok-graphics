@@ -1,3 +1,16 @@
+# uaRO Graphics 3.0.11-beta.79 — what is new
+
+- **Dragging without jumps** (your «when I drag the interface the window jumps a lot»). There were three causes:
+  - the parts standing by the one dragged (the buffs under the minimap, «Tracking» by the buffs, the party under the
+    character block, the hotbar by the chat) moved with it — and the one dragged snapped to them as well; now they take
+    no part in snapping and moving aside;
+  - the snapping was too strong (about 23 pixels on 4K) — now 6 of the game's pixels;
+  - each move painted the part anew (the minimap every frame); now a move does not paint it again.
+- **The party panel folds** (your «the party plate should be foldable»): a header on top — «Party» with the online count
+  (3/5) and a ▾ button; folded — the header alone, ▸ opens it. It is remembered.
+- To check: drag the minimap, the buffs and the party — they move evenly; fold and open the party. In the log:
+  `party: its panel folded`.
+
 # uaRO Graphics 3.0.11-beta.78 — what is new
 
 - **Each character has its own skill bar** (your «the skill bar shows the wrong skills, from other accounts, and skills
