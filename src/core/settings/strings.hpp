@@ -493,7 +493,10 @@ enum class Text : uint16_t {
     InterfaceLowHpEdge, InterfaceLowHpEdgeHint,
     // 3.0.11-beta.54: the new interface's size
     InterfaceSize, InterfaceSizeHint, InterfaceSizeAuto, InterfaceSize70, InterfaceSize85, InterfaceSize100,
-    InterfaceSize115, InterfaceSize130, InterfaceChat, InterfaceChatHint, ChatTabAll,
+    InterfaceSize115, InterfaceSize130,
+    // 3.0.11-beta.67: the reading windows' text
+    InterfaceTextSize, InterfaceTextSizeHint, InterfaceText80, InterfaceText90, InterfaceText150,
+    InterfaceChat, InterfaceChatHint, ChatTabAll,
     ChatTabParty,
     ChatTabGuild, ChatTabWhisper, ChatTabTrade, ChatTabBattle, ChatFrom, ChatTo, ChatHintSend, ChatHintType,
     ChatKilled, ChatPicked, ChatMiss, InterfaceItems, InterfaceItemsHint, InterfaceStatus, InterfaceStatusHint,

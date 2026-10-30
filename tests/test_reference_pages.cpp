@@ -667,14 +667,32 @@ TEST(reference_concept_cards) {
     for (const refwin::Words& w : refwin::words(narrow, shut, refwin::place(narrow, shut, total), 0, t, slim))
         named = named || w.text == "Предмети";
     CHECK(!named);
+    // 3.0.11-beta.67 (the concept's small screens: the rail folded to its icons, «с подсказками»): the section under
+    // the pointer names itself in a tip right of its icon, nothing else's words under it
+    slim.hover = refwin::Under{refwin::Part::Rail, 2};
+    int tips = 0;
+    panel::Box tip;
+    const std::vector<refwin::Words> slimWords =
+        refwin::words(narrow, shut, refwin::place(narrow, shut, total), 0, t, slim);
+    for (const refwin::Words& w : slimWords)
+        if (w.text == "Предмети") {
+            ++tips;
+            tip = w.box;
+        }
+    CHECK_EQ(tips, 1);
+    CHECK(tip.x >= thin.railW && std::fabs((tip.y + tip.h / 2) - (thin.rail[2].y + thin.rail[2].h / 2)) < 2);
+    for (const refwin::Words& w : slimWords)
+        if (w.text != "Предмети")
+            CHECK(w.box.x >= tip.x + tip.w || w.box.x + w.box.w <= tip.x || w.box.y >= tip.y + tip.h ||
+                  w.box.y + w.box.h <= tip.y);
 }
 
 TEST(reference_concept_rail_hover_repaints_its_section) {
     const refindex::Index ix = index();
     const refpages::Link at{refpages::Go::Item, 601, ""};
     const refpages::Page p = refpages::withRail(refpages::item(ix, Lang::Uk, 601, ctx("")), ix, Lang::Uk, at);
-    for (const float k : {1.0f, 1.5f}) {
-        const refwin::Layout L = refwin::layout(int(1920 * k), int(1080 * k), k);
+    for (const float k : {1.0f, 1.5f, 0.0f}) {  // 3.0.11-beta.67: 0 - a narrow window, its sections' tips
+        const refwin::Layout L = k > 0 ? refwin::layout(int(1920 * k), int(1080 * k), k) : refwin::layout(1100, 700, 1);
         int total = 0;
         const std::vector<refwin::Placed> rows = refwin::place(L, p, total);
         refwin::Texts t;

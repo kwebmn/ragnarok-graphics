@@ -8,7 +8,7 @@ namespace uagfx::uistyle {
 namespace {
 
 std::atomic<int> g_panel{kPanelDefault}, g_window{kWindowDefault}, g_generation{0};
-std::atomic<float> g_size{1.0f};
+std::atomic<float> g_size{1.0f}, g_text{1.0f};  // 3.0.11-beta.67: the reading windows' text
 
 }  // namespace
 
@@ -42,6 +42,17 @@ void setSize(float size) {
 float size() { return g_size; }
 
 float partScale(double k) { return std::clamp(float(k) * size(), 0.5f, 6.0f); }
+
+void setText(float text) {
+    text = std::clamp(text, 0.8f, 1.5f);
+    if (std::fabs(text - g_text.load()) < 1e-4f) return;
+    g_text = text;
+    ++g_generation;
+}
+
+float text() { return g_text; }
+
+float readingScale(double k) { return std::clamp(float(k) * size() * text(), 0.5f, 6.0f); }
 
 panel::Picture vignette(int w, int h, uint32_t rgb, float alpha, float depth) {
     panel::Picture p;

@@ -5123,6 +5123,18 @@ constexpr Entry kTexts[] = {
     {Text::InterfaceSize100, "100 %", "100 %", "100 %"},
     {Text::InterfaceSize115, "115 %", "115 %", "115 %"},
     {Text::InterfaceSize130, "130 %", "130 %", "130 %"},
+    // 3.0.11-beta.67 (the concept: «Масштаб текста — отдельная настройка 80–150 %»)
+    {Text::InterfaceTextSize, "Text size", "Розмір тексту", "Размер текста"},
+    {Text::InterfaceTextSizeHint,
+     "The windows you read in - the chat, «Reference», «Items», «Status» - larger or smaller together with their "
+     "words, on top of the interface size; the panels and icons stay as the interface size has them.",
+     "Вікна, які читають, — чат, «Довідник», «Речі», «Характеристики» — більші чи менші разом зі своїми словами, "
+     "понад розмір інтерфейсу; панелі й значки лишаються такими, як за розміром інтерфейсу.",
+     "Окна, которые читают, — чат, «Справочник», «Вещи», «Характеристики» — крупнее или мельче вместе со своими "
+     "словами, сверх размера интерфейса; панели и значки остаются такими, как по размеру интерфейса."},
+    {Text::InterfaceText80, "80 %", "80 %", "80 %"},
+    {Text::InterfaceText90, "90 %", "90 %", "90 %"},
+    {Text::InterfaceText150, "150 %", "150 %", "150 %"},
     // 3.0.11-beta.41: the chat (stage 8 of the new interface)
     {Text::InterfaceChat, "Chat", "Чат", "Чат"},
     {Text::InterfaceChatHint,

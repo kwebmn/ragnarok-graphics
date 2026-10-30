@@ -128,6 +128,11 @@ const std::vector<IniSetting>& iniSettings() {
          {Text::InterfaceSizeAuto, Text::InterfaceSize70, Text::InterfaceSize85, Text::InterfaceSize100,
           Text::InterfaceSize115, Text::InterfaceSize130},
          Text::InterfaceSize, Text::InterfaceSizeHint, ""},
+        // 3.0.11-beta.67: the reading windows' text
+        {"interface", "text_size", Page::Interface, Control::Choice, 0, 0, 0, {"80", "90", "100", "115", "130", "150"},
+         {Text::InterfaceText80, Text::InterfaceText90, Text::InterfaceSize100, Text::InterfaceSize115,
+          Text::InterfaceSize130, Text::InterfaceText150},
+         Text::InterfaceTextSize, Text::InterfaceTextSizeHint, ""},
         // 3.0.11-beta.50: the screen's edges red at low HP
         {"interface", "low_hp_edge", Page::Interface, Control::Slider, 0, 100, 10, {}, {}, Text::InterfaceLowHpEdge,
          Text::InterfaceLowHpEdgeHint, " %"},
@@ -954,6 +959,7 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "interface.dim_world") return c.dimWorld ? "1" : "0";             // 3.0.11-beta.49
     if (k == "interface.low_hp_edge") return std::to_string(c.lowHpEdge);      // 3.0.11-beta.50
     if (k == "interface.size") return c.uiSize > 0 ? std::to_string(c.uiSize) : "auto";  // 3.0.11-beta.54
+    if (k == "interface.text_size") return std::to_string(c.textSize);  // 3.0.11-beta.67
     if (k == "interface.window_opacity") return std::to_string(c.windowOpacity);
     if (k == "interface.reference") return c.referenceWindow ? "1" : "0";  // 3.0.11-beta.7
     if (k == "windows.start_count") return std::to_string(c.windowStartCount);  // 3.0.4-beta.4

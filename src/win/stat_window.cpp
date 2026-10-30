@@ -238,7 +238,7 @@ void frame(HWND game, bool on, double k, int targetWidth, int targetHeight) {
         return;
     }
     readState(s);
-    const float scale = uistyle::partScale(k);
+    const float scale = uistyle::readingScale(k);  // 3.0.11-beta.67: [interface] text_size's too
     s.k = float(k);
     s.scale = scale;
     s.targetW = targetWidth;

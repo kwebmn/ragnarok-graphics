@@ -525,6 +525,9 @@ Config parseConfig(const std::string& text) {
             int n = 0;
             if (val == "auto") c.uiSize = 0;
             else if (toInt(val, -100000, 100000, n)) c.uiSize = std::clamp(n, 50, 150);
+        } else if (key == "interface.text_size") {  // 3.0.11-beta.67: the reading windows' text, per cent
+            int n = 0;
+            if (toInt(val, -100000, 100000, n)) c.textSize = std::clamp(n, 80, 150);
         } else if (key == "interface.low_hp_edge") {  // 3.0.11-beta.50: the screen's edges red at low HP
             int n = 0;
             if (toInt(val, -100000, 100000, n)) c.lowHpEdge = std::clamp(n, 0, 100);

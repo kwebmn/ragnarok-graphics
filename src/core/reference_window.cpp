@@ -1196,6 +1196,19 @@ void chromeShapes(panel::Picture& out, const Layout& L, const Look& look) {
 }
 
 // Everything over the transparent picture - inside its clip (paint: all of it; repaint: a part)
+// 3.0.11-beta.67 (the concept's small screens: the rail folded to its icons, «с подсказками»): the narrow rail's
+// section under the pointer - its name in a tip right of its icon; w 0: none
+panel::Box railTip(const Layout& L, const refpages::Page& p, const Look& look) {
+    const Chrome& c = look.chrome;
+    const int i = look.hover.row;
+    if (!c.narrow || look.hover.part != Part::Rail || i < 0 || size_t(i) >= c.rail.size() || size_t(i) >= p.rail.size())
+        return panel::Box{};
+    const float s = L.s, h = 30 * s;
+    const panel::Box& b = c.rail[size_t(i)];
+    return panel::Box{c.railW + 6 * s, b.y + b.h / 2 - h / 2,
+                      std::ceil(L.measure(p.rail[size_t(i)].left, 13 * s, true)) + 26 * s, h};
+}
+
 void shapes(panel::Picture& out, const Layout& L, const refpages::Page& p, const std::vector<Placed>& rows, int scroll,
             int total, const Look& look) {
     const float s = L.s, edge = std::max(1.0f, s);
@@ -1456,6 +1469,8 @@ void shapes(panel::Picture& out, const Layout& L, const refpages::Page& p, const
         const float at = trackY + (trackH - thumbH) * float(scroll) / float(std::max(1, total - L.bodyH));
         panel::roundRect(out, panel::Box{float(L.w) - 12 * s, at, 6 * s, thumbH}, 3 * s, kWhite, 0.22f);
     }
+    if (const panel::Box tip = railTip(L, p, look); tip.w > 0)  // 3.0.11-beta.67: over all of it
+        panel::roundRect(out, tip, 8 * s, kCard, 0.97f, kWhite, kLine2A, edge);
 }
 
 // A box of the window in its whole pixels, a pixel more each way (the shapes' smooth edges), inside the window
@@ -1555,6 +1570,7 @@ std::vector<Rect> hotAreas(const Layout& L, const refpages::Page& p, const std::
     if (part == Part::Search && c.search.w > 0) out.push_back(pixelsOf(L, c.search));
     if (part == Part::Rail && look.hover.row >= 0 && size_t(look.hover.row) < c.rail.size())  // 3.0.11-beta.26
         out.push_back(pixelsOf(L, c.rail[size_t(look.hover.row)]));
+    if (const panel::Box tip = railTip(L, p, look); tip.w > 0) out.push_back(pixelsOf(L, tip));  // 3.0.11-beta.67
     for (const int i : {part == Part::Row ? look.hover.row : -1, look.selected})
         if (i >= 0 && size_t(i) < p.rows.size())
             if (const Rect a = rowArea(L, p, rows, scroll, i); !a.empty()) out.push_back(a);
@@ -1849,6 +1865,17 @@ std::vector<Words> words(const Layout& L, const refpages::Page& p, const std::ve
                 break;
             }
         }
+    }
+    // 3.0.11-beta.67: the narrow rail's tip over the rest - nothing else's words under it
+    if (const panel::Box tip = railTip(L, p, look); tip.w > 0) {
+        out.erase(std::remove_if(out.begin(), out.end(),
+                                 [&](const Words& w) {
+                                     return w.box.x < tip.x + tip.w && tip.x < w.box.x + w.box.w &&
+                                            w.box.y < tip.y + tip.h && tip.y < w.box.y + w.box.h;
+                                 }),
+                  out.end());
+        out.push_back(Words{panel::Box{tip.x + 13 * L.s, tip.y, tip.w - 26 * L.s, tip.h},
+                            p.rail[size_t(look.hover.row)].left, kText, 13 * L.s, true, Align::Left});
     }
     return out;
 }

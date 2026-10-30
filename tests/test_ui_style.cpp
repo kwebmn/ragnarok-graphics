@@ -70,3 +70,24 @@ TEST(ui_style_size) {
     CHECK(std::fabs(uistyle::size() - 1.5f) < 1e-6f);
     uistyle::setSize(1.0f);
 }
+
+// 3.0.11-beta.67 (the concept: «Масштаб текста — отдельная настройка 80–150 %»): the windows one reads in (the chat,
+// «Довідник», «Речі», «Характеристики») at the interface's size times the text's
+TEST(ui_style_text_size) {
+    uistyle::setSize(1.0f);
+    const int was = uistyle::generation();
+    uistyle::setText(1.3f);
+    CHECK(std::fabs(uistyle::text() - 1.3f) < 1e-6f && uistyle::generation() != was);
+    CHECK(std::fabs(uistyle::readingScale(2.0) - 2.6f) < 1e-4f && std::fabs(uistyle::partScale(2.0) - 2.0f) < 1e-4f);
+    uistyle::setSize(0.7f);
+    CHECK(std::fabs(uistyle::readingScale(2.0) - 1.82f) < 1e-4f);  // both
+    const int now = uistyle::generation();
+    uistyle::setText(1.3f);  // the same: nothing to draw again
+    CHECK(uistyle::generation() == now);
+    uistyle::setText(0.2f);
+    CHECK(std::fabs(uistyle::text() - 0.8f) < 1e-6f);  // 80 % at the least, 150 at the most
+    uistyle::setText(9.0f);
+    CHECK(std::fabs(uistyle::text() - 1.5f) < 1e-6f);
+    uistyle::setText(1.0f);
+    uistyle::setSize(1.0f);
+}

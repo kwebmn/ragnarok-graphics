@@ -594,6 +594,9 @@ struct Config {
     // 3.0.11-beta.54: [interface] size - the new interface's size against the concept's: 0 auto (smaller on a small
     // game, core/ui_style autoSize), else 50-150 per cent
     int uiSize = 0;
+    // 3.0.11-beta.67: [interface] text_size - the concept's «Масштаб текста 80–150 %»: the windows one reads in (the
+    // chat, «Довідник», «Речі», «Характеристики») larger or smaller as a whole, per cent of [interface] size's
+    int textSize = 100;
     // 3.0.11-beta.7: [interface] reference - «Довідник» (win/reference_window): Ctrl+F in the game
     bool referenceWindow = false;
     PanelLayout panelLayout = PanelLayout::Row;

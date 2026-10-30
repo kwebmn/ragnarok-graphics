@@ -103,7 +103,7 @@ struct State {
     panel::Picture picture;
     uint32_t texture = 0;
     int texW = 0, texH = 0, targetW = 0, targetH = 0;
-    float k = 0;
+    float k = 0, scale = 0;  // 3.0.11-beta.67: the layout's (uistyle::readingScale)
 };
 
 State& state() {
@@ -759,11 +759,15 @@ void frame(HWND game, bool enabled, double k, int targetWidth, int targetHeight)
         s.here = here;
         s.wantPage = true;
     }
-    if (float(k) != s.k || targetWidth != s.targetW || targetHeight != s.targetH) {
+    // 3.0.11-beta.67: [interface] text_size's too - and laid out again when it or [interface] size changes (a new
+    // size reached the open window only at its next game resolution)
+    const float scale = uistyle::readingScale(k);
+    if (float(k) != s.k || targetWidth != s.targetW || targetHeight != s.targetH || scale != s.scale) {
         s.k = float(k);
+        s.scale = scale;
         s.targetW = targetWidth;
         s.targetH = targetHeight;
-        s.layout = refwin::layout(targetWidth, targetHeight, uistyle::partScale(k), measured);
+        s.layout = refwin::layout(targetWidth, targetHeight, scale, measured);
         s.pictures.clear();  // 3.0.11-beta.14: their size is the layout's
         s.wantPage = true;
     }

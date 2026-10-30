@@ -26,6 +26,11 @@ float autoSize(int gameW, int gameH, double windowScale);
 void setSize(float size);  // a part's size against the concept's (0.5-1.5); changes draw the parts again
 float size();
 float partScale(double k);  // a part's scale in its picture's pixels: k times size(), 0.5-6
+// 3.0.11-beta.67 (the concept: «Масштаб текста — отдельная настройка 80–150 %»; [interface] text_size): the windows one
+// reads in - the chat, «Довідник», «Речі», «Характеристики» - larger or smaller as a whole, their words with them
+void setText(float text);  // 0.8-1.5; changes draw the parts again
+float text();
+float readingScale(double k);  // their scale: partScale's times text(), 0.5-6
 
 // 3.0.11-beta.49 (the concept: «тень только у окон»): a window's shadow - dark at a rounded box's edge (`alpha`),
 // fading out `spread` away, none under the box itself (its glass stays as it is); the picture (w + 2 spread) x
