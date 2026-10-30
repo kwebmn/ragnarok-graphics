@@ -54,7 +54,7 @@ struct State {
     bool upload = false;
     bool moving = false;
     float grabX = 0, grabY = 0;
-    int told = 0;
+    int told = 0, pressesTold = 0;
 };
 
 State& state() {
@@ -190,14 +190,6 @@ void render(State& s) {
     s.upload = true;
 }
 
-bool toTarget(const State& s, HWND game, int x, int y, float& tx, float& ty) {
-    RECT client{};
-    if (!GetClientRect(game, &client) || client.right <= 0 || client.bottom <= 0) return false;
-    tx = float(x) * float(s.targetW) / float(client.right);  // Windows' size of the window (uaRO.exe is not DPI-aware)
-    ty = float(y) * float(s.targetH) / float(client.bottom);
-    return true;
-}
-
 void block(const State& s, HWND game) {  // the mouse's clicks over it are its own, not the world's
     RECT client{};
     if (s.targetW <= 0 || s.targetH <= 0 || !GetClientRect(game, &client)) return;
@@ -300,10 +292,12 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     State& s = state();
     if (!s.shown) return false;
     (void)wp;
-    POINT p{GET_X_LPARAM(lp), GET_Y_LPARAM(lp)};
-    if (m == WM_MOUSEWHEEL && !ScreenToClient(game, &p)) return false;  // the wheel's point is the screen's
+    const bool button = m == WM_LBUTTONDOWN || m == WM_LBUTTONUP || m == WM_LBUTTONDBLCLK || m == WM_RBUTTONDOWN ||
+                        m == WM_RBUTTONUP || m == WM_RBUTTONDBLCLK || m == WM_MBUTTONDOWN || m == WM_MBUTTONUP;
+    if (!button && m != WM_MOUSEWHEEL && m != WM_MOUSEMOVE) return false;
     float tx = 0, ty = 0;
-    if (!toTarget(s, game, p.x, p.y, tx, ty)) return false;
+    bool fromGame = false;  // 3.0.11-beta.43: where the game's cursor stands, as the hover
+    if (!pointerInTarget(game, m, lp, s.k, s.targetW, s.targetH, tx, ty, &fromGame)) return false;
     if (s.moving && (m == WM_MOUSEMOVE || m == WM_LBUTTONUP)) {  // its title dragged
         const int roomX = std::max(1, s.targetW - s.layout.w), roomY = std::max(1, s.targetH - s.layout.h);
         s.fx = std::clamp((tx - s.grabX) / float(roomX), 0.0f, 1.0f);
@@ -316,11 +310,21 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
         return true;
     }
     const sw::Hit h = sw::hitTest(s.layout, tx - float(s.layout.x), ty - float(s.layout.y));
-    if (h.part == sw::Part::None) return false;
+    if ((m == WM_LBUTTONDOWN || m == WM_LBUTTONDBLCLK) && s.pressesTold < 8) {  // where the presses land
+        ++s.pressesTold;
+        int cx = -1, cy = -1;
+        readGameCursor(cx, cy);
+        LOG_INFO("stats: a press at the window's (%d, %d), the game's cursor (%d, %d) - the target's (%.0f, %.0f) by "
+                 "the %s; «Характеристики» at %d, %d %dx%d: part %d", GET_X_LPARAM(lp), GET_Y_LPARAM(lp), cx, cy, tx,
+                 ty, fromGame ? "game's cursor" : "message's point", s.layout.x, s.layout.y, s.layout.w, s.layout.h,
+                 int(h.part));
+    }
+    if (h.part == sw::Part::None || m == WM_MOUSEMOVE) return false;
     result = 0;
     if (m != WM_LBUTTONDOWN && m != WM_LBUTTONDBLCLK) return true;
     switch (h.part) {
         case sw::Part::Close:
+            if (s.told++ < 12) LOG_INFO("stats: its close - the game's own window asked to close (its 0x87)");
             closeGameWindow();
             break;
         case sw::Part::Plus:

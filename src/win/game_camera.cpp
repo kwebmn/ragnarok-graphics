@@ -1,6 +1,7 @@
 #include "win/game_camera.hpp"
 
 #include <windows.h>
+#include <windowsx.h>
 
 #include <algorithm>
 #include <cmath>
@@ -374,6 +375,25 @@ bool readOwnStatus(charstatus::Status& s) {
         !read(charstatus::kMaskedAt, masked, sizeof masked))
         return false;
     s = charstatus::fromMemory(plain, masked);
+    return true;
+}
+
+bool pointerInTarget(HWND game, UINT m, LPARAM lp, double k, int targetWidth, int targetHeight, float& tx, float& ty,
+                     bool* fromGame) {
+    int cx = 0, cy = 0;
+    if (k > 0 && readGameCursor(cx, cy)) {
+        tx = float(double(cx) * k);
+        ty = float(double(cy) * k);
+        if (fromGame) *fromGame = true;
+        return true;
+    }
+    POINT p{GET_X_LPARAM(lp), GET_Y_LPARAM(lp)};
+    if (m == WM_MOUSEWHEEL && !ScreenToClient(game, &p)) return false;  // the wheel's point is the screen's
+    RECT client{};
+    if (!GetClientRect(game, &client) || client.right <= 0 || client.bottom <= 0) return false;
+    tx = float(p.x) * float(targetWidth) / float(client.right);  // Windows' size of the window (not DPI-aware)
+    ty = float(p.y) * float(targetHeight) / float(client.bottom);
+    if (fromGame) *fromGame = false;
     return true;
 }
 

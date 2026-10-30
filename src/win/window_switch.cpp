@@ -1,5 +1,7 @@
 #include "win/window_switch.hpp"
 
+#include <windowsx.h>
+
 #include <algorithm>
 
 #include "pad/win/game_window.hpp"
@@ -57,6 +59,16 @@ LRESULT CALLBACK gameProc(HWND w, UINT m, WPARAM wp, LPARAM lp) {
         if (m == WM_TIMER && g_switch->timer(w, wp)) return 0;
         if (notifier::message(w, m, wp, lp)) return 0;  // 3.0.4-beta.3: a click on a notification
         if (m == WM_DESTROY) notifier::gone(w);
+        static int pressesTold = 0;  // 3.0.11-beta.43: whether the window's presses come at all, and where
+        if ((m == WM_LBUTTONDOWN || m == WM_RBUTTONDOWN) && pressesTold < 6) {
+            ++pressesTold;
+            RECT client{};
+            GetClientRect(w, &client);
+            int cx = -1, cy = -1;
+            readGameCursor(cx, cy);
+            LOG_INFO("windows: a press (0x%X) at (%d, %d) of a %ldx%ld client, the game's cursor at (%d, %d)", m,
+                     GET_X_LPARAM(lp), GET_Y_LPARAM(lp), client.right, client.bottom, cx, cy);
+        }
         LRESULT answer = 0;  // 3.0.3-beta.8: the mouse over the panel in the game's picture is the panel's
         if (answercard::mouse(w, m, lp, answer) ||       // 3.0.9-beta.4: and over the answer card the card's
             referencewin::mouse(w, m, wp, lp, answer) ||  // 3.0.11-beta.7: over «Довідник» its own

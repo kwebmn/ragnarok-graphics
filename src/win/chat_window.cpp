@@ -487,14 +487,6 @@ void makeRows(State& s) {
     s.rows = cp::wrap(s.rowLines, s.layout.lines.w, s.layout.px, measure);
 }
 
-bool toTarget(const State& s, HWND game, int x, int y, float& tx, float& ty) {
-    RECT client{};
-    if (!GetClientRect(game, &client) || client.right <= 0 || client.bottom <= 0) return false;
-    tx = float(x) * float(s.targetW) / float(client.right);  // Windows' size of the window (uaRO.exe is not DPI-aware)
-    ty = float(y) * float(s.targetH) / float(client.bottom);
-    return true;
-}
-
 void block(const State& s, HWND game) {  // the mouse's clicks over it are its own, not the world's
     RECT client{};
     if (s.targetW <= 0 || s.targetH <= 0 || !GetClientRect(game, &client)) return;
@@ -656,10 +648,8 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     const bool button = m == WM_LBUTTONDOWN || m == WM_LBUTTONUP || m == WM_LBUTTONDBLCLK || m == WM_RBUTTONDOWN ||
                         m == WM_RBUTTONUP || m == WM_RBUTTONDBLCLK || m == WM_MBUTTONDOWN || m == WM_MBUTTONUP;
     if (!button && m != WM_MOUSEWHEEL) return false;
-    POINT p{GET_X_LPARAM(lp), GET_Y_LPARAM(lp)};
-    if (m == WM_MOUSEWHEEL && !ScreenToClient(game, &p)) return false;  // the wheel's point is the screen's
-    float tx = 0, ty = 0;
-    if (!toTarget(s, game, p.x, p.y, tx, ty)) return false;
+    float tx = 0, ty = 0;  // 3.0.11-beta.43: where the game's cursor stands, as the hover
+    if (!pointerInTarget(game, m, lp, s.k, s.targetW, s.targetH, tx, ty)) return false;
     const cp::Hit h = cp::hitTest(s.layout, s.rows, s.show, tx - float(s.layout.x), ty - float(s.layout.y));
     if (h.part == cp::Part::None) return false;
     result = 0;

@@ -1,4 +1,6 @@
 #pragma once
+#include <windows.h>
+
 #include <string>
 
 #include "core/char_status.hpp"
@@ -29,6 +31,11 @@ bool hideGameMinimap();
 bool showGameMinimap();
 // 2.3, uaRO Studio's pick: the game's own cursor in its pixels; false in another build of the exe.
 bool readGameCursor(int& x, int& y);
+// 3.0.11-beta.43 (the owner on «Речі»: «крестик не закрывает ... не открывает карточку»): a mouse message's point in
+// the target as the parts take their clicks - where the game's own cursor stands (what the player sees, and what the
+// parts' hover follows), else the message's own (the wheel's from the screen); `fromGame` which one; false none
+bool pointerInTarget(HWND game, UINT m, LPARAM lp, double k, int targetWidth, int targetHeight, float& tx, float& ty,
+                     bool* fromGame = nullptr);
 // 3.0.2-beta.12: uaRO.exe is the build these addresses (and the profile's steps, core/sample_profile.hpp) belong to
 bool knownGameBuild();
 // 3.0.4-beta.5 (the user's idea 5): a building map's camera held as free as outdoors - the game mode's outdoor flag

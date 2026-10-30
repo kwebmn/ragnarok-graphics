@@ -41,6 +41,10 @@ constexpr int kButtonMsg = 6, kCloseButton = 0x87, kItemCard = 0xC, kShowItem = 
 // use, wear, a card into a slot, arrows, a drag begun
 constexpr uint32_t kModeNow = 0x74B57C, kModeMsgSlot = 0x14, kModeMsg = 0x5707D0;
 constexpr int kUseMsg = 0x1D, kWearMsg = 0x14, kCardMsg = 0x88, kAmmoMsg = 100, kDragMsg = 0x11;
+// 3.0.11-beta.43: a drag let go - the game mode's message 0x12 (the cursor's x, y), as its frame sends it when the
+// button comes up (FUN_00566c80): onto a window of the game's (FUN_004ccef0, the driver's parts through win/
+// world_mouse), else the ground's
+constexpr int kDropMsg = 0x12;
 // The bag: the session's list (a node's next at +0), each node's ITEM_INFO at +8, 72 bytes - its kind +0, where it is
 // worn +4, the bag's place +8, worn now +0xC, its count +0x10, its number's words (an std::string: c_str +0x30, its
 // length +0x34), identified +0x3C, refine +0x40
@@ -76,6 +80,18 @@ struct State {
     int lastCell = -1, armed = 0;
     ULONGLONG lastClick = 0, armedAt = 0;
     int told = 0;
+    // 3.0.11-beta.43 (the owner: «не перетаскивается»): a press on an item - a drag of its own once the cursor moved
+    // (its icon under the cursor), the game's own drag begun and let go only when the button comes up: a press the
+    // driver's part took is kept from the game, so a game's drag begun at the press never saw its button come up
+    int press = -1;  // the pressed item (of `items`), -1 none
+    float pressX = 0, pressY = 0;
+    bool dragging = false;
+    int pressesTold = 0;
+    panel::Picture dragIcon;  // the dragged item's icon under the cursor
+    const panel::Picture* dragOf = nullptr;
+    uint32_t dragTexture = 0;
+    int dragW = 0, dragH = 0;
+    bool dragUpload = false;
 };
 
 State& state() {
@@ -246,14 +262,6 @@ void render(State& s) {
     s.upload = true;
 }
 
-bool toTarget(const State& s, HWND game, int x, int y, float& tx, float& ty) {
-    RECT client{};
-    if (!GetClientRect(game, &client) || client.right <= 0 || client.bottom <= 0) return false;
-    tx = float(x) * float(s.targetW) / float(client.right);  // Windows' size of the window (uaRO.exe is not DPI-aware)
-    ty = float(y) * float(s.targetH) / float(client.bottom);
-    return true;
-}
-
 void block(const State& s, HWND game) {  // the mouse's clicks over it are its own, not the world's
     RECT client{};
     if (s.targetW <= 0 || s.targetH <= 0 || !GetClientRect(game, &client)) return;
@@ -279,6 +287,17 @@ void place(State& s) {
     s.layout.y = int(std::lround(s.fy * float(roomY)));
 }
 
+// The pressed item let go after a drag: the game's drag of it begun (0x11, as its own window's press) and let go at
+// once where the cursor is (0x12, as its frame on the button's coming up)
+const char* dropAt(const State& s, const iw::Item& it) {
+    int cx = 0, cy = 0;
+    if (!readGameCursor(cx, cy)) return "not dropped (no cursor)";
+    if (!modeMsg(kDragMsg, it.index, it.count)) return "not dropped (the game mode not found)";
+    modeMsg(kDropMsg, cx, cy);
+    (void)s;
+    return "let go through the game's own drop";
+}
+
 // What a double click on it does, as the game's own window: used, worn, a card into a slot, arrows worn; the items
 // the game asks about first used on a second double click within 3 s
 const char* use(State& s, const iw::Item& it) {
@@ -302,17 +321,20 @@ const char* use(State& s, const iw::Item& it) {
     return "nothing to do with it";
 }
 
-void card(const State& s, size_t at) {
-    if (at >= s.infos.size()) return;
+bool card(const State& s, size_t at) {
+    if (at >= s.infos.size()) return false;
     const uint32_t window = reinterpret_cast<MakeFn>(uintptr_t(kMakeWindow))(kWindowMgr, kItemCard);
     const uint32_t send = window ? read32(read32(window) + kSendMsgSlot) : 0;
-    if (send) reinterpret_cast<SendMsgFn>(uintptr_t(send))(window, 0, kShowItem, int(s.infos[at]), 0, 0);
+    if (!send) return false;
+    reinterpret_cast<SendMsgFn>(uintptr_t(send))(window, 0, kShowItem, int(s.infos[at]), 0, 0);
+    return true;
 }
 
-void closeGameWindow() {
+bool closeGameWindow() {
     const uint32_t window = gameWindow();
-    if (window && read32(read32(window) + kSendMsgSlot) == kItemsSendMsg)
-        reinterpret_cast<SendMsgFn>(uintptr_t(kItemsSendMsg))(window, 0, kButtonMsg, kCloseButton, 0, 0);
+    if (!window || read32(read32(window) + kSendMsgSlot) != kItemsSendMsg) return false;
+    reinterpret_cast<SendMsgFn>(uintptr_t(kItemsSendMsg))(window, 0, kButtonMsg, kCloseButton, 0, 0);
+    return true;
 }
 
 char letterOf(WPARAM vk, bool shift) {
@@ -399,8 +421,22 @@ void draw(FrameRecord& record, gpu::Renderer& renderer) {
     State& s = state();
     if (!s.shown || s.k <= 0 || s.picture.width <= 0 || s.picture.height <= 0) return;
     int cursor = -1, cx = 0, cy = 0;  // under the game's own cursor, as the minimap
-    if (readGameCursor(cx, cy)) cursor = panel::cursorDraw(record, float(cx), float(cy));
+    const bool known = readGameCursor(cx, cy);
+    if (known) cursor = panel::cursorDraw(record, float(cx), float(cy));
     drawPicture(record, renderer, s.picture, s.texture, s.texW, s.texH, s.upload, s.layout.x, s.layout.y, s.k);
+    const panel::Picture* icon = s.dragging && s.press >= 0 && size_t(s.press) < s.items.size()
+                                     ? s.items[size_t(s.press)].icon
+                                     : nullptr;
+    if (icon && icon->width > 0 && known) {  // the dragged item's icon under the cursor
+        if (icon != s.dragOf) {
+            s.dragOf = icon;
+            s.dragIcon = *icon;
+            s.dragUpload = true;
+        }
+        const int x = int(std::lround(float(cx) * s.k)) - icon->width / 2;
+        const int y = int(std::lround(float(cy) * s.k)) - icon->height / 2;
+        drawPicture(record, renderer, s.dragIcon, s.dragTexture, s.dragW, s.dragH, s.dragUpload, x, y, s.k);
+    }
     if (cursor >= 0) record.moveLastBefore(record.commands().size() - size_t(cursor) - 1, size_t(cursor));
 }
 
@@ -420,10 +456,12 @@ bool drop(int x, int y, uint32_t drag) {
 bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     State& s = state();
     if (!s.shown) return false;
-    POINT p{GET_X_LPARAM(lp), GET_Y_LPARAM(lp)};
-    if (m == WM_MOUSEWHEEL && !ScreenToClient(game, &p)) return false;  // the wheel's point is the screen's
+    const bool button = m == WM_LBUTTONDOWN || m == WM_LBUTTONUP || m == WM_LBUTTONDBLCLK || m == WM_RBUTTONDOWN ||
+                        m == WM_RBUTTONUP || m == WM_RBUTTONDBLCLK || m == WM_MBUTTONDOWN || m == WM_MBUTTONUP;
+    if (!button && m != WM_MOUSEWHEEL && m != WM_MOUSEMOVE) return false;
     float tx = 0, ty = 0;
-    if (!toTarget(s, game, p.x, p.y, tx, ty)) return false;
+    bool fromGame = false;
+    if (!pointerInTarget(game, m, lp, s.k, s.targetW, s.targetH, tx, ty, &fromGame)) return false;
     if (s.moving) {  // its title dragged: it follows the cursor, inside the screen
         if (m == WM_MOUSEMOVE || m == WM_LBUTTONUP) {
             const int roomX = std::max(1, s.targetW - s.layout.w), roomY = std::max(1, s.targetH - s.layout.h);
@@ -437,12 +475,48 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
             return true;
         }
     }
+    if (s.press >= 0 && (m == WM_MOUSEMOVE || m == WM_LBUTTONUP)) {  // an item pressed: dragged, or a click
+        if (size_t(s.press) >= s.items.size()) {
+            s.press = -1;
+            s.dragging = false;
+            return false;
+        }
+        if (m == WM_MOUSEMOVE) {
+            if (!s.dragging && std::hypot(tx - s.pressX, ty - s.pressY) > 6 * s.scale) s.dragging = true;
+            return s.dragging;
+        }
+        const iw::Item it = s.items[size_t(s.press)];
+        const bool dragged = s.dragging;
+        s.press = -1;
+        s.dragging = false;
+        s.key.clear();
+        if (dragged) {
+            const char* did = dropAt(s, it);
+            s.lastCell = -1;
+            s.readAt = 0;
+            if (s.told++ < 20) LOG_INFO("items: #%d dragged and let go - %s", it.id, did);
+        }
+        result = 0;
+        return true;
+    }
     const iw::Hit h = iw::hitTest(s.layout, s.shownItems.size(), s.show.scroll, tx - float(s.layout.x),
                                   ty - float(s.layout.y));
+    const bool press = m == WM_LBUTTONDOWN || m == WM_LBUTTONDBLCLK || m == WM_RBUTTONDOWN;
+    if (press && s.pressesTold < 12) {  // where the presses land: the game's cursor against the window
+        ++s.pressesTold;
+        POINT p{GET_X_LPARAM(lp), GET_Y_LPARAM(lp)};
+        int cx = -1, cy = -1;
+        readGameCursor(cx, cy);
+        LOG_INFO("items: a press (0x%X) at the window's (%ld, %ld), the game's cursor (%d, %d) - the target's (%.0f, "
+                 "%.0f) by the %s; «Речі» at %d, %d %dx%d: part %d", m, p.x, p.y, cx, cy, tx, ty,
+                 fromGame ? "game's cursor" : "message's point", s.layout.x, s.layout.y, s.layout.w, s.layout.h,
+                 int(h.part));
+    }
     if (h.part == iw::Part::None) {
         if (m == WM_LBUTTONDOWN || m == WM_RBUTTONDOWN) s.show.typing = false;  // a click elsewhere: the search lets go
         return false;
     }
+    if (m == WM_MOUSEMOVE) return false;  // the hover is the frame's; the game's cursor goes on
     result = 0;
     if (m == WM_MOUSEWHEEL) {
         const int by = GET_WHEEL_DELTA_WPARAM(wp) > 0 ? -1 : 1;
@@ -450,15 +524,23 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
         return true;
     }
     if (m == WM_RBUTTONDOWN && h.part == iw::Part::Cell && h.index < int(s.shownItems.size())) {
-        card(s, size_t(s.shownItems[size_t(h.index)]));
+        const size_t at = size_t(s.shownItems[size_t(h.index)]);
+        const bool shown = card(s, at);
+        if (s.told++ < 20)
+            LOG_INFO("items: #%d's card %s", s.items[at].id, shown ? "asked of the game's item window (0xC)"
+                                                                    : "not shown - the game's item window not made");
         return true;
     }
     if (m != WM_LBUTTONDOWN && m != WM_LBUTTONDBLCLK) return true;
     if (h.part != iw::Part::Search) s.show.typing = false;
     switch (h.part) {
-        case iw::Part::Close:
-            closeGameWindow();
+        case iw::Part::Close: {
+            const bool asked = closeGameWindow();
+            if (s.told++ < 20)
+                LOG_INFO("items: its close - %s", asked ? "the game's own window asked to close (its 0x87)"
+                                                        : "the game's window not found");
             break;
+        }
         case iw::Part::Tab:
             s.show.tab = iw::Tab(h.index);
             s.show.scroll = 0;
@@ -469,17 +551,22 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
             break;
         case iw::Part::Cell: {
             if (h.index >= int(s.shownItems.size())) break;
-            const iw::Item& it = s.items[size_t(s.shownItems[size_t(h.index)])];
+            const int at = s.shownItems[size_t(h.index)];
+            const iw::Item& it = s.items[size_t(at)];
             const ULONGLONG now = GetTickCount64();
             if ((h.index == s.lastCell && now - s.lastClick <= GetDoubleClickTime()) || m == WM_LBUTTONDBLCLK) {
                 const char* did = use(s, it);
                 s.lastCell = -1;
-                if (s.told++ < 12) LOG_INFO("items: a double click on #%d (kind %d) - %s", it.id, it.type, did);
+                s.press = -1;
+                if (s.told++ < 20) LOG_INFO("items: a double click on #%d (kind %d) - %s", it.id, it.type, did);
                 s.readAt = 0;
-            } else {  // a press drags it as the game's own window does
+            } else {  // a click, or a drag once it moves
                 s.lastCell = h.index;
                 s.lastClick = now;
-                modeMsg(kDragMsg, it.index, it.count);
+                s.press = at;
+                s.pressX = tx;
+                s.pressY = ty;
+                s.dragging = false;
             }
             break;
         }

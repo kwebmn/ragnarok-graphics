@@ -331,14 +331,6 @@ void render(State& s, int hover) {
     s.upload = true;
 }
 
-bool toTarget(const State& s, HWND game, int x, int y, float& tx, float& ty) {
-    RECT client{};
-    if (!GetClientRect(game, &client) || client.right <= 0 || client.bottom <= 0) return false;
-    tx = float(x) * float(s.targetW) / float(client.right);  // Windows' size of the window (uaRO.exe is not DPI-aware)
-    ty = float(y) * float(s.targetH) / float(client.bottom);
-    return true;
-}
-
 void block(const State& s, HWND game) {  // the mouse's clicks over it are its own, not the world's
     RECT client{};
     if (s.targetW <= 0 || s.targetH <= 0 || !GetClientRect(game, &client)) return;
@@ -472,10 +464,8 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
                         m == WM_RBUTTONUP || m == WM_RBUTTONDBLCLK || m == WM_MBUTTONDOWN || m == WM_MBUTTONUP;
     if (!button && m != WM_MOUSEWHEEL) return false;
     (void)wp;
-    POINT p{GET_X_LPARAM(lp), GET_Y_LPARAM(lp)};
-    if (m == WM_MOUSEWHEEL && !ScreenToClient(game, &p)) return false;  // the wheel's point is the screen's
-    float tx = 0, ty = 0;
-    if (!toTarget(s, game, p.x, p.y, tx, ty)) return false;
+    float tx = 0, ty = 0;  // 3.0.11-beta.43: where the game's cursor stands, as the hover
+    if (!pointerInTarget(game, m, lp, s.k, s.targetW, s.targetH, tx, ty)) return false;
     const hb::Hit h = hb::hitTest(s.layout, tx - float(s.layout.x), ty - float(s.layout.y));
     if (h.part == hb::Part::None) return false;
     if (m == WM_LBUTTONDOWN || m == WM_LBUTTONDBLCLK) {
