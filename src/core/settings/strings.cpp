@@ -3692,13 +3692,13 @@ constexpr Entry kTexts[] = {
      "зміняться.",
      "Видеокарта или монитор сменились: {1}, {2}. Подобрать настройки под них заново? Ваши нынешние настройки "
      "изменятся."},
-    {Text::SafeModeAuto,
-     "The game starts in the safe mode: its last starts did not get to the picture. Direct3D 12, the effects, the "
-     "neural network, DLSS and the 64-bit renderer are off.",
-     "Гра запускається в безпечному режимі: останні запуски не дійшли до картинки. Вимкнено Direct3D 12, ефекти, "
-     "нейромережу, DLSS і 64-бітний рендер.",
-     "Игра запускается в безопасном режиме: последние запуски не дошли до картинки. Выключены Direct3D 12, эффекты, "
-     "нейросеть, DLSS и 64-битный рендер."},
+    {Text::SafeModeAuto,  // 3.0.11-beta.59: or closed by an error in their first minutes
+     "The game starts in the safe mode: its last starts did not get to the picture or closed by an error in their "
+     "first minutes. Direct3D 12, the effects, the neural network, DLSS and the 64-bit renderer are off.",
+     "Гра запускається в безпечному режимі: останні запуски не дійшли до картинки або закрилися з помилкою в перші "
+     "хвилини. Вимкнено Direct3D 12, ефекти, нейромережу, DLSS і 64-бітний рендер.",
+     "Игра запускается в безопасном режиме: последние запуски не дошли до картинки или закрылись с ошибкой в первые "
+     "минуты. Выключены Direct3D 12, эффекты, нейросеть, DLSS и 64-битный рендер."},
     {Text::SafeModeAsked,
      "The safe mode is on: Direct3D 11 without effects, the neural network, DLSS and the 64-bit renderer.",
      "Безпечний режим увімкнено: Direct3D 11 без ефектів, нейромережі, DLSS і 64-бітного рендера.",

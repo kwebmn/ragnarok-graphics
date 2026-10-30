@@ -213,13 +213,22 @@ void safeModeFirst(const std::string& dir, Config& config) {
     readTextFile(logfiles::previous(log), previous);
     const std::string counter = layout::join(dir, layout::kFailedStarts);
     const std::string note = layout::join(dir, layout::kSafeModeNote);
+    // 3.0.11-beta.59 (the autopilot): a note another version wrote - the normal mode tried again (its cause may be
+    // mended); failing twice more brings the safe mode back
+    std::string written;
+    if (readTextFile(note, written) && safe::noteVersion(written) != kVersion) {
+        const std::string was = safe::noteVersion(written);
+        DeleteFileA(note.c_str());
+        DeleteFileA(counter.c_str());
+        LOG_INFO("safe mode: the note of %s, %s now - the normal mode tried again",
+                 was.empty() ? "an older version" : was.c_str(), kVersion);
+    }
     readTextFile(counter, kept);
     const int inRow = safe::failedInRow(std::atoi(kept.c_str()), safe::judge(previous));
     writeSmallFile(counter, std::to_string(inRow));
     const bool noted = fileExists(note);
     if (!noted && !safe::needed(inRow, config.safeMode)) return;
-    if (!noted && !config.safeMode)
-        writeSmallFile(note, std::to_string(inRow) + " starts in a row ended before their first picture");
+    if (!noted && !config.safeMode) writeSmallFile(note, safe::noteText(inRow, kVersion));
     safe::apply(config);
     LOG_INFO("safe mode (%s): Direct3D 11, no effects, AI textures, DLSS, 64-bit renderer",
              config.safeMode ? "[renderer] safe_mode = 1" : "the last starts failed - the settings app tells");
