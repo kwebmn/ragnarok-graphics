@@ -1,5 +1,6 @@
 // 3.0.11-beta.42: the windows «Речі» (core/item_window) and «Характеристики» (core/stat_window) - their tabs and
 // uses as the game's, the search, their places and the mouse, the stats' prices and what a point gives
+#include <algorithm>
 #include <string>
 #include <vector>
 
@@ -135,6 +136,12 @@ TEST(item_window_picture_and_words) {
     CHECK(has("Red Potion \xC3\x97" "38") && has("двічі клік — використати \xC2\xB7 ПКМ — опис"));
     CHECK(has("920 / 2 430 \xC2\xB7 37 %") && has("Пошук за назвою"));
     CHECK(itemwin::nameOf(items[1]) == "+7 Sword");
+    sh.tip = false;  // 3.0.11-beta.51: pointed at, its 0.4 s not over - no tip yet
+    const std::vector<itemwin::Words> early =
+        itemwin::words(L, items, shown, sh, t, itemwin::Measure(panel::wordsWidth));
+    CHECK(std::none_of(early.begin(), early.end(),
+                       [](const itemwin::Words& x) { return x.text == "Red Potion \xC3\x97" "38"; }));
+    CHECK(std::any_of(early.begin(), early.end(), [](const itemwin::Words& x) { return x.text == "38"; }));
 }
 
 TEST(stat_window_prices_and_points) {

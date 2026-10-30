@@ -45,6 +45,7 @@ constexpr uint32_t kSession = 0x771148, kJob = 0x771F8C, kSex = 0x772DEC, kHead 
 constexpr uint32_t kFolders = kSession + 0x840, kManHeads = kSession + 0x850, kWomanHeads = kSession + 0x860;
 constexpr uint32_t kEndings = kSession + 0x8A0;
 constexpr ULONGLONG kWarnMs = 2000;  // the low HP warning's
+constexpr ULONGLONG kTipMs = 400, kPressMs = 160;  // 3.0.11-beta.51: the concept's tip after 0.4 s; a press shown
 const std::string kHuman = "\xC0\xCE\xB0\xA3\xC1\xB7\\\xB8\xD3\xB8\xAE\xC5\xEB\\";  // 인간족\머리통\ (CP949)
 const std::string kHairPalettes = "\xB8\xD3\xB8\xAE\\\xB8\xD3\xB8\xAE";            // 머리\머리
 const std::string kMan = "\xB3\xB2", kWoman = "\xBF\xA9";                            // 남, 여
@@ -82,6 +83,8 @@ struct State {
     ULONGLONG changedAt = 0, warnAt = 0, levelAt = 0;
     int lastBase = 0, lastJob = 0;
     cb::View shownView = cb::View::Full;  // 3.0.11-beta.49: compact while the windows are open
+    int hoverId = 0, pressedButton = -1;  // 3.0.11-beta.51: what is pointed at since when (its tip after 0.4 s)
+    ULONGLONG hoverSince = 0, pressedUntil = 0;
 };
 
 State& state() {
@@ -394,6 +397,13 @@ void frame(HWND game, CharacterLook look, double k, int targetWidth, int targetH
         if (h.part == cb::Part::Button) show.hoverButton = h.index;
         show.hoverBlock = h.part != cb::Part::None;
     }
+    const int hoverId = show.hoverButton >= 0 ? 100 + show.hoverButton : show.hoverBlock ? 1 : 0;
+    if (hoverId != s.hoverId) {
+        s.hoverId = hoverId;
+        s.hoverSince = now;
+    }
+    show.tip = hoverId != 0 && now - s.hoverSince >= kTipMs;
+    show.pressedButton = now < s.pressedUntil ? s.pressedButton : -1;
     s.show = show;
     const std::string key =
         std::to_string(int(view)) + ';' + std::to_string(int(panelLook)) + ';' + std::to_string(scale) + ';' +
@@ -402,7 +412,8 @@ void frame(HWND game, CharacterLook look, double k, int targetWidth, int targetH
         std::to_string(d.spMost) + ';' + std::to_string(int(d.baseExp * 1000)) + ',' +
         std::to_string(int(d.jobExp * 1000)) + ';' + std::to_string(d.weight) + ';' + std::to_string(d.zeny) + ';' +
         std::to_string(d.statusPoints) + ';' + s.portraitKey + (d.portrait ? "p" : "") + ';' +
-        std::to_string(show.hoverButton) + (show.hoverBlock ? "h" : "") + (show.warning ? "w" : "");
+        std::to_string(show.hoverButton) + (show.hoverBlock ? "h" : "") + (show.warning ? "w" : "") +
+        (show.tip ? "t" : "") + std::to_string(show.pressedButton);
     if (const std::string drawn = key + '#' + std::to_string(uistyle::generation()); drawn != s.key) {  // its grounds
         s.key = drawn;
         render(s);
@@ -482,6 +493,8 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
                                                 : s.view == cb::View::Compact ? "compact"
                                                                               : "folded to its icon");
         } else if (h.part == cb::Part::Button && h.index >= 0 && h.index < cb::kButtons) {
+            s.pressedButton = h.index;  // 3.0.11-beta.51: shown pressed a moment
+            s.pressedUntil = GetTickCount64() + kPressMs;
             const bool sent = press(cb::kButton[h.index].command);
             if (s.clicksLogged++ < 10)
                 LOG_INFO("character: the Basic Info window's button 0x%X %s", cb::kButton[h.index].command,

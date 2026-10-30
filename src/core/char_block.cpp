@@ -115,6 +115,7 @@ bool rings(const Layout& L) { return L.view == View::Icon || (L.view == View::Co
 
 // The tip's lines: a button's words; the rings' numbers
 std::vector<std::string> tipLines(const Layout& L, const Data& d, const Texts& t, const Show& show) {
+    if (!show.tip) return {};
     if (L.view == View::Full && show.hoverButton >= 0 && show.hoverButton < kButtons)
         return {t.buttons[show.hoverButton]};
     if (rings(L) && show.hoverBlock && d.hpMost > 0)
@@ -289,10 +290,15 @@ void paint(panel::Picture& out, const Layout& L, const Data& d, const Texts& t, 
                                                  1.0f * s, L.expBar.h}, 0, kBlack, 0.5f);
         }
         for (int i = 0; i < kButtons; ++i) {
-            const panel::Box& b = L.buttons[i];
+            panel::Box b = L.buttons[i];
             if (b.w <= 0) continue;
-            const bool hot = show.hoverButton == i;
-            panel::roundRect(out, b, 7 * s, kWhite, hot ? 0.14f : 0.06f, kGold, hot ? 0.8f : 0.0f, 1.0f * s);
+            const bool hot = show.hoverButton == i, down = show.pressedButton == i;
+            if (down) {  // 3.0.11-beta.51: the concept's press - 1 px down, darker
+                b.y += 1 * s;
+                panel::roundRect(out, b, 7 * s, kBlack, 0.30f, kGold, 0.8f, 1.0f * s);
+            } else {
+                panel::roundRect(out, b, 7 * s, kWhite, hot ? 0.14f : 0.06f, kGold, hot ? 0.8f : 0.0f, 1.0f * s);
+            }
             const float icon = 18 * s;
             uiicons::draw(out, kButton[i].icon, b.x + (b.w - icon) / 2, b.y + (b.h - icon) / 2, icon,
                           hot ? kText : kMuted, 1.0f, 2.0f);

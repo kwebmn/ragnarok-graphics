@@ -53,6 +53,7 @@ constexpr int kDropMsg = 0x12;
 constexpr uint32_t kBag = 0x771148 + 0xF1C, kInfo = 8;
 constexpr size_t kInfoSize = 0x48, kMostNodes = 256;
 constexpr ULONGLONG kReadMs = 200, kConfirmMs = 3000, kBlinkMs = 530;
+constexpr ULONGLONG kTipMs = 400;  // 3.0.11-beta.51: a cell's tip after this long pointed at (the concept's)
 constexpr size_t kMostTyped = 24;
 
 using SendMsgFn = int(__attribute__((thiscall)) *)(uint32_t self, uint32_t sender, int msg, int a, int b, int c);
@@ -62,6 +63,8 @@ using DropFn = void(__attribute__((thiscall)) *)(uint32_t self, int x, int y, ui
 
 struct State {
     WindowShadow shadow;  // 3.0.11-beta.49
+    int tipOf = -1;       // 3.0.11-beta.51: the cell pointed at since tipSince
+    ULONGLONG tipSince = 0;
     bool on = false, shown = false, hid = false, stateRead = false, skipChar = false;
     unsigned codePage = 0;
     float k = 0, scale = 1;
@@ -415,9 +418,14 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
         if (h.part == iw::Part::Tab) s.show.hoverTab = h.index;
         s.show.hoverClose = h.part == iw::Part::Close;
     }
+    if (s.show.hover != s.tipOf) {  // 3.0.11-beta.51: the concept's - a tip after 0.4 s pointed at
+        s.tipOf = s.show.hover;
+        s.tipSince = now;
+    }
+    s.show.tip = s.show.hover >= 0 && now - s.tipSince >= kTipMs;
     std::string key = std::to_string(s.layout.x) + ',' + std::to_string(s.layout.y) + ';' + std::to_string(scale) +
                       ';' + std::to_string(int(s.show.tab)) + ';' + std::to_string(s.show.scroll) + ';' +
-                      std::to_string(s.show.hover) + ',' + std::to_string(s.show.hoverTab) +
+                      std::to_string(s.show.hover) + (s.show.tip ? "t" : "") + ',' + std::to_string(s.show.hoverTab) +
                       (s.show.hoverClose ? "x" : "") + ';' + s.show.search + (s.show.typing ? "|t" : "") +
                       (s.show.typing && s.show.caretOn ? "c" : "") + ';' + std::to_string(s.show.flashes.size()) + '@' +
                       std::to_string(s.show.flashes.empty() ? 0 : int(s.show.flashes.front().t * 40)) + ';' +

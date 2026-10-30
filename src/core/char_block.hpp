@@ -81,6 +81,8 @@ struct Show {
     bool hoverBlock = false;  // the rings and the icon: their numbers in a tip
     bool warning = false;     // the low HP warning (its first 2 seconds)
     bool warningApart = false;  // 3.0.11-beta.46: its place kept (a tip under it), the warning drawn apart
+    bool tip = true;            // 3.0.11-beta.51: the tip (the concept's: after 0.4 s pointed at)
+    int pressedButton = -1;     // pressed: 1 px down, its backing darker
 };
 void paint(panel::Picture& out, const Layout& L, const Data& d, const Texts& t, const Show& show);
 // 3.0.11-beta.46 (the concept's motion): the low HP warning alone - its own picture of the block's size, so that it

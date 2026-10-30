@@ -213,3 +213,32 @@ TEST(char_block_low_hp_glow_warning_apart_and_flare) {
     const uint32_t gold = pixel(ring, R.cx, R.cy - R.hpR - 2);
     CHECK(red(gold) > 0xB0 && green(gold) > 0x90);
 }
+
+// 3.0.11-beta.51 (the concept's states): a tip only after its while; a pressed button 1 px down and darker
+TEST(char_block_tip_after_its_while_and_a_press) {
+    const charblock::Texts t = texts();
+    const charblock::Data d = sora();
+    const charblock::Layout L = charblock::layout(charblock::View::Full, charblock::Look::Bars, 0, 0, 1.0f);
+    charblock::Show early;
+    early.hoverButton = 2;
+    early.hoverBlock = true;
+    early.tip = false;
+    const auto has = [&](const charblock::Show& sh, const std::string& text) {
+        const std::vector<charblock::Words> w = charblock::words(L, d, t, sh);
+        return std::any_of(w.begin(), w.end(), [&](const charblock::Words& x) { return x.text == text; });
+    };
+    CHECK(!has(early, "Button 2"));
+    charblock::Show late = early;
+    late.tip = true;
+    CHECK(has(late, "Button 2"));
+    panel::Picture plain = canvas(L), pressed = canvas(L);
+    charblock::paint(plain, L, d, t, charblock::Show{});
+    charblock::Show down;
+    down.pressedButton = 1;
+    charblock::paint(pressed, L, d, t, down);
+    const panel::Box& b = L.buttons[1];
+    const uint32_t before = pixel(plain, b.x + 3, b.y + 0.5f), after = pixel(pressed, b.x + 3, b.y + 0.5f);
+    CHECK(before != after);  // its top edge moved down a pixel
+    const uint32_t mid0 = pixel(plain, b.x + 4, b.y + b.h - 4), mid1 = pixel(pressed, b.x + 4, b.y + b.h - 4);
+    CHECK(green(mid1) < green(mid0));  // darker
+}

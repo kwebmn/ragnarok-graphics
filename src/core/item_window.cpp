@@ -271,7 +271,7 @@ void paint(panel::Picture& out, const Layout& L, const std::vector<Item>& items,
         const panel::Box ring{f.cell.x - grow, f.cell.y - grow, f.cell.w + 2 * grow, f.cell.h + 2 * grow};
         panel::roundRect(out, ring, 8 * s + grow, kGold, 0.0f, kGold, 0.95f * fade, 2.0f * s);
     }
-    if (sh.hover >= 0 && sh.hover < int(shown.size())) {
+    if (sh.tip && sh.hover >= 0 && sh.hover < int(shown.size())) {
         const Item& it = items[size_t(shown[size_t(sh.hover)])];
         const panel::Box tip = tipBox(L, it, sh.hover - sh.scroll * L.columns, t, m);
         if (tip.w > 0) panel::roundRect(out, tip, 8 * s, kCard, 0.96f, kWhite, 0.14f, 1.0f * s);
@@ -298,7 +298,7 @@ std::vector<Words> words(const Layout& L, const std::vector<Item>& items, const 
     else if (!sh.search.empty())
         out.push_back(Words{field, sh.search, kText, 12.5f * s, false, Align::Left});
     panel::Box tip;  // the pointed cell's tip: the cells' words under it not drawn over it
-    if (sh.hover >= 0 && sh.hover < int(shown.size()))
+    if (sh.tip && sh.hover >= 0 && sh.hover < int(shown.size()))
         tip = tipBox(L, items[size_t(shown[size_t(sh.hover)])], sh.hover - sh.scroll * L.columns, t, m);
     const auto under = [&](const panel::Box& b) {
         return tip.w > 0 && b.x < tip.x + tip.w && b.x + b.w > tip.x && b.y < tip.y + tip.h && b.y + b.h > tip.y;

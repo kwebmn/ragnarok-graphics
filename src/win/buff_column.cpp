@@ -52,6 +52,7 @@ using SendMsgFn = int(__attribute__((thiscall)) *)(uint32_t self, uint32_t sende
 constexpr uint32_t kWorld = 0xC4, kPlayer = 0x3C, kIconEffect = 0x428;
 constexpr int kRelayout = 0x2C;
 constexpr ULONGLONG kRepaintMs = 100;  // the times and the rings painted again at most this often
+constexpr uint64_t kTipMs = 400;       // 3.0.11-beta.51: the concept's - a tip after 0.4 s pointed at
 
 bool g_hooked = false, g_hide = false;
 
@@ -119,7 +120,8 @@ struct State {
     std::vector<GameIcon> game;
     std::vector<bp::Entry> entries;
     bp::Layout layout;
-    int hover = -1;
+    int hover = -1, tip = -1;  // 3.0.11-beta.51: its tip's - the hovered one's after 0.4 s (the concept's)
+    uint64_t hoverSince = 0;
     std::string shape, fill;  // what the picture shows: its parts, its times
     ULONGLONG paintedAt = 0;
     panel::Picture picture;
@@ -270,8 +272,8 @@ void render(State& s) {
     s.picture.px.assign(size_t(s.layout.w) * size_t(s.layout.h), 0u);
     const bp::Texts t = texts();
     bp::paint(s.picture, s.layout, s.entries, s.hover);
-    bp::paintTip(s.picture, s.layout, s.entries, s.hover, t);
-    drawWords(s.picture, gdiWords(bp::words(s.layout, s.entries, s.hover, t)));
+    bp::paintTip(s.picture, s.layout, s.entries, s.tip, t);
+    drawWords(s.picture, gdiWords(bp::words(s.layout, s.entries, s.tip, t)));
     s.upload = true;
     s.paintedAt = GetTickCount64();
 }
@@ -412,10 +414,13 @@ void frame(HWND game, BuffsLook look, double k, int targetWidth, int targetHeigh
                                       float(cy) * float(k) - float(s.layout.y));
         if (h.part == bp::Part::Icon) hover = h.slot;
     }
+    if (hover != s.hover) s.hoverSince = now;
     s.hover = hover;
+    s.tip = hover >= 0 && now - s.hoverSince >= kTipMs ? hover : -1;
     std::string shape = std::to_string(int(panelLook)) + ';' + std::to_string(s.layout.x) + ',' +
                         std::to_string(s.layout.y) + ',' + std::to_string(s.layout.w) + 'x' +
-                        std::to_string(s.layout.h) + ';' + std::to_string(hover) + ';' + std::to_string(scale) + ';' +
+                        std::to_string(s.layout.h) + ';' + std::to_string(hover) + ',' + std::to_string(s.tip) + ';' +
+                        std::to_string(scale) + ';' +
                         std::to_string(uistyle::generation()) + ';';  // 3.0.11-beta.47: its ground's opacity
     std::string fill;
     for (const bp::Entry& e : s.entries) {

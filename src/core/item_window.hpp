@@ -67,6 +67,7 @@ struct Show {
     Tab tab = Tab::Items;
     int scroll = 0;     // rows down
     int hover = -1;     // the cell pointed at (of the shown)
+    bool tip = true;    // 3.0.11-beta.51: its tip (the concept's: after 0.4 s pointed at)
     int hoverTab = -1;
     bool hoverClose = false;
     bool typing = false;  // the search has the keys
