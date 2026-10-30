@@ -50,7 +50,20 @@ struct Texts {
     std::string use, wear, card, info;  // the tip's: «двічі клік — використати», ... «ПКМ — опис»
 };
 
+// 3.0.11-beta.44 (the owner: «когда использую какую-то вещь, она просто пропадает. нету никакой анимации»): a used
+// item's cell answers for 0.6 s - a gold ring opening out of it, its icon lit and then, the last one gone, fading
+// out of the empty cell, a word (−1, worn) rising over it
+struct Flash {
+    panel::Box cell;                       // where it was used (the window's pixels)
+    const panel::Picture* icon = nullptr;  // drawn fading while its cell shows nothing
+    float t = 0;                           // 0..1 of its time
+    std::string label;
+    uint32_t rgb = 0xF3C653;
+};
+constexpr float kFlashMs = 600;
+
 struct Show {
+    std::vector<Flash> flashes;  // 3.0.11-beta.44
     Tab tab = Tab::Items;
     int scroll = 0;     // rows down
     int hover = -1;     // the cell pointed at (of the shown)

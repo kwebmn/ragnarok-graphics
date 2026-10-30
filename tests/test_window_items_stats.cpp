@@ -195,3 +195,40 @@ TEST(stat_window_layout_and_mouse) {
     statwin::paint(p, L, d, sh);
     CHECK((p.px[size_t(L.h / 2) * size_t(L.w) + 4] >> 24) > 0xC0);
 }
+
+// 3.0.11-beta.44 (the owner: «когда использую какую-то вещь, она просто пропадает. нету никакой анимации»): a used
+// item's cell answers - a gold ring opening out, its icon fading where the last one went, «−1» rising
+TEST(item_window_use_flash) {
+    const itemwin::Texts t = itemTexts();
+    const itemwin::Layout L = itemwin::layout(0, 0, 1.0f, t, itemwin::Measure(panel::wordsWidth));
+    panel::Picture icon;
+    icon.width = icon.height = 32;
+    icon.px.assign(32 * 32, 0xFFD04040u);
+    std::vector<itemwin::Item> items;  // the last one used: none left in its cell
+    itemwin::Show sh;
+    itemwin::Flash f;
+    f.cell = L.cells[0];
+    f.icon = &icon;
+    f.t = 0.25f;
+    f.label = "\xE2\x88\x92" "1";  // −1
+    sh.flashes.push_back(f);
+    panel::Picture p;
+    p.width = L.w;
+    p.height = L.h;
+    p.px.assign(size_t(L.w) * size_t(L.h), 0u);
+    itemwin::paint(p, L, items, {}, sh, t, itemwin::Measure(panel::wordsWidth));
+    const panel::Box& c = L.cells[0];
+    const uint32_t mid = p.px[size_t(int(c.y + c.h / 2)) * size_t(L.w) + size_t(int(c.x + c.w / 2))];
+    CHECK(((mid >> 16) & 0xFF) > 0x70);  // the icon still there, fading
+    sh.flashes[0].t = 0.95f;
+    panel::Picture q = p;
+    q.px.assign(q.px.size(), 0u);
+    itemwin::paint(q, L, items, {}, sh, t, itemwin::Measure(panel::wordsWidth));
+    const uint32_t late = q.px[size_t(int(c.y + c.h / 2)) * size_t(L.w) + size_t(int(c.x + c.w / 2))];
+    CHECK(((late >> 16) & 0xFF) < ((mid >> 16) & 0xFF));  // gone by its end
+    sh.flashes[0].t = 0.25f;
+    bool label = false;
+    for (const itemwin::Words& w : itemwin::words(L, items, {}, sh, t, itemwin::Measure(panel::wordsWidth)))
+        label = label || (w.text == "\xE2\x88\x92" "1" && w.box.y < c.y);
+    CHECK(label);
+}

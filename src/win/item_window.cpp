@@ -87,6 +87,7 @@ struct State {
     float pressX = 0, pressY = 0;
     bool dragging = false;
     int pressesTold = 0;
+    std::vector<std::pair<iw::Flash, ULONGLONG>> flashes;  // 3.0.11-beta.44: the uses answered, when
     panel::Picture dragIcon;  // the dragged item's icon under the cursor
     const panel::Picture* dragOf = nullptr;
     uint32_t dragTexture = 0;
@@ -386,6 +387,17 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
         }
     }
     place(s);
+    s.show.flashes.clear();  // 3.0.11-beta.44: the uses still answering in their cells
+    for (auto f = s.flashes.begin(); f != s.flashes.end();) {
+        const float t = float(now - f->second) / iw::kFlashMs;
+        if (t >= 1) {
+            f = s.flashes.erase(f);
+            continue;
+        }
+        f->first.t = t;
+        s.show.flashes.push_back(f->first);
+        ++f;
+    }
     s.shownItems = iw::shownOf(s.items, s.show.tab, s.show.search);
     s.show.scroll = std::clamp(s.show.scroll, 0, iw::mostScroll(s.layout, s.shownItems.size()));
     s.show.caretOn = (now / kBlinkMs) % 2 == 0;
@@ -404,7 +416,9 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
                       ';' + std::to_string(int(s.show.tab)) + ';' + std::to_string(s.show.scroll) + ';' +
                       std::to_string(s.show.hover) + ',' + std::to_string(s.show.hoverTab) +
                       (s.show.hoverClose ? "x" : "") + ';' + s.show.search + (s.show.typing ? "|t" : "") +
-                      (s.show.typing && s.show.caretOn ? "c" : "") + ';' + std::to_string(s.show.weight) + '/' +
+                      (s.show.typing && s.show.caretOn ? "c" : "") + ';' + std::to_string(s.show.flashes.size()) + '@' +
+                      std::to_string(s.show.flashes.empty() ? 0 : int(s.show.flashes.front().t * 40)) + ';' +
+                      std::to_string(s.show.weight) + '/' +
                       std::to_string(s.show.weightMost) + ';' + std::to_string(s.show.zeny) + ';';
     for (const iw::Item& it : s.items)
         key += std::to_string(it.index) + ':' + std::to_string(it.id) + 'x' + std::to_string(it.count) + '+' +
@@ -482,7 +496,7 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
             return false;
         }
         if (m == WM_MOUSEMOVE) {
-            if (!s.dragging && std::hypot(tx - s.pressX, ty - s.pressY) > 6 * s.scale) s.dragging = true;
+            if (!s.dragging && std::hypot(tx - s.pressX, ty - s.pressY) > 10 * s.scale) s.dragging = true;
             return s.dragging;
         }
         const iw::Item it = s.items[size_t(s.press)];
@@ -555,7 +569,20 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
             const iw::Item& it = s.items[size_t(at)];
             const ULONGLONG now = GetTickCount64();
             if ((h.index == s.lastCell && now - s.lastClick <= GetDoubleClickTime()) || m == WM_LBUTTONDBLCLK) {
+                const iw::Use kind = iw::useOf(it);
                 const char* did = use(s, it);
+                const bool asked = kind != iw::Use::None && !(kind == iw::Use::Confirm && s.armed == it.index);
+                if (asked) {  // 3.0.11-beta.44: its cell answers - a ring, its word rising
+                    iw::Flash f;
+                    const int cell = h.index - s.show.scroll * s.layout.columns;
+                    if (cell >= 0 && cell < int(s.layout.cells.size())) f.cell = s.layout.cells[size_t(cell)];
+                    f.icon = it.icon;
+                    f.label = kind == iw::Use::Wear || kind == iw::Use::Ammo ? say(settings::Text::ItemsWorn)
+                              : kind == iw::Use::Card                        ? ""
+                                                                             : "\xE2\x88\x92" "1";  // −1
+                    f.rgb = kind == iw::Use::Wear || kind == iw::Use::Ammo ? 0x5FD08A : 0xF3C653;
+                    if (f.cell.w > 0) s.flashes.emplace_back(f, now);
+                }
                 s.lastCell = -1;
                 s.press = -1;
                 if (s.told++ < 20) LOG_INFO("items: a double click on #%d (kind %d) - %s", it.id, it.type, did);

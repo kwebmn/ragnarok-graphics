@@ -5067,6 +5067,7 @@ constexpr Entry kTexts[] = {
     {Text::StatsEffectLuk, "CRIT +0.3 %", "CRIT +0,3 %", "CRIT +0,3 %"},
     {Text::StatsHint, "Point at a stat: its price and what the next point gives",
      "Наведіть на стат — ціна й що дає наступне очко", "Наведите на стат — цена и что даёт следующее очко"},
+    {Text::ItemsWorn, "worn", "вдягнуто", "надето"},  // 3.0.11-beta.44: the word rising over a worn item's cell
     {Text::MinimapRespawn, "{1} min", "{1} хв", "{1} мин"},
     {Text::MinimapMore, "and {1} more", "і ще {1}", "и ещё {1}"},
     {Text::MinimapNoReference, "No game reference yet", "Довідника гри ще немає", "Справочника игры ещё нет"},

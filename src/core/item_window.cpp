@@ -256,6 +256,20 @@ void paint(panel::Picture& out, const Layout& L, const std::vector<Item>& items,
     if (share > 0)
         panel::roundRect(out, panel::Box{L.bar.x, L.bar.y, L.bar.w * share, L.bar.h}, 3 * s,
                          share >= 0.9f ? kRed : share >= 0.5f ? kGold : kGreen, 0.95f);
+    for (const Flash& f : sh.flashes) {  // 3.0.11-beta.44: a use answered in its cell
+        const float t = std::clamp(f.t, 0.0f, 1.0f), fade = 1 - t;
+        bool empty = true;  // its cell now: nothing shown there (the last one gone)
+        for (size_t i = 0; i < L.cells.size(); ++i) {
+            const panel::Box& b = L.cells[i];
+            if (std::fabs(b.x - f.cell.x) < 1 && std::fabs(b.y - f.cell.y) < 1)
+                empty = int(i) + sh.scroll * L.columns >= int(shown.size());
+        }
+        if (empty && f.icon && f.icon->width > 0) put(out, *f.icon, f.cell, fade * fade);
+        panel::roundRect(out, f.cell, 8 * s, kGold, 0.30f * fade);
+        const float grow = 9 * s * t;
+        const panel::Box ring{f.cell.x - grow, f.cell.y - grow, f.cell.w + 2 * grow, f.cell.h + 2 * grow};
+        panel::roundRect(out, ring, 8 * s + grow, kGold, 0.0f, kGold, 0.95f * fade, 2.0f * s);
+    }
     if (sh.hover >= 0 && sh.hover < int(shown.size())) {
         const Item& it = items[size_t(shown[size_t(sh.hover)])];
         const panel::Box tip = tipBox(L, it, sh.hover - sh.scroll * L.columns, t, m);
@@ -322,6 +336,17 @@ std::vector<Words> words(const Layout& L, const std::vector<Item>& items, const 
     const float zw = m(z, 12 * s, true) + 4;
     out.push_back(Words{panel::Box{L.glass.w - side - zw, L.footer.y, zw, L.footer.h}, z, kText, 12 * s, true,
                         Align::Right});
+    for (const Flash& f : sh.flashes) {  // its word rising out of the cell, dimming
+        if (f.label.empty()) continue;
+        const float t = std::clamp(f.t, 0.0f, 1.0f);
+        const auto toward = [&](int sh2) {
+            const float a = float((f.rgb >> sh2) & 0xFF), b = float((kCard >> sh2) & 0xFF);
+            return uint32_t(a + (b - a) * t * t) << sh2;
+        };
+        const float w = m(f.label, 12 * s, true) + 8 * s, h = 16 * s;
+        out.push_back(Words{panel::Box{f.cell.x + (f.cell.w - w) / 2, f.cell.y - 4 * s - 22 * s * t, w, h}, f.label,
+                            toward(16) | toward(8) | toward(0), 12 * s, true, Align::Center});
+    }
     if (sh.hover >= 0 && sh.hover < int(shown.size())) {
         const Item& it = items[size_t(shown[size_t(sh.hover)])];
         if (tip.w > 0) {
