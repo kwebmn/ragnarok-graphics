@@ -1,3 +1,14 @@
+# uaRO Graphics 3.0.11-beta.60 — what is new
+
+- **A client packed with another computer's settings sets itself up for yours.** When uaro-graphics.ini records
+  another computer (the packer's) and the game was never started on this one, the app picks the settings for your card
+  and screen silently — no «The graphics card or the monitor changed…» question. When the game did run here and you
+  changed the card or the monitor, it asks, as before.
+- **No questions before the first game.** The anonymous statistics' and the automatic reports' questions now come only
+  after you played once on this computer: a newcomer plays first.
+- To check: on a freshly unpacked client the app's first start shows no question box; after the first game, at the
+  app's next opening — the two questions, as before.
+
 # uaRO Graphics 3.0.11-beta.59 — what is new
 
 - **The safe mode now catches crashes in the first minutes too.** It used to come only when two starts in a row did not
