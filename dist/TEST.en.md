@@ -1,3 +1,12 @@
+# uaRO Graphics 3.0.11-beta.50 — what is new
+
+- **Red screen edges at low HP — if wanted** (the concept: «the screen's edge — by choice, off»). A new slider «Red
+  edges at low HP» (the «Interface» section in the app, «The new interface» in the game's console): 0 — none (the
+  default), up to 100 % — how strong. While HP is under a quarter the world's edges turn red (smoothly, 0.18 s), the
+  panels and windows over them stay clean; HP back — the edges fade.
+- To check: in the game's console set 60 %, take hits until HP is under a quarter — red edges; heal — gone. In the
+  log: `low HP edge: the screen's edges red`.
+
 # uaRO Graphics 3.0.11-beta.49 — what is new
 
 - **Open windows, as in the concept.** While «Items», «Status» or «Reference» is open, the world behind them darkens
