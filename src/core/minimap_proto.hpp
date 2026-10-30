@@ -70,11 +70,15 @@ struct Scene {
     MapSize map;
     Cell player;
     float lookX = 0, lookY = 0;  // where the camera looks along the ground (east, north); 0, 0 not known: a dot
+    // 3.0.11-beta.71 (the owner: «туда куда чар смотрит»): which way the character faces (east, north; facingOf) - the
+    // arrow's way; the camera's (look) the fan's. 0, 0 not known: the arrow the camera's way as before
+    float headX = 0, headY = 0;
     int cells = 100;             // the zoom
     std::vector<Mark> marks;
     std::vector<Cell> path;  // the way over this map, from the player on (walkpath)
     bool pin = false;        // the way's next move: a gold pin there
     Cell pinCell;
+    std::vector<Cell> waypoints;  // 3.0.11-beta.71: the points set on the way before its end - gold dots
     int hoverMark = -1;  // the mark under the pointer: a ring round it
     Part hover = Part::None;
     BigPart bigHover = BigPart::None;
@@ -127,6 +131,16 @@ void paintBigMap(panel::Picture& out, const Big& b, const Scene& sc);
 void paintBig(panel::Picture& out, const panel::Picture& map, const Big& b, const Scene& sc);
 std::vector<Words> bigWords(const Big& b, const Scene& sc, const std::string& title, const std::string& cell);
 int bigMarkAt(const Big& b, const Scene& sc, float x, float y);
+
+// 3.0.11-beta.71 (the owner: «иконка игрока не поворачивается в сторону куда идешь», «туда куда чар смотрит»): the
+// character's facing as uaRO.exe keeps it - its object + 0x38, degrees from the south toward the east: FUN_00544da0
+// turns it toward a point by atan2(east, -north), the packet 0x9c sets (dir + 4) * 45 - as a way east and north;
+// false: not a number
+bool facingOf(float degrees, float& east, float& north);
+// 3.0.11-beta.71 (the owner: «хочется на карте прокладывать путь»): the cell under a point of the minimap's square (the
+// panel's pixels) or of the big map's map (its pixels); false: not over the map
+bool cellAt(const Layout& L, const Scene& sc, float x, float y, Cell& out);
+bool bigCellAt(const Big& b, const Scene& sc, float x, float y, Cell& out);
 
 // 3.0.11-beta.4 (the owner: «на Ctrl+Tab ничего не происходит»): Ctrl+Tab goes round the game's own way - opaque,
 // see-through (the game's 0xAA of 0xFF), hidden

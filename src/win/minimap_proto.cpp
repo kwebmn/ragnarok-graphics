@@ -120,6 +120,17 @@ struct State {
     std::string reachMap;
     uint8_t reachPart = walkgrid::kWall;
     int reachLogged = 0;
+    // 3.0.11-beta.71 (the owner: «иконка игрока не поворачивается в сторону куда идешь», «туда куда чар смотрит»): the
+    // character's facing (its object + 0x38) - the arrow's way
+    float facing = 1e9f, headX = 0, headY = 0;
+    int facingLogged = 0;
+    // 3.0.11-beta.71 (the owner: «хочется на карте прокладывать путь»): the points set on the map by clicks (Shift adds
+    // one), the way through them from the first (walkpath::through), its lines under the map; reached - «Ви на місці»
+    std::vector<minimap::Cell> plot;
+    std::string plotMap;
+    std::vector<walkpath::Cell> plotTail;  // from the first point through the rest
+    std::vector<minimap::Line> plotLines;
+    ULONGLONG plotThereAt = 0;
 };
 
 constexpr ULONGLONG kPaintEveryMs = 33;
@@ -281,6 +292,8 @@ void buildRoute(State& s) {
 void toGround(const State& s) {
     std::vector<std::pair<int, int>> cells;
     if (s.path.size() >= 2) cells = s.kept.way.size() >= 2 ? s.kept.way : std::vector<std::pair<int, int>>{};
+    if (!cells.empty() && !s.plot.empty() && s.plotTail.size() > 1)  // 3.0.11-beta.71: through the points set
+        cells.insert(cells.end(), s.plotTail.begin() + 1, s.plotTail.end());
     win::groundway::set(s.map, cells);
 }
 
@@ -293,27 +306,33 @@ void toGround(const State& s) {
 // 15 times in 40 walks, 5 never)
 constexpr float kOffCells = 5;
 
+// The walked cells of the player's map (the reference's walkable.bin), read once a map
+void loadCells(State& s) {
+    if (s.cellsMap == s.map) return;
+    s.cellsMap = s.map;
+    s.cells = walkpath::Cells{};
+    s.field = walkpath::Field{};
+    s.kept = walkpath::Kept{};
+    s.keptLogged = 0;
+    if (s.index && s.index->walk) {
+        const auto it = s.index->walk->find(s.map);
+        if (it != s.index->walk->end()) s.cells = walkpath::cellsOf(it->second);
+    }
+}
+
 void makePath(State& s) {
-    const refroute::Step* step = s.cellKnown ? routefollow::next(s.follow, s.map) : nullptr;
-    if (!step) {
+    // 3.0.11-beta.71: the points set on the map first - the way to the first, then through the rest
+    const bool plotted = !s.plot.empty() && s.plotMap == s.map;
+    const refroute::Step* step = !plotted && s.cellKnown ? routefollow::next(s.follow, s.map) : nullptr;
+    if ((!plotted && !step) || !s.cellKnown) {
         if (!s.path.empty()) s.dirty = true;
         s.path.clear();
         s.kept = walkpath::Kept{};
         toGround(s);
         return;
     }
-    const minimap::Cell goal{step->move.x, step->move.y};
-    if (s.cellsMap != s.map) {
-        s.cellsMap = s.map;
-        s.cells = walkpath::Cells{};
-        s.field = walkpath::Field{};
-        s.kept = walkpath::Kept{};
-        s.keptLogged = 0;
-        if (s.index && s.index->walk) {
-            const auto it = s.index->walk->find(s.map);
-            if (it != s.index->walk->end()) s.cells = walkpath::cellsOf(it->second);
-        }
-    }
+    const minimap::Cell goal = plotted ? s.plot.front() : minimap::Cell{step->move.x, step->move.y};
+    loadCells(s);
     const bool newGoal = s.field.goal != walkpath::Cell{goal.x, goal.y} || s.field.w != s.cells.w;
     if (newGoal) {  // its distances (none with no cells known: the goal alone, the way straight to it)
         const ULONGLONG t0 = GetTickCount64();
@@ -346,9 +365,113 @@ void makePath(State& s) {
     }
     s.path.clear();
     for (const walkpath::Cell& c : s.kept.rest) s.path.push_back(minimap::Cell{c.first, c.second});
+    if (plotted)  // 3.0.11-beta.71: on through the rest of the points
+        for (size_t i = 1; i < s.plotTail.size(); ++i)
+            s.path.push_back(minimap::Cell{s.plotTail[i].first, s.plotTail[i].second});
     s.dirty = true;
     s.bigDirty = true;
     toGround(s);
+}
+
+// 3.0.11-beta.71 (the owner: «хочется на карте прокладывать путь»): the way through the points set - its tail from the
+// first point through the rest (made once a set), its two lines under the map (the goal, how far; the keys)
+void plotTail(State& s) {
+    loadCells(s);
+    s.plotTail.clear();
+    if (s.plot.size() > 1) {
+        std::vector<walkpath::Cell> rest;
+        for (size_t i = 1; i < s.plot.size(); ++i) rest.emplace_back(s.plot[i].x, s.plot[i].y);
+        s.plotTail = walkpath::through(s.cells, walkpath::Cell{s.plot[0].x, s.plot[0].y}, rest);
+    }
+}
+
+void plotLines(State& s) {
+    s.plotLines.clear();
+    if (s.plotThereAt) {
+        s.plotLines.push_back(minimap::Line{say(settings::Text::MinimapRouteThere), ""});
+        return;
+    }
+    if (s.plot.empty()) return;
+    float cells = 0;  // along the way
+    for (size_t i = 1; i < s.path.size(); ++i)
+        cells += std::hypot(float(s.path[i].x - s.path[i - 1].x), float(s.path[i].y - s.path[i - 1].y));
+    const minimap::Cell& end = s.plot.back();
+    s.plotLines.push_back(minimap::Line{
+        settings::fmt(say(settings::Text::MinimapPlotTo), {std::to_string(end.x), std::to_string(end.y)}),
+        s.path.size() > 1 ? settings::fmt(say(settings::Text::MinimapPlotCells), {std::to_string(int(cells + 0.5f))})
+                          : ""});
+    s.plotLines.push_back(minimap::Line{say(settings::Text::MinimapPlotHint), ""});
+}
+
+void clearPlot(State& s) {
+    if (s.plot.empty() && !s.plotThereAt) return;
+    s.plot.clear();
+    s.plotTail.clear();
+    s.plotLines.clear();
+    s.plotThereAt = 0;
+    s.kept = walkpath::Kept{};
+    s.field = walkpath::Field{};
+    s.pathFrom = minimap::Cell{-1, -1};
+    s.path.clear();
+    s.dirty = s.bigDirty = true;
+    toGround(s);
+    LOG_INFO("route: the way set on the map taken away");
+}
+
+// A click's cell: the way to it (Shift: one more point after those set, at most 8)
+void setPlot(State& s, const minimap::Cell& at, bool add) {
+    if (!add || s.plotMap != s.map || s.plotThereAt) s.plot.clear();
+    if (s.plot.size() >= 8) s.plot.pop_back();
+    s.plot.push_back(at);
+    s.plotMap = s.map;
+    s.plotThereAt = 0;
+    s.field = walkpath::Field{};  // the first point maybe another: its distances made again
+    s.kept = walkpath::Kept{};
+    s.pathFrom = minimap::Cell{-1, -1};
+    plotTail(s);
+    LOG_INFO("route: a way set on %s to %d, %d (%zu points; from %d, %d)", s.map.c_str(), at.x, at.y, s.plot.size(),
+             s.cell.x, s.cell.y);
+}
+
+// Each frame while points are set: the first one reached (a cell away) - the next; the last - «Ви на місці» a while;
+// another map - gone. True: the way set is the one shown (the followed way waits)
+bool plotFrame(State& s) {
+    if (s.plot.empty() && !s.plotThereAt) return false;
+    const ULONGLONG now = GetTickCount64();
+    if (s.plotMap != s.map) {
+        clearPlot(s);
+        return false;
+    }
+    if (s.plotThereAt) {
+        if (now - s.plotThereAt > kThereMs) {
+            clearPlot(s);
+            return false;
+        }
+        return true;
+    }
+    // reached: a cell from the point, or at the end of the walked way to it (a point on a wall: its ground beside it)
+    const auto within = [&](int x, int y) { return std::max(std::abs(s.cell.x - x), std::abs(s.cell.y - y)) <= 1; };
+    const bool atEnd = !s.kept.rest.empty() && s.kept.goal == walkpath::Cell{s.plot.front().x, s.plot.front().y} &&
+                       within(s.kept.rest.back().first, s.kept.rest.back().second);
+    if (s.cellKnown && (within(s.plot.front().x, s.plot.front().y) || atEnd)) {
+        s.plot.erase(s.plot.begin());
+        s.field = walkpath::Field{};
+        s.kept = walkpath::Kept{};
+        s.pathFrom = minimap::Cell{-1, -1};
+        if (s.plot.empty()) {
+            s.plotThereAt = now;
+            s.path.clear();
+            toGround(s);
+            plotLines(s);
+            s.dirty = s.bigDirty = true;
+            LOG_INFO("route: the way set on %s reached at %d, %d", s.map.c_str(), s.cell.x, s.cell.y);
+            return true;
+        }
+        plotTail(s);
+    }
+    makePath(s);
+    plotLines(s);
+    return true;
 }
 
 // The way followed now on this map: made again when the player went elsewhere; «Ви на місці» a while, then the end
@@ -451,10 +574,16 @@ minimap::Scene sceneOf(const State& s) {
     sc.cells = minimap::cellsAt(s.zoom, s.size);
     sc.marks = s.marks;
     sc.path = s.path;
-    if (const refroute::Step* step = s.cellKnown ? routefollow::next(s.follow, s.map) : nullptr) {
+    if (!s.plot.empty() && s.plotMap == s.map) {  // 3.0.11-beta.71: the points set - the last a pin
+        sc.pin = true;
+        sc.pinCell = s.plot.back();
+        sc.waypoints.assign(s.plot.begin(), s.plot.end() - 1);
+    } else if (const refroute::Step* step = s.cellKnown ? routefollow::next(s.follow, s.map) : nullptr) {
         sc.pin = true;
         sc.pinCell = minimap::Cell{step->move.x, step->move.y};
     }
+    sc.headX = s.headX;  // 3.0.11-beta.71: the character's facing
+    sc.headY = s.headY;
     sc.hoverMark = s.hover;
     sc.hover = s.part;
     sc.bigHover = s.bigPart;
@@ -478,7 +607,7 @@ void render(State& s) {
     t.name = shortTitle(s, s.map);
     if (s.cellKnown) t.cell = std::to_string(s.cell.x) + ", " + std::to_string(s.cell.y);
     t.folded = s.folded;
-    t.route = s.routeLines;
+    t.route = !s.plotLines.empty() ? s.plotLines : s.routeLines;  // 3.0.11-beta.71: the way set on the map first
     for (const Line& l : s.lines)
         t.list.push_back(minimap::Line{l.left, l.right, l.boss ? kBossText : 0u,
                                        l.timer ? minimap::kRouteRgb : 0u, l.boss});
@@ -602,6 +731,7 @@ void frame(HWND game, const Show& show, double k, int targetWidth, int targetHei
         s.hideFailed = false;
         s.pathFrom = minimap::Cell{-1, -1};
         s.lookX = s.lookY = 0;
+        s.facingLogged = std::min(s.facingLogged, 4);  // 3.0.11-beta.71: a line or two on each map
         loadPicture(s);
         s.dirty = s.bigDirty = true;
         s.paintedAt = s.bigPaintedAt = 0;  // 3.0.11-beta.57: another map's at once, not the last one's a while
@@ -630,7 +760,17 @@ void frame(HWND game, const Show& show, double k, int targetWidth, int targetHei
         s.size = minimap::MapSize{w, h};
         s.cellKnown = true;
     }
-    float east = 0, north = 0;  // 3.0.11-beta.31: the arrow turns as the camera does (by a degree or more)
+    float facing = 0, headE = 0, headN = 0;  // 3.0.11-beta.71: the arrow - the way the character faces
+    if (readPlayerFacing(facing) && std::fabs(facing - s.facing) > 0.5f && minimap::facingOf(facing, headE, headN)) {
+        if (s.facingLogged++ < 6)
+            LOG_INFO("minimap: the character faces %.0f degrees (east %.2f, north %.2f) at %d, %d on %s - the arrow",
+                     facing, headE, headN, s.cell.x, s.cell.y, s.map.c_str());
+        s.facing = facing;
+        s.headX = headE;
+        s.headY = headN;
+        s.dirty = s.bigDirty = true;
+    }
+    float east = 0, north = 0;  // 3.0.11-beta.31: the fan turns as the camera does (by a degree or more)
     if (readLook(east, north) && (std::fabs(east - s.lookX) > 0.017f || std::fabs(north - s.lookY) > 0.017f)) {
         if (s.lookX == 0 && s.lookY == 0)  // the first a map: to set the arrow against the screen
             LOG_INFO("minimap: the camera looks %.2f east, %.2f north on %s (the arrow that way)", east, north,
@@ -670,7 +810,7 @@ void frame(HWND game, const Show& show, double k, int targetWidth, int targetHei
         buildHints(s);
         s.dirty = s.bigDirty = true;
     }
-    followFrame(s);
+    if (!plotFrame(s)) followFrame(s);  // 3.0.11-beta.71: the way set on the map first
     reachFrame(s, show.reach);  // 3.0.11-beta.65
     // the part and the mark under the game's cursor: a button lit, a mark naming itself
     int cx = 0, cy = 0, hover = -1;
@@ -757,7 +897,15 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
         const minimap::BigPart bp = minimap::bigPartAt(s.bigLayout, bx, by);
         if (bp != minimap::BigPart::None) {
             if (m == WM_LBUTTONDOWN && bp == minimap::BigPart::Close) setBig(s, false);
-            if (m == WM_LBUTTONDOWN && bp == minimap::BigPart::Map) {  // a warp: its map's card in «Довідник»
+            const bool ctrl = GetKeyState(VK_CONTROL) < 0, shift = GetKeyState(VK_SHIFT) < 0;
+            minimap::Cell at;
+            if (m == WM_LBUTTONDOWN && bp == minimap::BigPart::Map && !ctrl &&
+                minimap::bigCellAt(s.bigLayout, sc, bx, by, at)) {  // 3.0.11-beta.71: the way there (Shift: on)
+                setPlot(s, at, shift);
+                plotFrame(s);
+            }
+            if (m == WM_RBUTTONDOWN && bp == minimap::BigPart::Map) clearPlot(s);
+            if (m == WM_LBUTTONDOWN && bp == minimap::BigPart::Map && ctrl) {  // Ctrl: a warp's map's card
                 const int mark = minimap::bigMarkAt(s.bigLayout, sc, bx, by);
                 if (mark >= 0 && s.index && s.marks[size_t(mark)].glyph == minimap::Glyph::Warp) {
                     const auto it = s.index->maps.find(s.map);
@@ -796,9 +944,14 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
                 s.dirty = true;
                 keepState(s);
                 break;
-            case minimap::Part::Stop: unfollow(); break;
+            case minimap::Part::Stop:  // 3.0.11-beta.71: the way set on the map first
+                if (!s.plot.empty() || s.plotThereAt) clearPlot(s);
+                else unfollow();
+                break;
             case minimap::Part::Caption: referencewin::openMap(s.map); break;  // 3.0.11-beta.7: its card
-            case minimap::Part::Route: referencewin::openMap(s.follow.target); break;
+            case minimap::Part::Route:
+                if (s.plot.empty() && !s.plotThereAt) referencewin::openMap(s.follow.target);
+                break;
             case minimap::Part::List: {  // 3.0.11-beta.9: a monster's card; «і ще N» - the map's
                 const int i = minimap::lineAt(s.layout, py);
                 if (i >= 0 && size_t(i) < s.lines.size()) {
@@ -807,15 +960,39 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
                 }
                 break;
             }
-            case minimap::Part::Map:
+            case minimap::Part::Map: {  // 3.0.11-beta.71 (the owner: «хочется на карте прокладывать путь»)
+                minimap::Cell at;
+                if (minimap::cellAt(s.layout, sc, px, py, at)) {
+                    setPlot(s, at, GetKeyState(VK_SHIFT) < 0);
+                    plotFrame(s);
+                }
+                break;
+            }
             case minimap::Part::None: break;
         }
     }
+    if (m == WM_RBUTTONDOWN && part == minimap::Part::Map) clearPlot(s);  // 3.0.11-beta.71: the way set taken away
     result = 0;
     return true;
 }
 
 bool canFollow() { return state().on; }
+
+bool plotted(int& x, int& y) {
+    const State& s = state();
+    if (s.plot.empty() || s.plotMap != s.map) return false;
+    x = s.plot.back().x;
+    y = s.plot.back().y;
+    return true;
+}
+
+std::vector<std::pair<std::string, std::string>> plotLines() {
+    std::vector<std::pair<std::string, std::string>> out;
+    for (const minimap::Line& l : state().plotLines) out.emplace_back(l.left, l.right);
+    return out;
+}
+
+void clearPlot() { clearPlot(state()); }
 
 std::vector<std::pair<std::string, std::string>> routeLines() {
     std::vector<std::pair<std::string, std::string>> out;

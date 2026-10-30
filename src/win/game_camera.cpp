@@ -263,6 +263,7 @@ using WindowFn = uint32_t(__attribute__((thiscall)) *)(void* manager, int id);
 // The world's place of the player and of the map's cells (FUN_0055c220): mode+0xC4 the world; world+0x3C the player
 // (x +4, z +0xC); world+0x40 the map's cells (width +0x110, height +0x114, a cell's size +0x118)
 constexpr uint32_t kModeWorld = 0xC4, kWorldPlayer = 0x3C, kWorldCells = 0x40, kCellsSize = 0x110;
+constexpr uint32_t kPlayerFacing = 0x38;  // 3.0.11-beta.71: the actor's facing, degrees (FUN_00544da0, FUN_00580ca0)
 
 bool sameCode(uint32_t at, const uint8_t* code, size_t size) {
     uint8_t now[32];
@@ -309,6 +310,13 @@ bool readPlayerWorld(float at[3], int& width, int& height, int& cellSize) {
     height = size[1];
     cellSize = size[2];
     return std::isfinite(at[0]) && std::isfinite(at[1]) && std::isfinite(at[2]);
+}
+
+bool readPlayerFacing(float& degrees) {
+    uint32_t world = 0, player = 0;
+    const uint32_t mode = gameMode();
+    return mode && read(mode + kModeWorld, &world, 4) && world && read(world + kWorldPlayer, &player, 4) && player &&
+           read(player + kPlayerFacing, &degrees, sizeof degrees) && std::isfinite(degrees);
 }
 
 bool gameMinimapShown() {

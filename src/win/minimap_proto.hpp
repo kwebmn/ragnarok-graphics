@@ -44,5 +44,11 @@ bool following(std::string& target, bool& walk);  // false: none
 // 3.0.11-beta.70: the way's two lines as the minimap shows them under it (where to next, how many moves; where to take
 // it) - the tracker's way; empty: none followed
 std::vector<std::pair<std::string, std::string>> routeLines();
+// 3.0.11-beta.71 (the owner: «хочется на карте прокладывать путь»): a click on the minimap or its big map sets a way
+// there (Shift: one more point, a right click or ✕ takes it away; Ctrl on a warp of the big map: its map's card) - its
+// last point, its lines, taken away (the tracker's entry)
+bool plotted(int& x, int& y);
+std::vector<std::pair<std::string, std::string>> plotLines();
+void clearPlot();
 
 }  // namespace uagfx::win::minimapproto

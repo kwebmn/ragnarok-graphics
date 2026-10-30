@@ -23,6 +23,9 @@ bool readPlayerCell(int& x, int& y, int& width, int& height);
 // 3.0.11-beta.31: the player's place in the game's world (x, its height y - up along -y -, z) and the map's cells
 // (their count across and down, a cell's world size)
 bool readPlayerWorld(float at[3], int& width, int& height, int& cellSize);
+// 3.0.11-beta.71 (the owner: «туда куда чар смотрит»): which way the character faces - its object's + 0x38, degrees
+// (FUN_00544da0 turns it toward a point, the packet 0x9c sets it; minimap::facingOf); false: no character
+bool readPlayerFacing(float& degrees);
 // The game's own minimap: it is drawn while its UI window 14 exists (UIWindowMgr+0x7C); hidden and made again as
 // Ctrl+Tab does (UI command 0x99: DeleteWindow / MakeWindow of window 14, the latter only where the map has one) -
 // false when not done (another build, nothing to do). On the game's thread.

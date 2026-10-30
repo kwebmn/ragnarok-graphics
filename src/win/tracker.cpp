@@ -31,6 +31,8 @@ namespace {
 
 namespace tk = uagfx::tracker;
 
+const std::string kPlotted = "#plot";  // 3.0.11-beta.71: the way set on the map - its entry's mark
+
 struct State {
     bool on = false, shown = false, stateRead = false;
     bool folded = false, hidden = false;
@@ -135,6 +137,16 @@ void build(State& s) {
     for (; at < pinned.size() && pinned[at].kind == tk::Kind::Quest; ++at) {
         s.entries.push_back(pinned[at]);
         s.routeOf.emplace_back();
+    }
+    int gx = 0, gy = 0;  // 3.0.11-beta.71: the way set on the map by clicks
+    if (minimapproto::plotted(gx, gy)) {
+        const std::string here = readGameMap();
+        tk::Entry way{tk::Kind::Route, ix && !here.empty() ? refindex::mapTitle(*ix, here) : here,
+                      say(settings::Text::TrackerRoute), {}};
+        const auto lines = minimapproto::plotLines();
+        if (!lines.empty()) way.lines.push_back(tk::Line{lines.front().first, lines.front().second, false});
+        s.entries.push_back(std::move(way));
+        s.routeOf.push_back(kPlotted);
     }
     std::string target;
     bool walk = true;
@@ -247,7 +259,9 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
             keepState(s);
             LOG_INFO("tracker: hidden - shown again by the next pin");
         } else if (h.part == tk::Part::Close && e) {
-            if (e->kind == tk::Kind::Route) {
+            if (e->kind == tk::Kind::Route && s.routeOf[size_t(h.entry)] == kPlotted) {
+                minimapproto::clearPlot();  // 3.0.11-beta.71
+            } else if (e->kind == tk::Kind::Route) {
                 minimapproto::unfollow();
             } else if (e->kind == tk::Kind::Quest) {
                 size_t q = 0;  // the quests come first, in the pins' order
@@ -262,7 +276,8 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
         } else if (h.part == tk::Part::Head && e) {
             size_t n = 0;  // the entry's own pin, by its kind's order
             for (size_t i = 0; i < size_t(h.entry); ++i) n += s.entries[i].kind == e->kind;
-            if (e->kind == tk::Kind::Route && !s.routeOf[size_t(h.entry)].empty())
+            if (e->kind == tk::Kind::Route && !s.routeOf[size_t(h.entry)].empty() &&
+                s.routeOf[size_t(h.entry)] != kPlotted)
                 referencewin::openMap(s.routeOf[size_t(h.entry)]);
             else if (e->kind == tk::Kind::Quest && n < s.quests.size())
                 referencewin::openQuest(s.quests[n]);

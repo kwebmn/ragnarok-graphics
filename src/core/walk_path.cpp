@@ -216,4 +216,18 @@ bool keep(Kept& k, const Field& f, const Cells& c, Cell player, float off) {
     return true;
 }
 
+std::vector<Cell> through(const Cells& c, Cell from, const std::vector<Cell>& points) {
+    std::vector<Cell> out;
+    if (points.empty()) return out;
+    out.push_back(from);
+    for (const Cell& p : points) {
+        const Cell at = out.back();
+        std::vector<Cell> leg;
+        if (c.w > 0 && c.h > 0) leg = straightened(c, pathFrom(fieldTo(c, p), c, at));
+        if (leg.size() < 2) leg = {at, p};
+        out.insert(out.end(), leg.begin() + 1, leg.end());
+    }
+    return out;
+}
+
 }  // namespace uagfx::walkpath

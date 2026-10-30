@@ -85,16 +85,18 @@ void triangles(panel::Picture& p, const std::vector<std::array<float, 6>>& tris,
         }
 }
 
-// The player: where the camera looks, a soft fan of its view and the arrow; not known - a white dot
-void player(panel::Picture& p, const panel::Box& clip, float x, float y, float lookX, float lookY, float size) {
-    const float len = std::hypot(lookX, lookY);
-    if (len < 1e-4f) {
+// The player: where the camera looks, a soft fan of its view; 3.0.11-beta.71 the arrow the way the character faces
+// (the camera's when not known); neither known - a white dot
+void player(panel::Picture& p, const panel::Box& clip, float x, float y, float lookX, float lookY, float headX,
+            float headY, float size) {
+    const float len = std::hypot(lookX, lookY), head = std::hypot(headX, headY);
+    if (len < 1e-4f && head < 1e-4f) {
         panel::circle(p, x, y, size * 0.32f + 1.5f, kBlack, 0.85f);
         panel::circle(p, x, y, size * 0.32f, kWhite, 1.0f);
         return;
     }
-    const float dx = lookX / len, dy = -lookY / len;  // north up
-    const float reach = size * 3.6f, half = 0.66f;      // the view: 38 degrees each way
+    const float fx = len < 1e-4f ? 0.0f : lookX / len, fy = len < 1e-4f ? 0.0f : -lookY / len;  // north up
+    const float reach = len < 1e-4f ? 0.0f : size * 3.6f, half = 0.66f;  // the view: 38 degrees each way
     // 3.0.11-beta.57: well outside the fan by its cosine - no arc cosine for four pixels of five
     const float outside = std::cos(half) - 1e-3f;
     for (int py = std::max(int(clip.y), int(y - reach)); py <= std::min(int(clip.y + clip.h) - 1, int(y + reach));
@@ -104,14 +106,15 @@ void player(panel::Picture& p, const panel::Box& clip, float x, float y, float l
             if (px < 0 || py < 0 || px >= p.width || py >= p.height) continue;
             const float vx = float(px) + 0.5f - x, vy = float(py) + 0.5f - y, d = std::hypot(vx, vy);
             if (d > reach || d < 1) continue;
-            const float along = (vx * dx + vy * dy) / d;
+            const float along = (vx * fx + vy * fy) / d;
             if (along < outside) continue;
             const float angle = std::acos(std::clamp(along, -1.0f, 1.0f));
             const float edge = std::clamp((half - angle) * reach * 0.5f, 0.0f, 1.0f);  // soft at its sides
             const float fall = 1.0f - d / reach;
             if (edge > 0) panel::over(p.px[size_t(py) * size_t(p.width) + size_t(px)], kCone, 0.42f * edge * fall);
         }
-    // the arrow: a tip ahead, two wings behind it, a notch between them
+    // the arrow: a tip ahead, two wings behind it, a notch between them - the way the character faces
+    const float dx = head < 1e-4f ? fx : headX / head, dy = head < 1e-4f ? fy : -headY / head;
     const auto at = [&](float ahead, float side, float out[2]) {
         out[0] = x + dx * ahead - dy * side;
         out[1] = y + dy * ahead + dx * side;
@@ -301,12 +304,18 @@ void overMap(panel::Picture& out, const panel::Box& box, const Scene& sc, const 
             py0 = py1;
         }
     }
+    for (const Cell& w : sc.waypoints) {  // 3.0.11-beta.71: the points set on the way - gold dots
+        place(w, x, y);
+        if (!inBox(x, y, 0)) continue;
+        panel::circle(out, x, y, 4.2f * s * big + 1.2f, kBlack, 0.6f);
+        panel::circle(out, x, y, 4.2f * s * big, kRouteRgb, 1.0f);
+    }
     if (sc.pin) {
         place(sc.pinCell, x, y);
         if (inBox(x, y, 0)) pin(out, x, y, 5 * s * big);
     }
     place(sc.player, x, y);
-    if (inBox(x, y, 0)) player(out, box, x, y, sc.lookX, sc.lookY, 9.5f * s * big);
+    if (inBox(x, y, 0)) player(out, box, x, y, sc.lookX, sc.lookY, sc.headX, sc.headY, 9.5f * s * big);
 }
 
 uint32_t orText(uint32_t rgb) { return rgb ? rgb : kText; }
@@ -341,6 +350,26 @@ void cellToPanel(const View& v, const MapSize&, const Cell& c, float& px, float&
     px = (float(c.x) + 0.5f - v.left) * v.cellPx;
     py = (v.top - (float(c.y) + 0.5f)) * v.cellPx;
 }
+
+bool facingOf(float degrees, float& east, float& north) {
+    if (!std::isfinite(degrees) || std::fabs(degrees) > 3600) return false;
+    const float r = degrees * 3.14159265f / 180.0f;
+    east = std::sin(r);
+    north = -std::cos(r);
+    return true;
+}
+
+namespace {
+
+bool cellUnder(const View& v, const MapSize& map, float px, float py, Cell& out) {
+    if (v.cellPx <= 0 || map.w <= 0 || map.h <= 0) return false;
+    const int x = int(std::floor(v.left + px / v.cellPx)), y = int(std::floor(v.top - py / v.cellPx));
+    if (x < 0 || y < 0 || x >= map.w || y >= map.h) return false;
+    out = Cell{x, y};
+    return true;
+}
+
+}  // namespace
 
 int cellsAt(int step, const MapSize& map) {
     step = std::clamp(step, 0, kZoomSteps - 1);
@@ -575,6 +604,16 @@ std::vector<Label> bigLabels(const Big& b, const Scene& sc) {
 }
 
 }  // namespace
+
+bool cellAt(const Layout& L, const Scene& sc, float x, float y, Cell& out) {
+    if (!L.map.contains(x, y)) return false;
+    return cellUnder(view(sc.map, sc.player, sc.cells, int(L.map.w)), sc.map, x - L.map.x, y - L.map.y, out);
+}
+
+bool bigCellAt(const Big& b, const Scene& sc, float x, float y, Cell& out) {
+    if (!b.map.contains(x, y)) return false;
+    return cellUnder(bigView(b, sc), sc.map, x - b.map.x, y - b.map.y, out);
+}
 
 Big bigLayout(int targetW, int targetH, float scale, const MapSize& map) {
     Big b;

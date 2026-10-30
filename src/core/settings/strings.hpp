@@ -572,6 +572,8 @@ enum class Text : uint16_t {
     // 3.0.11-beta.70: the tracker panel (the concept's «Відстеження») - the cards' pins, the panel's words, its switch
     RefTrack, RefTracked, RefTrackItem, RefTrackedItem, TrackerTitle, TrackerQuest, TrackerRoute, TrackerItem,
     TrackerGiveTo, TrackerMore, InterfaceTracker, InterfaceTrackerHint,
+    // 3.0.11-beta.71: a way set on the map by clicks
+    MinimapPlotTo, MinimapPlotCells, MinimapPlotHint,
     Count
 };
 

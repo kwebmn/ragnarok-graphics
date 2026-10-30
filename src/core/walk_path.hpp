@@ -43,6 +43,10 @@ std::vector<Cell> pathFrom(const Field& f, const Cells& c, Cell from);
 bool clear(const Cells& c, Cell a, Cell b);
 // The path with fewer corners: from each point on, the farthest one a straight line reaches over walkable cells
 std::vector<Cell> straightened(const Cells& c, const std::vector<Cell>& path);
+// 3.0.11-beta.71 (the owner: «хочется на карте прокладывать путь»): a way from `from` through `points` in turn - each
+// leg over the walked cells from the last one's end (straightened); a leg nothing walked reaches (no cells known,
+// another part of the map): straight to its point. The corners in order; empty: no points
+std::vector<Cell> through(const Cells& c, Cell from, const std::vector<Cell>& points);
 
 // 3.0.11-beta.34 (the owner: «каждый шаг перестраивается маршрут», «каждый раз перестраивается линия, можно так чтобы
 // она не очень дергалась»): the way kept while the player keeps to it, not made again from each cell they step on -

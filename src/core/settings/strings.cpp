@@ -5650,6 +5650,10 @@ constexpr Entry kTexts[] = {
      "То, что вы закрепили, — в панели слева от бафов: квест («Отслеживать» в его карточке) — что принести и кому "
      "сдать, путь, которым ведёт миникарта, вещь для сбора — кто её чаще всего роняет. ▾ сворачивает до названий, ✕ "
      "прячет, пока не закрепите что-то снова; клик по названию открывает карточку."},
+    // 3.0.11-beta.71 (the owner: «хочется на карте прокладывать путь»): a way set on the minimap by clicks
+    {Text::MinimapPlotTo, "Goal · {1}, {2}", "Ціль · {1}, {2}", "Цель · {1}, {2}"},
+    {Text::MinimapPlotCells, "{1} cells", "{1} кл.", "{1} кл."},
+    {Text::MinimapPlotHint, "Shift+click: one more point", "Shift+клік — ще точка", "Shift+клик — ещё точка"},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

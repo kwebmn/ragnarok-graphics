@@ -1,5 +1,6 @@
 // 3.0.11-beta.31: the way across a map over the walked cells (core/walk_path) - round a wall, to an NPC standing on
 // its cell, never across a wall's corner, its corners cut where a straight line keeps to walkable cells
+#include <algorithm>
 #include <cmath>
 #include <string>
 #include <vector>
@@ -174,4 +175,30 @@ TEST(walk_path_kept_while_followed) {
     const walkpath::Cells unknown;
     CHECK(walkpath::keep(k, walkpath::fieldTo(unknown, {7, 7}), unknown, {1, 1}, 3.0f));
     CHECK(k.way == std::vector<walkpath::Cell>({{1, 1}, {7, 7}}));
+}
+
+// 3.0.11-beta.71 (the owner: «хочется на карте прокладывать путь»): a way through the points set on the map, in turn -
+// each leg over the walked cells from the last point; its corners in order, the points among them
+TEST(walk_path_through_points) {
+    const walkpath::Cells c = cellsFrom({
+        "..........",  // y 4: the gap over the wall
+        ".....#....",
+        ".....#....",
+        ".....#....",
+        ".....#....",  // y 0
+    });
+    const std::vector<walkpath::Cell> way = walkpath::through(c, {0, 0}, {{9, 0}, {9, 3}});
+    CHECK(way.size() >= 4 && way.front() == walkpath::Cell(0, 0) && way.back() == walkpath::Cell(9, 3));
+    CHECK(allWalked(c, way));
+    CHECK(std::find(way.begin(), way.end(), walkpath::Cell(9, 0)) != way.end());  // through the first point
+    bool over = false;  // round the wall by its gap at y 4
+    for (const walkpath::Cell& p : way) over = over || p.second == 4;
+    CHECK(over);
+    for (size_t i = 1; i < way.size(); ++i) CHECK(walkpath::clear(c, way[i - 1], way[i]));  // each leg walkable
+    // a point on a wall: reached from beside it; none walkable at all: a straight line to it
+    const std::vector<walkpath::Cell> wall = walkpath::through(c, {0, 0}, {{5, 1}});
+    CHECK(wall.size() >= 2 && wall.front() == walkpath::Cell(0, 0) && std::abs(wall.back().first - 5) <= 1);
+    CHECK(walkpath::through(walkpath::Cells{}, {0, 0}, {{3, 3}}) ==
+          std::vector<walkpath::Cell>({walkpath::Cell(0, 0), walkpath::Cell(3, 3)}));
+    CHECK(walkpath::through(c, {0, 0}, {}).empty());
 }

@@ -374,3 +374,54 @@ TEST(minimap_proto_view_fan_as_before) {
         CHECK(back == 0xFF141922u);
     }
 }
+
+// 3.0.11-beta.71 (the owner: «иконка игрока не поворачивается в сторону куда идешь», «туда куда чар смотрит»): the
+// character's facing as the game keeps it (its object + 0x38, degrees - FUN_00544da0 turns it toward a point:
+// atan2(east, -north); the packet 0x9c sets (dir + 4) * 45) into the arrow's way, east and north
+TEST(minimap_proto_facing_of_the_character) {
+    float e = 0, n = 0;
+    CHECK(minimap::facingOf(180, e, n) && std::fabs(e) < 1e-4f && std::fabs(n - 1) < 1e-4f);  // dir 0: north
+    CHECK(minimap::facingOf(90, e, n) && std::fabs(e - 1) < 1e-4f && std::fabs(n) < 1e-4f);    // east
+    CHECK(minimap::facingOf(450, e, n) && std::fabs(e - 1) < 1e-4f);  // 0x9c's dir 6, not wrapped: east
+    CHECK(minimap::facingOf(0, e, n) && std::fabs(n + 1) < 1e-4f);     // south
+    CHECK(minimap::facingOf(270, e, n) && std::fabs(e + 1) < 1e-4f);   // west
+    const float toward = std::atan2(1.0f, -1.0f) * 180 / 3.14159265f;  // FUN_00544da0 toward a point north-east
+    CHECK(minimap::facingOf(toward, e, n) && std::fabs(e - n) < 1e-4f && e > 0.7f);
+    CHECK(!minimap::facingOf(std::nanf(""), e, n) && !minimap::facingOf(1e9f, e, n));
+}
+
+// The arrow the way the character faces, the fan where the camera looks; a click on the map: its cell, back and forth
+TEST(minimap_proto_arrow_walks_and_clicks_find_cells) {
+    const minimap::Layout L = minimap::layout(1280, 720, 1.0f, false, 0);
+    const std::vector<uint32_t> argb(4, 0xFF404040);
+    minimap::Scene sc;
+    sc.argb = &argb;
+    sc.imgW = sc.imgH = 2;
+    sc.map = minimap::MapSize{100, 100};
+    sc.player = minimap::Cell{50, 50};
+    sc.lookX = 1;  // the camera east
+    sc.headY = 1;  // facing north
+    panel::Picture pic;
+    minimap::paint(pic, L, sc, minimap::Texts{});
+    const auto at = [&](float x, float y) { return pic.px[size_t(y) * size_t(pic.width) + size_t(x)]; };
+    float px = 0, py = 0;
+    minimap::cellToPanel(minimap::view(sc.map, sc.player, sc.cells, int(L.map.w)), sc.map, sc.player, px, py);
+    px += L.map.x;
+    py += L.map.y;
+    const uint32_t ahead = at(px, py - 6), beside = at(px + 6, py);
+    CHECK((ahead & 0xFF) > 0xC0 && ((ahead >> 16) & 0xFF) < 0xA0);   // the arrow's blue to the north
+    CHECK(!((beside & 0xFF) > 0xC0 && ((beside >> 16) & 0xFF) < 0xA0));  // not to the east
+    // a click's cell: where cellToPanel puts it, on the minimap and on the big map
+    for (const minimap::Cell want : {minimap::Cell{50, 50}, minimap::Cell{62, 41}, minimap::Cell{30, 70}}) {
+        float x = 0, y = 0;
+        minimap::cellToPanel(minimap::view(sc.map, sc.player, sc.cells, int(L.map.w)), sc.map, want, x, y);
+        minimap::Cell got;
+        CHECK(minimap::cellAt(L, sc, L.map.x + x, L.map.y + y, got) && got.x == want.x && got.y == want.y);
+    }
+    const minimap::Big b = minimap::bigLayout(1920, 1080, 1.0f, sc.map);
+    minimap::Cell got;
+    const float cx = b.map.w / 100.0f;  // the whole map: a cell's pixels
+    CHECK(minimap::bigCellAt(b, sc, b.map.x + (62 + 0.5f) * cx, b.map.y + (100 - 41 - 0.5f) * cx, got));
+    CHECK(got.x == 62 && got.y == 41);
+    CHECK(!minimap::cellAt(L, sc, L.map.x - 5, L.map.y - 5, got));  // off its map
+}
