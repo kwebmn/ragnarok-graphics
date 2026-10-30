@@ -1,3 +1,17 @@
+# uaRO Graphics 3.0.11-beta.71 — what is new
+
+- **The player's arrow on the minimap and the big map points where the character looks** (your «the player's icon
+  does not turn… where the character looks»). The angle is the game's own — the one it turns the character's sprite
+  by: walking, hitting, turning. The light cone stays: it shows where the camera looks.
+- **A way on the map.** A click on the minimap or the big map lays a way there over the walkable cells: a gold line
+  on the map and footprints on the ground. Shift+click adds one more point — the way goes through them all in turn
+  (up to 8). Under the minimap — «Goal · x, y» and the cells left; ✕ there or a right click on the map takes the way
+  away. Reached — «You are there». The way shows in «Tracking» too.
+- The card of the map a portal leads to now opens with Ctrl+click on the portal on the big map (a plain click: the
+  way to it).
+- To check: walk and turn — the arrow follows the character; click on the minimap — the way and the footprints. In
+  the log: `minimap: the character faces`, `route: a way set on`.
+
 # uaRO Graphics 3.0.11-beta.70 — what is new
 
 - **«Tracking»** — a panel left of the buffs' column (the concept: «keep in view — what to pin (a quest, a way, an
