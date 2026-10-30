@@ -53,6 +53,9 @@ void viewOn(int sheetW, int sheetH, int boxW, int boxH, float l, float t, float 
 // pixel bigger than the box's - smooth between the sheet's pixels)
 void scaled(panel::Picture& out, const std::vector<uint32_t>& sheetArgb, int sheetW, int sheetH, int boxW, int boxH,
             const Fit& f);
+// 3.0.11-beta.64: a map's picture `side` x `side` (the dungeon box's): premultiplied, opaque - its magenta the sea's
+// colour; none (width 0) for no picture
+panel::Picture thumbnail(const std::vector<uint32_t>& argb, int w, int h, int side);
 // The tile under a point of the box: its index in sheet.world, -1 none (a smaller tile over a bigger one)
 int tileAt(const Sheet& sheet, const Fit& f, float x, float y);
 const Tile* tileOf(const Sheet& sheet, const std::string& map);

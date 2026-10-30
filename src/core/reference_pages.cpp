@@ -1684,6 +1684,42 @@ std::vector<std::string> worldTip(const refindex::Index& ix, Lang l, const std::
     return out;
 }
 
+namespace {
+
+// 3.0.11-beta.64: a dungeon's maps along its way - from the way's last map on the sheet (the way in) to its end, named
+// short of the group's words («Glast Heim St. Abbey» of «Glast Heim»: «St. Abbey»; «Payon Cave» of «Payon Cave»: its
+// code - the floors share it); its title «Підземелля <group>»
+std::vector<std::pair<std::string, std::string>> dungeonChain(const refindex::Index& ix, const worldmap::Sheet& sheet,
+                                                             const std::vector<Hop>& hops, const std::string& target,
+                                                             std::string& title, Lang l) {
+    std::vector<std::string> maps{hops.front().from};  // the way's maps in order
+    for (const Hop& h : hops)
+        if (h.to != maps.back()) maps.push_back(h.to);
+    size_t first = 0;  // the last on the sheet
+    for (size_t i = 0; i < maps.size(); ++i)
+        if (worldmap::tileOf(sheet, maps[i])) first = i;
+    std::string group;
+    for (const worldmap::Dungeon& d : sheet.dungeons)
+        if (d.map == target) group = d.group;
+    std::vector<std::pair<std::string, std::string>> out;
+    for (size_t i = first; i < maps.size(); ++i) {
+        std::string name = mapShort(ix, maps[i]);
+        if (i > first && !group.empty()) {
+            if (name == group) name.clear();
+            else if (name.size() > group.size() + 1 && name.compare(0, group.size(), group) == 0 &&
+                     name[group.size()] == ' ')
+                name = name.substr(group.size() + 1);
+        }
+        const bool taken = std::any_of(out.begin(), out.end(), [&](const auto& m) { return m.second == name; });
+        out.emplace_back(maps[i], name.empty() || taken ? maps[i] : name);
+    }
+    if (out.size() < 2) return {};
+    title = sayf(l, Text::RefDungeonOf, {group.empty() ? mapShort(ix, target) : group});
+    return out;
+}
+
+}  // namespace
+
 WorldWay worldWayOf(const refindex::Index& ix, Lang l, const Context& c, const std::string& marks) {
     WorldWay w;
     if (!c.here.empty()) w.hereLabel = sayf(l, Text::RefHereLabel, {mapShort(ix, c.here)});
@@ -1699,6 +1735,7 @@ WorldWay worldWayOf(const refindex::Index& ix, Lang l, const Context& c, const s
     w.hops = worldHops(ix, l, r);
     const bool on = c.world && worldmap::tileOf(*c.world, w.target);
     w.targetLabel = on ? mapShort(ix, w.target) : sayf(l, Text::RefToDungeon, {mapShort(ix, w.target)});
+    if (!on && c.world && !w.hops.empty()) w.chain = dungeonChain(ix, *c.world, w.hops, w.target, w.chainTitle, l);
     return w;
 }
 
@@ -1777,6 +1814,9 @@ Page world(const refindex::Index& ix, Lang l, const Context& c, const std::strin
         return p;
     }
     p.rows.push_back(styled(Style::Caption, say(l, Text::RefWorld)));
+    // 3.0.11-beta.64 (the concept's v19_route): «184 локації · 128 підземель»
+    p.rows.push_back(styled(Style::Sub, counted(l, c.world->world.size(), Text::RefLocationsN) + " \xC2\xB7 " +
+                                            counted(l, c.world->dungeons.size(), Text::RefDungeonsN)));
     p.rows.push_back(text(say(l, Text::RefWorldHelp)));
     if (c.players && !c.players->empty()) {  // where the players are now
         std::vector<std::pair<int, std::string>> busy;

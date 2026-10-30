@@ -557,6 +557,8 @@ enum class Text : uint16_t {
     // 3.0.11-beta.32: the monsters' list in two (met on maps, never), the element table's line under it
     RefMobsOnMaps, RefMobsNowhere, RefTableHelp, RefTowns, RefMapsWithMobs, RefCardsDropped, RefCardsOther,
     RefCardsEnchants,
+    // 3.0.11-beta.64: the world map's dungeon box, its counts
+    RefDungeonOf, RefLocationsN, RefDungeonsN,
     Count
 };
 

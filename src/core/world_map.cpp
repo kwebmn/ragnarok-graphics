@@ -173,6 +173,15 @@ void scaled(panel::Picture& out, const std::vector<uint32_t>& sheet, int sheetW,
     }
 }
 
+panel::Picture thumbnail(const std::vector<uint32_t>& argb, int w, int h, int side) {
+    panel::Picture p;
+    if (side <= 0 || w <= 0 || h <= 0 || argb.size() < size_t(w) * size_t(h)) return p;
+    p.width = p.height = side;
+    p.px.assign(size_t(side) * size_t(side), kGround);
+    put(p.px, side, side, Tile{"", 0, 0, side, side}, argb, w, h);
+    return p;
+}
+
 int tileAt(const Sheet& sheet, const Fit& f, float x, float y) {
     if (f.s <= 0) return -1;
     const float sx = (x - f.x) / f.s, sy = (y - f.y) / f.s;

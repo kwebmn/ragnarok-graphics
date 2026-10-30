@@ -371,3 +371,81 @@ TEST(reference_world_way) {
     refwin::paint(pic, L, k, rows, 0, total, look);
     CHECK_EQ(pic.width, L.w);
 }
+
+// 3.0.11-beta.64 (the concept's v19_route: «Підземелля Glast Heim» - the dungeon's maps in a box at the world map's
+// bottom left; «184 локації · 128 підземель» under it): a dungeon's way - its maps from its way in on the sheet to the
+// target, their names short of the group's words; the counts on the world map's page
+TEST(reference_world_dungeon_chain) {
+    const auto ix = index();
+    ix->mapNames["tower"] = "Old Tower Hall";  // the group's words cut off
+    ix->mapNames["cave"] = "Old Tower";        // nothing left of it: its code
+    worldmap::Sheet sh;
+    CHECK(worldmap::parse(R"({"W":100,"H":60,"world":[{"id":"town","l":10,"t":10,"w":20,"h":20},
+        {"id":"field","l":40,"t":10,"w":20,"h":20},{"id":"isle","l":70,"t":30,"w":20,"h":20}],
+        "dungeon":[{"id":"tower","group":"Old Tower"},{"id":"cave","group":"Old Tower"}]})", sh));
+    refpages::Context c = ctx("town");
+    c.world = &sh;
+    const refpages::WorldWay w = refpages::worldWayOf(*ix, Lang::Uk, c, "to:cave:w");
+    CHECK_EQ(w.chain.size(), size_t(3));
+    if (w.chain.size() != 3) return;
+    CHECK(w.chain[0].first == "field" && w.chain[1].first == "tower" && w.chain[2].first == "cave");
+    CHECK(w.chain[0].second == "field" && w.chain[1].second == "Hall" && w.chain[2].second == "cave");
+    CHECK_EQ(w.chainTitle, std::string("Підземелля Old Tower"));
+    CHECK(refpages::worldWayOf(*ix, Lang::Uk, c, "to:isle:k").chain.empty());  // a way on the sheet: none
+    CHECK(refpages::worldWayOf(*ix, Lang::Uk, c, "to:field").chain.empty());
+    // the counts under the world map's caption
+    const refpages::Page home = refpages::world(*ix, Lang::Uk, c, "");
+    CHECK(std::any_of(home.rows.begin(), home.rows.end(),
+                      [](const refpages::Row& r) { return r.left == "3 локації · 2 підземелля"; }));
+    // the window: the box at the map's bottom left - its title, each map's picture and name; a click: its card
+    const refpages::Page p = refpages::world(*ix, Lang::Uk, c, "to:cave:w");
+    const refwin::Layout L = refwin::layout(1920, 1080, 1.0f);
+    int total = 0;
+    const auto rows = refwin::place(L, p, total);
+    size_t map = 0;
+    while (map < p.rows.size() && p.rows[map].style != refpages::Style::World) ++map;
+    CHECK(map < p.rows.size());
+    if (map >= p.rows.size()) return;
+    panel::Picture sheet;
+    sheet.width = rows[map].w;
+    sheet.height = rows[map].h;
+    sheet.px.assign(size_t(sheet.width) * size_t(sheet.height), 0xFF181B57u);
+    const int side = refwin::chainSide(L);
+    CHECK_EQ(side, 64);
+    panel::Picture red;
+    red.width = red.height = side;
+    red.px.assign(size_t(side) * size_t(side), 0xFFC03030u);
+    refwin::Look look;
+    look.world.picture = &sheet;
+    look.world.sheet = &sh;
+    look.world.here = "town";
+    look.world.hops = w.hops;
+    look.world.target = w.target;
+    look.world.targetLabel = w.targetLabel;
+    look.world.chainTitle = w.chainTitle;
+    for (const auto& [code, name] : w.chain)
+        look.world.chain.push_back(refwin::ChainMap{code, name, code == "tower" ? &red : nullptr});
+    const std::vector<refwin::Words> words = refwin::words(L, p, rows, 0, refwin::Texts{}, look);
+    const panel::Box box{float(rows[map].x), float(L.bodyY + rows[map].y), float(rows[map].w), float(rows[map].h)};
+    const auto find = [&](const std::string& t) {
+        return std::find_if(words.begin(), words.end(), [&](const refwin::Words& x) { return x.text == t; });
+    };
+    CHECK(find("Підземелля Old Tower") != words.end() && find("field") != words.end());
+    CHECK(find("Hall") != words.end() && find("cave") != words.end());
+    for (const char* t : {"Підземелля Old Tower", "field", "Hall", "cave"}) {  // in the map's bottom left
+        const auto it = find(t);
+        if (it == words.end()) continue;
+        CHECK(it->box.x >= box.x && it->box.x + it->box.w <= box.x + box.w / 2);
+        CHECK(it->box.y > box.y + box.h / 2 && it->box.y + it->box.h <= box.y + box.h);
+    }
+    panel::Picture pic;
+    refwin::paint(pic, L, p, rows, 0, total, look);
+    const auto hall = find("Hall");
+    if (hall == words.end()) return;
+    // its picture over its name
+    const float cx = hall->box.x + hall->box.w / 2, cy = hall->box.y - float(side) / 2 - 6;
+    CHECK(pic.px[size_t(int(cy)) * size_t(pic.width) + size_t(int(cx))] == 0xFFC03030u);
+    const refwin::Chrome ch = refwin::chrome(L, p, refwin::Texts{});
+    const refwin::Under u = refwin::under(L, p, rows, 0, ch, cx, cy, &look.world);
+    CHECK(u.part == refwin::Part::Chain && u.tile == 1);
+}

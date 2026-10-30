@@ -576,6 +576,7 @@ bool shown(const Layout& L, const Placed& r, int scroll) { return r.y - scroll >
 
 int portraitSide(const Layout& L) { return px(kPortrait, L.s); }
 int iconSide(const Layout& L) { return px(kIcon, L.s); }
+int chainSide(const Layout& L) { return px(64, L.s); }  // 3.0.11-beta.64: the concept's .dunin
 
 namespace {
 
@@ -623,6 +624,52 @@ worldmap::Fit worldView(const WorldLook& w, const Placed& row) {
     return w.sheet ? worldmap::view(w.sheet->w, w.sheet->h, row.w, row.h, w.zoom, w.cx, w.cy) : worldmap::Fit{};
 }
 
+namespace {
+
+// 3.0.11-beta.64 (the concept's v19_route, its .dunin): the dungeon box at the map's bottom left - its ground, its
+// title's line, each map's picture with its name under it, the arrows between them; the first maps left out when
+// they do not fit across the map (two at the least); w 0: none
+struct ChainBox {
+    panel::Box box, title;
+    std::vector<size_t> maps;  // their indices in WorldLook::chain
+    std::vector<panel::Box> pictures, names;
+    std::vector<panel::Box> arrows;
+};
+ChainBox chainBox(const Layout& L, const WorldLook& w, const panel::Box& b) {
+    ChainBox c;
+    if (w.chain.size() < 2) return c;
+    const float s = L.s, side = float(chainSide(L)), pad = 12 * s, gap = 8 * s, arrow = 14 * s, titleH = 15 * s;
+    std::vector<float> widths;
+    for (const ChainMap& m : w.chain)
+        widths.push_back(std::min(side * 2.2f, std::max(side, std::ceil(L.measure(m.name, 12 * s, true)) + 4 * s)));
+    size_t from = 0;
+    const auto across = [&] {
+        float x = 2 * pad;
+        for (size_t i = from; i < widths.size(); ++i) x += widths[i] + (i > from ? 2 * gap + arrow : 0);
+        return std::max(x, std::ceil(L.measure(w.chainTitle, 12 * s, true)) + 2 * pad);
+    };
+    while (from + 2 < widths.size() && across() > b.w - 32 * s) ++from;
+    const float height = 10 * s + titleH + 8 * s + side + 4 * s + titleH + 10 * s;
+    if (across() > b.w - 32 * s || height > b.h - 32 * s) return c;
+    c.box = panel::Box{b.x + 16 * s, b.y + b.h - 16 * s - height, across(), height};
+    c.title = panel::Box{c.box.x + pad, c.box.y + 10 * s, c.box.w - 2 * pad, titleH};
+    float x = c.box.x + pad;
+    const float py = c.title.y + titleH + 8 * s;
+    for (size_t i = from; i < w.chain.size(); ++i) {
+        if (i > from) {
+            c.arrows.push_back(panel::Box{x + gap, py, arrow, side});
+            x += 2 * gap + arrow;
+        }
+        c.maps.push_back(i);
+        c.pictures.push_back(panel::Box{x + (widths[i] - side) / 2, py, side, side});
+        c.names.push_back(panel::Box{x, py + side + 4 * s, widths[i], titleH});
+        x += widths[i];
+    }
+    return c;
+}
+
+}  // namespace
+
 Under under(const Layout& L, const refpages::Page& p, const std::vector<Placed>& rows, int scroll, const Chrome& c,
             float x, float y, const WorldLook* world) {
     if (x < 0 || y < 0 || x >= float(L.w) || y >= float(L.h)) return Under{};
@@ -640,6 +687,17 @@ Under under(const Layout& L, const refpages::Page& p, const std::vector<Placed>&
         const bool in = x >= float(r.x) && x < float(r.x + r.w) && by >= float(r.y) && by < float(r.y + r.h);
         if (!in) continue;
         if (world && world->sheet && p.rows[i].style == refpages::Style::World) {  // a map on the world map
+            // 3.0.11-beta.64: the dungeon box over it - its maps (a click: its card), its ground
+            const ChainBox chain = chainBox(L, *world, panel::Box{float(r.x), float(r.y), float(r.w), float(r.h)});
+            if (chain.box.w > 0 && chain.box.contains(x, by)) {
+                for (size_t k = 0; k < chain.maps.size(); ++k) {
+                    const panel::Box& pb = chain.pictures[k];
+                    const panel::Box& nb = chain.names[k];
+                    if (x >= nb.x && x < nb.x + nb.w && by >= pb.y && by < nb.y + nb.h)
+                        return Under{Part::Chain, int(i), int(chain.maps[k])};
+                }
+                return Under{Part::Body, -1};
+            }
             const int t = worldmap::tileAt(*world->sheet, worldView(*world, r), x - float(r.x), by - float(r.y));
             return t >= 0 ? Under{Part::Tile, int(i), t} : Under{Part::Body, -1};
         }
@@ -702,7 +760,7 @@ Arc arcOf(float ax, float ay, float bx, float by) {
 // 3.0.11-beta.29: what goes over the world map with words - the players' pills, the towns' names, «Ви тут», the
 // pin's name, the teleports' prices, the card of the map under the pointer: shapes() draws their grounds, words()
 // their words (one place for both)
-enum class Over : uint8_t { Players, Town, Here, Pin, Jump, Mark, Tip };
+enum class Over : uint8_t { Players, Town, Here, Pin, Jump, Mark, Tip, Chain };
 struct OverItem {
     Over kind;
     panel::Box box;
@@ -829,6 +887,19 @@ std::vector<OverItem> overItems(const Layout& L, const WorldLook& w, const panel
             out.push_back(OverItem{Over::Tip, keptIn(card, b), w.tip});
         }
     }
+    // 3.0.11-beta.64: the dungeon box - nothing of the rest under it, the card of the map under the pointer neither
+    const ChainBox chain = chainBox(L, w, b);
+    if (chain.box.w > 0) {
+        const panel::Box& cb = chain.box;
+        out.erase(std::remove_if(out.begin(), out.end(),
+                                 [&](const OverItem& o) {
+                                     const panel::Box& ob = o.box;
+                                     return ob.x < cb.x + cb.w && cb.x < ob.x + ob.w && ob.y < cb.y + cb.h &&
+                                            cb.y < ob.y + ob.h;
+                                 }),
+                  out.end());
+        out.push_back(OverItem{Over::Chain, cb, {w.chainTitle}});
+    }
     // only what is inside the map's row whole (its words are not cut at the edge as the map's shapes are), and
     // nothing under the card of the map under the pointer (their words would show through it)
     const auto tip = std::find_if(out.begin(), out.end(), [](const OverItem& o) { return o.kind == Over::Tip; });
@@ -844,6 +915,25 @@ std::vector<OverItem> overItems(const Layout& L, const WorldLook& w, const panel
 }
 
 constexpr uint32_t kWay = 0xF2C14E, kJump = 0xFF7EB6, kPill = 0x2FA562, kDark = 0x0B0E14;
+
+// 3.0.11-beta.64: a premultiplied picture over another at (ox, oy), inside its clip (the dungeon box's minimaps)
+void putOver(panel::Picture& out, const panel::Picture& pic, int ox, int oy) {
+    for (int y = 0; y < pic.height; ++y) {
+        const int ty = oy + y;
+        if (ty < std::max(0, out.clipY0) || ty >= std::min(out.height, out.clipY1)) continue;
+        for (int x = 0; x < pic.width; ++x) {
+            const int tx = ox + x;
+            if (tx < std::max(0, out.clipX0) || tx >= std::min(out.width, out.clipX1)) continue;
+            const uint32_t c = pic.px[size_t(y) * size_t(pic.width) + size_t(x)];
+            uint32_t& d = out.px[size_t(ty) * size_t(out.width) + size_t(tx)];
+            const uint32_t keep = 255 - (c >> 24);
+            const auto ch = [&](int sh) {
+                return std::min<uint32_t>(255, ((c >> sh) & 0xFF) + ((d >> sh) & 0xFF) * keep / 255);
+            };
+            d = ch(24) << 24 | ch(16) << 16 | ch(8) << 8 | ch(0);
+        }
+    }
+}
 constexpr uint32_t kWarn = 0xF0A050, kWarnWords = 0xFFD3A1;  // the concept's warning (its --warn)
 
 // The world map's row: its picture at the view, the way (gold; its teleports pink dashed arcs), the maps marked,
@@ -935,6 +1025,21 @@ void paintWorld(panel::Picture& out, const Layout& L, const panel::Box& b, const
                 if (o.words.size() > 2)  // the players' line: its green dot
                     panel::circle(out, ob.x + 15 * s, ob.y + tipLine(o.words, 2, s) + 9 * s, 3.5f * s, kLiveDot, 1.0f);
                 break;
+            case Over::Chain: {  // 3.0.11-beta.64: its ground, the maps' pictures ringed in gold (the end glowing)
+                panel::roundRect(out, ob, 10 * s, kDark, 0.93f, kWhite, kLine2A, std::max(1.0f, s));
+                const ChainBox chain = chainBox(L, w, b);
+                for (size_t k = 0; k < chain.maps.size(); ++k) {
+                    const panel::Box& pb = chain.pictures[k];
+                    const ChainMap& m = w.chain[chain.maps[k]];
+                    const bool end = chain.maps[k] + 1 == w.chain.size();
+                    if (end) outline(out, pb, 7 * s, kWay, 0.25f);  // its glow
+                    panel::roundRect(out, pb, 6 * s, worldmap::kGround & 0xFFFFFF, 1.0f);
+                    if (m.picture && m.picture->width == int(pb.w + 0.5f))
+                        putOver(out, *m.picture, int(std::lround(pb.x)), int(std::lround(pb.y)));
+                    outline(out, pb, (end ? 2.5f : 2) * s, kWay, 1.0f);
+                }
+                break;
+            }
         }
     }
     out.clipX0 = clipX0;
@@ -970,6 +1075,16 @@ void worldWords(std::vector<Words>& out, const Layout& L, const WorldLook& w, co
                                         k == 0 ? 13.5f * s : 12.5f * s, k != 1, Align::Left});
                 }
                 break;
+            case Over::Chain: {  // 3.0.11-beta.64: its title, the maps' names, the gold arrows
+                const ChainBox chain = chainBox(L, w, b);
+                out.push_back(Words{chain.title, o.words[0], kMuted, 12 * s, true, Align::Left});
+                for (size_t k = 0; k < chain.maps.size(); ++k)
+                    out.push_back(Words{chain.names[k], w.chain[chain.maps[k]].name, kText, 12 * s, true,
+                                        Align::Center});
+                for (const panel::Box& a : chain.arrows)
+                    out.push_back(Words{a, "\xE2\x86\x92", kWay, 16 * s, true, Align::Center});
+                break;
+            }
         }
     }
 }

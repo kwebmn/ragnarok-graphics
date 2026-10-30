@@ -5541,10 +5541,10 @@ constexpr Entry kTexts[] = {
     {Text::RefTopPlayers, "Most players now", "Найбільше гравців зараз", "Больше всего игроков сейчас"},
     {Text::RefToDungeon, "{1} → dungeon", "{1} → підземелля", "{1} → подземелье"},
     {Text::RefHereLabel, "You are here · {1}", "Ви тут · {1}", "Вы здесь · {1}"},
-    {Text::RefKeysWorld,
-     "Click — a map's card · drag — move · wheel — zoom · Esc close",
-     "Клік — картка · тягніть — зсув · колесо — зум · Esc закрити",
-     "Клик — карточка · тяните — сдвиг · колесо — зум · Esc закрыть"},
+    {Text::RefKeysWorld,  // 3.0.11-beta.64: Ctrl+M opens and closes it
+     "Click — a map's card · drag — move · wheel — zoom · Ctrl+M, Esc close",
+     "Клік — картка · тягніть — зсув · колесо — зум · Ctrl+M, Esc закрити",
+     "Клик — карточка · тяните — сдвиг · колесо — зум · Ctrl+M, Esc закрыть"},
     {Text::RefMoreN, "and {1} more", "і ще {1}", "и ещё {1}"},
     // 3.0.11-beta.32
     {Text::RefMobsOnMaps, "On the maps · {1}", "На картах · {1}", "На картах · {1}"},
@@ -5564,6 +5564,10 @@ constexpr Entry kTexts[] = {
      "Не випадають з монстрів (події, квести) · {1}",
      "Не выпадают с монстров (события, квесты) · {1}"},
     {Text::RefCardsEnchants, "Enchantments · {1}", "Зачарування · {1}", "Зачарования · {1}"},
+    // 3.0.11-beta.64: the world map's dungeon box (the concept's v19_route), its counts («184 локації · 128 підземель»)
+    {Text::RefDungeonOf, "{1} dungeon", "Підземелля {1}", "Подземелье {1}"},
+    {Text::RefLocationsN, "location|locations", "локація|локації|локацій", "локация|локации|локаций"},
+    {Text::RefDungeonsN, "dungeon|dungeons", "підземелля|підземелля|підземель", "подземелье|подземелья|подземелий"},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

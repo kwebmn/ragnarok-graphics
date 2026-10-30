@@ -81,6 +81,9 @@ struct State {
     float dragX = 0, dragY = 0, dragCx = 0, dragCy = 0;  // where it began (the window's pixels), the centre then
     int dragTile = -1;             // the tile pressed: its card on a click
     refpages::WorldWay way;        // what the map shows of the page's way (made with the page)
+    // 3.0.11-beta.64: the dungeon box's pictures - the maps' own minimaps at its side, found once each (none: empty)
+    std::map<std::string, panel::Picture> chainPictures;
+    int chainSide = 0, chainLogged = 0;
     std::vector<std::pair<std::string, std::string>> labels;  // the towns' names (made with the index)
     const refindex::Index* labelsOf = nullptr;
     // 3.0.11-beta.14: the cards' pictures - the client's sprites and item icons, found once each (none: an empty one)
@@ -121,6 +124,29 @@ bool readFile(State& s, const std::string& entry, std::string& out) {
     if (!s.files->read(entry, bytes, nullptr)) return false;
     out.assign(bytes.begin(), bytes.end());
     return true;
+}
+
+// 3.0.11-beta.64 (the concept's v19_route): a map's minimap for the world map's dungeon box - the client's own picture
+// (data\texture\유저인터페이스\map\<code>.bmp, as the world map's tiles), `side` square; null: none in its files
+const panel::Picture* chainPicture(State& s, const std::string& map, int side) {
+    if (side != s.chainSide) {
+        s.chainPictures.clear();
+        s.chainSide = side;
+    }
+    auto it = s.chainPictures.find(map);
+    if (it == s.chainPictures.end()) {
+        std::string bytes;
+        std::vector<uint32_t> argb;
+        int w = 0, h = 0;
+        const std::string entry = "data\\texture\\" + kUi + "\\map\\" + map + ".bmp";
+        const bool read = readFile(s, entry, bytes) &&
+                          pack::decodeBmp(reinterpret_cast<const uint8_t*>(bytes.data()), bytes.size(), argb, w, h);
+        it = s.chainPictures.emplace(map, read ? worldmap::thumbnail(argb, w, h, side) : panel::Picture{}).first;
+        if (s.chainLogged++ < 20)
+            LOG_INFO("reference: the dungeon box's %s - %s", map.c_str(),
+                     read ? "its minimap" : "no minimap in the game's files, the sea's colour");
+    }
+    return it->second.width > 0 ? &it->second : nullptr;
 }
 
 panel::Picture asPicture(const spritefile::Image& im) {
@@ -553,6 +579,8 @@ refwin::WorldLook worldHit(const State& s) {
     w.zoom = s.zoom;
     w.cx = s.cx;
     w.cy = s.cy;
+    for (const auto& [map, name] : s.way.chain) w.chain.push_back(refwin::ChainMap{map, name, nullptr});  // .64
+    w.chainTitle = s.way.chainTitle;
     return w;
 }
 
@@ -578,6 +606,11 @@ refwin::WorldLook worldLook(State& s) {
     w.target = s.way.target;
     w.targetLabel = s.way.targetLabel;
     w.hereLabel = s.way.hereLabel;
+    // 3.0.11-beta.64: a dungeon's way - its maps in a box at the map's bottom left, with their own minimaps
+    const int side = refwin::chainSide(s.layout);
+    for (const auto& [map, name] : s.way.chain)
+        w.chain.push_back(refwin::ChainMap{map, name, chainPicture(s, map, side)});
+    w.chainTitle = s.way.chainTitle;
     if (s.labelsOf != s.index.get()) {
         s.labels = refpages::worldLabels(*s.index);
         s.labelsOf = s.index.get();
@@ -871,6 +904,21 @@ bool key(UINT m, WPARAM wp, LPARAM) {
         s.skipChar = 6;  // Ctrl+F's WM_CHAR
         return true;
     }
+    // 3.0.11-beta.64 (the concept's v19_route: «Карта світу Ctrl+M»): the world map at once, and away again; the game
+    // takes M with Alt alone (FUN_004d96e0) - Ctrl+M is free
+    if (m == WM_KEYDOWN && wp == 'M' && ctrl && !alt) {
+        const bool onIt = s.open && s.at.go == refpages::Go::World && s.at.id == 0;
+        if (onIt) {
+            close(s);
+        } else if (s.open) {
+            go(s, refpages::Link{refpages::Go::World, 0, ""});
+        } else {
+            openWindow(s, refpages::Link{refpages::Go::World, 0, ""});
+        }
+        LOG_INFO("reference: Ctrl+M - the world map %s", onIt ? "closed" : "opened");
+        s.skipChar = 13;  // Ctrl+M's WM_CHAR is a carriage return - the chat's Enter
+        return true;
+    }
     if (!s.open) return false;
     if (m == WM_KEYDOWN || m == WM_SYSKEYDOWN) {
         switch (wp) {
@@ -954,6 +1002,8 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
             if (u.part == refwin::Part::Rail && u.row > 0 && size_t(u.row) < s.page.rail.size())
                 go(s, s.page.rail[size_t(u.row)].link);
             if (u.part == refwin::Part::Row) go(s, s.page.rows[size_t(u.row)].link);
+            if (u.part == refwin::Part::Chain && u.tile >= 0 && size_t(u.tile) < s.way.chain.size())  // .64: its card
+                go(s, refpages::Link{refpages::Go::Map, 0, s.way.chain[size_t(u.tile)].first});
             const int row = worldRow(s);  // 3.0.11-beta.29: a press on the world map - a drag, or a click on letting go
             if (row >= 0 && s.world && (u.part == refwin::Part::Tile || u.part == refwin::Part::Body)) {
                 const refwin::Placed& r = s.rows[size_t(row)];

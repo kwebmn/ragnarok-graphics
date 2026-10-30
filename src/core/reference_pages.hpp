@@ -175,6 +175,11 @@ std::vector<std::pair<std::string, std::string>> worldLabels(const refindex::Ind
 struct WorldWay {
     std::vector<Hop> hops;
     std::string target, targetLabel, hereLabel;
+    // 3.0.11-beta.64 (the concept's v19_route: «Підземелля Glast Heim»): a dungeon's way - its maps from its way in on
+    // the sheet to the target (the code, the name short of the dungeon's group's words; its code when nothing is left
+    // or another has it); none for a way on the sheet. The box's title: «Підземелля <group>»
+    std::vector<std::pair<std::string, std::string>> chain;
+    std::string chainTitle;
 };
 WorldWay worldWayOf(const refindex::Index& ix, settings::Lang l, const Context& c, const std::string& marks);
 // The part of the sheet a way and the maps marked take (false: none on the sheet) - the view zoomed on it

@@ -60,6 +60,18 @@ TEST(world_map_tiles_put_on_the_sheet) {
     CHECK_EQ(out.px[size_t((12 + 10) * 50 + 10)], 0xFF20A040u);
 }
 
+// 3.0.11-beta.64: a map's minimap for the world map's dungeon box - side x side, the game's magenta the sea's colour
+TEST(world_map_thumbnail) {
+    std::vector<uint32_t> picture(40 * 20, 0xFF20A040);  // a green field 40 x 20, its left half the game's magenta
+    for (int y = 0; y < 20; ++y)
+        for (int x = 0; x < 20; ++x) picture[size_t(y * 40 + x)] = 0xFFFF00FF;
+    const panel::Picture t = worldmap::thumbnail(picture, 40, 20, 16);
+    CHECK(t.width == 16 && t.height == 16 && t.px.size() == 256u);
+    CHECK_EQ(t.px[size_t(8 * 16 + 12)], 0xFF20A040u);       // the right half: the field, stretched to the square
+    CHECK_EQ(t.px[size_t(8 * 16 + 3)], worldmap::kGround);  // the left: the sea shows
+    CHECK(worldmap::thumbnail(picture, 40, 20, 0).width == 0 && worldmap::thumbnail({}, 0, 0, 16).width == 0);
+}
+
 // 3.0.11-beta.29: the concept's zoom (v19_route) - a view's fit, zooming round the pointer, the view on a part, the
 // sheet smooth when zoomed in
 TEST(world_map_view_zoom_and_pan) {

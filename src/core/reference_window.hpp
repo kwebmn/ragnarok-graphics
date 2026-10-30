@@ -47,11 +47,18 @@ bool shown(const Layout& L, const Placed& r, int scroll);  // the whole row in t
 
 // 3.0.11-beta.26: the header's star; the rail's sections (row: its index); 3.0.11-beta.30 «Головна» (the header's
 // button and its title)
-enum class Part : uint8_t { None, Close, Back, Search, Row, Body, Tile, Star, Rail, Home };
+// 3.0.11-beta.64: Chain - a map of the world map's dungeon box (WorldLook::chain)
+enum class Part : uint8_t { None, Close, Back, Search, Row, Body, Tile, Star, Rail, Home, Chain };
 struct Under {
     Part part = Part::None;
     int row = -1;   // Part::Row: a row that leads somewhere; Part::Tile: the world map's row
-    int tile = -1;  // 3.0.11-beta.11: Part::Tile - the world map's tile (worldmap::Sheet::world)
+    int tile = -1;  // 3.0.11-beta.11: Part::Tile - the world map's tile (worldmap::Sheet::world); Part::Chain its map
+};
+// 3.0.11-beta.64: a map of the dungeon box - its code, its name, its picture (the client's minimap at chainSide()
+// square, premultiplied; null: the sea's colour)
+struct ChainMap {
+    std::string map, name;
+    const panel::Picture* picture = nullptr;
 };
 // 3.0.11-beta.11: the world map's row - its picture and what goes over it; 3.0.11-beta.29 the concept's v19_route: the
 // view zoomed and moved, the players' green pills, the towns' names, «Ви тут», the way in gold with its teleports'
@@ -70,7 +77,12 @@ struct WorldLook {
     std::vector<std::pair<std::string, std::string>> labels;  // the towns' names on their tiles (refpages)
     std::vector<std::string> tip;             // the card of the map under the pointer (refpages::worldTip)
     std::string hereLabel, targetLabel;       // «Ви тут · …»; the pin's («Glast Heim → підземелля»), "" none
+    // 3.0.11-beta.64 (the concept's v19_route): a dungeon's way - its maps from its way in to the target in a box at
+    // the map's bottom left (refpages::WorldWay::chain), its title; fewer than two: none
+    std::vector<ChainMap> chain;
+    std::string chainTitle;
 };
+int chainSide(const Layout& L);  // 3.0.11-beta.64: the dungeon box's pictures' side (64 at scale 1)
 // 3.0.11-beta.26: the words around the page - the header's and the bottom's
 enum class Live : uint8_t { None, Fresh, Off };  // the site's live data: not asked for, fresh, no link
 struct Texts {
