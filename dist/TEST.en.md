@@ -1,3 +1,18 @@
+# uaRO Graphics 3.0.11-beta.57 — what is new
+
+- **The new interface should stop stuttering at each step** (reports R-9PP79T «the graphics slow down with the new
+  interface» and R-T942DZ). The log line of beta.55 showed why: at 4K the minimap was painted again at each step of
+  the character and each turn of the camera — 15.6 ms on the game's thread every time (108 times in 30 s in Prontera,
+  183 on prt_fild08); the character block 13–19 ms at each change of HP, the chat up to 30 ms. The shapes were 2–3 ms
+  of it, the rest the words: Windows drew all the words again on a canvas as big as the whole picture.
+- Now each word is drawn once and kept, and the paintings after take it as it is. The minimap's map is worked out
+  twice as fast (the same picture to the pixel), the minimap is painted again at most 30 times a second, and the
+  interface's pictures no longer take new memory at each painting.
+- The log's line `interface: pictures painted in 30 s` now shows the words' share (`words …`) and how many words were
+  drawn anew and how many taken as kept.
+- To check: walk round Prontera with the new interface — the motion should be even; send a report — the log will show
+  what the minimap costs now.
+
 # uaRO Graphics 3.0.11-beta.56 — what is new
 
 - **A count of installs.** The update check (at every start of the game and of the app) now tells uaro.kiev.ua every
