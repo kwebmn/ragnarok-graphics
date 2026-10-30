@@ -1,3 +1,25 @@
+# uaRO Graphics 3.0.11-beta.75 — what is new
+
+- **The interface's parts can be moved and sized** (your «some interfaces should be movable and configurable»).
+  Ctrl+Shift+L in the game (or the row «Arrange the interface» in the console ~) turns on «Interface layout»: the world
+  dims and takes no clicks, each part of the new interface — «Character block», «Minimap», «Buffs», «Tracking»,
+  «Hotbar», «Target card», «Party», «Chat» — in a gold frame with its name.
+  - Drag a part with the mouse — it stays there, snapping to the screen's edges and middle and to the other parts'
+    edges (gold guide lines).
+  - The wheel over a part — its size from 60 to 160 % (shown on its frame).
+  - A right click — the part goes back to its own place and size; «Reset all» — all of them.
+  - «Done» or Esc — out.
+- A place is kept to the screen's nearest corner, edge or middle, so at another resolution the part stays there. The
+  parts not moved stand as before (the buffs under the minimap and so on). All of it is kept in
+  uaro-graphics\hud-layout.txt.
+- A part not on the screen now (the target card with no target, the buffs with none) shows as a faint frame where it
+  was last («not shown now») — it can be moved too. A part that has not shown at all since the game started cannot be
+  placed yet.
+- The cast over the character does not move: it belongs to the hero in the world.
+- To check: Ctrl+Shift+L, move the minimap and the hotbar, make the chat bigger with the wheel, «Done»; restart the
+  game — all in their places. In the log: `interface layout: open`, `interface layout: minimap moved - at the screen's
+  point …`, `interface layout: closed`.
+
 # uaRO Graphics 3.0.11-beta.74 — what is new
 
 - **Icons from the AI texture pack** (your «load the icons of skills, items and everything else from the processed
