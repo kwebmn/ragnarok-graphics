@@ -1,3 +1,15 @@
+# uaRO Graphics 3.0.11-beta.65 — what is new
+
+- **«Light where you can walk (an experiment)»** — a new switch in the app's «Interface» section and in «The new
+  interface» of the game's console (the concept: «the highlight of where one can walk — an experiment, off»; off by
+  default). The new minimap and its big map dim everything you cannot reach on foot from where you stand: other parts
+  of the map — the river's other bank (as on prt_fild04), floors, islands, ledges. The data is the server's own maps
+  (.gat), the same the ways are found over; people, monsters and traps are not counted.
+- The highlight is worked out once a part of the map: a step changes nothing, only a teleport, a portal or another
+  map. Until the game knows your cell (right after entering a map) there is none.
+- To check: switch it on, stand on prt_fild04 by the river, open the big map — the other bank is darker; teleport —
+  the highlight follows you. In the log: `minimap: where one can walk on prt_fild04`.
+
 # uaRO Graphics 3.0.11-beta.64 — what is new
 
 - **The world map on Ctrl+M** (as in the concept's mock-up). Ctrl+M opens «Reference» right on the world map, Ctrl+M
