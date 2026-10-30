@@ -565,20 +565,38 @@ void paint(Picture& out, const Geometry& g, const std::vector<Card>& cards, Part
     }
 }
 
+namespace {
+
+// 3.0.11-beta.66: IBM Plex Sans' advances (third_party/plex, tools/plex_widths.py) by the letter
+struct Advance {
+    uint32_t code;
+    uint16_t regular, semibold;
+};
+constexpr Advance kPlex[] = {
+#include "core/plex_widths.inc"
+};
+
+}  // namespace
+
 float wordsWidth(const std::string& utf8, float px, bool bold) {
-    float em = 0;
+    // 3.0.11-beta.66 (the concept: «встроенный IBM Plex Sans»): the new interface's words are Plex's (win/ui_font) -
+    // its own advances (its SemiBold the bold), 3 % and half a pixel over (GDI's whole pixels); a letter it has not
+    // is drawn in Segoe UI (★, ●): 0.9 of the size
+    float thousandths = 0;
+    bool any = false;
     for (size_t i = 0; i < utf8.size();) {
         const unsigned char c = static_cast<unsigned char>(utf8[i]);
         const size_t n = c < 0x80 ? 1 : c < 0xE0 ? 2 : c < 0xF0 ? 3 : 4;
-        if (c == ' ' || c == '.' || c == ',' || c == ':' || c == '\'' || c == '|' || c == 'i' || c == 'l')
-            em += 0.32f;
-        else if (n == 1)
-            em += c >= 'A' && c <= 'Z' ? 0.68f : 0.58f;
-        else
-            em += 0.64f;  // Cyrillic, the middle dot, dashes
+        uint32_t code = n == 1 ? c : n == 2 ? c & 0x1Fu : n == 3 ? c & 0x0Fu : c & 0x07u;
+        for (size_t k = 1; k < n && i + k < utf8.size(); ++k)
+            code = code << 6 | (static_cast<unsigned char>(utf8[i + k]) & 0x3Fu);
+        const Advance* a = std::lower_bound(std::begin(kPlex), std::end(kPlex), code,
+                                            [](const Advance& x, uint32_t v) { return x.code < v; });
+        thousandths += a != std::end(kPlex) && a->code == code ? float(bold ? a->semibold : a->regular) : 900.0f;
+        any = true;
         i += n;
     }
-    return em * px * (bold ? 1.08f : 1.0f);
+    return any ? thousandths * px / 1000.0f * 1.03f + 0.5f : 0.0f;
 }
 
 }  // namespace uagfx::panel

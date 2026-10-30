@@ -1,0 +1,4 @@
+// 3.0.11-beta.66 (the concept: «встроенный IBM Plex Sans»): the new interface's face - IBM's own TTFs, unchanged
+// (third_party/plex, SIL OFL 1.1), added for the game's process by win/ui_font
+PLEX_REGULAR RCDATA "IBMPlexSans-Regular.ttf"
+PLEX_SEMIBOLD RCDATA "IBMPlexSans-SemiBold.ttf"

@@ -554,3 +554,28 @@ TEST(window_panel_blank_keeps_its_memory) {
     CHECK(!panel::blank(p, 100, -5));
     CHECK(p.height == 0 && p.px.empty());
 }
+
+// 3.0.11-beta.66 (the concept: «встроенный IBM Plex Sans»): the words' width by Plex's own advances (Regular, SemiBold
+// for the bold) - never narrower than the face draws them, a little wide; a letter it has not (★): wide
+TEST(window_panel_words_width_by_plex) {
+    struct Case {
+        const char* text;
+        int regular, semibold;  // the advances in thousandths of the size (fontTools on the TTFs)
+    };
+    const Case cases[] = {{"70 %", 2363, 2396},
+                          {"Maximum", 4417, 4559},
+                          {"\xD0\xA9\xD0\xB0\xD1\x81\xD1\x82\xD1\x8F", 3037, 3192},  // «Щастя»
+                          {"Wraith \xC2\xB7 4:32", 5851, 6079},
+                          {"\xD1\x89\xD0\xB5 11", 2810, 2858},  // «ще 11»
+                          {"Mjolnir", 3079, 3206}};
+    for (const Case& c : cases)
+        for (const float px : {11.0f, 12.0f, 14.0f, 26.0f})
+            for (const bool bold : {false, true}) {
+                const float exact = float(bold ? c.semibold : c.regular) * px / 1000.0f;
+                const float est = panel::wordsWidth(c.text, px, bold);
+                CHECK(est >= exact);
+                CHECK(est <= exact * 1.08f + 2.0f);
+            }
+    CHECK(panel::wordsWidth("\xE2\x98\x85", 12, false) >= 9.0f);  // ★ - Segoe UI's, not Plex's
+    CHECK(panel::wordsWidth("", 12, false) == 0.0f);
+}

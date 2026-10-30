@@ -14,6 +14,7 @@
 #include "core/states.hpp"
 #include "win/code_page.hpp"
 #include "win/gpu/renderer.hpp"
+#include "win/ui_font.hpp"
 #include "win/ui_cost.hpp"
 
 namespace uagfx::win {
@@ -36,7 +37,14 @@ struct WordsGdi {
     HBITMAP dib = nullptr;
     uint32_t* bits = nullptr;
     int w = 0, h = 0;
-    std::vector<std::pair<int, HFONT>> fonts;  // the height, negative for a bold one
+    // the height, negative for a bold one; 3.0.11-beta.66 its face (win/ui_font: Plex, or Segoe UI for a word with a
+    // letter Plex has not)
+    struct Font {
+        int key;
+        const wchar_t* face;
+        HFONT font;
+    };
+    std::vector<Font> fonts;
     std::unordered_map<std::wstring, Coverage> kept;
     size_t keptBytes = 0;
     unsigned long long clock = 0;  // a drawWords call each
@@ -51,18 +59,18 @@ constexpr size_t kKeptBytes = size_t(4) << 20;  // past that the words unused lo
 
 // 3.0.11-beta.25 (R-77TCM7): a font for each size and weight, not for each of the words; 3.0.11-beta.54 (R-PVZH5M):
 // kept from one picture to the next
-HFONT fontOf(WordsGdi& g, int height, bool bold) {
+HFONT fontOf(WordsGdi& g, int height, bool bold, const uifont::Face& face) {
     const int key = bold ? -height : height;
-    for (const auto& [k, f] : g.fonts)
-        if (k == key) return f;
+    for (const WordsGdi::Font& f : g.fonts)
+        if (f.key == key && f.face == face.name) return f.font;
     if (g.fonts.size() >= 32) {  // a few sizes in use at a time: past that all go (the stock font in the DC first)
         SelectObject(g.dc, GetStockObject(SYSTEM_FONT));
-        for (const auto& f : g.fonts) DeleteObject(f.second);
+        for (const WordsGdi::Font& f : g.fonts) DeleteObject(f.font);
         g.fonts.clear();
     }
-    HFONT font = CreateFontW(-height, 0, 0, 0, bold ? FW_SEMIBOLD : FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET,
-                             OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, ANTIALIASED_QUALITY, DEFAULT_PITCH, L"Segoe UI");
-    if (font) g.fonts.emplace_back(key, font);
+    HFONT font = CreateFontW(-height, 0, 0, 0, face.weight, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS,
+                             CLIP_DEFAULT_PRECIS, ANTIALIASED_QUALITY, DEFAULT_PITCH, face.name);
+    if (font) g.fonts.push_back(WordsGdi::Font{key, face.name, font});
     return font;
 }
 
@@ -99,7 +107,7 @@ bool room(WordsGdi& g, int w, int h) {
 // A word drawn by GDI in its box (w x h, at the DIB's corner): its coverage, cut to its lit part
 bool drawnAnew(WordsGdi& g, const Words& word, int height, int w, int h, UINT format, Coverage& out) {
     if (!room(g, w, h)) return false;
-    const HFONT font = fontOf(g, height, word.bold);
+    const HFONT font = fontOf(g, height, word.bold, uifont::faceFor(word.text, word.bold));
     if (!font) return false;
     for (int y = 0; y < h; ++y) std::memset(g.bits + size_t(y) * size_t(g.w), 0, size_t(w) * 4);
     SelectObject(g.dc, font);
@@ -324,23 +332,25 @@ int wordsWidth(const std::wstring& text, float px, bool bold) {
     struct Kept {
         int height;
         bool bold;
+        const wchar_t* face;  // 3.0.11-beta.66: win/ui_font's - as drawWords draws the word
         HFONT font;
     };
     thread_local HDC dc = CreateCompatibleDC(nullptr);
     thread_local std::vector<Kept> fonts;
     const int height = std::max(8, int(std::lround(px)));
+    const uifont::Face face = uifont::faceFor(text, bold);
     HFONT font = nullptr;
     for (const Kept& k : fonts)
-        if (k.height == height && k.bold == bold) font = k.font;
+        if (k.height == height && k.bold == bold && k.face == face.name) font = k.font;
     if (!font) {
-        font = CreateFontW(-height, 0, 0, 0, bold ? FW_SEMIBOLD : FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET,
-                           OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, ANTIALIASED_QUALITY, DEFAULT_PITCH, L"Segoe UI");
+        font = CreateFontW(-height, 0, 0, 0, face.weight, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS,
+                           CLIP_DEFAULT_PRECIS, ANTIALIASED_QUALITY, DEFAULT_PITCH, face.name);
         if (!font) return 0;
         if (fonts.size() >= 32) {  // never one selected: each measure puts the stock font back
             DeleteObject(fonts.front().font);
             fonts.erase(fonts.begin());
         }
-        fonts.push_back(Kept{height, bold, font});
+        fonts.push_back(Kept{height, bold, face.name, font});
     }
     if (!dc) return 0;
     SelectObject(dc, font);

@@ -23,7 +23,8 @@ EXPECTED = {"install.bat",  # 2.10: the only .bat - for an older update.bat, whi
             "uaro-graphics/clientlibs/cps.dll", "uaro-graphics/clientlibs/binkw32.dll",
             "uaro-graphics/clientlibs/ijl15.dll",  # 3.0.1-beta.6
             "uaro-graphics/clientlibs/mss32.dll",  # 3.0.1-beta.7
-            "uaro-graphics/walkable.bin"}  # 3.0.11-beta.8: the maps' walkable parts for the reference's routes
+            "uaro-graphics/walkable.bin",  # 3.0.11-beta.8: the maps' walkable parts for the reference's routes
+            "uaro-graphics/licenses/ibm-plex-sans-ofl.txt"}  # 3.0.11-beta.66: the font in ddraw.dll, its license
 # 2.15: the AI models are in release/uaro-graphics-models.zip, not here
 VERSION_CPP = Path(__file__).resolve().parent.parent / "src" / "core" / "version.cpp"
 

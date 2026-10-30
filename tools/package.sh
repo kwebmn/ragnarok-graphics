@@ -21,7 +21,7 @@ stage="build-win/package"
 python3 -I -B tools/check_text_names.py  # 2.15: every «name» in the texts is the interface's
 rm -rf "$out" "$stage"
 mkdir -p "$stage/uaro-graphics/remix" "$stage/uaro-graphics/notes" \
-         "$stage/uaro-graphics/defaults" "$stage/uaro-graphics/clientlibs"
+         "$stage/uaro-graphics/defaults" "$stage/uaro-graphics/clientlibs" "$stage/uaro-graphics/licenses"
 cp dist/install.bat "$stage/"  # 2.10: the only .bat - an older update.bat runs it once (uaro-graphics.exe --install)
 # 2.8: the notes of "What is new" and the template ini in uaro-graphics\ - never uaro-graphics\uaro-graphics.ini,
 # the player's settings. 2.6.1-2.7: uaro-flags.grf went here too; it is the client's file now (its DATA.INI).
@@ -31,6 +31,8 @@ cp build-win/ddraw.dll build-win/uaro-graphics.exe build-win64/uaro-render64.exe
    build-win64/uaro-studio.exe dist/dlss-version.txt dist/models-version.txt "$stage/uaro-graphics/"
 cp dist/remix/rtx.conf "$stage/uaro-graphics/remix/"  # part 4: RTX Remix's settings for this game
 cp dist/walkable.bin "$stage/uaro-graphics/"  # 3.0.11-beta.8: the maps' walkable parts (tools/walk_grids.py)
+# 3.0.11-beta.66: IBM Plex Sans is in ddraw.dll (the new interface's words) - its SIL OFL 1.1 beside it
+cp third_party/plex/LICENSE.txt "$stage/uaro-graphics/licenses/ibm-plex-sans-ofl.txt"
 # 1.4: uaRO Pad (github.com/kwebmn/ragnarok-gamepad), the gamepad - the Gamepad page puts it into the game's folder.
 cp dist/pad/uaro-pad.ini "$stage/uaro-graphics/defaults/"  # 2.9: uaRO Pad inside ddraw.dll, its template
 cp build-win/cps.dll build-win/binkw32.dll build-win/ijl15.dll build-win/mss32.dll \

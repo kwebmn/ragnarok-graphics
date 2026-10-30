@@ -99,7 +99,9 @@ elseif(WIN32)
     file(GLOB_RECURSE UAGFX_WIN_SOURCES CONFIGURE_DEPENDS src/win/*.cpp)
     # 2.9: uaRO Pad's Windows part (DirectInput 7 wrappers, the client's memory, its windows), mounted by the driver
     file(GLOB UAGFX_PAD_WIN_SOURCES CONFIGURE_DEPENDS src/pad/win/*.cpp)
-    add_library(ddraw SHARED ${UAGFX_WIN_SOURCES} ${UAGFX_PAD_WIN_SOURCES} src/win/ddraw.def)
+    # 3.0.11-beta.66: IBM Plex Sans (third_party/plex) as its resources - the new interface's words (win/ui_font)
+    add_library(ddraw SHARED ${UAGFX_WIN_SOURCES} ${UAGFX_PAD_WIN_SOURCES} src/win/ddraw.def src/win/ui_font.rc)
+    target_include_directories(ddraw PRIVATE third_party/plex)  # the .rc's fonts
     set_target_properties(ddraw PROPERTIES PREFIX "" OUTPUT_NAME "ddraw")
     target_compile_definitions(ddraw PRIVATE WIN32_LEAN_AND_MEAN NOMINMAX WIDL_EXPLICIT_AGGREGATE_RETURNS
                                DIRECTINPUT_VERSION=0x0700)
