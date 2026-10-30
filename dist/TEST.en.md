@@ -1,3 +1,19 @@
+# uaRO Graphics 3.0.11-beta.58 — what is new
+
+- **The effects' autopilot.** The «Auto» effects set is now picked for your graphics card by how it really draws, not
+  only by its memory — over the whole ladder «No effects» → «Low» → «Medium» → «High». A minute on a map with the game at
+  its full frames and the card less than half busy — the next set on trial for 3 minutes: too much — the set before
+  comes back. A card not judged yet that holds the game back half a minute — a set lower. The target: a smooth 60
+  frames. What was picked is kept for this card; a new card or monitor — picked again. Each step shows on the screen
+  for 10 seconds.
+- **«Keep the frame rate» is 60 on every card**, the strong ones too (it was 45, and off on the strong ones).
+- **A new install** gets «Auto» and 60 frames. **One set up before** goes over to «Auto» once, when its set is the one
+  the automatic setup gave it; a set you picked stays yours.
+- The «Game» page has a line «Effects for this graphics card: «…» · aiming at 60 frames a second» with «Change».
+- To check: the Effects page should say «Auto: …», the «Game» page the new line. Your computer went over to «Auto»
+  too: with the render at 200 % in Prontera the autopilot may lower the set to «Medium» — then pick «High» by hand and it
+  stays.
+
 # uaRO Graphics 3.0.11-beta.57 — what is new
 
 - **The new interface should stop stuttering at each step** (reports R-9PP79T «the graphics slow down with the new
