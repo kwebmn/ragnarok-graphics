@@ -19,4 +19,11 @@ TEST(install_ping) {
     CHECK(ping::body("0123456789abcdef", "3.0.10\"}", "other") ==
           "{\"id\":\"0123456789abcdef\",\"version\":\"3.0.10\",\"channel\":\"release\"}");  // nothing but its words
     CHECK(ping::body("bad\"", "1", "release").find("\"id\":\"\"") != std::string::npos);
+    // 3.0.11-beta.61 (the autopilot): the first game's outcome rides along once (core/first_game's object)
+    CHECK(ping::body("0123456789abcdef", "3.0.11-beta.61", "beta", "{\"class\":\"L1 d3d11\"}") ==
+          "{\"id\":\"0123456789abcdef\",\"version\":\"3.0.11-beta.61\",\"channel\":\"beta\",\"first\":"
+          "{\"class\":\"L1 d3d11\"}}");
+    CHECK(ping::body("0123456789abcdef", "3.0.11-beta.61", "beta", "") ==
+          ping::body("0123456789abcdef", "3.0.11-beta.61", "beta"));
+    CHECK(ping::body("0123456789abcdef", "1", "beta", "junk").find("first") == std::string::npos);  // no object
 }

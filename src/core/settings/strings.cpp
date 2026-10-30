@@ -2570,17 +2570,20 @@ constexpr Entry kTexts[] = {
      "off after a try, the graphics card's name and memory, the frames a second and the card's milliseconds. No name, "
      "no login, no files - a random number for this computer. Sent by this app to uaro.kiev.ua once a day. Apart "
      "from it, whatever is chosen here, the update check tells uaro.kiev.ua every 12 hours only that this install is "
-     "there: another random number, the version and the channel (to count the installs).",
+     "there: another random number, the version and the channel (to count the installs) - and once how its first "
+     "game went: whether it got to a map, its frames, whether it closed by an error.",
      "Допомагає зробити графіку кращою для всіх: які ефекти й текстури ввімкнені й скільки часу, що вимикають після "
      "спроби, назва й пам'ять відеокарти, кадри за секунду й мілісекунди карти. Ні імені, ні логіна, ні файлів — "
      "випадкове число для цього комп'ютера. Надсилає ця утиліта на uaro.kiev.ua раз на день. Окремо від неї, хоч "
      "би що вибрано тут, перевірка оновлень раз на 12 годин каже uaro.kiev.ua лише, що ця установка є: інше "
-     "випадкове число, версію й канал (щоб рахувати установки).",
+     "випадкове число, версію й канал (щоб рахувати установки), — і один раз, як пройшла перша гра: чи дійшла до "
+     "карти, скільки кадрів, чи закрилася з помилкою.",
      "Помогает сделать графику лучше для всех: какие эффекты и текстуры включены и сколько времени, что выключают "
      "после пробы, название и память видеокарты, кадры в секунду и миллисекунды карты. Ни имени, ни логина, ни "
      "файлов — случайное число для этого компьютера. Отправляет эта утилита на uaro.kiev.ua раз в день. Отдельно "
      "от неё, что бы ни было выбрано здесь, проверка обновлений раз в 12 часов сообщает uaro.kiev.ua только, что "
-     "эта установка есть: другое случайное число, версию и канал (чтобы считать установки)."},
+     "эта установка есть: другое случайное число, версию и канал (чтобы считать установки), — и один раз, как прошла "
+     "первая игра: дошла ли до карты, сколько кадров, закрылась ли с ошибкой."},
     {Text::StatsAsk,
      "Help make uaRO Graphics better?\n\nWith your leave the settings app sends, once a day, anonymous statistics "
      "of how the graphics are played: which effects and textures are on and for how long, what is turned off after "

@@ -31,14 +31,16 @@ std::string idOf(const std::string& text) {
     return validId(line) ? line : std::string();
 }
 
-std::string body(const std::string& id, const std::string& version, const std::string& channel) {
+std::string body(const std::string& id, const std::string& version, const std::string& channel,
+                 const std::string& first) {
     std::string v;
     for (const char c : version)
         if ((c >= '0' && c <= '9') || c == '.' || c == '-' || (c >= 'a' && c <= 'z')) v += c;
     if (v.size() > 32) v.resize(32);
     const std::string ch = channel == "beta" ? "beta" : "release";
+    const bool object = first.size() >= 2 && first.front() == '{' && first.back() == '}';
     return "{\"id\":\"" + (validId(id) ? id : std::string()) + "\",\"version\":\"" + v + "\",\"channel\":\"" + ch +
-           "\"}";
+           "\"" + (object ? ",\"first\":" + first : std::string()) + "}";
 }
 
 }  // namespace uagfx::ping

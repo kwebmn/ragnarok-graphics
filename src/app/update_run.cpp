@@ -10,6 +10,7 @@
 #include "app/system.hpp"
 #include "app/text.hpp"
 #include "core/config.hpp"
+#include "core/first_game.hpp"
 #include "core/install_ping.hpp"
 #include "core/layout.hpp"
 #include "core/settings/ini_edit.hpp"
@@ -43,17 +44,26 @@ void keepInfo(const std::wstring& dir, std::string branch, const std::string& sk
     writeFileAtomic(infoOf(dir), update::keptInfo(std::move(branch), skip, channel));
 }
 
+}  // namespace
+
 // 3.0.11-beta.56 (the owner: «сделать» - how many installs and on which versions): the site's anonymous count - this
 // install's random number, its version and channel at most every 12 hours (core/install_ping); not told again until
-// the site took it
-void pingInstall(const std::wstring& dir, update::Channel channel) {
+// the site took it. 3.0.11-beta.61 (the autopilot): with the first game's outcome once it is whole (core/first_game) -
+// at once when `firstNow` (the watcher: that game just closed)
+void pingInstall(const std::wstring& dir, update::Channel channel, bool firstNow) {
     const std::wstring idPath = join(dir, wide(layout::kInstallId)), sentPath = join(dir, wide(layout::kPingSent));
+    const std::wstring firstPath = join(dir, wide(layout::kFirstGame));
+    const std::wstring firstSent = join(dir, wide(layout::kFirstGameSent));
+    std::string stamp, text, local, firstText, first;
+    firstgame::Outcome outcome;
+    if (!fileExists(firstSent) && readFile(firstPath, firstText) && firstgame::parse(firstText, outcome) &&
+        firstgame::complete(outcome))
+        first = firstgame::json(outcome);
     const long long now = static_cast<long long>(std::time(nullptr));
-    std::string stamp, text, local;
     readFile(sentPath, stamp);
     long long last = 0;
     usage::readSentStamp(stamp, last, local);  // the seconds it was told at (no atoll: msvcrt's _atoi64)
-    if (!ping::due(now, last)) return;
+    if (!ping::due(now, last) && !(firstNow && !first.empty())) return;
     readFile(idPath, text);
     std::string id = ping::idOf(text);
     if (id.empty()) {  // made once: the clocks, a stack and a heap address mixed - a number, not a secret
@@ -66,11 +76,15 @@ void pingInstall(const std::wstring& dir, update::Channel channel) {
     }
     long status = 0;
     std::string answer, error;
-    const std::string body = ping::body(id, kVersion, update::channelToken(channel));
-    if (postPath("/api/graphics/ping", body, status, answer, error) && status >= 200 && status < 300 &&
-        makeFolders(join(dir, wide(layout::kCache))))
-        writeFileAtomic(sentPath, std::to_string(now) + "\n");
+    const std::string body = ping::body(id, kVersion, update::channelToken(channel), first);
+    if (!postPath("/api/graphics/ping", body, status, answer, error) || status < 200 || status >= 300 ||
+        !makeFolders(join(dir, wide(layout::kCache))))
+        return;
+    writeFileAtomic(sentPath, std::to_string(now) + "\n");
+    if (!first.empty()) writeFileAtomic(firstSent, "1\n");
 }
+
+namespace {
 
 std::string branchText(const std::string& kept) {
     const size_t local = kept.find("[local]");

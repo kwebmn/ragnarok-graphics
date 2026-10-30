@@ -16,6 +16,8 @@
 #include "app/text.hpp"
 #include "app/update_run.hpp"
 #include "core/config.hpp"
+#include "core/first_game.hpp"
+#include "core/layout.hpp"
 #include "core/log_files.hpp"
 #include "core/reports.hpp"
 #include "core/settings/log_digest.hpp"
@@ -292,7 +294,13 @@ int watchGame(unsigned long pid, int logSlot) {
         noteOnline(exeFolder(), error);
         noteLive(exeFolder(), error);  // 3.0.11-beta.12
     }
-    if (!config.reportAuto && !config.statsSend && !answers && !live) return 0;  // nothing more to watch for
+    // 3.0.11-beta.61 (the autopilot): an install's first game waits here for its end (core/first_game)
+    const std::wstring firstPath = ourPlace(exeFolder(), layout::kFirstGame);
+    std::string firstText;
+    firstgame::Outcome first;
+    const bool firstPending =
+        readFile(firstPath, firstText) && firstgame::parse(firstText, first) && !firstgame::complete(first);
+    if (!config.reportAuto && !config.statsSend && !answers && !live && !firstPending) return 0;  // nothing to wait for
     HANDLE game = OpenProcess(SYNCHRONIZE, FALSE, pid);
     if (!game) return 0;
     ULONGLONG answered = GetTickCount64();
@@ -308,13 +316,23 @@ int watchGame(unsigned long pid, int logSlot) {
         }
     }
     CloseHandle(game);
-    if (!config.reportAuto && !config.statsSend) return 0;
+    if (!config.reportAuto && !config.statsSend && !firstPending) return 0;
     Sleep(2000);  // the log closed and flushed
+    std::string log;  // 3.0.3-beta.1: that game window's
+    const std::wstring driverLog = ourPlace(exeFolder(), layout::now(layout::File::DriverLog));
+    const bool logRead = readFile(wide(logfiles::slotted(utf8(driverLog), logSlot)), log);
+    if (firstPending) {  // 3.0.11-beta.61: how it ended and how long - sent at once with the install's mark
+        if (readFile(firstPath, firstText)) firstgame::parse(firstText, first);  // its first minute on the maps
+        first.end = logRead ? firstgame::endOfLog(log) : "";
+        if (first.end.empty()) first.end = "unknown";
+        first.minutes = logRead ? firstgame::minutesOfLog(log) : -1;
+        if (writeFileAtomic(firstPath, firstgame::format(first)))
+            pingInstall(exeFolder(), channelOf(exeFolder()), true);
+    }
+    if (!config.reportAuto && !config.statsSend) return 0;
     std::string ignored;
     sendUsage(exeFolder(), false, ignored);  // 2.2.1: the statistics, with the player's leave
-    std::string log;  // 3.0.3-beta.1: that game window's
-    const std::wstring first = ourPlace(exeFolder(), layout::now(layout::File::DriverLog));
-    if (!readFile(wide(logfiles::slotted(utf8(first), logSlot)), log)) return 0;
+    if (!logRead) return 0;
     const std::string reason = report::reasonOfLog(log);
     if (reason.empty()) return 0;
     Model m;

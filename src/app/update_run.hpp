@@ -28,6 +28,9 @@ struct CheckResult {
 // 3.0.0-beta.2: the computer's channel - uaro-graphics.ini's [update] channel, else by the installed build
 // (update::channelOf).
 update::Channel channelOf(const std::wstring& dir);
+// 3.0.11-beta.56: the site's anonymous count of installs, at most every 12 hours; 3.0.11-beta.61: with the first
+// game's outcome once it is whole - at once when `firstNow` (the watcher, that game just closed)
+void pingInstall(const std::wstring& dir, update::Channel channel, bool firstNow = false);
 // The update.ini of the channel's branch read now and kept as uaro-graphics\update.ini - its text, then this
 // computer's [local] section - for the game's next start; the version to offer what is installed.
 CheckResult checkNow(const std::wstring& dir);

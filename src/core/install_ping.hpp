@@ -15,7 +15,10 @@ bool due(long long now, long long last);    // never told, 12 hours since, or a 
 bool validId(const std::string& id);        // 16 lower-case hex digits
 std::string newId(uint64_t seed);           // 16 lower-case hex digits from a seed's mixed bits (splitmix64)
 std::string idOf(const std::string& text);  // the file's first line when a valid number, else ""
-// The request's body: {"id":"...","version":"...","channel":"release"} (the version its digits, dots and '-'s)
-std::string body(const std::string& id, const std::string& version, const std::string& channel);
+// The request's body: {"id":"...","version":"...","channel":"release"} (the version its digits, dots and '-'s);
+// 3.0.11-beta.61 (the autopilot): `first` - the first game's outcome (core/first_game json, an object) added once as
+// "first", the app's tip saying so
+std::string body(const std::string& id, const std::string& version, const std::string& channel,
+                 const std::string& first = "");
 
 }  // namespace uagfx::ping
