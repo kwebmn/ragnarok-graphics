@@ -1,3 +1,16 @@
+# uaRO Graphics 3.0.11-beta.48 — what is new
+
+- **The cast over the hero in the new look** (the concept; your word on version 4: «the cast over the hero as a strip,
+  as in the old client, but not like the old one»). While the character casts, over them a dark pill with the skill's
+  icon and name and the seconds left («Fire Bolt 0.8 s»), a gold bar under it — in the place of the game's old gauge
+  (that one hidden). What is cast comes from the server's answer, where and how long from the game itself, so the
+  pill follows the hero and goes with the cast (an interrupted one too).
+- A new switch «Cast over the hero» (the «Interface» section in the app, «The new interface» in the game's console);
+  on by itself with the new minimap.
+- To check: cast a skill with a cast time (Fire Bolt, Heal at a level with a cast) — the pill with its name and
+  seconds over the hero, the gold bar; no old gauge; an interrupted cast — the pill goes. In the log: `cast: the
+  character casts the skill ... for ... ms`, `cast: the game's gauge at ... hidden for the label`.
+
 # uaRO Graphics 3.0.11-beta.47 — what is new
 
 - **The new interface's opacity, as in the concept.** The panels' ground — the character block, the minimap's bar and
