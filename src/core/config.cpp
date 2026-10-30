@@ -492,6 +492,8 @@ Config parseConfig(const std::string& text) {
             setBool(val, c.minimapNpcs);
         } else if (key == "interface.minimap_warps") {
             setBool(val, c.minimapWarps);
+        } else if (key == "interface.minimap_reach") {  // 3.0.11-beta.65: where one can walk, an experiment
+            setBool(val, c.minimapReach);
         } else if (key == "interface.minimap_mobs") {
             setBool(val, c.minimapMobs);
         } else if (key == "interface.minimap_way") {  // 3.0.11-beta.33: the way on the ground

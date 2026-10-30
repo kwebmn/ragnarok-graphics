@@ -79,6 +79,10 @@ struct Scene {
     Part hover = Part::None;
     BigPart bigHover = BigPart::None;
     float opacity = 1;  // Ctrl+Tab's see-through
+    // 3.0.11-beta.65 (the concept's «Подсветка, куда можно дойти» - an experiment, [interface] minimap_reach): the
+    // map's cells reached on foot from the player (walkgrid::partMask: map.w x map.h, rows from y 0) - the others
+    // dimmed; null or another size: none
+    const std::vector<uint8_t>* reach = nullptr;
 };
 constexpr uint32_t kRouteRgb = 0xF2C14E;  // 3.0.11-beta.31: the way's gold (the concept's; was blue)
 

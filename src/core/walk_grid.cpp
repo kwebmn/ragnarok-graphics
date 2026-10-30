@@ -53,6 +53,27 @@ std::vector<uint8_t> Grid::around(int x, int y, int most) const {
     return found;
 }
 
+uint8_t partOf(const Grid& g, int x, int y) {
+    const std::vector<uint8_t> near = g.around(x, y, 3);
+    return near.size() == 1 ? near.front() : kWall;
+}
+
+std::vector<uint8_t> partMask(const Grid& g, uint8_t part) {
+    std::vector<uint8_t> mask;
+    if (part == kWall || g.w <= 0 || g.h <= 0 || g.rows.size() != size_t(g.h) + 1) return mask;
+    mask.assign(size_t(g.w) * size_t(g.h), 0);
+    for (int y = 0; y < g.h; ++y) {
+        int x = 0;
+        for (uint32_t r = g.rows[size_t(y)]; r < g.rows[size_t(y) + 1] && x < g.w; ++r) {
+            const int run = std::min<int>(g.runs[r].first, g.w - x);
+            if (g.runs[r].second == part)
+                std::fill_n(mask.begin() + std::ptrdiff_t(size_t(y) * size_t(g.w) + size_t(x)), run, uint8_t(1));
+            x += run;
+        }
+    }
+    return mask;
+}
+
 bool read(const std::string& file, Grids& out) {
     std::string data;
     if (file.compare(0, 8, kMagic) == 0) data = file;  // the payload itself (the tests)

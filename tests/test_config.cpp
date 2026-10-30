@@ -865,6 +865,22 @@ TEST(config_interface_minimap) {
     CHECK(appliesNow("interface.minimap"));
 }
 
+// 3.0.11-beta.65 (the concept's «Подсветка, куда можно дойти» - an experiment, off): [interface] minimap_reach - the
+// minimap dims what the player cannot reach on foot; a box of «Інтерфейс», applied at once
+TEST(config_reads_the_reach_on_the_minimap) {
+    CHECK(!parseConfig("").minimapReach);
+    CHECK(parseConfig("[interface]\nminimap_reach = 1\n").minimapReach);
+    CHECK(!parseConfig("[interface]\nminimap = 1\n").minimapReach);  // an experiment: not with the new minimap
+    const settings::IniSetting* s = settings::findSetting("interface.minimap_reach");
+    CHECK(s != nullptr);
+    if (!s) return;
+    CHECK(s->page == settings::Page::Interface && s->control == settings::Control::Check);
+    CHECK_EQ(settings::tokenOf(*s, parseConfig("[interface]\nminimap_reach = 1\n")), std::string("1"));
+    CHECK(appliesNow("interface.minimap_reach"));
+    const LiveUpdate u = liveUpdate(parseConfig(""), parseConfig("[interface]\nminimap_reach = 1\n"));
+    CHECK(u.next.minimapReach);
+}
+
 // 3.0.11-beta.33 (the owner: «полоска с маршрутом может лучше бы была выполнена такими типа следами типа шажков»):
 // [interface] minimap_way - the way on the ground as footprints (steps), the strip (line) or none; a choice of
 // «Інтерфейс», applied at once

@@ -173,6 +173,13 @@ void roundCorners(panel::Picture& p, const panel::Box& b, float r) {
 // The map's picture through a view into a box of the picture: each pixel its cell's (the game's magenta: none).
 // 3.0.11-beta.57 (R-T942DZ: the minimap painted again at each step, 15.6 ms at 4K): what a column or a row of the box
 // takes from the picture worked out once for it, not for each of its pixels - the same numbers, the same picture
+// 3.0.11-beta.65: a cell not reached on foot - its picture at 40 %, still seen
+uint32_t dimmed(uint32_t argb) {
+    uint32_t out = argb & 0xFF000000;
+    for (int sh = 0; sh <= 16; sh += 8) out |= (((argb >> sh) & 0xFF) * 2 / 5) << sh;
+    return out;
+}
+
 void mapPixels(panel::Picture& out, const panel::Box& box, const Scene& sc, const View& v) {
     const bool picture = sc.argb && sc.imgW > 0 && sc.imgH > 0 && sc.map.w > 0 && sc.map.h > 0 && v.cellPx > 0 &&
                          sc.argb->size() >= size_t(sc.imgW) * size_t(sc.imgH);
@@ -181,14 +188,20 @@ void mapPixels(panel::Picture& out, const panel::Box& box, const Scene& sc, cons
         bool in;    // over the map
         int x0, x1;  // the picture's two columns
         float wx;    // between them
+        int cell;    // 3.0.11-beta.65: the map's cell column under it
     };
+    // 3.0.11-beta.65: the cells not reached from the player dimmed (the reached ones as they are)
+    const std::vector<uint8_t>* reach =
+        sc.reach && sc.reach->size() == size_t(std::max(0, sc.map.w)) * size_t(std::max(0, sc.map.h)) ? sc.reach
+                                                                                                      : nullptr;
     std::vector<Column> columns;
     columns.reserve(size_t(std::max(0, int(box.w))));
     for (int x = 0; x < int(box.w); ++x) {
         const int tx = int(box.x) + x;
         if (tx < 0 || tx >= out.width) continue;
-        Column c{tx, false, 0, 0, 0};
+        Column c{tx, false, 0, 0, 0, 0};
         const float cx = v.left + (float(x) + 0.5f) / v.cellPx;
+        c.cell = std::clamp(int(std::floor(cx)), 0, std::max(0, sc.map.w - 1));
         if (picture && cx >= 0 && cx < float(sc.map.w)) {
             // 3.0.11-beta.31: between the picture's four nearest pixels (no blocks when zoomed in)
             const float fx = std::clamp(cx / float(sc.map.w) * float(sc.imgW) - 0.5f, 0.0f, float(sc.imgW - 1));
@@ -215,6 +228,9 @@ void mapPixels(panel::Picture& out, const panel::Box& box, const Scene& sc, cons
         const float wy = fy - float(y0);
         const uint32_t* top = sc.argb->data() + size_t(y0) * size_t(sc.imgW);
         const uint32_t* low = sc.argb->data() + size_t(y1) * size_t(sc.imgW);
+        const uint8_t* reached =  // 3.0.11-beta.65: this row's cells
+            reach ? reach->data() + size_t(std::clamp(int(std::floor(cy)), 0, sc.map.h - 1)) * size_t(sc.map.w)
+                  : nullptr;
         for (const Column& c : columns) {
             uint32_t pixel = kGround;
             if (c.in) {
@@ -231,6 +247,7 @@ void mapPixels(panel::Picture& out, const panel::Box& box, const Scene& sc, cons
                     }
                     pixel = mixed;
                 }
+                if (reached && !reached[c.cell] && pixel != kGround) pixel = dimmed(pixel);
             }
             row[c.at] = pixel;
         }

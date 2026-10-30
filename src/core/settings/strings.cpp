@@ -4900,6 +4900,19 @@ constexpr Entry kTexts[] = {
      "The map's monsters and how many of them the server keeps here; ★ - a boss and its respawn after death.",
      "Монстри цієї карти і скільки їх тримає тут сервер; ★ - бос і його респавн після смерті.",
      "Монстры этой карты и сколько их держит здесь сервер; ★ - босс и его респавн после смерти."},
+    // 3.0.11-beta.65: the concept's «Подсветка, куда можно дойти» - an experiment
+    {Text::InterfaceMinimapReach, "Light where you can walk (an experiment)",
+     "Підсвітити, куди можна дійти (експеримент)", "Подсветить, куда можно дойти (эксперимент)"},
+    {Text::InterfaceMinimapReachHint,
+     "The new minimap and its big map dim what you cannot reach on foot from where you stand - other parts of the "
+     "map (floors, islands, ledges) by the server's own map data. An experiment: people, monsters and traps are not "
+     "counted; after a teleport it shows once the game knows your cell.",
+     "Нова мінікарта та її велика карта притемнюють усе, куди звідси не дійти пішки, — інші частини карти (поверхи, "
+     "острівці, уступи) за даними самого сервера. Експеримент: люди, монстри й пастки не враховані; після телепорту "
+     "підсвітка з'являється, щойно гра знає вашу клітинку.",
+     "Новая миникарта и её большая карта затемняют всё, куда отсюда не дойти пешком, — другие части карты (этажи, "
+     "островки, уступы) по данным самого сервера. Эксперимент: люди, монстры и ловушки не учтены; после телепорта "
+     "подсветка появляется, как только игра знает вашу клетку."},
     // 3.0.11-beta.33
     {Text::InterfaceMinimapWay, "The way on the ground", "Шлях на землі", "Путь на земле"},
     {Text::InterfaceMinimapWayHint,

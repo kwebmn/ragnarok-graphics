@@ -96,6 +96,25 @@ TEST(walk_grid_parts_runs_and_the_file) {
     CHECK(!walkgrid::read("not a grid file", back));
 }
 
+// 3.0.11-beta.65 (the concept's «Подсветка, куда можно дойти» - an experiment): the player's part (on a wall the one
+// part next to it), a part's cells flat - what the minimap leaves lit
+TEST(walk_grid_the_players_part_and_its_cells) {
+    const walkgrid::Grid t = tower();  // a wall down x 5: the floors x 0-4 and x 6-9
+    CHECK_EQ(int(walkgrid::partOf(t, 2, 3)), 0);
+    CHECK_EQ(int(walkgrid::partOf(t, 8, 3)), 1);
+    CHECK_EQ(int(walkgrid::partOf(t, 5, 3)), int(walkgrid::kWall));  // on the wall between both: not known
+    std::vector<uint8_t> cells(100, 1);
+    for (int y = 0; y < 10; ++y) cells[size_t(y * 10 + 5)] = cells[size_t(y * 10 + 9)] = 0;
+    const walkgrid::Grid edge = walkgrid::fromCells(10, 10, cells);
+    CHECK_EQ(int(walkgrid::partOf(edge, 9, 3)), int(edge.at(8, 3)));  // on the edge's wall: the one floor by it
+    CHECK_EQ(int(walkgrid::partOf(edge, -4, 3)), int(walkgrid::kWall));
+    const std::vector<uint8_t> mask = walkgrid::partMask(t, 0);
+    CHECK_EQ(mask.size(), size_t(100));
+    CHECK(mask[size_t(3 * 10 + 2)] == 1 && mask[size_t(3 * 10 + 8)] == 0 && mask[size_t(3 * 10 + 5)] == 0);
+    CHECK_EQ(std::count(mask.begin(), mask.end(), uint8_t(1)), 50);
+    CHECK(walkgrid::partMask(t, walkgrid::kWall).empty());
+}
+
 TEST(reference_route_walks_the_floors_by_the_stairs) {
     const auto ix = index();
     const refroute::Route r = refroute::find(*ix, "town", -1, -1, "cave", true);

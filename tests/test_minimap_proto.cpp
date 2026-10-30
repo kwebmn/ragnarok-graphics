@@ -89,6 +89,35 @@ TEST(minimap_proto_paints_the_map_round_the_player) {
     CHECK((arrow & 0xFF) > 0xC0 && ((arrow >> 16) & 0xFF) < 0xA0);
 }
 
+// 3.0.11-beta.65 (the concept's «Подсветка, куда можно дойти» - an experiment, [interface] minimap_reach): the cells
+// not reached on foot from the player dimmed on the map's picture, those reached as they are
+TEST(minimap_proto_dims_what_cannot_be_reached) {
+    const std::vector<uint32_t> argb(64 * 64, 0xFFE0E0E0);  // a light map
+    minimap::Scene sc;
+    sc.argb = &argb;
+    sc.imgW = sc.imgH = 64;
+    sc.map = minimap::MapSize{40, 40};
+    std::vector<uint8_t> reach(40 * 40, 0);
+    for (int y = 0; y < 40; ++y)
+        for (int x = 0; x < 20; ++x) reach[size_t(y * 40 + x)] = 1;  // the west half reached
+    const minimap::Big b = minimap::bigLayout(1920, 1080, 1.0f, sc.map);
+    panel::Picture plain, dimmed;
+    minimap::paintBigMap(plain, b, sc);
+    sc.reach = &reach;
+    minimap::paintBigMap(dimmed, b, sc);
+    const auto at = [&](const panel::Picture& p, float fx, float fy) {
+        return p.px[size_t(float(p.height) * fy) * size_t(p.width) + size_t(float(p.width) * fx)];
+    };
+    CHECK_EQ(at(dimmed, 0.25f, 0.5f), at(plain, 0.25f, 0.5f));  // the west: as it was
+    const uint32_t east = at(dimmed, 0.75f, 0.5f), was = at(plain, 0.75f, 0.5f);
+    CHECK((east >> 24) == 0xFF && ((east >> 16) & 0xFF) < ((was >> 16) & 0xFF) / 2 + 8);  // the east: dimmed
+    CHECK(((east >> 16) & 0xFF) > 0x30);  // still seen
+    std::vector<uint8_t> wrong(7, 1);  // a mask of another map's size: none
+    sc.reach = &wrong;
+    minimap::paintBigMap(dimmed, b, sc);
+    CHECK(dimmed.px == plain.px);
+}
+
 TEST(minimap_proto_ctrl_tab_goes_round_as_the_games) {
     // 3.0.11-beta.4 (the owner: «на Ctrl+Tab ничего не происходит»): the game's own round - opaque, see-through, hidden
     CHECK(minimap::next(minimap::Look::Opaque) == minimap::Look::Faded);

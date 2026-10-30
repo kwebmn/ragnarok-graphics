@@ -550,6 +550,9 @@ struct Config {
     // 3.0.11-beta.33: [interface] minimap_way - the way followed drawn on the ground (win/ground_way): as footprints
     // (the owner: «такими типа следами типа шажков»), as the strip of 3.0.11-beta.31, or not
     WayOnGround minimapWay = WayOnGround::Steps;
+    // 3.0.11-beta.65: [interface] minimap_reach - the concept's «Подсветка, куда можно дойти», an experiment (off): the
+    // minimap and its big map dim what the player cannot reach on foot (walkgrid parts)
+    bool minimapReach = false;
     // 3.0.11-beta.35: [interface] buffs - stage 7 of the new interface (the HUD, the buffs first; the owner's approved
     // column, the row a choice): the game's own status icons hidden, the driver's under the minimap (core/buff_panel)
     BuffsLook buffs = BuffsLook::Off;

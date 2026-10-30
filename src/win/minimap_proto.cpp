@@ -21,6 +21,7 @@
 #include "core/route_follow.hpp"
 #include "core/settings/strings.hpp"
 #include "core/ui_style.hpp"
+#include "core/walk_grid.hpp"
 #include "core/walk_path.hpp"
 #include "pad/win/game_window.hpp"
 #include "win/game_camera.hpp"
@@ -113,6 +114,12 @@ struct State {
     // 3.0.11-beta.57 (R-T942DZ: in Prontera 108 paintings in 30 s, 183 on prt_fild08 - each step and each degree
     // the camera turned): painted again at most each kPaintEveryMs, what changed meanwhile in the one after
     ULONGLONG paintedAt = 0, bigPaintedAt = 0;
+    // 3.0.11-beta.65 (the concept's «Подсветка, куда можно дойти», an experiment): the cells reached on foot from the
+    // player - their part of the map (walkgrid), made again when the player is in another part or on another map
+    std::vector<uint8_t> reach;
+    std::string reachMap;
+    uint8_t reachPart = walkgrid::kWall;
+    int reachLogged = 0;
 };
 
 constexpr ULONGLONG kPaintEveryMs = 33;
@@ -393,6 +400,45 @@ bool readLook(float& east, float& north) {
     return true;
 }
 
+// 3.0.11-beta.65 (the concept's «Подсветка, куда можно дойти» - an experiment, [interface] minimap_reach): the cells
+// of the player's part of the map (walkgrid - the server's own .gat, parts joined across no wall) left lit, the rest
+// dimmed; made again only when the player is in another part (a teleport, a warp, a map) - a step changes nothing.
+// None while the player's cell is not known, the map not in walkable.bin, or the cell on a wall between two parts
+void reachFrame(State& s, bool on) {
+    uint8_t part = walkgrid::kWall;
+    const walkgrid::Grid* grid = nullptr;
+    if (on && s.cellKnown && s.index && s.index->walk) {
+        const auto it = s.index->walk->find(s.map);
+        if (it != s.index->walk->end() && it->second.w == s.size.w && it->second.h == s.size.h) {
+            grid = &it->second;
+            part = walkgrid::partOf(*grid, s.cell.x, s.cell.y);
+        }
+    }
+    if (part == walkgrid::kWall) {
+        // on a wall a moment (the game's cell a step behind the server's): the part kept on the same map
+        if (on && grid && s.reachMap == s.map && !s.reach.empty()) return;
+        if (!s.reach.empty()) {
+            s.reach.clear();
+            s.dirty = s.bigDirty = true;
+        }
+        s.reachMap.clear();
+        s.reachPart = walkgrid::kWall;
+        return;
+    }
+    if (s.reachMap == s.map && s.reachPart == part && !s.reach.empty()) return;
+    const ULONGLONG t0 = GetTickCount64();
+    s.reach = walkgrid::partMask(*grid, part);
+    s.reachMap = s.map;
+    s.reachPart = part;
+    s.dirty = s.bigDirty = true;
+    if (s.reachLogged++ < 20) {
+        const size_t lit = size_t(std::count(s.reach.begin(), s.reach.end(), uint8_t(1)));
+        LOG_INFO("minimap: where one can walk on %s from %d, %d - part %d of %d, %zu of %dx%d cells (%llu ms)",
+                 s.map.c_str(), s.cell.x, s.cell.y, int(part), grid->partCount, lit, grid->w, grid->h,
+                 static_cast<unsigned long long>(GetTickCount64() - t0));
+    }
+}
+
 minimap::Scene sceneOf(const State& s) {
     minimap::Scene sc;
     sc.argb = &s.argb;
@@ -412,6 +458,7 @@ minimap::Scene sceneOf(const State& s) {
     sc.hoverMark = s.hover;
     sc.hover = s.part;
     sc.bigHover = s.bigPart;
+    if (!s.reach.empty()) sc.reach = &s.reach;  // 3.0.11-beta.65
     return sc;  // see-through (Ctrl+Tab) with its words: render() fades the whole picture
 }
 
@@ -452,7 +499,7 @@ void renderBig(State& s) {
     const uicost::Paint cost("big map", s.bigLayout.w, s.bigLayout.h);  // 3.0.11-beta.55 (beta.57: its size known)
     s.bigPaintedAt = GetTickCount64();
     const std::string key = s.map + "|" + std::to_string(s.bigLayout.w) + "x" + std::to_string(s.bigLayout.h) + "|" +
-                            std::to_string(s.picW);
+                            std::to_string(s.picW) + "|" + std::to_string(s.reach.empty() ? -1 : int(s.reachPart));
     if (key != s.bigMapOf) {  // the map's picture at its size: made once
         s.bigMapOf = key;
         minimap::paintBigMap(s.bigMap, s.bigLayout, sc);
@@ -624,6 +671,7 @@ void frame(HWND game, const Show& show, double k, int targetWidth, int targetHei
         s.dirty = s.bigDirty = true;
     }
     followFrame(s);
+    reachFrame(s, show.reach);  // 3.0.11-beta.65
     // the part and the mark under the game's cursor: a button lit, a mark naming itself
     int cx = 0, cy = 0, hover = -1;
     minimap::Part part = minimap::Part::None;

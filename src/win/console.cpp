@@ -165,6 +165,8 @@ void Console::build(Lang lang, const Config& config) {
                 if (settingOf(k)) rows_.push_back(Row{Kind::Box, k, 0});  // 3.0.11-beta.6: its hints
             if (settingOf("interface.minimap_way"))  // 3.0.11-beta.33: the way on the ground
                 rows_.push_back(Row{Kind::Choice, "interface.minimap_way", 1});
+            if (settingOf("interface.minimap_reach"))  // 3.0.11-beta.65: where one can walk, an experiment
+                rows_.push_back(Row{Kind::Box, "interface.minimap_reach", 0});
             if (settingOf("interface.buffs"))  // 3.0.11-beta.35: the buffs' column
                 rows_.push_back(Row{Kind::Choice, "interface.buffs", 0});
             if (settingOf("interface.buffs_overflow"))  // 3.0.11-beta.63: what it does not hold

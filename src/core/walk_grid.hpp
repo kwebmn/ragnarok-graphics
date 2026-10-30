@@ -28,6 +28,12 @@ struct Grid {
 };
 using Grids = std::unordered_map<std::string, Grid>;
 
+// 3.0.11-beta.65 (the concept's «Подсветка, куда можно дойти» - an experiment): the part a player's cell is in; on a
+// wall (the game's cell a step behind the server's) the one part within 3 cells of it; kWall none or two that near
+uint8_t partOf(const Grid& g, int x, int y);
+// A part's cells flat, row by row from y 0: 1 its own (reached on foot from each other), 0 the rest; empty for kWall
+std::vector<uint8_t> partMask(const Grid& g, uint8_t part);
+
 // The file's bytes (gzip of the payload walk_grids.py describes, or the payload) into the maps; false when it is
 // not one
 bool read(const std::string& file, Grids& out);

@@ -21,6 +21,7 @@ namespace uagfx::win::minimapproto {
 struct Show {
     bool on = false, npcs = true, warps = true, mobs = true;
     WayOnGround way = WayOnGround::Steps;  // 3.0.11-beta.33: [interface] minimap_way - the way on the ground
+    bool reach = false;  // 3.0.11-beta.65: [interface] minimap_reach - what cannot be reached on foot dimmed
 };
 void frame(HWND game, const Show& show, double k, int targetWidth, int targetHeight);
 // 3.0.11-beta.35: its panel's box in the target while it shows (the buffs' column stands under it); false: not shown
