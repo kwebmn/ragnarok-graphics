@@ -734,7 +734,7 @@ void frame(HWND game, bool on, bool ownBars, unsigned codePage, double k, int ta
     show.hoverEdit = s.hoverEdit;
     tellStates(s, waitingWas);
     std::string key = std::to_string(int(s.mode)) + ';' + std::to_string(s.row) + ';' + std::to_string(scale) + ';' +
-                      std::to_string(s.layout.x) + ',' + std::to_string(s.layout.y) + ';' + std::to_string(show.hover) +
+                      std::to_string(s.layout.w) + 'x' + std::to_string(s.layout.h) + ';' + std::to_string(show.hover) +
                       ',' + std::to_string(show.pressed) + (show.tip ? "t" : "") + (s.hoverEdit ? "e" : "") + ';';
     for (size_t i = 0; i < s.cells.size(); ++i) {
         const hb::Cell& c = s.cells[i];

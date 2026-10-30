@@ -309,7 +309,7 @@ void frame(HWND game, bool on, double k, int targetWidth, int targetHeight) {
         s.layout = tc::layout(s.data, t, targetWidth / 2, s.layout.y, scale, hover);
     }
     s.hoverBook = hoverBook;
-    const std::string key = std::to_string(cls) + ';' + std::to_string(s.layout.x) + ',' + std::to_string(s.layout.y) +
+    const std::string key = std::to_string(cls) + ';' + std::to_string(s.layout.w) + 'x' + std::to_string(s.layout.h) +
                             ';' + std::to_string(scale) + ';' + (hover ? "h" : "") + (hoverBook ? "b" : "") +
                             (s.data.picture ? "p" : "");
     if (const std::string drawn = key + '#' + std::to_string(uistyle::generation()); drawn != s.key) {  // its grounds

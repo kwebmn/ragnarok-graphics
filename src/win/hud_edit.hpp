@@ -26,6 +26,7 @@ float sizeOf(hudlayout::Part part);
 void place(hudlayout::Part part, float k, int targetW, int targetH, int w, int h, int& x, int& y);
 // Changes when the part's place or size does (a part that lays out only when it paints paints again)
 int stampOf(hudlayout::Part part);
+bool movedOf(hudlayout::Part part);  // 3.0.11-beta.79: put elsewhere by the player
 void setLocked(bool locked);  // [interface] lock_layout, each frame
 
 bool on();

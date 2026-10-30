@@ -610,8 +610,8 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     s.show.scroll = std::min(s.show.scroll, mostScroll(s));
     const cp::Input& in = s.input;
     const bool caret = !quiet && in.caretOn && (in.whisperFocus || (in.typing && !in.text.empty()));
-    std::string key = std::to_string(s.version) + ';' + s.rowsKey + ';' + std::to_string(s.layout.x) + ',' +
-                      std::to_string(s.layout.y) + ';' + std::to_string(scale) + ';' + (quiet ? "q" : "") +
+    std::string key = std::to_string(s.version) + ';' + s.rowsKey + ';' + std::to_string(s.layout.w) + 'x' +
+                      std::to_string(s.layout.h) + ';' + std::to_string(scale) + ';' + (quiet ? "q" : "") +
                       std::to_string(s.show.scroll) + ';' + std::to_string(s.show.hoverTab) + ',' +
                       std::to_string(s.show.hoverLine) + (s.show.hoverMode ? "m" : "") +
                       (s.show.hoverClear ? "c" : "") + (s.show.hoverNewer ? "n" : "") + ';';

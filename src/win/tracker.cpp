@@ -215,9 +215,11 @@ void frame(HWND game, bool on, double k, int targetWidth, int targetHeight) {
         hover = tk::hitTest(s.layout, float(cx) * float(k) - float(s.layout.x),
                             float(cy) * float(k) - float(s.layout.y));
     s.hover = hover;
-    std::string key = std::to_string(s.layout.x) + ',' + std::to_string(s.layout.y) + ',' + std::to_string(s.layout.h) +
-                      ';' + std::to_string(s.scale) + ';' + std::to_string(int(hover.part)) + ',' +
-                      std::to_string(hover.entry) + ';' + (s.folded ? "f" : "") + '#' +
+    // 3.0.11-beta.79 (the owner: «когда тяну мышкой интерфейс то окошко скачет сильно»): its place not in it - a
+    // picture is drawn where it stands each frame, a move alone paints nothing again
+    std::string key = std::to_string(s.layout.w) + 'x' + std::to_string(s.layout.h) + ';' + std::to_string(s.scale) +
+                      ';' + std::to_string(int(hover.part)) + ',' + std::to_string(hover.entry) + ';' +
+                      (s.folded ? "f" : "") + '#' +
                       std::to_string(uistyle::generation()) + ';';
     for (const tk::Entry& e : s.entries) {
         key += e.title + '|' + e.tag + '|';

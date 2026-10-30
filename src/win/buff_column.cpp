@@ -472,8 +472,7 @@ void frame(HWND game, BuffsLook look, BuffsOverflow overflow, double k, int targ
     if (hover != s.hover) s.hoverSince = now;
     s.hover = hover;
     s.tip = hover >= 0 && now - s.hoverSince >= kTipMs ? hover : -1;
-    std::string shape = std::to_string(int(panelLook)) + ';' + std::to_string(s.layout.x) + ',' +
-                        std::to_string(s.layout.y) + ',' + std::to_string(s.layout.w) + 'x' +
+    std::string shape = std::to_string(int(panelLook)) + ';' + std::to_string(s.layout.w) + 'x' +
                         std::to_string(s.layout.h) + ';' + std::to_string(hover) + ',' + std::to_string(s.tip) + ';' +
                         std::to_string(scale) + ';' +
                         std::to_string(uistyle::generation()) + ';';  // 3.0.11-beta.47: its ground's opacity

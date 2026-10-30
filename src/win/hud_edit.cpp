@@ -127,6 +127,30 @@ hudlayout::Box solidOf(const State& s, int i) {
 }
 bool inside(const hudlayout::Box& b, int x, int y) { return x >= b.x && y >= b.y && x < b.x + b.w && y < b.y + b.h; }
 
+// 3.0.11-beta.79 (the owner: «когда тяну мышкой интерфейс то окошко скачет сильно»): a part standing by another by
+// default (not moved by the player) goes with it - the one dragged is neither snapped to it nor kept clear of it (it
+// moved with it each frame and pulled it on): the buffs under the minimap, the tracker by the buffs (else the minimap),
+// the party under the character block, the hotbar past the chat
+int leaderOf(const State& s, int part) {
+    switch (Part(part)) {
+        case Part::Buffs: return int(Part::Minimap);
+        case Part::Tracker: return shownNow(s, int(Part::Buffs)) ? int(Part::Buffs) : int(Part::Minimap);
+        case Part::Party: return int(Part::Character);
+        case Part::Hotbar: return int(Part::Chat);
+        default: return -1;
+    }
+}
+
+bool follows(const State& s, int part, int leader) {
+    for (int p = part, steps = 0; p >= 0 && steps < 4; ++steps) {
+        if (s.layout[size_t(p)].moved) return false;
+        const int next = leaderOf(s, p);
+        if (next == leader) return true;
+        p = next;
+    }
+    return false;
+}
+
 int partAt(const State& s, int x, int y, bool liveOnly) {
     for (const bool live : {true, false})
         for (const Part p : kOnTop) {
@@ -200,7 +224,7 @@ void drop(State& s, const char* what) {
     if (i < 0) return;
     std::vector<hudlayout::Box> others;
     for (int j = 0; j < kParts; ++j)
-        if (j != i && shownNow(s, j)) others.push_back(solidOf(s, j));
+        if (j != i && shownNow(s, j) && !follows(s, j, i)) others.push_back(solidOf(s, j));
     const hudlayout::Box clear = hudlayout::clearOf(s.dropAt, others, s.targetW, s.targetH,
                                                     int(std::lround(4 * s.k)));
     hudlayout::Place& p = s.layout[size_t(i)];
@@ -227,13 +251,15 @@ void startDrag(State& s, int part, int x, int y, bool straight) {
 }
 
 // The dragged part follows the pointer, snapped to the screen and the other parts
-void follow(State& s, int cx, int cy, float scale) {
+void follow(State& s, int cx, int cy) {
     const hudlayout::Box was = solidOf(s, s.drag);
     std::vector<hudlayout::Box> others;
     for (int i = 0; i < kParts; ++i)
-        if (i != s.drag && (shownNow(s, i) || s.on) && known(s, i)) others.push_back(solidOf(s, i));
+        if (i != s.drag && (shownNow(s, i) || s.on) && known(s, i) && !follows(s, i, s.drag))
+            others.push_back(solidOf(s, i));
+    // 3.0.11-beta.79: 6 of the game's pixels (it was 10 of the parts' scaled ones - 23 on a 4K screen, a jump)
     const hudlayout::Snapped at = hudlayout::snap(hudlayout::Box{cx - s.grabX, cy - s.grabY, was.w, was.h}, others,
-                                                  s.targetW, s.targetH, int(std::lround(10 * scale)));
+                                                  s.targetW, s.targetH, std::max(2, int(std::lround(6 * s.k))));
     s.guideX = at.guideX;
     s.guideY = at.guideY;
     s.dropAt = hudlayout::Box{at.x, at.y, was.w, was.h};
@@ -304,6 +330,12 @@ void place(Part part, float k, int targetW, int targetH, int w, int h, int& x, i
 }
 
 int stampOf(Part part) { return int(part) < kParts ? state().stamps[size_t(part)] : 0; }
+
+bool movedOf(Part part) {
+    State& s = state();
+    readLayout(s);
+    return int(part) < kParts && s.layout[size_t(part)].moved;
+}
 
 void setLocked(bool locked) {
     State& s = state();
@@ -377,7 +409,7 @@ void frame(HWND game, double k, int targetW, int targetH) {
         save(s, Part(s.sizing), "sized");
         s.sizing = -1;
     }
-    if (s.drag >= 0 && pointer) follow(s, cx, cy, scale);
+    if (s.drag >= 0 && pointer) follow(s, cx, cy);
     if (s.sizing >= 0 && pointer) resize(s, cx, cy);
     // the grip at the corner of the part under the pointer
     s.gripPart = -1;

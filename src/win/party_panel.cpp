@@ -10,6 +10,7 @@
 #include <variant>
 #include <vector>
 
+#include "core/layout.hpp"
 #include "core/party_panel.hpp"
 #include "core/settings/strings.hpp"
 #include "core/ui_style.hpp"
@@ -19,6 +20,7 @@
 #include "win/game_camera.hpp"
 #include "win/hud_edit.hpp"
 #include "win/log.hpp"
+#include "win/paths.hpp"
 #include "win/picture_draw.hpp"
 #include "win/real_ddraw.hpp"
 #include "win/ui_cost.hpp"
@@ -53,6 +55,8 @@ struct State {
     int texW = 0, texH = 0;
     bool upload = false;
     int told = 0;
+    // 3.0.11-beta.79 (the owner: «плашка с пати её надо иметь возможность сворачивать»): folded to its header, kept
+    bool folded = false, stateRead = false;
 };
 
 State& state() {
@@ -66,6 +70,19 @@ uint32_t read32(uint32_t at) {
 }
 
 uint32_t own() { return read32(kOwnAccount); }
+
+void readState(State& s) {
+    if (s.stateRead) return;
+    s.stateRead = true;
+    std::string text;
+    if (readTextFile(layout::join(gameDir(), layout::kPartyState), text))
+        s.folded = text.find("folded 1") != std::string::npos;
+}
+
+void keepState(const State& s) {
+    writeFileAtomic(layout::join(gameDir(), layout::kPartyState),
+                    std::string("folded ") + (s.folded ? "1" : "0") + "\n");
+}
 
 void take(State& s, uint32_t account, const std::string& name, const std::string& map, bool leader, bool online) {
     if (!s.seats.count(account)) s.order.push_back(account);
@@ -91,8 +108,9 @@ void render(State& s) {
     const uicost::Paint cost("party", s.layout.w, s.layout.h);  // 3.0.11-beta.55
     if (!panel::blank(s.picture, s.layout.w, s.layout.h)) return;  // 3.0.11-beta.57: in the memory it had
     pp::paint(s.picture, s.layout, s.members, kLow);
-    drawWords(s.picture, gdiWords(pp::words(s.layout, s.members, kLow,
-                                            settings::tr(startup().lang, settings::Text::PartyOffline))));
+    const settings::Lang lang = startup().lang;
+    drawWords(s.picture, gdiWords(pp::words(s.layout, s.members, kLow, settings::tr(lang, settings::Text::PartyOffline),
+                                            settings::tr(lang, settings::Text::PartyTitle))));
     s.upload = true;
 }
 
@@ -176,6 +194,7 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
         hide(s);
         return;
     }
+    readState(s);
     const std::string here = readGameMap();
     s.members.clear();
     for (const uint32_t account : s.order) {
@@ -195,10 +214,11 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     s.scale = scale;
     s.targetW = targetWidth;
     s.targetH = targetHeight;
-    s.layout = pp::layout(s.members.size(), int(std::lround(10 * scale)), topOf(k, scale), scale);
+    s.layout = pp::layout(s.members.size(), int(std::lround(10 * scale)), topOf(k, scale), scale, s.folded);
     hudedit::place(hudlayout::Part::Party, float(k), targetWidth, targetHeight, s.layout.w, s.layout.h, s.layout.x,
                    s.layout.y);  // 3.0.11-beta.75: where the player put it
-    std::string key = std::to_string(s.layout.x) + ',' + std::to_string(s.layout.y) + ';' + std::to_string(scale) + ';';
+    std::string key = std::to_string(s.layout.w) + 'x' + std::to_string(s.layout.h) + ';' + std::to_string(scale) +
+                      (s.folded ? ";f;" : ";;");
     for (const pp::Member& m : s.members)
         key += m.name + '|' + m.where + '|' + (m.leader ? "L" : "") + (m.online ? "" : "o") +
                std::to_string(m.percent) + ';';
@@ -233,7 +253,12 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     const float tx = float(p.x) * float(s.targetW) / float(client.right) - float(s.layout.x);
     const float ty = float(p.y) * float(s.targetH) / float(client.bottom) - float(s.layout.y);
     if (!s.layout.glass.contains(tx, ty)) return false;
-    result = 0;  // nothing of its own to do yet: the click is not the world's
+    result = 0;  // the click is not the world's
+    if ((m == WM_LBUTTONDOWN || m == WM_LBUTTONDBLCLK) && pp::hitTest(s.layout, tx, ty).part == pp::Part::Fold) {
+        s.folded = !s.folded;  // 3.0.11-beta.79: ▾ folds it to its header, ▸ opens it
+        keepState(s);
+        LOG_INFO("party: its panel %s", s.folded ? "folded" : "opened");
+    }
     return true;
 }
 

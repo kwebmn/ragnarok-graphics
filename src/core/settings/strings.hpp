@@ -475,6 +475,7 @@ enum class Text : uint16_t {
     HudEditUnseen,
     InterfaceLockLayout, InterfaceLockLayoutHint,  // 3.0.11-beta.77
     InterfaceHotbarOwn, InterfaceHotbarOwnHint, HotbarUnlearned,  // 3.0.11-beta.78
+    PartyTitle,  // 3.0.11-beta.79
     InterfaceMinimapWay, InterfaceMinimapWayHint,
     InterfaceMinimapWaySteps, InterfaceMinimapWayLine, InterfaceMinimapWayOff, InterfaceBuffs, InterfaceBuffsHint,
     InterfaceBuffsOff, InterfaceBuffsColumn, InterfaceBuffsRow, BuffsNames, BuffsHideNames, BuffsMore, BuffsStar,

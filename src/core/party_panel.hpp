@@ -29,8 +29,18 @@ struct Layout {
     int x = 0, y = 0, w = 0, h = 0;  // the picture in the target
     panel::Box glass;
     std::vector<Row> rows;
+    // 3.0.11-beta.79 (the owner: «плашка с пати её надо иметь возможность сворачивать»): its header - «Група», the
+    // members online of all, the fold (▾ / ▸); folded: the header alone
+    panel::Box header, title, count, fold;
+    bool folded = false;
 };
-Layout layout(size_t members, int left, int top, float scale);
+Layout layout(size_t members, int left, int top, float scale, bool folded = false);
+enum class Part : uint8_t { None, Fold, Header, Row };
+struct Hit {
+    Part part = Part::None;
+    int row = -1;
+};
+Hit hitTest(const Layout& L, float x, float y);  // the picture's pixels
 
 void paint(panel::Picture& out, const Layout& L, const std::vector<Member>& members, int threshold);
 
@@ -44,6 +54,6 @@ struct Words {
     Align align = Align::Left;
 };
 std::vector<Words> words(const Layout& L, const std::vector<Member>& members, int threshold,
-                         const std::string& offline);
+                         const std::string& offline, const std::string& title = "");
 
 }  // namespace uagfx::partypanel

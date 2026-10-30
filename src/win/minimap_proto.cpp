@@ -56,7 +56,7 @@ struct Line {  // a monster under the map: its name, its count (a boss's respawn
 struct State {
     bool on = false, shown = false, dirty = true, upload = true;
     int style = -1;  // 3.0.11-beta.47: core/ui_style's generation painted
-    int placed = 0;  // 3.0.11-beta.75: win/hud_edit's stamp laid out
+    bool placedMoved = false;  // 3.0.11-beta.79: moved by the player when last laid out
     minimap::Look look = minimap::Look::Opaque;  // 3.0.11-beta.4: Ctrl+Tab's round
     bool hidOld = false;      // the game's own window 14 deleted by us (the game makes it again on a new map)
     bool hideFailed = false;  // told once a map
@@ -821,10 +821,11 @@ void frame(HWND game, const Show& show, double k, int targetWidth, int targetHei
     }
     // 3.0.11-beta.75: its size in «Розміщення інтерфейсу»; a new place lays it out again
     const float scale = uistyle::partScale(k) * hudedit::sizeOf(hudlayout::Part::Minimap);
-    if (const int placed = hudedit::stampOf(hudlayout::Part::Minimap); placed != s.placed) {
-        s.placed = placed;
+    // 3.0.11-beta.79 (the owner: «окошко скачет сильно»): moved, it is drawn where it stands without painting again;
+    // put back to its own place, laid out again
+    if (const bool moved = hudedit::movedOf(hudlayout::Part::Minimap); moved != s.placedMoved) {
+        s.placedMoved = moved;
         s.dirty = true;
-        s.paintedAt = 0;
     }
     if (float(k) != s.k || scale != s.scale || targetWidth != s.targetW || targetHeight != s.targetH) {
         s.k = float(k);
