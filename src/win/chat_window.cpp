@@ -15,6 +15,7 @@
 #include "core/chat_panel.hpp"
 #include "core/hotbar_panel.hpp"
 #include "core/settings/strings.hpp"
+#include "core/ui_style.hpp"
 #include "pad/win/game_window.hpp"
 #include "win/client_tables.hpp"
 #include "win/code_page.hpp"
@@ -615,8 +616,8 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     for (int u : s.show.unread) key += std::to_string(u) + ',';
     key += ';' + in.text + '|' + std::to_string(in.caret) + '|' + in.whisper + '|' + std::to_string(in.mode) +
            (in.whisperFocus ? "f" : "") + (in.battle ? "b" : "") + (in.typing ? "t" : "") + (caret ? "|" : "");
-    if (key != s.key) {
-        s.key = key;
+    if (const std::string drawn = key + '#' + std::to_string(uistyle::generation()); drawn != s.key) {  // its grounds
+        s.key = drawn;
         render(s);
     }
     s.shown = true;

@@ -4,6 +4,8 @@
 #include <cmath>
 #include <cstdio>
 
+#include "core/ui_style.hpp"
+
 namespace uagfx::charblock {
 namespace {
 
@@ -276,7 +278,7 @@ void paint(panel::Picture& out, const Layout& L, const Data& d, const Texts& t, 
         ring(out, L.cx, L.cy, L.spR, L.spW, part(d.sp, d.spMost), kSp, 1.0f);
         if (low) ring(out, L.cx, L.cy, L.hpR + 3 * s, 2 * s, 1, kHpLow, 0.45f);  // its glow
     } else {
-        panel::roundRect(out, L.block, kRadius * s, kCard, 0.86f, kWhite, 0.09f, 1.0f * s);
+        panel::roundRect(out, L.block, kRadius * s, kCard, uistyle::panel(), kWhite, 0.09f, 1.0f * s);
         if (L.view == View::Full) corners(out, L.block, s);
         bar(out, L.hpBar, part(d.hp, d.hpMost), hpRgb);
         bar(out, L.spBar, part(d.sp, d.spMost), kSp);

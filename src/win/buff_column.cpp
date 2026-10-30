@@ -18,6 +18,7 @@
 #include "core/layout.hpp"
 #include "core/pack_source.hpp"
 #include "core/settings/strings.hpp"
+#include "core/ui_style.hpp"
 #include "pad/win/game_window.hpp"
 #include "win/buff_overlay.hpp"
 #include "win/game_camera.hpp"
@@ -414,7 +415,8 @@ void frame(HWND game, BuffsLook look, double k, int targetWidth, int targetHeigh
     s.hover = hover;
     std::string shape = std::to_string(int(panelLook)) + ';' + std::to_string(s.layout.x) + ',' +
                         std::to_string(s.layout.y) + ',' + std::to_string(s.layout.w) + 'x' +
-                        std::to_string(s.layout.h) + ';' + std::to_string(hover) + ';' + std::to_string(scale) + ';';
+                        std::to_string(s.layout.h) + ';' + std::to_string(hover) + ';' + std::to_string(scale) + ';' +
+                        std::to_string(uistyle::generation()) + ';';  // 3.0.11-beta.47: its ground's opacity
     std::string fill;
     for (const bp::Entry& e : s.entries) {
         shape += std::to_string(e.icon) + ':' + std::to_string(int(e.kind)) + (e.picture ? "p" : "") + ',';

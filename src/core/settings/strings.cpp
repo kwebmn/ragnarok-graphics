@@ -5021,6 +5021,21 @@ constexpr Entry kTexts[] = {
      "Новый интерфейс немного двигается: карточка цели появляется и исчезает плавно, блок персонажа плавно меняет "
      "вид, на новом уровне его край вспыхивает золотом, предупреждение о малом HP выезжает сверху. Выключено — всё "
      "сразу."},
+    // 3.0.11-beta.47: the new interface's grounds
+    {Text::InterfacePanelOpacity, "Panels' opacity", "Непрозорість панелей", "Непрозрачность панелей"},
+    {Text::InterfacePanelOpacityHint,
+     "The ground of the character block, the minimap's bar, the buffs, the party, the target's card, the hotbar and "
+     "the chat (the chat never under 80 %). Less: the world shows through them more; the words and icons stay whole.",
+     "Підкладка блоку персонажа, смуги мінікарти, бафів, групи, картки цілі, панелі навичок і чату (чат — не менше "
+     "80 %). Менше — світ видно крізь них більше; слова й іконки лишаються цілими.",
+     "Подложка блока персонажа, полосы миникарты, баффов, группы, карточки цели, панели навыков и чата (чат — не "
+     "меньше 80 %). Меньше — мир виден сквозь них больше; слова и иконки остаются целыми."},
+    {Text::InterfaceWindowOpacity, "Windows' opacity", "Непрозорість вікон", "Непрозрачность окон"},
+    {Text::InterfaceWindowOpacityHint,
+     "The ground of the windows «Items», «Status» and «Reference»; at least 80 %, so that their tables and lists read "
+     "well.",
+     "Підкладка вікон «Речі», «Характеристики» і «Довідник»; не менше 80 %, щоб таблиці й списки читалися.",
+     "Подложка окон «Вещи», «Характеристики» и «Справочник»; не меньше 80 %, чтобы таблицы и списки читались."},
     // 3.0.11-beta.41: the chat (stage 8 of the new interface)
     {Text::InterfaceChat, "Chat", "Чат", "Чат"},
     {Text::InterfaceChatHint,

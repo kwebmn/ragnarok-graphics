@@ -16,6 +16,7 @@
 #include "core/item_window.hpp"
 #include "core/layout.hpp"
 #include "core/settings/strings.hpp"
+#include "core/ui_style.hpp"
 #include "pad/win/game_window.hpp"
 #include "win/client_tables.hpp"
 #include "win/code_page.hpp"
@@ -423,8 +424,8 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     for (const iw::Item& it : s.items)
         key += std::to_string(it.index) + ':' + std::to_string(it.id) + 'x' + std::to_string(it.count) + '+' +
                std::to_string(it.refine) + (it.identified ? "" : "?") + (it.icon ? "i" : "") + ',';
-    if (key != s.key) {
-        s.key = key;
+    if (const std::string drawn = key + '#' + std::to_string(uistyle::generation()); drawn != s.key) {  // its grounds
+        s.key = drawn;
         render(s);
     }
     s.shown = true;

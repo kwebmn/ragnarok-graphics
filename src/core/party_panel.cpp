@@ -4,6 +4,7 @@
 #include <cmath>
 
 #include "core/ui_icons.hpp"
+#include "core/ui_style.hpp"
 
 namespace uagfx::partypanel {
 namespace {
@@ -47,7 +48,7 @@ Layout layout(size_t members, int left, int top, float scale) {
 void paint(panel::Picture& out, const Layout& L, const std::vector<Member>& members, int threshold) {
     const float s = L.s;
     if (L.rows.empty()) return;
-    panel::roundRect(out, L.glass, 10 * s, kCard, 0.86f, kWhite, 0.09f, 1.0f * s);
+    panel::roundRect(out, L.glass, 10 * s, kCard, uistyle::panel(), kWhite, 0.09f, 1.0f * s);
     for (size_t i = 0; i < L.rows.size() && i < members.size(); ++i) {
         const Row& r = L.rows[i];
         const Member& m = members[i];

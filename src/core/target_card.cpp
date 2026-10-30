@@ -5,6 +5,7 @@
 
 #include "core/reference_pages.hpp"
 #include "core/ui_icons.hpp"
+#include "core/ui_style.hpp"
 
 namespace uagfx::targetcard {
 namespace {
@@ -122,7 +123,7 @@ Part hitTest(const Layout& L, float x, float y) {
 
 void paint(panel::Picture& out, const Layout& L, const Data& d, bool hoverBook) {
     const float s = L.s;
-    panel::roundRect(out, L.card, 10 * s, kCard, 0.88f, kWhite, 0.09f, 1.0f * s);
+    panel::roundRect(out, L.card, 10 * s, kCard, uistyle::panel(), kWhite, 0.09f, 1.0f * s);
     corners(out, L.card, s);
     const panel::Box& r = L.round;
     panel::circle(out, r.x + r.w / 2, r.y + r.h / 2, r.w / 2, kTile, 1.0f);

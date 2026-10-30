@@ -18,6 +18,7 @@
 #include "core/reference_window.hpp"
 #include "core/settings/strings.hpp"
 #include "core/sprite_file.hpp"
+#include "core/ui_style.hpp"
 #include "pad/win/game_window.hpp"
 #include "win/game_camera.hpp"
 #include "win/game_files.hpp"
@@ -49,6 +50,7 @@ struct Entry {  // a page left for another: what «Назад» brings back
 
 struct State {
     bool enabled = false, open = false, shown = false, dirty = true, upload = true, wantPage = true;
+    int style = -1;  // 3.0.11-beta.47: core/ui_style's generation painted
     WPARAM skipChar = 0;  // the character of the key that opened or closed it: neither typed nor the game's
     std::string query;    // typed (ASCII: the names are English)
     refpages::Link at;    // the page: Go::None - the search's (the first screen when nothing is typed)
@@ -806,6 +808,10 @@ void frame(HWND game, bool enabled, double k, int targetWidth, int targetHeight)
             if (s.page.rows[j].icon == r.icon)
                 if (const Rect a = refwin::rowArea(s.layout, s.page, s.rows, s.scroll, int(j)); !a.empty())
                     s.hot.push_back(a);
+    }
+    if (s.style != uistyle::generation()) {  // 3.0.11-beta.47: its ground another opacity
+        s.style = uistyle::generation();
+        s.dirty = true;
     }
     if (s.dirty)
         render(s);

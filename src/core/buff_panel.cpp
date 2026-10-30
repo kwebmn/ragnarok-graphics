@@ -3,6 +3,8 @@
 #include <algorithm>
 #include <cmath>
 
+#include "core/ui_style.hpp"
+
 namespace uagfx::buffpanel {
 namespace {
 
@@ -322,8 +324,8 @@ panel::Box tipBox(const Layout& L, int slot, float width) {
 
 void paint(panel::Picture& out, const Layout& L, const std::vector<Entry>& entries, int hover) {
     const float s = L.s;
-    if (L.toggle.w > 0) panel::roundRect(out, L.toggle, 8 * s, kCard, 0.86f, kWhite, 0.09f, 1.0f * s);
-    panel::roundRect(out, L.body, kRadius * s, kCard, 0.86f, kWhite, 0.09f, 1.0f * s);
+    if (L.toggle.w > 0) panel::roundRect(out, L.toggle, 8 * s, kCard, uistyle::panel(), kWhite, 0.09f, 1.0f * s);
+    panel::roundRect(out, L.body, kRadius * s, kCard, uistyle::panel(), kWhite, 0.09f, 1.0f * s);
     for (const panel::Box& b : L.seps) panel::roundRect(out, b, 0, kWhite, 0.15f);
     if (L.more.w > 0) panel::roundRect(out, L.more, 7 * s, kWhite, 0.08f);
     for (size_t i = 0; i < L.slots.size(); ++i) {

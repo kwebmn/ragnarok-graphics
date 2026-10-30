@@ -475,7 +475,10 @@ enum class Text : uint16_t {
     HotbarNoSp, HotbarNotHere, HotbarNoTeleport, HotbarNoReturn, HotbarNoWarp, HotbarNoBranch, HotbarNoIceWall,
     HotbarNoCall, HotbarNoSkills, HotbarGuildWar, HotbarOnlyGuildWar,
     // 3.0.11-beta.46: the new interface's motion
-    InterfaceAnimations, InterfaceAnimationsHint, InterfaceChat, InterfaceChatHint, ChatTabAll,
+    InterfaceAnimations, InterfaceAnimationsHint,
+    // 3.0.11-beta.47: the new interface's grounds
+    InterfacePanelOpacity, InterfacePanelOpacityHint, InterfaceWindowOpacity, InterfaceWindowOpacityHint,
+    InterfaceChat, InterfaceChatHint, ChatTabAll,
     ChatTabParty,
     ChatTabGuild, ChatTabWhisper, ChatTabTrade, ChatTabBattle, ChatFrom, ChatTo, ChatHintSend, ChatHintType,
     ChatKilled, ChatPicked, ChatMiss, InterfaceItems, InterfaceItemsHint, InterfaceStatus, InterfaceStatusHint,

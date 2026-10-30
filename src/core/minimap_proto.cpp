@@ -5,6 +5,7 @@
 #include <cmath>
 
 #include "core/ui_icons.hpp"
+#include "core/ui_style.hpp"
 
 namespace uagfx::minimap {
 namespace {
@@ -384,14 +385,14 @@ void paint(panel::Picture& out, const Layout& L, const Scene& sc, const Texts& t
         uiicons::draw(out, buttons[i].second, b.x + (b.w - 14 * s) / 2, b.y + (b.h - 14 * s) / 2, 14 * s, kWhite,
                       1.0f, 2.6f);
     }
-    panel::roundRect(out, L.caption, 8 * s, kCard, 0.92f, kWhite, 0.12f, edge);  // the bar: name, cell, ▾
+    panel::roundRect(out, L.caption, 8 * s, kCard, uistyle::panel(), kWhite, 0.12f, edge);  // the bar: name, cell, ▾
     if (sc.hover == Part::Fold) panel::roundRect(out, L.fold, 6 * s, kWhite, 0.10f);
     if (L.route.w > 0) {  // the way's bar: gold-tinted, its ×
-        panel::roundRect(out, L.route, 8 * s, kCard, 0.92f);
+        panel::roundRect(out, L.route, 8 * s, kCard, uistyle::panel());
         panel::roundRect(out, L.route, 8 * s, kAccent, 0.16f, kAccent, 0.55f, edge);
         if (sc.hover == Part::Stop) panel::roundRect(out, L.stop, 5 * s, kWhite, 0.12f);
     }
-    if (L.list.w > 0) panel::roundRect(out, L.list, 8 * s, kCard, 0.88f, kWhite, 0.10f, edge);
+    if (L.list.w > 0) panel::roundRect(out, L.list, 8 * s, kCard, uistyle::panel(), kWhite, 0.10f, edge);
     (void)t;
     if (sc.opacity < 1) panel::fade(out, sc.opacity);  // Ctrl+Tab's see-through
 }

@@ -14,6 +14,7 @@
 #include "core/settings/strings.hpp"
 #include "core/target_card.hpp"
 #include "core/ui_motion.hpp"
+#include "core/ui_style.hpp"
 #include "pad/win/game_window.hpp"
 #include "win/game_camera.hpp"
 #include "win/log.hpp"
@@ -300,8 +301,8 @@ void frame(HWND game, bool on, double k, int targetWidth, int targetHeight) {
     const std::string key = std::to_string(cls) + ';' + std::to_string(s.layout.x) + ',' + std::to_string(s.layout.y) +
                             ';' + std::to_string(scale) + ';' + (hover ? "h" : "") + (hoverBook ? "b" : "") +
                             (s.data.picture ? "p" : "");
-    if (key != s.key) {
-        s.key = key;
+    if (const std::string drawn = key + '#' + std::to_string(uistyle::generation()); drawn != s.key) {  // its grounds
+        s.key = drawn;
         render(s);
     }
     if (!s.shown) s.shownAt = now;

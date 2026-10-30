@@ -510,6 +510,12 @@ Config parseConfig(const std::string& text) {
             setBool(val, c.statusWindow);
         } else if (key == "interface.animations") {  // 3.0.11-beta.46: the new interface's motion
             setBool(val, c.animations);
+        } else if (key == "interface.panel_opacity" || key == "interface.window_opacity") {  // 3.0.11-beta.47
+            int n = 0;
+            if (toInt(val, -100000, 100000, n)) {
+                if (key == "interface.panel_opacity") c.hudOpacity = std::clamp(n, 50, 100);
+                else c.windowOpacity = std::clamp(n, 80, 100);
+            }
         } else if (key == "interface.chat") {  // 3.0.11-beta.41: the chat
             chatSet = val == "0" || val == "1" || val == "on" || val == "off" || val == "true" || val == "false";
             setBool(val, c.chat);

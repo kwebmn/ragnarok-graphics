@@ -4,6 +4,7 @@
 #include <cmath>
 
 #include "core/ui_icons.hpp"
+#include "core/ui_style.hpp"
 
 namespace uagfx::chatpanel {
 namespace {
@@ -364,7 +365,7 @@ std::string fieldText(const Layout& L, const Input& in, const Measure& m, float&
 void paint(panel::Picture& out, const Layout& L, const std::vector<Row>& rows, const Input& in, const Show& sh,
            const Texts& t, const Measure& m) {
     const float s = L.s;
-    panel::roundRect(out, L.glass, 10 * s, kCard, L.quiet ? 0.55f : 0.86f, kWhite, 0.09f, 1.0f * s);
+    panel::roundRect(out, L.glass, 10 * s, kCard, L.quiet ? 0.55f : uistyle::chat(), kWhite, 0.09f, 1.0f * s);
     if (!L.quiet) {
         for (size_t i = 0; i < L.tabs.size(); ++i) {
             const panel::Box& b = L.tabs[i];

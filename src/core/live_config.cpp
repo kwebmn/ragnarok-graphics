@@ -199,6 +199,16 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("status", flag(running.statusWindow), flag(file.statusWindow)));
         n.statusWindow = file.statusWindow;
     }
+    if (file.hudOpacity != running.hudOpacity) {  // 3.0.11-beta.47: the new interface's grounds, at once
+        u.applied.push_back(
+            change("panel_opacity", std::to_string(running.hudOpacity), std::to_string(file.hudOpacity)));
+        n.hudOpacity = file.hudOpacity;
+    }
+    if (file.windowOpacity != running.windowOpacity) {
+        u.applied.push_back(
+            change("window_opacity", std::to_string(running.windowOpacity), std::to_string(file.windowOpacity)));
+        n.windowOpacity = file.windowOpacity;
+    }
     if (file.animations != running.animations) {  // 3.0.11-beta.46: the new interface's motion, at once
         u.applied.push_back(change("animations", flag(running.animations), flag(file.animations)));
         n.animations = file.animations;

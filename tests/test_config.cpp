@@ -1025,3 +1025,21 @@ TEST(config_reads_the_animations) {
     CHECK(appliesNow("interface.animations"));
     CHECK(!liveUpdate(parseConfig(""), parseConfig("[interface]\nanimations = 0\n")).next.animations);
 }
+
+// 3.0.11-beta.47 (the concept's «Непрозрачность»): [interface] panel_opacity 50-100 (80), window_opacity 80-100 (90)
+TEST(config_reads_the_opacities) {
+    const Config d = parseConfig("");
+    CHECK(d.hudOpacity == 80 && d.windowOpacity == 90);
+    const Config c = parseConfig("[interface]\npanel_opacity = 65\nwindow_opacity = 95\n");
+    CHECK(c.hudOpacity == 65 && c.windowOpacity == 95);
+    const Config low = parseConfig("[interface]\npanel_opacity = 10\nwindow_opacity = 40\n");
+    CHECK(low.hudOpacity == 50 && low.windowOpacity == 80);
+    for (const char* key : {"interface.panel_opacity", "interface.window_opacity"}) {
+        const settings::IniSetting* s = settings::findSetting(key);
+        CHECK(s != nullptr);
+        if (!s) continue;
+        CHECK(s->page == settings::Page::Interface && s->control == settings::Control::Slider);
+        CHECK(appliesNow(key));
+    }
+    CHECK(liveUpdate(d, c).next.hudOpacity == 65 && liveUpdate(d, c).next.windowOpacity == 95);
+}

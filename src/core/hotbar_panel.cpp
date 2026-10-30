@@ -5,6 +5,7 @@
 
 #include "core/settings/strings.hpp"
 #include "core/ui_icons.hpp"
+#include "core/ui_style.hpp"
 
 namespace uagfx::hotbar {
 namespace {
@@ -174,7 +175,7 @@ Hit hitTest(const Layout& L, float x, float y) {
 
 void paint(panel::Picture& out, const Layout& L, const std::vector<Cell>& cells, const Show& show, const Texts& t) {
     const float s = L.s;
-    panel::roundRect(out, L.glass, 10 * s, kCard, 0.86f, kWhite, 0.09f, 1.0f * s);
+    panel::roundRect(out, L.glass, 10 * s, kCard, uistyle::panel(), kWhite, 0.09f, 1.0f * s);
     if (L.header.w > 0) {  // the battle mode's chip
         const float chipW = panel::wordsWidth(t.battle, 12 * s, true) + 18 * s;
         panel::roundRect(out, panel::Box{L.header.x, L.header.y, chipW, L.header.h}, L.header.h / 2, kRed, 0.9f);

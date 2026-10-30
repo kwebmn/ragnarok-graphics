@@ -571,6 +571,9 @@ struct Config {
     // 3.0.11-beta.46: [interface] animations - the new interface's motion (core/ui_motion): the target's card, the
     // character block's views, a new level's flare, the low HP warning sliding in; 0: all at once
     bool animations = true;
+    // 3.0.11-beta.47: [interface] panel_opacity and window_opacity - the new interface's grounds (core/ui_style): the
+    // HUD's panels 50-100 % (80), the windows 80-100 % (90)
+    int hudOpacity = 80, windowOpacity = 90;
     // 3.0.11-beta.7: [interface] reference - «Довідник» (win/reference_window): Ctrl+F in the game
     bool referenceWindow = false;
     PanelLayout panelLayout = PanelLayout::Row;

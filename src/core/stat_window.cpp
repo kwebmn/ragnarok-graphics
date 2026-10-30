@@ -4,6 +4,8 @@
 #include <cmath>
 #include <cstdio>
 
+#include "core/ui_style.hpp"
+
 namespace uagfx::statwin {
 namespace {
 
@@ -133,7 +135,7 @@ Hit hitTest(const Layout& L, float x, float y) {
 
 void paint(panel::Picture& out, const Layout& L, const Data& d, const Show& sh) {
     const float s = L.s;
-    panel::roundRect(out, L.glass, 12 * s, kCard, 0.9f, kWhite, 0.09f, 1.0f * s);
+    panel::roundRect(out, L.glass, 12 * s, kCard, uistyle::window(), kWhite, 0.09f, 1.0f * s);
     if (sh.hoverClose) panel::roundRect(out, L.close, 7 * s, kWhite, 0.12f);
     if (d.free > 0) panel::roundRect(out, L.freeChip, 6 * s, kGold, 0.18f, kGold, 0.5f, 1.0f * s);
     panel::roundRect(out, panel::Box{L.header.x, L.header.y + L.header.h - 1 * s, L.header.w, 1 * s}, 0, kWhite,

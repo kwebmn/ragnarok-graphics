@@ -181,6 +181,8 @@ void Console::build(Lang lang, const Config& config) {
                 if (settingOf(key)) rows_.push_back(Row{Kind::Box, key, 0});
             if (settingOf("interface.animations"))  // 3.0.11-beta.46: the new interface's motion
                 rows_.push_back(Row{Kind::Box, "interface.animations", 0});
+            for (const char* key : {"interface.panel_opacity", "interface.window_opacity"})  // 3.0.11-beta.47
+                if (settingOf(key)) rows_.push_back(Row{Kind::Slider, key, 0});
         }
         // 3.0.3-beta.8: the game windows' panel (the user: on or off in the console too)
         if (settingOf("panel.show")) {

@@ -16,6 +16,7 @@
 #include "core/pack_source.hpp"
 #include "core/settings/strings.hpp"
 #include "core/skill_costs.hpp"
+#include "core/ui_style.hpp"
 #include "pad/win/client_bar.hpp"
 #include "pad/win/game_window.hpp"
 #include "win/chat_window.hpp"
@@ -568,8 +569,8 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
         if (int(i) == show.hover && show.tip)  // its tip's numbers
             key += std::to_string(c.spNeed) + '/' + std::to_string(c.spHave) + ';';
     }
-    if (key != s.key) {
-        s.key = key;
+    if (const std::string drawn = key + '#' + std::to_string(uistyle::generation()); drawn != s.key) {  // its grounds
+        s.key = drawn;
         render(s, show);
     }
     s.shown = true;

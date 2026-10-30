@@ -4,6 +4,7 @@
 #include <cmath>
 
 #include "core/ui_icons.hpp"
+#include "core/ui_style.hpp"
 
 namespace uagfx::itemwin {
 namespace {
@@ -207,7 +208,7 @@ Hit hitTest(const Layout& L, size_t shownCount, int scroll, float x, float y) {
 void paint(panel::Picture& out, const Layout& L, const std::vector<Item>& items, const std::vector<int>& shown,
            const Show& sh, const Texts& t, const Measure& m) {
     const float s = L.s;
-    panel::roundRect(out, L.glass, 12 * s, kCard, 0.9f, kWhite, 0.09f, 1.0f * s);
+    panel::roundRect(out, L.glass, 12 * s, kCard, uistyle::window(), kWhite, 0.09f, 1.0f * s);
     if (sh.hoverClose) panel::roundRect(out, L.close, 7 * s, kWhite, 0.12f);
     panel::roundRect(out, panel::Box{L.tabsRow.x, L.tabsRow.y + L.tabsRow.h - 1 * s, L.tabsRow.w, 1 * s}, 0, kWhite,
                      0.08f);

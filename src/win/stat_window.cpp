@@ -13,6 +13,7 @@
 #include "core/layout.hpp"
 #include "core/settings/strings.hpp"
 #include "core/stat_window.hpp"
+#include "core/ui_style.hpp"
 #include "pad/win/game_window.hpp"
 #include "win/game_camera.hpp"
 #include "win/log.hpp"
@@ -271,8 +272,8 @@ void frame(HWND game, bool on, double k, int targetWidth, int targetHeight) {
     const int battle[] = {d.atk, d.atk2, d.matkMin, d.matkMax, d.hit, d.crit, d.def, d.def2, d.mdef, d.mdef2, d.flee,
                           d.flee2, d.aspd};
     for (int v : battle) key += std::to_string(v) + ',';
-    if (key != s.key) {
-        s.key = key;
+    if (const std::string drawn = key + '#' + std::to_string(uistyle::generation()); drawn != s.key) {  // its grounds
+        s.key = drawn;
         render(s);
     }
     s.shown = true;

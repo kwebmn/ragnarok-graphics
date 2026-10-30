@@ -16,6 +16,7 @@
 #include "core/settings/strings.hpp"
 #include "core/sprite_file.hpp"
 #include "core/ui_motion.hpp"
+#include "core/ui_style.hpp"
 #include "pad/win/game_window.hpp"
 #include "win/game_camera.hpp"
 #include "win/game_files.hpp"
@@ -388,8 +389,8 @@ void frame(HWND game, CharacterLook look, double k, int targetWidth, int targetH
         std::to_string(int(d.jobExp * 1000)) + ';' + std::to_string(d.weight) + ';' + std::to_string(d.zeny) + ';' +
         std::to_string(d.statusPoints) + ';' + s.portraitKey + (d.portrait ? "p" : "") + ';' +
         std::to_string(show.hoverButton) + (show.hoverBlock ? "h" : "") + (show.warning ? "w" : "");
-    if (key != s.key) {
-        s.key = key;
+    if (const std::string drawn = key + '#' + std::to_string(uistyle::generation()); drawn != s.key) {  // its grounds
+        s.key = drawn;
         render(s);
     }
     if (show.warning) renderWarning(s);

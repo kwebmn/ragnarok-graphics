@@ -5,6 +5,7 @@
 #include <cstdlib>
 
 #include "core/ui_icons.hpp"
+#include "core/ui_style.hpp"
 
 namespace uagfx::refwin {
 namespace {
@@ -28,7 +29,7 @@ constexpr float kMarkA = 0.28f;
 // The concept's colours: the window's glass (--card), white over it (--cell .06, --line .09, --line2 .15, the tiles
 // .04, the blocks .035), the gold (--accent) of the picked (--sel .16) and its ring (.55)
 constexpr uint32_t kCard = 0x10141C, kWhite = 0xFFFFFF, kBlack = 0x000000;
-constexpr float kCardA = 0.90f, kCellA = 0.06f, kLineA = 0.09f, kLine2A = 0.15f, kTileA = 0.04f, kBlockA = 0.035f;
+constexpr float kCellA = 0.06f, kLineA = 0.09f, kLine2A = 0.15f, kTileA = 0.04f, kBlockA = 0.035f;
 constexpr float kSelA = 0.16f, kRingA = 0.55f;
 constexpr uint32_t kPackDot = 0x9AA3B5, kLiveDot = 0x3CCF7C, kOffDot = 0x5D6475;  // the bottom's chips' dots
 constexpr uint32_t kRoute = 0x5AC8FA, kBadge = 0x0D1016;  // the minimap's way colour; the players' badge
@@ -1085,7 +1086,8 @@ void shapes(panel::Picture& out, const Layout& L, const refpages::Page& p, const
     const float s = L.s, edge = std::max(1.0f, s);
     const Chrome& c = look.chrome;
     // 3.0.11-beta.26: the concept's dark glass, its line around
-    panel::roundRect(out, panel::Box{0, 0, float(L.w), float(L.h)}, kRadius * s, kCard, kCardA, kWhite, kLineA, edge);
+    const panel::Box ground{0, 0, float(L.w), float(L.h)};
+    panel::roundRect(out, ground, kRadius * s, kCard, uistyle::window(), kWhite, kLineA, edge);
     chromeShapes(out, L, look);
     if (!c.rail.empty()) {  // the rail: its line at its right, its sections (the page's lit), «Усе»'s line
         fill(out, panel::Box{c.railW - edge, float(L.bodyY), edge, float(L.bodyH)}, kWhite, kLineA);

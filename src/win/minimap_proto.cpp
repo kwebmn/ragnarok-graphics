@@ -20,6 +20,7 @@
 #include "core/reference_pages.hpp"
 #include "core/route_follow.hpp"
 #include "core/settings/strings.hpp"
+#include "core/ui_style.hpp"
 #include "core/walk_path.hpp"
 #include "pad/win/game_window.hpp"
 #include "win/game_camera.hpp"
@@ -50,6 +51,7 @@ struct Line {  // a monster under the map: its name, its count (a boss's respawn
 
 struct State {
     bool on = false, shown = false, dirty = true, upload = true;
+    int style = -1;  // 3.0.11-beta.47: core/ui_style's generation painted
     minimap::Look look = minimap::Look::Opaque;  // 3.0.11-beta.4: Ctrl+Tab's round
     bool hidOld = false;      // the game's own window 14 deleted by us (the game makes it again on a new map)
     bool hideFailed = false;  // told once a map
@@ -633,6 +635,10 @@ void frame(HWND game, const Show& show, double k, int targetWidth, int targetHei
     if (hover != s.hover || part != s.part) {
         s.hover = hover;
         s.part = part;
+        s.dirty = true;
+    }
+    if (s.style != uistyle::generation()) {  // 3.0.11-beta.47: its bar's ground another opacity
+        s.style = uistyle::generation();
         s.dirty = true;
     }
     if (s.dirty) render(s);

@@ -116,6 +116,11 @@ const std::vector<IniSetting>& iniSettings() {
          Text::InterfaceItemsHint, ""},
         {"interface", "status", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::InterfaceStatus,
          Text::InterfaceStatusHint, ""},
+        // 3.0.11-beta.47: the new interface's grounds
+        {"interface", "panel_opacity", Page::Interface, Control::Slider, 50, 100, 5, {}, {},
+         Text::InterfacePanelOpacity, Text::InterfacePanelOpacityHint, " %"},
+        {"interface", "window_opacity", Page::Interface, Control::Slider, 80, 100, 5, {}, {},
+         Text::InterfaceWindowOpacity, Text::InterfaceWindowOpacityHint, " %"},
         // 3.0.11-beta.46: the new interface's motion
         {"interface", "animations", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::InterfaceAnimations,
          Text::InterfaceAnimationsHint, ""},
@@ -921,6 +926,8 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "interface.items") return c.itemsWindow ? "1" : "0";              // 3.0.11-beta.42
     if (k == "interface.status") return c.statusWindow ? "1" : "0";
     if (k == "interface.animations") return c.animations ? "1" : "0";  // 3.0.11-beta.46
+    if (k == "interface.panel_opacity") return std::to_string(c.hudOpacity);  // 3.0.11-beta.47
+    if (k == "interface.window_opacity") return std::to_string(c.windowOpacity);
     if (k == "interface.reference") return c.referenceWindow ? "1" : "0";  // 3.0.11-beta.7
     if (k == "windows.start_count") return std::to_string(c.windowStartCount);  // 3.0.4-beta.4
     if (k == "camera.indoor") return c.cameraIndoor ? "1" : "0";                // 3.0.4-beta.5
