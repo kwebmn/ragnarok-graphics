@@ -199,6 +199,10 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("status", flag(running.statusWindow), flag(file.statusWindow)));
         n.statusWindow = file.statusWindow;
     }
+    if (file.dimWorld != running.dimWorld) {  // 3.0.11-beta.49: the world dimmed under the windows, at once
+        u.applied.push_back(change("dim_world", flag(running.dimWorld), flag(file.dimWorld)));
+        n.dimWorld = file.dimWorld;
+    }
     if (file.castLabel != running.castLabel) {  // 3.0.11-beta.48: the cast's label, at once
         u.applied.push_back(change("cast", flag(running.castLabel), flag(file.castLabel)));
         n.castLabel = file.castLabel;

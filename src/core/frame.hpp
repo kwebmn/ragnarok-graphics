@@ -117,6 +117,8 @@ public:
     void moveLastBefore(size_t count, size_t position);
     // 3.0.4-beta.5: the photo mode - the interface's draws (DrawSetup::ui) out of the commands; how many went
     size_t dropInterface();
+    // 3.0.11-beta.49: the first interface draw's place among the commands (the world's end), commands().size() none
+    size_t firstInterface() const;
     // 3.0.3-beta.8: the draws, clears and writes since the last call, through flushes (reset keeps it): whether the
     // game drew a picture anew - the windows' panel goes over such a one alone (the target keeps its pixels)
     uint32_t takeWork() {

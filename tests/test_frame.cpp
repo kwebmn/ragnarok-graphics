@@ -287,3 +287,28 @@ TEST(frame_drops_the_interface) {
     CHECK_EQ(draws, size_t(2));
     CHECK_EQ(f.dropInterface(), size_t(0));
 }
+
+// 3.0.11-beta.49: where the world ends - the first interface draw's place (the world dimmed under the windows goes
+// there)
+TEST(frame_finds_the_interface) {
+    FrameRecord f;
+    uint8_t v[4 * 32] = {};
+    DrawSetup world, ui;
+    ui.ui = true;
+    DrawCmd d;
+    d.primitive = d3d7::PT_TRIANGLESTRIP;
+    d.fvf = d3d7::FVF_TL1;
+    CHECK_EQ(f.firstInterface(), size_t(0));  // nothing: its end
+    f.clear(ClearCmd{d3d7::CLEAR_TARGET, 0xFF000000, 1.0f, Rect{0, 0, 4, 4}});
+    d.state = f.addState(world);
+    f.draw(d, v, 4, nullptr, 0);
+    CHECK_EQ(f.firstInterface(), size_t(2));  // the world alone
+    d.state = f.addState(ui);
+    f.draw(d, v, 4, nullptr, 0);
+    d.state = f.addState(world);
+    f.draw(d, v, 4, nullptr, 0);
+    CHECK_EQ(f.firstInterface(), size_t(2));
+    f.draw(d, v, 4, nullptr, 0);  // one more drawn last, moved there: before the interface
+    f.moveLastBefore(1, f.firstInterface());
+    CHECK(!f.states()[f.draws()[f.commands()[2].index].state].ui && f.firstInterface() == 3);
+}

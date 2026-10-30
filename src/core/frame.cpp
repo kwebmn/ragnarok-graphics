@@ -96,6 +96,12 @@ size_t FrameRecord::dropInterface() {
     return before - commands_.size();
 }
 
+size_t FrameRecord::firstInterface() const {
+    for (size_t i = 0; i < commands_.size(); ++i)
+        if (commands_[i].type == Cmd::Draw && states_[draws_[commands_[i].index].state].ui) return i;
+    return commands_.size();
+}
+
 void FrameRecord::reset() {
     commands_.clear();
     clears_.clear();

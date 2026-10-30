@@ -25,6 +25,7 @@
 #include "win/picture_draw.hpp"
 #include "win/real_ddraw.hpp"
 #include "win/updates_hook.hpp"
+#include "win/world_dim.hpp"
 
 namespace uagfx::win::charpanel {
 namespace {
@@ -80,6 +81,7 @@ struct State {
     Layer before, warning, flare;
     ULONGLONG changedAt = 0, warnAt = 0, levelAt = 0;
     int lastBase = 0, lastJob = 0;
+    cb::View shownView = cb::View::Full;  // 3.0.11-beta.49: compact while the windows are open
 };
 
 State& state() {
@@ -337,7 +339,19 @@ void frame(HWND game, CharacterLook look, double k, int targetWidth, int targetH
     s.targetW = targetWidth;
     s.targetH = targetHeight;
     const cb::Look panelLook = look == CharacterLook::Rings ? cb::Look::Rings : cb::Look::Bars;
-    s.layout = cb::layout(s.view, panelLook, int(std::lround(10 * scale)), int(std::lround(10 * scale)), scale);
+    // 3.0.11-beta.49 (the concept's open windows): the full block compact while the new windows are open
+    const cb::View view = s.view == cb::View::Full && worlddim::active() ? cb::View::Compact : s.view;
+    if (view != s.shownView) {
+        if (motion::on() && s.picture.width > 0) {  // the look before fades out, as after a click
+            s.before.picture = s.picture;
+            s.before.x = s.layout.x;
+            s.before.y = s.layout.y;
+            s.before.upload = true;
+            s.changedAt = GetTickCount64();
+        }
+        s.shownView = view;
+    }
+    s.layout = cb::layout(view, panelLook, int(std::lround(10 * scale)), int(std::lround(10 * scale)), scale);
     makePortrait(s, int(std::lround(s.layout.portrait.w * 0.86f)));
     cb::Data& d = s.data;
     d.name = readOwnName();
@@ -382,7 +396,7 @@ void frame(HWND game, CharacterLook look, double k, int targetWidth, int targetH
     }
     s.show = show;
     const std::string key =
-        std::to_string(int(s.view)) + ';' + std::to_string(int(panelLook)) + ';' + std::to_string(scale) + ';' +
+        std::to_string(int(view)) + ';' + std::to_string(int(panelLook)) + ';' + std::to_string(scale) + ';' +
         d.name + ';' + d.job + ';' + std::to_string(d.baseLevel) + ',' + std::to_string(d.jobLevel) + ';' +
         std::to_string(d.hp) + '/' + std::to_string(d.hpMost) + ',' + std::to_string(d.sp) + '/' +
         std::to_string(d.spMost) + ';' + std::to_string(int(d.baseExp * 1000)) + ',' +
@@ -461,6 +475,7 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
                 s.changedAt = GetTickCount64();
             }
             s.view = cb::nextView(s.view);
+            s.shownView = s.view == cb::View::Full && worlddim::active() ? cb::View::Compact : s.view;
             keepState(s);
             s.key.clear();
             LOG_INFO("character: the block %s", s.view == cb::View::Full      ? "full"

@@ -25,6 +25,7 @@
 #include "win/paths.hpp"
 #include "win/picture_draw.hpp"
 #include "win/real_ddraw.hpp"
+#include "win/window_shadow.hpp"
 
 namespace uagfx::win::itemswin {
 namespace {
@@ -60,6 +61,7 @@ using MakeFn = uint32_t(__attribute__((thiscall)) *)(uint32_t manager, int id);
 using DropFn = void(__attribute__((thiscall)) *)(uint32_t self, int x, int y, uint32_t drag);
 
 struct State {
+    WindowShadow shadow;  // 3.0.11-beta.49
     bool on = false, shown = false, hid = false, stateRead = false, skipChar = false;
     unsigned codePage = 0;
     float k = 0, scale = 1;
@@ -438,6 +440,9 @@ void draw(FrameRecord& record, gpu::Renderer& renderer) {
     int cursor = -1, cx = 0, cy = 0;  // under the game's own cursor, as the minimap
     const bool known = readGameCursor(cx, cy);
     if (known) cursor = panel::cursorDraw(record, float(cx), float(cy));
+    const panel::Box& g = s.layout.glass;  // 3.0.11-beta.49: its shadow under it
+    s.shadow.draw(record, renderer, s.layout.x + int(g.x), s.layout.y + int(g.y), int(g.w), int(g.h), 12 * s.scale,
+                  s.scale, s.k);
     drawPicture(record, renderer, s.picture, s.texture, s.texW, s.texH, s.upload, s.layout.x, s.layout.y, s.k);
     const panel::Picture* icon = s.dragging && s.press >= 0 && size_t(s.press) < s.items.size()
                                      ? s.items[size_t(s.press)].icon
@@ -641,5 +646,7 @@ bool key(UINT m, WPARAM wp, LPARAM lp) {
     }
     return m == WM_KEYUP || m == WM_CHAR || m == WM_DEADCHAR;
 }
+
+bool shown() { return state().shown; }
 
 }  // namespace uagfx::win::itemswin

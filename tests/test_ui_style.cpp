@@ -23,3 +23,16 @@ TEST(ui_style_opacities) {
     CHECK(std::fabs(uistyle::chat() - 0.95f) < 1e-6f);
     uistyle::set(uistyle::kPanelDefault, uistyle::kWindowDefault);
 }
+
+// 3.0.11-beta.49: a window's shadow - dark at its edge, fading out, none under the window
+TEST(ui_style_window_shadow) {
+    const panel::Picture p = uistyle::shadow(100, 60, 12, 16, 0.5f);
+    CHECK(p.width == 132 && p.height == 92);
+    const auto alpha = [&](int x, int y) { return int(p.px[size_t(y) * size_t(p.width) + size_t(x)] >> 24); };
+    CHECK(alpha(66, 46) == 0);                                    // under the window: none
+    CHECK(alpha(66, 15) > 100 && alpha(66, 15) <= 128);           // just over its top edge: about the half
+    CHECK(alpha(66, 8) > 0 && alpha(66, 8) < alpha(66, 15));      // fading out
+    CHECK(alpha(66, 0) == 0 && alpha(0, 0) == 0);                 // its spread's end, the corner's far side
+    CHECK((p.px[size_t(15) * size_t(p.width) + 66] & 0xFFFFFF) == 0u);  // black
+    CHECK(uistyle::shadow(0, 60, 12, 16, 0.5f).width == 0);
+}

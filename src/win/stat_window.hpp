@@ -18,5 +18,6 @@ namespace uagfx::win::statswin {
 void frame(HWND game, bool on, double k, int targetWidth, int targetHeight);
 void draw(FrameRecord& record, gpu::Renderer& renderer);
 bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result);
+bool shown();  // 3.0.11-beta.49: open on the screen now (the world dimmed under it)
 
 }  // namespace uagfx::win::statswin

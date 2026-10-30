@@ -30,6 +30,7 @@
 #include "win/real_ddraw.hpp"
 #include "win/reference_load.hpp"
 #include "win/updates_hook.hpp"
+#include "win/window_shadow.hpp"
 
 namespace uagfx::win::referencewin {
 namespace {
@@ -49,6 +50,7 @@ struct Entry {  // a page left for another: what «Назад» brings back
 };
 
 struct State {
+    WindowShadow shadow;  // 3.0.11-beta.49
     bool enabled = false, open = false, shown = false, dirty = true, upload = true, wantPage = true;
     int style = -1;  // 3.0.11-beta.47: core/ui_style's generation painted
     WPARAM skipChar = 0;  // the character of the key that opened or closed it: neither typed nor the game's
@@ -842,6 +844,8 @@ void draw(FrameRecord& record, gpu::Renderer& renderer) {
         s.upload = true;
     }
     s.parts.clear();
+    const float sc = s.layout.s;  // 3.0.11-beta.49: its shadow under it (its ground the whole picture)
+    s.shadow.draw(record, renderer, s.layout.x, s.layout.y, s.picture.width, s.picture.height, 10 * sc, sc, s.k);
     drawPicture(record, renderer, s.picture, s.texture, s.texW, s.texH, s.upload, s.layout.x, s.layout.y, s.k);
     if (cursor >= 0) record.moveLastBefore(record.commands().size() - size_t(cursor) - 1, size_t(cursor));
 }

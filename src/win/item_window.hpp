@@ -26,5 +26,6 @@ bool key(UINT m, WPARAM wp, LPARAM lp);  // its search's keys while it has them
 // A drag let go at the game's (x, y) over it: given to the game's own window (its drop takes from the storage, the
 // cart, the gear); false: not over it
 bool drop(int x, int y, uint32_t drag);
+bool shown();  // 3.0.11-beta.49: open on the screen now (the world dimmed under it)
 
 }  // namespace uagfx::win::itemswin

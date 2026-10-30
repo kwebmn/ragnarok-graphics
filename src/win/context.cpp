@@ -58,6 +58,7 @@
 #include "win/profiler.hpp"
 #include "win/real_ddraw.hpp"
 #include "win/window_mode.hpp"
+#include "win/world_dim.hpp"
 
 namespace uagfx::win {
 namespace {
@@ -536,6 +537,7 @@ void Context::endScene() {
     if (photo_) record.dropInterface();  // 3.0.4-beta.5: the photo mode - the world alone
     if (drawn && renderer && !photo_) buffoverlay::draw(record, *renderer);  // 3.0.4-beta.6: the buffs' times
     if (panelSlot_.endScene(drawn) && renderer && !photo_) {
+        worlddim::draw(record);                 // 3.0.11-beta.49: the world dimmed under the windows (where it ends)
         castwin::draw(record, *renderer);       // 3.0.11-beta.48: the cast over the hero, under the panels
         minimapproto::draw(record, *renderer);  // 3.0.11-beta.1: the new minimap (prototype)
         buffcolumn::draw(record, *renderer);    // 3.0.11-beta.35: the buffs' column under it
@@ -579,6 +581,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     const bool drawnAnew = record.takeWork() > 0;
     drawSparkles();  // 2.7.14: a frame with no interface draw
     if (panelSlot_.present(drawnAnew) && renderer && !photo_) {
+        worlddim::draw(record);                 // 3.0.11-beta.49
         castwin::draw(record, *renderer);       // 3.0.11-beta.48
         minimapproto::draw(record, *renderer);  // 3.0.11-beta.1
         buffcolumn::draw(record, *renderer);    // 3.0.11-beta.35
@@ -809,6 +812,9 @@ void Context::present(const Rect& source, bool waitForVblank) {
     chatwin::frame(window, config.chat, gameCodePage(config), scaleMade_ ? plan.k : 1.0,
                    scaleMade_ ? plan.targetWidth : shadow.width(),
                    scaleMade_ ? plan.targetHeight : shadow.height());
+    // 3.0.11-beta.49: [interface] dim_world - the world dimmed while the new windows are open
+    worlddim::frame(config.dimWorld, scaleMade_ ? plan.k : 1.0, scaleMade_ ? plan.targetWidth : shadow.width(),
+                    scaleMade_ ? plan.targetHeight : shadow.height());
     // 3.0.11-beta.48: [interface] cast - the character's cast over the hero, the game's own gauge hidden
     castwin::frame(window, config.castLabel, gameCodePage(config), scaleMade_ ? plan.k : 1.0,
                    scaleMade_ ? plan.targetWidth : shadow.width(),

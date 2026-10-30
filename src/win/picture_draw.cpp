@@ -134,6 +134,29 @@ void drawPicture(FrameRecord& record, gpu::Renderer& renderer, const panel::Pict
     record.draw(cmd, v, 6, nullptr, 0);
 }
 
+void drawShade(FrameRecord& record, int x, int y, int w, int h, float k, float alpha) {
+    if (w <= 0 || h <= 0 || alpha <= 0 || k <= 0) return;
+    DrawSetup s;  // the vertices' colour alone, premultiplied
+    s.ui = true;
+    s.blend = true;
+    s.srcBlend = d3d7::BLEND_ONE;
+    s.dstBlend = d3d7::BLEND_INVSRCALPHA;
+    s.stage[0].colorOp = s.stage[0].alphaOp = d3d7::TOP_SELECTARG1;
+    s.stage[0].colorArg1 = s.stage[0].alphaArg1 = d3d7::TA_DIFFUSE;
+    s.stage[1].colorOp = s.stage[1].alphaOp = d3d7::TOP_DISABLE;
+    DrawCmd cmd;
+    cmd.state = record.addState(s);
+    cmd.effect = uint8_t(effect_exe::Kind::Panel);  // at the target's pixels, as the pictures
+    cmd.primitive = d3d7::PT_TRIANGLELIST;
+    cmd.fvf = d3d7::FVF_TL1;
+    const float x0 = (float(x) - 0.5f) / k, y0 = (float(y) - 0.5f) / k;
+    const float x1 = (float(x + w) - 0.5f) / k, y1 = (float(y + h) - 0.5f) / k;
+    const uint32_t c = uint32_t(std::lround(std::clamp(alpha, 0.0f, 1.0f) * 255)) << 24;
+    const glint::Vertex v[6] = {{x0, y0, 0, 1, c, 0, 0, 0}, {x1, y0, 0, 1, c, 0, 1, 0}, {x0, y1, 0, 1, c, 0, 0, 1},
+                                {x1, y0, 0, 1, c, 0, 1, 0}, {x1, y1, 0, 1, c, 0, 1, 1}, {x0, y1, 0, 1, c, 0, 0, 1}};
+    record.draw(cmd, v, 6, nullptr, 0);
+}
+
 int wordsWidth(const std::wstring& text, float px, bool bold) {
     if (text.empty()) return 0;
     // 3.0.11-beta.28: the DC and each size's font kept (the search's marks measure their words on every paint)

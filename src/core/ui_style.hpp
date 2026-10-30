@@ -1,5 +1,7 @@
 #pragma once
 
+#include "core/window_panel.hpp"
+
 namespace uagfx::uistyle {
 
 // 3.0.11-beta.47 (the concept's «Непрозрачность»; the owner: «занимаемся доработками интерфейса»): how dense the new
@@ -14,5 +16,10 @@ float panel();   // 0.5..1
 float window();  // 0.8..1
 float chat();    // the panels', at least 0.8
 int generation();  // another number each time they change: the parts draw their pictures again
+
+// 3.0.11-beta.49 (the concept: «тень только у окон»): a window's shadow - dark at a rounded box's edge (`alpha`),
+// fading out `spread` away, none under the box itself (its glass stays as it is); the picture (w + 2 spread) x
+// (h + 2 spread), premultiplied, the box at (spread, spread)
+panel::Picture shadow(int w, int h, float radius, float spread, float alpha);
 
 }  // namespace uagfx::uistyle

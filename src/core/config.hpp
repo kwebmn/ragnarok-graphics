@@ -577,6 +577,8 @@ struct Config {
     // 3.0.11-beta.48: [interface] cast - the character's cast over the hero in the new look (core/cast_bar), the
     // game's own gauge hidden while it shows
     bool castLabel = false;
+    // 3.0.11-beta.49: [interface] dim_world - the world dimmed while the new windows are open (win/world_dim)
+    bool dimWorld = false;
     // 3.0.11-beta.7: [interface] reference - «Довідник» (win/reference_window): Ctrl+F in the game
     bool referenceWindow = false;
     PanelLayout panelLayout = PanelLayout::Row;

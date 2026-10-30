@@ -20,6 +20,7 @@
 #include "win/paths.hpp"
 #include "win/picture_draw.hpp"
 #include "win/real_ddraw.hpp"
+#include "win/window_shadow.hpp"
 
 namespace uagfx::win::statswin {
 namespace {
@@ -40,6 +41,7 @@ using SendMsgFn = int(__attribute__((thiscall)) *)(uint32_t self, uint32_t sende
 using ModeMsgFn = int(__attribute__((thiscall)) *)(uint32_t mode, int msg, int a, int b, int c);
 
 struct State {
+    WindowShadow shadow;  // 3.0.11-beta.49
     bool on = false, shown = false, hid = false, stateRead = false;
     float k = 0, scale = 1;
     int targetW = 0, targetH = 0;
@@ -285,9 +287,14 @@ void draw(FrameRecord& record, gpu::Renderer& renderer) {
     if (!s.shown || s.k <= 0 || s.picture.width <= 0 || s.picture.height <= 0) return;
     int cursor = -1, cx = 0, cy = 0;  // under the game's own cursor, as the minimap
     if (readGameCursor(cx, cy)) cursor = panel::cursorDraw(record, float(cx), float(cy));
+    const panel::Box& g = s.layout.glass;  // 3.0.11-beta.49: its shadow under it
+    s.shadow.draw(record, renderer, s.layout.x + int(g.x), s.layout.y + int(g.y), int(g.w), int(g.h), 12 * s.scale,
+                  s.scale, s.k);
     drawPicture(record, renderer, s.picture, s.texture, s.texW, s.texH, s.upload, s.layout.x, s.layout.y, s.k);
     if (cursor >= 0) record.moveLastBefore(record.commands().size() - size_t(cursor) - 1, size_t(cursor));
 }
+
+bool shown() { return state().shown; }
 
 bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     State& s = state();
