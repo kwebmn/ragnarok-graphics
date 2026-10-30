@@ -1,3 +1,15 @@
+# uaRO Graphics 3.0.11-beta.59 — what is new
+
+- **The safe mode now catches crashes in the first minutes too.** It used to come only when two starts in a row did not
+  get to the picture. Now a game that closed by an error within 5 minutes of its first picture counts the same — at the
+  login, at the character choice, at a map's loading: such a fault would repeat every time, and the player would just
+  leave. After two such starts in a row the next one runs on Direct3D 11 without effects, the neural network, DLSS and
+  the 64-bit renderer; the «Game» page says so and offers «Normal mode».
+- **A new version tries the normal mode again**: a safe mode turned on by an older version's faults goes by itself
+  after the update — its cause may be mended. If the faults come back, so does the safe mode.
+- To check: nothing to do; if the game crashes at its start, after two crashes the third start should run in the safe
+  mode.
+
 # uaRO Graphics 3.0.11-beta.58 — what is new
 
 - **The effects' autopilot.** The «Auto» effects set is now picked for your graphics card by how it really draws, not
