@@ -1,3 +1,16 @@
+# uaRO Graphics 3.0.11-beta.68 — what is new
+
+- **«Your bar»** (the concept: «Your bar: Fire Bolt ×2…»; your answer to question 9 — «a great idea, needed»). The
+  skills on your bar (all the game's 27 cells) against the monster's element:
+  - in a monster's card in «Reference», in «Damage by element», under the element chips:
+    «Your bar (element multiplier): Fire Bolt ×2 · Soul Strike ×1.75 · Storm Gust ×1.5 · Jupitel Thunder ×1»;
+  - in the target card's tip at the top: «Your bar: …» (the first three).
+- The skills' elements are the server's own (db/skill_db.txt), the multipliers its element table. It is the element's
+  effect, not a forecast of the damage. Skills without damage (Blessing) and with the weapon's element (Double Strafe)
+  are not shown; a skill that heals the monster says «heals it».
+- To check: put Fire Bolt and Cold Bolt on the bar, open Poring's card (water 1) — «Fire Bolt ×0.5 · Cold Bolt
+  ×0.25»; point at the target card in a fight.
+
 # uaRO Graphics 3.0.11-beta.67 — what is new
 
 - **«Text size»** — a new choice in the app's «Interface» section and in «The new interface» of the game's console
