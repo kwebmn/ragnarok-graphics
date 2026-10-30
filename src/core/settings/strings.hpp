@@ -481,7 +481,9 @@ enum class Text : uint16_t {
     // 3.0.11-beta.48: the cast's label over the hero
     InterfaceCast, InterfaceCastHint, CastSeconds,
     // 3.0.11-beta.49: the world dimmed under the windows
-    InterfaceDimWorld, InterfaceDimWorldHint, InterfaceChat, InterfaceChatHint, ChatTabAll,
+    InterfaceDimWorld, InterfaceDimWorldHint,
+    // 3.0.11-beta.50: the screen's edges red at low HP
+    InterfaceLowHpEdge, InterfaceLowHpEdgeHint, InterfaceChat, InterfaceChatHint, ChatTabAll,
     ChatTabParty,
     ChatTabGuild, ChatTabWhisper, ChatTabTrade, ChatTabBattle, ChatFrom, ChatTo, ChatHintSend, ChatHintType,
     ChatKilled, ChatPicked, ChatMiss, InterfaceItems, InterfaceItemsHint, InterfaceStatus, InterfaceStatusHint,

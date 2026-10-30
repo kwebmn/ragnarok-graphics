@@ -199,6 +199,11 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("status", flag(running.statusWindow), flag(file.statusWindow)));
         n.statusWindow = file.statusWindow;
     }
+    if (file.lowHpEdge != running.lowHpEdge) {  // 3.0.11-beta.50: the low HP edge, at once
+        u.applied.push_back(
+            change("low_hp_edge", std::to_string(running.lowHpEdge), std::to_string(file.lowHpEdge)));
+        n.lowHpEdge = file.lowHpEdge;
+    }
     if (file.dimWorld != running.dimWorld) {  // 3.0.11-beta.49: the world dimmed under the windows, at once
         u.applied.push_back(change("dim_world", flag(running.dimWorld), flag(file.dimWorld)));
         n.dimWorld = file.dimWorld;

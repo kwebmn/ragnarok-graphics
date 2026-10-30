@@ -5056,6 +5056,14 @@ constexpr Entry kTexts[] = {
      "лишаються як є), а блок персонажа стискається до компактного.",
      "Пока открыты «Вещи», «Характеристики» или «Справочник», мир за ними темнеет (окна игры, панели и подписи "
      "остаются как есть), а блок персонажа сжимается до компактного."},
+    // 3.0.11-beta.50: the screen's edges red at low HP
+    {Text::InterfaceLowHpEdge, "Red edges at low HP", "Червоні краї при малому HP", "Красные края при малом HP"},
+    {Text::InterfaceLowHpEdgeHint,
+     "While HP is under a quarter, the screen's edges glow red; how strongly, from 0 (none, as by default) to 100 %.",
+     "Поки HP менше чверті, краї екрана світяться червоним; наскільки сильно — від 0 (немає, як за замовчуванням) до "
+     "100 %.",
+     "Пока HP меньше четверти, края экрана светятся красным; насколько сильно — от 0 (нет, как по умолчанию) до "
+     "100 %."},
     // 3.0.11-beta.41: the chat (stage 8 of the new interface)
     {Text::InterfaceChat, "Chat", "Чат", "Чат"},
     {Text::InterfaceChatHint,

@@ -116,6 +116,9 @@ const std::vector<IniSetting>& iniSettings() {
          Text::InterfaceItemsHint, ""},
         {"interface", "status", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::InterfaceStatus,
          Text::InterfaceStatusHint, ""},
+        // 3.0.11-beta.50: the screen's edges red at low HP
+        {"interface", "low_hp_edge", Page::Interface, Control::Slider, 0, 100, 10, {}, {}, Text::InterfaceLowHpEdge,
+         Text::InterfaceLowHpEdgeHint, " %"},
         // 3.0.11-beta.49: the world dimmed under the windows
         {"interface", "dim_world", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::InterfaceDimWorld,
          Text::InterfaceDimWorldHint, ""},
@@ -935,6 +938,7 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "interface.panel_opacity") return std::to_string(c.hudOpacity);  // 3.0.11-beta.47
     if (k == "interface.cast") return c.castLabel ? "1" : "0";                 // 3.0.11-beta.48
     if (k == "interface.dim_world") return c.dimWorld ? "1" : "0";             // 3.0.11-beta.49
+    if (k == "interface.low_hp_edge") return std::to_string(c.lowHpEdge);      // 3.0.11-beta.50
     if (k == "interface.window_opacity") return std::to_string(c.windowOpacity);
     if (k == "interface.reference") return c.referenceWindow ? "1" : "0";  // 3.0.11-beta.7
     if (k == "windows.start_count") return std::to_string(c.windowStartCount);  // 3.0.4-beta.4

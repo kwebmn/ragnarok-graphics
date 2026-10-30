@@ -579,6 +579,8 @@ struct Config {
     bool castLabel = false;
     // 3.0.11-beta.49: [interface] dim_world - the world dimmed while the new windows are open (win/world_dim)
     bool dimWorld = false;
+    // 3.0.11-beta.50: [interface] low_hp_edge 0-100 - the screen's edges red at low HP, its strength (0: none)
+    int lowHpEdge = 0;
     // 3.0.11-beta.7: [interface] reference - «Довідник» (win/reference_window): Ctrl+F in the game
     bool referenceWindow = false;
     PanelLayout panelLayout = PanelLayout::Row;

@@ -36,6 +36,9 @@ void drawWords(panel::Picture& pic, const std::vector<Words>& words, const Rect&
 // picture fainter, the interface's motion)
 void drawPicture(FrameRecord& record, gpu::Renderer& renderer, const panel::Picture& pic, uint32_t& texture, int& texW,
                  int& texH, bool& upload, int x, int y, float k, float opacity = 1.0f);
+// 3.0.11-beta.50: a picture stretched over (x, y, w, h) of the target, sampled smoothly (the low HP edge)
+void drawStretched(FrameRecord& record, gpu::Renderer& renderer, const panel::Picture& pic, uint32_t& texture,
+                   int& texW, int& texH, bool& upload, int x, int y, int w, int h, float k, float opacity = 1.0f);
 // 3.0.11-beta.49: a black shade `alpha` over (x, y, w, h) of the target - one untextured quad (the world dimmed under
 // the windows)
 void drawShade(FrameRecord& record, int x, int y, int w, int h, float k, float alpha);

@@ -21,5 +21,9 @@ int generation();  // another number each time they change: the parts draw their
 // fading out `spread` away, none under the box itself (its glass stays as it is); the picture (w + 2 spread) x
 // (h + 2 spread), premultiplied, the box at (spread, spread)
 panel::Picture shadow(int w, int h, float radius, float spread, float alpha);
+// 3.0.11-beta.50 (the concept's low HP: «кромка экрана — по выбору, выключена»): the screen's edge in `rgb` - `alpha`
+// at the very edge, fading in to nothing a `depth` share of the shorter side away; w x h to be stretched over the
+// screen (smooth), premultiplied
+panel::Picture vignette(int w, int h, uint32_t rgb, float alpha, float depth);
 
 }  // namespace uagfx::uistyle

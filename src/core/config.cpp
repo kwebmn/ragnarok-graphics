@@ -517,6 +517,9 @@ Config parseConfig(const std::string& text) {
             setBool(val, c.castLabel);
         } else if (key == "interface.animations") {  // 3.0.11-beta.46: the new interface's motion
             setBool(val, c.animations);
+        } else if (key == "interface.low_hp_edge") {  // 3.0.11-beta.50: the screen's edges red at low HP
+            int n = 0;
+            if (toInt(val, -100000, 100000, n)) c.lowHpEdge = std::clamp(n, 0, 100);
         } else if (key == "interface.panel_opacity" || key == "interface.window_opacity") {  // 3.0.11-beta.47
             int n = 0;
             if (toInt(val, -100000, 100000, n)) {

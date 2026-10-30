@@ -1069,3 +1069,15 @@ TEST(config_reads_the_world_dim) {
     CHECK(s->page == settings::Page::Interface && s->control == settings::Control::Check);
     CHECK(appliesNow("interface.dim_world"));
 }
+
+// 3.0.11-beta.50 (the concept's low HP): [interface] low_hp_edge 0-100 - none unless asked for
+TEST(config_reads_the_low_hp_edge) {
+    CHECK(parseConfig("").lowHpEdge == 0 && parseConfig("[interface]\nminimap = 1\n").lowHpEdge == 0);
+    CHECK(parseConfig("[interface]\nlow_hp_edge = 60\n").lowHpEdge == 60);
+    CHECK(parseConfig("[interface]\nlow_hp_edge = 250\n").lowHpEdge == 100);
+    const settings::IniSetting* s = settings::findSetting("interface.low_hp_edge");
+    CHECK(s != nullptr);
+    if (!s) return;
+    CHECK(s->page == settings::Page::Interface && s->control == settings::Control::Slider);
+    CHECK(appliesNow("interface.low_hp_edge"));
+}

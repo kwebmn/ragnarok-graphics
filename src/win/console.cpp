@@ -181,6 +181,8 @@ void Console::build(Lang lang, const Config& config) {
                 rows_.push_back(Row{Kind::Box, "interface.cast", 0});
             if (settingOf("interface.dim_world"))  // 3.0.11-beta.49: the world dimmed under the windows
                 rows_.push_back(Row{Kind::Box, "interface.dim_world", 0});
+            if (settingOf("interface.low_hp_edge"))  // 3.0.11-beta.50: the screen's edges red at low HP
+                rows_.push_back(Row{Kind::Slider, "interface.low_hp_edge", 0});
             for (const char* key : {"interface.items", "interface.status"})  // 3.0.11-beta.42: the windows
                 if (settingOf(key)) rows_.push_back(Row{Kind::Box, key, 0});
             if (settingOf("interface.animations"))  // 3.0.11-beta.46: the new interface's motion

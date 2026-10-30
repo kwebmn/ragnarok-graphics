@@ -88,9 +88,13 @@ void drawWords(panel::Picture& pic, const std::vector<Words>& words, const Rect&
 
 std::wstring utf8Wide(const std::string& s) { return widened(s, CP_UTF8); }
 
-void drawPicture(FrameRecord& record, gpu::Renderer& renderer, const panel::Picture& pic, uint32_t& texture, int& texW,
-                 int& texH, bool& upload, int x, int y, float k, float opacity) {
-    if (pic.width <= 0 || pic.height <= 0 || opacity <= 0) return;
+namespace {
+
+// A picture's quad at (x, y, w, h) of the target: its texture made for its size and uploaded when it changed;
+// `smooth` - sampled between its texels (stretched), else a texel a target pixel
+void drawQuad(FrameRecord& record, gpu::Renderer& renderer, const panel::Picture& pic, uint32_t& texture, int& texW,
+              int& texH, bool& upload, int x, int y, int w, int h, bool smooth, float k, float opacity) {
+    if (pic.width <= 0 || pic.height <= 0 || opacity <= 0 || w <= 0 || h <= 0) return;
     if (!texture || texW != pic.width || texH != pic.height) {
         if (texture) renderer.releaseTexture(texture);
         texture = renderer.createTexture(pic.width, pic.height, 1);
@@ -103,7 +107,7 @@ void drawPicture(FrameRecord& record, gpu::Renderer& renderer, const panel::Pict
         record.upload(texture, 0, Rect{0, 0, texW, texH}, pic.px.data());
         upload = false;
     }
-    // Premultiplied, no depth, a texel a target pixel
+    // Premultiplied, no depth
     DrawSetup s;
     s.ui = true;
     s.blend = true;
@@ -114,8 +118,8 @@ void drawPicture(FrameRecord& record, gpu::Renderer& renderer, const panel::Pict
     s.stage[0].colorArg1 = s.stage[0].alphaArg1 = d3d7::TA_TEXTURE;
     s.stage[0].colorArg2 = s.stage[0].alphaArg2 = d3d7::TA_DIFFUSE;
     s.stage[0].addressU = s.stage[0].addressV = d3d7::TADDRESS_CLAMP;
-    s.stage[0].magFilter = d3d7::TFG_POINT;
-    s.stage[0].minFilter = d3d7::TFN_POINT;
+    s.stage[0].magFilter = smooth ? d3d7::TFG_LINEAR : d3d7::TFG_POINT;
+    s.stage[0].minFilter = smooth ? d3d7::TFN_LINEAR : d3d7::TFN_POINT;
     s.stage[1].colorOp = s.stage[1].alphaOp = d3d7::TOP_DISABLE;
     DrawCmd cmd;
     cmd.state = record.addState(s);
@@ -125,13 +129,25 @@ void drawPicture(FrameRecord& record, gpu::Renderer& renderer, const panel::Pict
     cmd.fvf = d3d7::FVF_TL1;
     // a game x lands at x * k + 0.5 in the target (shaders.cpp draw_vs): the quad's edges on the target's pixel edges
     const float x0 = (float(x) - 0.5f) / k, y0 = (float(y) - 0.5f) / k;
-    const float x1 = (float(x + texW) - 0.5f) / k, y1 = (float(y + texH) - 0.5f) / k;
+    const float x1 = (float(x + w) - 0.5f) / k, y1 = (float(y + h) - 0.5f) / k;
     const uint32_t a = faint ? uint32_t(std::lround(std::clamp(opacity, 0.0f, 1.0f) * 255)) : 255u;
     const uint32_t white = a << 24 | a << 16 | a << 8 | a;
     const glint::Vertex v[6] = {{x0, y0, 0, 1, white, 0, 0, 0}, {x1, y0, 0, 1, white, 0, 1, 0},
                                 {x0, y1, 0, 1, white, 0, 0, 1}, {x1, y0, 0, 1, white, 0, 1, 0},
                                 {x1, y1, 0, 1, white, 0, 1, 1}, {x0, y1, 0, 1, white, 0, 0, 1}};
     record.draw(cmd, v, 6, nullptr, 0);
+}
+
+}  // namespace
+
+void drawPicture(FrameRecord& record, gpu::Renderer& renderer, const panel::Picture& pic, uint32_t& texture, int& texW,
+                 int& texH, bool& upload, int x, int y, float k, float opacity) {
+    drawQuad(record, renderer, pic, texture, texW, texH, upload, x, y, pic.width, pic.height, false, k, opacity);
+}
+
+void drawStretched(FrameRecord& record, gpu::Renderer& renderer, const panel::Picture& pic, uint32_t& texture,
+                   int& texW, int& texH, bool& upload, int x, int y, int w, int h, float k, float opacity) {
+    drawQuad(record, renderer, pic, texture, texW, texH, upload, x, y, w, h, true, k, opacity);
 }
 
 void drawShade(FrameRecord& record, int x, int y, int w, int h, float k, float alpha) {

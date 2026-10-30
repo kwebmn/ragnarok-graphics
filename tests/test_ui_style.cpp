@@ -36,3 +36,16 @@ TEST(ui_style_window_shadow) {
     CHECK((p.px[size_t(15) * size_t(p.width) + 66] & 0xFFFFFF) == 0u);  // black
     CHECK(uistyle::shadow(0, 60, 12, 16, 0.5f).width == 0);
 }
+
+// 3.0.11-beta.50: the low HP edge - red at the screen's edge, none in its middle
+TEST(ui_style_vignette) {
+    const panel::Picture v = uistyle::vignette(160, 90, 0xFF2D23, 0.4f, 0.3f);
+    CHECK(v.width == 160 && v.height == 90);
+    const auto at = [&](int x, int y) { return v.px[size_t(y) * size_t(v.width) + size_t(x)]; };
+    CHECK((at(80, 45) >> 24) == 0 && (at(80, 30) >> 24) == 0);  // the middle clear
+    const uint32_t edge = at(0, 45);
+    CHECK((edge >> 24) > 90 && (edge >> 24) <= 102 && ((edge >> 16) & 0xFF) > ((edge >> 8) & 0xFF) * 3);  // red
+    CHECK((at(10, 45) >> 24) < (edge >> 24) && (at(10, 45) >> 24) > 0);  // fading in
+    CHECK((at(80, 0) >> 24) > 90);                                       // the top edge too
+    CHECK(uistyle::vignette(0, 90, 0xFF2D23, 0.4f, 0.3f).width == 0);
+}

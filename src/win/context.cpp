@@ -53,6 +53,7 @@
 #include "win/start_screen.hpp"
 #include "win/texture_hook.hpp"
 #include "win/log.hpp"
+#include "win/low_hp_edge.hpp"
 #include "win/thread_time.hpp"
 #include "win/paths.hpp"
 #include "win/profiler.hpp"
@@ -538,6 +539,7 @@ void Context::endScene() {
     if (drawn && renderer && !photo_) buffoverlay::draw(record, *renderer);  // 3.0.4-beta.6: the buffs' times
     if (panelSlot_.endScene(drawn) && renderer && !photo_) {
         worlddim::draw(record);                 // 3.0.11-beta.49: the world dimmed under the windows (where it ends)
+        lowhpedge::draw(record, *renderer);     // 3.0.11-beta.50: the low HP edge, there too
         castwin::draw(record, *renderer);       // 3.0.11-beta.48: the cast over the hero, under the panels
         minimapproto::draw(record, *renderer);  // 3.0.11-beta.1: the new minimap (prototype)
         buffcolumn::draw(record, *renderer);    // 3.0.11-beta.35: the buffs' column under it
@@ -582,6 +584,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     drawSparkles();  // 2.7.14: a frame with no interface draw
     if (panelSlot_.present(drawnAnew) && renderer && !photo_) {
         worlddim::draw(record);                 // 3.0.11-beta.49
+        lowhpedge::draw(record, *renderer);     // 3.0.11-beta.50
         castwin::draw(record, *renderer);       // 3.0.11-beta.48
         minimapproto::draw(record, *renderer);  // 3.0.11-beta.1
         buffcolumn::draw(record, *renderer);    // 3.0.11-beta.35
@@ -815,6 +818,9 @@ void Context::present(const Rect& source, bool waitForVblank) {
     // 3.0.11-beta.49: [interface] dim_world - the world dimmed while the new windows are open
     worlddim::frame(config.dimWorld, scaleMade_ ? plan.k : 1.0, scaleMade_ ? plan.targetWidth : shadow.width(),
                     scaleMade_ ? plan.targetHeight : shadow.height());
+    // 3.0.11-beta.50: [interface] low_hp_edge - the screen's edges red at low HP (0: none)
+    lowhpedge::frame(config.lowHpEdge, scaleMade_ ? plan.k : 1.0, scaleMade_ ? plan.targetWidth : shadow.width(),
+                     scaleMade_ ? plan.targetHeight : shadow.height());
     // 3.0.11-beta.48: [interface] cast - the character's cast over the hero, the game's own gauge hidden
     castwin::frame(window, config.castLabel, gameCodePage(config), scaleMade_ ? plan.k : 1.0,
                    scaleMade_ ? plan.targetWidth : shadow.width(),
