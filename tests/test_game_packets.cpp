@@ -269,3 +269,22 @@ TEST(game_packets_the_battle_log) {
     const auto* e = std::get_if<packets::StatusLong>(&ee);
     CHECK(e && e->type == 1 && e->value == 123456);
 }
+
+// 3.0.11-beta.48: a cast begun (0x013e) - who, at whom, which skill, how long
+TEST(packets_casting) {
+    std::vector<uint8_t> c(24, 0);
+    c[0] = 0x3e;
+    c[1] = 0x01;
+    const auto put32 = [&](size_t at, uint32_t v) {
+        for (int i = 0; i < 4; ++i) c[at + size_t(i)] = uint8_t(v >> (8 * i));
+    };
+    put32(2, 2000123);
+    put32(6, 110000456);
+    c[14] = 19;  // MG_FIREBOLT
+    put32(16, 3);
+    put32(20, 1650);
+    const packets::Event e = packets::parse(c.data(), c.size());
+    const auto* k = std::get_if<packets::Casting>(&e);
+    CHECK(k && k->source == 2000123 && k->target == 110000456 && k->skill == 19 && k->ms == 1650);
+    CHECK(std::holds_alternative<std::monostate>(packets::parse(c.data(), 23)));  // cut short
+}

@@ -5036,6 +5036,16 @@ constexpr Entry kTexts[] = {
      "well.",
      "Підкладка вікон «Речі», «Характеристики» і «Довідник»; не менше 80 %, щоб таблиці й списки читалися.",
      "Подложка окон «Вещи», «Характеристики» и «Справочник»; не меньше 80 %, чтобы таблицы и списки читались."},
+    // 3.0.11-beta.48: the cast's label over the hero
+    {Text::InterfaceCast, "Cast over the hero", "Каст над героєм", "Каст над героем"},
+    {Text::InterfaceCastHint,
+     "While the character casts: over the hero the skill's icon and name, the seconds left and a gold bar in the "
+     "place of the game's old gauge (that one hidden).",
+     "Поки персонаж читає навичку: над героєм її іконка й назва, скільки секунд лишилося, і золота смужка на місці "
+     "старої смужки гри (та прихована).",
+     "Пока персонаж читает навык: над героем его иконка и название, сколько секунд осталось, и золотая полоска на "
+     "месте старой полоски игры (та скрыта)."},
+    {Text::CastSeconds, "s", "\xD1\x81", "\xD1\x81"},
     // 3.0.11-beta.41: the chat (stage 8 of the new interface)
     {Text::InterfaceChat, "Chat", "Чат", "Чат"},
     {Text::InterfaceChatHint,

@@ -857,11 +857,11 @@ TEST(config_interface_minimap) {
     const LiveUpdate u = liveUpdate(parseConfig(""), parseConfig("[interface]\nminimap = 1\n"));
     // 3.0.11-beta.37: the buffs' column and the character block come with it; 3.0.11-beta.38: the target's card too;
     // 3.0.11-beta.39: the party's panel; 3.0.11-beta.40: the hotbar; 3.0.11-beta.41: the chat; 3.0.11-beta.42: the
-    // windows
-    CHECK(u.waiting.empty() && u.applied.size() == 9 && u.applied[0] == "minimap 0 -> 1");
+    // windows; 3.0.11-beta.48: the cast's label
+    CHECK(u.waiting.empty() && u.applied.size() == 10 && u.applied[0] == "minimap 0 -> 1");
     CHECK(u.applied[1] == "buffs off -> column" && u.applied[2] == "items 0 -> 1" && u.applied[3] == "status 0 -> 1");
-    CHECK(u.applied[4] == "chat 0 -> 1" && u.applied[5] == "hotbar 0 -> 1" && u.applied[6] == "party 0 -> 1" &&
-          u.applied[7] == "target 0 -> 1" && u.applied[8] == "character off -> bars");
+    CHECK(u.applied[4] == "cast 0 -> 1" && u.applied[5] == "chat 0 -> 1" && u.applied[6] == "hotbar 0 -> 1" &&
+          u.applied[7] == "party 0 -> 1" && u.applied[8] == "target 0 -> 1" && u.applied[9] == "character off -> bars");
     CHECK(appliesNow("interface.minimap"));
 }
 
@@ -1042,4 +1042,17 @@ TEST(config_reads_the_opacities) {
         CHECK(appliesNow(key));
     }
     CHECK(liveUpdate(d, c).next.hudOpacity == 65 && liveUpdate(d, c).next.windowOpacity == 95);
+}
+
+// 3.0.11-beta.48 (the concept's cast label): [interface] cast - on with the new minimap unless the file names it
+TEST(config_reads_the_cast_label) {
+    CHECK(!parseConfig("").castLabel && parseConfig("[interface]\ncast = 1\n").castLabel);
+    CHECK(parseConfig("[interface]\nminimap = 1\n").castLabel);
+    CHECK(!parseConfig("[interface]\nminimap = 1\ncast = 0\n").castLabel);
+    const settings::IniSetting* s = settings::findSetting("interface.cast");
+    CHECK(s != nullptr);
+    if (!s) return;
+    CHECK(s->page == settings::Page::Interface && s->control == settings::Control::Check);
+    CHECK(appliesNow("interface.cast"));
+    CHECK(liveUpdate(parseConfig(""), parseConfig("[interface]\ncast = 1\n")).next.castLabel);
 }

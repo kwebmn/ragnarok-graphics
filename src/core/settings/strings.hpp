@@ -478,7 +478,8 @@ enum class Text : uint16_t {
     InterfaceAnimations, InterfaceAnimationsHint,
     // 3.0.11-beta.47: the new interface's grounds
     InterfacePanelOpacity, InterfacePanelOpacityHint, InterfaceWindowOpacity, InterfaceWindowOpacityHint,
-    InterfaceChat, InterfaceChatHint, ChatTabAll,
+    // 3.0.11-beta.48: the cast's label over the hero
+    InterfaceCast, InterfaceCastHint, CastSeconds, InterfaceChat, InterfaceChatHint, ChatTabAll,
     ChatTabParty,
     ChatTabGuild, ChatTabWhisper, ChatTabTrade, ChatTabBattle, ChatFrom, ChatTo, ChatHintSend, ChatHintType,
     ChatKilled, ChatPicked, ChatMiss, InterfaceItems, InterfaceItemsHint, InterfaceStatus, InterfaceStatusHint,

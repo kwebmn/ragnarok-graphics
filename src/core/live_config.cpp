@@ -199,6 +199,10 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("status", flag(running.statusWindow), flag(file.statusWindow)));
         n.statusWindow = file.statusWindow;
     }
+    if (file.castLabel != running.castLabel) {  // 3.0.11-beta.48: the cast's label, at once
+        u.applied.push_back(change("cast", flag(running.castLabel), flag(file.castLabel)));
+        n.castLabel = file.castLabel;
+    }
     if (file.hudOpacity != running.hudOpacity) {  // 3.0.11-beta.47: the new interface's grounds, at once
         u.applied.push_back(
             change("panel_opacity", std::to_string(running.hudOpacity), std::to_string(file.hudOpacity)));

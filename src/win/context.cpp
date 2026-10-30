@@ -33,6 +33,7 @@
 #include "win/reference_window.hpp"
 #include "win/buff_column.hpp"
 #include "win/buff_overlay.hpp"
+#include "win/cast_bar.hpp"
 #include "win/char_block.hpp"
 #include "win/code_page.hpp"
 #include "win/party_panel.hpp"
@@ -535,6 +536,7 @@ void Context::endScene() {
     if (photo_) record.dropInterface();  // 3.0.4-beta.5: the photo mode - the world alone
     if (drawn && renderer && !photo_) buffoverlay::draw(record, *renderer);  // 3.0.4-beta.6: the buffs' times
     if (panelSlot_.endScene(drawn) && renderer && !photo_) {
+        castwin::draw(record, *renderer);       // 3.0.11-beta.48: the cast over the hero, under the panels
         minimapproto::draw(record, *renderer);  // 3.0.11-beta.1: the new minimap (prototype)
         buffcolumn::draw(record, *renderer);    // 3.0.11-beta.35: the buffs' column under it
         charpanel::draw(record, *renderer);     // 3.0.11-beta.36: the character block
@@ -577,6 +579,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     const bool drawnAnew = record.takeWork() > 0;
     drawSparkles();  // 2.7.14: a frame with no interface draw
     if (panelSlot_.present(drawnAnew) && renderer && !photo_) {
+        castwin::draw(record, *renderer);       // 3.0.11-beta.48
         minimapproto::draw(record, *renderer);  // 3.0.11-beta.1
         buffcolumn::draw(record, *renderer);    // 3.0.11-beta.35
         charpanel::draw(record, *renderer);     // 3.0.11-beta.36
@@ -804,6 +807,10 @@ void Context::present(const Rect& source, bool waitForVblank) {
     // 3.0.11-beta.41: [interface] chat - the chat at the bottom left, the game's own out of sight (before the hotbar:
     // it keeps clear of it)
     chatwin::frame(window, config.chat, gameCodePage(config), scaleMade_ ? plan.k : 1.0,
+                   scaleMade_ ? plan.targetWidth : shadow.width(),
+                   scaleMade_ ? plan.targetHeight : shadow.height());
+    // 3.0.11-beta.48: [interface] cast - the character's cast over the hero, the game's own gauge hidden
+    castwin::frame(window, config.castLabel, gameCodePage(config), scaleMade_ ? plan.k : 1.0,
                    scaleMade_ ? plan.targetWidth : shadow.width(),
                    scaleMade_ ? plan.targetHeight : shadow.height());
     // 3.0.11-beta.40: [interface] hotbar - the hotkeys' bar at the bottom middle, the game's own hidden

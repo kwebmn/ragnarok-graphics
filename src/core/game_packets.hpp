@@ -110,9 +110,17 @@ struct StatusLong {
     uint32_t value = 0;
 };
 
+// 3.0.11-beta.48 (the cast's label over the hero): a skill's cast begun - 0x013e <source>.L <target>.L <x>.W <y>.W
+// <skill>.W <element>.L <time>.L (the game's FUN_0058b560: the caster's gauge for `ms`)
+struct Casting {
+    uint32_t source = 0, target = 0;
+    uint16_t skill = 0;
+    uint32_t ms = 0;
+};
+
 using Event = std::variant<std::monostate, Whisper, PartyInvite, TradeRequest, GuildInvite, FriendRequest, StatusIcon,
                            Vanish, SkillCast, Hit, PartyList, PartyMember, PartyLeft, PartyHp, PartyChat, GuildChat,
-                           Chat, Status, Pickup, StatusLong>;
+                           Chat, Status, Pickup, StatusLong, Casting>;
 
 // A packet as the game took it, `size` bytes of it readable: one of the above, or nothing (another packet, one cut
 // short or naming more bytes than there are).

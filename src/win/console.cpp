@@ -177,6 +177,8 @@ void Console::build(Lang lang, const Config& config) {
                 rows_.push_back(Row{Kind::Box, "interface.hotbar", 0});
             if (settingOf("interface.chat"))  // 3.0.11-beta.41: the chat
                 rows_.push_back(Row{Kind::Box, "interface.chat", 0});
+            if (settingOf("interface.cast"))  // 3.0.11-beta.48: the cast's label over the hero
+                rows_.push_back(Row{Kind::Box, "interface.cast", 0});
             for (const char* key : {"interface.items", "interface.status"})  // 3.0.11-beta.42: the windows
                 if (settingOf(key)) rows_.push_back(Row{Kind::Box, key, 0});
             if (settingOf("interface.animations"))  // 3.0.11-beta.46: the new interface's motion

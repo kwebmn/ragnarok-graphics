@@ -381,6 +381,7 @@ Config parseConfig(const std::string& text) {
     bool buffsSet = false, characterSet = false;  // 3.0.11-beta.37: the new interface's parts asked for by name
     bool targetSet = false, partySet = false;     // 3.0.11-beta.38, 3.0.11-beta.39
     bool hotbarSet = false, chatSet = false;      // 3.0.11-beta.40, 3.0.11-beta.41
+    bool castSet = false;                         // 3.0.11-beta.48
     bool itemsSet = false, statusSet = false;     // 3.0.11-beta.42
     std::istringstream in(text);
     std::string line;
@@ -508,6 +509,9 @@ Config parseConfig(const std::string& text) {
         } else if (key == "interface.status") {  // 3.0.11-beta.42: «Характеристики»
             statusSet = val == "0" || val == "1" || val == "on" || val == "off" || val == "true" || val == "false";
             setBool(val, c.statusWindow);
+        } else if (key == "interface.cast") {  // 3.0.11-beta.48: the cast's label over the hero
+            castSet = val == "0" || val == "1" || val == "on" || val == "off" || val == "true" || val == "false";
+            setBool(val, c.castLabel);
         } else if (key == "interface.animations") {  // 3.0.11-beta.46: the new interface's motion
             setBool(val, c.animations);
         } else if (key == "interface.panel_opacity" || key == "interface.window_opacity") {  // 3.0.11-beta.47
@@ -769,6 +773,7 @@ Config parseConfig(const std::string& text) {
     if (c.newMinimap && !targetSet) c.targetCard = true;  // 3.0.11-beta.38
     if (c.newMinimap && !partySet) c.partyPanel = true;   // 3.0.11-beta.39
     if (c.newMinimap && !hotbarSet) c.hotbar = true;      // 3.0.11-beta.40
+    if (c.newMinimap && !castSet) c.castLabel = true;     // 3.0.11-beta.48
     if (c.newMinimap && !chatSet) c.chat = true;          // 3.0.11-beta.41
     if (c.newMinimap && !itemsSet) c.itemsWindow = true;  // 3.0.11-beta.42
     if (c.newMinimap && !statusSet) c.statusWindow = true;
