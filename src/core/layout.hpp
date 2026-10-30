@@ -38,6 +38,10 @@ constexpr const char* kRedirected = "uaro-graphics\\cache\\launcher-redirect.txt
 // removes it - «Звичайний режим»)
 constexpr const char* kFailedStarts = "uaro-graphics\\cache\\failed-starts.txt";
 constexpr const char* kSafeModeNote = "uaro-graphics\\cache\\safe-mode.txt";
+// 3.0.11-beta.56 (the owner: «сделать» - how many installs there are): this install's random number for the site's
+// anonymous count (core/install_ping) and when it was last told
+constexpr const char* kInstallId = "uaro-graphics\\install-id.txt";
+constexpr const char* kPingSent = "uaro-graphics\\cache\\ping-sent.txt";
 // 3.0.3-beta.2: where each character's game window was put (core/window_places), written by the games
 constexpr const char* kWindowPlaces = "uaro-graphics\\uaro-windows.txt";
 // 2.13: «Звернення» (app/reports): the computer's random key - the site's reports belong to it, no login - and the

@@ -1,5 +1,6 @@
 #include "app/update_run.hpp"
 
+#include <ctime>
 #include <map>
 
 #include "app/app_disk.hpp"
@@ -9,9 +10,11 @@
 #include "app/system.hpp"
 #include "app/text.hpp"
 #include "core/config.hpp"
+#include "core/install_ping.hpp"
 #include "core/layout.hpp"
 #include "core/settings/ini_edit.hpp"
 #include "core/sha256.hpp"
+#include "core/usage.hpp"
 #include "core/version.hpp"
 #include "core/zip.hpp"
 
@@ -38,6 +41,35 @@ std::string firstLine(const std::wstring& path) {
 // uaro-graphics\update.ini: the branch's text, then "[local]" and this computer's choices (update::keptInfo).
 void keepInfo(const std::wstring& dir, std::string branch, const std::string& skip, update::Channel channel) {
     writeFileAtomic(infoOf(dir), update::keptInfo(std::move(branch), skip, channel));
+}
+
+// 3.0.11-beta.56 (the owner: «сделать» - how many installs and on which versions): the site's anonymous count - this
+// install's random number, its version and channel at most every 12 hours (core/install_ping); not told again until
+// the site took it
+void pingInstall(const std::wstring& dir, update::Channel channel) {
+    const std::wstring idPath = join(dir, wide(layout::kInstallId)), sentPath = join(dir, wide(layout::kPingSent));
+    const long long now = static_cast<long long>(std::time(nullptr));
+    std::string stamp, text, local;
+    readFile(sentPath, stamp);
+    long long last = 0;
+    usage::readSentStamp(stamp, last, local);  // the seconds it was told at (no atoll: msvcrt's _atoi64)
+    if (!ping::due(now, last)) return;
+    readFile(idPath, text);
+    std::string id = ping::idOf(text);
+    if (id.empty()) {  // made once: the clocks, a stack and a heap address mixed - a number, not a secret
+        int here = 0;
+        const std::string heap(64, ' ');
+        id = ping::newId(uint64_t(now) ^ (uint64_t(std::clock()) << 32) ^
+                         (uint64_t(reinterpret_cast<uintptr_t>(&here)) << 7) ^
+                         (uint64_t(reinterpret_cast<uintptr_t>(heap.data())) << 23));
+        if (!makeFolders(join(dir, wide(layout::kOurs))) || !writeFileAtomic(idPath, id + "\n")) return;
+    }
+    long status = 0;
+    std::string answer, error;
+    const std::string body = ping::body(id, kVersion, update::channelToken(channel));
+    if (postPath("/api/graphics/ping", body, status, answer, error) && status >= 200 && status < 300 &&
+        makeFolders(join(dir, wide(layout::kCache))))
+        writeFileAtomic(sentPath, std::to_string(now) + "\n");
 }
 
 std::string branchText(const std::string& kept) {
@@ -166,6 +198,7 @@ update::Channel channelOf(const std::wstring& dir) {
 CheckResult checkNow(const std::wstring& dir) {
     CheckResult c;
     c.channel = channelOf(dir);
+    pingInstall(dir, c.channel);  // 3.0.11-beta.56: the site's count of installs, before GitHub's answer
     std::string text;
     if (!fetchUrl(update::manifestUrl(c.channel), text, c.error) || !update::parseManifest(text, c.branch, c.error))
         return c;
