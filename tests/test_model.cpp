@@ -964,3 +964,21 @@ TEST(model_sets_a_copied_install_up_silently) {
     app::Model played;
     CHECK(played.playedHere());
 }
+
+// 3.0.11-beta.62 (the autopilot's review): a card of Direct3D 11 alone (a Radeon HD 6570) - the driver records its
+// verdict under the Direct3D 11 probe's name; the app reads it so, not the memory's level
+TEST(model_reads_the_card_verdict_of_a_direct3d_11_card) {
+    fake::Windows& w = fake::reset();
+    w.system.windows.major = 10;
+    w.system.d3d12Probed = true;
+    w.system.d3d12.ok = false;
+    w.system.d3d11.ok = true;
+    w.system.d3d11.level = 0xb000;
+    w.system.d3d11.adapter = "AMD Radeon HD 6570";
+    w.system.d3d11.vramMb = 2048;
+    w.folders.insert(fake::path(L"uaro-graphics"));
+    w.files[fake::path(L"uaro-graphics\\card-level.txt")] = "v2 0 1 AMD Radeon HD 6570\n";
+    app::Model m;
+    CHECK_EQ(m.memoryLevel(), 1);
+    CHECK_EQ(m.cardLevel(), 0);  // «Без ефектів», as the driver judged it
+}

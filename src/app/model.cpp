@@ -150,7 +150,9 @@ int Model::cardLevel() const {
     // 3.0.11-beta.58: every card's, over the whole ladder
     std::string judged;
     readFile(ourPlace(paths_.dir, layout::kCardLevel), judged);
-    return card_speed::startOf(memoryLevel(), system_.d3d12.adapter, judged).level;
+    // the card's name as the driver records it: Direct3D 12's, else Direct3D 11's (a card of 11 alone)
+    const std::string& adapter = !system_.d3d12.adapter.empty() ? system_.d3d12.adapter : system_.d3d11.adapter;
+    return card_speed::startOf(memoryLevel(), adapter, judged).level;
 }
 
 void Model::settleOldGroups() {
