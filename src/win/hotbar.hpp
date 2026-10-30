@@ -20,7 +20,8 @@ namespace uagfx::win::hotbarwin {
 // slot from the game's session (+0x314 a slot's words, +0x4C4 a skill's level), an item's count from the bag; a click
 // sends the window the same message 0x29 the keys do. The pencil shows the game's own bar to drag skills and items
 // into it. On the game's thread.
-void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int targetHeight);
+// 3.0.11-beta.78: ownBars - [interface] hotbar_per_character, each character's own bar (the new bar on or not)
+void frame(HWND game, bool on, bool ownBars, unsigned codePage, double k, int targetWidth, int targetHeight);
 void draw(FrameRecord& record, gpu::Renderer& renderer);
 bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result);
 // 3.0.11-beta.45: a key of its cells pressed (F1-F9; the battle mode's letters while the chat does not take them) - the

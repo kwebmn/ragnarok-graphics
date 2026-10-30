@@ -474,6 +474,7 @@ enum class Text : uint16_t {
     HudPartTracker, HudPartHotbar, HudPartTarget, HudPartParty, HudPartChat, ConsoleHudEdit, InterfaceLayoutNote,
     HudEditUnseen,
     InterfaceLockLayout, InterfaceLockLayoutHint,  // 3.0.11-beta.77
+    InterfaceHotbarOwn, InterfaceHotbarOwnHint, HotbarUnlearned,  // 3.0.11-beta.78
     InterfaceMinimapWay, InterfaceMinimapWayHint,
     InterfaceMinimapWaySteps, InterfaceMinimapWayLine, InterfaceMinimapWayOff, InterfaceBuffs, InterfaceBuffsHint,
     InterfaceBuffsOff, InterfaceBuffsColumn, InterfaceBuffsRow, BuffsNames, BuffsHideNames, BuffsMore, BuffsStar,

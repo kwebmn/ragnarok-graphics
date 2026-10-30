@@ -84,6 +84,7 @@ std::vector<TipLine> tipLines(const Cell& c, const Texts& t) {
     std::string first = c.name;
     if (c.level > 0) first += " \xC2\xB7 Lv " + std::to_string(c.level);
     if (c.count >= 0) first += " \xC2\xB7 \xC3\x97" + std::to_string(c.count);
+    if (c.unlearned) return {{first, kText}, {t.unlearned, kNotHereWords}};  // 3.0.11-beta.78
     const size_t why = size_t(c.notHere);
     if (c.notHere != NotHere::No && why < t.reasons.size())
         return {{first, kText}, {settings::fmt(t.notHere, {t.reasons[why]}), kNotHereWords}};
@@ -190,7 +191,7 @@ void paint(panel::Picture& out, const Layout& L, const std::vector<Cell>& cells,
         const float edgeA = chosen ? 1.0f : hot ? 0.20f : 0.10f, edgeW = (chosen ? 2.0f : 1.0f) * s;
         if (down) panel::roundRect(out, b, 7 * s, kBlack, 0.30f, edge, edgeA, edgeW);
         else panel::roundRect(out, b, 7 * s, kWhite, hot ? 0.10f : 0.05f, edge, edgeA, edgeW);
-        const bool barred = c && c->notHere != NotHere::No, dry = c && !barred && noSp(*c);
+        const bool barred = c && (c->notHere != NotHere::No || c->unlearned), dry = c && !barred && noSp(*c);
         if (c && c->icon && c->icon->width > 0)
             put(out, *c->icon, b, barred ? 0.45f : dry ? 0.5f : c->count == 0 ? 0.3f : 1.0f, barred || dry);
         if (barred) {  // a crossed circle over its icon
@@ -258,7 +259,7 @@ std::vector<Words> words(const Layout& L, const std::vector<Cell>& cells, int ro
         }
         if (c.level > 0)
             out.push_back(Words{levelBox(b, c.level, s), std::to_string(c.level), kText, 11 * s, true, Align::Center});
-        if (c.notHere == NotHere::No && noSp(c))
+        if (c.notHere == NotHere::No && !c.unlearned && noSp(c))
             out.push_back(Words{spBox(b, s), "SP", kWhite, 11 * s, true, Align::Center});
     }
     const std::vector<TipLine> lines = show.tip && show.hover >= 0 && show.hover < int(cells.size())

@@ -928,6 +928,20 @@ TEST(config_reads_the_layout_lock) {
     CHECK(liveUpdate(parseConfig(""), parseConfig("[interface]\nlock_layout = 1\n")).next.lockLayout);
 }
 
+// 3.0.11-beta.78 (the owner: «на панели скилов не те скилы появляются, с других аккаунтов»): [interface]
+// hotbar_per_character - each character's own bar (the game keeps one by the selection screen's place); on, a box of
+// «Інтерфейс», applied at once
+TEST(config_reads_the_bar_per_character) {
+    CHECK(parseConfig("").hotbarPerCharacter);
+    CHECK(!parseConfig("[interface]\nhotbar_per_character = 0\n").hotbarPerCharacter);
+    const settings::IniSetting* s = settings::findSetting("interface.hotbar_per_character");
+    CHECK(s != nullptr);
+    if (!s) return;
+    CHECK(s->page == settings::Page::Interface && s->control == settings::Control::Check);
+    CHECK(appliesNow("interface.hotbar_per_character"));
+    CHECK(!liveUpdate(parseConfig(""), parseConfig("[interface]\nhotbar_per_character = 0\n")).next.hotbarPerCharacter);
+}
+
 // 3.0.11-beta.33 (the owner: «полоска с маршрутом может лучше бы была выполнена такими типа следами типа шажков»):
 // [interface] minimap_way - the way on the ground as footprints (steps), the strip (line) or none; a choice of
 // «Інтерфейс», applied at once

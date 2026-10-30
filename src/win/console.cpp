@@ -174,6 +174,8 @@ void Console::build(Lang lang, const Config& config) {
                 rows_.push_back(Row{Kind::Box, "interface.pack_icons", 0});
             if (settingOf("interface.lock_layout"))  // 3.0.11-beta.77: the parts kept where they are
                 rows_.push_back(Row{Kind::Box, "interface.lock_layout", 0});
+            if (settingOf("interface.hotbar_per_character"))  // 3.0.11-beta.78: each character's own bar
+                rows_.push_back(Row{Kind::Box, "interface.hotbar_per_character", 0});
             if (settingOf("interface.buffs"))  // 3.0.11-beta.35: the buffs' column
                 rows_.push_back(Row{Kind::Choice, "interface.buffs", 0});
             if (settingOf("interface.buffs_overflow"))  // 3.0.11-beta.63: what it does not hold

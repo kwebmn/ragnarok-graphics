@@ -563,6 +563,10 @@ struct Config {
     // 3.0.11-beta.77 (the owner: «чтобы без быстрых кнопок можно было двигать, чтобы сразу все мышкой»): [interface]
     // lock_layout - the new interface's parts kept where they are: no dragging, no sizing grip (win/hud_edit); off
     bool lockLayout = false;
+    // 3.0.11-beta.78 (the owner: «на панели скилов не те скилы появляются, с других аккаунтов, плюс появляются те
+    // которых на чаре нету»): [interface] hotbar_per_character - each character's own hotkeys bar, kept by the driver
+    // (the game keeps one by the selection screen's place, every account's alike - win/hotbar); on
+    bool hotbarPerCharacter = true;
     // 3.0.11-beta.35: [interface] buffs - stage 7 of the new interface (the HUD, the buffs first; the owner's approved
     // column, the row a choice): the game's own status icons hidden, the driver's under the minimap (core/buff_panel)
     BuffsLook buffs = BuffsLook::Off;

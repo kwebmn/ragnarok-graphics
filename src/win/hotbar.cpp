@@ -7,12 +7,15 @@
 #include <cstdint>
 #include <cstring>
 #include <map>
+#include <set>
 #include <string>
 #include <vector>
 
 #include "core/buff_panel.hpp"
 #include "core/char_status.hpp"
+#include "core/hotbar_bars.hpp"
 #include "core/hotbar_panel.hpp"
+#include "core/layout.hpp"
 #include "core/settings/strings.hpp"
 #include "core/skill_costs.hpp"
 #include "core/ui_style.hpp"
@@ -24,6 +27,7 @@
 #include "win/game_camera.hpp"
 #include "win/hud_edit.hpp"
 #include "win/log.hpp"
+#include "win/paths.hpp"
 #include "win/picture_draw.hpp"
 #include "win/real_ddraw.hpp"
 #include "win/reference_load.hpp"
@@ -65,6 +69,25 @@ constexpr ULONGLONG kTipMs = 400;  // the concept's: a tip after 0.4 s
 constexpr ULONGLONG kReadMs = 150, kPressMs = 160;
 constexpr size_t kMostNodes = 1024;
 using SendMsgFn = int(__attribute__((thiscall)) *)(uint32_t self, uint32_t sender, int msg, int a, int b, int c);
+// 3.0.11-beta.78 (the owner: «на панели скилов не те скилы появляются, с других аккаунтов, плюс появляются те которых
+// на чаре нету»): the game keeps its bar in the registry by the character's place on the selection screen
+// (FUN_004d0500: SITEM<slot><langtype><page x 3 + index>), every account's alike - each character's own is put into
+// the session as that loader does: the slots and their levels cleared (FUN_006278e0, FUN_006425d0, ECX the session),
+// then for each slot its row byte (0x771458) and an item's FUN_006279b0 (name, slot), a skill's level FUN_006425f0
+// (level, slot) and FUN_00642630 (name, level, slot) - thiscall, the callee's stack; the bar told 0x17 after
+constexpr uint32_t kClearSlots = 0x6278E0, kSetItem = 0x6279B0, kClearLevels = 0x6425D0, kSetLevel = 0x6425F0;
+constexpr uint32_t kSetSkill = 0x642630, kSkillName = 0x24;  // and a skill node's AEGIS name (char*)
+constexpr int kRefreshMsg = 0x17;
+const uint8_t kClearSlotsCode[] = {0x55, 0x8B, 0xEC, 0x83, 0xEC, 0x08, 0x53, 0x56, 0x57, 0x8D, 0x99, 0x18, 0x03};
+const uint8_t kSetItemCode[] = {0x55, 0x8B, 0xEC, 0x83, 0xEC, 0x0C, 0x8B, 0xD1, 0x33, 0xC0, 0x53, 0x56, 0x8A, 0x82};
+const uint8_t kClearLevelsCode[] = {0x57, 0x8D, 0xB9, 0xC4, 0x04, 0x00, 0x00, 0xB9, 0x1B, 0x00, 0x00, 0x00};
+const uint8_t kSetLevelCode[] = {0x55, 0x8B, 0xEC, 0x8B, 0x45, 0x0C, 0x8B, 0x55, 0x08, 0x89, 0x94, 0x81, 0xC4, 0x04};
+const uint8_t kSetSkillCode[] = {0x55, 0x8B, 0xEC, 0x83, 0xEC, 0x10, 0x53, 0x56, 0x8B, 0xF1, 0x33, 0xC0, 0x57};
+using ClearFn = void(__attribute__((thiscall)) *)(uint32_t session);
+using SetItemFn = void(__attribute__((thiscall)) *)(uint32_t session, const char* name, int slot);
+using SetLevelFn = void(__attribute__((thiscall)) *)(uint32_t session, int level, int slot);
+using SetSkillFn = void(__attribute__((thiscall)) *)(uint32_t session, const char* name, int level, int slot);
+constexpr ULONGLONG kBarReadMs = 500, kBarSettleMs = 1000, kLearnedWaitMs = 10000;
 
 struct Slot {
     hb::Slot what;
@@ -107,6 +130,15 @@ struct State {
     int texW = 0, texH = 0;
     bool upload = false;
     int usesLogged = 0;
+    // 3.0.11-beta.78: each character's own bar (core/hotbar_bars, uaro-graphics\hotbar-bars.txt)
+    bool barsChecked = false, barsCan = false, barsRead = false;
+    hb::Bars bars;
+    std::string barOf;  // the character whose own bar the game's is now ("" none yet)
+    enum class BarStep : uint8_t { None, Put, Kept } barStep = BarStep::None;
+    ULONGLONG barSince = 0, barReadAt = 0, barChangedAt = 0;
+    hb::Bar barKept;                // as last kept for barOf
+    std::set<std::string> learned;  // the character's learned skills' AEGIS names (the session's list)
+    bool learnedCame = false;       // that list there at all
 };
 
 State& state() {
@@ -124,6 +156,16 @@ uint32_t read32(uint32_t at) {
 bool write32(uint32_t at, uint32_t v) {
     SIZE_T n = 0;
     return WriteProcessMemory(GetCurrentProcess(), reinterpret_cast<void*>(uintptr_t(at)), &v, 4, &n) && n == 4;
+}
+
+bool write8(uint32_t at, uint8_t v) {
+    SIZE_T n = 0;
+    return WriteProcessMemory(GetCurrentProcess(), reinterpret_cast<void*>(uintptr_t(at)), &v, 1, &n) && n == 1;
+}
+
+bool sameCode(uint32_t at, const uint8_t* code, size_t size) {
+    uint8_t got[32] = {};
+    return size <= sizeof got && readGame(at, got, size) && std::memcmp(got, code, size) == 0;
 }
 
 std::string readText(uint32_t object) {  // an MSVC 6 std::string
@@ -243,6 +285,149 @@ int waitingSkill() {
     return state >= 1 && state <= 5 ? int(read32(mode + kWaitSkill)) : 0;
 }
 
+// 3.0.11-beta.78: the character's learned skills' AEGIS names (the session's list - a node's name at +0x24 - those
+// above level 0); `came`: the list there at all (the server sent it)
+std::set<std::string> readLearned(bool* came = nullptr) {
+    std::set<std::string> out;
+    if (came) *came = false;
+    const uint32_t head = read32(kSkills);
+    if (!head) return out;
+    uint32_t node = read32(head);
+    for (size_t n = 0; node && node != head && n < kMostNodes; ++n, node = read32(node)) {
+        if (came) *came = true;
+        const uint32_t name = read32(node + kSkillName);
+        const int level = int(read32(node + kSkillLevel));
+        char text[48] = {};
+        if (level <= 0 || level >= 100 || !name || !readGame(name, text, sizeof text - 1)) continue;
+        text[sizeof text - 1] = '\0';
+        if (text[0]) out.insert(text);
+    }
+    return out;
+}
+
+// The game's bar as its session has it now
+hb::Bar barNow() {
+    hb::Bar bar;
+    for (int j = 0; j < kSlots; ++j) {
+        std::string v = readText(kSlotNames + 16 * uint32_t(j));
+        bar.slots[size_t(j)] = v == "nothing" ? "" : v;
+        const int level = int(read32(kSlotLevels + 4 * uint32_t(j)));
+        bar.levels[size_t(j)] = level > 0 && level < 100 ? level : 0;
+    }
+    return bar;
+}
+
+// A bar put into the game's session as its loader puts the registry's (FUN_004d0500), the bar told to fill its own
+void putBar(const hb::Bar& bar) {
+    uint8_t row = 0;
+    readGame(kRow, &row, 1);
+    reinterpret_cast<ClearFn>(uintptr_t(kClearSlots))(kSession);
+    reinterpret_cast<ClearFn>(uintptr_t(kClearLevels))(kSession);
+    for (int j = 0; j < kSlots; ++j) {
+        write8(kRow, uint8_t(j / 9));  // the setters' row (each keeps a name once a row)
+        const std::string& v = bar.slots[size_t(j)];
+        const int level = bar.levels[size_t(j)];
+        reinterpret_cast<SetLevelFn>(uintptr_t(kSetLevel))(kSession, level, j);
+        if (v.size() > 2 && v[0] == '#' && v[1] == '#')
+            reinterpret_cast<SetSkillFn>(uintptr_t(kSetSkill))(kSession, v.c_str(), level, j);
+        else
+            reinterpret_cast<SetItemFn>(uintptr_t(kSetItem))(kSession, v.c_str(), j);  // "" - "nothing"
+    }
+    write8(kRow, row < 3 ? row : 0);
+    if (const uint32_t window = gameBar())
+        reinterpret_cast<SendMsgFn>(uintptr_t(kSendMsg))(window, 0, kRefreshMsg, 0, 0, 0);
+}
+
+// The character's bar kept: the file read again first (another game window keeps its characters' there too)
+void keepBar(State& s, const std::string& name, const hb::Bar& bar) {
+    const std::string path = layout::join(gameDir(), layout::kHotbarBars);
+    std::string text;
+    if (readTextFile(path, text))
+        for (const auto& [other, kept] : hb::parseBars(text))
+            if (other != name) s.bars[other] = kept;
+    s.bars[name] = bar;
+    if (!writeFileAtomic(path, hb::barsText(s.bars))) LOG_INFO("hotbar: %s cannot be written", layout::kHotbarBars);
+}
+
+int filled(const hb::Bar& bar) {
+    int n = 0;
+    for (const std::string& v : bar.slots) n += !v.empty();
+    return n;
+}
+
+// 3.0.11-beta.78: [interface] hotbar_per_character - the character's own bar put into the game when it comes in (by
+// its name); met the first time, the game's own kept without the skills it has not learned; its changes kept
+void ownBar(State& s, bool own, unsigned codePage) {
+    if (!s.barsChecked) {
+        s.barsChecked = true;
+        s.barsCan = sameCode(kClearSlots, kClearSlotsCode, sizeof kClearSlotsCode) &&
+                    sameCode(kSetItem, kSetItemCode, sizeof kSetItemCode) &&
+                    sameCode(kClearLevels, kClearLevelsCode, sizeof kClearLevelsCode) &&
+                    sameCode(kSetLevel, kSetLevelCode, sizeof kSetLevelCode) &&
+                    sameCode(kSetSkill, kSetSkillCode, sizeof kSetSkillCode);
+        if (!s.barsCan)
+            LOG_INFO("hotbar: the game's bar setters are not this build's - no bar of each character's own");
+    }
+    if (!own || !s.barsCan) {
+        s.barStep = State::BarStep::None;
+        s.barOf.clear();
+        return;
+    }
+    if (!s.barsRead) {
+        s.barsRead = true;
+        std::string text;
+        if (readTextFile(layout::join(gameDir(), layout::kHotbarBars), text)) s.bars = hb::parseBars(text);
+        LOG_INFO("hotbar: %zu characters' own bars known (%s)", s.bars.size(), layout::kHotbarBars);
+    }
+    const ULONGLONG now = GetTickCount64();
+    const std::string name = readOwnName();
+    if (name.empty()) return;
+    if (name != s.barOf) {  // another character came in: its own bar
+        s.barOf = name;
+        s.barStep = State::BarStep::Put;
+        s.barSince = now;
+        s.barChangedAt = 0;
+    }
+    if (s.barStep == State::BarStep::Put) {
+        const auto it = s.bars.find(name);
+        if (it != s.bars.end()) {
+            putBar(it->second);
+            s.barKept = it->second;
+            s.barStep = State::BarStep::Kept;
+            LOG_INFO("hotbar: %s's own bar put back - %d cells", utf8Of(widened(name, codePage)).c_str(),
+                     filled(it->second));
+            return;
+        }
+        // met the first time: the game's own (by the selection screen's place) less the skills it has not learned
+        bool came = false;
+        const std::set<std::string> learned = readLearned(&came);
+        if (!came && now - s.barSince < kLearnedWaitMs) return;  // its skills not come yet
+        hb::Bar bar = barNow();
+        const int dropped = came ? hb::dropUnlearned(bar, learned) : 0;
+        if (dropped) putBar(bar);
+        keepBar(s, name, bar);
+        s.barKept = bar;
+        s.barStep = State::BarStep::Kept;
+        LOG_INFO("hotbar: %s met the first time - the game's bar kept as its own (%d cells), %d skills it has not "
+                 "learned taken out",
+                 utf8Of(widened(name, codePage)).c_str(), filled(bar), dropped);
+        return;
+    }
+    if (s.barStep != State::BarStep::Kept || now - s.barReadAt < kBarReadMs) return;
+    s.barReadAt = now;
+    const hb::Bar bar = barNow();  // the player's own changes kept (a second still)
+    if (bar == s.barKept) {
+        s.barChangedAt = 0;
+    } else if (!s.barChangedAt) {
+        s.barChangedAt = now;
+    } else if (now - s.barChangedAt >= kBarSettleMs) {
+        s.barChangedAt = 0;
+        s.barKept = bar;
+        keepBar(s, name, bar);
+        LOG_INFO("hotbar: %s's own bar kept - %d cells", utf8Of(widened(name, codePage)).c_str(), filled(bar));
+    }
+}
+
 void readSlots(State& s) {
     const uint32_t bar = gameBar();
     for (int j = 0; j < kSlots; ++j) {
@@ -254,6 +439,9 @@ void readSlots(State& s) {
     }
     s.bag = readBag();
     s.skills = readSkills();
+    bool came = false;  // 3.0.11-beta.78: a skill's cell greyed when the character has not learned it
+    s.learned = readLearned(&came);
+    s.learnedCame = came;
     tellPrices(s);
     charstatus::Status st;
     s.sp = readOwnStatus(st) && st.spMost > 0 ? st.sp : -1;
@@ -292,6 +480,7 @@ hb::Cell cellOf(State& s, int slot, const std::string& key, unsigned codePage) {
         c.name = n != skills.end() ? hb::spaced(n->second) : at.what.id;
         c.level = at.level;
         c.icon = iconOf(s, hb::lowered(at.what.id), side);
+        c.unlearned = s.learnedCame && !s.learned.count(at.what.id);  // 3.0.11-beta.78
         c.selected = s.waiting > 0 && at.skillId == s.waiting;
         const auto learned = s.skills.find(at.skillId);
         const int level = at.level > 0 ? at.level : learned != s.skills.end() ? learned->second.level : 0;
@@ -383,6 +572,7 @@ hb::Texts texts() {
     t.edit = say(settings::Text::HotbarEdit);
     t.done = say(settings::Text::HotbarDone);
     t.use = say(settings::Text::HotbarUse);
+    t.unlearned = say(settings::Text::HotbarUnlearned);  // 3.0.11-beta.78
     t.noSp = say(settings::Text::HotbarNoSp);
     t.notHere = say(settings::Text::HotbarNotHere);
     t.reasons.assign(size_t(hb::NotHere::kCount), "");
@@ -480,7 +670,7 @@ std::vector<barhint::Skill> barSkills() {
     return out;
 }
 
-void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int targetHeight) {
+void frame(HWND game, bool on, bool ownBars, unsigned codePage, double k, int targetWidth, int targetHeight) {
     State& s = state();
     if (on != s.on) {
         s.on = on;
@@ -495,6 +685,7 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     }
     const bool world = inGameWorld();
     if (world && s.known) holdGameBar(s, on);
+    if (world && s.known) ownBar(s, ownBars, codePage);  // 3.0.11-beta.78: each character's own bar, on or not
     if (!on || !s.known || !world || !game || k <= 0 || targetWidth <= 0 || targetHeight <= 0) {
         hide(s);
         return;

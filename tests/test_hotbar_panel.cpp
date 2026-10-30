@@ -29,6 +29,7 @@ hotbar::Texts texts() {
     t.notHere = "Не тут \xC2\xB7 {1}";
     t.reasons.assign(size_t(hotbar::NotHere::kCount), "");
     t.reasons[size_t(hotbar::NotHere::Teleport)] = "на цій карті телепорт заборонено";
+    t.unlearned = "Персонаж не має цієї навички";
     return t;
 }
 
@@ -207,6 +208,25 @@ TEST(hotbar_cell_states) {
     CHECK(tipOf(2) == "Немає SP \xC2\xB7 потрібно 24, у вас 12");
     CHECK(tipOf(3) == "Не тут \xC2\xB7 на цій карті телепорт заборонено");
     CHECK(tipOf(4) == "клік — використати");
+    // 3.0.11-beta.78: a skill the character has not learned - greyed as one not allowed here, its own words
+    std::vector<hotbar::Cell> missing = cells;
+    missing[6].unlearned = true;
+    hotbar::Show m6;
+    m6.hover = 6;
+    CHECK(hotbar::words(L, missing, 0, m6, texts()).back().text == "Персонаж не має цієї навички");
+    panel::Picture mp;
+    mp.width = L.w;
+    mp.height = L.h;
+    mp.px.assign(size_t(L.w) * size_t(L.h), 0u);
+    hotbar::paint(mp, L, missing, hotbar::Show{}, texts());
+    const auto blue = [&](const panel::Box& b) {  // the cell's blue on the whole: the icon's, dimmed or not
+        long sum = 0;
+        for (int y = int(b.y); y < int(b.y + b.h); ++y)
+            for (int x = int(b.x); x < int(b.x + b.w); ++x)
+                sum += long(mp.px[size_t(y) * size_t(mp.width) + size_t(x)] & 0xFF);
+        return sum;
+    };
+    CHECK(blue(L.cells[6]) * 10 < blue(L.cells[5]) * 8);
     hotbar::Show early;  // pointed at, its while not over: no tip
     early.hover = 2;
     early.tip = false;

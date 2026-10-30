@@ -4972,6 +4972,23 @@ constexpr Entry kTexts[] = {
      "Части нового интерфейса двигаются мышью: потяните часть, чтобы поставить её в другое место (клик остаётся "
      "кликом), уголок рядом с ней меняет размер, двойной клик по уголку возвращает её на место. Включено: они стоят на "
      "месте."},
+    // 3.0.11-beta.78 (the owner: «на панели скилов не те скилы появляются, с других аккаунтов, плюс появляются те
+    // которых на чаре нету»)
+    {Text::InterfaceHotbarOwn, "Each character's own skill bar", "Своя панель навичок у кожного персонажа",
+     "Своя панель навыков у каждого персонажа"},
+    {Text::InterfaceHotbarOwnHint,
+     "The game keeps one hotkeys bar for every account's character in the same place of the selection screen, so "
+     "skills of other characters turn up. The driver keeps each character's own bar by its name and puts it back when "
+     "the character comes into the game; met the first time, it keeps what the game had without the skills the "
+     "character has not learned.",
+     "Гра тримає одну панель клавіш для персонажів усіх акаунтів на тому самому місці екрана вибору, тому з'являються "
+     "навички інших персонажів. Драйвер зберігає власну панель кожного персонажа за його ім'ям і повертає її, коли "
+     "персонаж входить у гру; уперше — лишає те, що було в грі, без навичок, яких персонаж не має.",
+     "Игра держит одну панель клавиш для персонажей всех аккаунтов на том же месте экрана выбора, поэтому появляются "
+     "навыки других персонажей. Драйвер хранит собственную панель каждого персонажа по его имени и возвращает её, "
+     "когда персонаж входит в игру; впервые — оставляет то, что было в игре, без навыков, которых у персонажа нет."},
+    {Text::HotbarUnlearned, "The character does not have this skill", "Персонаж не має цієї навички",
+     "У персонажа нет этого навыка"},
     // 3.0.11-beta.33
     {Text::InterfaceMinimapWay, "The way on the ground", "Шлях на землі", "Путь на земле"},
     {Text::InterfaceMinimapWayHint,

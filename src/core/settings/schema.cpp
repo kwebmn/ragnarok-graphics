@@ -115,6 +115,9 @@ const std::vector<IniSetting>& iniSettings() {
         // 3.0.11-beta.77: the parts kept where they are
         {"interface", "lock_layout", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {},
          Text::InterfaceLockLayout, Text::InterfaceLockLayoutHint, ""},
+        // 3.0.11-beta.78: each character's own hotkeys bar
+        {"interface", "hotbar_per_character", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {},
+         Text::InterfaceHotbarOwn, Text::InterfaceHotbarOwnHint, ""},
         // 3.0.11-beta.33: the way followed on the ground - footprints, a strip or none
         {"interface", "minimap_way", Page::Interface, Control::Choice, 0, 0, 0, {"steps", "line", "off"},
          {Text::InterfaceMinimapWaySteps, Text::InterfaceMinimapWayLine, Text::InterfaceMinimapWayOff},
@@ -958,6 +961,7 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "interface.minimap_hd") return c.minimapHd ? "1" : "0";        // 3.0.11-beta.72
     if (k == "interface.pack_icons") return c.packIcons ? "1" : "0";        // 3.0.11-beta.74
     if (k == "interface.lock_layout") return c.lockLayout ? "1" : "0";      // 3.0.11-beta.77
+    if (k == "interface.hotbar_per_character") return c.hotbarPerCharacter ? "1" : "0";  // 3.0.11-beta.78
     if (k == "interface.minimap_way") return wayOnGroundToken(c.minimapWay);  // 3.0.11-beta.33
     if (k == "interface.buffs") return buffsLookToken(c.buffs);               // 3.0.11-beta.35
     if (k == "interface.buffs_overflow") return buffsOverflowToken(c.buffsOverflow);  // 3.0.11-beta.63

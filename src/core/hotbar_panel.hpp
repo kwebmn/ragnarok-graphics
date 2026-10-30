@@ -35,6 +35,7 @@ struct Cell {
     bool selected = false;       // 3.0.11-beta.45: the game waits for this skill's target - a gold outline 2 px
     int spNeed = 0, spHave = 0;  // a skill's SP price and the SP there: more needed than had - dimmed, a blue «SP»
     NotHere notHere = NotHere::No;  // greyed, a crossed circle, the reason in its tip
+    bool unlearned = false;  // 3.0.11-beta.78: a skill the character has not learned - greyed so, its own words
 };
 int iconSide(Mode mode, float scale);
 
@@ -72,6 +73,7 @@ struct Texts {
     std::string use;         // the cell's tip's second line: «клік — використати»
     std::string noSp;        // 3.0.11-beta.45: «Немає SP · потрібно {1}, у вас {2}»
     std::string notHere;     // «Не тут · {1}»
+    std::string unlearned;   // 3.0.11-beta.78: «Персонаж не має цієї навички»
     std::vector<std::string> reasons;  // by NotHere: «на цій карті телепорт заборонено», ...
 };
 // What the mouse and the keys do to it now

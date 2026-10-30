@@ -840,7 +840,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     // 3.0.11-beta.48: [interface] cast - the character's cast over the hero, the game's own gauge hidden
     castwin::frame(window, config.castLabel, gameCodePage(config), pk, pw, ph);
     // 3.0.11-beta.40: [interface] hotbar - the hotkeys' bar at the bottom middle, the game's own hidden
-    hotbarwin::frame(window, config.hotbar, gameCodePage(config), pk, pw, ph);
+    hotbarwin::frame(window, config.hotbar, config.hotbarPerCharacter, gameCodePage(config), pk, pw, ph);
     // 3.0.11-beta.42: [interface] items and status - «Речі» and «Характеристики» while the game's own are open
     itemswin::frame(window, config.itemsWindow, gameCodePage(config), pk, pw, ph);
     statswin::frame(window, config.statusWindow, pk, pw, ph);
