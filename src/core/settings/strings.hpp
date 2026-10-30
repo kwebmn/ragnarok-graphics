@@ -429,8 +429,9 @@ enum class Text : uint16_t {
     FxOwnGround, FxOwnGroundHint,  // 3.0.4-beta.10: the own world's prototype
     KeepFpsOffNote,                // 3.0.4-beta.11: keep_fps's choice said on the screen (R-EQDYNE)
     KeepFpsThinNote,               // 3.0.4-beta.35: keep_fps thinned the grass
-    CardRaisedNote,                // 3.0.4-beta.35: a weak card keeps up - the medium set on trial
-    CardLoweredNote,               // 3.0.4-beta.35: the medium set too much for it - the weak set back
+    CardRaisedNote,                // 3.0.4-beta.35: a weak card keeps up - the medium set on trial (3.0.11-beta.58)
+    CardLoweredNote,               // 3.0.4-beta.35: the medium set too much for it - the weak set back (3.0.11-beta.58)
+    CardSlowNote,                  // 3.0.11-beta.58: a card not judged yet holding the game back - a set lower
     FxOwnFarModels, FxOwnFarModelsHint,  // 3.0.4-beta.14: a part of the own ground
     CameraZoomLimit, CameraZoomLimitHint,  // 3.0.4-beta.17: the camera no further out than the character is drawn
     // 3.0.5-beta.1: «Реліз» chosen over a beta - the release offered back (update::backToRelease)

@@ -377,17 +377,37 @@ Startup decide() {
     }
     s.choice = chooseRenderer(s.config, facts, kUaroBuilt);
     s.memoryLevel = s.config.weakCard ? 1 : effect_groups::cardLevel(s.choice.api == Api::D3d12 && facts.d3d12, vramMb);
-    // 3.0.4-beta.35: a weak card judged by how it draws (core/card_speed.hpp) - its verdict from the last games
+    // 3.0.11-beta.58 (the autopilot): an install set up before moves over once - its set as its card's memory gave it
+    // to the automatic one, keep_fps to 60 (the settings app does the same when it opens)
+    if (haveIni) {
+        if (const std::vector<settings::IniEdit> edits = settings::autopilotOnce(settings::readIni(ini), s.memoryLevel);
+            edits.size() > 1) {
+            const bool written = editIniFile(iniPath, edits);
+            std::string what;
+            for (const settings::IniEdit& e : edits) {
+                if (e.section == "utility") continue;
+                what += (what.empty() ? "" : ", ") + e.section + "." + e.key + " " + e.value;
+                if (e.key == "preset") s.config.effects.preset = EffectPreset::Auto;
+                if (e.key == "keep_fps") s.config.keepFps = 60;
+            }
+            LOG_INFO("settings: the autopilot once - %s%s", what.c_str(),
+                     written ? "" : " (uaro-graphics.ini not written: this game only)");
+        } else if (!edits.empty() && !editIniFile(iniPath, edits)) {
+            LOG_ERROR("settings: uaro-graphics.ini could not be written ([utility] autopilot)");
+        }
+    }
+    // 3.0.4-beta.35: a card judged by how it draws (core/card_speed.hpp) - its verdict from the last games;
+    // 3.0.11-beta.58: every card's, over the whole ladder
     std::string judged;
     readTextFile(dir + "\\uaro-graphics\\card-level.txt", judged);
-    s.cardLevel = card_speed::levelAt(s.memoryLevel, s.adapter, judged);
-    s.cardDecided = card_speed::decided(s.memoryLevel, s.adapter, judged);
+    const card_speed::Start start = card_speed::startOf(s.memoryLevel, s.adapter, judged);
+    s.cardLevel = start.level;
+    s.cardSettled = start.settled;
     LOG_INFO("effects: set %s, the card's level %d%s", effect_groups::presetToken(s.config.effects.preset),
              s.cardLevel,
-             s.cardDecided ? (s.cardLevel > s.memoryLevel ? " (judged by its speed: it keeps up)"
-                                                         : " (judged by its speed: the medium set too much)")
-             : s.memoryLevel == 1 ? " (its speed to be judged on the maps)"
-                                   : "");
+             s.cardSettled                   ? " (judged by its speed)"
+             : s.cardLevel != s.memoryLevel ? " (by its speed so far - judged on the maps on)"
+                                            : " (by its memory - its speed judged on the maps)");
     // 2.2.1: also for the statistics - sent when the game ends, with the player's leave
     startWatcher(dir);  // 2.10: always - the update check; reports and statistics as the settings say
     LOG_INFO("renderer: %s%s (%s)", rendererName(s.choice.renderer),

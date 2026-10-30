@@ -1178,7 +1178,7 @@ void Context::sayOnScreen(const std::wstring& note) {
 
 card_speed::Judge& Context::judge() const {
     if (!judgeMade_) {
-        judge_ = card_speed::Judge(startup().cardLevel, startup().cardDecided);
+        judge_ = card_speed::Judge(startup().cardLevel, startup().cardSettled);
         judgeMade_ = true;
     }
     return judge_;
@@ -1186,31 +1186,50 @@ card_speed::Judge& Context::judge() const {
 
 // 3.0.4-beta.35 (the user: «у людей отключается трава на слабых видеокартах»): a window on a map for the card's judge
 // (core/card_speed.hpp) - the automatic set alone has a card's level to move; its verdict written for the next games
-// and the settings app (uaro-graphics\card-level.txt)
+// and the settings app (uaro-graphics\card-level.txt). 3.0.11-beta.58 (the autopilot): every card, the whole ladder
 void Context::judgeCard(const Config& config, double fps, double gpuMs) {
     if (config.effects.preset != EffectPreset::Auto) return;
     const int target = config.fpsLimit > 0 ? config.fpsLimit : 60;
+    const int before = judge().level();
     const card_speed::Step step = judge().window(fps, target, gpuMs, config.keepFps);
     if (step == card_speed::Step::None) return;
     effectsMade_ = false;
+    keepSlow_ = 0;  // 3.0.11-beta.58: the set moved this window - keep_fps counts again from the next one
     const Startup& s = startup();
-    const settings::Lang lang = startup().lang;
-    if (step == card_speed::Step::Raise) {
-        LOG_INFO("card level: %s keeps up - its own work %.1f ms a frame of %.1f for a minute on the maps: the medium "
-                 "set on trial", s.adapter.c_str(), gpuMs, 1000.0 / double(target));
-        sayOnScreen(wideOf(settings::tr(lang, settings::Text::CardRaisedNote)));
-        return;
+    const settings::Lang lang = s.lang;
+    const int now = judge().level();
+    const auto setName = [lang](int level) {
+        static const settings::Text kNames[] = {settings::Text::TestSetOff, settings::Text::FxPresetWeak,
+                                                settings::Text::FxPresetMedium, settings::Text::FxPresetStrong};
+        return settings::tr(lang, kNames[std::clamp(level, 0, card_speed::kTopLevel)]);
+    };
+    switch (step) {
+        case card_speed::Step::Raise:  // not written: a game ended on trial starts the next one on the set before
+            LOG_INFO("card level: %s keeps up - its own work %.1f ms a frame of %.1f, %.0f fps, for a minute on the "
+                     "maps: the set %d on trial", s.adapter.c_str(), gpuMs, 1000.0 / double(target), fps, now);
+            sayOnScreen(wideOf(settings::fmt(settings::tr(lang, settings::Text::CardRaisedNote), {setName(now)})));
+            return;
+        case card_speed::Step::Keep:
+            LOG_INFO("card level: %s - the set %d kept (three minutes on it without the card holding the game back)%s",
+                     s.adapter.c_str(), now, judge().settled() ? ", judged" : "");
+            break;
+        case card_speed::Step::Back:
+            LOG_INFO("card level: %s - %.0f fps, under %d with the card %.1f ms a frame: the set %d too much, back to "
+                     "%d, judged", s.adapter.c_str(), fps, config.keepFps > 0 ? config.keepFps : target, gpuMs, before,
+                     now);
+            sayOnScreen(wideOf(settings::fmt(settings::tr(lang, settings::Text::CardLoweredNote),
+                                             {setName(before), setName(now)})));
+            break;
+        case card_speed::Step::Lower:
+            LOG_INFO("card level: %s - holding the game back half a minute (%.0f fps, the card %.1f ms a frame): the "
+                     "set %d -> %d, judged", s.adapter.c_str(), fps, gpuMs, before, now);
+            sayOnScreen(wideOf(settings::fmt(settings::tr(lang, settings::Text::CardSlowNote),
+                                             {setName(before), setName(now)})));
+            break;
+        case card_speed::Step::None: return;
     }
-    const bool kept = step == card_speed::Step::Keep;
-    writeFileAtomic(gameDir() + "\\uaro-graphics\\card-level.txt", card_speed::format({kept ? 2 : 1, s.adapter}));
-    if (kept) {
-        LOG_INFO("card level: %s - the medium set kept (three minutes on it without the card holding the game back)",
-                 s.adapter.c_str());
-        return;
-    }
-    LOG_INFO("card level: %s - %.0f fps, under %d with the card %.1f ms a frame: back to the weak set, not tried again",
-             s.adapter.c_str(), fps, config.keepFps > 0 ? config.keepFps : target, gpuMs);
-    sayOnScreen(wideOf(settings::tr(lang, settings::Text::CardLoweredNote)));
+    writeFileAtomic(gameDir() + "\\uaro-graphics\\card-level.txt",
+                    card_speed::format({now, judge().settled(), s.adapter}));
 }
 
 void Context::watchSettings() {
