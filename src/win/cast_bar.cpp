@@ -91,13 +91,15 @@ std::string aegisOf(State& s, int id) {
     return readString(read32(read32(kSkillNames) + 4 * uint32_t(id)));
 }
 
-void restore(State& s) {  // the game's gauge back as it was
-    if (s.hidGauge && read32(s.hidGauge) == kGaugeClass) write32(s.hidGauge + kShown, 1);
+// The game's gauge back as it was - only while it is still the player's own: one the game took away at the cast's end
+// is freed memory, never written
+void restore(State& s, uint32_t live) {
+    if (s.hidGauge && s.hidGauge == live && read32(live) == kGaugeClass) write32(live + kShown, 1);
     s.hidGauge = 0;
 }
 
-void hide(State& s) {
-    restore(s);
+void hide(State& s, uint32_t live) {
+    restore(s, live);
     s.shown = false;
 }
 
@@ -148,15 +150,15 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     const uint32_t gauge = player ? read32(player + kGauge) : 0;
     if (!on || !game || k <= 0 || targetWidth <= 0 || targetHeight <= 0 || !gauge ||
         read32(gauge) != kGaugeClass) {
-        hide(s);
+        hide(s, gauge);
         if (!gauge) s.skill = 0;  // the cast over: its skill forgotten
         return;
     }
-    if (s.hidGauge != gauge) restore(s);
+    if (s.hidGauge != gauge) s.hidGauge = 0;  // another cast's gauge: the old one is the game's to free
     int32_t r[4] = {0, 0, 0, 0};  // the gauge's place: the game moves it over the hero each frame
     const DWORD end = read32(player + kCastEnd), start = read32(player + kCastStart), now = gameTime();
     if (!readGame(gauge + kRect, r, sizeof r) || r[2] <= 0 || r[2] > 400 || end <= start) {
-        hide(s);
+        hide(s, gauge);
         return;
     }
     if (read32(gauge + kShown) && write32(gauge + kShown, 0) && s.told < 20) {
