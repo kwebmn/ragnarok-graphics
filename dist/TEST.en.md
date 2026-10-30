@@ -1,3 +1,20 @@
+# uaRO Graphics 3.0.11-beta.77 — what is new
+
+- **The interface's parts move with the mouse straight away, no keys** (your «I wanted to move them without hotkeys,
+  everything right away with the mouse»). Press on the minimap, the buffs, «Tracking», the character block, the target
+  card, the party, the hotbar or the chat and drag — the part follows the mouse, snapping to the screen's edges and
+  middle and to the other parts. A plain click (no movement) works as before: a skill, an item, a button — they act
+  when you let the button go.
+- **Size by the grip.** With the mouse over a part, a gold grip shows at its bottom right corner: drag it — the size
+  from 60 to 160 %; twice on the grip — the part goes back to its own place and size.
+- **The parts no longer pile up on each other** (your «some windows overlap one another and get in the way»): a part
+  let go over another moves aside to the nearest free place by itself.
+- Not to move anything by chance — «Lock the parts' places» in «Interface» (off). Ctrl+Shift+L still shows all the
+  parts framed at once (with «Reset all» there).
+- To check: drag the minimap and the hotbar elsewhere, drop one part on another — it moves aside; make the chat bigger
+  by the grip; click a skill on the hotbar — it works. In the log: `interface layout: … dragged with the mouse`, `… let
+  go over another part - moved …`, `… sized`.
+
 # uaRO Graphics 3.0.11-beta.76 — what is new
 
 - **Monster pictures from the AI texture pack** (more of your «load ... everything else from the processed textures
