@@ -1,3 +1,11 @@
+# uaRO Graphics 3.0.11-beta.51 — what is new
+
+- **Tips by the concept's rule: after 0.4 s.** In the character block (the windows' buttons, the rings' numbers), the
+  buffs and «Items» a tip now shows once the cursor has stayed 0.4 s — not at once on every pass of the mouse (as on
+  the hotbar already). The highlight under the cursor is at once, as before.
+- **The character block's buttons press**: for a moment 1 point down and darker, as the hotbar's cells.
+- To check: sweep the mouse over the buffs and the block's buttons — the tips do not flicker; stay — the tip shows.
+
 # uaRO Graphics 3.0.11-beta.50 — what is new
 
 - **Red screen edges at low HP — if wanted** (the concept: «the screen's edge — by choice, off»). A new slider «Red
