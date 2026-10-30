@@ -9,50 +9,70 @@ bool hasRoom(int target, double gpuMs) {
 }
 
 Step Judge::window(double fps, int target, double gpuMs, int slowTarget) {
-    if (done_) return Step::None;
-    if (level_ == 1) {
-        run_ = hasRoom(target, gpuMs) ? run_ + 1 : 0;
-        if (run_ < kRaiseWindows) return Step::None;
-        level_ = 2;
-        trial_ = slow_ = 0;
-        return Step::Raise;
+    if (settled_) return Step::None;
+    const bool slow = effect_costs::slowForCard(fps, slowTarget > 0 ? slowTarget : target, gpuMs);
+    if (trying_) {
+        ++trial_;
+        slow_ = slow ? slow_ + 1 : 0;
+        if (slow_ >= kBackWindows) {
+            --level_;
+            trying_ = false;
+            settled_ = true;
+            return Step::Back;
+        }
+        if (trial_ < kTrialWindows) return Step::None;
+        trying_ = false;
+        settled_ = level_ >= kTopLevel;
+        room_ = slow_ = 0;
+        return Step::Keep;
     }
-    ++trial_;
-    slow_ = effect_costs::slowForCard(fps, slowTarget > 0 ? slowTarget : target, gpuMs) ? slow_ + 1 : 0;
-    if (slow_ >= kLowerWindows) {
-        level_ = 1;
-        done_ = true;
+    slow_ = slow ? slow_ + 1 : 0;
+    if (slow_ >= kLowerWindows && level_ > 0) {
+        --level_;
+        settled_ = true;
         return Step::Lower;
     }
-    if (trial_ < kTrialWindows) return Step::None;
-    done_ = true;
-    return Step::Keep;
+    // room: the game at its frames (a town slow for the processor is no room - more effects add the driver's own
+    // processor work there) and the card half idle
+    room_ = fps >= 0.9 * double(target) && hasRoom(target, gpuMs) ? room_ + 1 : 0;
+    if (room_ < kRaiseWindows || level_ >= kTopLevel) return Step::None;
+    ++level_;
+    trying_ = true;
+    room_ = trial_ = slow_ = 0;
+    return Step::Raise;
 }
 
-std::string format(const Record& r) { return std::to_string(r.level) + " " + r.adapter + "\n"; }
+std::string format(const Record& r) {
+    return "v2 " + std::to_string(r.level) + (r.settled ? " 1 " : " 0 ") + r.adapter + "\n";
+}
+
+namespace {
+
+std::string trimmed(std::string s) {
+    while (!s.empty() && (s.back() == '\n' || s.back() == '\r' || s.back() == ' ')) s.pop_back();
+    return s;
+}
+
+}  // namespace
 
 bool parse(const std::string& text, Record& out) {
-    const size_t space = text.find(' ');
-    if (space == std::string::npos || space == 0) return false;
-    const std::string level = text.substr(0, space);
-    if (level != "1" && level != "2") return false;
-    std::string adapter = text.substr(space + 1);
-    while (!adapter.empty() && (adapter.back() == '\n' || adapter.back() == '\r' || adapter.back() == ' '))
-        adapter.pop_back();
-    if (adapter.empty()) return false;
-    out.level = level[0] - '0';
-    out.adapter = adapter;
+    const std::string line = trimmed(text.substr(0, text.find('\n')));
+    if (line.size() > 7 && line.compare(0, 3, "v2 ") == 0 && line[4] == ' ' && line[6] == ' ') {
+        const char level = line[3], settled = line[5];
+        if (level < '0' || level > '3' || (settled != '0' && settled != '1')) return false;
+        out = Record{level - '0', settled == '1', line.substr(7)};
+        return !out.adapter.empty();
+    }
+    const size_t space = line.find(' ');  // 3.0.4-beta.35's
+    if (space != 1 || (line[0] != '1' && line[0] != '2') || line.size() < 3) return false;
+    out = Record{line[0] - '0', false, line.substr(2)};
     return true;
 }
 
-bool decided(int memoryLevel, const std::string& adapter, const std::string& text) {
+Start startOf(int memoryLevel, const std::string& adapter, const std::string& text) {
     Record r;
-    return memoryLevel == 1 && !adapter.empty() && parse(text, r) && r.adapter == adapter;
-}
-
-int levelAt(int memoryLevel, const std::string& adapter, const std::string& text) {
-    Record r;
-    return decided(memoryLevel, adapter, text) && parse(text, r) ? r.level : memoryLevel;
+    if (!adapter.empty() && parse(text, r) && r.adapter == adapter) return Start{r.level, r.settled};
+    return Start{memoryLevel, false};
 }
 
 }  // namespace uagfx::card_speed

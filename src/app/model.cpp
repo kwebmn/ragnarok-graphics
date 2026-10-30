@@ -137,10 +137,11 @@ int Model::cardLevel() const {
                        token(*findSetting("renderer.api")) != "d3d11";
     const bool weak = token(*findSetting("debug.weak_card")) == "1";  // 3.0.4-beta.35: taken as weak, to try it
     const int memory = weak ? 1 : effect_groups::cardLevel(d3d12, system_.d3d12.vramMb);
-    // 3.0.4-beta.35: a weak card judged by how it draws in the game (the driver's uaro-graphics\card-level.txt)
+    // 3.0.4-beta.35: a card judged by how it draws in the game (the driver's uaro-graphics\card-level.txt);
+    // 3.0.11-beta.58: every card's, over the whole ladder
     std::string judged;
     readFile(paths_.dir + L"\\uaro-graphics\\card-level.txt", judged);
-    return card_speed::levelAt(memory, system_.d3d12.adapter, judged);
+    return card_speed::startOf(memory, system_.d3d12.adapter, judged).level;
 }
 
 void Model::settleOldGroups() {
