@@ -1,3 +1,17 @@
+# uaRO Graphics 3.0.11-beta.72 — what is new
+
+- **Sharper map pictures** (your «the map pictures themselves are small and untidy»). When the game has a map's
+  picture four times bigger — in the AI texture pack (uaro-textures.zip) or the old client's texture_x4.zip — the
+  minimap and the big map take it. It loads in the background a moment after you enter the map; the game does not
+  stall. The map's edges now fade smoothly into the ground, and zoomed out the picture does not shimmer. The switch
+  «Sharp map pictures» in «Interface» (on).
+- **No more pink stripes at the edges** (your «pink stripes at the edges»). It was a nearly magenta fringe round the
+  game's see-through colour: scaling the picture smudges it into pink. Those points are see-through now too — on the
+  minimap, the big map and the world map in «Reference».
+- To check: enter a few maps (a town, a field, a dungeon) and open the big map — edges without pink, the picture
+  sharp. In the log the line `minimap: … picture 2048x2048 from …` says where the bigger picture came from;
+  `no picture bigger than the game's` — there is none, the game's picture shows (without pink as well).
+
 # uaRO Graphics 3.0.11-beta.71 — what is new
 
 - **The player's arrow on the minimap and the big map points where the character looks** (your «the player's icon
