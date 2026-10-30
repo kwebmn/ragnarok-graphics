@@ -1,3 +1,12 @@
+# uaRO Graphics 3.0.11-beta.56 — what is new
+
+- **A count of installs.** The update check (at every start of the game and of the app) now tells uaro.kiev.ua every
+  12 hours only that this install is there: the install's random number (uaro-graphics\install-id.txt), the version
+  and the channel. No settings, no play times, no address — only to know how many installs there are and on which
+  versions. This is apart from the choice «Send anonymous statistics of the settings» — its tip now says so (the
+  «Diagnostics» page).
+- To check: once the site's part is in place, the admin's statistics summary has an «installs» block.
+
 # uaRO Graphics 3.0.11-beta.55 — what is new
 
 - **The world's dimming under windows is off by default** (your word: «sometimes the interface has to stay open in
