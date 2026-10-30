@@ -1,3 +1,14 @@
+# uaRO Graphics 3.0.11-beta.61 — what is new
+
+- **How the first game went — seen on the site.** On a new install (the game never started there) the app tells
+  uaro.kiev.ua once, with the install's anonymous mark, how its first game went: the card's class and Direct3D, the
+  safe mode or not, whether the game got to a map, its frames there and the effects set, how it ended (fine or by an
+  error) and how many minutes it lasted. No name, no login, no address. This shows why newcomers leave after their
+  first start.
+- The tip of «Send anonymous settings statistics» says so too.
+- To check: on a fresh client play once and close the game — the site's install statistics get its first game (once
+  the site is updated).
+
 # uaRO Graphics 3.0.11-beta.60 — what is new
 
 - **A client packed with another computer's settings sets itself up for yours.** When uaro-graphics.ini records
