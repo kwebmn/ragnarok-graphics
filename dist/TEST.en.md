@@ -1,3 +1,19 @@
+# uaRO Graphics 3.0.11-beta.74 — what is new
+
+- **Icons from the AI texture pack** (your «load the icons of skills, items and everything else from the processed
+  textures where possible»). The skill and item icons on the hotbar, in «Items», on the cast bar and in «Reference»
+  (lists and item cards), and the status effect icons come from the pack uaro-textures.zip — four times bigger there
+  than the game's (a 24×24 icon → 96×96) and scaled down to the size needed, so they are sharp at any scale. Where the
+  pack has no picture, the game's stays. Your client's pack has 4008 item and skill icons and 91 newer status icons
+ ; the other status icons are not in the pack — the game's stay for them.
+- The pack is read once in the background at the start (its interface and texture contents); until then the game's
+  icons show, then the panels draw themselves again.
+- The switch «Icons from the AI texture pack» in «Interface» (on).
+- Monster pictures in «Reference» and on the target card still come from the game's sprites — that is the next step.
+- To check: the hotbar, «Items», the buffs — the icons are sharp. In the log: `pack pictures: the AI texture pack's …
+  pictures known in … ms`, `client tables: the icon … from the AI texture pack`, `buffs: icon … - the AI texture
+  pack's …`.
+
 # uaRO Graphics 3.0.11-beta.73 — what is new
 
 - **The new interface paints faster.** In your report (R-WXNNU2, «minimap test») the minimap took 13 ms to paint,
