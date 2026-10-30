@@ -902,6 +902,25 @@ TEST(config_reads_the_buffs_look) {
     CHECK(u.next.buffs == BuffsLook::Column);
 }
 
+// 3.0.11-beta.63 (the concept's question 17: variant 1 «ще N» by default, variant 2 - a second column - a choice):
+// [interface] buffs_overflow - what the buffs' column does not hold: under «ще N» or in a second column on its left
+// (the row: a second row); a choice of «Інтерфейс», applied at once
+TEST(config_reads_the_buffs_overflow) {
+    CHECK(parseConfig("").buffsOverflow == BuffsOverflow::More);
+    CHECK(parseConfig("[interface]\nbuffs_overflow = column\n").buffsOverflow == BuffsOverflow::Column);
+    CHECK(parseConfig("[interface]\nbuffs_overflow = more\n").buffsOverflow == BuffsOverflow::More);
+    CHECK(parseConfig("[interface]\nbuffs_overflow = scroll\n").buffsOverflow == BuffsOverflow::More);
+    const settings::IniSetting* s = settings::findSetting("interface.buffs_overflow");
+    CHECK(s != nullptr);
+    if (!s) return;
+    CHECK(s->page == settings::Page::Interface && s->control == settings::Control::Choice);
+    CHECK_EQ(settings::tokenOf(*s, parseConfig("[interface]\nbuffs_overflow = column\n")), std::string("column"));
+    CHECK_EQ(settings::tokenOf(*s, parseConfig("")), std::string("more"));
+    CHECK(appliesNow("interface.buffs_overflow"));
+    const LiveUpdate u = liveUpdate(parseConfig(""), parseConfig("[interface]\nbuffs_overflow = column\n"));
+    CHECK(u.next.buffsOverflow == BuffsOverflow::Column);
+}
+
 // 3.0.11-beta.36 (the owner: «кольца или полоски на выбор. приступай»): [interface] character - the game's own Basic
 // Info window (off), the character block with bars, with rings; a choice of «Інтерфейс», applied at once
 TEST(config_reads_the_character_block) {

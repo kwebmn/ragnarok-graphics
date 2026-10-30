@@ -23,6 +23,9 @@ enum class WayOnGround : uint8_t { Steps, Line, Off };
 // 3.0.11-beta.35: [interface] buffs - the character's buffs: the game's own icons (off), the driver's column under the
 // minimap, a row under it
 enum class BuffsLook : uint8_t { Off, Column, Row };
+// 3.0.11-beta.63: [interface] buffs_overflow - what the buffs' column does not hold: under «ще N» (more), in a second
+// column on its left - the row's in a second row (column)
+enum class BuffsOverflow : uint8_t { More, Column };
 // 3.0.11-beta.36: [interface] character - the game's own Basic Info window (off), the character block with bars, with
 // rings
 enum class CharacterLook : uint8_t { Off, Bars, Rings };
@@ -550,6 +553,9 @@ struct Config {
     // 3.0.11-beta.35: [interface] buffs - stage 7 of the new interface (the HUD, the buffs first; the owner's approved
     // column, the row a choice): the game's own status icons hidden, the driver's under the minimap (core/buff_panel)
     BuffsLook buffs = BuffsLook::Off;
+    // 3.0.11-beta.63: [interface] buffs_overflow - the concept's question 17: «ще N» by default (variant 1), a second
+    // column a choice (variant 2); the debuffs that do not fit open columns of their own either way
+    BuffsOverflow buffsOverflow = BuffsOverflow::More;
     // 3.0.11-beta.36: [interface] character - the character block at the top left (core/char_block), the game's Basic
     // Info window hidden; its compact look bars or rings (the owner: «кольца или полоски на выбор»)
     CharacterLook character = CharacterLook::Off;
@@ -721,6 +727,7 @@ const char* uiFilterToken(UiFilter f);
 const char* windowKeysToken(WindowKeys k);  // 3.0.3-beta.6
 const char* wayOnGroundToken(WayOnGround w);  // 3.0.11-beta.33
 const char* buffsLookToken(BuffsLook b);       // 3.0.11-beta.35
+const char* buffsOverflowToken(BuffsOverflow b);  // 3.0.11-beta.63
 const char* characterLookToken(CharacterLook c);  // 3.0.11-beta.36
 const char* panelLayoutToken(PanelLayout l);  // 3.0.3-beta.7
 const char* windowArtToken(WindowArt a);

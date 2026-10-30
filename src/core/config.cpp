@@ -503,6 +503,9 @@ Config parseConfig(const std::string& text) {
             if (val == "off") c.buffs = BuffsLook::Off;
             if (val == "column") c.buffs = BuffsLook::Column;
             if (val == "row") c.buffs = BuffsLook::Row;
+        } else if (key == "interface.buffs_overflow") {  // 3.0.11-beta.63: what the buffs' column does not hold
+            if (val == "more") c.buffsOverflow = BuffsOverflow::More;
+            if (val == "column") c.buffsOverflow = BuffsOverflow::Column;
         } else if (key == "interface.items") {  // 3.0.11-beta.42: «Речі»
             itemsSet = val == "0" || val == "1" || val == "on" || val == "off" || val == "true" || val == "false";
             setBool(val, c.itemsWindow);
@@ -860,6 +863,8 @@ const char* wayOnGroundToken(WayOnGround w) {
 const char* buffsLookToken(BuffsLook b) {
     return b == BuffsLook::Column ? "column" : b == BuffsLook::Row ? "row" : "off";
 }
+
+const char* buffsOverflowToken(BuffsOverflow b) { return b == BuffsOverflow::Column ? "column" : "more"; }
 
 const char* characterLookToken(CharacterLook c) {
     return c == CharacterLook::Bars ? "bars" : c == CharacterLook::Rings ? "rings" : "off";

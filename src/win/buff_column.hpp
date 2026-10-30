@@ -18,7 +18,8 @@ namespace uagfx::win::buffcolumn {
 // from the game's list (0x728484), their times from the packets (win/buff_overlay's), their pictures from the game's
 // own files. On the game's thread.
 bool installBuffIcons();  // the call redirected (it answers as the game's until the column shows); false: another build
-void frame(HWND game, BuffsLook look, double k, int targetWidth, int targetHeight);
+// 3.0.11-beta.63: `overflow` - what the column does not hold: under «ще N» or in a second column
+void frame(HWND game, BuffsLook look, BuffsOverflow overflow, double k, int targetWidth, int targetHeight);
 void draw(FrameRecord& record, gpu::Renderer& renderer);
 // The mouse over it is its own: the name in a tip, a click stars a favourite, «назви» opens the names
 bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result);

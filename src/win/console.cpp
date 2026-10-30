@@ -167,6 +167,8 @@ void Console::build(Lang lang, const Config& config) {
                 rows_.push_back(Row{Kind::Choice, "interface.minimap_way", 1});
             if (settingOf("interface.buffs"))  // 3.0.11-beta.35: the buffs' column
                 rows_.push_back(Row{Kind::Choice, "interface.buffs", 0});
+            if (settingOf("interface.buffs_overflow"))  // 3.0.11-beta.63: what it does not hold
+                rows_.push_back(Row{Kind::Choice, "interface.buffs_overflow", 1});
             if (settingOf("interface.character"))  // 3.0.11-beta.36: the character block
                 rows_.push_back(Row{Kind::Choice, "interface.character", 0});
             if (settingOf("interface.target"))  // 3.0.11-beta.38: the target's card

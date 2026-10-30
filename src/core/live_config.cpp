@@ -191,6 +191,11 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("buffs", buffsLookToken(running.buffs), buffsLookToken(file.buffs)));
         n.buffs = file.buffs;
     }
+    if (file.buffsOverflow != running.buffsOverflow) {  // 3.0.11-beta.63: what the column does not hold, at once
+        u.applied.push_back(change("buffs_overflow", buffsOverflowToken(running.buffsOverflow),
+                                   buffsOverflowToken(file.buffsOverflow)));
+        n.buffsOverflow = file.buffsOverflow;
+    }
     if (file.itemsWindow != running.itemsWindow) {  // 3.0.11-beta.42: «Речі», at once
         u.applied.push_back(change("items", flag(running.itemsWindow), flag(file.itemsWindow)));
         n.itemsWindow = file.itemsWindow;

@@ -101,6 +101,7 @@ TEST(buff_panel_what_does_not_fit) {
     e.push_back(entry(8, K::Debuff));
     const buffpanel::Layout L = buffpanel::layout(e, buffpanel::Look::Column, 1900, 300, 800, 0, 1.0f);
     CHECK(L.y + L.h <= 800 && L.hidden > 0 && L.more.w > 0 && inside(L.body, L.more));
+    CHECK(L.more.h == 28 && L.more.w == L.body.w - 14 && L.lines.empty());  // the concept's: its whole width, 28 px
     CHECK_EQ(L.slots.size() + size_t(L.hidden), e.size());
     // the favourite and both debuffs shown; the rest's last ones hidden, its first ones kept
     const auto shownIn = [](const buffpanel::Layout& of, int i) {
@@ -117,11 +118,102 @@ TEST(buff_panel_what_does_not_fit) {
     std::vector<buffpanel::Entry> d;
     for (uint16_t i = 0; i < 9; ++i) d.push_back(entry(13, K::Debuff));
     const buffpanel::Layout D = buffpanel::layout(d, buffpanel::Look::Column, 1900, 300, 500, 0, 1.0f);
-    CHECK(D.slots.size() == 9 && D.hidden == 0);
+    CHECK(D.slots.size() == 9 && D.hidden == 0 && D.y + D.h <= 500);  // 3.0.11-beta.63: in columns of their own
     // a buff hidden behind debuffs alone: «ще 1» first, none over it
     d.push_back(entry(9, K::Buff));
     const buffpanel::Layout M = buffpanel::layout(d, buffpanel::Look::Column, 1900, 300, 500, 0, 1.0f);
     CHECK(M.hidden == 1 && M.more.w > 0 && M.more.y + M.more.h <= M.slots[0].frame.y);
+}
+
+namespace {
+
+// The glass a slot of `entryIndex` stands in: 0 the body, 1.. the further lines; -1 not shown
+int glassOf(const buffpanel::Layout& L, int entryIndex) {
+    for (const buffpanel::Slot& s : L.slots) {
+        if (s.entry != entryIndex) continue;
+        if (inside(L.body, s.frame)) return 0;
+        for (size_t i = 0; i < L.lines.size(); ++i)
+            if (inside(L.lines[i], s.frame)) return int(i) + 1;
+        return -2;  // outside every glass
+    }
+    return -1;
+}
+
+}  // namespace
+
+// 3.0.11-beta.63 (the concept's «Крайние случаи»: «Если дебаффов больше, чем мест, те, что не влезли, открывают
+// второй столбик слева — только для дебаффов»): debuffs past the room open columns of their own on the left
+TEST(buff_panel_debuffs_open_columns) {
+    using K = buffpanel::Kind;
+    std::vector<buffpanel::Entry> d;
+    for (uint16_t i = 0; i < 9; ++i) d.push_back(entry(uint16_t(200 + i), K::Debuff));
+    const buffpanel::Layout D = buffpanel::layout(d, buffpanel::Look::Column, 1900, 300, 500, 0, 1.0f);
+    CHECK(D.slots.size() == 9 && D.hidden == 0 && D.more.w == 0 && D.x + D.w == 1900 && D.y + D.h <= 500);
+    CHECK_EQ(D.lines.size(), size_t(2));  // three a column in 200 px
+    CHECK(D.lines[0].x + D.lines[0].w <= D.body.x && D.lines[1].x + D.lines[1].w <= D.lines[0].x);  // to the left
+    CHECK(D.lines[0].y == D.body.y && D.lines[0].w == D.body.w && D.lines[0].h <= D.body.h);
+    CHECK(glassOf(D, 0) == 0 && glassOf(D, 2) == 0 && glassOf(D, 3) == 1 && glassOf(D, 5) == 1 && glassOf(D, 8) == 2);
+    for (size_t i = 0; i < D.slots.size(); ++i) CHECK_EQ(D.slots[i].entry, int(i));  // in their order
+    // the mouse: one in a further column is its own; the tips left of them all
+    const buffpanel::Slot& s = D.slots[4];
+    const buffpanel::Hit h = buffpanel::hitTest(D, s.frame.x + s.frame.w / 2, s.frame.y + s.frame.h / 2);
+    CHECK(h.part == buffpanel::Part::Icon && h.slot == 4);
+    const panel::Box tip = buffpanel::tipBox(D, 0, 100);
+    CHECK(tip.w >= 100 && tip.x >= 0 && tip.x + tip.w <= D.lines[1].x);
+    CHECK(D.tipRoom.w > 0 && D.tipRoom.x + D.tipRoom.w <= D.lines[1].x);
+    CHECK(inside(D.hit, D.body) && inside(D.hit, D.toggle));  // the main column's box
+    CHECK(inside(D.linesHit, D.lines[0]) && inside(D.linesHit, D.lines[1]) && D.linesHit.x + D.linesHit.w <= D.body.x);
+    // a buff hidden behind them: «ще 1» at the first column's top, the debuffs after it, those past it further on
+    d.push_back(entry(9, K::Buff));
+    const buffpanel::Layout M = buffpanel::layout(d, buffpanel::Look::Column, 1900, 300, 500, 0, 1.0f);
+    CHECK(M.hidden == 1 && inside(M.body, M.more) && M.slots.size() == 9 && M.y + M.h <= 500);
+    CHECK(glassOf(M, 0) == 0 && glassOf(M, 2) == 1 && glassOf(M, 9) == -1);
+    // the row: a second row under the first
+    std::vector<buffpanel::Entry> r;
+    for (uint16_t i = 0; i < 12; ++i) r.push_back(entry(uint16_t(200 + i), K::Debuff));
+    const buffpanel::Layout R = buffpanel::layout(r, buffpanel::Look::Row, 1900, 300, 1030, 300, 1.0f);
+    CHECK(R.hidden == 0 && R.slots.size() == 12 && R.w <= 300 && R.lines.size() == 1);
+    CHECK(R.lines[0].y >= R.body.y + R.body.h && std::fabs(R.lines[0].x + R.lines[0].w - float(R.w)) < 1e-3f);
+    CHECK(glassOf(R, 0) == 0 && glassOf(R, 11) == 1 && R.tipRoom.y >= R.lines[0].y + R.lines[0].h);
+    const panel::Box rowTip = buffpanel::tipBox(R, 0, 100);
+    CHECK(rowTip.y >= R.lines[0].y + R.lines[0].h && rowTip.y + rowTip.h <= float(R.h));
+}
+
+// 3.0.11-beta.63 (the concept's variant 2, question 17 - a choice): nothing hidden, what does not fit goes into a
+// second column on the left (the row: a second row); the debuffs stay at the first column's end
+TEST(buff_panel_second_column) {
+    using K = buffpanel::Kind;
+    std::vector<buffpanel::Entry> e{entry(10, K::Favourite)};
+    for (uint16_t i = 0; i < 12; ++i) e.push_back(entry(uint16_t(100 + i), K::Buff));
+    e.push_back(entry(13, K::Debuff));
+    e.push_back(entry(8, K::Debuff));
+    const buffpanel::Layout L =
+        buffpanel::layout(e, buffpanel::Look::Column, 1900, 300, 800, 0, 1.0f, buffpanel::Overflow::Lines);
+    CHECK(L.hidden == 0 && L.more.w == 0 && L.slots.size() == e.size() && L.y + L.h <= 800);
+    CHECK_EQ(L.lines.size(), size_t(1));
+    CHECK(glassOf(L, 0) == 0 && glassOf(L, 1) == 0 && glassOf(L, 13) == 0 && glassOf(L, 14) == 0);
+    CHECK(glassOf(L, 12) == 1 && glassOf(L, 11) == 1);
+    const auto at = [&](int entryIndex) {
+        for (const buffpanel::Slot& s : L.slots)
+            if (s.entry == entryIndex) return s.frame.y;
+        return -1.0f;
+    };
+    CHECK(at(13) > at(1) && at(14) > at(13));  // the debuffs last in the first column
+    // the names: columns of names
+    const buffpanel::Layout N =
+        buffpanel::layout(e, buffpanel::Look::Names, 1900, 300, 600, 0, 1.0f, buffpanel::Overflow::Lines);
+    CHECK(N.hidden == 0 && N.slots.size() == e.size() && !N.lines.empty() && N.lines[0].w == N.body.w);
+    CHECK(N.y + N.h <= 600 && N.lines[0].x + N.lines[0].w <= N.body.x);
+    // the row: a second row
+    const buffpanel::Layout R =
+        buffpanel::layout(e, buffpanel::Look::Row, 1900, 300, 1030, 300, 1.0f, buffpanel::Overflow::Lines);
+    CHECK(R.hidden == 0 && R.slots.size() == e.size() && R.w <= 300 && R.lines.size() == 1);
+    CHECK(glassOf(R, 0) == 0 && glassOf(R, 13) == 0 && glassOf(R, 12) == 1);
+    // everything in its room: one column as before
+    const std::vector<buffpanel::Entry> few{entry(10, K::Favourite), entry(9, K::Buff), entry(13, K::Debuff)};
+    const buffpanel::Layout F =
+        buffpanel::layout(few, buffpanel::Look::Column, 1900, 300, 800, 0, 1.0f, buffpanel::Overflow::Lines);
+    CHECK(F.lines.empty() && F.linesHit.w == 0 && F.slots.size() == 3);
 }
 
 TEST(buff_panel_mouse) {

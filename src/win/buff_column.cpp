@@ -111,6 +111,7 @@ struct GameIcon {
 
 struct State {
     BuffsLook look = BuffsLook::Off;
+    BuffsOverflow overflow = BuffsOverflow::More;  // 3.0.11-beta.63
     bool shown = false, wantedTold = false, hookTold = false;
     float k = 0, scale = 1;
     int targetW = 0, targetH = 0;
@@ -130,6 +131,8 @@ struct State {
     int texW = 0, texH = 0;
     bool upload = false;
     int iconsLogged = 0, clicksLogged = 0;
+    size_t linesTold = 0;  // 3.0.11-beta.63: the further columns logged
+    int linesLogged = 0;
 };
 
 State& state() {
@@ -287,15 +290,24 @@ bool toTarget(const State& s, HWND game, int x, int y, float& tx, float& ty) {
 void block(const State& s, HWND game) {  // the mouse's clicks over it are its own, not the game's
     RECT client{};
     if (s.targetW <= 0 || s.targetH <= 0 || !GetClientRect(game, &client)) return;
-    const panel::Box& h = s.layout.hit;
-    const float x0 = float(s.layout.x) + h.x, y0 = float(s.layout.y) + h.y;
-    const RECT r{LONG(int64_t(x0) * client.right / s.targetW), LONG(int64_t(y0) * client.bottom / s.targetH),
-                 LONG(int64_t(x0 + h.w) * client.right / s.targetW + 1),
-                 LONG(int64_t(y0 + h.h) * client.bottom / s.targetH + 1)};
+    const auto rect = [&](const panel::Box& h) {
+        const float x0 = float(s.layout.x) + h.x, y0 = float(s.layout.y) + h.y;
+        return RECT{LONG(int64_t(x0) * client.right / s.targetW), LONG(int64_t(y0) * client.bottom / s.targetH),
+                    LONG(int64_t(x0 + h.w) * client.right / s.targetW + 1),
+                    LONG(int64_t(y0 + h.h) * client.bottom / s.targetH + 1)};
+    };
+    const RECT r = rect(s.layout.hit);
     uapad::gamewindow::setBlocked(uapad::gamewindow::Blocker::Buffs, game, &r, false);
+    // 3.0.11-beta.63: the further columns' (rows') own box - the world under the empty corner by them stays the game's
+    const RECT lines = rect(s.layout.linesHit);
+    uapad::gamewindow::setBlocked(uapad::gamewindow::Blocker::BuffsLines, game,
+                                  s.layout.linesHit.w > 0 ? &lines : nullptr, false);
 }
 
-void unblock() { uapad::gamewindow::setBlocked(uapad::gamewindow::Blocker::Buffs, nullptr, nullptr, false); }
+void unblock() {
+    uapad::gamewindow::setBlocked(uapad::gamewindow::Blocker::Buffs, nullptr, nullptr, false);
+    uapad::gamewindow::setBlocked(uapad::gamewindow::Blocker::BuffsLines, nullptr, nullptr, false);
+}
 
 void hide(State& s) {
     if (s.shown) unblock();
@@ -339,11 +351,16 @@ bool installBuffIcons() {
 
 bool hidingGameIcons() { return g_hide; }
 
-void frame(HWND game, BuffsLook look, double k, int targetWidth, int targetHeight) {
+void frame(HWND game, BuffsLook look, BuffsOverflow overflow, double k, int targetWidth, int targetHeight) {
     State& s = state();
     if (look != s.look) {
         LOG_INFO("buffs: [interface] buffs = %s", buffsLookToken(look));
         s.look = look;
+        s.shape.clear();
+    }
+    if (overflow != s.overflow) {  // 3.0.11-beta.63
+        LOG_INFO("buffs: [interface] buffs_overflow = %s", buffsOverflowToken(overflow));
+        s.overflow = overflow;
         s.shape.clear();
     }
     const bool wanted = look != BuffsLook::Off;
@@ -406,7 +423,15 @@ void frame(HWND game, BuffsLook look, double k, int targetWidth, int targetHeigh
     // the hovered icon: its name in a tip
     int hover = -1;
     int cx = 0, cy = 0;
-    s.layout = bp::layout(s.entries, panelLook, right, top, bottom, widest, scale);
+    s.layout = bp::layout(s.entries, panelLook, right, top, bottom, widest, scale,
+                          s.overflow == BuffsOverflow::Column ? bp::Overflow::Lines : bp::Overflow::More);
+    if (s.layout.lines.size() != s.linesTold) {  // 3.0.11-beta.63: a further column opened or closed
+        s.linesTold = s.layout.lines.size();
+        if (s.linesLogged++ < 20)
+            LOG_INFO("buffs: %zu further %s (%zu of %zu icons shown, %d under «ще N», %s)", s.linesTold,
+                     panelLook == bp::Look::Row ? "rows" : "columns", s.layout.slots.size(), s.entries.size(),
+                     s.layout.hidden, buffsOverflowToken(s.overflow));
+    }
     if (readGameCursor(cx, cy)) {
         const bp::Hit h = bp::hitTest(s.layout, float(cx) * float(k) - float(s.layout.x),
                                       float(cy) * float(k) - float(s.layout.y));
@@ -460,7 +485,7 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     float tx = 0, ty = 0;
     if (!toTarget(s, game, p.x, p.y, tx, ty)) return false;
     const float px = tx - float(s.layout.x), py = ty - float(s.layout.y);
-    if (!s.layout.hit.contains(px, py)) return false;
+    if (!s.layout.hit.contains(px, py) && !s.layout.linesHit.contains(px, py)) return false;
     if (m == WM_LBUTTONDOWN) {
         const bp::Hit h = bp::hitTest(s.layout, px, py);
         if (h.part == bp::Part::Toggle || (h.part == bp::Part::More && s.look == BuffsLook::Column)) {

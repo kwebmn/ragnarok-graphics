@@ -4929,6 +4929,20 @@ constexpr Entry kTexts[] = {
     {Text::BuffsMore, "{1} more", "ще {1}", "ещё {1}"},
     {Text::BuffsStar, "click: to favourites", "клік — в обрані", "клик — в избранное"},
     {Text::BuffsUnstar, "click: off favourites", "клік — прибрати з обраних", "клик — убрать из избранного"},
+    // 3.0.11-beta.63: what the buffs' column does not hold (the concept's question 17)
+    {Text::InterfaceBuffsOverflow, "Buffs that do not fit", "Бафи, що не вміщаються", "Бафы, которые не помещаются"},
+    {Text::InterfaceBuffsOverflowHint,
+     "When the column is full: the buffs that do not fit hide under the «N more» button (a click shows them all "
+     "with their names) or stand in a second column on its left (the row: a second row under it). Debuffs are never "
+     "hidden: those that do not fit open a column of their own.",
+     "Коли стовпчик заповнений: бафи, що не вміщаються, ховаються під кнопку «ще N» (клік показує всі з назвами) "
+     "або стають у другий стовпчик ліворуч від нього (рядок — у другий рядок під ним). Дебафи не ховаються ніколи: "
+     "ті, що не вмістилися, відкривають свій стовпчик.",
+     "Когда столбик заполнен: бафы, которые не помещаются, прячутся под кнопку «ещё N» (клик показывает все с "
+     "названиями) или встают во второй столбик слева от него (строка — во вторую строку под ней). Дебафы не "
+     "прячутся никогда: те, что не поместились, открывают свой столбик."},
+    {Text::InterfaceBuffsOverflowMore, "Under «N more»", "Під «ще N»", "Под «ещё N»"},
+    {Text::InterfaceBuffsOverflowColumn, "In a second column", "У другий стовпчик", "Во второй столбик"},
     // 3.0.11-beta.36: the character block (stage 7 of the new interface)
     {Text::InterfaceCharacter, "Character block", "Блок персонажа", "Блок персонажа"},
     {Text::InterfaceCharacterHint,

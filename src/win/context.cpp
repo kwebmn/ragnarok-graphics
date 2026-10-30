@@ -808,7 +808,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
                          config.minimapWay},
                         pk, pw, ph);
     // 3.0.11-beta.35: [interface] buffs - the buffs' column under the new minimap, the game's icons hidden
-    buffcolumn::frame(window, config.buffs, pk, pw, ph);
+    buffcolumn::frame(window, config.buffs, config.buffsOverflow, pk, pw, ph);
     motion::setOn(config.animations);  // 3.0.11-beta.46: [interface] animations - the new interface's motion
     uistyle::set(config.hudOpacity, config.windowOpacity);  // 3.0.11-beta.47: its grounds
     // 3.0.11-beta.36: [interface] character - the character block at the top left, the game's Basic Info hidden

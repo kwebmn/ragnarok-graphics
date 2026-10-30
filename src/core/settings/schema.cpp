@@ -111,6 +111,10 @@ const std::vector<IniSetting>& iniSettings() {
         {"interface", "buffs", Page::Interface, Control::Choice, 0, 0, 0, {"off", "column", "row"},
          {Text::InterfaceBuffsOff, Text::InterfaceBuffsColumn, Text::InterfaceBuffsRow}, Text::InterfaceBuffs,
          Text::InterfaceBuffsHint, ""},
+        // 3.0.11-beta.63: what the column does not hold - under «ще N» or in a second column
+        {"interface", "buffs_overflow", Page::Interface, Control::Choice, 0, 0, 0, {"more", "column"},
+         {Text::InterfaceBuffsOverflowMore, Text::InterfaceBuffsOverflowColumn}, Text::InterfaceBuffsOverflow,
+         Text::InterfaceBuffsOverflowHint, ""},
         // 3.0.11-beta.42: the windows
         {"interface", "items", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::InterfaceItems,
          Text::InterfaceItemsHint, ""},
@@ -932,6 +936,7 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "interface.minimap_mobs") return c.minimapMobs ? "1" : "0";
     if (k == "interface.minimap_way") return wayOnGroundToken(c.minimapWay);  // 3.0.11-beta.33
     if (k == "interface.buffs") return buffsLookToken(c.buffs);               // 3.0.11-beta.35
+    if (k == "interface.buffs_overflow") return buffsOverflowToken(c.buffsOverflow);  // 3.0.11-beta.63
     if (k == "interface.character") return characterLookToken(c.character);  // 3.0.11-beta.36
     if (k == "interface.target") return c.targetCard ? "1" : "0";              // 3.0.11-beta.38
     if (k == "interface.party") return c.partyPanel ? "1" : "0";               // 3.0.11-beta.39

@@ -14,7 +14,8 @@ constexpr float kFrameBig = 40, kFrameSmall = 30, kPad = 7, kGap = 4, kTimeGap =
 constexpr float kColumnW = 54, kNamesW = 204, kNameGap = 10, kTimeW = 38;
 constexpr float kToggleH = 22, kToggleGap = 6, kToggleColumn = 72, kToggleNames = 136;
 constexpr float kTipW = 230, kTipGap = 6, kTipH = 42, kTipLine = 26, kRowTip = 50, kRowGap = 6;
-constexpr float kMoreH = 22, kMoreW = 40;
+constexpr float kMoreH = 28, kMoreW = 40;  // 3.0.11-beta.63: «ще N» 28 high (the concept's «не ниже 28 px»)
+constexpr float kLineGap = 6;               // between the columns (the rows): two columns 114 wide, as the concept's
 constexpr float kRadius = 10, kFrameRadius = 8, kIconRadius = 5;
 constexpr uint32_t kCard = 0x10141C, kWhite = 0xFFFFFF, kBlack = 0x000000, kTile = 0x1B1D24;
 constexpr uint32_t kGold = 0xE6CB8A, kWarn = 0xF0A050, kRed = 0xFF5A4E, kRedText = 0xFF9A8F;
@@ -79,53 +80,35 @@ void arc(panel::Picture& p, const panel::Box& b, float r, float part, uint32_t r
         }
 }
 
+// A column's (the row's) entries: its favourites, the rest, its debuffs; whether «ще N» stands in it
+struct Line {
+    std::vector<int> fav, rest, deb;
+    bool more = false;
+};
 struct Plan {
-    std::vector<int> fav, rest, deb;  // shown, in order
+    std::vector<Line> lines;  // the first, then the further ones
     int hidden = 0;
 };
 
-Plan planOf(const std::vector<Entry>& e) {
-    Plan p;
-    for (const int i : order(e))
-        (e[size_t(i)].kind == Kind::Favourite ? p.fav
-         : e[size_t(i)].kind == Kind::Debuff  ? p.deb
-                                              : p.rest)
-            .push_back(i);
-    return p;
+void add(Line& l, const std::vector<Entry>& e, int i) {
+    (e[size_t(i)].kind == Kind::Favourite ? l.fav : e[size_t(i)].kind == Kind::Debuff ? l.deb : l.rest).push_back(i);
 }
 
-// The kinds' groups shown, each a list of entries (and «ще N» after the non-debuffs' last group)
-std::vector<std::vector<int>> groupsOf(const Plan& p) {
-    std::vector<std::vector<int>> g;
-    for (const std::vector<int>* list : {&p.fav, &p.rest, &p.deb})
-        if (!list->empty()) g.push_back(*list);
-    return g;
-}
-
-// Hide one more: the rest's last first, then the favourites'; false: only debuffs left
-bool hideOne(Plan& p) {
-    std::vector<int>& from = !p.rest.empty() ? p.rest : p.fav;
-    if (from.empty()) return false;
-    from.pop_back();
-    ++p.hidden;
-    return true;
-}
-
-// Along the column (or the row) at scale 1: the glass's length for the plan
-float lengthOf(const std::vector<Entry>& e, const Plan& p, Look look) {
+// Along the column (or the row) at scale 1: a line's glass's length
+float lengthOf(const std::vector<Entry>& e, const Line& l, Look look) {
     const bool row = look == Look::Row;
     float len = 2 * kPad;
     int items = 0, groups = 0;
-    for (const std::vector<int>* list : {&p.fav, &p.rest, &p.deb}) {
+    for (const std::vector<int>* list : {&l.fav, &l.rest, &l.deb}) {
         if (list->empty()) continue;
         ++groups;
         for (const int i : *list) {
             const float f = frameOf(e[size_t(i)].kind);
-            len += row ? f : look == Look::Names ? f : f + kTimeGap + kTimeH;
+            len += look == Look::Column ? f + kTimeGap + kTimeH : f;
             ++items;
         }
     }
-    if (p.hidden) {
+    if (l.more) {
         len += row ? kMoreW : kMoreH;
         ++items;
     }
@@ -133,6 +116,49 @@ float lengthOf(const std::vector<Entry>& e, const Plan& p, Look look) {
     if (items > 1) len += gap * float(items - 1);
     if (groups > 1) len += float(groups - 1) * (kSep + gap);
     return len;
+}
+
+// `items` in lines of their own after the plan's, each as many as `room` holds (one at the least)
+void fill(Plan& p, const std::vector<Entry>& e, const std::vector<int>& items, Look look, float room) {
+    for (size_t from = 0; from < items.size();) {
+        Line l;
+        add(l, e, items[from++]);
+        for (; from < items.size(); ++from) {
+            Line longer = l;
+            add(longer, e, items[from]);
+            if (lengthOf(e, longer, look) > room) break;
+            l = std::move(longer);
+        }
+        p.lines.push_back(std::move(l));
+    }
+}
+
+// The first line: the debuffs at its end, as many of the others over them as `room` holds (one at the least) - the
+// rest's last ones out first, then the favourites' - those out under «ще N» or in further lines; the debuffs past
+// its room in lines of their own next to it
+Plan planOf(const std::vector<Entry>& e, Look look, Overflow overflow, float room) {
+    std::vector<int> others, deb;  // the favourites and the rest; the debuffs - each as order() puts them
+    for (const int i : order(e)) (e[size_t(i)].kind == Kind::Debuff ? deb : others).push_back(i);
+    const bool hide = overflow == Overflow::More;
+    Line first;
+    size_t kept = others.size();
+    for (;; --kept) {
+        first = Line{};
+        for (size_t k = 0; k < kept; ++k) add(first, e, others[k]);
+        first.deb = deb;
+        first.more = hide && kept < others.size();
+        if (lengthOf(e, first, look) <= room || kept == 0 || (kept == 1 && deb.empty())) break;
+    }
+    size_t debKept = deb.size();
+    while (debKept > 1 && lengthOf(e, first, look) > room) first.deb.resize(--debKept);
+    Plan p;
+    p.lines.push_back(std::move(first));
+    fill(p, e, std::vector<int>(deb.begin() + std::ptrdiff_t(debKept), deb.end()), look, room);
+    if (hide)
+        p.hidden = int(others.size() - kept);
+    else
+        fill(p, e, std::vector<int>(others.begin() + std::ptrdiff_t(kept), others.end()), look, room);
+    return p;
 }
 
 std::string fmtCount(const std::string& text, int n) {
@@ -201,93 +227,129 @@ int iconSide(Kind kind, float scale) {
     return int(std::lround(float(kind == Kind::Favourite ? kBig : kSmall) * scale));
 }
 
-Layout layout(const std::vector<Entry>& entries, Look look, int right, int top, int bottom, int widest, float scale) {
-    Layout L;
-    const float s = scale > 0 ? scale : 1.0f;
-    L.s = s;
-    L.look = look;
-    const bool row = look == Look::Row;
-    Plan plan = planOf(entries);
-    if (row) {  // as many across as `widest` holds
-        while (widest > 0 && lengthOf(entries, plan, look) * s > float(widest) && hideOne(plan)) {}
-    } else {
-        const float room = float(bottom - top) - (kToggleH + kToggleGap) * s;
-        while (lengthOf(entries, plan, look) * s > room && hideOne(plan)) {}
-    }
-    L.hidden = plan.hidden;
-    const float length = lengthOf(entries, plan, look) * s;
-    const float pad = kPad * s;
-    if (row) {
-        bool big = false;
-        for (const int i : plan.fav) big = big || entries[size_t(i)].kind == Kind::Favourite;
-        const float bodyH = 2 * pad + ((big ? kFrameBig : kFrameSmall) + kTimeGap + kTimeH) * s;
-        L.w = int(std::ceil(std::max(length, kTipW * s)));
-        L.h = int(std::ceil(bodyH + kRowTip * s));
-        L.body = panel::Box{float(L.w) - length, 0, length, bodyH};
-        L.tipRoom = panel::Box{0, bodyH, float(L.w), float(L.h) - bodyH};
-    } else {
-        const float bodyW = (look == Look::Names ? kNamesW : kColumnW) * s;
-        const float toggleW = (look == Look::Names ? kToggleNames : kToggleColumn) * s;
-        const float tip = look == Look::Column ? (kTipW + kTipGap) * s : 0.0f;
-        L.w = int(std::ceil(tip + std::max(bodyW, toggleW)));
-        const float bodyY = (kToggleH + kToggleGap) * s;
-        L.h = int(std::ceil(bodyY + length));
-        L.toggle = panel::Box{float(L.w) - toggleW, 0, toggleW, kToggleH * s};
-        L.body = panel::Box{float(L.w) - bodyW, bodyY, bodyW, length};
-        if (look == Look::Column) L.tipRoom = panel::Box{0, bodyY, tip - kTipGap * s, length};
-    }
-    L.x = right - L.w;
-    L.y = top;
-    // the slots along the glass, a line between the kinds, «ще N» after the non-debuffs (only debuffs shown: first)
-    float at = (row ? L.body.x : L.body.y) + pad;
+namespace {
+
+// A line's slots along its glass: its kinds with a line between them, «ще N» after the non-debuffs (over the
+// debuffs when only they stand there)
+void place(Layout& L, const std::vector<Entry>& entries, const Line& line, const panel::Box& glass) {
+    const float s = L.s, pad = kPad * s;
+    const bool row = L.look == Look::Row;
     const float gap = (row ? kRowGap : kGap) * s;
-    const std::vector<std::vector<int>> groups = groupsOf(plan);
-    const bool onlyDebuffs = plan.fav.empty() && plan.rest.empty();
+    float at = (row ? glass.x : glass.y) + pad;
+    std::vector<const std::vector<int>*> groups;
+    for (const std::vector<int>* list : {&line.fav, &line.rest, &line.deb})
+        if (!list->empty()) groups.push_back(list);
+    const bool onlyDebuffs = line.fav.empty() && line.rest.empty();
     const auto placeMore = [&] {
-        L.more = row ? panel::Box{at, L.body.y + pad, kMoreW * s, kFrameSmall * s}
-                     : panel::Box{L.body.x + pad, at, L.body.w - 2 * pad, kMoreH * s};
+        L.more = row ? panel::Box{at, glass.y + pad, kMoreW * s, kFrameSmall * s}
+                     : panel::Box{glass.x + pad, at, glass.w - 2 * pad, kMoreH * s};
         at += (row ? kMoreW : kMoreH) * s + gap;
     };
-    if (plan.hidden && onlyDebuffs) placeMore();
+    if (line.more && onlyDebuffs) placeMore();
     for (size_t g = 0; g < groups.size(); ++g) {
         if (g) {  // the line between this kind and the last
             const float mid = at + (kSep * s - 1.0f * s) / 2;
-            L.seps.push_back(row ? panel::Box{mid, L.body.y + pad, 1.0f * s, L.body.h - 2 * pad}
-                                 : panel::Box{L.body.x + pad, mid, L.body.w - 2 * pad, 1.0f * s});
+            L.seps.push_back(row ? panel::Box{mid, glass.y + pad, 1.0f * s, glass.h - 2 * pad}
+                                 : panel::Box{glass.x + pad, mid, glass.w - 2 * pad, 1.0f * s});
             at += kSep * s + gap;
         }
-        for (const int i : groups[g]) {
+        for (const int i : *groups[g]) {
             Slot slot;
             slot.entry = i;
             const float f = frameOf(entries[size_t(i)].kind) * s;
             const float ring = (entries[size_t(i)].kind == Kind::Favourite ? kFrameBig - kBig : kFrameSmall - kSmall) /
                                2 * s;
             if (row) {
-                slot.frame = panel::Box{at, L.body.y + pad, f, f};
+                slot.frame = panel::Box{at, glass.y + pad, f, f};
                 slot.time = panel::Box{at - gap / 2, slot.frame.y + f + kTimeGap * s, f + gap, kTimeH * s};
                 at += f + gap;
-            } else if (look == Look::Names) {
-                slot.frame = panel::Box{L.body.x + pad, at, f, f};
-                const float timeX = L.body.x + L.body.w - pad - kTimeW * s;
+            } else if (L.look == Look::Names) {
+                slot.frame = panel::Box{glass.x + pad, at, f, f};
+                const float timeX = glass.x + glass.w - pad - kTimeW * s;
                 slot.name = panel::Box{slot.frame.x + f + kNameGap * s, at, timeX - (slot.frame.x + f + kNameGap * s),
                                        f};
                 slot.time = panel::Box{timeX, at, kTimeW * s, f};
                 at += f + gap;
             } else {
-                slot.frame = panel::Box{L.body.x + (L.body.w - f) / 2, at, f, f};
-                slot.time = panel::Box{L.body.x + 2 * s, at + f + kTimeGap * s, L.body.w - 4 * s, kTimeH * s};
+                slot.frame = panel::Box{glass.x + (glass.w - f) / 2, at, f, f};
+                slot.time = panel::Box{glass.x + 2 * s, at + f + kTimeGap * s, glass.w - 4 * s, kTimeH * s};
                 at += f + kTimeGap * s + kTimeH * s + gap;
             }
             slot.icon = panel::Box{slot.frame.x + ring, slot.frame.y + ring, f - 2 * ring, f - 2 * ring};
             L.slots.push_back(slot);
         }
-        // the debuffs, when shown, are the last kind: «ще N» after the kind before them, else after the last
-        const size_t lastKept = groups.size() - (plan.deb.empty() ? 1 : 2);
-        if (plan.hidden && !onlyDebuffs && g == lastKept) placeMore();
+        // the debuffs, when there, are the last kind: «ще N» after the kind before them, else after the last
+        const size_t lastKept = groups.size() - (line.deb.empty() ? 1 : 2);
+        if (line.more && !onlyDebuffs && g == lastKept) placeMore();
     }
+}
+
+}  // namespace
+
+Layout layout(const std::vector<Entry>& entries, Look look, int right, int top, int bottom, int widest, float scale,
+              Overflow overflow) {
+    Layout L;
+    const float s = scale > 0 ? scale : 1.0f;
+    L.s = s;
+    L.look = look;
+    const bool row = look == Look::Row;
+    // a line's room at scale 1: the row as many across as `widest` holds (0: all), the column down to `bottom`
+    const float room =
+        row ? (widest > 0 ? float(widest) / s : 1e9f) : float(bottom - top) / s - (kToggleH + kToggleGap);
+    const Plan plan = planOf(entries, look, overflow, room);
+    L.hidden = plan.hidden;
+    const size_t n = plan.lines.size();
+    std::vector<panel::Box> glass(n);
+    const float lineGap = kLineGap * s;
+    if (row) {
+        float most = kTipW * s, y = 0;
+        for (const Line& l : plan.lines) most = std::max(most, lengthOf(entries, l, look) * s);
+        L.w = int(std::ceil(most));
+        for (size_t i = 0; i < n; ++i) {  // each under the last, at the right; a favourite's taller
+            const float length = lengthOf(entries, plan.lines[i], look) * s;
+            const float frame = plan.lines[i].fav.empty() ? kFrameSmall : kFrameBig;
+            const float h = 2 * kPad * s + (frame + kTimeGap + kTimeH) * s;
+            glass[i] = panel::Box{float(L.w) - length, y, length, h};
+            y += h + lineGap;
+        }
+        const float under = glass[n - 1].y + glass[n - 1].h;
+        L.h = int(std::ceil(under + kRowTip * s));
+        L.tipRoom = panel::Box{0, under, float(L.w), float(L.h) - under};
+    } else {
+        const float bodyW = (look == Look::Names ? kNamesW : kColumnW) * s;
+        const float toggleW = (look == Look::Names ? kToggleNames : kToggleColumn) * s;
+        const float tip = look == Look::Column ? (kTipW + kTipGap) * s : 0.0f;
+        const float span = float(n) * bodyW + float(n - 1) * lineGap;
+        L.w = int(std::ceil(tip + std::max(span, toggleW)));
+        const float bodyY = (kToggleH + kToggleGap) * s;
+        float longest = 0;
+        for (size_t i = 0; i < n; ++i) {  // each left of the last, their tops in line
+            const float length = lengthOf(entries, plan.lines[i], look) * s;
+            glass[i] = panel::Box{float(L.w) - bodyW - float(i) * (bodyW + lineGap), bodyY, bodyW, length};
+            longest = std::max(longest, length);
+        }
+        L.h = int(std::ceil(bodyY + longest));
+        L.toggle = panel::Box{float(L.w) - toggleW, 0, toggleW, kToggleH * s};
+        if (look == Look::Column) L.tipRoom = panel::Box{0, bodyY, glass[n - 1].x - kTipGap * s, longest};
+    }
+    L.x = right - L.w;
+    L.y = top;
+    L.body = glass[0];
+    L.lines.assign(glass.begin() + 1, glass.end());
+    for (size_t i = 0; i < n; ++i) place(L, entries, plan.lines[i], glass[i]);
     const float x0 = std::min(L.body.x, L.toggle.w > 0 ? L.toggle.x : L.body.x);
     const float y0 = L.toggle.w > 0 ? L.toggle.y : L.body.y;
     L.hit = panel::Box{x0, y0, L.body.x + L.body.w - x0, L.body.y + L.body.h - y0};
+    if (!L.lines.empty()) {
+        float lx = L.lines[0].x, ly = L.lines[0].y, lx1 = lx, ly1 = ly;
+        for (const panel::Box& b : L.lines) {
+            lx = std::min(lx, b.x);
+            ly = std::min(ly, b.y);
+            lx1 = std::max(lx1, b.x + b.w);
+            ly1 = std::max(ly1, b.y + b.h);
+        }
+        L.linesHit = panel::Box{lx, ly, lx1 - lx, ly1 - ly};
+    }
     return L;
 }
 
@@ -313,11 +375,11 @@ panel::Box tipBox(const Layout& L, int slot, float width) {
     if (slot < 0 || slot >= int(L.slots.size())) return panel::Box{};
     const Slot& s = L.slots[size_t(slot)];
     const float w = width + 20 * L.s, h = kTipH * L.s;
-    if (L.look == Look::Row) {
+    if (L.look == Look::Row) {  // under the rows
         const float x = std::clamp(s.frame.x + s.frame.w / 2 - w / 2, 0.0f, std::max(0.0f, float(L.w) - w));
-        return panel::Box{x, L.body.y + L.body.h + 6 * L.s, w, h};
+        return panel::Box{x, L.tipRoom.y + 6 * L.s, w, h};
     }
-    const float right = L.body.x - kTipGap * L.s;
+    const float right = (L.lines.empty() ? L.body : L.lines.back()).x - kTipGap * L.s;  // left of the columns
     const float x = std::max(0.0f, right - w);
     return panel::Box{x, s.frame.y + s.frame.h / 2 - h / 2, right - x, h};
 }
@@ -326,6 +388,8 @@ void paint(panel::Picture& out, const Layout& L, const std::vector<Entry>& entri
     const float s = L.s;
     if (L.toggle.w > 0) panel::roundRect(out, L.toggle, 8 * s, kCard, uistyle::panel(), kWhite, 0.09f, 1.0f * s);
     panel::roundRect(out, L.body, kRadius * s, kCard, uistyle::panel(), kWhite, 0.09f, 1.0f * s);
+    for (const panel::Box& b : L.lines)  // 3.0.11-beta.63: the further columns' (rows')
+        panel::roundRect(out, b, kRadius * s, kCard, uistyle::panel(), kWhite, 0.09f, 1.0f * s);
     for (const panel::Box& b : L.seps) panel::roundRect(out, b, 0, kWhite, 0.15f);
     if (L.more.w > 0) panel::roundRect(out, L.more, 7 * s, kWhite, 0.08f);
     for (size_t i = 0; i < L.slots.size(); ++i) {

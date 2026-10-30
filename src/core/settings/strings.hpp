@@ -468,7 +468,10 @@ enum class Text : uint16_t {
     InterfaceMinimapMobs, InterfaceMinimapMobsHint, InterfaceMinimapWay, InterfaceMinimapWayHint,
     InterfaceMinimapWaySteps, InterfaceMinimapWayLine, InterfaceMinimapWayOff, InterfaceBuffs, InterfaceBuffsHint,
     InterfaceBuffsOff, InterfaceBuffsColumn, InterfaceBuffsRow, BuffsNames, BuffsHideNames, BuffsMore, BuffsStar,
-    BuffsUnstar, InterfaceCharacter, InterfaceCharacterHint, InterfaceCharacterOff, InterfaceCharacterBars,
+    BuffsUnstar,
+    // 3.0.11-beta.63: what the buffs' column does not hold
+    InterfaceBuffsOverflow, InterfaceBuffsOverflowHint, InterfaceBuffsOverflowMore, InterfaceBuffsOverflowColumn,
+    InterfaceCharacter, InterfaceCharacterHint, InterfaceCharacterOff, InterfaceCharacterBars,
     InterfaceCharacterRings, CharWeight, CharPoints, CharLowHp, CharStats, CharEquip, CharItems, CharSkills,
     CharFriends, CharOptions, InterfaceTarget, InterfaceTargetHint, TargetWeak, TargetHeals, TargetBook,
     InterfaceParty, InterfacePartyHint, PartyOffline, InterfaceHotbar, InterfaceHotbarHint, HotbarBattle,

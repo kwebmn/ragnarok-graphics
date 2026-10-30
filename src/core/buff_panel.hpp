@@ -17,6 +17,10 @@ namespace uagfx::buffpanel {
 
 enum class Look : uint8_t { Column, Names, Row };
 enum class Kind : uint8_t { Favourite, Buff, Debuff };
+// 3.0.11-beta.63 (the concept's «Крайние случаи», question 17): what does not fit - under «ще N» (variant 1, the
+// default) or into further columns on the left, the row's into further rows under it (variant 2); debuffs past the
+// room open columns (rows) of their own either way, never hidden
+enum class Overflow : uint8_t { More, Lines };
 
 struct Entry {
     uint16_t icon = 0;                        // the game's status icon (the server's SI_*)
@@ -55,12 +59,19 @@ struct Layout {
     panel::Box more;                 // «ще N»: the ones that did not fit; w 0: none
     int hidden = 0;
     panel::Box hit;                  // what takes the mouse: the toggle and the glass
-    panel::Box tipRoom;              // where a tip may stand: left of the column, under the row
+    panel::Box tipRoom;              // where a tip may stand: left of the columns, under the rows
+    // 3.0.11-beta.63: the further columns' glasses, each left of the last (the row: the further rows, each under the
+    // last) - the debuffs past the first one's room, then (Overflow::Lines) the rest that did not fit; and their box
+    // for the mouse (w 0: none)
+    std::vector<panel::Box> lines;
+    panel::Box linesHit;
 };
 // The panel for `entries` with its top right corner at (right, top) in the target, reaching `bottom` at the most (the
 // row: `widest` across at the most); its box sizes at `scale` (the interface's). The ones that do not fit go into
-// «ще N» - the rest's last first, then the favourites'; debuffs never
-Layout layout(const std::vector<Entry>& entries, Look look, int right, int top, int bottom, int widest, float scale);
+// «ще N» - the rest's last first, then the favourites' - or into further columns (Overflow::Lines); debuffs past
+// the first column's room into columns of their own next to it
+Layout layout(const std::vector<Entry>& entries, Look look, int right, int top, int bottom, int widest, float scale,
+              Overflow overflow = Overflow::More);
 
 enum class Part : uint8_t { None, Toggle, Icon, More };
 struct Hit {
