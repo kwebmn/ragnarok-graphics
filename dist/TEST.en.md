@@ -1,3 +1,15 @@
+# uaRO Graphics 3.0.11-beta.66 — what is new
+
+- **The new interface writes in IBM Plex Sans** — the face all the concept's mock-ups are drawn in («the font —
+  IBM Plex Sans built in… Segoe UI — the Windows fallback»). The font is built into the driver (regular and semibold,
+  IBM's files unchanged, SIL OFL 1.1 — in `uaro-graphics\licenses`) and installs nothing into Windows: only the game
+  has it. Its digits are all one width, so timers and numbers do not jump.
+- A word with a sign Plex has not (★, ●, ▾, ✕, ⚠) is written in Segoe UI as before. If Windows will not take the
+  font, the whole interface stays in Segoe UI.
+- The boxes of tips, chips and labels are now worked out from Plex's own widths: words are not cut with an ellipsis.
+- To check: open «Reference», the chat, «Items» — the Plex face (round «a», «e», even digits); in the log at the
+  start: `interface: the words in IBM Plex Sans`. If it says `could not be added` — send a report.
+
 # uaRO Graphics 3.0.11-beta.65 — what is new
 
 - **«Light where you can walk (an experiment)»** — a new switch in the app's «Interface» section and in «The new
