@@ -12,13 +12,21 @@ constexpr const char* kFirstPicture = "renderer: the first picture is on the scr
 
 // The last start by its log: Fine - kFirstPicture; Failed - a bad end (report::reasonOfLog) before it; Unknown -
 // nothing of ours drawn (sent to «Гра», switched off, closed while it started, no game before): the count stays.
-enum class Start { Unknown, Fine, Failed };
+// 3.0.11-beta.59 (the autopilot): FailedEarly - a bad end within kEarlySeconds after the first picture (the log's
+// HH:MM:SS times; past midnight a day added; a log without times: Fine as before) - a crash at the login or at a map's
+// loading repeats at every start, and counts as a start that failed.
+enum class Start { Unknown, Fine, Failed, FailedEarly };
+constexpr int kEarlySeconds = 300;
 Start judge(const std::string& previousLog);
-bool startFailed(const std::string& previousLog);  // judge(...) == Failed
+bool startFailed(const std::string& previousLog);  // judge(...) == Failed or FailedEarly
 int failedInRow(int before, Start last);
 bool needed(int failedInRow, bool asked);
 // Direct3D 11 (api = system stays), no 64-bit bridge, AI textures, effects, DLSS, frame generation, HDR, Remix or
 // renderer thread.
 void apply(Config& c);
+// 3.0.11-beta.59: the automatic safe mode's note (layout::kSafeModeNote) - its first line "version <V>", the version
+// that wrote it: a start of another version deletes it and tries the normal mode again; "" a note of 2.12's
+std::string noteText(int inRow, const std::string& version);
+std::string noteVersion(const std::string& note);
 
 }  // namespace uagfx::safe

@@ -66,3 +66,33 @@ TEST(a_start_that_drew_nothing_leaves_the_count) {
     CHECK_EQ(safe::failedInRow(1, safe::Start::Failed), 2);
     CHECK_EQ(safe::failedInRow(1, safe::Start::Fine), 0);
 }
+
+// 3.0.11-beta.59 (the autopilot): a game that ended badly within 5 minutes of its first picture counts too - a crash at
+// the login or at a map's loading repeats at every start; a later one, or a log without times, as before
+TEST(safe_mode_a_crash_in_the_first_minutes_counts) {
+    const std::string start = "09:59:58.000 INFO  uaRO Graphics 3.0.11 in C:\\uaRO\\uaRO.exe\n"
+                              "09:59:59.000 INFO  (uaRO renderer)\n";
+    const std::string pic = std::string("10:00:00.100 INFO  ") + safe::kFirstPicture + "\n";
+    const std::string crash = " ERROR crash: exception 0xc0000005 at DDRAW.dll+0x1234\n";
+    CHECK(safe::judge(start + pic + "10:01:30.000" + crash) == safe::Start::FailedEarly);
+    CHECK(safe::judge(start + pic + "10:06:00.000" + crash) == safe::Start::Fine);
+    CHECK(safe::judge(start + pic + "10:02:00.000 INFO  map: prontera\n") == safe::Start::FailedEarly);  // not closed
+    CHECK(safe::judge(start + pic + "10:02:00.000 INFO  map: prontera\n10:30:00.000 INFO  DirectDraw released, "
+                                    "renderer closed\n") == safe::Start::Fine);
+    CHECK(safe::judge(start + pic + "10:02:00.000 ERROR the GPU device was removed (0x887a0006)\n") ==
+          safe::Start::FailedEarly);
+    const std::string late =
+        "23:58:58.000 INFO  (uaRO renderer)\n23:59:00.000 INFO  " + std::string(safe::kFirstPicture) + "\n";
+    CHECK(safe::judge(late + "00:01:00.000" + crash) == safe::Start::FailedEarly);  // past midnight
+    CHECK_EQ(safe::failedInRow(1, safe::Start::FailedEarly), 2);
+    CHECK(safe::startFailed(start + pic + "10:01:30.000" + crash));
+}
+
+// 3.0.11-beta.59: the automatic safe mode's note says which version wrote it - another version tries the normal mode
+TEST(safe_mode_note_carries_its_version) {
+    const std::string note = safe::noteText(2, "3.0.11-beta.59");
+    CHECK(note.rfind("version 3.0.11-beta.59\n", 0) == 0);
+    CHECK_EQ(safe::noteVersion(note), std::string("3.0.11-beta.59"));
+    CHECK_EQ(safe::noteVersion("2 starts in a row ended before their first picture"), std::string(""));  // 2.12's
+    CHECK_EQ(safe::noteVersion(""), std::string(""));
+}
