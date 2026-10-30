@@ -159,6 +159,7 @@ void Console::build(Lang lang, const Config& config) {
         // 3.0.11-beta.2: the new interface's minimap prototype - on and off in the game (the owner could not find it)
         if (settingOf("interface.minimap")) {
             rows_.push_back(Row{Kind::Heading, tr(lang, Text::InterfaceHeading), 0});
+            rows_.push_back(Row{Kind::Layout, "", 0});  // 3.0.11-beta.75: «Розміщення інтерфейсу»
             rows_.push_back(Row{Kind::Box, "interface.minimap", 0});
             for (const char* k : {"interface.minimap_npcs", "interface.minimap_warps", "interface.minimap_mobs",
                                   "interface.reference"})
@@ -284,6 +285,10 @@ bool Console::change(const std::string& iniPath, const Config& config, int step)
     }
     if (r.kind == Kind::Test) {  // 3.0.5-beta.6: Space or Enter starts it; the console closes (present)
         testAsked_ = testAsked_ || step == 0;
+        return false;
+    }
+    if (r.kind == Kind::Layout) {  // 3.0.11-beta.75: Space or Enter - «Розміщення інтерфейсу»; the console closes
+        layoutAsked_ = layoutAsked_ || step == 0;
         return false;
     }
     if (r.kind == Kind::Here) {  // 2.6.22: «Только на этой карте» - the console's own, not the file's
@@ -419,8 +424,8 @@ bool Console::present(HWND game, bool foreground, const std::string& iniPath, co
         changed = change(iniPath, config, 0);
     if (pressed(VK_LEFT, left_, true, now)) changed = change(iniPath, config, -1) || changed;
     if (pressed(VK_RIGHT, right_, true, now)) changed = change(iniPath, config, 1) || changed;
-    if (testAsked_) {  // 3.0.5-beta.6: the test runs over the game alone
-        LOG_INFO("console: «Тест графіки» chosen - closed");
+    if (testAsked_ || layoutAsked_) {  // 3.0.5-beta.6: the test runs over the game alone (3.0.11-beta.75: the layout)
+        LOG_INFO("console: %s chosen - closed", testAsked_ ? "«Тест графіки»" : "«Розмістити інтерфейс»");
         open_ = false;
         hide();
         comparing_.clear();
@@ -568,10 +573,12 @@ void Console::draw(HWND game, const Config& file, const GpuTiming* timing) {
                 text(fontH + r.depth * fontH * 2, y, wide(label), RGB(140, 180, 220));
                 continue;
             }
-            if (r.kind == Kind::Test) {  // 3.0.5-beta.6
+            if (r.kind == Kind::Test || r.kind == Kind::Layout) {  // 3.0.5-beta.6 (3.0.11-beta.75: the layout)
                 const int x = fontH + r.depth * fontH * 2;
                 text(x, y, L"▶", RGB(229, 169, 78));
-                text(x + fontH * 3 / 2, y, wide(tr(lang_, Text::TestRow)), RGB(240, 236, 226));
+                text(x + fontH * 3 / 2, y,
+                     wide(tr(lang_, r.kind == Kind::Test ? Text::TestRow : Text::ConsoleHudEdit)),
+                     RGB(240, 236, 226));
                 continue;
             }
             if (r.kind == Kind::Here) {  // 2.6.22: «Только на этой карте» and the map

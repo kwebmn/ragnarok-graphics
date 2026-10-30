@@ -27,6 +27,7 @@
 #include "win/game_camera.hpp"
 #include "win/game_files.hpp"
 #include "win/ground_way.hpp"
+#include "win/hud_edit.hpp"
 #include "win/log.hpp"
 #include "win/map_hd.hpp"
 #include "win/paths.hpp"
@@ -55,6 +56,7 @@ struct Line {  // a monster under the map: its name, its count (a boss's respawn
 struct State {
     bool on = false, shown = false, dirty = true, upload = true;
     int style = -1;  // 3.0.11-beta.47: core/ui_style's generation painted
+    int placed = 0;  // 3.0.11-beta.75: win/hud_edit's stamp laid out
     minimap::Look look = minimap::Look::Opaque;  // 3.0.11-beta.4: Ctrl+Tab's round
     bool hidOld = false;      // the game's own window 14 deleted by us (the game makes it again on a new map)
     bool hideFailed = false;  // told once a map
@@ -646,6 +648,8 @@ void render(State& s) {
         t.list.push_back(minimap::Line{l.left, l.right, l.boss ? kBossText : 0u,
                                        l.timer ? minimap::kRouteRgb : 0u, l.boss});
     s.layout = minimap::layout(s.targetW, s.targetH, s.scale, !t.route.empty(), s.folded ? 0 : int(t.list.size()));
+    hudedit::place(hudlayout::Part::Minimap, s.k, s.targetW, s.targetH, s.layout.w, s.layout.h, s.layout.x,
+                   s.layout.y);  // 3.0.11-beta.75: where the player put it
     const uicost::Paint cost("minimap", s.layout.w, s.layout.h);  // 3.0.11-beta.55 (beta.57: its size known)
     s.paintedAt = GetTickCount64();
     const minimap::Scene sc = sceneOf(s);
@@ -815,7 +819,13 @@ void frame(HWND game, const Show& show, double k, int targetWidth, int targetHei
         s.lookY = north;
         s.dirty = s.bigDirty = true;
     }
-    const float scale = uistyle::partScale(k);
+    // 3.0.11-beta.75: its size in «Розміщення інтерфейсу»; a new place lays it out again
+    const float scale = uistyle::partScale(k) * hudedit::sizeOf(hudlayout::Part::Minimap);
+    if (const int placed = hudedit::stampOf(hudlayout::Part::Minimap); placed != s.placed) {
+        s.placed = placed;
+        s.dirty = true;
+        s.paintedAt = 0;
+    }
     if (float(k) != s.k || scale != s.scale || targetWidth != s.targetW || targetHeight != s.targetH) {
         s.k = float(k);
         s.scale = scale;
@@ -879,6 +889,9 @@ void frame(HWND game, const Show& show, double k, int targetWidth, int targetHei
     }
     // 3.0.11-beta.57: at most each kPaintEveryMs (the first at once)
     if (s.dirty && (s.picture.width <= 0 || now - s.paintedAt >= kPaintEveryMs)) render(s);
+    else  // 3.0.11-beta.75: known to «Розміщення інтерфейсу» each frame (painted or not)
+        hudedit::place(hudlayout::Part::Minimap, s.k, s.targetW, s.targetH, s.layout.w, s.layout.h, s.layout.x,
+                       s.layout.y);
     if (s.big && s.bigDirty && (s.bigPicture.width <= 0 || now - s.bigPaintedAt >= kPaintEveryMs)) renderBig(s);
     s.shown = true;
     block(s, game);

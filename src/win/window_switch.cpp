@@ -10,6 +10,7 @@
 #include "win/char_block.hpp"
 #include "win/party_panel.hpp"
 #include "win/hotbar.hpp"
+#include "win/hud_edit.hpp"
 #include "win/chat_window.hpp"
 #include "win/item_window.hpp"
 #include "win/stat_window.hpp"
@@ -51,6 +52,7 @@ void claimed(UINT m) {
 
 LRESULT CALLBACK gameProc(HWND w, UINT m, WPARAM wp, LPARAM lp) {
     if (g_switch) {
+        if (hudedit::key(m, wp, lp)) return 0;  // 3.0.11-beta.75: Ctrl+Shift+L - «Розміщення інтерфейсу», its Esc
         if (referencewin::key(m, wp, lp)) return 0;  // 3.0.11-beta.7: Ctrl+F, and every key while «Довідник» is open
         if (itemswin::key(m, wp, lp)) return 0;      // 3.0.11-beta.42: «Речі»'s search while it types
         if (chatwin::key(m, wp, lp)) return 0;       // 3.0.11-beta.41: the new chat's F10, Alt+F10 and Tab
@@ -72,7 +74,8 @@ LRESULT CALLBACK gameProc(HWND w, UINT m, WPARAM wp, LPARAM lp) {
                      GET_X_LPARAM(lp), GET_Y_LPARAM(lp), client.right, client.bottom, cx, cy);
         }
         LRESULT answer = 0;  // 3.0.3-beta.8: the mouse over the panel in the game's picture is the panel's
-        if (answercard::mouse(w, m, lp, answer) ||       // 3.0.9-beta.4: and over the answer card the card's
+        if (hudedit::mouse(w, m, wp, lp, answer) ||      // 3.0.11-beta.75: all of it while the parts are placed
+            answercard::mouse(w, m, lp, answer) ||       // 3.0.9-beta.4: and over the answer card the card's
             referencewin::mouse(w, m, wp, lp, answer) ||  // 3.0.11-beta.7: over «Довідник» its own
             statswin::mouse(w, m, wp, lp, answer) ||      // 3.0.11-beta.42: the windows over the panels
             itemswin::mouse(w, m, wp, lp, answer) ||

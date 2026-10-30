@@ -469,6 +469,10 @@ enum class Text : uint16_t {
     InterfaceMinimapReach, InterfaceMinimapReachHint,  // 3.0.11-beta.65
     InterfaceMinimapHd, InterfaceMinimapHdHint,        // 3.0.11-beta.72
     InterfacePackIcons, InterfacePackIconsHint,        // 3.0.11-beta.74
+    // 3.0.11-beta.75: «Розміщення інтерфейсу» - its bar, the parts' names, the console's row, the app's note
+    HudEditTitle, HudEditHint, HudEditReset, HudEditDone, HudPartCharacter, HudPartMinimap, HudPartBuffs,
+    HudPartTracker, HudPartHotbar, HudPartTarget, HudPartParty, HudPartChat, ConsoleHudEdit, InterfaceLayoutNote,
+    HudEditUnseen,
     InterfaceMinimapWay, InterfaceMinimapWayHint,
     InterfaceMinimapWaySteps, InterfaceMinimapWayLine, InterfaceMinimapWayOff, InterfaceBuffs, InterfaceBuffsHint,
     InterfaceBuffsOff, InterfaceBuffsColumn, InterfaceBuffsRow, BuffsNames, BuffsHideNames, BuffsMore, BuffsStar,

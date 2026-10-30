@@ -41,6 +41,7 @@
 #include "win/code_page.hpp"
 #include "win/party_panel.hpp"
 #include "win/hotbar.hpp"
+#include "win/hud_edit.hpp"
 #include "win/chat_window.hpp"
 #include "win/item_window.hpp"
 #include "win/stat_window.hpp"
@@ -562,6 +563,7 @@ void Context::endScene() {
         answercard::draw(record, *renderer);  // 3.0.9-beta.4: the developer's answer
         windowSwitch_.draw(record, *renderer);
         referencewin::draw(record, *renderer);  // 3.0.11-beta.7: «Довідник», over the rest
+        hudedit::draw(record, *renderer);       // 3.0.11-beta.75: the parts' frames while they are placed
         record.takeWork();  // the driver's own draws are not the game's
     }
     flush();
@@ -608,6 +610,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
         answercard::draw(record, *renderer);  // 3.0.9-beta.4
         windowSwitch_.draw(record, *renderer);
         referencewin::draw(record, *renderer);  // 3.0.11-beta.7
+        hudedit::draw(record, *renderer);       // 3.0.11-beta.75
     }
     record.takeWork();  // the driver's own draws are not the game's
     flush();
@@ -842,6 +845,8 @@ void Context::present(const Rect& source, bool waitForVblank) {
     statswin::frame(window, config.statusWindow, pk, pw, ph);
     // 3.0.11-beta.7: [interface] reference - «Довідник» (Ctrl+F)
     referencewin::frame(window, config.referenceWindow, pk, pw, ph);
+    // 3.0.11-beta.75: «Розміщення інтерфейсу» (Ctrl+Shift+L, the console) - over the parts placed this frame
+    hudedit::frame(window, pk, pw, ph);
     // 2.5.16: [quality] world_scale - Direct3D 11 draws the world smaller and makes it larger before the interface;
     // Pause draws it whole (the game's own picture to compare with)
     renderer->setWorldScale(enhanced_ ? std::min(config.worldScale, light_.worldScaleMax) / 100.0 : 1.0);
@@ -997,6 +1002,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
         settingsKnown_ = false;
     }
     if (console_.takeTestAsk()) testStart();  // 3.0.5-beta.6
+    if (console_.takeLayoutAsk()) hudedit::open(window, "the console");  // 3.0.11-beta.75
     ++stats_.frames;
     logStats(false);
 }

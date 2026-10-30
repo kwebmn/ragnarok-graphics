@@ -4934,6 +4934,31 @@ constexpr Entry kTexts[] = {
      "ігрові, там, де пак їх має (uaro-textures.zip). Вимкнено: власні маленькі іконки гри.",
      "Иконки нового интерфейса — навыки, предметы, эффекты — рисуются из картинок пака текстур ИИ, в четыре раза "
      "больше игровых, там, где пак их имеет (uaro-textures.zip). Выключено: собственные маленькие иконки игры."},
+    // 3.0.11-beta.75 (the owner: «некоторые интерфейсы хотелось бы чтобы можно было бы двигать и настраивать»)
+    {Text::HudEditTitle, "Interface layout", "Розміщення інтерфейсу", "Размещение интерфейса"},
+    {Text::HudEditHint, "Drag a part with the mouse \xC2\xB7 wheel: its size \xC2\xB7 right click: as it was",
+     "Тягніть частину мишею \xC2\xB7 колесо — розмір \xC2\xB7 правий клік — як було",
+     "Тяните часть мышью \xC2\xB7 колесо — размер \xC2\xB7 правый клик — как было"},
+    {Text::HudEditReset, "Reset all", "Скинути все", "Сбросить всё"},
+    {Text::HudEditDone, "Done", "Готово", "Готово"},
+    {Text::HudPartCharacter, "Character block", "Блок персонажа", "Блок персонажа"},
+    {Text::HudPartMinimap, "Minimap", "Мінікарта", "Миникарта"},
+    {Text::HudPartBuffs, "Buffs", "Бафи", "Бафы"},
+    {Text::HudPartTracker, "Tracking", "Відстеження", "Отслеживание"},
+    {Text::HudPartHotbar, "Hotbar", "Панель навичок", "Панель навыков"},
+    {Text::HudPartTarget, "Target card", "Картка цілі", "Карточка цели"},
+    {Text::HudPartParty, "Party", "Група", "Группа"},
+    {Text::HudPartChat, "Chat", "Чат", "Чат"},
+    {Text::ConsoleHudEdit, "Arrange the interface (Ctrl+Shift+L)", "Розмістити інтерфейс (Ctrl+Shift+L)",
+     "Разместить интерфейс (Ctrl+Shift+L)"},
+    {Text::InterfaceLayoutNote,
+     "The parts' places and sizes: Ctrl+Shift+L in the game (or the console's row) - drag them with the mouse, the "
+     "wheel sizes them, a right click puts one back.",
+     "Місця й розміри частин: у грі Ctrl+Shift+L (або рядок у консолі) — тягніть їх мишею, колесо змінює розмір, "
+     "правий клік повертає частину на місце.",
+     "Места и размеры частей: в игре Ctrl+Shift+L (или строка в консоли) — тяните их мышью, колесо меняет размер, "
+     "правый клик возвращает часть на место."},
+    {Text::HudEditUnseen, "not shown now", "зараз не видно", "сейчас не видно"},
     // 3.0.11-beta.33
     {Text::InterfaceMinimapWay, "The way on the ground", "Шлях на землі", "Путь на земле"},
     {Text::InterfaceMinimapWayHint,

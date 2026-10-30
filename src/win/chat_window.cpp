@@ -20,6 +20,7 @@
 #include "win/client_tables.hpp"
 #include "win/code_page.hpp"
 #include "win/game_camera.hpp"
+#include "win/hud_edit.hpp"
 #include "win/log.hpp"
 #include "win/picture_draw.hpp"
 #include "win/real_ddraw.hpp"
@@ -576,7 +577,8 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
         hide(s);
         return;
     }
-    const float scale = uistyle::readingScale(k);  // 3.0.11-beta.67: [interface] text_size's too
+    // 3.0.11-beta.67: [interface] text_size's too; 3.0.11-beta.75: its size in «Розміщення інтерфейсу»
+    const float scale = uistyle::readingScale(k) * hudedit::sizeOf(hudlayout::Part::Chat);
     s.k = float(k);
     s.scale = scale;
     s.targetW = targetWidth;
@@ -602,6 +604,8 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     s.show.hoverNewer = hit.part == cp::Part::Newer;
     s.layout = cp::layout(int(std::lround(10 * scale)), targetHeight - int(std::lround(10 * scale)), scale,
                           kHeights[s.height % 3], quiet, s.show, s.input, texts(), measure);
+    hudedit::place(hudlayout::Part::Chat, float(k), targetWidth, targetHeight, s.layout.w, s.layout.h, s.layout.x,
+                   s.layout.y);  // 3.0.11-beta.75: where the player put it
     makeRows(s);
     s.show.scroll = std::min(s.show.scroll, mostScroll(s));
     const cp::Input& in = s.input;

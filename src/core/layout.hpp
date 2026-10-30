@@ -85,6 +85,8 @@ constexpr const char* kCharacterState = "uaro-graphics\\character-state.txt";
 // to the left and the top), «Речі»'s tab («tab 0|1|2»)
 constexpr const char* kItemsState = "uaro-graphics\\items-state.txt";
 constexpr const char* kTrackerState = "uaro-graphics\\tracker-state.txt";  // 3.0.11-beta.70: the tracker's pins
+// 3.0.11-beta.75: «Розміщення інтерфейсу» - the parts the player moved or sized (core/hud_layout)
+constexpr const char* kHudLayout = "uaro-graphics\\hud-layout.txt";
 constexpr const char* kStatsState = "uaro-graphics\\stats-state.txt";
 // 2.14: the client patcher (app/client_patch): the list of the game's files last put, and where they arrive first
 constexpr const char* kClientPatchRecord = "uaro-graphics\\client-patch.txt";

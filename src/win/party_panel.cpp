@@ -17,6 +17,7 @@
 #include "win/char_block.hpp"
 #include "win/code_page.hpp"
 #include "win/game_camera.hpp"
+#include "win/hud_edit.hpp"
 #include "win/log.hpp"
 #include "win/picture_draw.hpp"
 #include "win/real_ddraw.hpp"
@@ -189,12 +190,14 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
         if (seat.most > 0 && seat.hp >= 0) m.percent = int(int64_t(seat.hp) * 100 / seat.most);
         s.members.push_back(m);
     }
-    const float scale = uistyle::partScale(k);
+    const float scale = uistyle::partScale(k) * hudedit::sizeOf(hudlayout::Part::Party);  // 3.0.11-beta.75: its size
     s.k = float(k);
     s.scale = scale;
     s.targetW = targetWidth;
     s.targetH = targetHeight;
     s.layout = pp::layout(s.members.size(), int(std::lround(10 * scale)), topOf(k, scale), scale);
+    hudedit::place(hudlayout::Part::Party, float(k), targetWidth, targetHeight, s.layout.w, s.layout.h, s.layout.x,
+                   s.layout.y);  // 3.0.11-beta.75: where the player put it
     std::string key = std::to_string(s.layout.x) + ',' + std::to_string(s.layout.y) + ';' + std::to_string(scale) + ';';
     for (const pp::Member& m : s.members)
         key += m.name + '|' + m.where + '|' + (m.leader ? "L" : "") + (m.online ? "" : "o") +

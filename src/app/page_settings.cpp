@@ -135,6 +135,7 @@ public:
                 break;
             case settings::Page::Interface:  // 3.0.11-beta.3 (the owner: its own item «Інтерфейс»)
                 p.note(t(Text::InterfaceNote));
+                p.note(t(Text::InterfaceLayoutNote));  // 3.0.11-beta.75: «Розміщення інтерфейсу» in the game
                 buildRows(p);
                 // 3.0.11-beta.5: the game's reference pack there (the game's watcher fetches it)
                 if (const auto pack = referenceThere(host_.model().paths().dir)) {

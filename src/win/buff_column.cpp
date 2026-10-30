@@ -23,6 +23,7 @@
 #include "win/buff_overlay.hpp"
 #include "win/game_camera.hpp"
 #include "win/game_files.hpp"
+#include "win/hud_edit.hpp"
 #include "win/log.hpp"
 #include "win/pack_pictures.hpp"
 #include "win/minimap_proto.hpp"
@@ -402,7 +403,8 @@ void frame(HWND game, BuffsLook look, BuffsOverflow overflow, double k, int targ
         return;
     }
     readState(s);
-    const float scale = uistyle::partScale(k);
+    // 3.0.11-beta.75: its size in «Розміщення інтерфейсу»
+    const float scale = uistyle::partScale(k) * hudedit::sizeOf(hudlayout::Part::Buffs);
     if (scale != s.scale) {
         for (auto& [file, ic] : s.icons) ic.sized.clear();  // the pictures at the new size
         s.shape.clear();
@@ -453,6 +455,8 @@ void frame(HWND game, BuffsLook look, BuffsOverflow overflow, double k, int targ
     int cx = 0, cy = 0;
     s.layout = bp::layout(s.entries, panelLook, right, top, bottom, widest, scale,
                           s.overflow == BuffsOverflow::Column ? bp::Overflow::Lines : bp::Overflow::More);
+    hudedit::place(hudlayout::Part::Buffs, float(k), targetWidth, targetHeight, s.layout.w, s.layout.h, s.layout.x,
+                   s.layout.y);  // 3.0.11-beta.75: where the player put it
     if (s.layout.lines.size() != s.linesTold) {  // 3.0.11-beta.63: a further column opened or closed
         s.linesTold = s.layout.lines.size();
         if (s.linesLogged++ < 20)

@@ -22,6 +22,7 @@
 #include "win/client_tables.hpp"
 #include "win/code_page.hpp"
 #include "win/game_camera.hpp"
+#include "win/hud_edit.hpp"
 #include "win/log.hpp"
 #include "win/picture_draw.hpp"
 #include "win/real_ddraw.hpp"
@@ -371,6 +372,7 @@ void place(State& s) {
         else if (top - s8 - L.glass.h >= 0.55f * float(s.targetH))
             L = hb::layout(s.mode, s.targetW / 2, int(std::lround(top - s8)), s.scale);
     }
+    hudedit::place(hudlayout::Part::Hotbar, s.k, s.targetW, s.targetH, L.w, L.h, L.x, L.y);  // 3.0.11-beta.75
     s.layout = L;
 }
 
@@ -497,7 +499,7 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
         hide(s);
         return;
     }
-    const float scale = uistyle::partScale(k);
+    const float scale = uistyle::partScale(k) * hudedit::sizeOf(hudlayout::Part::Hotbar);  // 3.0.11-beta.75: its size
     s.k = float(k);
     s.scale = scale;
     s.targetW = targetWidth;

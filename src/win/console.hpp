@@ -36,11 +36,17 @@ public:
         testAsked_ = false;
         return asked;
     }
+    // 3.0.11-beta.75: «Розмістити інтерфейс» chosen (the console closed with it) - true once
+    bool takeLayoutAsk() {
+        const bool asked = layoutAsked_;
+        layoutAsked_ = false;
+        return asked;
+    }
 
 private:
     // 2.2.1: Open - a group's effects shown or not; 2.6.22: Here - «Только на этой карте» (the console's own);
     // 3.0.5-beta.6: Test - «Тест графіки» (core/graphics_test)
-    enum class Kind { Heading, Box, Check, Slider, Choice, Open, Here, Test };
+    enum class Kind { Heading, Box, Check, Slider, Choice, Open, Here, Test, Layout };
     struct Row {
         Kind kind = Kind::Heading;
         std::string key;  // "effects.grass"; a heading's: its text (UTF-8)
@@ -64,6 +70,7 @@ private:
     std::wstring typed_;   // and those not taken yet (wndProc's WM_CHAR; 8 Backspace)
     bool thisMap_ = false; // «Только на этой карте», while the game runs
     bool testAsked_ = false;
+    bool layoutAsked_ = false;  // 3.0.11-beta.75
     std::string map_;
     std::vector<Row> rows_;
     int at_ = 0, top_ = 0;

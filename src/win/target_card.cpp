@@ -19,6 +19,7 @@
 #include "pad/win/game_window.hpp"
 #include "win/game_camera.hpp"
 #include "win/hotbar.hpp"
+#include "win/hud_edit.hpp"
 #include "win/log.hpp"
 #include "win/monster_picture.hpp"
 #include "win/picture_draw.hpp"
@@ -264,7 +265,7 @@ void frame(HWND game, bool on, double k, int targetWidth, int targetHeight) {
         hide(s);
         return;
     }
-    const float scale = uistyle::partScale(k);
+    const float scale = uistyle::partScale(k) * hudedit::sizeOf(hudlayout::Part::Target);  // 3.0.11-beta.75: its size
     s.k = float(k);
     s.scale = scale;
     s.targetW = targetWidth;
@@ -287,6 +288,7 @@ void frame(HWND game, bool on, double k, int targetWidth, int targetHeight) {
     const int under = windowsOver(int(float(L.x) / kk), int(float(L.y) / kk), int(float(L.x + L.w) / kk),
                                   int(float(L.y) / kk + L.card.h / kk));
     if (under > 0) L = tc::layout(s.data, t, targetWidth / 2, int(std::lround(float(under + 6) * kk)), scale, s.hover);
+    hudedit::place(hudlayout::Part::Target, kk, targetWidth, targetHeight, L.w, L.h, L.x, L.y);  // 3.0.11-beta.75
     s.layout = L;
     int cx = 0, cy = 0;
     bool hover = false, hoverBook = false;

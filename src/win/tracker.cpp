@@ -17,6 +17,7 @@
 #include "pad/win/game_window.hpp"
 #include "win/buff_column.hpp"
 #include "win/game_camera.hpp"
+#include "win/hud_edit.hpp"
 #include "win/log.hpp"
 #include "win/minimap_proto.hpp"
 #include "win/paths.hpp"
@@ -195,7 +196,7 @@ void frame(HWND game, bool on, double k, int targetWidth, int targetHeight) {
         return;
     }
     s.k = float(k);
-    s.scale = uistyle::partScale(k);
+    s.scale = uistyle::partScale(k) * hudedit::sizeOf(hudlayout::Part::Tracker);  // 3.0.11-beta.75: its size
     s.targetW = targetWidth;
     s.targetH = targetHeight;
     build(s);
@@ -206,6 +207,8 @@ void frame(HWND game, bool on, double k, int targetWidth, int targetHeight) {
     int right = 0, top = 0;
     placeOf(s, right, top);
     s.layout = tk::layout(s.entries, s.folded, right, top, targetHeight - int(std::lround(50 * k)), s.scale);
+    hudedit::place(hudlayout::Part::Tracker, float(k), targetWidth, targetHeight, s.layout.w, s.layout.h, s.layout.x,
+                   s.layout.y);  // 3.0.11-beta.75: where the player put it
     tk::Hit hover;
     int cx = 0, cy = 0;
     if (readGameCursor(cx, cy))

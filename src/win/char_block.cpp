@@ -20,6 +20,7 @@
 #include "pad/win/game_window.hpp"
 #include "win/game_camera.hpp"
 #include "win/game_files.hpp"
+#include "win/hud_edit.hpp"
 #include "win/log.hpp"
 #include "win/paths.hpp"
 #include "win/picture_draw.hpp"
@@ -336,7 +337,8 @@ void frame(HWND game, CharacterLook look, double k, int targetWidth, int targetH
         hide(s);
         return;
     }
-    const float scale = uistyle::partScale(k);
+    // 3.0.11-beta.75: its size in «Розміщення інтерфейсу»
+    const float scale = uistyle::partScale(k) * hudedit::sizeOf(hudlayout::Part::Character);
     s.k = float(k);
     s.scale = scale;
     s.targetW = targetWidth;
@@ -355,6 +357,8 @@ void frame(HWND game, CharacterLook look, double k, int targetWidth, int targetH
         s.shownView = view;
     }
     s.layout = cb::layout(view, panelLook, int(std::lround(10 * scale)), int(std::lround(10 * scale)), scale);
+    hudedit::place(hudlayout::Part::Character, float(k), targetWidth, targetHeight, s.layout.w, s.layout.h, s.layout.x,
+                   s.layout.y);  // 3.0.11-beta.75: where the player put it
     makePortrait(s, int(std::lround(s.layout.portrait.w * 0.86f)));
     cb::Data& d = s.data;
     d.name = readOwnName();
