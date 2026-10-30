@@ -1,3 +1,13 @@
+# uaRO Graphics 3.0.11-beta.53 — what is new
+
+- **The game's old window no longer flashes** (your word: «when you open the inventory the old one flashes for a
+  moment»). The game opens its own «Items» window and draws it at once — the driver used to hide it only at that
+  frame's end, so it showed through for a moment. Now the game's replaced windows («Items», «Status», the hotkeys'
+  bar, Basic Info, the old chat) are hidden right before the game draws its windows — they never reach a frame. The
+  same on another map, when the game shows its windows again.
+- To check: Alt+E and Alt+A several times in a row — the old windows do not show through; in the log at the start
+  `windows draw: the game's replaced windows hidden before it draws its windows`.
+
 # uaRO Graphics 3.0.11-beta.52 — what is new
 
 - **«Cast over the hero»: safer.** When a cast ends the game takes its old gauge away itself; the driver no longer
