@@ -149,7 +149,7 @@ Event parse(const uint8_t* p, size_t size) {
         }
         case 0x00a0:  // 3.0.11-beta.41
             if (size < 23) return {};
-            return Pickup{rd16(p, 6), rd16(p, 4), p[22] == 0};
+            return Pickup{rd16(p, 6), rd16(p, 4), p[22] == 0, rd16(p, 2), p[21]};
         case 0x00b1:
             if (size < 8) return {};
             return StatusLong{rd16(p, 2), rd32(p, 4)};

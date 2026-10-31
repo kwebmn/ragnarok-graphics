@@ -71,6 +71,7 @@ struct State {
     ULONGLONG tipSince = 0;
     bool on = false, shown = false, hid = false, stateRead = false, skipChar = false;
     unsigned codePage = 0;
+    int gainsTold = 0;  // 3.0.11-beta.107: the items come into the bag told the log
     float k = 0, scale = 1;
     int targetW = 0, targetH = 0;
     float fx = 0.08f, fy = 0.23f;  // its place: a share of the free room to its left and above it (the concept's)
@@ -685,6 +686,24 @@ bool key(UINT m, WPARAM wp, LPARAM lp) {
 }
 
 bool shown() { return state().shown; }
+
+void packet(const packets::Event& e) {
+    const auto* p = std::get_if<packets::Pickup>(&e);
+    State& s = state();
+    if (!p || !p->ok || s.gainsTold >= 40) return;
+    ++s.gainsTold;
+    const auto& names = clienttables::itemNames();
+    const auto it = names.find(std::to_string(p->item));
+    const std::string name =
+        it != names.end() ? utf8Of(widened(hotbar::spaced(it->second), s.codePage)) : "#" + std::to_string(p->item);
+    const iw::Tab tab = iw::tabOf(p->type);
+    const settings::Text words = tab == iw::Tab::Items  ? settings::Text::ItemsTabItems
+                                 : tab == iw::Tab::Gear ? settings::Text::ItemsTabGear
+                                                        : settings::Text::ItemsTabEtc;
+    LOG_INFO("items: %s #%d x%d came into the bag (its place %d, the server's kind %d) - «Речі» shows it under «%s»%s",
+             name.c_str(), int(p->item), int(p->amount), int(p->index), int(p->type), say(words).c_str(),
+             s.shown ? ", open now" : "");
+}
 
 void padCommand(PadCommand c) {
     State& s = state();

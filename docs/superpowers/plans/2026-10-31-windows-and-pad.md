@@ -185,6 +185,14 @@ The owner 31.10: «Полоски HP мобов - всем показывай»,
   system dll of Windows 26300, no dump - not chased. Tests window_order_a_click_raises_an_open_window,
   skill_window_a_press_becomes_a_drag_past_ten_pixels, ground_way_walk_shade_reads_on_white_ground,
   safe_mode_a_crash_after_the_renderer_closed_is_the_games_exit; suite 2060/0.
+- Windows and inventory concept (owner 31.10: «я сделал стрелы и они в инвентаре не появились», «окна одно поверх
+  другого не появляются», «где окно еквпировки чара то вообще ничего не появилось» -> «давай подумаем над этим всем в
+  виде концепции окон и инвентаря?»): Claude Docs GV5qKobJpoTV6bT5oewBu5 «Концепция окон и инвентаря» (facts: draw
+  order items<stats<skills<equip<npc<shop vs click order stats,skills,equip,shop,npc,items; our windows over the
+  game's; ammo -> «Різне» per FUN_004ba410; no «new» mark; equip reads the bag +0xC); proposed: one window stack,
+  «Персонаж» (gear + bag), a drag layer, arrows end to end; 8 questions - waiting for answers. 3.0.11-beta.107:
+  diagnostics only - packets::Pickup gains index/type (0x00a0 bytes 2, 21), itemswin::packet logs each item come into
+  the bag and its tab. Test game_packets_an_item_into_the_bag_tells_its_kind; suite 2061/0.
 - Stage 5 research: 0x00c4 deal type; 0x00c6 buy list (11 B each: price.L discount.L type.B nameid.W)
   -> session deal list +0xF28 (count +0xF2C, FUN_0062bbb0(rec, 0); FUN_004ffd30 copies the record's text at +0x11 into
   m_itemName) + windows 0x16 (mgr+0xEC, class 0x69B3E0, SendMsg 0x4AFC00: 0x24 0 buy / 1 sell) and 0x17 (buy cart,

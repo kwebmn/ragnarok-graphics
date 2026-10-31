@@ -270,6 +270,19 @@ TEST(game_packets_the_battle_log) {
     CHECK(e && e->type == 1 && e->value == 123456);
 }
 
+// 3.0.11-beta.107 (the owner: «я сделал стрелы и они в инвентаре не появились»): an item into the bag tells its
+// place and the server's kind too (0x00a0's byte 21: 10 the ammo) - the log says where «Речі» shows it
+TEST(game_packets_an_item_into_the_bag_tells_its_kind) {
+    std::vector<uint8_t> got = packet(0x00a0, 23);
+    put16(got, 2, 12);    // its place in the bag
+    put16(got, 4, 500);   // how many
+    put16(got, 6, 1750);  // Arrow
+    got[21] = 10;         // the ammo
+    const packets::Event ge = packets::parse(got.data(), got.size());
+    const auto* g = std::get_if<packets::Pickup>(&ge);
+    CHECK(g && g->index == 12 && g->type == 10 && g->amount == 500 && g->item == 1750 && g->ok);
+}
+
 // 3.0.11-beta.48: a cast begun (0x013e) - who, at whom, which skill, how long
 TEST(packets_casting) {
     std::vector<uint8_t> c(24, 0);

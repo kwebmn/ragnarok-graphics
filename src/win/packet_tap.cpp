@@ -10,6 +10,7 @@
 #include "win/party_panel.hpp"
 #include "win/cast_bar.hpp"
 #include "win/chat_window.hpp"
+#include "win/item_window.hpp"
 #include "win/mob_hp.hpp"
 #include "win/npc_talk.hpp"
 #include "win/target_card.hpp"
@@ -74,6 +75,7 @@ uint16_t __attribute__((thiscall)) take(void* connection, const uint8_t* packet)
         castwin::packet(e);      // 3.0.11-beta.48: the cast's label - which skill
         mobhpwin::packet(e);     // 3.0.11-beta.95: the monsters' HP bars
         npcwin::packet(e);       // 3.0.11-beta.98: the NPC talk's words
+        itemswin::packet(e);     // 3.0.11-beta.107: an item come into the bag told the log
     }
     return id;
 }

@@ -104,6 +104,8 @@ struct Status {
 struct Pickup {
     uint16_t item = 0, amount = 0;
     bool ok = false;
+    uint16_t index = 0;  // 3.0.11-beta.107: its place in the bag (at 2) and the server's kind (at 21: 10 the ammo)
+    uint8_t type = 0;
 };
 struct StatusLong {
     uint16_t type = 0;
