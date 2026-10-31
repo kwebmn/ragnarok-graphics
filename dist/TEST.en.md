@@ -1,3 +1,12 @@
+# uaRO Graphics 3.0.11-beta.125 — what's new
+
+**How many arrows are left — always in sight** (over the left end of the F1–F9 skill bar):
+- While the character wears arrows (or bullets, shuriken), a plate over the bar shows their picture and count.
+- Under 50 the count and the edge turn amber, at 10 or fewer red.
+- When the arrows fall under 50 and when 10 are left, "Arrows running low · 37" shows for 5 seconds; none left —
+  "Arrows ran out · 0" until you wear new ones.
+- The switch "Ammo left on the skill bar" in "Interface" (on).
+
 # uaRO Graphics 3.0.11-beta.124 — what's new
 
 **Monsters and other players no longer jump forward after lags** (step 4 of the network plan):
