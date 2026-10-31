@@ -1,3 +1,18 @@
+# uaRO Graphics 3.0.11-beta.116 — what's new
+
+A new **"Trade"** window — the trade between players in the new look (the windows plan's last stage):
+- Your side on the left, the partner's on the right: ten cells each and the zeny under them. A side that pressed
+  "Ready" gets a green "✓ Ready" mark.
+- "Items" opens with the trade and stands beside it. To offer a thing — drag it from "Items" or double click it.
+- Zeny: click your field and type the amount, Enter shows it to the partner at once; "Ready" sends it too.
+- **Scam guard:** if the partner adds a thing or changes the zeny after your "Ready", it turns red and a line
+  "⚠ Changed after your «Ready»" appears.
+- Buttons "Ready", "Trade" (when both are ready), "Cancel"; ✕ and Esc cancel the trade too.
+- The right button on a cell — the item's card (the partner's too).
+- Controller: A — the next step ("Ready", then "Trade"), Y — the card, B — cancel; the D-pad walks both sides and
+  into "Items".
+- The "Trade" switch in "Interface"; off — the game's own window.
+
 # uaRO Graphics 3.0.11-beta.115 — what's new
 
 A new **"Storage"** window — the Kafra storage in the new look (the windows plan's storage stage):
