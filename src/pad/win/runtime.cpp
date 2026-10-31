@@ -125,6 +125,8 @@ struct State {
     bool ring = false;          // 3.0.11-beta.95: the interface's ring in place of the fake mark
     std::vector<HintPart> hintParts;
     WindowOrder windows;        // 3.0.11-beta.93: the windows B closes, in the order they opened
+    WindowOrder own;            // 3.0.11-beta.106: the driver's windows the pad drives (OwnWindow), the last first
+    int ownTold = -1;           // the one the log named last
     bool backDown = false;      // B held at the last tick
     bool backHeld = false;      // the press that closed a window: not the game's until it is let go
     bool openMenuNow = false;   // the tile's «Контролер» chosen: the pad's menu opens at the next tick
@@ -776,6 +778,9 @@ void backCloses(PadState& pad, const ViewInfo& view) {
     pad.buttons = uint16_t(pad.buttons & ~kPadB);
 }
 
+// 3.0.11-beta.106: the driver's windows by OwnWindow, for the log
+constexpr const char* kOwnNames[] = {"«Речі»", "«Характеристики»", "«Навички»", "«Спорядження»", "the shop"};
+
 void tick() {
     State& s = S();
     const DWORD now = GetTickCount();
@@ -818,15 +823,26 @@ void tick() {
     followTheMouse(view.focused, now);
     // 3.0.11-beta.21: the reference window's while it is open, else the pad's own menu (Start)
     const bool menuOpen = S().menu.isOpen();
+    // 3.0.11-beta.106 (R-WCXUQP: «при выборе скилов переключает там где вещи открыты» - «Речі» came first whatever was
+    // opened after it): of the driver's windows open, the last opened or clicked in takes the pad
+    s.own.see(int(OwnWindow::Items), uagfx::win::itemswin::shown());    // .91
+    s.own.see(int(OwnWindow::Stats), uagfx::win::statswin::shown());    // .92
+    s.own.see(int(OwnWindow::Skills), uagfx::win::skillswin::shown());  // .96
+    s.own.see(int(OwnWindow::Equip), uagfx::win::equipwin::shown());    // .97
+    s.own.see(int(OwnWindow::Shop), uagfx::win::shopwin::shown());      // .100
+    const int own = menuOpen || !pad.connected ? -1 : s.own.last();
+    if (own != s.ownTold && own >= 0) LOG_INFO("pad: %s takes the controller (the last opened or clicked in)",
+                                               kOwnNames[own]);
+    s.ownTold = own;
     view.paused = uagfx::win::referencewin::isOpen() && !menuOpen     ? referencePad(pad)
                   : uagfx::win::padassignwin::isOpen() && !menuOpen ? assignPad(pad, now)  // 3.0.11-beta.91
                   : uagfx::win::padtileswin::isOpen() && !menuOpen  ? tilePad(pad, now)    // 3.0.11-beta.90
-                  : uagfx::win::itemswin::shown() && !menuOpen && pad.connected ? itemsPad(pad, now)  // .91
-                  : uagfx::win::statswin::shown() && !menuOpen && pad.connected ? statsPad(pad, now)  // .92
-                  : uagfx::win::skillswin::shown() && !menuOpen && pad.connected ? skillsPad(pad, now)  // .96
-                  : uagfx::win::equipwin::shown() && !menuOpen && pad.connected ? equipPad(pad, now)    // .97
-                  : uagfx::win::shopwin::shown() && !menuOpen && pad.connected ? shopPad(pad, now)      // .100
-                                                                               : runMenu(pad, view, now);
+                  : own == int(OwnWindow::Items)                    ? itemsPad(pad, now)
+                  : own == int(OwnWindow::Stats)                    ? statsPad(pad, now)
+                  : own == int(OwnWindow::Skills)                   ? skillsPad(pad, now)
+                  : own == int(OwnWindow::Equip)                    ? equipPad(pad, now)
+                  : own == int(OwnWindow::Shop)                     ? shopPad(pad, now)
+                                                                    : runMenu(pad, view, now);
     if (s.npcSupported) view.dialog = clientnpc::read();
     double clientTurn = 0;
     if (s.cameraSupported && clientcamera::readTurn(clientTurn))
@@ -921,6 +937,8 @@ bool walkTarget(int& x, int& y) {
     y = at->y;
     return true;
 }
+
+void turnedTo(OwnWindow w) { S().own.raise(int(w)); }
 
 bool walkWay(float& east, float& north, bool& cut, int& lead) {
     if (!healthy() || !S().session) return false;

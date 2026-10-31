@@ -32,6 +32,22 @@ TEST(window_order_a_window_opened_again_comes_last) {
     CHECK_EQ(o.last(), 2);
 }
 
+// 3.0.11-beta.106 (R-WCXUQP: «геймпад вкладки переключает не там который сейчас активен, например при выборе скилов
+// переключает там где вещи открыты»): the driver's windows the controller drives - the last opened, or the one clicked
+// in since (raise); a window not open is not raised
+TEST(window_order_a_click_raises_an_open_window) {
+    WindowOrder o;
+    o.see(0, true);  // «Речі»
+    o.see(2, true);  // «Навички» opened after it: the controller's
+    CHECK_EQ(o.last(), 2);
+    o.raise(0);  // a click in «Речі»
+    CHECK_EQ(o.last(), 0);
+    o.raise(4);  // not open: nothing
+    CHECK_EQ(o.last(), 0);
+    o.see(0, false);
+    CHECK_EQ(o.last(), 2);
+}
+
 TEST(window_order_hint_names_b) {
     const std::vector<HintPart> p = windowHintParts(Lang::Uk);
     CHECK(p.size() == 1 && p[0].buttons == std::vector<uint16_t>({kPadB}) && p[0].words == "закрити вікно");

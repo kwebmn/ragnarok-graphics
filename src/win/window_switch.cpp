@@ -59,17 +59,24 @@ void claimed(UINT m) {
 
 // The driver's parts' mouse, the topmost first: true - the message was one of theirs
 bool partsMouse(HWND w, UINT m, WPARAM wp, LPARAM lp, LRESULT& answer) {
+    // 3.0.11-beta.106 (R-WCXUQP): a press one of the driver's windows takes makes it the controller's
+    const bool press = m == WM_LBUTTONDOWN || m == WM_LBUTTONDBLCLK || m == WM_RBUTTONDOWN || m == WM_RBUTTONDBLCLK;
+    const auto turned = [press](bool taken, uapad::runtime::OwnWindow own) {
+        if (taken && press) uapad::runtime::turnedTo(own);
+        return taken;
+    };
+    using Own = uapad::runtime::OwnWindow;
     return hudedit::mouse(w, m, wp, lp, answer) ||      // 3.0.11-beta.75: all of it while the parts are framed
            padtileswin::mouse(w, m, wp, lp, answer) ||  // 3.0.11-beta.90: the controller's windows' tile (modal)
            padassignwin::mouse(w, m, wp, lp, answer) ||  // 3.0.11-beta.91: «Призначити» (modal)
            answercard::mouse(w, m, lp, answer) ||       // 3.0.9-beta.4: and over the answer card the card's
            referencewin::mouse(w, m, wp, lp, answer) ||  // 3.0.11-beta.7: over «Довідник» its own
-           statswin::mouse(w, m, wp, lp, answer) ||      // 3.0.11-beta.42: the windows over the panels
-           skillswin::mouse(w, m, wp, lp, answer) ||     // 3.0.11-beta.96: «Навички»
-           equipwin::mouse(w, m, wp, lp, answer) ||      // 3.0.11-beta.97: «Спорядження»
-           shopwin::mouse(w, m, wp, lp, answer) ||       // 3.0.11-beta.100: the shop
+           turned(statswin::mouse(w, m, wp, lp, answer), Own::Stats) ||    // 3.0.11-beta.42: over the panels
+           turned(skillswin::mouse(w, m, wp, lp, answer), Own::Skills) ||  // 3.0.11-beta.96: «Навички»
+           turned(equipwin::mouse(w, m, wp, lp, answer), Own::Equip) ||    // 3.0.11-beta.97: «Спорядження»
+           turned(shopwin::mouse(w, m, wp, lp, answer), Own::Shop) ||      // 3.0.11-beta.100: the shop
            npcwin::mouse(w, m, wp, lp, answer) ||        // 3.0.11-beta.98: the NPC talk
-           itemswin::mouse(w, m, wp, lp, answer) ||
+           turned(itemswin::mouse(w, m, wp, lp, answer), Own::Items) ||
            minimapproto::mouse(w, m, wp, lp, answer) ||  // 3.0.11-beta.1: the new minimap's
            buffcolumn::mouse(w, m, wp, lp, answer) ||    // 3.0.11-beta.35: the buffs' column's
            trackerwin::mouse(w, m, wp, lp, answer) ||    // 3.0.11-beta.70: the tracker's

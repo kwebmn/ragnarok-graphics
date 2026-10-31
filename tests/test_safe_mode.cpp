@@ -88,6 +88,24 @@ TEST(safe_mode_a_crash_in_the_first_minutes_counts) {
     CHECK(safe::startFailed(start + pic + "10:01:30.000" + crash));
 }
 
+// 3.0.11-beta.106 (R-N6M9DY: a game closed a minute after its start crashed in the system's DINPUT.dll 1 ms after
+// «DirectDraw released, renderer closed» - counted as a failed start; two such short games and the safe mode came):
+// a crash after the renderer's last opening was closed is the game's own exit - the start went fine
+TEST(safe_mode_a_crash_after_the_renderer_closed_is_the_games_exit) {
+    const std::string start = "16:26:09.000 INFO  uaRO Graphics 3.0.11 in C:\\uaRO\\uaRO.exe\n"
+                              "16:26:09.500 INFO  (uaRO renderer)\n";
+    const std::string pic = std::string("16:26:10.100 INFO  ") + safe::kFirstPicture + "\n";
+    const std::string closed = "16:27:12.815 INFO  DirectDraw released, renderer closed\n";
+    const std::string crash = "16:27:12.816 ERROR crash: exception 0xc0000005 at DINPUT.dll+0x8ade (thread 23816)\n";
+    CHECK(safe::judge(start + pic + closed + crash) == safe::Start::Fine);
+    CHECK(!safe::startFailed(start + pic + closed + crash));
+    // the game opened DirectDraw again (a mode change) and crashed in it: a failed start still
+    const std::string again = "16:27:13.000 INFO  (uaRO renderer)\n";
+    CHECK(safe::judge(start + pic + closed + again + crash) == safe::Start::FailedEarly);
+    // a crash before the close: as before
+    CHECK(safe::judge(start + pic + crash + closed) == safe::Start::FailedEarly);
+}
+
 // 3.0.11-beta.59: the automatic safe mode's note says which version wrote it - another version tries the normal mode
 TEST(safe_mode_note_carries_its_version) {
     const std::string note = safe::noteText(2, "3.0.11-beta.59");

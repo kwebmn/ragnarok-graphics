@@ -119,8 +119,8 @@ std::vector<Tri> walkArrowShape(float x0, float z0, int toX, int toY, const Heig
 // diamond (B), a slim tapered arrow to a cell's gold corners (A), beta.102's concept arrow, a ring round the feet
 // with a gold pointer and a small gold ring at the end (C), dots to a gold ring (D), a cell's gold frame with a wedge
 // at the feet (E); a wall cutting the way short - a reddish bar across it past the end. Each look over its dark shade
-// (the same shapes a little bigger, black at half their alpha), every colour times `alpha`; nothing when the end is
-// under the feet (a wall's bar alone) or a corner is off the map
+// (the same shapes a tenth of a cell bigger, black at 3/4 of their alpha), every colour times `alpha`; nothing when
+// the end is under the feet (a wall's bar alone) or a corner is off the map
 struct WalkArrow {
     float x0 = 0, z0 = 0;      // the character's feet (the game's world)
     float wayX = 1, wayZ = 0;  // the way drawn along (x east, z north)

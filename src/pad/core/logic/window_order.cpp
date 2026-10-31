@@ -12,4 +12,11 @@ void WindowOrder::see(int window, bool open) {
         order_.erase(it);
 }
 
+void WindowOrder::raise(int window) {
+    const auto it = std::find(order_.begin(), order_.end(), window);
+    if (it == order_.end()) return;
+    order_.erase(it);
+    order_.push_back(window);
+}
+
 }  // namespace uapad

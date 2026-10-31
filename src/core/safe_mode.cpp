@@ -19,10 +19,20 @@ int badEndAt(const std::string& log) {
     return end == 0 ? -1 : logfiles::secondsAt(log, end - 1);
 }
 
+// 3.0.11-beta.106 (R-N6M9DY: the system's DINPUT.dll crashed 1 ms after «DirectDraw released, renderer closed», a
+// minute into the game): a crash after the renderer's last opening was closed - the game's own exit, the start fine
+bool exitCrash(const std::string& log) {
+    const size_t opened = log.rfind("(uaRO renderer)");
+    if (opened == std::string::npos) return false;
+    const size_t closed = log.find("DirectDraw released, renderer closed", opened);
+    const size_t crash = log.find("crash: exception 0x");
+    return closed != std::string::npos && crash != std::string::npos && crash > closed;
+}
+
 }  // namespace
 
 Start judge(const std::string& previousLog) {
-    const bool bad = !report::reasonOfLog(previousLog).empty();
+    const bool bad = !report::reasonOfLog(previousLog).empty() && !exitCrash(previousLog);
     const size_t picture = previousLog.find(kFirstPicture);
     if (picture == std::string::npos) return bad ? Start::Failed : Start::Unknown;
     if (!bad) return Start::Fine;

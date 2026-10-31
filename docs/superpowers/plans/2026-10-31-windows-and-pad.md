@@ -173,6 +173,18 @@ The owner 31.10: «Полоски HP мобов - всем показывай»,
   (the owner asked not to draw it; every part its own box, so it can come back); «Лише клітинка» keeps its cell (the
   look itself) - cost if wrong: one more condition. Tests config_walk_mark, ground_way_walk_looks_without_the_mark;
   suite 2056/0.
+- Reports R-WCXUQP / R-JDFY25 / R-N6M9DY (3.0.11-beta.106; owner «проверь отчеты»): (1) skills not dragged onto the bar
+  - win/skill_window began the game's drag (0x51) at the press, the press/release being the window's the game never
+  saw the button up (no «drag let go» line at all in the log); now core/skill_window Press (drag past 10 px x scale)
+  + the icon under the cursor, on release 0x51 then 0x12 at the game's cursor (as item_window since beta.43); (2) the
+  pad's routing was a fixed chain (items first) - pad core WindowOrder::raise + runtime `own` order (OwnWindow) + a
+  taken press in window_switch raises; (3) the arrow white on Prontera's white paving - shade grow 0.06 -> 0.10 cell,
+  dark 0.5 -> 0.75 (checked offline over the report's own shot and the doc's grass); (4) a crash 1 ms after
+  «DirectDraw released, renderer closed» (DINPUT.dll+0x8ade at exit) counted FailedEarly - safe_mode exitCrash: a
+  crash after the last opening's close is the game's exit (Fine). The DINPUT crash itself: once in all reports, the
+  system dll of Windows 26300, no dump - not chased. Tests window_order_a_click_raises_an_open_window,
+  skill_window_a_press_becomes_a_drag_past_ten_pixels, ground_way_walk_shade_reads_on_white_ground,
+  safe_mode_a_crash_after_the_renderer_closed_is_the_games_exit; suite 2060/0.
 - Stage 5 research: 0x00c4 deal type; 0x00c6 buy list (11 B each: price.L discount.L type.B nameid.W)
   -> session deal list +0xF28 (count +0xF2C, FUN_0062bbb0(rec, 0); FUN_004ffd30 copies the record's text at +0x11 into
   m_itemName) + windows 0x16 (mgr+0xEC, class 0x69B3E0, SendMsg 0x4AFC00: 0x24 0 buy / 1 sell) and 0x17 (buy cart,

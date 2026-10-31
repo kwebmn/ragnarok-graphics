@@ -157,3 +157,22 @@ TEST(skill_window_words_dots_and_pad_hints) {
     w = skillwin::words(L, d, sh, t, measure);
     CHECK(has("Застосувати") && has("+1 рівень") && has("Призначити") && has("Закрити") && !has(t.drag));
 }
+
+// 3.0.11-beta.106 (R-WCXUQP: «глюк с переносом скилов на панель, не переносятся» - the game's drag begun at the press
+// never saw its button come up, the press and the release being the driver's): a press on a skill becomes a drag of
+// the window's own once the cursor moved past 10 pixels (times its scale); let go, a drag gives its skill (the game's
+// drag begun and let go there), a click nothing
+TEST(skill_window_a_press_becomes_a_drag_past_ten_pixels) {
+    skillwin::Press p;
+    CHECK(skillwin::released(p) < 0);  // nothing pressed
+    skillwin::pressed(p, 3, 100, 100);
+    CHECK(!skillwin::moved(p, 108, 100, 1.0f));  // a hand's shake
+    CHECK(skillwin::moved(p, 111, 100, 1.0f));
+    CHECK(skillwin::moved(p, 100, 100, 1.0f));  // dragging till let go, back over the window too
+    CHECK_EQ(skillwin::released(p), 3);
+    CHECK(skillwin::released(p) < 0 && p.index < 0);  // let go once
+    skillwin::pressed(p, 5, 100, 100);
+    CHECK(!skillwin::moved(p, 115, 100, 2.0f));  // 20 pixels at the scale 2
+    CHECK(skillwin::released(p) < 0);           // a click: no drag
+}
+

@@ -12,6 +12,8 @@ public:
     void see(int window, bool open);
     // The window B closes: the last opened of those still open; -1 none
     int last() const { return order_.empty() ? -1 : order_.back(); }
+    // 3.0.11-beta.106: a window the player turned to (a click in it) - the last now, when it is open
+    void raise(int window);
 
 private:
     std::vector<int> order_;  // the open ones, the oldest first

@@ -48,6 +48,9 @@ constexpr uint32_t kJob = kSession + 0xE44, kSkillPoints = 0x771FA4, kSkillNames
 constexpr int kMostSkill = 0x3FD;
 constexpr uint32_t kModeNow = 0x74B57C, kModeMsgSlot = 0x14, kModeMsg = 0x5707D0;
 constexpr int kRaiseMsg = 0x4A, kUseMsg = 0x7E, kDragMsg = 0x51;
+// 3.0.11-beta.106: a drag let go - the game mode's 0x12 (the cursor's x, y), as its frame sends it when the button
+// comes up (as «Речі»'s, item_window)
+constexpr int kDropMsg = 0x12;
 constexpr ULONGLONG kReadMs = 200;
 
 using SendMsgFn = int(__attribute__((thiscall)) *)(uint32_t self, uint32_t sender, int msg, int a, int b, int c);
@@ -80,6 +83,15 @@ struct State {
     bool moving = false;
     float grabX = 0, grabY = 0;
     int told = 0, pressesTold = 0;
+    // 3.0.11-beta.106 (R-WCXUQP: «глюк с переносом скилов на панель, не переносятся»): the game's drag begun at the
+    // press never saw its button come up (the press and the release are the window's) - a drag of its own now, its
+    // skill's icon under the cursor, the game's drag begun and let go only when the button comes up (as «Речі»)
+    kw::Press press;
+    panel::Picture dragIcon;
+    const panel::Picture* dragOf = nullptr;
+    uint32_t dragTexture = 0;
+    int dragW = 0, dragH = 0;
+    bool dragUpload = false;
 };
 
 State& state() {
@@ -320,6 +332,7 @@ void hide(State& s) {
     if (s.shown) uapad::gamewindow::setBlocked(uapad::gamewindow::Blocker::Skills, nullptr, nullptr, false);
     s.shown = false;
     s.moving = false;
+    s.press = kw::Press{};
 }
 
 bool modeMsg(int msg, int a, int b, int c) {
@@ -379,12 +392,17 @@ void changeUse(State& s, int index, int by) {
     if (s.told++ < 20) LOG_INFO("skills: %s used at level %d now", k->aegis.c_str(), to);
 }
 
-void drag(State& s, int index) {
+// 3.0.11-beta.106: a skill dragged and let go - the game's drag of it begun (0x51, as its own tree's press) and let go
+// at once where the game's cursor is (0x12): onto a window of the game's or the driver's hotbar (win/world_mouse)
+const char* dropAt(State& s, int index) {
     const Raw* r = rawAt(s, index);
     const kw::Skill* k = skillAt(s, index);
-    if (!r || !k || !kw::usable(*k) || !r->name) return;
-    const bool sent = modeMsg(kDragMsg, k->id, int(r->name), k->use);
-    if (s.told++ < 20) LOG_INFO("skills: %s dragged %s", k->aegis.c_str(), sent ? "(the game's drag, 0x51)" : "- not");
+    if (!r || !k || !kw::usable(*k) || !r->name) return "not dropped (not a skill to use)";
+    int cx = 0, cy = 0;
+    if (!readGameCursor(cx, cy)) return "not dropped (no cursor)";
+    if (!modeMsg(kDragMsg, k->id, int(r->name), k->use)) return "not dropped (the game mode not found)";
+    modeMsg(kDropMsg, cx, cy, 0);
+    return "let go through the game's own drop";
 }
 
 void setTab(State& s, int tab) {
@@ -484,11 +502,24 @@ void draw(FrameRecord& record, gpu::Renderer& renderer) {
     State& s = state();
     if (!s.shown || s.k <= 0 || s.picture.width <= 0 || s.picture.height <= 0) return;
     int cursor = -1, cx = 0, cy = 0;  // under the game's own cursor, as the minimap
-    if (readGameCursor(cx, cy)) cursor = panel::cursorDraw(record, float(cx), float(cy));
+    const bool known = readGameCursor(cx, cy);
+    if (known) cursor = panel::cursorDraw(record, float(cx), float(cy));
     const panel::Box& g = s.layout.glass;
     s.shadow.draw(record, renderer, s.layout.x + int(g.x), s.layout.y + int(g.y), int(g.w), int(g.h), 12 * s.scale,
                   s.scale, s.k);
     drawPart(record, renderer, s.picture, s.texture, s.texW, s.texH, s.upload, s.layout.x, s.layout.y, s.k);
+    const kw::Skill* dragged = s.press.dragging ? skillAt(s, s.press.index) : nullptr;
+    const panel::Picture* icon = dragged ? dragged->icon : nullptr;
+    if (icon && icon->width > 0 && known) {  // 3.0.11-beta.106: the dragged skill's icon under the cursor
+        if (icon != s.dragOf) {
+            s.dragOf = icon;
+            s.dragIcon = *icon;
+            s.dragUpload = true;
+        }
+        const int x = int(std::lround(float(cx) * s.k)) - icon->width / 2;
+        const int y = int(std::lround(float(cy) * s.k)) - icon->height / 2;
+        drawPart(record, renderer, s.dragIcon, s.dragTexture, s.dragW, s.dragH, s.dragUpload, x, y, s.k);
+    }
     if (cursor >= 0) record.moveLastBefore(record.commands().size() - size_t(cursor) - 1, size_t(cursor));
 }
 
@@ -543,6 +574,17 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
         result = 0;
         return true;
     }
+    if (s.press.index >= 0 && (m == WM_MOUSEMOVE || m == WM_LBUTTONUP)) {  // a skill pressed: dragged, or a click
+        if (m == WM_MOUSEMOVE) return kw::moved(s.press, tx, ty, s.scale);
+        const int dragged = kw::released(s.press);
+        if (dragged >= 0) {
+            const kw::Skill* k = skillAt(s, dragged);
+            const char* did = dropAt(s, dragged);
+            if (s.told++ < 20) LOG_INFO("skills: %s dragged and let go - %s", k ? k->aegis.c_str() : "?", did);
+        }
+        result = 0;
+        return true;
+    }
     const kw::Hit h = kw::hitTest(s.layout, tx - float(s.layout.x), ty - float(s.layout.y));
     if ((m == WM_LBUTTONDOWN || m == WM_LBUTTONDBLCLK) && s.pressesTold < 8) {
         ++s.pressesTold;
@@ -581,7 +623,7 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
             if (m == WM_LBUTTONDBLCLK)
                 use(s, h.index, "a double click");
             else
-                drag(s, h.index);
+                kw::pressed(s.press, h.index, tx, ty);  // 3.0.11-beta.106: a drag once it moves
             break;
         case kw::Part::Title:
             s.moving = true;

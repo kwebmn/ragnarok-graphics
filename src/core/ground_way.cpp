@@ -347,12 +347,14 @@ struct Flat {
 };
 
 constexpr uint32_t kGold = 0x00E6CB8Au, kWhite = 0x00FFFFFFu, kWall = 0xEBEB7864u;
-constexpr float kShadeGrow = 0.06f;  // a cell's
+// 3.0.11-beta.106 (R-JDFY25: the white arrow lost on Prontera's white paving): a tenth of a cell all round, three
+// quarters as dark as the shape over it (it was 0.06 and a half - a thin grey rim)
+constexpr float kShadeGrow = 0.10f, kShadeDark = 0.75f;  // a cell's; of the shape's alpha
 
 constexpr uint32_t with(uint32_t rgb, uint32_t alpha) { return (alpha << 24) | (rgb & 0xFFFFFFu); }
 
 // Draws one pass of an arrow: the light one, or its shade (each shape `grow` bigger all round - the builders below
-// take it - black at half its alpha; the white heads inside their gold edges and the cells' fills left out)
+// take it - black at kShadeDark of its alpha; the white heads inside their gold edges and the cells' fills left out)
 struct Pen {
     std::vector<Flat>& out;
     bool shade;
@@ -360,7 +362,7 @@ struct Pen {
 
     void tri(float ax, float az, float bx, float bz, float cx, float cz, uint32_t argb, uint8_t part) {
         if (shade && (part == kPartHead || part == kPartCellFill)) return;
-        const uint32_t c = shade ? faded(argb & 0xFF000000u, 0.5f * alpha) : faded(argb, alpha);
+        const uint32_t c = shade ? faded(argb & 0xFF000000u, kShadeDark * alpha) : faded(argb, alpha);
         out.push_back(Flat{{ax, bx, cx}, {az, bz, cz}, c, shade ? kPartShade : part});
     }
     void quad(float ax, float az, float bx, float bz, float cx, float cz, float dx, float dz, uint32_t argb,

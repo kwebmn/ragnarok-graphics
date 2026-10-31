@@ -55,6 +55,10 @@ bool walkTarget(int& x, int& y);
 // asked for short (the arrow's red bar); false none. 3.0.11-beta.104: the march's way (a slide's along a wall) and the
 // lead (cells)
 bool walkWay(float& east, float& north, bool& cut, int& lead);
+// 3.0.11-beta.106 (R-WCXUQP): the driver's windows the controller drives - the last opened takes it, or the one a
+// click went into since (win/window_switch)
+enum class OwnWindow { Items, Stats, Skills, Equip, Shop };
+void turnedTo(OwnWindow w);
 // 3.0.11-beta.90 (stage 6): [interface] pad_tiles - Start opens the driver's windows' tile (win/pad_tiles) instead of
 // the pad's own menu; that menu opened from the tile's «Контролер»
 void setTiles(bool on);

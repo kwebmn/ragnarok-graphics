@@ -476,3 +476,34 @@ TEST(ground_way_walk_looks_without_the_mark) {
     CHECK(marks(groundway::walkShape(WalkLook::Cell, a, g, cs, 1.0f, 0.5f)) > 0);
 }
 
+// 3.0.11-beta.106 (R-JDFY25: «в пронтере не видно стрелочки» - the white arrow on Prontera's white paving): the shade
+// under each look a tenth of a cell wider all round and three quarters as dark as the shape over it (it was 0.06 and a
+// half: a thin grey rim lost on light ground)
+TEST(ground_way_walk_shade_reads_on_white_ground) {
+    groundway::Heights g;
+    CHECK(groundway::parseGat(gat(20, 20, [](int, int) { return 0.0f; }), g));
+    const int cs = 5;
+    groundway::WalkArrow a;
+    groundway::cellToWorld(4, 10, 20, 20, cs, a.x0, a.z0);
+    a.len = 5.0f * cs;
+    a.mark = false;
+    const std::vector<groundway::Tri> t = groundway::walkShape(WalkLook::Dots, a, g, cs, 1.0f, 0.5f);
+    const float dotX = a.x0 + 0.6f * cs;  // the first dot, 0.09 of a cell round, at a quarter's alpha
+    float shadeR = 0, lightR = 0;
+    uint32_t shadeA = 0, lightA = 0;
+    for (const groundway::Tri& q : t)
+        for (const groundway::Point& p : {q.a, q.b, q.c}) {
+            const float d = std::hypot(p.x - dotX, p.z - a.z0);
+            if (d > 0.25f * cs) continue;  // the next dot half a cell on left out
+            if (q.part == groundway::kPartShade) {
+                shadeR = std::max(shadeR, d);
+                shadeA = std::max(shadeA, q.argb >> 24);
+            } else if (q.part == groundway::kPartDot) {
+                lightR = std::max(lightR, d);
+                lightA = std::max(lightA, q.argb >> 24);
+            }
+        }
+    CHECK(lightR > 0 && shadeR - lightR >= 0.095f * cs);
+    CHECK(lightA > 0 && shadeA >= lightA * 7 / 10);
+}
+
