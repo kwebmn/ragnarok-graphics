@@ -1,3 +1,11 @@
+# uaRO Graphics 3.0.11-beta.117 — what's new
+
+Fixes from players' reports:
+- An NPC's name in the talk window no longer shows colour codes (`^0000FF…`).
+- A Cyrillic character name shows right in the "Character block" (it was «��»).
+- The F1–F9 bar no longer jumps right for a second: it moves aside only when a game window stands in its place for
+  longer than a second and a half.
+
 # uaRO Graphics 3.0.11-beta.116 — what's new
 
 A new **"Trade"** window — the trade between players in the new look (the windows plan's last stage):
