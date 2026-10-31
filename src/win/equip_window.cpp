@@ -30,6 +30,7 @@
 #include "win/reference_load.hpp"
 #include "win/ui_cost.hpp"
 #include "win/window_shadow.hpp"
+#include "win/window_stack.hpp"
 
 namespace uagfx::win::equipwin {
 namespace {
@@ -69,6 +70,7 @@ struct Thing {  // a thing of the bag as the game keeps it
 
 struct State {
     WindowShadow shadow;
+    WindowEdge edge;  // 3.0.11-beta.108: the top of two or more windows (win/window_stack)
     bool on = false, shown = false, hid = false, stateRead = false;
     float k = 0, scale = 1;
     int targetW = 0, targetH = 0;
@@ -503,6 +505,9 @@ void draw(FrameRecord& record, gpu::Renderer& renderer) {
     s.shadow.draw(record, renderer, s.layout.x + int(g.x), s.layout.y + int(g.y), int(g.w), int(g.h), 12 * s.scale,
                   s.scale, s.k);
     drawPart(record, renderer, s.picture, s.texture, s.texW, s.texH, s.upload, s.layout.x, s.layout.y, s.k);
+    if (windowstack::marked(winstack::Win::Equip))  // 3.0.11-beta.108: its gold edge, the top of two or more
+        s.edge.draw(record, renderer, s.layout.x + int(g.x), s.layout.y + int(g.y), int(g.w), int(g.h), 12 * s.scale,
+                    s.scale, s.k);
     if (cursor >= 0) record.moveLastBefore(record.commands().size() - size_t(cursor) - 1, size_t(cursor));
 }
 

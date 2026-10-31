@@ -22,4 +22,17 @@ void WindowShadow::draw(FrameRecord& record, gpu::Renderer& renderer, int x, int
                 y - spread + int(std::lround(4 * s)), k);
 }
 
+void WindowEdge::draw(FrameRecord& record, gpu::Renderer& renderer, int x, int y, int width, int height, float radius,
+                      float s, float k) {
+    if (width <= 0 || height <= 0 || k <= 0) return;
+    if (width != w || height != h || s != scale) {  // the interface's gold, 1.5 pixels a scale's
+        w = width;
+        h = height;
+        scale = s;
+        picture = uistyle::edge(width, height, radius, 1.5f * s, 0xE6CB8A, 0.85f);
+        upload = true;
+    }
+    drawPart(record, renderer, picture, texture, texW, texH, upload, x, y, k);
+}
+
 }  // namespace uagfx::win

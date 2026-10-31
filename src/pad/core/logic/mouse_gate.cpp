@@ -85,9 +85,20 @@ int blockedAt(const Blocked* parts, int count, int x, int y) {
     return -1;
 }
 
-int blockedAtGame(const Blocked* parts, int count, int clientW, int clientH, int x, int y, int width, int height) {
+int blockedAtOrdered(const Blocked* parts, int count, const std::vector<int>& first, int x, int y) {
+    const auto over = [&](int i) {
+        const Blocked& b = parts[i];
+        return b.all || (b.on && x >= b.left && x < b.right && y >= b.top && y < b.bottom);
+    };
+    for (const int i : first)
+        if (i >= 0 && i < count && over(i)) return i;
+    return blockedAt(parts, count, x, y);
+}
+
+int blockedAtGame(const Blocked* parts, int count, int clientW, int clientH, int x, int y, int width, int height,
+                  const std::vector<int>& first) {
     if (clientW <= 0 || clientH <= 0 || width <= 0 || height <= 0) return -1;
-    return blockedAt(parts, count, int(int64_t(x) * clientW / width), int(int64_t(y) * clientH / height));
+    return blockedAtOrdered(parts, count, first, int(int64_t(x) * clientW / width), int(int64_t(y) * clientH / height));
 }
 
 }  // namespace uapad

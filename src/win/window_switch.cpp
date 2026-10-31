@@ -1,4 +1,5 @@
 #include "win/window_switch.hpp"
+#include "win/window_stack.hpp"
 
 #include <windowsx.h>
 
@@ -59,24 +60,12 @@ void claimed(UINT m) {
 
 // The driver's parts' mouse, the topmost first: true - the message was one of theirs
 bool partsMouse(HWND w, UINT m, WPARAM wp, LPARAM lp, LRESULT& answer) {
-    // 3.0.11-beta.106 (R-WCXUQP): a press one of the driver's windows takes makes it the controller's
-    const bool press = m == WM_LBUTTONDOWN || m == WM_LBUTTONDBLCLK || m == WM_RBUTTONDOWN || m == WM_RBUTTONDBLCLK;
-    const auto turned = [press](bool taken, uapad::runtime::OwnWindow own) {
-        if (taken && press) uapad::runtime::turnedTo(own);
-        return taken;
-    };
-    using Own = uapad::runtime::OwnWindow;
     return hudedit::mouse(w, m, wp, lp, answer) ||      // 3.0.11-beta.75: all of it while the parts are framed
            padtileswin::mouse(w, m, wp, lp, answer) ||  // 3.0.11-beta.90: the controller's windows' tile (modal)
            padassignwin::mouse(w, m, wp, lp, answer) ||  // 3.0.11-beta.91: «Призначити» (modal)
            answercard::mouse(w, m, lp, answer) ||       // 3.0.9-beta.4: and over the answer card the card's
-           referencewin::mouse(w, m, wp, lp, answer) ||  // 3.0.11-beta.7: over «Довідник» its own
-           turned(statswin::mouse(w, m, wp, lp, answer), Own::Stats) ||    // 3.0.11-beta.42: over the panels
-           turned(skillswin::mouse(w, m, wp, lp, answer), Own::Skills) ||  // 3.0.11-beta.96: «Навички»
-           turned(equipwin::mouse(w, m, wp, lp, answer), Own::Equip) ||    // 3.0.11-beta.97: «Спорядження»
-           turned(shopwin::mouse(w, m, wp, lp, answer), Own::Shop) ||      // 3.0.11-beta.100: the shop
-           npcwin::mouse(w, m, wp, lp, answer) ||        // 3.0.11-beta.98: the NPC talk
-           turned(itemswin::mouse(w, m, wp, lp, answer), Own::Items) ||
+           // 3.0.11-beta.108: the windows over the panels, the stack's top first (a press raises the one it is in)
+           windowstack::mouse(w, m, wp, lp, answer) ||
            minimapproto::mouse(w, m, wp, lp, answer) ||  // 3.0.11-beta.1: the new minimap's
            buffcolumn::mouse(w, m, wp, lp, answer) ||    // 3.0.11-beta.35: the buffs' column's
            trackerwin::mouse(w, m, wp, lp, answer) ||    // 3.0.11-beta.70: the tracker's
@@ -93,10 +82,9 @@ LRESULT CALLBACK gameProc(HWND w, UINT m, WPARAM wp, LPARAM lp) {
         if (m == WM_KEYDOWN || m == WM_SYSKEYDOWN || m == WM_LBUTTONDOWN || m == WM_RBUTTONDOWN)
             uapad::runtime::noteKeysOrMouse(m != WM_KEYDOWN && m != WM_SYSKEYDOWN);  // 3.0.11-beta.86: keys' names back
         if (hudedit::key(m, wp, lp)) return 0;  // 3.0.11-beta.75: Ctrl+Shift+L - «Розміщення інтерфейсу», its Esc
-        if (referencewin::key(m, wp, lp)) return 0;  // 3.0.11-beta.7: Ctrl+F, and every key while «Довідник» is open
-        if (itemswin::key(m, wp, lp)) return 0;      // 3.0.11-beta.42: «Речі»'s search while it types
-        if (shopwin::key(m, wp, lp)) return 0;       // 3.0.11-beta.100: the shop's Enter, Esc, its search
-        if (npcwin::key(m, wp, lp)) return 0;        // 3.0.11-beta.98: the NPC talk's 1-9, Enter, Esc
+        // 3.0.11-beta.108: the windows' keys, the top one's first (Ctrl+F «Довідник», «Речі»'s search, the shop's
+        // and the NPC talk's keys); Esc closes the top one
+        if (windowstack::key(m, wp, lp)) return 0;
         if (chatwin::key(m, wp, lp)) return 0;       // 3.0.11-beta.41: the new chat's F10, Alt+F10 and Tab
         hotbarwin::key(m, wp, lp);                   // 3.0.11-beta.45: its cells' keys shown pressed (still the game's)
         if (m == WM_KEYDOWN && minimapproto::key(unsigned(wp))) return 0;  // 3.0.11-beta.4: Ctrl+Tab, the new minimap's

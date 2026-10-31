@@ -20,6 +20,7 @@ bool g_clipped = false;
 // «Довідник»'s (in Blocker's order)
 constexpr int kBlockers = kBlockerCount;
 Blocked g_parts[kBlockers];
+std::vector<int> g_order;  // 3.0.11-beta.108: the parts looked at first (the window stack's top first)
 HWND g_partsWindow = nullptr;  // 3.0.11-beta.24: the window their rectangles are in
 uint8_t g_claimed = 0;          // 3.0.11-beta.33: claimPress's since the last poll
 
@@ -133,7 +134,12 @@ bool blockerRect(Blocker who, RECT& out) {
 int blockedUnder(int x, int y, int width, int height) {
     RECT client{};
     if (!g_partsWindow || !GetClientRect(g_partsWindow, &client)) return -1;
-    return blockedAtGame(g_parts, kBlockers, client.right, client.bottom, x, y, width, height);
+    return blockedAtGame(g_parts, kBlockers, client.right, client.bottom, x, y, width, height, g_order);
+}
+
+void setOrder(const std::vector<Blocker>& topFirst) {
+    g_order.clear();
+    for (const Blocker b : topFirst) g_order.push_back(static_cast<int>(b));
 }
 
 void claimPress(uint8_t buttons) { g_claimed |= buttons; }
@@ -150,7 +156,7 @@ bool cursorOverGame(HWND game, POINT screen) {
     if (!game || !GetClientRect(game, &client) || !ScreenToClient(game, &p) || !PtInRect(&client, p)) return false;
     // 3.0.3-beta.8: the driver's panel of the game windows drawn in the game's picture - a click on it is the
     // panel's, and while it is dragged the held button is not the game's anywhere
-    if (blockedAt(g_parts, kBlockers, p.x, p.y) >= 0) return false;
+    if (blockedAtOrdered(g_parts, kBlockers, g_order, p.x, p.y) >= 0) return false;
     // Any window of the client's own process counts: a graphics wrapper may present the picture in a window
     // of its own over the game's. A window of another program on top does not.
     const HWND under = WindowFromPoint(screen);

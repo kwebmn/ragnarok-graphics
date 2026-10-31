@@ -80,6 +80,32 @@ panel::Picture vignette(int w, int h, uint32_t rgb, float alpha, float depth) {
     return p;
 }
 
+panel::Picture edge(int w, int h, float radius, float width, uint32_t rgb, float alpha) {
+    panel::Picture p;
+    if (w <= 0 || h <= 0 || width <= 0) return p;
+    p.width = w;
+    p.height = h;
+    p.px.assign(size_t(w) * size_t(h), 0u);
+    const float hx = float(w) / 2, hy = float(h) / 2;
+    const float r = std::clamp(radius, 0.0f, std::min(hx, hy));
+    const int band = int(std::ceil(std::max(r, width))) + 1;  // the rows and columns the ring may reach
+    for (int y = 0; y < h; ++y)
+        for (int x = 0; x < w; ++x) {
+            if (y >= band && y < h - band && x == band) x = w - band;  // the middle of a row: none
+            const float qx = std::fabs(float(x) + 0.5f - hx) - (hx - r);
+            const float qy = std::fabs(float(y) + 0.5f - hy) - (hy - r);
+            const float d =  // the signed distance to the rounded box's edge: inside negative
+                panel::length(std::max(qx, 0.0f), std::max(qy, 0.0f)) + std::min(std::max(qx, qy), 0.0f) - r;
+            const float cover = std::clamp(0.5f - d, 0.0f, 1.0f) * std::clamp(d + width + 0.5f, 0.0f, 1.0f);
+            if (cover <= 0) continue;
+            const float a = std::clamp(alpha * cover, 0.0f, 1.0f);
+            const auto ch = [&](int shift) { return uint32_t(panel::roundOf(float((rgb >> shift) & 0xFF) * a)); };
+            p.px[size_t(y) * size_t(w) + size_t(x)] =
+                (uint32_t(panel::roundOf(a * 255)) << 24) | (ch(16) << 16) | (ch(8) << 8) | ch(0);
+        }
+    return p;
+}
+
 panel::Picture shadow(int w, int h, float radius, float spread, float alpha) {
     panel::Picture p;
     const int m = int(std::ceil(std::max(0.0f, spread)));

@@ -71,7 +71,11 @@ struct Blocked {
 };
 // The part over a point of the game window's client area (the first of them), -1 for none.
 int blockedAt(const Blocked* parts, int count, int x, int y);
+// 3.0.11-beta.108: windows over each other - the parts in `first` looked at before the rest (the window stack's top
+// first: a click or a drop on two windows is the one's on top)
+int blockedAtOrdered(const Blocked* parts, int count, const std::vector<int>& first, int x, int y);
 // The same for the game's own cursor: x, y of its width x height picture in a client area of clientW x clientH.
-int blockedAtGame(const Blocked* parts, int count, int clientW, int clientH, int x, int y, int width, int height);
+int blockedAtGame(const Blocked* parts, int count, int clientW, int clientH, int x, int y, int width, int height,
+                  const std::vector<int>& first = {});
 
 }  // namespace uapad

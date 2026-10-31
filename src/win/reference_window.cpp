@@ -36,6 +36,7 @@
 #include "win/ui_cost.hpp"
 #include "win/updates_hook.hpp"
 #include "win/window_shadow.hpp"
+#include "win/window_stack.hpp"
 
 namespace uagfx::win::referencewin {
 namespace {
@@ -56,6 +57,7 @@ struct Entry {  // a page left for another: what «Назад» brings back
 
 struct State {
     WindowShadow shadow;  // 3.0.11-beta.49
+    WindowEdge edge;  // 3.0.11-beta.108: the top of two or more windows (win/window_stack)
     bool enabled = false, open = false, shown = false, dirty = true, upload = true, wantPage = true;
     int style = -1;  // 3.0.11-beta.47: core/ui_style's generation painted
     int iconsMade = -2;  // 3.0.11-beta.74: win/pack_pictures' iconsStamp() the pictures were made for
@@ -907,6 +909,8 @@ void draw(FrameRecord& record, gpu::Renderer& renderer) {
     const float sc = s.layout.s;  // 3.0.11-beta.49: its shadow under it (its ground the whole picture)
     s.shadow.draw(record, renderer, s.layout.x, s.layout.y, s.picture.width, s.picture.height, 10 * sc, sc, s.k);
     drawPart(record, renderer, s.picture, s.texture, s.texW, s.texH, s.upload, s.layout.x, s.layout.y, s.k);
+    if (windowstack::marked(winstack::Win::Reference))  // 3.0.11-beta.108: its gold edge, the top of two or more
+        s.edge.draw(record, renderer, s.layout.x, s.layout.y, s.picture.width, s.picture.height, 10 * sc, sc, s.k);
     if (cursor >= 0) record.moveLastBefore(record.commands().size() - size_t(cursor) - 1, size_t(cursor));
 }
 

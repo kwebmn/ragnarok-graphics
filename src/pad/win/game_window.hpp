@@ -1,6 +1,8 @@
 #pragma once
 #include <windows.h>
 
+#include <vector>
+
 #include "pad/core/config/config.hpp"
 
 // What the pad does to the game's window and the Windows cursor around it.
@@ -33,6 +35,9 @@ bool blockerRect(Blocker who, RECT& out);
 // 3.0.11-beta.24: the part the game's own cursor is over (x, y of the game's width x height picture), -1 for none:
 // the world under it is not the cursor's then (win/world_mouse). On the game's thread.
 int blockedUnder(int x, int y, int width, int height);
+// 3.0.11-beta.108: the driver's windows over each other - the parts looked at first by blockedUnder and the press
+// gate, the window stack's top first (win/window_stack, each frame)
+void setOrder(const std::vector<Blocker>& topFirst);
 // 3.0.11-beta.33: a press one of the driver's parts took in the game window's messages (bit i: the device's button
 // i) - not the game's until it is let go, though the part be gone before the game's next mouse poll (its ✕); taken
 // by that poll. On the game's thread.

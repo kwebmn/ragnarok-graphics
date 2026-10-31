@@ -219,3 +219,17 @@ TEST(gate_a_press_a_part_took_stays_out) {
     g.claim(kRmb);  // the other button's own press only
     CHECK_EQ(g.filter(kLmb | kRmb, true, false, 60).buttons, kLmb);
 }
+
+// 3.0.11-beta.108: windows over each other - the parts named first (the stack's top first) before the rest: a drop on
+// two windows goes to the one on top
+TEST(gate_the_top_window_first) {
+    Blocked parts[3];
+    parts[1] = Blocked{true, false, 100, 100, 300, 200};  // a window under
+    parts[2] = Blocked{true, false, 200, 150, 400, 300};  // a window over it, the overlap 200-300 x 150-200
+    CHECK_EQ(blockedAt(parts, 3, 250, 175), 1);  // the parts' own order
+    CHECK_EQ(blockedAtOrdered(parts, 3, {2, 1}, 250, 175), 2);
+    CHECK_EQ(blockedAtOrdered(parts, 3, {2, 1}, 150, 120), 1);
+    CHECK_EQ(blockedAtOrdered(parts, 3, {2}, 150, 120), 1);  // the rest after the named
+    CHECK_EQ(blockedAtOrdered(parts, 3, {}, 500, 500), -1);
+}
+

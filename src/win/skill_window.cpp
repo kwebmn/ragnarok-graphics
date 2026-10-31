@@ -29,6 +29,7 @@
 #include "win/real_ddraw.hpp"
 #include "win/ui_cost.hpp"
 #include "win/window_shadow.hpp"
+#include "win/window_stack.hpp"
 
 namespace uagfx::win::skillswin {
 namespace {
@@ -64,6 +65,7 @@ struct Raw {  // a skill as the session keeps it
 
 struct State {
     WindowShadow shadow;
+    WindowEdge edge;  // 3.0.11-beta.108: the top of two or more windows (win/window_stack)
     bool on = false, shown = false, hid = false, stateRead = false, namesChecked = false, namesKnown = false;
     float k = 0, scale = 1;
     int targetW = 0, targetH = 0;
@@ -508,6 +510,9 @@ void draw(FrameRecord& record, gpu::Renderer& renderer) {
     s.shadow.draw(record, renderer, s.layout.x + int(g.x), s.layout.y + int(g.y), int(g.w), int(g.h), 12 * s.scale,
                   s.scale, s.k);
     drawPart(record, renderer, s.picture, s.texture, s.texW, s.texH, s.upload, s.layout.x, s.layout.y, s.k);
+    if (windowstack::marked(winstack::Win::Skills))  // 3.0.11-beta.108: its gold edge, the top of two or more
+        s.edge.draw(record, renderer, s.layout.x + int(g.x), s.layout.y + int(g.y), int(g.w), int(g.h), 12 * s.scale,
+                    s.scale, s.k);
     const kw::Skill* dragged = s.press.dragging ? skillAt(s, s.press.index) : nullptr;
     const panel::Picture* icon = dragged ? dragged->icon : nullptr;
     if (icon && icon->width > 0 && known) {  // 3.0.11-beta.106: the dragged skill's icon under the cursor

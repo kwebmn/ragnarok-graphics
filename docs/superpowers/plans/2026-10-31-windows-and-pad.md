@@ -193,6 +193,18 @@ The owner 31.10: «Полоски HP мобов - всем показывай»,
   «Персонаж» (gear + bag), a drag layer, arrows end to end; 8 questions - waiting for answers. 3.0.11-beta.107:
   diagnostics only - packets::Pickup gains index/type (0x00a0 bytes 2, 21), itemswin::packet logs each item come into
   the bag and its tab. Test game_packets_an_item_into_the_bag_tells_its_kind; suite 2061/0.
+- Concept answers 31.10: 1 «два окна вплотную друг к другу как одно окно» (not one window), 2 «Спорядження» tab + a
+  «Карти» tab «и, может, что-то ещё» (my proposal in the doc: Усе / Витратне / Спорядження / Карти / Різне / ★ Обране -
+  question 9; question 10 the arrows' stock in the character block), 3 да, 4 ок, 5 да, 6 ок, 7 ок, 8 ок (order: window
+  manager and drag first). Doc updated (decided sections, two docked windows mock-up).
+- Stage 1 of the concept (3.0.11-beta.108): core/window_stack (Stack see/raise/top/topDown/marked), win/window_stack
+  (draw bottom up in context's endScene/present, mouse top down raising on a press, keys: the top's own first, Esc
+  closing the top without one, the rest after; the pad runtime routes by its top - replaces beta.106's `own`/turnedTo),
+  uistyle::edge + WindowEdge (the gold edge of the top of two or more, band-only painting), pad core
+  blockedAtOrdered + game_window setOrder (drops and the press gate the top first). Ruling R13: the gold edge only
+  with two or more windows shown (one alone keeps the approved look) - cost if wrong: one condition. Not yet: Q4 the
+  new window's place, Q5 the game's windows over ours (next beta). Tests window_stack_the_last_opened_or_clicked_on_top,
+  ui_style_window_edge, gate_the_top_window_first; suite 2064/0.
 - Stage 5 research: 0x00c4 deal type; 0x00c6 buy list (11 B each: price.L discount.L type.B nameid.W)
   -> session deal list +0xF28 (count +0xF2C, FUN_0062bbb0(rec, 0); FUN_004ffd30 copies the record's text at +0x11 into
   m_itemName) + windows 0x16 (mgr+0xEC, class 0x69B3E0, SendMsg 0x4AFC00: 0x24 0 buy / 1 sell) and 0x17 (buy cart,

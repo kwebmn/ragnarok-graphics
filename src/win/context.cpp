@@ -45,6 +45,7 @@
 #include "win/chat_window.hpp"
 #include "win/item_window.hpp"
 #include "win/stat_window.hpp"
+#include "win/window_stack.hpp"
 #include "pad/win/runtime.hpp"
 #include "win/ground_marks.hpp"
 #include "win/pad_assign.hpp"
@@ -587,15 +588,11 @@ void Context::endScene() {
         partywin::draw(record, *renderer);      // 3.0.11-beta.39: the party's panel
         hotbarwin::draw(record, *renderer);     // 3.0.11-beta.40: the hotbar
         chatwin::draw(record, *renderer);       // 3.0.11-beta.41: the chat
-        itemswin::draw(record, *renderer);      // 3.0.11-beta.42: «Речі»
-        statswin::draw(record, *renderer);      // 3.0.11-beta.42: «Характеристики»
-        skillswin::draw(record, *renderer);     // 3.0.11-beta.96: «Навички»
-        equipwin::draw(record, *renderer);      // 3.0.11-beta.97: «Спорядження»
-        npcwin::draw(record, *renderer);        // 3.0.11-beta.98: the NPC talk
-        shopwin::draw(record, *renderer);       // 3.0.11-beta.100: the shop
+        // 3.0.11-beta.108: «Речі», «Характеристики», «Навички», «Спорядження», the NPC talk, the shop and «Довідник»
+        // in their stack's order - the last opened or clicked in on top (they were each in a place of its own)
+        windowstack::draw(record, *renderer);
         answercard::draw(record, *renderer);  // 3.0.9-beta.4: the developer's answer
         windowSwitch_.draw(record, *renderer);
-        referencewin::draw(record, *renderer);  // 3.0.11-beta.7: «Довідник», over the rest
         padtileswin::draw(record, *renderer);   // 3.0.11-beta.90: the controller's windows' tile
         padassignwin::draw(record, *renderer);  // 3.0.11-beta.91: «Призначити»
         padhintwin::draw(record, *renderer);    // 3.0.11-beta.92: the controller's hint line
@@ -643,15 +640,9 @@ void Context::present(const Rect& source, bool waitForVblank) {
         partywin::draw(record, *renderer);      // 3.0.11-beta.39
         hotbarwin::draw(record, *renderer);     // 3.0.11-beta.40
         chatwin::draw(record, *renderer);       // 3.0.11-beta.41
-        itemswin::draw(record, *renderer);      // 3.0.11-beta.42
-        statswin::draw(record, *renderer);
-        skillswin::draw(record, *renderer);     // 3.0.11-beta.96
-        equipwin::draw(record, *renderer);      // 3.0.11-beta.97
-        npcwin::draw(record, *renderer);        // 3.0.11-beta.98
-        shopwin::draw(record, *renderer);       // 3.0.11-beta.100
+        windowstack::draw(record, *renderer);  // 3.0.11-beta.108
         answercard::draw(record, *renderer);  // 3.0.9-beta.4
         windowSwitch_.draw(record, *renderer);
-        referencewin::draw(record, *renderer);  // 3.0.11-beta.7
         padtileswin::draw(record, *renderer);   // 3.0.11-beta.90
         padassignwin::draw(record, *renderer);  // 3.0.11-beta.91
         padhintwin::draw(record, *renderer);    // 3.0.11-beta.92
@@ -905,6 +896,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     shopwin::frame(window, config.shopWindow, gameCodePage(config), pk, pw, ph);      // 3.0.11-beta.100
     // 3.0.11-beta.7: [interface] reference - «Довідник» (Ctrl+F)
     referencewin::frame(window, config.referenceWindow, pk, pw, ph);
+    windowstack::frame();  // 3.0.11-beta.108: who of them is shown - their stack's order (the last opened on top)
     // 3.0.11-beta.75: «Розміщення інтерфейсу» (Ctrl+Shift+L, the console) - over the parts placed this frame
     hudedit::frame(window, pk, pw, ph);
     // 2.5.16: [quality] world_scale - Direct3D 11 draws the world smaller and makes it larger before the interface;

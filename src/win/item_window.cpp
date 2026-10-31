@@ -30,6 +30,7 @@
 #include "win/real_ddraw.hpp"
 #include "win/ui_cost.hpp"
 #include "win/window_shadow.hpp"
+#include "win/window_stack.hpp"
 
 namespace uagfx::win::itemswin {
 namespace {
@@ -67,6 +68,7 @@ using DropFn = void(__attribute__((thiscall)) *)(uint32_t self, int x, int y, ui
 
 struct State {
     WindowShadow shadow;  // 3.0.11-beta.49
+    WindowEdge edge;  // 3.0.11-beta.108: the top of two or more windows (win/window_stack)
     int tipOf = -1;       // 3.0.11-beta.51: the cell pointed at since tipSince
     ULONGLONG tipSince = 0;
     bool on = false, shown = false, hid = false, stateRead = false, skipChar = false;
@@ -498,6 +500,9 @@ void draw(FrameRecord& record, gpu::Renderer& renderer) {
     s.shadow.draw(record, renderer, s.layout.x + int(g.x), s.layout.y + int(g.y), int(g.w), int(g.h), 12 * s.scale,
                   s.scale, s.k);
     drawPart(record, renderer, s.picture, s.texture, s.texW, s.texH, s.upload, s.layout.x, s.layout.y, s.k);
+    if (windowstack::marked(winstack::Win::Items))  // 3.0.11-beta.108: its gold edge, the top of two or more
+        s.edge.draw(record, renderer, s.layout.x + int(g.x), s.layout.y + int(g.y), int(g.w), int(g.h), 12 * s.scale,
+                    s.scale, s.k);
     const panel::Picture* icon = s.dragging && s.press >= 0 && size_t(s.press) < s.items.size()
                                      ? s.items[size_t(s.press)].icon
                                      : nullptr;

@@ -39,6 +39,10 @@ float readingScale(double k);  // their scale: partScale's times text(), 0.5-6
 // fading out `spread` away, none under the box itself (its glass stays as it is); the picture (w + 2 spread) x
 // (h + 2 spread), premultiplied, the box at (spread, spread)
 panel::Picture shadow(int w, int h, float radius, float spread, float alpha);
+// 3.0.11-beta.108 (the concept «Концепция окон и инвентаря», question 6): the top window's edge - a rounded ring
+// `width` thick at a w x h box's edge in `rgb` at `alpha` (its outer and inner sides smoothed), nothing inside;
+// premultiplied, w x h (only the band at the edge painted: a large window's picture made fast)
+panel::Picture edge(int w, int h, float radius, float width, uint32_t rgb, float alpha);
 // 3.0.11-beta.50 (the concept's low HP: «кромка экрана — по выбору, выключена»): the screen's edge in `rgb` - `alpha`
 // at the very edge, fading in to nothing a `depth` share of the shorter side away; w x h to be stretched over the
 // screen (smooth), premultiplied
