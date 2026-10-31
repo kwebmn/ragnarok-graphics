@@ -1633,6 +1633,25 @@ TEST(ctl_choice_hint_names_the_buttons) {  // 3.0.11-beta.85
     CHECK_EQ(c.choosingButton(), kPadY);
 }
 
+// 3.0.11-beta.92 (the concept's stage 6): the hints as parts - the buttons apart from their words, for the interface's
+// own hint bar to draw them as the controller's glyphs
+TEST(ctl_hint_parts) {
+    std::vector<HintPart> p = npcHintParts(NpcDialog::Menu, Lang::Uk);
+    CHECK_EQ(p.size(), size_t(3));
+    CHECK(p[0].buttons == std::vector<uint16_t>({kPadUp, kPadDown}) && p[0].words == "вибір");
+    CHECK(p[1].buttons == std::vector<uint16_t>({kPadA}) && p[1].words == "OK");
+    CHECK(p[2].buttons == std::vector<uint16_t>({kPadB}) && p[2].words == "скасувати");
+    p = npcHintParts(NpcDialog::Waiting, Lang::Uk);
+    CHECK(p.size() == 2 && p[0].buttons.empty() && p[0].words == "NPC говорить");
+    CHECK(p[1].before == "утримати" && p[1].buttons == std::vector<uint16_t>({kPadB}) && p[1].words == "закрити");
+    p = npcHintParts(NpcDialog::Number, Lang::En);
+    CHECK(p.size() == 4 && p[1].buttons == std::vector<uint16_t>({kPadLB, kPadRB}) && p[1].words == "±10");
+    CHECK(p[2].buttons == std::vector<uint16_t>({kPadLeft, kPadRight}));
+    p = choiceHintParts(kPadY, Lang::Uk);
+    CHECK(p.size() == 4 && p[2].buttons == std::vector<uint16_t>({kPadY}) && p[2].words == "на себе");
+    CHECK(npcHintParts(NpcDialog::None, Lang::En).empty());
+}
+
 TEST(ctl_npc_hint_names_the_buttons) {
     CHECK(npcHint(NpcDialog::None, Lang::En).empty());
     CHECK(npcHint(NpcDialog::Next, Lang::En) == "A: next");

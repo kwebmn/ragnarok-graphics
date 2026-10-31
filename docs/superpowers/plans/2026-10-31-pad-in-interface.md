@@ -82,3 +82,7 @@ defaults (ruling R3); the monsters' HP bars wait for question 2 (R2).
   tip at once, pad texts in the tip, A useCell, Y card, X assign, LB/RB tabs, B/Start close; runtime itemsPad +
   stickSteps), core/pad_assign + win/pad_assign (Blocker::PadAssign; hotbarwin::assign = barNow + putBar,
   slotWords). Left for part 3: «Характеристики» by the pad, NPC/choice hints in the interface's style.
+- Stage 6 part 3: built as 3.0.11-beta.92 - pad hint parts (npc_hint hintParts / npcHintParts / choiceHintParts),
+  core/pad_hint + win/pad_hint (the line over the skill bar, runtime setOwnHints/hints, the GDI hint off while
+  [interface] pad_hints), «Характеристики» by the pad (statswin::padCommand, runtime statsPad). Stage 6 done; stage 7
+  (HP bars) waits for the owner's question 2.

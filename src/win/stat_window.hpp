@@ -22,4 +22,10 @@ bool shown();  // 3.0.11-beta.49: open on the screen now (the world dimmed under
 // 3.0.11-beta.53: just before the game draws its windows (win/windows_draw) - its own one hidden, never a frame
 void beforeGameDraw();
 
+// 3.0.11-beta.92 (the concept «Контроллер в интерфейсе uaRO», stage 6): played with the controller - the D-pad
+// chooses a stat (its «+» lit, the line saying what a point gives), A adds a point (the game's own message 0x20), B
+// closes
+enum class PadCommand : uint8_t { Up, Down, Raise, Close };
+void padCommand(PadCommand c);
+
 }  // namespace uagfx::win::statswin

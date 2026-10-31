@@ -5,8 +5,10 @@
 #include <dinput.h>
 
 #include <cstdint>
+#include <vector>
 
 #include "pad/core/config/bindings.hpp"
+#include "pad/core/logic/npc_hint.hpp"
 
 // Glue between the hooks and the portable core. Every entry point is fail-open:
 // after an internal error it does nothing and the client keeps working.
@@ -53,5 +55,9 @@ bool walkTarget(int& x, int& y);
 // the pad's own menu; that menu opened from the tile's «Контролер»
 void setTiles(bool on);
 void openPadMenu();
+// 3.0.11-beta.92: [interface] pad_hints on - the hint line (an NPC's window, a support skill asking whom) drawn by the
+// interface itself (win/pad_hint) instead of the pad's own window; its parts now (none: no line)
+void setOwnHints(bool on);
+std::vector<HintPart> hints();
 
 }  // namespace uapad::runtime

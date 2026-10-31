@@ -48,6 +48,7 @@
 #include "pad/win/runtime.hpp"
 #include "win/ground_marks.hpp"
 #include "win/pad_assign.hpp"
+#include "win/pad_hint.hpp"
 #include "win/pad_tiles.hpp"
 #include "win/target_card.hpp"
 #include "win/tracker.hpp"
@@ -569,6 +570,7 @@ void Context::endScene() {
         referencewin::draw(record, *renderer);  // 3.0.11-beta.7: «Довідник», over the rest
         padtileswin::draw(record, *renderer);   // 3.0.11-beta.90: the controller's windows' tile
         padassignwin::draw(record, *renderer);  // 3.0.11-beta.91: «Призначити»
+        padhintwin::draw(record, *renderer);    // 3.0.11-beta.92: the controller's hint line
         hudedit::draw(record, *renderer);       // 3.0.11-beta.75: the parts' frames while they are placed
         record.takeWork();  // the driver's own draws are not the game's
     }
@@ -618,6 +620,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
         referencewin::draw(record, *renderer);  // 3.0.11-beta.7
         padtileswin::draw(record, *renderer);   // 3.0.11-beta.90
         padassignwin::draw(record, *renderer);  // 3.0.11-beta.91
+        padhintwin::draw(record, *renderer);    // 3.0.11-beta.92
         hudedit::draw(record, *renderer);       // 3.0.11-beta.75
     }
     record.takeWork();  // the driver's own draws are not the game's
@@ -841,6 +844,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     uapad::runtime::setTiles(config.padTiles);                        // 3.0.11-beta.90: Start opens the tile
     padtileswin::frame(window, pk, pw, ph);
     padassignwin::frame(window, pk, pw, ph);  // 3.0.11-beta.91: «Призначити»
+    padhintwin::frame(window, config.padHints, pk, pw, ph);  // 3.0.11-beta.92: the hint line in the interface's style
     // 3.0.11-beta.39: [interface] party - the party's panel under the character block
     partywin::frame(window, config.partyPanel, gameCodePage(config), pk, pw, ph);
     // 3.0.11-beta.41: [interface] chat - the chat at the bottom left, the game's own out of sight (before the hotbar:

@@ -45,6 +45,7 @@
 #include "core/walk_path.hpp"
 #include "win/game_camera.hpp"
 #include "win/item_window.hpp"
+#include "win/stat_window.hpp"
 #include "win/pad_assign.hpp"
 #include "win/pad_tiles.hpp"
 #include "win/party_panel.hpp"
@@ -113,6 +114,8 @@ struct State {
     // 3.0.11-beta.88: walking without the mouse - the map's walkable cells (the reference's walkable.bin)
     bool directWalk = false;
     bool tiles = true;          // 3.0.11-beta.90: [interface] pad_tiles
+    bool ownHints = true;       // 3.0.11-beta.92: the hint line drawn by the interface (win/pad_hint)
+    std::vector<HintPart> hintParts;
     bool openMenuNow = false;   // the tile's «Контролер» chosen: the pad's menu opens at the next tick
     std::string groundMap;
     GroundGrid ground;
@@ -473,6 +476,22 @@ bool itemsPad(const PadState& pad, DWORD now) {
     return true;
 }
 
+// 3.0.11-beta.92: «Характеристики» open - the D-pad (or the left stick) chooses a stat, A adds a point, B or Start
+// close it
+bool statsPad(const PadState& pad, DWORD now) {
+    State& s = S();
+    const uint16_t buttons = pad.connected ? pad.buttons : 0;
+    const uint16_t down = uint16_t((buttons & ~s.prevPadButtons) | stickSteps(pad, now));
+    s.prevPadButtons = buttons;
+    using uagfx::win::statswin::PadCommand;
+    const std::pair<uint16_t, PadCommand> keys[] = {{kPadUp, PadCommand::Up},    {kPadDown, PadCommand::Down},
+                                                    {kPadA, PadCommand::Raise},  {kPadB, PadCommand::Close},
+                                                    {kPadStart, PadCommand::Close}};
+    for (const auto& [button, command] : keys)
+        if (down & button) uagfx::win::statswin::padCommand(command);
+    return true;
+}
+
 bool runMenu(const PadState& pad, const ViewInfo& view, DWORD now) {
     State& s = S();
     const uint16_t buttons = pad.connected ? pad.buttons : 0;
@@ -614,6 +633,14 @@ void answerNpc(const TickOutput& out, const ViewInfo& view, const PadState& pad)
                              : choiceKey != 0  ? choiceHint(choiceKey, s.cfg.lang)
                              : s.cfg.npcHint && answering ? npcHint(view.dialog, s.cfg.lang)
                                                           : std::string();
+    s.hintParts = text.empty()     ? std::vector<HintPart>{}  // 3.0.11-beta.92: for the interface's own line
+                  : choiceKey != 0 ? choiceHintParts(choiceKey, s.cfg.lang)
+                                   : npcHintParts(view.dialog, s.cfg.lang);
+    if (s.ownHints) {  // drawn by the interface: the pad's own window away
+        if (!s.shownHint.empty()) hint::hide();
+        s.shownHint.clear();
+        return;
+    }
     if (text == s.shownHint) return;
     s.shownHint = text;
     if (text.empty())
@@ -668,6 +695,7 @@ void tick() {
                   : uagfx::win::padassignwin::isOpen() && !menuOpen ? assignPad(pad, now)  // 3.0.11-beta.91
                   : uagfx::win::padtileswin::isOpen() && !menuOpen  ? tilePad(pad, now)    // 3.0.11-beta.90
                   : uagfx::win::itemswin::shown() && !menuOpen && pad.connected ? itemsPad(pad, now)  // .91
+                  : uagfx::win::statswin::shown() && !menuOpen && pad.connected ? statsPad(pad, now)  // .92
                                                                                : runMenu(pad, view, now);
     if (s.npcSupported) view.dialog = clientnpc::read();
     double clientTurn = 0;
@@ -716,6 +744,15 @@ Look look() {
 uint32_t target() { return healthy() && S().session ? S().session->controller().target() : 0; }
 
 uint32_t preview() { return healthy() && S().session ? S().session->controller().preview() : 0; }
+
+void setOwnHints(bool on) {
+    State& s = S();
+    if (on == s.ownHints) return;
+    s.ownHints = on;
+    LOG_INFO("the controller's hints: %s", on ? "the interface's line" : "the pad's own window");
+}
+
+std::vector<HintPart> hints() { return healthy() ? S().hintParts : std::vector<HintPart>{}; }
 
 void setTiles(bool on) {
     State& s = S();

@@ -15,6 +15,7 @@
 #include "core/stat_window.hpp"
 #include "core/ui_style.hpp"
 #include "pad/win/game_window.hpp"
+#include "pad/win/runtime.hpp"
 #include "win/game_camera.hpp"
 #include "win/log.hpp"
 #include "win/paths.hpp"
@@ -262,6 +263,10 @@ void frame(HWND game, bool on, double k, int targetWidth, int targetHeight) {
         if (h.part == sw::Part::Plus) s.show.hoverPlus = h.index;
         s.show.hoverClose = h.part == sw::Part::Close;
     }
+    if (uapad::runtime::look().shown) {  // 3.0.11-beta.92: the controller's stat - its «+» lit
+        if (s.show.selected < 0 || s.show.selected > 5) s.show.selected = 0;
+        s.show.hoverPlus = s.show.selected;
+    }
     const sw::Data& d = s.data;
     std::string key = std::to_string(s.layout.x) + ',' + std::to_string(s.layout.y) + ';' + std::to_string(scale) +
                       ';' + std::to_string(s.show.hoverRow) + ',' + std::to_string(s.show.hoverPlus) + ',' +
@@ -293,6 +298,22 @@ void draw(FrameRecord& record, gpu::Renderer& renderer) {
 }
 
 bool shown() { return state().shown; }
+
+void padCommand(PadCommand c) {
+    State& s = state();
+    if (!s.shown) return;
+    if (s.show.selected < 0 || s.show.selected > 5) s.show.selected = 0;
+    switch (c) {
+        case PadCommand::Up: s.show.selected = (s.show.selected + 5) % 6; break;
+        case PadCommand::Down: s.show.selected = (s.show.selected + 1) % 6; break;
+        case PadCommand::Raise: {
+            const bool sent = raise(s.show.selected);
+            LOG_INFO("stats: the controller's A - a point to the stat %d%s", s.show.selected, sent ? "" : " not sent");
+            break;
+        }
+        case PadCommand::Close: closeGameWindow(); break;
+    }
+}
 
 bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     State& s = state();
