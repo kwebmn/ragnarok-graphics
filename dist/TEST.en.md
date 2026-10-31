@@ -1,3 +1,10 @@
+# uaRO Graphics 3.0.11-beta.124 — what's new
+
+**Monsters and other players no longer jump forward after lags** (step 4 of the network plan):
+- When a move packet comes late, the game puts the unit at once where it should be "by the server's clock" — a jump
+  forward. Now the jump is smoothed over 0.1–0.3 s: the unit catches up with its way.
+- Works with "Smooth position fixes" (the same switch in "Interface").
+
 # uaRO Graphics 3.0.11-beta.123 — what's new
 
 **Fewer "teleports"** (step 3 of the network plan):
