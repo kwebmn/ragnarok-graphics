@@ -1,3 +1,12 @@
+# uaRO Graphics 3.0.11-beta.107 — what's new
+
+Groundwork for the windows and inventory concept:
+- **The log now says what came into the bag**: the item, how many, its place and the "Items" tab it shows under
+  ("items: … came into the bag … - «Речі» shows it under «Різне»"). One report after making arrows shows where they
+  went.
+- To find why "Equipment" is empty: open it and send a report — the log has the line "equip: «Спорядження» open - N
+  thing(s) worn, M in the bag".
+
 # uaRO Graphics 3.0.11-beta.106 — what's new
 
 From the reports R-WCXUQP, R-JDFY25 and R-N6M9DY:
