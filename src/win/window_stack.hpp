@@ -18,7 +18,9 @@ namespace uagfx::win::windowstack {
 // their keys the top's first, Esc closing the top one that has none of its own (the chat's line empty); the
 // controller the top's (pad runtime); the parts under the cursor the top first (pad game_window); the top of two or
 // more in a gold edge. On the game's thread.
-void frame();  // each frame, after the windows' own: who is shown
+// Each frame, after the windows' own: who is shown; one opening where another stands goes beside it (question 4: the
+// target's width x height, `k` its pixels a game's)
+void frame(int targetWidth, int targetHeight, double k);
 void draw(FrameRecord& record, gpu::Renderer& renderer);
 bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result);
 bool key(UINT m, WPARAM wp, LPARAM lp);

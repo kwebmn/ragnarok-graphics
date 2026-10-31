@@ -568,6 +568,13 @@ void Context::drawSparkles() {
     orbHeads.clear();
 }
 
+void Context::markGameWindows() {
+    Guard guard;
+    if (gameWindowsAt_ != SIZE_MAX && gameWindowsGen_ == record.generation()) return;  // the first place a frame
+    gameWindowsAt_ = record.commands().size();
+    gameWindowsGen_ = record.generation();
+}
+
 void Context::endScene() {
     // 3.0.3-beta.12 (the user's R-KVTEMT: «всеравно курсор не видно»): the scene goes to the GPU here, before the
     // present - beta.9's and beta.11's panel, put in at the present, found no cursor in an empty record and covered it
@@ -576,6 +583,17 @@ void Context::endScene() {
     if (drawn && renderer && !photo_) buffoverlay::draw(record, *renderer);  // 3.0.4-beta.6: the buffs' times
     if (panelSlot_.endScene(drawn) && renderer && !photo_) {
         hidePadCursor(record, config.padWalk);  // 3.0.11-beta.102: no cursor while the controller plays
+        // 3.0.11-beta.109 (the concept «Концепция окон и инвентаря», question 5 «да»): the game's own windows (the ones
+        // the driver does not draw anew - the arrows' list, the storage, the trade, its options) and its cursor out of
+        // the frame while the driver's interface is drawn, back after the driver's windows: over them
+        std::vector<Command> game;
+        if (gameWindowsGen_ == record.generation() && gameWindowsAt_ < record.commands().size())
+            game = record.takeTail(gameWindowsAt_);
+        if (!game.empty() && !gameWindowsTold_) {
+            gameWindowsTold_ = true;
+            LOG_INFO("windows: the game's own windows and its cursor (%zu draws) over the driver's interface",
+                     game.size());
+        }
         worlddim::draw(record);                 // 3.0.11-beta.49: the world dimmed under the windows (where it ends)
         lowhpedge::draw(record, *renderer);     // 3.0.11-beta.50: the low HP edge, there too
         mobhpwin::draw(record, *renderer);      // 3.0.11-beta.95: the monsters' HP bars, under the cast
@@ -591,6 +609,7 @@ void Context::endScene() {
         // 3.0.11-beta.108: «Речі», «Характеристики», «Навички», «Спорядження», the NPC talk, the shop and «Довідник»
         // in their stack's order - the last opened or clicked in on top (they were each in a place of its own)
         windowstack::draw(record, *renderer);
+        if (!game.empty()) record.putBack(game);  // 3.0.11-beta.109: the game's own windows over them
         answercard::draw(record, *renderer);  // 3.0.9-beta.4: the developer's answer
         windowSwitch_.draw(record, *renderer);
         padtileswin::draw(record, *renderer);   // 3.0.11-beta.90: the controller's windows' tile
@@ -599,6 +618,7 @@ void Context::endScene() {
         hudedit::draw(record, *renderer);       // 3.0.11-beta.75: the parts' frames while they are placed
         record.takeWork();  // the driver's own draws are not the game's
     }
+    gameWindowsAt_ = SIZE_MAX;  // 3.0.11-beta.109: the next frame's own place
     flush();
 }
 
@@ -896,7 +916,8 @@ void Context::present(const Rect& source, bool waitForVblank) {
     shopwin::frame(window, config.shopWindow, gameCodePage(config), pk, pw, ph);      // 3.0.11-beta.100
     // 3.0.11-beta.7: [interface] reference - «Довідник» (Ctrl+F)
     referencewin::frame(window, config.referenceWindow, pk, pw, ph);
-    windowstack::frame();  // 3.0.11-beta.108: who of them is shown - their stack's order (the last opened on top)
+    windowstack::frame(pw, ph, pk);  // 3.0.11-beta.108: who of them is shown - their stack's order (the last opened on
+                                     // top); 3.0.11-beta.109: one opening where another stands goes beside it
     // 3.0.11-beta.75: «Розміщення інтерфейсу» (Ctrl+Shift+L, the console) - over the parts placed this frame
     hudedit::frame(window, pk, pw, ph);
     // 2.5.16: [quality] world_scale - Direct3D 11 draws the world smaller and makes it larger before the interface;

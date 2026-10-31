@@ -1,5 +1,7 @@
 #include "win/window_stack.hpp"
 
+#include <algorithm>
+#include <cmath>
 #include <vector>
 
 #include "pad/win/game_window.hpp"
@@ -103,6 +105,53 @@ bool keyOne(Win w, UINT m, WPARAM wp, LPARAM lp) {  // the windows with keys of 
     }
 }
 
+bool movable(Win w) { return w != Win::Npc && w != Win::Reference; }
+
+bool boxOf(Win w, winstack::Box& b) {
+    switch (w) {
+        case Win::Items: return itemswin::box(b.x, b.y, b.w, b.h);
+        case Win::Stats: return statswin::box(b.x, b.y, b.w, b.h);
+        case Win::Skills: return skillswin::box(b.x, b.y, b.w, b.h);
+        case Win::Equip: return equipwin::box(b.x, b.y, b.w, b.h);
+        case Win::Shop: return shopwin::box(b.x, b.y, b.w, b.h);
+        case Win::Npc: return npcwin::box(b.x, b.y, b.w, b.h);
+        case Win::Reference: return referencewin::box(b.x, b.y, b.w, b.h);
+    }
+    return false;
+}
+
+void moveTo(Win w, int x, int y) {
+    switch (w) {
+        case Win::Items: itemswin::moveTo(x, y); break;
+        case Win::Stats: statswin::moveTo(x, y); break;
+        case Win::Skills: skillswin::moveTo(x, y); break;
+        case Win::Equip: equipwin::moveTo(x, y); break;
+        case Win::Shop: shopwin::moveTo(x, y); break;
+        default: break;
+    }
+}
+
+// 3.0.11-beta.109 (question 4 «ок»): a window just opened where another one stands - beside it (8 game pixels apart),
+// else 24 down and right of it (core/window_stack place)
+void placeNew(State& s, Win w, int targetW, int targetH, double k) {
+    winstack::Box b;
+    if (!movable(w) || !boxOf(w, b) || targetW <= 0 || targetH <= 0) return;
+    std::vector<winstack::Box> open;
+    for (const Win o : s.stack.bottomUp()) {
+        winstack::Box ob;
+        if (boxOf(o, ob)) open.push_back(ob);
+    }
+    const int gap = int(std::lround(8 * k)), step = int(std::lround(24 * k));
+    const winstack::Box to = winstack::place(b, open, targetW, targetH, gap, step);
+    if (to.x == b.x && to.y == b.y) return;
+    moveTo(w, to.x, to.y);
+    if (s.tells < kMostTold) {
+        ++s.tells;
+        LOG_INFO("windows: %s opened where another stands - at %d, %d instead of %d, %d", nameOf(w), to.x, to.y, b.x,
+                 b.y);
+    }
+}
+
 // Esc on the top one: closed as its own ✕ does (the NPC talk and the shop have an Esc of their own)
 bool close(Win w) {
     switch (w) {
@@ -117,9 +166,16 @@ bool close(Win w) {
 
 }  // namespace
 
-void frame() {
+void frame(int targetWidth, int targetHeight, double k) {
     State& s = state();
-    for (int i = 0; i < winstack::kWins; ++i) s.stack.see(Win(i), shown(Win(i)));
+    for (int i = 0; i < winstack::kWins; ++i) {
+        const Win w = Win(i);
+        const bool now = shown(w);
+        const auto& order = s.stack.bottomUp();
+        if (now && std::find(order.begin(), order.end(), w) == order.end())
+            placeNew(s, w, targetWidth, targetHeight, k);  // the others' places before it joins them
+        s.stack.see(w, now);
+    }
     std::vector<Blocker> order;
     for (const Win w : s.stack.topDown()) order.push_back(blockerOf(w));
     uapad::gamewindow::setOrder(order);

@@ -205,6 +205,15 @@ The owner 31.10: «Полоски HP мобов - всем показывай»,
   with two or more windows shown (one alone keeps the approved look) - cost if wrong: one condition. Not yet: Q4 the
   new window's place, Q5 the game's windows over ours (next beta). Tests window_stack_the_last_opened_or_clicked_on_top,
   ui_style_window_edge, gate_the_top_window_first; suite 2064/0.
+- Stage 1 rest (3.0.11-beta.109): Q5 - FrameRecord takeTail/putBack + generation(); win/windows_draw's hook marks
+  Context::markGameWindows (the first place a frame, under Guard); endScene takes the tail (the game's own windows and
+  its cursor) out while the driver's interface is drawn and puts it back after windowstack (answer card, the window
+  switch panel, pad tiles/assign/hint, hud edit stay over it). Checked in the decompile (FUN_00559750): after the
+  windows' draw only the game's overlays it draws over its own windows (cursor, drag icon, top messages); the world and
+  names come before. Q4 - core/window_stack place() (15 % shared = taken; right, else left, gap 8 game px; else 24 down
+  and right; inside the screen) + box()/moveTo() on the five movable windows; windowstack::frame(w, h, k) places a
+  window the frame it opens. Tests frame_takes_the_tail_and_puts_it_back,
+  window_stack_a_new_window_beside_the_one_in_its_place; suite 2066/0.
 - Stage 5 research: 0x00c4 deal type; 0x00c6 buy list (11 B each: price.L discount.L type.B nameid.W)
   -> session deal list +0xF28 (count +0xF2C, FUN_0062bbb0(rec, 0); FUN_004ffd30 copies the record's text at +0x11 into
   m_itemName) + windows 0x16 (mgr+0xEC, class 0x69B3E0, SendMsg 0x4AFC00: 0x24 0 buy / 1 sell) and 0x17 (buy cart,

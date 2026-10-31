@@ -122,6 +122,13 @@ public:
     size_t dropInterface();
     // 3.0.11-beta.49: the first interface draw's place among the commands (the world's end), commands().size() none
     size_t firstInterface() const;
+    // 3.0.11-beta.109 (the concept «Концепция окон и инвентаря», question 5 «да»): the commands from `from` on
+    // taken out (the game's own windows and its cursor) and put back after the driver's interface is drawn - over it;
+    // nothing past the end. generation(): the times the record was emptied (a flush plays and empties it mid-frame) -
+    // a place noted in another generation is not this record's
+    std::vector<Command> takeTail(size_t from);
+    void putBack(std::vector<Command>& tail);
+    uint64_t generation() const { return generation_; }
     // 3.0.3-beta.8: the draws, clears and writes since the last call, through flushes (reset keeps it): whether the
     // game drew a picture anew - the windows' panel goes over such a one alone (the target keeps its pixels)
     uint32_t takeWork() {
@@ -165,6 +172,7 @@ private:
     std::vector<uint16_t> indices_;
     std::vector<uint32_t> pixels_;
     uint32_t work_ = 0;
+    uint64_t generation_ = 0;  // 3.0.11-beta.109
     std::vector<SpriteCell> slots_;
 };
 

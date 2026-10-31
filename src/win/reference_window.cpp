@@ -1143,4 +1143,15 @@ void openItem(int id) {
     LOG_INFO("reference: item %d's card from the tracker", id);
 }
 
+
+bool box(int& x, int& y, int& w, int& h) {  // 3.0.11-beta.109
+    const State& s = state();
+    if (!s.shown) return false;
+    x = s.layout.x;
+    y = s.layout.y;
+    w = s.layout.w;
+    h = s.layout.h;
+    return true;
+}
+
 }  // namespace uagfx::win::referencewin

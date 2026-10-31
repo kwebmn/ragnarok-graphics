@@ -270,6 +270,31 @@ TEST(frame_drops_one_command) {
     CHECK_EQ(r.commands().size(), size_t(2));
 }
 
+// 3.0.11-beta.109 (the concept «Концепция окон и инвентаря», question 5 «да»): the game's own windows and its cursor
+// (the commands from where it began drawing its windows) taken out while the driver draws its interface, put back
+// after it - over it; the record's emptying (a flush mid-frame) counted, so a place noted before it is not used
+TEST(frame_takes_the_tail_and_puts_it_back) {
+    FrameRecord r;
+    uint8_t vertices[32 * 3] = {};
+    DrawCmd cmd;
+    cmd.fvf = d3d7::FVF_TL1;
+    cmd.primitive = d3d7::PT_TRIANGLELIST;
+    r.draw(cmd, vertices, 3, nullptr, 0);  // 0 the world
+    r.draw(cmd, vertices, 3, nullptr, 0);  // 1 the game's window
+    r.draw(cmd, vertices, 3, nullptr, 0);  // 2 its cursor
+    std::vector<Command> tail = r.takeTail(1);
+    CHECK(tail.size() == 2 && r.commands().size() == 1);
+    r.draw(cmd, vertices, 3, nullptr, 0);  // 3 the driver's window
+    r.putBack(tail);
+    CHECK(tail.empty() && r.commands().size() == 4);
+    CHECK(r.commands()[0].index == 0 && r.commands()[1].index == 3 && r.commands()[2].index == 1 &&
+          r.commands()[3].index == 2);
+    CHECK(r.takeTail(9).empty() && r.commands().size() == 4);  // past the end: nothing
+    const uint64_t before = r.generation();
+    r.reset();
+    CHECK(r.generation() == before + 1);
+}
+
 // 3.0.4-beta.5 (the user's idea 5): the photo mode - the game's interface (the draws after its depth went off: the
 // windows, the text, the cursor) and the driver's own panel out of the frame, the world, its clears and uploads kept
 TEST(frame_drops_the_interface) {

@@ -25,4 +25,8 @@ bool key(UINT m, WPARAM wp, LPARAM lp);
 void beforeGameDraw();
 bool shown();
 
+// 3.0.11-beta.109 (the concept «Концепция окон и инвентаря», question 4): where it is on the target (win/window_stack:
+// a window opening where another stands goes beside it); false not shown
+bool box(int& x, int& y, int& w, int& h);
+
 }  // namespace uagfx::win::npcwin

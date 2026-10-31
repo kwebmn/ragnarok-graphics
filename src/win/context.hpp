@@ -69,6 +69,10 @@ public:
     // 3.0.3-beta.12: the game's EndScene - the windows' panel into its scene (the game's cursor still in the record,
     // moved over it), then the scene to the GPU
     void endScene();
+    // 3.0.11-beta.109 (the concept «Концепция окон и инвентаря», question 5 «да»): the game begins drawing its own
+    // windows (win/windows_draw) - where, in this record; at its EndScene they and its cursor go over the driver's
+    // interface (the first place a frame, in the record's generation)
+    void markGameWindows();
     bool readTarget(std::vector<uint32_t>& argb);
     void writeTarget(const Rect& rect, const uint32_t* argb);
     void flushIfFull();  // past FrameRecord::kFlushBytes: play the record now (a map's first frame, big writes)
@@ -100,6 +104,9 @@ public:
     double nowMs() const;    // a millisecond clock for the effects made as the game draws
 
 private:
+    size_t gameWindowsAt_ = SIZE_MAX;  // 3.0.11-beta.109: where the game's own windows began this frame
+    uint64_t gameWindowsGen_ = 0;
+    bool gameWindowsTold_ = false;
     Context();
     // One log line every 30 seconds and one at close: frames shown and reads of the frame from the GPU. Reads
     // should stay near 0 while playing: the per-frame Lock must not cause any (Review Focus 1).

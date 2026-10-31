@@ -6,6 +6,7 @@
 #include <cstring>
 
 #include "win/char_block.hpp"
+#include "win/context.hpp"
 #include "win/chat_window.hpp"
 #include "win/hotbar.hpp"
 #include "win/item_window.hpp"
@@ -46,6 +47,7 @@ void __attribute__((thiscall)) windowsDraw(uint32_t manager) {
     charpanel::beforeGameDraw();  // the Basic Info window
     hotbarwin::beforeGameDraw();  // the hotkeys' bar
     chatwin::beforeGameDraw();    // the chat (out of sight)
+    Context::get().markGameWindows();  // 3.0.11-beta.109: its own windows from here on - over the driver's
     if (g_told < 1) {
         ++g_told;
         LOG_INFO("windows draw: the game's replaced windows hidden before it draws its windows (uaRO.exe 0x%X)",

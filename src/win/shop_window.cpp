@@ -1021,4 +1021,26 @@ void beforeGameDraw() {
                       : "- not pressed");
 }
 
+
+bool box(int& x, int& y, int& w, int& h) {  // 3.0.11-beta.109
+    const State& s = state();
+    if (!s.shown) return false;
+    x = s.layout.x;
+    y = s.layout.y;
+    w = s.layout.w;
+    h = s.layout.h;
+    return true;
+}
+
+void moveTo(int x, int y) {  // 3.0.11-beta.109: question 4 - beside the window standing in its own place
+    State& s = state();
+    if (!s.shown) return;
+    const int roomX = std::max(1, s.targetW - s.layout.w), roomY = std::max(1, s.targetH - s.layout.h);
+    s.fx = std::clamp(float(x) / float(roomX), 0.0f, 1.0f);
+    s.fy = std::clamp(float(y) / float(roomY), 0.0f, 1.0f);
+    s.layout.x = x;
+    s.layout.y = y;
+    keepState(s);
+}
+
 }  // namespace uagfx::win::shopwin

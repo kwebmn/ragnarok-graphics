@@ -28,4 +28,12 @@ private:
     std::vector<Win> order_;  // the shown ones, the bottom first
 };
 
+// 3.0.11-beta.109 (question 4 «ок»): where a window opening at `wanted` goes - there, inside the screen, when no open
+// window shares more than 15 % of it; else beside the one sharing most: right of it, else left (`gap` apart, tops in
+// line), while the screen holds it and no other open one is in the way; else `step` down and right of it
+struct Box {
+    int x = 0, y = 0, w = 0, h = 0;
+};
+Box place(Box wanted, const std::vector<Box>& open, int screenW, int screenH, int gap, int step);
+
 }  // namespace uagfx::winstack

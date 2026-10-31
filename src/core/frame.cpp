@@ -106,7 +106,20 @@ size_t FrameRecord::firstInterface() const {
     return commands_.size();
 }
 
+std::vector<Command> FrameRecord::takeTail(size_t from) {
+    if (from >= commands_.size()) return {};
+    std::vector<Command> tail(commands_.begin() + std::ptrdiff_t(from), commands_.end());
+    commands_.erase(commands_.begin() + std::ptrdiff_t(from), commands_.end());
+    return tail;
+}
+
+void FrameRecord::putBack(std::vector<Command>& tail) {
+    commands_.insert(commands_.end(), tail.begin(), tail.end());
+    tail.clear();
+}
+
 void FrameRecord::reset() {
+    ++generation_;
     commands_.clear();
     clears_.clear();
     viewports_.clear();
