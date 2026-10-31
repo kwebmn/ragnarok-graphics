@@ -1,3 +1,12 @@
+# uaRO Graphics 3.0.11-beta.84 — what is new
+
+Point 8 (your «1-8, do it») — the last one, all eight are done:
+- **The party panel's compact view.** The ▦ button in the «Party» header (left of the fold) turns the panel into two
+  columns of small cells: a face, a name and an HP bar (the cast line under it). A dead one's cell is dark red. The ▤
+  button brings back the list with the class, buffs, arrow and distance. A click on a cell works as in the list (a
+  skill on the member, the way to it). The view is remembered.
+- To check: in a party press ▦, then ▤; click a cell; restart the game — the view stays.
+
 # uaRO Graphics 3.0.11-beta.83 — what is new
 
 Point 3 (your «1-8, do it»):
