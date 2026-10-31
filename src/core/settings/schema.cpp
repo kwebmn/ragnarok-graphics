@@ -120,6 +120,9 @@ const std::vector<IniSetting>& iniSettings() {
          Text::InterfaceHotbarOwn, Text::InterfaceHotbarOwnHint, ""},
         {"interface", "pad_hints", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {},  // 3.0.11-beta.86
          Text::InterfacePadHints, Text::InterfacePadHintsHint, ""},
+        {"interface", "target_ring", Page::Interface, Control::Choice, 0, 0, 0, {"off", "pad", "always"},  // .87
+         {Text::InterfaceTargetRingOff, Text::InterfaceTargetRingPad, Text::InterfaceTargetRingAlways},
+         Text::InterfaceTargetRing, Text::InterfaceTargetRingHint, ""},
         // 3.0.11-beta.33: the way followed on the ground - footprints, a strip or none
         {"interface", "minimap_way", Page::Interface, Control::Choice, 0, 0, 0, {"steps", "line", "off"},
          {Text::InterfaceMinimapWaySteps, Text::InterfaceMinimapWayLine, Text::InterfaceMinimapWayOff},
@@ -965,6 +968,7 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "interface.lock_layout") return c.lockLayout ? "1" : "0";      // 3.0.11-beta.77
     if (k == "interface.hotbar_per_character") return c.hotbarPerCharacter ? "1" : "0";  // 3.0.11-beta.78
     if (k == "interface.pad_hints") return c.padHints ? "1" : "0";                         // 3.0.11-beta.86
+    if (k == "interface.target_ring") return targetRingToken(c.targetRing);                // 3.0.11-beta.87
     if (k == "interface.minimap_way") return wayOnGroundToken(c.minimapWay);  // 3.0.11-beta.33
     if (k == "interface.buffs") return buffsLookToken(c.buffs);               // 3.0.11-beta.35
     if (k == "interface.buffs_overflow") return buffsOverflowToken(c.buffsOverflow);  // 3.0.11-beta.63

@@ -84,6 +84,9 @@ public:
     bool enabled() const { return enabled_; }
     bool walking() const { return walking_; }  // the left stick holds the virtual mouse
     uint32_t target() const { return target_; }
+    // 3.0.11-beta.87 (the concept's stage 3): the monster a light tilt of the right stick points at - where a push
+    // would take the aim (a dashed ring under it); 0 none
+    uint32_t preview() const { return preview_; }
     bool attacking() const { return wantAttack_; }
     bool approaching() const { return approach_.has_value(); }
     bool cameraMode() const { return cameraMode_; }  // the right stick turns the camera instead of picking
@@ -172,6 +175,7 @@ private:
     bool aiming_ = false;
     bool aimLatched_ = false;  // R3 dropped the target: no aiming until the stick comes back
     uint32_t target_ = 0;
+    uint32_t preview_ = 0;  // 3.0.11-beta.87
     bool picked_ = false;      // target_ was chosen with the right stick: presses keep it
     bool cameraMode_ = false;
     bool loggedCalibration_ = false;

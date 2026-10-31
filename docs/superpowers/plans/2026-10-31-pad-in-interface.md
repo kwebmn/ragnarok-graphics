@@ -58,3 +58,8 @@ defaults (ruling R3); the monsters' HP bars wait for question 2 (R2).
 - Stage 2: built as 3.0.11-beta.86 - core/input_mode, core/pad_glyphs (+8 line icons), hotbar badges, target card
   hints, [interface] pad_hints, 0x0195 HP log (EvActorName.hp); tests input_mode_*, pad_glyphs_*, hotbar_pad_badges,
   target_card_pad_hints, config_pad_hints, s2c_monster_name_carries_its_hp; suite 1981/0.
+- Stage 3: built as 3.0.11-beta.87 - Controller::preview (light tilt 0.3-0.6), core ground_way ring/notches/chevron,
+  win/game_camera readActorWorld (actor + 4) / readActorBox (pick list 0x74B5F0 + 0x28, id + 0x18), win/ground_marks,
+  [interface] target_ring off|pad|always; the fake 0x0229 mark kept until the owner confirms the ring (doc).
+  Ruling: no ring heights from the .gat - flat at the actor's own height with the depth bias (slopes under a monster are
+  small) - cost if wrong: a ring sinking on steep ground, one beta.

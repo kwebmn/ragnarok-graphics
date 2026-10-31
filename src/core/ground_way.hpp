@@ -84,4 +84,14 @@ size_t footprints(const std::vector<Print>& prints, const Heights& g, int cellSi
                   const float view[12], const camera::Projection& p, uint32_t argb, float bias,
                   std::vector<Vertex>& out);
 
+// 3.0.11-beta.87 (the concept «Контроллер в интерфейсе uaRO», stage 3): a ring `width` wide round (x, y, z) - its
+// middle `radius` world units out, `sides` pieces (dashed: every other one) - placed as strip() places its corners
+size_t ring(float x, float y, float z, float radius, float width, int sides, bool dashed, const float view[12],
+            const camera::Projection& p, uint32_t argb, float bias, std::vector<Vertex>& out);
+// Four notches out of such a ring (a friend's): `width` wide, 0.9 world units long from its outer edge
+size_t notches(float x, float y, float z, float radius, float width, const float view[12], const camera::Projection& p,
+               uint32_t argb, float bias, std::vector<Vertex>& out);
+// A chevron pointing down at (cx, tipY) in the screen's pixels, `w` wide and `h` high - no depth, over the world
+size_t chevron(float cx, float tipY, float w, float h, uint32_t argb, std::vector<Vertex>& out);
+
 }  // namespace uagfx::groundway

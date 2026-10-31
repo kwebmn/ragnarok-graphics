@@ -478,6 +478,8 @@ enum class Text : uint16_t {
     PartyTitle,  // 3.0.11-beta.79
     PartyDead,   // 3.0.11-beta.81
     InterfacePadHints, InterfacePadHintsHint, TargetPadAttack, TargetPadNext,  // 3.0.11-beta.86
+    InterfaceTargetRing, InterfaceTargetRingHint, InterfaceTargetRingOff, InterfaceTargetRingPad,  // 3.0.11-beta.87
+    InterfaceTargetRingAlways,
     InterfaceMinimapWay, InterfaceMinimapWayHint,
     InterfaceMinimapWaySteps, InterfaceMinimapWayLine, InterfaceMinimapWayOff, InterfaceBuffs, InterfaceBuffsHint,
     InterfaceBuffsOff, InterfaceBuffsColumn, InterfaceBuffsRow, BuffsNames, BuffsHideNames, BuffsMore, BuffsStar,

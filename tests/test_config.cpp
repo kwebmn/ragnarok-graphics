@@ -953,6 +953,18 @@ TEST(config_pad_hints) {
     CHECK(!liveUpdate(parseConfig(""), parseConfig("[interface]\npad_hints = 0\n")).next.padHints);
 }
 
+// 3.0.11-beta.87 (stage 3): [interface] target_ring = off | pad | always - the target's ring on the ground; pad
+TEST(config_target_ring) {
+    CHECK(parseConfig("").targetRing == TargetRing::Pad);
+    CHECK(parseConfig("[interface]\ntarget_ring = always\n").targetRing == TargetRing::Always);
+    CHECK(parseConfig("[interface]\ntarget_ring = off\n").targetRing == TargetRing::Off);
+    const settings::IniSetting* s = settings::findSetting("interface.target_ring");
+    CHECK(s != nullptr && s->page == settings::Page::Interface && s->control == settings::Control::Choice);
+    CHECK(appliesNow("interface.target_ring"));
+    CHECK(liveUpdate(parseConfig(""), parseConfig("[interface]\ntarget_ring = off\n")).next.targetRing ==
+          TargetRing::Off);
+}
+
 // 3.0.11-beta.33 (the owner: «полоска с маршрутом может лучше бы была выполнена такими типа следами типа шажков»):
 // [interface] minimap_way - the way on the ground as footprints (steps), the strip (line) or none; a choice of
 // «Інтерфейс», applied at once

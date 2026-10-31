@@ -20,6 +20,9 @@ enum class WindowKeys : uint8_t { All, Back, Off };
 enum class PanelLayout : uint8_t { Row, Column, Icons };  // 3.0.3-beta.8: [panel] layout; 3.0.3-beta.11 icons
 // 3.0.11-beta.33: [interface] minimap_way - the way followed on the ground: footprints (steps), a strip (line), none
 enum class WayOnGround : uint8_t { Steps, Line, Off };
+// 3.0.11-beta.87 (the concept «Контроллер в интерфейсе uaRO», stage 3): the target's ring on the ground - off, while
+// played with the controller, or always (the mouse's fight too)
+enum class TargetRing : uint8_t { Off, Pad, Always };
 // 3.0.11-beta.35: [interface] buffs - the character's buffs: the game's own icons (off), the driver's column under the
 // minimap, a row under it
 enum class BuffsLook : uint8_t { Off, Column, Row };
@@ -570,6 +573,9 @@ struct Config {
     // 3.0.11-beta.86 (the concept «Контроллер в интерфейсе uaRO», stage 2): [interface] pad_hints - played with the
     // controller (core/input_mode), its buttons on the interface instead of the keys' names (core/pad_glyphs); on
     bool padHints = true;
+    // 3.0.11-beta.87 (stage 3): [interface] target_ring - the pad's target in a gold ring on the ground
+    // (win/ground_marks)
+    TargetRing targetRing = TargetRing::Pad;
     // 3.0.11-beta.35: [interface] buffs - stage 7 of the new interface (the HUD, the buffs first; the owner's approved
     // column, the row a choice): the game's own status icons hidden, the driver's under the minimap (core/buff_panel)
     BuffsLook buffs = BuffsLook::Off;
@@ -752,6 +758,7 @@ const char* displayModeToken(DisplayMode m);
 const char* uiFilterToken(UiFilter f);
 const char* windowKeysToken(WindowKeys k);  // 3.0.3-beta.6
 const char* wayOnGroundToken(WayOnGround w);  // 3.0.11-beta.33
+const char* targetRingToken(TargetRing r);    // 3.0.11-beta.87
 const char* buffsLookToken(BuffsLook b);       // 3.0.11-beta.35
 const char* buffsOverflowToken(BuffsOverflow b);  // 3.0.11-beta.63
 const char* characterLookToken(CharacterLook c);  // 3.0.11-beta.36

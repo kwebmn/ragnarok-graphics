@@ -1139,6 +1139,32 @@ TEST(ctl_right_stick_picks_in_direction) {
     CHECK(o.rumble == Rumble::None);
 }
 
+// 3.0.11-beta.87 (the concept's stage 3): a light tilt of the right stick shows where a push would take the aim (a
+// dashed ring under it) and changes nothing; a push takes it
+TEST(ctl_right_stick_light_tilt_previews_the_next_target) {
+    Controller c(Config{});
+    WorldState w = world();
+    addMob(w, 110000001, Cell{105, 100});  // east
+    addMob(w, 110000002, Cell{100, 106});  // north
+    c.tick(padR(1, 0), w, view(), 1000);
+    c.tick(pad(), w, view(), 1100);
+    CHECK_EQ(c.target(), 110000001u);
+    CHECK_EQ(c.preview(), 0u);
+    TickOutput o = c.tick(padR(0, 0.45f), w, view(), 1200);  // a light tilt north
+    CHECK_EQ(c.preview(), 110000002u);
+    CHECK_EQ(c.target(), 110000001u);
+    CHECK(o.rumble == Rumble::None);
+    c.tick(padR(1, 0.1f), w, view(), 1300);  // a push east, at the target: no preview of it
+    CHECK_EQ(c.preview(), 0u);
+    c.tick(pad(), w, view(), 1400);
+    c.tick(padR(0, 0.45f), w, view(), 1500);
+    c.tick(padR(0, 0.9f), w, view(), 1600);  // pushed on: taken
+    CHECK_EQ(c.target(), 110000002u);
+    CHECK_EQ(c.preview(), 0u);
+    c.tick(pad(), w, view(), 1700);
+    CHECK_EQ(c.preview(), 0u);  // let go: none
+}
+
 TEST(ctl_right_stick_thresholds_and_switch_margin) {
     Controller c(Config{});
     WorldState w = world();

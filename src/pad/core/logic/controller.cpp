@@ -16,6 +16,7 @@ constexpr float kTriggerOn = 0.5f;
 constexpr float kTriggerOff = 0.3f;
 constexpr double kAimOn = 0.6;
 constexpr double kAimOff = 0.35;
+constexpr double kAimPreview = 0.3;  // 3.0.11-beta.87: a lighter tilt than kAimOn shows the next target
 constexpr double kAimSwitchMargin = 8.0;  // aim score points a new monster must win by
 constexpr uint32_t kSlotIntervalMs = 150;
 constexpr uint32_t kChooseMs = 8000;  // 3.0.11-beta.85: a support skill waits this long for whom
@@ -167,6 +168,7 @@ uint16_t Controller::readButtons(const PadState& pad) {
 
 TickOutput Controller::tick(const PadState& pad, const WorldState& world, const ViewInfo& view, uint32_t now) {
     TickOutput out;
+    preview_ = 0;  // 3.0.11-beta.87: aim() tells it anew
     const uint16_t buttons = readButtons(pad);
     const uint16_t down = uint16_t(buttons & ~prevButtons_);
     prevButtons_ = buttons;
@@ -322,6 +324,13 @@ void Controller::aim(const PadState& pad, const WorldState& world, uint32_t now,
     if (aimLatched_) {
         if (mag < kAimOff) aimLatched_ = false;
         return;
+    }
+    if (!aiming_ && mag >= kAimPreview && mag < kAimOn) {  // 3.0.11-beta.87: where a push would take the aim
+        double dirX = 0;
+        double dirY = 0;
+        camera_.toWorld(pad.rx, -pad.ry, dirX, dirY);
+        const uint32_t best = pickInDirection(world, now, dirX, dirY, blacklist_);
+        if (best != target_) preview_ = best;
     }
     if (mag < (aiming_ ? kAimOff : kAimOn)) {
         aiming_ = false;

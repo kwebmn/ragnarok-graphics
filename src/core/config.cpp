@@ -505,6 +505,10 @@ Config parseConfig(const std::string& text) {
             setBool(val, c.hotbarPerCharacter);
         } else if (key == "interface.pad_hints") {  // 3.0.11-beta.86: the controller's buttons on the interface
             setBool(val, c.padHints);
+        } else if (key == "interface.target_ring") {  // 3.0.11-beta.87: the target's ring on the ground
+            if (val == "off") c.targetRing = TargetRing::Off;
+            if (val == "pad") c.targetRing = TargetRing::Pad;
+            if (val == "always") c.targetRing = TargetRing::Always;
         } else if (key == "interface.minimap_mobs") {
             setBool(val, c.minimapMobs);
         } else if (key == "interface.minimap_way") {  // 3.0.11-beta.33: the way on the ground
@@ -874,6 +878,10 @@ const char* uiFilterToken(UiFilter f) { return f == UiFilter::Smooth ? "smooth" 
 
 const char* windowKeysToken(WindowKeys k) {
     return k == WindowKeys::Back ? "back" : k == WindowKeys::Off ? "off" : "all";
+}
+
+const char* targetRingToken(TargetRing r) {
+    return r == TargetRing::Off ? "off" : r == TargetRing::Always ? "always" : "pad";
 }
 
 const char* wayOnGroundToken(WayOnGround w) {

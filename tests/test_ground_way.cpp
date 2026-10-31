@@ -213,3 +213,33 @@ TEST(ground_way_footprints_fade) {
     CHECK_EQ(groundway::faded(0xE65AC8FAu, 0.25f), 0x3A5AC8FAu);
     CHECK_EQ(groundway::faded(0xE65AC8FAu, 2.0f), 0xE65AC8FAu);
 }
+
+// 3.0.11-beta.87 (the concept «Контроллер в интерфейсе uaRO», stage 3): marks on the ground under an actor - a ring
+// round its feet (whole, or dashed for the next target), four notches out of it (a friend), and a chevron over its head
+// in the screen's pixels
+TEST(ground_way_rings_and_chevron) {
+    const float view[12] = {1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0};  // as the strip's test: x right, y down, z ahead
+    camera::Projection p;
+    p.f0 = p.f1 = 100;
+    p.cx = 320;
+    p.cy = 240;
+    p.nearZ = 10;
+    p.farZ = 1500;
+    std::vector<groundway::Vertex> v;
+    CHECK_EQ(groundway::ring(0, 10, 100, 10, 1.0f, 24, false, view, p, 0xF0E6CB8Au, 0.0f, v), size_t(24 * 6));
+    float left = 1e9f, right = -1e9f;
+    for (const groundway::Vertex& q : v) {
+        left = std::min(left, q.x);
+        right = std::max(right, q.x);
+    }
+    CHECK(std::fabs(left - (320 - 10.5f * 100 / 100)) < 1.2f && std::fabs(right - (320 + 10.5f * 100 / 100)) < 1.2f);
+    CHECK(v[0].diffuse == 0xF0E6CB8Au);
+    std::vector<groundway::Vertex> dashed;
+    CHECK_EQ(groundway::ring(0, 10, 100, 10, 1.0f, 24, true, view, p, 0xFFFFFFFFu, 0.0f, dashed), size_t(12 * 6));
+    std::vector<groundway::Vertex> notches;
+    CHECK_EQ(groundway::notches(0, 10, 100, 10, 1.0f, view, p, 0xFF5BD36Cu, 0.0f, notches), size_t(4 * 6));
+    std::vector<groundway::Vertex> c;
+    CHECK_EQ(groundway::chevron(400, 120, 20, 14, 0xFFE6CB8Au, c), size_t(3));
+    CHECK(c[2].x == 400 && c[2].y == 120 && c[0].y == 106 && c[0].x == 390 && c[1].x == 410);
+    CHECK(c[0].z == 0 && c[0].rhw == 1 && c[0].diffuse == 0xFFE6CB8Au);
+}

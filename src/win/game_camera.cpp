@@ -312,6 +312,56 @@ bool readPlayerWorld(float at[3], int& width, int& height, int& cellSize) {
     return std::isfinite(at[0]) && std::isfinite(at[1]) && std::isfinite(at[2]);
 }
 
+bool readActorWorld(uint32_t id, float at[3]) {
+    constexpr uint32_t kWorldActors = 0x18, kActorId = 0x208, kOwnAccount = 0x771F7C;
+    uint32_t world = 0, head = 0, node = 0, own = 0;
+    const uint32_t mode = gameMode();
+    if (!id || !mode || !read(mode + kModeWorld, &world, 4) || !world) return false;
+    if (read(kOwnAccount, &own, 4) && own == id) {  // the character: the world's player, not in the list
+        uint32_t player = 0;
+        return read(world + kWorldPlayer, &player, 4) && player && read(player + 4, at, 3 * sizeof(float)) &&
+               std::isfinite(at[0]) && std::isfinite(at[1]) && std::isfinite(at[2]);
+    }
+    static uint32_t cachedId = 0, cachedActor = 0;  // the last one found: still it while its id reads the same
+    uint32_t actor = 0, aid = 0;
+    if (cachedId == id && cachedActor && read(cachedActor + kActorId, &aid, 4) && aid == id) actor = cachedActor;
+    if (!actor) {
+        if (!read(world + kWorldActors, &head, 4) || !head || !read(head, &node, 4)) return false;
+        for (size_t n = 0; node && node != head && n < 4096 && !actor; ++n) {
+            uint32_t a = 0;
+            if (!read(node + 8, &a, 4)) return false;
+            if (a && read(a + kActorId, &aid, 4) && aid == id) actor = a;
+            if (!actor && !read(node, &node, 4)) return false;
+        }
+        if (!actor) return false;
+        cachedId = id;
+        cachedActor = actor;
+    }
+    return read(actor + 4, at, 3 * sizeof(float)) && std::isfinite(at[0]) && std::isfinite(at[1]) &&
+           std::isfinite(at[2]);
+}
+
+bool readActorBox(uint32_t id, float box[4]) {
+    constexpr uint32_t kPickList = 0x74B5F0 + 0x28, kRecordId = 0x18;
+    uint32_t head = 0, node = 0;
+    if (!id || !gameMode() || !read(kPickList, &head, 4) || !head || !read(head, &node, 4)) return false;
+    for (size_t n = 0; node && node != head && n < 4096; ++n) {
+        uint32_t record = 0, rid = 0;
+        float f[5];
+        if (!read(node + 8, &record, 4)) return false;
+        if (record && read(record + kRecordId, &rid, 4) && rid == id && read(record, f, sizeof f)) {
+            box[0] = f[0];
+            box[1] = f[1];
+            box[2] = f[3];
+            box[3] = f[4];
+            return std::isfinite(box[0]) && std::isfinite(box[1]) && std::isfinite(box[2]) && std::isfinite(box[3]) &&
+                   box[2] > box[0] && box[3] > box[1];
+        }
+        if (!read(node, &node, 4)) return false;
+    }
+    return false;
+}
+
 bool readPlayerFacing(float& degrees) {
     uint32_t world = 0, player = 0;
     const uint32_t mode = gameMode();

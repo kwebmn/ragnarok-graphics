@@ -5002,6 +5002,21 @@ constexpr Entry kTexts[] = {
      "клавиша или движение мыши возвращают клавиши."},
     {Text::TargetPadAttack, "Attack", "Атака", "Атака"},  // 3.0.11-beta.86: the target card's A
     {Text::TargetPadNext, "Another target", "Інша ціль", "Другая цель"},  // its right stick
+    {Text::InterfaceTargetRing, "Target's ring on the ground", "Кільце цілі на землі",
+     "Кольцо цели на земле"},  // 3.0.11-beta.87
+    {Text::InterfaceTargetRingHint,
+     "A gold ring under the monster the controller aims at, a chevron over its head; a dashed ring under the next one "
+     "while the right stick is tilted lightly, a green one under the party member a heal is to go on. «Always» - also "
+     "under the monster the character fights with the mouse.",
+     "Золоте кільце під монстром, у якого цілиться контролер, і стрілка над ним; пунктирне — під наступним, поки "
+     "правий стік трохи нахилений, зелене — під учасником групи, на якого піде лікування. «Завжди» — також під "
+     "монстром, якого персонаж б'є мишею.",
+     "Золотое кольцо под монстром, в которого целится контроллер, и стрелка над ним; пунктирное — под следующим, пока "
+     "правый стик слегка наклонён, зелёное — под участником группы, на которого пойдёт лечение. «Всегда» — также под "
+     "монстром, которого персонаж бьёт мышью."},
+    {Text::InterfaceTargetRingOff, "Off", "Вимкнено", "Выключено"},
+    {Text::InterfaceTargetRingPad, "With the controller", "З контролером", "С контроллером"},
+    {Text::InterfaceTargetRingAlways, "Always", "Завжди", "Всегда"},
     // 3.0.11-beta.33
     {Text::InterfaceMinimapWay, "The way on the ground", "Шлях на землі", "Путь на земле"},
     {Text::InterfaceMinimapWayHint,

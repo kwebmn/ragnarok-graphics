@@ -269,4 +269,52 @@ size_t footprints(const std::vector<Print>& prints, const Heights& g, int cellSi
     return out.size() - before;
 }
 
+size_t ring(float x, float y, float z, float radius, float width, int sides, bool dashed, const float view[12],
+            const camera::Projection& p, uint32_t argb, float bias, std::vector<Vertex>& out) {
+    const size_t before = out.size();
+    const float in = std::max(0.0f, radius - width / 2), outR = radius + width / 2;
+    const float step = 6.28318530718f / float(std::max(3, sides));
+    for (int i = 0; i < std::max(3, sides); ++i) {
+        if (dashed && (i % 2)) continue;
+        const float a0 = step * float(i), a1 = step * float(i + 1);
+        const float wa[3] = {x + in * std::cos(a0), y, z + in * std::sin(a0)};
+        const float wb[3] = {x + outR * std::cos(a0), y, z + outR * std::sin(a0)};
+        const float wc[3] = {x + in * std::cos(a1), y, z + in * std::sin(a1)};
+        const float wd[3] = {x + outR * std::cos(a1), y, z + outR * std::sin(a1)};
+        Vertex a{}, b{}, c{}, d{};
+        if (!placed(wa, view, p, bias, argb, a) || !placed(wb, view, p, bias, argb, b) ||
+            !placed(wc, view, p, bias, argb, c) || !placed(wd, view, p, bias, argb, d))
+            continue;  // behind the near plane
+        out.insert(out.end(), {a, b, c, b, d, c});
+    }
+    return out.size() - before;
+}
+
+size_t notches(float x, float y, float z, float radius, float width, const float view[12], const camera::Projection& p,
+               uint32_t argb, float bias, std::vector<Vertex>& out) {
+    const size_t before = out.size();
+    const float from = radius + width / 2, to = from + 0.9f, half = width / 2;
+    for (int k = 0; k < 4; ++k) {
+        const float ux = k == 0 ? 1.0f : k == 2 ? -1.0f : 0.0f, uz = k == 1 ? 1.0f : k == 3 ? -1.0f : 0.0f;
+        const float sx = -uz * half, sz = ux * half;  // across it
+        const float wa[3] = {x + ux * from - sx, y, z + uz * from - sz};
+        const float wb[3] = {x + ux * from + sx, y, z + uz * from + sz};
+        const float wc[3] = {x + ux * to - sx, y, z + uz * to - sz};
+        const float wd[3] = {x + ux * to + sx, y, z + uz * to + sz};
+        Vertex a{}, b{}, c{}, d{};
+        if (!placed(wa, view, p, bias, argb, a) || !placed(wb, view, p, bias, argb, b) ||
+            !placed(wc, view, p, bias, argb, c) || !placed(wd, view, p, bias, argb, d))
+            continue;
+        out.insert(out.end(), {a, b, c, b, d, c});
+    }
+    return out.size() - before;
+}
+
+size_t chevron(float cx, float tipY, float w, float h, uint32_t argb, std::vector<Vertex>& out) {
+    out.push_back(Vertex{cx - w / 2, tipY - h, 0.0f, 1.0f, argb, 0u, 0.0f, 0.0f});
+    out.push_back(Vertex{cx + w / 2, tipY - h, 0.0f, 1.0f, argb, 0u, 0.0f, 0.0f});
+    out.push_back(Vertex{cx, tipY, 0.0f, 1.0f, argb, 0u, 0.0f, 0.0f});
+    return 3;
+}
+
 }  // namespace uagfx::groundway

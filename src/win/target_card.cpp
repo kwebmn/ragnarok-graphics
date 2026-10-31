@@ -245,6 +245,11 @@ void packet(const packets::Event& e) {
     }
 }
 
+uint32_t current() {
+    const State& s = state();
+    return s.shown ? s.target : 0;
+}
+
 void frame(HWND game, bool on, bool padHints, double k, int targetWidth, int targetHeight) {
     State& s = state();
     if (on != s.on) {

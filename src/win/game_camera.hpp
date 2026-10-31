@@ -1,6 +1,7 @@
 #pragma once
 #include <windows.h>
 
+#include <cstdint>
 #include <string>
 
 #include "core/char_status.hpp"
@@ -26,6 +27,13 @@ bool readPlayerWorld(float at[3], int& width, int& height, int& cellSize);
 // 3.0.11-beta.71 (the owner: «туда куда чар смотрит»): which way the character faces - its object's + 0x38, degrees
 // (FUN_00544da0 turns it toward a point, the packet 0x9c sets it; minimap::facingOf); false: no character
 bool readPlayerFacing(float& degrees);
+// 3.0.11-beta.87 (the concept «Контроллер в интерфейсе uaRO», stage 3): an actor's place in the game's world by its id
+// (the world's actors' list + 0x18, an actor's id + 0x208, its place + 4; the character itself by its own); false: not
+// in sight, another build
+bool readActorWorld(uint32_t id, float at[3]);
+// Its sprite's box on the screen the game keeps to pick actors with the mouse (0x74B5F0 + 0x28, FUN_004f9890: a
+// record's left, top +0, +4, right, bottom +0xC, +0x10, its id +0x18) - left, top, right, bottom in the game's pixels
+bool readActorBox(uint32_t id, float box[4]);
 // The game's own minimap: it is drawn while its UI window 14 exists (UIWindowMgr+0x7C); hidden and made again as
 // Ctrl+Tab does (UI command 0x99: DeleteWindow / MakeWindow of window 14, the latter only where the map has one) -
 // false when not done (another build, nothing to do). On the game's thread.

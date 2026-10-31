@@ -18,6 +18,8 @@ namespace uagfx::win::targetpanel {
 // reference pack. Under the game's own windows when one stands at the top middle (the hotkeys' bar). On the game's
 // thread.
 void packet(const packets::Event& e);
+// 3.0.11-beta.87: the monster the card shows now (the one the character fights); 0 none
+uint32_t current();
 // 3.0.11-beta.86: padHints - [interface] pad_hints, the controller's buttons at the card's end while played with it
 void frame(HWND game, bool on, bool padHints, double k, int targetWidth, int targetHeight);
 void draw(FrameRecord& record, gpu::Renderer& renderer);

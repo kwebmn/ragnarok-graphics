@@ -572,6 +572,10 @@ Look look() {
     return l;
 }
 
+uint32_t target() { return healthy() && S().session ? S().session->controller().target() : 0; }
+
+uint32_t preview() { return healthy() && S().session ? S().session->controller().preview() : 0; }
+
 void noteKeysOrMouse(bool click) {
     State& s = S();
     if (click && s.mouse.active) return;  // the pad's own virtual click (the messages channel), not the player's

@@ -207,6 +207,11 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("pad_hints", flag(running.padHints), flag(file.padHints)));
         n.padHints = file.padHints;
     }
+    if (file.targetRing != running.targetRing) {  // 3.0.11-beta.87: the target's ring on the ground
+        u.applied.push_back(
+            change("target_ring", targetRingToken(running.targetRing), targetRingToken(file.targetRing)));
+        n.targetRing = file.targetRing;
+    }
     if (file.minimapWay != running.minimapWay) {  // 3.0.11-beta.33: the way on the ground, at once
         u.applied.push_back(
             change("minimap_way", wayOnGroundToken(running.minimapWay), wayOnGroundToken(file.minimapWay)));

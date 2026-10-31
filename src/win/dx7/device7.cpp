@@ -13,6 +13,7 @@
 #include "win/dx7/formats.hpp"
 #include "win/dx7/surface7.hpp"
 #include "win/effect_hook.hpp"
+#include "win/ground_marks.hpp"
 #include "win/ground_way.hpp"
 #include "win/log.hpp"
 
@@ -76,7 +77,8 @@ HRESULT STDMETHODCALLTYPE Device7::EnumTextureFormats(LPD3DENUMPIXELFORMATSCALLB
 HRESULT STDMETHODCALLTYPE Device7::BeginScene() {
     win::Guard guard;
     scene_.beginScene();
-    win::groundway::newFrame();  // 3.0.11-beta.31: the way on the ground drawn once in this frame
+    win::groundway::newFrame();    // 3.0.11-beta.31: the way on the ground drawn once in this frame
+    win::groundmarks::newFrame();  // 3.0.11-beta.87: the target's ring too
     return D3D_OK;
 }
 
@@ -412,7 +414,10 @@ HRESULT Device7::record(D3DPRIMITIVETYPE type, DWORD fvf, const void* vertices, 
     }
     // 2.7.14: the world drawn - the cards' sparkles over it; 2.7.25: and the orbs' heads
     if (setup.ui && (!c.sparkles.empty() || !c.orbHeads.heads().empty())) c.drawSparkles();
-    if (setup.ui) win::groundway::draw(c.record, c.screenWidth, c.screenHeight);  // 3.0.11-beta.31: the way followed
+    if (setup.ui) {
+        win::groundway::draw(c.record, c.screenWidth, c.screenHeight);    // 3.0.11-beta.31: the way followed
+        win::groundmarks::draw(c.record, c.screenWidth, c.screenHeight);  // 3.0.11-beta.87: the target's ring
+    }
     c.record.draw(cmd, vertices, vertexCount, indices, indices ? indexCount : 0);
     if (flash > 0.01f) {  // 0.96: the sprite's shape once more in white, added, as strong as the flash is now
         if (vertices != soft_.data()) {

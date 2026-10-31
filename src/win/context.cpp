@@ -45,6 +45,7 @@
 #include "win/chat_window.hpp"
 #include "win/item_window.hpp"
 #include "win/stat_window.hpp"
+#include "win/ground_marks.hpp"
 #include "win/target_card.hpp"
 #include "win/tracker.hpp"
 #include "win/notifier.hpp"
@@ -828,6 +829,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     charpanel::frame(window, config.character, pk, pw, ph);
     // 3.0.11-beta.38: [interface] target - the target's card at the top middle
     targetpanel::frame(window, config.targetCard, config.padHints, pk, pw, ph);
+    groundmarks::look(config.targetRing);  // 3.0.11-beta.87: the target's ring on the ground
     // 3.0.11-beta.39: [interface] party - the party's panel under the character block
     partywin::frame(window, config.partyPanel, gameCodePage(config), pk, pw, ph);
     // 3.0.11-beta.41: [interface] chat - the chat at the bottom left, the game's own out of sight (before the hotbar:

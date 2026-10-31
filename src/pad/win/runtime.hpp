@@ -41,5 +41,9 @@ struct Look {
 Look look();
 // A key or a click in the game's window (window_switch): the keys' names back on the interface
 void noteKeysOrMouse(bool click);
+// 3.0.11-beta.87 (the concept's stage 3): the pad's target, and the monster a light tilt of the right stick points at
+// (the rings under them, win/ground_marks); 0 none
+uint32_t target();
+uint32_t preview();
 
 }  // namespace uapad::runtime
