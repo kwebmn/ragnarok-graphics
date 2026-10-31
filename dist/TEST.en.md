@@ -1,3 +1,12 @@
+# uaRO Graphics 3.0.11-beta.123 — what's new
+
+**Fewer "teleports"** (step 3 of the network plan):
+- The server often puts a monster or your character a cell or two farther than the game shows them (the game is a
+  little behind the server): before each attack of a monster that chased you, when one casts on the move, after a
+  lag. The game used to jump them there — now they **glide** there in 0.16–0.24 s. The camera follows smoothly.
+- Far moves (a teleport, a knock-back, wings) stay instant.
+- The "Smooth position fixes" switch in "Interface" (on).
+
 # uaRO Graphics 3.0.11-beta.122 — what's new
 
 The first step against the character and the monsters "teleporting":
