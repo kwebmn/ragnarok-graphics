@@ -1,3 +1,13 @@
+# uaRO Graphics 3.0.11-beta.111 — what's new
+
+The windows and inventory concept, stage 3 — "Equipment" and "Items" side by side (question 1):
+- **Open both and they stand side by side** as one window: "Equipment" left of "Items" (right of it when the left has
+  no room), their tops in line. A thing from the bag goes onto a slot next to it, the windows not over each other.
+- **They move as one**: drag either by its title and the other follows; both places are kept.
+- **Apart**: drag a window by its title holding Shift — it goes alone. Together again once one is closed and opened.
+- In the log: "windows: «Спорядження» docked left of «Речі»", "windows: «Спорядження» and «Речі» apart (dragged with
+  Shift)".
+
 # uaRO Graphics 3.0.11-beta.110 — what's new
 
 The windows and inventory concept, stage 2 — dragging:
