@@ -1,3 +1,18 @@
+# uaRO Graphics 3.0.11-beta.82 — what is new
+
+The party panel, points 2 and 4 (your «1-8, do it»):
+- **A click on a member — the skill on it.** Choose a skill (heal, blessing…) — the rows of the members near light
+  gold; click the row you want — the skill goes onto that member, as if you clicked it in the world (the character
+  walks up when it is far). A ground skill (Sanctuary and the like) lands under the member's feet. The member has to be
+  near on your map.
+- **Arrow and distance:** a member on your map has a gold arrow its way at the end of its row (as the camera turns)
+  and how many cells away it is. A click on the row with no skill chosen lays a way to it on the minimap.
+- **Another map:** a route mark by its map's name; a click on the row goes there (the way over the maps, as «Lead» in
+  «Reference»; without the new minimap — the map's card opens).
+- To check: as a priest choose Heal and click a member in the panel; watch the arrow while walking and turning the
+  camera; click a member on another map. In the log: `party: … - skill … on it`, `party: … is on … - the way there
+  followed`, `party: a way to …`.
+
 # uaRO Graphics 3.0.11-beta.81 — what is new
 
 The party panel, points 1, 5, 6, 7 of the list (your «1-8, do it»):
