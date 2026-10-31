@@ -858,12 +858,13 @@ TEST(config_interface_minimap) {
     // 3.0.11-beta.37: the buffs' column and the character block come with it; 3.0.11-beta.38: the target's card too;
     // 3.0.11-beta.39: the party's panel; 3.0.11-beta.40: the hotbar; 3.0.11-beta.41: the chat; 3.0.11-beta.42: the
     // windows; 3.0.11-beta.48: the cast's label (3.0.11-beta.49's dimmed world no longer comes with it: beta.55);
-    // 3.0.11-beta.70: the tracker; 3.0.11-beta.96: «Навички»
-    CHECK(u.waiting.empty() && u.applied.size() == 12 && u.applied[0] == "minimap 0 -> 1");
+    // 3.0.11-beta.70: the tracker; 3.0.11-beta.96: «Навички»; 3.0.11-beta.97: «Спорядження»
+    CHECK(u.waiting.empty() && u.applied.size() == 13 && u.applied[0] == "minimap 0 -> 1");
     CHECK(u.applied[1] == "buffs off -> column" && u.applied[2] == "items 0 -> 1" && u.applied[3] == "status 0 -> 1");
-    CHECK(u.applied[4] == "skills 0 -> 1" && u.applied[5] == "cast 0 -> 1" && u.applied[6] == "chat 0 -> 1");
-    CHECK(u.applied[7] == "hotbar 0 -> 1" && u.applied[8] == "tracker 0 -> 1" && u.applied[9] == "party 0 -> 1");
-    CHECK(u.applied[10] == "target 0 -> 1" && u.applied[11] == "character off -> bars");
+    CHECK(u.applied[4] == "skills 0 -> 1" && u.applied[5] == "equip 0 -> 1" && u.applied[6] == "cast 0 -> 1");
+    CHECK(u.applied[7] == "chat 0 -> 1" && u.applied[8] == "hotbar 0 -> 1" && u.applied[9] == "tracker 0 -> 1");
+    CHECK(u.applied[10] == "party 0 -> 1" && u.applied[11] == "target 0 -> 1");
+    CHECK(u.applied[12] == "character off -> bars");
     CHECK(appliesNow("interface.minimap"));
 }
 

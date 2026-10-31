@@ -5089,6 +5089,39 @@ constexpr Entry kTexts[] = {
     {Text::SkillsPadRaise, "+1 level", "+1 рівень", "+1 уровень"},
     {Text::SkillsPadAssign, "Assign", "Призначити", "Назначить"},
     {Text::SkillsPadClose, "Close", "Закрити", "Закрыть"},
+    {Text::InterfaceEquip, "Equipment", "Спорядження", "Снаряжение"},  // 3.0.11-beta.97
+    {Text::InterfaceEquipHint,
+     "The equipment (Alt+Q) in the new look: the slots round the character, each worn thing's icon, refine and name, "
+     "dots for its card slots; the character's portrait, levels and battle numbers in the middle. A double click "
+     "takes a thing off, a press drags it into the bag, a thing dragged from «Items» onto it is put on.",
+     "Спорядження (Alt+Q) у новому вигляді: слоти навколо персонажа, у кожної вдягненої речі іконка, заточка й назва, "
+     "кружечки слотів карток; посередині портрет персонажа, рівні й бойові числа. Подвійний клік — зняти, затиснути — "
+     "перетягнути в сумку, річ, перетягнута з «Речі» на вікно, вдягається.",
+     "Снаряжение (Alt+Q) в новом виде: слоты вокруг персонажа, у каждой надетой вещи иконка, заточка и название, "
+     "кружки слотов карт; посередине портрет персонажа, уровни и боевые числа. Двойной клик — снять, зажать — "
+     "перетащить в сумку, вещь, перетащенная из «Вещи» на окно, надевается."},
+    {Text::EquipTitle, "Equipment", "Спорядження", "Снаряжение"},
+    {Text::EquipHeadMid, "Middle head", "Середина голови", "Середина головы"},
+    {Text::EquipHeadLow, "Lower head", "Низ голови", "Низ головы"},
+    {Text::EquipArmor, "Armour", "Броня", "Броня"},
+    {Text::EquipGarment, "Garment", "Плащ", "Плащ"},
+    {Text::EquipAccessory, "Accessory", "Аксесуар", "Аксессуар"},
+    {Text::EquipHeadTop, "Upper head", "Верх голови", "Верх головы"},
+    {Text::EquipWeapon, "Weapon", "Зброя", "Оружие"},
+    {Text::EquipShield, "Shield", "Щит", "Щит"},
+    {Text::EquipShoes, "Shoes", "Взуття", "Обувь"},
+    {Text::EquipAmmo, "Ammo", "Набої", "Снаряды"},
+    {Text::EquipCards, "Dots - card slots", "Кружечки — слоти карток", "Кружки — слоты карт"},
+    {Text::EquipDrag, "Drag a thing from «Items» onto a slot", "Перетягніть річ із «Речі» на слот",
+     "Перетащите вещь из «Вещи» на слот"},
+    {Text::EquipLevel, "Lv {1} / {2}", "Рів. {1} / {2}", "Ур. {1} / {2}"},
+    {Text::EquipPickTitle, "What to put on: {1}", "Що вдягнути: {1}", "Что надеть: {1}"},
+    {Text::EquipPickNone, "Nothing in the bag fits", "У сумці нічого не підходить", "В сумке ничего не подходит"},
+    {Text::EquipPadOff, "Take off", "Зняти", "Снять"},
+    {Text::EquipPadPut, "Put on", "Вдягнути", "Надеть"},
+    {Text::EquipPadChange, "Change", "Замінити", "Заменить"},
+    {Text::EquipPadCard, "Card", "Картка", "Карточка"},
+    {Text::EquipPadBack, "Back", "Назад", "Назад"},
     {Text::InterfacePadWalk, "The controller walks", "Хід контролером", "Ход контроллером"},  // 3.0.11-beta.88
     {Text::InterfacePadWalkHint,
      "How the left stick walks: holding the game's cursor out, as before, or without the mouse - the character goes "

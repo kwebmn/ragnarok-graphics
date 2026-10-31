@@ -488,6 +488,9 @@ enum class Text : uint16_t {
     InterfaceSkills, InterfaceSkillsHint, SkillsTitle, SkillsPoints, SkillsDrag, SkillsPassive, SkillsEnemy,
     SkillsGround, SkillsSelf, SkillsAlly, SkillsTrap, SkillsSp, SkillsRange, SkillsNeeds, SkillsUnlearned, SkillsPadUse,
     SkillsPadRaise, SkillsPadAssign, SkillsPadClose,  // 3.0.11-beta.96
+    InterfaceEquip, InterfaceEquipHint, EquipTitle, EquipHeadMid, EquipHeadLow, EquipArmor, EquipGarment,
+    EquipAccessory, EquipHeadTop, EquipWeapon, EquipShield, EquipShoes, EquipAmmo, EquipCards, EquipDrag, EquipLevel,
+    EquipPickTitle, EquipPickNone, EquipPadOff, EquipPadPut, EquipPadChange, EquipPadCard, EquipPadBack,  // .97
     InterfacePadWalk, InterfacePadWalkHint, InterfacePadWalkMouse, InterfacePadWalkArrow,  // 3.0.11-beta.88
     InterfacePadTiles, InterfacePadTilesHint, TilesTitle, TileSkills, TileEquip, TileMap, TileOptions, TilesOpen,
     TilesClose,  // 3.0.11-beta.90

@@ -9,6 +9,7 @@
 #include "pad/win/client_mouse.hpp"
 #include "pad/win/game_window.hpp"
 #include "win/hotbar.hpp"
+#include "win/equip_window.hpp"
 #include "win/item_window.hpp"
 #include "win/log.hpp"
 
@@ -64,7 +65,7 @@ const char* const kParts[] = {"the windows' panel", "the answer card", "the new 
                               "the target's card", "the party's panel", "the hotbar", "the chat",
                               "the new «Речі»", "the new «Характеристики»", "the buffs' further columns",
                               "the tracker", "the interface's layout", "the controller's windows' tile",
-                              "the controller's «Призначити»", "the new «Навички»"};
+                              "the controller's «Призначити»", "the new «Навички»", "the new «Спорядження»"};
 static_assert(std::size(kParts) == size_t(uapad::gamewindow::kBlockerCount), "a name for each part");
 unsigned g_told = 0;    // the parts whose first cursor over them is logged
 unsigned g_hidden = 0;  // 3.0.11-beta.33: the parts whose first actor hidden under them is logged
@@ -112,7 +113,8 @@ int __attribute__((thiscall)) droppedOn(uint32_t manager, int x, int y, uint32_t
     if (part < 0 || part >= int(std::size(kParts))) return answer;
     // 3.0.11-beta.42: «Речі» gives it to the game's own window (from the storage, the cart, the gear into the bag)
     const bool taken = (part == int(uapad::gamewindow::Blocker::Hotbar) && hotbarwin::drop(x, y, drag)) ||
-                       (part == int(uapad::gamewindow::Blocker::Items) && itemswin::drop(x, y, drag));
+                       (part == int(uapad::gamewindow::Blocker::Items) && itemswin::drop(x, y, drag)) ||
+                       (part == int(uapad::gamewindow::Blocker::Equip) && equipwin::drop(x, y, drag));  // .97
     if (!taken) reinterpret_cast<NoDropFn>(uintptr_t(kNoDrop))(0, x, y, drag);
     if (g_drops++ < 10)
         LOG_INFO("world mouse: a drag let go over %s (%d, %d) - %s", kParts[part], x, y,

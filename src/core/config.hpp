@@ -620,6 +620,8 @@ struct Config {
     // 3.0.11-beta.96 (the owner: «доделаем окна интерфейсов»): [interface] skills - «Навички» (core/skill_window) in
     // place of the game's own skill tree while it is open; on with the new minimap
     bool skillsWindow = false;
+    // 3.0.11-beta.97: [interface] equip - «Спорядження» (core/equip_window) in place of the game's equipment window
+    bool equipWindow = false;
     // 3.0.11-beta.46: [interface] animations - the new interface's motion (core/ui_motion): the target's card, the
     // character block's views, a new level's flare, the low HP warning sliding in; 0: all at once
     bool animations = true;

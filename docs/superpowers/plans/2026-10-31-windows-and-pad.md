@@ -73,3 +73,10 @@ The owner 31.10: «Полоски HP мобов - всем показывай»,
   list, hold the game's window, mouse: dbl-click use, press drag, «+», ‹ ›, wheel, title), [interface] skills (on with
   the minimap), pad skillsPad (A use, Y raise, X assign, LB/RB, ←→, B/Start). Tests skill_tree_* (3),
   skill_window_* (5), config_interface_minimap updated; suite 2018/0.
+- Stage 3: built as 3.0.11-beta.97 - research: window 10 (mgr + 0x94, class 0x698668, SendMsg 0x470F90 6/0x87 close,
+  drop 0x46F550 wears by location: mode 0x14 (index, location), ammo types 10/16/17 mode 100), dbl-click take off =
+  mode 0x15 (the worn bit's number, FUN_00628bd0; 0x8000 -> 15), press = mode 0x16 (worn location: drag type 2);
+  ITEM_INFO cards +0x1C..+0x28 (0x00a4 handler FUN_00582420), refine +0x40; card slots from the reference pack.
+  core/equip_window (slots by bits, two columns + centre, card dots, pick list, pad footer), win/equip_window (bag,
+  portrait via headpicture, stats, take off / drag / card / drop / pick and wear), [interface] equip, Blocker::Equip +
+  world_mouse drop, pad equipPad. Tests equip_window_* (3), config_interface_minimap updated; suite 2021/0.

@@ -383,7 +383,7 @@ Config parseConfig(const std::string& text) {
     bool trackerSet = false;                      // 3.0.11-beta.70
     bool hotbarSet = false, chatSet = false;      // 3.0.11-beta.40, 3.0.11-beta.41
     bool castSet = false;                         // 3.0.11-beta.48
-    bool itemsSet = false, statusSet = false, skillsSet = false;     // 3.0.11-beta.42
+    bool itemsSet = false, statusSet = false, skillsSet = false, equipSet = false;     // 3.0.11-beta.42
     std::istringstream in(text);
     std::string line;
     std::string section;
@@ -542,6 +542,9 @@ Config parseConfig(const std::string& text) {
         } else if (key == "interface.skills") {  // 3.0.11-beta.96: «Навички»
             skillsSet = val == "0" || val == "1" || val == "on" || val == "off" || val == "true" || val == "false";
             setBool(val, c.skillsWindow);
+        } else if (key == "interface.equip") {  // 3.0.11-beta.97: «Спорядження»
+            equipSet = val == "0" || val == "1" || val == "on" || val == "off" || val == "true" || val == "false";
+            setBool(val, c.equipWindow);
         } else if (key == "interface.dim_world") {  // 3.0.11-beta.49: the world dimmed under the windows (off: .55)
             setBool(val, c.dimWorld);
         } else if (key == "interface.cast") {  // 3.0.11-beta.48: the cast's label over the hero
@@ -827,6 +830,7 @@ Config parseConfig(const std::string& text) {
     if (c.newMinimap && !itemsSet) c.itemsWindow = true;  // 3.0.11-beta.42
     if (c.newMinimap && !statusSet) c.statusWindow = true;
     if (c.newMinimap && !skillsSet) c.skillsWindow = true;  // 3.0.11-beta.96
+    if (c.newMinimap && !equipSet) c.equipWindow = true;    // 3.0.11-beta.97
     return c;
 }
 
