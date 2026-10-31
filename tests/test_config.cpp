@@ -1375,6 +1375,17 @@ TEST(config_interface_net_badge) {
     CHECK(!liveUpdate(parseConfig(""), parseConfig("[interface]\nnet_badge = 0\n")).next.netBadge);
 }
 
+// 3.0.11-beta.123 (the network plan's step 3): [interface] smooth_fixes - the server's position fixes of 1-3 cells
+// glided to, not jumped; on at first, a box of «Інтерфейс», at once
+TEST(config_interface_smooth_fixes) {
+    CHECK(parseConfig("").smoothFixes);
+    CHECK(!parseConfig("[interface]\nsmooth_fixes = 0\n").smoothFixes);
+    const settings::IniSetting* s = settings::findSetting("interface.smooth_fixes");
+    CHECK(s != nullptr && s->page == settings::Page::Interface);
+    CHECK(appliesNow("interface.smooth_fixes"));
+    CHECK(!liveUpdate(parseConfig(""), parseConfig("[interface]\nsmooth_fixes = 0\n")).next.smoothFixes);
+}
+
 // 3.0.11-beta.103 (the owner: «можешь сделать настройку, чтобы можно было выбрать эту стрелку в конфигураторе»):
 // [interface] walk_arrow - the look of the stick's walking arrow, the doc's variants; the chevrons by default (its
 // advice), a choice of «Інтерфейс» applied at once

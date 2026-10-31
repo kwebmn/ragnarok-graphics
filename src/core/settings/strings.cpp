@@ -4976,6 +4976,21 @@ constexpr Entry kTexts[] = {
      "соединение ждало потерянный пакет (мир после него прыгает: это была сеть, не игра)."},
     {Text::NetMs, "{1} ms", "{1} мс", "{1} мс"},
     {Text::NetStall, "stall", "обрив", "обрыв"},
+    // 3.0.11-beta.123: the position fixes glided to
+    {Text::InterfaceSmoothFixes, "Smooth position fixes", "Плавні поправки позиції", "Плавные поправки позиции"},
+    {Text::InterfaceSmoothFixesHint,
+     "The server often puts a monster or your character a cell or two from where the game, a moment behind it, shows "
+     "them - before each attack of a monster that chased you, when one casts on the move, after a lag. The game "
+     "jumps them there; with this on they glide there in a fifth of a second. Farther moves (a teleport, a "
+     "knock-back) stay instant.",
+     "Сервер часто ставить монстра чи вашого персонажа за клітинку-дві від місця, де гра, що трохи відстає, їх "
+     "показує, - перед кожною атакою монстра, який вас наздогнав, коли він кастує на ходу, після лагу. Гра ривком "
+     "переносить їх туди; з цим перемикачем вони доїжджають туди за п'яту частку секунди. Далекі переміщення "
+     "(телепорт, відкидання) лишаються миттєвими.",
+     "Сервер часто ставит монстра или вашего персонажа в клетке-двух от места, где игра, немного отставая, их "
+     "показывает, - перед каждой атакой догнавшего вас монстра, когда он кастует на ходу, после лага. Игра рывком "
+     "переносит их туда; с этим переключателем они доезжают туда за пятую долю секунды. Дальние перемещения "
+     "(телепорт, отбрасывание) остаются мгновенными."},
     // 3.0.11-beta.65: the concept's «Подсветка, куда можно дойти» - an experiment
     {Text::InterfaceMinimapReach, "Light where you can walk (an experiment)",
      "Підсвітити, куди можна дійти (експеримент)", "Подсветить, куда можно дойти (эксперимент)"},

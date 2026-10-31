@@ -39,3 +39,17 @@ cell. RO's TCP: one lost packet holds the rest until it is sent again (0.2-1 s o
   time-out. Ruling N1: TCP_NODELAY set without a switch (the server sets it too; a standard option, nothing for a
   player to choose) - cost if wrong: a beta to take it back. Ruling N2: the others' fixes counted without a distance
   (their cell before it not read yet) - step 3's research reads the actors. Suite 2099/0.
+- Step 3 (3.0.11-beta.123): research - the client's 0x0088 (the packet loop 0x579f10): the character's - the world's
+  player (world + 0x3C), another's - FUN_004ebd10(id); each told its message (vtable + 8, thiscall) 0x13 with the
+  packet's x, y (buffer + 6, + 8) - put there, the walk stopped; 0x0086 tells message 0 with the decoded move
+  (FUN_0057d420). Built: core/net_smooth (eases 1-3 cells, glideMs 120 + 40 a cell, eased cubic-out, at(), cellMiddle
+  - tests net_smooth_which_fixes_glide, net_smooth_the_way_along, net_smooth_a_cells_middle), win/net_smooth (fix():
+  the unit's world place (game_camera actorAddress, +4) against the packet's cell; near - the packet's cell made the
+  one it stands on (the game stops it there, no jump), a glide to the server's cell; beginScene() from
+  Device7::BeginScene - the place written along the way each frame, left to the game when it moved the unit
+  elsewhere (not where we wrote, not the cell it was told), at the end the unit told 0x13 with the server's cell (the
+  game's own state as the packet's would have been)); [interface] smooth_fixes (test config_interface_smooth_fixes);
+  the watch's fixes now measured for every unit. Ruling N3: the end through the game's own 0x13 message from
+  BeginScene (inside the frame's drawing, before any unit is drawn) - cost if wrong: a crash report naming
+  net_smooth, the switch off meanwhile. Suite 2103/0.
+

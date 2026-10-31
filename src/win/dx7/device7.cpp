@@ -16,6 +16,7 @@
 #include "win/ground_marks.hpp"
 #include "win/ground_way.hpp"
 #include "win/log.hpp"
+#include "win/net_smooth.hpp"
 
 namespace uagfx::dx7 {
 
@@ -79,6 +80,7 @@ HRESULT STDMETHODCALLTYPE Device7::BeginScene() {
     scene_.beginScene();
     win::groundway::newFrame();    // 3.0.11-beta.31: the way on the ground drawn once in this frame
     win::groundmarks::newFrame();  // 3.0.11-beta.87: the target's ring too
+    win::netsmoothwin::beginScene();  // 3.0.11-beta.123: the server's position fixes drawn gliding
     return D3D_OK;
 }
 

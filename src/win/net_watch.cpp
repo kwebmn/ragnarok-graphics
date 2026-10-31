@@ -11,6 +11,7 @@
 
 #include "win/game_camera.hpp"
 #include "win/log.hpp"
+#include "win/net_smooth.hpp"
 
 namespace uagfx::win::netwatchwin {
 namespace {
@@ -94,13 +95,11 @@ void packet(void* connection, uint16_t id, const uint8_t* data) {
     std::memcpy(&unit, data + 2, 4);
     const int x = rd16(data, 6), y = rd16(data, 8);
     const bool own = unit != 0 && unit == read32(kOwnAccount);
-    int cells = 0;
-    int px = 0, py = 0, w = 0, h = 0;
-    if (own && readPlayerCell(px, py, w, h)) cells = std::max(std::abs(px - x), std::abs(py - y));  // where it stood
-    s.watch.fix(own, cells, now);
+    // 3.0.11-beta.123: how far it stood (each unit's), the fix glided to when near (the packet's cell its own then)
+    const int cells = netsmoothwin::fix(unit, const_cast<uint8_t*>(data));
+    s.watch.fix(own, std::max(cells, 0), now);
     if (own && cells >= 2 && s.fixesTold++ < 20)
-        LOG_INFO("net: the server put the character back %d cells (from %d, %d to %d, %d) - it ran ahead of the server",
-                 cells, px, py, x, y);
+        LOG_INFO("net: the server put the character %d cells from where the game showed it (to %d, %d)", cells, x, y);
 }
 
 void frame() {

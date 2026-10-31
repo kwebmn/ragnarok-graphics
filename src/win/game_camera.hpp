@@ -33,6 +33,8 @@ bool readPlayerFacing(float& degrees);
 // (the world's actors' list + 0x18, an actor's id + 0x208, its place + 4; the character itself by its own); false: not
 // in sight, another build
 bool readActorWorld(uint32_t id, float at[3]);
+// 3.0.11-beta.123: the unit's object (its world place at +4: x, height, z), the character's the world's player; 0 none
+uint32_t actorAddress(uint32_t id);
 // Its sprite's box on the screen the game keeps to pick actors with the mouse (0x74B5F0 + 0x28, FUN_004f9890: a
 // record's left, top +0, +4, right, bottom +0xC, +0x10, its id +0x18) - left, top, right, bottom in the game's pixels
 bool readActorBox(uint32_t id, float box[4]);

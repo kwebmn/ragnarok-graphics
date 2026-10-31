@@ -573,6 +573,9 @@ struct Config {
     // 3.0.11-beta.122 (the network ideas, 7): [interface] net_badge - the round trip to the map server on the
     // minimap's bar (win/net_watch): a dot green, amber or red, a stall in red
     bool netBadge = true;
+    // 3.0.11-beta.123 (the network plan's step 3): [interface] smooth_fixes - the server's position fixes (0x0088) of
+    // 1-3 cells glided to instead of jumped (win/net_smooth)
+    bool smoothFixes = true;
     // 3.0.11-beta.33: [interface] minimap_way - the way followed drawn on the ground (win/ground_way): as footprints
     // (the owner: «такими типа следами типа шажков»), as the strip of 3.0.11-beta.31, or not
     WayOnGround minimapWay = WayOnGround::Steps;

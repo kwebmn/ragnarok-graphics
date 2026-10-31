@@ -476,6 +476,8 @@ enum class Text : uint16_t {
     InterfaceMinimapStyle, InterfaceMinimapStyleHint, MinimapStylePicture, MinimapStyleScheme, MinimapLayerScheme,
     // 3.0.11-beta.122: the round trip's badge
     InterfaceNetBadge, InterfaceNetBadgeHint, NetMs, NetStall,
+    // 3.0.11-beta.123: the position fixes glided to
+    InterfaceSmoothFixes, InterfaceSmoothFixesHint,
     InterfaceMinimapReach, InterfaceMinimapReachHint,  // 3.0.11-beta.65
     InterfaceMinimapHd, InterfaceMinimapHdHint,        // 3.0.11-beta.72
     InterfacePackIcons, InterfacePackIconsHint,        // 3.0.11-beta.74

@@ -312,32 +312,36 @@ bool readPlayerWorld(float at[3], int& width, int& height, int& cellSize) {
     return std::isfinite(at[0]) && std::isfinite(at[1]) && std::isfinite(at[2]);
 }
 
-bool readActorWorld(uint32_t id, float at[3]) {
+uint32_t actorAddress(uint32_t id) {
     constexpr uint32_t kWorldActors = 0x18, kActorId = 0x208, kOwnAccount = 0x771F7C;
     uint32_t world = 0, head = 0, node = 0, own = 0;
     const uint32_t mode = gameMode();
-    if (!id || !mode || !read(mode + kModeWorld, &world, 4) || !world) return false;
+    if (!id || !mode || !read(mode + kModeWorld, &world, 4) || !world) return 0;
     if (read(kOwnAccount, &own, 4) && own == id) {  // the character: the world's player, not in the list
         uint32_t player = 0;
-        return read(world + kWorldPlayer, &player, 4) && player && read(player + 4, at, 3 * sizeof(float)) &&
-               std::isfinite(at[0]) && std::isfinite(at[1]) && std::isfinite(at[2]);
+        return read(world + kWorldPlayer, &player, 4) ? player : 0;
     }
     static uint32_t cachedId = 0, cachedActor = 0;  // the last one found: still it while its id reads the same
     uint32_t actor = 0, aid = 0;
     if (cachedId == id && cachedActor && read(cachedActor + kActorId, &aid, 4) && aid == id) actor = cachedActor;
     if (!actor) {
-        if (!read(world + kWorldActors, &head, 4) || !head || !read(head, &node, 4)) return false;
+        if (!read(world + kWorldActors, &head, 4) || !head || !read(head, &node, 4)) return 0;
         for (size_t n = 0; node && node != head && n < 4096 && !actor; ++n) {
             uint32_t a = 0;
-            if (!read(node + 8, &a, 4)) return false;
+            if (!read(node + 8, &a, 4)) return 0;
             if (a && read(a + kActorId, &aid, 4) && aid == id) actor = a;
-            if (!actor && !read(node, &node, 4)) return false;
+            if (!actor && !read(node, &node, 4)) return 0;
         }
-        if (!actor) return false;
+        if (!actor) return 0;
         cachedId = id;
         cachedActor = actor;
     }
-    return read(actor + 4, at, 3 * sizeof(float)) && std::isfinite(at[0]) && std::isfinite(at[1]) &&
+    return actor;
+}
+
+bool readActorWorld(uint32_t id, float at[3]) {
+    const uint32_t actor = actorAddress(id);
+    return actor && read(actor + 4, at, 3 * sizeof(float)) && std::isfinite(at[0]) && std::isfinite(at[1]) &&
            std::isfinite(at[2]);
 }
 
