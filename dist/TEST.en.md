@@ -1,3 +1,16 @@
+# uaRO Graphics 3.0.11-beta.121 — what's new
+
+**Carrying things between the windows with the controller** (stage 5 of the windows concept):
+- **X — "Take"** on a thing in "Items", a skill in "Skills" or a thing in "Storage".
+- The places that take it light up in gold: the "Equipment" slots it fits, the F1–F9 bar's cells, "Storage" and
+  "Trade" (for the bag's things), the bag (for the storage's things).
+- **The D-pad** (or the left stick) moves a gold frame from place to place — into the other windows too; the thing's
+  icon over the frame, a hint under it.
+- **A — "Put"**: wear it in the slot, set it on the bar's cell, put it into the storage or the trade (for a stack the
+  game asks how many), take it from the storage into the bag. **B** — cancel.
+- The old "Assign" list gives way to this: to put a thing or a skill on a button, lay it on the cell with that
+  button.
+
 # uaRO Graphics 3.0.11-beta.120 — what's new
 
 - **The arrows worn show right.** With one kind of arrows worn at the login and another put on later, "Equipment",
