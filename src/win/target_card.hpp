@@ -20,6 +20,9 @@ namespace uagfx::win::targetpanel {
 void packet(const packets::Event& e);
 // 3.0.11-beta.87: the monster the card shows now (the one the character fights); 0 none
 uint32_t current();
+// 3.0.11-beta.99 (the owner: «hp для мобов должно быть доступно и в обычном режиме»): the one the character fights,
+// whether the card is on or not (the HP bars' and the ring's target with the mouse); 0 none
+uint32_t fighting();
 // 3.0.11-beta.86: padHints - [interface] pad_hints, the controller's buttons at the card's end while played with it
 void frame(HWND game, bool on, bool padHints, double k, int targetWidth, int targetHeight);
 void draw(FrameRecord& record, gpu::Renderer& renderer);

@@ -251,6 +251,11 @@ uint32_t current() {
     return s.shown ? s.target : 0;
 }
 
+uint32_t fighting() {
+    const State& s = state();
+    return s.target && GetTickCount64() - s.lastAt <= kForgetMs ? s.target : 0;
+}
+
 void frame(HWND game, bool on, bool padHints, double k, int targetWidth, int targetHeight) {
     State& s = state();
     if (on != s.on) {

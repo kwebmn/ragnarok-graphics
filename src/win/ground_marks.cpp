@@ -89,7 +89,7 @@ void draw(FrameRecord& record, int width, int height) {
         mate = uapad::runtime::choosing();
     }
     const bool mouse = !target && s.ring == TargetRing::Always;
-    if (mouse) target = targetpanel::current();
+    if (mouse) target = targetpanel::fighting();  // 3.0.11-beta.99: the card on or not
     if (!target && !next && !mate && !walking) return;
     float view[12];
     if (!readGameCamera(view)) return;

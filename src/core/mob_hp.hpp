@@ -38,6 +38,11 @@ private:
     std::unordered_map<uint32_t, Known> known_;
 };
 
+// 3.0.11-beta.99 (the owner: «hp для мобов должно быть доступно и в обычном режиме»): whose bar is the target's -
+// played with the controller (`pad`) its target, else the one the character fights; with the mouse the monster under
+// the cursor while its per cent is known, else the one the character fights
+uint32_t pointed(const Table& t, bool pad, uint32_t padTarget, uint32_t underCursor, uint32_t fighting);
+
 uint32_t fillColour(int hp);  // ARGB: green, red below a quarter
 
 // The bar over a sprite's box (left, top, right, bottom in the game's pixels, the game `screenHeight` pixels high)

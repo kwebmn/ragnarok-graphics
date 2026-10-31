@@ -71,8 +71,15 @@ static_assert(std::size(kParts) == size_t(uapad::gamewindow::kBlockerCount), "a 
 unsigned g_told = 0;    // the parts whose first cursor over them is logged
 unsigned g_hidden = 0;  // 3.0.11-beta.33: the parts whose first actor hidden under them is logged
 int g_drops = 0;        // 3.0.11-beta.40: the drops over the parts logged
+// 3.0.11-beta.99: this frame's answer (1: a window under the cursor - the game's or a part) and the actor the game's
+// cursor points at in the world (the pick's record, its id at +0x18)
+int g_answer = 0;
+uint32_t g_pointed = 0;
+DWORD g_pointedAt = 0;
+constexpr uint32_t kRecordId = 0x18;
+constexpr DWORD kPointedMs = 500;  // the game mode's frame not run since: none
 
-int __attribute__((thiscall)) windowsInput(uint32_t manager) {
+int windowsAnswer(uint32_t manager) {
     const int answer = reinterpret_cast<InputFn>(uintptr_t(kInput))(manager);
     if (answer == 1) return answer;  // a window of the game's own, or one holding the mouse
     int x = 0, y = 0, width = 0, height = 0;
@@ -88,9 +95,14 @@ int __attribute__((thiscall)) windowsInput(uint32_t manager) {
     return 1;
 }
 
+int __attribute__((thiscall)) windowsInput(uint32_t manager) {
+    g_answer = windowsAnswer(manager);
+    return g_answer;
+}
+
 // 3.0.11-beta.33: no actor under a part of the driver's - the frame's hover forgets the last one pointed at as over
 // the bare ground, and names none
-void* __attribute__((thiscall)) pickedActor(uint32_t world, float x, float y) {
+void* pickedUnder(uint32_t world, float x, float y) {
     void* const actor = reinterpret_cast<PickFn>(uintptr_t(kPick))(world, x, y);
     int cx = 0, cy = 0, width = 0, height = 0;
     if (!actor || !uapad::clientmouse::read(cx, cy, width, height)) return actor;
@@ -102,6 +114,14 @@ void* __attribute__((thiscall)) pickedActor(uint32_t world, float x, float y) {
                  "cursor through it", kParts[part], int(x), int(y));
     }
     return nullptr;
+}
+
+void* __attribute__((thiscall)) pickedActor(uint32_t world, float x, float y) {
+    void* const actor = pickedUnder(world, x, y);
+    g_pointed = 0;  // 3.0.11-beta.99: over a window the world's actor is not pointed at
+    if (actor && g_answer != 1) std::memcpy(&g_pointed, static_cast<const uint8_t*>(actor) + kRecordId, 4);
+    g_pointedAt = GetTickCount();
+    return actor;
 }
 
 // 3.0.11-beta.40: a drag let go over a part of the driver's is a window's drop, not the ground's
@@ -171,6 +191,10 @@ bool installWorldMouse() {
              "actors under them hidden (0x%X), a drag let go over them a window's (0x%X) - the world under them does "
              "not react to the cursor", kCall, kPickCall, kDropCall);
     return true;
+}
+
+uint32_t pointedActor() {
+    return g_pointed && GetTickCount() - g_pointedAt <= kPointedMs ? g_pointed : 0;
 }
 
 }  // namespace uagfx::win

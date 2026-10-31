@@ -1,4 +1,5 @@
 #pragma once
+#include <cstdint>
 
 namespace uagfx::win {
 
@@ -12,5 +13,8 @@ namespace uagfx::win {
 // (0x566DFA -> 0x4F9890) finds none under a part - its hover kept the last monster or player pointed at and named an
 // NPC under the part past that answer. False, with a log line, when the exe is another build.
 bool installWorldMouse();
+// 3.0.11-beta.99 (the owner: «hp для мобов должно быть доступно и в обычном режиме»): the world's actor the game's
+// cursor points at this frame (the pick's, not under a window of the game's or a part); 0 none or not hooked
+uint32_t pointedActor();
 
 }  // namespace uagfx::win

@@ -38,6 +38,11 @@ std::vector<Shown> Table::shown(MobHp mode, uint32_t target, uint32_t nowMs) con
     return out;
 }
 
+uint32_t pointed(const Table& t, bool pad, uint32_t padTarget, uint32_t underCursor, uint32_t fighting) {
+    if (pad) return padTarget ? padTarget : fighting;
+    return underCursor && t.hp(underCursor) >= 0 ? underCursor : fighting;
+}
+
 uint32_t fillColour(int hp) { return hp < 25 ? 0xFFE5534Bu : 0xFF5BD36Cu; }
 
 Bar barOver(const float box[4], bool target, int screenHeight) {

@@ -88,6 +88,15 @@ The owner 31.10: «Полоски HP мобов - всем показывай»,
   the pad's clientnpc, keys 1-9 / Enter / Esc / arrows while the chat line is empty (chatwin::inputEmpty), the number
   field kept the game's), the pad hint line hidden while it shows, [interface] npc_talk. Tests
   game_packets_an_npcs_words_and_menu, npc_talk_* (3); suite 2025/0.
+- Stage 1 follow-up: built as 3.0.11-beta.99 (the owner: «hp для мобов должно быть доступно и в обычном режиме») - the
+  bars' target with the mouse no longer needed the target card shown (targetpanel::current() was 0 with the card off,
+  no reference pack or an unknown monster: no wide bar, «Лише ціль» empty): core/mob_hp pointed() (the controller's
+  target; with the mouse the monster under the cursor while its per cent is known; else targetpanel::fighting(), the
+  one the character fights, card on or not), win/world_mouse pointedActor() (the pick's record id +0x18 at 0x566DFA,
+  not under a window: the frame's answer at 0x566C9A != 1), bars moved where the world ends (record.firstInterface():
+  under the game's windows, names, cursor), the chevron over any bar, the ring «Завжди» on fighting(); the row only in
+  «Інтерфейс» (off the «Контролер» page), its hint says mouse and controller alike. Test
+  mob_hp_the_target_with_the_mouse_and_with_the_controller; suite 2026/0.
 - Stage 5 research (not built yet): 0x00c4 deal type; 0x00c6 buy list (11 B each: price.L discount.L type.B nameid.W)
   -> session deal list +0xF28 (count +0xF2C, FUN_0062bbb0(rec, 0); FUN_004ffd30 copies the record's text at +0x11 into
   m_itemName) + windows 0x16 (mgr+0xEC, class 0x69B3E0, SendMsg 0x4AFC00: 0x24 0 buy / 1 sell) and 0x17 (buy cart,

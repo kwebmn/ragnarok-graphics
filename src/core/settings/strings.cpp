@@ -5046,15 +5046,18 @@ constexpr Entry kTexts[] = {
     {Text::InterfaceTargetRingPad, "With the controller", "З контролером", "С контроллером"},
     {Text::InterfaceTargetRingAlways, "Always", "Завжди", "Всегда"},
     {Text::InterfaceMobHp, "Monsters' HP bars", "Смужки HP монстрів", "Полоски HP монстров"},  // 3.0.11-beta.95
-    {Text::InterfaceMobHpHint,
+    {Text::InterfaceMobHpHint,  // 3.0.11-beta.99: with the mouse too
      "A thin bar over a monster's head from the per cent the server sends to everyone near on each hit: green, red "
-     "below a quarter; the target's wider, with its per cent. «The target and the wounded» - a wounded monster's bar "
-     "for 8 seconds after its last hit; a whole one has none.",
+     "below a quarter. With the mouse and with the controller alike: the target (the one the character fights or the "
+     "controller chose) and the monster under the mouse cursor have it wider, with the per cent. "
+     "«The target and the wounded» - a wounded monster's bar for 8 seconds after its last hit; a whole one has none.",
      "Тонка смужка над головою монстра з відсотка, який сервер надсилає всім поруч на кожен удар: зелена, нижче чверті "
-     "— червона; у цілі ширша і з відсотком. «Ціль і поранені» — смужка пораненого ще 8 секунд після останнього удару; "
-     "у цілого її немає.",
+     "— червона. І з мишею, і з контролером: у цілі (кого б'є персонаж або вибрав контролер) і в монстра під курсором "
+     "миші вона ширша, з відсотком. «Ціль і поранені» — смужка пораненого ще 8 секунд після останнього удару; у "
+     "цілого її немає.",
      "Тонкая полоска над головой монстра из процента, который сервер присылает всем рядом на каждый удар: зелёная, "
-     "ниже четверти — красная; у цели шире и с процентом. «Цель и раненые» — полоска раненого ещё 8 секунд после "
+     "ниже четверти — красная. И с мышью, и с контроллером: у цели (кого бьёт персонаж или выбрал контроллер) и у "
+     "монстра под курсором мыши она шире, с процентом. «Цель и раненые» — полоска раненого ещё 8 секунд после "
      "последнего удара; у целого её нет."},
     {Text::InterfaceMobHpOff, "Off", "Вимкнено", "Выключено"},
     {Text::InterfaceMobHpTarget, "The target only", "Лише ціль", "Только цель"},

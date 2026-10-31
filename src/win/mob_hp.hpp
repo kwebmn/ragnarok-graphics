@@ -17,11 +17,14 @@ namespace uagfx::win::mobhpwin {
 // «Полоски HP монстров»): HP bars over the monsters' heads (core/mob_hp) - the per cent from their name lines (0x0195
 // through win/packet_tap), each bar over its sprite's box from the game's pick list, under the driver's panels and
 // the game's cursor; the target's wider with its per cent beside. [interface] mob_hp. On the game's thread.
+// 3.0.11-beta.99 (the owner: «hp для мобов должно быть доступно и в обычном режиме»): the target with the mouse is the
+// monster under its cursor (win/world_mouse), else the one the character fights whether the target's card is on or
+// not; the bars go where the world ends - under the game's own windows, names and cursor.
 void packet(const packets::Event& e);
 void frame(HWND game, MobHp mode, double k, int targetWidth, int targetHeight);
 void draw(FrameRecord& record, gpu::Renderer& renderer);
 int hp(uint32_t id);  // the per cent the bars show for it; -1 none (not known, or the bars off)
-// The target's bar's top in the game's pixels over its box, for the target's chevron to stand over it; false: none
+// A monster's bar's top in the game's pixels over its box, for the target's chevron to stand over it; false: none
 bool targetBarTop(uint32_t id, const float box[4], int screenHeight, float& top);
 
 }  // namespace uagfx::win::mobhpwin

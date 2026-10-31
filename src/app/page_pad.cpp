@@ -91,7 +91,8 @@ public:
         p.heading(t(Text::PadOnInterface));
         rows_->buildRow(p, "interface.pad_hints");
         rows_->buildRow(p, "interface.target_ring");
-        rows_->buildRow(p, "interface.mob_hp");  // 3.0.11-beta.95
+        // 3.0.11-beta.99 (the owner: «hp для мобов должно быть доступно и в обычном режиме»): the HP bars' row in
+        // «Інтерфейс» alone - not the controller's
         rows_->buildRow(p, "interface.pad_walk");
         p.gap();
         buttons(p, value("pad.type", "auto") == "sony");

@@ -15,6 +15,7 @@
 #include "win/log.hpp"
 #include "win/picture_draw.hpp"
 #include "win/target_card.hpp"
+#include "win/world_mouse.hpp"
 
 namespace uagfx::win::mobhpwin {
 namespace {
@@ -22,6 +23,8 @@ namespace {
 struct Bar {
     float x = 0, y = 0, w = 0, h = 0;  // a part's pixels
     int hp = 0;
+    uint32_t id = 0;  // 3.0.11-beta.99: whose (the ring's chevron stands over any)
+    bool target = false;
 };
 
 struct State {
@@ -40,6 +43,8 @@ struct State {
     std::string key;
     int textX = 0, textY = 0;
     int heard = 0, told = 0;
+    uint32_t pointedLast = 0;  // 3.0.11-beta.99: the target's last, and where it came from (logged)
+    int pointedTold = 0;
 };
 
 State& state() {
@@ -47,9 +52,22 @@ State& state() {
     return s;
 }
 
-uint32_t targetNow() {  // the controller's target while played with it, else the one the character fights
-    const uint32_t pad = uapad::runtime::look().shown ? uapad::runtime::target() : 0;
-    return pad ? pad : targetpanel::current();
+// 3.0.11-beta.99 (the owner: «hp для мобов должно быть доступно и в обычном режиме»): the controller's target while
+// played with it; with the mouse the monster under its cursor; else the one the character fights - the card on or not
+uint32_t targetNow(State& s) {
+    const bool pad = uapad::runtime::look().shown;
+    const uint32_t padTarget = pad ? uapad::runtime::target() : 0, under = pad ? 0 : pointedActor();
+    const uint32_t fighting = targetpanel::fighting();
+    const uint32_t target = mobhp::pointed(s.table, pad, padTarget, under, fighting);
+    if (target && target != s.pointedLast && s.pointedTold < 20) {
+        ++s.pointedTold;
+        LOG_INFO("mob hp: the target's bar on %u - %s", target,
+                 target == padTarget  ? "the controller's target"
+                 : target == under    ? "the monster under the mouse cursor"
+                                      : "the one the character fights");
+    }
+    s.pointedLast = target;
+    return target;
 }
 
 }  // namespace
@@ -79,7 +97,7 @@ void frame(HWND game, MobHp mode, double k, int targetWidth, int targetHeight) {
     s.text = false;
     s.target = 0;
     if (mode == MobHp::Off || !game || k <= 0 || targetWidth <= 0 || targetHeight <= 0 || !inGameWorld()) return;
-    const uint32_t target = targetNow();
+    const uint32_t target = targetNow(s);
     const std::vector<mobhp::Shown> list = s.table.shown(mode, target, GetTickCount());
     if (list.empty()) return;
     readActorBoxes(s.boxes);
@@ -90,7 +108,7 @@ void frame(HWND game, MobHp mode, double k, int targetWidth, int targetHeight) {
         const auto it = s.boxes.find(m.id);
         if (it == s.boxes.end()) continue;  // not on the screen now
         const mobhp::Bar b = mobhp::barOver(it->second.data(), m.target, gameHeight);
-        s.bars.push_back(Bar{b.x * kk, b.y * kk, b.w * kk, b.h * kk, m.hp});
+        s.bars.push_back(Bar{b.x * kk, b.y * kk, b.w * kk, b.h * kk, m.hp, m.id, m.target});
         if (!m.target) continue;
         s.target = m.id;
         const float scale = uistyle::partScale(k);
@@ -123,8 +141,8 @@ void frame(HWND game, MobHp mode, double k, int targetWidth, int targetHeight) {
 void draw(FrameRecord& record, gpu::Renderer& renderer) {
     State& s = state();
     if (s.bars.empty() || s.k <= 0) return;
-    int cursor = -1, cx = 0, cy = 0;  // under the game's own cursor, as the panels
-    if (readGameCursor(cx, cy)) cursor = panel::cursorDraw(record, float(cx), float(cy));
+    // 3.0.11-beta.99: where the world ends - under the game's own windows, its names and its cursor, as the world is
+    const size_t world = record.firstInterface(), before = record.commands().size();
     const float edge = std::max(1.0f, s.k * 0.75f);
     for (const Bar& b : s.bars) {
         drawFill(record, b.x - edge, b.y - edge, b.w + 2 * edge, b.h + 2 * edge, s.k, 0xB4000000u);
@@ -133,7 +151,8 @@ void draw(FrameRecord& record, gpu::Renderer& renderer) {
     }
     if (s.text)
         drawPart(record, renderer, s.picture, s.texture, s.texW, s.texH, s.upload, s.textX, s.textY, s.k);
-    if (cursor >= 0) record.moveLastBefore(record.commands().size() - size_t(cursor) - 1, size_t(cursor));
+    const size_t added = record.commands().size() - before;  // the per cent's upload too, when it went now
+    if (added) record.moveLastBefore(added, world);
 }
 
 int hp(uint32_t id) {
@@ -143,9 +162,13 @@ int hp(uint32_t id) {
 
 bool targetBarTop(uint32_t id, const float box[4], int screenHeight, float& top) {
     const State& s = state();
-    if (!id || id != s.target || s.bars.empty()) return false;
-    top = mobhp::barOver(box, true, screenHeight).y;
-    return true;
+    if (!id) return false;
+    for (const Bar& b : s.bars) {
+        if (b.id != id) continue;
+        top = mobhp::barOver(box, b.target, screenHeight).y;
+        return true;
+    }
+    return false;
 }
 
 }  // namespace uagfx::win::mobhpwin

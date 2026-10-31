@@ -57,3 +57,21 @@ TEST(mob_hp_bars_colour_place_and_words) {
     CHECK(mobhp::barOver(box, false, 540).w < b.w);  // with the game's size
     CHECK(mobhp::percentText(57) == "57%");
 }
+
+// 3.0.11-beta.99 (the owner: «hp для мобов должно быть доступно и в обычном режиме»): whose bar is the target's (wider,
+// with its per cent) - with the controller its target, else the one the character fights; with the mouse the monster
+// under the cursor while its per cent is known, else the one the character fights (not only while the target's card
+// shows it)
+TEST(mob_hp_the_target_with_the_mouse_and_with_the_controller) {
+    mobhp::Table t;
+    t.seen(7, 100, 0);  // under the cursor, whole
+    t.seen(9, 40, 0);   // the one the character fights
+    CHECK_EQ(mobhp::pointed(t, true, 5, 7, 9), 5u);   // the controller's target
+    CHECK_EQ(mobhp::pointed(t, true, 0, 7, 9), 9u);   // the controller with none: the one fought
+    CHECK_EQ(mobhp::pointed(t, false, 5, 7, 9), 7u);  // the mouse: the one under the cursor
+    CHECK_EQ(mobhp::pointed(t, false, 0, 8, 9), 9u);  // its per cent not known yet: the one fought
+    CHECK_EQ(mobhp::pointed(t, false, 0, 0, 9), 9u);
+    CHECK_EQ(mobhp::pointed(t, false, 0, 0, 0), 0u);
+    const std::vector<mobhp::Shown> v = t.shown(MobHp::Target, mobhp::pointed(t, false, 0, 7, 9), 100);
+    CHECK(v.size() == 1 && v[0].id == 7 && v[0].hp == 100 && v[0].target);  // whole, under the cursor: its bar
+}
