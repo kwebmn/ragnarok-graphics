@@ -1,3 +1,21 @@
+# uaRO Graphics 3.0.11-beta.103 — what's new
+
+The controller's walking arrow — your choice, every variant of the doc on the arrow's looks:
+- **A new row "Walking arrow"** in "Interface" and on the "Controller" page (and in the game's console):
+  "Chevrons" (the default — the doc's advice), "Slim arrow", "The concept's arrow" (as in beta.102),
+  "Ring and pointer", "Dots of the way", "The cell alone", "None". It changes at once, no restart.
+- **Chevrons**: three white marks run from the feet to the cell (the nearest fainter), a gold diamond in the cell.
+- **Slim arrow**: a thin line coming out of nothing at the feet widens to a white head edged in gold; the cell's gold
+  corners.
+- **Ring and pointer**: a ring round the feet with a gold pointer on it, a small gold ring in the cell.
+- **Dots of the way**: dots from the feet, brighter toward the end, a gold ring in the cell.
+- **The cell alone**: its gold frame and a small gold wedge at the feet.
+- **For all of them**: a dark shade under the arrow (readable on light ground), a soft turn (~0.08 s), fading in over
+  0.12 s and out over 0.2 s after letting go of the stick. **A wall in the way** — a red bar past the cell (pushing
+  into a wall standing — the bar right in front of the feet).
+- To check: switch the looks in "Interface" while walking, walk along walls and on slopes. In the log:
+  "walk arrow: the look …", "walk arrow: chevrons - N triangles on the ground …".
+
 # uaRO Graphics 3.0.11-beta.102 — what is new
 
 Walking with the controller — by the map's cells, with the arrow of the concept:
