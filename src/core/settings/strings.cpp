@@ -5232,6 +5232,17 @@ constexpr Entry kTexts[] = {
     {Text::WalkArrowDots, "Dots of the way", "Точки шляху", "Точки пути"},
     {Text::WalkArrowCell, "The cell alone", "Лише клітинка", "Только клетка"},
     {Text::WalkArrowOff, "None", "Немає", "Нет"},
+    {Text::InterfaceWalkMark, "The cell it goes to", "Клітинка, куди йти", "Клетка, куда идти"},  // 3.0.11-beta.105
+    {Text::InterfaceWalkMarkHint,
+     "A mark at the walking arrow's end where the character goes: a gold diamond (chevrons), the cell's corners (slim "
+     "arrow), the cell's frame (the concept's arrow), a small gold ring (ring and pointer, dots of the way). Off: the "
+     "arrow alone. «The cell alone» always shows its cell - it is that look.",
+     "Позначка в кінці стрілки ходу, куди йде персонаж: золотий ромб (шеврони), кути клітинки (тонка стрілка), рамка "
+     "клітинки (стрілка з концепту), маленьке золоте кільце (кільце-компас, точки шляху). Вимкнено: лише стрілка. "
+     "«Лише клітинка» завжди показує свою клітинку - це і є її вигляд.",
+     "Отметка в конце стрелки хода, куда идёт персонаж: золотой ромб (шевроны), углы клетки (тонкая стрелка), рамка "
+     "клетки (стрелка из концепта), маленькое золотое кольцо (кольцо-компас, точки пути). Выключено: только стрелка. "
+     "«Только клетка» всегда показывает свою клетку - это и есть её вид."},
     {Text::InterfacePadTiles, "Start opens the windows' tile", "Start відкриває плитку вікон",
      "Start открывает плитку окон"},  // 3.0.11-beta.90
     {Text::InterfacePadTilesHint,

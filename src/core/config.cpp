@@ -520,6 +520,8 @@ Config parseConfig(const std::string& text) {
         } else if (key == "interface.pad_walk") {  // 3.0.11-beta.88: the left stick without the mouse
             if (val == "mouse") c.padWalk = PadWalk::Mouse;
             if (val == "arrow") c.padWalk = PadWalk::Arrow;
+        } else if (key == "interface.walk_mark") {  // 3.0.11-beta.105: the mark at the arrow's end
+            setBool(val, c.walkMark);
         } else if (key == "interface.walk_arrow") {  // 3.0.11-beta.103: the look of the stick's arrow
             for (const WalkLook w : {WalkLook::Off, WalkLook::Chevrons, WalkLook::Slim, WalkLook::Concept,
                                      WalkLook::Ring, WalkLook::Dots, WalkLook::Cell})

@@ -166,6 +166,13 @@ The owner 31.10: «Полоски HP мобов - всем показывай»,
   controller, walk_glide_ends_at_a_wall_with_the_controller, ctl_direct_walk_tells_the_way_it_marches_and_the_lead,
   stick_walk_tells_the_way_it_marched; suite 2054/0. Ruling R11: the end mark glides (not snapped to the cell under
   the end: that ticks a cell every 150 ms); cost if wrong: «Лише клітинка» shows a cell-sized square, not a cell.
+- End mark switch (3.0.11-beta.105; the owner: «а можно клетку куда идти над стрелкой не рисовать?»): [interface]
+  walk_mark (Check, default 0; «Клітинка, куди йти» under «Стрілка ходу» in «Інтерфейс», on «Контролер», the console's
+  sub-row, live) - WalkArrow.mark, each look's end mark (chevrons' diamond, slim's corners+fill, concept's cell frame+
+  fill, ring's and dots' small rings) and its shade left out; the flat fallback's ring too. Ruling R12: off by default
+  (the owner asked not to draw it; every part its own box, so it can come back); «Лише клітинка» keeps its cell (the
+  look itself) - cost if wrong: one more condition. Tests config_walk_mark, ground_way_walk_looks_without_the_mark;
+  suite 2056/0.
 - Stage 5 research: 0x00c4 deal type; 0x00c6 buy list (11 B each: price.L discount.L type.B nameid.W)
   -> session deal list +0xF28 (count +0xF2C, FUN_0062bbb0(rec, 0); FUN_004ffd30 copies the record's text at +0x11 into
   m_itemName) + windows 0x16 (mgr+0xEC, class 0x69B3E0, SendMsg 0x4AFC00: 0x24 0 buy / 1 sell) and 0x17 (buy cart,

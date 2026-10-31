@@ -428,16 +428,18 @@ struct Frame {
 };
 
 // beta.102's concept arrow: a soft white shaft in half-cell pieces from near the feet, a white head over a gold edge
-// with its tip at the cell's near edge, the cell faintly filled and outlined in gold
-void conceptLook(Pen& pen, const Frame& f) {
+// with its tip at the cell's near edge, the cell faintly filled and outlined in gold (`mark`)
+void conceptLook(Pen& pen, const Frame& f, bool mark) {
     const float cs = f.cs, g = pen.grow;
     const float x1 = f.cx - cs / 2, z1 = f.cz - cs / 2, x2 = f.cx + cs / 2, z2 = f.cz + cs / 2;
-    pen.tri(x1, z1, x2, z1, x1, z2, kWalkCellFill, kPartCellFill);
-    pen.tri(x2, z1, x2, z2, x1, z2, kWalkCellFill, kPartCellFill);
-    const float corners[5][2] = {{x1, z1}, {x2, z1}, {x2, z2}, {x1, z2}, {x1, z1}};
-    for (int i = 0; i < 4; ++i)
-        pen.line(corners[i][0], corners[i][1], corners[i + 1][0], corners[i + 1][1], 0.045f * cs + g, 0.5f * cs, g,
-                 kWalkCellLine, kPartCellLine);
+    if (mark) {
+        pen.tri(x1, z1, x2, z1, x1, z2, kWalkCellFill, kPartCellFill);
+        pen.tri(x2, z1, x2, z2, x1, z2, kWalkCellFill, kPartCellFill);
+        const float corners[5][2] = {{x1, z1}, {x2, z1}, {x2, z2}, {x1, z2}, {x1, z1}};
+        for (int i = 0; i < 4; ++i)
+            pen.line(corners[i][0], corners[i][1], corners[i + 1][0], corners[i + 1][1], 0.045f * cs + g, 0.5f * cs,
+                     g, kWalkCellLine, kPartCellLine);
+    }
     const float headLen = 1.0f * cs, headHalf = 0.55f * cs, tip = f.len - 0.55f * cs, run = tip - 0.45f * cs;
     const float head = run > headLen + 0.1f * cs ? headLen : std::max(0.5f * cs, std::min(headLen, run + 0.25f * cs));
     if (run > headLen + 0.1f * cs) {
@@ -458,8 +460,8 @@ void conceptLook(Pen& pen, const Frame& f) {
 }
 
 // A: a slim shaft widening from near the feet and coming up out of nothing, a white head edged in gold, the cell's
-// gold corners over a faint gold fill
-void slimLook(Pen& pen, const Frame& f) {
+// gold corners over a faint gold fill (`mark`)
+void slimLook(Pen& pen, const Frame& f, bool mark) {
     const float cs = f.cs, g = pen.grow, tip = f.len - 0.55f * cs, half = 0.425f * cs;
     const float head = std::max(0.45f * cs, std::min(0.95f * cs, tip - 0.6f * cs)), base = tip - head;
     const float t0 = 0.6f * cs;
@@ -480,6 +482,7 @@ void slimLook(Pen& pen, const Frame& f) {
                    with(kGold, 0xF5), kPartEdge);
     pen.tri(f.x(base, half), f.z(base, half), f.x(base, -half), f.z(base, -half), f.x(tip, 0), f.z(tip, 0),
             with(kWhite, 0xEB), kPartHead);
+    if (!mark) return;
     const float x1 = f.cx - cs / 2, z1 = f.cz - cs / 2, x2 = f.cx + cs / 2, z2 = f.cz + cs / 2, arm = 0.32f * cs;
     pen.tri(x1, z1, x2, z1, x1, z2, with(kGold, 0x1A), kPartCellFill);
     pen.tri(x2, z1, x2, z2, x1, z2, with(kGold, 0x1A), kPartCellFill);
@@ -494,8 +497,8 @@ void slimLook(Pen& pen, const Frame& f) {
 }
 
 // B: up to three chevrons running on toward the cell (faint at the feet, coming in and going out softly), a gold
-// diamond in the cell; a short way (a wall near) - one chevron, still, before the diamond
-void chevronsLook(Pen& pen, const Frame& f, float phase) {
+// diamond in the cell (`mark`); a short way (a wall near) - one chevron, still, before the diamond
+void chevronsLook(Pen& pen, const Frame& f, float phase, bool mark) {
     const float cs = f.cs, g = pen.grow, start = 1.25f * cs, span = f.len - 0.85f * cs - start;
     const bool still = span < 0.3f * cs;
     if (!still || f.len >= 1.6f * cs) {
@@ -515,21 +518,23 @@ void chevronsLook(Pen& pen, const Frame& f, float phase) {
                      f.z(back, -half), f.x(at - depth, -half), f.z(at - depth, -half), c, kPartChevron);
         }
     }
+    if (!mark) return;
     const float r = 0.3f * cs + g * 1.4142f;  // the diamond along the map's axes, as the cell
     pen.quad(f.cx - r, f.cz, f.cx, f.cz - r, f.cx + r, f.cz, f.cx, f.cz + r, with(kGold, 0xF0), kPartMarker);
 }
 
-// C: a ring round the feet, its gold pointer the way; a small gold ring in the cell
-void ringLook(Pen& pen, const Frame& f) {
+// C: a ring round the feet, its gold pointer the way; a small gold ring in the cell (`mark`)
+void ringLook(Pen& pen, const Frame& f, bool mark) {
     const float cs = f.cs;
     pen.ring(f.x0, f.z0, 1.05f * cs, 0.083f * cs, 40, with(kWhite, 0xBE), kPartRing);
     pen.grownTri(f.x(1.1f * cs, 0.42f * cs), f.z(1.1f * cs, 0.42f * cs), f.x(1.1f * cs, -0.42f * cs),
                  f.z(1.1f * cs, -0.42f * cs), f.x(2.0f * cs, 0), f.z(2.0f * cs, 0), with(kGold, 0xF5), kPartPointer);
-    pen.ring(f.cx, f.cz, 0.32f * cs, 0.0625f * cs, 24, with(kGold, 0xDC), kPartMarker);
+    if (mark) pen.ring(f.cx, f.cz, 0.32f * cs, 0.0625f * cs, 24, with(kGold, 0xDC), kPartMarker);
 }
 
 // D: dots a half cell apart up to the cell's near edge, bigger and brighter toward it; a gold ring in the cell
-void dotsLook(Pen& pen, const Frame& f) {
+// (`mark`)
+void dotsLook(Pen& pen, const Frame& f, bool mark) {
     const float cs = f.cs;
     const int n = f.len - 0.5f * cs >= 0.6f * cs ? int((f.len - 1.1f * cs) / (0.5f * cs)) + 1 : 0;
     for (int i = 0; i < n; ++i) {
@@ -537,7 +542,7 @@ void dotsLook(Pen& pen, const Frame& f) {
         pen.disc(f.x(at, 0), f.z(at, 0), (0.09f + 0.04f * k) * cs, 8,
                  with(kWhite, uint32_t(std::lround(255 * (0.25f + 0.65f * k)))), kPartDot);
     }
-    pen.ring(f.cx, f.cz, 0.36f * cs, 0.0625f * cs, 24, with(kGold, 0xE6), kPartMarker);
+    if (mark) pen.ring(f.cx, f.cz, 0.36f * cs, 0.0625f * cs, 24, with(kGold, 0xE6), kPartMarker);
 }
 
 // E: the cell alone - softly lit in gold, its gold frame; a small gold wedge at the feet shows the way
@@ -582,7 +587,7 @@ std::vector<Tri> walkArrowShape(float x0, float z0, int toX, int toY, const Heig
     if (len < 0.6f * cs) return {};  // where it stands
     std::vector<Flat> flat;
     Pen pen{flat, false, 0.0f, 1.0f};
-    conceptLook(pen, Frame{x0, z0, dx / len, dz / len, len, cx, cz, cs});
+    conceptLook(pen, Frame{x0, z0, dx / len, dz / len, len, cx, cz, cs}, true);
     return onGround(flat, g, cs, sign, lift);
 }
 
@@ -597,11 +602,11 @@ std::vector<Tri> walkShape(WalkLook look, const WalkArrow& a, const Heights& g, 
         Pen pen{flat, shade, shade ? kShadeGrow * cs : 0.0f, std::min(1.0f, a.alpha)};
         if (len >= 0.6f * cs) {
             switch (look) {
-                case WalkLook::Chevrons: chevronsLook(pen, f, a.phase - std::floor(a.phase)); break;
-                case WalkLook::Slim: slimLook(pen, f); break;
-                case WalkLook::Concept: conceptLook(pen, f); break;
-                case WalkLook::Ring: ringLook(pen, f); break;
-                case WalkLook::Dots: dotsLook(pen, f); break;
+                case WalkLook::Chevrons: chevronsLook(pen, f, a.phase - std::floor(a.phase), a.mark); break;
+                case WalkLook::Slim: slimLook(pen, f, a.mark); break;
+                case WalkLook::Concept: conceptLook(pen, f, a.mark); break;
+                case WalkLook::Ring: ringLook(pen, f, a.mark); break;
+                case WalkLook::Dots: dotsLook(pen, f, a.mark); break;
                 case WalkLook::Cell: cellLook(pen, f); break;
                 case WalkLook::Off: break;
             }

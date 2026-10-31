@@ -446,3 +446,33 @@ TEST(ground_way_walk_glide_holds_still_against_the_feet) {
     CHECK(std::fabs(gl.len - 3 * cs) < 1e-3f);
 }
 
+// 3.0.11-beta.105 (the owner: «а можно клетку куда идти над стрелкой не рисовать?»): without the end's mark each look
+// is its arrow alone - no diamond, no cell's corners, frame or fill, no small ring (nor their shade); «Лише клітинка»
+// keeps its cell (the look itself)
+TEST(ground_way_walk_looks_without_the_mark) {
+    groundway::Heights g;
+    CHECK(groundway::parseGat(gat(20, 20, [](int, int) { return 0.0f; }), g));
+    const int cs = 5;
+    groundway::WalkArrow a;
+    groundway::cellToWorld(4, 10, 20, 20, cs, a.x0, a.z0);
+    a.len = 5.0f * cs;
+    const auto marks = [](const std::vector<groundway::Tri>& t) {
+        size_t n = 0;
+        for (const groundway::Tri& q : t)
+            n += q.part == groundway::kPartMarker || q.part == groundway::kPartCellLine ||
+                 q.part == groundway::kPartCellFill;
+        return n;
+    };
+    for (const WalkLook look :
+         {WalkLook::Chevrons, WalkLook::Slim, WalkLook::Concept, WalkLook::Ring, WalkLook::Dots}) {
+        a.mark = true;
+        const std::vector<groundway::Tri> with = groundway::walkShape(look, a, g, cs, 1.0f, 0.5f);
+        a.mark = false;
+        const std::vector<groundway::Tri> without = groundway::walkShape(look, a, g, cs, 1.0f, 0.5f);
+        CHECK(marks(with) > 0 && marks(without) == 0);
+        CHECK(!without.empty() && without.size() < with.size());  // the arrow stays, its mark's shade gone too
+    }
+    a.mark = false;
+    CHECK(marks(groundway::walkShape(WalkLook::Cell, a, g, cs, 1.0f, 0.5f)) > 0);
+}
+

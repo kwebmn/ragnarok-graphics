@@ -594,6 +594,9 @@ struct Config {
     PadWalk padWalk = PadWalk::Arrow;  // 3.0.11-beta.102: by the map's cells by default (core/stick_walk)
     // 3.0.11-beta.103: [interface] walk_arrow - how the arrow of pad_walk = arrow looks (core/ground_way walkShape)
     WalkLook walkArrow = WalkLook::Chevrons;
+    // 3.0.11-beta.105 (the owner: «а можно клетку куда идти над стрелкой не рисовать?»): [interface] walk_mark - the
+    // mark at the arrow's end where the character goes (a diamond, a cell's corners or frame, a small ring)
+    bool walkMark = false;
     // 3.0.11-beta.90 (stage 6): [interface] pad_tiles - Start opens the windows' tile (win/pad_tiles); off: the pad's
     // own menu, as before
     bool padTiles = true;

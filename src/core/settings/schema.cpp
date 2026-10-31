@@ -137,6 +137,8 @@ const std::vector<IniSetting>& iniSettings() {
          {Text::WalkArrowChevrons, Text::WalkArrowSlim, Text::WalkArrowConcept, Text::WalkArrowRing,
           Text::WalkArrowDots, Text::WalkArrowCell, Text::WalkArrowOff},
          Text::InterfaceWalkArrow, Text::InterfaceWalkArrowHint, ""},
+        {"interface", "walk_mark", Page::Interface, Control::Check, 0, 1, 0, {"0", "1"}, {},  // 3.0.11-beta.105
+         Text::InterfaceWalkMark, Text::InterfaceWalkMarkHint, ""},
         // 3.0.11-beta.33: the way followed on the ground - footprints, a strip or none
         {"interface", "minimap_way", Page::Interface, Control::Choice, 0, 0, 0, {"steps", "line", "off"},
          {Text::InterfaceMinimapWaySteps, Text::InterfaceMinimapWayLine, Text::InterfaceMinimapWayOff},
@@ -994,6 +996,7 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "interface.mob_hp") return mobHpToken(c.mobHp);                               // 3.0.11-beta.95
     if (k == "interface.pad_walk") return padWalkToken(c.padWalk);                         // 3.0.11-beta.88
     if (k == "interface.walk_arrow") return walkLookToken(c.walkArrow);                    // 3.0.11-beta.103
+    if (k == "interface.walk_mark") return c.walkMark ? "1" : "0";                         // 3.0.11-beta.105
     if (k == "interface.pad_tiles") return c.padTiles ? "1" : "0";                         // 3.0.11-beta.90
     if (k == "interface.minimap_way") return wayOnGroundToken(c.minimapWay);  // 3.0.11-beta.33
     if (k == "interface.buffs") return buffsLookToken(c.buffs);               // 3.0.11-beta.35

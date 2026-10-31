@@ -34,6 +34,7 @@ constexpr double kRunMs = 600;
 
 struct Walk {
     WalkLook look = WalkLook::Chevrons;
+    bool mark = false;           // 3.0.11-beta.105: the mark at its end
     bool has = false;            // an arrow drawn or fading out
     groundway::WalkGlide glide;  // 3.0.11-beta.104: along the way, gliding with the feet (core/ground_way glide)
     bool cut = false;
@@ -175,12 +176,14 @@ void look(TargetRing ring) {
     LOG_INFO("target ring: %s", targetRingToken(ring));
 }
 
-void walkLook(WalkLook look) {
+void walkLook(WalkLook look, bool mark) {
     Walk& w = state().walk;
-    if (look == w.look) return;
+    if (look == w.look && mark == w.mark) return;
     w.look = look;
+    w.mark = mark;
     w.told = false;
-    LOG_INFO("walk arrow: the look %s", walkLookToken(look));
+    LOG_INFO("walk arrow: the look %s, %s", walkLookToken(look),
+             mark ? "a mark at its end where it goes" : "no mark at its end");
 }
 
 void newFrame() { state().drawn = false; }
@@ -254,6 +257,7 @@ void draw(FrameRecord& record, int width, int height) {
         arrow.blocked = w.cut;
         arrow.phase = w.phase;
         arrow.alpha = w.alpha;
+        arrow.mark = w.mark;
         std::vector<groundway::Tri> tris;
         if (heights) tris = groundway::walkShape(w.look, arrow, *heights, cellSize, sign, kLift);
         const float len = w.glide.len, tx = me[0] + arrow.wayX * len, tz = me[2] + arrow.wayZ * len;
@@ -265,7 +269,7 @@ void draw(FrameRecord& record, int width, int height) {
                              kArrowShade, kBias, s.verts);
             groundway::arrow(x0, z0, tx, tz, y, kArrowWidth, kArrowHead, kArrowHeadWidth, view, p, kArrowWhite,
                              kBias + 0.2f, s.verts);
-            groundway::ring(tx, y, tz, 1.4f, 0.45f, 20, false, view, p, kArrowGold, kBias + 0.2f, s.verts);
+            if (w.mark) groundway::ring(tx, y, tz, 1.4f, 0.45f, 20, false, view, p, kArrowGold, kBias + 0.2f, s.verts);
         }
         if (!s.arrowTold && walking) {
             s.arrowTold = true;
@@ -274,9 +278,9 @@ void draw(FrameRecord& record, int width, int height) {
         }
         if (!w.told && !tris.empty() && w.alpha >= 1.0f) {
             w.told = true;
-            LOG_INFO("walk arrow: %s - %zu triangles on the ground, the way %.0f deg from east%s",
+            LOG_INFO("walk arrow: %s - %zu triangles on the ground, the way %.0f deg from east%s%s",
                      walkLookToken(w.look), tris.size(), double(w.glide.angle) * 57.29578,
-                     w.cut ? ", a wall past its end" : "");
+                     w.mark ? "" : ", no mark at its end", w.cut ? ", a wall past its end" : "");
         }
     }
     float at[3] = {0, 0, 0};

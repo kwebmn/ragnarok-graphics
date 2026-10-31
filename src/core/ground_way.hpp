@@ -128,6 +128,7 @@ struct WalkArrow {
     bool blocked = false;      // a wall right past it
     float phase = 0;           // the chevrons' run, 0..1
     float alpha = 1;           // faded in and out
+    bool mark = true;          // 3.0.11-beta.105: the end's mark (the diamond, the corners, the frame, the small ring)
 };
 std::vector<Tri> walkShape(WalkLook look, const WalkArrow& arrow, const Heights& g, int cellSize, float sign,
                            float lift);

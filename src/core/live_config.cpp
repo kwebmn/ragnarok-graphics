@@ -219,6 +219,10 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("walk_arrow", walkLookToken(running.walkArrow), walkLookToken(file.walkArrow)));
         n.walkArrow = file.walkArrow;
     }
+    if (file.walkMark != running.walkMark) {  // 3.0.11-beta.105: the mark at the arrow's end
+        u.applied.push_back(change("walk_mark", flag(running.walkMark), flag(file.walkMark)));
+        n.walkMark = file.walkMark;
+    }
     if (file.mobHp != running.mobHp) {  // 3.0.11-beta.95: the monsters' HP bars
         u.applied.push_back(change("mob_hp", mobHpToken(running.mobHp), mobHpToken(file.mobHp)));
         n.mobHp = file.mobHp;

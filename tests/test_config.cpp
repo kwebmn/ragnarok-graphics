@@ -1321,3 +1321,15 @@ TEST(config_walk_arrow) {
           WalkLook::Ring);
 }
 
+// 3.0.11-beta.105 (the owner: «а можно клетку куда идти над стрелкой не рисовать?»): [interface] walk_mark - the mark
+// at the arrow's end where the character goes (the diamond, the cell's corners or frame, the small ring); off by
+// default
+TEST(config_walk_mark) {
+    CHECK(!parseConfig("").walkMark);
+    CHECK(parseConfig("[interface]\nwalk_mark = 1\n").walkMark);
+    const settings::IniSetting* s = settings::findSetting("interface.walk_mark");
+    CHECK(s != nullptr && s->page == settings::Page::Interface && s->control == settings::Control::Check);
+    CHECK(appliesNow("interface.walk_mark"));
+    CHECK(liveUpdate(parseConfig(""), parseConfig("[interface]\nwalk_mark = 1\n")).next.walkMark);
+}
+

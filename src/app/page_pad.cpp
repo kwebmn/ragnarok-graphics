@@ -95,6 +95,7 @@ public:
         // «Інтерфейс» alone - not the controller's
         rows_->buildRow(p, "interface.pad_walk");
         rows_->buildRow(p, "interface.walk_arrow");  // 3.0.11-beta.103: the look of the stick's arrow
+        rows_->buildRow(p, "interface.walk_mark");   // 3.0.11-beta.105: the mark at its end
         p.gap();
         buttons(p, value("pad.type", "auto") == "sony");
         p.gap();
