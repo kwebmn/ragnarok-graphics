@@ -1,3 +1,16 @@
+# uaRO Graphics 3.0.11-beta.88 — what is new
+
+The controller in the interface, stage 4 (a prototype, off by default):
+- **Walking without the mouse, an arrow on the ground.** In «Interface» → «The controller walks» choose «With an
+  arrow, no mouse». The left stick no longer moves the cursor: the character goes where the stick points (the camera's
+  turn counted), an arrow on the ground runs from its feet to the cell it goes to with a small gold ring. Before a wall
+  the arrow is shorter - no way on (the cells come from the reference). Let go of the stick - the character stops, as
+  before.
+- The default «With the cursor (as before)» - everything as it was until you check it.
+- To check: choose «With an arrow, no mouse», walk in a field and a narrow passage; turn the camera and walk again;
+  let go of the stick. In the log: «walk without the mouse: on», «walk without the mouse: <map> - its walkable cells
+  read», «walk without the mouse: to …», «walk arrow: from …», «walk stop at …».
+
 # uaRO Graphics 3.0.11-beta.87 — what is new
 
 The controller in the interface, stage 3:
