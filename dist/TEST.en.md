@@ -1,3 +1,14 @@
+# uaRO Graphics 3.0.11-beta.85 — what is new
+
+The controller in the interface, stage 1 (by the concept «Контроллер в интерфейсе uaRO»):
+- **Heals and buffs on a party member from the controller.** A skill for your own (Heal, Blessing, Increase AGI…)
+  with party members near no longer goes on you at once - it asks whom. In the «Party» panel the chosen one is filled
+  gold, a hint line at the bottom. D-pad ↑ ↓ - the next (the character last), A - cast (far away - the character
+  walks up), the skill's own button again - on yourself, B or Start - cancel; 8 seconds cancel it by themselves.
+  Without the party near - on you at once, as before.
+- To check: in a party on one map press Heal on the controller, choose a member and cast; again - on yourself; cancel
+  with B. In the log: «F2: skill 28 - whom? 3 to choose», «F2: chosen member …», «F2: the choice cancelled».
+
 # uaRO Graphics 3.0.11-beta.84 — what is new
 
 Point 8 (your «1-8, do it») — the last one, all eight are done:
