@@ -656,3 +656,31 @@ TEST(session_saves_the_layout_for_the_character) {
     CHECK(s.profiles().characters.count(kChar) && s.profiles().characters.at(kChar).bindings == b);
     CHECK(s.controller().bindings() == b);
 }
+
+// 3.0.11-beta.95 (the owner on the ring: «устраивает»): with the ring drawn the pad's fake mark is off; the name
+// request on a new target stays - its reply brings the target's HP % for the bar
+TEST(session_ring_drawn_no_mark_but_the_name_request) {
+    Config cfg;
+    cfg.mark = MarkStyle::Sight;
+    Session s{cfg};
+    s.setRing(true);
+    connect(s);
+    const TickOutput o = s.tick(pressA(), kView, 100);
+    CHECK_EQ(o.mark, 110000001u);
+    const std::vector<Bytes> ready = s.takeInjectable(100);
+    CHECK(ready.size() == 2 && rd16(ready[1].data(), 0) == 0x008c && rd32(ready[1].data(), 7) == 110000001u);
+    CHECK(toClient(s, 110).empty());  // no state, no "!"
+}
+
+TEST(session_ring_switched_on_gives_the_marked_target_its_state_back) {
+    Config cfg;
+    cfg.mark = MarkStyle::Sight;
+    Session s{cfg};
+    connect(s);
+    s.tick(pressA(), kView, 100);
+    CHECK_EQ(toClient(s, 110).size(), 1u);  // marked
+    s.setRing(true);
+    s.tick(press(0), kView, 200);
+    const std::vector<Bytes> p = toClient(s, 210);
+    CHECK(p.size() == 1 && unitState(p[0], 110000001, 0, 0));  // as the server showed it
+}

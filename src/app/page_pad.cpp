@@ -91,6 +91,7 @@ public:
         p.heading(t(Text::PadOnInterface));
         rows_->buildRow(p, "interface.pad_hints");
         rows_->buildRow(p, "interface.target_ring");
+        rows_->buildRow(p, "interface.mob_hp");  // 3.0.11-beta.95
         rows_->buildRow(p, "interface.pad_walk");
         p.gap();
         buttons(p, value("pad.type", "auto") == "sony");

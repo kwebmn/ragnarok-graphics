@@ -118,6 +118,7 @@ struct State {
     bool directWalk = false;
     bool tiles = true;          // 3.0.11-beta.90: [interface] pad_tiles
     bool ownHints = true;       // 3.0.11-beta.92: the hint line drawn by the interface (win/pad_hint)
+    bool ring = false;          // 3.0.11-beta.95: the interface's ring in place of the fake mark
     std::vector<HintPart> hintParts;
     WindowOrder windows;        // 3.0.11-beta.93: the windows B closes, in the order they opened
     bool backDown = false;      // B held at the last tick
@@ -812,6 +813,14 @@ void setOwnHints(bool on) {
 }
 
 std::vector<HintPart> hints() { return healthy() ? S().hintParts : std::vector<HintPart>{}; }
+
+void setRing(bool drawn) {
+    State& s = S();
+    if (!healthy() || !s.session || drawn == s.ring) return;
+    s.ring = drawn;
+    s.session->setRing(drawn);
+    LOG_INFO("the target's mark: %s", drawn ? "the interface's ring (the fake state off)" : "as [aim] mark says");
+}
 
 void setTiles(bool on) {
     State& s = S();

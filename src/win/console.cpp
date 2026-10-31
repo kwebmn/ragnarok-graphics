@@ -180,6 +180,8 @@ void Console::build(Lang lang, const Config& config) {
                 rows_.push_back(Row{Kind::Box, "interface.pad_hints", 0});
             if (settingOf("interface.target_ring"))  // 3.0.11-beta.87: the target's ring on the ground
                 rows_.push_back(Row{Kind::Choice, "interface.target_ring", 0});
+            if (settingOf("interface.mob_hp"))  // 3.0.11-beta.95: the monsters' HP bars
+                rows_.push_back(Row{Kind::Choice, "interface.mob_hp", 0});
             if (settingOf("interface.pad_tiles"))  // 3.0.11-beta.90: Start opens the windows' tile
                 rows_.push_back(Row{Kind::Box, "interface.pad_tiles", 0});
             if (settingOf("interface.pad_walk"))  // 3.0.11-beta.88: the left stick without the mouse

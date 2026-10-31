@@ -2040,12 +2040,12 @@ constexpr Entry kTexts[] = {
      "Что эта кнопка делает в игре: ячейка панели навыков, атака, подбор, разговор..."},
     {Text::PadMark, "The old target mark", "Стара позначка цілі", "Старая метка цели"},
     {Text::PadMarkHint,
-     "A state the game shows on the pad's target (a poison tint and the like) - kept until the gold ring is checked; "
-     "«None» leaves the ring alone.",
-     "Стан, який гра показує на цілі контролера (отруйний відтінок тощо), - лишається, доки золоте кільце не "
-     "перевірено; «Немає» лишає саме кільце.",
-     "Состояние, которое игра показывает на цели контроллера (ядовитый оттенок и т. п.), - остаётся, пока золотое "
-     "кольцо не проверено; «Нет» оставляет одно кольцо."},
+     "A state the game shows on the pad's target (a poison tint and the like) - only while «Target's ring on the "
+     "ground» is off; with the ring, the ring alone.",
+     "Стан, який гра показує на цілі контролера (отруйний відтінок тощо), - лише коли «Кільце цілі на землі» "
+     "вимкнене; з кільцем - саме кільце.",
+     "Состояние, которое игра показывает на цели контроллера (ядовитый оттенок и т. п.), - только когда «Кольцо цели "
+     "на земле» выключено; с кольцом - одно кольцо."},
     {Text::PadMarkOff, "None", "Немає", "Нет"},
     {Text::AiModelAnime6b, "anime 6B (drawn: finer lines, keeps details; 5-7 times slower)",
      "anime 6B (мальоване: тонші лінії, зберігає деталі; у 5-7 разів повільніша)",
@@ -5045,6 +5045,21 @@ constexpr Entry kTexts[] = {
     {Text::InterfaceTargetRingOff, "Off", "Вимкнено", "Выключено"},
     {Text::InterfaceTargetRingPad, "With the controller", "З контролером", "С контроллером"},
     {Text::InterfaceTargetRingAlways, "Always", "Завжди", "Всегда"},
+    {Text::InterfaceMobHp, "Monsters' HP bars", "Смужки HP монстрів", "Полоски HP монстров"},  // 3.0.11-beta.95
+    {Text::InterfaceMobHpHint,
+     "A thin bar over a monster's head from the per cent the server sends to everyone near on each hit: green, red "
+     "below a quarter; the target's wider, with its per cent. «The target and the wounded» - a wounded monster's bar "
+     "for 8 seconds after its last hit; a whole one has none.",
+     "Тонка смужка над головою монстра з відсотка, який сервер надсилає всім поруч на кожен удар: зелена, нижче чверті "
+     "— червона; у цілі ширша і з відсотком. «Ціль і поранені» — смужка пораненого ще 8 секунд після останнього удару; "
+     "у цілого її немає.",
+     "Тонкая полоска над головой монстра из процента, который сервер присылает всем рядом на каждый удар: зелёная, "
+     "ниже четверти — красная; у цели шире и с процентом. «Цель и раненые» — полоска раненого ещё 8 секунд после "
+     "последнего удара; у целого её нет."},
+    {Text::InterfaceMobHpOff, "Off", "Вимкнено", "Выключено"},
+    {Text::InterfaceMobHpTarget, "The target only", "Лише ціль", "Только цель"},
+    {Text::InterfaceMobHpWounded, "The target and the wounded", "Ціль і поранені", "Цель и раненые"},
+    {Text::InterfaceMobHpAll, "All", "Усі", "Все"},
     {Text::InterfacePadWalk, "The controller walks", "Хід контролером", "Ход контроллером"},  // 3.0.11-beta.88
     {Text::InterfacePadWalkHint,
      "How the left stick walks: holding the game's cursor out, as before, or without the mouse - the character goes "

@@ -344,3 +344,22 @@ TEST(game_packets_a_party_member_cell) {
     CHECK(at && at->account == 2000125 && at->x == 156 && at->y == 190);
     CHECK(std::holds_alternative<std::monostate>(packets::parse(p.data(), 9)));
 }
+
+// 3.0.11-beta.95 (the owner: «Полоски HP мобов - всем показывай»): a monster's name line - uAthena's show_mob_info 6
+// puts «Lv. 24 | HP: 57%» where a character's party name stands (0x0195 <unit>.L <name>.24B <party>.24B <guild>.24B
+// <title>.24B), on every hit, heal and spawn to everyone near; a character's party name brings none
+TEST(game_packets_a_monsters_name_line_brings_its_hp) {
+    std::vector<uint8_t> p = packet(0x0195, 102);
+    put32(p, 2, 110000042);
+    putText(p, 6, "Eggyra");
+    putText(p, 30, "Lv. 24 | HP: 57%");
+    packets::Event e = packets::parse(p.data(), p.size());
+    const auto* a = std::get_if<packets::ActorInfo>(&e);
+    CHECK(a != nullptr && a->id == 110000042u && a->hp == 57);
+    std::fill(p.begin() + 30, p.begin() + 54, uint8_t(0));
+    putText(p, 30, "Knights of Prontera");
+    e = packets::parse(p.data(), p.size());
+    a = std::get_if<packets::ActorInfo>(&e);
+    CHECK(a != nullptr && a->hp == -1);
+    CHECK(std::holds_alternative<std::monostate>(packets::parse(p.data(), 101)));  // cut short
+}

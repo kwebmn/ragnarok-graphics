@@ -123,6 +123,9 @@ const std::vector<IniSetting>& iniSettings() {
         {"interface", "target_ring", Page::Interface, Control::Choice, 0, 0, 0, {"off", "pad", "always"},  // .87
          {Text::InterfaceTargetRingOff, Text::InterfaceTargetRingPad, Text::InterfaceTargetRingAlways},
          Text::InterfaceTargetRing, Text::InterfaceTargetRingHint, ""},
+        {"interface", "mob_hp", Page::Interface, Control::Choice, 0, 0, 0, {"off", "target", "wounded", "all"},  // .95
+         {Text::InterfaceMobHpOff, Text::InterfaceMobHpTarget, Text::InterfaceMobHpWounded, Text::InterfaceMobHpAll},
+         Text::InterfaceMobHp, Text::InterfaceMobHpHint, ""},
         {"interface", "pad_tiles", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {},  // 3.0.11-beta.90
          Text::InterfacePadTiles, Text::InterfacePadTilesHint, ""},
         {"interface", "pad_walk", Page::Interface, Control::Choice, 0, 0, 0, {"mouse", "arrow"},  // 3.0.11-beta.88
@@ -974,6 +977,7 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "interface.hotbar_per_character") return c.hotbarPerCharacter ? "1" : "0";  // 3.0.11-beta.78
     if (k == "interface.pad_hints") return c.padHints ? "1" : "0";                         // 3.0.11-beta.86
     if (k == "interface.target_ring") return targetRingToken(c.targetRing);                // 3.0.11-beta.87
+    if (k == "interface.mob_hp") return mobHpToken(c.mobHp);                               // 3.0.11-beta.95
     if (k == "interface.pad_walk") return padWalkToken(c.padWalk);                         // 3.0.11-beta.88
     if (k == "interface.pad_tiles") return c.padTiles ? "1" : "0";                         // 3.0.11-beta.90
     if (k == "interface.minimap_way") return wayOnGroundToken(c.minimapWay);  // 3.0.11-beta.33

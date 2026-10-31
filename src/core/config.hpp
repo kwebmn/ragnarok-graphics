@@ -23,6 +23,8 @@ enum class WayOnGround : uint8_t { Steps, Line, Off };
 // 3.0.11-beta.87 (the concept «Контроллер в интерфейсе uaRO», stage 3): the target's ring on the ground - off, while
 // played with the controller, or always (the mouse's fight too)
 enum class TargetRing : uint8_t { Off, Pad, Always };
+// 3.0.11-beta.95: [interface] mob_hp - the monsters' HP bars: none, the target's, the target's and the wounded's, all
+enum class MobHp : uint8_t { Off, Target, Wounded, All };
 // 3.0.11-beta.88 (stage 4): how the controller's left stick walks - holding the game's cursor out (as before), or the
 // pad asking for the cell itself with an arrow on the ground
 enum class PadWalk : uint8_t { Mouse, Arrow };
@@ -579,6 +581,9 @@ struct Config {
     // 3.0.11-beta.87 (stage 3): [interface] target_ring - the pad's target in a gold ring on the ground
     // (win/ground_marks)
     TargetRing targetRing = TargetRing::Pad;
+    // 3.0.11-beta.95 (the owner: «Полоски HP мобов - всем показывай»): [interface] mob_hp - HP bars over the monsters'
+    // heads from their name lines' per cent (core/mob_hp, win/mob_hp); the target's and the wounded's
+    MobHp mobHp = MobHp::Wounded;
     // 3.0.11-beta.88 (stage 4): [interface] pad_walk - the left stick walks without the mouse, an arrow on the ground
     // (a prototype for the owner: off till checked)
     PadWalk padWalk = PadWalk::Mouse;
@@ -768,6 +773,7 @@ const char* uiFilterToken(UiFilter f);
 const char* windowKeysToken(WindowKeys k);  // 3.0.3-beta.6
 const char* wayOnGroundToken(WayOnGround w);  // 3.0.11-beta.33
 const char* targetRingToken(TargetRing r);    // 3.0.11-beta.87
+const char* mobHpToken(MobHp m);              // 3.0.11-beta.95
 const char* padWalkToken(PadWalk w);          // 3.0.11-beta.88
 const char* buffsLookToken(BuffsLook b);       // 3.0.11-beta.35
 const char* buffsOverflowToken(BuffsOverflow b);  // 3.0.11-beta.63

@@ -15,6 +15,24 @@ std::string name(const uint8_t* p, size_t at) {
     return std::string(s, strnlen(s, 24));
 }
 
+// 3.0.11-beta.95: the per cent in a monster's name line «Lv. 24 | HP: 57%» (or «HP: 1234/5678»); -1 none
+int hpOf(const std::string& s) {
+    const size_t at = s.find("HP: ");
+    if (at == std::string::npos) return -1;
+    size_t i = at + 4;
+    const auto number = [&](long long& v) {
+        const size_t from = i;
+        v = 0;
+        while (i < s.size() && s[i] >= '0' && s[i] <= '9' && v < 1000000000000LL) v = v * 10 + (s[i++] - '0');
+        return i > from;
+    };
+    long long a = 0, b = 0;
+    if (!number(a)) return -1;
+    if (i < s.size() && s[i] == '%') return a <= 100 ? int(a) : -1;
+    if (i < s.size() && s[i] == '/' && (++i, number(b)) && b > 0) return int(a * 100 / b > 100 ? 100 : a * 100 / b);
+    return -1;
+}
+
 // 3.0.11-beta.39: a map's name of 16 bytes, its «.gat» off
 std::string mapAt(const uint8_t* p, size_t at) {
     const char* s = reinterpret_cast<const char*>(p + at);
@@ -64,6 +82,9 @@ Event parse(const uint8_t* p, size_t size) {
         case 0x0080:
             if (size < 7) return {};
             return Vanish{rd32(p, 2), p[6]};
+        case 0x0195:  // 3.0.11-beta.95: a unit's name line - a monster's HP % in its party's place
+            if (size < 102) return {};
+            return ActorInfo{rd32(p, 2), hpOf(name(p, 30))};
         case 0x011a:
             if (size < 15) return {};
             return SkillCast{rd16(p, 2), rd16(p, 4), rd32(p, 6), rd32(p, 10)};

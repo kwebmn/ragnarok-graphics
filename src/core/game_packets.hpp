@@ -136,9 +136,17 @@ struct PartyPos {
     uint16_t x = 0, y = 0;
 };
 
+// 3.0.11-beta.95 (the owner: «Полоски HP мобов - всем показывай»): a unit's name line - 0x0195 <unit>.L <name>.24B
+// <party>.24B <guild>.24B <title>.24B; for a monster uAthena's show_mob_info 6 puts «Lv. 24 | HP: 57%» in the party's
+// place, sent to everyone near on each hit, heal and spawn (status_damage / status_heal)
+struct ActorInfo {
+    uint32_t id = 0;
+    int hp = -1;  // per cent; -1 none (a character's party name)
+};
+
 using Event = std::variant<std::monostate, Whisper, PartyInvite, TradeRequest, GuildInvite, FriendRequest, StatusIcon,
                            Vanish, SkillCast, Hit, PartyList, PartyMember, PartyLeft, PartyHp, PartyChat, GuildChat,
-                           Chat, Status, Pickup, StatusLong, Casting, Appear, PartyPos>;
+                           Chat, Status, Pickup, StatusLong, Casting, Appear, PartyPos, ActorInfo>;
 
 // A packet as the game took it, `size` bytes of it readable: one of the above, or nothing (another packet, one cut
 // short or naming more bytes than there are).

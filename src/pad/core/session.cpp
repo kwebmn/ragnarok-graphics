@@ -183,8 +183,9 @@ TickOutput Session::tick(const PadState& pad, const ViewInfo& view, uint32_t now
     if (padWalking_ && !controller_.walking()) walkStopMs_ = nowMs;
     padWalking_ = controller_.walking();
     std::vector<Bytes> requests = out.packets;
-    if (out.mark != 0 && mark_ != MarkStyle::Off && mapSocket_ != 0 && downOk_) {
-        if (mark_ == MarkStyle::Gasp)
+    const MarkStyle mark = ring_ ? MarkStyle::Off : mark_;  // 3.0.11-beta.95: the ring in its place
+    if (out.mark != 0 && (mark != MarkStyle::Off || ring_) && mapSocket_ != 0 && downOk_) {
+        if (mark == MarkStyle::Gasp)
             toClient_.emplace_back(nowMs + kMarkStaleMs, buildEmotion(out.mark, kEmotionGasp));
         requests.push_back(buildNameRequest(out.mark));  // the server answers at once and the mark rides along
     }
@@ -225,8 +226,15 @@ void Session::setMark(MarkStyle style) {
     remark_ = marked_ != 0;  // the new style replaces the old effect, or puts the state back
 }
 
+void Session::setRing(bool drawn) {
+    if (drawn == ring_) return;
+    ring_ = drawn;
+    remark_ = marked_ != 0;  // the marked target gets its own state back (or its mark)
+}
+
 void Session::updatePersistentMark(uint32_t nowMs) {
-    const bool persistent = mark_ != MarkStyle::Gasp && mark_ != MarkStyle::Off;
+    const MarkStyle mark = ring_ ? MarkStyle::Off : mark_;
+    const bool persistent = mark != MarkStyle::Gasp && mark != MarkStyle::Off;
     uint32_t want = persistent && mapSocket_ != 0 && downOk_ ? controller_.target() : 0;
     const auto& actors = world_.actors();
     if (want != 0 && actors.count(want) == 0) want = 0;
@@ -242,7 +250,7 @@ void Session::updatePersistentMark(uint32_t nowMs) {
         uint16_t opt1 = a.opt1;
         uint16_t opt2 = a.opt2;
         uint32_t option = a.option;
-        switch (mark_) {
+        switch (mark) {
             case MarkStyle::Poison: opt2 |= kOpt2Poison; break;
             case MarkStyle::DeadlyPoison: opt2 |= kOpt2DeadlyPoison; break;
             case MarkStyle::Curse: opt2 |= kOpt2Curse; break;

@@ -10,6 +10,7 @@
 #include "win/party_panel.hpp"
 #include "win/cast_bar.hpp"
 #include "win/chat_window.hpp"
+#include "win/mob_hp.hpp"
 #include "win/target_card.hpp"
 #include "win/notifier.hpp"
 
@@ -70,6 +71,7 @@ uint16_t __attribute__((thiscall)) take(void* connection, const uint8_t* packet)
         partywin::packet(e);     // 3.0.11-beta.39: the party's panel
         chatwin::packet(e);      // 3.0.11-beta.41: the chat's battle log
         castwin::packet(e);      // 3.0.11-beta.48: the cast's label - which skill
+        mobhpwin::packet(e);     // 3.0.11-beta.95: the monsters' HP bars
     }
     return id;
 }

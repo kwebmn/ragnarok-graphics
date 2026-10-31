@@ -58,6 +58,8 @@ void openPadMenu();
 // 3.0.11-beta.92: [interface] pad_hints on - the hint line (an NPC's window, a support skill asking whom) drawn by the
 // interface itself (win/pad_hint) instead of the pad's own window; its parts now (none: no line)
 void setOwnHints(bool on);
+// 3.0.11-beta.95 (the owner on the ring: «устраивает»): the interface draws the target's ring - the pad's fake mark off
+void setRing(bool drawn);
 std::vector<HintPart> hints();
 
 }  // namespace uapad::runtime

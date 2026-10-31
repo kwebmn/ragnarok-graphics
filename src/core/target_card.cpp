@@ -15,6 +15,7 @@ namespace {
 constexpr float kH = 48, kPad = 8, kRound = 32, kBook = 30, kChipH = 22, kGap = 10, kLine = 18, kCorner = 11;
 constexpr uint32_t kCard = 0x10141C, kWhite = 0xFFFFFF, kBlack = 0x000000, kTile = 0x1B1D24;
 constexpr uint32_t kGold = 0xC9A55B, kText = 0xECEFF5, kMuted = 0x9AA3B5;
+constexpr uint32_t kGreen = 0x5BD36C, kRed = 0xE5534B;  // 3.0.11-beta.95: the HP bar's, as over the monsters' heads
 
 float cover(float d) { return std::clamp(0.5f - d, 0.0f, 1.0f); }
 
@@ -87,14 +88,23 @@ Layout layout(const Data& d, const Texts& t, int centreX, int top, float scale, 
     const float levelW = panel::wordsWidth(levelText(d), 13 * s, false) + 4 * s;
     const float chipW = d.element.empty() ? 0 : panel::wordsWidth(d.element, 12.5f * s, true) + 18 * s;
     float x = kPad * s;
+    const bool hp = d.hp >= 0;  // 3.0.11-beta.95: the name's line up, the HP bar under it
     L.round = panel::Box{x, kPad * s, kRound * s, kRound * s};
     x += kRound * s + kGap * s;
-    L.name = panel::Box{x, 14 * s, nameW, 20 * s};
+    L.name = panel::Box{x, (hp ? 5 : 14) * s, nameW, 20 * s};
     x += nameW + 6 * s;
-    L.level = panel::Box{x, 15 * s, levelW, 20 * s};
+    L.level = panel::Box{x, (hp ? 6 : 15) * s, levelW, 20 * s};
     x += levelW + 8 * s;
-    L.element = panel::Box{x, (kH - kChipH) / 2 * s, chipW, kChipH * s};
-    x += chipW + 12 * s;
+    L.element = panel::Box{x, (hp ? 4 : (kH - kChipH) / 2) * s, chipW, (hp ? kChipH - 2 : kChipH) * s};
+    x += chipW;
+    if (hp) {
+        const float pct = panel::wordsWidth("100%", 12 * s, true) + 2 * s;
+        const float end = std::max(x, L.name.x + 80 * s + 6 * s + pct);
+        L.hp = panel::Box{L.name.x, 32 * s, end - pct - 6 * s - L.name.x, 5 * s};
+        L.hpText = panel::Box{end - pct, 26 * s, pct, 16 * s};
+        x = end;
+    }
+    x += 12 * s;
     L.book = panel::Box{x, (kH - kBook) / 2 * s, kBook * s, kBook * s};
     x += kBook * s;
     if (d.pad && !t.attack.empty()) {  // 3.0.11-beta.86: the controller's buttons after a line
@@ -118,7 +128,8 @@ Layout layout(const Data& d, const Texts& t, int centreX, int top, float scale, 
     // the card and its details centred in the picture, the picture's middle at the screen's
     L.w = int(std::ceil(width));
     const float shiftCard = (float(L.w) - L.card.w) / 2;
-    for (panel::Box* b : {&L.card, &L.round, &L.name, &L.level, &L.element, &L.book, &L.hints}) b->x += shiftCard;
+    for (panel::Box* b : {&L.card, &L.round, &L.name, &L.level, &L.element, &L.book, &L.hints, &L.hp, &L.hpText})
+        b->x += shiftCard;
     if (details) L.details.x = (float(L.w) - L.details.w) / 2;
     L.h = int(std::ceil(details ? L.details.y + L.details.h : L.card.h));
     L.x = centreX - L.w / 2;
@@ -140,6 +151,13 @@ void paint(panel::Picture& out, const Layout& L, const Data& d, bool hoverBook) 
     if (d.picture && d.picture->width > 0) putRound(out, *d.picture, r);
     if (L.element.w > 0)
         panel::roundRect(out, L.element, 6 * s, d.elementRgb, 0.22f, d.elementRgb, 0.6f, 1.0f * s);
+    if (L.hp.w > 0) {  // 3.0.11-beta.95: green, red below a quarter, over a dark rest
+        panel::roundRect(out, L.hp, L.hp.h / 2, kBlack, 0.55f);
+        const float done = L.hp.w * float(std::clamp(d.hp, 0, 100)) / 100.0f;
+        if (done > 0.5f)
+            panel::roundRect(out, panel::Box{L.hp.x, L.hp.y, done, L.hp.h}, L.hp.h / 2, d.hp < 25 ? kRed : kGreen,
+                             1.0f);
+    }
     panel::roundRect(out, L.book, 7 * s, kWhite, hoverBook ? 0.14f : 0.06f, kGold, hoverBook ? 0.8f : 0.0f, 1.0f * s);
     const float icon = 18 * s;
     uiicons::draw(out, uiicons::Icon::Quest, L.book.x + (L.book.w - icon) / 2, L.book.y + (L.book.h - icon) / 2, icon,
@@ -161,6 +179,8 @@ std::vector<Words> words(const Layout& L, const Data& d, const Texts& t, bool ho
     out.push_back(Words{L.name, d.name, kText, 16 * s, true, Align::Left});
     out.push_back(Words{L.level, levelText(d), kMuted, 13 * s, false, Align::Left});
     if (L.element.w > 0) out.push_back(Words{L.element, d.element, d.elementRgb, 12.5f * s, true, Align::Center});
+    if (L.hpText.w > 0)  // 3.0.11-beta.95
+        out.push_back(Words{L.hpText, std::to_string(d.hp) + "%", kText, 12 * s, true, Align::Right});
     if (L.hints.w > 0) {  // 3.0.11-beta.86: its buttons' letters and what they do
         const panel::Box& h = L.hints;
         const padglyph::Family f = d.padSony ? padglyph::Family::Sony : padglyph::Family::Xbox;

@@ -22,6 +22,7 @@
 #include "win/hotbar.hpp"
 #include "win/hud_edit.hpp"
 #include "win/log.hpp"
+#include "win/mob_hp.hpp"
 #include "win/monster_picture.hpp"
 #include "win/pack_pictures.hpp"
 #include "win/picture_draw.hpp"
@@ -297,6 +298,7 @@ void frame(HWND game, bool on, bool padHints, double k, int targetWidth, int tar
     const uapad::runtime::Look pad = padHints ? uapad::runtime::look() : uapad::runtime::Look{};  // 3.0.11-beta.86
     s.data.pad = pad.shown;
     s.data.padSony = pad.sony;
+    s.data.hp = mobhpwin::hp(s.target);  // 3.0.11-beta.95: its HP bar, from its name line's per cent
     // its place: the top middle, under the game's own windows standing there
     const tc::Texts t = texts();
     tc::Layout L = tc::layout(s.data, t, targetWidth / 2, int(std::lround(10 * scale)), scale, s.hover);
@@ -321,7 +323,8 @@ void frame(HWND game, bool on, bool padHints, double k, int targetWidth, int tar
     s.hoverBook = hoverBook;
     const std::string key = std::to_string(cls) + ';' + std::to_string(s.layout.w) + 'x' + std::to_string(s.layout.h) +
                             ';' + std::to_string(scale) + ';' + (hover ? "h" : "") + (hoverBook ? "b" : "") +
-                            (s.data.picture ? "p" : "") + (s.data.pad ? (s.data.padSony ? "S" : "X") : "");
+                            (s.data.picture ? "p" : "") + (s.data.pad ? (s.data.padSony ? "S" : "X") : "") + ';' +
+                            std::to_string(s.data.hp);
     if (const std::string drawn = key + '#' + std::to_string(uistyle::generation()); drawn != s.key) {  // its grounds
         s.key = drawn;
         render(s);

@@ -1268,3 +1268,16 @@ TEST(config_reads_the_interface_size) {
     CHECK_EQ(settings::tokenOf(*s, parseConfig("")), std::string("auto"));
     CHECK(appliesNow("interface.size"));
 }
+
+// 3.0.11-beta.95 (the owner: «Полоски HP мобов - всем показывай»): [interface] mob_hp = off | target | wounded | all -
+// the monsters' HP bars; the target and the wounded by default, a choice of «Інтерфейс», at once
+TEST(config_mob_hp) {
+    CHECK(parseConfig("").mobHp == MobHp::Wounded);
+    CHECK(parseConfig("[interface]\nmob_hp = all\n").mobHp == MobHp::All);
+    CHECK(parseConfig("[interface]\nmob_hp = target\n").mobHp == MobHp::Target);
+    CHECK(parseConfig("[interface]\nmob_hp = off\n").mobHp == MobHp::Off);
+    const settings::IniSetting* s = settings::findSetting("interface.mob_hp");
+    CHECK(s != nullptr && s->page == settings::Page::Interface && s->control == settings::Control::Choice);
+    CHECK(appliesNow("interface.mob_hp"));
+    CHECK(liveUpdate(parseConfig(""), parseConfig("[interface]\nmob_hp = off\n")).next.mobHp == MobHp::Off);
+}

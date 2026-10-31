@@ -54,6 +54,9 @@ void drawPartStretched(FrameRecord& record, gpu::Renderer& renderer, const panel
 // 3.0.11-beta.49: a black shade `alpha` over (x, y, w, h) - one untextured quad (the world dimmed under the windows);
 // 3.0.11-beta.54 a part's: its pixels, at the parts' stretch
 void drawShade(FrameRecord& record, int x, int y, int w, int h, float k, float alpha);
+// 3.0.11-beta.95: a quad of one colour (ARGB, its alpha its own) over (x, y, w, h) of a part's pixels (the monsters'
+// HP bars)
+void drawFill(FrameRecord& record, float x, float y, float w, float h, float k, uint32_t argb);
 // The words' width at a size (the target's pixels), as drawWords draws them
 int wordsWidth(const std::wstring& text, float px, bool bold);
 std::wstring utf8Wide(const std::string& s);

@@ -30,6 +30,9 @@ struct Data {
     // 3.0.11-beta.86 (the concept «Контроллер в интерфейсе uaRO», stage 2): played with the controller - the card's
     // end says its buttons (A attacks, the right stick another target), PlayStation's look
     bool pad = false, padSony = false;
+    // 3.0.11-beta.95 (the owner: «Полоски HP мобов - всем показывай»): its HP per cent from its name line
+    // (core/mob_hp); -1 not known - no bar
+    int hp = -1;
 };
 struct Texts {
     std::string weak;   // «Слабкий до: {1}»
@@ -45,6 +48,7 @@ struct Layout {
     panel::Box card, round, name, level, element, book;
     panel::Box hints;    // 3.0.11-beta.86: the controller's buttons at its end (w 0: none)
     panel::Box details;  // under the card while pointed at (w 0: none)
+    panel::Box hp, hpText;  // 3.0.11-beta.95: the HP bar under the name and its per cent (w 0: not known)
 };
 // Its top middle at (centreX, top) in the target; `details`: pointed at - its lines under it
 Layout layout(const Data& d, const Texts& t, int centreX, int top, float scale, bool details);

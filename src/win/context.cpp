@@ -48,6 +48,7 @@
 #include "pad/win/runtime.hpp"
 #include "win/ground_marks.hpp"
 #include "win/pad_assign.hpp"
+#include "win/mob_hp.hpp"
 #include "win/pad_hint.hpp"
 #include "win/pad_tiles.hpp"
 #include "win/target_card.hpp"
@@ -554,6 +555,7 @@ void Context::endScene() {
     if (panelSlot_.endScene(drawn) && renderer && !photo_) {
         worlddim::draw(record);                 // 3.0.11-beta.49: the world dimmed under the windows (where it ends)
         lowhpedge::draw(record, *renderer);     // 3.0.11-beta.50: the low HP edge, there too
+        mobhpwin::draw(record, *renderer);      // 3.0.11-beta.95: the monsters' HP bars, under the cast
         castwin::draw(record, *renderer);       // 3.0.11-beta.48: the cast over the hero, under the panels
         minimapproto::draw(record, *renderer);  // 3.0.11-beta.1: the new minimap (prototype)
         trackerwin::draw(record, *renderer);    // 3.0.11-beta.70: the tracker (under the buffs' tips)
@@ -604,6 +606,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     if (panelSlot_.present(drawnAnew) && renderer && !photo_) {
         worlddim::draw(record);                 // 3.0.11-beta.49
         lowhpedge::draw(record, *renderer);     // 3.0.11-beta.50
+        mobhpwin::draw(record, *renderer);      // 3.0.11-beta.95
         castwin::draw(record, *renderer);       // 3.0.11-beta.48
         minimapproto::draw(record, *renderer);  // 3.0.11-beta.1
         trackerwin::draw(record, *renderer);    // 3.0.11-beta.70
@@ -840,6 +843,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     // 3.0.11-beta.38: [interface] target - the target's card at the top middle
     targetpanel::frame(window, config.targetCard, config.padHints, pk, pw, ph);
     groundmarks::look(config.targetRing);  // 3.0.11-beta.87: the target's ring on the ground
+    uapad::runtime::setRing(config.targetRing != TargetRing::Off);  // 3.0.11-beta.95: the pad's fake mark off then
     uapad::runtime::setDirectWalk(config.padWalk == PadWalk::Arrow);  // 3.0.11-beta.88: the stick without the mouse
     uapad::runtime::setTiles(config.padTiles);                        // 3.0.11-beta.90: Start opens the tile
     padtileswin::frame(window, pk, pw, ph);
@@ -855,6 +859,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     // 3.0.11-beta.50: [interface] low_hp_edge - the screen's edges red at low HP (0: none)
     lowhpedge::frame(config.lowHpEdge, pk, pw, ph);
     // 3.0.11-beta.48: [interface] cast - the character's cast over the hero, the game's own gauge hidden
+    mobhpwin::frame(window, config.mobHp, pk, pw, ph);  // 3.0.11-beta.95
     castwin::frame(window, config.castLabel, gameCodePage(config), pk, pw, ph);
     // 3.0.11-beta.40: [interface] hotbar - the hotkeys' bar at the bottom middle, the game's own hidden
     hotbarwin::frame(window, config.hotbar, config.hotbarPerCharacter, config.padHints, gameCodePage(config), pk, pw,

@@ -39,6 +39,9 @@ public:
     bool canInject() const;
     void markInjectBroken();
     void setMark(MarkStyle style);  // [aim] mark, changed from the menu
+    // 3.0.11-beta.95 (the owner on the ring: «устраивает»): the interface draws the target's ring - no fake mark then;
+    // the name request on a new target stays (its reply brings the target's HP % for its bar)
+    void setRing(bool drawn);
     void setClientTurn(std::optional<double> radians) { controller_.setClientTurn(radians); }
     void setWalkRadius(float fraction) { controller_.setWalkRadius(fraction); }
     // Appends the queued client-only packets (the "!" over a new target) to the `n` bytes the client is
@@ -82,6 +85,7 @@ private:
     WorldState world_;
     Controller controller_;
     MarkStyle mark_ = MarkStyle::Gasp;  // [aim] mark
+    bool ring_ = false;                 // 3.0.11-beta.95: the ring drawn in its place
     uint32_t marked_ = 0;   // the monster the client draws our persistent mark on
     bool remark_ = false;   // the server redrew it (or the style changed): send the mark again
     int hpTold_ = 0;        // 3.0.11-beta.86: monsters' HP lines told the log (the live check)

@@ -215,6 +215,10 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("pad_walk", padWalkToken(running.padWalk), padWalkToken(file.padWalk)));
         n.padWalk = file.padWalk;
     }
+    if (file.mobHp != running.mobHp) {  // 3.0.11-beta.95: the monsters' HP bars
+        u.applied.push_back(change("mob_hp", mobHpToken(running.mobHp), mobHpToken(file.mobHp)));
+        n.mobHp = file.mobHp;
+    }
     if (file.targetRing != running.targetRing) {  // 3.0.11-beta.87: the target's ring on the ground
         u.applied.push_back(
             change("target_ring", targetRingToken(running.targetRing), targetRingToken(file.targetRing)));

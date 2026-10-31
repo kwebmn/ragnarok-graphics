@@ -155,3 +155,25 @@ TEST(target_card_pad_hints) {
         ring = std::max(ring, (p.px[size_t(y) * size_t(p.width) + size_t(int(L.hints.x + 8))] >> 8) & 0xFFu);
     CHECK(ring > 0x90);
 }
+
+// 3.0.11-beta.95 (the owner: «Полоски HP мобов - всем показывай»): the card's HP bar under the name and its per cent,
+// from the monster's name line; not known - no bar
+TEST(target_card_hp_bar) {
+    targetcard::Data d = zombie();
+    const targetcard::Layout plain = targetcard::layout(d, texts(), 960, 10, 1.0f, false);
+    CHECK(plain.hp.w == 0);
+    d.hp = 57;
+    const targetcard::Layout L = targetcard::layout(d, texts(), 960, 10, 1.0f, false);
+    CHECK(L.hp.w > 60 && inside(L.card, L.hp) && L.hp.y > L.name.y + L.name.h / 2);
+    const std::vector<targetcard::Words> w = targetcard::words(L, d, texts(), false);
+    CHECK(std::any_of(w.begin(), w.end(), [](const targetcard::Words& x) { return x.text == "57%"; }));
+    panel::Picture p;
+    p.width = L.w;
+    p.height = L.h;
+    p.px.assign(size_t(L.w) * size_t(L.h), 0u);
+    targetcard::paint(p, L, d, false);
+    const auto at = [&](float x, float y) { return p.px[size_t(int(y)) * size_t(p.width) + size_t(int(x))]; };
+    const uint32_t fill = at(L.hp.x + 3, L.hp.y + L.hp.h / 2), rest = at(L.hp.x + L.hp.w - 3, L.hp.y + L.hp.h / 2);
+    CHECK(((fill >> 8) & 0xFF) > ((fill >> 16) & 0xFF) + 40);  // green at its start
+    CHECK(((rest >> 8) & 0xFF) < 0x60);                        // past 57 %: the dark rest
+}

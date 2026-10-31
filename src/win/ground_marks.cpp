@@ -11,6 +11,7 @@
 #include "pad/win/runtime.hpp"
 #include "win/game_camera.hpp"
 #include "win/log.hpp"
+#include "win/mob_hp.hpp"
 #include "win/target_card.hpp"
 
 namespace uagfx::win::groundmarks {
@@ -132,7 +133,9 @@ void draw(FrameRecord& record, int width, int height) {
     const bool boxed = ringed && readActorBox(target, box);
     if (boxed) {  // the chevron over its head: the dark under, the gold over
         const float w = std::max(12.0f, float(height) * 0.016f), h = w * 0.7f;
-        const float cx = (box[0] + box[2]) / 2, tip = box[1] - w * 0.3f;
+        float tip = box[1] - w * 0.3f, bar = 0;
+        if (mobhpwin::targetBarTop(target, box, height, bar)) tip = std::min(tip, bar - 3);  // 3.0.11-beta.95: over it
+        const float cx = (box[0] + box[2]) / 2;
         groundway::chevron(cx, tip + 2, w + 6, h + 4, 0x90000000u, s.flat);
         groundway::chevron(cx, tip, w, h, kGold, s.flat);
     }

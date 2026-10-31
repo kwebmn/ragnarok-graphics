@@ -326,6 +326,31 @@ void drawShade(FrameRecord& record, int x, int y, int w, int h, float k, float a
     record.draw(cmd, v, 6, nullptr, 0);
 }
 
+void drawFill(FrameRecord& record, float x, float y, float w, float h, float k, uint32_t argb) {
+    const uint32_t a = argb >> 24;
+    if (w <= 0 || h <= 0 || !a || k <= 0) return;
+    const float half = 0.5f / float(g_partStretch);
+    DrawSetup s;  // the vertices' colour alone, premultiplied
+    s.ui = true;
+    s.blend = true;
+    s.srcBlend = d3d7::BLEND_ONE;
+    s.dstBlend = d3d7::BLEND_INVSRCALPHA;
+    s.stage[0].colorOp = s.stage[0].alphaOp = d3d7::TOP_SELECTARG1;
+    s.stage[0].colorArg1 = s.stage[0].alphaArg1 = d3d7::TA_DIFFUSE;
+    s.stage[1].colorOp = s.stage[1].alphaOp = d3d7::TOP_DISABLE;
+    DrawCmd cmd;
+    cmd.state = record.addState(s);
+    cmd.effect = uint8_t(effect_exe::Kind::Panel);
+    cmd.primitive = d3d7::PT_TRIANGLELIST;
+    cmd.fvf = d3d7::FVF_TL1;
+    const float x0 = (x - half) / k, y0 = (y - half) / k, x1 = (x + w - half) / k, y1 = (y + h - half) / k;
+    const auto pre = [&](int shift) { return (((argb >> shift) & 0xFFu) * a + 127) / 255 << shift; };
+    const uint32_t c = a << 24 | pre(16) | pre(8) | pre(0);
+    const glint::Vertex v[6] = {{x0, y0, 0, 1, c, 0, 0, 0}, {x1, y0, 0, 1, c, 0, 1, 0}, {x0, y1, 0, 1, c, 0, 0, 1},
+                                {x1, y0, 0, 1, c, 0, 1, 0}, {x1, y1, 0, 1, c, 0, 1, 1}, {x0, y1, 0, 1, c, 0, 0, 1}};
+    record.draw(cmd, v, 6, nullptr, 0);
+}
+
 int wordsWidth(const std::wstring& text, float px, bool bold) {
     if (text.empty()) return 0;
     // 3.0.11-beta.28: the DC and each size's font kept (the search's marks measure their words on every paint)

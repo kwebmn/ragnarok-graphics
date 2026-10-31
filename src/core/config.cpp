@@ -509,6 +509,11 @@ Config parseConfig(const std::string& text) {
             if (val == "off") c.targetRing = TargetRing::Off;
             if (val == "pad") c.targetRing = TargetRing::Pad;
             if (val == "always") c.targetRing = TargetRing::Always;
+        } else if (key == "interface.mob_hp") {  // 3.0.11-beta.95: the monsters' HP bars
+            if (val == "off") c.mobHp = MobHp::Off;
+            if (val == "target") c.mobHp = MobHp::Target;
+            if (val == "wounded") c.mobHp = MobHp::Wounded;
+            if (val == "all") c.mobHp = MobHp::All;
         } else if (key == "interface.pad_tiles") {  // 3.0.11-beta.90: Start opens the windows' tile
             setBool(val, c.padTiles);
         } else if (key == "interface.pad_walk") {  // 3.0.11-beta.88: the left stick without the mouse
@@ -889,6 +894,10 @@ const char* padWalkToken(PadWalk w) { return w == PadWalk::Arrow ? "arrow" : "mo
 
 const char* targetRingToken(TargetRing r) {
     return r == TargetRing::Off ? "off" : r == TargetRing::Always ? "always" : "pad";
+}
+
+const char* mobHpToken(MobHp m) {
+    return m == MobHp::Off ? "off" : m == MobHp::Target ? "target" : m == MobHp::All ? "all" : "wounded";
 }
 
 const char* wayOnGroundToken(WayOnGround w) {
