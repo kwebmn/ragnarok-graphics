@@ -54,7 +54,7 @@ void putRound(panel::Picture& out, const panel::Picture& pic, const panel::Box& 
 bool low(const Member& m, int threshold) { return here(m) && m.percent >= 0 && m.percent < threshold; }
 
 Layout layout(size_t members, int left, int top, float scale, bool folded) {
-    return layout(std::vector<int>(members, 0), left, top, scale, folded);
+    return layout(std::vector<int>(members, 0), left, top, scale, folded, false);
 }
 
 std::vector<int> rowsOf(const std::vector<Member>& members) {
@@ -63,9 +63,10 @@ std::vector<int> rowsOf(const std::vector<Member>& members) {
     return out;
 }
 
-Layout layout(const std::vector<int>& buffs, int left, int top, float scale, bool folded) {
+Layout layout(const std::vector<int>& buffs, int left, int top, float scale, bool folded, bool compact) {
     const size_t members = buffs.size();
     Layout L;
+    L.compact = compact;
     const float s = scale > 0 ? scale : 1.0f;
     L.s = s;
     L.x = left;
@@ -75,7 +76,8 @@ Layout layout(const std::vector<int>& buffs, int left, int top, float scale, boo
     const float w = kW * s, pad = kPad * s;
     L.header = panel::Box{pad, pad * 0.5f, w - 2 * pad, kHeaderH * s};  // 3.0.11-beta.79
     L.fold = panel::Box{L.header.x + L.header.w - 24 * s, L.header.y + 3 * s, 22 * s, L.header.h - 6 * s};
-    L.count = panel::Box{L.fold.x - 52 * s, L.header.y, 48 * s, L.header.h};
+    L.view = panel::Box{L.fold.x - 24 * s, L.fold.y, 22 * s, L.fold.h};  // 3.0.11-beta.84
+    L.count = panel::Box{L.view.x - 52 * s, L.header.y, 48 * s, L.header.h};
     L.title = panel::Box{L.header.x + 4 * s, L.header.y, L.count.x - L.header.x - 8 * s, L.header.h};
     const float top0 = L.header.y + L.header.h;
     if (folded) {
@@ -85,6 +87,23 @@ Layout layout(const std::vector<int>& buffs, int left, int top, float scale, boo
         return L;
     }
     float y = top0;
+    if (compact) {  // 3.0.11-beta.84: two columns of small cells
+        const float gap = 6 * s, cellW = (w - 2 * pad - gap) / 2, cellH = 30 * s;
+        for (size_t i = 0; i < members; ++i) {
+            Row r;
+            r.box = panel::Box{pad + float(i % 2) * (cellW + gap), top0 + float(i / 2) * cellH, cellW, cellH};
+            r.round = panel::Box{r.box.x + 2 * s, r.box.y + 6 * s, 16 * s, 16 * s};
+            const float x0 = r.round.x + r.round.w + 5 * s;
+            r.name = panel::Box{x0, r.box.y + 3 * s, r.box.x + r.box.w - 3 * s - x0, 15 * s};
+            r.bar = panel::Box{x0, r.box.y + 20 * s, r.box.x + r.box.w - 3 * s - x0, 4 * s};
+            L.rows.push_back(r);
+        }
+        y = top0 + float((members + 1) / 2) * cellH;
+        L.glass = panel::Box{0, 0, w, y + pad};
+        L.w = int(std::ceil(L.glass.w));
+        L.h = int(std::ceil(L.glass.h));
+        return L;
+    }
     for (size_t i = 0; i < members; ++i) {
         Row r;
         const bool line = buffs[i] > 0;  // 3.0.11-beta.80: its buffs a line of their own under its bar
@@ -114,6 +133,7 @@ Layout layout(const std::vector<int>& buffs, int left, int top, float scale, boo
 Hit hitTest(const Layout& L, float x, float y) {
     if (!L.glass.contains(x, y)) return {};
     if (L.fold.contains(x, y)) return Hit{Part::Fold, -1};
+    if (L.view.contains(x, y)) return Hit{Part::View, -1};  // 3.0.11-beta.84
     if (L.header.contains(x, y)) return Hit{Part::Header, -1};
     for (size_t i = 0; i < L.rows.size(); ++i)
         if (L.rows[i].box.contains(x, y)) return Hit{Part::Row, int(i)};
@@ -141,7 +161,7 @@ void paint(panel::Picture& out, const Layout& L, const std::vector<Member>& memb
         if (m.face && m.face->width > 0)  // 3.0.11-beta.80: its face, faint when it is not here (or dead)
             putRound(out, *m.face, r.round, here(m) && !m.dead ? 1.0f : 0.45f);
         if (m.leader) {  // the crown after its name
-            const float nameW = panel::wordsWidth((bad ? "! " : "") + m.name, 13 * s, true);
+            const float nameW = panel::wordsWidth((bad ? "! " : "") + m.name, (L.compact ? 11.5f : 13) * s, true);
             const float icon = 13 * s, x = std::min(r.name.x + nameW + 4 * s, r.name.x + r.name.w - icon);
             uiicons::draw(out, uiicons::Icon::Mvp, x, r.name.y + (r.name.h - icon) / 2, icon, kGold, 1.0f, 2.2f);
         }
@@ -180,7 +200,7 @@ void paint(panel::Picture& out, const Layout& L, const std::vector<Member>& memb
             const float done = std::max(line.h, line.w * std::clamp(m.castPart, 0.0f, 1.0f));
             panel::roundRect(out, panel::Box{line.x, line.y, done, line.h}, line.h / 2, kCast, 1.0f);
         }
-        if (m.online && !m.where.empty()) {  // 3.0.11-beta.82: elsewhere - a route mark by its map's name (go there)
+        if (m.online && !m.where.empty() && r.value.w > 0) {  // 3.0.11-beta.82: elsewhere - a route mark by its map
             const float icon = 12 * s, wordsW = panel::wordsWidth(m.where, 12 * s, false);
             const float x = std::max(r.value.x, r.value.x + r.value.w - wordsW - icon - 4 * s);
             uiicons::draw(out, uiicons::Icon::Route, x, r.value.y + (r.value.h - icon) / 2, icon, kGold, 0.9f, 2.2f);
@@ -206,6 +226,8 @@ std::vector<Words> words(const Layout& L, const std::vector<Member>& members, in
         out.push_back(Words{L.count, std::to_string(online) + "/" + std::to_string(members.size()), kMuted, 12 * s,
                             false, Align::Right});
         out.push_back(Words{L.fold, L.folded ? "\xE2\x96\xB8" : "\xE2\x96\xBE", kText, 12 * s, false, Align::Center});
+        out.push_back(Words{L.view, L.compact ? "\xE2\x96\xA4" : "\xE2\x96\xA6", kText, 12 * s, false,
+                            Align::Center});  // 3.0.11-beta.84: ▤ the list, ▦ compact
     }
     for (size_t i = 0; i < L.rows.size() && i < members.size(); ++i) {
         const Row& r = L.rows[i];
@@ -213,10 +235,12 @@ std::vector<Words> words(const Layout& L, const std::vector<Member>& members, in
         const bool bad = low(m, threshold);
         const bool wide = !m.name.empty() && (static_cast<unsigned char>(m.name[0]) & 0xE0) == 0xC0;  // UTF-8 of 2
         const std::string first = m.name.empty() ? "?" : m.name.substr(0, wide ? 2 : 1);
-        if (!m.face || m.face->width <= 0) out.push_back(Words{r.round, first, kMuted, 10.5f * s, true, Align::Center});
+        if (!m.face || m.face->width <= 0)
+            out.push_back(Words{r.round, first, kMuted, (L.compact ? 9 : 10.5f) * s, true, Align::Center});
         const std::string shown = bad ? "! " + m.name : m.name;
-        out.push_back(Words{r.name, shown, bad || m.dead ? kRedText : here(m) ? kText : kMuted, 13 * s, true,
-                            Align::Left});
+        out.push_back(Words{r.name, shown, bad || m.dead ? kRedText : here(m) ? kText : kMuted,
+                            (L.compact ? 11.5f : 13) * s, true, Align::Left});
+        if (L.compact) continue;  // 3.0.11-beta.84: a cell - its name and bar alone
         // 3.0.11-beta.81: after its name - its cast's skill (blue), else its class and level (faint)
         const std::string after = !m.casting.empty() && m.castPart >= 0 ? m.casting : m.job;
         const float nameW = panel::wordsWidth(shown, 13 * s, true) + 6 * s;

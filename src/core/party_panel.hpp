@@ -55,12 +55,17 @@ struct Layout {
     panel::Box header, title, count, fold;
     bool folded = false;
     bool targeting = false;  // 3.0.11-beta.82: a skill waits for a target - the rows here edged gold
+    // 3.0.11-beta.84 (the owner's 8): the view's button in the header (▦ compact, ▤ the list); compact - two columns
+    // of small cells: a face, a name, an HP bar (its rows' boxes the cells)
+    panel::Box view;
+    bool compact = false;
 };
 Layout layout(size_t members, int left, int top, float scale, bool folded = false);
 // 3.0.11-beta.80: each row's buffs counted - a row with any a line taller
 std::vector<int> rowsOf(const std::vector<Member>& members);
-Layout layout(const std::vector<int>& buffs, int left, int top, float scale, bool folded = false);
-enum class Part : uint8_t { None, Fold, Header, Row };
+Layout layout(const std::vector<int>& buffs, int left, int top, float scale, bool folded = false,
+              bool compact = false);
+enum class Part : uint8_t { None, Fold, Header, Row, View };
 struct Hit {
     Part part = Part::None;
     int row = -1;

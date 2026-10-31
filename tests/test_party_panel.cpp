@@ -221,3 +221,28 @@ TEST(party_panel_arrows_routes_targeting) {
     const uint32_t edge = t.px[size_t(int(r.box.y + r.box.h / 2)) * size_t(t.width) + size_t(int(r.box.x))];
     CHECK(((edge >> 16) & 0xFF) > 0x90 && ((edge >> 8) & 0xFF) > 0x70 && (edge & 0xFF) < ((edge >> 16) & 0xFF));
 }
+
+// 3.0.11-beta.84 (the owner's 8: «компактный вид — одни полоски HP в сетку»): a view button in the header; compact -
+// two columns of small cells (a face, a name, an HP bar), a click on one as on its row
+TEST(party_panel_compact_grid) {
+    std::vector<partypanel::Member> m = party();
+    m.push_back(m[0]);
+    m.push_back(m[1]);  // six
+    const partypanel::Layout list = partypanel::layout(partypanel::rowsOf(m), 0, 0, 1.0f, false, false);
+    const partypanel::Layout L = partypanel::layout(partypanel::rowsOf(m), 0, 0, 1.0f, false, true);
+    CHECK(L.compact && L.rows.size() == 6 && L.h < list.h * 0.6f);
+    CHECK(L.rows[1].box.x > L.rows[0].box.x + L.rows[0].box.w - 1);
+    CHECK(std::fabs(L.rows[1].box.y - L.rows[0].box.y) < 0.01f);
+    CHECK(L.rows[2].box.y >= L.rows[0].box.y + L.rows[0].box.h - 0.01f && L.rows[2].box.x == L.rows[0].box.x);
+    for (const partypanel::Row& r : L.rows) CHECK(inside(L.glass, r.box) && inside(r.box, r.bar) && r.buffs.empty());
+    CHECK(L.view.w > 0 && inside(L.header, L.view));
+    CHECK(partypanel::hitTest(L, L.view.x + 2, L.view.y + 2).part == partypanel::Part::View);
+    const partypanel::Hit h = partypanel::hitTest(L, L.rows[3].box.x + 3, L.rows[3].box.y + 3);
+    CHECK(h.part == partypanel::Part::Row && h.row == 3);
+    const std::vector<partypanel::Words> w = partypanel::words(L, m, 30, "офлайн", "Група", "мертвий");
+    CHECK(std::any_of(w.begin(), w.end(), [](const partypanel::Words& x) { return x.text == "Tor"; }));
+    CHECK(std::none_of(w.begin(), w.end(), [](const partypanel::Words& x) { return x.text == "96 %"; }));
+    CHECK(std::any_of(w.begin(), w.end(), [](const partypanel::Words& x) { return x.text == "\xE2\x96\xA4"; }));  // ▤
+    const std::vector<partypanel::Words> lw = partypanel::words(list, m, 30, "офлайн", "Група", "мертвий");
+    CHECK(std::any_of(lw.begin(), lw.end(), [](const partypanel::Words& x) { return x.text == "\xE2\x96\xA6"; }));  // ▦
+}

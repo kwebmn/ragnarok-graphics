@@ -109,6 +109,7 @@ struct State {
     int told = 0;
     // 3.0.11-beta.79 (the owner: «плашка с пати её надо иметь возможность сворачивать»): folded to its header, kept
     bool folded = false, stateRead = false;
+    bool compact = false;  // 3.0.11-beta.84 (the owner's 8): two columns of small cells, kept
 };
 
 State& state() {
@@ -168,13 +169,16 @@ void readState(State& s) {
     if (s.stateRead) return;
     s.stateRead = true;
     std::string text;
-    if (readTextFile(layout::join(gameDir(), layout::kPartyState), text))
+    if (readTextFile(layout::join(gameDir(), layout::kPartyState), text)) {
         s.folded = text.find("folded 1") != std::string::npos;
+        s.compact = text.find("view compact") != std::string::npos;  // 3.0.11-beta.84
+    }
 }
 
 void keepState(const State& s) {
-    writeFileAtomic(layout::join(gameDir(), layout::kPartyState),
-                    std::string("folded ") + (s.folded ? "1" : "0") + "\n");
+    const std::string text = std::string("folded ") + (s.folded ? "1" : "0") + "\nview " +
+                             (s.compact ? "compact" : "list") + "\n";
+    writeFileAtomic(layout::join(gameDir(), layout::kPartyState), text);
 }
 
 void take(State& s, uint32_t account, const std::string& name, const std::string& map, bool leader, bool online) {
@@ -393,7 +397,8 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     float lookE = 0, lookN = 1;
     readLook(lookE, lookN);
     const float partScale = uistyle::partScale(k) * hudedit::sizeOf(hudlayout::Part::Party);
-    const int faceSide = int(std::lround(20 * partScale)), buffSide = int(std::lround(14 * partScale));
+    const int faceSide = int(std::lround((s.compact ? 16 : 20) * partScale));  // 3.0.11-beta.84: a cell's round
+    const int buffSide = int(std::lround(14 * partScale));
     for (const uint32_t account : s.order) {
         const auto it = s.seats.find(account);
         if (it == s.seats.end()) continue;
@@ -468,7 +473,8 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     s.scale = scale;
     s.targetW = targetWidth;
     s.targetH = targetHeight;
-    s.layout = pp::layout(pp::rowsOf(s.members), int(std::lround(10 * scale)), topOf(k, scale), scale, s.folded);
+    s.layout = pp::layout(pp::rowsOf(s.members), int(std::lround(10 * scale)), topOf(k, scale), scale, s.folded,
+                          s.compact);
     uint32_t mode = 0;
     s.layout.targeting = waitingState(mode) != 0;  // 3.0.11-beta.82: a click on a member casts it there
     hudedit::place(hudlayout::Part::Party, float(k), targetWidth, targetHeight, s.layout.w, s.layout.h, s.layout.x,
@@ -487,6 +493,7 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
                std::to_string(int(m.dirY * 16)) + ';';
     }
     key += s.layout.targeting ? "T" : "";
+    key += s.compact ? "C" : "";
     if (const std::string drawn = key + '#' + std::to_string(uistyle::generation()); drawn != s.key) {  // its grounds
         s.key = drawn;
         render(s);
@@ -524,6 +531,10 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
         s.folded = !s.folded;  // 3.0.11-beta.79: ▾ folds it to its header, ▸ opens it
         keepState(s);
         LOG_INFO("party: its panel %s", s.folded ? "folded" : "opened");
+    } else if ((m == WM_LBUTTONDOWN || m == WM_LBUTTONDBLCLK) && hit.part == pp::Part::View) {
+        s.compact = !s.compact;  // 3.0.11-beta.84: ▦ two columns of small cells, ▤ the list
+        keepState(s);
+        LOG_INFO("party: its panel %s", s.compact ? "compact" : "a list");
     } else if (m == WM_LBUTTONDOWN && hit.part == pp::Part::Row && size_t(hit.row) < s.rowsOf.size()) {
         // 3.0.11-beta.82 (the owner's 2 and 4): a member clicked - the skill waited for cast on it; else elsewhere its
         // map's way followed, here a way to its cell
