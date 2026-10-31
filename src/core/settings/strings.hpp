@@ -504,6 +504,8 @@ enum class Text : uint16_t {
     // 3.0.11-beta.115: the Kafra storage («Склад»)
     InterfaceStorage, InterfaceStorageHint, StorageTitle, StoragePlaces, StorageTake, StoragePadTake, StoragePadMore,
     ItemsToStorage, ItemsPadToStorage,
+    // 3.0.11-beta.121: the controller carries a thing between the windows
+    PadCarryPut, PadCarryCancel, PadCarryNowhere,
     // 3.0.11-beta.116: the trade («Обмін»)
     InterfaceTrade, InterfaceTradeHint, TradeTitle, TradeYou, TradeZeny, TradeReady, TradeDo, TradeCancel, TradeLate,
     TradeHint, TradePadHint, ItemsToTrade, ItemsPadToTrade,

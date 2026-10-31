@@ -896,7 +896,7 @@ bool assign(int slot, const std::string& value, int level) {
     bar.levels[size_t(slot)] = level;
     putBar(bar);
     s.readAt = 0;  // its cells read again at once
-    LOG_INFO("hotbar: the slot %d given %s (the controller's «Призначити»)", slot,
+    LOG_INFO("hotbar: the slot %d given %s (the controller: its X, then A on the cell)", slot,
              value.empty() ? "nothing" : value.c_str());
     return true;
 }
@@ -905,6 +905,29 @@ std::string slotWords(int slot) {
     State& s = state();
     if (slot < 0 || slot >= kSlots) return "";
     return cellOf(s, slot, "", s.codePage).name;
+}
+
+std::vector<uagfx::padcarry::Place> cellPlaces() {  // 3.0.11-beta.121
+    const State& s = state();
+    std::vector<uagfx::padcarry::Place> out;
+    if (!s.shown || s.mode == hb::Mode::Editing) return out;
+    uint8_t row = 0;
+    readGame(kRow, &row, 1);
+    for (size_t i = 0; i < s.layout.cells.size(); ++i) {
+        const panel::Box& b = s.layout.cells[i];
+        const int cell = int(i);
+        const int slot = s.mode == hb::Mode::Battle ? hb::gameRow(cell / 9) * 9 + cell % 9 : int(row) * 9 + cell % 9;
+        if (slot < 0 || slot >= kSlots) continue;
+        uagfx::padcarry::Place p;
+        p.to = uagfx::padcarry::To::Cell;
+        p.index = slot;
+        p.x = float(s.layout.x) + b.x;
+        p.y = float(s.layout.y) + b.y;
+        p.w = b.w;
+        p.h = b.h;
+        out.push_back(p);
+    }
+    return out;
 }
 
 }  // namespace uagfx::win::hotbarwin

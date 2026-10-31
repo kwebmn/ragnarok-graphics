@@ -26,6 +26,7 @@
 #include "win/game_camera.hpp"
 #include "win/item_window.hpp"
 #include "win/log.hpp"
+#include "win/pad_carry.hpp"
 #include "win/paths.hpp"
 #include "win/picture_draw.hpp"
 #include "win/real_ddraw.hpp"
@@ -253,8 +254,9 @@ iw::Texts texts(bool pad) {
     t.info = say(settings::Text::ItemsInfo);
     if (pad) {
         t.all = std::string(uapad::buttonLabel(0)) + ": " + say(settings::Text::StoragePadTake);
-        std::string more = say(settings::Text::StoragePadMore);
-        if (const size_t at = more.find("{1}"); at != std::string::npos) more.replace(at, 3, uapad::buttonLabel(3));
+        std::string more = say(settings::Text::StoragePadMore);  // 3.0.11-beta.121: X takes, Y its card
+        if (const size_t at = more.find("{1}"); at != std::string::npos) more.replace(at, 3, uapad::buttonLabel(2));
+        if (const size_t at = more.find("{2}"); at != std::string::npos) more.replace(at, 3, uapad::buttonLabel(3));
         t.info = more;
     }
     return t;
@@ -509,6 +511,40 @@ bool put(int index, int count) {
     return true;
 }
 
+bool takeIndex(int index, int count) {  // 3.0.11-beta.121
+    State& s = state();
+    for (const iw::Item& it : s.items)
+        if (it.index == index) {
+            iw::Item one = it;
+            one.count = count > 0 && count < it.count ? count : it.count;
+            const char* did = take(s, one);
+            if (s.told++ < 30) LOG_INFO("storage: the controller's carry - #%d %s", it.id, did);
+            return true;
+        }
+    return false;
+}
+
+bool padThing(uagfx::padcarry::Thing& t, float& x, float& y, const panel::Picture*& icon, std::string& name) {
+    const State& s = state();  // 3.0.11-beta.121
+    if (!s.shown || s.padFocus < 0 || s.padFocus >= int(s.shownItems.size())) return false;
+    const iw::Item& it = s.items[size_t(s.shownItems[size_t(s.padFocus)])];
+    t = uagfx::padcarry::Thing{};
+    t.from = uagfx::padcarry::From::Storage;
+    t.index = it.index;
+    t.id = it.id;
+    t.type = it.type;
+    t.location = uint32_t(it.location);
+    t.count = it.count;
+    t.value = std::to_string(it.id);
+    icon = it.icon;
+    name = iw::nameOf(it);
+    const int cell = s.padFocus - s.show.scroll * s.layout.columns;
+    const panel::Box b = cell >= 0 && cell < int(s.layout.cells.size()) ? s.layout.cells[size_t(cell)] : s.layout.grid;
+    x = float(s.layout.x) + b.x + b.w / 2;
+    y = float(s.layout.y) + b.y + b.h / 2;
+    return true;
+}
+
 bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     State& s = state();
     if (!s.shown) return false;
@@ -727,6 +763,14 @@ void padCommand(PadCommand c) {
             s.show.scroll = 0;
             break;
         case PadCommand::Close: closeGameWindow(); break;
+        case PadCommand::Carry: {  // 3.0.11-beta.121: X - «Взяти», carried into the bag (win/pad_carry)
+            uagfx::padcarry::Thing t;
+            float x = 0, y = 0;
+            const panel::Picture* icon = nullptr;
+            std::string name;
+            if (padThing(t, x, y, icon, name)) padcarrywin::begin(t, x, y, icon, name);
+            break;
+        }
     }
 }
 

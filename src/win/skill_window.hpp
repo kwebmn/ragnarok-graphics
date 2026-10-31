@@ -2,8 +2,11 @@
 #include <windows.h>
 
 #include <cstdint>
+#include <string>
 
 #include "core/frame.hpp"
+#include "core/pad_carry.hpp"
+#include "core/window_panel.hpp"
 
 namespace uagfx::gpu {
 class Renderer;
@@ -34,5 +37,8 @@ void padCommand(PadCommand c);
 // a window opening where another stands goes beside it); false not shown
 bool box(int& x, int& y, int& w, int& h);
 void moveTo(int x, int y);  // 3.0.11-beta.109: a new place on the target, kept
+// 3.0.11-beta.121 (the concept's stage 5): the controller's row's skill - «##AEGIS» at the level used - its icon and
+// its row's icon's middle on the target; false: none, or not one to use
+bool padThing(uagfx::padcarry::Thing& t, float& x, float& y, const panel::Picture*& icon, std::string& name);
 
 }  // namespace uagfx::win::skillswin

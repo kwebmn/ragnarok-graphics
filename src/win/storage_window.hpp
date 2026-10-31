@@ -2,9 +2,12 @@
 #include <windows.h>
 
 #include <cstdint>
+#include <string>
 
 #include "core/frame.hpp"
 #include "core/game_packets.hpp"
+#include "core/pad_carry.hpp"
+#include "core/window_panel.hpp"
 
 namespace uagfx::gpu {
 class Renderer;
@@ -36,10 +39,14 @@ void packet(const packets::Event& e);  // 0x00f2: the places used of the most
 // A thing of the bag (its place, its count) put into the storage as a drag let go over it does - the game's count
 // window for a stack: «Речі»'s double click and the controller's A while «Склад» is open; false: not open
 bool put(int index, int count);
+// 3.0.11-beta.121 (the concept's stage 5): a storage thing (its place, how many) into the bag as a double click takes
+// it; the controller's frame's thing for carrying (its icon, its cell's middle on the target); false: none
+bool takeIndex(int index, int count);
+bool padThing(uagfx::padcarry::Thing& t, float& x, float& y, const panel::Picture*& icon, std::string& name);
 
 // Played with the controller: the D-pad moves a gold frame over the cells, A takes the thing into the bag, Y its card,
 // LB / RB the tabs, B closes the storage
-enum class PadCommand : uint8_t { Up, Down, Left, Right, Take, Card, TabBack, TabOn, Close };
+enum class PadCommand : uint8_t { Up, Down, Left, Right, Take, Card, TabBack, TabOn, Close, Carry };  // .121: Carry
 void padCommand(PadCommand c);
 
 // Where it is on the target (win/window_stack: placed beside the others, docked with «Речі»); false not shown

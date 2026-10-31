@@ -22,7 +22,7 @@
 #include "pad/core/config/bindings.hpp"
 #include "pad/win/game_window.hpp"
 #include "pad/win/runtime.hpp"
-#include "win/pad_assign.hpp"
+#include "win/pad_carry.hpp"
 #include "win/client_tables.hpp"
 #include "win/code_page.hpp"
 #include "win/game_camera.hpp"
@@ -827,6 +827,27 @@ const std::set<int>& starredIds() {  // 3.0.11-beta.115
 
 void toggleStar(int id) { flipStar(state(), id); }  // 3.0.11-beta.115
 
+bool padThing(uagfx::padcarry::Thing& t, float& x, float& y, const panel::Picture*& icon, std::string& name) {
+    const State& s = state();  // 3.0.11-beta.121
+    if (!s.shown || s.padFocus < 0 || s.padFocus >= int(s.shownItems.size())) return false;
+    const iw::Item& it = s.items[size_t(s.shownItems[size_t(s.padFocus)])];
+    t = uagfx::padcarry::Thing{};
+    t.from = uagfx::padcarry::From::Bag;
+    t.index = it.index;
+    t.id = it.id;
+    t.type = it.type;
+    t.location = it.identified ? uint32_t(it.location) : 0;  // an unknown one is not worn
+    t.count = it.count;
+    t.value = std::to_string(it.id);
+    icon = it.icon;
+    name = iw::nameOf(it);
+    const int cell = s.padFocus - s.show.scroll * s.layout.columns;
+    const panel::Box b = cell >= 0 && cell < int(s.layout.cells.size()) ? s.layout.cells[size_t(cell)] : s.layout.grid;
+    x = float(s.layout.x) + b.x + b.w / 2;
+    y = float(s.layout.y) + b.y + b.h / 2;
+    return true;
+}
+
 bool open() {  // 3.0.11-beta.115: as the character block's button opens it
     if (gameWindow()) return true;
     if (!inGameWorld()) return false;
@@ -926,12 +947,14 @@ void padCommand(PadCommand c) {
         case PadCommand::Card:
             if (s.padFocus >= 0 && s.padFocus < n) card(s, size_t(s.shownItems[size_t(s.padFocus)]));
             break;
-        case PadCommand::Assign:
-            if (s.padFocus >= 0 && s.padFocus < n) {
-                const iw::Item& it = s.items[size_t(s.shownItems[size_t(s.padFocus)])];
-                padassignwin::open(std::to_string(it.id), 0, iw::nameOf(it));
-            }
+        case PadCommand::Assign: {  // 3.0.11-beta.121: X - «Взяти» (win/pad_carry; it took «Призначити»'s place)
+            uagfx::padcarry::Thing t;
+            float x = 0, y = 0;
+            const panel::Picture* icon = nullptr;
+            std::string name;
+            if (padThing(t, x, y, icon, name)) padcarrywin::begin(t, x, y, icon, name);
             break;
+        }
         case PadCommand::TabBack:
         case PadCommand::TabOn:
             s.show.tab = iw::Tab((int(s.show.tab) + (c == PadCommand::TabOn ? 1 : iw::kTabs - 1)) % iw::kTabs);

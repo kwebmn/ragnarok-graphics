@@ -768,4 +768,41 @@ void moveTo(int x, int y, bool keep) {  // 3.0.11-beta.109: question 4 - beside 
 
 bool moving() { return state().shown && state().moving; }  // 3.0.11-beta.111
 
+std::vector<uagfx::padcarry::Place> slotPlaces() {  // 3.0.11-beta.121
+    const State& s = state();
+    std::vector<uagfx::padcarry::Place> out;
+    if (!s.shown) return out;
+    for (int i = 0; i < ew::kSlots; ++i) {
+        const panel::Box& b = s.layout.slots[i];
+        if (b.w <= 0) continue;
+        uagfx::padcarry::Place p;
+        p.to = uagfx::padcarry::To::Slot;
+        p.index = i;
+        p.x = float(s.layout.x) + b.x;
+        p.y = float(s.layout.y) + b.y;
+        p.w = b.w;
+        p.h = b.h;
+        out.push_back(p);
+    }
+    return out;
+}
+
+bool wearThing(int bagIndex, int slot) {  // 3.0.11-beta.121
+    State& s = state();
+    if (slot < 0 || slot >= ew::kSlots) return false;
+    readBag(s);
+    for (const Thing& t : s.bag) {
+        if (t.index != bagIndex) continue;
+        const bool ammo = isAmmo(t.type);
+        const uint32_t at = (t.location & ew::kBits[slot]) ? ew::kBits[slot] : t.location;
+        const bool sent = modeMsg(ammo ? kAmmoMsg : kWearMsg, t.index, int(at), 0);
+        s.readAt = 0;
+        if (s.told++ < 20)
+            LOG_INFO("equip: the controller's carry puts on #%d (the bag's %d) in the slot %d at 0x%X %s", t.id,
+                     t.index, slot, at, sent ? "(as the game's own window)" : "- not sent");
+        return sent;
+    }
+    return false;
+}
+
 }  // namespace uagfx::win::equipwin

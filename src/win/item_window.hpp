@@ -3,9 +3,12 @@
 
 #include <cstdint>
 #include <set>
+#include <string>
 
 #include "core/frame.hpp"
 #include "core/game_packets.hpp"
+#include "core/pad_carry.hpp"
+#include "core/window_panel.hpp"
 
 namespace uagfx::gpu {
 class Renderer;
@@ -61,5 +64,8 @@ bool open();
 // A drag of the game's (a storage thing's, type 6) given to the game's «Речі» window's drop, the window made first:
 // the thing into the bag (the game's count window for a stack); false: no window
 bool giveDrag(uint32_t drag);
+// 3.0.11-beta.121 (the concept's stage 5: the controller carries a thing between the windows): the controller's frame's
+// thing - its place, number, kind, where it is worn, count - its icon and its cell's middle on the target; false none
+bool padThing(uagfx::padcarry::Thing& t, float& x, float& y, const panel::Picture*& icon, std::string& name);
 
 }  // namespace uagfx::win::itemswin

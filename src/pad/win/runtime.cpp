@@ -59,6 +59,7 @@
 #include "win/reference_load.hpp"
 #include "win/reference_window.hpp"
 #include "win/shop_window.hpp"
+#include "win/pad_carry.hpp"
 #include "win/storage_window.hpp"
 #include "win/trade_window.hpp"
 #include "core/shop_window.hpp"
@@ -473,6 +474,23 @@ bool assignPad(const PadState& pad, DWORD now) {
     return true;
 }
 
+// 3.0.11-beta.121 (the concept's stage 5): a thing carried (win/pad_carry) - the D-pad (or the left stick) from place
+// to place, A puts it there, B or Start cancel
+bool carryPad(const PadState& pad, DWORD now) {
+    State& s = S();
+    const uint16_t buttons = pad.connected ? pad.buttons : 0;
+    const uint16_t down = uint16_t((buttons & ~s.prevPadButtons) | stickSteps(pad, now));
+    s.prevPadButtons = buttons;
+    using uagfx::win::padcarrywin::Command;
+    const std::pair<uint16_t, Command> keys[] = {{kPadUp, Command::Up},     {kPadDown, Command::Down},
+                                                 {kPadLeft, Command::Left}, {kPadRight, Command::Right},
+                                                 {kPadA, Command::Put},     {kPadB, Command::Cancel},
+                                                 {kPadStart, Command::Cancel}};
+    for (const auto& [button, command] : keys)
+        if (down & button) uagfx::win::padcarrywin::command(command);
+    return true;
+}
+
 // 3.0.11-beta.91: «Речі» open - the D-pad (or the left stick) moves its frame, A uses, Y its card, X «Призначити»,
 // LB / RB the tabs, B or Start close the game's window; the character stands meanwhile
 bool itemsPad(const PadState& pad, DWORD now) {
@@ -503,7 +521,7 @@ bool storagePad(const PadState& pad, DWORD now) {
         {kPadUp, PadCommand::Up},       {kPadDown, PadCommand::Down},  {kPadLeft, PadCommand::Left},
         {kPadRight, PadCommand::Right}, {kPadA, PadCommand::Take},     {kPadY, PadCommand::Card},
         {kPadLB, PadCommand::TabBack},  {kPadRB, PadCommand::TabOn},   {kPadB, PadCommand::Close},
-        {kPadStart, PadCommand::Close}};
+        {kPadStart, PadCommand::Close}, {kPadX, PadCommand::Carry}};  // 3.0.11-beta.121: X takes it up
     for (const auto& [button, command] : keys)
         if (down & button) uagfx::win::storagewin::padCommand(command);
     return true;
@@ -870,7 +888,8 @@ void tick() {
     const bool drive = top && (*top == Win::Reference || (pad.connected && *top != Win::Npc));
     if (drive && top != s.padTop) LOG_INFO("pad: %s takes the controller (the top window)", kTopNames[int(*top)]);
     s.padTop = drive ? top : std::nullopt;
-    view.paused = uagfx::win::padassignwin::isOpen() && !menuOpen  ? assignPad(pad, now)  // 3.0.11-beta.91
+    view.paused = uagfx::win::padcarrywin::active() && !menuOpen   ? carryPad(pad, now)   // 3.0.11-beta.121
+                  : uagfx::win::padassignwin::isOpen() && !menuOpen ? assignPad(pad, now)  // 3.0.11-beta.91
                   : uagfx::win::padtileswin::isOpen() && !menuOpen ? tilePad(pad, now)    // 3.0.11-beta.90
                   : drive && *top == Win::Reference                ? referencePad(pad)    // 3.0.11-beta.21
                   : drive && *top == Win::Items                    ? itemsPad(pad, now)   // .91

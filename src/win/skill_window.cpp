@@ -23,7 +23,7 @@
 #include "win/code_page.hpp"
 #include "win/game_camera.hpp"
 #include "win/log.hpp"
-#include "win/pad_assign.hpp"
+#include "win/pad_carry.hpp"
 #include "win/paths.hpp"
 #include "win/picture_draw.hpp"
 #include "win/real_ddraw.hpp"
@@ -549,12 +549,17 @@ void padCommand(PadCommand c) {
         case PadCommand::TabOn: setTab(s, (s.show.tab + 1) % int(s.data.tabs.size())); break;
         case PadCommand::Use: use(s, s.show.focus, "the controller's A"); break;
         case PadCommand::Raise: raise(s, s.show.focus, "the controller's Y:"); break;
-        case PadCommand::Assign:
-            if (const kw::Skill* k = skillAt(s, s.show.focus); k && kw::usable(*k) && !k->aegis.empty()) {
-                padassignwin::open("##" + k->aegis, k->use, k->name);
-                LOG_INFO("skills: the controller's X - «Призначити» for %s at level %d", k->aegis.c_str(), k->use);
+        case PadCommand::Assign: {  // 3.0.11-beta.121: X - «Взяти» (win/pad_carry; it took «Призначити»'s place)
+            uagfx::padcarry::Thing t;
+            float x = 0, y = 0;
+            const panel::Picture* icon = nullptr;
+            std::string name;
+            if (padThing(t, x, y, icon, name)) {
+                padcarrywin::begin(t, x, y, icon, name);
+                LOG_INFO("skills: the controller's X - %s at level %d taken up", t.value.c_str(), t.level);
             }
             break;
+        }
         case PadCommand::Close: closeGameWindow(); break;
     }
     s.key.clear();
@@ -656,6 +661,23 @@ void beforeGameDraw() {
     if (const uint32_t window = gameWindow()) hold(s, window, true);
 }
 
+
+bool padThing(uagfx::padcarry::Thing& t, float& x, float& y, const panel::Picture*& icon, std::string& name) {
+    const State& s = state();  // 3.0.11-beta.121
+    const kw::Skill* k = s.shown ? skillAt(s, s.show.focus) : nullptr;
+    if (!k || !kw::usable(*k) || k->aegis.empty()) return false;
+    t = uagfx::padcarry::Thing{};
+    t.from = uagfx::padcarry::From::Skill;
+    t.value = "##" + k->aegis;
+    t.level = k->use;
+    icon = k->icon;
+    name = k->name;
+    const int row = s.show.focus - s.layout.first;
+    const panel::Box b = row >= 0 && row < int(s.layout.icons.size()) ? s.layout.icons[size_t(row)] : s.layout.list;
+    x = float(s.layout.x) + b.x + b.w / 2;
+    y = float(s.layout.y) + b.y + b.h / 2;
+    return true;
+}
 
 bool box(int& x, int& y, int& w, int& h) {  // 3.0.11-beta.109
     const State& s = state();

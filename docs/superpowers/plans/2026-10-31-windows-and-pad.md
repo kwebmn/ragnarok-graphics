@@ -322,6 +322,24 @@ The owner 31.10: «Полоски HP мобов - всем показывай»,
   after the layers' (Part::Style) and a chip «Схема» after the layers' under the big map (BigPart::Style), written to
   the ini as the layers. Tests minimap_proto_scheme_from_the_walkable_cells, minimap_proto_style_switch_places,
   config_interface_minimap_style; suite 2092/0.
+- The concept's stage 5 - the controller carries a thing between the windows (question 7 «ок»; the owner 31.10
+  «приступай», 3.0.11-beta.121): core/pad_carry (Thing from the bag / a skill / the storage; Place to an equipment
+  slot / a hotbar cell (its game slot) / the bag / the storage / the trade; takes(): a gear its fitting slots
+  (equipwin::fits), a cell anything of the bag or a skill, the bag the storage's, the storage and the trade the bag's;
+  nextPlace(): the nearest whose middle lies that way within twice as much across as along, scored along + 3 x
+  across; nearestPlace()); win/pad_carry (begin: windrag lit as the mouse's drag, the first place the nearest to where
+  it was taken; frame: the places from hotbarwin::cellPlaces, equipwin::slotPlaces, the bag's / storage's / trade's
+  boxes, the focus kept by what it is; draw: a gold frame, the thing's icon over its top right corner, a hint «name ·
+  A: покласти · B: скасувати» under it or over it; A: equipwin::wearThing (the slot's own bit when it goes there),
+  hotbarwin::assign, storagewin::takeIndex / put, tradewin::put). X in «Речі» and «Навички» (was «Призначити» - its
+  list no longer opened) and in «Склад» (new) takes up; runtime carryPad first (modal). Strings ItemsPadMore /
+  SkillsPadAssign / StoragePadMore «взяти», PadCarryPut / Cancel / Nowhere. Ruling R23: «Спорядження»'s X stays its
+  list of what fits a slot and its A takes off (the worn thing's carry to the bag would only repeat A) - cost if wrong:
+  one more source. Ruling R24: «Призначити»'s list (a pad button's cell) gives way to carrying onto the cell itself
+  (the cells show their buttons when played with the controller) - cost if wrong: X opens the list again. TDD note:
+  the core's test written first but run only with its first build (the header missing); the D-pad's cone came from
+  its RED (a jump from the bar's first cell to a slot up left). Tests pad_carry_what_takes_what,
+  pad_carry_the_dpads_way; suite 2094/0.
 - Stage 5 research: 0x00c4 deal type; 0x00c6 buy list (11 B each: price.L discount.L type.B nameid.W)
   -> session deal list +0xF28 (count +0xF2C, FUN_0062bbb0(rec, 0); FUN_004ffd30 copies the record's text at +0x11 into
   m_itemName) + windows 0x16 (mgr+0xEC, class 0x69B3E0, SendMsg 0x4AFC00: 0x24 0 buy / 1 sell) and 0x17 (buy cart,

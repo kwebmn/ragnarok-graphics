@@ -53,6 +53,7 @@
 #include "win/equip_window.hpp"
 #include "win/npc_talk.hpp"
 #include "win/shop_window.hpp"
+#include "win/pad_carry.hpp"
 #include "win/storage_window.hpp"
 #include "win/trade_window.hpp"
 #include "win/skill_window.hpp"
@@ -617,6 +618,7 @@ void Context::endScene() {
         windowSwitch_.draw(record, *renderer);
         padtileswin::draw(record, *renderer);   // 3.0.11-beta.90: the controller's windows' tile
         padassignwin::draw(record, *renderer);  // 3.0.11-beta.91: «Призначити»
+        padcarrywin::draw(record, *renderer);   // 3.0.11-beta.121: the carried thing over its place
         padhintwin::draw(record, *renderer);    // 3.0.11-beta.92: the controller's hint line
         hudedit::draw(record, *renderer);       // 3.0.11-beta.75: the parts' frames while they are placed
         record.takeWork();  // the driver's own draws are not the game's
@@ -924,6 +926,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     tradewin::frame(window, config.tradeWindow, gameCodePage(config), pk, pw, ph);      // 3.0.11-beta.116
     // 3.0.11-beta.7: [interface] reference - «Довідник» (Ctrl+F)
     referencewin::frame(window, config.referenceWindow, pk, pw, ph);
+    padcarrywin::frame(window, pk, pw, ph);  // 3.0.11-beta.121: a thing the controller carries - its places now
     windowstack::frame(pw, ph, pk);  // 3.0.11-beta.108: who of them is shown - their stack's order (the last opened on
                                      // top); 3.0.11-beta.109: one opening where another stands goes beside it
     // 3.0.11-beta.75: «Розміщення інтерфейсу» (Ctrl+Shift+L, the console) - over the parts placed this frame

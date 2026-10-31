@@ -2,8 +2,10 @@
 #include <windows.h>
 
 #include <cstdint>
+#include <vector>
 
 #include "core/frame.hpp"
+#include "core/pad_carry.hpp"
 
 namespace uagfx::gpu {
 class Renderer;
@@ -38,5 +40,11 @@ bool box(int& x, int& y, int& w, int& h);
 // being dragged)
 void moveTo(int x, int y, bool keep = true);
 bool moving();  // 3.0.11-beta.111: its title dragged now (docked with the other, it leads)
+
+// 3.0.11-beta.121 (the concept's stage 5: the controller carries a thing between the windows): its slots as places on
+// the target (none while it is not shown); a thing of the bag (its place) put on in a slot - at the slot's own bit
+// when it goes there (an accessory left or right), as the game's window wears it; false: no such thing
+std::vector<uagfx::padcarry::Place> slotPlaces();
+bool wearThing(int bagIndex, int slot);
 
 }  // namespace uagfx::win::equipwin

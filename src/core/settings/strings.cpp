@@ -5126,7 +5126,7 @@ constexpr Entry kTexts[] = {
     {Text::SkillsUnlearned, "Not learned", "Не вивчено", "Не изучен"},
     {Text::SkillsPadUse, "Use", "Застосувати", "Применить"},
     {Text::SkillsPadRaise, "+1 level", "+1 рівень", "+1 уровень"},
-    {Text::SkillsPadAssign, "Assign", "Призначити", "Назначить"},
+    {Text::SkillsPadAssign, "Take", "Взяти", "Взять"},  // 3.0.11-beta.121: X carries it to a cell (was «Призначити»)
     {Text::SkillsPadClose, "Close", "Закрити", "Закрыть"},
     {Text::InterfaceEquip, "Equipment", "Спорядження", "Снаряжение"},  // 3.0.11-beta.97
     {Text::InterfaceEquipHint,
@@ -5244,9 +5244,13 @@ constexpr Entry kTexts[] = {
     {Text::StoragePlaces, "Places", "Місця", "Места"},
     {Text::StorageTake, "double click: into the bag", "двічі клік — у сумку", "двойной клик — в сумку"},
     {Text::StoragePadTake, "into the bag", "у сумку", "в сумку"},
-    {Text::StoragePadMore, "{1}: its card", "{1}: картка", "{1}: карточка"},
+    {Text::StoragePadMore, "{1}: take \xC2\xB7 {2}: its card", "{1}: взяти \xC2\xB7 {2}: картка",
+     "{1}: взять \xC2\xB7 {2}: карточка"},  // 3.0.11-beta.121: X carries it
     {Text::ItemsToStorage, "double click: into the storage", "двічі клік — на склад", "двойной клик — на склад"},
     {Text::ItemsPadToStorage, "into the storage", "на склад", "на склад"},
+    {Text::PadCarryPut, "put", "покласти", "положить"},  // 3.0.11-beta.121
+    {Text::PadCarryCancel, "cancel", "скасувати", "отменить"},
+    {Text::PadCarryNowhere, "nowhere to put it", "нікуди покласти", "некуда положить"},
     {Text::InterfaceTrade, "Trade", "Обмін", "Обмен"},  // 3.0.11-beta.116
     {Text::InterfaceTradeHint,
      "The trade between players in the new look: «Trade» with your side and the partner's - ten cells each, the zeny "
@@ -5354,8 +5358,8 @@ constexpr Entry kTexts[] = {
     {Text::ItemsPadUse, "use", "використати", "использовать"},
     {Text::ItemsPadWear, "wear", "вдягнути", "надеть"},
     {Text::ItemsPadCard, "into a slot", "у слот", "в слот"},
-    {Text::ItemsPadMore, "{1}: put on a button · {2}: its card", "{1}: призначити · {2}: картка",
-     "{1}: назначить · {2}: карточка"},
+    {Text::ItemsPadMore, "{1}: take · {2}: its card", "{1}: взяти · {2}: картка",
+     "{1}: взять · {2}: карточка"},  // 3.0.11-beta.121: X carries it (was «призначити»)
     // 3.0.11-beta.33
     {Text::InterfaceMinimapWay, "The way on the ground", "Шлях на землі", "Путь на земле"},
     {Text::InterfaceMinimapWayHint,

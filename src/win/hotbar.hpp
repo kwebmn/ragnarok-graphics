@@ -6,6 +6,7 @@
 
 #include "core/bar_hint.hpp"
 #include "core/frame.hpp"
+#include "core/pad_carry.hpp"
 
 namespace uagfx::gpu {
 class Renderer;
@@ -44,5 +45,9 @@ std::vector<barhint::Skill> barSkills();
 // kept as the other changes are); its words now («Red Potion», «Double Strafe»; "" empty). On the game's thread
 bool assign(int slot, const std::string& value, int level);
 std::string slotWords(int slot);
+
+// 3.0.11-beta.121 (the concept's stage 5): its cells shown as places on the target, each with the game's slot it
+// keeps (assign's: the row shown, the battle mode's three rows); none while editing or not shown
+std::vector<uagfx::padcarry::Place> cellPlaces();
 
 }  // namespace uagfx::win::hotbarwin
