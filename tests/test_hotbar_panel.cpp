@@ -306,3 +306,28 @@ TEST(hotbar_not_here_rules) {
     CHECK(hotbar::notHere(skill("CG_HERMODE"), {"gvg_castle"}) == NotHere::No);  // a castle: its war unknown
     CHECK(hotbar::notHere(hotbar::slotOf(""), noSkill) == NotHere::No);
 }
+
+// 3.0.11-beta.110 (the concept «Концепция окон и инвентаря», stage 2): a thing or a skill dragged - the cells lit in
+// gold (a drop on one gives it the cell)
+TEST(hotbar_lights_its_cells_while_a_thing_is_dragged) {
+    const hotbar::Layout L = hotbar::layout(hotbar::Mode::Normal, 960, 1070, 1.0f);
+    const std::vector<hotbar::Cell> cells(L.cells.size());
+    const auto painted = [&](const hotbar::Show& show) {
+        panel::Picture p;
+        p.width = L.w;
+        p.height = L.h;
+        p.px.assign(size_t(L.w) * size_t(L.h), 0u);
+        hotbar::paint(p, L, cells, show, texts());
+        return p;
+    };
+    hotbar::Show sh;
+    const panel::Picture plain = painted(sh);
+    sh.dropping = true;
+    const panel::Picture lit = painted(sh);
+    const auto edge = [](const panel::Picture& p, const panel::Box& c) {
+        return p.px[size_t(int(c.y + c.h / 2)) * size_t(p.width) + size_t(int(c.x))];
+    };
+    CHECK(((edge(lit, L.cells[0]) >> 16) & 0xFF) > ((edge(plain, L.cells[0]) >> 16) & 0xFF) + 20);
+    CHECK(((edge(lit, L.cells[5]) >> 16) & 0xFF) > ((edge(plain, L.cells[5]) >> 16) & 0xFF) + 20);
+}
+

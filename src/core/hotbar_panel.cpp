@@ -188,8 +188,10 @@ void paint(panel::Picture& out, const Layout& L, const std::vector<Cell>& cells,
         const Cell* c = i < cells.size() ? &cells[i] : nullptr;
         const bool hot = int(i) == show.hover, down = int(i) == show.pressed, chosen = c && c->selected;
         // the concept's states: plain 5 % with a 10 % edge, hovered lighter with 20 %, pressed darker, chosen gold
-        const uint32_t edge = chosen ? kGold : kWhite;
-        const float edgeA = chosen ? 1.0f : hot ? 0.20f : 0.10f, edgeW = (chosen ? 2.0f : 1.0f) * s;
+        const bool lit = show.dropping;  // 3.0.11-beta.110: a drop would take it
+        const uint32_t edge = chosen || lit ? kGold : kWhite;
+        const float edgeA = chosen ? 1.0f : lit ? 0.85f : hot ? 0.20f : 0.10f;
+        const float edgeW = (chosen || lit ? 2.0f : 1.0f) * s;
         if (down) panel::roundRect(out, b, 7 * s, kBlack, 0.30f, edge, edgeA, edgeW);
         else panel::roundRect(out, b, 7 * s, kWhite, hot ? 0.10f : 0.05f, edge, edgeA, edgeW);
         const bool barred = c && (c->notHere != NotHere::No || c->unlearned), dry = c && !barred && noSp(*c);

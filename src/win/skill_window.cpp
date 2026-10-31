@@ -334,6 +334,7 @@ void hide(State& s) {
     if (s.shown) uapad::gamewindow::setBlocked(uapad::gamewindow::Blocker::Skills, nullptr, nullptr, false);
     s.shown = false;
     s.moving = false;
+    if (s.press.dragging) windrag::clear();  // 3.0.11-beta.110
     s.press = kw::Press{};
 }
 
@@ -580,7 +581,14 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
         return true;
     }
     if (s.press.index >= 0 && (m == WM_MOUSEMOVE || m == WM_LBUTTONUP)) {  // a skill pressed: dragged, or a click
-        if (m == WM_MOUSEMOVE) return kw::moved(s.press, tx, ty, s.scale);
+        if (m == WM_MOUSEMOVE) {
+            const bool was = s.press.dragging, now = kw::moved(s.press, tx, ty, s.scale);
+            if (now && !was)  // 3.0.11-beta.110: told to the hotbar (its cells lit in gold)
+                if (const kw::Skill* k = skillAt(s, s.press.index))
+                    windrag::set(windrag::Thing{windrag::Kind::Skill, k->id, 0, 0});
+            return now;
+        }
+        if (s.press.dragging) windrag::clear();
         const int dragged = kw::released(s.press);
         if (dragged >= 0) {
             const kw::Skill* k = skillAt(s, dragged);

@@ -71,6 +71,7 @@ struct Show {
     int hoverTab = -1;
     bool hoverClose = false;
     bool typing = false;  // the search has the keys
+    bool dropping = false;  // 3.0.11-beta.110: a worn thing dragged out of «Спорядження» - the grid lit (taken off)
     std::string search;   // UTF-8
     bool caretOn = true;
     int weight = 0, weightMost = 0;

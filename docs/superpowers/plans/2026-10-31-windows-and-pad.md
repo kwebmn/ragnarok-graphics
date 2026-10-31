@@ -214,6 +214,14 @@ The owner 31.10: «Полоски HP мобов - всем показывай»,
   and right; inside the screen) + box()/moveTo() on the five movable windows; windowstack::frame(w, h, k) places a
   window the frame it opens. Tests frame_takes_the_tail_and_puts_it_back,
   window_stack_a_new_window_beside_the_one_in_its_place; suite 2066/0.
+- Stage 2 of the concept (3.0.11-beta.110): core/window_drag (Press/pressed/moved/released, moved out of skills; the
+  dragged Thing set/clear/now); «Речі» and «Навички» tell their drags; «Спорядження»'s worn-thing drag rebuilt (it began
+  the game's 0x16 at the press - the same never-let-go fault as the skills' before .106): own drag + icon, on release
+  0x16 then 0x12 at the cursor; highlights: equip Show.dropFits (ew::fits per slot), hotbar Show.dropping (items,
+  skills), «Речі» Show.dropping (worn) - each in its repaint key. Ruling R14: the pad's carry between windows (Q7) left
+  to stage 5 (the doc's order) - the pad already wears (A), assigns (X) and takes off (A in «Спорядження»). Tests
+  window_drag_*, equip_window_lights_the_slots_a_dragged_thing_fits, hotbar_lights_its_cells_while_a_thing_is_dragged,
+  item_window_lights_the_bag_while_a_worn_thing_is_dragged; suite 2071/0.
 - Stage 5 research: 0x00c4 deal type; 0x00c6 buy list (11 B each: price.L discount.L type.B nameid.W)
   -> session deal list +0xF28 (count +0xF2C, FUN_0062bbb0(rec, 0); FUN_004ffd30 copies the record's text at +0x11 into
   m_itemName) + windows 0x16 (mgr+0xEC, class 0x69B3E0, SendMsg 0x4AFC00: 0x24 0 buy / 1 sell) and 0x17 (buy cart,

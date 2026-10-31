@@ -144,6 +144,29 @@ TEST(item_window_picture_and_words) {
     CHECK(std::any_of(early.begin(), early.end(), [](const itemwin::Words& x) { return x.text == "38"; }));
 }
 
+// 3.0.11-beta.110 (the concept «Концепция окон и инвентаря», stage 2): a worn thing dragged out of «Спорядження» - the
+// bag's grid lit in gold (a drop there takes it off)
+TEST(item_window_lights_the_bag_while_a_worn_thing_is_dragged) {
+    const std::vector<itemwin::Item> items{item(1, 501, 0, 38, "Red Potion")};
+    const itemwin::Texts t = itemTexts();
+    const itemwin::Layout L = itemwin::layout(0, 0, 1.0f, t, itemwin::Measure(panel::wordsWidth));
+    const std::vector<int> shown = itemwin::shownOf(items, itemwin::Tab::Items, "");
+    const auto painted = [&](const itemwin::Show& show) {
+        panel::Picture p;
+        p.width = L.w;
+        p.height = L.h;
+        p.px.assign(size_t(L.w) * size_t(L.h), 0u);
+        itemwin::paint(p, L, items, shown, show, t, itemwin::Measure(panel::wordsWidth));
+        return p;
+    };
+    itemwin::Show sh;
+    const panel::Picture plain = painted(sh);
+    sh.dropping = true;
+    const panel::Picture lit = painted(sh);
+    const size_t at = size_t(int(L.grid.y + L.grid.h / 2)) * size_t(L.w) + size_t(int(L.grid.x) + 1);
+    CHECK(((lit.px[at] >> 16) & 0xFF) > ((plain.px[at] >> 16) & 0xFF) + 20);
+}
+
 TEST(stat_window_prices_and_points) {
     const statwin::Texts t = statTexts();
     statwin::Data d;

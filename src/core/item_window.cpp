@@ -257,6 +257,8 @@ void paint(panel::Picture& out, const Layout& L, const std::vector<Item>& items,
     if (share > 0)
         panel::roundRect(out, panel::Box{L.bar.x, L.bar.y, L.bar.w * share, L.bar.h}, 3 * s,
                          share >= 0.9f ? kRed : share >= 0.5f ? kGold : kGreen, 0.95f);
+    if (sh.dropping)  // 3.0.11-beta.110: a worn thing dragged - the grid takes it off
+        panel::roundRect(out, L.grid, 8 * s, kGold2, 0.06f, kGold, 0.9f, 2.0f * s);
     for (const Flash& f : sh.flashes) {  // 3.0.11-beta.44: a use answered in its cell
         const float t = std::clamp(f.t, 0.0f, 1.0f), fade = 1 - t;
         bool empty = true;  // its cell now: nothing shown there (the last one gone)

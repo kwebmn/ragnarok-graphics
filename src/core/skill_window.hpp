@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 
+#include "core/window_drag.hpp"
 #include "core/window_panel.hpp"
 
 namespace uagfx::skillwin {
@@ -72,18 +73,12 @@ struct Layout {
 };
 Layout layout(int x, int y, float scale, const Data& d, const Show& sh, const Texts& t, const Measure& m);
 
-// 3.0.11-beta.106 (R-WCXUQP: «не переносятся» - the game's drag begun at the press never saw its button come up, the
-// press and the release being the driver's): a press on a skill, a drag of the window's own once the cursor moved past
-// 10 pixels times the scale (till let go); released() - the skill a drag let go (the game's drag of it begun and let
-// go there), -1 after a click or nothing pressed
-struct Press {
-    int index = -1;  // the skill pressed (in its tab), -1 none
-    float x = 0, y = 0;
-    bool dragging = false;
-};
-void pressed(Press& p, int index, float x, float y);
-bool moved(Press& p, float x, float y, float scale);  // dragging now
-int released(Press& p);
+// 3.0.11-beta.106 (R-WCXUQP: «не переносятся»): a press on a skill, a drag of the window's own past 10 pixels -
+// 3.0.11-beta.110: the windows' common one (core/window_drag)
+using windrag::Press;
+using windrag::pressed;
+using windrag::moved;
+using windrag::released;
 
 enum class Part : uint8_t { None, Close, Tab, Row, Plus, Less, More, Title, Body };
 struct Hit {

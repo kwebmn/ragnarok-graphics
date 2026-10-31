@@ -64,6 +64,7 @@ struct Show {
     bool hoverClose = false, pad = false, sony = false;
     bool picking = false;  // the controller's list of what fits `pickSlot`
     int pickSlot = -1, pickFocus = 0;
+    uint32_t dropFits = 0;  // 3.0.11-beta.110: bit i - slot i takes the thing dragged (lit in gold)
 };
 
 struct Layout {

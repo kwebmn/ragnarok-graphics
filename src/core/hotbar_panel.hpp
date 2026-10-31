@@ -86,6 +86,7 @@ struct Show {
     // 3.0.11-beta.86 (the concept «Контроллер в интерфейсе uaRO»): played with the controller - each cell its button's
     // badge (Cell::pad) over its top left corner instead of its key, a cell no button uses dimmed; PlayStation's look
     bool pad = false, sony = false;
+    bool dropping = false;  // 3.0.11-beta.110: a thing or a skill dragged - the cells lit in gold (a drop takes it)
 };
 void paint(panel::Picture& out, const Layout& L, const std::vector<Cell>& cells, const Show& show, const Texts& t);
 

@@ -17,6 +17,7 @@
 #include "core/layout.hpp"
 #include "core/settings/strings.hpp"
 #include "core/ui_style.hpp"
+#include "core/window_drag.hpp"
 #include "pad/core/config/bindings.hpp"
 #include "pad/win/game_window.hpp"
 #include "pad/win/runtime.hpp"
@@ -301,6 +302,7 @@ void block(const State& s, HWND game) {  // the mouse's clicks over it are its o
 
 void hide(State& s) {
     if (s.shown) uapad::gamewindow::setBlocked(uapad::gamewindow::Blocker::Items, nullptr, nullptr, false);
+    if (s.dragging) windrag::clear();  // 3.0.11-beta.110
     s.shown = false;
     s.moving = false;
 }
@@ -465,6 +467,7 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     }
     s.show.tip = s.show.hover >= 0 && now - s.tipSince >= kTipMs;
     s.padNow = uapad::runtime::look().shown;  // 3.0.11-beta.91: the controller's frame and its tip at once
+    s.show.dropping = windrag::now().kind == windrag::Kind::Worn;  // 3.0.11-beta.110: a drop here takes it off
     if (s.padNow && !s.shownItems.empty()) {
         s.padFocus = std::clamp(s.padFocus, 0, int(s.shownItems.size()) - 1);
         s.show.hover = s.padFocus;
@@ -474,7 +477,8 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
                       ';' + std::to_string(int(s.show.tab)) + ';' + std::to_string(s.show.scroll) + ';' +
                       std::to_string(s.show.hover) + (s.show.tip ? "t" : "") + ',' + std::to_string(s.show.hoverTab) +
                       (s.show.hoverClose ? "x" : "") + ';' + s.show.search + (s.show.typing ? "|t" : "") +
-                      (s.show.typing && s.show.caretOn ? "c" : "") + ';' + std::to_string(s.show.flashes.size()) + '@' +
+                      (s.show.typing && s.show.caretOn ? "c" : "") + (s.show.dropping ? "D" : "") + ';' +
+                      std::to_string(s.show.flashes.size()) + '@' +
                       std::to_string(s.show.flashes.empty() ? 0 : int(s.show.flashes.front().t * 40)) + ';' +
                       std::to_string(s.show.weight) + '/' +
                       std::to_string(s.show.weightMost) + ';' + std::to_string(s.show.zeny) + ';' +
@@ -557,15 +561,21 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     if (s.press >= 0 && (m == WM_MOUSEMOVE || m == WM_LBUTTONUP)) {  // an item pressed: dragged, or a click
         if (size_t(s.press) >= s.items.size()) {
             s.press = -1;
+            if (s.dragging) windrag::clear();
             s.dragging = false;
             return false;
         }
         if (m == WM_MOUSEMOVE) {
-            if (!s.dragging && std::hypot(tx - s.pressX, ty - s.pressY) > 10 * s.scale) s.dragging = true;
+            if (!s.dragging && std::hypot(tx - s.pressX, ty - s.pressY) > 10 * s.scale) {
+                s.dragging = true;  // 3.0.11-beta.110: told to the windows that take it (lit in gold)
+                const iw::Item& it = s.items[size_t(s.press)];
+                windrag::set(windrag::Thing{windrag::Kind::Item, it.id, uint32_t(it.location), it.type});
+            }
             return s.dragging;
         }
         const iw::Item it = s.items[size_t(s.press)];
         const bool dragged = s.dragging;
+        if (dragged) windrag::clear();
         s.press = -1;
         s.dragging = false;
         s.key.clear();

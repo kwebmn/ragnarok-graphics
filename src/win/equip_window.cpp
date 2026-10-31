@@ -17,6 +17,7 @@
 #include "core/layout.hpp"
 #include "core/settings/strings.hpp"
 #include "core/ui_style.hpp"
+#include "core/window_drag.hpp"
 #include "pad/win/game_window.hpp"
 #include "pad/win/runtime.hpp"
 #include "win/client_tables.hpp"
@@ -47,6 +48,9 @@ constexpr uint32_t kEquipDrop = 0x46F550, kMakeWindow = 0x4D42D0;
 constexpr int kButtonMsg = 6, kCloseButton = 0x87, kItemCard = 0xC, kShowItem = 0x18;
 constexpr uint32_t kModeNow = 0x74B57C, kModeMsgSlot = 0x14, kModeMsg = 0x5707D0;
 constexpr int kWearMsg = 0x14, kAmmoMsg = 100, kTakeOffMsg = 0x15, kDragWornMsg = 0x16;
+// 3.0.11-beta.110: a drag let go - the game mode's 0x12 (the cursor's x, y), as its frame sends it when the button
+// comes up (as «Речі»'s and «Навички»'s)
+constexpr int kDropMsg = 0x12;
 // The bag (win/item_window's): the session's list, a node's ITEM_INFO at +8, 72 bytes
 constexpr uint32_t kBag = 0x771148 + 0xF1C, kInfo = 8;
 constexpr size_t kInfoSize = 0x48, kMostNodes = 256;
@@ -71,6 +75,15 @@ struct Thing {  // a thing of the bag as the game keeps it
 struct State {
     WindowShadow shadow;
     WindowEdge edge;  // 3.0.11-beta.108: the top of two or more windows (win/window_stack)
+    // 3.0.11-beta.110 (the concept «Концепция окон и инвентаря», stage 2): the game's drag of a worn thing begun at
+    // the press never saw its button come up (the press and the release are the window's) - a drag of its own now, its
+    // icon under the cursor, the game's drag begun and let go only when the button comes up (as «Речі»)
+    windrag::Press press;
+    panel::Picture dragIcon;
+    const panel::Picture* dragOf = nullptr;
+    uint32_t dragTexture = 0;
+    int dragW = 0, dragH = 0;
+    bool dragUpload = false;
     bool on = false, shown = false, hid = false, stateRead = false;
     float k = 0, scale = 1;
     int targetW = 0, targetH = 0;
@@ -341,9 +354,34 @@ void block(const State& s, HWND game) {
 
 void hide(State& s) {
     if (s.shown) uapad::gamewindow::setBlocked(uapad::gamewindow::Blocker::Equip, nullptr, nullptr, false);
+    if (s.press.dragging) windrag::clear();  // 3.0.11-beta.110
+    s.press = windrag::Press{};
     s.shown = false;
     s.moving = false;
     s.show.picking = false;
+}
+
+bool modeMsg(int msg, int a, int b, int c);
+
+// 3.0.11-beta.110: a worn thing dragged and let go - the game's drag of it begun (0x16, as its own window's press) and
+// let go at once where the game's cursor is (0x12): onto «Речі» (taken off), a window of the game's or the ground
+const char* dropAt(State& s, int slot) {
+    if (slot < 0 || slot >= ew::kSlots || s.data.slots[slot].index <= 0) return "not dropped (nothing worn there)";
+    int cx = 0, cy = 0;
+    if (!readGameCursor(cx, cy)) return "not dropped (no cursor)";
+    if (!modeMsg(kDragWornMsg, int(s.data.slots[slot].location), 0, 0)) return "not dropped (the game mode not found)";
+    modeMsg(kDropMsg, cx, cy, 0);
+    return "let go through the game's own drop";
+}
+
+// 3.0.11-beta.110: the slots a thing of the bag being dragged fits (lit in gold)
+uint32_t dropFits() {
+    const windrag::Thing& t = windrag::now();
+    if (t.kind != windrag::Kind::Item || !t.location) return 0;
+    uint32_t bits = 0;
+    for (int i = 0; i < ew::kSlots; ++i)
+        if (ew::fits(t.location, i)) bits |= 1u << i;
+    return bits;
 }
 
 bool modeMsg(int msg, int a, int b, int c) {
@@ -452,6 +490,7 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     const uapad::runtime::Look pad = uapad::runtime::look();
     s.show.pad = pad.shown;
     s.show.sony = pad.sony;
+    s.show.dropFits = dropFits();  // 3.0.11-beta.110
     if (s.show.pad && (s.show.focus < 0 || s.show.focus >= ew::kSlots)) s.show.focus = ew::Weapon;
     if (s.show.picking)
         s.show.pickFocus = std::clamp(s.show.pickFocus, 0, std::max(0, int(s.data.picks.size()) - 1));
@@ -473,7 +512,8 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
                       ';' + std::to_string(s.show.hoverSlot) + ',' + std::to_string(s.show.hoverPick) + ',' +
                       std::to_string(s.show.focus) + ',' + std::to_string(s.show.pickFocus) +
                       (s.show.picking ? "p" + std::to_string(s.show.pickSlot) : "") + (s.show.hoverClose ? "x" : "") +
-                      (s.show.pad ? (s.show.sony ? "S" : "X") : "") + ';' + s.data.who + ';' +
+                      (s.show.pad ? (s.show.sony ? "S" : "X") : "") + 'F' + std::to_string(s.show.dropFits) + ';' +
+                      s.data.who + ';' +
                       std::to_string(s.data.baseLevel) + '/' + std::to_string(s.data.jobLevel) + ';' +
                       (s.data.portrait ? "f" : "");
     for (const ew::Worn& w : s.data.slots)
@@ -500,7 +540,8 @@ void draw(FrameRecord& record, gpu::Renderer& renderer) {
     State& s = state();
     if (!s.shown || s.k <= 0 || s.picture.width <= 0 || s.picture.height <= 0) return;
     int cursor = -1, cx = 0, cy = 0;
-    if (readGameCursor(cx, cy)) cursor = panel::cursorDraw(record, float(cx), float(cy));
+    const bool known = readGameCursor(cx, cy);
+    if (known) cursor = panel::cursorDraw(record, float(cx), float(cy));
     const panel::Box& g = s.layout.glass;
     s.shadow.draw(record, renderer, s.layout.x + int(g.x), s.layout.y + int(g.y), int(g.w), int(g.h), 12 * s.scale,
                   s.scale, s.k);
@@ -508,6 +549,18 @@ void draw(FrameRecord& record, gpu::Renderer& renderer) {
     if (windowstack::marked(winstack::Win::Equip))  // 3.0.11-beta.108: its gold edge, the top of two or more
         s.edge.draw(record, renderer, s.layout.x + int(g.x), s.layout.y + int(g.y), int(g.w), int(g.h), 12 * s.scale,
                     s.scale, s.k);
+    const int dragged = s.press.dragging ? s.press.index : -1;  // 3.0.11-beta.110: its icon under the cursor
+    const panel::Picture* icon = dragged >= 0 && dragged < ew::kSlots ? s.data.slots[dragged].icon : nullptr;
+    if (icon && icon->width > 0 && known) {
+        if (icon != s.dragOf) {
+            s.dragOf = icon;
+            s.dragIcon = *icon;
+            s.dragUpload = true;
+        }
+        const int x = int(std::lround(float(cx) * s.k)) - icon->width / 2;
+        const int y = int(std::lround(float(cy) * s.k)) - icon->height / 2;
+        drawPart(record, renderer, s.dragIcon, s.dragTexture, s.dragW, s.dragH, s.dragUpload, x, y, s.k);
+    }
     if (cursor >= 0) record.moveLastBefore(record.commands().size() - size_t(cursor) - 1, size_t(cursor));
 }
 
@@ -587,6 +640,26 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
         result = 0;
         return true;
     }
+    if (s.press.index >= 0 && (m == WM_MOUSEMOVE || m == WM_LBUTTONUP)) {  // a worn thing pressed: dragged, or a click
+        if (m == WM_MOUSEMOVE) {
+            const bool was = s.press.dragging, now = windrag::moved(s.press, tx, ty, s.scale);
+            if (now && !was && s.press.index < ew::kSlots) {  // told to «Речі» (its grid lit in gold)
+                const ew::Worn& w = s.data.slots[s.press.index];
+                windrag::set(windrag::Thing{windrag::Kind::Worn, w.id, uint32_t(w.location), 0});
+            }
+            return now;
+        }
+        if (s.press.dragging) windrag::clear();
+        const int dragged = windrag::released(s.press);
+        if (dragged >= 0 && dragged < ew::kSlots) {
+            const int id = s.data.slots[dragged].id;
+            const char* did = dropAt(s, dragged);
+            s.readAt = 0;
+            if (s.told++ < 20) LOG_INFO("equip: #%d dragged and let go - %s", id, did);
+        }
+        result = 0;
+        return true;
+    }
     const ew::Hit h = ew::hitTest(s.layout, tx - float(s.layout.x), ty - float(s.layout.y));
     if ((m == WM_LBUTTONDOWN || m == WM_LBUTTONDBLCLK || m == WM_RBUTTONDOWN) && s.pressesTold < 8) {
         ++s.pressesTold;
@@ -614,9 +687,8 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
             if (w.index <= 0) break;
             if (m == WM_LBUTTONDBLCLK) {
                 takeOff(s, h.index, "a double click");
-            } else {  // dragged as the game's own window drags a worn thing
-                const bool sent = modeMsg(kDragWornMsg, int(w.location), 0, 0);
-                if (s.told++ < 20) LOG_INFO("equip: #%d dragged %s", w.id, sent ? "(the game mode's 0x16)" : "- not");
+            } else {  // 3.0.11-beta.110: a drag of its own once it moves (the game's begun and let go on release)
+                windrag::pressed(s.press, h.index, tx, ty);
             }
             break;
         }

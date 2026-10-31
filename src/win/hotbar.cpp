@@ -19,6 +19,7 @@
 #include "core/settings/strings.hpp"
 #include "core/skill_costs.hpp"
 #include "core/ui_style.hpp"
+#include "core/window_drag.hpp"
 #include "pad/win/client_bar.hpp"
 #include "pad/win/game_window.hpp"
 #include "pad/win/runtime.hpp"
@@ -750,6 +751,7 @@ void frame(HWND game, bool on, bool ownBars, bool padHints, unsigned codePage, d
     show.tip = s.hover >= 0 && now - s.hoverSince >= kTipMs;
     show.hoverEdit = s.hoverEdit;
     show.pad = pad.shown && s.mode != hb::Mode::Editing;  // 3.0.11-beta.86
+    show.dropping = windrag::now().kind == windrag::Kind::Item || windrag::now().kind == windrag::Kind::Skill;  // .110
     show.sony = pad.sony;
     if (show.pad != s.padTold) {
         s.padTold = show.pad;
@@ -761,7 +763,7 @@ void frame(HWND game, bool on, bool ownBars, bool padHints, unsigned codePage, d
     std::string key = std::to_string(int(s.mode)) + ';' + std::to_string(s.row) + ';' + std::to_string(scale) + ';' +
                       std::to_string(s.layout.w) + 'x' + std::to_string(s.layout.h) + ';' + std::to_string(show.hover) +
                       ',' + std::to_string(show.pressed) + (show.tip ? "t" : "") + (s.hoverEdit ? "e" : "") +
-                      (show.pad ? (show.sony ? "S" : "X") : "") + ';';
+                      (show.pad ? (show.sony ? "S" : "X") : "") + (show.dropping ? "D" : "") + ';';
     for (size_t i = 0; i < s.cells.size(); ++i) {
         const hb::Cell& c = s.cells[i];
         key += c.key + '|' + c.name + '|' + std::to_string(c.level) + '|' + std::to_string(c.count) +

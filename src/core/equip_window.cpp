@@ -163,6 +163,7 @@ void paint(panel::Picture& out, const Layout& L, const Data& d, const Show& sh) 
         if (b.w <= 0) continue;
         if (i == sh.hoverSlot && !sh.picking) panel::roundRect(out, b, 8 * s, kWhite, 0.06f);
         if (sh.pad && i == sh.focus) panel::roundRect(out, b, 8 * s, kGold2, 0.08f, kGold, 0.9f, 1.5f * s);
+        if ((sh.dropFits >> i) & 1u) panel::roundRect(out, b, 8 * s, kGold2, 0.12f, kGold, 0.95f, 2.0f * s);  // .110
         panel::roundRect(out, L.icons[i], 8 * s, kTile, 0.9f, kWhite, 0.08f, 1.0f * s);
         const Worn& wi = d.slots[i];
         if (wi.index > 0 && wi.icon && wi.icon->width > 0) put(out, *wi.icon, L.icons[i], wi.spill ? 0.4f : 1.0f);

@@ -121,3 +121,29 @@ TEST(equip_window_the_controllers_pick_list) {
     CHECK(has("Що вдягнути: Взуття") && has("Sandals") && has("Вдягнути") && has("Назад"));
     CHECK(equipwin::hitTest(L, L.picks[0].x + 5, L.picks[0].y + 5).part == equipwin::Part::Pick);
 }
+
+// 3.0.11-beta.110 (the concept «Концепция окон и инвентаря», stage 2): a thing of the bag dragged - the slots it fits
+// lit in gold, the rest as they are
+TEST(equip_window_lights_the_slots_a_dragged_thing_fits) {
+    const equipwin::Data d = wizard();
+    equipwin::Show sh;
+    const equipwin::Layout L = equipwin::layout(0, 0, 1.0f, d, sh, texts(), measure);
+    const auto painted = [&](const equipwin::Show& show) {
+        panel::Picture p;
+        p.width = L.w;
+        p.height = L.h;
+        p.px.assign(size_t(L.w) * size_t(L.h), 0u);
+        equipwin::paint(p, L, d, show);
+        return p;
+    };
+    const panel::Picture plain = painted(sh);
+    sh.dropFits = 1u << equipwin::Weapon;  // a bow dragged
+    const panel::Picture lit = painted(sh);
+    const auto edge = [](const panel::Picture& p, const panel::Box& b) {
+        return p.px[size_t(int(b.y + b.h / 2)) * size_t(p.width) + size_t(int(b.x) + 1)];
+    };
+    CHECK(((edge(lit, L.slots[equipwin::Weapon]) >> 16) & 0xFF) >
+          ((edge(plain, L.slots[equipwin::Weapon]) >> 16) & 0xFF) + 20);  // gold: more red
+    CHECK(edge(lit, L.slots[equipwin::Armor]) == edge(plain, L.slots[equipwin::Armor]));
+}
+

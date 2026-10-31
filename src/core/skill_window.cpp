@@ -308,17 +308,4 @@ std::vector<Words> words(const Layout& L, const Data& d, const Show& sh, const T
     return out;
 }
 
-void pressed(Press& p, int index, float x, float y) { p = Press{index, x, y, false}; }
-
-bool moved(Press& p, float x, float y, float scale) {
-    if (p.index >= 0 && !p.dragging && std::hypot(x - p.x, y - p.y) > 10.0f * scale) p.dragging = true;
-    return p.index >= 0 && p.dragging;
-}
-
-int released(Press& p) {
-    const int index = p.dragging ? p.index : -1;
-    p = Press{};
-    return index;
-}
-
 }  // namespace uagfx::skillwin
