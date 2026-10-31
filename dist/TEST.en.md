@@ -1,3 +1,27 @@
+# uaRO Graphics 3.0.11-beta.100 — what is new
+
+HP bars over every monster:
+- **«Monsters' HP bars» is «All» by default now**: a bar over each monster on the screen, a whole one too. A whole
+  monster's per cent is asked of the server by the driver with the same name request the game sends when the mouse
+  points at it (at most 8 a second, the same one once in 15 seconds). The target's and the one under the cursor are
+  wider, with the per cent.
+- If you chose another value in «Interface», it stays.
+
+The NPC's shop in the new look:
+- On the left the list with icons, prices and weights under a search; on the right the cart with «−» and «+», each
+  row's sum, «Total», «Left» and «Weight after buying» (yellow from 50 %, red from 90 %). The trader's name comes from
+  the reference.
+- It opens on «Buy» at once; «Sell» is a tab (the game asks the server for the list again). Selling, each item shows
+  how many the bag holds.
+- The mouse: a click puts one in, with Shift ten (selling: the whole stack), the right button takes one out; the wheel
+  scrolls. Enter buys or sells, Esc closes.
+- The controller: the D-pad goes round the list and the cart, A +1, X −1, Y buys or sells, LB / RB the tabs, B closes.
+- Buying and selling go through the game's own functions and buttons: the server gets the packets the game's windows
+  send.
+- The setting «NPC shops» in «Interface» (and in the console); off brings the game's windows back.
+- To check: buy a few potions from a Tool Dealer, sell something, switch the tabs, the same with the controller. In the
+  log: «shop: the deal's choice … pressed», «shop: … row(s) bought …», «mob hp: «Усі» - … asked of the server».
+
 # uaRO Graphics 3.0.11-beta.99 — what is new
 
 Monsters' HP bars with the mouse too, not only with the controller:
