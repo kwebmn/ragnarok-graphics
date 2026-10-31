@@ -1,3 +1,16 @@
+# uaRO Graphics 3.0.11-beta.108 — what's new
+
+The windows and inventory concept, stage 1 — the windows in one stack:
+- **The window opened or clicked in last is on top.** "Items", "Status", "Skills", "Equipment", the shop, the NPC talk
+  and "Reference" are in one stack now. The drawing order and the clicks' order used to differ, fixed in the code: the
+  window on top on the screen might not get the click.
+- **A click anywhere in a window raises it**; clicks, drags and drops go to the window seen on top.
+- **The top window has a gold edge** while two or more are open (the others keep their quiet edge).
+- **Esc closes the top window** (when nothing is typed in the chat); the shop and the NPC talk keep their own Esc.
+- **The controller drives the top window.**
+- In the log: "windows: «Навички» on top (2 shown)", "windows: «Речі» raised by a click", "pad: «Навички» takes the
+  controller (the top window)".
+
 # uaRO Graphics 3.0.11-beta.107 — what's new
 
 Groundwork for the windows and inventory concept:
