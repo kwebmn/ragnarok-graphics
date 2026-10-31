@@ -1,3 +1,11 @@
+# uaRO Graphics 3.0.11-beta.118 — what's new
+
+- **The arrows show in "Items".** The arrows worn (and new ones added to their stack) did not show before. Now they
+  are in "All" and "Equipment" with a green **E**, the tip saying "worn".
+- **"Equipment" shows the worn things.** The window was empty (only the arrows showed), because the game keeps what is
+  worn apart from the bag. Now every slot is filled as it should be.
+- The arrows' stock in the "Character block" finds arrows worn during the play too.
+
 # uaRO Graphics 3.0.11-beta.117 — what's new
 
 Fixes from players' reports:
