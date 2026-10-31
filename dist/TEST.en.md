@@ -1,3 +1,20 @@
+# uaRO Graphics 3.0.11-beta.95 — what is new
+
+The controller in the interface, stage 7, and your «the ring is fine»:
+- **HP bars over the monsters - for every player, not only with the controller.** A thin bar over the head: green,
+  red below a quarter; the target's wider with its per cent «57%». «The target and the wounded» by default: the
+  target's always, a wounded one's for 8 seconds after its last hit, a whole one none. The per cent comes from the line
+  the server itself sends to everyone near on each hit; a monster gone out of sight is forgotten (better no bar than a
+  stale one). The setting «Monsters' HP bars» in «Interface» (and on the «Controller» page, and in the console):
+  «Off» / «The target only» / «The target and the wounded» / «All».
+- **The bar and the per cent on the target's card** at the top of the screen.
+- **The ring in place of the old mark.** While «Target's ring on the ground» is on, the controller no longer puts a
+  false state (poison and the like) on its target; the target's chevron stands over its HP bar. The old mark works
+  only with the ring off.
+- To check: hit a monster - a bar over it, the target's with its per cent; a bar on the target's card. In the log:
+  «mob hp: … at 57% (its name line)», «mob hp: 3 bar(s) over the monsters, the target's with its per cent», «the
+  target's mark: the interface's ring».
+
 # uaRO Graphics 3.0.11-beta.94 — what is new
 
 Diagnostics after the report R-3S33MK («the game lags»):
