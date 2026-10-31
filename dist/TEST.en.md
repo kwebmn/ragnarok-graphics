@@ -1,3 +1,23 @@
+# uaRO Graphics 3.0.11-beta.102 — what is new
+
+Walking with the controller — by the map's cells, with the arrow of the concept:
+- **Why it jerked before.** The stick held the mouse cursor so many pixels from the screen's middle and the game
+  walked to the cell under it. With a near camera that is 1–2 cells: the character got there and stood until the next
+  step (jerks). With a far one 6–10 cells: after letting go of the stick it walked on.
+- **Now** the driver asks the server itself for a step to a cell 3–6 cells ahead along the stick (by the character's
+  speed, the same at any camera distance) and asks for the next one before the character gets there — no stops on the
+  way. A turn of the stick past 22° asks at once.
+- **Letting go of the stick** stops the character at the next cell it steps into, no step back.
+- **Walls**: the step to the last walkable cell; against one it slides along the wall and goes round a post.
+- **The arrow of the concept**: a soft white trail from the feet, a white head edged in gold, the destination cell in
+  a gold frame — on the ground's heights (no floating over slopes).
+- **The game's cursor is hidden** while you play with the controller; move the mouse and it is where it was.
+- The character's place comes from the game itself, not a guess from the packets.
+- The setting «The controller walks» is «With an arrow, no mouse» by default now; «With the cursor (as before)» is the
+  old way.
+- To check: walk with a near and a far camera, let go of the stick (where it stops), walk into a wall, turn the camera.
+  In the log: «walk without the mouse: to …, 5 cells ahead», «walk stop at …».
+
 # uaRO Graphics 3.0.11-beta.101 — what is new
 
 The NPC's shop — the keys, the amount, taking back, the description (after the report R-2REP95):
