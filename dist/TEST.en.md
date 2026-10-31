@@ -1,3 +1,24 @@
+# uaRO Graphics 3.0.11-beta.101 — what is new
+
+The NPC's shop — the keys, the amount, taking back, the description (after the report R-2REP95):
+- **The button's words fixed**: «Buy Â· Enter» is «Buy» now with the Enter key beside it (with the controller its
+  Start button).
+- **The keys** (while the chat's line is empty): the arrows ↑↓ move the frame over the list, ← → move it into the cart
+  and back (Tab too); Page Up / Page Down, Home / End. Space or + one more, − one fewer, Shift+Space ten.
+- **The amount from the keys**: type digits - the chosen item's amount becomes what you typed (its cart row appears by
+  itself). Enter: done, Esc: undo. No more than the zeny or the weight left allow: «at most N» shows under the cart.
+  With the mouse: click the number in a cart row and type.
+- **Taking an item back**: the cross ✕ in its cart row, the Del key or LT on the controller - the whole row leaves the
+  cart.
+- **The item's description**: the right mouse button on an item, F1 or Y on the controller - the game's item card opens
+  on the shop's right. Again to close it.
+- The cart takes no more than the zeny and the weight allow.
+- The controller: A +1, X −1 (held: faster, then ten at a time), LT takes back, Y the description, Start buys or sells,
+  LB / RB the tabs, B closes (the amount typed or the card first).
+- The window's bottom shows the keys as key caps instead of a line of hints.
+- To check: buy with the keys (arrows, digits, Enter), take an item back by its cross and by Del, look at a description
+  by the right button and F1, the same with the controller.
+
 # uaRO Graphics 3.0.11-beta.100 — what is new
 
 HP bars over every monster:
