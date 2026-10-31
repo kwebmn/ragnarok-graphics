@@ -1,3 +1,12 @@
+# uaRO Graphics 3.0.11-beta.119 — what's new
+
+**The map's layers switch on the map itself** (a player's request):
+- Round buttons in the minimap's top left: portals, NPCs, Kafra, the party. Point at one — its name shows on the bar
+  under the map; a click hides or shows those marks.
+- The same switches under the big map, with their names: "Portals", "NPC", "Kafra", "Party".
+- A layer turned off is struck through. The choice is kept and matches the switches in "Interface" (new: "Kafra on
+  the maps" and "The party on the maps"; the Kafras can stay with the other NPCs hidden).
+
 # uaRO Graphics 3.0.11-beta.118 — what's new
 
 - **The arrows show in "Items".** The arrows worn (and new ones added to their stack) did not show before. Now they
