@@ -88,3 +88,14 @@ The owner 31.10: «Полоски HP мобов - всем показывай»,
   the pad's clientnpc, keys 1-9 / Enter / Esc / arrows while the chat line is empty (chatwin::inputEmpty), the number
   field kept the game's), the pad hint line hidden while it shows, [interface] npc_talk. Tests
   game_packets_an_npcs_words_and_menu, npc_talk_* (3); suite 2025/0.
+- Stage 5 research (not built yet): 0x00c4 deal type; 0x00c6 buy list (11 B each: price.L discount.L type.B nameid.W)
+  -> session deal list +0xF28 (count +0xF2C, FUN_0062bbb0(rec, 0); FUN_004ffd30 copies the record's text at +0x11 into
+  m_itemName) + windows 0x16 (mgr+0xEC, class 0x69B3E0, SendMsg 0x4AFC00: 0x24 0 buy / 1 sell) and 0x17 (buy cart,
+  mgr+0xF0, class 0x69B5A8, SendMsg 0x4B35D0: 6/0x76 OK -> when [0x28]==0 mode 0x25 = packet 0x00c8 from the purchase
+  list +0xF58 (count +0xF5C; FUN_00629650 reads, FUN_00629750(session, ITEM_INFO*) adds by name, its +0x10 the count),
+  6/0x77 cancel -> close 0x16/0x17, mode 0x2B, clear FUN_0061e3d0). 0x00c7 sell list (10 B: index.W price.L
+  overcharge.L) -> FUN_0062bbb0(rec, 1) into +0xF28 too, windows 0x16 (0x24 1) and 0x18 (sell cart, mgr+0xF4, class
+  0x69B6D8, SendMsg 0x4B6B70: 6/0x76 -> FUN_0062a390() != 0 then mode 0x26 = packet 0x00c9 from the sell list +0xF34
+  (count +0xF38; FUN_0062a4b0(session, ITEM_INFO*) adds by bag index +8, count +0x10 capped at the bag's)). Plan: our
+  window fills those lists through FUN_00629750 / FUN_0062a4b0 (the deal record's count +0x10 set for the call and put
+  back) and presses the cart's own OK; prices: the deal record's fields still to map (FUN_0062bbb0 copies).
