@@ -1,3 +1,12 @@
+# uaRO Graphics 3.0.11-beta.126 — what's new
+
+**Dungeon maps are readable again** (reports R-4ZHJ3R and R-4T7N4D, Clock Tower):
+- With "Light where you can walk (an experiment)" on, the map dimmed everything you cannot walk to — the walls
+  and the ground too. On dungeon maps (a light ground, dark corridors) the ground went exactly as dark as the
+  corridors and the map turned one flat grey.
+- Now only the walkable places of another part of the map, the ones you cannot reach on foot, are dimmed; the
+  walls and the ground stay as the picture has them.
+
 # uaRO Graphics 3.0.11-beta.125 — what's new
 
 **How many arrows are left — always in sight** (over the left end of the F1–F9 skill bar):
