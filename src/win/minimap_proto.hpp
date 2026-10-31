@@ -49,6 +49,9 @@ std::vector<std::pair<std::string, std::string>> routeLines();
 // there (Shift: one more point, a right click or ✕ takes it away; Ctrl on a warp of the big map: its map's card) - its
 // last point, its lines, taken away (the tracker's entry)
 bool plotted(int& x, int& y);
+// 3.0.11-beta.82 (the party's «путь к участнику»): a way set to that cell of the map the player is on, as a click on
+// the map sets one; false - the new minimap off, or the cell not on its map
+bool plotTo(int x, int y);
 std::vector<std::pair<std::string, std::string>> plotLines();
 void clearPlot();
 

@@ -129,9 +129,16 @@ struct Appear {
     bool dead = false;  // 3.0.11-beta.81: 0x022a's <dead_sit>.B at 55 is 1 (2: sitting); come in or walking: alive
 };
 
+// 3.0.11-beta.82: a party member's cell - 0x0107 <account>.L <x>.W <y>.W (uAthena's clif_party_xy, to the party on
+// its map)
+struct PartyPos {
+    uint32_t account = 0;
+    uint16_t x = 0, y = 0;
+};
+
 using Event = std::variant<std::monostate, Whisper, PartyInvite, TradeRequest, GuildInvite, FriendRequest, StatusIcon,
                            Vanish, SkillCast, Hit, PartyList, PartyMember, PartyLeft, PartyHp, PartyChat, GuildChat,
-                           Chat, Status, Pickup, StatusLong, Casting, Appear>;
+                           Chat, Status, Pickup, StatusLong, Casting, Appear, PartyPos>;
 
 // A packet as the game took it, `size` bytes of it readable: one of the above, or nothing (another packet, one cut
 // short or naming more bytes than there are).

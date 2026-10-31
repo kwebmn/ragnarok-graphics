@@ -331,3 +331,16 @@ TEST(game_packets_a_character_in_sight) {
           walking->sex == 0 && walking->level == 99);
     CHECK(std::holds_alternative<std::monostate>(packets::parse(walk.data(), 40)));  // cut short: nothing
 }
+
+// 3.0.11-beta.82 (the party's arrows and the minimap's members): 0x0107 a member's cell <account>.L <x>.W <y>.W, sent
+// to the party on its map (uAthena clif_party_xy)
+TEST(game_packets_a_party_member_cell) {
+    std::vector<uint8_t> p = packet(0x0107, 10);
+    put32(p, 2, 2000125);
+    put16(p, 6, 156);
+    put16(p, 8, 190);
+    const packets::Event e = packets::parse(p.data(), p.size());
+    const auto* at = std::get_if<packets::PartyPos>(&e);
+    CHECK(at && at->account == 2000125 && at->x == 156 && at->y == 190);
+    CHECK(std::holds_alternative<std::monostate>(packets::parse(p.data(), 9)));
+}

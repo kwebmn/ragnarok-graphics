@@ -94,7 +94,9 @@ Layout layout(const std::vector<int>& buffs, int left, int top, float scale, boo
         const float x0 = r.round.x + r.round.w + 8 * s;
         r.value = panel::Box{r.box.x + r.box.w - kValueW * s - 4 * s, r.box.y + 5 * s, kValueW * s, 18 * s};
         r.name = panel::Box{x0, r.box.y + 5 * s, r.value.x - 4 * s - x0, 18 * s};
-        r.bar = panel::Box{x0, r.box.y + 27 * s, r.box.x + r.box.w - 4 * s - x0, kBarH * s};
+        // 3.0.11-beta.82: its arrow and cells away at the end of its bar's line
+        r.where = panel::Box{r.box.x + r.box.w - 44 * s, r.box.y + 22 * s, 40 * s, 14 * s};
+        r.bar = panel::Box{x0, r.box.y + 27 * s, r.where.x - 4 * s - x0, kBarH * s};
         if (line) {
             const float side = kBuffSide * s, step = (kBuffSide + kBuffGap) * s;
             const int fit = std::max(0, int((r.box.x + r.box.w - 4 * s - x0 + kBuffGap * s) / step));
@@ -131,6 +133,8 @@ void paint(panel::Picture& out, const Layout& L, const std::vector<Member>& memb
         const bool bad = low(m, threshold);
         if (m.dead)  // 3.0.11-beta.81: dead - its row dark red
             panel::roundRect(out, r.box, 7 * s, kDeadGround, 0.55f, kRed, 0.6f, 1.0f * s);
+        else if (L.targeting && here(m))  // 3.0.11-beta.82: a skill waits for a target - a click here casts it
+            panel::roundRect(out, r.box, 7 * s, kGold, 0.08f, kGold, 0.9f, 1.2f * s);
         else if (bad)
             panel::roundRect(out, r.box, 7 * s, kRed, 0.10f, kRed, 0.85f, 1.2f * s);  // the row edged red
         panel::circle(out, r.round.x + r.round.w / 2, r.round.y + r.round.h / 2, r.round.w / 2, kTile, 1.0f);
@@ -155,11 +159,31 @@ void paint(panel::Picture& out, const Layout& L, const std::vector<Member>& memb
                                  0, part < 0.1f ? kRed : kGold, 1.0f);
             }
         }
+        if (m.cells >= 0 && here(m) && (m.dirX != 0 || m.dirY != 0)) {  // 3.0.11-beta.82: its arrow, its way
+            const float side = r.where.h, cx = r.where.x + side / 2, cy = r.where.y + side / 2, len = side * 0.45f;
+            const float ux = m.dirX, uy = m.dirY, px = -uy, py = ux;  // along it, across it
+            for (int y = int(r.where.y); y < int(r.where.y + side); ++y)
+                for (int x = int(r.where.x); x < int(r.where.x + side); ++x) {
+                    const float vx = float(x) + 0.5f - cx, vy = float(y) + 0.5f - cy;
+                    const float along = vx * ux + vy * uy, across = std::fabs(vx * px + vy * py);
+                    // a triangle: its tip ahead, its base behind, as wide there as its length's three fifths
+                    const float half = (len - along) * 0.6f;
+                    if (along < -len * 0.8f || along > len || across > half || x < 0 || y < 0 || x >= out.width ||
+                        y >= out.height)
+                        continue;
+                    panel::over(out.px[size_t(y) * size_t(out.width) + size_t(x)], kGold, 0.95f);
+                }
+        }
         if (m.castPart >= 0 && here(m)) {  // 3.0.11-beta.81: its cast - a line under its bar
             const panel::Box line{r.bar.x, r.bar.y + r.bar.h + 1.5f * s, r.bar.w, 2.5f * s};
             panel::roundRect(out, line, line.h / 2, kBlack, 0.45f);
             const float done = std::max(line.h, line.w * std::clamp(m.castPart, 0.0f, 1.0f));
             panel::roundRect(out, panel::Box{line.x, line.y, done, line.h}, line.h / 2, kCast, 1.0f);
+        }
+        if (m.online && !m.where.empty()) {  // 3.0.11-beta.82: elsewhere - a route mark by its map's name (go there)
+            const float icon = 12 * s, wordsW = panel::wordsWidth(m.where, 12 * s, false);
+            const float x = std::max(r.value.x, r.value.x + r.value.w - wordsW - icon - 4 * s);
+            uiicons::draw(out, uiicons::Icon::Route, x, r.value.y + (r.value.h - icon) / 2, icon, kGold, 0.9f, 2.2f);
         }
         if (!here(m) || m.dead) continue;  // elsewhere, offline, dead: no bar
         panel::roundRect(out, r.bar, r.bar.h / 2, kBlack, 0.45f);
@@ -212,6 +236,9 @@ std::vector<Words> words(const Layout& L, const std::vector<Member>& members, in
         }
         if (!value.empty())
             out.push_back(Words{r.value, value, rgb, (here(m) ? 13 : 12) * s, here(m), Align::Right});
+        if (m.cells >= 0 && here(m))  // 3.0.11-beta.82: its cells away, by its arrow
+            out.push_back(Words{panel::Box{r.where.x + r.where.h, r.where.y, r.where.w - r.where.h, r.where.h},
+                                std::to_string(m.cells), kMuted, 11 * s, false, Align::Right});
     }
     return out;
 }

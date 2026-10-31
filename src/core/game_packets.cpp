@@ -125,6 +125,9 @@ Event parse(const uint8_t* p, size_t size) {
         case 0x00b1:
             if (size < 8) return {};
             return StatusLong{rd16(p, 2), rd32(p, 4)};
+        case 0x0107:  // 3.0.11-beta.82: a party member's cell
+            if (size < 10) return {};
+            return PartyPos{rd32(p, 2), rd16(p, 6), rd16(p, 8)};
         case 0x022a:  // 3.0.11-beta.80: a character in sight
             if (size < 58) return {};
             return Appear{rd32(p, 2), rd16(p, 16), rd16(p, 18), rd16(p, 30), rd16(p, 56), p[49], p[55] == 1};

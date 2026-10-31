@@ -26,9 +26,11 @@
 #include "win/head_picture.hpp"
 #include "win/hud_edit.hpp"
 #include "win/log.hpp"
+#include "win/minimap_proto.hpp"
 #include "win/paths.hpp"
 #include "win/picture_draw.hpp"
 #include "win/real_ddraw.hpp"
+#include "win/reference_window.hpp"
 #include "win/ui_cost.hpp"
 
 namespace uagfx::win::partywin {
@@ -40,6 +42,15 @@ constexpr uint32_t kOwnAccount = 0x771F7C;
 // The game's Basic Info window (UI window 0) when the character block is off: the panel under it
 constexpr uint32_t kBasicInfo = 0x727ED8 + 0x90, kShown = 0x38, kRect = 0x14;
 constexpr int kLow = 30;  // per cent: red under it (as [notify] party_hp's default)
+// 3.0.11-beta.82 (the owner's 2): the game mode waiting for a skill's target (its class's vtable; FUN_00561c20 - a
+// click on a character): its state +0x3C4 (1 a place, 2 an enemy, 4 a friend), the skill +0x3C8, its range +0x3CC, its
+// level +0x3D0; the world +0xC4, its player +0x3C, whose SendMsg (vtable + 8) takes 0x29 (a target's id, the skill,
+// the range) then 0x5A (the level) - or for a place 0x41 (the skill, x, y)
+constexpr uint32_t kModeClass = 0x69F388, kWaitState = 0x3C4, kWaitSkill = 0x3C8, kWaitRange = 0x3CC;
+constexpr uint32_t kWaitLevel = 0x3D0, kWorld = 0xC4, kPlayer = 0x3C;
+constexpr int kUseOn = 0x29, kUseLevel = 0x5A, kUsePlace = 0x41;
+constexpr ULONGLONG kPosMs = 20000;  // a member's cell this fresh still shown
+using ActorMsgFn = int(__attribute__((thiscall)) *)(uint32_t self, uint32_t sender, int msg, int a, int b, int c);
 
 struct Seat {
     std::string name, map;  // the game's code page, as they came
@@ -51,6 +62,9 @@ struct Seat {
     int castSkill = 0;
     ULONGLONG castAt = 0;
     uint32_t castMs = 0;
+    // 3.0.11-beta.82: its cell as the server told the party (0x0107) and when
+    int x = -1, y = -1;
+    ULONGLONG posAt = 0;
 };
 
 // 3.0.11-beta.80 (the owner: «иконки можно сделать как лица персонажей?»): a member's looks as last seen in sight
@@ -80,6 +94,7 @@ struct State {
     ULONGLONG looksChangedAt = 0;    // to keep (0: kept)
     std::map<std::string, panel::Picture> faces;  // by sex:hair:colour:side
     int facesTold = 0;
+    std::vector<uint32_t> rowsOf;  // 3.0.11-beta.82: each row's account (a click's member)
     bool on = false, shown = false;
     float k = 0, scale = 1;
     int targetW = 0, targetH = 0;
@@ -219,6 +234,50 @@ int topOf(double k, float scale) {
     return int(std::lround(10 * scale));
 }
 
+// 3.0.11-beta.82: where the camera looks along the ground (as the minimap's: its view's forward east and north)
+bool readLook(float& east, float& north) {
+    float view[12];
+    if (!readGameCamera(view)) return false;
+    const float x = view[2], z = view[8], len = std::hypot(x, z);
+    if (len < 1e-3f) return false;
+    east = x / len;
+    north = z / len;
+    return true;
+}
+
+// The game mode waiting for a skill's target: its state (1 a place, 2 an enemy, 4 a friend); 0 none
+int waitingState(uint32_t& mode) {
+    mode = readGameMode();
+    if (!mode || read32(mode) != kModeClass) return 0;
+    const int state = int(read32(mode + kWaitState));
+    return state == 1 || state == 2 || state == 4 ? state : 0;
+}
+
+// 3.0.11-beta.82 (the owner's 2: «клик по участнику — навык на него»): the skill waited for cast on a member as a click
+// on it in the world does (FUN_00561c20) - a place one on its cell; false: none waited, or no cell of it
+bool castOn(uint32_t account, const Seat& seat, std::string& said) {
+    uint32_t mode = 0;
+    const int state = waitingState(mode);
+    if (!state) return false;
+    const uint32_t world = read32(mode + kWorld), player = world ? read32(world + kPlayer) : 0;
+    const uint32_t vtable = player ? read32(player) : 0, fn = vtable ? read32(vtable + 8) : 0;
+    if (!fn || fn < 0x401000 || fn >= 0x6A0000) return false;
+    const int skill = int(read32(mode + kWaitSkill)), range = int(read32(mode + kWaitRange));
+    const int level = int(read32(mode + kWaitLevel));
+    const auto msg = reinterpret_cast<ActorMsgFn>(uintptr_t(fn));
+    if (state == 1) {  // a place: the member's cell
+        if (seat.x < 0 || GetTickCount64() - seat.posAt > kPosMs) return false;
+        msg(player, 0, kUsePlace, skill, seat.x, seat.y);
+        said = "skill " + std::to_string(skill) + " Lv" + std::to_string(level) + " on its cell " +
+               std::to_string(seat.x) + ", " + std::to_string(seat.y);
+    } else {
+        msg(player, 0, kUseOn, int(account), skill, range);
+        said = "skill " + std::to_string(skill) + " Lv" + std::to_string(level) + " on it";
+    }
+    msg(player, 0, kUseLevel, level, 0, 0);
+    return true;
+}
+
 }  // namespace
 
 void packet(const packets::Event& e) {
@@ -257,6 +316,12 @@ void packet(const packets::Event& e) {
             it->second.hp = hp->hp;
             it->second.most = hp->most;
             if (hp->hp > 0) it->second.dead = false;  // 3.0.11-beta.81: back
+        }
+    } else if (const auto* pos = std::get_if<packets::PartyPos>(&e)) {  // 3.0.11-beta.82: a member's cell
+        if (const auto it = s.seats.find(pos->account); it != s.seats.end()) {
+            it->second.x = pos->x;
+            it->second.y = pos->y;
+            it->second.posAt = GetTickCount64();
         }
     } else if (const auto* casting = std::get_if<packets::Casting>(&e)) {  // 3.0.11-beta.81: a member's cast
         if (const auto it = s.seats.find(casting->source); it != s.seats.end()) {
@@ -320,6 +385,11 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     }
     const std::string here = readGameMap();
     s.members.clear();
+    s.rowsOf.clear();
+    int ownX = -1, ownY = -1, mapW = 0, mapH = 0;  // 3.0.11-beta.82: the character's cell and the camera's way
+    const bool ownKnown = readPlayerCell(ownX, ownY, mapW, mapH);
+    float lookE = 0, lookN = 1;
+    readLook(lookE, lookN);
     const float partScale = uistyle::partScale(k) * hudedit::sizeOf(hudlayout::Part::Party);
     const int faceSide = int(std::lround(20 * partScale)), buffSide = int(std::lround(14 * partScale));
     for (const uint32_t account : s.order) {
@@ -337,6 +407,15 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
         }
         const bool nearHere = seat.online && (seat.map.empty() || seat.map == here);
         m.dead = seat.dead && nearHere;
+        if (nearHere && ownKnown && seat.x >= 0 && now - seat.posAt < kPosMs) {  // 3.0.11-beta.82: its way, its cells
+            const float dx = float(seat.x - ownX), dy = float(seat.y - ownY);  // east, north
+            m.cells = int(std::max(std::fabs(dx), std::fabs(dy)));
+            const float right = dx * lookN - dy * lookE, up = dx * lookE + dy * lookN, len = std::hypot(right, up);
+            if (len > 0.5f) {
+                m.dirX = right / len;
+                m.dirY = -up / len;
+            }
+        }
         if (seat.castSkill && seat.castMs && now < seat.castAt + seat.castMs + 250 && nearHere) {
             m.casting = clienttables::skillWords(seat.castSkill, codePage);
             m.castPart = std::clamp(float(double(now - seat.castAt) / double(seat.castMs)), 0.0f, 1.0f);
@@ -380,6 +459,7 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
         if (!seat.map.empty() && seat.map != here) m.where = seat.map;
         if (seat.most > 0 && seat.hp >= 0) m.percent = int(int64_t(seat.hp) * 100 / seat.most);
         s.members.push_back(m);
+        s.rowsOf.push_back(account);
     }
     const float scale = uistyle::partScale(k) * hudedit::sizeOf(hudlayout::Part::Party);  // 3.0.11-beta.75: its size
     s.k = float(k);
@@ -387,6 +467,8 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     s.targetW = targetWidth;
     s.targetH = targetHeight;
     s.layout = pp::layout(pp::rowsOf(s.members), int(std::lround(10 * scale)), topOf(k, scale), scale, s.folded);
+    uint32_t mode = 0;
+    s.layout.targeting = waitingState(mode) != 0;  // 3.0.11-beta.82: a click on a member casts it there
     hudedit::place(hudlayout::Part::Party, float(k), targetWidth, targetHeight, s.layout.w, s.layout.h, s.layout.x,
                    s.layout.y);  // 3.0.11-beta.75: where the player put it
     std::string key = std::to_string(s.layout.w) + 'x' + std::to_string(s.layout.h) + ';' + std::to_string(scale) +
@@ -398,8 +480,11 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
         for (const pp::Buff& b : m.buffs)
             key += std::to_string(uintptr_t(b.icon)) + ':' + std::to_string(int(b.left * 20)) + ':' +
                    std::to_string(int(b.glow * 8)) + ',';
-        key += m.job + '|' + m.casting + '|' + std::to_string(int(m.castPart * 20)) + (m.dead ? "d;" : ";");
+        key += m.job + '|' + m.casting + '|' + std::to_string(int(m.castPart * 20)) + (m.dead ? "d;" : ";") +
+               std::to_string(m.cells) + ',' + std::to_string(int(m.dirX * 16)) + ',' +
+               std::to_string(int(m.dirY * 16)) + ';';
     }
+    key += s.layout.targeting ? "T" : "";
     if (const std::string drawn = key + '#' + std::to_string(uistyle::generation()); drawn != s.key) {  // its grounds
         s.key = drawn;
         render(s);
@@ -432,10 +517,32 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     const float ty = float(p.y) * float(s.targetH) / float(client.bottom) - float(s.layout.y);
     if (!s.layout.glass.contains(tx, ty)) return false;
     result = 0;  // the click is not the world's
-    if ((m == WM_LBUTTONDOWN || m == WM_LBUTTONDBLCLK) && pp::hitTest(s.layout, tx, ty).part == pp::Part::Fold) {
+    const pp::Hit hit = pp::hitTest(s.layout, tx, ty);
+    if ((m == WM_LBUTTONDOWN || m == WM_LBUTTONDBLCLK) && hit.part == pp::Part::Fold) {
         s.folded = !s.folded;  // 3.0.11-beta.79: ▾ folds it to its header, ▸ opens it
         keepState(s);
         LOG_INFO("party: its panel %s", s.folded ? "folded" : "opened");
+    } else if (m == WM_LBUTTONDOWN && hit.part == pp::Part::Row && size_t(hit.row) < s.rowsOf.size()) {
+        // 3.0.11-beta.82 (the owner's 2 and 4): a member clicked - the skill waited for cast on it; else elsewhere its
+        // map's way followed, here a way to its cell
+        const uint32_t account = s.rowsOf[size_t(hit.row)];
+        const auto it = s.seats.find(account);
+        const std::string name = size_t(hit.row) < s.members.size() ? s.members[size_t(hit.row)].name : "?";
+        if (it != s.seats.end()) {
+            const Seat& seat = it->second;
+            const std::string here = readGameMap();
+            std::string said;
+            if (castOn(account, seat, said)) {
+                LOG_INFO("party: %s - %s", name.c_str(), said.c_str());
+            } else if (seat.online && !seat.map.empty() && seat.map != here) {
+                if (minimapproto::canFollow()) minimapproto::follow(seat.map, true);
+                else referencewin::openMap(seat.map);
+                LOG_INFO("party: %s is on %s - %s", name.c_str(), seat.map.c_str(),
+                         minimapproto::canFollow() ? "the way there followed" : "its card opened");
+            } else if (seat.x >= 0 && GetTickCount64() - seat.posAt < kPosMs && minimapproto::plotTo(seat.x, seat.y)) {
+                LOG_INFO("party: a way to %s at %d, %d", name.c_str(), seat.x, seat.y);
+            }
+        }
     }
     return true;
 }

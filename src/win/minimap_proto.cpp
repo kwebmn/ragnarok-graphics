@@ -1028,6 +1028,14 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
 
 bool canFollow() { return state().on; }
 
+bool plotTo(int x, int y) {
+    State& s = state();
+    if (!s.on || s.map.empty() || x < 0 || y < 0 || (s.size.w > 0 && (x >= s.size.w || y >= s.size.h))) return false;
+    setPlot(s, minimap::Cell{x, y}, false);
+    s.dirty = s.bigDirty = true;
+    return true;
+}
+
 bool plotted(int& x, int& y) {
     const State& s = state();
     if (s.plot.empty() || s.plotMap != s.map) return false;

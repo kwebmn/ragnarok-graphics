@@ -188,3 +188,36 @@ TEST(party_panel_class_cast_dead_glow) {
     const uint32_t edge = p.px[size_t(int(b.y + b.h / 2)) * size_t(p.width) + size_t(int(b.x - 1))];
     CHECK(((edge >> 16) & 0xFF) > 0x90 && ((edge >> 8) & 0xFF) > 0x70);
 }
+
+// 3.0.11-beta.82 (the owner's 2 and 4): a member here - an arrow its way (as the screen turns) and its cells away at
+// the end of its bar's line; elsewhere - a route mark by its map's name; a skill waiting for a target - the rows
+// edged gold (a click on one casts it there)
+TEST(party_panel_arrows_routes_targeting) {
+    std::vector<partypanel::Member> m = party();
+    m[0].cells = 12;
+    m[0].dirX = 1;  // to the right
+    m[0].dirY = 0;
+    partypanel::Layout L = partypanel::layout(partypanel::rowsOf(m), 0, 0, 1.0f);
+    const partypanel::Row& r = L.rows[0];
+    CHECK(r.where.w > 20 && r.where.x >= r.bar.x + r.bar.w && inside(r.box, r.where));
+    const std::vector<partypanel::Words> w = partypanel::words(L, m, 30, "офлайн", "Група", "мертвий");
+    CHECK(std::any_of(w.begin(), w.end(), [](const partypanel::Words& x) { return x.text == "12"; }));
+    panel::Picture p;
+    p.width = L.w;
+    p.height = L.h;
+    p.px.assign(size_t(L.w) * size_t(L.h), 0u);
+    partypanel::paint(p, L, m, 30);
+    int lit = 0;  // the arrow drawn in the distance's box
+    for (int y = int(r.where.y); y < int(r.where.y + r.where.h); ++y)
+        for (int x = int(r.where.x); x < int(r.where.x + r.where.h); ++x)
+            lit += ((p.px[size_t(y) * size_t(p.width) + size_t(x)] >> 16) & 0xFF) > 0x80;
+    CHECK(lit > 4);
+    L.targeting = true;  // a skill waits: the rows here edged gold
+    panel::Picture t;
+    t.width = L.w;
+    t.height = L.h;
+    t.px.assign(size_t(L.w) * size_t(L.h), 0u);
+    partypanel::paint(t, L, m, 30);
+    const uint32_t edge = t.px[size_t(int(r.box.y + r.box.h / 2)) * size_t(t.width) + size_t(int(r.box.x))];
+    CHECK(((edge >> 16) & 0xFF) > 0x90 && ((edge >> 8) & 0xFF) > 0x70 && (edge & 0xFF) < ((edge >> 16) & 0xFF));
+}

@@ -33,12 +33,17 @@ struct Member {
     std::string job, casting;
     float castPart = -1;
     bool dead = false;
+    // 3.0.11-beta.82 (the owner's 2 and 4): here - its cells away (< 0 not known) and its way on the screen (a unit
+    // vector, x right, y down); elsewhere its map's name with a route mark (a click goes there)
+    int cells = -1;
+    float dirX = 0, dirY = 0;
 };
 bool low(const Member& m, int threshold);  // here, online, known and under the threshold
 
 struct Row {
     panel::Box box, round, name, value, bar;
     std::vector<panel::Box> buffs;  // 3.0.11-beta.80: its buffs' icons under its bar (as many as the row holds)
+    panel::Box where;               // 3.0.11-beta.82: its arrow and cells away, at the end of its bar's line
 };
 struct Layout {
     float s = 1;
@@ -49,6 +54,7 @@ struct Layout {
     // members online of all, the fold (▾ / ▸); folded: the header alone
     panel::Box header, title, count, fold;
     bool folded = false;
+    bool targeting = false;  // 3.0.11-beta.82: a skill waits for a target - the rows here edged gold
 };
 Layout layout(size_t members, int left, int top, float scale, bool folded = false);
 // 3.0.11-beta.80: each row's buffs counted - a row with any a line taller
