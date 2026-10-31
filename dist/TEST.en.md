@@ -1,3 +1,19 @@
+# uaRO Graphics 3.0.11-beta.104 — what's new
+
+The controller's walking arrow no longer shakes:
+- **Why it shook.** The arrow went to the cell the driver asks the server for: "the character's cell + 5 cells
+  ahead". That cell hopped a cell on each time the character's cell changed (6–7 times a second) while the feet glided
+  up to it. The arrow's end and its cell mark shook against the character by a whole cell. A walking model on the
+  controller's real code: 0.19 cells a frame on average, peaks of 1.3.
+- **Now** the arrow lies along the stick's way and moves with the character as if glued on: the same model — no shake
+  at all. Its length is how far ahead the step is asked (3–6 cells by the speed).
+- **At a wall** the arrow shortens softly to the last walkable cell, its end stays put as the character comes up (it
+  does not poke into the wall); past it — the red bar. Sliding along a wall — the arrow points along the wall.
+- **The way is exact**: with the stick at 30° the arrow used to point at 36–37° (at the rounded cell), now at 30°.
+- The chevrons' run and the fading go by a precise clock (it stepped 15.6 ms — in jerks).
+- In the log after each walk (the first 6, then every 25th): "walk arrow: a walk of N frames - its end moved against
+  the feet at most … cells a frame …" — it should be about 0.
+
 # uaRO Graphics 3.0.11-beta.103 — what's new
 
 The controller's walking arrow — your choice, every variant of the doc on the arrow's looks:
