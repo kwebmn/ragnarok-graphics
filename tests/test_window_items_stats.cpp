@@ -177,6 +177,26 @@ TEST(item_window_as_the_storage) {
                       [](const itemwin::Words& x) { return x.text == "двічі клік — у сумку \xC2\xB7 ПКМ — опис"; }));
 }
 
+// 3.0.11-beta.118 (the owner: «нету стрел»; R-2YRWU2): the arrows worn stay in the bag (the game's own window lists
+// them) - shown in «Усе» and «Спорядження» with a green «E», the tip saying they are worn
+TEST(item_window_shows_the_worn_arrows) {
+    std::vector<itemwin::Item> items{item(13, 1750, 10, 101, "Arrow"), item(14, 501, 0, 5, "Red Potion")};
+    items[0].worn = true;
+    CHECK(itemwin::shownOf(items, itemwin::Tab::All, "").size() == 2);
+    CHECK(itemwin::shownOf(items, itemwin::Tab::Gear, "") == std::vector<int>{0});
+    itemwin::Texts t = itemTexts();
+    t.worn = "вдягнуто";
+    const itemwin::Layout L = itemwin::layout(0, 0, 1.0f, t, itemwin::Measure(panel::wordsWidth));
+    itemwin::Show sh;
+    sh.hover = 0;
+    const std::vector<int> shown = itemwin::shownOf(items, itemwin::Tab::All, "");
+    const std::vector<itemwin::Words> w = itemwin::words(L, items, shown, sh, t, itemwin::Measure(panel::wordsWidth));
+    CHECK(std::any_of(w.begin(), w.end(), [](const itemwin::Words& x) { return x.text == "E" && x.rgb == 0x5FD08A; }));
+    CHECK(std::any_of(w.begin(), w.end(), [](const itemwin::Words& x) {
+        return x.text.rfind("вдягнуто \xC2\xB7 ", 0) == 0;  // the tip: worn first
+    }));
+}
+
 // 3.0.11-beta.110 (the concept «Концепция окон и инвентаря», stage 2): a worn thing dragged out of «Спорядження» - the
 // bag's grid lit in gold (a drop there takes it off)
 TEST(item_window_lights_the_bag_while_a_worn_thing_is_dragged) {

@@ -54,6 +54,13 @@ constexpr int kDropMsg = 0x12;
 // The bag (win/item_window's): the session's list, a node's ITEM_INFO at +8, 72 bytes
 constexpr uint32_t kBag = 0x771148 + 0xF1C, kInfo = 8;
 constexpr size_t kInfoSize = 0x48, kMostNodes = 256;
+// 3.0.11-beta.118 (R-2YRWU2 «1 thing(s) worn» - the arrows alone - and R-8YW96B «0 worn» on a dressed Paladin; the
+// owner's «шмоток нету»): the worn gear is not in the bag - the session keeps it apart, an ITEM_INFO for each of the
+// ten places by its bit (+0xFC0, 72 bytes apart: FUN_00628e50 at the equipment's list 0x00a4 and at the wear's
+// answer 0x00aa; a two-hander or a full helm in each of its places); the arrows worn stay in the bag - their place at
+// +0xEEC (0x013c), or worn 0x8000 (the stackables' list 0x01ee at the login)
+constexpr uint32_t kWorn = 0x771148 + 0xFC0, kAmmoNow = 0x771148 + 0xEEC, kAmmoBit = 0x8000;
+constexpr int kWornPlaces = 10;
 // The character: its job, sex, hair style and colour (the character block's)
 constexpr uint32_t kJob = 0x771F8C, kSex = 0x772DEC, kHead = 0x7718F4, kHairColour = 0x771910;
 constexpr ULONGLONG kReadMs = 200;
@@ -90,6 +97,7 @@ struct State {
     float fx = 0.5f, fy = 0.22f;
     unsigned codePage = 0;
     std::vector<Thing> bag;
+    std::vector<Thing> worn;  // 3.0.11-beta.118: the worn gear (the session's own places, not the bag)
     uint32_t slotInfo[ew::kSlots] = {};  // each slot's worn thing's ITEM_INFO (its card)
     ew::Data data;
     std::vector<int> pickBag;  // the picks' places in `bag`
@@ -190,31 +198,51 @@ const panel::Picture* iconOf(const State& s, int id) {
     return f == files.end() ? nullptr : clienttables::icon(f->second, ew::iconSide(s.scale), 4 * s.scale);
 }
 
+// An ITEM_INFO at `info` as a thing; false: no thing there
+bool thingAt(uint32_t info, Thing& t) {
+    uint8_t raw[kInfoSize] = {};
+    if (!readGame(info, raw, sizeof raw)) return false;
+    const uint32_t index = rd32(raw, 0x08), ptr = rd32(raw, 0x30), len = rd32(raw, 0x34);
+    if (!index || !ptr || !len || len > 16) return false;
+    char digits[17] = {};
+    if (!readGame(ptr, digits, len)) return false;
+    t = Thing{};
+    t.info = info;
+    t.index = int(index);
+    t.id = std::atoi(digits);
+    t.type = int(rd32(raw, 0x00));
+    t.location = rd32(raw, 0x04);
+    t.worn = rd32(raw, 0x0C);
+    t.count = int(rd32(raw, 0x10));
+    for (int c = 0; c < 4; ++c) t.cards[c] = int(rd32(raw, 0x1C + size_t(c) * 4));
+    t.identified = raw[0x3C] != 0;
+    const int refine = int(rd32(raw, 0x40));
+    t.refine = refine > 0 && refine <= 20 ? refine : 0;
+    return true;
+}
+
 void readBag(State& s) {
     s.bag.clear();
     const uint32_t head = read32(kBag);
     if (!head) return;
+    const uint32_t ammo = read32(kAmmoNow);
     uint32_t node = read32(head);
     for (size_t n = 0; node && node != head && n < kMostNodes; ++n, node = read32(node)) {
-        uint8_t raw[kInfoSize] = {};
-        if (!readGame(node + kInfo, raw, sizeof raw)) break;
-        const uint32_t index = rd32(raw, 0x08), ptr = rd32(raw, 0x30), len = rd32(raw, 0x34);
-        if (!index || !ptr || !len || len > 16) continue;
-        char digits[17] = {};
-        if (!readGame(ptr, digits, len)) continue;
         Thing t;
-        t.info = node + kInfo;
-        t.index = int(index);
-        t.id = std::atoi(digits);
-        t.type = int(rd32(raw, 0x00));
-        t.location = rd32(raw, 0x04);
-        t.worn = rd32(raw, 0x0C);
-        t.count = int(rd32(raw, 0x10));
-        for (int c = 0; c < 4; ++c) t.cards[c] = int(rd32(raw, 0x1C + size_t(c) * 4));
-        t.identified = raw[0x3C] != 0;
-        const int refine = int(rd32(raw, 0x40));
-        t.refine = refine > 0 && refine <= 20 ? refine : 0;
+        if (!thingAt(node + kInfo, t)) continue;
+        if (ammo && uint32_t(t.index) == ammo) t.worn |= kAmmoBit;  // 3.0.11-beta.118: the arrows worn
         s.bag.push_back(t);
+    }
+}
+
+// 3.0.11-beta.118: the worn gear, from the session's ten places (a thing in two or three of them once)
+void readWorn(State& s) {
+    s.worn.clear();
+    for (int place = 0; place < kWornPlaces; ++place) {
+        Thing t;
+        if (!thingAt(kWorn + uint32_t(place) * uint32_t(kInfoSize), t) || !t.worn) continue;
+        const bool seen = std::any_of(s.worn.begin(), s.worn.end(), [&](const Thing& w) { return w.index == t.index; });
+        if (!seen) s.worn.push_back(t);
     }
 }
 
@@ -222,11 +250,15 @@ bool isAmmo(int type) { return type == 10 || type == 16 || type == 17; }
 
 void readData(State& s) {
     readBag(s);
+    readWorn(s);
     ew::Data& d = s.data;
     for (ew::Worn& w : d.slots) w = ew::Worn{};
     for (uint32_t& i : s.slotInfo) i = 0;
     const auto refs = reference::index();
-    for (const Thing& t : s.bag) {
+    std::vector<Thing> worn = s.worn;  // the gear, then the arrows worn (in the bag)
+    for (const Thing& t : s.bag)
+        if (t.worn & kAmmoBit) worn.push_back(t);
+    for (const Thing& t : worn) {
         if (!t.worn) continue;
         const std::vector<int> slots = ew::slotsOf(t.worn);
         for (size_t n = 0; n < slots.size(); ++n) {

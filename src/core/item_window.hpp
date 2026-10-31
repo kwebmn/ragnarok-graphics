@@ -30,6 +30,9 @@ struct Item {
     // corner, its tab's count of them
     bool fresh = false;
     bool starred = false;  // 3.0.11-beta.113: in «★» (its star in its cell's corner)
+    // 3.0.11-beta.118 (the owner: «нету стрел»): the arrows worn - they stay in the bag (the game's own window lists
+    // them); a green «E» in its cell's corner, «вдягнуто» first in its tip
+    bool worn = false;
 };
 
 // 3.0.11-beta.113 (the concept «Концепция окон и инвентаря», question 9 «давай»): «Усе», «Витратне» (potions, food,
@@ -63,6 +66,7 @@ struct Texts {
     std::string use, wear, card, info;  // the tip's: «двічі клік — використати», ... «ПКМ — опис»
     std::string fresh;                  // 3.0.11-beta.112: «нове»
     std::string all;  // 3.0.11-beta.115: set - every thing's tip says it («Склад»: «двічі клік — у сумку»)
+    std::string worn;  // 3.0.11-beta.118: «вдягнуто»
 };
 
 // 3.0.11-beta.44 (the owner: «когда использую какую-то вещь, она просто пропадает. нету никакой анимации»): a used

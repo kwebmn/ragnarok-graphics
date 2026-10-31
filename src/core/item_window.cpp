@@ -60,6 +60,7 @@ std::string tipSecond(const Item& it, const Texts& t) {
                     : u == Use::Card                     ? t.card
                                                          : "";
     if (!s.empty()) s += " \xC2\xB7 ";
+    if (it.worn && !t.worn.empty()) s = t.worn + " \xC2\xB7 " + s;  // 3.0.11-beta.118: the arrows worn
     return s + t.info;
 }
 
@@ -393,6 +394,9 @@ std::vector<Words> words(const Layout& L, const std::vector<Item>& items, const 
         }
         if (!it.identified)
             out.push_back(Words{panel::Box{b.x + 2 * s, b.y + 2 * s, 12 * s, 12 * s}, "?", kMuted, 11 * s, true,
+                                Align::Center});
+        if (it.worn)  // 3.0.11-beta.118: the arrows worn
+            out.push_back(Words{panel::Box{b.x + 2 * s, b.y + 2 * s, 12 * s, 12 * s}, "E", kGreen, 10.5f * s, true,
                                 Align::Center});
         if (it.fresh && !t.fresh.empty())  // 3.0.11-beta.112: «нове» on its gold pill
             out.push_back(Words{freshPill(b, t, s, m), t.fresh, kCard, 9.5f * s, true, Align::Center});

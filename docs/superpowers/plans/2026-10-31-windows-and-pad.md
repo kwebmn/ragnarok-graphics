@@ -295,6 +295,15 @@ The owner 31.10: «Полоски HP мобов - всем показывай»,
   moved aside only for a window standing there 1.5 s, the culprit logged «hotbar: moved aside - … stands over its
   place» (test hotbar_moves_aside_only_for_a_window_that_stays). R-5Z6J2S asks for map layer switches (NPCs, portals)
   on the minimap and the big map - proposed to the owner, not built. Suite 2086/0.
+- The owner 31.10 «нету стрел» + R-2YRWU2 / R-8YW96B's «equip: «Спорядження» open - 1 / 0 thing(s) worn» on dressed
+  characters (3.0.11-beta.118): the worn gear is not in the bag list - the 0x00a4 handler FUN_00582420 puts worn things
+  into the session's ten places (+0xFC0 + bit * 0x48, FUN_00628e50; the wear's answer 0x00aa the same through
+  FUN_00628c10, which takes one off the bag's stack), the arrows worn stay in the bag (0x013c sets +0xEEC = 0x772034 to
+  their place; at the login 0x01ee gives them worn 0x8000). «Спорядження» read the bag's worn only (the arrows alone,
+  so empty for most); «Речі» skipped every worn thing (the arrows worn at the login and the ones made onto their stack
+  never shown). Built: equip readWorn (the ten places, a thing once) + the bag's arrows worn by +0xEEC or 0x8000;
+  «Речі» lists the arrows worn with a green «E», «вдягнуто» first in the tip (itemwin Item.worn, Texts.worn, test
+  item_window_shows_the_worn_arrows); the character block's ammo by +0xEEC too. Suite 2087/0.
 - Stage 5 research: 0x00c4 deal type; 0x00c6 buy list (11 B each: price.L discount.L type.B nameid.W)
   -> session deal list +0xF28 (count +0xF2C, FUN_0062bbb0(rec, 0); FUN_004ffd30 copies the record's text at +0x11 into
   m_itemName) + windows 0x16 (mgr+0xEC, class 0x69B3E0, SendMsg 0x4AFC00: 0x24 0 buy / 1 sell) and 0x17 (buy cart,

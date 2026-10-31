@@ -62,6 +62,9 @@ constexpr int kDropMsg = 0x12;
 // length +0x34), identified +0x3C, refine +0x40
 constexpr uint32_t kBag = 0x771148 + 0xF1C, kInfo = 8;
 constexpr size_t kInfoSize = 0x48, kMostNodes = 256;
+// 3.0.11-beta.118 (the owner: «нету стрел»): the arrows worn stay in the bag - their place at 0x772034 (the session's
+// +0xEEC, set by 0x013c) or their worn 0x8000 (the stackables' list 0x01ee at the login); the worn gear is not in it
+constexpr uint32_t kAmmoNow = 0x772034, kAmmoBit = 0x8000;
 constexpr ULONGLONG kReadMs = 200, kConfirmMs = 3000, kBlinkMs = 530;
 constexpr ULONGLONG kTipMs = 400;  // 3.0.11-beta.51: a cell's tip after this long pointed at (the concept's)
 constexpr ULONGLONG kToastMs = 2000;  // 3.0.11-beta.112: the words of a thing come into the bag
@@ -248,12 +251,13 @@ void readBag(State& s) {
     const auto& files = clienttables::itemFiles();
     const uint32_t head = read32(kBag);
     if (!head) return;
+    const uint32_t ammo = read32(kAmmoNow);
     uint32_t node = read32(head);
     for (size_t n = 0; node && node != head && n < kMostNodes; ++n, node = read32(node)) {
         uint8_t raw[kInfoSize] = {};
         if (!readGame(node + kInfo, raw, sizeof raw)) break;
         const uint32_t index = rd32(raw, 0x08), worn = rd32(raw, 0x0C), ptr = rd32(raw, 0x30), len = rd32(raw, 0x34);
-        if (!index || worn || !ptr || !len || len > 16) continue;
+        if (!index || (worn && !(worn & kAmmoBit)) || !ptr || !len || len > 16) continue;
         char digits[17] = {};
         if (!readGame(ptr, digits, len)) continue;
         iw::Item it;
@@ -265,6 +269,7 @@ void readBag(State& s) {
         it.identified = raw[0x3C] != 0;
         const int refine = int(rd32(raw, 0x40));
         it.refine = refine > 0 && refine <= 20 ? refine : 0;
+        it.worn = (worn & kAmmoBit) != 0 || (ammo && index == ammo);  // 3.0.11-beta.118: the arrows worn
         const std::string id = std::to_string(it.id);
         std::string words;  // an unidentified one's own words, else the item's
         if (!it.identified) {
@@ -308,6 +313,7 @@ iw::Texts texts(bool pad) {
     t.tabs[4] = say(settings::Text::ItemsTabEtc);
     t.tabs[5] = "\xE2\x98\x85";  // ★ the starred
     t.fresh = say(settings::Text::ItemsFresh);  // 3.0.11-beta.112
+    t.worn = say(settings::Text::ItemsWorn);    // 3.0.11-beta.118: the arrows worn
     t.search = say(settings::Text::ItemsSearch);
     t.weight = say(settings::Text::CharWeight);
     t.use = say(settings::Text::ItemsUse);
@@ -590,7 +596,8 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
                       (s.padNow ? "P;" : ";");
     for (const iw::Item& it : s.items)
         key += std::to_string(it.index) + ':' + std::to_string(it.id) + 'x' + std::to_string(it.count) + '+' +
-               std::to_string(it.refine) + (it.identified ? "" : "?") + (it.icon ? "i" : "") + ',';
+               std::to_string(it.refine) + (it.identified ? "" : "?") + (it.icon ? "i" : "") + (it.worn ? "E" : "") +
+               ',';
     if (const std::string drawn = key + '#' + std::to_string(uistyle::generation()); drawn != s.key) {  // its grounds
         s.key = drawn;
         render(s);
