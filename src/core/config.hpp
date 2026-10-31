@@ -639,6 +639,9 @@ struct Config {
     // 3.0.11-beta.115: [interface] storage - the Kafra storage (win/storage_window: «Склад», «Речі» beside it) in
     // place of the game's storage window
     bool storageWindow = false;
+    // 3.0.11-beta.116: [interface] trade - the trade (win/trade_window: «Обмін», «Речі» beside it) in place of the
+    // game's trade window
+    bool tradeWindow = false;
     // 3.0.11-beta.46: [interface] animations - the new interface's motion (core/ui_motion): the target's card, the
     // character block's views, a new level's flare, the low HP warning sliding in; 0: all at once
     bool animations = true;

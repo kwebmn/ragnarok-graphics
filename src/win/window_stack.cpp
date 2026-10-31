@@ -16,6 +16,7 @@
 #include "win/skill_window.hpp"
 #include "win/stat_window.hpp"
 #include "win/storage_window.hpp"
+#include "win/trade_window.hpp"
 
 namespace uagfx::win::windowstack {
 namespace {
@@ -24,7 +25,7 @@ using winstack::Win;
 using uapad::gamewindow::Blocker;
 
 constexpr const char* kNames[] = {"«Речі»",  "«Характеристики»", "«Навички»", "«Спорядження»",
-                                  "the shop", "the NPC talk",      "«Довідник»", "«Склад»"};
+                                  "the shop", "the NPC talk",      "«Довідник»", "«Склад»", "«Обмін»"};
 static_assert(std::size(kNames) == size_t(winstack::kWins), "a name for each window");
 constexpr int kMostTold = 40;
 
@@ -65,6 +66,7 @@ bool shown(Win w) {
         case Win::Npc: return npcwin::shown();
         case Win::Reference: return referencewin::isOpen();
         case Win::Storage: return storagewin::shown();
+        case Win::Trade: return tradewin::shown();
     }
     return false;
 }
@@ -78,6 +80,7 @@ Blocker blockerOf(Win w) {
         case Win::Shop: return Blocker::Shop;
         case Win::Npc: return Blocker::Npc;
         case Win::Storage: return Blocker::Storage;
+        case Win::Trade: return Blocker::Trade;
         case Win::Reference: break;
     }
     return Blocker::Reference;
@@ -93,6 +96,7 @@ void drawOne(Win w, FrameRecord& record, gpu::Renderer& renderer) {
         case Win::Npc: npcwin::draw(record, renderer); break;
         case Win::Reference: referencewin::draw(record, renderer); break;
         case Win::Storage: storagewin::draw(record, renderer); break;
+        case Win::Trade: tradewin::draw(record, renderer); break;
     }
 }
 
@@ -106,6 +110,7 @@ bool mouseOne(Win w, HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
         case Win::Npc: return npcwin::mouse(game, m, wp, lp, result);
         case Win::Reference: return referencewin::mouse(game, m, wp, lp, result);
         case Win::Storage: return storagewin::mouse(game, m, wp, lp, result);
+        case Win::Trade: return tradewin::mouse(game, m, wp, lp, result);
     }
     return false;
 }
@@ -117,6 +122,7 @@ bool keyOne(Win w, UINT m, WPARAM wp, LPARAM lp) {  // the windows with keys of 
         case Win::Npc: return npcwin::key(m, wp, lp);
         case Win::Reference: return referencewin::key(m, wp, lp);
         case Win::Storage: return storagewin::key(m, wp, lp);  // 3.0.11-beta.115: its search's
+        case Win::Trade: return tradewin::key(m, wp, lp);      // 3.0.11-beta.116: its zeny field's
         default: return false;
     }
 }
@@ -133,6 +139,7 @@ bool boxOf(Win w, winstack::Box& b) {
         case Win::Npc: return npcwin::box(b.x, b.y, b.w, b.h);
         case Win::Reference: return referencewin::box(b.x, b.y, b.w, b.h);
         case Win::Storage: return storagewin::box(b.x, b.y, b.w, b.h);
+        case Win::Trade: return tradewin::box(b.x, b.y, b.w, b.h);
     }
     return false;
 }
@@ -145,6 +152,7 @@ void moveTo(Win w, int x, int y, bool keep = true) {
         case Win::Equip: equipwin::moveTo(x, y, keep); break;
         case Win::Shop: shopwin::moveTo(x, y); break;
         case Win::Storage: storagewin::moveTo(x, y, keep); break;
+        case Win::Trade: tradewin::moveTo(x, y, keep); break;
         default: break;
     }
 }
@@ -154,7 +162,7 @@ void moveTo(Win w, int x, int y, bool keep = true) {
 // the one dragged by its title leads, the other follows (kept when the drag ends); Shift held while dragging - apart.
 // 3.0.11-beta.115: «Склад» in the gear's place while it is open (the storage with its bag beside it)
 void dockFrame(State& s, bool opened, int targetW, int targetH) {
-    const Win partner = shown(Win::Storage) ? Win::Storage : Win::Equip;
+    const Win partner = shown(Win::Storage) ? Win::Storage : shown(Win::Trade) ? Win::Trade : Win::Equip;
     if (s.dock.on && s.dock.partner != partner) s.dock = Dock{};  // another partner: docked anew when it opens
     winstack::Box bag, gear;
     if (!boxOf(Win::Items, bag) || !boxOf(partner, gear)) {
@@ -162,7 +170,9 @@ void dockFrame(State& s, bool opened, int targetW, int targetH) {
         return;
     }
     const bool bagMoving = itemswin::moving();
-    const bool gearMoving = partner == Win::Storage ? storagewin::moving() : equipwin::moving();
+    const bool gearMoving = partner == Win::Storage ? storagewin::moving()
+                            : partner == Win::Trade ? tradewin::moving()
+                                                    : equipwin::moving();
     const bool dragged = bagMoving || gearMoving;
     if (opened && !s.dock.on) {
         s.dock.on = true;
@@ -229,6 +239,7 @@ bool close(Win w) {
         case Win::Equip: equipwin::padCommand(equipwin::PadCommand::Close); return true;
         case Win::Reference: referencewin::padCommand(referencewin::PadCommand::Close); return true;
         case Win::Storage: storagewin::padCommand(storagewin::PadCommand::Close); return true;
+        case Win::Trade: tradewin::padCommand(tradewin::PadCommand::Cancel); return true;
         default: return false;
     }
 }
@@ -244,7 +255,7 @@ void frame(int targetWidth, int targetHeight, double k) {
         const auto& order = s.stack.bottomUp();
         if (now && std::find(order.begin(), order.end(), w) == order.end()) {
             placeNew(s, w, targetWidth, targetHeight, k);  // the others' places before it joins them
-            pairOpened = pairOpened || w == Win::Items || w == Win::Equip || w == Win::Storage;
+            pairOpened = pairOpened || w == Win::Items || w == Win::Equip || w == Win::Storage || w == Win::Trade;
         }
         s.stack.see(w, now);
     }
@@ -294,8 +305,8 @@ std::optional<winstack::Win> top() { return state().stack.top(); }
 
 bool padCross(winstack::Win from, bool right) {
     State& s = state();
-    // «Склад» and «Речі» (the gear's slots go round with left and right of their own: no way back from there yet)
-    if (!s.dock.on || s.dock.partner != Win::Storage || !shown(Win::Items) || !shown(s.dock.partner)) return false;
+    // «Склад» or «Обмін» and «Речі» (the gear's slots go round with left and right of their own: no way back yet)
+    if (!s.dock.on || s.dock.partner == Win::Equip || !shown(Win::Items) || !shown(s.dock.partner)) return false;
     const bool partnerLeft = s.dock.side == winstack::Side::Left;
     const Win to = from == Win::Items && right != partnerLeft       ? s.dock.partner
                    : from == s.dock.partner && right == partnerLeft ? Win::Items

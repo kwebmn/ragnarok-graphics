@@ -60,6 +60,7 @@
 #include "win/reference_window.hpp"
 #include "win/shop_window.hpp"
 #include "win/storage_window.hpp"
+#include "win/trade_window.hpp"
 #include "core/shop_window.hpp"
 
 namespace uapad::runtime {
@@ -508,6 +509,23 @@ bool storagePad(const PadState& pad, DWORD now) {
     return true;
 }
 
+// 3.0.11-beta.116: «Обмін» open - the D-pad (or the left stick) moves its frame over both sides, A the next step
+// («Готово», then «Обмін»), Y the card, B or Start cancel the trade
+bool tradePad(const PadState& pad, DWORD now) {
+    State& s = S();
+    const uint16_t buttons = pad.connected ? pad.buttons : 0;
+    const uint16_t down = uint16_t((buttons & ~s.prevPadButtons) | stickSteps(pad, now));
+    s.prevPadButtons = buttons;
+    using uagfx::win::tradewin::PadCommand;
+    const std::pair<uint16_t, PadCommand> keys[] = {
+        {kPadUp, PadCommand::Up},       {kPadDown, PadCommand::Down}, {kPadLeft, PadCommand::Left},
+        {kPadRight, PadCommand::Right}, {kPadA, PadCommand::Next},    {kPadY, PadCommand::Card},
+        {kPadB, PadCommand::Cancel},    {kPadStart, PadCommand::Cancel}};
+    for (const auto& [button, command] : keys)
+        if (down & button) uagfx::win::tradewin::padCommand(command);
+    return true;
+}
+
 // 3.0.11-beta.92: «Характеристики» open - the D-pad (or the left stick) chooses a stat, A adds a point, B or Start
 // close it
 bool statsPad(const PadState& pad, DWORD now) {
@@ -799,7 +817,7 @@ void backCloses(PadState& pad, const ViewInfo& view) {
 
 // 3.0.11-beta.108: the driver's windows by winstack::Win, for the log
 constexpr const char* kTopNames[] = {"«Речі»",  "«Характеристики»", "«Навички»", "«Спорядження»",
-                                     "the shop", "the NPC talk",      "«Довідник»", "«Склад»"};
+                                     "the shop", "the NPC talk",      "«Довідник»", "«Склад»", "«Обмін»"};
 static_assert(std::size(kTopNames) == size_t(uagfx::winstack::kWins), "a name for each window");
 
 void tick() {
@@ -861,6 +879,7 @@ void tick() {
                   : drive && *top == Win::Equip                    ? equipPad(pad, now)   // .97
                   : drive && *top == Win::Shop                     ? shopPad(pad, now)    // .100
                   : drive && *top == Win::Storage                  ? storagePad(pad, now)  // .115
+                  : drive && *top == Win::Trade                    ? tradePad(pad, now)    // .116
                                                                    : runMenu(pad, view, now);
     if (s.npcSupported) view.dialog = clientnpc::read();
     double clientTurn = 0;

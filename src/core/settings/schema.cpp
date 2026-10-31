@@ -166,6 +166,8 @@ const std::vector<IniSetting>& iniSettings() {
          Text::InterfaceShopHint, ""},  // 3.0.11-beta.100
         {"interface", "storage", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::InterfaceStorage,
          Text::InterfaceStorageHint, ""},  // 3.0.11-beta.115
+        {"interface", "trade", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::InterfaceTrade,
+         Text::InterfaceTradeHint, ""},  // 3.0.11-beta.116
         // 3.0.11-beta.54: the new interface's size
         {"interface", "size", Page::Interface, Control::Choice, 0, 0, 0, {"auto", "70", "85", "100", "115", "130"},
          {Text::InterfaceSizeAuto, Text::InterfaceSize70, Text::InterfaceSize85, Text::InterfaceSize100,
@@ -1016,6 +1018,7 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "interface.npc_talk") return c.npcWindow ? "1" : "0";   // 3.0.11-beta.98
     if (k == "interface.shop") return c.shopWindow ? "1" : "0";      // 3.0.11-beta.100
     if (k == "interface.storage") return c.storageWindow ? "1" : "0";  // 3.0.11-beta.115
+    if (k == "interface.trade") return c.tradeWindow ? "1" : "0";      // 3.0.11-beta.116
     if (k == "interface.animations") return c.animations ? "1" : "0";  // 3.0.11-beta.46
     if (k == "interface.panel_opacity") return std::to_string(c.hudOpacity);  // 3.0.11-beta.47
     if (k == "interface.cast") return c.castLabel ? "1" : "0";                 // 3.0.11-beta.48

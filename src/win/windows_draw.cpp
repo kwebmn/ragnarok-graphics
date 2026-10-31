@@ -18,6 +18,7 @@
 #include "win/skill_window.hpp"
 #include "win/stat_window.hpp"
 #include "win/storage_window.hpp"
+#include "win/trade_window.hpp"
 
 namespace uagfx::win {
 namespace {
@@ -45,6 +46,7 @@ void __attribute__((thiscall)) windowsDraw(uint32_t manager) {
     npcwin::beforeGameDraw();     // 3.0.11-beta.98: the NPC talk
     shopwin::beforeGameDraw();    // 3.0.11-beta.100: the shop (its deal's choice pressed)
     storagewin::beforeGameDraw();  // 3.0.11-beta.115: «Склад» (and «Речі» made beside it)
+    tradewin::beforeGameDraw();    // 3.0.11-beta.116: «Обмін» (and «Речі» made beside it)
     mobhpwin::beforeGameDraw();   // 3.0.11-beta.100: the monsters' per cent asked
     charpanel::beforeGameDraw();  // the Basic Info window
     hotbarwin::beforeGameDraw();  // the hotkeys' bar

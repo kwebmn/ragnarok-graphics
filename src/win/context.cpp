@@ -54,6 +54,7 @@
 #include "win/npc_talk.hpp"
 #include "win/shop_window.hpp"
 #include "win/storage_window.hpp"
+#include "win/trade_window.hpp"
 #include "win/skill_window.hpp"
 #include "win/pad_hint.hpp"
 #include "win/pad_tiles.hpp"
@@ -918,6 +919,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     npcwin::frame(window, config.npcWindow, gameCodePage(config), pk, pw, ph);        // 3.0.11-beta.98
     shopwin::frame(window, config.shopWindow, gameCodePage(config), pk, pw, ph);      // 3.0.11-beta.100
     storagewin::frame(window, config.storageWindow, gameCodePage(config), pk, pw, ph);  // 3.0.11-beta.115
+    tradewin::frame(window, config.tradeWindow, gameCodePage(config), pk, pw, ph);      // 3.0.11-beta.116
     // 3.0.11-beta.7: [interface] reference - «Довідник» (Ctrl+F)
     referencewin::frame(window, config.referenceWindow, pk, pw, ph);
     windowstack::frame(pw, ph, pk);  // 3.0.11-beta.108: who of them is shown - their stack's order (the last opened on

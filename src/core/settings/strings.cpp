@@ -5213,6 +5213,36 @@ constexpr Entry kTexts[] = {
     {Text::StoragePadMore, "{1}: its card", "{1}: картка", "{1}: карточка"},
     {Text::ItemsToStorage, "double click: into the storage", "двічі клік — на склад", "двойной клик — на склад"},
     {Text::ItemsPadToStorage, "into the storage", "на склад", "на склад"},
+    {Text::InterfaceTrade, "Trade", "Обмін", "Обмен"},  // 3.0.11-beta.116
+    {Text::InterfaceTradeHint,
+     "The trade between players in the new look: «Trade» with your side and the partner's - ten cells each, the zeny "
+     "under each - and «Items» opened beside it. Drag things from «Items» onto your side or double click them; type "
+     "the zeny in your field (Enter shows it to the partner). «Ready» locks your offer, «Trade» completes it once both "
+     "are ready. What the partner adds or changes after your «Ready» turns red with a warning. The controller: A - "
+     "the next step, Y - the card, B - cancel. Off: the game's own window.",
+     "Обмін між гравцями в новому вигляді: «Обмін» із вашим боком і боком партнера — по десять клітинок і зені під "
+     "ними, — а «Речі» відкриваються поруч. Перетягніть речі з «Речі» на свій бік або клацніть по них двічі; зені "
+     "введіть у своє поле (Enter показує їх партнерові). «Готово» фіксує вашу пропозицію, «Обмін» завершує, коли "
+     "обидва готові. Що партнер додав чи змінив після вашого «Готово», стає червоним із попередженням. Контролер: A — "
+     "наступний крок, Y — картка, B — скасувати. Вимкнено — вікно самої гри.",
+     "Обмен между игроками в новом виде: «Обмен» с вашей стороной и стороной партнёра — по десять ячеек и зени под "
+     "ними, — а «Вещи» открываются рядом. Перетащите вещи из «Вещи» на свою сторону или дважды щёлкните по ним; зени "
+     "введите в своё поле (Enter показывает их партнёру). «Готово» фиксирует ваше предложение, «Обмен» завершает, "
+     "когда оба готовы. Что партнёр добавил или изменил после вашего «Готово», становится красным с предупреждением. "
+     "Контроллер: A — следующий шаг, Y — карточка, B — отменить. Выключено — окно самой игры."},
+    {Text::TradeTitle, "Trade", "Обмін", "Обмен"},
+    {Text::TradeYou, "You", "Ви", "Вы"},
+    {Text::TradeZeny, "Zeny", "Зені", "Зени"},
+    {Text::TradeReady, "Ready", "Готово", "Готово"},
+    {Text::TradeDo, "Trade", "Обмін", "Обмен"},
+    {Text::TradeCancel, "Cancel", "Скасувати", "Отменить"},
+    {Text::TradeLate, "Changed after your «Ready»", "Змінено після вашого «Готово»", "Изменено после вашего «Готово»"},
+    {Text::TradeHint, "Drag things from «Items» or double click them", "Перетягніть речі з «Речі» або клацніть двічі",
+     "Перетащите вещи из «Вещи» или щёлкните дважды"},
+    {Text::TradePadHint, "{1}: ready / trade \xC2\xB7 {2}: cancel", "{1}: готово / обмін \xC2\xB7 {2}: скасувати",
+     "{1}: готово / обмен \xC2\xB7 {2}: отменить"},
+    {Text::ItemsToTrade, "double click: into the trade", "двічі клік — в обмін", "двойной клик — в обмен"},
+    {Text::ItemsPadToTrade, "into the trade", "в обмін", "в обмен"},
     {Text::InterfacePadWalk, "The controller walks", "Хід контролером", "Ход контроллером"},  // 3.0.11-beta.88
     {Text::InterfacePadWalkHint,  // 3.0.11-beta.102: by the map's cells, the default
      "How the left stick walks. With an arrow: by the map's cells, the same at any camera's distance - the character "

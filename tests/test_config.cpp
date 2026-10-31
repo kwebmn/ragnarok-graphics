@@ -859,14 +859,14 @@ TEST(config_interface_minimap) {
     // 3.0.11-beta.39: the party's panel; 3.0.11-beta.40: the hotbar; 3.0.11-beta.41: the chat; 3.0.11-beta.42: the
     // windows; 3.0.11-beta.48: the cast's label (3.0.11-beta.49's dimmed world no longer comes with it: beta.55);
     // 3.0.11-beta.70: the tracker; 3.0.11-beta.96: «Навички»; 3.0.11-beta.97: «Спорядження»; .98: the NPC talk;
-    // .100: the shops; .115: the storage
-    CHECK(u.waiting.empty() && u.applied.size() == 16 && u.applied[0] == "minimap 0 -> 1");
+    // .100: the shops; .115: the storage; .116: the trade
+    CHECK(u.waiting.empty() && u.applied.size() == 17 && u.applied[0] == "minimap 0 -> 1");
     CHECK(u.applied[1] == "buffs off -> column" && u.applied[2] == "items 0 -> 1" && u.applied[3] == "status 0 -> 1");
     CHECK(u.applied[4] == "skills 0 -> 1" && u.applied[5] == "equip 0 -> 1" && u.applied[6] == "npc_talk 0 -> 1");
-    CHECK(u.applied[7] == "shop 0 -> 1" && u.applied[8] == "storage 0 -> 1" && u.applied[9] == "cast 0 -> 1");
-    CHECK(u.applied[10] == "chat 0 -> 1" && u.applied[11] == "hotbar 0 -> 1" && u.applied[12] == "tracker 0 -> 1");
-    CHECK(u.applied[13] == "party 0 -> 1" && u.applied[14] == "target 0 -> 1" &&
-          u.applied[15] == "character off -> bars");
+    CHECK(u.applied[7] == "shop 0 -> 1" && u.applied[8] == "storage 0 -> 1" && u.applied[9] == "trade 0 -> 1");
+    CHECK(u.applied[10] == "cast 0 -> 1" && u.applied[11] == "chat 0 -> 1" && u.applied[12] == "hotbar 0 -> 1");
+    CHECK(u.applied[13] == "tracker 0 -> 1" && u.applied[14] == "party 0 -> 1" && u.applied[15] == "target 0 -> 1");
+    CHECK(u.applied[16] == "character off -> bars");
     CHECK(appliesNow("interface.minimap"));
 }
 
@@ -1315,6 +1315,20 @@ TEST(config_interface_storage) {
     if (s) CHECK_EQ(settings::tokenOf(*s, parseConfig("[interface]\nstorage = 1\n")), std::string("1"));
     CHECK(appliesNow("interface.storage"));
     CHECK(liveUpdate(parseConfig(""), parseConfig("[interface]\nstorage = 1\n")).next.storageWindow);
+}
+
+// 3.0.11-beta.116 (the windows plan's stage 7): [interface] trade - the trade in the new look («Обмін» beside «Речі»);
+// on with the new minimap unless the file says, a box of «Інтерфейс», at once
+TEST(config_interface_trade) {
+    CHECK(!parseConfig("").tradeWindow);
+    CHECK(parseConfig("[interface]\nminimap = 1\n").tradeWindow);
+    CHECK(!parseConfig("[interface]\nminimap = 1\ntrade = 0\n").tradeWindow);
+    CHECK(parseConfig("[interface]\ntrade = 1\n").tradeWindow);
+    const settings::IniSetting* s = settings::findSetting("interface.trade");
+    CHECK(s != nullptr && s->page == settings::Page::Interface);
+    if (s) CHECK_EQ(settings::tokenOf(*s, parseConfig("[interface]\ntrade = 1\n")), std::string("1"));
+    CHECK(appliesNow("interface.trade"));
+    CHECK(liveUpdate(parseConfig(""), parseConfig("[interface]\ntrade = 1\n")).next.tradeWindow);
 }
 
 // 3.0.11-beta.103 (the owner: «можешь сделать настройку, чтобы можно было выбрать эту стрелку в конфигураторе»):

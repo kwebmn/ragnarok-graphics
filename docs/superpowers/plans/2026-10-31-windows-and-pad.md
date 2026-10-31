@@ -267,6 +267,26 @@ The owner 31.10: «Полоски HP мобов - всем показывай»,
   Ruling R20: the D-pad crosses only between «Склад» and «Речі» (equip's left/right go round its slots, no way back
   yet). Tests item_window_as_the_storage, config_interface_storage, game_packets_the_storages_places (+ the minimap
   list 16); suite 2079/0.
+- Stage 7, «Обмін» (3.0.11-beta.116): research - the trade window = UI window 0x1F (mgr+0x10C, class 0x699A98, made
+  at 0x00e7 result 3 after the session's trade cleared, SendMsg 0x32 the partner's name -> its std::string +0x9C (c_str
+  +0xA0, length +0xA4); deleted at 0x00ee / 0x00f0); SendMsg 0x4840C0: 6/0x76 OK (its zeny edit +0x6C: atoi clamped to
+  your zeny 0x772038, mode 0x38(0, offered + typed), then 0x39, +0x78 = 1), 6/0xA0 the zeny arrow (0x38 only), 6/0xA4
+  trade (0x3B once, +0x7C), 6/0x77 cancel (0x3A), 0x17 refill, 0x26 add the drag (0x38(place, count) + 0x13), 0x33 /
+  0x34 the locks (+0x70 yours, +0x74 the partner's, from 0x00ec 0/1); drop 0x4848A0: refused once locked, a bag drag
+  -> one: 0x26, else the count window mode 5 (its OK -> the trade window's 0x26). Session: your ten ITEM_INFOs at
+  +0x1290 and the partner's at +0x1560 (0x48 apart, empty = count 0, the partner's place -1; 0x00e9 fills the first
+  empty one), the zeny offered +0x1830 / +0x1834 (0x00ea / 0x00e9 index 0). Edit SetText = its vtable + 0x98
+  (0x446210, the chat's). Built: core/trade_window (two sides of 2x5 cells, zeny rows, ✓ Готово pills, three buttons
+  by canReady / canTrade, the tip, watchLate: the partner's slot or zeny changed while you are ready -> red + «⚠
+  Змінено після вашого «Готово»»), win/trade_window (the game's own buttons pressed; the zeny typed: the edit set to
+  typed − offered before OK / the arrow, emptied after the arrow), [interface] trade («Обмін»), Blocker::Trade,
+  Win::Trade (dock partner Storage > Trade > Equip, padCross for both), «Речі» double click / A offers it, pad tradePad
+  (A next step, Y card, B cancel, the D-pad across both sides and into «Речі»). Ruling R21: the ✕ and Esc cancel the
+  trade (the game's window has no close but «Cancel») - cost if wrong: an Esc ends a trade. Ruling R22: the zeny only
+  grows (the game adds typed to offered; the server keeps the last amount) - typing less than offered changes nothing.
+  Tests trade_window_layout_two_sides, trade_window_buttons_by_the_trades_state,
+  trade_window_the_partners_changes_after_your_ready, trade_window_words, config_interface_trade (+ the minimap list
+  17); suite 2084/0. The windows plan's stages 1-7 all built.
 - Stage 5 research: 0x00c4 deal type; 0x00c6 buy list (11 B each: price.L discount.L type.B nameid.W)
   -> session deal list +0xF28 (count +0xF2C, FUN_0062bbb0(rec, 0); FUN_004ffd30 copies the record's text at +0x11 into
   m_itemName) + windows 0x16 (mgr+0xEC, class 0x69B3E0, SendMsg 0x4AFC00: 0x24 0 buy / 1 sell) and 0x17 (buy cart,

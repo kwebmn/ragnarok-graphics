@@ -31,6 +31,7 @@
 #include "win/picture_draw.hpp"
 #include "win/real_ddraw.hpp"
 #include "win/storage_window.hpp"
+#include "win/trade_window.hpp"
 #include "win/ui_cost.hpp"
 #include "win/window_shadow.hpp"
 #include "win/window_stack.hpp"
@@ -316,6 +317,9 @@ iw::Texts texts(bool pad) {
     if (storagewin::shown())  // 3.0.11-beta.115: «Склад» open - a double click puts the thing into the storage
         t.all = pad ? std::string(uapad::buttonLabel(0)) + ": " + say(settings::Text::ItemsPadToStorage)
                     : say(settings::Text::ItemsToStorage);
+    else if (tradewin::shown())  // 3.0.11-beta.116: «Обмін» open - into the trade
+        t.all = pad ? std::string(uapad::buttonLabel(0)) + ": " + say(settings::Text::ItemsPadToTrade)
+                    : say(settings::Text::ItemsToTrade);
     if (pad) {
         const std::string a = uapad::buttonLabel(0), x = uapad::buttonLabel(2), y = uapad::buttonLabel(3);
         t.use = a + ": " + say(settings::Text::ItemsPadUse);
@@ -428,6 +432,14 @@ void useCell(State& s, int shownIndex, ULONGLONG now, const char* how) {
         if (s.told++ < 20)
             LOG_INFO("items: %s on #%d x%d - %s", how, it.id, it.count,
                      put ? "given to the game's storage window's drop" : "not put (the storage window not found)");
+        s.readAt = 0;
+        return;
+    }
+    if (tradewin::shown()) {  // 3.0.11-beta.116: «Обмін» open - offered (the game's count window for a stack)
+        const bool put = tradewin::put(it.index, it.count);
+        if (s.told++ < 20)
+            LOG_INFO("items: %s on #%d x%d - %s", how, it.id, it.count,
+                     put ? "given to the game's trade window's drop" : "not offered (no trade, or your offer locked)");
         s.readAt = 0;
         return;
     }

@@ -499,6 +499,9 @@ enum class Text : uint16_t {
     // 3.0.11-beta.115: the Kafra storage («Склад»)
     InterfaceStorage, InterfaceStorageHint, StorageTitle, StoragePlaces, StorageTake, StoragePadTake, StoragePadMore,
     ItemsToStorage, ItemsPadToStorage,
+    // 3.0.11-beta.116: the trade («Обмін»)
+    InterfaceTrade, InterfaceTradeHint, TradeTitle, TradeYou, TradeZeny, TradeReady, TradeDo, TradeCancel, TradeLate,
+    TradeHint, TradePadHint, ItemsToTrade, ItemsPadToTrade,
     InterfacePadWalk, InterfacePadWalkHint, InterfacePadWalkMouse, InterfacePadWalkArrow,  // 3.0.11-beta.88
     InterfaceWalkArrow, InterfaceWalkArrowHint, WalkArrowChevrons, WalkArrowSlim, WalkArrowConcept, WalkArrowRing,
     WalkArrowDots, WalkArrowCell, WalkArrowOff,  // 3.0.11-beta.103
