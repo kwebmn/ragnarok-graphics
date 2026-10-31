@@ -146,7 +146,8 @@ elseif(WIN32)
     target_compile_definitions(uagfx_app PUBLIC WIN32_LEAN_AND_MEAN NOMINMAX UNICODE _UNICODE
                                WIDL_EXPLICIT_AGGREGATE_RETURNS)
     target_compile_options(uagfx_app PRIVATE -Wall -Wextra)
-    target_link_libraries(uagfx_app PUBLIC uagfx_core comctl32 shell32 ole32 uuid advapi32 winhttp)
+    # 3.0.11-beta.89: the page «Контролер» edits the pad's layouts with its own core (bindings, i18n)
+    target_link_libraries(uagfx_app PUBLIC uagfx_core uagfx_pad comctl32 shell32 ole32 uuid advapi32 winhttp)
 
     # uaro-graphics.exe, the settings app (stage 2 spec): its version comes from src/core/version.cpp.
     add_executable(uaro-graphics WIN32 src/app/main.cpp src/app/main_window.cpp src/app/ui.cpp src/app/page.cpp

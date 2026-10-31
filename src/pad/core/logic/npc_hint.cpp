@@ -44,6 +44,12 @@ std::string choiceHint(uint16_t key, Lang lang) {
     return s;
 }
 
+std::string windowHint(Lang lang) {
+    std::string s = tr(lang, Text::HintWindow);
+    put(s, "{B}", label(kPadB));
+    return s;
+}
+
 std::vector<HintPart> hintParts(const std::string& line, uint16_t key) {
     std::vector<HintPart> out;
     const std::string dot = "  \xC2\xB7  ";
@@ -102,5 +108,7 @@ std::vector<HintPart> npcHintParts(NpcDialog d, Lang lang) {
 }
 
 std::vector<HintPart> choiceHintParts(uint16_t key, Lang lang) { return hintParts(tr(lang, Text::HintChoose), key); }
+
+std::vector<HintPart> windowHintParts(Lang lang) { return hintParts(tr(lang, Text::HintWindow)); }
 
 }  // namespace uapad

@@ -86,3 +86,9 @@ defaults (ruling R3); the monsters' HP bars wait for question 2 (R2).
   core/pad_hint + win/pad_hint (the line over the skill bar, runtime setOwnHints/hints, the GDI hint off while
   [interface] pad_hints), «Характеристики» by the pad (statswin::padCommand, runtime statsPad). Stage 6 done; stage 7
   (HP bars) waits for the owner's question 2.
+- After the report R-KMG8GE (the owner's «проверил геймпад», beta.92): B on the game's equipment and options windows
+  and on the big map went to the empty slot F3, the big map closed only with the mouse. 3.0.11-beta.93: B closes the
+  window opened last of the big map and the game's windows the tile opens (pad core WindowOrder; charpanel::gameOpen
+  = the windows' manager's pointers + 0x94 / + 0x118 / + 0x98 / + 0x11C from DeleteWindow FUN_004d1e60;
+  minimapproto::bigShown), the press swallowed until let go, the hint line «B закрити вікно» while the pad plays;
+  tests window_order_* (3); suite 1998/0.

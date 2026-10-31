@@ -1057,6 +1057,8 @@ bool showBig(bool open) {
     return true;
 }
 
+bool bigShown() { return state().on && state().big; }
+
 bool canFollow() { return state().on; }
 
 bool plotTo(int x, int y) {

@@ -28,6 +28,7 @@
 #include "pad/core/logic/npc_hint.hpp"
 #include "pad/core/logic/settings_menu.hpp"
 #include "pad/core/logic/vbutton.hpp"
+#include "pad/core/logic/window_order.hpp"
 #include "pad/core/session.hpp"
 #include "pad/core/version.hpp"
 #include "pad/win/client_bar.hpp"
@@ -43,8 +44,10 @@
 #include "win/disk.hpp"
 #include "win/paths.hpp"
 #include "core/walk_path.hpp"
+#include "win/char_block.hpp"
 #include "win/game_camera.hpp"
 #include "win/item_window.hpp"
+#include "win/minimap_proto.hpp"
 #include "win/stat_window.hpp"
 #include "win/pad_assign.hpp"
 #include "win/pad_tiles.hpp"
@@ -116,6 +119,9 @@ struct State {
     bool tiles = true;          // 3.0.11-beta.90: [interface] pad_tiles
     bool ownHints = true;       // 3.0.11-beta.92: the hint line drawn by the interface (win/pad_hint)
     std::vector<HintPart> hintParts;
+    WindowOrder windows;        // 3.0.11-beta.93: the windows B closes, in the order they opened
+    bool backDown = false;      // B held at the last tick
+    bool backHeld = false;      // the press that closed a window: not the game's until it is let go
     bool openMenuNow = false;   // the tile's «Контролер» chosen: the pad's menu opens at the next tick
     std::string groundMap;
     GroundGrid ground;
@@ -629,13 +635,17 @@ void answerNpc(const TickOutput& out, const ViewInfo& view, const PadState& pad)
     const bool answering = s.session->controller().dialog() != NpcDialog::None && view.dialog != NpcDialog::None;
     const uint16_t choiceKey = s.session->controller().choosingButton();  // 3.0.11-beta.85: a support skill asks whom
     const bool shown = pad.connected && view.focused && !view.paused;
+    // 3.0.11-beta.93: a window B closes open while the player plays with the pad
+    const bool closing = s.windows.last() >= 0 && s.mode.padShown(GetTickCount64());
     const std::string text = !shown            ? std::string()
                              : choiceKey != 0  ? choiceHint(choiceKey, s.cfg.lang)
                              : s.cfg.npcHint && answering ? npcHint(view.dialog, s.cfg.lang)
+                             : closing && view.dialog == NpcDialog::None ? windowHint(s.cfg.lang)
                                                           : std::string();
     s.hintParts = text.empty()     ? std::vector<HintPart>{}  // 3.0.11-beta.92: for the interface's own line
                   : choiceKey != 0 ? choiceHintParts(choiceKey, s.cfg.lang)
-                                   : npcHintParts(view.dialog, s.cfg.lang);
+                  : s.cfg.npcHint && answering ? npcHintParts(view.dialog, s.cfg.lang)
+                                               : windowHintParts(s.cfg.lang);
     if (s.ownHints) {  // drawn by the interface: the pad's own window away
         if (!s.shownHint.empty()) hint::hide();
         s.shownHint.clear();
@@ -647,6 +657,53 @@ void answerNpc(const TickOutput& out, const ViewInfo& view, const PadState& pad)
         hint::hide();
     else
         hint::show(s.hwnd, widen(text, CP_UTF8));
+}
+
+// 3.0.11-beta.93 (R-KMG8GE: B pressed on the game's equipment and options windows and on the big map went to the
+// empty slot F3; the big map closed only with the mouse): while none of the pad's own windows has the buttons, B
+// closes the window opened last of the big map and the game's windows the tile opens - unless an NPC window or a
+// skill's «whom?» has B. That press goes no further: B's own action waits for the next one.
+struct Closable {
+    const char* name;
+    int command;  // the game's Basic Info button opening it; 0 the big map
+};
+constexpr Closable kClosable[] = {{"the big map", 0},
+                                  {"the game's equipment", 0x81},
+                                  {"the game's skills", 0x82},
+                                  {"the game's options", 0x7F},
+                                  {"the game's party and friends", 0x85}};
+
+bool closableOpen(const Closable& w) {
+    return w.command == 0 ? uagfx::win::minimapproto::bigShown() : uagfx::win::charpanel::gameOpen(w.command);
+}
+
+void backCloses(PadState& pad, const ViewInfo& view) {
+    State& s = S();
+    for (size_t i = 0; i < std::size(kClosable); ++i) s.windows.see(int(i), closableOpen(kClosable[i]));
+    const bool b = pad.connected && (pad.buttons & kPadB);
+    const bool down = b && !s.backDown;
+    s.backDown = b;
+    if (s.backHeld) {
+        if (b)
+            pad.buttons = uint16_t(pad.buttons & ~kPadB);
+        else
+            s.backHeld = false;
+        return;
+    }
+    const int last = s.windows.last();
+    if (!down || view.paused || last < 0 || !view.focused || view.dialog != NpcDialog::None ||
+        s.session->controller().choosing() != 0)
+        return;
+    const Closable& w = kClosable[last];
+    if (w.command == 0)
+        uagfx::win::minimapproto::showBig(false);
+    else
+        uagfx::win::charpanel::pressGame(w.command);
+    const bool closed = !closableOpen(w);
+    s.windows.see(last, !closed);
+    LOG_INFO("B: %s %s", w.name, closed ? "closed" : "still open - the game did not close it");
+    s.backHeld = true;
+    pad.buttons = uint16_t(pad.buttons & ~kPadB);
 }
 
 void tick() {
@@ -705,7 +762,9 @@ void tick() {
         s.session->setClientTurn(std::nullopt);
     s.session->setFriends(uagfx::win::partywin::hereIds());  // 3.0.11-beta.85: whom a support skill may go on
     lookAndGround(now);  // 3.0.11-beta.88
-    const TickOutput out = s.session->tick(pad, view, now);
+    PadState padIn = pad;
+    backCloses(padIn, view);  // 3.0.11-beta.93: each tick, so the press closing the tile closes nothing more
+    const TickOutput out = s.session->tick(padIn, view, now);
     if (out.camera.turnDeg != 0 && s.cameraSupported && !clientcamera::turn(out.camera.turnDeg) &&
         !s.loggedCameraFail) {
         s.loggedCameraFail = true;

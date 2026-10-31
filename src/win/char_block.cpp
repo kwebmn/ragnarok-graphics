@@ -466,4 +466,13 @@ void beforeGameDraw() {
 
 bool pressGame(int command) { return press(command); }
 
+bool gameOpen(int command) {
+    const uint32_t at = command == 0x81   ? kWindowMgr + 0x94
+                        : command == 0x82 ? kWindowMgr + 0x118
+                        : command == 0x7F ? kWindowMgr + 0x98
+                        : command == 0x85 ? kWindowMgr + 0x11C
+                                          : 0;
+    return at && inGameWorld() && read32(at) != 0;
+}
+
 }  // namespace uagfx::win::charpanel

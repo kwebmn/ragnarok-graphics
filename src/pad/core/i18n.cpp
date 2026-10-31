@@ -69,6 +69,7 @@ const Entry kTexts[] = {
     {"↑ ↓: whom  ·  {A}: cast  ·  {KEY}: on yourself  ·  {B}: cancel",
      "↑ ↓: кому  ·  {A}: застосувати  ·  {KEY}: на себе  ·  {B}: скасувати",
      "↑ ↓: кому  ·  {A}: применить  ·  {KEY}: на себя  ·  {B}: отмена"},
+    {"{B}: close the window", "{B}: закрити вікно", "{B}: закрыть окно"},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "every Text needs its translations");
 

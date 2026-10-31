@@ -14,6 +14,9 @@ std::string npcHint(NpcDialog d, Lang lang);
 // 3.0.11-beta.85: the line while a support skill asks whom; `key`: the skill's own button (on the character)
 std::string choiceHint(uint16_t key, Lang lang);
 
+// 3.0.11-beta.93: the line while a window B closes is open (the big map, the game's equipment, skills, options, party)
+std::string windowHint(Lang lang);
+
 // 3.0.11-beta.92 (the concept «Контроллер в интерфейсе uaRO», stage 6): the same lines as parts - each its words
 // before the buttons («утримати»), its buttons (PadButton bits, the arrows too), its words after - for the interface's
 // own hint bar to draw the buttons as the controller's glyphs
@@ -25,5 +28,6 @@ struct HintPart {
 std::vector<HintPart> hintParts(const std::string& line, uint16_t key = 0);  // a line with {A}, {B}, ↑ ↓ ...
 std::vector<HintPart> npcHintParts(NpcDialog d, Lang lang);
 std::vector<HintPart> choiceHintParts(uint16_t key, Lang lang);
+std::vector<HintPart> windowHintParts(Lang lang);
 
 }  // namespace uapad

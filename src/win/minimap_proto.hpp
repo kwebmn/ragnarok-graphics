@@ -41,6 +41,8 @@ bool key(unsigned vk);
 bool canFollow();
 // 3.0.11-beta.90 (the controller's windows' tile): the big map opened or closed; false: the new minimap is off
 bool showBig(bool open);
+// 3.0.11-beta.93: the big map shows now (the controller's B closes it)
+bool bigShown();
 void follow(const std::string& target, bool walk);
 void unfollow();
 bool following(std::string& target, bool& walk);  // false: none

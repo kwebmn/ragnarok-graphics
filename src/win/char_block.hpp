@@ -29,5 +29,9 @@ void beforeGameDraw();
 // (its SendMsg message 6 with the command: 0x7E stats, 0x81 equip, 0x80 items, 0x82 skills, 0x85 friends, 0x7F
 // options) - the game's window opened or closed; false: no such window now
 bool pressGame(int command);
+// 3.0.11-beta.93 (the controller's B closes them): the game's window that button opens is open now - the windows'
+// manager keeps a pointer to each open one (its DeleteWindow FUN_004d1e60): 0x81 the equipment (window 10, + 0x94),
+// 0x82 the skills (0x25, + 0x118), 0x7F the options (0xD, + 0x98), 0x85 the party and friends (0x22, + 0x11C)
+bool gameOpen(int command);
 
 }  // namespace uagfx::win::charpanel
