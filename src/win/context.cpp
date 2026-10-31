@@ -49,6 +49,7 @@
 #include "win/ground_marks.hpp"
 #include "win/pad_assign.hpp"
 #include "win/mob_hp.hpp"
+#include "win/skill_window.hpp"
 #include "win/pad_hint.hpp"
 #include "win/pad_tiles.hpp"
 #include "win/target_card.hpp"
@@ -567,6 +568,7 @@ void Context::endScene() {
         chatwin::draw(record, *renderer);       // 3.0.11-beta.41: the chat
         itemswin::draw(record, *renderer);      // 3.0.11-beta.42: «Речі»
         statswin::draw(record, *renderer);      // 3.0.11-beta.42: «Характеристики»
+        skillswin::draw(record, *renderer);     // 3.0.11-beta.96: «Навички»
         answercard::draw(record, *renderer);  // 3.0.9-beta.4: the developer's answer
         windowSwitch_.draw(record, *renderer);
         referencewin::draw(record, *renderer);  // 3.0.11-beta.7: «Довідник», over the rest
@@ -618,6 +620,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
         chatwin::draw(record, *renderer);       // 3.0.11-beta.41
         itemswin::draw(record, *renderer);      // 3.0.11-beta.42
         statswin::draw(record, *renderer);
+        skillswin::draw(record, *renderer);     // 3.0.11-beta.96
         answercard::draw(record, *renderer);  // 3.0.9-beta.4
         windowSwitch_.draw(record, *renderer);
         referencewin::draw(record, *renderer);  // 3.0.11-beta.7
@@ -867,6 +870,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     // 3.0.11-beta.42: [interface] items and status - «Речі» and «Характеристики» while the game's own are open
     itemswin::frame(window, config.itemsWindow, gameCodePage(config), pk, pw, ph);
     statswin::frame(window, config.statusWindow, pk, pw, ph);
+    skillswin::frame(window, config.skillsWindow, gameCodePage(config), pk, pw, ph);  // 3.0.11-beta.96: «Навички»
     // 3.0.11-beta.7: [interface] reference - «Довідник» (Ctrl+F)
     referencewin::frame(window, config.referenceWindow, pk, pw, ph);
     // 3.0.11-beta.75: «Розміщення інтерфейсу» (Ctrl+Shift+L, the console) - over the parts placed this frame

@@ -5060,6 +5060,35 @@ constexpr Entry kTexts[] = {
     {Text::InterfaceMobHpTarget, "The target only", "Лише ціль", "Только цель"},
     {Text::InterfaceMobHpWounded, "The target and the wounded", "Ціль і поранені", "Цель и раненые"},
     {Text::InterfaceMobHpAll, "All", "Усі", "Все"},
+    {Text::InterfaceSkills, "Skills", "Навички", "Навыки"},  // 3.0.11-beta.96
+    {Text::InterfaceSkillsHint,
+     "The skill tree (Alt+S) in the new look: tabs by the jobs the character passed through, each skill's level out of "
+     "its most, a plus where a free point raises it, the arrows of the level it is used at. A double click uses it, a "
+     "press drags it onto the hotbar. The title moves it.",
+     "Дерево навичок (Alt+S) у новому вигляді: вкладки за професіями, які пройшов персонаж, рівень кожної навички з "
+     "її найбільшого, плюс там, де вільне очко її підвищує, стрілки рівня, яким вона застосовується. Подвійний клік — "
+     "застосувати, затиснути — перетягнути на панель навичок. За заголовок вікно рухається.",
+     "Дерево навыков (Alt+S) в новом виде: вкладки по профессиям, которые прошёл персонаж, уровень каждого навыка из "
+     "его наибольшего, плюс там, где свободное очко его повышает, стрелки уровня, которым он применяется. Двойной "
+     "клик — применить, зажать — перетащить на панель навыков. За заголовок окно двигается."},
+    {Text::SkillsTitle, "Skills", "Навички", "Навыки"},
+    {Text::SkillsPoints, "Free points: {1}", "Вільних очок: {1}", "Свободных очков: {1}"},
+    {Text::SkillsDrag, "Drag a skill onto the skill bar", "Перетягніть навичку на панель навичок",
+     "Перетащите навык на панель навыков"},
+    {Text::SkillsPassive, "Passive", "Пасивна", "Пассивный"},
+    {Text::SkillsEnemy, "On an enemy", "На ворога", "На врага"},
+    {Text::SkillsGround, "On the ground", "На землю", "На землю"},
+    {Text::SkillsSelf, "On yourself", "На себе", "На себя"},
+    {Text::SkillsAlly, "On an ally", "На союзника", "На союзника"},
+    {Text::SkillsTrap, "A trap", "Пастка", "Ловушка"},
+    {Text::SkillsSp, "SP {1}", "SP {1}", "SP {1}"},
+    {Text::SkillsRange, "range {1}", "дальність {1}", "дальность {1}"},
+    {Text::SkillsNeeds, "Needs: {1}", "Потрібно: {1}", "Нужно: {1}"},
+    {Text::SkillsUnlearned, "Not learned", "Не вивчено", "Не изучен"},
+    {Text::SkillsPadUse, "Use", "Застосувати", "Применить"},
+    {Text::SkillsPadRaise, "+1 level", "+1 рівень", "+1 уровень"},
+    {Text::SkillsPadAssign, "Assign", "Призначити", "Назначить"},
+    {Text::SkillsPadClose, "Close", "Закрити", "Закрыть"},
     {Text::InterfacePadWalk, "The controller walks", "Хід контролером", "Ход контроллером"},  // 3.0.11-beta.88
     {Text::InterfacePadWalkHint,
      "How the left stick walks: holding the game's cursor out, as before, or without the mouse - the character goes "

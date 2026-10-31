@@ -48,6 +48,7 @@
 #include "win/game_camera.hpp"
 #include "win/item_window.hpp"
 #include "win/minimap_proto.hpp"
+#include "win/skill_window.hpp"
 #include "win/stat_window.hpp"
 #include "win/pad_assign.hpp"
 #include "win/pad_tiles.hpp"
@@ -499,6 +500,24 @@ bool statsPad(const PadState& pad, DWORD now) {
     return true;
 }
 
+// 3.0.11-beta.96: «Навички» open - the D-pad (or the left stick) moves its frame up and down, left and right the level
+// a skill is used at, LB / RB its tabs, A uses, Y raises, X «Призначити», B or Start close it
+bool skillsPad(const PadState& pad, DWORD now) {
+    State& s = S();
+    const uint16_t buttons = pad.connected ? pad.buttons : 0;
+    const uint16_t down = uint16_t((buttons & ~s.prevPadButtons) | stickSteps(pad, now));
+    s.prevPadButtons = buttons;
+    using uagfx::win::skillswin::PadCommand;
+    const std::pair<uint16_t, PadCommand> keys[] = {
+        {kPadUp, PadCommand::Up},       {kPadDown, PadCommand::Down},     {kPadLeft, PadCommand::Less},
+        {kPadRight, PadCommand::More},  {kPadLB, PadCommand::TabBack},    {kPadRB, PadCommand::TabOn},
+        {kPadA, PadCommand::Use},       {kPadY, PadCommand::Raise},       {kPadX, PadCommand::Assign},
+        {kPadB, PadCommand::Close},     {kPadStart, PadCommand::Close}};
+    for (const auto& [button, command] : keys)
+        if (down & button) uagfx::win::skillswin::padCommand(command);
+    return true;
+}
+
 bool runMenu(const PadState& pad, const ViewInfo& view, DWORD now) {
     State& s = S();
     const uint16_t buttons = pad.connected ? pad.buttons : 0;
@@ -754,6 +773,7 @@ void tick() {
                   : uagfx::win::padtileswin::isOpen() && !menuOpen  ? tilePad(pad, now)    // 3.0.11-beta.90
                   : uagfx::win::itemswin::shown() && !menuOpen && pad.connected ? itemsPad(pad, now)  // .91
                   : uagfx::win::statswin::shown() && !menuOpen && pad.connected ? statsPad(pad, now)  // .92
+                  : uagfx::win::skillswin::shown() && !menuOpen && pad.connected ? skillsPad(pad, now)  // .96
                                                                                : runMenu(pad, view, now);
     if (s.npcSupported) view.dialog = clientnpc::read();
     double clientTurn = 0;

@@ -617,6 +617,9 @@ struct Config {
     // 3.0.11-beta.42: [interface] items and status - stage 8's windows: «Речі» (core/item_window) and
     // «Характеристики» (core/stat_window) in place of the game's own while they are open
     bool itemsWindow = false, statusWindow = false;
+    // 3.0.11-beta.96 (the owner: «доделаем окна интерфейсов»): [interface] skills - «Навички» (core/skill_window) in
+    // place of the game's own skill tree while it is open; on with the new minimap
+    bool skillsWindow = false;
     // 3.0.11-beta.46: [interface] animations - the new interface's motion (core/ui_motion): the target's card, the
     // character block's views, a new level's flare, the low HP warning sliding in; 0: all at once
     bool animations = true;

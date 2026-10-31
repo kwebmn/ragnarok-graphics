@@ -10,6 +10,7 @@
 #include "win/hotbar.hpp"
 #include "win/item_window.hpp"
 #include "win/log.hpp"
+#include "win/skill_window.hpp"
 #include "win/stat_window.hpp"
 
 namespace uagfx::win {
@@ -33,6 +34,7 @@ int g_told = 0;
 void __attribute__((thiscall)) windowsDraw(uint32_t manager) {
     itemswin::beforeGameDraw();   // «Речі»
     statswin::beforeGameDraw();   // «Характеристики»
+    skillswin::beforeGameDraw();  // 3.0.11-beta.96: «Навички»
     charpanel::beforeGameDraw();  // the Basic Info window
     hotbarwin::beforeGameDraw();  // the hotkeys' bar
     chatwin::beforeGameDraw();    // the chat (out of sight)

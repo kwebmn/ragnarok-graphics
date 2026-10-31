@@ -16,6 +16,7 @@
 #include "win/item_window.hpp"
 #include "win/pad_assign.hpp"
 #include "win/pad_tiles.hpp"
+#include "win/skill_window.hpp"
 #include "win/stat_window.hpp"
 #include "win/target_card.hpp"
 #include "win/tracker.hpp"
@@ -61,6 +62,7 @@ bool partsMouse(HWND w, UINT m, WPARAM wp, LPARAM lp, LRESULT& answer) {
            answercard::mouse(w, m, lp, answer) ||       // 3.0.9-beta.4: and over the answer card the card's
            referencewin::mouse(w, m, wp, lp, answer) ||  // 3.0.11-beta.7: over «Довідник» its own
            statswin::mouse(w, m, wp, lp, answer) ||      // 3.0.11-beta.42: the windows over the panels
+           skillswin::mouse(w, m, wp, lp, answer) ||     // 3.0.11-beta.96: «Навички»
            itemswin::mouse(w, m, wp, lp, answer) ||
            minimapproto::mouse(w, m, wp, lp, answer) ||  // 3.0.11-beta.1: the new minimap's
            buffcolumn::mouse(w, m, wp, lp, answer) ||    // 3.0.11-beta.35: the buffs' column's

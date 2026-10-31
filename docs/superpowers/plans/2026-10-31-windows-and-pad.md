@@ -65,3 +65,11 @@ The owner 31.10: «Полоски HP мобов - всем показывай»,
   [interface] mob_hp (wounded; app «Інтерфейс» + «Контролер», console), pad Session::setRing (no fake mark, the name
   request kept) from runtime setRing(target_ring != off); tests game_packets_a_monsters_name_line_brings_its_hp,
   mob_hp_* (4), target_card_hp_bar, config_mob_hp, session_ring_* (2); suite 2010/0.
+- Stage 2: built as 3.0.11-beta.96 - research: window 0x25 (mgr + 0x118, class 0x69B9D0, SendMsg 0x4BDD90: 6/0x87
+  close, 6/0xAD.. «+» -> mode 0x4A (packet 0x0112, mode[0x42] guards), 0x3A use -> mode 0x7E (record, use level), press
+  -> mode 0x51 (id, AEGIS name, use level: drag type 8)), use levels session + 0x534 by id, the job session + 0xE44.
+  core/skill_tree (+ tools/skill_tree.py -> skill_tree.inc from db/skill_tree.txt: most levels, chains by job, home
+  job, needs), core/skill_window (tabs, rows, dots, «+», use arrows, scroll, pad footer), win/skill_window (session's
+  list, hold the game's window, mouse: dbl-click use, press drag, «+», ‹ ›, wheel, title), [interface] skills (on with
+  the minimap), pad skillsPad (A use, Y raise, X assign, LB/RB, ←→, B/Start). Tests skill_tree_* (3),
+  skill_window_* (5), config_interface_minimap updated; suite 2018/0.

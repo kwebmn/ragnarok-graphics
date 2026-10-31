@@ -485,6 +485,9 @@ enum class Text : uint16_t {
     InterfaceTargetRingAlways,
     InterfaceMobHp, InterfaceMobHpHint, InterfaceMobHpOff, InterfaceMobHpTarget, InterfaceMobHpWounded,
     InterfaceMobHpAll,  // 3.0.11-beta.95
+    InterfaceSkills, InterfaceSkillsHint, SkillsTitle, SkillsPoints, SkillsDrag, SkillsPassive, SkillsEnemy,
+    SkillsGround, SkillsSelf, SkillsAlly, SkillsTrap, SkillsSp, SkillsRange, SkillsNeeds, SkillsUnlearned, SkillsPadUse,
+    SkillsPadRaise, SkillsPadAssign, SkillsPadClose,  // 3.0.11-beta.96
     InterfacePadWalk, InterfacePadWalkHint, InterfacePadWalkMouse, InterfacePadWalkArrow,  // 3.0.11-beta.88
     InterfacePadTiles, InterfacePadTilesHint, TilesTitle, TileSkills, TileEquip, TileMap, TileOptions, TilesOpen,
     TilesClose,  // 3.0.11-beta.90

@@ -94,6 +94,8 @@ constexpr const char* kPartyState = "uaro-graphics\\party-state.txt";
 // 3.0.11-beta.80: the party's members' looks as last seen («<account> <sex> <hair> <colour> <class> <level>» lines)
 constexpr const char* kPartyLooks = "uaro-graphics\\party-looks.txt";
 constexpr const char* kStatsState = "uaro-graphics\\stats-state.txt";
+// 3.0.11-beta.96: «Навички»'s place («at 0.2 0.15») and its tab («tab 2»)
+constexpr const char* kSkillsState = "uaro-graphics\\skills-state.txt";
 // 2.14: the client patcher (app/client_patch): the list of the game's files last put, and where they arrive first
 constexpr const char* kClientPatchRecord = "uaro-graphics\\client-patch.txt";
 constexpr const char* kClientPatchWork = "uaro-graphics\\update\\client";
