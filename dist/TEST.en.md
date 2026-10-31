@@ -1,3 +1,13 @@
+# uaRO Graphics 3.0.11-beta.113 — what's new
+
+The windows and inventory concept, question 9 — "Items"' new tabs:
+- **Six tabs**: "All", "Consumables" (potions, food, scrolls), "Equipment" (weapons, armour and now the arrows),
+  "Cards", "Misc" (materials, loot, pet eggs) and "★" — the starred things.
+- **The star**: point at a thing — ☆ shows in its cell's lower left corner; click it — ★, the thing goes into the "★"
+  tab. Click again — off. The starred things are kept for each character apart. The right click stays the thing's
+  description.
+- The tab open last time starts at "All" after this update.
+
 # uaRO Graphics 3.0.11-beta.112 — what's new
 
 The windows and inventory concept, question 3 — new things are seen at once:
