@@ -47,6 +47,7 @@
 #include "win/stat_window.hpp"
 #include "pad/win/runtime.hpp"
 #include "win/ground_marks.hpp"
+#include "win/pad_assign.hpp"
 #include "win/pad_tiles.hpp"
 #include "win/target_card.hpp"
 #include "win/tracker.hpp"
@@ -567,6 +568,7 @@ void Context::endScene() {
         windowSwitch_.draw(record, *renderer);
         referencewin::draw(record, *renderer);  // 3.0.11-beta.7: «Довідник», over the rest
         padtileswin::draw(record, *renderer);   // 3.0.11-beta.90: the controller's windows' tile
+        padassignwin::draw(record, *renderer);  // 3.0.11-beta.91: «Призначити»
         hudedit::draw(record, *renderer);       // 3.0.11-beta.75: the parts' frames while they are placed
         record.takeWork();  // the driver's own draws are not the game's
     }
@@ -615,6 +617,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
         windowSwitch_.draw(record, *renderer);
         referencewin::draw(record, *renderer);  // 3.0.11-beta.7
         padtileswin::draw(record, *renderer);   // 3.0.11-beta.90
+        padassignwin::draw(record, *renderer);  // 3.0.11-beta.91
         hudedit::draw(record, *renderer);       // 3.0.11-beta.75
     }
     record.takeWork();  // the driver's own draws are not the game's
@@ -837,6 +840,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     uapad::runtime::setDirectWalk(config.padWalk == PadWalk::Arrow);  // 3.0.11-beta.88: the stick without the mouse
     uapad::runtime::setTiles(config.padTiles);                        // 3.0.11-beta.90: Start opens the tile
     padtileswin::frame(window, pk, pw, ph);
+    padassignwin::frame(window, pk, pw, ph);  // 3.0.11-beta.91: «Призначити»
     // 3.0.11-beta.39: [interface] party - the party's panel under the character block
     partywin::frame(window, config.partyPanel, gameCodePage(config), pk, pw, ph);
     // 3.0.11-beta.41: [interface] chat - the chat at the bottom left, the game's own out of sight (before the hotbar:

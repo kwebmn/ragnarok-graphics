@@ -30,4 +30,10 @@ bool shown();  // 3.0.11-beta.49: open on the screen now (the world dimmed under
 // 3.0.11-beta.53: just before the game draws its windows (win/windows_draw) - its own «Речі» hidden, never a frame
 void beforeGameDraw();
 
+// 3.0.11-beta.91 (the concept «Контроллер в интерфейсе uaRO», stage 6): played with the controller - the D-pad moves a
+// gold frame over the cells (its tip at once, the controller's buttons in it), A uses (as a double click), Y its card,
+// X «Призначити» (win/pad_assign), LB / RB the tabs, B closes the game's window
+enum class PadCommand : uint8_t { Up, Down, Left, Right, Use, Card, Assign, TabBack, TabOn, Close };
+void padCommand(PadCommand c);
+
 }  // namespace uagfx::win::itemswin

@@ -17,7 +17,10 @@
 #include "core/layout.hpp"
 #include "core/settings/strings.hpp"
 #include "core/ui_style.hpp"
+#include "pad/core/config/bindings.hpp"
 #include "pad/win/game_window.hpp"
+#include "pad/win/runtime.hpp"
+#include "win/pad_assign.hpp"
 #include "win/client_tables.hpp"
 #include "win/code_page.hpp"
 #include "win/game_camera.hpp"
@@ -95,6 +98,8 @@ struct State {
     bool dragging = false;
     int pressesTold = 0;
     std::vector<std::pair<iw::Flash, ULONGLONG>> flashes;  // 3.0.11-beta.44: the uses answered, when
+    int padFocus = 0;      // 3.0.11-beta.91: the controller's frame (of the shown cells)
+    bool padNow = false;   // played with the controller: its frame, its buttons in the tip
     panel::Picture dragIcon;  // the dragged item's icon under the cursor
     const panel::Picture* dragOf = nullptr;
     uint32_t dragTexture = 0;
@@ -227,7 +232,10 @@ void readBag(State& s) {
     }
 }
 
-iw::Texts texts() {
+// 3.0.11-beta.91: played with the controller - its buttons in the tip («A: використати · X: призначити · Y: картка»)
+iw::Texts texts(bool pad = false);
+
+iw::Texts texts(bool pad) {
     iw::Texts t;
     t.title = say(settings::Text::ItemsTitle);
     t.hotkey = "Alt+E";
@@ -240,6 +248,16 @@ iw::Texts texts() {
     t.wear = say(settings::Text::ItemsWear);
     t.card = say(settings::Text::ItemsCard);
     t.info = say(settings::Text::ItemsInfo);
+    if (pad) {
+        const std::string a = uapad::buttonLabel(0), x = uapad::buttonLabel(2), y = uapad::buttonLabel(3);
+        t.use = a + ": " + say(settings::Text::ItemsPadUse);
+        t.wear = a + ": " + say(settings::Text::ItemsPadWear);
+        t.card = a + ": " + say(settings::Text::ItemsPadCard);
+        std::string more = say(settings::Text::ItemsPadMore);
+        if (const size_t at = more.find("{1}"); at != std::string::npos) more.replace(at, 3, x);
+        if (const size_t at = more.find("{2}"); at != std::string::npos) more.replace(at, 3, y);
+        t.info = more;
+    }
     return t;
 }
 
@@ -261,7 +279,7 @@ std::vector<Words> gdiWords(const std::vector<iw::Words>& in) {
 void render(State& s) {
     const uicost::Paint cost("«Речі»", s.layout.w, s.layout.h);  // 3.0.11-beta.55
     if (!panel::blank(s.picture, s.layout.w, s.layout.h)) return;  // 3.0.11-beta.57: in the memory it had
-    const iw::Texts t = texts();
+    const iw::Texts t = texts(s.padNow);
     iw::paint(s.picture, s.layout, s.items, s.shownItems, s.show, t, measure);
     drawWords(s.picture, gdiWords(iw::words(s.layout, s.items, s.shownItems, s.show, t, measure)));
     s.upload = true;
@@ -324,6 +342,28 @@ const char* use(State& s, const iw::Item& it) {
         case iw::Use::None: break;
     }
     return "nothing to do with it";
+}
+
+// A cell's item used as a double click uses it (3.0.11-beta.91: the controller's A too) - its cell answering
+void useCell(State& s, int shownIndex, ULONGLONG now, const char* how) {
+    if (shownIndex < 0 || shownIndex >= int(s.shownItems.size())) return;
+    const iw::Item& it = s.items[size_t(s.shownItems[size_t(shownIndex)])];
+    const iw::Use kind = iw::useOf(it);
+    const char* did = use(s, it);
+    const bool asked = kind != iw::Use::None && !(kind == iw::Use::Confirm && s.armed == it.index);
+    if (asked) {  // 3.0.11-beta.44: its cell answers - a ring, its word rising
+        iw::Flash f;
+        const int cell = shownIndex - s.show.scroll * s.layout.columns;
+        if (cell >= 0 && cell < int(s.layout.cells.size())) f.cell = s.layout.cells[size_t(cell)];
+        f.icon = it.icon;
+        f.label = kind == iw::Use::Wear || kind == iw::Use::Ammo ? say(settings::Text::ItemsWorn)
+                  : kind == iw::Use::Card                        ? ""
+                                                                 : "\xE2\x88\x92" "1";  // −1
+        f.rgb = kind == iw::Use::Wear || kind == iw::Use::Ammo ? 0x5FD08A : 0xF3C653;
+        if (f.cell.w > 0) s.flashes.emplace_back(f, now);
+    }
+    if (s.told++ < 20) LOG_INFO("items: %s on #%d (kind %d) - %s", how, it.id, it.type, did);
+    s.readAt = 0;
 }
 
 bool card(const State& s, size_t at) {
@@ -421,6 +461,12 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
         s.tipSince = now;
     }
     s.show.tip = s.show.hover >= 0 && now - s.tipSince >= kTipMs;
+    s.padNow = uapad::runtime::look().shown;  // 3.0.11-beta.91: the controller's frame and its tip at once
+    if (s.padNow && !s.shownItems.empty()) {
+        s.padFocus = std::clamp(s.padFocus, 0, int(s.shownItems.size()) - 1);
+        s.show.hover = s.padFocus;
+        s.show.tip = true;
+    }
     std::string key = std::to_string(s.layout.x) + ',' + std::to_string(s.layout.y) + ';' + std::to_string(scale) +
                       ';' + std::to_string(int(s.show.tab)) + ';' + std::to_string(s.show.scroll) + ';' +
                       std::to_string(s.show.hover) + (s.show.tip ? "t" : "") + ',' + std::to_string(s.show.hoverTab) +
@@ -428,7 +474,8 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
                       (s.show.typing && s.show.caretOn ? "c" : "") + ';' + std::to_string(s.show.flashes.size()) + '@' +
                       std::to_string(s.show.flashes.empty() ? 0 : int(s.show.flashes.front().t * 40)) + ';' +
                       std::to_string(s.show.weight) + '/' +
-                      std::to_string(s.show.weightMost) + ';' + std::to_string(s.show.zeny) + ';';
+                      std::to_string(s.show.weightMost) + ';' + std::to_string(s.show.zeny) + ';' +
+                      (s.padNow ? "P;" : ";");
     for (const iw::Item& it : s.items)
         key += std::to_string(it.index) + ':' + std::to_string(it.id) + 'x' + std::to_string(it.count) + '+' +
                std::to_string(it.refine) + (it.identified ? "" : "?") + (it.icon ? "i" : "") + ',';
@@ -578,27 +625,11 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
         case iw::Part::Cell: {
             if (h.index >= int(s.shownItems.size())) break;
             const int at = s.shownItems[size_t(h.index)];
-            const iw::Item& it = s.items[size_t(at)];
             const ULONGLONG now = GetTickCount64();
             if ((h.index == s.lastCell && now - s.lastClick <= GetDoubleClickTime()) || m == WM_LBUTTONDBLCLK) {
-                const iw::Use kind = iw::useOf(it);
-                const char* did = use(s, it);
-                const bool asked = kind != iw::Use::None && !(kind == iw::Use::Confirm && s.armed == it.index);
-                if (asked) {  // 3.0.11-beta.44: its cell answers - a ring, its word rising
-                    iw::Flash f;
-                    const int cell = h.index - s.show.scroll * s.layout.columns;
-                    if (cell >= 0 && cell < int(s.layout.cells.size())) f.cell = s.layout.cells[size_t(cell)];
-                    f.icon = it.icon;
-                    f.label = kind == iw::Use::Wear || kind == iw::Use::Ammo ? say(settings::Text::ItemsWorn)
-                              : kind == iw::Use::Card                        ? ""
-                                                                             : "\xE2\x88\x92" "1";  // −1
-                    f.rgb = kind == iw::Use::Wear || kind == iw::Use::Ammo ? 0x5FD08A : 0xF3C653;
-                    if (f.cell.w > 0) s.flashes.emplace_back(f, now);
-                }
+                useCell(s, h.index, now, "a double click");
                 s.lastCell = -1;
                 s.press = -1;
-                if (s.told++ < 20) LOG_INFO("items: a double click on #%d (kind %d) - %s", it.id, it.type, did);
-                s.readAt = 0;
             } else {  // a click, or a drag once it moves
                 s.lastCell = h.index;
                 s.lastClick = now;
@@ -654,6 +685,40 @@ bool key(UINT m, WPARAM wp, LPARAM lp) {
 }
 
 bool shown() { return state().shown; }
+
+void padCommand(PadCommand c) {
+    State& s = state();
+    if (!s.shown) return;
+    const int n = int(s.shownItems.size()), cols = s.layout.columns > 0 ? s.layout.columns : 8;
+    const auto keepInSight = [&] {  // the frame's row on the grid's rows
+        const int row = s.padFocus / cols;
+        if (row < s.show.scroll) s.show.scroll = row;
+        if (row >= s.show.scroll + s.layout.rows) s.show.scroll = row - s.layout.rows + 1;
+    };
+    switch (c) {
+        case PadCommand::Up: s.padFocus = std::max(0, s.padFocus - cols); keepInSight(); break;
+        case PadCommand::Down: s.padFocus = std::min(std::max(0, n - 1), s.padFocus + cols); keepInSight(); break;
+        case PadCommand::Left: s.padFocus = std::max(0, s.padFocus - 1); keepInSight(); break;
+        case PadCommand::Right: s.padFocus = std::min(std::max(0, n - 1), s.padFocus + 1); keepInSight(); break;
+        case PadCommand::Use: useCell(s, s.padFocus, GetTickCount64(), "the controller's A"); break;
+        case PadCommand::Card:
+            if (s.padFocus >= 0 && s.padFocus < n) card(s, size_t(s.shownItems[size_t(s.padFocus)]));
+            break;
+        case PadCommand::Assign:
+            if (s.padFocus >= 0 && s.padFocus < n) {
+                const iw::Item& it = s.items[size_t(s.shownItems[size_t(s.padFocus)])];
+                padassignwin::open(std::to_string(it.id), 0, iw::nameOf(it));
+            }
+            break;
+        case PadCommand::TabBack:
+        case PadCommand::TabOn:
+            s.show.tab = iw::Tab((int(s.show.tab) + (c == PadCommand::TabOn ? 1 : iw::kTabs - 1)) % iw::kTabs);
+            s.padFocus = 0;
+            s.show.scroll = 0;
+            break;
+        case PadCommand::Close: closeGameWindow(); break;
+    }
+}
 
 void beforeGameDraw() {
     State& s = state();

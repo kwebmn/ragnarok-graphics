@@ -486,6 +486,8 @@ enum class Text : uint16_t {
     InterfacePadWalk, InterfacePadWalkHint, InterfacePadWalkMouse, InterfacePadWalkArrow,  // 3.0.11-beta.88
     InterfacePadTiles, InterfacePadTilesHint, TilesTitle, TileSkills, TileEquip, TileMap, TileOptions, TilesOpen,
     TilesClose,  // 3.0.11-beta.90
+    AssignTitle, AssignPut, AssignCancel, AssignEmpty, ItemsPadUse, ItemsPadWear, ItemsPadCard,
+    ItemsPadMore,  // 3.0.11-beta.91
     InterfaceMinimapWay, InterfaceMinimapWayHint,
     InterfaceMinimapWaySteps, InterfaceMinimapWayLine, InterfaceMinimapWayOff, InterfaceBuffs, InterfaceBuffsHint,
     InterfaceBuffsOff, InterfaceBuffsColumn, InterfaceBuffsRow, BuffsNames, BuffsHideNames, BuffsMore, BuffsStar,

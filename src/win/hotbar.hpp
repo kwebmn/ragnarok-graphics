@@ -39,4 +39,10 @@ bool drop(int x, int y, uint32_t drag);
 // session keeps them - the new bar shown or not), each with its name as the game shows it; in the slots' order
 std::vector<barhint::Skill> barSkills();
 
+// 3.0.11-beta.91 (the concept «Контроллер в интерфейсе uaRO», stage 6): a slot of the game's bar (0-26) given an item
+// (its number's words, "501") or a skill ("##AEGIS") at a level, the bar told to fill its own (each character's own
+// kept as the other changes are); its words now («Red Potion», «Double Strafe»; "" empty). On the game's thread
+bool assign(int slot, const std::string& value, int level);
+std::string slotWords(int slot);
+
 }  // namespace uagfx::win::hotbarwin

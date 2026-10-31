@@ -104,6 +104,7 @@ struct State {
     bool on = false, shown = false, known = false, checked = false, hid = false, oldTold = false;
     bool editing = false, editShown = false;
     bool padTold = false;  // 3.0.11-beta.86: the controller's buttons shown, as last told the log
+    unsigned codePage = 0;  // 3.0.11-beta.91: the names' (slotWords)
     float k = 0, scale = 1;
     int targetW = 0, targetH = 0;
     hb::Mode mode = hb::Mode::Normal;
@@ -688,6 +689,7 @@ void frame(HWND game, bool on, bool ownBars, bool padHints, unsigned codePage, d
     }
     const bool world = inGameWorld();
     if (world && s.known) holdGameBar(s, on);
+    s.codePage = codePage;
     if (world && s.known) ownBar(s, ownBars, codePage);  // 3.0.11-beta.78: each character's own bar, on or not
     if (!on || !s.known || !world || !game || k <= 0 || targetWidth <= 0 || targetHeight <= 0) {
         hide(s);
@@ -863,6 +865,25 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
 void beforeGameDraw() {
     State& s = state();
     if (s.on && s.known && inGameWorld()) holdGameBar(s, true);
+}
+
+bool assign(int slot, const std::string& value, int level) {
+    State& s = state();
+    if (slot < 0 || slot >= kSlots || !s.known || !inGameWorld()) return false;
+    hb::Bar bar = barNow();
+    bar.slots[size_t(slot)] = value;
+    bar.levels[size_t(slot)] = level;
+    putBar(bar);
+    s.readAt = 0;  // its cells read again at once
+    LOG_INFO("hotbar: the slot %d given %s (the controller's «Призначити»)", slot,
+             value.empty() ? "nothing" : value.c_str());
+    return true;
+}
+
+std::string slotWords(int slot) {
+    State& s = state();
+    if (slot < 0 || slot >= kSlots) return "";
+    return cellOf(s, slot, "", s.codePage).name;
 }
 
 }  // namespace uagfx::win::hotbarwin

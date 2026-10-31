@@ -78,3 +78,7 @@ defaults (ruling R3); the monsters' HP bars wait for question 2 (R2).
   modal mouse), Start -> the tile ([interface] pad_tiles, on), tiles open the game's windows (charpanel::pressGame
   0x80/0x7E/0x82/0x81/0x85/0x7F), the big map (minimapproto::showBig) or the map card, «Довідник», the pad's own menu
   (runtime openPadMenu). Next: «Речі»/«Характеристики» by the pad, X assign, NPC/choice hints in the interface's style.
+- Stage 6 part 2: built as 3.0.11-beta.91 - «Речі» by the pad (itemswin::padCommand: frame = show.hover with the
+  tip at once, pad texts in the tip, A useCell, Y card, X assign, LB/RB tabs, B/Start close; runtime itemsPad +
+  stickSteps), core/pad_assign + win/pad_assign (Blocker::PadAssign; hotbarwin::assign = barNow + putBar,
+  slotWords). Left for part 3: «Характеристики» by the pad, NPC/choice hints in the interface's style.

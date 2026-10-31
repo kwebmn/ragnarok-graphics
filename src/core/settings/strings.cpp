@@ -5074,6 +5074,15 @@ constexpr Entry kTexts[] = {
     {Text::TileOptions, "Game options", "Налаштування гри", "Настройки игры"},
     {Text::TilesOpen, "Open", "Відкрити", "Открыть"},
     {Text::TilesClose, "Close", "Закрити", "Закрыть"},
+    {Text::AssignTitle, "Put on a button", "Призначити на кнопку", "Назначить на кнопку"},  // 3.0.11-beta.91
+    {Text::AssignPut, "Put", "Поставити", "Поставить"},
+    {Text::AssignCancel, "Cancel", "Скасувати", "Отмена"},
+    {Text::AssignEmpty, "empty", "порожньо", "пусто"},
+    {Text::ItemsPadUse, "use", "використати", "использовать"},
+    {Text::ItemsPadWear, "wear", "вдягнути", "надеть"},
+    {Text::ItemsPadCard, "into a slot", "у слот", "в слот"},
+    {Text::ItemsPadMore, "{1}: put on a button · {2}: its card", "{1}: призначити · {2}: картка",
+     "{1}: назначить · {2}: карточка"},
     // 3.0.11-beta.33
     {Text::InterfaceMinimapWay, "The way on the ground", "Шлях на землі", "Путь на земле"},
     {Text::InterfaceMinimapWayHint,

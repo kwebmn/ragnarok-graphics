@@ -44,6 +44,8 @@
 #include "win/paths.hpp"
 #include "core/walk_path.hpp"
 #include "win/game_camera.hpp"
+#include "win/item_window.hpp"
+#include "win/pad_assign.hpp"
 #include "win/pad_tiles.hpp"
 #include "win/party_panel.hpp"
 #include "win/real_ddraw.hpp"
@@ -407,10 +409,12 @@ bool referencePad(const PadState& pad) {
 
 // 3.0.11-beta.90 (the concept's stage 6): the windows' tile open - the pad's buttons are its: the D-pad (or the left
 // stick) moves its frame, A opens, B or Start closes; the character waits meanwhile
+uint16_t stickSteps(const PadState& pad, DWORD now);
+
 bool tilePad(const PadState& pad, DWORD now) {
     State& s = S();
     const uint16_t buttons = pad.connected ? pad.buttons : 0;
-    const uint16_t down = uint16_t(buttons & ~s.prevPadButtons);
+    const uint16_t down = uint16_t((buttons & ~s.prevPadButtons) | stickSteps(pad, now));
     s.prevPadButtons = buttons;
     using uagfx::win::padtileswin::Command;
     const std::pair<uint16_t, Command> keys[] = {{kPadUp, Command::Up},       {kPadDown, Command::Down},
@@ -419,17 +423,53 @@ bool tilePad(const PadState& pad, DWORD now) {
                                                  {kPadStart, Command::Close}};
     for (const auto& [button, command] : keys)
         if (down & button) uagfx::win::padtileswin::command(command);
-    static DWORD stickAt = 0;  // the left stick as the D-pad: a step on a push, again every 250 ms held
+    return true;
+}
+
+// The left stick as the D-pad for the windows: a step on a push, again every 250 ms held; 0 none
+uint16_t stickSteps(const PadState& pad, DWORD now) {
+    static DWORD stickAt = 0;
     const bool pushed = std::fabs(pad.lx) > 0.6f || std::fabs(pad.ly) > 0.6f;
-    if (pushed && now - stickAt >= 250) {
-        stickAt = now;
-        if (std::fabs(pad.lx) > std::fabs(pad.ly))
-            uagfx::win::padtileswin::command(pad.lx > 0 ? Command::Right : Command::Left);
-        else
-            uagfx::win::padtileswin::command(pad.ly > 0 ? Command::Up : Command::Down);
-    } else if (!pushed) {
+    if (!pushed) {
         stickAt = 0;
+        return 0;
     }
+    if (stickAt && now - stickAt < 250) return 0;
+    stickAt = now ? now : 1;
+    if (std::fabs(pad.lx) > std::fabs(pad.ly)) return pad.lx > 0 ? kPadRight : kPadLeft;
+    return pad.ly > 0 ? kPadUp : kPadDown;
+}
+
+// 3.0.11-beta.91 (the concept's stage 6): «Призначити» open - the D-pad chooses the button, A puts, B or Start cancel
+bool assignPad(const PadState& pad, DWORD now) {
+    State& s = S();
+    const uint16_t buttons = pad.connected ? pad.buttons : 0;
+    const uint16_t down = uint16_t((buttons & ~s.prevPadButtons) | stickSteps(pad, now));
+    s.prevPadButtons = buttons;
+    using uagfx::win::padassignwin::Command;
+    const std::pair<uint16_t, Command> keys[] = {{kPadUp, Command::Up},   {kPadDown, Command::Down},
+                                                 {kPadA, Command::Enter}, {kPadB, Command::Close},
+                                                 {kPadStart, Command::Close}};
+    for (const auto& [button, command] : keys)
+        if (down & button) uagfx::win::padassignwin::command(command);
+    return true;
+}
+
+// 3.0.11-beta.91: «Речі» open - the D-pad (or the left stick) moves its frame, A uses, Y its card, X «Призначити»,
+// LB / RB the tabs, B or Start close the game's window; the character stands meanwhile
+bool itemsPad(const PadState& pad, DWORD now) {
+    State& s = S();
+    const uint16_t buttons = pad.connected ? pad.buttons : 0;
+    const uint16_t down = uint16_t((buttons & ~s.prevPadButtons) | stickSteps(pad, now));
+    s.prevPadButtons = buttons;
+    using uagfx::win::itemswin::PadCommand;
+    const std::pair<uint16_t, PadCommand> keys[] = {
+        {kPadUp, PadCommand::Up},     {kPadDown, PadCommand::Down}, {kPadLeft, PadCommand::Left},
+        {kPadRight, PadCommand::Right}, {kPadA, PadCommand::Use},   {kPadY, PadCommand::Card},
+        {kPadX, PadCommand::Assign},  {kPadLB, PadCommand::TabBack}, {kPadRB, PadCommand::TabOn},
+        {kPadB, PadCommand::Close},   {kPadStart, PadCommand::Close}};
+    for (const auto& [button, command] : keys)
+        if (down & button) uagfx::win::itemswin::padCommand(command);
     return true;
 }
 
@@ -623,9 +663,12 @@ void tick() {
     }
     followTheMouse(view.focused, now);
     // 3.0.11-beta.21: the reference window's while it is open, else the pad's own menu (Start)
-    view.paused = uagfx::win::referencewin::isOpen() && !S().menu.isOpen()     ? referencePad(pad)
-                  : uagfx::win::padtileswin::isOpen() && !S().menu.isOpen() ? tilePad(pad, now)  // 3.0.11-beta.90
-                                                                            : runMenu(pad, view, now);
+    const bool menuOpen = S().menu.isOpen();
+    view.paused = uagfx::win::referencewin::isOpen() && !menuOpen     ? referencePad(pad)
+                  : uagfx::win::padassignwin::isOpen() && !menuOpen ? assignPad(pad, now)  // 3.0.11-beta.91
+                  : uagfx::win::padtileswin::isOpen() && !menuOpen  ? tilePad(pad, now)    // 3.0.11-beta.90
+                  : uagfx::win::itemswin::shown() && !menuOpen && pad.connected ? itemsPad(pad, now)  // .91
+                                                                               : runMenu(pad, view, now);
     if (s.npcSupported) view.dialog = clientnpc::read();
     double clientTurn = 0;
     if (s.cameraSupported && clientcamera::readTurn(clientTurn))
