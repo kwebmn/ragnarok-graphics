@@ -1,3 +1,12 @@
+# uaRO Graphics 3.0.11-beta.112 — what's new
+
+The windows and inventory concept, question 3 — new things are seen at once:
+- **A "new" mark** on the cell of a thing that has just come into the bag (picked up, arrows made, bought, a quest's
+  reward) until the cursor points at it.
+- **A count on the tab**: a gold number by the name of the tab holding new things (the arrows — in "Other"), so you
+  know where to look.
+- **"+500 Fire Arrow"** for 2 seconds: over the bag when it is open, or at the bottom middle of the screen when closed.
+
 # uaRO Graphics 3.0.11-beta.111 — what's new
 
 The windows and inventory concept, stage 3 — "Equipment" and "Items" side by side (question 1):
