@@ -1,3 +1,16 @@
+# uaRO Graphics 3.0.11-beta.94 — what is new
+
+Diagnostics after the report R-3S33MK («the game lags»):
+- **Stalls recorded.** In the report the game stopped completely twice - for 15 and for 5 seconds (Windows even put
+  its «not responding» window over it) - and the log did not say where. Now the driver watches the game's loop: when
+  it stands still for more than a second, the driver looks where the game's thread is, then writes «the game's
+  thread: stood still N s» to the log - the Windows function it waited in and who called it. It does not slow the
+  game.
+- **The window's size.** On a 4K monitor at 175 % the window is placed at exactly 3840x2160 but becomes 3839x2159
+  some 40 ms later, and Windows mixes the picture with the desktop (a frame's extra delay). Now the log shows the
+  game's own calls that move its window («window: the game's ShowWindow…») - the exact fix will follow from them.
+- If the game stalls again, send a report right away.
+
 # uaRO Graphics 3.0.11-beta.93 — what is new
 
 The controller in the interface, after the report R-KMG8GE:
