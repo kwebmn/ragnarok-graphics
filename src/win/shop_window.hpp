@@ -24,13 +24,18 @@ namespace uagfx::win::shopwin {
 void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int targetHeight);
 void draw(FrameRecord& record, gpu::Renderer& renderer);
 bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result);
-bool key(UINT m, WPARAM wp, LPARAM lp);  // Enter buys or sells, Esc closes (the chat's line empty); its search's keys
+// 3.0.11-beta.101: the keys while the chat's line is empty - the arrows (Page Up / Down, Home, End) move the frame,
+// left and right or Tab between the list and the cart, Space or + one more, - one fewer (Shift+Space ten), the digits
+// the amount, Del takes it back, F1 its description (the game's item card), Enter buys or sells, Esc closes; its
+// search's keys
+bool key(UINT m, WPARAM wp, LPARAM lp);
 void beforeGameDraw();
 bool shown();
 
 // The controller's (pad runtime shopPad): up and down the list or the cart, left and right between them, A one more,
-// X one fewer, Y buys or sells, LB / RB the tabs, B or Start close the deal
-enum class PadCommand : uint8_t { Up, Down, Left, Right, Plus, Minus, Confirm, TabBack, TabOn, Close };
-void padCommand(PadCommand c);
+// X one fewer (held: on and on, `times` at once), LT takes it back, Y its description, Start buys or sells, LB / RB the
+// tabs, B closes the typing, the card or the deal
+enum class PadCommand : uint8_t { Up, Down, Left, Right, Plus, Minus, TakeBack, Info, Confirm, TabBack, TabOn, Close };
+void padCommand(PadCommand c, int times = 1);
 
 }  // namespace uagfx::win::shopwin

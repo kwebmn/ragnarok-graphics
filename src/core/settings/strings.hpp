@@ -494,7 +494,8 @@ enum class Text : uint16_t {
     InterfaceNpc, InterfaceNpcHint, NpcNext, NpcKeys, NpcServer, NpcChoose,  // 3.0.11-beta.98
     InterfaceShop, InterfaceShopHint, ShopTitle, ShopBuy, ShopSell, ShopSearch, ShopWare, ShopPrice,  // .100
     ShopWeight, ShopCart, ShopAmount, ShopSum, ShopTotal, ShopLeft, ShopAfter, ShopWeightBuy, ShopWeightSell,
-    ShopBuyButton, ShopSellButton, ShopClear, ShopNote, ShopEmpty, ShopMouse, ShopWaiting,
+    ShopClear, ShopNote, ShopEmpty, ShopWaiting, ShopChoose, ShopToCart, ShopKeyAmount, ShopRemove, ShopInfo,  // .101
+    ShopSpace, ShopEditHint,
     InterfacePadWalk, InterfacePadWalkHint, InterfacePadWalkMouse, InterfacePadWalkArrow,  // 3.0.11-beta.88
     InterfacePadTiles, InterfacePadTilesHint, TilesTitle, TileSkills, TileEquip, TileMap, TileOptions, TilesOpen,
     TilesClose,  // 3.0.11-beta.90

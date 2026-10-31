@@ -17,7 +17,11 @@ namespace uagfx::shopwin {
 // «Купити» / «Продати», the shop's list on the left (an icon, the name, the price, the weight) under a search, the cart
 // on the right (− n + and each row's sum), the total, the zeny left (or after a sale), the weight after, «Купити ·
 // Enter» and «Очистити»; under them what the mouse or the controller's buttons do. The parts that need no Windows; the
-// words by GDI (win/shop_window).
+// words by GDI (win/shop_window). 3.0.11-beta.101 (the owner: «чтобы в диалоге покупки работали также кнопки на
+// клавиатуре верх вниз, также чтобы можно было легко вернуть выбраную на продажу вещь, чтобы если что можно было ввести
+// количество с клавиатуры. продумай хорошо механизм», «и чтобы описание вещи можно было посмотреть»): a frame the keys
+// and the controller move over the list and the cart, the amount typed into a row, its cross taking it back, a row's
+// most by the zeny and the weight left, the keys under it all.
 enum class Tab : uint8_t { Buy, Sell };
 constexpr int kMostBought = 30000;  // a cart row's most when bought (the purchase packet's amount is a short)
 constexpr int kListRows = 10, kCartRows = 6;
@@ -37,14 +41,52 @@ struct Line {  // a row of the cart
     int amount = 0;
 };
 
-int most(const Ware& w, Tab tab);
+struct Data {
+    Tab tab = Tab::Buy;
+    std::string name, place;  // «Tool Dealer», «prontera»; the name "" not known
+    std::vector<Ware> wares;
+    std::vector<Line> cart;
+    long long zeny = 0;
+    int weight = 0, weightMost = 0;
+    bool waiting = false;  // the other tab asked for, its list not here yet
+};
+
+// 3.0.11-beta.101 (the owner: «чтобы если что можно было ввести количество с клавиатуры»): the most a row may hold -
+// sold: what the bag holds; bought: what the zeny and the weight left beside the cart's other rows allow (no more than
+// kMostBought)
+int mostFor(const Data& d, int ware);
 // `by` more of the ware in the cart (fewer when negative), within 0 .. its most; at 0 its row leaves the cart
-void put(std::vector<Line>& cart, const std::vector<Ware>& wares, int ware, int by, Tab tab);
+void put(Data& d, int ware, int by);
+void takeBack(Data& d, int ware);  // 3.0.11-beta.101: its whole row out of the cart
 int amountOf(const std::vector<Line>& cart, int ware);
 std::vector<int> shownOf(const std::vector<Ware>& wares, const std::string& search);  // the names holding it, any case
 std::string weightText(int tenths);  // «7», «0.1»
 std::string money(long long zeny);   // «36 000 z»
 int scrollFor(int focus, int scroll, int rows, int count);  // the scroll that keeps the row `focus` in sight
+
+// 3.0.11-beta.101: an amount typed - the first digit replaces the ware's amount (its row made when it had none), the
+// next ones follow, kept within its most (shown as the most then); the row stays while typed even at 0; the typing ends
+// as typed (0: the row leaves) or back as it was
+struct Edit {
+    int ware = -1;  // -1: none typed
+    std::string digits;
+    int before = 0;  // its amount when the typing began
+};
+void typeDigit(Data& d, Edit& e, int ware, char digit);
+void eraseDigit(Data& d, Edit& e);
+void endEdit(Data& d, Edit& e);
+void cancelEdit(Data& d, Edit& e);
+
+// 3.0.11-beta.101: a held button's steps (the controller's A and X) - one at the press, after 0.4 s one every 80 ms,
+// after 1.5 s ten at a time
+class HoldRepeat {
+public:
+    int step(bool held, uint32_t nowMs);
+
+private:
+    bool held_ = false;
+    uint32_t downAt_ = 0, lastAt_ = 0;
+};
 
 struct Sums {
     long long total = 0;
@@ -61,58 +103,58 @@ Sums sums(Tab tab, const std::vector<Line>& cart, const std::vector<Ware>& wares
 int matchShop(const std::vector<refindex::Shop>& shops, const std::string& map, const std::vector<int>& items, int x,
               int y);
 
-struct Data {
-    Tab tab = Tab::Buy;
-    std::string name, place;  // «Tool Dealer», «prontera»; the name "" not known
-    std::vector<Ware> wares;
-    std::vector<Line> cart;
-    long long zeny = 0;
-    int weight = 0, weightMost = 0;
-    bool waiting = false;  // the other tab asked for, its list not here yet
-};
-
 struct Texts {
     std::string title;  // «Крамниця»: the NPC's name not known
     std::string buy, sell, search, ware, price, weight, cart, amount, sum;
     std::string total, left, after, weightBuy, weightSell;  // «Разом», «Залишиться», «Буде», «Вага після покупки» ...
-    std::string buyButton, sellButton, clear, note, empty, mouse, waiting;
-    std::string plus, minus, close;  // the controller's
+    std::string clear, note, empty, waiting;
+    // 3.0.11-beta.101: the keys' and the controller's words in the footer: «вибір», «список / кошик», «+1», «−1»,
+    // «кількість», «прибрати», «опис», «Закрити», the space bar's name; the typing's hint («... найбільше {1}»)
+    std::string choose, toCart, plus, minus, typeAmount, remove, info, close, space;
+    std::string editHint;
 };
 
 using Measure = std::function<float(const std::string& utf8, float px, bool bold)>;
 
 struct Show {
     int hoverTab = -1, hoverWare = -1, hoverLine = -1;  // hoverWare: a place in the shown list
-    int hoverLess = -1, hoverMore = -1;
+    int hoverLess = -1, hoverMore = -1, hoverAmount = -1, hoverTakeBack = -1;
     bool hoverConfirm = false, hoverClear = false, hoverClose = false, hoverSearch = false;
     int scroll = 0, cartScroll = 0;
     bool typing = false, caretOn = false;  // the search has the keys
     std::string search;
     bool pad = false, sony = false;
-    bool padCart = false;  // the controller's frame in the cart, else in the list
-    int padWare = 0, padLine = 0;
+    // 3.0.11-beta.101: the frame the keys and the controller move (a place in the shown list, or a row of the cart),
+    // shown once they moved it or a row was clicked; the amount typed
+    bool cartFocus = false, framed = false;
+    int ware = 0, line = 0;
+    Edit edit;
 };
 
 struct Layout {
     float s = 1;
     int x = 0, y = 0, w = 0, h = 0;
     panel::Box glass, title, close, tabsRow, searchBox, listHead, list, cartTitle, cartHead, cart, totals;
-    panel::Box confirm, clear, note, footer;
-    std::vector<panel::Box> tabs;               // «Купити», «Продати»
-    std::vector<panel::Box> wares;              // the list's rows on the screen: shown[firstWare] ...
-    std::vector<panel::Box> lines, less, more;  // the cart's rows on the screen (cart[firstLine] ...), their − and +
+    panel::Box confirm, confirmKey, clear, note, footer;  // confirmKey: «Enter» or the controller's Start on it
+    std::vector<panel::Box> tabs;  // «Купити», «Продати»
+    std::vector<panel::Box> wares;  // the list's rows on the screen: shown[firstWare] ...
+    // the cart's rows on the screen (cart[firstLine] ...): − the amount + and the take-back cross
+    std::vector<panel::Box> lines, less, amounts, more, drops;
     int firstWare = 0, firstLine = 0;
-    panel::Box tabGlyphs[2];                    // LB and RB beside the tabs while played with the controller
+    panel::Box tabGlyphs[2];  // LB and RB beside the tabs while played with the controller
     std::vector<panel::Box> padGlyphs, padWords;
+    std::vector<panel::Box> keyCaps, keyWords;  // 3.0.11-beta.101: the keys and their words, without the controller
 };
 Layout layout(int x, int y, float scale, const Data& d, const std::vector<int>& shown, const Show& sh,
               const Texts& t, const Measure& m);
 int iconSide(float scale);
 
-enum class Part : uint8_t { None, Close, Tab, Search, Ware, Line, Less, More, Confirm, Clear, List, Cart, Title, Body };
+enum class Part : uint8_t {
+    None, Close, Tab, Search, Ware, Line, Less, Amount, More, TakeBack, Confirm, Clear, List, Cart, Title, Body
+};
 struct Hit {
     Part part = Part::None;
-    int index = -1;  // Ware: the place in the shown list; Line, Less, More: the cart's row; Tab: 0 buy, 1 sell
+    int index = -1;  // Ware: the place in the shown list; Line ... TakeBack: the cart's row; Tab: 0 buy, 1 sell
 };
 Hit hitTest(const Layout& L, float x, float y);
 

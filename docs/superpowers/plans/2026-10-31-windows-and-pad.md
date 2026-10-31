@@ -113,6 +113,20 @@ The owner 31.10: «Полоски HP мобов - всем показывай»,
   asker (core/mob_hp Asker, win/mob_hp beforeGameDraw; readActorBoxes classes +0x1C). Tests shop_window_* (6),
   config_interface_shop, mob_hp_asks_the_server_for_the_monsters_not_known; config_mob_hp, config_interface_minimap
   updated; suite 2034/0.
+- Stage 5 follow-up: built as 3.0.11-beta.101 after R-2REP95 (the owner on beta.100: «немого не понял фразу Buy A -
+  enter» - the button's «·» written by a Python edit as «Â·»; «чтобы в диалоге покупки работали также кнопки на
+  клавиатуре верх вниз, также чтобы можно было легко вернуть выбраную на продажу вещь, чтобы если что можно было ввести
+  количество с клавиатуры. продумай хорошо механизм», «и чтобы описание вещи можно было посмотреть»). core/shop_window:
+  mostFor (sold: the bag's; bought: the zeny and the weight left beside the other rows, <= 30000), put/takeBack on Data,
+  Edit (typeDigit/eraseDigit/endEdit/cancelEdit: the first digit replaces, kept within the most, Esc back as it was),
+  HoldRepeat (1, then 1 per 80 ms after 0.4 s, 10 after 1.5 s), the cart row − [amount field] + sum ✕, the confirm
+  «Купити» with an «Enter» key cap (pad: Start), the footer's key caps (↑↓ ←→ Space 0–9 Del F1 Esc), the frame
+  (Show.cartFocus/ware/line/framed). win/shop_window: keys (arrows, PgUp/PgDn/Home/End, ←→/Tab, Space/+/−, digits, Del,
+  F1, Enter, Esc; the chat line empty; the next WM_CHAR eaten), the right click and F1/pad Y = the game's item card
+  (0xC, mgr+0xC8, Move vtable+0x18 beside the shop), the amount clicked to type, ✕ takes back; pad A/X held, LT takes
+  back, Y card, Start buys, B closes typing/card/deal. Ruling R6: right click = the description (as the game's shop),
+  −1 by Ctrl+click or the cart's −; R7: pad Y = description as in «Речі»/«Спорядження», Start = buy. Tests
+  shop_window_* (9); suite 2037/0.
 - Stage 5 research: 0x00c4 deal type; 0x00c6 buy list (11 B each: price.L discount.L type.B nameid.W)
   -> session deal list +0xF28 (count +0xF2C, FUN_0062bbb0(rec, 0); FUN_004ffd30 copies the record's text at +0x11 into
   m_itemName) + windows 0x16 (mgr+0xEC, class 0x69B3E0, SendMsg 0x4AFC00: 0x24 0 buy / 1 sell) and 0x17 (buy cart,

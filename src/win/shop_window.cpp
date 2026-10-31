@@ -65,10 +65,20 @@ constexpr uint32_t kModeNow = 0x74B57C, kModeMsgSlot = 0x14, kModeMsg = 0x5707D0
 constexpr int kAskSell = 0x28, kAskBuy = 0x29;
 constexpr ULONGLONG kReadMs = 200, kWaitMs = 3000;
 constexpr size_t kMostTyped = 24;
+// 3.0.11-beta.101 (the owner: «и чтобы описание вещи можно было посмотреть»): the game's item card (UI window 0xC at
+// the manager's +0xC8, made by MakeWindow, its message 0x18 an ITEM_INFO - as its own shop shows one on a right
+// click; gone with the deal's end, the game mode's 0x2B), moved beside the shop (a window's vtable +0x18: x, y; its
+// place +0x14 / +0x18, its size +0x1C / +0x20) - the driver's parts are drawn over the game's windows
+constexpr uint32_t kCardAt = kWindowMgr + 0xC8, kMakeWindow = 0x4D42D0, kDeleteWindow = 0x4D1E60;
+constexpr uint32_t kMoveSlot = 0x18, kRect = 0x14;
+constexpr int kItemCard = 0xC, kShowItem = 0x18;
 
 using SendMsgFn = int(__attribute__((thiscall)) *)(uint32_t self, uint32_t sender, int msg, int a, int b, int c);
 using ModeMsgFn = int(__attribute__((thiscall)) *)(uint32_t mode, int msg, int a, int b, int c);
 using AddFn = void(__attribute__((thiscall)) *)(uint32_t session, uint32_t info);
+using MakeFn = uint32_t(__attribute__((thiscall)) *)(uint32_t manager, int id);
+using DeleteFn = void(__attribute__((thiscall)) *)(uint32_t manager, int id);
+using MoveFn = void(__attribute__((thiscall)) *)(uint32_t window, int x, int y);
 
 struct Deal {  // the game's deal windows now (0: none)
     uint32_t choose = 0, list = 0, buy = 0, sell = 0;
@@ -99,6 +109,8 @@ struct State {
     bool moving = false;
     float grabX = 0, grabY = 0;
     WPARAM skipChar = 0;
+    bool eatChar = false;  // 3.0.11-beta.101: the next character is a key the shop took (not the chat's)
+    int cardWare = -1;     // the ware whose item card is open
     int told = 0, pressesTold = 0;
 };
 
@@ -212,9 +224,10 @@ const panel::Picture* iconOf(const State& s, int id) {
 
 void emptyCart(State& s) {
     s.data.cart.clear();
+    s.show.edit = sw::Edit{};
     s.show.cartScroll = 0;
-    s.show.padLine = 0;
-    s.show.padCart = false;
+    s.show.line = 0;
+    s.show.cartFocus = false;
 }
 
 // The game's deal list as the tab's wares; a list not as before empties the cart
@@ -252,7 +265,7 @@ void readDeal(State& s, sw::Tab tab) {
         s.listKey = key;
         emptyCart(s);
         s.show.scroll = 0;
-        s.show.padWare = 0;
+        s.show.ware = 0;
     }
     s.data.wares = std::move(wares);
     s.infos = std::move(infos);
@@ -291,16 +304,20 @@ sw::Texts texts() {
     t.after = say(settings::Text::ShopAfter);
     t.weightBuy = say(settings::Text::ShopWeightBuy);
     t.weightSell = say(settings::Text::ShopWeightSell);
-    t.buyButton = say(settings::Text::ShopBuyButton);
-    t.sellButton = say(settings::Text::ShopSellButton);
     t.clear = say(settings::Text::ShopClear);
     t.note = say(settings::Text::ShopNote);
     t.empty = say(settings::Text::ShopEmpty);
-    t.mouse = say(settings::Text::ShopMouse);
     t.waiting = say(settings::Text::ShopWaiting);
+    t.choose = say(settings::Text::ShopChoose);
+    t.toCart = say(settings::Text::ShopToCart);
     t.plus = "+1";
     t.minus = "\xE2\x88\x92" "1";
+    t.typeAmount = say(settings::Text::ShopKeyAmount);
+    t.remove = say(settings::Text::ShopRemove);
+    t.info = say(settings::Text::ShopInfo);
     t.close = say(settings::Text::SkillsPadClose);
+    t.space = say(settings::Text::ShopSpace);
+    t.editHint = say(settings::Text::ShopEditHint);
     return t;
 }
 
@@ -347,6 +364,7 @@ void hide(State& s) {
 
 // The cart into the game's own purchase or sale list, sent by the cart window's own OK
 void confirm(State& s, const char* by) {
+    if (s.show.edit.ware >= 0) sw::endEdit(s.data, s.show.edit);  // the amount typed, as typed
     const Deal d = dealNow();
     const bool buy = s.data.tab == sw::Tab::Buy;
     const uint32_t cart = buy ? d.buy : d.sell;
@@ -417,13 +435,117 @@ void switchTab(State& s, sw::Tab want, const char* by) {
                        : "- not asked");
 }
 
-void putIn(State& s, int ware, int by) {
-    sw::put(s.data.cart, s.data.wares, ware, by, s.data.tab);
-    s.show.cartScroll = sw::scrollFor(std::max(0, int(s.data.cart.size()) - 1), s.show.cartScroll, sw::kCartRows,
-                                      int(s.data.cart.size()));
-    if (by < 0)
-        s.show.cartScroll = std::clamp(s.show.cartScroll, 0, std::max(0, int(s.data.cart.size()) - sw::kCartRows));
+int lineOf(const State& s, int ware) {
+    for (size_t i = 0; i < s.data.cart.size(); ++i)
+        if (s.data.cart[i].ware == ware) return int(i);
+    return -1;
+}
+
+// 3.0.11-beta.101: the ware under the frame - the list's (a place in the shown list) or the cart's row's; -1 none
+int framedWare(const State& s) {
+    if (s.show.cartFocus)
+        return s.show.line >= 0 && s.show.line < int(s.data.cart.size()) ? s.data.cart[size_t(s.show.line)].ware : -1;
+    return s.show.ware >= 0 && s.show.ware < int(s.shownList.size()) ? s.shownList[size_t(s.show.ware)] : -1;
+}
+
+void keepFrameInSight(State& s) {
+    const int count = int(s.shownList.size()), lines = int(s.data.cart.size());
+    s.show.ware = std::clamp(s.show.ware, 0, std::max(0, count - 1));
+    s.show.line = std::clamp(s.show.line, 0, std::max(0, lines - 1));
+    if (!lines) s.show.cartFocus = false;
+    if (s.show.cartFocus)
+        s.show.cartScroll = sw::scrollFor(s.show.line, s.show.cartScroll, sw::kCartRows, lines);
+    else
+        s.show.scroll = sw::scrollFor(s.show.ware, s.show.scroll, sw::kListRows, count);
+    s.show.cartScroll = std::clamp(s.show.cartScroll, 0, std::max(0, lines - sw::kCartRows));
+}
+
+void lineInSight(State& s, int ware) {  // the cart's row of the ware changed: in sight (the frame stays the frame)
+    const int at = lineOf(s, ware), lines = int(s.data.cart.size());
+    if (at >= 0 && !s.show.cartFocus) s.show.cartScroll = sw::scrollFor(at, s.show.cartScroll, sw::kCartRows, lines);
+    keepFrameInSight(s);
     s.key.clear();
+}
+
+void putIn(State& s, int ware, int by) {
+    if (s.show.edit.ware >= 0) sw::endEdit(s.data, s.show.edit);
+    sw::put(s.data, ware, by);
+    lineInSight(s, ware);
+}
+
+void takeOut(State& s, int ware, const char* by) {  // its whole row back
+    if (ware < 0) return;
+    if (s.show.edit.ware == ware) s.show.edit = sw::Edit{};
+    const int amount = sw::amountOf(s.data.cart, ware);
+    sw::takeBack(s.data, ware);
+    keepFrameInSight(s);
+    s.key.clear();
+    if (amount > 0 && s.told++ < 30)
+        LOG_INFO("shop: %s - %d of the row %d taken back out of the cart", by, amount, ware);
+}
+
+void moveFrame(State& s, int step) {
+    if (s.show.edit.ware >= 0) sw::endEdit(s.data, s.show.edit);
+    s.show.framed = true;
+    if (s.show.cartFocus)
+        s.show.line += step;
+    else
+        s.show.ware += step;
+    keepFrameInSight(s);
+    s.key.clear();
+}
+
+void switchPane(State& s, bool toCart) {  // the frame onto the same ware's row on the other side when it has one
+    if (s.show.edit.ware >= 0) sw::endEdit(s.data, s.show.edit);
+    const int ware = framedWare(s);
+    s.show.framed = true;
+    s.show.cartFocus = toCart && !s.data.cart.empty();
+    if (s.show.cartFocus) {
+        if (const int at = lineOf(s, ware); at >= 0) s.show.line = at;
+    } else {
+        for (size_t i = 0; i < s.shownList.size(); ++i)
+            if (s.shownList[i] == ware) s.show.ware = int(i);
+    }
+    keepFrameInSight(s);
+    s.key.clear();
+}
+
+bool cardOpen() { return read32(kCardAt) != 0; }
+
+void closeCard(State& s) {
+    if (cardOpen()) reinterpret_cast<DeleteFn>(uintptr_t(kDeleteWindow))(kWindowMgr, kItemCard);
+    s.cardWare = -1;
+}
+
+// 3.0.11-beta.101: the game's own item card of the ware (its ITEM_INFO of the deal list) beside the shop; again for the
+// same ware closes it
+void toggleCard(State& s, int ware, const char* by) {
+    if (ware < 0 || ware >= int(s.infos.size())) return;
+    if (cardOpen() && s.cardWare == ware) {
+        closeCard(s);
+        return;
+    }
+    const uint32_t window = reinterpret_cast<MakeFn>(uintptr_t(kMakeWindow))(kWindowMgr, kItemCard);
+    const uint32_t send = window ? read32(read32(window) + kSendMsgSlot) : 0;
+    if (!send) return;
+    reinterpret_cast<SendMsgFn>(uintptr_t(send))(window, 0, kShowItem, int(s.infos[size_t(ware)]), 0, 0);
+    s.cardWare = ware;
+    int32_t r[4] = {};  // its place and size in the game's pixels: on the shop's right, else on its left
+    const uint32_t move = read32(read32(window) + kMoveSlot);
+    bool moved = false;
+    if (s.k > 0 && move && readGame(window + kRect, r, sizeof r) && r[2] > 0 && r[3] > 0) {
+        const int gameW = int(float(s.targetW) / s.k), gameH = int(float(s.targetH) / s.k);
+        const int left = int(float(s.layout.x) / s.k), right = int(float(s.layout.x + s.layout.w) / s.k);
+        int x = right + 8;
+        if (x + r[2] > gameW) x = left - 8 - r[2];
+        if (x < 0) x = std::max(0, gameW - r[2]);
+        const int y = std::clamp(int(float(s.layout.y) / s.k), 0, std::max(0, gameH - r[3]));
+        reinterpret_cast<MoveFn>(uintptr_t(move))(window, x, y);
+        moved = true;
+    }
+    if (s.told++ < 30)
+        LOG_INFO("shop: %s - the item card of #%d (the game's own window 0xC, %dx%d)%s", by,
+                 s.data.wares[size_t(ware)].id, r[2], r[3], moved ? " beside the shop" : "");
 }
 
 char letterOf(WPARAM vk, bool shift) {
@@ -503,18 +625,24 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     s.show.pad = pad.shown;
     s.show.sony = pad.sony;
     s.shownList = sw::shownOf(s.data.wares, s.show.search);
+    if (!s.shown) {  // just open: no frame until the keys, the controller or a click move it
+        s.show.framed = false;
+        s.show.ware = s.show.line = 0;
+        s.show.cartFocus = false;
+    }
     const int count = int(s.shownList.size()), lines = int(s.data.cart.size());
-    s.show.padWare = std::clamp(s.show.padWare, 0, std::max(0, count - 1));
-    s.show.padLine = std::clamp(s.show.padLine, 0, std::max(0, lines - 1));
-    if (!lines) s.show.padCart = false;
+    s.show.ware = std::clamp(s.show.ware, 0, std::max(0, count - 1));
+    s.show.line = std::clamp(s.show.line, 0, std::max(0, lines - 1));
+    if (!lines) s.show.cartFocus = false;
     s.show.scroll = std::clamp(s.show.scroll, 0, std::max(0, count - sw::kListRows));
     s.show.cartScroll = std::clamp(s.show.cartScroll, 0, std::max(0, lines - sw::kCartRows));
-    s.show.caretOn = s.show.typing && (now / 530) % 2 == 0;
+    s.show.caretOn = (s.show.typing || s.show.edit.ware >= 0) && (now / 530) % 2 == 0;
     const sw::Texts t = texts();
     s.layout = sw::layout(0, 0, scale, s.data, s.shownList, s.show, t, measure);
     s.layout.x = int(std::lround(s.fx * float(std::max(0, targetWidth - s.layout.w))));
     s.layout.y = int(std::lround(s.fy * float(std::max(0, targetHeight - s.layout.h))));
     s.show.hoverTab = s.show.hoverWare = s.show.hoverLine = s.show.hoverLess = s.show.hoverMore = -1;
+    s.show.hoverAmount = s.show.hoverTakeBack = -1;
     s.show.hoverConfirm = s.show.hoverClear = s.show.hoverClose = s.show.hoverSearch = false;
     int cx = 0, cy = 0;
     if (readGameCursor(cx, cy) && !s.moving) {
@@ -526,6 +654,8 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
             case sw::Part::Line: s.show.hoverLine = h.index; break;
             case sw::Part::Less: s.show.hoverLess = h.index; break;
             case sw::Part::More: s.show.hoverMore = h.index; break;
+            case sw::Part::Amount: s.show.hoverAmount = h.index; break;
+            case sw::Part::TakeBack: s.show.hoverTakeBack = h.index; break;
             case sw::Part::Confirm: s.show.hoverConfirm = true; break;
             case sw::Part::Clear: s.show.hoverClear = true; break;
             case sw::Part::Close: s.show.hoverClose = true; break;
@@ -537,13 +667,15 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
                       ';' + std::to_string(int(s.data.tab)) + (s.data.waiting ? "w" : "") + ';' +
                       std::to_string(s.show.hoverTab) + ',' + std::to_string(s.show.hoverWare) + ',' +
                       std::to_string(s.show.hoverLine) + ',' + std::to_string(s.show.hoverLess) + ',' +
-                      std::to_string(s.show.hoverMore) + (s.show.hoverConfirm ? "c" : "") +
+                      std::to_string(s.show.hoverMore) + ',' + std::to_string(s.show.hoverAmount) + ',' +
+                      std::to_string(s.show.hoverTakeBack) + (s.show.hoverConfirm ? "c" : "") +
                       (s.show.hoverClear ? "l" : "") + (s.show.hoverClose ? "x" : "") +
                       (s.show.hoverSearch ? "f" : "") + ';' + std::to_string(s.show.scroll) + ',' +
                       std::to_string(s.show.cartScroll) + ';' + (s.show.typing ? "t" : "") +
                       (s.show.caretOn ? "|" : "") + s.show.search + ';' +
-                      (s.show.pad ? (s.show.sony ? "S" : "X") : "") + (s.show.padCart ? "C" : "") +
-                      std::to_string(s.show.padWare) + ',' + std::to_string(s.show.padLine) + ';' + s.data.name +
+                      (s.show.pad ? (s.show.sony ? "S" : "X") : "") + (s.show.cartFocus ? "C" : "") +
+                      (s.show.framed ? "F" : "") + std::to_string(s.show.ware) + ',' + std::to_string(s.show.line) +
+                      ";e" + std::to_string(s.show.edit.ware) + ':' + s.show.edit.digits + ';' + s.data.name +
                       ';' + s.data.place + ';' + std::to_string(s.data.zeny) + ',' + std::to_string(s.data.weight) +
                       '/' + std::to_string(s.data.weightMost) + ';' + s.listKey + ';';
     for (const sw::Ware& w : s.data.wares) key += w.icon ? "i" : "-";
@@ -606,16 +738,20 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
                  int(h.part), h.index);
     }
     if (h.part == sw::Part::None) {
-        if (m == WM_LBUTTONDOWN || m == WM_RBUTTONDOWN) s.show.typing = false;
+        if (m == WM_LBUTTONDOWN || m == WM_RBUTTONDOWN) {
+            s.show.typing = false;
+            if (s.show.edit.ware >= 0) sw::endEdit(s.data, s.show.edit);
+        }
         return false;
     }
     if (m == WM_MOUSEMOVE) return false;
     result = 0;
-    const bool shift = (GET_KEYSTATE_WPARAM(wp) & MK_SHIFT) != 0;
+    const WORD keys = GET_KEYSTATE_WPARAM(wp);
+    const bool shift = (keys & MK_SHIFT) != 0, ctrl = (keys & MK_CONTROL) != 0;
     if (m == WM_MOUSEWHEEL) {
         const int steps = GET_WHEEL_DELTA_WPARAM(wp) > 0 ? -3 : 3;
         if (h.part == sw::Part::Line || h.part == sw::Part::Less || h.part == sw::Part::More ||
-            h.part == sw::Part::Cart)
+            h.part == sw::Part::Amount || h.part == sw::Part::TakeBack || h.part == sw::Part::Cart)
             s.show.cartScroll = std::clamp(s.show.cartScroll + (steps > 0 ? 1 : -1), 0,
                                            std::max(0, int(s.data.cart.size()) - sw::kCartRows));
         else
@@ -630,21 +766,45 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     const auto lineWare = [&](int at) {
         return at >= 0 && at < int(s.data.cart.size()) ? s.data.cart[size_t(at)].ware : -1;
     };
-    if (m == WM_RBUTTONDOWN) {  // one fewer; a cart's row out of it
-        if (h.part == sw::Part::Ware) putIn(s, wareOf(h.index), shift ? -sw::kMostBought : -1);
-        if (h.part == sw::Part::Line) putIn(s, lineWare(h.index), -sw::kMostBought);
+    if (m == WM_RBUTTONDOWN) {  // 3.0.11-beta.101: its description, as the game's own shop shows it
+        if (h.part == sw::Part::Ware) toggleCard(s, wareOf(h.index), "a right click");
+        if (h.part == sw::Part::Line || h.part == sw::Part::Amount) toggleCard(s, lineWare(h.index), "a right click");
         return true;
     }
     if (m != WM_LBUTTONDOWN && m != WM_LBUTTONDBLCLK) return true;
     if (h.part != sw::Part::Search) s.show.typing = false;
+    if (h.part != sw::Part::Amount && s.show.edit.ware >= 0) sw::endEdit(s.data, s.show.edit);
     const int many = s.data.tab == sw::Tab::Sell ? sw::kMostBought : 10;  // Shift: ten bought, all of it sold
     switch (h.part) {
         case sw::Part::Close: closeDeal(s, "its close"); break;
         case sw::Part::Tab: switchTab(s, h.index == 1 ? sw::Tab::Sell : sw::Tab::Buy, "a click on its tab"); break;
         case sw::Part::Search: s.show.typing = true; break;
-        case sw::Part::Ware: putIn(s, wareOf(h.index), shift ? many : 1); break;
+        case sw::Part::Ware:  // one more (Shift ten, Ctrl one fewer); the frame on it
+            s.show.framed = true;
+            s.show.cartFocus = false;
+            s.show.ware = h.index;
+            putIn(s, wareOf(h.index), ctrl ? -1 : shift ? many : 1);
+            break;
+        case sw::Part::Line:
+            s.show.framed = true;
+            s.show.cartFocus = true;
+            s.show.line = h.index;
+            break;
         case sw::Part::Less: putIn(s, lineWare(h.index), shift ? -10 : -1); break;
         case sw::Part::More: putIn(s, lineWare(h.index), shift ? 10 : 1); break;
+        case sw::Part::Amount: {  // the amount typed from the keys: the digits replace it
+            const int ware = lineWare(h.index);
+            if (ware < 0) break;
+            if (s.show.edit.ware != ware) {
+                sw::endEdit(s.data, s.show.edit);
+                s.show.edit = sw::Edit{ware, "", sw::amountOf(s.data.cart, ware)};
+            }
+            s.show.framed = true;
+            s.show.cartFocus = true;
+            s.show.line = h.index;
+            break;
+        }
+        case sw::Part::TakeBack: takeOut(s, lineWare(h.index), "its cross"); break;
         case sw::Part::Confirm: confirm(s, "a click on its button"); break;
         case sw::Part::Clear: emptyCart(s); break;
         case sw::Part::Title:
@@ -662,11 +822,17 @@ bool key(UINT m, WPARAM wp, LPARAM lp) {
     State& s = state();
     (void)lp;
     if (!s.shown) return false;
-    if ((m == WM_CHAR || m == WM_SYSCHAR) && s.skipChar && wp == s.skipChar) {  // Enter's, Esc's own character
-        s.skipChar = 0;
-        return true;
+    if (m == WM_CHAR || m == WM_SYSCHAR) {
+        if (s.skipChar && wp == s.skipChar) {  // Enter's, Esc's, Tab's own character
+            s.skipChar = 0;
+            return true;
+        }
+        if (s.eatChar) {  // a digit's, Space's, + or -'s: the shop's, not the chat's
+            s.eatChar = false;
+            return true;
+        }
     }
-    if (s.show.typing) {
+    if (s.show.typing) {  // the search
         if (m == WM_KEYDOWN || m == WM_SYSKEYDOWN) {
             const bool ctrl = GetKeyState(VK_CONTROL) < 0, alt = GetKeyState(VK_MENU) < 0;
             if (alt) return false;
@@ -686,71 +852,140 @@ bool key(UINT m, WPARAM wp, LPARAM lp) {
                     s.show.search.clear();
                     s.show.scroll = 0;
                     return true;
+                case VK_DOWN:  // into the list
+                case VK_TAB:
+                    s.show.typing = false;
+                    s.show.framed = true;
+                    s.show.cartFocus = false;
+                    s.show.ware = 0;
+                    keepFrameInSight(s);
+                    s.skipChar = wp == VK_TAB ? 9 : 0;
+                    s.key.clear();
+                    return true;
                 default: break;
             }
             const char c = ctrl ? 0 : letterOf(wp, GetKeyState(VK_SHIFT) < 0);
             if (c && s.show.search.size() < kMostTyped) {
                 s.show.search += c;
                 s.show.scroll = 0;
-                s.show.padWare = 0;
+                s.show.ware = 0;
             }
             return true;  // every key the search's while it types
         }
         return m == WM_KEYUP || m == WM_CHAR || m == WM_DEADCHAR;
     }
-    if (m != WM_KEYDOWN || !chatwin::inputEmpty()) return false;
-    if (wp == VK_RETURN && !s.data.cart.empty()) {
-        confirm(s, "Enter");
-        s.skipChar = 13;
+    if (m != WM_KEYDOWN) return false;
+    s.eatChar = false;  // a new key: the one before brought no character
+    const bool shift = GetKeyState(VK_SHIFT) < 0, ctrl = GetKeyState(VK_CONTROL) < 0;
+    if (GetKeyState(VK_MENU) < 0) return false;  // Alt+...: the game's
+    const bool editing = s.show.edit.ware >= 0;
+    if (!editing && !chatwin::inputEmpty()) return false;  // words in the chat's line: its keys
+    const int digit = wp >= '0' && wp <= '9' && !shift      ? int(wp - '0')
+                      : wp >= VK_NUMPAD0 && wp <= VK_NUMPAD9 ? int(wp - VK_NUMPAD0)
+                                                             : -1;
+    if (digit >= 0 && !ctrl) {  // the amount typed for the framed ware
+        const int ware = editing ? s.show.edit.ware : framedWare(s);
+        if (ware < 0) return false;
+        s.show.framed = true;
+        sw::typeDigit(s.data, s.show.edit, ware, char('0' + digit));
+        lineInSight(s, ware);
+        s.eatChar = true;
         return true;
     }
-    if (wp == VK_ESCAPE) {
-        closeDeal(s, "Esc");
-        s.skipChar = 27;
-        return true;
+    const int page = s.show.cartFocus ? sw::kCartRows : sw::kListRows;
+    switch (wp) {
+        case VK_BACK:
+            if (!editing) return false;
+            sw::eraseDigit(s.data, s.show.edit);
+            s.eatChar = true;
+            s.key.clear();
+            return true;
+        case VK_RETURN:
+            if (editing) {
+                sw::endEdit(s.data, s.show.edit);
+                keepFrameInSight(s);
+            } else if (s.data.cart.empty()) {
+                return false;  // the chat's Enter
+            } else {
+                confirm(s, "Enter");
+            }
+            s.skipChar = 13;
+            s.key.clear();
+            return true;
+        case VK_ESCAPE:  // the typing back as it was, else the item card, else the deal
+            if (editing)
+                sw::cancelEdit(s.data, s.show.edit);
+            else if (cardOpen())
+                closeCard(s);
+            else
+                closeDeal(s, "Esc");
+            keepFrameInSight(s);
+            s.skipChar = 27;
+            s.key.clear();
+            return true;
+        case VK_UP: moveFrame(s, -1); return true;
+        case VK_DOWN: moveFrame(s, 1); return true;
+        case VK_PRIOR: moveFrame(s, -page); return true;
+        case VK_NEXT: moveFrame(s, page); return true;
+        case VK_HOME: moveFrame(s, -100000); return true;
+        case VK_END: moveFrame(s, 100000); return true;
+        case VK_LEFT:
+        case VK_RIGHT: switchPane(s, wp == VK_RIGHT); return true;
+        case VK_TAB:
+            switchPane(s, !s.show.cartFocus);
+            s.skipChar = 9;
+            return true;
+        case VK_SPACE:
+        case VK_ADD:
+        case VK_OEM_PLUS:
+        case VK_SUBTRACT:
+        case VK_OEM_MINUS: {
+            const int ware = framedWare(s);
+            if (ware < 0) return false;
+            const bool less = wp == VK_SUBTRACT || wp == VK_OEM_MINUS;
+            s.show.framed = true;
+            putIn(s, ware, (less ? -1 : 1) * (wp == VK_SPACE && shift ? 10 : 1));
+            s.eatChar = true;
+            return true;
+        }
+        case VK_DELETE: takeOut(s, editing ? s.show.edit.ware : framedWare(s), "Del"); return true;
+        case VK_F1: toggleCard(s, framedWare(s), "F1"); return true;
+        default: return false;
     }
-    return false;
 }
 
-void padCommand(PadCommand c) {
+void padCommand(PadCommand c, int times) {
     State& s = state();
     if (!s.shown) return;
-    const int count = int(s.shownList.size()), lines = int(s.data.cart.size());
+    s.show.framed = true;
+    const bool editing = s.show.edit.ware >= 0;
     switch (c) {
-        case PadCommand::Up:
-        case PadCommand::Down: {
-            const int step = c == PadCommand::Up ? -1 : 1;
-            if (s.show.padCart && lines) {
-                s.show.padLine = std::clamp(s.show.padLine + step, 0, lines - 1);
-                s.show.cartScroll = sw::scrollFor(s.show.padLine, s.show.cartScroll, sw::kCartRows, lines);
-            } else if (count) {
-                s.show.padWare = std::clamp(s.show.padWare + step, 0, count - 1);
-                s.show.scroll = sw::scrollFor(s.show.padWare, s.show.scroll, sw::kListRows, count);
-            }
-            break;
-        }
-        case PadCommand::Left: s.show.padCart = false; break;
-        case PadCommand::Right: s.show.padCart = lines > 0; break;
+        case PadCommand::Up: moveFrame(s, -1); break;
+        case PadCommand::Down: moveFrame(s, 1); break;
+        case PadCommand::Left:
+        case PadCommand::Right: switchPane(s, c == PadCommand::Right); break;
         case PadCommand::Plus:
-        case PadCommand::Minus: {
-            const int by = c == PadCommand::Plus ? 1 : -1;
-            if (s.show.padCart && s.show.padLine < lines)
-                putIn(s, s.data.cart[size_t(s.show.padLine)].ware, by);
-            else if (s.show.padWare < count)
-                putIn(s, s.shownList[size_t(s.show.padWare)], by);
-            const int left = int(s.data.cart.size());
-            if (!left) s.show.padCart = false;
-            s.show.padLine = std::clamp(s.show.padLine, 0, std::max(0, left - 1));
+        case PadCommand::Minus:
+            putIn(s, framedWare(s), (c == PadCommand::Plus ? 1 : -1) * std::max(1, times));
             break;
-        }
-        case PadCommand::Confirm: confirm(s, "the controller's Y"); break;
+        case PadCommand::TakeBack: takeOut(s, framedWare(s), "the controller's LT"); break;
+        case PadCommand::Info: toggleCard(s, framedWare(s), "the controller's Y"); break;
+        case PadCommand::Confirm: confirm(s, "the controller's Start"); break;
         case PadCommand::TabBack:
         case PadCommand::TabOn:
             switchTab(s, s.data.tab == sw::Tab::Buy ? sw::Tab::Sell : sw::Tab::Buy,
                       c == PadCommand::TabBack ? "the controller's LB" : "the controller's RB");
             break;
-        case PadCommand::Close: closeDeal(s, "the controller's B"); break;
+        case PadCommand::Close:  // the typing, else the item card, else the deal
+            if (editing)
+                sw::cancelEdit(s.data, s.show.edit);
+            else if (cardOpen())
+                closeCard(s);
+            else
+                closeDeal(s, "the controller's B");
+            break;
     }
+    keepFrameInSight(s);
     s.key.clear();
 }
 
@@ -767,6 +1002,8 @@ void beforeGameDraw() {
     // the deal's choice: its own «Купити» (or the tab asked for) at once - the list comes as the shop's tab
     s.chosen = d.choose;
     s.npc = read32(d.choose + kChooseNpc);
+    const auto known = s.names.find(s.npc);  // 3.0.11-beta.101: not the shop before's name meanwhile
+    s.data.name = known != s.names.end() ? known->second : "";
     const bool sell = s.want == sw::Tab::Sell;
     const bool done = press(d.choose, kChooseSendMsg, sell ? kChooseSell : kChooseBuy);
     s.data.tab = s.want;

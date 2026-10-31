@@ -20,10 +20,12 @@ namespace {
 // the list 520 wide, its rows 35, the cart's 35, the totals' lines 24, the buttons 36, the footer 40
 constexpr float kW = 1000, kTitleH = 46, kTabsH = 32, kSide = 16, kSearchH = 34, kHeadH = 22, kRowH = 35;
 constexpr float kListW = 520, kGapW = 24, kIcon = 30, kLineH = 24, kButtonH = 36, kFooterH = 40, kGlyph = 17;
-constexpr float kPriceW = 110, kWeightW = 64, kAmountW = 96, kStepBox = 22;
+constexpr float kPriceW = 110, kWeightW = 64, kStepBox = 22, kAmountBox = 52, kSumW = 90, kCapH = 18;
 constexpr int kNear = 15;  // cells: the NPC a character trades with stands this near
+constexpr size_t kMostDigits = 5;
+constexpr uint32_t kRepeatAfterMs = 400, kRepeatEveryMs = 80, kFasterAfterMs = 1500;
 constexpr uint32_t kCard = 0x10141C, kWhite = 0xFFFFFF, kBlack = 0x000000, kGold = 0xF3C653, kGold2 = 0xC9A55B;
-constexpr uint32_t kTile = 0x1B1D24, kText = 0xEEF2F8, kMuted = 0x9AA3B5, kFaint = 0x7E889A, kInk = 0x1A1408;
+constexpr uint32_t kText = 0xEEF2F8, kMuted = 0x9AA3B5, kFaint = 0x7E889A, kInk = 0x1A1408;
 constexpr uint32_t kAmber = 0xF5BD4F, kRed = 0xFF8A80;
 
 std::string lowered(std::string s) {
@@ -32,7 +34,16 @@ std::string lowered(std::string s) {
     return s;
 }
 
-void put(panel::Picture& out, const panel::Picture& pic, const panel::Box& box, float k) {
+std::string fill(std::string form, const std::vector<std::string>& values) {
+    for (size_t i = 0; i < values.size(); ++i) {
+        const std::string key = "{" + std::to_string(i + 1) + "}";
+        for (size_t at = form.find(key); at != std::string::npos; at = form.find(key, at + values[i].size()))
+            form.replace(at, key.size(), values[i]);
+    }
+    return form;
+}
+
+void blit(panel::Picture& out, const panel::Picture& pic, const panel::Box& box, float k) {
     const int ox = int(std::lround(box.x + (box.w - float(pic.width)) / 2));
     const int oy = int(std::lround(box.y + (box.h - float(pic.height)) / 2));
     for (int y = 0; y < pic.height; ++y)
@@ -56,39 +67,80 @@ void put(panel::Picture& out, const panel::Picture& pic, const panel::Box& box, 
 
 std::string nameOf(const Ware& w) { return w.refine > 0 ? "+" + std::to_string(w.refine) + " " + w.name : w.name; }
 
+const Ware* wareAt(const Data& d, int at) {
+    return at >= 0 && at < int(d.wares.size()) ? &d.wares[size_t(at)] : nullptr;
+}
+
+void place(Data& d, int ware, int amount) {  // the row's amount, made when it had none (0 kept)
+    for (Line& l : d.cart)
+        if (l.ware == ware) {
+            l.amount = amount;
+            return;
+        }
+    d.cart.push_back(Line{ware, amount});
+}
+
+int digitsValue(const std::string& digits) { return digits.empty() ? 0 : std::atoi(digits.c_str()); }
+
 struct PadItem {
     padglyph::Button button;
     const std::string* words;
 };
 
-std::vector<PadItem> padItems(const Data& d, const Texts& t) {
+std::vector<PadItem> padItems(const Texts& t) {
     return {{padglyph::Button::A, &t.plus},
             {padglyph::Button::X, &t.minus},
-            {padglyph::Button::Y, d.tab == Tab::Buy ? &t.buy : &t.sell},
+            {padglyph::Button::LT, &t.remove},
+            {padglyph::Button::Y, &t.info},
             {padglyph::Button::B, &t.close}};
 }
 
-const Ware* wareAt(const Data& d, int at) {
-    return at >= 0 && at < int(d.wares.size()) ? &d.wares[size_t(at)] : nullptr;
+struct KeyItem {
+    std::string cap;
+    const std::string* words;
+};
+
+std::vector<KeyItem> keyItems(const Texts& t) {
+    return {{"\xE2\x86\x91\xE2\x86\x93", &t.choose},  // ↑↓
+            {"\xE2\x86\x90\xE2\x86\x92", &t.toCart},  // ←→
+            {t.space, &t.plus},
+            {"0\xE2\x80\x93" "9", &t.typeAmount},  // 0–9
+            {"Del", &t.remove},
+            {"F1", &t.info},
+            {"Esc", &t.close}};
 }
 
 }  // namespace
 
-int most(const Ware& w, Tab tab) { return tab == Tab::Sell ? std::max(0, w.count) : kMostBought; }
-
-void put(std::vector<Line>& cart, const std::vector<Ware>& wares, int ware, int by, Tab tab) {
-    if (ware < 0 || ware >= int(wares.size()) || by == 0) return;
-    const int top = most(wares[size_t(ware)], tab);
-    const auto it = std::find_if(cart.begin(), cart.end(), [&](const Line& l) { return l.ware == ware; });
-    const long long now = it == cart.end() ? 0 : it->amount;
-    const int want = int(std::clamp<long long>(now + by, 0, top));
-    if (it == cart.end()) {
-        if (want > 0) cart.push_back(Line{ware, want});
-    } else if (want > 0) {
-        it->amount = want;
-    } else {
-        cart.erase(it);
+int mostFor(const Data& d, int ware) {
+    const Ware* w = wareAt(d, ware);
+    if (!w) return 0;
+    if (d.tab == Tab::Sell) return std::max(0, w->count);
+    long long most = kMostBought, others = 0, othersWeight = 0;
+    for (const Line& l : d.cart) {
+        const Ware* o = l.ware == ware ? nullptr : wareAt(d, l.ware);
+        if (!o) continue;
+        others += (long long)o->price * l.amount;
+        if (o->weight > 0) othersWeight += (long long)o->weight * l.amount;
     }
+    if (w->price > 0) most = std::min(most, std::max(0LL, (d.zeny - others) / w->price));
+    if (w->weight > 0 && d.weightMost > 0)
+        most = std::min(most, std::max(0LL, ((long long)d.weightMost - d.weight) * 10 - othersWeight) / w->weight);
+    return int(std::max(0LL, most));
+}
+
+void put(Data& d, int ware, int by) {
+    if (!wareAt(d, ware) || by == 0) return;
+    const int amount = int(std::clamp<long long>((long long)amountOf(d.cart, ware) + by, 0, mostFor(d, ware)));
+    if (amount > 0)
+        place(d, ware, amount);
+    else
+        takeBack(d, ware);
+}
+
+void takeBack(Data& d, int ware) {
+    d.cart.erase(std::remove_if(d.cart.begin(), d.cart.end(), [&](const Line& l) { return l.ware == ware; }),
+                 d.cart.end());
 }
 
 int amountOf(const std::vector<Line>& cart, int ware) {
@@ -118,12 +170,65 @@ int scrollFor(int focus, int scroll, int rows, int count) {
     return std::clamp(scroll, 0, std::max(0, count - rows));
 }
 
+void typeDigit(Data& d, Edit& e, int ware, char digit) {
+    if (digit < '0' || digit > '9' || !wareAt(d, ware)) return;
+    if (e.ware != ware) {  // another ware: the one typed before stays as typed
+        endEdit(d, e);
+        e.ware = ware;
+        e.digits.clear();
+        e.before = amountOf(d.cart, ware);
+    }
+    if (e.digits.size() >= kMostDigits) return;
+    e.digits += digit;
+    while (e.digits.size() > 1 && e.digits[0] == '0') e.digits.erase(e.digits.begin());
+    const int top = mostFor(d, ware), want = digitsValue(e.digits);
+    if (want > top) e.digits = std::to_string(top);
+    place(d, ware, std::min(want, top));
+}
+
+void eraseDigit(Data& d, Edit& e) {
+    if (e.ware < 0) return;
+    if (!e.digits.empty()) e.digits.pop_back();
+    place(d, e.ware, digitsValue(e.digits));
+}
+
+void endEdit(Data& d, Edit& e) {
+    if (e.ware < 0) return;
+    if (amountOf(d.cart, e.ware) <= 0) takeBack(d, e.ware);
+    e = Edit{};
+}
+
+void cancelEdit(Data& d, Edit& e) {
+    if (e.ware < 0) return;
+    if (e.before > 0)
+        place(d, e.ware, e.before);
+    else
+        takeBack(d, e.ware);
+    e = Edit{};
+}
+
+int HoldRepeat::step(bool held, uint32_t nowMs) {
+    if (!held) {
+        held_ = false;
+        return 0;
+    }
+    if (!held_) {
+        held_ = true;
+        downAt_ = lastAt_ = nowMs;
+        return 1;
+    }
+    const uint32_t heldMs = nowMs - downAt_;
+    if (heldMs < kRepeatAfterMs || nowMs - lastAt_ < kRepeatEveryMs) return 0;
+    lastAt_ = nowMs;
+    return heldMs >= kFasterAfterMs ? 10 : 1;
+}
+
 Sums sums(Tab tab, const std::vector<Line>& cart, const std::vector<Ware>& wares, long long zeny, int weight,
           int weightMost) {
     Sums s;
     long long tenths = 0;
     for (const Line& l : cart) {
-        if (l.ware < 0 || l.ware >= int(wares.size())) continue;
+        if (l.ware < 0 || l.ware >= int(wares.size()) || l.amount <= 0) continue;
         const Ware& w = wares[size_t(l.ware)];
         s.total += (long long)w.price * l.amount;
         if (w.weight > 0) tenths += (long long)w.weight * l.amount;
@@ -133,7 +238,9 @@ Sums sums(Tab tab, const std::vector<Line>& cart, const std::vector<Ware>& wares
     const long long after = (long long)weight * 10 + (buy ? tenths : -tenths);
     s.weightAfter = std::max(0LL, after / 10);
     s.weightPercent = weightMost > 0 ? int(s.weightAfter * 100 / weightMost) : 0;
-    s.ok = !cart.empty() && (!buy || (s.zenyAfter >= 0 && (weightMost <= 0 || after <= (long long)weightMost * 10)));
+    s.ok = s.total > 0 && (!buy || (s.zenyAfter >= 0 && (weightMost <= 0 || after <= (long long)weightMost * 10)));
+    if (!s.ok && s.total == 0)  // free wares: anything in the cart goes
+        for (const Line& l : cart) s.ok = s.ok || l.amount > 0;
     return s;
 }
 
@@ -186,36 +293,47 @@ Layout layout(int x, int y, float scale, const Data& d, const std::vector<int>& 
                                     kGlyph * s};
     const float top = L.tabsRow.y + L.tabsRow.h + 12 * s;
     // the list on the left
+    L.firstWare = sh.scroll;
+    L.firstLine = sh.cartScroll;
     L.searchBox = panel::Box{side, top, kListW * s, kSearchH * s};
     L.listHead = panel::Box{side, top + (kSearchH + 8) * s, kListW * s, kHeadH * s};
     L.list = panel::Box{side, L.listHead.y + L.listHead.h, kListW * s, kListRows * kRowH * s};
-    L.firstWare = sh.scroll;
-    L.firstLine = sh.cartScroll;
     for (int i = sh.scroll; i < int(shown.size()) && i - sh.scroll < kListRows; ++i)
         L.wares.push_back(panel::Box{L.list.x, L.list.y + float(i - sh.scroll) * kRowH * s, L.list.w, kRowH * s});
-    // the cart on the right
+    // the cart on the right: a row's − amount +, its sum and the cross taking it back, from its right
     const float cx = side + (kListW + kGapW) * s, cw = w - side - cx;
     L.cartTitle = panel::Box{cx, top, cw, kSearchH * s};
     L.cartHead = panel::Box{cx, L.listHead.y, cw, kHeadH * s};
     L.cart = panel::Box{cx, L.cartHead.y + L.cartHead.h, cw, kCartRows * kRowH * s};
     for (int i = sh.cartScroll; i < int(d.cart.size()) && i - sh.cartScroll < kCartRows; ++i) {
         const panel::Box row{cx, L.cart.y + float(i - sh.cartScroll) * kRowH * s, cw, kRowH * s};
-        L.lines.push_back(row);
-        const float ax = row.x + row.w - 100 * s - kAmountW * s;  // the amount's column: − n +
         const float by = row.y + (row.h - kStepBox * s) / 2;
-        L.less.push_back(panel::Box{ax, by, kStepBox * s, kStepBox * s});
-        L.more.push_back(panel::Box{ax + kAmountW * s - kStepBox * s, by, kStepBox * s, kStepBox * s});
+        const float dropX = row.x + row.w - 6 * s - kStepBox * s;
+        const float moreX = dropX - 8 * s - kSumW * s - 10 * s - kStepBox * s;
+        const float amountX = moreX - 4 * s - kAmountBox * s, lessX = amountX - 4 * s - kStepBox * s;
+        L.lines.push_back(row);
+        L.less.push_back(panel::Box{lessX, by, kStepBox * s, kStepBox * s});
+        L.amounts.push_back(panel::Box{amountX, by, kAmountBox * s, kStepBox * s});
+        L.more.push_back(panel::Box{moreX, by, kStepBox * s, kStepBox * s});
+        L.drops.push_back(panel::Box{dropX, by, kStepBox * s, kStepBox * s});
     }
     L.totals = panel::Box{cx, L.cart.y + L.cart.h + 10 * s, cw, 3 * kLineH * s};
-    const std::string& button = d.tab == Tab::Buy ? t.buyButton : t.sellButton;
-    const float bw = m(button, 13 * s, true) + 36 * s, clw = m(t.clear, 13 * s, true) + 28 * s;
+    // the confirm: «Купити» with its key - Enter, or the controller's Start
+    const std::string& button = d.tab == Tab::Buy ? t.buy : t.sell;
+    const float keyW = sh.pad ? padglyph::widthOf(padglyph::Button::Start, kGlyph * s)
+                              : m("Enter", 11 * s, true) + 12 * s;
+    const float bw = 20 * s + m(button, 13.5f * s, true) + 10 * s + keyW + 14 * s;
+    const float clw = m(t.clear, 13 * s, true) + 28 * s;
     L.confirm = panel::Box{cx, L.totals.y + L.totals.h + 10 * s, bw, kButtonH * s};
+    const float keyH = sh.pad ? kGlyph * s : kCapH * s;
+    L.confirmKey = panel::Box{L.confirm.x + L.confirm.w - 14 * s - keyW, L.confirm.y + (L.confirm.h - keyH) / 2,
+                              keyW, keyH};
     L.clear = panel::Box{L.confirm.x + L.confirm.w + 10 * s, L.confirm.y, clw, kButtonH * s};
     L.note = panel::Box{cx, L.confirm.y + L.confirm.h + 6 * s, cw, 18 * s};
     const float bottom = std::max(L.list.y + L.list.h, L.note.y + L.note.h);
     L.footer = panel::Box{0, bottom + 10 * s, w, kFooterH * s};
     if (sh.pad) {  // the controller's buttons in the footer, from its right
-        const std::vector<PadItem> items = padItems(d, t);
+        const std::vector<PadItem> items = padItems(t);
         float right = w - side;
         L.padGlyphs.resize(items.size());
         L.padWords.resize(items.size());
@@ -226,6 +344,14 @@ Layout layout(int x, int y, float scale, const Data& d, const std::vector<int>& 
             L.padGlyphs[i] = panel::Box{L.padWords[i].x - 6 * s - gw, L.footer.y + (L.footer.h - kGlyph * s) / 2, gw,
                                         kGlyph * s};
             right = L.padGlyphs[i].x - 16 * s;
+        }
+    } else {  // the keys and their words, from its left
+        float left = side;
+        for (const KeyItem& k : keyItems(t)) {
+            const float capW = m(k.cap, 11 * s, true) + 12 * s, ww = m(*k.words, 12 * s, false) + 2;
+            L.keyCaps.push_back(panel::Box{left, L.footer.y + (L.footer.h - kCapH * s) / 2, capW, kCapH * s});
+            L.keyWords.push_back(panel::Box{left + capW + 6 * s, L.footer.y, ww, L.footer.h});
+            left += capW + 6 * s + ww + 16 * s;
         }
     }
     L.glass = panel::Box{0, 0, w, L.footer.y + L.footer.h};
@@ -247,7 +373,9 @@ Hit hitTest(const Layout& L, float x, float y) {
     for (size_t i = 0; i < L.lines.size(); ++i) {
         const int at = L.firstLine + int(i);
         if (L.less[i].contains(x, y)) return Hit{Part::Less, at};
+        if (L.amounts[i].contains(x, y)) return Hit{Part::Amount, at};
         if (L.more[i].contains(x, y)) return Hit{Part::More, at};
+        if (L.drops[i].contains(x, y)) return Hit{Part::TakeBack, at};
         if (L.lines[i].contains(x, y)) return Hit{Part::Line, at};
     }
     for (size_t i = 0; i < L.wares.size(); ++i)
@@ -281,6 +409,7 @@ void paint(panel::Picture& out, const Layout& L, const Data& d, const std::vecto
         panel::roundRect(out, panel::Box{x, L.searchBox.y + 9 * s, 1.5f * s, L.searchBox.h - 18 * s}, 0, kText,
                          0.95f);
     }
+    const bool framed = sh.framed || sh.pad;
     // the list's rows
     panel::roundRect(out, panel::Box{L.listHead.x, L.listHead.y + L.listHead.h - 1 * s, L.listHead.w, 1 * s}, 0,
                      kWhite, 0.08f);
@@ -288,49 +417,67 @@ void paint(panel::Picture& out, const Layout& L, const Data& d, const std::vecto
         const panel::Box& b = L.wares[i];
         const int at = L.firstWare + int(i);
         if (at == sh.hoverWare) panel::roundRect(out, b, 6 * s, kWhite, 0.06f);
-        if (sh.pad && !sh.padCart && at == sh.padWare)
+        if (framed && !sh.cartFocus && at == sh.ware)
             panel::roundRect(out, b, 6 * s, kGold2, 0.08f, kGold, 0.9f, 1.5f * s);
         if (at < int(shown.size()) && amountOf(d.cart, shown[size_t(at)]) > 0)  // in the cart: a gold mark at its start
             panel::roundRect(out, panel::Box{b.x + 1 * s, b.y + 8 * s, 2.5f * s, b.h - 16 * s}, 1 * s, kGold, 0.9f);
         panel::roundRect(out, panel::Box{b.x, b.y + b.h - 1 * s, b.w, 1 * s}, 0, kWhite, 0.05f);
         const Ware* w = at < int(shown.size()) ? wareAt(d, shown[size_t(at)]) : nullptr;
         if (w && w->icon && w->icon->width > 0)
-            put(out, *w->icon, panel::Box{b.x + 6 * s, b.y + (b.h - kIcon * s) / 2, kIcon * s, kIcon * s},
-                w->identified ? 1.0f : 0.45f);
+            blit(out, *w->icon, panel::Box{b.x + 6 * s, b.y + (b.h - kIcon * s) / 2, kIcon * s, kIcon * s},
+                 w->identified ? 1.0f : 0.45f);
     }
-    // the cart's rows, their − and +
+    // the cart's rows: − the amount (a field while typed) + and the cross taking it back
     panel::roundRect(out, panel::Box{L.cartHead.x, L.cartHead.y + L.cartHead.h - 1 * s, L.cartHead.w, 1 * s}, 0,
                      kWhite, 0.08f);
     for (size_t i = 0; i < L.lines.size(); ++i) {
         const panel::Box& b = L.lines[i];
         const int at = L.firstLine + int(i);
+        const Line& line = d.cart[size_t(at)];
         if (at == sh.hoverLine) panel::roundRect(out, b, 6 * s, kWhite, 0.06f);
-        if (sh.pad && sh.padCart && at == sh.padLine)
+        if (framed && sh.cartFocus && at == sh.line)
             panel::roundRect(out, b, 6 * s, kGold2, 0.08f, kGold, 0.9f, 1.5f * s);
         panel::roundRect(out, panel::Box{b.x, b.y + b.h - 1 * s, b.w, 1 * s}, 0, kWhite, 0.05f);
-        const Line& line = d.cart[size_t(at)];
         const Ware* w = wareAt(d, line.ware);
         if (w && w->icon && w->icon->width > 0)
-            put(out, *w->icon, panel::Box{b.x + 4 * s, b.y + (b.h - kIcon * s) / 2, kIcon * s, kIcon * s}, 1.0f);
-        for (const auto& [box, hot, glyph] : {std::tuple{L.less[i], at == sh.hoverLess, uiicons::Icon::Minus},
-                                              std::tuple{L.more[i], at == sh.hoverMore, uiicons::Icon::Plus}}) {
+            blit(out, *w->icon, panel::Box{b.x + 4 * s, b.y + (b.h - kIcon * s) / 2, kIcon * s, kIcon * s}, 1.0f);
+        const bool typed = sh.edit.ware == line.ware;
+        if (typed) {
+            panel::roundRect(out, L.amounts[i], 5 * s, kBlack, 0.45f, kGold, 0.95f, 1.5f * s);
+            if (sh.caretOn) {
+                const float cx = L.amounts[i].x + L.amounts[i].w / 2 + m(sh.edit.digits, 12.5f * s, true) / 2 + 2 * s;
+                panel::roundRect(out, panel::Box{cx, L.amounts[i].y + 4 * s, 1.5f * s, L.amounts[i].h - 8 * s}, 0,
+                                 kText, 0.95f);
+            }
+        } else if (at == sh.hoverAmount) {
+            panel::roundRect(out, L.amounts[i], 5 * s, kWhite, 0.10f);
+        }
+        const auto cell = [&](const panel::Box& box, bool hot, uiicons::Icon glyph) {
             panel::roundRect(out, box, 5 * s, kWhite, hot ? 0.16f : 0.07f);
             const float g = 12 * s;
             uiicons::draw(out, glyph, box.x + (box.w - g) / 2, box.y + (box.h - g) / 2, g, kText, 0.9f, 2.4f);
-        }
+        };
+        cell(L.less[i], at == sh.hoverLess, uiicons::Icon::Minus);
+        cell(L.more[i], at == sh.hoverMore, uiicons::Icon::Plus);
+        if (at == sh.hoverTakeBack) panel::roundRect(out, L.drops[i], 5 * s, kRed, 0.18f);
     }
-    // the buttons
+    // the buttons; the confirm's key on it
     const Sums sum = sums(d.tab, d.cart, d.wares, d.zeny, d.weight, d.weightMost);
     if (sum.ok)
         panel::roundRect(out, L.confirm, 8 * s, sh.hoverConfirm ? 0xF8D57A : kGold, 1.0f);
     else
         panel::roundRect(out, L.confirm, 8 * s, kWhite, 0.07f, kWhite, 0.10f, 1.0f * s);
+    const padglyph::Family f = sh.sony ? padglyph::Family::Sony : padglyph::Family::Xbox;
+    if (sh.pad)
+        padglyph::paint(out, padglyph::Button::Start, f, L.confirmKey.x, L.confirmKey.y, kGlyph * s);
+    else
+        panel::roundRect(out, L.confirmKey, 4 * s, sum.ok ? kInk : kWhite, sum.ok ? 0.16f : 0.10f);
     panel::roundRect(out, L.clear, 8 * s, kWhite, sh.hoverClear ? 0.14f : 0.07f);
     panel::roundRect(out, panel::Box{0, L.footer.y, L.glass.w, 1 * s}, 0, kWhite, 0.08f);
+    for (const panel::Box& cap : L.keyCaps) panel::roundRect(out, cap, 4 * s, kWhite, 0.12f, kWhite, 0.18f, 1.0f * s);
     if (sh.pad) {
-        const padglyph::Family f = sh.sony ? padglyph::Family::Sony : padglyph::Family::Xbox;
         Texts none;
-        const std::vector<PadItem> items = padItems(d, none);
+        const std::vector<PadItem> items = padItems(none);
         for (size_t i = 0; i < items.size() && i < L.padGlyphs.size(); ++i)
             padglyph::paint(out, items[i].button, f, L.padGlyphs[i].x, L.padGlyphs[i].y, kGlyph * s);
         padglyph::paint(out, padglyph::Button::LB, f, L.tabGlyphs[0].x, L.tabGlyphs[0].y, kGlyph * s);
@@ -375,11 +522,17 @@ std::vector<Words> words(const Layout& L, const Data& d, const std::vector<int>&
         const int at = L.firstWare + int(i);
         const Ware* w = at < int(shown.size()) ? wareAt(d, shown[size_t(at)]) : nullptr;
         if (!w) continue;
-        const float nx = b.x + (kIcon + 14) * s;
+        const float nx = b.x + (kIcon + 14) * s, nameEnd = priceR - kPriceW * s - 8 * s;
         std::string name = nameOf(*w);
         if (d.tab == Tab::Sell && w->count > 1) name += "  \xC3\x97" + std::to_string(w->count);
-        out.push_back(Words{panel::Box{nx, b.y, priceR - kPriceW * s - nx - 8 * s, b.h}, name,
-                            w->identified ? kText : kMuted, 12.5f * s, false, Align::Left});
+        const int inCart = amountOf(d.cart, shown[size_t(at)]);
+        const std::string mark = inCart > 0 ? "\xE2\x86\x92 " + grouped(inCart) : "";  // → 30: so many in the cart
+        const float markW = mark.empty() ? 0 : m(mark, 11.5f * s, true) + 6 * s;
+        out.push_back(Words{panel::Box{nx, b.y, nameEnd - nx - markW, b.h}, name, w->identified ? kText : kMuted,
+                            12.5f * s, false, Align::Left});
+        if (!mark.empty())
+            out.push_back(Words{panel::Box{nameEnd - markW, b.y, markW, b.h}, mark, kGold, 11.5f * s, true,
+                                Align::Right});
         out.push_back(Words{panel::Box{priceR - kPriceW * s, b.y, kPriceW * s, b.h}, money(w->price), kText, 12.5f * s,
                             false, Align::Right});
         if (w->weight >= 0)
@@ -388,16 +541,16 @@ std::vector<Words> words(const Layout& L, const Data& d, const std::vector<int>&
     }
     // the cart
     out.push_back(Words{L.cartTitle, t.cart, kText, 13.5f * s, true, Align::Left});
-    const float sumR = L.cart.x + L.cart.w - 6 * s;
     out.push_back(Words{panel::Box{L.cartHead.x + 6 * s, L.cartHead.y, 120 * s, L.cartHead.h}, t.ware, kFaint, 11 * s,
                         false, Align::Left});
-    if (!L.less.empty() || d.cart.empty()) {
-        const float ax = L.cart.x + L.cart.w - 100 * s - kAmountW * s;
-        out.push_back(Words{panel::Box{ax - 10 * s, L.cartHead.y, kAmountW * s + 20 * s, L.cartHead.h}, t.amount,
-                            kFaint, 11 * s, false, Align::Center});
+    if (!L.less.empty()) {
+        const float ax = L.less[0].x, aw = L.more[0].x + L.more[0].w - ax;
+        out.push_back(Words{panel::Box{ax - 10 * s, L.cartHead.y, aw + 20 * s, L.cartHead.h}, t.amount, kFaint,
+                            11 * s, false, Align::Center});
+        const float sumR = L.drops[0].x - 8 * s;
+        out.push_back(Words{panel::Box{sumR - kSumW * s, L.cartHead.y, kSumW * s, L.cartHead.h}, t.sum, kFaint,
+                            11 * s, false, Align::Right});
     }
-    out.push_back(Words{panel::Box{sumR - 90 * s, L.cartHead.y, 90 * s, L.cartHead.h}, t.sum, kFaint, 11 * s, false,
-                        Align::Right});
     if (d.cart.empty())
         out.push_back(Words{panel::Box{L.cart.x + 6 * s, L.cart.y + 6 * s, L.cart.w - 12 * s, 24 * s}, t.empty, kFaint,
                             12 * s, false, Align::Left});
@@ -409,11 +562,14 @@ std::vector<Words> words(const Layout& L, const Data& d, const std::vector<int>&
         const float nx = b.x + (kIcon + 10) * s;
         out.push_back(Words{panel::Box{nx, b.y, L.less[i].x - nx - 8 * s, b.h}, nameOf(*w), kText, 12.5f * s, false,
                             Align::Left});
-        const float ax = L.less[i].x + L.less[i].w, aw = L.more[i].x - ax;
-        out.push_back(Words{panel::Box{ax, b.y, aw, b.h}, grouped(line.amount), kText, 12.5f * s, true,
+        const bool typed = sh.edit.ware == line.ware;
+        out.push_back(Words{L.amounts[i], typed ? sh.edit.digits : grouped(line.amount), kText, 12.5f * s, true,
                             Align::Center});
-        out.push_back(Words{panel::Box{sumR - 96 * s, b.y, 96 * s, b.h}, money((long long)w->price * line.amount),
+        const float sumR = L.drops[i].x - 8 * s;
+        out.push_back(Words{panel::Box{sumR - kSumW * s, b.y, kSumW * s, b.h}, money((long long)w->price * line.amount),
                             kText, 12.5f * s, false, Align::Right});
+        out.push_back(Words{L.drops[i], "\xC3\x97", int(L.firstLine + int(i)) == sh.hoverTakeBack ? kRed : kMuted,
+                            14 * s, false, Align::Center});
     }
     // the totals
     const Sums sum = sums(d.tab, d.cart, d.wares, d.zeny, d.weight, d.weightMost);
@@ -434,17 +590,33 @@ std::vector<Words> words(const Layout& L, const Data& d, const std::vector<int>&
         out.push_back(Words{panel::Box{row.x + row.w * 0.4f, row.y, row.w * 0.6f - 6 * s, row.h},
                             rows[i].second.first, rows[i].second.second, 13 * s, true, Align::Right});
     }
-    out.push_back(Words{L.confirm, buy ? t.buyButton : t.sellButton, sum.ok ? kInk : kFaint, 13 * s, true,
-                        Align::Center});
-    out.push_back(Words{L.clear, t.clear, d.cart.empty() ? kFaint : kText, 13 * s, true, Align::Center});
-    out.push_back(Words{L.note, t.note, kFaint, 11 * s, false, Align::Left});
-    if (!sh.pad) {
-        out.push_back(Words{panel::Box{side, L.footer.y, L.footer.w - 2 * side, L.footer.h}, t.mouse, kFaint, 11.5f * s,
-                            false, Align::Left});
-        return out;
-    }
+    // the confirm with its key, the clear; under them the typing's hint, else the note
+    out.push_back(Words{panel::Box{L.confirm.x + 20 * s, L.confirm.y, L.confirmKey.x - L.confirm.x - 30 * s,
+                                   L.confirm.h},
+                        buy ? t.buy : t.sell, sum.ok ? kInk : kFaint, 13.5f * s, true, Align::Left});
     const padglyph::Family f = sh.sony ? padglyph::Family::Sony : padglyph::Family::Xbox;
-    const std::vector<PadItem> items = padItems(d, t);
+    if (sh.pad) {
+        const padglyph::Letter l = padglyph::letter(padglyph::Button::Start, f, L.confirmKey.x, L.confirmKey.y,
+                                                    kGlyph * s);
+        if (!l.text.empty()) out.push_back(Words{l.box, l.text, l.rgb, l.px, true, Align::Center});
+    } else {
+        out.push_back(Words{L.confirmKey, "Enter", sum.ok ? kInk : kFaint, 11 * s, true, Align::Center});
+    }
+    out.push_back(Words{L.clear, t.clear, d.cart.empty() ? kFaint : kText, 13 * s, true, Align::Center});
+    if (sh.edit.ware >= 0)
+        out.push_back(Words{L.note, fill(t.editHint, {grouped(mostFor(d, sh.edit.ware))}), kGold, 11 * s, false,
+                            Align::Left});
+    else
+        out.push_back(Words{L.note, t.note, kFaint, 11 * s, false, Align::Left});
+    // the footer: the keys, or the controller's buttons
+    for (size_t i = 0; i < L.keyCaps.size(); ++i) {
+        const std::vector<KeyItem> items = keyItems(t);
+        if (i >= items.size()) break;
+        out.push_back(Words{L.keyCaps[i], items[i].cap, kText, 11 * s, true, Align::Center});
+        out.push_back(Words{L.keyWords[i], *items[i].words, kMuted, 12 * s, false, Align::Left});
+    }
+    if (!sh.pad) return out;
+    const std::vector<PadItem> items = padItems(t);
     for (size_t i = 0; i < items.size() && i < L.padGlyphs.size(); ++i) {
         const padglyph::Letter l = padglyph::letter(items[i].button, f, L.padGlyphs[i].x, L.padGlyphs[i].y,
                                                     kGlyph * s);

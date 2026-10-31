@@ -5144,19 +5144,25 @@ constexpr Entry kTexts[] = {
     {Text::NpcServer, "The text is the server's", "Текст — як у сервера", "Текст — как у сервера"},
     {Text::NpcChoose, "choose", "вибір", "выбор"},
     {Text::InterfaceShop, "NPC shops", "Крамниці NPC", "Магазины NPC"},  // 3.0.11-beta.100
-    {Text::InterfaceShopHint,
-     "The NPCs' shops in the new look: the list on the left with a search, the cart on the right with − and +, the "
-     "total, the zeny left and the weight after it; «Buy» and «Sell» are tabs. The mouse: a click puts one in the "
-     "cart, with Shift ten, the right button takes one out; Enter buys, Esc closes. The controller: A +1, X −1, Y buys "
-     "or sells, LB / RB the tabs, B closes. Off: the game's own windows.",
-     "Крамниці NPC у новому вигляді: список ліворуч із пошуком, кошик праворуч із − і +, сума, залишок зені й вага "
-     "після покупки; «Купити» й «Продати» — вкладки. Миша: клацання кладе одну в кошик, із Shift — десять, права "
-     "кнопка виймає; Enter купує, Esc закриває. Контролер: A +1, X −1, Y купує чи продає, LB / RB — вкладки, B "
-     "закриває. Вимкнено — вікна гри.",
-     "Магазины NPC в новом виде: список слева с поиском, корзина справа с − и +, сумма, остаток зени и вес "
-     "после покупки; «Купить» и «Продать» — вкладки. Мышь: щелчок кладёт одну в корзину, с Shift — десять, правая "
-     "кнопка вынимает; Enter покупает, Esc закрывает. Контроллер: A +1, X −1, Y покупает или продаёт, LB / RB — "
-     "вкладки, B закрывает. Выключено — окна игры."},
+    {Text::InterfaceShopHint,  // 3.0.11-beta.101: the keys, the amount typed, the description
+     "The NPCs' shops in the new look: the list on the left with a search, the cart on the right, the total, the zeny "
+     "left and the weight after it; «Buy» and «Sell» are tabs. The mouse: a click puts one in the cart (with Shift "
+     "ten), the right button shows the item's description, a cart row's cross takes it back, a click on its amount "
+     "types it. The keys: the arrows choose, Space +1, digits the amount, Del takes back, F1 the description, Enter "
+     "buys, Esc closes. The controller: A +1, X −1, LT takes back, Y the description, Start buys or sells, LB / RB the "
+     "tabs, B closes. Off: the game's own windows.",
+     "Крамниці NPC у новому вигляді: список ліворуч із пошуком, кошик праворуч, сума, залишок зені й вага після "
+     "покупки; «Купити» й «Продати» — вкладки. Миша: клацання кладе одну в кошик (із Shift — десять), права кнопка "
+     "показує опис предмета, хрестик у рядку кошика повертає його, клацання по кількості — ввести її. Клавіші: "
+     "стрілки — вибір, Пробіл — +1, цифри — кількість, Del — прибрати, F1 — опис, Enter — купити, Esc — закрити. "
+     "Контролер: A +1, X −1, LT — прибрати, Y — опис, Start — купити чи продати, LB / RB — вкладки, B — закрити. "
+     "Вимкнено — вікна гри.",
+     "Магазины NPC в новом виде: список слева с поиском, корзина справа, сумма, остаток зени и вес после покупки; "
+     "«Купить» и «Продать» — вкладки. Мышь: щелчок кладёт одну в корзину (с Shift — десять), правая кнопка "
+     "показывает описание предмета, крестик в строке корзины возвращает его, щелчок по количеству — ввести его. "
+     "Клавиши: стрелки — выбор, Пробел — +1, цифры — количество, Del — убрать, F1 — описание, Enter — купить, Esc — "
+     "закрыть. Контроллер: A +1, X −1, LT — убрать, Y — описание, Start — купить или продать, LB / RB — вкладки, "
+     "B — закрыть. Выключено — окна игры."},
     {Text::ShopTitle, "Shop", "Крамниця", "Магазин"},
     {Text::ShopBuy, "Buy", "Купити", "Купить"},
     {Text::ShopSell, "Sell", "Продати", "Продать"},
@@ -5172,16 +5178,20 @@ constexpr Entry kTexts[] = {
     {Text::ShopAfter, "You will have", "Буде", "Будет"},
     {Text::ShopWeightBuy, "Weight after buying", "Вага після покупки", "Вес после покупки"},
     {Text::ShopWeightSell, "Weight after selling", "Вага після продажу", "Вес после продажи"},
-    {Text::ShopBuyButton, "Buy Â· Enter", "Купити Â· Enter", "Купить Â· Enter"},
-    {Text::ShopSellButton, "Sell Â· Enter", "Продати Â· Enter", "Продать Â· Enter"},
     {Text::ShopClear, "Clear", "Очистити", "Очистить"},
     {Text::ShopNote, "Prices are the server's, weights its item base's", "Ціни — від сервера, вага — з бази предметів",
      "Цены — от сервера, вес — из базы предметов"},
     {Text::ShopEmpty, "Click an item to put it here", "Клацніть товар, щоб додати", "Щёлкните товар, чтобы добавить"},
-    {Text::ShopMouse, "A click: +1 Â· Shift: +10 Â· the right button: −1 Â· the wheel scrolls",
-     "Клацання: +1 Â· Shift: +10 Â· права кнопка: −1 Â· коліщатко гортає",
-     "Щелчок: +1 Â· Shift: +10 Â· правая кнопка: −1 Â· колесо листает"},
     {Text::ShopWaiting, "Loading the list…", "Завантажую список…", "Загружаю список…"},
+    {Text::ShopChoose, "choose", "вибір", "выбор"},  // 3.0.11-beta.101: the keys' words
+    {Text::ShopToCart, "list / cart", "список / кошик", "список / корзина"},
+    {Text::ShopKeyAmount, "amount", "кількість", "количество"},
+    {Text::ShopRemove, "take back", "прибрати", "убрать"},
+    {Text::ShopInfo, "description", "опис", "описание"},
+    {Text::ShopSpace, "Space", "Пробіл", "Пробел"},
+    {Text::ShopEditHint, "Enter: done \xC2\xB7 Esc: undo \xC2\xB7 at most {1}",
+     "Enter — готово \xC2\xB7 Esc — скасувати \xC2\xB7 найбільше {1}",
+     "Enter — готово \xC2\xB7 Esc — отменить \xC2\xB7 не больше {1}"},
     {Text::InterfacePadWalk, "The controller walks", "Хід контролером", "Ход контроллером"},  // 3.0.11-beta.88
     {Text::InterfacePadWalkHint,
      "How the left stick walks: holding the game's cursor out, as before, or without the mouse - the character goes "

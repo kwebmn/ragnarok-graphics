@@ -58,6 +58,7 @@
 #include "win/reference_load.hpp"
 #include "win/reference_window.hpp"
 #include "win/shop_window.hpp"
+#include "core/shop_window.hpp"
 
 namespace uapad::runtime {
 namespace {
@@ -539,20 +540,26 @@ bool equipPad(const PadState& pad, DWORD now) {
 }
 
 // 3.0.11-beta.100: the shop open - the D-pad (or the left stick) up and down its list or its cart, left and right
-// between them, A one more, X one fewer, Y buys or sells, LB / RB the tabs, B or Start close the deal
+// between them; 3.0.11-beta.101 (the owner: «продумай хорошо механизм»): A one more, X one fewer - held, on and on
+// (core/shop_window HoldRepeat), LT takes the row back, Y its description, Start buys or sells, LB / RB the tabs, B
+// closes the typing, the item card or the deal
 bool shopPad(const PadState& pad, DWORD now) {
     State& s = S();
-    const uint16_t buttons = pad.connected ? pad.buttons : 0;
+    static uagfx::shopwin::HoldRepeat plus, minus;
+    // the left trigger as a button (the controller makes its bit from the trigger's travel only for itself)
+    const uint16_t buttons = pad.connected ? uint16_t(pad.buttons | (pad.lt > 0.5f ? kPadLT : 0)) : 0;
     const uint16_t down = uint16_t((buttons & ~s.prevPadButtons) | stickSteps(pad, now));
     s.prevPadButtons = buttons;
     using uagfx::win::shopwin::PadCommand;
     const std::pair<uint16_t, PadCommand> keys[] = {
-        {kPadUp, PadCommand::Up},       {kPadDown, PadCommand::Down},    {kPadLeft, PadCommand::Left},
-        {kPadRight, PadCommand::Right}, {kPadA, PadCommand::Plus},       {kPadX, PadCommand::Minus},
-        {kPadY, PadCommand::Confirm},   {kPadLB, PadCommand::TabBack},   {kPadRB, PadCommand::TabOn},
-        {kPadB, PadCommand::Close},     {kPadStart, PadCommand::Close}};
+        {kPadUp, PadCommand::Up},           {kPadDown, PadCommand::Down},   {kPadLeft, PadCommand::Left},
+        {kPadRight, PadCommand::Right},     {kPadLT, PadCommand::TakeBack}, {kPadY, PadCommand::Info},
+        {kPadStart, PadCommand::Confirm},   {kPadLB, PadCommand::TabBack},  {kPadRB, PadCommand::TabOn},
+        {kPadB, PadCommand::Close}};
     for (const auto& [button, command] : keys)
         if (down & button) uagfx::win::shopwin::padCommand(command);
+    if (const int n = plus.step((buttons & kPadA) != 0, now)) uagfx::win::shopwin::padCommand(PadCommand::Plus, n);
+    if (const int n = minus.step((buttons & kPadX) != 0, now)) uagfx::win::shopwin::padCommand(PadCommand::Minus, n);
     return true;
 }
 
