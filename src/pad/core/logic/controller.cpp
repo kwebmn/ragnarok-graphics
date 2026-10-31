@@ -22,8 +22,6 @@ constexpr uint32_t kSlotIntervalMs = 150;
 constexpr uint32_t kChooseMs = 8000;  // 3.0.11-beta.85: a support skill waits this long for whom
 // 3.0.11-beta.88: walking without the mouse - 6 cells along the stick in half-cell steps; another way asked for 150 ms
 // on, the same again every 350 ms (the server walks to a cell and stops)
-constexpr int kDirectSteps = 12;
-constexpr uint32_t kDirectTurnMs = 150, kDirectAgainMs = 350;
 constexpr float kCameraDeadZone = 0.2f;
 constexpr float kCameraTurnDegPerSec = 120.0f;   // the right stick fully pushed
 constexpr float kCameraZoomStepsPerSec = 6.0f;   // wheel notches a second, fully pushed
@@ -329,53 +327,41 @@ void Controller::walk(const PadState& pad, const WorldState& world, const ViewIn
 }
 
 void Controller::walkDirect(const PadState& pad, float mag, const WorldState& world, uint32_t now, TickOutput& out) {
+    const Cell me = selfCell_ ? *selfCell_ : world.selfPos(now);
     if (mag > cfg_.deadzone) {
         if (!walking_) {
             walking_ = true;
             approach_.reset();
             stopAttacking();  // walking ends a fight; a held A starts it again afterwards
             stickDest_.reset();
-            sentTo_.reset();
+            asked_.reset();
         }
-        const double sx = pad.lx / mag, sy = pad.ly / mag;  // the stick's way: x right, y up
-        double east = 0, north = 0;
-        if (look_) {  // the screen's up is where the camera looks along the ground, its right a quarter turn clockwise
-            east = sx * look_->second + sy * look_->first;
-            north = -sx * look_->first + sy * look_->second;
+        if (look_) {  // 3.0.11-beta.102 (core/stick_walk): the cell along the way, asked again before it is reached
+            way_ = stickwalk::wayOf(pad.lx, pad.ly, look_);
         } else {
-            camera_.toWorld(sx, -sy, east, north);
+            double east = 0, north = 0;
+            camera_.toWorld(pad.lx / mag, -pad.ly / mag, east, north);
+            way_ = stickwalk::wayOf(east, north, std::make_pair(0.0, 1.0));
         }
-        const Cell me = world.selfPos(now);
-        Cell dest = me;
-        for (int i = 1; i <= kDirectSteps; ++i) {  // half a cell a step: the last walkable cell along the way
-            const double t = 0.5 * double(i);
-            const Cell c{me.x + int(std::lround(east * t)), me.y + int(std::lround(north * t))};
-            if (ground_ && ground_->known() && !ground_->at(c.x, c.y)) break;
-            dest = c;
-        }
+        const int lead = stickwalk::lead(world.selfSpeed());
+        const Cell dest = stickwalk::destination(me, way_, lead, ground_);
         walkTo_ = dest;
-        if (dest == me) return;
-        const bool changed = !sentTo_ || dest != *sentTo_;
-        if (!sentTo_ || (changed && now - sentAt_ >= kDirectTurnMs) || now - sentAt_ >= kDirectAgainMs) {
-            out.packets.push_back(buildWalk(dest));
-            if (!sentTo_) out.notes.push_back("walk without the mouse: to " + cellText(dest));
-            sentTo_ = dest;
-            sentAt_ = now;
-            stickDest_ = dest;
-        }
+        if (dest == me || !stickwalk::askAgain(asked_, me, dest, way_, lead, now)) return;
+        out.packets.push_back(buildWalk(dest));
+        if (!asked_) out.notes.push_back("walk without the mouse: to " + cellText(dest) + ", " + std::to_string(lead) +
+                                         " cells ahead");
+        asked_ = stickwalk::Asked{dest, way_, now};
+        stickDest_ = dest;
         return;
     }
     walkTo_.reset();
     if (!walking_) return;
-    walking_ = false;
-    const Cell here = world.selfPos(now);
-    const Cell heading = stickDest_ ? *stickDest_ : world.selfDest();
-    const Cell stop = stopCell(here, heading);
+    walking_ = false;  // let go: the cell it steps into along its way, no further and no step back
+    const Cell stop = stickwalk::stopCell(me, way_, ground_);
     stickDest_.reset();
-    sentTo_.reset();
+    asked_.reset();
     out.packets.push_back(buildWalk(stop));
-    out.notes.push_back("walk stop at " + cellText(stop) + ": we are at about " + cellText(here) + ", heading for " +
-                        cellText(heading));
+    out.notes.push_back("walk stop at " + cellText(stop) + ": the character at " + cellText(me));
 }
 
 void Controller::aim(const PadState& pad, const WorldState& world, uint32_t now, TickOutput& out) {

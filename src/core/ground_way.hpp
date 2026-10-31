@@ -95,6 +95,22 @@ size_t notches(float x, float y, float z, float radius, float width, const float
 // `head` long and `headWidth` wide at its end (all of it a head when shorter) - placed as strip() places its corners
 size_t arrow(float x0, float z0, float x1, float z1, float y, float width, float head, float headWidth,
              const float view[12], const camera::Projection& p, uint32_t argb, float bias, std::vector<Vertex>& out);
+// 3.0.11-beta.102 (the owner: «чтобы стрелочка показывалась как в концепции»): the stick's walking arrow as the
+// concept draws it, over the map's heights (`g`, `cellSize`, `sign`, `lift` as along()'s) - from near the character's
+// feet (x0, z0: the game's world) to the near edge of the cell (toX, toY): a soft white shaft in half-cell pieces, a
+// white head over a gold edge, the cell's square faintly filled and outlined in gold; nothing when the character
+// stands on that cell or a corner is off the map
+struct Tri {
+    Point a, b, c;
+    uint32_t argb = 0;
+};
+constexpr uint32_t kWalkShaft = 0x66FFFFFFu, kWalkEdge = 0xE6E2C27Au, kWalkHead = 0xE6FFFFFFu;
+constexpr uint32_t kWalkCellFill = 0x24FFFFFFu, kWalkCellLine = 0xD9E2C27Au;
+std::vector<Tri> walkArrowShape(float x0, float z0, int toX, int toY, const Heights& g, int cellSize, float sign,
+                                float lift);
+// The triangles on the screen as strip() places its corners; one with a corner behind the near plane left out
+size_t placeTris(const std::vector<Tri>& tris, const float view[12], const camera::Projection& p, float bias,
+                 std::vector<Vertex>& out);
 // A chevron pointing down at (cx, tipY) in the screen's pixels, `w` wide and `h` high - no depth, over the world
 size_t chevron(float cx, float tipY, float w, float h, uint32_t argb, std::vector<Vertex>& out);
 

@@ -86,6 +86,10 @@ void FrameRecord::moveLastBefore(size_t count, size_t position) {
                 commands_.end());
 }
 
+void FrameRecord::dropCommand(size_t index) {
+    if (index < commands_.size()) commands_.erase(commands_.begin() + std::ptrdiff_t(index));
+}
+
 size_t FrameRecord::dropInterface() {
     const size_t before = commands_.size();
     commands_.erase(std::remove_if(commands_.begin(), commands_.end(),

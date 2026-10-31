@@ -13,6 +13,7 @@
 #include "pad/core/logic/camera.hpp"
 #include "pad/core/logic/pad.hpp"
 #include "pad/core/logic/slots.hpp"
+#include "pad/core/logic/stick_walk.hpp"
 #include "pad/core/world/world.hpp"
 
 namespace uapad {
@@ -100,6 +101,9 @@ public:
     void setLook(double east, double north) { look_ = std::make_pair(east, north); }
     void clearLook() { look_.reset(); }
     void setGround(const GroundGrid* g) { ground_ = g; }
+    // 3.0.11-beta.102: the character's cell as the game shows it now (none: the walk packets' guess) - the stick's
+    // cells are counted from it (core/stick_walk)
+    void setSelfCell(std::optional<Cell> c) { selfCell_ = c; }
     std::optional<Cell> walkTarget() const { return walkTo_; }
     // The client's own camera turn (radians, its own count) when it can be read from its memory; nothing
     // otherwise. Once the walk samples show how it maps to the screen, the directions follow it at once.
@@ -205,8 +209,10 @@ private:
     bool directWalk_ = false;           // 3.0.11-beta.88
     std::optional<std::pair<double, double>> look_;  // the camera's look along the ground: east, north
     const GroundGrid* ground_ = nullptr;
-    std::optional<Cell> walkTo_, sentTo_;  // where the stick walks now; the last cell asked for
-    uint32_t sentAt_ = 0;
+    std::optional<Cell> walkTo_;  // where the stick walks now
+    std::optional<Cell> selfCell_;              // 3.0.11-beta.102: the game's own cell of the character
+    std::optional<stickwalk::Asked> asked_;     // the last cell the stick asked for
+    stickwalk::Way way_;                        // the stick's way on the ground (letting go stops along it)
     std::optional<Choosing> choosing_;  // a support skill waits for whom
     NpcDialog dialog_ = NpcDialog::None;
     int number_ = 0;                       // what the pad put into the number field

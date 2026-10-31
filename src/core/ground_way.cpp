@@ -337,6 +337,82 @@ size_t arrow(float x0, float z0, float x1, float z1, float y, float width, float
     return out.size() - before;
 }
 
+std::vector<Tri> walkArrowShape(float x0, float z0, int toX, int toY, const Heights& g, int cellSize, float sign,
+                                float lift) {
+    std::vector<Tri> out;
+    if (cellSize <= 0 || g.w <= 0 || g.h <= 0) return out;
+    const float cs = float(cellSize);
+    const float cx = (float(toX) + 0.5f - float(g.w / 2)) * cs, cz = (float(toY) + 0.5f - float(g.h / 2)) * cs;
+    const float dx = cx - x0, dz = cz - z0, len = std::hypot(dx, dz);
+    if (len < 0.6f * cs) return out;  // where it stands
+    const float ux = dx / len, uz = dz / len, sx = -uz, sz = ux;  // along the way, across it
+    bool ok = true;
+    const auto at = [&](float x, float z) {  // the ground there (`lift` over it: up along -y)
+        float h = 0;
+        if (!g.at(x / cs + float(g.w / 2), z / cs + float(g.h / 2), h)) ok = false;
+        return Point{x, sign * h - lift, z};
+    };
+    const auto tri = [&](const Point& a, const Point& b, const Point& c, uint32_t argb) {
+        out.push_back(Tri{a, b, c, argb});
+    };
+    // a band from a to b `half` to each side, its corners on the ground
+    const auto band = [&](float ax, float az, float bx, float bz, float half, uint32_t argb) {
+        const float lx = bx - ax, lz = bz - az, l = std::hypot(lx, lz);
+        if (l < 1e-4f) return;
+        const float px = -lz / l * half, pz = lx / l * half;
+        const Point a1 = at(ax - px, az - pz), a2 = at(ax + px, az + pz), b1 = at(bx - px, bz - pz),
+                    b2 = at(bx + px, bz + pz);
+        tri(a1, a2, b1, argb);
+        tri(a2, b2, b1, argb);
+    };
+    // the cell: faintly filled, its square outlined in gold (each side in two pieces over the heights)
+    const float x1 = cx - cs / 2, z1 = cz - cs / 2, x2 = cx + cs / 2, z2 = cz + cs / 2;
+    tri(at(x1, z1), at(x2, z1), at(x1, z2), kWalkCellFill);
+    tri(at(x2, z1), at(x2, z2), at(x1, z2), kWalkCellFill);
+    const float line = 0.045f * cs;
+    const float corners[5][2] = {{x1, z1}, {x2, z1}, {x2, z2}, {x1, z2}, {x1, z1}};
+    for (int i = 0; i < 4; ++i) {
+        const float mx = (corners[i][0] + corners[i + 1][0]) / 2, mz = (corners[i][1] + corners[i + 1][1]) / 2;
+        band(corners[i][0], corners[i][1], mx, mz, line, kWalkCellLine);
+        band(mx, mz, corners[i + 1][0], corners[i + 1][1], line, kWalkCellLine);
+    }
+    // the shaft from near the feet, then the head with its tip at the cell's near edge
+    const float headLen = 1.0f * cs, headHalf = 0.55f * cs;
+    const float startX = x0 + ux * 0.45f * cs, startZ = z0 + uz * 0.45f * cs;
+    const float tipX = cx - ux * 0.55f * cs, tipZ = cz - uz * 0.55f * cs;
+    const float run = (tipX - startX) * ux + (tipZ - startZ) * uz;
+    const float head = run > headLen + 0.1f * cs ? headLen : std::max(0.5f * cs, std::min(headLen, run + 0.25f * cs));
+    if (run > headLen + 0.1f * cs) {
+        const float shaft = run - headLen;
+        const int pieces = std::max(1, int(std::ceil(shaft / (0.5f * cs))));
+        for (int i = 0; i < pieces; ++i) {
+            const float a = shaft * float(i) / float(pieces), b = shaft * float(i + 1) / float(pieces);
+            band(startX + ux * a, startZ + uz * a, startX + ux * b, startZ + uz * b, 0.19f * cs, kWalkShaft);
+        }
+    }
+    const float baseX = tipX - ux * head, baseZ = tipZ - uz * head, e = 0.12f * cs;
+    tri(at(baseX - ux * e + sx * (headHalf + e), baseZ - uz * e + sz * (headHalf + e)),
+        at(baseX - ux * e - sx * (headHalf + e), baseZ - uz * e - sz * (headHalf + e)),
+        at(tipX + ux * e * 1.5f, tipZ + uz * e * 1.5f), kWalkEdge);
+    tri(at(baseX + sx * headHalf, baseZ + sz * headHalf), at(baseX - sx * headHalf, baseZ - sz * headHalf),
+        at(tipX, tipZ), kWalkHead);
+    if (!ok) out.clear();  // off the map somewhere
+    return out;
+}
+
+size_t placeTris(const std::vector<Tri>& tris, const float view[12], const camera::Projection& p, float bias,
+                 std::vector<Vertex>& out) {
+    const size_t before = out.size();
+    for (const Tri& t : tris) {
+        const float a[3] = {t.a.x, t.a.y, t.a.z}, b[3] = {t.b.x, t.b.y, t.b.z}, c[3] = {t.c.x, t.c.y, t.c.z};
+        Vertex va{}, vb{}, vc{};
+        if (placed(a, view, p, bias, t.argb, va) && placed(b, view, p, bias, t.argb, vb) &&
+            placed(c, view, p, bias, t.argb, vc))
+            out.insert(out.end(), {va, vb, vc});
+    }
+    return out.size() - before;
+}
+
 size_t chevron(float cx, float tipY, float w, float h, uint32_t argb, std::vector<Vertex>& out) {
     out.push_back(Vertex{cx - w / 2, tipY - h, 0.0f, 1.0f, argb, 0u, 0.0f, 0.0f});
     out.push_back(Vertex{cx + w / 2, tipY - h, 0.0f, 1.0f, argb, 0u, 0.0f, 0.0f});

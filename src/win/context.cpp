@@ -114,6 +114,23 @@ std::string foregroundName() {
     return std::string("\"") + cls + "\" of " + exe;
 }
 
+// 3.0.11-beta.102 (the concept «Контроллер в интерфейсе uaRO»: «Курсор при игре с контроллера скрыт и не прыгает;
+// двинул мышь — он там, где был»): the game's cursor out of the frame while the controller plays and its stick walks
+// by the map's cells (nothing to point at: the arrow on the ground shows the way)
+void hidePadCursor(FrameRecord& record, PadWalk walk) {
+    static bool told = false;
+    if (walk != PadWalk::Arrow || !uapad::runtime::look().shown) return;
+    int cx = 0, cy = 0;
+    if (!readGameCursor(cx, cy)) return;
+    const int at = panel::cursorDraw(record, float(cx), float(cy));
+    if (at < 0) return;
+    record.dropCommand(size_t(at));
+    if (!told) {
+        told = true;
+        LOG_INFO("pad: the game's cursor hidden while the controller plays (the mouse brings it back where it was)");
+    }
+}
+
 }  // namespace
 
 // 2.2.1: the settings played with, a line a stretch (core/usage.hpp) - with the player's leave only, while the game is
@@ -557,6 +574,7 @@ void Context::endScene() {
     if (photo_) record.dropInterface();  // 3.0.4-beta.5: the photo mode - the world alone
     if (drawn && renderer && !photo_) buffoverlay::draw(record, *renderer);  // 3.0.4-beta.6: the buffs' times
     if (panelSlot_.endScene(drawn) && renderer && !photo_) {
+        hidePadCursor(record, config.padWalk);  // 3.0.11-beta.102: no cursor while the controller plays
         worlddim::draw(record);                 // 3.0.11-beta.49: the world dimmed under the windows (where it ends)
         lowhpedge::draw(record, *renderer);     // 3.0.11-beta.50: the low HP edge, there too
         mobhpwin::draw(record, *renderer);      // 3.0.11-beta.95: the monsters' HP bars, under the cast
@@ -612,6 +630,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     const bool drawnAnew = record.takeWork() > 0;
     drawSparkles();  // 2.7.14: a frame with no interface draw
     if (panelSlot_.present(drawnAnew) && renderer && !photo_) {
+        hidePadCursor(record, config.padWalk);  // 3.0.11-beta.102
         worlddim::draw(record);                 // 3.0.11-beta.49
         lowhpedge::draw(record, *renderer);     // 3.0.11-beta.50
         mobhpwin::draw(record, *renderer);      // 3.0.11-beta.95

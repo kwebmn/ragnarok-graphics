@@ -47,18 +47,20 @@ TEST(ctl_direct_walk_along_the_stick) {
     p.lx = 1.0f;
     TickOutput o = c.tick(p, w, view(), 100);
     CHECK(!o.mouse.active);  // the mouse is left alone
-    CHECK(o.packets.size() == 1 && pid(pkt(o, 0)) == 0x00a7 && decodePos3(pkt(o, 0).data(), 5) == (Cell{106, 100}));
-    CHECK(c.walkTarget() && *c.walkTarget() == (Cell{106, 100}));
-    o = c.tick(p, w, view(), 200);  // held steady: the next request 350 ms on
+    // 3.0.11-beta.102: 5 cells ahead at the game's speed (150 ms a cell), the same at any zoom
+    CHECK(o.packets.size() == 1 && pid(pkt(o, 0)) == 0x00a7 && decodePos3(pkt(o, 0).data(), 5) == (Cell{105, 100}));
+    CHECK(c.walkTarget() && *c.walkTarget() == (Cell{105, 100}));
+    o = c.tick(p, w, view(), 200);  // still far from it: no new ask
     CHECK(o.packets.empty());
-    o = c.tick(p, w, view(), 460);
-    CHECK_EQ(o.packets.size(), 1u);
+    c.setSelfCell(Cell{103, 100});  // the game's own cell: halfway there - asked on before it arrives and stands
+    o = c.tick(p, w, view(), 400);
+    CHECK(o.packets.size() == 1 && decodePos3(pkt(o, 0).data(), 5) == (Cell{108, 100}));
     p.lx = 0;
-    p.ly = 1.0f;  // up: north - another way 150 ms on
-    o = c.tick(p, w, view(), 620);
-    CHECK(o.packets.size() == 1 && decodePos3(pkt(o, 0).data(), 5) == (Cell{100, 106}));
-    o = c.tick(pad(), w, view(), 700);  // let go: the stop, as with the mouse
-    CHECK(o.packets.size() == 1 && pid(pkt(o, 0)) == 0x00a7);
+    p.ly = 1.0f;  // up: north - another way at once
+    o = c.tick(p, w, view(), 520);
+    CHECK(o.packets.size() == 1 && decodePos3(pkt(o, 0).data(), 5) == (Cell{103, 105}));
+    o = c.tick(pad(), w, view(), 700);  // let go: the cell it steps into, no further
+    CHECK(o.packets.size() == 1 && pid(pkt(o, 0)) == 0x00a7 && decodePos3(pkt(o, 0).data(), 5) == (Cell{103, 101}));
     CHECK(!c.walkTarget());
 }
 
@@ -70,14 +72,14 @@ TEST(ctl_direct_walk_turns_with_the_camera) {
     PadState p = pad();
     p.ly = 1.0f;
     TickOutput o = c.tick(p, w, view(), 100);
-    CHECK(!o.packets.empty() && decodePos3(pkt(o, 0).data(), 5) == (Cell{106, 100}));
+    CHECK(!o.packets.empty() && decodePos3(pkt(o, 0).data(), 5) == (Cell{105, 100}));
     p.ly = 0;
     p.lx = 1.0f;
     o = c.tick(p, w, view(), 300);
-    CHECK(!o.packets.empty() && decodePos3(pkt(o, 0).data(), 5) == (Cell{100, 94}));
+    CHECK(!o.packets.empty() && decodePos3(pkt(o, 0).data(), 5) == (Cell{100, 95}));
 }
 
-TEST(ctl_direct_walk_stops_short_of_a_wall) {
+TEST(ctl_direct_walk_stops_short_of_a_wall_and_goes_round_a_post) {
     Controller c(Config{});
     c.setDirectWalk(true);
     c.setLook(0, 1);
@@ -91,10 +93,15 @@ TEST(ctl_direct_walk_stops_short_of_a_wall) {
     p.lx = 1.0f;
     TickOutput o = c.tick(p, w, view(), 100);
     CHECK(!o.packets.empty() && decodePos3(pkt(o, 0).data(), 5) == (Cell{103, 100}));
-    g.walk[size_t(100) * 200 + 101] = 0;  // a wall next to the character: nowhere that way
+    g.walk[size_t(100) * 200 + 101] = 0;  // a post right in front: round it, short of the wall
     o = c.tick(p, w, view(), 500);
-    CHECK(o.packets.empty());
-    CHECK(c.walkTarget() && *c.walkTarget() == (Cell{100, 100}));
+    CHECK(o.packets.size() == 1 && decodePos3(pkt(o, 0).data(), 5) == (Cell{103, 103}));
+    CHECK(c.walkTarget() && *c.walkTarget() == (Cell{103, 103}));
+    for (int x = 99; x <= 101; ++x)  // boxed in: nowhere to go, nothing asked
+        for (int y = 99; y <= 101; ++y)
+            if (x != 100 || y != 100) g.walk[size_t(y) * 200 + size_t(x)] = 0;
+    o = c.tick(p, w, view(), 1700);
+    CHECK(o.packets.empty() && c.walkTarget() && *c.walkTarget() == (Cell{100, 100}));
 }
 
 TEST(ctl_walk_radius_changes_at_once) {

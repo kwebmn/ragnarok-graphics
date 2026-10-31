@@ -71,6 +71,7 @@ public:
     uint32_t selfId() const { return selfId_; }
     bool inGame() const { return inGame_; }
     Cell selfPos(uint32_t nowMs) const;
+    uint16_t selfSpeed() const { return selfSpeed_; }  // 3.0.11-beta.102: ms a cell (0x00b0 SP_SPEED)
     bool selfMoving(uint32_t nowMs) const { return selfPos(nowMs) != selfTo_; }
     Cell selfDest() const { return selfTo_; }  // where the server is walking us (our cell when standing)
     bool sitting() const { return sitting_; }

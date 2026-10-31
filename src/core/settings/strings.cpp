@@ -5193,13 +5193,19 @@ constexpr Entry kTexts[] = {
      "Enter — готово \xC2\xB7 Esc — скасувати \xC2\xB7 найбільше {1}",
      "Enter — готово \xC2\xB7 Esc — отменить \xC2\xB7 не больше {1}"},
     {Text::InterfacePadWalk, "The controller walks", "Хід контролером", "Ход контроллером"},  // 3.0.11-beta.88
-    {Text::InterfacePadWalkHint,
-     "How the left stick walks: holding the game's cursor out, as before, or without the mouse - the character goes "
-     "where the stick points, an arrow on the ground shows the way and stops short of walls (a prototype to check).",
-     "Як ходить лівий стік: тримаючи курсор гри, як раніше, або без миші - персонаж іде, куди показує стік, стрілка "
-     "на землі показує шлях і зупиняється перед стінами (прототип на перевірку).",
-     "Как ходит левый стик: держа курсор игры, как раньше, или без мыши - персонаж идёт, куда показывает стик, стрелка "
-     "на земле показывает путь и останавливается перед стенами (прототип на проверку)."},
+    {Text::InterfacePadWalkHint,  // 3.0.11-beta.102: by the map's cells, the default
+     "How the left stick walks. With an arrow: by the map's cells, the same at any camera's distance - the character "
+     "goes where the stick points a few cells ahead of it, asked on before it gets there (no stops on the way), slides "
+     "along walls, and stops at the next cell when the stick is let go; an arrow on the ground shows the way, the "
+     "game's cursor hidden while you play with the controller. With the cursor: the game's cursor held out, as before.",
+     "Як ходить лівий стік. Стрілкою: клітинками карти, однаково за будь-якої відстані камери - персонаж іде, куди "
+     "показує стік, на кілька клітинок уперед, і крок просимо далі, поки він не дійшов (без зупинок дорогою), уздовж "
+     "стін ковзає, а відпустили стік - стає на наступній клітинці; стрілка на землі показує шлях, курсор гри схований, "
+     "поки граєте контролером. Курсором: курсор гри тримається збоку, як раніше.",
+     "Как ходит левый стик. Стрелкой: клетками карты, одинаково при любом расстоянии камеры - персонаж идёт, куда "
+     "показывает стик, на несколько клеток вперёд, и шаг просим дальше, пока он не дошёл (без остановок по пути), "
+     "вдоль стен скользит, а отпустили стик - встаёт на следующей клетке; стрелка на земле показывает путь, курсор "
+     "игры спрятан, пока играете контроллером. Курсором: курсор игры держится сбоку, как раньше."},
     {Text::InterfacePadWalkMouse, "With the cursor (as before)", "Курсором (як раніше)", "Курсором (как раньше)"},
     {Text::InterfacePadWalkArrow, "With an arrow, no mouse", "Стрілкою, без миші", "Стрелкой, без мыши"},
     {Text::InterfacePadTiles, "Start opens the windows' tile", "Start відкриває плитку вікон",

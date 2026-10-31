@@ -969,7 +969,10 @@ TEST(config_target_ring) {
 
 // 3.0.11-beta.88 (stage 4): [interface] pad_walk = mouse | arrow - the left stick without the mouse; mouse till checked
 TEST(config_pad_walk) {
-    CHECK(parseConfig("").padWalk == PadWalk::Mouse);
+    // 3.0.11-beta.102 (the owner: «проработал передвижение с контролером»): the stick walks by the map's cells and the
+    // arrow by default; the cursor held out as before when asked for
+    CHECK(parseConfig("").padWalk == PadWalk::Arrow);
+    CHECK(parseConfig("[interface]\npad_walk = mouse\n").padWalk == PadWalk::Mouse);
     CHECK(parseConfig("[interface]\npad_walk = arrow\n").padWalk == PadWalk::Arrow);
     const settings::IniSetting* s = settings::findSetting("interface.pad_walk");
     CHECK(s != nullptr && s->page == settings::Page::Interface && s->control == settings::Control::Choice);

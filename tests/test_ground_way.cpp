@@ -263,3 +263,52 @@ TEST(ground_way_arrow) {
     std::vector<groundway::Vertex> none;
     CHECK_EQ(groundway::arrow(0, 100, 0, 101, 10, 1.0f, 4.0f, 3.0f, view, p, 0xC8FFFFFFu, 0.0f, none), size_t(3));
 }
+
+// 3.0.11-beta.102 (the owner: «чтобы стрелочка показывалась как в концепции»): the stick's arrow as the concept draws
+// it - over the ground's heights from near the character's feet to the near edge of the cell asked for, the head gold
+// edged under its white, the cell's square outlined in gold
+TEST(ground_way_walk_arrow_on_the_ground) {
+    groundway::Heights g;
+    CHECK(groundway::parseGat(gat(20, 20, [](int x, int) { return -float(x); }), g));  // rising east (up: -y)
+    const int cs = 5;
+    float x0 = 0, z0 = 0;  // the character at the cell (4, 10)'s middle, the cell (9, 10) asked for
+    groundway::cellToWorld(4, 10, 20, 20, cs, x0, z0);
+    const std::vector<groundway::Tri> t = groundway::walkArrowShape(x0, z0, 9, 10, g, cs, 1.0f, 0.5f);
+    CHECK(!t.empty());
+    bool onGround = true;
+    float tipX = -1e9f, shaftFrom = 1e9f, cellFrom = 1e9f, cellTo = -1e9f;
+    int firstEdge = -1, firstHead = -1;
+    for (size_t i = 0; i < t.size(); ++i) {
+        for (const groundway::Point& c : {t[i].a, t[i].b, t[i].c}) {
+            float h = 0;
+            onGround = onGround && g.at(c.x / float(cs) + 10, c.z / float(cs) + 10, h) && std::fabs(c.y - (h - 0.5f)) <
+                                                                                             1e-3f;
+            if (t[i].argb == groundway::kWalkHead) tipX = std::max(tipX, c.x);
+            if (t[i].argb == groundway::kWalkShaft) shaftFrom = std::min(shaftFrom, c.x);
+            if (t[i].argb == groundway::kWalkCellLine) {
+                cellFrom = std::min(cellFrom, c.x);
+                cellTo = std::max(cellTo, c.x);
+            }
+        }
+        if (t[i].argb == groundway::kWalkEdge && firstEdge < 0) firstEdge = int(i);
+        if (t[i].argb == groundway::kWalkHead && firstHead < 0) firstHead = int(i);
+    }
+    CHECK(onGround);  // every corner on the ground (a unit over it)
+    const float cellMiddle = (9.5f - 10) * float(cs);
+    CHECK(std::fabs(tipX - (cellMiddle - 0.55f * float(cs))) < 0.01f);  // the tip at the cell's near edge
+    CHECK(std::fabs(shaftFrom - (x0 + 0.45f * float(cs))) < 0.01f);      // the shaft from near the feet
+    CHECK(cellFrom < cellMiddle - 2.4f && cellTo > cellMiddle + 2.4f);   // the cell's square round its middle
+    CHECK(firstEdge >= 0 && firstHead > firstEdge);                      // the gold edge under the white head
+    CHECK(!groundway::walkArrowShape(x0, z0, 5, 10, g, cs, 1.0f, 0.5f).empty());  // the next cell: a head and a cell
+    CHECK(groundway::walkArrowShape(x0, z0, 4, 10, g, cs, 1.0f, 0.5f).empty());   // where it stands: nothing
+    const float view[12] = {1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 100};  // the ground 100 ahead
+    camera::Projection p;
+    p.f0 = p.f1 = 100;
+    p.cx = 320;
+    p.cy = 240;
+    p.nearZ = 10;
+    p.farZ = 1500;
+    std::vector<groundway::Vertex> v;
+    CHECK_EQ(groundway::placeTris(t, view, p, 0.0f, v), t.size() * 3);  // three corners a triangle on the screen
+    CHECK(v[0].diffuse == t[0].argb);
+}

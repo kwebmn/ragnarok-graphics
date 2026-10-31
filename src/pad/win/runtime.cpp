@@ -667,6 +667,11 @@ void lookAndGround(DWORD now) {
         control.setLook(double(view[2] / len), double(view[8] / len));
     else
         control.clearLook();
+    int cx = 0, cy = 0, cw = 0, ch = 0;  // 3.0.11-beta.102: the character's cell as the game shows it now
+    if (uagfx::win::readPlayerCell(cx, cy, cw, ch))
+        control.setSelfCell(Cell{cx, cy});
+    else
+        control.setSelfCell(std::nullopt);
     const std::string map = uagfx::win::readGameMap();
     if (map != s.groundMap || (!s.ground.known() && !map.empty() && now - s.groundTriedMs >= 2000)) {
         const bool fresh = map != s.groundMap;

@@ -127,6 +127,19 @@ The owner 31.10: «Полоски HP мобов - всем показывай»,
   back, Y card, Start buys, B closes typing/card/deal. Ruling R6: right click = the description (as the game's shop),
   −1 by Ctrl+click or the cart's −; R7: pad Y = description as in «Речі»/«Спорядження», Start = buy. Tests
   shop_window_* (9); suite 2037/0.
+- Walking (3.0.11-beta.102; the owner: «проработал передвижение с контролером, чтобы стрелочка показывалась как в
+  концепции и оно не глючило при хождении ... если маштаб маленький то были рывки ... а если большой маштаб то шел
+  дальше чем нужно»): cause - the mouse mode held the cursor a fixed number of pixels out (cells by the zoom). New
+  pad/core/logic/stick_walk (wayOf by the camera's look, lead 3..6 by SP_SPEED (600 ms + 1), destination along the way
+  stopping at walls, sliding ±45° or along an axis when blocked at once, stopCell = the next cell, askAgain: first,
+  turn > 22.5° or the destination moved aside, within lead/2 of the last ask, 1 s refresh, never the same cell, 100 ms
+  gap); Controller::walkDirect on it with setSelfCell (the game's cell, readPlayerCell); core/ground_way walkArrowShape
+  (shaft, gold-edged head at the cell's near edge, gold cell frame, on the .gat heights) + placeTris; win/ground_marks
+  heights cache; FrameRecord::dropCommand + the game's cursor hidden while the pad plays in arrow mode; [interface]
+  pad_walk = arrow by default (dist template too). Ruling R8: the arrow's length is the speed-based lead, not the
+  [stick] walk_radius of the concept (the radius was screen pixels - the cause). Tests stick_walk_* (6),
+  ctl_direct_walk_* (3, updated), ground_way_walk_arrow_on_the_ground, frame_drops_one_command, config_pad_walk;
+  suite 2045/0.
 - Stage 5 research: 0x00c4 deal type; 0x00c6 buy list (11 B each: price.L discount.L type.B nameid.W)
   -> session deal list +0xF28 (count +0xF2C, FUN_0062bbb0(rec, 0); FUN_004ffd30 copies the record's text at +0x11 into
   m_itemName) + windows 0x16 (mgr+0xEC, class 0x69B3E0, SendMsg 0x4AFC00: 0x24 0 buy / 1 sell) and 0x17 (buy cart,

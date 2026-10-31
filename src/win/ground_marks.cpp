@@ -2,6 +2,8 @@
 
 #include <algorithm>
 #include <cmath>
+#include <memory>
+#include <string>
 #include <vector>
 
 #include "core/d3d7.hpp"
@@ -10,7 +12,9 @@
 #include "core/ground_way.hpp"
 #include "pad/win/runtime.hpp"
 #include "win/game_camera.hpp"
+#include "win/game_files.hpp"
 #include "win/log.hpp"
+#include "win/paths.hpp"
 #include "win/mob_hp.hpp"
 #include "win/target_card.hpp"
 
@@ -32,6 +36,12 @@ struct State {
     uint32_t told = 0;  // the target last told the log
     int tells = 0;
     bool arrowTold = false;
+    // 3.0.11-beta.102: the map's .gat heights for the stick's arrow on the ground, and which way round they run
+    std::string heightsMap;
+    groundway::Heights heights;
+    bool heightsRead = false;
+    float sign = 0;
+    std::unique_ptr<gamefiles::Reader> files;
 };
 
 State& state() {
@@ -62,6 +72,39 @@ void put(FrameRecord& record, const std::vector<groundway::Vertex>& verts, bool 
     cmd.fvf = d3d7::FVF_TL1;
     cmd.effect = uint8_t(effect_exe::Kind::None);
     record.draw(cmd, verts.data(), uint32_t(verts.size()), nullptr, 0);
+}
+
+// The map's heights where the player stands, told which way round against its own height (none: not read, or they do
+// not fit it - the flat arrow then)
+const groundway::Heights* heightsHere(State& s, const float me[3], int mapW, int mapH, int cellSize, float& sign) {
+    const std::string map = readGameMap();
+    if (map.empty()) return nullptr;
+    if (map != s.heightsMap) {
+        s.heightsMap = map;
+        s.heightsRead = false;
+        s.sign = 0;
+        s.heights = groundway::Heights{};
+        if (!s.files) s.files = std::make_unique<gamefiles::Reader>(gameDir());
+        std::vector<uint8_t> bytes;
+        if (s.files->read("data\\" + map + ".gat", bytes) &&
+            groundway::parseGat(std::string(bytes.begin(), bytes.end()), s.heights))
+            s.heightsRead = true;
+        LOG_INFO("walk arrow: %s's heights %s", map.c_str(), s.heightsRead ? "read - the arrow on the ground" : "none");
+    }
+    if (!s.heightsRead || s.heights.w != mapW || s.heights.h != mapH || cellSize <= 0) return nullptr;
+    if (s.sign == 0) {
+        float h = 0;
+        if (!s.heights.at(me[0] / float(cellSize) + float(mapW / 2), me[2] / float(cellSize) + float(mapH / 2), h))
+            return nullptr;
+        s.sign = std::fabs(me[1] - h) <= 3.0f ? 1.0f : std::fabs(me[1] + h) <= 3.0f ? -1.0f : 0.0f;
+        if (s.sign == 0) {
+            s.heightsRead = false;  // they do not fit the player's own height: the flat arrow on this map
+            LOG_INFO("walk arrow: %s's heights do not fit the player's own - the flat arrow", map.c_str());
+            return nullptr;
+        }
+    }
+    sign = s.sign;
+    return &s.heights;
 }
 
 }  // namespace
@@ -102,7 +145,14 @@ void draw(FrameRecord& record, int width, int height) {
         float tx = 0, tz = 0;
         groundway::cellToWorld(toX, toY, mapW, mapH, cellSize, tx, tz);
         const float dx = tx - me[0], dz = tz - me[2], len = std::hypot(dx, dz), y = me[1] - kLift;
-        if (len > 3.0f) {
+        float sign = 0;  // 3.0.11-beta.102: the concept's arrow on the ground's heights, the flat one without them
+        const groundway::Heights* heights = heightsHere(s, me, mapW, mapH, cellSize, sign);
+        const std::vector<groundway::Tri> arrow =
+            heights ? groundway::walkArrowShape(me[0], me[2], toX, toY, *heights, cellSize, sign, kLift)
+                    : std::vector<groundway::Tri>{};
+        if (!arrow.empty()) {
+            groundway::placeTris(arrow, view, p, kBias, s.verts);
+        } else if (len > 3.0f) {
             const float x0 = me[0] + dx / len * 2.2f, z0 = me[2] + dz / len * 2.2f;
             groundway::arrow(x0, z0, tx, tz, y, kArrowWidth + 0.8f, kArrowHead + 0.6f, kArrowHeadWidth + 0.8f, view, p,
                              kArrowShade, kBias, s.verts);

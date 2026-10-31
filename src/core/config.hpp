@@ -586,7 +586,7 @@ struct Config {
     MobHp mobHp = MobHp::All;  // 3.0.11-beta.100 (the owner: «а можно чтобы над мобами всегда хп висело?»)
     // 3.0.11-beta.88 (stage 4): [interface] pad_walk - the left stick walks without the mouse, an arrow on the ground
     // (a prototype for the owner: off till checked)
-    PadWalk padWalk = PadWalk::Mouse;
+    PadWalk padWalk = PadWalk::Arrow;  // 3.0.11-beta.102: by the map's cells by default (core/stick_walk)
     // 3.0.11-beta.90 (stage 6): [interface] pad_tiles - Start opens the windows' tile (win/pad_tiles); off: the pad's
     // own menu, as before
     bool padTiles = true;

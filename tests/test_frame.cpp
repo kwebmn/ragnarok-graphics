@@ -255,6 +255,21 @@ TEST(frame_moves_its_last_commands_before_one) {
     CHECK(r.commands()[4].index == 2);
 }
 
+// 3.0.11-beta.102 (the concept «Контроллер в интерфейсе uaRO»: «Курсор при игре с контроллера скрыт»): a command
+// dropped out of the frame (the game's cursor while the stick walks), the rest kept in their order
+TEST(frame_drops_one_command) {
+    FrameRecord r;
+    uint8_t vertices[32 * 3] = {};
+    DrawCmd cmd;
+    cmd.fvf = d3d7::FVF_TL1;
+    cmd.primitive = d3d7::PT_TRIANGLELIST;
+    for (int i = 0; i < 3; ++i) r.draw(cmd, vertices, 3, nullptr, 0);
+    r.dropCommand(1);
+    CHECK(r.commands().size() == 2 && r.commands()[0].index == 0 && r.commands()[1].index == 2);
+    r.dropCommand(7);  // none there: nothing dropped
+    CHECK_EQ(r.commands().size(), size_t(2));
+}
+
 // 3.0.4-beta.5 (the user's idea 5): the photo mode - the game's interface (the draws after its depth went off: the
 // windows, the text, the cursor) and the driver's own panel out of the frame, the world, its clears and uploads kept
 TEST(frame_drops_the_interface) {
