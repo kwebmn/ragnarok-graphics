@@ -5055,6 +5055,25 @@ constexpr Entry kTexts[] = {
      "на земле показывает путь и останавливается перед стенами (прототип на проверку)."},
     {Text::InterfacePadWalkMouse, "With the cursor (as before)", "Курсором (як раніше)", "Курсором (как раньше)"},
     {Text::InterfacePadWalkArrow, "With an arrow, no mouse", "Стрілкою, без миші", "Стрелкой, без мыши"},
+    {Text::InterfacePadTiles, "Start opens the windows' tile", "Start відкриває плитку вікон",
+     "Start открывает плитку окон"},  // 3.0.11-beta.90
+    {Text::InterfacePadTilesHint,
+     "Start on the controller opens a tile of the game's windows (items, status, skills, equipment, party, the map, "
+     "«Reference», the game's options, the controller's own menu): the D-pad chooses, A opens, B closes. Off: Start "
+     "opens the controller's own menu, as before.",
+     "Start на контролері відкриває плитку вікон гри (речі, характеристики, уміння, спорядження, група, карта, "
+     "«Довідник», налаштування гри, власне меню контролера): хрестовина вибирає, A відкриває, B закриває. Вимкнено: "
+     "Start відкриває меню контролера, як раніше.",
+     "Start на контроллере открывает плитку окон игры (вещи, характеристики, умения, снаряжение, группа, карта, "
+     "«Справочник», настройки игры, собственное меню контроллера): крестовина выбирает, A открывает, B закрывает. "
+     "Выключено: Start открывает меню контроллера, как раньше."},
+    {Text::TilesTitle, "Menu", "Меню", "Меню"},
+    {Text::TileSkills, "Skills", "Уміння", "Умения"},
+    {Text::TileEquip, "Equipment", "Спорядження", "Снаряжение"},
+    {Text::TileMap, "Map", "Карта", "Карта"},
+    {Text::TileOptions, "Game options", "Налаштування гри", "Настройки игры"},
+    {Text::TilesOpen, "Open", "Відкрити", "Открыть"},
+    {Text::TilesClose, "Close", "Закрити", "Закрыть"},
     // 3.0.11-beta.33
     {Text::InterfaceMinimapWay, "The way on the ground", "Шлях на землі", "Путь на земле"},
     {Text::InterfaceMinimapWayHint,

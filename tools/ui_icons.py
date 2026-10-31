@@ -66,6 +66,10 @@ ICONS = [
     ('PadRight', '<path d="M16.5 12l-6 4.5v-9z"/>'),
     ('PadDown', '<path d="M12 16.5l-4.5-6h9z"/>'),
     ('PadLeft', '<path d="M7.5 12l6-4.5v9z"/>'),
+    # 3.0.11-beta.90: the windows' tile's «Контролер» (core/pad_tiles)
+    ('Gamepad', '<path d="M7 8h10a4 4 0 0 1 4 4l.6 4.2a2.4 2.4 0 0 1-4.3 1.8L15.5 16h-7l-1.8 2a2.4 2.4 0 0 1-4.3-1.8'
+                'L3 12a4 4 0 0 1 4-4z"/><path d="M8 10.5v3.5M6.25 12.25h3.5"/>'
+                '<circle cx="16" cy="11.4" r=".7"/><circle cx="17.8" cy="13.2" r=".7"/>'),
 ]
 
 NUMBER = r'[-+]?(?:\d*\.\d+|\d+\.?)(?:[eE][-+]?\d+)?'

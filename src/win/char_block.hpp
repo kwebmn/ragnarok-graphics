@@ -25,4 +25,9 @@ bool panelBox(int& x, int& y, int& w, int& h);
 // 3.0.11-beta.53: just before the game draws its windows (win/windows_draw) - its Basic Info hidden, never a frame
 void beforeGameDraw();
 
+// 3.0.11-beta.90 (the controller's windows' tile): one of the game's Basic Info window's buttons pressed as its own
+// (its SendMsg message 6 with the command: 0x7E stats, 0x81 equip, 0x80 items, 0x82 skills, 0x85 friends, 0x7F
+// options) - the game's window opened or closed; false: no such window now
+bool pressGame(int command);
+
 }  // namespace uagfx::win::charpanel

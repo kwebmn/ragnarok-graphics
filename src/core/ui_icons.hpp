@@ -17,6 +17,7 @@ enum class Icon : uint8_t {
     Blocked,                                  // 3.0.11-beta.45: the hotbar's «не тут»
     PadCross, PadCircle, PadSquare, PadTriangle,  // 3.0.11-beta.86: the controller's (core/pad_glyphs)
     PadUp, PadRight, PadDown, PadLeft,
+    Gamepad,  // 3.0.11-beta.90: the windows' tile's «Контролер»
     kCount
 };
 

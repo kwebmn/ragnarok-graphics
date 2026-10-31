@@ -464,4 +464,6 @@ void beforeGameDraw() {
     if (s.look != CharacterLook::Off && inGameWorld()) holdGameWindow(s, true);
 }
 
+bool pressGame(int command) { return press(command); }
+
 }  // namespace uagfx::win::charpanel

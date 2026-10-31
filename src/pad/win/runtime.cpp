@@ -44,6 +44,7 @@
 #include "win/paths.hpp"
 #include "core/walk_path.hpp"
 #include "win/game_camera.hpp"
+#include "win/pad_tiles.hpp"
 #include "win/party_panel.hpp"
 #include "win/real_ddraw.hpp"
 #include "win/reference_load.hpp"
@@ -109,6 +110,8 @@ struct State {
     int travelX = 0, travelY = 0;
     // 3.0.11-beta.88: walking without the mouse - the map's walkable cells (the reference's walkable.bin)
     bool directWalk = false;
+    bool tiles = true;          // 3.0.11-beta.90: [interface] pad_tiles
+    bool openMenuNow = false;   // the tile's «Контролер» chosen: the pad's menu opens at the next tick
     std::string groundMap;
     GroundGrid ground;
     DWORD groundTriedMs = 0;
@@ -402,6 +405,34 @@ bool referencePad(const PadState& pad) {
     return true;
 }
 
+// 3.0.11-beta.90 (the concept's stage 6): the windows' tile open - the pad's buttons are its: the D-pad (or the left
+// stick) moves its frame, A opens, B or Start closes; the character waits meanwhile
+bool tilePad(const PadState& pad, DWORD now) {
+    State& s = S();
+    const uint16_t buttons = pad.connected ? pad.buttons : 0;
+    const uint16_t down = uint16_t(buttons & ~s.prevPadButtons);
+    s.prevPadButtons = buttons;
+    using uagfx::win::padtileswin::Command;
+    const std::pair<uint16_t, Command> keys[] = {{kPadUp, Command::Up},       {kPadDown, Command::Down},
+                                                 {kPadLeft, Command::Left},   {kPadRight, Command::Right},
+                                                 {kPadA, Command::Enter},     {kPadB, Command::Close},
+                                                 {kPadStart, Command::Close}};
+    for (const auto& [button, command] : keys)
+        if (down & button) uagfx::win::padtileswin::command(command);
+    static DWORD stickAt = 0;  // the left stick as the D-pad: a step on a push, again every 250 ms held
+    const bool pushed = std::fabs(pad.lx) > 0.6f || std::fabs(pad.ly) > 0.6f;
+    if (pushed && now - stickAt >= 250) {
+        stickAt = now;
+        if (std::fabs(pad.lx) > std::fabs(pad.ly))
+            uagfx::win::padtileswin::command(pad.lx > 0 ? Command::Right : Command::Left);
+        else
+            uagfx::win::padtileswin::command(pad.ly > 0 ? Command::Up : Command::Down);
+    } else if (!pushed) {
+        stickAt = 0;
+    }
+    return true;
+}
+
 bool runMenu(const PadState& pad, const ViewInfo& view, DWORD now) {
     State& s = S();
     const uint16_t buttons = pad.connected ? pad.buttons : 0;
@@ -409,7 +440,13 @@ bool runMenu(const PadState& pad, const ViewInfo& view, DWORD now) {
     s.prevPadButtons = buttons;
     if (!s.menu.isOpen()) {
         // 3.0.11-beta.85: Start while a support skill asks whom cancels that, it opens no menu
-        if (!(down & kPadStart) || !view.focused || !s.hwnd || s.session->controller().choosing() != 0) return false;
+        const bool start = (down & kPadStart) && view.focused && s.hwnd && s.session->controller().choosing() == 0;
+        if (start && s.tiles && !s.openMenuNow) {  // 3.0.11-beta.90: the windows' tile instead
+            uagfx::win::padtileswin::open();
+            return true;
+        }
+        if (!start && !(s.openMenuNow && view.focused && s.hwnd)) return false;
+        s.openMenuNow = false;
         s.menuBefore = settingsFrom(s.cfg);
         s.menu.open(s.session->controller().bindings(), s.menuBefore, s.session->world().clientBarNames(), buttons,
                     now, pad.lx, pad.ly);
@@ -586,8 +623,9 @@ void tick() {
     }
     followTheMouse(view.focused, now);
     // 3.0.11-beta.21: the reference window's while it is open, else the pad's own menu (Start)
-    view.paused =
-        uagfx::win::referencewin::isOpen() && !S().menu.isOpen() ? referencePad(pad) : runMenu(pad, view, now);
+    view.paused = uagfx::win::referencewin::isOpen() && !S().menu.isOpen()     ? referencePad(pad)
+                  : uagfx::win::padtileswin::isOpen() && !S().menu.isOpen() ? tilePad(pad, now)  // 3.0.11-beta.90
+                                                                            : runMenu(pad, view, now);
     if (s.npcSupported) view.dialog = clientnpc::read();
     double clientTurn = 0;
     if (s.cameraSupported && clientcamera::readTurn(clientTurn))
@@ -635,6 +673,18 @@ Look look() {
 uint32_t target() { return healthy() && S().session ? S().session->controller().target() : 0; }
 
 uint32_t preview() { return healthy() && S().session ? S().session->controller().preview() : 0; }
+
+void setTiles(bool on) {
+    State& s = S();
+    if (on == s.tiles) return;
+    s.tiles = on;
+    LOG_INFO("Start: %s", on ? "the windows' tile" : "the controller's own menu");
+}
+
+void openPadMenu() {
+    S().openMenuNow = true;
+    LOG_INFO("the controller's own menu asked for from the tile");
+}
 
 void setDirectWalk(bool on) {
     State& s = S();

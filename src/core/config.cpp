@@ -509,6 +509,8 @@ Config parseConfig(const std::string& text) {
             if (val == "off") c.targetRing = TargetRing::Off;
             if (val == "pad") c.targetRing = TargetRing::Pad;
             if (val == "always") c.targetRing = TargetRing::Always;
+        } else if (key == "interface.pad_tiles") {  // 3.0.11-beta.90: Start opens the windows' tile
+            setBool(val, c.padTiles);
         } else if (key == "interface.pad_walk") {  // 3.0.11-beta.88: the left stick without the mouse
             if (val == "mouse") c.padWalk = PadWalk::Mouse;
             if (val == "arrow") c.padWalk = PadWalk::Arrow;

@@ -74,3 +74,7 @@ defaults (ruling R3); the monsters' HP bars wait for question 2 (R2).
   choice; the pad follows the interface's language (followDriverLanguage). Ruling R4: the pad's two files stay where
   they are (uaro-graphics\, edited by the page and the Start menu alike) instead of moving keys into uaro-graphics.ini
   - one settings place for the player without a migration's risk; cost if wrong: a migration beta later.
+- Stage 6 part 1: built as 3.0.11-beta.90 - core/pad_tiles (3x3, Gamepad icon), win/pad_tiles (Blocker::PadTiles,
+  modal mouse), Start -> the tile ([interface] pad_tiles, on), tiles open the game's windows (charpanel::pressGame
+  0x80/0x7E/0x82/0x81/0x85/0x7F), the big map (minimapproto::showBig) or the map card, «Довідник», the pad's own menu
+  (runtime openPadMenu). Next: «Речі»/«Характеристики» by the pad, X assign, NPC/choice hints in the interface's style.

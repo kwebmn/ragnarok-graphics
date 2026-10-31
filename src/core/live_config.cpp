@@ -207,6 +207,10 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("pad_hints", flag(running.padHints), flag(file.padHints)));
         n.padHints = file.padHints;
     }
+    if (file.padTiles != running.padTiles) {  // 3.0.11-beta.90: Start opens the windows' tile
+        u.applied.push_back(change("pad_tiles", flag(running.padTiles), flag(file.padTiles)));
+        n.padTiles = file.padTiles;
+    }
     if (file.padWalk != running.padWalk) {  // 3.0.11-beta.88: the left stick without the mouse
         u.applied.push_back(change("pad_walk", padWalkToken(running.padWalk), padWalkToken(file.padWalk)));
         n.padWalk = file.padWalk;

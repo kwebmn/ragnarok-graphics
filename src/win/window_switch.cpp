@@ -14,6 +14,7 @@
 #include "win/hud_edit.hpp"
 #include "win/chat_window.hpp"
 #include "win/item_window.hpp"
+#include "win/pad_tiles.hpp"
 #include "win/stat_window.hpp"
 #include "win/target_card.hpp"
 #include "win/tracker.hpp"
@@ -54,6 +55,7 @@ void claimed(UINT m) {
 // The driver's parts' mouse, the topmost first: true - the message was one of theirs
 bool partsMouse(HWND w, UINT m, WPARAM wp, LPARAM lp, LRESULT& answer) {
     return hudedit::mouse(w, m, wp, lp, answer) ||      // 3.0.11-beta.75: all of it while the parts are framed
+           padtileswin::mouse(w, m, wp, lp, answer) ||  // 3.0.11-beta.90: the controller's windows' tile (modal)
            answercard::mouse(w, m, lp, answer) ||       // 3.0.9-beta.4: and over the answer card the card's
            referencewin::mouse(w, m, wp, lp, answer) ||  // 3.0.11-beta.7: over «Довідник» its own
            statswin::mouse(w, m, wp, lp, answer) ||      // 3.0.11-beta.42: the windows over the panels

@@ -49,5 +49,9 @@ uint32_t preview();
 // frame); where it walks now (the arrow's end, the map's cells); false none
 void setDirectWalk(bool on);
 bool walkTarget(int& x, int& y);
+// 3.0.11-beta.90 (stage 6): [interface] pad_tiles - Start opens the driver's windows' tile (win/pad_tiles) instead of
+// the pad's own menu; that menu opened from the tile's «Контролер»
+void setTiles(bool on);
+void openPadMenu();
 
 }  // namespace uapad::runtime

@@ -39,6 +39,8 @@ bool key(unsigned vk);
 // two lines under the map (where to, how many moves left, where to take the move); made again wherever the player
 // goes; «Ви на місці» on the map, then it stops. canFollow: the new minimap on
 bool canFollow();
+// 3.0.11-beta.90 (the controller's windows' tile): the big map opened or closed; false: the new minimap is off
+bool showBig(bool open);
 void follow(const std::string& target, bool walk);
 void unfollow();
 bool following(std::string& target, bool& walk);  // false: none

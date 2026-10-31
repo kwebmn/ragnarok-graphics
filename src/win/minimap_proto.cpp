@@ -1050,6 +1050,13 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     return true;
 }
 
+bool showBig(bool open) {
+    State& s = state();
+    if (!s.on) return false;
+    setBig(s, open);
+    return true;
+}
+
 bool canFollow() { return state().on; }
 
 bool plotTo(int x, int y) {
