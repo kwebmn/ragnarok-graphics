@@ -1,3 +1,15 @@
+# uaRO Graphics 3.0.11-beta.91 — what is new
+
+The controller in the interface, stage 6 (part 2):
+- **«Items» from the controller.** While the items window is open, the buttons are its: the D-pad or the left stick
+  moves a gold frame over the cells (the tip at once, with the controller's buttons), A uses or wears (as a double
+  click), Y the item's card, LB / RB the tabs, B or Start close it. The character stands meanwhile.
+- **X - «Put on a button».** A list of the controller's buttons that use the skill bar's cells, each with what its cell
+  holds now. The D-pad chooses, A puts the item into that cell (on that button at once), B cancels.
+- To check: Start → «Items» → move the frame, A on a potion, X on a potion → choose a button → A; the potion on that
+  button in the skill bar. In the log: «items: the controller's A on …», «pad assign: … into F6 - put», «hotbar: the
+  slot … given …».
+
 # uaRO Graphics 3.0.11-beta.90 — what is new
 
 The controller in the interface, stage 6 (part 1):
