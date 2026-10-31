@@ -1,3 +1,13 @@
+# uaRO Graphics 3.0.11-beta.83 — what is new
+
+Point 3 (your «1-8, do it»):
+- **The party members on the minimap and the big map.** Each member on your map is a round with its face and a blue
+  ring where it stands (the server sends the party members' cells on the same map); a dead one's ring is red. Point at
+  it — its name on the bar under the map. The rounds move with the members.
+- The party panel has to be on («Party» in «Interface»).
+- To check: in a party on one map — open the minimap and the big map (the ⛶ button), walk about. Point 8 (the compact
+  view) — the next beta.
+
 # uaRO Graphics 3.0.11-beta.82 — what is new
 
 The party panel, points 2 and 4 (your «1-8, do it»):
