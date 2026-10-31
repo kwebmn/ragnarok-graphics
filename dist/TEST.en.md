@@ -1,3 +1,14 @@
+# uaRO Graphics 3.0.11-beta.122 — what's new
+
+The first step against the character and the monsters "teleporting":
+- **Commands go to the server at once.** The game never turned off the small packets' delay on its connection
+  (Nagle's algorithm), so a step, a hit or a skill in a row could wait 40–200 ms. Now it is off.
+- **The ping on the minimap.** On the bar under the minimap — "● 45 ms": green under 120 ms, amber under 250 ms,
+  red slower or when packets were lost; "stall" in red — the connection waited for a lost packet (the world "jumps"
+  after it: that was the network, not the game). Off in "Interface" — "Ping on the minimap".
+- **A network log.** Once a minute the log gets the ping, the packets lost, the stalls and how many times the server
+  "fixed" positions; with a report it shows what causes the jerks.
+
 # uaRO Graphics 3.0.11-beta.121 — what's new
 
 **Carrying things between the windows with the controller** (stage 5 of the windows concept):
