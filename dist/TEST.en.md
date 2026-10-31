@@ -1,3 +1,16 @@
+# uaRO Graphics 3.0.11-beta.115 — what's new
+
+A new **"Storage"** window — the Kafra storage in the new look (the windows plan's storage stage):
+- The same tabs, search and grid as "Items"; at the bottom — how many places are used ("57 / 600").
+- "Items" opens with the storage and stands right beside it; drag them by either title.
+- **Moving things:** drag a thing from one window into the other or double click it — in "Storage" it goes into the
+  bag, in "Items" into the storage. For a stack the game itself asks how many.
+- The right button — the item's card; the ★ star is shared with "Items".
+- Controller: A moves the thing, Y — its card, LB / RB — the tabs, B closes the storage; the D-pad past the grid's
+  edge goes into the window beside it.
+- The game's own windows (such as the "how many" window) now get the clicks too, not only drawn over ours.
+- The "Kafra storage" switch in "Interface"; off — the game's own window.
+
 # uaRO Graphics 3.0.11-beta.114 — what's new
 
 The windows and inventory concept, question 10 — the arrows' stock in the "Character block":
