@@ -1,3 +1,14 @@
+# uaRO Graphics 3.0.11-beta.110 — what's new
+
+The windows and inventory concept, stage 2 — dragging:
+- **Where it may go is lit in gold.** Drag a thing out of "Items" — the "Equipment" slots it fits light up (a bow on
+  "Weapon", arrows on the arrows' slot), and the hotbar's cells. Drag a skill out of "Skills" — the hotbar's cells. Drag
+  a worn thing out of "Equipment" — the "Items" bag.
+- **Taking a thing off by dragging it from "Equipment" into the bag works now.** The window began the game's drag at
+  the press, but the game never saw the button come up (as with the skills before). Now the window drags it itself —
+  the thing's icon under the cursor — and, let go, begins and at once lets go the game's drag.
+- In the log: "equip: #… dragged and let go - let go through the game's own drop".
+
 # uaRO Graphics 3.0.11-beta.109 — what's new
 
 The windows and inventory concept, stage 1 (the rest):
