@@ -1,3 +1,13 @@
+# uaRO Graphics 3.0.11-beta.105 — what's new
+
+The cell it goes to is no longer drawn at the walking arrow's end:
+- **A new box "The cell it goes to"** in "Interface", on the "Controller" page (under "Walking arrow") and in the game's
+  console. **Off** by default: the arrow alone — no gold diamond (chevrons), no cell's corners (slim arrow), no cell's
+  frame (the concept's arrow), no small gold ring (ring and pointer, dots of the way).
+- Turn it on — the mark at the arrow's end comes back. It changes at once, no restart.
+- "The cell alone" always shows its cell — it is that look.
+- The red bar at a wall stays.
+
 # uaRO Graphics 3.0.11-beta.104 — what's new
 
 The controller's walking arrow no longer shakes:
