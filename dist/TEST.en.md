@@ -1,3 +1,18 @@
+# uaRO Graphics 3.0.11-beta.87 — what is new
+
+The controller in the interface, stage 3:
+- **The target is a gold ring on the ground.** Under the monster the controller aims at - a gold ring, over its head
+  a gold chevron. A light tilt of the right stick shows where the target would go: a dashed white ring under that
+  monster; tilt it further - it becomes the target; let go - the target stays. While a heal waits for a choice
+  (stage 1), a green notched ring under the chosen member.
+- The choice «Target's ring on the ground» in «Interface» and the console: «With the controller» (the default),
+  «Always» (also under the monster you fight with the mouse), «Off».
+- The old target mark (the poison tint and so on) stays for now, as agreed. To compare, turn it off in the controller's
+  menu: Start → «Settings» → «Target mark».
+- To check: the ring at the monster's feet, the monster hides the ring's back half; the chevron over its head; light
+  grass and dark caves. In the log: «target ring: under … (the pad's target) at the world's …, the chevron over its
+  sprite».
+
 # uaRO Graphics 3.0.11-beta.86 — what is new
 
 The controller in the interface, stage 2:
