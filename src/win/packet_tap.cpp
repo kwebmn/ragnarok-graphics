@@ -12,6 +12,7 @@
 #include "win/chat_window.hpp"
 #include "win/item_window.hpp"
 #include "win/mob_hp.hpp"
+#include "win/net_watch.hpp"
 #include "win/npc_talk.hpp"
 #include "win/storage_window.hpp"
 #include "win/target_card.hpp"
@@ -66,6 +67,7 @@ bool redirect(uint32_t at, const uint8_t* call, uint32_t fn, const uint8_t* code
 
 uint16_t __attribute__((thiscall)) take(void* connection, const uint8_t* packet) {
     const uint16_t id = g_take(connection, packet);
+    netwatchwin::packet(connection, id, packet);  // 3.0.11-beta.122: the connection watched, the position fixes
     const packets::Event e = packets::parse(packet, kReadable);
     if (!std::holds_alternative<std::monostate>(e)) {
         notifier::packet(e);

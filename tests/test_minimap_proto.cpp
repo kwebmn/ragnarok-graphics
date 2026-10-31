@@ -512,3 +512,24 @@ TEST(minimap_proto_style_switch_places) {
     CHECK(b.styleChip.x + b.styleChip.w <= float(b.w));
     CHECK(minimap::bigPartAt(b, b.styleChip.x + 5, b.styleChip.y + 5) == minimap::BigPart::Style);
 }
+
+// 3.0.11-beta.122 (the network ideas, 7): the round trip's badge on the minimap's bar - a dot and its words in their
+// colour, left of the cell; none when not given
+TEST(minimap_proto_net_badge_on_the_bar) {
+    const minimap::Layout L = minimap::layout(1920, 1080, 1.0f, false, 0);
+    minimap::Scene sc;
+    minimap::Texts t;
+    t.name = "Prontera";
+    t.cell = "150, 180";
+    std::vector<minimap::Words> w = minimap::words(L, sc, t);
+    CHECK(std::none_of(w.begin(), w.end(),
+                       [](const minimap::Words& x) { return x.text.rfind("\xE2\x97\x8F", 0) == 0; }));
+    t.net = "45 ms";
+    t.netRgb = 0x5FD08A;
+    w = minimap::words(L, sc, t);
+    const auto badge =
+        std::find_if(w.begin(), w.end(), [](const minimap::Words& x) { return x.text == "\xE2\x97\x8F 45 ms"; });
+    const auto cell = std::find_if(w.begin(), w.end(), [](const minimap::Words& x) { return x.text == "150, 180"; });
+    CHECK(badge != w.end() && cell != w.end() && badge->rgb == 0x5FD08A);
+    if (badge != w.end() && cell != w.end()) CHECK(badge->box.x + badge->box.w <= cell->box.x + 1);
+}

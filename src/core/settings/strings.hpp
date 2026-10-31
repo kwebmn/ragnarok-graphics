@@ -474,6 +474,8 @@ enum class Text : uint16_t {
     MinimapLayerWarps, MinimapLayerNpcs, MinimapLayerKafra, MinimapLayerParty,
     // 3.0.11-beta.120: the maps' picture
     InterfaceMinimapStyle, InterfaceMinimapStyleHint, MinimapStylePicture, MinimapStyleScheme, MinimapLayerScheme,
+    // 3.0.11-beta.122: the round trip's badge
+    InterfaceNetBadge, InterfaceNetBadgeHint, NetMs, NetStall,
     InterfaceMinimapReach, InterfaceMinimapReachHint,  // 3.0.11-beta.65
     InterfaceMinimapHd, InterfaceMinimapHdHint,        // 3.0.11-beta.72
     InterfacePackIcons, InterfacePackIconsHint,        // 3.0.11-beta.74

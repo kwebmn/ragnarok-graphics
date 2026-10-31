@@ -178,6 +178,10 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("minimap_warps", flag(running.minimapWarps), flag(file.minimapWarps)));
         n.minimapWarps = file.minimapWarps;
     }
+    if (file.netBadge != running.netBadge) {  // 3.0.11-beta.122: the round trip's badge, at once
+        u.applied.push_back(change("net_badge", flag(running.netBadge), flag(file.netBadge)));
+        n.netBadge = file.netBadge;
+    }
     if (file.minimapStyle != running.minimapStyle) {  // 3.0.11-beta.120: the maps' picture, at once
         u.applied.push_back(
             change("minimap_style", mapStyleToken(running.minimapStyle), mapStyleToken(file.minimapStyle)));

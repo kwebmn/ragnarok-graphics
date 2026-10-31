@@ -30,6 +30,7 @@
 #include "win/hud_edit.hpp"
 #include "win/log.hpp"
 #include "win/map_hd.hpp"
+#include "win/net_watch.hpp"
 #include "win/party_panel.hpp"
 #include "win/paths.hpp"
 #include "win/picture_draw.hpp"
@@ -60,6 +61,8 @@ struct State {
     int layerWant[minimap::kLayers] = {-1, -1, -1, -1};
     ULONGLONG layerWantAt[minimap::kLayers] = {};
     int hoverLayer = -1;
+    std::string net;  // 3.0.11-beta.122: the round trip's badge painted
+    uint32_t netRgb = 0;
     bool on = false, shown = false, dirty = true, upload = true;
     int style = -1;  // 3.0.11-beta.47: core/ui_style's generation painted
     bool placedMoved = false;  // 3.0.11-beta.79: moved by the player when last laid out
@@ -760,6 +763,8 @@ void render(State& s) {
     t.folded = s.folded;
     for (int i = 0; i < minimap::kLayers; ++i) t.layers[i] = layerName(i);  // 3.0.11-beta.119
     t.style = settings::tr(startup().lang, settings::Text::MinimapLayerScheme);  // 3.0.11-beta.120
+    t.net = s.net;  // 3.0.11-beta.122
+    t.netRgb = s.netRgb;
     t.route = !s.plotLines.empty() ? s.plotLines : s.routeLines;  // 3.0.11-beta.71: the way set on the map first
     for (const Line& l : s.lines)
         t.list.push_back(minimap::Line{l.left, l.right, l.boss ? kBossText : 0u,
@@ -1044,6 +1049,26 @@ void frame(HWND game, const Show& show, double k, int targetWidth, int targetHei
         s.hover = hover;
         s.part = part;
         s.dirty = true;
+    }
+    {  // 3.0.11-beta.122: the round trip's badge - green, amber, red, a stall
+        std::string net;
+        uint32_t rgb = 0;
+        const netwatch::Level level = show.netBadge ? netwatchwin::level() : netwatch::Level::Unknown;
+        if (level == netwatch::Level::Stall) {
+            net = settings::tr(startup().lang, settings::Text::NetStall);
+            rgb = 0xFF5A4E;
+        } else if (level != netwatch::Level::Unknown) {
+            std::string ms = settings::tr(startup().lang, settings::Text::NetMs);
+            const int rtt = (netwatchwin::rttMs() + 2) / 5 * 5;  // in fives: not painted again each second
+            if (const size_t at = ms.find("{1}"); at != std::string::npos) ms.replace(at, 3, std::to_string(rtt));
+            net = ms;
+            rgb = level == netwatch::Level::Good ? 0x5FD08A : level == netwatch::Level::Fair ? 0xF0A050 : 0xFF7D6E;
+        }
+        if (net != s.net || rgb != s.netRgb) {
+            s.net = net;
+            s.netRgb = rgb;
+            s.dirty = true;
+        }
     }
     if (s.style != uistyle::generation()) {  // 3.0.11-beta.47: its bar's ground another opacity
         s.style = uistyle::generation();

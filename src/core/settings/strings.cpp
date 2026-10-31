@@ -4962,6 +4962,20 @@ constexpr Entry kTexts[] = {
     {Text::MinimapStylePicture, "The game's picture", "Картинка гри", "Картинка игры"},
     {Text::MinimapStyleScheme, "Scheme", "Схема", "Схема"},
     {Text::MinimapLayerScheme, "Scheme", "Схема", "Схема"},
+    // 3.0.11-beta.122: the round trip's badge
+    {Text::InterfaceNetBadge, "Ping on the minimap", "Пінг на мінікарті", "Пинг на миникарте"},
+    {Text::InterfaceNetBadgeHint,
+     "The time to the game's server and back on the bar under the minimap, measured by Windows on the game's own "
+     "connection: green under 120 ms, amber under 250 ms, red slower or when packets were lost; «stall» in red - the "
+     "connection waited for a lost packet (the world jumps after it: that was the network, not the game).",
+     "Час до сервера гри й назад на панелі під мінікартою, як його міряє Windows на з'єднанні самої гри: зелений - "
+     "до 120 мс, бурштиновий - до 250 мс, червоний - повільніше або коли пакети губилися; «обрив» червоним - "
+     "з'єднання чекало на загублений пакет (світ після нього стрибає: це була мережа, не гра).",
+     "Время до сервера игры и обратно на панели под миникартой, как его меряет Windows на соединении самой игры: "
+     "зелёный - до 120 мс, янтарный - до 250 мс, красный - медленнее или когда пакеты терялись; «обрыв» красным - "
+     "соединение ждало потерянный пакет (мир после него прыгает: это была сеть, не игра)."},
+    {Text::NetMs, "{1} ms", "{1} мс", "{1} мс"},
+    {Text::NetStall, "stall", "обрив", "обрыв"},
     // 3.0.11-beta.65: the concept's «Подсветка, куда можно дойти» - an experiment
     {Text::InterfaceMinimapReach, "Light where you can walk (an experiment)",
      "Підсвітити, куди можна дійти (експеримент)", "Подсветить, куда можно дойти (эксперимент)"},

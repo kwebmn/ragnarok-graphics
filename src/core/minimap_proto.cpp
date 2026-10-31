@@ -702,8 +702,12 @@ std::vector<Words> words(const Layout& L, const Scene& sc, const Texts& t) {
                             sc.marks[size_t(sc.hoverMark)].label, kAccent2, 12.5f * s, true, Align::Left});
     } else {
         const float cellW = std::round(62 * s);
-        out.push_back(Words{panel::Box{c.x + 10 * s, c.y, L.fold.x - 6 * s - cellW - c.x - 10 * s, c.h}, t.name, kText,
-                            13 * s, true, Align::Left});
+        const float netW = t.net.empty() ? 0 : std::round(58 * s);  // 3.0.11-beta.122: the round trip's badge
+        out.push_back(Words{panel::Box{c.x + 10 * s, c.y, L.fold.x - 6 * s - cellW - netW - c.x - 10 * s, c.h}, t.name,
+                            kText, 13 * s, true, Align::Left});
+        if (netW > 0)
+            out.push_back(Words{panel::Box{L.fold.x - 6 * s - cellW - netW, c.y, netW, c.h}, "\xE2\x97\x8F " + t.net,
+                                t.netRgb ? t.netRgb : kMuted, 11.5f * s, true, Align::Left});
         out.push_back(Words{panel::Box{L.fold.x - 4 * s - cellW, c.y, cellW, c.h}, t.cell, kMuted, 12 * s, false,
                             Align::Right});
     }

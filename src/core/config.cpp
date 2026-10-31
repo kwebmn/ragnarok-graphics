@@ -496,6 +496,8 @@ Config parseConfig(const std::string& text) {
             setBool(val, c.minimapNpcs);
         } else if (key == "interface.minimap_warps") {
             setBool(val, c.minimapWarps);
+        } else if (key == "interface.net_badge") {  // 3.0.11-beta.122: the round trip on the minimap's bar
+            setBool(val, c.netBadge);
         } else if (key == "interface.minimap_style") {  // 3.0.11-beta.120: the maps' picture
             if (val == "picture") c.minimapStyle = MapStyle::Picture;
             if (val == "scheme") c.minimapStyle = MapStyle::Scheme;

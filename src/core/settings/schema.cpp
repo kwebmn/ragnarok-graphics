@@ -101,6 +101,9 @@ const std::vector<IniSetting>& iniSettings() {
          Text::InterfaceMinimapNpcs, Text::InterfaceMinimapNpcsHint, ""},
         {"interface", "minimap_warps", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {},
          Text::InterfaceMinimapWarps, Text::InterfaceMinimapWarpsHint, ""},
+        // 3.0.11-beta.122: the round trip to the map server on the minimap's bar
+        {"interface", "net_badge", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::InterfaceNetBadge,
+         Text::InterfaceNetBadgeHint, ""},
         // 3.0.11-beta.120: the maps' picture - the game's own or drawn from the walkable cells
         {"interface", "minimap_style", Page::Interface, Control::Choice, 0, 0, 0, {"picture", "scheme"},
          {Text::MinimapStylePicture, Text::MinimapStyleScheme}, Text::InterfaceMinimapStyle,
@@ -999,6 +1002,7 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "interface.minimap_npcs") return c.minimapNpcs ? "1" : "0";  // 3.0.11-beta.6
     if (k == "interface.minimap_warps") return c.minimapWarps ? "1" : "0";
     if (k == "interface.minimap_mobs") return c.minimapMobs ? "1" : "0";
+    if (k == "interface.net_badge") return c.netBadge ? "1" : "0";  // 3.0.11-beta.122
     if (k == "interface.minimap_style") return mapStyleToken(c.minimapStyle);  // 3.0.11-beta.120
     if (k == "interface.minimap_kafra") return c.minimapKafra ? "1" : "0";  // 3.0.11-beta.119
     if (k == "interface.minimap_party") return c.minimapParty ? "1" : "0";

@@ -1364,6 +1364,17 @@ TEST(config_interface_minimap_style) {
           MapStyle::Scheme);
 }
 
+// 3.0.11-beta.122 (the network ideas, 7): [interface] net_badge - the round trip to the map server on the minimap's bar
+// (a coloured dot, a stall in red); on at first, a box of «Інтерфейс», at once
+TEST(config_interface_net_badge) {
+    CHECK(parseConfig("").netBadge);
+    CHECK(!parseConfig("[interface]\nnet_badge = 0\n").netBadge);
+    const settings::IniSetting* s = settings::findSetting("interface.net_badge");
+    CHECK(s != nullptr && s->page == settings::Page::Interface);
+    CHECK(appliesNow("interface.net_badge"));
+    CHECK(!liveUpdate(parseConfig(""), parseConfig("[interface]\nnet_badge = 0\n")).next.netBadge);
+}
+
 // 3.0.11-beta.103 (the owner: «можешь сделать настройку, чтобы можно было выбрать эту стрелку в конфигураторе»):
 // [interface] walk_arrow - the look of the stick's walking arrow, the doc's variants; the chevrons by default (its
 // advice), a choice of «Інтерфейс» applied at once

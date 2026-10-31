@@ -53,6 +53,7 @@
 #include "win/equip_window.hpp"
 #include "win/npc_talk.hpp"
 #include "win/shop_window.hpp"
+#include "win/net_watch.hpp"
 #include "win/pad_carry.hpp"
 #include "win/storage_window.hpp"
 #include "win/trade_window.hpp"
@@ -882,6 +883,8 @@ void Context::present(const Rect& source, bool waitForVblank) {
     minimapShow.kafra = config.minimapKafra;  // 3.0.11-beta.119: the map's layers
     minimapShow.party = config.minimapParty;
     minimapShow.scheme = config.minimapStyle == MapStyle::Scheme;  // 3.0.11-beta.120: the maps' picture
+    minimapShow.netBadge = config.netBadge;                         // 3.0.11-beta.122: the round trip's badge
+    netwatchwin::frame();  // 3.0.11-beta.122: the map server's connection read each second (the minimap's badge)
     minimapproto::frame(window, minimapShow, pk, pw, ph);
     // 3.0.11-beta.35: [interface] buffs - the buffs' column under the new minimap, the game's icons hidden
     buffcolumn::frame(window, config.buffs, config.buffsOverflow, pk, pw, ph);

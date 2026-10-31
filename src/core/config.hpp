@@ -570,6 +570,9 @@ struct Config {
     // big map's picture: the game's own, or «Схема» drawn from the server's walkable cells (core/minimap_proto
     // schemePixels); switched on the maps themselves too
     MapStyle minimapStyle = MapStyle::Picture;
+    // 3.0.11-beta.122 (the network ideas, 7): [interface] net_badge - the round trip to the map server on the
+    // minimap's bar (win/net_watch): a dot green, amber or red, a stall in red
+    bool netBadge = true;
     // 3.0.11-beta.33: [interface] minimap_way - the way followed drawn on the ground (win/ground_way): as footprints
     // (the owner: «такими типа следами типа шажков»), as the strip of 3.0.11-beta.31, or not
     WayOnGround minimapWay = WayOnGround::Steps;

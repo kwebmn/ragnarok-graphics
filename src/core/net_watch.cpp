@@ -1,0 +1,83 @@
+#include "core/net_watch.hpp"
+
+#include <algorithm>
+#include <cstdio>
+
+namespace uagfx::netwatch {
+namespace {
+
+constexpr uint64_t kPeriodMs = 60000, kResentMs = 10000, kStallMs = 5000;
+constexpr uint32_t kFairUs = 120000, kBadUs = 250000;
+
+}  // namespace
+
+void Watch::tcp(const Tcp& t, uint64_t nowMs) {
+    if (!known_) {  // the first: the baseline (what was sent again before it is not this period's)
+        known_ = true;
+        periodAt_ = nowMs;
+    } else {
+        if (t.bytesRetrans > last_.bytesRetrans) {
+            resent_ += t.bytesRetrans - last_.bytesRetrans;
+            resentAt_ = nowMs;
+        }
+        if (t.timeouts > last_.timeouts) {
+            timeouts_ += t.timeouts - last_.timeouts;
+            timeoutAt_ = nowMs;
+            stallTold_ = false;
+        }
+    }
+    last_ = t;
+    rttSum_ += t.rttUs;
+    ++rttCount_;
+    rttMost_ = std::max(rttMost_, t.rttUs);
+}
+
+void Watch::packet(uint64_t nowMs) {
+    if (packetAt_ && nowMs > packetAt_) longestGap_ = std::max(longestGap_, nowMs - packetAt_);
+    packetAt_ = nowMs;
+}
+
+void Watch::fix(bool own, int cells, uint64_t nowMs) {
+    (void)nowMs;
+    ++fixes_;
+    if (own) ++ownFixes_;
+    fixMost_ = std::max(fixMost_, cells);
+}
+
+Level Watch::level(uint64_t nowMs) const {
+    if (!known_) return Level::Unknown;
+    if (timeoutAt_ && nowMs - timeoutAt_ < kStallMs) return Level::Stall;
+    if ((resentAt_ && nowMs - resentAt_ < kResentMs) || last_.rttUs >= kBadUs) return Level::Bad;
+    return last_.rttUs >= kFairUs ? Level::Fair : Level::Good;
+}
+
+bool Watch::stalled() {
+    if (stallTold_) return false;
+    stallTold_ = true;
+    return true;
+}
+
+bool Watch::due(uint64_t nowMs) const { return known_ && nowMs - periodAt_ >= kPeriodMs; }
+
+std::string Watch::line(uint64_t nowMs) {
+    const uint32_t average = rttCount_ ? uint32_t(rttSum_ / rttCount_) : last_.rttUs;
+    const uint32_t most = rttCount_ ? rttMost_ : last_.rttUs;
+    char text[320];
+    std::snprintf(text, sizeof text,
+                  "the map server - round trip %u ms (at most %u, least %u), %llu bytes sent again, %u time-out%s; "
+                  "the longest pause between its packets %.1f s; %d position fix%s (yours %d), %d cells at most",
+                  average / 1000, most / 1000, last_.minRttUs / 1000, static_cast<unsigned long long>(resent_),
+                  timeouts_, timeouts_ == 1 ? "" : "s", double(longestGap_) / 1000.0, fixes_,
+                  fixes_ == 1 ? "" : "es", ownFixes_, fixMost_);
+    periodAt_ = nowMs;  // a new period
+    rttSum_ = 0;
+    rttCount_ = 0;
+    rttMost_ = 0;
+    resent_ = 0;
+    timeouts_ = 0;
+    longestGap_ = 0;
+    fixes_ = ownFixes_ = fixMost_ = 0;
+    return text;
+}
+
+}  // namespace uagfx::netwatch

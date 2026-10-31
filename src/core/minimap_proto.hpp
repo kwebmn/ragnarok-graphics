@@ -165,6 +165,8 @@ struct Texts {
     std::vector<Line> list;   // the details
     std::string layers[kLayers];  // 3.0.11-beta.119: «Портали», «NPC», «Кафра», «Група» (a button pointed at: its name)
     std::string style;            // 3.0.11-beta.120: «Схема» (its button pointed at)
+    std::string net;              // 3.0.11-beta.122: the round trip's badge on the bar («45 мс»); "" none
+    uint32_t netRgb = 0;          // its colour
 };
 // The panel's picture (premultiplied: see-through round its parts), the words over it
 void paint(panel::Picture& out, const Layout& L, const Scene& sc, const Texts& t);
