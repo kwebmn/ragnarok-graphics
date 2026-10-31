@@ -15,6 +15,8 @@ enum class Icon : uint8_t {
     Edit, Done,                               // 3.0.11-beta.40: the hotbar's
     Down,                                     // 3.0.11-beta.41: the chat's channel
     Blocked,                                  // 3.0.11-beta.45: the hotbar's «не тут»
+    PadCross, PadCircle, PadSquare, PadTriangle,  // 3.0.11-beta.86: the controller's (core/pad_glyphs)
+    PadUp, PadRight, PadDown, PadLeft,
     kCount
 };
 

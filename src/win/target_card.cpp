@@ -17,6 +17,7 @@
 #include "core/ui_motion.hpp"
 #include "core/ui_style.hpp"
 #include "pad/win/game_window.hpp"
+#include "pad/win/runtime.hpp"
 #include "win/game_camera.hpp"
 #include "win/hotbar.hpp"
 #include "win/hud_edit.hpp"
@@ -130,7 +131,8 @@ tc::Texts texts() {
     const settings::Lang l = startup().lang;
     return tc::Texts{settings::tr(l, settings::Text::TargetWeak), settings::tr(l, settings::Text::TargetHeals),
                      settings::tr(l, settings::Text::TargetBook),
-                     settings::tr(l, settings::Text::TargetYourBar)};  // 3.0.11-beta.68
+                     settings::tr(l, settings::Text::TargetYourBar),  // 3.0.11-beta.68
+                     settings::tr(l, settings::Text::TargetPadAttack), settings::tr(l, settings::Text::TargetPadNext)};
 }
 
 std::vector<Words> gdiWords(const std::vector<tc::Words>& in) {
@@ -243,7 +245,7 @@ void packet(const packets::Event& e) {
     }
 }
 
-void frame(HWND game, bool on, double k, int targetWidth, int targetHeight) {
+void frame(HWND game, bool on, bool padHints, double k, int targetWidth, int targetHeight) {
     State& s = state();
     if (on != s.on) {
         s.on = on;
@@ -287,6 +289,9 @@ void frame(HWND game, bool on, double k, int targetWidth, int targetHeight) {
     }
     const int side = int(std::lround(32 * scale));
     s.data.picture = pictureOf(s, m->second, cls, side);
+    const uapad::runtime::Look pad = padHints ? uapad::runtime::look() : uapad::runtime::Look{};  // 3.0.11-beta.86
+    s.data.pad = pad.shown;
+    s.data.padSony = pad.sony;
     // its place: the top middle, under the game's own windows standing there
     const tc::Texts t = texts();
     tc::Layout L = tc::layout(s.data, t, targetWidth / 2, int(std::lround(10 * scale)), scale, s.hover);
@@ -311,7 +316,7 @@ void frame(HWND game, bool on, double k, int targetWidth, int targetHeight) {
     s.hoverBook = hoverBook;
     const std::string key = std::to_string(cls) + ';' + std::to_string(s.layout.w) + 'x' + std::to_string(s.layout.h) +
                             ';' + std::to_string(scale) + ';' + (hover ? "h" : "") + (hoverBook ? "b" : "") +
-                            (s.data.picture ? "p" : "");
+                            (s.data.picture ? "p" : "") + (s.data.pad ? (s.data.padSony ? "S" : "X") : "");
     if (const std::string drawn = key + '#' + std::to_string(uistyle::generation()); drawn != s.key) {  // its grounds
         s.key = drawn;
         render(s);

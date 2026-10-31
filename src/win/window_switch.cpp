@@ -5,6 +5,7 @@
 #include <algorithm>
 
 #include "pad/win/game_window.hpp"
+#include "pad/win/runtime.hpp"
 #include "win/answer_card.hpp"
 #include "win/buff_column.hpp"
 #include "win/char_block.hpp"
@@ -70,6 +71,8 @@ bool partsMouse(HWND w, UINT m, WPARAM wp, LPARAM lp, LRESULT& answer) {
 
 LRESULT CALLBACK gameProc(HWND w, UINT m, WPARAM wp, LPARAM lp) {
     if (g_switch) {
+        if (m == WM_KEYDOWN || m == WM_SYSKEYDOWN || m == WM_LBUTTONDOWN || m == WM_RBUTTONDOWN)
+            uapad::runtime::noteKeysOrMouse(m != WM_KEYDOWN && m != WM_SYSKEYDOWN);  // 3.0.11-beta.86: keys' names back
         if (hudedit::key(m, wp, lp)) return 0;  // 3.0.11-beta.75: Ctrl+Shift+L - «Розміщення інтерфейсу», its Esc
         if (referencewin::key(m, wp, lp)) return 0;  // 3.0.11-beta.7: Ctrl+F, and every key while «Довідник» is open
         if (itemswin::key(m, wp, lp)) return 0;      // 3.0.11-beta.42: «Речі»'s search while it types

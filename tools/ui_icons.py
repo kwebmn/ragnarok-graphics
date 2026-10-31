@@ -56,6 +56,16 @@ ICONS = [
     ('Down', '<path d="M6.5 9.5l5.5 5.5 5.5-5.5"/>'),
     # 3.0.11-beta.45: the hotbar's «не тут» - a crossed circle over a skill or an item the map forbids
     ('Blocked', '<circle cx="12" cy="12" r="8.5"/><path d="M6 6l12 12"/>'),
+    # 3.0.11-beta.86: the controller's buttons on the interface (core/pad_glyphs) - PlayStation's four shapes, the
+    # D-pad's four ways
+    ('PadCross', '<path d="M7.6 7.6l8.8 8.8M16.4 7.6l-8.8 8.8"/>'),
+    ('PadCircle', '<circle cx="12" cy="12" r="5.4"/>'),
+    ('PadSquare', '<path d="M7 7h10v10H7z"/>'),
+    ('PadTriangle', '<path d="M12 6.4l6 10.4H6z"/>'),
+    ('PadUp', '<path d="M12 7.5l4.5 6h-9z"/>'),
+    ('PadRight', '<path d="M16.5 12l-6 4.5v-9z"/>'),
+    ('PadDown', '<path d="M12 16.5l-4.5-6h9z"/>'),
+    ('PadLeft', '<path d="M7.5 12l6-4.5v9z"/>'),
 ]
 
 NUMBER = r'[-+]?(?:\d*\.\d+|\d+\.?)(?:[eE][-+]?\d+)?'

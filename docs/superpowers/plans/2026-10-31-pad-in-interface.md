@@ -53,4 +53,8 @@ defaults (ruling R3); the monsters' HP bars wait for question 2 (R2).
 
 ## Ledger
 
-- (empty)
+- Stage 1: complete - 3.0.11-beta.85 (c5794c80), tests ctl_support_* (7), party_panel_pad_choice,
+  ctl_choice_hint_names_the_buttons; suite 1971/0.
+- Stage 2: built as 3.0.11-beta.86 - core/input_mode, core/pad_glyphs (+8 line icons), hotbar badges, target card
+  hints, [interface] pad_hints, 0x0195 HP log (EvActorName.hp); tests input_mode_*, pad_glyphs_*, hotbar_pad_badges,
+  target_card_pad_hints, config_pad_hints, s2c_monster_name_carries_its_hp; suite 1981/0.

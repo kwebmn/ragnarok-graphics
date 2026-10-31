@@ -126,3 +126,32 @@ TEST(target_card_your_bar) {
     for (const targetcard::Words& x : targetcard::words(targetcard::layout(d, t, 960, 10, 1.0f, true), d, t, false))
         CHECK(x.text.rfind("Ваша панель", 0) != 0);
 }
+
+// 3.0.11-beta.86 (the concept «Контроллер в интерфейсе uaRO», stage 2): played with the controller - the card's end
+// says its buttons: A attacks, the right stick another target
+TEST(target_card_pad_hints) {
+    targetcard::Data d = zombie();
+    targetcard::Texts t = texts();
+    t.attack = "Атака";
+    t.next = "Інша ціль";
+    const targetcard::Layout plain = targetcard::layout(d, t, 960, 10, 1.0f, false);
+    CHECK(plain.hints.w == 0);
+    d.pad = true;
+    const targetcard::Layout L = targetcard::layout(d, t, 960, 10, 1.0f, false);
+    CHECK(L.hints.w > 60 && L.hints.x >= L.book.x + L.book.w && L.card.w > plain.card.w);
+    CHECK(L.hints.x + L.hints.w <= L.card.x + L.card.w);
+    const std::vector<targetcard::Words> w = targetcard::words(L, d, t, false);
+    const auto has = [&](const std::string& text) {
+        return std::any_of(w.begin(), w.end(), [&](const targetcard::Words& x) { return x.text == text; });
+    };
+    CHECK(has("Атака") && has("Інша ціль") && has("A") && has("R"));
+    panel::Picture p;
+    p.width = L.w;
+    p.height = L.h;
+    p.px.assign(size_t(L.w) * size_t(L.h), 0u);
+    targetcard::paint(p, L, d, false);
+    uint32_t ring = 0;  // A's green ring at the hints' top left
+    for (int y = int(L.hints.y); y < int(L.hints.y) + 3; ++y)
+        ring = std::max(ring, (p.px[size_t(y) * size_t(p.width) + size_t(int(L.hints.x + 8))] >> 8) & 0xFFu);
+    CHECK(ring > 0x90);
+}

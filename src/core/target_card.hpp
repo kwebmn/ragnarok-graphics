@@ -27,18 +27,23 @@ struct Data {
     // 3.0.11-beta.68 (the concept's «карточка цели со строкой «Ваша панель»»): the hotbar's skills' element
     // multipliers on it («Fire Bolt ×2 · Jupitel Thunder ×1», core/bar_hint); "" none
     std::string bar;
+    // 3.0.11-beta.86 (the concept «Контроллер в интерфейсе uaRO», stage 2): played with the controller - the card's
+    // end says its buttons (A attacks, the right stick another target), PlayStation's look
+    bool pad = false, padSony = false;
 };
 struct Texts {
     std::string weak;   // «Слабкий до: {1}»
     std::string heals;  // «Лікують: {1}»
     std::string book;   // the book's tip: «Картка в довіднику»
     std::string bar;    // 3.0.11-beta.68: «Ваша панель: {1}»
+    std::string attack, next;  // 3.0.11-beta.86: «Атака», «Інша ціль»
 };
 
 struct Layout {
     float s = 1;
     int x = 0, y = 0, w = 0, h = 0;  // the picture in the target
     panel::Box card, round, name, level, element, book;
+    panel::Box hints;    // 3.0.11-beta.86: the controller's buttons at its end (w 0: none)
     panel::Box details;  // under the card while pointed at (w 0: none)
 };
 // Its top middle at (centreX, top) in the target; `details`: pointed at - its lines under it

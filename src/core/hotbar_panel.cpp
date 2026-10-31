@@ -4,6 +4,7 @@
 #include <cmath>
 
 #include "core/settings/strings.hpp"
+#include "core/pad_glyphs.hpp"
 #include "core/ui_icons.hpp"
 #include "core/ui_style.hpp"
 
@@ -199,7 +200,7 @@ void paint(panel::Picture& out, const Layout& L, const std::vector<Cell>& cells,
             uiicons::draw(out, uiicons::Icon::Blocked, b.x + (b.w - side) / 2, b.y + (b.h - side) / 2, side, kText,
                           0.9f, 2.0f);
         }
-        if (c && !c->key.empty())  // its key's plate
+        if (c && !c->key.empty() && !show.pad)  // its key's plate
             panel::roundRect(out, panel::Box{b.x + 2 * s, b.y + 2 * s, panel::wordsWidth(c->key, 11 * s, true) + 6 * s,
                                              13 * s},
                              3 * s, kBlack, 0.62f);
@@ -211,7 +212,14 @@ void paint(panel::Picture& out, const Layout& L, const std::vector<Cell>& cells,
                              0.62f);
         }
         if (dry) panel::roundRect(out, spBox(b, s), 3 * s, kSpBlue, 0.95f);  // its «SP» plate
+        if (show.pad && c && c->pad < 0) panel::roundRect(out, b, 7 * s, kBlack, 0.5f);  // no button uses it
     }
+    for (size_t i = 0; show.pad && i < L.cells.size() && i < cells.size(); ++i)  // 3.0.11-beta.86: the badges
+        if (cells[i].pad >= 0) {
+            const panel::Box b = shown(L, i, show);
+            const padglyph::Family f = show.sony ? padglyph::Family::Sony : padglyph::Family::Xbox;
+            padglyph::paint(out, padglyph::Button(cells[i].pad), f, b.x - 4 * s, b.y - 5 * s, 18 * s);
+        }
     const float icon = 16 * s;
     panel::roundRect(out, L.edit, 7 * s, kWhite, show.hoverEdit ? 0.14f : 0.06f, kGold, show.hoverEdit ? 0.8f : 0.0f,
                      1.0f * s);
@@ -247,10 +255,16 @@ std::vector<Words> words(const Layout& L, const std::vector<Cell>& cells, int ro
     for (size_t i = 0; i < L.cells.size() && i < cells.size(); ++i) {
         const panel::Box b = shown(L, i, show);
         const Cell& c = cells[i];
-        if (!c.key.empty())
+        if (!c.key.empty() && !show.pad)
             out.push_back(Words{panel::Box{b.x + 2 * s, b.y + 2 * s, panel::wordsWidth(c.key, 11 * s, true) + 6 * s,
                                            13 * s},
                                 c.key, kGold2, 11 * s, true, Align::Center});
+        if (show.pad && c.pad >= 0) {  // 3.0.11-beta.86: its button's letter
+            const padglyph::Letter l =
+                padglyph::letter(padglyph::Button(c.pad), show.sony ? padglyph::Family::Sony : padglyph::Family::Xbox,
+                                 b.x - 4 * s, b.y - 5 * s, 18 * s);
+            if (!l.text.empty()) out.push_back(Words{l.box, l.text, l.rgb, l.px, true, Align::Center});
+        }
         if (c.count >= 0) {
             const std::string n = std::to_string(c.count);
             const float w = panel::wordsWidth(n, 11 * s, true) + 6 * s;

@@ -21,6 +21,7 @@
 #include "core/ui_style.hpp"
 #include "pad/win/client_bar.hpp"
 #include "pad/win/game_window.hpp"
+#include "pad/win/runtime.hpp"
 #include "win/chat_window.hpp"
 #include "win/client_tables.hpp"
 #include "win/code_page.hpp"
@@ -102,6 +103,7 @@ struct Learned {
 struct State {
     bool on = false, shown = false, known = false, checked = false, hid = false, oldTold = false;
     bool editing = false, editShown = false;
+    bool padTold = false;  // 3.0.11-beta.86: the controller's buttons shown, as last told the log
     float k = 0, scale = 1;
     int targetW = 0, targetH = 0;
     hb::Mode mode = hb::Mode::Normal;
@@ -670,7 +672,8 @@ std::vector<barhint::Skill> barSkills() {
     return out;
 }
 
-void frame(HWND game, bool on, bool ownBars, unsigned codePage, double k, int targetWidth, int targetHeight) {
+void frame(HWND game, bool on, bool ownBars, bool padHints, unsigned codePage, double k, int targetWidth,
+           int targetHeight) {
     State& s = state();
     if (on != s.on) {
         s.on = on;
@@ -707,12 +710,24 @@ void frame(HWND game, bool on, bool ownBars, unsigned codePage, double k, int ta
     s.mode = s.editing ? hb::Mode::Editing : read32(kBattle) ? hb::Mode::Battle : hb::Mode::Normal;
     place(s);
     s.cells.clear();
+    // 3.0.11-beta.86 (the concept «Контроллер в интерфейсе uaRO», stage 2): played with the controller - its buttons
+    const uapad::runtime::Look pad = padHints ? uapad::runtime::look() : uapad::runtime::Look{};
+    const auto padOf = [&](int slot) {  // the controller's button that uses this slot, -1 none
+        for (size_t i = 0; i < pad.bindings.size(); ++i)
+            if (pad.bindings[i].kind == uapad::Action::Kind::Slot && int(pad.bindings[i].slot) == slot) return int(i);
+        return -1;
+    };
     if (s.mode == hb::Mode::Battle) {
         for (int r = 0; r < 3; ++r)
-            for (int c = 0; c < 9; ++c)
+            for (int c = 0; c < 9; ++c) {
                 s.cells.push_back(cellOf(s, hb::gameRow(r) * 9 + c, hb::battleKey(r, c), codePage));
+                s.cells.back().pad = padOf(hb::gameRow(r) * 9 + c);
+            }
     } else if (s.mode == hb::Mode::Normal) {
-        for (int c = 0; c < 9; ++c) s.cells.push_back(cellOf(s, s.row * 9 + c, "F" + std::to_string(c + 1), codePage));
+        for (int c = 0; c < 9; ++c) {
+            s.cells.push_back(cellOf(s, s.row * 9 + c, "F" + std::to_string(c + 1), codePage));
+            s.cells.back().pad = padOf(s.row * 9 + c);
+        }
     }
     s.hover = -1;
     s.hoverEdit = false;
@@ -732,15 +747,24 @@ void frame(HWND game, bool on, bool ownBars, unsigned codePage, double k, int ta
     show.pressed = now < s.pressedUntil ? s.pressed : -1;
     show.tip = s.hover >= 0 && now - s.hoverSince >= kTipMs;
     show.hoverEdit = s.hoverEdit;
+    show.pad = pad.shown && s.mode != hb::Mode::Editing;  // 3.0.11-beta.86
+    show.sony = pad.sony;
+    if (show.pad != s.padTold) {
+        s.padTold = show.pad;
+        LOG_INFO("hotbar: %s", show.pad ? (show.sony ? "the controller's buttons (PlayStation)"
+                                                     : "the controller's buttons (Xbox)")
+                                        : "the keys' names");
+    }
     tellStates(s, waitingWas);
     std::string key = std::to_string(int(s.mode)) + ';' + std::to_string(s.row) + ';' + std::to_string(scale) + ';' +
                       std::to_string(s.layout.w) + 'x' + std::to_string(s.layout.h) + ';' + std::to_string(show.hover) +
-                      ',' + std::to_string(show.pressed) + (show.tip ? "t" : "") + (s.hoverEdit ? "e" : "") + ';';
+                      ',' + std::to_string(show.pressed) + (show.tip ? "t" : "") + (s.hoverEdit ? "e" : "") +
+                      (show.pad ? (show.sony ? "S" : "X") : "") + ';';
     for (size_t i = 0; i < s.cells.size(); ++i) {
         const hb::Cell& c = s.cells[i];
         key += c.key + '|' + c.name + '|' + std::to_string(c.level) + '|' + std::to_string(c.count) +
                (c.icon ? "i" : "") + (c.selected ? "s" : "") + (c.spHave < c.spNeed ? "d" : "") +
-               std::to_string(int(c.notHere)) + ';';
+               std::to_string(int(c.notHere)) + ',' + std::to_string(c.pad) + ';';
         if (int(i) == show.hover && show.tip)  // its tip's numbers
             key += std::to_string(c.spNeed) + '/' + std::to_string(c.spHave) + ';';
     }

@@ -361,3 +361,28 @@ TEST(s2c_actor_names) {
     auto* name2 = as<EvActorName>(e2);
     CHECK(name2 && name2->name == "Hunter");
 }
+
+// 3.0.11-beta.86 (the concept «Контроллер в интерфейсе uaRO», the live check of its HP bars): uAthena with
+// show_mob_info 6 sends every one near a monster its name with «Lv. 24 | HP: 57%» in the party's field (0x0195, at 30)
+// on each hit, heal and spawn; with show_mob_info 1 «HP: 300/600»
+TEST(s2c_monster_name_carries_its_hp) {
+    Bytes b = pkt(0x0195, 102);
+    wr32(b, 2, 110000001);
+    std::memcpy(b.data() + 6, "Eggyra", 6);
+    std::memcpy(b.data() + 30, "Lv. 24 | HP: 57%", 16);
+    std::memcpy(b.data() + 78, "Lv. 24 | HP: 57%", 16);
+    const auto* n = as<EvActorName>(parseS2C(b));
+    CHECK(n && n->id == 110000001u && n->name == "Eggyra" && n->hp == 57);
+    std::memset(b.data() + 30, 0, 24);
+    std::memcpy(b.data() + 30, "HP: 300/600", 11);
+    n = as<EvActorName>(parseS2C(b));
+    CHECK(n && n->hp == 50);
+    std::memset(b.data() + 30, 0, 24);
+    std::memcpy(b.data() + 30, "My Party", 8);  // a player's party: no HP
+    n = as<EvActorName>(parseS2C(b));
+    CHECK(n && n->hp == -1);
+    Bytes small = pkt(0x0095, 30);
+    wr32(small, 2, 5);
+    n = as<EvActorName>(parseS2C(small));
+    CHECK(n && n->hp == -1);
+}

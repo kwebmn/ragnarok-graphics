@@ -36,6 +36,7 @@ struct Cell {
     int spNeed = 0, spHave = 0;  // a skill's SP price and the SP there: more needed than had - dimmed, a blue «SP»
     NotHere notHere = NotHere::No;  // greyed, a crossed circle, the reason in its tip
     bool unlearned = false;  // 3.0.11-beta.78: a skill the character has not learned - greyed so, its own words
+    int pad = -1;  // 3.0.11-beta.86: the controller's button that uses it (padglyph::Button), -1 none
 };
 int iconSide(Mode mode, float scale);
 
@@ -82,6 +83,9 @@ struct Show {
     int pressed = -1;        // 3.0.11-beta.45: the cell pressed (a click, its key): 1 px down, its backing darker
     bool tip = true;         // the hovered cell's tip (the window part shows it after 0.4 s)
     bool hoverEdit = false;  // the edit button under the cursor
+    // 3.0.11-beta.86 (the concept «Контроллер в интерфейсе uaRO»): played with the controller - each cell its button's
+    // badge (Cell::pad) over its top left corner instead of its key, a cell no button uses dimmed; PlayStation's look
+    bool pad = false, sony = false;
 };
 void paint(panel::Picture& out, const Layout& L, const std::vector<Cell>& cells, const Show& show, const Texts& t);
 

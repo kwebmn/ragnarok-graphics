@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 
+#include "core/pad_glyphs.hpp"
 #include "core/reference_pages.hpp"
 #include "core/ui_icons.hpp"
 #include "core/ui_style.hpp"
@@ -95,7 +96,15 @@ Layout layout(const Data& d, const Texts& t, int centreX, int top, float scale, 
     L.element = panel::Box{x, (kH - kChipH) / 2 * s, chipW, kChipH * s};
     x += chipW + 12 * s;
     L.book = panel::Box{x, (kH - kBook) / 2 * s, kBook * s, kBook * s};
-    x += kBook * s + kPad * s;
+    x += kBook * s;
+    if (d.pad && !t.attack.empty()) {  // 3.0.11-beta.86: the controller's buttons after a line
+        const float most =
+            std::max(panel::wordsWidth(t.attack, 13 * s, false), panel::wordsWidth(t.next, 13 * s, false));
+        x += 13 * s;
+        L.hints = panel::Box{x, 6 * s, 24 * s + most, 36 * s};
+        x += L.hints.w;
+    }
+    x += kPad * s;
     L.card = panel::Box{0, 0, x, kH * s};
     float width = L.card.w;
     if (details) {
@@ -109,7 +118,7 @@ Layout layout(const Data& d, const Texts& t, int centreX, int top, float scale, 
     // the card and its details centred in the picture, the picture's middle at the screen's
     L.w = int(std::ceil(width));
     const float shiftCard = (float(L.w) - L.card.w) / 2;
-    for (panel::Box* b : {&L.card, &L.round, &L.name, &L.level, &L.element, &L.book}) b->x += shiftCard;
+    for (panel::Box* b : {&L.card, &L.round, &L.name, &L.level, &L.element, &L.book, &L.hints}) b->x += shiftCard;
     if (details) L.details.x = (float(L.w) - L.details.w) / 2;
     L.h = int(std::ceil(details ? L.details.y + L.details.h : L.card.h));
     L.x = centreX - L.w / 2;
@@ -135,6 +144,13 @@ void paint(panel::Picture& out, const Layout& L, const Data& d, bool hoverBook) 
     const float icon = 18 * s;
     uiicons::draw(out, uiicons::Icon::Quest, L.book.x + (L.book.w - icon) / 2, L.book.y + (L.book.h - icon) / 2, icon,
                   hoverBook ? kText : kMuted, 1.0f, 2.0f);
+    if (L.hints.w > 0) {  // 3.0.11-beta.86: a line before them, A and the right stick
+        const panel::Box& h = L.hints;
+        panel::roundRect(out, panel::Box{h.x - 7 * s, L.card.y + 9 * s, 1 * s, L.card.h - 18 * s}, 0, kWhite, 0.10f);
+        const padglyph::Family f = d.padSony ? padglyph::Family::Sony : padglyph::Family::Xbox;
+        padglyph::paint(out, padglyph::Button::A, f, h.x, h.y, 17 * s);
+        padglyph::paint(out, padglyph::Button::R3, f, h.x, h.y + 19 * s, 17 * s);
+    }
     if (L.details.w > 0) panel::roundRect(out, L.details, 8 * s, kCard, 0.94f, kWhite, 0.12f, 1.0f * s);
 }
 
@@ -145,6 +161,17 @@ std::vector<Words> words(const Layout& L, const Data& d, const Texts& t, bool ho
     out.push_back(Words{L.name, d.name, kText, 16 * s, true, Align::Left});
     out.push_back(Words{L.level, levelText(d), kMuted, 13 * s, false, Align::Left});
     if (L.element.w > 0) out.push_back(Words{L.element, d.element, d.elementRgb, 12.5f * s, true, Align::Center});
+    if (L.hints.w > 0) {  // 3.0.11-beta.86: its buttons' letters and what they do
+        const panel::Box& h = L.hints;
+        const padglyph::Family f = d.padSony ? padglyph::Family::Sony : padglyph::Family::Xbox;
+        for (const padglyph::Letter& l : {padglyph::letter(padglyph::Button::A, f, h.x, h.y, 17 * s),
+                                          padglyph::letter(padglyph::Button::R3, f, h.x, h.y + 19 * s, 17 * s)})
+            if (!l.text.empty()) out.push_back(Words{l.box, l.text, l.rgb, l.px, true, Align::Center});
+        out.push_back(Words{panel::Box{h.x + 24 * s, h.y, h.w - 24 * s, 17 * s}, t.attack, kText, 13 * s, false,
+                            Align::Left});
+        out.push_back(Words{panel::Box{h.x + 24 * s, h.y + 19 * s, h.w - 24 * s, 17 * s}, t.next, kText, 13 * s, false,
+                            Align::Left});
+    }
     if (L.details.w > 0) {
         const std::vector<std::pair<std::string, uint32_t>> l = lines(d, t);
         for (size_t i = 0; i < l.size(); ++i)

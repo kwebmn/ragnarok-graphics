@@ -477,6 +477,7 @@ enum class Text : uint16_t {
     InterfaceHotbarOwn, InterfaceHotbarOwnHint, HotbarUnlearned,  // 3.0.11-beta.78
     PartyTitle,  // 3.0.11-beta.79
     PartyDead,   // 3.0.11-beta.81
+    InterfacePadHints, InterfacePadHintsHint, TargetPadAttack, TargetPadNext,  // 3.0.11-beta.86
     InterfaceMinimapWay, InterfaceMinimapWayHint,
     InterfaceMinimapWaySteps, InterfaceMinimapWayLine, InterfaceMinimapWayOff, InterfaceBuffs, InterfaceBuffsHint,
     InterfaceBuffsOff, InterfaceBuffsColumn, InterfaceBuffsRow, BuffsNames, BuffsHideNames, BuffsMore, BuffsStar,

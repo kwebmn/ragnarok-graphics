@@ -942,6 +942,17 @@ TEST(config_reads_the_bar_per_character) {
     CHECK(!liveUpdate(parseConfig(""), parseConfig("[interface]\nhotbar_per_character = 0\n")).next.hotbarPerCharacter);
 }
 
+// 3.0.11-beta.86 (the concept «Контроллер в интерфейсе uaRO», stage 2): [interface] pad_hints - the controller's
+// buttons on the interface while played with it; on, a box of «Інтерфейс», at once
+TEST(config_pad_hints) {
+    CHECK(parseConfig("").padHints);
+    CHECK(!parseConfig("[interface]\npad_hints = 0\n").padHints);
+    const settings::IniSetting* s = settings::findSetting("interface.pad_hints");
+    CHECK(s != nullptr && s->page == settings::Page::Interface && s->control == settings::Control::Check);
+    CHECK(appliesNow("interface.pad_hints"));
+    CHECK(!liveUpdate(parseConfig(""), parseConfig("[interface]\npad_hints = 0\n")).next.padHints);
+}
+
 // 3.0.11-beta.33 (the owner: «полоска с маршрутом может лучше бы была выполнена такими типа следами типа шажков»):
 // [interface] minimap_way - the way on the ground as footprints (steps), the strip (line) or none; a choice of
 // «Інтерфейс», applied at once

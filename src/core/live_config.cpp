@@ -203,6 +203,10 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
             change("hotbar_per_character", flag(running.hotbarPerCharacter), flag(file.hotbarPerCharacter)));
         n.hotbarPerCharacter = file.hotbarPerCharacter;
     }
+    if (file.padHints != running.padHints) {  // 3.0.11-beta.86: the controller's buttons on the interface
+        u.applied.push_back(change("pad_hints", flag(running.padHints), flag(file.padHints)));
+        n.padHints = file.padHints;
+    }
     if (file.minimapWay != running.minimapWay) {  // 3.0.11-beta.33: the way on the ground, at once
         u.applied.push_back(
             change("minimap_way", wayOnGroundToken(running.minimapWay), wayOnGroundToken(file.minimapWay)));

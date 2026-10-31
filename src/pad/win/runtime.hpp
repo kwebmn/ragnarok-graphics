@@ -6,6 +6,8 @@
 
 #include <cstdint>
 
+#include "pad/core/config/bindings.hpp"
+
 // Glue between the hooks and the portable core. Every entry point is fail-open:
 // after an internal error it does nothing and the client keeps working.
 namespace uapad::runtime {
@@ -30,5 +32,14 @@ void onClose(SOCKET sock);
 // 3.0.11-beta.85: the one the pad's support skill would go on while it asks whom (the party panel fills its row);
 // 0 none
 uint32_t choosing();
+// 3.0.11-beta.86 (the concept «Контроллер в интерфейсе uaRO», stage 2): what the interface shows of the controller
+struct Look {
+    bool shown = false;  // the player plays with it now (core/input_mode): its buttons instead of the keys' names
+    bool sony = false;   // PlayStation's shapes and names
+    Bindings bindings{};  // the layout in use
+};
+Look look();
+// A key or a click in the game's window (window_switch): the keys' names back on the interface
+void noteKeysOrMouse(bool click);
 
 }  // namespace uapad::runtime

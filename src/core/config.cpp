@@ -503,6 +503,8 @@ Config parseConfig(const std::string& text) {
             setBool(val, c.lockLayout);
         } else if (key == "interface.hotbar_per_character") {  // 3.0.11-beta.78: each character's own bar
             setBool(val, c.hotbarPerCharacter);
+        } else if (key == "interface.pad_hints") {  // 3.0.11-beta.86: the controller's buttons on the interface
+            setBool(val, c.padHints);
         } else if (key == "interface.minimap_mobs") {
             setBool(val, c.minimapMobs);
         } else if (key == "interface.minimap_way") {  // 3.0.11-beta.33: the way on the ground

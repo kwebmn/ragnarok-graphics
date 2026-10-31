@@ -62,7 +62,13 @@ struct EvSkillUp { uint16_t id = 0; uint16_t lv = 0; uint16_t range = 0; };  // 
 struct EvHotkeys { std::array<Hotkey, 27> keys{}; };              // 0x02b9
 struct EvResurrect { uint32_t id = 0; };                          // 0x0148
 struct EvSelfSpeed { uint16_t speed = 0; };                       // 0x00b0 SP_SPEED, ms per cell
-struct EvActorName { uint32_t id = 0; std::string name; };        // 0x0095, 0x0195
+// 0x0095, 0x0195; 3.0.11-beta.86: hp - a monster's HP per cent, from uAthena's show_mob_info in the party's field
+// of 0x0195 («Lv. 24 | HP: 57%», «HP: 300/600»); -1 none
+struct EvActorName {
+    uint32_t id = 0;
+    std::string name;
+    int hp = -1;
+};
 
 using Event = std::variant<EvAuthOk, EvMapChange, EvSelfWalk, EvSetPos, EvVanish, EvActor, EvActorMove, EvPetInfo,
                            EvAction, EvSkillHit, EvGroundItem, EvGroundItemGone, EvInventory, EvItemAdd,

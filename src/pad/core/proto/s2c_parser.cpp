@@ -1,5 +1,6 @@
 #include "pad/core/proto/s2c_parser.hpp"
 
+#include <algorithm>
 #include <cstring>
 
 namespace uapad {
@@ -9,6 +10,28 @@ std::string mapName(const Bytes& p, size_t o) {
     std::string s;
     for (size_t i = o; i < o + 16 && i < p.size() && p[i] != 0; ++i) s.push_back(char(p[i]));
     return s;
+}
+
+// 3.0.11-beta.86: «Lv. 24 | HP: 57%» or «HP: 300/600» (uAthena's show_mob_info) - its per cent; -1 none
+int hpOf(const std::string& s) {
+    const size_t at = s.find("HP: ");
+    if (at == std::string::npos) return -1;
+    size_t i = at + 4;
+    auto number = [&](long long& v) {
+        const size_t from = i;
+        v = 0;
+        while (i < s.size() && s[i] >= '0' && s[i] <= '9' && v < 1000000000000LL) v = v * 10 + (s[i++] - '0');
+        return i > from;
+    };
+    long long a = 0, b = 0;
+    if (!number(a)) return -1;
+    if (i < s.size() && s[i] == '%') return a <= 100 ? int(a) : -1;
+    if (i < s.size() && s[i] == '/') {
+        ++i;
+        if (!number(b) || b <= 0) return -1;
+        return int(std::min<long long>(100, a * 100 / b));
+    }
+    return -1;
 }
 
 }  // namespace
@@ -124,7 +147,12 @@ std::optional<Event> parseS2C(const Bytes& p) {
         case 0x0195: {
             if (n < 30) break;
             const char* name = reinterpret_cast<const char*>(d + 6);
-            return EvActorName{rd32(d, 2), std::string(name, strnlen(name, 24))};
+            EvActorName ev{rd32(d, 2), std::string(name, strnlen(name, 24))};
+            if (rd16(d, 0) == 0x0195 && n >= 54) {
+                const char* party = reinterpret_cast<const char*>(d + 30);
+                ev.hp = hpOf(std::string(party, strnlen(party, 24)));
+            }
+            return ev;
         }
         case 0x010e:
             if (n < 11) break;

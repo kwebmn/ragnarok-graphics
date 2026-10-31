@@ -4991,6 +4991,17 @@ constexpr Entry kTexts[] = {
      "У персонажа нет этого навыка"},
     {Text::PartyTitle, "Party", "Група", "Группа"},  // 3.0.11-beta.79: the party panel's header
     {Text::PartyDead, "dead", "мертвий", "мёртв"},  // 3.0.11-beta.81: a party member's
+    {Text::InterfacePadHints, "Controller's buttons on the interface", "Кнопки контролера на інтерфейсі",
+     "Кнопки контроллера на интерфейсе"},  // 3.0.11-beta.86
+    {Text::InterfacePadHintsHint,
+     "While you play with a controller, its buttons show on the skill bar and the target's card instead of the keys' "
+     "names; a click, a key or the mouse moved brings the keys back.",
+     "Поки граєте з контролером, його кнопки видно на панелі навичок і в картці цілі замість назв клавіш; клік, "
+     "клавіша чи рух миші повертають клавіші.",
+     "Пока играете с контроллером, его кнопки видны на панели навыков и в карточке цели вместо названий клавиш; клик, "
+     "клавиша или движение мыши возвращают клавиши."},
+    {Text::TargetPadAttack, "Attack", "Атака", "Атака"},  // 3.0.11-beta.86: the target card's A
+    {Text::TargetPadNext, "Another target", "Інша ціль", "Другая цель"},  // its right stick
     // 3.0.11-beta.33
     {Text::InterfaceMinimapWay, "The way on the ground", "Шлях на землі", "Путь на земле"},
     {Text::InterfaceMinimapWayHint,

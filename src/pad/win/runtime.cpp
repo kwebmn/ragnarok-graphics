@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <atomic>
+#include <cstdlib>
 #include <cstring>
 #include <exception>
 #include <fstream>
@@ -11,6 +12,7 @@
 #include <string>
 #include <vector>
 
+#include "core/input_mode.hpp"
 #include "core/layout.hpp"
 #include "core/layout_migration.hpp"
 #include "pad/core/bytes.hpp"
@@ -92,6 +94,13 @@ struct State {
     uint16_t loggedButtons = 0;
     bool ticked = false;
     DWORD lastTickMs = 0;
+    // 3.0.11-beta.86: what the player plays with now (core/input_mode) - the pad's presses and sticks against the real
+    // mouse's presses and moves (adding up while it keeps moving) and the keys
+    uagfx::inputmode::Mode mode;
+    uint16_t modeButtons = 0;
+    bool padConnected = false;
+    ULONGLONG travelAt = 0;
+    int travelX = 0, travelY = 0;
     unsigned long nState = 0, nData = 0, nCursor = 0, nPump = 0, nRecv = 0, nSend = 0;
     DWORD lastDiagMs = 0;
 };
@@ -487,6 +496,12 @@ void tick() {
     if (g_unseenDown.exchange(false)) s.session->onUnobserved(s.session->mapSocket(), Direction::ServerToClient);
     const PadState pad = s.pad.poll();
     logPad(pad);
+    if (pad.connected) {  // 3.0.11-beta.86: an intentional pad input shows its buttons on the interface
+        const uint16_t pressed = uint16_t((pad.buttons & ~s.modeButtons) | (pad.lt > 0.5f || pad.rt > 0.5f ? 1 : 0));
+        if (uagfx::inputmode::intentional(pressed, pad.lx, pad.ly, pad.rx, pad.ry)) s.mode.pad(GetTickCount64());
+    }
+    s.modeButtons = pad.connected ? pad.buttons : 0;
+    s.padConnected = pad.connected;
     // The client fills its send/recv pointers itself (and may refill them): keep them going through us.
     if (!s.checkedPointers || now - s.lastPointerCheckMs >= (s.pointersHooked >= 2 ? 2000u : 250u)) {
         s.checkedPointers = true;
@@ -546,6 +561,22 @@ void tick() {
 bool healthy() { return S().initDone && !S().failed; }
 
 uint32_t choosing() { return healthy() && S().session ? S().session->controller().choosing() : 0; }
+
+Look look() {
+    Look l;
+    State& s = S();
+    if (!healthy() || !s.session) return l;
+    l.shown = s.padConnected && s.session->controller().enabled() && s.mode.padShown(GetTickCount64());
+    l.sony = s.pad.sony();
+    l.bindings = s.session->controller().bindings();
+    return l;
+}
+
+void noteKeysOrMouse(bool click) {
+    State& s = S();
+    if (click && s.mouse.active) return;  // the pad's own virtual click (the messages channel), not the player's
+    s.mode.mouse(GetTickCount64());
+}
 
 void init() {
     State& s = S();
@@ -639,6 +670,17 @@ void onMouseState(DWORD cb, LPVOID data) {
         uint8_t raw = 0;  // the device's own buttons, before anything of ours
         for (int i = 0; i < 4; ++i)
             if (st->rgbButtons[i] & 0x80) raw |= uint8_t(1u << i);
+        {  // 3.0.11-beta.86: the real mouse - a press, or moves adding up past 8 px - brings the keys' names back
+            const ULONGLONG at = GetTickCount64();
+            if (at - s.travelAt > 300) s.travelX = s.travelY = 0;
+            s.travelX += std::abs(int(st->lX));
+            s.travelY += std::abs(int(st->lY));
+            if (st->lX || st->lY) s.travelAt = at;
+            if (raw || uagfx::inputmode::mouseMoved(s.travelX, s.travelY)) {
+                s.mode.mouse(at);
+                s.travelX = s.travelY = 0;
+            }
+        }
         // With mouse freedom DirectInput reports the mouse wherever the cursor is while the game is active:
         // only clicks and the wheel over the game window reach it, and not the click that activated it.
         // The open menu is not the game. The window's coming to the front is checked on every poll: the first

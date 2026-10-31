@@ -120,6 +120,11 @@ void Session::onServerData(SocketId s, const uint8_t* data, size_t n, uint32_t n
             log_.push_back("after the stick: the server walks us " + cellText(walk->from) + " -> " +
                            cellText(walk->to));
         const auto* named = std::get_if<EvActorName>(&*ev);
+        if (named && named->hp >= 0 && hpTold_ < 60) {  // 3.0.11-beta.86: the live check of the monsters' HP bars
+            ++hpTold_;
+            log_.push_back("monster " + std::to_string(named->id) + ": HP " + std::to_string(named->hp) +
+                           "% (its name line, 0x0195)");
+        }
         if (named && named->id == world_.selfId() && !named->name.empty()) {
             charName_ = named->name;
             auto it = profiles_.characters.find(charId_);

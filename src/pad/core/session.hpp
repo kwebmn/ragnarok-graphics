@@ -83,6 +83,7 @@ private:
     MarkStyle mark_ = MarkStyle::Gasp;  // [aim] mark
     uint32_t marked_ = 0;   // the monster the client draws our persistent mark on
     bool remark_ = false;   // the server redrew it (or the style changed): send the mark again
+    int hpTold_ = 0;        // 3.0.11-beta.86: monsters' HP lines told the log (the live check)
     bool padWalking_ = false;
     std::optional<uint32_t> walkStopMs_;  // the stick walk ended: what follows is logged for a moment
     std::optional<std::array<ClientBarSlot, kClientBarSlots>> loggedBar_;

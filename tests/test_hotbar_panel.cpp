@@ -134,6 +134,46 @@ TEST(hotbar_picture_and_words) {
     CHECK(inB("бойовий режим") && inB("2") && inB("3") && inB("1"));
 }
 
+// 3.0.11-beta.86 (the concept «Контроллер в интерфейсе uaRO», stage 2): played with the controller - each cell its
+// button's badge in the top left instead of its key, a cell no button uses dimmed
+TEST(hotbar_pad_badges) {
+    const hotbar::Layout L = hotbar::layout(hotbar::Mode::Normal, 400, 200, 1.0f);
+    panel::Picture icon;
+    icon.width = icon.height = 32;
+    icon.px.assign(32 * 32, 0xFF3060C0u);
+    std::vector<hotbar::Cell> cells(9);
+    for (int i = 0; i < 9; ++i) {
+        cells[size_t(i)].key = "F" + std::to_string(i + 1);
+        cells[size_t(i)].name = "Skill";
+        cells[size_t(i)].icon = &icon;
+    }
+    cells[0].pad = 2;  // X
+    cells[3].pad = 5;  // RB
+    hotbar::Show show;
+    show.pad = true;
+    panel::Picture p;
+    p.width = L.w;
+    p.height = L.h;
+    p.px.assign(size_t(L.w) * size_t(L.h), 0u);
+    hotbar::paint(p, L, cells, show, texts());
+    const auto mid = [&](const panel::Box& b) {
+        return p.px[size_t(int(b.y + b.h / 2)) * size_t(p.width) + size_t(int(b.x + b.w / 2))];
+    };
+    CHECK((mid(L.cells[8]) & 0xFF) < (mid(L.cells[0]) & 0xFF) * 3 / 4);  // F9: no button, dimmed
+    uint32_t ring = 0;  // X's blue ring over the cell's corner: its badge 18 px from 4 left and 5 above the cell
+    for (int y = int(L.cells[0].y) - 5; y < int(L.cells[0].y) - 1; ++y)
+        ring = std::max(ring, p.px[size_t(y) * size_t(p.width) + size_t(int(L.cells[0].x) + 5)] & 0xFFu);
+    CHECK(ring > 0xB0);
+    const std::vector<hotbar::Words> w = hotbar::words(L, cells, 0, show, texts());
+    const auto has = [&](const std::string& text) {
+        return std::find_if(w.begin(), w.end(), [&](const hotbar::Words& x) { return x.text == text; }) != w.end();
+    };
+    CHECK(has("X") && has("RB") && !has("F1") && !has("F9"));
+    show.sony = true;
+    const std::vector<hotbar::Words> ws = hotbar::words(L, cells, 0, show, texts());
+    CHECK(std::find_if(ws.begin(), ws.end(), [](const hotbar::Words& x) { return x.text == "R1"; }) != ws.end());
+}
+
 // The game's tables and the session's slots (win/hotbar reads them out of the client)
 TEST(hotbar_tables_and_slots) {
     const std::map<std::string, std::string> t =
