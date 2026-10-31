@@ -1,3 +1,13 @@
+# uaRO Graphics 3.0.11-beta.93 — what is new
+
+The controller in the interface, after the report R-KMG8GE:
+- **B closes windows.** The big map and the game's windows the tile opens (equipment, skills, options, party and
+  friends) now close with B - the last one opened first. Before, B went to the slot F3 («the slot is empty») and the
+  big map closed only with the mouse. That press goes no further: a skill on B works from the next one.
+  While such a window is open and you play with the controller, the line «B close the window» shows at the bottom.
+- To check: Start → the tile → equipment (or the big map) → B. In the log: «B: the game's equipment closed»,
+  «B: the big map closed».
+
 # uaRO Graphics 3.0.11-beta.92 — what is new
 
 The controller in the interface, stage 6 (part 3):
