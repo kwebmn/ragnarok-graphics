@@ -1,3 +1,21 @@
+# uaRO Graphics 3.0.11-beta.106 — what's new
+
+From the reports R-WCXUQP, R-JDFY25 and R-N6M9DY:
+- **Skills drag onto the bar again** (R-WCXUQP). "Skills" began the game's drag at the press, but the press and the
+  release were the window's — the game never saw the button come up, and the skill never landed on the bar. Now the
+  window drags it itself (the skill's icon under the cursor) and, let go, begins and at once lets go the game's drag
+  where the cursor is — as "Items" does.
+- **The controller drives the window in use** (R-WCXUQP). There was a fixed order: with "Items" open, the tabs
+  switched there even while working in "Skills" (the shop too). Now the buttons go to the window opened last, or the
+  one clicked in with the mouse.
+- **The walking arrow reads on light ground** (R-JDFY25, Prontera): the white arrow merged into the white paving. Its
+  dark border is wider now (0.1 of a cell) and denser (3/4 of the shape's) — clear on paving, unobtrusive on grass.
+- **A crash at the game's exit no longer turns the safe mode on** (R-N6M9DY): the system's DirectInput crashed 1 ms
+  after the graphics had closed — counted as a failed start, and two short games in a row would have turned the safe
+  mode on. Now a crash after the graphics closed normally counts as the game's exit.
+- In the log: "skills: … dragged and let go - let go through the game's own drop", "hotbar: a drop on the cell …",
+  "pad: «Навички» takes the controller (the last opened or clicked in)".
+
 # uaRO Graphics 3.0.11-beta.105 — what's new
 
 The cell it goes to is no longer drawn at the walking arrow's end:
