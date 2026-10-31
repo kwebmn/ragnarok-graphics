@@ -5544,10 +5544,12 @@ constexpr Entry kTexts[] = {
      "Характеристики (Alt+A) в новом виде: база, бонус, итог и цена следующего очка, плюс там, где хватает свободных "
      "очков; рядом боевые числа; под ними — что даёт стат под курсором по формулам игры."},
     {Text::ItemsTitle, "Items", "Речі", "Вещи"},
-    {Text::ItemsTabItems, "Items", "Предмети", "Предметы"},
+    {Text::ItemsTabItems, "Consumables", "Витратне", "Расходники"},
     {Text::ItemsTabGear, "Gear", "Спорядження", "Снаряжение"},
-    {Text::ItemsTabEtc, "Other", "Інше", "Прочее"},
+    {Text::ItemsTabEtc, "Misc", "Різне", "Разное"},
     {Text::ItemsFresh, "new", "нове", "новое"},  // 3.0.11-beta.112
+    {Text::ItemsTabAll, "All", "Усе", "Всё"},           // 3.0.11-beta.113 (the concept's question 9)
+    {Text::ItemsTabCards, "Cards", "Карти", "Карты"},
     {Text::ItemsSearch, "Search by the name", "Пошук за назвою", "Поиск по названию"},
     {Text::ItemsUse, "double click: use", "двічі клік — використати", "двойной клик — использовать"},
     {Text::ItemsWear, "double click: wear", "двічі клік — вдягнути", "двойной клик — надеть"},

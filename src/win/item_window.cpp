@@ -80,6 +80,8 @@ struct State {
     // 3.0.11-beta.112 (question 3 «да»): the things come into the bag (their places) till pointed at - «нове»; the last
     // one's words («+500 Fire Arrow») over the bag, or the screen's lower middle with it closed, for 2 s
     std::set<int> fresh;
+    std::set<int> starred;    // 3.0.11-beta.113: the items' numbers in «★» (this character's)
+    std::string starredOf;    // whose they are
     std::string toast, toastPainted;
     ULONGLONG toastUntil = 0;
     float toastK = 0, toastScale = 1;
@@ -192,15 +194,15 @@ void readState(State& s) {
         if (std::sscanf(line.c_str(), "at %f %f", &x, &y) == 2 && x >= 0 && x <= 1 && y >= 0 && y <= 1) {
             s.fx = x;
             s.fy = y;
-        } else if (std::sscanf(line.c_str(), "tab %d", &tab) == 1 && tab >= 0 && tab < iw::kTabs) {
-            s.show.tab = iw::Tab(tab);
+        } else if (std::sscanf(line.c_str(), "tabs6 %d", &tab) == 1 && tab >= 0 && tab < iw::kTabs) {
+            s.show.tab = iw::Tab(tab);  // 3.0.11-beta.113: the six tabs' («tab» was the three's: «Усе» then)
         }
     }
 }
 
 void keepState(const State& s) {
     char text[64];
-    std::snprintf(text, sizeof text, "at %.4f %.4f\ntab %d\n", s.fx, s.fy, int(s.show.tab));
+    std::snprintf(text, sizeof text, "at %.4f %.4f\ntabs6 %d\n", s.fx, s.fy, int(s.show.tab));
     const std::string path = layout::join(gameDir(), layout::kItemsState);
     if (!writeFileAtomic(path, std::string(text))) LOG_INFO("items: %s cannot be written", path.c_str());
 }
@@ -247,7 +249,17 @@ void readBag(State& s) {
         s.items.push_back(it);
         s.infos.push_back(node + kInfo);
     }
-    for (iw::Item& it : s.items) it.fresh = s.fresh.count(it.index) > 0;  // 3.0.11-beta.112
+    const std::string who = readOwnName();  // 3.0.11-beta.113: «★» - this character's starred things
+    if (who != s.starredOf) {
+        s.starredOf = who;
+        std::string text;
+        readTextFile(layout::join(gameDir(), layout::kItemsStarred), text);
+        s.starred = iw::starredOf(text, who);
+    }
+    for (iw::Item& it : s.items) {
+        it.fresh = s.fresh.count(it.index) > 0;  // 3.0.11-beta.112
+        it.starred = s.starred.count(it.id) > 0;
+    }
     for (auto f = s.fresh.begin(); f != s.fresh.end();) {  // gone from the bag (or worn): no longer new
         const int at = *f;
         f = std::any_of(s.items.begin(), s.items.end(), [at](const iw::Item& it) { return it.index == at; })
@@ -263,9 +275,12 @@ iw::Texts texts(bool pad) {
     iw::Texts t;
     t.title = say(settings::Text::ItemsTitle);
     t.hotkey = "Alt+E";
-    t.tabs[0] = say(settings::Text::ItemsTabItems);
-    t.tabs[1] = say(settings::Text::ItemsTabGear);
-    t.tabs[2] = say(settings::Text::ItemsTabEtc);
+    t.tabs[0] = say(settings::Text::ItemsTabAll);  // 3.0.11-beta.113: the concept's question 9 - six tabs
+    t.tabs[1] = say(settings::Text::ItemsTabItems);
+    t.tabs[2] = say(settings::Text::ItemsTabGear);
+    t.tabs[3] = say(settings::Text::ItemsTabCards);
+    t.tabs[4] = say(settings::Text::ItemsTabEtc);
+    t.tabs[5] = "\xE2\x98\x85";  // ★ the starred
     t.fresh = say(settings::Text::ItemsFresh);  // 3.0.11-beta.112
     t.search = say(settings::Text::ItemsSearch);
     t.weight = say(settings::Text::CharWeight);
@@ -518,7 +533,8 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
                       std::to_string(s.show.hover) + (s.show.tip ? "t" : "") + ',' + std::to_string(s.show.hoverTab) +
                       (s.show.hoverClose ? "x" : "") + ';' + s.show.search + (s.show.typing ? "|t" : "") +
                       (s.show.typing && s.show.caretOn ? "c" : "") + (s.show.dropping ? "D" : "") + 'n' +
-                      std::to_string(s.fresh.size()) + '/' + std::to_string(freshSum(s)) + ';' +
+                      std::to_string(s.fresh.size()) + '/' + std::to_string(freshSum(s)) + 's' +
+                      std::to_string(s.starred.size()) + ';' +
                       std::to_string(s.show.flashes.size()) + '@' +
                       std::to_string(s.show.flashes.empty() ? 0 : int(s.show.flashes.front().t * 40)) + ';' +
                       std::to_string(s.show.weight) + '/' +
@@ -679,6 +695,22 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
         case iw::Part::Search:
             s.show.typing = true;
             break;
+        case iw::Part::Star: {  // 3.0.11-beta.113: starred or not - «★»
+            if (h.index >= int(s.shownItems.size()) || s.starredOf.empty()) break;
+            const int id = s.items[size_t(s.shownItems[size_t(h.index)])].id;
+            const bool on = s.starred.erase(id) == 0;
+            if (on) s.starred.insert(id);
+            for (iw::Item& it : s.items) it.starred = s.starred.count(it.id) > 0;
+            s.shownItems = iw::shownOf(s.items, s.show.tab, s.show.search);
+            const std::string path = layout::join(gameDir(), layout::kItemsStarred);
+            std::string text;
+            readTextFile(path, text);
+            if (!writeFileAtomic(path, iw::withStarred(text, s.starredOf, s.starred)))
+                LOG_INFO("items: %s cannot be written", path.c_str());
+            s.key.clear();
+            if (s.told++ < 20) LOG_INFO("items: #%d %s «★»", id, on ? "into" : "out of");
+            break;
+        }
         case iw::Part::Cell: {
             if (h.index >= int(s.shownItems.size())) break;
             const int at = s.shownItems[size_t(h.index)];
@@ -787,9 +819,10 @@ void packet(const packets::Event& e) {
     if (s.gainsTold >= 40) return;
     ++s.gainsTold;
     const iw::Tab tab = iw::tabOf(p->type);
-    const settings::Text words = tab == iw::Tab::Items  ? settings::Text::ItemsTabItems
-                                 : tab == iw::Tab::Gear ? settings::Text::ItemsTabGear
-                                                        : settings::Text::ItemsTabEtc;
+    const settings::Text words = tab == iw::Tab::Use     ? settings::Text::ItemsTabItems
+                                 : tab == iw::Tab::Gear  ? settings::Text::ItemsTabGear
+                                 : tab == iw::Tab::Cards ? settings::Text::ItemsTabCards
+                                                         : settings::Text::ItemsTabEtc;
     LOG_INFO("items: %s #%d x%d came into the bag (its place %d, the server's kind %d) - «Речі» shows it under «%s»%s",
              name.c_str(), int(p->item), int(p->amount), int(p->index), int(p->type), say(words).c_str(),
              s.shown ? ", open now" : "");

@@ -84,6 +84,8 @@ constexpr const char* kCharacterState = "uaro-graphics\\character-state.txt";
 // 3.0.11-beta.42: the new windows «Речі» and «Характеристики» - their places («at 0.1 0.13» a share of the free room
 // to the left and the top), «Речі»'s tab («tab 0|1|2»)
 constexpr const char* kItemsState = "uaro-graphics\\items-state.txt";
+// 3.0.11-beta.113: «Речі»'s starred things, a line a character (core/item_window starredOf)
+constexpr const char* kItemsStarred = "uaro-graphics\\items-starred.txt";
 constexpr const char* kTrackerState = "uaro-graphics\\tracker-state.txt";  // 3.0.11-beta.70: the tracker's pins
 // 3.0.11-beta.75: «Розміщення інтерфейсу» - the parts the player moved or sized (core/hud_layout)
 constexpr const char* kHudLayout = "uaro-graphics\\hud-layout.txt";

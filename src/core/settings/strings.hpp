@@ -537,7 +537,8 @@ enum class Text : uint16_t {
     ChatTabParty,
     ChatTabGuild, ChatTabWhisper, ChatTabTrade, ChatTabBattle, ChatFrom, ChatTo, ChatHintSend, ChatHintType,
     ChatKilled, ChatPicked, ChatMiss, InterfaceItems, InterfaceItemsHint, InterfaceStatus, InterfaceStatusHint,
-    ItemsTitle, ItemsTabItems, ItemsTabGear, ItemsTabEtc, ItemsFresh, ItemsSearch, ItemsUse,  // .112: ItemsFresh
+    ItemsTitle, ItemsTabItems, ItemsTabGear, ItemsTabEtc, ItemsFresh, ItemsTabAll, ItemsTabCards,  // .112, .113
+    ItemsSearch, ItemsUse,
     ItemsWear, ItemsCard, ItemsInfo,
     StatsTitle, StatsFree, StatsColumnStat, StatsColumnBase, StatsColumnBonus, StatsColumnTotal, StatsColumnCost,
     StatsBattle, StatsCast, StatsMaxed, StatsCost, StatsShort, StatsTop, StatsEffectStr, StatsEffectAgi,

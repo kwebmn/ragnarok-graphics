@@ -2,6 +2,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <functional>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -28,18 +29,27 @@ struct Item {
     // 3.0.11-beta.112 (question 3 «да»): come into the bag since it was last pointed at - «нове» over its cell's
     // corner, its tab's count of them
     bool fresh = false;
+    bool starred = false;  // 3.0.11-beta.113: in «★» (its star in its cell's corner)
 };
 
-enum class Tab : uint8_t { Items, Gear, Etc };
-constexpr int kTabs = 3;
-// As the game's window sorts them (FUN_004ba410): 0, 1, 2, 0x12 the items; 4, 5, 8, 9, 0xB-0xF the gear; the rest
+// 3.0.11-beta.113 (the concept «Концепция окон и инвентаря», question 9 «давай»): «Усе», «Витратне» (potions, food,
+// scrolls), «Спорядження» (weapons, armour, the ammo), «Карти», «Різне» (the rest), «★» (the starred ones)
+enum class Tab : uint8_t { All, Use, Gear, Cards, Etc, Starred };
+constexpr int kTabs = 6;
+// A thing's own tab - as the game's window sorts them (FUN_004ba410): 0, 1, 2, 0x12 to use; 4, 5, 8, 9, 0xB-0xF the
+// gear, the ammo (10, 0x11) with it now; 6 the cards; the rest
 Tab tabOf(int type);
 enum class Use : uint8_t { None, Use, Confirm, Wear, Card, Ammo };  // Confirm: used after a second ask
 // What a double click does with it, as the game's window (FUN_004b9a10): the items used, the gear worn (identified
 // only), a card into a slot, the arrows worn
 Use useOf(const Item& it);
-// The tab's items whose names hold the search's words (any case), in the bag's order: their places in `items`
+// The tab's items whose names hold the search's words (any case), in the bag's order: their places in `items` («Усе»
+// all of them, «★» the starred)
 std::vector<int> shownOf(const std::vector<Item>& items, Tab tab, const std::string& search);
+// 3.0.11-beta.113: the starred things of each character - uaro-graphics\items-starred.txt, a line each: its name, a
+// tab, the items' numbers comma separated (none: no line)
+std::set<int> starredOf(const std::string& text, const std::string& who);
+std::string withStarred(const std::string& text, const std::string& who, const std::set<int>& ids);
 std::string lowered(const std::string& utf8);  // the Latin and Cyrillic letters small
 
 using Measure = std::function<float(const std::string& utf8, float px, bool bold)>;
@@ -47,7 +57,7 @@ int iconSide(float scale);  // 32 at scale 1
 
 struct Texts {
     std::string title, hotkey;  // «Речі», «Alt+E»
-    std::string tabs[kTabs];    // «Предмети», «Спорядження», «Інше»
+    std::string tabs[kTabs];    // «Усе», «Витратне», «Спорядження», «Карти», «Різне», «★»
     std::string search;         // «Пошук за назвою»
     std::string weight;         // «Вага»
     std::string use, wear, card, info;  // the tip's: «двічі клік — використати», ... «ПКМ — опис»
@@ -68,7 +78,7 @@ constexpr float kFlashMs = 600;
 
 struct Show {
     std::vector<Flash> flashes;  // 3.0.11-beta.44
-    Tab tab = Tab::Items;
+    Tab tab = Tab::All;
     int scroll = 0;     // rows down
     int hover = -1;     // the cell pointed at (of the shown)
     bool tip = true;    // 3.0.11-beta.51: its tip (the concept's: after 0.4 s pointed at)
@@ -92,7 +102,7 @@ struct Layout {
 Layout layout(int x, int y, float scale, const Texts& t, const Measure& m);
 int mostScroll(const Layout& L, size_t count);
 
-enum class Part : uint8_t { None, Close, Tab, Search, Cell, Grid, Title, Body };
+enum class Part : uint8_t { None, Close, Tab, Search, Cell, Grid, Title, Body, Star };  // 3.0.11-beta.113: Star
 struct Hit {
     Part part = Part::None;
     int index = -1;  // a tab's; a cell's (of the shown, the scroll counted)

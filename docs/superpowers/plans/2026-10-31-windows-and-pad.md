@@ -233,6 +233,13 @@ The owner 31.10: «Полоски HP мобов - всем показывай»,
   0x00a0 (itemswin::packet) kept new till pointed at or gone, «+N name» drawn for 2 s (itemswin::drawToast after the
   stack, over the bag or at the screen's lower middle, fading its last 0.4 s); strings ItemsFresh. Test
   item_window_marks_the_new_things; suite 2073/0. Tabs (Q9) and the arrows' stock (Q10) still wait for answers.
+- Q9 «давай», Q10 «можна» (31.10). Tabs (3.0.11-beta.113): core itemwin Tab {All, Use, Gear, Cards, Etc, Starred},
+  tabOf (ammo 10/0x11 into Gear, 6 Cards), Item.starred, shownOf (All / Starred), Part::Star (a cell's lower left
+  corner, its thing there), ☆ while pointed at / ★ starred in words, starredOf/withStarred (uaro-graphics\
+  items-starred.txt per character); strings ItemsTabAll/ItemsTabCards, ItemsTabItems «Витратне», ItemsTabEtc «Різне»;
+  the kept tab's key «tabs6» (old «tab» ignored). Ruling R16: the star is clicked in the cell's corner, not by a right
+  click (the right click stays the description, beta.101's R6) - noted in the doc's answer. Tests
+  item_window_six_tabs_and_the_starred, item_window_starred_kept_per_character (+ the tab tests updated); suite 2075/0.
 - Stage 5 research: 0x00c4 deal type; 0x00c6 buy list (11 B each: price.L discount.L type.B nameid.W)
   -> session deal list +0xF28 (count +0xF2C, FUN_0062bbb0(rec, 0); FUN_004ffd30 copies the record's text at +0x11 into
   m_itemName) + windows 0x16 (mgr+0xEC, class 0x69B3E0, SendMsg 0x4AFC00: 0x24 0 buy / 1 sell) and 0x17 (buy cart,

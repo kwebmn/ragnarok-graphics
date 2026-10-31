@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdlib>
 
 #include "core/ui_icons.hpp"
 #include "core/ui_style.hpp"
@@ -73,6 +74,11 @@ panel::Box tipBox(const Layout& L, const Item& it, int cell, const Texts& t, con
     return panel::Box{x, y, w, h};
 }
 
+// 3.0.11-beta.113: a cell's star - its lower left corner
+panel::Box starBox(const panel::Box& cell, float s) {
+    return panel::Box{cell.x + 2 * s, cell.y + cell.h - 15 * s, 13 * s, 13 * s};
+}
+
 // 3.0.11-beta.112: a new thing's «нове» pill over its cell's top right corner
 panel::Box freshPill(const panel::Box& cell, const Texts& t, float s, const Measure& m) {
     const float w = m(t.fresh, 9.5f * s, true) + 8 * s, h = 13 * s;
@@ -82,8 +88,10 @@ panel::Box freshPill(const panel::Box& cell, const Texts& t, float s, const Meas
 }  // namespace
 
 Tab tabOf(int type) {
-    if (type == 0 || type == 1 || type == 2 || type == 0x12) return Tab::Items;
-    if (type == 4 || type == 5 || type == 8 || type == 9 || (type >= 0xB && type <= 0xF)) return Tab::Gear;
+    if (type == 0 || type == 1 || type == 2 || type == 0x12) return Tab::Use;
+    if (type == 4 || type == 5 || type == 8 || type == 9 || (type >= 0xB && type <= 0xF) || type == 10 || type == 0x11)
+        return Tab::Gear;
+    if (type == 6) return Tab::Cards;
     return Tab::Etc;
 }
 
@@ -145,11 +153,49 @@ std::vector<int> shownOf(const std::vector<Item>& items, Tab tab, const std::str
     std::vector<int> out;
     const std::string want = lowered(search);
     for (size_t i = 0; i < items.size(); ++i) {
-        if (tabOf(items[i].type) != tab) continue;
+        if (tab == Tab::Starred ? !items[i].starred : tab != Tab::All && tabOf(items[i].type) != tab) continue;
         if (!want.empty() && lowered(items[i].name).find(want) == std::string::npos) continue;
         out.push_back(int(i));
     }
     return out;
+}
+
+std::set<int> starredOf(const std::string& text, const std::string& who) {
+    std::set<int> out;
+    size_t at = 0;
+    while (at < text.size()) {
+        const size_t end = std::min(text.find('\n', at), text.size());
+        const std::string line = text.substr(at, end - at);
+        at = end + 1;
+        const size_t tab = line.find('\t');
+        if (tab == std::string::npos || line.substr(0, tab) != who) continue;
+        for (size_t p = tab + 1; p < line.size();) {
+            const size_t comma = std::min(line.find(',', p), line.size());
+            const int id = std::atoi(line.substr(p, comma - p).c_str());
+            if (id > 0) out.insert(id);
+            p = comma + 1;
+        }
+    }
+    return out;
+}
+
+std::string withStarred(const std::string& text, const std::string& who, const std::set<int>& ids) {
+    std::string out;
+    size_t at = 0;
+    while (at < text.size()) {  // the other characters' lines as they were
+        const size_t end = std::min(text.find('\n', at), text.size());
+        const std::string line = text.substr(at, end - at);
+        at = end + 1;
+        if (!line.empty() && line.substr(0, line.find('\t')) != who) out += line + '\n';
+    }
+    if (ids.empty() || who.empty()) return out;
+    out += who + '\t';
+    bool first = true;
+    for (const int id : ids) {
+        out += (first ? "" : ",") + std::to_string(id);
+        first = false;
+    }
+    return out + '\n';
 }
 
 int iconSide(float scale) { return int(std::lround(32 * scale)); }
@@ -204,7 +250,8 @@ Hit hitTest(const Layout& L, size_t shownCount, int scroll, float x, float y) {
     for (size_t i = 0; i < L.cells.size(); ++i)
         if (L.cells[i].contains(x, y)) {
             const int at = int(i) + scroll * L.columns;
-            return at < int(shownCount) ? Hit{Part::Cell, at} : Hit{Part::Grid, -1};
+            if (at >= int(shownCount)) return Hit{Part::Grid, -1};
+            return Hit{starBox(L.cells[i], L.s).contains(x, y) ? Part::Star : Part::Cell, at};  // 3.0.11-beta.113
         }
     if (L.grid.contains(x, y)) return Hit{Part::Grid, -1};
     if (y < L.title.y + L.title.h) return Hit{Part::Title, -1};
@@ -347,6 +394,9 @@ std::vector<Words> words(const Layout& L, const std::vector<Item>& items, const 
                                 Align::Center});
         if (it.fresh && !t.fresh.empty())  // 3.0.11-beta.112: «нове» on its gold pill
             out.push_back(Words{freshPill(b, t, s, m), t.fresh, kCard, 9.5f * s, true, Align::Center});
+        if (it.starred || at == sh.hover)  // 3.0.11-beta.113: ★ starred, ☆ pointed at (pressed: starred)
+            out.push_back(Words{starBox(b, s), it.starred ? "\xE2\x98\x85" : "\xE2\x98\x86",
+                                it.starred ? kGold : kMuted, 11 * s, false, Align::Center});
     }
     const float side = kSide * s;
     out.push_back(

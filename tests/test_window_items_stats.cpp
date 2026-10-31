@@ -1,6 +1,7 @@
 // 3.0.11-beta.42: the windows «Речі» (core/item_window) and «Характеристики» (core/stat_window) - their tabs and
 // uses as the game's, the search, their places and the mouse, the stats' prices and what a point gives
 #include <algorithm>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -16,9 +17,8 @@ itemwin::Texts itemTexts() {
     itemwin::Texts t;
     t.title = "Речі";
     t.hotkey = "Alt+E";
-    t.tabs[0] = "Предмети";
-    t.tabs[1] = "Спорядження";
-    t.tabs[2] = "Інше";
+    const char* tabs[itemwin::kTabs] = {"Усе", "Витратне", "Спорядження", "Карти", "Різне", "\xE2\x98\x85"};
+    for (int i = 0; i < itemwin::kTabs; ++i) t.tabs[i] = tabs[i];
     t.search = "Пошук за назвою";
     t.weight = "Вага";
     t.use = "двічі клік — використати";
@@ -66,9 +66,10 @@ itemwin::Item item(int index, int id, int type, int count, const std::string& na
 TEST(item_window_tabs_and_uses_as_the_game) {
     using itemwin::Tab;
     using itemwin::Use;
-    CHECK(itemwin::tabOf(0) == Tab::Items && itemwin::tabOf(2) == Tab::Items && itemwin::tabOf(0x12) == Tab::Items);
+    CHECK(itemwin::tabOf(0) == Tab::Use && itemwin::tabOf(2) == Tab::Use && itemwin::tabOf(0x12) == Tab::Use);
     CHECK(itemwin::tabOf(4) == Tab::Gear && itemwin::tabOf(5) == Tab::Gear && itemwin::tabOf(0xD) == Tab::Gear);
-    CHECK(itemwin::tabOf(3) == Tab::Etc && itemwin::tabOf(6) == Tab::Etc && itemwin::tabOf(10) == Tab::Etc);
+    CHECK(itemwin::tabOf(10) == Tab::Gear && itemwin::tabOf(0x11) == Tab::Gear);  // 3.0.11-beta.113: the ammo
+    CHECK(itemwin::tabOf(6) == Tab::Cards && itemwin::tabOf(3) == Tab::Etc && itemwin::tabOf(7) == Tab::Etc);
     itemwin::Item potion = item(5, 501, 0, 38, "Red Potion");
     CHECK(itemwin::useOf(potion) == Use::Use);
     itemwin::Item sword = item(7, 1101, 4, 1, "Sword");
@@ -86,15 +87,16 @@ TEST(item_window_tabs_and_uses_as_the_game) {
 TEST(item_window_search_and_places) {
     std::vector<itemwin::Item> items{item(1, 501, 0, 38, "Red Potion"), item(2, 909, 3, 20, "Jellopy"),
                                      item(3, 502, 0, 5, "Orange Potion"), item(4, 1101, 4, 1, "Sword")};
-    const std::vector<int> potions = itemwin::shownOf(items, itemwin::Tab::Items, "POTION");
+    const std::vector<int> potions = itemwin::shownOf(items, itemwin::Tab::Use, "POTION");
     CHECK(potions.size() == 2 && potions[0] == 0 && potions[1] == 2);
-    CHECK(itemwin::shownOf(items, itemwin::Tab::Items, "").size() == 2);
+    CHECK(itemwin::shownOf(items, itemwin::Tab::Use, "").size() == 2);
     CHECK(itemwin::shownOf(items, itemwin::Tab::Etc, "jell").size() == 1);
     CHECK(itemwin::shownOf(items, itemwin::Tab::Gear, "").size() == 1);
     CHECK(itemwin::lowered("ЗІЛЛЯ Red") == "зілля red");
     const itemwin::Texts t = itemTexts();
     const itemwin::Layout L = itemwin::layout(110, 140, 1.0f, t, itemwin::Measure(panel::wordsWidth));
-    CHECK(L.w == 500 && L.cells.size() == 40 && L.tabs.size() == 3 && L.x == 110 && L.y == 140);
+    CHECK(L.w == 500 && L.cells.size() == 40 && L.tabs.size() == 6 && L.x == 110 && L.y == 140);
+    CHECK(L.tabs[5].x + L.tabs[5].w <= L.tabsRow.x + L.tabsRow.w);  // 3.0.11-beta.113: six of them in its row
     CHECK(L.cells[0].w == 48 && L.cells[1].x - L.cells[0].x == 56 && L.cells[8].y - L.cells[0].y == 56);
     CHECK(L.search.y > L.tabsRow.y && L.grid.y > L.search.y + L.search.h && L.footer.y > L.grid.y + L.grid.h);
     CHECK(itemwin::mostScroll(L, 40) == 0 && itemwin::mostScroll(L, 41) == 1 && itemwin::mostScroll(L, 100) == 8);
@@ -119,7 +121,7 @@ TEST(item_window_picture_and_words) {
     sh.weight = 920;
     sh.weightMost = 2430;
     sh.zeny = 1482300;
-    const std::vector<int> shown = itemwin::shownOf(items, itemwin::Tab::Items, "");
+    const std::vector<int> shown = itemwin::shownOf(items, itemwin::Tab::Use, "");
     panel::Picture p;
     p.width = L.w;
     p.height = L.h;
@@ -132,7 +134,7 @@ TEST(item_window_picture_and_words) {
             if (x.text == s) return true;
         return false;
     };
-    CHECK(has("Речі") && has("Alt+E") && has("Предмети") && has("38") && has("1 482 300 z"));
+    CHECK(has("Речі") && has("Alt+E") && has("Витратне") && has("38") && has("1 482 300 z"));
     CHECK(has("Red Potion \xC3\x97" "38") && has("двічі клік — використати \xC2\xB7 ПКМ — опис"));
     CHECK(has("920 / 2 430 \xC2\xB7 37 %") && has("Пошук за назвою"));
     CHECK(itemwin::nameOf(items[1]) == "+7 Sword");
@@ -150,7 +152,7 @@ TEST(item_window_lights_the_bag_while_a_worn_thing_is_dragged) {
     const std::vector<itemwin::Item> items{item(1, 501, 0, 38, "Red Potion")};
     const itemwin::Texts t = itemTexts();
     const itemwin::Layout L = itemwin::layout(0, 0, 1.0f, t, itemwin::Measure(panel::wordsWidth));
-    const std::vector<int> shown = itemwin::shownOf(items, itemwin::Tab::Items, "");
+    const std::vector<int> shown = itemwin::shownOf(items, itemwin::Tab::Use, "");
     const auto painted = [&](const itemwin::Show& show) {
         panel::Picture p;
         p.width = L.w;
@@ -169,7 +171,7 @@ TEST(item_window_lights_the_bag_while_a_worn_thing_is_dragged) {
 
 // 3.0.11-beta.112 (the concept «Концепция окон и инвентаря», question 3 «да»; the owner: «я сделал стрелы и они в
 // инвентаре не появились»): a thing come into the bag marked «нове» in a gold pill over its cell's corner till it is
-// pointed at, its tab's count of the new ones beside its name (the arrows in «Інше»)
+// pointed at, its tab's count of the new ones beside its name (the arrows in «Спорядження» since 3.0.11-beta.113)
 TEST(item_window_marks_the_new_things) {
     std::vector<itemwin::Item> items{item(1, 501, 0, 38, "Red Potion"), item(2, 1750, 10, 500, "Arrow")};
     items[1].fresh = true;
@@ -177,11 +179,11 @@ TEST(item_window_marks_the_new_things) {
     t.fresh = "нове";
     const itemwin::Layout L = itemwin::layout(0, 0, 1.0f, t, itemwin::Measure(panel::wordsWidth));
     itemwin::Show sh;
-    sh.tab = itemwin::Tab::Etc;
-    const std::vector<int> shown = itemwin::shownOf(items, itemwin::Tab::Etc, "");
+    sh.tab = itemwin::Tab::Gear;
+    const std::vector<int> shown = itemwin::shownOf(items, itemwin::Tab::Gear, "");
     const std::vector<itemwin::Words> w = itemwin::words(L, items, shown, sh, t, itemwin::Measure(panel::wordsWidth));
     const panel::Box& cell = L.cells[0];
-    const panel::Box& etc = L.tabs[size_t(itemwin::Tab::Etc)];
+    const panel::Box& etc = L.tabs[size_t(itemwin::Tab::Gear)];
     bool pill = false, count = false, other = false;
     for (const itemwin::Words& x : w) {
         pill = pill || (x.text == "нове" && x.box.y < cell.y + cell.h / 2 && x.box.x + x.box.w <= cell.x + cell.w + 4);
@@ -193,6 +195,53 @@ TEST(item_window_marks_the_new_things) {
     const std::vector<itemwin::Words> seen =
         itemwin::words(L, items, shown, sh, t, itemwin::Measure(panel::wordsWidth));
     CHECK(std::none_of(seen.begin(), seen.end(), [](const itemwin::Words& x) { return x.text == "нове"; }));
+}
+
+// 3.0.11-beta.113 (the concept «Концепция окон и инвентаря», question 9 «давай»): six tabs - «Усе», «Витратне»,
+// «Спорядження» (the ammo there too), «Карти», «Різне», «★» (the starred ones); a cell's lower left corner the star:
+// pressed, its thing starred or not (☆ while pointed at, ★ starred)
+TEST(item_window_six_tabs_and_the_starred) {
+    using itemwin::Tab;
+    std::vector<itemwin::Item> items{item(1, 501, 0, 38, "Red Potion"), item(2, 1750, 10, 500, "Arrow"),
+                                     item(3, 4001, 6, 1, "Poring Card"), item(4, 909, 3, 20, "Jellopy")};
+    items[3].starred = true;
+    CHECK(itemwin::shownOf(items, Tab::All, "").size() == 4);
+    CHECK(itemwin::shownOf(items, Tab::Use, "") == std::vector<int>({0}));
+    CHECK(itemwin::shownOf(items, Tab::Gear, "") == std::vector<int>({1}));
+    CHECK(itemwin::shownOf(items, Tab::Cards, "") == std::vector<int>({2}));
+    CHECK(itemwin::shownOf(items, Tab::Etc, "") == std::vector<int>({3}));
+    CHECK(itemwin::shownOf(items, Tab::Starred, "") == std::vector<int>({3}));
+    const itemwin::Texts t = itemTexts();
+    const itemwin::Layout L = itemwin::layout(0, 0, 1.0f, t, itemwin::Measure(panel::wordsWidth));
+    const panel::Box& c = L.cells[3];
+    const itemwin::Hit star = itemwin::hitTest(L, 4, 0, c.x + 6, c.y + c.h - 6);
+    CHECK(star.part == itemwin::Part::Star && star.index == 3);
+    CHECK(itemwin::hitTest(L, 4, 0, c.x + c.w / 2, c.y + c.h / 2).part == itemwin::Part::Cell);
+    CHECK(itemwin::hitTest(L, 2, 0, c.x + 6, c.y + c.h - 6).part == itemwin::Part::Grid);  // no thing there: none
+    itemwin::Show sh;
+    sh.tab = Tab::All;
+    sh.hover = 0;
+    const std::vector<int> shown = itemwin::shownOf(items, Tab::All, "");
+    const std::vector<itemwin::Words> w = itemwin::words(L, items, shown, sh, t, itemwin::Measure(panel::wordsWidth));
+    const auto at = [&](const std::string& text, const panel::Box& cell) {
+        return std::any_of(w.begin(), w.end(), [&](const itemwin::Words& x) {
+            return x.text == text && x.box.x >= cell.x && x.box.x < cell.x + cell.w / 2 && x.box.y > cell.y;
+        });
+    };
+    CHECK(at("\xE2\x98\x85", L.cells[3]) && at("\xE2\x98\x86", L.cells[0]));  // ★ starred, ☆ pointed at
+    CHECK(!at("\xE2\x98\x86", L.cells[1]) && !at("\xE2\x98\x85", L.cells[1]));  // neither: none
+}
+
+// 3.0.11-beta.113: the starred things kept per character (uaro-graphics\items-starred.txt: its name, a tab, the
+// items' numbers)
+TEST(item_window_starred_kept_per_character) {
+    std::string text = itemwin::withStarred("", "Korel", {1750, 501});
+    text = itemwin::withStarred(text, "tester", {909});
+    CHECK(itemwin::starredOf(text, "Korel") == std::set<int>({501, 1750}));
+    CHECK(itemwin::starredOf(text, "tester") == std::set<int>({909}));
+    text = itemwin::withStarred(text, "Korel", {});  // none left: its line gone
+    CHECK(itemwin::starredOf(text, "Korel").empty() && itemwin::starredOf(text, "tester").size() == 1);
+    CHECK(text.find("Korel") == std::string::npos);
 }
 
 TEST(stat_window_prices_and_points) {
