@@ -1,3 +1,13 @@
+# uaRO Graphics 3.0.11-beta.127 — what's new
+
+**The ping on its own plate with a graph**:
+- The ping no longer sits on the bar under the minimap, where it cut the map's name short ("Clock T…"); the name
+  shows whole again.
+- Under the bar, a small plate of its own: "● 50 ms" and a small graph of the last minute (a bar each second):
+  green under 120 ms, amber under 250 ms, red slower; red to the top — a stall (the connection waited for a lost
+  packet).
+- The same switch: "Ping on the minimap" in "Interface".
+
 # uaRO Graphics 3.0.11-beta.126 — what's new
 
 **Dungeon maps are readable again** (reports R-4ZHJ3R and R-4T7N4D, Clock Tower):
