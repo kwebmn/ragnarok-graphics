@@ -51,6 +51,7 @@
 #include "win/mob_hp.hpp"
 #include "win/equip_window.hpp"
 #include "win/npc_talk.hpp"
+#include "win/shop_window.hpp"
 #include "win/skill_window.hpp"
 #include "win/pad_hint.hpp"
 #include "win/pad_tiles.hpp"
@@ -573,6 +574,7 @@ void Context::endScene() {
         skillswin::draw(record, *renderer);     // 3.0.11-beta.96: «Навички»
         equipwin::draw(record, *renderer);      // 3.0.11-beta.97: «Спорядження»
         npcwin::draw(record, *renderer);        // 3.0.11-beta.98: the NPC talk
+        shopwin::draw(record, *renderer);       // 3.0.11-beta.100: the shop
         answercard::draw(record, *renderer);  // 3.0.9-beta.4: the developer's answer
         windowSwitch_.draw(record, *renderer);
         referencewin::draw(record, *renderer);  // 3.0.11-beta.7: «Довідник», over the rest
@@ -627,6 +629,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
         skillswin::draw(record, *renderer);     // 3.0.11-beta.96
         equipwin::draw(record, *renderer);      // 3.0.11-beta.97
         npcwin::draw(record, *renderer);        // 3.0.11-beta.98
+        shopwin::draw(record, *renderer);       // 3.0.11-beta.100
         answercard::draw(record, *renderer);  // 3.0.9-beta.4
         windowSwitch_.draw(record, *renderer);
         referencewin::draw(record, *renderer);  // 3.0.11-beta.7
@@ -879,6 +882,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     skillswin::frame(window, config.skillsWindow, gameCodePage(config), pk, pw, ph);  // 3.0.11-beta.96: «Навички»
     equipwin::frame(window, config.equipWindow, gameCodePage(config), pk, pw, ph);    // 3.0.11-beta.97
     npcwin::frame(window, config.npcWindow, gameCodePage(config), pk, pw, ph);        // 3.0.11-beta.98
+    shopwin::frame(window, config.shopWindow, gameCodePage(config), pk, pw, ph);      // 3.0.11-beta.100
     // 3.0.11-beta.7: [interface] reference - «Довідник» (Ctrl+F)
     referencewin::frame(window, config.referenceWindow, pk, pw, ph);
     // 3.0.11-beta.75: «Розміщення інтерфейсу» (Ctrl+Shift+L, the console) - over the parts placed this frame

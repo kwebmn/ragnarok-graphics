@@ -583,7 +583,7 @@ struct Config {
     TargetRing targetRing = TargetRing::Pad;
     // 3.0.11-beta.95 (the owner: «Полоски HP мобов - всем показывай»): [interface] mob_hp - HP bars over the monsters'
     // heads from their name lines' per cent (core/mob_hp, win/mob_hp); the target's and the wounded's
-    MobHp mobHp = MobHp::Wounded;
+    MobHp mobHp = MobHp::All;  // 3.0.11-beta.100 (the owner: «а можно чтобы над мобами всегда хп висело?»)
     // 3.0.11-beta.88 (stage 4): [interface] pad_walk - the left stick walks without the mouse, an arrow on the ground
     // (a prototype for the owner: off till checked)
     PadWalk padWalk = PadWalk::Mouse;
@@ -624,6 +624,8 @@ struct Config {
     bool equipWindow = false;
     // 3.0.11-beta.98: [interface] npc_talk - the NPC talk (core/npc_talk) in place of the game's text and menu windows
     bool npcWindow = false;
+    // 3.0.11-beta.100: [interface] shop - the NPCs' shops (core/shop_window) in place of the game's deal windows
+    bool shopWindow = false;
     // 3.0.11-beta.46: [interface] animations - the new interface's motion (core/ui_motion): the target's card, the
     // character block's views, a new level's flare, the low HP warning sliding in; 0: all at once
     bool animations = true;

@@ -24,6 +24,9 @@ void packet(const packets::Event& e);
 void frame(HWND game, MobHp mode, double k, int targetWidth, int targetHeight);
 void draw(FrameRecord& record, gpu::Renderer& renderer);
 int hp(uint32_t id);  // the per cent the bars show for it; -1 none (not known, or the bars off)
+// 3.0.11-beta.100: «Усі» - the monsters on the screen not known yet asked of the server, before the game draws its
+// windows (inside its frame, where its own mouse asks a name)
+void beforeGameDraw();
 // A monster's bar's top in the game's pixels over its box, for the target's chevron to stand over it; false: none
 bool targetBarTop(uint32_t id, const float box[4], int screenHeight, float& top);
 

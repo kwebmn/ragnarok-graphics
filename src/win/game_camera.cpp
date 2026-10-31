@@ -362,9 +362,11 @@ bool readActorBox(uint32_t id, float box[4]) {
     return false;
 }
 
-void readActorBoxes(std::unordered_map<uint32_t, std::array<float, 4>>& out) {
+void readActorBoxes(std::unordered_map<uint32_t, std::array<float, 4>>& out,
+                    std::unordered_map<uint32_t, int>* classes) {
     out.clear();
-    constexpr uint32_t kPickList = 0x74B5F0 + 0x28, kRecordId = 0x18;
+    if (classes) classes->clear();
+    constexpr uint32_t kPickList = 0x74B5F0 + 0x28, kRecordId = 0x18, kRecordClass = 0x1C;
     uint32_t head = 0, node = 0;
     if (!gameMode() || !read(kPickList, &head, 4) || !head || !read(head, &node, 4)) return;
     for (size_t n = 0; node && node != head && n < 4096; ++n) {
@@ -372,8 +374,11 @@ void readActorBoxes(std::unordered_map<uint32_t, std::array<float, 4>>& out) {
         float f[5];
         if (!read(node + 8, &record, 4)) return;
         if (record && read(record + kRecordId, &rid, 4) && rid && read(record, f, sizeof f) && std::isfinite(f[0]) &&
-            std::isfinite(f[1]) && std::isfinite(f[3]) && std::isfinite(f[4]) && f[3] > f[0] && f[4] > f[1])
+            std::isfinite(f[1]) && std::isfinite(f[3]) && std::isfinite(f[4]) && f[3] > f[0] && f[4] > f[1]) {
             out[rid] = std::array<float, 4>{f[0], f[1], f[3], f[4]};
+            uint32_t cls = 0;
+            if (classes && read(record + kRecordClass, &cls, 4)) (*classes)[rid] = int(cls);
+        }
         if (!read(node, &node, 4)) return;
     }
 }

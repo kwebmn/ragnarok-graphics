@@ -5046,19 +5046,21 @@ constexpr Entry kTexts[] = {
     {Text::InterfaceTargetRingPad, "With the controller", "З контролером", "С контроллером"},
     {Text::InterfaceTargetRingAlways, "Always", "Завжди", "Всегда"},
     {Text::InterfaceMobHp, "Monsters' HP bars", "Смужки HP монстрів", "Полоски HP монстров"},  // 3.0.11-beta.95
-    {Text::InterfaceMobHpHint,  // 3.0.11-beta.99: with the mouse too
+    {Text::InterfaceMobHpHint,  // 3.0.11-beta.99: with the mouse too; 3.0.11-beta.100: every monster's by default
      "A thin bar over a monster's head from the per cent the server sends to everyone near on each hit: green, red "
      "below a quarter. With the mouse and with the controller alike: the target (the one the character fights or the "
-     "controller chose) and the monster under the mouse cursor have it wider, with the per cent. "
-     "«The target and the wounded» - a wounded monster's bar for 8 seconds after its last hit; a whole one has none.",
+     "controller chose) and the monster under the mouse cursor have it wider, with the per cent. «All» - over every "
+     "monster on the screen (a whole one's per cent asked of the server, as the game asks it when the mouse points at "
+     "it); «The target and the wounded» - a wounded monster's bar for 8 seconds after its last hit.",
      "Тонка смужка над головою монстра з відсотка, який сервер надсилає всім поруч на кожен удар: зелена, нижче чверті "
      "— червона. І з мишею, і з контролером: у цілі (кого б'є персонаж або вибрав контролер) і в монстра під курсором "
-     "миші вона ширша, з відсотком. «Ціль і поранені» — смужка пораненого ще 8 секунд після останнього удару; у "
-     "цілого її немає.",
+     "миші вона ширша, з відсотком. «Усі» — над кожним монстром на екрані (відсоток цілого питаємо в сервера, як гра "
+     "питає при наведенні миші); «Ціль і поранені» — смужка пораненого ще 8 секунд після останнього удару.",
      "Тонкая полоска над головой монстра из процента, который сервер присылает всем рядом на каждый удар: зелёная, "
      "ниже четверти — красная. И с мышью, и с контроллером: у цели (кого бьёт персонаж или выбрал контроллер) и у "
-     "монстра под курсором мыши она шире, с процентом. «Цель и раненые» — полоска раненого ещё 8 секунд после "
-     "последнего удара; у целого её нет."},
+     "монстра под курсором мыши она шире, с процентом. «Все» — над каждым монстром на экране (процент целого "
+     "спрашиваем у сервера, как игра спрашивает при наведении мыши); «Цель и раненые» — полоска раненого ещё 8 "
+     "секунд после последнего удара."},
     {Text::InterfaceMobHpOff, "Off", "Вимкнено", "Выключено"},
     {Text::InterfaceMobHpTarget, "The target only", "Лише ціль", "Только цель"},
     {Text::InterfaceMobHpWounded, "The target and the wounded", "Ціль і поранені", "Цель и раненые"},
@@ -5141,6 +5143,45 @@ constexpr Entry kTexts[] = {
      "1-9 вибір \xC2\xB7 Enter далі \xC2\xB7 Esc закрити", "1-9 выбор \xC2\xB7 Enter далее \xC2\xB7 Esc закрыть"},
     {Text::NpcServer, "The text is the server's", "Текст — як у сервера", "Текст — как у сервера"},
     {Text::NpcChoose, "choose", "вибір", "выбор"},
+    {Text::InterfaceShop, "NPC shops", "Крамниці NPC", "Магазины NPC"},  // 3.0.11-beta.100
+    {Text::InterfaceShopHint,
+     "The NPCs' shops in the new look: the list on the left with a search, the cart on the right with − and +, the "
+     "total, the zeny left and the weight after it; «Buy» and «Sell» are tabs. The mouse: a click puts one in the "
+     "cart, with Shift ten, the right button takes one out; Enter buys, Esc closes. The controller: A +1, X −1, Y buys "
+     "or sells, LB / RB the tabs, B closes. Off: the game's own windows.",
+     "Крамниці NPC у новому вигляді: список ліворуч із пошуком, кошик праворуч із − і +, сума, залишок зені й вага "
+     "після покупки; «Купити» й «Продати» — вкладки. Миша: клацання кладе одну в кошик, із Shift — десять, права "
+     "кнопка виймає; Enter купує, Esc закриває. Контролер: A +1, X −1, Y купує чи продає, LB / RB — вкладки, B "
+     "закриває. Вимкнено — вікна гри.",
+     "Магазины NPC в новом виде: список слева с поиском, корзина справа с − и +, сумма, остаток зени и вес "
+     "после покупки; «Купить» и «Продать» — вкладки. Мышь: щелчок кладёт одну в корзину, с Shift — десять, правая "
+     "кнопка вынимает; Enter покупает, Esc закрывает. Контроллер: A +1, X −1, Y покупает или продаёт, LB / RB — "
+     "вкладки, B закрывает. Выключено — окна игры."},
+    {Text::ShopTitle, "Shop", "Крамниця", "Магазин"},
+    {Text::ShopBuy, "Buy", "Купити", "Купить"},
+    {Text::ShopSell, "Sell", "Продати", "Продать"},
+    {Text::ShopSearch, "Search the shop", "Пошук у крамниці", "Поиск в магазине"},
+    {Text::ShopWare, "Item", "Товар", "Товар"},
+    {Text::ShopPrice, "Price", "Ціна", "Цена"},
+    {Text::ShopWeight, "Weight", "Вага", "Вес"},
+    {Text::ShopCart, "Cart", "Кошик", "Корзина"},
+    {Text::ShopAmount, "Amount", "Кількість", "Количество"},
+    {Text::ShopSum, "Sum", "Сума", "Сумма"},
+    {Text::ShopTotal, "Total", "Разом", "Итого"},
+    {Text::ShopLeft, "Left", "Залишиться", "Останется"},
+    {Text::ShopAfter, "You will have", "Буде", "Будет"},
+    {Text::ShopWeightBuy, "Weight after buying", "Вага після покупки", "Вес после покупки"},
+    {Text::ShopWeightSell, "Weight after selling", "Вага після продажу", "Вес после продажи"},
+    {Text::ShopBuyButton, "Buy Â· Enter", "Купити Â· Enter", "Купить Â· Enter"},
+    {Text::ShopSellButton, "Sell Â· Enter", "Продати Â· Enter", "Продать Â· Enter"},
+    {Text::ShopClear, "Clear", "Очистити", "Очистить"},
+    {Text::ShopNote, "Prices are the server's, weights its item base's", "Ціни — від сервера, вага — з бази предметів",
+     "Цены — от сервера, вес — из базы предметов"},
+    {Text::ShopEmpty, "Click an item to put it here", "Клацніть товар, щоб додати", "Щёлкните товар, чтобы добавить"},
+    {Text::ShopMouse, "A click: +1 Â· Shift: +10 Â· the right button: −1 Â· the wheel scrolls",
+     "Клацання: +1 Â· Shift: +10 Â· права кнопка: −1 Â· коліщатко гортає",
+     "Щелчок: +1 Â· Shift: +10 Â· правая кнопка: −1 Â· колесо листает"},
+    {Text::ShopWaiting, "Loading the list…", "Завантажую список…", "Загружаю список…"},
     {Text::InterfacePadWalk, "The controller walks", "Хід контролером", "Ход контроллером"},  // 3.0.11-beta.88
     {Text::InterfacePadWalkHint,
      "How the left stick walks: holding the game's cursor out, as before, or without the mouse - the character goes "

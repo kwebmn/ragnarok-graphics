@@ -56,6 +56,11 @@ The owner 31.10: «Полоски HP мобов - всем показывай»,
 - R2: with the ring drawn the pad's fake mark is off, its menu choice kept for the ring off; the name request on a new
   target stays (it brings the target's HP %). Cost if wrong: one beta.
 - R3: the windows' order by how often a player opens them (skills, equipment, NPC talk, shop, storage, trade).
+- R4 (the owner 31.10: «а можно чтобы над мобами всегда хп висело?»): [interface] mob_hp's default «Усі», and «Усі»
+  asks the server for each monster on the screen not known (the game's own name request FUN_00560650, 8 a second, the
+  same one after 15 s). Cost if wrong: one default and a few packets a second.
+- R5: the shop opens on «Купити» at once (the deal's choice pressed for the player, «Продати» a tab: the game's cancel,
+  then the game mode's 0x28 - the packet 0x00c5 again). Cost if wrong: one round trip on «Продати».
 
 ## Ledger
 
@@ -97,7 +102,18 @@ The owner 31.10: «Полоски HP мобов - всем показывай»,
   under the game's windows, names, cursor), the chevron over any bar, the ring «Завжди» on fighting(); the row only in
   «Інтерфейс» (off the «Контролер» page), its hint says mouse and controller alike. Test
   mob_hp_the_target_with_the_mouse_and_with_the_controller; suite 2026/0.
-- Stage 5 research (not built yet): 0x00c4 deal type; 0x00c6 buy list (11 B each: price.L discount.L type.B nameid.W)
+- Stage 5: built as 3.0.11-beta.100 - core/shop_window (Ware/Line, put within the most, sums: total, zeny after,
+  weight after in tenths, ok; shownOf, scrollFor, matchShop by wares or the nearest within 15 cells; layout 1000 wide:
+  tabs, search, list 520 with price and weight, cart with − n +, totals, «Купити · Enter», «Очистити», note, pad
+  footer and LB/RB at the tabs), win/shop_window (windows 0x16/0x17/0x18/0x19 held hidden; the chooser's 0x9E pressed in
+  beforeGameDraw; the deal list +0xF28 read every 200 ms: price +0x18, bag count +0x10 when sold; confirm: the ITEM_INFO's
+  +0x10 set, FUN_00629750 / FUN_0062a4b0 (bytes checked), the cart's 6/0x76; cancel 0x77; the other tab: cancel + mode
+  0x28/0x29 with the NPC from the chooser's +0x60, «loading» up to 3 s; mouse, keys (Enter, Esc, the search), pad
+  shopPad), [interface] shop (on with the minimap), Blocker::Shop, pad hint hidden. HP bars «Усі» by default with the
+  asker (core/mob_hp Asker, win/mob_hp beforeGameDraw; readActorBoxes classes +0x1C). Tests shop_window_* (6),
+  config_interface_shop, mob_hp_asks_the_server_for_the_monsters_not_known; config_mob_hp, config_interface_minimap
+  updated; suite 2034/0.
+- Stage 5 research: 0x00c4 deal type; 0x00c6 buy list (11 B each: price.L discount.L type.B nameid.W)
   -> session deal list +0xF28 (count +0xF2C, FUN_0062bbb0(rec, 0); FUN_004ffd30 copies the record's text at +0x11 into
   m_itemName) + windows 0x16 (mgr+0xEC, class 0x69B3E0, SendMsg 0x4AFC00: 0x24 0 buy / 1 sell) and 0x17 (buy cart,
   mgr+0xF0, class 0x69B5A8, SendMsg 0x4B35D0: 6/0x76 OK -> when [0x28]==0 mode 0x25 = packet 0x00c8 from the purchase

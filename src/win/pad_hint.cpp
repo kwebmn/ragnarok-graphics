@@ -1,6 +1,7 @@
 #include "win/pad_hint.hpp"
 
 #include "win/npc_talk.hpp"
+#include "win/shop_window.hpp"
 
 #include <cmath>
 #include <string>
@@ -53,7 +54,8 @@ void frame(HWND game, bool on, double k, int targetWidth, int targetHeight) {
     State& s = state();
     uapad::runtime::setOwnHints(on);
     s.parts.clear();
-    if (on && game && k > 0 && targetWidth > 0 && targetHeight > 0 && !npcwin::shown())  // .98: its own footer
+    // .98: the NPC talk's own footer; .100: the shop's
+    if (on && game && k > 0 && targetWidth > 0 && targetHeight > 0 && !npcwin::shown() && !shopwin::shown())
         for (const uapad::HintPart& p : uapad::runtime::hints()) {
             ph::Part part{p.before, {}, p.words};
             for (uint16_t b : p.buttons) {

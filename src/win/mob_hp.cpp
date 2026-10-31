@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <cstring>
 #include <string>
 #include <unordered_map>
 #include <variant>
@@ -28,7 +29,7 @@ struct Bar {
 };
 
 struct State {
-    MobHp mode = MobHp::Wounded;
+    MobHp mode = MobHp::All;
     bool modeTold = false;
     mobhp::Table table;
     std::unordered_map<uint32_t, std::array<float, 4>> boxes;
@@ -45,6 +46,13 @@ struct State {
     int heard = 0, told = 0;
     uint32_t pointedLast = 0;  // 3.0.11-beta.99: the target's last, and where it came from (logged)
     int pointedTold = 0;
+    // 3.0.11-beta.100: «Усі» - the monsters on the screen whose per cent is asked of the server (the game's own name
+    // request FUN_00560650: thiscall, the game mode in ECX, the actor's id; the packet 0x008c, its 2.5 s per actor)
+    mobhp::Asker asker;
+    std::unordered_map<uint32_t, int> classes;
+    std::vector<uint32_t> toAsk;
+    std::string map;
+    int asked = 0, askTold = 0;
 };
 
 State& state() {
@@ -54,6 +62,17 @@ State& state() {
 
 // 3.0.11-beta.99 (the owner: «hp для мобов должно быть доступно и в обычном режиме»): the controller's target while
 // played with it; with the mouse the monster under its cursor; else the one the character fights - the card on or not
+constexpr uint32_t kModeNow = 0x74B57C, kModeMsgSlot = 0x14, kModeMsg = 0x5707D0, kAskName = 0x560650;
+const uint8_t kAskNameCode[] = {0x55, 0x8B, 0xEC, 0x83, 0xEC, 0x24, 0x8B, 0x45,
+                                0x08, 0x53, 0x56, 0x57, 0x85, 0xC0, 0x8B, 0xF9};
+using AskNameFn = void(__attribute__((thiscall)) *)(uint32_t mode, uint32_t id);
+constexpr int kFirstMonster = 1001, kLastMonster = 3999;  // the classes the game names as monsters
+
+uint32_t read32(uint32_t at) {
+    uint32_t v = 0;
+    return readGame(at, &v, 4) ? v : 0;
+}
+
 uint32_t targetNow(State& s) {
     const bool pad = uapad::runtime::look().shown;
     const uint32_t padTarget = pad ? uapad::runtime::target() : 0, under = pad ? 0 : pointedActor();
@@ -83,6 +102,7 @@ void packet(const packets::Event& e) {
         }
     } else if (const auto* v = std::get_if<packets::Vanish>(&e)) {
         s.table.gone(v->id);
+        s.asker.forget(v->id);  // 3.0.11-beta.100: asked again as soon as it is back
     }
 }
 
@@ -97,12 +117,35 @@ void frame(HWND game, MobHp mode, double k, int targetWidth, int targetHeight) {
     s.text = false;
     s.target = 0;
     if (mode == MobHp::Off || !game || k <= 0 || targetWidth <= 0 || targetHeight <= 0 || !inGameWorld()) return;
+    const std::string map = readGameMap();
+    if (map != s.map) {  // a new map: its monsters are others
+        s.map = map;
+        s.table.clear();
+        s.asker.clear();
+        s.toAsk.clear();
+    }
     const uint32_t target = targetNow(s);
     const std::vector<mobhp::Shown> list = s.table.shown(mode, target, GetTickCount());
-    if (list.empty()) return;
-    readActorBoxes(s.boxes);
+    if (list.empty() && mode != MobHp::All) return;
+    readActorBoxes(s.boxes, mode == MobHp::All ? &s.classes : nullptr);
     const float kk = float(k);
     const int gameHeight = int(std::lround(float(targetHeight) / kk));
+    if (mode == MobHp::All) {  // 3.0.11-beta.100: the monsters on the screen not known yet, the nearest first
+        const int gameWidth = int(std::lround(float(targetWidth) / kk));
+        std::vector<std::pair<float, uint32_t>> nearest;
+        for (const auto& [id, cls] : s.classes) {
+            if (cls < kFirstMonster || cls > kLastMonster || s.table.hp(id) >= 0) continue;
+            const auto& b = s.boxes[id];
+            const float dx = (b[0] + b[2]) / 2 - float(gameWidth) / 2, dy = (b[1] + b[3]) / 2 - float(gameHeight) / 2;
+            nearest.emplace_back(dx * dx + dy * dy, id);
+        }
+        std::sort(nearest.begin(), nearest.end());
+        std::vector<uint32_t> ids;
+        for (const auto& [d, id] : nearest) ids.push_back(id);
+        for (const uint32_t id : s.asker.due(ids, s.table, GetTickCount()))
+            if (s.toAsk.size() < 32) s.toAsk.push_back(id);
+    }
+    if (list.empty()) return;
     s.k = kk;
     for (const mobhp::Shown& m : list) {
         const auto it = s.boxes.find(m.id);
@@ -153,6 +196,28 @@ void draw(FrameRecord& record, gpu::Renderer& renderer) {
         drawPart(record, renderer, s.picture, s.texture, s.texW, s.texH, s.upload, s.textX, s.textY, s.k);
     const size_t added = record.commands().size() - before;  // the per cent's upload too, when it went now
     if (added) record.moveLastBefore(added, world);
+}
+
+void beforeGameDraw() {
+    State& s = state();
+    if (s.toAsk.empty()) return;
+    std::vector<uint32_t> ids;
+    ids.swap(s.toAsk);
+    static int known = -1;  // the game's name request where this build has it: checked once
+    if (known < 0) {
+        uint8_t have[sizeof kAskNameCode] = {};
+        known = readGame(kAskName, have, sizeof have) && std::memcmp(have, kAskNameCode, sizeof have) == 0 ? 1 : 0;
+        if (!known) LOG_INFO("mob hp: the game's name request is not where this build has it - no monster asked");
+    }
+    const uint32_t mode = read32(kModeNow);
+    if (!known || !mode || !inGameWorld() || read32(read32(mode) + kModeMsgSlot) != kModeMsg) return;
+    for (const uint32_t id : ids) reinterpret_cast<AskNameFn>(uintptr_t(kAskName))(mode, id);
+    s.asked += int(ids.size());
+    if (s.askTold < 10) {
+        ++s.askTold;
+        LOG_INFO("mob hp: «Усі» - %zu monster(s) on the screen asked of the server for their per cent (the game's own "
+                 "name request, the packet 0x008c; %d so far)", ids.size(), s.asked);
+    }
 }
 
 int hp(uint32_t id) {

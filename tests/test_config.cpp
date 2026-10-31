@@ -858,13 +858,14 @@ TEST(config_interface_minimap) {
     // 3.0.11-beta.37: the buffs' column and the character block come with it; 3.0.11-beta.38: the target's card too;
     // 3.0.11-beta.39: the party's panel; 3.0.11-beta.40: the hotbar; 3.0.11-beta.41: the chat; 3.0.11-beta.42: the
     // windows; 3.0.11-beta.48: the cast's label (3.0.11-beta.49's dimmed world no longer comes with it: beta.55);
-    // 3.0.11-beta.70: the tracker; 3.0.11-beta.96: «Навички»; 3.0.11-beta.97: «Спорядження»; .98: the NPC talk
-    CHECK(u.waiting.empty() && u.applied.size() == 14 && u.applied[0] == "minimap 0 -> 1");
+    // 3.0.11-beta.70: the tracker; 3.0.11-beta.96: «Навички»; 3.0.11-beta.97: «Спорядження»; .98: the NPC talk;
+    // .100: the shops
+    CHECK(u.waiting.empty() && u.applied.size() == 15 && u.applied[0] == "minimap 0 -> 1");
     CHECK(u.applied[1] == "buffs off -> column" && u.applied[2] == "items 0 -> 1" && u.applied[3] == "status 0 -> 1");
     CHECK(u.applied[4] == "skills 0 -> 1" && u.applied[5] == "equip 0 -> 1" && u.applied[6] == "npc_talk 0 -> 1");
-    CHECK(u.applied[7] == "cast 0 -> 1" && u.applied[8] == "chat 0 -> 1" && u.applied[9] == "hotbar 0 -> 1");
-    CHECK(u.applied[10] == "tracker 0 -> 1" && u.applied[11] == "party 0 -> 1" && u.applied[12] == "target 0 -> 1");
-    CHECK(u.applied[13] == "character off -> bars");
+    CHECK(u.applied[7] == "shop 0 -> 1" && u.applied[8] == "cast 0 -> 1" && u.applied[9] == "chat 0 -> 1");
+    CHECK(u.applied[10] == "hotbar 0 -> 1" && u.applied[11] == "tracker 0 -> 1" && u.applied[12] == "party 0 -> 1");
+    CHECK(u.applied[13] == "target 0 -> 1" && u.applied[14] == "character off -> bars");
     CHECK(appliesNow("interface.minimap"));
 }
 
@@ -1273,7 +1274,9 @@ TEST(config_reads_the_interface_size) {
 // 3.0.11-beta.95 (the owner: «Полоски HP мобов - всем показывай»): [interface] mob_hp = off | target | wounded | all -
 // the monsters' HP bars; the target and the wounded by default, a choice of «Інтерфейс», at once
 TEST(config_mob_hp) {
-    CHECK(parseConfig("").mobHp == MobHp::Wounded);
+    // 3.0.11-beta.100 (the owner: «а можно чтобы над мобами всегда хп висело?»): every monster's by default
+    CHECK(parseConfig("").mobHp == MobHp::All);
+    CHECK(parseConfig("[interface]\nmob_hp = wounded\n").mobHp == MobHp::Wounded);
     CHECK(parseConfig("[interface]\nmob_hp = all\n").mobHp == MobHp::All);
     CHECK(parseConfig("[interface]\nmob_hp = target\n").mobHp == MobHp::Target);
     CHECK(parseConfig("[interface]\nmob_hp = off\n").mobHp == MobHp::Off);
@@ -1281,4 +1284,17 @@ TEST(config_mob_hp) {
     CHECK(s != nullptr && s->page == settings::Page::Interface && s->control == settings::Control::Choice);
     CHECK(appliesNow("interface.mob_hp"));
     CHECK(liveUpdate(parseConfig(""), parseConfig("[interface]\nmob_hp = off\n")).next.mobHp == MobHp::Off);
+}
+
+// 3.0.11-beta.100 (the owner: «доделаем окна интерфейсов»; the concept's «Магазин»): [interface] shop - the NPCs' shops
+// in the new look; on with the new minimap unless the file says, a box of «Інтерфейс», at once
+TEST(config_interface_shop) {
+    CHECK(!parseConfig("").shopWindow);
+    CHECK(parseConfig("[interface]\nminimap = 1\n").shopWindow);
+    CHECK(!parseConfig("[interface]\nminimap = 1\nshop = 0\n").shopWindow);
+    CHECK(parseConfig("[interface]\nshop = 1\n").shopWindow);
+    const settings::IniSetting* s = settings::findSetting("interface.shop");
+    CHECK(s != nullptr);
+    if (s) CHECK_EQ(settings::tokenOf(*s, parseConfig("[interface]\nshop = 1\n")), std::string("1"));
+    CHECK(appliesNow("interface.shop"));
 }

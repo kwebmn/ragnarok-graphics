@@ -36,8 +36,10 @@ bool readActorWorld(uint32_t id, float at[3]);
 // Its sprite's box on the screen the game keeps to pick actors with the mouse (0x74B5F0 + 0x28, FUN_004f9890: a
 // record's left, top +0, +4, right, bottom +0xC, +0x10, its id +0x18) - left, top, right, bottom in the game's pixels
 bool readActorBox(uint32_t id, float box[4]);
-// 3.0.11-beta.95: every actor's box there at once (the monsters' HP bars) - its id to left, top, right, bottom
-void readActorBoxes(std::unordered_map<uint32_t, std::array<float, 4>>& out);
+// 3.0.11-beta.95: every actor's box there at once (the monsters' HP bars) - its id to left, top, right, bottom;
+// 3.0.11-beta.100: `classes` - each one's class too (the record's +0x1C, FUN_0054aee0's: 1001-3999 a monster)
+void readActorBoxes(std::unordered_map<uint32_t, std::array<float, 4>>& out,
+                    std::unordered_map<uint32_t, int>* classes = nullptr);
 // The game's own minimap: it is drawn while its UI window 14 exists (UIWindowMgr+0x7C); hidden and made again as
 // Ctrl+Tab does (UI command 0x99: DeleteWindow / MakeWindow of window 14, the latter only where the map has one) -
 // false when not done (another build, nothing to do). On the game's thread.

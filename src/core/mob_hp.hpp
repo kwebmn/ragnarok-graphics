@@ -38,6 +38,24 @@ private:
     std::unordered_map<uint32_t, Known> known_;
 };
 
+// 3.0.11-beta.100 (the owner: «а можно чтобы над мобами всегда хп висело?»): «Усі» asks the server for the per cent of
+// each monster on the screen it does not know (the game's own name request, as its mouse asks on a hover; the answer is
+// the same name line) - at most kAsksPerSecond a second, the same one again after kAskAgainMs
+constexpr int kAsksPerSecond = 8;
+constexpr uint32_t kAskAgainMs = 15000;
+class Asker {
+public:
+    // Of the monsters on the screen (the nearest first) those to ask now
+    std::vector<uint32_t> due(const std::vector<uint32_t>& onScreen, const Table& t, uint32_t nowMs);
+    void forget(uint32_t id) { asked_.erase(id); }  // out of sight: asked again when it is back
+    void clear() { asked_.clear(); }
+
+private:
+    std::unordered_map<uint32_t, uint32_t> asked_;  // when each was asked
+    uint32_t secondAt_ = 0;
+    int inSecond_ = 0;
+};
+
 // 3.0.11-beta.99 (the owner: «hp для мобов должно быть доступно и в обычном режиме»): whose bar is the target's -
 // played with the controller (`pad`) its target, else the one the character fights; with the mouse the monster under
 // the cursor while its per cent is known, else the one the character fights

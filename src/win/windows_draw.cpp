@@ -11,7 +11,9 @@
 #include "win/item_window.hpp"
 #include "win/log.hpp"
 #include "win/equip_window.hpp"
+#include "win/mob_hp.hpp"
 #include "win/npc_talk.hpp"
+#include "win/shop_window.hpp"
 #include "win/skill_window.hpp"
 #include "win/stat_window.hpp"
 
@@ -39,6 +41,8 @@ void __attribute__((thiscall)) windowsDraw(uint32_t manager) {
     skillswin::beforeGameDraw();  // 3.0.11-beta.96: «Навички»
     equipwin::beforeGameDraw();   // 3.0.11-beta.97: «Спорядження»
     npcwin::beforeGameDraw();     // 3.0.11-beta.98: the NPC talk
+    shopwin::beforeGameDraw();    // 3.0.11-beta.100: the shop (its deal's choice pressed)
+    mobhpwin::beforeGameDraw();   // 3.0.11-beta.100: the monsters' per cent asked
     charpanel::beforeGameDraw();  // the Basic Info window
     hotbarwin::beforeGameDraw();  // the hotkeys' bar
     chatwin::beforeGameDraw();    // the chat (out of sight)

@@ -1,6 +1,7 @@
 #include "core/mob_hp.hpp"
 
 #include <algorithm>
+#include <iterator>
 
 namespace uagfx::mobhp {
 
@@ -35,6 +36,27 @@ std::vector<Shown> Table::shown(MobHp mode, uint32_t target, uint32_t nowMs) con
     }
     std::sort(out.begin() + std::ptrdiff_t(first), out.end(),
               [](const Shown& a, const Shown& b) { return a.id < b.id; });  // a steady order between frames
+    return out;
+}
+
+std::vector<uint32_t> Asker::due(const std::vector<uint32_t>& onScreen, const Table& t, uint32_t nowMs) {
+    std::vector<uint32_t> out;
+    if (nowMs - secondAt_ >= 1000) {
+        secondAt_ = nowMs;
+        inSecond_ = 0;
+    }
+    for (const uint32_t id : onScreen) {
+        if (inSecond_ >= kAsksPerSecond) break;
+        if (!id || t.hp(id) >= 0) continue;
+        const auto it = asked_.find(id);
+        if (it != asked_.end() && nowMs - it->second < kAskAgainMs) continue;
+        asked_[id] = nowMs;
+        ++inSecond_;
+        out.push_back(id);
+    }
+    if (asked_.size() > 4096)  // the long gone ones
+        for (auto it = asked_.begin(); it != asked_.end();)
+            it = nowMs - it->second >= kAskAgainMs ? asked_.erase(it) : std::next(it);
     return out;
 }
 

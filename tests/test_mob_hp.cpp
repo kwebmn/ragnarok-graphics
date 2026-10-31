@@ -75,3 +75,29 @@ TEST(mob_hp_the_target_with_the_mouse_and_with_the_controller) {
     const std::vector<mobhp::Shown> v = t.shown(MobHp::Target, mobhp::pointed(t, false, 0, 7, 9), 100);
     CHECK(v.size() == 1 && v[0].id == 7 && v[0].hp == 100 && v[0].target);  // whole, under the cursor: its bar
 }
+
+// 3.0.11-beta.100 (the owner: «а можно чтобы над мобами всегда хп висело?»): «Усі» asks the server for each monster on
+// the screen whose per cent it does not know (the game's own name request) - a few a second, the same one again only
+// after a while, never one known
+TEST(mob_hp_asks_the_server_for_the_monsters_not_known) {
+    mobhp::Table t;
+    t.seen(2, 80, 0);
+    mobhp::Asker a;
+    std::vector<uint32_t> due = a.due({1, 2, 3}, t, 5000);
+    CHECK(due.size() == 2 && due[0] == 1 && due[1] == 3);  // in the screen's order, the known one left out
+    CHECK(a.due({1, 2, 3}, t, 6500).empty());              // asked a moment ago
+    t.seen(1, 100, 6600);                                  // its answer came
+    due = a.due({1, 2, 3}, t, 5000 + mobhp::kAskAgainMs);
+    CHECK(due.size() == 1 && due[0] == 3);  // no answer for it: again after a while
+    std::vector<uint32_t> many;
+    for (uint32_t id = 100; id < 120; ++id) many.push_back(id);
+    mobhp::Asker b;
+    CHECK_EQ(b.due(many, t, 40000).size(), size_t(mobhp::kAsksPerSecond));  // a few a second
+    CHECK(b.due(many, t, 40500).empty());
+    due = b.due(many, t, 41000);
+    CHECK(due.size() == size_t(mobhp::kAsksPerSecond) && due[0] == 100 + mobhp::kAsksPerSecond);  // the next ones
+    a.forget(3);  // gone out of sight: asked again as soon as it is back
+    due = a.due({3}, t, 21000);
+    CHECK(due.size() == 1 && due[0] == 3);
+}
+

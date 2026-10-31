@@ -98,6 +98,8 @@ constexpr const char* kStatsState = "uaro-graphics\\stats-state.txt";
 constexpr const char* kSkillsState = "uaro-graphics\\skills-state.txt";
 // 3.0.11-beta.97: «Спорядження»'s place («at 0.5 0.22»)
 constexpr const char* kEquipState = "uaro-graphics\\equip-state.txt";
+// 3.0.11-beta.100: the shop's place («at 0.5 0.3»)
+constexpr const char* kShopState = "uaro-graphics\\shop-state.txt";
 // 2.14: the client patcher (app/client_patch): the list of the game's files last put, and where they arrive first
 constexpr const char* kClientPatchRecord = "uaro-graphics\\client-patch.txt";
 constexpr const char* kClientPatchWork = "uaro-graphics\\update\\client";
