@@ -26,5 +26,9 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result);
 bool key(UINT m, WPARAM wp, LPARAM lp);
 std::optional<winstack::Win> top();
 bool marked(winstack::Win w);  // its gold edge now
+// 3.0.11-beta.115 (question 7 «ок»: the D-pad goes into the other window too): the controller's frame past `from`'s
+// edge toward the window docked beside it (`right` - its right edge) - that one raised, the controller's now; false:
+// none docked there
+bool padCross(winstack::Win from, bool right);
 
 }  // namespace uagfx::win::windowstack

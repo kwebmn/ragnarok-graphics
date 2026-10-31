@@ -54,9 +54,11 @@ std::string tipFirst(const Item& it) {
 
 std::string tipSecond(const Item& it, const Texts& t) {
     const Use u = useOf(it);
-    std::string s = u == Use::Use || u == Use::Confirm ? t.use : u == Use::Wear || u == Use::Ammo ? t.wear
-                    : u == Use::Card                    ? t.card
-                                                        : "";
+    std::string s = !t.all.empty()                      ? t.all  // 3.0.11-beta.115: «Склад»'s
+                    : u == Use::Use || u == Use::Confirm ? t.use
+                    : u == Use::Wear || u == Use::Ammo   ? t.wear
+                    : u == Use::Card                     ? t.card
+                                                         : "";
     if (!s.empty()) s += " \xC2\xB7 ";
     return s + t.info;
 }
@@ -408,10 +410,12 @@ std::vector<Words> words(const Layout& L, const std::vector<Item>& items, const 
         out.push_back(Words{panel::Box{L.bar.x + L.bar.w + 12 * s, L.footer.y, m(w, 12 * s, false) + 4, L.footer.h}, w,
                             0xC9D1DE, 12 * s, false, Align::Left});
     }
-    const std::string z = grouped(sh.zeny) + " z";
-    const float zw = m(z, 12 * s, true) + 4;
-    out.push_back(Words{panel::Box{L.glass.w - side - zw, L.footer.y, zw, L.footer.h}, z, kText, 12 * s, true,
-                        Align::Right});
+    if (sh.zeny >= 0) {  // 3.0.11-beta.115: none in «Склад»
+        const std::string z = grouped(sh.zeny) + " z";
+        const float zw = m(z, 12 * s, true) + 4;
+        out.push_back(Words{panel::Box{L.glass.w - side - zw, L.footer.y, zw, L.footer.h}, z, kText, 12 * s, true,
+                            Align::Right});
+    }
     for (const Flash& f : sh.flashes) {  // its word rising out of the cell, dimming
         if (f.label.empty()) continue;
         const float t = std::clamp(f.t, 0.0f, 1.0f);

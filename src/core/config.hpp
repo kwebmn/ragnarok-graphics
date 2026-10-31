@@ -636,6 +636,9 @@ struct Config {
     bool npcWindow = false;
     // 3.0.11-beta.100: [interface] shop - the NPCs' shops (core/shop_window) in place of the game's deal windows
     bool shopWindow = false;
+    // 3.0.11-beta.115: [interface] storage - the Kafra storage (win/storage_window: «Склад», «Речі» beside it) in
+    // place of the game's storage window
+    bool storageWindow = false;
     // 3.0.11-beta.46: [interface] animations - the new interface's motion (core/ui_motion): the target's card, the
     // character block's views, a new level's flare, the low HP warning sliding in; 0: all at once
     bool animations = true;

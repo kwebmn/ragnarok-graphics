@@ -247,6 +247,26 @@ The owner 31.10: «Полоски HP мобов - всем показывай»,
   logs «ammo worn», «running low», «ran out». Ruling R17: bullets and thrown things (types 16, 17) say «Боєприпаси»
   (CharAmmo), arrows «Стріли» (CharArrows) - the owner said arrows, gunslingers/ninjas exist in the job list - cost if
   wrong: one word. Test char_block_the_arrows_running_low; suite 2076/0.
+- Stage 6, «Склад» (3.0.11-beta.115; the concept's stage 4): research - the storage window = UI window 0x21 (mgr+0x114,
+  class 0x69B938, made at 0x00f2 with SendMsg 0x37 count/most, deleted at 0x00f8; SendMsg 0x4BB8A0: 6/0x87 -> mode
+  0x3F, 0x16 tab, 0x17 refill, 0x26 put the drag in: mode 0x3D (bag) / 0x57 (cart); drop 0x4BB6C0: trade open ->
+  refused, drag 1/9 only, one -> 0x26, else the count window 0xF mode 7; press 0x4BB2A0 -> mode 0x3C (place, count) =
+  drag type 6); the bag window's drop 0x4BA530: drag 6/9 -> one: its 0x26 (mode 0x3E take / 0x55 cart), else the count
+  window mode 6 (its OK -> «Речі» window's 0x26: the game's window 8 must exist); session storage list +0xF40 (count
+  +0xF44), nodes as the bag's; mode drag info +0x32C (kind, place +4, count +0x10), 0x12 passes it to FUN_004ccef0.
+  Built: win/storage_window («Склад»: itemwin grid, Texts.all one tip, places «57 / 600» from 0x00f2 (packets
+  StorageCount), no zeny), [interface] storage (on with the minimap; app «Інтерфейс» «Склад Кафри»), Blocker::Storage,
+  Win::Storage, drops through world_mouse, «Речі» made beside it and docked (Dock.partner), the same «★»
+  (itemswin::starredIds/toggleStar), pad storagePad (A take, Y card, LB/RB, B close) and the D-pad past the edge into
+  the docked window (windowstack::padCross). Ruling R18: while «Склад» is open «Речі»'s double click (and the pad's A)
+  puts the thing into the storage (tip «двічі клік — на склад») - the concept said drag only; a double click is the
+  quick way stash windows have - cost if wrong: one condition. Ruling R19: a press over a window of the game's own (its
+  hit test FUN_004cb550 over the manager's list) goes to the game, not to our part drawn under it (win/game_press) -
+  Q5 drew them over ours, their clicks did not follow (the count window over «Склад» would lose its OK) - cost if wrong:
+  a shown-but-invisible game window would steal presses (logged: «a press over the game's own window (its class …)»).
+  Ruling R20: the D-pad crosses only between «Склад» and «Речі» (equip's left/right go round its slots, no way back
+  yet). Tests item_window_as_the_storage, config_interface_storage, game_packets_the_storages_places (+ the minimap
+  list 16); suite 2079/0.
 - Stage 5 research: 0x00c4 deal type; 0x00c6 buy list (11 B each: price.L discount.L type.B nameid.W)
   -> session deal list +0xF28 (count +0xF2C, FUN_0062bbb0(rec, 0); FUN_004ffd30 copies the record's text at +0x11 into
   m_itemName) + windows 0x16 (mgr+0xEC, class 0x69B3E0, SendMsg 0x4AFC00: 0x24 0 buy / 1 sell) and 0x17 (buy cart,

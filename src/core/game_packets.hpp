@@ -157,9 +157,16 @@ struct NpcMenu {
     std::string text;
 };
 
+// 3.0.11-beta.115 (the windows plan's stage 6, «Склад»): the storage opened or changed - 0x00f2 <count>.W <most>.W,
+// its places used of the most
+struct StorageCount {
+    int count = 0, most = 0;
+};
+
 using Event = std::variant<std::monostate, Whisper, PartyInvite, TradeRequest, GuildInvite, FriendRequest, StatusIcon,
                            Vanish, SkillCast, Hit, PartyList, PartyMember, PartyLeft, PartyHp, PartyChat, GuildChat,
-                           Chat, Status, Pickup, StatusLong, Casting, Appear, PartyPos, ActorInfo, NpcSay, NpcMenu>;
+                           Chat, Status, Pickup, StatusLong, Casting, Appear, PartyPos, ActorInfo, NpcSay, NpcMenu,
+                           StorageCount>;
 
 // A packet as the game took it, `size` bytes of it readable: one of the above, or nothing (another packet, one cut
 // short or naming more bytes than there are).

@@ -146,6 +146,37 @@ TEST(item_window_picture_and_words) {
     CHECK(std::any_of(early.begin(), early.end(), [](const itemwin::Words& x) { return x.text == "38"; }));
 }
 
+// 3.0.11-beta.115 (the windows plan's stage 6, «Склад»): the same grid as the storage - one tip for every thing (a
+// double click takes it into the bag, an etc thing too), the places used of the most in the weight's place, no zeny
+TEST(item_window_as_the_storage) {
+    std::vector<itemwin::Item> items{item(3, 909, 3, 120, "Jellopy"), item(4, 501, 0, 5, "Red Potion")};
+    itemwin::Texts t = itemTexts();
+    t.title = "Склад";
+    t.hotkey = "";
+    t.weight = "Місця";
+    t.all = "двічі клік — у сумку";
+    const itemwin::Layout L = itemwin::layout(0, 0, 1.0f, t, itemwin::Measure(panel::wordsWidth));
+    itemwin::Show sh;
+    sh.hover = 0;
+    sh.weight = 57;
+    sh.weightMost = 600;
+    sh.zeny = -1;
+    const std::vector<int> shown = itemwin::shownOf(items, itemwin::Tab::All, "");
+    const std::vector<itemwin::Words> w = itemwin::words(L, items, shown, sh, t, itemwin::Measure(panel::wordsWidth));
+    const auto has = [&](const std::string& s) {
+        return std::any_of(w.begin(), w.end(), [&](const itemwin::Words& x) { return x.text == s; });
+    };
+    CHECK(has("Склад") && has("Місця") && has("57 / 600 \xC2\xB7 9 %"));
+    CHECK(has("двічі клік — у сумку \xC2\xB7 ПКМ — опис"));  // Jellopy: an etc thing taken too
+    CHECK(std::none_of(w.begin(), w.end(), [](const itemwin::Words& x) {
+        return x.text.size() >= 2 && x.text.compare(x.text.size() - 2, 2, " z") == 0;
+    }));
+    sh.hover = 1;  // a potion: the same words, not «використати»
+    const std::vector<itemwin::Words> w2 = itemwin::words(L, items, shown, sh, t, itemwin::Measure(panel::wordsWidth));
+    CHECK(std::any_of(w2.begin(), w2.end(),
+                      [](const itemwin::Words& x) { return x.text == "двічі клік — у сумку \xC2\xB7 ПКМ — опис"; }));
+}
+
 // 3.0.11-beta.110 (the concept «Концепция окон и инвентаря», stage 2): a worn thing dragged out of «Спорядження» - the
 // bag's grid lit in gold (a drop there takes it off)
 TEST(item_window_lights_the_bag_while_a_worn_thing_is_dragged) {

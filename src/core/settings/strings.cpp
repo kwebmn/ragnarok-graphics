@@ -5192,6 +5192,27 @@ constexpr Entry kTexts[] = {
     {Text::ShopEditHint, "Enter: done \xC2\xB7 Esc: undo \xC2\xB7 at most {1}",
      "Enter — готово \xC2\xB7 Esc — скасувати \xC2\xB7 найбільше {1}",
      "Enter — готово \xC2\xB7 Esc — отменить \xC2\xB7 не больше {1}"},
+    {Text::InterfaceStorage, "Kafra storage", "Склад Кафри", "Склад Кафры"},  // 3.0.11-beta.115
+    {Text::InterfaceStorageHint,
+     "The Kafra storage in the new look: «Storage» with the same tabs, search and grid as «Items», and «Items» opened "
+     "beside it. Drag a thing from one into the other, or double click it: in «Storage» it goes into the bag, in "
+     "«Items» into the storage; how many - the game asks for a stack. The right button shows the item's card. The "
+     "controller: A moves the thing, Y its card, LB / RB the tabs, B closes. Off: the game's own window.",
+     "Склад Кафри в новому вигляді: «Склад» із тими самими вкладками, пошуком і сіткою, що й «Речі», а «Речі» "
+     "відкриваються поруч. Перетягніть річ з одного в інше або клацніть двічі: у «Склад» — річ іде в сумку, у «Речі» — "
+     "на склад; скільки — гра питає для стосу. Права кнопка показує картку речі. Контролер: A переносить річ, Y — "
+     "картка, LB / RB — вкладки, B закриває. Вимкнено — вікно самої гри.",
+     "Склад Кафры в новом виде: «Склад» с теми же вкладками, поиском и сеткой, что и «Вещи», а «Вещи» открываются "
+     "рядом. Перетащите вещь из одного в другое или дважды щёлкните: в «Склад» — вещь идёт в сумку, в «Вещи» — на "
+     "склад; сколько — игра спрашивает для стопки. Правая кнопка показывает карточку вещи. Контроллер: A переносит "
+     "вещь, Y — карточка, LB / RB — вкладки, B закрывает. Выключено — окно самой игры."},
+    {Text::StorageTitle, "Storage", "Склад", "Склад"},
+    {Text::StoragePlaces, "Places", "Місця", "Места"},
+    {Text::StorageTake, "double click: into the bag", "двічі клік — у сумку", "двойной клик — в сумку"},
+    {Text::StoragePadTake, "into the bag", "у сумку", "в сумку"},
+    {Text::StoragePadMore, "{1}: its card", "{1}: картка", "{1}: карточка"},
+    {Text::ItemsToStorage, "double click: into the storage", "двічі клік — на склад", "двойной клик — на склад"},
+    {Text::ItemsPadToStorage, "into the storage", "на склад", "на склад"},
     {Text::InterfacePadWalk, "The controller walks", "Хід контролером", "Ход контроллером"},  // 3.0.11-beta.88
     {Text::InterfacePadWalkHint,  // 3.0.11-beta.102: by the map's cells, the default
      "How the left stick walks. With an arrow: by the map's cells, the same at any camera's distance - the character "

@@ -385,6 +385,7 @@ Config parseConfig(const std::string& text) {
     bool castSet = false;                         // 3.0.11-beta.48
     bool itemsSet = false, statusSet = false, skillsSet = false, equipSet = false, npcSet = false;     // 3.0.11-beta.42
     bool shopSet = false;                         // 3.0.11-beta.100
+    bool storageSet = false;                      // 3.0.11-beta.115
     std::istringstream in(text);
     std::string line;
     std::string section;
@@ -558,6 +559,9 @@ Config parseConfig(const std::string& text) {
         } else if (key == "interface.shop") {  // 3.0.11-beta.100: the NPCs' shops
             shopSet = val == "0" || val == "1" || val == "on" || val == "off" || val == "true" || val == "false";
             setBool(val, c.shopWindow);
+        } else if (key == "interface.storage") {  // 3.0.11-beta.115: the Kafra storage
+            storageSet = val == "0" || val == "1" || val == "on" || val == "off" || val == "true" || val == "false";
+            setBool(val, c.storageWindow);
         } else if (key == "interface.dim_world") {  // 3.0.11-beta.49: the world dimmed under the windows (off: .55)
             setBool(val, c.dimWorld);
         } else if (key == "interface.cast") {  // 3.0.11-beta.48: the cast's label over the hero
@@ -846,6 +850,7 @@ Config parseConfig(const std::string& text) {
     if (c.newMinimap && !equipSet) c.equipWindow = true;    // 3.0.11-beta.97
     if (c.newMinimap && !npcSet) c.npcWindow = true;        // 3.0.11-beta.98
     if (c.newMinimap && !shopSet) c.shopWindow = true;      // 3.0.11-beta.100
+    if (c.newMinimap && !storageSet) c.storageWindow = true;  // 3.0.11-beta.115
     return c;
 }
 

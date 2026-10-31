@@ -62,6 +62,7 @@ struct Texts {
     std::string weight;         // «Вага»
     std::string use, wear, card, info;  // the tip's: «двічі клік — використати», ... «ПКМ — опис»
     std::string fresh;                  // 3.0.11-beta.112: «нове»
+    std::string all;  // 3.0.11-beta.115: set - every thing's tip says it («Склад»: «двічі клік — у сумку»)
 };
 
 // 3.0.11-beta.44 (the owner: «когда использую какую-то вещь, она просто пропадает. нету никакой анимации»): a used
@@ -88,8 +89,8 @@ struct Show {
     bool dropping = false;  // 3.0.11-beta.110: a worn thing dragged out of «Спорядження» - the grid lit (taken off)
     std::string search;   // UTF-8
     bool caretOn = true;
-    int weight = 0, weightMost = 0;
-    long long zeny = 0;
+    int weight = 0, weightMost = 0;  // 3.0.11-beta.115: «Склад» - its places used of the most
+    long long zeny = 0;              // < 0: none shown («Склад»)
 };
 
 struct Layout {

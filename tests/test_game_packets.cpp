@@ -397,3 +397,15 @@ TEST(game_packets_an_npcs_words_and_menu) {
     const auto* m = std::get_if<packets::NpcMenu>(&e);
     CHECK(m != nullptr && m->npc == 110000777u && m->text == menu);
 }
+
+// 3.0.11-beta.115 (the windows plan's stage 6, «Склад»): the storage's places used of the most (0x00f2 <count>.W
+// <most>.W), as the game's storage window shows them («57/600»)
+TEST(game_packets_the_storages_places) {
+    std::vector<uint8_t> p = packet(0x00f2, 6);
+    put16(p, 2, 57);
+    put16(p, 4, 600);
+    const packets::Event e = packets::parse(p.data(), p.size());
+    const auto* c = std::get_if<packets::StorageCount>(&e);
+    CHECK(c != nullptr && c->count == 57 && c->most == 600);
+    CHECK(std::holds_alternative<std::monostate>(packets::parse(p.data(), 5)));  // cut short
+}

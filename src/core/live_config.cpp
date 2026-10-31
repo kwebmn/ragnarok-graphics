@@ -270,6 +270,10 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("shop", flag(running.shopWindow), flag(file.shopWindow)));
         n.shopWindow = file.shopWindow;
     }
+    if (file.storageWindow != running.storageWindow) {  // 3.0.11-beta.115: the Kafra storage, at once
+        u.applied.push_back(change("storage", flag(running.storageWindow), flag(file.storageWindow)));
+        n.storageWindow = file.storageWindow;
+    }
     if (file.uiSize != running.uiSize) {  // 3.0.11-beta.54: the new interface's size, at once
         const auto token = [](int v) { return v > 0 ? std::to_string(v) : std::string("auto"); };
         u.applied.push_back(change("size", token(running.uiSize), token(file.uiSize)));

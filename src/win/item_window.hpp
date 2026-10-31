@@ -2,6 +2,7 @@
 #include <windows.h>
 
 #include <cstdint>
+#include <set>
 
 #include "core/frame.hpp"
 #include "core/game_packets.hpp"
@@ -50,5 +51,15 @@ bool box(int& x, int& y, int& w, int& h);
 // being dragged)
 void moveTo(int x, int y, bool keep = true);
 bool moving();  // 3.0.11-beta.111: its title dragged now (docked with the other, it leads)
+
+// 3.0.11-beta.115 (the windows plan's stage 6, «Склад»): this character's «★» things - «Склад» marks the same ones
+const std::set<int>& starredIds();
+void toggleStar(int id);
+// The game's «Речі» window made (as the character block's button does) when it is not open: «Склад» opens it beside
+// itself; false: not made
+bool open();
+// A drag of the game's (a storage thing's, type 6) given to the game's «Речі» window's drop, the window made first:
+// the thing into the bag (the game's count window for a stack); false: no window
+bool giveDrag(uint32_t drag);
 
 }  // namespace uagfx::win::itemswin

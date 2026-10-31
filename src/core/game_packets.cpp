@@ -89,6 +89,9 @@ Event parse(const uint8_t* p, size_t size) {
             if (rd16(p, 0) == 0x00b4) return NpcSay{rd32(p, 4), text};
             return NpcMenu{rd32(p, 4), text};
         }
+        case 0x00f2:  // 3.0.11-beta.115: the storage's places used of the most
+            if (size < 6) return {};
+            return StorageCount{rd16(p, 2), rd16(p, 4)};
         case 0x0195:  // 3.0.11-beta.95: a unit's name line - a monster's HP % in its party's place
             if (size < 102) return {};
             return ActorInfo{rd32(p, 2), hpOf(name(p, 30))};

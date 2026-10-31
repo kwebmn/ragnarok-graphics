@@ -30,6 +30,7 @@
 #include "win/paths.hpp"
 #include "win/picture_draw.hpp"
 #include "win/real_ddraw.hpp"
+#include "win/storage_window.hpp"
 #include "win/ui_cost.hpp"
 #include "win/window_shadow.hpp"
 #include "win/window_stack.hpp"
@@ -46,6 +47,7 @@ constexpr uint32_t kWindowMgr = 0x727ED8, kItemsAt = kWindowMgr + 0x8C, kItemsCl
 constexpr uint32_t kShown = 0x38, kSendMsgSlot = 0x94, kItemsSendMsg = 0x4B9DF0, kDropSlot = 0x2C;
 constexpr uint32_t kItemsDrop = 0x4BA530, kMakeWindow = 0x4D42D0;
 constexpr int kButtonMsg = 6, kCloseButton = 0x87, kItemCard = 0xC, kShowItem = 0x18;
+constexpr int kItemsWindow = 8;  // 3.0.11-beta.115: made for «Склад» (MakeWindow's id)
 // The game mode (its SendMsg FUN_005707d0 at vtable + 0x14) and what its window sends it (FUN_004b9a10, FUN_004b98b0):
 // use, wear, a card into a slot, arrows, a drag begun
 constexpr uint32_t kModeNow = 0x74B57C, kModeMsgSlot = 0x14, kModeMsg = 0x5707D0;
@@ -207,6 +209,35 @@ void keepState(const State& s) {
     if (!writeFileAtomic(path, std::string(text))) LOG_INFO("items: %s cannot be written", path.c_str());
 }
 
+// 3.0.11-beta.113: this character's starred things, read again when another character plays (3.0.11-beta.115: «Склад»
+// marks them too, through starred() / toggleStar())
+void readStarred(State& s) {
+    const std::string who = readOwnName();
+    if (who == s.starredOf) return;
+    s.starredOf = who;
+    std::string text;
+    readTextFile(layout::join(gameDir(), layout::kItemsStarred), text);
+    s.starred = iw::starredOf(text, who);
+}
+
+// A thing into «★» or out of it, the file written; false: no character known
+bool flipStar(State& s, int id) {
+    readStarred(s);
+    if (s.starredOf.empty()) return false;
+    const bool on = s.starred.erase(id) == 0;
+    if (on) s.starred.insert(id);
+    for (iw::Item& it : s.items) it.starred = s.starred.count(it.id) > 0;
+    s.shownItems = iw::shownOf(s.items, s.show.tab, s.show.search);
+    const std::string path = layout::join(gameDir(), layout::kItemsStarred);
+    std::string text;
+    readTextFile(path, text);
+    if (!writeFileAtomic(path, iw::withStarred(text, s.starredOf, s.starred)))
+        LOG_INFO("items: %s cannot be written", path.c_str());
+    s.key.clear();
+    if (s.told++ < 20) LOG_INFO("items: #%d %s «★»", id, on ? "into" : "out of");
+    return true;
+}
+
 // The bag as the session has it, the worn ones out (their window is the gear's)
 void readBag(State& s) {
     s.items.clear();
@@ -249,13 +280,7 @@ void readBag(State& s) {
         s.items.push_back(it);
         s.infos.push_back(node + kInfo);
     }
-    const std::string who = readOwnName();  // 3.0.11-beta.113: «★» - this character's starred things
-    if (who != s.starredOf) {
-        s.starredOf = who;
-        std::string text;
-        readTextFile(layout::join(gameDir(), layout::kItemsStarred), text);
-        s.starred = iw::starredOf(text, who);
-    }
+    readStarred(s);  // 3.0.11-beta.113: «★» - this character's starred things
     for (iw::Item& it : s.items) {
         it.fresh = s.fresh.count(it.index) > 0;  // 3.0.11-beta.112
         it.starred = s.starred.count(it.id) > 0;
@@ -288,6 +313,9 @@ iw::Texts texts(bool pad) {
     t.wear = say(settings::Text::ItemsWear);
     t.card = say(settings::Text::ItemsCard);
     t.info = say(settings::Text::ItemsInfo);
+    if (storagewin::shown())  // 3.0.11-beta.115: «Склад» open - a double click puts the thing into the storage
+        t.all = pad ? std::string(uapad::buttonLabel(0)) + ": " + say(settings::Text::ItemsPadToStorage)
+                    : say(settings::Text::ItemsToStorage);
     if (pad) {
         const std::string a = uapad::buttonLabel(0), x = uapad::buttonLabel(2), y = uapad::buttonLabel(3);
         t.use = a + ": " + say(settings::Text::ItemsPadUse);
@@ -395,6 +423,14 @@ const char* use(State& s, const iw::Item& it) {
 void useCell(State& s, int shownIndex, ULONGLONG now, const char* how) {
     if (shownIndex < 0 || shownIndex >= int(s.shownItems.size())) return;
     const iw::Item& it = s.items[size_t(s.shownItems[size_t(shownIndex)])];
+    if (storagewin::shown()) {  // 3.0.11-beta.115: «Склад» open - into the storage (the game's count window, a stack)
+        const bool put = storagewin::put(it.index, it.count);
+        if (s.told++ < 20)
+            LOG_INFO("items: %s on #%d x%d - %s", how, it.id, it.count,
+                     put ? "given to the game's storage window's drop" : "not put (the storage window not found)");
+        s.readAt = 0;
+        return;
+    }
     const iw::Use kind = iw::useOf(it);
     const char* did = use(s, it);
     const bool asked = kind != iw::Use::None && !(kind == iw::Use::Confirm && s.armed == it.index);
@@ -695,22 +731,9 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
         case iw::Part::Search:
             s.show.typing = true;
             break;
-        case iw::Part::Star: {  // 3.0.11-beta.113: starred or not - «★»
-            if (h.index >= int(s.shownItems.size()) || s.starredOf.empty()) break;
-            const int id = s.items[size_t(s.shownItems[size_t(h.index)])].id;
-            const bool on = s.starred.erase(id) == 0;
-            if (on) s.starred.insert(id);
-            for (iw::Item& it : s.items) it.starred = s.starred.count(it.id) > 0;
-            s.shownItems = iw::shownOf(s.items, s.show.tab, s.show.search);
-            const std::string path = layout::join(gameDir(), layout::kItemsStarred);
-            std::string text;
-            readTextFile(path, text);
-            if (!writeFileAtomic(path, iw::withStarred(text, s.starredOf, s.starred)))
-                LOG_INFO("items: %s cannot be written", path.c_str());
-            s.key.clear();
-            if (s.told++ < 20) LOG_INFO("items: #%d %s «★»", id, on ? "into" : "out of");
+        case iw::Part::Star:  // 3.0.11-beta.113: starred or not - «★»
+            if (h.index < int(s.shownItems.size())) flipStar(s, s.items[size_t(s.shownItems[size_t(h.index)])].id);
             break;
-        }
         case iw::Part::Cell: {
             if (h.index >= int(s.shownItems.size())) break;
             const int at = s.shownItems[size_t(h.index)];
@@ -774,6 +797,32 @@ bool key(UINT m, WPARAM wp, LPARAM lp) {
 }
 
 bool shown() { return state().shown; }
+
+const std::set<int>& starredIds() {  // 3.0.11-beta.115
+    State& s = state();
+    readStarred(s);
+    return s.starred;
+}
+
+void toggleStar(int id) { flipStar(state(), id); }  // 3.0.11-beta.115
+
+bool open() {  // 3.0.11-beta.115: as the character block's button opens it
+    if (gameWindow()) return true;
+    if (!inGameWorld()) return false;
+    reinterpret_cast<MakeFn>(uintptr_t(kMakeWindow))(kWindowMgr, kItemsWindow);
+    const bool made = gameWindow() != 0;
+    LOG_INFO("items: the game's «Речі» window %s for «Склад»", made ? "made" : "not made");
+    return made;
+}
+
+bool giveDrag(uint32_t drag) {  // 3.0.11-beta.115
+    if (!open()) return false;
+    const uint32_t window = gameWindow();
+    if (!window || read32(read32(window) + kDropSlot) != kItemsDrop) return false;
+    reinterpret_cast<DropFn>(uintptr_t(kItemsDrop))(window, 0, 0, drag);
+    state().readAt = 0;
+    return true;
+}
 
 void drawToast(FrameRecord& record, gpu::Renderer& renderer) {
     State& s = state();
@@ -840,8 +889,18 @@ void padCommand(PadCommand c) {
     switch (c) {
         case PadCommand::Up: s.padFocus = std::max(0, s.padFocus - cols); keepInSight(); break;
         case PadCommand::Down: s.padFocus = std::min(std::max(0, n - 1), s.padFocus + cols); keepInSight(); break;
-        case PadCommand::Left: s.padFocus = std::max(0, s.padFocus - 1); keepInSight(); break;
-        case PadCommand::Right: s.padFocus = std::min(std::max(0, n - 1), s.padFocus + 1); keepInSight(); break;
+        case PadCommand::Left:  // 3.0.11-beta.115: past the left edge - into the window docked there
+            if (s.padFocus % cols == 0 && windowstack::padCross(winstack::Win::Items, false)) break;
+            s.padFocus = std::max(0, s.padFocus - 1);
+            keepInSight();
+            break;
+        case PadCommand::Right:
+            if ((s.padFocus % cols == cols - 1 || s.padFocus >= n - 1) &&
+                windowstack::padCross(winstack::Win::Items, true))
+                break;
+            s.padFocus = std::min(std::max(0, n - 1), s.padFocus + 1);
+            keepInSight();
+            break;
         case PadCommand::Use: useCell(s, s.padFocus, GetTickCount64(), "the controller's A"); break;
         case PadCommand::Card:
             if (s.padFocus >= 0 && s.padFocus < n) card(s, size_t(s.shownItems[size_t(s.padFocus)]));

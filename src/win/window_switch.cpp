@@ -20,6 +20,7 @@
 #include "win/equip_window.hpp"
 #include "win/npc_talk.hpp"
 #include "win/shop_window.hpp"
+#include "win/game_press.hpp"
 #include "win/skill_window.hpp"
 #include "win/stat_window.hpp"
 #include "win/target_card.hpp"
@@ -60,11 +61,14 @@ void claimed(UINT m) {
 
 // The driver's parts' mouse, the topmost first: true - the message was one of theirs
 bool partsMouse(HWND w, UINT m, WPARAM wp, LPARAM lp, LRESULT& answer) {
-    return hudedit::mouse(w, m, wp, lp, answer) ||      // 3.0.11-beta.75: all of it while the parts are framed
-           padtileswin::mouse(w, m, wp, lp, answer) ||  // 3.0.11-beta.90: the controller's windows' tile (modal)
-           padassignwin::mouse(w, m, wp, lp, answer) ||  // 3.0.11-beta.91: «Призначити» (modal)
-           answercard::mouse(w, m, lp, answer) ||       // 3.0.9-beta.4: and over the answer card the card's
-           // 3.0.11-beta.108: the windows over the panels, the stack's top first (a press raises the one it is in)
+    if (hudedit::mouse(w, m, wp, lp, answer) ||      // 3.0.11-beta.75: all of it while the parts are framed
+        padtileswin::mouse(w, m, wp, lp, answer) ||  // 3.0.11-beta.90: the controller's windows' tile (modal)
+        padassignwin::mouse(w, m, wp, lp, answer) ||  // 3.0.11-beta.91: «Призначити» (modal)
+        answercard::mouse(w, m, lp, answer))          // 3.0.9-beta.4: and over the answer card the card's
+        return true;
+    // 3.0.11-beta.115: a press over a window of the game's own (drawn over the driver's since beta.109) is the game's
+    if (gamepress::pressOver(m)) return false;
+    return // 3.0.11-beta.108: the windows over the panels, the stack's top first (a press raises the one it is in)
            windowstack::mouse(w, m, wp, lp, answer) ||
            minimapproto::mouse(w, m, wp, lp, answer) ||  // 3.0.11-beta.1: the new minimap's
            buffcolumn::mouse(w, m, wp, lp, answer) ||    // 3.0.11-beta.35: the buffs' column's

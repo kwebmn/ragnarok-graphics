@@ -496,6 +496,9 @@ enum class Text : uint16_t {
     ShopWeight, ShopCart, ShopAmount, ShopSum, ShopTotal, ShopLeft, ShopAfter, ShopWeightBuy, ShopWeightSell,
     ShopClear, ShopNote, ShopEmpty, ShopWaiting, ShopChoose, ShopToCart, ShopKeyAmount, ShopRemove, ShopInfo,  // .101
     ShopSpace, ShopEditHint,
+    // 3.0.11-beta.115: the Kafra storage («Склад»)
+    InterfaceStorage, InterfaceStorageHint, StorageTitle, StoragePlaces, StorageTake, StoragePadTake, StoragePadMore,
+    ItemsToStorage, ItemsPadToStorage,
     InterfacePadWalk, InterfacePadWalkHint, InterfacePadWalkMouse, InterfacePadWalkArrow,  // 3.0.11-beta.88
     InterfaceWalkArrow, InterfaceWalkArrowHint, WalkArrowChevrons, WalkArrowSlim, WalkArrowConcept, WalkArrowRing,
     WalkArrowDots, WalkArrowCell, WalkArrowOff,  // 3.0.11-beta.103

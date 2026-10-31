@@ -86,6 +86,8 @@ constexpr const char* kCharacterState = "uaro-graphics\\character-state.txt";
 constexpr const char* kItemsState = "uaro-graphics\\items-state.txt";
 // 3.0.11-beta.113: «Речі»'s starred things, a line a character (core/item_window starredOf)
 constexpr const char* kItemsStarred = "uaro-graphics\\items-starred.txt";
+// 3.0.11-beta.115: «Склад»'s place and tab, as «Речі»'s
+constexpr const char* kStorageState = "uaro-graphics\\storage-state.txt";
 constexpr const char* kTrackerState = "uaro-graphics\\tracker-state.txt";  // 3.0.11-beta.70: the tracker's pins
 // 3.0.11-beta.75: «Розміщення інтерфейсу» - the parts the player moved or sized (core/hud_layout)
 constexpr const char* kHudLayout = "uaro-graphics\\hud-layout.txt";

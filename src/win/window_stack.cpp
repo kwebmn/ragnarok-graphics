@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <iterator>
 #include <vector>
 
 #include "pad/win/game_window.hpp"
@@ -14,6 +15,7 @@
 #include "win/shop_window.hpp"
 #include "win/skill_window.hpp"
 #include "win/stat_window.hpp"
+#include "win/storage_window.hpp"
 
 namespace uagfx::win::windowstack {
 namespace {
@@ -22,12 +24,14 @@ using winstack::Win;
 using uapad::gamewindow::Blocker;
 
 constexpr const char* kNames[] = {"«Речі»",  "«Характеристики»", "«Навички»", "«Спорядження»",
-                                  "the shop", "the NPC talk",      "«Довідник»"};
+                                  "the shop", "the NPC talk",      "«Довідник»", "«Склад»"};
+static_assert(std::size(kNames) == size_t(winstack::kWins), "a name for each window");
 constexpr int kMostTold = 40;
 
-struct Dock {  // 3.0.11-beta.111: «Спорядження» beside «Речі»
+struct Dock {  // 3.0.11-beta.111: «Спорядження» beside «Речі» (3.0.11-beta.115: or «Склад», while it is open)
     bool on = false;
-    winstack::Side side = winstack::Side::Left;  // the gear's side of the bag
+    Win partner = Win::Equip;
+    winstack::Side side = winstack::Side::Left;  // the partner's side of the bag
     bool unsaved = false;                        // the follower moved during a drag, its place not kept yet
 };
 
@@ -60,6 +64,7 @@ bool shown(Win w) {
         case Win::Shop: return shopwin::shown();
         case Win::Npc: return npcwin::shown();
         case Win::Reference: return referencewin::isOpen();
+        case Win::Storage: return storagewin::shown();
     }
     return false;
 }
@@ -72,6 +77,7 @@ Blocker blockerOf(Win w) {
         case Win::Equip: return Blocker::Equip;
         case Win::Shop: return Blocker::Shop;
         case Win::Npc: return Blocker::Npc;
+        case Win::Storage: return Blocker::Storage;
         case Win::Reference: break;
     }
     return Blocker::Reference;
@@ -86,6 +92,7 @@ void drawOne(Win w, FrameRecord& record, gpu::Renderer& renderer) {
         case Win::Shop: shopwin::draw(record, renderer); break;
         case Win::Npc: npcwin::draw(record, renderer); break;
         case Win::Reference: referencewin::draw(record, renderer); break;
+        case Win::Storage: storagewin::draw(record, renderer); break;
     }
 }
 
@@ -98,6 +105,7 @@ bool mouseOne(Win w, HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
         case Win::Shop: return shopwin::mouse(game, m, wp, lp, result);
         case Win::Npc: return npcwin::mouse(game, m, wp, lp, result);
         case Win::Reference: return referencewin::mouse(game, m, wp, lp, result);
+        case Win::Storage: return storagewin::mouse(game, m, wp, lp, result);
     }
     return false;
 }
@@ -108,6 +116,7 @@ bool keyOne(Win w, UINT m, WPARAM wp, LPARAM lp) {  // the windows with keys of 
         case Win::Shop: return shopwin::key(m, wp, lp);
         case Win::Npc: return npcwin::key(m, wp, lp);
         case Win::Reference: return referencewin::key(m, wp, lp);
+        case Win::Storage: return storagewin::key(m, wp, lp);  // 3.0.11-beta.115: its search's
         default: return false;
     }
 }
@@ -123,6 +132,7 @@ bool boxOf(Win w, winstack::Box& b) {
         case Win::Shop: return shopwin::box(b.x, b.y, b.w, b.h);
         case Win::Npc: return npcwin::box(b.x, b.y, b.w, b.h);
         case Win::Reference: return referencewin::box(b.x, b.y, b.w, b.h);
+        case Win::Storage: return storagewin::box(b.x, b.y, b.w, b.h);
     }
     return false;
 }
@@ -134,26 +144,33 @@ void moveTo(Win w, int x, int y, bool keep = true) {
         case Win::Skills: skillswin::moveTo(x, y); break;
         case Win::Equip: equipwin::moveTo(x, y, keep); break;
         case Win::Shop: shopwin::moveTo(x, y); break;
+        case Win::Storage: storagewin::moveTo(x, y, keep); break;
         default: break;
     }
 }
 
 // 3.0.11-beta.111 (question 1: «два окна вплотную друг к другу как одно окно»): «Спорядження» and «Речі» opened
 // together stand side by side, tops in line (core/window_stack docked) - the gear left of the bag where there is room;
-// the one dragged by its title leads, the other follows (kept when the drag ends); Shift held while dragging - apart
+// the one dragged by its title leads, the other follows (kept when the drag ends); Shift held while dragging - apart.
+// 3.0.11-beta.115: «Склад» in the gear's place while it is open (the storage with its bag beside it)
 void dockFrame(State& s, bool opened, int targetW, int targetH) {
+    const Win partner = shown(Win::Storage) ? Win::Storage : Win::Equip;
+    if (s.dock.on && s.dock.partner != partner) s.dock = Dock{};  // another partner: docked anew when it opens
     winstack::Box bag, gear;
-    if (!boxOf(Win::Items, bag) || !boxOf(Win::Equip, gear)) {
+    if (!boxOf(Win::Items, bag) || !boxOf(partner, gear)) {
         s.dock = Dock{};
         return;
     }
-    const bool bagMoving = itemswin::moving(), gearMoving = equipwin::moving(), dragged = bagMoving || gearMoving;
+    const bool bagMoving = itemswin::moving();
+    const bool gearMoving = partner == Win::Storage ? storagewin::moving() : equipwin::moving();
+    const bool dragged = bagMoving || gearMoving;
     if (opened && !s.dock.on) {
         s.dock.on = true;
+        s.dock.partner = partner;
         s.dock.side = winstack::dockSide(bag, gear, targetW);
         if (s.tells < kMostTold) {
             ++s.tells;
-            LOG_INFO("windows: «Спорядження» docked %s of «Речі»",
+            LOG_INFO("windows: %s docked %s of «Речі»", nameOf(partner),
                      s.dock.side == winstack::Side::Left ? "left" : "right");
         }
     }
@@ -162,7 +179,7 @@ void dockFrame(State& s, bool opened, int targetW, int targetH) {
         s.dock.on = false;
         if (s.tells < kMostTold) {
             ++s.tells;
-            LOG_INFO("windows: «Спорядження» and «Речі» apart (dragged with Shift)");
+            LOG_INFO("windows: %s and «Речі» apart (dragged with Shift)", nameOf(partner));
         }
         return;
     }
@@ -171,7 +188,7 @@ void dockFrame(State& s, bool opened, int targetW, int targetH) {
                                    : winstack::docked(bag, gear, s.dock.side);
     want.x = std::clamp(want.x, 0, std::max(0, targetW - want.w));  // the screen's edge: as near as it goes
     want.y = std::clamp(want.y, 0, std::max(0, targetH - want.h));
-    const Win follower = gearLeads ? Win::Items : Win::Equip;
+    const Win follower = gearLeads ? Win::Items : partner;
     const winstack::Box at = gearLeads ? bag : gear;
     if (want.x != at.x || want.y != at.y) {
         moveTo(follower, want.x, want.y, !dragged);
@@ -211,6 +228,7 @@ bool close(Win w) {
         case Win::Skills: skillswin::padCommand(skillswin::PadCommand::Close); return true;
         case Win::Equip: equipwin::padCommand(equipwin::PadCommand::Close); return true;
         case Win::Reference: referencewin::padCommand(referencewin::PadCommand::Close); return true;
+        case Win::Storage: storagewin::padCommand(storagewin::PadCommand::Close); return true;
         default: return false;
     }
 }
@@ -226,7 +244,7 @@ void frame(int targetWidth, int targetHeight, double k) {
         const auto& order = s.stack.bottomUp();
         if (now && std::find(order.begin(), order.end(), w) == order.end()) {
             placeNew(s, w, targetWidth, targetHeight, k);  // the others' places before it joins them
-            pairOpened = pairOpened || w == Win::Items || w == Win::Equip;
+            pairOpened = pairOpened || w == Win::Items || w == Win::Equip || w == Win::Storage;
         }
         s.stack.see(w, now);
     }
@@ -273,6 +291,20 @@ bool key(UINT m, WPARAM wp, LPARAM lp) {
 }
 
 std::optional<winstack::Win> top() { return state().stack.top(); }
+
+bool padCross(winstack::Win from, bool right) {
+    State& s = state();
+    // «Склад» and «Речі» (the gear's slots go round with left and right of their own: no way back from there yet)
+    if (!s.dock.on || s.dock.partner != Win::Storage || !shown(Win::Items) || !shown(s.dock.partner)) return false;
+    const bool partnerLeft = s.dock.side == winstack::Side::Left;
+    const Win to = from == Win::Items && right != partnerLeft       ? s.dock.partner
+                   : from == s.dock.partner && right == partnerLeft ? Win::Items
+                                                                    : from;
+    if (to == from) return false;
+    s.stack.raise(to);
+    tell(s, "raised by the controller's D-pad past its neighbour's edge", to);
+    return true;
+}
 
 bool marked(winstack::Win w) { return state().stack.marked(w); }
 
