@@ -1,3 +1,17 @@
+# uaRO Graphics 3.0.11-beta.89 — what is new
+
+The controller in the interface, stage 5 - everything about the controller in one program:
+- **The page «Controller»** in the app (was «Gamepad»): which controller the game saw last and when; the interface's
+  switches for the controller («Controller's buttons on the interface», «Target's ring on the ground», «The controller
+  walks»); **each character's buttons** - choose a character and give each button an action (a bar's cell, attack,
+  pick up, sit, talk…), as the Start menu does; how far the stick walks; the old target mark («None» possible);
+  vibration, PlayStation's light bar and touchpad, the hint in NPC windows.
+- **The controller's language = the interface's**: its menu and hints speak uaRO Graphics' language, no choice of its
+  own any more.
+- The Start menu in the game stays for now and changes the same.
+- To check: open «Controller», choose a character, change a button, enter with that character - the button works the
+  new way and shows on the skill bar. In the log: «gamepad: DualSense (Bluetooth)» (or Xbox).
+
 # uaRO Graphics 3.0.11-beta.88 — what is new
 
 The controller in the interface, stage 4 (a prototype, off by default):
