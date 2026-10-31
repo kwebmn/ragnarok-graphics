@@ -1,3 +1,16 @@
+# uaRO Graphics 3.0.11-beta.92 — what is new
+
+The controller in the interface, stage 6 (part 3):
+- **The controller's hints in the interface's style.** The hint line in NPC windows and while choosing whom a heal goes
+  on is drawn by the interface itself over the skill bar: a glass bar, the buttons as Xbox or PlayStation glyphs («↑↓
+  choose · A OK · B cancel»). The separate little hint window no longer comes (while «Controller's buttons on the
+  interface» is on).
+- **«Status» from the controller.** While the window is open: the D-pad or the left stick chooses a stat (its «+» lit,
+  the line saying what a point gives), A adds a point, B or Start close it.
+- To check: talk to an NPC with the controller - a bar with glyphs at the bottom; open «Status» (Start → the tile) and
+  add a point with A. In the log: «pad hint: a line of 3 parts in the interface's style», «stats: the controller's A -
+  a point to the stat …».
+
 # uaRO Graphics 3.0.11-beta.91 — what is new
 
 The controller in the interface, stage 6 (part 2):
