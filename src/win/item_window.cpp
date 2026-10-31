@@ -8,6 +8,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -60,6 +61,7 @@ constexpr uint32_t kBag = 0x771148 + 0xF1C, kInfo = 8;
 constexpr size_t kInfoSize = 0x48, kMostNodes = 256;
 constexpr ULONGLONG kReadMs = 200, kConfirmMs = 3000, kBlinkMs = 530;
 constexpr ULONGLONG kTipMs = 400;  // 3.0.11-beta.51: a cell's tip after this long pointed at (the concept's)
+constexpr ULONGLONG kToastMs = 2000;  // 3.0.11-beta.112: the words of a thing come into the bag
 constexpr size_t kMostTyped = 24;
 
 using SendMsgFn = int(__attribute__((thiscall)) *)(uint32_t self, uint32_t sender, int msg, int a, int b, int c);
@@ -75,6 +77,17 @@ struct State {
     bool on = false, shown = false, hid = false, stateRead = false, skipChar = false;
     unsigned codePage = 0;
     int gainsTold = 0;  // 3.0.11-beta.107: the items come into the bag told the log
+    // 3.0.11-beta.112 (question 3 «да»): the things come into the bag (their places) till pointed at - «нове»; the last
+    // one's words («+500 Fire Arrow») over the bag, or the screen's lower middle with it closed, for 2 s
+    std::set<int> fresh;
+    std::string toast, toastPainted;
+    ULONGLONG toastUntil = 0;
+    float toastK = 0, toastScale = 1;
+    int toastW = 0, toastH = 0;  // the target's
+    panel::Picture toastPicture;
+    uint32_t toastTexture = 0;
+    int toastTexW = 0, toastTexH = 0;
+    bool toastUpload = false;
     float k = 0, scale = 1;
     int targetW = 0, targetH = 0;
     float fx = 0.08f, fy = 0.23f;  // its place: a share of the free room to its left and above it (the concept's)
@@ -234,6 +247,13 @@ void readBag(State& s) {
         s.items.push_back(it);
         s.infos.push_back(node + kInfo);
     }
+    for (iw::Item& it : s.items) it.fresh = s.fresh.count(it.index) > 0;  // 3.0.11-beta.112
+    for (auto f = s.fresh.begin(); f != s.fresh.end();) {  // gone from the bag (or worn): no longer new
+        const int at = *f;
+        f = std::any_of(s.items.begin(), s.items.end(), [at](const iw::Item& it) { return it.index == at; })
+                ? std::next(f)
+                : s.fresh.erase(f);
+    }
 }
 
 // 3.0.11-beta.91: played with the controller - its buttons in the tip («A: використати · X: призначити · Y: картка»)
@@ -246,6 +266,7 @@ iw::Texts texts(bool pad) {
     t.tabs[0] = say(settings::Text::ItemsTabItems);
     t.tabs[1] = say(settings::Text::ItemsTabGear);
     t.tabs[2] = say(settings::Text::ItemsTabEtc);
+    t.fresh = say(settings::Text::ItemsFresh);  // 3.0.11-beta.112
     t.search = say(settings::Text::ItemsSearch);
     t.weight = say(settings::Text::CharWeight);
     t.use = say(settings::Text::ItemsUse);
@@ -278,6 +299,12 @@ std::vector<Words> gdiWords(const std::vector<iw::Words>& in) {
                                                                 : DT_LEFT),
                             false});
     return out;
+}
+
+int freshSum(const State& s) {  // 3.0.11-beta.112: which ones are new (for the picture's key)
+    int sum = 0;
+    for (const int f : s.fresh) sum += f;
+    return sum;
 }
 
 void render(State& s) {
@@ -405,6 +432,12 @@ char letterOf(WPARAM vk, bool shift) {
 void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int targetHeight) {
     State& s = state();
     s.codePage = codePage;
+    if (k > 0 && targetWidth > 0 && targetHeight > 0) {  // 3.0.11-beta.112: a thing come's words, the bag closed too
+        s.toastK = float(k);
+        s.toastScale = uistyle::readingScale(k);
+        s.toastW = targetWidth;
+        s.toastH = targetHeight;
+    }
     if (on != s.on) {
         s.on = on;
         s.key.clear();
@@ -466,6 +499,13 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
         s.tipSince = now;
     }
     s.show.tip = s.show.hover >= 0 && now - s.tipSince >= kTipMs;
+    if (s.show.hover >= 0 && size_t(s.show.hover) < s.shownItems.size()) {  // 3.0.11-beta.112: pointed at - seen
+        iw::Item& it = s.items[size_t(s.shownItems[size_t(s.show.hover)])];
+        if (it.fresh) {
+            it.fresh = false;
+            s.fresh.erase(it.index);
+        }
+    }
     s.padNow = uapad::runtime::look().shown;  // 3.0.11-beta.91: the controller's frame and its tip at once
     s.show.dropping = windrag::now().kind == windrag::Kind::Worn;  // 3.0.11-beta.110: a drop here takes it off
     if (s.padNow && !s.shownItems.empty()) {
@@ -477,7 +517,8 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
                       ';' + std::to_string(int(s.show.tab)) + ';' + std::to_string(s.show.scroll) + ';' +
                       std::to_string(s.show.hover) + (s.show.tip ? "t" : "") + ',' + std::to_string(s.show.hoverTab) +
                       (s.show.hoverClose ? "x" : "") + ';' + s.show.search + (s.show.typing ? "|t" : "") +
-                      (s.show.typing && s.show.caretOn ? "c" : "") + (s.show.dropping ? "D" : "") + ';' +
+                      (s.show.typing && s.show.caretOn ? "c" : "") + (s.show.dropping ? "D" : "") + 'n' +
+                      std::to_string(s.fresh.size()) + '/' + std::to_string(freshSum(s)) + ';' +
                       std::to_string(s.show.flashes.size()) + '@' +
                       std::to_string(s.show.flashes.empty() ? 0 : int(s.show.flashes.front().t * 40)) + ';' +
                       std::to_string(s.show.weight) + '/' +
@@ -702,15 +743,49 @@ bool key(UINT m, WPARAM wp, LPARAM lp) {
 
 bool shown() { return state().shown; }
 
+void drawToast(FrameRecord& record, gpu::Renderer& renderer) {
+    State& s = state();
+    const ULONGLONG now = GetTickCount64();
+    if (s.toast.empty() || now >= s.toastUntil || s.toastK <= 0) return;
+    const float sc = s.toastScale;
+    if (s.toast != s.toastPainted) {
+        s.toastPainted = s.toast;
+        panel::Picture& p = s.toastPicture;
+        p.width = int(std::ceil(measure(s.toast, 13 * sc, true) + 24 * sc));
+        p.height = int(std::ceil(26 * sc));
+        p.px.assign(size_t(p.width) * size_t(p.height), 0u);
+        const panel::Box all{0, 0, float(p.width), float(p.height)};
+        panel::roundRect(p, all, all.h / 2, 0x10141C, 0.92f, 0xF3C653, 0.7f, 1.0f * sc);
+        drawWords(p, {Words{all, utf8Wide(s.toast), 0xF3C653, 13 * sc, true, UINT(DT_CENTER), false}});
+        s.toastUpload = true;
+    }
+    const int w = s.toastPicture.width, h = s.toastPicture.height;
+    int x = s.toastW / 2 - w / 2, y = int(float(s.toastH) * 0.78f);  // the bag closed: the screen's lower middle
+    if (s.shown) {  // over the bag's right end
+        x = s.layout.x + s.layout.w - w;
+        y = s.layout.y - h - int(6 * sc);
+    }
+    x = std::clamp(x, 0, std::max(0, s.toastW - w));
+    y = std::clamp(y, 0, std::max(0, s.toastH - h));
+    const float fade = std::clamp(float(s.toastUntil - now) / 400.0f, 0.0f, 1.0f);  // its last 0.4 s fading
+    drawPicture(record, renderer, s.toastPicture, s.toastTexture, s.toastTexW, s.toastTexH, s.toastUpload, x, y,
+                s.toastK, fade);
+}
+
 void packet(const packets::Event& e) {
     const auto* p = std::get_if<packets::Pickup>(&e);
     State& s = state();
-    if (!p || !p->ok || s.gainsTold >= 40) return;
-    ++s.gainsTold;
+    if (!p || !p->ok) return;
     const auto& names = clienttables::itemNames();
     const auto it = names.find(std::to_string(p->item));
     const std::string name =
         it != names.end() ? utf8Of(widened(hotbar::spaced(it->second), s.codePage)) : "#" + std::to_string(p->item);
+    s.fresh.insert(int(p->index));  // 3.0.11-beta.112: «нове» till pointed at, its words for 2 s
+    s.toast = "+" + std::to_string(p->amount) + " " + name;
+    s.toastUntil = GetTickCount64() + kToastMs;
+    s.key.clear();
+    if (s.gainsTold >= 40) return;
+    ++s.gainsTold;
     const iw::Tab tab = iw::tabOf(p->type);
     const settings::Text words = tab == iw::Tab::Items  ? settings::Text::ItemsTabItems
                                  : tab == iw::Tab::Gear ? settings::Text::ItemsTabGear

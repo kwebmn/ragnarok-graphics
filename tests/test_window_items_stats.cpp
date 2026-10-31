@@ -167,6 +167,34 @@ TEST(item_window_lights_the_bag_while_a_worn_thing_is_dragged) {
     CHECK(((lit.px[at] >> 16) & 0xFF) > ((plain.px[at] >> 16) & 0xFF) + 20);
 }
 
+// 3.0.11-beta.112 (the concept «Концепция окон и инвентаря», question 3 «да»; the owner: «я сделал стрелы и они в
+// инвентаре не появились»): a thing come into the bag marked «нове» in a gold pill over its cell's corner till it is
+// pointed at, its tab's count of the new ones beside its name (the arrows in «Інше»)
+TEST(item_window_marks_the_new_things) {
+    std::vector<itemwin::Item> items{item(1, 501, 0, 38, "Red Potion"), item(2, 1750, 10, 500, "Arrow")};
+    items[1].fresh = true;
+    itemwin::Texts t = itemTexts();
+    t.fresh = "нове";
+    const itemwin::Layout L = itemwin::layout(0, 0, 1.0f, t, itemwin::Measure(panel::wordsWidth));
+    itemwin::Show sh;
+    sh.tab = itemwin::Tab::Etc;
+    const std::vector<int> shown = itemwin::shownOf(items, itemwin::Tab::Etc, "");
+    const std::vector<itemwin::Words> w = itemwin::words(L, items, shown, sh, t, itemwin::Measure(panel::wordsWidth));
+    const panel::Box& cell = L.cells[0];
+    const panel::Box& etc = L.tabs[size_t(itemwin::Tab::Etc)];
+    bool pill = false, count = false, other = false;
+    for (const itemwin::Words& x : w) {
+        pill = pill || (x.text == "нове" && x.box.y < cell.y + cell.h / 2 && x.box.x + x.box.w <= cell.x + cell.w + 4);
+        count = count || (x.text == "1" && x.box.x >= etc.x + etc.w - 6 && x.box.x <= etc.x + etc.w + 12);
+        other = other || (x.text == "1" && x.box.x < etc.x);  // no new ones in the other tabs: no count there
+    }
+    CHECK(pill && count && !other);
+    items[1].fresh = false;  // pointed at
+    const std::vector<itemwin::Words> seen =
+        itemwin::words(L, items, shown, sh, t, itemwin::Measure(panel::wordsWidth));
+    CHECK(std::none_of(seen.begin(), seen.end(), [](const itemwin::Words& x) { return x.text == "нове"; }));
+}
+
 TEST(stat_window_prices_and_points) {
     const statwin::Texts t = statTexts();
     statwin::Data d;

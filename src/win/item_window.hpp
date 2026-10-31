@@ -33,6 +33,9 @@ void beforeGameDraw();
 // 3.0.11-beta.107 (the owner: «я сделал стрелы и они в инвентаре не появились»): an item come into the bag (0x00a0
 // through win/packet_tap) told the log - which, how many, its place, the server's kind and the tab «Речі» shows it in
 void packet(const packets::Event& e);
+// 3.0.11-beta.112 (question 3 «да»): the words of a thing come into the bag («+500 Fire Arrow») for 2 s - over the bag,
+// or the screen's lower middle with it closed (win/context, after the windows)
+void drawToast(FrameRecord& record, gpu::Renderer& renderer);
 
 // 3.0.11-beta.91 (the concept «Контроллер в интерфейсе uaRO», stage 6): played with the controller - the D-pad moves a
 // gold frame over the cells (its tip at once, the controller's buttons in it), A uses (as a double click), Y its card,

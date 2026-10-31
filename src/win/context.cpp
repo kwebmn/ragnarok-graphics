@@ -609,6 +609,7 @@ void Context::endScene() {
         // 3.0.11-beta.108: «Речі», «Характеристики», «Навички», «Спорядження», the NPC talk, the shop and «Довідник»
         // in their stack's order - the last opened or clicked in on top (they were each in a place of its own)
         windowstack::draw(record, *renderer);
+        itemswin::drawToast(record, *renderer);   // 3.0.11-beta.112: «+N …» of a thing come into the bag
         if (!game.empty()) record.putBack(game);  // 3.0.11-beta.109: the game's own windows over them
         answercard::draw(record, *renderer);  // 3.0.9-beta.4: the developer's answer
         windowSwitch_.draw(record, *renderer);
@@ -661,6 +662,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
         hotbarwin::draw(record, *renderer);     // 3.0.11-beta.40
         chatwin::draw(record, *renderer);       // 3.0.11-beta.41
         windowstack::draw(record, *renderer);  // 3.0.11-beta.108
+        itemswin::drawToast(record, *renderer);  // 3.0.11-beta.112
         answercard::draw(record, *renderer);  // 3.0.9-beta.4
         windowSwitch_.draw(record, *renderer);
         padtileswin::draw(record, *renderer);   // 3.0.11-beta.90

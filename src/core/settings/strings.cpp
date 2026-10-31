@@ -5547,6 +5547,7 @@ constexpr Entry kTexts[] = {
     {Text::ItemsTabItems, "Items", "Предмети", "Предметы"},
     {Text::ItemsTabGear, "Gear", "Спорядження", "Снаряжение"},
     {Text::ItemsTabEtc, "Other", "Інше", "Прочее"},
+    {Text::ItemsFresh, "new", "нове", "новое"},  // 3.0.11-beta.112
     {Text::ItemsSearch, "Search by the name", "Пошук за назвою", "Поиск по названию"},
     {Text::ItemsUse, "double click: use", "двічі клік — використати", "двойной клик — использовать"},
     {Text::ItemsWear, "double click: wear", "двічі клік — вдягнути", "двойной клик — надеть"},

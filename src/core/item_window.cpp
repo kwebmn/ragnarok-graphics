@@ -73,6 +73,12 @@ panel::Box tipBox(const Layout& L, const Item& it, int cell, const Texts& t, con
     return panel::Box{x, y, w, h};
 }
 
+// 3.0.11-beta.112: a new thing's «нове» pill over its cell's top right corner
+panel::Box freshPill(const panel::Box& cell, const Texts& t, float s, const Measure& m) {
+    const float w = m(t.fresh, 9.5f * s, true) + 8 * s, h = 13 * s;
+    return panel::Box{cell.x + cell.w - w + 3 * s, cell.y - 5 * s, w, h};
+}
+
 }  // namespace
 
 Tab tabOf(int type) {
@@ -257,6 +263,12 @@ void paint(panel::Picture& out, const Layout& L, const std::vector<Item>& items,
     if (share > 0)
         panel::roundRect(out, panel::Box{L.bar.x, L.bar.y, L.bar.w * share, L.bar.h}, 3 * s,
                          share >= 0.9f ? kRed : share >= 0.5f ? kGold : kGreen, 0.95f);
+    for (size_t i = 0; i < L.cells.size(); ++i) {  // 3.0.11-beta.112: the new things' pills
+        const int at = int(i) + sh.scroll * L.columns;
+        if (at >= int(shown.size()) || t.fresh.empty() || !items[size_t(shown[size_t(at)])].fresh) continue;
+        const panel::Box pill = freshPill(L.cells[i], t, s, m);
+        panel::roundRect(out, pill, pill.h / 2, kGold, 0.95f);
+    }
     if (sh.dropping)  // 3.0.11-beta.110: a worn thing dragged - the grid takes it off
         panel::roundRect(out, L.grid, 8 * s, kGold2, 0.06f, kGold, 0.9f, 2.0f * s);
     for (const Flash& f : sh.flashes) {  // 3.0.11-beta.44: a use answered in its cell
@@ -289,10 +301,19 @@ std::vector<Words> words(const Layout& L, const std::vector<Item>& items, const 
     out.push_back(Words{panel::Box{kSide * s + titleW + 8 * s, 0, m(t.hotkey, 11 * s, false) + 2, L.title.h}, t.hotkey,
                         kFaint, 11 * s, false, Align::Left});
     out.push_back(Words{L.close, "\xC3\x97", sh.hoverClose ? kText : kMuted, 16 * s, false, Align::Center});  // ×
+    int fresh[kTabs] = {};  // 3.0.11-beta.112: the new things in each tab
+    for (const Item& it : items)
+        if (it.fresh) ++fresh[int(tabOf(it.type))];
     for (size_t i = 0; i < L.tabs.size(); ++i) {
         const bool on = int(i) == int(sh.tab);
         out.push_back(Words{L.tabs[i], t.tabs[i], on ? kText : int(i) == sh.hoverTab ? 0xC9D1DE : kFaint, 13 * s, true,
                             Align::Left});
+        if (i < size_t(kTabs) && fresh[i] > 0) {  // the count over its name's end
+            const std::string n = std::to_string(fresh[i]);
+            out.push_back(Words{panel::Box{L.tabs[i].x + L.tabs[i].w - 2 * s, L.tabs[i].y - 2 * s,
+                                           m(n, 10 * s, true) + 4 * s, 12 * s},
+                                n, kGold, 10 * s, true, Align::Left});
+        }
     }
     const panel::Box field{L.search.x + 32 * s, L.search.y, L.search.w - 40 * s, L.search.h};
     if (sh.search.empty() && !sh.typing)
@@ -324,6 +345,8 @@ std::vector<Words> words(const Layout& L, const std::vector<Item>& items, const 
         if (!it.identified)
             out.push_back(Words{panel::Box{b.x + 2 * s, b.y + 2 * s, 12 * s, 12 * s}, "?", kMuted, 11 * s, true,
                                 Align::Center});
+        if (it.fresh && !t.fresh.empty())  // 3.0.11-beta.112: «нове» on its gold pill
+            out.push_back(Words{freshPill(b, t, s, m), t.fresh, kCard, 9.5f * s, true, Align::Center});
     }
     const float side = kSide * s;
     out.push_back(

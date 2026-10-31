@@ -25,6 +25,9 @@ struct Item {
     bool identified = true;
     std::string name;  // UTF-8
     const panel::Picture* icon = nullptr;  // iconSide() square, premultiplied
+    // 3.0.11-beta.112 (question 3 «да»): come into the bag since it was last pointed at - «нове» over its cell's
+    // corner, its tab's count of them
+    bool fresh = false;
 };
 
 enum class Tab : uint8_t { Items, Gear, Etc };
@@ -48,6 +51,7 @@ struct Texts {
     std::string search;         // «Пошук за назвою»
     std::string weight;         // «Вага»
     std::string use, wear, card, info;  // the tip's: «двічі клік — використати», ... «ПКМ — опис»
+    std::string fresh;                  // 3.0.11-beta.112: «нове»
 };
 
 // 3.0.11-beta.44 (the owner: «когда использую какую-то вещь, она просто пропадает. нету никакой анимации»): a used

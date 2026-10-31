@@ -228,6 +228,11 @@ The owner 31.10: «Полоски HP мобов - всем показывай»,
   when it ends), clamped to the screen; Shift while dragging - apart (until one closes). Ruling R15: undocking by
   Shift-drag (the doc said «за его край» - our windows move by their titles only); the doc's bullet updated. Test
   window_stack_docks_the_equipment_beside_the_bag; suite 2072/0.
+- Stage 3, new things (3.0.11-beta.112, Q3): core itemwin Item.fresh + Texts.fresh - a gold pill «нове» over a fresh
+  cell's corner (paint + words), each tab's count of fresh ones in gold over its name's end; win: the bag places from
+  0x00a0 (itemswin::packet) kept new till pointed at or gone, «+N name» drawn for 2 s (itemswin::drawToast after the
+  stack, over the bag or at the screen's lower middle, fading its last 0.4 s); strings ItemsFresh. Test
+  item_window_marks_the_new_things; suite 2073/0. Tabs (Q9) and the arrows' stock (Q10) still wait for answers.
 - Stage 5 research: 0x00c4 deal type; 0x00c6 buy list (11 B each: price.L discount.L type.B nameid.W)
   -> session deal list +0xF28 (count +0xF2C, FUN_0062bbb0(rec, 0); FUN_004ffd30 copies the record's text at +0x11 into
   m_itemName) + windows 0x16 (mgr+0xEC, class 0x69B3E0, SendMsg 0x4AFC00: 0x24 0 buy / 1 sell) and 0x17 (buy cart,
