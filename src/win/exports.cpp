@@ -12,6 +12,7 @@
 #include "win/packet_tap.hpp"
 #include "win/pad_mount.hpp"
 #include "win/roext.hpp"
+#include "win/stall_watch.hpp"
 #include "win/updates_hook.hpp"
 #include "win/real_ddraw.hpp"
 #include "win/window_mode.hpp"
@@ -204,6 +205,8 @@ BOOL WINAPI DllMain(HINSTANCE inst, DWORD reason, LPVOID) {
         uagfx::win::installPacketTap();   // 3.0.4-beta.3: the game's packets read (notifications)
         uagfx::win::mountPad();           // 2.9: uaRO Pad, before the game makes its DirectInput
         uagfx::win::installRoext();       // 3.0.1-beta.8: ROExt's work, before the game makes its window
+        uagfx::win::installStallWatch();  // 3.0.11-beta.94: the game's loop's beats, after ROExt's hook
+        uagfx::win::installWindowTrace(); // 3.0.11-beta.94: the game's own window placing told (3839x2159)
         uagfx::win::installUpdates();     // 3.0.2-beta.5: updates\'s GRFs, before the game reads its files
     }
     if (reason == DLL_PROCESS_DETACH) {

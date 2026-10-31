@@ -1,9 +1,12 @@
 #include "win/window_mode.hpp"
 
+#include <atomic>
+#include <cstdio>
 #include <vector>
 
 #include "core/window_plan.hpp"
 #include "win/dpi.hpp"
+#include "win/iat.hpp"
 #include "win/log.hpp"
 
 namespace uagfx::win {
@@ -125,6 +128,60 @@ BOOL CALLBACK keepBiggest(HWND hwnd, LPARAM p) {
 }
 
 }  // namespace
+
+namespace {
+
+using ShowFn = BOOL(WINAPI*)(HWND, int);
+using PlaceFn = BOOL(WINAPI*)(HWND, HWND, int, int, int, int, UINT);
+using MoveFn = BOOL(WINAPI*)(HWND, int, int, int, int, BOOL);
+ShowFn g_show = nullptr;
+PlaceFn g_place = nullptr;
+MoveFn g_move = nullptr;
+std::atomic<int> g_placesTold{0};
+
+void tellPlace(const char* call, HWND w, const void* from) {
+    if (g_placesTold.fetch_add(1) >= 12) return;
+    RECT r{};
+    {
+        RealPixels real;
+        GetWindowRect(w, &r);
+    }
+    LOG_INFO("window: the game's %s from uaRO.exe 0x%06lx - the window now %ldx%ld real pixels at %ld,%ld", call,
+             static_cast<unsigned long>(reinterpret_cast<uintptr_t>(from)), r.right - r.left, r.bottom - r.top, r.left,
+             r.top);
+}
+
+BOOL WINAPI showWindow(HWND w, int how) {
+    const BOOL ok = g_show(w, how);
+    char call[32];
+    std::snprintf(call, sizeof call, "ShowWindow(%d)", how);
+    tellPlace(call, w, __builtin_return_address(0));
+    return ok;
+}
+
+BOOL WINAPI placeWindow(HWND w, HWND after, int x, int y, int cx, int cy, UINT flags) {
+    const BOOL ok = g_place(w, after, x, y, cx, cy, flags);
+    char call[96];
+    std::snprintf(call, sizeof call, "SetWindowPos(%d, %d, %dx%d, flags 0x%X)", x, y, cx, cy, flags);
+    tellPlace(call, w, __builtin_return_address(0));
+    return ok;
+}
+
+BOOL WINAPI moveWindow(HWND w, int x, int y, int cx, int cy, BOOL repaint) {
+    const BOOL ok = g_move(w, x, y, cx, cy, repaint);
+    char call[64];
+    std::snprintf(call, sizeof call, "MoveWindow(%d, %d, %dx%d)", x, y, cx, cy);
+    tellPlace(call, w, __builtin_return_address(0));
+    return ok;
+}
+
+}  // namespace
+
+void installWindowTrace() {
+    hookImport("user32.dll", "ShowWindow", &showWindow, g_show);
+    hookImport("user32.dll", "SetWindowPos", &placeWindow, g_place);
+    hookImport("user32.dll", "MoveWindow", &moveWindow, g_move);
+}
 
 HWND findGameWindow() {
     Biggest found;

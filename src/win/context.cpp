@@ -910,6 +910,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     // 0.87: [debug] profile; 3.0.5-beta.10: and while «Тест графіки» runs - where the game's thread goes on each set
     // (R-5A9BTU: Direct3D 11's «Високі» 63 ms of the processor a frame, nothing sampled with the profile off)
     Profiler::get().run(GetCurrentThreadId(), config.profile || test_.running());
+    Profiler::get().watch(GetCurrentThreadId(), window);  // 3.0.11-beta.94: the stall watch (R-3S33MK)
     // 2.2: the set and the groups made into the switches; 0.63: how much night now, by the clock; 0.74: the minute
     EffectSettings fx = effects();
     {  // 2.6.11: the minute for all that goes by the hour - the computer's clock or the player's chosen moment

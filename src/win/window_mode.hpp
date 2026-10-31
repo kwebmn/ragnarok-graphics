@@ -17,6 +17,12 @@ void applyWindowMode(HWND hwnd, const Config& config, bool gameFullscreen, int g
 // thread that made the window.
 void blackenGameWindow();
 
+// 3.0.11-beta.94 (R-KMG8GE, R-3S33MK: placed at 3840x2160 real pixels, the window 3839x2159 some 40 ms later on every
+// start at 175 % - Windows composes the picture with the desktop): the game's own calls that place its window (its
+// imports of ShowWindow, SetWindowPos and MoveWindow) told with the uaRO.exe place they come from and the window's real
+// size after, the first dozen. In DllMain, before the game makes its window.
+void installWindowTrace();
+
 // The calling thread's biggest visible top-level window - the game's (the IME's windows are small or hidden) -
 // or null. Part 4: RTX Remix's device is made on it when the renderer starts.
 HWND findGameWindow();

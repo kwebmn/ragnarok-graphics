@@ -23,6 +23,11 @@ public:
     void close(const std::string& prefix, const std::string& head, const std::vector<std::string>& more);
     void drop();
     void stop();  // the game closing
+    // 3.0.11-beta.94 (R-3S33MK «чтото лагает игра»: the game's thread stood still 15 s and 5 s, the log silent on
+    // where): each present - the sampling thread started for the stall watch (once); the game's message loop's beats
+    // (win/stall_watch) looked at four times a second: still for a second - sampled until it beats again, then «the
+    // game's thread: stood still N s» with the tally (where it waited: Windows' function and who called it)
+    void watch(DWORD gameThread, HWND window);
 
 private:
     enum : LONG { kShut, kOpen, kReport, kDrop };  // window_
@@ -36,6 +41,9 @@ private:
     volatile LONG on_ = 0;
     volatile LONG window_ = kShut;
     volatile LONG quit_ = 0;
+    volatile LONG watching_ = 0;   // 3.0.11-beta.94: the stall watch on
+    bool watchAsked_ = false;      // the game's thread's: watch() did its work
+    HWND volatile gameWindow_ = nullptr;
     CRITICAL_SECTION lock_;  // close()'s words, for the sampling thread
     std::string prefix_, head_;
     std::vector<std::string> more_;

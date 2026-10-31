@@ -13,8 +13,10 @@
 
 #include "core/pe_exports.hpp"
 #include "core/sample_profile.hpp"
+#include "core/stall_watch.hpp"
 #include "win/game_camera.hpp"
 #include "win/log.hpp"
+#include "win/stall_watch.hpp"
 
 #ifndef CREATE_WAITABLE_TIMER_HIGH_RESOLUTION
 #define CREATE_WAITABLE_TIMER_HIGH_RESOLUTION 0x00000002
@@ -25,6 +27,7 @@ namespace {
 
 constexpr size_t kStackWords = 1024;  // 3.0.2-beta.12: 4 KB of the stack, deep enough for the game's steps
 constexpr size_t kFrames = 48;        // the return addresses looked at
+constexpr int kStallsTold = 30;       // 3.0.11-beta.94: the stalls a game tells, at most
 
 // Our own memory read: a place no longer mapped (a module gone meanwhile) fails instead of faulting
 bool readSelf(uint32_t address, void* out, size_t size) {
@@ -209,6 +212,21 @@ profile::Sample classify(Modules& mods, uint32_t at, const uint32_t* stack, size
     return s;
 }
 
+// 3.0.11-beta.94: the game at a stall's start - in front or behind, its process's priority (uaRO.exe drops it to
+// idle behind other windows, FUN_00654190), minimised
+std::string howTheGame(HWND game) {
+    const DWORD c = GetPriorityClass(GetCurrentProcess());
+    const char* priority = c == IDLE_PRIORITY_CLASS           ? "idle"
+                           : c == BELOW_NORMAL_PRIORITY_CLASS ? "below normal"
+                           : c == NORMAL_PRIORITY_CLASS       ? "normal"
+                           : c == ABOVE_NORMAL_PRIORITY_CLASS ? "above normal"
+                           : c == HIGH_PRIORITY_CLASS         ? "high"
+                                                              : "realtime";
+    std::string how = game && GetForegroundWindow() == game ? "in front" : "behind other windows";
+    if (game && IsIconic(game)) how += ", minimised";
+    return how + ", its priority " + priority;
+}
+
 void say(const std::string& prefix, const std::string& head, const std::vector<std::string>& more) {
     LOG_INFO("%s: %s", prefix.c_str(), head.c_str());
     for (const std::string& line : more) LOG_INFO("%s", line.c_str());
@@ -274,6 +292,22 @@ void Profiler::drop() {
     }
 }
 
+void Profiler::watch(DWORD gameThread, HWND window) {
+    gameWindow_ = window;
+    if (watchAsked_) return;
+    watchAsked_ = true;
+    uint32_t beats = 0;
+    if (!stallBeats(beats)) {
+        LOG_INFO("stall watch: off - uaRO.exe's PeekMessageA not hooked");
+        return;
+    }
+    if (!start(gameThread)) return;
+    setStallThread(gameThread);
+    InterlockedExchange(&watching_, 1);
+    LOG_INFO("stall watch: the game's thread watched - still for a second, where it stands is sampled");
+    SetEvent(wake_);
+}
+
 void Profiler::stop() {
     if (!thread_) return;
     InterlockedExchange(&quit_, 1);
@@ -296,7 +330,11 @@ void Profiler::sampleLoop() {
     Modules mods;
     profile::Tally tally;   // [debug] profile's, every 10 s
     profile::Tally window;  // 3.0.2-beta.12: a map's loading
-    bool wasOn = false, windowLive = false;
+    profile::Tally still;   // 3.0.11-beta.94: a stall of the game's thread
+    stallwatch::Watch stall;
+    std::string stillHow;  // the game at the stall's start
+    int stallsTold = 0;
+    bool wasOn = false, windowLive = false, stillLive = false;
     const bool steps = knownGameBuild();
     ULONGLONG since = GetTickCount64();
     uint32_t stack[kStackWords];
@@ -336,8 +374,28 @@ void Profiler::sampleLoop() {
             window.setModules(mods.forTally(), mods.exeIndex(), mods.ownIndex());
             window.setOwnFunctions(mods.ownFunctions());
         }
-        if (!on && !open) {
-            WaitForSingleObject(wake_, 1000);
+        // 3.0.11-beta.94: the game's thread still for a second - sampled until it beats again
+        uint32_t beats = 0;
+        if (watching_ && stallBeats(beats)) {
+            const stallwatch::Event e = stall.look(beats, GetTickCount64());
+            if (e == stallwatch::Event::Began && stallsTold < kStallsTold && !open) {  // a map's load: its own
+                mods.list();
+                still.setModules(mods.forTally(), mods.exeIndex(), mods.ownIndex());
+                still.setOwnFunctions(mods.ownFunctions());
+                stillHow = howTheGame(gameWindow_);
+                stillLive = true;
+            } else if (e == stallwatch::Event::Ended && stillLive) {
+                stillLive = false;
+                char head[200];
+                std::snprintf(head, sizeof head, "stood still %.1f s (%s); sampled %zu times",
+                              double(stall.stillMs()) / 1000.0, stillHow.c_str(), still.samples());
+                for (const std::string& line : still.report("the game's thread", head)) LOG_INFO("%s", line.c_str());
+                still.report(1.0);  // emptied for the next one
+                if (++stallsTold == kStallsTold) LOG_INFO("stall watch: %d stalls told - the rest not", kStallsTold);
+            }
+        }
+        if (!on && !open && !stillLive) {
+            WaitForSingleObject(wake_, watching_ ? 250 : 1000);
             continue;
         }
         if (timer) {
@@ -370,6 +428,7 @@ void Profiler::sampleLoop() {
             const profile::Sample s = classify(mods, uint32_t(c.Eip), stack, words, steps);
             if (on) tally.add(s);
             if (open) window.add(s);
+            if (stillLive) still.add(s);
         }
         if (on) {
             const ULONGLONG now = GetTickCount64();
