@@ -1,3 +1,15 @@
+# uaRO Graphics 3.0.11-beta.90 — what is new
+
+The controller in the interface, stage 6 (part 1):
+- **Start opens the windows' tile.** In the middle of the screen - «Menu» of nine tiles: «Items», «Status», «Skills»,
+  «Equipment», «Party», «Map», «Довідник», «Game options» and «Controller» (the controller's old menu). The D-pad or
+  the left stick moves the gold frame, A opens the window, B or Start closes the tile; the mouse clicks the tiles too.
+  The game's windows open through its own buttons (as in the Basic Info window), «Map» - the new minimap's big map.
+- The switch «Start opens the windows' tile» in «Interface» and the console (on by default; off - Start opens the
+  controller's menu again).
+- To check: Start → choose each tile in turn; «Controller» opens the old menu. In the log: «pad tile: opened (Start)»,
+  «pad tile: the game's items», «pad tile: closed (B or Start)».
+
 # uaRO Graphics 3.0.11-beta.89 — what is new
 
 The controller in the interface, stage 5 - everything about the controller in one program:
