@@ -28,7 +28,11 @@ struct Data {
     long long zeny = -1;              // < 0 not known
     int statusPoints = 0;
     const panel::Picture* portrait = nullptr;  // the head, at the portrait's side; none: the name's first letter
+    // 3.0.11-beta.114 (the concept «Концепция окон и инвентаря», question 10 «можна»): the arrows (bullets) worn, how
+    // many; 0 ran out (gone from the bag), < 0 none worn - «Стріли N» on the info line under 50
+    int ammo = -1;
 };
+constexpr int kAmmoLow = 50, kAmmoVeryLow = 10;  // 3.0.11-beta.114: amber under 50, red at 10 or fewer
 bool lowHp(const Data& d);  // under a quarter of the most, as the game's own gauges turn red
 const char* jobName(int job);  // the server's English (conf/msg_athena.conf 550-620); "" not known
 std::string grouped(long long n);  // "1 482 300", the thousands apart by no-break spaces
@@ -73,6 +77,7 @@ struct Texts {
     std::string weight;            // «Вага»
     std::string points;            // «очко|очки|очок»: the free points' word by their count (one, a few, many)
     std::string lowHp;             // «Мало HP · {1} %»
+    std::string ammo;              // 3.0.11-beta.114: «Стріли»
     std::string buttons[kButtons];  // «Характеристики · Alt+A» ...
     char decimal = ',';
 };

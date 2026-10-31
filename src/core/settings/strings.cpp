@@ -5333,6 +5333,8 @@ constexpr Entry kTexts[] = {
     {Text::CharWeight, "Weight", "Вага", "Вес"},
     {Text::CharPoints, "point|points", "очко|очки|очок", "очко|очка|очков"},  // forms: one, a few, many
     {Text::CharLowHp, "Low HP \xC2\xB7 {1} %", "Мало HP \xC2\xB7 {1} %", "Мало HP \xC2\xB7 {1} %"},
+    {Text::CharArrows, "Arrows", "Стріли", "Стрелы"},  // 3.0.11-beta.114: the ammo worn running low
+    {Text::CharAmmo, "Ammo", "Боєприпаси", "Боеприпасы"},
     {Text::CharStats, "Stats \xC2\xB7 Alt+A", "Характеристики \xC2\xB7 Alt+A", "Характеристики \xC2\xB7 Alt+A"},
     {Text::CharEquip, "Equipment \xC2\xB7 Alt+Q", "Спорядження \xC2\xB7 Alt+Q", "Снаряжение \xC2\xB7 Alt+Q"},
     {Text::CharItems, "Items \xC2\xB7 Alt+E", "Речі \xC2\xB7 Alt+E", "Вещи \xC2\xB7 Alt+E"},

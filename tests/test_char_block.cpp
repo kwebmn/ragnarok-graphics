@@ -242,3 +242,29 @@ TEST(char_block_tip_after_its_while_and_a_press) {
     const uint32_t mid0 = pixel(plain, b.x + 4, b.y + b.h - 4), mid1 = pixel(pressed, b.x + 4, b.y + b.h - 4);
     CHECK(green(mid1) < green(mid0));  // darker
 }
+
+// 3.0.11-beta.114 (the concept «Концепция окон и инвентаря», question 10 «можна»): the arrows worn running low - «Стріли
+// 37» at the info line's end under 50 (amber; red at 10 or fewer), «0» in red when they ran out (gone from the bag);
+// none from 50 on, or none worn
+TEST(char_block_the_arrows_running_low) {
+    const charblock::Layout L = charblock::layout(charblock::View::Full, charblock::Look::Bars, 0, 0, 1.0f);
+    charblock::Texts t = texts();
+    t.ammo = "Стріли";
+    charblock::Data d = sora();
+    const auto colourOf = [&](const charblock::Data& data, const std::string& text) -> int64_t {
+        for (const charblock::Words& w : charblock::words(L, data, t, charblock::Show{}))
+            if (w.text == text && w.box.y >= L.info.y - 1 && w.box.y <= L.info.y + 1) return int64_t(w.rgb);
+        return -1;
+    };
+    d.ammo = 37;
+    CHECK(colourOf(d, "Стріли") >= 0 && colourOf(d, "37") == 0xF0A050);  // amber
+    d.ammo = 8;
+    CHECK(colourOf(d, "8") == 0xFF5A4E);  // red
+    d.ammo = 0;
+    CHECK(colourOf(d, "0") == 0xFF5A4E);  // ran out
+    d.ammo = 120;
+    CHECK(colourOf(d, "Стріли") < 0);  // plenty: none
+    d.ammo = -1;
+    CHECK(colourOf(d, "Стріли") < 0);  // none worn
+}
+

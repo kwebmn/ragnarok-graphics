@@ -402,7 +402,11 @@ std::vector<Words> words(const Layout& L, const Data& d, const Texts& t, const S
             put(grouped(d.zeny), kText, true, 2);
             put("z", kMuted, false, 12);
         }
-        if (d.statusPoints > 0) put(counted(t.points, d.statusPoints), kGold2, false, 0);
+        if (d.statusPoints > 0) put(counted(t.points, d.statusPoints), kGold2, false, 12);
+        if (d.ammo >= 0 && d.ammo < kAmmoLow && !t.ammo.empty()) {  // 3.0.11-beta.114: the arrows running low
+            put(t.ammo, kMuted, false, 4);
+            put(std::to_string(d.ammo), d.ammo <= kAmmoVeryLow ? kHpLow : kWarn, true, 0);
+        }
         out.push_back(Words{L.hpLabel, "HP", kMuted, 11 * s, true, Align::Left});
         out.push_back(Words{L.spLabel, "SP", kMuted, 11 * s, true, Align::Left});
         if (d.hpMost > 0) out.push_back(Words{L.hpText, pair(d.hp, d.hpMost), low ? 0xFF9A8F : kText, 13 * s, true,

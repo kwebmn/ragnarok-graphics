@@ -511,9 +511,9 @@ enum class Text : uint16_t {
     // 3.0.11-beta.63: what the buffs' column does not hold
     InterfaceBuffsOverflow, InterfaceBuffsOverflowHint, InterfaceBuffsOverflowMore, InterfaceBuffsOverflowColumn,
     InterfaceCharacter, InterfaceCharacterHint, InterfaceCharacterOff, InterfaceCharacterBars,
-    InterfaceCharacterRings, CharWeight, CharPoints, CharLowHp, CharStats, CharEquip, CharItems, CharSkills,
-    CharFriends, CharOptions, InterfaceTarget, InterfaceTargetHint, TargetWeak, TargetHeals, TargetBook,
-    InterfaceParty, InterfacePartyHint, PartyOffline, InterfaceHotbar, InterfaceHotbarHint, HotbarBattle,
+    InterfaceCharacterRings, CharWeight, CharPoints, CharLowHp, CharArrows, CharAmmo, CharStats, CharEquip,
+    CharItems, CharSkills, CharFriends, CharOptions, InterfaceTarget, InterfaceTargetHint, TargetWeak, TargetHeals,
+    TargetBook, InterfaceParty, InterfacePartyHint, PartyOffline, InterfaceHotbar, InterfaceHotbarHint, HotbarBattle,
     HotbarBattleHint, HotbarEdit, HotbarDone, HotbarUse,
     // 3.0.11-beta.45: the hotbar's cell states - no SP, «не тут» and why
     HotbarNoSp, HotbarNotHere, HotbarNoTeleport, HotbarNoReturn, HotbarNoWarp, HotbarNoBranch, HotbarNoIceWall,

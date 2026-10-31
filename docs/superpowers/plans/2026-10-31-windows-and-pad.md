@@ -240,6 +240,13 @@ The owner 31.10: «Полоски HP мобов - всем показывай»,
   the kept tab's key «tabs6» (old «tab» ignored). Ruling R16: the star is clicked in the cell's corner, not by a right
   click (the right click stays the description, beta.101's R6) - noted in the doc's answer. Tests
   item_window_six_tabs_and_the_starred, item_window_starred_kept_per_character (+ the tab tests updated); suite 2075/0.
+- Q10, the ammo's stock (3.0.11-beta.114): core charblock Data.ammo (< 0 none, 0 ran out), Texts.ammo, kAmmoLow 50 /
+  kAmmoVeryLow 10 - «Стріли N» on the info line after the free points, amber under 50, red at 10 or fewer; win reads
+  the bag every 0.5 s (worn +0x0C & 0x8000, count +0x10, the item number +0x30), the worn one gone from the bag = ran
+  out (red 0 for 30 s), taken off = nothing; an empty/unreadable bag decides nothing, another character forgets it;
+  logs «ammo worn», «running low», «ran out». Ruling R17: bullets and thrown things (types 16, 17) say «Боєприпаси»
+  (CharAmmo), arrows «Стріли» (CharArrows) - the owner said arrows, gunslingers/ninjas exist in the job list - cost if
+  wrong: one word. Test char_block_the_arrows_running_low; suite 2076/0.
 - Stage 5 research: 0x00c4 deal type; 0x00c6 buy list (11 B each: price.L discount.L type.B nameid.W)
   -> session deal list +0xF28 (count +0xF2C, FUN_0062bbb0(rec, 0); FUN_004ffd30 copies the record's text at +0x11 into
   m_itemName) + windows 0x16 (mgr+0xEC, class 0x69B3E0, SendMsg 0x4AFC00: 0x24 0 buy / 1 sell) and 0x17 (buy cart,
