@@ -1,3 +1,14 @@
+# uaRO Graphics 3.0.11-beta.109 — what's new
+
+The windows and inventory concept, stage 1 (the rest):
+- **The game's own windows over ours** (question 5): the windows we have not redrawn — the arrows' crafting list, the
+  storage, the trade, the game's options and others — now show over our windows and panels. Ours used to cover them.
+  The game's cursor is over everything.
+- **A new window does not open over another** (question 4): if a window already stands in its place, it goes beside
+  it — right, else left — and with no room, 24 pixels down and right. Its new place is kept.
+- In the log: "windows: the game's own windows and its cursor (N draws) over the driver's interface", "windows:
+  «Навички» opened where another stands - at …".
+
 # uaRO Graphics 3.0.11-beta.108 — what's new
 
 The windows and inventory concept, stage 1 — the windows in one stack:
