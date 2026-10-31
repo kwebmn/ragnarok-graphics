@@ -18,6 +18,7 @@
 #include "core/settings/strings.hpp"
 #include "core/ui_style.hpp"
 #include "pad/win/game_window.hpp"
+#include "pad/win/runtime.hpp"
 #include "win/buff_column.hpp"
 #include "win/char_block.hpp"
 #include "win/client_tables.hpp"
@@ -392,6 +393,7 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     const std::string here = readGameMap();
     s.members.clear();
     s.rowsOf.clear();
+    const uint32_t chosen = uapad::runtime::choosing();  // 3.0.11-beta.85
     int ownX = -1, ownY = -1, mapW = 0, mapH = 0;  // 3.0.11-beta.82: the character's cell and the camera's way
     const bool ownKnown = readPlayerCell(ownX, ownY, mapW, mapH);
     float lookE = 0, lookN = 1;
@@ -465,6 +467,7 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
         m.online = seat.online;
         if (!seat.map.empty() && seat.map != here) m.where = seat.map;
         if (seat.most > 0 && seat.hp >= 0) m.percent = int(int64_t(seat.hp) * 100 / seat.most);
+        m.chosen = chosen != 0 && account == chosen;  // 3.0.11-beta.85: the pad's support skill would go on it
         s.members.push_back(m);
         s.rowsOf.push_back(account);
     }
@@ -476,14 +479,14 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     s.layout = pp::layout(pp::rowsOf(s.members), int(std::lround(10 * scale)), topOf(k, scale), scale, s.folded,
                           s.compact);
     uint32_t mode = 0;
-    s.layout.targeting = waitingState(mode) != 0;  // 3.0.11-beta.82: a click on a member casts it there
+    s.layout.targeting = waitingState(mode) != 0 || chosen != 0;  // 3.0.11-beta.82: a click on a member casts it there
     hudedit::place(hudlayout::Part::Party, float(k), targetWidth, targetHeight, s.layout.w, s.layout.h, s.layout.x,
                    s.layout.y);  // 3.0.11-beta.75: where the player put it
     std::string key = std::to_string(s.layout.w) + 'x' + std::to_string(s.layout.h) + ';' + std::to_string(scale) +
                       (s.folded ? ";f;" : ";;");
     for (const pp::Member& m : s.members)
         key += m.name + '|' + m.where + '|' + (m.leader ? "L" : "") + (m.online ? "" : "o") +
-               std::to_string(m.percent) + (m.face ? std::to_string(uintptr_t(m.face)) : "") + ';';
+               std::to_string(m.percent) + (m.face ? std::to_string(uintptr_t(m.face)) : "") + (m.chosen ? "c;" : ";");
     for (const pp::Member& m : s.members) {  // 3.0.11-beta.80: its buffs, their times by twentieths (.81: glow)
         for (const pp::Buff& b : m.buffs)
             key += std::to_string(uintptr_t(b.icon)) + ':' + std::to_string(int(b.left * 20)) + ':' +
@@ -558,6 +561,20 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
         }
     }
     return true;
+}
+
+std::vector<uint32_t> hereIds() {
+    State& s = state();
+    std::vector<uint32_t> out;
+    if (!s.on || s.order.empty()) return out;
+    const std::string here = readGameMap();
+    for (const uint32_t account : s.order) {
+        const auto it = s.seats.find(account);
+        if (it != s.seats.end() && it->second.online && !it->second.dead &&
+            (it->second.map.empty() || it->second.map == here))
+            out.push_back(account);
+    }
+    return out;
 }
 
 std::vector<OnMap> onMap(int faceSide) {

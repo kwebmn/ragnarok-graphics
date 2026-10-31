@@ -28,4 +28,10 @@ struct SlotDecision {
 SlotDecision decideSlot(const Hotkey& key, const WorldState& world, uint32_t target, uint32_t nearest,
                         const Config& cfg, uint32_t nowMs);
 
+// 3.0.11-beta.85 (the concept's «Выбор цели навыка»): a skill that may go on another player - support (inf 16), on
+// neither an enemy nor the ground - asks whom while party members are in sight
+bool choosesWhom(const SkillInfo& sk);
+// That skill (`key`'s) on `actor`, a party member or the character: at once within its range, else a walk up
+SlotDecision decideSupport(const Hotkey& key, const WorldState& world, uint32_t actor, uint32_t nowMs);
+
 }  // namespace uapad

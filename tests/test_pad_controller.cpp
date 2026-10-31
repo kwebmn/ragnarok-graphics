@@ -665,6 +665,129 @@ TEST(ctl_slot_press_note_says_what_went_out) {
     CHECK(!o.notes.empty() && o.notes.back() == "F5: item 501");
 }
 
+// --- 3.0.11-beta.85: a support skill on a party member (the concept's «Выбор цели навыка») ---
+
+namespace {
+constexpr uint32_t kMate = 2000002, kMate2 = 2000003, kAway = 2000004;
+WorldState partyWorld() {
+    WorldState w = slotWorld();
+    w.apply(EvActor{kMate, 4, 0, 150, Cell{103, 100}, Cell{103, 100}}, 0);   // an acolyte 3 cells away
+    w.apply(EvActor{kMate2, 7, 0, 150, Cell{100, 120}, Cell{100, 120}}, 0);  // a knight 20 cells away
+    return w;
+}
+}  // namespace
+
+TEST(ctl_support_skill_waits_for_a_party_member) {
+    Controller c(Config{});
+    WorldState w = partyWorld();
+    c.setFriends({kMate, kMate2, kAway});  // kAway: in the party, not in sight - not offered
+    TickOutput o = c.tick(pad(kPadY), w, view(), 1000);  // F2: Heal - whom?
+    CHECK(o.packets.empty());
+    CHECK_EQ(c.choosing(), kMate);
+    CHECK(!o.notes.empty() && o.notes.back() == "F2: skill 28 - whom? 3 to choose");
+    c.tick(pad(), w, view(), 1100);
+    o = c.tick(pad(kPadA), w, view(), 1200);  // A: on the chosen one
+    CHECK(o.packets.size() == 1 && pid(pkt(o, 0)) == 0x0072 && rd16(pkt(o, 0).data(), 10) == 28 &&
+          rd32(pkt(o, 0).data(), 21) == kMate);
+    CHECK_EQ(c.choosing(), 0u);
+    c.tick(pad(kPadA), w, view(), 1300);
+    CHECK(!c.attacking());  // A cast; held on, it does not attack
+}
+
+TEST(ctl_support_skill_again_casts_on_the_character) {
+    Controller c(Config{});
+    WorldState w = partyWorld();
+    c.setFriends({kMate});
+    c.tick(pad(kPadY), w, view(), 1000);
+    c.tick(pad(), w, view(), 1100);
+    CHECK_EQ(c.choosing(), kMate);
+    TickOutput o = c.tick(pad(kPadY), w, view(), 1200);  // the skill's own button again: on the character
+    CHECK(o.packets.size() == 1 && rd32(pkt(o, 0).data(), 21) == kSelf);
+    CHECK_EQ(c.choosing(), 0u);
+    o = c.tick(pad(kPadY), w, view(), 1700);  // held on: no repeat until pressed again
+    CHECK(o.packets.empty());
+}
+
+TEST(ctl_support_choice_moves_with_the_dpad_and_cancels) {
+    Controller c(Config{});
+    WorldState w = partyWorld();
+    c.setFriends({kMate, kMate2});
+    uint32_t t = 1000;
+    auto tap = [&](uint16_t b) {
+        TickOutput o = c.tick(pad(b), w, view(), t);
+        c.tick(pad(), w, view(), t + 10);
+        t += 100;
+        return o;
+    };
+    tap(kPadY);
+    CHECK_EQ(c.choosing(), kMate);
+    CHECK(tap(kPadDown).packets.empty());  // D-pad down: the next one, no talking to an NPC
+    CHECK_EQ(c.choosing(), kMate2);
+    tap(kPadDown);
+    CHECK_EQ(c.choosing(), kSelf);  // the character last
+    tap(kPadDown);
+    CHECK_EQ(c.choosing(), kMate);  // round again
+    tap(kPadUp);
+    CHECK_EQ(c.choosing(), kSelf);
+    TickOutput o = tap(kPadX);  // another skill's button does nothing meanwhile
+    CHECK(o.packets.empty());
+    CHECK_EQ(c.choosing(), kSelf);
+    o = tap(kPadB);  // B: cancelled, its own slot (F3) not used
+    CHECK(o.packets.empty());
+    CHECK_EQ(c.choosing(), 0u);
+    CHECK(!o.notes.empty() && o.notes.back() == "F2: the choice cancelled");
+}
+
+TEST(ctl_support_choice_far_member_walks_up) {
+    Controller c(Config{});
+    WorldState w = partyWorld();
+    c.setFriends({kMate2});  // 20 cells away, Heal reaches 9
+    c.tick(pad(kPadY), w, view(), 1000);
+    c.tick(pad(), w, view(), 1100);
+    TickOutput o = c.tick(pad(kPadA), w, view(), 1200);
+    CHECK(c.approaching());
+    CHECK(!o.notes.empty() && o.notes.back() == "approaching for skill 28");
+}
+
+TEST(ctl_support_choice_ends_by_start_and_by_time) {
+    Controller c(Config{});
+    WorldState w = partyWorld();
+    c.setFriends({kMate});
+    c.tick(pad(kPadY), w, view(), 1000);
+    c.tick(pad(), w, view(), 1100);
+    c.tick(pad(kPadStart), w, view(), 1200);  // Start: cancelled (the runtime opens no menu meanwhile)
+    CHECK_EQ(c.choosing(), 0u);
+    c.tick(pad(), w, view(), 1300);
+    c.tick(pad(kPadY), w, view(), 2000);
+    c.tick(pad(), w, view(), 2100);
+    CHECK_EQ(c.choosing(), kMate);
+    TickOutput o = c.tick(pad(), w, view(), 10100);  // 8 s: given up
+    CHECK_EQ(c.choosing(), 0u);
+    CHECK(!o.notes.empty() && o.notes.back() == "F2: the choice timed out");
+}
+
+TEST(ctl_support_choice_ends_when_a_window_takes_the_pad) {
+    Controller c(Config{});
+    WorldState w = partyWorld();
+    c.setFriends({kMate});
+    c.tick(pad(kPadY), w, view(), 1000);
+    CHECK_EQ(c.choosing(), kMate);
+    ViewInfo menu = view();
+    menu.paused = true;  // the menu or «Довідник» has the pad
+    TickOutput o = c.tick(pad(), w, menu, 1100);
+    CHECK_EQ(c.choosing(), 0u);
+    CHECK(!o.notes.empty() && o.notes.front() == "F2: the choice cancelled");
+}
+
+TEST(ctl_support_skill_alone_casts_at_once) {
+    Controller c(Config{});
+    WorldState w = partyWorld();
+    c.setFriends({kAway});  // nobody of the party in sight: on the character at once, as before
+    TickOutput o = c.tick(pad(kPadY), w, view(), 1000);
+    CHECK(o.packets.size() == 1 && rd32(pkt(o, 0).data(), 21) == kSelf);
+    CHECK_EQ(c.choosing(), 0u);
+}
+
 TEST(ctl_triggers_have_hysteresis) {
     Controller c(Config{});
     WorldState w = slotWorld();
@@ -1408,6 +1531,19 @@ TEST(ctl_npc_window_without_a_button_closes_with_b_held) {
     TickOutput o = c.tick(pad(kPadB), w, waiting, 2000);
     CHECK(o.dialog.size() == 1 && o.dialog[0] == DialogCommand::Close);
     CHECK(c.tick(pad(kPadB), w, waiting, 3100).dialog.empty());  // once
+}
+
+TEST(ctl_choice_hint_names_the_buttons) {  // 3.0.11-beta.85
+    CHECK(choiceHint(kPadY, Lang::Uk) == "↑ ↓: кому  ·  A: застосувати  ·  Y: на себе  ·  B: скасувати");
+    useSonyLabels(true);
+    CHECK(choiceHint(kPadY, Lang::En) == "↑ ↓: whom  ·  Cross: cast  ·  Triangle: on yourself  ·  Circle: cancel");
+    useSonyLabels(false);
+    Controller c(Config{});
+    WorldState w = partyWorld();
+    c.setFriends({kMate});
+    CHECK_EQ(c.choosingButton(), 0);
+    c.tick(pad(kPadY), w, view(), 1000);
+    CHECK_EQ(c.choosingButton(), kPadY);
 }
 
 TEST(ctl_npc_hint_names_the_buttons) {

@@ -61,6 +61,7 @@ public:
     SocketId mapSocket() const { return mapSocket_; }
     const WorldState& world() const { return world_; }
     const Controller& controller() const { return controller_; }
+    void setFriends(std::vector<uint32_t> ids) { controller_.setFriends(std::move(ids)); }  // 3.0.11-beta.85
     std::vector<std::string> takeLog();
 
 private:

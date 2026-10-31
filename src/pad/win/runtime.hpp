@@ -4,6 +4,8 @@
 
 #include <dinput.h>
 
+#include <cstdint>
+
 // Glue between the hooks and the portable core. Every entry point is fail-open:
 // after an internal error it does nothing and the client keeps working.
 namespace uapad::runtime {
@@ -25,5 +27,8 @@ void onRecv(SOCKET sock, const char* buf, int n);
 int extendRecv(SOCKET sock, char* buf, int n, int cap);
 void onSent(SOCKET sock, const char* buf, int n);
 void onClose(SOCKET sock);
+// 3.0.11-beta.85: the one the pad's support skill would go on while it asks whom (the party panel fills its row);
+// 0 none
+uint32_t choosing();
 
 }  // namespace uapad::runtime

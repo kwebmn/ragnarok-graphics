@@ -38,6 +38,7 @@
 #include "pad/win/pads.hpp"
 #include "win/disk.hpp"
 #include "win/paths.hpp"
+#include "win/party_panel.hpp"
 #include "win/reference_window.hpp"
 
 namespace uapad::runtime {
@@ -375,7 +376,8 @@ bool runMenu(const PadState& pad, const ViewInfo& view, DWORD now) {
     const uint16_t down = uint16_t(buttons & ~s.prevPadButtons);
     s.prevPadButtons = buttons;
     if (!s.menu.isOpen()) {
-        if (!(down & kPadStart) || !view.focused || !s.hwnd) return false;
+        // 3.0.11-beta.85: Start while a support skill asks whom cancels that, it opens no menu
+        if (!(down & kPadStart) || !view.focused || !s.hwnd || s.session->controller().choosing() != 0) return false;
         s.menuBefore = settingsFrom(s.cfg);
         s.menu.open(s.session->controller().bindings(), s.menuBefore, s.session->world().clientBarNames(), buttons,
                     now, pad.lx, pad.ly);
@@ -453,16 +455,20 @@ void followTheMouse(bool foreground, DWORD now) {
     }
 }
 
-// 0.7: what the pad asked of the NPC window, and the line that says what its buttons do there.
+// 0.7: what the pad asked of the NPC window, and the line that says what its buttons do there (3.0.11-beta.85: or
+// while a support skill asks whom).
 void answerNpc(const TickOutput& out, const ViewInfo& view, const PadState& pad) {
     State& s = S();
     for (DialogCommand c : out.dialog)
         if (!clientnpc::answer(c)) LOG_INFO("NPC window: command %d found no window to answer", int(c));
     if (out.number) clientnpc::typeNumber(s.hwnd, *out.number);
     const bool answering = s.session->controller().dialog() != NpcDialog::None && view.dialog != NpcDialog::None;
-    const std::string text = s.cfg.npcHint && answering && pad.connected && view.focused && !view.paused
-                                 ? npcHint(view.dialog, s.cfg.lang)
-                                 : std::string();
+    const uint16_t choiceKey = s.session->controller().choosingButton();  // 3.0.11-beta.85: a support skill asks whom
+    const bool shown = pad.connected && view.focused && !view.paused;
+    const std::string text = !shown            ? std::string()
+                             : choiceKey != 0  ? choiceHint(choiceKey, s.cfg.lang)
+                             : s.cfg.npcHint && answering ? npcHint(view.dialog, s.cfg.lang)
+                                                          : std::string();
     if (text == s.shownHint) return;
     s.shownHint = text;
     if (text.empty())
@@ -514,6 +520,7 @@ void tick() {
         s.session->setClientTurn(clientTurn * 3.14159265358979323846 / 180.0);
     else
         s.session->setClientTurn(std::nullopt);
+    s.session->setFriends(uagfx::win::partywin::hereIds());  // 3.0.11-beta.85: whom a support skill may go on
     const TickOutput out = s.session->tick(pad, view, now);
     if (out.camera.turnDeg != 0 && s.cameraSupported && !clientcamera::turn(out.camera.turnDeg) &&
         !s.loggedCameraFail) {
@@ -537,6 +544,8 @@ void tick() {
 }  // namespace
 
 bool healthy() { return S().initDone && !S().failed; }
+
+uint32_t choosing() { return healthy() && S().session ? S().session->controller().choosing() : 0; }
 
 void init() {
     State& s = S();

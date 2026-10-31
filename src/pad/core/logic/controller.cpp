@@ -18,6 +18,7 @@ constexpr double kAimOn = 0.6;
 constexpr double kAimOff = 0.35;
 constexpr double kAimSwitchMargin = 8.0;  // aim score points a new monster must win by
 constexpr uint32_t kSlotIntervalMs = 150;
+constexpr uint32_t kChooseMs = 8000;  // 3.0.11-beta.85: a support skill waits this long for whom
 constexpr float kCameraDeadZone = 0.2f;
 constexpr float kCameraTurnDegPerSec = 120.0f;   // the right stick fully pushed
 constexpr float kCameraZoomStepsPerSec = 6.0f;   // wheel notches a second, fully pushed
@@ -170,6 +171,10 @@ TickOutput Controller::tick(const PadState& pad, const WorldState& world, const 
     const uint16_t down = uint16_t(buttons & ~prevButtons_);
     prevButtons_ = buttons;
 
+    if (choosing_ && (view.paused || view.dialog != NpcDialog::None || !enabled_ || !pad.connected || !view.focused)) {
+        out.notes.push_back(hotkeyName(choosing_->slot) + ": the choice cancelled");  // 3.0.11-beta.85: a window came
+        choosing_.reset();
+    }
     if (view.paused) {  // the settings menu has the pad: the character stands, buttons only get remembered
         if (!paused_) {
             paused_ = true;
@@ -246,7 +251,12 @@ TickOutput Controller::tick(const PadState& pad, const WorldState& world, const 
     talkDirX_ = talkDirY_ = 0;  // talk: the NPC the right stick points at, or the nearest
     if (!cameraMode_ && std::hypot(double(pad.rx), double(pad.ry)) > kAimOn)
         camera_.toWorld(pad.rx, -pad.ry, talkDirX_, talkDirY_);
-    handleButtons(buttons, down, world, now, out);
+    if (choosing_) {  // 3.0.11-beta.85: the buttons choose whom the support skill goes on; the sticks go on
+        choose(down, world, now, out);
+        armed_ = 0;  // nothing held then repeats or attacks
+    } else {
+        handleButtons(buttons, down, world, now, out);
+    }
     stepApproach(world, now, out);
     maintainTarget(attackHeld(), world, now, out);
     return out;
@@ -539,9 +549,65 @@ void Controller::useSlot(int slot, bool repeat, const WorldState& world, uint32_
     std::optional<uint32_t>& last = lastSlotMs_[size_t(slot)];
     if (!due(last, now, kSlotIntervalMs)) return;
     last = now;
+    if (!repeat && key.type != 0) {  // 3.0.11-beta.85: a support skill with party members in sight asks whom
+        auto sk = world.skill(uint16_t(key.id));
+        if (sk && sk->lv > 0 && choosesWhom(*sk)) {
+            std::vector<uint32_t> who;
+            for (uint32_t id : friends_)
+                if (id != world.selfId() && world.actorPos(id, now)) who.push_back(id);
+            if (!who.empty()) {
+                who.push_back(world.selfId());
+                choosing_ = Choosing{slot, std::move(who), 0, now};
+                out.notes.push_back(hotkeyName(slot) + ": skill " + std::to_string(sk->id) + " - whom? " +
+                                    std::to_string(choosing_->who.size()) + " to choose");
+                return;
+            }
+        }
+    }
     const uint32_t target = keepsTarget(world) ? target_ : 0;
     const uint32_t nearest = target != 0 ? 0 : nearestTarget(world, now);
-    SlotDecision d = decideSlot(key, world, target, nearest, cfg_, now);
+    act(decideSlot(key, world, target, nearest, cfg_, now), slot, repeat, key, world, nearest, now, out);
+}
+
+uint16_t Controller::choosingButton() const {
+    if (!choosing_) return 0;
+    for (size_t i = 0; i < kBindableButtons.size(); ++i)
+        if (bindings_[i].kind == Action::Kind::Slot && int(bindings_[i].slot) == choosing_->slot)
+            return kBindableButtons[i];
+    return 0;
+}
+
+void Controller::choose(uint16_t down, const WorldState& world, uint32_t now, TickOutput& out) {
+    Choosing& ch = *choosing_;
+    const std::string name = hotkeyName(ch.slot);
+    if (down & (kPadB | kPadStart)) {
+        out.notes.push_back(name + ": the choice cancelled");
+        choosing_.reset();
+        return;
+    }
+    if (int32_t(now - ch.sinceMs) >= int32_t(kChooseMs)) {
+        out.notes.push_back(name + ": the choice timed out");
+        choosing_.reset();
+        return;
+    }
+    const size_t n = ch.who.size();
+    if (down & kPadDown) ch.at = (ch.at + 1) % n;
+    if (down & kPadUp) ch.at = (ch.at + n - 1) % n;
+    uint16_t again = 0;  // the skill's own buttons: on the character
+    for (size_t i = 0; i < kBindableButtons.size(); ++i)
+        if (bindings_[i].kind == Action::Kind::Slot && int(bindings_[i].slot) == ch.slot) again |= kBindableButtons[i];
+    if (!(down & (again | kPadA))) return;
+    const uint32_t whom = (down & again) ? world.selfId() : ch.who[ch.at];
+    out.notes.push_back(name + ": chosen " + (whom == world.selfId() ? std::string("the character")
+                                                                      : "member " + std::to_string(whom)));
+    const int slot = ch.slot;
+    choosing_.reset();
+    const Hotkey& key = world.hotkey(slot);
+    act(decideSupport(key, world, whom, now), slot, false, key, world, 0, now, out);
+}
+
+void Controller::act(SlotDecision d, int slot, bool repeat, const Hotkey& key, const WorldState& world,
+                     uint32_t nearest, uint32_t now, TickOutput& out) {
     if (d.kind == SlotDecision::Kind::Approach && walking_) {
         // The stick has the legs: no walking up against it. A held button casts once it is in range.
         if (!repeat) deny(out, "skill " + std::to_string(d.skill) + ": out of range while walking");

@@ -32,5 +32,8 @@ struct OnMap {
     bool dead = false;
 };
 std::vector<OnMap> onMap(int faceSide);
+// 3.0.11-beta.85: the members online on the character's map and not dead, in the panel's order - whom the pad's
+// support skill may go on (uapad::Controller::setFriends)
+std::vector<uint32_t> hereIds();
 
 }  // namespace uagfx::win::partywin

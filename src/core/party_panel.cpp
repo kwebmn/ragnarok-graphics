@@ -153,6 +153,8 @@ void paint(panel::Picture& out, const Layout& L, const std::vector<Member>& memb
         const bool bad = low(m, threshold);
         if (m.dead)  // 3.0.11-beta.81: dead - its row dark red
             panel::roundRect(out, r.box, 7 * s, kDeadGround, 0.55f, kRed, 0.6f, 1.0f * s);
+        else if (m.chosen)  // 3.0.11-beta.85: the pad's choice - filled gold, edged stronger than the others waiting
+            panel::roundRect(out, r.box, 7 * s, kGold, 0.22f, kGold, 1.0f, 2.0f * s);
         else if (L.targeting && here(m))  // 3.0.11-beta.82: a skill waits for a target - a click here casts it
             panel::roundRect(out, r.box, 7 * s, kGold, 0.08f, kGold, 0.9f, 1.2f * s);
         else if (bad)

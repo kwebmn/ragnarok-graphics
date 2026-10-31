@@ -62,6 +62,7 @@ enum class Text : uint16_t {
     HintMenu,
     HintNumber,
     Reference,  // 3.0.11-beta.22: the action opening uaRO Graphics' «Довідник»
+    HintChoose,  // 3.0.11-beta.85: a support skill asks whom: {A}, {B} and {KEY}, the skill's own button
     Count
 };
 

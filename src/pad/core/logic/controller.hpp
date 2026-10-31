@@ -11,6 +11,7 @@
 #include "pad/core/config/config.hpp"
 #include "pad/core/logic/camera.hpp"
 #include "pad/core/logic/pad.hpp"
+#include "pad/core/logic/slots.hpp"
 #include "pad/core/world/world.hpp"
 
 namespace uapad {
@@ -73,6 +74,12 @@ public:
 
     void setBindings(const Bindings& bindings);
     const Bindings& bindings() const { return bindings_; }
+    // 3.0.11-beta.85 (the concept's «Выбор цели навыка»): the party's members on this map, in the party panel's order
+    // (partywin::hereIds). A support skill pressed with any of them in sight asks whom: the D-pad goes round them and
+    // the character, A casts on the one chosen, the skill's own button again on the character, B or Start cancels
+    void setFriends(std::vector<uint32_t> ids) { friends_ = std::move(ids); }
+    uint32_t choosing() const { return choosing_ ? choosing_->who[choosing_->at] : 0; }  // the one it would go on
+    uint16_t choosingButton() const;  // the skill's own button (again: on the character); 0 while none asks
 
     bool enabled() const { return enabled_; }
     bool walking() const { return walking_; }  // the left stick holds the virtual mouse
@@ -93,6 +100,12 @@ public:
     const CameraYaw& camera() const { return camera_; }
 
 private:
+    struct Choosing {  // 3.0.11-beta.85
+        int slot = -1;
+        std::vector<uint32_t> who;  // the members in sight, the character last
+        size_t at = 0;
+        uint32_t sinceMs = 0;
+    };
     struct Approach {
         bool pickup = false;  // floor item pickup, otherwise a skill
         uint32_t id = 0;      // floor item id or actor id
@@ -114,6 +127,10 @@ private:
     bool attackHeld() const;
     void attack(const WorldState& world, uint32_t now, TickOutput& out);
     void useSlot(int slot, bool repeat, const WorldState& world, uint32_t now, TickOutput& out);
+    // What a slot's decision does: sent, a walk up, or denied (`nearest`: the monster decideSlot was offered)
+    void act(SlotDecision d, int slot, bool repeat, const Hotkey& key, const WorldState& world, uint32_t nearest,
+             uint32_t now, TickOutput& out);
+    void choose(uint16_t down, const WorldState& world, uint32_t now, TickOutput& out);
     void pickup(bool repeat, const WorldState& world, uint32_t now, TickOutput& out);
     void sendTake(uint32_t item, uint32_t now, TickOutput& out);
     void clearTarget(const WorldState& world, uint32_t now, TickOutput& out);
@@ -170,6 +187,8 @@ private:
     std::unordered_map<uint32_t, uint32_t> blacklist_;  // actor id -> blacklisted until (ms)
     std::unordered_map<uint32_t, uint32_t> markedMs_;   // actor id -> when we last showed its "!"
     std::optional<Approach> approach_;
+    std::vector<uint32_t> friends_;     // 3.0.11-beta.85
+    std::optional<Choosing> choosing_;  // a support skill waits for whom
     NpcDialog dialog_ = NpcDialog::None;
     int number_ = 0;                       // what the pad put into the number field
     std::optional<uint32_t> bHeldSinceMs_;  // B held in a window without a button: closes it after a second

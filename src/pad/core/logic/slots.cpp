@@ -32,6 +32,28 @@ bool listed(const std::vector<uint16_t>& ids, uint16_t id) {
     return std::find(ids.begin(), ids.end(), id) != ids.end();
 }
 
+// `sk` at `lv` on `actor` (or its cell): sent within the skill's reach, else a walk up to it first.
+SlotDecision castAt(const SkillInfo& sk, uint16_t lv, const WorldState& world, uint32_t actor, bool ground,
+                    uint32_t newTarget, uint32_t nowMs) {
+    auto pos = world.actorPos(actor, nowMs);
+    if (!pos) return deny("target is gone");
+    const int reach = std::max(1, int(sk.range));
+    SlotDecision d;
+    d.newTarget = newTarget;
+    if (cellDistance(world.selfPos(nowMs), *pos) <= reach) {
+        d.kind = SlotDecision::Kind::Send;
+        d.packet = ground ? buildSkillToPos(sk.id, lv, *pos) : buildSkillToId(sk.id, lv, actor);
+    } else {
+        d.kind = SlotDecision::Kind::Approach;
+        d.actor = actor;
+        d.ground = ground;
+        d.skill = sk.id;
+        d.lv = lv;
+        d.range = reach;
+    }
+    return d;
+}
+
 // What a learned skill does right now (see decideSlot).
 SlotDecision decideSkill(const SkillInfo& sk, uint16_t lv, const WorldState& world, uint32_t target,
                          uint32_t nearest, const Config& cfg, uint32_t nowMs) {
@@ -40,22 +62,7 @@ SlotDecision decideSkill(const SkillInfo& sk, uint16_t lv, const WorldState& wor
     const int reach = std::max(1, int(sk.range));
 
     auto castOn = [&](uint32_t actor, bool ground, uint32_t newTarget) {
-        auto pos = world.actorPos(actor, nowMs);
-        if (!pos) return deny("target is gone");
-        SlotDecision d;
-        d.newTarget = newTarget;
-        if (cellDistance(me, *pos) <= reach) {
-            d.kind = SlotDecision::Kind::Send;
-            d.packet = ground ? buildSkillToPos(id, lv, *pos) : buildSkillToId(id, lv, actor);
-        } else {
-            d.kind = SlotDecision::Kind::Approach;
-            d.actor = actor;
-            d.ground = ground;
-            d.skill = id;
-            d.lv = lv;
-            d.range = reach;
-        }
-        return d;
+        return castAt(sk, lv, world, actor, ground, newTarget, nowMs);
     };
 
     if (sk.inf & kInfGround) {
@@ -90,6 +97,21 @@ SlotDecision decideSkill(const SkillInfo& sk, uint16_t lv, const WorldState& wor
 }
 
 }  // namespace
+
+bool choosesWhom(const SkillInfo& sk) { return (sk.inf & kInfSupport) && !(sk.inf & (kInfEnemy | kInfGround)); }
+
+SlotDecision decideSupport(const Hotkey& key, const WorldState& world, uint32_t actor, uint32_t nowMs) {
+    auto sk = world.skill(uint16_t(key.id));
+    if (key.type == 0 || !sk || sk->lv == 0) return deny("skill " + std::to_string(key.id) + " is not learned");
+    const uint16_t lv = key.lv == 0 ? sk->lv : std::min(key.lv, sk->lv);
+    SlotDecision d = actor == world.selfId() ? send(buildSkillToId(sk->id, lv, actor))
+                                             : castAt(*sk, lv, world, actor, false, 0, nowMs);
+    if (d.kind != SlotDecision::Kind::Deny) {
+        d.skill = sk->id;
+        d.lv = lv;
+    }
+    return d;
+}
 
 SlotDecision decideSlot(const Hotkey& key, const WorldState& world, uint32_t target, uint32_t nearest,
                         const Config& cfg, uint32_t nowMs) {

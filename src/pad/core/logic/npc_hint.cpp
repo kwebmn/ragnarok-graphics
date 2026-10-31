@@ -36,4 +36,12 @@ std::string npcHint(NpcDialog d, Lang lang) {
     return s;
 }
 
+std::string choiceHint(uint16_t key, Lang lang) {
+    std::string s = tr(lang, Text::HintChoose);
+    put(s, "{A}", label(kPadA));
+    put(s, "{B}", label(kPadB));
+    put(s, "{KEY}", label(key));
+    return s;
+}
+
 }  // namespace uapad

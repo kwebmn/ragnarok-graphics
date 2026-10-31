@@ -222,6 +222,27 @@ TEST(party_panel_arrows_routes_targeting) {
     CHECK(((edge >> 16) & 0xFF) > 0x90 && ((edge >> 8) & 0xFF) > 0x70 && (edge & 0xFF) < ((edge >> 16) & 0xFF));
 }
 
+// 3.0.11-beta.85 (the pad's «Выбор цели навыка»): the member the pad's support skill would go on - its row filled gold
+// and edged stronger than the others waiting
+TEST(party_panel_pad_choice) {
+    std::vector<partypanel::Member> m = party();
+    m[1].chosen = true;
+    partypanel::Layout L = partypanel::layout(partypanel::rowsOf(m), 0, 0, 1.0f);
+    L.targeting = true;
+    panel::Picture p;
+    p.width = L.w;
+    p.height = L.h;
+    p.px.assign(size_t(L.w) * size_t(L.h), 0u);
+    partypanel::paint(p, L, m, 30);
+    auto at = [&](const partypanel::Row& r, float fx, float fy) {
+        return p.px[size_t(int(r.box.y + r.box.h * fy)) * size_t(p.width) + size_t(int(r.box.x + r.box.w * fx))];
+    };
+    const uint32_t chosenEdge = at(L.rows[1], 0, 0.5f), otherEdge = at(L.rows[0], 0, 0.5f);
+    CHECK(((chosenEdge >> 16) & 0xFF) > ((otherEdge >> 16) & 0xFF));  // the chosen edge brighter
+    const uint32_t chosenInside = at(L.rows[1], 0.5f, 0.15f), otherInside = at(L.rows[0], 0.5f, 0.15f);
+    CHECK(((chosenInside >> 16) & 0xFF) > ((otherInside >> 16) & 0xFF) + 8);  // and filled gold
+}
+
 // 3.0.11-beta.84 (the owner's 8: «компактный вид — одни полоски HP в сетку»): a view button in the header; compact -
 // two columns of small cells (a face, a name, an HP bar), a click on one as on its row
 TEST(party_panel_compact_grid) {
