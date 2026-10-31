@@ -126,6 +126,7 @@ struct Appear {
     uint32_t id = 0;
     uint16_t job = 0, hair = 0, hairColour = 0, level = 0;
     uint8_t sex = 0;
+    bool dead = false;  // 3.0.11-beta.81: 0x022a's <dead_sit>.B at 55 is 1 (2: sitting); come in or walking: alive
 };
 
 using Event = std::variant<std::monostate, Whisper, PartyInvite, TradeRequest, GuildInvite, FriendRequest, StatusIcon,

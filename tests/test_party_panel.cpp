@@ -147,3 +147,44 @@ TEST(party_panel_member_buffs) {
     CHECK(!many.rows[0].buffs.empty() && many.rows[0].buffs.size() < 40);
     CHECK(inside(many.rows[0].box, many.rows[0].buffs.back()));
 }
+
+// 3.0.11-beta.81 (the owner: «1-8 делай»): a member's class and level after its name, its cast (the skill's words in
+// their place and a line under its bar), dead (its row dark red, «мертвий»), a buff of one's own about to end glowing
+TEST(party_panel_class_cast_dead_glow) {
+    std::vector<partypanel::Member> m = party();
+    m[0].job = "Priest 85";
+    m[1].casting = "Heal";
+    m[1].castPart = 0.5f;
+    m[2].where.clear();  // here
+    m[2].dead = true;
+    panel::Picture icon;
+    icon.width = icon.height = 14;
+    icon.px.assign(14 * 14, 0xFF2050E0u);
+    m[0].buffs = {{&icon, 0.05f, 1.0f}};
+    const partypanel::Layout L = partypanel::layout(partypanel::rowsOf(m), 0, 0, 1.0f);
+    const std::vector<partypanel::Words> w = partypanel::words(L, m, 30, "офлайн", "Група", "мертвий");
+    const auto find = [&](const std::string& text) -> const partypanel::Words* {
+        for (const partypanel::Words& x : w)
+            if (x.text == text) return &x;
+        return nullptr;
+    };
+    const partypanel::Words* job = find("Priest 85");
+    CHECK(job && job->box.x > L.rows[0].name.x + 10 && job->rgb != find("Tor")->rgb);
+    CHECK(find("Heal") != nullptr);
+    CHECK(find("мертвий") != nullptr && find("мертвий")->rgb != find("96 %")->rgb);
+    panel::Picture p;
+    p.width = L.w;
+    p.height = L.h;
+    p.px.assign(size_t(L.w) * size_t(L.h), 0u);
+    partypanel::paint(p, L, m, 30);
+    const partypanel::Row& r1 = L.rows[1];  // the cast's line under the bar: blue
+    const uint32_t cast = p.px[size_t(int(r1.bar.y + r1.bar.h + 2.5f)) * size_t(p.width) + size_t(int(r1.bar.x + 3))];
+    CHECK((cast & 0xFF) > 0xA0 && (cast & 0xFF) > ((cast >> 8) & 0xFF));
+    const partypanel::Row& r2 = L.rows[2];  // dead: its row dark red
+    const uint32_t dead =
+        p.px[size_t(int(r2.box.y + r2.box.h / 2)) * size_t(p.width) + size_t(int(r2.box.x + r2.box.w * 0.6f))];
+    CHECK(((dead >> 16) & 0xFF) > ((dead >> 8) & 0xFF) + 10);
+    const panel::Box& b = L.rows[0].buffs[0];  // the glow: gold round the icon
+    const uint32_t edge = p.px[size_t(int(b.y + b.h / 2)) * size_t(p.width) + size_t(int(b.x - 1))];
+    CHECK(((edge >> 16) & 0xFF) > 0x90 && ((edge >> 8) & 0xFF) > 0x70);
+}

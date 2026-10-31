@@ -4990,6 +4990,7 @@ constexpr Entry kTexts[] = {
     {Text::HotbarUnlearned, "The character does not have this skill", "Персонаж не має цієї навички",
      "У персонажа нет этого навыка"},
     {Text::PartyTitle, "Party", "Група", "Группа"},  // 3.0.11-beta.79: the party panel's header
+    {Text::PartyDead, "dead", "мертвий", "мёртв"},  // 3.0.11-beta.81: a party member's
     // 3.0.11-beta.33
     {Text::InterfaceMinimapWay, "The way on the ground", "Шлях на землі", "Путь на земле"},
     {Text::InterfaceMinimapWayHint,

@@ -8,6 +8,8 @@
 #include "core/buff_panel.hpp"
 #include "core/hotbar_panel.hpp"
 #include "core/pack_source.hpp"
+#include "win/code_page.hpp"
+#include "win/game_camera.hpp"
 #include "win/game_files.hpp"
 #include "win/log.hpp"
 #include "win/pack_pictures.hpp"
@@ -116,6 +118,37 @@ const panel::Picture* icon(const std::string& file, int side, float radius) {
     if (it == r.sized.end())
         it = r.sized.emplace(key, Sized{radius, buffpanel::iconPicture(r.argb, r.w, r.h, true, side, radius)}).first;
     return &it->second.picture;
+}
+
+std::string skillAegis(int id) {
+    constexpr uint32_t kNames = 0x74B9AC;
+    constexpr int kMostSkill = 0x3FD;
+    const auto read32 = [](uint32_t at) {
+        uint32_t v = 0;
+        return readGame(at, &v, 4) ? v : 0u;
+    };
+    const auto text = [](uint32_t at) {
+        char buf[48] = {};
+        if (!at || !readGame(at, buf, sizeof buf - 1)) return std::string();
+        buf[sizeof buf - 1] = 0;
+        return std::string(buf);
+    };
+    static int known = -1;
+    if (known < 0) {
+        const uint32_t names = read32(kNames);
+        known = names && text(read32(names + 4)) == "NV_BASIC" ? 1 : 0;
+        if (!known) LOG_INFO("client tables: the game's skills' names are not where this build has them");
+    }
+    if (!known || id <= 0 || id >= kMostSkill) return "";
+    return text(read32(read32(kNames) + 4 * uint32_t(id)));
+}
+
+std::string skillWords(int id, unsigned codePage) {
+    const std::string aegis = skillAegis(id);
+    if (aegis.empty()) return "";
+    const auto& names = skillNames();
+    const auto n = names.find(aegis);
+    return n != names.end() ? utf8Of(widened(hotbar::spaced(n->second), codePage)) : aegis;
 }
 
 }  // namespace uagfx::win::clienttables

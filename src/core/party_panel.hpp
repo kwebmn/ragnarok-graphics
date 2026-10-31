@@ -18,6 +18,7 @@ namespace uagfx::partypanel {
 struct Buff {
     const panel::Picture* icon = nullptr;  // premultiplied, about its box's side
     float left = -1;                       // its time left, a share (0..1); < 0 not known
+    float glow = 0;  // 3.0.11-beta.81: one's own about to end - a gold edge round it this strong (0..1), pulsing
 };
 
 struct Member {
@@ -27,6 +28,11 @@ struct Member {
     int percent = -1;    // HP; < 0 not known
     const panel::Picture* face = nullptr;  // 3.0.11-beta.80: its head (premultiplied) in its round; null: its letter
     std::vector<Buff> buffs;               // 3.0.11-beta.80: its buffs as last told
+    // 3.0.11-beta.81 (the owner: «1-8 делай»): its class and level after its name ("Priest 85"; "" not known), its
+    // cast (the skill's words in their place, its part done as a line under its bar; < 0 none), dead
+    std::string job, casting;
+    float castPart = -1;
+    bool dead = false;
 };
 bool low(const Member& m, int threshold);  // here, online, known and under the threshold
 
@@ -67,6 +73,6 @@ struct Words {
     Align align = Align::Left;
 };
 std::vector<Words> words(const Layout& L, const std::vector<Member>& members, int threshold,
-                         const std::string& offline, const std::string& title = "");
+                         const std::string& offline, const std::string& title = "", const std::string& dead = "");
 
 }  // namespace uagfx::partypanel

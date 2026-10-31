@@ -16,6 +16,8 @@ namespace uagfx::buffs {
 uint32_t duration(uint16_t icon, uint16_t skill, uint16_t level);  // ms; 0 none known
 // 3.0.7-beta.6: an icon's buff by name - the first skill's giving it, else the item's; "" none known
 const char* name(uint16_t icon);
+// 3.0.11-beta.81: the skill gives this icon (the server's table) - a party member's buff one's own cast
+bool gives(uint16_t skill, uint16_t icon);
 
 class Timers {
 public:

@@ -38,6 +38,8 @@ bool givenBy(uint16_t icon, uint16_t skill) {  // the skill gives this icon
 
 }  // namespace
 
+bool gives(uint16_t skill, uint16_t icon) { return skill && givenBy(icon, skill); }
+
 void Timers::cast(uint16_t skill, uint16_t level, uint64_t now) {
     last_ = Cast{true, skill, level, now};
     for (const auto& [icon, at] : onAt_) {  // 3.0.4-beta.36: its icon put on just before - the server's order

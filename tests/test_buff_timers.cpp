@@ -115,3 +115,10 @@ TEST(buff_timers_a_short_one_not_told) {
     t.icon(5, true, 0);  // Cloaking: 9 s at most - never a whole half minute
     CHECK(e.due(t, 1000, 10000).empty());
 }
+
+// 3.0.11-beta.81 (the party's «пора перекастовать»): which skill gives which icon - a buff one's own cast
+TEST(buff_timers_skill_gives_icon) {
+    CHECK(buffs::gives(kBlessing, kBlessingIcon));
+    CHECK(!buffs::gives(kBlessing, kPotionIcon));
+    CHECK(!buffs::gives(0, kBlessingIcon));
+}

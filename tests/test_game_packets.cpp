@@ -303,7 +303,14 @@ TEST(game_packets_a_character_in_sight) {
     const packets::Event e = packets::parse(idle.data(), idle.size());
     const auto* standing = std::get_if<packets::Appear>(&e);
     CHECK(standing && standing->id == 2000123 && standing->job == 8 && standing->hair == 12 &&
-          standing->hairColour == 4 && standing->sex == 1 && standing->level == 85);
+          standing->hairColour == 4 && standing->sex == 1 && standing->level == 85 && !standing->dead);
+    idle[55] = 1;  // 3.0.11-beta.81: lying dead (its dead_sit)
+    const packets::Event dead = packets::parse(idle.data(), idle.size());
+    CHECK(std::get_if<packets::Appear>(&dead) && std::get_if<packets::Appear>(&dead)->dead);
+    idle[55] = 2;  // sitting: alive
+    const packets::Event sits = packets::parse(idle.data(), idle.size());
+    CHECK(std::get_if<packets::Appear>(&sits) && !std::get_if<packets::Appear>(&sits)->dead);
+    idle[55] = 0;
     std::vector<uint8_t> spawn(idle.begin(), idle.begin() + 57);  // the level moved to 55
     spawn[0] = 0x2b;
     put16(spawn, 55, 85);

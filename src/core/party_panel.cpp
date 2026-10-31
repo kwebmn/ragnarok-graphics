@@ -16,6 +16,7 @@ constexpr float kBuffSide = 14, kBuffGap = 3, kBuffLine = 20;  // 3.0.11-beta.80
 constexpr uint32_t kCard = 0x10141C, kWhite = 0xFFFFFF, kBlack = 0x000000, kTile = 0x1B1D24;
 constexpr uint32_t kGold = 0xE6CB8A, kText = 0xECEFF5, kMuted = 0x9AA3B5, kHp = 0x5BD36C, kRed = 0xFF5A4E;
 constexpr uint32_t kRedText = 0xFF9A8F;
+constexpr uint32_t kCast = 0x8E9BFF, kDeadGround = 0x5A1414;  // 3.0.11-beta.81
 
 bool here(const Member& m) { return m.online && m.where.empty(); }
 
@@ -128,10 +129,13 @@ void paint(panel::Picture& out, const Layout& L, const std::vector<Member>& memb
         const Row& r = L.rows[i];
         const Member& m = members[i];
         const bool bad = low(m, threshold);
-        if (bad) panel::roundRect(out, r.box, 7 * s, kRed, 0.10f, kRed, 0.85f, 1.2f * s);  // the row edged red
+        if (m.dead)  // 3.0.11-beta.81: dead - its row dark red
+            panel::roundRect(out, r.box, 7 * s, kDeadGround, 0.55f, kRed, 0.6f, 1.0f * s);
+        else if (bad)
+            panel::roundRect(out, r.box, 7 * s, kRed, 0.10f, kRed, 0.85f, 1.2f * s);  // the row edged red
         panel::circle(out, r.round.x + r.round.w / 2, r.round.y + r.round.h / 2, r.round.w / 2, kTile, 1.0f);
-        if (m.face && m.face->width > 0)  // 3.0.11-beta.80: its face, faint when it is not here
-            putRound(out, *m.face, r.round, here(m) ? 1.0f : 0.55f);
+        if (m.face && m.face->width > 0)  // 3.0.11-beta.80: its face, faint when it is not here (or dead)
+            putRound(out, *m.face, r.round, here(m) && !m.dead ? 1.0f : 0.45f);
         if (m.leader) {  // the crown after its name
             const float nameW = panel::wordsWidth((bad ? "! " : "") + m.name, 13 * s, true);
             const float icon = 13 * s, x = std::min(r.name.x + nameW + 4 * s, r.name.x + r.name.w - icon);
@@ -140,6 +144,9 @@ void paint(panel::Picture& out, const Layout& L, const std::vector<Member>& memb
         for (size_t b = 0; b < r.buffs.size() && b < m.buffs.size(); ++b) {  // 3.0.11-beta.80: its buffs
             const panel::Box& box = r.buffs[b];
             const Buff& f = m.buffs[b];
+            if (f.glow > 0)  // 3.0.11-beta.81: one's own about to end - a gold edge, pulsing
+                panel::roundRect(out, panel::Box{box.x - 2 * s, box.y - 2 * s, box.w + 4 * s, box.h + 4 * s}, 3 * s,
+                                 kGold, 0.25f * f.glow, kGold, std::min(1.0f, f.glow), 1.5f * s);
             if (f.icon && f.icon->width > 0) putRound(out, *f.icon, box, 1.0f, true);
             if (f.left >= 0) {  // its time left: a thin line under it, red at its last tenth
                 const float part = std::clamp(f.left, 0.0f, 1.0f);
@@ -148,7 +155,13 @@ void paint(panel::Picture& out, const Layout& L, const std::vector<Member>& memb
                                  0, part < 0.1f ? kRed : kGold, 1.0f);
             }
         }
-        if (!here(m)) continue;  // elsewhere, offline: no bar
+        if (m.castPart >= 0 && here(m)) {  // 3.0.11-beta.81: its cast - a line under its bar
+            const panel::Box line{r.bar.x, r.bar.y + r.bar.h + 1.5f * s, r.bar.w, 2.5f * s};
+            panel::roundRect(out, line, line.h / 2, kBlack, 0.45f);
+            const float done = std::max(line.h, line.w * std::clamp(m.castPart, 0.0f, 1.0f));
+            panel::roundRect(out, panel::Box{line.x, line.y, done, line.h}, line.h / 2, kCast, 1.0f);
+        }
+        if (!here(m) || m.dead) continue;  // elsewhere, offline, dead: no bar
         panel::roundRect(out, r.bar, r.bar.h / 2, kBlack, 0.45f);
         if (m.percent > 0) {
             const float part = std::clamp(float(m.percent) / 100.0f, 0.0f, 1.0f);
@@ -159,7 +172,7 @@ void paint(panel::Picture& out, const Layout& L, const std::vector<Member>& memb
 }
 
 std::vector<Words> words(const Layout& L, const std::vector<Member>& members, int threshold,
-                         const std::string& offline, const std::string& title) {
+                         const std::string& offline, const std::string& title, const std::string& dead) {
     std::vector<Words> out;
     const float s = L.s;
     if (L.header.w > 0) {  // 3.0.11-beta.79: «Група», online of all, ▾ / ▸
@@ -177,11 +190,21 @@ std::vector<Words> words(const Layout& L, const std::vector<Member>& members, in
         const bool wide = !m.name.empty() && (static_cast<unsigned char>(m.name[0]) & 0xE0) == 0xC0;  // UTF-8 of 2
         const std::string first = m.name.empty() ? "?" : m.name.substr(0, wide ? 2 : 1);
         if (!m.face || m.face->width <= 0) out.push_back(Words{r.round, first, kMuted, 10.5f * s, true, Align::Center});
-        out.push_back(Words{r.name, bad ? "! " + m.name : m.name, bad ? kRedText : here(m) ? kText : kMuted, 13 * s,
-                            true, Align::Left});
+        const std::string shown = bad ? "! " + m.name : m.name;
+        out.push_back(Words{r.name, shown, bad || m.dead ? kRedText : here(m) ? kText : kMuted, 13 * s, true,
+                            Align::Left});
+        // 3.0.11-beta.81: after its name - its cast's skill (blue), else its class and level (faint)
+        const std::string after = !m.casting.empty() && m.castPart >= 0 ? m.casting : m.job;
+        const float nameW = panel::wordsWidth(shown, 13 * s, true) + 6 * s;
+        if (!after.empty() && nameW + 24 * s < r.name.w)
+            out.push_back(Words{panel::Box{r.name.x + nameW, r.name.y + 1 * s, r.name.w - nameW, r.name.h}, after,
+                                after == m.job ? kMuted : kCast, 11.5f * s, false, Align::Left});
         std::string value;
         uint32_t rgb = kMuted;
-        if (!m.online) value = offline;
+        if (m.dead && m.online && !dead.empty()) {  // 3.0.11-beta.81
+            value = dead;
+            rgb = kRedText;
+        } else if (!m.online) value = offline;
         else if (!m.where.empty()) value = m.where;
         else if (m.percent >= 0) {
             value = std::to_string(m.percent) + " %";

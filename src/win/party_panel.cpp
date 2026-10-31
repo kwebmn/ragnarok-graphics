@@ -11,14 +11,16 @@
 #include <variant>
 #include <vector>
 
-#include "core/layout.hpp"
 #include "core/buff_timers.hpp"
+#include "core/char_block.hpp"
+#include "core/layout.hpp"
 #include "core/party_panel.hpp"
 #include "core/settings/strings.hpp"
 #include "core/ui_style.hpp"
 #include "pad/win/game_window.hpp"
 #include "win/buff_column.hpp"
 #include "win/char_block.hpp"
+#include "win/client_tables.hpp"
 #include "win/code_page.hpp"
 #include "win/game_camera.hpp"
 #include "win/head_picture.hpp"
@@ -43,6 +45,12 @@ struct Seat {
     std::string name, map;  // the game's code page, as they came
     bool leader = false, online = true;
     int hp = -1, most = 0;
+    // 3.0.11-beta.81 (the owner: «1-8 делай»): seen dying and not back yet; its cast (0x013e) - the skill, when, how
+    // long
+    bool dead = false;
+    int castSkill = 0;
+    ULONGLONG castAt = 0;
+    uint32_t castMs = 0;
 };
 
 // 3.0.11-beta.80 (the owner: «иконки можно сделать как лица персонажей?»): a member's looks as last seen in sight
@@ -59,7 +67,8 @@ struct Look {
 // character's own - core/buff_timers)
 struct Buffs {
     buffs::Timers timers;
-    std::map<uint16_t, uint64_t> on;  // icon -> when put on
+    std::map<uint16_t, uint64_t> on;    // icon -> when put on
+    std::map<uint16_t, uint64_t> mine;  // 3.0.11-beta.81: the character's own casts on it - skill -> when
 };
 
 struct State {
@@ -178,7 +187,8 @@ void render(State& s) {
     pp::paint(s.picture, s.layout, s.members, kLow);
     const settings::Lang lang = startup().lang;
     drawWords(s.picture, gdiWords(pp::words(s.layout, s.members, kLow, settings::tr(lang, settings::Text::PartyOffline),
-                                            settings::tr(lang, settings::Text::PartyTitle))));
+                                            settings::tr(lang, settings::Text::PartyTitle),
+                                            settings::tr(lang, settings::Text::PartyDead))));
     s.upload = true;
 }
 
@@ -246,6 +256,13 @@ void packet(const packets::Event& e) {
         if (it != s.seats.end()) {
             it->second.hp = hp->hp;
             it->second.most = hp->most;
+            if (hp->hp > 0) it->second.dead = false;  // 3.0.11-beta.81: back
+        }
+    } else if (const auto* casting = std::get_if<packets::Casting>(&e)) {  // 3.0.11-beta.81: a member's cast
+        if (const auto it = s.seats.find(casting->source); it != s.seats.end()) {
+            it->second.castSkill = casting->skill;
+            it->second.castAt = GetTickCount64();
+            it->second.castMs = casting->ms;
         }
     } else if (const auto* icon = std::get_if<packets::StatusIcon>(&e)) {  // 3.0.11-beta.80: a member's buff
         if (s.seats.count(icon->id)) {
@@ -256,8 +273,16 @@ void packet(const packets::Event& e) {
             else b.on.erase(icon->icon);
         }
     } else if (const auto* cast = std::get_if<packets::SkillCast>(&e)) {  // its time: a cast seen on it
-        if (s.seats.count(cast->target)) s.buffs[cast->target].timers.cast(cast->skill, cast->level, GetTickCount64());
+        const uint64_t now = GetTickCount64();
+        if (s.seats.count(cast->target)) {
+            Buffs& b = s.buffs[cast->target];
+            b.timers.cast(cast->skill, cast->level, now);
+            if (cast->source == me) b.mine[cast->skill] = now;  // 3.0.11-beta.81: the character's own
+        }
+        if (const auto it = s.seats.find(cast->source); it != s.seats.end() && it->second.castSkill == cast->skill)
+            it->second.castSkill = 0;  // its cast went off
     } else if (const auto* a = std::get_if<packets::Appear>(&e)) {  // 3.0.11-beta.80: a member in sight - its looks
+        if (const auto seat = s.seats.find(a->id); seat != s.seats.end()) seat->second.dead = a->dead;  // .81
         if (s.seats.count(a->id) && a->hair > 0) {
             readLooks(s);
             const Look l{a->sex ? 1 : 0, a->hair, a->hairColour, a->job, a->level};
@@ -269,7 +294,11 @@ void packet(const packets::Event& e) {
         }
     } else if (const auto* v = std::get_if<packets::Vanish>(&e)) {
         const auto it = s.seats.find(v->id);
-        if (it != s.seats.end() && v->type == 1) it->second.hp = 0;  // seen dying
+        if (it != s.seats.end() && v->type == 1) {  // seen dying
+            it->second.hp = 0;
+            it->second.dead = true;  // 3.0.11-beta.81
+            it->second.castSkill = 0;
+        }
     }
 }
 
@@ -300,28 +329,48 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
         pp::Member m;
         m.name = utf8Of(widened(seat.name, codePage));
         m.face = faceOf(s, account, faceSide, m.name);  // 3.0.11-beta.80
+        const uint64_t now = GetTickCount64();
+        if (const auto look = s.looks.find(account); look != s.looks.end() && look->second.job >= 0) {
+            const char* job = uagfx::charblock::jobName(look->second.job);  // 3.0.11-beta.81: «Priest 85»
+            const int level = look->second.level;
+            if (job && *job) m.job = std::string(job) + (level > 0 ? " " + std::to_string(level) : "");
+        }
+        const bool nearHere = seat.online && (seat.map.empty() || seat.map == here);
+        m.dead = seat.dead && nearHere;
+        if (seat.castSkill && seat.castMs && now < seat.castAt + seat.castMs + 250 && nearHere) {
+            m.casting = clienttables::skillWords(seat.castSkill, codePage);
+            m.castPart = std::clamp(float(double(now - seat.castAt) / double(seat.castMs)), 0.0f, 1.0f);
+        }
         if (const auto bf = s.buffs.find(account); bf != s.buffs.end()) {  // 3.0.11-beta.80: its buffs
-            const bool nearby = seat.online && (seat.map.empty() || seat.map == here);  // (`near`: Windows' macro)
-            if (!nearby) {
+            if (!nearHere) {  // (`near`: Windows' macro)
                 s.buffs.erase(bf);  // not near: the server tells it no more
             } else {
-                const uint64_t now = GetTickCount64();
                 const std::vector<buffs::Timers::Running> running = bf->second.timers.running();
                 for (auto on = bf->second.on.begin(); on != bf->second.on.end();) {
                     float left = -1;
+                    uint64_t leftMs = 0;
                     bool over = false;
                     for (const buffs::Timers::Running& r : running)
                         if (r.icon == on->first && r.end > r.from) {
                             over = now >= r.end + 2000;  // its time out and no word of it: gone
-                            left = std::clamp(float(double(r.end > now ? r.end - now : 0) / double(r.end - r.from)),
-                                              0.0f, 1.0f);
+                            leftMs = r.end > now ? r.end - now : 0;
+                            left = std::clamp(float(double(leftMs) / double(r.end - r.from)), 0.0f, 1.0f);
                         }
                     if (over) {
                         on = bf->second.on.erase(on);
                         continue;
                     }
+                    // 3.0.11-beta.81 (the owner's «напоминание перекастовать»): the character's own, its last 10 s
+                    // - a gold edge pulsing
+                    float glow = 0;
+                    if (left >= 0 && leftMs <= 10000)
+                        for (const auto& [skill, at] : bf->second.mine)
+                            if (buffs::gives(skill, on->first) && now - at < 3600000) {
+                                const float wave = 0.5f + 0.5f * std::sin(float(now % 100000) / 160.0f);
+                                glow = std::round((0.35f + 0.65f * wave) * 8) / 8;
+                            }
                     if (const panel::Picture* pic = buffcolumn::iconPicture(on->first, buffSide))
-                        m.buffs.push_back(pp::Buff{pic, left});
+                        m.buffs.push_back(pp::Buff{pic, left, glow});
                     ++on;
                 }
             }
@@ -345,9 +394,12 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     for (const pp::Member& m : s.members)
         key += m.name + '|' + m.where + '|' + (m.leader ? "L" : "") + (m.online ? "" : "o") +
                std::to_string(m.percent) + (m.face ? std::to_string(uintptr_t(m.face)) : "") + ';';
-    for (const pp::Member& m : s.members)  // 3.0.11-beta.80: its buffs, their times by twentieths
+    for (const pp::Member& m : s.members) {  // 3.0.11-beta.80: its buffs, their times by twentieths (.81: glow)
         for (const pp::Buff& b : m.buffs)
-            key += std::to_string(uintptr_t(b.icon)) + ':' + std::to_string(int(b.left * 20)) + ',';
+            key += std::to_string(uintptr_t(b.icon)) + ':' + std::to_string(int(b.left * 20)) + ':' +
+                   std::to_string(int(b.glow * 8)) + ',';
+        key += m.job + '|' + m.casting + '|' + std::to_string(int(m.castPart * 20)) + (m.dead ? "d;" : ";");
+    }
     if (const std::string drawn = key + '#' + std::to_string(uistyle::generation()); drawn != s.key) {  // its grounds
         s.key = drawn;
         render(s);

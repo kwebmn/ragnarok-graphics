@@ -127,7 +127,7 @@ Event parse(const uint8_t* p, size_t size) {
             return StatusLong{rd16(p, 2), rd32(p, 4)};
         case 0x022a:  // 3.0.11-beta.80: a character in sight
             if (size < 58) return {};
-            return Appear{rd32(p, 2), rd16(p, 16), rd16(p, 18), rd16(p, 30), rd16(p, 56), p[49]};
+            return Appear{rd32(p, 2), rd16(p, 16), rd16(p, 18), rd16(p, 30), rd16(p, 56), p[49], p[55] == 1};
         case 0x022b:
             if (size < 57) return {};
             return Appear{rd32(p, 2), rd16(p, 16), rd16(p, 18), rd16(p, 30), rd16(p, 55), p[49]};

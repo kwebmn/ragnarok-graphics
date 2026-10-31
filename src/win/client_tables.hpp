@@ -26,6 +26,10 @@ const panel::Picture* icon(const std::string& file, int side, float radius);
 // see-through; straight alpha. `from`: where from, or why none (for the log)
 bool iconPixels(const std::string& file, std::vector<uint32_t>& argb, int& width, int& height,
                 std::string* from = nullptr);
+// 3.0.11-beta.81: a skill's AEGIS name by its id in the game's table ([0x74B9AC][id], FUN_00505ce0 - checked once by
+// its first name, NV_BASIC); "" none. Its words as the client's skillnametable has them (UTF-8), else its AEGIS name
+std::string skillAegis(int id);
+std::string skillWords(int id, unsigned codePage);
 // A client's file as the game finds it (its zips and updates too), else from the game's folder's archives
 bool readClientFile(const std::string& entry, std::string& out);
 
