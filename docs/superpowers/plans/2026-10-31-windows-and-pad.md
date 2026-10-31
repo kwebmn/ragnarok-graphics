@@ -140,6 +140,20 @@ The owner 31.10: «Полоски HP мобов - всем показывай»,
   [stick] walk_radius of the concept (the radius was screen pixels - the cause). Tests stick_walk_* (6),
   ctl_direct_walk_* (3, updated), ground_way_walk_arrow_on_the_ground, frame_drops_one_command, config_pad_walk;
   suite 2045/0.
+- Arrow looks (3.0.11-beta.103; the owner: «можешь сделать настройку, чтобы можно было выбрать эту стрелку в
+  конфигураторе?» after the doc «Стрелка хода с контроллера - варианты», artifact 28xJTGnGqirNpwVXj5jNbP):
+  [interface] walk_arrow = chevrons|slim|concept|ring|dots|cell|off (WalkLook; schema row Page::Interface Choice, the
+  pad page's row after pad_walk, the console's sub-row, live). core/ground_way walkShape(look, WalkArrow, ...): Pen
+  passes (a shade first - each shape grown 0.06 cell, black at half its alpha, heads and fills left out - then the
+  light one), Frame along the way; the mockups' sizes (tools/render.py of the doc); Tri gains `part`. stick_walk
+  destination(..., bool* cut) = the march stopped by a cell that does not walk; Controller walkWay()/walkCut();
+  runtime walkWay(). win/ground_marks: the way turned to the cell softly (80 ms), fade in 120 / out 200 ms, the
+  chevrons' phase 600 ms; log «walk arrow: the look X», «walk arrow: X - N triangles on the ground». Ruling R9: the
+  default is the doc's advice (chevrons) - the owner did not answer its questions but asked for the choice; cost if
+  wrong: one default to change. Ruling R10: a short way (span < 0.3 cell) gets one still chevron when the cell is
+  1.6+ cells away (else the diamond alone) - checked offline (arrowcheck render over the doc's screenshot). Tests
+  config_walk_arrow, ground_way_walk_looks, stick_walk_tells_a_wall_cutting_the_way_short,
+  ctl_direct_walk_tells_the_arrow_its_way_and_a_wall; suite 2049/0.
 - Stage 5 research: 0x00c4 deal type; 0x00c6 buy list (11 B each: price.L discount.L type.B nameid.W)
   -> session deal list +0xF28 (count +0xF2C, FUN_0062bbb0(rec, 0); FUN_004ffd30 copies the record's text at +0x11 into
   m_itemName) + windows 0x16 (mgr+0xEC, class 0x69B3E0, SendMsg 0x4AFC00: 0x24 0 buy / 1 sell) and 0x17 (buy cart,

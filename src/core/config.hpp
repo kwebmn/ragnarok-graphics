@@ -28,6 +28,11 @@ enum class MobHp : uint8_t { Off, Target, Wounded, All };
 // 3.0.11-beta.88 (stage 4): how the controller's left stick walks - holding the game's cursor out (as before), or the
 // pad asking for the cell itself with an arrow on the ground
 enum class PadWalk : uint8_t { Mouse, Arrow };
+// 3.0.11-beta.103 (the owner: «можешь сделать настройку, чтобы можно было выбрать эту стрелку в конфигураторе»):
+// [interface] walk_arrow - the look of the stick's arrow on the ground, the variants of the doc «Стрелка хода с
+// контроллера - варианты»: chevrons (its advice, B), a slim tapered arrow (A), beta.102's arrow of the concept, a ring
+// round the feet with a pointer (C), dots of the way (D), the cell alone (E), none
+enum class WalkLook : uint8_t { Off, Chevrons, Slim, Concept, Ring, Dots, Cell };
 // 3.0.11-beta.35: [interface] buffs - the character's buffs: the game's own icons (off), the driver's column under the
 // minimap, a row under it
 enum class BuffsLook : uint8_t { Off, Column, Row };
@@ -587,6 +592,8 @@ struct Config {
     // 3.0.11-beta.88 (stage 4): [interface] pad_walk - the left stick walks without the mouse, an arrow on the ground
     // (a prototype for the owner: off till checked)
     PadWalk padWalk = PadWalk::Arrow;  // 3.0.11-beta.102: by the map's cells by default (core/stick_walk)
+    // 3.0.11-beta.103: [interface] walk_arrow - how the arrow of pad_walk = arrow looks (core/ground_way walkShape)
+    WalkLook walkArrow = WalkLook::Chevrons;
     // 3.0.11-beta.90 (stage 6): [interface] pad_tiles - Start opens the windows' tile (win/pad_tiles); off: the pad's
     // own menu, as before
     bool padTiles = true;
@@ -784,6 +791,7 @@ const char* wayOnGroundToken(WayOnGround w);  // 3.0.11-beta.33
 const char* targetRingToken(TargetRing r);    // 3.0.11-beta.87
 const char* mobHpToken(MobHp m);              // 3.0.11-beta.95
 const char* padWalkToken(PadWalk w);          // 3.0.11-beta.88
+const char* walkLookToken(WalkLook w);        // 3.0.11-beta.103
 const char* buffsLookToken(BuffsLook b);       // 3.0.11-beta.35
 const char* buffsOverflowToken(BuffsOverflow b);  // 3.0.11-beta.63
 const char* characterLookToken(CharacterLook c);  // 3.0.11-beta.36

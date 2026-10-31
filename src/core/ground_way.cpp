@@ -337,67 +337,292 @@ size_t arrow(float x0, float z0, float x1, float z1, float y, float width, float
     return out.size() - before;
 }
 
-std::vector<Tri> walkArrowShape(float x0, float z0, int toX, int toY, const Heights& g, int cellSize, float sign,
-                                float lift) {
-    std::vector<Tri> out;
-    if (cellSize <= 0 || g.w <= 0 || g.h <= 0) return out;
-    const float cs = float(cellSize);
-    const float cx = (float(toX) + 0.5f - float(g.w / 2)) * cs, cz = (float(toY) + 0.5f - float(g.h / 2)) * cs;
-    const float dx = cx - x0, dz = cz - z0, len = std::hypot(dx, dz);
-    if (len < 0.6f * cs) return out;  // where it stands
-    const float ux = dx / len, uz = dz / len, sx = -uz, sz = ux;  // along the way, across it
-    bool ok = true;
-    const auto at = [&](float x, float z) {  // the ground there (`lift` over it: up along -y)
-        float h = 0;
-        if (!g.at(x / cs + float(g.w / 2), z / cs + float(g.h / 2), h)) ok = false;
-        return Point{x, sign * h - lift, z};
-    };
-    const auto tri = [&](const Point& a, const Point& b, const Point& c, uint32_t argb) {
-        out.push_back(Tri{a, b, c, argb});
-    };
-    // a band from a to b `half` to each side, its corners on the ground
-    const auto band = [&](float ax, float az, float bx, float bz, float half, uint32_t argb) {
+namespace {
+
+// 3.0.11-beta.103: an arrow's shapes flat on the map (the game's world x, z), put on its heights after
+struct Flat {
+    float x[3], z[3];
+    uint32_t argb;
+    uint8_t part;
+};
+
+constexpr uint32_t kGold = 0x00E6CB8Au, kWhite = 0x00FFFFFFu, kWall = 0xEBEB7864u;
+constexpr float kShadeGrow = 0.06f;  // a cell's
+
+constexpr uint32_t with(uint32_t rgb, uint32_t alpha) { return (alpha << 24) | (rgb & 0xFFFFFFu); }
+
+// Draws one pass of an arrow: the light one, or its shade (each shape `grow` bigger all round - the builders below
+// take it - black at half its alpha; the white heads inside their gold edges and the cells' fills left out)
+struct Pen {
+    std::vector<Flat>& out;
+    bool shade;
+    float grow, alpha;
+
+    void tri(float ax, float az, float bx, float bz, float cx, float cz, uint32_t argb, uint8_t part) {
+        if (shade && (part == kPartHead || part == kPartCellFill)) return;
+        const uint32_t c = shade ? faded(argb & 0xFF000000u, 0.5f * alpha) : faded(argb, alpha);
+        out.push_back(Flat{{ax, bx, cx}, {az, bz, cz}, c, shade ? kPartShade : part});
+    }
+    void quad(float ax, float az, float bx, float bz, float cx, float cz, float dx, float dz, uint32_t argb,
+              uint8_t part) {
+        tri(ax, az, bx, bz, cx, cz, argb, part);
+        tri(ax, az, cx, cz, dx, dz, argb, part);
+    }
+    // a band from a to b, `halfA` / `halfB` to each side at its ends, `extA` / `extB` longer there
+    void band(float ax, float az, float bx, float bz, float halfA, float halfB, float extA, float extB, uint32_t argb,
+              uint8_t part) {
         const float lx = bx - ax, lz = bz - az, l = std::hypot(lx, lz);
         if (l < 1e-4f) return;
-        const float px = -lz / l * half, pz = lx / l * half;
-        const Point a1 = at(ax - px, az - pz), a2 = at(ax + px, az + pz), b1 = at(bx - px, bz - pz),
-                    b2 = at(bx + px, bz + pz);
-        tri(a1, a2, b1, argb);
-        tri(a2, b2, b1, argb);
-    };
-    // the cell: faintly filled, its square outlined in gold (each side in two pieces over the heights)
-    const float x1 = cx - cs / 2, z1 = cz - cs / 2, x2 = cx + cs / 2, z2 = cz + cs / 2;
-    tri(at(x1, z1), at(x2, z1), at(x1, z2), kWalkCellFill);
-    tri(at(x2, z1), at(x2, z2), at(x1, z2), kWalkCellFill);
-    const float line = 0.045f * cs;
-    const float corners[5][2] = {{x1, z1}, {x2, z1}, {x2, z2}, {x1, z2}, {x1, z1}};
-    for (int i = 0; i < 4; ++i) {
-        const float mx = (corners[i][0] + corners[i + 1][0]) / 2, mz = (corners[i][1] + corners[i + 1][1]) / 2;
-        band(corners[i][0], corners[i][1], mx, mz, line, kWalkCellLine);
-        band(mx, mz, corners[i + 1][0], corners[i + 1][1], line, kWalkCellLine);
+        const float ux = lx / l, uz = lz / l, px = -uz, pz = ux;
+        ax -= ux * extA, az -= uz * extA, bx += ux * extB, bz += uz * extB;
+        quad(ax - px * halfA, az - pz * halfA, bx - px * halfB, bz - pz * halfB, bx + px * halfB, bz + pz * halfB,
+             ax + px * halfA, az + pz * halfA, argb, part);
     }
-    // the shaft from near the feet, then the head with its tip at the cell's near edge
-    const float headLen = 1.0f * cs, headHalf = 0.55f * cs;
-    const float startX = x0 + ux * 0.45f * cs, startZ = z0 + uz * 0.45f * cs;
-    const float tipX = cx - ux * 0.55f * cs, tipZ = cz - uz * 0.55f * cs;
-    const float run = (tipX - startX) * ux + (tipZ - startZ) * uz;
+    // a band cut into pieces of at most `piece` (the ground followed), its ends `ext` longer
+    void line(float ax, float az, float bx, float bz, float half, float piece, float ext, uint32_t argb, uint8_t part) {
+        const float l = std::hypot(bx - ax, bz - az);
+        const int n = std::max(1, int(std::ceil(l / piece)));
+        for (int i = 0; i < n; ++i) {
+            const float t0 = float(i) / float(n), t1 = float(i + 1) / float(n);
+            band(ax + (bx - ax) * t0, az + (bz - az) * t0, ax + (bx - ax) * t1, az + (bz - az) * t1, half, half,
+                 i == 0 ? ext : 0.0f, i == n - 1 ? ext : 0.0f, argb, part);
+        }
+    }
+    // a triangle `grow` bigger all round: scaled about its incentre
+    void grownTri(float ax, float az, float bx, float bz, float cx, float cz, uint32_t argb, uint8_t part) {
+        const float la = std::hypot(cx - bx, cz - bz), lb = std::hypot(ax - cx, az - cz);
+        const float lc = std::hypot(bx - ax, bz - az);
+        const float per = la + lb + lc, area = std::fabs((bx - ax) * (cz - az) - (cx - ax) * (bz - az)) / 2;
+        if (grow > 0 && per > 1e-4f && area > 1e-6f) {
+            const float ix = (la * ax + lb * bx + lc * cx) / per, iz = (la * az + lb * bz + lc * cz) / per;
+            const float k = (2 * area / per + grow) / (2 * area / per);
+            ax = ix + (ax - ix) * k, az = iz + (az - iz) * k, bx = ix + (bx - ix) * k, bz = iz + (bz - iz) * k;
+            cx = ix + (cx - ix) * k, cz = iz + (cz - iz) * k;
+        }
+        tri(ax, az, bx, bz, cx, cz, argb, part);
+    }
+    void disc(float x, float z, float r, int sides, uint32_t argb, uint8_t part) {
+        r += grow;
+        for (int i = 0; i < sides; ++i) {
+            const float a0 = 6.2831853f * float(i) / float(sides), a1 = 6.2831853f * float(i + 1) / float(sides);
+            tri(x, z, x + std::cos(a0) * r, z + std::sin(a0) * r, x + std::cos(a1) * r, z + std::sin(a1) * r, argb,
+                part);
+        }
+    }
+    void ring(float x, float z, float r, float width, int sides, uint32_t argb, uint8_t part) {
+        const float in = r - width / 2 - grow, out = r + width / 2 + grow;
+        for (int i = 0; i < sides; ++i) {
+            const float a0 = 6.2831853f * float(i) / float(sides), a1 = 6.2831853f * float(i + 1) / float(sides);
+            const float c0 = std::cos(a0), s0 = std::sin(a0), c1 = std::cos(a1), s1 = std::sin(a1);
+            quad(x + c0 * in, z + s0 * in, x + c0 * out, z + s0 * out, x + c1 * out, z + s1 * out, x + c1 * in,
+                 z + s1 * in, argb, part);
+        }
+    }
+};
+
+// Where an arrow lies: from the feet along the way (`t` along it, `s` to its left), the cell's middle `len` away
+struct Frame {
+    float x0, z0, ux, uz, len, cx, cz, cs;
+    float x(float t, float s) const { return x0 + ux * t - uz * s; }
+    float z(float t, float s) const { return z0 + uz * t + ux * s; }
+};
+
+// beta.102's concept arrow: a soft white shaft in half-cell pieces from near the feet, a white head over a gold edge
+// with its tip at the cell's near edge, the cell faintly filled and outlined in gold
+void conceptLook(Pen& pen, const Frame& f) {
+    const float cs = f.cs, g = pen.grow;
+    const float x1 = f.cx - cs / 2, z1 = f.cz - cs / 2, x2 = f.cx + cs / 2, z2 = f.cz + cs / 2;
+    pen.tri(x1, z1, x2, z1, x1, z2, kWalkCellFill, kPartCellFill);
+    pen.tri(x2, z1, x2, z2, x1, z2, kWalkCellFill, kPartCellFill);
+    const float corners[5][2] = {{x1, z1}, {x2, z1}, {x2, z2}, {x1, z2}, {x1, z1}};
+    for (int i = 0; i < 4; ++i)
+        pen.line(corners[i][0], corners[i][1], corners[i + 1][0], corners[i + 1][1], 0.045f * cs + g, 0.5f * cs, g,
+                 kWalkCellLine, kPartCellLine);
+    const float headLen = 1.0f * cs, headHalf = 0.55f * cs, tip = f.len - 0.55f * cs, run = tip - 0.45f * cs;
     const float head = run > headLen + 0.1f * cs ? headLen : std::max(0.5f * cs, std::min(headLen, run + 0.25f * cs));
     if (run > headLen + 0.1f * cs) {
         const float shaft = run - headLen;
         const int pieces = std::max(1, int(std::ceil(shaft / (0.5f * cs))));
         for (int i = 0; i < pieces; ++i) {
-            const float a = shaft * float(i) / float(pieces), b = shaft * float(i + 1) / float(pieces);
-            band(startX + ux * a, startZ + uz * a, startX + ux * b, startZ + uz * b, 0.19f * cs, kWalkShaft);
+            const float a = 0.45f * cs + shaft * float(i) / float(pieces);
+            const float b = 0.45f * cs + shaft * float(i + 1) / float(pieces);
+            pen.band(f.x(a, 0), f.z(a, 0), f.x(b, 0), f.z(b, 0), 0.19f * cs + g, 0.19f * cs + g, i == 0 ? g : 0.0f,
+                     0.0f, kWalkShaft, kPartShaft);
         }
     }
-    const float baseX = tipX - ux * head, baseZ = tipZ - uz * head, e = 0.12f * cs;
-    tri(at(baseX - ux * e + sx * (headHalf + e), baseZ - uz * e + sz * (headHalf + e)),
-        at(baseX - ux * e - sx * (headHalf + e), baseZ - uz * e - sz * (headHalf + e)),
-        at(tipX + ux * e * 1.5f, tipZ + uz * e * 1.5f), kWalkEdge);
-    tri(at(baseX + sx * headHalf, baseZ + sz * headHalf), at(baseX - sx * headHalf, baseZ - sz * headHalf),
-        at(tipX, tipZ), kWalkHead);
-    if (!ok) out.clear();  // off the map somewhere
+    const float base = tip - head, e = 0.12f * cs + g;
+    pen.tri(f.x(base - e, headHalf + e), f.z(base - e, headHalf + e), f.x(base - e, -headHalf - e),
+            f.z(base - e, -headHalf - e), f.x(tip + e * 1.5f, 0), f.z(tip + e * 1.5f, 0), kWalkEdge, kPartEdge);
+    pen.tri(f.x(base, headHalf), f.z(base, headHalf), f.x(base, -headHalf), f.z(base, -headHalf), f.x(tip, 0),
+            f.z(tip, 0), kWalkHead, kPartHead);
+}
+
+// A: a slim shaft widening from near the feet and coming up out of nothing, a white head edged in gold, the cell's
+// gold corners over a faint gold fill
+void slimLook(Pen& pen, const Frame& f) {
+    const float cs = f.cs, g = pen.grow, tip = f.len - 0.55f * cs, half = 0.425f * cs;
+    const float head = std::max(0.45f * cs, std::min(0.95f * cs, tip - 0.6f * cs)), base = tip - head;
+    const float t0 = 0.6f * cs;
+    if (base - t0 > 0.1f * cs) {
+        const int n = std::max(1, int(std::ceil((base - t0) / (0.35f * cs))));
+        for (int i = 0; i < n; ++i) {
+            const float k0 = float(i) / float(n), k1 = float(i + 1) / float(n), a = t0 + (base - t0) * k0;
+            const float b = t0 + (base - t0) * k1, km = (k0 + k1) / 2;
+            const float h0 = (0.042f + 0.103f * k0) * cs + g, h1 = (0.042f + 0.103f * k1) * cs + g;
+            const uint32_t alpha = uint32_t(std::lround(255 * (0.05f + 0.70f * std::pow(km, 1.3f))));
+            pen.band(f.x(a, 0), f.z(a, 0), f.x(b, 0), f.z(b, 0), h0, h1, i == 0 ? g : 0.0f, 0.0f, with(kWhite, alpha),
+                     kPartShaft);
+        }
+    }
+    const float edge = 0.0625f * cs;
+    Pen grown{pen.out, pen.shade, edge + g, pen.alpha};
+    grown.grownTri(f.x(base, half), f.z(base, half), f.x(base, -half), f.z(base, -half), f.x(tip, 0), f.z(tip, 0),
+                   with(kGold, 0xF5), kPartEdge);
+    pen.tri(f.x(base, half), f.z(base, half), f.x(base, -half), f.z(base, -half), f.x(tip, 0), f.z(tip, 0),
+            with(kWhite, 0xEB), kPartHead);
+    const float x1 = f.cx - cs / 2, z1 = f.cz - cs / 2, x2 = f.cx + cs / 2, z2 = f.cz + cs / 2, arm = 0.32f * cs;
+    pen.tri(x1, z1, x2, z1, x1, z2, with(kGold, 0x1A), kPartCellFill);
+    pen.tri(x2, z1, x2, z2, x1, z2, with(kGold, 0x1A), kPartCellFill);
+    const float cx[4] = {x1, x2, x2, x1}, cz[4] = {z1, z1, z2, z2};
+    for (int i = 0; i < 4; ++i) {
+        const float sx = cx[i] == x1 ? 1.0f : -1.0f, sz = cz[i] == z1 ? 1.0f : -1.0f;
+        pen.band(cx[i], cz[i], cx[i] + sx * arm, cz[i], 0.035f * cs + g, 0.035f * cs + g, g, g, with(kGold, 0xE6),
+                 kPartCellLine);
+        pen.band(cx[i], cz[i], cx[i], cz[i] + sz * arm, 0.035f * cs + g, 0.035f * cs + g, g, g, with(kGold, 0xE6),
+                 kPartCellLine);
+    }
+}
+
+// B: up to three chevrons running on toward the cell (faint at the feet, coming in and going out softly), a gold
+// diamond in the cell; a short way (a wall near) - one chevron, still, before the diamond
+void chevronsLook(Pen& pen, const Frame& f, float phase) {
+    const float cs = f.cs, g = pen.grow, start = 1.25f * cs, span = f.len - 0.85f * cs - start;
+    const bool still = span < 0.3f * cs;
+    if (!still || f.len >= 1.6f * cs) {
+        const int n = still ? 1 : std::clamp(int(std::lround(span / (1.05f * cs))), 1, 3);
+        const float half = 0.5f * cs + g, depth = 0.42f * cs, thick = 0.26f * cs + 2 * g;
+        for (int i = 0; i < n; ++i) {
+            const float u = (float(i) + phase) / float(n);
+            const float at = (still ? f.len - 0.6f * cs : start + u * span) + g;
+            const float k = still ? 0.95f
+                                  : (0.45f + 0.5f * u) * std::min(1.0f, u / 0.2f) * std::min(1.0f, (1 - u) / 0.15f);
+            const uint32_t c = with(kWhite, uint32_t(std::lround(255 * std::clamp(k, 0.0f, 1.0f))));
+            // the left arm and the right one: two parallelograms sharing the tip's edge
+            const float back = at - depth - thick;
+            pen.quad(f.x(at, 0), f.z(at, 0), f.x(at - depth, half), f.z(at - depth, half), f.x(back, half),
+                     f.z(back, half), f.x(at - thick, 0), f.z(at - thick, 0), c, kPartChevron);
+            pen.quad(f.x(at, 0), f.z(at, 0), f.x(at - thick, 0), f.z(at - thick, 0), f.x(back, -half),
+                     f.z(back, -half), f.x(at - depth, -half), f.z(at - depth, -half), c, kPartChevron);
+        }
+    }
+    const float r = 0.3f * cs + g * 1.4142f;  // the diamond along the map's axes, as the cell
+    pen.quad(f.cx - r, f.cz, f.cx, f.cz - r, f.cx + r, f.cz, f.cx, f.cz + r, with(kGold, 0xF0), kPartMarker);
+}
+
+// C: a ring round the feet, its gold pointer the way; a small gold ring in the cell
+void ringLook(Pen& pen, const Frame& f) {
+    const float cs = f.cs;
+    pen.ring(f.x0, f.z0, 1.05f * cs, 0.083f * cs, 40, with(kWhite, 0xBE), kPartRing);
+    pen.grownTri(f.x(1.1f * cs, 0.42f * cs), f.z(1.1f * cs, 0.42f * cs), f.x(1.1f * cs, -0.42f * cs),
+                 f.z(1.1f * cs, -0.42f * cs), f.x(2.0f * cs, 0), f.z(2.0f * cs, 0), with(kGold, 0xF5), kPartPointer);
+    pen.ring(f.cx, f.cz, 0.32f * cs, 0.0625f * cs, 24, with(kGold, 0xDC), kPartMarker);
+}
+
+// D: dots a half cell apart up to the cell's near edge, bigger and brighter toward it; a gold ring in the cell
+void dotsLook(Pen& pen, const Frame& f) {
+    const float cs = f.cs;
+    const int n = f.len - 0.5f * cs >= 0.6f * cs ? int((f.len - 1.1f * cs) / (0.5f * cs)) + 1 : 0;
+    for (int i = 0; i < n; ++i) {
+        const float k = n > 1 ? float(i) / float(n - 1) : 1.0f, at = (0.6f + 0.5f * float(i)) * cs;
+        pen.disc(f.x(at, 0), f.z(at, 0), (0.09f + 0.04f * k) * cs, 8,
+                 with(kWhite, uint32_t(std::lround(255 * (0.25f + 0.65f * k)))), kPartDot);
+    }
+    pen.ring(f.cx, f.cz, 0.36f * cs, 0.0625f * cs, 24, with(kGold, 0xE6), kPartMarker);
+}
+
+// E: the cell alone - softly lit in gold, its gold frame; a small gold wedge at the feet shows the way
+void cellLook(Pen& pen, const Frame& f) {
+    const float cs = f.cs, g = pen.grow;
+    const float x1 = f.cx - cs / 2, z1 = f.cz - cs / 2, x2 = f.cx + cs / 2, z2 = f.cz + cs / 2;
+    pen.tri(x1, z1, x2, z1, x1, z2, with(kGold, 0x38), kPartCellFill);
+    pen.tri(x2, z1, x2, z2, x1, z2, with(kGold, 0x38), kPartCellFill);
+    const float corners[5][2] = {{x1, z1}, {x2, z1}, {x2, z2}, {x1, z2}, {x1, z1}};
+    for (int i = 0; i < 4; ++i)
+        pen.line(corners[i][0], corners[i][1], corners[i + 1][0], corners[i + 1][1], 0.035f * cs + g, 0.5f * cs, g,
+                 with(kGold, 0xF2), kPartCellLine);
+    pen.grownTri(f.x(0.75f * cs, 0.32f * cs), f.z(0.75f * cs, 0.32f * cs), f.x(0.75f * cs, -0.32f * cs),
+                 f.z(0.75f * cs, -0.32f * cs), f.x(1.5f * cs, 0), f.z(1.5f * cs, 0), with(kGold, 0xF5), kPartPointer);
+}
+
+// The flat shapes on the map's heights (`lift` over them: up along -y); none when a corner is off the map
+std::vector<Tri> onGround(const std::vector<Flat>& flat, const Heights& g, float cs, float sign, float lift) {
+    std::vector<Tri> out;
+    out.reserve(flat.size());
+    bool ok = true;
+    const auto at = [&](float x, float z) {
+        float h = 0;
+        if (!g.at(x / cs + float(g.w / 2), z / cs + float(g.h / 2), h)) ok = false;
+        return Point{x, sign * h - lift, z};
+    };
+    for (const Flat& t : flat) out.push_back(Tri{at(t.x[0], t.z[0]), at(t.x[1], t.z[1]), at(t.x[2], t.z[2]), t.argb,
+                                                 t.part});
+    if (!ok) out.clear();
     return out;
+}
+
+}  // namespace
+
+std::vector<Tri> walkArrowShape(float x0, float z0, int toX, int toY, const Heights& g, int cellSize, float sign,
+                                float lift) {
+    if (cellSize <= 0 || g.w <= 0 || g.h <= 0) return {};
+    const float cs = float(cellSize);
+    float cx = 0, cz = 0;
+    cellToWorld(toX, toY, g.w, g.h, cellSize, cx, cz);
+    const float dx = cx - x0, dz = cz - z0, len = std::hypot(dx, dz);
+    if (len < 0.6f * cs) return {};  // where it stands
+    std::vector<Flat> flat;
+    Pen pen{flat, false, 0.0f, 1.0f};
+    conceptLook(pen, Frame{x0, z0, dx / len, dz / len, len, cx, cz, cs});
+    return onGround(flat, g, cs, sign, lift);
+}
+
+std::vector<Tri> walkShape(WalkLook look, const WalkArrow& a, const Heights& g, int cellSize, float sign,
+                           float lift) {
+    if (look == WalkLook::Off || cellSize <= 0 || g.w <= 0 || g.h <= 0 || a.alpha <= 0) return {};
+    const float cs = float(cellSize);
+    float cx = 0, cz = 0;
+    cellToWorld(a.toX, a.toY, g.w, g.h, cellSize, cx, cz);
+    const float dx = cx - a.x0, dz = cz - a.z0, len = std::hypot(dx, dz), way = std::hypot(a.wayX, a.wayZ);
+    float ux = 0, uz = 0;
+    if (way > 1e-4f) {
+        ux = a.wayX / way, uz = a.wayZ / way;
+    } else if (len > 1e-4f) {
+        ux = dx / len, uz = dz / len;
+    } else {
+        return {};
+    }
+    const Frame f{a.x0, a.z0, ux, uz, len, cx, cz, cs};
+    std::vector<Flat> flat;
+    for (const bool shade : {true, false}) {  // the dark shade first, under the rest
+        Pen pen{flat, shade, shade ? kShadeGrow * cs : 0.0f, std::min(1.0f, a.alpha)};
+        if (len >= 0.6f * cs) {
+            switch (look) {
+                case WalkLook::Chevrons: chevronsLook(pen, f, a.phase - std::floor(a.phase)); break;
+                case WalkLook::Slim: slimLook(pen, f); break;
+                case WalkLook::Concept: conceptLook(pen, f); break;
+                case WalkLook::Ring: ringLook(pen, f); break;
+                case WalkLook::Dots: dotsLook(pen, f); break;
+                case WalkLook::Cell: cellLook(pen, f); break;
+                case WalkLook::Off: break;
+            }
+        }
+        if (a.blocked) {  // a wall past the cell (or right ahead, standing): a short bar across the way
+            const float at = len >= 0.6f * cs ? len + 0.55f * cs : 0.9f * cs;
+            pen.line(f.x(at, -0.5f * cs), f.z(at, -0.5f * cs), f.x(at, 0.5f * cs), f.z(at, 0.5f * cs),
+                     0.05f * cs + pen.grow, 0.5f * cs, pen.grow, kWall, kPartWall);
+        }
+    }
+    return onGround(flat, g, cs, sign, lift);
 }
 
 size_t placeTris(const std::vector<Tri>& tris, const float view[12], const camera::Projection& p, float bias,

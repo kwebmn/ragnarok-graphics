@@ -105,6 +105,10 @@ public:
     // cells are counted from it (core/stick_walk)
     void setSelfCell(std::optional<Cell> c) { selfCell_ = c; }
     std::optional<Cell> walkTarget() const { return walkTo_; }
+    // 3.0.11-beta.103: the stick's way on the ground while it walks (the arrow drawn along it), and whether a wall cuts
+    // the cell asked for short of the lead (a red bar across the arrow's end); false after letting go
+    stickwalk::Way walkWay() const { return way_; }
+    bool walkCut() const { return walkCut_; }
     // The client's own camera turn (radians, its own count) when it can be read from its memory; nothing
     // otherwise. Once the walk samples show how it maps to the screen, the directions follow it at once.
     void setClientTurn(std::optional<double> radians) {
@@ -213,6 +217,7 @@ private:
     std::optional<Cell> selfCell_;              // 3.0.11-beta.102: the game's own cell of the character
     std::optional<stickwalk::Asked> asked_;     // the last cell the stick asked for
     stickwalk::Way way_;                        // the stick's way on the ground (letting go stops along it)
+    bool walkCut_ = false;                      // 3.0.11-beta.103: a wall short of the lead
     std::optional<Choosing> choosing_;  // a support skill waits for whom
     NpcDialog dialog_ = NpcDialog::None;
     int number_ = 0;                       // what the pad put into the number field

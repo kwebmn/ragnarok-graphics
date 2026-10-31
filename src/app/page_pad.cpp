@@ -94,6 +94,7 @@ public:
         // 3.0.11-beta.99 (the owner: «hp для мобов должно быть доступно и в обычном режиме»): the HP bars' row in
         // «Інтерфейс» alone - not the controller's
         rows_->buildRow(p, "interface.pad_walk");
+        rows_->buildRow(p, "interface.walk_arrow");  // 3.0.11-beta.103: the look of the stick's arrow
         p.gap();
         buttons(p, value("pad.type", "auto") == "sony");
         p.gap();

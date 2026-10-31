@@ -28,6 +28,20 @@ constexpr uint32_t kGold = 0xF5E6CB8A, kShade = 0x70000000, kWhite = 0xC8FFFFFF,
 // 3.0.11-beta.88: the walk without the mouse's arrow - faint white over a dark edge, a small gold ring at its end
 constexpr float kArrowWidth = 1.0f, kArrowHead = 3.2f, kArrowHeadWidth = 3.0f;
 constexpr uint32_t kArrowWhite = 0x96FFFFFF, kArrowShade = 0x50000000, kArrowGold = 0xC8E6CB8A;
+// 3.0.11-beta.103: the look's arrow - faded in and out (ms), its way turned to (ms, a time constant), the chevrons' run
+constexpr float kFadeInMs = 120, kFadeOutMs = 200, kTurnMs = 80;
+constexpr double kRunMs = 600;
+
+struct Walk {
+    WalkLook look = WalkLook::Chevrons;
+    bool has = false;  // an arrow drawn or fading out
+    float angle = 0;   // its way (radians from east toward north)
+    int toX = 0, toY = 0;
+    bool cut = false;
+    float alpha = 0, phase = 0;
+    ULONGLONG lastMs = 0;
+    bool told = false;  // its look told the log
+};
 
 struct State {
     TargetRing ring = TargetRing::Pad;
@@ -42,6 +56,7 @@ struct State {
     bool heightsRead = false;
     float sign = 0;
     std::unique_ptr<gamefiles::Reader> files;
+    Walk walk;  // 3.0.11-beta.103
 };
 
 State& state() {
@@ -116,6 +131,14 @@ void look(TargetRing ring) {
     LOG_INFO("target ring: %s", targetRingToken(ring));
 }
 
+void walkLook(WalkLook look) {
+    Walk& w = state().walk;
+    if (look == w.look) return;
+    w.look = look;
+    w.told = false;
+    LOG_INFO("walk arrow: the look %s", walkLookToken(look));
+}
+
 void newFrame() { state().drawn = false; }
 
 void draw(FrameRecord& record, int width, int height) {
@@ -126,6 +149,16 @@ void draw(FrameRecord& record, int width, int height) {
     int toX = 0, toY = 0;
     const bool padNow = uapad::runtime::look().shown;
     const bool walking = padNow && uapad::runtime::walkTarget(toX, toY);  // 3.0.11-beta.88: the stick without the mouse
+    Walk& w = s.walk;  // 3.0.11-beta.103: faded in while it walks, out after
+    float wayEast = 0, wayNorth = 0;
+    bool cut = false;
+    if (walking) uapad::runtime::walkWay(wayEast, wayNorth, cut);
+    const ULONGLONG now = GetTickCount64();
+    const float dt = w.lastMs ? float(std::min<ULONGLONG>(now - w.lastMs, 100)) : 0.0f;
+    w.lastMs = now;
+    w.alpha = walking ? std::min(1.0f, w.alpha + dt / kFadeInMs) : std::max(0.0f, w.alpha - dt / kFadeOutMs);
+    if (!walking && w.alpha <= 0) w.has = false;
+    const bool arrowShown = w.look != WalkLook::Off && (walking || w.has);
     if (padNow && s.ring != TargetRing::Off) {
         target = uapad::runtime::target();
         next = uapad::runtime::preview();
@@ -133,7 +166,7 @@ void draw(FrameRecord& record, int width, int height) {
     }
     const bool mouse = !target && s.ring == TargetRing::Always;
     if (mouse) target = targetpanel::fighting();  // 3.0.11-beta.99: the card on or not
-    if (!target && !next && !mate && !walking) return;
+    if (!target && !next && !mate && !arrowShown) return;
     float view[12];
     if (!readGameCamera(view)) return;
     const camera::Projection p = camera::projectionFor(width, height);
@@ -141,18 +174,42 @@ void draw(FrameRecord& record, int width, int height) {
     s.flat.clear();
     float me[3];
     int mapW = 0, mapH = 0, cellSize = 0;
-    if (walking && readPlayerWorld(me, mapW, mapH, cellSize)) {  // 3.0.11-beta.88: the way the stick walks
+    if (arrowShown && readPlayerWorld(me, mapW, mapH, cellSize)) {  // 3.0.11-beta.88: the way the stick walks
         float tx = 0, tz = 0;
-        groundway::cellToWorld(toX, toY, mapW, mapH, cellSize, tx, tz);
+        groundway::cellToWorld(walking ? toX : w.toX, walking ? toY : w.toY, mapW, mapH, cellSize, tx, tz);
         const float dx = tx - me[0], dz = tz - me[2], len = std::hypot(dx, dz), y = me[1] - kLift;
-        float sign = 0;  // 3.0.11-beta.102: the concept's arrow on the ground's heights, the flat one without them
+        if (walking) {  // 3.0.11-beta.103: the way to the cell (the stick's own standing on it), turned to softly
+            const bool there = len < 0.6f * float(cellSize);
+            const float wx = there ? wayEast : dx, wz = there ? wayNorth : dz;
+            if (std::hypot(wx, wz) > 1e-4f) {
+                const float want = std::atan2(wz, wx);
+                float turn = std::remainder(want - w.angle, 6.2831853f);
+                if (!w.has) turn = want - w.angle;  // a new arrow: its way at once
+                w.angle += w.has ? turn * (1.0f - std::exp(-dt / kTurnMs)) : turn;
+            }
+            w.toX = toX;
+            w.toY = toY;
+            w.cut = cut;
+            w.has = true;
+            w.phase = float(std::fmod(double(now) / kRunMs, 1.0));
+        }
+        float sign = 0;  // 3.0.11-beta.102: on the ground's heights, the flat arrow without them
         const groundway::Heights* heights = heightsHere(s, me, mapW, mapH, cellSize, sign);
-        const std::vector<groundway::Tri> arrow =
-            heights ? groundway::walkArrowShape(me[0], me[2], toX, toY, *heights, cellSize, sign, kLift)
-                    : std::vector<groundway::Tri>{};
-        if (!arrow.empty()) {
-            groundway::placeTris(arrow, view, p, kBias, s.verts);
-        } else if (len > 3.0f) {
+        groundway::WalkArrow arrow;
+        arrow.x0 = me[0];
+        arrow.z0 = me[2];
+        arrow.wayX = std::cos(w.angle);
+        arrow.wayZ = std::sin(w.angle);
+        arrow.toX = w.toX;
+        arrow.toY = w.toY;
+        arrow.blocked = w.cut;
+        arrow.phase = w.phase;
+        arrow.alpha = w.alpha;
+        std::vector<groundway::Tri> tris;
+        if (heights) tris = groundway::walkShape(w.look, arrow, *heights, cellSize, sign, kLift);
+        if (!tris.empty()) {
+            groundway::placeTris(tris, view, p, kBias, s.verts);
+        } else if (!heights && walking && len > 3.0f) {
             const float x0 = me[0] + dx / len * 2.2f, z0 = me[2] + dz / len * 2.2f;
             groundway::arrow(x0, z0, tx, tz, y, kArrowWidth + 0.8f, kArrowHead + 0.6f, kArrowHeadWidth + 0.8f, view, p,
                              kArrowShade, kBias, s.verts);
@@ -160,10 +217,16 @@ void draw(FrameRecord& record, int width, int height) {
                              kBias + 0.2f, s.verts);
             groundway::ring(tx, y, tz, 1.4f, 0.45f, 20, false, view, p, kArrowGold, kBias + 0.2f, s.verts);
         }
-        if (!s.arrowTold) {
+        if (!s.arrowTold && walking) {
             s.arrowTold = true;
             LOG_INFO("walk arrow: from the world's %.1f, %.1f to the cell %d, %d (%.1f units)", me[0], me[2], toX, toY,
                      len);
+        }
+        if (!w.told && !tris.empty() && w.alpha >= 1.0f) {
+            w.told = true;
+            LOG_INFO("walk arrow: %s - %zu triangles on the ground, the way %.0f deg from east%s",
+                     walkLookToken(w.look), tris.size(), double(w.angle) * 57.29578,
+                     w.cut ? ", a wall past the cell" : "");
         }
     }
     float at[3] = {0, 0, 0};

@@ -186,6 +186,8 @@ void Console::build(Lang lang, const Config& config) {
                 rows_.push_back(Row{Kind::Box, "interface.pad_tiles", 0});
             if (settingOf("interface.pad_walk"))  // 3.0.11-beta.88: the left stick without the mouse
                 rows_.push_back(Row{Kind::Choice, "interface.pad_walk", 0});
+            if (settingOf("interface.walk_arrow"))  // 3.0.11-beta.103: the look of the stick's arrow
+                rows_.push_back(Row{Kind::Choice, "interface.walk_arrow", 1});
             if (settingOf("interface.buffs"))  // 3.0.11-beta.35: the buffs' column
                 rows_.push_back(Row{Kind::Choice, "interface.buffs", 0});
             if (settingOf("interface.buffs_overflow"))  // 3.0.11-beta.63: what it does not hold

@@ -3,6 +3,7 @@
 #include <string>
 #include <vector>
 
+#include "core/config.hpp"
 #include "core/game_camera.hpp"
 #include "core/own_ground.hpp"
 
@@ -100,14 +101,36 @@ size_t arrow(float x0, float z0, float x1, float z1, float y, float width, float
 // feet (x0, z0: the game's world) to the near edge of the cell (toX, toY): a soft white shaft in half-cell pieces, a
 // white head over a gold edge, the cell's square faintly filled and outlined in gold; nothing when the character
 // stands on that cell or a corner is off the map
+// 3.0.11-beta.103: which part of an arrow a triangle draws (the shade under all the rest)
+constexpr uint8_t kPartShaft = 0, kPartEdge = 1, kPartHead = 2, kPartCellFill = 3, kPartCellLine = 4, kPartShade = 5,
+                  kPartChevron = 6, kPartMarker = 7, kPartRing = 8, kPartPointer = 9, kPartDot = 10, kPartWall = 11;
 struct Tri {
     Point a, b, c;
     uint32_t argb = 0;
+    uint8_t part = kPartShaft;
 };
 constexpr uint32_t kWalkShaft = 0x66FFFFFFu, kWalkEdge = 0xE6E2C27Au, kWalkHead = 0xE6FFFFFFu;
 constexpr uint32_t kWalkCellFill = 0x24FFFFFFu, kWalkCellLine = 0xD9E2C27Au;
 std::vector<Tri> walkArrowShape(float x0, float z0, int toX, int toY, const Heights& g, int cellSize, float sign,
                                 float lift);
+// 3.0.11-beta.103 (the owner: «можешь сделать настройку, чтобы можно было выбрать эту стрелку в конфигураторе»): the
+// stick's arrow in each look of the doc «Стрелка хода с контроллера - варианты» ([interface] walk_arrow) over the map's
+// heights, drawn along `way` (turned softly by the caller) to the cell asked for: chevrons running on to a gold diamond
+// in the cell (B), a slim tapered arrow to the cell's gold corners (A), beta.102's concept arrow, a ring round the feet
+// with a gold pointer and a small gold ring in the cell (C), dots to a gold ring (D), the cell's gold frame with a
+// wedge at the feet (E); a wall cutting the way short - a reddish bar across it past the cell. Each look over its dark
+// shade (the same shapes a little bigger, black at half their alpha), every colour times `alpha`; nothing when the
+// character stands on that cell (a wall's bar alone) or a corner is off the map
+struct WalkArrow {
+    float x0 = 0, z0 = 0;      // the character's feet (the game's world)
+    float wayX = 1, wayZ = 0;  // the way drawn along (x east, z north; none: to the cell)
+    int toX = 0, toY = 0;      // the cell asked for
+    bool blocked = false;      // a wall right past it
+    float phase = 0;           // the chevrons' run, 0..1
+    float alpha = 1;           // faded in and out
+};
+std::vector<Tri> walkShape(WalkLook look, const WalkArrow& arrow, const Heights& g, int cellSize, float sign,
+                           float lift);
 // The triangles on the screen as strip() places its corners; one with a corner behind the near plane left out
 size_t placeTris(const std::vector<Tri>& tris, const float view[12], const camera::Projection& p, float bias,
                  std::vector<Vertex>& out);

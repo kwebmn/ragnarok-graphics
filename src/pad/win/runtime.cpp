@@ -922,6 +922,16 @@ bool walkTarget(int& x, int& y) {
     return true;
 }
 
+bool walkWay(float& east, float& north, bool& cut) {
+    if (!healthy() || !S().session) return false;
+    const Controller& c = S().session->controller();
+    if (!c.walkTarget()) return false;
+    east = float(c.walkWay().east);
+    north = float(c.walkWay().north);
+    cut = c.walkCut();
+    return true;
+}
+
 void noteKeysOrMouse(bool click) {
     State& s = S();
     if (click && s.mouse.active) return;  // the pad's own virtual click (the messages channel), not the player's

@@ -497,6 +497,8 @@ enum class Text : uint16_t {
     ShopClear, ShopNote, ShopEmpty, ShopWaiting, ShopChoose, ShopToCart, ShopKeyAmount, ShopRemove, ShopInfo,  // .101
     ShopSpace, ShopEditHint,
     InterfacePadWalk, InterfacePadWalkHint, InterfacePadWalkMouse, InterfacePadWalkArrow,  // 3.0.11-beta.88
+    InterfaceWalkArrow, InterfaceWalkArrowHint, WalkArrowChevrons, WalkArrowSlim, WalkArrowConcept, WalkArrowRing,
+    WalkArrowDots, WalkArrowCell, WalkArrowOff,  // 3.0.11-beta.103
     InterfacePadTiles, InterfacePadTilesHint, TilesTitle, TileSkills, TileEquip, TileMap, TileOptions, TilesOpen,
     TilesClose,  // 3.0.11-beta.90
     AssignTitle, AssignPut, AssignCancel, AssignEmpty, ItemsPadUse, ItemsPadWear, ItemsPadCard,

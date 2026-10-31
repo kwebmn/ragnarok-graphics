@@ -520,6 +520,10 @@ Config parseConfig(const std::string& text) {
         } else if (key == "interface.pad_walk") {  // 3.0.11-beta.88: the left stick without the mouse
             if (val == "mouse") c.padWalk = PadWalk::Mouse;
             if (val == "arrow") c.padWalk = PadWalk::Arrow;
+        } else if (key == "interface.walk_arrow") {  // 3.0.11-beta.103: the look of the stick's arrow
+            for (const WalkLook w : {WalkLook::Off, WalkLook::Chevrons, WalkLook::Slim, WalkLook::Concept,
+                                     WalkLook::Ring, WalkLook::Dots, WalkLook::Cell})
+                if (val == walkLookToken(w)) c.walkArrow = w;
         } else if (key == "interface.minimap_mobs") {
             setBool(val, c.minimapMobs);
         } else if (key == "interface.minimap_way") {  // 3.0.11-beta.33: the way on the ground
@@ -908,6 +912,19 @@ const char* windowKeysToken(WindowKeys k) {
 }
 
 const char* padWalkToken(PadWalk w) { return w == PadWalk::Arrow ? "arrow" : "mouse"; }
+
+const char* walkLookToken(WalkLook w) {
+    switch (w) {
+        case WalkLook::Off: return "off";
+        case WalkLook::Slim: return "slim";
+        case WalkLook::Concept: return "concept";
+        case WalkLook::Ring: return "ring";
+        case WalkLook::Dots: return "dots";
+        case WalkLook::Cell: return "cell";
+        case WalkLook::Chevrons: break;
+    }
+    return "chevrons";
+}
 
 const char* targetRingToken(TargetRing r) {
     return r == TargetRing::Off ? "off" : r == TargetRing::Always ? "always" : "pad";

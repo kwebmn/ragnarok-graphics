@@ -1301,3 +1301,23 @@ TEST(config_interface_shop) {
     if (s) CHECK_EQ(settings::tokenOf(*s, parseConfig("[interface]\nshop = 1\n")), std::string("1"));
     CHECK(appliesNow("interface.shop"));
 }
+
+// 3.0.11-beta.103 (the owner: «можешь сделать настройку, чтобы можно было выбрать эту стрелку в конфигураторе»):
+// [interface] walk_arrow - the look of the stick's walking arrow, the doc's variants; the chevrons by default (its
+// advice), a choice of «Інтерфейс» applied at once
+TEST(config_walk_arrow) {
+    CHECK(parseConfig("").walkArrow == WalkLook::Chevrons);
+    const char* tokens[] = {"chevrons", "slim", "concept", "ring", "dots", "cell", "off"};
+    const WalkLook looks[] = {WalkLook::Chevrons, WalkLook::Slim, WalkLook::Concept, WalkLook::Ring,
+                              WalkLook::Dots,     WalkLook::Cell, WalkLook::Off};
+    for (size_t i = 0; i < 7; ++i) {
+        CHECK(parseConfig(std::string("[interface]\nwalk_arrow = ") + tokens[i] + "\n").walkArrow == looks[i]);
+        CHECK(std::string(walkLookToken(looks[i])) == tokens[i]);
+    }
+    const settings::IniSetting* s = settings::findSetting("interface.walk_arrow");
+    CHECK(s != nullptr && s->page == settings::Page::Interface && s->control == settings::Control::Choice);
+    CHECK(appliesNow("interface.walk_arrow"));
+    CHECK(liveUpdate(parseConfig(""), parseConfig("[interface]\nwalk_arrow = ring\n")).next.walkArrow ==
+          WalkLook::Ring);
+}
+

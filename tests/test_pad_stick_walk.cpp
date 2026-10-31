@@ -102,3 +102,27 @@ TEST(stick_walk_asks_again_before_arriving) {
     // the cell along the way moved aside (round a post, along a wall) with the stick held as it was: asked at once
     CHECK(stickwalk::askAgain(last, Cell{100, 100}, Cell{103, 103}, east, 5, 1300));
 }
+
+// 3.0.11-beta.103: whether a wall cuts the way short of the lead (the arrow's red bar across its end) - the march that
+// gave the cell stopped at one that does not walk; a slide round a post that runs its whole lead is not cut
+TEST(stick_walk_tells_a_wall_cutting_the_way_short) {
+    GroundGrid g = open();
+    const Cell here{100, 100};
+    bool cut = true;
+    CHECK(stickwalk::destination(here, stickwalk::Way{1, 0}, 5, &g, &cut) == (Cell{105, 100}) && !cut);  // open
+    cut = true;
+    CHECK(stickwalk::destination(here, stickwalk::Way{1, 0}, 5, nullptr, &cut) == (Cell{105, 100}) && !cut);
+    wall(g, 104);
+    CHECK(stickwalk::destination(here, stickwalk::Way{1, 0}, 5, &g, &cut) == (Cell{103, 100}) && cut);  // the wall
+    GroundGrid post = open();
+    post.walk[size_t(100) * 200 + 101] = 0;  // a post right in front: round it, the whole lead
+    cut = true;
+    CHECK(stickwalk::destination(here, stickwalk::Way{1, 0}, 5, &post, &cut) != here && !cut);
+    GroundGrid boxed = open();
+    for (int x = 99; x <= 101; ++x)
+        for (int y = 99; y <= 101; ++y)
+            if (x != 100 || y != 100) boxed.walk[size_t(y) * 200 + size_t(x)] = 0;
+    cut = false;
+    CHECK(stickwalk::destination(here, stickwalk::Way{1, 0}, 5, &boxed, &cut) == here && cut);  // nowhere: a wall
+}
+

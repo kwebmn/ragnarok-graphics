@@ -24,13 +24,18 @@ Way turned(Way w, double by) {
 
 bool walks(const GroundGrid* ground, Cell c) { return !ground || !ground->known() || ground->at(c.x, c.y); }
 
-// Half a cell a step along the way: the last walkable cell within `lead` cells
-Cell march(Cell here, Way way, int lead, const GroundGrid* ground) {
+// Half a cell a step along the way: the last walkable cell within `lead` cells; `cut` - stopped by one that does not
+// walk
+Cell march(Cell here, Way way, int lead, const GroundGrid* ground, bool& cut) {
     Cell dest = here;
+    cut = false;
     for (int i = 1; i <= 2 * lead; ++i) {
         const double t = 0.5 * double(i);
         const Cell c{here.x + int(std::lround(way.east * t)), here.y + int(std::lround(way.north * t))};
-        if (!walks(ground, c)) break;
+        if (!walks(ground, c)) {
+            cut = true;
+            break;
+        }
         dest = c;
     }
     return dest;
@@ -54,9 +59,11 @@ int lead(uint16_t speedMs) {
     return std::clamp(int(std::lround(kLeadMs / speed)) + 1, kLeadLeast, kLeadMost);
 }
 
-Cell destination(Cell here, Way way, int lead, const GroundGrid* ground) {
+Cell destination(Cell here, Way way, int lead, const GroundGrid* ground, bool* cut) {
     if (ground && ground->known() && !ground->at(here.x, here.y)) ground = nullptr;  // the grid not this map's
-    const Cell straight = march(here, way, lead, ground);
+    bool stopped = false;
+    const Cell straight = march(here, way, lead, ground, stopped);
+    if (cut) *cut = stopped;
     if (straight != here || !ground) return straight;
     std::vector<Way> slides = {turned(way, kQuarter), turned(way, -kQuarter)};  // blocked at once: along the wall
     if (std::fabs(way.east) > 1e-9) slides.push_back(Way{way.east > 0 ? 1.0 : -1.0, 0});
@@ -65,16 +72,18 @@ Cell destination(Cell here, Way way, int lead, const GroundGrid* ground) {
     int bestRun = 0;
     double bestTurn = 10;
     for (const Way& w : slides) {
-        const Cell c = march(here, w, lead, ground);
+        bool slideCut = false;
+        const Cell c = march(here, w, lead, ground, slideCut);
         const int run = cellDistance(here, c);
         const double turn = turnBetween(w, way);
         if (run > bestRun || (run == bestRun && run > 0 && turn < bestTurn)) {
             best = c;
             bestRun = run;
             bestTurn = turn;
+            if (cut) *cut = slideCut;
         }
     }
-    return best;
+    return best;  // nowhere: still cut (the straight march's wall)
 }
 
 Cell stopCell(Cell here, Way way, const GroundGrid* ground) {

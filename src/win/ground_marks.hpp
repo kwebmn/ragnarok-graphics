@@ -11,6 +11,9 @@ namespace uagfx::win::groundmarks {
 // against the depth with the world (the characters before them hide them), before the interface, as win/ground_way;
 // the chevron over the world. On the game's thread.
 void look(TargetRing ring);
+// 3.0.11-beta.103: [interface] walk_arrow - the look of the stick's arrow (core/ground_way walkShape): its way turned
+// softly (some 80 ms), faded in over 120 ms and out over 200 ms after letting go, the chevrons running on to the cell
+void walkLook(WalkLook look);
 void newFrame();
 void draw(FrameRecord& record, int width, int height);
 

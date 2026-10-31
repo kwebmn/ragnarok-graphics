@@ -5208,6 +5208,30 @@ constexpr Entry kTexts[] = {
      "игры спрятан, пока играете контроллером. Курсором: курсор игры держится сбоку, как раньше."},
     {Text::InterfacePadWalkMouse, "With the cursor (as before)", "Курсором (як раніше)", "Курсором (как раньше)"},
     {Text::InterfacePadWalkArrow, "With an arrow, no mouse", "Стрілкою, без миші", "Стрелкой, без мыши"},
+    {Text::InterfaceWalkArrow, "Walking arrow", "Стрілка ходу", "Стрелка хода"},  // 3.0.11-beta.103
+    {Text::InterfaceWalkArrowHint,
+     "How the arrow on the ground looks while the left stick walks («The controller walks»: with an arrow). Chevrons: "
+     "three marks running on to the cell, a gold diamond in it. Slim arrow: a thin line widening to a head, the cell's "
+     "corners. The concept's arrow: a wide one with a gold edge and the cell. Ring and pointer: a ring round the feet "
+     "with a gold pointer on it. Dots of the way: a dotted path and a gold ring. The cell alone: its gold frame and a "
+     "small wedge at the feet. A wall in the way shows as a red bar at the end.",
+     "Як виглядає стрілка на землі, коли ходить лівий стік («Хід контролером»: стрілкою). Шеврони: три позначки "
+     "біжать до клітинки, у ній золотий ромб. Тонка стрілка: тонка лінія розширюється до вістря, кути клітинки. "
+     "Стрілка з концепту: широка, із золотою облямівкою, і клітинка. Кільце-компас: кільце навколо ніг і золотий "
+     "покажчик на ньому. Точки шляху: пунктир і золоте кільце. Лише клітинка: її золота рамка й невеликий клин біля "
+     "ніг. Стіна на шляху - червона риска в кінці.",
+     "Как выглядит стрелка на земле, когда ходит левый стик («Ход контроллером»: стрелкой). Шевроны: три отметки "
+     "бегут к клетке, в ней золотой ромб. Тонкая стрелка: тонкая линия расширяется к острию, углы клетки. Стрелка из "
+     "концепта: широкая, с золотой каймой, и клетка. Кольцо-компас: кольцо вокруг ног и золотой указатель на нём. "
+     "Точки пути: пунктир и золотое кольцо. Только клетка: её золотая рамка и небольшой клин у ног. Стена на пути - "
+     "красная черта в конце."},
+    {Text::WalkArrowChevrons, "Chevrons", "Шеврони", "Шевроны"},
+    {Text::WalkArrowSlim, "Slim arrow", "Тонка стрілка", "Тонкая стрелка"},
+    {Text::WalkArrowConcept, "The concept's arrow", "Стрілка з концепту", "Стрелка из концепта"},
+    {Text::WalkArrowRing, "Ring and pointer", "Кільце-компас", "Кольцо-компас"},
+    {Text::WalkArrowDots, "Dots of the way", "Точки шляху", "Точки пути"},
+    {Text::WalkArrowCell, "The cell alone", "Лише клітинка", "Только клетка"},
+    {Text::WalkArrowOff, "None", "Немає", "Нет"},
     {Text::InterfacePadTiles, "Start opens the windows' tile", "Start відкриває плитку вікон",
      "Start открывает плитку окон"},  // 3.0.11-beta.90
     {Text::InterfacePadTilesHint,

@@ -104,6 +104,34 @@ TEST(ctl_direct_walk_stops_short_of_a_wall_and_goes_round_a_post) {
     CHECK(o.packets.empty() && c.walkTarget() && *c.walkTarget() == (Cell{100, 100}));
 }
 
+// 3.0.11-beta.103: the arrow's way and its wall - the stick's way on the ground (east, north), whether a wall cuts the
+// cell asked for short of the lead (a red bar across the arrow's end); nothing after letting go
+TEST(ctl_direct_walk_tells_the_arrow_its_way_and_a_wall) {
+    Controller c(Config{});
+    c.setDirectWalk(true);
+    c.setLook(0, 1);
+    GroundGrid g;
+    g.w = g.h = 200;
+    g.walk.assign(200 * 200, 1);
+    for (int y = 0; y < 200; ++y) g.walk[size_t(y) * 200 + 104] = 0;  // a wall at x 104
+    c.setGround(&g);
+    WorldState w = world();
+    PadState p = pad();
+    p.lx = 1.0f;
+    c.tick(p, w, view(), 100);
+    CHECK(std::fabs(c.walkWay().east - 1) < 1e-9 && std::fabs(c.walkWay().north) < 1e-9 && c.walkCut());
+    p.lx = 0;
+    p.ly = 1.0f;
+    c.tick(p, w, view(), 300);
+    CHECK(std::fabs(c.walkWay().north - 1) < 1e-9 && !c.walkCut());  // north: open ground
+    p.ly = 0;
+    p.lx = 1.0f;
+    c.tick(p, w, view(), 500);
+    CHECK(c.walkCut());
+    c.tick(pad(), w, view(), 700);  // let go
+    CHECK(!c.walkCut());
+}
+
 TEST(ctl_walk_radius_changes_at_once) {
     Controller c(Config{});
     WorldState w = world();

@@ -312,3 +312,85 @@ TEST(ground_way_walk_arrow_on_the_ground) {
     CHECK_EQ(groundway::placeTris(t, view, p, 0.0f, v), t.size() * 3);  // three corners a triangle on the screen
     CHECK(v[0].diffuse == t[0].argb);
 }
+
+// 3.0.11-beta.103 (the owner: «можешь сделать настройку, чтобы можно было выбрать эту стрелку в конфигураторе»):
+// every look of the stick's arrow ([interface] walk_arrow) on the ground's heights - each part where the doc draws it,
+// a dark shade under the light ones first, the chevrons running on with the phase, a wall's bar, faded by its alpha
+TEST(ground_way_walk_looks) {
+    groundway::Heights g;
+    CHECK(groundway::parseGat(gat(20, 20, [](int x, int) { return -float(x); }), g));
+    const int cs = 5;
+    float x0 = 0, z0 = 0;
+    groundway::cellToWorld(4, 10, 20, 20, cs, x0, z0);
+    groundway::WalkArrow a;
+    a.x0 = x0;
+    a.z0 = z0;
+    a.wayX = 1;
+    a.wayZ = 0;
+    a.toX = 9;
+    a.toY = 10;
+    const auto on = [&](const std::vector<groundway::Tri>& t) {
+        bool all = !t.empty();
+        for (const groundway::Tri& q : t)
+            for (const groundway::Point& c : {q.a, q.b, q.c}) {
+                float h = 0;
+                all = all && g.at(c.x / float(cs) + 10, c.z / float(cs) + 10, h) && std::fabs(c.y - (h - 0.5f)) < 1e-3f;
+            }
+        return all;
+    };
+    const auto parts = [](const std::vector<groundway::Tri>& t, uint8_t part) {
+        size_t n = 0;
+        for (const groundway::Tri& q : t) n += q.part == part;
+        return n;
+    };
+    for (const WalkLook look : {WalkLook::Chevrons, WalkLook::Slim, WalkLook::Concept, WalkLook::Ring, WalkLook::Dots,
+                                WalkLook::Cell})
+        CHECK(on(groundway::walkShape(look, a, g, cs, 1.0f, 0.5f)));
+    CHECK(groundway::walkShape(WalkLook::Off, a, g, cs, 1.0f, 0.5f).empty());
+    // the chevrons: three, a shade under them first, a gold diamond in the cell; they run on with the phase
+    std::vector<groundway::Tri> c = groundway::walkShape(WalkLook::Chevrons, a, g, cs, 1.0f, 0.5f);
+    CHECK(parts(c, groundway::kPartChevron) > 0 && parts(c, groundway::kPartMarker) > 0);
+    CHECK(!c.empty() && c[0].part == groundway::kPartShade);
+    const auto nearest = [&](const std::vector<groundway::Tri>& t) {
+        float x = 1e9f;
+        for (const groundway::Tri& q : t)
+            if (q.part == groundway::kPartChevron) x = std::min({x, q.a.x, q.b.x, q.c.x});
+        return x;
+    };
+    a.phase = 0.4f;
+    CHECK(nearest(groundway::walkShape(WalkLook::Chevrons, a, g, cs, 1.0f, 0.5f)) > nearest(c));
+    a.phase = 0;
+    // a short way (a wall two cells on): one chevron, still, before the diamond; next to the feet the diamond alone
+    a.toX = 6;
+    CHECK(parts(groundway::walkShape(WalkLook::Chevrons, a, g, cs, 1.0f, 0.5f), groundway::kPartChevron) == 4);
+    a.toX = 5;
+    CHECK(parts(groundway::walkShape(WalkLook::Chevrons, a, g, cs, 1.0f, 0.5f), groundway::kPartChevron) == 0);
+    a.toX = 9;
+    // the ring: round the feet, a cell and a twentieth out; its gold pointer further on along the way
+    const std::vector<groundway::Tri> r = groundway::walkShape(WalkLook::Ring, a, g, cs, 1.0f, 0.5f);
+    bool round = parts(r, groundway::kPartRing) > 0, ahead = parts(r, groundway::kPartPointer) > 0;
+    for (const groundway::Tri& q : r)
+        for (const groundway::Point& p : {q.a, q.b, q.c}) {
+            const float d = std::hypot(p.x - x0, p.z - z0);
+            if (q.part == groundway::kPartRing) round = round && d > 0.95f * cs && d < 1.15f * cs;
+            if (q.part == groundway::kPartPointer) ahead = ahead && p.x > x0 + 0.9f * cs;
+        }
+    CHECK(round && ahead);
+    // the dots: one a half cell from 0.6 of a cell up to the cell's near edge
+    const std::vector<groundway::Tri> d = groundway::walkShape(WalkLook::Dots, a, g, cs, 1.0f, 0.5f);
+    CHECK(parts(d, groundway::kPartDot) >= 6 * 8 && parts(d, groundway::kPartMarker) > 0);
+    // the cell alone: its frame and a wedge at the feet, no line between them
+    const std::vector<groundway::Tri> e = groundway::walkShape(WalkLook::Cell, a, g, cs, 1.0f, 0.5f);
+    CHECK(parts(e, groundway::kPartCellLine) > 0 && parts(e, groundway::kPartPointer) > 0);
+    CHECK(parts(e, groundway::kPartShaft) == 0 && parts(e, groundway::kPartChevron) == 0);
+    // a wall ahead: a short reddish bar across the way at its end
+    a.blocked = true;
+    CHECK(parts(groundway::walkShape(WalkLook::Chevrons, a, g, cs, 1.0f, 0.5f), groundway::kPartWall) > 0);
+    a.blocked = false;
+    a.alpha = 0.5f;  // fading: every part at half its alpha at the most
+    bool faded = true;
+    for (const groundway::Tri& q : groundway::walkShape(WalkLook::Slim, a, g, cs, 1.0f, 0.5f))
+        faded = faded && (q.argb >> 24) <= 0x80u;
+    CHECK(faded);
+}
+
