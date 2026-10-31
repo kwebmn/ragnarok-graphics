@@ -287,6 +287,14 @@ The owner 31.10: «Полоски HP мобов - всем показывай»,
   Tests trade_window_layout_two_sides, trade_window_buttons_by_the_trades_state,
   trade_window_the_partners_changes_after_your_ready, trade_window_words, config_interface_trade (+ the minimap list
   17); suite 2084/0. The windows plan's stages 1-7 all built.
+- Reports R-2YRWU2 / R-5JGPFX / R-8YW96B (a player on beta.108, HD 6570, 1600x900; 3.0.11-beta.117): the NPC talk's
+  name line with ^RRGGBB colours (around or inside the brackets) named the NPC with the codes - npctalk::named reads
+  the line's plain words (test npc_talk_its_name_without_the_colours); the character block showed a Cyrillic name as
+  «��» - readOwnName's bytes were taken as UTF-8: charpanel::frame gets the game's code page (as «Спорядження» and the
+  chat); the hotbar jumped right for a second while walking (a game window over its place a moment) - hotbar::Settle:
+  moved aside only for a window standing there 1.5 s, the culprit logged «hotbar: moved aside - … stands over its
+  place» (test hotbar_moves_aside_only_for_a_window_that_stays). R-5Z6J2S asks for map layer switches (NPCs, portals)
+  on the minimap and the big map - proposed to the owner, not built. Suite 2086/0.
 - Stage 5 research: 0x00c4 deal type; 0x00c6 buy list (11 B each: price.L discount.L type.B nameid.W)
   -> session deal list +0xF28 (count +0xF2C, FUN_0062bbb0(rec, 0); FUN_004ffd30 copies the record's text at +0x11 into
   m_itemName) + windows 0x16 (mgr+0xEC, class 0x69B3E0, SendMsg 0x4AFC00: 0x24 0 buy / 1 sell) and 0x17 (buy cart,

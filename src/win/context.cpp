@@ -885,7 +885,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     motion::setOn(config.animations);  // 3.0.11-beta.46: [interface] animations - the new interface's motion
     uistyle::set(config.hudOpacity, config.windowOpacity);  // 3.0.11-beta.47: its grounds
     // 3.0.11-beta.36: [interface] character - the character block at the top left, the game's Basic Info hidden
-    charpanel::frame(window, config.character, pk, pw, ph);
+    charpanel::frame(window, config.character, gameCodePage(config), pk, pw, ph);
     // 3.0.11-beta.38: [interface] target - the target's card at the top middle
     targetpanel::frame(window, config.targetCard, config.padHints, pk, pw, ph);
     groundmarks::look(config.targetRing);  // 3.0.11-beta.87: the target's ring on the ground

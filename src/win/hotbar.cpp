@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
+#include <cstdio>
 #include <cstring>
 #include <map>
 #include <set>
@@ -70,6 +71,7 @@ constexpr uint32_t kModeClass = 0x69F388, kWaitState = 0x3C4, kWaitSkill = 0x3C8
 constexpr ULONGLONG kTipMs = 400;  // the concept's: a tip after 0.4 s
 constexpr ULONGLONG kReadMs = 150, kPressMs = 160;
 constexpr size_t kMostNodes = 1024;
+constexpr ULONGLONG kAsideMs = 1500;  // 3.0.11-beta.117: a window over its place this long moves it aside
 using SendMsgFn = int(__attribute__((thiscall)) *)(uint32_t self, uint32_t sender, int msg, int a, int b, int c);
 // 3.0.11-beta.78 (the owner: «на панели скилов не те скилы появляются, с других аккаунтов, плюс появляются те которых
 // на чаре нету»): the game keeps its bar in the registry by the character's place on the selection screen
@@ -102,6 +104,11 @@ struct Learned {
 };
 
 struct State {
+    // 3.0.11-beta.117 (R-8YW96B, R-5JGPFX: it jumped right for a second while walking): moved aside only for a window
+    // standing over its place 1.5 s; what was there told the log (the first few)
+    hb::Settle settle;
+    std::string overWhat;
+    int asideTold = 0;
     bool on = false, shown = false, known = false, checked = false, hid = false, oldTold = false;
     bool editing = false, editShown = false;
     bool padTold = false;  // 3.0.11-beta.86: the controller's buttons shown, as last told the log
@@ -510,8 +517,8 @@ hb::Cell cellOf(State& s, int slot, const std::string& key, unsigned codePage) {
 }
 
 // The game's shown windows over the box (the target's pixels), and the new chat (3.0.11-beta.41): the right edge and
-// the top of those; false none
-bool windowsOver(const State& s, float x0, float y0, float x1, float y1, float& right, float& top) {
+// the top of those; false none (3.0.11-beta.117: `what` - which, for the log)
+bool windowsOver(const State& s, float x0, float y0, float x1, float y1, float& right, float& top, std::string& what) {
     const uint32_t head = read32(kWindowMgr + kWindows), bar = gameBar();
     if (!head || s.k <= 0) return false;
     bool any = false;
@@ -521,6 +528,7 @@ bool windowsOver(const State& s, float x0, float y0, float x1, float y1, float& 
         right = float(cx + cw);
         top = float(cy);
         any = true;
+        what = "the new chat";
     }
     uint32_t node = read32(head);
     for (size_t n = 0; node && node != head && n < kMostNodes; ++n, node = read32(node)) {
@@ -534,6 +542,10 @@ bool windowsOver(const State& s, float x0, float y0, float x1, float y1, float& 
         right = any ? std::max(right, wx1) : wx1;
         top = any ? std::min(top, wy0) : wy0;
         any = true;
+        char text[96];
+        std::snprintf(text, sizeof text, "the game's window (its class 0x%X at %d, %d %dx%d)", read32(window), r[0],
+                      r[1], r[2], r[3]);
+        what = text;
     }
     return any;
 }
@@ -558,7 +570,14 @@ void place(State& s) {
     hb::Layout L = hb::layout(s.mode, s.targetW / 2, s.targetH - int(s8), s.scale);
     const float x0 = float(L.x) + L.glass.x, y0 = float(L.y) + L.glass.y;
     float right = 0, top = 0;
-    if (windowsOver(s, x0, y0, x0 + L.glass.w, y0 + L.glass.h, right, top)) {
+    std::string what;
+    const bool over = windowsOver(s, x0, y0, x0 + L.glass.w, y0 + L.glass.h, right, top, what);
+    if (s.settle.settled(over, GetTickCount64(), kAsideMs)) {
+        if (what != s.overWhat && s.asideTold < 10) {
+            ++s.asideTold;
+            LOG_INFO("hotbar: moved aside - %s stands over its place", what.c_str());
+        }
+        s.overWhat = what;
         const float shift = right + s8 - x0;
         if (x0 + shift + L.glass.w <= float(s.targetW) - s8)
             L = hb::layout(s.mode, s.targetW / 2 + int(std::lround(shift)), s.targetH - int(s8), s.scale);

@@ -16,8 +16,9 @@ namespace uagfx::win::charpanel {
 // shown flag (+0x38, which the windows' manager reads to draw it and to give it the mouse) is held at 0 while the block
 // shows, and its buttons stay its own - the block's send the window the same commands (its SendMsg, vtable + 0x94:
 // message 6, 0x7E the stats, 0x81 the equipment ...). The numbers from the game's session (core/char_status), the
-// portrait from its head's sprite and hair palette. On the game's thread.
-void frame(HWND game, CharacterLook look, double k, int targetWidth, int targetHeight);
+// portrait from its head's sprite and hair palette. On the game's thread. 3.0.11-beta.117 (R-5JGPFX: «не відображається
+// ім'я персонажа ... кирилицею»): the name in the game's code page (`codePage`), as the chat's and «Спорядження»'s
+void frame(HWND game, CharacterLook look, unsigned codePage, double k, int targetWidth, int targetHeight);
 void draw(FrameRecord& record, gpu::Renderer& renderer);
 bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result);
 // 3.0.11-beta.39: its block's box in the target while it shows (the party's panel stands under it); false: not shown

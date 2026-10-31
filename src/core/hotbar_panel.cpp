@@ -124,6 +124,15 @@ const char* battleKey(int shownRow, int cell) {
     return shownRow >= 0 && shownRow < 3 && cell >= 0 && cell < 9 ? kBattleKeys[shownRow][cell] : "";
 }
 
+bool Settle::settled(bool over, uint64_t nowMs, uint64_t afterMs) {
+    if (!over) {
+        since = 0;
+        return false;
+    }
+    if (!since) since = nowMs ? nowMs : 1;
+    return nowMs - since >= afterMs;
+}
+
 Layout layout(Mode mode, int centreX, int bottom, float scale) {
     Layout L;
     const float s = scale > 0 ? scale : 1.0f;

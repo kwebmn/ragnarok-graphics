@@ -75,8 +75,13 @@ std::vector<Run> colours(const std::string& utf8, uint32_t base) {
 }
 
 Talk named(Talk t) {
-    if (!t.lines.empty() && t.lines[0].size() > 2 && t.lines[0].front() == '[' && t.lines[0].back() == ']') {
-        t.name = t.lines[0].substr(1, t.lines[0].size() - 2);
+    if (t.lines.empty()) return t;
+    std::string plain;  // 3.0.11-beta.117 (R-2YRWU2): the line's words without its ^RRGGBB colours
+    for (const Run& r : colours(t.lines[0], 0)) plain += r.text;
+    const size_t from = plain.find_first_not_of(' '), to = plain.find_last_not_of(' ');
+    plain = from == std::string::npos ? std::string() : plain.substr(from, to - from + 1);
+    if (plain.size() > 2 && plain.front() == '[' && plain.back() == ']') {
+        t.name = plain.substr(1, plain.size() - 2);
         t.lines.erase(t.lines.begin());
     }
     return t;

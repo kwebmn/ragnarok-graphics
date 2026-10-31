@@ -331,3 +331,15 @@ TEST(hotbar_lights_its_cells_while_a_thing_is_dragged) {
     CHECK(((edge(lit, L.cells[5]) >> 16) & 0xFF) > ((edge(plain, L.cells[5]) >> 16) & 0xFF) + 20);
 }
 
+
+// 3.0.11-beta.117 (R-8YW96B: «при хотьбі по світу, час від часу панель скілів від Ф1 до Ф9 буквально на секунду
+// зміщується в право і повертається назад»): a window over the bar's place moves it only once it has stood there 1.5 s
+TEST(hotbar_moves_aside_only_for_a_window_that_stays) {
+    hotbar::Settle settle;
+    CHECK(!settle.settled(true, 10000, 1500));  // a window just came over its place
+    CHECK(!settle.settled(true, 11000, 1500));
+    CHECK(settle.settled(true, 11500, 1500));   // it stayed: the bar moves aside
+    CHECK(!settle.settled(false, 11600, 1500));  // gone: back at once
+    CHECK(!settle.settled(true, 11700, 1500));   // again: counted anew
+    CHECK(settle.settled(true, 13200, 1500));
+}

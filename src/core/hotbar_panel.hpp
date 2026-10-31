@@ -60,6 +60,13 @@ struct Layout {
 // Its bottom middle at (centreX, bottom) in the target
 Layout layout(Mode mode, int centreX, int bottom, float scale);
 
+// 3.0.11-beta.117 (R-8YW96B: the bar jumped right for a second while walking): a window over the bar's place moves it
+// aside only once it has stood there `afterMs` - a window there a moment no longer makes it jump; gone, it is back
+struct Settle {
+    uint64_t since = 0;  // the window there since (0 none)
+    bool settled(bool over, uint64_t nowMs, uint64_t afterMs);
+};
+
 enum class Part : uint8_t { None, Cell, Edit, Body };
 struct Hit {
     Part part = Part::None;

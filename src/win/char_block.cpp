@@ -19,6 +19,7 @@
 #include "core/ui_motion.hpp"
 #include "core/ui_style.hpp"
 #include "pad/win/game_window.hpp"
+#include "win/code_page.hpp"
 #include "win/game_camera.hpp"
 #include "win/head_picture.hpp"
 #include "win/hud_edit.hpp"
@@ -344,7 +345,7 @@ float share(int value, int next, int level) {
 
 }  // namespace
 
-void frame(HWND game, CharacterLook look, double k, int targetWidth, int targetHeight) {
+void frame(HWND game, CharacterLook look, unsigned codePage, double k, int targetWidth, int targetHeight) {
     State& s = state();
     if (look != s.look) {
         LOG_INFO("character: [interface] character = %s", characterLookToken(look));
@@ -390,7 +391,8 @@ void frame(HWND game, CharacterLook look, double k, int targetWidth, int targetH
                    s.layout.y);  // 3.0.11-beta.75: where the player put it
     makePortrait(s, int(std::lround(s.layout.portrait.w * 0.86f)));
     cb::Data& d = s.data;
-    d.name = readOwnName();
+    const std::string own = readOwnName();  // 3.0.11-beta.117: the game's code page's letters, as UTF-8
+    d.name = own.empty() ? std::string() : utf8Of(widened(own, codePage));
     d.job = cb::jobName(int(read32(kJob)));
     d.baseLevel = st.baseLevel;
     d.jobLevel = st.jobLevel;

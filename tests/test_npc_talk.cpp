@@ -48,6 +48,20 @@ TEST(npc_talk_its_name_from_the_first_line) {
     CHECK(npctalk::named(plain).name.empty() && npctalk::named(plain).lines.size() == 1);
 }
 
+// 3.0.11-beta.117 (R-2YRWU2: «неправильне відображення імені НПЦ, інтерфейс не розуміє кодів кольору»): a name line
+// with the server's ^RRGGBB colours - around the brackets or inside them - names the NPC without them
+TEST(npc_talk_its_name_without_the_colours) {
+    npctalk::Talk t;
+    t.lines = {"^0000FF[Guide]^000000", "Hello"};
+    npctalk::Talk shown = npctalk::named(t);
+    CHECK(shown.name == "Guide" && shown.lines.size() == 1 && shown.lines[0] == "Hello");
+    t.lines = {"[^FF0000Prontera Guard^000000]", "Halt!"};
+    shown = npctalk::named(t);
+    CHECK(shown.name == "Prontera Guard" && shown.lines.size() == 1);
+    t.lines = {"^0000FFJust words^000000"};
+    CHECK(npctalk::named(t).name.empty() && npctalk::named(t).lines.size() == 1);  // no brackets: a line of words
+}
+
 TEST(npc_talk_layout_words_options_and_buttons) {
     npctalk::Talk t;
     t.name = "Kafra Employee";
