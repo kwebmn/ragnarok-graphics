@@ -32,10 +32,21 @@ struct Glide {
     bool wrote = false;
 };
 
+struct Pending {  // 3.0.11-beta.124: a move seen - where the unit was shown before the game took it
+    uint32_t id = 0;
+    float x = 0, z = 0;
+};
+struct Fade {  // a move's jump fading out over the game's own place
+    ns::Offset o;
+    float lastX = 0, lastZ = 0, baseX = 0, baseZ = 0;  // written last, the game's place under it
+};
+
 struct State {
     bool on = true;
     std::vector<Glide> glides;
-    int eased = 0, told = 0;
+    std::vector<Pending> pending;
+    std::vector<Fade> fades;
+    int eased = 0, told = 0, faded = 0, fadesTold = 0;
 };
 
 State& state() {
@@ -68,7 +79,11 @@ void setOn(bool on) {
     State& s = state();
     if (on == s.on) return;
     s.on = on;
-    if (!on) s.glides.clear();
+    if (!on) {
+        s.glides.clear();
+        s.pending.clear();
+        s.fades.clear();
+    }
     LOG_INFO("net: [interface] smooth_fixes = %d", on ? 1 : 0);
 }
 
@@ -108,10 +123,86 @@ int fix(uint32_t id, uint8_t* packet) {
     return cells;
 }
 
+void moveSeen(uint32_t id) {
+    State& s = state();
+    float at[3] = {};
+    if (!s.on || !id || !readActorWorld(id, at)) return;
+    s.pending.erase(std::remove_if(s.pending.begin(), s.pending.end(), [&](const Pending& p) { return p.id == id; }),
+                    s.pending.end());
+    s.pending.push_back(Pending{id, at[0], at[2]});
+}
+
+namespace {
+
+// The moves taken this frame: the game's place now against where the unit was shown - a jump faded out
+void startFades(State& s, uint64_t now) {
+    float own[3] = {};
+    int w = 0, h = 0, cell = 0;
+    if (s.pending.empty() || !readPlayerWorld(own, w, h, cell) || cell <= 0) {
+        s.pending.clear();
+        return;
+    }
+    for (const Pending& p : s.pending) {
+        float at[3] = {};
+        if (!readActorWorld(p.id, at)) continue;
+        const float dx = p.x - at[0], dz = p.z - at[2];
+        const float cells = std::max(std::fabs(dx), std::fabs(dz)) / float(cell);
+        if (!ns::easesJump(cells)) continue;
+        Fade f;
+        f.o.id = p.id;
+        f.o.offX = dx;
+        f.o.offZ = dz;
+        f.o.startMs = now;
+        f.o.durationMs = uint32_t(100 + 45 * std::min(cells, 4.0f));
+        s.fades.erase(std::remove_if(s.fades.begin(), s.fades.end(), [&](const Fade& o) { return o.o.id == p.id; }),
+                      s.fades.end());
+        s.fades.push_back(f);
+        if (s.fadesTold < 12 && ++s.faded % 25 == 1) {
+            ++s.fadesTold;
+            LOG_INFO("net: a move of %u jumped %.1f cells (late or from another cell) - drawn away over %u ms (%d so "
+                     "far)", p.id, double(cells), f.o.durationMs, s.faded);
+        }
+    }
+    s.pending.clear();
+}
+
+void fadeFrame(State& s, uint64_t now) {
+    for (auto it = s.fades.begin(); it != s.fades.end();) {
+        Fade& f = *it;
+        const uint32_t actor = actorAddress(f.o.id);
+        float at[3] = {};
+        if (!actor || !readGame(actor + 4, at, sizeof at)) {
+            it = s.fades.erase(it);
+            continue;
+        }
+        // the game's place: where it put it this frame - or, not moved since we wrote (stopped), the one under that
+        const bool unmoved = f.o.startMs != now && samePlace(at[0], f.lastX) && samePlace(at[2], f.lastZ);
+        if (!unmoved) {
+            f.baseX = at[0];
+            f.baseZ = at[2];
+        }
+        float ox = 0, oz = 0;
+        const bool going = ns::offsetAt(f.o, now, ox, oz);
+        f.lastX = f.baseX + ox;
+        f.lastZ = f.baseZ + oz;
+        writeFloat(actor + 4, f.lastX);
+        writeFloat(actor + 12, f.lastZ);
+        if (!going) {
+            it = s.fades.erase(it);
+            continue;
+        }
+        ++it;
+    }
+}
+
+}  // namespace
+
 void beginScene() {
     State& s = state();
-    if (s.glides.empty()) return;
     const uint64_t now = GetTickCount64();
+    startFades(s, now);  // 3.0.11-beta.124
+    fadeFrame(s, now);
+    if (s.glides.empty()) return;
     for (auto it = s.glides.begin(); it != s.glides.end();) {
         Glide& gl = *it;
         const uint32_t actor = actorAddress(gl.g.id);

@@ -37,3 +37,20 @@ TEST(net_smooth_a_cells_middle) {
     CHECK(minimap::cellOf(x, z, 312, 392, 5, c) && c.x == 136 && c.y == 62);
     CHECK(std::fabs(x - (136 - 156 + 0.5f) * 5) < 0.01f);
 }
+
+// 3.0.11-beta.124 (the network plan's step 4): a move come late (the game walks the unit on from where it should be by
+// now - a jump forward) or from a cell other than the shown one: the jump drawn away over a moment - an offset from the
+// game's own place fading out
+TEST(net_smooth_a_moves_jump_fades) {
+    CHECK(!netsmooth::easesJump(0.2f) && netsmooth::easesJump(0.5f) && netsmooth::easesJump(4.0f));
+    CHECK(!netsmooth::easesJump(4.5f));  // farther: a real jump
+    netsmooth::Offset o;
+    o.offX = 10;
+    o.offZ = -5;
+    o.startMs = 1000;
+    o.durationMs = 200;
+    float x = 0, z = 0;
+    CHECK(netsmooth::offsetAt(o, 1000, x, z) && x == 10 && z == -5);  // at first: where it was shown
+    CHECK(netsmooth::offsetAt(o, 1100, x, z) && x > 0 && x < 5);      // fading (eased out)
+    CHECK(!netsmooth::offsetAt(o, 1200, x, z) && x == 0 && z == 0);   // gone: the game's own place
+}

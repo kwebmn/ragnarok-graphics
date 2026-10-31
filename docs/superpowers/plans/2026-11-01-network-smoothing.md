@@ -52,4 +52,14 @@ cell. RO's TCP: one lost packet holds the rest until it is sent again (0.2-1 s o
   the watch's fixes now measured for every unit. Ruling N3: the end through the game's own 0x13 message from
   BeginScene (inside the frame's drawing, before any unit is drawn) - cost if wrong: a crash report naming
   net_smooth, the switch off meanwhile. Suite 2103/0.
+- Step 4 (3.0.11-beta.124): research - the client already catches late moves up: 0x0086's server tick (packet + 12)
+  goes with the decoded way (FUN_0057d420: src, sub-cell, dst) to the unit's message 0, and FUN_0062dbb0 keeps the
+  session's server clock (+0x5E4): a move more than 144 ms late starts where the unit should be by now - a jump
+  forward (after 4 late ones in a row the clock is moved back). Built: the jump faded instead - core/net_smooth
+  easesJump (0.4-4 cells), Offset / offsetAt (an offset fading cubic-out; test net_smooth_a_moves_jump_fades);
+  win/net_smooth moveSeen (0x0086 of another unit: where it is shown before the game takes it) -> at BeginScene the
+  game's new place against it: a jump faded over 100 + 45 a cell ms, written over the game's place each frame (the
+  game's place re-read when it walked it, kept when it stood). Ruling N4: the character's own moves (0x0087) not
+  faded - the camera follows its place before BeginScene (the world would jump round a gliding character) - cost if
+  wrong: the character's own jumps stay. Suite 2104/0.
 

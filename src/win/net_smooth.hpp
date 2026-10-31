@@ -12,6 +12,10 @@ void setOn(bool on);
 // The packet's unit, cell and the packet itself before the game reads it: how far the unit stood (cells; -1 not
 // known) - the packet's cell changed to where it stands when it glides
 int fix(uint32_t id, uint8_t* packet);
+// 3.0.11-beta.124 (step 4): a move of another unit (0x0086) before the game takes it - where it is shown now kept: a
+// jump of 0.4-4 cells when the game walks it on (late: from where it should be by now; or from another cell) drawn away
+// over 140-280 ms, an offset from the game's own place fading out (the character's own not: the camera follows it)
+void moveSeen(uint32_t id);
 void beginScene();
 
 }  // namespace uagfx::win::netsmoothwin

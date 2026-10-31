@@ -22,6 +22,18 @@ struct Glide {
 // Where the unit is drawn at `nowMs`; false when the glide is over (there: its cell)
 bool at(const Glide& g, uint64_t nowMs, float& x, float& z);
 
+// 3.0.11-beta.124 (step 4): a move come late - the game walks the unit on from where it should be by now (its server
+// clock, FUN_0062dbb0: more than 144 ms late) - or from a cell other than the one shown: a jump of 0.4 to 4 cells
+// drawn away - an offset from the game's own place, where it was shown at first, fading out (`at` false: gone)
+bool easesJump(float cells);
+struct Offset {
+    uint32_t id = 0;
+    float offX = 0, offZ = 0;  // where it was shown less the game's place (the world's)
+    uint64_t startMs = 0;
+    uint32_t durationMs = 0;
+};
+bool offsetAt(const Offset& o, uint64_t nowMs, float& x, float& z);
+
 // A cell's middle in the world as uaRO.exe counts cells (FUN_0055c220's x / cell + w / 2, the other way)
 void cellMiddle(int cellX, int cellY, int width, int height, int cellSize, float& x, float& z);
 

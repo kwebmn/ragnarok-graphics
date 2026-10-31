@@ -26,6 +26,20 @@ bool at(const Glide& g, uint64_t nowMs, float& x, float& z) {
     return true;
 }
 
+bool easesJump(float cells) { return cells >= 0.4f && cells <= 4.0f; }
+
+bool offsetAt(const Offset& o, uint64_t nowMs, float& x, float& z) {
+    const float t = o.durationMs ? float(nowMs > o.startMs ? nowMs - o.startMs : 0) / float(o.durationMs) : 1.0f;
+    if (t >= 1.0f) {
+        x = z = 0;
+        return false;
+    }
+    const float k = 1.0f - eased(t);
+    x = o.offX * k;
+    z = o.offZ * k;
+    return true;
+}
+
 void cellMiddle(int cellX, int cellY, int width, int height, int cellSize, float& x, float& z) {
     x = (float(cellX - width / 2) + 0.5f) * float(cellSize);
     z = (float(cellY - height / 2) + 0.5f) * float(cellSize);

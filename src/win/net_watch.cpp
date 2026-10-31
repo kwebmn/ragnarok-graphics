@@ -19,6 +19,7 @@ namespace {
 // uaRO.exe's: its connection object's socket (+4, FUN_00418af0 makes it), the character's own account
 constexpr uint32_t kSocketAt = 4, kOwnAccount = 0x771F7C;
 constexpr uint16_t kFixPos = 0x0088;  // ZC_STOPMOVE <unit>.L <x>.W <y>.W - the server puts a unit on a cell
+constexpr uint16_t kMove = 0x0086;    // ZC_NOTIFY_MOVE <unit>.L <the way>.6B <its server tick>.L - another unit walks
 constexpr ULONGLONG kReadMs = 1000;
 
 // SIO_TCP_INFO and its TCP_INFO_v0 (mstcpip.h keeps them for Windows 10 1703 builds; ours is older), MSVC's layout
@@ -90,6 +91,12 @@ void packet(void* connection, uint16_t id, const uint8_t* data) {
     if (!inGameWorld()) return;
     const ULONGLONG now = GetTickCount64();
     s.watch.packet(now);
+    if (id == kMove && data) {  // 3.0.11-beta.124: where it is shown before the game walks it (its jump faded)
+        uint32_t unit = 0;
+        std::memcpy(&unit, data + 2, 4);
+        if (unit != read32(kOwnAccount)) netsmoothwin::moveSeen(unit);
+        return;
+    }
     if (id != kFixPos || !data) return;
     uint32_t unit = 0;
     std::memcpy(&unit, data + 2, 4);
