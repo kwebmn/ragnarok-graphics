@@ -115,6 +115,20 @@ TEST(walk_grid_the_players_part_and_its_cells) {
     CHECK(walkgrid::partMask(t, walkgrid::kWall).empty());
 }
 
+// 3.0.11-beta.126 (R-4ZHJ3R): the reach's cells for the minimap's picture - 1 the part's own, kElsewhere (2) walked on
+// but another part's (dimmed), 0 not walked on (a wall, the ground: the picture's own colour kept)
+TEST(walk_grid_the_reach_tells_walls_from_other_parts) {
+    const walkgrid::Grid t = tower();  // a wall down x 5: the floors x 0-4 and x 6-9
+    const std::vector<uint8_t> mask = walkgrid::reachMask(t, 0);
+    CHECK_EQ(mask.size(), size_t(100));
+    if (mask.size() == size_t(100)) {
+        CHECK_EQ(int(mask[size_t(3 * 10 + 2)]), 1);
+        CHECK_EQ(int(mask[size_t(3 * 10 + 8)]), int(walkgrid::kElsewhere));
+        CHECK_EQ(int(mask[size_t(3 * 10 + 5)]), 0);
+    }
+    CHECK(walkgrid::reachMask(t, walkgrid::kWall).empty());
+}
+
 TEST(reference_route_walks_the_floors_by_the_stairs) {
     const auto ix = index();
     const refroute::Route r = refroute::find(*ix, "town", -1, -1, "cave", true);

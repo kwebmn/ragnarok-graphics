@@ -33,6 +33,11 @@ using Grids = std::unordered_map<std::string, Grid>;
 uint8_t partOf(const Grid& g, int x, int y);
 // A part's cells flat, row by row from y 0: 1 its own (reached on foot from each other), 0 the rest; empty for kWall
 std::vector<uint8_t> partMask(const Grid& g, uint8_t part);
+// 3.0.11-beta.126 (R-4ZHJ3R: c_tower2's map one flat grey with the reach on - its light ground dimmed to its dark
+// corridors' grey): the cells as the minimap's picture dims them - 1 the part's own, kElsewhere walked on but another
+// part's (dimmed), 0 not walked on (a wall, the map's ground: as the picture has it); empty for kWall
+constexpr uint8_t kElsewhere = 2;
+std::vector<uint8_t> reachMask(const Grid& g, uint8_t part);
 
 // The file's bytes (gzip of the payload walk_grids.py describes, or the payload) into the maps; false when it is
 // not one

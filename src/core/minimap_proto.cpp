@@ -175,7 +175,8 @@ void roundCorners(panel::Picture& p, const panel::Box& b, float r) {
         }
 }
 
-// 3.0.11-beta.65: a cell not reached on foot - its picture at 40 %, still seen
+// 3.0.11-beta.65: a cell not reached on foot - its picture at 40 %, still seen (3.0.11-beta.126: a walked-on one of
+// another part only - a wall or the map's ground dimmed made c_tower2's light ground its dark corridors' grey)
 uint32_t dimmed(uint32_t argb) {
     uint32_t out = argb & 0xFF000000;
     for (int sh = 0; sh <= 16; sh += 8) out |= (((argb >> sh) & 0xFF) * 2 / 5) << sh;
@@ -274,7 +275,8 @@ void mapPixels(panel::Picture& out, const panel::Box& box, const Scene& sc, cons
         uint32_t wx;  // between them, of 256
         int cell;    // 3.0.11-beta.65: the map's cell column under it
     };
-    // 3.0.11-beta.65: the cells not reached from the player dimmed (the reached ones as they are)
+    // 3.0.11-beta.65: the cells not reached from the player dimmed (the reached ones as they are); 3.0.11-beta.126:
+    // walked on, another part's (walkgrid::reachMask's kElsewhere) - the walls and the ground as drawn
     const std::vector<uint8_t>* reach =
         sc.reach && sc.reach->size() == size_t(std::max(0, sc.map.w)) * size_t(std::max(0, sc.map.h)) ? sc.reach
                                                                                                       : nullptr;
@@ -319,7 +321,7 @@ void mapPixels(panel::Picture& out, const panel::Box& box, const Scene& sc, cons
                 // between the four nearest, premultiplied - a see-through one adds nothing: the ground shows there
                 const uint32_t p = mix(mix(top[c.x0], top[c.x1], c.wx), mix(low[c.x0], low[c.x1], c.wx), wy);
                 pixel = overGround(p);
-                if (reached && !reached[c.cell] && (p >> 24)) pixel = dimmed(pixel);
+                if (reached && reached[c.cell] == walkgrid::kElsewhere && (p >> 24)) pixel = dimmed(pixel);
             }
             row[c.at] = pixel;
         }

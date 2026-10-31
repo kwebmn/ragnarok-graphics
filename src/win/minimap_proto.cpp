@@ -557,8 +557,9 @@ bool readLook(float& east, float& north) {
 }
 
 // 3.0.11-beta.65 (the concept's «Подсветка, куда можно дойти» - an experiment, [interface] minimap_reach): the cells
-// of the player's part of the map (walkgrid - the server's own .gat, parts joined across no wall) left lit, the rest
-// dimmed; made again only when the player is in another part (a teleport, a warp, a map) - a step changes nothing.
+// of the player's part of the map (walkgrid - the server's own .gat, parts joined across no wall) left lit, the other
+// parts' walked-on cells dimmed (3.0.11-beta.126: the walls and the ground as drawn - R-4ZHJ3R's c_tower2 one grey);
+// made again only when the player is in another part (a teleport, a warp, a map) - a step changes nothing.
 // None while the player's cell is not known, the map not in walkable.bin, or the cell on a wall between two parts
 void reachFrame(State& s, bool on) {
     uint8_t part = walkgrid::kWall;
@@ -583,14 +584,16 @@ void reachFrame(State& s, bool on) {
     }
     if (s.reachMap == s.map && s.reachPart == part && !s.reach.empty()) return;
     const ULONGLONG t0 = GetTickCount64();
-    s.reach = walkgrid::partMask(*grid, part);
+    s.reach = walkgrid::reachMask(*grid, part);  // 3.0.11-beta.126: walls apart from the other parts
     s.reachMap = s.map;
     s.reachPart = part;
     s.dirty = s.bigDirty = true;
     if (s.reachLogged++ < 20) {
         const size_t lit = size_t(std::count(s.reach.begin(), s.reach.end(), uint8_t(1)));
-        LOG_INFO("minimap: where one can walk on %s from %d, %d - part %d of %d, %zu of %dx%d cells (%llu ms)",
-                 s.map.c_str(), s.cell.x, s.cell.y, int(part), grid->partCount, lit, grid->w, grid->h,
+        const size_t dim = size_t(std::count(s.reach.begin(), s.reach.end(), walkgrid::kElsewhere));
+        LOG_INFO("minimap: where one can walk on %s from %d, %d - part %d of %d, %zu of %dx%d cells; %zu of the other "
+                 "parts dimmed, the walls as drawn (%llu ms)",
+                 s.map.c_str(), s.cell.x, s.cell.y, int(part), grid->partCount, lit, grid->w, grid->h, dim,
                  static_cast<unsigned long long>(GetTickCount64() - t0));
     }
 }

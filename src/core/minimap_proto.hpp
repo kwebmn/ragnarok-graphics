@@ -134,8 +134,8 @@ struct Scene {
     BigPart bigHover = BigPart::None;
     float opacity = 1;  // Ctrl+Tab's see-through
     // 3.0.11-beta.65 (the concept's «Подсветка, куда можно дойти» - an experiment, [interface] minimap_reach): the
-    // map's cells reached on foot from the player (walkgrid::partMask: map.w x map.h, rows from y 0) - the others
-    // dimmed; null or another size: none
+    // map's cells reached on foot from the player (walkgrid::reachMask: map.w x map.h, rows from y 0) - another
+    // part's walked-on cells dimmed (3.0.11-beta.126: not the walls nor the ground); null or another size: none
     const std::vector<uint8_t>* reach = nullptr;
     Layers layers;        // 3.0.11-beta.119: the buttons' and the chips' looks (the marks given already shown ones)
     int hoverLayer = -1;  // the layer's button or chip under the pointer
