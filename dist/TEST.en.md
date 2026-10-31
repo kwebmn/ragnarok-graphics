@@ -1,3 +1,17 @@
+# uaRO Graphics 3.0.11-beta.86 — what is new
+
+The controller in the interface, stage 2:
+- **The controller's buttons on the interface.** While you play with a controller (a button pressed or a stick pushed
+  past half its way), the skill bar's cells show the button that uses them instead of F1–F9: Xbox - coloured A B X Y,
+  LB RB LT RT, the D-pad's arrows; PlayStation - ✕ ○ □ △, L1 R1 L2 R2. Cells without a button are dimmer. The target's
+  card says at its end: A - «Attack», the right stick - «Another target». A click, a key or the mouse moved brings
+  F1–F9 back; it switches at most once in a second and a half, a drifting stick does not switch it.
+- The switch «Controller's buttons on the interface» in «Interface» and the console (on by default).
+- **The monsters' HP checked on the live server** (for the HP bars' decision): log lines «monster …: HP 57% (its name
+  line, 0x0195)» - the first 60 a game. Send the log after a fight near other players.
+- To check: play with the controller - the badges come; move the mouse - F1–F9 again. In the log: «hotbar: the
+  controller's buttons (Xbox)» or «(PlayStation)», «hotbar: the keys' names».
+
 # uaRO Graphics 3.0.11-beta.85 — what is new
 
 The controller in the interface, stage 1 (by the concept «Контроллер в интерфейсе uaRO»):
