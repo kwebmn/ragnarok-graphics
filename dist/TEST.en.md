@@ -1,3 +1,12 @@
+# uaRO Graphics 3.0.11-beta.120 — what's new
+
+- **The arrows worn show right.** With one kind of arrows worn at the login and another put on later, "Equipment",
+  "Items" and the character block kept counting the first ones as worn. Now the ones worn now.
+- **"Scheme" — a new look of the maps.** The minimap and the big map can show, instead of the game's picture, a clean
+  scheme by the cells you can walk on: the floor light (where you can walk to lighter still), the walls dark, the
+  edges drawn. Switched by the last round button in the minimap's top left or the "Scheme" chip under the big map;
+  in "Interface" — "The maps' picture".
+
 # uaRO Graphics 3.0.11-beta.119 — what's new
 
 **The map's layers switch on the map itself** (a player's request):
