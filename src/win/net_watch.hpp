@@ -1,5 +1,6 @@
 #pragma once
 #include <cstdint>
+#include <vector>
 
 #include "core/net_watch.hpp"
 
@@ -15,5 +16,6 @@ void packet(void* connection, uint16_t id, const uint8_t* data);  // the packet 
 void frame();
 netwatch::Level level();
 int rttMs();
+std::vector<int> graph();  // 3.0.11-beta.127: the last minute's round trips (ms), the oldest first; -1 a stall
 
 }  // namespace uagfx::win::netwatchwin

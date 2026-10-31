@@ -12,6 +12,10 @@ constexpr uint32_t kFairUs = 120000, kBadUs = 250000;
 }  // namespace
 
 void Watch::tcp(const Tcp& t, uint64_t nowMs) {
+    const bool stall = known_ && t.timeouts > last_.timeouts;  // 3.0.11-beta.127: the graph's reading
+    graph_[graphNext_] = stall ? -1 : int(t.rttUs / 1000);
+    graphNext_ = (graphNext_ + 1) % kGraph;
+    graphCount_ = std::min(graphCount_ + 1, kGraph);
     if (!known_) {  // the first: the baseline (what was sent again before it is not this period's)
         known_ = true;
         periodAt_ = nowMs;
@@ -49,6 +53,13 @@ Level Watch::level(uint64_t nowMs) const {
     if (timeoutAt_ && nowMs - timeoutAt_ < kStallMs) return Level::Stall;
     if ((resentAt_ && nowMs - resentAt_ < kResentMs) || last_.rttUs >= kBadUs) return Level::Bad;
     return last_.rttUs >= kFairUs ? Level::Fair : Level::Good;
+}
+
+std::vector<int> Watch::graph() const {
+    std::vector<int> out;
+    out.reserve(size_t(graphCount_));
+    for (int i = 0; i < graphCount_; ++i) out.push_back(graph_[(graphNext_ - graphCount_ + i + kGraph) % kGraph]);
+    return out;
 }
 
 bool Watch::stalled() {

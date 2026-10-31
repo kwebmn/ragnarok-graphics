@@ -63,6 +63,7 @@ struct State {
     int hoverLayer = -1;
     std::string net;  // 3.0.11-beta.122: the round trip's badge painted
     uint32_t netRgb = 0;
+    std::vector<int> netGraph;  // 3.0.11-beta.127: its plate's graph painted (the last minute, ms; -1 a stall)
     bool on = false, shown = false, dirty = true, upload = true;
     int style = -1;  // 3.0.11-beta.47: core/ui_style's generation painted
     bool placedMoved = false;  // 3.0.11-beta.79: moved by the player when last laid out
@@ -738,6 +739,7 @@ minimap::Scene sceneOf(const State& s) {
     sc.hover = s.part;
     sc.bigHover = s.bigPart;
     if (!s.reach.empty()) sc.reach = &s.reach;  // 3.0.11-beta.65
+    if (!s.net.empty() && !s.netGraph.empty()) sc.netGraph = &s.netGraph;  // 3.0.11-beta.127
     return sc;  // see-through (Ctrl+Tab) with its words: render() fades the whole picture
 }
 
@@ -772,7 +774,8 @@ void render(State& s) {
     for (const Line& l : s.lines)
         t.list.push_back(minimap::Line{l.left, l.right, l.boss ? kBossText : 0u,
                                        l.timer ? minimap::kRouteRgb : 0u, l.boss});
-    s.layout = minimap::layout(s.targetW, s.targetH, s.scale, !t.route.empty(), s.folded ? 0 : int(t.list.size()));
+    s.layout = minimap::layout(s.targetW, s.targetH, s.scale, !t.route.empty(), s.folded ? 0 : int(t.list.size()),
+                               !t.net.empty());  // 3.0.11-beta.127: the round trip's plate
     hudedit::place(hudlayout::Part::Minimap, s.k, s.targetW, s.targetH, s.layout.w, s.layout.h, s.layout.x,
                    s.layout.y);  // 3.0.11-beta.75: where the player put it
     const uicost::Paint cost("minimap", s.layout.w, s.layout.h);  // 3.0.11-beta.55 (beta.57: its size known)
@@ -1070,6 +1073,14 @@ void frame(HWND game, const Show& show, double k, int targetWidth, int targetHei
         if (net != s.net || rgb != s.netRgb) {
             s.net = net;
             s.netRgb = rgb;
+            s.dirty = true;
+        }
+        // 3.0.11-beta.127: its plate's graph - a new reading each second
+        std::vector<int> graph = net.empty() ? std::vector<int>{} : netwatchwin::graph();
+        if (graph != s.netGraph) {
+            if (s.netGraph.empty() && !graph.empty())
+                LOG_INFO("minimap: the round trip's plate under the bar - %s, a graph of the last minute", net.c_str());
+            s.netGraph = std::move(graph);
             s.dirty = true;
         }
     }

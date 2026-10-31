@@ -66,3 +66,25 @@ TEST(net_watch_the_logs_line) {
     const std::string quiet = w.line(122000);
     CHECK(has(quiet, "0 position fixes") && has(quiet, "0 time-outs"));
 }
+
+// 3.0.11-beta.127 (the owner: «пинги вынеси в отдельную плашку, можешь еще график строить. но небольшую»): the last
+// minute's round trips for the plate's graph - a reading each (about a second), a time-out's reading -1 (a stall); 60
+// at most, the oldest first
+TEST(net_watch_keeps_a_minute_for_the_graph) {
+    netwatch::Watch w;
+    CHECK(w.graph().empty());
+    netwatch::Tcp t;
+    t.rttUs = 48000;
+    w.tcp(t, 1000);
+    t.rttUs = 52000;
+    w.tcp(t, 2000);
+    t.timeouts = 1;  // TCP waited for a lost packet in this one
+    w.tcp(t, 3000);
+    std::vector<int> g = w.graph();
+    CHECK(g.size() == 3);
+    if (g.size() == 3) CHECK(g[0] == 48 && g[1] == 52 && g[2] == -1);
+    t.rttUs = 40000;
+    for (int i = 0; i < 70; ++i) w.tcp(t, 4000 + uint64_t(i) * 1000);
+    g = w.graph();
+    CHECK(g.size() == size_t(netwatch::kGraph) && g.front() == 40 && g.back() == 40);
+}

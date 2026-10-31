@@ -150,4 +150,6 @@ netwatch::Level level() { return state().watch.level(GetTickCount64()); }
 
 int rttMs() { return state().watch.rttMs(); }
 
+std::vector<int> graph() { return state().watch.graph(); }
+
 }  // namespace uagfx::win::netwatchwin

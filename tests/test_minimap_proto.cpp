@@ -541,23 +541,47 @@ TEST(minimap_proto_style_switch_places) {
     CHECK(minimap::bigPartAt(b, b.styleChip.x + 5, b.styleChip.y + 5) == minimap::BigPart::Style);
 }
 
-// 3.0.11-beta.122 (the network ideas, 7): the round trip's badge on the minimap's bar - a dot and its words in their
-// colour, left of the cell; none when not given
-TEST(minimap_proto_net_badge_on_the_bar) {
-    const minimap::Layout L = minimap::layout(1920, 1080, 1.0f, false, 0);
+// 3.0.11-beta.122 (the network ideas, 7): the round trip's badge; 3.0.11-beta.127 (the owner: «пинги вынеси в
+// отдельную плашку, можешь еще график строить. но небольшую. там где карта оно название карты сокращает»): a plate of
+// its own under the bar - the dot and its words, a small graph of the last minute; the bar's name its whole width
+TEST(minimap_proto_net_plate_under_the_bar) {
+    const minimap::Layout plain = minimap::layout(1920, 1080, 1.0f, false, 0);
+    CHECK(plain.net.w == 0);
+    const minimap::Layout L = minimap::layout(1920, 1080, 1.0f, false, 0, true);
+    CHECK(L.net.w > 0 && L.net.w < L.caption.w * 0.75f && L.net.x == L.caption.x);
+    CHECK(L.net.y >= L.caption.y + L.caption.h && float(L.h) >= L.net.y + L.net.h && L.h > plain.h);
     minimap::Scene sc;
     minimap::Texts t;
-    t.name = "Prontera";
-    t.cell = "150, 180";
-    std::vector<minimap::Words> w = minimap::words(L, sc, t);
-    CHECK(std::none_of(w.begin(), w.end(),
-                       [](const minimap::Words& x) { return x.text.rfind("\xE2\x97\x8F", 0) == 0; }));
-    t.net = "45 ms";
+    t.name = "Clock Tower 2f";
+    t.cell = "108, 236";
+    t.net = "50 ms";
     t.netRgb = 0x5FD08A;
-    w = minimap::words(L, sc, t);
-    const auto badge =
-        std::find_if(w.begin(), w.end(), [](const minimap::Words& x) { return x.text == "\xE2\x97\x8F 45 ms"; });
-    const auto cell = std::find_if(w.begin(), w.end(), [](const minimap::Words& x) { return x.text == "150, 180"; });
-    CHECK(badge != w.end() && cell != w.end() && badge->rgb == 0x5FD08A);
-    if (badge != w.end() && cell != w.end()) CHECK(badge->box.x + badge->box.w <= cell->box.x + 1);
+    const std::vector<minimap::Words> w = minimap::words(L, sc, t);
+    const auto find = [](const std::vector<minimap::Words>& in, const std::string& text) {
+        return std::find_if(in.begin(), in.end(), [&](const minimap::Words& x) { return x.text == text; });
+    };
+    const auto badge = find(w, "\xE2\x97\x8F 50 ms"), name = find(w, "Clock Tower 2f");
+    CHECK(badge != w.end() && name != w.end());
+    if (badge != w.end())
+        CHECK(badge->rgb == 0x5FD08A && badge->box.y >= L.net.y && badge->box.x + badge->box.w <= L.net.x + L.net.w);
+    minimap::Texts none = t;  // the name as wide as with no badge at all
+    none.net.clear();
+    const std::vector<minimap::Words> w0 = minimap::words(plain, sc, none);
+    const auto name0 = find(w0, "Clock Tower 2f");
+    CHECK(name0 != w0.end());
+    if (name != w.end() && name0 != w0.end()) CHECK(name->box.w == name0->box.w);
+    // the graph: a bar a reading, the newest at its right end, its colour by its round trip; a stall red to the top
+    const std::vector<int> graph{50, 50, 300, -1};
+    sc.netGraph = &graph;
+    panel::Picture p;
+    minimap::paint(p, L, sc, t);
+    const panel::Box g = minimap::netGraphBox(L);
+    CHECK(g.w > 0 && g.x > L.net.x && g.x + g.w <= L.net.x + L.net.w && g.y >= L.net.y && g.h > 4);
+    const auto at = [&](float x, float y) { return p.px[size_t(y) * size_t(p.width) + size_t(x)]; };
+    const auto red = [](uint32_t c) { return ((c >> 16) & 0xFF) > 0xC0 && ((c >> 8) & 0xFF) < 0x90; };
+    const auto green = [](uint32_t c) { return ((c >> 8) & 0xFF) > ((c >> 16) & 0xFF) + 40; };
+    CHECK(red(at(g.x + g.w - 0.5f, g.y + 0.5f)));          // the stall: to the top
+    CHECK(red(at(g.x + g.w - 1.5f, g.y + 0.5f)));          // 300 ms: the graph's top, red
+    CHECK(green(at(g.x + g.w - 3.5f, g.y + g.h - 0.5f)));  // 50 ms: low and green
+    CHECK(!green(at(g.x + g.w - 3.5f, g.y + 0.5f)));
 }

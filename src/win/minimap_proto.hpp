@@ -32,7 +32,9 @@ struct Show {
     // from the server's walkable cells (core/minimap_proto schemePixels) in place of the game's picture; switched by
     // the maps' own button too
     bool scheme = false;
-    bool netBadge = true;  // 3.0.11-beta.122: [interface] net_badge - the round trip on its bar (win/net_watch)
+    // 3.0.11-beta.122: [interface] net_badge - the round trip (win/net_watch); 3.0.11-beta.127 on its own plate under
+    // the bar with a graph of the last minute
+    bool netBadge = true;
 };
 void frame(HWND game, const Show& show, double k, int targetWidth, int targetHeight);
 // 3.0.11-beta.35: its panel's box in the target while it shows (the buffs' column stands under it); false: not shown

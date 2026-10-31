@@ -13,6 +13,9 @@ namespace {
 
 // At scale 1, the target's pixels (3.0.11-beta.31: the concept's v19_town - 200 a side, the bars under it)
 constexpr float kSide = 220, kMargin = 10, kGap = 6, kBarH = 30, kRouteH = 46, kLineH = 19, kListPad = 7;
+// 3.0.11-beta.127: the round trip's plate - 20 high, its words 58 wide, a graph of 60 bars a pixel each, 12 high
+constexpr float kNetH = 20, kNetText = 58, kNetGraphW = 60, kNetGraphH = 12, kNetPad = 8;
+constexpr uint32_t kNetGood = 0x5FD08A, kNetFair = 0xF0A050, kNetBad = 0xFF7D6E, kNetStall = 0xFF5A4E;
 constexpr float kButton = 22, kButtonGap = 4, kRadius = 10;
 constexpr float kBigFooter = 44;  // 3.0.11-beta.119: the big map's row of the layers' chips
 // The concept's style A: its glass, white over it, its gold, its words' colours
@@ -553,7 +556,7 @@ std::vector<Mark> shownMarks(const std::vector<Mark>& marks, const Layers& layer
     return out;
 }
 
-Layout layout(int targetW, int targetH, float scale, bool route, int listLines) {
+Layout layout(int targetW, int targetH, float scale, bool route, int listLines, bool net) {
     Layout L;
     const float s = std::max(0.5f, scale);
     L.s = s;
@@ -572,6 +575,12 @@ Layout layout(int targetW, int targetH, float scale, bool route, int listLines) 
     L.caption = panel::Box{0, y, side, bar};
     L.fold = panel::Box{side - std::round(26 * s), y + std::round(4 * s), std::round(22 * s), bar - std::round(8 * s)};
     y += bar;
+    if (net) {  // 3.0.11-beta.127: the round trip's plate, its own under the bar
+        y += std::round(4 * s);
+        const float w = std::round((kNetPad + kNetText + 6 + kNetGraphW + kNetPad) * s);
+        L.net = panel::Box{0, y, w, std::round(kNetH * s)};
+        y += L.net.h;
+    }
     if (route) {
         y += gap;
         L.route = panel::Box{0, y, side, std::round(kRouteH * s)};
@@ -589,6 +598,12 @@ Layout layout(int targetW, int targetH, float scale, bool route, int listLines) 
     L.x = std::max(0, targetW - m - L.w);
     L.y = std::min(m, std::max(0, targetH - L.h));
     return L;
+}
+
+panel::Box netGraphBox(const Layout& L) {
+    if (L.net.w <= 0) return panel::Box{};
+    const float s = L.s, w = std::round(kNetGraphW * s), h = std::round(kNetGraphH * s);
+    return panel::Box{L.net.x + L.net.w - std::round(kNetPad * s) - w, L.net.y + std::round((L.net.h - h) / 2), w, h};
 }
 
 int layerAt(const Layout& L, float x, float y) {
@@ -663,6 +678,27 @@ void paint(panel::Picture& out, const Layout& L, const Scene& sc, const Texts& t
     }
     panel::roundRect(out, L.caption, 8 * s, kCard, uistyle::panel(), kWhite, 0.12f, edge);  // the bar: name, cell, ▾
     if (sc.hover == Part::Fold) panel::roundRect(out, L.fold, 6 * s, kWhite, 0.10f);
+    if (L.net.w > 0) {  // 3.0.11-beta.127: the round trip's plate - its ground, the graph's baseline and bars
+        panel::roundRect(out, L.net, L.net.h / 2, kCard, uistyle::panel(), kWhite, 0.12f, edge);
+        const panel::Box g = netGraphBox(L);
+        panel::roundRect(out, panel::Box{g.x, g.y + g.h - std::max(1.0f, std::round(s)), g.w,
+                                         std::max(1.0f, std::round(s))},
+                         0, kWhite, 0.10f);
+        if (sc.netGraph && !sc.netGraph->empty()) {
+            const std::vector<int>& v = *sc.netGraph;
+            int top = 150;  // ms at the graph's top: 150 or the highest
+            for (int ms : v) top = std::max(top, ms);
+            const float bar = g.w / kNetGraphW;
+            const size_t n = std::min(v.size(), size_t(kNetGraphW));
+            for (size_t i = 0; i < n; ++i) {
+                const int ms = v[v.size() - n + i];
+                const float x = g.x + g.w - float(n - i) * bar;
+                const float h = ms < 0 ? g.h : std::max(std::max(1.0f, std::round(s)), g.h * float(ms) / float(top));
+                const uint32_t rgb = ms < 0 ? kNetStall : ms < 120 ? kNetGood : ms < 250 ? kNetFair : kNetBad;
+                panel::roundRect(out, panel::Box{x, g.y + g.h - h, bar, h}, 0, rgb, 0.95f);
+            }
+        }
+    }
     if (L.route.w > 0) {  // the way's bar: gold-tinted, its ×
         panel::roundRect(out, L.route, 8 * s, kCard, uistyle::panel());
         panel::roundRect(out, L.route, 8 * s, kAccent, 0.16f, kAccent, 0.55f, edge);
@@ -704,17 +740,16 @@ std::vector<Words> words(const Layout& L, const Scene& sc, const Texts& t) {
                             sc.marks[size_t(sc.hoverMark)].label, kAccent2, 12.5f * s, true, Align::Left});
     } else {
         const float cellW = std::round(62 * s);
-        const float netW = t.net.empty() ? 0 : std::round(58 * s);  // 3.0.11-beta.122: the round trip's badge
-        out.push_back(Words{panel::Box{c.x + 10 * s, c.y, L.fold.x - 6 * s - cellW - netW - c.x - 10 * s, c.h}, t.name,
+        out.push_back(Words{panel::Box{c.x + 10 * s, c.y, L.fold.x - 6 * s - cellW - c.x - 10 * s, c.h}, t.name,
                             kText, 13 * s, true, Align::Left});
-        if (netW > 0)
-            out.push_back(Words{panel::Box{L.fold.x - 6 * s - cellW - netW, c.y, netW, c.h}, "\xE2\x97\x8F " + t.net,
-                                t.netRgb ? t.netRgb : kMuted, 11.5f * s, true, Align::Left});
         out.push_back(Words{panel::Box{L.fold.x - 4 * s - cellW, c.y, cellW, c.h}, t.cell, kMuted, 12 * s, false,
                             Align::Right});
     }
     out.push_back(Words{L.fold, t.folded ? "▸" : "▾", sc.hover == Part::Fold ? kText : kMuted, 12 * s, false,
                         Align::Center});
+    if (L.net.w > 0 && !t.net.empty())  // 3.0.11-beta.127: the round trip on its plate (.122: on the bar)
+        out.push_back(Words{panel::Box{L.net.x + std::round(kNetPad * s), L.net.y, std::round(kNetText * s), L.net.h},
+                            "\xE2\x97\x8F " + t.net, t.netRgb ? t.netRgb : kMuted, 11.5f * s, true, Align::Left});
     if (L.route.w > 0 && !t.route.empty()) {
         const panel::Box& r = L.route;
         const float rightW = std::round(48 * s);

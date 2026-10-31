@@ -58,9 +58,13 @@ struct Layout {
     panel::Box map, zoomIn, zoomOut, expand, caption, fold, route, stop, list;
     panel::Box layers[kLayers];  // 3.0.11-beta.119: a row in the square's top left
     panel::Box style;            // 3.0.11-beta.120: the picture's switch, after them
+    // 3.0.11-beta.127 (the owner: «пинги вынеси в отдельную плашку, можешь еще график строить. но небольшую. там где
+    // карта оно название карты сокращает»): the round trip's plate under the bar - its dot and words, a small graph
+    panel::Box net;
     float lineH = 0;
 };
-Layout layout(int targetW, int targetH, float scale, bool route, int listLines);
+Layout layout(int targetW, int targetH, float scale, bool route, int listLines, bool net = false);
+panel::Box netGraphBox(const Layout& L);  // 3.0.11-beta.127: the plate's graph (w 0 none)
 enum class Part : uint8_t { None, Map, ZoomIn, ZoomOut, Expand, Caption, Fold, Route, Stop, List, Layer, Style };
 Part partAt(const Layout& L, float x, float y);
 int layerAt(const Layout& L, float x, float y);  // 3.0.11-beta.119: the layer's button there, -1 none
@@ -137,6 +141,8 @@ struct Scene {
     // map's cells reached on foot from the player (walkgrid::reachMask: map.w x map.h, rows from y 0) - another
     // part's walked-on cells dimmed (3.0.11-beta.126: not the walls nor the ground); null or another size: none
     const std::vector<uint8_t>* reach = nullptr;
+    // 3.0.11-beta.127: the plate's graph - the round trips of the last minute (ms), the oldest first; -1 a stall
+    const std::vector<int>* netGraph = nullptr;
     Layers layers;        // 3.0.11-beta.119: the buttons' and the chips' looks (the marks given already shown ones)
     int hoverLayer = -1;  // the layer's button or chip under the pointer
     bool scheme = false;  // 3.0.11-beta.120: «Схема» shown (its switch lit)
@@ -165,7 +171,7 @@ struct Texts {
     std::vector<Line> list;   // the details
     std::string layers[kLayers];  // 3.0.11-beta.119: «Портали», «NPC», «Кафра», «Група» (a button pointed at: its name)
     std::string style;            // 3.0.11-beta.120: «Схема» (its button pointed at)
-    std::string net;              // 3.0.11-beta.122: the round trip's badge on the bar («45 мс»); "" none
+    std::string net;              // 3.0.11-beta.122: the round trip («45 мс», on its plate since .127); "" none
     uint32_t netRgb = 0;          // its colour
 };
 // The panel's picture (premultiplied: see-through round its parts), the words over it

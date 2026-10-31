@@ -1,6 +1,7 @@
 #pragma once
 #include <cstdint>
 #include <string>
+#include <vector>
 
 namespace uagfx::netwatch {
 
@@ -20,6 +21,8 @@ struct Tcp {  // a reading of the socket (TCP_INFO_v0's)
 // time-out in the last 5 s
 enum class Level : uint8_t { Unknown, Good, Fair, Bad, Stall };
 
+constexpr int kGraph = 60;  // 3.0.11-beta.127: the plate's graph - the last readings (about a minute)
+
 class Watch {
 public:
     void tcp(const Tcp& t, uint64_t nowMs);  // a reading (about each second)
@@ -30,6 +33,9 @@ public:
     bool stalled();  // a new time-out since last asked (told once)
     bool due(uint64_t nowMs) const;  // a minute since the period began: its line
     std::string line(uint64_t nowMs);  // the period's words, a new period begun
+    // 3.0.11-beta.127 (the owner: «пинги вынеси в отдельную плашку, можешь еще график строить»): the last kGraph
+    // readings' round trips (ms), the oldest first; a reading with a time-out -1 (a stall)
+    std::vector<int> graph() const;
 
 private:
     bool known_ = false, stallTold_ = true;
@@ -38,6 +44,8 @@ private:
     uint64_t rttSum_ = 0, resent_ = 0, longestGap_ = 0;
     uint32_t rttCount_ = 0, rttMost_ = 0, timeouts_ = 0;
     int fixes_ = 0, ownFixes_ = 0, fixMost_ = 0;
+    int graph_[kGraph] = {};
+    int graphNext_ = 0, graphCount_ = 0;
 };
 
 }  // namespace uagfx::netwatch
