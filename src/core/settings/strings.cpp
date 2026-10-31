@@ -4912,12 +4912,13 @@ constexpr Entry kTexts[] = {
     // 3.0.11-beta.6: the minimap's hints from the game's reference
     {Text::InterfaceMinimapNpcs, "NPC marks on the minimap", "Мітки NPC на мінікарті", "Метки NPC на миникарте"},
     {Text::InterfaceMinimapNpcsHint,
-     "Dots in the colours of the site's map: Kafra, healers, shops, smiths, armour, inns, guides, job masters, ships. "
-     "The pointer over a dot names it. From the game's reference (uaro.kiev.ua).",
-     "Крапки в кольорах карти сайту: Кафра, лікарі, крамниці, ковалі, броня, заїжджі двори, провідники, майстри "
-     "професій, кораблі. Курсор на крапці називає NPC. Дані - з довідника гри (uaro.kiev.ua).",
-     "Точки в цветах карты сайта: Кафра, лекари, лавки, кузнецы, броня, постоялые дворы, проводники, мастера "
-     "профессий, корабли. Курсор на точке называет NPC. Данные - из справочника игры (uaro.kiev.ua)."},
+     "Dots in the colours of the site's map: healers, shops, smiths, armour, inns, guides, job masters, ships (the "
+     "Kafras - a switch of their own). The pointer over a dot names it. From the game's reference (uaro.kiev.ua).",
+     "Крапки в кольорах карти сайту: лікарі, крамниці, ковалі, броня, заїжджі двори, провідники, майстри професій, "
+     "кораблі (Кафра - окремий перемикач). Курсор на крапці називає NPC. Дані - з довідника гри (uaro.kiev.ua).",
+     "Точки в цветах карты сайта: лекари, лавки, кузнецы, броня, постоялые дворы, проводники, мастера профессий, "
+     "корабли (Кафра - отдельный переключатель). Курсор на точке называет NPC. Данные - из справочника игры "
+     "(uaro.kiev.ua)."},
     {Text::InterfaceMinimapWarps, "Warps on the minimap", "Переходи на мінікарті", "Переходы на миникарте"},
     {Text::InterfaceMinimapWarpsHint,
      "Red rings where a warp leads to another map; the pointer over a ring names that map.",
@@ -4928,6 +4929,24 @@ constexpr Entry kTexts[] = {
      "The map's monsters and how many of them the server keeps here; ★ - a boss and its respawn after death.",
      "Монстри цієї карти і скільки їх тримає тут сервер; ★ - бос і його респавн після смерті.",
      "Монстры этой карты и сколько их держит здесь сервер; ★ - босс и его респавн после смерти."},
+    // 3.0.11-beta.119 (R-5Z6J2S): the map's layers
+    {Text::InterfaceMinimapKafra, "Kafra on the maps", "Кафра на картах", "Кафра на картах"},
+    {Text::InterfaceMinimapKafraHint,
+     "The Kafras' pink K on the minimap and the big map, even with the other NPCs hidden. The maps' own buttons "
+     "switch it too: the round ones in the minimap's top left, the chips under the big map.",
+     "Рожеві літери K Кафри на мінікарті й великій карті, навіть коли інших NPC сховано. Перемикають і кнопки самих "
+     "карт: круглі в лівому верхньому куті мінікарти, плашки під великою картою.",
+     "Розовые буквы K Кафры на миникарте и большой карте, даже когда другие NPC скрыты. Переключают и кнопки самих "
+     "карт: круглые в левом верхнем углу миникарты, плашки под большой картой."},
+    {Text::InterfaceMinimapParty, "The party on the maps", "Група на картах", "Группа на картах"},
+    {Text::InterfaceMinimapPartyHint,
+     "The party members' faces on the minimap and the big map; the maps' own buttons switch them too.",
+     "Обличчя учасників групи на мінікарті й великій карті; перемикають і кнопки самих карт.",
+     "Лица участников группы на миникарте и большой карте; переключают и кнопки самих карт."},
+    {Text::MinimapLayerWarps, "Portals", "Портали", "Порталы"},
+    {Text::MinimapLayerNpcs, "NPC", "NPC", "NPC"},
+    {Text::MinimapLayerKafra, "Kafra", "Кафра", "Кафра"},
+    {Text::MinimapLayerParty, "Party", "Група", "Группа"},
     // 3.0.11-beta.65: the concept's «Подсветка, куда можно дойти» - an experiment
     {Text::InterfaceMinimapReach, "Light where you can walk (an experiment)",
      "Підсвітити, куди можна дійти (експеримент)", "Подсветить, куда можно дойти (эксперимент)"},

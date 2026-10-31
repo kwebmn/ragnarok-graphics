@@ -875,10 +875,11 @@ void Context::present(const Rect& source, bool waitForVblank) {
     hudedit::setLocked(config.lockLayout);  // 3.0.11-beta.77: [interface] lock_layout
     uistyle::setPictures(packpictures::iconsStamp());
     // 3.0.11-beta.1: [interface] minimap - the new interface's minimap prototype in the game's own one's corner
-    minimapproto::frame(window,
-                        {config.newMinimap, config.minimapNpcs, config.minimapWarps, config.minimapMobs,
-                         config.minimapWay, config.minimapReach, config.minimapHd},
-                        pk, pw, ph);
+    minimapproto::Show minimapShow{config.newMinimap, config.minimapNpcs, config.minimapWarps, config.minimapMobs,
+                                   config.minimapWay, config.minimapReach, config.minimapHd};
+    minimapShow.kafra = config.minimapKafra;  // 3.0.11-beta.119: the map's layers
+    minimapShow.party = config.minimapParty;
+    minimapproto::frame(window, minimapShow, pk, pw, ph);
     // 3.0.11-beta.35: [interface] buffs - the buffs' column under the new minimap, the game's icons hidden
     buffcolumn::frame(window, config.buffs, config.buffsOverflow, pk, pw, ph);
     trackerwin::frame(window, config.tracker, pk, pw, ph);  // 3.0.11-beta.70: left of the buffs' column

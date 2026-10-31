@@ -55,6 +55,11 @@ struct Line {  // a monster under the map: its name, its count (a boss's respawn
 };
 
 struct State {
+    // 3.0.11-beta.119 (R-5Z6J2S): a layer switched on the map - wanted so until the settings read again say it
+    // (uaro-graphics.ini written at once; the file's next reading a moment later): -1 none, else 0 / 1
+    int layerWant[minimap::kLayers] = {-1, -1, -1, -1};
+    ULONGLONG layerWantAt[minimap::kLayers] = {};
+    int hoverLayer = -1;
     bool on = false, shown = false, dirty = true, upload = true;
     int style = -1;  // 3.0.11-beta.47: core/ui_style's generation painted
     bool placedMoved = false;  // 3.0.11-beta.79: moved by the player when last laid out
@@ -226,12 +231,13 @@ void buildHints(State& s) {
         const auto it = s.index->maps.find(s.map);
         if (it != s.index->maps.end()) h = &it->second;
     }
-    if (h && s.show.npcs) {
-        for (const refindex::Npc& n : h->npcs)
+    if (h && (s.show.npcs || s.show.kafra)) {  // 3.0.11-beta.119: the Kafras a layer of their own
+        for (const refindex::Npc& n : h->npcs) {
+            const bool kafra = n.kind == refindex::NpcKind::Kafra;
+            if (kafra ? !s.show.kafra : !s.show.npcs) continue;
             s.marks.push_back(minimap::Mark{minimap::Cell{n.x, n.y}, refindex::colorOf(n.kind),
-                                            n.kind == refindex::NpcKind::Kafra ? minimap::Glyph::Kafra
-                                                                               : minimap::Glyph::Dot,
-                                            n.name});
+                                            kafra ? minimap::Glyph::Kafra : minimap::Glyph::Dot, n.name});
+        }
     }
     if (h && s.show.warps) {
         readNames(s);
@@ -604,6 +610,44 @@ void hdFrame(State& s, bool on) {
     }
 }
 
+minimap::Layers layersOf(const Show& show) {  // 3.0.11-beta.119
+    minimap::Layers l;
+    l.on[int(minimap::Layer::Warps)] = show.warps;
+    l.on[int(minimap::Layer::Npcs)] = show.npcs;
+    l.on[int(minimap::Layer::Kafra)] = show.kafra;
+    l.on[int(minimap::Layer::Party)] = show.party;
+    return l;
+}
+
+const char* const kLayerKeys[minimap::kLayers] = {"minimap_warps", "minimap_npcs", "minimap_kafra", "minimap_party"};
+
+// 3.0.11-beta.119: what the settings say, a layer just switched on the map as wanted till they say it too (5 s at most)
+Show withWanted(State& s, Show show, ULONGLONG now) {
+    bool* flags[minimap::kLayers] = {&show.warps, &show.npcs, &show.kafra, &show.party};
+    for (int i = 0; i < minimap::kLayers; ++i) {
+        if (s.layerWant[i] < 0) continue;
+        if (*flags[i] == (s.layerWant[i] == 1) || now - s.layerWantAt[i] > 5000) {
+            s.layerWant[i] = -1;  // said by the settings now (or not written: theirs again)
+            continue;
+        }
+        *flags[i] = s.layerWant[i] == 1;
+    }
+    return show;
+}
+
+// 3.0.11-beta.119: a layer's button or chip clicked - on or off at once, uaro-graphics.ini told (the app's box too)
+void switchLayer(State& s, int layer) {
+    if (layer < 0 || layer >= minimap::kLayers) return;
+    const bool on = !layersOf(s.show).on[layer];
+    s.layerWant[layer] = on ? 1 : 0;
+    s.layerWantAt[layer] = GetTickCount64();
+    s.hintsMade = false;  // the marks made again with it
+    s.dirty = s.bigDirty = true;
+    const bool written = editIniFile(ourFile(layout::File::Ini), {{"interface", kLayerKeys[layer], on ? "1" : "0"}});
+    LOG_INFO("minimap: the layer %s %s on the map%s", kLayerKeys[layer], on ? "on" : "off",
+             written ? " ([interface] written)" : " - uaro-graphics.ini could not be written");
+}
+
 minimap::Scene sceneOf(const State& s) {
     minimap::Scene sc;
     sc.picture = shownPicture(s);  // 3.0.11-beta.72 (no argb: never prepared again at each painting)
@@ -613,7 +657,10 @@ minimap::Scene sceneOf(const State& s) {
     sc.lookY = s.lookY;
     sc.cells = minimap::cellsAt(s.zoom, s.size);
     sc.marks = s.marks;
-    sc.marks.insert(sc.marks.end(), s.members.begin(), s.members.end());  // 3.0.11-beta.83: after the hints
+    if (s.show.party)  // 3.0.11-beta.119: the party a layer
+        sc.marks.insert(sc.marks.end(), s.members.begin(), s.members.end());  // 3.0.11-beta.83: after the hints
+    sc.layers = layersOf(s.show);
+    sc.hoverLayer = s.hoverLayer;
     sc.path = s.path;
     if (!s.plot.empty() && s.plotMap == s.map) {  // 3.0.11-beta.71: the points set - the last a pin
         sc.pin = true;
@@ -643,11 +690,19 @@ std::vector<Words> gdiWords(const std::vector<minimap::Words>& in) {
     return out;
 }
 
+std::string layerName(int i) {  // 3.0.11-beta.119
+    using settings::Text;
+    const Text names[minimap::kLayers] = {Text::MinimapLayerWarps, Text::MinimapLayerNpcs, Text::MinimapLayerKafra,
+                                          Text::MinimapLayerParty};
+    return settings::tr(startup().lang, names[i]);
+}
+
 void render(State& s) {
     minimap::Texts t;
     t.name = shortTitle(s, s.map);
     if (s.cellKnown) t.cell = std::to_string(s.cell.x) + ", " + std::to_string(s.cell.y);
     t.folded = s.folded;
+    for (int i = 0; i < minimap::kLayers; ++i) t.layers[i] = layerName(i);  // 3.0.11-beta.119
     t.route = !s.plotLines.empty() ? s.plotLines : s.routeLines;  // 3.0.11-beta.71: the way set on the map first
     for (const Line& l : s.lines)
         t.list.push_back(minimap::Line{l.left, l.right, l.boss ? kBossText : 0u,
@@ -667,7 +722,14 @@ void render(State& s) {
 
 void renderBig(State& s) {
     const minimap::Scene sc = sceneOf(s);
-    s.bigLayout = minimap::bigLayout(s.targetW, s.targetH, s.scale, s.size);
+    std::string names[minimap::kLayers];  // 3.0.11-beta.119: the layers' chips under the map, as wide as their words
+    float widths[minimap::kLayers] = {};
+    for (int i = 0; i < minimap::kLayers; ++i) {
+        names[i] = layerName(i);
+        const float s28 = std::round(28 * s.scale);
+        widths[i] = std::round(float(wordsWidth(utf8Wide(names[i]), 12 * s.scale, true)) + s28 + 14 * s.scale);
+    }
+    s.bigLayout = minimap::bigLayout(s.targetW, s.targetH, s.scale, s.size, widths);
     const uicost::Paint cost("big map", s.bigLayout.w, s.bigLayout.h);  // 3.0.11-beta.55 (beta.57: its size known)
     s.bigPaintedAt = GetTickCount64();
     const int picture = sc.picture ? sc.picture->levels.front().w : 0;  // 3.0.11-beta.72: the game's or the bigger
@@ -680,7 +742,7 @@ void renderBig(State& s) {
     minimap::paintBig(s.bigPicture, s.bigMap, s.bigLayout, sc);
     const std::string cell = s.cellKnown ? std::to_string(s.cell.x) + ", " + std::to_string(s.cell.y) : "";
     drawWords(s.bigPicture, gdiWords(minimap::bigWords(s.bigLayout, sc, shortTitle(s, s.map) + " \xC2\xB7 " + s.map,
-                                                       cell)));
+                                                       cell, names)));
     s.bigDirty = false;
     s.bigUpload = true;
 }
@@ -848,9 +910,10 @@ void frame(HWND game, const Show& show, double k, int targetWidth, int targetHei
     const auto index = reference::index();
     const auto live = reference::live();  // 3.0.11-beta.12
     const ULONGLONG now = GetTickCount64();
-    if (!s.hintsMade || s.hintsMap != s.map || index != s.index || show.npcs != s.show.npcs ||
-        show.warps != s.show.warps || show.mobs != s.show.mobs || live != s.live ||
-        (s.live && now - s.hintsAt >= 60000)) {
+    const Show want = withWanted(s, show, now);  // 3.0.11-beta.119: a layer switched on the map
+    if (!s.hintsMade || s.hintsMap != s.map || index != s.index || want.npcs != s.show.npcs ||
+        want.warps != s.show.warps || want.mobs != s.show.mobs || want.kafra != s.show.kafra ||
+        want.party != s.show.party || live != s.live || (s.live && now - s.hintsAt >= 60000)) {
         s.live = live;
         s.hintsAt = now;
         if (index != s.index) {  // 3.0.11-beta.9: the way made again over the new pack
@@ -858,7 +921,7 @@ void frame(HWND game, const Show& show, double k, int targetWidth, int targetHei
             s.cellsMap.clear();
         }
         s.index = index;
-        s.show = show;
+        s.show = want;
         buildHints(s);
         s.dirty = s.bigDirty = true;
     }
@@ -886,6 +949,7 @@ void frame(HWND game, const Show& show, double k, int targetWidth, int targetHei
     int cx = 0, cy = 0, hover = -1;
     minimap::Part part = minimap::Part::None;
     minimap::BigPart bigPart = minimap::BigPart::None;
+    int hoverLayer = -1;  // 3.0.11-beta.119
     if (readGameCursor(cx, cy)) {
         const float tx = float(cx) * float(k), ty = float(cy) * float(k);
         const minimap::Scene sc = sceneOf(s);
@@ -893,12 +957,19 @@ void frame(HWND game, const Show& show, double k, int targetWidth, int targetHei
             const float bx = tx - float(s.bigLayout.x), by = ty - float(s.bigLayout.y);
             bigPart = minimap::bigPartAt(s.bigLayout, bx, by);
             if (bigPart == minimap::BigPart::Map) hover = minimap::bigMarkAt(s.bigLayout, sc, bx, by);
+            if (bigPart == minimap::BigPart::Layer) hoverLayer = minimap::bigLayerAt(s.bigLayout, bx, by);
         }
         if (bigPart == minimap::BigPart::None) {
             const float px = tx - float(s.layout.x), py = ty - float(s.layout.y);
             part = minimap::partAt(s.layout, px, py);
             if (part == minimap::Part::Map) hover = minimap::markAt(s.layout, sc, px, py);
+            if (part == minimap::Part::Layer) hoverLayer = minimap::layerAt(s.layout, px, py);
         }
+    }
+    if (hoverLayer != s.hoverLayer) {
+        s.hoverLayer = hoverLayer;
+        s.dirty = true;
+        if (s.big) s.bigDirty = true;
     }
     if (s.big && (bigPart != s.bigPart || hover != s.hover)) s.bigDirty = true;
     s.bigPart = bigPart;
@@ -970,6 +1041,8 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
         const minimap::BigPart bp = minimap::bigPartAt(s.bigLayout, bx, by);
         if (bp != minimap::BigPart::None) {
             if (m == WM_LBUTTONDOWN && bp == minimap::BigPart::Close) setBig(s, false);
+            if (m == WM_LBUTTONDOWN && bp == minimap::BigPart::Layer)  // 3.0.11-beta.119: a layer on or off
+                switchLayer(s, minimap::bigLayerAt(s.bigLayout, bx, by));
             const bool ctrl = GetKeyState(VK_CONTROL) < 0, shift = GetKeyState(VK_SHIFT) < 0;
             minimap::Cell at;
             if (m == WM_LBUTTONDOWN && bp == minimap::BigPart::Map && !ctrl &&
@@ -1010,6 +1083,7 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
                  s.cell.y, s.map.c_str());
     if (m == WM_LBUTTONDOWN) {
         switch (part) {
+            case minimap::Part::Layer: switchLayer(s, minimap::layerAt(s.layout, px, py)); break;  // .119
             case minimap::Part::ZoomIn: setZoom(s, s.zoom - 1); break;  // fewer cells: nearer
             case minimap::Part::ZoomOut: setZoom(s, s.zoom + 1); break;
             case minimap::Part::Expand: setBig(s, !s.big); break;

@@ -1331,6 +1331,24 @@ TEST(config_interface_trade) {
     CHECK(liveUpdate(parseConfig(""), parseConfig("[interface]\ntrade = 1\n")).next.tradeWindow);
 }
 
+// 3.0.11-beta.119 (R-5Z6J2S, the owner «делать»): [interface] minimap_kafra and minimap_party - the Kafras and the
+// party on the maps, each its own layer (on at first), switched on the maps themselves too; boxes of «Інтерфейс»,
+// at once
+TEST(config_interface_minimap_layers) {
+    const Config c = parseConfig("");
+    CHECK(c.minimapKafra && c.minimapParty);
+    CHECK(!parseConfig("[interface]\nminimap_kafra = 0\n").minimapKafra);
+    CHECK(!parseConfig("[interface]\nminimap_party = 0\n").minimapParty);
+    for (const char* key : {"interface.minimap_kafra", "interface.minimap_party"}) {
+        const settings::IniSetting* s = settings::findSetting(key);
+        CHECK(s != nullptr && s->page == settings::Page::Interface);
+        CHECK(appliesNow(key));
+    }
+    const LiveUpdate u =
+        liveUpdate(parseConfig(""), parseConfig("[interface]\nminimap_kafra = 0\nminimap_party = 0\n"));
+    CHECK(!u.next.minimapKafra && !u.next.minimapParty);
+}
+
 // 3.0.11-beta.103 (the owner: «можешь сделать настройку, чтобы можно было выбрать эту стрелку в конфигураторе»):
 // [interface] walk_arrow - the look of the stick's walking arrow, the doc's variants; the chevrons by default (its
 // advice), a choice of «Інтерфейс» applied at once

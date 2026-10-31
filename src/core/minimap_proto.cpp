@@ -14,6 +14,7 @@ namespace {
 // At scale 1, the target's pixels (3.0.11-beta.31: the concept's v19_town - 200 a side, the bars under it)
 constexpr float kSide = 220, kMargin = 10, kGap = 6, kBarH = 30, kRouteH = 46, kLineH = 19, kListPad = 7;
 constexpr float kButton = 22, kButtonGap = 4, kRadius = 10;
+constexpr float kBigFooter = 44;  // 3.0.11-beta.119: the big map's row of the layers' chips
 // The concept's style A: its glass, white over it, its gold, its words' colours
 constexpr uint32_t kCard = 0x10141C, kWhite = 0xFFFFFF, kBlack = 0x000000, kDark = 0x0B0E14;
 constexpr uint32_t kAccent = 0xC9A55B, kAccent2 = 0xE6CB8A, kText = 0xECEFF5, kMuted = 0x9AA3B5;
@@ -349,6 +350,30 @@ void faceIn(panel::Picture& out, const panel::Picture& pic, float cx, float cy, 
         }
 }
 
+// 3.0.11-beta.119: a layer's sign - as its marks look on the map - at (x, y), `r` across; a layer off dimmed and struck
+void layerSign(panel::Picture& out, Layer l, float x, float y, float r, float s, bool on) {
+    const float k = on ? 1.0f : 0.35f;
+    switch (l) {
+        case Layer::Warps:
+            panel::circle(out, x, y, r, kPortal, 0.95f * k);
+            ring(out, x, y, r - 0.8f * s, 1.5f * s, kPortalRing, k);
+            panel::circle(out, x, y, r * 0.3f, kWhite, k);
+            break;
+        case Layer::Npcs:
+            panel::circle(out, x, y, r * 0.62f, 0x37B24D, k);
+            break;
+        case Layer::Kafra:
+            panel::roundRect(out, panel::Box{x - r, y - r, 2 * r, 2 * r}, 3 * s, kKafra, k);
+            break;
+        case Layer::Party:
+            panel::circle(out, x, y, r, kDark, k);
+            ring(out, x, y, r - 0.6f * s, 1.6f * s, kMemberRing, k);
+            break;
+    }
+    if (!on) segment(out, panel::Box{0, 0, float(out.width), float(out.height)}, x - r, y + r, x + r, y - r, 1.8f * s,
+                     kMuted, 0.9f);
+}
+
 // The marks, the way, its pin and the player over the map's picture in `box` (a view's pixels from its corner)
 void overMap(panel::Picture& out, const panel::Box& box, const Scene& sc, const View& v, float s, float big) {
     const auto place = [&](const Cell& c, float& x, float& y) {
@@ -473,6 +498,23 @@ int cellsAt(int step, const MapSize& map) {
     return kZoomCells[step];
 }
 
+Layer layerOf(const Mark& m) {
+    switch (m.glyph) {
+        case Glyph::Warp: return Layer::Warps;
+        case Glyph::Kafra: return Layer::Kafra;
+        case Glyph::Member: return Layer::Party;
+        case Glyph::Dot: break;
+    }
+    return Layer::Npcs;
+}
+
+std::vector<Mark> shownMarks(const std::vector<Mark>& marks, const Layers& layers) {
+    std::vector<Mark> out;
+    for (const Mark& m : marks)
+        if (layers.on[int(layerOf(m))]) out.push_back(m);
+    return out;
+}
+
 Layout layout(int targetW, int targetH, float scale, bool route, int listLines) {
     Layout L;
     const float s = std::max(0.5f, scale);
@@ -484,6 +526,8 @@ Layout layout(int targetW, int targetH, float scale, bool route, int listLines) 
     L.expand = panel::Box{bx, side - inset - b, b, b};
     L.zoomOut = panel::Box{bx, L.expand.y - std::round(kButtonGap * s) - b, b, b};
     L.zoomIn = panel::Box{bx, L.zoomOut.y - std::round(kButtonGap * s) - b, b, b};
+    for (int i = 0; i < kLayers; ++i)  // 3.0.11-beta.119: the layers' row in the top left corner
+        L.layers[i] = panel::Box{bx + float(i) * (b + std::round(kButtonGap * s)), inset, b, b};
     float y = side + gap;
     const float bar = std::round(kBarH * s);
     L.caption = panel::Box{0, y, side, bar};
@@ -508,7 +552,14 @@ Layout layout(int targetW, int targetH, float scale, bool route, int listLines) 
     return L;
 }
 
+int layerAt(const Layout& L, float x, float y) {
+    for (int i = 0; i < kLayers; ++i)
+        if (L.layers[i].w > 0 && L.layers[i].contains(x, y)) return i;
+    return -1;
+}
+
 Part partAt(const Layout& L, float x, float y) {
+    if (layerAt(L, x, y) >= 0) return Part::Layer;  // 3.0.11-beta.119: over the map's square
     for (const auto& [box, part] : {std::pair{L.zoomIn, Part::ZoomIn}, std::pair{L.zoomOut, Part::ZoomOut},
                                     std::pair{L.expand, Part::Expand}, std::pair{L.fold, Part::Fold},
                                     std::pair{L.stop, Part::Stop}, std::pair{L.map, Part::Map},
@@ -556,6 +607,13 @@ void paint(panel::Picture& out, const Layout& L, const Scene& sc, const Texts& t
         uiicons::draw(out, buttons[i].second, b.x + (b.w - 14 * s) / 2, b.y + (b.h - 14 * s) / 2, 14 * s, kWhite,
                       1.0f, 2.6f);
     }
+    for (int i = 0; i < kLayers; ++i) {  // 3.0.11-beta.119: the layers' buttons, each its marks' sign
+        const panel::Box& b = L.layers[i];
+        if (b.w <= 0) continue;
+        const bool over = sc.hover == Part::Layer && sc.hoverLayer == i;
+        panel::roundRect(out, b, b.w / 2, over ? kAccent : kDark, over ? 0.55f : 0.72f, kWhite, 0.18f, edge);
+        layerSign(out, Layer(i), b.x + b.w / 2, b.y + b.h / 2, 5.5f * s, s, sc.layers.on[i]);
+    }
     panel::roundRect(out, L.caption, 8 * s, kCard, uistyle::panel(), kWhite, 0.12f, edge);  // the bar: name, cell, ▾
     if (sc.hover == Part::Fold) panel::roundRect(out, L.fold, 6 * s, kWhite, 0.10f);
     if (L.route.w > 0) {  // the way's bar: gold-tinted, its ×
@@ -580,9 +638,18 @@ std::vector<Words> words(const Layout& L, const Scene& sc, const Texts& t) {
         if (x - r < 0 || y - r < 0 || x + r > L.map.w || y + r > L.map.h) continue;
         out.push_back(Words{panel::Box{x - r, y - r, 2 * r, 2 * r}, "K", kWhite, 9 * s, true, Align::Center});
     }
+    const panel::Box& kafra = L.layers[int(Layer::Kafra)];  // 3.0.11-beta.119: the Kafras' button's «K»
+    if (kafra.w > 0)
+        out.push_back(Words{kafra, "K", sc.layers.on[int(Layer::Kafra)] ? kWhite : kMuted, 8 * s, true,
+                            Align::Center});
     const panel::Box& c = L.caption;
     const bool hovered = sc.hoverMark >= 0 && size_t(sc.hoverMark) < sc.marks.size();
-    if (hovered) {  // the mark under the pointer names itself on the bar
+    const bool layer = sc.hover == Part::Layer && sc.hoverLayer >= 0 && sc.hoverLayer < kLayers;
+    if (layer) {  // 3.0.11-beta.119: a layer's button pointed at names its layer on the bar
+        out.push_back(Words{panel::Box{c.x + 10 * s, c.y, L.fold.x - 4 * s - c.x - 10 * s, c.h},
+                            t.layers[sc.hoverLayer], sc.layers.on[sc.hoverLayer] ? kAccent2 : kMuted, 12.5f * s, true,
+                            Align::Left});
+    } else if (hovered) {  // the mark under the pointer names itself on the bar
         out.push_back(Words{panel::Box{c.x + 10 * s, c.y, L.fold.x - 4 * s - c.x - 10 * s, c.h},
                             sc.marks[size_t(sc.hoverMark)].label, kAccent2, 12.5f * s, true, Align::Left});
     } else {
@@ -711,28 +778,48 @@ bool bigCellAt(const Big& b, const Scene& sc, float x, float y, Cell& out) {
     return cellUnder(bigView(b, sc), sc.map, x - b.map.x, y - b.map.y, out);
 }
 
-Big bigLayout(int targetW, int targetH, float scale, const MapSize& map) {
+Big bigLayout(int targetW, int targetH, float scale, const MapSize& map, const float* chipWidths) {
     Big b;
     const float s = std::max(0.5f, scale);
     b.s = s;
     const float margin = kBigMargin * s, header = std::round(kBigHeader * s), pad = std::round(kBigPad * s);
-    const float roomW = float(targetW) - 2 * margin - 2 * pad, roomH = float(targetH) - 2 * margin - header - pad;
+    const float footer = chipWidths ? std::round(kBigFooter * s) : 0;  // 3.0.11-beta.119: the layers' chips
+    const float roomW = float(targetW) - 2 * margin - 2 * pad;
+    const float roomH = float(targetH) - 2 * margin - header - pad - footer;
     const float cell = std::max(0.1f, std::min(roomW / float(std::max(1, map.w)), roomH / float(std::max(1, map.h))));
     const float mapW = std::round(float(std::max(1, map.w)) * cell);
     const float mapH = std::round(float(std::max(1, map.h)) * cell);
     b.w = int(mapW + 2 * pad);
-    b.h = int(header + mapH + pad);
+    b.h = int(header + mapH + (chipWidths ? footer : pad));
     b.x = std::max(0, (targetW - b.w) / 2);
     b.y = std::max(0, (targetH - b.h) / 2);
     b.header = panel::Box{0, 0, float(b.w), header};
     b.close = panel::Box{float(b.w) - std::round(10 * s) - std::round(32 * s), (header - std::round(32 * s)) / 2,
                          std::round(32 * s), std::round(32 * s)};
     b.map = panel::Box{pad, header, mapW, mapH};
+    if (chipWidths) {  // a row in the middle under the map
+        const float gap = std::round(8 * s), h = std::round(28 * s);
+        float total = gap * float(kLayers - 1);
+        for (int i = 0; i < kLayers; ++i) total += chipWidths[i];
+        float x = std::max(pad, (float(b.w) - total) / 2);
+        const float y = header + mapH + (footer - h) / 2;
+        for (int i = 0; i < kLayers; ++i) {
+            b.chips[i] = panel::Box{x, y, chipWidths[i], h};
+            x += chipWidths[i] + gap;
+        }
+    }
     return b;
+}
+
+int bigLayerAt(const Big& b, float x, float y) {
+    for (int i = 0; i < kLayers; ++i)
+        if (b.chips[i].w > 0 && b.chips[i].contains(x, y)) return i;
+    return -1;
 }
 
 BigPart bigPartAt(const Big& b, float x, float y) {
     if (b.close.contains(x, y)) return BigPart::Close;
+    if (bigLayerAt(b, x, y) >= 0) return BigPart::Layer;  // 3.0.11-beta.119
     if (b.map.contains(x, y)) return BigPart::Map;
     if (x >= 0 && y >= 0 && x < float(b.w) && y < float(b.h)) return BigPart::Header;
     return BigPart::None;
@@ -762,10 +849,19 @@ void paintBig(panel::Picture& out, const panel::Picture& map, const Big& b, cons
     overMap(out, b.map, sc, v, s, 1.5f);
     for (const Label& l : bigLabels(b, sc))  // the words' grounds
         panel::roundRect(out, l.box, 6 * s, kDark, 0.84f);
+    for (int i = 0; i < kLayers; ++i) {  // 3.0.11-beta.119: the layers' chips - its sign, its words (by GDI)
+        const panel::Box& c = b.chips[i];
+        if (c.w <= 0) continue;
+        const bool on = sc.layers.on[i], over = sc.bigHover == BigPart::Layer && sc.hoverLayer == i;
+        panel::roundRect(out, c, c.h / 2, on ? kAccent : kDark, on ? (over ? 0.32f : 0.22f) : (over ? 0.9f : 0.7f),
+                         on ? kAccent : kWhite, on ? 0.7f : 0.16f, edge);
+        layerSign(out, Layer(i), c.x + c.h / 2, c.y + c.h / 2, 6 * s, s, on);
+    }
     if (sc.opacity < 1) panel::fade(out, sc.opacity);
 }
 
-std::vector<Words> bigWords(const Big& b, const Scene& sc, const std::string& title, const std::string& cell) {
+std::vector<Words> bigWords(const Big& b, const Scene& sc, const std::string& title, const std::string& cell,
+                            const std::string* layerNames) {
     std::vector<Words> out;
     const float s = b.s;
     const float cellW = std::round(110 * s);
@@ -785,6 +881,16 @@ std::vector<Words> bigWords(const Big& b, const Scene& sc, const std::string& ti
     }
     for (const Label& l : bigLabels(b, sc))
         out.push_back(Words{l.box, l.text, l.rgb, 12.5f * s, true, Align::Center});
+    for (int i = 0; layerNames && i < kLayers; ++i) {  // 3.0.11-beta.119: the layers' chips
+        const panel::Box& c = b.chips[i];
+        if (c.w <= 0) continue;
+        const bool on = sc.layers.on[i];
+        out.push_back(Words{panel::Box{c.x + c.h, c.y, c.w - c.h - 8 * s, c.h}, layerNames[i], on ? kText : kMuted,
+                            12 * s, true, Align::Left});
+        if (i == int(Layer::Kafra))
+            out.push_back(Words{panel::Box{c.x + c.h / 2 - 6 * s, c.y + c.h / 2 - 6 * s, 12 * s, 12 * s}, "K",
+                                on ? kWhite : kMuted, 9 * s, true, Align::Center});
+    }
     return out;
 }
 

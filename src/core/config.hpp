@@ -560,6 +560,9 @@ struct Config {
     // 3.0.11-beta.6: [interface] minimap_npcs / minimap_warps / minimap_mobs - its hints from the game's reference
     // (core/reference_index): the NPCs as dots, the warps to other maps as rings, the map's monsters under it
     bool minimapNpcs = true, minimapWarps = true, minimapMobs = true;
+    // 3.0.11-beta.119 (R-5Z6J2S): [interface] minimap_kafra / minimap_party - the Kafras and the party's faces, each a
+    // layer of its own (core/minimap_proto Layer), switched on the maps themselves too
+    bool minimapKafra = true, minimapParty = true;
     // 3.0.11-beta.33: [interface] minimap_way - the way followed drawn on the ground (win/ground_way): as footprints
     // (the owner: «такими типа следами типа шажков»), as the strip of 3.0.11-beta.31, or not
     WayOnGround minimapWay = WayOnGround::Steps;

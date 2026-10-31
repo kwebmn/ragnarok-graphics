@@ -41,6 +41,13 @@ constexpr int kZoomSteps = 6;  // those and the whole map
 constexpr int kZoomFirst = 2;  // 100 cells, as before
 int cellsAt(int step, const MapSize& map);
 
+// 3.0.11-beta.119 (R-5Z6J2S: «потрібно щоб на мінікарті та на великій карті була можливість включати та виключати
+// НПЦ, портали та інше»; the owner «делать»): the map's layers - each switched on the maps themselves (a round button
+// in the minimap's top left, a chip under the big map) as [interface] minimap_warps, minimap_npcs, minimap_kafra and
+// minimap_party switch them
+enum class Layer : uint8_t { Warps, Npcs, Kafra, Party };
+constexpr int kLayers = 4;
+
 // The panel in the target's top right corner, where the game's own minimap was: the map's square (200 px at scale 1,
 // 10 from the edges), its buttons in its bottom left corner (+, −, the big map), the bar under it, the way's bar, the
 // details (the map's monsters). The boxes in the panel's own pixels; w 0: not there
@@ -48,12 +55,14 @@ struct Layout {
     float s = 1;
     int x = 0, y = 0, w = 0, h = 0;  // the panel in the target
     panel::Box map, zoomIn, zoomOut, expand, caption, fold, route, stop, list;
+    panel::Box layers[kLayers];  // 3.0.11-beta.119: a row in the square's top left
     float lineH = 0;
 };
 Layout layout(int targetW, int targetH, float scale, bool route, int listLines);
-enum class Part : uint8_t { None, Map, ZoomIn, ZoomOut, Expand, Caption, Fold, Route, Stop, List };
+enum class Part : uint8_t { None, Map, ZoomIn, ZoomOut, Expand, Caption, Fold, Route, Stop, List, Layer };
 Part partAt(const Layout& L, float x, float y);
-enum class BigPart : uint8_t { None, Header, Close, Map };  // the big map's (below)
+int layerAt(const Layout& L, float x, float y);  // 3.0.11-beta.119: the layer's button there, -1 none
+enum class BigPart : uint8_t { None, Header, Close, Map, Layer };  // the big map's (below)
 int lineAt(const Layout& L, float y);  // the details' line under y, -1 none
 
 // 3.0.11-beta.72 (the owner: «сами картинки карт маленькие и не аккуратные», «розовые полосы по краям»): the map's
@@ -86,6 +95,13 @@ struct Mark {
     const panel::Picture* picture = nullptr;  // 3.0.11-beta.83: a member's face (premultiplied); null: none
     bool dead = false;                        // a member's
 };
+// 3.0.11-beta.119: a mark's layer, the layers on
+Layer layerOf(const Mark& m);
+struct Layers {
+    bool on[kLayers] = {true, true, true, true};
+};
+std::vector<Mark> shownMarks(const std::vector<Mark>& marks, const Layers& layers);
+
 struct Scene {
     const std::vector<uint32_t>* argb = nullptr;  // the map's own picture (the game's), the whole map, rows north first
     int imgW = 0, imgH = 0;
@@ -110,6 +126,8 @@ struct Scene {
     // map's cells reached on foot from the player (walkgrid::partMask: map.w x map.h, rows from y 0) - the others
     // dimmed; null or another size: none
     const std::vector<uint8_t>* reach = nullptr;
+    Layers layers;        // 3.0.11-beta.119: the buttons' and the chips' looks (the marks given already shown ones)
+    int hoverLayer = -1;  // the layer's button or chip under the pointer
 };
 constexpr uint32_t kRouteRgb = 0xF2C14E;  // 3.0.11-beta.31: the way's gold (the concept's; was blue)
 
@@ -133,6 +151,7 @@ struct Texts {
     bool folded = false;      // the details hidden: ▸
     std::vector<Line> route;  // the way's bar: its two lines
     std::vector<Line> list;   // the details
+    std::string layers[kLayers];  // 3.0.11-beta.119: «Портали», «NPC», «Кафра», «Група» (a button pointed at: its name)
 };
 // The panel's picture (premultiplied: see-through round its parts), the words over it
 void paint(panel::Picture& out, const Layout& L, const Scene& sc, const Texts& t);
@@ -146,13 +165,17 @@ struct Big {
     float s = 1;
     int x = 0, y = 0, w = 0, h = 0;  // in the target
     panel::Box header, close, map;   // its own pixels
+    panel::Box chips[kLayers];       // 3.0.11-beta.119: the layers' chips in a row under the map (w 0: none)
 };
-Big bigLayout(int targetW, int targetH, float scale, const MapSize& map);
+// `chipWidths` - each layer's chip as wide (its words measured); null: no chips
+Big bigLayout(int targetW, int targetH, float scale, const MapSize& map, const float* chipWidths = nullptr);
 BigPart bigPartAt(const Big& b, float x, float y);
+int bigLayerAt(const Big& b, float x, float y);  // 3.0.11-beta.119: the layer's chip there, -1 none
 // The map's picture alone at the big map's size (made once a map and a size) and the rest over a copy of it
 void paintBigMap(panel::Picture& out, const Big& b, const Scene& sc);
 void paintBig(panel::Picture& out, const panel::Picture& map, const Big& b, const Scene& sc);
-std::vector<Words> bigWords(const Big& b, const Scene& sc, const std::string& title, const std::string& cell);
+std::vector<Words> bigWords(const Big& b, const Scene& sc, const std::string& title, const std::string& cell,
+                            const std::string* layerNames = nullptr);  // 3.0.11-beta.119: the chips' words
 int bigMarkAt(const Big& b, const Scene& sc, float x, float y);
 
 // 3.0.11-beta.71 (the owner: «иконка игрока не поворачивается в сторону куда идешь», «туда куда чар смотрит»): the

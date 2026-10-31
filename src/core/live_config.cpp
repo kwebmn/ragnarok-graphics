@@ -178,6 +178,14 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("minimap_warps", flag(running.minimapWarps), flag(file.minimapWarps)));
         n.minimapWarps = file.minimapWarps;
     }
+    if (file.minimapKafra != running.minimapKafra) {  // 3.0.11-beta.119: the map's layers, at once
+        u.applied.push_back(change("minimap_kafra", flag(running.minimapKafra), flag(file.minimapKafra)));
+        n.minimapKafra = file.minimapKafra;
+    }
+    if (file.minimapParty != running.minimapParty) {
+        u.applied.push_back(change("minimap_party", flag(running.minimapParty), flag(file.minimapParty)));
+        n.minimapParty = file.minimapParty;
+    }
     if (file.minimapMobs != running.minimapMobs) {
         u.applied.push_back(change("minimap_mobs", flag(running.minimapMobs), flag(file.minimapMobs)));
         n.minimapMobs = file.minimapMobs;

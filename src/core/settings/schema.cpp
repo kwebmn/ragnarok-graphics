@@ -101,6 +101,11 @@ const std::vector<IniSetting>& iniSettings() {
          Text::InterfaceMinimapNpcs, Text::InterfaceMinimapNpcsHint, ""},
         {"interface", "minimap_warps", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {},
          Text::InterfaceMinimapWarps, Text::InterfaceMinimapWarpsHint, ""},
+        // 3.0.11-beta.119: the Kafras and the party, layers of their own (switched on the maps too)
+        {"interface", "minimap_kafra", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {},
+         Text::InterfaceMinimapKafra, Text::InterfaceMinimapKafraHint, ""},
+        {"interface", "minimap_party", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {},
+         Text::InterfaceMinimapParty, Text::InterfaceMinimapPartyHint, ""},
         {"interface", "minimap_mobs", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {},
          Text::InterfaceMinimapMobs, Text::InterfaceMinimapMobsHint, ""},
         // 3.0.11-beta.65: where one can walk from here - the concept's experiment
@@ -990,6 +995,8 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "interface.minimap_npcs") return c.minimapNpcs ? "1" : "0";  // 3.0.11-beta.6
     if (k == "interface.minimap_warps") return c.minimapWarps ? "1" : "0";
     if (k == "interface.minimap_mobs") return c.minimapMobs ? "1" : "0";
+    if (k == "interface.minimap_kafra") return c.minimapKafra ? "1" : "0";  // 3.0.11-beta.119
+    if (k == "interface.minimap_party") return c.minimapParty ? "1" : "0";
     if (k == "interface.minimap_reach") return c.minimapReach ? "1" : "0";  // 3.0.11-beta.65
     if (k == "interface.minimap_hd") return c.minimapHd ? "1" : "0";        // 3.0.11-beta.72
     if (k == "interface.pack_icons") return c.packIcons ? "1" : "0";        // 3.0.11-beta.74

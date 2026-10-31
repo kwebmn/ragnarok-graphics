@@ -304,6 +304,13 @@ The owner 31.10: «Полоски HP мобов - всем показывай»,
   never shown). Built: equip readWorn (the ten places, a thing once) + the bag's arrows worn by +0xEEC or 0x8000;
   «Речі» lists the arrows worn with a green «E», «вдягнуто» first in the tip (itemwin Item.worn, Texts.worn, test
   item_window_shows_the_worn_arrows); the character block's ammo by +0xEEC too. Suite 2087/0.
+- R-5Z6J2S (the beta player: switch NPCs, portals and the rest on the minimap and the big map), the owner «делать»
+  (3.0.11-beta.119): core minimap Layer {Warps, Npcs, Kafra, Party}, layerOf / shownMarks, Layout.layers (a row of
+  round buttons in the square's top left, each its marks' sign, struck when off; pointed at - its name on the bar),
+  Big.chips (a row under the big map, as wide as their words, BigPart::Layer); [interface] minimap_kafra /
+  minimap_party (new, on; the Kafras out of minimap_npcs) beside minimap_npcs / minimap_warps; a click writes the key
+  into uaro-graphics.ini (editIniFile, the app's box follows) and holds the wanted look up to 5 s till the settings
+  say it (withWanted). Tests minimap_proto_layers_switched, config_interface_minimap_layers; suite 2089/0.
 - Stage 5 research: 0x00c4 deal type; 0x00c6 buy list (11 B each: price.L discount.L type.B nameid.W)
   -> session deal list +0xF28 (count +0xF2C, FUN_0062bbb0(rec, 0); FUN_004ffd30 copies the record's text at +0x11 into
   m_itemName) + windows 0x16 (mgr+0xEC, class 0x69B3E0, SendMsg 0x4AFC00: 0x24 0 buy / 1 sell) and 0x17 (buy cart,
