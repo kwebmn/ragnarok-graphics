@@ -3,6 +3,7 @@
 #include <string>
 #include <vector>
 
+#include "core/walk_grid.hpp"
 #include "core/window_panel.hpp"
 
 namespace uagfx::minimap {
@@ -56,13 +57,14 @@ struct Layout {
     int x = 0, y = 0, w = 0, h = 0;  // the panel in the target
     panel::Box map, zoomIn, zoomOut, expand, caption, fold, route, stop, list;
     panel::Box layers[kLayers];  // 3.0.11-beta.119: a row in the square's top left
+    panel::Box style;            // 3.0.11-beta.120: the picture's switch, after them
     float lineH = 0;
 };
 Layout layout(int targetW, int targetH, float scale, bool route, int listLines);
-enum class Part : uint8_t { None, Map, ZoomIn, ZoomOut, Expand, Caption, Fold, Route, Stop, List, Layer };
+enum class Part : uint8_t { None, Map, ZoomIn, ZoomOut, Expand, Caption, Fold, Route, Stop, List, Layer, Style };
 Part partAt(const Layout& L, float x, float y);
 int layerAt(const Layout& L, float x, float y);  // 3.0.11-beta.119: the layer's button there, -1 none
-enum class BigPart : uint8_t { None, Header, Close, Map, Layer };  // the big map's (below)
+enum class BigPart : uint8_t { None, Header, Close, Map, Layer, Style };  // the big map's (below)
 int lineAt(const Layout& L, float y);  // the details' line under y, -1 none
 
 // 3.0.11-beta.72 (the owner: «сами картинки карт маленькие и не аккуратные», «розовые полосы по краям»): the map's
@@ -83,6 +85,15 @@ inline bool keyedPink(uint32_t argb) {
     return !(argb >> 24) || (r < b ? r : b) - g > 110;
 }
 MapPicture prepare(const std::vector<uint32_t>& argb, int width, int height);
+
+// 3.0.11-beta.120 (the owner: «карту в отчете, она какаято не красивая, может другую попробовать или сделать
+// переключалку слоев разных?»): «Схема» - the map drawn from its walkable cells (walkgrid, the server's .gat): the
+// floor light (the part reached on foot - `reach`, walkgrid::partMask's - lighter), walls dark, a darker rim on the
+// floor where it meets a wall; `px` pixels a cell, rows north first as the game's picture (for prepare)
+constexpr uint32_t kSchemeWall = 0xFF1B2029, kSchemeFloor = 0xFF6F7A8C, kSchemeReached = 0xFFB3BDCB;
+constexpr uint32_t kSchemeEdge = 0xFF3C4554;
+std::vector<uint32_t> schemePixels(const walkgrid::Grid& g, const std::vector<uint8_t>* reach, int px, int& width,
+                                   int& height);
 
 // What the map shows
 // 3.0.11-beta.83 (the owner's 3): Member - a party member, its face in a round with a blue ring (a dead one's red)
@@ -128,6 +139,7 @@ struct Scene {
     const std::vector<uint8_t>* reach = nullptr;
     Layers layers;        // 3.0.11-beta.119: the buttons' and the chips' looks (the marks given already shown ones)
     int hoverLayer = -1;  // the layer's button or chip under the pointer
+    bool scheme = false;  // 3.0.11-beta.120: «Схема» shown (its switch lit)
 };
 constexpr uint32_t kRouteRgb = 0xF2C14E;  // 3.0.11-beta.31: the way's gold (the concept's; was blue)
 
@@ -152,6 +164,7 @@ struct Texts {
     std::vector<Line> route;  // the way's bar: its two lines
     std::vector<Line> list;   // the details
     std::string layers[kLayers];  // 3.0.11-beta.119: «Портали», «NPC», «Кафра», «Група» (a button pointed at: its name)
+    std::string style;            // 3.0.11-beta.120: «Схема» (its button pointed at)
 };
 // The panel's picture (premultiplied: see-through round its parts), the words over it
 void paint(panel::Picture& out, const Layout& L, const Scene& sc, const Texts& t);
@@ -166,16 +179,19 @@ struct Big {
     int x = 0, y = 0, w = 0, h = 0;  // in the target
     panel::Box header, close, map;   // its own pixels
     panel::Box chips[kLayers];       // 3.0.11-beta.119: the layers' chips in a row under the map (w 0: none)
+    panel::Box styleChip;            // 3.0.11-beta.120: «Схема», after them
 };
-// `chipWidths` - each layer's chip as wide (its words measured); null: no chips
-Big bigLayout(int targetW, int targetH, float scale, const MapSize& map, const float* chipWidths = nullptr);
+// `chipWidths` - each layer's chip as wide (its words measured), `styleWidth` the picture's switch's; null: no chips
+Big bigLayout(int targetW, int targetH, float scale, const MapSize& map, const float* chipWidths = nullptr,
+              float styleWidth = 0);
 BigPart bigPartAt(const Big& b, float x, float y);
 int bigLayerAt(const Big& b, float x, float y);  // 3.0.11-beta.119: the layer's chip there, -1 none
 // The map's picture alone at the big map's size (made once a map and a size) and the rest over a copy of it
 void paintBigMap(panel::Picture& out, const Big& b, const Scene& sc);
 void paintBig(panel::Picture& out, const panel::Picture& map, const Big& b, const Scene& sc);
 std::vector<Words> bigWords(const Big& b, const Scene& sc, const std::string& title, const std::string& cell,
-                            const std::string* layerNames = nullptr);  // 3.0.11-beta.119: the chips' words
+                            const std::string* layerNames = nullptr,  // 3.0.11-beta.119: the chips' words
+                            const std::string& styleName = "");       // 3.0.11-beta.120
 int bigMarkAt(const Big& b, const Scene& sc, float x, float y);
 
 // 3.0.11-beta.71 (the owner: «иконка игрока не поворачивается в сторону куда идешь», «туда куда чар смотрит»): the

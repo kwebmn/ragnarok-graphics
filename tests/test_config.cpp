@@ -1349,6 +1349,21 @@ TEST(config_interface_minimap_layers) {
     CHECK(!u.next.minimapKafra && !u.next.minimapParty);
 }
 
+// 3.0.11-beta.120 (the owner: «карта ... какаято не красивая, может другую попробовать или сделать переключалку слоев
+// разных?»): [interface] minimap_style - the maps' picture: the game's own (picture) or «Схема» from the walkable cells
+// (scheme); a choice of «Інтерфейс», at once, switched on the maps themselves too
+TEST(config_interface_minimap_style) {
+    CHECK(parseConfig("").minimapStyle == MapStyle::Picture);
+    CHECK(parseConfig("[interface]\nminimap_style = scheme\n").minimapStyle == MapStyle::Scheme);
+    CHECK(parseConfig("[interface]\nminimap_style = other\n").minimapStyle == MapStyle::Picture);
+    const settings::IniSetting* s = settings::findSetting("interface.minimap_style");
+    CHECK(s != nullptr && s->page == settings::Page::Interface && s->control == settings::Control::Choice);
+    if (s) CHECK_EQ(settings::tokenOf(*s, parseConfig("[interface]\nminimap_style = scheme\n")), std::string("scheme"));
+    CHECK(appliesNow("interface.minimap_style"));
+    CHECK(liveUpdate(parseConfig(""), parseConfig("[interface]\nminimap_style = scheme\n")).next.minimapStyle ==
+          MapStyle::Scheme);
+}
+
 // 3.0.11-beta.103 (the owner: «можешь сделать настройку, чтобы можно было выбрать эту стрелку в конфигураторе»):
 // [interface] walk_arrow - the look of the stick's walking arrow, the doc's variants; the chevrons by default (its
 // advice), a choice of «Інтерфейс» applied at once

@@ -20,6 +20,9 @@ enum class WindowKeys : uint8_t { All, Back, Off };
 enum class PanelLayout : uint8_t { Row, Column, Icons };  // 3.0.3-beta.8: [panel] layout; 3.0.3-beta.11 icons
 // 3.0.11-beta.33: [interface] minimap_way - the way followed on the ground: footprints (steps), a strip (line), none
 enum class WayOnGround : uint8_t { Steps, Line, Off };
+// 3.0.11-beta.120: [interface] minimap_style - the maps' picture: the game's own (picture) or drawn from the walkable
+// cells (scheme)
+enum class MapStyle : uint8_t { Picture, Scheme };
 // 3.0.11-beta.87 (the concept «Контроллер в интерфейсе uaRO», stage 3): the target's ring on the ground - off, while
 // played with the controller, or always (the mouse's fight too)
 enum class TargetRing : uint8_t { Off, Pad, Always };
@@ -563,6 +566,10 @@ struct Config {
     // 3.0.11-beta.119 (R-5Z6J2S): [interface] minimap_kafra / minimap_party - the Kafras and the party's faces, each a
     // layer of its own (core/minimap_proto Layer), switched on the maps themselves too
     bool minimapKafra = true, minimapParty = true;
+    // 3.0.11-beta.120 (the owner: «карта ... какаято не красивая»): [interface] minimap_style - the minimap's and the
+    // big map's picture: the game's own, or «Схема» drawn from the server's walkable cells (core/minimap_proto
+    // schemePixels); switched on the maps themselves too
+    MapStyle minimapStyle = MapStyle::Picture;
     // 3.0.11-beta.33: [interface] minimap_way - the way followed drawn on the ground (win/ground_way): as footprints
     // (the owner: «такими типа следами типа шажков»), as the strip of 3.0.11-beta.31, or not
     WayOnGround minimapWay = WayOnGround::Steps;
@@ -800,6 +807,7 @@ const char* displayModeToken(DisplayMode m);
 const char* uiFilterToken(UiFilter f);
 const char* windowKeysToken(WindowKeys k);  // 3.0.3-beta.6
 const char* wayOnGroundToken(WayOnGround w);  // 3.0.11-beta.33
+const char* mapStyleToken(MapStyle m);         // 3.0.11-beta.120
 const char* targetRingToken(TargetRing r);    // 3.0.11-beta.87
 const char* mobHpToken(MobHp m);              // 3.0.11-beta.95
 const char* padWalkToken(PadWalk w);          // 3.0.11-beta.88

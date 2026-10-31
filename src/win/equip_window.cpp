@@ -58,7 +58,8 @@ constexpr size_t kInfoSize = 0x48, kMostNodes = 256;
 // owner's «шмоток нету»): the worn gear is not in the bag - the session keeps it apart, an ITEM_INFO for each of the
 // ten places by its bit (+0xFC0, 72 bytes apart: FUN_00628e50 at the equipment's list 0x00a4 and at the wear's
 // answer 0x00aa; a two-hander or a full helm in each of its places); the arrows worn stay in the bag - their place at
-// +0xEEC (0x013c), or worn 0x8000 (the stackables' list 0x01ee at the login)
+// +0xEEC (0x013c, at the login too). 3.0.11-beta.120 (R-4T7N4D: Sleep Arrow shown while plain arrows were worn): the
+// place alone - the login list's worn 0x8000 stays on the first arrows after others are worn
 constexpr uint32_t kWorn = 0x771148 + 0xFC0, kAmmoNow = 0x771148 + 0xEEC, kAmmoBit = 0x8000;
 constexpr int kWornPlaces = 10;
 // The character: its job, sex, hair style and colour (the character block's)
@@ -230,6 +231,7 @@ void readBag(State& s) {
     for (size_t n = 0; node && node != head && n < kMostNodes; ++n, node = read32(node)) {
         Thing t;
         if (!thingAt(node + kInfo, t)) continue;
+        t.worn &= ~kAmmoBit;  // 3.0.11-beta.120: the arrows worn by their place alone (the login's flag stays stale)
         if (ammo && uint32_t(t.index) == ammo) t.worn |= kAmmoBit;  // 3.0.11-beta.118: the arrows worn
         s.bag.push_back(t);
     }

@@ -374,6 +374,15 @@ void layerSign(panel::Picture& out, Layer l, float x, float y, float r, float s,
                      kMuted, 0.9f);
 }
 
+// 3.0.11-beta.120: the scheme's sign - a little floor plan: three light squares in an L over a dark one
+void schemeSign(panel::Picture& out, float x, float y, float r, bool on) {
+    const float k = on ? 1.0f : 0.7f, q = r * 0.62f, g = r * 0.16f;
+    panel::roundRect(out, panel::Box{x - r, y - r, 2 * r, 2 * r}, r * 0.25f, kSchemeWall & 0xFFFFFF, k);
+    panel::roundRect(out, panel::Box{x - q - g, y - q - g, q, q}, 1.0f, kSchemeReached & 0xFFFFFF, k);
+    panel::roundRect(out, panel::Box{x + g, y - q - g, q, q}, 1.0f, kSchemeReached & 0xFFFFFF, k);
+    panel::roundRect(out, panel::Box{x - q - g, y + g, q, q}, 1.0f, kSchemeFloor & 0xFFFFFF, k);
+}
+
 // The marks, the way, its pin and the player over the map's picture in `box` (a view's pixels from its corner)
 void overMap(panel::Picture& out, const panel::Box& box, const Scene& sc, const View& v, float s, float big) {
     const auto place = [&](const Cell& c, float& x, float& y) {
@@ -498,6 +507,33 @@ int cellsAt(int step, const MapSize& map) {
     return kZoomCells[step];
 }
 
+std::vector<uint32_t> schemePixels(const walkgrid::Grid& g, const std::vector<uint8_t>* reach, int px, int& width,
+                                   int& height) {
+    px = std::max(1, px);
+    width = g.w * px;
+    height = g.h * px;
+    std::vector<uint32_t> out(size_t(width) * size_t(height), kSchemeWall);
+    const auto floor = [&](int x, int y) { return g.at(x, y) != walkgrid::kWall; };
+    const bool lit = reach && reach->size() == size_t(g.w) * size_t(g.h);
+    for (int y = 0; y < g.h; ++y)
+        for (int x = 0; x < g.w; ++x) {
+            if (!floor(x, y)) continue;
+            const uint32_t base = lit && (*reach)[size_t(y) * size_t(g.w) + size_t(x)] ? kSchemeReached : kSchemeFloor;
+            const bool west = !floor(x - 1, y), east = !floor(x + 1, y);
+            const bool north = !floor(x, y + 1), south = !floor(x, y - 1);
+            const int top = (g.h - 1 - y) * px, left = x * px;  // north first
+            for (int r = 0; r < px; ++r) {
+                uint32_t* row = out.data() + size_t(top + r) * size_t(width) + size_t(left);
+                for (int c = 0; c < px; ++c) {
+                    const bool rim = (west && c == 0) || (east && c == px - 1) || (north && r == 0) ||
+                                     (south && r == px - 1);
+                    row[c] = rim && px > 1 ? kSchemeEdge : base;
+                }
+            }
+        }
+    return out;
+}
+
 Layer layerOf(const Mark& m) {
     switch (m.glyph) {
         case Glyph::Warp: return Layer::Warps;
@@ -528,6 +564,7 @@ Layout layout(int targetW, int targetH, float scale, bool route, int listLines) 
     L.zoomIn = panel::Box{bx, L.zoomOut.y - std::round(kButtonGap * s) - b, b, b};
     for (int i = 0; i < kLayers; ++i)  // 3.0.11-beta.119: the layers' row in the top left corner
         L.layers[i] = panel::Box{bx + float(i) * (b + std::round(kButtonGap * s)), inset, b, b};
+    L.style = panel::Box{bx + float(kLayers) * (b + std::round(kButtonGap * s)) + std::round(4 * s), inset, b, b};
     float y = side + gap;
     const float bar = std::round(kBarH * s);
     L.caption = panel::Box{0, y, side, bar};
@@ -560,6 +597,7 @@ int layerAt(const Layout& L, float x, float y) {
 
 Part partAt(const Layout& L, float x, float y) {
     if (layerAt(L, x, y) >= 0) return Part::Layer;  // 3.0.11-beta.119: over the map's square
+    if (L.style.w > 0 && L.style.contains(x, y)) return Part::Style;  // 3.0.11-beta.120
     for (const auto& [box, part] : {std::pair{L.zoomIn, Part::ZoomIn}, std::pair{L.zoomOut, Part::ZoomOut},
                                     std::pair{L.expand, Part::Expand}, std::pair{L.fold, Part::Fold},
                                     std::pair{L.stop, Part::Stop}, std::pair{L.map, Part::Map},
@@ -614,6 +652,13 @@ void paint(panel::Picture& out, const Layout& L, const Scene& sc, const Texts& t
         panel::roundRect(out, b, b.w / 2, over ? kAccent : kDark, over ? 0.55f : 0.72f, kWhite, 0.18f, edge);
         layerSign(out, Layer(i), b.x + b.w / 2, b.y + b.h / 2, 5.5f * s, s, sc.layers.on[i]);
     }
+    if (L.style.w > 0) {  // 3.0.11-beta.120: the picture's switch - lit gold while «Схема» shows
+        const panel::Box& b = L.style;
+        const bool over = sc.hover == Part::Style;
+        panel::roundRect(out, b, b.w / 2, sc.scheme || over ? kAccent : kDark, sc.scheme ? 0.75f : over ? 0.55f : 0.72f,
+                         sc.scheme ? kAccent2 : kWhite, sc.scheme ? 0.8f : 0.18f, edge);
+        schemeSign(out, b.x + b.w / 2, b.y + b.h / 2, 5.5f * s, true);
+    }
     panel::roundRect(out, L.caption, 8 * s, kCard, uistyle::panel(), kWhite, 0.12f, edge);  // the bar: name, cell, ▾
     if (sc.hover == Part::Fold) panel::roundRect(out, L.fold, 6 * s, kWhite, 0.10f);
     if (L.route.w > 0) {  // the way's bar: gold-tinted, its ×
@@ -645,7 +690,10 @@ std::vector<Words> words(const Layout& L, const Scene& sc, const Texts& t) {
     const panel::Box& c = L.caption;
     const bool hovered = sc.hoverMark >= 0 && size_t(sc.hoverMark) < sc.marks.size();
     const bool layer = sc.hover == Part::Layer && sc.hoverLayer >= 0 && sc.hoverLayer < kLayers;
-    if (layer) {  // 3.0.11-beta.119: a layer's button pointed at names its layer on the bar
+    if (sc.hover == Part::Style && !t.style.empty()) {  // 3.0.11-beta.120: the picture's switch names itself
+        out.push_back(Words{panel::Box{c.x + 10 * s, c.y, L.fold.x - 4 * s - c.x - 10 * s, c.h}, t.style,
+                            sc.scheme ? kAccent2 : kMuted, 12.5f * s, true, Align::Left});
+    } else if (layer) {  // 3.0.11-beta.119: a layer's button pointed at names its layer on the bar
         out.push_back(Words{panel::Box{c.x + 10 * s, c.y, L.fold.x - 4 * s - c.x - 10 * s, c.h},
                             t.layers[sc.hoverLayer], sc.layers.on[sc.hoverLayer] ? kAccent2 : kMuted, 12.5f * s, true,
                             Align::Left});
@@ -778,7 +826,7 @@ bool bigCellAt(const Big& b, const Scene& sc, float x, float y, Cell& out) {
     return cellUnder(bigView(b, sc), sc.map, x - b.map.x, y - b.map.y, out);
 }
 
-Big bigLayout(int targetW, int targetH, float scale, const MapSize& map, const float* chipWidths) {
+Big bigLayout(int targetW, int targetH, float scale, const MapSize& map, const float* chipWidths, float styleWidth) {
     Big b;
     const float s = std::max(0.5f, scale);
     b.s = s;
@@ -799,7 +847,7 @@ Big bigLayout(int targetW, int targetH, float scale, const MapSize& map, const f
     b.map = panel::Box{pad, header, mapW, mapH};
     if (chipWidths) {  // a row in the middle under the map
         const float gap = std::round(8 * s), h = std::round(28 * s);
-        float total = gap * float(kLayers - 1);
+        float total = gap * float(kLayers - 1) + (styleWidth > 0 ? styleWidth + 2 * gap : 0);
         for (int i = 0; i < kLayers; ++i) total += chipWidths[i];
         float x = std::max(pad, (float(b.w) - total) / 2);
         const float y = header + mapH + (footer - h) / 2;
@@ -807,6 +855,7 @@ Big bigLayout(int targetW, int targetH, float scale, const MapSize& map, const f
             b.chips[i] = panel::Box{x, y, chipWidths[i], h};
             x += chipWidths[i] + gap;
         }
+        if (styleWidth > 0) b.styleChip = panel::Box{x + gap, y, styleWidth, h};  // 3.0.11-beta.120: a gap more
     }
     return b;
 }
@@ -820,6 +869,7 @@ int bigLayerAt(const Big& b, float x, float y) {
 BigPart bigPartAt(const Big& b, float x, float y) {
     if (b.close.contains(x, y)) return BigPart::Close;
     if (bigLayerAt(b, x, y) >= 0) return BigPart::Layer;  // 3.0.11-beta.119
+    if (b.styleChip.w > 0 && b.styleChip.contains(x, y)) return BigPart::Style;  // 3.0.11-beta.120
     if (b.map.contains(x, y)) return BigPart::Map;
     if (x >= 0 && y >= 0 && x < float(b.w) && y < float(b.h)) return BigPart::Header;
     return BigPart::None;
@@ -857,11 +907,19 @@ void paintBig(panel::Picture& out, const panel::Picture& map, const Big& b, cons
                          on ? kAccent : kWhite, on ? 0.7f : 0.16f, edge);
         layerSign(out, Layer(i), c.x + c.h / 2, c.y + c.h / 2, 6 * s, s, on);
     }
+    if (b.styleChip.w > 0) {  // 3.0.11-beta.120: «Схема» - lit gold while it shows
+        const panel::Box& c = b.styleChip;
+        const bool over = sc.bigHover == BigPart::Style;
+        panel::roundRect(out, c, c.h / 2, sc.scheme ? kAccent : kDark,
+                         sc.scheme ? (over ? 0.42f : 0.32f) : (over ? 0.9f : 0.7f), sc.scheme ? kAccent : kWhite,
+                         sc.scheme ? 0.8f : 0.16f, edge);
+        schemeSign(out, c.x + c.h / 2, c.y + c.h / 2, 6 * s, true);
+    }
     if (sc.opacity < 1) panel::fade(out, sc.opacity);
 }
 
 std::vector<Words> bigWords(const Big& b, const Scene& sc, const std::string& title, const std::string& cell,
-                            const std::string* layerNames) {
+                            const std::string* layerNames, const std::string& styleName) {
     std::vector<Words> out;
     const float s = b.s;
     const float cellW = std::round(110 * s);
@@ -890,6 +948,11 @@ std::vector<Words> bigWords(const Big& b, const Scene& sc, const std::string& ti
         if (i == int(Layer::Kafra))
             out.push_back(Words{panel::Box{c.x + c.h / 2 - 6 * s, c.y + c.h / 2 - 6 * s, 12 * s, 12 * s}, "K",
                                 on ? kWhite : kMuted, 9 * s, true, Align::Center});
+    }
+    if (b.styleChip.w > 0 && !styleName.empty()) {  // 3.0.11-beta.120
+        const panel::Box& c = b.styleChip;
+        out.push_back(Words{panel::Box{c.x + c.h, c.y, c.w - c.h - 8 * s, c.h}, styleName, sc.scheme ? kText : kMuted,
+                            12 * s, true, Align::Left});
     }
     return out;
 }

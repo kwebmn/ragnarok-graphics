@@ -162,7 +162,7 @@ void Console::build(Lang lang, const Config& config) {
             rows_.push_back(Row{Kind::Layout, "", 0});  // 3.0.11-beta.75: «Розміщення інтерфейсу»
             rows_.push_back(Row{Kind::Box, "interface.minimap", 0});
             for (const char* k : {"interface.minimap_npcs", "interface.minimap_warps", "interface.minimap_kafra",
-                                  "interface.minimap_party", "interface.minimap_mobs",
+                                  "interface.minimap_party", "interface.minimap_style", "interface.minimap_mobs",
                                   "interface.reference"})
                 if (settingOf(k)) rows_.push_back(Row{Kind::Box, k, 0});  // 3.0.11-beta.6: its hints
             if (settingOf("interface.minimap_way"))  // 3.0.11-beta.33: the way on the ground

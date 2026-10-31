@@ -28,6 +28,10 @@ struct Show {
     // 3.0.11-beta.119 (R-5Z6J2S): [interface] minimap_kafra / minimap_party - the Kafras, the party's faces; each
     // layer (with npcs and warps) also switched by the maps' own buttons, written to uaro-graphics.ini
     bool kafra = true, party = true;
+    // 3.0.11-beta.120 (the owner: «карта ... какаято не красивая»): [interface] minimap_style = scheme - the maps drawn
+    // from the server's walkable cells (core/minimap_proto schemePixels) in place of the game's picture; switched by
+    // the maps' own button too
+    bool scheme = false;
 };
 void frame(HWND game, const Show& show, double k, int targetWidth, int targetHeight);
 // 3.0.11-beta.35: its panel's box in the target while it shows (the buffs' column stands under it); false: not shown

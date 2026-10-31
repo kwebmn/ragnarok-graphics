@@ -311,6 +311,17 @@ The owner 31.10: «Полоски HP мобов - всем показывай»,
   minimap_party (new, on; the Kafras out of minimap_npcs) beside minimap_npcs / minimap_warps; a click writes the key
   into uaro-graphics.ini (editIniFile, the app's box follows) and holds the wanted look up to 5 s till the settings
   say it (withWanted). Tests minimap_proto_layers_switched, config_interface_minimap_layers; suite 2089/0.
+- R-4T7N4D (the owner, 31.10 on .119: «пишет что одето sleep arrow, хотя одеты обычные»; its «Спорядження» «10
+  thing(s) worn» - .118's fix holds) and «карта ... какаято не красивая, может другую попробовать или сделать
+  переключалку слоев разных?» (3.0.11-beta.120): the login's stackables list (0x01ee) gives the worn arrows worn
+  0x8000 and nothing ever clears it (0x013c only sets +0xEEC, the take-off 0x00ac for 0x8000 only zeroes +0xEEC); the
+  server sends 0x013c at the login too (uAthena clif_inventorylist -> clif_arrowequip) - the arrows worn are the bag's
+  thing at +0xEEC alone in «Речі», «Спорядження» and the character block. The maps: «Схема» -
+  minimap::schemePixels from walkgrid (floor 0x6F7A8C, the part reached 0xB3BDCB, walls 0x1B2029, a rim 0x3C4554;
+  4 px a cell, prepare()d), [interface] minimap_style = picture | scheme (picture first), the switch a round button
+  after the layers' (Part::Style) and a chip «Схема» after the layers' under the big map (BigPart::Style), written to
+  the ini as the layers. Tests minimap_proto_scheme_from_the_walkable_cells, minimap_proto_style_switch_places,
+  config_interface_minimap_style; suite 2092/0.
 - Stage 5 research: 0x00c4 deal type; 0x00c6 buy list (11 B each: price.L discount.L type.B nameid.W)
   -> session deal list +0xF28 (count +0xF2C, FUN_0062bbb0(rec, 0); FUN_004ffd30 copies the record's text at +0x11 into
   m_itemName) + windows 0x16 (mgr+0xEC, class 0x69B3E0, SendMsg 0x4AFC00: 0x24 0 buy / 1 sell) and 0x17 (buy cart,

@@ -496,6 +496,9 @@ Config parseConfig(const std::string& text) {
             setBool(val, c.minimapNpcs);
         } else if (key == "interface.minimap_warps") {
             setBool(val, c.minimapWarps);
+        } else if (key == "interface.minimap_style") {  // 3.0.11-beta.120: the maps' picture
+            if (val == "picture") c.minimapStyle = MapStyle::Picture;
+            if (val == "scheme") c.minimapStyle = MapStyle::Scheme;
         } else if (key == "interface.minimap_kafra") {  // 3.0.11-beta.119: the map's layers
             setBool(val, c.minimapKafra);
         } else if (key == "interface.minimap_party") {
@@ -949,6 +952,8 @@ const char* targetRingToken(TargetRing r) {
 const char* mobHpToken(MobHp m) {
     return m == MobHp::Off ? "off" : m == MobHp::Target ? "target" : m == MobHp::All ? "all" : "wounded";
 }
+
+const char* mapStyleToken(MapStyle m) { return m == MapStyle::Scheme ? "scheme" : "picture"; }
 
 const char* wayOnGroundToken(WayOnGround w) {
     return w == WayOnGround::Line ? "line" : w == WayOnGround::Off ? "off" : "steps";

@@ -879,6 +879,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
                                    config.minimapWay, config.minimapReach, config.minimapHd};
     minimapShow.kafra = config.minimapKafra;  // 3.0.11-beta.119: the map's layers
     minimapShow.party = config.minimapParty;
+    minimapShow.scheme = config.minimapStyle == MapStyle::Scheme;  // 3.0.11-beta.120: the maps' picture
     minimapproto::frame(window, minimapShow, pk, pw, ph);
     // 3.0.11-beta.35: [interface] buffs - the buffs' column under the new minimap, the game's icons hidden
     buffcolumn::frame(window, config.buffs, config.buffsOverflow, pk, pw, ph);

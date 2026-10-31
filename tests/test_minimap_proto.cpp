@@ -476,3 +476,39 @@ TEST(minimap_proto_layers_switched) {
     CHECK(b.chips[1].x > b.chips[0].x + b.chips[0].w);
     CHECK(b.y + b.h <= 900);
 }
+
+// 3.0.11-beta.120 (the owner: «карту в отчете, она какаято не красивая, может другую попробовать или сделать
+// переключалку слоев разных?»): «Схема» - the map drawn from its walkable cells (walkgrid): the floor light (the part
+// reached on foot lighter), walls dark, a darker rim where the floor meets a wall; `px` pixels a cell, rows north first
+TEST(minimap_proto_scheme_from_the_walkable_cells) {
+    // 4 x 3 cells, y 0 the south row: a floor of two cells at (1, 1) and (2, 1), the rest walls
+    std::vector<uint8_t> cells(12, 0);
+    cells[1 * 4 + 1] = cells[1 * 4 + 2] = 1;
+    const walkgrid::Grid g = walkgrid::fromCells(4, 3, cells);
+    int w = 0, h = 0;
+    const std::vector<uint32_t> px = minimap::schemePixels(g, nullptr, 4, w, h);
+    CHECK(w == 16 && h == 12 && px.size() == size_t(w) * size_t(h));
+    const auto at = [&](int x, int y) { return px[size_t(y) * size_t(w) + size_t(x)]; };
+    CHECK(at(0, 0) == minimap::kSchemeWall);                 // the north-west corner: a wall
+    CHECK(at(4 + 1, 4 + 1) == minimap::kSchemeFloor);         // (1, 1)'s inside (the middle row both ways)
+    CHECK(at(4, 4 + 1) == minimap::kSchemeEdge);              // its west edge: a wall beyond it
+    CHECK(at(4 + 3, 4 + 1) == minimap::kSchemeFloor);         // its east edge: the floor goes on
+    const std::vector<uint8_t> reach(12, 1);  // every cell reached: the floor lighter
+    const std::vector<uint32_t> lit = minimap::schemePixels(g, &reach, 4, w, h);
+    CHECK(lit[size_t(4 + 1) * size_t(w) + size_t(4 + 1)] == minimap::kSchemeReached);
+    CHECK(lit[0] == minimap::kSchemeWall);
+}
+
+// 3.0.11-beta.120: the picture's switch - a round button after the layers' in the minimap's top left, a chip after
+// the layers' under the big map
+TEST(minimap_proto_style_switch_places) {
+    const minimap::Layout L = minimap::layout(1920, 1080, 1.0f, false, 0);
+    const panel::Box& st = L.style;
+    CHECK(st.w > 0 && st.x > L.layers[minimap::kLayers - 1].x && st.y == L.layers[0].y && st.x + st.w <= L.map.w);
+    CHECK(minimap::partAt(L, st.x + st.w / 2, st.y + st.h / 2) == minimap::Part::Style);
+    const float widths[minimap::kLayers] = {90, 70, 80, 75};
+    const minimap::Big b = minimap::bigLayout(1600, 900, 1.0f, minimap::MapSize{312, 392}, widths, 84);
+    CHECK(b.styleChip.w == 84 && b.styleChip.x > b.chips[minimap::kLayers - 1].x && b.styleChip.y == b.chips[0].y);
+    CHECK(b.styleChip.x + b.styleChip.w <= float(b.w));
+    CHECK(minimap::bigPartAt(b, b.styleChip.x + 5, b.styleChip.y + 5) == minimap::BigPart::Style);
+}

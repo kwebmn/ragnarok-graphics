@@ -74,6 +74,12 @@ struct State {
     int picW = 0, picH = 0;
     std::vector<uint8_t> bmp;  // its file: the AI pack's keys
     std::shared_ptr<const minimap::MapPicture> hd;
+    // 3.0.11-beta.120: «Схема» - the map drawn from its walkable cells (made again for another map or part), the style
+    // switched on the map wanted till the settings say it
+    minimap::MapPicture scheme;
+    std::string schemeKey;
+    int styleWant = -1;
+    ULONGLONG styleWantAt = 0;
     bool hdOn = true, hdAsked = false;
     minimap::MapSize size;
     minimap::Cell cell;
@@ -586,10 +592,42 @@ void reachFrame(State& s, bool on) {
     }
 }
 
-// 3.0.11-beta.72: the map's picture shown - four times bigger once found ([interface] minimap_hd), else the game's
+// 3.0.11-beta.72: the map's picture shown - four times bigger once found ([interface] minimap_hd), else the game's;
+// 3.0.11-beta.120: «Схема» when chosen and the map's cells are known
 const minimap::MapPicture* shownPicture(const State& s) {
+    if (s.show.scheme && !s.scheme.levels.empty()) return &s.scheme;
     const minimap::MapPicture* p = s.hdOn && s.hd ? s.hd.get() : &s.prepared;
     return p->levels.empty() ? nullptr : p;
+}
+
+// 3.0.11-beta.120: «Схема» made when chosen - the map's walkable cells, the part the player stands in lighter (4
+// pixels a cell); nothing for a map the walkable file lacks (the game's picture then)
+void schemeFrame(State& s) {
+    if (!s.show.scheme || !s.index || !s.index->walk) return;
+    const auto it = s.index->walk->find(s.map);
+    if (it == s.index->walk->end() || it->second.w != s.size.w || it->second.h != s.size.h) {
+        if (!s.scheme.levels.empty()) {
+            s.scheme = minimap::MapPicture{};
+            s.schemeKey.clear();
+            s.dirty = s.bigDirty = true;
+        }
+        return;
+    }
+    const walkgrid::Grid& grid = it->second;
+    const uint8_t part = s.cellKnown ? walkgrid::partOf(grid, s.cell.x, s.cell.y) : walkgrid::kWall;
+    const std::string key = s.map + ':' + std::to_string(part);
+    if (key == s.schemeKey || (part == walkgrid::kWall && !s.schemeKey.empty() &&
+                               s.schemeKey.compare(0, s.map.size() + 1, s.map + ':') == 0))
+        return;  // the same, or on a wall a moment: the part kept
+    const ULONGLONG t0 = GetTickCount64();
+    const std::vector<uint8_t> mask = part == walkgrid::kWall ? std::vector<uint8_t>{} : walkgrid::partMask(grid, part);
+    int w = 0, h = 0;
+    const std::vector<uint32_t> pixels = minimap::schemePixels(grid, mask.empty() ? nullptr : &mask, 4, w, h);
+    s.scheme = minimap::prepare(pixels, w, h);
+    s.schemeKey = key;
+    s.dirty = s.bigDirty = true;
+    LOG_INFO("minimap: «Схема» of %s (part %d, %dx%d cells) made in %llu ms", s.map.c_str(), int(part), grid.w, grid.h,
+             static_cast<unsigned long long>(GetTickCount64() - t0));
 }
 
 // 3.0.11-beta.72: asked once a map with the switch on, shown when the thread has it (off: the game's at once)
@@ -632,6 +670,10 @@ Show withWanted(State& s, Show show, ULONGLONG now) {
         }
         *flags[i] = s.layerWant[i] == 1;
     }
+    if (s.styleWant >= 0) {  // 3.0.11-beta.120: «Схема» likewise
+        if (show.scheme == (s.styleWant == 1) || now - s.styleWantAt > 5000) s.styleWant = -1;
+        else show.scheme = s.styleWant == 1;
+    }
     return show;
 }
 
@@ -648,6 +690,19 @@ void switchLayer(State& s, int layer) {
              written ? " ([interface] written)" : " - uaro-graphics.ini could not be written");
 }
 
+// 3.0.11-beta.120: the picture's switch clicked - «Схема» or the game's picture at once, uaro-graphics.ini told
+void switchStyle(State& s) {
+    const bool scheme = !s.show.scheme;
+    s.styleWant = scheme ? 1 : 0;
+    s.styleWantAt = GetTickCount64();
+    s.show.scheme = scheme;
+    s.dirty = s.bigDirty = true;
+    const bool written =
+        editIniFile(ourFile(layout::File::Ini), {{"interface", "minimap_style", scheme ? "scheme" : "picture"}});
+    LOG_INFO("minimap: «%s» on the map%s", scheme ? "Схема" : "the game's picture",
+             written ? " ([interface] minimap_style written)" : " - uaro-graphics.ini could not be written");
+}
+
 minimap::Scene sceneOf(const State& s) {
     minimap::Scene sc;
     sc.picture = shownPicture(s);  // 3.0.11-beta.72 (no argb: never prepared again at each painting)
@@ -661,6 +716,7 @@ minimap::Scene sceneOf(const State& s) {
         sc.marks.insert(sc.marks.end(), s.members.begin(), s.members.end());  // 3.0.11-beta.83: after the hints
     sc.layers = layersOf(s.show);
     sc.hoverLayer = s.hoverLayer;
+    sc.scheme = s.show.scheme && !s.scheme.levels.empty();  // 3.0.11-beta.120
     sc.path = s.path;
     if (!s.plot.empty() && s.plotMap == s.map) {  // 3.0.11-beta.71: the points set - the last a pin
         sc.pin = true;
@@ -703,6 +759,7 @@ void render(State& s) {
     if (s.cellKnown) t.cell = std::to_string(s.cell.x) + ", " + std::to_string(s.cell.y);
     t.folded = s.folded;
     for (int i = 0; i < minimap::kLayers; ++i) t.layers[i] = layerName(i);  // 3.0.11-beta.119
+    t.style = settings::tr(startup().lang, settings::Text::MinimapLayerScheme);  // 3.0.11-beta.120
     t.route = !s.plotLines.empty() ? s.plotLines : s.routeLines;  // 3.0.11-beta.71: the way set on the map first
     for (const Line& l : s.lines)
         t.list.push_back(minimap::Line{l.left, l.right, l.boss ? kBossText : 0u,
@@ -729,12 +786,17 @@ void renderBig(State& s) {
         const float s28 = std::round(28 * s.scale);
         widths[i] = std::round(float(wordsWidth(utf8Wide(names[i]), 12 * s.scale, true)) + s28 + 14 * s.scale);
     }
-    s.bigLayout = minimap::bigLayout(s.targetW, s.targetH, s.scale, s.size, widths);
+    const std::string styleName = settings::tr(startup().lang, settings::Text::MinimapLayerScheme);  // .120
+    const float styleWidth =
+        std::round(float(wordsWidth(utf8Wide(styleName), 12 * s.scale, true)) + std::round(28 * s.scale) +
+                   14 * s.scale);
+    s.bigLayout = minimap::bigLayout(s.targetW, s.targetH, s.scale, s.size, widths, styleWidth);
     const uicost::Paint cost("big map", s.bigLayout.w, s.bigLayout.h);  // 3.0.11-beta.55 (beta.57: its size known)
     s.bigPaintedAt = GetTickCount64();
     const int picture = sc.picture ? sc.picture->levels.front().w : 0;  // 3.0.11-beta.72: the game's or the bigger
     const std::string key = s.map + "|" + std::to_string(s.bigLayout.w) + "x" + std::to_string(s.bigLayout.h) + "|" +
-                            std::to_string(picture) + "|" + std::to_string(s.reach.empty() ? -1 : int(s.reachPart));
+                            std::to_string(picture) + "|" + std::to_string(s.reach.empty() ? -1 : int(s.reachPart)) +
+                            "|" + (sc.scheme ? s.schemeKey : std::string());  // 3.0.11-beta.120
     if (key != s.bigMapOf) {  // the map's picture at its size: made once
         s.bigMapOf = key;
         minimap::paintBigMap(s.bigMap, s.bigLayout, sc);
@@ -742,7 +804,7 @@ void renderBig(State& s) {
     minimap::paintBig(s.bigPicture, s.bigMap, s.bigLayout, sc);
     const std::string cell = s.cellKnown ? std::to_string(s.cell.x) + ", " + std::to_string(s.cell.y) : "";
     drawWords(s.bigPicture, gdiWords(minimap::bigWords(s.bigLayout, sc, shortTitle(s, s.map) + " \xC2\xB7 " + s.map,
-                                                       cell, names)));
+                                                       cell, names, styleName)));
     s.bigDirty = false;
     s.bigUpload = true;
 }
@@ -925,6 +987,11 @@ void frame(HWND game, const Show& show, double k, int targetWidth, int targetHei
         buildHints(s);
         s.dirty = s.bigDirty = true;
     }
+    if (want.scheme != s.show.scheme) {  // 3.0.11-beta.120: «Схема» or the game's picture
+        s.show.scheme = want.scheme;
+        s.dirty = s.bigDirty = true;
+    }
+    schemeFrame(s);
     if (!plotFrame(s)) followFrame(s);  // 3.0.11-beta.71: the way set on the map first
     {  // 3.0.11-beta.83: the party's members here, their faces as the marks' size
         const int side = std::max(8, int(std::lround(12 * s.scale)));
@@ -1043,6 +1110,7 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
             if (m == WM_LBUTTONDOWN && bp == minimap::BigPart::Close) setBig(s, false);
             if (m == WM_LBUTTONDOWN && bp == minimap::BigPart::Layer)  // 3.0.11-beta.119: a layer on or off
                 switchLayer(s, minimap::bigLayerAt(s.bigLayout, bx, by));
+            if (m == WM_LBUTTONDOWN && bp == minimap::BigPart::Style) switchStyle(s);  // 3.0.11-beta.120
             const bool ctrl = GetKeyState(VK_CONTROL) < 0, shift = GetKeyState(VK_SHIFT) < 0;
             minimap::Cell at;
             if (m == WM_LBUTTONDOWN && bp == minimap::BigPart::Map && !ctrl &&
@@ -1084,6 +1152,7 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     if (m == WM_LBUTTONDOWN) {
         switch (part) {
             case minimap::Part::Layer: switchLayer(s, minimap::layerAt(s.layout, px, py)); break;  // .119
+            case minimap::Part::Style: switchStyle(s); break;                                      // .120
             case minimap::Part::ZoomIn: setZoom(s, s.zoom - 1); break;  // fewer cells: nearer
             case minimap::Part::ZoomOut: setZoom(s, s.zoom + 1); break;
             case minimap::Part::Expand: setBig(s, !s.big); break;

@@ -4947,6 +4947,21 @@ constexpr Entry kTexts[] = {
     {Text::MinimapLayerNpcs, "NPC", "NPC", "NPC"},
     {Text::MinimapLayerKafra, "Kafra", "Кафра", "Кафра"},
     {Text::MinimapLayerParty, "Party", "Група", "Группа"},
+    // 3.0.11-beta.120: the maps' picture
+    {Text::InterfaceMinimapStyle, "The maps' picture", "Картинка карт", "Картинка карт"},
+    {Text::InterfaceMinimapStyleHint,
+     "What the minimap and the big map show under their marks: the game's own picture of the map, or a scheme drawn "
+     "from the server's walkable cells - the floor light (the part you can walk to lighter still), the walls dark. "
+     "The maps' own button switches it too: the last round one in the minimap's top left, «Scheme» under the big map.",
+     "Що показують мінікарта й велика карта під мітками: картинку карти з самої гри або схему, намальовану з клітинок, "
+     "якими можна ходити на сервері, - підлога світла (куди можна дійти - ще світліша), стіни темні. Перемикає й "
+     "кнопка самих карт: остання кругла в лівому верхньому куті мінікарти, «Схема» під великою картою.",
+     "Что показывают миникарта и большая карта под метками: картинку карты из самой игры или схему, нарисованную из "
+     "клеток, по которым можно ходить на сервере, - пол светлый (куда можно дойти - ещё светлее), стены тёмные. "
+     "Переключает и кнопка самих карт: последняя круглая в левом верхнем углу миникарты, «Схема» под большой картой."},
+    {Text::MinimapStylePicture, "The game's picture", "Картинка гри", "Картинка игры"},
+    {Text::MinimapStyleScheme, "Scheme", "Схема", "Схема"},
+    {Text::MinimapLayerScheme, "Scheme", "Схема", "Схема"},
     // 3.0.11-beta.65: the concept's «Подсветка, куда можно дойти» - an experiment
     {Text::InterfaceMinimapReach, "Light where you can walk (an experiment)",
      "Підсвітити, куди можна дійти (експеримент)", "Подсветить, куда можно дойти (эксперимент)"},

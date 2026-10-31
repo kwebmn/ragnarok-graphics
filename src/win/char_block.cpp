@@ -49,10 +49,10 @@ constexpr ULONGLONG kWarnMs = 2000;  // the low HP warning's
 constexpr ULONGLONG kTipMs = 400, kPressMs = 160;  // 3.0.11-beta.51: the concept's tip after 0.4 s; a press shown
 // 3.0.11-beta.114 (the concept «Концепция окон и инвентаря», question 10 «можна»): the bag (win/item_window's: the
 // session's list, a node's ITEM_INFO at +8 - its type +0, where it is worn +0x0C, how many +0x10, the item's number as
-// text +0x30/+0x34), the ammo's place bit; read every half a second, a worn ammo gone from the bag shown as 0 a while
-constexpr uint32_t kBag = 0x771148 + 0xF1C, kInfo = 8, kAmmoBit = 0x8000;
+// text +0x30/+0x34); read every half a second, a worn ammo gone from the bag shown as 0 a while
+constexpr uint32_t kBag = 0x771148 + 0xF1C, kInfo = 8;
 // 3.0.11-beta.118: the arrows worn during the play are known by their place only (the session's +0xEEC, set by the
-// server's 0x013c) - the worn 0x8000 is theirs at the login alone
+// server's 0x013c - at the login too); 3.0.11-beta.120: the login's worn 0x8000 not looked at (stale after a change)
 constexpr uint32_t kAmmoNow = 0x771148 + 0xEEC;
 constexpr size_t kInfoSize = 0x48, kMostNodes = 256;
 constexpr ULONGLONG kAmmoReadMs = 500, kAmmoGoneMs = 30000;
@@ -306,7 +306,7 @@ void readAmmo(State& s, ULONGLONG now) {
         const int thing = ptr && len && len <= 16 && readGame(ptr, digits, len) ? std::atoi(digits) : 0;
         ++things;
         if (thing && thing == s.ammoId) stillThere = true;
-        if ((rd32(raw, 0x0C) & kAmmoBit) || (ammo && rd32(raw, 0x08) == ammo)) {
+        if (ammo && rd32(raw, 0x08) == ammo) {  // 3.0.11-beta.120: by their place alone (the login's flag stays)
             count = int(rd32(raw, 0x10));
             id = thing;
             type = int(rd32(raw, 0x00));

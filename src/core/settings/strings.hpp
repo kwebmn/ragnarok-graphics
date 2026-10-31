@@ -472,6 +472,8 @@ enum class Text : uint16_t {
     // 3.0.11-beta.119 (R-5Z6J2S): the map's layers - their switches and the maps' own buttons
     InterfaceMinimapKafra, InterfaceMinimapKafraHint, InterfaceMinimapParty, InterfaceMinimapPartyHint,
     MinimapLayerWarps, MinimapLayerNpcs, MinimapLayerKafra, MinimapLayerParty,
+    // 3.0.11-beta.120: the maps' picture
+    InterfaceMinimapStyle, InterfaceMinimapStyleHint, MinimapStylePicture, MinimapStyleScheme, MinimapLayerScheme,
     InterfaceMinimapReach, InterfaceMinimapReachHint,  // 3.0.11-beta.65
     InterfaceMinimapHd, InterfaceMinimapHdHint,        // 3.0.11-beta.72
     InterfacePackIcons, InterfacePackIconsHint,        // 3.0.11-beta.74

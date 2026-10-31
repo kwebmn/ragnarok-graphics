@@ -63,7 +63,9 @@ constexpr int kDropMsg = 0x12;
 constexpr uint32_t kBag = 0x771148 + 0xF1C, kInfo = 8;
 constexpr size_t kInfoSize = 0x48, kMostNodes = 256;
 // 3.0.11-beta.118 (the owner: «нету стрел»): the arrows worn stay in the bag - their place at 0x772034 (the session's
-// +0xEEC, set by 0x013c) or their worn 0x8000 (the stackables' list 0x01ee at the login); the worn gear is not in it
+// +0xEEC, set by 0x013c - the server sends it at the login too, after the stackables' list); the worn gear is not in
+// it. 3.0.11-beta.120 (R-4T7N4D: «пишет что одето sleep arrow, хотя одеты обычные»): the place alone - the worn
+// 0x8000 the login's list gives stays on those arrows after others are worn (0x013c and 0x00ac never clear it)
 constexpr uint32_t kAmmoNow = 0x772034, kAmmoBit = 0x8000;
 constexpr ULONGLONG kReadMs = 200, kConfirmMs = 3000, kBlinkMs = 530;
 constexpr ULONGLONG kTipMs = 400;  // 3.0.11-beta.51: a cell's tip after this long pointed at (the concept's)
@@ -269,7 +271,7 @@ void readBag(State& s) {
         it.identified = raw[0x3C] != 0;
         const int refine = int(rd32(raw, 0x40));
         it.refine = refine > 0 && refine <= 20 ? refine : 0;
-        it.worn = (worn & kAmmoBit) != 0 || (ammo && index == ammo);  // 3.0.11-beta.118: the arrows worn
+        it.worn = ammo && index == ammo;  // 3.0.11-beta.118: the arrows worn (3.0.11-beta.120: by their place alone)
         const std::string id = std::to_string(it.id);
         std::string words;  // an unidentified one's own words, else the item's
         if (!it.identified) {
