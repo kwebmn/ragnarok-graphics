@@ -1,3 +1,11 @@
+# uaRO Graphics 3.0.11-beta.114 — what's new
+
+The windows and inventory concept, question 10 — the arrows' stock in the "Character block":
+- With fewer than 50 arrows worn, **"Arrows N"** shows on the line under the bars: amber, red at 10 or fewer.
+- The arrows ran out (gone from the bag) — a **red "0"** for half a minute, so it is clear why the character stopped
+  shooting. Arrows taken off by hand — the line just goes.
+- Bullets and thrown weapons say "Ammo".
+
 # uaRO Graphics 3.0.11-beta.113 — what's new
 
 The windows and inventory concept, question 9 — "Items"' new tabs:
