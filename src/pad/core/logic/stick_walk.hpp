@@ -30,8 +30,9 @@ int lead(uint16_t speedMs);
 // The cell to ask for: the last walkable one along the way within `lead` cells (none known: `lead` cells on); blocked
 // at once - slid along the wall: the way turned 45° either side or along either axis, the one walking furthest (the
 // nearer the stick's way on a tie); nowhere - `here`. 3.0.11-beta.103: `cut` (when given) - whether the march that
-// gave it stopped at a cell that does not walk short of the lead (the arrow's red bar across its end)
-Cell destination(Cell here, Way way, int lead, const GroundGrid* ground, bool* cut = nullptr);
+// gave it stopped at a cell that does not walk short of the lead (the arrow's red bar across its end).
+// 3.0.11-beta.104: `along` (when given) - that march's way: the stick's own or the slide's (the arrow lies along it)
+Cell destination(Cell here, Way way, int lead, const GroundGrid* ground, bool* cut = nullptr, Way* along = nullptr);
 
 // Letting go: the cell the character steps into along its way (the server stops it there, no step back), where it is
 // when that one does not walk

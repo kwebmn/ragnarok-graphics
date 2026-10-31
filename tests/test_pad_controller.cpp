@@ -132,6 +132,29 @@ TEST(ctl_direct_walk_tells_the_arrow_its_way_and_a_wall) {
     CHECK(!c.walkCut());
 }
 
+// 3.0.11-beta.104: the arrow lies along the way the character walks - a slide's along a post, not into it - and is as
+// long as the lead (cells by the speed)
+TEST(ctl_direct_walk_tells_the_way_it_marches_and_the_lead) {
+    Controller c(Config{});
+    c.setDirectWalk(true);
+    c.setLook(0, 1);
+    GroundGrid g;
+    g.w = g.h = 200;
+    g.walk.assign(200 * 200, 1);
+    g.walk[size_t(100) * 200 + 101] = 0;  // a post right in front
+    c.setGround(&g);
+    WorldState w = world();
+    PadState p = pad();
+    p.lx = 1.0f;
+    c.tick(p, w, view(), 100);
+    const double d = std::sqrt(0.5);
+    CHECK(std::fabs(c.walkWay().east - d) < 1e-6 && std::fabs(std::fabs(c.walkWay().north) - d) < 1e-6);
+    CHECK_EQ(c.walkLead(), 5);
+    g.walk[size_t(100) * 200 + 101] = 1;  // gone: straight on again
+    c.tick(p, w, view(), 300);
+    CHECK(std::fabs(c.walkWay().east - 1) < 1e-9);
+}
+
 TEST(ctl_walk_radius_changes_at_once) {
     Controller c(Config{});
     WorldState w = world();

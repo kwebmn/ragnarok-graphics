@@ -115,22 +115,47 @@ std::vector<Tri> walkArrowShape(float x0, float z0, int toX, int toY, const Heig
                                 float lift);
 // 3.0.11-beta.103 (the owner: «можешь сделать настройку, чтобы можно было выбрать эту стрелку в конфигураторе»): the
 // stick's arrow in each look of the doc «Стрелка хода с контроллера - варианты» ([interface] walk_arrow) over the map's
-// heights, drawn along `way` (turned softly by the caller) to the cell asked for: chevrons running on to a gold diamond
-// in the cell (B), a slim tapered arrow to the cell's gold corners (A), beta.102's concept arrow, a ring round the feet
-// with a gold pointer and a small gold ring in the cell (C), dots to a gold ring (D), the cell's gold frame with a
-// wedge at the feet (E); a wall cutting the way short - a reddish bar across it past the cell. Each look over its dark
-// shade (the same shapes a little bigger, black at half their alpha), every colour times `alpha`; nothing when the
-// character stands on that cell (a wall's bar alone) or a corner is off the map
+// heights, drawn along `way` `len` on (as glide() gives them) to a cell-sized end: chevrons running on to a gold
+// diamond (B), a slim tapered arrow to a cell's gold corners (A), beta.102's concept arrow, a ring round the feet
+// with a gold pointer and a small gold ring at the end (C), dots to a gold ring (D), a cell's gold frame with a wedge
+// at the feet (E); a wall cutting the way short - a reddish bar across it past the end. Each look over its dark shade
+// (the same shapes a little bigger, black at half their alpha), every colour times `alpha`; nothing when the end is
+// under the feet (a wall's bar alone) or a corner is off the map
 struct WalkArrow {
     float x0 = 0, z0 = 0;      // the character's feet (the game's world)
-    float wayX = 1, wayZ = 0;  // the way drawn along (x east, z north; none: to the cell)
-    int toX = 0, toY = 0;      // the cell asked for
+    float wayX = 1, wayZ = 0;  // the way drawn along (x east, z north)
+    float len = 0;             // 3.0.11-beta.104: the end's middle along it (world units; it was the asked cell)
     bool blocked = false;      // a wall right past it
     float phase = 0;           // the chevrons' run, 0..1
     float alpha = 1;           // faded in and out
 };
 std::vector<Tri> walkShape(WalkLook look, const WalkArrow& arrow, const Heights& g, int cellSize, float sign,
                            float lift);
+
+// 3.0.11-beta.104 (the owner: «стрелочки очень дергаются при движении»): the arrow gliding with the character. The
+// cell asked for is the game's cell + the lead along the way, worked out again at every frame: it hopped a cell on
+// each time the character's cell changed (6-7 times a second at 150 ms a cell) while the feet glided up to it - the
+// arrow's end and its cell shook by up to a cell in a frame (tests/test_walk_glide's model of the real asks: 0.9-1.3
+// cells, 0.19 a frame on average against the feet, where none is right). Now the arrow lies along the way the
+// character walks (the march's: the stick's own or a slide's along a wall) eased round in 80 ms, as long as the lead
+// while the way is open, up to the asked cell along it when a wall cuts the way short (that cell stays put as the
+// character comes up: its end kept where it is on the ground as the feet go on, so the easing does not lag into the
+// wall), its length eased in 100 ms; the first frame of an arrow takes both at once, as a warp does (the feet a lead
+// away from a frame ago)
+struct WalkAim {
+    float x0 = 0, z0 = 0;        // the feet
+    float wayX = 1, wayZ = 0;    // the march's way
+    float cellX = 0, cellZ = 0;  // the asked cell's middle
+    bool cut = false;            // a wall short of the lead: up to that cell
+    float lead = 0;              // the lead's cells in world units
+};
+struct WalkGlide {
+    bool has = false;
+    float angle = 0;  // radians from east (x) toward north (z)
+    float len = 0;    // world units along it
+    float x0 = 0, z0 = 0;  // the feet a frame ago
+};
+void glide(WalkGlide& g, const WalkAim& aim, float dtMs);
 // The triangles on the screen as strip() places its corners; one with a corner behind the near plane left out
 size_t placeTris(const std::vector<Tri>& tris, const float view[12], const camera::Projection& p, float bias,
                  std::vector<Vertex>& out);

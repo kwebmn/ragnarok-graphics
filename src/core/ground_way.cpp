@@ -588,20 +588,10 @@ std::vector<Tri> walkArrowShape(float x0, float z0, int toX, int toY, const Heig
 
 std::vector<Tri> walkShape(WalkLook look, const WalkArrow& a, const Heights& g, int cellSize, float sign,
                            float lift) {
-    if (look == WalkLook::Off || cellSize <= 0 || g.w <= 0 || g.h <= 0 || a.alpha <= 0) return {};
-    const float cs = float(cellSize);
-    float cx = 0, cz = 0;
-    cellToWorld(a.toX, a.toY, g.w, g.h, cellSize, cx, cz);
-    const float dx = cx - a.x0, dz = cz - a.z0, len = std::hypot(dx, dz), way = std::hypot(a.wayX, a.wayZ);
-    float ux = 0, uz = 0;
-    if (way > 1e-4f) {
-        ux = a.wayX / way, uz = a.wayZ / way;
-    } else if (len > 1e-4f) {
-        ux = dx / len, uz = dz / len;
-    } else {
-        return {};
-    }
-    const Frame f{a.x0, a.z0, ux, uz, len, cx, cz, cs};
+    const float way = std::hypot(a.wayX, a.wayZ);
+    if (look == WalkLook::Off || cellSize <= 0 || g.w <= 0 || g.h <= 0 || a.alpha <= 0 || way < 1e-4f) return {};
+    const float cs = float(cellSize), ux = a.wayX / way, uz = a.wayZ / way, len = std::max(0.0f, a.len);
+    const Frame f{a.x0, a.z0, ux, uz, len, a.x0 + ux * len, a.z0 + uz * len, cs};
     std::vector<Flat> flat;
     for (const bool shade : {true, false}) {  // the dark shade first, under the rest
         Pen pen{flat, shade, shade ? kShadeGrow * cs : 0.0f, std::min(1.0f, a.alpha)};
@@ -623,6 +613,26 @@ std::vector<Tri> walkShape(WalkLook look, const WalkArrow& a, const Heights& g, 
         }
     }
     return onGround(flat, g, cs, sign, lift);
+}
+
+void glide(WalkGlide& g, const WalkAim& aim, float dtMs) {
+    constexpr float kTurnMs = 80, kLengthMs = 100;
+    const float way = std::hypot(aim.wayX, aim.wayZ);
+    if (way < 1e-6f) return;
+    const float ux = aim.wayX / way, uz = aim.wayZ / way, angle = std::atan2(uz, ux);
+    const float len = aim.cut ? std::max(0.0f, (aim.cellX - aim.x0) * ux + (aim.cellZ - aim.z0) * uz) : aim.lead;
+    if (g.has && std::hypot(aim.x0 - g.x0, aim.z0 - g.z0) > std::max(aim.lead, 1.0f)) g.has = false;  // a warp
+    if (!g.has) {
+        g = WalkGlide{true, angle, len, aim.x0, aim.z0};
+        return;
+    }
+    if (aim.cut) g.len -= (aim.x0 - g.x0) * ux + (aim.z0 - g.z0) * uz;  // the wall's end stays on the ground
+    g.x0 = aim.x0;
+    g.z0 = aim.z0;
+    const float dt = std::max(0.0f, dtMs);
+    g.angle += std::remainder(angle - g.angle, 6.2831853f) * (1.0f - std::exp(-dt / kTurnMs));
+    g.angle = std::remainder(g.angle, 6.2831853f);
+    g.len += (len - g.len) * (1.0f - std::exp(-dt / kLengthMs));
 }
 
 size_t placeTris(const std::vector<Tri>& tris, const float view[12], const camera::Projection& p, float bias,

@@ -106,9 +106,11 @@ public:
     void setSelfCell(std::optional<Cell> c) { selfCell_ = c; }
     std::optional<Cell> walkTarget() const { return walkTo_; }
     // 3.0.11-beta.103: the stick's way on the ground while it walks (the arrow drawn along it), and whether a wall cuts
-    // the cell asked for short of the lead (a red bar across the arrow's end); false after letting go
-    stickwalk::Way walkWay() const { return way_; }
+    // the cell asked for short of the lead (a red bar across the arrow's end); false after letting go.
+    // 3.0.11-beta.104: the way of the march that gave the cell (a slide's along a wall, not into it) and the lead
+    stickwalk::Way walkWay() const { return walkAlong_; }
     bool walkCut() const { return walkCut_; }
+    int walkLead() const { return walkLead_; }
     // The client's own camera turn (radians, its own count) when it can be read from its memory; nothing
     // otherwise. Once the walk samples show how it maps to the screen, the directions follow it at once.
     void setClientTurn(std::optional<double> radians) {
@@ -218,6 +220,8 @@ private:
     std::optional<stickwalk::Asked> asked_;     // the last cell the stick asked for
     stickwalk::Way way_;                        // the stick's way on the ground (letting go stops along it)
     bool walkCut_ = false;                      // 3.0.11-beta.103: a wall short of the lead
+    stickwalk::Way walkAlong_;                  // 3.0.11-beta.104: the march's way
+    int walkLead_ = 0;
     std::optional<Choosing> choosing_;  // a support skill waits for whom
     NpcDialog dialog_ = NpcDialog::None;
     int number_ = 0;                       // what the pad put into the number field

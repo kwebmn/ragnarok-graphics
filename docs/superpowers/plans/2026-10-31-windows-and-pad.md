@@ -154,6 +154,18 @@ The owner 31.10: «Полоски HP мобов - всем показывай»,
   1.6+ cells away (else the diamond alone) - checked offline (arrowcheck render over the doc's screenshot). Tests
   config_walk_arrow, ground_way_walk_looks, stick_walk_tells_a_wall_cutting_the_way_short,
   ctl_direct_walk_tells_the_arrow_its_way_and_a_wall; suite 2049/0.
+- Arrow shake (3.0.11-beta.104; the owner: «стрелочки очень дергаются при движении»): cause found offline (scratch
+  walksim on the real Controller + a server-like walker, 150/210 ms steps): walkTo_ = the game's cell + the lead,
+  recomputed every frame, hopped a cell on each time the character's cell changed (6-7/s) while the feet glided to it
+  - the end shook 0.19 cells a frame on average (peaks 0.9-1.3), the way to the rounded cell off by 6-7° at 30°. Fix:
+  core/ground_way glide (WalkAim/WalkGlide): along the march's way (stick_walk destination `along`, a slide's along a
+  wall), as long as the lead (Controller walkLead), a wall: up to the asked cell projected on the way, its end kept on
+  the ground as the feet go on (no easing lag into the wall), turn 80 ms / length 100 ms eases, a warp taken anew;
+  WalkArrow.len replaces the cell; ground_marks: QueryPerformanceCounter clock, a per-walk smoothness log line. Model
+  after: 0 cells a frame. Tests ground_way_walk_glide_holds_still_against_the_feet, walk_glide_holds_still_with_the_
+  controller, walk_glide_ends_at_a_wall_with_the_controller, ctl_direct_walk_tells_the_way_it_marches_and_the_lead,
+  stick_walk_tells_the_way_it_marched; suite 2054/0. Ruling R11: the end mark glides (not snapped to the cell under
+  the end: that ticks a cell every 150 ms); cost if wrong: «Лише клітинка» shows a cell-sized square, not a cell.
 - Stage 5 research: 0x00c4 deal type; 0x00c6 buy list (11 B each: price.L discount.L type.B nameid.W)
   -> session deal list +0xF28 (count +0xF2C, FUN_0062bbb0(rec, 0); FUN_004ffd30 copies the record's text at +0x11 into
   m_itemName) + windows 0x16 (mgr+0xEC, class 0x69B3E0, SendMsg 0x4AFC00: 0x24 0 buy / 1 sell) and 0x17 (buy cart,

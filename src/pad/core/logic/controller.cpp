@@ -344,7 +344,8 @@ void Controller::walkDirect(const PadState& pad, float mag, const WorldState& wo
             way_ = stickwalk::wayOf(east, north, std::make_pair(0.0, 1.0));
         }
         const int lead = stickwalk::lead(world.selfSpeed());
-        const Cell dest = stickwalk::destination(me, way_, lead, ground_, &walkCut_);
+        const Cell dest = stickwalk::destination(me, way_, lead, ground_, &walkCut_, &walkAlong_);
+        walkLead_ = lead;
         walkTo_ = dest;
         if (dest == me || !stickwalk::askAgain(asked_, me, dest, way_, lead, now)) return;
         out.packets.push_back(buildWalk(dest));

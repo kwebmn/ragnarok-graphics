@@ -59,11 +59,12 @@ int lead(uint16_t speedMs) {
     return std::clamp(int(std::lround(kLeadMs / speed)) + 1, kLeadLeast, kLeadMost);
 }
 
-Cell destination(Cell here, Way way, int lead, const GroundGrid* ground, bool* cut) {
+Cell destination(Cell here, Way way, int lead, const GroundGrid* ground, bool* cut, Way* along) {
     if (ground && ground->known() && !ground->at(here.x, here.y)) ground = nullptr;  // the grid not this map's
     bool stopped = false;
     const Cell straight = march(here, way, lead, ground, stopped);
     if (cut) *cut = stopped;
+    if (along) *along = way;
     if (straight != here || !ground) return straight;
     std::vector<Way> slides = {turned(way, kQuarter), turned(way, -kQuarter)};  // blocked at once: along the wall
     if (std::fabs(way.east) > 1e-9) slides.push_back(Way{way.east > 0 ? 1.0 : -1.0, 0});
@@ -81,6 +82,7 @@ Cell destination(Cell here, Way way, int lead, const GroundGrid* ground, bool* c
             bestRun = run;
             bestTurn = turn;
             if (cut) *cut = slideCut;
+            if (along) *along = w;
         }
     }
     return best;  // nowhere: still cut (the straight march's wall)

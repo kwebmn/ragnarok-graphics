@@ -327,8 +327,7 @@ TEST(ground_way_walk_looks) {
     a.z0 = z0;
     a.wayX = 1;
     a.wayZ = 0;
-    a.toX = 9;
-    a.toY = 10;
+    a.len = 5.0f * cs;  // 3.0.11-beta.104: its end along the way (it was the cell (9, 10))
     const auto on = [&](const std::vector<groundway::Tri>& t) {
         bool all = !t.empty();
         for (const groundway::Tri& q : t)
@@ -361,11 +360,11 @@ TEST(ground_way_walk_looks) {
     CHECK(nearest(groundway::walkShape(WalkLook::Chevrons, a, g, cs, 1.0f, 0.5f)) > nearest(c));
     a.phase = 0;
     // a short way (a wall two cells on): one chevron, still, before the diamond; next to the feet the diamond alone
-    a.toX = 6;
+    a.len = 2.0f * cs;
     CHECK(parts(groundway::walkShape(WalkLook::Chevrons, a, g, cs, 1.0f, 0.5f), groundway::kPartChevron) == 4);
-    a.toX = 5;
+    a.len = 1.0f * cs;
     CHECK(parts(groundway::walkShape(WalkLook::Chevrons, a, g, cs, 1.0f, 0.5f), groundway::kPartChevron) == 0);
-    a.toX = 9;
+    a.len = 5.0f * cs;
     // the ring: round the feet, a cell and a twentieth out; its gold pointer further on along the way
     const std::vector<groundway::Tri> r = groundway::walkShape(WalkLook::Ring, a, g, cs, 1.0f, 0.5f);
     bool round = parts(r, groundway::kPartRing) > 0, ahead = parts(r, groundway::kPartPointer) > 0;
@@ -392,5 +391,58 @@ TEST(ground_way_walk_looks) {
     for (const groundway::Tri& q : groundway::walkShape(WalkLook::Slim, a, g, cs, 1.0f, 0.5f))
         faded = faded && (q.argb >> 24) <= 0x80u;
     CHECK(faded);
+}
+
+// 3.0.11-beta.104 (the owner: «стрелочки очень дергаются при движении»): the arrow glides with the character - along
+// the way the stick walks, as long as the lead; the asked cell (the game's cell + the lead, hopping a cell on each time
+// the character's cell changes) left out while the way is open; a wall: up to that cell, which stays put; eased
+TEST(ground_way_walk_glide_holds_still_against_the_feet) {
+    const float cs = 5;
+    groundway::WalkGlide gl;
+    groundway::WalkAim aim;
+    aim.wayX = 1;
+    aim.wayZ = 0;
+    aim.lead = 5 * cs;
+    float worst = 0, before = 0;
+    for (int f = 0; f < 120; ++f) {  // east at 150 ms a cell, 16 ms frames
+        aim.x0 = float(f) * 16.0f / 150.0f * cs;
+        aim.cellX = (std::round(aim.x0 / cs) + 5) * cs;  // the asked cell hops on
+        groundway::glide(gl, aim, 16);
+        const float end = std::cos(gl.angle) * gl.len;  // against the feet
+        if (f > 0) worst = std::max(worst, std::fabs(end - before));
+        before = end;
+    }
+    CHECK(worst < 0.01f * cs);
+    CHECK(std::fabs(gl.len - 5 * cs) < 0.01f && std::fabs(gl.angle) < 1e-4f);
+    // a wall four cells on: eased down to the asked cell, then its end stays on it as the feet come up
+    aim.cut = true;
+    aim.cellX = aim.x0 + 4 * cs;
+    const float wallCell = aim.cellX;
+    float firstStep = 0;
+    for (int f = 0; f < 25; ++f) {  // 2.7 cells on, the wall still ahead
+        aim.x0 += 16.0f / 150.0f * cs;
+        const float was = gl.len;
+        groundway::glide(gl, aim, 16);
+        if (f == 0) firstStep = was - gl.len;
+    }
+    CHECK(firstStep > 0 && firstStep < 0.5f * cs);  // no jump at once
+    CHECK(std::fabs(aim.x0 + gl.len - wallCell) < 0.05f * cs);
+    // the stick turned a quarter: about two thirds round in 80 ms, all of it soon
+    aim.cut = false;
+    aim.wayX = 0;
+    aim.wayZ = 1;
+    for (int f = 0; f < 5; ++f) groundway::glide(gl, aim, 16);
+    CHECK(gl.angle > 0.55f && gl.angle < 1.2f);
+    for (int f = 0; f < 40; ++f) groundway::glide(gl, aim, 16);
+    CHECK(std::fabs(gl.angle - 1.5707963f) < 0.01f);
+    groundway::WalkGlide fresh;  // a new arrow: its way and length at once
+    groundway::glide(fresh, aim, 0);
+    CHECK(std::fabs(fresh.angle - 1.5707963f) < 1e-4f && std::fabs(fresh.len - 5 * cs) < 1e-4f);
+    aim.cut = true;  // the feet put elsewhere at once (a warp): taken anew, no easing from the old place
+    aim.x0 += 40 * cs;
+    aim.cellX = aim.x0;
+    aim.cellZ = aim.z0 + 3 * cs;
+    groundway::glide(gl, aim, 16);
+    CHECK(std::fabs(gl.len - 3 * cs) < 1e-3f);
 }
 

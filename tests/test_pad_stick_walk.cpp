@@ -126,3 +126,15 @@ TEST(stick_walk_tells_a_wall_cutting_the_way_short) {
     CHECK(stickwalk::destination(here, stickwalk::Way{1, 0}, 5, &boxed, &cut) == here && cut);  // nowhere: a wall
 }
 
+// 3.0.11-beta.104: the way of the march that gave the cell (the arrow lies along it) - the stick's own, or a slide's
+TEST(stick_walk_tells_the_way_it_marched) {
+    GroundGrid g = open();
+    stickwalk::Way along;
+    stickwalk::destination(Cell{100, 100}, stickwalk::Way{1, 0}, 5, &g, nullptr, &along);
+    CHECK(std::fabs(along.east - 1) < 1e-9 && std::fabs(along.north) < 1e-9);
+    g.walk[size_t(100) * 200 + 101] = 0;  // a post right in front: round it at 45°
+    const Cell to = stickwalk::destination(Cell{100, 100}, stickwalk::Way{1, 0}, 5, &g, nullptr, &along);
+    CHECK(std::fabs(along.east - std::sqrt(0.5)) < 1e-9 && std::fabs(std::fabs(along.north) - std::sqrt(0.5)) < 1e-9);
+    CHECK((to.y > 100) == (along.north > 0));
+}
+
