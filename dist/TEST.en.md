@@ -1,3 +1,18 @@
+# uaRO Graphics 3.0.11-beta.99 — what is new
+
+Monsters' HP bars with the mouse too, not only with the controller:
+- **The target without the controller** is the monster the character hits (or the one hitting it). It used to come
+  from the target's card, so without the card (off, no reference pack, an unknown monster) the target had no wide bar
+  with its per cent, and «The target only» showed nothing.
+- **The monster under the mouse cursor** gets the wide bar with its per cent too - even a whole one, while the cursor
+  is on it.
+- The bars now go under the game's windows, its names and its cursor: a game window over a monster covers its bar.
+- «Target's ring on the ground» set to «Always» no longer depends on the target's card either.
+- The setting «Monsters' HP bars» is in «Interface» alone (off the controller's page: it is not only the controller's).
+- To check: without the controller point the mouse at a monster - a bar and the per cent over it; hit one - the
+  target's bar. In the log: «mob hp: the target's bar on N - the monster under the mouse cursor» and «… - the one the
+  character fights».
+
 # uaRO Graphics 3.0.11-beta.98 — what is new
 
 The interface's windows, talking with NPCs:
