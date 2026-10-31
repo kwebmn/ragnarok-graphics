@@ -1,3 +1,16 @@
+# uaRO Graphics 3.0.11-beta.81 — what is new
+
+The party panel, points 1, 5, 6, 7 of the list (your «1-8, do it»):
+- **Class and level** after the name, faint: «Priest 85» — as the member was last seen.
+- **A member's cast:** while it casts, the skill's name in place of the class (blue), under the HP bar — a blue line
+  of the cast's progress.
+- **Dead:** the row dark red, the face faint, «dead» in place of the per cent. Gone when the member is up (HP over
+  zero came, or it is seen alive again).
+- **Time to recast:** your own buff on a member (the one you put on yourself) pulses in a gold frame in its last 10
+  seconds.
+- To check: in a party with a priest — put Blessing on, wait for its last 10 seconds; watch a member cast; let a member
+  die. Points 2, 3, 4, 8 — the next betas.
+
 # uaRO Graphics 3.0.11-beta.80 — what is new
 
 - **The party members' faces** (your «can the icons be the characters' faces?»). Each member's round now holds its head
