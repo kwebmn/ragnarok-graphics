@@ -84,6 +84,26 @@ struct Texts {
     std::string unlearned;   // 3.0.11-beta.78: «Персонаж не має цієї навички»
     std::vector<std::string> reasons;  // by NotHere: «на цій карті телепорт заборонено», ...
 };
+// 3.0.11-beta.125 (the owner: «когда играю арчером, есть стрелы, и не видно сколько осталось ... чтобы словить момент
+// когда они заканчиваются»): the ammo worn on a pill over the bar's left end - its picture and how many, amber under 50,
+// red at 10 or fewer; a fall under those (none left too) its words before the count a while (AmmoWarn)
+struct Ammo {
+    int count = -1;                        // how many (< 0 none worn: no pill)
+    const panel::Picture* icon = nullptr;  // its picture at ammoIconSide(), premultiplied
+    std::string warning;                   // «Стріли закінчуються» ("" none)
+};
+int ammoIconSide(float scale);
+// How low: 0 plenty (50 or more; none worn), 1 under 50, 2 ten or fewer, 3 none left
+int ammoLevel(int count);
+// The level whose words to show with the count now (0 none): a fall to a lower level its words kShowMs, none left as
+// long as it lasts; more again (a new stack) quiet at once
+struct AmmoWarn {
+    static constexpr uint64_t kShowMs = 5000;
+    int level = 0, warned = 0;
+    uint64_t since = 0;
+    int now(int count, uint64_t nowMs);
+};
+
 // What the mouse and the keys do to it now
 struct Show {
     int hover = -1;          // the cell under the cursor: its backing lighter, its edge 20 %
@@ -94,7 +114,10 @@ struct Show {
     // badge (Cell::pad) over its top left corner instead of its key, a cell no button uses dimmed; PlayStation's look
     bool pad = false, sony = false;
     bool dropping = false;  // 3.0.11-beta.110: a thing or a skill dragged - the cells lit in gold (a drop takes it)
+    Ammo ammo;              // 3.0.11-beta.125
 };
+// The ammo's pill over the glass's left end (w 0: none worn); a cell's tip over it hides it a while
+panel::Box ammoBox(const Layout& L, const Show& show);
 void paint(panel::Picture& out, const Layout& L, const std::vector<Cell>& cells, const Show& show, const Texts& t);
 
 enum class Align : uint8_t { Left, Right, Center };

@@ -596,6 +596,10 @@ struct Config {
     // которых на чаре нету»): [interface] hotbar_per_character - each character's own hotkeys bar, kept by the driver
     // (the game keeps one by the selection screen's place, every account's alike - win/hotbar); on
     bool hotbarPerCharacter = true;
+    // 3.0.11-beta.125 (the owner: «когда играю арчером, есть стрелы, и не видно сколько осталось ... чтобы словить
+    // момент когда они заканчиваются»): [interface] hotbar_ammo - the ammo worn and how many left on a pill over the
+    // hotbar (core/hotbar_panel Ammo, win/ammo_watch); on
+    bool hotbarAmmo = true;
     // 3.0.11-beta.86 (the concept «Контроллер в интерфейсе uaRO», stage 2): [interface] pad_hints - played with the
     // controller (core/input_mode), its buttons on the interface instead of the keys' names (core/pad_glyphs); on
     bool padHints = true;

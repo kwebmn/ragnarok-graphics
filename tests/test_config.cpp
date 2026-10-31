@@ -1386,6 +1386,17 @@ TEST(config_interface_smooth_fixes) {
     CHECK(!liveUpdate(parseConfig(""), parseConfig("[interface]\nsmooth_fixes = 0\n")).next.smoothFixes);
 }
 
+// 3.0.11-beta.125 (the owner: «когда играю арчером ... не видно сколько осталось»): [interface] hotbar_ammo - the ammo
+// worn and how many left on a pill over the hotbar; on at first, a box of «Інтерфейс», at once
+TEST(config_interface_hotbar_ammo) {
+    CHECK(parseConfig("").hotbarAmmo);
+    CHECK(!parseConfig("[interface]\nhotbar_ammo = 0\n").hotbarAmmo);
+    const settings::IniSetting* s = settings::findSetting("interface.hotbar_ammo");
+    CHECK(s != nullptr && s->page == settings::Page::Interface);
+    CHECK(appliesNow("interface.hotbar_ammo"));
+    CHECK(!liveUpdate(parseConfig(""), parseConfig("[interface]\nhotbar_ammo = 0\n")).next.hotbarAmmo);
+}
+
 // 3.0.11-beta.103 (the owner: «можешь сделать настройку, чтобы можно было выбрать эту стрелку в конфигураторе»):
 // [interface] walk_arrow - the look of the stick's walking arrow, the doc's variants; the chevrons by default (its
 // advice), a choice of «Інтерфейс» applied at once

@@ -24,6 +24,7 @@
 #include "pad/win/client_bar.hpp"
 #include "pad/win/game_window.hpp"
 #include "pad/win/runtime.hpp"
+#include "win/ammo_watch.hpp"
 #include "win/chat_window.hpp"
 #include "win/client_tables.hpp"
 #include "win/code_page.hpp"
@@ -150,6 +151,10 @@ struct State {
     hb::Bar barKept;                // as last kept for barOf
     std::set<std::string> learned;  // the character's learned skills' AEGIS names (the session's list)
     bool learnedCame = false;       // that list there at all
+    // 3.0.11-beta.125: the ammo's pill - its warning shown by how low it fell, the one last told the log
+    hb::AmmoWarn ammoWarn;
+    int ammoTold = 0;
+    bool ammoOn = true;
 };
 
 State& state() {
@@ -516,6 +521,34 @@ hb::Cell cellOf(State& s, int slot, const std::string& key, unsigned codePage) {
     return c;
 }
 
+// 3.0.11-beta.125 (the owner: «когда играю арчером, есть стрелы, и не видно сколько осталось ... чтобы словить момент
+// когда они заканчиваются»): the ammo worn on its pill - how many, its picture, the warning's words as it falls
+hb::Ammo ammoOf(State& s, ULONGLONG now, bool on) {
+    hb::Ammo a;
+    if (on != s.ammoOn) {
+        s.ammoOn = on;
+        LOG_INFO("hotbar: [interface] hotbar_ammo = %d", on ? 1 : 0);
+    }
+    if (!on) return a;
+    const ammowatch::Ammo& w = ammowatch::read(now);
+    const int warn = s.ammoWarn.now(w.count, now);
+    if (warn != s.ammoTold) {
+        s.ammoTold = warn;
+        if (warn)
+            LOG_INFO("hotbar: the ammo's pill warns - %s (%d left)",
+                     warn == 3 ? "none left" : warn == 2 ? "10 or fewer" : "under 50", w.count);
+    }
+    if (w.count < 0) return a;
+    a.count = w.count;
+    const auto& files = clienttables::itemFiles();
+    const auto f = w.id ? files.find(std::to_string(w.id)) : files.end();
+    if (f != files.end()) a.icon = iconOf(s, f->second, hb::ammoIconSide(s.scale));
+    if (warn)
+        a.warning = settings::fmt(say(warn == 3 ? settings::Text::HotbarAmmoOut : settings::Text::HotbarAmmoLow),
+                                  {say(w.arrows ? settings::Text::CharArrows : settings::Text::CharAmmo)});
+    return a;
+}
+
 // The game's shown windows over the box (the target's pixels), and the new chat (3.0.11-beta.41): the right edge and
 // the top of those; false none (3.0.11-beta.117: `what` - which, for the log)
 bool windowsOver(const State& s, float x0, float y0, float x1, float y1, float& right, float& top, std::string& what) {
@@ -693,7 +726,7 @@ std::vector<barhint::Skill> barSkills() {
     return out;
 }
 
-void frame(HWND game, bool on, bool ownBars, bool padHints, unsigned codePage, double k, int targetWidth,
+void frame(HWND game, bool on, bool ownBars, bool padHints, bool ammo, unsigned codePage, double k, int targetWidth,
            int targetHeight) {
     State& s = state();
     if (on != s.on) {
@@ -772,6 +805,7 @@ void frame(HWND game, bool on, bool ownBars, bool padHints, unsigned codePage, d
     show.pad = pad.shown && s.mode != hb::Mode::Editing;  // 3.0.11-beta.86
     show.dropping = windrag::now().kind == windrag::Kind::Item || windrag::now().kind == windrag::Kind::Skill;  // .110
     show.sony = pad.sony;
+    show.ammo = ammoOf(s, now, ammo);  // 3.0.11-beta.125
     if (show.pad != s.padTold) {
         s.padTold = show.pad;
         LOG_INFO("hotbar: %s", show.pad ? (show.sony ? "the controller's buttons (PlayStation)"
@@ -782,7 +816,8 @@ void frame(HWND game, bool on, bool ownBars, bool padHints, unsigned codePage, d
     std::string key = std::to_string(int(s.mode)) + ';' + std::to_string(s.row) + ';' + std::to_string(scale) + ';' +
                       std::to_string(s.layout.w) + 'x' + std::to_string(s.layout.h) + ';' + std::to_string(show.hover) +
                       ',' + std::to_string(show.pressed) + (show.tip ? "t" : "") + (s.hoverEdit ? "e" : "") +
-                      (show.pad ? (show.sony ? "S" : "X") : "") + (show.dropping ? "D" : "") + ';';
+                      (show.pad ? (show.sony ? "S" : "X") : "") + (show.dropping ? "D" : "") + ';' +
+                      std::to_string(show.ammo.count) + (show.ammo.icon ? "i" : "") + show.ammo.warning + ';';
     for (size_t i = 0; i < s.cells.size(); ++i) {
         const hb::Cell& c = s.cells[i];
         key += c.key + '|' + c.name + '|' + std::to_string(c.level) + '|' + std::to_string(c.count) +

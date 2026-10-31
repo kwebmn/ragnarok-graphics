@@ -23,7 +23,8 @@ namespace uagfx::win::hotbarwin {
 // into it. On the game's thread.
 // 3.0.11-beta.78: ownBars - [interface] hotbar_per_character, each character's own bar (the new bar on or not)
 // 3.0.11-beta.86: padHints - [interface] pad_hints, the controller's buttons on its cells while played with it
-void frame(HWND game, bool on, bool ownBars, bool padHints, unsigned codePage, double k, int targetWidth,
+// 3.0.11-beta.125: ammo - [interface] hotbar_ammo, the ammo worn and how many left on a pill over it (win/ammo_watch)
+void frame(HWND game, bool on, bool ownBars, bool padHints, bool ammo, unsigned codePage, double k, int targetWidth,
            int targetHeight);
 void draw(FrameRecord& record, gpu::Renderer& renderer);
 bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result);

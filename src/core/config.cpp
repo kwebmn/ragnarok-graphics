@@ -517,6 +517,8 @@ Config parseConfig(const std::string& text) {
             setBool(val, c.lockLayout);
         } else if (key == "interface.hotbar_per_character") {  // 3.0.11-beta.78: each character's own bar
             setBool(val, c.hotbarPerCharacter);
+        } else if (key == "interface.hotbar_ammo") {  // 3.0.11-beta.125: the ammo left over the hotbar
+            setBool(val, c.hotbarAmmo);
         } else if (key == "interface.pad_hints") {  // 3.0.11-beta.86: the controller's buttons on the interface
             setBool(val, c.padHints);
         } else if (key == "interface.target_ring") {  // 3.0.11-beta.87: the target's ring on the ground

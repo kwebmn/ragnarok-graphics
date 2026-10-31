@@ -133,6 +133,9 @@ const std::vector<IniSetting>& iniSettings() {
         // 3.0.11-beta.78: each character's own hotkeys bar
         {"interface", "hotbar_per_character", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {},
          Text::InterfaceHotbarOwn, Text::InterfaceHotbarOwnHint, ""},
+        // 3.0.11-beta.125: the ammo left over the hotbar
+        {"interface", "hotbar_ammo", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {},
+         Text::InterfaceHotbarAmmo, Text::InterfaceHotbarAmmoHint, ""},
         {"interface", "pad_hints", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {},  // 3.0.11-beta.86
          Text::InterfacePadHints, Text::InterfacePadHintsHint, ""},
         {"interface", "target_ring", Page::Interface, Control::Choice, 0, 0, 0, {"off", "pad", "always"},  // .87
@@ -1015,6 +1018,7 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "interface.pack_icons") return c.packIcons ? "1" : "0";        // 3.0.11-beta.74
     if (k == "interface.lock_layout") return c.lockLayout ? "1" : "0";      // 3.0.11-beta.77
     if (k == "interface.hotbar_per_character") return c.hotbarPerCharacter ? "1" : "0";  // 3.0.11-beta.78
+    if (k == "interface.hotbar_ammo") return c.hotbarAmmo ? "1" : "0";                    // 3.0.11-beta.125
     if (k == "interface.pad_hints") return c.padHints ? "1" : "0";                         // 3.0.11-beta.86
     if (k == "interface.target_ring") return targetRingToken(c.targetRing);                // 3.0.11-beta.87
     if (k == "interface.mob_hp") return mobHpToken(c.mobHp);                               // 3.0.11-beta.95

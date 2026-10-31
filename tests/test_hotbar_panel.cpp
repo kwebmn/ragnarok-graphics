@@ -343,3 +343,58 @@ TEST(hotbar_moves_aside_only_for_a_window_that_stays) {
     CHECK(!settle.settled(true, 11700, 1500));   // again: counted anew
     CHECK(settle.settled(true, 13200, 1500));
 }
+
+// 3.0.11-beta.125 (the owner: «когда играю арчером, есть стрелы, и не видно сколько осталось ... чтобы словить момент
+// когда они заканчиваются»): the ammo worn on a pill over the bar's left end - how many, amber under 50, red at 10 or
+// fewer; a warning's words with the count for a while as it falls under 50 or 10 or runs out
+TEST(hotbar_shows_the_ammo_left) {
+    const hotbar::Layout L = hotbar::layout(hotbar::Mode::Normal, 960, 1070, 1.0f);
+    const std::vector<hotbar::Cell> cells(L.cells.size());
+    hotbar::Show sh;
+    CHECK(hotbar::ammoBox(L, sh).w == 0);  // none worn: no pill
+    sh.ammo.count = 437;
+    const panel::Box b = hotbar::ammoBox(L, sh);
+    CHECK(b.w > 0 && b.y >= 0 && b.y + b.h <= L.glass.y && b.x >= L.glass.x);
+    const auto colourOf = [&](const std::string& text) -> uint32_t {
+        for (const hotbar::Words& w : hotbar::words(L, cells, 0, sh, texts()))
+            if (w.text == text) return w.rgb;
+        return 0;
+    };
+    CHECK(colourOf("437") == 0xECEFF5);
+    sh.ammo.count = 37;
+    CHECK(colourOf("37") == 0xF0A050);  // under 50: amber
+    sh.ammo.count = 8;
+    CHECK(colourOf("8") == 0xFF5A4E);   // 10 or fewer: red
+    sh.ammo.warning = "Стріли закінчуються";
+    CHECK(colourOf("Стріли закінчуються \xC2\xB7 8") == 0xFF5A4E);
+    CHECK(hotbar::ammoBox(L, sh).w > b.w);  // wider with its words
+    panel::Picture p;
+    p.width = L.w;
+    p.height = L.h;
+    p.px.assign(size_t(L.w) * size_t(L.h), 0u);
+    hotbar::paint(p, L, cells, sh, texts());
+    const panel::Box w = hotbar::ammoBox(L, sh);
+    CHECK((p.px[size_t(w.y + w.h / 2) * size_t(p.width) + size_t(w.x + w.w / 2)] >> 24) > 0x80);  // its ground
+}
+
+// 3.0.11-beta.125: when the pill's warning shows - a fall under 50 or to 10 or fewer its words 5 s, none left as long as
+// it lasts; more again (a new stack) quiet at once; none worn nothing
+TEST(hotbar_ammo_warns_as_it_falls) {
+    CHECK(hotbar::ammoLevel(-1) == 0 && hotbar::ammoLevel(50) == 0 && hotbar::ammoLevel(49) == 1);
+    CHECK(hotbar::ammoLevel(11) == 1 && hotbar::ammoLevel(10) == 2 && hotbar::ammoLevel(1) == 2);
+    CHECK(hotbar::ammoLevel(0) == 3);
+    hotbar::AmmoWarn w;
+    CHECK(w.now(437, 1000) == 0);
+    CHECK(w.now(49, 2000) == 1);   // under 50: told
+    CHECK(w.now(45, 6900) == 1);   // its 5 s
+    CHECK(w.now(44, 7000) == 0);   // then the count alone
+    CHECK(w.now(10, 8000) == 2);   // 10 or fewer: told again
+    CHECK(w.now(3, 13100) == 0);
+    CHECK(w.now(0, 14000) == 3);   // none left
+    CHECK(w.now(0, 40000) == 3);   // as long as it lasts
+    CHECK(w.now(500, 41000) == 0); // a new stack: quiet
+    CHECK(w.now(-1, 42000) == 0);
+    hotbar::AmmoWarn login;
+    CHECK(login.now(30, 1000) == 1);  // a few at the start: told too
+    CHECK(login.now(400, 2000) == 0);  // more again: quiet at once
+}

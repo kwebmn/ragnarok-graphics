@@ -20,6 +20,10 @@ constexpr uint32_t kGold = 0xC9A55B, kGold2 = 0xE6CB8A, kText = 0xECEFF5, kMuted
 // 3.0.11-beta.45: the «SP» plate (the SP bar's blue), the tips' lines of no SP and of «не тут» (the concept's red for
 // small words, 4.9:1)
 constexpr uint32_t kSpBlue = 0x3D7EEB, kSpWords = 0x9CC3FF, kNotHereWords = 0xFF9A8F;
+// 3.0.11-beta.125: the ammo running low - the character block's amber and red (core/char_block)
+constexpr uint32_t kAmmoWarn = 0xF0A050, kAmmoOut = 0xFF5A4E;
+constexpr int kAmmoLow = 50, kAmmoVeryLow = 10;
+constexpr float kAmmoH = 26, kAmmoIcon = 18, kAmmoPx = 12.5f;
 
 const char* const kBattleKeys[3][9] = {{"Q", "W", "E", "R", "T", "Y", "U", "I", "O"},
                                        {"A", "S", "D", "F", "G", "H", "J", "K", "L"},
@@ -114,6 +118,32 @@ panel::Box editTip(const Layout& L, const Texts& t) {
     return panel::Box{x, L.tipRoom.y + L.tipRoom.h - 26 * L.s, w, 22 * L.s};
 }
 
+bool overlap(const panel::Box& a, const panel::Box& b) {
+    return a.w > 0 && b.w > 0 && a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+}
+
+// 3.0.11-beta.125: the ammo pill's words - the warning's before the count - and their colour by how low it is
+std::string ammoText(const Ammo& a) {
+    const std::string n = std::to_string(std::max(0, a.count));
+    return a.warning.empty() ? n : a.warning + " \xC2\xB7 " + n;
+}
+uint32_t ammoRgb(int count) { return count <= kAmmoVeryLow ? kAmmoOut : count < kAmmoLow ? kAmmoWarn : kText; }
+
+// The pill where it would be, a tip over it or not
+panel::Box ammoPlace(const Layout& L, const Ammo& a) {
+    if (a.count < 0) return panel::Box{};
+    const float s = L.s;
+    const float w = 8 * s + kAmmoIcon * s + 6 * s + panel::wordsWidth(ammoText(a), kAmmoPx * s, true) + 10 * s;
+    const float x = std::clamp(L.glass.x, 0.0f, std::max(0.0f, float(L.w) - w));
+    return panel::Box{x, L.glass.y - kAmmoH * s - 6 * s, w, kAmmoH * s};
+}
+
+// Shown: not under the hovered cell's tip nor the edit button's
+panel::Box ammoShown(const Layout& L, const Show& show, const panel::Box& tip, const Texts& t) {
+    const panel::Box b = ammoPlace(L, show.ammo);
+    return overlap(b, tip) || (show.hoverEdit && overlap(b, editTip(L, t))) ? panel::Box{} : b;
+}
+
 }  // namespace
 
 int iconSide(Mode mode, float scale) { return int(std::lround((mode == Mode::Battle ? 30 : 32) * scale)); }
@@ -122,6 +152,24 @@ int gameRow(int shownRow) { return shownRow == 0 ? 1 : shownRow == 1 ? 2 : 0; }
 
 const char* battleKey(int shownRow, int cell) {
     return shownRow >= 0 && shownRow < 3 && cell >= 0 && cell < 9 ? kBattleKeys[shownRow][cell] : "";
+}
+
+int ammoIconSide(float scale) { return int(std::lround(kAmmoIcon * (scale > 0 ? scale : 1.0f))); }
+
+int ammoLevel(int count) {
+    return count < 0 ? 0 : count == 0 ? 3 : count <= kAmmoVeryLow ? 2 : count < kAmmoLow ? 1 : 0;
+}
+
+int AmmoWarn::now(int count, uint64_t nowMs) {
+    const int l = ammoLevel(count);
+    if (l > level) {  // fell lower: told
+        warned = l;
+        since = nowMs;
+    }
+    level = l;
+    if (warned > l) warned = 0;  // more again
+    if (!warned) return 0;
+    return warned == 3 || nowMs - since < kShowMs ? warned : 0;
 }
 
 bool Settle::settled(bool over, uint64_t nowMs, uint64_t afterMs) {
@@ -176,6 +224,8 @@ Layout layout(Mode mode, int centreX, int bottom, float scale) {
     L.y = bottom - L.h;
     return L;
 }
+
+panel::Box ammoBox(const Layout& L, const Show& show) { return ammoPlace(L, show.ammo); }
 
 Hit hitTest(const Layout& L, float x, float y) {
     if (L.edit.contains(x, y)) return Hit{Part::Edit, -1};
@@ -241,6 +291,15 @@ void paint(panel::Picture& out, const Layout& L, const std::vector<Cell>& cells,
                                            ? tipLines(cells[size_t(show.hover)], t)
                                            : std::vector<TipLine>{};
     const panel::Box tip = tipBox(L, show.hover, lines);
+    const panel::Box ammo = ammoShown(L, show, tip, t);
+    if (ammo.w > 0) {  // 3.0.11-beta.125: the ammo's pill - its edge amber or red when low
+        const uint32_t rgb = ammoRgb(show.ammo.count);
+        const bool low = show.ammo.count < kAmmoLow;
+        panel::roundRect(out, ammo, ammo.h / 2, kCard, std::max(0.85f, uistyle::panel()), low ? rgb : kWhite,
+                         low ? 0.9f : 0.12f, (low ? 1.5f : 1.0f) * s);
+        if (show.ammo.icon && show.ammo.icon->width > 0)
+            put(out, *show.ammo.icon, panel::Box{ammo.x + 8 * s, ammo.y, kAmmoIcon * s, ammo.h}, 1.0f);
+    }
     if (tip.w > 0) panel::roundRect(out, tip, 8 * s, kCard, 0.94f, kWhite, 0.12f, 1.0f * s);
     if (show.hoverEdit) panel::roundRect(out, editTip(L, t), 8 * s, kCard, 0.94f, kWhite, 0.12f, 1.0f * s);
 }
@@ -291,6 +350,10 @@ std::vector<Words> words(const Layout& L, const std::vector<Cell>& cells, int ro
                                            ? tipLines(cells[size_t(show.hover)], t)
                                            : std::vector<TipLine>{};
     const panel::Box tip = tipBox(L, show.hover, lines);
+    if (const panel::Box ammo = ammoShown(L, show, tip, t); ammo.w > 0)  // 3.0.11-beta.125
+        out.push_back(Words{panel::Box{ammo.x + (8 + kAmmoIcon + 6) * s, ammo.y, ammo.w - (8 + kAmmoIcon + 6 + 4) * s,
+                                       ammo.h},
+                            ammoText(show.ammo), ammoRgb(show.ammo.count), kAmmoPx * s, true, Align::Left});
     for (size_t i = 0; tip.w > 0 && i < lines.size(); ++i)
         out.push_back(Words{panel::Box{tip.x + 10 * s, tip.y + (4 + 18 * float(i)) * s, tip.w - 20 * s, 17 * s},
                             lines[i].text, lines[i].rgb, (i ? 11.5f : 13) * s, i == 0, Align::Left});

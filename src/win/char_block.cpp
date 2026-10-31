@@ -19,6 +19,7 @@
 #include "core/ui_motion.hpp"
 #include "core/ui_style.hpp"
 #include "pad/win/game_window.hpp"
+#include "win/ammo_watch.hpp"
 #include "win/code_page.hpp"
 #include "win/game_camera.hpp"
 #include "win/head_picture.hpp"
@@ -47,16 +48,8 @@ using SendMsgFn = int(__attribute__((thiscall)) *)(uint32_t self, uint32_t sende
 constexpr uint32_t kJob = 0x771F8C, kSex = 0x772DEC, kHead = 0x7718F4, kHairColour = 0x771910;
 constexpr ULONGLONG kWarnMs = 2000;  // the low HP warning's
 constexpr ULONGLONG kTipMs = 400, kPressMs = 160;  // 3.0.11-beta.51: the concept's tip after 0.4 s; a press shown
-// 3.0.11-beta.114 (the concept «Концепция окон и инвентаря», question 10 «можна»): the bag (win/item_window's: the
-// session's list, a node's ITEM_INFO at +8 - its type +0, where it is worn +0x0C, how many +0x10, the item's number as
-// text +0x30/+0x34); read every half a second, a worn ammo gone from the bag shown as 0 a while
-constexpr uint32_t kBag = 0x771148 + 0xF1C, kInfo = 8;
-// 3.0.11-beta.118: the arrows worn during the play are known by their place only (the session's +0xEEC, set by the
-// server's 0x013c - at the login too); 3.0.11-beta.120: the login's worn 0x8000 not looked at (stale after a change)
-constexpr uint32_t kAmmoNow = 0x771148 + 0xEEC;
-constexpr size_t kInfoSize = 0x48, kMostNodes = 256;
-constexpr ULONGLONG kAmmoReadMs = 500, kAmmoGoneMs = 30000;
-constexpr int kArrowType = 10;  // the client's arrows; 16 bullets, 17 thrown things - «Боєприпаси»
+// 3.0.11-beta.114 (the concept «Концепция окон и инвентаря», question 10 «можна»): the ammo worn running low on the
+// info line - read by win/ammo_watch (3.0.11-beta.125: shared with the hotbar's pill)
 
 struct State {
     CharacterLook look = CharacterLook::Off;
@@ -92,10 +85,7 @@ struct State {
     cb::View shownView = cb::View::Full;  // 3.0.11-beta.49: compact while the windows are open
     int hoverId = 0, pressedButton = -1;  // 3.0.11-beta.51: what is pointed at since when (its tip after 0.4 s)
     ULONGLONG hoverSince = 0, pressedUntil = 0;
-    // 3.0.11-beta.114: the ammo worn - how many (< 0 none), its item number, arrows or other; ran out since when
-    int ammo = -1, ammoId = 0;
-    bool ammoArrows = true, ammoLowTold = false;
-    ULONGLONG ammoReadAt = 0, ammoGoneAt = 0;
+    bool ammoArrows = true;  // 3.0.11-beta.114: the ammo worn arrows or other (win/ammo_watch)
 };
 
 State& state() {
@@ -108,10 +98,6 @@ std::string say(settings::Text t) { return settings::tr(startup().lang, t); }
 uint32_t read32(uint32_t at) {
     uint32_t v = 0;
     return readGame(at, &v, 4) ? v : 0;
-}
-
-uint32_t rd32(const uint8_t* p, size_t at) {
-    return uint32_t(p[at]) | uint32_t(p[at + 1]) << 8 | uint32_t(p[at + 2]) << 16 | uint32_t(p[at + 3]) << 24;
 }
 
 // UI window 0 when it is the Basic Info window of this build
@@ -279,69 +265,6 @@ void hide(State& s) {
     s.shown = false;
 }
 
-void forgetAmmo(State& s) {
-    s.ammo = -1;
-    s.ammoId = 0;
-    s.ammoGoneAt = 0;
-    s.ammoLowTold = false;
-}
-
-// 3.0.11-beta.114: the worn ammo's count from the bag; the worn one gone from it - ran out (0 for half a minute); taken
-// off (still in the bag) or none - nothing shown. An empty or unreadable bag (a map loading) decides nothing
-void readAmmo(State& s, ULONGLONG now) {
-    if (now - s.ammoReadAt < kAmmoReadMs) return;
-    s.ammoReadAt = now;
-    const uint32_t head = read32(kBag);
-    if (!head) return;
-    int count = -1, id = 0, type = 0;
-    size_t things = 0;
-    bool stillThere = false;
-    const uint32_t ammo = read32(kAmmoNow);
-    uint32_t node = read32(head);
-    for (size_t n = 0; node && node != head && n < kMostNodes; ++n, node = read32(node)) {
-        uint8_t raw[kInfoSize] = {};
-        if (!readGame(node + kInfo, raw, sizeof raw)) return;
-        const uint32_t ptr = rd32(raw, 0x30), len = rd32(raw, 0x34);
-        char digits[17] = {};
-        const int thing = ptr && len && len <= 16 && readGame(ptr, digits, len) ? std::atoi(digits) : 0;
-        ++things;
-        if (thing && thing == s.ammoId) stillThere = true;
-        if (ammo && rd32(raw, 0x08) == ammo) {  // 3.0.11-beta.120: by their place alone (the login's flag stays)
-            count = int(rd32(raw, 0x10));
-            id = thing;
-            type = int(rd32(raw, 0x00));
-        }
-    }
-    if (count >= 0) {
-        if (id != s.ammoId) {
-            LOG_INFO("character: ammo worn - #%d x%d (type %d)", id, count, type);
-            s.ammoLowTold = false;
-        }
-        if (count < cb::kAmmoLow && !s.ammoLowTold) {
-            s.ammoLowTold = true;
-            LOG_INFO("character: ammo running low - %d left: the block's info line shows it", count);
-        }
-        s.ammo = count;
-        s.ammoId = id;
-        s.ammoArrows = type == kArrowType || (type != 16 && type != 17);
-        s.ammoGoneAt = 0;
-        return;
-    }
-    if (!things) return;
-    if (s.ammoId && !stillThere) {
-        if (!s.ammoGoneAt) {
-            s.ammoGoneAt = now;
-            LOG_INFO("character: ammo #%d ran out (gone from the bag) - the block shows 0 for %d s", s.ammoId,
-                     int(kAmmoGoneMs / 1000));
-        }
-        if (now - s.ammoGoneAt < kAmmoGoneMs) {
-            s.ammo = 0;
-            return;
-        }
-    }
-    forgetAmmo(s);
-}
-
 float share(int value, int next, int level) {
     if (next > 0) return std::clamp(float(value) / float(next), 0.0f, 1.0f);
     return level > 0 ? 1.0f : -1.0f;  // next 0: the last level
@@ -362,7 +285,6 @@ void frame(HWND game, CharacterLook look, unsigned codePage, double k, int targe
     if (!on || !world || !game || k <= 0 || targetWidth <= 0 || targetHeight <= 0) {
         hide(s);
         s.lastBase = s.lastJob = 0;  // another character next: no flare for its levels
-        if (!world) forgetAmmo(s);   // 3.0.11-beta.114: its own ammo
         return;
     }
     readState(s);
@@ -412,8 +334,9 @@ void frame(HWND game, CharacterLook look, unsigned codePage, double k, int targe
     d.portrait = s.portrait.width > 0 ? &s.portrait : nullptr;
     // low HP: a short warning as it falls under a quarter
     const ULONGLONG now = GetTickCount64();
-    readAmmo(s, now);
-    d.ammo = s.ammo;
+    const ammowatch::Ammo& ammo = ammowatch::read(now);  // 3.0.11-beta.114 (.125: win/ammo_watch)
+    d.ammo = ammo.count;
+    s.ammoArrows = ammo.arrows;
     const bool low = cb::lowHp(d);
     if (low && !s.wasLow) {
         s.warnAt = now;
