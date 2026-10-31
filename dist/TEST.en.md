@@ -1,3 +1,20 @@
+# uaRO Graphics 3.0.11-beta.97 — what is new
+
+The interface's windows, «Equipment»:
+- **A new equipment window (Alt+Q, the button of the character block and of the Start tile)** in place of the game's.
+  The slots round the character as in the concept: on the left the middle and lower head, armour, garment, an
+  accessory; on the right the upper head, weapon, shield, shoes, an accessory; the ammo under the character. A thing:
+  its icon, refine «+4» and name, dots for its card slots (gold with a card). In the middle the portrait, name, job,
+  levels and ATK, MATK, DEF, MDEF, HIT, FLEE.
+- With the mouse: a double click takes off, a press drags into the bag, a right click shows the item's card; a thing
+  dragged from «Items» onto the window is put on in its slot.
+- **With the controller:** the D-pad goes round the slots, A takes off (on an empty slot: a list of the bag's things
+  that fit, A puts on), X changes (the same list), Y the card, B back from the list or close, Start close.
+- The setting «Equipment» in «Interface» (and in the console); off brings the game's window back.
+- To check: take a thing off and put it on with the mouse and the controller, drag a thing from «Items». In the log:
+  «equip: «Спорядження» open…», «equip: … takes off … (the game mode's 0x15…)», «equip: … puts on … (the game mode's
+  0x14)».
+
 # uaRO Graphics 3.0.11-beta.96 — what is new
 
 The interface's windows, «Skills»:
