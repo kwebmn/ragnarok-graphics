@@ -68,3 +68,9 @@ defaults (ruling R3); the monsters' HP bars wait for question 2 (R2).
   (as the minimap), core ground_way arrow, win/ground_marks arrow + end ring, [interface] pad_walk mouse|arrow (mouse).
   Ruling: the game cursor is not hidden (left where the mouse put it; hiding means every part's cursorDraw) - cost if
   wrong: a still cursor on screen, one beta.
+- Stage 5: built as 3.0.11-beta.89 - the app page «Контролер» (was «Геймпад»): the last controller seen
+  (uaro-graphics\pad-seen.txt written at connect), the interface's three controller rows, each character's 14 buttons
+  (uapad parseProfiles/withLayout/formatProfiles, uagfx_pad linked into the app), walk radius slider, the old mark
+  choice; the pad follows the interface's language (followDriverLanguage). Ruling R4: the pad's two files stay where
+  they are (uaro-graphics\, edited by the page and the Start menu alike) instead of moving keys into uaro-graphics.ini
+  - one settings place for the player without a migration's risk; cost if wrong: a migration beta later.

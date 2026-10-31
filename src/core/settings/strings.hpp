@@ -196,8 +196,11 @@ enum class Text : uint16_t {
     PagePad, PadHeading, PadIntro, PadStateOff, PadStateOn, PadStateOld, PadFailed, PadController, PadType, PadTypeHint,
     PadTypeAuto, PadTypeSony, PadLightbar, PadLightbarHint, ColourBlue, ColourRed, ColourGreen, ColourPurple,
     ColourOrange, ColourWhite, ColourOff, ColourOwn, PadTouchpad, PadTouchpadHint, TouchNothing, TouchBack, TouchStart,
-    PadRumble, PadRumbleHint, PadStartsOn, PadStartsOnHint, PadMenuLanguage, PadMenuLanguageHint, PadSettingsNote,
+    PadRumble, PadRumbleHint, PadStartsOn, PadStartsOnHint, PadWalkRadius, PadWalkRadiusHint, PadSettingsNote,
     PadNpcHint, PadNpcHintHint,
+    // 3.0.11-beta.89 (the concept «Контроллер в интерфейсе uaRO», stage 5): the page «Контролер»
+    PadSeen, PadSeenNone, PadOnInterface, PadButtons, PadWho, PadWhoHint, PadWhoDefault, PadButtonHint, PadMark,
+    PadMarkHint, PadMarkOff,
     AiModelAnime6b,  // 1.5
     // 1.6: a model for each group, the preview
     AiGroupsHeading, AiGroupMonsters, AiGroupNpcs, AiGroupItems, AiGroupModelHint, AiModelSet, AiModelSetHint,

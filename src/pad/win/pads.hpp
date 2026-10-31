@@ -46,6 +46,8 @@ public:
         sony_.stopRumble();
     }
     bool sony() const { return sonyNow_; }  // a Sony controller is the one read: its buttons' names in the menu
+    // 3.0.11-beta.89: the one read, for the app's page «Контролер» («DualSense (Bluetooth)», «Xbox (XInput)»)
+    const char* name() const { return sonyNow_ ? sony_.name() : "Xbox (XInput)"; }
 
 private:
     void setSony(bool on);

@@ -1897,22 +1897,25 @@ constexpr Entry kTexts[] = {
     {Text::AutoSoundEngine, "Sound: around you on any speakers; with Windows Sonic in headphones too.",
      "Звук: навколо вас на будь-яких колонках; з Windows Sonic і в навушниках.",
      "Звук: вокруг вас на любых колонках; с Windows Sonic и в наушниках."},
-    {Text::PagePad, "Gamepad",
-     "Геймпад",
-     "Геймпад"},
-    {Text::PadHeading, "uaRO Pad: playing with a gamepad",
-     "uaRO Pad: гра з геймпадом",
-     "uaRO Pad: игра с геймпадом"},
+    {Text::PagePad, "Controller",
+     "Контролер",
+     "Контроллер"},  // 3.0.11-beta.89: was «Геймпад»
+    {Text::PadHeading, "The controller in the game",
+     "Контролер у грі",
+     "Контроллер в игре"},
     {Text::PadIntro,
-     "Xbox controllers and PlayStation ones (DualShock 4, DualSense - over USB or Bluetooth) play the game: the stick "
-     "walks, the buttons attack the nearest monster and use the skills of the hotkey bar, D-pad down talks to the "
-     "nearest NPC and the buttons answer its windows. Start on the controller opens its menu in the game.",
-     "Геймпади Xbox і PlayStation (DualShock 4, DualSense - через USB або Bluetooth) керують грою: стік веде "
-     "персонажа, кнопки атакують найближчого монстра і застосовують уміння з панелі швидкого доступу, D-pad вниз "
-     "говорить із найближчим NPC, а кнопки відповідають його вікнам. Start на геймпаді відкриває його меню в грі.",
-     "Геймпады Xbox и PlayStation (DualShock 4, DualSense - по USB или Bluetooth) управляют игрой: стик ведёт "
-     "персонажа, кнопки атакуют ближайшего монстра и применяют умения с панели быстрого доступа, D-pad вниз говорит с "
-     "ближайшим NPC, а кнопки отвечают его окнам. Start на геймпаде открывает его меню в игре."},
+     "Xbox controllers and PlayStation ones (DualShock 4, DualSense - over USB or Bluetooth) play the game: the left "
+     "stick walks, A attacks, the other buttons use the skill bar's cells, the right stick picks the target, D-pad "
+     "down talks to the nearest NPC. While you play with one, the interface shows its buttons and the target stands in "
+     "a gold ring.",
+     "Контролери Xbox і PlayStation (DualShock 4, DualSense - через USB або Bluetooth) керують грою: лівий стік веде "
+     "персонажа, A атакує, інші кнопки тиснуть клітинки панелі навичок, правий стік вибирає ціль, хрестовина вниз "
+     "говорить із найближчим NPC. Поки граєте з контролером, інтерфейс показує його кнопки, а ціль стоїть у золотому "
+     "кільці.",
+     "Контроллеры Xbox и PlayStation (DualShock 4, DualSense - по USB или Bluetooth) управляют игрой: левый стик ведёт "
+     "персонажа, A атакует, остальные кнопки жмут ячейки панели навыков, правый стик выбирает цель, крестовина вниз "
+     "говорит с ближайшим NPC. Пока играете с контроллером, интерфейс показывает его кнопки, а цель стоит в золотом "
+     "кольце."},
     {Text::PadStateOff, "Off: the game starts without the pad.",
      "Вимкнено: гра запускається без геймпада.",
      "Выключен: игра запускается без геймпада."},
@@ -1999,19 +2002,20 @@ constexpr Entry kTexts[] = {
     {Text::PadStartsOnHint, "Off: the pad waits for Back (Share, Create) to switch on.",
      "Вимкнено: геймпад чекає на Back (Share, Create), щоб увімкнутися.",
      "Выключено: геймпад ждёт Back (Share, Create), чтобы включиться."},
-    {Text::PadMenuLanguage, "Its menu's language",
-     "Мова його меню",
-     "Язык его меню"},
-    {Text::PadMenuLanguageHint, "The language of the pad's menu in the game (Start).",
-     "Мова меню геймпада в грі (Start).",
-     "Язык меню геймпада в игре (Start)."},
+    {Text::PadWalkRadius, "How far the stick walks",
+     "Дальність ходу стіком",
+     "Дальность хода стиком"},  // 3.0.11-beta.89: was the pad's menu's language (it follows this app's now)
+    {Text::PadWalkRadiusHint,
+     "How far ahead of the character the left stick walks, a share of the window's shorter side (as before: 22 %).",
+     "Наскільки далеко перед персонажем іде лівий стік, частка коротшої сторони вікна (як було: 22 %).",
+     "Насколько далеко перед персонажем идёт левый стик, доля короткой стороны окна (как было: 22 %)."},
     {Text::PadSettingsNote,
-     "These are saved to uaro-pad.ini at once; the game reads them when it starts. Button layouts and the rest are in "
-     "the pad's menu: Start in the game.",
-     "Це зберігається в uaro-pad.ini одразу; гра читає їх при запуску. Розкладки кнопок та інше - у меню геймпада: "
-     "Start у грі.",
-     "Это сохраняется в uaro-pad.ini сразу; игра читает их при запуске. Раскладки кнопок и остальное - в меню "
-     "геймпада: Start в игре."},
+     "Saved at once (uaro-graphics\\uaro-pad.ini and uaro-pad-binds.ini); the game takes the buttons when the "
+     "character enters, the rest when it starts. The controller's menu in the game (Start) changes the same.",
+     "Зберігається одразу (uaro-graphics\\uaro-pad.ini та uaro-pad-binds.ini); кнопки гра бере, коли входить "
+     "персонаж, решту - під час запуску. Меню контролера в грі (Start) змінює те саме.",
+     "Сохраняется сразу (uaro-graphics\\uaro-pad.ini и uaro-pad-binds.ini); кнопки игра берёт, когда входит "
+     "персонаж, остальное - при запуске. Меню контроллера в игре (Start) меняет то же самое."},
     {Text::PadNpcHint, "Hint in NPC windows",
      "Підказка у вікнах NPC",
      "Подсказка в окнах NPC"},
@@ -2019,6 +2023,30 @@ constexpr Entry kTexts[] = {
      "While an NPC window is open, a line at the bottom of the game says what the buttons do there.",
      "Поки відкрите вікно NPC, рядок унизу гри підказує, що там роблять кнопки.",
      "Пока открыто окно NPC, строка внизу игры подсказывает, что там делают кнопки."},
+    {Text::PadSeen, "The last controller in the game: {1}, {2}.", "Останній контролер у грі: {1}, {2}.",
+     "Последний контроллер в игре: {1}, {2}."},  // 3.0.11-beta.89
+    {Text::PadSeenNone, "No controller has been connected in the game yet.", "У грі контролер ще не підключали.",
+     "В игре контроллер ещё не подключали."},
+    {Text::PadOnInterface, "On the interface", "На інтерфейсі", "На интерфейсе"},
+    {Text::PadButtons, "Buttons", "Кнопки", "Кнопки"},
+    {Text::PadWho, "Character", "Персонаж", "Персонаж"},
+    {Text::PadWhoHint, "Each character keeps its own buttons; those without their own take the default ones.",
+     "Кожен персонаж має свої кнопки; ті, хто без своїх, беруть типові.",
+     "У каждого персонажа свои кнопки; те, у кого своих нет, берут кнопки по умолчанию."},
+    {Text::PadWhoDefault, "Default (characters without their own)", "Типові (персонажі без своїх)",
+     "По умолчанию (персонажи без своих)"},
+    {Text::PadButtonHint, "What this button does in the game: a skill bar's cell, attack, picking up, talking...",
+     "Що ця кнопка робить у грі: клітинка панелі навичок, атака, підбирання, розмова...",
+     "Что эта кнопка делает в игре: ячейка панели навыков, атака, подбор, разговор..."},
+    {Text::PadMark, "The old target mark", "Стара позначка цілі", "Старая метка цели"},
+    {Text::PadMarkHint,
+     "A state the game shows on the pad's target (a poison tint and the like) - kept until the gold ring is checked; "
+     "«None» leaves the ring alone.",
+     "Стан, який гра показує на цілі контролера (отруйний відтінок тощо), - лишається, доки золоте кільце не "
+     "перевірено; «Немає» лишає саме кільце.",
+     "Состояние, которое игра показывает на цели контроллера (ядовитый оттенок и т. п.), - остаётся, пока золотое "
+     "кольцо не проверено; «Нет» оставляет одно кольцо."},
+    {Text::PadMarkOff, "None", "Немає", "Нет"},
     {Text::AiModelAnime6b, "anime 6B (drawn: finer lines, keeps details; 5-7 times slower)",
      "anime 6B (мальоване: тонші лінії, зберігає деталі; у 5-7 разів повільніша)",
      "anime 6B (рисованное: тоньше линии, сохраняет детали; в 5-7 раз медленнее)"},

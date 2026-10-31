@@ -48,8 +48,11 @@ const OwnRow kOwnRows[] = {
     {View::Pad, Mode::Simple, "pad.enabled", {Text::PadTouchpad, Text::PadTouchpadHint}},
     {View::Pad, Mode::Simple, "pad.enabled", {Text::PadRumble, Text::PadRumbleHint}},
     {View::Pad, Mode::Simple, "pad.enabled", {Text::PadStartsOn, Text::PadStartsOnHint}},
-    {View::Pad, Mode::Simple, "pad.enabled", {Text::PadMenuLanguage, Text::PadMenuLanguageHint}},
+    {View::Pad, Mode::Simple, "pad.enabled", {Text::PadWalkRadius, Text::PadWalkRadiusHint}},
     {View::Pad, Mode::Simple, "pad.enabled", {Text::PadNpcHint, Text::PadNpcHintHint}},
+    {View::Pad, Mode::Simple, "pad.enabled", {Text::PadWho, Text::PadWhoHint}},  // 3.0.11-beta.89
+    {View::Pad, Mode::Simple, "pad.enabled", {Text::PadButtons, Text::PadButtonHint}},
+    {View::Pad, Mode::Simple, "pad.enabled", {Text::PadMark, Text::PadMarkHint}},
 };
 
 // The Effects page's head in its order (the mode not in Simple: a set decides it there); the groups follow

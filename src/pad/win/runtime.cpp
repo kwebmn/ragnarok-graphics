@@ -5,6 +5,7 @@
 #include <cmath>
 #include <cstdlib>
 #include <cstring>
+#include <ctime>
 #include <exception>
 #include <fstream>
 #include <memory>
@@ -44,6 +45,7 @@
 #include "core/walk_path.hpp"
 #include "win/game_camera.hpp"
 #include "win/party_panel.hpp"
+#include "win/real_ddraw.hpp"
 #include "win/reference_load.hpp"
 #include "win/reference_window.hpp"
 
@@ -259,11 +261,18 @@ void logDiagnostics(DWORD now) {
              (unsigned long)s.session->world().selfId());
 }
 
+bool writeAtomically(const std::string& path, const std::string& text);
+
 void logPad(const PadState& p) {
     State& s = S();
     if (p.connected != s.loggedConnected) {
         s.loggedConnected = p.connected;
         LOG_INFO("gamepad %s", p.connected ? "connected" : "disconnected");
+        if (p.connected) {  // 3.0.11-beta.89: the app's page «Контролер» says which one the game saw last
+            const std::string line = std::to_string(static_cast<long long>(std::time(nullptr))) + "\t" + s.pad.name();
+            writeAtomically(uagfx::layout::join(uagfx::win::gameDir(), uagfx::layout::kPadSeen), line + "\n");
+            LOG_INFO("gamepad: %s", s.pad.name());
+        }
     }
     if (p.buttons != s.loggedButtons) {
         s.loggedButtons = p.buttons;
@@ -304,6 +313,10 @@ overlay::View menuView() {
     return v;
 }
 
+// 3.0.11-beta.89 (the concept «Контроллер в интерфейсе uaRO»: one program, one language): the pad's menu and hints in
+// the language of uaRO Graphics' interface, whatever uaro-pad.ini says
+void followDriverLanguage(Config& cfg) { cfg.lang = Lang(int(uagfx::win::startup().lang)); }
+
 // Writes `text` to `path` through a temporary file, so a crash never leaves half a file behind.
 bool writeAtomically(const std::string& path, const std::string& text) {
     const std::string tmp = path + ".tmp";
@@ -334,6 +347,7 @@ bool saveSettings(const Settings& after) {
     if (written) LOG_INFO("uaro-pad.ini: %u setting(s) saved", unsigned(edits.size()));
     const Config old = s.cfg;
     applySettings(after, s.sleepWhenOn, s.cfg);
+    followDriverLanguage(s.cfg);
     if (s.cfg.backgroundSleepMs > 0) s.sleepWhenOn = s.cfg.backgroundSleepMs;
     s.session->setMark(s.cfg.mark);
     s.session->setWalkRadius(s.cfg.walkRadius);
@@ -658,6 +672,7 @@ void init() {
         s.iniPath = uagfx::win::ourFile(game, layout::File::PadIni);
         s.bindsPath = uagfx::win::ourFile(game, layout::File::PadBinds);
         s.cfg = parseConfig(readFile(s.iniPath));
+        followDriverLanguage(s.cfg);  // 3.0.11-beta.89: the pad speaks the interface's language
         uagfx::win::makeFolders(layout::join(game, layout::kLogs));
         wlog::open(layout::join(game, layout::now(layout::File::PadLog)), s.cfg.logLevel);
         LOG_INFO("uaRO Pad %s", version());

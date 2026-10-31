@@ -101,6 +101,9 @@ constexpr const char* kClientPatchWork = "uaro-graphics\\update\\client";
 // own place - an older update.bat copies uaro-graphics\ of the archive over the installed one).
 constexpr const char* kIniTemplate = "uaro-graphics\\defaults\\uaro-graphics.ini";
 constexpr const char* kPadTemplate = "uaro-graphics\\defaults\\uaro-pad.ini";
+// 3.0.11-beta.89 (the concept «Контроллер в интерфейсе uaRO», stage 5): the last controller the game saw - its unix
+// time, a tab, its name (pad/win/runtime writes it, the app's page «Контролер» shows it)
+constexpr const char* kPadSeen = "uaro-graphics\\pad-seen.txt";
 
 const char* now(File f);     // where 2.8 keeps it
 const char* before(File f);  // where 2.x kept it

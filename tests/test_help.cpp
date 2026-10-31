@@ -71,8 +71,8 @@ TEST(help_holds_the_pages_own_rows) {
     const std::vector<Text> pad = labels(View::Pad, Mode::Simple);
     CHECK_EQ(at(pad, Text::PadEnabled), 0);
     CHECK_EQ(at(pad, Text::PadType), 1);
-    for (Text t : {Text::PadLightbar, Text::PadTouchpad, Text::PadRumble, Text::PadStartsOn, Text::PadMenuLanguage,
-                   Text::PadNpcHint})
+    for (Text t : {Text::PadLightbar, Text::PadTouchpad, Text::PadRumble, Text::PadStartsOn, Text::PadWalkRadius,
+                   Text::PadNpcHint, Text::PadWho, Text::PadButtons, Text::PadMark})  // 3.0.11-beta.89: the page's own
         CHECK(at(pad, t) > 1);
     CHECK(hintOf(View::Pad, Mode::Simple, Text::PadNpcHint) == Text::PadNpcHintHint);
     const std::vector<Text> play = labels(View::Play, Mode::Simple);
