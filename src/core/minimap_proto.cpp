@@ -21,6 +21,7 @@ constexpr uint32_t kGround = 0xFF141922;   // the map's square where it has no p
 constexpr uint32_t kKafra = 0xE86AA8;      // the concept's «K»
 constexpr uint32_t kPortal = 0x23285A, kPortalRing = 0x8E9BFF;
 constexpr uint32_t kArrow = 0x4FA3FF, kCone = 0x5AB4FF;
+constexpr uint32_t kMemberRing = 0x7FD3FF, kDeadRing = 0xFF5A4E;  // 3.0.11-beta.83: the party's (as the chat's)
 
 // a smooth line `width` wide and a ring - each pixel's coverage by its distance (inside `clip`)
 void segment(panel::Picture& p, const panel::Box& clip, float x0, float y0, float x1, float y1, float width,
@@ -324,7 +325,29 @@ void mapPixels(panel::Picture& out, const panel::Box& box, const Scene& sc, cons
     }
 }
 
-float markRadius(Glyph g, float s) { return g == Glyph::Warp ? 5.5f * s : g == Glyph::Kafra ? 6 * s : 2.8f * s; }
+float markRadius(Glyph g, float s) {
+    return g == Glyph::Warp ? 5.5f * s : g == Glyph::Kafra ? 6 * s : g == Glyph::Member ? 7 * s : 2.8f * s;
+}
+
+// 3.0.11-beta.83: a premultiplied picture inside a circle round (cx, cy), over what is there
+void faceIn(panel::Picture& out, const panel::Picture& pic, float cx, float cy, float r) {
+    const int ox = int(std::floor(cx - float(pic.width) / 2)), oy = int(std::floor(cy - float(pic.height) / 2));
+    for (int y = 0; y < pic.height; ++y)
+        for (int x = 0; x < pic.width; ++x) {
+            const int tx = ox + x, ty = oy + y;
+            if (tx < 0 || ty < 0 || tx >= out.width || ty >= out.height) continue;
+            const float k = std::clamp(r + 0.5f - panel::length(float(tx) + 0.5f - cx, float(ty) + 0.5f - cy), 0.0f,
+                                       1.0f);
+            const uint32_t c = pic.px[size_t(y) * size_t(pic.width) + size_t(x)];
+            if (k <= 0 || !(c >> 24)) continue;
+            uint32_t& d = out.px[size_t(ty) * size_t(out.width) + size_t(tx)];
+            uint32_t mixed = 0;
+            const float keep = 1.0f - float(c >> 24) / 255.0f * k;
+            for (int sh = 0; sh <= 24; sh += 8)
+                mixed |= uint32_t(std::min(255.0f, float((c >> sh) & 0xFF) * k + float((d >> sh) & 0xFF) * keep)) << sh;
+            d = mixed;
+        }
+}
 
 // The marks, the way, its pin and the player over the map's picture in `box` (a view's pixels from its corner)
 void overMap(panel::Picture& out, const panel::Box& box, const Scene& sc, const View& v, float s, float big) {
@@ -357,6 +380,12 @@ void overMap(panel::Picture& out, const panel::Box& box, const Scene& sc, const 
             case Glyph::Dot:
                 panel::circle(out, x, y, r + 1.2f, kBlack, 0.8f);
                 panel::circle(out, x, y, r, m.rgb, 1.0f);
+                break;
+            case Glyph::Member:  // 3.0.11-beta.83: its face in a dark round, a blue ring (a dead one's red)
+                panel::circle(out, x, y, r + 1.5f, kBlack, 0.7f);
+                panel::circle(out, x, y, r, kDark, 1.0f);
+                if (m.picture && m.picture->width > 0) faceIn(out, *m.picture, x, y, r - 1.2f * s);
+                ring(out, x, y, r - 0.6f * s, 1.6f * s, m.dead ? kDeadRing : kMemberRing, 1.0f);
                 break;
         }
     }

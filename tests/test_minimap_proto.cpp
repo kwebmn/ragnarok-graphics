@@ -397,3 +397,42 @@ TEST(minimap_proto_arrow_walks_and_clicks_find_cells) {
     CHECK(got.x == 62 && got.y == 41);
     CHECK(!minimap::cellAt(L, sc, L.map.x - 5, L.map.y - 5, got));  // off its map
 }
+
+// 3.0.11-beta.83 (the owner's 3: «участники на миникарте и большой карте»): a party member - its face in a round with a
+// blue ring (a dead one's red), named under the pointer
+TEST(minimap_proto_party_members) {
+    const minimap::Layout L = minimap::layout(1280, 720, 1.0f, false, 0);
+    panel::Picture face;
+    face.width = face.height = 12;
+    face.px.assign(144, 0xFFC08040u);
+    minimap::Scene sc;
+    sc.map = minimap::MapSize{100, 100};
+    sc.player = minimap::Cell{50, 50};
+    minimap::Mark tor{minimap::Cell{30, 70}, 0, minimap::Glyph::Member, "Tor"};
+    tor.picture = &face;
+    minimap::Mark lis{minimap::Cell{70, 30}, 0, minimap::Glyph::Member, "Lis"};
+    lis.dead = true;
+    sc.marks = {tor, lis};
+    panel::Picture pic;
+    minimap::paint(pic, L, sc, minimap::Texts{});
+    const auto at = [&](float x, float y) { return pic.px[size_t(y) * size_t(pic.width) + size_t(x)]; };
+    const minimap::View v = minimap::view(sc.map, sc.player, 100, int(L.map.w));
+    float px = 0, py = 0;
+    minimap::cellToPanel(v, sc.map, minimap::Cell{30, 70}, px, py);
+    const uint32_t middle = at(L.map.x + px, L.map.y + py);
+    CHECK(((middle >> 16) & 0xFF) > 0xA0 && ((middle >> 8) & 0xFF) > 0x60 && (middle & 0xFF) < 0x60);  // its face
+    int blue = 0;  // its ring
+    for (int dx = -9; dx <= 9; ++dx) {
+        const uint32_t c = at(L.map.x + px + float(dx), L.map.y + py);
+        blue += (c & 0xFF) > 0xC0 && ((c >> 16) & 0xFF) < 0xA0;
+    }
+    CHECK(blue > 0);
+    minimap::cellToPanel(v, sc.map, minimap::Cell{70, 30}, px, py);
+    int red = 0;  // the dead one's ring
+    for (int dx = -9; dx <= 9; ++dx) {
+        const uint32_t c = at(L.map.x + px + float(dx), L.map.y + py);
+        red += ((c >> 16) & 0xFF) > 0xC0 && ((c >> 8) & 0xFF) < 0x80;
+    }
+    CHECK(red > 0);
+    CHECK(minimap::markAt(L, sc, px + 1, py - 1) == 1);
+}

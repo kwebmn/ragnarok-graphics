@@ -76,12 +76,15 @@ inline bool keyedPink(uint32_t argb) {
 MapPicture prepare(const std::vector<uint32_t>& argb, int width, int height);
 
 // What the map shows
-enum class Glyph : uint8_t { Dot, Kafra, Warp };
+// 3.0.11-beta.83 (the owner's 3): Member - a party member, its face in a round with a blue ring (a dead one's red)
+enum class Glyph : uint8_t { Dot, Kafra, Warp, Member };
 struct Mark {
     Cell cell;
     uint32_t rgb = 0;
     Glyph glyph = Glyph::Dot;
     std::string label;  // its words: under the pointer; on the big map a warp's and a Kafra's always
+    const panel::Picture* picture = nullptr;  // 3.0.11-beta.83: a member's face (premultiplied); null: none
+    bool dead = false;                        // a member's
 };
 struct Scene {
     const std::vector<uint32_t>* argb = nullptr;  // the map's own picture (the game's), the whole map, rows north first

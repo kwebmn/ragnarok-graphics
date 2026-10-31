@@ -95,6 +95,7 @@ struct State {
     std::map<std::string, panel::Picture> faces;  // by sex:hair:colour:side
     int facesTold = 0;
     std::vector<uint32_t> rowsOf;  // 3.0.11-beta.82: each row's account (a click's member)
+    unsigned codePage = 0;         // 3.0.11-beta.83: the names' (the minimap's members)
     bool on = false, shown = false;
     float k = 0, scale = 1;
     int targetW = 0, targetH = 0;
@@ -379,6 +380,7 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     }
     readState(s);
     readLooks(s);
+    s.codePage = codePage;
     if (s.looksChangedAt && GetTickCount64() - s.looksChangedAt > 2000) {  // 3.0.11-beta.80: the looks seen, kept
         s.looksChangedAt = 0;
         keepLooks(s);
@@ -545,6 +547,29 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
         }
     }
     return true;
+}
+
+std::vector<OnMap> onMap(int faceSide) {
+    State& s = state();
+    std::vector<OnMap> out;
+    if (!s.on || s.order.empty()) return out;
+    const std::string here = readGameMap();
+    const ULONGLONG now = GetTickCount64();
+    for (const uint32_t account : s.order) {
+        const auto it = s.seats.find(account);
+        if (it == s.seats.end()) continue;
+        const Seat& seat = it->second;
+        if (!seat.online || (!seat.map.empty() && seat.map != here) || seat.x < 0 || now - seat.posAt > kPosMs)
+            continue;
+        OnMap m;
+        m.x = seat.x;
+        m.y = seat.y;
+        m.name = utf8Of(widened(seat.name, s.codePage));
+        m.face = faceOf(s, account, faceSide, m.name);
+        m.dead = seat.dead;
+        out.push_back(m);
+    }
+    return out;
 }
 
 }  // namespace uagfx::win::partywin

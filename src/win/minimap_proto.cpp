@@ -30,6 +30,7 @@
 #include "win/hud_edit.hpp"
 #include "win/log.hpp"
 #include "win/map_hd.hpp"
+#include "win/party_panel.hpp"
 #include "win/paths.hpp"
 #include "win/picture_draw.hpp"
 #include "win/real_ddraw.hpp"
@@ -140,6 +141,9 @@ struct State {
     std::vector<walkpath::Cell> plotTail;  // from the first point through the rest
     std::vector<minimap::Line> plotLines;
     ULONGLONG plotThereAt = 0;
+    // 3.0.11-beta.83 (the owner's 3): the party's members on this map - their faces at their cells
+    std::vector<minimap::Mark> members;
+    std::string membersKey;
 };
 
 constexpr ULONGLONG kPaintEveryMs = 33;
@@ -609,6 +613,7 @@ minimap::Scene sceneOf(const State& s) {
     sc.lookY = s.lookY;
     sc.cells = minimap::cellsAt(s.zoom, s.size);
     sc.marks = s.marks;
+    sc.marks.insert(sc.marks.end(), s.members.begin(), s.members.end());  // 3.0.11-beta.83: after the hints
     sc.path = s.path;
     if (!s.plot.empty() && s.plotMap == s.map) {  // 3.0.11-beta.71: the points set - the last a pin
         sc.pin = true;
@@ -858,6 +863,24 @@ void frame(HWND game, const Show& show, double k, int targetWidth, int targetHei
         s.dirty = s.bigDirty = true;
     }
     if (!plotFrame(s)) followFrame(s);  // 3.0.11-beta.71: the way set on the map first
+    {  // 3.0.11-beta.83: the party's members here, their faces as the marks' size
+        const int side = std::max(8, int(std::lround(12 * s.scale)));
+        std::vector<minimap::Mark> members;
+        std::string key;
+        for (const partywin::OnMap& m : partywin::onMap(side)) {
+            minimap::Mark mark{minimap::Cell{m.x, m.y}, 0, minimap::Glyph::Member, m.name};
+            mark.picture = m.face;
+            mark.dead = m.dead;
+            members.push_back(mark);
+            key += m.name + ':' + std::to_string(m.x) + ',' + std::to_string(m.y) + (m.dead ? "d" : "") +
+                   (m.face ? "f" : "") + ';';
+        }
+        if (key != s.membersKey) {
+            s.membersKey = key;
+            s.members = std::move(members);
+            s.dirty = s.bigDirty = true;
+        }
+    }
     reachFrame(s, show.reach);  // 3.0.11-beta.65
     // the part and the mark under the game's cursor: a button lit, a mark naming itself
     int cx = 0, cy = 0, hover = -1;
@@ -957,7 +980,8 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
             if (m == WM_RBUTTONDOWN && bp == minimap::BigPart::Map) clearPlot(s);
             if (m == WM_LBUTTONDOWN && bp == minimap::BigPart::Map && ctrl) {  // Ctrl: a warp's map's card
                 const int mark = minimap::bigMarkAt(s.bigLayout, sc, bx, by);
-                if (mark >= 0 && s.index && s.marks[size_t(mark)].glyph == minimap::Glyph::Warp) {
+                if (mark >= 0 && size_t(mark) < s.marks.size() && s.index &&
+                    s.marks[size_t(mark)].glyph == minimap::Glyph::Warp) {
                     const auto it = s.index->maps.find(s.map);
                     if (it != s.index->maps.end())
                         for (const refindex::Warp& w : it->second.warps)

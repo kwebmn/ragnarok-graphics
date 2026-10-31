@@ -1,8 +1,12 @@
 #pragma once
 #include <windows.h>
 
+#include <string>
+#include <vector>
+
 #include "core/frame.hpp"
 #include "core/game_packets.hpp"
+#include "core/window_panel.hpp"
 
 namespace uagfx::gpu {
 class Renderer;
@@ -18,5 +22,15 @@ void packet(const packets::Event& e);
 void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int targetHeight);
 void draw(FrameRecord& record, gpu::Renderer& renderer);
 bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result);
+
+// 3.0.11-beta.83 (the owner's 3: «участники на миникарте и большой карте»): the party's members on the character's
+// map at the cells the server told the party (0x0107, fresh), their faces at `faceSide` - for the minimap
+struct OnMap {
+    int x = 0, y = 0;
+    std::string name;  // UTF-8
+    const panel::Picture* face = nullptr;
+    bool dead = false;
+};
+std::vector<OnMap> onMap(int faceSide);
 
 }  // namespace uagfx::win::partywin
