@@ -36,6 +36,67 @@ TEST(ctl_walk_ring_point_and_stop) {
     CHECK(decodePos3(pkt(o, 0).data(), 5) == (Cell{100, 100}));
 }
 
+// --- 3.0.11-beta.88: walking without the mouse (the concept «Контроллер в интерфейсе uaRO», stage 4) ---
+
+TEST(ctl_direct_walk_along_the_stick) {
+    Controller c(Config{});
+    c.setDirectWalk(true);
+    c.setLook(0, 1);  // the camera looks north: the stick's up is north, its right east
+    WorldState w = world();
+    PadState p = pad();
+    p.lx = 1.0f;
+    TickOutput o = c.tick(p, w, view(), 100);
+    CHECK(!o.mouse.active);  // the mouse is left alone
+    CHECK(o.packets.size() == 1 && pid(pkt(o, 0)) == 0x00a7 && decodePos3(pkt(o, 0).data(), 5) == (Cell{106, 100}));
+    CHECK(c.walkTarget() && *c.walkTarget() == (Cell{106, 100}));
+    o = c.tick(p, w, view(), 200);  // held steady: the next request 350 ms on
+    CHECK(o.packets.empty());
+    o = c.tick(p, w, view(), 460);
+    CHECK_EQ(o.packets.size(), 1u);
+    p.lx = 0;
+    p.ly = 1.0f;  // up: north - another way 150 ms on
+    o = c.tick(p, w, view(), 620);
+    CHECK(o.packets.size() == 1 && decodePos3(pkt(o, 0).data(), 5) == (Cell{100, 106}));
+    o = c.tick(pad(), w, view(), 700);  // let go: the stop, as with the mouse
+    CHECK(o.packets.size() == 1 && pid(pkt(o, 0)) == 0x00a7);
+    CHECK(!c.walkTarget());
+}
+
+TEST(ctl_direct_walk_turns_with_the_camera) {
+    Controller c(Config{});
+    c.setDirectWalk(true);
+    c.setLook(1, 0);  // the camera looks east: the stick's up is east, its right south
+    WorldState w = world();
+    PadState p = pad();
+    p.ly = 1.0f;
+    TickOutput o = c.tick(p, w, view(), 100);
+    CHECK(!o.packets.empty() && decodePos3(pkt(o, 0).data(), 5) == (Cell{106, 100}));
+    p.ly = 0;
+    p.lx = 1.0f;
+    o = c.tick(p, w, view(), 300);
+    CHECK(!o.packets.empty() && decodePos3(pkt(o, 0).data(), 5) == (Cell{100, 94}));
+}
+
+TEST(ctl_direct_walk_stops_short_of_a_wall) {
+    Controller c(Config{});
+    c.setDirectWalk(true);
+    c.setLook(0, 1);
+    GroundGrid g;
+    g.w = g.h = 200;
+    g.walk.assign(200 * 200, 1);
+    for (int y = 0; y < 200; ++y) g.walk[size_t(y) * 200 + 104] = 0;  // a wall at x 104
+    c.setGround(&g);
+    WorldState w = world();
+    PadState p = pad();
+    p.lx = 1.0f;
+    TickOutput o = c.tick(p, w, view(), 100);
+    CHECK(!o.packets.empty() && decodePos3(pkt(o, 0).data(), 5) == (Cell{103, 100}));
+    g.walk[size_t(100) * 200 + 101] = 0;  // a wall next to the character: nowhere that way
+    o = c.tick(p, w, view(), 500);
+    CHECK(o.packets.empty());
+    CHECK(c.walkTarget() && *c.walkTarget() == (Cell{100, 100}));
+}
+
 TEST(ctl_walk_radius_changes_at_once) {
     Controller c(Config{});
     WorldState w = world();

@@ -63,3 +63,8 @@ defaults (ruling R3); the monsters' HP bars wait for question 2 (R2).
   [interface] target_ring off|pad|always; the fake 0x0229 mark kept until the owner confirms the ring (doc).
   Ruling: no ring heights from the .gat - flat at the actor's own height with the depth bias (slopes under a monster are
   small) - cost if wrong: a ring sinking on steep ground, one beta.
+- Stage 4: built as 3.0.11-beta.88 - Controller direct walk (setDirectWalk/setLook/setGround/walkTarget: 6 cells in
+  half-cell steps, resend 150/350 ms, the stop as before), GroundGrid from walkable.bin, the look from the view matrix
+  (as the minimap), core ground_way arrow, win/ground_marks arrow + end ring, [interface] pad_walk mouse|arrow (mouse).
+  Ruling: the game cursor is not hidden (left where the mouse put it; hiding means every part's cursorDraw) - cost if
+  wrong: a still cursor on screen, one beta.

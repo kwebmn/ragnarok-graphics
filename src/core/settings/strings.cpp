@@ -5017,6 +5017,16 @@ constexpr Entry kTexts[] = {
     {Text::InterfaceTargetRingOff, "Off", "Вимкнено", "Выключено"},
     {Text::InterfaceTargetRingPad, "With the controller", "З контролером", "С контроллером"},
     {Text::InterfaceTargetRingAlways, "Always", "Завжди", "Всегда"},
+    {Text::InterfacePadWalk, "The controller walks", "Хід контролером", "Ход контроллером"},  // 3.0.11-beta.88
+    {Text::InterfacePadWalkHint,
+     "How the left stick walks: holding the game's cursor out, as before, or without the mouse - the character goes "
+     "where the stick points, an arrow on the ground shows the way and stops short of walls (a prototype to check).",
+     "Як ходить лівий стік: тримаючи курсор гри, як раніше, або без миші - персонаж іде, куди показує стік, стрілка "
+     "на землі показує шлях і зупиняється перед стінами (прототип на перевірку).",
+     "Как ходит левый стик: держа курсор игры, как раньше, или без мыши - персонаж идёт, куда показывает стик, стрелка "
+     "на земле показывает путь и останавливается перед стенами (прототип на проверку)."},
+    {Text::InterfacePadWalkMouse, "With the cursor (as before)", "Курсором (як раніше)", "Курсором (как раньше)"},
+    {Text::InterfacePadWalkArrow, "With an arrow, no mouse", "Стрілкою, без миші", "Стрелкой, без мыши"},
     // 3.0.11-beta.33
     {Text::InterfaceMinimapWay, "The way on the ground", "Шлях на землі", "Путь на земле"},
     {Text::InterfaceMinimapWayHint,

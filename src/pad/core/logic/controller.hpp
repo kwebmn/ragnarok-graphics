@@ -4,6 +4,7 @@
 #include <optional>
 #include <string>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 #include "pad/core/bytes.hpp"
@@ -92,6 +93,14 @@ public:
     bool cameraMode() const { return cameraMode_; }  // the right stick turns the camera instead of picking
     NpcDialog dialog() const { return dialog_; }      // 0.7: the NPC window the pad answered last tick
     void setWalkRadius(float fraction) { cfg_.walkRadius = fraction; }  // [stick] walk_radius, from the menu
+    // 3.0.11-beta.88 (the concept's stage 4): walking without the mouse - the pad asks the server for a cell along the
+    // stick itself (the camera's look along the ground gives the way, the map's walkable cells where it ends) instead
+    // of holding the client's cursor out; walkTarget() - where the stick walks now (the arrow's end on the ground)
+    void setDirectWalk(bool on) { directWalk_ = on; }
+    void setLook(double east, double north) { look_ = std::make_pair(east, north); }
+    void clearLook() { look_.reset(); }
+    void setGround(const GroundGrid* g) { ground_ = g; }
+    std::optional<Cell> walkTarget() const { return walkTo_; }
     // The client's own camera turn (radians, its own count) when it can be read from its memory; nothing
     // otherwise. Once the walk samples show how it maps to the screen, the directions follow it at once.
     void setClientTurn(std::optional<double> radians) {
@@ -123,6 +132,7 @@ private:
 
     uint16_t readButtons(const PadState& pad);
     void walk(const PadState& pad, const WorldState& world, const ViewInfo& view, uint32_t now, TickOutput& out);
+    void walkDirect(const PadState& pad, float mag, const WorldState& world, uint32_t now, TickOutput& out);
     void aim(const PadState& pad, const WorldState& world, uint32_t now, TickOutput& out);
     void handleButtons(uint16_t held, uint16_t down, const WorldState& world, uint32_t now, TickOutput& out);
     void fire(const Action& a, bool repeat, const WorldState& world, uint32_t now, TickOutput& out);
@@ -192,6 +202,11 @@ private:
     std::unordered_map<uint32_t, uint32_t> markedMs_;   // actor id -> when we last showed its "!"
     std::optional<Approach> approach_;
     std::vector<uint32_t> friends_;     // 3.0.11-beta.85
+    bool directWalk_ = false;           // 3.0.11-beta.88
+    std::optional<std::pair<double, double>> look_;  // the camera's look along the ground: east, north
+    const GroundGrid* ground_ = nullptr;
+    std::optional<Cell> walkTo_, sentTo_;  // where the stick walks now; the last cell asked for
+    uint32_t sentAt_ = 0;
     std::optional<Choosing> choosing_;  // a support skill waits for whom
     NpcDialog dialog_ = NpcDialog::None;
     int number_ = 0;                       // what the pad put into the number field

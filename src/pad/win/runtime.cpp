@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <atomic>
+#include <cmath>
 #include <cstdlib>
 #include <cstring>
 #include <exception>
@@ -40,7 +41,10 @@
 #include "pad/win/pads.hpp"
 #include "win/disk.hpp"
 #include "win/paths.hpp"
+#include "core/walk_path.hpp"
+#include "win/game_camera.hpp"
 #include "win/party_panel.hpp"
+#include "win/reference_load.hpp"
 #include "win/reference_window.hpp"
 
 namespace uapad::runtime {
@@ -101,6 +105,11 @@ struct State {
     bool padConnected = false;
     ULONGLONG travelAt = 0;
     int travelX = 0, travelY = 0;
+    // 3.0.11-beta.88: walking without the mouse - the map's walkable cells (the reference's walkable.bin)
+    bool directWalk = false;
+    std::string groundMap;
+    GroundGrid ground;
+    DWORD groundTriedMs = 0;
     unsigned long nState = 0, nData = 0, nCursor = 0, nPump = 0, nRecv = 0, nSend = 0;
     DWORD lastDiagMs = 0;
 };
@@ -464,6 +473,42 @@ void followTheMouse(bool foreground, DWORD now) {
     }
 }
 
+// 3.0.11-beta.88 (the concept's stage 4): walking without the mouse - which way the camera looks along the ground (the
+// view's forward, as the minimap reads it) and the map's walkable cells, for the controller to find the cell to ask for
+void lookAndGround(DWORD now) {
+    State& s = S();
+    Controller& control = s.session->control();
+    control.setDirectWalk(s.directWalk);
+    if (!s.directWalk) return;
+    float view[12];
+    const float len = uagfx::win::readGameCamera(view) ? std::hypot(view[2], view[8]) : 0.0f;
+    if (len > 1e-3f)
+        control.setLook(double(view[2] / len), double(view[8] / len));
+    else
+        control.clearLook();
+    const std::string map = uagfx::win::readGameMap();
+    if (map != s.groundMap || (!s.ground.known() && !map.empty() && now - s.groundTriedMs >= 2000)) {
+        const bool fresh = map != s.groundMap;
+        s.groundMap = map;
+        s.groundTriedMs = now;
+        s.ground = GroundGrid{};
+        const auto index = uagfx::win::reference::index();
+        if (index && index->walk) {
+            const auto it = index->walk->find(map);
+            if (it != index->walk->end()) {
+                const uagfx::walkpath::Cells cells = uagfx::walkpath::cellsOf(it->second);
+                s.ground.w = cells.w;
+                s.ground.h = cells.h;
+                s.ground.walk = cells.walk;
+            }
+        }
+        if (fresh || s.ground.known())
+            LOG_INFO("walk without the mouse: %s - %s", map.c_str(),
+                     s.ground.known() ? "its walkable cells read" : "no walkable cells known yet: any cell asked for");
+    }
+    control.setGround(&s.ground);
+}
+
 // 0.7: what the pad asked of the NPC window, and the line that says what its buttons do there (3.0.11-beta.85: or
 // while a support skill asks whom).
 void answerNpc(const TickOutput& out, const ViewInfo& view, const PadState& pad) {
@@ -536,6 +581,7 @@ void tick() {
     else
         s.session->setClientTurn(std::nullopt);
     s.session->setFriends(uagfx::win::partywin::hereIds());  // 3.0.11-beta.85: whom a support skill may go on
+    lookAndGround(now);  // 3.0.11-beta.88
     const TickOutput out = s.session->tick(pad, view, now);
     if (out.camera.turnDeg != 0 && s.cameraSupported && !clientcamera::turn(out.camera.turnDeg) &&
         !s.loggedCameraFail) {
@@ -575,6 +621,22 @@ Look look() {
 uint32_t target() { return healthy() && S().session ? S().session->controller().target() : 0; }
 
 uint32_t preview() { return healthy() && S().session ? S().session->controller().preview() : 0; }
+
+void setDirectWalk(bool on) {
+    State& s = S();
+    if (on == s.directWalk) return;
+    s.directWalk = on;
+    LOG_INFO("walk without the mouse: %s", on ? "on (an arrow on the ground)" : "off (the game's cursor held out)");
+}
+
+bool walkTarget(int& x, int& y) {
+    if (!healthy() || !S().session) return false;
+    const std::optional<Cell> at = S().session->controller().walkTarget();
+    if (!at) return false;
+    x = at->x;
+    y = at->y;
+    return true;
+}
 
 void noteKeysOrMouse(bool click) {
     State& s = S();

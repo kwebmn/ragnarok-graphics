@@ -243,3 +243,23 @@ TEST(ground_way_rings_and_chevron) {
     CHECK(c[2].x == 400 && c[2].y == 120 && c[0].y == 106 && c[0].x == 390 && c[1].x == 410);
     CHECK(c[0].z == 0 && c[0].rhw == 1 && c[0].diffuse == 0xFFE6CB8Au);
 }
+
+// 3.0.11-beta.88 (the concept's stage 4): the walk without the mouse's arrow on the ground - a shaft from near the
+// character's feet and a head at the cell it walks to
+TEST(ground_way_arrow) {
+    const float view[12] = {1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0};
+    camera::Projection p;
+    p.f0 = p.f1 = 100;
+    p.cx = 320;
+    p.cy = 240;
+    p.nearZ = 10;
+    p.farZ = 1500;
+    std::vector<groundway::Vertex> v;
+    // from (0, 100) to (0, 130) on the ground at y 10, 1 wide, its head 4 long and 3 wide: a quad and a triangle
+    CHECK_EQ(groundway::arrow(0, 100, 0, 130, 10, 1.0f, 4.0f, 3.0f, view, p, 0xC8FFFFFFu, 0.0f, v), size_t(9));
+    float mostZ = 0;  // the head's tip the farthest: its rhw the smallest
+    for (const groundway::Vertex& q : v) mostZ = std::max(mostZ, 1.0f / q.rhw);
+    CHECK(std::fabs(mostZ - 130) < 0.5f);
+    std::vector<groundway::Vertex> none;
+    CHECK_EQ(groundway::arrow(0, 100, 0, 101, 10, 1.0f, 4.0f, 3.0f, view, p, 0xC8FFFFFFu, 0.0f, none), size_t(3));
+}

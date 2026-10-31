@@ -91,6 +91,10 @@ size_t ring(float x, float y, float z, float radius, float width, int sides, boo
 // Four notches out of such a ring (a friend's): `width` wide, 0.9 world units long from its outer edge
 size_t notches(float x, float y, float z, float radius, float width, const float view[12], const camera::Projection& p,
                uint32_t argb, float bias, std::vector<Vertex>& out);
+// 3.0.11-beta.88 (stage 4): an arrow on the ground at height y from (x0, z0) to (x1, z1) - a shaft `width` wide, a head
+// `head` long and `headWidth` wide at its end (all of it a head when shorter) - placed as strip() places its corners
+size_t arrow(float x0, float z0, float x1, float z1, float y, float width, float head, float headWidth,
+             const float view[12], const camera::Projection& p, uint32_t argb, float bias, std::vector<Vertex>& out);
 // A chevron pointing down at (cx, tipY) in the screen's pixels, `w` wide and `h` high - no depth, over the world
 size_t chevron(float cx, float tipY, float w, float h, uint32_t argb, std::vector<Vertex>& out);
 

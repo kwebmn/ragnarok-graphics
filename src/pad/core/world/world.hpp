@@ -4,6 +4,7 @@
 #include <optional>
 #include <string>
 #include <unordered_map>
+#include <vector>
 
 #include "pad/core/proto/events.hpp"
 
@@ -26,6 +27,17 @@ struct GroundItem {
     uint32_t id = 0;
     uint16_t item = 0;
     Cell pos;
+};
+
+// 3.0.11-beta.88 (the concept «Контроллер в интерфейсе uaRO», stage 4): the map's cells one walks on (the driver's,
+// from the server's own .gat) - row by row from y 0 (south), 1 walked on; none known: every cell counts as walkable
+struct GroundGrid {
+    int w = 0, h = 0;
+    std::vector<uint8_t> walk;
+    bool known() const { return w > 0 && h > 0 && walk.size() == size_t(w) * size_t(h); }
+    bool at(int x, int y) const {
+        return x >= 0 && y >= 0 && x < w && y < h && walk[size_t(y) * size_t(w) + size_t(x)] != 0;
+    }
 };
 
 constexpr int kHotkeySlots = 27;

@@ -509,6 +509,9 @@ Config parseConfig(const std::string& text) {
             if (val == "off") c.targetRing = TargetRing::Off;
             if (val == "pad") c.targetRing = TargetRing::Pad;
             if (val == "always") c.targetRing = TargetRing::Always;
+        } else if (key == "interface.pad_walk") {  // 3.0.11-beta.88: the left stick without the mouse
+            if (val == "mouse") c.padWalk = PadWalk::Mouse;
+            if (val == "arrow") c.padWalk = PadWalk::Arrow;
         } else if (key == "interface.minimap_mobs") {
             setBool(val, c.minimapMobs);
         } else if (key == "interface.minimap_way") {  // 3.0.11-beta.33: the way on the ground
@@ -879,6 +882,8 @@ const char* uiFilterToken(UiFilter f) { return f == UiFilter::Smooth ? "smooth" 
 const char* windowKeysToken(WindowKeys k) {
     return k == WindowKeys::Back ? "back" : k == WindowKeys::Off ? "off" : "all";
 }
+
+const char* padWalkToken(PadWalk w) { return w == PadWalk::Arrow ? "arrow" : "mouse"; }
 
 const char* targetRingToken(TargetRing r) {
     return r == TargetRing::Off ? "off" : r == TargetRing::Always ? "always" : "pad";

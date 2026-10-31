@@ -310,6 +310,33 @@ size_t notches(float x, float y, float z, float radius, float width, const float
     return out.size() - before;
 }
 
+size_t arrow(float x0, float z0, float x1, float z1, float y, float width, float head, float headWidth,
+             const float view[12], const camera::Projection& p, uint32_t argb, float bias, std::vector<Vertex>& out) {
+    const size_t before = out.size();
+    const float len = std::hypot(x1 - x0, z1 - z0);
+    if (len < 1e-3f) return 0;
+    const float ux = (x1 - x0) / len, uz = (z1 - z0) / len, sx = -uz, sz = ux;  // along it, across it
+    const float neck = std::max(0.0f, len - head);
+    if (neck > 0.05f) {  // the shaft
+        const float h = width / 2;
+        const float wa[3] = {x0 - sx * h, y, z0 - sz * h}, wb[3] = {x0 + sx * h, y, z0 + sz * h};
+        const float wc[3] = {x0 + ux * neck - sx * h, y, z0 + uz * neck - sz * h};
+        const float wd[3] = {x0 + ux * neck + sx * h, y, z0 + uz * neck + sz * h};
+        Vertex a{}, b{}, c{}, d{};
+        if (placed(wa, view, p, bias, argb, a) && placed(wb, view, p, bias, argb, b) &&
+            placed(wc, view, p, bias, argb, c) && placed(wd, view, p, bias, argb, d))
+            out.insert(out.end(), {a, b, c, b, d, c});
+    }
+    const float h = headWidth / 2;  // the head: its base at the neck, its tip at the end
+    const float wa[3] = {x0 + ux * neck - sx * h, y, z0 + uz * neck - sz * h};
+    const float wb[3] = {x0 + ux * neck + sx * h, y, z0 + uz * neck + sz * h};
+    const float wt[3] = {x1, y, z1};
+    Vertex a{}, b{}, t{};
+    if (placed(wa, view, p, bias, argb, a) && placed(wb, view, p, bias, argb, b) && placed(wt, view, p, bias, argb, t))
+        out.insert(out.end(), {a, b, t});
+    return out.size() - before;
+}
+
 size_t chevron(float cx, float tipY, float w, float h, uint32_t argb, std::vector<Vertex>& out) {
     out.push_back(Vertex{cx - w / 2, tipY - h, 0.0f, 1.0f, argb, 0u, 0.0f, 0.0f});
     out.push_back(Vertex{cx + w / 2, tipY - h, 0.0f, 1.0f, argb, 0u, 0.0f, 0.0f});

@@ -1,6 +1,7 @@
 #include "win/ground_marks.hpp"
 
 #include <algorithm>
+#include <cmath>
 #include <vector>
 
 #include "core/d3d7.hpp"
@@ -19,6 +20,9 @@ namespace {
 constexpr float kRadius = 4.2f, kWidth = 0.9f, kEdge = 1.7f, kLift = 0.4f, kBias = 1.5f;
 constexpr int kSides = 40;
 constexpr uint32_t kGold = 0xF5E6CB8A, kShade = 0x70000000, kWhite = 0xC8FFFFFF, kGreen = 0xF05BD36C;
+// 3.0.11-beta.88: the walk without the mouse's arrow - faint white over a dark edge, a small gold ring at its end
+constexpr float kArrowWidth = 1.0f, kArrowHead = 3.2f, kArrowHeadWidth = 3.0f;
+constexpr uint32_t kArrowWhite = 0x96FFFFFF, kArrowShade = 0x50000000, kArrowGold = 0xC8E6CB8A;
 
 struct State {
     TargetRing ring = TargetRing::Pad;
@@ -26,6 +30,7 @@ struct State {
     std::vector<groundway::Vertex> verts, flat;
     uint32_t told = 0;  // the target last told the log
     int tells = 0;
+    bool arrowTold = false;
 };
 
 State& state() {
@@ -71,22 +76,45 @@ void newFrame() { state().drawn = false; }
 
 void draw(FrameRecord& record, int width, int height) {
     State& s = state();
-    if (s.drawn || s.ring == TargetRing::Off || width <= 0 || height <= 0) return;
+    if (s.drawn || width <= 0 || height <= 0) return;
     s.drawn = true;
     uint32_t target = 0, next = 0, mate = 0;
-    if (uapad::runtime::look().shown) {
+    int toX = 0, toY = 0;
+    const bool padNow = uapad::runtime::look().shown;
+    const bool walking = padNow && uapad::runtime::walkTarget(toX, toY);  // 3.0.11-beta.88: the stick without the mouse
+    if (padNow && s.ring != TargetRing::Off) {
         target = uapad::runtime::target();
         next = uapad::runtime::preview();
         mate = uapad::runtime::choosing();
     }
     const bool mouse = !target && s.ring == TargetRing::Always;
     if (mouse) target = targetpanel::current();
-    if (!target && !next && !mate) return;
+    if (!target && !next && !mate && !walking) return;
     float view[12];
     if (!readGameCamera(view)) return;
     const camera::Projection p = camera::projectionFor(width, height);
     s.verts.clear();
     s.flat.clear();
+    float me[3];
+    int mapW = 0, mapH = 0, cellSize = 0;
+    if (walking && readPlayerWorld(me, mapW, mapH, cellSize)) {  // 3.0.11-beta.88: the way the stick walks
+        float tx = 0, tz = 0;
+        groundway::cellToWorld(toX, toY, mapW, mapH, cellSize, tx, tz);
+        const float dx = tx - me[0], dz = tz - me[2], len = std::hypot(dx, dz), y = me[1] - kLift;
+        if (len > 3.0f) {
+            const float x0 = me[0] + dx / len * 2.2f, z0 = me[2] + dz / len * 2.2f;
+            groundway::arrow(x0, z0, tx, tz, y, kArrowWidth + 0.8f, kArrowHead + 0.6f, kArrowHeadWidth + 0.8f, view, p,
+                             kArrowShade, kBias, s.verts);
+            groundway::arrow(x0, z0, tx, tz, y, kArrowWidth, kArrowHead, kArrowHeadWidth, view, p, kArrowWhite,
+                             kBias + 0.2f, s.verts);
+            groundway::ring(tx, y, tz, 1.4f, 0.45f, 20, false, view, p, kArrowGold, kBias + 0.2f, s.verts);
+        }
+        if (!s.arrowTold) {
+            s.arrowTold = true;
+            LOG_INFO("walk arrow: from the world's %.1f, %.1f to the cell %d, %d (%.1f units)", me[0], me[2], toX, toY,
+                     len);
+        }
+    }
     float at[3] = {0, 0, 0};
     const auto ringAt = [&](uint32_t id, uint32_t argb, bool dashed, bool notched) {
         if (!id || !readActorWorld(id, at)) return false;
@@ -110,7 +138,7 @@ void draw(FrameRecord& record, int width, int height) {
     }
     put(record, s.verts, true);
     put(record, s.flat, false);
-    if (target != s.told && s.tells < 30) {
+    if (target && target != s.told && s.tells < 30) {
         s.told = target;
         ++s.tells;
         if (ringed)

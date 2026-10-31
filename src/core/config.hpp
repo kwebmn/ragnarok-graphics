@@ -23,6 +23,9 @@ enum class WayOnGround : uint8_t { Steps, Line, Off };
 // 3.0.11-beta.87 (the concept «Контроллер в интерфейсе uaRO», stage 3): the target's ring on the ground - off, while
 // played with the controller, or always (the mouse's fight too)
 enum class TargetRing : uint8_t { Off, Pad, Always };
+// 3.0.11-beta.88 (stage 4): how the controller's left stick walks - holding the game's cursor out (as before), or the
+// pad asking for the cell itself with an arrow on the ground
+enum class PadWalk : uint8_t { Mouse, Arrow };
 // 3.0.11-beta.35: [interface] buffs - the character's buffs: the game's own icons (off), the driver's column under the
 // minimap, a row under it
 enum class BuffsLook : uint8_t { Off, Column, Row };
@@ -576,6 +579,9 @@ struct Config {
     // 3.0.11-beta.87 (stage 3): [interface] target_ring - the pad's target in a gold ring on the ground
     // (win/ground_marks)
     TargetRing targetRing = TargetRing::Pad;
+    // 3.0.11-beta.88 (stage 4): [interface] pad_walk - the left stick walks without the mouse, an arrow on the ground
+    // (a prototype for the owner: off till checked)
+    PadWalk padWalk = PadWalk::Mouse;
     // 3.0.11-beta.35: [interface] buffs - stage 7 of the new interface (the HUD, the buffs first; the owner's approved
     // column, the row a choice): the game's own status icons hidden, the driver's under the minimap (core/buff_panel)
     BuffsLook buffs = BuffsLook::Off;
@@ -759,6 +765,7 @@ const char* uiFilterToken(UiFilter f);
 const char* windowKeysToken(WindowKeys k);  // 3.0.3-beta.6
 const char* wayOnGroundToken(WayOnGround w);  // 3.0.11-beta.33
 const char* targetRingToken(TargetRing r);    // 3.0.11-beta.87
+const char* padWalkToken(PadWalk w);          // 3.0.11-beta.88
 const char* buffsLookToken(BuffsLook b);       // 3.0.11-beta.35
 const char* buffsOverflowToken(BuffsOverflow b);  // 3.0.11-beta.63
 const char* characterLookToken(CharacterLook c);  // 3.0.11-beta.36

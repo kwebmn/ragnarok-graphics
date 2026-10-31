@@ -965,6 +965,16 @@ TEST(config_target_ring) {
           TargetRing::Off);
 }
 
+// 3.0.11-beta.88 (stage 4): [interface] pad_walk = mouse | arrow - the left stick without the mouse; mouse till checked
+TEST(config_pad_walk) {
+    CHECK(parseConfig("").padWalk == PadWalk::Mouse);
+    CHECK(parseConfig("[interface]\npad_walk = arrow\n").padWalk == PadWalk::Arrow);
+    const settings::IniSetting* s = settings::findSetting("interface.pad_walk");
+    CHECK(s != nullptr && s->page == settings::Page::Interface && s->control == settings::Control::Choice);
+    CHECK(appliesNow("interface.pad_walk"));
+    CHECK(liveUpdate(parseConfig(""), parseConfig("[interface]\npad_walk = arrow\n")).next.padWalk == PadWalk::Arrow);
+}
+
 // 3.0.11-beta.33 (the owner: «полоска с маршрутом может лучше бы была выполнена такими типа следами типа шажков»):
 // [interface] minimap_way - the way on the ground as footprints (steps), the strip (line) or none; a choice of
 // «Інтерфейс», applied at once

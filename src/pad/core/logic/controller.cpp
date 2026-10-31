@@ -20,6 +20,10 @@ constexpr double kAimPreview = 0.3;  // 3.0.11-beta.87: a lighter tilt than kAim
 constexpr double kAimSwitchMargin = 8.0;  // aim score points a new monster must win by
 constexpr uint32_t kSlotIntervalMs = 150;
 constexpr uint32_t kChooseMs = 8000;  // 3.0.11-beta.85: a support skill waits this long for whom
+// 3.0.11-beta.88: walking without the mouse - 6 cells along the stick in half-cell steps; another way asked for 150 ms
+// on, the same again every 350 ms (the server walks to a cell and stops)
+constexpr int kDirectSteps = 12;
+constexpr uint32_t kDirectTurnMs = 150, kDirectAgainMs = 350;
 constexpr float kCameraDeadZone = 0.2f;
 constexpr float kCameraTurnDegPerSec = 120.0f;   // the right stick fully pushed
 constexpr float kCameraZoomStepsPerSec = 6.0f;   // wheel notches a second, fully pushed
@@ -265,6 +269,7 @@ TickOutput Controller::tick(const PadState& pad, const WorldState& world, const 
 }
 
 void Controller::onClientWalk(Cell dest, const WorldState& world, uint32_t now) {
+    if (directWalk_) return;  // 3.0.11-beta.88: the pad walks without the client's cursor: nothing to learn
     if (walking_) stickDest_ = dest;
     if (!walking_ || !ringSteadyFromMs_ || int32_t(now - *ringSteadyFromMs_) < 0) return;
     const Cell me = world.selfPos(now);
@@ -274,6 +279,10 @@ void Controller::onClientWalk(Cell dest, const WorldState& world, uint32_t now) 
 void Controller::walk(const PadState& pad, const WorldState& world, const ViewInfo& view, uint32_t now,
                       TickOutput& out) {
     const float mag = std::sqrt(pad.lx * pad.lx + pad.ly * pad.ly);
+    if (directWalk_) {  // 3.0.11-beta.88: no mouse
+        walkDirect(pad, mag, world, now, out);
+        return;
+    }
     if (mag > cfg_.deadzone && view.width > 0 && view.height > 0) {
         const bool starting = !walking_;
         if (starting) {
@@ -317,6 +326,56 @@ void Controller::walk(const PadState& pad, const WorldState& world, const ViewIn
         out.notes.push_back("walk stop at " + cellText(stop) + ": we are at about " + cellText(here) +
                             ", heading for " + cellText(heading));
     }
+}
+
+void Controller::walkDirect(const PadState& pad, float mag, const WorldState& world, uint32_t now, TickOutput& out) {
+    if (mag > cfg_.deadzone) {
+        if (!walking_) {
+            walking_ = true;
+            approach_.reset();
+            stopAttacking();  // walking ends a fight; a held A starts it again afterwards
+            stickDest_.reset();
+            sentTo_.reset();
+        }
+        const double sx = pad.lx / mag, sy = pad.ly / mag;  // the stick's way: x right, y up
+        double east = 0, north = 0;
+        if (look_) {  // the screen's up is where the camera looks along the ground, its right a quarter turn clockwise
+            east = sx * look_->second + sy * look_->first;
+            north = -sx * look_->first + sy * look_->second;
+        } else {
+            camera_.toWorld(sx, -sy, east, north);
+        }
+        const Cell me = world.selfPos(now);
+        Cell dest = me;
+        for (int i = 1; i <= kDirectSteps; ++i) {  // half a cell a step: the last walkable cell along the way
+            const double t = 0.5 * double(i);
+            const Cell c{me.x + int(std::lround(east * t)), me.y + int(std::lround(north * t))};
+            if (ground_ && ground_->known() && !ground_->at(c.x, c.y)) break;
+            dest = c;
+        }
+        walkTo_ = dest;
+        if (dest == me) return;
+        const bool changed = !sentTo_ || dest != *sentTo_;
+        if (!sentTo_ || (changed && now - sentAt_ >= kDirectTurnMs) || now - sentAt_ >= kDirectAgainMs) {
+            out.packets.push_back(buildWalk(dest));
+            if (!sentTo_) out.notes.push_back("walk without the mouse: to " + cellText(dest));
+            sentTo_ = dest;
+            sentAt_ = now;
+            stickDest_ = dest;
+        }
+        return;
+    }
+    walkTo_.reset();
+    if (!walking_) return;
+    walking_ = false;
+    const Cell here = world.selfPos(now);
+    const Cell heading = stickDest_ ? *stickDest_ : world.selfDest();
+    const Cell stop = stopCell(here, heading);
+    stickDest_.reset();
+    sentTo_.reset();
+    out.packets.push_back(buildWalk(stop));
+    out.notes.push_back("walk stop at " + cellText(stop) + ": we are at about " + cellText(here) + ", heading for " +
+                        cellText(heading));
 }
 
 void Controller::aim(const PadState& pad, const WorldState& world, uint32_t now, TickOutput& out) {

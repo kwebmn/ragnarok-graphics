@@ -45,5 +45,9 @@ void noteKeysOrMouse(bool click);
 // (the rings under them, win/ground_marks); 0 none
 uint32_t target();
 uint32_t preview();
+// 3.0.11-beta.88 (stage 4): [interface] pad_walk = arrow - the left stick walks without the mouse (win/context, each
+// frame); where it walks now (the arrow's end, the map's cells); false none
+void setDirectWalk(bool on);
+bool walkTarget(int& x, int& y);
 
 }  // namespace uapad::runtime
