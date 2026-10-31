@@ -1,3 +1,20 @@
+# uaRO Graphics 3.0.11-beta.98 — what is new
+
+The interface's windows, talking with NPCs:
+- **A new talk window at the bottom middle** in place of the game's text and menu windows. The NPC's name (from the
+  line «[Kafra Employee]») and the map, the text with its colours (black and the too dark ones lit to read on the dark
+  glass), the menu's options numbered in two columns, the button «Next» or «Close». The text is as the server sent it,
+  untranslated.
+- Keys: 1–9 choose an option, Enter answers, Esc ends the talk (new: the game's Esc never did), the arrows go round
+  the menu. They work while the chat's line is empty, so typing is not in the way.
+- **With the controller** as before (A next / OK, the D-pad chooses, B closes), the chosen option lit in the new
+  window; its buttons as glyphs at the window's bottom (the separate hint line hidden meanwhile).
+- The number field (Kafra's, the shops') stays the game's for now.
+- The setting «Talk with NPCs» in «Interface» (and in the console); off brings the game's windows back.
+- To check: talk with a Kafra by the mouse, the keys and the controller. In the log: «npc: the talk in the
+  interface's window - N line(s), M option(s)…», «npc: a key chose the option 2 (the menu's own OK)», «npc: Enter -
+  next (the game's own button)».
+
 # uaRO Graphics 3.0.11-beta.97 — what is new
 
 The interface's windows, «Equipment»:
