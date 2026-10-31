@@ -25,8 +25,15 @@ constexpr const char* kNames[] = {"«Речі»",  "«Характеристик
                                   "the shop", "the NPC talk",      "«Довідник»"};
 constexpr int kMostTold = 40;
 
+struct Dock {  // 3.0.11-beta.111: «Спорядження» beside «Речі»
+    bool on = false;
+    winstack::Side side = winstack::Side::Left;  // the gear's side of the bag
+    bool unsaved = false;                        // the follower moved during a drag, its place not kept yet
+};
+
 struct State {
     winstack::Stack stack;
+    Dock dock;
     std::optional<Win> told;  // the top the log named last
     int tells = 0;
 };
@@ -120,14 +127,58 @@ bool boxOf(Win w, winstack::Box& b) {
     return false;
 }
 
-void moveTo(Win w, int x, int y) {
+void moveTo(Win w, int x, int y, bool keep = true) {
     switch (w) {
-        case Win::Items: itemswin::moveTo(x, y); break;
+        case Win::Items: itemswin::moveTo(x, y, keep); break;
         case Win::Stats: statswin::moveTo(x, y); break;
         case Win::Skills: skillswin::moveTo(x, y); break;
-        case Win::Equip: equipwin::moveTo(x, y); break;
+        case Win::Equip: equipwin::moveTo(x, y, keep); break;
         case Win::Shop: shopwin::moveTo(x, y); break;
         default: break;
+    }
+}
+
+// 3.0.11-beta.111 (question 1: «два окна вплотную друг к другу как одно окно»): «Спорядження» and «Речі» opened
+// together stand side by side, tops in line (core/window_stack docked) - the gear left of the bag where there is room;
+// the one dragged by its title leads, the other follows (kept when the drag ends); Shift held while dragging - apart
+void dockFrame(State& s, bool opened, int targetW, int targetH) {
+    winstack::Box bag, gear;
+    if (!boxOf(Win::Items, bag) || !boxOf(Win::Equip, gear)) {
+        s.dock = Dock{};
+        return;
+    }
+    const bool bagMoving = itemswin::moving(), gearMoving = equipwin::moving(), dragged = bagMoving || gearMoving;
+    if (opened && !s.dock.on) {
+        s.dock.on = true;
+        s.dock.side = winstack::dockSide(bag, gear, targetW);
+        if (s.tells < kMostTold) {
+            ++s.tells;
+            LOG_INFO("windows: «Спорядження» docked %s of «Речі»",
+                     s.dock.side == winstack::Side::Left ? "left" : "right");
+        }
+    }
+    if (!s.dock.on) return;
+    if (dragged && (GetAsyncKeyState(VK_SHIFT) & 0x8000)) {
+        s.dock.on = false;
+        if (s.tells < kMostTold) {
+            ++s.tells;
+            LOG_INFO("windows: «Спорядження» and «Речі» apart (dragged with Shift)");
+        }
+        return;
+    }
+    const bool gearLeads = gearMoving && !bagMoving;
+    winstack::Box want = gearLeads ? winstack::docked(gear, bag, winstack::opposite(s.dock.side))
+                                   : winstack::docked(bag, gear, s.dock.side);
+    want.x = std::clamp(want.x, 0, std::max(0, targetW - want.w));  // the screen's edge: as near as it goes
+    want.y = std::clamp(want.y, 0, std::max(0, targetH - want.h));
+    const Win follower = gearLeads ? Win::Items : Win::Equip;
+    const winstack::Box at = gearLeads ? bag : gear;
+    if (want.x != at.x || want.y != at.y) {
+        moveTo(follower, want.x, want.y, !dragged);
+        s.dock.unsaved = dragged;
+    } else if (!dragged && s.dock.unsaved) {
+        moveTo(follower, at.x, at.y, true);  // the drag over: the follower's place kept too
+        s.dock.unsaved = false;
     }
 }
 
@@ -168,14 +219,18 @@ bool close(Win w) {
 
 void frame(int targetWidth, int targetHeight, double k) {
     State& s = state();
+    bool pairOpened = false;  // 3.0.11-beta.111: «Речі» or «Спорядження» opened this frame
     for (int i = 0; i < winstack::kWins; ++i) {
         const Win w = Win(i);
         const bool now = shown(w);
         const auto& order = s.stack.bottomUp();
-        if (now && std::find(order.begin(), order.end(), w) == order.end())
+        if (now && std::find(order.begin(), order.end(), w) == order.end()) {
             placeNew(s, w, targetWidth, targetHeight, k);  // the others' places before it joins them
+            pairOpened = pairOpened || w == Win::Items || w == Win::Equip;
+        }
         s.stack.see(w, now);
     }
+    dockFrame(s, pairOpened, targetWidth, targetHeight);
     std::vector<Blocker> order;
     for (const Win w : s.stack.topDown()) order.push_back(blockerOf(w));
     uapad::gamewindow::setOrder(order);

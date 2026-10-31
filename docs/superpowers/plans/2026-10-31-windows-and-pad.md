@@ -222,6 +222,12 @@ The owner 31.10: «Полоски HP мобов - всем показывай»,
   to stage 5 (the doc's order) - the pad already wears (A), assigns (X) and takes off (A in «Спорядження»). Tests
   window_drag_*, equip_window_lights_the_slots_a_dragged_thing_fits, hotbar_lights_its_cells_while_a_thing_is_dragged,
   item_window_lights_the_bag_while_a_worn_thing_is_dragged; suite 2071/0.
+- Stage 3, docking (3.0.11-beta.111, Q1): core winstack dockSide/opposite/docked; win/window_stack dockFrame - docked
+  when «Речі» or «Спорядження» opens with the other shown (the gear left of the bag where there is room), the one
+  dragged by its title leads (itemswin/equipwin moving()), the other follows (moveTo keep=false during the drag, kept
+  when it ends), clamped to the screen; Shift while dragging - apart (until one closes). Ruling R15: undocking by
+  Shift-drag (the doc said «за его край» - our windows move by their titles only); the doc's bullet updated. Test
+  window_stack_docks_the_equipment_beside_the_bag; suite 2072/0.
 - Stage 5 research: 0x00c4 deal type; 0x00c6 buy list (11 B each: price.L discount.L type.B nameid.W)
   -> session deal list +0xF28 (count +0xF2C, FUN_0062bbb0(rec, 0); FUN_004ffd30 copies the record's text at +0x11 into
   m_itemName) + windows 0x16 (mgr+0xEC, class 0x69B3E0, SendMsg 0x4AFC00: 0x24 0 buy / 1 sell) and 0x17 (buy cart,

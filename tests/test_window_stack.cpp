@@ -48,3 +48,20 @@ TEST(window_stack_a_new_window_beside_the_one_in_its_place) {
     CHECK(same(held, Box{1620, 880, 300, 200}));  // inside the screen
 }
 
+// 3.0.11-beta.111 (question 1: «два окна вплотную друг к другу как одно окно»): «Спорядження» and «Речі» open together
+// stand side by side, tops in line - the gear left of the bag where there is room, else right of it; the one led keeps
+// to the leader's side
+TEST(window_stack_docks_the_equipment_beside_the_bag) {
+    using winstack::Box;
+    using winstack::Side;
+    const Box bag{800, 200, 600, 700}, gear{300, 150, 450, 600};
+    CHECK(winstack::dockSide(bag, gear, 1920) == Side::Left);
+    const Box left = winstack::docked(bag, gear, Side::Left);
+    CHECK(left.x == 350 && left.y == 200 && left.w == 450 && left.h == 600);
+    const Box narrow{100, 200, 600, 700};
+    CHECK(winstack::dockSide(narrow, gear, 1920) == Side::Right);  // no room on its left
+    CHECK(winstack::docked(narrow, gear, Side::Right).x == 700);
+    CHECK(winstack::docked(gear, bag, Side::Right).x == 750);  // the gear dragged: the bag follows on its right
+    CHECK(winstack::opposite(Side::Left) == Side::Right);
+}
+

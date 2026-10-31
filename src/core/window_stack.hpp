@@ -36,4 +36,11 @@ struct Box {
 };
 Box place(Box wanted, const std::vector<Box>& open, int screenW, int screenH, int gap, int step);
 
+// 3.0.11-beta.111 (question 1: «два окна вплотную друг к другу как одно окно»): «Спорядження» and «Речі» open together
+// stand side by side, tops in line, and move as one - the gear left of the bag where the screen has room, else right
+enum class Side : uint8_t { Left, Right };
+Side dockSide(Box bag, Box gear, int screenW);
+Side opposite(Side s);
+Box docked(Box leader, Box follower, Side side);  // the follower `side` of the leader, tops in line
+
 }  // namespace uagfx::winstack

@@ -66,4 +66,17 @@ Box place(Box wanted, const std::vector<Box>& open, int screenW, int screenH, in
     return inside(Box{o.x + step, o.y + step, wanted.w, wanted.h}, screenW, screenH);
 }
 
+Side dockSide(Box bag, Box gear, int screenW) {
+    if (bag.x - gear.w >= 0 || bag.x + bag.w + gear.w > screenW) return Side::Left;
+    return Side::Right;
+}
+
+Side opposite(Side s) { return s == Side::Left ? Side::Right : Side::Left; }
+
+Box docked(Box leader, Box follower, Side side) {
+    follower.x = side == Side::Left ? leader.x - follower.w : leader.x + leader.w;
+    follower.y = leader.y;
+    return follower;
+}
+
 }  // namespace uagfx::winstack

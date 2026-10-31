@@ -771,7 +771,7 @@ bool box(int& x, int& y, int& w, int& h) {  // 3.0.11-beta.109
     return true;
 }
 
-void moveTo(int x, int y) {  // 3.0.11-beta.109: question 4 - beside the window standing in its own place
+void moveTo(int x, int y, bool keep) {  // 3.0.11-beta.109: question 4 - beside the window standing in its own place
     State& s = state();
     if (!s.shown) return;
     const int roomX = std::max(1, s.targetW - s.layout.w), roomY = std::max(1, s.targetH - s.layout.h);
@@ -779,7 +779,9 @@ void moveTo(int x, int y) {  // 3.0.11-beta.109: question 4 - beside the window 
     s.fy = std::clamp(float(y) / float(roomY), 0.0f, 1.0f);
     s.layout.x = x;
     s.layout.y = y;
-    keepState(s);
+    if (keep) keepState(s);
 }
+
+bool moving() { return state().shown && state().moving; }  // 3.0.11-beta.111
 
 }  // namespace uagfx::win::itemswin

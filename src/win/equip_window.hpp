@@ -34,6 +34,9 @@ void padCommand(PadCommand c);
 // 3.0.11-beta.109 (the concept «Концепция окон и инвентаря», question 4): where it is on the target (win/window_stack:
 // a window opening where another stands goes beside it); false not shown
 bool box(int& x, int& y, int& w, int& h);
-void moveTo(int x, int y);  // 3.0.11-beta.109: a new place on the target, kept
+// 3.0.11-beta.109: a new place on the target, kept (3.0.11-beta.111: `keep` false - not yet: it follows a window
+// being dragged)
+void moveTo(int x, int y, bool keep = true);
+bool moving();  // 3.0.11-beta.111: its title dragged now (docked with the other, it leads)
 
 }  // namespace uagfx::win::equipwin
