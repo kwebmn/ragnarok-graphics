@@ -1,3 +1,19 @@
+# uaRO Graphics 3.0.11-beta.96 — what is new
+
+The interface's windows, «Skills»:
+- **A new skills window (Alt+S, the «Skills» button of the character block and of the Start tile)** in place of the
+  game's skill tree. Tabs by the jobs the character passed through (a Lord Knight: Novice, Swordman, Knight, Lord
+  Knight). A row: the icon, the name, what it is used on, SP and range (an unlearned one: what it needs), the level's
+  dots out of its most and «5/10», a «+» where a free point raises it, the ‹ › arrows of the level it is used at. The
+  most levels and the needs come from the server's skill tree.
+- With the mouse: a double click uses, a press drags onto the skill bar, the wheel scrolls, the title moves it.
+- **With the controller:** the D-pad or the left stick chooses, ← → the use level, LB / RB the tabs, A uses, Y +1
+  level, X «Assign» to a button, B or Start close. These buttons as glyphs at the window's bottom.
+- The setting «Skills» in «Interface» (and in the console); off brings the game's window back.
+- To check: open Alt+S, raise a skill with «+», drag a skill onto the bar, from the controller Y and X. In the log:
+  «skills: «Навички» open - N tab(s)…», «skills: its «+»: … +1 … asked as the game's own «+» (0x4A)», «skills: …
+  dragged (the game's drag, 0x51)».
+
 # uaRO Graphics 3.0.11-beta.95 — what is new
 
 The controller in the interface, stage 7, and your «the ring is fine»:
