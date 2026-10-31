@@ -1,5 +1,7 @@
 #include "win/pad_hint.hpp"
 
+#include "win/npc_talk.hpp"
+
 #include <cmath>
 #include <string>
 #include <vector>
@@ -51,7 +53,7 @@ void frame(HWND game, bool on, double k, int targetWidth, int targetHeight) {
     State& s = state();
     uapad::runtime::setOwnHints(on);
     s.parts.clear();
-    if (on && game && k > 0 && targetWidth > 0 && targetHeight > 0)
+    if (on && game && k > 0 && targetWidth > 0 && targetHeight > 0 && !npcwin::shown())  // .98: its own footer
         for (const uapad::HintPart& p : uapad::runtime::hints()) {
             ph::Part part{p.before, {}, p.words};
             for (uint16_t b : p.buttons) {

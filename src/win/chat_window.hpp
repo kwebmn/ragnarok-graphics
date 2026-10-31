@@ -24,6 +24,8 @@ void draw(FrameRecord& record, gpu::Renderer& renderer);
 bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result);
 // F10 its height, Alt+F10 folded to its input, Tab the channel - while it shows
 bool key(UINT m, WPARAM wp, LPARAM lp);
+// 3.0.11-beta.98: the game's chat line holds no words (the NPC talk's keys 1-9, Enter, Esc are its own then)
+bool inputEmpty();
 // Its box in the target while it shows (the hotbar keeps clear of it); false: not shown
 bool panelBox(int& x, int& y, int& w, int& h);
 // 3.0.11-beta.53: just before the game draws its windows (win/windows_draw) - its own chat kept out of sight

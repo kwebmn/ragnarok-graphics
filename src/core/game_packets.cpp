@@ -82,6 +82,13 @@ Event parse(const uint8_t* p, size_t size) {
         case 0x0080:
             if (size < 7) return {};
             return Vanish{rd32(p, 2), p[6]};
+        case 0x00b4:  // 3.0.11-beta.98: an NPC's words
+        case 0x00b7: {  // and its menu
+            std::string text;
+            if (size < 8 || !textOf(p, size, 8, text)) return {};
+            if (rd16(p, 0) == 0x00b4) return NpcSay{rd32(p, 4), text};
+            return NpcMenu{rd32(p, 4), text};
+        }
         case 0x0195:  // 3.0.11-beta.95: a unit's name line - a monster's HP % in its party's place
             if (size < 102) return {};
             return ActorInfo{rd32(p, 2), hpOf(name(p, 30))};

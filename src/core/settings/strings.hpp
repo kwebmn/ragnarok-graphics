@@ -491,6 +491,7 @@ enum class Text : uint16_t {
     InterfaceEquip, InterfaceEquipHint, EquipTitle, EquipHeadMid, EquipHeadLow, EquipArmor, EquipGarment,
     EquipAccessory, EquipHeadTop, EquipWeapon, EquipShield, EquipShoes, EquipAmmo, EquipCards, EquipDrag, EquipLevel,
     EquipPickTitle, EquipPickNone, EquipPadOff, EquipPadPut, EquipPadChange, EquipPadCard, EquipPadBack,  // .97
+    InterfaceNpc, InterfaceNpcHint, NpcNext, NpcKeys, NpcServer, NpcChoose,  // 3.0.11-beta.98
     InterfacePadWalk, InterfacePadWalkHint, InterfacePadWalkMouse, InterfacePadWalkArrow,  // 3.0.11-beta.88
     InterfacePadTiles, InterfacePadTilesHint, TilesTitle, TileSkills, TileEquip, TileMap, TileOptions, TilesOpen,
     TilesClose,  // 3.0.11-beta.90

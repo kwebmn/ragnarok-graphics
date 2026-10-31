@@ -254,6 +254,10 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("equip", flag(running.equipWindow), flag(file.equipWindow)));
         n.equipWindow = file.equipWindow;
     }
+    if (file.npcWindow != running.npcWindow) {  // 3.0.11-beta.98: the NPC talk, at once
+        u.applied.push_back(change("npc_talk", flag(running.npcWindow), flag(file.npcWindow)));
+        n.npcWindow = file.npcWindow;
+    }
     if (file.uiSize != running.uiSize) {  // 3.0.11-beta.54: the new interface's size, at once
         const auto token = [](int v) { return v > 0 ? std::to_string(v) : std::string("auto"); };
         u.applied.push_back(change("size", token(running.uiSize), token(file.uiSize)));

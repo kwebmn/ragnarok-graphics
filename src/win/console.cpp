@@ -212,7 +212,8 @@ void Console::build(Lang lang, const Config& config) {
                 rows_.push_back(Row{Kind::Choice, "interface.size", 0});
             if (settingOf("interface.text_size"))  // 3.0.11-beta.67: the reading windows' text
                 rows_.push_back(Row{Kind::Choice, "interface.text_size", 0});
-            for (const char* key : {"interface.items", "interface.status", "interface.skills", "interface.equip"})
+            for (const char* key :
+                 {"interface.items", "interface.status", "interface.skills", "interface.equip", "interface.npc_talk"})
                 if (settingOf(key)) rows_.push_back(Row{Kind::Box, key, 0});
             if (settingOf("interface.animations"))  // 3.0.11-beta.46: the new interface's motion
                 rows_.push_back(Row{Kind::Box, "interface.animations", 0});

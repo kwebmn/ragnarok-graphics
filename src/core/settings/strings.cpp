@@ -5122,6 +5122,22 @@ constexpr Entry kTexts[] = {
     {Text::EquipPadChange, "Change", "Замінити", "Заменить"},
     {Text::EquipPadCard, "Card", "Картка", "Карточка"},
     {Text::EquipPadBack, "Back", "Назад", "Назад"},
+    {Text::InterfaceNpc, "Talk with NPCs", "Розмова з NPC", "Разговор с NPC"},  // 3.0.11-beta.98
+    {Text::InterfaceNpcHint,
+     "The NPCs' words in the new look at the bottom middle: the name, the text with its colours, the menu's options "
+     "numbered in two columns, Next and Close. Keys 1-9 choose, Enter answers, Esc closes (while the chat's line is "
+     "empty); the controller answers as before. The text is the server's, untranslated.",
+     "Слова NPC у новому вигляді внизу посередині: ім'я, текст із його кольорами, варіанти меню з номерами у дві "
+     "колонки, «Далі» й «Закрити». Клавіші 1-9 — вибір, Enter — відповідь, Esc — закрити (поки рядок чату порожній); "
+     "контролер відповідає як раніше. Текст — сервера, без перекладу.",
+     "Слова NPC в новом виде внизу посередине: имя, текст с его цветами, варианты меню с номерами в две "
+     "колонки, «Далее» и «Закрыть». Клавиши 1-9 — выбор, Enter — ответ, Esc — закрыть (пока строка чата "
+     "пуста); контроллер отвечает как раньше. Текст — сервера, без перевода."},
+    {Text::NpcNext, "Next", "Далі", "Далее"},
+    {Text::NpcKeys, "1-9 choose \xC2\xB7 Enter answers \xC2\xB7 Esc closes",
+     "1-9 вибір \xC2\xB7 Enter далі \xC2\xB7 Esc закрити", "1-9 выбор \xC2\xB7 Enter далее \xC2\xB7 Esc закрыть"},
+    {Text::NpcServer, "The text is the server's", "Текст — як у сервера", "Текст — как у сервера"},
+    {Text::NpcChoose, "choose", "вибір", "выбор"},
     {Text::InterfacePadWalk, "The controller walks", "Хід контролером", "Ход контроллером"},  // 3.0.11-beta.88
     {Text::InterfacePadWalkHint,
      "How the left stick walks: holding the game's cursor out, as before, or without the mouse - the character goes "

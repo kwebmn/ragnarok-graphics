@@ -80,3 +80,11 @@ The owner 31.10: «Полоски HP мобов - всем показывай»,
   core/equip_window (slots by bits, two columns + centre, card dots, pick list, pad footer), win/equip_window (bag,
   portrait via headpicture, stats, take off / drag / card / drop / pick and wear), [interface] equip, Blocker::Equip +
   world_mouse drop, pad equipPad. Tests equip_window_* (3), config_interface_minimap updated; suite 2021/0.
+- Stage 4: built as 3.0.11-beta.98 - research: 0x00b4 -> window 0x10 SendMsg 0x1A (text, npc; +0x88 set = a Next
+  pressed: the next text clears the page), 0x00b7 -> window 0x11 (strtok ':' options via 0x1B, rows' option numbers
+  vector +0x68..+0x6C, list +0x74 chosen +0x64; OK 6/0x76 -> mode 0x19 (number+1), cancel 0x77). core/game_packets
+  NpcSay / NpcMenu, core/npc_talk (^RRGGBB runs, dark ones lit, «[Name]», wrap, two-column numbered options, button,
+  keys / pad footer), win/npc_talk (words from packets, game windows hidden, choose = list +0x64 then the menu's OK via
+  the pad's clientnpc, keys 1-9 / Enter / Esc / arrows while the chat line is empty (chatwin::inputEmpty), the number
+  field kept the game's), the pad hint line hidden while it shows, [interface] npc_talk. Tests
+  game_packets_an_npcs_words_and_menu, npc_talk_* (3); suite 2025/0.

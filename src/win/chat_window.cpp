@@ -266,6 +266,15 @@ uint32_t nameEdit() {
     return e && read32(e) == kNameClass ? e : 0;
 }
 
+}  // namespace
+
+bool inputEmpty() {
+    const uint32_t words = wordsEdit();
+    return !words || editText(words).empty();
+}
+
+namespace {
+
 void readInput(State& s) {
     cp::Input in;
     if (const uint32_t words = wordsEdit()) {

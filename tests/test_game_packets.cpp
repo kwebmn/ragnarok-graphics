@@ -363,3 +363,24 @@ TEST(game_packets_a_monsters_name_line_brings_its_hp) {
     CHECK(a != nullptr && a->hp == -1);
     CHECK(std::holds_alternative<std::monostate>(packets::parse(p.data(), 101)));  // cut short
 }
+
+// 3.0.11-beta.98 («Разговор с NPC», the concept's NPC window): an NPC's words (0x00b4 <len>.W <npc>.L <text>) and its
+// menu (0x00b7 <len>.W <npc>.L <options split by ':'>) as the server sends them
+TEST(game_packets_an_npcs_words_and_menu) {
+    const std::string text = "[Kafra Employee]";
+    std::vector<uint8_t> p = packet(0x00b4, 8 + text.size() + 1);
+    put16(p, 2, uint16_t(p.size()));
+    put32(p, 4, 110000777);
+    putText(p, 8, text);
+    packets::Event e = packets::parse(p.data(), p.size());
+    const auto* say = std::get_if<packets::NpcSay>(&e);
+    CHECK(say != nullptr && say->npc == 110000777u && say->text == text);
+    const std::string menu = "Save:Storage:^0000FFCancel^000000";
+    p = packet(0x00b7, 8 + menu.size() + 1);
+    put16(p, 2, uint16_t(p.size()));
+    put32(p, 4, 110000777);
+    putText(p, 8, menu);
+    e = packets::parse(p.data(), p.size());
+    const auto* m = std::get_if<packets::NpcMenu>(&e);
+    CHECK(m != nullptr && m->npc == 110000777u && m->text == menu);
+}

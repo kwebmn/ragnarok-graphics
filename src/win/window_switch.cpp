@@ -17,6 +17,7 @@
 #include "win/pad_assign.hpp"
 #include "win/pad_tiles.hpp"
 #include "win/equip_window.hpp"
+#include "win/npc_talk.hpp"
 #include "win/skill_window.hpp"
 #include "win/stat_window.hpp"
 #include "win/target_card.hpp"
@@ -65,6 +66,7 @@ bool partsMouse(HWND w, UINT m, WPARAM wp, LPARAM lp, LRESULT& answer) {
            statswin::mouse(w, m, wp, lp, answer) ||      // 3.0.11-beta.42: the windows over the panels
            skillswin::mouse(w, m, wp, lp, answer) ||     // 3.0.11-beta.96: «Навички»
            equipwin::mouse(w, m, wp, lp, answer) ||      // 3.0.11-beta.97: «Спорядження»
+           npcwin::mouse(w, m, wp, lp, answer) ||        // 3.0.11-beta.98: the NPC talk
            itemswin::mouse(w, m, wp, lp, answer) ||
            minimapproto::mouse(w, m, wp, lp, answer) ||  // 3.0.11-beta.1: the new minimap's
            buffcolumn::mouse(w, m, wp, lp, answer) ||    // 3.0.11-beta.35: the buffs' column's
@@ -84,6 +86,7 @@ LRESULT CALLBACK gameProc(HWND w, UINT m, WPARAM wp, LPARAM lp) {
         if (hudedit::key(m, wp, lp)) return 0;  // 3.0.11-beta.75: Ctrl+Shift+L - «Розміщення інтерфейсу», its Esc
         if (referencewin::key(m, wp, lp)) return 0;  // 3.0.11-beta.7: Ctrl+F, and every key while «Довідник» is open
         if (itemswin::key(m, wp, lp)) return 0;      // 3.0.11-beta.42: «Речі»'s search while it types
+        if (npcwin::key(m, wp, lp)) return 0;        // 3.0.11-beta.98: the NPC talk's 1-9, Enter, Esc
         if (chatwin::key(m, wp, lp)) return 0;       // 3.0.11-beta.41: the new chat's F10, Alt+F10 and Tab
         hotbarwin::key(m, wp, lp);                   // 3.0.11-beta.45: its cells' keys shown pressed (still the game's)
         if (m == WM_KEYDOWN && minimapproto::key(unsigned(wp))) return 0;  // 3.0.11-beta.4: Ctrl+Tab, the new minimap's

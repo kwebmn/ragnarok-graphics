@@ -622,6 +622,8 @@ struct Config {
     bool skillsWindow = false;
     // 3.0.11-beta.97: [interface] equip - «Спорядження» (core/equip_window) in place of the game's equipment window
     bool equipWindow = false;
+    // 3.0.11-beta.98: [interface] npc_talk - the NPC talk (core/npc_talk) in place of the game's text and menu windows
+    bool npcWindow = false;
     // 3.0.11-beta.46: [interface] animations - the new interface's motion (core/ui_motion): the target's card, the
     // character block's views, a new level's flare, the low HP warning sliding in; 0: all at once
     bool animations = true;

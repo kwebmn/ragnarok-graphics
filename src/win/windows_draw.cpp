@@ -11,6 +11,7 @@
 #include "win/item_window.hpp"
 #include "win/log.hpp"
 #include "win/equip_window.hpp"
+#include "win/npc_talk.hpp"
 #include "win/skill_window.hpp"
 #include "win/stat_window.hpp"
 
@@ -37,6 +38,7 @@ void __attribute__((thiscall)) windowsDraw(uint32_t manager) {
     statswin::beforeGameDraw();   // «Характеристики»
     skillswin::beforeGameDraw();  // 3.0.11-beta.96: «Навички»
     equipwin::beforeGameDraw();   // 3.0.11-beta.97: «Спорядження»
+    npcwin::beforeGameDraw();     // 3.0.11-beta.98: the NPC talk
     charpanel::beforeGameDraw();  // the Basic Info window
     hotbarwin::beforeGameDraw();  // the hotkeys' bar
     chatwin::beforeGameDraw();    // the chat (out of sight)

@@ -144,9 +144,20 @@ struct ActorInfo {
     int hp = -1;  // per cent; -1 none (a character's party name)
 };
 
+// 3.0.11-beta.98 (the NPC talk window): an NPC's words - 0x00b4 <len>.W <npc>.L <text> - and its menu - 0x00b7
+// <len>.W <npc>.L <options split by ':'>, in the game's code page with their ^RRGGBB colours
+struct NpcSay {
+    uint32_t npc = 0;
+    std::string text;
+};
+struct NpcMenu {
+    uint32_t npc = 0;
+    std::string text;
+};
+
 using Event = std::variant<std::monostate, Whisper, PartyInvite, TradeRequest, GuildInvite, FriendRequest, StatusIcon,
                            Vanish, SkillCast, Hit, PartyList, PartyMember, PartyLeft, PartyHp, PartyChat, GuildChat,
-                           Chat, Status, Pickup, StatusLong, Casting, Appear, PartyPos, ActorInfo>;
+                           Chat, Status, Pickup, StatusLong, Casting, Appear, PartyPos, ActorInfo, NpcSay, NpcMenu>;
 
 // A packet as the game took it, `size` bytes of it readable: one of the above, or nothing (another packet, one cut
 // short or naming more bytes than there are).
