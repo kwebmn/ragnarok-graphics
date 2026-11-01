@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "pad/win/game_window.hpp"
+#include "win/char_make.hpp"
 #include "win/char_select.hpp"
 #include "win/chat_window.hpp"
 #include "win/ask_card.hpp"
@@ -33,7 +34,7 @@ using uapad::gamewindow::Blocker;
 constexpr const char* kNames[] = {"«Речі»",  "«Характеристики»", "«Навички»", "«Спорядження»",
                                   "the shop", "the NPC talk",      "«Довідник»", "«Склад»", "«Обмін»",
                                   "the menu", "the item card", "the skill card", "the request",
-                                  "the message box", "the login", "the character select"};
+                                  "the message box", "the login", "the character select", "the character make"};
 static_assert(std::size(kNames) == size_t(winstack::kWins), "a name for each window");
 constexpr int kMostTold = 40;
 
@@ -82,6 +83,7 @@ bool shown(Win w) {
         case Win::Message: return msgboxwin::shown();  // 3.0.11-beta.151
         case Win::Login: return loginwin::shown();
         case Win::CharSelect: return charselectwin::shown();  // 3.0.11-beta.152
+        case Win::CharMake: return charmakewin::shown();  // 3.0.11-beta.153
     }
     return false;
 }
@@ -103,6 +105,7 @@ Blocker blockerOf(Win w) {
         case Win::Message: return Blocker::Message;
         case Win::Login: return Blocker::Login;
         case Win::CharSelect: return Blocker::CharSelect;
+        case Win::CharMake: return Blocker::CharMake;
         case Win::Reference: break;
     }
     return Blocker::Reference;
@@ -126,6 +129,7 @@ void drawOne(Win w, FrameRecord& record, gpu::Renderer& renderer) {
         case Win::Message: msgboxwin::draw(record, renderer); break;
         case Win::Login: loginwin::draw(record, renderer); break;
         case Win::CharSelect: charselectwin::draw(record, renderer); break;
+        case Win::CharMake: charmakewin::draw(record, renderer); break;
     }
 }
 
@@ -147,6 +151,7 @@ bool mouseOne(Win w, HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
         case Win::Message: return msgboxwin::mouse(game, m, wp, lp, result);
         case Win::Login: return loginwin::mouse(game, m, wp, lp, result);
         case Win::CharSelect: return charselectwin::mouse(game, m, wp, lp, result);
+        case Win::CharMake: return charmakewin::mouse(game, m, wp, lp, result);
     }
     return false;
 }
@@ -169,7 +174,7 @@ bool keyOne(Win w, UINT m, WPARAM wp, LPARAM lp) {  // the windows with keys of 
 
 bool movable(Win w) {  // .140: the menu centred; .149: a card beside the cursor that opened it
     return w != Win::Npc && w != Win::Reference && w != Win::Menu && w != Win::ItemCard && w != Win::SkillCard &&
-           w != Win::Ask && w != Win::Message && w != Win::Login && w != Win::CharSelect;
+           w != Win::Ask && w != Win::Message && w != Win::Login && w != Win::CharSelect && w != Win::CharMake;
 }
 
 bool boxOf(Win w, winstack::Box& b) {
@@ -190,6 +195,7 @@ bool boxOf(Win w, winstack::Box& b) {
         case Win::Message: return msgboxwin::box(b.x, b.y, b.w, b.h);
         case Win::Login: return loginwin::box(b.x, b.y, b.w, b.h);
         case Win::CharSelect: return charselectwin::box(b.x, b.y, b.w, b.h);
+        case Win::CharMake: return charmakewin::box(b.x, b.y, b.w, b.h);
     }
     return false;
 }

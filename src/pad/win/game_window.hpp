@@ -31,9 +31,10 @@ enum class Blocker { Panel, Card, Minimap, Reference, BigMap, Buffs, Character, 
                      ItemCard, SkillCard,  // 3.0.11-beta.149
                      Ask,  // 3.0.11-beta.150
                      Message, Login,  // 3.0.11-beta.151
-                     CharSelect };  // 3.0.11-beta.152
+                     CharSelect,  // 3.0.11-beta.152
+                     CharMake };  // 3.0.11-beta.153
 // 3.0.11-beta.33: their number (win/world_mouse names each)
-constexpr int kBlockerCount = int(Blocker::CharSelect) + 1;
+constexpr int kBlockerCount = int(Blocker::CharMake) + 1;
 void setBlocked(Blocker who, HWND game, const RECT* rect, bool all);
 // 3.0.11-beta.77: a part's rectangle as it set it (the client's pixels) - false while it has none
 bool blockerRect(Blocker who, RECT& out);

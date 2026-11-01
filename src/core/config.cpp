@@ -393,6 +393,7 @@ Config parseConfig(const std::string& text) {
     bool messagesSet = false;                     // 3.0.11-beta.151
     bool loginSet = false;                        // 3.0.11-beta.151
     bool charSelectSet = false;                   // 3.0.11-beta.152
+    bool charMakeSet = false;                     // 3.0.11-beta.153
     std::istringstream in(text);
     std::string line;
     std::string section;
@@ -607,6 +608,9 @@ Config parseConfig(const std::string& text) {
         } else if (key == "interface.char_select") {  // 3.0.11-beta.152: the character select
             charSelectSet = val == "0" || val == "1" || val == "on" || val == "off" || val == "true" || val == "false";
             setBool(val, c.charSelectWindow);
+        } else if (key == "interface.char_make") {  // 3.0.11-beta.153: the character make
+            charMakeSet = val == "0" || val == "1" || val == "on" || val == "off" || val == "true" || val == "false";
+            setBool(val, c.charMakeWindow);
         } else if (key == "interface.skill_cells") {  // 3.0.11-beta.142: a ground skill's cells on the ground
             setBool(val, c.skillCells);
         } else if (key == "interface.ground_counts") {  // 3.0.11-beta.143: walls standing, traps left on the bar
@@ -913,6 +917,7 @@ Config parseConfig(const std::string& text) {
     if (c.newMinimap && !messagesSet) c.messageBoxes = true;  // 3.0.11-beta.151
     if (c.newMinimap && !loginSet) c.loginWindow = true;      // 3.0.11-beta.151
     if (c.newMinimap && !charSelectSet) c.charSelectWindow = true;  // 3.0.11-beta.152
+    if (c.newMinimap && !charMakeSet) c.charMakeWindow = true;      // 3.0.11-beta.153
     return c;
 }
 

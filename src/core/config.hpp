@@ -688,6 +688,8 @@ struct Config {
     bool loginWindow = false;
     // 3.0.11-beta.152: [interface] char_select - the game's character select (win/char_select) in the new look
     bool charSelectWindow = false;
+    // 3.0.11-beta.153: [interface] char_make - the game's character make (win/char_make) in the new look
+    bool charMakeWindow = false;
     // 3.0.11-beta.142 (the owner's concept «маг, прист и хант на геймпаде», answer 9 «дать»): [interface] skill_cells -
     // a ground skill's cells, as the server makes them (core/skill_area), shown on the ground after a cast by the pad
     // or the mouse (win/ground_marks); 0: none

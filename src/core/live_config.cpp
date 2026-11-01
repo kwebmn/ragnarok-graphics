@@ -339,6 +339,10 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("char_select", flag(running.charSelectWindow), flag(file.charSelectWindow)));
         n.charSelectWindow = file.charSelectWindow;
     }
+    if (file.charMakeWindow != running.charMakeWindow) {  // 3.0.11-beta.153: the character make, at once
+        u.applied.push_back(change("char_make", flag(running.charMakeWindow), flag(file.charMakeWindow)));
+        n.charMakeWindow = file.charMakeWindow;
+    }
     if (file.skillCells != running.skillCells) {  // 3.0.11-beta.142: a ground skill's cells, at once
         u.applied.push_back(change("skill_cells", flag(running.skillCells), flag(file.skillCells)));
         n.skillCells = file.skillCells;

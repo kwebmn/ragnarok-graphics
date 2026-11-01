@@ -5482,6 +5482,28 @@ constexpr Entry kTexts[] = {
     {Text::CharsEmpty, "Free place", "Вільне місце", "Свободное место"},
     {Text::CharsMakeHint, "Make a new character here", "Створіть тут нового персонажа",
      "Создайте здесь нового персонажа"},
+    // 3.0.11-beta.153: the character make
+    {Text::InterfaceCharMake, "Character make", "Створення персонажа", "Создание персонажа"},
+    {Text::InterfaceCharMakeHint,
+     "The game's character make in the new look: the face with the hair's style and colour, the name (typed as "
+     "before - the game's own field), the stats in the game's three pairs (a stat's + takes a point from its pair, "
+     "each pair 10 together). The controller: up and down a row, left and right change it, A makes, B cancels. Off: "
+     "the game's own window.",
+     "Створення персонажа в новому вигляді: обличчя із зачіскою та кольором волосся, ім'я (набирається як раніше — "
+     "це поле самої гри), характеристики в трьох парах гри (+ біля характеристики бере очко з її пари, разом пара "
+     "завжди 10). Контролер: вгору й униз — рядок, вліво й управо — змінити, A — створити, B — скасувати. Вимкнено: "
+     "власне вікно гри.",
+     "Создание персонажа в новом виде: лицо с причёской и цветом волос, имя (набирается как раньше — это поле самой "
+     "игры), характеристики в трёх парах игры (+ возле характеристики берёт очко из её пары, вместе пара всегда 10). "
+     "Контроллер: вверх и вниз — строка, влево и вправо — изменить, A — создать, B — отменить. Выключено: собственное "
+     "окно игры."},
+    {Text::MakeTitle, "New character", "Новий персонаж", "Новый персонаж"},
+    {Text::MakeName, "Name", "Ім'я", "Имя"},
+    {Text::MakeNameHint, "4 to 23 letters", "Від 4 до 23 символів", "От 4 до 23 символов"},
+    {Text::MakeHair, "Hair", "Зачіска", "Причёска"},
+    {Text::MakeColour, "Hair colour", "Колір волосся", "Цвет волос"},
+    {Text::MakePairsHint, "A point moves inside its pair: 10 together", "Очко переходить у парі: разом завжди 10",
+     "Очко переходит в паре: вместе всегда 10"},
     // 3.0.11-beta.141: the character block's experience (forms: one, a few, many)
     {Text::CharSkillPoints, "skill point|skill points", "очко навичок|очки навичок|очок навичок",
      "очко навыков|очка навыков|очков навыков"},
