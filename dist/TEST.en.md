@@ -1,3 +1,9 @@
+# uaRO Graphics 3.0.11-beta.137 — what's new
+
+**Walking without waiting for the server — only on a calm line** (report R-QTN6TF):
+- A walk is guessed only when no packet was lost in the last 30 seconds and the round trip is under 150 ms. On an
+  unsteady line both of the report's put-backs fell on a request lost right after the click.
+
 # uaRO Graphics 3.0.11-beta.136 — what's new
 
 **Walking without waiting for the server — only from the cell the server has the character on** (report R-JMHDUY):
