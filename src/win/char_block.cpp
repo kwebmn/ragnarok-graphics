@@ -20,6 +20,7 @@
 #include "core/ui_style.hpp"
 #include "pad/win/game_window.hpp"
 #include "win/ammo_watch.hpp"
+#include "win/buff_overlay.hpp"
 #include "win/code_page.hpp"
 #include "win/game_camera.hpp"
 #include "win/head_picture.hpp"
@@ -86,6 +87,7 @@ struct State {
     int hoverId = 0, pressedButton = -1;  // 3.0.11-beta.51: what is pointed at since when (its tip after 0.4 s)
     ULONGLONG hoverSince = 0, pressedUntil = 0;
     bool ammoArrows = true;  // 3.0.11-beta.114: the ammo worn arrows or other (win/ammo_watch)
+    int overweightTold = -2;  // 3.0.11-beta.139: the overweight state last told the log
 };
 
 State& state() {
@@ -94,6 +96,14 @@ State& state() {
 }
 
 std::string say(settings::Text t) { return settings::tr(startup().lang, t); }
+
+// 3.0.11-beta.139 (the owner: «пишет что 60% но хп воостанавливается»): the server's own overweight state - its status
+// icons SI_WEIGHT90 (36: no attacks nor skills, 90 %) and SI_WEIGHT50 (35: no natural regen - uaRO's
+// natural_heal_weight_rate is 70 %, not the classic 50)
+int ownOverweight() {
+    const buffs::Timers& t = buffoverlay::timers();
+    return t.on(36) ? 2 : t.on(35) ? 1 : 0;
+}
 
 uint32_t read32(uint32_t at) {
     uint32_t v = 0;
@@ -179,6 +189,8 @@ cb::Texts texts() {
     t.points = say(settings::Text::CharPoints);
     t.lowHp = say(settings::Text::CharLowHp);
     t.ammo = say(state().ammoArrows ? settings::Text::CharArrows : settings::Text::CharAmmo);  // 3.0.11-beta.114
+    t.overweight1 = say(settings::Text::CharOverweight1);  // 3.0.11-beta.139
+    t.overweight2 = say(settings::Text::CharOverweight2);
     const settings::Text names[cb::kButtons] = {settings::Text::CharStats,  settings::Text::CharEquip,
                                                 settings::Text::CharItems,  settings::Text::CharSkills,
                                                 settings::Text::CharFriends, settings::Text::CharOptions};
@@ -329,6 +341,15 @@ void frame(HWND game, CharacterLook look, unsigned codePage, double k, int targe
     d.baseExp = share(st.baseExp, st.baseNext, st.baseLevel);
     d.jobExp = share(st.jobExp, st.jobNext, st.jobLevel);
     d.weight = st.weightMost > 0 ? int(int64_t(st.weight) * 100 / st.weightMost) : -1;
+    d.weightNow = st.weight;  // 3.0.11-beta.139: the numbers and the server's own overweight state
+    d.weightMost = st.weightMost;
+    d.overweight = ownOverweight();
+    if (d.overweight != s.overweightTold && d.weight >= 0) {
+        s.overweightTold = d.overweight;
+        LOG_INFO("character: weight %d / %d (%d %%) - the server's overweight state %d (%s)", st.weight,
+                 st.weightMost, d.weight, d.overweight,
+                 d.overweight == 2 ? "90 %: no attacks nor skills" : d.overweight == 1 ? "no natural regen" : "none");
+    }
     d.zeny = st.zeny;
     d.statusPoints = st.statusPoints;
     d.portrait = s.portrait.width > 0 ? &s.portrait : nullptr;
@@ -376,6 +397,7 @@ void frame(HWND game, CharacterLook look, unsigned codePage, double k, int targe
         std::to_string(d.spMost) + ';' + std::to_string(int(d.baseExp * 1000)) + ',' +
         std::to_string(int(d.jobExp * 1000)) + ';' + std::to_string(d.weight) + ';' + std::to_string(d.zeny) + ';' +
         std::to_string(d.statusPoints) + ';' + std::to_string(d.ammo) + (s.ammoArrows ? "a" : "b") + ';' +
+        std::to_string(d.weightNow) + '/' + std::to_string(d.weightMost) + 'o' + std::to_string(d.overweight) + ';' +
         s.portraitKey + (d.portrait ? "p" : "") + ';' +
         std::to_string(show.hoverButton) + (show.hoverBlock ? "h" : "") + (show.warning ? "w" : "") +
         (show.tip ? "t" : "") + std::to_string(show.pressedButton);

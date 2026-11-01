@@ -312,7 +312,10 @@ void paint(panel::Picture& out, const Layout& L, const std::vector<Item>& items,
     panel::roundRect(out, L.bar, 3 * s, kWhite, 0.10f);
     if (share > 0)
         panel::roundRect(out, panel::Box{L.bar.x, L.bar.y, L.bar.w * share, L.bar.h}, 3 * s,
-                         share >= 0.9f ? kRed : share >= 0.5f ? kGold : kGreen, 0.95f);
+                         (sh.overweight >= 0 ? sh.overweight == 2 : share >= 0.9f)   ? kRed
+                         : (sh.overweight >= 0 ? sh.overweight == 1 : share >= 0.5f) ? kGold
+                                                                                     : kGreen,
+                         0.95f);
     for (size_t i = 0; i < L.cells.size(); ++i) {  // 3.0.11-beta.112: the new things' pills
         const int at = int(i) + sh.scroll * L.columns;
         if (at >= int(shown.size()) || t.fresh.empty() || !items[size_t(shown[size_t(at)])].fresh) continue;

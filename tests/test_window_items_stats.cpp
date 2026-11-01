@@ -390,3 +390,32 @@ TEST(item_window_use_flash) {
         label = label || (w.text == "\xE2\x88\x92" "1" && w.box.y < c.y);
     CHECK(label);
 }
+
+// 3.0.11-beta.139 (the owner: «пишет что 60% но хп воостанавливается» - uaRO stops the natural regen at 70 %): the
+// weight's bar coloured by the server's own overweight state (green none, gold no regen, red the 90 % one); not known
+// yet: by the classic 50 % and 90 % as before
+TEST(item_window_weight_bar_by_the_servers_state) {
+    std::vector<itemwin::Item> items{item(1, 501, 0, 38, "Red Potion")};
+    const itemwin::Texts t = itemTexts();
+    const itemwin::Layout L = itemwin::layout(0, 0, 1.0f, t, itemwin::Measure(panel::wordsWidth));
+    const std::vector<int> shown = itemwin::shownOf(items, itemwin::Tab::All, "");
+    itemwin::Show sh;
+    sh.weight = 2700;
+    sh.weightMost = 4500;  // 60 %
+    const auto barColour = [&](int overweight) {
+        sh.overweight = overweight;
+        panel::Picture p;
+        p.width = L.w;
+        p.height = L.h;
+        p.px.assign(size_t(L.w) * size_t(L.h), 0u);
+        itemwin::paint(p, L, items, shown, sh, t, itemwin::Measure(panel::wordsWidth));
+        return p.px[size_t(L.bar.y + L.bar.h / 2) * size_t(L.w) + size_t(L.bar.x + 4)];
+    };
+    const auto g = [](uint32_t c) { return int((c >> 8) & 0xFF); };
+    const auto r = [](uint32_t c) { return int((c >> 16) & 0xFF); };
+    const uint32_t none = barColour(0), regen = barColour(1), ninety = barColour(2), unknown = barColour(-1);
+    CHECK(g(none) > r(none));      // green: the server says none at 60 %
+    CHECK(r(regen) > g(regen) && g(regen) > 0x90);  // gold
+    CHECK(r(ninety) > 0xD0 && g(ninety) < 0x90);    // red
+    CHECK(unknown == regen);       // not known: 60 % by the classic 50 %
+}

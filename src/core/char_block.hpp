@@ -25,6 +25,13 @@ struct Data {
     int hp = 0, hpMost = 0, sp = 0, spMost = 0;
     float baseExp = -1, jobExp = -1;  // the level's part done (0..1); < 0 not known
     int weight = -1;                  // per cent of the most; < 0 not known
+    // 3.0.11-beta.139 (the owner: «в интерфейсе вес не работает ... или не правильно считает»): the game's own numbers
+    // (whole units, as its Basic Info window showed them) - in the rings' tip; most 0 not known
+    int weightNow = -1, weightMost = 0;
+    // 3.0.11-beta.139 (the owner: «пишет что 60% но хп воостанавливается»): the server's own overweight state, its
+    // status icons - 1 no natural regen (SI_WEIGHT50; uaRO's natural_heal_weight_rate is 70 %, not 50), 2 no attacks
+    // nor skills (SI_WEIGHT90, 90 %), 0 none; < 0 not known: by the classic 50 % and 90 %
+    int overweight = -1;
     long long zeny = -1;              // < 0 not known
     int statusPoints = 0;
     const panel::Picture* portrait = nullptr;  // the head, at the portrait's side; none: the name's first letter
@@ -78,6 +85,7 @@ struct Texts {
     std::string points;            // «очко|очки|очок»: the free points' word by their count (one, a few, many)
     std::string lowHp;             // «Мало HP · {1} %»
     std::string ammo;              // 3.0.11-beta.114: «Стріли»
+    std::string overweight1, overweight2;  // 3.0.11-beta.139: what the overweight states stop (the rings' tip)
     std::string buttons[kButtons];  // «Характеристики · Alt+A» ...
     char decimal = ',';
 };

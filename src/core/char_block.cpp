@@ -113,13 +113,27 @@ int lowPercent(const Data& d) { return int(std::lround(part(d.hp, d.hpMost) * 10
 
 bool rings(const Layout& L) { return L.view == View::Icon || (L.view == View::Compact && L.look == Look::Rings); }
 
+// 3.0.11-beta.139: the overweight state - the server's when known, else by the classic 50 % and 90 %
+int overweightOf(const Data& d) {
+    if (d.overweight >= 0) return d.overweight;
+    return d.weight >= 90 ? 2 : d.weight >= 50 ? 1 : 0;
+}
+
 // The tip's lines: a button's words; the rings' numbers
 std::vector<std::string> tipLines(const Layout& L, const Data& d, const Texts& t, const Show& show) {
     if (!show.tip) return {};
     if (L.view == View::Full && show.hoverButton >= 0 && show.hoverButton < kButtons)
         return {t.buttons[show.hoverButton]};
-    if (rings(L) && show.hoverBlock && d.hpMost > 0)
-        return {"HP " + pair(d.hp, d.hpMost), "SP " + pair(d.sp, d.spMost), levels(d)};
+    if (rings(L) && show.hoverBlock && d.hpMost > 0) {
+        std::vector<std::string> lines{"HP " + pair(d.hp, d.hpMost), "SP " + pair(d.sp, d.spMost), levels(d)};
+        if (d.weightMost > 0 && d.weightNow >= 0 && d.weight >= 0)  // 3.0.11-beta.139: the weight's numbers
+            lines.push_back(t.weight + " " + pair(d.weightNow, d.weightMost) + " \xC2\xB7 " + std::to_string(d.weight) +
+                            "\xC2\xA0%");
+        const int over = overweightOf(d);  // 3.0.11-beta.139: what the overweight stops
+        if (over == 1 && !t.overweight1.empty()) lines.push_back(t.overweight1);
+        if (over == 2 && !t.overweight2.empty()) lines.push_back(t.overweight2);
+        return lines;
+    }
     return {};
 }
 
@@ -325,11 +339,11 @@ void paint(panel::Picture& out, const Layout& L, const Data& d, const Texts& t, 
             panel::circle(out, L.pointsDot.x + L.pointsDot.w / 2, L.pointsDot.y + L.pointsDot.h / 2,
                           L.pointsDot.w / 2, kGold2, 1.0f);
         }
-        if (d.weight >= 50) {
+        if (const int over = overweightOf(d); over > 0) {  // 3.0.11-beta.139: the server's state
             panel::circle(out, L.weightDot.x + L.weightDot.w / 2, L.weightDot.y + L.weightDot.h / 2,
                           L.weightDot.w / 2 + 1.2f * s, kBlack, 0.7f);
             panel::circle(out, L.weightDot.x + L.weightDot.w / 2, L.weightDot.y + L.weightDot.h / 2,
-                          L.weightDot.w / 2, kWarn, 1.0f);
+                          L.weightDot.w / 2, over == 2 ? kHpLow : kWarn, 1.0f);
         }
     }
     const panel::Box warn = warnBox(L, d, t, show);
@@ -396,7 +410,8 @@ std::vector<Words> words(const Layout& L, const Data& d, const Texts& t, const S
         };
         if (d.weight >= 0) {
             put(t.weight, kMuted, false, 4);
-            put(std::to_string(d.weight) + "\xC2\xA0%", d.weight >= 50 ? kWarn : kText, true, 12);
+            const int over = overweightOf(d);  // 3.0.11-beta.139: by the server's state
+            put(std::to_string(d.weight) + "\xC2\xA0%", over == 2 ? kHpLow : over == 1 ? kWarn : kText, true, 12);
         }
         if (d.zeny >= 0) {
             put(grouped(d.zeny), kText, true, 2);

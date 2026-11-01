@@ -25,6 +25,8 @@ public:
     void cast(uint16_t skill, uint16_t level, uint64_t now);
     void icon(uint16_t icon, bool on, uint64_t now);
     uint32_t left(uint16_t icon, uint64_t now) const;  // ms; 0 none or ended
+    // 3.0.11-beta.139: an icon on now, timed or not (the server's overweight states: 35, 36)
+    bool on(uint16_t icon) const { return onAt_.count(icon) != 0; }
     // 3.0.7-beta.6: each buff counted - its icon, when it was put on (none known: its end less its time) and its end
     struct Running {
         uint16_t icon = 0;

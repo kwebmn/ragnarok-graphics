@@ -94,6 +94,9 @@ struct Show {
     std::string search;   // UTF-8
     bool caretOn = true;
     int weight = 0, weightMost = 0;  // 3.0.11-beta.115: «Склад» - its places used of the most
+    // 3.0.11-beta.139: the server's overweight state (1 no regen - uaRO from 70 %, 2 the 90 % one, 0 none) - the bar's
+    // colour; < 0 not known (and «Склад»): by the share, 50 % and 90 %
+    int overweight = -1;
     long long zeny = 0;              // < 0: none shown («Склад»)
 };
 

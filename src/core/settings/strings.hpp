@@ -483,6 +483,7 @@ enum class Text : uint16_t {
     // 3.0.11-beta.125: the ammo left on the hotbar
     InterfaceHotbarAmmo, InterfaceHotbarAmmoHint, HotbarAmmoLow, HotbarAmmoOut,
     InterfaceAmmoSound, InterfaceAmmoSoundHint,  // 3.0.11-beta.129
+    CharOverweight1, CharOverweight2,            // 3.0.11-beta.139
     InterfaceMinimapReach, InterfaceMinimapReachHint,  // 3.0.11-beta.65
     InterfaceMinimapHd, InterfaceMinimapHdHint,        // 3.0.11-beta.72
     InterfacePackIcons, InterfacePackIconsHint,        // 3.0.11-beta.74

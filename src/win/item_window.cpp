@@ -23,6 +23,7 @@
 #include "pad/win/game_window.hpp"
 #include "pad/win/runtime.hpp"
 #include "win/pad_carry.hpp"
+#include "win/buff_overlay.hpp"
 #include "win/client_tables.hpp"
 #include "win/code_page.hpp"
 #include "win/game_camera.hpp"
@@ -536,6 +537,8 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
         if (readOwnStatus(st)) {
             s.show.weight = st.weight;
             s.show.weightMost = st.weightMost;
+            const buffs::Timers& icons = buffoverlay::timers();  // 3.0.11-beta.139: the server's overweight state
+            s.show.overweight = icons.on(36) ? 2 : icons.on(35) ? 1 : 0;
             s.show.zeny = st.zeny;
         }
     }
@@ -594,7 +597,8 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
                       std::to_string(s.show.flashes.size()) + '@' +
                       std::to_string(s.show.flashes.empty() ? 0 : int(s.show.flashes.front().t * 40)) + ';' +
                       std::to_string(s.show.weight) + '/' +
-                      std::to_string(s.show.weightMost) + ';' + std::to_string(s.show.zeny) + ';' +
+                      std::to_string(s.show.weightMost) + 'o' + std::to_string(s.show.overweight) + ';' +
+                      std::to_string(s.show.zeny) + ';' +
                       (s.padNow ? "P;" : ";");
     for (const iw::Item& it : s.items)
         key += std::to_string(it.index) + ':' + std::to_string(it.id) + 'x' + std::to_string(it.count) + '+' +

@@ -268,3 +268,64 @@ TEST(char_block_the_arrows_running_low) {
     CHECK(colourOf(d, "Стріли") < 0);  // none worn
 }
 
+
+// 3.0.11-beta.139 (the owner: «мне кажется что в интерфейсе вес не работает ... или не правильно считает»): the rings
+// show the weight only as a dot from 50 % - its numbers now in their tip, the game's own (whole units, as its Basic
+// Info window showed them) and the per cent as the game counts it
+TEST(char_block_rings_tip_tells_the_weight) {
+    charblock::Data d = sora();
+    d.weightNow = 1710;
+    d.weightMost = 4500;
+    d.weight = 38;
+    const charblock::Layout R = charblock::layout(charblock::View::Compact, charblock::Look::Rings, 0, 0, 1.0f);
+    charblock::Show hover;
+    hover.hoverBlock = true;
+    const std::vector<charblock::Words> w = charblock::words(R, d, texts(), hover);
+    const auto has = [&](const std::string& s) {
+        return std::any_of(w.begin(), w.end(), [&](const charblock::Words& x) { return x.text == s; });
+    };
+    CHECK(has("Вага 1\xC2\xA0" "710 / 4\xC2\xA0" "500 \xC2\xB7 38\xC2\xA0%"));
+    d.weightMost = 0;  // not known: no line
+    const std::vector<charblock::Words> none = charblock::words(R, d, texts(), hover);
+    CHECK(std::none_of(none.begin(), none.end(),
+                       [](const charblock::Words& x) { return x.text.rfind("Вага", 0) == 0; }));
+}
+
+// 3.0.11-beta.139 (the owner: «пишет что 60% но хп воостанавливается» - uaRO stops the natural regen at 70 %, its
+// natural_heal_weight_rate, not the classic 50 %): the weight's dot and colour by the server's own state - 1 no regen
+// (amber), 2 the 90 % one (red), 0 none (no dot at 60 %); not known yet: from 50 % as before; the tip says which
+TEST(char_block_overweight_by_the_servers_state) {
+    const charblock::Layout R = charblock::layout(charblock::View::Compact, charblock::Look::Rings, 0, 0, 1.0f);
+    charblock::Texts t = texts();
+    t.overweight1 = "HP і SP не відновлюються";
+    t.overweight2 = "Атаки й уміння заборонені";
+    charblock::Data d = sora();
+    d.weight = 60;
+    d.weightNow = 2700;
+    d.weightMost = 4500;
+    const auto dot = [&](const charblock::Data& data) {
+        panel::Picture p = canvas(R);
+        charblock::paint(p, R, data, t, charblock::Show{});
+        return pixel(p, R.weightDot.x + R.weightDot.w / 2, R.weightDot.y + R.weightDot.h / 2);
+    };
+    d.overweight = 0;  // the server: none - its regen goes on at 60 %
+    CHECK(!(red(dot(d)) > 0xD0 && green(dot(d)) > 0x80 && blue(dot(d)) < 0x70));
+    d.overweight = 1;
+    const uint32_t amber = dot(d);
+    CHECK(red(amber) > 0xD0 && green(amber) > 0x80 && blue(amber) < 0x70);
+    d.overweight = 2;
+    const uint32_t red90 = dot(d);
+    CHECK(red(red90) > 0xD0 && green(red90) < 0x70);
+    d.overweight = -1;  // not known: by 50 %
+    CHECK(red(dot(d)) > 0xD0 && green(dot(d)) > 0x80);
+    charblock::Show hover;
+    hover.hoverBlock = true;
+    d.overweight = 1;
+    const std::vector<charblock::Words> w = charblock::words(R, d, t, hover);
+    CHECK(std::any_of(w.begin(), w.end(),
+                      [](const charblock::Words& x) { return x.text == "HP і SP не відновлюються"; }));
+    d.overweight = 0;
+    const std::vector<charblock::Words> calm = charblock::words(R, d, t, hover);
+    CHECK(std::none_of(calm.begin(), calm.end(),
+                       [](const charblock::Words& x) { return x.text == "HP і SP не відновлюються"; }));
+}

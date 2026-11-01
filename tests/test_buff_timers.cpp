@@ -122,3 +122,15 @@ TEST(buff_timers_skill_gives_icon) {
     CHECK(!buffs::gives(kBlessing, kPotionIcon));
     CHECK(!buffs::gives(0, kBlessingIcon));
 }
+
+// 3.0.11-beta.139 (the owner: «пишет что 60% но хп воостанавливается»): an icon on now, timed or not - the server's own
+// overweight states (SI_WEIGHT50 35: no natural regen - uaRO's natural_heal_weight_rate 70 %; SI_WEIGHT90 36)
+TEST(buff_timers_an_icon_on_now) {
+    buffs::Timers t;
+    CHECK(!t.on(35));
+    t.icon(35, true, 1000);
+    CHECK(t.on(35) && !t.on(36));
+    t.icon(35, false, 2000);
+    t.icon(36, true, 2000);
+    CHECK(!t.on(35) && t.on(36));
+}
