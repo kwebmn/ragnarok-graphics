@@ -1,3 +1,13 @@
+# uaRO Graphics 3.0.11-beta.134 — what's new
+
+**Walking without waiting for the server — fewer mismatches** (report R-U436CU):
+- No walk is guessed while the server still walks the character on its last way: the game may show it standing
+  (finishing an attack) while on the server it already walks. The way's time is counted at the character's speed
+  the server tells.
+- When the server walks another way anyway, the log now shows why: its way before and the last position fix.
+- The server's delays are no longer mistaken for the moment the game comes back from behind other windows and
+  reads what piled up.
+
 # uaRO Graphics 3.0.11-beta.133 — what's new
 
 **Walking without waiting for the server — with the controller too** (report R-N2N7T8):
