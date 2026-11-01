@@ -1,3 +1,19 @@
+# uaRO Graphics 3.0.11-beta.147 — what's new
+
+**Hotbar: icons with the mouse and a battle mode button**:
+- The pencil is gone. A cell's icon can be picked up with the mouse: dragged to another cell - the two swap places,
+  carried off the bar - the skill or item is taken off the bar (a red minus shows on the icon).
+- So that a quick click in a fight drags nothing by chance, the icon is picked up only when the button is held a
+  quarter of a second and the mouse moves. A plain click, even if the mouse twitched, just uses the cell.
+- A right click on a cell shows the skill's or item's details (the game's own window).
+- In the pencil's place - a button with swords: turns the battle mode on and off, as the /battlemode command. While
+  the mode is on, the button is red.
+
+**The bar no longer moves away by itself** (your message; report R-VYV3AG shows it at 10:01:13):
+- A click on the bar during which the mouse slipped a couple of pixels counted as dragging the whole bar. Now any
+  part of the interface moves only when the button is held 0.3 s and the mouse moves - a quick click no longer moves
+  it. In a cell with an icon the icon itself is dragged; the whole bar - by its frame or an empty cell.
+
 # uaRO Graphics 3.0.11-beta.146 — what's new
 
 **Fire Wall no longer "hangs" after the mouse** (report R-VYV3AG "the fire wall is always active"):
