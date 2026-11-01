@@ -132,6 +132,13 @@ public:
                     p.heading(t(Text::NotifyHeading));
                     buildRows(p, "notify");
                 }
+                // 3.0.11-beta.148 (R-4FBB8B: «2 раз словил ДЦ при заходе в игру»; built 2.6.17, parked): getting onto a
+                // map ([connection]), at once
+                if (anyListed("connection")) {
+                    p.gap();
+                    p.heading(t(Text::ConnectionHeading));
+                    buildRows(p, "connection");
+                }
                 break;
             case settings::Page::Interface:  // 3.0.11-beta.3 (the owner: its own item «Інтерфейс»)
                 p.note(t(Text::InterfaceNote));

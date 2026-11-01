@@ -506,6 +506,11 @@ extern const NotifyBox kNotifyBoxes[];
 extern const size_t kNotifyBoxCount;
 constexpr int kBuffSecondsLeast = 3, kBuffSecondsMost = 60, kPartyHpLeast = 10, kPartyHpMost = 90;
 constexpr int kRecoveredLeast = 50, kRecoveredMost = 100;
+// 2.6.17: [connection] - the legacy client's way onto a map (core/map_entry.hpp, win/map_entry_hook.hpp)
+struct ConnectionSettings {
+    bool patientEntry = true;  // patient_entry: wait for the map up to a minute, a failed connect made again
+    bool entryPause = true;    // entry_pause: after a failed entry the next selection waits till the map forgets it
+};
 
 struct Config {
     Api api = Api::D3d12;
@@ -739,6 +744,7 @@ struct Config {
     // what is shown follows this one at once (aiKindsShown): a kind off is hidden in a running game
     AiSettings aiNow;
     EffectSettings effects;
+    ConnectionSettings connection;  // 2.6.17
     // Part 3: [quality] dlss = off, dlaa, quality, balanced, performance, ultra or (2.4.2) custom - NVIDIA DLSS in the
     // 64-bit renderer (it starts that renderer; MSAA is off then).
     std::string dlss = "off";

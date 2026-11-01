@@ -488,6 +488,13 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("fps_counter", flag(running.fpsCounter), flag(file.fpsCounter)));
         n.fpsCounter = file.fpsCounter;
     }
+    if (file.connection.patientEntry != running.connection.patientEntry)  // 2.6.17: the way onto a map at once
+        u.applied.push_back(
+            change("patient_entry", flag(running.connection.patientEntry), flag(file.connection.patientEntry)));
+    if (file.connection.entryPause != running.connection.entryPause)
+        u.applied.push_back(
+            change("entry_pause", flag(running.connection.entryPause), flag(file.connection.entryPause)));
+    n.connection = file.connection;
     // 1.9.6: every [effects] key the settings know, by its word in the file - the list written out by hand stopped at
     // 0.33, and a change of a newer one alone (grass, foliage, the sky, the living world...) was not applied until
     // one of the listed changed with it: the console's switches seemed not to work.
@@ -523,7 +530,8 @@ bool appliesNow(const std::string& k) {
            k.compare(0, 7, "notify.") == 0 ||  // 3.0.4-beta.3
            k == "camera.indoor" ||            // 3.0.4-beta.5
            k == "camera.zoom_limit" ||        // 3.0.4-beta.17
-           k == "buffs.timers";               // 3.0.4-beta.6
+           k == "buffs.timers" ||              // 3.0.4-beta.6
+           k.compare(0, 11, "connection.") == 0;  // 3.0.11-beta.148: the way onto a map
 }
 
 }  // namespace uagfx

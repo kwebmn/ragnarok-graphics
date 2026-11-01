@@ -27,6 +27,7 @@
 #include "core/safe_mode.hpp"
 #include "win/hit_hook.hpp"
 #include "win/map_start.hpp"
+#include "win/map_entry_hook.hpp"
 #include "win/pick_hook.hpp"
 #include "win/sort_guard.hpp"
 #include "win/world_mouse.hpp"
@@ -1026,6 +1027,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     }
     renderer->setEffects(enhanced_ ? fx : effectsOff());  // Pause: the game's own picture
     serverNightFrame(enhanced_ && fx.noServerNight);      // 2.6.13: the server's night by the clock and «Ночь»
+    mapEntryFrame(config.connection, window);             // 2.6.17: the way onto a map ([connection])
     // A line per change of the picture's geometry; while the window is being resized at most two a second and the
     // final state once it settles (stage 3 review M7); it says when the target could not be made (0.4.1 review).
     const bool changed = out.cx != lastOut_.cx || out.cy != lastOut_.cy || plan.k != lastPlan_.k ||

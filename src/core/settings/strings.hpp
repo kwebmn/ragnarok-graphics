@@ -645,6 +645,8 @@ enum class Text : uint16_t {
     TrackerGiveTo, TrackerMore, InterfaceTracker, InterfaceTrackerHint,
     // 3.0.11-beta.71: a way set on the map by clicks
     MinimapPlotTo, MinimapPlotCells, MinimapPlotHint,
+    ConnectionHeading, ConnPatientEntry, ConnPatientEntryHint, ConnEntryPause, ConnEntryPauseHint,  // 2.6.17
+    ConnEntryWait,
     Count
 };
 

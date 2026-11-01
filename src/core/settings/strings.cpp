@@ -6246,6 +6246,33 @@ constexpr Entry kTexts[] = {
     {Text::MinimapPlotTo, "Goal · {1}, {2}", "Ціль · {1}, {2}", "Цель · {1}, {2}"},
     {Text::MinimapPlotCells, "{1} cells", "{1} кл.", "{1} кл."},
     {Text::MinimapPlotHint, "Shift+click: one more point", "Shift+клік — ще точка", "Shift+клик — ещё точка"},
+    // 3.0.11-beta.148 (R-4FBB8B; built 2.6.17, parked): getting onto a map ([connection])
+    {Text::ConnectionHeading, "Getting onto a map", "Вхід на карту", "Вход на карту"},
+    {Text::ConnPatientEntry, "Patient entry onto a map", "Терплячий вхід на карту", "Терпеливый вход на карту"},
+    {Text::ConnPatientEntryHint,
+     "The game waits for the map server up to a minute instead of 15 seconds, and connects again when its connection "
+     "did not come up - instead of \"Failed to connect to Server\".",
+     "Гра чекає на сервер карти до хвилини замість 15 секунд і підключається знову, якщо з'єднання не встановилося, "
+     "— замість «Failed to connect to Server».",
+     "Игра ждёт сервер карты до минуты вместо 15 секунд и подключается снова, если соединение не установилось, — "
+     "вместо «Failed to connect to Server»."},
+    {Text::ConnEntryPause, "Pause after a failed entry", "Пауза після невдалого входу", "Пауза после неудачного входа"},
+    {Text::ConnEntryPauseHint,
+     "If getting onto a map failed, the next character selection waits until the server has forgotten that attempt "
+     "(two to five minutes, a countdown over the game; also after the game is closed and opened again) - straight "
+     "away it would fail again. Opened again within half a minute of closing, the first selection waits out that "
+     "half minute: the server is still saving the closed session.",
+     "Якщо вхід на карту зірвався, наступний вибір персонажа чекає, доки сервер забуде ту спробу (від двох до п'яти "
+     "хвилин, відлік над грою; і після закриття й нового запуску гри), — одразу він знову не вдався б. Якщо гру "
+     "відкрили знову за пів хвилини після закриття, перший вибір чекає ці пів хвилини: сервер ще зберігає закриту "
+     "сесію.",
+     "Если вход на карту сорвался, следующий выбор персонажа ждёт, пока сервер забудет ту попытку (от двух до пяти "
+     "минут, отсчёт над игрой; и после закрытия и нового запуска игры), — сразу он снова бы не удался. Если игру "
+     "открыли снова в течение полуминуты после закрытия, первый выбор ждёт эти полминуты: сервер ещё сохраняет "
+     "закрытую сессию."},
+    {Text::ConnEntryWait, "Onto the map in {1}: the server has not let go of the last entry yet",
+     "Вхід на карту через {1}: сервер ще не відпустив минулий вхід",
+     "Вход на карту через {1}: сервер ещё не отпустил прошлый вход"},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 
