@@ -43,6 +43,8 @@ struct State {
     // no guess), the bad connection told
     uint64_t askedAt = 0, prevAskedAt = 0;
     int flightTold = 0, badTold = 0;
+    np::Placed placed;  // 3.0.11-beta.136: where the server last put the character (its walk's end or a fix)
+    int behindTold = 0;
 };
 
 State& state() {
@@ -103,6 +105,13 @@ void guess(State& s, uint64_t now) {
         if (s.badTold++ < 10) LOG_INFO("net: the walk not guessed - the connection loses packets now");
         return;
     }
+    if (!np::caughtUp(x, y, s.placed)) {  // 3.0.11-beta.136: the game shows it short of the server's cell
+        if (s.behindTold++ < 10)
+            LOG_INFO("net: the walk not guessed - shown at %d, %d, the server put it on %d, %d", x, y,
+                     s.placed.fixAfterMove ? s.placed.fixX : s.placed.move.dstX,
+                     s.placed.fixAfterMove ? s.placed.fixY : s.placed.move.dstY);
+        return;
+    }
     if (np::inFlight(s.prevAskedAt, s.lastMoveAt, now, np::waitMs(netwatchwin::rttMs()))) {  // 3.0.11-beta.135
         if (s.flightTold++ < 10)
             LOG_INFO("net: the walk not guessed - the walk asked before still waits for the server");
@@ -157,6 +166,9 @@ void ownMove(uint8_t* packet) {
     s.lastMove = m;  // 3.0.11-beta.134: when this walk ends on the server
     s.lastMoveAt = now;
     s.walkEnd = np::walkEnds(m, s.speed);
+    s.placed.move = m;  // 3.0.11-beta.136: the server's cell is its end now
+    s.placed.moveKnown = true;
+    s.placed.fixAfterMove = false;
     if (!s.guess.pending) return;
     s.guess.pending = false;
     const uint64_t late = now - s.guess.atMs;
@@ -188,6 +200,10 @@ void ownFix(int x, int y) {
     s.fixX = x;
     s.fixY = y;
     s.fixAt = GetTickCount64();
+    s.placed.fixX = x;  // 3.0.11-beta.136: the server put it there after its last walk
+    s.placed.fixY = y;
+    s.placed.fixKnown = true;
+    s.placed.fixAfterMove = true;
 }
 
 void act(const uint8_t* packet) {
@@ -203,6 +219,7 @@ void beginScene() {
     float at[3] = {};
     int w = 0, h = 0, cell = 0;
     if (!inGameWorld() || !readPlayerWorld(at, w, h, cell)) {
+        s.placed = np::Placed{};  // 3.0.11-beta.136: another map - nothing known there yet
         s.stillSince = 0;
         s.asked = false;
         s.guess.pending = false;

@@ -117,4 +117,12 @@ cell. RO's TCP: one lost packet holds the rest until it is sent again (0.2-1 s o
   ahead). 3.0.11-beta.135: netpredict walking (a walk known only) and inFlight (tests
   net_predict_no_guess_over_another_request); win: no guess while netwatch level is Stall or Bad, or while the request
   before waits for its answer. Suite 2126/0.
+- R-JMHDUY (.135, 12 min cmd_fild02): 04:09-04:16 healthy (round trip ~60, no losses); from 04:17 degraded - round
+  trip ~120 (peaks 317), bytes resent every minute, 3-6 server holds a minute up to 1159 ms. loki itself clean (0 %
+  loss to 1.1.1.1/8.8.8.8/the VM; mtr to the player clean to Hetzner Warsaw, the ISP's hops silent) - the loss is past
+  Warsaw. Guesses: 5 joined (47-250 ms), 6 «another way» (the shown cell short of the server's last walk's end: hit on
+  the way), 1 put back (in a stall); skips worked (10 bad connection, 10 still walking, 7 in flight, 1 hold).
+  3.0.11-beta.136: netpredict Placed/caughtUp (test net_predict_guess_only_where_the_server_has_it) - guessed only
+  from the cell the server last put the character on (its last 0x0087's end, or a later own 0x0088); reset on another
+  map. Suite 2127/0.
 

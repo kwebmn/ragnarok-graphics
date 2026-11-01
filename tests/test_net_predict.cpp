@@ -147,3 +147,26 @@ TEST(net_predict_no_guess_over_another_request) {
     CHECK(!netpredict::inFlight(1000, 900, 1700, 600));   // its wait over
     CHECK(!netpredict::inFlight(0, 0, 1200, 600));        // none asked
 }
+
+// 3.0.11-beta.136 (R-JMHDUY: 6 of 12 guesses walked «another way» - each time the game showed the character short of
+// where the server's last walk had put it, hit by Seals on the way): guessed only when the shown cell is where the
+// server last put it - its last walk's end, or its position fix when that came after the walk; none known: guessed
+TEST(net_predict_guess_only_where_the_server_has_it) {
+    netpredict::Move last;
+    last.srcX = 97;
+    last.srcY = 125;
+    last.dstX = 97;
+    last.dstY = 121;
+    netpredict::Placed at;
+    at.move = last;
+    at.moveKnown = true;
+    CHECK(!netpredict::caughtUp(97, 124, at));  // R-JMHDUY 04:14:33: shown 97, 124, the server had it at 97, 121
+    CHECK(netpredict::caughtUp(97, 121, at));
+    at.fixKnown = true;  // a fix after the walk: the server put it on 97, 123
+    at.fixX = 97;
+    at.fixY = 123;
+    at.fixAfterMove = true;
+    CHECK(netpredict::caughtUp(97, 123, at) && !netpredict::caughtUp(97, 121, at));
+    netpredict::Placed none;
+    CHECK(netpredict::caughtUp(228, 130, none));  // nothing known yet: the first walk after the map's entry
+}

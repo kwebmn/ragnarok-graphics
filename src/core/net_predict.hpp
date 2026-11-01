@@ -53,4 +53,15 @@ bool walking(uint32_t serverNow, uint32_t walkEnd);
 // then: the server's answers to older clicks would come while the guess waits (a minute of lost packets)
 bool inFlight(uint64_t askedMs, uint64_t answeredMs, uint64_t nowMs, uint32_t waitMs);
 
+// 3.0.11-beta.136 (R-JMHDUY: 6 of 12 guesses walked «another way» - the game showed the character short of where the
+// server's last walk had put it, hit by Seals on the way): where the server last put the character - its last walk's
+// end, or its position fix (0x0088) when that came after the walk; guessed only from that cell (none known: guessed)
+struct Placed {
+    Move move;
+    bool moveKnown = false;
+    int fixX = 0, fixY = 0;
+    bool fixKnown = false, fixAfterMove = false;
+};
+bool caughtUp(int shownX, int shownY, const Placed& at);
+
 }  // namespace uagfx::netpredict

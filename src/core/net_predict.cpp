@@ -76,6 +76,12 @@ bool inFlight(uint64_t askedMs, uint64_t answeredMs, uint64_t nowMs, uint32_t wa
     return askedMs && askedMs > answeredMs && nowMs >= askedMs && nowMs - askedMs < waitMs;
 }
 
+bool caughtUp(int shownX, int shownY, const Placed& at) {
+    if (at.fixKnown && (at.fixAfterMove || !at.moveKnown)) return shownX == at.fixX && shownY == at.fixY;
+    if (at.moveKnown) return shownX == at.move.dstX && shownY == at.move.dstY;
+    return true;
+}
+
 uint32_t walkEnds(const Move& m, int speedMs) {
     const int dx = std::abs(m.dstX - m.srcX), dy = std::abs(m.dstY - m.srcY);
     const int diagonal = std::min(dx, dy), straight = std::max(dx, dy) - diagonal;
