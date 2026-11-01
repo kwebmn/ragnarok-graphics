@@ -1,3 +1,13 @@
+# uaRO Graphics 3.0.11-beta.153 — what's new
+
+**The character make in the new look** (the third group of the remaining windows, its end):
+- On the left the new character's face; under it "Hair" and "Hair colour" with ‹ › arrows, the face changes at once.
+- On the right "Name" (typed as before - the game's own field) and the six stats in the game's three pairs:
+  STR - INT, AGI - LUK, VIT - DEX. A stat's "+" takes a point from its pair, each pair is always 10 together.
+- "Make" and "Cancel" press the game's own buttons; its name checks and messages stay.
+- The controller: up/down a row (the hair, its colour, the pairs), left/right change it, A makes, B cancels.
+- The switch "Character make" under "Interface", on with the new minimap.
+
 # uaRO Graphics 3.0.11-beta.152 — what's new
 
 **The character select in the new look** (the third group of the remaining windows, continued):
