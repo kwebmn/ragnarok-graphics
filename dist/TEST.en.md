@@ -1,3 +1,9 @@
+# uaRO Graphics 3.0.11-beta.133 — what's new
+
+**Walking without waiting for the server — with the controller too** (report R-N2N7T8):
+- Only a mouse click was guessed before: the controller sends its walk requests itself, past the game. Now a walk
+  started with the stick does not wait for the server's answer either.
+
 # uaRO Graphics 3.0.11-beta.132 — what's new
 
 **Walking without waiting for the server — fewer put-backs** (report R-6D43Y6):
