@@ -16,6 +16,11 @@ void ownMove(uint8_t* packet);  // ZC_NOTIFY_PLAYERMOVE before the game reads it
 // 3.0.11-beta.132: ZC_NOTIFY_ACT - the character hit or attacking: the server holds its walk for the motion (no guess
 // until then); a dead character neither guessed nor put back
 void act(const uint8_t* packet);
+// 3.0.11-beta.134 (R-U436CU): the character's speed (0x00b0 SP_SPEED, ms a cell) - when the server's walk of it ends
+// (no guess before: the client may still show it standing); its own position fix (0x0088) - for the log of a guess
+// the server walked another way
+void speed(int msPerCell);
+void ownFix(int x, int y);
 void beginScene();              // each frame before the scene (Device7::BeginScene)
 
 }  // namespace uagfx::win::netpredictwin

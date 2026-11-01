@@ -25,6 +25,7 @@ constexpr uint16_t kMove = 0x0086;    // ZC_NOTIFY_MOVE <unit>.L <the way>.6B <i
 // way>.6B), a hit (ZC_NOTIFY_ACT <from>.L <to>.L <tick>.L ...); the game's server clock: timeGetTime() less the
 // session's +0x5E4 (FUN_0062dbb0 keeps it; a move more than 144 ms behind it is walked on from where it should be)
 constexpr uint16_t kOwnMove = 0x0087, kAct = 0x008A;
+constexpr uint16_t kParam = 0x00B0;  // 3.0.11-beta.134: ZC_PAR_CHANGE <its kind>.W <value>.L - 0 the speed (ms a cell)
 constexpr uint32_t kClockOffset = 0x771148 + 0x5E4;
 constexpr ULONGLONG kReadMs = 1000;
 
@@ -73,6 +74,7 @@ struct State {
     TimeFn time = nullptr;
     int holdsTold = 0;
     ULONGLONG polledAt = 0, readGap = 0;  // 3.0.11-beta.131: the game's last read of its socket, the one before it
+    ULONGLONG longGapAt = 0;              // 3.0.11-beta.134: the last long pause between reads (a backlog after it)
 };
 
 State& state() {
@@ -136,10 +138,15 @@ void packet(void* connection, uint16_t id, const uint8_t* data) {
     if ((id == kMove || id == kOwnMove || id == kAct) && data) {  // 3.0.11-beta.128: held by a lost packet?
         const int late = lateness(s, data, id == kMove ? 12 : id == kOwnMove ? 2 : 10);
         const int way = netwatch::onTheWay(late, uint32_t(std::min<ULONGLONG>(s.readGap, 60000)));  // .131
-        if (way > 0 && late < 60000) s.watch.late(way, now);
+        if (way > 0 && late < 60000 && !netwatch::inBacklog(now, s.longGapAt)) s.watch.late(way, now);  // .134
     }
     if (id == kOwnMove && data) netpredictwin::ownMove(const_cast<uint8_t*>(data));  // 3.0.11-beta.130
     if (id == kAct && data) netpredictwin::act(data);  // 3.0.11-beta.132: the server's hold on the own walk
+    if (id == kParam && data && rd16(data, 2) == 0) {  // 3.0.11-beta.134: the character's speed
+        uint32_t value = 0;
+        std::memcpy(&value, data + 4, 4);
+        netpredictwin::speed(int(value));
+    }
     if (id == kMove && data) {  // 3.0.11-beta.124: where it is shown before the game walks it (its jump faded)
         uint32_t unit = 0;
         std::memcpy(&unit, data + 2, 4);
@@ -151,6 +158,7 @@ void packet(void* connection, uint16_t id, const uint8_t* data) {
     std::memcpy(&unit, data + 2, 4);
     const int x = rd16(data, 6), y = rd16(data, 8);
     const bool own = unit != 0 && unit == read32(kOwnAccount);
+    if (own) netpredictwin::ownFix(x, y);  // 3.0.11-beta.134: for the log of a guess walked another way
     // 3.0.11-beta.123: how far it stood (each unit's), the fix glided to when near (the packet's cell its own then)
     const int cells = netsmoothwin::fix(unit, const_cast<uint8_t*>(data));
     s.watch.fix(own, std::max(cells, 0), now);
@@ -230,6 +238,7 @@ void polled() {
     const ULONGLONG now = GetTickCount64();
     s.readGap = s.polledAt ? now - s.polledAt : 0;
     s.polledAt = now;
+    if (s.readGap >= netwatch::kBacklogGapMs) s.longGapAt = now;  // 3.0.11-beta.134
 }
 
 void setQuickAcks(bool on) {

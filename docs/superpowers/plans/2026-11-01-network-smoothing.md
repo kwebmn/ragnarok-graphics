@@ -103,4 +103,12 @@ cell. RO's TCP: one lost packet holds the rest until it is sent again (0.2-1 s o
   net_predict_the_servers_hold_on_the_walk, net_predict_reads_an_act) - no guess while the server holds the own walk
   (hit: tick + damage motion unless endured or missed; attacking: tick + attack motion; +50 ms), none and no put back
   for a dead character. Suite 2123/0.
+- R-N2N7T8 (.132, stick walking): no guesses - the pad's own 0x00a7 go past the game's send (hooks::sendAll in
+  flushPackets): 3.0.11-beta.133 flushPackets calls walkAsked too. R-U436CU (.132, mouse): 4 guesses - 2 joined (63
+  ms), 2 «another way» (server src 1 and 4 cells from the shown cell: the client showing the character standing while
+  the server walked it on); «held 352 ms» = the game back from 310 s behind other windows at 0.4 fps reading its
+  backlog over several frames. 3.0.11-beta.134: netpredict walkEnds (10/14 a cell at 0x00b0 SP_SPEED, 150 untold;
+  test net_predict_the_servers_walk_ends) - no guess until the server's last walk ends (+300 ms); the «another way»
+  line names the walk before and the last own fix; netwatch inBacklog (300 ms gap -> 2 s of no holds; test
+  net_watch_a_backlog_tells_no_hold). Suite 2125/0.
 

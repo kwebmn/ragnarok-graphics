@@ -41,4 +41,9 @@ bool readAct(const uint8_t* packet, size_t size, Act& a);
 uint32_t holdUntil(uint32_t until, const Act& a, uint32_t own);  // the server's clock the own walk is held to
 bool heldNow(uint32_t serverNow, uint32_t until);
 
+// 3.0.11-beta.134 (R-U436CU: guessed from 286, 124 while the server walked it from 290, 124 - the client still showed
+// it standing): when the server's walk of the character ends - its tick, 10 a straight cell and 14 a diagonal one at
+// the character's speed (ms a cell, 0x00b0's; 150 when not told); no guess before then
+uint32_t walkEnds(const Move& m, int speedMs);
+
 }  // namespace uagfx::netpredict

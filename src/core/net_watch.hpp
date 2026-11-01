@@ -26,6 +26,13 @@ constexpr int kGraph = 60;  // 3.0.11-beta.127: the plate's graph - the last rea
 // 3.0.11-beta.131 (R-6MF4UU: «held 374 ms» as the report's screenshot stood the game still): a server-ticked packet's
 // lateness on the way - less the time between the game's two last reads of its socket (what the game kept waiting)
 inline int onTheWay(int lateMs, uint32_t readGapMs) { return lateMs - int(readGapMs); }
+// 3.0.11-beta.134 (R-U436CU: «held 352 ms» as the game came back from 5 minutes behind other windows - the waiting
+// packets read over several frames): after a pause of kBacklogGapMs or more between the game's reads, its next
+// kBacklogMs tell no hold
+constexpr uint64_t kBacklogGapMs = 300, kBacklogMs = 2000;
+inline bool inBacklog(uint64_t nowMs, uint64_t longGapAtMs) {
+    return longGapAtMs && nowMs >= longGapAtMs && nowMs - longGapAtMs < kBacklogMs;
+}
 
 class Watch {
 public:

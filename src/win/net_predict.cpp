@@ -34,6 +34,11 @@ struct State {
     int joined = 0, other = 0, putBack = 0, guessed = 0, told = 0;
     uint32_t holdUntil = 0;  // 3.0.11-beta.132: the server's clock the own walk is held to (hit, attacking)
     int heldTold = 0;
+    // 3.0.11-beta.134: the server's last walk of the character (when it ends at its speed), its last position fix
+    np::Move lastMove;
+    uint64_t lastMoveAt = 0, fixAt = 0;
+    uint32_t walkEnd = 0;
+    int speed = 0, fixX = 0, fixY = 0, walkingTold = 0;
 };
 
 State& state() {
@@ -81,6 +86,12 @@ void guess(State& s, uint64_t now) {
             LOG_INFO("net: the walk not guessed - the server holds the character %d ms more (hit or attacking)",
                      int(int32_t(s.holdUntil - clock)));
         return;
+    } else if (np::heldNow(clock, s.walkEnd + 250)) {  // 3.0.11-beta.134: the server still walks it
+        if (s.walkingTold++ < 10)
+            LOG_INFO("net: the walk not guessed - the server still walks the character %d ms more (shown at %d, %d; "
+                     "its walk %d, %d to %d, %d)", int(int32_t(s.walkEnd - clock)), x, y, s.lastMove.srcX,
+                     s.lastMove.srcY, s.lastMove.dstX, s.lastMove.dstY);
+        return;
     }
     np::Move m;
     m.tick = netwatchwin::serverNow();
@@ -122,20 +133,44 @@ void ownMove(uint8_t* packet) {
     State& s = state();
     s.asked = false;  // the server's answer before the frame guessed it: the game walks by it alone
     np::Move m;
-    if (!s.guess.pending || !np::readOwnMove(packet, 12, m)) return;
+    if (!s.on || !np::readOwnMove(packet, 12, m)) return;
+    const uint64_t now = GetTickCount64();
+    const np::Move before = s.lastMove;
+    const uint64_t beforeAt = s.lastMoveAt;
+    s.lastMove = m;  // 3.0.11-beta.134: when this walk ends on the server
+    s.lastMoveAt = now;
+    s.walkEnd = np::walkEnds(m, s.speed);
+    if (!s.guess.pending) return;
     s.guess.pending = false;
-    const uint64_t late = GetTickCount64() - s.guess.atMs;
+    const uint64_t late = now - s.guess.atMs;
     if (np::answer(s.guess, m) == np::Answer::Join) {
         np::writeTick(packet, s.guess.move.tick);  // the game walks on from where the guess has it
+        s.lastMove.tick = s.guess.move.tick;
+        s.walkEnd = np::walkEnds(s.lastMove, s.speed);
         if (++s.joined <= 5 || s.joined % 50 == 0)
             LOG_INFO("net: the server's walk came %llu ms after the guess - the same way, joined (%d so far)",
                      static_cast<unsigned long long>(late), s.joined);
         return;
     }
-    if (++s.other <= 20)
-        LOG_INFO("net: the server walked another way (from %d, %d to %d, %d; guessed %d, %d to %d, %d) - its own",
-                 m.srcX, m.srcY, m.dstX, m.dstY, s.guess.move.srcX, s.guess.move.srcY, s.guess.move.dstX,
-                 s.guess.move.dstY);
+    if (++s.other <= 20)  // 3.0.11-beta.134: with the server's walk before it and the last fix, to see why
+        LOG_INFO("net: the server walked another way (from %d, %d to %d, %d; guessed %d, %d to %d, %d) - its own; "
+                 "its walk before %d, %d to %d, %d %llu ms ago, the last fix %d, %d %llu ms ago", m.srcX, m.srcY,
+                 m.dstX, m.dstY, s.guess.move.srcX, s.guess.move.srcY, s.guess.move.dstX, s.guess.move.dstY,
+                 before.srcX, before.srcY, before.dstX, before.dstY,
+                 static_cast<unsigned long long>(beforeAt ? now - beforeAt : 0), s.fixX, s.fixY,
+                 static_cast<unsigned long long>(s.fixAt ? now - s.fixAt : 0));
+}
+
+void speed(int msPerCell) {
+    State& s = state();
+    if (msPerCell > 0 && msPerCell < 2000) s.speed = msPerCell;
+}
+
+void ownFix(int x, int y) {
+    State& s = state();
+    s.fixX = x;
+    s.fixY = y;
+    s.fixAt = GetTickCount64();
 }
 
 void act(const uint8_t* packet) {

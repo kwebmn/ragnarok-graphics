@@ -124,3 +124,12 @@ TEST(net_watch_the_games_own_pause_is_no_hold) {
     CHECK(netwatch::onTheWay(269, 14) >= 250);  // a frame between reads: the server's packets held
     CHECK(netwatch::onTheWay(40, 14) == 26);
 }
+
+// 3.0.11-beta.134 (R-U436CU: «held 352 ms» as the game came back after 5 minutes behind other windows at 0.4 fps - the
+// packets waiting in the game read over several frames): after a pause of 300 ms or more between the game's reads
+// its next 2 s tell no hold
+TEST(net_watch_a_backlog_tells_no_hold) {
+    CHECK(netwatch::inBacklog(5000, 4000));   // a second after the long pause
+    CHECK(!netwatch::inBacklog(6500, 4000));  // past 2 s
+    CHECK(!netwatch::inBacklog(5000, 0));     // none
+}

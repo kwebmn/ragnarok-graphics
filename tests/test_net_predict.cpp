@@ -118,3 +118,18 @@ TEST(net_predict_reads_an_act) {
     CHECK(a.damage == 120 && a.type == 10);
     CHECK(!netpredict::readAct(p.data(), 28, a));
 }
+
+// 3.0.11-beta.134 (R-U436CU: guessed from 286, 124 while the server walked it from 290, 124 - the client still showed
+// it standing, the server's walk going on): when the server's last walk of the character ends - its tick, 10 a
+// straight cell and 14 a diagonal one at the character's speed (ms a cell; 150 when not told); no guess before then
+TEST(net_predict_the_servers_walk_ends) {
+    netpredict::Move m;
+    m.tick = 1000;
+    m.srcX = 0;
+    m.srcY = 0;
+    m.dstX = 3;
+    m.dstY = 4;  // three diagonal cells and a straight one
+    CHECK(netpredict::walkEnds(m, 150) == 1000 + 780);
+    CHECK(netpredict::walkEnds(m, 0) == 1000 + 780);  // not told: 150
+    CHECK(netpredict::walkEnds(m, 100) == 1000 + 520);
+}
