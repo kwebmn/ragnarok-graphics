@@ -14,8 +14,9 @@ enum class Win : uint8_t { Items, Stats, Skills, Equip, Shop, Npc, Reference, St
                            Ask,  // 3.0.11-beta.150
                            Message, Login,  // 3.0.11-beta.151
                            CharSelect,  // 3.0.11-beta.152
-                           CharMake };  // 3.0.11-beta.153
-constexpr int kWins = 17;
+                           CharMake,  // 3.0.11-beta.153
+                           Cart };  // 3.0.11-beta.154
+constexpr int kWins = 18;
 
 class Stack {
 public:

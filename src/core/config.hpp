@@ -690,6 +690,8 @@ struct Config {
     bool charSelectWindow = false;
     // 3.0.11-beta.153: [interface] char_make - the game's character make (win/char_make) in the new look
     bool charMakeWindow = false;
+    // 3.0.11-beta.154: [interface] cart - the merchant's cart (win/cart_window) as «Візок»
+    bool cartWindow = false;
     // 3.0.11-beta.142 (the owner's concept «маг, прист и хант на геймпаде», answer 9 «дать»): [interface] skill_cells -
     // a ground skill's cells, as the server makes them (core/skill_area), shown on the ground after a cast by the pad
     // or the mouse (win/ground_marks); 0: none

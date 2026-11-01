@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "pad/win/game_window.hpp"
+#include "win/cart_window.hpp"
 #include "win/char_make.hpp"
 #include "win/char_select.hpp"
 #include "win/chat_window.hpp"
@@ -34,7 +35,8 @@ using uapad::gamewindow::Blocker;
 constexpr const char* kNames[] = {"«Речі»",  "«Характеристики»", "«Навички»", "«Спорядження»",
                                   "the shop", "the NPC talk",      "«Довідник»", "«Склад»", "«Обмін»",
                                   "the menu", "the item card", "the skill card", "the request",
-                                  "the message box", "the login", "the character select", "the character make"};
+                                  "the message box", "the login", "the character select", "the character make",
+                                  "«Візок»"};
 static_assert(std::size(kNames) == size_t(winstack::kWins), "a name for each window");
 constexpr int kMostTold = 40;
 
@@ -84,6 +86,7 @@ bool shown(Win w) {
         case Win::Login: return loginwin::shown();
         case Win::CharSelect: return charselectwin::shown();  // 3.0.11-beta.152
         case Win::CharMake: return charmakewin::shown();  // 3.0.11-beta.153
+        case Win::Cart: return cartwin::shown();  // 3.0.11-beta.154
     }
     return false;
 }
@@ -106,6 +109,7 @@ Blocker blockerOf(Win w) {
         case Win::Login: return Blocker::Login;
         case Win::CharSelect: return Blocker::CharSelect;
         case Win::CharMake: return Blocker::CharMake;
+        case Win::Cart: return Blocker::Cart;
         case Win::Reference: break;
     }
     return Blocker::Reference;
@@ -130,6 +134,7 @@ void drawOne(Win w, FrameRecord& record, gpu::Renderer& renderer) {
         case Win::Login: loginwin::draw(record, renderer); break;
         case Win::CharSelect: charselectwin::draw(record, renderer); break;
         case Win::CharMake: charmakewin::draw(record, renderer); break;
+        case Win::Cart: cartwin::draw(record, renderer); break;
     }
 }
 
@@ -152,6 +157,7 @@ bool mouseOne(Win w, HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
         case Win::Login: return loginwin::mouse(game, m, wp, lp, result);
         case Win::CharSelect: return charselectwin::mouse(game, m, wp, lp, result);
         case Win::CharMake: return charmakewin::mouse(game, m, wp, lp, result);
+        case Win::Cart: return cartwin::mouse(game, m, wp, lp, result);
     }
     return false;
 }
@@ -168,6 +174,7 @@ bool keyOne(Win w, UINT m, WPARAM wp, LPARAM lp) {  // the windows with keys of 
         case Win::ItemCard: return infocardwin::key(infocardwin::Kind::Item, m, wp, lp);  // .149: ↑ ↓ scroll
         case Win::SkillCard: return infocardwin::key(infocardwin::Kind::Skill, m, wp, lp);
         case Win::Message: return msgboxwin::key(m, wp, lp);  // 3.0.11-beta.151: Enter, Esc - the box's answers
+        case Win::Cart: return cartwin::key(m, wp, lp);       // 3.0.11-beta.154: its search's
         default: return false;
     }
 }
@@ -196,6 +203,7 @@ bool boxOf(Win w, winstack::Box& b) {
         case Win::Login: return loginwin::box(b.x, b.y, b.w, b.h);
         case Win::CharSelect: return charselectwin::box(b.x, b.y, b.w, b.h);
         case Win::CharMake: return charmakewin::box(b.x, b.y, b.w, b.h);
+        case Win::Cart: return cartwin::box(b.x, b.y, b.w, b.h);
     }
     return false;
 }
@@ -208,6 +216,7 @@ void moveTo(Win w, int x, int y, bool keep = true) {
         case Win::Equip: equipwin::moveTo(x, y, keep); break;
         case Win::Shop: shopwin::moveTo(x, y); break;
         case Win::Storage: storagewin::moveTo(x, y, keep); break;
+        case Win::Cart: cartwin::moveTo(x, y, keep); break;  // 3.0.11-beta.154
         case Win::Trade: tradewin::moveTo(x, y, keep); break;
         default: break;
     }
@@ -300,6 +309,7 @@ bool close(Win w) {
         case Win::SkillCard: infocardwin::close(infocardwin::Kind::Skill); return true;
         case Win::Ask: return askcardwin::close();  // 3.0.11-beta.150: a request declined (an input: the game's)
         case Win::Message: return msgboxwin::close();  // 3.0.11-beta.151
+        case Win::Cart: cartwin::padCommand(cartwin::PadCommand::Close); return true;  // 3.0.11-beta.154
         default: return false;
     }
 }

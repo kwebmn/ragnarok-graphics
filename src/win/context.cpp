@@ -59,6 +59,7 @@
 #include "win/ammo_sound.hpp"
 #include "win/ask_card.hpp"
 #include "win/info_card.hpp"
+#include "win/cart_window.hpp"
 #include "win/char_make.hpp"
 #include "win/char_select.hpp"
 #include "win/login_card.hpp"
@@ -953,6 +954,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     loginwin::frame(window, config.loginWindow, gameCodePage(config), pk, pw, ph);     // 3.0.11-beta.151
     charselectwin::frame(window, config.charSelectWindow, gameCodePage(config), pk, pw, ph);  // 3.0.11-beta.152
     charmakewin::frame(window, config.charMakeWindow, gameCodePage(config), pk, pw, ph);      // 3.0.11-beta.153
+    cartwin::frame(window, config.cartWindow, gameCodePage(config), pk, pw, ph);              // 3.0.11-beta.154
     // 3.0.11-beta.7: [interface] reference - «Довідник» (Ctrl+F)
     referencewin::frame(window, config.referenceWindow, pk, pw, ph);
     padcarrywin::frame(window, pk, pw, ph);  // 3.0.11-beta.121: a thing the controller carries - its places now

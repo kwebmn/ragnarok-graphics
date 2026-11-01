@@ -5504,6 +5504,20 @@ constexpr Entry kTexts[] = {
     {Text::MakeColour, "Hair colour", "Колір волосся", "Цвет волос"},
     {Text::MakePairsHint, "A point moves inside its pair: 10 together", "Очко переходить у парі: разом завжди 10",
      "Очко переходит в паре: вместе всегда 10"},
+    // 3.0.11-beta.154: the merchant's cart
+    {Text::InterfaceCart, "Cart", "Візок", "Тележка"},
+    {Text::InterfaceCartHint,
+     "The merchant's cart in the new look, as the storage: the tabs, the search, the weight, the things of the most in "
+     "its title; drag things between the cart, the bag and the storage, a double click takes one into the bag, a right "
+     "click shows its card. Off: the game's own window.",
+     "Візок торговця в новому вигляді, як склад: вкладки, пошук, вага, кількість речей у заголовку; перетягуйте речі "
+     "між візком, сумкою і складом, подвійний клік забирає річ у сумку, правий клік показує її картку. Вимкнено: "
+     "власне вікно гри.",
+     "Тележка торговца в новом виде, как склад: вкладки, поиск, вес, количество вещей в заголовке; перетаскивайте "
+     "вещи между тележкой, сумкой и складом, двойной клик забирает вещь в сумку, правый клик показывает её карточку. "
+     "Выключено: собственное окно игры."},
+    {Text::CartTitle, "Cart", "Візок", "Тележка"},
+    {Text::CartPadCard, "{1}: its card", "{1}: картка", "{1}: карточка"},
     // 3.0.11-beta.141: the character block's experience (forms: one, a few, many)
     {Text::CharSkillPoints, "skill point|skill points", "очко навичок|очки навичок|очок навичок",
      "очко навыков|очка навыков|очков навыков"},

@@ -49,6 +49,7 @@
 #include "win/ground_marks.hpp"
 #include "win/item_window.hpp"
 #include "win/ask_card.hpp"
+#include "win/cart_window.hpp"
 #include "win/char_make.hpp"
 #include "win/char_select.hpp"
 #include "win/info_card.hpp"
@@ -654,6 +655,24 @@ bool charMakePad(const PadState& pad, DWORD now) {
     return true;
 }
 
+// 3.0.11-beta.154: «Візок» open - the D-pad (or the left stick) moves its frame, A takes the thing into the bag (the
+// game's count window for a stack), Y its card, LB / RB the tabs, B or Start close the cart window
+bool cartPad(const PadState& pad, DWORD now) {
+    State& s = S();
+    const uint16_t buttons = pad.connected ? pad.buttons : 0;
+    const uint16_t down = uint16_t((buttons & ~s.prevPadButtons) | stickSteps(pad, now));
+    s.prevPadButtons = buttons;
+    using uagfx::win::cartwin::PadCommand;
+    const std::pair<uint16_t, PadCommand> keys[] = {
+        {kPadUp, PadCommand::Up},       {kPadDown, PadCommand::Down},  {kPadLeft, PadCommand::Left},
+        {kPadRight, PadCommand::Right}, {kPadA, PadCommand::Take},     {kPadY, PadCommand::Card},
+        {kPadLB, PadCommand::TabBack},  {kPadRB, PadCommand::TabOn},   {kPadB, PadCommand::Close},
+        {kPadStart, PadCommand::Close}};
+    for (const auto& [button, command] : keys)
+        if (down & button) uagfx::win::cartwin::padCommand(command);
+    return true;
+}
+
 // 3.0.11-beta.92: «Характеристики» open - the D-pad (or the left stick) chooses a stat, A adds a point, B or Start
 // close it
 bool statsPad(const PadState& pad, DWORD now) {
@@ -952,7 +971,7 @@ constexpr const char* kTopNames[] = {"«Речі»",  "«Характерист�
                                      "the shop", "the NPC talk",      "«Довідник»", "«Склад»", "«Обмін»",
                                      "the menu", "the item card", "the skill card", "the request",
                                      "the message box", "the login", "the character select",
-                                     "the character make"};
+                                     "the character make", "«Візок»"};
 static_assert(std::size(kTopNames) == size_t(uagfx::winstack::kWins), "a name for each window");
 
 void tick() {
@@ -1023,6 +1042,7 @@ void tick() {
                   : drive && *top == Win::Message                  ? messagePad(pad)  // .151
                   : drive && *top == Win::CharSelect               ? charSelectPad(pad, now)  // .152
                   : drive && *top == Win::CharMake                 ? charMakePad(pad, now)    // .153
+                  : drive && *top == Win::Cart                     ? cartPad(pad, now)        // .154
                                                                    : runMenu(pad, view, now);
     if (s.npcSupported) view.dialog = clientnpc::read();
     double clientTurn = 0;

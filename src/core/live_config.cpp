@@ -343,6 +343,10 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("char_make", flag(running.charMakeWindow), flag(file.charMakeWindow)));
         n.charMakeWindow = file.charMakeWindow;
     }
+    if (file.cartWindow != running.cartWindow) {  // 3.0.11-beta.154: «Візок», at once
+        u.applied.push_back(change("cart", flag(running.cartWindow), flag(file.cartWindow)));
+        n.cartWindow = file.cartWindow;
+    }
     if (file.skillCells != running.skillCells) {  // 3.0.11-beta.142: a ground skill's cells, at once
         u.applied.push_back(change("skill_cells", flag(running.skillCells), flag(file.skillCells)));
         n.skillCells = file.skillCells;

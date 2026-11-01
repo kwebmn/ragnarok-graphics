@@ -12,6 +12,7 @@
 #include "win/equip_window.hpp"
 #include "win/item_window.hpp"
 #include "win/log.hpp"
+#include "win/cart_window.hpp"
 #include "win/storage_window.hpp"
 #include "win/trade_window.hpp"
 
@@ -71,7 +72,7 @@ const char* const kParts[] = {"the windows' panel", "the answer card", "the new 
                               "the NPC talk", "the shop", "the new «Склад»", "the new «Обмін»", "the new menu",
                               "the new item card", "the new skill card", "the new request or input",
                               "the new message box", "the new login", "the new character select",
-                              "the new character make"};
+                              "the new character make", "the new «Візок»"};
 static_assert(std::size(kParts) == size_t(uapad::gamewindow::kBlockerCount), "a name for each part");
 unsigned g_told = 0;    // the parts whose first cursor over them is logged
 unsigned g_hidden = 0;  // 3.0.11-beta.33: the parts whose first actor hidden under them is logged
@@ -142,7 +143,8 @@ int __attribute__((thiscall)) droppedOn(uint32_t manager, int x, int y, uint32_t
                        (part == int(uapad::gamewindow::Blocker::Items) && itemswin::drop(x, y, drag)) ||
                        (part == int(uapad::gamewindow::Blocker::Equip) && equipwin::drop(x, y, drag)) ||  // .97
                        (part == int(uapad::gamewindow::Blocker::Storage) && storagewin::drop(x, y, drag)) ||  // .115
-                       (part == int(uapad::gamewindow::Blocker::Trade) && tradewin::drop(x, y, drag));  // .116
+                       (part == int(uapad::gamewindow::Blocker::Trade) && tradewin::drop(x, y, drag)) ||  // .116
+                       (part == int(uapad::gamewindow::Blocker::Cart) && cartwin::drop(x, y, drag));  // .154
     if (!taken) reinterpret_cast<NoDropFn>(uintptr_t(kNoDrop))(0, x, y, drag);
     if (g_drops++ < 10)
         LOG_INFO("world mouse: a drag let go over %s (%d, %d) - %s", kParts[part], x, y,
