@@ -1,3 +1,14 @@
+# uaRO Graphics 3.0.11-beta.151 — what's new
+
+**The game's messages and the login window in the new look** (the third group of the remaining windows, its start):
+- The game's messages - errors ("Unregistered ID...", a lost connection), Yes/No questions and "Please wait..." - are
+  now a card at the screen's middle, on the login's screens too. Enter and Esc answer as in the game; A and B on the
+  controller.
+- The login window: the account and the password (typed as before - the game's own fields; the password as dots),
+  "Remember the account", "Enter", "Exit". A click on a field moves the typing there.
+- At its foot "No account? Register on uaro.kiev.ua" opens uaRO's real registration page.
+- The switches "Game messages" and "Login window" under "Interface", on with the new minimap.
+
 # uaRO Graphics 3.0.11-beta.150 — what's new
 
 **Requests and NPC inputs in the new look** (the second group of the game's remaining windows):
