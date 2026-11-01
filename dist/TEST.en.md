@@ -1,3 +1,20 @@
+# uaRO Graphics 3.0.11-beta.145 — what's new
+
+**Ground skills, step 4: aiming with the controller**:
+- A short press of a ground skill's button places it by the rule of beta 142 (a wall between you and the monster, an
+  area where most monsters are, a trap 2 cells toward the target) - now at the moment the button is let go.
+- Hold the button longer than a quarter of a second - the aim: the character stands, the skill's cells show on the
+  ground. Either stick moves it - the one whose thumb is free: a skill on X/Y/B/A - the left one, on the D-pad - the
+  right one, on the shoulders - either.
+  - Walls, traps, Fire Pillar: the stick chooses the side from the character (8 sides, as the server's; a diagonal -
+    the 5-cell staircase) and the distance (1-4 cells by the lean, a trap up to 3).
+  - Areas (Storm Gust, Lord of Vermilion, Sanctuary and the others): the stick moves a cursor; let the stick go next
+    to a monster (for Sanctuary, Pneuma, Safety Wall - next to a party member) - the aim moves onto it.
+  - The D-pad moves the aim by one cell.
+  - Let the button go - the skill is cast. Press a stick (L3 or R3) or B (when the skill is not on B) - cancelled.
+- A hint line at the bottom with the aim's buttons.
+- While a ground skill's button is held, the other buttons do not repeat.
+
 # uaRO Graphics 3.0.11-beta.144 — what's new
 
 **Ground skills, step 3: the cells under the mouse before the click**:
