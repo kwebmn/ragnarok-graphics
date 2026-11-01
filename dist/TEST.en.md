@@ -1,3 +1,13 @@
+# uaRO Graphics 3.0.11-beta.155 — what's new
+
+**The how many window in the new look** (the fourth group of the remaining windows):
+- When the game asks how many to move (a stack into the storage, the cart, the bag, a trade, a shop, or to drop), a
+  card at the middle replaces the old little window: what for ("Into the storage", "Into the cart"...) and the most.
+- The number is typed as before (the game's own field, Enter - done); "1", "Half", "All" in one click.
+- "Cancel" is there now (the old window had none): the move is given up, nothing moves. Esc does the same.
+- The controller: A takes all, B gives up.
+- The switch "How many window" under "Interface", on with the new minimap.
+
 # uaRO Graphics 3.0.11-beta.154 — what's new
 
 **The merchant's cart in the new look** (the fourth group of the remaining windows, its start):
