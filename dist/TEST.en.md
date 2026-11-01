@@ -1,3 +1,16 @@
+# uaRO Graphics 3.0.11-beta.140 — what's new
+
+**The menu and the death screen in the new look**:
+- Esc's menu and the window after a death are drawn anew: a card under the middle of the screen (the character
+  seen above it), a row a choice. The menu: "Character select", "Exit the game", "Back to the game". After a death:
+  "To the save point" (in gold), "Character select", "Exit the game", "Back to the game" - stay where you fell and
+  wait for a resurrection. With a Token of Siegfried in the bag "Revive here (Token of Siegfried)" comes first.
+- The rows press the game's own buttons - everything works as before, only the look changes.
+- The safe row "Back to the game" is chosen first: an Enter by chance does nothing. Mouse - click a row; keyboard -
+  the up/down arrows and Enter, Esc closes as before; controller - the D-pad, A chooses, B is "Back to the game".
+- Switched in "Interface" -> "The menu and the death screen" (console: `interface.menu`). On at once with the new
+  interface; off - the game's own window comes back.
+
 # uaRO Graphics 3.0.11-beta.139 — what's new
 
 **The weight by our server's rules** ("it says 60 %, but HP recovers"):
