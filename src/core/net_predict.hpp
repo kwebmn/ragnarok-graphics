@@ -7,8 +7,8 @@ namespace uagfx::netpredict {
 // 3.0.11-beta.130 (the network plan's step 5, the own walk at once; the owner «делаем» - a switch of its own, off at
 // first): the client walks the character only after the server's answer (ZC_NOTIFY_PLAYERMOVE 0x0087, a round trip
 // after the click). Guessed instead: at the click the game's player told the walk itself (its message 0, as the
-// client's FUN_0057e1f0 tells it: the server's clock now, from its cell to the one asked); the server's answer, the same
-// cells both ends, joined - its tick made the guess's, so the game walks on from where it is; another way: the
+// client's FUN_0057e1f0 tells it: the server's clock now, from its cell to the one asked); the server's answer, the
+// same cells both ends, joined - its tick made the guess's, so the game walks on from where it is; another way: the
 // server's, as before; none in time: the server did not walk it - put back. No Windows here (win/net_predict).
 
 struct Move {  // as FUN_0057e1f0 hands it to the player (its message 0's struct, seven dwords in this order)
@@ -35,7 +35,8 @@ uint32_t waitMs(int rttMs);  // four round trips and 200 ms, at least 600 (the r
 struct Act {  // ZC_NOTIFY_ACT (0x008a, 29 bytes)
     uint32_t src = 0, dst = 0, tick = 0;  // who +2, whom +6, the server's tick +10
     int srcSpeed = 0, dstSpeed = 0;      // the attack's motion +14, the damage's +18 (ms)
-    int damage = 0, type = 0;            // the damage +22, the kind +26 (0 hit, 4 endured, 8 hits, 9 endured, 10 critical)
+    // the damage +22, the kind +26 (0 a hit, 4 endured, 8 hits, 9 endured, 10 a critical one)
+    int damage = 0, type = 0;
 };
 bool readAct(const uint8_t* packet, size_t size, Act& a);
 uint32_t holdUntil(uint32_t until, const Act& a, uint32_t own);  // the server's clock the own walk is held to
@@ -45,5 +46,11 @@ bool heldNow(uint32_t serverNow, uint32_t until);
 // it standing): when the server's walk of the character ends - its tick, 10 a straight cell and 14 a diagonal one at
 // the character's speed (ms a cell, 0x00b0's; 150 when not told); no guess before then
 uint32_t walkEnds(const Move& m, int speedMs);
+
+// 3.0.11-beta.135 (R-DWCBHA): the server still walks it - a walk known (0: none) whose end is less than 300 ms ago
+bool walking(uint32_t serverNow, uint32_t walkEnd);
+// An earlier walk request still waiting for its answer (asked after the last answer, its wait not over) - no guess
+// then: the server's answers to older clicks would come while the guess waits (a minute of lost packets)
+bool inFlight(uint64_t askedMs, uint64_t answeredMs, uint64_t nowMs, uint32_t waitMs);
 
 }  // namespace uagfx::netpredict

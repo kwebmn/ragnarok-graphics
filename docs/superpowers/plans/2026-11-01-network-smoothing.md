@@ -111,4 +111,10 @@ cell. RO's TCP: one lost packet holds the rest until it is sent again (0.2-1 s o
   test net_predict_the_servers_walk_ends) - no guess until the server's last walk ends (+300 ms); the «another way»
   line names the walk before and the last own fix; netwatch inBacklog (300 ms gap -> 2 s of no holds; test
   net_watch_a_backlog_tells_no_hold). Suite 2125/0.
+- R-DWCBHA (.134, a minute after login): a bad network minute - 3 TCP time-outs in 3 s (round trip 128 ms), the
+  server's holds 288-1723 ms (fps 70.8: not the game); guesses confused (answers to older clicks while newer guesses
+  waited); a bug: «still walks 1797700571 ms more» with no walk known (the server clock past 2^31: 0 + 300 looked
+  ahead). 3.0.11-beta.135: netpredict walking (a walk known only) and inFlight (tests
+  net_predict_no_guess_over_another_request); win: no guess while netwatch level is Stall or Bad, or while the request
+  before waits for its answer. Suite 2126/0.
 

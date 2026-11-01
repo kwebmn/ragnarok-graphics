@@ -70,6 +70,12 @@ uint32_t holdUntil(uint32_t until, const Act& a, uint32_t own) {
 
 bool heldNow(uint32_t serverNow, uint32_t until) { return until && int32_t(serverNow - (until + 50)) < 0; }
 
+bool walking(uint32_t serverNow, uint32_t walkEnd) { return walkEnd && heldNow(serverNow, walkEnd + 250); }
+
+bool inFlight(uint64_t askedMs, uint64_t answeredMs, uint64_t nowMs, uint32_t waitMs) {
+    return askedMs && askedMs > answeredMs && nowMs >= askedMs && nowMs - askedMs < waitMs;
+}
+
 uint32_t walkEnds(const Move& m, int speedMs) {
     const int dx = std::abs(m.dstX - m.srcX), dy = std::abs(m.dstY - m.srcY);
     const int diagonal = std::min(dx, dy), straight = std::max(dx, dy) - diagonal;

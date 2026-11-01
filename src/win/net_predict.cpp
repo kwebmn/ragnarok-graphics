@@ -39,6 +39,10 @@ struct State {
     uint64_t lastMoveAt = 0, fixAt = 0;
     uint32_t walkEnd = 0;
     int speed = 0, fixX = 0, fixY = 0, walkingTold = 0;
+    // 3.0.11-beta.135 (R-DWCBHA): the last two walk requests' times (the one before the guessed one still waiting:
+    // no guess), the bad connection told
+    uint64_t askedAt = 0, prevAskedAt = 0;
+    int flightTold = 0, badTold = 0;
 };
 
 State& state() {
@@ -86,11 +90,22 @@ void guess(State& s, uint64_t now) {
             LOG_INFO("net: the walk not guessed - the server holds the character %d ms more (hit or attacking)",
                      int(int32_t(s.holdUntil - clock)));
         return;
-    } else if (np::heldNow(clock, s.walkEnd + 250)) {  // 3.0.11-beta.134: the server still walks it
+    } else if (np::walking(clock, s.walkEnd)) {  // 3.0.11-beta.134 (.135: only a walk known)
         if (s.walkingTold++ < 10)
             LOG_INFO("net: the walk not guessed - the server still walks the character %d ms more (shown at %d, %d; "
                      "its walk %d, %d to %d, %d)", int(int32_t(s.walkEnd - clock)), x, y, s.lastMove.srcX,
                      s.lastMove.srcY, s.lastMove.dstX, s.lastMove.dstY);
+        return;
+    }
+    // 3.0.11-beta.135: packets lost now (a time-out or a hold of the server's in 5 s, bytes sent again in 10 s, a
+    // round trip of 250 ms) - the answers late and out of turn: no guess
+    if (const netwatch::Level lv = netwatchwin::level(); lv == netwatch::Level::Stall || lv == netwatch::Level::Bad) {
+        if (s.badTold++ < 10) LOG_INFO("net: the walk not guessed - the connection loses packets now");
+        return;
+    }
+    if (np::inFlight(s.prevAskedAt, s.lastMoveAt, now, np::waitMs(netwatchwin::rttMs()))) {  // 3.0.11-beta.135
+        if (s.flightTold++ < 10)
+            LOG_INFO("net: the walk not guessed - the walk asked before still waits for the server");
         return;
     }
     np::Move m;
@@ -124,6 +139,8 @@ void setOn(bool on) {
 void walkAsked(int x, int y) {
     State& s = state();
     if (!s.on) return;
+    s.prevAskedAt = s.askedAt;  // 3.0.11-beta.135
+    s.askedAt = GetTickCount64();
     s.asked = true;
     s.askX = x;
     s.askY = y;

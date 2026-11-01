@@ -133,3 +133,17 @@ TEST(net_predict_the_servers_walk_ends) {
     CHECK(netpredict::walkEnds(m, 0) == 1000 + 780);  // not told: 150
     CHECK(netpredict::walkEnds(m, 100) == 1000 + 520);
 }
+
+// 3.0.11-beta.135 (R-DWCBHA: «the server still walks the character 1797700571 ms more» with no walk known - the
+// server's clock past 2^31 made 0 + 300 look ahead of it; and in a minute of lost packets the server's answers to older
+// clicks came while newer guesses waited): the server's walk on only when one is known; no guess while an earlier walk
+// request waits for its answer (until the answer's wait is over)
+TEST(net_predict_no_guess_over_another_request) {
+    CHECK(!netpredict::walking(2497266725u, 0));                     // no walk known
+    CHECK(netpredict::walking(2497266725u, 2497266725u + 100));       // its walk ends later
+    CHECK(!netpredict::walking(2497266725u + 400, 2497266725u + 100));  // 300 ms past its end
+    CHECK(netpredict::inFlight(1000, 900, 1200, 600));    // asked at 1000, the last answer at 900: waiting
+    CHECK(!netpredict::inFlight(1000, 1050, 1200, 600));  // answered
+    CHECK(!netpredict::inFlight(1000, 900, 1700, 600));   // its wait over
+    CHECK(!netpredict::inFlight(0, 0, 1200, 600));        // none asked
+}
