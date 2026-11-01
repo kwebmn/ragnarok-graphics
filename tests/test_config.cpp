@@ -1397,6 +1397,18 @@ TEST(config_interface_hotbar_ammo) {
     CHECK(!liveUpdate(parseConfig(""), parseConfig("[interface]\nhotbar_ammo = 0\n")).next.hotbarAmmo);
 }
 
+// 3.0.11-beta.128 (the network plan's step 5): [debug] quick_acks - the game's socket acknowledges each of the server's
+// packets at once (Windows waits up to 200 ms for a lone one): the server sees a lost packet sooner; on, the
+// developer's page, at once
+TEST(config_debug_quick_acks) {
+    CHECK(parseConfig("").quickAcks);
+    CHECK(!parseConfig("[debug]\nquick_acks = 0\n").quickAcks);
+    const settings::IniSetting* s = settings::findSetting("debug.quick_acks");
+    CHECK(s != nullptr && s->page == settings::Page::Debug);
+    CHECK(appliesNow("debug.quick_acks"));
+    CHECK(!liveUpdate(parseConfig(""), parseConfig("[debug]\nquick_acks = 0\n")).next.quickAcks);
+}
+
 // 3.0.11-beta.103 (the owner: «можешь сделать настройку, чтобы можно было выбрать эту стрелку в конфигураторе»):
 // [interface] walk_arrow - the look of the stick's walking arrow, the doc's variants; the chevrons by default (its
 // advice), a choice of «Інтерфейс» applied at once

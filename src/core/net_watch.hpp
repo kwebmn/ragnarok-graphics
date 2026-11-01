@@ -36,6 +36,12 @@ public:
     // 3.0.11-beta.127 (the owner: «пинги вынеси в отдельную плашку, можешь еще график строить»): the last kGraph
     // readings' round trips (ms), the oldest first; a reading with a time-out -1 (a stall)
     std::vector<int> graph() const;
+    // 3.0.11-beta.128 (the network plan's step 5; the owner: «делать сеть, оно бывает глючит»): a server-ticked
+    // packet's lateness - the game's server clock less its tick (ms); 250 or more: held by a lost packet of the
+    // server's (they come late at once after it is sent again; the late ones within a second one hold)
+    void late(int ms, uint64_t nowMs);
+    bool held();  // a new hold since last asked (told once)
+    int holdMs() const { return holdMs_; }  // the last hold's lateness at most
 
 private:
     bool known_ = false, stallTold_ = true;
@@ -46,6 +52,9 @@ private:
     int fixes_ = 0, ownFixes_ = 0, fixMost_ = 0;
     int graph_[kGraph] = {};
     int graphNext_ = 0, graphCount_ = 0;
+    uint64_t holdAt_ = 0, lateAt_ = 0, readAt_ = 0;  // 3.0.11-beta.128: the hold began, its last late one, a reading
+    int holdMs_ = 0, holds_ = 0, holdMost_ = 0;
+    bool holdTold_ = true;
 };
 
 }  // namespace uagfx::netwatch

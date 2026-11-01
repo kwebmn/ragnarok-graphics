@@ -2,6 +2,7 @@
 // - the network ideas 1, 2, 7): the connection to the map server watched (core/net_watch) - its level for the badge,
 // the stalls, the log's line
 #include <string>
+#include <vector>
 
 #include "core/net_watch.hpp"
 #include "test.hpp"
@@ -87,4 +88,30 @@ TEST(net_watch_keeps_a_minute_for_the_graph) {
     for (int i = 0; i < 70; ++i) w.tcp(t, 4000 + uint64_t(i) * 1000);
     g = w.graph();
     CHECK(g.size() == size_t(netwatch::kGraph) && g.front() == 40 && g.back() == 40);
+}
+
+// 3.0.11-beta.128 (the network plan's step 5; the owner: «делать сеть, оно бывает глючит»): a server's packet lost on
+// the way holds the ones after it until it is sent again - they come late at once. A server-ticked packet 250 ms or
+// more behind the game's server clock is held (the late ones within a second one hold): told once, «обрив» 5 s, the
+// reading after it red on the graph, counted in the minute's line
+TEST(net_watch_the_servers_held_packets) {
+    netwatch::Watch w;
+    w.tcp(tcp(45, 0, 0), 1000);
+    w.late(40, 1500);  // on time (the way's own)
+    CHECK(!w.held() && w.level(1500) == netwatch::Level::Good);
+    w.late(380, 2000);  // held by a lost packet
+    w.late(370, 2010);  // the same hold's others
+    CHECK(w.held() && !w.held());  // told once
+    CHECK(w.holdMs() == 380);
+    CHECK(w.level(2100) == netwatch::Level::Stall && w.level(7100) != netwatch::Level::Stall);
+    w.tcp(tcp(45, 0, 0), 2500);  // the reading after it
+    const std::vector<int> g = w.graph();
+    CHECK(g.size() == 2 && g.back() == -1);
+    w.tcp(tcp(45, 0, 0), 3500);
+    CHECK(w.graph().back() == 45);
+    w.late(300, 30000);  // another, later
+    CHECK(w.held());
+    const std::string line = w.line(61000);
+    CHECK(has(line, "2 holds by the server's lost packets (at most 380 ms)"));
+    CHECK(has(w.line(122000), "0 holds"));
 }

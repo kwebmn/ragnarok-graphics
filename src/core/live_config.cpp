@@ -182,6 +182,10 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("smooth_fixes", flag(running.smoothFixes), flag(file.smoothFixes)));
         n.smoothFixes = file.smoothFixes;
     }
+    if (file.quickAcks != running.quickAcks) {  // 3.0.11-beta.128: the server's packets acknowledged at once
+        u.applied.push_back(change("quick_acks", flag(running.quickAcks), flag(file.quickAcks)));
+        n.quickAcks = file.quickAcks;
+    }
     if (file.netBadge != running.netBadge) {  // 3.0.11-beta.122: the round trip's badge, at once
         u.applied.push_back(change("net_badge", flag(running.netBadge), flag(file.netBadge)));
         n.netBadge = file.netBadge;
@@ -490,6 +494,7 @@ bool appliesNow(const std::string& k) {
            k == "quality.alpha_to_coverage" || k == "quality.anisotropy" || k == "frames.vsync" ||
            k == "frames.fps_limit" || k == "frames.keep_fps" || k == "frames.save_power" || k == "debug.log" ||
            k == "debug.profile" || k == "debug.xray" || k == "debug.seams_view" || k == "frames.fps_counter" ||
+           k == "debug.quick_acks" ||  // 3.0.11-beta.128
            k == "stats.send" || k.compare(0, 8, "windows.") == 0 || k.compare(0, 8, "effects.") == 0 ||
            k.compare(0, 6, "panel.") == 0 ||  // 3.0.3-beta.8
            k.compare(0, 10, "interface.") == 0 ||  // 3.0.11-beta.1: the minimap; 3.0.11-beta.6: its hints

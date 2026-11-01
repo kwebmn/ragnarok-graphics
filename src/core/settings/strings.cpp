@@ -3236,6 +3236,15 @@ constexpr Entry kTexts[] = {
     {Text::DebugFastTexturesHint, "The game's texture rows copied with SSE2. Off: the game's own copy.",
      "Рядки текстур гри копіюються через SSE2. Вимкнено: власне копіювання гри.",
      "Строки текстур игры копируются через SSE2. Выключено: собственное копирование игры."},
+    // 3.0.11-beta.128 (the network plan's step 5; the owner: «делать сеть, оно бывает глючит»)
+    {Text::DebugQuickAcks, "Quick TCP acknowledgements", "Швидкі підтвердження TCP", "Быстрые подтверждения TCP"},
+    {Text::DebugQuickAcksHint,
+     "The game's connection acknowledges each of the server's packets at once - Windows waits up to 200 ms for a "
+     "lone one, so the server notices its lost packet later and the world stands still longer. Off: Windows' own way.",
+     "З'єднання гри підтверджує кожен пакет сервера одразу — Windows чекає до 200 мс на поодинокий, тож сервер "
+     "пізніше помічає свій втрачений пакет і світ довше стоїть. Вимкнено: як заведено у Windows.",
+     "Соединение игры подтверждает каждый пакет сервера сразу — Windows ждёт до 200 мс на одиночный, поэтому сервер "
+     "позже замечает свой потерянный пакет и мир дольше стоит. Выключено: как принято в Windows."},
     {Text::DeveloperOnly, "Developer only", "Лише розробнику", "Только разработчику"},
     {Text::DebugTools, "Tools", "Інструменти", "Инструменты"},
     {Text::DebugStudio, "Open uaRO Studio", "Відкрити uaRO Studio", "Открыть uaRO Studio"},

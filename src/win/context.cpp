@@ -887,6 +887,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     minimapShow.netBadge = config.netBadge;                         // 3.0.11-beta.122: the round trip's badge
     netwatchwin::frame();  // 3.0.11-beta.122: the map server's connection read each second (the minimap's badge)
     netsmoothwin::setOn(config.smoothFixes);  // 3.0.11-beta.123: [interface] smooth_fixes
+    netwatchwin::setQuickAcks(config.quickAcks);  // 3.0.11-beta.128: [debug] quick_acks
     minimapproto::frame(window, minimapShow, pk, pw, ph);
     // 3.0.11-beta.35: [interface] buffs - the buffs' column under the new minimap, the game's icons hidden
     buffcolumn::frame(window, config.buffs, config.buffsOverflow, pk, pw, ph);

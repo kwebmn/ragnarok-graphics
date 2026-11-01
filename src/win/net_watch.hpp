@@ -17,5 +17,10 @@ void frame();
 netwatch::Level level();
 int rttMs();
 std::vector<int> graph();  // 3.0.11-beta.127: the last minute's round trips (ms), the oldest first; -1 a stall
+// 3.0.11-beta.128 (the network plan's step 5; the owner: «делать сеть, оно бывает глючит»): [debug] quick_acks - the
+// game's socket acknowledges each of the server's packets at once (SIO_TCP_SET_ACK_FREQUENCY 1; Windows waits up to
+// 200 ms for a lone segment, so the server's round trip looks long and a packet it lost is sent again later); the
+// server's held packets measured (a moving or hitting unit's packet late by its server tick against the game's clock)
+void setQuickAcks(bool on);
 
 }  // namespace uagfx::win::netwatchwin

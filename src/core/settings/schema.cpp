@@ -956,6 +956,8 @@ const std::vector<IniSetting>& iniSettings() {
          Text::DebugFastFtolHint, ""},
         {"debug", "fast_textures", Page::Debug, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::DebugFastTextures,
          Text::DebugFastTexturesHint, ""},
+        {"debug", "quick_acks", Page::Debug, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::DebugQuickAcks,
+         Text::DebugQuickAcksHint, ""},  // 3.0.11-beta.128
     };
     return list;
 }
@@ -1178,6 +1180,7 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "debug.fast_pick") return c.fastPick ? "1" : "0";
     if (k == "debug.fast_ftol") return c.fastFtol ? "1" : "0";
     if (k == "debug.fast_textures") return c.fastTextures ? "1" : "0";
+    if (k == "debug.quick_acks") return c.quickAcks ? "1" : "0";  // 3.0.11-beta.128
     return "";
 }
 
