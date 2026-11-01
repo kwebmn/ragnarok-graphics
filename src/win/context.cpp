@@ -949,7 +949,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     tradewin::frame(window, config.tradeWindow, gameCodePage(config), pk, pw, ph);      // 3.0.11-beta.116
     menuwin::frame(window, config.menuWindow, gameCodePage(config), pk, pw, ph);        // 3.0.11-beta.140
     infocardwin::frame(window, config.cardWindows, gameCodePage(config), pk, pw, ph);  // 3.0.11-beta.149
-    askcardwin::frame(window, config.askWindows, gameCodePage(config), pk, pw, ph);    // 3.0.11-beta.150
+    askcardwin::frame(window, config.askWindows, config.countWindow, gameCodePage(config), pk, pw, ph);  // .150, .155
     msgboxwin::frame(window, config.messageBoxes, gameCodePage(config), pk, pw, ph);   // 3.0.11-beta.151
     loginwin::frame(window, config.loginWindow, gameCodePage(config), pk, pw, ph);     // 3.0.11-beta.151
     charselectwin::frame(window, config.charSelectWindow, gameCodePage(config), pk, pw, ph);  // 3.0.11-beta.152

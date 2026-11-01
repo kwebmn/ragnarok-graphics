@@ -5518,6 +5518,33 @@ constexpr Entry kTexts[] = {
      "Выключено: собственное окно игры."},
     {Text::CartTitle, "Cart", "Візок", "Тележка"},
     {Text::CartPadCard, "{1}: its card", "{1}: картка", "{1}: карточка"},
+    // 3.0.11-beta.155: the game's «how many» window
+    {Text::InterfaceCounts, "How many window", "Вікно кількості", "Окно количества"},
+    {Text::InterfaceCountsHint,
+     "The game's how many window (a stack into the storage, the cart, the bag, a trade, a shop) as a card in the new "
+     "look: what for and the most, the number typed as before, one, half or all in a click, Cancel. The controller: A "
+     "takes all, B gives up. Off: the game's own window.",
+     "Вікно кількості гри (стос на склад, у візок, у сумку, в обмін, до крамниці) карткою в новому вигляді: для чого "
+     "і скільки найбільше, число набирається як раніше, один, половина або всі одним кліком, скасувати. "
+     "Контролер: A — усі, B — скасувати. Вимкнено: власне вікно гри.",
+     "Окно количества игры (стопка на склад, в тележку, в сумку, в обмен, в магазин) карточкой в новом виде: для чего "
+     "и сколько максимум, число набирается как раньше, одна, половина или все одним кликом, отменить. "
+     "Контроллер: A — все, B — отменить. Выключено: собственное окно игры."},
+    {Text::CountTitle, "How many?", "Скільки?", "Сколько?"},
+    {Text::CountHint, "How many? At most {1}", "Скільки штук? Найбільше — {1}", "Сколько штук? Максимум — {1}"},
+    {Text::CountHalf, "Half", "Половина", "Половина"},
+    {Text::CountAll, "All", "Усі", "Все"},
+    {Text::CountDrop, "Drop on the ground", "Викинути на землю", "Выбросить на землю"},
+    {Text::CountBuy, "Buy", "Купити", "Купить"},
+    {Text::CountSell, "Sell", "Продати", "Продать"},
+    {Text::CountTrade, "Into the trade", "В обмін", "В обмен"},
+    {Text::CountBag, "Into the bag", "У сумку", "В сумку"},
+    {Text::CountStorage, "Into the storage", "На склад", "На склад"},
+    {Text::CountCart, "Into the cart", "У візок", "В тележку"},
+    {Text::CountShop, "Into the shop", "До лавки", "В лавку"},
+    {Text::CountUnbuy, "Out of the purchase", "Прибрати з покупки", "Убрать из покупки"},
+    {Text::CountToBuy, "Into the purchase", "До покупки", "В покупку"},
+    {Text::CountMail, "Into the letter", "До листа", "В письмо"},
     // 3.0.11-beta.141: the character block's experience (forms: one, a few, many)
     {Text::CharSkillPoints, "skill point|skill points", "очко навичок|очки навичок|очок навичок",
      "очко навыков|очка навыков|очков навыков"},

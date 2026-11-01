@@ -208,6 +208,8 @@ const std::vector<IniSetting>& iniSettings() {
          Text::InterfaceCharMake, Text::InterfaceCharMakeHint, ""},  // 3.0.11-beta.153
         {"interface", "cart", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::InterfaceCart,
          Text::InterfaceCartHint, ""},  // 3.0.11-beta.154
+        {"interface", "counts", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::InterfaceCounts,
+         Text::InterfaceCountsHint, ""},  // 3.0.11-beta.155
         {"interface", "skill_cells", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {},
          Text::InterfaceSkillCells, Text::InterfaceSkillCellsHint, ""},  // 3.0.11-beta.142
         {"interface", "ground_counts", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {},
@@ -1085,6 +1087,7 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "interface.char_select") return c.charSelectWindow ? "1" : "0";  // 3.0.11-beta.152
     if (k == "interface.char_make") return c.charMakeWindow ? "1" : "0";      // 3.0.11-beta.153
     if (k == "interface.cart") return c.cartWindow ? "1" : "0";               // 3.0.11-beta.154
+    if (k == "interface.counts") return c.countWindow ? "1" : "0";            // 3.0.11-beta.155
     if (k == "interface.skill_cells") return c.skillCells ? "1" : "0";  // 3.0.11-beta.142
     if (k == "interface.ground_counts") return c.groundCounts ? "1" : "0";  // 3.0.11-beta.143
     if (k == "interface.animations") return c.animations ? "1" : "0";  // 3.0.11-beta.46

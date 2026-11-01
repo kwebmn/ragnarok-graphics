@@ -19,12 +19,15 @@ namespace uagfx::win::askcardwin {
 // window moved off the screen (its field keeps the keys and the controller's typing), its words shown as its field has
 // them, «Готово» pressing its OK. On the game's thread.
 void packet(const packets::Event& e);
-void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int targetHeight);
+// 3.0.11-beta.155: `counts` [interface] counts - the game's «how many» window (UI window 0xF at g_windowMgr + 0xA0) as
+// a count card: what for, the most, the game's field, one / half / all (set and OK), OK its own, «Скасувати» ends the
+// game's drag and hides its window (it has no cancel of its own)
+void frame(HWND game, bool on, bool counts, unsigned codePage, double k, int targetWidth, int targetHeight);
 void draw(FrameRecord& record, gpu::Renderer& renderer);
 bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result);
 bool shown();
-bool asking();  // a request shown (an input's the controller leaves to the game's own field)
-bool close();   // Esc: a request declined (true); an input left to the game
+bool asking();  // a request or a count shown (an NPC's input the controller leaves to the game's own field)
+bool close();   // Esc: a request declined, a count given up (true); an NPC's input left to the game
 void beforeGameDraw();
 enum class PadCommand : uint8_t { Accept, Decline };
 void padCommand(PadCommand c);

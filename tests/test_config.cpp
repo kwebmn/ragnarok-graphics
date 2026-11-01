@@ -861,17 +861,17 @@ TEST(config_interface_minimap) {
     // 3.0.11-beta.70: the tracker; 3.0.11-beta.96: «Навички»; 3.0.11-beta.97: «Спорядження»; .98: the NPC talk;
     // .100: the shops; .115: the storage; .116: the trade; .140: the menu; .149: the item and skill cards; .150: the
     // requests and the NPC's inputs; .151: the game's message boxes and its login
-    CHECK(u.waiting.empty() && u.applied.size() == 25 && u.applied[0] == "minimap 0 -> 1");
+    CHECK(u.waiting.empty() && u.applied.size() == 26 && u.applied[0] == "minimap 0 -> 1");
     CHECK(u.applied[1] == "buffs off -> column" && u.applied[2] == "items 0 -> 1" && u.applied[3] == "status 0 -> 1");
     CHECK(u.applied[4] == "skills 0 -> 1" && u.applied[5] == "equip 0 -> 1" && u.applied[6] == "npc_talk 0 -> 1");
     CHECK(u.applied[7] == "shop 0 -> 1" && u.applied[8] == "storage 0 -> 1" && u.applied[9] == "trade 0 -> 1");
     CHECK(u.applied[10] == "menu 0 -> 1" && u.applied[11] == "cards 0 -> 1" && u.applied[12] == "asks 0 -> 1");
     CHECK(u.applied[13] == "messages 0 -> 1" && u.applied[14] == "login 0 -> 1" &&
           u.applied[15] == "char_select 0 -> 1" && u.applied[16] == "char_make 0 -> 1" &&
-          u.applied[17] == "cart 0 -> 1");
-    CHECK(u.applied[18] == "cast 0 -> 1" && u.applied[19] == "chat 0 -> 1" && u.applied[20] == "hotbar 0 -> 1");
-    CHECK(u.applied[21] == "tracker 0 -> 1" && u.applied[22] == "party 0 -> 1" && u.applied[23] == "target 0 -> 1");
-    CHECK(u.applied[24] == "character off -> bars");
+          u.applied[17] == "cart 0 -> 1" && u.applied[18] == "counts 0 -> 1");
+    CHECK(u.applied[19] == "cast 0 -> 1" && u.applied[20] == "chat 0 -> 1" && u.applied[21] == "hotbar 0 -> 1");
+    CHECK(u.applied[22] == "tracker 0 -> 1" && u.applied[23] == "party 0 -> 1" && u.applied[24] == "target 0 -> 1");
+    CHECK(u.applied[25] == "character off -> bars");
     CHECK(appliesNow("interface.minimap"));
 }
 
@@ -1534,6 +1534,18 @@ TEST(config_interface_cart) {
     CHECK(s != nullptr && s->page == settings::Page::Interface);
     CHECK(appliesNow("interface.cart"));
     CHECK(liveUpdate(parseConfig(""), parseConfig("[interface]\ncart = 1\n")).next.cartWindow);
+}
+
+// 3.0.11-beta.155: [interface] counts - the game's «how many» window as a card, on with the new minimap, at once
+TEST(config_interface_counts) {
+    CHECK(!parseConfig("").countWindow);
+    CHECK(parseConfig("[interface]\nminimap = 1\n").countWindow);
+    CHECK(!parseConfig("[interface]\nminimap = 1\ncounts = 0\n").countWindow);
+    CHECK(parseConfig("[interface]\ncounts = 1\n").countWindow);
+    const settings::IniSetting* s = settings::findSetting("interface.counts");
+    CHECK(s != nullptr && s->page == settings::Page::Interface);
+    CHECK(appliesNow("interface.counts"));
+    CHECK(liveUpdate(parseConfig(""), parseConfig("[interface]\ncounts = 1\n")).next.countWindow);
 }
 
 // 3.0.11-beta.103 (the owner: «можешь сделать настройку, чтобы можно было выбрать эту стрелку в конфигураторе»):

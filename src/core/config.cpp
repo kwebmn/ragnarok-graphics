@@ -395,6 +395,7 @@ Config parseConfig(const std::string& text) {
     bool charSelectSet = false;                   // 3.0.11-beta.152
     bool charMakeSet = false;                     // 3.0.11-beta.153
     bool cartSet = false;                         // 3.0.11-beta.154
+    bool countSet = false;                        // 3.0.11-beta.155
     std::istringstream in(text);
     std::string line;
     std::string section;
@@ -615,6 +616,9 @@ Config parseConfig(const std::string& text) {
         } else if (key == "interface.cart") {  // 3.0.11-beta.154: the merchant's cart
             cartSet = val == "0" || val == "1" || val == "on" || val == "off" || val == "true" || val == "false";
             setBool(val, c.cartWindow);
+        } else if (key == "interface.counts") {  // 3.0.11-beta.155: the game's «how many» window
+            countSet = val == "0" || val == "1" || val == "on" || val == "off" || val == "true" || val == "false";
+            setBool(val, c.countWindow);
         } else if (key == "interface.skill_cells") {  // 3.0.11-beta.142: a ground skill's cells on the ground
             setBool(val, c.skillCells);
         } else if (key == "interface.ground_counts") {  // 3.0.11-beta.143: walls standing, traps left on the bar
@@ -923,6 +927,7 @@ Config parseConfig(const std::string& text) {
     if (c.newMinimap && !charSelectSet) c.charSelectWindow = true;  // 3.0.11-beta.152
     if (c.newMinimap && !charMakeSet) c.charMakeWindow = true;      // 3.0.11-beta.153
     if (c.newMinimap && !cartSet) c.cartWindow = true;              // 3.0.11-beta.154
+    if (c.newMinimap && !countSet) c.countWindow = true;            // 3.0.11-beta.155
     return c;
 }
 

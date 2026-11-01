@@ -539,6 +539,9 @@ enum class Text : uint16_t {
     InterfaceCharMake, InterfaceCharMakeHint, MakeTitle, MakeName, MakeNameHint, MakeHair, MakeColour, MakePairsHint,
     // 3.0.11-beta.154: the merchant's cart
     InterfaceCart, InterfaceCartHint, CartTitle, CartPadCard,
+    // 3.0.11-beta.155: the game's «how many» window
+    InterfaceCounts, InterfaceCountsHint, CountTitle, CountHint, CountHalf, CountAll, CountDrop, CountBuy, CountSell,
+    CountTrade, CountBag, CountStorage, CountCart, CountShop, CountUnbuy, CountToBuy, CountMail,
     // 3.0.11-beta.141: the character block's experience - the free skill points, the last level, an hour, a minute,
     // the experience's tip, the portrait's tip (Alt+V)
     CharSkillPoints, CharExpMax, CharHour, CharMinute, CharToLevel, CharLevelIn, CharPerHour, CharSession, CharLastGain,

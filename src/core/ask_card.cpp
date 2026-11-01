@@ -17,12 +17,12 @@ constexpr uint32_t kBlack = 0x000000;
 
 bool request(Kind k) { return k == Kind::Trade || k == Kind::Party || k == Kind::Guild || k == Kind::Friend; }
 
-bool input(Kind k) { return k == Kind::Number || k == Kind::Text; }
+bool input(Kind k) { return k == Kind::Number || k == Kind::Text || k == Kind::Count; }
 
 std::vector<Button> buttons(Kind k) {
     if (request(k)) return {Button::Accept, Button::Decline};
     if (k == Kind::Question) return {Button::Yes, Button::No};
-    if (k == Kind::Choice) return {Button::Ok, Button::Cancel};
+    if (k == Kind::Choice || k == Kind::Count) return {Button::Ok, Button::Cancel};
     if (k == Kind::Wait) return {};
     return {Button::Ok};
 }
@@ -57,6 +57,12 @@ Layout layout(const Card& c, int targetW, int targetH, float scale, const Texts&
         L.field = panel::Box{pad, y, w - 2 * pad, kFieldH * s};
         y += kFieldH * s;
     }
+    if (c.kind == Kind::Count) {  // 3.0.11-beta.155: one, half, all
+        y += 8 * s;
+        const float qw = (w - 2 * pad - 2 * kGap * s) / 3;
+        for (int i = 0; i < 3; ++i) L.quick.push_back(panel::Box{pad + float(i) * (qw + kGap * s), y, qw, 28 * s});
+        y += 28 * s;
+    }
     y += kGap * s;
     const std::vector<Button> bs = buttons(c.kind);
     if (!bs.empty()) {
@@ -80,10 +86,29 @@ int buttonAt(const Layout& L, float x, float y) {
     return -1;
 }
 
+int quickAt(const Layout& L, float x, float y) {
+    for (size_t i = 0; i < L.quick.size(); ++i)
+        if (L.quick[i].contains(x, y)) return int(i);
+    return -1;
+}
+
+int quickValue(Quick q, int most) {
+    const int m = std::max(1, most);
+    switch (q) {
+        case Quick::One: return 1;
+        case Quick::Half: return std::max(1, m / 2);
+        case Quick::All: break;
+    }
+    return m;
+}
+
 void paint(panel::Picture& out, const Layout& L, const Card& c, const Show& sh) {
     const float s = L.s;
     panel::roundRect(out, L.glass, 12 * s, kCard, std::max(0.94f, uistyle::window()), kWhite, 0.12f, 1.0f * s);
     if (L.field.w > 0) panel::roundRect(out, L.field, 7 * s, kBlack, 0.35f, kGold, 0.55f, 1.0f * s);
+    for (size_t i = 0; i < L.quick.size(); ++i)  // 3.0.11-beta.155: a count's quick choices
+        panel::roundRect(out, L.quick[i], 7 * s, kWhite, int(i) == sh.quickHover ? 0.14f : 0.06f, kWhite, 0.16f,
+                         1.0f * s);
     const std::vector<Button> bs = buttons(c.kind);
     for (size_t i = 0; i < L.buttons.size() && i < bs.size(); ++i) {
         const bool primary = bs[i] != Button::Decline && bs[i] != Button::No && bs[i] != Button::Cancel;
@@ -103,6 +128,8 @@ std::vector<Words> words(const Layout& L, const Card& c, const Show& sh, const T
     if (L.field.w > 0)
         out.push_back(Words{panel::Box{L.field.x + 10 * s, L.field.y, L.field.w - 20 * s, L.field.h},
                             c.field + (c.caret ? "|" : ""), kText, 14 * s, true, Align::Left});
+    for (size_t i = 0; i < L.quick.size() && i < 3; ++i)
+        out.push_back(Words{L.quick[i], t.quick[i], kText, 12.5f * s, false, Align::Center});
     const std::vector<Button> bs = buttons(c.kind);
     for (size_t i = 0; i < L.buttons.size() && i < bs.size(); ++i) {
         const Button b = bs[i];

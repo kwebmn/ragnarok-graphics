@@ -44,8 +44,19 @@ constexpr uint32_t kShown = 0x38, kRect = 0x14, kSendMsgSlot = 0x94, kEdit = 0x6
 constexpr int kButtonMsg = 6;
 constexpr int kAway = -4000;  // an input's window moved out of sight, its field still the keys'
 constexpr ULONGLONG kNameMs = 60000, kBlinkMs = 530;
+// 3.0.11-beta.155: the game's «how many» window (UI window 0xF, «UIItemDropCntWnd»: its class, its SendMsg
+// FUN_004ad2e0 - 6 / 0x76 its only button, OK; what it is for + 0x30 - 0 the ground, 6 the bag, 7 the storage, 8 the
+// cart ...) - made once and shown or hidden (the manager's FUN_004d4090(0xF, 1 / 0)); the most from the game mode's
+// drag (its count + 0x33C, as the game fills the field); an edit's SetText at its vtable + 0x98
+constexpr uint32_t kCountAt = kWindowMgr + 0xA0, kCountClass = 0x69B2B0, kCountSend = 0x4AD2E0, kCountFor = 0x30;
+constexpr uint32_t kShowWindow = 0x4D4090, kModeNow = 0x74B57C, kModeMsgSlot = 0x14, kDragCount = 0x33C;
+constexpr uint32_t kSetTextSlot = 0x98;
+constexpr int kCountWindow = 0xF, kEndDragMsg = 0x13;
 using SendMsgFn = int(__attribute__((thiscall)) *)(uint32_t self, uint32_t sender, int msg, int a, int b, int c);
 using GetTextFn = const char*(__attribute__((thiscall)) *)(uint32_t edit);
+using SetTextFn = void(__attribute__((thiscall)) *)(uint32_t edit, const char* text);
+using ShowFn = int(__attribute__((thiscall)) *)(uint32_t manager, int id, int show);
+using ModeMsgFn = int(__attribute__((thiscall)) *)(uint32_t mode, int msg, int a, int b, int c);
 
 struct Named {
     std::string name;  // in the game's code page
@@ -55,6 +66,8 @@ struct Named {
 struct State {
     WindowShadow shadow;
     bool on = false, shown = false, hid = false, moved = false, padNow = false;
+    bool counts = false, countMoved = false;  // 3.0.11-beta.155: [interface] counts; its window out of sight
+    int countX = 0, countY = 0;               // its own place (back when the switch goes off)
     unsigned codePage = 0;
     float k = 0, scale = 1;
     int targetW = 0, targetH = 0;
@@ -98,6 +111,7 @@ const char* nameOf(ac::Kind k) {
         case ac::Kind::Friend: return "a friend's request";
         case ac::Kind::Number: return "an NPC's number";
         case ac::Kind::Text: return "an NPC's words";
+        case ac::Kind::Count: return "the game's «how many»";
         default: break;  // the game's messages (win/msg_box)
     }
     return "a message";
@@ -144,6 +158,48 @@ void hold(State& s, uint32_t window, ac::Kind kind, bool on) {
     }
 }
 
+// 3.0.11-beta.155: the «how many» window (made once: there whether shown or not)
+uint32_t gameCount() {
+    const uint32_t w = read32(kCountAt);
+    return w && read32(w) == kCountClass && read32(read32(w) + kSendMsgSlot) == kCountSend ? w : 0;
+}
+
+// Out of sight while the switch is on (its field still the keys' - Enter its OK); back where it was when it goes off
+void holdCount(State& s, uint32_t window, bool on) {
+    if (!window) return;
+    const int32_t x = int32_t(read32(window + kRect)), y = int32_t(read32(window + kRect + 4));
+    if (on && x != kAway) {
+        s.countX = x;
+        s.countY = y;
+        write32(window + kRect, uint32_t(kAway));
+        s.countMoved = true;
+    } else if (!on && s.countMoved) {
+        write32(window + kRect, uint32_t(s.countX));
+        write32(window + kRect + 4, uint32_t(s.countY));
+        s.countMoved = false;
+    }
+}
+
+settings::Text countTitle(uint32_t purpose) {
+    switch (purpose) {
+        case 0: return settings::Text::CountDrop;
+        case 1: return settings::Text::CountBuy;
+        case 2:
+        case 3:
+        case 4: return settings::Text::CountSell;
+        case 5: return settings::Text::CountTrade;
+        case 6: return settings::Text::CountBag;
+        case 7: return settings::Text::CountStorage;
+        case 8: return settings::Text::CountCart;
+        case 9:
+        case 10: return settings::Text::CountShop;
+        case 0xB: return settings::Text::CountUnbuy;
+        case 0xC: return settings::Text::CountToBuy;
+        case 0xD: return settings::Text::CountMail;
+        default: return settings::Text::CountTitle;
+    }
+}
+
 int requestIndex(ac::Kind k) {
     return k == ac::Kind::Trade ? 0 : k == ac::Kind::Party ? 1 : k == ac::Kind::Guild ? 2 : 3;
 }
@@ -181,8 +237,15 @@ ac::Card cardOf(State& s, ac::Kind kind, uint32_t window) {
         }
         return c;
     }
-    c.title = say(kind == ac::Kind::Number ? settings::Text::AskNumberTitle : settings::Text::AskTextTitle);
-    c.message = say(settings::Text::AskTypeHint);
+    if (kind == ac::Kind::Count) {  // 3.0.11-beta.155: what for, the most
+        c.title = say(countTitle(read32(window + kCountFor)));
+        const uint32_t mode = read32(kModeNow);
+        c.most = mode ? int(read32(mode + kDragCount)) : 0;
+        c.message = settings::fmt(say(settings::Text::CountHint), {std::to_string(c.most)});
+    } else {
+        c.title = say(kind == ac::Kind::Number ? settings::Text::AskNumberTitle : settings::Text::AskTextTitle);
+        c.message = say(settings::Text::AskTypeHint);
+    }
     const uint32_t edit = read32(window + kEdit);
     if (edit) {
         const char* t = reinterpret_cast<GetTextFn>(uintptr_t(kGetText))(edit);
@@ -204,6 +267,10 @@ ac::Texts texts(const State& s) {
     t.acceptKey = s.padNow ? uapad::buttonLabel(0) : "";
     t.declineKey = s.padNow ? uapad::buttonLabel(1) : "Esc";
     t.okKey = s.padNow ? "" : "Enter";
+    t.cancel = say(settings::Text::MsgCancel);  // 3.0.11-beta.155: a count's
+    t.quick[0] = "1";
+    t.quick[1] = say(settings::Text::CountHalf);
+    t.quick[2] = say(settings::Text::CountAll);
     return t;
 }
 
@@ -243,8 +310,40 @@ void hide(State& s) {
     s.shown = false;
 }
 
+// 3.0.11-beta.155: a count given up - the game's drag ended (its mode's 0x13) and its window hidden, as nothing taken
+void cancelCount(State& s) {
+    const uint32_t mode = read32(kModeNow);
+    if (mode) reinterpret_cast<ModeMsgFn>(uintptr_t(read32(read32(mode) + kModeMsgSlot)))(mode, kEndDragMsg, 0, 0, 0);
+    reinterpret_cast<ShowFn>(uintptr_t(kShowWindow))(kWindowMgr, kCountWindow, 0);
+    if (s.told++ < 30) LOG_INFO("asks: the game's «how many» given up - its drag ended, its window hidden");
+    s.key.clear();
+}
+
+// 3.0.11-beta.155: a count's quick choice - the game's field set to it and its OK pressed
+void quick(State& s, int value) {
+    const uint32_t window = gameCount(), edit = window ? read32(window + kEdit) : 0;
+    if (!edit) return;
+    const std::string digits = std::to_string(value);
+    reinterpret_cast<SetTextFn>(uintptr_t(read32(read32(edit) + kSetTextSlot)))(edit, digits.c_str());
+    if (s.told++ < 30) LOG_INFO("asks: the game's «how many» - %d chosen, its OK", value);
+    reinterpret_cast<SendMsgFn>(uintptr_t(kCountSend))(window, 0, kButtonMsg, 0x76, 0, 0);
+    s.key.clear();
+}
+
 // Its button pressed: the game's window's own (message 6, 0x76 or 0x77) - the game does the rest
 void press(State& s, ac::Button b) {
+    if (s.kind == ac::Kind::Count && s.shown) {  // 3.0.11-beta.155: OK its own, cancel ours (it has none)
+        const uint32_t window = gameCount();
+        if (!window) return;
+        if (b == ac::Button::Cancel || b == ac::Button::Decline) {
+            cancelCount(s);
+            return;
+        }
+        if (s.told++ < 30) LOG_INFO("asks: the game's «how many» - typed, OK (0x76)");
+        reinterpret_cast<SendMsgFn>(uintptr_t(kCountSend))(window, 0, kButtonMsg, 0x76, 0, 0);
+        s.key.clear();
+        return;
+    }
     ac::Kind kind = ac::Kind::Trade;
     const uint32_t window = gameAsk(kind);
     if (!window) return;
@@ -268,7 +367,7 @@ void packet(const packets::Event& e) {
     else if (const auto* f = std::get_if<packets::FriendRequest>(&e)) s.names[3] = Named{f->from, now};
 }
 
-void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int targetHeight) {
+void frame(HWND game, bool on, bool counts, unsigned codePage, double k, int targetWidth, int targetHeight) {
     State& s = state();
     s.codePage = codePage;
     if (on != s.on) {
@@ -276,11 +375,23 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
         s.key.clear();
         LOG_INFO("asks: [interface] asks = %d", on ? 1 : 0);
     }
+    if (counts != s.counts) {
+        s.counts = counts;
+        s.key.clear();
+        LOG_INFO("asks: [interface] counts = %d", counts ? 1 : 0);
+    }
     const bool world = inGameWorld();
     ac::Kind kind = ac::Kind::Trade;
-    const uint32_t window = world ? gameAsk(kind) : 0;
+    uint32_t window = world ? gameAsk(kind) : 0;
     if (world) hold(s, window, kind, on);
-    if (!on || !window || !game || k <= 0 || targetWidth <= 0 || targetHeight <= 0) {
+    const uint32_t count = world ? gameCount() : 0;  // 3.0.11-beta.155: the «how many» window
+    if (world) holdCount(s, count, counts);
+    if (!on) window = 0;
+    if (!window && counts && count && read32(count + kShown)) {
+        window = count;
+        kind = ac::Kind::Count;
+    }
+    if (!window || !game || k <= 0 || targetWidth <= 0 || targetHeight <= 0) {
         hide(s);
         s.window = 0;
         return;
@@ -300,14 +411,18 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     const ac::Texts t = texts(s);
     s.layout = ac::layout(s.card, targetWidth, targetHeight, s.scale, t);
     s.show.hover = -1;
+    s.show.quickHover = -1;
     int cx = 0, cy = 0;
-    if (readGameCursor(cx, cy))
-        s.show.hover = ac::buttonAt(s.layout, float(cx) * float(k) - float(s.layout.x),
-                                    float(cy) * float(k) - float(s.layout.y));
+    if (readGameCursor(cx, cy)) {
+        const float lx = float(cx) * float(k) - float(s.layout.x), ly = float(cy) * float(k) - float(s.layout.y);
+        s.show.hover = ac::buttonAt(s.layout, lx, ly);
+        s.show.quickHover = ac::quickAt(s.layout, lx, ly);
+    }
     const std::string key = std::to_string(int(kind)) + ';' + s.card.title + ';' + s.card.message + ';' +
                             s.card.field + (s.card.caret ? "|" : "") + ';' + std::to_string(s.layout.x) + ',' +
-                            std::to_string(s.layout.y) + ';' + std::to_string(s.show.hover) + (s.padNow ? "P" : "") +
-                            '#' + std::to_string(uistyle::generation());
+                            std::to_string(s.layout.y) + ';' + std::to_string(s.show.hover) + ',' +
+                            std::to_string(s.show.quickHover) + (s.padNow ? "P" : "") + '#' +
+                            std::to_string(uistyle::generation());
     if (key != s.key) {
         s.key = key;
         render(s);
@@ -341,6 +456,11 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     if (!s.layout.glass.contains(lx, ly)) return false;
     result = 0;
     if (m == WM_LBUTTONDOWN || m == WM_LBUTTONDBLCLK) {
+        const int q = ac::quickAt(s.layout, lx, ly);
+        if (q >= 0 && s.kind == ac::Kind::Count) {  // 3.0.11-beta.155: one, half, all - set and OK
+            quick(s, ac::quickValue(ac::Quick(q), s.card.most));
+            return true;
+        }
         const int i = ac::buttonAt(s.layout, lx, ly);
         const std::vector<ac::Button> bs = ac::buttons(s.kind);
         if (i >= 0 && i < int(bs.size())) press(s, bs[size_t(i)]);
@@ -352,27 +472,32 @@ bool shown() { return state().shown; }
 
 bool asking() {
     const State& s = state();
-    return s.shown && ac::request(s.kind);
+    return s.shown && (ac::request(s.kind) || s.kind == ac::Kind::Count);
 }
 
 bool close() {
     State& s = state();
-    if (!s.shown || !ac::request(s.kind)) return false;
-    press(s, ac::Button::Decline);
+    if (!s.shown || (!ac::request(s.kind) && s.kind != ac::Kind::Count)) return false;
+    press(s, s.kind == ac::Kind::Count ? ac::Button::Cancel : ac::Button::Decline);
     return true;
 }
 
 void beforeGameDraw() {
     State& s = state();
-    if (!s.on || !inGameWorld()) return;
+    if (!inGameWorld()) return;
+    if (s.counts) holdCount(s, gameCount(), true);
+    if (!s.on) return;
     ac::Kind kind = ac::Kind::Trade;
     if (const uint32_t window = gameAsk(kind)) hold(s, window, kind, true);
 }
 
 void padCommand(PadCommand c) {
     State& s = state();
-    if (!s.shown || !ac::request(s.kind)) return;
-    press(s, c == PadCommand::Accept ? ac::Button::Accept : ac::Button::Decline);
+    if (!s.shown || (!ac::request(s.kind) && s.kind != ac::Kind::Count)) return;
+    if (s.kind == ac::Kind::Count)  // 3.0.11-beta.155: A the count the field has (the most at first), B gives up
+        press(s, c == PadCommand::Accept ? ac::Button::Ok : ac::Button::Cancel);
+    else
+        press(s, c == PadCommand::Accept ? ac::Button::Accept : ac::Button::Decline);
 }
 
 bool box(int& x, int& y, int& w, int& h) {

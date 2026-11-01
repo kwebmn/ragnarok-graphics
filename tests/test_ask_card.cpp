@@ -129,3 +129,37 @@ TEST(ask_card_the_games_messages) {
     const std::vector<askcard::Words> words = askcard::words(L, w, askcard::Show{}, texts());
     CHECK(has(words, "Please wait..."));
 }
+
+// 3.0.11-beta.155 (task 4 of the remaining windows: the game's «how many» window, UI window 0xF - a stack into the
+// storage, the cart, the bag, a trade, a shop): an input with OK and «Скасувати», the number field and three quick
+// choices under it - one, half, all of the most it may take (each sets the field and OKs)
+TEST(ask_card_the_games_count) {
+    using B = askcard::Button;
+    CHECK(askcard::input(askcard::Kind::Count) && !askcard::request(askcard::Kind::Count));
+    CHECK((askcard::buttons(askcard::Kind::Count) == std::vector<B>{B::Ok, B::Cancel}));
+    askcard::Card c;
+    c.kind = askcard::Kind::Count;
+    c.title = "На склад";
+    c.message = "Скільки штук? Найбільше — 25";
+    c.field = "25";
+    c.most = 25;
+    askcard::Texts t = texts();
+    t.quick[0] = "1";
+    t.quick[1] = "Половина";
+    t.quick[2] = "Усі";
+    const askcard::Layout L = askcard::layout(c, 1920, 1080, 1.0f, t);
+    CHECK(L.quick.size() == 3);
+    CHECK(L.quick[0].y >= L.field.y + L.field.h && L.buttons[0].y >= L.quick[0].y + L.quick[0].h);
+    const auto mid = [](const panel::Box& b) { return std::make_pair(b.x + b.w / 2, b.y + b.h / 2); };
+    CHECK(askcard::quickAt(L, mid(L.quick[2]).first, mid(L.quick[2]).second) == 2);
+    CHECK(askcard::quickAt(L, mid(L.field).first, mid(L.field).second) == -1);
+    CHECK(askcard::quickValue(askcard::Quick::One, 25) == 1);
+    CHECK(askcard::quickValue(askcard::Quick::Half, 25) == 12);
+    CHECK(askcard::quickValue(askcard::Quick::All, 25) == 25);
+    CHECK(askcard::quickValue(askcard::Quick::Half, 1) == 1);
+    const std::vector<askcard::Words> w = askcard::words(L, c, askcard::Show{}, t);
+    CHECK(has(w, "Усі") && has(w, "Половина") && has(w, "Скасувати") && has(w, "Готово"));
+    askcard::Card npc = c;  // an NPC's number: no quick choices
+    npc.kind = askcard::Kind::Number;
+    CHECK(askcard::layout(npc, 1920, 1080, 1.0f, t).quick.empty());
+}
