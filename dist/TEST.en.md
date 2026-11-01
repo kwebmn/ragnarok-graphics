@@ -1,3 +1,14 @@
+# uaRO Graphics 3.0.11-beta.152 — what's new
+
+**The character select in the new look** (the third group of the remaining windows, continued):
+- Three cards a page: the character's face, the name, the job, the level and the job level, HP and SP, the six
+  stats. A free place reads "Free place" with "Make a new character here".
+- A click chooses a character, a double click enters the game (on a free place: makes a character).
+  The buttons "Enter", "Make", "Delete", "Back"; the arrows and the mouse wheel turn the pages.
+- The controller: the D-pad left/right chooses, A enters, X makes, LB and RB the pages, B back to the login.
+- Deleting still asks the game's own confirmation (now in the new message card).
+- The switch "Character select" under "Interface", on with the new minimap.
+
 # uaRO Graphics 3.0.11-beta.151 — what's new
 
 **The game's messages and the login window in the new look** (the third group of the remaining windows, its start):
