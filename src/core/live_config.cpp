@@ -178,6 +178,10 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("minimap_warps", flag(running.minimapWarps), flag(file.minimapWarps)));
         n.minimapWarps = file.minimapWarps;
     }
+    if (file.predictWalk != running.predictWalk) {  // 3.0.11-beta.130: the own walk at the click, at once
+        u.applied.push_back(change("predict_walk", flag(running.predictWalk), flag(file.predictWalk)));
+        n.predictWalk = file.predictWalk;
+    }
     if (file.smoothFixes != running.smoothFixes) {  // 3.0.11-beta.123: the position fixes glided to, at once
         u.applied.push_back(change("smooth_fixes", flag(running.smoothFixes), flag(file.smoothFixes)));
         n.smoothFixes = file.smoothFixes;

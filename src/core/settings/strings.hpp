@@ -479,6 +479,7 @@ enum class Text : uint16_t {
     InterfaceNetBadge, InterfaceNetBadgeHint, NetMs, NetStall,
     // 3.0.11-beta.123: the position fixes glided to
     InterfaceSmoothFixes, InterfaceSmoothFixesHint,
+    InterfacePredictWalk, InterfacePredictWalkHint,  // 3.0.11-beta.130
     // 3.0.11-beta.125: the ammo left on the hotbar
     InterfaceHotbarAmmo, InterfaceHotbarAmmoHint, HotbarAmmoLow, HotbarAmmoOut,
     InterfaceAmmoSound, InterfaceAmmoSoundHint,  // 3.0.11-beta.129

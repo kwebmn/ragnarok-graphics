@@ -83,4 +83,17 @@ cell. RO's TCP: one lost packet holds the rest until it is sent again (0.2-1 s o
   default via 192.168.122.1) with rto_min 80ms and quickack 1 (the server resends sooner, acknowledges the clients'
   packets at once - their own probes sooner). No restart (new connections take the route; the sysctl at once); each
   undone by one command; persisted in /etc/sysctl.d and the network config.
+- Step 5's prediction (3.0.11-beta.130; the owner «делаем» to the opt-in offer - ruling N5 superseded): research - the
+  client's walk request is 0x00a7 (the pad's session parses the game's sends: Session::takeWalkAsked); its answer
+  0x0087 goes to FUN_0057e1f0 (this = the game mode; tick +2, the way +6 in x0 y0 x1 y1 10 bits + sub 4/4), which
+  syncs the clock (FUN_0062dbb0) and tells the world's player (game mode +0xC4, +0x3C) its message 0 with seven dwords
+  {tick, srcX, srcY, subX, subY, dstX, dstY} (the stack at ebp-0x1c..-0x4). Built: core/net_predict (readOwnMove,
+  writeTick, Guess/answer, predicts within 20 cells, waitMs max(600, 4 RTT + 200); tests net_predict_*),
+  win/net_predict (the guess at the next BeginScene when the player stood still 150 ms and has no cast gauge (+0x220,
+  class 0x696C18); the 0x0087 of the same cells has its tick rewritten to the guess's before the game reads it; none in
+  time - message 0x13 puts the player back; the server's answer before the guess cancels it), [interface]
+  predict_walk OFF (test config_interface_predict_walk), session_hands_the_clients_walk_request_once. Suite 2120/0.
+  Ruling N6: the joined answer's tick is the guess's (older by about a round trip) - with a round trip over 144 ms the
+  game counts it late and after 4 in a row moves its server clock back 144 ms (any on-time packet resets the count) -
+  cost if wrong: other units' moves read a little late after several own walks in a row on a slow line.
 

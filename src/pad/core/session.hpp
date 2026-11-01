@@ -26,6 +26,12 @@ public:
     explicit Session(const Config& cfg);
 
     void onClientSent(SocketId s, const uint8_t* data, size_t n, uint32_t nowMs);  // bytes really sent
+    // 3.0.11-beta.130 (the own walk at once): the cell of the client's last walk request (0x00a7) seen since asked
+    std::optional<Cell> takeWalkAsked() {
+        std::optional<Cell> w = walkAsked_;
+        walkAsked_.reset();
+        return w;
+    }
     void onServerData(SocketId s, const uint8_t* data, size_t n, uint32_t nowMs);  // bytes really received
     void onClosed(SocketId s);
     // Traffic on `s` that the hooks could not see (overlapped WSASend, a call from another thread).
@@ -69,6 +75,7 @@ public:
     std::vector<std::string> takeLog();
 
 private:
+    std::optional<Cell> walkAsked_;  // 3.0.11-beta.130
     struct Conn {
         enum class Kind { Unknown, Map, Other };
         Kind kind = Kind::Unknown;

@@ -1420,6 +1420,17 @@ TEST(config_interface_ammo_sound) {
     CHECK(!liveUpdate(parseConfig(""), parseConfig("[interface]\nammo_sound = 0\n")).next.ammoSound);
 }
 
+// 3.0.11-beta.130 (the network plan's step 5; the owner «делаем»): [interface] predict_walk - the character walks at the
+// click, not a round trip later (an experiment); OFF at first, a box of «Інтерфейс», at once
+TEST(config_interface_predict_walk) {
+    CHECK(!parseConfig("").predictWalk);
+    CHECK(parseConfig("[interface]\npredict_walk = 1\n").predictWalk);
+    const settings::IniSetting* s = settings::findSetting("interface.predict_walk");
+    CHECK(s != nullptr && s->page == settings::Page::Interface);
+    CHECK(appliesNow("interface.predict_walk"));
+    CHECK(liveUpdate(parseConfig(""), parseConfig("[interface]\npredict_walk = 1\n")).next.predictWalk);
+}
+
 // 3.0.11-beta.103 (the owner: «можешь сделать настройку, чтобы можно было выбрать эту стрелку в конфигураторе»):
 // [interface] walk_arrow - the look of the stick's walking arrow, the doc's variants; the chevrons by default (its
 // advice), a choice of «Інтерфейс» applied at once

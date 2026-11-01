@@ -11,6 +11,7 @@
 
 #include "win/game_camera.hpp"
 #include "win/log.hpp"
+#include "win/net_predict.hpp"
 #include "win/net_smooth.hpp"
 
 namespace uagfx::win::netwatchwin {
@@ -135,6 +136,7 @@ void packet(void* connection, uint16_t id, const uint8_t* data) {
         const int late = lateness(s, data, id == kMove ? 12 : id == kOwnMove ? 2 : 10);
         if (late > 0 && late < 60000) s.watch.late(late, now);
     }
+    if (id == kOwnMove && data) netpredictwin::ownMove(const_cast<uint8_t*>(data));  // 3.0.11-beta.130
     if (id == kMove && data) {  // 3.0.11-beta.124: where it is shown before the game walks it (its jump faded)
         uint32_t unit = 0;
         std::memcpy(&unit, data + 2, 4);
@@ -217,6 +219,8 @@ void frame() {
 netwatch::Level level() { return state().watch.level(GetTickCount64()); }
 
 int rttMs() { return state().watch.rttMs(); }
+
+uint32_t serverNow() { return gameTime(state()) - read32(kClockOffset); }
 
 void setQuickAcks(bool on) {
     State& s = state();

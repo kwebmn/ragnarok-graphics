@@ -104,6 +104,9 @@ const std::vector<IniSetting>& iniSettings() {
         // 3.0.11-beta.123: the server's position fixes of 1-3 cells glided to
         {"interface", "smooth_fixes", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {},
          Text::InterfaceSmoothFixes, Text::InterfaceSmoothFixesHint, ""},
+        // 3.0.11-beta.130: the own walk at the click (an experiment, off)
+        {"interface", "predict_walk", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {},
+         Text::InterfacePredictWalk, Text::InterfacePredictWalkHint, ""},
         // 3.0.11-beta.122: the round trip to the map server on the minimap's bar
         {"interface", "net_badge", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::InterfaceNetBadge,
          Text::InterfaceNetBadgeHint, ""},
@@ -1015,6 +1018,7 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "interface.minimap_mobs") return c.minimapMobs ? "1" : "0";
     if (k == "interface.net_badge") return c.netBadge ? "1" : "0";  // 3.0.11-beta.122
     if (k == "interface.smooth_fixes") return c.smoothFixes ? "1" : "0";  // 3.0.11-beta.123
+    if (k == "interface.predict_walk") return c.predictWalk ? "1" : "0";  // 3.0.11-beta.130
     if (k == "interface.minimap_style") return mapStyleToken(c.minimapStyle);  // 3.0.11-beta.120
     if (k == "interface.minimap_kafra") return c.minimapKafra ? "1" : "0";  // 3.0.11-beta.119
     if (k == "interface.minimap_party") return c.minimapParty ? "1" : "0";

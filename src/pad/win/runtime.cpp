@@ -48,6 +48,7 @@
 #include "win/game_camera.hpp"
 #include "win/item_window.hpp"
 #include "win/minimap_proto.hpp"
+#include "win/net_predict.hpp"
 #include "win/equip_window.hpp"
 #include "win/skill_window.hpp"
 #include "win/stat_window.hpp"
@@ -1313,6 +1314,8 @@ void onSent(SOCKET sock, const char* buf, int n) {
             return;
         }
         s.session->onClientSent(uintptr_t(sock), reinterpret_cast<const uint8_t*>(buf), size_t(n), GetTickCount());
+        if (const auto walk = s.session->takeWalkAsked())  // 3.0.11-beta.130: the driver's guess of the own walk
+            uagfx::win::netpredictwin::walkAsked(walk->x, walk->y);
         g_mapSocket.store(s.session->mapSocket());
         flushPackets();
     });

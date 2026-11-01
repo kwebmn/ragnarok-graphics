@@ -684,3 +684,17 @@ TEST(session_ring_switched_on_gives_the_marked_target_its_state_back) {
     const std::vector<Bytes> p = toClient(s, 210);
     CHECK(p.size() == 1 && unitState(p[0], 110000001, 0, 0));  // as the server showed it
 }
+
+// 3.0.11-beta.130 (the network plan's step 5, the own walk at once): the client's own walk request (0x00a7) handed to
+// the driver once - the cell it asked for - whatever the pad does with it
+TEST(session_hands_the_clients_walk_request_once) {
+    Session s{Config{}};
+    connect(s);
+    CHECK(!s.takeWalkAsked().has_value());
+    const Bytes req = buildWalk(Cell{104, 98});
+    s.onClientSent(kMap, req.data(), req.size(), 110);
+    const std::optional<Cell> w = s.takeWalkAsked();
+    CHECK(w.has_value());
+    if (w) CHECK(w->x == 104 && w->y == 98);
+    CHECK(!s.takeWalkAsked().has_value());  // once
+}

@@ -576,6 +576,9 @@ struct Config {
     // 3.0.11-beta.123 (the network plan's step 3): [interface] smooth_fixes - the server's position fixes (0x0088) of
     // 1-3 cells glided to instead of jumped (win/net_smooth)
     bool smoothFixes = true;
+    // 3.0.11-beta.130 (the network plan's step 5; the owner «делаем»): [interface] predict_walk - the character's walk
+    // told at the click and the server's answer joined to it (core/net_predict, win/net_predict); an experiment, off
+    bool predictWalk = false;
     // 3.0.11-beta.33: [interface] minimap_way - the way followed drawn on the ground (win/ground_way): as footprints
     // (the owner: «такими типа следами типа шажков»), as the strip of 3.0.11-beta.31, or not
     WayOnGround minimapWay = WayOnGround::Steps;

@@ -55,6 +55,7 @@
 #include "win/shop_window.hpp"
 #include "win/net_smooth.hpp"
 #include "win/ammo_sound.hpp"
+#include "win/net_predict.hpp"
 #include "win/net_watch.hpp"
 #include "win/pad_carry.hpp"
 #include "win/storage_window.hpp"
@@ -889,6 +890,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     netwatchwin::frame();  // 3.0.11-beta.122: the map server's connection read each second (the minimap's badge)
     netsmoothwin::setOn(config.smoothFixes);  // 3.0.11-beta.123: [interface] smooth_fixes
     netwatchwin::setQuickAcks(config.quickAcks);  // 3.0.11-beta.128: [debug] quick_acks
+    netpredictwin::setOn(config.predictWalk);     // 3.0.11-beta.130: [interface] predict_walk
     minimapproto::frame(window, minimapShow, pk, pw, ph);
     // 3.0.11-beta.35: [interface] buffs - the buffs' column under the new minimap, the game's icons hidden
     buffcolumn::frame(window, config.buffs, config.buffsOverflow, pk, pw, ph);

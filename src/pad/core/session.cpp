@@ -94,6 +94,7 @@ void Session::feedUp(Conn& c, const uint8_t* data, size_t n, uint32_t nowMs) {
             log_.push_back("hotkey bar: " + (row == 1 ? slot : "row " + std::to_string(row) + " " + slot) + " = " +
                            hotkeyText(change->key));
         } else if (auto dest = parseWalkRequest(p)) {
+            walkAsked_ = *dest;  // 3.0.11-beta.130: for the driver's guess of the walk
             if (justStoppedWalking(nowMs))
                 log_.push_back("after the stick: the client asks to walk to " + cellText(*dest) + "; we are at " +
                                cellText(world_.selfPos(nowMs)));
