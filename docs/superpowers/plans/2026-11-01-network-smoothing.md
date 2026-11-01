@@ -62,4 +62,25 @@ cell. RO's TCP: one lost packet holds the rest until it is sent again (0.2-1 s o
   game's place re-read when it walked it, kept when it stood). Ruling N4: the character's own moves (0x0087) not
   faded - the camera follows its place before BeginScene (the world would jump round a gliding character) - cost if
   wrong: the character's own jumps stay. Suite 2104/0.
+- Numbers (R-4ZHJ3R, the owner, 18 min on c_tower2, .125): round trip 37-154 ms (about 50); 2 time-outs of OUR sent
+  bytes (the uplink); own position fixes 5-29 a minute, nearly all 1 cell (uAthena unit_attack_timer_sub sends
+  clif_fixpos for a player at each attack start) - glided by step 3; 1 late-move jump in 18 min. Ping plate with a
+  graph 3.0.11-beta.127 (the owner's ask; confirmed).
+- Step 5 (3.0.11-beta.128; the owner: «делать сеть, оно бывает глючит»): research - Windows delays the ACK of a lone
+  segment up to 200 ms (TcpAckFrequency 2), so a thin stream's server sees round trips up to 200 ms too long: its RTO
+  (SRTT + 4 RTTVAR, at least 200 ms) and its tail loss probe (2 SRTT + 200 ms with one packet in flight) late - a lost
+  server packet holds the rest 0.5 s and more. Built: [debug] quick_acks (SIO_TCP_SET_ACK_FREQUENCY 1 on the game's
+  socket; test config_debug_quick_acks); the server's held packets measured - 0x0086 (tick +12), 0x0087 (+2), 0x008a
+  (+10) against the game's server clock (timeGetTime() - session +0x5E4, FUN_0062dbb0; the session 0x771148 by its
+  callers' `mov ecx`), 250 ms late or more a hold (the late ones within a second one hold): netwatch late / held /
+  holdMs, the minute's line «N holds by the server's lost packets (at most X ms)», «обрив» 5 s and a red bar on the
+  graph (test net_watch_the_servers_held_packets). Suite 2112/0. Ruling N5: the own walk's prediction (the plan's
+  step 5) not built - at 50 ms it would win 50 ms, and on every uplink stall (the felt glitch) it walks the character
+  ahead of the server and pulls it back 1-2 cells; the ACKs and the measure attack the stalls themselves - cost if
+  wrong: the own walk keeps its round trip's delay (offered to the owner as an opt-in).
+- Step 6 (waits for the owner's leave to enter the game's VM, 192.168.122.16, Debian 13): proposed - sysctl
+  net.ipv4.tcp_thin_linear_timeouts=1 (no doubling of the retry time on a thin stream); the clients' route (the VM's
+  default via 192.168.122.1) with rto_min 80ms and quickack 1 (the server resends sooner, acknowledges the clients'
+  packets at once - their own probes sooner). No restart (new connections take the route; the sysctl at once); each
+  undone by one command; persisted in /etc/sysctl.d and the network config.
 
