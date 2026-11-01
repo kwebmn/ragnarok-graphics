@@ -94,6 +94,9 @@ constexpr const char* kTrackerState = "uaro-graphics\\tracker-state.txt";  // 3.
 constexpr const char* kHudLayout = "uaro-graphics\\hud-layout.txt";
 // 3.0.11-beta.78: each character's own hotkeys bar (core/hotbar_bars)
 constexpr const char* kHotbarBars = "uaro-graphics\\hotbar-bars.txt";
+// 3.0.11-beta.148 (2.6.17, parked till R-4FBB8B): the moment before which no character selection goes (Windows'
+// seconds since 1601)
+constexpr const char* kMapEntry = "uaro-graphics\\map-entry.txt";
 // 3.0.11-beta.79: the party's panel folded or not («folded 0|1»)
 constexpr const char* kPartyState = "uaro-graphics\\party-state.txt";
 // 3.0.11-beta.80: the party's members' looks as last seen («<account> <sex> <hair> <colour> <class> <level>» lines)

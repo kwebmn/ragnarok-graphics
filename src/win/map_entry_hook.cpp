@@ -4,15 +4,15 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <optional>
 #include <string>
 
+#include "core/layout.hpp"
 #include "core/login_exe.hpp"
 #include "core/map_entry.hpp"
-#include "core/settings/ini_edit.hpp"
 #include "core/settings/strings.hpp"
 #include "win/log.hpp"
 #include "win/paths.hpp"
+#include "win/real_ddraw.hpp"
 #include "win/text_window.hpp"
 
 namespace uagfx::win {
@@ -81,7 +81,7 @@ uint64_t wallSeconds() {
     return ((uint64_t(f.dwHighDateTime) << 32) | f.dwLowDateTime) / 10000000ull;
 }
 
-std::string holdFile() { return gameDir() + "\\uaro-graphics\\map-entry.txt"; }
+std::string holdFile() { return layout::join(gameDir(), layout::kMapEntry); }
 
 void saveHold(uint64_t wall) {
     if (wall == g_savedWall) return;
@@ -112,12 +112,7 @@ int __attribute__((thiscall)) selectQueued(void* conn, int len, const uint8_t* d
         g_held.len = len;
         g_held.on = true;
         g_held.nextPing = now + 10000;
-        std::string text;
-        readTextFile(gameDir() + "\\uaro-graphics.ini", text);
-        const auto ini = settings::readIni(text);
-        const auto word = ini.find("utility.language");
-        const auto chosen = word != ini.end() ? settings::parseLang(word->second) : std::nullopt;
-        g_held.lang = settings::startLang(chosen);
+        g_held.lang = startup().lang;  // 3.0.11-beta.148: the player's, as the driver's other words
         LOG_INFO("map entry: the character's selection waits %u s - the map server still has the failed entry",
                  unsigned((g_guard.holdUntil() - now + 999) / 1000));
         return 1;
