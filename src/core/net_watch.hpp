@@ -23,6 +23,10 @@ enum class Level : uint8_t { Unknown, Good, Fair, Bad, Stall };
 
 constexpr int kGraph = 60;  // 3.0.11-beta.127: the plate's graph - the last readings (about a minute)
 
+// 3.0.11-beta.131 (R-6MF4UU: «held 374 ms» as the report's screenshot stood the game still): a server-ticked packet's
+// lateness on the way - less the time between the game's two last reads of its socket (what the game kept waiting)
+inline int onTheWay(int lateMs, uint32_t readGapMs) { return lateMs - int(readGapMs); }
+
 class Watch {
 public:
     void tcp(const Tcp& t, uint64_t nowMs);  // a reading (about each second)

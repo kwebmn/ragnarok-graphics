@@ -13,6 +13,9 @@ namespace uagfx::win::netwatchwin {
 // its position fixes (0x0088: the character's own measured against where the game showed it) counted
 // (core/net_watch); a line in the log each minute, a stall at once. On the game's thread.
 void packet(void* connection, uint16_t id, const uint8_t* data);  // the packet tap's, each packet
+// 3.0.11-beta.131: the game read its socket (its connection's poll, each loop) - the held packets' lateness counted
+// less the time between two reads (the game standing still is not the server's hold)
+void polled();
 void frame();
 netwatch::Level level();
 int rttMs();

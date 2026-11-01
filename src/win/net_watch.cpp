@@ -72,6 +72,7 @@ struct State {
     LastErrorFn lastError = nullptr;
     TimeFn time = nullptr;
     int holdsTold = 0;
+    ULONGLONG polledAt = 0, readGap = 0;  // 3.0.11-beta.131: the game's last read of its socket, the one before it
 };
 
 State& state() {
@@ -134,7 +135,8 @@ void packet(void* connection, uint16_t id, const uint8_t* data) {
     s.watch.packet(now);
     if ((id == kMove || id == kOwnMove || id == kAct) && data) {  // 3.0.11-beta.128: held by a lost packet?
         const int late = lateness(s, data, id == kMove ? 12 : id == kOwnMove ? 2 : 10);
-        if (late > 0 && late < 60000) s.watch.late(late, now);
+        const int way = netwatch::onTheWay(late, uint32_t(std::min<ULONGLONG>(s.readGap, 60000)));  // .131
+        if (way > 0 && late < 60000) s.watch.late(way, now);
     }
     if (id == kOwnMove && data) netpredictwin::ownMove(const_cast<uint8_t*>(data));  // 3.0.11-beta.130
     if (id == kMove && data) {  // 3.0.11-beta.124: where it is shown before the game walks it (its jump faded)
@@ -221,6 +223,13 @@ netwatch::Level level() { return state().watch.level(GetTickCount64()); }
 int rttMs() { return state().watch.rttMs(); }
 
 uint32_t serverNow() { return gameTime(state()) - read32(kClockOffset); }
+
+void polled() {
+    State& s = state();
+    const ULONGLONG now = GetTickCount64();
+    s.readGap = s.polledAt ? now - s.polledAt : 0;
+    s.polledAt = now;
+}
 
 void setQuickAcks(bool on) {
     State& s = state();

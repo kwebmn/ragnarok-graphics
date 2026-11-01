@@ -115,3 +115,12 @@ TEST(net_watch_the_servers_held_packets) {
     CHECK(has(line, "2 holds by the server's lost packets (at most 380 ms)"));
     CHECK(has(w.line(122000), "0 holds"));
 }
+
+// 3.0.11-beta.131 (R-6MF4UU: «held 374 ms» right as the report's screenshot stood the game still - not the network):
+// a packet's lateness less the time between the game's two last reads of its socket - what the game itself kept
+// waiting is not the server's hold
+TEST(net_watch_the_games_own_pause_is_no_hold) {
+    CHECK(netwatch::onTheWay(374, 950) < 250);  // the game stood still almost a second: its own
+    CHECK(netwatch::onTheWay(269, 14) >= 250);  // a frame between reads: the server's packets held
+    CHECK(netwatch::onTheWay(40, 14) == 26);
+}

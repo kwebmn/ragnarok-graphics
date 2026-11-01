@@ -45,6 +45,7 @@ using PollFn = char(__attribute__((thiscall)) *)(void* connection);
 PollFn g_poll = nullptr;
 
 char __attribute__((thiscall)) poll(void* connection) {
+    netwatchwin::polled();  // 3.0.11-beta.131: the game reads its socket now
     const char fine = g_poll(connection);
     if (!fine) notifier::disconnected();
     return fine;
