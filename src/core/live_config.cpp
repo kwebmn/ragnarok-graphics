@@ -319,6 +319,10 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("menu", flag(running.menuWindow), flag(file.menuWindow)));
         n.menuWindow = file.menuWindow;
     }
+    if (file.skillCells != running.skillCells) {  // 3.0.11-beta.142: a ground skill's cells, at once
+        u.applied.push_back(change("skill_cells", flag(running.skillCells), flag(file.skillCells)));
+        n.skillCells = file.skillCells;
+    }
     if (file.uiSize != running.uiSize) {  // 3.0.11-beta.54: the new interface's size, at once
         const auto token = [](int v) { return v > 0 ? std::to_string(v) : std::string("auto"); };
         u.applied.push_back(change("size", token(running.uiSize), token(file.uiSize)));

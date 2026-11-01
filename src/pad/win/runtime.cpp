@@ -46,6 +46,7 @@
 #include "core/walk_path.hpp"
 #include "win/char_block.hpp"
 #include "win/game_camera.hpp"
+#include "win/ground_marks.hpp"
 #include "win/item_window.hpp"
 #include "win/menu_window.hpp"
 #include "win/minimap_proto.hpp"
@@ -277,6 +278,8 @@ void flushPackets() {
         // 3.0.11-beta.133 (R-N2N7T8: walked by the stick, nothing guessed - the pad's own requests go past the game's
         // send): the stick's walk request guessed by the driver too
         if (const auto walk = parseWalkRequest(p)) uagfx::win::netpredictwin::walkAsked(walk->x, walk->y);
+        if (const auto g = parseGroundSkill(p))  // 3.0.11-beta.142: its cells flashed on the ground
+            uagfx::win::groundmarks::skillCast(g->skill, g->lv, g->at.x, g->at.y);
     }
 }
 
@@ -1338,6 +1341,8 @@ void onSent(SOCKET sock, const char* buf, int n) {
         s.session->onClientSent(uintptr_t(sock), reinterpret_cast<const uint8_t*>(buf), size_t(n), GetTickCount());
         if (const auto walk = s.session->takeWalkAsked())  // 3.0.11-beta.130: the driver's guess of the own walk
             uagfx::win::netpredictwin::walkAsked(walk->x, walk->y);
+        for (const GroundSkill& g : s.session->takeGroundAsked())  // 3.0.11-beta.142: the mouse's ground skills
+            uagfx::win::groundmarks::skillCast(g.skill, g.lv, g.at.x, g.at.y);
         g_mapSocket.store(s.session->mapSocket());
         flushPackets();
     });

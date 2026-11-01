@@ -507,3 +507,27 @@ TEST(ground_way_walk_shade_reads_on_white_ground) {
     CHECK(lightA > 0 && shadeA >= lightA * 7 / 10);
 }
 
+
+// 3.0.11-beta.142 (the concept «маг, прист и хант на геймпаде»): a ground skill's cells on the map's heights - each
+// cell filled, the shape's outline only where a neighbour is not in it (no line between a wall's cells), over a dark
+// shade; nothing for a cell off the map
+TEST(ground_way_skill_cells_on_the_ground) {
+    groundway::Heights g;
+    CHECK(groundway::parseGat(gat(20, 20, [](int, int) { return -2.0f; }), g));
+    const std::vector<std::pair<int, int>> wall = {{5, 5}, {6, 5}, {7, 5}};
+    const std::vector<groundway::Tri> t = groundway::cellsShape(wall, 0x55FF8A3Du, 0xE6FF8A3Du, 1.0f, g, 5, 1.0f, 0.1f);
+    size_t fills = 0, lines = 0, shades = 0, inner = 0;
+    for (const groundway::Tri& q : t) {
+        fills += q.part == groundway::kPartCellFill ? 1 : 0;
+        lines += q.part == groundway::kPartCellLine ? 1 : 0;
+        shades += q.part == groundway::kPartShade ? 1 : 0;
+        const float cx = (q.a.x + q.b.x + q.c.x) / 3, cz = (q.a.z + q.b.z + q.c.z) / 3;
+        // cells 5 and 6 share the edge x -20; the row's inside runs z -25 to -20
+        if (q.part == groundway::kPartCellLine && std::fabs(cx + 20) < 0.5f && cz > -24 && cz < -21) ++inner;
+        CHECK(std::fabs(q.a.y + 2.1f) < 0.01f);  // on the ground, lifted 0.1 (up: -y)
+    }
+    CHECK_EQ(fills, size_t(6));
+    CHECK(lines > 0 && shades > 0 && inner == 0);
+    CHECK(groundway::cellsShape({}, 0x55FF8A3Du, 0xE6FF8A3Du, 1.0f, g, 5, 1.0f, 0.1f).empty());
+    CHECK(groundway::cellsShape({{25, 5}}, 0x55FF8A3Du, 0xE6FF8A3Du, 1.0f, g, 5, 1.0f, 0.1f).empty());
+}

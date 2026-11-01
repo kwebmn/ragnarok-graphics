@@ -4,6 +4,7 @@
 #include <cmath>
 #include <cstdlib>
 
+#include "core/skill_area.hpp"
 #include "pad/core/proto/c2s.hpp"
 
 namespace uapad {
@@ -54,6 +55,59 @@ SlotDecision castAt(const SkillInfo& sk, uint16_t lv, const WorldState& world, u
     return d;
 }
 
+namespace area = uagfx::skillarea;
+
+// 3.0.11-beta.142 (the owner's concept «маг, прист и хант на геймпаде», answer 3): a wall between us and the monster -
+// two cells from us along the server's own side toward it (a diagonal one: the 5-cell staircase), one when it is two
+// away, on it when it is next to us; no monster - two cells along our last step
+SlotDecision wallBetween(const SkillInfo& sk, uint16_t lv, const WorldState& world, uint32_t at, uint32_t adopt,
+                         uint32_t nowMs) {
+    const Cell me = world.selfPos(nowMs);
+    std::optional<Cell> pos = at != 0 ? world.actorPos(at, nowMs) : std::nullopt;
+    if (pos && *pos == me) pos.reset();
+    Cell way{0, 0};
+    int dist = 3;
+    if (pos) {
+        way = Cell{pos->x - me.x, pos->y - me.y};
+        dist = std::max(std::abs(way.x), std::abs(way.y));
+        if (dist <= 1) return send(buildSkillToPos(sk.id, lv, *pos), adopt);
+    } else if (auto last = world.lastMove()) {
+        way = *last;
+    } else {
+        return deny("no direction to put wall " + std::to_string(sk.id) + " in");
+    }
+    const area::Cell one = area::step(area::dirOf(way.x, way.y));
+    const int n = dist >= 3 ? 2 : 1;
+    return send(buildSkillToPos(sk.id, lv, Cell{me.x + one.x * n, me.y + one.y * n}), pos ? adopt : 0);
+}
+
+// 3.0.11-beta.142 (answer 5): an area where it covers the most monsters - the cell of the monster within the skill's
+// reach whose area (its radius about it) holds the most of them; a tie: the one nearest the target (us without one);
+// none within reach: nothing
+std::optional<Cell> crowdCell(uint16_t skill, int reach, const WorldState& world, uint32_t target, uint32_t nowMs) {
+    const int r = area::crowdRadius(skill);
+    const Cell me = world.selfPos(nowMs);
+    std::vector<Cell> mobs;
+    for (const auto& [id, a] : world.actors())
+        if (world.isMonster(a))
+            if (auto p = world.actorPos(id, nowMs)) mobs.push_back(*p);
+    const std::optional<Cell> near = target != 0 ? world.actorPos(target, nowMs) : std::nullopt;
+    std::optional<Cell> best;
+    int bestCount = 0, bestTie = 0;
+    for (const Cell& c : mobs) {
+        if (cellDistance(me, c) > reach) continue;
+        int count = 0;
+        for (const Cell& m : mobs) count += std::max(std::abs(m.x - c.x), std::abs(m.y - c.y)) <= r ? 1 : 0;
+        const int tie = cellDistance(near ? *near : me, c);
+        if (!best || count > bestCount || (count == bestCount && tie < bestTie)) {
+            best = c;
+            bestCount = count;
+            bestTie = tie;
+        }
+    }
+    return best;
+}
+
 // What a learned skill does right now (see decideSlot).
 SlotDecision decideSkill(const SkillInfo& sk, uint16_t lv, const WorldState& world, uint32_t target,
                          uint32_t nearest, const Config& cfg, uint32_t nowMs) {
@@ -69,7 +123,11 @@ SlotDecision decideSkill(const SkillInfo& sk, uint16_t lv, const WorldState& wor
         if (listed(cfg.groundSelf, id)) return send(buildSkillToPos(id, lv, me));
         const uint32_t at = target != 0 ? target : nearest;
         const uint32_t adopt = target != 0 ? 0 : nearest;
-        if (listed(cfg.traps, id)) {
+        const area::Kind kind = area::kindOf(id);
+        if (kind == area::Kind::Wall) return wallBetween(sk, lv, world, at, adopt, nowMs);
+        if (kind == area::Kind::Crowd && at != 0)  // a monster offered: where the most of them are
+            if (auto c = crowdCell(id, reach, world, at, nowMs)) return send(buildSkillToPos(id, lv, *c), adopt);
+        if (listed(cfg.traps, id) || kind == area::Kind::Ahead) {  // 3.0.11-beta.142: Fire Pillar as a trap
             // The server refuses a trap with any character within 1 cell, us included: put it two steps
             // towards the monster (or along our last step), always within the trap range of 3.
             std::optional<Cell> dir;

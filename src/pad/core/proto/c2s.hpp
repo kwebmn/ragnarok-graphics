@@ -35,5 +35,11 @@ std::optional<uint32_t> parseWantToConnection(const Bytes& p);  // 0x009b -> acc
 std::optional<uint32_t> parseWantToConnectionCharId(const Bytes& p);  // 0x009b -> character id
 std::optional<HotkeyChange> parseHotkeyChange(const Bytes& p);  // 0x02ba
 std::optional<Cell> parseWalkRequest(const Bytes& p);           // 0x00a7
+// 3.0.11-beta.142 (the concept «маг, прист и хант на геймпаде»): a ground skill asked for (0x0113, 22 bytes)
+struct GroundSkill {
+    uint16_t skill = 0, lv = 0;
+    Cell at;
+};
+std::optional<GroundSkill> parseGroundSkill(const Bytes& p);
 
 }  // namespace uapad

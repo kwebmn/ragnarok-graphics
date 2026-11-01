@@ -100,3 +100,14 @@ TEST(c2s_want_to_connection_char_id) {
     CHECK(parseWantToConnectionCharId(b) && *parseWantToConnectionCharId(b) == 150001u);
     CHECK(!parseWantToConnectionCharId(Bytes{0x9b, 0x00}));
 }
+
+// 3.0.11-beta.142 (the concept «маг, прист и хант на геймпаде»): a ground skill's request (0x0113, 22 bytes: lv +5,
+// skill +9, x +12, y +20) read back - the pad's own and the game's (the mouse) - for its cells' flash on the ground
+TEST(c2s_parse_ground_skill) {
+    const Bytes p = buildSkillToPos(18, 10, Cell{102, 97});
+    const auto g = parseGroundSkill(p);
+    CHECK(g.has_value());
+    if (g) CHECK(g->skill == 18 && g->lv == 10 && g->at == (Cell{102, 97}));
+    CHECK(!parseGroundSkill(buildSkillToId(19, 10, 110000001)).has_value());
+    CHECK(!parseGroundSkill(Bytes(p.begin(), p.begin() + 21)).has_value());
+}

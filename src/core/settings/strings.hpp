@@ -526,6 +526,7 @@ enum class Text : uint16_t {
     // the experience's tip, the portrait's tip (Alt+V)
     CharSkillPoints, CharExpMax, CharHour, CharMinute, CharToLevel, CharLevelIn, CharPerHour, CharSession, CharLastGain,
     CharFold, CharUnfold,
+    InterfaceSkillCells, InterfaceSkillCellsHint,  // 3.0.11-beta.142
     InterfacePadWalk, InterfacePadWalkHint, InterfacePadWalkMouse, InterfacePadWalkArrow,  // 3.0.11-beta.88
     InterfaceWalkArrow, InterfaceWalkArrowHint, WalkArrowChevrons, WalkArrowSlim, WalkArrowConcept, WalkArrowRing,
     WalkArrowDots, WalkArrowCell, WalkArrowOff,  // 3.0.11-beta.103

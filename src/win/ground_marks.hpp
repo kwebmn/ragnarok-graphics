@@ -15,6 +15,12 @@ void look(TargetRing ring);
 // softly (some 80 ms), faded in over 120 ms and out over 200 ms after letting go, the chevrons running on to the cell.
 // 3.0.11-beta.105: [interface] walk_mark - the mark at its end where the character goes
 void walkLook(WalkLook look, bool mark);
+// 3.0.11-beta.142 (the owner's concept «маг, прист и хант на геймпаде», answer 9): [interface] skill_cells - a ground
+// skill cast (0x0113: the pad's or the game's own, the mouse's) flashes its cells as the server makes them
+// (core/skill_area, from the character's cell then) on the ground for 0.45 s, coloured by the skill: fire, ice and
+// water, holy and the shields, wind and lightning, traps
+void skillCells(bool on);
+void skillCast(uint16_t skill, int lv, int x, int y);
 void newFrame();
 void draw(FrameRecord& record, int width, int height);
 

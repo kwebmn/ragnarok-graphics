@@ -97,4 +97,9 @@ std::optional<Cell> parseWalkRequest(const Bytes& p) {
     return decodePos3(p.data(), 5);
 }
 
+std::optional<GroundSkill> parseGroundSkill(const Bytes& p) {
+    if (p.size() != 22 || rd16(p.data(), 0) != 0x0113) return std::nullopt;
+    return GroundSkill{rd16(p.data(), 9), rd16(p.data(), 5), Cell{int(rd16(p.data(), 12)), int(rd16(p.data(), 20))}};
+}
+
 }  // namespace uapad

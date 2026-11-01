@@ -5395,6 +5395,15 @@ constexpr Entry kTexts[] = {
     {Text::CharLastGain, "Last gain +{1}", "Остання здобич +{1}", "Последняя добыча +{1}"},
     {Text::CharFold, "Alt+V \xE2\x80\x94 fold", "Alt+V \xE2\x80\x94 згорнути", "Alt+V \xE2\x80\x94 свернуть"},
     {Text::CharUnfold, "Alt+V \xE2\x80\x94 unfold", "Alt+V \xE2\x80\x94 розгорнути", "Alt+V \xE2\x80\x94 развернуть"},
+    // 3.0.11-beta.142: a ground skill's cells on the ground
+    {Text::InterfaceSkillCells, "Skill cells on the ground", "Клітинки навичок на землі", "Клетки навыков на земле"},
+    {Text::InterfaceSkillCellsHint,
+     "Where a ground skill landed: Fire Wall's 3 or 5 cells, Storm Gust's square, Sanctuary, a trap - the cells the "
+     "server makes, flashed on the ground after the cast, from the controller and the mouse.",
+     "Куди лягла навичка по землі: 3 чи 5 клітинок Fire Wall, квадрат Storm Gust, Sanctuary, пастка — клітинки, які "
+     "створює сервер, коротко спалахують на землі після касту, з геймпада й мишею.",
+     "Куда легло умение по земле: 3 или 5 клеток Fire Wall, квадрат Storm Gust, Sanctuary, ловушка — клетки, которые "
+     "создаёт сервер, коротко вспыхивают на земле после каста, с геймпада и мышью."},
     {Text::InterfacePadWalk, "The controller walks", "Хід контролером", "Ход контроллером"},  // 3.0.11-beta.88
     {Text::InterfacePadWalkHint,  // 3.0.11-beta.102: by the map's cells, the default
      "How the left stick walks. With an arrow: by the map's cells, the same at any camera's distance - the character "

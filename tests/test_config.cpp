@@ -1476,3 +1476,15 @@ TEST(config_walk_mark) {
     CHECK(liveUpdate(parseConfig(""), parseConfig("[interface]\nwalk_mark = 1\n")).next.walkMark);
 }
 
+
+// 3.0.11-beta.142 (the owner's concept «маг, прист и хант на геймпаде», answer 9 «дать»): [interface] skill_cells - a
+// ground skill's cells shown on the ground (core/skill_area: the server's own) after a cast, for the pad and the mouse;
+// on unless the file says 0, a box of «Інтерфейс», at once
+TEST(config_interface_skill_cells) {
+    CHECK(parseConfig("").skillCells);
+    CHECK(!parseConfig("[interface]\nskill_cells = 0\n").skillCells);
+    const settings::IniSetting* s = settings::findSetting("interface.skill_cells");
+    CHECK(s != nullptr && s->page == settings::Page::Interface);
+    CHECK(appliesNow("interface.skill_cells"));
+    CHECK(!liveUpdate(parseConfig(""), parseConfig("[interface]\nskill_cells = 0\n")).next.skillCells);
+}

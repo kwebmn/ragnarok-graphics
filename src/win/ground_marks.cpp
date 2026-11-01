@@ -10,6 +10,7 @@
 #include "core/effect_exe.hpp"
 #include "core/game_camera.hpp"
 #include "core/ground_way.hpp"
+#include "core/skill_area.hpp"
 #include "pad/win/runtime.hpp"
 #include "win/game_camera.hpp"
 #include "win/game_files.hpp"
@@ -30,6 +31,7 @@ constexpr float kArrowWidth = 1.0f, kArrowHead = 3.2f, kArrowHeadWidth = 3.0f;
 constexpr uint32_t kArrowWhite = 0x96FFFFFF, kArrowShade = 0x50000000, kArrowGold = 0xC8E6CB8A;
 // 3.0.11-beta.103: the look's arrow - faded in and out (ms), the chevrons' run
 constexpr float kFadeInMs = 120, kFadeOutMs = 200;
+constexpr double kFlashMs = 450, kFlashHoldMs = 150;  // 3.0.11-beta.142: a cast's cells - whole, then fading
 constexpr double kRunMs = 600;
 
 struct Walk {
@@ -88,8 +90,34 @@ void tellWalk(Walk& w) {
     w.endMax = w.endSum = w.feetMax = 0;
 }
 
+// 3.0.11-beta.142: a ground skill's cells flashed after its cast
+struct Flash {
+    std::vector<std::pair<int, int>> cells;
+    uint32_t fill = 0, line = 0;
+    double atMs = 0;
+};
+
+// A skill's colour on the ground: fire; ice, water and mud; holy and the shields; wind, lightning and earth; traps
+void colours(uint16_t skill, uint32_t& fill, uint32_t& line) {
+    uint32_t rgb = 0xFFFFFF;
+    switch (skill) {
+        case 18: case 80: case 83: case 285: rgb = 0xFF8A3D; break;           // Fire Wall, Pillar, Meteor, Volcano
+        case 87: case 89: case 92: case 286: rgb = 0x6CC7E8; break;           // Ice Wall, Storm Gust, Quagmire, Deluge
+        case 12: case 25: case 70: case 79: case 288: rgb = 0xE6CB8A; break;  // Safety Wall, Pneuma, Sanctuary, Magnus
+        case 21: case 85: case 91: case 287: rgb = 0xB7A6FF; break;           // Thunder Storm, LoV, Heaven's Drive
+        default:
+            if (skillarea::kindOf(skill) == skillarea::Kind::Trap) rgb = 0x7FD3C3;
+            break;
+    }
+    fill = 0x50000000u | rgb;
+    line = 0xE6000000u | rgb;
+}
+
 struct State {
     TargetRing ring = TargetRing::Pad;
+    bool cellsOn = true;  // 3.0.11-beta.142: [interface] skill_cells
+    std::vector<Flash> flashes;
+    int castsTold = 0;
     bool drawn = false;
     std::vector<groundway::Vertex> verts, flat;
     uint32_t told = 0;  // the target last told the log
@@ -186,6 +214,32 @@ void walkLook(WalkLook look, bool mark) {
              mark ? "a mark at its end where it goes" : "no mark at its end");
 }
 
+void skillCells(bool on) {
+    State& s = state();
+    if (on == s.cellsOn) return;
+    s.cellsOn = on;
+    if (!on) s.flashes.clear();
+    LOG_INFO("skill cells: [interface] skill_cells = %d", on ? 1 : 0);
+}
+
+void skillCast(uint16_t skill, int lv, int x, int y) {
+    State& s = state();
+    int px = 0, py = 0, w = 0, h = 0;
+    if (!s.cellsOn || !readPlayerCell(px, py, w, h)) return;
+    const std::vector<skillarea::Cell> cells =
+        skillarea::cells(skill, lv, skillarea::Cell{px, py}, skillarea::Cell{x, y});
+    if (cells.empty()) return;
+    Flash f;
+    for (const skillarea::Cell& c : cells) f.cells.emplace_back(c.x, c.y);
+    colours(skill, f.fill, f.line);
+    f.atMs = clockMs();
+    if (s.castsTold++ < 20)
+        LOG_INFO("skill cells: skill %u lv %d at %d, %d cast from %d, %d - %zu cells flashed", unsigned(skill), lv, x,
+                 y, px, py, f.cells.size());
+    if (s.flashes.size() >= 8) s.flashes.erase(s.flashes.begin());
+    s.flashes.push_back(std::move(f));
+}
+
 void newFrame() { state().drawn = false; }
 
 void draw(FrameRecord& record, int width, int height) {
@@ -218,7 +272,11 @@ void draw(FrameRecord& record, int width, int height) {
     }
     const bool mouse = !target && s.ring == TargetRing::Always;
     if (mouse) target = targetpanel::fighting();  // 3.0.11-beta.99: the card on or not
-    if (!target && !next && !mate && !arrowShown) return;
+    const double nowFlash = clockMs();  // 3.0.11-beta.142: a ground skill's cells after its cast
+    s.flashes.erase(std::remove_if(s.flashes.begin(), s.flashes.end(),
+                                   [&](const Flash& f) { return nowFlash - f.atMs > kFlashMs; }),
+                    s.flashes.end());
+    if (!target && !next && !mate && !arrowShown && s.flashes.empty()) return;
     float view[12];
     if (!readGameCamera(view)) return;
     const camera::Projection p = camera::projectionFor(width, height);
@@ -282,6 +340,19 @@ void draw(FrameRecord& record, int width, int height) {
                      walkLookToken(w.look), tris.size(), double(w.glide.angle) * 57.29578,
                      w.mark ? "" : ", no mark at its end", w.cut ? ", a wall past its end" : "");
         }
+    }
+    float feet[3];
+    int fw = 0, fh = 0, fcs = 0;
+    if (!s.flashes.empty() && readPlayerWorld(feet, fw, fh, fcs)) {  // 3.0.11-beta.142: on the ground's heights
+        float sign = 0;
+        if (const groundway::Heights* heights = heightsHere(s, feet, fw, fh, fcs, sign))
+            for (const Flash& f : s.flashes) {
+                const double age = nowFlash - f.atMs;
+                const float a =
+                    age < kFlashHoldMs ? 1.0f : float(1.0 - (age - kFlashHoldMs) / (kFlashMs - kFlashHoldMs));
+                groundway::placeTris(groundway::cellsShape(f.cells, f.fill, f.line, a, *heights, fcs, sign, kLift),
+                                     view, p, kBias, s.verts);
+            }
     }
     float at[3] = {0, 0, 0};
     const auto ringAt = [&](uint32_t id, uint32_t argb, bool dashed, bool notched) {

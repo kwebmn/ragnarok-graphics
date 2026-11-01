@@ -160,3 +160,71 @@ TEST(slots_trap_without_monsters_uses_last_step) {
     CHECK(cellOf(d) == (Cell{98, 102}));
     CHECK_EQ(d.newTarget, 0u);
 }
+
+// 3.0.11-beta.142 (the owner's concept «маг, прист и хант на геймпаде», answers 3 and 5): a mage's bar - Fire Wall,
+// Storm Gust, Fire Pillar - on the second row
+static WorldState mageWorld() {
+    WorldState w = fx::slotWorld();
+    w.setHotkey(10, Hotkey{1, 18, 10});  // Fire Wall
+    w.setHotkey(11, Hotkey{1, 89, 10});  // Storm Gust
+    w.setHotkey(12, Hotkey{1, 80, 10});  // Fire Pillar
+    w.apply(EvSkills{{SkillInfo{5, 1, 10, 1}, SkillInfo{28, 16, 5, 9}, SkillInfo{12, 2, 10, 9},
+                      SkillInfo{21, 2, 5, 9}, SkillInfo{19, 1, 10, 9}, SkillInfo{117, 2, 5, 3},
+                      SkillInfo{2, 0, 10, 0}, SkillInfo{18, 2, 10, 9}, SkillInfo{89, 2, 10, 9},
+                      SkillInfo{80, 2, 10, 9}}},
+            0);
+    return w;
+}
+
+// Fire Wall by a press: two cells from us toward the monster, along the server's own side (a diagonal one - the
+// 5-cell staircase); one cell when it is two away; on it when it is next to us; no monster - two cells along our last
+// step; nothing known - nowhere
+TEST(slots_fire_wall_between_us_and_the_monster) {
+    WorldState w = mageWorld();
+    fx::addMob(w, 110000001, Cell{106, 100});
+    CHECK(cellOf(slot(w, 10, 110000001, 0)) == (Cell{102, 100}));
+    fx::addMob(w, 110000002, Cell{102, 100});
+    CHECK(cellOf(slot(w, 10, 110000002, 0)) == (Cell{101, 100}));
+    fx::addMob(w, 110000003, Cell{101, 101});
+    CHECK(cellOf(slot(w, 10, 110000003, 0)) == (Cell{101, 101}));
+    fx::addMob(w, 110000004, Cell{105, 103});  // up-right by the server's rule: the diagonal
+    CHECK(cellOf(slot(w, 10, 110000004, 0)) == (Cell{102, 102}));
+    fx::addMob(w, 110000005, Cell{112, 100});  // beyond the reach: the wall still goes in front of us
+    SlotDecision far = slot(w, 10, 110000005, 0);
+    CHECK(far.kind == SlotDecision::Kind::Send && cellOf(far) == (Cell{102, 100}));
+    SlotDecision adopt = slot(w, 10, 0, 110000001);  // no target: toward the nearest, which becomes the target
+    CHECK(cellOf(adopt) == (Cell{102, 100}) && adopt.newTarget == 110000001u);
+    WorldState empty = mageWorld();
+    CHECK(slot(empty, 10, 0, 0).kind == SlotDecision::Kind::Deny);
+    empty.apply(EvSelfWalk{Cell{100, 100}, Cell{97, 104}}, 0);  // a step to the north-west
+    CHECK(cellOf(slot(empty, 10, 0, 0)) == (Cell{98, 102}));
+}
+
+// Storm Gust by a press: on the monster whose cell's area (radius 5) holds the most of them within its reach, not on
+// the lone target; a tie - the one nearest the target; none within reach - toward the target as before
+TEST(slots_crowd_skill_where_the_most_monsters_are) {
+    WorldState w = mageWorld();
+    fx::addMob(w, 110000001, Cell{104, 100});  // the target, alone
+    fx::addMob(w, 110000002, Cell{100, 106});
+    fx::addMob(w, 110000003, Cell{101, 107});
+    fx::addMob(w, 110000004, Cell{99, 107});
+    SlotDecision d = slot(w, 11, 110000001, 0);
+    CHECK(d.kind == SlotDecision::Kind::Send);
+    CHECK_EQ(rd16(d.packet.data(), 9), 89);
+    const Cell at = cellOf(d);
+    CHECK(at == (Cell{100, 106}) || at == (Cell{101, 107}) || at == (Cell{99, 107}));
+    WorldState one = mageWorld();
+    fx::addMob(one, 110000001, Cell{104, 100});
+    fx::addMob(one, 110000002, Cell{94, 100});
+    CHECK(cellOf(slot(one, 11, 110000001, 0)) == (Cell{104, 100}));  // a tie: the target's own
+    WorldState far = mageWorld();
+    fx::addMob(far, 110000001, Cell{112, 100});
+    CHECK(slot(far, 11, 110000001, 0).kind == SlotDecision::Kind::Approach);
+}
+
+// Fire Pillar by a press: like a trap, two steps toward the monster
+TEST(slots_fire_pillar_ahead_like_a_trap) {
+    WorldState w = mageWorld();
+    fx::addMob(w, 110000001, Cell{105, 103});
+    CHECK(cellOf(slot(w, 12, 110000001, 0)) == (Cell{102, 101}));
+}

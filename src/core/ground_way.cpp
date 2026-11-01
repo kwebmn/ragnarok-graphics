@@ -622,6 +622,37 @@ std::vector<Tri> walkShape(WalkLook look, const WalkArrow& a, const Heights& g, 
     return onGround(flat, g, cs, sign, lift);
 }
 
+std::vector<Tri> cellsShape(const std::vector<std::pair<int, int>>& cells, uint32_t fill, uint32_t line, float alpha,
+                            const Heights& g, int cellSize, float sign, float lift) {
+    std::vector<Tri> out;
+    if (cellSize <= 0 || g.w <= 0 || g.h <= 0 || alpha <= 0) return out;
+    const float cs = float(cellSize);
+    const auto in = [&](int x, int y) {
+        return std::find(cells.begin(), cells.end(), std::make_pair(x, y)) != cells.end();
+    };
+    std::vector<Flat> flat;
+    for (const bool shade : {true, false}) {  // the dark shade first, under the rest
+        for (const auto& [x, y] : cells) {
+            if (x < 0 || y < 0 || x >= g.w || y >= g.h) continue;
+            flat.clear();
+            Pen pen{flat, shade, shade ? 0.5f * kShadeGrow * cs : 0.0f, std::min(1.0f, alpha)};
+            float cx = 0, cz = 0;
+            cellToWorld(x, y, g.w, g.h, cellSize, cx, cz);
+            const float x1 = cx - cs / 2, z1 = cz - cs / 2, x2 = cx + cs / 2, z2 = cz + cs / 2;
+            const float half = 0.05f * cs + pen.grow, piece = 0.5f * cs;
+            pen.tri(x1, z1, x2, z1, x1, z2, fill, kPartCellFill);
+            pen.tri(x2, z1, x2, z2, x1, z2, fill, kPartCellFill);
+            if (!in(x, y - 1)) pen.line(x1, z1, x2, z1, half, piece, pen.grow, line, kPartCellLine);
+            if (!in(x, y + 1)) pen.line(x1, z2, x2, z2, half, piece, pen.grow, line, kPartCellLine);
+            if (!in(x - 1, y)) pen.line(x1, z1, x1, z2, half, piece, pen.grow, line, kPartCellLine);
+            if (!in(x + 1, y)) pen.line(x2, z1, x2, z2, half, piece, pen.grow, line, kPartCellLine);
+            const std::vector<Tri> placed = onGround(flat, g, cs, sign, lift);
+            out.insert(out.end(), placed.begin(), placed.end());
+        }
+    }
+    return out;
+}
+
 void glide(WalkGlide& g, const WalkAim& aim, float dtMs) {
     constexpr float kTurnMs = 80, kLengthMs = 100;
     const float way = std::hypot(aim.wayX, aim.wayZ);

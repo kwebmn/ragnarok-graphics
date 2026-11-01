@@ -133,6 +133,13 @@ struct WalkArrow {
 std::vector<Tri> walkShape(WalkLook look, const WalkArrow& arrow, const Heights& g, int cellSize, float sign,
                            float lift);
 
+// 3.0.11-beta.142 (the owner's concept «маг, прист и хант на геймпаде»): a ground skill's cells (core/skill_area) on
+// the map's heights - each cell filled with `fill`, the shape's outline in `line` only where a neighbour is not one
+// of them (a wall's cells read as one wall), over a dark shade as the arrows'; every colour times `alpha`; a cell off
+// the map left out alone
+std::vector<Tri> cellsShape(const std::vector<std::pair<int, int>>& cells, uint32_t fill, uint32_t line, float alpha,
+                            const Heights& g, int cellSize, float sign, float lift);
+
 // 3.0.11-beta.104 (the owner: «стрелочки очень дергаются при движении»): the arrow gliding with the character. The
 // cell asked for is the game's cell + the lead along the way, worked out again at every frame: it hopped a cell on
 // each time the character's cell changed (6-7 times a second at 150 ms a cell) while the feet glided up to it - the

@@ -194,6 +194,8 @@ const std::vector<IniSetting>& iniSettings() {
          Text::InterfaceTradeHint, ""},  // 3.0.11-beta.116
         {"interface", "menu", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::InterfaceMenu,
          Text::InterfaceMenuHint, ""},  // 3.0.11-beta.140
+        {"interface", "skill_cells", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {},
+         Text::InterfaceSkillCells, Text::InterfaceSkillCellsHint, ""},  // 3.0.11-beta.142
         // 3.0.11-beta.54: the new interface's size
         {"interface", "size", Page::Interface, Control::Choice, 0, 0, 0, {"auto", "70", "85", "100", "115", "130"},
          {Text::InterfaceSizeAuto, Text::InterfaceSize70, Text::InterfaceSize85, Text::InterfaceSize100,
@@ -1056,6 +1058,7 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "interface.storage") return c.storageWindow ? "1" : "0";  // 3.0.11-beta.115
     if (k == "interface.trade") return c.tradeWindow ? "1" : "0";      // 3.0.11-beta.116
     if (k == "interface.menu") return c.menuWindow ? "1" : "0";        // 3.0.11-beta.140
+    if (k == "interface.skill_cells") return c.skillCells ? "1" : "0";  // 3.0.11-beta.142
     if (k == "interface.animations") return c.animations ? "1" : "0";  // 3.0.11-beta.46
     if (k == "interface.panel_opacity") return std::to_string(c.hudOpacity);  // 3.0.11-beta.47
     if (k == "interface.cast") return c.castLabel ? "1" : "0";                 // 3.0.11-beta.48

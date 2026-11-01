@@ -27,6 +27,13 @@ public:
 
     void onClientSent(SocketId s, const uint8_t* data, size_t n, uint32_t nowMs);  // bytes really sent
     // 3.0.11-beta.130 (the own walk at once): the cell of the client's last walk request (0x00a7) seen since asked
+    // 3.0.11-beta.142: the ground skills the game asked for itself (the mouse's) since the last call - for their cells'
+    // flash on the ground (win/ground_marks)
+    std::vector<GroundSkill> takeGroundAsked() {
+        std::vector<GroundSkill> g;
+        g.swap(groundAsked_);
+        return g;
+    }
     std::optional<Cell> takeWalkAsked() {
         std::optional<Cell> w = walkAsked_;
         walkAsked_.reset();
@@ -76,6 +83,7 @@ public:
 
 private:
     std::optional<Cell> walkAsked_;  // 3.0.11-beta.130
+    std::vector<GroundSkill> groundAsked_;  // 3.0.11-beta.142
     struct Conn {
         enum class Kind { Unknown, Map, Other };
         Kind kind = Kind::Unknown;

@@ -904,6 +904,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     targetpanel::frame(window, config.targetCard, config.padHints, pk, pw, ph);
     groundmarks::look(config.targetRing);  // 3.0.11-beta.87: the target's ring on the ground
     groundmarks::walkLook(config.walkArrow, config.walkMark);  // 3.0.11-beta.103: the stick's arrow's look
+    groundmarks::skillCells(config.skillCells);                // 3.0.11-beta.142: a ground skill's cells
     uapad::runtime::setRing(config.targetRing != TargetRing::Off);  // 3.0.11-beta.95: the pad's fake mark off then
     uapad::runtime::setDirectWalk(config.padWalk == PadWalk::Arrow);  // 3.0.11-beta.88: the stick without the mouse
     uapad::runtime::setTiles(config.padTiles);                        // 3.0.11-beta.90: Start opens the tile

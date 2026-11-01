@@ -101,6 +101,7 @@ void Session::feedUp(Conn& c, const uint8_t* data, size_t n, uint32_t nowMs) {
             controller_.onClientWalk(*dest, world_, nowMs);
         } else if (p.size() >= 2 && (rd16(p.data(), 0) == 0x0072 || rd16(p.data(), 0) == 0x0113)) {
             controller_.onClientSkill(nowMs);  // useskilltoid / useskilltopos
+            if (auto g = parseGroundSkill(p); g && groundAsked_.size() < 8) groundAsked_.push_back(*g);
         }
     }
 }
