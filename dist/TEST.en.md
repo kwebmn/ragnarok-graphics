@@ -1,3 +1,11 @@
+# uaRO Graphics 3.0.11-beta.135 — what's new
+
+**Walking without waiting for the server — only on a healthy connection** (report R-DWCBHA):
+- While the connection loses packets (a time-out or a server's delay in the last 5 seconds, bytes sent again, a
+  round trip of 250 ms or more) no walk is guessed: the server's answers then come late and out of turn.
+- No walk is guessed while the walk asked before still waits for the server's answer.
+- Fixed: with no way known yet the guess wrongly took the server for still walking the character.
+
 # uaRO Graphics 3.0.11-beta.134 — what's new
 
 **Walking without waiting for the server — fewer mismatches** (report R-U436CU):
