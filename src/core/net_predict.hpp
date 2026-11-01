@@ -29,4 +29,16 @@ Answer answer(const Guess& g, const Move& server);  // Join: the same cells both
 bool predicts(int fromX, int fromY, int toX, int toY);  // another cell, at most 20 cells away
 uint32_t waitMs(int rttMs);  // four round trips and 200 ms, at least 600 (the round trip not known: 600)
 
+// 3.0.11-beta.132 (R-6D43Y6: a walk guessed while five Seals hit the character - no answer, put back): the server
+// holds a unit still after it was hit (its damage motion; not when endured, missed or dodged) and after it attacked
+// (its attack motion) - a walk asked then waits there; no guess until 50 ms after that hold (the server's clock)
+struct Act {  // ZC_NOTIFY_ACT (0x008a, 29 bytes)
+    uint32_t src = 0, dst = 0, tick = 0;  // who +2, whom +6, the server's tick +10
+    int srcSpeed = 0, dstSpeed = 0;      // the attack's motion +14, the damage's +18 (ms)
+    int damage = 0, type = 0;            // the damage +22, the kind +26 (0 hit, 4 endured, 8 hits, 9 endured, 10 critical)
+};
+bool readAct(const uint8_t* packet, size_t size, Act& a);
+uint32_t holdUntil(uint32_t until, const Act& a, uint32_t own);  // the server's clock the own walk is held to
+bool heldNow(uint32_t serverNow, uint32_t until);
+
 }  // namespace uagfx::netpredict

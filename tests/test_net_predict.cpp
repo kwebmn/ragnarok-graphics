@@ -64,3 +64,57 @@ TEST(net_predict_which_walks_and_how_long) {
     CHECK(netpredict::predicts(150, 180, 170, 180) && !netpredict::predicts(150, 180, 171, 180));
     CHECK(netpredict::waitMs(50) == 600 && netpredict::waitMs(300) == 1400 && netpredict::waitMs(-1) == 600);
 }
+
+// 3.0.11-beta.132 (R-6D43Y6: a walk guessed while five Seals hit the character - the server holds a hit or attacking
+// unit still for its damage or attack motion, so no answer came and it was put back): the server's hold on the own
+// walk from its acts (0x008a) - hit (damage, not endured, not missed): its damage motion; attacking: its attack motion
+TEST(net_predict_the_servers_hold_on_the_walk) {
+    netpredict::Act hit;
+    hit.src = 110021272;
+    hit.dst = 2000000;
+    hit.tick = 1000;
+    hit.srcSpeed = 872;
+    hit.dstSpeed = 480;
+    hit.damage = 120;
+    hit.type = 0;
+    CHECK(netpredict::holdUntil(0, hit, 2000000) == 1480);
+    CHECK(netpredict::holdUntil(1600, hit, 2000000) == 1600);  // a longer hold kept
+    netpredict::Act endured = hit;
+    endured.type = 4;
+    CHECK(netpredict::holdUntil(0, endured, 2000000) == 0);
+    netpredict::Act missed = hit;
+    missed.damage = 0;
+    CHECK(netpredict::holdUntil(0, missed, 2000000) == 0);
+    netpredict::Act attack = hit;  // the character hits a Seal
+    attack.src = 2000000;
+    attack.dst = 110021272;
+    attack.tick = 3000;
+    attack.srcSpeed = 384;
+    CHECK(netpredict::holdUntil(0, attack, 2000000) == 3384);
+    netpredict::Act others = hit;  // another's fight
+    others.dst = 2000001;
+    CHECK(netpredict::holdUntil(0, others, 2000000) == 0);
+    CHECK(netpredict::heldNow(1500, 1480) && !netpredict::heldNow(1531, 1480));  // 50 ms over it
+}
+
+// ZC_NOTIFY_ACT (29 bytes): who +2, whom +6, the server's tick +10, the attack's motion +14, the damage's motion +18,
+// the damage +22, the hits +24, the kind +26
+TEST(net_predict_reads_an_act) {
+    std::vector<uint8_t> p(29, 0);
+    p[0] = 0x8A;
+    const auto put32 = [&](size_t at, uint32_t v) {
+        for (int i = 0; i < 4; ++i) p[at + size_t(i)] = uint8_t(v >> (8 * i));
+    };
+    put32(2, 110021272);
+    put32(6, 2000000);
+    put32(10, 123456);
+    put32(14, 872);
+    put32(18, 480);
+    p[22] = 120;
+    p[26] = 10;  // a critical hit
+    netpredict::Act a;
+    CHECK(netpredict::readAct(p.data(), p.size(), a));
+    CHECK(a.src == 110021272 && a.dst == 2000000 && a.tick == 123456 && a.srcSpeed == 872 && a.dstSpeed == 480);
+    CHECK(a.damage == 120 && a.type == 10);
+    CHECK(!netpredict::readAct(p.data(), 28, a));
+}

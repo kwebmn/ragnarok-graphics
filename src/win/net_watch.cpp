@@ -139,6 +139,7 @@ void packet(void* connection, uint16_t id, const uint8_t* data) {
         if (way > 0 && late < 60000) s.watch.late(way, now);
     }
     if (id == kOwnMove && data) netpredictwin::ownMove(const_cast<uint8_t*>(data));  // 3.0.11-beta.130
+    if (id == kAct && data) netpredictwin::act(data);  // 3.0.11-beta.132: the server's hold on the own walk
     if (id == kMove && data) {  // 3.0.11-beta.124: where it is shown before the game walks it (its jump faded)
         uint32_t unit = 0;
         std::memcpy(&unit, data + 2, 4);

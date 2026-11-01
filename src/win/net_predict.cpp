@@ -5,6 +5,7 @@
 #include <cmath>
 #include <cstdint>
 
+#include "core/char_status.hpp"
 #include "core/net_predict.hpp"
 #include "win/game_camera.hpp"
 #include "win/log.hpp"
@@ -31,6 +32,8 @@ struct State {
     float lastX = 0, lastZ = 0;
     uint64_t stillSince = 0;
     int joined = 0, other = 0, putBack = 0, guessed = 0, told = 0;
+    uint32_t holdUntil = 0;  // 3.0.11-beta.132: the server's clock the own walk is held to (hit, attacking)
+    int heldTold = 0;
 };
 
 State& state() {
@@ -55,6 +58,11 @@ bool tell(uint32_t actor, int msg, int a, int b) {
     return true;
 }
 
+bool dead() {
+    charstatus::Status st;
+    return readOwnStatus(st) && st.hpMost > 0 && st.hp <= 0;
+}
+
 bool casting(uint32_t actor) {
     const uint32_t gauge = read32(actor + kGauge);
     return gauge && read32(gauge) == kGaugeClass;
@@ -67,7 +75,13 @@ void guess(State& s, uint64_t now) {
     const uint32_t actor = player();
     if (!actor || !readPlayerCell(x, y, w, h)) return;
     const bool still = s.stillSince && now - s.stillSince >= kStillMs;
-    if (!still || casting(actor) || !np::predicts(x, y, s.askX, s.askY)) return;
+    if (!still || casting(actor) || !np::predicts(x, y, s.askX, s.askY) || dead()) return;
+    if (const uint32_t clock = netwatchwin::serverNow(); np::heldNow(clock, s.holdUntil)) {  // 3.0.11-beta.132
+        if (s.heldTold++ < 10)
+            LOG_INFO("net: the walk not guessed - the server holds the character %d ms more (hit or attacking)",
+                     int(int32_t(s.holdUntil - clock)));
+        return;
+    }
     np::Move m;
     m.tick = netwatchwin::serverNow();
     m.srcX = x;
@@ -124,6 +138,12 @@ void ownMove(uint8_t* packet) {
                  s.guess.move.dstY);
 }
 
+void act(const uint8_t* packet) {
+    State& s = state();
+    np::Act a;
+    if (s.on && np::readAct(packet, 29, a)) s.holdUntil = np::holdUntil(s.holdUntil, a, read32(kOwnAccount));
+}
+
 void beginScene() {
     State& s = state();
     if (!s.on) return;
@@ -141,6 +161,7 @@ void beginScene() {
     s.lastZ = at[2];
     if (s.guess.pending && now - s.guess.atMs > np::waitMs(netwatchwin::rttMs())) {  // the server did not walk it
         s.guess.pending = false;
+        if (dead()) return;  // 3.0.11-beta.132: died meanwhile - the game shows it as the server has it
         tell(player(), kPutMsg, s.guess.move.srcX, s.guess.move.srcY);
         if (++s.putBack <= 20)
             LOG_INFO("net: no answer to the guessed walk in %u ms - the server did not walk it: put back on %d, %d",

@@ -13,6 +13,9 @@ namespace uagfx::win::netpredictwin {
 void setOn(bool on);
 void walkAsked(int x, int y);   // the game sent its walk request - the pad's send hook
 void ownMove(uint8_t* packet);  // ZC_NOTIFY_PLAYERMOVE before the game reads it - the packet tap
+// 3.0.11-beta.132: ZC_NOTIFY_ACT - the character hit or attacking: the server holds its walk for the motion (no guess
+// until then); a dead character neither guessed nor put back
+void act(const uint8_t* packet);
 void beginScene();              // each frame before the scene (Device7::BeginScene)
 
 }  // namespace uagfx::win::netpredictwin

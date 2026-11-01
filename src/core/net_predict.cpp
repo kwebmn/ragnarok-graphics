@@ -34,4 +34,40 @@ bool predicts(int fromX, int fromY, int toX, int toY) {
 
 uint32_t waitMs(int rttMs) { return uint32_t(std::max(600, 4 * std::max(0, rttMs) + 200)); }
 
+namespace {
+
+uint32_t rd32(const uint8_t* p, size_t at) {
+    return uint32_t(p[at]) | uint32_t(p[at + 1]) << 8 | uint32_t(p[at + 2]) << 16 | uint32_t(p[at + 3]) << 24;
+}
+
+// The later of two of the server's ticks (they wrap)
+uint32_t later(uint32_t a, uint32_t b) { return int32_t(b - a) > 0 ? b : a; }
+
+bool attackKind(int type) { return type == 0 || type == 8 || type == 10; }  // a hit, hits, a critical
+
+}  // namespace
+
+bool readAct(const uint8_t* p, size_t size, Act& a) {
+    if (!p || size < 29) return false;
+    a.src = rd32(p, 2);
+    a.dst = rd32(p, 6);
+    a.tick = rd32(p, 10);
+    a.srcSpeed = int(rd32(p, 14));
+    a.dstSpeed = int(rd32(p, 18));
+    a.damage = int(int16_t(uint16_t(p[22] | p[23] << 8)));
+    a.type = int(p[26]);
+    return true;
+}
+
+uint32_t holdUntil(uint32_t until, const Act& a, uint32_t own) {
+    if (!own) return until;
+    if (a.dst == own && a.damage > 0 && attackKind(a.type) && a.dstSpeed > 0)  // hit: its damage motion
+        return until ? later(until, a.tick + uint32_t(a.dstSpeed)) : a.tick + uint32_t(a.dstSpeed);
+    if (a.src == own && (attackKind(a.type) || a.type == 4 || a.type == 9) && a.srcSpeed > 0)  // it attacked
+        return until ? later(until, a.tick + uint32_t(a.srcSpeed)) : a.tick + uint32_t(a.srcSpeed);
+    return until;
+}
+
+bool heldNow(uint32_t serverNow, uint32_t until) { return until && int32_t(serverNow - (until + 50)) < 0; }
+
 }  // namespace uagfx::netpredict

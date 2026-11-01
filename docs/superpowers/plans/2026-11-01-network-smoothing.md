@@ -96,4 +96,11 @@ cell. RO's TCP: one lost packet holds the rest until it is sent again (0.2-1 s o
   Ruling N6: the joined answer's tick is the guess's (older by about a round trip) - with a round trip over 144 ms the
   game counts it late and after 4 in a row moves its server clock back 144 ms (any on-time packet resets the count) -
   cost if wrong: other units' moves read a little late after several own walks in a row on a slow line.
+- R-6D43Y6 (owner, .130, cmd_fild02, the same session to 03:19): a real ~1 s network outage at 03:18:23 both ways (our
+  TCP time-out + the server's packets held 1042 ms, fps steady 72); «held 914/726 ms» right after two reports'
+  screenshots (fixed in .131). Prediction on: 1 joined (47 ms after the guess), 1 put back - five Seals hit the
+  character at the click, it died 27 ms later. 3.0.11-beta.132: netpredict Act/readAct/holdUntil/heldNow (tests
+  net_predict_the_servers_hold_on_the_walk, net_predict_reads_an_act) - no guess while the server holds the own walk
+  (hit: tick + damage motion unless endured or missed; attacking: tick + attack motion; +50 ms), none and no put back
+  for a dead character. Suite 2123/0.
 
