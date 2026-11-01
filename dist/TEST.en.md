@@ -1,3 +1,10 @@
+# uaRO Graphics 3.0.11-beta.132 — what's new
+
+**Walking without waiting for the server — fewer put-backs** (report R-6D43Y6):
+- No walk is guessed while the server holds the character still anyway: right after it is hit and after its own
+  attack. That is how the report's character was put back - five Seals were hitting it at the click.
+- A dead character is neither moved nor put back.
+
 # uaRO Graphics 3.0.11-beta.131 — what's new
 
 **The server's delays measured more truly** (report R-6MF4UU):
