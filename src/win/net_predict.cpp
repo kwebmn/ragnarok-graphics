@@ -99,10 +99,14 @@ void guess(State& s, uint64_t now) {
                      s.lastMove.srcY, s.lastMove.dstX, s.lastMove.dstY);
         return;
     }
-    // 3.0.11-beta.135: packets lost now (a time-out or a hold of the server's in 5 s, bytes sent again in 10 s, a
-    // round trip of 250 ms) - the answers late and out of turn: no guess
-    if (const netwatch::Level lv = netwatchwin::level(); lv == netwatch::Level::Stall || lv == netwatch::Level::Bad) {
-        if (s.badTold++ < 10) LOG_INFO("net: the walk not guessed - the connection loses packets now");
+    // 3.0.11-beta.135: packets lost now - the answers late and out of turn: no guess; 3.0.11-beta.137 (R-QTN6TF: both
+    // put back were guessed in a calm moment of a lossy line): none lost for 30 s, a round trip under 150 ms
+    if (!np::calm(now, netwatchwin::lastLossMs(), netwatchwin::rttMs())) {
+        if (s.badTold++ < 10)
+            LOG_INFO("net: the walk not guessed - the line is not calm (a packet lost %llu s ago, round trip %d ms)",
+                     static_cast<unsigned long long>(netwatchwin::lastLossMs()
+                                                         ? (now - netwatchwin::lastLossMs()) / 1000 : 0),
+                     netwatchwin::rttMs());
         return;
     }
     if (!np::caughtUp(x, y, s.placed)) {  // 3.0.11-beta.136: the game shows it short of the server's cell

@@ -26,5 +26,6 @@ std::vector<int> graph();  // 3.0.11-beta.127: the last minute's round trips (ms
 // server's held packets measured (a moving or hitting unit's packet late by its server tick against the game's clock)
 void setQuickAcks(bool on);
 uint32_t serverNow();  // 3.0.11-beta.130: the game's server clock - timeGetTime() less the session's +0x5E4
+uint64_t lastLossMs();  // 3.0.11-beta.137: when a packet was last lost (GetTickCount64; 0 none yet)
 
 }  // namespace uagfx::win::netwatchwin

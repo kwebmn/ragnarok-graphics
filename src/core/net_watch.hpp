@@ -53,6 +53,8 @@ public:
     void late(int ms, uint64_t nowMs);
     bool held();  // a new hold since last asked (told once)
     int holdMs() const { return holdMs_; }  // the last hold's lateness at most
+    // 3.0.11-beta.137 (R-QTN6TF): when a packet was last lost - a time-out, bytes sent again, a hold (0 none yet)
+    uint64_t lastLossMs() const { return lossAt_; }
 
 private:
     bool known_ = false, stallTold_ = true;
@@ -64,6 +66,7 @@ private:
     int graph_[kGraph] = {};
     int graphNext_ = 0, graphCount_ = 0;
     uint64_t holdAt_ = 0, lateAt_ = 0, readAt_ = 0;  // 3.0.11-beta.128: the hold began, its last late one, a reading
+    uint64_t lossAt_ = 0;                            // 3.0.11-beta.137
     int holdMs_ = 0, holds_ = 0, holdMost_ = 0;
     bool holdTold_ = true;
 };

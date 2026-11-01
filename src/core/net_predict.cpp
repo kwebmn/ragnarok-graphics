@@ -82,6 +82,10 @@ bool caughtUp(int shownX, int shownY, const Placed& at) {
     return true;
 }
 
+bool calm(uint64_t nowMs, uint64_t lastLossMs, int rttMs) {
+    return (!lastLossMs || nowMs < lastLossMs || nowMs - lastLossMs >= 30000) && rttMs < 150;
+}
+
 uint32_t walkEnds(const Move& m, int speedMs) {
     const int dx = std::abs(m.dstX - m.srcX), dy = std::abs(m.dstY - m.srcY);
     const int diagonal = std::min(dx, dy), straight = std::max(dx, dy) - diagonal;

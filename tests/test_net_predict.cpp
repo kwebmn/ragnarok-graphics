@@ -170,3 +170,12 @@ TEST(net_predict_guess_only_where_the_server_has_it) {
     netpredict::Placed none;
     CHECK(netpredict::caughtUp(228, 130, none));  // nothing known yet: the first walk after the map's entry
 }
+
+// 3.0.11-beta.137 (R-QTN6TF): guessed only on a calm line - no loss for 30 s and a round trip under 150 ms
+TEST(net_predict_only_on_a_calm_line) {
+    CHECK(netpredict::calm(100000, 0, 60));         // no loss seen
+    CHECK(netpredict::calm(100000, 69000, 60));     // 31 s since the last
+    CHECK(!netpredict::calm(100000, 75000, 60));    // 25 s
+    CHECK(!netpredict::calm(100000, 0, 150));       // a slow line
+    CHECK(netpredict::calm(100000, 0, 0));          // the round trip not known yet
+}

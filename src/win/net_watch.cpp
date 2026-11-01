@@ -233,6 +233,8 @@ int rttMs() { return state().watch.rttMs(); }
 
 uint32_t serverNow() { return gameTime(state()) - read32(kClockOffset); }
 
+uint64_t lastLossMs() { return state().watch.lastLossMs(); }
+
 void polled() {
     State& s = state();
     const ULONGLONG now = GetTickCount64();

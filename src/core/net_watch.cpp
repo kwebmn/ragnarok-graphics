@@ -26,11 +26,11 @@ void Watch::tcp(const Tcp& t, uint64_t nowMs) {
     } else {
         if (t.bytesRetrans > last_.bytesRetrans) {
             resent_ += t.bytesRetrans - last_.bytesRetrans;
-            resentAt_ = nowMs;
+            resentAt_ = lossAt_ = nowMs;
         }
         if (t.timeouts > last_.timeouts) {
             timeouts_ += t.timeouts - last_.timeouts;
-            timeoutAt_ = nowMs;
+            timeoutAt_ = lossAt_ = nowMs;
             stallTold_ = false;
         }
     }
@@ -64,7 +64,7 @@ void Watch::late(int ms, uint64_t nowMs) {
     if (ms < kHeldMs) return;
     if (!lateAt_ || nowMs - lateAt_ > kHoldGapMs) {  // a new hold
         ++holds_;
-        holdAt_ = nowMs ? nowMs : 1;
+        holdAt_ = lossAt_ = nowMs ? nowMs : 1;
         holdMs_ = 0;
         holdTold_ = false;
     }

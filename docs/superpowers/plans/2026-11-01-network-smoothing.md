@@ -125,4 +125,8 @@ cell. RO's TCP: one lost packet holds the rest until it is sent again (0.2-1 s o
   3.0.11-beta.136: netpredict Placed/caughtUp (test net_predict_guess_only_where_the_server_has_it) - guessed only
   from the cell the server last put the character on (its last 0x0087's end, or a later own 0x0088); reset on another
   map. Suite 2127/0.
+- R-QTN6TF (.136, 4 min, the line still lossy: 8 time-outs, ~18 server holds 0.3-1.1 s, round trip 79-143, peaks
+  694): 5 joined (93-172 ms), 0 «another way» (caughtUp skipped one), 2 put back - both guessed in a calm moment, the
+  request lost right after. 3.0.11-beta.137: netwatch lastLossMs (time-out, resent, hold; test net_watch_the_last_loss),
+  netpredict calm (no loss 30 s, round trip < 150; test net_predict_only_on_a_calm_line) in place of the level check.
 

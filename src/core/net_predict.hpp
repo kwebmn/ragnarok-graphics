@@ -64,4 +64,8 @@ struct Placed {
 };
 bool caughtUp(int shownX, int shownY, const Placed& at);
 
+// 3.0.11-beta.137 (R-QTN6TF: both walks put back were guessed in a calm moment of a lossy line): a calm line - no
+// packet lost for 30 s (0: none seen) and a round trip under 150 ms (0: not known yet)
+bool calm(uint64_t nowMs, uint64_t lastLossMs, int rttMs);
+
 }  // namespace uagfx::netpredict

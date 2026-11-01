@@ -133,3 +133,19 @@ TEST(net_watch_a_backlog_tells_no_hold) {
     CHECK(!netwatch::inBacklog(6500, 4000));  // past 2 s
     CHECK(!netwatch::inBacklog(5000, 0));     // none
 }
+
+// 3.0.11-beta.137 (R-QTN6TF: both walks put back were guessed in a calm moment of a lossy line, the request lost
+// right after): the last loss of any kind - a time-out, bytes sent again, a hold of the server's
+TEST(net_watch_the_last_loss) {
+    netwatch::Watch w;
+    CHECK(w.lastLossMs() == 0);
+    w.tcp(tcp(45, 0, 0), 1000);
+    w.late(380, 2000);  // a hold
+    CHECK(w.lastLossMs() == 2000);
+    w.tcp(tcp(45, 300, 0), 5000);  // bytes sent again
+    CHECK(w.lastLossMs() == 5000);
+    w.tcp(tcp(45, 300, 1), 9000);  // a time-out
+    CHECK(w.lastLossMs() == 9000);
+    w.tcp(tcp(45, 300, 1), 10000);  // nothing new
+    CHECK(w.lastLossMs() == 9000);
+}
