@@ -1,3 +1,12 @@
+# uaRO Graphics 3.0.11-beta.150 — what's new
+
+**Requests and NPC inputs in the new look** (the second group of the game's remaining windows):
+- A trade request, a party or guild invitation, a friend request - a card at the screen's middle: who invites and to
+  what, "Accept" and "Decline". Esc and the controller's B decline, A accepts.
+- A number or words an NPC asks for - the same card with a field: type on the keyboard (or with the controller, as
+  before), Enter or "Done" sends it. The field is the game's own, so typing works as before.
+- The switch "Requests and NPC inputs" under "Interface", on with the new minimap.
+
 # uaRO Graphics 3.0.11-beta.149 — what's new
 
 **Item and skill cards in the new look** (the first of the game's remaining windows):
