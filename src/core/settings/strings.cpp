@@ -6253,9 +6253,9 @@ constexpr Entry kTexts[] = {
      "The game waits for the map server up to a minute instead of 15 seconds, and connects again when its connection "
      "did not come up - instead of \"Failed to connect to Server\".",
      "Гра чекає на сервер карти до хвилини замість 15 секунд і підключається знову, якщо з'єднання не встановилося, "
-     "— замість «Failed to connect to Server».",
+     "— замість помилки гри Failed to connect to Server.",
      "Игра ждёт сервер карты до минуты вместо 15 секунд и подключается снова, если соединение не установилось, — "
-     "вместо «Failed to connect to Server»."},
+     "вместо ошибки игры Failed to connect to Server."},
     {Text::ConnEntryPause, "Pause after a failed entry", "Пауза після невдалого входу", "Пауза после неудачного входа"},
     {Text::ConnEntryPauseHint,
      "If getting onto a map failed, the next character selection waits until the server has forgotten that attempt "
