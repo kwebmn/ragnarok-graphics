@@ -1,3 +1,13 @@
+# uaRO Graphics 3.0.11-beta.154 — what's new
+
+**The merchant's cart in the new look** (the fourth group of the remaining windows, its start):
+- "Cart" opens in place of the old window (Alt+W or the cart button in the character window): the same tabs,
+  search, "★" and grid as "Storage", the cart's weight at the foot, the things carried in the title ("Cart · 12/100").
+- Drag things between the cart, "Items" and "Storage" - the game itself moves them (its count window for a stack).
+- A double click on a thing in the cart takes it into the bag; a right click shows its card.
+- The controller: the D-pad moves the frame, A into the bag, Y its card, LB/RB the tabs, B closes.
+- The switch "Cart" under "Interface", on with the new minimap.
+
 # uaRO Graphics 3.0.11-beta.153 — what's new
 
 **The character make in the new look** (the third group of the remaining windows, its end):
