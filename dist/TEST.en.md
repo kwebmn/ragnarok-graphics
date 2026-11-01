@@ -1,3 +1,13 @@
+# uaRO Graphics 3.0.11-beta.143 — what's new
+
+**Ground skills, step 2: walls and traps on the hotbar**:
+- Fire Wall's slot shows how many of your walls stand: "2/3" (the server allows 3 at once). The same for Quagmire (up
+  to 3) and Fire Pillar (up to 5).
+- When a wall has burnt out entirely, the slot's edge lights amber for a second and a half - time to put a new one.
+- A hunter's trap slot shows the Trap items left in the bag: "×37", in red when none is left.
+- Only your own walls count, by the server's packets about skill cells; a map change starts the count anew.
+- Switched in "Interface" -> "Walls and traps on the hotbar" (console: `interface.ground_counts`), on at once.
+
 # uaRO Graphics 3.0.11-beta.142 — what's new
 
 **Ground skills on the controller, step 1** (the concept "mage, priest and hunter on the controller"):
