@@ -1,3 +1,19 @@
+# uaRO Graphics 3.0.11-beta.141 — what's new
+
+**The character block: Alt+V and the experience in numbers**:
+- Alt+V, as in the game, unfolds and folds the block: full <-> small (compact or the icon - the one you chose last).
+  The game's own window no longer gets the key. With windows open, Alt+V still shows the full block.
+- The full block has two experience bars: Base (lilac) and Job (teal), with a tick each 10 %. The per cent at the
+  right, the exact experience under the bar - "1 234 567 / 2 666 000". Beside it the pace an hour and the time to the
+  level: "+4,2 %/h · ≈ 13 h". The pace counts the last 10 minutes of play; none in the first minute.
+- Point at an experience bar for a tip: what is left to the level, the experience an hour, when the level comes, this
+  session's gain and the last gain.
+- The weight in numbers now - "Weight 1 710 / 4 500 · 38 %", the zeny beside it. Under it a line of its own: the free
+  stat points, skill points and the arrows when few are left.
+- The compact block has two thin experience lines at its foot. The compact block's and the rings' tips show the
+  experience in numbers.
+- The portrait's tip reminds of Alt+V.
+
 # uaRO Graphics 3.0.11-beta.140 — what's new
 
 **The menu and the death screen in the new look**:
