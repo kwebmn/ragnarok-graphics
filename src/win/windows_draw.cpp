@@ -18,6 +18,7 @@
 #include "win/skill_window.hpp"
 #include "win/stat_window.hpp"
 #include "win/storage_window.hpp"
+#include "win/ask_card.hpp"
 #include "win/info_card.hpp"
 #include "win/menu_window.hpp"
 #include "win/trade_window.hpp"
@@ -51,6 +52,7 @@ void __attribute__((thiscall)) windowsDraw(uint32_t manager) {
     tradewin::beforeGameDraw();    // 3.0.11-beta.116: «Обмін» (and «Речі» made beside it)
     menuwin::beforeGameDraw();     // 3.0.11-beta.140: the menu and the death screen
     infocardwin::beforeGameDraw();  // 3.0.11-beta.149: the item card and the skill card
+    askcardwin::beforeGameDraw();   // 3.0.11-beta.150: the requests and the NPC's inputs
     mobhpwin::beforeGameDraw();   // 3.0.11-beta.100: the monsters' per cent asked
     charpanel::beforeGameDraw();  // the Basic Info window
     hotbarwin::beforeGameDraw();  // the hotkeys' bar

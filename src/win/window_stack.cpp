@@ -7,6 +7,7 @@
 
 #include "pad/win/game_window.hpp"
 #include "win/chat_window.hpp"
+#include "win/ask_card.hpp"
 #include "win/equip_window.hpp"
 #include "win/info_card.hpp"
 #include "win/item_window.hpp"
@@ -28,7 +29,7 @@ using uapad::gamewindow::Blocker;
 
 constexpr const char* kNames[] = {"«Речі»",  "«Характеристики»", "«Навички»", "«Спорядження»",
                                   "the shop", "the NPC talk",      "«Довідник»", "«Склад»", "«Обмін»",
-                                  "the menu", "the item card", "the skill card"};
+                                  "the menu", "the item card", "the skill card", "the request"};
 static_assert(std::size(kNames) == size_t(winstack::kWins), "a name for each window");
 constexpr int kMostTold = 40;
 
@@ -73,6 +74,7 @@ bool shown(Win w) {
         case Win::Menu: return menuwin::shown();  // 3.0.11-beta.140
         case Win::ItemCard: return infocardwin::shown(infocardwin::Kind::Item);  // 3.0.11-beta.149
         case Win::SkillCard: return infocardwin::shown(infocardwin::Kind::Skill);
+        case Win::Ask: return askcardwin::shown();  // 3.0.11-beta.150
     }
     return false;
 }
@@ -90,6 +92,7 @@ Blocker blockerOf(Win w) {
         case Win::Menu: return Blocker::Menu;
         case Win::ItemCard: return Blocker::ItemCard;
         case Win::SkillCard: return Blocker::SkillCard;
+        case Win::Ask: return Blocker::Ask;
         case Win::Reference: break;
     }
     return Blocker::Reference;
@@ -109,6 +112,7 @@ void drawOne(Win w, FrameRecord& record, gpu::Renderer& renderer) {
         case Win::Menu: menuwin::draw(record, renderer); break;
         case Win::ItemCard: infocardwin::draw(infocardwin::Kind::Item, record, renderer); break;
         case Win::SkillCard: infocardwin::draw(infocardwin::Kind::Skill, record, renderer); break;
+        case Win::Ask: askcardwin::draw(record, renderer); break;
     }
 }
 
@@ -126,6 +130,7 @@ bool mouseOne(Win w, HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
         case Win::Menu: return menuwin::mouse(game, m, wp, lp, result);
         case Win::ItemCard: return infocardwin::mouse(infocardwin::Kind::Item, game, m, wp, lp, result);
         case Win::SkillCard: return infocardwin::mouse(infocardwin::Kind::Skill, game, m, wp, lp, result);
+        case Win::Ask: return askcardwin::mouse(game, m, wp, lp, result);
     }
     return false;
 }
@@ -146,7 +151,8 @@ bool keyOne(Win w, UINT m, WPARAM wp, LPARAM lp) {  // the windows with keys of 
 }
 
 bool movable(Win w) {  // .140: the menu centred; .149: a card beside the cursor that opened it
-    return w != Win::Npc && w != Win::Reference && w != Win::Menu && w != Win::ItemCard && w != Win::SkillCard;
+    return w != Win::Npc && w != Win::Reference && w != Win::Menu && w != Win::ItemCard && w != Win::SkillCard &&
+           w != Win::Ask;
 }
 
 bool boxOf(Win w, winstack::Box& b) {
@@ -163,6 +169,7 @@ bool boxOf(Win w, winstack::Box& b) {
         case Win::Menu: return menuwin::box(b.x, b.y, b.w, b.h);
         case Win::ItemCard: return infocardwin::box(infocardwin::Kind::Item, b.x, b.y, b.w, b.h);
         case Win::SkillCard: return infocardwin::box(infocardwin::Kind::Skill, b.x, b.y, b.w, b.h);
+        case Win::Ask: return askcardwin::box(b.x, b.y, b.w, b.h);
     }
     return false;
 }
@@ -265,6 +272,7 @@ bool close(Win w) {
         case Win::Trade: tradewin::padCommand(tradewin::PadCommand::Cancel); return true;
         case Win::ItemCard: infocardwin::close(infocardwin::Kind::Item); return true;  // 3.0.11-beta.149
         case Win::SkillCard: infocardwin::close(infocardwin::Kind::Skill); return true;
+        case Win::Ask: return askcardwin::close();  // 3.0.11-beta.150: a request declined (an input: the game's)
         default: return false;
     }
 }

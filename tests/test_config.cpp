@@ -859,15 +859,16 @@ TEST(config_interface_minimap) {
     // 3.0.11-beta.39: the party's panel; 3.0.11-beta.40: the hotbar; 3.0.11-beta.41: the chat; 3.0.11-beta.42: the
     // windows; 3.0.11-beta.48: the cast's label (3.0.11-beta.49's dimmed world no longer comes with it: beta.55);
     // 3.0.11-beta.70: the tracker; 3.0.11-beta.96: «Навички»; 3.0.11-beta.97: «Спорядження»; .98: the NPC talk;
-    // .100: the shops; .115: the storage; .116: the trade; .140: the menu; .149: the item and skill cards
-    CHECK(u.waiting.empty() && u.applied.size() == 19 && u.applied[0] == "minimap 0 -> 1");
+    // .100: the shops; .115: the storage; .116: the trade; .140: the menu; .149: the item and skill cards; .150: the
+    // requests and the NPC's inputs
+    CHECK(u.waiting.empty() && u.applied.size() == 20 && u.applied[0] == "minimap 0 -> 1");
     CHECK(u.applied[1] == "buffs off -> column" && u.applied[2] == "items 0 -> 1" && u.applied[3] == "status 0 -> 1");
     CHECK(u.applied[4] == "skills 0 -> 1" && u.applied[5] == "equip 0 -> 1" && u.applied[6] == "npc_talk 0 -> 1");
     CHECK(u.applied[7] == "shop 0 -> 1" && u.applied[8] == "storage 0 -> 1" && u.applied[9] == "trade 0 -> 1");
-    CHECK(u.applied[10] == "menu 0 -> 1" && u.applied[11] == "cards 0 -> 1");
-    CHECK(u.applied[12] == "cast 0 -> 1" && u.applied[13] == "chat 0 -> 1" && u.applied[14] == "hotbar 0 -> 1");
-    CHECK(u.applied[15] == "tracker 0 -> 1" && u.applied[16] == "party 0 -> 1" && u.applied[17] == "target 0 -> 1");
-    CHECK(u.applied[18] == "character off -> bars");
+    CHECK(u.applied[10] == "menu 0 -> 1" && u.applied[11] == "cards 0 -> 1" && u.applied[12] == "asks 0 -> 1");
+    CHECK(u.applied[13] == "cast 0 -> 1" && u.applied[14] == "chat 0 -> 1" && u.applied[15] == "hotbar 0 -> 1");
+    CHECK(u.applied[16] == "tracker 0 -> 1" && u.applied[17] == "party 0 -> 1" && u.applied[18] == "target 0 -> 1");
+    CHECK(u.applied[19] == "character off -> bars");
     CHECK(appliesNow("interface.minimap"));
 }
 
@@ -1456,6 +1457,19 @@ TEST(config_interface_cards) {
     CHECK(s != nullptr && s->page == settings::Page::Interface);
     CHECK(appliesNow("interface.cards"));
     CHECK(liveUpdate(parseConfig(""), parseConfig("[interface]\ncards = 1\n")).next.cardWindows);
+}
+
+// 3.0.11-beta.150: [interface] asks - the requests and the NPC's inputs in the new look, on with the new minimap,
+// at once
+TEST(config_interface_asks) {
+    CHECK(!parseConfig("").askWindows);
+    CHECK(parseConfig("[interface]\nminimap = 1\n").askWindows);
+    CHECK(!parseConfig("[interface]\nminimap = 1\nasks = 0\n").askWindows);
+    CHECK(parseConfig("[interface]\nasks = 1\n").askWindows);
+    const settings::IniSetting* s = settings::findSetting("interface.asks");
+    CHECK(s != nullptr && s->page == settings::Page::Interface);
+    CHECK(appliesNow("interface.asks"));
+    CHECK(liveUpdate(parseConfig(""), parseConfig("[interface]\nasks = 1\n")).next.askWindows);
 }
 
 // 3.0.11-beta.103 (the owner: «можешь сделать настройку, чтобы можно было выбрать эту стрелку в конфигураторе»):

@@ -57,6 +57,7 @@
 #include "win/shop_window.hpp"
 #include "win/net_smooth.hpp"
 #include "win/ammo_sound.hpp"
+#include "win/ask_card.hpp"
 #include "win/info_card.hpp"
 #include "win/menu_window.hpp"
 #include "win/net_predict.hpp"
@@ -942,6 +943,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     tradewin::frame(window, config.tradeWindow, gameCodePage(config), pk, pw, ph);      // 3.0.11-beta.116
     menuwin::frame(window, config.menuWindow, gameCodePage(config), pk, pw, ph);        // 3.0.11-beta.140
     infocardwin::frame(window, config.cardWindows, gameCodePage(config), pk, pw, ph);  // 3.0.11-beta.149
+    askcardwin::frame(window, config.askWindows, gameCodePage(config), pk, pw, ph);    // 3.0.11-beta.150
     // 3.0.11-beta.7: [interface] reference - «Довідник» (Ctrl+F)
     referencewin::frame(window, config.referenceWindow, pk, pw, ph);
     padcarrywin::frame(window, pk, pw, ph);  // 3.0.11-beta.121: a thing the controller carries - its places now

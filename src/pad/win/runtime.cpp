@@ -48,6 +48,7 @@
 #include "win/game_camera.hpp"
 #include "win/ground_marks.hpp"
 #include "win/item_window.hpp"
+#include "win/ask_card.hpp"
 #include "win/info_card.hpp"
 #include "win/menu_window.hpp"
 #include "win/minimap_proto.hpp"
@@ -590,6 +591,20 @@ bool cardPad(bool item, const PadState& pad, DWORD now) {
     return true;
 }
 
+// 3.0.11-beta.150: a request on top (a trade's, a party's, a guild's, a friend's) - A accepts, B declines; an NPC's
+// number or words to type left to the game's own field (the pad's NPC typing), so not paused
+bool askPad(const PadState& pad) {
+    State& s = S();
+    if (!uagfx::win::askcardwin::asking()) return false;
+    const uint16_t buttons = pad.connected ? pad.buttons : 0;
+    const uint16_t down = uint16_t(buttons & ~s.prevPadButtons);
+    s.prevPadButtons = buttons;
+    using uagfx::win::askcardwin::PadCommand;
+    if (down & kPadA) uagfx::win::askcardwin::padCommand(PadCommand::Accept);
+    if (down & kPadB) uagfx::win::askcardwin::padCommand(PadCommand::Decline);
+    return true;
+}
+
 // 3.0.11-beta.92: «Характеристики» open - the D-pad (or the left stick) chooses a stat, A adds a point, B or Start
 // close it
 bool statsPad(const PadState& pad, DWORD now) {
@@ -886,7 +901,7 @@ void backCloses(PadState& pad, const ViewInfo& view) {
 // 3.0.11-beta.108: the driver's windows by winstack::Win, for the log
 constexpr const char* kTopNames[] = {"«Речі»",  "«Характеристики»", "«Навички»", "«Спорядження»",
                                      "the shop", "the NPC talk",      "«Довідник»", "«Склад»", "«Обмін»",
-                                     "the menu", "the item card", "the skill card"};
+                                     "the menu", "the item card", "the skill card", "the request"};
 static_assert(std::size(kTopNames) == size_t(uagfx::winstack::kWins), "a name for each window");
 
 void tick() {
@@ -953,6 +968,7 @@ void tick() {
                   : drive && *top == Win::Menu                     ? menuPad(pad, now)     // .140
                   : drive && *top == Win::ItemCard                 ? cardPad(true, pad, now)   // .149
                   : drive && *top == Win::SkillCard                ? cardPad(false, pad, now)
+                  : drive && *top == Win::Ask                      ? askPad(pad)  // .150: an input's - the game's
                                                                    : runMenu(pad, view, now);
     if (s.npcSupported) view.dialog = clientnpc::read();
     double clientTurn = 0;

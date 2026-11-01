@@ -524,6 +524,10 @@ enum class Text : uint16_t {
     MenuBack,
     // 3.0.11-beta.149: the item card and the skill card
     InterfaceCards, InterfaceCardsHint, CardSlots, CardEmpty, CardUnknown, CardNotLearned, CardLevel,
+    // 3.0.11-beta.150: the requests and the NPC's inputs
+    InterfaceAsks, InterfaceAsksHint, AskTradeTitle, AskTrade, AskTradeAny, AskPartyTitle, AskParty, AskPartyAny,
+    AskGuildTitle, AskGuild, AskGuildAny, AskFriendTitle, AskFriend, AskFriendAny, AskNumberTitle, AskTextTitle,
+    AskTypeHint, AskAccept, AskDecline, AskOk,
     // 3.0.11-beta.141: the character block's experience - the free skill points, the last level, an hour, a minute,
     // the experience's tip, the portrait's tip (Alt+V)
     CharSkillPoints, CharExpMax, CharHour, CharMinute, CharToLevel, CharLevelIn, CharPerHour, CharSession, CharLastGain,

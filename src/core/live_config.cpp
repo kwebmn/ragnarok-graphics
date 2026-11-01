@@ -323,6 +323,10 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("cards", flag(running.cardWindows), flag(file.cardWindows)));
         n.cardWindows = file.cardWindows;
     }
+    if (file.askWindows != running.askWindows) {  // 3.0.11-beta.150: the requests and the NPC's inputs, at once
+        u.applied.push_back(change("asks", flag(running.askWindows), flag(file.askWindows)));
+        n.askWindows = file.askWindows;
+    }
     if (file.skillCells != running.skillCells) {  // 3.0.11-beta.142: a ground skill's cells, at once
         u.applied.push_back(change("skill_cells", flag(running.skillCells), flag(file.skillCells)));
         n.skillCells = file.skillCells;

@@ -5398,6 +5398,38 @@ constexpr Entry kTexts[] = {
     {Text::CardUnknown, "Not identified", "Не опізнано", "Не опознано"},
     {Text::CardNotLearned, "Not learned", "Не вивчено", "Не изучено"},
     {Text::CardLevel, "Level {1}", "Рівень {1}", "Уровень {1}"},
+    // 3.0.11-beta.150: the requests and the NPC's inputs
+    {Text::InterfaceAsks, "Requests and NPC inputs", "Запити та введення для NPC", "Запросы и ввод для NPC"},
+    {Text::InterfaceAsksHint,
+     "A trade's, a party's, a guild's or a friend's request and an NPC's number or words to type in the new look: a "
+     "card at the screen's middle, accept or decline (Esc, the controller's B declines). Off: the game's own windows.",
+     "Запит на обмін, запрошення до групи чи гільдії, запит у друзі та число чи текст для NPC у новому вигляді: "
+     "картка посередині екрана, прийняти чи відмовити (Esc або B на контролері відмовляє). Вимкнено: власні вікна "
+     "гри.",
+     "Запрос обмена, приглашение в группу или гильдию, запрос в друзья и число или текст для NPC в новом виде: "
+     "карточка посередине экрана, принять или отказать (Esc или B на контроллере отказывает). Выключено: собственные "
+     "окна игры."},
+    {Text::AskTradeTitle, "Trade", "Обмін", "Обмен"},
+    {Text::AskTrade, "{1} offers you a trade", "{1} пропонує вам обмін", "{1} предлагает вам обмен"},
+    {Text::AskTradeAny, "Someone offers you a trade", "Вам пропонують обмін", "Вам предлагают обмен"},
+    {Text::AskPartyTitle, "Party", "Група", "Группа"},
+    {Text::AskParty, "An invitation to the party {1}", "Запрошення до групи {1}", "Приглашение в группу {1}"},
+    {Text::AskPartyAny, "An invitation to a party", "Запрошення до групи", "Приглашение в группу"},
+    {Text::AskGuildTitle, "Guild", "Гільдія", "Гильдия"},
+    {Text::AskGuild, "An invitation to the guild {1}", "Запрошення до гільдії {1}", "Приглашение в гильдию {1}"},
+    {Text::AskGuildAny, "An invitation to a guild", "Запрошення до гільдії", "Приглашение в гильдию"},
+    {Text::AskFriendTitle, "Friends", "Друзі", "Друзья"},
+    {Text::AskFriend, "{1} wants to add you to their friends", "{1} хоче додати вас до друзів",
+     "{1} хочет добавить вас в друзья"},
+    {Text::AskFriendAny, "Someone wants to add you to their friends", "Вас хочуть додати до друзів",
+     "Вас хотят добавить в друзья"},
+    {Text::AskNumberTitle, "Type a number", "Введіть число", "Введите число"},
+    {Text::AskTextTitle, "Type the words", "Введіть текст", "Введите текст"},
+    {Text::AskTypeHint, "Type it on the keyboard; Enter sends it", "Наберіть на клавіатурі; Enter надсилає",
+     "Наберите на клавиатуре; Enter отправляет"},
+    {Text::AskAccept, "Accept", "Прийняти", "Принять"},
+    {Text::AskDecline, "Decline", "Відмовити", "Отказать"},
+    {Text::AskOk, "Done", "Готово", "Готово"},
     // 3.0.11-beta.141: the character block's experience (forms: one, a few, many)
     {Text::CharSkillPoints, "skill point|skill points", "очко навичок|очки навичок|очок навичок",
      "очко навыков|очка навыков|очков навыков"},

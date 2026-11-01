@@ -389,6 +389,7 @@ Config parseConfig(const std::string& text) {
     bool tradeSet = false;                        // 3.0.11-beta.116
     bool menuSet = false;                         // 3.0.11-beta.140
     bool cardsSet = false;                        // 3.0.11-beta.149
+    bool asksSet = false;                         // 3.0.11-beta.150
     std::istringstream in(text);
     std::string line;
     std::string section;
@@ -591,6 +592,9 @@ Config parseConfig(const std::string& text) {
         } else if (key == "interface.cards") {  // 3.0.11-beta.149: the item card and the skill card
             cardsSet = val == "0" || val == "1" || val == "on" || val == "off" || val == "true" || val == "false";
             setBool(val, c.cardWindows);
+        } else if (key == "interface.asks") {  // 3.0.11-beta.150: the requests and the NPC's inputs
+            asksSet = val == "0" || val == "1" || val == "on" || val == "off" || val == "true" || val == "false";
+            setBool(val, c.askWindows);
         } else if (key == "interface.skill_cells") {  // 3.0.11-beta.142: a ground skill's cells on the ground
             setBool(val, c.skillCells);
         } else if (key == "interface.ground_counts") {  // 3.0.11-beta.143: walls standing, traps left on the bar
@@ -893,6 +897,7 @@ Config parseConfig(const std::string& text) {
     if (c.newMinimap && !tradeSet) c.tradeWindow = true;      // 3.0.11-beta.116
     if (c.newMinimap && !menuSet) c.menuWindow = true;        // 3.0.11-beta.140
     if (c.newMinimap && !cardsSet) c.cardWindows = true;      // 3.0.11-beta.149
+    if (c.newMinimap && !asksSet) c.askWindows = true;        // 3.0.11-beta.150
     return c;
 }
 

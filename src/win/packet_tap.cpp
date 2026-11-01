@@ -13,6 +13,7 @@
 #include "win/item_window.hpp"
 #include "win/mob_hp.hpp"
 #include "win/net_watch.hpp"
+#include "win/ask_card.hpp"
 #include "win/npc_talk.hpp"
 #include "win/storage_window.hpp"
 #include "win/target_card.hpp"
@@ -81,6 +82,7 @@ uint16_t __attribute__((thiscall)) take(void* connection, const uint8_t* packet)
         castwin::packet(e);      // 3.0.11-beta.48: the cast's label - which skill
         mobhpwin::packet(e);     // 3.0.11-beta.95: the monsters' HP bars
         npcwin::packet(e);       // 3.0.11-beta.98: the NPC talk's words
+        askcardwin::packet(e);   // 3.0.11-beta.150: the requests' names
         itemswin::packet(e);     // 3.0.11-beta.107: an item come into the bag told the log
         storagewin::packet(e);   // 3.0.11-beta.115: the storage's places used of the most
     }

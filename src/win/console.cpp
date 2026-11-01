@@ -226,6 +226,7 @@ void Console::build(Lang lang, const Config& config) {
             for (const char* key :
                  {"interface.items", "interface.status", "interface.skills", "interface.equip", "interface.npc_talk",
                   "interface.shop", "interface.storage", "interface.trade", "interface.menu", "interface.cards",
+                  "interface.asks",
                   "interface.skill_cells", "interface.ground_counts"})
                 if (settingOf(key)) rows_.push_back(Row{Kind::Box, key, 0});
             if (settingOf("interface.animations"))  // 3.0.11-beta.46: the new interface's motion

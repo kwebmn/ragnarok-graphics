@@ -10,8 +10,9 @@ namespace uagfx::winstack {
 // controller the top's first (they were each in an order of its own, the drawing's and the clicks' apart); a window
 // opened or clicked in comes on top. No Windows here (win/window_stack).
 enum class Win : uint8_t { Items, Stats, Skills, Equip, Shop, Npc, Reference, Storage, Trade, Menu,  // .115-.140
-                           ItemCard, SkillCard };  // 3.0.11-beta.149
-constexpr int kWins = 12;
+                           ItemCard, SkillCard,  // 3.0.11-beta.149
+                           Ask };  // 3.0.11-beta.150
+constexpr int kWins = 13;
 
 class Stack {
 public:

@@ -196,6 +196,8 @@ const std::vector<IniSetting>& iniSettings() {
          Text::InterfaceMenuHint, ""},  // 3.0.11-beta.140
         {"interface", "cards", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::InterfaceCards,
          Text::InterfaceCardsHint, ""},  // 3.0.11-beta.149
+        {"interface", "asks", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::InterfaceAsks,
+         Text::InterfaceAsksHint, ""},  // 3.0.11-beta.150
         {"interface", "skill_cells", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {},
          Text::InterfaceSkillCells, Text::InterfaceSkillCellsHint, ""},  // 3.0.11-beta.142
         {"interface", "ground_counts", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {},
@@ -1067,6 +1069,7 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "interface.trade") return c.tradeWindow ? "1" : "0";      // 3.0.11-beta.116
     if (k == "interface.menu") return c.menuWindow ? "1" : "0";        // 3.0.11-beta.140
     if (k == "interface.cards") return c.cardWindows ? "1" : "0";      // 3.0.11-beta.149
+    if (k == "interface.asks") return c.askWindows ? "1" : "0";        // 3.0.11-beta.150
     if (k == "interface.skill_cells") return c.skillCells ? "1" : "0";  // 3.0.11-beta.142
     if (k == "interface.ground_counts") return c.groundCounts ? "1" : "0";  // 3.0.11-beta.143
     if (k == "interface.animations") return c.animations ? "1" : "0";  // 3.0.11-beta.46

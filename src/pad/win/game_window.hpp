@@ -28,9 +28,10 @@ bool cursorOverGame(HWND game, POINT screen);
 enum class Blocker { Panel, Card, Minimap, Reference, BigMap, Buffs, Character, Target, Party, Hotbar, Chat, Items,
                      Stats, BuffsLines, Tracker, HudEdit, PadTiles, PadAssign, Skills, Equip, Npc, Shop,
                      Storage, Trade, Menu,  // 3.0.11-beta.115, 3.0.11-beta.116, 3.0.11-beta.140
-                     ItemCard, SkillCard };  // 3.0.11-beta.149
+                     ItemCard, SkillCard,  // 3.0.11-beta.149
+                     Ask };  // 3.0.11-beta.150
 // 3.0.11-beta.33: their number (win/world_mouse names each)
-constexpr int kBlockerCount = int(Blocker::SkillCard) + 1;
+constexpr int kBlockerCount = int(Blocker::Ask) + 1;
 void setBlocked(Blocker who, HWND game, const RECT* rect, bool all);
 // 3.0.11-beta.77: a part's rectangle as it set it (the client's pixels) - false while it has none
 bool blockerRect(Blocker who, RECT& out);
