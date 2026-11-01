@@ -93,3 +93,16 @@ TEST(map_entry_switches_apply_at_once) {
     CHECK(u.applied.size() == 1 && u.applied[0] == "entry_pause 1 -> 0");
     CHECK(appliesNow("connection.patient_entry") && appliesNow("connection.entry_pause"));
 }
+
+TEST(map_entry_hold_kept_and_after_a_quick_restart) {
+    // 2.6.17, the user's test: closed with Alt-F4 and opened at once, one entry in five failed - the map server still
+    // had the closed session. The hold outlives the client (a file) and a start soon after an exit holds the first
+    // selection until kAfterExitMs past it; the later of two holds wins.
+    Guard g;
+    g.holdAtLeastUntil(5000);
+    CHECK_EQ(g.holdUntil(), uint64_t(5000));
+    g.holdAtLeastUntil(3000);
+    CHECK_EQ(g.holdUntil(), uint64_t(5000));
+    CHECK(g.holding(4000, true) && !g.holding(5000, true));
+    CHECK_EQ(map_entry::kAfterExitMs, uint64_t(30000));
+}

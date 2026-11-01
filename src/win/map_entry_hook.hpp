@@ -11,5 +11,8 @@ namespace uagfx::win {
 // forgotten it (its auth node), the char server kept awake meanwhile and a countdown over the game. Nothing done
 // when uaRO.exe is another build.
 void mapEntryFrame(const ConnectionSettings& settings, HWND game);
+// The game closing (DllMain): the next start within map_entry::kAfterExitMs holds its first selection - the hold
+// lives in uaro-graphics\map-entry.txt, a failed entry's too, so it outlives a client closed and opened again.
+void mapEntryAtExit();
 
 }  // namespace uagfx::win

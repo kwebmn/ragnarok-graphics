@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <optional>
 #include <string>
@@ -43,6 +44,9 @@ struct Held {  // a character's selection held back (CH_SELECT_CHAR)
 } g_held;
 HWND g_notice = nullptr;
 std::wstring g_noticeText;
+bool g_loaded = false;    // the file's hold taken
+uint64_t g_savedWall = 0;  // the file's: no selection before this (seconds of the wall clock, 0 none)
+uint64_t g_lastHold = 0;   // the guard's hold as last written
 
 bool codeIs(uint32_t at, const uint8_t* bytes, size_t size) {
     uint8_t now[16] = {};
@@ -70,6 +74,33 @@ void* connection() {
 int queue(void* conn, int len, const uint8_t* data) { return reinterpret_cast<QueueFn>(kQueue)(conn, len, data); }
 
 uint64_t nowMs() { return GetTickCount64(); }
+
+uint64_t wallSeconds() {
+    FILETIME f{};
+    GetSystemTimeAsFileTime(&f);
+    return ((uint64_t(f.dwHighDateTime) << 32) | f.dwLowDateTime) / 10000000ull;
+}
+
+std::string holdFile() { return gameDir() + "\\uaro-graphics\\map-entry.txt"; }
+
+void saveHold(uint64_t wall) {
+    if (wall == g_savedWall) return;
+    if (writeFileAtomic(holdFile(), std::to_string(wall) + "\r\n")) g_savedWall = wall;
+}
+
+// Once: the hold a former client left (a failed entry's, or the one after its exit), in the guard's clock
+void loadHold(uint64_t now) {
+    g_loaded = true;
+    std::string text;
+    if (!readTextFile(holdFile(), text)) return;
+    const uint64_t until = std::strtoull(text.c_str(), nullptr, 10), wall = wallSeconds();
+    g_savedWall = until;
+    if (until <= wall) return;
+    g_guard.holdAtLeastUntil(now + (until - wall) * 1000);
+    g_lastHold = g_guard.holdUntil();
+    LOG_INFO("map entry: the former client's hold - the first selection waits up to %u s",
+             unsigned(until - wall));
+}
 
 // The client's queueing of CH_SELECT_CHAR (its call in CLoginMode state 9, kSelectCall): held back while the map
 // server still has a failed entry's node, else as the game would.
@@ -151,11 +182,18 @@ std::wstring wide(const std::string& s) {
 
 }  // namespace
 
+void mapEntryAtExit() {
+    if (g_ready != 1) return;
+    const uint64_t wall = wallSeconds(), after = wall + map_entry::kAfterExitMs / 1000;
+    saveHold(g_savedWall > after ? g_savedWall : after);
+}
+
 void mapEntryFrame(const ConnectionSettings& settings, HWND game) {
     if (!ready()) return;
     setPatient(settings.patientEntry);
     g_pause = settings.entryPause;
     const uint64_t now = nowMs();
+    if (!g_loaded) loadHold(now);
     uint8_t* mode = *reinterpret_cast<uint8_t* const*>(uintptr_t(kModeNow));
     map_entry::Seen s;
     s.loginMode = mode && *reinterpret_cast<const uint32_t*>(mode) == kLoginVtable;
@@ -166,6 +204,10 @@ void mapEntryFrame(const ConnectionSettings& settings, HWND game) {
         LOG_INFO("map entry: the connection to the map server did not come up - connecting again");
         reinterpret_cast<CloseFn>(kClose)(conn);
         *reinterpret_cast<int*>(mode + kNextStateAt) = kStateEntering;  // the game connects again in its own turn
+    }
+    if (g_guard.holdUntil() != g_lastHold) {  // a failed entry's hold set, or one done with: the file follows
+        g_lastHold = g_guard.holdUntil();
+        saveHold(g_lastHold > now ? wallSeconds() + (g_lastHold - now + 999) / 1000 : 0);
     }
     if (!g_held.on) return;
     if (!s.loginMode || s.state != kStateSelecting || !conn) {  // the player went back, or the char server is gone

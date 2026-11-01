@@ -9,6 +9,7 @@
 #include "win/context.hpp"
 #include "win/dx7/ddraw7.hpp"
 #include "win/log.hpp"
+#include "win/map_entry_hook.hpp"
 #include "win/packet_tap.hpp"
 #include "win/pad_mount.hpp"
 #include "win/roext.hpp"
@@ -211,6 +212,7 @@ BOOL WINAPI DllMain(HINSTANCE inst, DWORD reason, LPVOID) {
     }
     if (reason == DLL_PROCESS_DETACH) {
         uagfx::win::logModulesAtExit();
+        uagfx::win::mapEntryAtExit();  // 3.0.11-beta.148 (2.6.17): a quick restart holds its first selection
         uagfx::win::unmountPad();
     }
     return TRUE;

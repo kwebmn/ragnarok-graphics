@@ -14,6 +14,9 @@ constexpr uint32_t kPatientWaitMs = 60000;              // the client's wait for
 constexpr int kMaxReconnects = 4;                        // a failed connect made again, an entry's most
 constexpr uint64_t kNodeGoneMs = 125000;                 // a node whose client never came: 90 s + 30 s + 5 s
 constexpr uint64_t kNodeOfLeftClientGoneMs = 305000;     // one whose client came and left: 270 s + 30 s + 5 s
+// A client opened again soon after it was closed (Alt-F4): the map server keeps the closed session until the char
+// server has saved it, and an entry before that is lost - the first selection waits till this long after the exit.
+constexpr uint64_t kAfterExitMs = 30000;
 
 enum class Step { None, Reconnect };
 
@@ -31,6 +34,10 @@ public:
     // After an entry that failed: the next character's selection waits until its node is gone (0: none).
     uint64_t holdUntil() const { return holdUntil_; }
     bool holding(uint64_t now, bool pause) const { return pause && now < holdUntil_; }
+    // A hold carried over (the client opened again: a failed entry's, or one after a quick restart): the later wins.
+    void holdAtLeastUntil(uint64_t until) {
+        if (until > holdUntil_) holdUntil_ = until;
+    }
 
 private:
     bool entering_ = false;
