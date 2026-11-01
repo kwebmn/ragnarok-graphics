@@ -1,3 +1,13 @@
+# uaRO Graphics 3.0.11-beta.139 — what's new
+
+**The weight by our server's rules** ("it says 60 %, but HP recovers"):
+- On uaRO the natural HP and SP recovery stops at 70 % weight (the server's setting), not at 50 % as in classic RO.
+  The interface warned from 50 %. Now the dot by the portrait, the per cent's colour and the weight bar in "Items"
+  take the overweight state from the server itself: amber - HP and SP do not recover, red - 90 %, no attacks or
+  skills.
+- The portrait rings' tip now shows the weight in numbers - "Weight 2 700 / 4 500 · 60 %" - and what an overweight
+  stops.
+
 # uaRO Graphics 3.0.11-beta.138 — what's new
 
 **Walking without waiting for the server — no put-backs after a map's entry or in a stall** (report R-VXZ36T):
