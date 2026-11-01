@@ -1,3 +1,11 @@
+# uaRO Graphics 3.0.11-beta.138 — what's new
+
+**Walking without waiting for the server — no put-backs after a map's entry or in a stall** (report R-VXZ36T):
+- No walk is guessed in the first 5 seconds on a map: until it is loaded the server takes no walk (the report had a
+  put-back 1.3 s after the entry).
+- A put-back counts as a lost packet itself: no walk is guessed for the next 30 seconds. The report had two
+  put-backs in a row in one stall - the second click came before TCP noticed the first was lost.
+
 # uaRO Graphics 3.0.11-beta.137 — what's new
 
 **Walking without waiting for the server — only on a calm line** (report R-QTN6TF):
