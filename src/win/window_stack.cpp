@@ -9,6 +9,7 @@
 #include "win/chat_window.hpp"
 #include "win/equip_window.hpp"
 #include "win/item_window.hpp"
+#include "win/menu_window.hpp"
 #include "win/log.hpp"
 #include "win/npc_talk.hpp"
 #include "win/reference_window.hpp"
@@ -25,7 +26,8 @@ using winstack::Win;
 using uapad::gamewindow::Blocker;
 
 constexpr const char* kNames[] = {"«Речі»",  "«Характеристики»", "«Навички»", "«Спорядження»",
-                                  "the shop", "the NPC talk",      "«Довідник»", "«Склад»", "«Обмін»"};
+                                  "the shop", "the NPC talk",      "«Довідник»", "«Склад»", "«Обмін»",
+                                  "the menu"};
 static_assert(std::size(kNames) == size_t(winstack::kWins), "a name for each window");
 constexpr int kMostTold = 40;
 
@@ -67,6 +69,7 @@ bool shown(Win w) {
         case Win::Reference: return referencewin::isOpen();
         case Win::Storage: return storagewin::shown();
         case Win::Trade: return tradewin::shown();
+        case Win::Menu: return menuwin::shown();  // 3.0.11-beta.140
     }
     return false;
 }
@@ -81,6 +84,7 @@ Blocker blockerOf(Win w) {
         case Win::Npc: return Blocker::Npc;
         case Win::Storage: return Blocker::Storage;
         case Win::Trade: return Blocker::Trade;
+        case Win::Menu: return Blocker::Menu;
         case Win::Reference: break;
     }
     return Blocker::Reference;
@@ -97,6 +101,7 @@ void drawOne(Win w, FrameRecord& record, gpu::Renderer& renderer) {
         case Win::Reference: referencewin::draw(record, renderer); break;
         case Win::Storage: storagewin::draw(record, renderer); break;
         case Win::Trade: tradewin::draw(record, renderer); break;
+        case Win::Menu: menuwin::draw(record, renderer); break;
     }
 }
 
@@ -111,6 +116,7 @@ bool mouseOne(Win w, HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
         case Win::Reference: return referencewin::mouse(game, m, wp, lp, result);
         case Win::Storage: return storagewin::mouse(game, m, wp, lp, result);
         case Win::Trade: return tradewin::mouse(game, m, wp, lp, result);
+        case Win::Menu: return menuwin::mouse(game, m, wp, lp, result);
     }
     return false;
 }
@@ -123,11 +129,12 @@ bool keyOne(Win w, UINT m, WPARAM wp, LPARAM lp) {  // the windows with keys of 
         case Win::Reference: return referencewin::key(m, wp, lp);
         case Win::Storage: return storagewin::key(m, wp, lp);  // 3.0.11-beta.115: its search's
         case Win::Trade: return tradewin::key(m, wp, lp);      // 3.0.11-beta.116: its zeny field's
+        case Win::Menu: return menuwin::key(m, wp, lp);        // 3.0.11-beta.140: ↑ ↓ Enter
         default: return false;
     }
 }
 
-bool movable(Win w) { return w != Win::Npc && w != Win::Reference; }
+bool movable(Win w) { return w != Win::Npc && w != Win::Reference && w != Win::Menu; }  // .140: the menu centred
 
 bool boxOf(Win w, winstack::Box& b) {
     switch (w) {
@@ -140,6 +147,7 @@ bool boxOf(Win w, winstack::Box& b) {
         case Win::Reference: return referencewin::box(b.x, b.y, b.w, b.h);
         case Win::Storage: return storagewin::box(b.x, b.y, b.w, b.h);
         case Win::Trade: return tradewin::box(b.x, b.y, b.w, b.h);
+        case Win::Menu: return menuwin::box(b.x, b.y, b.w, b.h);
     }
     return false;
 }

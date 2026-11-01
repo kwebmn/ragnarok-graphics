@@ -315,6 +315,10 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("trade", flag(running.tradeWindow), flag(file.tradeWindow)));
         n.tradeWindow = file.tradeWindow;
     }
+    if (file.menuWindow != running.menuWindow) {  // 3.0.11-beta.140: the menu and the death screen, at once
+        u.applied.push_back(change("menu", flag(running.menuWindow), flag(file.menuWindow)));
+        n.menuWindow = file.menuWindow;
+    }
     if (file.uiSize != running.uiSize) {  // 3.0.11-beta.54: the new interface's size, at once
         const auto token = [](int v) { return v > 0 ? std::to_string(v) : std::string("auto"); };
         u.applied.push_back(change("size", token(running.uiSize), token(file.uiSize)));

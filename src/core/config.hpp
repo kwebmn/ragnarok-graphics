@@ -668,6 +668,9 @@ struct Config {
     // 3.0.11-beta.116: [interface] trade - the trade (win/trade_window: «Обмін», «Речі» beside it) in place of the
     // game's trade window
     bool tradeWindow = false;
+    // 3.0.11-beta.140 (the owner «давай»): [interface] menu - the game's menu (Esc) and its death screen
+    // (win/menu_window, core/menu_window) in place of the game's windows 0x30, 0x13 and 0x88
+    bool menuWindow = false;
     // 3.0.11-beta.46: [interface] animations - the new interface's motion (core/ui_motion): the target's card, the
     // character block's views, a new level's flare, the low HP warning sliding in; 0: all at once
     bool animations = true;

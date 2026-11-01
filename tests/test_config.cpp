@@ -859,14 +859,15 @@ TEST(config_interface_minimap) {
     // 3.0.11-beta.39: the party's panel; 3.0.11-beta.40: the hotbar; 3.0.11-beta.41: the chat; 3.0.11-beta.42: the
     // windows; 3.0.11-beta.48: the cast's label (3.0.11-beta.49's dimmed world no longer comes with it: beta.55);
     // 3.0.11-beta.70: the tracker; 3.0.11-beta.96: «Навички»; 3.0.11-beta.97: «Спорядження»; .98: the NPC talk;
-    // .100: the shops; .115: the storage; .116: the trade
-    CHECK(u.waiting.empty() && u.applied.size() == 17 && u.applied[0] == "minimap 0 -> 1");
+    // .100: the shops; .115: the storage; .116: the trade; .140: the menu
+    CHECK(u.waiting.empty() && u.applied.size() == 18 && u.applied[0] == "minimap 0 -> 1");
     CHECK(u.applied[1] == "buffs off -> column" && u.applied[2] == "items 0 -> 1" && u.applied[3] == "status 0 -> 1");
     CHECK(u.applied[4] == "skills 0 -> 1" && u.applied[5] == "equip 0 -> 1" && u.applied[6] == "npc_talk 0 -> 1");
     CHECK(u.applied[7] == "shop 0 -> 1" && u.applied[8] == "storage 0 -> 1" && u.applied[9] == "trade 0 -> 1");
-    CHECK(u.applied[10] == "cast 0 -> 1" && u.applied[11] == "chat 0 -> 1" && u.applied[12] == "hotbar 0 -> 1");
-    CHECK(u.applied[13] == "tracker 0 -> 1" && u.applied[14] == "party 0 -> 1" && u.applied[15] == "target 0 -> 1");
-    CHECK(u.applied[16] == "character off -> bars");
+    CHECK(u.applied[10] == "menu 0 -> 1");
+    CHECK(u.applied[11] == "cast 0 -> 1" && u.applied[12] == "chat 0 -> 1" && u.applied[13] == "hotbar 0 -> 1");
+    CHECK(u.applied[14] == "tracker 0 -> 1" && u.applied[15] == "party 0 -> 1" && u.applied[16] == "target 0 -> 1");
+    CHECK(u.applied[17] == "character off -> bars");
     CHECK(appliesNow("interface.minimap"));
 }
 
@@ -1429,6 +1430,19 @@ TEST(config_interface_predict_walk) {
     CHECK(s != nullptr && s->page == settings::Page::Interface);
     CHECK(appliesNow("interface.predict_walk"));
     CHECK(liveUpdate(parseConfig(""), parseConfig("[interface]\npredict_walk = 1\n")).next.predictWalk);
+}
+
+// 3.0.11-beta.140 (the owner «давай»): [interface] menu - the game's menu and death screen redrawn; on with the new
+// interface (its minimap) unless the file names it, as the other windows; a box of «Інтерфейс», at once
+TEST(config_interface_menu_window) {
+    CHECK(!parseConfig("").menuWindow);
+    CHECK(parseConfig("[interface]\nminimap = 1\n").menuWindow);
+    CHECK(!parseConfig("[interface]\nminimap = 1\nmenu = 0\n").menuWindow);
+    CHECK(parseConfig("[interface]\nmenu = 1\n").menuWindow);
+    const settings::IniSetting* s = settings::findSetting("interface.menu");
+    CHECK(s != nullptr && s->page == settings::Page::Interface);
+    CHECK(appliesNow("interface.menu"));
+    CHECK(liveUpdate(parseConfig(""), parseConfig("[interface]\nmenu = 1\n")).next.menuWindow);
 }
 
 // 3.0.11-beta.103 (the owner: «можешь сделать настройку, чтобы можно было выбрать эту стрелку в конфигураторе»):

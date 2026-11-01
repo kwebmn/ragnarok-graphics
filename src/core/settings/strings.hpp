@@ -519,6 +519,9 @@ enum class Text : uint16_t {
     // 3.0.11-beta.116: the trade («Обмін»)
     InterfaceTrade, InterfaceTradeHint, TradeTitle, TradeYou, TradeZeny, TradeReady, TradeDo, TradeCancel, TradeLate,
     TradeHint, TradePadHint, ItemsToTrade, ItemsPadToTrade,
+    // 3.0.11-beta.140: the menu and the death screen
+    InterfaceMenu, InterfaceMenuHint, MenuTitle, MenuDead, MenuRevive, MenuSavePoint, MenuCharSelect, MenuExit,
+    MenuBack,
     InterfacePadWalk, InterfacePadWalkHint, InterfacePadWalkMouse, InterfacePadWalkArrow,  // 3.0.11-beta.88
     InterfaceWalkArrow, InterfaceWalkArrowHint, WalkArrowChevrons, WalkArrowSlim, WalkArrowConcept, WalkArrowRing,
     WalkArrowDots, WalkArrowCell, WalkArrowOff,  // 3.0.11-beta.103

@@ -47,6 +47,7 @@
 #include "win/char_block.hpp"
 #include "win/game_camera.hpp"
 #include "win/item_window.hpp"
+#include "win/menu_window.hpp"
 #include "win/minimap_proto.hpp"
 #include "win/net_predict.hpp"
 #include "win/equip_window.hpp"
@@ -548,6 +549,22 @@ bool tradePad(const PadState& pad, DWORD now) {
     return true;
 }
 
+// 3.0.11-beta.140: the menu or the death screen open - the D-pad (or the left stick) chooses, A presses, B or Start
+// «Повернутися до гри»
+bool menuPad(const PadState& pad, DWORD now) {
+    State& s = S();
+    const uint16_t buttons = pad.connected ? pad.buttons : 0;
+    const uint16_t down = uint16_t((buttons & ~s.prevPadButtons) | stickSteps(pad, now));
+    s.prevPadButtons = buttons;
+    using uagfx::win::menuwin::PadCommand;
+    const std::pair<uint16_t, PadCommand> keys[] = {{kPadUp, PadCommand::Up},   {kPadDown, PadCommand::Down},
+                                                    {kPadA, PadCommand::Press}, {kPadB, PadCommand::Back},
+                                                    {kPadStart, PadCommand::Back}};
+    for (const auto& [button, command] : keys)
+        if (down & button) uagfx::win::menuwin::padCommand(command);
+    return true;
+}
+
 // 3.0.11-beta.92: «Характеристики» open - the D-pad (or the left stick) chooses a stat, A adds a point, B or Start
 // close it
 bool statsPad(const PadState& pad, DWORD now) {
@@ -839,7 +856,8 @@ void backCloses(PadState& pad, const ViewInfo& view) {
 
 // 3.0.11-beta.108: the driver's windows by winstack::Win, for the log
 constexpr const char* kTopNames[] = {"«Речі»",  "«Характеристики»", "«Навички»", "«Спорядження»",
-                                     "the shop", "the NPC talk",      "«Довідник»", "«Склад»", "«Обмін»"};
+                                     "the shop", "the NPC talk",      "«Довідник»", "«Склад»", "«Обмін»",
+                                     "the menu"};
 static_assert(std::size(kTopNames) == size_t(uagfx::winstack::kWins), "a name for each window");
 
 void tick() {
@@ -903,6 +921,7 @@ void tick() {
                   : drive && *top == Win::Shop                     ? shopPad(pad, now)    // .100
                   : drive && *top == Win::Storage                  ? storagePad(pad, now)  // .115
                   : drive && *top == Win::Trade                    ? tradePad(pad, now)    // .116
+                  : drive && *top == Win::Menu                     ? menuPad(pad, now)     // .140
                                                                    : runMenu(pad, view, now);
     if (s.npcSupported) view.dialog = clientnpc::read();
     double clientTurn = 0;

@@ -9,8 +9,8 @@ namespace uagfx::winstack {
 // появляются», answers 4-8 «ок»): the driver's windows in one stack - drawn bottom up, the mouse, the keys and the
 // controller the top's first (they were each in an order of its own, the drawing's and the clicks' apart); a window
 // opened or clicked in comes on top. No Windows here (win/window_stack).
-enum class Win : uint8_t { Items, Stats, Skills, Equip, Shop, Npc, Reference, Storage, Trade };  // .115, .116
-constexpr int kWins = 9;
+enum class Win : uint8_t { Items, Stats, Skills, Equip, Shop, Npc, Reference, Storage, Trade, Menu };  // .115-.140
+constexpr int kWins = 10;
 
 class Stack {
 public:

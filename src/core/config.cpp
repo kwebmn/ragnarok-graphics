@@ -387,6 +387,7 @@ Config parseConfig(const std::string& text) {
     bool shopSet = false;                         // 3.0.11-beta.100
     bool storageSet = false;                      // 3.0.11-beta.115
     bool tradeSet = false;                        // 3.0.11-beta.116
+    bool menuSet = false;                         // 3.0.11-beta.140
     std::istringstream in(text);
     std::string line;
     std::string section;
@@ -583,6 +584,9 @@ Config parseConfig(const std::string& text) {
         } else if (key == "interface.trade") {  // 3.0.11-beta.116: the trade
             tradeSet = val == "0" || val == "1" || val == "on" || val == "off" || val == "true" || val == "false";
             setBool(val, c.tradeWindow);
+        } else if (key == "interface.menu") {  // 3.0.11-beta.140: the menu and the death screen
+            menuSet = val == "0" || val == "1" || val == "on" || val == "off" || val == "true" || val == "false";
+            setBool(val, c.menuWindow);
         } else if (key == "interface.dim_world") {  // 3.0.11-beta.49: the world dimmed under the windows (off: .55)
             setBool(val, c.dimWorld);
         } else if (key == "interface.cast") {  // 3.0.11-beta.48: the cast's label over the hero
@@ -875,6 +879,7 @@ Config parseConfig(const std::string& text) {
     if (c.newMinimap && !shopSet) c.shopWindow = true;      // 3.0.11-beta.100
     if (c.newMinimap && !storageSet) c.storageWindow = true;  // 3.0.11-beta.115
     if (c.newMinimap && !tradeSet) c.tradeWindow = true;      // 3.0.11-beta.116
+    if (c.newMinimap && !menuSet) c.menuWindow = true;        // 3.0.11-beta.140
     return c;
 }
 

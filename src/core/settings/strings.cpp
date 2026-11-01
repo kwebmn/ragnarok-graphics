@@ -5362,6 +5362,26 @@ constexpr Entry kTexts[] = {
      "{1}: готово / обмен \xC2\xB7 {2}: отменить"},
     {Text::ItemsToTrade, "double click: into the trade", "двічі клік — в обмін", "двойной клик — в обмен"},
     {Text::ItemsPadToTrade, "into the trade", "в обмін", "в обмен"},
+    // 3.0.11-beta.140 (the owner «давай»): the menu and the death screen
+    {Text::InterfaceMenu, "The menu and the death screen", "Меню й екран загибелі", "Меню и экран гибели"},
+    {Text::InterfaceMenuHint,
+     "Esc's menu and the window after a death in the new look: a card under the middle of the screen, a row a choice "
+     "- the save point, character select, exit, back to the game (reviving with a Token of Siegfried when it is in "
+     "the bag). Off: the game's own window.",
+     "Меню за Esc і вікно після загибелі в новому вигляді: картка під серединою екрана, рядок на кожен вибір — точка "
+     "збереження, вибір персонажа, вихід, повернення до гри (воскресіння жетоном Зігфріда, коли він є в сумці). "
+     "Вимкнено: власне вікно гри.",
+     "Меню по Esc и окно после гибели в новом виде: карточка под серединой экрана, строка на каждый выбор — точка "
+     "сохранения, выбор персонажа, выход, возврат в игру (воскрешение жетоном Зигфрида, если он есть в сумке). "
+     "Выключено: собственное окно игры."},
+    {Text::MenuTitle, "Menu", "Меню", "Меню"},
+    {Text::MenuDead, "You died", "Ви загинули", "Вы погибли"},
+    {Text::MenuRevive, "Revive here (Token of Siegfried)", "Воскреснути тут (жетон Зігфріда)",
+     "Воскреснуть здесь (жетон Зигфрида)"},
+    {Text::MenuSavePoint, "To the save point", "До точки збереження", "К точке сохранения"},
+    {Text::MenuCharSelect, "Character select", "Вибір персонажа", "Выбор персонажа"},
+    {Text::MenuExit, "Exit the game", "Вийти з гри", "Выйти из игры"},
+    {Text::MenuBack, "Back to the game", "Повернутися до гри", "Вернуться в игру"},
     {Text::InterfacePadWalk, "The controller walks", "Хід контролером", "Ход контроллером"},  // 3.0.11-beta.88
     {Text::InterfacePadWalkHint,  // 3.0.11-beta.102: by the map's cells, the default
      "How the left stick walks. With an arrow: by the map's cells, the same at any camera's distance - the character "
