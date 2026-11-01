@@ -1,3 +1,12 @@
+# uaRO Graphics 3.0.11-beta.129 — what's new
+
+**A sound when the arrows run low**:
+- When 10 arrows (bullets, shuriken) are left, a short soft two-note chime; when none are left, a lower
+  three-note one.
+- It plays through the game's own sound: at its volume, and not at all while the game's sound is off. After a map
+  loads, the same stack does not chime again.
+- The switch "A sound when the arrows run low" in "Interface" (on).
+
 # uaRO Graphics 3.0.11-beta.128 — what's new
 
 **Network: the server notices its lost packets sooner** (step 5 of the network plan):
