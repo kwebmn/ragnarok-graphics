@@ -1,3 +1,13 @@
+# uaRO Graphics 3.0.11-beta.128 — what's new
+
+**Network: the server notices its lost packets sooner** (step 5 of the network plan):
+- Windows acknowledges a lone packet of the server only after 200 ms, so the server takes the connection for slower
+  than it is and sends a lost packet again later — the world stands still longer, then jumps. Now the game
+  acknowledges each of the server's packets at once.
+- A new measure: when a server's packet is lost and the ones after it come late at once, the log gets a line and the
+  ping's graph a red bar, as for a stall.
+- It turns off in "Debugging" with the switch "Quick TCP acknowledgements" (to compare).
+
 # uaRO Graphics 3.0.11-beta.127 — what's new
 
 **The ping on its own plate with a graph**:
