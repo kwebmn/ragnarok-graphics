@@ -24,6 +24,11 @@ void walkLook(WalkLook look, bool mark);
 // (win/pick_hook lastPick) stand on the ground until the click
 void skillCells(bool on);
 void skillCast(uint16_t skill, int lv, int x, int y);
+// 3.0.11-beta.146 (R-VYV3AG «фаерволл постоянно активный»: Fire Wall clicked on the bar with the mouse, then cast with
+// the pad - the game kept waiting for its place, «Select a Target» and the cells under the hidden cursor to the end):
+// the game's own wait for a skill's target ended as its Esc ends it (the game mode's message 0x4e: +0x3C4, +0x3C8,
+// +0x3D0 to 0) - when the pad casts or aims itself; false: none waited
+bool cancelGameAim(const char* why);
 void newFrame();
 void draw(FrameRecord& record, int width, int height);
 

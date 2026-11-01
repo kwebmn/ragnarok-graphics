@@ -128,9 +128,21 @@ bool gameAims(uint16_t& skill, int& lv) {
     return true;
 }
 
+// 3.0.11-beta.146: the game waiting for any skill's target (+0x3C4 1 to 5), its mode when it is
+uint32_t gameWaiting(uint32_t& skill) {
+    constexpr uint32_t kModeClass = 0x69F388, kWaitState = 0x3C4, kWaitSkill = 0x3C8;
+    const uint32_t mode = readGameMode();
+    uint32_t cls = 0, state = 0;
+    if (!mode || !readGame(mode, &cls, 4) || cls != kModeClass) return 0;
+    if (!readGame(mode + kWaitState, &state, 4) || state < 1 || state > 5) return 0;
+    if (!readGame(mode + kWaitSkill, &skill, 4)) skill = 0;
+    return mode;
+}
+
 struct State {
     TargetRing ring = TargetRing::Pad;
     bool cellsOn = true;  // 3.0.11-beta.142: [interface] skill_cells
+    int cancelsTold = 0;  // 3.0.11-beta.146
     std::vector<Flash> flashes;
     int castsTold = 0;
     uint16_t aimTold = 0;  // 3.0.11-beta.144: the game's aim last told the log
@@ -257,6 +269,20 @@ void skillCast(uint16_t skill, int lv, int x, int y) {
     s.flashes.push_back(std::move(f));
 }
 
+bool cancelGameAim(const char* why) {
+    constexpr uint32_t kModeMsgSlot = 0x14, kModeMsg = 0x5707D0, kEndWait = 0x4E;
+    using ModeMsgFn = int(__attribute__((thiscall)) *)(uint32_t mode, int msg, int a, int b, int c);
+    uint32_t skill = 0, vtable = 0, fn = 0;
+    const uint32_t mode = gameWaiting(skill);
+    if (!mode || !readGame(mode, &vtable, 4) || !readGame(vtable + kModeMsgSlot, &fn, 4) || fn != kModeMsg)
+        return false;
+    reinterpret_cast<ModeMsgFn>(uintptr_t(fn))(mode, kEndWait, 0, 0, 0);
+    State& s = state();
+    if (s.cancelsTold++ < 20)
+        LOG_INFO("skill cells: the game's own wait for skill %u's target ended (its message 0x4e) - %s", skill, why);
+    return true;
+}
+
 void newFrame() { state().drawn = false; }
 
 void draw(FrameRecord& record, int width, int height) {
@@ -298,7 +324,8 @@ void draw(FrameRecord& record, int width, int height) {
     int aimLv = 0, aimX = 0, aimY = 0;
     // 3.0.11-beta.145: the pad's aim first (a ground skill's button held), the game's with the mouse after
     const bool padAim = s.cellsOn && uapad::runtime::aimCells(aimSkill, aimLv, aimX, aimY);
-    const bool aiming = padAim || (s.cellsOn && gameAims(aimSkill, aimLv) && lastPick(aimX, aimY));
+    // 3.0.11-beta.146: the mouse's only while the pad is not the one played with (its cursor hidden then)
+    const bool aiming = padAim || (s.cellsOn && !padNow && gameAims(aimSkill, aimLv) && lastPick(aimX, aimY));
     if (aiming && aimSkill != s.aimTold && s.aimsTold < 20) {
         ++s.aimsTold;
         LOG_INFO("skill cells: %s skill %u lv %d - its cells at %d, %d", padAim ? "the pad aims" : "the game waits for",

@@ -280,6 +280,10 @@ void flushPackets() {
         if (const auto walk = parseWalkRequest(p)) uagfx::win::netpredictwin::walkAsked(walk->x, walk->y);
         if (const auto g = parseGroundSkill(p))  // 3.0.11-beta.142: its cells flashed on the ground
             uagfx::win::groundmarks::skillCast(g->skill, g->lv, g->at.x, g->at.y);
+        // 3.0.11-beta.146 (R-VYV3AG): the pad's own skill - the game's own wait for a target (clicked with the mouse
+        // before) ended
+        if (p.size() >= 2 && (rd16(p.data(), 0) == 0x0113 || rd16(p.data(), 0) == 0x0072))
+            uagfx::win::groundmarks::cancelGameAim("the pad cast its own");
     }
 }
 
@@ -941,6 +945,8 @@ void tick() {
     PadState padIn = pad;
     backCloses(padIn, view);  // 3.0.11-beta.93: each tick, so the press closing the tile closes nothing more
     const TickOutput out = s.session->tick(padIn, view, now);
+    if (s.session->controller().aimView())  // 3.0.11-beta.146 (R-VYV3AG): the pad aims - the game's own wait ended
+        uagfx::win::groundmarks::cancelGameAim("the pad aims its own");
     if (out.camera.turnDeg != 0 && s.cameraSupported && !clientcamera::turn(out.camera.turnDeg) &&
         !s.loggedCameraFail) {
         s.loggedCameraFail = true;

@@ -15,6 +15,7 @@ constexpr uint32_t kOwnAccount = 0x771F7C;  // uaRO.exe's session: the character
 struct State {
     groundunits::Tracker tracker;
     int told = 0;
+    int rawTold = 0;  // 3.0.11-beta.146 (R-VYV3AG: 19 Fire Walls cast, none counted): the packets as they came
 };
 
 State& state() {
@@ -53,7 +54,14 @@ void packet(uint16_t id, const uint8_t* packet) {
     if (id == 0x011F) {
         groundunits::Seen seen;
         uint32_t self = 0;
-        if (!groundunits::readSeen(packet, 16, seen) || !readGame(kOwnAccount, &self, 4)) return;
+        const bool read = groundunits::readSeen(packet, 16, seen), selfRead = readGame(kOwnAccount, &self, 4);
+        if (s.rawTold < 16 && (seen.caster == self || seen.type == 0x7F || s.rawTold < 6)) {
+            ++s.rawTold;
+            LOG_INFO("ground units: 0x011f unit %u by %u at %d, %d of the kind 0x%02X - the character %u%s%s",
+                     seen.unit, seen.caster, seen.x, seen.y, unsigned(seen.type), self, read ? "" : ", not read",
+                     selfRead ? "" : ", the character's account not read");
+        }
+        if (!read || !selfRead) return;
         const uint16_t skill = countedSkill(seen.type);
         if (skill == 0) return;
         const int before = s.tracker.standing(skill);
@@ -65,6 +73,10 @@ void packet(uint16_t id, const uint8_t* packet) {
     }
     uint32_t unit = 0;
     if (id != 0x0120 || !groundunits::readGone(packet, 6, unit)) return;
+    if (s.rawTold < 16) {
+        ++s.rawTold;
+        LOG_INFO("ground units: 0x0120 unit %u gone (%d Fire Walls standing)", unit, s.tracker.standing(18));
+    }
     uint64_t was[std::size(kCounted)];
     for (size_t i = 0; i < std::size(kCounted); ++i) was[i] = s.tracker.burntOut(kCounted[i]);
     s.tracker.gone(unit, now);
