@@ -24,8 +24,10 @@ namespace uagfx::win::hotbarwin {
 // 3.0.11-beta.78: ownBars - [interface] hotbar_per_character, each character's own bar (the new bar on or not)
 // 3.0.11-beta.86: padHints - [interface] pad_hints, the controller's buttons on its cells while played with it
 // 3.0.11-beta.125: ammo - [interface] hotbar_ammo, the ammo worn and how many left on a pill over it (win/ammo_watch)
-void frame(HWND game, bool on, bool ownBars, bool padHints, bool ammo, unsigned codePage, double k, int targetWidth,
-           int targetHeight);
+// 3.0.11-beta.143: counts - [interface] ground_counts, a ground skill's walls standing or a trap's Traps left on its
+// slot (win/ground_units), its edge flashing when a wall burnt out
+void frame(HWND game, bool on, bool ownBars, bool padHints, bool ammo, bool counts, unsigned codePage, double k,
+           int targetWidth, int targetHeight);
 void draw(FrameRecord& record, gpu::Renderer& renderer);
 bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result);
 // 3.0.11-beta.45: a key of its cells pressed (F1-F9; the battle mode's letters while the chat does not take them) - the

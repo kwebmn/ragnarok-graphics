@@ -1488,3 +1488,15 @@ TEST(config_interface_skill_cells) {
     CHECK(appliesNow("interface.skill_cells"));
     CHECK(!liveUpdate(parseConfig(""), parseConfig("[interface]\nskill_cells = 0\n")).next.skillCells);
 }
+
+// 3.0.11-beta.143 (the concept «маг, прист и хант на геймпаде»): [interface] ground_counts - on a ground skill's slot
+// of the hotbar its walls standing («2/3») or a trap's Traps in the bag («×37»), its edge flashing when a wall burnt
+// out; on unless the file says 0, a box of «Інтерфейс», at once
+TEST(config_interface_ground_counts) {
+    CHECK(parseConfig("").groundCounts);
+    CHECK(!parseConfig("[interface]\nground_counts = 0\n").groundCounts);
+    const settings::IniSetting* s = settings::findSetting("interface.ground_counts");
+    CHECK(s != nullptr && s->page == settings::Page::Interface);
+    CHECK(appliesNow("interface.ground_counts"));
+    CHECK(!liveUpdate(parseConfig(""), parseConfig("[interface]\nground_counts = 0\n")).next.groundCounts);
+}

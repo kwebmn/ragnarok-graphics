@@ -589,6 +589,8 @@ Config parseConfig(const std::string& text) {
             setBool(val, c.menuWindow);
         } else if (key == "interface.skill_cells") {  // 3.0.11-beta.142: a ground skill's cells on the ground
             setBool(val, c.skillCells);
+        } else if (key == "interface.ground_counts") {  // 3.0.11-beta.143: walls standing, traps left on the bar
+            setBool(val, c.groundCounts);
         } else if (key == "interface.dim_world") {  // 3.0.11-beta.49: the world dimmed under the windows (off: .55)
             setBool(val, c.dimWorld);
         } else if (key == "interface.cast") {  // 3.0.11-beta.48: the cast's label over the hero

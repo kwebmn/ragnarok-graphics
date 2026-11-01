@@ -323,6 +323,10 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("skill_cells", flag(running.skillCells), flag(file.skillCells)));
         n.skillCells = file.skillCells;
     }
+    if (file.groundCounts != running.groundCounts) {  // 3.0.11-beta.143: walls standing, traps left, at once
+        u.applied.push_back(change("ground_counts", flag(running.groundCounts), flag(file.groundCounts)));
+        n.groundCounts = file.groundCounts;
+    }
     if (file.uiSize != running.uiSize) {  // 3.0.11-beta.54: the new interface's size, at once
         const auto token = [](int v) { return v > 0 ? std::to_string(v) : std::string("auto"); };
         u.applied.push_back(change("size", token(running.uiSize), token(file.uiSize)));

@@ -5404,6 +5404,15 @@ constexpr Entry kTexts[] = {
      "створює сервер, коротко спалахують на землі після касту, з геймпада й мишею.",
      "Куда легло умение по земле: 3 или 5 клеток Fire Wall, квадрат Storm Gust, Sanctuary, ловушка — клетки, которые "
      "создаёт сервер, коротко вспыхивают на земле после каста, с геймпада и мышью."},
+    {Text::InterfaceGroundCounts, "Walls and traps on the hotbar", "Стіни й пастки на панелі",
+     "Стены и ловушки на панели"},
+    {Text::InterfaceGroundCountsHint,
+     "On a ground skill's slot: how many of its walls stand - Fire Wall 2/3, Quagmire, Fire Pillar - with the slot's "
+     "edge flashing when one burnt out, so you put it again; on a trap's slot the Traps left in the bag.",
+     "На клітинці навички по землі: скільки її стін стоїть — Fire Wall 2/3, Quagmire, Fire Pillar — і край клітинки "
+     "блимає, коли одна прогоріла, щоб поставити знову; на клітинці пастки — скільки предметів Trap лишилося в сумці.",
+     "На ячейке умения по земле: сколько его стен стоит — Fire Wall 2/3, Quagmire, Fire Pillar — и край ячейки мигает, "
+     "когда одна прогорела, чтобы поставить снова; на ячейке ловушки — сколько предметов Trap осталось в сумке."},
     {Text::InterfacePadWalk, "The controller walks", "Хід контролером", "Ход контроллером"},  // 3.0.11-beta.88
     {Text::InterfacePadWalkHint,  // 3.0.11-beta.102: by the map's cells, the default
      "How the left stick walks. With an arrow: by the map's cells, the same at any camera's distance - the character "

@@ -37,6 +37,13 @@ struct Cell {
     NotHere notHere = NotHere::No;  // greyed, a crossed circle, the reason in its tip
     bool unlearned = false;  // 3.0.11-beta.78: a skill the character has not learned - greyed so, its own words
     int pad = -1;  // 3.0.11-beta.86: the controller's button that uses it (padglyph::Button), -1 none
+    // 3.0.11-beta.143 (the owner's concept «маг, прист и хант на геймпаде»): a ground skill's own count in the bottom
+    // right - its walls standing («2/3»: Fire Wall, Quagmire, Fire Pillar) or a trap's Traps in the bag («×37»); ""
+    // none; `standingOut` - none left (red); `flash` - a wall of it burnt out a moment ago: its edge amber (1 fading
+    // to 0) - put it again
+    std::string standing;
+    bool standingOut = false;
+    float flash = 0;
 };
 int iconSide(Mode mode, float scale);
 

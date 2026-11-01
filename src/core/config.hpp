@@ -675,6 +675,10 @@ struct Config {
     // a ground skill's cells, as the server makes them (core/skill_area), shown on the ground after a cast by the pad
     // or the mouse (win/ground_marks); 0: none
     bool skillCells = true;
+    // 3.0.11-beta.143: [interface] ground_counts - on a ground skill's hotbar slot its walls standing («2/3»: Fire
+    // Wall, Quagmire, Fire Pillar - core/ground_units) or a trap's Traps in the bag («×37»), its edge flashing amber
+    // when a wall burnt out; 0: none
+    bool groundCounts = true;
     // 3.0.11-beta.46: [interface] animations - the new interface's motion (core/ui_motion): the target's card, the
     // character block's views, a new level's flare, the low HP warning sliding in; 0: all at once
     bool animations = true;

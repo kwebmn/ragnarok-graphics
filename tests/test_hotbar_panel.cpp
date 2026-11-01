@@ -413,3 +413,44 @@ TEST(hotbar_ammo_warns_once_across_a_maps_loading) {
     CHECK(w.now(0, 9500) == 3 && w.fresh == 0);
     CHECK(w.now(300, 10000) == 0 && w.fresh == 0);  // a new stack
 }
+
+// 3.0.11-beta.143 (the owner's concept «маг, прист и хант на геймпаде»): a ground skill's own count in its cell's
+// bottom right - Fire Wall's walls standing «2/3», a trap's Traps in the bag «×37» (red when none) - and its edge
+// flashing amber when a wall burnt out (re-place it)
+TEST(hotbar_ground_skill_counts_and_flash) {
+    const hotbar::Layout L = hotbar::layout(hotbar::Mode::Normal, 400, 200, 1.0f);
+    std::vector<hotbar::Cell> cells(9);
+    cells[0].name = "Fire Wall";
+    cells[0].level = 10;
+    cells[0].standing = "2/3";
+    cells[1].name = "Ankle Snare";
+    cells[1].level = 5;
+    cells[1].standing = "\xC3\x97" "37";
+    cells[2].name = "Land Mine";
+    cells[2].standing = "\xC3\x97" "0";
+    cells[2].standingOut = true;
+    const std::vector<hotbar::Words> w = hotbar::words(L, cells, 0, hotbar::Show{}, texts());
+    const auto find = [&](const std::string& text) {
+        return std::find_if(w.begin(), w.end(), [&](const hotbar::Words& x) { return x.text == text; });
+    };
+    CHECK(find("2/3") != w.end() && find("\xC3\x97" "37") != w.end());
+    if (find("2/3") != w.end()) {  // the bottom right
+        const panel::Box& c = L.cells[0];
+        const panel::Box& at = find("2/3")->box;
+        CHECK(std::fabs(at.x + at.w - (c.x + c.w - 2)) < 0.5f && at.y > c.y + c.h / 2);
+    }
+    CHECK(find("\xC3\x97" "0") != w.end() && find("\xC3\x97" "0")->rgb == 0xFF5A4E);
+    panel::Picture plain, flashed;
+    for (panel::Picture* p : {&plain, &flashed}) {
+        p->width = L.w;
+        p->height = L.h;
+        p->px.assign(size_t(L.w) * size_t(L.h), 0u);
+    }
+    hotbar::paint(plain, L, cells, hotbar::Show{}, texts());
+    cells[0].flash = 1.0f;
+    hotbar::paint(flashed, L, cells, hotbar::Show{}, texts());
+    const panel::Box& c = L.cells[0];
+    const uint32_t before = plain.px[size_t(int(c.y + c.h / 2)) * size_t(L.w) + size_t(int(c.x))];
+    const uint32_t after = flashed.px[size_t(int(c.y + c.h / 2)) * size_t(L.w) + size_t(int(c.x))];
+    CHECK(((after >> 16) & 0xFF) > ((before >> 16) & 0xFF) + 40);  // its edge amber
+}

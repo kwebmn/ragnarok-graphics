@@ -16,6 +16,7 @@
 #include "win/npc_talk.hpp"
 #include "win/storage_window.hpp"
 #include "win/target_card.hpp"
+#include "win/ground_units.hpp"
 #include "win/notifier.hpp"
 
 namespace uagfx::win {
@@ -69,6 +70,7 @@ bool redirect(uint32_t at, const uint8_t* call, uint32_t fn, const uint8_t* code
 uint16_t __attribute__((thiscall)) take(void* connection, const uint8_t* packet) {
     const uint16_t id = g_take(connection, packet);
     netwatchwin::packet(connection, id, packet);  // 3.0.11-beta.122: the connection watched, the position fixes
+    groundunitswin::packet(id, packet);           // 3.0.11-beta.143: the own walls and pillars standing
     const packets::Event e = packets::parse(packet, kReadable);
     if (!std::holds_alternative<std::monostate>(e)) {
         notifier::packet(e);

@@ -16,6 +16,7 @@
 #include "core/char_status.hpp"
 #include "core/hotbar_bars.hpp"
 #include "core/hotbar_panel.hpp"
+#include "core/skill_area.hpp"
 #include "core/layout.hpp"
 #include "core/settings/strings.hpp"
 #include "core/skill_costs.hpp"
@@ -29,6 +30,7 @@
 #include "win/client_tables.hpp"
 #include "win/code_page.hpp"
 #include "win/game_camera.hpp"
+#include "win/ground_units.hpp"
 #include "win/hud_edit.hpp"
 #include "win/log.hpp"
 #include "win/paths.hpp"
@@ -155,6 +157,7 @@ struct State {
     hb::AmmoWarn ammoWarn;
     int ammoTold = 0;
     bool ammoOn = true;
+    bool countsOn = true;  // 3.0.11-beta.143: [interface] ground_counts
 };
 
 State& state() {
@@ -485,6 +488,24 @@ const panel::Picture* iconOf(State& s, const std::string& file, int side) {
     return clienttables::icon(file, side, 4 * s.scale);
 }
 
+// 3.0.11-beta.143 (the owner's concept «маг, прист и хант на геймпаде»): a ground skill's own count on its slot - its
+// walls standing of the most at once (core/ground_units: Fire Wall, Quagmire, Fire Pillar), its edge flashing amber
+// 1.5 s after one burnt out; a trap's Traps (item 1065) in the bag
+void groundCount(State& s, uint16_t skill, hb::Cell& c) {
+    constexpr uint64_t kFlashMs = 1500;
+    if (const int most = skillarea::most(skill); most > 0) {
+        const groundunits::Tracker& t = groundunitswin::tracker();
+        if (const int n = t.standing(skill); n > 0) c.standing = std::to_string(n) + "/" + std::to_string(most);
+        const uint64_t out = t.burntOut(skill), now = GetTickCount64();
+        if (out > 0 && now >= out && now - out < kFlashMs) c.flash = 1.0f - float(now - out) / float(kFlashMs);
+    } else if (skillarea::kindOf(skill) == skillarea::Kind::Trap) {
+        const auto b = s.bag.find("1065");
+        const int n = b != s.bag.end() ? b->second : 0;
+        c.standing = "\xC3\x97" + std::to_string(n);
+        c.standingOut = n == 0;
+    }
+}
+
 hb::Cell cellOf(State& s, int slot, const std::string& key, unsigned codePage) {
     hb::Cell c;
     c.key = key;
@@ -507,6 +528,7 @@ hb::Cell cellOf(State& s, int slot, const std::string& key, unsigned codePage) {
             c.spNeed = price;
             c.spHave = s.sp;
         }
+        if (s.countsOn && at.skillId > 0) groundCount(s, uint16_t(at.skillId), c);  // 3.0.11-beta.143
     } else if (at.what.kind == hb::Slot::Kind::Item) {
         const auto& items = clienttables::itemNames();
         const auto n = items.find(at.what.id);
@@ -726,9 +748,14 @@ std::vector<barhint::Skill> barSkills() {
     return out;
 }
 
-void frame(HWND game, bool on, bool ownBars, bool padHints, bool ammo, unsigned codePage, double k, int targetWidth,
-           int targetHeight) {
+void frame(HWND game, bool on, bool ownBars, bool padHints, bool ammo, bool counts, unsigned codePage, double k,
+           int targetWidth, int targetHeight) {
     State& s = state();
+    if (counts != s.countsOn) {  // 3.0.11-beta.143
+        s.countsOn = counts;
+        s.key.clear();
+        LOG_INFO("hotbar: [interface] ground_counts = %d", counts ? 1 : 0);
+    }
     if (on != s.on) {
         s.on = on;
         if (!on) s.editing = s.editShown = false;
@@ -822,7 +849,8 @@ void frame(HWND game, bool on, bool ownBars, bool padHints, bool ammo, unsigned 
         const hb::Cell& c = s.cells[i];
         key += c.key + '|' + c.name + '|' + std::to_string(c.level) + '|' + std::to_string(c.count) +
                (c.icon ? "i" : "") + (c.selected ? "s" : "") + (c.spHave < c.spNeed ? "d" : "") +
-               std::to_string(int(c.notHere)) + ',' + std::to_string(c.pad) + ';';
+               std::to_string(int(c.notHere)) + ',' + std::to_string(c.pad) + ',' + c.standing +
+               std::to_string(int(c.flash * 10)) + ';';  // 3.0.11-beta.143: the flash in ten steps
         if (int(i) == show.hover && show.tip)  // its tip's numbers
             key += std::to_string(c.spNeed) + '/' + std::to_string(c.spHave) + ';';
     }

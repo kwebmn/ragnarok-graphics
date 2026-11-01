@@ -66,6 +66,12 @@ panel::Box levelBox(const panel::Box& cell, int level, float s) {
 
 bool noSp(const Cell& c) { return c.spNeed > 0 && c.spHave < c.spNeed; }
 
+// 3.0.11-beta.143: a ground skill's own count's plate - the bottom right, as an item's count
+panel::Box standingBox(const panel::Box& cell, const std::string& text, float s) {
+    const float w = panel::wordsWidth(text, 11 * s, true) + 6 * s;
+    return panel::Box{cell.x + cell.w - w - 2 * s, cell.y + cell.h - 15 * s, w, 13 * s};
+}
+
 // The cell as shown: pressed, 1 px lower
 panel::Box shown(const Layout& L, size_t i, const Show& show) {
     panel::Box b = L.cells[i];
@@ -275,6 +281,10 @@ void paint(panel::Picture& out, const Layout& L, const std::vector<Cell>& cells,
             panel::roundRect(out, panel::Box{b.x + b.w - w - 2 * s, b.y + b.h - 15 * s, w, 13 * s}, 3 * s, kBlack,
                              0.62f);
         }
+        if (c && c->count < 0 && !c->standing.empty())  // 3.0.11-beta.143: a ground skill's own count's plate
+            panel::roundRect(out, standingBox(b, c->standing, s), 3 * s, kBlack, 0.62f);
+        if (c && c->flash > 0)  // 3.0.11-beta.143: a wall of it burnt out - its edge amber, fading
+            panel::roundRect(out, b, 7 * s, kAmmoWarn, 0.0f, kAmmoWarn, std::min(1.0f, c->flash), 2.0f * s);
         if (dry) panel::roundRect(out, spBox(b, s), 3 * s, kSpBlue, 0.95f);  // its «SP» plate
         if (show.pad && c && c->pad < 0) panel::roundRect(out, b, 7 * s, kBlack, 0.5f);  // no button uses it
     }
@@ -344,6 +354,9 @@ std::vector<Words> words(const Layout& L, const std::vector<Cell>& cells, int ro
             out.push_back(Words{panel::Box{b.x + b.w - w - 2 * s, b.y + b.h - 15 * s, w, 13 * s}, n,
                                 c.count == 0 ? kMuted : kText, 11 * s, true, Align::Center});
         }
+        if (c.count < 0 && !c.standing.empty())  // 3.0.11-beta.143
+            out.push_back(Words{standingBox(b, c.standing, s), c.standing, c.standingOut ? kAmmoOut : kText, 11 * s,
+                                true, Align::Center});
         if (c.level > 0)
             out.push_back(Words{levelBox(b, c.level, s), std::to_string(c.level), kText, 11 * s, true, Align::Center});
         if (c.notHere == NotHere::No && !c.unlearned && noSp(c))
