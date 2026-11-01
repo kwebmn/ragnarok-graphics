@@ -129,4 +129,8 @@ cell. RO's TCP: one lost packet holds the rest until it is sent again (0.2-1 s o
   694): 5 joined (93-172 ms), 0 «another way» (caughtUp skipped one), 2 put back - both guessed in a calm moment, the
   request lost right after. 3.0.11-beta.137: netwatch lastLossMs (time-out, resent, hold; test net_watch_the_last_loss),
   netpredict calm (no loss 30 s, round trip < 150; test net_predict_only_on_a_calm_line) in place of the level check.
+- R-VXZ36T (.137, 4 min): 1 joined (62 ms), 3 put back - 1.3 s after the map's entry (the server walks no one before
+  the map is loaded) and twice in a 4 s uplink stall (the second click guessed before TCP_INFO showed the time-out).
+  3.0.11-beta.138: netpredict settled (5 s on the map) and lastLoss (a put back is a loss: calm 30 s after it; test
+  net_predict_settled_and_put_back_as_a_loss). Suite 2130/0.
 

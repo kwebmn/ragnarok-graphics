@@ -68,4 +68,12 @@ bool caughtUp(int shownX, int shownY, const Placed& at);
 // packet lost for 30 s (0: none seen) and a round trip under 150 ms (0: not known yet)
 bool calm(uint64_t nowMs, uint64_t lastLossMs, int rttMs);
 
+// 3.0.11-beta.138 (R-VXZ36T: put back 1.3 s after the map's entry; twice in one stall - the second click guessed before
+// TCP knew the first request was lost): 5 s on the map (0: not on one) before a guess; a guess put back is a lost
+// packet too - the later of the two
+bool settled(uint64_t nowMs, uint64_t enteredMs);
+inline uint64_t lastLoss(uint64_t watchedMs, uint64_t putBackMs) {
+    return watchedMs > putBackMs ? watchedMs : putBackMs;
+}
+
 }  // namespace uagfx::netpredict

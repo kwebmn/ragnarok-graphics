@@ -179,3 +179,14 @@ TEST(net_predict_only_on_a_calm_line) {
     CHECK(!netpredict::calm(100000, 0, 150));       // a slow line
     CHECK(netpredict::calm(100000, 0, 0));          // the round trip not known yet
 }
+
+// 3.0.11-beta.138 (R-VXZ36T: put back 1.3 s after the map's entry - the server walks no one before the map is loaded;
+// and twice in a row in one stall - the second click guessed before TCP knew the first was lost): no guess in the
+// first 5 s on a map; a guess put back counts as a lost packet (the line not calm for 30 s)
+TEST(net_predict_settled_and_put_back_as_a_loss) {
+    CHECK(!netpredict::settled(1000, 0));      // not on a map
+    CHECK(!netpredict::settled(5000, 1000));   // 4 s on it
+    CHECK(netpredict::settled(6000, 1000));    // 5 s
+    CHECK(netpredict::lastLoss(9000, 12000) == 12000 && netpredict::lastLoss(15000, 12000) == 15000);
+    CHECK(!netpredict::calm(20000, netpredict::lastLoss(0, 12000), 60));  // 8 s after a put back
+}

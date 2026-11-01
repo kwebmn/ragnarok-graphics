@@ -45,6 +45,8 @@ struct State {
     int flightTold = 0, badTold = 0;
     np::Placed placed;  // 3.0.11-beta.136: where the server last put the character (its walk's end or a fix)
     int behindTold = 0;
+    uint64_t enteredAt = 0, putBackAt = 0;  // 3.0.11-beta.138: on this map since; the last guess put back
+    int enteringTold = 0;
 };
 
 State& state() {
@@ -101,12 +103,16 @@ void guess(State& s, uint64_t now) {
     }
     // 3.0.11-beta.135: packets lost now - the answers late and out of turn: no guess; 3.0.11-beta.137 (R-QTN6TF: both
     // put back were guessed in a calm moment of a lossy line): none lost for 30 s, a round trip under 150 ms
-    if (!np::calm(now, netwatchwin::lastLossMs(), netwatchwin::rttMs())) {
+    if (!np::settled(now, s.enteredAt)) {  // 3.0.11-beta.138: the server walks no one before the map is loaded
+        if (s.enteringTold++ < 5) LOG_INFO("net: the walk not guessed - just on the map (5 s first)");
+        return;
+    }
+    // 3.0.11-beta.138: a guess put back is a lost packet too
+    if (const uint64_t lost = np::lastLoss(netwatchwin::lastLossMs(), s.putBackAt);
+        !np::calm(now, lost, netwatchwin::rttMs())) {
         if (s.badTold++ < 10)
             LOG_INFO("net: the walk not guessed - the line is not calm (a packet lost %llu s ago, round trip %d ms)",
-                     static_cast<unsigned long long>(netwatchwin::lastLossMs()
-                                                         ? (now - netwatchwin::lastLossMs()) / 1000 : 0),
-                     netwatchwin::rttMs());
+                     static_cast<unsigned long long>(lost ? (now - lost) / 1000 : 0), netwatchwin::rttMs());
         return;
     }
     if (!np::caughtUp(x, y, s.placed)) {  // 3.0.11-beta.136: the game shows it short of the server's cell
@@ -224,16 +230,19 @@ void beginScene() {
     int w = 0, h = 0, cell = 0;
     if (!inGameWorld() || !readPlayerWorld(at, w, h, cell)) {
         s.placed = np::Placed{};  // 3.0.11-beta.136: another map - nothing known there yet
+        s.enteredAt = 0;          // 3.0.11-beta.138
         s.stillSince = 0;
         s.asked = false;
         s.guess.pending = false;
         return;
     }
+    if (!s.enteredAt) s.enteredAt = now;  // 3.0.11-beta.138: on the map from this frame
     if (std::fabs(at[0] - s.lastX) + std::fabs(at[2] - s.lastZ) > 0.01f || !s.stillSince) s.stillSince = now;
     s.lastX = at[0];
     s.lastZ = at[2];
     if (s.guess.pending && now - s.guess.atMs > np::waitMs(netwatchwin::rttMs())) {  // the server did not walk it
         s.guess.pending = false;
+        s.putBackAt = now;  // 3.0.11-beta.138: as a lost packet - the line not calm for 30 s
         if (dead()) return;  // 3.0.11-beta.132: died meanwhile - the game shows it as the server has it
         tell(player(), kPutMsg, s.guess.move.srcX, s.guess.move.srcY);
         if (++s.putBack <= 20)
