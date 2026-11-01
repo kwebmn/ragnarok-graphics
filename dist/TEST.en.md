@@ -1,3 +1,14 @@
+# uaRO Graphics 3.0.11-beta.146 — what's new
+
+**Fire Wall no longer "hangs" after the mouse** (report R-VYV3AG "the fire wall is always active"):
+- A ground skill pressed with the mouse on the hotbar and then play with the controller - the game kept waiting for
+  where to put it: "Select a Target" on the screen, the slot outlined, the cells under the hidden cursor - to the
+  end. Now as soon as the controller casts a skill itself or starts aiming, the game's wait ends - as Esc ends it.
+- While you play with the controller, the skill's cells under the mouse cursor are not drawn - only the controller's
+  aim.
+- The walls' counter "2/3" on the hotbar saw none of your walls. This beta writes the server's first packets about
+  skill cells to the log - send a report after a couple of Fire Walls and I will fix it by it.
+
 # uaRO Graphics 3.0.11-beta.145 — what's new
 
 **Ground skills, step 4: aiming with the controller**:
