@@ -70,6 +70,9 @@ ICONS = [
     ('Gamepad', '<path d="M7 8h10a4 4 0 0 1 4 4l.6 4.2a2.4 2.4 0 0 1-4.3 1.8L15.5 16h-7l-1.8 2a2.4 2.4 0 0 1-4.3-1.8'
                 'L3 12a4 4 0 0 1 4-4z"/><path d="M8 10.5v3.5M6.25 12.25h3.5"/>'
                 '<circle cx="16" cy="11.4" r=".7"/><circle cx="17.8" cy="13.2" r=".7"/>'),
+    # 3.0.11-beta.147: the hotbar's battle mode button (in the pencil's place) - two crossed swords
+    ('Battle', '<path d="M14.5 17.5L3 6V3h3l11.5 11.5"/><path d="M13 19l6-6M16 16l4 4M19 21l2-2"/>'
+               '<path d="M14.5 6.5L18 3h3v3l-3.5 3.5"/><path d="M5 14l4 4M7 17l-3 3M3 19l2 2"/>'),
 ]
 
 NUMBER = r'[-+]?(?:\d*\.\d+|\d+\.?)(?:[eE][-+]?\d+)?'

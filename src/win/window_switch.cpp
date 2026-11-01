@@ -61,7 +61,8 @@ void claimed(UINT m) {
 
 // The driver's parts' mouse, the topmost first: true - the message was one of theirs
 bool partsMouse(HWND w, UINT m, WPARAM wp, LPARAM lp, LRESULT& answer) {
-    if (hudedit::mouse(w, m, wp, lp, answer) ||      // 3.0.11-beta.75: all of it while the parts are framed
+    if (hotbarwin::held(w, m, wp, lp, answer) ||     // 3.0.11-beta.147: a hotbar cell's icon held - its let go
+        hudedit::mouse(w, m, wp, lp, answer) ||      // 3.0.11-beta.75: all of it while the parts are framed
         padtileswin::mouse(w, m, wp, lp, answer) ||  // 3.0.11-beta.90: the controller's windows' tile (modal)
         padassignwin::mouse(w, m, wp, lp, answer) ||  // 3.0.11-beta.91: «Призначити» (modal)
         answercard::mouse(w, m, lp, answer))          // 3.0.9-beta.4: and over the answer card the card's

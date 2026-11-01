@@ -1,5 +1,5 @@
-// 3.0.11-beta.40: the hotbar (core/hotbar_panel) - its rows in both modes, the editing button, the mouse over it,
-// its cells' picture and words
+// 3.0.11-beta.40: the hotbar (core/hotbar_panel) - its rows in both modes, the battle mode's button (3.0.11-beta.147:
+// in the pencil's place), the mouse over it, its cells' picture and words, a cell's icon lifted and let go
 #include <algorithm>
 #include <cmath>
 #include <map>
@@ -22,8 +22,8 @@ hotbar::Texts texts() {
     hotbar::Texts t;
     t.battle = "бойовий режим";
     t.battleHint = "літери — навички й предмети \xC2\xB7 Enter — чат";
-    t.edit = "редагувати панель гри";
-    t.done = "готово";
+    t.battleOn = "увімкнути бойовий режим";
+    t.battleOff = "вимкнути бойовий режим";
     t.use = "клік — використати";
     t.noSp = "Немає SP \xC2\xB7 потрібно {1}, у вас {2}";
     t.notHere = "Не тут \xC2\xB7 {1}";
@@ -55,7 +55,7 @@ TEST(hotbar_layout) {
     CHECK(std::abs(N.y + int(N.glass.y + N.glass.h) - 1070) <= 1);              // its bottom where asked
     CHECK(std::abs(N.x + int(N.glass.x + N.glass.w / 2) - 960) <= 1);          // its middle too
     CHECK(N.tipRoom.h > 0 && N.tipRoom.y + N.tipRoom.h <= N.glass.y + 1e-3f);  // the tips over it
-    CHECK(N.row.x + N.row.w <= N.cells[0].x && N.edit.x >= N.cells[8].x + N.cells[8].w);
+    CHECK(N.row.x + N.row.w <= N.cells[0].x && N.toggle.x >= N.cells[8].x + N.cells[8].w);
     for (size_t i = 0; i < N.cells.size(); ++i) {
         CHECK(inside(N.glass, N.cells[i]) && N.cells[i].w == 48 && N.cells[i].h == 48);
         if (i) CHECK(N.cells[i].x > N.cells[i - 1].x + N.cells[i - 1].w && N.cells[i].y == N.cells[0].y);
@@ -69,8 +69,6 @@ TEST(hotbar_layout) {
             CHECK(b.x > a.x && b.y == a.y && inside(B.glass, b));
         }
     CHECK(B.cells[9].y > B.cells[0].y && B.cells[18].y > B.cells[9].y);
-    const hotbar::Layout E = hotbar::layout(hotbar::Mode::Editing, 960, 1070, 1.0f);
-    CHECK(E.cells.empty() && E.edit.w > 0 && inside(E.glass, E.edit));
     const hotbar::Layout N2 = hotbar::layout(hotbar::Mode::Normal, 1920, 2140, 2.0f);
     CHECK(N2.cells[0].w == 96 && std::fabs(N2.glass.w - 2 * N.glass.w) < 1.0f);
 }
@@ -81,7 +79,7 @@ TEST(hotbar_mouse) {
         const hotbar::Hit h = hotbar::hitTest(N, N.cells[size_t(i)].x + 24, N.cells[size_t(i)].y + 24);
         CHECK(h.part == hotbar::Part::Cell && h.cell == i);
     }
-    CHECK(hotbar::hitTest(N, N.edit.x + 4, N.edit.y + 4).part == hotbar::Part::Edit);
+    CHECK(hotbar::hitTest(N, N.toggle.x + 4, N.toggle.y + 4).part == hotbar::Part::Toggle);
     CHECK(hotbar::hitTest(N, N.row.x + 4, N.row.y + 4).part == hotbar::Part::Body);
     CHECK(hotbar::hitTest(N, N.tipRoom.x + 4, N.tipRoom.y + 4).part == hotbar::Part::None);
     const hotbar::Layout B = hotbar::layout(hotbar::Mode::Battle, 960, 1070, 1.0f);
@@ -453,4 +451,145 @@ TEST(hotbar_ground_skill_counts_and_flash) {
     const uint32_t before = plain.px[size_t(int(c.y + c.h / 2)) * size_t(L.w) + size_t(int(c.x))];
     const uint32_t after = flashed.px[size_t(int(c.y + c.h / 2)) * size_t(L.w) + size_t(int(c.x))];
     CHECK(((after >> 16) & 0xFF) > ((before >> 16) & 0xFF) + 40);  // its edge amber
+}
+
+// 3.0.11-beta.147 (the owner: «предусмотри возможность чтобы можно было батлмод кнопкой на этой панели включать»): the
+// pencil gone - in its place the battle mode's button, two crossed swords: red while the mode is on, its tip what a
+// click does
+TEST(hotbar_battle_button) {
+    const hotbar::Layout N = hotbar::layout(hotbar::Mode::Normal, 400, 200, 1.0f);
+    const hotbar::Layout B = hotbar::layout(hotbar::Mode::Battle, 400, 300, 1.0f);
+    for (const hotbar::Layout* L : {&N, &B}) {
+        CHECK(L->toggle.w > 0 && inside(L->glass, L->toggle) && L->toggle.x >= L->cells[8].x + L->cells[8].w);
+        const hotbar::Hit h = hotbar::hitTest(*L, L->toggle.x + L->toggle.w / 2, L->toggle.y + L->toggle.h / 2);
+        CHECK(h.part == hotbar::Part::Toggle);
+    }
+    const auto backing = [](const hotbar::Layout& L) {  // left of its swords, inside its rounding
+        panel::Picture p;
+        p.width = L.w;
+        p.height = L.h;
+        p.px.assign(size_t(L.w) * size_t(L.h), 0u);
+        hotbar::paint(p, L, std::vector<hotbar::Cell>(L.cells.size()), hotbar::Show{}, texts());
+        return p.px[size_t(int(L.toggle.y + L.toggle.h / 2)) * size_t(p.width) + size_t(int(L.toggle.x + 3))];
+    };
+    const uint32_t off = backing(N), on = backing(B);
+    CHECK(((on >> 16) & 0xFF) > ((on >> 8) & 0xFF) + 40);    // red while on
+    CHECK(((off >> 16) & 0xFF) < ((off >> 8) & 0xFF) + 20);  // not while off
+    hotbar::Show sh;
+    sh.hoverToggle = true;
+    const auto has = [](const std::vector<hotbar::Words>& w, const std::string& text) {
+        return std::find_if(w.begin(), w.end(), [&](const hotbar::Words& x) { return x.text == text; }) != w.end();
+    };
+    CHECK(has(hotbar::words(N, std::vector<hotbar::Cell>(9), 0, sh, texts()), "увімкнути бойовий режим"));
+    CHECK(has(hotbar::words(B, std::vector<hotbar::Cell>(27), 0, sh, texts()), "вимкнути бойовий режим"));
+    CHECK(!has(hotbar::words(N, std::vector<hotbar::Cell>(9), 0, hotbar::Show{}, texts()), "увімкнути бойовий режим"));
+}
+
+// 3.0.11-beta.147: the game's slot each shown cell keeps - the normal mode's of the row shown, the battle mode's rows
+// Q, A, Z the game's 1, 2, 0 (whatever row the normal mode shows)
+TEST(hotbar_cells_slots) {
+    CHECK(hotbar::gameSlot(hotbar::Mode::Normal, 0, 0) == 0 && hotbar::gameSlot(hotbar::Mode::Normal, 2, 8) == 26);
+    CHECK(hotbar::gameSlot(hotbar::Mode::Normal, 1, 3) == 12);
+    CHECK(hotbar::gameSlot(hotbar::Mode::Battle, 2, 0) == 9);   // Q: the game's row 1
+    CHECK(hotbar::gameSlot(hotbar::Mode::Battle, 0, 9) == 18);  // A: its row 2
+    CHECK(hotbar::gameSlot(hotbar::Mode::Battle, 0, 26) == 8);  // «.»: its row 0
+    CHECK(hotbar::gameSlot(hotbar::Mode::Normal, 0, 9) == -1 && hotbar::gameSlot(hotbar::Mode::Battle, 0, 27) == -1);
+    CHECK(hotbar::gameSlot(hotbar::Mode::Normal, 0, -1) == -1);
+}
+
+// 3.0.11-beta.147 (the owner: «иногда панель сама двигается» - a click whose pointer slipped dragged the whole bar): a
+// press on a cell's icon lifts it only held 0.25 s and moved 10 pixels x the scale - a quicker one, wherever it is let
+// go, stays the pressed cell's click
+TEST(hotbar_lift_click_or_drag) {
+    hotbar::Lift l;
+    hotbar::press(l, 3, 100, 50, 1000);
+    CHECK(!hotbar::moved(l, 130, 50, 1148, 1.0f));  // R-VYV3AG: slipped in 148 ms - still a click
+    CHECK(hotbar::moved(l, 130, 50, 1250, 1.0f));   // held on: lifted
+    CHECK(hotbar::moved(l, 102, 50, 1300, 1.0f));   // and stays lifted back near
+    hotbar::press(l, 4, 100, 50, 2000);
+    CHECK(l.cell == 4 && !l.dragging);
+    CHECK(!hotbar::moved(l, 109, 50, 2600, 1.0f));  // held still
+    CHECK(!hotbar::moved(l, 118, 50, 2600, 2.0f));  // 18 px at scale 2: still
+    CHECK(hotbar::moved(l, 121, 50, 2600, 2.0f));
+    hotbar::Lift none;
+    CHECK(!hotbar::moved(none, 500, 500, 99999, 1.0f));  // nothing pressed
+}
+
+// 3.0.11-beta.147: a lifted icon let go - over another cell: the two swapped; well off the bar (24 px x the scale past
+// its glass): its slot emptied; over its own cell, the bar's other parts or just past its edge: nothing
+TEST(hotbar_lifted_icon_let_go) {
+    const hotbar::Layout L = hotbar::layout(hotbar::Mode::Normal, 400, 200, 1.0f);
+    const auto at = [&](const hotbar::Layout& Y, int from, const panel::Box& b) {
+        return hotbar::letGo(Y, from, b.x + b.w / 2, b.y + b.h / 2);
+    };
+    hotbar::Release r = at(L, 2, L.cells[6]);
+    CHECK(r.what == hotbar::Let::Swap && r.cell == 6);
+    CHECK(at(L, 2, L.cells[2]).what == hotbar::Let::Nothing);
+    CHECK(at(L, 2, L.toggle).what == hotbar::Let::Nothing && at(L, 2, L.row).what == hotbar::Let::Nothing);
+    CHECK(hotbar::letGo(L, 2, L.glass.x + 100, L.glass.y - 10).what == hotbar::Let::Nothing);  // just over its edge
+    r = hotbar::letGo(L, 2, L.glass.x + 100, L.glass.y - 30);
+    CHECK(r.what == hotbar::Let::Empty && r.cell == 2);
+    CHECK(hotbar::letGo(L, 2, -500, -400).what == hotbar::Let::Empty);  // far off, outside its picture
+    CHECK(hotbar::away(L, -500, -400) && !hotbar::away(L, L.glass.x + 100, L.glass.y - 10));
+    const hotbar::Layout B = hotbar::layout(hotbar::Mode::Battle, 400, 300, 1.0f);
+    r = at(B, 0, B.cells[26]);
+    CHECK(r.what == hotbar::Let::Swap && r.cell == 26);
+    CHECK(hotbar::letGo(L, -1, -500, -400).what == hotbar::Let::Nothing);  // nothing lifted
+}
+
+// 3.0.11-beta.147: a lifted icon at the cursor - on a dark plate, a little faded; well off the bar a red badge with a
+// minus at its top right (let go there - taken off the bar)
+TEST(hotbar_lifted_icon_picture) {
+    panel::Picture icon;
+    icon.width = icon.height = 32;
+    icon.px.assign(32 * 32, 0xFF3060C0u);
+    const int side = hotbar::liftedSide(hotbar::Mode::Normal, 1.0f);
+    CHECK(side >= 40 && side <= 56);
+    const auto paint = [&](bool away) {
+        panel::Picture p;
+        p.width = p.height = side;
+        p.px.assign(size_t(side) * size_t(side), 0u);
+        hotbar::paintLifted(p, &icon, away, 1.0f);
+        return p;
+    };
+    const auto red = [](const panel::Picture& q) {
+        int n = 0;
+        for (const uint32_t px : q.px) n += ((px >> 16) & 0xFF) > 0xA0 && ((px >> 8) & 0xFF) < 0x70;
+        return n;
+    };
+    const panel::Picture near = paint(false), far = paint(true);
+    const uint32_t c = near.px[size_t(side / 2) * size_t(side) + size_t(side / 2)];
+    CHECK((c >> 24) > 0x80 && (c & 0xFF) > 0x60 && (c & 0xFF) < 0xC0);  // the icon there, a little faded
+    CHECK(red(near) == 0 && red(far) > 20);
+    CHECK(hotbar::liftedSide(hotbar::Mode::Normal, 2.0f) == 2 * side);
+}
+
+// 3.0.11-beta.147: while an icon is lifted its cell shows it faded and the cell under it is outlined in gold
+TEST(hotbar_lifted_cell_and_its_place) {
+    const hotbar::Layout L = hotbar::layout(hotbar::Mode::Normal, 400, 200, 1.0f);
+    panel::Picture icon;
+    icon.width = icon.height = 32;
+    icon.px.assign(32 * 32, 0xFF3060C0u);
+    std::vector<hotbar::Cell> cells(9);
+    for (hotbar::Cell& c : cells) {
+        c.name = "Fire Bolt";
+        c.icon = &icon;
+    }
+    hotbar::Show show;
+    show.lifted = 1;
+    show.over = 4;
+    panel::Picture p;
+    p.width = L.w;
+    p.height = L.h;
+    p.px.assign(size_t(L.w) * size_t(L.h), 0u);
+    hotbar::paint(p, L, cells, show, texts());
+    const auto mid = [&](const panel::Box& b) {
+        return p.px[size_t(int(b.y + b.h / 2)) * size_t(p.width) + size_t(int(b.x + b.w / 2))];
+    };
+    CHECK((mid(L.cells[1]) & 0xFF) < (mid(L.cells[2]) & 0xFF) / 2);  // its icon faded where it was
+    const auto edge = [&](const panel::Box& b) {
+        return p.px[size_t(int(b.y + b.h / 2)) * size_t(p.width) + size_t(int(b.x))];
+    };
+    const uint32_t gold = edge(L.cells[4]), plain = edge(L.cells[3]);
+    CHECK(((gold >> 16) & 0xFF) > ((plain >> 16) & 0xFF) + 60 && ((gold >> 16) & 0xFF) > (gold & 0xFF) + 40);
 }

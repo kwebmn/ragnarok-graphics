@@ -2,6 +2,7 @@
 
 #include <cstdlib>
 #include <sstream>
+#include <utility>
 #include <vector>
 
 namespace uagfx::hotbar {
@@ -90,6 +91,18 @@ int dropUnlearned(Bar& bar, const std::set<std::string>& learned) {
         }
     }
     return dropped;
+}
+
+void swapSlots(Bar& bar, int a, int b) {
+    if (a < 0 || b < 0 || a >= kBarSlots || b >= kBarSlots) return;
+    std::swap(bar.slots[size_t(a)], bar.slots[size_t(b)]);
+    std::swap(bar.levels[size_t(a)], bar.levels[size_t(b)]);
+}
+
+void emptySlot(Bar& bar, int slot) {
+    if (slot < 0 || slot >= kBarSlots) return;
+    bar.slots[size_t(slot)].clear();
+    bar.levels[size_t(slot)] = 0;
 }
 
 }  // namespace uagfx::hotbar

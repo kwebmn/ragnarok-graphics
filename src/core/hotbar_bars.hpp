@@ -25,5 +25,9 @@ Bars parseBars(const std::string& text);  // a line it cannot read skipped
 std::string barsText(const Bars& bars);
 // Its skills the character has not learned (`learned`: their AEGIS names) taken out; how many
 int dropUnlearned(Bar& bar, const std::set<std::string>& learned);
+// 3.0.11-beta.147 (the owner: a cell's icon dragged to another cell, off the bar to take it away): two slots swapped
+// with their levels (to an empty one: moved there); a slot emptied; a slot out of the bar changes nothing
+void swapSlots(Bar& bar, int a, int b);
+void emptySlot(Bar& bar, int slot);
 
 }  // namespace uagfx::hotbar

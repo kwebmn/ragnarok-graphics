@@ -148,4 +148,8 @@ float stepped(float size, int steps) {
     return within(v);
 }
 
+bool dragStarts(float movedPx, float k, uint64_t heldMs) {
+    return heldMs >= kHoldMs && k > 0 && movedPx >= kMoveGame * k;
+}
+
 }  // namespace uagfx::hudlayout

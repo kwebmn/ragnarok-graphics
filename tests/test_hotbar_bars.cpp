@@ -43,3 +43,23 @@ TEST(hotbar_bars_drop_unlearned) {
     CHECK(bar.slots[0] == "##AC_DOUBLE" && bar.slots[1].empty() && bar.levels[1] == 0 && bar.slots[2] == "501");
     CHECK_EQ(hotbar::dropUnlearned(bar, learned), 0);
 }
+
+// 3.0.11-beta.147 (the owner: a cell's icon dragged to another cell, off the bar to take it away): two slots swapped
+// with their levels (an empty one: moved there); a slot emptied; a slot out of the bar changes nothing
+TEST(hotbar_bars_swap_and_empty) {
+    hotbar::Bar b;
+    b.slots[0] = "##MG_FIREWALL";
+    b.levels[0] = 10;
+    b.slots[5] = "501";
+    hotbar::swapSlots(b, 0, 5);
+    CHECK(b.slots[0] == "501" && b.levels[0] == 0 && b.slots[5] == "##MG_FIREWALL" && b.levels[5] == 10);
+    hotbar::swapSlots(b, 5, 20);
+    CHECK(b.slots[5].empty() && b.levels[5] == 0 && b.slots[20] == "##MG_FIREWALL" && b.levels[20] == 10);
+    hotbar::emptySlot(b, 20);
+    CHECK(b.slots[20].empty() && b.levels[20] == 0);
+    const hotbar::Bar same = b;
+    hotbar::swapSlots(b, -1, 0);
+    hotbar::swapSlots(b, 0, hotbar::kBarSlots);
+    hotbar::emptySlot(b, hotbar::kBarSlots);
+    CHECK(b == same);
+}

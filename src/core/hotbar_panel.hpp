@@ -10,12 +10,14 @@ namespace uagfx::hotbar {
 
 // 3.0.11-beta.40 (stage 8 of the new interface - the hotbar first; the owner: «делай дальше»): the game's hotkeys bar
 // redrawn at the bottom middle, style A (the concept's v17_hotbar) - the normal mode a row of nine cells F1-F9 with the
-// row's number (F12 goes round them, as the game's), the battle mode the game's three rows Q, A, Z as the keyboard
-// has them; each cell its icon, its key in the top left, an item's count in the bottom right (dimmed when none is in
-// the bag), a skill's level in the bottom left; pointed at - its name in a tip. An edit button brings the game's own
-// bar back to drag skills and items into it. The parts that need no Windows; the words by GDI (win/hotbar).
+// row's number (F12 goes round them, as the game's), the battle mode the game's three rows Q, A, Z as the keyboard has
+// them; each cell its icon, its key in the top left, an item's count in the bottom right (dimmed when none is in the
+// bag), a skill's level in the bottom left; pointed at - its name in a tip. The parts that need no Windows; the words
+// by GDI (win/hotbar). 3.0.11-beta.147 (the owner: «да, сделай так и предусмотри возможность чтобы можно было батлмод
+// кнопкой на этой панели включать»): the pencil (the game's own bar shown to edit it) gone - a cell's icon dragged to
+// another cell or off the bar, a right click its card; in the pencil's place the battle mode's button.
 
-enum class Mode : uint8_t { Normal, Battle, Editing };
+enum class Mode : uint8_t { Normal, Battle };
 
 // 3.0.11-beta.45 (the concept's cell states; the owner: «занимаемся доработками интерфейса»): why the map forbids a
 // slot - the server's own rules (uAthena pc_isUseitem, skill_not_ok and db/skill_nocast_db.txt) over the map's flags
@@ -56,10 +58,10 @@ struct Layout {
     float s = 1;
     Mode mode = Mode::Normal;
     int x = 0, y = 0, w = 0, h = 0;  // the picture in the target
-    panel::Box glass;                 // the bar (editing: the done button alone)
+    panel::Box glass;                 // the bar
     panel::Box row;                   // normal: the row's number and F12
     panel::Box header;                // battle: the mode's chip and its hint
-    panel::Box edit;                  // the edit button (editing: done)
+    panel::Box toggle;                // 3.0.11-beta.147: the battle mode's button (the pencil's place)
     std::vector<panel::Box> cells;    // normal 9; battle 27, the shown rows' order
     std::vector<panel::Box> rowLabels;  // battle: each shown row's number
     panel::Box tipRoom;               // over the glass
@@ -74,7 +76,7 @@ struct Settle {
     bool settled(bool over, uint64_t nowMs, uint64_t afterMs);
 };
 
-enum class Part : uint8_t { None, Cell, Edit, Body };
+enum class Part : uint8_t { None, Cell, Toggle, Body };
 struct Hit {
     Part part = Part::None;
     int cell = -1;
@@ -84,8 +86,8 @@ Hit hitTest(const Layout& L, float x, float y);  // the picture's pixels
 struct Texts {
     std::string battle;      // «бойовий режим»
     std::string battleHint;  // «літери — навички й предмети · Enter — чат»
-    std::string edit, done;  // the button's tips: «редагувати панель гри», «готово»
-    std::string use;         // the cell's tip's second line: «клік — використати»
+    std::string battleOn, battleOff;  // 3.0.11-beta.147: the battle mode button's tips: «Увімкнути бойовий режим», ...
+    std::string use;         // the cell's tip's second line: «клік — використати · ПКМ — опис · тягніть — перемістити»
     std::string noSp;        // 3.0.11-beta.45: «Немає SP · потрібно {1}, у вас {2}»
     std::string notHere;     // «Не тут · {1}»
     std::string unlearned;   // 3.0.11-beta.78: «Персонаж не має цієї навички»
@@ -117,12 +119,14 @@ struct Show {
     int hover = -1;          // the cell under the cursor: its backing lighter, its edge 20 %
     int pressed = -1;        // 3.0.11-beta.45: the cell pressed (a click, its key): 1 px down, its backing darker
     bool tip = true;         // the hovered cell's tip (the window part shows it after 0.4 s)
-    bool hoverEdit = false;  // the edit button under the cursor
+    bool hoverToggle = false;  // 3.0.11-beta.147: the battle mode's button under the cursor
     // 3.0.11-beta.86 (the concept «Контроллер в интерфейсе uaRO»): played with the controller - each cell its button's
     // badge (Cell::pad) over its top left corner instead of its key, a cell no button uses dimmed; PlayStation's look
     bool pad = false, sony = false;
     bool dropping = false;  // 3.0.11-beta.110: a thing or a skill dragged - the cells lit in gold (a drop takes it)
     Ammo ammo;              // 3.0.11-beta.125
+    // 3.0.11-beta.147: a cell's icon lifted (dragged) - that cell's faded where it was, the cell it is over outlined
+    int lifted = -1, over = -1;
 };
 // The ammo's pill over the glass's left end (w 0: none worn); a cell's tip over it hides it a while
 panel::Box ammoBox(const Layout& L, const Show& show);
@@ -155,5 +159,39 @@ struct Slot {
 Slot slotOf(const std::string& raw);
 // 3.0.11-beta.45: whether this map (its flags: "noteleport", "gvg", ...) forbids the slot
 NotHere notHere(const Slot& slot, const std::vector<std::string>& mapFlags);
+
+// 3.0.11-beta.147: the game's slot (0-26) a shown cell keeps - the normal mode's of the row shown (`row` 0-2), the
+// battle mode's shown rows Q, A, Z the game's 1, 2, 0; -1 no such cell
+int gameSlot(Mode mode, int row, int cell);
+
+// 3.0.11-beta.147 (the owner: «иногда панель сама двигается» - R-VYV3AG: a click whose pointer slipped dragged the
+// whole bar): a press on a cell's icon, lifted (dragged) only once held kLiftMs and moved kLiftPx x the scale (the
+// picture's pixels) - a quicker one stays the pressed cell's click wherever it is let go
+struct Lift {
+    static constexpr uint64_t kLiftMs = 250;
+    static constexpr float kLiftPx = 10;
+    int cell = -1;  // the cell pressed, -1 none
+    float x = 0, y = 0;
+    uint64_t at = 0;
+    bool dragging = false;
+};
+void press(Lift& l, int cell, float x, float y, uint64_t nowMs);
+bool moved(Lift& l, float x, float y, uint64_t nowMs, float scale);  // lifted now
+
+// What a lifted icon let go at (x, y of the picture) does: over another cell - the two swapped (an empty one: moved
+// there); well off the bar (kAwayPx x the scale past its glass) - its slot emptied; over its own cell, the bar's other
+// parts or just past its edge - nothing
+enum class Let : uint8_t { Nothing, Swap, Empty };
+struct Release {
+    Let what = Let::Nothing;
+    int cell = -1;  // Swap: the other cell; Empty: the lifted one
+};
+constexpr float kAwayPx = 24;
+bool away(const Layout& L, float x, float y);
+Release letGo(const Layout& L, int lifted, float x, float y);
+// The lifted icon's picture at the cursor, a cell's size: on a dark plate a little faded; away - a red badge with a
+// minus at its top right
+int liftedSide(Mode mode, float scale);
+void paintLifted(panel::Picture& out, const panel::Picture* icon, bool away, float scale);
 
 }  // namespace uagfx::hotbar

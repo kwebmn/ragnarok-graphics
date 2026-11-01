@@ -18,6 +18,7 @@ enum class Icon : uint8_t {
     PadCross, PadCircle, PadSquare, PadTriangle,  // 3.0.11-beta.86: the controller's (core/pad_glyphs)
     PadUp, PadRight, PadDown, PadLeft,
     Gamepad,  // 3.0.11-beta.90: the windows' tile's «Контролер»
+    Battle,   // 3.0.11-beta.147: the hotbar's battle mode button
     kCount
 };
 

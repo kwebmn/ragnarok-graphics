@@ -137,3 +137,13 @@ TEST(hud_layout_keeps_clear_of_the_others) {
     b = hudlayout::clearOf({10, 10, 100, 100}, {{0, 0, 1920, 1080}}, 1920, 1080, 4);
     CHECK(b.x == 10 && b.y == 10);
 }
+
+// 3.0.11-beta.147 (the owner: «иногда панель сама двигается»; R-VYV3AG 10:01:13 - a click on the hotbar whose pointer
+// slipped 6 game pixels in 148 ms dragged the whole bar away): a press on a part drags it only held 0.3 s and moved 6
+// game pixels; a quicker one stays the part's click
+TEST(hud_layout_a_quick_click_drags_nothing) {
+    CHECK(!hudlayout::dragStarts(12.0f, 1.75f, 148));  // R-VYV3AG: 12 target pixels at k 1.75 in 148 ms
+    CHECK(hudlayout::dragStarts(12.0f, 1.75f, 300));
+    CHECK(!hudlayout::dragStarts(10.0f, 1.75f, 2000));  // under 6 game pixels: held still
+    CHECK(hudlayout::dragStarts(10.5f, 1.75f, 2000));
+}

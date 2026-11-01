@@ -5596,26 +5596,32 @@ constexpr Entry kTexts[] = {
     {Text::InterfaceHotbarHint,
      "The game's hotkeys bar at the bottom middle: F1-F9 of the row (F12 goes round them), in the battle mode its "
      "three rows Q, A, Z; each cell's key, a skill's level, an item's count in the bag; a click uses it. Skills and "
-     "items are dragged onto its cells; the pencil shows the game's own bar to take one away or move it. A skill "
-     "waiting for its target has a gold frame; one with too little SP a blue SP; one the map forbids a crossed "
+     "items are dragged onto its cells; a cell's icon held and dragged to another cell swaps them, dragged off the "
+     "bar takes it off; a right click shows its details; the swords button turns the battle mode on and off. A "
+     "skill waiting for its target has a gold frame; one with too little SP a blue SP; one the map forbids a crossed "
      "circle, the reason in its tip.",
      "Панель клавіш гри внизу посередині: F1-F9 ряду (F12 перемикає ряди), у бойовому режимі — три ряди Q, A, Z; у "
      "клітинці клавіша, рівень навички, кількість предмета в сумці; клік — використати. Навички й предмети "
-     "перетягуються на клітинки; олівець показує панель гри, щоб прибрати чи переставити. Навичка, що чекає ціль, — "
-     "у золотій рамці; якщо SP не вистачає — синя плашка SP; заборонене на карті — перекреслене коло, причина в "
-     "підказці.",
+     "перетягуються на клітинки; значок, утриманий і перетягнутий на іншу клітинку, міняється з нею місцями, а за "
+     "межі панелі — прибирається; ПКМ показує опис; кнопка з мечами вмикає й вимикає бойовий режим. Навичка, що "
+     "чекає ціль, — у золотій рамці; якщо SP не вистачає — синя плашка SP; заборонене на карті — перекреслене коло, "
+     "причина в підказці.",
      "Панель клавиш игры внизу посередине: F1-F9 ряда (F12 переключает ряды), в боевом режиме — три ряда Q, A, Z; в "
      "ячейке клавиша, уровень навыка, количество предмета в сумке; клик — использовать. Навыки и предметы "
-     "перетаскиваются на ячейки; карандаш показывает панель игры, чтобы убрать или переставить. Навык, ждущий цель, — "
-     "в золотой рамке; если SP не хватает — синяя плашка SP; запрещённое на карте — перечёркнутый круг, причина в "
-     "подсказке."},
+     "перетаскиваются на ячейки; значок, удержанный и перетащенный на другую ячейку, меняется с ней местами, а за "
+     "пределы панели — убирается; ПКМ показывает описание; кнопка с мечами включает и выключает боевой режим. Навык, "
+     "ждущий цель, — в золотой рамке; если SP не хватает — синяя плашка SP; запрещённое на карте — перечёркнутый "
+     "круг, причина в подсказке."},
     {Text::HotbarBattle, "battle mode", "бойовий режим", "боевой режим"},
     {Text::HotbarBattleHint, "letters: skills and items \xC2\xB7 Enter: the chat",
      "літери — навички й предмети \xC2\xB7 Enter — чат", "буквы — навыки и предметы \xC2\xB7 Enter — чат"},
-    {Text::HotbarEdit, "the game's bar: take away, move", "панель гри: прибрати, переставити",
-     "панель игры: убрать, переставить"},
-    {Text::HotbarDone, "done: back to this bar", "готово: назад до цієї панелі", "готово: назад к этой панели"},
-    {Text::HotbarUse, "click: use it", "клік — використати", "клик — использовать"},
+    // 3.0.11-beta.147: the battle mode button's tips (the pencil's place); a cell's ways - its card by a right click,
+    // its icon dragged
+    {Text::HotbarBattleOn, "Turn the battle mode on", "Увімкнути бойовий режим", "Включить боевой режим"},
+    {Text::HotbarBattleOff, "Turn the battle mode off", "Вимкнути бойовий режим", "Выключить боевой режим"},
+    {Text::HotbarUse, "click: use \xC2\xB7 right click: details \xC2\xB7 drag: move",
+     "клік — використати \xC2\xB7 ПКМ — опис \xC2\xB7 тягніть — перемістити",
+     "клик — использовать \xC2\xB7 ПКМ — описание \xC2\xB7 тяните — переместить"},
     // 3.0.11-beta.45: the hotbar's cell states
     {Text::HotbarNoSp, "No SP \xC2\xB7 needs {1}, you have {2}", "Немає SP \xC2\xB7 потрібно {1}, у вас {2}",
      "Нет SP \xC2\xB7 нужно {1}, у вас {2}"},

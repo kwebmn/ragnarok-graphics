@@ -47,5 +47,12 @@ float stepped(float size, int steps);  // the wheel's: by kSizeStep, kept within
 // 3.0.11-beta.77 (the owner: «некоторые окна налазят одно на другое и мешают»): a part let go over others - moved the
 // least way out of them all (`gap` apart), kept on the screen; as it is when clear, or when no place is free
 Box clearOf(const Box& moving, const std::vector<Box>& others, int targetW, int targetH, int gap);
+// 3.0.11-beta.147 (the owner: «иногда панель сама двигается»; R-VYV3AG 10:01:13 - a click on the hotbar whose pointer
+// slipped 6 game pixels in 148 ms dragged the whole bar away): a press held on a part drags it only once held kHoldMs
+// and moved kMoveGame game pixels (`movedPx` the target's, k of them a game pixel); a quicker one stays the part's
+// click
+constexpr float kMoveGame = 6;
+constexpr uint64_t kHoldMs = 300;
+bool dragStarts(float movedPx, float k, uint64_t heldMs);
 
 }  // namespace uagfx::hudlayout

@@ -12,8 +12,9 @@ namespace uagfx::hotbar {
 namespace {
 
 // The concept's sizes at scale 1 (v17_hotbar): a cell 48 (its icon 32), the battle mode's 44 (30), 4 apart; the bar 6
-// in; the row's chip 34 wide; the edit button 28; a tip 42 high over the bar
-constexpr float kCell = 48, kCellBattle = 44, kGap = 4, kPad = 6, kRowW = 34, kLabelW = 18, kEdit = 28;
+// in; the row's chip 34 wide; the battle mode's button 28 (3.0.11-beta.147: the pencil's place); a tip 42 high over the
+// bar
+constexpr float kCell = 48, kCellBattle = 44, kGap = 4, kPad = 6, kRowW = 34, kLabelW = 18, kToggle = 28;
 constexpr float kHeaderH = 22, kTipH = 42;
 constexpr uint32_t kCard = 0x10141C, kWhite = 0xFFFFFF, kBlack = 0x000000;
 constexpr uint32_t kGold = 0xC9A55B, kGold2 = 0xE6CB8A, kText = 0xECEFF5, kMuted = 0x9AA3B5, kRed = 0xC0392B;
@@ -116,11 +117,13 @@ panel::Box tipBox(const Layout& L, int hover, const std::vector<TipLine>& lines)
     return panel::Box{x, L.tipRoom.y + L.tipRoom.h - kTipH * L.s, w, kTipH * L.s};
 }
 
-// The edit button's tip over it
-panel::Box editTip(const Layout& L, const Texts& t) {
-    const std::string& text = L.mode == Mode::Editing ? t.done : t.edit;
-    const float w = panel::wordsWidth(text, 12 * L.s, false) + 20 * L.s;
-    const float x = std::clamp(L.edit.x + L.edit.w / 2 - w / 2, 0.0f, std::max(0.0f, float(L.w) - w));
+// 3.0.11-beta.147: the battle mode button's tip over it - what a click does
+const std::string& toggleText(const Layout& L, const Texts& t) {
+    return L.mode == Mode::Battle ? t.battleOff : t.battleOn;
+}
+panel::Box toggleTip(const Layout& L, const Texts& t) {
+    const float w = panel::wordsWidth(toggleText(L, t), 12 * L.s, false) + 20 * L.s;
+    const float x = std::clamp(L.toggle.x + L.toggle.w / 2 - w / 2, 0.0f, std::max(0.0f, float(L.w) - w));
     return panel::Box{x, L.tipRoom.y + L.tipRoom.h - 26 * L.s, w, 22 * L.s};
 }
 
@@ -144,10 +147,10 @@ panel::Box ammoPlace(const Layout& L, const Ammo& a) {
     return panel::Box{x, L.glass.y - kAmmoH * s - 6 * s, w, kAmmoH * s};
 }
 
-// Shown: not under the hovered cell's tip nor the edit button's
+// Shown: not under the hovered cell's tip nor the battle mode button's
 panel::Box ammoShown(const Layout& L, const Show& show, const panel::Box& tip, const Texts& t) {
     const panel::Box b = ammoPlace(L, show.ammo);
-    return overlap(b, tip) || (show.hoverEdit && overlap(b, editTip(L, t))) ? panel::Box{} : b;
+    return overlap(b, tip) || (show.hoverToggle && overlap(b, toggleTip(L, t))) ? panel::Box{} : b;
 }
 
 }  // namespace
@@ -196,35 +199,30 @@ Layout layout(Mode mode, int centreX, int bottom, float scale) {
     L.s = s;
     L.mode = mode;
     const float pad = kPad * s, tip = kTipH * s + 6 * s;
-    if (mode == Mode::Editing) {  // the game's own bar shows: the done button alone
-        L.glass = panel::Box{0, tip, kEdit * s + 2 * pad, kEdit * s + 2 * pad};
-        L.edit = panel::Box{pad, tip + pad, kEdit * s, kEdit * s};
-    } else {
-        const float side = cellSide(mode) * s, gap = kGap * s;
-        const float cellsW = 9 * side + 8 * gap;
-        const bool battle = mode == Mode::Battle;
-        const float leftW = (battle ? kLabelW : kRowW) * s;
-        const float w = pad + leftW + pad + cellsW + pad + kEdit * s + pad;
-        const float top = tip + pad + (battle ? kHeaderH * s + gap : 0.0f);
-        const int rows = battle ? 3 : 1;
-        const float h = (top - tip) + float(rows) * side + float(rows - 1) * gap + pad;
-        L.glass = panel::Box{0, tip, w, h};
-        const float x0 = pad + leftW + pad;
-        for (int r = 0; r < rows; ++r) {
-            const float y = top + float(r) * (side + gap);
-            for (int c = 0; c < 9; ++c) L.cells.push_back(panel::Box{x0 + float(c) * (side + gap), y, side, side});
-            if (battle) L.rowLabels.push_back(panel::Box{pad, y, leftW, side});
-        }
-        if (battle) L.header = panel::Box{x0, tip + pad, cellsW, kHeaderH * s};
-        else L.row = panel::Box{pad, top, leftW, side};
-        L.edit = panel::Box{x0 + cellsW + pad, top + ((battle ? 3 * side + 2 * gap : side) - kEdit * s) / 2, kEdit * s,
-                            kEdit * s};
+    const float side = cellSide(mode) * s, gap = kGap * s;
+    const float cellsW = 9 * side + 8 * gap;
+    const bool battle = mode == Mode::Battle;
+    const float leftW = (battle ? kLabelW : kRowW) * s;
+    const float w = pad + leftW + pad + cellsW + pad + kToggle * s + pad;
+    const float top = tip + pad + (battle ? kHeaderH * s + gap : 0.0f);
+    const int rows = battle ? 3 : 1;
+    const float h = (top - tip) + float(rows) * side + float(rows - 1) * gap + pad;
+    L.glass = panel::Box{0, tip, w, h};
+    const float x0 = pad + leftW + pad;
+    for (int r = 0; r < rows; ++r) {
+        const float y = top + float(r) * (side + gap);
+        for (int c = 0; c < 9; ++c) L.cells.push_back(panel::Box{x0 + float(c) * (side + gap), y, side, side});
+        if (battle) L.rowLabels.push_back(panel::Box{pad, y, leftW, side});
     }
+    if (battle) L.header = panel::Box{x0, tip + pad, cellsW, kHeaderH * s};
+    else L.row = panel::Box{pad, top, leftW, side};
+    L.toggle = panel::Box{x0 + cellsW + pad, top + ((battle ? 3 * side + 2 * gap : side) - kToggle * s) / 2,
+                          kToggle * s, kToggle * s};
     L.tipRoom = panel::Box{0, 0, L.glass.w, tip - 6 * s};
     L.w = int(std::ceil(std::max(L.glass.w, 300 * s)));
     // the glass centred in the picture
     const float shift = (float(L.w) - L.glass.w) / 2;
-    for (panel::Box* b : {&L.glass, &L.row, &L.header, &L.edit}) b->x += shift;
+    for (panel::Box* b : {&L.glass, &L.row, &L.header, &L.toggle}) b->x += shift;
     for (panel::Box& b : L.cells) b.x += shift;
     for (panel::Box& b : L.rowLabels) b.x += shift;
     L.tipRoom.w = float(L.w);
@@ -237,7 +235,7 @@ Layout layout(Mode mode, int centreX, int bottom, float scale) {
 panel::Box ammoBox(const Layout& L, const Show& show) { return ammoPlace(L, show.ammo); }
 
 Hit hitTest(const Layout& L, float x, float y) {
-    if (L.edit.contains(x, y)) return Hit{Part::Edit, -1};
+    if (L.toggle.contains(x, y)) return Hit{Part::Toggle, -1};
     for (size_t i = 0; i < L.cells.size(); ++i)
         if (L.cells[i].contains(x, y)) return Hit{Part::Cell, int(i)};
     return L.glass.contains(x, y) ? Hit{Part::Body, -1} : Hit{};
@@ -257,14 +255,17 @@ void paint(panel::Picture& out, const Layout& L, const std::vector<Cell>& cells,
         const bool hot = int(i) == show.hover, down = int(i) == show.pressed, chosen = c && c->selected;
         // the concept's states: plain 5 % with a 10 % edge, hovered lighter with 20 %, pressed darker, chosen gold
         const bool lit = show.dropping;  // 3.0.11-beta.110: a drop would take it
-        const uint32_t edge = chosen || lit ? kGold : kWhite;
-        const float edgeA = chosen ? 1.0f : lit ? 0.85f : hot ? 0.20f : 0.10f;
-        const float edgeW = (chosen || lit ? 2.0f : 1.0f) * s;
+        const bool under = int(i) == show.over && show.over != show.lifted;  // 3.0.11-beta.147: a lifted icon over it
+        const uint32_t edge = chosen || lit || under ? kGold : kWhite;
+        const float edgeA = chosen || under ? 1.0f : lit ? 0.85f : hot ? 0.20f : 0.10f;
+        const float edgeW = (chosen || lit || under ? 2.0f : 1.0f) * s;
         if (down) panel::roundRect(out, b, 7 * s, kBlack, 0.30f, edge, edgeA, edgeW);
         else panel::roundRect(out, b, 7 * s, kWhite, hot ? 0.10f : 0.05f, edge, edgeA, edgeW);
         const bool barred = c && (c->notHere != NotHere::No || c->unlearned), dry = c && !barred && noSp(*c);
-        if (c && c->icon && c->icon->width > 0)
-            put(out, *c->icon, b, barred ? 0.45f : dry ? 0.5f : c->count == 0 ? 0.3f : 1.0f, barred || dry);
+        if (c && c->icon && c->icon->width > 0)  // 3.0.11-beta.147: lifted - faded where it was
+            put(out, *c->icon, b,
+                (barred ? 0.45f : dry ? 0.5f : c->count == 0 ? 0.3f : 1.0f) * (int(i) == show.lifted ? 0.3f : 1.0f),
+                barred || dry);
         if (barred) {  // a crossed circle over its icon
             const float side = std::min(b.w, b.h) * 0.7f;
             uiicons::draw(out, uiicons::Icon::Blocked, b.x + (b.w - side) / 2, b.y + (b.h - side) / 2, side, kText,
@@ -294,12 +295,14 @@ void paint(panel::Picture& out, const Layout& L, const std::vector<Cell>& cells,
             const padglyph::Family f = show.sony ? padglyph::Family::Sony : padglyph::Family::Xbox;
             padglyph::paint(out, padglyph::Button(cells[i].pad), f, b.x - 4 * s, b.y - 5 * s, 18 * s);
         }
-    const float icon = 16 * s;
-    panel::roundRect(out, L.edit, 7 * s, kWhite, show.hoverEdit ? 0.14f : 0.06f, kGold, show.hoverEdit ? 0.8f : 0.0f,
-                     1.0f * s);
-    uiicons::draw(out, L.mode == Mode::Editing ? uiicons::Icon::Done : uiicons::Icon::Edit,
-                  L.edit.x + (L.edit.w - icon) / 2, L.edit.y + (L.edit.h - icon) / 2, icon,
-                  show.hoverEdit || L.mode == Mode::Editing ? kGold2 : kMuted, 1.0f, 2.0f);
+    const float icon = 16 * s;  // 3.0.11-beta.147: the battle mode's button - red as the mode's chip while it is on
+    const bool battle = L.mode == Mode::Battle;
+    panel::roundRect(out, L.toggle, 7 * s, battle ? kRed : kWhite,
+                     battle ? (show.hoverToggle ? 1.0f : 0.9f) : (show.hoverToggle ? 0.14f : 0.06f), kGold,
+                     show.hoverToggle ? 0.8f : 0.0f, 1.0f * s);
+    uiicons::draw(out, uiicons::Icon::Battle, L.toggle.x + (L.toggle.w - icon) / 2,
+                  L.toggle.y + (L.toggle.h - icon) / 2, icon, battle ? kWhite : show.hoverToggle ? kGold2 : kMuted,
+                  1.0f, 2.0f);
     const std::vector<TipLine> lines = show.tip && show.hover >= 0 && show.hover < int(cells.size())
                                            ? tipLines(cells[size_t(show.hover)], t)
                                            : std::vector<TipLine>{};
@@ -314,7 +317,7 @@ void paint(panel::Picture& out, const Layout& L, const std::vector<Cell>& cells,
             put(out, *show.ammo.icon, panel::Box{ammo.x + 8 * s, ammo.y, kAmmoIcon * s, ammo.h}, 1.0f);
     }
     if (tip.w > 0) panel::roundRect(out, tip, 8 * s, kCard, 0.94f, kWhite, 0.12f, 1.0f * s);
-    if (show.hoverEdit) panel::roundRect(out, editTip(L, t), 8 * s, kCard, 0.94f, kWhite, 0.12f, 1.0f * s);
+    if (show.hoverToggle) panel::roundRect(out, toggleTip(L, t), 8 * s, kCard, 0.94f, kWhite, 0.12f, 1.0f * s);
 }
 
 std::vector<Words> words(const Layout& L, const std::vector<Cell>& cells, int row, const Show& show, const Texts& t) {
@@ -373,9 +376,8 @@ std::vector<Words> words(const Layout& L, const std::vector<Cell>& cells, int ro
     for (size_t i = 0; tip.w > 0 && i < lines.size(); ++i)
         out.push_back(Words{panel::Box{tip.x + 10 * s, tip.y + (4 + 18 * float(i)) * s, tip.w - 20 * s, 17 * s},
                             lines[i].text, lines[i].rgb, (i ? 11.5f : 13) * s, i == 0, Align::Left});
-    if (show.hoverEdit)
-        out.push_back(Words{editTip(L, t), L.mode == Mode::Editing ? t.done : t.edit, kText, 12 * s, false,
-                            Align::Center});
+    if (show.hoverToggle)
+        out.push_back(Words{toggleTip(L, t), toggleText(L, t), kText, 12 * s, false, Align::Center});
     return out;
 }
 
@@ -445,6 +447,54 @@ NotHere notHere(const Slot& slot, const std::vector<std::string>& mapFlags) {
     if ((k == "WE_CALLPARTNER" || k == "WE_CALLPARENT" || k == "WE_CALLBABY") && has("nomemo")) return NotHere::Call;
     if (k == "WZ_ICEWALL" && has("noicewall")) return NotHere::IceWall;
     return has("noskill") ? NotHere::Skills : NotHere::No;
+}
+
+int gameSlot(Mode mode, int row, int cell) {
+    if (mode == Mode::Battle) return cell >= 0 && cell < 27 ? gameRow(cell / 9) * 9 + cell % 9 : -1;
+    return cell >= 0 && cell < 9 && row >= 0 && row < 3 ? row * 9 + cell : -1;
+}
+
+void press(Lift& l, int cell, float x, float y, uint64_t nowMs) {
+    l = Lift{};
+    l.cell = cell;
+    l.x = x;
+    l.y = y;
+    l.at = nowMs;
+}
+
+bool moved(Lift& l, float x, float y, uint64_t nowMs, float scale) {
+    if (l.cell < 0) return false;
+    if (!l.dragging && nowMs - l.at >= Lift::kLiftMs &&
+        std::hypot(x - l.x, y - l.y) >= Lift::kLiftPx * (scale > 0 ? scale : 1.0f))
+        l.dragging = true;
+    return l.dragging;
+}
+
+bool away(const Layout& L, float x, float y) {
+    const float m = kAwayPx * L.s;
+    const panel::Box& g = L.glass;
+    return x < g.x - m || y < g.y - m || x > g.x + g.w + m || y > g.y + g.h + m;
+}
+
+Release letGo(const Layout& L, int lifted, float x, float y) {
+    if (lifted < 0 || lifted >= int(L.cells.size())) return Release{};
+    const Hit h = hitTest(L, x, y);
+    if (h.part == Part::Cell) return h.cell == lifted ? Release{} : Release{Let::Swap, h.cell};
+    return away(L, x, y) ? Release{Let::Empty, lifted} : Release{};
+}
+
+int liftedSide(Mode mode, float scale) { return int(std::lround(cellSide(mode) * (scale > 0 ? scale : 1.0f))); }
+
+void paintLifted(panel::Picture& out, const panel::Picture* icon, bool far, float scale) {
+    const float s = scale > 0 ? scale : 1.0f;
+    const panel::Box b{0, 0, float(out.width), float(out.height)};
+    panel::roundRect(out, b, 7 * s, kCard, 0.75f, kGold, 0.9f, 2.0f * s);
+    if (icon && icon->width > 0) put(out, *icon, b, 0.85f);
+    if (!far) return;
+    const float r = 8 * s;  // let go here - off the bar: a red badge with a minus
+    const panel::Box badge{b.w - 2 * r - 1 * s, 1 * s, 2 * r, 2 * r};
+    panel::roundRect(out, badge, r, kRed, 1.0f, kWhite, 0.9f, 1.0f * s);
+    uiicons::draw(out, uiicons::Icon::Minus, badge.x + 2 * s, badge.y + 2 * s, badge.w - 4 * s, kWhite, 1.0f, 3.0f);
 }
 
 }  // namespace uagfx::hotbar

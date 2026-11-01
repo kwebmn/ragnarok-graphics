@@ -19,8 +19,11 @@ namespace uagfx::win::hotbarwin {
 // g_windowMgr + 0x9C, its class's vtable 0x6985D0): its shown flag (+0x38) held at 0 while this one shows, its keys
 // (F1-F9, the battle mode's letters - they send the window its message 0x29 hidden or not) its own. What is in each
 // slot from the game's session (+0x314 a slot's words, +0x4C4 a skill's level), an item's count from the bag; a click
-// sends the window the same message 0x29 the keys do. The pencil shows the game's own bar to drag skills and items
-// into it. On the game's thread.
+// sends the window the same message 0x29 the keys do. 3.0.11-beta.147 (the owner: «да, сделай так и предусмотри
+// возможность чтобы можно было батлмод кнопкой на этой панели включать»): no pencil (the game's own bar shown to edit
+// it) - a cell's icon held and dragged to another cell swaps the two slots, well off the bar empties its slot, a right
+// click shows its card (the game's bar's own); the battle mode's button turns the mode as /battlemode. On the game's
+// thread.
 // 3.0.11-beta.78: ownBars - [interface] hotbar_per_character, each character's own bar (the new bar on or not)
 // 3.0.11-beta.86: padHints - [interface] pad_hints, the controller's buttons on its cells while played with it
 // 3.0.11-beta.125: ammo - [interface] hotbar_ammo, the ammo worn and how many left on a pill over it (win/ammo_watch)
@@ -30,10 +33,16 @@ void frame(HWND game, bool on, bool ownBars, bool padHints, bool ammo, bool coun
            int targetWidth, int targetHeight);
 void draw(FrameRecord& record, gpu::Renderer& renderer);
 bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result);
+// 3.0.11-beta.147: a left press at the game window's client point on a cell with a skill or an item - the hotbar's own
+// (its icon lifted), not «Розміщення інтерфейсу»'s drag of the whole bar (win/hud_edit asks)
+bool ownsPress(HWND game, LPARAM lp);
+// While a press on a cell's icon is held: all of the mouse's buttons its own (its let go the drop, wherever the pointer
+// is) - asked before the other parts
+bool held(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result);
 // 3.0.11-beta.45: a key of its cells pressed (F1-F9; the battle mode's letters while the chat does not take them) - the
 // cell shown pressed; the key stays the game's
 void key(UINT m, WPARAM wp, LPARAM lp);
-// 3.0.11-beta.53: just before the game draws its windows (win/windows_draw) - its own bar hidden (shown while edited)
+// 3.0.11-beta.53: just before the game draws its windows (win/windows_draw) - its own bar hidden
 void beforeGameDraw();
 // A skill or an item dragged from the game's windows and let go at the game's (x, y) over one of its cells (`drag`: the
 // game mode's drag, + 0x32C): the game's own bar takes it as dropped on that cell (its drop, vtable + 0x2C - the slot
@@ -50,7 +59,7 @@ bool assign(int slot, const std::string& value, int level);
 std::string slotWords(int slot);
 
 // 3.0.11-beta.121 (the concept's stage 5): its cells shown as places on the target, each with the game's slot it
-// keeps (assign's: the row shown, the battle mode's three rows); none while editing or not shown
+// keeps (assign's: the row shown, the battle mode's three rows); none while not shown
 std::vector<uagfx::padcarry::Place> cellPlaces();
 
 }  // namespace uagfx::win::hotbarwin

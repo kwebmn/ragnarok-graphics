@@ -14,6 +14,7 @@
 #include "core/ui_style.hpp"
 #include "pad/win/game_window.hpp"
 #include "win/game_camera.hpp"
+#include "win/hotbar.hpp"
 #include "win/log.hpp"
 #include "win/paths.hpp"
 #include "win/picture_draw.hpp"
@@ -38,7 +39,6 @@ const Blocker kSolid[kParts] = {Blocker::Character, Blocker::Minimap, Blocker::B
 // The windows over the parts: a press there is theirs
 const Blocker kWindows[] = {Blocker::Panel, Blocker::Card, Blocker::Reference, Blocker::BigMap, Blocker::Items,
                             Blocker::Stats};
-constexpr float kMoveGame = 6;   // game pixels the pointer moves before a held press drags its part
 constexpr float kGripGame = 14;  // the grip's side, off the part's bottom right corner
 
 struct Drawn {  // a picture of the editor's, its texture
@@ -70,6 +70,7 @@ struct State {
     // a press held on a part (3.0.11-beta.77): the part's after all unless the pointer moves
     bool held = false;
     int heldPart = -1, pressX = 0, pressY = 0;
+    ULONGLONG pressAt = 0;  // 3.0.11-beta.147: when (a part dragged only held 0.3 s)
     UINT heldM = 0;
     WPARAM heldWp = 0;
     LPARAM heldLp = 0;
@@ -398,8 +399,11 @@ void frame(HWND game, double k, int targetW, int targetH) {
     const bool down = buttonDown();
     // 3.0.11-beta.77: a held press that moved - its part dragged; one let go outside the window - forgotten
     if (s.held && !down) s.held = false;
-    if (s.held && pointer &&
-        std::hypot(float(cx - s.pressX), float(cy - s.pressY)) >= kMoveGame * s.k && s.heldPart >= 0) {
+    // 3.0.11-beta.147 (R-VYV3AG: a click on the hotbar slipped 6 game pixels in 148 ms - the whole bar dragged away):
+    // held 0.3 s too
+    if (s.held && pointer && s.heldPart >= 0 &&
+        hudlayout::dragStarts(std::hypot(float(cx - s.pressX), float(cy - s.pressY)), s.k,
+                              GetTickCount64() - s.pressAt)) {
         s.held = false;
         startDrag(s, s.heldPart, s.pressX, s.pressY, true);
         LOG_INFO("interface layout: %s dragged with the mouse", hudlayout::keyOf(Part(s.drag)));
@@ -592,9 +596,11 @@ Gate gate(HWND game, UINT m, WPARAM wp, LPARAM lp) {
             GET_Y_LPARAM(lp) >= r.top && GET_Y_LPARAM(lp) < r.bottom)
             return Gate::Pass;
     }
+    if (hotbarwin::ownsPress(game, lp)) return Gate::Pass;  // 3.0.11-beta.147: a cell's icon - lifted by the hotbar
     const int part = partAt(s, x, y, true);
     if (part < 0) return Gate::Pass;
     s.held = true;
+    s.pressAt = GetTickCount64();
     s.heldPart = part;
     s.heldM = m;
     s.heldWp = wp;

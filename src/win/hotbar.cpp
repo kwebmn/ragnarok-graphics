@@ -62,6 +62,24 @@ constexpr int kUseMsg = 0x29, kSlots = 27;
 constexpr uint32_t kDropSlot = 0x2C, kBarDrop = 0x46DAE0;
 constexpr int kCellX0 = 4, kCellW = 29, kCellY = 12;
 using DropFn = void(__attribute__((thiscall)) *)(uint32_t self, int x, int y, uint32_t drag);
+// 3.0.11-beta.147: a cell's card - the bar's right click (FUN_0046e2e0, its class's slot + 0x80: a skill's description
+// window 0x2E told 0x3D, an item's card 0xC told 0x18; its x and y the window's own as the drop's)
+constexpr uint32_t kInfoSlot = 0x80, kBarInfo = 0x46E2E0;
+using InfoFn = void(__attribute__((thiscall)) *)(uint32_t self, int x, int y);
+// 3.0.11-beta.147: the battle mode as the game's /battlemode turns it (FUN_00567900, its command 0x86 at 0x568C31, its
+// line's tail at 0x56AFE7 - both byte for byte): the flag flipped (1 - it), the windows' manager's message 3
+// (FUN_004db310 - its chat window shown, told 0x10), then 1 with the mode's line (FUN_00504fb0, cdecl: msgstringtable
+// 0x311 on, 0x312 off) in the game's colour
+constexpr uint32_t kBattleCode = 0x568C31, kLineCode = 0x56AFE7, kPush = 0x4DB310, kMsgString = 0x504FB0;
+constexpr int kBattleOnLine = 0x311, kBattleOffLine = 0x312, kLineColour = 0x64FFFF;
+const uint8_t kBattleCodeBytes[] = {0xA1, 0x54, 0x2D, 0x77, 0x00, 0xBA, 0x01, 0x00, 0x00, 0x00, 0x56, 0x56, 0x2B,
+                                    0xD0, 0x56, 0x6A, 0x03, 0xB9, 0xD8, 0x7E, 0x72, 0x00, 0x89, 0x15, 0x54, 0x2D,
+                                    0x77, 0x00, 0xE8, 0xBE, 0x26, 0xF7};
+const uint8_t kLineCodeBytes[] = {0xE8, 0xC4, 0x9F, 0xF9, 0xFF, 0x83, 0xC4, 0x04, 0x50, 0x6A, 0x01,
+                                  0xB9, 0xD8, 0x7E, 0x72, 0x00, 0xE8, 0x14, 0x03, 0xF7, 0xFF};
+using PushFn = int(__attribute__((thiscall)) *)(uint32_t manager, int msg, const char* text, int colour, int more);
+using MsgStringFn = const char* (*)(int id);
+constexpr ULONGLONG kUnseenUpMs = 250;  // the button up this long with no message of it: the press forgotten
 // 3.0.11-beta.45 (the concept's cell states): the session's skills (a list: a node's next at +0; its id +0xC, its
 // learned level +0x14, that level's SP +0x18 - FUN_00643040 keeps 0x010f's there), the bar's own each slot's skill id
 // (+0x64) and whether it is a skill (+0xD0) - SendMsg 0x17 fills them anew at each change, 0x29 uses them; the game
@@ -113,7 +131,6 @@ struct State {
     std::string overWhat;
     int asideTold = 0;
     bool on = false, shown = false, known = false, checked = false, hid = false, oldTold = false;
-    bool editing = false, editShown = false;
     bool padTold = false;  // 3.0.11-beta.86: the controller's buttons shown, as last told the log
     unsigned codePage = 0;  // 3.0.11-beta.91: the names' (slotWords)
     float k = 0, scale = 1;
@@ -136,8 +153,25 @@ struct State {
     std::vector<hb::Cell> cells;
     hb::Layout layout;
     int hover = -1, pressed = -1;
-    bool hoverEdit = false;
+    bool hoverToggle = false;  // 3.0.11-beta.147: the battle mode's button
     ULONGLONG pressedUntil = 0;
+    // 3.0.11-beta.147 (the owner: drag a cell's icon to another cell, off the bar to take it off; «иногда панель сама
+    // двигается»): a press on a cell's icon (lifted once held and moved - core/hotbar_panel Lift), the game's slot it
+    // keeps, the pointer (the picture's pixels), well off the bar or not; the button seen up since (its message to
+    // come)
+    hb::Lift lift;
+    int liftSlot = -1;
+    float liftX = 0, liftY = 0;
+    bool liftAway = false;
+    bool liftReal = false;  // the mouse's own button down at the press (the controller's posted presses are not)
+    ULONGLONG liftUpSince = 0;
+    panel::Picture liftPicture;  // the lifted icon at the cursor
+    uint32_t liftTexture = 0;
+    int liftTexW = 0, liftTexH = 0;
+    bool liftUpload = false;
+    std::string liftKey;
+    int dragsTold = 0, cardsTold = 0;
+    bool battleChecked = false, battleCan = false;
     std::string key;
     panel::Picture picture;
     uint32_t texture = 0;
@@ -200,8 +234,8 @@ uint32_t gameBar() {
     return window && read32(window) == kBarClass ? window : 0;
 }
 
-// Its shown flag held: 0 while this bar shows (each frame - the game shows it again on a new map and on F12), 1 while
-// the player edits the game's own; off - back as the player had it
+// Its shown flag held: 0 while this bar shows (each frame - the game shows it again on a new map and on F12); off -
+// back as the player had it
 void holdGameBar(State& s, bool on) {
     const uint32_t window = gameBar();
     if (!window) {
@@ -212,19 +246,7 @@ void holdGameBar(State& s, bool on) {
         return;
     }
     const uint32_t shown = read32(window + kShown);
-    if (on && s.editing) {
-        if (s.editShown && !shown) {  // the player closed it with its own button: done
-            s.editing = s.editShown = false;
-            s.key.clear();
-            LOG_INFO("hotbar: the game's own bar closed - editing done");
-        } else if (!shown && write32(window + kShown, 1)) {
-            s.editShown = true;
-            LOG_INFO("hotbar: the game's own bar shown to edit it");
-        } else {
-            s.editShown = true;
-        }
-        s.hid = true;
-    } else if (on) {
+    if (on) {
         if (shown && write32(window + kShown, 0)) {
             if (!s.hid) LOG_INFO("hotbar: the game's hotkeys bar hidden for the new one (its shown flag 0)");
             s.hid = true;
@@ -606,22 +628,9 @@ bool windowsOver(const State& s, float x0, float y0, float x1, float y1, float& 
 }
 
 // Its place: the bottom middle - moved right past the game's windows there (its chat), or up over them while it stays
-// in the screen's lower part (else over them); editing, the done button beside the game's own bar
+// in the screen's lower part (else over them)
 void place(State& s) {
     const float s8 = 8 * s.scale;
-    if (s.mode == hb::Mode::Editing) {
-        int32_t r[4] = {0, 0, 0, 0};
-        const uint32_t bar = gameBar();
-        hb::Layout L = hb::layout(hb::Mode::Editing, s.targetW / 2, s.targetH - int(s8), s.scale);
-        if (bar && readGame(bar + kRect, r, sizeof r) && r[2] > 0 && r[3] > 0) {
-            const float right = float(r[0] + r[2]) * s.k, bottom = float(r[1] + r[3]) * s.k;
-            const int centre = int(std::lround(right + s8 + L.glass.w / 2));
-            L = hb::layout(hb::Mode::Editing, std::min(centre, s.targetW - int(L.glass.w / 2 + s8)),
-                           int(std::lround(bottom)), s.scale);
-        }
-        s.layout = L;
-        return;
-    }
     hb::Layout L = hb::layout(s.mode, s.targetW / 2, s.targetH - int(s8), s.scale);
     const float x0 = float(L.x) + L.glass.x, y0 = float(L.y) + L.glass.y;
     float right = 0, top = 0;
@@ -647,8 +656,8 @@ hb::Texts texts() {
     hb::Texts t;
     t.battle = say(settings::Text::HotbarBattle);
     t.battleHint = say(settings::Text::HotbarBattleHint);
-    t.edit = say(settings::Text::HotbarEdit);
-    t.done = say(settings::Text::HotbarDone);
+    t.battleOn = say(settings::Text::HotbarBattleOn);  // 3.0.11-beta.147
+    t.battleOff = say(settings::Text::HotbarBattleOff);
     t.use = say(settings::Text::HotbarUse);
     t.unlearned = say(settings::Text::HotbarUnlearned);  // 3.0.11-beta.78
     t.noSp = say(settings::Text::HotbarNoSp);
@@ -722,6 +731,7 @@ void block(const State& s, HWND game) {  // the mouse's clicks over it are its o
 void hide(State& s) {
     if (s.shown) uapad::gamewindow::setBlocked(uapad::gamewindow::Blocker::Hotbar, nullptr, nullptr, false);
     s.shown = false;
+    s.lift = hb::Lift{};  // 3.0.11-beta.147: a press held as it went (a map's loading) forgotten
 }
 
 // A slot used as its key would: the bar's message 0x29 (its cell; the battle mode's row - the normal mode's the game
@@ -732,6 +742,144 @@ bool use(const State& s, int cell) {
     const int row = s.mode == hb::Mode::Battle ? hb::gameRow(cell / 9) : 0;
     reinterpret_cast<SendMsgFn>(uintptr_t(kSendMsg))(window, 0, kUseMsg, cell % 9, row, 0);
     return true;
+}
+
+// 3.0.11-beta.147: a cell's card as the game's own bar shows it on a right click (the battle mode's row the cell's for
+// the call's while, as the drop's)
+bool card(const State& s, int cell) {
+    const uint32_t bar = gameBar();
+    if (!bar || read32(read32(bar) + kInfoSlot) != kBarInfo) return false;
+    uint8_t row = 0;
+    readGame(kRow, &row, 1);
+    const uint8_t want = s.mode == hb::Mode::Battle ? uint8_t(hb::gameRow(cell / 9)) : row;
+    if (want != row) write8(kRow, want);
+    reinterpret_cast<InfoFn>(uintptr_t(kBarInfo))(bar, kCellX0 + kCellW * (cell % 9) + kCellW / 2, kCellY);
+    if (want != row) write8(kRow, row);
+    return true;
+}
+
+// 3.0.11-beta.147 (the owner: «предусмотри возможность чтобы можно было батлмод кнопкой на этой панели включать»): its
+// button turns the battle mode as the game's /battlemode does
+void toggleBattle(State& s, unsigned codePage) {
+    if (!s.battleChecked) {
+        s.battleChecked = true;
+        s.battleCan = sameCode(kBattleCode, kBattleCodeBytes, sizeof kBattleCodeBytes) &&
+                      sameCode(kLineCode, kLineCodeBytes, sizeof kLineCodeBytes);
+        if (!s.battleCan) LOG_INFO("hotbar: the game's /battlemode is not where this build has it - its button idle");
+    }
+    if (!s.battleCan) return;
+    const uint32_t on = 1 - read32(kBattle);
+    write32(kBattle, on);
+    reinterpret_cast<PushFn>(uintptr_t(kPush))(kWindowMgr, 3, nullptr, 0, 0);
+    const char* line = reinterpret_cast<MsgStringFn>(uintptr_t(kMsgString))(on ? kBattleOnLine : kBattleOffLine);
+    reinterpret_cast<PushFn>(uintptr_t(kPush))(kWindowMgr, 1, line, kLineColour, 0);
+    s.key.clear();
+    LOG_INFO("hotbar: the battle mode turned %s by its button, as the game's /battlemode (its line «%s»)",
+             on ? "on" : "off", line ? utf8Of(widened(line, codePage)).c_str() : "");
+}
+
+bool buttonDown() {  // the logical left button (the physical right one when Windows swaps them)
+    return GetAsyncKeyState(GetSystemMetrics(SM_SWAPBUTTON) ? VK_RBUTTON : VK_LBUTTON) < 0;
+}
+
+const char* nameOf(const State& s, int cell) {
+    return cell >= 0 && cell < int(s.cells.size()) && !s.cells[size_t(cell)].name.empty()
+               ? s.cells[size_t(cell)].name.c_str()
+               : "empty";
+}
+const char* keyOf(const State& s, int cell) {
+    return cell >= 0 && cell < int(s.cells.size()) ? s.cells[size_t(cell)].key.c_str() : "?";
+}
+
+// 3.0.11-beta.147: the press on a cell's icon followed each frame - lifted once held and moved, where the pointer is;
+// the mouse's button up with no message of it a while (another part took it, the focus gone) - forgotten, nothing done
+void liftStep(State& s, ULONGLONG now) {
+    if (s.lift.cell < 0) return;
+    if (s.liftReal && !buttonDown()) {
+        if (!s.liftUpSince) s.liftUpSince = now;
+        if (now - s.liftUpSince >= kUnseenUpMs) {
+            LOG_INFO("hotbar: the press on the cell %s let go unseen - nothing done", keyOf(s, s.lift.cell));
+            s.lift = hb::Lift{};
+            s.pressedUntil = 0;
+        }
+        return;
+    }
+    s.liftUpSince = 0;
+    int cx = 0, cy = 0;
+    if (!readGameCursor(cx, cy)) return;
+    s.liftX = float(cx) * s.k - float(s.layout.x);
+    s.liftY = float(cy) * s.k - float(s.layout.y);
+    const bool was = s.lift.dragging;
+    if (hb::moved(s.lift, s.liftX, s.liftY, now, s.scale) && !was) {
+        s.pressedUntil = 0;
+        if (s.dragsTold < 20)
+            LOG_INFO("hotbar: the cell %s (%s) lifted - held %llu ms and moved", keyOf(s, s.lift.cell),
+                     nameOf(s, s.lift.cell), static_cast<unsigned long long>(now - s.lift.at));
+    }
+    s.liftAway = s.lift.dragging && hb::away(s.layout, s.liftX, s.liftY);
+}
+
+// The lifted icon's picture at the cursor: painted anew when its icon, its size or «away» change
+void liftPaint(State& s) {
+    if (!s.lift.dragging || s.lift.cell < 0 || s.lift.cell >= int(s.cells.size())) return;
+    const panel::Picture* icon = s.cells[size_t(s.lift.cell)].icon;
+    const int side = hb::liftedSide(s.mode, s.scale);
+    const std::string key = std::to_string(side) + (s.liftAway ? "a" : "") +
+                            std::to_string(static_cast<unsigned long long>(reinterpret_cast<uintptr_t>(icon)));
+    if (key == s.liftKey) return;
+    s.liftKey = key;
+    if (!panel::blank(s.liftPicture, side, side)) return;
+    hb::paintLifted(s.liftPicture, icon, s.liftAway, s.scale);
+    s.liftUpload = true;
+}
+
+// The press let go at (x, y) of the picture: not lifted - the pressed cell used (a quick click whose pointer slipped
+// too); lifted - over another cell the two slots swapped, well off the bar its slot emptied, else nothing
+void finish(State& s, float x, float y) {
+    const hb::Lift lift = s.lift;
+    s.lift = hb::Lift{};
+    s.liftUpSince = 0;
+    s.key.clear();
+    const int cell = lift.cell;
+    if (hb::gameSlot(s.mode, s.row, cell) != s.liftSlot || cell >= int(s.cells.size())) {
+        s.pressedUntil = 0;
+        LOG_INFO("hotbar: the bar changed under the press (its mode or row) - nothing done");
+        return;
+    }
+    if (!lift.dragging) {
+        const bool sent = use(s, cell);
+        s.pressed = cell;
+        s.pressedUntil = GetTickCount64() + kPressMs;
+        if (s.usesLogged++ < 10)
+            LOG_INFO("hotbar: the cell %s (%s) %s", keyOf(s, cell), nameOf(s, cell),
+                     sent ? "used through the game's bar (its message 0x29)"
+                          : "not used - the game's bar is not where this build has it");
+        return;
+    }
+    s.pressedUntil = 0;
+    const hb::Release r = hb::letGo(s.layout, cell, x, y);
+    if (r.what == hb::Let::Nothing) {
+        if (s.dragsTold++ < 20) LOG_INFO("hotbar: the cell %s let go on the bar - nothing moved", keyOf(s, cell));
+        return;
+    }
+    if (!s.barsCan) {
+        LOG_INFO("hotbar: the game's bar setters are not this build's - the cell %s not moved", keyOf(s, cell));
+        return;
+    }
+    hb::Bar bar = barNow();
+    const int to = r.what == hb::Let::Swap ? hb::gameSlot(s.mode, s.row, r.cell) : -1;
+    if (r.what == hb::Let::Swap) hb::swapSlots(bar, s.liftSlot, to);
+    else hb::emptySlot(bar, s.liftSlot);
+    putBar(bar);
+    s.readAt = 0;  // its cells read again at once
+    if (s.dragsTold++ < 20) {
+        if (r.what == hb::Let::Swap)
+            LOG_INFO("hotbar: the cell %s (%s) dragged to %s (%s) - the game's slots %d and %d swapped", keyOf(s, cell),
+                     nameOf(s, cell), keyOf(s, r.cell), nameOf(s, r.cell), s.liftSlot, to);
+        else
+            LOG_INFO("hotbar: the cell %s (%s) dragged off the bar - the game's slot %d emptied", keyOf(s, cell),
+                     nameOf(s, cell), s.liftSlot);
+    }
 }
 
 }  // namespace
@@ -758,7 +906,7 @@ void frame(HWND game, bool on, bool ownBars, bool padHints, bool ammo, bool coun
     }
     if (on != s.on) {
         s.on = on;
-        if (!on) s.editing = s.editShown = false;
+        if (!on) s.lift = hb::Lift{};
         s.key.clear();
         LOG_INFO("hotbar: [interface] hotbar = %d", on ? 1 : 0);
     }
@@ -789,7 +937,7 @@ void frame(HWND game, bool on, bool ownBars, bool padHints, bool ammo, bool coun
     s.waiting = waitingSkill();
     uint8_t row = 0;
     s.row = readGame(kRow, &row, 1) && row < 3 ? row : 0;
-    s.mode = s.editing ? hb::Mode::Editing : read32(kBattle) ? hb::Mode::Battle : hb::Mode::Normal;
+    s.mode = read32(kBattle) ? hb::Mode::Battle : hb::Mode::Normal;
     place(s);
     s.cells.clear();
     // 3.0.11-beta.86 (the concept «Контроллер в интерфейсе uaRO», stage 2): played with the controller - its buttons
@@ -805,31 +953,36 @@ void frame(HWND game, bool on, bool ownBars, bool padHints, bool ammo, bool coun
                 s.cells.push_back(cellOf(s, hb::gameRow(r) * 9 + c, hb::battleKey(r, c), codePage));
                 s.cells.back().pad = padOf(hb::gameRow(r) * 9 + c);
             }
-    } else if (s.mode == hb::Mode::Normal) {
+    } else {
         for (int c = 0; c < 9; ++c) {
             s.cells.push_back(cellOf(s, s.row * 9 + c, "F" + std::to_string(c + 1), codePage));
             s.cells.back().pad = padOf(s.row * 9 + c);
         }
     }
     s.hover = -1;
-    s.hoverEdit = false;
+    s.hoverToggle = false;
     int cx = 0, cy = 0;
     if (readGameCursor(cx, cy)) {
         const hb::Hit h = hb::hitTest(s.layout, float(cx) * float(k) - float(s.layout.x),
                                       float(cy) * float(k) - float(s.layout.y));
         if (h.part == hb::Part::Cell) s.hover = h.cell;
-        s.hoverEdit = h.part == hb::Part::Edit;
+        s.hoverToggle = h.part == hb::Part::Toggle;
     }
+    liftStep(s, now);  // 3.0.11-beta.147: a press on a cell's icon - lifted, let go unseen
+    const bool dragging = s.lift.dragging;
+    liftPaint(s);
     if (s.hover != s.lastHover) {
         s.lastHover = s.hover;
         s.hoverSince = now;
     }
     hb::Show show;
-    show.hover = s.hover;
+    show.hover = dragging ? -1 : s.hover;
     show.pressed = now < s.pressedUntil ? s.pressed : -1;
-    show.tip = s.hover >= 0 && now - s.hoverSince >= kTipMs;
-    show.hoverEdit = s.hoverEdit;
-    show.pad = pad.shown && s.mode != hb::Mode::Editing;  // 3.0.11-beta.86
+    show.tip = !dragging && s.hover >= 0 && now - s.hoverSince >= kTipMs;
+    show.hoverToggle = s.hoverToggle && !dragging;
+    show.lifted = dragging ? s.lift.cell : -1;  // 3.0.11-beta.147: its cell faded, the one under it outlined
+    show.over = dragging ? s.hover : -1;
+    show.pad = pad.shown;  // 3.0.11-beta.86
     show.dropping = windrag::now().kind == windrag::Kind::Item || windrag::now().kind == windrag::Kind::Skill;  // .110
     show.sony = pad.sony;
     show.ammo = ammoOf(s, now, ammo);  // 3.0.11-beta.125
@@ -842,7 +995,8 @@ void frame(HWND game, bool on, bool ownBars, bool padHints, bool ammo, bool coun
     tellStates(s, waitingWas);
     std::string key = std::to_string(int(s.mode)) + ';' + std::to_string(s.row) + ';' + std::to_string(scale) + ';' +
                       std::to_string(s.layout.w) + 'x' + std::to_string(s.layout.h) + ';' + std::to_string(show.hover) +
-                      ',' + std::to_string(show.pressed) + (show.tip ? "t" : "") + (s.hoverEdit ? "e" : "") +
+                      ',' + std::to_string(show.pressed) + (show.tip ? "t" : "") + (show.hoverToggle ? "e" : "") +
+                      ',' + std::to_string(show.lifted) + ',' + std::to_string(show.over) +
                       (show.pad ? (show.sony ? "S" : "X") : "") + (show.dropping ? "D" : "") + ';' +
                       std::to_string(show.ammo.count) + (show.ammo.icon ? "i" : "") + show.ammo.warning + ';';
     for (size_t i = 0; i < s.cells.size(); ++i) {
@@ -882,7 +1036,7 @@ void key(UINT m, WPARAM wp, LPARAM lp) {
 
 bool drop(int x, int y, uint32_t drag) {
     State& s = state();
-    if (!s.shown || s.k <= 0 || s.mode == hb::Mode::Editing) return false;
+    if (!s.shown || s.k <= 0) return false;
     const hb::Hit h = hb::hitTest(s.layout, float(x) * s.k - float(s.layout.x), float(y) * s.k - float(s.layout.y));
     if (h.part != hb::Part::Cell || h.cell < 0 || h.cell >= int(s.cells.size())) return false;
     const uint32_t bar = gameBar();
@@ -910,6 +1064,11 @@ void draw(FrameRecord& record, gpu::Renderer& renderer) {
     int cursor = -1, cx = 0, cy = 0;  // under the game's own cursor, as the minimap
     if (readGameCursor(cx, cy)) cursor = panel::cursorDraw(record, float(cx), float(cy));
     drawPart(record, renderer, s.picture, s.texture, s.texW, s.texH, s.upload, s.layout.x, s.layout.y, s.k);
+    if (s.lift.dragging && s.liftPicture.width > 0) {  // 3.0.11-beta.147: the lifted icon, its middle at the pointer
+        const int x = s.layout.x + int(std::lround(s.liftX)) - s.liftPicture.width / 2;
+        const int y = s.layout.y + int(std::lround(s.liftY)) - s.liftPicture.height / 2;
+        drawPart(record, renderer, s.liftPicture, s.liftTexture, s.liftTexW, s.liftTexH, s.liftUpload, x, y, s.k);
+    }
     if (cursor >= 0) record.moveLastBefore(record.commands().size() - size_t(cursor) - 1, size_t(cursor));
 }
 
@@ -924,23 +1083,56 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     if (!pointerInTarget(game, m, lp, s.k, s.targetW, s.targetH, tx, ty)) return false;
     const hb::Hit h = hb::hitTest(s.layout, tx - float(s.layout.x), ty - float(s.layout.y));
     if (h.part == hb::Part::None) return false;
+    const bool filled = h.part == hb::Part::Cell && h.cell >= 0 && h.cell < int(s.cells.size()) &&
+                        !s.cells[size_t(h.cell)].name.empty();
     if (m == WM_LBUTTONDOWN || m == WM_LBUTTONDBLCLK) {
-        if (h.part == hb::Part::Edit) {
-            s.editing = !s.editing;
-            s.editShown = false;
-            s.key.clear();
-            LOG_INFO("hotbar: %s", s.editing ? "editing - the game's own bar shown, this one's done button beside it"
-                                             : "editing done - the new bar back");
-        } else if (h.part == hb::Part::Cell && h.cell >= 0 && h.cell < int(s.cells.size())) {
-            const bool sent = use(s, h.cell);
+        if (h.part == hb::Part::Toggle) {  // 3.0.11-beta.147: the battle mode's button
+            toggleBattle(s, s.codePage);
+        } else if (filled) {  // 3.0.11-beta.147: used when let go - or lifted, held and moved
+            hb::press(s.lift, h.cell, tx - float(s.layout.x), ty - float(s.layout.y), GetTickCount64());
+            s.liftSlot = hb::gameSlot(s.mode, s.row, h.cell);
+            s.liftReal = buttonDown();
+            s.liftUpSince = 0;
             s.pressed = h.cell;
-            s.pressedUntil = GetTickCount64() + kPressMs;
-            if (s.usesLogged++ < 10)
-                LOG_INFO("hotbar: the cell %s (%s) %s", s.cells[size_t(h.cell)].key.c_str(),
-                         s.cells[size_t(h.cell)].name.empty() ? "empty" : s.cells[size_t(h.cell)].name.c_str(),
-                         sent ? "used through the game's bar (its message 0x29)"
-                              : "not used - the game's bar is not where this build has it");
+            s.pressedUntil = ~0ULL;  // shown pressed while held
+            s.key.clear();
         }
+    } else if (m == WM_RBUTTONDOWN && filled) {  // 3.0.11-beta.147: its card, the game's own
+        const bool shownCard = card(s, h.cell);
+        if (s.cardsTold++ < 10)
+            LOG_INFO("hotbar: the cell %s (%s) right-clicked - %s", keyOf(s, h.cell), nameOf(s, h.cell),
+                     shownCard ? "its card shown by the game's bar (its right click)"
+                               : "no card - the game's bar is not where this build has it");
+    }
+    result = 0;
+    return true;
+}
+
+bool ownsPress(HWND game, LPARAM lp) {
+    const State& s = state();
+    float tx = 0, ty = 0;
+    if (!s.shown || !pointerInTarget(game, WM_LBUTTONDOWN, lp, s.k, s.targetW, s.targetH, tx, ty)) return false;
+    const hb::Hit h = hb::hitTest(s.layout, tx - float(s.layout.x), ty - float(s.layout.y));
+    return h.part == hb::Part::Cell && h.cell >= 0 && h.cell < int(s.cells.size()) &&
+           !s.cells[size_t(h.cell)].name.empty();
+}
+
+bool held(HWND game, UINT m, WPARAM, LPARAM lp, LRESULT& result) {
+    State& s = state();
+    if (s.lift.cell < 0) return false;
+    const bool button = m == WM_LBUTTONDOWN || m == WM_LBUTTONUP || m == WM_LBUTTONDBLCLK || m == WM_RBUTTONDOWN ||
+                        m == WM_RBUTTONUP || m == WM_RBUTTONDBLCLK || m == WM_MBUTTONDOWN || m == WM_MBUTTONUP;
+    if (!button) return false;
+    if (m == WM_LBUTTONUP) {
+        float tx = 0, ty = 0;
+        if (pointerInTarget(game, m, lp, s.k, s.targetW, s.targetH, tx, ty))
+            finish(s, tx - float(s.layout.x), ty - float(s.layout.y));
+        else
+            s.lift = hb::Lift{};
+    } else if (m == WM_RBUTTONDOWN && s.lift.dragging) {  // a right click while it is lifted: put back
+        LOG_INFO("hotbar: the cell %s put back (a right click while lifted)", keyOf(s, s.lift.cell));
+        s.lift = hb::Lift{};
+        s.key.clear();
     }
     result = 0;
     return true;
@@ -973,13 +1165,12 @@ std::string slotWords(int slot) {
 std::vector<uagfx::padcarry::Place> cellPlaces() {  // 3.0.11-beta.121
     const State& s = state();
     std::vector<uagfx::padcarry::Place> out;
-    if (!s.shown || s.mode == hb::Mode::Editing) return out;
+    if (!s.shown) return out;
     uint8_t row = 0;
     readGame(kRow, &row, 1);
     for (size_t i = 0; i < s.layout.cells.size(); ++i) {
         const panel::Box& b = s.layout.cells[i];
-        const int cell = int(i);
-        const int slot = s.mode == hb::Mode::Battle ? hb::gameRow(cell / 9) * 9 + cell % 9 : int(row) * 9 + cell % 9;
+        const int slot = hb::gameSlot(s.mode, int(row), int(i));
         if (slot < 0 || slot >= kSlots) continue;
         uagfx::padcarry::Place p;
         p.to = uagfx::padcarry::To::Cell;
