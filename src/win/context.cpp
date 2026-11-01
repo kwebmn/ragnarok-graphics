@@ -28,6 +28,7 @@
 #include "win/hit_hook.hpp"
 #include "win/map_start.hpp"
 #include "win/pick_hook.hpp"
+#include "win/sort_guard.hpp"
 #include "win/world_mouse.hpp"
 #include "win/server_night.hpp"
 #include "win/answer_card.hpp"
@@ -392,6 +393,7 @@ bool Context::open(std::string& error) {
     if (!config.remix) installTextureHook();
     installMapStartHook();             // 3.0.2-beta.15: a map's loading known whatever its camera holds
     installPickHook(config.fastPick);  // 0.89: the cell under the mouse without testing the whole map
+    installSortGuard();                // 3.0.11-beta.148 (R-DEHAHA): the see-through faces' sort, a NaN depth mended
     installWorldMouse();               // 3.0.11-beta.24: the driver's parts are windows for the game's cursor
     installWindowsDraw();              // 3.0.11-beta.53: the replaced windows hidden before the game draws them
     buffcolumn::installBuffIcons();    // 3.0.11-beta.35: the game's status icons hidden for the buffs' column

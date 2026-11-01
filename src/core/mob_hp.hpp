@@ -68,6 +68,19 @@ struct Bar {
     float x = 0, y = 0, w = 0, h = 0;
 };
 Bar barOver(const float box[4], bool target, int screenHeight);
+// 3.0.11-beta.148 (the owner: «хп над мобом дергается когда тот ходит», «когда моба атакую, хп дергается туда сюда»):
+// a bar steady over its monster - across the middle of its feet on the screen (its place in the world as the game
+// projects it), at its tallest frame's height of late: the sprite's box (the bar's place before) changes with each
+// frame of a walk, an attack or a hit, and the bar jumped with it. A taller frame raises it at once; a lower height
+// (a zoom out) is taken only after kHoldMs without the old one, gliding there over about kSettleMs
+constexpr uint32_t kHoldMs = 1500, kSettleMs = 300;
+struct Tall {
+    float px = 0;         // the height kept: its top's pixels over the feet
+    uint32_t metMs = 0;   // when a frame last reached it
+    uint32_t fedMs = 0;   // the last frame's time (0 none yet)
+};
+void keepTall(Tall& t, float now, uint32_t nowMs);
+Bar barOverFeet(float feetX, float feetY, float tall, bool target, int screenHeight);
 std::string percentText(int hp);  // «57%»
 
 }  // namespace uagfx::mobhp

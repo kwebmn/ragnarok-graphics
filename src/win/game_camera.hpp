@@ -42,6 +42,9 @@ bool readActorBox(uint32_t id, float box[4]);
 // 3.0.11-beta.100: `classes` - each one's class too (the record's +0x1C, FUN_0054aee0's: 1001-3999 a monster)
 void readActorBoxes(std::unordered_map<uint32_t, std::array<float, 4>>& out,
                     std::unordered_map<uint32_t, int>* classes = nullptr);
+// 3.0.11-beta.148: every actor's place in the world at once (the world's actors' list, as readActorWorld's) - its id
+// to x, height, z; the character itself not among them
+void readActorPlaces(std::unordered_map<uint32_t, std::array<float, 3>>& out);
 // The game's own minimap: it is drawn while its UI window 14 exists (UIWindowMgr+0x7C); hidden and made again as
 // Ctrl+Tab does (UI command 0x99: DeleteWindow / MakeWindow of window 14, the latter only where the map has one) -
 // false when not done (another build, nothing to do). On the game's thread.

@@ -345,6 +345,25 @@ bool readActorWorld(uint32_t id, float at[3]) {
            std::isfinite(at[2]);
 }
 
+void readActorPlaces(std::unordered_map<uint32_t, std::array<float, 3>>& out) {
+    constexpr uint32_t kWorldActors = 0x18, kActorId = 0x208;
+    out.clear();
+    uint32_t world = 0, head = 0, node = 0;
+    const uint32_t mode = gameMode();
+    if (!mode || !read(mode + kModeWorld, &world, 4) || !world || !read(world + kWorldActors, &head, 4) || !head ||
+        !read(head, &node, 4))
+        return;
+    for (size_t n = 0; node && node != head && n < 4096; ++n) {
+        uint32_t actor = 0, id = 0;
+        float at[3];
+        if (!read(node + 8, &actor, 4)) return;
+        if (actor && read(actor + kActorId, &id, 4) && id && read(actor + 4, at, sizeof at) && std::isfinite(at[0]) &&
+            std::isfinite(at[1]) && std::isfinite(at[2]))
+            out[id] = std::array<float, 3>{at[0], at[1], at[2]};
+        if (!read(node, &node, 4)) return;
+    }
+}
+
 bool readActorBox(uint32_t id, float box[4]) {
     constexpr uint32_t kPickList = 0x74B5F0 + 0x28, kRecordId = 0x18;
     uint32_t head = 0, node = 0;

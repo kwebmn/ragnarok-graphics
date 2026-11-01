@@ -101,3 +101,32 @@ TEST(mob_hp_asks_the_server_for_the_monsters_not_known) {
     CHECK(due.size() == 1 && due[0] == 3);
 }
 
+
+// 3.0.11-beta.148 (the owner: «хп над мобом дергается когда тот ходит», «когда моба атакую, хп дергается туда сюда»):
+// the bar over the monster's feet (its place in the world on the screen), at its tallest frame's height of late - not
+// on each frame's box: a walk's or a hit's frames of 60 and 54 pixels keep it still; a taller one raises it at once;
+// a lower height (a zoom out) taken only after 1.5 s without the old one, gliding there
+TEST(mob_hp_bar_steady_over_the_feet) {
+    mobhp::Tall t;
+    uint32_t ms = 1000;
+    mobhp::keepTall(t, 60, ms);
+    CHECK(std::fabs(t.px - 60) < 1e-3f);
+    for (int i = 0; i < 10; ++i) {  // a walk: its frames 54 and 60 pixels tall in turn, 100 ms each
+        ms += 100;
+        mobhp::keepTall(t, i % 2 ? 60.0f : 54.0f, ms);
+        CHECK(std::fabs(t.px - 60) < 1e-3f);
+    }
+    mobhp::keepTall(t, 66, ms += 100);  // a taller frame (a hit's)
+    CHECK(std::fabs(t.px - 66) < 1e-3f);
+    for (int i = 0; i < 14; ++i) mobhp::keepTall(t, 40, ms += 100);  // zoomed out: 1.4 s still held
+    CHECK(std::fabs(t.px - 66) < 1e-3f);
+    for (int i = 0; i < 20; ++i) mobhp::keepTall(t, 40, ms += 100);  // then glides down to it
+    CHECK(t.px < 41 && t.px >= 40);
+    const mobhp::Bar a = mobhp::barOverFeet(500, 400, 60, false, 1080);
+    const mobhp::Bar b = mobhp::barOverFeet(500, 400, 60, true, 1080);
+    CHECK(std::fabs(a.x + a.w / 2 - 500) < 1e-3f && a.y + a.h < 400 - 60);  // across the feet, over the head
+    CHECK(std::fabs(b.x + b.w / 2 - 500) < 1e-3f && b.w > a.w);
+    const float box[4] = {470, 340, 530, 400};  // the same as over its box when the box is centred on the feet
+    const mobhp::Bar c = mobhp::barOver(box, false, 1080);
+    CHECK(std::fabs(c.x - a.x) < 1e-3f && std::fabs(c.y - a.y) < 1e-3f);
+}

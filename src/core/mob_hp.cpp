@@ -1,6 +1,7 @@
 #include "core/mob_hp.hpp"
 
 #include <algorithm>
+#include <cmath>
 #include <iterator>
 
 namespace uagfx::mobhp {
@@ -75,6 +76,22 @@ Bar barOver(const float box[4], bool target, int screenHeight) {
     b.x = (box[0] + box[2]) / 2 - b.w / 2;
     b.y = box[1] - 5.0f * k - b.h;
     return b;
+}
+
+void keepTall(Tall& t, float now, uint32_t nowMs) {
+    constexpr float kMet = 0.5f;  // pixels: a frame as tall as the kept height, near enough
+    if (!t.fedMs || now >= t.px - kMet) {
+        t.px = t.fedMs ? std::max(t.px, now) : now;
+        t.metMs = nowMs;
+    } else if (nowMs - t.metMs >= kHoldMs) {
+        t.px = now + (t.px - now) * float(std::exp(-double(nowMs - t.fedMs) / double(kSettleMs)));
+    }
+    t.fedMs = nowMs ? nowMs : 1;
+}
+
+Bar barOverFeet(float feetX, float feetY, float tall, bool target, int screenHeight) {
+    const float box[4] = {feetX, feetY - tall, feetX, feetY};
+    return barOver(box, target, screenHeight);
 }
 
 std::string percentText(int hp) { return std::to_string(hp) + "%"; }

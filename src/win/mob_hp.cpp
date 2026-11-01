@@ -9,7 +9,9 @@
 #include <variant>
 #include <vector>
 
+#include "core/game_camera.hpp"
 #include "core/mob_hp.hpp"
+#include "core/own_ground.hpp"
 #include "core/ui_style.hpp"
 #include "pad/win/runtime.hpp"
 #include "win/game_camera.hpp"
@@ -23,6 +25,7 @@ namespace {
 
 struct Bar {
     float x = 0, y = 0, w = 0, h = 0;  // a part's pixels
+    float top = 0;                     // 3.0.11-beta.148: its top in the game's pixels (the target's chevron)
     int hp = 0;
     uint32_t id = 0;  // 3.0.11-beta.99: whose (the ring's chevron stands over any)
     bool target = false;
@@ -33,6 +36,11 @@ struct State {
     bool modeTold = false;
     mobhp::Table table;
     std::unordered_map<uint32_t, std::array<float, 4>> boxes;
+    // 3.0.11-beta.148 (the owner: «хп над мобом дергается когда тот ходит», «когда моба атакую, хп дергается туда
+    // сюда»): each actor's place in the world, each monster's tallest frame of late - the bar over its feet
+    std::unordered_map<uint32_t, std::array<float, 3>> places;
+    std::unordered_map<uint32_t, mobhp::Tall> talls;
+    int steadyTold = 0;
     std::vector<Bar> bars;
     float k = 0;
     uint32_t target = 0;
@@ -103,6 +111,7 @@ void packet(const packets::Event& e) {
     } else if (const auto* v = std::get_if<packets::Vanish>(&e)) {
         s.table.gone(v->id);
         s.asker.forget(v->id);  // 3.0.11-beta.100: asked again as soon as it is back
+        s.talls.erase(v->id);   // 3.0.11-beta.148
     }
 }
 
@@ -123,6 +132,7 @@ void frame(HWND game, MobHp mode, double k, int targetWidth, int targetHeight) {
         s.table.clear();
         s.asker.clear();
         s.toAsk.clear();
+        s.talls.clear();
     }
     const uint32_t target = targetNow(s);
     const std::vector<mobhp::Shown> list = s.table.shown(mode, target, GetTickCount());
@@ -147,11 +157,36 @@ void frame(HWND game, MobHp mode, double k, int targetWidth, int targetHeight) {
     }
     if (list.empty()) return;
     s.k = kk;
+    // 3.0.11-beta.148: the bars over the monsters' feet as the game's camera puts them on the screen, at their tallest
+    // frame's height of late; a monster whose place is not read - over its box, as before
+    float view[12];
+    const bool camera = readGameCamera(view);
+    const camera::Projection p = camera::projectionFor(int(std::lround(float(targetWidth) / kk)), gameHeight);
+    if (camera) readActorPlaces(s.places);
+    const uint32_t nowMs = GetTickCount();
+    int steady = 0;
     for (const mobhp::Shown& m : list) {
         const auto it = s.boxes.find(m.id);
         if (it == s.boxes.end()) continue;  // not on the screen now
-        const mobhp::Bar b = mobhp::barOver(it->second.data(), m.target, gameHeight);
-        s.bars.push_back(Bar{b.x * kk, b.y * kk, b.w * kk, b.h * kk, m.hp, m.id, m.target});
+        const auto place = camera ? s.places.find(m.id) : s.places.end();
+        own_ground::Tl2 feet{};
+        mobhp::Bar b;
+        if (place != s.places.end()) {
+            const float* w = place->second.data();
+            const float c[3] = {w[0] * view[0] + w[1] * view[3] + w[2] * view[6] + view[9],
+                                w[0] * view[1] + w[1] * view[4] + w[2] * view[7] + view[10],
+                                w[0] * view[2] + w[1] * view[5] + w[2] * view[8] + view[11]};
+            if (!own_ground::placeView(p, c, feet)) feet.rhw = 0;
+        }
+        if (place != s.places.end() && feet.rhw > 0 && std::isfinite(feet.x) && std::isfinite(feet.y)) {
+            mobhp::Tall& tall = s.talls[m.id];
+            mobhp::keepTall(tall, feet.y - it->second[1], nowMs);
+            b = mobhp::barOverFeet(feet.x, feet.y, tall.px, m.target, gameHeight);
+            ++steady;
+        } else {
+            b = mobhp::barOver(it->second.data(), m.target, gameHeight);
+        }
+        s.bars.push_back(Bar{b.x * kk, b.y * kk, b.w * kk, b.h * kk, b.y, m.hp, m.id, m.target});
         if (!m.target) continue;
         s.target = m.id;
         const float scale = uistyle::partScale(k);
@@ -176,8 +211,13 @@ void frame(HWND game, MobHp mode, double k, int targetWidth, int targetHeight) {
     }
     if (!s.bars.empty() && s.told < 10) {
         ++s.told;
-        LOG_INFO("mob hp: %zu bar(s) over the monsters%s (%zu per cents known)", s.bars.size(),
-                 s.target ? ", the target's with its per cent" : "", s.table.size());
+        LOG_INFO("mob hp: %zu bar(s) over the monsters%s (%zu per cents known); %d of them over their feet, steady",
+                 s.bars.size(), s.target ? ", the target's with its per cent" : "", s.table.size(), steady);
+    }
+    if (!s.bars.empty() && size_t(steady) < s.bars.size() && s.steadyTold < 5) {
+        ++s.steadyTold;
+        LOG_INFO("mob hp: %zu of %zu bars over their sprites' boxes - %s", s.bars.size() - size_t(steady),
+                 s.bars.size(), camera ? "their places in the world not read" : "the game's camera not read");
     }
 }
 
@@ -228,9 +268,11 @@ int hp(uint32_t id) {
 bool targetBarTop(uint32_t id, const float box[4], int screenHeight, float& top) {
     const State& s = state();
     if (!id) return false;
+    (void)box;
+    (void)screenHeight;
     for (const Bar& b : s.bars) {
         if (b.id != id) continue;
-        top = mobhp::barOver(box, b.target, screenHeight).y;
+        top = b.top;  // 3.0.11-beta.148: the bar's own place (over the feet, steady)
         return true;
     }
     return false;
