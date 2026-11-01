@@ -1,3 +1,12 @@
+# uaRO Graphics 3.0.11-beta.130 — what's new
+
+**Walking without waiting for the server (an experiment, off at first)**:
+- A new switch "Walk without waiting for the server (an experiment)" in "Interface". On, the character starts
+  walking right after the click instead of a ping later, when the server answers.
+- When the server answers with the same way, the walk joins it without a jump. When the server does not let it walk
+  (a cast, a stun) or does not answer in time, the character is put back on the cell it stood on.
+- It works only while the character stands still and casts nothing.
+
 # uaRO Graphics 3.0.11-beta.129 — what's new
 
 **A sound when the arrows run low**:
