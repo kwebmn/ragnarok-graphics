@@ -1,3 +1,17 @@
+# uaRO Graphics 3.0.11-beta.142 — what's new
+
+**Ground skills on the controller, step 1** (the concept "mage, priest and hunter on the controller"):
+- Fire Wall and Ice Wall by a press stand between you and the monster, facing it: 2 cells from you, 1 when the monster
+  is 2 cells away, on it when it is next to you; with no monster - 2 cells the way you were walking. A monster coming
+  at an angle - the wall comes out as a 5-cell staircase by itself (the server turns it so).
+- Storm Gust, Lord of Vermilion, Meteor Storm, Magnus, Heaven's Drive, Thunder Storm by a press land where they cover
+  the most monsters within reach.
+- Fire Pillar goes like a trap - 2 cells toward the monster.
+- After any ground skill's cast its cells show on the ground for half a second: a wall's 3 or 5 cells, Storm Gust's
+  square, Sanctuary, a trap. With the controller and the mouse alike. Coloured by element: fire, ice and water, holy,
+  wind and lightning, traps.
+- Switched in "Interface" -> "Skill cells on the ground" (console: `interface.skill_cells`), on at once.
+
 # uaRO Graphics 3.0.11-beta.141 — what's new
 
 **The character block: Alt+V and the experience in numbers**:
