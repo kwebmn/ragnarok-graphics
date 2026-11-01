@@ -49,6 +49,7 @@
 #include "win/ground_marks.hpp"
 #include "win/item_window.hpp"
 #include "win/ask_card.hpp"
+#include "win/char_select.hpp"
 #include "win/info_card.hpp"
 #include "win/menu_window.hpp"
 #include "win/msg_box.hpp"
@@ -618,6 +619,23 @@ bool messagePad(const PadState& pad) {
     return true;
 }
 
+// 3.0.11-beta.152: the character select - the D-pad (or the left stick) left and right chooses a place, A enters
+// (an empty place: makes a character there), X makes one, LB / RB the pages, B back to the login
+bool charSelectPad(const PadState& pad, DWORD now) {
+    State& s = S();
+    const uint16_t buttons = pad.connected ? pad.buttons : 0;
+    const uint16_t down = uint16_t((buttons & ~s.prevPadButtons) | stickSteps(pad, now));
+    s.prevPadButtons = buttons;
+    using uagfx::win::charselectwin::PadCommand;
+    const std::pair<uint16_t, PadCommand> keys[] = {{kPadLeft, PadCommand::Left},   {kPadRight, PadCommand::Right},
+                                                    {kPadA, PadCommand::Enter},     {kPadX, PadCommand::Make},
+                                                    {kPadB, PadCommand::Back},      {kPadLB, PadCommand::PageBefore},
+                                                    {kPadRB, PadCommand::PageAfter}};
+    for (const auto& [button, command] : keys)
+        if (down & button) uagfx::win::charselectwin::padCommand(command);
+    return true;
+}
+
 // 3.0.11-beta.92: «Характеристики» open - the D-pad (or the left stick) chooses a stat, A adds a point, B or Start
 // close it
 bool statsPad(const PadState& pad, DWORD now) {
@@ -915,7 +933,7 @@ void backCloses(PadState& pad, const ViewInfo& view) {
 constexpr const char* kTopNames[] = {"«Речі»",  "«Характеристики»", "«Навички»", "«Спорядження»",
                                      "the shop", "the NPC talk",      "«Довідник»", "«Склад»", "«Обмін»",
                                      "the menu", "the item card", "the skill card", "the request",
-                                     "the message box", "the login"};
+                                     "the message box", "the login", "the character select"};
 static_assert(std::size(kTopNames) == size_t(uagfx::winstack::kWins), "a name for each window");
 
 void tick() {
@@ -984,6 +1002,7 @@ void tick() {
                   : drive && *top == Win::SkillCard                ? cardPad(false, pad, now)
                   : drive && *top == Win::Ask                      ? askPad(pad)  // .150: an input's - the game's
                   : drive && *top == Win::Message                  ? messagePad(pad)  // .151
+                  : drive && *top == Win::CharSelect               ? charSelectPad(pad, now)  // .152
                                                                    : runMenu(pad, view, now);
     if (s.npcSupported) view.dialog = clientnpc::read();
     double clientTurn = 0;

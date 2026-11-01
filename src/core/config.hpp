@@ -686,6 +686,8 @@ struct Config {
     bool messageBoxes = false;
     // 3.0.11-beta.151: [interface] login - the game's login window (win/login_card) in the new look
     bool loginWindow = false;
+    // 3.0.11-beta.152: [interface] char_select - the game's character select (win/char_select) in the new look
+    bool charSelectWindow = false;
     // 3.0.11-beta.142 (the owner's concept «маг, прист и хант на геймпаде», answer 9 «дать»): [interface] skill_cells -
     // a ground skill's cells, as the server makes them (core/skill_area), shown on the ground after a cast by the pad
     // or the mouse (win/ground_marks); 0: none

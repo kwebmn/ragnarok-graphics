@@ -532,6 +532,9 @@ enum class Text : uint16_t {
     InterfaceMessages, InterfaceMessagesHint, MsgTitle, MsgWaitTitle, MsgYes, MsgNo, MsgCancel,
     InterfaceLogin, InterfaceLoginHint, LoginSubtitle, LoginAccount, LoginPassword, LoginRemember, LoginEnter,
     LoginExit, LoginRegister,
+    // 3.0.11-beta.152: the character select
+    InterfaceCharSelect, InterfaceCharSelectHint, CharsTitle, CharsEnter, CharsMake, CharsRemove, CharsBack, CharsEmpty,
+    CharsMakeHint,
     // 3.0.11-beta.141: the character block's experience - the free skill points, the last level, an hour, a minute,
     // the experience's tip, the portrait's tip (Alt+V)
     CharSkillPoints, CharExpMax, CharHour, CharMinute, CharToLevel, CharLevelIn, CharPerHour, CharSession, CharLastGain,

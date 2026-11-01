@@ -59,6 +59,7 @@
 #include "win/ammo_sound.hpp"
 #include "win/ask_card.hpp"
 #include "win/info_card.hpp"
+#include "win/char_select.hpp"
 #include "win/login_card.hpp"
 #include "win/msg_box.hpp"
 #include "win/menu_window.hpp"
@@ -949,6 +950,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     askcardwin::frame(window, config.askWindows, gameCodePage(config), pk, pw, ph);    // 3.0.11-beta.150
     msgboxwin::frame(window, config.messageBoxes, gameCodePage(config), pk, pw, ph);   // 3.0.11-beta.151
     loginwin::frame(window, config.loginWindow, gameCodePage(config), pk, pw, ph);     // 3.0.11-beta.151
+    charselectwin::frame(window, config.charSelectWindow, gameCodePage(config), pk, pw, ph);  // 3.0.11-beta.152
     // 3.0.11-beta.7: [interface] reference - «Довідник» (Ctrl+F)
     referencewin::frame(window, config.referenceWindow, pk, pw, ph);
     padcarrywin::frame(window, pk, pw, ph);  // 3.0.11-beta.121: a thing the controller carries - its places now

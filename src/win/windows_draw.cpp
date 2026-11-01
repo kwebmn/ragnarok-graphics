@@ -20,6 +20,7 @@
 #include "win/storage_window.hpp"
 #include "win/ask_card.hpp"
 #include "win/info_card.hpp"
+#include "win/char_select.hpp"
 #include "win/login_card.hpp"
 #include "win/msg_box.hpp"
 #include "win/menu_window.hpp"
@@ -57,6 +58,7 @@ void __attribute__((thiscall)) windowsDraw(uint32_t manager) {
     askcardwin::beforeGameDraw();   // 3.0.11-beta.150: the requests and the NPC's inputs
     msgboxwin::beforeGameDraw();    // 3.0.11-beta.151: the game's message boxes
     loginwin::beforeGameDraw();     // 3.0.11-beta.151: the login
+    charselectwin::beforeGameDraw();  // 3.0.11-beta.152: the character select
     mobhpwin::beforeGameDraw();   // 3.0.11-beta.100: the monsters' per cent asked
     charpanel::beforeGameDraw();  // the Basic Info window
     hotbarwin::beforeGameDraw();  // the hotkeys' bar

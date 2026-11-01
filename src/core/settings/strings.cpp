@@ -5462,6 +5462,26 @@ constexpr Entry kTexts[] = {
     {Text::LoginExit, "Exit", "Вийти", "Выйти"},
     {Text::LoginRegister, "No account? Register on uaro.kiev.ua", "Немає акаунта? Реєстрація на uaro.kiev.ua",
      "Нет аккаунта? Регистрация на uaro.kiev.ua"},
+    // 3.0.11-beta.152: the character select
+    {Text::InterfaceCharSelect, "Character select", "Вибір персонажа", "Выбор персонажа"},
+    {Text::InterfaceCharSelectHint,
+     "The game's character select in the new look: three cards a page - the face, the name, the job, the levels, HP "
+     "and SP, the stats; a click chooses, two clicks enter (on an empty place: make a character), the controller's "
+     "A enters, X makes, LB and RB turn the pages. Off: the game's own window.",
+     "Вибір персонажа в новому вигляді: три картки на сторінці — обличчя, ім'я, професія, рівні, HP і SP, "
+     "характеристики; клік обирає, подвійний клік — у гру (на вільному місці — створити персонажа), на контролері "
+     "A — увійти, X — створити, LB і RB гортають сторінки. Вимкнено: власне вікно гри.",
+     "Выбор персонажа в новом виде: три карточки на странице — лицо, имя, профессия, уровни, HP и SP, "
+     "характеристики; клик выбирает, двойной клик — в игру (на свободном месте — создать персонажа), на "
+     "контроллере A — войти, X — создать, LB и RB листают страницы. Выключено: собственное окно игры."},
+    {Text::CharsTitle, "Characters", "Вибір персонажа", "Выбор персонажа"},
+    {Text::CharsEnter, "Enter", "Увійти", "Войти"},
+    {Text::CharsMake, "Make", "Створити", "Создать"},
+    {Text::CharsRemove, "Delete", "Видалити", "Удалить"},
+    {Text::CharsBack, "Back", "Назад", "Назад"},
+    {Text::CharsEmpty, "Free place", "Вільне місце", "Свободное место"},
+    {Text::CharsMakeHint, "Make a new character here", "Створіть тут нового персонажа",
+     "Создайте здесь нового персонажа"},
     // 3.0.11-beta.141: the character block's experience (forms: one, a few, many)
     {Text::CharSkillPoints, "skill point|skill points", "очко навичок|очки навичок|очок навичок",
      "очко навыков|очка навыков|очков навыков"},
