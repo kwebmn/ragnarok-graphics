@@ -1,3 +1,9 @@
+# uaRO Graphics 3.0.11-beta.131 — what's new
+
+**The server's delays measured more truly** (report R-6MF4UU):
+- When the game itself stood still a moment (taking the screenshot for a report, say), the packets waited in the
+  game, not on the network - this no longer counts as the server's delay nor draws a red bar on the ping's graph.
+
 # uaRO Graphics 3.0.11-beta.130 — what's new
 
 **Walking without waiting for the server (an experiment, off at first)**:
