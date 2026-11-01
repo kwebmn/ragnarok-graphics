@@ -739,9 +739,11 @@ TEST(ctl_slot_buttons_cover_the_first_row) {
     WorldState w = slotWorld();
     addMob(w, 110000001, Cell{101, 100});
     uint32_t t = 1000;
-    auto tap = [&](const PadState& p) {
+    auto tap = [&](const PadState& p) {  // 3.0.11-beta.145: a ground skill goes out at the release - both ticks'
         TickOutput o = c.tick(p, w, view(), t);
-        c.tick(pad(), w, view(), t + 10);
+        const TickOutput up = c.tick(pad(), w, view(), t + 10);
+        o.packets.insert(o.packets.end(), up.packets.begin(), up.packets.end());
+        if (o.rumble == Rumble::None) o.rumble = up.rumble;
         t += 200;
         return o;
     };
@@ -1009,10 +1011,10 @@ TEST(ctl_held_potion_repeats_during_a_walk_up) {
 TEST(ctl_held_repeat_never_takes_over_another_walk_up) {
     Controller c(Config{});
     WorldState w = slotWorld();
-    addMob(w, 110000001, Cell{112, 100});          // 12 cells: Bash and Thunderstorm both need a walk up
+    addMob(w, 110000001, Cell{112, 100});          // 12 cells: Bash and Fire Bolt both need a walk up
     c.tick(pad(kPadX), w, view(), 1000);           // F1: Bash walks up
-    c.tick(pad(kPadX | kPadRB), w, view(), 1100);  // F4 pressed too: a new press takes over
-    TickOutput o = c.tick(pad(kPadX | kPadRB), w, view(), 1250);  // F1's repeat must not take it back
+    c.tick(pad(kPadX | kPadUp), w, view(), 1100);  // F7 pressed too: a new press takes over
+    TickOutput o = c.tick(pad(kPadX | kPadUp), w, view(), 1250);  // F1's repeat must not take it back
     CHECK(c.approaching());
     bool bash = false;
     for (const std::string& n : o.notes) bash = bash || n.find("skill 5") != std::string::npos;
@@ -1718,4 +1720,88 @@ TEST(ctl_npc_hint_names_the_buttons) {
     CHECK(npcHint(NpcDialog::Close, Lang::Uk) == "Cross / Circle: закрити");
     CHECK(npcHint(NpcDialog::Number, Lang::En).find("L1 / R1: ±10") != std::string::npos);
     useSonyLabels(false);
+}
+
+// --- 3.0.11-beta.145: ground skills - a tap places, a hold aims (the concept «маг, прист и хант на геймпаде») ---
+
+namespace {
+WorldState fireWallWorld() {  // X: Fire Wall instead of Bash
+    WorldState w = slotWorld();
+    w.setHotkey(0, Hotkey{1, 18, 10});
+    w.apply(EvSkills{{SkillInfo{5, 1, 10, 1}, SkillInfo{28, 16, 5, 9}, SkillInfo{12, 2, 10, 9},
+                      SkillInfo{21, 2, 5, 9}, SkillInfo{19, 1, 10, 9}, SkillInfo{117, 2, 5, 3},
+                      SkillInfo{2, 0, 10, 0}, SkillInfo{18, 2, 10, 9}}},
+            0);
+    return w;
+}
+bool castAt(const TickOutput& o, uint16_t skill, int x, int y) {
+    return o.packets.size() == 1 && pid(pkt(o, 0)) == 0x0113 && rd16(pkt(o, 0).data(), 9) == skill &&
+           rd16(pkt(o, 0).data(), 12) == x && rd16(pkt(o, 0).data(), 20) == y;
+}
+}  // namespace
+
+// A tap: nothing at the press (it may become an aim), the wall by the press's rule at the release
+TEST(ctl_ground_tap_casts_on_release) {
+    Controller c(Config{});
+    WorldState w = fireWallWorld();
+    addMob(w, 110000001, Cell{106, 100});
+    CHECK(c.tick(pad(kPadX), w, view(), 1000).packets.empty());
+    CHECK(castAt(c.tick(pad(), w, view(), 1100), 18, 102, 100));
+    CHECK(!c.aimView().has_value());
+}
+
+// Held 0.25 s: the aim - from the press's own cell, the character standing, either stick leaning it (the left one
+// here, the thumb free of the buttons), the release casts where it is; nothing repeats meanwhile
+TEST(ctl_ground_hold_aims_with_either_stick) {
+    Controller c(Config{});
+    WorldState w = fireWallWorld();
+    addMob(w, 110000001, Cell{106, 100});
+    c.tick(pad(kPadX), w, view(), 1000);
+    TickOutput o = c.tick(pad(kPadX), w, view(), 1300);
+    CHECK(o.packets.empty() && c.aimView().has_value());
+    if (c.aimView()) CHECK(c.aimView()->cell == (Cell{102, 100}) && c.aimView()->skill == 18);
+    PadState lean = pad(kPadX);
+    lean.lx = 0.0f;
+    lean.ly = 1.0f;  // up: north on the map, the camera not turned
+    o = c.tick(lean, w, view(), 1320);
+    CHECK(o.packets.empty() && !o.mouse.active && !c.walking());  // the character stands
+    if (c.aimView()) CHECK(c.aimView()->cell == (Cell{100, 104}));
+    PadState right = pad(kPadX);
+    right.rx = 1.0f;  // the right stick too
+    c.tick(right, w, view(), 1340);
+    if (c.aimView()) CHECK(c.aimView()->cell == (Cell{104, 100}));
+    CHECK(c.tick(pad(kPadX), w, view(), 2000).packets.empty());  // still held: no repeat
+    CHECK(castAt(c.tick(pad(), w, view(), 2100), 18, 104, 100));
+    CHECK(!c.aimView().has_value());
+}
+
+// A stick pressed (or B, when the skill is not on B) cancels the aim: nothing at the release
+TEST(ctl_ground_aim_cancelled_by_a_stick_click) {
+    Controller c(Config{});
+    WorldState w = fireWallWorld();
+    c.tick(pad(kPadX), w, view(), 1000);
+    c.tick(pad(kPadX), w, view(), 1300);
+    CHECK(c.aimView().has_value());
+    c.tick(pad(kPadX | kPadR3), w, view(), 1350);
+    CHECK(!c.aimView().has_value());
+    CHECK(c.tick(pad(), w, view(), 1400).packets.empty());
+    c.tick(pad(kPadX), w, view(), 2000);
+    c.tick(pad(kPadX), w, view(), 2300);
+    c.tick(pad(kPadX | kPadB), w, view(), 2350);  // B: Safety Wall's button, not the held one - cancels
+    CHECK(!c.aimView().has_value());
+    CHECK(c.tick(pad(), w, view(), 2400).packets.empty());
+}
+
+// 3.0.11-beta.145: the line while a ground skill is aimed - the sticks' words, the D-pad's arrows, the skill's own
+// button to let go, the sticks pressed to cancel - as the interface's hint bar draws it
+TEST(ctl_ground_aim_hint_line) {
+    const std::vector<HintPart> parts = aimHintParts(kPadX, Lang::Uk);
+    CHECK_EQ(parts.size(), size_t(4));
+    if (parts.size() == 4) {
+        CHECK(parts[0].before == "стіки" && parts[0].words == "куди" && parts[0].buttons.empty());
+        CHECK((parts[1].buttons == std::vector<uint16_t>{kPadUp, kPadDown, kPadLeft, kPadRight}));
+        CHECK(parts[2].before == "відпустіть" && parts[2].buttons == std::vector<uint16_t>{kPadX});
+        CHECK((parts[3].buttons == std::vector<uint16_t>{kPadL3, kPadR3}) && parts[3].words == "скасувати");
+    }
+    CHECK(aimHint(kPadX, Lang::En).find("let go") != std::string::npos);
 }

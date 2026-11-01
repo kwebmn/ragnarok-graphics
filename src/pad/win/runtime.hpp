@@ -51,6 +51,9 @@ uint32_t preview();
 // frame); where it walks now (the arrow's end, the map's cells); false none
 void setDirectWalk(bool on);
 bool walkTarget(int& x, int& y);
+// 3.0.11-beta.145 (the concept «маг, прист и хант на геймпаде»): a ground skill aimed with the pad now - the skill, its
+// level and the cell it would go on (its cells on the ground: win/ground_marks); false while not aiming
+bool aimCells(uint16_t& skill, int& lv, int& x, int& y);
 // 3.0.11-beta.103: the stick's way on the ground while it walks (east, north: a unit) and whether a wall cuts the cell
 // asked for short (the arrow's red bar); false none. 3.0.11-beta.104: the march's way (a slide's along a wall) and the
 // lead (cells)

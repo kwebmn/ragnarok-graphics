@@ -785,15 +785,19 @@ void answerNpc(const TickOutput& out, const ViewInfo& view, const PadState& pad)
     if (out.number) clientnpc::typeNumber(s.hwnd, *out.number);
     const bool answering = s.session->controller().dialog() != NpcDialog::None && view.dialog != NpcDialog::None;
     const uint16_t choiceKey = s.session->controller().choosingButton();  // 3.0.11-beta.85: a support skill asks whom
+    const auto aim = s.session->controller().aimView();  // 3.0.11-beta.145: a ground skill aimed
+    const uint16_t aimKey = aim ? aim->button : 0;
     const bool shown = pad.connected && view.focused && !view.paused;
     // 3.0.11-beta.93: a window B closes open while the player plays with the pad
     const bool closing = s.windows.last() >= 0 && s.mode.padShown(GetTickCount64());
     const std::string text = !shown            ? std::string()
+                             : aimKey != 0     ? aimHint(aimKey, s.cfg.lang)
                              : choiceKey != 0  ? choiceHint(choiceKey, s.cfg.lang)
                              : s.cfg.npcHint && answering ? npcHint(view.dialog, s.cfg.lang)
                              : closing && view.dialog == NpcDialog::None ? windowHint(s.cfg.lang)
                                                           : std::string();
     s.hintParts = text.empty()     ? std::vector<HintPart>{}  // 3.0.11-beta.92: for the interface's own line
+                  : aimKey != 0    ? aimHintParts(aimKey, s.cfg.lang)
                   : choiceKey != 0 ? choiceHintParts(choiceKey, s.cfg.lang)
                   : s.cfg.npcHint && answering ? npcHintParts(view.dialog, s.cfg.lang)
                                                : windowHintParts(s.cfg.lang);
@@ -975,6 +979,17 @@ Look look() {
 uint32_t target() { return healthy() && S().session ? S().session->controller().target() : 0; }
 
 uint32_t preview() { return healthy() && S().session ? S().session->controller().preview() : 0; }
+
+bool aimCells(uint16_t& skill, int& lv, int& x, int& y) {
+    if (!healthy() || !S().session) return false;
+    const auto aim = S().session->controller().aimView();
+    if (!aim) return false;
+    skill = aim->skill;
+    lv = aim->lv;
+    x = aim->cell.x;
+    y = aim->cell.y;
+    return true;
+}
 
 void setOwnHints(bool on) {
     State& s = S();

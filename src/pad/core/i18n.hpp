@@ -64,6 +64,7 @@ enum class Text : uint16_t {
     Reference,  // 3.0.11-beta.22: the action opening uaRO Graphics' «Довідник»
     HintChoose,  // 3.0.11-beta.85: a support skill asks whom: {A}, {B} and {KEY}, the skill's own button
     HintWindow,  // 3.0.11-beta.93: a window B closes is open (the big map, the game's equipment, skills ...)
+    HintAim,     // 3.0.11-beta.145: a ground skill aimed: the sticks, the D-pad, {KEY} let go, {L3} / {R3} cancel
     Count
 };
 

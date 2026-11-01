@@ -16,6 +16,8 @@ std::string choiceHint(uint16_t key, Lang lang);
 
 // 3.0.11-beta.93: the line while a window B closes is open (the big map, the game's equipment, skills, options, party)
 std::string windowHint(Lang lang);
+// 3.0.11-beta.145: the line while a ground skill is aimed; `key`: its own button (let go: cast)
+std::string aimHint(uint16_t key, Lang lang);
 
 // 3.0.11-beta.92 (the concept «Контроллер в интерфейсе uaRO», stage 6): the same lines as parts - each its words
 // before the buttons («утримати»), its buttons (PadButton bits, the arrows too), its words after - for the interface's
@@ -29,5 +31,6 @@ std::vector<HintPart> hintParts(const std::string& line, uint16_t key = 0);  // 
 std::vector<HintPart> npcHintParts(NpcDialog d, Lang lang);
 std::vector<HintPart> choiceHintParts(uint16_t key, Lang lang);
 std::vector<HintPart> windowHintParts(Lang lang);
+std::vector<HintPart> aimHintParts(uint16_t key, Lang lang);
 
 }  // namespace uapad

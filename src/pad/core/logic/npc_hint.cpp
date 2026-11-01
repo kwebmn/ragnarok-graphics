@@ -50,6 +50,14 @@ std::string windowHint(Lang lang) {
     return s;
 }
 
+std::string aimHint(uint16_t key, Lang lang) {
+    std::string s = tr(lang, Text::HintAim);
+    put(s, "{KEY}", label(key));
+    put(s, "{L3}", label(kPadL3));
+    put(s, "{R3}", label(kPadR3));
+    return s;
+}
+
 std::vector<HintPart> hintParts(const std::string& line, uint16_t key) {
     std::vector<HintPart> out;
     const std::string dot = "  \xC2\xB7  ";
@@ -78,6 +86,8 @@ std::vector<HintPart> hintParts(const std::string& line, uint16_t key) {
                                : t == "{LB}" ? uint16_t(kPadLB)
                                : t == "{RB}" ? uint16_t(kPadRB)
                                : t == "{KEY}" ? key
+                               : t == "{L3}" ? uint16_t(kPadL3)  // 3.0.11-beta.145
+                               : t == "{R3}" ? uint16_t(kPadR3)
                                : t == "\xE2\x86\x91" ? uint16_t(kPadUp)     // ↑
                                : t == "\xE2\x86\x93" ? uint16_t(kPadDown)   // ↓
                                : t == "\xE2\x86\x90" ? uint16_t(kPadLeft)   // ←
@@ -108,6 +118,8 @@ std::vector<HintPart> npcHintParts(NpcDialog d, Lang lang) {
 }
 
 std::vector<HintPart> choiceHintParts(uint16_t key, Lang lang) { return hintParts(tr(lang, Text::HintChoose), key); }
+
+std::vector<HintPart> aimHintParts(uint16_t key, Lang lang) { return hintParts(tr(lang, Text::HintAim), key); }
 
 std::vector<HintPart> windowHintParts(Lang lang) { return hintParts(tr(lang, Text::HintWindow)); }
 

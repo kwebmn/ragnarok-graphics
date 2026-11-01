@@ -70,6 +70,9 @@ const Entry kTexts[] = {
      "↑ ↓: кому  ·  {A}: застосувати  ·  {KEY}: на себе  ·  {B}: скасувати",
      "↑ ↓: кому  ·  {A}: применить  ·  {KEY}: на себя  ·  {B}: отмена"},
     {"{B}: close the window", "{B}: закрити вікно", "{B}: закрыть окно"},
+    {"sticks: where  ·  ↑ ↓ ← →: a cell  ·  let go {KEY}: cast  ·  {L3} / {R3}: cancel",
+     "стіки: куди  ·  ↑ ↓ ← →: на клітинку  ·  відпустіть {KEY}: поставити  ·  {L3} / {R3}: скасувати",
+     "стики: куда  ·  ↑ ↓ ← →: на клетку  ·  отпустите {KEY}: поставить  ·  {L3} / {R3}: отмена"},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "every Text needs its translations");
 

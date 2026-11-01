@@ -296,10 +296,12 @@ void draw(FrameRecord& record, int width, int height) {
     // 3.0.11-beta.144: the game waiting for a ground skill's place - its cells on the cell under the mouse
     uint16_t aimSkill = 0;
     int aimLv = 0, aimX = 0, aimY = 0;
-    const bool aiming = s.cellsOn && gameAims(aimSkill, aimLv) && lastPick(aimX, aimY);
+    // 3.0.11-beta.145: the pad's aim first (a ground skill's button held), the game's with the mouse after
+    const bool padAim = s.cellsOn && uapad::runtime::aimCells(aimSkill, aimLv, aimX, aimY);
+    const bool aiming = padAim || (s.cellsOn && gameAims(aimSkill, aimLv) && lastPick(aimX, aimY));
     if (aiming && aimSkill != s.aimTold && s.aimsTold < 20) {
         ++s.aimsTold;
-        LOG_INFO("skill cells: the game waits for skill %u lv %d's place - its cells under the mouse (%d, %d)",
+        LOG_INFO("skill cells: %s skill %u lv %d - its cells at %d, %d", padAim ? "the pad aims" : "the game waits for",
                  unsigned(aimSkill), aimLv, aimX, aimY);
     }
     s.aimTold = aiming ? aimSkill : 0;

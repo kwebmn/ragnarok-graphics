@@ -1,5 +1,7 @@
 #include "pad/core/logic/controller.hpp"
 
+#include "core/skill_area.hpp"
+
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
@@ -20,6 +22,8 @@ constexpr double kAimPreview = 0.3;  // 3.0.11-beta.87: a lighter tilt than kAim
 constexpr double kAimSwitchMargin = 8.0;  // aim score points a new monster must win by
 constexpr uint32_t kSlotIntervalMs = 150;
 constexpr uint32_t kChooseMs = 8000;  // 3.0.11-beta.85: a support skill waits this long for whom
+constexpr uint32_t kAimHoldMs = 250;  // 3.0.11-beta.145: a ground skill's button held this long aims it
+constexpr uint32_t kInfGround = 2;    // a skill placed on a cell (0x010f's inf)
 // 3.0.11-beta.88: walking without the mouse - 6 cells along the stick in half-cell steps; another way asked for 150 ms
 // on, the same again every 350 ms (the server walks to a cell and stops)
 constexpr float kCameraDeadZone = 0.2f;
@@ -193,6 +197,8 @@ TickOutput Controller::tick(const PadState& pad, const WorldState& world, const 
         out.mouse = VirtualMouse{};
         armed_ = 0;
         aiming_ = false;
+        aim_.stop();  // 3.0.11-beta.145
+        groundPress_.reset();
         approach_.reset();
         return out;
     }
@@ -210,6 +216,8 @@ TickOutput Controller::tick(const PadState& pad, const WorldState& world, const 
         armed_ = 0;  // buttons pressed meanwhile do nothing until pressed again
         approach_.reset();
         dialog_ = NpcDialog::None;  // the pad does not answer an NPC window now
+        aim_.stop();  // 3.0.11-beta.145
+        groundPress_.reset();
         return out;
     }
     if (view.dialog != NpcDialog::None) {  // 0.7: an NPC window: the character stands, the buttons answer it
@@ -218,6 +226,8 @@ TickOutput Controller::tick(const PadState& pad, const WorldState& world, const 
             stopAttacking();
             approach_.reset();
             aiming_ = false;
+            aim_.stop();  // 3.0.11-beta.145
+            groundPress_.reset();
             out.notes.push_back("NPC window: the buttons answer it");
         }
         if (view.dialog == NpcDialog::Number && dialog_ != NpcDialog::Number) number_ = 0;  // the client's "0"
@@ -244,6 +254,14 @@ TickOutput Controller::tick(const PadState& pad, const WorldState& world, const 
         std::snprintf(text, sizeof text, "camera: follows the client's turn (sign %d, offset %.0f degrees)",
                       camera_.calibratedSign(), camera_.calibratedOffset() * 180.0 / kPi);
         out.notes.push_back(text);
+    }
+    if (aim_.active()) {  // 3.0.11-beta.145: the aim - the character stands, the sticks and the D-pad move it
+        PadState still = pad;
+        still.lx = still.ly = 0;
+        walk(still, world, view, now, out);
+        aimStep(pad, buttons, down, world, now, out);
+        armed_ = 0;
+        return out;
     }
     walk(pad, world, view, now, out);
     for (size_t i = 0; i < kBindableButtons.size(); ++i)  // before the stick: this tick's push goes to the new mode
@@ -417,18 +435,143 @@ void Controller::handleButtons(uint16_t held, uint16_t down, const WorldState& w
         const Action& a = bindings_[i];
         if (a.kind == Action::Kind::None) continue;
         const size_t bit = bitIndex(button);
+        const bool ground = a.kind == Action::Kind::Slot && groundSlot(int(a.slot), world);  // 3.0.11-beta.145
         if (down & button) {
+            if (ground) {  // a tap at the release, an aim if held
+                groundPress_ = GroundPress{button, int(a.slot), now};
+                continue;
+            }
             fire(a, false, world, now, out);
             repeatAtMs_[bit] = now + uint32_t(cfg_.repeatMs);
             continue;
         }
-        const bool repeats = a.kind == Action::Kind::Slot || a.kind == Action::Kind::Pickup;
+        // a ground skill's press waiting to be a tap or an aim: nothing else repeats (no walk up meanwhile)
+        const bool repeats =
+            !groundPress_ && ((a.kind == Action::Kind::Slot && !ground) || a.kind == Action::Kind::Pickup);
         if (repeats && cfg_.repeatMs > 0 && (armed_ & button) && !ownsApproach(a) &&
             int32_t(now - repeatAtMs_[bit]) >= 0) {
             fire(a, true, world, now, out);
             repeatAtMs_[bit] = now + uint32_t(cfg_.repeatMs);
         }
     }
+    if (groundPress_) {  // 3.0.11-beta.145: a ground skill's press - a tap at the release, an aim once held
+        if (!(held & groundPress_->button)) {
+            const int slot = groundPress_->slot;
+            groundPress_.reset();
+            useSlot(slot, false, world, now, out);
+        } else if (int32_t(now - groundPress_->downMs) >= int32_t(kAimHoldMs)) {
+            startAim(world, now, out);
+        }
+    }
+}
+
+// 3.0.11-beta.145: a learned skill on the slot placed on a cell
+bool Controller::groundSlot(int slot, const WorldState& world) const {
+    if (slot < 0 || slot >= kHotkeySlots) return false;
+    const Hotkey& key = world.hotkey(slot);
+    if (key.type == 0 || key.id == 0) return false;
+    const auto sk = world.skill(uint16_t(key.id));
+    return sk && sk->lv > 0 && (sk->inf & kInfGround) != 0;
+}
+
+// The aim begun from the press's own cell (the rule a tap would use), the skill's reach about the character
+void Controller::startAim(const WorldState& world, uint32_t now, TickOutput& out) {
+    const GroundPress press = *groundPress_;
+    const Hotkey& key = world.hotkey(press.slot);
+    const auto sk = world.skill(uint16_t(key.id));
+    if (!sk || sk->lv == 0) {
+        groundPress_.reset();
+        return;
+    }
+    const uint16_t lv = key.lv == 0 ? sk->lv : std::min(key.lv, sk->lv);
+    const Cell me = world.selfPos(now);
+    const uint32_t target = keepsTarget(world) ? target_ : 0;
+    const uint32_t nearest = target != 0 ? 0 : nearestTarget(world, now);
+    const SlotDecision d = decideSlot(key, world, target, nearest, cfg_, now);
+    Cell from = me;
+    if (d.kind == SlotDecision::Kind::Send && d.packet.size() == 22 && rd16(d.packet.data(), 0) == 0x0113)
+        from = Cell{int(rd16(d.packet.data(), 12)), int(rd16(d.packet.data(), 20))};
+    else if (d.kind == SlotDecision::Kind::Approach)
+        if (const auto at = world.actorPos(d.actor, now)) from = *at;
+    aim_.start(sk->id, lv, press.slot, press.button, me, from, std::max(1, int(sk->range)));
+    aimMs_ = now;
+    out.notes.push_back(hotkeyName(press.slot) + ": aiming skill " + std::to_string(sk->id) + " from " +
+                        cellText(aim_.cell()) + " - the sticks move it, let go to cast");
+}
+
+// One tick of the aim: a stick pressed (or B, not the held button) cancels; the held button let go casts; else the
+// stick that leans the most (either: the thumb that is free) and the D-pad move it, the cursor sticking to a monster
+// (a friend for the zones put on them) as it lets go
+void Controller::aimStep(const PadState& pad, uint16_t held, uint16_t down, const WorldState& world, uint32_t now,
+                         TickOutput& out) {
+    const std::string name = hotkeyName(aim_.slot());
+    if ((down & (kPadL3 | kPadR3)) || ((down & kPadB) && aim_.button() != kPadB)) {
+        out.notes.push_back(name + ": the aim cancelled");
+        aim_.stop();
+        groundPress_.reset();
+        return;
+    }
+    if (!(held & aim_.button())) {
+        castAim(world, now, out);
+        aim_.stop();
+        groundPress_.reset();
+        return;
+    }
+    const double l = std::hypot(double(pad.lx), double(pad.ly)), r = std::hypot(double(pad.rx), double(pad.ry));
+    double east = 0, north = 0;
+    if (std::max(l, r) > 0.05) {
+        const bool left = l >= r;
+        double ux = 0, uy = 0;
+        camera_.toWorld(left ? pad.lx : pad.rx, -(left ? pad.ly : pad.ry), ux, uy);
+        const double lean = std::min(1.0, left ? l : r);
+        east = ux * lean;
+        north = uy * lean;
+    }
+    Cell nudge{0, 0};
+    const struct {
+        uint16_t bit;
+        double sx, sy;  // the screen's, +y down
+    } arrows[] = {{kPadUp, 0, -1}, {kPadDown, 0, 1}, {kPadLeft, -1, 0}, {kPadRight, 1, 0}};
+    for (const auto& a : arrows)
+        if (down & a.bit) {  // a cell along the map's axis nearest that way
+            double ux = 0, uy = 0;
+            camera_.toWorld(a.sx, a.sy, ux, uy);
+            if (std::fabs(ux) >= std::fabs(uy))
+                nudge.x += ux > 0 ? 1 : -1;
+            else
+                nudge.y += uy > 0 ? 1 : -1;
+        }
+    std::vector<Cell> snaps;
+    if (GroundAim::styleOf(aim_.skill()) == GroundAim::Style::Cursor) {
+        if (uagfx::skillarea::kindOf(aim_.skill()) == uagfx::skillarea::Kind::Friend) {
+            snaps.push_back(world.selfPos(now));
+            for (uint32_t id : friends_)
+                if (const auto at = world.actorPos(id, now)) snaps.push_back(*at);
+        } else {
+            for (const auto& [id, a] : world.actors())
+                if (world.isMonster(a))
+                    if (const auto at = world.actorPos(id, now)) snaps.push_back(*at);
+        }
+    }
+    aim_.step(east, north, nudge, world.selfPos(now), snaps, now - aimMs_);
+    aimMs_ = now;
+}
+
+void Controller::castAim(const WorldState& world, uint32_t now, TickOutput& out) {
+    const std::string name = hotkeyName(aim_.slot());
+    if (!aim_.inReach(world.selfPos(now))) {
+        deny(out, name + ": the aimed cell " + cellText(aim_.cell()) + " is out of reach");
+        return;
+    }
+    out.packets.push_back(buildSkillToPos(aim_.skill(), aim_.level(), aim_.cell()));
+    lastSlotMs_[size_t(aim_.slot())] = now;
+    out.notes.push_back(name + ": skill " + std::to_string(aim_.skill()) + " lv " + std::to_string(aim_.level()) +
+                        " aimed at " + cellText(aim_.cell()));
+}
+
+std::optional<Controller::AimView> Controller::aimView() const {
+    if (!aim_.active()) return std::nullopt;
+    return AimView{aim_.skill(), aim_.level(), aim_.cell(), aim_.button()};
 }
 
 // The button whose press is walking us up to something waits for that walk; the others keep repeating.

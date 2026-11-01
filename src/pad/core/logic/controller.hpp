@@ -11,6 +11,7 @@
 #include "pad/core/config/bindings.hpp"
 #include "pad/core/config/config.hpp"
 #include "pad/core/logic/camera.hpp"
+#include "pad/core/logic/ground_aim.hpp"
 #include "pad/core/logic/pad.hpp"
 #include "pad/core/logic/slots.hpp"
 #include "pad/core/logic/stick_walk.hpp"
@@ -82,6 +83,16 @@ public:
     void setFriends(std::vector<uint32_t> ids) { friends_ = std::move(ids); }
     uint32_t choosing() const { return choosing_ ? choosing_->who[choosing_->at] : 0; }  // the one it would go on
     uint16_t choosingButton() const;  // the skill's own button (again: on the character); 0 while none asks
+
+    // 3.0.11-beta.145 (the concept «маг, прист и хант на геймпаде», answers 1 and 2): a ground skill's button held
+    // 0.25 s aims it (pad/core/logic/ground_aim) - the skill, its level and the cell it would go on now, for its cells
+    // on the ground (win/ground_marks); none while not aiming. A tap places it at the release by the press's rule.
+    struct AimView {
+        uint16_t skill = 0, lv = 0;
+        Cell cell;
+        uint16_t button = 0;  // its own button (let go: cast)
+    };
+    std::optional<AimView> aimView() const;
 
     bool enabled() const { return enabled_; }
     bool walking() const { return walking_; }  // the left stick holds the virtual mouse
@@ -176,6 +187,12 @@ private:
     void setTarget(uint32_t id, uint32_t now, TickOutput& out);
     bool targetAlive(const WorldState& world) const;
     void deny(TickOutput& out, const std::string& why);
+    // 3.0.11-beta.145: a ground skill on the slot (a learned one placed on a cell); the aim begun, stepped, cast
+    bool groundSlot(int slot, const WorldState& world) const;
+    void startAim(const WorldState& world, uint32_t now, TickOutput& out);
+    void aimStep(const PadState& pad, uint16_t held, uint16_t down, const WorldState& world, uint32_t now,
+                 TickOutput& out);
+    void castAim(const WorldState& world, uint32_t now, TickOutput& out);
 
     Config cfg_;
     Bindings bindings_ = defaultBindings();
@@ -223,6 +240,14 @@ private:
     stickwalk::Way walkAlong_;                  // 3.0.11-beta.104: the march's way
     int walkLead_ = 0;
     std::optional<Choosing> choosing_;  // a support skill waits for whom
+    struct GroundPress {  // 3.0.11-beta.145: a ground skill's button down - a tap or an aim
+        uint16_t button = 0;
+        int slot = -1;
+        uint32_t downMs = 0;
+    };
+    std::optional<GroundPress> groundPress_;
+    GroundAim aim_;
+    uint32_t aimMs_ = 0;  // the aim's last tick
     NpcDialog dialog_ = NpcDialog::None;
     int number_ = 0;                       // what the pad put into the number field
     std::optional<uint32_t> bHeldSinceMs_;  // B held in a window without a button: closes it after a second
