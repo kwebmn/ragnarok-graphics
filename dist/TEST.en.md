@@ -1,3 +1,13 @@
+# uaRO Graphics 3.0.11-beta.149 — what's new
+
+**Item and skill cards in the new look** (the first of the game's remaining windows):
+- A right click on an item (in "Items", on the hotbar) or a skill opens its card beside the cursor: the icon, the name
+  (refine "+7", slot count), the count, the description from the game's own tables in its colours, and for gear the
+  cards in its slots. When the client has the item's big picture, it is on the right.
+- A long description scrolls with the wheel (and the arrows), Esc or ✕ close it; on the controller up/down and B.
+- An unidentified item shows its "unidentified" description, a skill whether it is learned and at what level.
+- The switch "Item and skill cards" under "Interface", on with the new minimap.
+
 # uaRO Graphics 3.0.11-beta.148 — what's new
 
 **A monster's HP bar no longer jitters** (your message):
