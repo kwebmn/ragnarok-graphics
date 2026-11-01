@@ -327,6 +327,14 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("asks", flag(running.askWindows), flag(file.askWindows)));
         n.askWindows = file.askWindows;
     }
+    if (file.messageBoxes != running.messageBoxes) {  // 3.0.11-beta.151: the game's message boxes, at once
+        u.applied.push_back(change("messages", flag(running.messageBoxes), flag(file.messageBoxes)));
+        n.messageBoxes = file.messageBoxes;
+    }
+    if (file.loginWindow != running.loginWindow) {  // 3.0.11-beta.151: the login window, at once
+        u.applied.push_back(change("login", flag(running.loginWindow), flag(file.loginWindow)));
+        n.loginWindow = file.loginWindow;
+    }
     if (file.skillCells != running.skillCells) {  // 3.0.11-beta.142: a ground skill's cells, at once
         u.applied.push_back(change("skill_cells", flag(running.skillCells), flag(file.skillCells)));
         n.skillCells = file.skillCells;

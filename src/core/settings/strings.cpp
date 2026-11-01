@@ -5430,6 +5430,38 @@ constexpr Entry kTexts[] = {
     {Text::AskAccept, "Accept", "Прийняти", "Принять"},
     {Text::AskDecline, "Decline", "Відмовити", "Отказать"},
     {Text::AskOk, "Done", "Готово", "Готово"},
+    // 3.0.11-beta.151: the game's message boxes
+    {Text::InterfaceMessages, "Game messages", "Повідомлення гри", "Сообщения игры"},
+    {Text::InterfaceMessagesHint,
+     "The game's message boxes in the new look - its errors (a wrong login, a lost connection), its questions and "
+     "its waits - on the login's screens too: the game's words, its buttons (Enter, Esc; A and B on the "
+     "controller). Off: the game's own boxes.",
+     "Повідомлення гри в новому вигляді — її помилки (невірний логін, обрив з'єднання), запитання й очікування, також "
+     "на екранах входу: слова гри, її кнопки (Enter, Esc; A і B на контролері). Вимкнено: власні вікна гри.",
+     "Сообщения игры в новом виде — её ошибки (неверный логин, обрыв соединения), вопросы и ожидания, также на "
+     "экранах входа: слова игры, её кнопки (Enter, Esc; A и B на контроллере). Выключено: собственные окна игры."},
+    {Text::MsgTitle, "Message", "Повідомлення", "Сообщение"},
+    {Text::MsgWaitTitle, "Please wait", "Зачекайте", "Подождите"},
+    {Text::MsgYes, "Yes", "Так", "Да"},
+    {Text::MsgNo, "No", "Ні", "Нет"},
+    {Text::MsgCancel, "Cancel", "Скасувати", "Отмена"},
+    {Text::InterfaceLogin, "Login window", "Вікно входу", "Окно входа"},
+    {Text::InterfaceLoginHint,
+     "The game's login in the new look at the screen's middle: the account and the password (typed as before - the "
+     "game's own fields), remember the account, enter, exit, and the registration on uaro.kiev.ua. Off: the game's "
+     "own window.",
+     "Вхід у гру в новому вигляді посередині екрана: логін і пароль (набираються як раніше — це поля самої гри), "
+     "запам'ятати логін, увійти, вийти й реєстрація на uaro.kiev.ua. Вимкнено: власне вікно гри.",
+     "Вход в игру в новом виде посередине экрана: логин и пароль (набираются как раньше — это поля самой игры), "
+     "запомнить логин, войти, выйти и регистрация на uaro.kiev.ua. Выключено: собственное окно игры."},
+    {Text::LoginSubtitle, "Into the game", "Вхід у гру", "Вход в игру"},
+    {Text::LoginAccount, "Account", "Логін", "Логин"},
+    {Text::LoginPassword, "Password", "Пароль", "Пароль"},
+    {Text::LoginRemember, "Remember the account", "Запам'ятати логін", "Запомнить логин"},
+    {Text::LoginEnter, "Enter", "Увійти", "Войти"},
+    {Text::LoginExit, "Exit", "Вийти", "Выйти"},
+    {Text::LoginRegister, "No account? Register on uaro.kiev.ua", "Немає акаунта? Реєстрація на uaro.kiev.ua",
+     "Нет аккаунта? Регистрация на uaro.kiev.ua"},
     // 3.0.11-beta.141: the character block's experience (forms: one, a few, many)
     {Text::CharSkillPoints, "skill point|skill points", "очко навичок|очки навичок|очок навичок",
      "очко навыков|очка навыков|очков навыков"},

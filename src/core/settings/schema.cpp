@@ -198,6 +198,10 @@ const std::vector<IniSetting>& iniSettings() {
          Text::InterfaceCardsHint, ""},  // 3.0.11-beta.149
         {"interface", "asks", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::InterfaceAsks,
          Text::InterfaceAsksHint, ""},  // 3.0.11-beta.150
+        {"interface", "messages", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::InterfaceMessages,
+         Text::InterfaceMessagesHint, ""},  // 3.0.11-beta.151
+        {"interface", "login", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::InterfaceLogin,
+         Text::InterfaceLoginHint, ""},  // 3.0.11-beta.151
         {"interface", "skill_cells", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {},
          Text::InterfaceSkillCells, Text::InterfaceSkillCellsHint, ""},  // 3.0.11-beta.142
         {"interface", "ground_counts", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {},
@@ -1070,6 +1074,8 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "interface.menu") return c.menuWindow ? "1" : "0";        // 3.0.11-beta.140
     if (k == "interface.cards") return c.cardWindows ? "1" : "0";      // 3.0.11-beta.149
     if (k == "interface.asks") return c.askWindows ? "1" : "0";        // 3.0.11-beta.150
+    if (k == "interface.messages") return c.messageBoxes ? "1" : "0";  // 3.0.11-beta.151
+    if (k == "interface.login") return c.loginWindow ? "1" : "0";
     if (k == "interface.skill_cells") return c.skillCells ? "1" : "0";  // 3.0.11-beta.142
     if (k == "interface.ground_counts") return c.groundCounts ? "1" : "0";  // 3.0.11-beta.143
     if (k == "interface.animations") return c.animations ? "1" : "0";  // 3.0.11-beta.46

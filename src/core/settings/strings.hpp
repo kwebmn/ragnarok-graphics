@@ -528,6 +528,10 @@ enum class Text : uint16_t {
     InterfaceAsks, InterfaceAsksHint, AskTradeTitle, AskTrade, AskTradeAny, AskPartyTitle, AskParty, AskPartyAny,
     AskGuildTitle, AskGuild, AskGuildAny, AskFriendTitle, AskFriend, AskFriendAny, AskNumberTitle, AskTextTitle,
     AskTypeHint, AskAccept, AskDecline, AskOk,
+    // 3.0.11-beta.151: the game's message boxes
+    InterfaceMessages, InterfaceMessagesHint, MsgTitle, MsgWaitTitle, MsgYes, MsgNo, MsgCancel,
+    InterfaceLogin, InterfaceLoginHint, LoginSubtitle, LoginAccount, LoginPassword, LoginRemember, LoginEnter,
+    LoginExit, LoginRegister,
     // 3.0.11-beta.141: the character block's experience - the free skill points, the last level, an hour, a minute,
     // the experience's tip, the portrait's tip (Alt+V)
     CharSkillPoints, CharExpMax, CharHour, CharMinute, CharToLevel, CharLevelIn, CharPerHour, CharSession, CharLastGain,

@@ -18,6 +18,9 @@ askcard::Texts texts() {
     t.accept = "Прийняти";
     t.decline = "Відмовити";
     t.ok = "Готово";
+    t.yes = "Так";
+    t.no = "Ні";
+    t.cancel = "Скасувати";
     t.declineKey = "Esc";
     return t;
 }
@@ -91,4 +94,38 @@ TEST(ask_card_words_and_picture) {
     p.px.assign(size_t(L.w) * size_t(L.h), 0u);
     askcard::paint(p, L, c, sh);
     CHECK((p.px[size_t(L.h / 2) * size_t(L.w) + size_t(L.w / 2)] >> 24) > 0x80);
+}
+
+// 3.0.11-beta.151 (task 3 of the remaining windows, the login's part): the game's messages (UIWindowMgr::ErrorMsg -
+// «Unregistered ID ...», «Disconnected from server») on the same card: OK (0x76), Yes and No (0x79, 0x7a), OK and
+// Cancel (0x76, 0x77), and the wait («Please wait...») with no button; a long message as many rows as it needs
+TEST(ask_card_the_games_messages) {
+    using B = askcard::Button;
+    CHECK((askcard::buttons(askcard::Kind::Message) == std::vector<B>{B::Ok}));
+    CHECK((askcard::buttons(askcard::Kind::Question) == std::vector<B>{B::Yes, B::No}));
+    CHECK((askcard::buttons(askcard::Kind::Choice) == std::vector<B>{B::Ok, B::Cancel}));
+    CHECK(askcard::buttons(askcard::Kind::Wait).empty());
+    CHECK(askcard::gameButton(B::Yes) == 0x79 && askcard::gameButton(B::No) == 0x7a);
+    CHECK(askcard::gameButton(B::Cancel) == 0x77);
+    for (const askcard::Kind k : {askcard::Kind::Message, askcard::Kind::Question, askcard::Kind::Choice,
+                                  askcard::Kind::Wait})
+        CHECK(!askcard::request(k) && !askcard::input(k));
+    CHECK(askcard::input(askcard::Kind::Number) && askcard::input(askcard::Kind::Text));
+    askcard::Card m;
+    m.kind = askcard::Kind::Message;
+    m.message = "Unregistered ID. Please make sure you have a registered account and you have correctly typed in "
+                "the user ID.";
+    m.messageLines = 1;
+    const askcard::Layout one = askcard::layout(m, 1920, 1080, 1.0f, texts());
+    m.messageLines = 4;
+    const askcard::Layout four = askcard::layout(m, 1920, 1080, 1.0f, texts());
+    CHECK(four.message.h >= 19 * 4 - 0.5f && four.message.h > one.message.h + 30);  // a row 19, two at least
+    CHECK(four.buttons.size() == 1 && four.field.w == 0);
+    askcard::Card w;
+    w.kind = askcard::Kind::Wait;
+    w.message = "Please wait...";
+    const askcard::Layout L = askcard::layout(w, 1920, 1080, 1.0f, texts());
+    CHECK(L.buttons.empty() && L.message.w > 0);
+    const std::vector<askcard::Words> words = askcard::words(L, w, askcard::Show{}, texts());
+    CHECK(has(words, "Please wait..."));
 }

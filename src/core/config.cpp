@@ -390,6 +390,8 @@ Config parseConfig(const std::string& text) {
     bool menuSet = false;                         // 3.0.11-beta.140
     bool cardsSet = false;                        // 3.0.11-beta.149
     bool asksSet = false;                         // 3.0.11-beta.150
+    bool messagesSet = false;                     // 3.0.11-beta.151
+    bool loginSet = false;                        // 3.0.11-beta.151
     std::istringstream in(text);
     std::string line;
     std::string section;
@@ -595,6 +597,12 @@ Config parseConfig(const std::string& text) {
         } else if (key == "interface.asks") {  // 3.0.11-beta.150: the requests and the NPC's inputs
             asksSet = val == "0" || val == "1" || val == "on" || val == "off" || val == "true" || val == "false";
             setBool(val, c.askWindows);
+        } else if (key == "interface.messages") {  // 3.0.11-beta.151: the game's message boxes
+            messagesSet = val == "0" || val == "1" || val == "on" || val == "off" || val == "true" || val == "false";
+            setBool(val, c.messageBoxes);
+        } else if (key == "interface.login") {  // 3.0.11-beta.151: the login window
+            loginSet = val == "0" || val == "1" || val == "on" || val == "off" || val == "true" || val == "false";
+            setBool(val, c.loginWindow);
         } else if (key == "interface.skill_cells") {  // 3.0.11-beta.142: a ground skill's cells on the ground
             setBool(val, c.skillCells);
         } else if (key == "interface.ground_counts") {  // 3.0.11-beta.143: walls standing, traps left on the bar
@@ -898,6 +906,8 @@ Config parseConfig(const std::string& text) {
     if (c.newMinimap && !menuSet) c.menuWindow = true;        // 3.0.11-beta.140
     if (c.newMinimap && !cardsSet) c.cardWindows = true;      // 3.0.11-beta.149
     if (c.newMinimap && !asksSet) c.askWindows = true;        // 3.0.11-beta.150
+    if (c.newMinimap && !messagesSet) c.messageBoxes = true;  // 3.0.11-beta.151
+    if (c.newMinimap && !loginSet) c.loginWindow = true;      // 3.0.11-beta.151
     return c;
 }
 

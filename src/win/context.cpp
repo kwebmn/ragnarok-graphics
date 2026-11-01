@@ -59,6 +59,8 @@
 #include "win/ammo_sound.hpp"
 #include "win/ask_card.hpp"
 #include "win/info_card.hpp"
+#include "win/login_card.hpp"
+#include "win/msg_box.hpp"
 #include "win/menu_window.hpp"
 #include "win/net_predict.hpp"
 #include "win/net_watch.hpp"
@@ -401,6 +403,7 @@ bool Context::open(std::string& error) {
     installWindowsDraw();              // 3.0.11-beta.53: the replaced windows hidden before the game draws them
     buffcolumn::installBuffIcons();    // 3.0.11-beta.35: the game's status icons hidden for the buffs' column
     chatwin::install();                // 3.0.11-beta.41: the game's chat lines read for the new chat
+    msgboxwin::install();              // 3.0.11-beta.151: the game's message boxes' words caught
     installFastFtol(config.fastFtol);  // 2.5.20: float to integer without switching the x87
     installChatFix();                  // 2.6.12: Enter in the chat box while a map loads (R-PVF8AV)
     installShadowFix();                // 3.0.4-beta.9: a shadow drawn while a map loads (R-VBDSCP)
@@ -944,6 +947,8 @@ void Context::present(const Rect& source, bool waitForVblank) {
     menuwin::frame(window, config.menuWindow, gameCodePage(config), pk, pw, ph);        // 3.0.11-beta.140
     infocardwin::frame(window, config.cardWindows, gameCodePage(config), pk, pw, ph);  // 3.0.11-beta.149
     askcardwin::frame(window, config.askWindows, gameCodePage(config), pk, pw, ph);    // 3.0.11-beta.150
+    msgboxwin::frame(window, config.messageBoxes, gameCodePage(config), pk, pw, ph);   // 3.0.11-beta.151
+    loginwin::frame(window, config.loginWindow, gameCodePage(config), pk, pw, ph);     // 3.0.11-beta.151
     // 3.0.11-beta.7: [interface] reference - «Довідник» (Ctrl+F)
     referencewin::frame(window, config.referenceWindow, pk, pw, ph);
     padcarrywin::frame(window, pk, pw, ph);  // 3.0.11-beta.121: a thing the controller carries - its places now

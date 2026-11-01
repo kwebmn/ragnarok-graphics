@@ -11,7 +11,9 @@
 #include "win/equip_window.hpp"
 #include "win/info_card.hpp"
 #include "win/item_window.hpp"
+#include "win/login_card.hpp"
 #include "win/menu_window.hpp"
+#include "win/msg_box.hpp"
 #include "win/log.hpp"
 #include "win/npc_talk.hpp"
 #include "win/reference_window.hpp"
@@ -29,7 +31,8 @@ using uapad::gamewindow::Blocker;
 
 constexpr const char* kNames[] = {"«Речі»",  "«Характеристики»", "«Навички»", "«Спорядження»",
                                   "the shop", "the NPC talk",      "«Довідник»", "«Склад»", "«Обмін»",
-                                  "the menu", "the item card", "the skill card", "the request"};
+                                  "the menu", "the item card", "the skill card", "the request",
+                                  "the message box", "the login"};
 static_assert(std::size(kNames) == size_t(winstack::kWins), "a name for each window");
 constexpr int kMostTold = 40;
 
@@ -75,6 +78,8 @@ bool shown(Win w) {
         case Win::ItemCard: return infocardwin::shown(infocardwin::Kind::Item);  // 3.0.11-beta.149
         case Win::SkillCard: return infocardwin::shown(infocardwin::Kind::Skill);
         case Win::Ask: return askcardwin::shown();  // 3.0.11-beta.150
+        case Win::Message: return msgboxwin::shown();  // 3.0.11-beta.151
+        case Win::Login: return loginwin::shown();
     }
     return false;
 }
@@ -93,6 +98,8 @@ Blocker blockerOf(Win w) {
         case Win::ItemCard: return Blocker::ItemCard;
         case Win::SkillCard: return Blocker::SkillCard;
         case Win::Ask: return Blocker::Ask;
+        case Win::Message: return Blocker::Message;
+        case Win::Login: return Blocker::Login;
         case Win::Reference: break;
     }
     return Blocker::Reference;
@@ -113,6 +120,8 @@ void drawOne(Win w, FrameRecord& record, gpu::Renderer& renderer) {
         case Win::ItemCard: infocardwin::draw(infocardwin::Kind::Item, record, renderer); break;
         case Win::SkillCard: infocardwin::draw(infocardwin::Kind::Skill, record, renderer); break;
         case Win::Ask: askcardwin::draw(record, renderer); break;
+        case Win::Message: msgboxwin::draw(record, renderer); break;
+        case Win::Login: loginwin::draw(record, renderer); break;
     }
 }
 
@@ -131,6 +140,8 @@ bool mouseOne(Win w, HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
         case Win::ItemCard: return infocardwin::mouse(infocardwin::Kind::Item, game, m, wp, lp, result);
         case Win::SkillCard: return infocardwin::mouse(infocardwin::Kind::Skill, game, m, wp, lp, result);
         case Win::Ask: return askcardwin::mouse(game, m, wp, lp, result);
+        case Win::Message: return msgboxwin::mouse(game, m, wp, lp, result);
+        case Win::Login: return loginwin::mouse(game, m, wp, lp, result);
     }
     return false;
 }
@@ -146,13 +157,14 @@ bool keyOne(Win w, UINT m, WPARAM wp, LPARAM lp) {  // the windows with keys of 
         case Win::Menu: return menuwin::key(m, wp, lp);        // 3.0.11-beta.140: ↑ ↓ Enter
         case Win::ItemCard: return infocardwin::key(infocardwin::Kind::Item, m, wp, lp);  // .149: ↑ ↓ scroll
         case Win::SkillCard: return infocardwin::key(infocardwin::Kind::Skill, m, wp, lp);
+        case Win::Message: return msgboxwin::key(m, wp, lp);  // 3.0.11-beta.151: Enter, Esc - the box's answers
         default: return false;
     }
 }
 
 bool movable(Win w) {  // .140: the menu centred; .149: a card beside the cursor that opened it
     return w != Win::Npc && w != Win::Reference && w != Win::Menu && w != Win::ItemCard && w != Win::SkillCard &&
-           w != Win::Ask;
+           w != Win::Ask && w != Win::Message && w != Win::Login;
 }
 
 bool boxOf(Win w, winstack::Box& b) {
@@ -170,6 +182,8 @@ bool boxOf(Win w, winstack::Box& b) {
         case Win::ItemCard: return infocardwin::box(infocardwin::Kind::Item, b.x, b.y, b.w, b.h);
         case Win::SkillCard: return infocardwin::box(infocardwin::Kind::Skill, b.x, b.y, b.w, b.h);
         case Win::Ask: return askcardwin::box(b.x, b.y, b.w, b.h);
+        case Win::Message: return msgboxwin::box(b.x, b.y, b.w, b.h);
+        case Win::Login: return loginwin::box(b.x, b.y, b.w, b.h);
     }
     return false;
 }
@@ -273,6 +287,7 @@ bool close(Win w) {
         case Win::ItemCard: infocardwin::close(infocardwin::Kind::Item); return true;  // 3.0.11-beta.149
         case Win::SkillCard: infocardwin::close(infocardwin::Kind::Skill); return true;
         case Win::Ask: return askcardwin::close();  // 3.0.11-beta.150: a request declined (an input: the game's)
+        case Win::Message: return msgboxwin::close();  // 3.0.11-beta.151
         default: return false;
     }
 }

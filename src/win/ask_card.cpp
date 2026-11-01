@@ -97,9 +97,10 @@ const char* nameOf(ac::Kind k) {
         case ac::Kind::Guild: return "a guild's invitation";
         case ac::Kind::Friend: return "a friend's request";
         case ac::Kind::Number: return "an NPC's number";
-        case ac::Kind::Text: break;
+        case ac::Kind::Text: return "an NPC's words";
+        default: break;  // the game's messages (win/msg_box)
     }
-    return "an NPC's words";
+    return "a message";
 }
 
 // The game's small window made now (the inputs first), its kind
