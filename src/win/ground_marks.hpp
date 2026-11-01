@@ -19,6 +19,9 @@ void walkLook(WalkLook look, bool mark);
 // skill cast (0x0113: the pad's or the game's own, the mouse's) flashes its cells as the server makes them
 // (core/skill_area, from the character's cell then) on the ground for 0.45 s, coloured by the skill: fire, ice and
 // water, holy and the shields, wind and lightning, traps
+// 3.0.11-beta.144 (answer 9 «дать»): while the game waits for a ground skill's place (the mouse's: its mode's state
+// +0x3C4 1 a place, 5 a trap; the skill +0x3C8, its level +0x3D0) the cells it would make on the cell under the mouse
+// (win/pick_hook lastPick) stand on the ground until the click
 void skillCells(bool on);
 void skillCast(uint16_t skill, int lv, int x, int y);
 void newFrame();

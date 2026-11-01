@@ -12,5 +12,9 @@ bool installPickHook(bool on);
 // 3.0.2-beta.13, a map's loading measured: the picks so far, those checked against the game's own, and the game's own
 // time on them (ms)
 void pickCounts(unsigned& picks, unsigned& checked, double& theirsMs);
+// 3.0.11-beta.144 (the concept «маг, прист и хант на геймпаде», answer 9): the cell the game found under the mouse a
+// moment ago (within 150 ms - it looks every frame while the mouse is over the world); false: none (the hook not in:
+// [debug] fast_pick = 0, another build)
+bool lastPick(int& x, int& y);
 
 }  // namespace uagfx::win

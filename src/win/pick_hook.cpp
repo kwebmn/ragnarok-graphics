@@ -68,7 +68,10 @@ uint32_t groundOf(uint32_t world) {
     return node ? at(node + kLeafGround) : 0;
 }
 
-unsigned char __attribute__((thiscall)) pickCell(uint32_t mode, int* x, int* y) {
+int g_lastX = 0, g_lastY = 0;  // 3.0.11-beta.144: the last cell found, when
+ULONGLONG g_lastAt = 0;
+
+unsigned char pickWhere(uint32_t mode, int* x, int* y) {
     const auto original = reinterpret_cast<PickFn>(uintptr_t(kPick));
     ++g_picks;
     if (!g_on || g_trust.off()) return original(mode, x, y);
@@ -131,7 +134,25 @@ unsigned char __attribute__((thiscall)) pickCell(uint32_t mode, int* x, int* y) 
     return theirs ? 1 : 0;
 }
 
+// The game's pick (its one call goes here): the cell found kept for lastPick
+unsigned char __attribute__((thiscall)) pickCell(uint32_t mode, int* x, int* y) {
+    const unsigned char found = pickWhere(mode, x, y);
+    if (found) {
+        g_lastX = *x;
+        g_lastY = *y;
+        g_lastAt = GetTickCount64();
+    }
+    return found;
+}
+
 }  // namespace
+
+bool lastPick(int& x, int& y) {
+    if (!g_lastAt || GetTickCount64() - g_lastAt > 150) return false;
+    x = g_lastX;
+    y = g_lastY;
+    return true;
+}
 
 void pickCounts(unsigned& picks, unsigned& checked, double& theirsMs) {
     if (!g_freq.QuadPart) QueryPerformanceFrequency(&g_freq);

@@ -17,6 +17,7 @@
 #include "win/log.hpp"
 #include "win/paths.hpp"
 #include "win/mob_hp.hpp"
+#include "win/pick_hook.hpp"
 #include "win/target_card.hpp"
 
 namespace uagfx::win::groundmarks {
@@ -113,11 +114,27 @@ void colours(uint16_t skill, uint32_t& fill, uint32_t& line) {
     line = 0xE6000000u | rgb;
 }
 
+// 3.0.11-beta.144: the game waiting for a ground skill's place - the skill and its level; false none
+bool gameAims(uint16_t& skill, int& lv) {
+    constexpr uint32_t kModeClass = 0x69F388, kWaitState = 0x3C4, kWaitSkill = 0x3C8, kWaitLevel = 0x3D0;
+    const uint32_t mode = readGameMode();
+    uint32_t cls = 0, state = 0, id = 0, level = 0;
+    if (!mode || !readGame(mode, &cls, 4) || cls != kModeClass) return false;
+    if (!readGame(mode + kWaitState, &state, 4) || (state != 1 && state != 5)) return false;
+    if (!readGame(mode + kWaitSkill, &id, 4) || !readGame(mode + kWaitLevel, &level, 4) || id == 0 || id > 0xFFFF)
+        return false;
+    skill = uint16_t(id);
+    lv = int(level);
+    return true;
+}
+
 struct State {
     TargetRing ring = TargetRing::Pad;
     bool cellsOn = true;  // 3.0.11-beta.142: [interface] skill_cells
     std::vector<Flash> flashes;
     int castsTold = 0;
+    uint16_t aimTold = 0;  // 3.0.11-beta.144: the game's aim last told the log
+    int aimsTold = 0;
     bool drawn = false;
     std::vector<groundway::Vertex> verts, flat;
     uint32_t told = 0;  // the target last told the log
@@ -276,7 +293,17 @@ void draw(FrameRecord& record, int width, int height) {
     s.flashes.erase(std::remove_if(s.flashes.begin(), s.flashes.end(),
                                    [&](const Flash& f) { return nowFlash - f.atMs > kFlashMs; }),
                     s.flashes.end());
-    if (!target && !next && !mate && !arrowShown && s.flashes.empty()) return;
+    // 3.0.11-beta.144: the game waiting for a ground skill's place - its cells on the cell under the mouse
+    uint16_t aimSkill = 0;
+    int aimLv = 0, aimX = 0, aimY = 0;
+    const bool aiming = s.cellsOn && gameAims(aimSkill, aimLv) && lastPick(aimX, aimY);
+    if (aiming && aimSkill != s.aimTold && s.aimsTold < 20) {
+        ++s.aimsTold;
+        LOG_INFO("skill cells: the game waits for skill %u lv %d's place - its cells under the mouse (%d, %d)",
+                 unsigned(aimSkill), aimLv, aimX, aimY);
+    }
+    s.aimTold = aiming ? aimSkill : 0;
+    if (!target && !next && !mate && !arrowShown && s.flashes.empty() && !aiming) return;
     float view[12];
     if (!readGameCamera(view)) return;
     const camera::Projection p = camera::projectionFor(width, height);
@@ -343,9 +370,21 @@ void draw(FrameRecord& record, int width, int height) {
     }
     float feet[3];
     int fw = 0, fh = 0, fcs = 0;
-    if (!s.flashes.empty() && readPlayerWorld(feet, fw, fh, fcs)) {  // 3.0.11-beta.142: on the ground's heights
+    if ((!s.flashes.empty() || aiming) && readPlayerWorld(feet, fw, fh, fcs)) {  // 3.0.11-beta.142: on the heights
         float sign = 0;
-        if (const groundway::Heights* heights = heightsHere(s, feet, fw, fh, fcs, sign))
+        const groundway::Heights* heights = heightsHere(s, feet, fw, fh, fcs, sign);
+        int px = 0, py = 0, pw = 0, ph = 0;
+        if (heights && aiming && readPlayerCell(px, py, pw, ph)) {  // 3.0.11-beta.144: the mouse's aim, whole
+            std::vector<std::pair<int, int>> cells;
+            for (const skillarea::Cell& c :
+                 skillarea::cells(aimSkill, aimLv, skillarea::Cell{px, py}, skillarea::Cell{aimX, aimY}))
+                cells.emplace_back(c.x, c.y);
+            uint32_t fill = 0, line = 0;
+            colours(aimSkill, fill, line);
+            groundway::placeTris(groundway::cellsShape(cells, fill, line, 0.85f, *heights, fcs, sign, kLift), view, p,
+                                 kBias, s.verts);
+        }
+        if (heights)
             for (const Flash& f : s.flashes) {
                 const double age = nowFlash - f.atMs;
                 const float a =

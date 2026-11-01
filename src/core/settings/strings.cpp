@@ -5398,12 +5398,13 @@ constexpr Entry kTexts[] = {
     // 3.0.11-beta.142: a ground skill's cells on the ground
     {Text::InterfaceSkillCells, "Skill cells on the ground", "Клітинки навичок на землі", "Клетки навыков на земле"},
     {Text::InterfaceSkillCellsHint,
-     "Where a ground skill landed: Fire Wall's 3 or 5 cells, Storm Gust's square, Sanctuary, a trap - the cells the "
-     "server makes, flashed on the ground after the cast, from the controller and the mouse.",
-     "Куди лягла навичка по землі: 3 чи 5 клітинок Fire Wall, квадрат Storm Gust, Sanctuary, пастка — клітинки, які "
-     "створює сервер, коротко спалахують на землі після касту, з геймпада й мишею.",
-     "Куда легло умение по земле: 3 или 5 клеток Fire Wall, квадрат Storm Gust, Sanctuary, ловушка — клетки, которые "
-     "создаёт сервер, коротко вспыхивают на земле после каста, с геймпада и мышью."},
+     "Where a ground skill goes: Fire Wall's 3 or 5 cells, Storm Gust's square, Sanctuary, a trap - the cells the "
+     "server makes, under the mouse while the game waits for the place, and flashed after the cast from the "
+     "controller and the mouse.",
+     "Куди ляже навичка по землі: 3 чи 5 клітинок Fire Wall, квадрат Storm Gust, Sanctuary, пастка — клітинки, які "
+     "створить сервер: під мишею, поки гра чекає місце, і коротко після касту з геймпада й мишею.",
+     "Куда ляжет умение по земле: 3 или 5 клеток Fire Wall, квадрат Storm Gust, Sanctuary, ловушка — клетки, которые "
+     "создаст сервер: под мышью, пока игра ждёт место, и коротко после каста с геймпада и мышью."},
     {Text::InterfaceGroundCounts, "Walls and traps on the hotbar", "Стіни й пастки на панелі",
      "Стены и ловушки на панели"},
     {Text::InterfaceGroundCountsHint,
