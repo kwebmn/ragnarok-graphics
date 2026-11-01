@@ -319,6 +319,10 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("menu", flag(running.menuWindow), flag(file.menuWindow)));
         n.menuWindow = file.menuWindow;
     }
+    if (file.cardWindows != running.cardWindows) {  // 3.0.11-beta.149: the item card and the skill card, at once
+        u.applied.push_back(change("cards", flag(running.cardWindows), flag(file.cardWindows)));
+        n.cardWindows = file.cardWindows;
+    }
     if (file.skillCells != running.skillCells) {  // 3.0.11-beta.142: a ground skill's cells, at once
         u.applied.push_back(change("skill_cells", flag(running.skillCells), flag(file.skillCells)));
         n.skillCells = file.skillCells;

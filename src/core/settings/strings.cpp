@@ -5382,6 +5382,22 @@ constexpr Entry kTexts[] = {
     {Text::MenuCharSelect, "Character select", "Вибір персонажа", "Выбор персонажа"},
     {Text::MenuExit, "Exit the game", "Вийти з гри", "Выйти из игры"},
     {Text::MenuBack, "Back to the game", "Повернутися до гри", "Вернуться в игру"},
+    // 3.0.11-beta.149: the item card and the skill card
+    {Text::InterfaceCards, "Item and skill cards", "Картки предметів і навичок", "Карточки предметов и навыков"},
+    {Text::InterfaceCardsHint,
+     "The card of an item (a right click on it) and of a skill in the new look, beside the cursor: the picture, the "
+     "name, the game's own description, the cards in an item's slots; the wheel scrolls a long one, Esc closes it. "
+     "Off: the game's own windows.",
+     "Картка предмета (правий клік по ньому) і навички в новому вигляді, поруч із курсором: картинка, назва, власний "
+     "опис гри, карти в слотах предмета; коліщатко гортає довгий опис, Esc закриває. Вимкнено: власні вікна гри.",
+     "Карточка предмета (правый клик по нему) и навыка в новом виде, рядом с курсором: картинка, название, "
+     "собственное описание игры, карты в слотах предмета; колёсико листает длинное описание, Esc закрывает. "
+     "Выключено: собственные окна игры."},
+    {Text::CardSlots, "Slots", "Слоти", "Слоты"},
+    {Text::CardEmpty, "empty", "порожньо", "пусто"},
+    {Text::CardUnknown, "Not identified", "Не опізнано", "Не опознано"},
+    {Text::CardNotLearned, "Not learned", "Не вивчено", "Не изучено"},
+    {Text::CardLevel, "Level {1}", "Рівень {1}", "Уровень {1}"},
     // 3.0.11-beta.141: the character block's experience (forms: one, a few, many)
     {Text::CharSkillPoints, "skill point|skill points", "очко навичок|очки навичок|очок навичок",
      "очко навыков|очка навыков|очков навыков"},

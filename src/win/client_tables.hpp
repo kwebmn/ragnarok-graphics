@@ -26,6 +26,9 @@ const panel::Picture* icon(const std::string& file, int side, float radius);
 // see-through; straight alpha. `from`: where from, or why none (for the log)
 bool iconPixels(const std::string& file, std::vector<uint32_t>& argb, int& width, int& height,
                 std::string* from = nullptr);
+// 3.0.11-beta.149: an item's big picture (data\texture\유저인터페이스\collection\<file>.bmp, its magenta see-through),
+// straight alpha; false none (most items have none in uaRO's archives)
+bool collectionPixels(const std::string& file, std::vector<uint32_t>& argb, int& width, int& height);
 // 3.0.11-beta.81: a skill's AEGIS name by its id in the game's table ([0x74B9AC][id], FUN_00505ce0 - checked once by
 // its first name, NV_BASIC); "" none. Its words as the client's skillnametable has them (UTF-8), else its AEGIS name
 std::string skillAegis(int id);

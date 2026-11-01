@@ -676,6 +676,9 @@ struct Config {
     // 3.0.11-beta.140 (the owner «давай»): [interface] menu - the game's menu (Esc) and its death screen
     // (win/menu_window, core/menu_window) in place of the game's windows 0x30, 0x13 and 0x88
     bool menuWindow = false;
+    // 3.0.11-beta.149 (the owner: «сделай все без остановки»): [interface] cards - the game's item card and skill card
+    // (win/info_card, core/info_card) in place of its windows 0xC and 0x2E
+    bool cardWindows = false;
     // 3.0.11-beta.142 (the owner's concept «маг, прист и хант на геймпаде», answer 9 «дать»): [interface] skill_cells -
     // a ground skill's cells, as the server makes them (core/skill_area), shown on the ground after a cast by the pad
     // or the mouse (win/ground_marks); 0: none

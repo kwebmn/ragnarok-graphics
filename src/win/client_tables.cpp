@@ -83,6 +83,24 @@ bool iconPixels(const std::string& file, std::vector<uint32_t>& argb, int& width
     return true;
 }
 
+bool collectionPixels(const std::string& file, std::vector<uint32_t>& argb, int& width, int& height) {
+    static const std::string kUi = "\xC0\xAF\xC0\xFA\xC0\xCE\xC5\xCD\xC6\xE4\xC0\xCC\xBD\xBA";  // 유저인터페이스
+    argb.clear();
+    width = height = 0;
+    std::string bytes;
+    if (file.empty() || !readClientFile("data\\texture\\" + kUi + "\\collection\\" + file + ".bmp", bytes))
+        return false;
+    if (!pack::decodeBmp(reinterpret_cast<const uint8_t*>(bytes.data()), bytes.size(), argb, width, height)) {
+        argb.clear();
+        return false;
+    }
+    for (uint32_t& c : argb) {  // the game's magenta see-through
+        const uint32_t r = (c >> 16) & 0xFF, g = (c >> 8) & 0xFF, b = c & 0xFF;
+        c = r > 0xF0 && g < 0x10 && b > 0xF0 ? 0u : (c | 0xFF000000u);
+    }
+    return true;
+}
+
 const panel::Picture* icon(const std::string& file, int side, float radius) {
     struct Sized {
         float radius = 0;
