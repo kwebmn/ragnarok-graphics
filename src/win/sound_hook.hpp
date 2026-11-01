@@ -14,5 +14,9 @@ void installSoundHooks();
 void soundFrame(bool foreground, bool music = true, bool sounds = true);
 // 3.0.4-beta.1: [sound] output changed in a running game - the music and the sounds move to it at once
 void soundOutput(const std::string& id);
+// 3.0.11-beta.129 (the ammo's chime): a short sound of the driver's own - its RIFF WAVE image, alive while it plays -
+// played as the game plays its interface's (FUN_004396b0: only with the game's sound on; its 2D or 3D player as the
+// game's choice, at the listener, the game's volume; the driver's engine when [sound] engine is on). The game's thread
+bool playOwn(const void* image);
 
 }  // namespace uagfx::win

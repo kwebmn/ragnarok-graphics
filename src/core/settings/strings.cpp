@@ -5018,6 +5018,16 @@ constexpr Entry kTexts[] = {
      "предупреждением, когда их становится меньше, и когда они закончились."},
     {Text::HotbarAmmoLow, "{1} running low", "{1} закінчуються", "{1} заканчиваются"},
     {Text::HotbarAmmoOut, "{1} ran out", "{1} скінчилися", "{1} закончились"},
+    // 3.0.11-beta.129 (the owner «делай»)
+    {Text::InterfaceAmmoSound, "A sound when the arrows run low", "Звук, коли стріли закінчуються",
+     "Звук, когда стрелы заканчиваются"},
+    {Text::InterfaceAmmoSoundHint,
+     "A short soft chime when 10 arrows (bullets, shuriken) are left and a lower one when none are left - as loud as "
+     "the game's sounds, none while the game's sound is off.",
+     "Короткий тихий сигнал, коли лишається 10 стріл (куль, сюрикенів), і нижчий, коли вони скінчилися, — гучність як "
+     "у звуків гри, з вимкненим звуком гри сигналу немає.",
+     "Короткий тихий сигнал, когда остаётся 10 стрел (пуль, сюрикенов), и более низкий, когда они закончились, — "
+     "громкость как у звуков игры, при выключенном звуке игры сигнала нет."},
     // 3.0.11-beta.65: the concept's «Подсветка, куда можно дойти» - an experiment
     {Text::InterfaceMinimapReach, "Light where you can walk (an experiment)",
      "Підсвітити, куди можна дійти (експеримент)", "Подсветить, куда можно дойти (эксперимент)"},

@@ -232,6 +232,10 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("hotbar_ammo", flag(running.hotbarAmmo), flag(file.hotbarAmmo)));
         n.hotbarAmmo = file.hotbarAmmo;
     }
+    if (file.ammoSound != running.ammoSound) {  // 3.0.11-beta.129: the chime at 10 left and at none, at once
+        u.applied.push_back(change("ammo_sound", flag(running.ammoSound), flag(file.ammoSound)));
+        n.ammoSound = file.ammoSound;
+    }
     if (file.padHints != running.padHints) {  // 3.0.11-beta.86: the controller's buttons on the interface
         u.applied.push_back(change("pad_hints", flag(running.padHints), flag(file.padHints)));
         n.padHints = file.padHints;

@@ -398,3 +398,18 @@ TEST(hotbar_ammo_warns_as_it_falls) {
     CHECK(login.now(30, 1000) == 1);  // a few at the start: told too
     CHECK(login.now(400, 2000) == 0);  // more again: quiet at once
 }
+
+// 3.0.11-beta.129 (the owner «делай»: a sound when 10 arrows are left and when none are): a new warning's level once
+// (`fresh`) - the sound's moment; the count not known a while (a map loading) changes nothing - the same stack low
+// again is not told again
+TEST(hotbar_ammo_warns_once_across_a_maps_loading) {
+    hotbar::AmmoWarn w;
+    CHECK(w.now(12, 1000) == 1 && w.fresh == 1);
+    CHECK(w.now(11, 2000) == 1 && w.fresh == 0);
+    CHECK(w.now(10, 3000) == 2 && w.fresh == 2);
+    CHECK(w.now(-1, 4000) == 0 && w.fresh == 0);  // a map loading: not known
+    CHECK(w.now(10, 5000) == 2 && w.fresh == 0);   // the same low: its words go on, not told again
+    CHECK(w.now(0, 9000) == 3 && w.fresh == 3);
+    CHECK(w.now(0, 9500) == 3 && w.fresh == 0);
+    CHECK(w.now(300, 10000) == 0 && w.fresh == 0);  // a new stack
+}

@@ -600,6 +600,9 @@ struct Config {
     // момент когда они заканчиваются»): [interface] hotbar_ammo - the ammo worn and how many left on a pill over the
     // hotbar (core/hotbar_panel Ammo, win/ammo_watch); on
     bool hotbarAmmo = true;
+    // 3.0.11-beta.129 (the owner «делай»): [interface] ammo_sound - a short soft chime when 10 arrows are left and
+    // when none are (core/ui_chime, win/ammo_sound through the game's own sound player); on
+    bool ammoSound = true;
     // 3.0.11-beta.86 (the concept «Контроллер в интерфейсе uaRO», stage 2): [interface] pad_hints - played with the
     // controller (core/input_mode), its buttons on the interface instead of the keys' names (core/pad_glyphs); on
     bool padHints = true;

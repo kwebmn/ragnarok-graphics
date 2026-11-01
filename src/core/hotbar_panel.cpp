@@ -161,10 +161,13 @@ int ammoLevel(int count) {
 }
 
 int AmmoWarn::now(int count, uint64_t nowMs) {
+    fresh = 0;
+    if (count < 0) return 0;  // 3.0.11-beta.129: not known a while - the level kept
     const int l = ammoLevel(count);
     if (l > level) {  // fell lower: told
         warned = l;
         since = nowMs;
+        fresh = l;
     }
     level = l;
     if (warned > l) warned = 0;  // more again

@@ -54,6 +54,7 @@
 #include "win/npc_talk.hpp"
 #include "win/shop_window.hpp"
 #include "win/net_smooth.hpp"
+#include "win/ammo_sound.hpp"
 #include "win/net_watch.hpp"
 #include "win/pad_carry.hpp"
 #include "win/storage_window.hpp"
@@ -921,6 +922,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     // 3.0.11-beta.40: [interface] hotbar - the hotkeys' bar at the bottom middle, the game's own hidden
     hotbarwin::frame(window, config.hotbar, config.hotbarPerCharacter, config.padHints, config.hotbarAmmo,
                      gameCodePage(config), pk, pw, ph);  // 3.0.11-beta.125: the ammo's pill
+    ammosound::frame(config.ammoSound);  // 3.0.11-beta.129: [interface] ammo_sound - the chime at 10 left and at none
     // 3.0.11-beta.42: [interface] items and status - «Речі» and «Характеристики» while the game's own are open
     itemswin::frame(window, config.itemsWindow, gameCodePage(config), pk, pw, ph);
     statswin::frame(window, config.statusWindow, pk, pw, ph);

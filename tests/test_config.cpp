@@ -1409,6 +1409,17 @@ TEST(config_debug_quick_acks) {
     CHECK(!liveUpdate(parseConfig(""), parseConfig("[debug]\nquick_acks = 0\n")).next.quickAcks);
 }
 
+// 3.0.11-beta.129 (the owner «делай»): [interface] ammo_sound - a short soft chime when 10 arrows are left and when none
+// are; on at first, a box of «Інтерфейс», at once
+TEST(config_interface_ammo_sound) {
+    CHECK(parseConfig("").ammoSound);
+    CHECK(!parseConfig("[interface]\nammo_sound = 0\n").ammoSound);
+    const settings::IniSetting* s = settings::findSetting("interface.ammo_sound");
+    CHECK(s != nullptr && s->page == settings::Page::Interface);
+    CHECK(appliesNow("interface.ammo_sound"));
+    CHECK(!liveUpdate(parseConfig(""), parseConfig("[interface]\nammo_sound = 0\n")).next.ammoSound);
+}
+
 // 3.0.11-beta.103 (the owner: «можешь сделать настройку, чтобы можно было выбрать эту стрелку в конфигураторе»):
 // [interface] walk_arrow - the look of the stick's walking arrow, the doc's variants; the chevrons by default (its
 // advice), a choice of «Інтерфейс» applied at once

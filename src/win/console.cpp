@@ -181,6 +181,8 @@ void Console::build(Lang lang, const Config& config) {
                 rows_.push_back(Row{Kind::Box, "interface.hotbar_per_character", 0});
             if (settingOf("interface.hotbar_ammo"))  // 3.0.11-beta.125: the ammo left over the hotbar
                 rows_.push_back(Row{Kind::Box, "interface.hotbar_ammo", 0});
+            if (settingOf("interface.ammo_sound"))  // 3.0.11-beta.129: the chime at 10 left and at none
+                rows_.push_back(Row{Kind::Box, "interface.ammo_sound", 0});
             if (settingOf("interface.pad_hints"))  // 3.0.11-beta.86: the controller's buttons on the interface
                 rows_.push_back(Row{Kind::Box, "interface.pad_hints", 0});
             if (settingOf("interface.target_ring"))  // 3.0.11-beta.87: the target's ring on the ground

@@ -494,6 +494,19 @@ void installSoundHooks() {
     hookImport("_AIL_start_3D_sample@4", &start3D, g_start3D);
 }
 
+bool playOwn(const void* image) {
+    // FUN_004396b0's own checks: the sound's kind (1 2D, 2 3D; 0 none) and the game's sound switched on
+    constexpr uint32_t kSoundKind = 0x6B7B54, kSoundOn = 0x6B8320;
+    uint32_t kind = 0, on = 0;
+    if (!image || !readGame(kSoundKind, &kind, 4) || !readGame(kSoundOn, &on, 4) || !on) return false;
+    float x = 0, y = 0, z = 0;
+    constexpr uint32_t kOne = 0x3F800000;  // its loudness factor 1.0, as the game's button sound
+    void* file = const_cast<void*>(image);
+    if (kind == 1) return play2D(file, &x, &y, &z, 250, 40, kOne) != 0;
+    if (kind == 2) return play3D(file, &x, &y, &z, 250, 40, kOne) != 0;
+    return false;
+}
+
 void soundOutput(const std::string& id) {
     readSettings();
     g_set.output = id;

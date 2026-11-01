@@ -96,10 +96,11 @@ int ammoIconSide(float scale);
 // How low: 0 plenty (50 or more; none worn), 1 under 50, 2 ten or fewer, 3 none left
 int ammoLevel(int count);
 // The level whose words to show with the count now (0 none): a fall to a lower level its words kShowMs, none left as
-// long as it lasts; more again (a new stack) quiet at once
+// long as it lasts; more again (a new stack) quiet at once. 3.0.11-beta.129: `fresh` - the level of a warning begun in
+// this call (the sound's moment), 0 none; a count not known (< 0: a map loading) changes nothing
 struct AmmoWarn {
     static constexpr uint64_t kShowMs = 5000;
-    int level = 0, warned = 0;
+    int level = 0, warned = 0, fresh = 0;
     uint64_t since = 0;
     int now(int count, uint64_t nowMs);
 };
