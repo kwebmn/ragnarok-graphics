@@ -1,3 +1,22 @@
+# uaRO Graphics 3.0.11-beta.148 — what's new
+
+**A monster's HP bar no longer jitters** (your message):
+- The bar stood over the box of the sprite's current frame, and that box differs between the frames of a walk, an
+  attack and a hit - the bar jumped after it. Now it stands over the monster's feet (its place in the world, as the
+  game's camera puts it) at the height of its tallest frame of the last seconds - still while it walks and in a
+  fight. Zoom the camera out and after a second and a half it glides down.
+
+**The game crashing as it entered a map** (report R-DEHAHA):
+- The game crashed in its own sort of see-through faces by depth: a face's depth that is not a number breaks the
+  game's comparison, and the sort ran past the end of its list. Now such depths are mended before the sort, and the
+  log tells where it happened.
+
+**Disconnected on entering the game** (report R-4FBB8B):
+- The guard for getting onto a map made in October is back: the game waits for the map server up to a minute instead
+  of 15 seconds and connects again by itself; after a failed entry the next character selection waits until the
+  server has forgotten that attempt (a countdown over the game) - straight away it would fail again. The switches:
+  "Getting onto a map" on the "Game" page of the settings app, both on.
+
 # uaRO Graphics 3.0.11-beta.147 — what's new
 
 **Hotbar: icons with the mouse and a battle mode button**:
