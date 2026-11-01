@@ -273,6 +273,9 @@ void flushPackets() {
             return;
         }
         LOG_DEBUG("sent 0x%04x (%u bytes)", unsigned(rd16(p.data(), 0)), unsigned(p.size()));
+        // 3.0.11-beta.133 (R-N2N7T8: walked by the stick, nothing guessed - the pad's own requests go past the game's
+        // send): the stick's walk request guessed by the driver too
+        if (const auto walk = parseWalkRequest(p)) uagfx::win::netpredictwin::walkAsked(walk->x, walk->y);
     }
 }
 
