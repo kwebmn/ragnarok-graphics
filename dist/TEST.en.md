@@ -1,3 +1,12 @@
+# uaRO Graphics 3.0.11-beta.144 — what's new
+
+**Ground skills, step 3: the cells under the mouse before the click**:
+- Pressed a ground skill's key (Fire Wall, Storm Gust, Sanctuary, a trap) - while the game waits for where to put it,
+  the cells it will take show under the cursor: a wall's 3 or 5 cells turned the way the server will put it, Storm
+  Gust's square, Sanctuary's shape. Move the mouse round the character - you see on which side the wall comes out as
+  a 5-cell staircase.
+- The same switch "Skill cells on the ground" (`interface.skill_cells`).
+
 # uaRO Graphics 3.0.11-beta.143 — what's new
 
 **Ground skills, step 2: walls and traps on the hotbar**:
