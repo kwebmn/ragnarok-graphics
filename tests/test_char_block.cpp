@@ -48,7 +48,42 @@ charblock::Texts texts() {
     t.points = "очко|очки|очок";
     t.lowHp = "Мало HP \xC2\xB7 {1} %";
     for (int i = 0; i < charblock::kButtons; ++i) t.buttons[i] = "Button " + std::to_string(i);
+    t.skillPoints = "очко навичок|очки навичок|очок навичок";  // 3.0.11-beta.141
+    t.expMax = "макс.";
+    t.hour = "год";
+    t.minute = "хв";
+    t.toLevel = "До рівня {1}";
+    t.levelIn = "Рівень через \xE2\x89\x88 {1}";
+    t.perHour = "За годину +{1}";
+    t.session = "За сесію +{1}";
+    t.lastGain = "Остання здобич +{1}";
+    t.fold = "Alt+V \xE2\x80\x94 згорнути";
+    t.unfold = "Alt+V \xE2\x80\x94 розгорнути";
     return t;
+}
+
+// 3.0.11-beta.141: Sora's experience in numbers - 1 234 567 of 2 666 000 (46,3 %), the job's 71 800 of 100 000, the
+// base's pace 4,2 % an hour
+charblock::Data soraInNumbers() {
+    charblock::Data d = sora();
+    d.baseNow = 1234567;
+    d.baseNext = 2666000;
+    d.jobNow = 71800;
+    d.jobNext = 100000;
+    d.basePerHour = 111972;  // 4,2 % of 2 666 000
+    d.baseSession = 328000;
+    d.baseLast = 3456;
+    d.skillPoints = 2;
+    return d;
+}
+
+bool hasText(const std::vector<charblock::Words>& w, const std::string& text) {
+    return std::any_of(w.begin(), w.end(), [&](const charblock::Words& x) { return x.text == text; });
+}
+
+const charblock::Words* wordsOf(const std::vector<charblock::Words>& w, const std::string& text) {
+    const auto it = std::find_if(w.begin(), w.end(), [&](const charblock::Words& x) { return x.text == text; });
+    return it == w.end() ? nullptr : &*it;
 }
 
 panel::Picture canvas(const charblock::Layout& L) {
@@ -91,8 +126,16 @@ TEST(char_block_full) {
     CHECK(inside(L.block, L.hpBar) && inside(L.block, L.spBar) && L.spBar.y > L.hpBar.y + L.hpBar.h);
     CHECK(L.hpText.x > L.hpBar.x + L.hpBar.w && L.hpLabel.x + L.hpLabel.w <= L.hpBar.x);
     CHECK(L.expBar.y > L.spBar.y + L.spBar.h && L.expBar.h < L.hpBar.h && L.baseText.y >= L.expBar.y + L.expBar.h);
+    // 3.0.11-beta.141: the points' own line under the info; the job's bar under the base's numbers, its numbers under
+    // it
+    CHECK(L.points.y >= L.info.y + L.info.h - 1 && L.hpBar.y > L.points.y + L.points.h - 1);
+    CHECK(L.jobBar.y > L.baseText.y + L.baseText.h - 1 && L.jobBar.h == L.expBar.h && L.jobText.y >= L.jobBar.y +
+                                                                                                       L.jobBar.h);
+    CHECK(L.jobBar.x == L.expBar.x && L.expBar.x == L.hpBar.x && L.expBar.w == L.hpBar.w);  // under HP and SP
+    CHECK(L.basePct.x > L.expBar.x + L.expBar.w && L.baseLabel.x + L.baseLabel.w <= L.expBar.x);
+    CHECK(L.baseText.x == L.expBar.x && L.baseText.x + L.baseText.w > L.basePct.x);  // its numbers the row's width
     for (int i = 0; i < charblock::kButtons; ++i) {
-        CHECK(inside(L.block, L.buttons[i]) && L.buttons[i].y >= L.baseText.y + L.baseText.h);
+        CHECK(inside(L.block, L.buttons[i]) && L.buttons[i].y >= L.jobText.y + L.jobText.h);
         if (i) CHECK(L.buttons[i].x > L.buttons[i - 1].x + L.buttons[i - 1].w);
     }
     CHECK(L.under.y >= L.block.y + L.block.h && L.under.y + L.under.h <= float(L.h));
@@ -108,7 +151,10 @@ TEST(char_block_compact_and_icon) {
     CHECK(bars.block.h < full.block.h / 2 && bars.block.w < full.block.w);
     CHECK(bars.hpBar.x > bars.portrait.x + bars.portrait.w && bars.spBar.y > bars.hpBar.y);
     CHECK(bars.hpText.y >= bars.spBar.y + bars.spBar.h && bars.spText.x > bars.hpText.x);
-    CHECK(bars.buttons[0].w == 0 && bars.expBar.w == 0);  // the compact block: no buttons, no experience
+    CHECK(bars.buttons[0].w == 0);  // the compact block: no buttons
+    // 3.0.11-beta.141: the experience's two thin lines at its foot - the base's, the job's under it
+    CHECK(bars.expBar.w > bars.hpBar.w && bars.expBar.h <= 4 && bars.expBar.y >= bars.hpText.y + bars.hpText.h);
+    CHECK(bars.jobBar.y > bars.expBar.y + bars.expBar.h - 1 && inside(bars.block, bars.jobBar));
     const charblock::Layout rings = charblock::layout(V::Compact, K::Rings, 0, 0, 1.0f);
     CHECK(std::fabs(rings.cx - (rings.portrait.x + rings.portrait.w / 2)) < 0.5f && rings.hpR > rings.spR);
     CHECK(rings.spR - rings.spW >= rings.portrait.w / 2);  // the rings round the portrait, not over it
@@ -128,6 +174,9 @@ TEST(char_block_mouse) {
         CHECK(h.part == charblock::Part::Button && h.index == i);
     }
     CHECK(charblock::hitTest(L, L.hpBar.x + 3, L.hpBar.y + 3).part == charblock::Part::Body);
+    const charblock::Hit base = charblock::hitTest(L, L.expBar.x + 20, L.expBar.y + 1);  // 3.0.11-beta.141
+    const charblock::Hit job = charblock::hitTest(L, L.jobText.x + 20, L.jobText.y + 4);
+    CHECK(base.part == charblock::Part::Exp && base.index == 0 && job.part == charblock::Part::Exp && job.index == 1);
     CHECK(charblock::hitTest(L, L.block.w + 5, 5).part == charblock::Part::None);
     CHECK(charblock::hitTest(L, 5, L.under.y + 3).part == charblock::Part::None);  // the warning, the tips: not its
     const charblock::Layout R = charblock::layout(charblock::View::Icon, charblock::Look::Rings, 0, 0, 1.0f);
@@ -244,8 +293,8 @@ TEST(char_block_tip_after_its_while_and_a_press) {
 }
 
 // 3.0.11-beta.114 (the concept «Концепция окон и инвентаря», question 10 «можна»): the arrows worn running low - «Стріли
-// 37» at the info line's end under 50 (amber; red at 10 or fewer), «0» in red when they ran out (gone from the bag);
-// none from 50 on, or none worn
+// 37» under 50 (amber; red at 10 or fewer), «0» in red when they ran out (gone from the bag); none from 50 on, or none
+// worn. 3.0.11-beta.141: on the points' line under the info (the weight's numbers took the info line's room)
 TEST(char_block_the_arrows_running_low) {
     const charblock::Layout L = charblock::layout(charblock::View::Full, charblock::Look::Bars, 0, 0, 1.0f);
     charblock::Texts t = texts();
@@ -253,7 +302,7 @@ TEST(char_block_the_arrows_running_low) {
     charblock::Data d = sora();
     const auto colourOf = [&](const charblock::Data& data, const std::string& text) -> int64_t {
         for (const charblock::Words& w : charblock::words(L, data, t, charblock::Show{}))
-            if (w.text == text && w.box.y >= L.info.y - 1 && w.box.y <= L.info.y + 1) return int64_t(w.rgb);
+            if (w.text == text && w.box.y >= L.points.y - 1 && w.box.y <= L.points.y + 1) return int64_t(w.rgb);
         return -1;
     };
     d.ammo = 37;
@@ -328,4 +377,116 @@ TEST(char_block_overweight_by_the_servers_state) {
     const std::vector<charblock::Words> calm = charblock::words(R, d, t, hover);
     CHECK(std::none_of(calm.begin(), calm.end(),
                        [](const charblock::Words& x) { return x.text == "HP і SP не відновлюються"; }));
+}
+
+// 3.0.11-beta.141 (the owner: «блок с персонажем должен работать от альт-V»): Alt+V as the game's Basic Info window's
+// own key - the full block to the small one last used (compact or the icon), a small one to the full
+TEST(char_block_alt_v) {
+    using V = charblock::View;
+    CHECK(charblock::altV(V::Full, V::Compact) == V::Compact && charblock::altV(V::Full, V::Icon) == V::Icon);
+    CHECK(charblock::altV(V::Compact, V::Compact) == V::Full && charblock::altV(V::Icon, V::Icon) == V::Full);
+    CHECK(charblock::altV(V::Full, V::Full) == V::Compact);  // no small one known: compact
+}
+
+// 3.0.11-beta.141 (the owner: «прогресбар с бейз опытом и джоб опытом, также желательно там же написать и точное
+// количество опыта. и побольше подробностей»): the full block's two bars (the concept's colours: the base's violet,
+// the job's teal), each with its per cent at the right and its numbers under it - the base's pace an hour and the
+// time to the next level beside them; the last level «макс.»
+TEST(char_block_experience_in_numbers) {
+    const charblock::Layout L = charblock::layout(charblock::View::Full, charblock::Look::Bars, 0, 0, 1.0f);
+    const charblock::Texts t = texts();
+    charblock::Data d = soraInNumbers();
+    const std::vector<charblock::Words> w = charblock::words(L, d, t, charblock::Show{});
+    CHECK(hasText(w, "Base") && hasText(w, "Job") && hasText(w, "46,3\xC2\xA0%") && hasText(w, "71,8\xC2\xA0%"));
+    const charblock::Words* base = wordsOf(w, "1\xC2\xA0" "234\xC2\xA0" "567 / 2\xC2\xA0" "666\xC2\xA0" "000");
+    const charblock::Words* job = wordsOf(w, "71\xC2\xA0" "800 / 100\xC2\xA0" "000");
+    CHECK(base && std::fabs(base->box.y - L.baseText.y) < 1 && job && std::fabs(job->box.y - L.jobText.y) < 1);
+    const charblock::Words* pace = wordsOf(w, "+4,2\xC2\xA0%/год \xC2\xB7 \xE2\x89\x88 13 год");
+    CHECK(pace && pace->align == charblock::Align::Right && std::fabs(pace->box.y - L.baseText.y) < 1);
+    panel::Picture p = canvas(L);
+    charblock::paint(p, L, d, t, charblock::Show{});
+    const uint32_t violet = pixel(p, L.expBar.x + L.expBar.w * 0.25f, L.expBar.y + L.expBar.h / 2);
+    CHECK(blue(violet) > 0xE0 && red(violet) > 0x98 && green(violet) < red(violet));  // #B7A6FF
+    const uint32_t teal = pixel(p, L.jobBar.x + L.jobBar.w * 0.55f, L.jobBar.y + L.jobBar.h / 2);
+    CHECK(green(teal) > 0xC0 && red(teal) < 0x90);  // #7FD3C3
+    CHECK(green(pixel(p, L.jobBar.x + L.jobBar.w * 0.9f, L.jobBar.y + L.jobBar.h / 2)) < 0x60);  // past 71,8 %
+    d.jobNext = 0;  // the job's last level
+    d.jobNow = 0;
+    const std::vector<charblock::Words> top = charblock::words(L, d, t, charblock::Show{});
+    CHECK(hasText(top, "макс.") && !hasText(top, "0 / 0"));
+    d.baseNow = d.baseNext = -1;  // the numbers not known: the per cent alone
+    const std::vector<charblock::Words> part = charblock::words(L, d, t, charblock::Show{});
+    CHECK(hasText(part, "46,3\xC2\xA0%") && !wordsOf(part, "+4,2\xC2\xA0%/год \xC2\xB7 \xE2\x89\x88 13 год"));
+}
+
+// 3.0.11-beta.141: the weight in the game's numbers on the info line (by the server's state's colour), the free skill
+// points beside the stat points on their own line
+TEST(char_block_weight_and_points_lines) {
+    const charblock::Layout L = charblock::layout(charblock::View::Full, charblock::Look::Bars, 0, 0, 1.0f);
+    charblock::Data d = soraInNumbers();
+    d.weightNow = 1710;
+    d.weightMost = 4500;
+    d.overweight = 0;
+    const std::vector<charblock::Words> w = charblock::words(L, d, texts(), charblock::Show{});
+    const charblock::Words* weight = wordsOf(w, "1\xC2\xA0" "710 / 4\xC2\xA0" "500 \xC2\xB7 38\xC2\xA0%");
+    CHECK(weight && std::fabs(weight->box.y - L.info.y) < 1);
+    const charblock::Words* points = wordsOf(w, "+3 очки");
+    const charblock::Words* skills = wordsOf(w, "+2 очки навичок");
+    CHECK(points && skills && std::fabs(points->box.y - L.points.y) < 1 && skills->box.x > points->box.x);
+}
+
+// 3.0.11-beta.141: «и побольше подробностей» - pointed at an experience row, its tip: the per cent and numbers, what is
+// left to the level, the pace an hour, the time to the level, this session's gain, the last gain
+TEST(char_block_experience_tip) {
+    const charblock::Layout L = charblock::layout(charblock::View::Full, charblock::Look::Bars, 0, 0, 1.0f);
+    charblock::Show sh;
+    sh.hoverExp = 0;
+    sh.hoverBlock = true;
+    const std::vector<charblock::Words> w = charblock::words(L, soraInNumbers(), texts(), sh);
+    CHECK(hasText(w, "Base 46,3\xC2\xA0% \xC2\xB7 1\xC2\xA0" "234\xC2\xA0" "567 / 2\xC2\xA0" "666\xC2\xA0" "000"));
+    CHECK(hasText(w, "До рівня 1\xC2\xA0" "431\xC2\xA0" "433"));
+    CHECK(hasText(w, "За годину +111\xC2\xA0" "972 \xC2\xB7 4,2\xC2\xA0%"));
+    CHECK(hasText(w, "Рівень через \xE2\x89\x88 13 год"));
+    CHECK(hasText(w, "За сесію +328\xC2\xA0" "000 \xC2\xB7 12,3\xC2\xA0%"));
+    CHECK(hasText(w, "Остання здобич +3\xC2\xA0" "456"));
+    sh.tip = false;  // not before its while
+    CHECK(!hasText(charblock::words(L, soraInNumbers(), texts(), sh), "До рівня 1\xC2\xA0" "431\xC2\xA0" "433"));
+    sh.tip = true;
+    sh.hoverExp = 1;  // the job's: no pace known, none gained
+    const std::vector<charblock::Words> j = charblock::words(L, soraInNumbers(), texts(), sh);
+    CHECK(hasText(j, "Job 71,8\xC2\xA0% \xC2\xB7 71\xC2\xA0" "800 / 100\xC2\xA0" "000") &&
+          hasText(j, "До рівня 28\xC2\xA0" "200"));
+    CHECK(std::none_of(j.begin(), j.end(),
+                       [](const charblock::Words& x) { return x.text.rfind("За годину", 0) == 0; }));
+}
+
+// 3.0.11-beta.141: the portrait's tip tells Alt+V (the full block folds, a small one unfolds); the compact block and
+// the rings tell the experience in their tips
+TEST(char_block_alt_v_and_experience_in_tips) {
+    using V = charblock::View;
+    charblock::Show sh;
+    sh.hoverPortrait = sh.hoverBlock = true;
+    const charblock::Data d = soraInNumbers();
+    const std::vector<charblock::Words> full =
+        charblock::words(charblock::layout(V::Full, charblock::Look::Bars, 0, 0, 1.0f), d, texts(), sh);
+    CHECK(hasText(full, "Alt+V \xE2\x80\x94 згорнути"));
+    const std::vector<charblock::Words> compact =
+        charblock::words(charblock::layout(V::Compact, charblock::Look::Bars, 0, 0, 1.0f), d, texts(), sh);
+    CHECK(hasText(compact, "Alt+V \xE2\x80\x94 розгорнути"));
+    sh.hoverPortrait = false;  // the compact block's body: its numbers
+    const std::vector<charblock::Words> body =
+        charblock::words(charblock::layout(V::Compact, charblock::Look::Bars, 0, 0, 1.0f), d, texts(), sh);
+    CHECK(hasText(body, "Base 46,3\xC2\xA0% \xC2\xB7 1\xC2\xA0" "234\xC2\xA0" "567 / 2\xC2\xA0" "666\xC2\xA0" "000"));
+    CHECK(hasText(body, "Job 71,8\xC2\xA0% \xC2\xB7 71\xC2\xA0" "800 / 100\xC2\xA0" "000"));
+    const std::vector<charblock::Words> rings =
+        charblock::words(charblock::layout(V::Compact, charblock::Look::Rings, 0, 0, 1.0f), d, texts(), sh);
+    CHECK(hasText(rings, "Base 46,3\xC2\xA0% \xC2\xB7 1\xC2\xA0" "234\xC2\xA0" "567 / 2\xC2\xA0" "666\xC2\xA0" "000"));
+    CHECK(hasText(rings, "Alt+V \xE2\x80\x94 розгорнути"));
+}
+
+// 3.0.11-beta.141: the time to the level - minutes under an hour, hours and minutes under ten hours, whole hours on
+TEST(char_block_durations) {
+    CHECK(charblock::duration(50, "год", "хв") == "50 хв" && charblock::duration(0, "год", "хв") == "1 хв");
+    CHECK(charblock::duration(125, "год", "хв") == "2 год 5 хв" && charblock::duration(120, "год", "хв") == "2 год");
+    CHECK(charblock::duration(768, "год", "хв") == "13 год" && charblock::duration(70000, "год", "хв") == "> 999 год");
 }

@@ -90,6 +90,7 @@ LRESULT CALLBACK gameProc(HWND w, UINT m, WPARAM wp, LPARAM lp) {
         // and the NPC talk's keys); Esc closes the top one
         if (windowstack::key(m, wp, lp)) return 0;
         if (chatwin::key(m, wp, lp)) return 0;       // 3.0.11-beta.41: the new chat's F10, Alt+F10 and Tab
+        if (charpanel::key(m, wp, lp)) return 0;     // 3.0.11-beta.141: Alt+V, the character block full or small
         hotbarwin::key(m, wp, lp);                   // 3.0.11-beta.45: its cells' keys shown pressed (still the game's)
         if (m == WM_KEYDOWN && minimapproto::key(unsigned(wp))) return 0;  // 3.0.11-beta.4: Ctrl+Tab, the new minimap's
         if ((m == WM_KEYDOWN || m == WM_SYSKEYDOWN) && g_switch->key(unsigned(wp), lp)) return 0;

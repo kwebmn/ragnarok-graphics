@@ -13,6 +13,7 @@
 
 #include "core/char_block.hpp"
 #include "core/char_status.hpp"
+#include "core/exp_rate.hpp"
 #include "core/layout.hpp"
 #include "core/settings/strings.hpp"
 #include "core/sprite_file.hpp"
@@ -88,6 +89,16 @@ struct State {
     ULONGLONG hoverSince = 0, pressedUntil = 0;
     bool ammoArrows = true;  // 3.0.11-beta.114: the ammo worn arrows or other (win/ammo_watch)
     int overweightTold = -2;  // 3.0.11-beta.139: the overweight state last told the log
+    // 3.0.11-beta.141 (the owner: «блок с персонажем должен работать от альт-V ... прогресбар с бейз опытом и джоб
+    // опытом ... точное количество опыта. и побольше подробностей»): the small view Alt+V folds to (the last one used),
+    // Alt+V's full while the windows are open; the experience gained (core/exp_rate) - whose, its pace once a second
+    cb::View small = cb::View::Compact;
+    bool fullOverWindows = false;
+    exprate::Track baseTrack, jobTrack;
+    std::string trackName;
+    ULONGLONG paceAt = 0;
+    double basePerHour = -1, jobPerHour = -1;
+    int keysLogged = 0;
 };
 
 State& state() {
@@ -157,13 +168,35 @@ void readState(State& s) {
     if (!readTextFile(layout::join(gameDir(), layout::kCharacterState), text)) return;
     if (text.find("view compact") != std::string::npos) s.view = cb::View::Compact;
     if (text.find("view icon") != std::string::npos) s.view = cb::View::Icon;
+    if (text.find("small icon") != std::string::npos) s.small = cb::View::Icon;  // 3.0.11-beta.141: Alt+V's
+    if (s.view != cb::View::Full) s.small = s.view;
+}
+
+const char* viewToken(cb::View v) {
+    return v == cb::View::Compact ? "compact" : v == cb::View::Icon ? "icon" : "full";
 }
 
 void keepState(const State& s) {
-    const char* view = s.view == cb::View::Compact ? "compact" : s.view == cb::View::Icon ? "icon" : "full";
     const std::string path = layout::join(gameDir(), layout::kCharacterState);
-    if (!writeFileAtomic(path, std::string("view ") + view + "\n"))
+    if (!writeFileAtomic(path, std::string("view ") + viewToken(s.view) + "\nsmall " + viewToken(s.small) + "\n"))
         LOG_INFO("character: %s cannot be written", path.c_str());
+}
+
+// Another view (a click on the portrait, Alt+V): the one before fades out under it (3.0.11-beta.46), kept for the
+// next start
+void changeView(State& s, cb::View v) {
+    if (motion::on() && s.picture.width > 0) {
+        s.before.picture = s.picture;
+        s.before.x = s.layout.x;
+        s.before.y = s.layout.y;
+        s.before.upload = true;
+        s.changedAt = GetTickCount64();
+    }
+    s.view = v;
+    if (v != cb::View::Full) s.small = v;
+    s.shownView = s.view == cb::View::Full && worlddim::active() && !s.fullOverWindows ? cb::View::Compact : s.view;
+    keepState(s);
+    s.key.clear();
 }
 
 // The portrait: the head's first frame (standing, facing down) in its hair colour, fitted into `side` (3.0.11-beta.80:
@@ -191,6 +224,17 @@ cb::Texts texts() {
     t.ammo = say(state().ammoArrows ? settings::Text::CharArrows : settings::Text::CharAmmo);  // 3.0.11-beta.114
     t.overweight1 = say(settings::Text::CharOverweight1);  // 3.0.11-beta.139
     t.overweight2 = say(settings::Text::CharOverweight2);
+    t.skillPoints = say(settings::Text::CharSkillPoints);  // 3.0.11-beta.141: the experience's words
+    t.expMax = say(settings::Text::CharExpMax);
+    t.hour = say(settings::Text::CharHour);
+    t.minute = say(settings::Text::CharMinute);
+    t.toLevel = say(settings::Text::CharToLevel);
+    t.levelIn = say(settings::Text::CharLevelIn);
+    t.perHour = say(settings::Text::CharPerHour);
+    t.session = say(settings::Text::CharSession);
+    t.lastGain = say(settings::Text::CharLastGain);
+    t.fold = say(settings::Text::CharFold);
+    t.unfold = say(settings::Text::CharUnfold);
     const settings::Text names[cb::kButtons] = {settings::Text::CharStats,  settings::Text::CharEquip,
                                                 settings::Text::CharItems,  settings::Text::CharSkills,
                                                 settings::Text::CharFriends, settings::Text::CharOptions};
@@ -313,7 +357,10 @@ void frame(HWND game, CharacterLook look, unsigned codePage, double k, int targe
     s.targetH = targetHeight;
     const cb::Look panelLook = look == CharacterLook::Rings ? cb::Look::Rings : cb::Look::Bars;
     // 3.0.11-beta.49 (the concept's open windows): the full block compact while the new windows are open
-    const cb::View view = s.view == cb::View::Full && worlddim::active() ? cb::View::Compact : s.view;
+    // (3.0.11-beta.141: unless Alt+V unfolded it while they were)
+    const bool windows = worlddim::active();
+    if (!windows) s.fullOverWindows = false;
+    const cb::View view = s.view == cb::View::Full && windows && !s.fullOverWindows ? cb::View::Compact : s.view;
     if (view != s.shownView) {
         if (motion::on() && s.picture.width > 0) {  // the look before fades out, as after a click
             s.before.picture = s.picture;
@@ -352,9 +399,35 @@ void frame(HWND game, CharacterLook look, unsigned codePage, double k, int targe
     }
     d.zeny = st.zeny;
     d.statusPoints = st.statusPoints;
+    d.skillPoints = st.skillPoints;  // 3.0.11-beta.141
     d.portrait = s.portrait.width > 0 ? &s.portrait : nullptr;
-    // low HP: a short warning as it falls under a quarter
     const ULONGLONG now = GetTickCount64();
+    // 3.0.11-beta.141: the experience in the game's numbers, gained as it plays (another character: counted anew), its
+    // pace an hour counted once a second
+    if (d.name != s.trackName) {
+        s.trackName = d.name;
+        s.baseTrack.reset();
+        s.jobTrack.reset();
+        s.paceAt = 0;
+    }
+    s.baseTrack.feed(now, st.baseLevel, st.baseExp, st.baseNext);
+    s.jobTrack.feed(now, st.jobLevel, st.jobExp, st.jobNext);
+    if (now - s.paceAt >= 1000) {
+        s.paceAt = now;
+        s.basePerHour = s.baseTrack.perHour(now);
+        s.jobPerHour = s.jobTrack.perHour(now);
+    }
+    d.baseNow = st.baseLevel > 0 ? st.baseExp : -1;
+    d.baseNext = st.baseLevel > 0 ? st.baseNext : -1;
+    d.jobNow = st.jobLevel > 0 ? st.jobExp : -1;
+    d.jobNext = st.jobLevel > 0 ? st.jobNext : -1;
+    d.basePerHour = s.basePerHour;
+    d.jobPerHour = s.jobPerHour;
+    d.baseSession = s.baseTrack.session();
+    d.jobSession = s.jobTrack.session();
+    d.baseLast = s.baseTrack.last();
+    d.jobLast = s.jobTrack.last();
+    // low HP: a short warning as it falls under a quarter
     const ammowatch::Ammo& ammo = ammowatch::read(now);  // 3.0.11-beta.114 (.125: win/ammo_watch)
     d.ammo = ammo.count;
     s.ammoArrows = ammo.arrows;
@@ -380,9 +453,15 @@ void frame(HWND game, CharacterLook look, unsigned codePage, double k, int targe
         const cb::Hit h = cb::hitTest(s.layout, float(cx) * float(k) - float(s.layout.x),
                                       float(cy) * float(k) - float(s.layout.y));
         if (h.part == cb::Part::Button) show.hoverButton = h.index;
+        if (h.part == cb::Part::Exp) show.hoverExp = h.index;  // 3.0.11-beta.141: an experience row's tip
+        show.hoverPortrait = h.part == cb::Part::Portrait;     // 3.0.11-beta.141: Alt+V in its tip
         show.hoverBlock = h.part != cb::Part::None;
     }
-    const int hoverId = show.hoverButton >= 0 ? 100 + show.hoverButton : show.hoverBlock ? 1 : 0;
+    const int hoverId = show.hoverButton >= 0 ? 100 + show.hoverButton
+                        : show.hoverExp >= 0  ? 200 + show.hoverExp
+                        : show.hoverPortrait  ? 2
+                        : show.hoverBlock     ? 1
+                                              : 0;
     if (hoverId != s.hoverId) {
         s.hoverId = hoverId;
         s.hoverSince = now;
@@ -400,7 +479,13 @@ void frame(HWND game, CharacterLook look, unsigned codePage, double k, int targe
         std::to_string(d.weightNow) + '/' + std::to_string(d.weightMost) + 'o' + std::to_string(d.overweight) + ';' +
         s.portraitKey + (d.portrait ? "p" : "") + ';' +
         std::to_string(show.hoverButton) + (show.hoverBlock ? "h" : "") + (show.warning ? "w" : "") +
-        (show.tip ? "t" : "") + std::to_string(show.pressedButton);
+        (show.tip ? "t" : "") + std::to_string(show.pressedButton) + ';' +
+        // 3.0.11-beta.141: the experience's numbers, its pace (once a second), the gains, the rows and the portrait
+        std::to_string(d.baseNow) + '/' + std::to_string(d.baseNext) + ',' + std::to_string(d.jobNow) + '/' +
+        std::to_string(d.jobNext) + ';' + std::to_string(std::llround(d.basePerHour)) + ',' +
+        std::to_string(std::llround(d.jobPerHour)) + ';' + std::to_string(d.baseSession) + ',' +
+        std::to_string(d.jobSession) + ',' + std::to_string(d.baseLast) + ',' + std::to_string(d.jobLast) + ';' +
+        std::to_string(d.skillPoints) + 'e' + std::to_string(show.hoverExp) + (show.hoverPortrait ? "f" : "");
     if (const std::string drawn = key + '#' + std::to_string(uistyle::generation()); drawn != s.key) {  // its grounds
         s.key = drawn;
         render(s);
@@ -465,17 +550,7 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     if (h.part == cb::Part::None) return false;
     if (m == WM_LBUTTONDOWN) {
         if (h.part == cb::Part::Portrait) {  // full, compact, the icon, full again
-            if (motion::on() && s.picture.width > 0) {  // 3.0.11-beta.46: the view before fades out
-                s.before.picture = s.picture;
-                s.before.x = s.layout.x;
-                s.before.y = s.layout.y;
-                s.before.upload = true;
-                s.changedAt = GetTickCount64();
-            }
-            s.view = cb::nextView(s.view);
-            s.shownView = s.view == cb::View::Full && worlddim::active() ? cb::View::Compact : s.view;
-            keepState(s);
-            s.key.clear();
+            changeView(s, cb::nextView(s.view));
             LOG_INFO("character: the block %s", s.view == cb::View::Full      ? "full"
                                                 : s.view == cb::View::Compact ? "compact"
                                                                               : "folded to its icon");
@@ -490,6 +565,19 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
         }
     }
     result = 0;
+    return true;
+}
+
+bool key(UINT m, WPARAM wp, LPARAM lp) {
+    State& s = state();
+    if (!s.shown || m != WM_SYSKEYDOWN || wp != 'V' || !(lp & (1 << 29))) return false;  // Alt+V (Alt down: bit 29)
+    if (lp & (1 << 30)) return true;  // held down: once
+    const cb::View next = cb::altV(s.shownView, s.small);
+    s.fullOverWindows = next == cb::View::Full && worlddim::active();
+    changeView(s, next);
+    if (s.keysLogged++ < 20)
+        LOG_INFO("character: Alt+V - the block %s (the game's own Basic Info key, not given the game)",
+                 s.view == cb::View::Full ? "full" : s.view == cb::View::Compact ? "compact" : "folded to its icon");
     return true;
 }
 

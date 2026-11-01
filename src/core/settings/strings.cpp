@@ -5382,6 +5382,19 @@ constexpr Entry kTexts[] = {
     {Text::MenuCharSelect, "Character select", "Вибір персонажа", "Выбор персонажа"},
     {Text::MenuExit, "Exit the game", "Вийти з гри", "Выйти из игры"},
     {Text::MenuBack, "Back to the game", "Повернутися до гри", "Вернуться в игру"},
+    // 3.0.11-beta.141: the character block's experience (forms: one, a few, many)
+    {Text::CharSkillPoints, "skill point|skill points", "очко навичок|очки навичок|очок навичок",
+     "очко навыков|очка навыков|очков навыков"},
+    {Text::CharExpMax, "max", "макс.", "макс."},
+    {Text::CharHour, "h", "год", "ч"},
+    {Text::CharMinute, "min", "хв", "мин"},
+    {Text::CharToLevel, "To the level {1}", "До рівня {1}", "До уровня {1}"},
+    {Text::CharLevelIn, "Level in \xE2\x89\x88 {1}", "Рівень через \xE2\x89\x88 {1}", "Уровень через \xE2\x89\x88 {1}"},
+    {Text::CharPerHour, "An hour +{1}", "За годину +{1}", "За час +{1}"},
+    {Text::CharSession, "This session +{1}", "За сесію +{1}", "За сессию +{1}"},
+    {Text::CharLastGain, "Last gain +{1}", "Остання здобич +{1}", "Последняя добыча +{1}"},
+    {Text::CharFold, "Alt+V \xE2\x80\x94 fold", "Alt+V \xE2\x80\x94 згорнути", "Alt+V \xE2\x80\x94 свернуть"},
+    {Text::CharUnfold, "Alt+V \xE2\x80\x94 unfold", "Alt+V \xE2\x80\x94 розгорнути", "Alt+V \xE2\x80\x94 развернуть"},
     {Text::InterfacePadWalk, "The controller walks", "Хід контролером", "Ход контроллером"},  // 3.0.11-beta.88
     {Text::InterfacePadWalkHint,  // 3.0.11-beta.102: by the map's cells, the default
      "How the left stick walks. With an arrow: by the map's cells, the same at any camera's distance - the character "
@@ -5509,14 +5522,15 @@ constexpr Entry kTexts[] = {
     {Text::InterfaceCharacterHint,
      "The character at the screen's top left instead of the game's window with HP and SP: the full block (the "
      "portrait, the levels, the weight, the zeny, HP, SP, the experience, the windows' buttons), the compact one - "
-     "with bars or rings - or a ring icon; a click on the portrait goes round them. Low HP: red and a short warning. "
-     "As in the game: the game's own window.",
+     "with bars or rings - or a ring icon; a click on the portrait goes round them, Alt+V the full or the small one, "
+     "as the game's window. Low HP: red and a short warning. As in the game: the game's own window.",
      "Персонаж у лівому верхньому куті замість вікна гри з HP і SP: повний блок (портрет, рівні, вага, зені, HP, SP, "
-     "досвід, кнопки вікон), компактний — смужками або кільцями — чи значок-кільця; клік по портрету перемикає їх. "
-     "Мало HP — червоним і коротке попередження. Як у грі — вікно самої гри.",
+     "досвід, кнопки вікон), компактний — смужками або кільцями — чи значок-кільця; клік по портрету перемикає їх, "
+     "Alt+V — повний чи малий, як вікно гри. Мало HP — червоним і коротке попередження. Як у грі — вікно самої гри.",
      "Персонаж в левом верхнем углу вместо окна игры с HP и SP: полный блок (портрет, уровни, вес, зени, HP, SP, "
-     "опыт, кнопки окон), компактный — полосками или кольцами — или значок-кольца; клик по портрету переключает их. "
-     "Мало HP — красным и короткое предупреждение. Как в игре — окно самой игры."},
+     "опыт, кнопки окон), компактный — полосками или кольцами — или значок-кольца; клик по портрету переключает их, "
+     "Alt+V — полный или малый, как окно игры. Мало HP — красным и короткое предупреждение. Как в игре — окно самой "
+     "игры."},
     {Text::InterfaceCharacterOff, "As in the game", "Як у грі", "Как в игре"},
     {Text::InterfaceCharacterBars, "Bars", "Смужками", "Полосками"},
     {Text::InterfaceCharacterRings, "Rings", "Кільцями", "Кольцами"},

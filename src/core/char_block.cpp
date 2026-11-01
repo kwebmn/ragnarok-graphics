@@ -4,21 +4,26 @@
 #include <cmath>
 #include <cstdio>
 
+#include "core/exp_rate.hpp"
 #include "core/ui_style.hpp"
 
 namespace uagfx::charblock {
 namespace {
 
-// The concept's sizes at scale 1 (v17_char): the full block 372 wide, its portrait 54, its bars 10, the experience 5;
-// the compact one 300 x 66 (portrait 46); the rings round a 62 portrait (HP 5 outer, SP 4 inner); the icon's round 36
+// The concept's sizes at scale 1 (v17_char): the full block 372 wide, its portrait 54, its bars 10, the experience 6
+// (3.0.11-beta.141: the base's and the job's, their numbers under them); the compact one 300 x 74 (portrait 46, the
+// experience's two thin lines at its foot); the rings round a 62 portrait (HP 5 outer, SP 4 inner); the icon's round 36
 constexpr float kFullW = 372, kPad = 12, kPortrait = 54, kNumbersW = 124, kButtonW = 32, kButtonH = 26, kButtonGap = 6;
-constexpr float kCompactW = 300, kCompactH = 66, kCompactPortrait = 46;
+constexpr float kButtonsY = 198, kBaseRowY = 126, kJobRowY = 160;
+constexpr float kCompactW = 300, kCompactH = 74, kCompactPortrait = 46;
 constexpr float kRingHp = 46, kRingHpW = 5, kRingSp = 39, kRingSpW = 4, kRingPortrait = 31;
 constexpr float kIconHp = 28, kIconHpW = 4, kIconSp = 23, kIconSpW = 3, kIconPortrait = 18;
-constexpr float kUnderW = 250, kWarnH = 30, kTipH = 62, kGap = 8, kRadius = 10, kCorner = 11;
+// under the block: the low HP warning, then a tip of up to 8 lines (3.0.11-beta.141: the experience's in them)
+constexpr float kUnderW = 300, kWarnH = 30, kTipH = 144, kGap = 8, kRadius = 10, kCorner = 11;
 constexpr uint32_t kCard = 0x10141C, kWhite = 0xFFFFFF, kBlack = 0x000000, kTile = 0x1B1D24;
 constexpr uint32_t kGold = 0xC9A55B, kGold2 = 0xE6CB8A, kText = 0xECEFF5, kMuted = 0x9AA3B5, kWarn = 0xF0A050;
-constexpr uint32_t kHp = 0x5BD36C, kHpLow = 0xFF5A4E, kSp = 0x4F8BFF, kExp = 0x6CC7E8, kWarnGround = 0x3A1414;
+constexpr uint32_t kHp = 0x5BD36C, kHpLow = 0xFF5A4E, kSp = 0x4F8BFF, kWarnGround = 0x3A1414;
+constexpr uint32_t kBaseExp = 0xB7A6FF, kJobExp = 0x7FD3C3;  // 3.0.11-beta.141: the concept's experience colours
 
 float part(int value, int most) { return most > 0 ? std::clamp(float(value) / float(most), 0.0f, 1.0f) : 0.0f; }
 
@@ -119,19 +124,111 @@ int overweightOf(const Data& d) {
     return d.weight >= 90 ? 2 : d.weight >= 50 ? 1 : 0;
 }
 
-// The tip's lines: a button's words; the rings' numbers
+// 3.0.11-beta.141: one of the two experiences - its share, the level's numbers, its pace and gains
+struct Exp {
+    const char* name;
+    float share;
+    long long now, next;
+    double perHour;
+    long long session, last;
+};
+Exp baseOf(const Data& d) {
+    return Exp{"Base", d.baseExp, d.baseNow, d.baseNext, d.basePerHour, d.baseSession, d.baseLast};
+}
+Exp jobOf(const Data& d) { return Exp{"Job", d.jobExp, d.jobNow, d.jobNext, d.jobPerHour, d.jobSession, d.jobLast}; }
+bool known(const Exp& e) { return e.share >= 0 || e.next >= 0; }
+bool numbers(const Exp& e) { return e.next > 0 && e.now >= 0; }
+
+// A per cent not held to 100 (a pace, a session's gain): "4,2 %", from 100 whole
+std::string share(double part, char decimal) {
+    char buf[32];
+    const double v = std::max(0.0, part * 100.0);
+    std::snprintf(buf, sizeof buf, v >= 100 ? "%.0f" : "%.1f", v);
+    std::string out = buf;
+    for (char& c : out)
+        if (c == '.') c = decimal;
+    return out + "\xC2\xA0%";
+}
+
+// Its pace: "+4,2 %/год" (under 0,1 % an hour its exp: "+12 345/год"), the time to the level after it (`time`)
+std::string pace(const Exp& e, const Texts& t, bool time) {
+    if (e.perHour <= 0 || e.next <= 0) return {};
+    const double part = e.perHour / double(e.next);
+    std::string out = "+" + (part >= 0.001 ? share(part, t.decimal) : grouped(std::llround(e.perHour))) + "/" + t.hour;
+    const long long minutes = exprate::minutesTo(e.now, e.next, e.perHour);
+    if (time && e.now >= 0 && minutes >= 0)
+        out += " \xC2\xB7 \xE2\x89\x88 " + duration(minutes, t.hour, t.minute);
+    return out;
+}
+
+// «Base 46,3 % · 1 234 567 / 2 666 000»; the last level «Base макс.»
+std::string expLine(const Exp& e, const Texts& t) {
+    if (!known(e)) return {};
+    std::string out =
+        std::string(e.name) + " " + (e.next == 0 ? t.expMax : percent(std::max(e.share, 0.0f), t.decimal));
+    if (numbers(e)) out += " \xC2\xB7 " + grouped(e.now) + " / " + grouped(e.next);
+    return out;
+}
+
+// Pointed at an experience row: its line, what is left to the level, the pace an hour, the time to the level, this
+// session's gain, the last gain
+std::vector<std::string> expTip(const Exp& e, const Texts& t) {
+    std::vector<std::string> lines;
+    if (const std::string line = expLine(e, t); !line.empty()) lines.push_back(line);
+    if (numbers(e) && !t.toLevel.empty()) lines.push_back(replaced(t.toLevel, grouped(std::max(0LL, e.next - e.now))));
+    if (e.perHour > 0 && e.next > 0) {
+        if (!t.perHour.empty())
+            lines.push_back(replaced(t.perHour, grouped(std::llround(e.perHour)) + " \xC2\xB7 " +
+                                                    share(e.perHour / double(e.next), t.decimal)));
+        const long long minutes = exprate::minutesTo(e.now, e.next, e.perHour);
+        if (e.now >= 0 && minutes >= 0 && !t.levelIn.empty())
+            lines.push_back(replaced(t.levelIn, duration(minutes, t.hour, t.minute)));
+    }
+    if (e.session > 0 && !t.session.empty())
+        lines.push_back(replaced(t.session, grouped(e.session) + (e.next > 0 ? " \xC2\xB7 " +
+                                                                               share(double(e.session) / double(e.next),
+                                                                                     t.decimal)
+                                                                             : std::string())));
+    if (e.last > 0 && !t.lastGain.empty()) lines.push_back(replaced(t.lastGain, grouped(e.last)));
+    return lines;
+}
+
+// The weight's line of a tip: «Вага 1 710 / 4 500 · 38 %», what the overweight stops after it
+void weightLines(std::vector<std::string>& lines, const Data& d, const Texts& t) {
+    if (d.weightMost > 0 && d.weightNow >= 0 && d.weight >= 0)  // 3.0.11-beta.139: the weight's numbers
+        lines.push_back(t.weight + " " + pair(d.weightNow, d.weightMost) + " \xC2\xB7 " + std::to_string(d.weight) +
+                        "\xC2\xA0%");
+    const int over = overweightOf(d);  // 3.0.11-beta.139: what the overweight stops
+    if (over == 1 && !t.overweight1.empty()) lines.push_back(t.overweight1);
+    if (over == 2 && !t.overweight2.empty()) lines.push_back(t.overweight2);
+}
+
+// The tip's lines: a button's words; an experience row's (3.0.11-beta.141); the rings' numbers; the portrait's Alt+V;
+// the compact block's numbers
 std::vector<std::string> tipLines(const Layout& L, const Data& d, const Texts& t, const Show& show) {
     if (!show.tip) return {};
     if (L.view == View::Full && show.hoverButton >= 0 && show.hoverButton < kButtons)
         return {t.buttons[show.hoverButton]};
+    if (L.view == View::Full && (show.hoverExp == 0 || show.hoverExp == 1))
+        return expTip(show.hoverExp == 0 ? baseOf(d) : jobOf(d), t);
+    const std::string& key = L.view == View::Full ? t.fold : t.unfold;
+    const auto experience = [&](std::vector<std::string>& lines) {
+        for (const Exp& e : {baseOf(d), jobOf(d)})
+            if (const std::string line = expLine(e, t); !line.empty()) lines.push_back(line);
+    };
     if (rings(L) && show.hoverBlock && d.hpMost > 0) {
         std::vector<std::string> lines{"HP " + pair(d.hp, d.hpMost), "SP " + pair(d.sp, d.spMost), levels(d)};
-        if (d.weightMost > 0 && d.weightNow >= 0 && d.weight >= 0)  // 3.0.11-beta.139: the weight's numbers
-            lines.push_back(t.weight + " " + pair(d.weightNow, d.weightMost) + " \xC2\xB7 " + std::to_string(d.weight) +
-                            "\xC2\xA0%");
-        const int over = overweightOf(d);  // 3.0.11-beta.139: what the overweight stops
-        if (over == 1 && !t.overweight1.empty()) lines.push_back(t.overweight1);
-        if (over == 2 && !t.overweight2.empty()) lines.push_back(t.overweight2);
+        experience(lines);
+        weightLines(lines, d, t);
+        if (!key.empty()) lines.push_back(key);
+        return lines;
+    }
+    if (show.hoverPortrait && !rings(L)) return key.empty() ? std::vector<std::string>{} : std::vector{key};
+    if (L.view == View::Compact && show.hoverBlock) {  // the compact block's body: what it does not show
+        std::vector<std::string> lines{levels(d)};
+        experience(lines);
+        weightLines(lines, d, t);
+        if (!key.empty()) lines.push_back(key);
         return lines;
     }
     return {};
@@ -159,6 +256,11 @@ panel::Box tipBox(const Layout& L, const Data& d, const Texts& t, const Show& sh
 }  // namespace
 
 View nextView(View v) { return v == View::Full ? View::Compact : v == View::Compact ? View::Icon : View::Full; }
+
+View altV(View shown, View small) {
+    if (shown != View::Full) return View::Full;
+    return small == View::Full ? View::Compact : small;
+}
 
 bool lowHp(const Data& d) { return d.hpMost > 0 && d.hp * 4 < d.hpMost; }
 
@@ -201,6 +303,17 @@ std::string percent(float share, char decimal) {
     return out + "\xC2\xA0%";
 }
 
+std::string duration(long long minutes, const std::string& hour, const std::string& minute) {
+    minutes = std::max(1LL, minutes);
+    if (minutes < 60) return std::to_string(minutes) + " " + minute;
+    if (minutes < 600) {
+        const long long m = minutes % 60;
+        return std::to_string(minutes / 60) + " " + hour + (m ? " " + std::to_string(m) + " " + minute : "");
+    }
+    const long long hours = (minutes + 30) / 60;
+    return hours > 999 ? "> 999 " + hour : std::to_string(hours) + " " + hour;
+}
+
 const Button kButton[kButtons] = {{0x7E, uiicons::Icon::Stats},   {0x81, uiicons::Icon::Equip},
                                   {0x80, uiicons::Icon::Bag},     {0x82, uiicons::Icon::Skill},
                                   {0x85, uiicons::Icon::Friends}, {0x7F, uiicons::Icon::Gear}};
@@ -239,26 +352,39 @@ Layout layout(View view, Look look, int left, int top, float scale) {
         L.spBar = panel::Box{x0, 29 * s, right - x0, 8 * s};
         L.hpText = panel::Box{x0, 42 * s, 130 * s, 16 * s};
         L.spText = panel::Box{right - 130 * s, 42 * s, 130 * s, 16 * s};
+        L.expBar = panel::Box{p, 62 * s, w - 2 * p, 3 * s};  // 3.0.11-beta.141: the base's, the job's under it
+        L.jobBar = panel::Box{p, 67 * s, w - 2 * p, 3 * s};
     } else {
         const float w = kFullW * s, p = kPad * s, pic = kPortrait * s;
         L.portrait = panel::Box{p, p, pic, pic};
         const float x0 = p + pic + 12 * s, right = w - p;
         L.name = panel::Box{x0, 14 * s, right - x0, 20 * s};
         L.levels = panel::Box{x0, 14 * s, right - x0, 20 * s};
-        L.info = panel::Box{x0, 38 * s, right - x0, 18 * s};
+        L.info = panel::Box{x0, 36 * s, right - x0, 17 * s};
+        L.points = panel::Box{x0, 54 * s, right - x0, 16 * s};  // 3.0.11-beta.141: the free points, the arrows
         const float numbersX = right - kNumbersW * s, barX = p + 36 * s, barW = numbersX - 8 * s - barX;
-        L.hpLabel = panel::Box{p, 74 * s, 30 * s, 16 * s};
-        L.hpBar = panel::Box{barX, 77 * s, barW, 10 * s};
-        L.hpText = panel::Box{numbersX, 74 * s, kNumbersW * s, 16 * s};
-        L.spLabel = panel::Box{p, 98 * s, 30 * s, 16 * s};
-        L.spBar = panel::Box{barX, 101 * s, barW, 10 * s};
-        L.spText = panel::Box{numbersX, 98 * s, kNumbersW * s, 16 * s};
-        L.expBar = panel::Box{p, 124 * s, right - p, 5 * s};
-        L.baseText = panel::Box{p, 132 * s, (right - p) / 2, 16 * s};
-        L.jobText = panel::Box{p + (right - p) / 2, 132 * s, (right - p) / 2, 16 * s};
+        L.hpLabel = panel::Box{p, 80 * s, 30 * s, 16 * s};
+        L.hpBar = panel::Box{barX, 83 * s, barW, 10 * s};
+        L.hpText = panel::Box{numbersX, 80 * s, kNumbersW * s, 16 * s};
+        L.spLabel = panel::Box{p, 102 * s, 30 * s, 16 * s};
+        L.spBar = panel::Box{barX, 105 * s, barW, 10 * s};
+        L.spText = panel::Box{numbersX, 102 * s, kNumbersW * s, 16 * s};
+        // 3.0.11-beta.141: the experience's rows as HP's and SP's - the word, the bar, the per cent; its numbers under
+        // them across the row
+        const auto row = [&](float y, panel::Box& label, panel::Box& bar, panel::Box& pct, panel::Box& text,
+                             panel::Box& whole) {
+            label = panel::Box{p, y, 34 * s, 16 * s};
+            bar = panel::Box{barX, y + 5 * s, barW, 6 * s};
+            pct = panel::Box{numbersX, y, kNumbersW * s, 16 * s};
+            text = panel::Box{barX, y + 16 * s, right - barX, 14 * s};
+            whole = panel::Box{p, y, right - p, 30 * s};
+        };
+        row(kBaseRowY * s, L.baseLabel, L.expBar, L.basePct, L.baseText, L.baseRow);
+        row(kJobRowY * s, L.jobLabel, L.jobBar, L.jobPct, L.jobText, L.jobRow);
         for (int i = 0; i < kButtons; ++i)
-            L.buttons[i] = panel::Box{p + float(i) * (kButtonW + kButtonGap) * s, 156 * s, kButtonW * s, kButtonH * s};
-        L.block = panel::Box{0, 0, w, (156 + kButtonH) * s + p};
+            L.buttons[i] =
+                panel::Box{p + float(i) * (kButtonW + kButtonGap) * s, kButtonsY * s, kButtonW * s, kButtonH * s};
+        L.block = panel::Box{0, 0, w, (kButtonsY + kButtonH) * s + p};
     }
     const float underY = L.block.y + L.block.h + kGap * s;
     L.w = int(std::ceil(std::max(L.block.w, kUnderW * s)));
@@ -278,6 +404,8 @@ Hit hitTest(const Layout& L, float x, float y) {
     if (std::hypot(x - (p.x + p.w / 2), y - (p.y + p.h / 2)) <= p.w / 2) return Hit{Part::Portrait, -1};
     for (int i = 0; i < kButtons; ++i)
         if (L.buttons[i].w > 0 && L.buttons[i].contains(x, y)) return Hit{Part::Button, i};
+    if (L.baseRow.w > 0 && L.baseRow.contains(x, y)) return Hit{Part::Exp, 0};  // 3.0.11-beta.141
+    if (L.jobRow.w > 0 && L.jobRow.contains(x, y)) return Hit{Part::Exp, 1};
     return Hit{Part::Body, -1};
 }
 
@@ -297,12 +425,21 @@ void paint(panel::Picture& out, const Layout& L, const Data& d, const Texts& t, 
         if (L.view == View::Full) corners(out, L.block, s);
         bar(out, L.hpBar, part(d.hp, d.hpMost), hpRgb);
         bar(out, L.spBar, part(d.sp, d.spMost), kSp);
-        if (L.expBar.w > 0) {  // the base experience, a tick each 10 %
-            bar(out, L.expBar, d.baseExp >= 0 ? d.baseExp : 0, kExp);
-            for (int i = 1; i < 10; ++i)
-                panel::roundRect(out, panel::Box{L.expBar.x + L.expBar.w * float(i) / 10 - 0.5f * s, L.expBar.y,
-                                                 1.0f * s, L.expBar.h}, 0, kBlack, 0.5f);
-        }
+        // 3.0.11-beta.141: the base's experience and the job's (the concept's colours), the full block's a tick each
+        // 10 %; the last level full and faint
+        const auto experience = [&](const panel::Box& b, const Exp& e, uint32_t rgb) {
+            if (b.w <= 0) return;
+            panel::roundRect(out, b, b.h / 2, kBlack, 0.45f);
+            const float f = e.next == 0 ? 1.0f : std::max(e.share, 0.0f);
+            if (f > 0) panel::roundRect(out, panel::Box{b.x, b.y, std::max(b.h, b.w * f), b.h}, b.h / 2, rgb,
+                                        e.next == 0 ? 0.45f : 1.0f);
+            if (L.view == View::Full)
+                for (int i = 1; i < 10; ++i)
+                    panel::roundRect(out, panel::Box{b.x + b.w * float(i) / 10 - 0.5f * s, b.y, 1.0f * s, b.h}, 0,
+                                     kBlack, 0.5f);
+        };
+        experience(L.expBar, baseOf(d), kBaseExp);
+        experience(L.jobBar, jobOf(d), kJobExp);
         for (int i = 0; i < kButtons; ++i) {
             panel::Box b = L.buttons[i];
             if (b.w <= 0) continue;
@@ -401,23 +538,30 @@ std::vector<Words> words(const Layout& L, const Data& d, const Texts& t, const S
         const float lvW = panel::wordsWidth(lv, 13 * s, true) + 4 * s;
         out.push_back(Words{panel::Box{L.levels.x + L.levels.w - lvW, L.levels.y, lvW, L.levels.h}, lv, kGold2,
                             13 * s, true, Align::Right});
-        // the weight, the zeny, the free points - one after another along the line
+        // the weight (3.0.11-beta.141: in the game's numbers), the zeny along the info line; the free points (stats',
+        // skills') and the arrows running low along the points' line under it
         float x = L.info.x;
+        const panel::Box* line = &L.info;
         const auto put = [&](const std::string& text, uint32_t rgb, bool bold, float gap) {
             const float w = panel::wordsWidth(text, 12.5f * s, bold) + 2 * s;
-            out.push_back(Words{panel::Box{x, L.info.y, w, L.info.h}, text, rgb, 12.5f * s, bold, Align::Left});
+            out.push_back(Words{panel::Box{x, line->y, w, line->h}, text, rgb, 12.5f * s, bold, Align::Left});
             x += w + gap * s;
         };
         if (d.weight >= 0) {
             put(t.weight, kMuted, false, 4);
             const int over = overweightOf(d);  // 3.0.11-beta.139: by the server's state
-            put(std::to_string(d.weight) + "\xC2\xA0%", over == 2 ? kHpLow : over == 1 ? kWarn : kText, true, 12);
+            const std::string per = std::to_string(d.weight) + "\xC2\xA0%";
+            put(d.weightMost > 0 && d.weightNow >= 0 ? pair(d.weightNow, d.weightMost) + " \xC2\xB7 " + per : per,
+                over == 2 ? kHpLow : over == 1 ? kWarn : kText, true, 12);
         }
         if (d.zeny >= 0) {
             put(grouped(d.zeny), kText, true, 2);
             put("z", kMuted, false, 12);
         }
+        x = L.points.x;
+        line = &L.points;
         if (d.statusPoints > 0) put(counted(t.points, d.statusPoints), kGold2, false, 12);
+        if (d.skillPoints > 0 && !t.skillPoints.empty()) put(counted(t.skillPoints, d.skillPoints), kGold2, false, 12);
         if (d.ammo >= 0 && d.ammo < kAmmoLow && !t.ammo.empty()) {  // 3.0.11-beta.114: the arrows running low
             put(t.ammo, kMuted, false, 4);
             put(std::to_string(d.ammo), d.ammo <= kAmmoVeryLow ? kHpLow : kWarn, true, 0);
@@ -432,12 +576,29 @@ std::vector<Words> words(const Layout& L, const Data& d, const Texts& t, const S
             out.push_back(Words{panel::Box{L.hpText.x - 2 * r - 2 * s, L.hpText.y, 2 * r, L.hpText.h}, "!", kText,
                                 11 * s, true, Align::Center});
         }
-        if (d.baseExp >= 0)
-            out.push_back(Words{L.baseText, "Base " + percent(d.baseExp, t.decimal), kMuted, 12 * s, false,
-                                Align::Left});
-        if (d.jobExp >= 0)
-            out.push_back(Words{L.jobText, "Job " + percent(d.jobExp, t.decimal), kMuted, 12 * s, false,
+        // 3.0.11-beta.141: the experience's rows - the word, the per cent (the last level «макс.»), the level's numbers
+        // under the bar and the pace with the time to the level at the row's right (what fits of it)
+        const auto experience = [&](const Exp& e, const panel::Box& label, const panel::Box& pct,
+                                    const panel::Box& text) {
+            if (!known(e)) return;
+            out.push_back(Words{label, e.name, kMuted, 11 * s, true, Align::Left});
+            out.push_back(Words{pct, e.next == 0 ? t.expMax : percent(std::max(e.share, 0.0f), t.decimal), kMuted,
+                                12 * s, true, Align::Right});
+            if (!numbers(e)) return;
+            const float px = 11 * s;
+            const std::string level = grouped(e.now) + " / " + grouped(e.next);
+            const float levelW = panel::wordsWidth(level, px, false) + 4 * s;
+            out.push_back(Words{panel::Box{text.x, text.y, levelW, text.h}, level, kMuted, px, false, Align::Left});
+            std::string speed = pace(e, t, true);
+            if (!speed.empty() && levelW + panel::wordsWidth(speed, px, false) + 12 * s > text.w)
+                speed = pace(e, t, false);  // no room for the time: the pace alone
+            if (speed.empty() || levelW + panel::wordsWidth(speed, px, false) + 12 * s > text.w) return;
+            const float speedW = panel::wordsWidth(speed, px, false) + 4 * s;
+            out.push_back(Words{panel::Box{text.x + text.w - speedW, text.y, speedW, text.h}, speed, kMuted, px, false,
                                 Align::Right});
+        };
+        experience(baseOf(d), L.baseLabel, L.basePct, L.baseText);
+        experience(jobOf(d), L.jobLabel, L.jobPct, L.jobText);
     }
     const panel::Box warn = warnBox(L, d, t, show);
     if (warn.w > 0 && !show.warningApart)

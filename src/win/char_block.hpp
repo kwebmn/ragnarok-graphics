@@ -25,6 +25,11 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result);
 bool panelBox(int& x, int& y, int& w, int& h);
 // 3.0.11-beta.53: just before the game draws its windows (win/windows_draw) - its Basic Info hidden, never a frame
 void beforeGameDraw();
+// 3.0.11-beta.141 (the owner: «блок с персонажем должен работать от альт-V»): Alt+V - the game's own key for its Basic
+// Info window (uaRO.exe FUN_004d96e0 on WM_SYSKEYDOWN: VK 'V' with Alt sends the window its button 0x88, full or
+// small) - the block full or small (core/char_block altV) while it shows; true: taken, not given the game (its hidden
+// window stays as it is)
+bool key(UINT m, WPARAM wp, LPARAM lp);
 
 // 3.0.11-beta.90 (the controller's windows' tile): one of the game's Basic Info window's buttons pressed as its own
 // (its SendMsg message 6 with the command: 0x7E stats, 0x81 equip, 0x80 items, 0x82 skills, 0x85 friends, 0x7F

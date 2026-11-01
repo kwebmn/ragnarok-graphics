@@ -522,6 +522,10 @@ enum class Text : uint16_t {
     // 3.0.11-beta.140: the menu and the death screen
     InterfaceMenu, InterfaceMenuHint, MenuTitle, MenuDead, MenuRevive, MenuSavePoint, MenuCharSelect, MenuExit,
     MenuBack,
+    // 3.0.11-beta.141: the character block's experience - the free skill points, the last level, an hour, a minute,
+    // the experience's tip, the portrait's tip (Alt+V)
+    CharSkillPoints, CharExpMax, CharHour, CharMinute, CharToLevel, CharLevelIn, CharPerHour, CharSession, CharLastGain,
+    CharFold, CharUnfold,
     InterfacePadWalk, InterfacePadWalkHint, InterfacePadWalkMouse, InterfacePadWalkArrow,  // 3.0.11-beta.88
     InterfaceWalkArrow, InterfaceWalkArrowHint, WalkArrowChevrons, WalkArrowSlim, WalkArrowConcept, WalkArrowRing,
     WalkArrowDots, WalkArrowCell, WalkArrowOff,  // 3.0.11-beta.103

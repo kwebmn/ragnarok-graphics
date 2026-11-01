@@ -18,6 +18,10 @@ namespace uagfx::charblock {
 enum class Look : uint8_t { Bars, Rings };       // the compact block's: [interface] character = bars | rings
 enum class View : uint8_t { Full, Compact, Icon };
 View nextView(View v);  // a click on the portrait: full, compact, the icon, full again
+// 3.0.11-beta.141 (the owner: «блок с персонажем должен работать от альт-V»): Alt+V, the game's own key for its Basic
+// Info window (its button 0x88: the window full or small) - the full block to `small` (the small one last used:
+// compact or the icon), a small one to the full
+View altV(View shown, View small);
 
 struct Data {
     std::string name, job;
@@ -38,12 +42,23 @@ struct Data {
     // 3.0.11-beta.114 (the concept «Концепция окон и инвентаря», question 10 «можна»): the arrows (bullets) worn, how
     // many; 0 ran out (gone from the bag), < 0 none worn - «Стріли N» on the info line under 50
     int ammo = -1;
+    // 3.0.11-beta.141 (the owner: «прогресбар с бейз опытом и джоб опытом, также желательно там же написать и точное
+    // количество опыта. и побольше подробностей»): the experience in the game's numbers - the level's now and the next
+    // level's (0: the last level; < 0 not known), its pace an hour (< 0 not known yet: core/exp_rate), gained this
+    // session and the last gain; the free skill points
+    long long baseNow = -1, baseNext = -1, jobNow = -1, jobNext = -1;
+    double basePerHour = -1, jobPerHour = -1;
+    long long baseSession = 0, jobSession = 0, baseLast = 0, jobLast = 0;
+    int skillPoints = 0;
 };
 constexpr int kAmmoLow = 50, kAmmoVeryLow = 10;  // 3.0.11-beta.114: amber under 50, red at 10 or fewer
 bool lowHp(const Data& d);  // under a quarter of the most, as the game's own gauges turn red
 const char* jobName(int job);  // the server's English (conf/msg_athena.conf 550-620); "" not known
 std::string grouped(long long n);  // "1 482 300", the thousands apart by no-break spaces
 std::string percent(float part, char decimal);  // "46,3 %"
+// 3.0.11-beta.141: the time to a level, «12 год 48 хв» - minutes under an hour, hours and minutes under ten hours,
+// whole hours from ten (rounded), «> 999 год» past it; under a minute one
+std::string duration(long long minutes, const std::string& hour, const std::string& minute);
 
 // The Basic Info window's buttons (its own commands - FUN_0046c980 opens or closes each window): stats, equip,
 // items, skills, friends, options
@@ -63,7 +78,11 @@ struct Layout {
     panel::Box portrait;             // its circle's box
     panel::Box name, levels, info;   // full: the name and class line, the levels, the weight / zeny / points line
     panel::Box hpLabel, spLabel, hpBar, spBar, hpText, spText;  // full and compact bars
-    panel::Box expBar, baseText, jobText;                        // full
+    // full: the base's experience row (its word, its bar, its per cent; its numbers under it) and the job's
+    // (3.0.11-beta.141); compact: the two bars thin at its foot
+    panel::Box baseLabel, expBar, basePct, baseText, jobLabel, jobBar, jobPct, jobText;
+    panel::Box baseRow, jobRow;      // full: the rows the mouse points at (their tips)
+    panel::Box points;               // full: the free points' line under the info (3.0.11-beta.141)
     panel::Box badge;                // the level on the rings (rings, the icon)
     float cx = 0, cy = 0, hpR = 0, hpW = 0, spR = 0, spW = 0;  // the rings: their middle, outer radii and widths
     panel::Box pointsDot, weightDot;  // the rings': free points (gold), heavy (orange)
@@ -73,10 +92,10 @@ struct Layout {
 // Its top left at (left, top) in the target, its sizes at `scale`
 Layout layout(View view, Look look, int left, int top, float scale);
 
-enum class Part : uint8_t { None, Portrait, Button, Body };
+enum class Part : uint8_t { None, Portrait, Button, Body, Exp };
 struct Hit {
     Part part = Part::None;
-    int index = -1;  // the button
+    int index = -1;  // the button; the experience's row (0 the base, 1 the job)
 };
 Hit hitTest(const Layout& L, float x, float y);  // the picture's pixels
 
@@ -88,6 +107,12 @@ struct Texts {
     std::string overweight1, overweight2;  // 3.0.11-beta.139: what the overweight states stop (the rings' tip)
     std::string buttons[kButtons];  // «Характеристики · Alt+A» ...
     char decimal = ',';
+    // 3.0.11-beta.141: the experience's words - the free skill points' word by their count, the last level's, an
+    // hour's and a minute's, the tip's lines («До рівня {1}», «Рівень через ≈ {1}», «За годину +{1}», «За сесію +{1}»,
+    // «Остання здобич +{1}»), the portrait's tip («Alt+V — згорнути», «Alt+V — розгорнути»)
+    std::string skillPoints, expMax, hour, minute;
+    std::string toLevel, levelIn, perHour, session, lastGain;
+    std::string fold, unfold;
 };
 struct Show {
     int hoverButton = -1;
@@ -96,6 +121,8 @@ struct Show {
     bool warningApart = false;  // 3.0.11-beta.46: its place kept (a tip under it), the warning drawn apart
     bool tip = true;            // 3.0.11-beta.51: the tip (the concept's: after 0.4 s pointed at)
     int pressedButton = -1;     // pressed: 1 px down, its backing darker
+    int hoverExp = -1;          // 3.0.11-beta.141: the full block's experience row pointed at (0 the base, 1 the job)
+    bool hoverPortrait = false;  // 3.0.11-beta.141: the portrait pointed at (its tip tells Alt+V)
 };
 void paint(panel::Picture& out, const Layout& L, const Data& d, const Texts& t, const Show& show);
 // 3.0.11-beta.46 (the concept's motion): the low HP warning alone - its own picture of the block's size, so that it
