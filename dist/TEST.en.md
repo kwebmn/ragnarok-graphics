@@ -1,3 +1,10 @@
+# uaRO Graphics 3.0.11-beta.136 — what's new
+
+**Walking without waiting for the server — only from the cell the server has the character on** (report R-JMHDUY):
+- A walk is guessed only when the game shows the character on the cell the server last put it on (its way's end or
+  a position fix). In a fight the game lags - finishing the hits while the server walks the character on - and 6 of
+  the report's 12 guesses went another way because of it.
+
 # uaRO Graphics 3.0.11-beta.135 — what's new
 
 **Walking without waiting for the server — only on a healthy connection** (report R-DWCBHA):
