@@ -1,3 +1,13 @@
+# uaRO Graphics 3.0.11-beta.158 — what's new
+
+**The party's settings in the new look** (the sixth group of the remaining windows, its start):
+- Alt+P (or making a party) shows a card: "Experience" - "Each takes" / "Shared evenly", "Things picked up" and
+  "Sharing the things" - "Each takes" / "Shared".
+- A click chooses through the game's own buttons (its leader check stays; when only the leader may change them the
+  card says so). "Done" and "Cancel" are the game's buttons.
+- The controller: up/down a row, left/right its choice, A done, B cancel.
+- The switch "Party settings" under "Interface", on with the new minimap.
+
 # uaRO Graphics 3.0.11-beta.157 — what's new
 
 **Choosing a thing in the new look** (the seventh group of the remaining windows):
