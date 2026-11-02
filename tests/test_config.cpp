@@ -1764,3 +1764,15 @@ TEST(config_interface_ground_counts) {
     CHECK(appliesNow("interface.ground_counts"));
     CHECK(!liveUpdate(parseConfig(""), parseConfig("[interface]\nground_counts = 0\n")).next.groundCounts);
 }
+
+// 3.0.11-beta.173 (the login concept): [interface] login_status - the server's status line under the login window
+// (it answers, the players online, the ping; not answering: one line and a quiet retry); on at first, a box of
+// «Інтерфейс», at once
+TEST(config_interface_login_status) {
+    CHECK(parseConfig("").loginStatus);
+    CHECK(!parseConfig("[interface]\nlogin_status = 0\n").loginStatus);
+    const settings::IniSetting* s = settings::findSetting("interface.login_status");
+    CHECK(s != nullptr && s->page == settings::Page::Interface);
+    CHECK(appliesNow("interface.login_status"));
+    CHECK(!liveUpdate(parseConfig(""), parseConfig("[interface]\nlogin_status = 0\n")).next.loginStatus);
+}

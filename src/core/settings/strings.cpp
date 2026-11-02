@@ -5484,6 +5484,27 @@ constexpr Entry kTexts[] = {
     {Text::LoginHintCaps, "Caps Lock is on", "Увімкнено Caps Lock", "Включён Caps Lock"},
     {Text::LoginHintLayout, "Layout {1} - logins are usually Latin ({2}?)",
      "Розкладка {1} — логін зазвичай латиницею ({2}?)", "Раскладка {1} — логин обычно латиницей ({2}?)"},
+    // 3.0.11-beta.173: the server's status on the login screen
+    {Text::InterfaceLoginStatus, "Server status on the login", "Стан сервера на вході", "Состояние сервера на входе"},
+    {Text::InterfaceLoginStatusHint,
+     "A line under the login window: the server answers, how many play now, the ping. When it does not answer - "
+     "one line with the next try's countdown instead of the game's boxes; a login is tried again by itself only "
+     "after you pressed Enter.",
+     "Рядок під вікном входу: сервер відповідає, скільки гравців онлайн, пінг. Коли не відповідає — один рядок з "
+     "відліком до наступної спроби замість вікон гри; вхід повторюється сам лише після того, як ви натиснули "
+     "«Увійти».",
+     "Строка под окном входа: сервер отвечает, сколько игроков онлайн, пинг. Когда не отвечает — одна строка с "
+     "отсчётом до следующей попытки вместо окон игры; вход повторяется сам только после того, как вы нажали "
+     "«Увійти»."},
+    {Text::LoginStatusUp, "Server up · {1} players online · ping {2} ms",
+     "Сервер працює · {1} гравців онлайн · пінг {2} мс", "Сервер работает · {1} игроков онлайн · пинг {2} мс"},
+    {Text::LoginStatusUpCount, "Server up · {1} players online", "Сервер працює · {1} гравців онлайн",
+     "Сервер работает · {1} игроков онлайн"},
+    {Text::LoginStatusUpNoCount, "Server up · ping {1} ms", "Сервер працює · пінг {1} мс",
+     "Сервер работает · пинг {1} мс"},
+    {Text::LoginStatusDown, "The server does not answer - trying again in {1} s",
+     "Сервер не відповідає — пробуємо ще раз через {1} с", "Сервер не отвечает — пробуем ещё раз через {1} с"},
+    {Text::LoginStatusDownIdle, "The server does not answer", "Сервер не відповідає", "Сервер не отвечает"},
     // 3.0.11-beta.152: the character select
     {Text::InterfaceCharSelect, "Character select", "Вибір персонажа", "Выбор персонажа"},
     {Text::InterfaceCharSelectHint,

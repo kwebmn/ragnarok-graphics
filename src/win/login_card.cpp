@@ -4,10 +4,15 @@
 
 #include <algorithm>
 #include <cstdint>
+#include <cstdlib>
+#include <ctime>
 #include <string>
 #include <vector>
 
 #include "core/login_card.hpp"
+#include "core/login_chrome.hpp"
+#include "core/reference_live.hpp"
+#include "core/server_status.hpp"
 #include "core/login_hints.hpp"
 #include "core/settings/strings.hpp"
 #include "core/ui_style.hpp"
@@ -16,6 +21,8 @@
 #include "win/game_camera.hpp"
 #include "win/log.hpp"
 #include "win/login_refusal.hpp"
+#include "win/reference_load.hpp"
+#include "win/server_probe.hpp"
 #include "win/picture_draw.hpp"
 #include "win/real_ddraw.hpp"
 #include "win/ui_cost.hpp"
@@ -36,6 +43,10 @@ constexpr uint32_t kFirstField = 0x60, kSecondField = 0x64, kMaskAt = 0x50;
 constexpr uint32_t kRemember = 0x68, kRect = 0x14, kSendMsgSlot = 0x94;
 constexpr uint32_t kGetText = 0x443300, kTextLength = 0x443330, kFocus = kWindowMgr + 0x6C, kSetFocus = 0x4CE510;
 constexpr int kButtonMsg = 6;
+// 3.0.11-beta.173: the game's chosen login server (FUN_004F3A10 from sclientinfo's connection): its address and port
+// words; an edit's SetText (its vtable's slot)
+constexpr uint32_t kServerAddress = 0x6BD370, kServerPort = 0x6BD374, kSetTextSlot = 0x98;
+constexpr ULONGLONG kRetryForMs = 10 * 60 * 1000;  // a login not answered tried again for 10 minutes at most
 constexpr int kAway = -4000;
 constexpr ULONGLONG kBlinkMs = 530;
 const wchar_t kRegister[] = L"https://uaro.kiev.ua/account/register";
@@ -44,6 +55,7 @@ using SendMsgFn = int(__attribute__((thiscall)) *)(uint32_t self, uint32_t sende
 using GetTextFn = const char*(__attribute__((thiscall)) *)(uint32_t edit);
 using LengthFn = int(__attribute__((thiscall)) *)(uint32_t edit);
 using SetFocusFn = void(__attribute__((thiscall)) *)(uint32_t manager, uint32_t control);
+using SetTextFn = void(__attribute__((thiscall)) *)(uint32_t edit, const char* text);
 using ShellExecuteFn = HINSTANCE(WINAPI*)(HWND, const wchar_t*, const wchar_t*, const wchar_t*, const wchar_t*, int);
 
 struct State {
@@ -73,6 +85,22 @@ struct State {
     bool errorFresh = false;  // the window's fields as they were when the refusal came not seen yet
     std::string errorAccount;
     int errorPasswordLength = 0;
+    // 3.0.11-beta.173: the card took the last login (the window seen with its fields known; the game closes it while
+    // the server answers - the refusals and the failed connects come then)
+    bool tookLast = false;
+    // 3.0.11-beta.173: the server's status line and the login tried again after a failed connect
+    bool status = true;
+    std::string seenAccount, seenPassword;  // the game's fields' words as last seen (its code page) - never logged
+    std::string tryAccount, tryPassword;    // the login sent (the window gone since)
+    bool hadWindow = false, connectFailed = false;
+    ULONGLONG failedAt = 0, firstFailAt = 0, probeAt = 0;
+    loginchrome::Layout chrome;
+    loginchrome::Show chromeShow;
+    std::string chromeKey;
+    panel::Picture chromePicture;
+    uint32_t chromeTexture = 0;
+    int chromeTexW = 0, chromeTexH = 0;
+    bool chromeUpload = false;
 };
 
 State& state() {
@@ -213,6 +241,81 @@ void hide(State& s) {
     s.shown = false;
 }
 
+// An edit's words as the game keeps them (its code page)
+std::string rawText(uint32_t edit) {
+    if (!edit) return {};
+    const char* t = reinterpret_cast<GetTextFn>(uintptr_t(kGetText))(edit);
+    char buf[64] = {};
+    if (!t || !readGame(uint32_t(reinterpret_cast<uintptr_t>(t)), buf, sizeof buf - 1)) return {};
+    buf[sizeof buf - 1] = 0;
+    return buf;
+}
+
+void setText(uint32_t edit, const std::string& raw) {
+    const uint32_t fn = edit ? read32(read32(edit) + kSetTextSlot) : 0;
+    if (fn) reinterpret_cast<SetTextFn>(uintptr_t(fn))(edit, raw.c_str());
+}
+
+// 3.0.11-beta.173: the login the server could not be reached for, sent again - its words put back into the game's
+// fields (none focused meanwhile: the focused field's words would come from the keys' buffer) and its Enter
+void sendAgain(State& s, uint32_t window) {
+    reinterpret_cast<SetFocusFn>(uintptr_t(kSetFocus))(kWindowMgr, 0);
+    setText(read32(window + s.places.account), s.tryAccount);
+    setText(read32(window + s.places.password), s.tryPassword);
+    LOG_INFO("login: the server did not answer - the login sent again");
+    reinterpret_cast<SendMsgFn>(uintptr_t(read32(read32(window) + kSendMsgSlot)))(window, 0, kButtonMsg,
+                                                                                 lc::gameButton(lc::Part::Enter), 0, 0);
+}
+
+// The game's chosen login server: its address and port (after the server select; before it the exe's own)
+bool serverOf(std::string& host, int& port) {
+    char buf[96] = {};
+    const uint32_t a = read32(kServerAddress), p = read32(kServerPort);
+    if (!a || !readGame(a, buf, sizeof buf - 1)) return false;
+    host = buf;
+    char pb[16] = {};
+    if (!p || !readGame(p, pb, sizeof pb - 1)) return false;
+    port = std::atoi(pb);
+    return !host.empty() && port > 0;
+}
+
+// 3.0.11-beta.173: the strip at the screen's foot - the server's status
+void chromeFrame(State& s, int targetWidth, int targetHeight) {
+    if (!s.status) {
+        s.chromeShow = loginchrome::Show{};
+        s.chrome = loginchrome::Layout{};
+        return;
+    }
+    const ULONGLONG now = GetTickCount64();
+    if (now - s.probeAt >= 1000) {
+        s.probeAt = now;
+        std::string host;
+        int port = 0;
+        if (serverOf(host, port)) serverprobe::want(host, port);
+    }
+    const serverprobe::Result r = serverprobe::result();
+    const auto online = reference::online();
+    const int players = online && reflive::fresh(*online, (long long)(std::time(nullptr))) ? online->online : -1;
+    const int since = int((now - s.failedAt) / 1000);
+    const int retryIn = s.connectFailed ? std::max(1, srvstatus::kProbeSec - since) : 0;
+    const srvstatus::Line line = srvstatus::line(s.connectFailed ? srvstatus::State::Down : r.state, r.pingMs, players,
+                                                 retryIn, startup().lang);
+    s.chromeShow.status = line.text;
+    s.chromeShow.statusRgb = line.rgb;
+    s.chrome = loginchrome::layout(targetWidth, targetHeight, s.scale, line.text);
+    const std::string key = line.text + '#' + std::to_string(line.rgb) + '#' + std::to_string(targetWidth) + 'x' +
+                            std::to_string(targetHeight) + '#' + std::to_string(uistyle::generation());
+    if (key == s.chromeKey) return;
+    s.chromeKey = key;
+    if (!panel::blank(s.chromePicture, s.chrome.w, s.chrome.h)) return;
+    loginchrome::paint(s.chromePicture, s.chrome, s.chromeShow);
+    std::vector<Words> words;
+    for (const loginchrome::Words& w : loginchrome::words(s.chrome, s.chromeShow))
+        words.push_back(Words{w.box, utf8Wide(w.text), w.rgb, w.px, w.bold, UINT(DT_LEFT), false});
+    drawWords(s.chromePicture, words);
+    s.chromeUpload = true;
+}
+
 // A page of the site in the player's browser (shell32 asked for only now: the driver's imports stay the four it has)
 bool openUrl(const wchar_t* url) {
     const HMODULE shell = LoadLibraryA("shell32.dll");
@@ -261,15 +364,21 @@ void press(State& s, lc::Part p) {
 
 }  // namespace
 
-void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int targetHeight) {
+void frame(HWND game, bool on, bool status, unsigned codePage, double k, int targetWidth, int targetHeight) {
     State& s = state();
     s.codePage = codePage;
+    s.status = status;
     if (on != s.on) {
         s.on = on;
         s.key.clear();
         LOG_INFO("login: [interface] login = %d", on ? 1 : 0);
     }
     const uint32_t window = gameLogin();
+    if (s.hadWindow && !window) {  // 3.0.11-beta.173: the window gone - the login sent (or the game left it)
+        s.tryAccount = s.seenAccount;
+        s.tryPassword = s.seenPassword;
+    }
+    s.hadWindow = window != 0;
     s.places = window ? placesOf(window) : lc::FieldPlaces{};
     if (on && window && !s.places.known() && !s.toldUnknown) {
         s.toldUnknown = true;
@@ -281,6 +390,8 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
                  unsigned(s.places.account), unsigned(s.places.password));
     }
     const bool take = on && s.places.known();
+    if (!on) s.tookLast = false;
+    if (take && window) s.tookLast = true;
     hold(s, window, take);
     if (!take || !window || !game || k <= 0 || targetWidth <= 0 || targetHeight <= 0) {
         hide(s);
@@ -294,6 +405,20 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     s.targetW = targetWidth;
     s.targetH = targetHeight;
     s.fields = fieldsOf(s, window);
+    s.seenAccount = rawText(read32(window + s.places.account));
+    s.seenPassword = rawText(read32(window + s.places.password));
+    if (s.connectFailed) {  // 3.0.11-beta.173: the server not reached - its login tried again every 8 s
+        const ULONGLONG now = GetTickCount64();
+        const bool retyped = !s.seenAccount.empty() && s.seenAccount != s.tryAccount;
+        if (retyped || now - s.firstFailAt > kRetryForMs || s.tryAccount.empty() || s.tryPassword.empty()) {
+            s.connectFailed = false;
+            LOG_INFO("login: the login not tried again any more (%s)", retyped ? "typed anew" : "given up");
+        } else if (srvstatus::retryLogin(true, true, int((now - s.failedAt) / 1000))) {
+            s.connectFailed = false;
+            sendAgain(s, window);
+            return;
+        }
+    }
     if (const auto seen = loginrefusal::take()) {  // 3.0.11-beta.172: the server's refusal - under its field
         const loginerr::Refusal r = loginerr::refusal(seen->code);
         if (r.inlineOnly) {
@@ -332,6 +457,7 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
         s.key = key;
         render(s);
     }
+    chromeFrame(s, targetWidth, targetHeight);
     s.shown = true;
     block(s, game);
 }
@@ -345,6 +471,9 @@ void draw(FrameRecord& record, gpu::Renderer& renderer) {
     s.shadow.draw(record, renderer, s.layout.x + int(g.x), s.layout.y + int(g.y), int(g.w), int(g.h), 14 * s.scale,
                   s.scale, s.k);
     drawPart(record, renderer, s.picture, s.texture, s.texW, s.texH, s.upload, s.layout.x, s.layout.y, s.k);
+    if (s.chrome.w > 0 && s.chromePicture.width > 0)  // 3.0.11-beta.173: the strip at the screen's foot
+        drawPart(record, renderer, s.chromePicture, s.chromeTexture, s.chromeTexW, s.chromeTexH, s.chromeUpload,
+                 s.chrome.x, s.chrome.y, s.k);
     if (cursor >= 0) record.moveLastBefore(record.commands().size() - size_t(cursor) - 1, size_t(cursor));
 }
 
@@ -371,7 +500,16 @@ bool shown() { return state().shown; }
 
 bool active() {
     const State& s = state();
-    return s.on && s.places.known() && gameLogin() != 0;
+    return s.on && s.tookLast;
+}
+
+void connectFailed() {
+    State& s = state();
+    const ULONGLONG now = GetTickCount64();
+    if (!s.connectFailed && (s.firstFailAt == 0 || now - s.failedAt > kRetryForMs)) s.firstFailAt = now;
+    s.connectFailed = true;
+    s.failedAt = now;
+    LOG_INFO("login: the server could not be reached - tried again in %d s", srvstatus::kProbeSec);
 }
 
 const std::string& account() { return state().lastTyped; }

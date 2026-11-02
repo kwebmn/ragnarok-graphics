@@ -620,6 +620,8 @@ Config parseConfig(const std::string& text) {
         } else if (key == "interface.login") {  // 3.0.11-beta.151: the login window
             loginSet = val == "0" || val == "1" || val == "on" || val == "off" || val == "true" || val == "false";
             setBool(val, c.loginWindow);
+        } else if (key == "interface.login_status") {  // 3.0.11-beta.173: the server's status on the login
+            setBool(val, c.loginStatus);
         } else if (key == "interface.char_select") {  // 3.0.11-beta.152: the character select
             charSelectSet = val == "0" || val == "1" || val == "on" || val == "off" || val == "true" || val == "false";
             setBool(val, c.charSelectWindow);

@@ -45,6 +45,10 @@ constexpr uint32_t kEscAnswer = 0x58, kEnterAnswer = 0x5C;
 // 3.0.11-beta.172: the words the game asks with to open ragnarok.co.kr (FUN_005A40C0); the answers ErrorMsg returns
 constexpr uintptr_t kKoreanSiteAsk = 0x6D8258, kKoreanSiteAsk2 = 0x6D8210;
 constexpr int kOkAnswer = 0x76, kNoAnswer = 0x77;
+// 3.0.11-beta.173: msgstringtable's line by its number (cdecl, the line's words) and the «Failed to Connect» one
+constexpr uint32_t kMsgString = 0x504FB0;
+constexpr int kNoServerLine = 1;
+using MsgStringFn = const char*(__cdecl*)(int line);
 constexpr int kButtonMsg = 6;
 using ErrorFn = int(__attribute__((thiscall)) *)(uint32_t manager, const char* text, int kind, int a, int b, int c);
 using WaitFn = int(__attribute__((thiscall)) *)(uint32_t manager, const char* text, int a);
@@ -106,6 +110,13 @@ int __attribute__((thiscall)) errorMsg(uint32_t manager, const char* text, int k
     if (uintptr_t(text) == kKoreanSiteAsk || uintptr_t(text) == kKoreanSiteAsk2) {
         if (s.told++ < 30) LOG_INFO("messages: the game's offer to open ragnarok.co.kr - answered no unseen");
         return kNoAnswer;
+    }
+    // 3.0.11-beta.173: «Failed to Connect to Server.» for a login the new card took - answered unseen, the card's
+    // status line says it and the login is sent again by itself
+    if (loginwin::active() && !read32(kBoxAt) && text == reinterpret_cast<MsgStringFn>(kMsgString)(kNoServerLine)) {
+        if (s.told++ < 30) LOG_INFO("messages: «Failed to Connect to Server.» for the login - on the card's line");
+        loginwin::connectFailed();
+        return kOkAnswer;
     }
     // 3.0.11-beta.172: the server's refusal of a login the new login card shows in words - its box answered unseen;
     // the others in the card's words

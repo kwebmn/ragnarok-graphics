@@ -536,6 +536,9 @@ enum class Text : uint16_t {
     LoginErrUnknownId, LoginErrPassword, LoginErrExpired, LoginErrMaintenance, LoginErrOldExe, LoginErrBannedUntil,
     LoginErrJammed, LoginErrRemoved, LoginErrRejected, LoginCreateAccount, LoginResetPassword, LoginHintCaps,
     LoginHintLayout,
+    // 3.0.11-beta.173: the server's status on the login screen
+    InterfaceLoginStatus, InterfaceLoginStatusHint, LoginStatusUp, LoginStatusUpCount, LoginStatusUpNoCount,
+    LoginStatusDown, LoginStatusDownIdle,
     // 3.0.11-beta.152: the character select
     InterfaceCharSelect, InterfaceCharSelectHint, CharsTitle, CharsEnter, CharsMake, CharsRemove, CharsBack, CharsEmpty,
     CharsMakeHint,

@@ -686,6 +686,8 @@ struct Config {
     bool messageBoxes = false;
     // 3.0.11-beta.151: [interface] login - the game's login window (win/login_card) in the new look
     bool loginWindow = false;
+    // 3.0.11-beta.173: [interface] login_status - the server's status line under the login window (on)
+    bool loginStatus = true;
     // 3.0.11-beta.152: [interface] char_select - the game's character select (win/char_select) in the new look
     bool charSelectWindow = false;
     // 3.0.11-beta.153: [interface] char_make - the game's character make (win/char_make) in the new look
