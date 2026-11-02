@@ -15,8 +15,8 @@ namespace {
 constexpr float kCardW = 228, kCardH = 338, kGap = 20, kPicH = 196, kTitleH = 34, kTitleGap = 18, kRowGap = 30;
 constexpr float kButtonH = 42, kButtonGap = 14, kOtherW = 210, kCreateW = 210, kExitW = 150;
 constexpr float kArrowW = 36, kArrowH = 56, kArrowGap = 16, kPlayH = 40, kPlayIn = 14, kDotsW = 30, kDotsH = 26;
-constexpr float kMenuRowH = 32, kMenuPad = 6;
-constexpr float kSiteH = 34;  // 3.0.11-beta.181: the site's links' row under the buttons
+constexpr float kMenuRowH = 32, kMenuPad = 6, kLinkPad = 12;
+constexpr float kSiteH = 40;  // 3.0.11-beta.181: the site's links' row under the buttons (.183: 12 + 26 high plates)
 constexpr uint32_t kCard = 0x10141C, kWhite = 0xFFFFFF, kGold = 0xC9A55B, kGold2 = 0xE6CB8A, kText = 0xEEF2F8;
 constexpr uint32_t kMuted = 0x9AA3B5, kLogin = 0x7E879A, kRed = 0xFF5A4E, kAmber = 0xF2C46B, kPill = 0x0A0C12;
 constexpr uint32_t kChosenWords = 0xF5E6BE, kKey = 0xB9A47A, kLink = 0x8CB8FF;
@@ -72,8 +72,8 @@ Layout layout(int targetW, int targetH, float scale, size_t cards, int first, bo
     if (site) {  // 3.0.11-beta.181: the site account's parts
         L.chars = panel::Box{w - 150 * s, 0, 150 * s, kTitleH * s};
         const float ly = by + (kButtonH + 12) * s;
-        L.newLogin = panel::Box{w / 2 - 230 * s, ly, 220 * s, 22 * s};
-        L.linkLogin = panel::Box{w / 2 + 10 * s, ly, 220 * s, 22 * s};
+        L.newLogin = panel::Box{w / 2 - 230 * s, ly, 220 * s, 26 * s};
+        L.linkLogin = panel::Box{w / 2 + 10 * s, ly, 220 * s, 26 * s};
     }
     return L;
 }
@@ -159,12 +159,24 @@ void paint(panel::Picture& out, const Layout& L, const std::vector<Card>& cards,
     };
     arrow(L.left, Part::Left);
     arrow(L.right, Part::Right);
+    // 3.0.11-beta.183 (R-BFQFDU): the buttons and the site's links on the dark plates of the title and the arrows - a
+    // faint white ghost under white words was lost over a bright wallpaper
     const auto button = [&](const panel::Box& b, Part p) {
-        panel::roundRect(out, b, 9 * s, kWhite, sh.hoverPart == p ? 0.12f : 0.06f, kWhite, 0.16f, 1.0f * s);
+        const bool hot = sh.hoverPart == p;
+        panel::roundRect(out, b, 9 * s, kPill, hot ? 0.92f : 0.78f, kWhite, hot ? 0.40f : 0.22f, 1.0f * s);
     };
     button(L.other, Part::Other);
     button(L.create, Part::Create);
     button(L.exit, Part::Exit);
+    const auto link = [&](const panel::Box& b, const std::string& words, float size, bool right) {
+        if (b.w <= 0 || words.empty()) return;
+        const float pw = std::min(b.w, panel::wordsWidth(words, size * s, false) + 2 * kLinkPad * s);
+        panel::roundRect(out, panel::Box{right ? b.x + b.w - pw : b.x, b.y, pw, b.h}, b.h / 2, kPill, 0.72f, kWhite,
+                         0.10f, 1.0f * s);
+    };
+    link(L.chars, t.chars, 13.5f, true);
+    link(L.newLogin, t.newLogin, 13, true);
+    link(L.linkLogin, t.linkLogin, 13, false);
 }
 
 std::vector<Words> words(const Layout& L, const std::vector<Card>& cards, const Show& sh, const Texts& t) {
@@ -228,14 +240,19 @@ std::vector<Words> words(const Layout& L, const std::vector<Card>& cards, const 
     }
     if (L.left.w > 0) out.push_back(Words{L.left, "‹", kText, 28 * s, false, Align::Center});
     if (L.right.w > 0) out.push_back(Words{L.right, "›", kText, 28 * s, false, Align::Center});
-    if (L.chars.w > 0)  // 3.0.11-beta.181
-        out.push_back(Words{L.chars, t.chars, sh.hoverPart == Part::Chars ? kGold2 : kLink, 13.5f * s, false,
+    // 3.0.11-beta.181; .183: inside their plates
+    const auto inRight = [&](const panel::Box& b) { return panel::Box{b.x, b.y, b.w - kLinkPad * s, b.h}; };
+    const auto inLeft = [&](const panel::Box& b) {
+        return panel::Box{b.x + kLinkPad * s, b.y, b.w - kLinkPad * s, b.h};
+    };
+    if (L.chars.w > 0)
+        out.push_back(Words{inRight(L.chars), t.chars, sh.hoverPart == Part::Chars ? kGold2 : kLink, 13.5f * s, false,
                             Align::Right});
     if (L.newLogin.w > 0) {
-        out.push_back(Words{L.newLogin, t.newLogin, sh.hoverPart == Part::NewLogin ? kGold2 : kLink, 13 * s, false,
-                            Align::Right});
-        out.push_back(Words{L.linkLogin, t.linkLogin, sh.hoverPart == Part::LinkLogin ? kGold2 : kLink, 13 * s,
-                            false, Align::Left});
+        out.push_back(Words{inRight(L.newLogin), t.newLogin, sh.hoverPart == Part::NewLogin ? kGold2 : kLink, 13 * s,
+                            false, Align::Right});
+        out.push_back(Words{inLeft(L.linkLogin), t.linkLogin, sh.hoverPart == Part::LinkLogin ? kGold2 : kLink,
+                            13 * s, false, Align::Left});
     }
     out.push_back(Words{L.other, t.other, kText, 15 * s, true, Align::Center});
     out.push_back(Words{L.create, t.create, kText, 15 * s, true, Align::Center});

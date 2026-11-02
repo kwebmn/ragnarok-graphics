@@ -156,6 +156,28 @@ TEST(login_shelf_site_parts) {
                       [](const loginshelf::Words& x) { return x.text == "Пароль — ввести один раз"; }));
 }
 
+// 3.0.11-beta.183 (R-BFQFDU): «Інший акаунт», «Створити акаунт», «Вийти» and the site's links stand on the shelf's
+// dark plates - white words over a faint white ghost were lost on a bright wallpaper
+TEST(login_shelf_buttons_on_plates) {
+    const loginshelf::Layout L = loginshelf::layout(1920, 1080, 1.0f, 2, 0, true);
+    panel::Picture p;
+    p.width = L.w;
+    p.height = L.h;
+    p.px.assign(size_t(L.w) * size_t(L.h), 0);
+    loginshelf::Texts t = texts();
+    t.chars = "Персонажі ›";
+    t.newLogin = "+ Новий ігровий логін";
+    t.linkLogin = "Прив'язати наявний логін";
+    loginshelf::paint(p, L, {loginshelf::Card{}, loginshelf::Card{}}, loginshelf::Show{}, t);
+    const auto alpha = [&](float x, float y) { return int(p.px[size_t(y) * size_t(p.width) + size_t(x)] >> 24); };
+    for (const panel::Box& b : {L.other, L.create, L.exit}) CHECK(alpha(b.x + b.w / 2, b.y + b.h / 2) >= 170);
+    // the links' plates round their words: «+ Новий ігровий логін» to the right, «Прив'язати наявний логін» to the left
+    CHECK(alpha(L.newLogin.x + L.newLogin.w - 20, L.newLogin.y + L.newLogin.h / 2) >= 170);
+    CHECK(alpha(L.linkLogin.x + 20, L.linkLogin.y + L.linkLogin.h / 2) >= 170);
+    CHECK(alpha(L.chars.x + L.chars.w - 20, L.chars.y + L.chars.h / 2) >= 170);
+    CHECK(alpha(L.newLogin.x + 2, L.newLogin.y + L.newLogin.h / 2) == 0);  // not the whole box: just round the words
+}
+
 // 3.0.11-beta.181: «Персонажі»'s words - each row's login, each card's name, job and level, map; «+ Новий персонаж»;
 // a login with no password here says so on its row
 TEST(login_shelf_character_words) {
