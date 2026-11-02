@@ -242,6 +242,7 @@ bool keyOne(Win w, UINT m, WPARAM wp, LPARAM lp) {  // the windows with keys of 
         case Win::ItemCard: return infocardwin::key(infocardwin::Kind::Item, m, wp, lp);  // .149: ↑ ↓ scroll
         case Win::SkillCard: return infocardwin::key(infocardwin::Kind::Skill, m, wp, lp);
         case Win::Message: return msgboxwin::key(m, wp, lp);  // 3.0.11-beta.151: Enter, Esc - the box's answers
+        case Win::Login: return loginwin::key(m, wp, lp);     // 3.0.11-beta.176: «Полиця»'s
         case Win::Cart: return cartwin::key(m, wp, lp);       // 3.0.11-beta.154: its search's
         default: return false;
     }

@@ -130,6 +130,27 @@ void recordChar(Shelf& s, const std::string& login, const LastChar& c, long long
     }
 }
 
+Plan planFor(const Account& a, bool shiftHeld, bool busyElsewhere) {
+    Plan p;
+    p.fillPassword = !a.password.empty() && !a.refused;
+    p.enterAtOnce = p.fillPassword && !busyElsewhere;
+    p.autoCharacter = p.enterAtOnce && a.autoEnter && !shiftHeld && !a.last.name.empty();
+    return p;
+}
+
+bool markRefused(Shelf& s, const std::string& login) {
+    Account* a = find(s, login);
+    if (a) a->refused = true;
+    return a != nullptr;
+}
+
+int findSlot(const std::vector<std::string>& slotNames, const std::string& name) {
+    if (name.empty()) return -1;
+    for (size_t i = 0; i < slotNames.size(); ++i)
+        if (slotNames[i] == name) return int(i);
+    return -1;
+}
+
 uint64_t loginHash(const std::string& login) {
     uint64_t h = 0xcbf29ce484222325ull;
     for (const char c : lower(login)) {

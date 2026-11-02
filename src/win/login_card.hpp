@@ -5,6 +5,7 @@
 
 #include <cstdint>
 
+#include "core/accounts.hpp"
 #include "core/frame.hpp"
 
 namespace uagfx::gpu {
@@ -39,6 +40,12 @@ void drawToast(FrameRecord& record, gpu::Renderer& renderer);
 bool toastMouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result);
 // 3.0.11-beta.175: the login of the session the server accepted (the game's words; empty before)
 const std::string& loggedIn();
+// 3.0.11-beta.176 (a click on the shelf enters): a shelf row's login and password into the game's fields, sent at
+// once as accounts::planFor says (Shift held: the character select shown; no password, or refused: the keys to the
+// password's field), «Одразу в гру» handed to the character select. False: the game's login is not there.
+bool loginWith(const accounts::Account& a);
+// 3.0.11-beta.176: the keys while «Полиця» shows (← → Enter, a label typed in; a login typed - the card for it)
+bool key(UINT m, WPARAM wp, LPARAM lp);
 bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result);
 bool shown();
 void beforeGameDraw();

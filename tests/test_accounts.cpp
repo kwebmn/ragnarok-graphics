@@ -1,6 +1,7 @@
 // 3.0.11-beta.175 (the login concept's shelf): the player's game accounts kept on this computer (core/accounts) - the
 // login, the password (the file DPAPI-protected, win/accounts_store), the label, «Одразу в гру», the last character
 #include <string>
+#include <vector>
 
 #include "core/accounts.hpp"
 #include "test.hpp"
@@ -65,4 +66,48 @@ TEST(accounts_login_hash) {
     CHECK(accounts::loginHash("KWeb") == accounts::loginHash("kweb"));
     CHECK(accounts::loginHash("kweb") != accounts::loginHash("kweb2"));
     CHECK(accounts::loginHash("") != 0);
+}
+
+// 3.0.11-beta.176 (the login concept: a click on the shelf enters): what a click does - the password put in, the login
+// sent at once, past the character select with the last one («Одразу в гру»); Shift stops at the character select
+TEST(accounts_plan_for_one_click) {
+    accounts::Account a;
+    a.login = "kweb";
+    a.password = "p";
+    a.last.name = "Raphael";
+    const accounts::Plan p = accounts::planFor(a, false, false);
+    CHECK(p.fillPassword && p.enterAtOnce && p.autoCharacter);
+    CHECK(!accounts::planFor(a, true, false).autoCharacter);  // Shift: stop at the character select
+    CHECK(accounts::planFor(a, true, false).enterAtOnce);
+    CHECK(!accounts::planFor(a, false, true).enterAtOnce);  // busy in another window
+    a.last.name.clear();
+    CHECK(!accounts::planFor(a, false, false).autoCharacter);  // no character yet: the select
+    a.last.name = "Raphael";
+    a.password.clear();
+    CHECK(!accounts::planFor(a, false, false).enterAtOnce);  // no password: the cursor goes to the password
+    CHECK(!accounts::planFor(a, false, false).fillPassword);
+    a.password = "p";
+    a.autoEnter = false;
+    CHECK(!accounts::planFor(a, false, false).autoCharacter && accounts::planFor(a, false, false).enterAtOnce);
+}
+
+// A password the server refused: not sent again by itself until a login with it went through
+TEST(accounts_refusal_stops_the_next_auto_try) {
+    accounts::Shelf s;
+    accounts::upsert(s, "kweb", "old", 1);
+    CHECK(accounts::markRefused(s, "KWEB") && !accounts::markRefused(s, "nobody"));
+    CHECK(s.list[0].refused && !accounts::planFor(s.list[0], false, false).enterAtOnce);
+    CHECK(!accounts::planFor(s.list[0], false, false).fillPassword);
+    accounts::Shelf back;
+    CHECK(accounts::fromJson(accounts::toJson(s), back) && back.list[0].refused);
+    accounts::upsert(s, "kweb", "new", 2);
+    CHECK(!s.list[0].refused);
+}
+
+// The character by its name alone (its place may have changed): renamed or deleted - none, the select waits
+TEST(accounts_saved_character_found_by_name_only) {
+    const std::vector<std::string> slots{"Raphael", "", "Ezzy", "Mira"};
+    CHECK(accounts::findSlot(slots, "Ezzy") == 2);
+    CHECK(accounts::findSlot(slots, "Raphaell") == -1);
+    CHECK(accounts::findSlot(slots, "") == -1);
 }

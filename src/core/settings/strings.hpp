@@ -541,6 +541,10 @@ enum class Text : uint16_t {
     LoginStatusDown, LoginStatusDownIdle,
     InterfaceLoginNews, InterfaceLoginNewsHint, LoginAllNews,  // 3.0.11-beta.174
     LoginAddShelf, ShelfAdded, ShelfUndo,  // 3.0.11-beta.175
+    // 3.0.11-beta.176: «Полиця»
+    ShelfBack, ShelfFirstNote, ShelfTitle, ShelfTitleHint, ShelfPlay, ShelfLogin, ShelfAdd, ShelfAddHint, ShelfOther,
+    ShelfCreate, ShelfRefused, ShelfBusy, ShelfNoChar, ShelfMenuAutoEnter, ShelfMenuKeepPassword, ShelfMenuLabel,
+    ShelfMenuEdit, ShelfMenuLeft, ShelfMenuRight, ShelfMenuRemove, ShelfMenuRemoveSure,
     // 3.0.11-beta.152: the character select
     InterfaceCharSelect, InterfaceCharSelectHint, CharsTitle, CharsEnter, CharsMake, CharsRemove, CharsBack, CharsEmpty,
     CharsMakeHint,

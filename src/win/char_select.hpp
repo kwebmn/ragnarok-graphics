@@ -32,5 +32,9 @@ bool box(int& x, int& y, int& w, int& h);
 // login entered the world with when the world came next
 bool gameUp();
 accounts::LastChar entered();
+// 3.0.11-beta.176 («Одразу в гру»): enter the world with the character of that name (UTF-8) - its page turned to, its
+// place chosen and «Увійти» pressed, a step a frame, whatever [interface] char_select says; no place carries the name
+// within 1.5 s (renamed, deleted): the select waits for the player. False: the game's select is not there.
+bool enterByName(const std::string& name);
 
 }  // namespace uagfx::win::charselectwin

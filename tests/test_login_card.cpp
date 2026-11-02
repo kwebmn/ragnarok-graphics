@@ -160,3 +160,33 @@ TEST(login_card_add_to_shelf_tick) {
     CHECK(((on >> 16) & 0xFF) > (on & 0xFF) + 40);    // gold: its red well over its blue
     CHECK(((off >> 16) & 0xFF) <= (off & 0xFF) + 8);  // off: the card's ground through it
 }
+
+// 3.0.11-beta.176 (the login concept's «Полиця»): the card for one other login has «‹ Полиця» back at its top left;
+// the first launch's card says what the shelf will do (two lines at its foot)
+TEST(login_card_back_to_shelf_and_the_first_note) {
+    const logincard::Layout plain = logincard::layout(1920, 1080, 1.0f);
+    CHECK(plain.back.w == 0 && plain.note.h == 0);
+    logincard::Texts t = texts();
+    t.shelf = "‹ Полиця";
+    logincard::Fields f;
+    f.shelfBack = true;
+    const logincard::Layout L = logincard::layout(1920, 1080, 1.0f, loginerr::Field::None, false);
+    CHECK(L.back.w == 0);  // the layout's: given by the fields
+    const logincard::Layout B = logincard::layout(1920, 1080, 1.0f, loginerr::Field::None, false, true);
+    CHECK(B.back.w > 0 && B.back.y < B.title.y + B.title.h && B.back.x < B.title.x + B.title.w / 2);
+    CHECK(logincard::hitTest(B, B.back.x + 4, B.back.y + B.back.h / 2) == logincard::Part::Shelf);
+    CHECK(has(logincard::words(B, f, logincard::Show{}, t), "‹ Полиця"));
+    const logincard::Layout N = logincard::layout(1920, 1080, 1.0f, loginerr::Field::None, true);
+    CHECK(N.note.h > 0 && N.note.y >= N.link.y + N.link.h - 0.5f && N.h > plain.h);
+    CHECK(N.y == plain.y);  // the top kept: it grows downward
+    logincard::Fields first;
+    first.note = "Полиця ще порожня: після входу акаунт з'явиться на ній, далі — вхід одним кліком";
+    const auto w = logincard::words(N, first, logincard::Show{}, t);
+    int lines = 0;
+    for (const logincard::Words& x : w)
+        if (x.box.y >= N.note.y - 0.5f && x.rgb == 0x9AA3B5) {
+            ++lines;
+            CHECK(panel::wordsWidth(x.text, x.px, false) <= N.note.w + 0.5f);
+        }
+    CHECK(lines == 2);
+}

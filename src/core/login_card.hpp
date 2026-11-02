@@ -27,6 +27,9 @@ struct Fields {
     std::string hint;
     loginerr::Field hintField = loginerr::Field::None;
     bool addShelf = true;  // 3.0.11-beta.175: «Додати на полицю після входу» (the shelf's own setting)
+    // 3.0.11-beta.176: «‹ Полиця» back (the card shown for one other login), the first launch's note at its foot
+    bool shelfBack = false;
+    std::string note;
 };
 struct Texts {
     std::string title, subtitle;     // «uaRO», «Вхід у гру»
@@ -36,6 +39,7 @@ struct Texts {
     std::string register_;           // «Немає акаунта? Реєстрація на uaro.kiev.ua»
     std::string createAccount, resetPassword;  // 3.0.11-beta.172: the refusals' actions
     std::string addShelf;                      // 3.0.11-beta.175: «Додати на полицю після входу»
+    std::string shelf;                         // 3.0.11-beta.176: «‹ Полиця»
 };
 struct Show {
     int hover = 0;  // a Part's number, 0 none
@@ -47,9 +51,11 @@ struct Layout {
     panel::Box addShelf, addTick;  // 3.0.11-beta.175: under the remember box, the same look
     panel::Box enter, exit, link;
     panel::Box error, errorAction;  // 3.0.11-beta.172: under the field a refusal is about; 0 high when none
+    panel::Box back, note;  // 3.0.11-beta.176: «‹ Полиця» (0 wide: none), the note's two lines (0 high: none)
 };
-Layout layout(int targetW, int targetH, float scale, loginerr::Field errorAt = loginerr::Field::None);
-enum class Part : uint8_t { None, Account, Password, Remember, Enter, Exit, Register, ErrorAction, AddShelf };
+Layout layout(int targetW, int targetH, float scale, loginerr::Field errorAt = loginerr::Field::None,
+              bool note = false, bool back = false);
+enum class Part : uint8_t { None, Account, Password, Remember, Enter, Exit, Register, ErrorAction, AddShelf, Shelf };
 Part hitTest(const Layout& L, float x, float y);
 int gameButton(Part p);  // the game's window's own: 0x78 enter, 0x9b exit, 0x93 the box; 0 none
 

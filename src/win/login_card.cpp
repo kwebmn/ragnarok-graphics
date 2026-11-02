@@ -26,6 +26,7 @@
 #include "win/game_camera.hpp"
 #include "win/log.hpp"
 #include "win/login_refusal.hpp"
+#include "win/login_shelf.hpp"
 #include "win/paths.hpp"
 #include "win/reference_load.hpp"
 #include "win/server_probe.hpp"
@@ -113,6 +114,9 @@ struct State {
     // then the character it enters the world with goes on its row
     bool pendingShelf = false, selectWasUp = false, recordPending = false;
     std::string loggedIn;  // the accepted login (the game's words)
+    // 3.0.11-beta.176: the login a shelf row sent with one click, and «Одразу в гру»'s character (UTF-8; "" the select)
+    std::string oneClick, autoName;
+    bool shelfShown = false;  // 3.0.11-beta.176: «Полиця» in place of the card
     std::string toast, toastLogin;  // «kweb додано на полицю», the login «Скасувати» takes off
     ULONGLONG toastUntil = 0;
     float toastK = 0, toastScale = 1;
@@ -227,6 +231,7 @@ lc::Texts texts() {
     t.createAccount = say(settings::Text::LoginCreateAccount);
     t.resetPassword = say(settings::Text::LoginResetPassword);
     t.addShelf = say(settings::Text::LoginAddShelf);  // 3.0.11-beta.175
+    t.shelf = say(settings::Text::ShelfBack);          // 3.0.11-beta.176
     return t;
 }
 
@@ -252,8 +257,14 @@ void render(State& s) {
 void block(const State& s, HWND game) {
     RECT client{};
     if (s.targetW <= 0 || s.targetH <= 0 || !GetClientRect(game, &client)) return;
-    const panel::Box& b = s.layout.glass;
-    const float x0 = float(s.layout.x) + b.x, y0 = float(s.layout.y) + b.y;
+    panel::Box b = s.layout.glass;
+    float x0 = float(s.layout.x) + b.x, y0 = float(s.layout.y) + b.y;
+    int sx = 0, sy = 0, sw = 0, sh = 0;
+    if (s.shelfShown && loginshelfwin::box(sx, sy, sw, sh)) {  // 3.0.11-beta.176: the shelf's place
+        b = panel::Box{0, 0, float(sw), float(sh)};
+        x0 = float(sx);
+        y0 = float(sy);
+    }
     const RECT r{LONG(int64_t(x0) * client.right / s.targetW), LONG(int64_t(y0) * client.bottom / s.targetH),
                  LONG(int64_t(x0 + b.w) * client.right / s.targetW + 1),
                  LONG(int64_t(y0 + b.h) * client.bottom / s.targetH + 1)};
@@ -297,13 +308,22 @@ void setText(uint32_t edit, const std::string& raw) {
 
 // 3.0.11-beta.173: the login the server could not be reached for, sent again - its words put back into the game's
 // fields (none focused meanwhile: the focused field's words would come from the keys' buffer) and its Enter
-void sendAgain(State& s, uint32_t window) {
+// The game's login window's fields set (its own SetText: the keys go on as typed), the focus off them
+void putFields(const State& s, uint32_t window, const std::string& account, const std::string& password) {
     reinterpret_cast<SetFocusFn>(uintptr_t(kSetFocus))(kWindowMgr, 0);
-    setText(read32(window + s.places.account), s.tryAccount);
-    setText(read32(window + s.places.password), s.tryPassword);
-    LOG_INFO("login: the server did not answer - the login sent again");
+    setText(read32(window + s.places.account), account);
+    setText(read32(window + s.places.password), password);
+}
+
+void pressEnter(uint32_t window) {
     reinterpret_cast<SendMsgFn>(uintptr_t(read32(read32(window) + kSendMsgSlot)))(window, 0, kButtonMsg,
                                                                                  lc::gameButton(lc::Part::Enter), 0, 0);
+}
+
+void sendAgain(State& s, uint32_t window) {
+    putFields(s, window, s.tryAccount, s.tryPassword);
+    LOG_INFO("login: the server did not answer - the login sent again");
+    pressEnter(window);
 }
 
 // The game's chosen login server: its address and port (after the server select; before it the exe's own)
@@ -481,6 +501,11 @@ void undoShelf(State& s) {
 }
 
 void press(State& s, lc::Part p) {
+    if (p == lc::Part::Shelf) {  // 3.0.11-beta.176: «‹ Полиця» - the shelf again
+        loginshelfwin::classic(false);
+        s.key.clear();
+        return;
+    }
     if (p == lc::Part::AddShelf) {  // 3.0.11-beta.175: the shelf's own setting, kept with it
         accounts::Shelf& shelf = accountsstore::shelf();
         shelf.addAfterLogin = !shelf.addAfterLogin;
@@ -526,6 +551,45 @@ void press(State& s, lc::Part p) {
     s.key.clear();
 }
 
+// 3.0.11-beta.176: what the shelf asked - a card's login, the card for another one (empty fields) or for a card's
+// login (its password typed anew), the site's registration, the game's «Вийти»
+void act(State& s, const loginshelfwin::Asked& a) {
+    using A = loginshelfwin::Act;
+    accounts::Shelf& shelf = accountsstore::shelf();
+    const uint32_t window = gameLogin();
+    const bool row = a.index >= 0 && a.index < int(shelf.list.size());
+    switch (a.act) {
+        case A::Login:
+            if (row) loginWith(shelf.list[size_t(a.index)]);
+            break;
+        case A::Add:
+            if (!shelf.addAfterLogin) {
+                shelf.addAfterLogin = true;
+                accountsstore::save();
+            }
+            [[fallthrough]];
+        case A::Other:
+            loginshelfwin::classic(true);
+            if (window && s.places.known()) {
+                putFields(s, window, std::string(), std::string());
+                reinterpret_cast<SetFocusFn>(uintptr_t(kSetFocus))(kWindowMgr, read32(window + s.places.account));
+            }
+            LOG_INFO("login: the card for %s", a.act == A::Add ? "a login to add" : "another login");
+            break;
+        case A::Edit:
+            loginshelfwin::classic(true);
+            if (row && window && s.places.known()) {
+                putFields(s, window, shelf.list[size_t(a.index)].login, std::string());
+                reinterpret_cast<SetFocusFn>(uintptr_t(kSetFocus))(kWindowMgr, read32(window + s.places.password));
+            }
+            break;
+        case A::Create: openUrl(kRegister); break;
+        case A::Exit: press(s, lc::Part::Exit); break;
+        case A::None: break;
+    }
+    s.key.clear();
+}
+
 // 3.0.11-beta.175: each frame, the login window there or not - the shelf's moments (the login accepted, the world
 // entered) and its «додано» note's place, kept from the game's mouse while it shows
 void shelfFrame(State& s, HWND game, double k, int targetWidth, int targetHeight) {
@@ -533,6 +597,12 @@ void shelfFrame(State& s, HWND game, double k, int targetWidth, int targetHeight
     if (selectUp && !s.selectWasUp) {
         if (s.pendingShelf) accepted(s);
         s.recordPending = !s.loggedIn.empty();
+        if (!s.autoName.empty() && s.oneClick == s.loggedIn) {  // 3.0.11-beta.176: «Одразу в гру»
+            charselectwin::enterByName(s.autoName);
+            LOG_INFO("login: «Одразу в гру» - the character select passed with the saved character");
+        }
+        s.oneClick.clear();
+        s.autoName.clear();
     }
     s.selectWasUp = selectUp;
     if (s.recordPending && !selectUp)
@@ -579,6 +649,7 @@ void frame(HWND game, bool on, bool status, bool news, unsigned codePage, double
         s.tryAccount = s.seenAccount;
         s.tryPassword = s.seenPassword;
         s.pendingShelf = s.tookLast && !s.tryAccount.empty();  // 3.0.11-beta.175: waits for the character select
+        loginshelfwin::classic(false);  // 3.0.11-beta.176: the next login screen the shelf again
     }
     if (window && !s.hadWindow) s.pendingShelf = false;  // the window back: refused, or not reached
     s.hadWindow = window != 0;
@@ -626,6 +697,16 @@ void frame(HWND game, bool on, bool status, bool news, unsigned codePage, double
     }
     if (const auto seen = loginrefusal::take()) {  // 3.0.11-beta.172: the server's refusal - under its field
         const loginerr::Refusal r = loginerr::refusal(seen->code);
+        // 3.0.11-beta.176: a shelf row's password refused - not sent again by itself until a login goes through
+        if (r.field == loginerr::Field::Password && !s.oneClick.empty() &&
+            accounts::markRefused(accountsstore::shelf(), s.oneClick)) {
+            accountsstore::save();
+            LOG_INFO("login: the shelf's %016llx - its password refused, asked again",
+                     (unsigned long long)accounts::loginHash(s.oneClick));
+        }
+        if (!s.oneClick.empty()) loginshelfwin::classic(true);  // 3.0.11-beta.176: the card, its password asked
+        s.oneClick.clear();
+        s.autoName.clear();
         if (r.inlineOnly) {
             s.error = loginerr::words(r, language(), s.lastTyped, utf8Of(widened(seen->until, s.codePage)));
             s.errorField = r.field;
@@ -646,8 +727,28 @@ void frame(HWND game, bool on, bool status, bool news, unsigned codePage, double
     s.fields.errorField = s.error.empty() ? loginerr::Field::None : s.errorField;
     s.fields.errorAction = s.errorAction;
     hintOf(s.fields);  // 3.0.11-beta.172: Caps Lock, the layout - under the field typed in
+    const bool shelfNow = loginshelfwin::wanted();  // 3.0.11-beta.176: «Полиця» in place of the card
+    if (shelfNow != s.shelfShown) {
+        s.shelfShown = shelfNow;
+        s.key.clear();
+        LOG_INFO("login: %s", shelfNow ? "the shelf of accounts shown" : "the login card shown");
+    }
+    if (shelfNow) {
+        loginshelfwin::frame(k, targetWidth, targetHeight, codePage);
+        chromeFrame(s, targetWidth, targetHeight);
+        s.shown = true;
+        block(s, game);
+        blockBar(s, game);
+        return;
+    }
+    {
+        const accounts::Shelf& shelf = accountsstore::shelf();
+        s.fields.shelfBack = !shelf.list.empty();
+        s.fields.note = shelf.list.empty() && shelf.addAfterLogin ? say(settings::Text::ShelfFirstNote) : "";
+    }
     s.layout = lc::layout(targetWidth, targetHeight, s.scale,
-                          s.error.empty() ? s.fields.hintField : s.fields.errorField);
+                          s.error.empty() ? s.fields.hintField : s.fields.errorField, !s.fields.note.empty(),
+                          s.fields.shelfBack);
     s.show.hover = 0;
     int cx = 0, cy = 0;
     if (readGameCursor(cx, cy))
@@ -655,7 +756,8 @@ void frame(HWND game, bool on, bool status, bool news, unsigned codePage, double
                                        float(cy) * float(k) - float(s.layout.y)));
     const lc::Fields& f = s.fields;
     const std::string key = f.account + ';' + std::to_string(f.passwordLength) + ';' + std::to_string(int(f.focus)) +
-                            (f.caret ? "|" : "") + (f.remember ? "r" : "") + (f.addShelf ? "s" : "") + ';' +
+                            (f.caret ? "|" : "") + (f.remember ? "r" : "") + (f.addShelf ? "s" : "") +
+                            (f.shelfBack ? "b" : "") + f.note + ';' +
                             std::to_string(s.layout.x) + ',' +
                             std::to_string(s.layout.y) + ';' + std::to_string(s.show.hover) + '#' +
                             std::to_string(uistyle::generation()) + '!' + s.error + '?' + s.fields.hint;
@@ -671,13 +773,17 @@ void frame(HWND game, bool on, bool status, bool news, unsigned codePage, double
 
 void draw(FrameRecord& record, gpu::Renderer& renderer) {
     State& s = state();
-    if (!s.shown || s.k <= 0 || s.picture.width <= 0 || s.picture.height <= 0) return;
+    if (!s.shown || s.k <= 0) return;
     int cursor = -1, cx = 0, cy = 0;
     if (readGameCursor(cx, cy)) cursor = panel::cursorDraw(record, float(cx), float(cy));
-    const panel::Box& g = s.layout.glass;
-    s.shadow.draw(record, renderer, s.layout.x + int(g.x), s.layout.y + int(g.y), int(g.w), int(g.h), 14 * s.scale,
-                  s.scale, s.k);
-    drawPart(record, renderer, s.picture, s.texture, s.texW, s.texH, s.upload, s.layout.x, s.layout.y, s.k);
+    if (s.shelfShown) {  // 3.0.11-beta.176: «Полиця» in place of the card
+        loginshelfwin::draw(record, renderer);
+    } else if (s.picture.width > 0 && s.picture.height > 0) {
+        const panel::Box& g = s.layout.glass;
+        s.shadow.draw(record, renderer, s.layout.x + int(g.x), s.layout.y + int(g.y), int(g.w), int(g.h),
+                      14 * s.scale, s.scale, s.k);
+        drawPart(record, renderer, s.picture, s.texture, s.texW, s.texH, s.upload, s.layout.x, s.layout.y, s.k);
+    }
     if (s.chrome.w > 0 && s.chromePicture.width > 0)  // 3.0.11-beta.173: the strip at the screen's foot
         drawPart(record, renderer, s.chromePicture, s.chromeTexture, s.chromeTexW, s.chromeTexH, s.chromeUpload,
                  s.chrome.x, s.chrome.y, s.k);
@@ -704,6 +810,14 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
             if (news && click) openNews(s, p == loginchrome::Part::AllNews);
             return true;
         }
+    }
+    if (s.shelfShown) {  // 3.0.11-beta.176
+        bool took = false;
+        const loginshelfwin::Asked a = loginshelfwin::mouse(m, tx, ty, took);
+        if (!took) return false;
+        result = 0;
+        act(s, a);
+        return true;
     }
     const float lx = tx - float(s.layout.x), ly = ty - float(s.layout.y);
     if (!s.layout.glass.contains(lx, ly)) return false;
@@ -761,6 +875,28 @@ bool toastMouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
 
 const std::string& loggedIn() { return state().loggedIn; }
 
+bool loginWith(const accounts::Account& a) {
+    State& s = state();
+    const uint32_t window = gameLogin();
+    if (!window || !s.places.known() || a.login.empty()) return false;
+    const unsigned long long hash = accounts::loginHash(a.login);
+    const accounts::Plan p = accounts::planFor(a, GetKeyState(VK_SHIFT) < 0, false);
+    putFields(s, window, a.login, p.fillPassword ? a.password : std::string());
+    s.seenAccount = a.login;  // the window may go before the next frame reads them
+    s.seenPassword = p.fillPassword ? a.password : std::string();
+    s.key.clear();
+    if (!p.enterAtOnce) {  // its password to type: the keys to that field
+        reinterpret_cast<SetFocusFn>(uintptr_t(kSetFocus))(kWindowMgr, read32(window + s.places.password));
+        LOG_INFO("login: the shelf's %016llx - its password asked", hash);
+        return true;
+    }
+    s.oneClick = a.login;
+    s.autoName = p.autoCharacter ? a.last.name : std::string();
+    LOG_INFO("login: the shelf's %016llx sent with one click%s", hash, p.autoCharacter ? " («Одразу в гру»)" : "");
+    pressEnter(window);
+    return true;
+}
+
 bool active() {
     const State& s = state();
     return s.on && s.tookLast;
@@ -782,9 +918,20 @@ void beforeGameDraw() {
     if (s.on && s.places.known()) hold(s, gameLogin(), true);
 }
 
+bool key(UINT m, WPARAM wp, LPARAM lp) {
+    State& s = state();
+    (void)lp;
+    if (!s.shown || !s.shelfShown) return false;
+    bool took = false;
+    const loginshelfwin::Asked a = loginshelfwin::key(m, wp, took);
+    if (a.act != loginshelfwin::Act::None) act(s, a);
+    return took;
+}
+
 bool box(int& x, int& y, int& w, int& h) {
     const State& s = state();
     if (!s.shown) return false;
+    if (s.shelfShown) return loginshelfwin::box(x, y, w, h);  // 3.0.11-beta.176
     x = s.layout.x;
     y = s.layout.y;
     w = s.layout.w;

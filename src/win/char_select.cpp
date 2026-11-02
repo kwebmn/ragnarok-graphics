@@ -65,6 +65,8 @@ struct State {
     ULONGLONG clickMs = 0;  // the last click on a place (two on it: into the game - the window may get no double click)
     int clickPlace = -1;
     accounts::LastChar chosen;  // 3.0.11-beta.175: the place chosen as last seen (the shelf's last character)
+    std::string wanted;         // 3.0.11-beta.176: «Одразу в гру»'s character (UTF-8)
+    ULONGLONG wantedAt = 0, stepAt = 0;
 };
 
 State& state() {
@@ -225,6 +227,16 @@ accounts::LastChar chosenOf(const State& s, uint32_t window) {
     return c;
 }
 
+// 3.0.11-beta.176: the name in a place of the account (any page), UTF-8; "" an empty place
+std::string nameAt(const State& s, int index) {
+    const uint32_t mode = read32(kModeNow);
+    const uint32_t send = mode ? read32(read32(mode) + kModeMsgSlot) : 0;
+    const uint32_t info = send ? reinterpret_cast<ModeMsgFn>(uintptr_t(send))(mode, kInfoMsg, index, 0, 0) : 0;
+    char name[25] = {};
+    if (!info || !readGame(info + 0x4A, name, 24)) return {};
+    return name[0] ? utf8Of(widened(name, s.codePage)) : std::string();
+}
+
 void send(State& s, uint32_t sender, int id, const char* what) {
     const uint32_t window = gameSelect();
     if (!window) return;
@@ -238,6 +250,35 @@ void choose(State& s, int place) {
     if (!window || place < 0 || place > 2) return;
     const uint32_t control = read32(window + kPlaces + 4 * uint32_t(place));
     if (control) send(s, control, kPlaceClick, "a place chosen");
+}
+
+// 3.0.11-beta.176 («Одразу в гру»): a step a frame toward the wanted character - its page, its place, «Увійти»
+void wantFrame(State& s, uint32_t window) {
+    if (read32(camera::kModeMgr + camera::kModeType) != 0) return;  // the login mode's message 8 alone
+    const ULONGLONG now = GetTickCount64();
+    if (now - s.stepAt < 150) return;  // the game's window takes each press in its own time
+    const int pages = std::clamp(int(read32(window + kPages)), 1, 3);
+    std::vector<std::string> names(size_t(pages) * 3);
+    for (int i = 0; i < pages * 3; ++i) names[size_t(i)] = nameAt(s, i);
+    const int at = accounts::findSlot(names, s.wanted);
+    if (at < 0) {
+        if (now - s.wantedAt > 1500) {
+            LOG_INFO("characters: the saved character is not on this account - waiting");
+            s.wanted.clear();
+        }
+        return;
+    }
+    s.stepAt = now;
+    const int page = at / 3, place = at % 3, pageNow = int(read32(window + kPage));
+    if (page != pageNow) {
+        send(s, 0, cs::pageButton(page > pageNow), "a page turned («Одразу в гру»)");
+    } else if (place != int(read32(window + kChosen))) {
+        choose(s, place);
+    } else {
+        send(s, 0, cs::gameButton(cs::Button::Enter), "«Увійти» («Одразу в гру»)");
+        LOG_INFO("characters: «Одразу в гру» - the saved character entered (place %d)", at);
+        s.wanted.clear();
+    }
 }
 
 void press(State& s, cs::Button b) {
@@ -262,6 +303,8 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     const uint32_t window = gameSelect();
     hold(s, window, on);
     if (window) s.chosen = chosenOf(s, window);  // 3.0.11-beta.175: the shelf's last character
+    if (window && !s.wanted.empty()) wantFrame(s, window);  // 3.0.11-beta.176: «Одразу в гру»
+    if (!window) s.wanted.clear();
     if (!on || !window || !game || k <= 0 || targetWidth <= 0 || targetHeight <= 0) {
         hide(s);
         s.window = 0;
@@ -360,6 +403,15 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
 bool shown() { return state().shown; }
 
 bool gameUp() { return gameSelect() != 0; }
+
+bool enterByName(const std::string& name) {
+    State& s = state();
+    if (!gameSelect() || name.empty()) return false;
+    s.wanted = name;
+    s.wantedAt = GetTickCount64();
+    s.stepAt = 0;
+    return true;
+}
 
 accounts::LastChar entered() { return state().chosen; }
 

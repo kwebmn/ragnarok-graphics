@@ -38,4 +38,15 @@ void recordChar(Shelf& s, const std::string& login, const LastChar& c, long long
 // its words
 uint64_t loginHash(const std::string& login);
 
+// 3.0.11-beta.176 (a click on the shelf enters): what the click does - the password put in (kept and not refused),
+// the login sent at once (and not while the account plays in another game window), past the character select with the
+// last character («Одразу в гру»; Shift held - the select shown)
+struct Plan {
+    bool fillPassword = false, enterAtOnce = false, autoCharacter = false;
+};
+Plan planFor(const Account& a, bool shiftHeld, bool busyElsewhere);
+bool markRefused(Shelf& s, const std::string& login);  // the server refused its password: false - not on the shelf
+// The character by its name among the account's places (their names, "" an empty place): its place, -1 none
+int findSlot(const std::vector<std::string>& slotNames, const std::string& name);
+
 }  // namespace uagfx::accounts

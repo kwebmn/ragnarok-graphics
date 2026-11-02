@@ -16,10 +16,32 @@ constexpr uint32_t kCard = 0x10141C, kWhite = 0xFFFFFF, kGold = 0xC9A55B, kGold2
 constexpr uint32_t kMuted = 0x9AA3B5, kBlack = 0x000000, kLink = 0x8CB8FF, kRed = 0xFF5A4E;
 constexpr float kErrorH = 18;  // 3.0.11-beta.172: a refusal's line and its action's under a field
 constexpr uint32_t kAmber = 0xF2C46B;  // 3.0.11-beta.172: a hint's words
+constexpr float kNoteLine = 17;         // 3.0.11-beta.176: the first launch's note, two lines
+
+// Words broken at spaces into lines `room` wide at most (a word longer than that alone on its line)
+std::vector<std::string> lines(const std::string& text, float px, float room) {
+    std::vector<std::string> out;
+    std::string line;
+    size_t at = 0;
+    while (at < text.size()) {
+        const size_t end = std::min(text.find(' ', at), text.size());
+        const std::string word = text.substr(at, end - at);
+        const std::string longer = line.empty() ? word : line + ' ' + word;
+        if (!line.empty() && panel::wordsWidth(longer, px, false) > room) {
+            out.push_back(line);
+            line = word;
+        } else {
+            line = longer;
+        }
+        at = end + 1;
+    }
+    if (!line.empty()) out.push_back(line);
+    return out;
+}
 
 }  // namespace
 
-Layout layout(int targetW, int targetH, float scale, loginerr::Field errorAt) {
+Layout layout(int targetW, int targetH, float scale, loginerr::Field errorAt, bool note, bool back) {
     Layout L;
     const float s = scale > 0 ? scale : 1.0f;
     L.s = s;
@@ -59,18 +81,25 @@ Layout layout(int targetW, int targetH, float scale, loginerr::Field errorAt) {
     L.exit = panel::Box{pad + bw + kGap * s, y, bw, kButtonH * s};
     y += kButtonH * s + kGap * s;
     L.link = panel::Box{pad, y, fw, kLinkH * s};
-    y += kLinkH * s + pad;
+    y += kLinkH * s;
+    if (note) {  // 3.0.11-beta.176
+        L.note = panel::Box{pad, y + 6 * s, fw, 2 * kNoteLine * s};
+        y += 6 * s + 2 * kNoteLine * s;
+    }
+    y += pad;
+    if (back) L.back = panel::Box{pad - 6 * s, pad - 6 * s, 96 * s, 24 * s};  // 3.0.11-beta.176: the title row's left
     L.glass = panel::Box{0, 0, w, y};
     L.w = int(std::ceil(w));
     L.h = int(std::ceil(y));
     L.x = std::max(0, targetW / 2 - L.w / 2);
     // 3.0.11-beta.172: placed by its height without a line under a field - the top stays, it grows downward
-    const float lines = L.error.h > 0 ? 2 * kErrorH * s : 0;
-    L.y = std::max(0, targetH / 2 - int(std::ceil(y - lines)) / 2);
+    const float grown = (L.error.h > 0 ? 2 * kErrorH * s : 0) + (note ? 6 * s + 2 * kNoteLine * s : 0);
+    L.y = std::max(0, targetH / 2 - int(std::ceil(y - grown)) / 2);
     return L;
 }
 
 Part hitTest(const Layout& L, float x, float y) {
+    if (L.back.w > 0 && L.back.contains(x, y)) return Part::Shelf;
     if (L.errorAction.h > 0 && L.errorAction.contains(x, y)) return Part::ErrorAction;
     if (L.account.contains(x, y)) return Part::Account;
     if (L.password.contains(x, y)) return Part::Password;
@@ -149,6 +178,15 @@ std::vector<Words> words(const Layout& L, const Fields& f, const Show& sh, const
     out.push_back(Words{L.exit, t.exit, kText, 14 * s, false, Align::Center});
     out.push_back(Words{L.link, t.register_, sh.hover == int(Part::Register) ? kGold2 : kLink, 12 * s, false,
                         Align::Center});
+    if (f.shelfBack && L.back.w > 0)  // 3.0.11-beta.176
+        out.push_back(Words{panel::Box{L.back.x + 6 * s, L.back.y, L.back.w - 6 * s, L.back.h}, t.shelf,
+                            sh.hover == int(Part::Shelf) ? kGold2 : kLink, 12.5f * s, false, Align::Left});
+    if (!f.note.empty() && L.note.h > 0) {
+        const std::vector<std::string> ls = lines(f.note, 12 * s, L.note.w);
+        for (size_t i = 0; i < ls.size() && i < 2; ++i)
+            out.push_back(Words{panel::Box{L.note.x, L.note.y + float(i) * kNoteLine * s, L.note.w, kNoteLine * s},
+                                ls[i], kMuted, 12 * s, false, Align::Center});
+    }
     if (f.error.empty() && !f.hint.empty() && L.error.h > 0)
         out.push_back(Words{L.error, f.hint, kAmber, 12 * s, false, Align::Left});
     if (!f.error.empty() && L.error.h > 0) {
