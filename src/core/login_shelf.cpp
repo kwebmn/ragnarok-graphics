@@ -5,6 +5,8 @@
 #include <cmath>
 
 #include "core/class_art.hpp"
+#include "core/settings/search.hpp"
+#include "core/ui_icons.hpp"
 #include "core/ui_style.hpp"
 
 namespace uagfx::loginshelf {
@@ -17,6 +19,9 @@ constexpr float kButtonH = 42, kButtonGap = 14, kOtherW = 210, kCreateW = 210, k
 constexpr float kArrowW = 36, kArrowH = 56, kArrowGap = 16, kPlayH = 40, kPlayIn = 14, kDotsW = 30, kDotsH = 26;
 constexpr float kMenuRowH = 32, kMenuPad = 6, kLinkPad = 12;
 constexpr float kSiteH = 40;  // 3.0.11-beta.181: the site's links' row under the buttons (.183: 12 + 26 high plates)
+// 3.0.11-beta.189: the bar under the row (4 high, 10 under it; a press 9 either side of it counts), the search's field
+// on the title row's left, the row's glide (a time constant: most of the way in a tenth of a second)
+constexpr float kBarH = 4, kBarGap = 10, kBarReach = 9, kSearchW = 230, kClearW = 30, kGlideMs = 50;
 constexpr uint32_t kCard = 0x10141C, kWhite = 0xFFFFFF, kGold = 0xC9A55B, kGold2 = 0xE6CB8A, kText = 0xEEF2F8;
 constexpr uint32_t kMuted = 0x9AA3B5, kLogin = 0x7E879A, kRed = 0xFF5A4E, kAmber = 0xF2C46B, kPill = 0x0A0C12;
 constexpr uint32_t kChosenWords = 0xF5E6BE, kKey = 0xB9A47A, kLink = 0x8CB8FF;
@@ -36,13 +41,15 @@ std::string fill(const std::string& pattern, const std::string& v) {
 
 }  // namespace
 
-Layout layout(int targetW, int targetH, float scale, size_t cards, int first, bool site) {
+Layout layout(int targetW, int targetH, float scale, size_t cards, int first, bool site, const Scroll& sc) {
     Layout L;
     const float s = scale > 0 ? scale : 1.0f;
     L.s = s;
-    const int slots = int(cards) + 1;  // the accounts and «Додати акаунт»
-    L.first = std::clamp(first, 0, std::max(0, slots - kInSight));
-    const int inSight = std::min(kInSight, slots - L.first);
+    const int slots = int(cards) + (sc.add ? 1 : 0);  // the accounts and «Додати акаунт»
+    const int most = mostFirst(cards, sc.add);
+    L.target = std::clamp(first, 0, most);
+    L.most = most;
+    const float shown = sc.pos < 0 ? float(L.target) : std::clamp(sc.pos, 0.0f, float(most));
     const float w = (rowWidth(kInSight) + 2 * (kArrowGap + kArrowW)) * s;
     const float h = (kTitleH + kTitleGap + kCardH + kRowGap + kButtonH + (site ? kSiteH : 0.0f)) * s;
     L.w = int(std::ceil(w));
@@ -50,17 +57,31 @@ Layout layout(int targetW, int targetH, float scale, size_t cards, int first, bo
     L.x = std::max(0, targetW / 2 - L.w / 2);
     L.y = std::max(0, targetH / 2 - L.h / 2);
     L.title = panel::Box{0, 0, w, kTitleH * s};
-    const float top = (kTitleH + kTitleGap) * s, row = rowWidth(inSight) * s, left = (w - row) / 2;
-    for (int i = 0; i < inSight; ++i) {
-        const panel::Box b{left + i * (kCardW + kGap) * s, top, kCardW * s, kCardH * s};
-        if (L.first + i < int(cards))
+    const float top = (kTitleH + kTitleGap) * s, row = rowWidth(std::min(kInSight, std::max(1, slots))) * s;
+    const float left = (w - row) / 2, step = (kCardW + kGap) * s;
+    L.row = panel::Box{left, top, row, kCardH * s};
+    // 3.0.11-beta.189: the cards from the one half in sight at the left to the one half in sight at the right
+    L.first = std::max(0, int(std::floor(shown)));
+    for (int i = L.first; i < slots; ++i) {
+        const panel::Box b{left + (float(i) - shown) * step, top, kCardW * s, kCardH * s};
+        if (b.x >= left + row - 0.5f) break;
+        if (i < int(cards))
             L.cards.push_back(b);
         else
             L.add = b;
     }
     const float arrowY = top + (kCardH - kArrowH) * s / 2;
-    if (L.first > 0) L.left = panel::Box{left - (kArrowGap + kArrowW) * s, arrowY, kArrowW * s, kArrowH * s};
-    if (L.first + inSight < slots) L.right = panel::Box{left + row + kArrowGap * s, arrowY, kArrowW * s, kArrowH * s};
+    if (L.target > 0) L.left = panel::Box{left - (kArrowGap + kArrowW) * s, arrowY, kArrowW * s, kArrowH * s};
+    if (L.target < most) L.right = panel::Box{left + row + kArrowGap * s, arrowY, kArrowW * s, kArrowH * s};
+    if (slots > kInSight) {  // 3.0.11-beta.189: the bar - the part in sight
+        L.bar = panel::Box{left, top + (kCardH + kBarGap) * s, row, kBarH * s};
+        const float tw = std::max(L.bar.w * float(kInSight) / float(slots), 24 * s);
+        L.thumb = panel::Box{left + (row - tw) * shown / float(std::max(1, most)), L.bar.y, tw, L.bar.h};
+    }
+    if (sc.search) {  // 3.0.11-beta.189: the search's field
+        L.search = panel::Box{0, 0, kSearchW * s, kTitleH * s};
+        L.searchClear = panel::Box{L.search.w - kClearW * s, 0, kClearW * s, kTitleH * s};
+    }
     const float by = top + (kCardH + kRowGap) * s;
     const float buttons = (kOtherW + kCreateW + kExitW + 2 * kButtonGap) * s;
     float bx = (w - buttons) / 2;
@@ -78,6 +99,38 @@ Layout layout(int targetW, int targetH, float scale, size_t cards, int first, bo
     return L;
 }
 
+int mostFirst(size_t cards, bool add) { return std::max(0, int(cards) + (add ? 1 : 0) - kInSight); }
+
+float glide(float pos, int first, float ms) {
+    if (pos < 0) return float(first);
+    const float d = float(first) - pos;
+    if (std::fabs(d) < 0.005f) return float(first);  // about a pixel
+    return pos + d * (1.0f - std::exp(-std::max(0.0f, ms) / kGlideMs));
+}
+
+int barFirst(const Layout& L, float x) {
+    if (L.bar.w <= 0 || L.most <= 0) return L.target;
+    const float share = std::clamp((x - L.bar.x - L.thumb.w / 2) / std::max(1.0f, L.bar.w - L.thumb.w), 0.0f, 1.0f);
+    return int(std::lround(share * float(L.most)));
+}
+
+bool matches(const std::string& search, const std::vector<std::string>& words) {
+    const std::string want = settings::foldCase(search);
+    std::vector<std::string> folded;
+    for (const std::string& w : words) folded.push_back(settings::foldCase(w));
+    size_t at = 0;
+    while (at < want.size()) {
+        const size_t space = want.find(' ', at);
+        const std::string part = want.substr(at, space == std::string::npos ? std::string::npos : space - at);
+        at = space == std::string::npos ? want.size() : space + 1;
+        if (part.empty()) continue;
+        if (std::none_of(folded.begin(), folded.end(),
+                         [&](const std::string& f) { return f.find(part) != std::string::npos; }))
+            return false;
+    }
+    return true;
+}
+
 panel::Box menuButton(const Layout& L, int visible) {
     if (visible < 0 || visible >= int(L.cards.size())) return {};
     const panel::Box& c = L.cards[size_t(visible)];
@@ -85,11 +138,17 @@ panel::Box menuButton(const Layout& L, int visible) {
 }
 
 Hit hitTest(const Layout& L, float x, float y) {
-    for (size_t i = 0; i < L.cards.size(); ++i) {
+    const bool inRow = L.row.w <= 0 || L.row.contains(x, y);  // 3.0.11-beta.189: a card half in sight - its half
+    for (size_t i = 0; i < L.cards.size() && inRow; ++i) {
         if (menuButton(L, int(i)).contains(x, y)) return Hit{Part::Menu, L.first + int(i)};
         if (L.cards[i].contains(x, y)) return Hit{Part::Card, L.first + int(i)};
     }
-    if (L.add.w > 0 && L.add.contains(x, y)) return Hit{Part::Add, -1};
+    if (inRow && L.add.w > 0 && L.add.contains(x, y)) return Hit{Part::Add, -1};
+    if (L.search.w > 0 && L.searchClear.contains(x, y)) return Hit{Part::SearchClear, -1};  // 3.0.11-beta.189
+    if (L.search.w > 0 && L.search.contains(x, y)) return Hit{Part::Search, -1};
+    if (L.bar.w > 0 && x >= L.bar.x && x < L.bar.x + L.bar.w && y >= L.bar.y - kBarReach * L.s &&
+        y < L.bar.y + L.bar.h + kBarReach * L.s)
+        return Hit{Part::Bar, -1};
     if (L.left.w > 0 && L.left.contains(x, y)) return Hit{Part::Left, -1};
     if (L.right.w > 0 && L.right.contains(x, y)) return Hit{Part::Right, -1};
     if (L.chars.w > 0 && L.chars.contains(x, y)) return Hit{Part::Chars, -1};  // 3.0.11-beta.181
@@ -118,6 +177,18 @@ void paint(panel::Picture& out, const Layout& L, const std::vector<Card>& cards,
     const float pw = tw + 36 * s;
     panel::roundRect(out, panel::Box{(float(L.w) - pw) / 2, L.title.y, pw, L.title.h}, L.title.h / 2, kPill, 0.72f,
                      kWhite, 0.10f, 1.0f * s);
+    if (L.search.w > 0) {  // 3.0.11-beta.189: the search's field, gold edged with words in it
+        const bool typed = !sh.search.empty(), hot = sh.hoverPart == Part::Search || sh.hoverPart == Part::SearchClear;
+        panel::roundRect(out, L.search, L.search.h / 2, kPill, 0.80f, typed ? kGold : kWhite,
+                         typed ? 0.75f : hot ? 0.30f : 0.14f, 1.0f * s);
+        const float icon = 15 * s;
+        uiicons::draw(out, uiicons::Icon::Search, L.search.x + 12 * s, L.search.y + (L.search.h - icon) / 2, icon,
+                      typed ? kGold2 : kMuted, 0.95f);
+    }
+    // 3.0.11-beta.189: the cards within the row alone - one half in sight while it glides
+    const int keepX0 = out.clipX0, keepX1 = out.clipX1;
+    out.clipX0 = std::max(keepX0, int(std::floor(L.row.x)));
+    out.clipX1 = std::min(keepX1, int(std::ceil(L.row.x + L.row.w)));
     for (size_t i = 0; i < L.cards.size(); ++i) {
         const int index = L.first + int(i);
         if (index >= int(cards.size())) break;
@@ -154,6 +225,13 @@ void paint(panel::Picture& out, const Layout& L, const std::vector<Card>& cards,
         const panel::Box plus{L.add.x + L.add.w / 2 - 28 * s, L.add.y + L.add.h / 2 - 62 * s, 56 * s, 56 * s};
         panel::roundRect(out, plus, 28 * s, kCard, 0.0f, kWhite, 0.35f, 1.5f * s);
     }
+    out.clipX0 = keepX0;
+    out.clipX1 = keepX1;
+    if (L.bar.w > 0) {  // 3.0.11-beta.189: the bar - the part of the row in sight
+        panel::roundRect(out, L.bar, L.bar.h / 2, kWhite, 0.10f);
+        panel::roundRect(out, L.thumb, L.thumb.h / 2, sh.hoverPart == Part::Bar ? kGold : kWhite,
+                         sh.hoverPart == Part::Bar ? 0.85f : 0.45f);
+    }
     const auto arrow = [&](const panel::Box& a, Part p) {
         if (a.w > 0) panel::roundRect(out, a, 10 * s, kPill, sh.hoverPart == p ? 0.9f : 0.72f, kWhite, 0.14f, 1.0f * s);
     };
@@ -187,6 +265,7 @@ std::vector<Words> words(const Layout& L, const std::vector<Card>& cards, const 
     out.push_back(Words{panel::Box{tx, L.title.y, tw + 2, L.title.h}, t.title, kText, 17 * s, true, Align::Left});
     out.push_back(Words{panel::Box{tx + tw + 8 * s, L.title.y, hw + 2, L.title.h}, t.titleHint, kMuted, 14 * s, false,
                         Align::Left});
+    const size_t rowFrom = out.size();  // 3.0.11-beta.189: the cards' words from here - drawn within the row
     for (size_t i = 0; i < L.cards.size(); ++i) {
         const int index = L.first + int(i);
         if (index >= int(cards.size())) break;
@@ -237,6 +316,20 @@ std::vector<Words> words(const Layout& L, const std::vector<Card>& cards, const 
                             Align::Center});
         out.push_back(Words{panel::Box{a.x + 16 * s, a.y + a.h / 2 + 30 * s, a.w - 32 * s, 40 * s}, t.addHint, kMuted,
                             13 * s, false, Align::Center});
+    }
+    for (size_t i = rowFrom; i < out.size(); ++i) out[i].row = true;
+    if (L.search.w > 0) {  // 3.0.11-beta.189: the search's words or its hint, its ×; nothing found - a line in the row
+        const panel::Box field{L.search.x + 34 * s, L.search.y, L.search.w - 34 * s - L.searchClear.w, L.search.h};
+        if (sh.search.empty())
+            out.push_back(Words{field, t.searchHint, kMuted, 13.5f * s, false, Align::Left});
+        else
+            out.push_back(Words{field, sh.search + (sh.caret && sh.editing < 0 ? "|" : ""), kText, 13.5f * s, true,
+                                Align::Left});
+        if (!sh.search.empty())
+            out.push_back(Words{L.searchClear, "×", sh.hoverPart == Part::SearchClear ? kGold2 : kMuted, 16 * s,
+                                false, Align::Center});
+        if (cards.empty() && !sh.search.empty())
+            out.push_back(Words{L.row, t.noMatch, kMuted, 16 * s, false, Align::Center});
     }
     if (L.left.w > 0) out.push_back(Words{L.left, "‹", kText, 28 * s, false, Align::Center});
     if (L.right.w > 0) out.push_back(Words{L.right, "›", kText, 28 * s, false, Align::Center});

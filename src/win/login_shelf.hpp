@@ -17,6 +17,10 @@ namespace uagfx::win::loginshelfwin {
 // the arrows, the keys (← → Enter; Esc closes the menu or the label). 3.0.11-beta.181: signed in to the site - its
 // other logins on the shelf too (their passwords asked once), «Персонажі» (a row a login, a click enters with that
 // character), a new game login, an existing one linked, a game password changed. On the game's thread.
+// 3.0.11-beta.189 (the owner: «стрелочки, скрол чтобы мотать было интереснее ... поиск», «чтобы мышкой скролить»):
+// the row glides; the wheel, the arrows and the bar move it (the focus stays in sight), the keys and the pad move the
+// focus (the row follows; Home, End, Page Up and Down too); with more accounts than in sight the keys typed go into
+// the search on the title row (the login, the label, the characters' names; Esc empties it).
 enum class Act : uint8_t {
     None, Login, Add, Other, Edit, Create, Exit,
     NewLogin, LinkLogin, GamePassword, CharLogin, CharNew  // 3.0.11-beta.181: the site account's
@@ -33,7 +37,8 @@ void classic(bool on);  // the card for one login (on), the shelf again (off)
 bool classicChosen();
 void frame(double k, int targetWidth, int targetHeight, unsigned codePage);
 void draw(FrameRecord& record, gpu::Renderer& renderer);
-Asked mouse(UINT m, float tx, float ty, bool& took);  // a press at the target's (tx, ty); took: it was over the shelf
+// a press or the wheel (its wp) at the target's (tx, ty); took: it was over the shelf
+Asked mouse(UINT m, WPARAM wp, float tx, float ty, bool& took);
 Asked key(UINT m, WPARAM wp, bool& took);
 bool box(int& x, int& y, int& w, int& h);  // the shelf's picture in the target's pixels
 // 3.0.11-beta.179: the pad - ◀ ▶ the card, A plays it (a menu open: its row), X another account, Y the card's menu

@@ -1023,7 +1023,6 @@ void draw(FrameRecord& record, gpu::Renderer& renderer) {
 
 bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     State& s = state();
-    (void)wp;
     if (!s.shown) return false;
     const bool button = m == WM_LBUTTONDOWN || m == WM_LBUTTONUP || m == WM_LBUTTONDBLCLK || m == WM_RBUTTONDOWN ||
                         m == WM_RBUTTONUP || m == WM_RBUTTONDBLCLK || m == WM_MBUTTONDOWN || m == WM_MBUTTONUP;
@@ -1046,7 +1045,7 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     }
     if (s.mode == State::Mode::Shelf) {  // 3.0.11-beta.176
         bool took = false;
-        const loginshelfwin::Asked a = loginshelfwin::mouse(m, tx, ty, took);
+        const loginshelfwin::Asked a = loginshelfwin::mouse(m, wp, tx, ty, took);
         if (!took) return false;
         result = 0;
         act(s, a);

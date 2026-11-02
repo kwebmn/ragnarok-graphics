@@ -178,6 +178,90 @@ TEST(login_shelf_buttons_on_plates) {
     CHECK(alpha(L.newLogin.x + 2, L.newLogin.y + L.newLogin.h / 2) == 0);  // not the whole box: just round the words
 }
 
+// 3.0.11-beta.189 (the owner: «если там много аккаунтов, сделай какието стрелочки, скрол чтобы мотать было
+// интереснее. возможно еще и поиск», «чтобы мышкой скролить можно было»): the row glides to its place, the cards half
+// in sight clipped to the row; a bar under it with the part in sight, a click there goes there; the arrows by the
+// place it goes to
+TEST(login_shelf_glides_with_a_bar) {
+    using P = loginshelf::Part;
+    loginshelf::Scroll sc;
+    const loginshelf::Layout still = loginshelf::layout(1920, 1080, 1.0f, 10, 2, false, sc);
+    CHECK(still.target == 2 && still.first == 2 && still.cards.size() == 4 && still.add.w == 0);
+    CHECK(still.row.w > 0 && std::fabs(still.cards[0].x - still.row.x) < 0.5f);
+    CHECK(still.bar.w > 0 && still.thumb.w > 0 && still.thumb.w < still.bar.w);
+    CHECK(still.left.w > 0 && still.right.w > 0);
+    sc.pos = 1.5f;  // half way from the second to the third
+    const loginshelf::Layout mid = loginshelf::layout(1920, 1080, 1.0f, 10, 2, false, sc);
+    CHECK(mid.target == 2 && mid.first == 1 && mid.cards.size() == 5);
+    CHECK(mid.cards[0].x < mid.row.x && mid.cards[0].x + mid.cards[0].w > mid.row.x);  // half in sight at the left
+    CHECK(mid.cards[4].x < mid.row.x + mid.row.w && mid.cards[4].x + mid.cards[4].w > mid.row.x + mid.row.w);
+    CHECK(loginshelf::hitTest(mid, mid.row.x - 5, mid.cards[0].y + 50).part != P::Card);  // its hidden half: no card
+    CHECK(mid.thumb.x > still.bar.x && mid.thumb.x < still.thumb.x);
+    // the bar: a click at its end shows the last four
+    const float barY = still.bar.y + still.bar.h / 2;
+    CHECK(loginshelf::hitTest(still, still.bar.x + still.bar.w - 2, barY).part == P::Bar);
+    CHECK(loginshelf::barFirst(still, still.bar.x + still.bar.w - 2) == loginshelf::mostFirst(10, true));
+    CHECK(loginshelf::barFirst(still, still.bar.x + 1) == 0);
+    CHECK(loginshelf::mostFirst(10, true) == 7 && loginshelf::mostFirst(10, false) == 6 &&
+          loginshelf::mostFirst(2, true) == 0);
+    // three accounts and «Додати акаунт»: all in sight, no bar, no arrows
+    const loginshelf::Layout few = loginshelf::layout(1920, 1080, 1.0f, 3, 0);
+    CHECK(few.bar.w == 0 && few.left.w == 0 && few.right.w == 0 && few.add.w > 0);
+}
+
+// The glide: most of the way in a few frames, there in a quarter of a second, none at once
+TEST(login_shelf_glide_eases) {
+    CHECK(loginshelf::glide(-1, 3, 16) == 3.0f);  // not shown yet: there
+    const float a = loginshelf::glide(0, 1, 16);
+    CHECK(a > 0.1f && a < 0.5f);
+    float p = 0;
+    for (int i = 0; i < 18; ++i) p = loginshelf::glide(p, 1, 16);  // about 0.29 s at 60 frames
+    CHECK(p == 1.0f);
+    CHECK(loginshelf::glide(5, 2, 16) < 5 && loginshelf::glide(5, 2, 16) > 2);
+}
+
+// The search: its field on the title row's left, its × with words in it; the cards it leaves (any case, any order of
+// the words, the login, the label, the characters' names); none - its line in the row
+TEST(login_shelf_search) {
+    using P = loginshelf::Part;
+    CHECK(loginshelf::matches("", {"kweb_main"}));
+    CHECK(loginshelf::matches("KWEB", {"kweb_main", "Основний"}));
+    CHECK(loginshelf::matches("осн", {"kweb_main", "Основний"}));
+    CHECK(loginshelf::matches("lord kweb", {"kweb_main", "-Chaos-", "Lord Knight"}));
+    CHECK(!loginshelf::matches("lord twink", {"kweb_main", "-Chaos-", "Lord Knight"}));
+    loginshelf::Scroll sc;
+    sc.search = true;
+    sc.add = false;
+    const loginshelf::Layout L = loginshelf::layout(1920, 1080, 1.0f, 0, 0, false, sc);
+    CHECK(L.search.w > 0 && L.search.x < L.title.x + L.title.w / 4 && L.add.w == 0 && L.cards.empty());
+    CHECK(loginshelf::hitTest(L, L.search.x + 30, L.search.y + L.search.h / 2).part == P::Search);
+    CHECK(loginshelf::hitTest(L, L.searchClear.x + L.searchClear.w / 2, L.searchClear.y + 5).part == P::SearchClear);
+    loginshelf::Texts t;
+    t.searchHint = "Пошук…";
+    t.noMatch = "Нічого не знайдено";
+    loginshelf::Show sh;
+    const auto has = [](const std::vector<loginshelf::Words>& w, const std::string& text) {
+        return std::any_of(w.begin(), w.end(), [&](const loginshelf::Words& x) { return x.text == text; });
+    };
+    CHECK(has(loginshelf::words(L, {}, sh, t), "Пошук…"));
+    CHECK(!has(loginshelf::words(L, {}, sh, t), "Нічого не знайдено"));  // nothing typed: no line
+    sh.search = "zz";
+    CHECK(has(loginshelf::words(L, {}, sh, t), "zz") && has(loginshelf::words(L, {}, sh, t), "Нічого не знайдено"));
+    const loginshelf::Layout plain = loginshelf::layout(1920, 1080, 1.0f, 3, 0);
+    CHECK(plain.search.w == 0);
+    // a card's words are the row's (clipped to it), the buttons' not
+    std::vector<loginshelf::Card> cards(1);
+    cards[0].login = "kweb_main";
+    const loginshelf::Layout one = loginshelf::layout(1920, 1080, 1.0f, 1, 0);
+    loginshelf::Texts t2;
+    t2.other = "Інший акаунт";
+    const auto w = loginshelf::words(one, cards, loginshelf::Show{}, t2);
+    for (const loginshelf::Words& x : w) {
+        if (x.text == "kweb_main") CHECK(x.row);
+        if (x.text == "Інший акаунт") CHECK(!x.row);
+    }
+}
+
 // 3.0.11-beta.181: «Персонажі»'s words - each row's login, each card's name, job and level, map; «+ Новий персонаж»;
 // a login with no password here says so on its row
 TEST(login_shelf_character_words) {

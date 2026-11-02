@@ -1,12 +1,14 @@
 #include "win/login_shelf.hpp"
 
 #include <algorithm>
+#include <cmath>
 #include <string>
 #include <vector>
 
 #include "core/accounts.hpp"
 #include "core/login_shelf.hpp"
 #include "core/settings/strings.hpp"
+#include "core/ui_motion.hpp"
 #include "core/ui_style.hpp"
 #include "win/accounts_store.hpp"
 #include "win/class_pictures.hpp"
@@ -23,7 +25,7 @@ namespace uagfx::win::loginshelfwin {
 namespace {
 
 namespace ls = loginshelf;
-constexpr size_t kLabelMost = 24;  // a label's letters at most
+constexpr size_t kLabelMost = 24;  // a label's letters at most (the search's too)
 
 struct State {
     bool classic = false;
@@ -32,7 +34,16 @@ struct State {
     unsigned codePage = 0;
     int first = 0;
     std::vector<shelfmerge::Row> rows;  // 3.0.11-beta.181: this computer's and the site's
-    std::vector<ls::Card> cards;        // a card a row
+    std::vector<ls::Card> cards;        // a card a row (3.0.11-beta.189: a row the search leaves)
+    // 3.0.11-beta.189 (the owner: «стрелочки, скрол чтобы мотать было интереснее ... поиск», «чтобы мышкой скролить»):
+    // a card's row; the search typed; the row's shown place gliding to first, when it last moved; the view to follow
+    // the focus (keys, the pad) or the focus to stay in the view (the wheel, the arrows, the bar)
+    std::vector<int> cardRow;
+    std::string search;
+    bool searchShown = false;
+    float pos = -1;
+    ULONGLONG glidedAt = 0;
+    bool followFocus = true;
     ls::Layout layout;
     ls::Show show;
     int menuFor = -1;  // the row whose menu is open
@@ -80,6 +91,8 @@ ls::Texts texts() {
     t.chars = say(settings::Text::ShelfChars);
     t.newLogin = say(settings::Text::ShelfNewLogin);
     t.linkLogin = say(settings::Text::ShelfLinkLogin);
+    t.searchHint = say(settings::Text::ShelfSearch);  // 3.0.11-beta.189
+    t.noMatch = say(settings::Text::ShelfNoMatch);
     return t;
 }
 
@@ -106,12 +119,24 @@ std::vector<Words> gdi(const std::vector<W>& in) {
     return out;
 }
 
+// The view to the focus (it moved by the keys or the pad)
 void keepInSight(State& s) {
-    const int slots = int(s.cards.size()) + 1;
     if (s.show.focus < s.first) s.first = s.show.focus;
     if (s.show.focus >= s.first + ls::kInSight) s.first = s.show.focus - ls::kInSight + 1;
-    s.first = std::clamp(s.first, 0, std::max(0, slots - ls::kInSight));
+    s.first = std::clamp(s.first, 0, ls::mostFirst(s.cards.size(), s.search.empty()));
+    s.followFocus = true;
 }
+
+// 3.0.11-beta.189: the view moved by the wheel, the arrows or the bar - the focus stays in it (it pulled the view back
+// to itself before: the arrows did nothing with the first card focused)
+void moveView(State& s, int first) {
+    s.first = std::clamp(first, 0, ls::mostFirst(s.cards.size(), s.search.empty()));
+    s.followFocus = false;
+    s.key.clear();
+}
+
+// A card's row (the search leaves some), -1 none
+int rowOf(const State& s, int card) { return card >= 0 && card < int(s.cardRow.size()) ? s.cardRow[size_t(card)] : -1; }
 
 void closeMenu(State& s) {
     s.menuFor = -1;
@@ -129,7 +154,7 @@ accounts::Account* localOf(State& s, int row) {  // the row's account on this co
 void commitLabel(State& s, bool keep) {
     const int i = s.show.editing;
     s.show.editing = -1;
-    accounts::Account* a = localOf(s, i);
+    accounts::Account* a = localOf(s, rowOf(s, i));
     if (!keep || !a) return;
     a->label = s.show.editText;
     accountsstore::save();
@@ -148,12 +173,12 @@ Asked pick(State& s, int menuRow) {
     const ls::MenuItem item = items[size_t(menuRow)];
     if (item == ls::MenuItem::Edit || item == ls::MenuItem::GamePassword) {
         closeMenu(s);
-        return Asked{item == ls::MenuItem::Edit ? Act::Edit : Act::GamePassword, i, {}};
+        return Asked{item == ls::MenuItem::Edit ? Act::Edit : Act::GamePassword, rowOf(s, i), {}};
     }
     accounts::Shelf& shelf = accountsstore::shelf();
-    accounts::Account* a = localOf(s, i);
+    accounts::Account* a = localOf(s, rowOf(s, i));
     if (!a) return {};
-    const int local = s.rows[size_t(i)].local;
+    const int local = s.rows[size_t(rowOf(s, i))].local;
     const unsigned long long hash = accounts::loginHash(a->login);
     switch (item) {
         case ls::MenuItem::AutoEnter:
@@ -249,7 +274,12 @@ void render(State& s) {
     if (!panel::blank(s.picture, L.w, L.h)) return;
     const ls::Texts t = texts();
     ls::paint(s.picture, L, s.cards, s.show, t);
-    drawWords(s.picture, gdi(ls::words(L, s.cards, s.show, t)));
+    // 3.0.11-beta.189: the cards' words within the row alone (one half in sight while it glides), the rest over all
+    std::vector<ls::Words> rowWords, others;
+    for (ls::Words& w : ls::words(L, s.cards, s.show, t)) (w.row ? rowWords : others).push_back(std::move(w));
+    const Rect row{int(std::floor(L.row.x)), 0, int(std::ceil(L.row.x + L.row.w)), L.h};
+    if (!rowWords.empty()) drawWords(s.picture, gdi(rowWords), row);
+    drawWords(s.picture, gdi(others));
     if (s.menuFor >= 0 && s.menuFor < int(s.cards.size())) {
         const std::vector<ls::MenuItem> items = ls::menu(s.cards[size_t(s.menuFor)]);
         ls::paintMenu(s.picture, L, s.menuLayout, s.menuShow);
@@ -338,24 +368,50 @@ void frame(double k, int targetWidth, int targetHeight, unsigned codePage) {
     if (!site) s.charsView = false;
     if (s.charsView) return charsFrame(s, targetWidth, targetHeight);
     const std::vector<uagfx::gamelogins::Busy> busy = gamelogins::others();  // 3.0.11-beta.178
+    // 3.0.11-beta.189: the search's field with more accounts than in sight (or words typed); the cards it leaves
+    s.searchShown = int(s.rows.size()) >= ls::kInSight || !s.search.empty();
+    if (!s.searchShown) s.search.clear();
     s.cards.clear();
-    for (const shelfmerge::Row& r : s.rows) {
+    s.cardRow.clear();
+    for (size_t i = 0; i < s.rows.size(); ++i) {
+        const shelfmerge::Row& r = s.rows[i];
         ls::Card c = cardOf(s, r, shelf);
+        if (!s.search.empty()) {
+            std::vector<std::string> words{c.login, c.label, c.name, c.job};
+            for (const siteapi::SiteChar& ch : r.chars) words.push_back(ch.name);
+            if (!ls::matches(s.search, words)) continue;
+        }
         for (const auto& b : busy)
             if (b.login == accounts::loginHash(r.login)) {
                 c.busy = true;
                 c.busyWindow = b.window;
             }
         s.cards.push_back(c);
+        s.cardRow.push_back(int(i));
     }
     if (s.menuFor >= int(s.cards.size())) closeMenu(s);
     if (s.show.editing >= int(s.cards.size())) s.show.editing = -1;
     s.show.focus = std::clamp(s.show.focus, 0, std::max(0, int(s.cards.size()) - 1));
-    keepInSight(s);
-    s.layout = ls::layout(targetWidth, targetHeight, s.scale, s.cards.size(), s.first, site);
-    s.first = s.layout.first;
+    if (s.followFocus) {
+        keepInSight(s);
+    } else {  // the view moved by the wheel, the arrows or the bar: the focus into it
+        s.first = std::clamp(s.first, 0, ls::mostFirst(s.cards.size(), s.search.empty()));
+        if (!s.cards.empty())
+            s.show.focus = std::clamp(s.show.focus, s.first, std::min(int(s.cards.size()), s.first + ls::kInSight) - 1);
+    }
+    const ULONGLONG now = GetTickCount64();  // 3.0.11-beta.189: the row glides to its place
+    const float ms = s.glidedAt ? float(std::min<ULONGLONG>(100, now - s.glidedAt)) : 0.0f;
+    s.glidedAt = now;
+    s.pos = motion::on() ? ls::glide(s.pos, s.first, ms) : float(s.first);
+    ls::Scroll sc;
+    sc.pos = s.pos;
+    sc.search = s.searchShown;
+    sc.add = s.search.empty();
+    s.layout = ls::layout(targetWidth, targetHeight, s.scale, s.cards.size(), s.first, site, sc);
+    s.first = s.layout.target;
     s.menuLayout = s.menuFor >= 0
-                       ? ls::menuLayout(s.layout, s.menuFor - s.first, ls::menu(s.cards[size_t(s.menuFor)]).size())
+                       ? ls::menuLayout(s.layout, s.menuFor - s.layout.first,
+                                        ls::menu(s.cards[size_t(s.menuFor)]).size())
                        : ls::MenuLayout{};
     if (s.menuFor >= 0 && s.menuLayout.rows.empty()) closeMenu(s);  // scrolled out of sight
     s.show.hover = -1;
@@ -372,11 +428,12 @@ void frame(double k, int targetWidth, int targetHeight, unsigned codePage) {
         }
     }
     if (s.menuFor >= 0 && s.menuShow.hover < 0) s.menuShow.hover = s.padRow;  // 3.0.11-beta.179: the pad's row
-    if (const accounts::Account* a = s.menuFor >= 0 ? localOf(s, s.menuFor) : nullptr) {
+    if (const accounts::Account* a = s.menuFor >= 0 ? localOf(s, rowOf(s, s.menuFor)) : nullptr) {
         s.menuShow.autoEnter = a->autoEnter;
         s.menuShow.keepPassword = a->keepPassword;
     }
-    s.show.caret = s.show.editing >= 0 && (GetTickCount64() / 500) % 2 == 0;
+    s.show.caret = (s.show.editing >= 0 || !s.search.empty()) && (GetTickCount64() / 500) % 2 == 0;
+    s.show.search = s.search;  // 3.0.11-beta.189
     s.picX = s.layout.x;
     s.picY = s.layout.y;
     s.picW = s.layout.w;
@@ -387,7 +444,8 @@ void frame(double k, int targetWidth, int targetHeight, unsigned codePage) {
                       std::to_string(s.menuFor) + ',' + std::to_string(s.menuShow.hover) +
                       (s.menuShow.removeSure ? "!" : "") + (s.menuShow.autoEnter ? "a" : "") +
                       (s.menuShow.keepPassword ? "k" : "") + ';' + std::to_string(s.show.editing) + s.show.editText +
-                      (s.show.caret ? "|" : "") + (site ? "S" : "") + '#' + std::to_string(uistyle::generation());
+                      (s.show.caret ? "|" : "") + (site ? "S" : "") + '#' + std::to_string(uistyle::generation()) +
+                      '@' + std::to_string(int(std::lround(s.pos * 1000))) + '?' + s.search;  // 3.0.11-beta.189
     for (const ls::Card& c : s.cards)
         key += ';' + c.label + ',' + c.name + ',' + c.login + ',' + std::to_string(c.level) + c.map +
                (c.refused ? "r" : "") + (c.art ? "a" : c.head ? "h" : "") + std::to_string(c.busyWindow) +
@@ -404,14 +462,20 @@ void draw(FrameRecord& record, gpu::Renderer& renderer) {
     drawPart(record, renderer, s.picture, s.texture, s.texW, s.texH, s.upload, s.picX, s.picY, s.k);
 }
 
-Asked mouse(UINT m, float tx, float ty, bool& took) {
+Asked mouse(UINT m, WPARAM wp, float tx, float ty, bool& took) {
     State& s = state();
     took = false;
     const bool left = m == WM_LBUTTONDOWN || m == WM_LBUTTONDBLCLK, right = m == WM_RBUTTONDOWN;
+    const int wheel = m == WM_MOUSEWHEEL ? (GET_WHEEL_DELTA_WPARAM(wp) > 0 ? -1 : 1) : 0;  // 3.0.11-beta.189: up - back
     if (s.charsView) {  // 3.0.11-beta.181: «Персонажі»
         const float x = tx - float(s.charLayout.x), y = ty - float(s.charLayout.y);
         if (x < 0 || y < 0 || x >= float(s.charLayout.w) || y >= float(s.charLayout.h)) return {};
         took = true;
+        if (wheel) {  // 3.0.11-beta.189: a row a notch
+            s.charFirst = std::max(0, s.charFirst + wheel);
+            s.key.clear();
+            return {};
+        }
         if (!left) return {};
         s.key.clear();
         const ls::CharHit h = ls::characterHit(s.charLayout, x, y);
@@ -438,6 +502,10 @@ Asked mouse(UINT m, float tx, float ty, bool& took) {
     if (s.show.editing >= 0 && (left || right)) commitLabel(s, true);
     if (!inside) return {};
     took = true;
+    if (wheel && s.menuFor < 0) {  // 3.0.11-beta.189: a card a notch, the row gliding
+        moveView(s, s.first + wheel);
+        return {};
+    }
     if (!left && !right) return {};
     const ls::Hit h = ls::hitTest(s.layout, x, y);
     s.key.clear();
@@ -448,7 +516,8 @@ Asked mouse(UINT m, float tx, float ty, bool& took) {
                 s.menuFor = h.index;
                 return {};
             }
-            return Asked{Act::Login, h.index, {}};
+            s.search.clear();  // 3.0.11-beta.189: after the game the whole shelf again
+            return Asked{Act::Login, rowOf(s, h.index), {}};
         case ls::Part::Menu:
             s.show.focus = h.index;
             s.menuFor = s.menuFor == h.index ? -1 : h.index;
@@ -457,8 +526,11 @@ Asked mouse(UINT m, float tx, float ty, bool& took) {
         case ls::Part::Other: return left ? Asked{Act::Other, -1, {}} : Asked{};
         case ls::Part::Create: return left ? Asked{Act::Create, -1, {}} : Asked{};
         case ls::Part::Exit: return left ? Asked{Act::Exit, -1, {}} : Asked{};
-        case ls::Part::Left: s.first = std::max(0, s.first - 1); return {};
-        case ls::Part::Right: ++s.first; return {};
+        case ls::Part::Left: moveView(s, s.first - 1); return {};  // 3.0.11-beta.189: the focus no longer pulls it back
+        case ls::Part::Right: moveView(s, s.first + 1); return {};
+        case ls::Part::Bar: moveView(s, ls::barFirst(s.layout, x)); return {};  // 3.0.11-beta.189
+        case ls::Part::SearchClear: s.search.clear(); return {};
+        case ls::Part::Search: return {};
         case ls::Part::Chars:  // 3.0.11-beta.181
             if (left) s.charsView = true;
             return {};
@@ -505,10 +577,16 @@ Asked key(UINT m, WPARAM wp, bool& took) {
         return {};
     }
     const bool down = m == WM_KEYDOWN;
-    if (wp == VK_LEFT || wp == VK_RIGHT) {
+    if (wp == VK_LEFT || wp == VK_RIGHT || wp == VK_HOME || wp == VK_END || wp == VK_PRIOR || wp == VK_NEXT) {
         took = m == WM_KEYDOWN || m == WM_KEYUP;
-        if (down && !s.cards.empty()) {
-            s.show.focus = std::clamp(s.show.focus + (wp == VK_LEFT ? -1 : 1), 0, int(s.cards.size()) - 1);
+        if (down && !s.cards.empty()) {  // 3.0.11-beta.189: Home, End, Page Up and Down too
+            const int last = int(s.cards.size()) - 1;
+            const int to = wp == VK_HOME    ? 0
+                           : wp == VK_END   ? last
+                           : wp == VK_PRIOR ? s.show.focus - ls::kInSight
+                           : wp == VK_NEXT  ? s.show.focus + ls::kInSight
+                                            : s.show.focus + (wp == VK_LEFT ? -1 : 1);
+            s.show.focus = std::clamp(to, 0, last);
             keepInSight(s);
             s.key.clear();
         }
@@ -516,8 +594,43 @@ Asked key(UINT m, WPARAM wp, bool& took) {
     }
     if (wp == VK_RETURN || (m == WM_CHAR && wp == '\r')) {  // Enter plays the focused card (the game's own not)
         took = m == WM_KEYDOWN || m == WM_KEYUP || m == WM_CHAR;
-        if (down && s.show.focus >= 0 && s.show.focus < int(s.cards.size()))
-            return Asked{Act::Login, s.show.focus, {}};
+        if (down && s.show.focus >= 0 && s.show.focus < int(s.cards.size())) {
+            const int row = rowOf(s, s.show.focus);
+            s.search.clear();  // 3.0.11-beta.189: after the game the whole shelf again
+            return Asked{Act::Login, row, {}};
+        }
+        return {};
+    }
+    if (s.searchShown && s.menuFor < 0) {  // 3.0.11-beta.189: the keys typed go into the search
+        if (down && wp == VK_ESCAPE && !s.search.empty()) {
+            took = true;
+            s.search.clear();
+            s.key.clear();
+            return {};
+        }
+        if (wp == VK_BACK) {
+            took = m == WM_KEYDOWN || m == WM_KEYUP || m == WM_CHAR;
+            if (down) {
+                while (!s.search.empty() && (uint8_t(s.search.back()) & 0xC0) == 0x80) s.search.pop_back();
+                if (!s.search.empty()) s.search.pop_back();
+                s.show.focus = 0;
+                s.first = 0;
+                s.key.clear();
+            }
+            return {};
+        }
+        if (m == WM_CHAR && wp >= 0x20 && wp != 0x7F && wp != '\b') {
+            took = true;
+            size_t letters = 0;
+            for (const char c : s.search) letters += (uint8_t(c) & 0xC0) != 0x80;
+            if (letters < kLabelMost && !(wp == ' ' && s.search.empty()))
+                s.search += utf8Of(std::wstring(1, wchar_t(wp)));
+            s.show.focus = 0;  // the first card it leaves
+            s.first = 0;
+            s.followFocus = true;
+            s.key.clear();
+            return {};
+        }
         return {};
     }
     if (m == WM_CHAR && wp > 0x20 && wp != 0x7F && s.menuFor < 0)  // a login typed: the card for it
@@ -551,7 +664,7 @@ Asked pad(Pad p, bool& took) {
             s.show.focus = ls::padMove(s.show.focus, cards, p == Pad::Left ? -1 : 1);
             keepInSight(s);
             return {};
-        case Pad::Select: return cards > 0 ? Asked{Act::Login, s.show.focus, {}} : Asked{Act::Add, -1, {}};
+        case Pad::Select: return cards > 0 ? Asked{Act::Login, rowOf(s, s.show.focus), {}} : Asked{Act::Add, -1, {}};
         case Pad::Other: return Asked{Act::Other, -1, {}};
         case Pad::Menu:
             if (cards > 0) {

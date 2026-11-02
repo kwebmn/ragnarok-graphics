@@ -33,6 +33,7 @@ struct Texts {
     std::string refused, busy, noChar;  // «Пароль не підходить», «Вже в грі», «Ще не грали»
     std::string noPassword;             // 3.0.11-beta.181: «Пароль — ввести один раз»
     std::string chars, newLogin, linkLogin;  // «Персонажі ›», «+ Новий ігровий логін», «Прив'язати наявний»
+    std::string searchHint, noMatch;         // 3.0.11-beta.189: «Пошук…», «Нічого не знайдено»
 };
 struct Layout {
     float s = 1;
@@ -44,10 +45,31 @@ struct Layout {
     panel::Box other, create, exit;
     panel::Box chars, newLogin, linkLogin;  // 3.0.11-beta.181: signed in to the site (0 wide: not)
     int first = 0;
+    // 3.0.11-beta.189: the place the row goes to (first is the card half in sight at its left while it glides); the
+    // row (the cards clipped to it); the bar under it and its thumb (0 wide: all in sight); the search's field, its ×
+    int target = 0, most = 0;  // most: the place with the row's end in sight
+    panel::Box row, bar, thumb, search, searchClear;
 };
 constexpr int kInSight = 4;
-Layout layout(int targetW, int targetH, float scale, size_t cards, int first, bool site = false);
-enum class Part : uint8_t { None, Card, Menu, Add, Other, Create, Exit, Left, Right, Chars, NewLogin, LinkLogin };
+// 3.0.11-beta.189 (the owner: «если там много аккаунтов, сделай какието стрелочки, скрол чтобы мотать было интереснее.
+// возможно еще и поиск», «чтобы мышкой скролить можно было»): the row's shown place gliding to `first` (glide), the
+// search's field on the title row's left (more accounts than in sight), «Додати акаунт» left out while it searches
+struct Scroll {
+    float pos = -1;  // -1: at first
+    bool search = false;
+    bool add = true;
+};
+Layout layout(int targetW, int targetH, float scale, size_t cards, int first, bool site = false,
+              const Scroll& sc = Scroll{});
+int mostFirst(size_t cards, bool add);         // the row's end in sight
+float glide(float pos, int first, float ms);  // the row's shown place `ms` later (-1: not shown yet - there)
+int barFirst(const Layout& L, float x);        // a press on the bar at x: the place to go to
+// All the search's words (any case) in one of `words` or another; an empty search: all
+bool matches(const std::string& search, const std::vector<std::string>& words);
+enum class Part : uint8_t {
+    None, Card, Menu, Add, Other, Create, Exit, Left, Right, Chars, NewLogin, LinkLogin,
+    Search, SearchClear, Bar  // 3.0.11-beta.189
+};
 struct Hit {
     Part part = Part::None;
     int index = -1;  // Card, Menu: the account's
@@ -65,6 +87,7 @@ struct Show {
     int editing = -1;       // the account whose label is typed (its words in editText, a caret)
     std::string editText;
     bool caret = false;
+    std::string search;  // 3.0.11-beta.189: typed into the search (the caret's blink: caret, editing -1)
 };
 void paint(panel::Picture& out, const Layout& L, const std::vector<Card>& cards, const Show& sh, const Texts& t);
 enum class Align : uint8_t { Left, Right, Center };
@@ -75,6 +98,7 @@ struct Words {
     float px = 13;
     bool bold = false;
     Align align = Align::Left;
+    bool row = false;  // 3.0.11-beta.189: a card's - drawn within the row alone (a card half in sight)
 };
 std::vector<Words> words(const Layout& L, const std::vector<Card>& cards, const Show& sh, const Texts& t);
 

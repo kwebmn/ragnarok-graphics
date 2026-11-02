@@ -6906,6 +6906,9 @@ constexpr Entry kTexts[] = {
      "стрілка.",
      "Светлый веер вокруг стрелки: то, что видит камера. Куда смотрит персонаж, показывает стрелка. Выключено: только "
      "стрелка."},
+    // 3.0.11-beta.189 (the owner: «возможно еще и поиск»): the shelf's search
+    {Text::ShelfSearch, "Search…", "Пошук…", "Поиск…"},
+    {Text::ShelfNoMatch, "Nothing found", "Нічого не знайдено", "Ничего не найдено"},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 
