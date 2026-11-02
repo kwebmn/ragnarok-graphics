@@ -603,11 +603,11 @@ void Context::drawSparkles() {
     orbHeads.clear();
 }
 
-void Context::markGameWindows() {
+void Context::markGameWindows(size_t facesBefore) {
     Guard guard;
-    if (gameWindowsAt_ != SIZE_MAX && gameWindowsGen_ == record.generation()) return;  // the first place a frame
-    gameWindowsAt_ = record.commands().size();
-    gameWindowsGen_ = record.generation();
+    if (gameWindowsMarked_) return;  // the first time a frame
+    gameWindowsMarked_ = true;
+    gameWindowsFaces_ = facesBefore;
 }
 
 void Context::endScene() {
@@ -621,13 +621,16 @@ void Context::endScene() {
         // 3.0.11-beta.109 (the concept «Концепция окон и инвентаря», question 5 «да»): the game's own windows (the ones
         // the driver does not draw anew - the arrows' list, the storage, the trade, its options) and its cursor out of
         // the frame while the driver's interface is drawn, back after the driver's windows: over them
+        // 3.0.11-beta.185: from its interface's draw past the faces it filed before its windows - the world and the
+        // names over the heads, the chat's balloons stay under the driver's windows
         std::vector<Command> game;
-        if (gameWindowsGen_ == record.generation() && gameWindowsAt_ < record.commands().size())
-            game = record.takeTail(gameWindowsAt_);
+        if (gameWindowsMarked_ && gameWindowsFaces_ != SIZE_MAX)
+            game = record.takeTail(record.interfaceDraw(gameWindowsFaces_));
         if (!game.empty() && !gameWindowsTold_) {
             gameWindowsTold_ = true;
-            LOG_INFO("windows: the game's own windows and its cursor (%zu draws) over the driver's interface",
-                     game.size());
+            LOG_INFO("windows: the game's own windows and its cursor (%zu draws) over the driver's interface; the "
+                     "world and the %zu faces filed before them (the names, the balloons) under it",
+                     game.size(), gameWindowsFaces_);
         }
         worlddim::draw(record);                 // 3.0.11-beta.49: the world dimmed under the windows (where it ends)
         lowhpedge::draw(record, *renderer);     // 3.0.11-beta.50: the low HP edge, there too
@@ -656,7 +659,7 @@ void Context::endScene() {
         hudedit::draw(record, *renderer);       // 3.0.11-beta.75: the parts' frames while they are placed
         record.takeWork();  // the driver's own draws are not the game's
     }
-    gameWindowsAt_ = SIZE_MAX;  // 3.0.11-beta.109: the next frame's own place
+    gameWindowsMarked_ = false;  // 3.0.11-beta.109: the next frame's own
     flush();
 }
 

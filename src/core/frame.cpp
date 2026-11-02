@@ -106,6 +106,12 @@ size_t FrameRecord::firstInterface() const {
     return commands_.size();
 }
 
+size_t FrameRecord::interfaceDraw(size_t skip) const {
+    for (size_t i = 0; i < commands_.size(); ++i)
+        if (commands_[i].type == Cmd::Draw && states_[draws_[commands_[i].index].state].ui && skip-- == 0) return i;
+    return commands_.size();
+}
+
 std::vector<Command> FrameRecord::takeTail(size_t from) {
     if (from >= commands_.size()) return {};
     std::vector<Command> tail(commands_.begin() + std::ptrdiff_t(from), commands_.end());

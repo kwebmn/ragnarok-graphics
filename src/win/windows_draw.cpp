@@ -7,6 +7,7 @@
 
 #include "win/char_block.hpp"
 #include "win/context.hpp"
+#include "win/game_camera.hpp"
 #include "win/chat_window.hpp"
 #include "win/hotbar.hpp"
 #include "win/item_window.hpp"
@@ -58,6 +59,25 @@ const Known kKnown[] = {
     {0x4CD720, "\x55\x8B\xEC\x83\xEC\x20\x8B\x41\x38\x57", 10},  // the draw's: its windows' list
 };
 int g_told = 0;
+// 3.0.11-beta.185 (the tester: «вода іде оверлеем навіть над меню - і моби з деревами теж»): the renderer ([0x6EE3D8])
+// files the interface's faces into its list +0xEC ({depth, face} 8 bytes each, its end at +0xF0) and draws them in
+// that order after the world, its depth off (FUN_0040f320; a face with no vertices - its + 4 - skipped)
+constexpr uint32_t kRenderer = 0x6EE3D8, kInterfaceList = 0xEC;
+
+// The interface's faces the game will draw that it filed so far - before its windows: the names over the heads, the
+// chat's balloons. SIZE_MAX: not known.
+size_t facesFiledBefore() {
+    uint32_t renderer = 0, list[2] = {};
+    if (!readGame(kRenderer, &renderer, 4) || !renderer || !readGame(renderer + kInterfaceList, list, sizeof list) ||
+        list[1] < list[0] || (list[1] - list[0]) % 8 != 0 || (list[1] - list[0]) / 8 > 100000)
+        return SIZE_MAX;
+    size_t drawn = 0;
+    for (uint32_t at = list[0]; at < list[1]; at += 8) {  // the game's own list, read as it reads it a moment later
+        const uint32_t face = *reinterpret_cast<const uint32_t*>(uintptr_t(at + 4));
+        if (face && *reinterpret_cast<const int32_t*>(uintptr_t(face + 4)) != 0) ++drawn;
+    }
+    return drawn;
+}
 
 void __attribute__((thiscall)) windowsDraw(uint32_t manager) {
     itemswin::beforeGameDraw();   // «Речі»
@@ -93,7 +113,7 @@ void __attribute__((thiscall)) windowsDraw(uint32_t manager) {
     charpanel::beforeGameDraw();  // the Basic Info window
     hotbarwin::beforeGameDraw();  // the hotkeys' bar
     chatwin::beforeGameDraw();    // the chat (out of sight)
-    Context::get().markGameWindows();  // 3.0.11-beta.109: its own windows from here on - over the driver's
+    Context::get().markGameWindows(facesFiledBefore());  // 3.0.11-beta.109: its own windows from here on - over ours
     if (g_told < 1) {
         ++g_told;
         LOG_INFO("windows draw: the game's replaced windows hidden before it draws its windows (uaRO.exe 0x%X)",

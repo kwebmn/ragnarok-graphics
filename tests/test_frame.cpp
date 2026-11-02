@@ -295,6 +295,37 @@ TEST(frame_takes_the_tail_and_puts_it_back) {
     CHECK(r.generation() == before + 1);
 }
 
+// 3.0.11-beta.185 (the tester's «вода іде оверлеем навіть над меню - і моби з деревами теж»): the game's windows are
+// filed before its scene begins, so the place noted then was the frame's start - the whole world went over the
+// driver's windows wherever nothing upscaled it under them. The game's own windows begin at its interface's draw after
+// the faces filed before them (the names over the heads, the chat's balloons): that one's place
+TEST(frame_finds_an_interface_draw) {
+    FrameRecord f;
+    uint8_t v[4 * 32] = {};
+    DrawSetup world, ui;
+    ui.ui = true;
+    DrawCmd d;
+    d.primitive = d3d7::PT_TRIANGLESTRIP;
+    d.fvf = d3d7::FVF_TL1;
+    CHECK_EQ(f.interfaceDraw(0), size_t(0));  // nothing: its end
+    f.clear(ClearCmd{d3d7::CLEAR_TARGET, 0xFF000000, 1.0f, Rect{0, 0, 4, 4}});
+    d.state = f.addState(world);
+    f.draw(d, v, 4, nullptr, 0);  // 1 the ground
+    f.draw(d, v, 4, nullptr, 0);  // 2 the water, the trees, the monsters
+    CHECK_EQ(f.interfaceDraw(0), size_t(3));  // the world alone: its end
+    d.state = f.addState(ui);
+    f.draw(d, v, 4, nullptr, 0);  // 3 a name over a head
+    const uint32_t px[4] = {1, 2, 3, 4};
+    f.upload(7, 0, Rect{0, 0, 2, 2}, px);  // 4 an upload between: not a draw
+    f.draw(d, v, 4, nullptr, 0);  // 5 the game's window
+    f.draw(d, v, 4, nullptr, 0);  // 6 its cursor
+    CHECK_EQ(f.interfaceDraw(0), size_t(3));
+    CHECK_EQ(f.interfaceDraw(1), size_t(5));
+    CHECK_EQ(f.interfaceDraw(2), size_t(6));
+    CHECK_EQ(f.interfaceDraw(3), size_t(7));  // not that many: the end
+    CHECK_EQ(f.interfaceDraw(SIZE_MAX), size_t(7));
+}
+
 // 3.0.4-beta.5 (the user's idea 5): the photo mode - the game's interface (the draws after its depth went off: the
 // windows, the text, the cursor) and the driver's own panel out of the frame, the world, its clears and uploads kept
 TEST(frame_drops_the_interface) {

@@ -122,6 +122,9 @@ public:
     size_t dropInterface();
     // 3.0.11-beta.49: the first interface draw's place among the commands (the world's end), commands().size() none
     size_t firstInterface() const;
+    // 3.0.11-beta.185: the place of the interface draw after the first `skip` of them (the game's own windows' first,
+    // past the faces it filed before them: win/windows_draw); commands().size() when there are not that many
+    size_t interfaceDraw(size_t skip) const;
     // 3.0.11-beta.109 (the concept «Концепция окон и инвентаря», question 5 «да»): the commands from `from` on
     // taken out (the game's own windows and its cursor) and put back after the driver's interface is drawn - over it;
     // nothing past the end. generation(): the times the record was emptied (a flush plays and empties it mid-frame) -
