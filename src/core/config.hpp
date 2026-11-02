@@ -694,6 +694,8 @@ struct Config {
     bool cartWindow = false;
     // 3.0.11-beta.155: [interface] counts - the game's «how many» window (win/ask_card) as a count card
     bool countWindow = false;
+    // 3.0.11-beta.156: [interface] vending - another's shop (win/vend_shop) as «Лавка»
+    bool vendWindow = false;
     // 3.0.11-beta.142 (the owner's concept «маг, прист и хант на геймпаде», answer 9 «дать»): [interface] skill_cells -
     // a ground skill's cells, as the server makes them (core/skill_area), shown on the ground after a cast by the pad
     // or the mouse (win/ground_marks); 0: none

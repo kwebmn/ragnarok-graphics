@@ -409,3 +409,20 @@ TEST(game_packets_the_storages_places) {
     CHECK(c != nullptr && c->count == 57 && c->most == 600);
     CHECK(std::holds_alternative<std::monostate>(packets::parse(p.data(), 5)));  // cut short
 }
+
+// 3.0.11-beta.156 (task 4 of the remaining windows, «Лавка»): a shop's sign over its merchant (0x0131 <account>.L
+// <title>.80B) - the shop window's title when one opens; its sign gone (0x0132 <account>.L)
+TEST(game_packets_a_shops_sign) {
+    std::vector<uint8_t> p = packet(0x0131, 86);
+    put32(p, 2, 2000123);
+    putText(p, 6, "Cheap pots!");
+    packets::Event e = packets::parse(p.data(), p.size());
+    const auto* s = std::get_if<packets::ShopSign>(&e);
+    CHECK(s != nullptr && s->account == 2000123u && s->title == "Cheap pots!");
+    CHECK(std::holds_alternative<std::monostate>(packets::parse(p.data(), 85)));  // cut short
+    std::vector<uint8_t> q = packet(0x0132, 6);
+    put32(q, 2, 2000123);
+    e = packets::parse(q.data(), q.size());
+    const auto* g = std::get_if<packets::ShopSign>(&e);
+    CHECK(g != nullptr && g->account == 2000123u && g->title.empty());
+}

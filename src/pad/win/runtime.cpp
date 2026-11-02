@@ -52,6 +52,7 @@
 #include "win/cart_window.hpp"
 #include "win/char_make.hpp"
 #include "win/char_select.hpp"
+#include "win/vend_shop.hpp"
 #include "win/info_card.hpp"
 #include "win/menu_window.hpp"
 #include "win/msg_box.hpp"
@@ -673,6 +674,22 @@ bool cartPad(const PadState& pad, DWORD now) {
     return true;
 }
 
+// 3.0.11-beta.156: «Лавка» open - the D-pad (or the left stick) up and down a row, A one more of it, X one less, Y
+// buys, B gives up
+bool vendPad(const PadState& pad, DWORD now) {
+    State& s = S();
+    const uint16_t buttons = pad.connected ? pad.buttons : 0;
+    const uint16_t down = uint16_t((buttons & ~s.prevPadButtons) | stickSteps(pad, now));
+    s.prevPadButtons = buttons;
+    using uagfx::win::vendshopwin::PadCommand;
+    const std::pair<uint16_t, PadCommand> keys[] = {{kPadUp, PadCommand::Up}, {kPadDown, PadCommand::Down},
+                                                    {kPadA, PadCommand::More}, {kPadX, PadCommand::Less},
+                                                    {kPadY, PadCommand::Buy},  {kPadB, PadCommand::Cancel}};
+    for (const auto& [button, command] : keys)
+        if (down & button) uagfx::win::vendshopwin::padCommand(command);
+    return true;
+}
+
 // 3.0.11-beta.92: «Характеристики» open - the D-pad (or the left stick) chooses a stat, A adds a point, B or Start
 // close it
 bool statsPad(const PadState& pad, DWORD now) {
@@ -971,7 +988,7 @@ constexpr const char* kTopNames[] = {"«Речі»",  "«Характерист�
                                      "the shop", "the NPC talk",      "«Довідник»", "«Склад»", "«Обмін»",
                                      "the menu", "the item card", "the skill card", "the request",
                                      "the message box", "the login", "the character select",
-                                     "the character make", "«Візок»"};
+                                     "the character make", "«Візок»", "«Лавка»"};
 static_assert(std::size(kTopNames) == size_t(uagfx::winstack::kWins), "a name for each window");
 
 void tick() {
@@ -1043,6 +1060,7 @@ void tick() {
                   : drive && *top == Win::CharSelect               ? charSelectPad(pad, now)  // .152
                   : drive && *top == Win::CharMake                 ? charMakePad(pad, now)    // .153
                   : drive && *top == Win::Cart                     ? cartPad(pad, now)        // .154
+                  : drive && *top == Win::Vending                  ? vendPad(pad, now)        // .156
                                                                    : runMenu(pad, view, now);
     if (s.npcSupported) view.dialog = clientnpc::read();
     double clientTurn = 0;

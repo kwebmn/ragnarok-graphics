@@ -92,6 +92,14 @@ Event parse(const uint8_t* p, size_t size) {
         case 0x00f2:  // 3.0.11-beta.115: the storage's places used of the most
             if (size < 6) return {};
             return StorageCount{rd16(p, 2), rd16(p, 4)};
+        case 0x0131: {  // 3.0.11-beta.156: a shop's sign
+            if (size < 86) return {};
+            const char* t = reinterpret_cast<const char*>(p + 6);
+            return ShopSign{rd32(p, 2), std::string(t, strnlen(t, 80))};
+        }
+        case 0x0132:
+            if (size < 6) return {};
+            return ShopSign{rd32(p, 2), ""};
         case 0x0195:  // 3.0.11-beta.95: a unit's name line - a monster's HP % in its party's place
             if (size < 102) return {};
             return ActorInfo{rd32(p, 2), hpOf(name(p, 30))};

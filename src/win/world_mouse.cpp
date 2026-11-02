@@ -72,7 +72,7 @@ const char* const kParts[] = {"the windows' panel", "the answer card", "the new 
                               "the NPC talk", "the shop", "the new «Склад»", "the new «Обмін»", "the new menu",
                               "the new item card", "the new skill card", "the new request or input",
                               "the new message box", "the new login", "the new character select",
-                              "the new character make", "the new «Візок»"};
+                              "the new character make", "the new «Візок»", "the new «Лавка»"};
 static_assert(std::size(kParts) == size_t(uapad::gamewindow::kBlockerCount), "a name for each part");
 unsigned g_told = 0;    // the parts whose first cursor over them is logged
 unsigned g_hidden = 0;  // 3.0.11-beta.33: the parts whose first actor hidden under them is logged

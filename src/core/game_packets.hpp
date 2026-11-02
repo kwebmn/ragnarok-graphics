@@ -163,10 +163,17 @@ struct StorageCount {
     int count = 0, most = 0;
 };
 
+// 3.0.11-beta.156 («Лавка»): a shop's sign over its merchant - 0x0131 <account>.L <title>.80B; 0x0132 <account>.L
+// its sign gone (the title empty)
+struct ShopSign {
+    uint32_t account = 0;
+    std::string title;  // in the game's code page
+};
+
 using Event = std::variant<std::monostate, Whisper, PartyInvite, TradeRequest, GuildInvite, FriendRequest, StatusIcon,
                            Vanish, SkillCast, Hit, PartyList, PartyMember, PartyLeft, PartyHp, PartyChat, GuildChat,
                            Chat, Status, Pickup, StatusLong, Casting, Appear, PartyPos, ActorInfo, NpcSay, NpcMenu,
-                           StorageCount>;
+                           StorageCount, ShopSign>;
 
 // A packet as the game took it, `size` bytes of it readable: one of the above, or nothing (another packet, one cut
 // short or naming more bytes than there are).

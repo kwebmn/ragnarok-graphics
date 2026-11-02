@@ -5545,6 +5545,26 @@ constexpr Entry kTexts[] = {
     {Text::CountUnbuy, "Out of the purchase", "Прибрати з покупки", "Убрать из покупки"},
     {Text::CountToBuy, "Into the purchase", "До покупки", "В покупку"},
     {Text::CountMail, "Into the letter", "До листа", "В письмо"},
+    // 3.0.11-beta.156: another's shop
+    {Text::InterfaceVending, "Merchant's shop", "Лавка торговця", "Лавка торговца"},
+    {Text::InterfaceVendingHint,
+     "Another player's shop in the new look: a row a thing with its price and how many the shop has, + and - choose "
+     "how many to buy (Shift: ten), the total against your zeny, Buy and Cancel. The controller: A one more, X one "
+     "less, Y buys, B gives up. Off: the game's own two windows.",
+     "Лавка іншого гравця в новому вигляді: рядок на річ із ціною і скільки її є, + і − обирають, скільки купити "
+     "(Shift — по десять), сума проти ваших зені, купити і скасувати. Контролер: A — ще одна, X — на одну менше, "
+     "Y — купити, B — скасувати. Вимкнено: два власні вікна гри.",
+     "Лавка другого игрока в новом виде: строка на вещь с ценой и сколько её есть, + и − выбирают, сколько купить "
+     "(Shift — по десять), сумма против ваших зени, купить и отменить. Контроллер: A — ещё одна, X — на одну меньше, "
+     "Y — купить, B — отменить. Выключено: два собственных окна игры."},
+    {Text::VendTitle, "Shop", "Лавка", "Лавка"},
+    {Text::VendStock, "{1} in the shop", "є {1}", "есть {1}"},
+    {Text::VendTotal, "Total", "Разом", "Итого"},
+    {Text::VendZeny, "Your zeny", "Ваші зені", "Ваши зени"},
+    {Text::VendBuy, "Buy", "Купити", "Купить"},
+    {Text::VendPadHint, "{1}: +1 \xC2\xB7 {2}: -1 \xC2\xB7 {3}: buy",
+     "{1}: +1 \xC2\xB7 {2}: \xE2\x88\x92" "1 \xC2\xB7 {3}: купити",
+     "{1}: +1 \xC2\xB7 {2}: \xE2\x88\x92" "1 \xC2\xB7 {3}: купить"},
     // 3.0.11-beta.141: the character block's experience (forms: one, a few, many)
     {Text::CharSkillPoints, "skill point|skill points", "очко навичок|очки навичок|очок навичок",
      "очко навыков|очка навыков|очков навыков"},
