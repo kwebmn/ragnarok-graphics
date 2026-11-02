@@ -1,8 +1,10 @@
 #pragma once
 #include <cstdint>
+#include <optional>
 #include <string>
 #include <vector>
 
+#include "core/settings/strings.hpp"
 #include "core/window_panel.hpp"
 
 namespace uagfx::sitesignin {
@@ -60,6 +62,9 @@ enum class Part : uint8_t {
     Rules, HaveAccount
 };
 bool isForm(Way w);  // a form of the signed-in site account (no ways' tabs)
+// A refusal of the site's for `field` on `way` in our own words (the player's language; the site answers in its own),
+// none: the site's words kept
+std::optional<settings::Text> errorText(Way way, const std::string& field);
 Part hitTest(const Layout& L, float x, float y);
 void paint(panel::Picture& out, const Layout& L, const Show& sh);
 enum class Align : uint8_t { Left, Right, Center };

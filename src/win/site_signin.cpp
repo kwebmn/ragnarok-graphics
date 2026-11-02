@@ -164,6 +164,14 @@ std::string failed(int status) {
                        : settings::fmt(say(settings::Text::SiteErrFailed), {std::to_string(status)});
 }
 
+// The site's refusal: a known field's in our words (the player's language), else the site's (final review)
+std::string refusal(const siteapi::TokenAnswer& t, int status, ss::Way way) {
+    if (t.fieldErrors.empty()) return failed(status);
+    const auto& first = *t.fieldErrors.begin();
+    const auto own = ss::errorText(way, first.first);
+    return own ? say(*own) : first.second;
+}
+
 void tokenAnswer(State& s, int status, const std::string& body, const char* how) {
     s.busy = false;
     const siteapi::TokenAnswer t = siteapi::parseToken(status, body);
@@ -174,7 +182,7 @@ void tokenAnswer(State& s, int status, const std::string& body, const char* how)
         s.error = say(settings::Text::SiteErrTwofa);
         return;
     }
-    s.error = t.fieldErrors.empty() ? failed(status) : t.fieldErrors.begin()->second;
+    s.error = refusal(t, status, s.way);
 }
 
 void poll(State& s) {
@@ -223,7 +231,7 @@ void formAnswer(int status, const std::string& body, const char* what) {
         return formDone(s, login, password, what);
     }
     const siteapi::TokenAnswer t = siteapi::parseToken(status, body);  // its errors
-    s.error = t.fieldErrors.empty() ? failed(status) : t.fieldErrors.begin()->second;
+    s.error = refusal(t, status, s.way);
 }
 
 // 3.0.11-beta.181: the site's language of its texts (the verification e-mail)
@@ -260,7 +268,7 @@ void pressRegister(State& s) {
                        st.busy = false;
                        const siteapi::TokenAnswer t = siteapi::parseToken(status, body);
                        if (!t.ok) {
-                           st.error = t.fieldErrors.empty() ? failed(status) : t.fieldErrors.begin()->second;
+                           st.error = refusal(t, status, ss::Way::Register);
                            return;
                        }
                        sitekey::save(t.token, t.nick);

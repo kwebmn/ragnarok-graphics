@@ -560,6 +560,8 @@ enum class Text : uint16_t {
     // 3.0.11-beta.181: the registration in the client
     RegTitle, RegSteps, RegPassword2, RegAgree, RegRules, RegCreate, RegHaveAccount, RegFree, RegTaken, RegErrLogin,
     RegErrPassword, RegErrPassword2, RegErrEmail, RegErrSex, RegErrAgree,
+    // the site's refusals in our words
+    SiteErrCredentials, SiteErrLinkWrong, RegErrTaken, RegErrEmailTaken, SiteErrCurrentPass,
     // 3.0.11-beta.152: the character select
     InterfaceCharSelect, InterfaceCharSelectHint, CharsTitle, CharsEnter, CharsMake, CharsRemove, CharsBack, CharsEmpty,
     CharsMakeHint,

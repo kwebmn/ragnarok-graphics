@@ -5646,6 +5646,16 @@ constexpr Entry kTexts[] = {
     {Text::RegErrSex, "Choose the character's sex", "Оберіть стать персонажа", "Выберите пол персонажа"},
     {Text::RegErrAgree, "Agree with the rules to go on", "Погодьтеся з правилами, щоб продовжити",
      "Согласитесь с правилами, чтобы продолжить"},
+    // the site's refusals in our words
+    {Text::SiteErrCredentials, "A wrong e-mail or password", "Невірний e-mail або пароль",
+     "Неверный e-mail или пароль"},
+    {Text::SiteErrLinkWrong, "A wrong game login or password", "Невірний ігровий логін або пароль",
+     "Неверный игровой логин или пароль"},
+    {Text::RegErrTaken, "This login is taken already", "Цей логін уже зайнятий", "Этот логин уже занят"},
+    {Text::RegErrEmailTaken, "This e-mail is registered on the site already", "Цей e-mail уже зареєстровано на сайті",
+     "Этот e-mail уже зарегистрирован на сайте"},
+    {Text::SiteErrCurrentPass, "The current game password does not fit", "Поточний пароль гри не підходить",
+     "Текущий пароль игры не подходит"},
     // 3.0.11-beta.152: the character select
     {Text::InterfaceCharSelect, "Character select", "Вибір персонажа", "Выбор персонажа"},
     {Text::InterfaceCharSelectHint,

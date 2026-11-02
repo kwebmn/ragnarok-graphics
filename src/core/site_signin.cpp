@@ -101,6 +101,17 @@ bool isForm(Way w) {
     return w == Way::NewLogin || w == Way::Link || w == Way::GamePassword || w == Way::Register;
 }
 
+std::optional<settings::Text> errorText(Way way, const std::string& field) {
+    if (field == "code") return settings::Text::SiteErrTwofa;
+    if (way == Way::Password && (field == "email" || field == "password")) return settings::Text::SiteErrCredentials;
+    if (field == "game_userid")
+        return way == Way::Link ? settings::Text::SiteErrLinkWrong : settings::Text::RegErrTaken;
+    if (way == Way::Register && field == "email") return settings::Text::RegErrEmailTaken;
+    if (way == Way::Register && field == "password") return settings::Text::RegErrPassword;
+    if (field == "current_password") return settings::Text::SiteErrCurrentPass;
+    return std::nullopt;
+}
+
 Part hitTest(const Layout& L, float x, float y) {
     if (L.back.contains(x, y)) return Part::Back;
     if (L.rules.h > 0 && L.rules.contains(x, y)) return Part::Rules;  // 3.0.11-beta.181: the registration

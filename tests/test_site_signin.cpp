@@ -133,3 +133,18 @@ TEST(site_signin_register_form) {
     CHECK(has("Новий акаунт") && has("1 Акаунт → 2 Персонаж → 3 У гру") && has("вільний") && !has("зайнятий"));
     CHECK(has("Погоджуюся з правилами сервера"));
 }
+
+// Final review: the site's refusals in the player's language - a known field of a way gets our own words (the site
+// answers in its own language), an unknown one keeps the site's
+TEST(site_signin_refusals_in_our_words) {
+    using W = sitesignin::Way;
+    using T = settings::Text;
+    CHECK(sitesignin::errorText(W::Password, "email") == T::SiteErrCredentials);
+    CHECK(sitesignin::errorText(W::Link, "game_userid") == T::SiteErrLinkWrong);
+    CHECK(sitesignin::errorText(W::NewLogin, "game_userid") == T::RegErrTaken);
+    CHECK(sitesignin::errorText(W::Register, "game_userid") == T::RegErrTaken);
+    CHECK(sitesignin::errorText(W::Register, "email") == T::RegErrEmailTaken);
+    CHECK(sitesignin::errorText(W::GamePassword, "current_password") == T::SiteErrCurrentPass);
+    CHECK(sitesignin::errorText(W::Password, "code") == T::SiteErrTwofa);
+    CHECK(!sitesignin::errorText(W::Register, "nick").has_value());
+}

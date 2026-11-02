@@ -14,11 +14,15 @@ constexpr const char* kFile = "site.dat";
 struct State {
     bool read = false;
     unsigned long long stamp = 0;
+    ULONGLONG lookedAt = 0;  // the file looked at once a second at most (asked many times a frame)
     std::string token, nick;
 };
 
 State& state() {
     static State s;
+    const ULONGLONG now = GetTickCount64();
+    if (s.read && now - s.lookedAt < 1000) return s;
+    s.lookedAt = now;
     const unsigned long long stamp = userfiles::writeTime(kFile);
     if (!s.read || stamp != s.stamp) {  // read once, again when another game window signed in or out
         s.read = true;
