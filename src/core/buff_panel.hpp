@@ -98,7 +98,7 @@ struct Words {
     Align align = Align::Left;
 };
 struct Texts {
-    std::string names, hideNames;  // the toggle's: «назви», «сховати назви»
+    std::string names, hideNames;  // the toggle's: «Назви», «Іконки» (3.0.11-beta.186; «назви», «сховати назви»)
     std::string more;              // «ще {1}»
     std::string star, unstar;      // the tip's second line: «клік — в обрані», «клік — прибрати з обраних»
 };

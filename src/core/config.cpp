@@ -584,6 +584,8 @@ Config parseConfig(const std::string& text) {
         } else if (key == "interface.items") {  // 3.0.11-beta.42: «Речі»
             itemsSet = val == "0" || val == "1" || val == "on" || val == "off" || val == "true" || val == "false";
             setBool(val, c.itemsWindow);
+        } else if (key == "interface.item_toast") {  // 3.0.11-beta.186
+            setBool(val, c.itemToast);
         } else if (key == "interface.status") {  // 3.0.11-beta.42: «Характеристики»
             statusSet = val == "0" || val == "1" || val == "on" || val == "off" || val == "true" || val == "false";
             setBool(val, c.statusWindow);

@@ -6119,8 +6119,9 @@ constexpr Entry kTexts[] = {
     {Text::InterfaceBuffsOff, "As in the game", "Як у грі", "Как в игре"},
     {Text::InterfaceBuffsColumn, "Column", "Стовпчиком", "Столбиком"},
     {Text::InterfaceBuffsRow, "Row", "Рядком", "Строкой"},
-    {Text::BuffsNames, "names", "назви", "названия"},
-    {Text::BuffsHideNames, "hide names", "сховати назви", "скрыть названия"},
+    // 3.0.11-beta.186 (the tester: «варто додати заглавні букви ... "Назви або Іконки"?»): the column's two looks
+    {Text::BuffsNames, "Names", "Назви", "Названия"},
+    {Text::BuffsHideNames, "Icons", "Іконки", "Иконки"},
     {Text::BuffsMore, "{1} more", "ще {1}", "ещё {1}"},
     {Text::BuffsStar, "click: to favourites", "клік — в обрані", "клик — в избранное"},
     {Text::BuffsUnstar, "click: off favourites", "клік — прибрати з обраних", "клик — убрать из избранного"},
@@ -6885,6 +6886,16 @@ constexpr Entry kTexts[] = {
      "залишили, - окремо на вулиці й у будівлях, - і після нового запуску гри.",
      "Игра каждый раз начинает с приближенной камерой. С этим флажком отдаление и наклон остаются такими, как вы их "
      "оставили, - отдельно на улице и в зданиях, - и после нового запуска игры."},
+    // 3.0.11-beta.186 (the tester: «тут дублюючий інтерфейс»): the line on a thing picked up
+    {Text::InterfaceItemToast, "The line on a thing picked up", "Рядок про підібрану річ",
+     "Строка о подобранной вещи"},
+    {Text::InterfaceItemToastHint,
+     "+1 and the thing's name for 2 seconds over the bag (at the screen's lower middle when it is closed), in place of "
+     "the game's own box at the top of the screen. Off: the game's box as before. Works with «Items» on.",
+     "+1 і назва речі на 2 секунди над сумкою (унизу посередині екрана, коли її закрито) замість власного віконця гри "
+     "вгорі екрана. Вимкнено: віконце гри, як раніше. Працює з увімкненими «Речі».",
+     "+1 и название вещи на 2 секунды над сумкой (внизу посередине экрана, когда она закрыта) вместо собственного "
+     "окошка игры вверху экрана. Выключено: окошко игры, как раньше. Работает с включёнными «Вещи»."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

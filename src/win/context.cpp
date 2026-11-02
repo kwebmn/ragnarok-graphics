@@ -961,7 +961,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
                      config.groundCounts, gameCodePage(config), pk, pw, ph);  // .125 the ammo's pill, .143 the walls
     ammosound::frame(config.ammoSound);  // 3.0.11-beta.129: [interface] ammo_sound - the chime at 10 left and at none
     // 3.0.11-beta.42: [interface] items and status - «Речі» and «Характеристики» while the game's own are open
-    itemswin::frame(window, config.itemsWindow, gameCodePage(config), pk, pw, ph);
+    itemswin::frame(window, config.itemsWindow, gameCodePage(config), pk, pw, ph, config.itemToast);
     statswin::frame(window, config.statusWindow, pk, pw, ph);
     skillswin::frame(window, config.skillsWindow, gameCodePage(config), pk, pw, ph);  // 3.0.11-beta.96: «Навички»
     equipwin::frame(window, config.equipWindow, gameCodePage(config), pk, pw, ph);    // 3.0.11-beta.97

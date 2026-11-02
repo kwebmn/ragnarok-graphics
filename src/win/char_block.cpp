@@ -32,7 +32,6 @@
 #include "win/real_ddraw.hpp"
 #include "win/ui_cost.hpp"
 #include "win/updates_hook.hpp"
-#include "win/world_dim.hpp"
 
 namespace uagfx::win::charpanel {
 namespace {
@@ -90,10 +89,9 @@ struct State {
     bool ammoArrows = true;  // 3.0.11-beta.114: the ammo worn arrows or other (win/ammo_watch)
     int overweightTold = -2;  // 3.0.11-beta.139: the overweight state last told the log
     // 3.0.11-beta.141 (the owner: «блок с персонажем должен работать от альт-V ... прогресбар с бейз опытом и джоб
-    // опытом ... точное количество опыта. и побольше подробностей»): the small view Alt+V folds to (the last one used),
-    // Alt+V's full while the windows are open; the experience gained (core/exp_rate) - whose, its pace once a second
+    // опытом ... точное количество опыта. и побольше подробностей»): the small view Alt+V folds to (the last one used);
+    // the experience gained (core/exp_rate) - whose, its pace once a second
     cb::View small = cb::View::Compact;
-    bool fullOverWindows = false;
     exprate::Track baseTrack, jobTrack;
     std::string trackName;
     ULONGLONG paceAt = 0;
@@ -194,7 +192,7 @@ void changeView(State& s, cb::View v) {
     }
     s.view = v;
     if (v != cb::View::Full) s.small = v;
-    s.shownView = s.view == cb::View::Full && worlddim::active() && !s.fullOverWindows ? cb::View::Compact : s.view;
+    s.shownView = s.view;
     keepState(s);
     s.key.clear();
 }
@@ -356,11 +354,10 @@ void frame(HWND game, CharacterLook look, unsigned codePage, double k, int targe
     s.targetW = targetWidth;
     s.targetH = targetHeight;
     const cb::Look panelLook = look == CharacterLook::Rings ? cb::Look::Rings : cb::Look::Bars;
-    // 3.0.11-beta.49 (the concept's open windows): the full block compact while the new windows are open
-    // (3.0.11-beta.141: unless Alt+V unfolded it while they were)
-    const bool windows = worlddim::active();
-    if (!windows) s.fullOverWindows = false;
-    const cb::View view = s.view == cb::View::Full && windows && !s.fullOverWindows ? cb::View::Compact : s.view;
+    // 3.0.11-beta.186 (the tester: «кнопка "статуси" згортає разом з собою і меню персонажа, інші так не роблять»):
+    // the block as the player set it while windows are open too - beta.49 folded it to compact under «Речі»,
+    // «Характеристики» and «Довідник» alone, its buttons gone with it (the one that opened the window among them)
+    const cb::View view = s.view;
     if (view != s.shownView) {
         if (motion::on() && s.picture.width > 0) {  // the look before fades out, as after a click
             s.before.picture = s.picture;
@@ -572,9 +569,7 @@ bool key(UINT m, WPARAM wp, LPARAM lp) {
     State& s = state();
     if (!s.shown || m != WM_SYSKEYDOWN || wp != 'V' || !(lp & (1 << 29))) return false;  // Alt+V (Alt down: bit 29)
     if (lp & (1 << 30)) return true;  // held down: once
-    const cb::View next = cb::altV(s.shownView, s.small);
-    s.fullOverWindows = next == cb::View::Full && worlddim::active();
-    changeView(s, next);
+    changeView(s, cb::altV(s.shownView, s.small));
     if (s.keysLogged++ < 20)
         LOG_INFO("character: Alt+V - the block %s (the game's own Basic Info key, not given the game)",
                  s.view == cb::View::Full ? "full" : s.view == cb::View::Compact ? "compact" : "folded to its icon");

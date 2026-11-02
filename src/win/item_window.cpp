@@ -46,6 +46,10 @@ namespace iw = uagfx::itemwin;
 // with 0x87 its close button - and its drop FUN_004ba530), a window's shown flag; the item card's window (0xC, its
 // message 0x18 an ITEM_INFO), MakeWindow FUN_004d42d0
 constexpr uint32_t kWindowMgr = 0x727ED8, kItemsAt = kWindowMgr + 0x8C, kItemsClass = 0x69B8A0;
+// 3.0.11-beta.186 (the tester: «тут дублюючий інтерфейс»): the game's box of a thing picked up - UI window 0x3A
+// (g_windowMgr + 0x16C, 180 x 32 at the top's middle, its class's vtable 0x698960), made and shown by the pickup's
+// handler (0x00a0: the chat's line, then MakeWindow 0x3A and its messages 0x4C, 0x24, 0x22)
+constexpr uint32_t kNoticeAt = kWindowMgr + 0x16C, kNoticeClass = 0x698960;
 constexpr uint32_t kShown = 0x38, kSendMsgSlot = 0x94, kItemsSendMsg = 0x4B9DF0, kDropSlot = 0x2C;
 constexpr uint32_t kItemsDrop = 0x4BA530, kMakeWindow = 0x4D42D0;
 constexpr int kButtonMsg = 6, kCloseButton = 0x87, kItemCard = 0xC, kShowItem = 0x18;
@@ -93,6 +97,7 @@ struct State {
     std::string starredOf;    // whose they are
     std::string toast, toastPainted;
     ULONGLONG toastUntil = 0;
+    bool toastOn = true, noticeHidden = false;  // 3.0.11-beta.186: [interface] item_toast; the game's box hidden once
     float toastK = 0, toastScale = 1;
     int toastW = 0, toastH = 0;  // the target's
     panel::Picture toastPicture;
@@ -501,9 +506,10 @@ char letterOf(WPARAM vk, bool shift) {
 
 }  // namespace
 
-void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int targetHeight) {
+void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int targetHeight, bool toast) {
     State& s = state();
     s.codePage = codePage;
+    s.toastOn = toast;
     if (k > 0 && targetWidth > 0 && targetHeight > 0) {  // 3.0.11-beta.112: a thing come's words, the bag closed too
         s.toastK = float(k);
         s.toastScale = uistyle::readingScale(k);
@@ -873,7 +879,7 @@ bool giveDrag(uint32_t drag) {  // 3.0.11-beta.115
 void drawToast(FrameRecord& record, gpu::Renderer& renderer) {
     State& s = state();
     const ULONGLONG now = GetTickCount64();
-    if (s.toast.empty() || now >= s.toastUntil || s.toastK <= 0) return;
+    if (!s.on || !s.toastOn || s.toast.empty() || now >= s.toastUntil || s.toastK <= 0) return;
     const float sc = s.toastScale;
     if (s.toast != s.toastPainted) {
         s.toastPainted = s.toast;
@@ -973,6 +979,14 @@ void beforeGameDraw() {
     State& s = state();
     if (!s.on || !inGameWorld()) return;
     if (const uint32_t window = gameWindow()) hold(s, window, true);
+    // 3.0.11-beta.186: its box of a thing picked up not drawn - «+N …» stands for it
+    const uint32_t notice = read32(kNoticeAt);
+    if (s.toastOn && notice && read32(notice) == kNoticeClass && read32(notice + kShown) &&
+        write32(notice + kShown, 0) && !s.noticeHidden) {
+        s.noticeHidden = true;
+        LOG_INFO("items: the game's box of a thing picked up hidden - «+N …» over the bag stands for it "
+                 "([interface] item_toast)");
+    }
 }
 
 

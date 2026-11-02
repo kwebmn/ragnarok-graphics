@@ -178,6 +178,9 @@ const std::vector<IniSetting>& iniSettings() {
         // 3.0.11-beta.42: the windows
         {"interface", "items", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::InterfaceItems,
          Text::InterfaceItemsHint, ""},
+        // 3.0.11-beta.186: the line on a thing picked up, in place of the game's box
+        {"interface", "item_toast", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::InterfaceItemToast,
+         Text::InterfaceItemToastHint, ""},
         {"interface", "status", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::InterfaceStatus,
          Text::InterfaceStatusHint, ""},
         {"interface", "skills", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::InterfaceSkills,
@@ -1108,6 +1111,7 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "interface.hotbar") return c.hotbar ? "1" : "0";                  // 3.0.11-beta.40
     if (k == "interface.chat") return c.chat ? "1" : "0";                      // 3.0.11-beta.41
     if (k == "interface.items") return c.itemsWindow ? "1" : "0";              // 3.0.11-beta.42
+    if (k == "interface.item_toast") return c.itemToast ? "1" : "0";           // 3.0.11-beta.186
     if (k == "interface.status") return c.statusWindow ? "1" : "0";
     if (k == "interface.skills") return c.skillsWindow ? "1" : "0";  // 3.0.11-beta.96
     if (k == "interface.equip") return c.equipWindow ? "1" : "0";    // 3.0.11-beta.97

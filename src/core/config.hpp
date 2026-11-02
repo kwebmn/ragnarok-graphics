@@ -659,6 +659,9 @@ struct Config {
     // 3.0.11-beta.42: [interface] items and status - stage 8's windows: «Речі» (core/item_window) and
     // «Характеристики» (core/stat_window) in place of the game's own while they are open
     bool itemsWindow = false, statusWindow = false;
+    // 3.0.11-beta.186 (the tester: «тут дублюючий інтерфейс»): [interface] item_toast - «+N …» of a thing picked up
+    // over the bag (win/item_window drawToast), the game's own box at the top (its window 0x3A) hidden for it
+    bool itemToast = true;
     // 3.0.11-beta.96 (the owner: «доделаем окна интерфейсов»): [interface] skills - «Навички» (core/skill_window) in
     // place of the game's own skill tree while it is open; on with the new minimap
     bool skillsWindow = false;

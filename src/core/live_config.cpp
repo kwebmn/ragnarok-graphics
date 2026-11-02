@@ -287,6 +287,10 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("items", flag(running.itemsWindow), flag(file.itemsWindow)));
         n.itemsWindow = file.itemsWindow;
     }
+    if (file.itemToast != running.itemToast) {  // 3.0.11-beta.186
+        u.applied.push_back(change("item_toast", flag(running.itemToast), flag(file.itemToast)));
+        n.itemToast = file.itemToast;
+    }
     if (file.statusWindow != running.statusWindow) {  // 3.0.11-beta.42: «Характеристики», at once
         u.applied.push_back(change("status", flag(running.statusWindow), flag(file.statusWindow)));
         n.statusWindow = file.statusWindow;

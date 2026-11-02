@@ -1181,6 +1181,21 @@ TEST(config_reads_the_chat) {
     CHECK(liveUpdate(parseConfig(""), parseConfig("[interface]\nchat = 1\n")).next.chat);
 }
 
+// 3.0.11-beta.186 (the tester: «тут дублюючий інтерфейс, треба десь вимикач зробити»): [interface] item_toast - «+N …»
+// of a thing picked up over the bag, the game's own box at the top hidden for it; off: the game's box alone
+TEST(config_reads_the_item_toast) {
+    CHECK(parseConfig("").itemToast);
+    CHECK(!parseConfig("[interface]\nitem_toast = 0\n").itemToast);
+    const settings::IniSetting* s = settings::findSetting("interface.item_toast");
+    CHECK(s != nullptr);
+    if (!s) return;
+    CHECK(s->page == settings::Page::Interface && s->control == settings::Control::Check);
+    CHECK(appliesNow("interface.item_toast"));
+    const LiveUpdate u = liveUpdate(parseConfig(""), parseConfig("[interface]\nitem_toast = 0\n"));
+    CHECK(!u.next.itemToast && u.applied.size() == 1 && u.waiting.empty());
+    CHECK_EQ(settings::tokenOf(*s, parseConfig("[interface]\nitem_toast = 0\n")), std::string("0"));
+}
+
 // 3.0.11-beta.42 (the owner: «делай окна»): [interface] items and status - «Речі» and «Характеристики» redrawn; they
 // come with the new minimap as the other parts do, unless the file names them
 TEST(config_reads_the_windows) {

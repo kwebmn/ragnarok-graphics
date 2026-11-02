@@ -23,8 +23,10 @@ namespace uagfx::win::itemswin {
 // in it; what its own window does, through the same game mode's messages (FUN_004b9a10, FUN_004b98b0): a double
 // click uses (0x1D) or wears (0x14), a card into a slot (0x88), arrows (100); a press drags (0x11) as its own; a right
 // click its item's card (window 0xC, its message 0x18). Drags let go over it are its window's (win/world_mouse). Its
-// place and tab kept in uaro-graphics\items-state.txt. On the game's thread.
-void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int targetHeight);
+// place and tab kept in uaro-graphics\items-state.txt. On the game's thread. 3.0.11-beta.186: `toast` - [interface]
+// item_toast: «+N …» of a thing picked up, the game's own box at the top (UI window 0x3A) hidden for it while «Речі»
+// is on; off: the game's box alone.
+void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int targetHeight, bool toast);
 void draw(FrameRecord& record, gpu::Renderer& renderer);
 bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result);
 bool key(UINT m, WPARAM wp, LPARAM lp);  // its search's keys while it has them
