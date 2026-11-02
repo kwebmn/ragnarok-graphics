@@ -818,6 +818,20 @@ TEST(config_camera_indoor) {
     CHECK(!u.next.cameraIndoor && u.applied.size() == 1 && u.waiting.empty());
 }
 
+// 3.0.11-beta.184 (R-ANMTEJ): [camera] remember - the camera's zoom and tilt kept between the games
+TEST(config_camera_remember) {
+    CHECK(parseConfig("").cameraRemember);
+    CHECK(!parseConfig("[camera]\nremember = 0\n").cameraRemember);
+    const settings::IniSetting* s = settings::findSetting("camera.remember");
+    CHECK(s != nullptr);
+    if (!s) return;
+    CHECK(s->page == settings::Page::Game && s->control == settings::Control::Check);
+    CHECK(appliesNow("camera.remember"));
+    const LiveUpdate u = liveUpdate(parseConfig(""), parseConfig("[camera]\nremember = 0\n"));
+    CHECK(!u.next.cameraRemember && u.applied.size() == 1 && u.waiting.empty());
+    CHECK_EQ(settings::tokenOf(*s, parseConfig("[camera]\nremember = 0\n")), std::string("0"));
+}
+
 // 3.0.4-beta.17 (the user chose «Ограничить отдаление», R-35N5QN): [camera] zoom_limit - the camera out no further
 // than the character stays this side of the game's far plane
 TEST(config_camera_zoom_limit) {

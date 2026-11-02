@@ -7,6 +7,8 @@
 #include <cmath>
 #include <cstdint>
 #include <cstring>
+#include <optional>
+#include <string>
 #include <unordered_set>
 #include <utility>
 #include <vector>
@@ -14,8 +16,11 @@
 #include "core/ai/texture_cache.hpp"
 #include "core/char_name.hpp"
 #include "core/game_camera.hpp"
+#include "core/camera_memory.hpp"
+#include "core/layout.hpp"
 #include "core/minimap_proto.hpp"
 #include "win/log.hpp"
+#include "win/paths.hpp"
 
 namespace uagfx::win {
 namespace {
@@ -53,6 +58,77 @@ uint32_t gameMode() {
         !read(camera::kModeMgr + camera::kModeCurrent, &mode, 4))
         return 0;
     return mode;
+}
+
+// 3.0.11-beta.184 (R-ANMTEJ): the map whose start win/map_start saw end - its game mode, the game's own outdoor flag
+// and own camera (data\viewpointtable.txt) for it -, the building map whose flag the driver holds at 1, what the frames
+// last asked ([camera] indoor, remember), the slots kept over a map of its own camera, what camera.txt holds
+uint32_t g_startedMode = 0;
+bool g_startedOutdoor = true, g_startedOwn = false;
+uint32_t g_heldMode = 0;
+bool g_freeWanted = true, g_rememberWanted = false, g_memoryApplied = false;
+std::optional<cameramemory::Memory> g_keptSlots, g_written;
+int g_toldExits = 0, g_toldWrites = 0;
+
+std::string memoryFile() { return layout::join(gameDir(), layout::kCameraMemory); }
+
+std::string readMap(uint32_t mode) {
+    char name[40] = {};
+    if (!read(mode + camera::kModeMap, name, sizeof name - 1)) return {};
+    std::string map(name);
+    const size_t dot = map.find('.');
+    return dot == std::string::npos ? map : map.substr(0, dot);
+}
+
+cameramemory::Memory slotsNow() {
+    cameramemory::Memory m;
+    read(camera::kOutdoorTilt, &m.outdoors.tilt, 4);
+    read(camera::kOutdoorZoom, &m.outdoors.zoom, 4);
+    read(camera::kBuildingTilt, &m.buildings.tilt, 4);
+    read(camera::kBuildingZoom, &m.buildings.zoom, 4);
+    return m;
+}
+
+void putSlots(const cameramemory::Memory& m) {
+    write(camera::kOutdoorTilt, &m.outdoors.tilt, 4);
+    write(camera::kOutdoorZoom, &m.outdoors.zoom, 4);
+    write(camera::kBuildingTilt, &m.buildings.tilt, 4);
+    write(camera::kBuildingZoom, &m.buildings.zoom, 4);
+}
+
+// The file written when the camera moved on from what it holds.
+void remember(const cameramemory::Memory& m) {
+    if (g_written && !cameramemory::differs(m, *g_written)) return;
+    if (cameramemory::parse(cameramemory::format(m)) && writeFileAtomic(memoryFile(), cameramemory::format(m))) {
+        g_written = m;
+        if (g_toldWrites++ < 5)
+            LOG_INFO("camera: remembered - outdoors %.0f (tilt %.0f), in buildings %.0f (tilt %.0f)", m.outdoors.zoom,
+                     m.outdoors.tilt, m.buildings.zoom, m.buildings.tilt);
+    }
+}
+
+// A building map's camera as free as outdoors: the outdoor flag 1, and the zoom and tilt the buildings' slot keeps -
+// the game's start put the zoom at 300 at most, its buildings' own limit
+void freeBuilding(uint32_t mode, const char* why) {
+    *reinterpret_cast<int32_t*>(uintptr_t(mode + camera::kModeOutdoor)) = 1;
+    g_heldMode = mode;
+    float tilt = 0.0f, zoom = 0.0f, least = 0.0f, most = 0.0f, now = 0.0f;
+    uint32_t cview = 0;
+    if (!g_startedOwn && read(camera::kBuildingTilt, &tilt, 4) && read(camera::kBuildingZoom, &zoom, 4) &&
+        read(camera::kZoomLeast, &least, 4) && read(camera::kZoomMost, &most, 4) && read(camera::kZoomNow, &now, 4) &&
+        read(mode + camera::kModeView, &cview, 4) && cview && std::isfinite(zoom) && least > 0.0f && most > least &&
+        zoom > now + 0.5f) {
+        zoom = std::clamp(zoom, least, most);
+        tilt = std::clamp(std::isfinite(tilt) ? tilt : -45.0f, -65.0f, -25.0f);  // as an outdoors start: -45 +-20
+        write(camera::kZoomNow, &zoom, 4);
+        write(camera::kTiltNow, &tilt, 4);
+        for (uint32_t at : {camera::kViewDistance, camera::kViewDistanceTo}) write(cview + at, &zoom, 4);
+        for (uint32_t at : {camera::kViewTilt, camera::kViewTiltTo}) write(cview + at, &tilt, 4);
+    }
+    float shown = 0.0f;
+    read(camera::kZoomNow, &shown, 4);
+    LOG_INFO("camera: %s is a building - its camera free as outdoors ([camera] indoor, %s; zoom %.0f)",
+             readMap(mode).c_str(), why, shown);
 }
 
 }  // namespace
@@ -122,32 +198,85 @@ bool readCameraLimits(bool& outdoor, bool& ownLimits, int& limitFrom, int& limit
 }
 
 bool keepCameraFree(bool wanted) {
-    static uint32_t heldMode = 0;  // the game mode whose building map's flag we hold, and that map
-    static std::string heldMap;
+    g_freeWanted = wanted;
     const uint32_t mode = gameMode();
-    int32_t outdoor = 1;
-    if (!mode || !read(mode + camera::kModeOutdoor, &outdoor, 4)) {
-        heldMode = 0;
-        return false;
-    }
-    auto* flag = reinterpret_cast<int32_t*>(uintptr_t(mode + camera::kModeOutdoor));
-    if (wanted && outdoor == 0) {  // a building map just started (or the box ticked on it)
-        *flag = 1;
-        heldMode = mode;
-        heldMap = readGameMap();
-        LOG_INFO("camera: %s is a building - its camera free as outdoors ([camera] indoor)", heldMap.c_str());
+    if (!mode || mode != g_startedMode || g_startedOutdoor) return false;  // not a building whose start was seen
+    if (wanted && g_heldMode != mode) {  // the box ticked on a building map
+        freeBuilding(mode, "the box ticked");
         return true;
     }
-    if (heldMode != mode || readGameMap() != heldMap) {  // another map: its flag is the game's again
-        heldMode = 0;
+    if (!wanted && g_heldMode == mode) {  // the box off on it: the game's own lock back
+        *reinterpret_cast<int32_t*>(uintptr_t(mode + camera::kModeOutdoor)) = 0;
+        g_heldMode = 0;
         return false;
     }
-    if (!wanted) {  // the box off on the building map: the game's own lock back
-        *flag = 0;
-        heldMode = 0;
-        return false;
+    return g_heldMode == mode;
+}
+
+void cameraBeforeMapStart() {
+    g_startedMode = 0;  // a new map: nothing of it known until the game's start is over (the same address, often)
+    if (g_memoryApplied || !knownBuild()) return;
+    g_memoryApplied = true;  // the first map of the game only: the slots are the game's own from then on
+    if (!g_rememberWanted) return;
+    std::string text;
+    if (!readTextFile(memoryFile(), text)) return;
+    const std::optional<cameramemory::Memory> m = cameramemory::parse(text);
+    if (!m) {
+        LOG_INFO("camera: %s not understood - the game's own camera", layout::kCameraMemory);
+        return;
     }
-    return true;
+    putSlots(*m);
+    g_written = m;
+    LOG_INFO("camera: as left last time - outdoors %.0f (tilt %.0f), in buildings %.0f (tilt %.0f) ([camera] remember)",
+             m->outdoors.zoom, m->outdoors.tilt, m->buildings.zoom, m->buildings.tilt);
+}
+
+void cameraAfterMapStart(uint32_t mode) {
+    int32_t outdoor = 1, own = 0;
+    if (!mode || !knownBuild() || !read(mode + camera::kModeOutdoor, &outdoor, 4) ||
+        !read(mode + camera::kModeOwnLimits, &own, 4))
+        return;
+    g_startedMode = mode;
+    g_startedOutdoor = outdoor != 0;
+    g_startedOwn = own != 0;
+    g_heldMode = 0;
+    if (g_freeWanted && !g_startedOutdoor) freeBuilding(mode, "its start");
+}
+
+void cameraBeforeMapExit(uint32_t mode) {
+    g_keptSlots.reset();
+    if (!mode || mode != g_startedMode) return;
+    if (g_startedOwn) g_keptSlots = slotsNow();  // its own camera (data\viewpointtable.txt): not the player's choice
+    if (mode != g_heldMode) return;
+    *reinterpret_cast<int32_t*>(uintptr_t(mode + camera::kModeOutdoor)) = 0;
+    g_heldMode = 0;
+    float zoom = 0.0f, outdoors = 0.0f;
+    if (g_toldExits++ < 20 && read(camera::kZoomNow, &zoom, 4) && read(camera::kOutdoorZoom, &outdoors, 4))
+        LOG_INFO("camera: leaving the building %s - its zoom %.0f kept with the buildings', the outdoors' %.0f stays",
+                 readMap(mode).c_str(), zoom, outdoors);
+}
+
+void cameraAfterMapExit(uint32_t mode) {
+    if (g_keptSlots) {
+        putSlots(*g_keptSlots);
+        g_keptSlots.reset();
+    }
+    if (mode && mode == g_startedMode) g_startedMode = 0;
+    if (g_rememberWanted && knownBuild()) remember(slotsNow());
+}
+
+void rememberCamera(bool wanted) {
+    g_rememberWanted = wanted;
+    if (!wanted || !knownBuild()) return;
+    static DWORD last = 0;
+    const DWORD now = GetTickCount();
+    if (now - last < 2000) return;
+    last = now;
+    const uint32_t mode = gameMode();
+    if (!mode || mode != g_startedMode || g_startedOwn) return;  // a world whose start was seen, the player's camera
+    cameramemory::Pose pose;
+    if (!read(camera::kTiltNow, &pose.tilt, 4) || !read(camera::kZoomNow, &pose.zoom, 4)) return;
+    remember(cameramemory::withNow(slotsNow(), pose, !g_startedOutdoor));
 }
 
 void limitZoom(bool wanted) {

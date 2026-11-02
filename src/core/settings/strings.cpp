@@ -6875,6 +6875,16 @@ constexpr Entry kTexts[] = {
     {Text::ConnEntryWait, "Onto the map in {1}: the server has not let go of the last entry yet",
      "Вхід на карту через {1}: сервер ще не відпустив минулий вхід",
      "Вход на карту через {1}: сервер ещё не отпустил прошлый вход"},
+    // 3.0.11-beta.184 (R-ANMTEJ): the camera's zoom and tilt kept between the games
+    {Text::CameraRemember, "Remember the camera's zoom", "Пам'ятати віддалення камери",
+     "Запоминать отдаление камеры"},
+    {Text::CameraRememberHint,
+     "The game starts every session with the camera close in. With this box the zoom and the tilt stay as you left "
+     "them - outdoors and in buildings apart - after the next start of the game too.",
+     "Гра щоразу починає з наближеною камерою. З цим прапорцем віддалення й нахил лишаються такими, як ви їх "
+     "залишили, - окремо на вулиці й у будівлях, - і після нового запуску гри.",
+     "Игра каждый раз начинает с приближенной камерой. С этим флажком отдаление и наклон остаются такими, как вы их "
+     "оставили, - отдельно на улице и в зданиях, - и после нового запуска игры."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

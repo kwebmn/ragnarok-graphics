@@ -770,6 +770,9 @@ struct Config {
     // 3.0.4-beta.17, [camera] zoom_limit: the camera out no further than the character stays this side of the game's
     // far plane (win/game_camera limitZoom, camera::kZoomLimit; R-35N5QN)
     bool cameraZoomLimit = true;
+    // 3.0.11-beta.184, [camera] remember: the camera's zoom and tilt as the player left them, outdoors and in buildings
+    // apart, kept between the games in uaro-graphics\camera.txt (win/game_camera rememberCamera; R-ANMTEJ)
+    bool cameraRemember = true;
     bool buffTimers = true;  // 3.0.4-beta.6, [buffs] timers: the time left on the buff icons (win/buff_overlay)
     bool clientUpdates = true;  // 3.0.2-beta.5: [client] updates - the GRFs in updates\ over the game's archives
     // 2.12: [renderer] safe_mode - Direct3D 11 without the risky parts (core/safe_mode), asked by the player

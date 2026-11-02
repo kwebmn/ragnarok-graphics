@@ -733,6 +733,7 @@ enum class Text : uint16_t {
     MinimapPlotTo, MinimapPlotCells, MinimapPlotHint,
     ConnectionHeading, ConnPatientEntry, ConnPatientEntryHint, ConnEntryPause, ConnEntryPauseHint,  // 2.6.17
     ConnEntryWait,
+    CameraRemember, CameraRememberHint,  // 3.0.11-beta.184 (R-ANMTEJ): the camera's zoom kept between the games
     Count
 };
 

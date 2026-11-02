@@ -6,6 +6,7 @@ namespace uagfx::win {
 // matrix in memory it gets back, and the driver took the loading picture for the world): the game mode's map start
 // (CGameMode's vtable 0x69F388, slot 1: 0x559030 - the map's files, its models, the loading picture) hooked, so the
 // driver knows when a map is being loaded whatever its camera holds. False, with a log line, in another build.
+// 3.0.11-beta.184 (R-ANMTEJ): its exit too (slot 3: 0x559B60); both tell win/game_camera (cameraBeforeMapStart...).
 bool installMapStartHook();
 bool mapStarting();     // the game's map start runs now
 unsigned mapStarts();  // how many times it began so far

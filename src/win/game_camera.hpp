@@ -62,8 +62,22 @@ bool pointerInTarget(HWND game, UINT m, LPARAM lp, double k, int targetWidth, in
 bool knownGameBuild();
 // 3.0.4-beta.5 (the user's idea 5): a building map's camera held as free as outdoors - the game mode's outdoor flag
 // (core/game_camera.hpp kModeOutdoor) kept at 1 while `wanted`; set back to the game's 0 when not wanted any more on
-// the same map. True while it holds a building map's.
+// the same map. True while it holds a building map's. 3.0.11-beta.184 (R-ANMTEJ): a map counts as a building only by
+// the flag the game's own map start left (win/map_start: before it the flag is the new mode's 0 for every map), and the
+// flag goes back to 0 before the map's exit - the game then keeps a building's camera in the buildings' slot, not over
+// the outdoors' zoom (each building visited brought the camera close in outdoors).
 bool keepCameraFree(bool wanted);
+// 3.0.11-beta.184 (R-ANMTEJ): win/map_start's calls around the game mode's map start and its exit - the camera as left
+// last time into the game's slots (once, before the first map: [camera] remember); the map's own outdoor flag known
+// (a building's camera freed, its zoom from the buildings' slot as the game's 300 at most would not keep it); a held
+// building's flag back to 0, a map with its own camera (data\viewpointtable.txt) leaving the slots as they were; the
+// slots as the game left them written to uaro-graphics\camera.txt
+void cameraBeforeMapStart();
+void cameraAfterMapStart(uint32_t mode);
+void cameraBeforeMapExit(uint32_t mode);
+void cameraAfterMapExit(uint32_t mode);
+// [camera] remember, each frame: the camera's zoom and tilt written when they change (looked at every 2 s)
+void rememberCamera(bool wanted);
 // 3.0.4-beta.17 (the user chose «Ограничить отдаление», R-35N5QN): the game's outdoors zoom limit (camera::kZoomMost,
 // 2040) held at camera::kZoomLimit while `wanted` - past its far plane, 1500, the game draws neither the character nor
 // the monsters -, its own put back when not; a camera already further out drawn in at once

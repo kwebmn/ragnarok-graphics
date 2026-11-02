@@ -48,6 +48,8 @@ constexpr const char* kInstallId = "uaro-graphics\\install-id.txt";
 constexpr const char* kPingSent = "uaro-graphics\\cache\\ping-sent.txt";
 // 3.0.3-beta.2: where each character's game window was put (core/window_places), written by the games
 constexpr const char* kWindowPlaces = "uaro-graphics\\uaro-windows.txt";
+// 3.0.11-beta.184 (R-ANMTEJ): the camera's zoom and tilt as the player left them (core/camera_memory), by the games
+constexpr const char* kCameraMemory = "uaro-graphics\\camera.txt";
 // 2.13: «Звернення» (app/reports): the computer's random key - the site's reports belong to it, no login - and the
 // reports the site did not take yet (queued-*.json, sent at the app's next start)
 constexpr const char* kReports = "uaro-graphics\\reports";

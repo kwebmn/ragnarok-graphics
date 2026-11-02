@@ -531,6 +531,10 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("camera zoom_limit", flag(running.cameraZoomLimit), flag(file.cameraZoomLimit)));
         n.cameraZoomLimit = file.cameraZoomLimit;
     }
+    if (file.cameraRemember != running.cameraRemember) {  // 3.0.11-beta.184
+        u.applied.push_back(change("camera remember", flag(running.cameraRemember), flag(file.cameraRemember)));
+        n.cameraRemember = file.cameraRemember;
+    }
     {  // 3.0.4-beta.3: the notifications, each box (3.0.7-beta.6: kNotifyBoxes, and the two thresholds)
         const NotifySettings &f = file.notify, &r = running.notify;
         for (size_t i = 0; i < kNotifyBoxCount; ++i) {
@@ -632,6 +636,7 @@ bool appliesNow(const std::string& k) {
            k.compare(0, 7, "notify.") == 0 ||  // 3.0.4-beta.3
            k == "camera.indoor" ||            // 3.0.4-beta.5
            k == "camera.zoom_limit" ||        // 3.0.4-beta.17
+           k == "camera.remember" ||          // 3.0.11-beta.184
            k == "buffs.timers" ||              // 3.0.4-beta.6
            k.compare(0, 11, "connection.") == 0;  // 3.0.11-beta.148: the way onto a map
 }

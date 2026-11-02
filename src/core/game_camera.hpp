@@ -27,6 +27,12 @@ constexpr uint32_t kMouseX = 0x14, kMouseY = 0x18;
 // distance - CView kViewDistance, its target kViewDistanceTo - to it, uaRO.exe 0x55a314, 0x565d2f, ...) and the one
 // the driver holds there: the character this side of the far plane, its height with it (R-35N5QN)
 constexpr uint32_t kZoomMost = 0x6D66B4;
+// 3.0.11-beta.184 (R-ANMTEJ): the camera's slots in the exe's .data (core/camera_memory) - the closest zoom (230), the
+// tilt and the distance now (the wheel's own, FUN_00565c00), the buildings' and the outdoors' kept between maps:
+// written at a map's exit by the game mode's outdoor flag (FUN_00559b60), read at a map's start (FUN_0055a230, the
+// buildings' zoom then 300 at most), -45 and 300 at every launch
+constexpr uint32_t kZoomLeast = 0x6D66B0, kTiltNow = 0x6D66BC, kZoomNow = 0x6D66C0;
+constexpr uint32_t kBuildingTilt = 0x6D66C4, kBuildingZoom = 0x6D66C8, kOutdoorTilt = 0x6D66CC, kOutdoorZoom = 0x6D66D0;
 constexpr uint32_t kViewDistance = 0x24, kViewDistanceTo = 0x3C;
 // 3.0.5-beta.6 (the graphics test): the view's tilt and turn (degrees) as shown and their targets, which the game eases
 // them toward by a tenth a frame (FUN_004faca0: the turn kept within 0-360 and turned the short way)

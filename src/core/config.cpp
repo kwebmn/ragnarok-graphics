@@ -745,6 +745,8 @@ Config parseConfig(const std::string& text) {
             setBool(val, c.cameraIndoor);
         } else if (key == "camera.zoom_limit") {  // 3.0.4-beta.17
             setBool(val, c.cameraZoomLimit);
+        } else if (key == "camera.remember") {  // 3.0.11-beta.184
+            setBool(val, c.cameraRemember);
         } else if (key == "buffs.timers") {  // 3.0.4-beta.6
             setBool(val, c.buffTimers);
         } else if (key.compare(0, 7, "notify.") == 0) {  // 3.0.4-beta.3
