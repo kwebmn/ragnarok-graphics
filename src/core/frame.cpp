@@ -112,6 +112,14 @@ size_t FrameRecord::interfaceDraw(size_t skip) const {
     return commands_.size();
 }
 
+std::vector<Command> FrameRecord::takeRange(size_t from, size_t to) {
+    to = std::min(to, commands_.size());
+    if (from >= to) return {};
+    std::vector<Command> taken(commands_.begin() + std::ptrdiff_t(from), commands_.begin() + std::ptrdiff_t(to));
+    commands_.erase(commands_.begin() + std::ptrdiff_t(from), commands_.begin() + std::ptrdiff_t(to));
+    return taken;
+}
+
 std::vector<Command> FrameRecord::takeTail(size_t from) {
     if (from >= commands_.size()) return {};
     std::vector<Command> tail(commands_.begin() + std::ptrdiff_t(from), commands_.end());

@@ -610,6 +610,11 @@ void Context::markGameWindows(size_t facesBefore) {
     gameWindowsFaces_ = facesBefore;
 }
 
+void Context::markInterfaceEnd(size_t faces) {
+    Guard guard;
+    interfaceFaces_ = faces;
+}
+
 void Context::endScene() {
     // 3.0.3-beta.12 (the user's R-KVTEMT: «всеравно курсор не видно»): the scene goes to the GPU here, before the
     // present - beta.9's and beta.11's panel, put in at the present, found no cursor in an empty record and covered it
@@ -623,14 +628,24 @@ void Context::endScene() {
         // the frame while the driver's interface is drawn, back after the driver's windows: over them
         // 3.0.11-beta.185: from its interface's draw past the faces it filed before its windows - the world and the
         // names over the heads, the chat's balloons stay under the driver's windows
+        // 3.0.11-beta.190 (R-RCFQHR): to the interface list's end - the depth-sorted screen list after it (the bars
+        // under the characters) stays under the driver's windows
         std::vector<Command> game;
-        if (gameWindowsMarked_ && gameWindowsFaces_ != SIZE_MAX)
-            game = record.takeTail(record.interfaceDraw(gameWindowsFaces_));
+        size_t sorted = 0;
+        if (gameWindowsMarked_ && gameWindowsFaces_ != SIZE_MAX) {
+            const size_t from = record.interfaceDraw(gameWindowsFaces_);
+            const size_t to = interfaceFaces_ != SIZE_MAX && interfaceFaces_ >= gameWindowsFaces_
+                                  ? record.interfaceDraw(interfaceFaces_)
+                                  : record.commands().size();
+            sorted = record.commands().size() - std::min(to, record.commands().size());
+            game = record.takeRange(from, to);
+        }
         if (!game.empty() && !gameWindowsTold_) {
             gameWindowsTold_ = true;
             LOG_INFO("windows: the game's own windows and its cursor (%zu draws) over the driver's interface; the "
-                     "world and the %zu faces filed before them (the names, the balloons) under it",
-                     game.size(), gameWindowsFaces_);
+                     "world, the %zu faces filed before them (the names, the balloons) and %zu after its interface "
+                     "list (the bars under the characters) under it",
+                     game.size(), gameWindowsFaces_, sorted);
         }
         worlddim::draw(record);                 // 3.0.11-beta.49: the world dimmed under the windows (where it ends)
         lowhpedge::draw(record, *renderer);     // 3.0.11-beta.50: the low HP edge, there too
@@ -660,6 +675,7 @@ void Context::endScene() {
         record.takeWork();  // the driver's own draws are not the game's
     }
     gameWindowsMarked_ = false;  // 3.0.11-beta.109: the next frame's own
+    interfaceFaces_ = SIZE_MAX;
     flush();
 }
 

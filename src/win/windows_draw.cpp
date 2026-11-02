@@ -64,9 +64,11 @@ int g_told = 0;
 // that order after the world, its depth off (FUN_0040f320; a face with no vertices - its + 4 - skipped)
 constexpr uint32_t kRenderer = 0x6EE3D8, kInterfaceList = 0xEC;
 
-// The interface's faces the game will draw that it filed so far - before its windows: the names over the heads, the
-// chat's balloons. SIZE_MAX: not known.
-size_t facesFiledBefore() {
+}  // namespace
+
+// The interface's faces the game will draw that it filed so far (before its windows: the names over the heads, the
+// chat's balloons; at its scene's begin: all)
+size_t interfaceFaces() {
     uint32_t renderer = 0, list[2] = {};
     if (!readGame(kRenderer, &renderer, 4) || !renderer || !readGame(renderer + kInterfaceList, list, sizeof list) ||
         list[1] < list[0] || (list[1] - list[0]) % 8 != 0 || (list[1] - list[0]) / 8 > 100000)
@@ -78,6 +80,8 @@ size_t facesFiledBefore() {
     }
     return drawn;
 }
+
+namespace {
 
 void __attribute__((thiscall)) windowsDraw(uint32_t manager) {
     itemswin::beforeGameDraw();   // «Речі»
@@ -113,7 +117,7 @@ void __attribute__((thiscall)) windowsDraw(uint32_t manager) {
     charpanel::beforeGameDraw();  // the Basic Info window
     hotbarwin::beforeGameDraw();  // the hotkeys' bar
     chatwin::beforeGameDraw();    // the chat (out of sight)
-    Context::get().markGameWindows(facesFiledBefore());  // 3.0.11-beta.109: its own windows from here on - over ours
+    Context::get().markGameWindows(interfaceFaces());  // 3.0.11-beta.109: its own windows from here on - over ours
     if (g_told < 1) {
         ++g_told;
         LOG_INFO("windows draw: the game's replaced windows hidden before it draws its windows (uaRO.exe 0x%X)",

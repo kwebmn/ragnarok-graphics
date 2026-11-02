@@ -18,6 +18,7 @@
 #include "win/log.hpp"
 #include "win/net_predict.hpp"
 #include "win/net_smooth.hpp"
+#include "win/windows_draw.hpp"
 
 namespace uagfx::dx7 {
 
@@ -79,6 +80,7 @@ HRESULT STDMETHODCALLTYPE Device7::EnumTextureFormats(LPD3DENUMPIXELFORMATSCALLB
 HRESULT STDMETHODCALLTYPE Device7::BeginScene() {
     win::Guard guard;
     scene_.beginScene();
+    win::Context::get().markInterfaceEnd(win::interfaceFaces());  // 3.0.11-beta.190: the game's interface list
     win::groundway::newFrame();    // 3.0.11-beta.31: the way on the ground drawn once in this frame
     win::groundmarks::newFrame();  // 3.0.11-beta.87: the target's ring too
     win::netsmoothwin::beginScene();  // 3.0.11-beta.123: the server's position fixes drawn gliding

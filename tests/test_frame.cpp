@@ -326,6 +326,24 @@ TEST(frame_finds_an_interface_draw) {
     CHECK_EQ(f.interfaceDraw(SIZE_MAX), size_t(7));
 }
 
+// 3.0.11-beta.190 (R-RCFQHR «строка хп поверх интерфейса»): the game's own windows and its cursor are its interface
+// list's faces from its windows on; the depth-sorted screen list after them (the bars under the characters) stays
+// where it is - under the driver's windows. The commands [from, to) taken out, the rest kept in order
+TEST(frame_takes_a_range) {
+    FrameRecord r;
+    uint8_t vertices[32 * 3] = {};
+    DrawCmd cmd;
+    cmd.fvf = d3d7::FVF_TL1;
+    cmd.primitive = d3d7::PT_TRIANGLELIST;
+    for (int i = 0; i < 5; ++i) r.draw(cmd, vertices, 3, nullptr, 0);  // the world, a name, a window, the cursor, a bar
+    std::vector<Command> mid = r.takeRange(2, 4);
+    CHECK(mid.size() == 2 && r.commands().size() == 3);
+    CHECK(r.commands()[0].index == 0 && r.commands()[1].index == 1 && r.commands()[2].index == 4);
+    CHECK(mid[0].index == 2 && mid[1].index == 3);
+    CHECK(r.takeRange(2, 99).size() == 1 && r.commands().size() == 2);  // past the end: to it
+    CHECK(r.takeRange(5, 9).empty() && r.takeRange(1, 1).empty() && r.commands().size() == 2);
+}
+
 // 3.0.4-beta.5 (the user's idea 5): the photo mode - the game's interface (the draws after its depth went off: the
 // windows, the text, the cursor) and the driver's own panel out of the frame, the world, its clears and uploads kept
 TEST(frame_drops_the_interface) {

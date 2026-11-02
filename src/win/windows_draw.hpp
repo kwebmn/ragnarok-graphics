@@ -1,4 +1,5 @@
 #pragma once
+#include <cstddef>
 
 namespace uagfx::win {
 
@@ -8,5 +9,10 @@ namespace uagfx::win {
 // the parts' own frames come at the scene's end: a window opened was drawn for that one frame. Through the driver, the
 // parts hide theirs first (each part's beforeGameDraw), then the game draws. Once; false: not this build's code.
 bool installWindowsDraw();
+// 3.0.11-beta.185/.190: the faces in the renderer's interface list ([0x6EE3D8] + 0xEC, drawn in that order after the
+// world with its depth off; a face with no vertices skipped) - before its windows (the names over the heads), at its
+// scene's begin (all of them: its windows, its cursor; the depth-sorted screen list +0x11C comes after). SIZE_MAX:
+// not known
+size_t interfaceFaces();
 
 }  // namespace uagfx::win

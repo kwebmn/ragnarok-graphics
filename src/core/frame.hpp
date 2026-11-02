@@ -130,6 +130,8 @@ public:
     // nothing past the end. generation(): the times the record was emptied (a flush plays and empties it mid-frame) -
     // a place noted in another generation is not this record's
     std::vector<Command> takeTail(size_t from);
+    // 3.0.11-beta.190: the commands [from, to) taken out (to past the end: the end), the rest kept in order
+    std::vector<Command> takeRange(size_t from, size_t to);
     void putBack(std::vector<Command>& tail);
     uint64_t generation() const { return generation_; }
     // 3.0.3-beta.8: the draws, clears and writes since the last call, through flushes (reset keeps it): whether the
