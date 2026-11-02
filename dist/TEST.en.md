@@ -1,3 +1,15 @@
+# uaRO Graphics 3.0.11-beta.165 — what's new
+
+**The guild in the new look** (the sixth group of the remaining windows):
+- Alt+G shows a card with the guild's name and two tabs. "Information": the master, the level, the members of the
+  most, the average level, the experience to the next level, the tax points, the territory.
+- "Members": a row each - a green dot when online, the name, the title, the job and the level; how many are online
+  at the top. The wheel scrolls.
+- The game's other tabs (positions, guild skills, expulsions, notice) stay in the game's own window with the switch
+  off.
+- The controller: up/down scroll, LB/RB the tabs, B closes.
+- The switch "Guild card" under "Interface", on with the new minimap.
+
 # uaRO Graphics 3.0.11-beta.164 — what's new
 
 **The server select in the new look** (the third group of the remaining windows - the whole login is new now):
