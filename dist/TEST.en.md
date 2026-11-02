@@ -1,3 +1,13 @@
+# uaRO Graphics 3.0.11-beta.157 — what's new
+
+**Choosing a thing in the new look** (the seventh group of the remaining windows):
+- The magnifier ("Identify") and inserting a card ("Insert the card") show a card at the middle: a row a thing with
+  its icon, the chosen one lit in gold.
+- A click chooses, a double click chooses and confirms at once; "Identify" / "Insert" and "Cancel" press the game's
+  buttons. The wheel scrolls a long list.
+- The controller: up/down a thing, A confirms, B cancels.
+- The switch "Choice of things" under "Interface", on with the new minimap.
+
 # uaRO Graphics 3.0.11-beta.156 — what's new
 
 **A merchant's shop in the new look** (the fourth group of the remaining windows):
