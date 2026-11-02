@@ -1,3 +1,14 @@
+# uaRO Graphics 3.0.11-beta.156 — what's new
+
+**A merchant's shop in the new look** (the fourth group of the remaining windows):
+- In place of the two old windows (the goods and the purchase) one card "Shop" with the merchant's sign: a row a
+  thing, its price and how many there are.
+- "−" and "+" beside each thing choose how many to buy (with Shift ten at a time); a double click on a row adds one.
+  The game's checks stay: no more than the shop has, no more than the zeny pays.
+- At the foot "Total" (red when the zeny is short) and "Your zeny"; "Buy" and "Cancel" press the game's buttons.
+- The controller: up/down a row, A one more, X one less, Y buys, B gives up.
+- The switch "Merchant's shop" under "Interface", on with the new minimap.
+
 # uaRO Graphics 3.0.11-beta.155 — what's new
 
 **The how many window in the new look** (the fourth group of the remaining windows):
