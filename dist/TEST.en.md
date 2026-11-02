@@ -1,3 +1,14 @@
+# uaRO Graphics 3.0.11-beta.173 — what's new
+
+**The server's state on the login screen** (the new login screen, step 3):
+- A line at the foot of the login screen: "Server up · 157 players online · ping 52 ms". The ping is measured by a
+  connection to the login server every 8 s, the players come from the site.
+- The server not answering — instead of the game's "Failed to Connect to Server." boxes one line "The server does not
+  answer - trying again in 8 s", and the login is sent again by itself (for 10 minutes, until you type another login).
+- The switch "Server status on the login" under "Interface".
+- Fixed: the login errors in words of 3.0.11-beta.172 did not show — the game closes the login window while the server
+  answers.
+
 # uaRO Graphics 3.0.11-beta.172 — what's new
 
 **Login errors in words and hints under the fields** (the new login screen, step 2):
