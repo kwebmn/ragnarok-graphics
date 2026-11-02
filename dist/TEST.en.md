@@ -1,3 +1,12 @@
+# uaRO Graphics 3.0.11-beta.186 — what's new
+
+**The interface: fixes after the tester**:
+- A thing picked up is no longer shown twice: in place of the game's box at the top of the screen, "+1 …" over the
+  bag stays. A new box "The line on a thing picked up" ("Interface", on); off — the game's box as before.
+- The character card no longer folds when "Status", "Items" or "Reference" open: its buttons stay, and the same
+  button closes the window.
+- The buffs' toggle is written with capitals: "‹ Names" and "Icons ›" (before "names" and "hide names").
+
 # uaRO Graphics 3.0.11-beta.185 — what's new
 
 **The interface's windows over the world again**:
