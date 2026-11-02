@@ -1,3 +1,10 @@
+# uaRO Graphics 3.0.11-beta.169 — what's new
+
+**The chat's macros in the new look** (the eighth group of the remaining windows):
+- Alt+M shows a card "Chat macros": ten lines "Alt+1"..."Alt+0". A click on a line gives it the keyboard, the text is
+  typed as before (the game's own fields), "Save" writes them.
+- The switch "Chat macros card" under "Interface", on with the new minimap.
+
 # uaRO Graphics 3.0.11-beta.168 — what's new
 
 **The whisper's settings in the new look** (the fifth group of the remaining windows):
