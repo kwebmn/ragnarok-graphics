@@ -1,3 +1,14 @@
+# uaRO Graphics 3.0.11-beta.181 — what's new
+
+**Registration right in the client** (the new login screen; shows once the site is updated — until then "Create an
+account" opens the site's page as before):
+- "Create an account" opens one form "1 Account → 2 Character → 3 Into the game": the login (while you type, "free" or
+  "taken" shows), the password twice, the e-mail, the sex, "I agree with the server's rules". No captcha.
+- One password for both the site and the game. After "Create the account" the game logs in by itself and opens the
+  first character's make; the account is on the shelf already, then — one click to enter. The e-mail confirmation as
+  from the site.
+- "An account on the site already? Sign in and add a login" — the site account's sign-in, then "+ A new game login".
+
 # uaRO Graphics 3.0.11-beta.180 — what's new
 
 **Signing in with the site account: all logins and characters** (the new login screen; shows once the site is
