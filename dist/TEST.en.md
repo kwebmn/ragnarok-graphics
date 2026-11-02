@@ -1,3 +1,13 @@
+# uaRO Graphics 3.0.11-beta.163 — what's new
+
+**Friends and the party in the new look** (the fifth and sixth groups of the remaining windows):
+- Alt+H and the party's button show a card with the tabs "Friends" and "Party": a row a person - a green dot when
+  online, ♛ by the party's leader, where they are on the right (or "offline").
+- A click chooses a person, a double click whispers to them. The buttons: "Whisper", "Delete" (a friend) or "Expel"
+  (from the party), "Leave the party", "Settings" (the party opens the new settings card). The game still asks first.
+- The controller: up/down a person, left/right a button, A presses, LB/RB the tabs, B closes.
+- The switch "Friends and party card" under "Interface", on with the new minimap.
+
 # uaRO Graphics 3.0.11-beta.162 — what's new
 
 **The game's options in the new look** (the eighth group of the remaining windows):
