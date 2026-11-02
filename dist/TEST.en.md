@@ -1,3 +1,13 @@
+# uaRO Graphics 3.0.11-beta.178 — what's new
+
+**Class pictures on the cards; "already in the game" for several windows** (the new login screen):
+- The "Shelf" and "Continue" cards show the class picture of the character you entered with (uaRO's 17 pictures
+  from the site: Lord Knight to Soul Linker; a second class, a baby or a mounted one with its class's picture). For
+  novices and first classes — the character's own head.
+- Several game windows: an account another window plays is marked "Already in the game (window N)" on its card. A
+  click on it does not log in by itself (the server would throw that window out) — the login window opens with that
+  login, and you press "Enter".
+
 # uaRO Graphics 3.0.11-beta.177 — what's new
 
 **Three login views to choose from** (the new login screen):
