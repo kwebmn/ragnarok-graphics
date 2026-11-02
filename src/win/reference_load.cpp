@@ -216,6 +216,26 @@ std::shared_ptr<const reflive::Online> online() {
     return l.current;
 }
 
+std::shared_ptr<const refnow::File> now() {
+    static std::shared_ptr<const refnow::File> current;  // the game's thread alone (the login screen)
+    static unsigned long long stamp = 0;
+    static ULONGLONG lookedAt = 0;
+    const ULONGLONG tick = GetTickCount64();
+    if (lookedAt == 0 || tick - lookedAt >= (current ? kLookEveryMs : 2000)) {  // the login comes seconds after
+        lookedAt = tick;
+        const std::string path = layout::join(gameDir(), layout::kReferenceNow);
+        const unsigned long long time = writeTime(path);
+        std::string text;
+        auto read = std::make_shared<refnow::File>();
+        if (time && time != stamp && readTextFile(path, text) && refnow::read(text, *read)) {
+            stamp = time;
+            current = std::move(read);
+        }
+    }
+    if (!current || !refnow::fresh(*current, static_cast<long long>(std::time(nullptr)))) return nullptr;
+    return current;
+}
+
 long long onlineSeen() {
     online();  // read again when due
     const Live& l = onlineFile();

@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <cstdlib>
 #include <ctime>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -21,6 +22,7 @@
 #include "win/game_camera.hpp"
 #include "win/log.hpp"
 #include "win/login_refusal.hpp"
+#include "win/paths.hpp"
 #include "win/reference_load.hpp"
 #include "win/server_probe.hpp"
 #include "win/picture_draw.hpp"
@@ -101,6 +103,8 @@ struct State {
     uint32_t chromeTexture = 0;
     int chromeTexW = 0, chromeTexH = 0;
     bool chromeUpload = false;
+    bool news = true;     // 3.0.11-beta.174: [interface] login_news
+    std::string newsUrl;  // the item's page on the site (empty: its click does nothing)
 };
 
 State& state() {
@@ -108,7 +112,7 @@ State& state() {
     return s;
 }
 
-std::string say(settings::Text t) { return settings::tr(startup().lang, t); }
+std::string say(settings::Text t) { return settings::tr(language(), t); }
 
 uint32_t read32(uint32_t at) {
     uint32_t v = 0;
@@ -236,8 +240,23 @@ void block(const State& s, HWND game) {
     uapad::gamewindow::setBlocked(Blocker::Login, game, &r, false);
 }
 
+// 3.0.11-beta.174: the strip kept from the game's mouse - from its news pill (else its switches) to the screen's foot
+void blockBar(const State& s, HWND game) {
+    RECT client{};
+    if (s.chrome.w <= 0 || s.targetW <= 0 || s.targetH <= 0 || !GetClientRect(game, &client)) {
+        uapad::gamewindow::setBlocked(Blocker::LoginBar, nullptr, nullptr, false);
+        return;
+    }
+    const float top = float(s.chrome.y) + (s.chrome.news.w > 0 ? s.chrome.news.y : s.chrome.langSeg[0].y);
+    const RECT r{0, LONG(int64_t(top) * client.bottom / s.targetH), client.right, client.bottom};
+    uapad::gamewindow::setBlocked(Blocker::LoginBar, game, &r, false);
+}
+
 void hide(State& s) {
-    if (s.shown) uapad::gamewindow::setBlocked(Blocker::Login, nullptr, nullptr, false);
+    if (s.shown) {
+        uapad::gamewindow::setBlocked(Blocker::Login, nullptr, nullptr, false);
+        uapad::gamewindow::setBlocked(Blocker::LoginBar, nullptr, nullptr, false);
+    }
     s.shown = false;
 }
 
@@ -279,13 +298,18 @@ bool serverOf(std::string& host, int& port) {
     return !host.empty() && port > 0;
 }
 
-// 3.0.11-beta.173: the strip at the screen's foot - the server's status
-void chromeFrame(State& s, int targetWidth, int targetHeight) {
-    if (!s.status) {
-        s.chromeShow = loginchrome::Show{};
-        s.chrome = loginchrome::Layout{};
-        return;
-    }
+// The language's segment of the strip: «УКР», «РУС», «ENG»
+constexpr settings::Lang kSegmentLang[3] = {settings::Lang::Uk, settings::Lang::Ru, settings::Lang::En};
+
+int segmentOf(settings::Lang l) {
+    for (int i = 0; i < 3; ++i)
+        if (kSegmentLang[i] == l) return i;
+    return 2;
+}
+
+// 3.0.11-beta.173: the server's status line (empty with [interface] login_status = 0)
+srvstatus::Line statusLine(State& s) {
+    if (!s.status) return srvstatus::Line{};
     const ULONGLONG now = GetTickCount64();
     if (now - s.probeAt >= 1000) {
         s.probeAt = now;
@@ -298,22 +322,62 @@ void chromeFrame(State& s, int targetWidth, int targetHeight) {
     const int players = online && reflive::fresh(*online, (long long)(std::time(nullptr))) ? online->online : -1;
     const int since = int((now - s.failedAt) / 1000);
     const int retryIn = s.connectFailed ? std::max(1, srvstatus::kProbeSec - since) : 0;
-    const srvstatus::Line line = srvstatus::line(s.connectFailed ? srvstatus::State::Down : r.state, r.pingMs, players,
-                                                 retryIn, startup().lang);
+    return srvstatus::line(s.connectFailed ? srvstatus::State::Down : r.state, r.pingMs, players, retryIn,
+                           language());
+}
+
+// 3.0.11-beta.173: the strip at the screen's foot - the server's status; 3.0.11-beta.174: the language's «УКР / РУС /
+// ENG» at its right
+void chromeFrame(State& s, int targetWidth, int targetHeight) {
+    const srvstatus::Line line = statusLine(s);
+    loginchrome::Content c;
+    c.status = line.text;
+    s.newsUrl.clear();
+    if (s.news)  // 3.0.11-beta.174: the site's event or news now, in the player's language
+        if (const auto f = reference::now()) {
+            const std::optional<refnow::Now>& item = f->items[int(language())];
+            if (item && refnow::current(*item, (long long)(std::time(nullptr)))) {
+                c.news = item->title;
+                c.allNews = say(settings::Text::LoginAllNews);
+                s.newsUrl = item->url;
+            }
+        }
     s.chromeShow.status = line.text;
     s.chromeShow.statusRgb = line.rgb;
-    s.chrome = loginchrome::layout(targetWidth, targetHeight, s.scale, line.text);
+    s.chromeShow.lang = segmentOf(language());
+    s.chromeShow.news = c.news;
+    s.chromeShow.allNews = c.allNews;
+    s.chrome = loginchrome::layout(targetWidth, targetHeight, s.scale, c);
+    s.chromeShow.hover = 0;
+    int cx = 0, cy = 0;
+    if (readGameCursor(cx, cy))
+        s.chromeShow.hover = int(loginchrome::hitTest(s.chrome, float(cx) * s.k - float(s.chrome.x),
+                                                      float(cy) * s.k - float(s.chrome.y)));
     const std::string key = line.text + '#' + std::to_string(line.rgb) + '#' + std::to_string(targetWidth) + 'x' +
-                            std::to_string(targetHeight) + '#' + std::to_string(uistyle::generation());
+                            std::to_string(targetHeight) + '#' + std::to_string(uistyle::generation()) + ';' +
+                            std::to_string(s.chromeShow.lang) + ';' + std::to_string(s.chromeShow.hover) + '!' +
+                            c.news;
     if (key == s.chromeKey) return;
     s.chromeKey = key;
     if (!panel::blank(s.chromePicture, s.chrome.w, s.chrome.h)) return;
     loginchrome::paint(s.chromePicture, s.chrome, s.chromeShow);
     std::vector<Words> words;
     for (const loginchrome::Words& w : loginchrome::words(s.chrome, s.chromeShow))
-        words.push_back(Words{w.box, utf8Wide(w.text), w.rgb, w.px, w.bold, UINT(DT_LEFT), false});
+        words.push_back(Words{w.box, utf8Wide(w.text), w.rgb, w.px, w.bold,
+                              UINT(w.align == loginchrome::Align::Center ? DT_CENTER : DT_LEFT), false});
     drawWords(s.chromePicture, words);
     s.chromeUpload = true;
+}
+
+// 3.0.11-beta.174: a language picked on the strip - kept in uaro-graphics.ini ([utility] language, as the settings
+// app's choice) and our words in it at once; the game's own texts stay as they are
+void chooseLanguage(int segment) {
+    const settings::Lang l = kSegmentLang[std::clamp(segment, 0, 2)];
+    if (l == language()) return;
+    const bool written = editIniFile(ourFile(layout::File::Ini), {{"utility", "language", settings::langToken(l)}});
+    setLanguage(l);
+    LOG_INFO("login: the language %s picked%s", settings::langToken(l),
+             written ? "" : " - uaro-graphics.ini not written: this game only");
 }
 
 // A page of the site in the player's browser (shell32 asked for only now: the driver's imports stay the four it has)
@@ -323,6 +387,21 @@ bool openUrl(const wchar_t* url) {
         reinterpret_cast<void*>(shell ? GetProcAddress(shell, "ShellExecuteW") : nullptr));
     if (open) open(nullptr, L"open", url, nullptr, nullptr, SW_SHOWNORMAL);
     return open != nullptr;
+}
+
+// 3.0.11-beta.174: the news line's click - the item's page, or the site's news in the player's language
+void openNews(const State& s, bool all) {
+    if (all) {
+        const settings::Lang l = language();
+        const wchar_t* url = l == settings::Lang::Uk   ? L"https://uaro.kiev.ua/uk/news"
+                             : l == settings::Lang::Ru ? L"https://uaro.kiev.ua/ru/news"
+                                                       : L"https://uaro.kiev.ua/en/news";
+        LOG_INFO("login: the site's news opened%s", openUrl(url) ? "" : " - not possible here");
+        return;
+    }
+    if (s.newsUrl.empty()) return;
+    const bool opened = openUrl(utf8Wide(s.newsUrl).c_str());
+    LOG_INFO("login: the news line's page opened%s", opened ? "" : " - not possible here");
 }
 
 void press(State& s, lc::Part p) {
@@ -364,10 +443,12 @@ void press(State& s, lc::Part p) {
 
 }  // namespace
 
-void frame(HWND game, bool on, bool status, unsigned codePage, double k, int targetWidth, int targetHeight) {
+void frame(HWND game, bool on, bool status, bool news, unsigned codePage, double k, int targetWidth,
+           int targetHeight) {
     State& s = state();
     s.codePage = codePage;
     s.status = status;
+    s.news = news;
     if (on != s.on) {
         s.on = on;
         s.key.clear();
@@ -422,7 +503,7 @@ void frame(HWND game, bool on, bool status, unsigned codePage, double k, int tar
     if (const auto seen = loginrefusal::take()) {  // 3.0.11-beta.172: the server's refusal - under its field
         const loginerr::Refusal r = loginerr::refusal(seen->code);
         if (r.inlineOnly) {
-            s.error = loginerr::words(r, startup().lang, s.lastTyped, utf8Of(widened(seen->until, s.codePage)));
+            s.error = loginerr::words(r, language(), s.lastTyped, utf8Of(widened(seen->until, s.codePage)));
             s.errorField = r.field;
             s.errorAction = r.action;
             s.errorFresh = true;
@@ -460,6 +541,7 @@ void frame(HWND game, bool on, bool status, unsigned codePage, double k, int tar
     chromeFrame(s, targetWidth, targetHeight);
     s.shown = true;
     block(s, game);
+    blockBar(s, game);
 }
 
 void draw(FrameRecord& record, gpu::Renderer& renderer) {
@@ -486,6 +568,18 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     if (!button && m != WM_MOUSEWHEEL) return false;
     float tx = 0, ty = 0;
     if (!pointerInTarget(game, m, lp, s.k, s.targetW, s.targetH, tx, ty, nullptr)) return false;
+    if (s.chrome.w > 0) {  // 3.0.11-beta.174: the strip's switches
+        const loginchrome::Part p = loginchrome::hitTest(s.chrome, tx - float(s.chrome.x), ty - float(s.chrome.y));
+        const bool lang = p >= loginchrome::Part::Lang0 && p <= loginchrome::Part::Lang2;
+        const bool news = p == loginchrome::Part::News || p == loginchrome::Part::AllNews;
+        if (lang || news || (s.chromeShow.views && p != loginchrome::Part::None)) {
+            result = 0;
+            const bool click = m == WM_LBUTTONDOWN || m == WM_LBUTTONDBLCLK;
+            if (lang && click) chooseLanguage(int(p) - int(loginchrome::Part::Lang0));
+            if (news && click) openNews(s, p == loginchrome::Part::AllNews);
+            return true;
+        }
+    }
     const float lx = tx - float(s.layout.x), ly = ty - float(s.layout.y);
     if (!s.layout.glass.contains(lx, ly)) return false;
     result = 0;

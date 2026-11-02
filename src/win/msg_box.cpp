@@ -83,7 +83,7 @@ State& state() {
     return s;
 }
 
-std::string say(settings::Text t) { return settings::tr(startup().lang, t); }
+std::string say(settings::Text t) { return settings::tr(language(), t); }
 
 uint32_t read32(uint32_t at) {
     uint32_t v = 0;
@@ -128,7 +128,7 @@ int __attribute__((thiscall)) errorMsg(uint32_t manager, const char* text, int k
                 LOG_INFO("messages: the server's refusal (code %d) - in words on the login card", refusal);
             return kOkAnswer;
         }
-        s.text = loginerr::words(r, startup().lang, loginwin::account(),
+        s.text = loginerr::words(r, language(), loginwin::account(),
                                  utf8Of(widened(loginrefusal::handlingUntil(), s.codePage)));
         s.ownWords = true;
         s.kind = ac::Kind::Message;

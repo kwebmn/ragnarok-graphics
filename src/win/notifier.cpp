@@ -167,7 +167,7 @@ void tellWords(notify::Kind kind, const std::string& words) {
 }
 
 void tell(notify::Kind kind, const std::string& who, const std::string& what) {
-    tellWords(kind, notify::text(startup().lang, kind, fromGame(who), fromGame(what)));
+    tellWords(kind, notify::text(language(), kind, fromGame(who), fromGame(what)));
 }
 
 // 3.0.7-beta.6 (the user's notification 6): what the party watch saw - a death, a fall under the threshold
@@ -212,7 +212,7 @@ void frame(HWND window, bool front, bool main, const Config& config) {
 }
 
 void answer(const std::string& code, const std::string& status) {
-    tellWords(notify::Kind::Answer, notify::text(startup().lang, notify::Kind::Answer, code, status));
+    tellWords(notify::Kind::Answer, notify::text(language(), notify::Kind::Answer, code, status));
 }
 
 void disconnected() {

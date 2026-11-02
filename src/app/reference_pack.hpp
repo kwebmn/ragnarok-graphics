@@ -23,5 +23,8 @@ bool noteQuests(const std::wstring& dir, std::string& error);
 // 3.0.11-beta.12: the players' public MVP timers and the site's market (core/reference_live) into live.json - with
 // the counts, every 2 minutes; false and why (the site without it yet: an older site)
 bool noteLive(const std::wstring& dir, std::string& error);
+// 3.0.11-beta.174: the site's event or news now (core/reference_now) in its three languages into now.json - for the
+// login screen's news line, at the game's start and with the counts, at most every 10 minutes
+bool noteNow(const std::wstring& dir, std::string& error);
 
 }  // namespace uagfx::app

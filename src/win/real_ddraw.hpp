@@ -27,6 +27,11 @@ struct Startup {
     bool graphicsTest = false;  // 3.0.5-beta.7: the settings app's «Тест графіки» started it (UARO_GRAPHICS_TEST)
 };
 const Startup& startup();
+// 3.0.11-beta.174: the driver's words' language now - the start's (startup().lang) until the player picks another on
+// the login screen or in the settings app ([utility] language, read live); a change draws our parts again, the game's
+// own texts stay as they are
+settings::Lang language();
+void setLanguage(settings::Lang l);
 
 // The system's DirectDraw: where the calls go when the uaRO renderer is not used, and its fallback (2.2: dgVoodoo is
 // gone). Loaded on the first call that needs it, never in DllMain (no LoadLibrary under the loader lock).

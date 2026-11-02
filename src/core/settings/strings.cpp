@@ -5495,7 +5495,7 @@ constexpr Entry kTexts[] = {
      "«Увійти».",
      "Строка под окном входа: сервер отвечает, сколько игроков онлайн, пинг. Когда не отвечает — одна строка с "
      "отсчётом до следующей попытки вместо окон игры; вход повторяется сам только после того, как вы нажали "
-     "«Увійти»."},
+     "«Войти»."},
     {Text::LoginStatusUp, "Server up · {1} players online · ping {2} ms",
      "Сервер працює · {1} гравців онлайн · пінг {2} мс", "Сервер работает · {1} игроков онлайн · пинг {2} мс"},
     {Text::LoginStatusUpCount, "Server up · {1} players online", "Сервер працює · {1} гравців онлайн",
@@ -5505,6 +5505,16 @@ constexpr Entry kTexts[] = {
     {Text::LoginStatusDown, "The server does not answer - trying again in {1} s",
      "Сервер не відповідає — пробуємо ще раз через {1} с", "Сервер не отвечает — пробуем ещё раз через {1} с"},
     {Text::LoginStatusDownIdle, "The server does not answer", "Сервер не відповідає", "Сервер не отвечает"},
+    // 3.0.11-beta.174: the site's event or news now on the login screen
+    {Text::InterfaceLoginNews, "News on the login", "Новини на вході", "Новости на входе"},
+    {Text::InterfaceLoginNewsHint,
+     "Above the server's status: the event on now or next, else the newest news from uaro.kiev.ua. A click opens it "
+     "in the browser, «All news» - the site's news.",
+     "Над станом сервера: подія, що йде зараз або наступна, інакше найсвіжіша новина з uaro.kiev.ua. Клік відкриває "
+     "її в браузері, «Усі новини» — новини сайту.",
+     "Над состоянием сервера: событие, которое идёт сейчас или следующее, иначе самая свежая новость с uaro.kiev.ua. "
+     "Клик открывает её в браузере, «Все новости» — новости сайта."},
+    {Text::LoginAllNews, "All news", "Усі новини", "Все новости"},
     // 3.0.11-beta.152: the character select
     {Text::InterfaceCharSelect, "Character select", "Вибір персонажа", "Выбор персонажа"},
     {Text::InterfaceCharSelectHint,

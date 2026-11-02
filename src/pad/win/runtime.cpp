@@ -369,7 +369,7 @@ overlay::View menuView() {
 
 // 3.0.11-beta.89 (the concept «Контроллер в интерфейсе uaRO»: one program, one language): the pad's menu and hints in
 // the language of uaRO Graphics' interface, whatever uaro-pad.ini says
-void followDriverLanguage(Config& cfg) { cfg.lang = Lang(int(uagfx::win::startup().lang)); }
+void followDriverLanguage(Config& cfg) { cfg.lang = Lang(int(uagfx::win::language())); }
 
 // Writes `text` to `path` through a temporary file, so a crash never leaves half a file behind.
 bool writeAtomically(const std::string& path, const std::string& text) {
@@ -1170,6 +1170,7 @@ void tick() {
     if (s.ticked && now - s.lastTickMs < 5) return;  // the client may poll several times per frame
     s.ticked = true;
     s.lastTickMs = now;
+    followDriverLanguage(s.cfg);  // 3.0.11-beta.174: the login screen's or the settings app's language at once
     if (g_unseenUp.exchange(false)) s.session->onUnobserved(s.session->mapSocket(), Direction::ClientToServer);
     if (g_unseenDown.exchange(false)) s.session->onUnobserved(s.session->mapSocket(), Direction::ServerToClient);
     const PadState pad = s.pad.poll();

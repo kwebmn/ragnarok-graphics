@@ -91,7 +91,7 @@ State& state() {
     return s;
 }
 
-std::string say(settings::Text t) { return settings::tr(startup().lang, t); }
+std::string say(settings::Text t) { return settings::tr(language(), t); }
 
 void readLayout(State& s) {
     if (s.read) return;
@@ -300,7 +300,7 @@ void paintFrame(State& s, int i, float scale) {
     const int percent = int(std::lround(s.layout[size_t(i)].size * 100));
     const bool live = shownNow(s, i);
     const std::string key = std::to_string(b.w) + 'x' + std::to_string(b.h) + ';' + std::to_string(int(look)) + ';' +
-                            std::to_string(percent) + (live ? ";" : ";u") + std::to_string(int(startup().lang));
+                            std::to_string(percent) + (live ? ";" : ";u") + std::to_string(int(language()));
     Drawn& d = s.frames[size_t(i)];
     if (key == d.key) return;
     d.key = key;
@@ -440,7 +440,7 @@ void frame(HWND game, double k, int targetW, int targetH) {
                   : s.barHover == hudlayout::BarPart::None && pointer ? partAt(s, cx, cy, false)
                                                                       : -1;
         const std::string barKey = std::to_string(s.bar.w) + ';' + std::to_string(int(s.barHover)) + ';' +
-                                   std::to_string(int(startup().lang));
+                                   std::to_string(int(language()));
         if (barKey != s.barPicture.key) {
             s.barPicture.key = barKey;
             hudlayout::paintBar(s.barPicture.picture, s.bar, s.barHover);

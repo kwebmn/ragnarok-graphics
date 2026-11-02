@@ -206,7 +206,7 @@ void render(State& s) {
     const uicost::Paint cost("party", s.layout.w, s.layout.h);  // 3.0.11-beta.55
     if (!panel::blank(s.picture, s.layout.w, s.layout.h)) return;  // 3.0.11-beta.57: in the memory it had
     pp::paint(s.picture, s.layout, s.members, kLow);
-    const settings::Lang lang = startup().lang;
+    const settings::Lang lang = language();
     drawWords(s.picture, gdiWords(pp::words(s.layout, s.members, kLow, settings::tr(lang, settings::Text::PartyOffline),
                                             settings::tr(lang, settings::Text::PartyTitle),
                                             settings::tr(lang, settings::Text::PartyDead))));

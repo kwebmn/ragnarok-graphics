@@ -56,7 +56,7 @@ std::wstring SeveralWindows::titleOf(const std::string& name, unsigned codePage)
     const bool known = !name.empty() && readOwnStatus(status);
     const std::string map = name.empty() ? "" : readGameMap();
     const std::string text = window_title::title(utf8Of(widened(name, codePage)), known ? &status : nullptr, map,
-                                                 client_, startup().lang);
+                                                 client_, language());
     return widened(text, CP_UTF8);
 }
 

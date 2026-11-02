@@ -76,7 +76,7 @@ void render(State& s, bool sony) {
     if (!panel::blank(s.picture, s.layout.w, s.layout.h)) return;
     pa::paint(s.picture, s.layout, s.rows, s.focus, sony);
     using settings::Text;
-    const settings::Lang l = startup().lang;
+    const settings::Lang l = language();
     drawWords(s.picture, gdiWords(pa::words(s.layout, s.rows, s.what, settings::tr(l, Text::AssignTitle),
                                             settings::tr(l, Text::AssignPut), settings::tr(l, Text::AssignCancel),
                                             settings::tr(l, Text::AssignEmpty), sony)));

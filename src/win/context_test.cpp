@@ -40,7 +40,7 @@ std::wstring wide(const std::string& utf8) {
 }
 
 std::string said(Text t, const std::vector<std::string>& args = {}) {
-    return settings::fmt(settings::tr(startup().lang, t), args);
+    return settings::fmt(settings::tr(language(), t), args);
 }
 
 std::string resultFile() { return gameDir() + "\\uaro-graphics\\graphics-test.txt"; }
@@ -261,7 +261,7 @@ void Context::testSend() {
     h.mode = light_.superLight ? said(Text::QualitySuperLight) : light_.battery ? said(Text::FramesBattery) : "";
     graphics_test::PhaseResult r[kSets];
     for (int p = 0; p < kSets; ++p) r[p] = test_.result(p);
-    const std::string table = graphics_test::summary(h, r, graphics_test::profileParts(logs), startup().lang);
+    const std::string table = graphics_test::summary(h, r, graphics_test::profileParts(logs), language());
     size_t from = 0;
     while (from < table.size()) {  // the table in the log too
         const size_t end = std::min(table.find('\n', from), table.size());

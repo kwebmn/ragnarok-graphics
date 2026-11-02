@@ -69,7 +69,7 @@ State& state() {
     return s;
 }
 
-std::string say(settings::Text t) { return settings::tr(startup().lang, t); }
+std::string say(settings::Text t) { return settings::tr(language(), t); }
 
 uint32_t read32(uint32_t at) {
     uint32_t v = 0;
@@ -167,7 +167,7 @@ sw::Texts texts() {
                                                 settings::Text::StatsEffectDex, settings::Text::StatsEffectLuk};
     for (int i = 0; i < sw::kStats; ++i) t.effects[i] = say(effects[i]);
     t.hint = say(settings::Text::StatsHint);
-    t.decimal = startup().lang == settings::Lang::En ? '.' : ',';
+    t.decimal = language() == settings::Lang::En ? '.' : ',';
     return t;
 }
 

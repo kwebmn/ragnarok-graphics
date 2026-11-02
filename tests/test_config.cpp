@@ -1776,3 +1776,14 @@ TEST(config_interface_login_status) {
     CHECK(appliesNow("interface.login_status"));
     CHECK(!liveUpdate(parseConfig(""), parseConfig("[interface]\nlogin_status = 0\n")).next.loginStatus);
 }
+
+// 3.0.11-beta.174 (the login concept's news line): [interface] login_news - the site's event or news now above the
+// status line on the login screen (a click opens it on uaro.kiev.ua); on at first, a box of «Інтерфейс», at once
+TEST(config_interface_login_news) {
+    CHECK(parseConfig("").loginNews);
+    CHECK(!parseConfig("[interface]\nlogin_news = 0\n").loginNews);
+    const settings::IniSetting* s = settings::findSetting("interface.login_news");
+    CHECK(s != nullptr && s->page == settings::Page::Interface);
+    CHECK(appliesNow("interface.login_news"));
+    CHECK(!liveUpdate(parseConfig(""), parseConfig("[interface]\nlogin_news = 0\n")).next.loginNews);
+}

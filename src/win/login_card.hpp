@@ -21,8 +21,10 @@ namespace uagfx::win::loginwin {
 // (the password as dots, its length only), a click on a field gives it the keys (the manager's SetFocus 0x4CE510),
 // «Увійти», «Вийти» and the box press its own buttons, the registration opens uaro.kiev.ua's page. On the game's
 // thread.
-// 3.0.11-beta.173: `status` - [interface] login_status, the server's status line at the screen's foot
-void frame(HWND game, bool on, bool status, unsigned codePage, double k, int targetWidth, int targetHeight);
+// 3.0.11-beta.173: `status` - [interface] login_status, the server's status line at the screen's foot;
+// 3.0.11-beta.174: `news` - [interface] login_news, the site's event or news now above it
+void frame(HWND game, bool on, bool status, bool news, unsigned codePage, double k, int targetWidth,
+           int targetHeight);
 // 3.0.11-beta.172: the card holds the game's login now (on, the window there, its fields known by their mask)
 bool active();
 // 3.0.11-beta.172: the login typed into the game's field the last time the card saw it (UTF-8)

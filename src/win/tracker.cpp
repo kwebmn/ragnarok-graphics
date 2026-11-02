@@ -58,7 +58,7 @@ State& state() {
     return s;
 }
 
-std::string say(settings::Text t) { return settings::tr(startup().lang, t); }
+std::string say(settings::Text t) { return settings::tr(language(), t); }
 
 void readState(State& s) {
     if (s.stateRead) return;
@@ -130,7 +130,7 @@ void hide(State& s) {
 void build(State& s) {
     s.entries.clear();
     s.routeOf.clear();
-    const settings::Lang l = startup().lang;
+    const settings::Lang l = language();
     const std::shared_ptr<const refindex::Index> ix = reference::index();
     std::vector<tk::Entry> pinned;
     if (ix) pinned = refpages::trackedEntries(*ix, l, s.quests, s.items);

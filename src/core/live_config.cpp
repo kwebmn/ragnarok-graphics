@@ -335,6 +335,14 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("login", flag(running.loginWindow), flag(file.loginWindow)));
         n.loginWindow = file.loginWindow;
     }
+    if (file.language != running.language) {  // 3.0.11-beta.174: the driver's words' language, at once
+        u.applied.push_back(change("language", running.language, file.language));
+        n.language = file.language;
+    }
+    if (file.loginNews != running.loginNews) {  // 3.0.11-beta.174: the site's item now on the login, at once
+        u.applied.push_back(change("login_news", flag(running.loginNews), flag(file.loginNews)));
+        n.loginNews = file.loginNews;
+    }
     if (file.loginStatus != running.loginStatus) {  // 3.0.11-beta.173: the server's status on the login, at once
         u.applied.push_back(change("login_status", flag(running.loginStatus), flag(file.loginStatus)));
         n.loginStatus = file.loginStatus;
@@ -610,6 +618,7 @@ bool appliesNow(const std::string& k) {
            k == "frames.fps_limit" || k == "frames.keep_fps" || k == "frames.save_power" || k == "debug.log" ||
            k == "debug.profile" || k == "debug.xray" || k == "debug.seams_view" || k == "frames.fps_counter" ||
            k == "debug.quick_acks" ||  // 3.0.11-beta.128
+           k == "utility.language" ||  // 3.0.11-beta.174
            k == "stats.send" || k.compare(0, 8, "windows.") == 0 || k.compare(0, 8, "effects.") == 0 ||
            k.compare(0, 6, "panel.") == 0 ||  // 3.0.3-beta.8
            k.compare(0, 10, "interface.") == 0 ||  // 3.0.11-beta.1: the minimap; 3.0.11-beta.6: its hints

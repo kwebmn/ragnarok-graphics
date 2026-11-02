@@ -137,7 +137,7 @@ int __attribute__((thiscall)) pushed(uint32_t manager, int msg, const char* text
     return reinterpret_cast<PushFn>(g_push)(manager, msg, text, colour, more);
 }
 
-std::string say(settings::Text t) { return settings::tr(startup().lang, t); }
+std::string say(settings::Text t) { return settings::tr(language(), t); }
 
 uint32_t read32(uint32_t at) {
     uint32_t v = 0;

@@ -112,7 +112,7 @@ int __attribute__((thiscall)) selectQueued(void* conn, int len, const uint8_t* d
         g_held.len = len;
         g_held.on = true;
         g_held.nextPing = now + 10000;
-        g_held.lang = startup().lang;  // 3.0.11-beta.148: the player's, as the driver's other words
+        g_held.lang = language();  // 3.0.11-beta.148: the player's, as the driver's other words
         LOG_INFO("map entry: the character's selection waits %u s - the map server still has the failed entry",
                  unsigned((g_guard.holdUntil() - now + 999) / 1000));
         return 1;

@@ -129,7 +129,7 @@ const panel::Picture* pictureOf(State& s, const refindex::Mob& mob, int id, int 
 }
 
 tc::Texts texts() {
-    const settings::Lang l = startup().lang;
+    const settings::Lang l = language();
     return tc::Texts{settings::tr(l, settings::Text::TargetWeak), settings::tr(l, settings::Text::TargetHeals),
                      settings::tr(l, settings::Text::TargetBook),
                      settings::tr(l, settings::Text::TargetYourBar),  // 3.0.11-beta.68
@@ -200,7 +200,7 @@ std::string joined(const std::vector<std::string>& parts) {
 }
 
 void describe(tc::Data& d, const refindex::Mob& m, int id) {
-    const settings::Lang l = startup().lang;
+    const settings::Lang l = language();
     d.mob = id;
     d.name = m.name;
     d.level = m.lv;

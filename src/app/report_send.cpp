@@ -286,6 +286,11 @@ int watchGame(unsigned long pid, int logSlot) {
     // site has another one
     // 3.0.11-beta.10: and the players on each map now, every 2 minutes while the game runs (core/reference_live)
     const bool live = config.newMinimap || config.referenceWindow;
+    const bool news = config.loginWindow && config.loginNews;  // 3.0.11-beta.174: the login screen's news line
+    if (news) {
+        std::string error;
+        noteNow(exeFolder(), error);
+    }
     if (live) {
         std::string error;
         noteReference(exeFolder(), error);
@@ -309,6 +314,7 @@ int watchGame(unsigned long pid, int logSlot) {
             std::string error;
             noteOnline(exeFolder(), error);
             noteLive(exeFolder(), error);
+            if (news) noteNow(exeFolder(), error);  // 3.0.11-beta.174: every 10 minutes at most
         }
         if (answers && GetTickCount64() - answered >= kAnswersEveryMs) {
             answered = GetTickCount64();

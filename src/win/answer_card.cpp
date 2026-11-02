@@ -88,7 +88,7 @@ void tellBehind(State& s) {
         const std::string key = answers::key(a);
         if (s.handled.count(key) || s.told.count(key)) continue;
         s.told.insert(key);
-        notifier::answer(a.code, reporttexts::status(startup().lang, a.status, a.fixedIn));
+        notifier::answer(a.code, reporttexts::status(language(), a.status, a.fixedIn));
     }
 }
 
@@ -129,7 +129,7 @@ std::string clock(const std::string& iso) {
 }
 
 void render(State& s) {
-    const settings::Lang lang = startup().lang;
+    const settings::Lang lang = language();
     const reports::Answer& a = s.current;
     const float sc = s.scale;
     const float titlePx = 13 * sc, chipPx = 11.5f * sc, quotePx = 13 * sc, buttonPx = 12.5f * sc, timePx = 11.5f * sc;

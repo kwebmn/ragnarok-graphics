@@ -227,7 +227,7 @@ void Console::build(Lang lang, const Config& config) {
                  {"interface.items", "interface.status", "interface.skills", "interface.equip", "interface.npc_talk",
                   "interface.shop", "interface.storage", "interface.trade", "interface.menu", "interface.cards",
                   "interface.asks", "interface.messages", "interface.login", "interface.login_status",
-                  "interface.char_select",
+                  "interface.login_news", "interface.char_select",
                   "interface.char_make", "interface.cart", "interface.counts", "interface.vending",
                   "interface.picks", "interface.party_setup", "interface.pet", "interface.homun",
                   "interface.merc", "interface.options", "interface.social", "interface.servers",

@@ -622,6 +622,8 @@ Config parseConfig(const std::string& text) {
             setBool(val, c.loginWindow);
         } else if (key == "interface.login_status") {  // 3.0.11-beta.173: the server's status on the login
             setBool(val, c.loginStatus);
+        } else if (key == "interface.login_news") {  // 3.0.11-beta.174: the site's item now on the login
+            setBool(val, c.loginNews);
         } else if (key == "interface.char_select") {  // 3.0.11-beta.152: the character select
             charSelectSet = val == "0" || val == "1" || val == "on" || val == "off" || val == "true" || val == "false";
             setBool(val, c.charSelectWindow);
@@ -753,6 +755,9 @@ Config parseConfig(const std::string& text) {
                 c.notify.partyHp = std::clamp(std::atoi(val.c_str()), kPartyHpLeast, kPartyHpMost);
             else if (k == "recovered_percent")  // 3.0.7-beta.7
                 c.notify.recoveredPercent = std::clamp(std::atoi(val.c_str()), kRecoveredLeast, kRecoveredMost);
+        } else if (key == "utility.language") {  // 3.0.11-beta.174: the driver's words, at once
+            const std::string l = lower(val);
+            c.language = l == "uk" || l == "ru" || l == "en" ? l : "";
         } else if (key == "utility.mode") {  // 2.15: the Developer mode's keys
             c.developer = lower(val) == "developer";
         } else if (key == "renderer.safe_mode") {  // 2.12

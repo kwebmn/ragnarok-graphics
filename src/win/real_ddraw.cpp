@@ -6,6 +6,7 @@
 #include "win/roext.hpp"
 #include "win/updates_hook.hpp"
 
+#include <atomic>
 #include <cstdlib>
 #include <cstring>
 #include <string>
@@ -21,6 +22,7 @@
 #include "core/settings/ini_edit.hpp"
 #include "win/start_screen.hpp"
 #include "core/settings/report.hpp"
+#include "core/ui_style.hpp"
 #include "core/update_check.hpp"
 #include "core/version.hpp"
 #include "win/crash.hpp"
@@ -455,6 +457,23 @@ HMODULE loadReal() {
 const Startup& startup() {
     static const Startup s = decide();
     return s;
+}
+
+namespace {
+std::atomic<int> g_language{-1};  // 3.0.11-beta.174: setLanguage's, -1 the start's
+}  // namespace
+
+settings::Lang language() {
+    const int l = g_language.load(std::memory_order_relaxed);
+    return l < 0 ? startup().lang : settings::Lang(l);
+}
+
+void setLanguage(settings::Lang l) {
+    if (language() == l) return;
+    g_language = int(l);
+    startLanguage(l);
+    uistyle::bump();
+    LOG_INFO("language: our words now in %s (the game's own stay)", settings::langToken(l));
 }
 
 HMODULE realModule() {

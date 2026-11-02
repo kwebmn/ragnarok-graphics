@@ -106,7 +106,7 @@ State& state() {
     return s;
 }
 
-std::string say(settings::Text t) { return settings::tr(startup().lang, t); }
+std::string say(settings::Text t) { return settings::tr(language(), t); }
 
 // 3.0.11-beta.139 (the owner: «пишет что 60% но хп воостанавливается»): the server's own overweight state - its status
 // icons SI_WEIGHT90 (36: no attacks nor skills, 90 %) and SI_WEIGHT50 (35: no natural regen - uaRO's
@@ -239,7 +239,7 @@ cb::Texts texts() {
                                                 settings::Text::CharItems,  settings::Text::CharSkills,
                                                 settings::Text::CharFriends, settings::Text::CharOptions};
     for (int i = 0; i < cb::kButtons; ++i) t.buttons[i] = say(names[i]);
-    t.decimal = startup().lang == settings::Lang::En ? '.' : ',';
+    t.decimal = language() == settings::Lang::En ? '.' : ',';
     return t;
 }
 

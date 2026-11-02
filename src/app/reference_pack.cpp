@@ -9,6 +9,7 @@
 #include "app/text.hpp"
 #include "core/layout.hpp"
 #include "core/reference_live.hpp"
+#include "core/reference_now.hpp"
 #include "core/reference_quests.hpp"
 #include "core/world_map.hpp"
 
@@ -21,6 +22,8 @@ constexpr const char* kOnlinePath = "/api/public/online.json";  // 3.0.11-beta.1
 constexpr const char* kWorldPath = "/assets/worldmap/worldmap.json";  // 3.0.11-beta.11: the site's world map
 constexpr const char* kLivePath = "/api/public/game/live.json";  // 3.0.11-beta.12: MVP timers, the market
 constexpr const char* kQuestsPath = "/api/public/game/quests.json";  // 3.0.11-beta.16: the quests' manifest
+constexpr const char* kNowPath = "/api/public/now.json";  // 3.0.11-beta.174: the site's event or news now
+constexpr long long kNowAgain = 600;  // seconds: the item asked again at most every 10 minutes
 constexpr long long kOnlineAgain = 90;  // seconds: younger counts are kept (several game windows, several watchers)
 
 std::wstring folderOf(const std::wstring& dir) { return dir + L"\\" + wide(layout::kReference); }
@@ -167,6 +170,35 @@ bool noteOnline(const std::wstring& dir, std::string& error) {
     makeFolder(folderOf(dir));
     if (!writeFileAtomic(dir + L"\\" + wide(layout::kReferenceOnline), reflive::write(o))) {
         error = "the players online could not be written";
+        return false;
+    }
+    return true;
+}
+
+bool noteNow(const std::wstring& dir, std::string& error) {
+    std::string text;
+    refnow::File there;
+    const long long now = static_cast<long long>(std::time(nullptr));
+    const std::wstring file = dir + L"\\" + wide(layout::kReferenceNow);
+    if (readFile(file, text) && refnow::read(text, there) && now - there.at >= 0 && now - there.at < kNowAgain)
+        return true;
+    struct SiteLang {
+        settings::Lang lang;
+        const char* site;  // the site's language of its texts (?lang=)
+    };
+    static constexpr SiteLang kLangs[] = {{settings::Lang::Uk, "ua"}, {settings::Lang::Ru, "ru"},
+                                          {settings::Lang::En, "en"}};
+    refnow::File f;
+    f.at = now;
+    for (const SiteLang& l : kLangs) {
+        if (!fetchPath(std::string(kNowPath) + "?lang=" + l.site, text, error)) return false;
+        refnow::Now n;
+        if (refnow::parse(text, n)) f.items[int(l.lang)] = std::move(n);
+    }
+    makeFolder(dir + L"\\" + wide(layout::kOurs));
+    makeFolder(folderOf(dir));
+    if (!writeFileAtomic(file, refnow::write(f))) {
+        error = "the site's item now could not be written";
         return false;
     }
     return true;

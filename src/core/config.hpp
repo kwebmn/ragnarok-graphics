@@ -688,6 +688,10 @@ struct Config {
     bool loginWindow = false;
     // 3.0.11-beta.173: [interface] login_status - the server's status line under the login window (on)
     bool loginStatus = true;
+    // 3.0.11-beta.174: [interface] login_news - the site's event or news now above the status line (on)
+    bool loginNews = true;
+    // 3.0.11-beta.174: [utility] language - the driver's words' language ("uk", "ru", "en"; "" Windows'), at once
+    std::string language;
     // 3.0.11-beta.152: [interface] char_select - the game's character select (win/char_select) in the new look
     bool charSelectWindow = false;
     // 3.0.11-beta.153: [interface] char_make - the game's character make (win/char_make) in the new look

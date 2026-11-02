@@ -5,6 +5,7 @@
 
 #include "core/reference_index.hpp"
 #include "core/reference_live.hpp"
+#include "core/reference_now.hpp"
 #include "core/world_map.hpp"
 
 namespace uagfx::win::reference {
@@ -21,6 +22,9 @@ long long onlineSeen();
 // 3.0.11-beta.12: the players' public MVP timers and the site's market (uaro-graphics\reference\live.json) - as
 // online()
 std::shared_ptr<const reflive::Live> live();
+// 3.0.11-beta.174: the site's event or news now in its three languages (uaro-graphics\reference\now.json, the
+// watcher's at the game's start) - looked at every 2 s until read, then as online(); null none or not fresh
+std::shared_ptr<const refnow::File> now();
 // 3.0.11-beta.11: the world map - the site's sheet (uaro-graphics\reference\worldmap.json) with the client's own
 // minimaps put on it, made on a thread of its own at the first ask (and again when the sheet changes); null until then
 struct World {

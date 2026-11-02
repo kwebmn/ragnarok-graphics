@@ -19,6 +19,8 @@ int generation();  // another number each time they change: the parts draw their
 // 3.0.11-beta.74: the panels' pictures' source (win/pack_pictures' iconsStamp: the AI pack read, the switch) - another
 // one changes generation(), the icons made again
 void setPictures(int source);
+// 3.0.11-beta.174: the driver's words changed language (the login screen's «УКР / РУС / ENG») - the parts draw again
+void bump();
 
 // 3.0.11-beta.54 (R-JK5455: «взял маленький екран а там не все елементы интерфейса влезли»): the new interface's
 // size - its parts are the concept's at the game's 1920 x 1080 (a concept pixel a game pixel); a game smaller than

@@ -139,7 +139,7 @@ void WindowPanel::render() {
     geometry_ = panel::geometry(int(all_.size()), layout_, scale_, targetW_);
     std::vector<panel::Card> cards;
     std::vector<Words> words;
-    const settings::Lang lang = startup().lang;
+    const settings::Lang lang = language();
     const float s = geometry_.scale;
     const bool icons = layout_ == panel::Layout::Icons;  // 3.0.3-beta.11: their numbers alone
     if (!icons)
@@ -216,7 +216,7 @@ void WindowPanel::renderTip() {
     const std::string data = std::to_string(i) + '|' + shownData_ + '|' + std::to_string(scale_);
     if (data == tipData_) return;
     tipData_ = data;
-    const settings::Lang lang = startup().lang;
+    const settings::Lang lang = language();
     const float s = scale_;
     const std::wstring name = utf8Wide(
         w.name.empty() ? settings::fmt(settings::tr(lang, settings::Text::PanelWindow), {std::to_string(w.number)})
@@ -424,7 +424,7 @@ void WindowPanel::openMenu(float tx, float ty) {
 void WindowPanel::renderMenu() {
     menuGeometry_ = panel::menuGeometry(menuRows_, menuScale_);
     panel::paintMenu(menuPicture_, menuGeometry_, menuRows_, menuHover_);
-    const std::vector<panel::MenuText> texts = panel::menuTexts(startup().lang);
+    const std::vector<panel::MenuText> texts = panel::menuTexts(language());
     const float s = menuGeometry_.scale;
     std::vector<Words> words;
     for (size_t i = 0; i < menuRows_.size() && i < texts.size() && i < menuGeometry_.label.size(); ++i) {

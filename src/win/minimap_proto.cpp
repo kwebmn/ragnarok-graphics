@@ -200,7 +200,7 @@ void readNames(State& s) {
     LOG_INFO("minimap: %zu names of maps from the client's mapnametable.txt", s.mapNames.size());
 }
 
-std::string say(settings::Text t) { return settings::tr(startup().lang, t); }
+std::string say(settings::Text t) { return settings::tr(language(), t); }
 
 // 3.0.11-beta.9: a map's short name: the client's, else its code
 std::string shortTitle(State& s, const std::string& code) {
@@ -277,7 +277,7 @@ void buildHints(State& s) {
         const std::string name = mob != s.index->mobs.end() ? mob->second.name : "#" + std::to_string(m.id);
         const bool boss = mob != s.index->mobs.end() && mob->second.boss;
         std::string right = std::to_string(m.count);
-        if (boss && m.respawnMs >= kBossRespawnMs) right = refpages::respawn(m.respawnMs, startup().lang);
+        if (boss && m.respawnMs >= kBossRespawnMs) right = refpages::respawn(m.respawnMs, language());
         bool timer = false;  // 3.0.11-beta.12: a player's public timer of it here - when it comes back
         if (boss && s.live && m.respawnMs > 0) {
             const reflive::Timer* t = nullptr;
@@ -288,7 +288,7 @@ void buildHints(State& s) {
                 }
             if (t) {
                 const long long left = t->killed + m.respawnMs / 1000 - static_cast<long long>(std::time(nullptr));
-                right = left > 0 ? refpages::respawn(int(std::max<long long>(left, 60) * 1000), startup().lang)
+                right = left > 0 ? refpages::respawn(int(std::max<long long>(left, 60) * 1000), language())
                                  : say(settings::Text::MinimapTimerDue);
                 timer = true;
             }
@@ -318,7 +318,7 @@ void buildRoute(State& s) {
     const std::string left =
         settings::fmt(say(settings::Text::MinimapRouteLeft), {std::to_string(s.follow.route.steps.size())});
     s.routeLines.push_back(minimap::Line{"\xE2\x86\x92 " + shortTitle(s, step->move.to), left});
-    s.routeLines.push_back(minimap::Line{refpages::stepNote(*step, startup().lang), ""});
+    s.routeLines.push_back(minimap::Line{refpages::stepNote(*step, language()), ""});
 }
 
 // 3.0.11-beta.31: the way on the ground itself (win/ground_way) - the same cells as the minimap's line.
@@ -758,7 +758,7 @@ std::string layerName(int i) {  // 3.0.11-beta.119
     using settings::Text;
     const Text names[minimap::kLayers] = {Text::MinimapLayerWarps, Text::MinimapLayerNpcs, Text::MinimapLayerKafra,
                                           Text::MinimapLayerParty};
-    return settings::tr(startup().lang, names[i]);
+    return settings::tr(language(), names[i]);
 }
 
 void render(State& s) {
@@ -767,7 +767,7 @@ void render(State& s) {
     if (s.cellKnown) t.cell = std::to_string(s.cell.x) + ", " + std::to_string(s.cell.y);
     t.folded = s.folded;
     for (int i = 0; i < minimap::kLayers; ++i) t.layers[i] = layerName(i);  // 3.0.11-beta.119
-    t.style = settings::tr(startup().lang, settings::Text::MinimapLayerScheme);  // 3.0.11-beta.120
+    t.style = settings::tr(language(), settings::Text::MinimapLayerScheme);  // 3.0.11-beta.120
     t.net = s.net;  // 3.0.11-beta.122
     t.netRgb = s.netRgb;
     t.route = !s.plotLines.empty() ? s.plotLines : s.routeLines;  // 3.0.11-beta.71: the way set on the map first
@@ -797,7 +797,7 @@ void renderBig(State& s) {
         const float s28 = std::round(28 * s.scale);
         widths[i] = std::round(float(wordsWidth(utf8Wide(names[i]), 12 * s.scale, true)) + s28 + 14 * s.scale);
     }
-    const std::string styleName = settings::tr(startup().lang, settings::Text::MinimapLayerScheme);  // .120
+    const std::string styleName = settings::tr(language(), settings::Text::MinimapLayerScheme);  // .120
     const float styleWidth =
         std::round(float(wordsWidth(utf8Wide(styleName), 12 * s.scale, true)) + std::round(28 * s.scale) +
                    14 * s.scale);
@@ -1061,10 +1061,10 @@ void frame(HWND game, const Show& show, double k, int targetWidth, int targetHei
         uint32_t rgb = 0;
         const netwatch::Level level = show.netBadge ? netwatchwin::level() : netwatch::Level::Unknown;
         if (level == netwatch::Level::Stall) {
-            net = settings::tr(startup().lang, settings::Text::NetStall);
+            net = settings::tr(language(), settings::Text::NetStall);
             rgb = 0xFF5A4E;
         } else if (level != netwatch::Level::Unknown) {
-            std::string ms = settings::tr(startup().lang, settings::Text::NetMs);
+            std::string ms = settings::tr(language(), settings::Text::NetMs);
             const int rtt = (netwatchwin::rttMs() + 2) / 5 * 5;  // in fives: not painted again each second
             if (const size_t at = ms.find("{1}"); at != std::string::npos) ms.replace(at, 3, std::to_string(rtt));
             net = ms;

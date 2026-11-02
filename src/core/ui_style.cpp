@@ -30,6 +30,8 @@ void setPictures(int source) {
     if (g_pictures.exchange(source) != source) ++g_generation;
 }
 
+void bump() { ++g_generation; }
+
 float autoSize(int gameW, int gameH, double windowScale) {
     if (gameW <= 0 || gameH <= 0) return 1.0f;
     const float share = std::min(float(gameW) / float(kFullW), float(gameH) / float(kFullH));

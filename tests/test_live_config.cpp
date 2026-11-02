@@ -1,3 +1,5 @@
+#include <algorithm>
+
 #include "core/daylight.hpp"
 #include "core/live_config.hpp"
 #include "test.hpp"
@@ -61,10 +63,11 @@ TEST(live_config_window_art_applies_at_once) {
 
 TEST(live_config_names_the_keys_that_apply_now) {
     for (const char* k : {"display.high_resolution", "display.ui_filter", "display.crisp_text", "quality.render_scale",
-                          "quality.sharpen", "frames.vsync", "frames.fps_limit", "debug.log", "display.window_art"})
+                          "quality.sharpen", "frames.vsync", "frames.fps_limit", "debug.log", "display.window_art",
+                          "utility.language"})
         CHECK(appliesNow(k));
     for (const char* k : {"renderer.backend", "display.mode", "display.monitor", "display.window_width",
-                          "display.window_height", "frames.allow_tearing", "utility.language", "nothing"})
+                          "display.window_height", "frames.allow_tearing", "nothing"})
         CHECK(!appliesNow(k));
 }
 
@@ -339,4 +342,16 @@ TEST(live_config_takes_the_developer_mode_at_once) {
     file.developer = true;
     CHECK(liveUpdate(running, file).next.developer);
     CHECK(!liveUpdate(file, running).next.developer);
+}
+
+// 3.0.11-beta.174 (the login concept): [utility] language - the driver's words in another language at once (the login
+// screen's УКР / РУС / ENG and the settings app write it)
+TEST(live_config_language_change_is_told) {
+    const LiveUpdate u =
+        liveUpdate(parseConfig("[utility]\nlanguage = uk\n"), parseConfig("[utility]\nlanguage = en\n"));
+    CHECK(u.next.language == "en");
+    CHECK(std::any_of(u.applied.begin(), u.applied.end(),
+                      [](const std::string& a) { return a.find("language") != std::string::npos; }));
+    CHECK(appliesNow("utility.language"));
+    CHECK(parseConfig("").language.empty());
 }

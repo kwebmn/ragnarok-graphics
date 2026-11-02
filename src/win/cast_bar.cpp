@@ -181,7 +181,7 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     }
     const int total = int(end - start), past = std::clamp(int(now - start), 0, total);
     d.done = float(past) / float(total);
-    const settings::Lang lang = startup().lang;
+    const settings::Lang lang = language();
     d.left = cb::seconds(total - past, lang == settings::Lang::En ? '.' : ',',
                          settings::tr(lang, settings::Text::CastSeconds));
     const int centre = int(std::lround((float(r[0]) + float(r[2]) / 2) * float(k)));

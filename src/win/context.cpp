@@ -752,7 +752,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
         enhanced_ = !enhanced_;
         LOG_INFO("compare key: improvements %s", enhanced_ ? "on" : "off");
         // 2.15: said on the screen while they are off - a stray press looked like a broken game
-        fps_.setNote(enhanced_ ? L"" : wideOf(settings::tr(startup().lang, settings::Text::CompareOffNote)));
+        fps_.setNote(enhanced_ ? L"" : wideOf(settings::tr(language(), settings::Text::CompareOffNote)));
     }
     // 0.54: Ctrl+Shift+F11 - the frame counter
     const bool fpsDown = window && GetForegroundWindow() == window && GetAsyncKeyState(VK_CONTROL) < 0 &&
@@ -966,7 +966,8 @@ void Context::present(const Rect& source, bool waitForVblank) {
     infocardwin::frame(window, config.cardWindows, gameCodePage(config), pk, pw, ph);  // 3.0.11-beta.149
     askcardwin::frame(window, config.askWindows, config.countWindow, gameCodePage(config), pk, pw, ph);  // .150, .155
     msgboxwin::frame(window, config.messageBoxes, gameCodePage(config), pk, pw, ph);   // 3.0.11-beta.151
-    loginwin::frame(window, config.loginWindow, config.loginStatus, gameCodePage(config), pk, pw, ph);  // .151, .173
+    loginwin::frame(window, config.loginWindow, config.loginStatus, config.loginNews, gameCodePage(config), pk, pw,
+                    ph);  // .151, .173, .174
     charselectwin::frame(window, config.charSelectWindow, gameCodePage(config), pk, pw, ph);  // 3.0.11-beta.152
     charmakewin::frame(window, config.charMakeWindow, gameCodePage(config), pk, pw, ph);      // 3.0.11-beta.153
     cartwin::frame(window, config.cartWindow, gameCodePage(config), pk, pw, ph);              // 3.0.11-beta.154
@@ -1326,7 +1327,7 @@ void Context::keepFrameRate(const Config& config, HWND window) {
                  key.c_str(), cost);
     // 3.0.4-beta.11: said on the screen too - the grass gone with nothing said looked like a fault (R-EQDYNE)
     const settings::IniSetting* s = settings::findSetting("effects." + key);
-    const settings::Lang lang = startup().lang;
+    const settings::Lang lang = language();
     const std::string name = s ? settings::tr(lang, s->label) : key;
     const std::string fpsNow = std::to_string(int(fps + 0.5)), target = std::to_string(config.keepFps);
     const settings::Text note = thin ? settings::Text::KeepFpsThinNote : settings::Text::KeepFpsOffNote;
@@ -1439,6 +1440,9 @@ void Context::watchSettings() {
         if (keepOff_.erase(k)) LOG_INFO("keep_fps: effects.%s turned on again by the player - back on", k.c_str());
     }
     if (config.uiFilter != was.uiFilter) renderer->setUiSharp(config.uiFilter == UiFilter::Sharp);
+    if (config.language != was.language)  // 3.0.11-beta.174: our words in the language chosen in the settings app
+        setLanguage(
+            settings::windowLang(settings::parseLang(config.language), PRIMARYLANGID(GetUserDefaultUILanguage())));
     if (config.crispText != was.crispText) {
         if (config.crispText) {
             crisp::install(true);

@@ -119,7 +119,7 @@ State& state() {
     return s;
 }
 
-std::string say(Text t) { return settings::tr(startup().lang, t); }
+std::string say(Text t) { return settings::tr(language(), t); }
 
 // 3.0.11-beta.14: a card's picture - a monster's standing frame from its sprite (data\sprite\몬스터 or npc), an
 // item's icon (data\texture\유저인터페이스\item) - fitted into the Portrait's square
@@ -291,7 +291,7 @@ void worldChanged(State& s) {
 }
 
 void makePage(State& s) {
-    const settings::Lang l = startup().lang;
+    const settings::Lang l = language();
     if (!s.index) {
         s.page = refpages::Page{};
         s.page.name = say(Text::RefTitle);
@@ -626,7 +626,7 @@ refwin::WorldLook worldLook(State& s) {
         s.labelsOf = s.index.get();
     }
     w.labels = s.labels;
-    if (!s.worldHover.empty()) w.tip = refpages::worldTip(*s.index, startup().lang, s.worldHover, contextOf(s));
+    if (!s.worldHover.empty()) w.tip = refpages::worldTip(*s.index, language(), s.worldHover, contextOf(s));
     return w;
 }
 
@@ -646,7 +646,7 @@ refwin::Look lookOf(State& s) {
 // first screen, then this one), the searches', the data's chips (the pack; the players now and how fresh, or no
 // link), the keys (a card's or a list's)
 refwin::Texts textsOf(const State& s) {
-    const settings::Lang l = startup().lang;
+    const settings::Lang l = language();
     refwin::Texts t;
     t.title = say(Text::RefTitle);
     if (!s.back.empty()) t.back = settings::fmt(settings::tr(l, Text::RefBack), {s.back.back().name});

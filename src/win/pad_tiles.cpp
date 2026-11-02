@@ -60,7 +60,7 @@ void render(State& s, bool sony) {
     if (!panel::blank(s.picture, s.layout.w, s.layout.h)) return;
     pt::paint(s.picture, s.layout, s.focus, sony);
     using settings::Text;
-    const settings::Lang l = startup().lang;
+    const settings::Lang l = language();
     const std::vector<std::string> names = {settings::tr(l, Text::ItemsTitle),   settings::tr(l, Text::StatsTitle),
                                             settings::tr(l, Text::TileSkills),   settings::tr(l, Text::TileEquip),
                                             settings::tr(l, Text::PartyTitle),   settings::tr(l, Text::TileMap),
