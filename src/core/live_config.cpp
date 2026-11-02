@@ -375,6 +375,10 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("merc", flag(running.mercWindow), flag(file.mercWindow)));
         n.mercWindow = file.mercWindow;
     }
+    if (file.optionsWindow != running.optionsWindow) {  // 3.0.11-beta.162: the options card, at once
+        u.applied.push_back(change("options", flag(running.optionsWindow), flag(file.optionsWindow)));
+        n.optionsWindow = file.optionsWindow;
+    }
     if (file.skillCells != running.skillCells) {  // 3.0.11-beta.142: a ground skill's cells, at once
         u.applied.push_back(change("skill_cells", flag(running.skillCells), flag(file.skillCells)));
         n.skillCells = file.skillCells;

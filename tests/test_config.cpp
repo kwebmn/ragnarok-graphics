@@ -861,7 +861,7 @@ TEST(config_interface_minimap) {
     // 3.0.11-beta.70: the tracker; 3.0.11-beta.96: «Навички»; 3.0.11-beta.97: «Спорядження»; .98: the NPC talk;
     // .100: the shops; .115: the storage; .116: the trade; .140: the menu; .149: the item and skill cards; .150: the
     // requests and the NPC's inputs; .151: the game's message boxes and its login
-    CHECK(u.waiting.empty() && u.applied.size() == 32 && u.applied[0] == "minimap 0 -> 1");
+    CHECK(u.waiting.empty() && u.applied.size() == 33 && u.applied[0] == "minimap 0 -> 1");
     CHECK(u.applied[1] == "buffs off -> column" && u.applied[2] == "items 0 -> 1" && u.applied[3] == "status 0 -> 1");
     CHECK(u.applied[4] == "skills 0 -> 1" && u.applied[5] == "equip 0 -> 1" && u.applied[6] == "npc_talk 0 -> 1");
     CHECK(u.applied[7] == "shop 0 -> 1" && u.applied[8] == "storage 0 -> 1" && u.applied[9] == "trade 0 -> 1");
@@ -870,10 +870,10 @@ TEST(config_interface_minimap) {
           u.applied[15] == "char_select 0 -> 1" && u.applied[16] == "char_make 0 -> 1" &&
           u.applied[17] == "cart 0 -> 1" && u.applied[18] == "counts 0 -> 1" && u.applied[19] == "vending 0 -> 1");
     CHECK(u.applied[20] == "picks 0 -> 1" && u.applied[21] == "party_setup 0 -> 1" && u.applied[22] == "pet 0 -> 1");
-    CHECK(u.applied[23] == "homun 0 -> 1" && u.applied[24] == "merc 0 -> 1");
-    CHECK(u.applied[25] == "cast 0 -> 1" && u.applied[26] == "chat 0 -> 1" && u.applied[27] == "hotbar 0 -> 1");
-    CHECK(u.applied[28] == "tracker 0 -> 1" && u.applied[29] == "party 0 -> 1" && u.applied[30] == "target 0 -> 1");
-    CHECK(u.applied[31] == "character off -> bars");
+    CHECK(u.applied[23] == "homun 0 -> 1" && u.applied[24] == "merc 0 -> 1" && u.applied[25] == "options 0 -> 1");
+    CHECK(u.applied[26] == "cast 0 -> 1" && u.applied[27] == "chat 0 -> 1" && u.applied[28] == "hotbar 0 -> 1");
+    CHECK(u.applied[29] == "tracker 0 -> 1" && u.applied[30] == "party 0 -> 1" && u.applied[31] == "target 0 -> 1");
+    CHECK(u.applied[32] == "character off -> bars");
     CHECK(appliesNow("interface.minimap"));
 }
 
@@ -1620,6 +1620,18 @@ TEST(config_interface_merc) {
     CHECK(s != nullptr && s->page == settings::Page::Interface);
     CHECK(appliesNow("interface.merc"));
     CHECK(liveUpdate(parseConfig(""), parseConfig("[interface]\nmerc = 1\n")).next.mercWindow);
+}
+
+// 3.0.11-beta.162: [interface] options - the game's options window as a card, on with the new minimap, at once
+TEST(config_interface_options) {
+    CHECK(!parseConfig("").optionsWindow);
+    CHECK(parseConfig("[interface]\nminimap = 1\n").optionsWindow);
+    CHECK(!parseConfig("[interface]\nminimap = 1\noptions = 0\n").optionsWindow);
+    CHECK(parseConfig("[interface]\noptions = 1\n").optionsWindow);
+    const settings::IniSetting* s = settings::findSetting("interface.options");
+    CHECK(s != nullptr && s->page == settings::Page::Interface);
+    CHECK(appliesNow("interface.options"));
+    CHECK(liveUpdate(parseConfig(""), parseConfig("[interface]\noptions = 1\n")).next.optionsWindow);
 }
 
 // 3.0.11-beta.103 (the owner: «можешь сделать настройку, чтобы можно было выбрать эту стрелку в конфигураторе»):

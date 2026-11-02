@@ -21,8 +21,9 @@ enum class Win : uint8_t { Items, Stats, Skills, Equip, Shop, Npc, Reference, St
                            PartySetup,  // 3.0.11-beta.158
                            Pet,  // 3.0.11-beta.159
                            Homun,  // 3.0.11-beta.160
-                           Merc };  // 3.0.11-beta.161
-constexpr int kWins = 24;
+                           Merc,  // 3.0.11-beta.161
+                           Options };  // 3.0.11-beta.162
+constexpr int kWins = 25;
 
 class Stack {
 public:

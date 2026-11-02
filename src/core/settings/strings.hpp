@@ -560,6 +560,9 @@ enum class Text : uint16_t {
     // 3.0.11-beta.161: the mercenary
     InterfaceMerc, InterfaceMercHint, MercArcher, MercSpearman, MercSwordsman, MercEnds, MercLoyalty, MercSummons,
     MercKills, MercDismiss,
+    // 3.0.11-beta.162: the game's options
+    InterfaceOptions, InterfaceOptionsHint, OptionsTitle, OptionsMusic, OptionsSounds, OptionsAttackSnap,
+    OptionsSkillSnap, OptionsItemSnap, OptionsOpaque, OptionsSnapHint,
     // 3.0.11-beta.141: the character block's experience - the free skill points, the last level, an hour, a minute,
     // the experience's tip, the portrait's tip (Alt+V)
     CharSkillPoints, CharExpMax, CharHour, CharMinute, CharToLevel, CharLevelIn, CharPerHour, CharSession, CharLastGain,

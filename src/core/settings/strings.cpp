@@ -5669,6 +5669,25 @@ constexpr Entry kTexts[] = {
     {Text::MercSummons, "Summons", "Викликів", "Вызовов"},
     {Text::MercKills, "Kills", "Убито", "Убито"},
     {Text::MercDismiss, "Dismiss", "Звільнити", "Уволить"},
+    // 3.0.11-beta.162: the game's options
+    {Text::InterfaceOptions, "Game options card", "Картка налаштувань гри", "Карточка настроек игры"},
+    {Text::InterfaceOptionsHint,
+     "The game's options window (Alt+O) as a card in the new look: the music and the sounds with their volumes, the "
+     "cursor's snap to a target for the attack, the skills and the things, the game's windows opaque. Off: the game's "
+     "own window.",
+     "Вікно налаштувань гри (Alt+O) карткою в новому вигляді: музика і звуки з гучністю, прилипання курсора до цілі "
+     "для атаки, навичок і речей, непрозорі вікна гри. Вимкнено: власне вікно гри.",
+     "Окно настроек игры (Alt+O) карточкой в новом виде: музыка и звуки с громкостью, прилипание курсора к цели для "
+     "атаки, навыков и вещей, непрозрачные окна игры. Выключено: собственное окно игры."},
+    {Text::OptionsTitle, "Game options", "Налаштування гри", "Настройки игры"},
+    {Text::OptionsMusic, "Music", "Музика", "Музыка"},
+    {Text::OptionsSounds, "Sounds", "Звуки", "Звуки"},
+    {Text::OptionsAttackSnap, "Snap: the attack", "Прилипання: атака", "Прилипание: атака"},
+    {Text::OptionsSkillSnap, "Snap: the skills", "Прилипання: навички", "Прилипание: навыки"},
+    {Text::OptionsItemSnap, "Snap: the things", "Прилипання: речі", "Прилипание: вещи"},
+    {Text::OptionsOpaque, "The game's windows opaque", "Непрозорі вікна гри", "Непрозрачные окна игры"},
+    {Text::OptionsSnapHint, "Snap: the cursor finds the nearest target by itself",
+     "Прилипання: курсор сам наводиться на найближчу ціль", "Прилипание: курсор сам наводится на ближайшую цель"},
     // 3.0.11-beta.141: the character block's experience (forms: one, a few, many)
     {Text::CharSkillPoints, "skill point|skill points", "очко навичок|очки навичок|очок навичок",
      "очко навыков|очка навыков|очков навыков"},
