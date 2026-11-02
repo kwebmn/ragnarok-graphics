@@ -1,3 +1,13 @@
+# uaRO Graphics 3.0.11-beta.172 — what's new
+
+**Login errors in words and hints under the fields** (the new login screen, step 2):
+- Instead of the game's English "Unregistered ID" box — a line under "Login": "There is no login … Check how it is
+  written or" and a "Create an account" link. A wrong password — a line under "Password" and "Reset the password on
+  the site". The server's other refusals (maintenance, login forbidden until a date, a full server) — in the message
+  box, in our words.
+- Hints while typing: "Caps Lock is on" and "Layout UKR - logins are usually Latin (kweb?)".
+- After three wrong passwords the game offered to open a Korean site and closed itself — that offer no longer comes.
+
 # uaRO Graphics 3.0.11-beta.171 — what's new
 
 **The server choice is skipped** (the first step of the new login screen):
