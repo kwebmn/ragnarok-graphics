@@ -622,6 +622,34 @@ std::wstring Model::forgetLogin(Lang l) {
     return failed.empty() ? L"" : wtrf(l, Text::ErrWriteRegistry, {failed});
 }
 
+namespace {
+std::wstring accountsFolder() {  // %LOCALAPPDATA%\uaroGraphics (win/accounts_store's)
+    const std::wstring local = localAppData();
+    return local.empty() ? local : local + L"\\uaroGraphics";
+}
+constexpr const wchar_t* kAccountFiles[] = {L"accounts.dat", L"accounts.dat.bad", L"site.dat"};
+}  // namespace
+
+bool Model::accountsSaved() {
+    const std::wstring dir = accountsFolder();
+    if (dir.empty()) return false;
+    for (const wchar_t* f : kAccountFiles)
+        if (fileExists(dir + L"\\" + f)) return true;
+    return false;
+}
+
+std::wstring Model::forgetAccounts(Lang l) {
+    refreshRunning();
+    if (now_.gameRunning) return wtr(l, Text::ErrGameRunning);  // the game keeps the shelf and writes it again
+    const std::wstring dir = accountsFolder();
+    std::string failed;
+    for (const wchar_t* f : kAccountFiles) {
+        const std::wstring path = dir + L"\\" + f;
+        if (fileExists(path) && !deleteFile(path)) failed += (failed.empty() ? "" : ", ") + utf8(path);
+    }
+    return failed.empty() ? L"" : wtrf(l, Text::ErrWriteFile, {failed});
+}
+
 std::wstring Model::saveGameSettings(const std::wstring& file, Lang l) const {
     GameRegistry r;  // as it is now: the game wrote its hotbars at its last map change
     r.personal = readPersonal();

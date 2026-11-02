@@ -13,6 +13,12 @@
 
 namespace uagfx::app {
 
+std::wstring localAppData() {
+    wchar_t buf[MAX_PATH] = {};
+    const DWORD n = GetEnvironmentVariableW(L"LOCALAPPDATA", buf, MAX_PATH);
+    return n > 0 && n < MAX_PATH ? std::wstring(buf, n) : std::wstring();
+}
+
 std::wstring exeFolder() {
     wchar_t path[MAX_PATH];
     const DWORD n = GetModuleFileNameW(nullptr, path, MAX_PATH);

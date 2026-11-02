@@ -73,6 +73,18 @@ const Entry kTexts[] = {
     {"sticks: where  ·  ↑ ↓ ← →: a cell  ·  let go {KEY}: cast  ·  {L3} / {R3}: cancel",
      "стіки: куди  ·  ↑ ↓ ← →: на клітинку  ·  відпустіть {KEY}: поставити  ·  {L3} / {R3}: скасувати",
      "стики: куда  ·  ↑ ↓ ← →: на клетку  ·  отпустите {KEY}: поставить  ·  {L3} / {R3}: отмена"},
+    {"← →: card  ·  {A}: play  ·  {X}: another account  ·  {Y}: menu  ·  {B}: exit",
+     "← →: картка  ·  {A}: грати  ·  {X}: інший акаунт  ·  {Y}: меню  ·  {B}: вийти",
+     "← →: карточка  ·  {A}: играть  ·  {X}: другой аккаунт  ·  {Y}: меню  ·  {B}: выйти"},
+    {"↑ ↓: choose  ·  {A}: OK  ·  {B}: close", "↑ ↓: вибір  ·  {A}: OK  ·  {B}: закрити",
+     "↑ ↓: выбор  ·  {A}: OK  ·  {B}: закрыть"},
+    {"{A}: log in  ·  {B}: exit", "{A}: увійти  ·  {B}: вийти", "{A}: войти  ·  {B}: выйти"},
+    {"{A}: log in  ·  {B}: the shelf", "{A}: увійти  ·  {B}: полиця", "{A}: войти  ·  {B}: полка"},
+    {"{A}: play  ·  {X}: another character  ·  {Y}: another account  ·  {B}: exit",
+     "{A}: грати  ·  {X}: інший персонаж  ·  {Y}: інший акаунт  ·  {B}: вийти",
+     "{A}: играть  ·  {X}: другой персонаж  ·  {Y}: другой аккаунт  ·  {B}: выйти"},
+    {"{B}: leave the game  ·  {A}: stay", "{B}: вийти з гри  ·  {A}: залишитися",
+     "{B}: выйти из игры  ·  {A}: остаться"},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "every Text needs its translations");
 

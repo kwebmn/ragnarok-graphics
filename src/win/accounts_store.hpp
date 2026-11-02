@@ -9,7 +9,5 @@ namespace uagfx::win::accountsstore {
 // kept aside as accounts.dat.bad and the shelf starts empty. On the game's thread.
 accounts::Shelf& shelf();
 bool save();  // false: not written (the shelf stays for this game)
-// «Забути всі акаунти»: the shelf empty, its file gone
-bool forget();
 
 }  // namespace uagfx::win::accountsstore

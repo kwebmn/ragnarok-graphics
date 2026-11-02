@@ -134,6 +134,10 @@ public:
     // holds taken into the personal one. An error, else "".
     std::wstring ownGameKey(settings::Lang l);
     std::wstring forgetLogin(settings::Lang l);  // the saved login goes; only while the game is closed (§4.1)
+    // 3.0.11-beta.179 (the login concept's shelf): this Windows user's saved accounts (%LOCALAPPDATA%\uaroGraphics:
+    // accounts.dat, accounts.dat.bad, site.dat) gone; only while the game is closed (it keeps the shelf in memory)
+    std::wstring forgetAccounts(settings::Lang l);
+    static bool accountsSaved();
     // Spec §8: the whole game key as the game reads it, to a .reg file under the personal copy's path; from one, it
     // replaces the personal copy (only while the game is closed, a copy of the present one made first).
     std::wstring saveGameSettings(const std::wstring& file, settings::Lang l) const;

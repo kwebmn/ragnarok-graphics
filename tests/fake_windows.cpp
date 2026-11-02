@@ -70,6 +70,7 @@ using fake::windows;
 // files.hpp
 
 std::wstring exeFolder() { return fake::kDir; }
+std::wstring localAppData() { return L"C:\\Users\\player\\AppData\\Local"; }
 
 bool readFile(const std::wstring& path, std::string& out) {
     const auto it = windows().files.find(path);

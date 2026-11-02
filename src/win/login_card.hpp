@@ -7,6 +7,7 @@
 
 #include "core/accounts.hpp"
 #include "core/login_view.hpp"
+#include "pad/core/logic/npc_hint.hpp"
 #include "core/frame.hpp"
 
 namespace uagfx::gpu {
@@ -48,6 +49,12 @@ const std::string& loggedIn();
 bool loginWith(const accounts::Account& a, bool stopAtSelect = false);  // .177: «Інший персонаж» - the select
 // 3.0.11-beta.176: the keys while «Полиця» shows (← → Enter, a label typed in; a login typed - the card for it)
 bool key(UINT m, WPARAM wp, LPARAM lp);
+// 3.0.11-beta.179 (the login concept: the pad on the login screen): «Полиця» - ◀ ▶ the card, A plays, X another
+// account, Y the card's menu (↑ ↓ A, B closes); «Продовжити» - A plays, X another character, Y the next account; the
+// card - A «Увійти», B back to the shelf; B elsewhere asks first (B again within 3 s presses «Вийти», A stays)
+enum class PadCommand : uint8_t { Left, Right, Up, Down, A, B, X, Y };
+void padCommand(PadCommand c);
+uapad::LoginHint padHint();  // the hint line the controller's bar shows now
 bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result);
 bool shown();
 void beforeGameDraw();

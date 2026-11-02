@@ -83,6 +83,8 @@ std::vector<HintPart> hintParts(const std::string& line, uint16_t key) {
             at = space + 1;
             const uint16_t b = t == "{A}"    ? uint16_t(kPadA)
                                : t == "{B}"  ? uint16_t(kPadB)
+                               : t == "{X}"  ? uint16_t(kPadX)  // 3.0.11-beta.179
+                               : t == "{Y}"  ? uint16_t(kPadY)
                                : t == "{LB}" ? uint16_t(kPadLB)
                                : t == "{RB}" ? uint16_t(kPadRB)
                                : t == "{KEY}" ? key
@@ -122,5 +124,30 @@ std::vector<HintPart> choiceHintParts(uint16_t key, Lang lang) { return hintPart
 std::vector<HintPart> aimHintParts(uint16_t key, Lang lang) { return hintParts(tr(lang, Text::HintAim), key); }
 
 std::vector<HintPart> windowHintParts(Lang lang) { return hintParts(tr(lang, Text::HintWindow)); }
+
+namespace {
+Text loginText(LoginHint h) {
+    switch (h) {
+        case LoginHint::Shelf: return Text::HintLoginShelf;
+        case LoginHint::Menu: return Text::HintLoginMenu;
+        case LoginHint::Card: return Text::HintLoginCard;
+        case LoginHint::CardBack: return Text::HintLoginCardBack;
+        case LoginHint::Continue: return Text::HintLoginContinue;
+        default: return Text::HintLoginExit;
+    }
+}
+}  // namespace
+
+std::string loginHint(LoginHint h, Lang lang) {
+    if (h == LoginHint::None) return "";
+    std::string s = tr(lang, loginText(h));
+    for (const uint16_t b : {uint16_t(kPadA), uint16_t(kPadB), uint16_t(kPadX), uint16_t(kPadY)})
+        put(s, b == kPadA ? "{A}" : b == kPadB ? "{B}" : b == kPadX ? "{X}" : "{Y}", label(b));
+    return s;
+}
+
+std::vector<HintPart> loginHintParts(LoginHint h, Lang lang) {
+    return h == LoginHint::None ? std::vector<HintPart>{} : hintParts(tr(lang, loginText(h)));
+}
 
 }  // namespace uapad

@@ -1,4 +1,5 @@
 // The settings app's model (stage 2 spec §4) over the stand-ins of tests/fake_windows.cpp.
+#include "app/files.hpp"
 #include "app/model.hpp"
 #include "core/effect_groups.hpp"
 #include "core/settings/game_settings.hpp"
@@ -437,6 +438,27 @@ TEST(model_forget_login_clears_the_saved_one) {
     w.gameRunning = false;
     CHECK(m.forgetLogin(Lang::En).empty());
     CHECK(w.registry.personal.find("", "ID")->text == "");
+}
+
+// 3.0.11-beta.179 (the login concept's shelf): «Забути всі акаунти» - this Windows user's saved accounts gone
+// (%LOCALAPPDATA%\uaroGraphics: the shelf, a shelf kept aside as unreadable, the site's sign-in); refused while the
+// game runs (it keeps the shelf and would write it again); the button only while there is something to forget
+TEST(model_forget_accounts_takes_the_shelf_away) {
+    fake::Windows& w = fake::reset();
+    fake::gameKey(w.registry.common, 1920, 1080, false);
+    const std::wstring dir = app::localAppData() + L"\\uaroGraphics";
+    CHECK(!app::Model::accountsSaved());
+    w.files[dir + L"\\accounts.dat"] = "sealed";
+    w.files[dir + L"\\accounts.dat.bad"] = "old";
+    w.files[dir + L"\\other.txt"] = "not ours to take";
+    CHECK(app::Model::accountsSaved());
+    w.gameRunning = true;
+    app::Model m;
+    CHECK(!m.forgetAccounts(Lang::En).empty() && w.files.count(dir + L"\\accounts.dat") == 1);
+    w.gameRunning = false;
+    CHECK(m.forgetAccounts(Lang::En).empty());
+    CHECK(w.files.count(dir + L"\\accounts.dat") == 0 && w.files.count(dir + L"\\accounts.dat.bad") == 0);
+    CHECK(w.files.count(dir + L"\\other.txt") == 1 && !app::Model::accountsSaved());
 }
 
 TEST(model_game_settings_go_to_a_file_and_back) {

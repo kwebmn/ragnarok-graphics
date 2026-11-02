@@ -1712,6 +1712,25 @@ TEST(ctl_hint_parts) {
     CHECK(npcHintParts(NpcDialog::None, Lang::En).empty());
 }
 
+// 3.0.11-beta.179 (the login concept: the pad on the login screen): the hint line of each of its looks - «Полиця»
+// (← → the card, A plays, X another account, Y its menu, B leaves), the card's menu, the card, «Продовжити», the
+// question before leaving the game
+TEST(ctl_login_hint_parts) {
+    std::vector<HintPart> p = loginHintParts(LoginHint::Shelf, Lang::Uk);
+    CHECK_EQ(p.size(), size_t(5));
+    CHECK(p[0].buttons == std::vector<uint16_t>({kPadLeft, kPadRight}) && p[0].words == "картка");
+    CHECK(p[1].buttons == std::vector<uint16_t>({kPadA}) && p[1].words == "грати");
+    CHECK(p[2].buttons == std::vector<uint16_t>({kPadX}) && p[2].words == "інший акаунт");
+    CHECK(p[3].buttons == std::vector<uint16_t>({kPadY}) && p[3].words == "меню");
+    CHECK(p[4].buttons == std::vector<uint16_t>({kPadB}) && p[4].words == "вийти");
+    p = loginHintParts(LoginHint::ExitAsk, Lang::En);
+    CHECK(p.size() == 2 && p[0].buttons == std::vector<uint16_t>({kPadB}) &&
+          p[1].buttons == std::vector<uint16_t>({kPadA}));
+    CHECK(loginHintParts(LoginHint::Continue, Lang::Ru).size() == 4);
+    CHECK(loginHintParts(LoginHint::None, Lang::En).empty() && loginHint(LoginHint::None, Lang::En).empty());
+    CHECK(loginHint(LoginHint::Card, Lang::En).find("log in") != std::string::npos);
+}
+
 TEST(ctl_npc_hint_names_the_buttons) {
     CHECK(npcHint(NpcDialog::None, Lang::En).empty());
     CHECK(npcHint(NpcDialog::Next, Lang::En) == "A: next");

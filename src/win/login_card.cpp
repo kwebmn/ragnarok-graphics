@@ -124,6 +124,7 @@ struct State {
     loginview::View view = loginview::View::Shelf;  // the view now ([interface] login_view, or picked on the strip)
     std::optional<loginview::View> viewPicked;       // picked on the strip until the settings say the same
     bool eyeHeld = false;                            // 3.0.11-beta.177: the password's letters shown while held
+    ULONGLONG exitAskedAt = 0;                       // 3.0.11-beta.179: the pad's B once - «Вийти» on the next
     // 3.0.11-beta.177: ▾'s saved logins under the account's field - their own picture
     bool dropOpen = false;
     lc::DropLayout drop;  // in the card's picture's pixels
@@ -1123,6 +1124,63 @@ bool key(UINT m, WPARAM wp, LPARAM lp) {
         took = true;
     }
     return took;
+}
+
+void padCommand(PadCommand c) {
+    State& s = state();
+    if (!s.shown) return;
+    const ULONGLONG now = GetTickCount64();
+    const bool asked = s.exitAskedAt && now - s.exitAskedAt < 3000;
+    if (asked) {  // «вийти з гри»: B again leaves, anything else stays
+        s.exitAskedAt = 0;
+        if (c == PadCommand::B) {
+            LOG_INFO("login: the pad's B twice - «Вийти»");
+            press(s, lc::Part::Exit);
+        }
+        return;
+    }
+    const bool forOne = loginshelfwin::classicChosen();
+    if (s.mode == State::Mode::Shelf) {
+        using P = loginshelfwin::Pad;
+        const P p = c == PadCommand::Left ? P::Left : c == PadCommand::Right ? P::Right : c == PadCommand::Up ? P::Up
+                    : c == PadCommand::Down ? P::Down : c == PadCommand::A ? P::Select : c == PadCommand::X ? P::Other
+                    : c == PadCommand::Y ? P::Menu : P::Back;
+        if (c == PadCommand::B && !loginshelfwin::menuOpen()) {
+            s.exitAskedAt = now;
+            return;
+        }
+        bool took = false;
+        const loginshelfwin::Asked a = loginshelfwin::pad(p, took);
+        if (a.act != loginshelfwin::Act::None) act(s, a);
+        return;
+    }
+    if (s.mode == State::Mode::Continue) {
+        const int index = logincontinuewin::shown();
+        using A = logincontinuewin::Act;
+        if (c == PadCommand::A) actContinue(s, logincontinuewin::Asked{A::Play, index});
+        if (c == PadCommand::X) actContinue(s, logincontinuewin::Asked{A::OtherChar, index});
+        if (c == PadCommand::Y) logincontinuewin::nextAccount();
+        if (c == PadCommand::B) s.exitAskedAt = now;
+        return;
+    }
+    if (c == PadCommand::A) press(s, lc::Part::Enter);  // the card: what is typed sent
+    if (c == PadCommand::B) {
+        if (forOne && !accountsstore::shelf().list.empty())
+            press(s, lc::Part::Shelf);
+        else
+            s.exitAskedAt = now;
+    }
+}
+
+uapad::LoginHint padHint() {
+    const State& s = state();
+    if (!s.shown) return uapad::LoginHint::None;
+    if (s.exitAskedAt && GetTickCount64() - s.exitAskedAt < 3000) return uapad::LoginHint::ExitAsk;
+    if (s.mode == State::Mode::Shelf)
+        return loginshelfwin::menuOpen() ? uapad::LoginHint::Menu : uapad::LoginHint::Shelf;
+    if (s.mode == State::Mode::Continue) return uapad::LoginHint::Continue;
+    return loginshelfwin::classicChosen() && !accountsstore::shelf().list.empty() ? uapad::LoginHint::CardBack
+                                                                                  : uapad::LoginHint::Card;
 }
 
 bool box(int& x, int& y, int& w, int& h) {

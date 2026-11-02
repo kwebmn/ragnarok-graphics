@@ -247,6 +247,18 @@ Asked key(UINT m, WPARAM wp, bool& took) {
     return {};
 }
 
+void nextAccount() {
+    State& s = state();
+    const accounts::Shelf& shelf = accountsstore::shelf();
+    if (shelf.list.empty()) return;
+    const int next = (std::max(0, s.index) + 1) % int(shelf.list.size());
+    s.chosen = shelf.list[size_t(next)].login;
+    s.dropOpen = false;
+    s.key.clear();
+}
+
+int shown() { return state().index; }
+
 bool box(int& x, int& y, int& w, int& h) {
     const State& s = state();
     if (s.layout.w <= 0) return false;

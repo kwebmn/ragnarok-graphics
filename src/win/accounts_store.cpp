@@ -121,13 +121,4 @@ bool save() {
     return true;
 }
 
-bool forget() {
-    State& s = state();
-    s.shelf = accounts::Shelf{};
-    s.stamp = 0;
-    s.read = true;
-    const std::wstring path = filePath();
-    return !path.empty() && (DeleteFileW(path.c_str()) || GetLastError() == ERROR_FILE_NOT_FOUND);
-}
-
 }  // namespace uagfx::win::accountsstore

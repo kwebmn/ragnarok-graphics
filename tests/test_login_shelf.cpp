@@ -107,3 +107,12 @@ TEST(login_shelf_menu_places) {
     CHECK(loginshelf::menuHit(M, M.rows[3].x + 5, M.rows[3].y + M.rows[3].h / 2) == 3);
     CHECK(loginshelf::menuHit(M, M.x - 5, M.y + 5) == -1);
 }
+
+// 3.0.11-beta.179 (the login concept: the pad on the login screen): ◀ ▶ go along the cards and stop at their ends
+TEST(login_shelf_pad_moves) {
+    CHECK(loginshelf::padMove(0, 3, -1) == 0);
+    CHECK(loginshelf::padMove(0, 3, +1) == 1);
+    CHECK(loginshelf::padMove(2, 3, +1) == 2);
+    CHECK(loginshelf::padMove(1, 3, -1) == 0);
+    CHECK(loginshelf::padMove(0, 0, +1) == 0);  // no cards
+}

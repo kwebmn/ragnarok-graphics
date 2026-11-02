@@ -192,6 +192,10 @@ public:
             forgetLogin();
             return;
         }
+        if (id == kForgetAccounts && code == BN_CLICKED) {
+            forgetAccounts();
+            return;
+        }
         if (const RegSetting* r = regOf(id)) {
             regCommand(*r, GetDlgItem(host_.window(), id), code);
             return;
@@ -387,7 +391,15 @@ private:
         const Snapshot& now = host_.model().now();
         const auto login = effectiveValue(now.registry, "", "ID");
         p.buttons({{kForgetLogin, t(Text::ChatForgetLogin), login && login->isSz() && !login->text.empty() &&
-                                                                !now.gameRunning}});
+                                                                !now.gameRunning},
+                   {kForgetAccounts, t(Text::ChatForgetAccounts), Model::accountsSaved() && !now.gameRunning}});
+    }
+
+    void forgetAccounts() {  // 3.0.11-beta.179: the login screen's shelf
+        if (!host_.ask(t(Text::ChatForgetAccountsAsk))) return;
+        const std::wstring err = host_.model().forgetAccounts(host_.lang());
+        host_.message(err.empty() ? t(Text::ChatAccountsForgotten) : err, !err.empty());
+        host_.reload();
     }
 
     void forgetLogin() {

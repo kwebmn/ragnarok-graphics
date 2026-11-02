@@ -12,6 +12,7 @@ namespace uagfx::app {
 // nothing.
 constexpr int kRows = 4000;  // + 4 x the setting's index in iniSettings()
 constexpr int kForgetLogin = 1490;
+constexpr int kForgetAccounts = 1491;  // 3.0.11-beta.179: «Забути всі акаунти» (the login screen's shelf)
 constexpr int kAuto = 1492;  // 0.50
 constexpr int kGpu = 1493;   // 0.50.2
 constexpr int kOutput = 1494;  // 3.0.4-beta.1: the output device

@@ -65,6 +65,9 @@ enum class Text : uint16_t {
     HintChoose,  // 3.0.11-beta.85: a support skill asks whom: {A}, {B} and {KEY}, the skill's own button
     HintWindow,  // 3.0.11-beta.93: a window B closes is open (the big map, the game's equipment, skills ...)
     HintAim,     // 3.0.11-beta.145: a ground skill aimed: the sticks, the D-pad, {KEY} let go, {L3} / {R3} cancel
+    // 3.0.11-beta.179: the login screen - «Полиця», its card's menu, the card (with «‹ Полиця» back), «Продовжити»,
+    // the question before leaving the game
+    HintLoginShelf, HintLoginMenu, HintLoginCard, HintLoginCardBack, HintLoginContinue, HintLoginExit,
     Count
 };
 

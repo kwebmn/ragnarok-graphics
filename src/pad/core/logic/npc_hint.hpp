@@ -33,4 +33,9 @@ std::vector<HintPart> choiceHintParts(uint16_t key, Lang lang);
 std::vector<HintPart> windowHintParts(Lang lang);
 std::vector<HintPart> aimHintParts(uint16_t key, Lang lang);
 
+// 3.0.11-beta.179 (the login concept: the pad on the login screen): which of the login screen's lines
+enum class LoginHint : uint8_t { None, Shelf, Menu, Card, CardBack, Continue, ExitAsk };
+std::string loginHint(LoginHint h, Lang lang);
+std::vector<HintPart> loginHintParts(LoginHint h, Lang lang);
+
 }  // namespace uapad

@@ -26,5 +26,8 @@ void draw(FrameRecord& record, gpu::Renderer& renderer);
 Asked mouse(UINT m, float tx, float ty, bool& took);  // a press at the target's (tx, ty); took: it was the panel's
 Asked key(UINT m, WPARAM wp, bool& took);
 bool box(int& x, int& y, int& w, int& h);  // the panel in the target's pixels
+// 3.0.11-beta.179: the pad's Y - the shelf's next account shown (round)
+void nextAccount();
+int shown();  // the account shown: its place on the shelf, -1 none
 
 }  // namespace uagfx::win::logincontinuewin

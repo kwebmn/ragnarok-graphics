@@ -26,5 +26,10 @@ void draw(FrameRecord& record, gpu::Renderer& renderer);
 Asked mouse(UINT m, float tx, float ty, bool& took);  // a press at the target's (tx, ty); took: it was over the shelf
 Asked key(UINT m, WPARAM wp, bool& took);
 bool box(int& x, int& y, int& w, int& h);  // the shelf's picture in the target's pixels
+// 3.0.11-beta.179: the pad - ◀ ▶ the card, A plays it (a menu open: its row), X another account, Y the card's menu
+// (↑ ↓ its rows), B closes the menu (false: no menu - the caller's B)
+enum class Pad : uint8_t { Left, Right, Up, Down, Select, Other, Menu, Back };
+Asked pad(Pad p, bool& took);
+bool menuOpen();
 
 }  // namespace uagfx::win::loginshelfwin

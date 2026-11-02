@@ -64,6 +64,7 @@ enum class Text : uint16_t {
     GameSkin, GameSkinHint, SkinNone, SkinMissing, GameTips, GameIntro, GameMinimap, GameStacks,
     ChatWhisperStrangers, ChatWhisperFriends, ChatWhisperSound, ChatFriendsNote, ChatRememberLogin, ChatForgetLogin,
     ChatForgetAsk, ChatLoginForgotten, ChatMacrosHeading, ChatMacrosHint,
+    ChatForgetAccounts, ChatForgetAccountsAsk, ChatAccountsForgotten,  // 3.0.11-beta.179: the login screen's shelf
     ServiceGameSettings, GameSave, GameLoad, LayoutReset, GameSettingsNote, GameLoadAsk, LayoutResetAsk, GameSaved,
     GameLoaded, LayoutResetDone, ErrReadFile, FileFilterReg, DiagGpuValueCapped, GameSettingsRunning, ErrPartialFile,
     PageSmoothing, SmoothMsaa, SmoothMsaaHint, SmoothA2c, SmoothA2cHint, SmoothAniso, SmoothAnisoHint, SmoothOff,

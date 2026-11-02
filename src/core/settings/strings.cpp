@@ -423,6 +423,16 @@ constexpr Entry kTexts[] = {
      "Up to 49 letters; empty is the game's own one, shown grey. A /command runs, any other text goes to the chat.",
      "До 49 літер; порожній — власний макрос гри, показаний сірим. /команда виконується, інший текст іде в чат.",
      "До 49 букв; пустой — макрос самой игры, показан серым. /команда выполняется, другой текст уходит в чат."},
+    // 3.0.11-beta.179: the login screen's shelf
+    {Text::ChatForgetAccounts, "Forget all accounts", "Забути всі акаунти", "Забыть все аккаунты"},
+    {Text::ChatForgetAccountsAsk,
+     "Take all the saved accounts of the login screen's shelf (logins and passwords) off this computer? The accounts "
+     "on the server stay.",
+     "Прибрати з цього комп'ютера всі збережені акаунти полиці екрана входу (логіни й паролі)? Акаунти на сервері "
+     "залишаться.",
+     "Убрать с этого компьютера все сохранённые аккаунты полки экрана входа (логины и пароли)? Аккаунты на сервере "
+     "останутся."},
+    {Text::ChatAccountsForgotten, "The accounts are forgotten.", "Акаунти забуто.", "Аккаунты забыты."},
     {Text::ServiceGameSettings, "The game's settings", "Налаштування гри", "Настройки игры"},
     {Text::GameSave, "Save to a file...", "Зберегти у файл…", "Сохранить в файл…"},
     {Text::GameLoad, "Load from a file...", "Завантажити з файлу…", "Загрузить из файла…"},

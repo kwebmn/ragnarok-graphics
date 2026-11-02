@@ -5,6 +5,7 @@
 namespace uagfx::app {
 
 std::wstring exeFolder();  // the folder of uaro-graphics.exe: the client folder
+std::wstring localAppData();  // 3.0.11-beta.179: %LOCALAPPDATA% (this Windows user's own), "" none
 bool readFile(const std::wstring& path, std::string& out);
 // Written to "<path>.new" and moved over the old file in one step: a reader never sees half of it (spec §4.5).
 bool writeFileAtomic(const std::wstring& path, const std::string& bytes);

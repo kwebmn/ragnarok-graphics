@@ -33,6 +33,7 @@ struct State {
     ls::Layout layout;
     ls::Show show;
     int menuFor = -1;  // the account whose menu is open
+    int padRow = -1;   // 3.0.11-beta.179: the menu's row the pad is on
     ls::MenuShow menuShow;
     ls::MenuLayout menuLayout;
     std::string key;
@@ -100,6 +101,7 @@ void keepInSight(State& s) {
 
 void closeMenu(State& s) {
     s.menuFor = -1;
+    s.padRow = -1;
     s.menuShow = ls::MenuShow{};
 }
 
@@ -249,6 +251,7 @@ void frame(double k, int targetWidth, int targetHeight, unsigned codePage) {
             if (h.part == ls::Part::Card || h.part == ls::Part::Menu) s.show.hover = h.index;
         }
     }
+    if (s.menuFor >= 0 && s.menuShow.hover < 0) s.menuShow.hover = s.padRow;  // 3.0.11-beta.179: the pad's row
     if (s.menuFor >= 0) {
         s.menuShow.autoEnter = shelf.list[size_t(s.menuFor)].autoEnter;
         s.menuShow.keepPassword = shelf.list[size_t(s.menuFor)].keepPassword;
@@ -370,6 +373,47 @@ Asked key(UINT m, WPARAM wp, bool& took) {
         return Asked{Act::Other, -1};
     return {};
 }
+
+Asked pad(Pad p, bool& took) {
+    State& s = state();
+    took = true;
+    s.key.clear();
+    const int cards = int(s.cards.size());
+    if (s.menuFor >= 0) {  // the card's menu: its rows
+        const int rows = int(ls::menu(s.cards[size_t(s.menuFor)]).size());
+        switch (p) {
+            case Pad::Up: s.padRow = std::max(0, s.padRow - 1); return {};
+            case Pad::Down: s.padRow = std::min(rows - 1, s.padRow + 1); return {};
+            case Pad::Select: {
+                const int row = std::max(0, s.padRow), account = s.menuFor;
+                const bool edit = ls::menu(s.cards[size_t(account)])[size_t(row)] == ls::MenuItem::Edit;
+                pick(s, row);
+                return edit ? Asked{Act::Edit, account} : Asked{};
+            }
+            case Pad::Back:
+            case Pad::Menu: closeMenu(s); return {};
+            default: return {};
+        }
+    }
+    switch (p) {
+        case Pad::Left:
+        case Pad::Right:
+            s.show.focus = ls::padMove(s.show.focus, cards, p == Pad::Left ? -1 : 1);
+            keepInSight(s);
+            return {};
+        case Pad::Select: return cards > 0 ? Asked{Act::Login, s.show.focus} : Asked{Act::Add, -1};
+        case Pad::Other: return Asked{Act::Other, -1};
+        case Pad::Menu:
+            if (cards > 0) {
+                s.menuFor = s.show.focus;
+                s.padRow = 0;
+            }
+            return {};
+        default: took = false; return {};
+    }
+}
+
+bool menuOpen() { return state().menuFor >= 0; }
 
 bool box(int& x, int& y, int& w, int& h) {
     const State& s = state();

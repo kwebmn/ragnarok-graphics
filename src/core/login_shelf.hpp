@@ -49,6 +49,7 @@ struct Hit {
 Hit hitTest(const Layout& L, float x, float y);
 panel::Box menuButton(const Layout& L, int visible);  // the ⋯ of cards[visible]
 bool classicInstead(size_t accounts);                 // the first launch: the classic card, its note says why
+int padMove(int index, int count, int dir);  // 3.0.11-beta.179: the pad's ◀ ▶ - the next card, stopping at the ends
 std::string jobLine(const Card& c);                   // «High Priest · 99 · Prontera»
 
 struct Show {

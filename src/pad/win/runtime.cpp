@@ -52,6 +52,7 @@
 #include "win/cart_window.hpp"
 #include "win/char_make.hpp"
 #include "win/char_select.hpp"
+#include "win/login_card.hpp"
 #include "win/party_setup.hpp"
 #include "win/guild_card.hpp"
 #include "win/homun_card.hpp"
@@ -633,6 +634,23 @@ bool messagePad(const PadState& pad) {
     return true;
 }
 
+// 3.0.11-beta.179 (the login concept): the login screen - «Полиця», «Продовжити» or the card (win/login_card): the
+// D-pad (or the left stick), A, B, X, Y as its own
+bool loginPad(const PadState& pad, DWORD now) {
+    State& s = S();
+    const uint16_t buttons = pad.connected ? pad.buttons : 0;
+    const uint16_t down = uint16_t((buttons & ~s.prevPadButtons) | stickSteps(pad, now));
+    s.prevPadButtons = buttons;
+    using uagfx::win::loginwin::PadCommand;
+    const std::pair<uint16_t, PadCommand> keys[] = {{kPadLeft, PadCommand::Left}, {kPadRight, PadCommand::Right},
+                                                    {kPadUp, PadCommand::Up},     {kPadDown, PadCommand::Down},
+                                                    {kPadA, PadCommand::A},       {kPadB, PadCommand::B},
+                                                    {kPadX, PadCommand::X},       {kPadY, PadCommand::Y}};
+    for (const auto& [button, command] : keys)
+        if (down & button) uagfx::win::loginwin::padCommand(command);
+    return true;
+}
+
 // 3.0.11-beta.152: the character select - the D-pad (or the left stick) left and right chooses a place, A enters
 // (an empty place: makes a character there), X makes one, LB / RB the pages, B back to the login
 bool charSelectPad(const PadState& pad, DWORD now) {
@@ -1082,13 +1100,19 @@ void answerNpc(const TickOutput& out, const ViewInfo& view, const PadState& pad)
     const bool shown = pad.connected && view.focused && !view.paused;
     // 3.0.11-beta.93: a window B closes open while the player plays with the pad
     const bool closing = s.windows.last() >= 0 && s.mode.padShown(GetTickCount64());
-    const std::string text = !shown            ? std::string()
+    // 3.0.11-beta.179: the login screen's own line (its window takes the pad: the game paused for it)
+    const LoginHint login = pad.connected && view.focused && s.padTop && *s.padTop == uagfx::winstack::Win::Login
+                                ? uagfx::win::loginwin::padHint()
+                                : LoginHint::None;
+    const std::string text = login != LoginHint::None ? loginHint(login, s.cfg.lang)
+                             : !shown          ? std::string()
                              : aimKey != 0     ? aimHint(aimKey, s.cfg.lang)
                              : choiceKey != 0  ? choiceHint(choiceKey, s.cfg.lang)
                              : s.cfg.npcHint && answering ? npcHint(view.dialog, s.cfg.lang)
                              : closing && view.dialog == NpcDialog::None ? windowHint(s.cfg.lang)
                                                           : std::string();
     s.hintParts = text.empty()     ? std::vector<HintPart>{}  // 3.0.11-beta.92: for the interface's own line
+                  : login != LoginHint::None ? loginHintParts(login, s.cfg.lang)
                   : aimKey != 0    ? aimHintParts(aimKey, s.cfg.lang)
                   : choiceKey != 0 ? choiceHintParts(choiceKey, s.cfg.lang)
                   : s.cfg.npcHint && answering ? npcHintParts(view.dialog, s.cfg.lang)
@@ -1231,6 +1255,7 @@ void tick() {
                   : drive && *top == Win::SkillCard                ? cardPad(false, pad, now)
                   : drive && *top == Win::Ask                      ? askPad(pad)  // .150: an input's - the game's
                   : drive && *top == Win::Message                  ? messagePad(pad)  // .151
+                  : drive && *top == Win::Login                    ? loginPad(pad, now)       // .179
                   : drive && *top == Win::CharSelect               ? charSelectPad(pad, now)  // .152
                   : drive && *top == Win::CharMake                 ? charMakePad(pad, now)    // .153
                   : drive && *top == Win::Cart                     ? cartPad(pad, now)        // .154
