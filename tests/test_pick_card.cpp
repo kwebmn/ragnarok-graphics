@@ -71,3 +71,13 @@ TEST(pick_card_words_and_picture) {
     pickcard::paint(p, L, e, sh);
     CHECK((p.px[size_t(L.h / 2) * size_t(L.w) + size_t(L.w / 2)] >> 24) > 0x80);
 }
+
+// 3.0.11-beta.171 (the login concept: «Выбор сервера: пропускаем»): the server select with one row is chosen and
+// confirmed at once - the game shows it even for one (uaRO HD's sclientinfo has one connection), after the login
+// the char servers' list too; two rows and more wait for the player
+TEST(pick_card_single_entry_goes_on_by_itself) {
+    CHECK(pickcard::autoChoice(1, -1) == 0);
+    CHECK(pickcard::autoChoice(1, 0) == 0);
+    CHECK(pickcard::autoChoice(2, 0) == -1);
+    CHECK(pickcard::autoChoice(0, -1) == -1);
+}

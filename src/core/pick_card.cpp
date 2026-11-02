@@ -67,6 +67,11 @@ Layout layout(int targetW, int targetH, float scale, size_t count) {
 
 int mostScroll(const Layout& L, size_t count) { return std::max(0, int(count) - int(L.rows.size())); }
 
+int autoChoice(size_t entries, int chosen) {
+    (void)chosen;  // one row: whatever the list says, it is that one
+    return entries == 1 ? 0 : -1;
+}
+
 Hit hitTest(const Layout& L, int scroll, size_t count, float x, float y) {
     for (size_t i = 0; i < L.rows.size(); ++i) {
         const int row = int(i) + scroll;

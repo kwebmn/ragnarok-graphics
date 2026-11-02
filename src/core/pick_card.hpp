@@ -38,6 +38,8 @@ struct Hit {
     int row = -1;  // of all (the scroll counted)
 };
 Hit hitTest(const Layout& L, int scroll, size_t count, float x, float y);
+// 3.0.11-beta.171 (the login concept): the row to press OK on at once - the only one; -1 when the player chooses
+int autoChoice(size_t entries, int chosen);
 
 void paint(panel::Picture& out, const Layout& L, const std::vector<Entry>& entries, const Show& sh);
 

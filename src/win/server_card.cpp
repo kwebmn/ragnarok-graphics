@@ -50,6 +50,7 @@ struct State {
     int texW = 0, texH = 0;
     bool upload = false;
     int told = 0;
+    bool pressed = false;  // 3.0.11-beta.171: the only server confirmed for this window
 };
 
 State& state() {
@@ -196,10 +197,9 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
         s.window = 0;
         return;
     }
-    if (!s.shown || window != s.window) {
-        s.show = pc::Show{};
-        LOG_INFO("servers: the game's server select - the new card shows it");
-    }
+    if (window != s.window) s.pressed = false;
+    const bool fresh = !s.shown || window != s.window;
+    if (fresh) s.show = pc::Show{};
     s.window = window;
     s.k = float(k);
     s.scale = uistyle::readingScale(k);
@@ -208,7 +208,17 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     s.entries = readServers(s, control);
     s.show.selected = int32_t(read32(control + kChosen));
     if (s.show.selected >= int(s.entries.size())) s.show.selected = -1;
-    if (s.show.selected < 0 && s.entries.size() == 1) choose(s, 0);  // the only one chosen at once
+    if (pc::autoChoice(s.entries.size(), s.show.selected) == 0) {  // 3.0.11-beta.171: the only one - on at once
+        if (!s.pressed) {
+            s.pressed = true;
+            choose(s, 0);
+            LOG_INFO("servers: the only server - chosen at once");
+            press(s, pc::kOkButton);
+        }
+        hide(s);
+        return;
+    }
+    if (fresh) LOG_INFO("servers: the game's server select - the new card shows it");
     s.layout = pc::layout(targetWidth, targetHeight, s.scale, s.entries.size());
     s.show.scroll = std::clamp(s.show.scroll, 0, pc::mostScroll(s.layout, s.entries.size()));
     s.show.hover = -1;
