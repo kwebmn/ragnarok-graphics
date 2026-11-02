@@ -367,6 +367,10 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("pet", flag(running.petWindow), flag(file.petWindow)));
         n.petWindow = file.petWindow;
     }
+    if (file.homunWindow != running.homunWindow) {  // 3.0.11-beta.160: the homunculus' card, at once
+        u.applied.push_back(change("homun", flag(running.homunWindow), flag(file.homunWindow)));
+        n.homunWindow = file.homunWindow;
+    }
     if (file.skillCells != running.skillCells) {  // 3.0.11-beta.142: a ground skill's cells, at once
         u.applied.push_back(change("skill_cells", flag(running.skillCells), flag(file.skillCells)));
         n.skillCells = file.skillCells;

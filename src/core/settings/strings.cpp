@@ -5630,6 +5630,25 @@ constexpr Entry kTexts[] = {
     {Text::PetPerform, "Perform", "Трюк", "Трюк"},
     {Text::PetUnequip, "Accessory off", "Зняти прикрасу", "Снять украшение"},
     {Text::PetEgg, "Into the egg", "У яйце", "В яйцо"},
+    // 3.0.11-beta.160: the homunculus
+    {Text::InterfaceHomun, "Homunculus card", "Картка гомункула", "Карточка гомункула"},
+    {Text::InterfaceHomunHint,
+     "The homunculus' window (Alt+R) as a card in the new look: its name and level, HP, SP and experience bars, "
+     "fullness and closeness, its eight stats, feed and its skills (deleting it small at the foot, the game asks "
+     "first). Off: the game's own window.",
+     "Вікно гомункула (Alt+R) карткою в новому вигляді: ім'я й рівень, смуги HP, SP і досвіду, ситість і "
+     "близькість, вісім характеристик, нагодувати і навички (видалення — дрібно внизу, гра перепитує). Вимкнено: "
+     "власне вікно гри.",
+     "Окно гомункула (Alt+R) карточкой в новом виде: имя и уровень, полосы HP, SP и опыта, сытость и близость, "
+     "восемь характеристик, покормить и навыки (удаление — мелко внизу, игра переспрашивает). Выключено: "
+     "собственное окно игры."},
+    {Text::HomunTitle, "Homunculus", "Гомункул", "Гомункул"},
+    {Text::HomunSkills, "Skills", "Навички", "Навыки"},
+    {Text::HomunDelete, "Delete", "Видалити", "Удалить"},
+    {Text::HomunClose0, "Hostile", "Ворожий", "Враждебный"},
+    {Text::HomunClose1, "Unfriendly", "Неприязний", "Неприязненный"},
+    {Text::HomunClose2, "Awkward", "Уникає", "Избегает"},
+    {Text::HomunClose7, "Unknown", "Невідомо", "Неизвестно"},
     // 3.0.11-beta.141: the character block's experience (forms: one, a few, many)
     {Text::CharSkillPoints, "skill point|skill points", "очко навичок|очки навичок|очок навичок",
      "очко навыков|очка навыков|очков навыков"},

@@ -702,6 +702,8 @@ struct Config {
     bool partySetupWindow = false;
     // 3.0.11-beta.159: [interface] pet - the pet's window (Alt+J, win/pet_card) as a card
     bool petWindow = false;
+    // 3.0.11-beta.160: [interface] homun - the homunculus' window (Alt+R, win/homun_card) as a card
+    bool homunWindow = false;
     // 3.0.11-beta.142 (the owner's concept «маг, прист и хант на геймпаде», answer 9 «дать»): [interface] skill_cells -
     // a ground skill's cells, as the server makes them (core/skill_area), shown on the ground after a cast by the pad
     // or the mouse (win/ground_marks); 0: none

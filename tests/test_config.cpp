@@ -861,7 +861,7 @@ TEST(config_interface_minimap) {
     // 3.0.11-beta.70: the tracker; 3.0.11-beta.96: «Навички»; 3.0.11-beta.97: «Спорядження»; .98: the NPC talk;
     // .100: the shops; .115: the storage; .116: the trade; .140: the menu; .149: the item and skill cards; .150: the
     // requests and the NPC's inputs; .151: the game's message boxes and its login
-    CHECK(u.waiting.empty() && u.applied.size() == 30 && u.applied[0] == "minimap 0 -> 1");
+    CHECK(u.waiting.empty() && u.applied.size() == 31 && u.applied[0] == "minimap 0 -> 1");
     CHECK(u.applied[1] == "buffs off -> column" && u.applied[2] == "items 0 -> 1" && u.applied[3] == "status 0 -> 1");
     CHECK(u.applied[4] == "skills 0 -> 1" && u.applied[5] == "equip 0 -> 1" && u.applied[6] == "npc_talk 0 -> 1");
     CHECK(u.applied[7] == "shop 0 -> 1" && u.applied[8] == "storage 0 -> 1" && u.applied[9] == "trade 0 -> 1");
@@ -870,9 +870,10 @@ TEST(config_interface_minimap) {
           u.applied[15] == "char_select 0 -> 1" && u.applied[16] == "char_make 0 -> 1" &&
           u.applied[17] == "cart 0 -> 1" && u.applied[18] == "counts 0 -> 1" && u.applied[19] == "vending 0 -> 1");
     CHECK(u.applied[20] == "picks 0 -> 1" && u.applied[21] == "party_setup 0 -> 1" && u.applied[22] == "pet 0 -> 1");
-    CHECK(u.applied[23] == "cast 0 -> 1" && u.applied[24] == "chat 0 -> 1" && u.applied[25] == "hotbar 0 -> 1");
-    CHECK(u.applied[26] == "tracker 0 -> 1" && u.applied[27] == "party 0 -> 1" && u.applied[28] == "target 0 -> 1");
-    CHECK(u.applied[29] == "character off -> bars");
+    CHECK(u.applied[23] == "homun 0 -> 1");
+    CHECK(u.applied[24] == "cast 0 -> 1" && u.applied[25] == "chat 0 -> 1" && u.applied[26] == "hotbar 0 -> 1");
+    CHECK(u.applied[27] == "tracker 0 -> 1" && u.applied[28] == "party 0 -> 1" && u.applied[29] == "target 0 -> 1");
+    CHECK(u.applied[30] == "character off -> bars");
     CHECK(appliesNow("interface.minimap"));
 }
 
@@ -1595,6 +1596,18 @@ TEST(config_interface_pet) {
     CHECK(s != nullptr && s->page == settings::Page::Interface);
     CHECK(appliesNow("interface.pet"));
     CHECK(liveUpdate(parseConfig(""), parseConfig("[interface]\npet = 1\n")).next.petWindow);
+}
+
+// 3.0.11-beta.160: [interface] homun - the homunculus' window as a card, on with the new minimap, at once
+TEST(config_interface_homun) {
+    CHECK(!parseConfig("").homunWindow);
+    CHECK(parseConfig("[interface]\nminimap = 1\n").homunWindow);
+    CHECK(!parseConfig("[interface]\nminimap = 1\nhomun = 0\n").homunWindow);
+    CHECK(parseConfig("[interface]\nhomun = 1\n").homunWindow);
+    const settings::IniSetting* s = settings::findSetting("interface.homun");
+    CHECK(s != nullptr && s->page == settings::Page::Interface);
+    CHECK(appliesNow("interface.homun"));
+    CHECK(liveUpdate(parseConfig(""), parseConfig("[interface]\nhomun = 1\n")).next.homunWindow);
 }
 
 // 3.0.11-beta.103 (the owner: «можешь сделать настройку, чтобы можно было выбрать эту стрелку в конфигураторе»):
