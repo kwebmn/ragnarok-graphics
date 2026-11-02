@@ -43,6 +43,10 @@ Overrides overridesOf(const Config& c, bool onBattery, Role role = Role::Main);
 EffectSettings effectsOf(const EffectSettings& effective, const Overrides& o);
 // [frames] fps_limit (0: none) under them.
 int fpsLimit(int file, const Overrides& o);
+// 0.85, [frames] save_power: the frames a second the picture is held to - 15 behind another window or minimised; with
+// no map (the login, the character select) 60 (3.0.11-beta.188, R-U5A9G4: 30 before - the new login screen's hover
+// and its shelf's glide stuttered at 33 ms a frame); 0 in the world (none)
+int savePowerFps(bool foreground, bool mapShown);
 // kFlatWorld: the mip level a world texture is drawn from - its last (its colour alone), or for one with transparent
 // texels the last of 16 texels a side or more (leaves and grilles keep their shape); 0: none (no mip levels).
 int flatLevel(int width, int height, int levels, bool transparent);

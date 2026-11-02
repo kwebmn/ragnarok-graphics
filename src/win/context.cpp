@@ -1104,10 +1104,10 @@ void Context::present(const Rect& source, bool waitForVblank) {
     o.vsync = config.vsync && waitForVblank;
     o.allowTearing = config.allowTearing;
     // 0.85, [frames] save_power: in the background (another window in front, minimised) 15 frames a second, with no
-    // map shown (the login, the character select) 30 - what the player is not looking at needs no more.
+    // map shown (the login, the character select) 60 (light::savePowerFps; 30 before 3.0.11-beta.188).
     o.fpsLimit = light::fpsLimit(config.fpsLimit, light_);  // 2.5.20: the battery's
     o.pacerSleeps = light_.pacerSleeps;
-    const int idle = !foreground ? 15 : map_.empty() ? 30 : 0;
+    const int idle = light::savePowerFps(foreground, !map_.empty());
     if (config.savePower && idle && (o.fpsLimit <= 0 || o.fpsLimit > idle)) o.fpsLimit = idle;
     o.sharpen = enhanced_ && config.sharpen > 0 && !light_.noSharpen ? float(config.sharpen - 1) / 99.0f
                                                                      : -1.0f;  // 1-100 -> CAS 0..1

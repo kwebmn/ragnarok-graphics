@@ -5,6 +5,16 @@
 
 using namespace uagfx;
 
+// 3.0.11-beta.188 (R-U5A9G4 «а тут маленький фпс почему? почему милисекунд так много?», «лаги в интерфейсе входа»):
+// [frames] save_power's frames - 15 behind another window; with no map (the login, the character select) 60, not
+// the 30 of 0.85 (the new login screen's hover and glide stuttered at 33 ms a frame); in the world none
+TEST(light_save_power_frames) {
+    CHECK_EQ(light::savePowerFps(false, true), 15);
+    CHECK_EQ(light::savePowerFps(false, false), 15);
+    CHECK_EQ(light::savePowerFps(true, false), 60);
+    CHECK_EQ(light::savePowerFps(true, true), 0);
+}
+
 TEST(light_modes_take_nothing_when_off) {
     Config c;
     CHECK(light::overridesOf(c, false) == light::Overrides{});
