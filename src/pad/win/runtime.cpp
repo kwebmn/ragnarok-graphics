@@ -52,6 +52,7 @@
 #include "win/cart_window.hpp"
 #include "win/char_make.hpp"
 #include "win/char_select.hpp"
+#include "win/pick_card.hpp"
 #include "win/vend_shop.hpp"
 #include "win/info_card.hpp"
 #include "win/menu_window.hpp"
@@ -690,6 +691,20 @@ bool vendPad(const PadState& pad, DWORD now) {
     return true;
 }
 
+// 3.0.11-beta.157: the magnifier's or a card's choice of things - up and down choose, A OKs, B cancels
+bool pickPad(const PadState& pad, DWORD now) {
+    State& s = S();
+    const uint16_t buttons = pad.connected ? pad.buttons : 0;
+    const uint16_t down = uint16_t((buttons & ~s.prevPadButtons) | stickSteps(pad, now));
+    s.prevPadButtons = buttons;
+    using uagfx::win::pickcardwin::PadCommand;
+    const std::pair<uint16_t, PadCommand> keys[] = {{kPadUp, PadCommand::Up}, {kPadDown, PadCommand::Down},
+                                                    {kPadA, PadCommand::Ok},  {kPadB, PadCommand::Cancel}};
+    for (const auto& [button, command] : keys)
+        if (down & button) uagfx::win::pickcardwin::padCommand(command);
+    return true;
+}
+
 // 3.0.11-beta.92: «Характеристики» open - the D-pad (or the left stick) chooses a stat, A adds a point, B or Start
 // close it
 bool statsPad(const PadState& pad, DWORD now) {
@@ -988,7 +1003,7 @@ constexpr const char* kTopNames[] = {"«Речі»",  "«Характерист�
                                      "the shop", "the NPC talk",      "«Довідник»", "«Склад»", "«Обмін»",
                                      "the menu", "the item card", "the skill card", "the request",
                                      "the message box", "the login", "the character select",
-                                     "the character make", "«Візок»", "«Лавка»"};
+                                     "the character make", "«Візок»", "«Лавка»", "the choice of things"};
 static_assert(std::size(kTopNames) == size_t(uagfx::winstack::kWins), "a name for each window");
 
 void tick() {
@@ -1061,6 +1076,7 @@ void tick() {
                   : drive && *top == Win::CharMake                 ? charMakePad(pad, now)    // .153
                   : drive && *top == Win::Cart                     ? cartPad(pad, now)        // .154
                   : drive && *top == Win::Vending                  ? vendPad(pad, now)        // .156
+                  : drive && *top == Win::Pick                     ? pickPad(pad, now)        // .157
                                                                    : runMenu(pad, view, now);
     if (s.npcSupported) view.dialog = clientnpc::read();
     double clientTurn = 0;

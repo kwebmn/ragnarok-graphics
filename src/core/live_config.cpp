@@ -355,6 +355,10 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("vending", flag(running.vendWindow), flag(file.vendWindow)));
         n.vendWindow = file.vendWindow;
     }
+    if (file.pickWindows != running.pickWindows) {  // 3.0.11-beta.157: the choice of things, at once
+        u.applied.push_back(change("picks", flag(running.pickWindows), flag(file.pickWindows)));
+        n.pickWindows = file.pickWindows;
+    }
     if (file.skillCells != running.skillCells) {  // 3.0.11-beta.142: a ground skill's cells, at once
         u.applied.push_back(change("skill_cells", flag(running.skillCells), flag(file.skillCells)));
         n.skillCells = file.skillCells;

@@ -5565,6 +5565,23 @@ constexpr Entry kTexts[] = {
     {Text::VendPadHint, "{1}: +1 \xC2\xB7 {2}: -1 \xC2\xB7 {3}: buy",
      "{1}: +1 \xC2\xB7 {2}: \xE2\x88\x92" "1 \xC2\xB7 {3}: купити",
      "{1}: +1 \xC2\xB7 {2}: \xE2\x88\x92" "1 \xC2\xB7 {3}: купить"},
+    // 3.0.11-beta.157: the choice of things (the magnifier's, a card's)
+    {Text::InterfacePicks, "Choice of things", "Вибір речі", "Выбор вещи"},
+    {Text::InterfacePicksHint,
+     "The magnifier's list of things not known yet and a card's list of the things it goes into, in the new look: a "
+     "row a thing with its icon, a click chooses, two clicks choose and confirm. Off: the game's own windows.",
+     "Список речей для лупи й список речей, у які йде карта, у новому вигляді: рядок на річ з іконкою, клік обирає, "
+     "подвійний клік — обрати й підтвердити. Вимкнено: власні вікна гри.",
+     "Список вещей для лупы и список вещей, в которые идёт карта, в новом виде: строка на вещь с иконкой, клик "
+     "выбирает, двойной клик — выбрать и подтвердить. Выключено: собственные окна игры."},
+    {Text::PickIdentifyTitle, "Identify", "Опізнати річ", "Опознать вещь"},
+    {Text::PickIdentifyHint, "Choose the thing to identify", "Оберіть річ, яку опізнати",
+     "Выберите вещь для опознания"},
+    {Text::PickIdentifyOk, "Identify", "Опізнати", "Опознать"},
+    {Text::PickCompoundTitle, "Insert the card", "Вставити карту", "Вставить карту"},
+    {Text::PickCompoundHint, "Choose the thing for the card", "Оберіть річ для карти", "Выберите вещь для карты"},
+    {Text::PickCompoundOk, "Insert", "Вставити", "Вставить"},
+    {Text::PickEmpty, "No thing fits", "Немає відповідних речей", "Нет подходящих вещей"},
     // 3.0.11-beta.141: the character block's experience (forms: one, a few, many)
     {Text::CharSkillPoints, "skill point|skill points", "очко навичок|очки навичок|очок навичок",
      "очко навыков|очка навыков|очков навыков"},

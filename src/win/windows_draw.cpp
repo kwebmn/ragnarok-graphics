@@ -23,6 +23,7 @@
 #include "win/cart_window.hpp"
 #include "win/char_make.hpp"
 #include "win/char_select.hpp"
+#include "win/pick_card.hpp"
 #include "win/vend_shop.hpp"
 #include "win/login_card.hpp"
 #include "win/msg_box.hpp"
@@ -65,6 +66,7 @@ void __attribute__((thiscall)) windowsDraw(uint32_t manager) {
     charmakewin::beforeGameDraw();    // 3.0.11-beta.153: the character make
     cartwin::beforeGameDraw();        // 3.0.11-beta.154: «Візок»
     vendshopwin::beforeGameDraw();    // 3.0.11-beta.156: «Лавка»
+    pickcardwin::beforeGameDraw();    // 3.0.11-beta.157: the choice of things
     mobhpwin::beforeGameDraw();   // 3.0.11-beta.100: the monsters' per cent asked
     charpanel::beforeGameDraw();  // the Basic Info window
     hotbarwin::beforeGameDraw();  // the hotkeys' bar
