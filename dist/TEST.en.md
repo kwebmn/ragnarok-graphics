@@ -1,3 +1,14 @@
+# uaRO Graphics 3.0.11-beta.177 — what's new
+
+**Three login views to choose from** (the new login screen):
+- At the bottom left "View": "Classic", "Shelf", "Continue". The choice is kept; the same switch is "The login
+  screen" under the settings app's "Interface". While the shelf has no accounts, every view shows the login window.
+- "Classic": the login window as before, plus ▾ in the "Login" field — the saved logins (the one picked puts its
+  login and password in, you press "Enter"), an eye in the "Password" field — the password seen while you hold the
+  mouse button. Under the buttons "Create an account" and "Forgot the password?".
+- "Continue": the last account big — its character, job, level, map, "Play" (Enter) straight into the game; "Another
+  character" — to the character select; "Change account" — another from the shelf, or "+ Another login".
+
 # uaRO Graphics 3.0.11-beta.176 — what's new
 
 **The account shelf: one click to enter** (the new login screen, the shelf, step 2):
