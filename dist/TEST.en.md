@@ -1,3 +1,11 @@
+# uaRO Graphics 3.0.11-beta.182 — what's new
+
+**The login screen: fixes after the review**:
+- The site's refusals in the sign-in, the registration and the forms — in your language: "A wrong e-mail or
+  password", "This login is taken already", "This e-mail is registered on the site already", "A wrong game login or
+  password", "The current game password does not fit" (before — the site's words).
+- Fewer disk reads on the login screen: the site account's file is looked at once a second, not several times a frame.
+
 # uaRO Graphics 3.0.11-beta.181 — what's new
 
 **Registration right in the client** (the new login screen; shows once the site is updated — until then "Create an
