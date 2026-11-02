@@ -1,3 +1,9 @@
+# uaRO Graphics 3.0.11-beta.190 — what's new
+
+**The HP bars under the characters — under the windows**:
+- The HP and SP bar under the character (and under the others) is no longer drawn over the new interface's windows
+  ("Chat macros", "Skills" and the others). Over the windows only the game's own windows and its cursor stay.
+
 # uaRO Graphics 3.0.11-beta.189 — what's new
 
 **The shelf with many accounts**:
