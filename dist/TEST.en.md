@@ -1,3 +1,11 @@
+# uaRO Graphics 3.0.11-beta.168 — what's new
+
+**The whisper's settings in the new look** (the fifth group of the remaining windows):
+- The friends' card's Settings show a card of three switches: "Own window for strangers' whispers", "Own window for
+  friends' whispers", "A sound for a new whisper". A click on a row flips it.
+- The controller: up/down a row, A flips, B closes.
+- The switch "Whisper settings" under "Interface", on with the new minimap.
+
 # uaRO Graphics 3.0.11-beta.167 — what's new
 
 **A fix for the new windows:**
