@@ -1,3 +1,10 @@
+# uaRO Graphics 3.0.11-beta.188 — what's new
+
+**A smoother login screen**:
+- On the login and the character select the game draws up to 60 frames a second now, not 30: the hover, the views'
+  switch and the shelf no longer stutter (the counter showed 30 frames and 33 ms a frame — the "Save power in the
+  background" limit, not a load). In the background 15 as before.
+
 # uaRO Graphics 3.0.11-beta.187 — what's new
 
 **The interface: more fixes after the tester**:
