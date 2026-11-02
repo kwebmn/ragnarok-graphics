@@ -1,3 +1,12 @@
+# uaRO Graphics 3.0.11-beta.161 — what's new
+
+**The mercenary in the new look** (the ninth group of the remaining windows, its end):
+- Ctrl+R shows a card: the mercenary's kind ("Mercenary archer", "spearman", "swordsman"), its name and level, HP and
+  SP bars, "Contract until" (date and time), "Loyalty", "Summons", "Kills" and its eight stats.
+- The button "Skills"; "Dismiss" small at the foot, the game asks first.
+- The controller: A its skills, B closes.
+- The switch "Mercenary card" under "Interface", on with the new minimap.
+
 # uaRO Graphics 3.0.11-beta.160 — what's new
 
 **The homunculus in the new look** (the ninth group of the remaining windows):
