@@ -67,6 +67,7 @@ struct State {
     accounts::LastChar chosen;  // 3.0.11-beta.175: the place chosen as last seen (the shelf's last character)
     std::string wanted;         // 3.0.11-beta.176: «Одразу в гру»'s character (UTF-8)
     ULONGLONG wantedAt = 0, stepAt = 0;
+    bool makeWanted = false;  // 3.0.11-beta.181: a character made on the first empty place
 };
 
 State& state() {
@@ -260,11 +261,19 @@ void wantFrame(State& s, uint32_t window) {
     const int pages = std::clamp(int(read32(window + kPages)), 1, 3);
     std::vector<std::string> names(size_t(pages) * 3);
     for (int i = 0; i < pages * 3; ++i) names[size_t(i)] = nameAt(s, i);
-    const int at = accounts::findSlot(names, s.wanted);
+    int at = -1;
+    if (s.makeWanted) {  // 3.0.11-beta.181: the first empty place
+        for (int i = 0; i < pages * 3 && at < 0; ++i)
+            if (names[size_t(i)].empty()) at = i;
+    } else {
+        at = accounts::findSlot(names, s.wanted);
+    }
     if (at < 0) {
         if (now - s.wantedAt > 1500) {
-            LOG_INFO("characters: the saved character is not on this account - waiting");
+            LOG_INFO("characters: %s", s.makeWanted ? "no empty place to make a character in"
+                                                    : "the saved character is not on this account - waiting");
             s.wanted.clear();
+            s.makeWanted = false;
         }
         return;
     }
@@ -274,6 +283,9 @@ void wantFrame(State& s, uint32_t window) {
         send(s, 0, cs::pageButton(page > pageNow), "a page turned («Одразу в гру»)");
     } else if (place != int(read32(window + kChosen))) {
         choose(s, place);
+    } else if (s.makeWanted) {
+        send(s, 0, cs::gameButton(cs::Button::Make), "«Створити» (the registration's character)");
+        s.makeWanted = false;
     } else {
         send(s, 0, cs::gameButton(cs::Button::Enter), "«Увійти» («Одразу в гру»)");
         LOG_INFO("characters: «Одразу в гру» - the saved character entered (place %d)", at);
@@ -303,8 +315,11 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     const uint32_t window = gameSelect();
     hold(s, window, on);
     if (window) s.chosen = chosenOf(s, window);  // 3.0.11-beta.175: the shelf's last character
-    if (window && !s.wanted.empty()) wantFrame(s, window);  // 3.0.11-beta.176: «Одразу в гру»
-    if (!window) s.wanted.clear();
+    if (window && (!s.wanted.empty() || s.makeWanted)) wantFrame(s, window);  // 3.0.11-beta.176: «Одразу в гру»
+    if (!window) {
+        s.wanted.clear();
+        s.makeWanted = false;
+    }
     if (!on || !window || !game || k <= 0 || targetWidth <= 0 || targetHeight <= 0) {
         hide(s);
         s.window = 0;
@@ -403,6 +418,16 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
 bool shown() { return state().shown; }
 
 bool gameUp() { return gameSelect() != 0; }
+
+bool makeFirst() {
+    State& s = state();
+    if (!gameSelect()) return false;
+    s.makeWanted = true;
+    s.wanted.clear();
+    s.wantedAt = GetTickCount64();
+    s.stepAt = 0;
+    return true;
+}
 
 bool enterByName(const std::string& name) {
     State& s = state();

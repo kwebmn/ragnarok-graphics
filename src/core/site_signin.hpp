@@ -11,7 +11,8 @@ namespace uagfx::sitesignin {
 // uaro.kiev.ua account - all its game logins on the shelf at once. Three ways: the site's password (and its
 // two-factor code when the site asks), a code confirmed in the browser (the cabinet's /account/device), the cabinet's
 // key pasted. The parts that need no Windows; the words by GDI (win/site_signin).
-enum class Way : uint8_t { Password, Browser, Key, NewLogin, Link, GamePassword };  // .181: the last three - forms
+// .181: the last four - forms (Register: the registration in the client, one form)
+enum class Way : uint8_t { Password, Browser, Key, NewLogin, Link, GamePassword, Register };
 enum class Field : uint8_t { None, Email, Password, Code, Key, Login, GamePass, NewPass };
 struct Texts {
     std::string title, subtitle;
@@ -23,6 +24,8 @@ struct Texts {
     // 3.0.11-beta.181: the forms - their titles, fields, the sexes and their buttons
     std::string forms[3];  // «Новий ігровий логін», «Прив'язати наявний логін», «Змінити пароль гри»
     std::string login, gamePass, currentPass, newPass, sexes[2], create, link, change;
+    // 3.0.11-beta.181: the registration
+    std::string regTitle, steps, password2, agree, rules, regCreate, haveAccount, free, taken;
 };
 struct Show {
     Way way = Way::Password;
@@ -37,7 +40,9 @@ struct Show {
     int hover = 0;      // a Part's number
     std::string login;  // 3.0.11-beta.181: the forms'
     int gamePassLength = 0, newPassLength = 0;
-    char sex = 'M';
+    char sex = 'M';      // 'M', 'F'; 0 not chosen yet (the registration)
+    bool agree = false;  // the registration's rules ticked
+    int loginFree = -1;  // its login asked: 1 free, 0 taken, -1 not known
 };
 struct Layout {
     float s = 1;
@@ -45,12 +50,14 @@ struct Layout {
     panel::Box glass, title, subtitle, ways[3];
     panel::Box emailLabel, email, passwordLabel, password, codeLabel, code, keyLabel, key;  // 0 high: not on the way
     panel::Box loginLabel, login, gamePassLabel, gamePass, newPassLabel, newPass, sex[2];  // 3.0.11-beta.181
+    panel::Box steps, free, agree, agreeTick, rules, haveAccount;  // the registration (0 high: not on the way)
     panel::Box codeBig, wait;  // the browser's code and its wait (the browser's way)
     panel::Box error, button, back;
 };
 Layout layout(int targetW, int targetH, float scale, Way way, bool twofa);
 enum class Part : uint8_t {
-    None, Way0, Way1, Way2, Email, Password, Code, Key, Button, Back, Login, GamePass, NewPass, Sex0, Sex1
+    None, Way0, Way1, Way2, Email, Password, Code, Key, Button, Back, Login, GamePass, NewPass, Sex0, Sex1, Agree,
+    Rules, HaveAccount
 };
 bool isForm(Way w);  // a form of the signed-in site account (no ways' tabs)
 Part hitTest(const Layout& L, float x, float y);

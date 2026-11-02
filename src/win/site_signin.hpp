@@ -20,6 +20,11 @@ void open();
 // 3.0.11-beta.181: the signed-in site account's forms - a new game login, an existing one linked, a game password
 // changed (`accountId`, `login` its); done: the login and its password on this computer's shelf, the site's asked again
 void openForm(int way, int accountId, const std::string& login);  // way: sitesignin::Way's number
+// 3.0.11-beta.181: the registration in the client - one form (the site account and its first game login, one
+// password); done: the token kept, the account on the shelf, the login sent and the first character made
+void openRegister();
+// The registration done: its login and password once (win/login_card sends the login, then makes the character)
+bool takeRegistered(std::string& login, std::string& password);
 bool isOpen();
 void close();
 void probe();      // the login screen shown: is the site's client API there?

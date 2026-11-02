@@ -557,6 +557,9 @@ enum class Text : uint16_t {
     ShelfNoPassword, ShelfNoPasswordShort, ShelfChars, ShelfNewLogin, ShelfLinkLogin, ShelfMenuGamePassword,
     ShelfCharsTitle, ShelfCharsBack, ShelfNewChar, SiteFormNewLogin, SiteFormLink, SiteFormGamePassword, SiteGamePass,
     SiteCurrentPass, SiteNewPass, SiteSexM, SiteSexF, SiteCreate, SiteLink, SiteChange, SiteErrForm,
+    // 3.0.11-beta.181: the registration in the client
+    RegTitle, RegSteps, RegPassword2, RegAgree, RegRules, RegCreate, RegHaveAccount, RegFree, RegTaken, RegErrLogin,
+    RegErrPassword, RegErrPassword2, RegErrEmail, RegErrSex, RegErrAgree,
     // 3.0.11-beta.152: the character select
     InterfaceCharSelect, InterfaceCharSelectHint, CharsTitle, CharsEnter, CharsMake, CharsRemove, CharsBack, CharsEmpty,
     CharsMakeHint,

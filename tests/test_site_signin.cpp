@@ -102,3 +102,34 @@ TEST(site_signin_forms) {
     };
     CHECK(has("Новий ігровий логін") && has("kweb2") && has("Жіночий") && has("Створити логін"));
 }
+
+// 3.0.11-beta.181 (the registration in the client, one form): «1 Акаунт → 2 Персонаж → 3 У гру» over the login, the
+// password twice, the e-mail, the sex, the rules' tick and their link; «вільний» at the login's right once asked;
+// «Вже є акаунт на сайті?» under the button
+TEST(site_signin_register_form) {
+    using P = sitesignin::Part;
+    const sitesignin::Layout L = sitesignin::layout(1920, 1080, 1.0f, sitesignin::Way::Register, false);
+    CHECK(L.ways[0].w == 0 && L.steps.h > 0 && L.login.h > 0 && L.gamePass.h > 0 && L.newPass.h > 0 && L.email.h > 0);
+    CHECK(L.sex[0].w > 0 && L.agree.h > 0 && L.button.y > L.agree.y && L.haveAccount.y > L.button.y);
+    CHECK(L.email.y > L.newPass.y && L.newPass.y > L.gamePass.y && L.gamePass.y > L.login.y);
+    const auto at = [&](const panel::Box& b) { return sitesignin::hitTest(L, b.x + 3, b.y + b.h / 2); };
+    CHECK(at(L.agree) == P::Agree && at(L.rules) == P::Rules && at(L.haveAccount) == P::HaveAccount);
+    CHECK(at(L.email) == P::Email && at(L.newPass) == P::NewPass);
+    CHECK(L.y + L.h <= 1080 && L.y >= 0);
+    sitesignin::Texts t;
+    t.regTitle = "Новий акаунт";
+    t.steps = "1 Акаунт → 2 Персонаж → 3 У гру";
+    t.free = "вільний";
+    t.taken = "зайнятий";
+    t.agree = "Погоджуюся з правилами сервера";
+    sitesignin::Show sh;
+    sh.way = sitesignin::Way::Register;
+    sh.login = "kweb_new";
+    sh.loginFree = 1;
+    const auto w = sitesignin::words(L, sh, t);
+    const auto has = [&](const std::string& s) {
+        return std::any_of(w.begin(), w.end(), [&](const sitesignin::Words& x) { return x.text == s; });
+    };
+    CHECK(has("Новий акаунт") && has("1 Акаунт → 2 Персонаж → 3 У гру") && has("вільний") && !has("зайнятий"));
+    CHECK(has("Погоджуюся з правилами сервера"));
+}

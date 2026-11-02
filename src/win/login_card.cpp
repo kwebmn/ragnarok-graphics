@@ -129,6 +129,7 @@ struct State {
     std::optional<loginview::View> viewPicked;       // picked on the strip until the settings say the same
     bool eyeHeld = false;                            // 3.0.11-beta.177: the password's letters shown while held
     ULONGLONG exitAskedAt = 0;                       // 3.0.11-beta.179: the pad's B once - «Вийти» on the next
+    bool makeCharAfter = false;  // 3.0.11-beta.181: registered - the first character made at the select
     // 3.0.11-beta.177: ▾'s saved logins under the account's field - their own picture
     bool dropOpen = false;
     lc::DropLayout drop;  // in the card's picture's pixels
@@ -566,6 +567,11 @@ void press(State& s, lc::Part p) {
         return;
     }
     if (p == lc::Part::Register) {
+        if (sitesigninwin::siteReady()) {  // 3.0.11-beta.181: the registration in the client
+            sitesigninwin::openRegister();
+            s.key.clear();
+            return;
+        }
         const bool opened = openUrl(kRegister);
         LOG_INFO("login: the registration page %s (uaro.kiev.ua/account/register)", opened ? "opened" : "not opened");
         return;
@@ -658,7 +664,7 @@ void act(State& s, const loginshelfwin::Asked& a) {
                 reinterpret_cast<SetFocusFn>(uintptr_t(kSetFocus))(kWindowMgr, read32(window + s.places.password));
             }
             break;
-        case A::Create: openUrl(kRegister); break;
+        case A::Create: press(s, lc::Part::Register); break;  // 3.0.11-beta.181: in the client when the site can
         case A::Exit: press(s, lc::Part::Exit); break;
         case A::None: break;
     }
@@ -677,7 +683,7 @@ void actContinue(State& s, const logincontinuewin::Asked& a) {
             if (row) loginWith(shelf.list[size_t(a.index)], a.act == A::OtherChar);
             break;
         case A::Other: act(s, loginshelfwin::Asked{loginshelfwin::Act::Other, -1, {}}); break;
-        case A::Create: openUrl(kRegister); break;
+        case A::Create: press(s, lc::Part::Register); break;  // 3.0.11-beta.181
         case A::None: break;
     }
     s.key.clear();
@@ -753,6 +759,11 @@ void shelfFrame(State& s, HWND game, double k, int targetWidth, int targetHeight
     if (selectUp && !s.selectWasUp) {
         if (s.pendingShelf) accepted(s);
         s.recordPending = !s.loggedIn.empty();
+        if (s.makeCharAfter) {  // 3.0.11-beta.181: registered - «2 Персонаж»
+            s.makeCharAfter = false;
+            charselectwin::makeFirst();
+            LOG_INFO("login: registered - the character make on the first empty place");
+        }
         if (!s.autoName.empty() && s.oneClick == s.loggedIn) {  // 3.0.11-beta.176: «Одразу в гру»
             charselectwin::enterByName(s.autoName);
             LOG_INFO("login: «Одразу в гру» - the character select passed with the saved character");
@@ -811,6 +822,7 @@ void frame(HWND game, bool on, bool status, bool news, loginview::View view, uns
     }
     if (window && !s.hadWindow) {  // the window back: refused, not reached, or back from the game
         s.pendingShelf = false;
+        s.makeCharAfter = false;
         if (!s.loggedIn.empty()) {  // 3.0.11-beta.178: this game plays no login now
             gamelogins::left();
             s.loggedIn.clear();
@@ -897,6 +909,19 @@ void frame(HWND game, bool on, bool status, bool news, loginview::View view, uns
     const bool any = !shelf.list.empty(), forOne = loginshelfwin::classicChosen();
     sitesigninwin::probe();  // 3.0.11-beta.180: the site's client API there? (asked once; again while not)
     if (sitesigninwin::takeSignedIn()) siteaccounts::refresh(true);  // 3.0.11-beta.181: the shelf from the site
+    {
+        std::string login, password;
+        if (sitesigninwin::takeRegistered(login, password) && window) {  // the new login sent, its character next
+            accounts::Account a;
+            a.login = login;
+            a.password = password;
+            s.makeCharAfter = true;
+            loginWith(a, true);
+            wipe(password);
+            wipe(a.password);
+            siteaccounts::refresh(true);
+        }
+    }
     const State::Mode mode = sitesigninwin::isOpen()                                    ? State::Mode::Site
                              : !any || forOne || s.view == loginview::View::Classic ? State::Mode::Card
                              : s.view == loginview::View::Shelf                    ? State::Mode::Shelf

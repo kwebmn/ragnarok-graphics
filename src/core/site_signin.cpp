@@ -32,6 +32,7 @@ Layout layout(int targetW, int targetH, float scale, Way way, bool twofa) {
     L.title = panel::Box{pad, y, fw, kTitleH * s};
     y += kTitleH * s;
     L.subtitle = panel::Box{pad, y, fw, kSubH * s};
+    if (way == Way::Register) L.steps = L.subtitle;  // 3.0.11-beta.181: the steps in the subtitle's place
     y += kSubH * s + kGap * s;
     if (!isForm(way)) {
         for (int i = 0; i < 3; ++i) L.ways[i] = panel::Box{pad + i * fw / 3, y, fw / 3, kWaysH * s};
@@ -60,6 +61,19 @@ Layout layout(int targetW, int targetH, float scale, Way way, bool twofa) {
     } else if (way == Way::GamePassword) {
         field(L.gamePassLabel, L.gamePass);
         field(L.newPassLabel, L.newPass);
+    } else if (way == Way::Register) {  // 3.0.11-beta.181: one form - the login, its password twice, the e-mail
+        field(L.loginLabel, L.login);
+        L.free = panel::Box{L.login.x + L.login.w - 110 * s, L.login.y, 100 * s, L.login.h};
+        field(L.gamePassLabel, L.gamePass);
+        field(L.newPassLabel, L.newPass);
+        field(L.emailLabel, L.email);
+        L.sex[0] = panel::Box{pad, y, fw / 2, kWaysH * s};
+        L.sex[1] = panel::Box{pad + fw / 2, y, fw / 2, kWaysH * s};
+        y += kWaysH * s + 10 * s;
+        L.agree = panel::Box{pad, y, fw - 90 * s, 24 * s};
+        L.agreeTick = panel::Box{pad, y + 3 * s, 18 * s, 18 * s};
+        L.rules = panel::Box{pad + fw - 90 * s, y, 90 * s, 24 * s};
+        y += 24 * s + 8 * s;
     } else {
         L.codeBig = panel::Box{pad, y, fw, kCodeH * s};
         y += kCodeH * s;
@@ -69,7 +83,12 @@ Layout layout(int targetW, int targetH, float scale, Way way, bool twofa) {
     L.error = panel::Box{pad, y, fw, kErrorH * s};
     y += kErrorH * s + 6 * s;
     L.button = panel::Box{pad, y, fw, kButtonH * s};
-    y += kButtonH * s + pad;
+    y += kButtonH * s;
+    if (way == Way::Register) {
+        L.haveAccount = panel::Box{pad, y + 10 * s, fw, 20 * s};
+        y += 30 * s;
+    }
+    y += pad;
     L.glass = panel::Box{0, 0, w, y};
     L.w = int(std::ceil(w));
     L.h = int(std::ceil(y));
@@ -78,10 +97,15 @@ Layout layout(int targetW, int targetH, float scale, Way way, bool twofa) {
     return L;
 }
 
-bool isForm(Way w) { return w == Way::NewLogin || w == Way::Link || w == Way::GamePassword; }
+bool isForm(Way w) {
+    return w == Way::NewLogin || w == Way::Link || w == Way::GamePassword || w == Way::Register;
+}
 
 Part hitTest(const Layout& L, float x, float y) {
     if (L.back.contains(x, y)) return Part::Back;
+    if (L.rules.h > 0 && L.rules.contains(x, y)) return Part::Rules;  // 3.0.11-beta.181: the registration
+    if (L.agree.h > 0 && L.agree.contains(x, y)) return Part::Agree;
+    if (L.haveAccount.h > 0 && L.haveAccount.contains(x, y)) return Part::HaveAccount;
     if (L.login.h > 0 && L.login.contains(x, y)) return Part::Login;  // 3.0.11-beta.181: the forms
     if (L.gamePass.h > 0 && L.gamePass.contains(x, y)) return Part::GamePass;
     if (L.newPass.h > 0 && L.newPass.contains(x, y)) return Part::NewPass;
@@ -108,7 +132,8 @@ void paint(panel::Picture& out, const Layout& L, const Show& sh) {
     if (L.sex[0].w > 0) {  // 3.0.11-beta.181: the new login's sex
         const panel::Box both{L.sex[0].x, L.sex[0].y, L.sex[1].x + L.sex[1].w - L.sex[0].x, L.sex[0].h};
         panel::roundRect(out, both, both.h / 2, kBlack, 0.30f, kWhite, 0.12f, 1.0f * s);
-        panel::roundRect(out, L.sex[sh.sex == 'F' ? 1 : 0], L.sex[0].h / 2, kGold, 0.26f);
+        if (sh.sex == 'M' || sh.sex == 'F')
+            panel::roundRect(out, L.sex[sh.sex == 'F' ? 1 : 0], L.sex[0].h / 2, kGold, 0.26f);
     }
     const auto field = [&](const panel::Box& b, Field f, Part p) {
         if (b.h <= 0) return;
@@ -125,6 +150,9 @@ void paint(panel::Picture& out, const Layout& L, const Show& sh) {
     field(L.newPass, Field::NewPass, Part::NewPass);
     if (L.codeBig.h > 0 && !sh.userCode.empty())
         panel::roundRect(out, L.codeBig, 10 * s, kBlack, 0.35f, kGold, 0.55f, 1.0f * s);
+    if (L.agree.h > 0)  // 3.0.11-beta.181: the rules' tick
+        panel::roundRect(out, L.agreeTick, 4 * s, sh.agree ? kGold : kWhite, sh.agree ? 0.85f : 0.06f,
+                         sh.agree ? kGold : kWhite, sh.agree ? 1.0f : 0.35f, 1.0f * s);
     const bool hot = sh.hover == int(Part::Button);
     panel::roundRect(out, L.button, 9 * s, kGold, sh.busy ? 0.10f : hot ? 0.36f : 0.24f, kGold, sh.busy ? 0.4f : 0.85f,
                      1.0f * s);
@@ -136,9 +164,11 @@ std::vector<Words> words(const Layout& L, const Show& sh, const Texts& t) {
     out.push_back(Words{panel::Box{L.back.x + 6 * s, L.back.y, L.back.w, L.back.h}, t.back,
                         sh.hover == int(Part::Back) ? kGold2 : kLink, 12.5f * s, false, Align::Left});
     const bool form = isForm(sh.way);
-    out.push_back(Words{L.title, form ? t.forms[int(sh.way) - int(Way::NewLogin)] : t.title, kText, 19 * s, true,
-                        Align::Center});
+    const bool reg = sh.way == Way::Register;
+    out.push_back(Words{L.title, reg ? t.regTitle : form ? t.forms[int(sh.way) - int(Way::NewLogin)] : t.title, kText,
+                        19 * s, true, Align::Center});
     if (!form) out.push_back(Words{L.subtitle, t.subtitle, kMuted, 12.5f * s, false, Align::Center});
+    if (reg) out.push_back(Words{L.steps, t.steps, kGold2, 12.5f * s, true, Align::Center});
     for (int i = 0; i < 3 && L.ways[0].w > 0; ++i)
         out.push_back(Words{L.ways[i], t.ways[i], i == int(sh.way) ? kChosen : kMuted, 12 * s, i == int(sh.way),
                             Align::Center});
@@ -162,9 +192,22 @@ std::vector<Words> words(const Layout& L, const Show& sh, const Texts& t) {
     field(L.loginLabel, t.login, L.login, sh.login, Field::Login);  // 3.0.11-beta.181: the forms
     field(L.gamePassLabel, sh.way == Way::GamePassword ? t.currentPass : t.gamePass, L.gamePass,
           dots(sh.gamePassLength), Field::GamePass);
-    field(L.newPassLabel, t.newPass, L.newPass, dots(sh.newPassLength), Field::NewPass);
+    field(L.newPassLabel, reg ? t.password2 : t.newPass, L.newPass, dots(sh.newPassLength), Field::NewPass);
+    if (reg && sh.loginFree >= 0 && !sh.login.empty())  // 3.0.11-beta.181: asked while typed
+        out.push_back(Words{L.free, sh.loginFree ? t.free : t.taken, sh.loginFree ? 0x4ED38A : kRed, 12 * s, true,
+                            Align::Right});
+    if (L.agree.h > 0) {
+        if (sh.agree) out.push_back(Words{L.agreeTick, "\xE2\x9C\x93", kBlack, 13 * s, true, Align::Center});
+        out.push_back(Words{panel::Box{L.agree.x + 28 * s, L.agree.y, L.agree.w - 28 * s, L.agree.h}, t.agree, kText,
+                            12.5f * s, false, Align::Left});
+        out.push_back(Words{L.rules, t.rules, sh.hover == int(Part::Rules) ? kGold2 : kLink, 12.5f * s, false,
+                            Align::Right});
+    }
+    if (L.haveAccount.h > 0)
+        out.push_back(Words{L.haveAccount, t.haveAccount, sh.hover == int(Part::HaveAccount) ? kGold2 : kLink,
+                            12.5f * s, false, Align::Center});
     for (int i = 0; i < 2 && L.sex[0].w > 0; ++i) {
-        const bool on = (sh.sex == 'F') == (i == 1);
+        const bool on = (sh.sex == 'M' || sh.sex == 'F') && (sh.sex == 'F') == (i == 1);
         out.push_back(Words{L.sex[i], t.sexes[i], on ? kChosen : kMuted, 12 * s, on, Align::Center});
     }
     if (L.codeBig.h > 0 && !sh.userCode.empty()) {
@@ -177,6 +220,7 @@ std::vector<Words> words(const Layout& L, const Show& sh, const Texts& t) {
                                 : sh.way == Way::NewLogin     ? t.create
                                 : sh.way == Way::Link         ? t.link
                                 : sh.way == Way::GamePassword ? t.change
+                                : sh.way == Way::Register     ? t.regCreate
                                                               : t.signIn;
     out.push_back(Words{L.button, button, sh.busy ? kMuted : kText, 14 * s, true, Align::Center});
     return out;

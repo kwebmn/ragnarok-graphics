@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "core/accounts.hpp"
+#include "core/register_form.hpp"
 #include "core/settings/strings.hpp"
 #include "core/site_api.hpp"
 #include "core/site_signin.hpp"
@@ -35,6 +36,13 @@ struct State {
     std::string login, gamePass, newPass;       // 3.0.11-beta.181: the forms'
     char sex = 'M';
     int formAccount = 0;
+    // 3.0.11-beta.181: the registration - the rules ticked, the login asked while typed, the result once
+    bool agree = false;
+    int loginFree = -1;
+    std::string freeAsked, freeSeen;  // the login asked about, the login as last typed
+    ULONGLONG loginChangedAt = 0;
+    bool registered = false;
+    std::string regLogin, regPassword;
     bool twofa = false, busy = false, signedIn = false;
     std::string error;
     // the browser's code
@@ -95,6 +103,15 @@ ss::Texts texts() {
     t.create = say(settings::Text::SiteCreate);
     t.link = say(settings::Text::SiteLink);
     t.change = say(settings::Text::SiteChange);
+    t.regTitle = say(settings::Text::RegTitle);  // 3.0.11-beta.181: the registration
+    t.steps = say(settings::Text::RegSteps);
+    t.password2 = say(settings::Text::RegPassword2);
+    t.agree = say(settings::Text::RegAgree);
+    t.rules = say(settings::Text::RegRules);
+    t.regCreate = say(settings::Text::RegCreate);
+    t.haveAccount = say(settings::Text::RegHaveAccount);
+    t.free = say(settings::Text::RegFree);
+    t.taken = say(settings::Text::RegTaken);
     return t;
 }
 
@@ -130,6 +147,8 @@ std::vector<ss::Field> fieldsOf(const State& s) {
     if (s.way == ss::Way::Key) return {ss::Field::Key};
     if (s.way == ss::Way::NewLogin || s.way == ss::Way::Link) return {ss::Field::Login, ss::Field::GamePass};
     if (s.way == ss::Way::GamePassword) return {ss::Field::GamePass, ss::Field::NewPass};
+    if (s.way == ss::Way::Register)
+        return {ss::Field::Login, ss::Field::GamePass, ss::Field::NewPass, ss::Field::Email};
     return {};
 }
 
@@ -207,8 +226,78 @@ void formAnswer(int status, const std::string& body, const char* what) {
     s.error = t.fieldErrors.empty() ? failed(status) : t.fieldErrors.begin()->second;
 }
 
+// 3.0.11-beta.181: the site's language of its texts (the verification e-mail)
+const char* siteLang() {
+    const settings::Lang l = language();
+    return l == settings::Lang::Uk ? "ua" : l == settings::Lang::Ru ? "ru" : "en";
+}
+
+void pressRegister(State& s) {
+    regform::Form f;
+    f.login = s.login;
+    f.password = s.gamePass;
+    f.password2 = s.newPass;
+    f.email = s.email;
+    f.sex = s.sex == 'M' ? 0 : s.sex == 'F' ? 1 : -1;
+    f.agree = s.agree;
+    const auto refused = regform::check(f);
+    wipe(f.password);
+    wipe(f.password2);
+    if (!refused.empty()) {
+        s.error = say(refused.front().second);
+        const regform::Field at = refused.front().first;
+        s.focus = at == regform::Field::Login       ? ss::Field::Login
+                  : at == regform::Field::Password  ? ss::Field::GamePass
+                  : at == regform::Field::Password2 ? ss::Field::NewPass
+                  : at == regform::Field::Email     ? ss::Field::Email
+                                                    : s.focus;
+        return;
+    }
+    s.busy = true;
+    sitehttp::send(siteapi::registerAccount(s.login, s.gamePass, s.email, s.sex, sitekey::deviceName(), siteLang()),
+                   [](int status, const std::string& body) {
+                       State& st = state();
+                       st.busy = false;
+                       const siteapi::TokenAnswer t = siteapi::parseToken(status, body);
+                       if (!t.ok) {
+                           st.error = t.fieldErrors.empty() ? failed(status) : t.fieldErrors.begin()->second;
+                           return;
+                       }
+                       sitekey::save(t.token, t.nick);
+                       accounts::Shelf& shelf = accountsstore::shelf();
+                       accounts::upsert(shelf, st.login, st.gamePass, 0);
+                       accountsstore::save();
+                       st.regLogin = st.login;
+                       st.regPassword = st.gamePass;
+                       st.registered = true;
+                       LOG_INFO("site: registered - the login %016llx, its first character next",
+                                (unsigned long long)accounts::loginHash(st.login));
+                       close();
+                   });
+}
+
+// The registration's login asked 600 ms after it was last typed (a valid one, not asked yet)
+void freeFrame(State& s, ULONGLONG now) {
+    if (s.login != s.freeSeen) {
+        s.freeSeen = s.login;
+        s.loginChangedAt = now;
+        s.loginFree = -1;
+    }
+    if (s.login == s.freeAsked || now - s.loginChangedAt < 600 || s.login.size() < 4 || s.login.size() > 23) return;
+    s.freeAsked = s.login;
+    const std::string asked = s.login;
+    sitehttp::send(siteapi::loginFree(asked), [asked](int status, const std::string& body) {
+        State& st = state();
+        if (st.login == asked) st.loginFree = siteapi::parseFree(status, body);
+    });
+}
+
 bool pressForm(State& s) {
     if (!ss::isForm(s.way)) return false;
+    if (s.way == ss::Way::Register) {
+        pressRegister(s);
+        return true;
+    }
     const bool change = s.way == ss::Way::GamePassword;
     if ((!change && (s.login.size() < 4 || s.gamePass.size() < 4)) || (change && (s.gamePass.empty() ||
                                                                                    s.newPass.size() < 4))) {
@@ -334,6 +423,28 @@ void openForm(int way, int accountId, const std::string& login) {
     s.focus = s.way == ss::Way::GamePassword || !login.empty() ? ss::Field::GamePass : ss::Field::Login;
 }
 
+void openRegister() {
+    State& s = state();
+    open();
+    s.way = ss::Way::Register;
+    s.focus = ss::Field::Login;
+    s.sex = 0;  // chosen by the player
+    s.agree = false;
+    s.loginFree = -1;
+    s.freeAsked.clear();
+}
+
+bool takeRegistered(std::string& login, std::string& password) {
+    State& s = state();
+    if (!s.registered) return false;
+    s.registered = false;
+    login = s.regLogin;
+    password = s.regPassword;
+    s.regLogin.clear();
+    wipe(s.regPassword);
+    return true;
+}
+
 bool isOpen() { return state().open; }
 
 void close() {
@@ -344,6 +455,8 @@ void close() {
     wipe(s.gamePass);
     wipe(s.newPass);
     s.login.clear();
+    s.email.clear();
+    s.agree = false;
     s.code2fa.clear();
     s.twofa = false;
     s.deviceCode.clear();
@@ -401,6 +514,9 @@ void frame(double k, int targetWidth, int targetHeight) {
     sh.gamePassLength = int(s.gamePass.size());
     sh.newPassLength = int(s.newPass.size());
     sh.sex = s.sex;
+    sh.agree = s.agree;  // 3.0.11-beta.181: the registration
+    if (s.way == ss::Way::Register) freeFrame(s, now);
+    sh.loginFree = s.loginFree;
     sh.hover = 0;
     int cx = 0, cy = 0;
     if (readGameCursor(cx, cy))
@@ -411,7 +527,7 @@ void frame(double k, int targetWidth, int targetHeight) {
                             '\x01' + sh.code2fa + '\x01' + sh.userCode + std::to_string(sh.secondsLeft) + sh.error +
                             (sh.busy ? "b" : "") + std::to_string(sh.hover) + (s.twofa ? "t" : "") + sh.login +
                             '\x01' + std::to_string(sh.gamePassLength) + ',' + std::to_string(sh.newPassLength) +
-                            sh.sex + '#' +
+                            sh.sex + (sh.agree ? "A" : "") + std::to_string(sh.loginFree) + '#' +
                             std::to_string(uistyle::generation());
     if (key != s.picKey) {
         s.picKey = key;
@@ -456,6 +572,19 @@ bool mouse(UINT m, float tx, float ty) {
         case ss::Part::NewPass: s.focus = ss::Field::NewPass; return true;
         case ss::Part::Sex0: s.sex = 'M'; return true;
         case ss::Part::Sex1: s.sex = 'F'; return true;
+        case ss::Part::Agree: s.agree = !s.agree; return true;  // 3.0.11-beta.181: the registration
+        case ss::Part::Rules: {
+            const settings::Lang l = language();
+            openPage(l == settings::Lang::Uk   ? L"https://uaro.kiev.ua/uk/rules"
+                     : l == settings::Lang::Ru ? L"https://uaro.kiev.ua/ru/rules"
+                                               : L"https://uaro.kiev.ua/en/rules");
+            return true;
+        }
+        case ss::Part::HaveAccount:  // the sign-in first, then «+ Новий ігровий логін»
+            s.way = ss::Way::Password;
+            s.focus = ss::Field::Email;
+            s.error.clear();
+            return true;
         case ss::Part::Button: press(s); return true;
         case ss::Part::Back: close(); return true;
         case ss::Part::None: return true;

@@ -36,5 +36,8 @@ accounts::LastChar entered();
 // place chosen and «Увійти» pressed, a step a frame, whatever [interface] char_select says; no place carries the name
 // within 1.5 s (renamed, deleted): the select waits for the player. False: the game's select is not there.
 bool enterByName(const std::string& name);
+// 3.0.11-beta.181 (the registration in the client: «2 Персонаж»): the first empty place chosen and «Створити» pressed
+// (the character make opens), a step a frame as enterByName. False: the game's select is not there.
+bool makeFirst();
 
 }  // namespace uagfx::win::charselectwin
