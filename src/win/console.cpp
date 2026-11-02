@@ -230,7 +230,7 @@ void Console::build(Lang lang, const Config& config) {
                   "interface.char_make", "interface.cart", "interface.counts", "interface.vending",
                   "interface.picks", "interface.party_setup", "interface.pet", "interface.homun",
                   "interface.merc", "interface.options", "interface.social", "interface.servers",
-                  "interface.guild", "interface.my_shop",
+                  "interface.guild", "interface.my_shop", "interface.whisper_setup",
                   "interface.skill_cells", "interface.ground_counts"})
                 if (settingOf(key)) rows_.push_back(Row{Kind::Box, key, 0});
             if (settingOf("interface.animations"))  // 3.0.11-beta.46: the new interface's motion

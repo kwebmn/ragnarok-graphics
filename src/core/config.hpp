@@ -716,6 +716,8 @@ struct Config {
     bool guildWindow = false;
     // 3.0.11-beta.166: [interface] my_shop - one's own open shop (win/my_shop) as a card
     bool myShopWindow = false;
+    // 3.0.11-beta.168: [interface] whisper_setup - the whisper's settings (win/whisper_setup) as a card of switches
+    bool whisperSetupWindow = false;
     // 3.0.11-beta.142 (the owner's concept «маг, прист и хант на геймпаде», answer 9 «дать»): [interface] skill_cells -
     // a ground skill's cells, as the server makes them (core/skill_area), shown on the ground after a cast by the pad
     // or the mouse (win/ground_marks); 0: none

@@ -34,6 +34,7 @@
 #include "win/pet_card.hpp"
 #include "win/pick_card.hpp"
 #include "win/vend_shop.hpp"
+#include "win/whisper_setup.hpp"
 #include "win/login_card.hpp"
 #include "win/msg_box.hpp"
 #include "win/menu_window.hpp"
@@ -85,6 +86,7 @@ void __attribute__((thiscall)) windowsDraw(uint32_t manager) {
     servercardwin::beforeGameDraw();   // 3.0.11-beta.164: the server select
     guildcardwin::beforeGameDraw();    // 3.0.11-beta.165: the guild
     myshopwin::beforeGameDraw();       // 3.0.11-beta.166: one's own shop
+    whispersetupwin::beforeGameDraw();  // 3.0.11-beta.168: the whisper's settings
     mobhpwin::beforeGameDraw();   // 3.0.11-beta.100: the monsters' per cent asked
     charpanel::beforeGameDraw();  // the Basic Info window
     hotbarwin::beforeGameDraw();  // the hotkeys' bar

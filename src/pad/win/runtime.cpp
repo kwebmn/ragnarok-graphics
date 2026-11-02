@@ -63,6 +63,7 @@
 #include "win/pet_card.hpp"
 #include "win/pick_card.hpp"
 #include "win/vend_shop.hpp"
+#include "win/whisper_setup.hpp"
 #include "win/info_card.hpp"
 #include "win/menu_window.hpp"
 #include "win/msg_box.hpp"
@@ -845,6 +846,20 @@ bool myShopPad(const PadState& pad, DWORD now) {
     return true;
 }
 
+// 3.0.11-beta.168: the whisper's settings - up and down a switch, A flips it, B closes
+bool whisperSetupPad(const PadState& pad, DWORD now) {
+    State& s = S();
+    const uint16_t buttons = pad.connected ? pad.buttons : 0;
+    const uint16_t down = uint16_t((buttons & ~s.prevPadButtons) | stickSteps(pad, now));
+    s.prevPadButtons = buttons;
+    using uagfx::win::whispersetupwin::PadCommand;
+    const std::pair<uint16_t, PadCommand> keys[] = {{kPadUp, PadCommand::Up}, {kPadDown, PadCommand::Down},
+                                                    {kPadA, PadCommand::Press}, {kPadB, PadCommand::Close}};
+    for (const auto& [button, command] : keys)
+        if (down & button) uagfx::win::whispersetupwin::padCommand(command);
+    return true;
+}
+
 // 3.0.11-beta.92: «Характеристики» open - the D-pad (or the left stick) chooses a stat, A adds a point, B or Start
 // close it
 bool statsPad(const PadState& pad, DWORD now) {
@@ -1146,7 +1161,7 @@ constexpr const char* kTopNames[] = {"«Речі»",  "«Характерист�
                                      "the character make", "«Візок»", "«Лавка»", "the choice of things",
                                      "the party's settings", "the pet", "the homunculus", "the mercenary",
                                      "the game's options", "the friends and the party", "the server select",
-                                     "the guild", "one's own shop"};
+                                     "the guild", "one's own shop", "the whisper's settings"};
 static_assert(std::size(kTopNames) == size_t(uagfx::winstack::kWins), "a name for each window");
 
 void tick() {
@@ -1229,6 +1244,7 @@ void tick() {
                   : drive && *top == Win::Servers                  ? serversPad(pad, now)     // .164
                   : drive && *top == Win::Guild                    ? guildPad(pad, now)       // .165
                   : drive && *top == Win::MyShop                   ? myShopPad(pad, now)      // .166
+                  : drive && *top == Win::WhisperSetup             ? whisperSetupPad(pad, now)  // .168
                                                                    : runMenu(pad, view, now);
     if (s.npcSupported) view.dialog = clientnpc::read();
     double clientTurn = 0;

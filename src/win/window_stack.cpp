@@ -36,6 +36,7 @@
 #include "win/storage_window.hpp"
 #include "win/trade_window.hpp"
 #include "win/vend_shop.hpp"
+#include "win/whisper_setup.hpp"
 
 namespace uagfx::win::windowstack {
 namespace {
@@ -49,7 +50,8 @@ constexpr const char* kNames[] = {"«Речі»",  "«Характеристик
                                   "the message box", "the login", "the character select", "the character make",
                                   "«Візок»", "«Лавка»", "the choice of things", "the party's settings",
                                   "the pet", "the homunculus", "the mercenary", "the game's options",
-                                  "the friends and the party", "the server select", "the guild", "one's own shop"};
+                                  "the friends and the party", "the server select", "the guild", "one's own shop",
+                                  "the whisper's settings"};
 static_assert(std::size(kNames) == size_t(winstack::kWins), "a name for each window");
 constexpr int kMostTold = 40;
 
@@ -111,6 +113,7 @@ bool shown(Win w) {
         case Win::Servers: return servercardwin::shown();  // 3.0.11-beta.164
         case Win::Guild: return guildcardwin::shown();  // 3.0.11-beta.165
         case Win::MyShop: return myshopwin::shown();  // 3.0.11-beta.166
+        case Win::WhisperSetup: return whispersetupwin::shown();  // 3.0.11-beta.168
     }
     return false;
 }
@@ -145,6 +148,7 @@ Blocker blockerOf(Win w) {
         case Win::Servers: return Blocker::Servers;
         case Win::Guild: return Blocker::Guild;
         case Win::MyShop: return Blocker::MyShop;
+        case Win::WhisperSetup: return Blocker::WhisperSetup;
         case Win::Reference: break;
     }
     return Blocker::Reference;
@@ -181,6 +185,7 @@ void drawOne(Win w, FrameRecord& record, gpu::Renderer& renderer) {
         case Win::Servers: servercardwin::draw(record, renderer); break;
         case Win::Guild: guildcardwin::draw(record, renderer); break;
         case Win::MyShop: myshopwin::draw(record, renderer); break;
+        case Win::WhisperSetup: whispersetupwin::draw(record, renderer); break;
     }
 }
 
@@ -215,6 +220,7 @@ bool mouseOne(Win w, HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
         case Win::Servers: return servercardwin::mouse(game, m, wp, lp, result);
         case Win::Guild: return guildcardwin::mouse(game, m, wp, lp, result);
         case Win::MyShop: return myshopwin::mouse(game, m, wp, lp, result);
+        case Win::WhisperSetup: return whispersetupwin::mouse(game, m, wp, lp, result);
     }
     return false;
 }
@@ -241,7 +247,7 @@ bool movable(Win w) {  // .140: the menu centred; .149: a card beside the cursor
            w != Win::Ask && w != Win::Message && w != Win::Login && w != Win::CharSelect && w != Win::CharMake &&
            w != Win::Vending && w != Win::Pick && w != Win::PartySetup && w != Win::Pet && w != Win::Homun &&
            w != Win::Merc && w != Win::Options && w != Win::Social && w != Win::Servers && w != Win::Guild &&
-           w != Win::MyShop;
+           w != Win::MyShop && w != Win::WhisperSetup;
 }
 
 bool boxOf(Win w, winstack::Box& b) {
@@ -275,6 +281,7 @@ bool boxOf(Win w, winstack::Box& b) {
         case Win::Servers: return servercardwin::box(b.x, b.y, b.w, b.h);
         case Win::Guild: return guildcardwin::box(b.x, b.y, b.w, b.h);
         case Win::MyShop: return myshopwin::box(b.x, b.y, b.w, b.h);
+        case Win::WhisperSetup: return whispersetupwin::box(b.x, b.y, b.w, b.h);
     }
     return false;
 }
@@ -390,6 +397,7 @@ bool close(Win w) {
         case Win::Options: return optionscardwin::close();      // 3.0.11-beta.162
         case Win::Social: return socialcardwin::close();        // 3.0.11-beta.163
         case Win::Guild: return guildcardwin::close();          // 3.0.11-beta.165
+        case Win::WhisperSetup: return whispersetupwin::close();  // 3.0.11-beta.168
         default: return false;
     }
 }

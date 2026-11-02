@@ -5761,6 +5761,22 @@ constexpr Entry kTexts[] = {
     {Text::MyShopWorth, "Still for sale", "Ще на продаж", "Ещё на продажу"},
     {Text::MyShopClose, "Close the shop", "Закрити лавку", "Закрыть лавку"},
     {Text::MyShopSold, "All sold", "Усе продано", "Всё продано"},
+    // 3.0.11-beta.168: the whisper's settings
+    {Text::InterfaceWhisperSetup, "Whisper settings", "Налаштування шепоту", "Настройки шёпота"},
+    {Text::InterfaceWhisperSetupHint,
+     "The whisper's settings (the friends' window's Settings) as a card of switches: a whisper's own window for "
+     "strangers and for friends, the new whisper's sound. Off: the game's own window.",
+     "Налаштування шепоту (кнопка налаштувань у вікні друзів) карткою перемикачів: окреме вікно для шепоту незнайомих "
+     "і друзів, звук нового шепоту. Вимкнено: власне вікно гри.",
+     "Настройки шёпота (кнопка настроек в окне друзей) карточкой переключателей: отдельное окно для шёпота "
+     "незнакомых и друзей, звук нового шёпота. Выключено: собственное окно игры."},
+    {Text::WhisperTitle, "Whisper settings", "Налаштування шепоту", "Настройки шёпота"},
+    {Text::WhisperHint, "When someone whispers to you", "Коли вам шепочуть", "Когда вам шепчут"},
+    {Text::WhisperStrangers, "Own window for strangers' whispers", "Окреме вікно для шепоту незнайомих",
+     "Отдельное окно для шёпота незнакомых"},
+    {Text::WhisperFriends, "Own window for friends' whispers", "Окреме вікно для шепоту друзів",
+     "Отдельное окно для шёпота друзей"},
+    {Text::WhisperSound, "A sound for a new whisper", "Звук нового шепоту", "Звук нового шёпота"},
     // 3.0.11-beta.141: the character block's experience (forms: one, a few, many)
     {Text::CharSkillPoints, "skill point|skill points", "очко навичок|очки навичок|очок навичок",
      "очко навыков|очка навыков|очков навыков"},

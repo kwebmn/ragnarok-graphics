@@ -395,6 +395,10 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("my_shop", flag(running.myShopWindow), flag(file.myShopWindow)));
         n.myShopWindow = file.myShopWindow;
     }
+    if (file.whisperSetupWindow != running.whisperSetupWindow) {  // 3.0.11-beta.168: the whisper settings, at once
+        u.applied.push_back(change("whisper_setup", flag(running.whisperSetupWindow), flag(file.whisperSetupWindow)));
+        n.whisperSetupWindow = file.whisperSetupWindow;
+    }
     if (file.skillCells != running.skillCells) {  // 3.0.11-beta.142: a ground skill's cells, at once
         u.applied.push_back(change("skill_cells", flag(running.skillCells), flag(file.skillCells)));
         n.skillCells = file.skillCells;
