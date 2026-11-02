@@ -132,3 +132,31 @@ TEST(login_card_hint_line_in_amber) {
     const auto it = std::find_if(w.begin(), w.end(), [&](const logincard::Words& x) { return x.text == f.hint; });
     CHECK(it != w.end() && it->rgb == 0xF2C46B && it->box.y == L.error.y);
 }
+
+// 3.0.11-beta.175 (the login concept's shelf): «Додати на полицю після входу» under «Запам'ятати логін» - our own
+// tick (no button of the game's), gold when on
+TEST(login_card_add_to_shelf_tick) {
+    const logincard::Layout L = logincard::layout(1920, 1080, 1.0f);
+    CHECK(L.addShelf.y >= L.remember.y + L.remember.h - 0.5f && L.enter.y > L.addShelf.y + L.addShelf.h - 0.5f);
+    CHECK(logincard::hitTest(L, L.addShelf.x + L.addShelf.w / 2, L.addShelf.y + L.addShelf.h / 2) ==
+          logincard::Part::AddShelf);
+    CHECK(logincard::gameButton(logincard::Part::AddShelf) == 0);
+    logincard::Texts t = texts();
+    t.addShelf = "Додати на полицю після входу";
+    logincard::Fields f;
+    CHECK(f.addShelf);  // on at first
+    CHECK(has(logincard::words(L, f, logincard::Show{}, t), "Додати на полицю після входу"));
+    const auto tickPixel = [&](const logincard::Fields& fields) {
+        panel::Picture p;
+        p.width = L.w;
+        p.height = L.h;
+        p.px.assign(size_t(L.w) * size_t(L.h), 0u);
+        logincard::paint(p, L, fields, logincard::Show{});
+        return p.px[size_t(L.addTick.y + L.addTick.h / 2) * size_t(L.w) + size_t(L.addTick.x + L.addTick.w / 2)];
+    };
+    const uint32_t on = tickPixel(f);
+    f.addShelf = false;
+    const uint32_t off = tickPixel(f);
+    CHECK(((on >> 16) & 0xFF) > (on & 0xFF) + 40);    // gold: its red well over its blue
+    CHECK(((off >> 16) & 0xFF) <= (off & 0xFF) + 8);  // off: the card's ground through it
+}

@@ -32,6 +32,13 @@ const std::string& account();
 // 3.0.11-beta.173: the game's «Failed to Connect to Server.» for the login (win/msg_box answered it unseen)
 void connectFailed();
 void draw(FrameRecord& record, gpu::Renderer& renderer);
+// 3.0.11-beta.175 (the login concept's shelf): «kweb додано на полицю · Скасувати» at the screen's top for 6 s after
+// the login the card sent was accepted and put on the shelf - drawn over the windows (the character select, or the
+// world with «Одразу в гру»), its «Скасувати» takes the login off again
+void drawToast(FrameRecord& record, gpu::Renderer& renderer);
+bool toastMouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result);
+// 3.0.11-beta.175: the login of the session the server accepted (the game's words; empty before)
+const std::string& loggedIn();
 bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result);
 bool shown();
 void beforeGameDraw();

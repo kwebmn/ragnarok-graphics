@@ -15,6 +15,7 @@
 #include "win/hud_edit.hpp"
 #include "win/chat_window.hpp"
 #include "win/item_window.hpp"
+#include "win/login_card.hpp"
 #include "win/pad_assign.hpp"
 #include "win/pad_tiles.hpp"
 #include "win/equip_window.hpp"
@@ -65,7 +66,8 @@ bool partsMouse(HWND w, UINT m, WPARAM wp, LPARAM lp, LRESULT& answer) {
         hudedit::mouse(w, m, wp, lp, answer) ||      // 3.0.11-beta.75: all of it while the parts are framed
         padtileswin::mouse(w, m, wp, lp, answer) ||  // 3.0.11-beta.90: the controller's windows' tile (modal)
         padassignwin::mouse(w, m, wp, lp, answer) ||  // 3.0.11-beta.91: «Призначити» (modal)
-        answercard::mouse(w, m, lp, answer))          // 3.0.9-beta.4: and over the answer card the card's
+        answercard::mouse(w, m, lp, answer) ||        // 3.0.9-beta.4: and over the answer card the card's
+        loginwin::toastMouse(w, m, wp, lp, answer))   // 3.0.11-beta.175: «… додано на полицю · Скасувати»
         return true;
     // 3.0.11-beta.115: a press over a window of the game's own (drawn over the driver's since beta.109) is the game's
     if (gamepress::pressOver(m)) return false;

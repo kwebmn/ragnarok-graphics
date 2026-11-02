@@ -644,6 +644,7 @@ void Context::endScene() {
         // in their stack's order - the last opened or clicked in on top (they were each in a place of its own)
         windowstack::draw(record, *renderer);
         itemswin::drawToast(record, *renderer);   // 3.0.11-beta.112: «+N …» of a thing come into the bag
+        loginwin::drawToast(record, *renderer);   // 3.0.11-beta.175: «… додано на полицю»
         if (!game.empty()) record.putBack(game);  // 3.0.11-beta.109: the game's own windows over them
         answercard::draw(record, *renderer);  // 3.0.9-beta.4: the developer's answer
         windowSwitch_.draw(record, *renderer);
@@ -698,6 +699,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
         chatwin::draw(record, *renderer);       // 3.0.11-beta.41
         windowstack::draw(record, *renderer);  // 3.0.11-beta.108
         itemswin::drawToast(record, *renderer);  // 3.0.11-beta.112
+        loginwin::drawToast(record, *renderer);  // 3.0.11-beta.175
         answercard::draw(record, *renderer);  // 3.0.9-beta.4
         windowSwitch_.draw(record, *renderer);
         padtileswin::draw(record, *renderer);   // 3.0.11-beta.90

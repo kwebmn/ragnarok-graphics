@@ -12,6 +12,7 @@
 
 #include "core/char_block.hpp"
 #include "core/char_select.hpp"
+#include "core/game_camera.hpp"
 #include "core/settings/strings.hpp"
 #include "core/ui_style.hpp"
 #include "pad/win/game_window.hpp"
@@ -63,6 +64,7 @@ struct State {
     int told = 0;
     ULONGLONG clickMs = 0;  // the last click on a place (two on it: into the game - the window may get no double click)
     int clickPlace = -1;
+    accounts::LastChar chosen;  // 3.0.11-beta.175: the place chosen as last seen (the shelf's last character)
 };
 
 State& state() {
@@ -197,6 +199,32 @@ void hide(State& s) {
     s.shown = false;
 }
 
+// 3.0.11-beta.175: the chosen place's character as the game mode gives it (its CHARACTER_INFO), slot -1 none
+accounts::LastChar chosenOf(const State& s, uint32_t window) {
+    accounts::LastChar c;
+    if (read32(camera::kModeMgr + camera::kModeType) != 0) return c;  // the login mode's message 8 alone
+    const int page = std::clamp(int(read32(window + kPage)), 0, 2);
+    const int place = std::clamp(int(read32(window + kChosen)), 0, 2);
+    const uint32_t mode = read32(kModeNow);
+    const uint32_t send = mode ? read32(read32(mode) + kModeMsgSlot) : 0;
+    const uint32_t info =
+        send ? reinterpret_cast<ModeMsgFn>(uintptr_t(send))(mode, kInfoMsg, page * 3 + place, 0, 0) : 0;
+    uint8_t raw[kInfoSize] = {};
+    if (!info || !readGame(info, raw, sizeof raw)) return c;
+    char name[25] = {};
+    std::memcpy(name, raw + 0x4A, 24);
+    if (!name[0]) return c;
+    c.name = utf8Of(widened(name, s.codePage));
+    c.jobId = u16(raw, 0x34);
+    c.job = charblock::jobName(c.jobId);
+    c.level = u16(raw, 0x3A);
+    c.slot = page * 3 + place;
+    c.sex = read32(kSex) != 0 ? 1 : 0;
+    c.hair = u16(raw, 0x36);
+    c.hairColour = u16(raw, 0x46);
+    return c;
+}
+
 void send(State& s, uint32_t sender, int id, const char* what) {
     const uint32_t window = gameSelect();
     if (!window) return;
@@ -233,6 +261,7 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     }
     const uint32_t window = gameSelect();
     hold(s, window, on);
+    if (window) s.chosen = chosenOf(s, window);  // 3.0.11-beta.175: the shelf's last character
     if (!on || !window || !game || k <= 0 || targetWidth <= 0 || targetHeight <= 0) {
         hide(s);
         s.window = 0;
@@ -329,6 +358,10 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
 }
 
 bool shown() { return state().shown; }
+
+bool gameUp() { return gameSelect() != 0; }
+
+accounts::LastChar entered() { return state().chosen; }
 
 void beforeGameDraw() {
     State& s = state();

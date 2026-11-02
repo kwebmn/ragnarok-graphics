@@ -5515,6 +5515,11 @@ constexpr Entry kTexts[] = {
      "Над состоянием сервера: событие, которое идёт сейчас или следующее, иначе самая свежая новость с uaro.kiev.ua. "
      "Клик открывает её в браузере, «Все новости» — новости сайта."},
     {Text::LoginAllNews, "All news", "Усі новини", "Все новости"},
+    // 3.0.11-beta.175: the shelf of accounts
+    {Text::LoginAddShelf, "Add to the shelf after login", "Додати на полицю після входу",
+     "Добавить на полку после входа"},
+    {Text::ShelfAdded, "{1} added to the shelf", "{1} додано на полицю", "{1} добавлен на полку"},
+    {Text::ShelfUndo, "Undo", "Скасувати", "Отменить"},
     // 3.0.11-beta.152: the character select
     {Text::InterfaceCharSelect, "Character select", "Вибір персонажа", "Выбор персонажа"},
     {Text::InterfaceCharSelectHint,

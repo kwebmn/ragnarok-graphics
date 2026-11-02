@@ -26,6 +26,7 @@ struct Fields {
     // 3.0.11-beta.172: a hint under a field while the player types (Caps Lock, the layout) - the refusal's place
     std::string hint;
     loginerr::Field hintField = loginerr::Field::None;
+    bool addShelf = true;  // 3.0.11-beta.175: «Додати на полицю після входу» (the shelf's own setting)
 };
 struct Texts {
     std::string title, subtitle;     // «uaRO», «Вхід у гру»
@@ -34,6 +35,7 @@ struct Texts {
     std::string enter, exit;         // «Увійти», «Вийти»
     std::string register_;           // «Немає акаунта? Реєстрація на uaro.kiev.ua»
     std::string createAccount, resetPassword;  // 3.0.11-beta.172: the refusals' actions
+    std::string addShelf;                      // 3.0.11-beta.175: «Додати на полицю після входу»
 };
 struct Show {
     int hover = 0;  // a Part's number, 0 none
@@ -42,11 +44,12 @@ struct Layout {
     float s = 1;
     int x = 0, y = 0, w = 0, h = 0;
     panel::Box glass, title, subtitle, accountLabel, account, passwordLabel, password, remember, tick;
+    panel::Box addShelf, addTick;  // 3.0.11-beta.175: under the remember box, the same look
     panel::Box enter, exit, link;
     panel::Box error, errorAction;  // 3.0.11-beta.172: under the field a refusal is about; 0 high when none
 };
 Layout layout(int targetW, int targetH, float scale, loginerr::Field errorAt = loginerr::Field::None);
-enum class Part : uint8_t { None, Account, Password, Remember, Enter, Exit, Register, ErrorAction };
+enum class Part : uint8_t { None, Account, Password, Remember, Enter, Exit, Register, ErrorAction, AddShelf };
 Part hitTest(const Layout& L, float x, float y);
 int gameButton(Part p);  // the game's window's own: 0x78 enter, 0x9b exit, 0x93 the box; 0 none
 

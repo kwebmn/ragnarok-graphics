@@ -10,14 +10,18 @@
 #include <string>
 #include <vector>
 
+#include "core/accounts.hpp"
 #include "core/login_card.hpp"
 #include "core/login_chrome.hpp"
 #include "core/reference_live.hpp"
 #include "core/server_status.hpp"
+#include "core/shelf_toast.hpp"
 #include "core/login_hints.hpp"
 #include "core/settings/strings.hpp"
 #include "core/ui_style.hpp"
 #include "pad/win/game_window.hpp"
+#include "win/accounts_store.hpp"
+#include "win/char_select.hpp"
 #include "win/code_page.hpp"
 #include "win/game_camera.hpp"
 #include "win/log.hpp"
@@ -105,6 +109,21 @@ struct State {
     bool chromeUpload = false;
     bool news = true;     // 3.0.11-beta.174: [interface] login_news
     std::string newsUrl;  // the item's page on the site (empty: its click does nothing)
+    // 3.0.11-beta.175: the shelf - the login the card sent waits for the character select (accepted: on the shelf),
+    // then the character it enters the world with goes on its row
+    bool pendingShelf = false, selectWasUp = false, recordPending = false;
+    std::string loggedIn;  // the accepted login (the game's words)
+    std::string toast, toastLogin;  // «kweb додано на полицю», the login «Скасувати» takes off
+    ULONGLONG toastUntil = 0;
+    float toastK = 0, toastScale = 1;
+    int toastW = 0, toastH = 0;
+    shelftoast::Layout toastLayout;
+    bool toastHot = false, toastBlocked = false;
+    std::string toastKey;
+    panel::Picture toastPicture;
+    uint32_t toastTexture = 0;
+    int toastTexW = 0, toastTexH = 0;
+    bool toastUpload = false;
 };
 
 State& state() {
@@ -207,6 +226,7 @@ lc::Texts texts() {
     t.register_ = say(settings::Text::LoginRegister);
     t.createAccount = say(settings::Text::LoginCreateAccount);
     t.resetPassword = say(settings::Text::LoginResetPassword);
+    t.addShelf = say(settings::Text::LoginAddShelf);  // 3.0.11-beta.175
     return t;
 }
 
@@ -404,7 +424,72 @@ void openNews(const State& s, bool all) {
     LOG_INFO("login: the news line's page opened%s", opened ? "" : " - not possible here");
 }
 
+// 3.0.11-beta.175: a password's letters gone from memory (never logged)
+void wipe(std::string& t) {
+    if (!t.empty()) SecureZeroMemory(t.data(), t.size());
+    t.clear();
+}
+
+bool onShelf(const std::string& login) {
+    const uint64_t h = accounts::loginHash(login);
+    for (const accounts::Account& a : accountsstore::shelf().list)
+        if (accounts::loginHash(a.login) == h) return true;
+    return false;
+}
+
+// 3.0.11-beta.175: the login the card sent accepted (the character select came) - on the shelf when its tick is on
+// (a login already there: its password kept fresh), «додано на полицю» for 6 s when new
+void accepted(State& s) {
+    s.pendingShelf = false;
+    s.loggedIn = s.tryAccount;
+    accounts::Shelf& shelf = accountsstore::shelf();
+    const bool there = onShelf(s.tryAccount);
+    const unsigned long long hash = accounts::loginHash(s.tryAccount);
+    if (shelf.addAfterLogin || there) {
+        accounts::upsert(shelf, s.tryAccount, s.tryPassword, (long long)(std::time(nullptr)));
+        const bool saved = accountsstore::save();
+        LOG_INFO("login: the login %016llx %s the shelf%s", hash, there ? "renewed on" : "put on",
+                 saved ? "" : " - not saved");
+        if (saved && !there) {
+            s.toast = settings::fmt(say(settings::Text::ShelfAdded), {utf8Of(widened(s.tryAccount, s.codePage))});
+            s.toastLogin = s.tryAccount;
+            s.toastUntil = GetTickCount64() + shelftoast::kShowMs;
+        }
+    }
+    wipe(s.tryPassword);
+    wipe(s.seenPassword);
+}
+
+// 3.0.11-beta.175: the character the accepted login entered the world with, on its shelf row (the map it came to)
+void recordEntered(State& s, const std::string& map) {
+    accounts::LastChar c = charselectwin::entered();
+    if (c.slot < 0 || !onShelf(s.loggedIn)) return;
+    c.map = map;
+    accounts::recordChar(accountsstore::shelf(), s.loggedIn, c, (long long)(std::time(nullptr)));
+    const bool saved = accountsstore::save();
+    LOG_INFO("login: the shelf's %016llx entered with the character in slot %d on %s%s",
+             (unsigned long long)accounts::loginHash(s.loggedIn), c.slot, map.c_str(), saved ? "" : " - not saved");
+}
+
+// 3.0.11-beta.175: «Скасувати» - the login just put on the shelf taken off again
+void undoShelf(State& s) {
+    const bool removed = accounts::remove(accountsstore::shelf(), s.toastLogin);
+    if (removed) accountsstore::save();
+    LOG_INFO("login: the login %016llx taken off the shelf again («Скасувати»)",
+             (unsigned long long)accounts::loginHash(s.toastLogin));
+    s.toastUntil = 0;
+}
+
 void press(State& s, lc::Part p) {
+    if (p == lc::Part::AddShelf) {  // 3.0.11-beta.175: the shelf's own setting, kept with it
+        accounts::Shelf& shelf = accountsstore::shelf();
+        shelf.addAfterLogin = !shelf.addAfterLogin;
+        const bool saved = accountsstore::save();
+        LOG_INFO("login: «Додати на полицю після входу» %s%s", shelf.addAfterLogin ? "on" : "off",
+                 saved ? "" : " - not saved");
+        s.key.clear();
+        return;
+    }
     const uint32_t window = gameLogin();
     if (!window) return;
     if (p == lc::Part::ErrorAction) {  // 3.0.11-beta.172: what to do about a refusal
@@ -441,6 +526,41 @@ void press(State& s, lc::Part p) {
     s.key.clear();
 }
 
+// 3.0.11-beta.175: each frame, the login window there or not - the shelf's moments (the login accepted, the world
+// entered) and its «додано» note's place, kept from the game's mouse while it shows
+void shelfFrame(State& s, HWND game, double k, int targetWidth, int targetHeight) {
+    const bool selectUp = charselectwin::gameUp();
+    if (selectUp && !s.selectWasUp) {
+        if (s.pendingShelf) accepted(s);
+        s.recordPending = !s.loggedIn.empty();
+    }
+    s.selectWasUp = selectUp;
+    if (s.recordPending && !selectUp)
+        if (const std::string map = readGameMap(); !map.empty()) {
+            s.recordPending = false;
+            recordEntered(s, map);
+        }
+    s.toastK = float(k);
+    s.toastScale = uistyle::readingScale(k);
+    s.toastW = targetWidth;
+    s.toastH = targetHeight;
+    const bool showing = !s.toast.empty() && GetTickCount64() < s.toastUntil && k > 0 && targetWidth > 0;
+    RECT client{};
+    if (showing && game && GetClientRect(game, &client)) {
+        s.toastLayout =
+            shelftoast::layout(targetWidth, targetHeight, s.toastScale, s.toast, say(settings::Text::ShelfUndo));
+        const shelftoast::Layout& L = s.toastLayout;
+        const RECT r{LONG(int64_t(L.x) * client.right / targetWidth), LONG(int64_t(L.y) * client.bottom / targetHeight),
+                     LONG(int64_t(L.x + L.w) * client.right / targetWidth + 1),
+                     LONG(int64_t(L.y + L.h) * client.bottom / targetHeight + 1)};
+        uapad::gamewindow::setBlocked(Blocker::ShelfToast, game, &r, false);
+        s.toastBlocked = true;
+    } else if (s.toastBlocked) {
+        uapad::gamewindow::setBlocked(Blocker::ShelfToast, nullptr, nullptr, false);
+        s.toastBlocked = false;
+    }
+}
+
 }  // namespace
 
 void frame(HWND game, bool on, bool status, bool news, unsigned codePage, double k, int targetWidth,
@@ -458,8 +578,11 @@ void frame(HWND game, bool on, bool status, bool news, unsigned codePage, double
     if (s.hadWindow && !window) {  // 3.0.11-beta.173: the window gone - the login sent (or the game left it)
         s.tryAccount = s.seenAccount;
         s.tryPassword = s.seenPassword;
+        s.pendingShelf = s.tookLast && !s.tryAccount.empty();  // 3.0.11-beta.175: waits for the character select
     }
+    if (window && !s.hadWindow) s.pendingShelf = false;  // the window back: refused, or not reached
     s.hadWindow = window != 0;
+    shelfFrame(s, game, k, targetWidth, targetHeight);
     s.places = window ? placesOf(window) : lc::FieldPlaces{};
     if (on && window && !s.places.known() && !s.toldUnknown) {
         s.toldUnknown = true;
@@ -486,6 +609,7 @@ void frame(HWND game, bool on, bool status, bool news, unsigned codePage, double
     s.targetW = targetWidth;
     s.targetH = targetHeight;
     s.fields = fieldsOf(s, window);
+    s.fields.addShelf = accountsstore::shelf().addAfterLogin;  // 3.0.11-beta.175
     s.seenAccount = rawText(read32(window + s.places.account));
     s.seenPassword = rawText(read32(window + s.places.password));
     if (s.connectFailed) {  // 3.0.11-beta.173: the server not reached - its login tried again every 8 s
@@ -531,7 +655,8 @@ void frame(HWND game, bool on, bool status, bool news, unsigned codePage, double
                                        float(cy) * float(k) - float(s.layout.y)));
     const lc::Fields& f = s.fields;
     const std::string key = f.account + ';' + std::to_string(f.passwordLength) + ';' + std::to_string(int(f.focus)) +
-                            (f.caret ? "|" : "") + (f.remember ? "r" : "") + ';' + std::to_string(s.layout.x) + ',' +
+                            (f.caret ? "|" : "") + (f.remember ? "r" : "") + (f.addShelf ? "s" : "") + ';' +
+                            std::to_string(s.layout.x) + ',' +
                             std::to_string(s.layout.y) + ';' + std::to_string(s.show.hover) + '#' +
                             std::to_string(uistyle::generation()) + '!' + s.error + '?' + s.fields.hint;
     if (key != s.key) {
@@ -591,6 +716,50 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
 }
 
 bool shown() { return state().shown; }
+
+void drawToast(FrameRecord& record, gpu::Renderer& renderer) {
+    State& s = state();
+    const ULONGLONG now = GetTickCount64();
+    if (s.toast.empty() || now >= s.toastUntil || s.toastK <= 0 || s.toastLayout.w <= 0) return;
+    const shelftoast::Layout& L = s.toastLayout;
+    int cx = 0, cy = 0;
+    s.toastHot = readGameCursor(cx, cy) &&
+                 shelftoast::overUndo(L, float(cx) * s.toastK - float(L.x), float(cy) * s.toastK - float(L.y));
+    const std::string undo = say(settings::Text::ShelfUndo);
+    const std::string key = s.toast + '#' + undo + (s.toastHot ? "h" : "") + std::to_string(L.w) + 'x' +
+                            std::to_string(L.h) + '#' + std::to_string(uistyle::generation());
+    if (key != s.toastKey) {
+        s.toastKey = key;
+        if (!panel::blank(s.toastPicture, L.w, L.h)) return;
+        shelftoast::paint(s.toastPicture, L, s.toastHot);
+        std::vector<Words> words;
+        for (const shelftoast::Words& w : shelftoast::words(L, s.toast, undo, s.toastHot))
+            words.push_back(Words{w.box, utf8Wide(w.text), w.rgb, w.px, w.bold, UINT(DT_LEFT), false});
+        drawWords(s.toastPicture, words);
+        s.toastUpload = true;
+    }
+    const float fade = std::clamp(float(s.toastUntil - now) / 400.0f, 0.0f, 1.0f);  // its last 0.4 s fading
+    drawPart(record, renderer, s.toastPicture, s.toastTexture, s.toastTexW, s.toastTexH, s.toastUpload, L.x, L.y,
+             s.toastK, fade);
+}
+
+bool toastMouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
+    State& s = state();
+    (void)wp;
+    if (s.toast.empty() || GetTickCount64() >= s.toastUntil || s.toastK <= 0 || s.toastLayout.w <= 0) return false;
+    const bool button = m == WM_LBUTTONDOWN || m == WM_LBUTTONUP || m == WM_LBUTTONDBLCLK || m == WM_RBUTTONDOWN ||
+                        m == WM_RBUTTONUP || m == WM_RBUTTONDBLCLK;
+    if (!button) return false;
+    float tx = 0, ty = 0;
+    if (!pointerInTarget(game, m, lp, s.toastK, s.toastW, s.toastH, tx, ty, nullptr)) return false;
+    const float lx = tx - float(s.toastLayout.x), ly = ty - float(s.toastLayout.y);
+    if (!s.toastLayout.pill.contains(lx, ly)) return false;
+    result = 0;
+    if ((m == WM_LBUTTONDOWN || m == WM_LBUTTONDBLCLK) && shelftoast::overUndo(s.toastLayout, lx, ly)) undoShelf(s);
+    return true;
+}
+
+const std::string& loggedIn() { return state().loggedIn; }
 
 bool active() {
     const State& s = state();

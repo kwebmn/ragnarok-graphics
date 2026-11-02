@@ -50,6 +50,9 @@ Layout layout(int targetW, int targetH, float scale, loginerr::Field errorAt) {
     }
     L.remember = panel::Box{pad, y, fw, kBoxH * s};
     L.tick = panel::Box{pad, y + 3 * s, 18 * s, 18 * s};
+    y += kBoxH * s + 4 * s;
+    L.addShelf = panel::Box{pad, y, fw, kBoxH * s};  // 3.0.11-beta.175
+    L.addTick = panel::Box{pad, y + 3 * s, 18 * s, 18 * s};
     y += kBoxH * s + kGap * s;
     const float bw = (fw - kGap * s) / 2;
     L.enter = panel::Box{pad, y, bw, kButtonH * s};
@@ -72,6 +75,7 @@ Part hitTest(const Layout& L, float x, float y) {
     if (L.account.contains(x, y)) return Part::Account;
     if (L.password.contains(x, y)) return Part::Password;
     if (L.remember.contains(x, y)) return Part::Remember;
+    if (L.addShelf.contains(x, y)) return Part::AddShelf;
     if (L.enter.contains(x, y)) return Part::Enter;
     if (L.exit.contains(x, y)) return Part::Exit;
     if (L.link.contains(x, y)) return Part::Register;
@@ -108,8 +112,12 @@ void paint(panel::Picture& out, const Layout& L, const Fields& f, const Show& sh
           bad && f.errorField == loginerr::Field::Account);
     field(L.password, f.focus == Focus::Password, sh.hover == int(Part::Password),
           bad && f.errorField == loginerr::Field::Password);
-    panel::roundRect(out, L.tick, 4 * s, f.remember ? kGold : kWhite, f.remember ? 0.85f : 0.06f,
-                     f.remember ? kGold : kWhite, f.remember ? 1.0f : 0.35f, 1.0f * s);
+    const auto box = [&](const panel::Box& b, bool on) {
+        panel::roundRect(out, b, 4 * s, on ? kGold : kWhite, on ? 0.85f : 0.06f, on ? kGold : kWhite,
+                         on ? 1.0f : 0.35f, 1.0f * s);
+    };
+    box(L.tick, f.remember);
+    box(L.addTick, f.addShelf);  // 3.0.11-beta.175
     const bool hotEnter = sh.hover == int(Part::Enter), hotExit = sh.hover == int(Part::Exit);
     panel::roundRect(out, L.enter, 9 * s, kGold, hotEnter ? 0.36f : 0.24f, kGold, 0.85f, 1.0f * s);
     panel::roundRect(out, L.exit, 9 * s, kWhite, hotExit ? 0.12f : 0.06f, kWhite, 0.16f, 1.0f * s);
@@ -133,6 +141,10 @@ std::vector<Words> words(const Layout& L, const Fields& f, const Show& sh, const
         out.push_back(Words{L.tick, "\xE2\x9C\x93", kBlack, 13 * s, true, Align::Center});  // ✓
     out.push_back(Words{panel::Box{L.remember.x + 28 * s, L.remember.y, L.remember.w - 28 * s, L.remember.h},
                         t.remember, kText, 12.5f * s, false, Align::Left});
+    if (f.addShelf)  // 3.0.11-beta.175
+        out.push_back(Words{L.addTick, "\xE2\x9C\x93", kBlack, 13 * s, true, Align::Center});
+    out.push_back(Words{panel::Box{L.addShelf.x + 28 * s, L.addShelf.y, L.addShelf.w - 28 * s, L.addShelf.h},
+                        t.addShelf, kText, 12.5f * s, false, Align::Left});
     out.push_back(Words{L.enter, t.enter, kText, 14 * s, true, Align::Center});
     out.push_back(Words{L.exit, t.exit, kText, 14 * s, false, Align::Center});
     out.push_back(Words{L.link, t.register_, sh.hover == int(Part::Register) ? kGold2 : kLink, 12 * s, false,

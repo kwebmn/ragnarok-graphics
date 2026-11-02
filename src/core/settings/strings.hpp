@@ -540,6 +540,7 @@ enum class Text : uint16_t {
     InterfaceLoginStatus, InterfaceLoginStatusHint, LoginStatusUp, LoginStatusUpCount, LoginStatusUpNoCount,
     LoginStatusDown, LoginStatusDownIdle,
     InterfaceLoginNews, InterfaceLoginNewsHint, LoginAllNews,  // 3.0.11-beta.174
+    LoginAddShelf, ShelfAdded, ShelfUndo,  // 3.0.11-beta.175
     // 3.0.11-beta.152: the character select
     InterfaceCharSelect, InterfaceCharSelectHint, CharsTitle, CharsEnter, CharsMake, CharsRemove, CharsBack, CharsEmpty,
     CharsMakeHint,

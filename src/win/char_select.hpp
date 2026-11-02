@@ -3,6 +3,7 @@
 
 #include <cstdint>
 
+#include "core/accounts.hpp"
 #include "core/frame.hpp"
 
 namespace uagfx::gpu {
@@ -26,5 +27,10 @@ void beforeGameDraw();
 enum class PadCommand : uint8_t { Left, Right, Enter, Back, PageBefore, PageAfter, Make };
 void padCommand(PadCommand c);
 bool box(int& x, int& y, int& w, int& h);
+// 3.0.11-beta.175 (the login concept's shelf): the game's character select there (whatever [interface] char_select
+// says) - the login was accepted; and the character chosen in it when it was last seen (slot -1 none): the one the
+// login entered the world with when the world came next
+bool gameUp();
+accounts::LastChar entered();
 
 }  // namespace uagfx::win::charselectwin
