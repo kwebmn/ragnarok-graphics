@@ -1,3 +1,15 @@
+# uaRO Graphics 3.0.11-beta.180 — what's new
+
+**Signing in with the site account: all logins and characters** (the new login screen; shows once the site is
+updated):
+- On the login window "Bring in all logins from the site account" — sign in to the uaro.kiev.ua account three ways:
+  the site's password (and its two-factor code when it is on), a code in the browser (the game opens the cabinet's
+  page, you press "Allow") or a key from the cabinet ("Security → Devices").
+- Signed in, the shelf has all the account's game logins; the password of a login not on this computer yet is typed
+  once. "Characters ›" — a row a login: a click on a character enters with it, "+ A new character" — to the select.
+- "+ A new game login", "Link an existing login", in a card's menu "Change the game password…".
+- On the login window — "nick · logins: N" and "Sign out"; the devices are seen and revoked in the cabinet.
+
 # uaRO Graphics 3.0.11-beta.179 — what's new
 
 **The gamepad on the login screen; "Forget all accounts"** (the new login screen):
