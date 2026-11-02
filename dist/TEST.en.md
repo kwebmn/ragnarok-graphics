@@ -1,3 +1,13 @@
+# uaRO Graphics 3.0.11-beta.166 — what's new
+
+**One's own shop in the new look** (the fourth group of the remaining windows):
+- With a merchant's shop open a card "My shop: <sign>" replaces the old window: a row a thing still for sale with
+  its icon, price and "N left"; at the foot what is left is worth.
+- Sold things go by themselves (as in the game); "Close the shop" presses the game's button. Esc does not close the
+  shop - so it is not closed by chance.
+- The controller: up/down scroll, Y closes the shop (not B, for the same reason).
+- The switch "Own shop card" under "Interface", on with the new minimap.
+
 # uaRO Graphics 3.0.11-beta.165 — what's new
 
 **The guild in the new look** (the sixth group of the remaining windows):
