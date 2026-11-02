@@ -1,3 +1,12 @@
+# uaRO Graphics 3.0.11-beta.162 — what's new
+
+**The game's options in the new look** (the eighth group of the remaining windows):
+- Alt+O shows a card "Game options": "Music" and "Sounds" - a switch and a volume slider (in per cent), "Snap: the
+  attack / the skills / the things" (the cursor finds the nearest target by itself) and "The game's windows opaque".
+- The slider follows the mouse or the wheel; everything changes at once through the game's own controls.
+- The controller: up/down a row, left/right a volume, A a switch, B closes.
+- The switch "Game options card" under "Interface", on with the new minimap.
+
 # uaRO Graphics 3.0.11-beta.161 — what's new
 
 **The mercenary in the new look** (the ninth group of the remaining windows, its end):
