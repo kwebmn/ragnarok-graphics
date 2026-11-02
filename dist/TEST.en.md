@@ -1,3 +1,12 @@
+# uaRO Graphics 3.0.11-beta.164 — what's new
+
+**The server select in the new look** (the third group of the remaining windows - the whole login is new now):
+- Between the login and the character select a card "Server select" replaces the old window: a row a server, the
+  only one chosen at once.
+- A double click or "Next" goes to the character select, "Back" to the login.
+- The controller: up/down a server, A next, B back.
+- The switch "Server select" under "Interface", on with the new minimap.
+
 # uaRO Graphics 3.0.11-beta.163 — what's new
 
 **Friends and the party in the new look** (the fifth and sixth groups of the remaining windows):
