@@ -1,3 +1,14 @@
+# uaRO Graphics 3.0.11-beta.175 — what's new
+
+**Accounts go on the shelf by themselves after a login** (the new login screen, the account shelf, step 1):
+- Under "Remember login" — "Add to the shelf after login" (on). When the server accepted the login, the login and the
+  password are kept on this computer, protected by Windows for your user: another user of the computer, or a copy of
+  the file on another computer, cannot read them. The logs have the account's number only, never the login or the
+  password.
+- At the top of the screen for 6 s: "kweb added to the shelf · Undo" — "Undo" takes the account off again.
+- The shelf remembers the character you entered with and the map it came to.
+- Logging in from the shelf with one click — in the next betas.
+
 # uaRO Graphics 3.0.11-beta.174 — what's new
 
 **Language and news on the login screen** (the new login screen, steps 4–5):
