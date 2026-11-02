@@ -532,6 +532,10 @@ enum class Text : uint16_t {
     InterfaceMessages, InterfaceMessagesHint, MsgTitle, MsgWaitTitle, MsgYes, MsgNo, MsgCancel,
     InterfaceLogin, InterfaceLoginHint, LoginSubtitle, LoginAccount, LoginPassword, LoginRemember, LoginEnter,
     LoginExit, LoginRegister,
+    // 3.0.11-beta.172: the login's refusals in words
+    LoginErrUnknownId, LoginErrPassword, LoginErrExpired, LoginErrMaintenance, LoginErrOldExe, LoginErrBannedUntil,
+    LoginErrJammed, LoginErrRemoved, LoginErrRejected, LoginCreateAccount, LoginResetPassword, LoginHintCaps,
+    LoginHintLayout,
     // 3.0.11-beta.152: the character select
     InterfaceCharSelect, InterfaceCharSelectHint, CharsTitle, CharsEnter, CharsMake, CharsRemove, CharsBack, CharsEmpty,
     CharsMakeHint,

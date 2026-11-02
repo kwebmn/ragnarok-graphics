@@ -1,6 +1,8 @@
 #pragma once
 #include <windows.h>
 
+#include <string>
+
 #include <cstdint>
 
 #include "core/frame.hpp"
@@ -20,6 +22,10 @@ namespace uagfx::win::loginwin {
 // «Увійти», «Вийти» and the box press its own buttons, the registration opens uaro.kiev.ua's page. On the game's
 // thread.
 void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int targetHeight);
+// 3.0.11-beta.172: the card holds the game's login now (on, the window there, its fields known by their mask)
+bool active();
+// 3.0.11-beta.172: the login typed into the game's field the last time the card saw it (UTF-8)
+const std::string& account();
 void draw(FrameRecord& record, gpu::Renderer& renderer);
 bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result);
 bool shown();

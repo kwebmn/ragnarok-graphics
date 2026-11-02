@@ -91,3 +91,44 @@ TEST(login_card_fields_by_the_games_mask) {
     CHECK(!logincard::fieldPlaces(0x60, '*', 0x64, '*').known());  // no account field
     CHECK(!logincard::FieldPlaces{}.known());
 }
+
+// 3.0.11-beta.172 (the login concept: the server's answer in words): the refusal under the field it is about - the
+// card grows by its line and the action's link, the field outlined red; no refusal: the card as before
+TEST(login_card_error_line_under_its_field) {
+    const logincard::Layout plain = logincard::layout(1920, 1080, 1.0f);
+    const logincard::Layout L = logincard::layout(1920, 1080, 1.0f, loginerr::Field::Password);
+    CHECK(plain.error.h == 0 && L.error.h > 0 && L.h > plain.h);
+    CHECK(L.error.y >= L.password.y + L.password.h && L.error.y + L.error.h <= L.remember.y);
+    CHECK(L.errorAction.y >= L.error.y && L.errorAction.y + L.errorAction.h <= L.remember.y + 1);
+    logincard::Fields f;
+    f.error = "Пароль не підходить до kweb.";
+    f.errorField = loginerr::Field::Password;
+    f.errorAction = loginerr::Action::ResetPassword;
+    logincard::Texts t = texts();
+    t.resetPassword = "Відновити пароль на сайті";
+    const auto w = logincard::words(L, f, logincard::Show{}, t);
+    CHECK(has(w, "Пароль не підходить до kweb.") && has(w, "Відновити пароль на сайті"));
+    CHECK(logincard::hitTest(L, L.errorAction.x + 4, L.errorAction.y + L.errorAction.h / 2) ==
+          logincard::Part::ErrorAction);
+    panel::Picture p;
+    p.width = L.w;
+    p.height = L.h;
+    p.px.assign(size_t(L.w) * size_t(L.h), 0u);
+    logincard::paint(p, L, f, logincard::Show{});
+    const uint32_t edge = p.px[size_t(L.password.y) * size_t(L.w) + size_t(L.password.x + L.password.w / 2)];
+    CHECK(((edge >> 16) & 0xFF) > ((edge >> 8) & 0xFF) + 40);  // red over green: the field's border
+}
+
+// 3.0.11-beta.172 (the login concept: hints before a mistake): Caps Lock or the layout under the field in amber, in
+// the refusal's place (none there now); the card's top stays where it was - it grows downward only
+TEST(login_card_hint_line_in_amber) {
+    const logincard::Layout plain = logincard::layout(1920, 1080, 1.0f);
+    const logincard::Layout L = logincard::layout(1920, 1080, 1.0f, loginerr::Field::Account);
+    CHECK(L.y == plain.y && L.h > plain.h);
+    logincard::Fields f;
+    f.hint = "Розкладка УКР — логін зазвичай латиницею (kweb?)";
+    f.hintField = loginerr::Field::Account;
+    const auto w = logincard::words(L, f, logincard::Show{}, texts());
+    const auto it = std::find_if(w.begin(), w.end(), [&](const logincard::Words& x) { return x.text == f.hint; });
+    CHECK(it != w.end() && it->rgb == 0xF2C46B && it->box.y == L.error.y);
+}

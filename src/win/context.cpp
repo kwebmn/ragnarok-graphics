@@ -75,6 +75,7 @@
 #include "win/vend_shop.hpp"
 #include "win/whisper_setup.hpp"
 #include "win/login_card.hpp"
+#include "win/login_refusal.hpp"
 #include "win/macro_card.hpp"
 #include "win/msg_box.hpp"
 #include "win/menu_window.hpp"
@@ -420,6 +421,7 @@ bool Context::open(std::string& error) {
     buffcolumn::installBuffIcons();    // 3.0.11-beta.35: the game's status icons hidden for the buffs' column
     chatwin::install();                // 3.0.11-beta.41: the game's chat lines read for the new chat
     msgboxwin::install();              // 3.0.11-beta.151: the game's message boxes' words caught
+    loginrefusal::install();           // 3.0.11-beta.172: the server's refusals of a login in words
     installFastFtol(config.fastFtol);  // 2.5.20: float to integer without switching the x87
     installChatFix();                  // 2.6.12: Enter in the chat box while a map loads (R-PVF8AV)
     installShadowFix();                // 3.0.4-beta.9: a shadow drawn while a map loads (R-VBDSCP)

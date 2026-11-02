@@ -10,14 +10,18 @@
 #include <vector>
 
 #include "core/ask_card.hpp"
+#include "core/login_refusals.hpp"
 #include "core/settings/strings.hpp"
 #include "core/ui_style.hpp"
 #include "pad/core/config/bindings.hpp"
 #include "pad/win/game_window.hpp"
 #include "pad/win/runtime.hpp"
+#include "win/code_detour.hpp"
 #include "win/code_page.hpp"
 #include "win/game_camera.hpp"
 #include "win/log.hpp"
+#include "win/login_card.hpp"
+#include "win/login_refusal.hpp"
 #include "win/picture_draw.hpp"
 #include "win/real_ddraw.hpp"
 #include "win/ui_cost.hpp"
@@ -38,6 +42,9 @@ const uint8_t kErrorCode[] = {0x55, 0x8B, 0xEC, 0x64, 0xA1, 0x00, 0x00, 0x00, 0x
 const uint8_t kWaitCode[] = {0x55, 0x8B, 0xEC, 0x6A, 0xFF};
 constexpr uint32_t kErrorClass = 0x697940, kWaitClass = 0x6978A8, kShown = 0x38, kSendMsgSlot = 0x94;
 constexpr uint32_t kEscAnswer = 0x58, kEnterAnswer = 0x5C;
+// 3.0.11-beta.172: the words the game asks with to open ragnarok.co.kr (FUN_005A40C0); the answers ErrorMsg returns
+constexpr uintptr_t kKoreanSiteAsk = 0x6D8258, kKoreanSiteAsk2 = 0x6D8210;
+constexpr int kOkAnswer = 0x76, kNoAnswer = 0x77;
 constexpr int kButtonMsg = 6;
 using ErrorFn = int(__attribute__((thiscall)) *)(uint32_t manager, const char* text, int kind, int a, int b, int c);
 using WaitFn = int(__attribute__((thiscall)) *)(uint32_t manager, const char* text, int a);
@@ -64,6 +71,7 @@ struct State {
     bool upload = false;
     int told = 0;
     bool toldAgain = false;  // a call while its box is up logged (once a box)
+    bool ownWords = false;   // 3.0.11-beta.172: `text` is the card's own (UTF-8), not the game's
 };
 
 State& state() {
@@ -93,11 +101,36 @@ std::string copied(const char* text) {
 
 int __attribute__((thiscall)) errorMsg(uint32_t manager, const char* text, int kind, int a, int b, int c) {
     State& s = state();
+    // 3.0.11-beta.172: the game's offers to open ragnarok.co.kr (after three wrong passwords, and its code 0x10) -
+    // answered «no» unseen: a yes there opens a Korean site and closes the game
+    if (uintptr_t(text) == kKoreanSiteAsk || uintptr_t(text) == kKoreanSiteAsk2) {
+        if (s.told++ < 30) LOG_INFO("messages: the game's offer to open ragnarok.co.kr - answered no unseen");
+        return kNoAnswer;
+    }
+    // 3.0.11-beta.172: the server's refusal of a login the new login card shows in words - its box answered unseen;
+    // the others in the card's words
+    const int refusal = loginrefusal::handlingCode();
+    if (refusal >= 0 && loginwin::active() && !read32(kBoxAt)) {
+        const loginerr::Refusal r = loginerr::refusal(refusal);
+        if (r.inlineOnly) {
+            if (s.told++ < 30)
+                LOG_INFO("messages: the server's refusal (code %d) - in words on the login card", refusal);
+            return kOkAnswer;
+        }
+        s.text = loginerr::words(r, startup().lang, loginwin::account(),
+                                 utf8Of(widened(loginrefusal::handlingUntil(), s.codePage)));
+        s.ownWords = true;
+        s.kind = ac::Kind::Message;
+        s.toldAgain = false;
+        if (s.told++ < 30) LOG_INFO("messages: the server's refusal (code %d) - the box in the card's words", refusal);
+        return reinterpret_cast<ErrorFn>(g_error)(manager, text, kind, a, b, c);
+    }
     const std::string words = copied(text);
     const bool up = read32(kBoxAt) != 0;
     // 3.0.11-beta.170 (R-KD2UQQ): a box up already - the game adds the line only when the call asks (b), else it
     // answers the call at once (its login asks again each turn while «Failed to Connect to Server.» is up)
     s.text = ac::boxWords(s.text, words, up, b != 0);
+    if (!up) s.ownWords = false;
     if (!up) {
         s.kind = kind == 2 ? ac::Kind::Question : kind == 4 ? ac::Kind::Choice : ac::Kind::Message;
         s.toldAgain = false;
@@ -116,40 +149,11 @@ int __attribute__((thiscall)) waitMsg(uint32_t manager, const char* text, int a)
     State& s = state();
     if (!read32(kBoxAt)) {
         s.text = copied(text);
+        s.ownWords = false;
         s.kind = ac::Kind::Wait;
         if (s.told++ < 30) LOG_INFO("messages: the game's wait - «%s»", s.text.c_str());
     }
     return reinterpret_cast<WaitFn>(g_wait)(manager, text, a);
-}
-
-// A function's first instructions to a copy that goes on to the rest, a jump to ours in their place; its copy's
-// address, 0 when the bytes are not this build's
-uintptr_t detour(uint32_t at, const uint8_t* code, size_t size, const void* ours) {
-    uint8_t now[16] = {};
-    SIZE_T got = 0;
-    if (size > sizeof now || !ReadProcessMemory(GetCurrentProcess(), reinterpret_cast<const void*>(uintptr_t(at)), now,
-                                                size, &got) ||
-        got != size || std::memcmp(now, code, size) != 0)
-        return 0;
-    auto* t = static_cast<uint8_t*>(VirtualAlloc(nullptr, 32, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE));
-    if (!t) return 0;
-    std::memcpy(t, code, size);
-    t[size] = 0xE9;
-    const int32_t back = int32_t(uintptr_t(at) + size - (reinterpret_cast<uintptr_t>(t) + size + 5));
-    std::memcpy(t + size + 1, &back, 4);
-    FlushInstructionCache(GetCurrentProcess(), t, 32);
-    DWORD old = 0;
-    if (!VirtualProtect(reinterpret_cast<void*>(uintptr_t(at)), size, PAGE_EXECUTE_READWRITE, &old)) return 0;
-    uint8_t jump[16];
-    std::memset(jump, 0x90, size);  // the rest of the first instructions nothing
-    jump[0] = 0xE9;
-    const int32_t to = int32_t(reinterpret_cast<uintptr_t>(ours) - (uintptr_t(at) + 5));
-    std::memcpy(jump + 1, &to, 4);
-    std::memcpy(reinterpret_cast<void*>(uintptr_t(at)), jump, size);
-    DWORD unused = 0;
-    VirtualProtect(reinterpret_cast<void*>(uintptr_t(at)), size, old, &unused);
-    FlushInstructionCache(GetCurrentProcess(), reinterpret_cast<void*>(uintptr_t(at)), size);
-    return reinterpret_cast<uintptr_t>(t);
 }
 
 // The game's box up now: the error's or the wait's
@@ -258,8 +262,8 @@ void install() {
     static bool done = false;
     if (done) return;
     done = true;
-    g_error = detour(kErrorMsg, kErrorCode, sizeof kErrorCode, reinterpret_cast<const void*>(&errorMsg));
-    g_wait = detour(kWaitMsg, kWaitCode, sizeof kWaitCode, reinterpret_cast<const void*>(&waitMsg));
+    g_error = codedetour::detour(kErrorMsg, kErrorCode, sizeof kErrorCode, reinterpret_cast<const void*>(&errorMsg));
+    g_wait = codedetour::detour(kWaitMsg, kWaitCode, sizeof kWaitCode, reinterpret_cast<const void*>(&waitMsg));
     LOG_INFO("messages: the game's message box's words %s, its wait's %s",
              g_error ? "caught" : "not caught (another build)", g_wait ? "caught" : "not caught (another build)");
 }
@@ -295,7 +299,7 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     s.card = ac::Card{};
     s.card.kind = wait ? ac::Kind::Wait : s.kind;
     s.card.title = say(wait ? settings::Text::MsgWaitTitle : settings::Text::MsgTitle);
-    s.card.message = utf8(s, s.text);
+    s.card.message = s.ownWords ? s.text : utf8(s, s.text);
     s.card.messageLines = rowsOf(s, s.card.message);
     s.layout = ac::layout(s.card, targetWidth, targetHeight, s.scale, texts(s));
     s.show.hover = -1;

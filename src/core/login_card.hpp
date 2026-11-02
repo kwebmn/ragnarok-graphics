@@ -3,6 +3,7 @@
 #include <string>
 #include <vector>
 
+#include "core/login_refusals.hpp"
 #include "core/window_panel.hpp"
 
 namespace uagfx::logincard {
@@ -18,6 +19,13 @@ struct Fields {
     Focus focus = Focus::None;
     bool caret = false;  // shown now (it blinks)
     bool remember = false;
+    // 3.0.11-beta.172: the server's refusal in words under its field, and what to do
+    std::string error;
+    loginerr::Field errorField = loginerr::Field::None;
+    loginerr::Action errorAction = loginerr::Action::None;
+    // 3.0.11-beta.172: a hint under a field while the player types (Caps Lock, the layout) - the refusal's place
+    std::string hint;
+    loginerr::Field hintField = loginerr::Field::None;
 };
 struct Texts {
     std::string title, subtitle;     // «uaRO», «Вхід у гру»
@@ -25,6 +33,7 @@ struct Texts {
     std::string remember;            // «Запам'ятати логін»
     std::string enter, exit;         // «Увійти», «Вийти»
     std::string register_;           // «Немає акаунта? Реєстрація на uaro.kiev.ua»
+    std::string createAccount, resetPassword;  // 3.0.11-beta.172: the refusals' actions
 };
 struct Show {
     int hover = 0;  // a Part's number, 0 none
@@ -34,9 +43,10 @@ struct Layout {
     int x = 0, y = 0, w = 0, h = 0;
     panel::Box glass, title, subtitle, accountLabel, account, passwordLabel, password, remember, tick;
     panel::Box enter, exit, link;
+    panel::Box error, errorAction;  // 3.0.11-beta.172: under the field a refusal is about; 0 high when none
 };
-Layout layout(int targetW, int targetH, float scale);
-enum class Part : uint8_t { None, Account, Password, Remember, Enter, Exit, Register };
+Layout layout(int targetW, int targetH, float scale, loginerr::Field errorAt = loginerr::Field::None);
+enum class Part : uint8_t { None, Account, Password, Remember, Enter, Exit, Register, ErrorAction };
 Part hitTest(const Layout& L, float x, float y);
 int gameButton(Part p);  // the game's window's own: 0x78 enter, 0x9b exit, 0x93 the box; 0 none
 

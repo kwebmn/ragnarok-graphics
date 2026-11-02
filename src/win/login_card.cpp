@@ -8,12 +8,14 @@
 #include <vector>
 
 #include "core/login_card.hpp"
+#include "core/login_hints.hpp"
 #include "core/settings/strings.hpp"
 #include "core/ui_style.hpp"
 #include "pad/win/game_window.hpp"
 #include "win/code_page.hpp"
 #include "win/game_camera.hpp"
 #include "win/log.hpp"
+#include "win/login_refusal.hpp"
 #include "win/picture_draw.hpp"
 #include "win/real_ddraw.hpp"
 #include "win/ui_cost.hpp"
@@ -37,6 +39,7 @@ constexpr int kButtonMsg = 6;
 constexpr int kAway = -4000;
 constexpr ULONGLONG kBlinkMs = 530;
 const wchar_t kRegister[] = L"https://uaro.kiev.ua/account/register";
+const wchar_t kForgot[] = L"https://uaro.kiev.ua/account/forgot";  // 3.0.11-beta.172: a refused password's action
 using SendMsgFn = int(__attribute__((thiscall)) *)(uint32_t self, uint32_t sender, int msg, int a, int b, int c);
 using GetTextFn = const char*(__attribute__((thiscall)) *)(uint32_t edit);
 using LengthFn = int(__attribute__((thiscall)) *)(uint32_t edit);
@@ -62,6 +65,14 @@ struct State {
     int texW = 0, texH = 0;
     bool upload = false;
     int told = 0;
+    // 3.0.11-beta.172: the server's refusal shown under its field until the player changes that field
+    std::string lastTyped;  // the login last seen in the game's field, not empty (a refused one: its window gone)
+    std::string error;
+    loginerr::Field errorField = loginerr::Field::None;
+    loginerr::Action errorAction = loginerr::Action::None;
+    bool errorFresh = false;  // the window's fields as they were when the refusal came not seen yet
+    std::string errorAccount;
+    int errorPasswordLength = 0;
 };
 
 State& state() {
@@ -133,6 +144,25 @@ lc::Fields fieldsOf(const State& s, uint32_t window) {
     return f;
 }
 
+// The keyboard's layout as the hint names it: its language's short name
+std::string layoutName() {
+    const unsigned lang = PRIMARYLANGID(LOWORD(HandleToUlong(GetKeyboardLayout(0))));
+    return lang == LANG_UKRAINIAN ? "УКР" : lang == LANG_RUSSIAN ? "РУС" : lang == LANG_BELARUSIAN ? "БЕЛ" : "?";
+}
+
+// 3.0.11-beta.172: the hint under the field the keys go to - Caps Lock on, Cyrillic in the login (its layout)
+void hintOf(lc::Fields& f) {
+    const bool caps = (GetKeyState(VK_CAPITAL) & 1) != 0;
+    const loginhint::Hint h = f.focus == lc::Focus::Account    ? loginhint::forAccount(f.account, caps)
+                              : f.focus == lc::Focus::Password ? loginhint::forPassword(caps)
+                                                               : loginhint::Hint{};
+    if (h.kind == loginhint::Kind::None) return;
+    f.hintField = f.focus == lc::Focus::Account ? loginerr::Field::Account : loginerr::Field::Password;
+    f.hint = h.kind == loginhint::Kind::CapsLock
+                 ? say(settings::Text::LoginHintCaps)
+                 : settings::fmt(say(settings::Text::LoginHintLayout), {layoutName(), h.guess});
+}
+
 lc::Texts texts() {
     lc::Texts t;
     t.title = "uaRO";
@@ -143,6 +173,8 @@ lc::Texts texts() {
     t.enter = say(settings::Text::LoginEnter);
     t.exit = say(settings::Text::LoginExit);
     t.register_ = say(settings::Text::LoginRegister);
+    t.createAccount = say(settings::Text::LoginCreateAccount);
+    t.resetPassword = say(settings::Text::LoginResetPassword);
     return t;
 }
 
@@ -181,9 +213,25 @@ void hide(State& s) {
     s.shown = false;
 }
 
+// A page of the site in the player's browser (shell32 asked for only now: the driver's imports stay the four it has)
+bool openUrl(const wchar_t* url) {
+    const HMODULE shell = LoadLibraryA("shell32.dll");
+    const auto open = reinterpret_cast<ShellExecuteFn>(
+        reinterpret_cast<void*>(shell ? GetProcAddress(shell, "ShellExecuteW") : nullptr));
+    if (open) open(nullptr, L"open", url, nullptr, nullptr, SW_SHOWNORMAL);
+    return open != nullptr;
+}
+
 void press(State& s, lc::Part p) {
     const uint32_t window = gameLogin();
     if (!window) return;
+    if (p == lc::Part::ErrorAction) {  // 3.0.11-beta.172: what to do about a refusal
+        const bool create = s.errorAction == loginerr::Action::CreateAccount;
+        const bool opened = s.errorAction != loginerr::Action::None && openUrl(create ? kRegister : kForgot);
+        LOG_INFO("login: the refusal's action - %s %s", create ? "the registration page" : "the password's reset",
+                 opened ? "opened" : "not opened");
+        return;
+    }
     if (p == lc::Part::Account || p == lc::Part::Password) {  // the keys to that field
         const lc::FieldPlaces places = placesOf(window);
         if (!places.known()) return;
@@ -193,18 +241,15 @@ void press(State& s, lc::Part p) {
         return;
     }
     if (p == lc::Part::Register) {
-        // shell32 asked for only now (the driver's own imports stay the four it has - as the notifications do)
-        const HMODULE shell = LoadLibraryA("shell32.dll");
-        const auto open = reinterpret_cast<ShellExecuteFn>(
-            reinterpret_cast<void*>(shell ? GetProcAddress(shell, "ShellExecuteW") : nullptr));
-        if (open) open(nullptr, L"open", kRegister, nullptr, nullptr, SW_SHOWNORMAL);
-        LOG_INFO("login: the registration page %s (uaro.kiev.ua/account/register)", open ? "opened" : "not opened");
+        const bool opened = openUrl(kRegister);
+        LOG_INFO("login: the registration page %s (uaro.kiev.ua/account/register)", opened ? "opened" : "not opened");
         return;
     }
     const int id = lc::gameButton(p);
     if (!id) return;
     const uint32_t send = read32(read32(window) + kSendMsgSlot);
     const int b = p == lc::Part::Remember ? (read32(window + kRemember) ? 0 : 1) : 0;  // the box: its new state
+    if (p == lc::Part::Enter) s.error.clear();  // a new try: the last refusal gone
     if (s.told++ < 30)
         LOG_INFO("login: %s - the game's button 0x%X", p == lc::Part::Enter    ? "«Увійти»"
                                                        : p == lc::Part::Exit   ? "«Вийти»"
@@ -249,7 +294,30 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     s.targetW = targetWidth;
     s.targetH = targetHeight;
     s.fields = fieldsOf(s, window);
-    s.layout = lc::layout(targetWidth, targetHeight, s.scale);
+    if (const auto seen = loginrefusal::take()) {  // 3.0.11-beta.172: the server's refusal - under its field
+        const loginerr::Refusal r = loginerr::refusal(seen->code);
+        if (r.inlineOnly) {
+            s.error = loginerr::words(r, startup().lang, s.lastTyped, utf8Of(widened(seen->until, s.codePage)));
+            s.errorField = r.field;
+            s.errorAction = r.action;
+            s.errorFresh = true;
+        }
+    }
+    if (!s.error.empty() && s.errorFresh) {  // the window as it came back: what the player changes clears it
+        s.errorFresh = false;
+        s.errorAccount = s.fields.account;
+        s.errorPasswordLength = s.fields.passwordLength;
+    } else if (!s.error.empty() && (s.fields.account != s.errorAccount ||
+                                    s.fields.passwordLength != s.errorPasswordLength)) {
+        s.error.clear();
+    }
+    if (!s.fields.account.empty()) s.lastTyped = s.fields.account;
+    s.fields.error = s.error;
+    s.fields.errorField = s.error.empty() ? loginerr::Field::None : s.errorField;
+    s.fields.errorAction = s.errorAction;
+    hintOf(s.fields);  // 3.0.11-beta.172: Caps Lock, the layout - under the field typed in
+    s.layout = lc::layout(targetWidth, targetHeight, s.scale,
+                          s.error.empty() ? s.fields.hintField : s.fields.errorField);
     s.show.hover = 0;
     int cx = 0, cy = 0;
     if (readGameCursor(cx, cy))
@@ -259,7 +327,7 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     const std::string key = f.account + ';' + std::to_string(f.passwordLength) + ';' + std::to_string(int(f.focus)) +
                             (f.caret ? "|" : "") + (f.remember ? "r" : "") + ';' + std::to_string(s.layout.x) + ',' +
                             std::to_string(s.layout.y) + ';' + std::to_string(s.show.hover) + '#' +
-                            std::to_string(uistyle::generation());
+                            std::to_string(uistyle::generation()) + '!' + s.error + '?' + s.fields.hint;
     if (key != s.key) {
         s.key = key;
         render(s);
@@ -300,6 +368,13 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
 }
 
 bool shown() { return state().shown; }
+
+bool active() {
+    const State& s = state();
+    return s.on && s.places.known() && gameLogin() != 0;
+}
+
+const std::string& account() { return state().lastTyped; }
 
 void beforeGameDraw() {
     State& s = state();
