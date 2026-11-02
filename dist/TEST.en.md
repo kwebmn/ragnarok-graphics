@@ -1,3 +1,19 @@
+# uaRO Graphics 3.0.11-beta.176 — what's new
+
+**The account shelf: one click to enter** (the new login screen, the shelf, step 2):
+- With accounts on the shelf, "Choose an account" shows in place of the login window: a card an account (the
+  character you entered with: its name, job, level, map; your label; the login). A click on a card logs in and goes
+  straight into the game with that character ("Straight into the game"). Shift held while clicking stops at the
+  character select. ← → and Enter work too.
+- "⋯" or a right click on a card — its menu: "Straight into the game", "Keep the password", "Label…", "Change login
+  and password…", move left/right, "Take off the shelf" (asks again).
+- "Add an account" and "Another account" open the usual login window; its "‹ Shelf" goes back. Starting to type a
+  login on the shelf does the same.
+- The server refused a saved password — the card says "The password does not fit" and the login window asks for it
+  again; that password is not sent by itself any more.
+- The first launch (the shelf empty): the usual login window with the line "The shelf is empty yet: after a login
+  the account shows on it, then - one click to enter".
+
 # uaRO Graphics 3.0.11-beta.175 — what's new
 
 **Accounts go on the shelf by themselves after a login** (the new login screen, the account shelf, step 1):
