@@ -73,3 +73,17 @@ TEST(login_chrome_news_line) {
     }
     CHECK(std::any_of(w.begin(), w.end(), [](const loginchrome::Words& x) { return x.text == "Усі новини"; }));
 }
+
+// 3.0.11-beta.177: the views' segments as wide as their words («Классический» wider than 96), one after another
+TEST(login_chrome_view_segments_fit_their_words) {
+    loginchrome::Content c;
+    c.viewLabel = "Вид";
+    c.viewNames[0] = "Классический";
+    c.viewNames[1] = "Полка";
+    c.viewNames[2] = "Продолжить";
+    const loginchrome::Layout L = loginchrome::layout(1920, 1080, 1.0f, c);
+    CHECK(L.viewSeg[0].w >= panel::wordsWidth(c.viewNames[0], 13.5f, true) + 20);
+    CHECK(L.viewSeg[1].w >= 96 - 0.5f);
+    for (int i = 1; i < 3; ++i) CHECK(std::fabs(L.viewSeg[i].x - (L.viewSeg[i - 1].x + L.viewSeg[i - 1].w)) < 0.5f);
+    CHECK(L.viewSeg[0].x > L.viewLabel.x + L.viewLabel.w - 0.5f);
+}

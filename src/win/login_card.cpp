@@ -25,6 +25,7 @@
 #include "win/code_page.hpp"
 #include "win/game_camera.hpp"
 #include "win/log.hpp"
+#include "win/login_continue.hpp"
 #include "win/login_refusal.hpp"
 #include "win/login_shelf.hpp"
 #include "win/paths.hpp"
@@ -116,7 +117,22 @@ struct State {
     std::string loggedIn;  // the accepted login (the game's words)
     // 3.0.11-beta.176: the login a shelf row sent with one click, and «Одразу в гру»'s character (UTF-8; "" the select)
     std::string oneClick, autoName;
-    bool shelfShown = false;  // 3.0.11-beta.176: «Полиця» in place of the card
+    // 3.0.11-beta.176-177: what shows in the login window's place - the card, «Полиця», «Продовжити»
+    enum class Mode : uint8_t { Card, Shelf, Continue };
+    Mode mode = Mode::Card;
+    loginview::View view = loginview::View::Shelf;  // the view now ([interface] login_view, or picked on the strip)
+    std::optional<loginview::View> viewPicked;       // picked on the strip until the settings say the same
+    bool eyeHeld = false;                            // 3.0.11-beta.177: the password's letters shown while held
+    // 3.0.11-beta.177: ▾'s saved logins under the account's field - their own picture
+    bool dropOpen = false;
+    lc::DropLayout drop;  // in the card's picture's pixels
+    int dropHover = -1;
+    std::vector<lc::DropRow> dropRows;
+    std::string dropKey;
+    panel::Picture dropPicture;
+    uint32_t dropTexture = 0;
+    int dropTexW = 0, dropTexH = 0;
+    bool dropUpload = false;
     std::string toast, toastLogin;  // «kweb додано на полицю», the login «Скасувати» takes off
     ULONGLONG toastUntil = 0;
     float toastK = 0, toastScale = 1;
@@ -218,7 +234,7 @@ void hintOf(lc::Fields& f) {
                  : settings::fmt(say(settings::Text::LoginHintLayout), {layoutName(), h.guess});
 }
 
-lc::Texts texts() {
+lc::Texts texts(loginview::View view) {
     lc::Texts t;
     t.title = "uaRO";
     t.subtitle = say(settings::Text::LoginSubtitle);
@@ -227,11 +243,13 @@ lc::Texts texts() {
     t.remember = say(settings::Text::LoginRemember);
     t.enter = say(settings::Text::LoginEnter);
     t.exit = say(settings::Text::LoginExit);
-    t.register_ = say(settings::Text::LoginRegister);
+    t.register_ = say(settings::Text::ShelfCreate);  // 3.0.11-beta.177: «Створити акаунт» | «Забули пароль?»
+    t.forgot = say(settings::Text::LoginForgot);
     t.createAccount = say(settings::Text::LoginCreateAccount);
     t.resetPassword = say(settings::Text::LoginResetPassword);
     t.addShelf = say(settings::Text::LoginAddShelf);  // 3.0.11-beta.175
-    t.shelf = say(settings::Text::ShelfBack);          // 3.0.11-beta.176
+    t.shelf = say(view == loginview::View::Continue ? settings::Text::ContinueBack
+                                                     : settings::Text::ShelfBack);  // 3.0.11-beta.176
     return t;
 }
 
@@ -250,7 +268,7 @@ void render(State& s) {
     const uicost::Paint cost("the login", s.layout.w, s.layout.h);
     if (!panel::blank(s.picture, s.layout.w, s.layout.h)) return;
     lc::paint(s.picture, s.layout, s.fields, s.show);
-    drawWords(s.picture, gdiWords(lc::words(s.layout, s.fields, s.show, texts())));
+    drawWords(s.picture, gdiWords(lc::words(s.layout, s.fields, s.show, texts(s.view))));
     s.upload = true;
 }
 
@@ -260,7 +278,10 @@ void block(const State& s, HWND game) {
     panel::Box b = s.layout.glass;
     float x0 = float(s.layout.x) + b.x, y0 = float(s.layout.y) + b.y;
     int sx = 0, sy = 0, sw = 0, sh = 0;
-    if (s.shelfShown && loginshelfwin::box(sx, sy, sw, sh)) {  // 3.0.11-beta.176: the shelf's place
+    const bool other = s.mode == State::Mode::Shelf   ? loginshelfwin::box(sx, sy, sw, sh)
+                       : s.mode == State::Mode::Continue ? logincontinuewin::box(sx, sy, sw, sh)
+                                                         : false;
+    if (other) {  // 3.0.11-beta.176-177: the shelf's or «Продовжити»'s place
         b = panel::Box{0, 0, float(sw), float(sh)};
         x0 = float(sx);
         y0 = float(sy);
@@ -372,6 +393,14 @@ void chromeFrame(State& s, int targetWidth, int targetHeight) {
     const srvstatus::Line line = statusLine(s);
     loginchrome::Content c;
     c.status = line.text;
+    c.viewLabel = say(settings::Text::LoginViewLabel);  // 3.0.11-beta.177: «Вигляд»
+    c.viewNames[0] = say(settings::Text::LoginViewClassic);
+    c.viewNames[1] = say(settings::Text::LoginViewShelf);
+    c.viewNames[2] = say(settings::Text::LoginViewContinue);
+    s.chromeShow.views = true;
+    s.chromeShow.view = int(s.view);
+    s.chromeShow.viewLabel = c.viewLabel;
+    for (int i = 0; i < 3; ++i) s.chromeShow.viewNames[i] = c.viewNames[i];
     s.newsUrl.clear();
     if (s.news)  // 3.0.11-beta.174: the site's event or news now, in the player's language
         if (const auto f = reference::now()) {
@@ -396,7 +425,7 @@ void chromeFrame(State& s, int targetWidth, int targetHeight) {
     const std::string key = line.text + '#' + std::to_string(line.rgb) + '#' + std::to_string(targetWidth) + 'x' +
                             std::to_string(targetHeight) + '#' + std::to_string(uistyle::generation()) + ';' +
                             std::to_string(s.chromeShow.lang) + ';' + std::to_string(s.chromeShow.hover) + '!' +
-                            c.news;
+                            c.news + '%' + std::to_string(s.chromeShow.view) + c.viewNames[0];
     if (key == s.chromeKey) return;
     s.chromeKey = key;
     if (!panel::blank(s.chromePicture, s.chrome.w, s.chrome.h)) return;
@@ -537,6 +566,22 @@ void press(State& s, lc::Part p) {
         LOG_INFO("login: the registration page %s (uaro.kiev.ua/account/register)", opened ? "opened" : "not opened");
         return;
     }
+    if (p == lc::Part::Forgot) {  // 3.0.11-beta.177
+        const bool opened = openUrl(kForgot);
+        LOG_INFO("login: the password's reset page %s", opened ? "opened" : "not opened");
+        return;
+    }
+    if (p == lc::Part::Eye) {  // 3.0.11-beta.177: its letters while the button is held
+        s.eyeHeld = true;
+        s.key.clear();
+        return;
+    }
+    if (p == lc::Part::Drop) {  // 3.0.11-beta.177: the saved logins
+        s.dropOpen = !s.dropOpen;
+        s.dropKey.clear();
+        s.key.clear();
+        return;
+    }
     const int id = lc::gameButton(p);
     if (!id) return;
     const uint32_t send = read32(read32(window) + kSendMsgSlot);
@@ -590,6 +635,87 @@ void act(State& s, const loginshelfwin::Asked& a) {
     s.key.clear();
 }
 
+// 3.0.11-beta.177: what «Продовжити» asked - its account's login (with its character, or the select shown), the card
+// for another login, the site's registration
+void actContinue(State& s, const logincontinuewin::Asked& a) {
+    using A = logincontinuewin::Act;
+    accounts::Shelf& shelf = accountsstore::shelf();
+    const bool row = a.index >= 0 && a.index < int(shelf.list.size());
+    switch (a.act) {
+        case A::Play:
+        case A::OtherChar:
+            if (row) loginWith(shelf.list[size_t(a.index)], a.act == A::OtherChar);
+            break;
+        case A::Other: act(s, loginshelfwin::Asked{loginshelfwin::Act::Other, -1}); break;
+        case A::Create: openUrl(kRegister); break;
+        case A::None: break;
+    }
+    s.key.clear();
+}
+
+// 3.0.11-beta.177: a view picked on the strip - kept in uaro-graphics.ini ([interface] login_view), shown at once
+void chooseView(State& s, loginview::View v) {
+    if (v == s.view) return;
+    const bool written =
+        editIniFile(ourFile(layout::File::Ini), {{"interface", "login_view", loginview::token(v)}});
+    s.viewPicked = v;
+    s.view = v;
+    loginshelfwin::classic(false);
+    s.dropOpen = false;
+    s.key.clear();
+    LOG_INFO("login: the view %s picked%s", loginview::token(v),
+             written ? "" : " - uaro-graphics.ini not written: this game only");
+}
+
+// 3.0.11-beta.177: ▾'s saved logins under the account's field (the card's picture's pixels), their own picture
+void dropFrame(State& s) {
+    const accounts::Shelf& shelf = accountsstore::shelf();
+    s.dropRows.clear();
+    for (const accounts::Account& a : shelf.list) {
+        lc::DropRow r;
+        r.login = utf8Of(widened(a.login, s.codePage));
+        if (!a.last.name.empty())
+            r.line = a.last.name + " · " + a.last.job + (a.last.level > 0 ? " " + std::to_string(a.last.level) : "");
+        s.dropRows.push_back(r);
+    }
+    s.drop = lc::dropLayout(s.layout, s.dropRows.size());
+    s.dropHover = -1;
+    int cx = 0, cy = 0;
+    if (readGameCursor(cx, cy))
+        s.dropHover = lc::dropHit(s.drop, float(cx) * s.k - float(s.layout.x), float(cy) * s.k - float(s.layout.y));
+    std::string key = std::to_string(s.layout.x) + ',' + std::to_string(s.layout.y) + ';' +
+                      std::to_string(s.dropHover) + '#' + std::to_string(uistyle::generation());
+    for (const lc::DropRow& r : s.dropRows) key += ';' + r.login + ',' + r.line;
+    if (key == s.dropKey) return;
+    s.dropKey = key;
+    if (!panel::blank(s.dropPicture, int(s.drop.w + 0.5f), int(s.drop.h + 0.5f))) return;
+    lc::paintDrop(s.dropPicture, s.drop, s.dropHover, s.scale);
+    drawWords(s.dropPicture,
+              gdiWords(lc::dropWords(s.drop, s.dropRows, s.dropHover, say(settings::Text::LoginOtherLogin), s.scale)));
+    s.dropUpload = true;
+}
+
+// 3.0.11-beta.177: a saved login picked in ▾'s list - its login and password into the fields (not sent: «Увійти»
+// is the player's); «+ Інший логін» - the fields empty
+void dropPick(State& s, int row) {
+    s.dropOpen = false;
+    s.key.clear();
+    const uint32_t window = gameLogin();
+    const accounts::Shelf& shelf = accountsstore::shelf();
+    if (!window || !s.places.known()) return;
+    if (row >= 0 && row < int(shelf.list.size())) {
+        const accounts::Account& a = shelf.list[size_t(row)];
+        const bool password = !a.password.empty() && !a.refused;
+        putFields(s, window, a.login, password ? a.password : std::string());
+        reinterpret_cast<SetFocusFn>(uintptr_t(kSetFocus))(kWindowMgr, read32(window + s.places.password));
+        LOG_INFO("login: ▾ - the shelf's %016llx put into the fields%s",
+                 (unsigned long long)accounts::loginHash(a.login), password ? "" : " (its password to type)");
+    } else {
+        putFields(s, window, std::string(), std::string());
+        reinterpret_cast<SetFocusFn>(uintptr_t(kSetFocus))(kWindowMgr, read32(window + s.places.account));
+    }
+}
+
 // 3.0.11-beta.175: each frame, the login window there or not - the shelf's moments (the login accepted, the world
 // entered) and its «додано» note's place, kept from the game's mouse while it shows
 void shelfFrame(State& s, HWND game, double k, int targetWidth, int targetHeight) {
@@ -633,9 +759,11 @@ void shelfFrame(State& s, HWND game, double k, int targetWidth, int targetHeight
 
 }  // namespace
 
-void frame(HWND game, bool on, bool status, bool news, unsigned codePage, double k, int targetWidth,
-           int targetHeight) {
+void frame(HWND game, bool on, bool status, bool news, loginview::View view, unsigned codePage, double k,
+           int targetWidth, int targetHeight) {
     State& s = state();
+    if (s.viewPicked && *s.viewPicked == view) s.viewPicked.reset();  // the settings say the same now
+    s.view = s.viewPicked.value_or(view);
     s.codePage = codePage;
     s.status = status;
     s.news = news;
@@ -727,28 +855,46 @@ void frame(HWND game, bool on, bool status, bool news, unsigned codePage, double
     s.fields.errorField = s.error.empty() ? loginerr::Field::None : s.errorField;
     s.fields.errorAction = s.errorAction;
     hintOf(s.fields);  // 3.0.11-beta.172: Caps Lock, the layout - under the field typed in
-    const bool shelfNow = loginshelfwin::wanted();  // 3.0.11-beta.176: «Полиця» in place of the card
-    if (shelfNow != s.shelfShown) {
-        s.shelfShown = shelfNow;
+    // 3.0.11-beta.176-177: the card, «Полиця» or «Продовжити» - the shelf empty, or the card asked for one login:
+    // the card whichever view
+    const accounts::Shelf& shelf = accountsstore::shelf();
+    const bool any = !shelf.list.empty(), forOne = loginshelfwin::classicChosen();
+    const State::Mode mode = !any || forOne || s.view == loginview::View::Classic ? State::Mode::Card
+                             : s.view == loginview::View::Shelf                    ? State::Mode::Shelf
+                                                                                   : State::Mode::Continue;
+    if (mode != s.mode) {
+        s.mode = mode;
         s.key.clear();
-        LOG_INFO("login: %s", shelfNow ? "the shelf of accounts shown" : "the login card shown");
+        s.dropOpen = false;
+        LOG_INFO("login: %s shown", mode == State::Mode::Shelf ? "«Полиця»" : mode == State::Mode::Continue
+                                                                               ? "«Продовжити»"
+                                                                               : "the login card");
     }
-    if (shelfNow) {
-        loginshelfwin::frame(k, targetWidth, targetHeight, codePage);
+    if (mode != State::Mode::Card) {
+        if (mode == State::Mode::Shelf)
+            loginshelfwin::frame(k, targetWidth, targetHeight, codePage);
+        else
+            logincontinuewin::frame(k, targetWidth, targetHeight, codePage);
         chromeFrame(s, targetWidth, targetHeight);
         s.shown = true;
         block(s, game);
         blockBar(s, game);
         return;
     }
-    {
-        const accounts::Shelf& shelf = accountsstore::shelf();
-        s.fields.shelfBack = !shelf.list.empty();
-        s.fields.note = shelf.list.empty() && shelf.addAfterLogin ? say(settings::Text::ShelfFirstNote) : "";
+    if (s.eyeHeld && GetAsyncKeyState(VK_LBUTTON) >= 0) {  // 3.0.11-beta.177: let go - dots again
+        s.eyeHeld = false;
+        s.key.clear();
     }
-    s.layout = lc::layout(targetWidth, targetHeight, s.scale,
-                          s.error.empty() ? s.fields.hintField : s.fields.errorField, !s.fields.note.empty(),
-                          s.fields.shelfBack);
+    s.fields.passwordShown = s.eyeHeld ? utf8Of(widened(s.seenPassword, codePage)) : std::string();
+    s.fields.dropOpen = s.dropOpen;
+    s.fields.shelfBack = any && forOne && s.view != loginview::View::Classic;
+    s.fields.note = !any && shelf.addAfterLogin ? say(settings::Text::ShelfFirstNote) : "";
+    lc::Options o;
+    o.errorAt = s.error.empty() ? s.fields.hintField : s.fields.errorField;
+    o.note = !s.fields.note.empty();
+    o.back = s.fields.shelfBack;
+    o.drop = any;
+    s.layout = lc::layout(targetWidth, targetHeight, s.scale, o);
     s.show.hover = 0;
     int cx = 0, cy = 0;
     if (readGameCursor(cx, cy))
@@ -757,7 +903,8 @@ void frame(HWND game, bool on, bool status, bool news, unsigned codePage, double
     const lc::Fields& f = s.fields;
     const std::string key = f.account + ';' + std::to_string(f.passwordLength) + ';' + std::to_string(int(f.focus)) +
                             (f.caret ? "|" : "") + (f.remember ? "r" : "") + (f.addShelf ? "s" : "") +
-                            (f.shelfBack ? "b" : "") + f.note + ';' +
+                            (f.shelfBack ? "b" : "") + f.note + (f.passwordShown.empty() ? "" : "e") +
+                            (f.dropOpen ? "d" : "") + std::to_string(int(s.view)) + ';' +
                             std::to_string(s.layout.x) + ',' +
                             std::to_string(s.layout.y) + ';' + std::to_string(s.show.hover) + '#' +
                             std::to_string(uistyle::generation()) + '!' + s.error + '?' + s.fields.hint;
@@ -765,6 +912,7 @@ void frame(HWND game, bool on, bool status, bool news, unsigned codePage, double
         s.key = key;
         render(s);
     }
+    if (s.dropOpen) dropFrame(s);  // 3.0.11-beta.177
     chromeFrame(s, targetWidth, targetHeight);
     s.shown = true;
     block(s, game);
@@ -776,13 +924,18 @@ void draw(FrameRecord& record, gpu::Renderer& renderer) {
     if (!s.shown || s.k <= 0) return;
     int cursor = -1, cx = 0, cy = 0;
     if (readGameCursor(cx, cy)) cursor = panel::cursorDraw(record, float(cx), float(cy));
-    if (s.shelfShown) {  // 3.0.11-beta.176: «Полиця» in place of the card
+    if (s.mode == State::Mode::Shelf) {  // 3.0.11-beta.176: «Полиця» in place of the card
         loginshelfwin::draw(record, renderer);
+    } else if (s.mode == State::Mode::Continue) {  // 3.0.11-beta.177: «Продовжити»
+        logincontinuewin::draw(record, renderer);
     } else if (s.picture.width > 0 && s.picture.height > 0) {
         const panel::Box& g = s.layout.glass;
         s.shadow.draw(record, renderer, s.layout.x + int(g.x), s.layout.y + int(g.y), int(g.w), int(g.h),
                       14 * s.scale, s.scale, s.k);
         drawPart(record, renderer, s.picture, s.texture, s.texW, s.texH, s.upload, s.layout.x, s.layout.y, s.k);
+        if (s.dropOpen && s.dropPicture.width > 0)  // 3.0.11-beta.177: ▾'s list over the card
+            drawPart(record, renderer, s.dropPicture, s.dropTexture, s.dropTexW, s.dropTexH, s.dropUpload,
+                     s.layout.x + int(s.drop.x), s.layout.y + int(s.drop.y), s.k);
     }
     if (s.chrome.w > 0 && s.chromePicture.width > 0)  // 3.0.11-beta.173: the strip at the screen's foot
         drawPart(record, renderer, s.chromePicture, s.chromeTexture, s.chromeTexW, s.chromeTexH, s.chromeUpload,
@@ -808,10 +961,12 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
             const bool click = m == WM_LBUTTONDOWN || m == WM_LBUTTONDBLCLK;
             if (lang && click) chooseLanguage(int(p) - int(loginchrome::Part::Lang0));
             if (news && click) openNews(s, p == loginchrome::Part::AllNews);
+            if (click && p >= loginchrome::Part::View0 && p <= loginchrome::Part::View2)  // 3.0.11-beta.177
+                chooseView(s, loginview::View(int(p) - int(loginchrome::Part::View0)));
             return true;
         }
     }
-    if (s.shelfShown) {  // 3.0.11-beta.176
+    if (s.mode == State::Mode::Shelf) {  // 3.0.11-beta.176
         bool took = false;
         const loginshelfwin::Asked a = loginshelfwin::mouse(m, tx, ty, took);
         if (!took) return false;
@@ -819,7 +974,28 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
         act(s, a);
         return true;
     }
+    if (s.mode == State::Mode::Continue) {  // 3.0.11-beta.177
+        bool took = false;
+        const logincontinuewin::Asked a = logincontinuewin::mouse(m, tx, ty, took);
+        if (!took) return false;
+        result = 0;
+        actContinue(s, a);
+        return true;
+    }
     const float lx = tx - float(s.layout.x), ly = ty - float(s.layout.y);
+    if (s.dropOpen) {  // 3.0.11-beta.177: ▾'s list first; a press beside it closes it
+        const bool over = lx >= s.drop.x && ly >= s.drop.y && lx < s.drop.x + s.drop.w && ly < s.drop.y + s.drop.h;
+        if (over) {
+            result = 0;
+            const int row = lc::dropHit(s.drop, lx, ly);
+            if ((m == WM_LBUTTONDOWN || m == WM_LBUTTONDBLCLK) && row >= 0) dropPick(s, row);
+            return true;
+        }
+        if (m == WM_LBUTTONDOWN || m == WM_RBUTTONDOWN) {
+            s.dropOpen = false;
+            s.key.clear();
+        }
+    }
     if (!s.layout.glass.contains(lx, ly)) return false;
     result = 0;
     if (m == WM_LBUTTONDOWN || m == WM_LBUTTONDBLCLK) {
@@ -875,12 +1051,12 @@ bool toastMouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
 
 const std::string& loggedIn() { return state().loggedIn; }
 
-bool loginWith(const accounts::Account& a) {
+bool loginWith(const accounts::Account& a, bool stopAtSelect) {
     State& s = state();
     const uint32_t window = gameLogin();
     if (!window || !s.places.known() || a.login.empty()) return false;
     const unsigned long long hash = accounts::loginHash(a.login);
-    const accounts::Plan p = accounts::planFor(a, GetKeyState(VK_SHIFT) < 0, false);
+    const accounts::Plan p = accounts::planFor(a, stopAtSelect || GetKeyState(VK_SHIFT) < 0, false);
     putFields(s, window, a.login, p.fillPassword ? a.password : std::string());
     s.seenAccount = a.login;  // the window may go before the next frame reads them
     s.seenPassword = p.fillPassword ? a.password : std::string();
@@ -921,17 +1097,27 @@ void beforeGameDraw() {
 bool key(UINT m, WPARAM wp, LPARAM lp) {
     State& s = state();
     (void)lp;
-    if (!s.shown || !s.shelfShown) return false;
+    if (!s.shown) return false;
     bool took = false;
-    const loginshelfwin::Asked a = loginshelfwin::key(m, wp, took);
-    if (a.act != loginshelfwin::Act::None) act(s, a);
+    if (s.mode == State::Mode::Shelf) {
+        const loginshelfwin::Asked a = loginshelfwin::key(m, wp, took);
+        if (a.act != loginshelfwin::Act::None) act(s, a);
+    } else if (s.mode == State::Mode::Continue) {  // 3.0.11-beta.177
+        const logincontinuewin::Asked a = logincontinuewin::key(m, wp, took);
+        if (a.act != logincontinuewin::Act::None) actContinue(s, a);
+    } else if (s.dropOpen && m == WM_KEYDOWN && wp == VK_ESCAPE) {  // ▾'s list closed
+        s.dropOpen = false;
+        s.key.clear();
+        took = true;
+    }
     return took;
 }
 
 bool box(int& x, int& y, int& w, int& h) {
     const State& s = state();
     if (!s.shown) return false;
-    if (s.shelfShown) return loginshelfwin::box(x, y, w, h);  // 3.0.11-beta.176
+    if (s.mode == State::Mode::Shelf) return loginshelfwin::box(x, y, w, h);         // 3.0.11-beta.176
+    if (s.mode == State::Mode::Continue) return logincontinuewin::box(x, y, w, h);  // 3.0.11-beta.177
     x = s.layout.x;
     y = s.layout.y;
     w = s.layout.w;

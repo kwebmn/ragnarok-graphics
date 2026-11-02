@@ -968,8 +968,8 @@ void Context::present(const Rect& source, bool waitForVblank) {
     infocardwin::frame(window, config.cardWindows, gameCodePage(config), pk, pw, ph);  // 3.0.11-beta.149
     askcardwin::frame(window, config.askWindows, config.countWindow, gameCodePage(config), pk, pw, ph);  // .150, .155
     msgboxwin::frame(window, config.messageBoxes, gameCodePage(config), pk, pw, ph);   // 3.0.11-beta.151
-    loginwin::frame(window, config.loginWindow, config.loginStatus, config.loginNews, gameCodePage(config), pk, pw,
-                    ph);  // .151, .173, .174
+    loginwin::frame(window, config.loginWindow, config.loginStatus, config.loginNews, config.loginView,
+                    gameCodePage(config), pk, pw, ph);  // .151, .173, .174, .177
     charselectwin::frame(window, config.charSelectWindow, gameCodePage(config), pk, pw, ph);  // 3.0.11-beta.152
     charmakewin::frame(window, config.charMakeWindow, gameCodePage(config), pk, pw, ph);      // 3.0.11-beta.153
     cartwin::frame(window, config.cartWindow, gameCodePage(config), pk, pw, ph);              // 3.0.11-beta.154

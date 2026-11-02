@@ -6,6 +6,7 @@
 #include <cstdint>
 
 #include "core/accounts.hpp"
+#include "core/login_view.hpp"
 #include "core/frame.hpp"
 
 namespace uagfx::gpu {
@@ -24,8 +25,9 @@ namespace uagfx::win::loginwin {
 // thread.
 // 3.0.11-beta.173: `status` - [interface] login_status, the server's status line at the screen's foot;
 // 3.0.11-beta.174: `news` - [interface] login_news, the site's event or news now above it
-void frame(HWND game, bool on, bool status, bool news, unsigned codePage, double k, int targetWidth,
-           int targetHeight);
+// 3.0.11-beta.177: `view` - [interface] login_view («Класичний», «Полиця», «Продовжити»)
+void frame(HWND game, bool on, bool status, bool news, loginview::View view, unsigned codePage, double k,
+           int targetWidth, int targetHeight);
 // 3.0.11-beta.172: the card holds the game's login now (on, the window there, its fields known by their mask)
 bool active();
 // 3.0.11-beta.172: the login typed into the game's field the last time the card saw it (UTF-8)
@@ -43,7 +45,7 @@ const std::string& loggedIn();
 // 3.0.11-beta.176 (a click on the shelf enters): a shelf row's login and password into the game's fields, sent at
 // once as accounts::planFor says (Shift held: the character select shown; no password, or refused: the keys to the
 // password's field), «Одразу в гру» handed to the character select. False: the game's login is not there.
-bool loginWith(const accounts::Account& a);
+bool loginWith(const accounts::Account& a, bool stopAtSelect = false);  // .177: «Інший персонаж» - the select
 // 3.0.11-beta.176: the keys while «Полиця» shows (← → Enter, a label typed in; a login typed - the card for it)
 bool key(UINT m, WPARAM wp, LPARAM lp);
 bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result);

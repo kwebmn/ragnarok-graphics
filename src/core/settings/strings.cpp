@@ -5460,8 +5460,6 @@ constexpr Entry kTexts[] = {
     {Text::LoginRemember, "Remember the account", "Запам'ятати логін", "Запомнить логин"},
     {Text::LoginEnter, "Enter", "Увійти", "Войти"},
     {Text::LoginExit, "Exit", "Вийти", "Выйти"},
-    {Text::LoginRegister, "No account? Register on uaro.kiev.ua", "Немає акаунта? Реєстрація на uaro.kiev.ua",
-     "Нет аккаунта? Регистрация на uaro.kiev.ua"},
     // 3.0.11-beta.172: the login's refusals in words
     {Text::LoginErrUnknownId, "There is no login {1}. Check how it is written or",
      "Логіна {1} немає. Перевірте написання або", "Логина {1} нет. Проверьте написание или"},
@@ -5545,6 +5543,28 @@ constexpr Entry kTexts[] = {
     {Text::ShelfMenuRight, "Move right", "Перемістити праворуч", "Переместить вправо"},
     {Text::ShelfMenuRemove, "Take off the shelf", "Прибрати з полиці", "Убрать с полки"},
     {Text::ShelfMenuRemoveSure, "Sure? Press again", "Точно? Натисніть ще раз", "Точно? Нажмите ещё раз"},
+    // 3.0.11-beta.177: the views
+    {Text::InterfaceLoginView, "The login screen", "Екран входу", "Экран входа"},
+    {Text::InterfaceLoginViewHint,
+     "«Shelf» - a card an account, one click to enter; «Classic» - the login window with ▾ the saved logins; "
+     "«Continue» - the last character big and «Play». With no saved accounts the login window whichever. Also at the "
+     "login screen's foot.",
+     "«Полиця» — картка на акаунт, вхід одним кліком; «Класичний» — вікно входу з ▾ збереженими логінами; "
+     "«Продовжити» — останній персонаж великим планом і «Грати». Без збережених акаунтів — вікно входу. Також унизу "
+     "екрана входу.",
+     "«Полка» — карточка на аккаунт, вход одним кликом; «Классический» — окно входа с ▾ сохранёнными логинами; "
+     "«Продолжить» — последний персонаж крупным планом и «Играть». Без сохранённых аккаунтов — окно входа. Также "
+     "внизу экрана входа."},
+    {Text::LoginViewLabel, "View", "Вигляд", "Вид"},
+    {Text::LoginViewClassic, "Classic", "Класичний", "Классический"},
+    {Text::LoginViewShelf, "Shelf", "Полиця", "Полка"},
+    {Text::LoginViewContinue, "Continue", "Продовжити", "Продолжить"},
+    {Text::LoginForgot, "Forgot the password?", "Забули пароль?", "Забыли пароль?"},
+    {Text::LoginOtherLogin, "+ Another login", "+ Інший логін", "+ Другой логин"},
+    {Text::ContinueHeading, "Continue the game", "Продовжити гру", "Продолжить игру"},
+    {Text::ContinueOtherChar, "Another character", "Інший персонаж", "Другой персонаж"},
+    {Text::ContinueChange, "Change account", "Змінити акаунт", "Сменить аккаунт"},
+    {Text::ContinueBack, "‹ Continue", "‹ Продовжити", "‹ Продолжить"},
     // 3.0.11-beta.152: the character select
     {Text::InterfaceCharSelect, "Character select", "Вибір персонажа", "Выбор персонажа"},
     {Text::InterfaceCharSelectHint,

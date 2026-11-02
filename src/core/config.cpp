@@ -624,6 +624,8 @@ Config parseConfig(const std::string& text) {
             setBool(val, c.loginStatus);
         } else if (key == "interface.login_news") {  // 3.0.11-beta.174: the site's item now on the login
             setBool(val, c.loginNews);
+        } else if (key == "interface.login_view") {  // 3.0.11-beta.177: the login screen's view
+            c.loginView = loginview::parse(val).value_or(loginview::View::Shelf);
         } else if (key == "interface.char_select") {  // 3.0.11-beta.152: the character select
             charSelectSet = val == "0" || val == "1" || val == "on" || val == "off" || val == "true" || val == "false";
             setBool(val, c.charSelectWindow);

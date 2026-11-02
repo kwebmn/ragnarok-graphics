@@ -3,6 +3,7 @@
 #include <string>
 
 #include "core/ai/groups.hpp"
+#include "core/login_view.hpp"
 #include "core/roext.hpp"
 
 namespace uagfx {
@@ -690,6 +691,9 @@ struct Config {
     bool loginStatus = true;
     // 3.0.11-beta.174: [interface] login_news - the site's event or news now above the status line (on)
     bool loginNews = true;
+    // 3.0.11-beta.177: [interface] login_view - the login screen's view: «Полиця» (shelf), «Класичний» (classic),
+    // «Продовжити» (continue)
+    loginview::View loginView = loginview::View::Shelf;
     // 3.0.11-beta.174: [utility] language - the driver's words' language ("uk", "ru", "en"; "" Windows'), at once
     std::string language;
     // 3.0.11-beta.152: [interface] char_select - the game's character select (win/char_select) in the new look

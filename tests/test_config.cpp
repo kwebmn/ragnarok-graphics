@@ -1777,6 +1777,20 @@ TEST(config_interface_login_status) {
     CHECK(!liveUpdate(parseConfig(""), parseConfig("[interface]\nlogin_status = 0\n")).next.loginStatus);
 }
 
+// 3.0.11-beta.177 (the login concept's views): [interface] login_view - «Полиця» at first, «Класичний» or
+// «Продовжити» chosen (the login screen's «Вигляд» or «Інтерфейс»), any other word the first; a choice applied at once
+TEST(config_interface_login_view) {
+    CHECK(parseConfig("").loginView == loginview::View::Shelf);
+    CHECK(parseConfig("[interface]\nlogin_view = classic\n").loginView == loginview::View::Classic);
+    CHECK(parseConfig("[interface]\nlogin_view = continue\n").loginView == loginview::View::Continue);
+    CHECK(parseConfig("[interface]\nlogin_view = wall\n").loginView == loginview::View::Shelf);
+    const settings::IniSetting* s = settings::findSetting("interface.login_view");
+    CHECK(s != nullptr && s->page == settings::Page::Interface && s->control == settings::Control::Choice);
+    CHECK(appliesNow("interface.login_view"));
+    CHECK(liveUpdate(parseConfig(""), parseConfig("[interface]\nlogin_view = continue\n")).next.loginView ==
+          loginview::View::Continue);
+}
+
 // 3.0.11-beta.174 (the login concept's news line): [interface] login_news - the site's event or news now above the
 // status line on the login screen (a click opens it on uaro.kiev.ua); on at first, a box of «Інтерфейс», at once
 TEST(config_interface_login_news) {

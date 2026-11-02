@@ -182,8 +182,6 @@ void render(State& s) {
 
 }  // namespace
 
-bool wanted() { return !state().classic && !ls::classicInstead(accountsstore::shelf().list.size()); }
-
 void classic(bool on) {
     State& s = state();
     if (s.classic == on) return;

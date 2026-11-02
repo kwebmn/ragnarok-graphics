@@ -41,7 +41,15 @@ std::vector<std::string> lines(const std::string& text, float px, float room) {
 
 }  // namespace
 
-Layout layout(int targetW, int targetH, float scale, loginerr::Field errorAt, bool note, bool back) {
+Layout layout(int targetW, int targetH, float scale, loginerr::Field errorAt) {
+    Options o;
+    o.errorAt = errorAt;
+    return layout(targetW, targetH, scale, o);
+}
+
+Layout layout(int targetW, int targetH, float scale, const Options& o) {
+    const loginerr::Field errorAt = o.errorAt;
+    const bool note = o.note, back = o.back;
     Layout L;
     const float s = scale > 0 ? scale : 1.0f;
     L.s = s;
@@ -80,7 +88,8 @@ Layout layout(int targetW, int targetH, float scale, loginerr::Field errorAt, bo
     L.enter = panel::Box{pad, y, bw, kButtonH * s};
     L.exit = panel::Box{pad + bw + kGap * s, y, bw, kButtonH * s};
     y += kButtonH * s + kGap * s;
-    L.link = panel::Box{pad, y, fw, kLinkH * s};
+    L.link = panel::Box{pad, y, fw / 2, kLinkH * s};  // 3.0.11-beta.177: «Створити акаунт» | «Забули пароль?»
+    L.forgot = panel::Box{pad + fw / 2, y, fw / 2, kLinkH * s};
     y += kLinkH * s;
     if (note) {  // 3.0.11-beta.176
         L.note = panel::Box{pad, y + 6 * s, fw, 2 * kNoteLine * s};
@@ -88,6 +97,8 @@ Layout layout(int targetW, int targetH, float scale, loginerr::Field errorAt, bo
     }
     y += pad;
     if (back) L.back = panel::Box{pad - 6 * s, pad - 6 * s, 96 * s, 24 * s};  // 3.0.11-beta.176: the title row's left
+    if (o.drop) L.drop = panel::Box{L.account.x + L.account.w - 36 * s, L.account.y, 36 * s, L.account.h};  // .177
+    L.eye = panel::Box{L.password.x + L.password.w - 38 * s, L.password.y, 38 * s, L.password.h};
     L.glass = panel::Box{0, 0, w, y};
     L.w = int(std::ceil(w));
     L.h = int(std::ceil(y));
@@ -101,6 +112,8 @@ Layout layout(int targetW, int targetH, float scale, loginerr::Field errorAt, bo
 Part hitTest(const Layout& L, float x, float y) {
     if (L.back.w > 0 && L.back.contains(x, y)) return Part::Shelf;
     if (L.errorAction.h > 0 && L.errorAction.contains(x, y)) return Part::ErrorAction;
+    if (L.drop.w > 0 && L.drop.contains(x, y)) return Part::Drop;  // 3.0.11-beta.177
+    if (L.eye.w > 0 && L.eye.contains(x, y)) return Part::Eye;
     if (L.account.contains(x, y)) return Part::Account;
     if (L.password.contains(x, y)) return Part::Password;
     if (L.remember.contains(x, y)) return Part::Remember;
@@ -108,6 +121,7 @@ Part hitTest(const Layout& L, float x, float y) {
     if (L.enter.contains(x, y)) return Part::Enter;
     if (L.exit.contains(x, y)) return Part::Exit;
     if (L.link.contains(x, y)) return Part::Register;
+    if (L.forgot.contains(x, y)) return Part::Forgot;
     return Part::None;
 }
 
@@ -147,6 +161,11 @@ void paint(panel::Picture& out, const Layout& L, const Fields& f, const Show& sh
     };
     box(L.tick, f.remember);
     box(L.addTick, f.addShelf);  // 3.0.11-beta.175
+    if (L.drop.w > 0)  // 3.0.11-beta.177: ▾ and the eye
+        paintTriangle(out, L.drop.x + L.drop.w / 2 - 2 * s, L.drop.y + L.drop.h / 2, 10 * s, kGold2,
+                      sh.hover == int(Part::Drop) || f.dropOpen ? 1.0f : 0.8f);
+    paintEye(out, panel::Box{L.eye.x + 8 * s, L.eye.y + L.eye.h / 2 - 7 * s, 20 * s, 14 * s}, kMuted,
+             !f.passwordShown.empty() ? 1.0f : sh.hover == int(Part::Eye) ? 0.9f : 0.6f, s);
     const bool hotEnter = sh.hover == int(Part::Enter), hotExit = sh.hover == int(Part::Exit);
     panel::roundRect(out, L.enter, 9 * s, kGold, hotEnter ? 0.36f : 0.24f, kGold, 0.85f, 1.0f * s);
     panel::roundRect(out, L.exit, 9 * s, kWhite, hotExit ? 0.12f : 0.06f, kWhite, 0.16f, 1.0f * s);
@@ -164,8 +183,11 @@ std::vector<Words> words(const Layout& L, const Fields& f, const Show& sh, const
     for (int i = 0; i < std::clamp(f.passwordLength, 0, 24); ++i) dots += "\xE2\x80\xA2";
     out.push_back(Words{inside(L.account), f.account + (f.focus == Focus::Account && f.caret ? "|" : ""), kText,
                         14 * s, false, Align::Left});
-    out.push_back(Words{inside(L.password), dots + (f.focus == Focus::Password && f.caret ? "|" : ""), kText, 14 * s,
-                        false, Align::Left});
+    const std::string secret = f.passwordShown.empty() ? dots : f.passwordShown;  // 3.0.11-beta.177: the eye held
+    const panel::Box pass = inside(L.password);
+    out.push_back(Words{panel::Box{pass.x, pass.y, pass.w - (L.eye.w > 0 ? 26 * s : 0), pass.h},
+                        secret + (f.focus == Focus::Password && f.caret ? "|" : ""), kText, 14 * s, false,
+                        Align::Left});
     if (f.remember)
         out.push_back(Words{L.tick, "\xE2\x9C\x93", kBlack, 13 * s, true, Align::Center});  // ✓
     out.push_back(Words{panel::Box{L.remember.x + 28 * s, L.remember.y, L.remember.w - 28 * s, L.remember.h},
@@ -176,8 +198,16 @@ std::vector<Words> words(const Layout& L, const Fields& f, const Show& sh, const
                         t.addShelf, kText, 12.5f * s, false, Align::Left});
     out.push_back(Words{L.enter, t.enter, kText, 14 * s, true, Align::Center});
     out.push_back(Words{L.exit, t.exit, kText, 14 * s, false, Align::Center});
-    out.push_back(Words{L.link, t.register_, sh.hover == int(Part::Register) ? kGold2 : kLink, 12 * s, false,
-                        Align::Center});
+    if (t.forgot.empty()) {  // the one link across (3.0.11-beta.151)
+        const panel::Box across{L.link.x, L.link.y, L.link.w + L.forgot.w, L.link.h};
+        out.push_back(Words{across, t.register_, sh.hover == int(Part::Register) ? kGold2 : kLink, 12 * s, false,
+                            Align::Center});
+    } else {  // 3.0.11-beta.177: «Створити акаунт» at the left, «Забули пароль?» at the right
+        out.push_back(Words{L.link, t.register_, sh.hover == int(Part::Register) ? kGold2 : kLink, 12.5f * s, false,
+                            Align::Left});
+        out.push_back(Words{L.forgot, t.forgot, sh.hover == int(Part::Forgot) ? kGold2 : kLink, 12.5f * s, false,
+                            Align::Right});
+    }
     if (f.shelfBack && L.back.w > 0)  // 3.0.11-beta.176
         out.push_back(Words{panel::Box{L.back.x + 6 * s, L.back.y, L.back.w - 6 * s, L.back.h}, t.shelf,
                             sh.hover == int(Part::Shelf) ? kGold2 : kLink, 12.5f * s, false, Align::Left});
@@ -199,6 +229,78 @@ std::vector<Words> words(const Layout& L, const Fields& f, const Show& sh, const
                                 false, Align::Left});
     }
     return out;
+}
+
+DropLayout dropLayout(const Layout& L, size_t logins) {
+    return dropAt(L.account.x, L.account.y + L.account.h + 4 * L.s, L.account.w, logins, L.s);
+}
+
+DropLayout dropAt(float x, float y0, float w, size_t logins, float scale) {
+    DropLayout D;
+    const float s = scale;
+    constexpr float kRowH = 46, kOtherH = 36, kPadIn = 6;
+    D.x = x;
+    D.y = y0;
+    D.w = w;
+    float y = kPadIn * s;
+    for (size_t i = 0; i < logins; ++i) {
+        D.rows.push_back(panel::Box{D.x + kPadIn * s, D.y + y, D.w - 2 * kPadIn * s, kRowH * s});
+        y += kRowH * s;
+    }
+    D.rows.push_back(panel::Box{D.x + kPadIn * s, D.y + y, D.w - 2 * kPadIn * s, kOtherH * s});
+    y += kOtherH * s + kPadIn * s;
+    D.h = y;
+    return D;
+}
+
+int dropHit(const DropLayout& D, float x, float y) {
+    for (size_t i = 0; i < D.rows.size(); ++i)
+        if (D.rows[i].contains(x, y)) return int(i);
+    return -1;
+}
+
+void paintDrop(panel::Picture& out, const DropLayout& D, int hover, float scale) {
+    const float s = scale;
+    panel::roundRect(out, panel::Box{0, 0, D.w, D.h}, 10 * s, 0x161B26, 0.98f, kWhite, 0.14f, 1.0f * s);
+    if (hover >= 0 && hover < int(D.rows.size())) {
+        const panel::Box& r = D.rows[size_t(hover)];
+        panel::roundRect(out, panel::Box{r.x - D.x, r.y - D.y, r.w, r.h}, 7 * s, kGold, 0.16f);
+    }
+}
+
+std::vector<Words> dropWords(const DropLayout& D, const std::vector<DropRow>& rows, int hover, const std::string& other,
+                             float scale) {
+    std::vector<Words> out;
+    const float s = scale;
+    for (size_t i = 0; i < rows.size() && i < D.rows.size(); ++i) {
+        const panel::Box r{D.rows[i].x - D.x + 10 * s, D.rows[i].y - D.y, D.rows[i].w - 20 * s, D.rows[i].h};
+        const bool two = !rows[i].line.empty();
+        out.push_back(Words{panel::Box{r.x, r.y + (two ? 4 * s : 0), r.w, two ? 20 * s : r.h}, rows[i].login,
+                            hover == int(i) ? kGold2 : kText, 14.5f * s, true, Align::Left});
+        if (two)
+            out.push_back(Words{panel::Box{r.x, r.y + 24 * s, r.w, 18 * s}, rows[i].line, kMuted, 12 * s, false,
+                                Align::Left});
+    }
+    if (!D.rows.empty()) {
+        const panel::Box& o = D.rows.back();
+        out.push_back(Words{panel::Box{o.x - D.x + 10 * s, o.y - D.y, o.w - 20 * s, o.h}, other,
+                            hover == int(D.rows.size()) - 1 ? kGold2 : kLink, 13.5f * s, false, Align::Left});
+    }
+    return out;
+}
+
+void paintTriangle(panel::Picture& out, float cx, float cy, float w, uint32_t rgb, float a) {
+    const float h = w / 2;  // rows a pixel high, narrower each one down
+    const int rows = std::max(1, int(std::lround(h)));
+    for (int i = 0; i < rows; ++i) {
+        const float rw = w * (1.0f - float(i) / float(rows));
+        panel::roundRect(out, panel::Box{cx - rw / 2, cy - h / 2 + float(i), rw, 1.0f}, 0, rgb, a);
+    }
+}
+
+void paintEye(panel::Picture& out, const panel::Box& b, uint32_t rgb, float a, float scale) {
+    panel::roundRect(out, b, b.h / 2, rgb, 0.0f, rgb, a, 1.5f * scale);  // the lids
+    panel::circle(out, b.x + b.w / 2, b.y + b.h / 2, b.h * 0.2f, rgb, a);  // the pupil
 }
 
 }  // namespace uagfx::logincard

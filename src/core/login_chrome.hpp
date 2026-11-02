@@ -22,6 +22,7 @@ struct Layout {
 // The strip's words that set its places (UTF-8; an empty one - its part left out)
 struct Content {
     std::string status, viewLabel, news, allNews;
+    std::string viewNames[3];  // 3.0.11-beta.177: the views' segments as wide as their words (96 at least)
 };
 Layout layout(int targetW, int targetH, float scale, const Content& c);
 Layout layout(int targetW, int targetH, float scale, const std::string& statusText);  // the status alone

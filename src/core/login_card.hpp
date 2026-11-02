@@ -30,6 +30,8 @@ struct Fields {
     // 3.0.11-beta.176: «‹ Полиця» back (the card shown for one other login), the first launch's note at its foot
     bool shelfBack = false;
     std::string note;
+    std::string passwordShown;  // 3.0.11-beta.177: the password's letters while the eye is held (else empty: dots)
+    bool dropOpen = false;      // 3.0.11-beta.177: the saved logins' list shown
 };
 struct Texts {
     std::string title, subtitle;     // «uaRO», «Вхід у гру»
@@ -40,6 +42,7 @@ struct Texts {
     std::string createAccount, resetPassword;  // 3.0.11-beta.172: the refusals' actions
     std::string addShelf;                      // 3.0.11-beta.175: «Додати на полицю після входу»
     std::string shelf;                         // 3.0.11-beta.176: «‹ Полиця»
+    std::string forgot;                        // 3.0.11-beta.177: «Забули пароль?» (register_: «Створити акаунт»)
 };
 struct Show {
     int hover = 0;  // a Part's number, 0 none
@@ -52,10 +55,20 @@ struct Layout {
     panel::Box enter, exit, link;
     panel::Box error, errorAction;  // 3.0.11-beta.172: under the field a refusal is about; 0 high when none
     panel::Box back, note;  // 3.0.11-beta.176: «‹ Полиця» (0 wide: none), the note's two lines (0 high: none)
+    // 3.0.11-beta.177: ▾ in the account's field (0 wide: no saved logins), the eye in the password's, «Забули
+    // пароль?» at the right of the links' row («Створити акаунт», link, at its left)
+    panel::Box drop, eye, forgot;
 };
-Layout layout(int targetW, int targetH, float scale, loginerr::Field errorAt = loginerr::Field::None,
-              bool note = false, bool back = false);
-enum class Part : uint8_t { None, Account, Password, Remember, Enter, Exit, Register, ErrorAction, AddShelf, Shelf };
+// What the card has besides its fields: a refusal's line, the first launch's note, «‹ Полиця», ▾
+struct Options {
+    loginerr::Field errorAt = loginerr::Field::None;
+    bool note = false, back = false, drop = false;
+};
+Layout layout(int targetW, int targetH, float scale, const Options& o);
+Layout layout(int targetW, int targetH, float scale, loginerr::Field errorAt = loginerr::Field::None);
+enum class Part : uint8_t {
+    None, Account, Password, Remember, Enter, Exit, Register, ErrorAction, AddShelf, Shelf, Drop, Eye, Forgot
+};
 Part hitTest(const Layout& L, float x, float y);
 int gameButton(Part p);  // the game's window's own: 0x78 enter, 0x9b exit, 0x93 the box; 0 none
 
@@ -80,5 +93,24 @@ struct Words {
     Align align = Align::Left;
 };
 std::vector<Words> words(const Layout& L, const Fields& f, const Show& sh, const Texts& t);
+
+// 3.0.11-beta.177: the saved logins' list under the account's field (▾) - a row a login (its character's line under
+// it), «+ Інший логін» last; in the card's picture's pixels (it may go past the card's foot: its own picture then)
+struct DropRow {
+    std::string login, line;  // UTF-8; line «Raphael · High Priest 99», "" none
+};
+struct DropLayout {
+    float x = 0, y = 0, w = 0, h = 0;
+    std::vector<panel::Box> rows;  // the logins', then «+ Інший логін»
+};
+DropLayout dropLayout(const Layout& L, size_t logins);
+DropLayout dropAt(float x, float y, float w, size_t logins, float scale);  // under any place (x, y its top left)
+int dropHit(const DropLayout& D, float x, float y);  // the row, -1 none
+void paintDrop(panel::Picture& out, const DropLayout& D, int hover, float scale);  // out: D.w x D.h, D at 0, 0
+std::vector<Words> dropWords(const DropLayout& D, const std::vector<DropRow>& rows, int hover, const std::string& other,
+                             float scale);  // in the list's own picture
+// A small ▾ and an eye painted (IBM Plex has neither)
+void paintTriangle(panel::Picture& out, float cx, float cy, float w, uint32_t rgb, float a);
+void paintEye(panel::Picture& out, const panel::Box& b, uint32_t rgb, float a, float scale);
 
 }  // namespace uagfx::logincard

@@ -206,6 +206,9 @@ const std::vector<IniSetting>& iniSettings() {
          Text::InterfaceLoginStatus, Text::InterfaceLoginStatusHint, ""},  // 3.0.11-beta.173
         {"interface", "login_news", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::InterfaceLoginNews,
          Text::InterfaceLoginNewsHint, ""},  // 3.0.11-beta.174
+        {"interface", "login_view", Page::Interface, Control::Choice, 0, 0, 1, {"classic", "shelf", "continue"},
+         {Text::LoginViewClassic, Text::LoginViewShelf, Text::LoginViewContinue}, Text::InterfaceLoginView,
+         Text::InterfaceLoginViewHint, ""},  // 3.0.11-beta.177
         {"interface", "char_select", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {},
          Text::InterfaceCharSelect, Text::InterfaceCharSelectHint, ""},  // 3.0.11-beta.152
         {"interface", "char_make", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {},
@@ -1116,6 +1119,7 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "interface.login") return c.loginWindow ? "1" : "0";
     if (k == "interface.login_status") return c.loginStatus ? "1" : "0";  // 3.0.11-beta.173
     if (k == "interface.login_news") return c.loginNews ? "1" : "0";      // 3.0.11-beta.174
+    if (k == "interface.login_view") return loginview::token(c.loginView);  // 3.0.11-beta.177
     if (k == "interface.char_select") return c.charSelectWindow ? "1" : "0";  // 3.0.11-beta.152
     if (k == "interface.char_make") return c.charMakeWindow ? "1" : "0";      // 3.0.11-beta.153
     if (k == "interface.cart") return c.cartWindow ? "1" : "0";               // 3.0.11-beta.154

@@ -339,6 +339,11 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("language", running.language, file.language));
         n.language = file.language;
     }
+    if (file.loginView != running.loginView) {  // 3.0.11-beta.177: the login screen's view, at once
+        u.applied.push_back(
+            change("login_view", loginview::token(running.loginView), loginview::token(file.loginView)));
+        n.loginView = file.loginView;
+    }
     if (file.loginNews != running.loginNews) {  // 3.0.11-beta.174: the site's item now on the login, at once
         u.applied.push_back(change("login_news", flag(running.loginNews), flag(file.loginNews)));
         n.loginNews = file.loginNews;

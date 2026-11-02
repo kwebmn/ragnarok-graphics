@@ -66,7 +66,11 @@ Layout layout(int targetW, int targetH, float scale, const Content& c) {
         L.viewLabel = panel::Box{x, top, w + 2 * s, kPillH * s};
         x += w + kLabelGap * s;
     }
-    for (int i = 0; i < 3; ++i) L.viewSeg[i] = panel::Box{x + i * kViewW * s, top, kViewW * s, kPillH * s};
+    for (int i = 0; i < 3; ++i) {
+        const float w = std::max(kViewW * s, panel::wordsWidth(c.viewNames[i], kSegPx * s, true) + 26 * s);
+        L.viewSeg[i] = panel::Box{x, top, w, kPillH * s};
+        x += w;
+    }
     if (!c.news.empty()) {  // 3.0.11-beta.174: the title as long as the screen lets it, the link whole after it
         const float link = c.allNews.empty() ? 0.0f : panel::wordsWidth(c.allNews, kLinkPx * s, false);
         const float most = std::min(kNewsMost * s, float(targetW) - 2 * kSide * s);

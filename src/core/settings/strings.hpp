@@ -531,7 +531,7 @@ enum class Text : uint16_t {
     // 3.0.11-beta.151: the game's message boxes
     InterfaceMessages, InterfaceMessagesHint, MsgTitle, MsgWaitTitle, MsgYes, MsgNo, MsgCancel,
     InterfaceLogin, InterfaceLoginHint, LoginSubtitle, LoginAccount, LoginPassword, LoginRemember, LoginEnter,
-    LoginExit, LoginRegister,
+    LoginExit,
     // 3.0.11-beta.172: the login's refusals in words
     LoginErrUnknownId, LoginErrPassword, LoginErrExpired, LoginErrMaintenance, LoginErrOldExe, LoginErrBannedUntil,
     LoginErrJammed, LoginErrRemoved, LoginErrRejected, LoginCreateAccount, LoginResetPassword, LoginHintCaps,
@@ -545,6 +545,9 @@ enum class Text : uint16_t {
     ShelfBack, ShelfFirstNote, ShelfTitle, ShelfTitleHint, ShelfPlay, ShelfLogin, ShelfAdd, ShelfAddHint, ShelfOther,
     ShelfCreate, ShelfRefused, ShelfBusy, ShelfNoChar, ShelfMenuAutoEnter, ShelfMenuKeepPassword, ShelfMenuLabel,
     ShelfMenuEdit, ShelfMenuLeft, ShelfMenuRight, ShelfMenuRemove, ShelfMenuRemoveSure,
+    // 3.0.11-beta.177: the views, «Класичний»'s links and list, «Продовжити»
+    InterfaceLoginView, InterfaceLoginViewHint, LoginViewLabel, LoginViewClassic, LoginViewShelf, LoginViewContinue,
+    LoginForgot, LoginOtherLogin, ContinueHeading, ContinueOtherChar, ContinueChange, ContinueBack,
     // 3.0.11-beta.152: the character select
     InterfaceCharSelect, InterfaceCharSelectHint, CharsTitle, CharsEnter, CharsMake, CharsRemove, CharsBack, CharsEmpty,
     CharsMakeHint,

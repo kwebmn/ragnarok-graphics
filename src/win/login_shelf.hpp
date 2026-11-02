@@ -19,7 +19,6 @@ struct Asked {
     Act act = Act::None;
     int index = -1;  // Login, Edit: the account's place on the shelf
 };
-bool wanted();  // the shelf in place of the card now
 void classic(bool on);  // the card for one login (on), the shelf again (off)
 bool classicChosen();
 void frame(double k, int targetWidth, int targetHeight, unsigned codePage);

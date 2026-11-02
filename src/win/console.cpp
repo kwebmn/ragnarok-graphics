@@ -234,6 +234,8 @@ void Console::build(Lang lang, const Config& config) {
                   "interface.guild", "interface.my_shop", "interface.whisper_setup", "interface.macros",
                   "interface.skill_cells", "interface.ground_counts"})
                 if (settingOf(key)) rows_.push_back(Row{Kind::Box, key, 0});
+            if (settingOf("interface.login_view"))  // 3.0.11-beta.177: the login screen's view
+                rows_.push_back(Row{Kind::Choice, "interface.login_view", 0});
             if (settingOf("interface.animations"))  // 3.0.11-beta.46: the new interface's motion
                 rows_.push_back(Row{Kind::Box, "interface.animations", 0});
             for (const char* key : {"interface.panel_opacity", "interface.window_opacity"})  // 3.0.11-beta.47

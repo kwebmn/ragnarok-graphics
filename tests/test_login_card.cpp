@@ -170,13 +170,17 @@ TEST(login_card_back_to_shelf_and_the_first_note) {
     t.shelf = "‹ Полиця";
     logincard::Fields f;
     f.shelfBack = true;
-    const logincard::Layout L = logincard::layout(1920, 1080, 1.0f, loginerr::Field::None, false);
+    const logincard::Layout L = logincard::layout(1920, 1080, 1.0f, logincard::Options{});
     CHECK(L.back.w == 0);  // the layout's: given by the fields
-    const logincard::Layout B = logincard::layout(1920, 1080, 1.0f, loginerr::Field::None, false, true);
+    logincard::Options back;
+    back.back = true;
+    const logincard::Layout B = logincard::layout(1920, 1080, 1.0f, back);
     CHECK(B.back.w > 0 && B.back.y < B.title.y + B.title.h && B.back.x < B.title.x + B.title.w / 2);
     CHECK(logincard::hitTest(B, B.back.x + 4, B.back.y + B.back.h / 2) == logincard::Part::Shelf);
     CHECK(has(logincard::words(B, f, logincard::Show{}, t), "‹ Полиця"));
-    const logincard::Layout N = logincard::layout(1920, 1080, 1.0f, loginerr::Field::None, true);
+    logincard::Options note;
+    note.note = true;
+    const logincard::Layout N = logincard::layout(1920, 1080, 1.0f, note);
     CHECK(N.note.h > 0 && N.note.y >= N.link.y + N.link.h - 0.5f && N.h > plain.h);
     CHECK(N.y == plain.y);  // the top kept: it grows downward
     logincard::Fields first;
@@ -189,4 +193,40 @@ TEST(login_card_back_to_shelf_and_the_first_note) {
             CHECK(panel::wordsWidth(x.text, x.px, false) <= N.note.w + 0.5f);
         }
     CHECK(lines == 2);
+}
+
+// 3.0.11-beta.177 (the login concept's «Класичний»): ▾ at the account field's right end (the saved logins, when the
+// shelf has them), the eye at the password's (its letters while held, else dots), «Створити акаунт» and «Забули
+// пароль?» under the buttons; the saved logins' list under the account's field
+TEST(login_card_dropdown_and_eye) {
+    logincard::Options o;
+    o.drop = true;
+    const logincard::Layout L = logincard::layout(1920, 1080, 1.0f, o);
+    const auto mid = [](const panel::Box& b) { return std::pair<float, float>{b.x + b.w / 2, b.y + b.h / 2}; };
+    CHECK(L.drop.w > 0 && L.drop.x > L.account.x + L.account.w / 2);
+    CHECK(L.drop.x + L.drop.w <= L.account.x + L.account.w + 0.5f && L.drop.y >= L.account.y - 0.5f);
+    CHECK(L.eye.w > 0 && L.eye.x > L.password.x + L.password.w / 2);
+    CHECK(L.eye.x + L.eye.w <= L.password.x + L.password.w + 0.5f && L.eye.y >= L.password.y - 0.5f);
+    CHECK(logincard::hitTest(L, mid(L.drop).first, mid(L.drop).second) == logincard::Part::Drop);
+    CHECK(logincard::hitTest(L, mid(L.eye).first, mid(L.eye).second) == logincard::Part::Eye);
+    CHECK(logincard::layout(1920, 1080, 1.0f).drop.w == 0);  // no saved logins: no ▾
+    CHECK(L.link.x < L.forgot.x && std::abs(L.link.y - L.forgot.y) < 0.5f && L.forgot.y > L.enter.y);
+    CHECK(logincard::hitTest(L, mid(L.forgot).first, mid(L.forgot).second) == logincard::Part::Forgot);
+    CHECK(logincard::hitTest(L, mid(L.link).first, mid(L.link).second) == logincard::Part::Register);
+    logincard::Texts t = texts();
+    t.forgot = "Забули пароль?";
+    logincard::Fields f;
+    f.passwordLength = 4;
+    CHECK(has(logincard::words(L, f, logincard::Show{}, t), "\xE2\x80\xA2\xE2\x80\xA2\xE2\x80\xA2\xE2\x80\xA2"));
+    CHECK(has(logincard::words(L, f, logincard::Show{}, t), "Забули пароль?"));
+    f.passwordShown = "abcd";  // the eye held
+    CHECK(has(logincard::words(L, f, logincard::Show{}, t), "abcd"));
+    const std::vector<logincard::DropRow> rows{{"kweb", "Raphael · High Priest 99"}, {"kweb_shop", ""}};
+    const logincard::DropLayout D = logincard::dropLayout(L, rows.size());
+    CHECK(D.rows.size() == 3);  // the two and «+ Інший логін»
+    CHECK(D.y >= L.account.y + L.account.h - 0.5f && std::abs(D.x - L.account.x) < 0.5f);
+    CHECK(logincard::dropHit(D, D.rows[1].x + 5, D.rows[1].y + D.rows[1].h / 2) == 1);
+    CHECK(logincard::dropHit(D, D.x - 5, D.y) == -1);
+    const auto dw = logincard::dropWords(D, rows, -1, "+ Інший логін", 1.0f);
+    CHECK(has(dw, "kweb") && has(dw, "Raphael · High Priest 99") && has(dw, "kweb_shop") && has(dw, "+ Інший логін"));
 }
