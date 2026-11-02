@@ -1,3 +1,14 @@
+# uaRO Graphics 3.0.11-beta.184 — what's new
+
+**The camera remembers its zoom**:
+- After buildings (inns, shops, prt_in…) the camera outdoors no longer comes close in by itself: the free camera in
+  buildings used to write its zoom over the outdoors' one, and after every building the camera had to be zoomed out
+  again.
+- A new box "Remember the camera's zoom" ("Game" → "Camera", on): the zoom and the tilt stay as you left them —
+  outdoors and in buildings apart — after the next start of the game too. Before, the game started with the camera
+  close in every time.
+- In buildings with the free camera the zoom comes back to yours too (before — 300 at most every time).
+
 # uaRO Graphics 3.0.11-beta.183 — what's new
 
 **The login screen, the "Shelf" view**:
