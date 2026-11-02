@@ -78,8 +78,10 @@ const char* const kParts[] = {"the windows' panel", "the answer card", "the new 
                               "the new friends and party card", "the new server select", "the new guild card",
                               "the new own shop card"};
 static_assert(std::size(kParts) == size_t(uapad::gamewindow::kBlockerCount), "a name for each part");
-unsigned g_told = 0;    // the parts whose first cursor over them is logged
-unsigned g_hidden = 0;  // 3.0.11-beta.33: the parts whose first actor hidden under them is logged
+// 3.0.11-beta.167: 64 bits - the parts passed 32 at 3.0.11-beta.154 («Візок»: part 32), a 32-bit 1u << 32 wrapped
+uint64_t g_told = 0;    // the parts whose first cursor over them is logged
+uint64_t g_hidden = 0;  // 3.0.11-beta.33: the parts whose first actor hidden under them is logged
+static_assert(uapad::gamewindow::kBlockerCount <= 64, "a bit for each part in g_told and g_hidden");
 int g_drops = 0;        // 3.0.11-beta.40: the drops over the parts logged
 // 3.0.11-beta.99: this frame's answer (1: a window under the cursor - the game's or a part) and the actor the game's
 // cursor points at in the world (the pick's record, its id at +0x18)
@@ -97,8 +99,8 @@ int windowsAnswer(uint32_t manager) {
     const int part = uapad::gamewindow::blockedUnder(x, y, width, height);
     if (part < 0 || part >= int(std::size(kParts))) return answer;
     if (answer == 0) reinterpret_cast<ArrowFn>(uintptr_t(kArrow))(0, 0);  // no window of the game's set one there
-    if (!(g_told & (1u << part))) {
-        g_told |= 1u << part;
+    if (!(g_told & (uint64_t(1) << part))) {
+        g_told |= uint64_t(1) << part;
         LOG_INFO("world mouse: the cursor over %s (%d, %d in %dx%d) - a window for the game, the world under it does "
                  "not react", kParts[part], x, y, width, height);
     }
@@ -118,8 +120,8 @@ void* pickedUnder(uint32_t world, float x, float y) {
     if (!actor || !uapad::clientmouse::read(cx, cy, width, height)) return actor;
     const int part = uapad::gamewindow::blockedUnder(int(x), int(y), width, height);
     if (part < 0 || part >= int(std::size(kParts))) return actor;
-    if (!(g_hidden & (1u << part))) {
-        g_hidden |= 1u << part;
+    if (!(g_hidden & (uint64_t(1) << part))) {
+        g_hidden |= uint64_t(1) << part;
         LOG_INFO("world mouse: under %s the game pointed at an actor (%d, %d) - hidden: no name, no talk or sword "
                  "cursor through it", kParts[part], int(x), int(y));
     }
