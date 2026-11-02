@@ -1,3 +1,11 @@
+# uaRO Graphics 3.0.11-beta.183 — what's new
+
+**The login screen, the "Shelf" view**:
+- The "Another account", "Create an account" and "Exit" buttons now stand on dark plates like the title and the
+  arrows: they are easy to see over a bright login picture (before, white words with almost no ground under them were
+  lost on it).
+- The site account's links "Characters ›", "+ A new game login" and "Link an existing login" — on plates too.
+
 # uaRO Graphics 3.0.11-beta.182 — what's new
 
 **The login screen: fixes after the review**:
