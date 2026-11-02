@@ -1,3 +1,14 @@
+# uaRO Graphics 3.0.11-beta.179 — what's new
+
+**The gamepad on the login screen; "Forget all accounts"** (the new login screen):
+- "Shelf" from the controller: ◀ ▶ — the card, A — play, X — another account, Y — the card's menu (↑ ↓, A picks,
+  B closes). "Continue": A — play, X — another character, Y — the next account. The login window: A — "Enter", B —
+  back to the shelf.
+- B to leave the game asks first: the line "B: leave the game · A: stay", B again leaves.
+- At the bottom — the hint line with your controller's buttons (Xbox or PlayStation).
+- The settings app, "Chat and login": "Forget all accounts" next to "Forget the login" — takes the shelf's saved
+  accounts off the computer (asks first; not while the game runs).
+
 # uaRO Graphics 3.0.11-beta.178 — what's new
 
 **Class pictures on the cards; "already in the game" for several windows** (the new login screen):
