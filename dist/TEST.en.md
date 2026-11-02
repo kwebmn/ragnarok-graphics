@@ -1,3 +1,10 @@
+# uaRO Graphics 3.0.11-beta.167 — what's new
+
+**A fix for the new windows:**
+- Since the new interface's parts passed 32 (beta .154), the "already logged" marks of the windows past the 32nd
+  mixed with the first ones (the interface itself worked, but the log for reports could miss lines). Each window has
+  its own mark now.
+
 # uaRO Graphics 3.0.11-beta.166 — what's new
 
 **One's own shop in the new look** (the fourth group of the remaining windows):
