@@ -399,6 +399,10 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("whisper_setup", flag(running.whisperSetupWindow), flag(file.whisperSetupWindow)));
         n.whisperSetupWindow = file.whisperSetupWindow;
     }
+    if (file.macroWindow != running.macroWindow) {  // 3.0.11-beta.169: the macros card, at once
+        u.applied.push_back(change("macros", flag(running.macroWindow), flag(file.macroWindow)));
+        n.macroWindow = file.macroWindow;
+    }
     if (file.skillCells != running.skillCells) {  // 3.0.11-beta.142: a ground skill's cells, at once
         u.applied.push_back(change("skill_cells", flag(running.skillCells), flag(file.skillCells)));
         n.skillCells = file.skillCells;

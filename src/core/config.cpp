@@ -408,6 +408,7 @@ Config parseConfig(const std::string& text) {
     bool guildSet = false;                        // 3.0.11-beta.165
     bool myShopSet = false;                       // 3.0.11-beta.166
     bool whisperSetupSet = false;                 // 3.0.11-beta.168
+    bool macroSet = false;                        // 3.0.11-beta.169
     std::istringstream in(text);
     std::string line;
     std::string section;
@@ -668,6 +669,9 @@ Config parseConfig(const std::string& text) {
             whisperSetupSet =
                 val == "0" || val == "1" || val == "on" || val == "off" || val == "true" || val == "false";
             setBool(val, c.whisperSetupWindow);
+        } else if (key == "interface.macros") {  // 3.0.11-beta.169: the chat's macros
+            macroSet = val == "0" || val == "1" || val == "on" || val == "off" || val == "true" || val == "false";
+            setBool(val, c.macroWindow);
         } else if (key == "interface.skill_cells") {  // 3.0.11-beta.142: a ground skill's cells on the ground
             setBool(val, c.skillCells);
         } else if (key == "interface.ground_counts") {  // 3.0.11-beta.143: walls standing, traps left on the bar
@@ -989,6 +993,7 @@ Config parseConfig(const std::string& text) {
     if (c.newMinimap && !guildSet) c.guildWindow = true;            // 3.0.11-beta.165
     if (c.newMinimap && !myShopSet) c.myShopWindow = true;          // 3.0.11-beta.166
     if (c.newMinimap && !whisperSetupSet) c.whisperSetupWindow = true;  // 3.0.11-beta.168
+    if (c.newMinimap && !macroSet) c.macroWindow = true;            // 3.0.11-beta.169
     return c;
 }
 

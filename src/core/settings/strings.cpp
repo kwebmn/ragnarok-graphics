@@ -5777,6 +5777,19 @@ constexpr Entry kTexts[] = {
     {Text::WhisperFriends, "Own window for friends' whispers", "Окреме вікно для шепоту друзів",
      "Отдельное окно для шёпота друзей"},
     {Text::WhisperSound, "A sound for a new whisper", "Звук нового шепоту", "Звук нового шёпота"},
+    // 3.0.11-beta.169: the chat's macros
+    {Text::InterfaceMacros, "Chat macros card", "Картка макросів чату", "Карточка макросов чата"},
+    {Text::InterfaceMacrosHint,
+     "The chat's macros (Alt+M) as a card in the new look: ten lines for Alt+1 to Alt+0, typed as before (the game's "
+     "own fields), Save. Off: the game's own window.",
+     "Макроси чату (Alt+M) карткою в новому вигляді: десять рядків для Alt+1…Alt+0, набираються як раніше (поля "
+     "самої гри), зберегти. Вимкнено: власне вікно гри.",
+     "Макросы чата (Alt+M) карточкой в новом виде: десять строк для Alt+1…Alt+0, набираются как раньше (поля самой "
+     "игры), сохранить. Выключено: собственное окно игры."},
+    {Text::MacroTitle, "Chat macros", "Макроси чату", "Макросы чата"},
+    {Text::MacroHint, "Alt and a digit write the line into the chat", "Alt+цифра пише рядок у чат",
+     "Alt+цифра пишет строку в чат"},
+    {Text::MacroSave, "Save", "Зберегти", "Сохранить"},
     // 3.0.11-beta.141: the character block's experience (forms: one, a few, many)
     {Text::CharSkillPoints, "skill point|skill points", "очко навичок|очки навичок|очок навичок",
      "очко навыков|очка навыков|очков навыков"},
