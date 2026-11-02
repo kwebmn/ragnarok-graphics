@@ -1,3 +1,9 @@
+# uaRO Graphics 3.0.11-beta.192 — what's new
+
+**Diagnostics of the bar under the character**:
+- With the cursor over the new interface's windows the log tells every second and a half what the game draws under
+  the cursor ("diag:" lines). It is to find why the HP bar shows over a window when the mouse is over it.
+
 # uaRO Graphics 3.0.11-beta.191 — what's new
 
 **The bars under the characters — under the windows (for real now)**:
