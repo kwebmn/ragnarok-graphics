@@ -56,6 +56,7 @@
 #include "win/homun_card.hpp"
 #include "win/merc_card.hpp"
 #include "win/options_card.hpp"
+#include "win/social_card.hpp"
 #include "win/pet_card.hpp"
 #include "win/pick_card.hpp"
 #include "win/vend_shop.hpp"
@@ -781,6 +782,23 @@ bool optionsPad(const PadState& pad, DWORD now) {
     return true;
 }
 
+// 3.0.11-beta.163: the friends and the party - up and down a person, left and right a button, A presses it, LB / RB
+// the tabs, B closes
+bool socialPad(const PadState& pad, DWORD now) {
+    State& s = S();
+    const uint16_t buttons = pad.connected ? pad.buttons : 0;
+    const uint16_t down = uint16_t((buttons & ~s.prevPadButtons) | stickSteps(pad, now));
+    s.prevPadButtons = buttons;
+    using uagfx::win::socialcardwin::PadCommand;
+    const std::pair<uint16_t, PadCommand> keys[] = {
+        {kPadUp, PadCommand::Up},       {kPadDown, PadCommand::Down},  {kPadLeft, PadCommand::Left},
+        {kPadRight, PadCommand::Right}, {kPadA, PadCommand::Press},    {kPadLB, PadCommand::TabBack},
+        {kPadRB, PadCommand::TabOn},    {kPadB, PadCommand::Close}};
+    for (const auto& [button, command] : keys)
+        if (down & button) uagfx::win::socialcardwin::padCommand(command);
+    return true;
+}
+
 // 3.0.11-beta.92: «Характеристики» open - the D-pad (or the left stick) chooses a stat, A adds a point, B or Start
 // close it
 bool statsPad(const PadState& pad, DWORD now) {
@@ -1081,7 +1099,7 @@ constexpr const char* kTopNames[] = {"«Речі»",  "«Характерист�
                                      "the message box", "the login", "the character select",
                                      "the character make", "«Візок»", "«Лавка»", "the choice of things",
                                      "the party's settings", "the pet", "the homunculus", "the mercenary",
-                                     "the game's options"};
+                                     "the game's options", "the friends and the party"};
 static_assert(std::size(kTopNames) == size_t(uagfx::winstack::kWins), "a name for each window");
 
 void tick() {
@@ -1160,6 +1178,7 @@ void tick() {
                   : drive && *top == Win::Homun                    ? homunPad(pad, now)       // .160
                   : drive && *top == Win::Merc                     ? mercPad(pad)             // .161
                   : drive && *top == Win::Options                  ? optionsPad(pad, now)     // .162
+                  : drive && *top == Win::Social                   ? socialPad(pad, now)      // .163
                                                                    : runMenu(pad, view, now);
     if (s.npcSupported) view.dialog = clientnpc::read();
     double clientTurn = 0;

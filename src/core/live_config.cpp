@@ -379,6 +379,10 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("options", flag(running.optionsWindow), flag(file.optionsWindow)));
         n.optionsWindow = file.optionsWindow;
     }
+    if (file.socialWindow != running.socialWindow) {  // 3.0.11-beta.163: the friends and party card, at once
+        u.applied.push_back(change("social", flag(running.socialWindow), flag(file.socialWindow)));
+        n.socialWindow = file.socialWindow;
+    }
     if (file.skillCells != running.skillCells) {  // 3.0.11-beta.142: a ground skill's cells, at once
         u.applied.push_back(change("skill_cells", flag(running.skillCells), flag(file.skillCells)));
         n.skillCells = file.skillCells;

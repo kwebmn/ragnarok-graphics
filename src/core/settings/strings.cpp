@@ -5688,6 +5688,29 @@ constexpr Entry kTexts[] = {
     {Text::OptionsOpaque, "The game's windows opaque", "Непрозорі вікна гри", "Непрозрачные окна игры"},
     {Text::OptionsSnapHint, "Snap: the cursor finds the nearest target by itself",
      "Прилипання: курсор сам наводиться на найближчу ціль", "Прилипание: курсор сам наводится на ближайшую цель"},
+    // 3.0.11-beta.163: the friends and the party
+    {Text::InterfaceSocial, "Friends and party card", "Картка друзів і групи", "Карточка друзей и группы"},
+    {Text::InterfaceSocialHint,
+     "The friends and party window (Alt+H, the party's button) as a card in the new look: two tabs, a row a person "
+     "(online or not, the leader, where they are), whisper, delete or expel, leave the party, the settings. Off: the "
+     "game's own window.",
+     "Вікно друзів і групи (Alt+H, кнопка групи) карткою в новому вигляді: дві вкладки, рядок на людину (у грі чи ні, "
+     "лідер, де зараз), шепіт, видалити чи вигнати, вийти з групи, налаштування. Вимкнено: власне вікно гри.",
+     "Окно друзей и группы (Alt+H, кнопка группы) карточкой в новом виде: две вкладки, строка на человека (в игре или "
+     "нет, лидер, где сейчас), шёпот, удалить или выгнать, выйти из группы, настройки. Выключено: собственное окно "
+     "игры."},
+    {Text::SocialFriends, "Friends", "Друзі", "Друзья"},
+    {Text::SocialParty, "Party", "Група", "Группа"},
+    {Text::SocialOffline, "offline", "не в грі", "не в игре"},
+    {Text::SocialEmpty, "Nobody here", "Нікого немає", "Никого нет"},
+    {Text::SocialNoParty, "You are in no party", "Ви не в групі", "Вы не в группе"},
+    {Text::SocialPartyName, "Party: {1}", "Група: {1}", "Группа: {1}"},
+    {Text::SocialFriendCount, "Friends: {1} of {2}", "Друзі: {1} з {2}", "Друзья: {1} из {2}"},
+    {Text::SocialWhisper, "Whisper", "Шепіт", "Шёпот"},
+    {Text::SocialExpel, "Expel", "Вигнати", "Выгнать"},
+    {Text::SocialLeave, "Leave the party", "Вийти з групи", "Выйти из группы"},
+    {Text::SocialSettings, "Settings", "Налаштування", "Настройки"},
+    {Text::SocialDelete, "Delete", "Видалити", "Удалить"},
     // 3.0.11-beta.141: the character block's experience (forms: one, a few, many)
     {Text::CharSkillPoints, "skill point|skill points", "очко навичок|очки навичок|очок навичок",
      "очко навыков|очка навыков|очков навыков"},

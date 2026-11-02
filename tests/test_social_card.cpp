@@ -1,0 +1,97 @@
+// 3.0.11-beta.163 (tasks 5 and 6 of the remaining windows: the friends and the party, Alt+H / the party's button): the
+// game's friends and party window (UI window 0x22, its two tabs) as a card (core/social_card) - a row a person (online
+// or not, the party's leader, where they are), the chosen one's actions the window's own buttons
+#include <algorithm>
+#include <string>
+#include <utility>
+#include <vector>
+
+#include "core/social_card.hpp"
+#include "test.hpp"
+
+using namespace uagfx;
+
+namespace {
+
+std::pair<float, float> mid(const panel::Box& b) { return {b.x + b.w / 2, b.y + b.h / 2}; }
+
+}  // namespace
+
+// The window's own (FUN_004c2250): the tab's choice (6 / 0x95 with 1 the friends, 2 the party), the whisper 0xa6, a
+// friend deleted / a member expelled 0xa9, the party left 0xaa (with one's own row chosen), the settings 0xa8, ✕ 0x87
+TEST(social_card_the_windows_buttons) {
+    using A = socialcard::Action;
+    CHECK(socialcard::kTabMsg == 0x95 && socialcard::tabParam(socialcard::Tab::Friends) == 1);
+    CHECK(socialcard::tabParam(socialcard::Tab::Party) == 2);
+    CHECK(socialcard::gameButton(A::Whisper) == 0xa6 && socialcard::gameButton(A::Remove) == 0xa9);
+    CHECK(socialcard::gameButton(A::Leave) == 0xaa && socialcard::gameButton(A::Settings) == 0xa8);
+    CHECK(socialcard::gameButton(A::Close) == 0x87);
+}
+
+// Which actions each tab shows: the friends - whisper, delete, settings; the party - whisper, expel, leave, settings;
+// a person's actions only with one chosen, not on oneself (but leaving)
+TEST(social_card_actions_by_tab_and_choice) {
+    using A = socialcard::Action;
+    using T = socialcard::Tab;
+    CHECK((socialcard::actions(T::Friends) == std::vector<A>{A::Whisper, A::Remove, A::Settings}));
+    CHECK((socialcard::actions(T::Party) == std::vector<A>{A::Whisper, A::Remove, A::Leave, A::Settings}));
+    socialcard::Entry other, me;
+    other.name = "Ann";
+    me.name = "Me";
+    me.self = true;
+    CHECK(socialcard::allowed(T::Party, A::Whisper, &other) && !socialcard::allowed(T::Party, A::Whisper, &me));
+    CHECK(socialcard::allowed(T::Party, A::Remove, &other) && !socialcard::allowed(T::Party, A::Remove, &me));
+    CHECK(!socialcard::allowed(T::Party, A::Whisper, nullptr) && socialcard::allowed(T::Party, A::Leave, nullptr));
+    CHECK(socialcard::allowed(T::Friends, A::Settings, nullptr) && !socialcard::allowed(T::Friends, A::Leave, &other));
+}
+
+TEST(social_card_places_and_the_mouse) {
+    const socialcard::Layout L = socialcard::layout(1920, 1080, 1.0f, socialcard::Tab::Party, 3);
+    CHECK(L.rows.size() == 3 && L.buttons.size() == 4);
+    CHECK(L.tabs[1].x > L.tabs[0].x && L.rows[0].y > L.tabs[0].y && L.buttons[0].y > L.rows[2].y);
+    using P = socialcard::Part;
+    const socialcard::Hit t = socialcard::hitTest(L, 0, 3, mid(L.tabs[1]).first, mid(L.tabs[1]).second);
+    CHECK(t.part == P::Tab && t.index == 1);
+    const socialcard::Hit r = socialcard::hitTest(L, 0, 3, mid(L.rows[2]).first, mid(L.rows[2]).second);
+    CHECK(r.part == P::Row && r.index == 2);
+    const socialcard::Hit b = socialcard::hitTest(L, 0, 3, mid(L.buttons[3]).first, mid(L.buttons[3]).second);
+    CHECK(b.part == P::Button && b.index == 3);
+    CHECK(socialcard::hitTest(L, 0, 3, mid(L.close).first, mid(L.close).second).part == P::Close);
+    const socialcard::Layout many = socialcard::layout(1920, 1080, 1.0f, socialcard::Tab::Friends, 30);
+    CHECK(many.rows.size() == 10 && socialcard::mostScroll(many, 30) == 20 && many.buttons.size() == 3);
+}
+
+TEST(social_card_words_and_picture) {
+    std::vector<socialcard::Entry> e(2);
+    e[0].name = "Ann";
+    e[0].map = "prontera";
+    e[0].online = true;
+    e[0].leader = true;
+    e[1].name = "Bob";
+    const socialcard::Layout L = socialcard::layout(1920, 1080, 1.0f, socialcard::Tab::Party, e.size());
+    socialcard::Texts t;
+    t.tabs[0] = "Друзі";
+    t.tabs[1] = "Група";
+    t.header = "Група: Heroes";
+    t.offline = "не в грі";
+    t.actions[0] = "Шепіт";
+    t.actions[1] = "Вигнати";
+    t.actions[2] = "Вийти з групи";
+    t.actions[3] = "Налаштування";
+    t.empty = "Нікого немає";
+    socialcard::Show sh;
+    sh.tab = socialcard::Tab::Party;
+    sh.selected = 0;
+    const std::vector<socialcard::Words> w = socialcard::words(L, e, sh, t);
+    const auto has = [&](const std::string& s) {
+        return std::any_of(w.begin(), w.end(), [&](const socialcard::Words& x) { return x.text == s; });
+    };
+    CHECK(has("Друзі") && has("Група") && has("Група: Heroes") && has("Ann") && has("prontera") && has("Bob"));
+    CHECK(has("не в грі") && has("Вийти з групи") && has("\xE2\x99\x9B"));  // ♛ the leader
+    panel::Picture p;
+    p.width = L.w;
+    p.height = L.h;
+    p.px.assign(size_t(L.w) * size_t(L.h), 0u);
+    socialcard::paint(p, L, e, sh);
+    CHECK((p.px[size_t(L.h / 2) * size_t(L.w) + size_t(L.w / 2)] >> 24) > 0x80);
+}

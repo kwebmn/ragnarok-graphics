@@ -403,6 +403,7 @@ Config parseConfig(const std::string& text) {
     bool homunSet = false;                        // 3.0.11-beta.160
     bool mercSet = false;                         // 3.0.11-beta.161
     bool optionsSet = false;                      // 3.0.11-beta.162
+    bool socialSet = false;                       // 3.0.11-beta.163
     std::istringstream in(text);
     std::string line;
     std::string section;
@@ -647,6 +648,9 @@ Config parseConfig(const std::string& text) {
         } else if (key == "interface.options") {  // 3.0.11-beta.162: the game's options
             optionsSet = val == "0" || val == "1" || val == "on" || val == "off" || val == "true" || val == "false";
             setBool(val, c.optionsWindow);
+        } else if (key == "interface.social") {  // 3.0.11-beta.163: the friends and the party
+            socialSet = val == "0" || val == "1" || val == "on" || val == "off" || val == "true" || val == "false";
+            setBool(val, c.socialWindow);
         } else if (key == "interface.skill_cells") {  // 3.0.11-beta.142: a ground skill's cells on the ground
             setBool(val, c.skillCells);
         } else if (key == "interface.ground_counts") {  // 3.0.11-beta.143: walls standing, traps left on the bar
@@ -963,6 +967,7 @@ Config parseConfig(const std::string& text) {
     if (c.newMinimap && !homunSet) c.homunWindow = true;            // 3.0.11-beta.160
     if (c.newMinimap && !mercSet) c.mercWindow = true;              // 3.0.11-beta.161
     if (c.newMinimap && !optionsSet) c.optionsWindow = true;        // 3.0.11-beta.162
+    if (c.newMinimap && !socialSet) c.socialWindow = true;          // 3.0.11-beta.163
     return c;
 }
 
