@@ -134,6 +134,7 @@ void FrameRecord::putBack(std::vector<Command>& tail) {
 
 void FrameRecord::reset() {
     ++generation_;
+    cursorAside_ = false;
     commands_.clear();
     clears_.clear();
     viewports_.clear();

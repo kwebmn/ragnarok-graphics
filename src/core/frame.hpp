@@ -134,6 +134,11 @@ public:
     std::vector<Command> takeRange(size_t from, size_t to);
     void putBack(std::vector<Command>& tail);
     uint64_t generation() const { return generation_; }
+    // 3.0.11-beta.193 (R-9RSSAW): the game's cursor out of the record with its windows while the driver draws its
+    // interface (Context::endScene) - panel::cursorDraw finds none then (the bar under the mouse was taken for it);
+    // a reset clears it
+    void setCursorAside(bool aside) { cursorAside_ = aside; }
+    bool cursorAside() const { return cursorAside_; }
     // 3.0.3-beta.8: the draws, clears and writes since the last call, through flushes (reset keeps it): whether the
     // game drew a picture anew - the windows' panel goes over such a one alone (the target keeps its pixels)
     uint32_t takeWork() {
@@ -178,6 +183,7 @@ private:
     std::vector<uint32_t> pixels_;
     uint32_t work_ = 0;
     uint64_t generation_ = 0;  // 3.0.11-beta.109
+    bool cursorAside_ = false;
     std::vector<SpriteCell> slots_;
 };
 

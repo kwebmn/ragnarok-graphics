@@ -682,6 +682,9 @@ void Context::endScene() {
             tellDrawsAtCursor(from, to);  // 3.0.11-beta.192
             game = record.takeRange(from, to);
         }
+        // 3.0.11-beta.193 (R-9RSSAW): the game's cursor is among them - while they are out, a part looking for it
+        // (panel::cursorDraw, to stay under it) finds none, not the bar under the mouse
+        record.setCursorAside(!game.empty());
         if (!game.empty() && !gameWindowsTold_) {
             gameWindowsTold_ = true;
             LOG_INFO("windows: the game's own windows and its cursor (%zu draws) over the driver's interface; the "
@@ -707,6 +710,7 @@ void Context::endScene() {
         itemswin::drawToast(record, *renderer);   // 3.0.11-beta.112: «+N …» of a thing come into the bag
         loginwin::drawToast(record, *renderer);   // 3.0.11-beta.175: «… додано на полицю»
         if (!game.empty()) record.putBack(game);  // 3.0.11-beta.109: the game's own windows over them
+        record.setCursorAside(false);
         answercard::draw(record, *renderer);  // 3.0.9-beta.4: the developer's answer
         windowSwitch_.draw(record, *renderer);
         padtileswin::draw(record, *renderer);   // 3.0.11-beta.90: the controller's windows' tile

@@ -355,6 +355,25 @@ TEST(window_panel_finds_the_games_cursor_by_its_colour) {
     CHECK_EQ(panel::cursorDraw(tip, 402, 303), 1);
 }
 
+// 3.0.11-beta.193 (R-9RSSAW, the cursor on the bar under the character over «Макроси чату»): while the game's windows
+// and its cursor are out of the record (taken out to go back over the driver's interface), the cursor is not in it -
+// none found, or the bar under the mouse (a small quad of the window colour) was taken for it and the card was put
+// under it
+TEST(window_panel_no_cursor_while_it_is_aside) {
+    FrameRecord r;
+    quad(r, 0, 0, 800, 600, true);                   // a window of the game
+    quad(r, 380, 300, 440, 309, true, 0xFAFFFFFFu);  // the bar under the character, 60 x 9
+    CHECK_EQ(panel::cursorDraw(r, 402, 303), 1);     // as before: taken for the cursor
+    r.setCursorAside(true);
+    CHECK_EQ(panel::cursorDraw(r, 402, 303), -1);
+    r.setCursorAside(false);
+    CHECK_EQ(panel::cursorDraw(r, 402, 303), 1);
+    r.setCursorAside(true);
+    r.reset();  // a new frame: in the record again
+    quad(r, 401, 301, 425, 325, true, 0xFAFFFFFFu);
+    CHECK_EQ(panel::cursorDraw(r, 402, 303), 0);
+}
+
 // 3.0.3-beta.11 (the user: «супер минималистичный режим в котором типа иконки маленькие были этих окон, чтобы не
 // занимало много места»): small square tiles with the windows' numbers in a row, a grip at its start - no title, no
 // cross, no names (the name under the mouse in a tip of its own)

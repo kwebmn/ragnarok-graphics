@@ -268,6 +268,7 @@ Place placeOf(Point at, int panelW, int panelH, int roomW, int roomH, float scal
 uint32_t barColour(int percent, bool hp) { return percent < 25 ? kRed : hp ? kGreen : kBlue; }
 
 int cursorDraw(const FrameRecord& r, float x, float y) {
+    if (r.cursorAside()) return -1;  // 3.0.11-beta.193: out with the game's windows - not in the record
     constexpr int kLookBack = 8;  // without its colour: among the frame's last draws
     constexpr float kMost = 64;   // a cursor's picture is no bigger
     // A small interface quad over the point (`near`: up to that far off it): whether every corner has the cursor's
