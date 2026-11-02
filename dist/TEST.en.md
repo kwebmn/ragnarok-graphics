@@ -1,3 +1,9 @@
+# uaRO Graphics 3.0.11-beta.193 — what's new
+
+**The bar under the character no longer comes over a window on hover**:
+- The new interface's windows look for the game's cursor to stay under it. While the cursor was set aside, they took
+  the HP bar under the mouse for it and went under it. Now no cursor is looked for then — the bar stays under the window.
+
 # uaRO Graphics 3.0.11-beta.192 — what's new
 
 **Diagnostics of the bar under the character**:
