@@ -1,3 +1,14 @@
+# uaRO Graphics 3.0.11-beta.189 — what's new
+
+**The shelf with many accounts**:
+- The mouse wheel scrolls the shelf — a card a notch, the row gliding (with the ‹ › arrows too). The arrows really
+  scroll now: with the first card chosen they did not move the row before.
+- A bar under the cards shows the part of the shelf in sight; a click on it goes there.
+- Search: with more accounts than fit, a "Search…" field at the top left — just type, the shelf keeps the cards whose
+  login, label or character's name match (any case). Esc empties it, Enter plays the chosen card.
+- Keys: ← → over the cards, Home / End to the first / last, Page Up / Page Down by four.
+- "Characters" scrolls with the wheel too.
+
 # uaRO Graphics 3.0.11-beta.188 — what's new
 
 **A smoother login screen**:
