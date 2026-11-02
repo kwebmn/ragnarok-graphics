@@ -131,7 +131,7 @@ Every shipping step below means:
 
 ## Part A — skip the single-server list (1 beta)
 
-### Task A1: the only server chosen and confirmed at once
+### Task 1 (A1): the only server chosen and confirmed at once
 
 **Files:** Modify `src/core/pick_card.{hpp,cpp}`, `src/win/server_card.cpp`; Test `tests/test_pick_card.cpp`.
 
@@ -156,7 +156,7 @@ TEST(pick_card_single_entry_goes_on_by_itself) {
 
 ## Part B — words, hints, status, language, news (3 betas)
 
-### Task B1: refusals in words, the game's boxes answered for us
+### Task 2 (B1): refusals in words, the game's boxes answered for us
 
 **Files:** Create `src/core/login_errors.{hpp,cpp}`, `src/win/login_refusal.{hpp,cpp}`; Modify `src/win/msg_box.cpp`,
 `src/core/login_card.{hpp,cpp}`, `src/win/login_card.cpp`, `src/core/settings/strings.{hpp,cpp}`; Test
@@ -209,7 +209,7 @@ TEST(login_errors_words_name_the_login) {
   outlines the field red (pixel at the field's border has red > green).
 - [ ] **Step 6:** host PASS, win builds; ship together with B2.
 
-### Task B2: Caps Lock and keyboard layout hints
+### Task 3 (B2): Caps Lock and keyboard layout hints
 
 **Files:** Create `src/core/login_hints.{hpp,cpp}`; Modify `src/win/login_card.cpp`, `src/core/login_card.cpp`;
 Test `tests/test_login_hints.cpp`.
@@ -238,7 +238,7 @@ TEST(login_hints_layout_and_caps) {
   Lock»), `LoginHintLayout` («Розкладка {1} — логін зазвичай латиницею ({2}?)»).
 - [ ] **Step 4:** PASS; ship B1+B2 (R), notes «Помилки входу словами й підказки під полями».
 
-### Task B3: server status line and the quiet retry
+### Task 4 (B3): server status line and the quiet retry
 
 **Files:** Create `src/core/server_status.{hpp,cpp}`, `src/win/server_probe.{hpp,cpp}`; Modify `src/core/reference_live.
 {hpp,cpp}`, `src/win/msg_box.cpp`, `src/win/login_card.cpp`; Test `tests/test_server_status.cpp`,
@@ -279,7 +279,7 @@ TEST(reference_live_reads_the_total) { /* online.json with "online":157 → tota
   раз через {1} с»). Switch `[interface] login_status` (default 1) with the full switch set (Global Constraints).
 - [ ] **Step 4:** PASS; ship (R), notes «Рядок стану сервера на екрані входу».
 
-### Task B4: language on the login screen
+### Task 5 (B4): language on the login screen
 
 **Files:** Create `src/core/login_chrome.{hpp,cpp}`, `src/win/login_chrome.{hpp,cpp}`; Modify `src/win/real_ddraw.
 {hpp,cpp}`, `src/core/live_config.cpp`, `src/win/login_card.cpp`; Test `tests/test_login_chrome.cpp`,
@@ -303,7 +303,7 @@ TEST(reference_live_reads_the_total) { /* online.json with "online":157 → tota
   touched (said in the notes).
 - [ ] **Step 4:** PASS; ship with B5.
 
-### Task B5: news line (client part)
+### Task 6 (B5): news line (client part)
 
 **Files:** Create `src/core/reference_now.{hpp,cpp}`; Modify `src/app/reference_pack.cpp`, `src/core/layout.hpp`,
 `src/win/login_chrome.cpp`; Test `tests/test_reference_now.cpp`. Site endpoint: Task D1 (`GET
@@ -323,7 +323,7 @@ TEST(reference_live_reads_the_total) { /* online.json with "online":157 → tota
 
 ## Part C — three views and the account shelf (4 betas)
 
-### Task C1: the account store
+### Task 7 (C1): the account store
 
 **Files:** Create `src/core/accounts.{hpp,cpp}`, `src/win/dpapi.{hpp,cpp}`, `src/win/accounts_store.{hpp,cpp}`;
 Test `tests/test_accounts.cpp`.
@@ -368,7 +368,7 @@ TEST(accounts_move_remove_and_last_character) { /* move(0,+1) swaps; remove("kwe
   accounts.dat.bad` (no logins in any log line).
 - [ ] **Step 4:** PASS (no ship alone — ships with C2/C3).
 
-### Task C2: added after login, last character, the toast
+### Task 8 (C2): added after login, last character, the toast
 
 **Files:** Modify `src/win/login_card.cpp`, `src/win/char_select.cpp`, `src/core/login_card.{hpp,cpp}`, strings;
 Test `tests/test_login_card.cpp`.
@@ -388,7 +388,7 @@ slot −1 before).
   password. On entering the world, `recordChar` with the slot's CHARACTER_INFO and the map name.
 - [ ] **Step 4:** PASS; ship C1+C2 (R), notes «Акаунти самі додаються на полицю після входу».
 
-### Task C3: one-click login and «Одразу в гру»
+### Task 9 (C3): one-click login and «Одразу в гру»
 
 **Files:** Modify `src/win/login_card.cpp`, `src/win/char_select.cpp`, `src/core/accounts.{hpp,cpp}`; Test
 `tests/test_accounts.cpp`.
@@ -435,7 +435,7 @@ TEST(accounts_saved_character_found_by_name_only) {
   A refusal (Task B1) → `markRefused` + the card shows «Пароль не підходить» with a password field.
 - [ ] **Step 4:** PASS; ship with C4.
 
-### Task C4: «Полиця», first launch, card menu
+### Task 10 (C4): «Полиця», first launch, card menu
 
 **Files:** Create `src/core/login_shelf.{hpp,cpp}`, `src/win/login_shelf.{hpp,cpp}`; Modify `src/win/login_card.cpp`,
 `src/win/window_stack.cpp`, `src/win/context.cpp`, `src/win/windows_draw.cpp`, strings; Test
@@ -461,7 +461,7 @@ Remove`.
   the line «Полиця ще порожня: після входу акаунт з'явиться на ній, далі — вхід одним кліком».
 - [ ] **Step 4:** PASS; ship C3+C4 (R), notes «Полиця акаунтів: вхід одним кліком».
 
-### Task C5: «Класичний», «Продовжити», the «Вигляд» switch
+### Task 11 (C5): «Класичний», «Продовжити», the «Вигляд» switch
 
 **Files:** Create `src/core/login_view.hpp`, `src/core/login_continue.{hpp,cpp}`, `src/win/login_continue.{hpp,cpp}`;
 Modify `src/core/login_card.{hpp,cpp}`, `src/win/login_card.cpp`, config/schema/strings/console/live config/ini;
@@ -481,7 +481,7 @@ links «Інший персонаж», «Змінити акаунт ▾», «С
   (live); the schema row is a choice with uk names «Класичний», «Полиця», «Продовжити».
 - [ ] **Step 4:** PASS; ship (R), notes «Три види входу на вибір».
 
-### Task C6: class pictures on the cards
+### Task 12 (C6): class pictures on the cards
 
 **Files:** Create `src/core/class_art.{hpp,cpp}`, `tools/class_art.py`; Modify the package step (`dist/` list or
 `tools/package*.py`), `src/win/login_shelf.cpp`; Test `tests/test_class_art.cpp`.
@@ -496,7 +496,7 @@ classes); `tools/class_art.py` crops 360×360 portraits to JPEG ≤ 40 KB each.
   the card falls back to `headpicture::make(sex, hair, hairColour, side)` from `LastChar`, then to the job name only.
 - [ ] **Step 4:** PASS; ship with C7.
 
-### Task C7: «вже в грі» across game windows
+### Task 13 (C7): «вже в грі» across game windows
 
 **Files:** Create `src/core/game_logins.hpp`, `src/win/game_logins.{hpp,cpp}`; Modify `src/win/login_shelf.cpp`;
 Test `tests/test_game_logins.cpp`.
@@ -512,7 +512,7 @@ login is accepted and clears it at exit or back at the login screen.
 - [ ] **Step 2:** FAIL; **Step 3:** implement; busy cards show «вже в грі (вікно N)» and `planFor(..., busy=true)`.
 - [ ] **Step 4:** PASS; ship C6+C7 (R), notes «Картки з картинками класів; «вже в грі» для кількох вікон».
 
-### Task C8: the pad on the login screen
+### Task 14 (C8): the pad on the login screen
 
 **Files:** Modify `src/pad/win/runtime.cpp`, `src/win/login_shelf.cpp`, `src/win/login_card.cpp`,
 `src/win/login_chrome.cpp`; Test `tests/test_login_shelf.cpp`.
@@ -526,7 +526,7 @@ chain: ◀ ▶ card, A «Грати», X «Інший акаунт», Y the card
 - [ ] **Step 2:** FAIL; **Step 3:** implement + the hints bar words (A/X/Y/B badges drawn, not font glyphs).
 - [ ] **Step 4:** PASS; ship with C9.
 
-### Task C9: «Забути всі акаунти» in the settings app
+### Task 15 (C9): «Забути всі акаунти» in the settings app
 
 **Files:** Modify `src/app/page_settings.cpp`, `src/app/model.{hpp,cpp}`, strings.
 
@@ -537,7 +537,7 @@ chain: ◀ ▶ card, A «Грати», X «Інший акаунт», Y the card
 
 ## Part D — the site account and registration (site deploy + 3 betas)
 
-### Task D1: the site's client API (sandbox) and cabinet devices
+### Task 16 (D1): the site's client API (sandbox) and cabinet devices
 
 **Files (sandbox `$S/site_db/app`):** listed in File Structure.
 
@@ -581,7 +581,7 @@ chain: ◀ ▶ card, A «Грати», X «Інший акаунт», Y the card
   and the index swapped, a probe (`GET /api/client/login-free?login=` with an empty login → 422 = route alive);
   dry run on a worktree copy of the live app → passes. Commit in the sandbox repo; tell the owner the command.
 
-### Task D2: the client's HTTP, site key and API parsers
+### Task 17 (D2): the client's HTTP, site key and API parsers
 
 **Files:** Create `src/core/site_api.{hpp,cpp}`, `src/win/site_http.{hpp,cpp}`, `src/win/site_key.{hpp,cpp}`;
 Test `tests/test_site_api.cpp`.
@@ -613,7 +613,7 @@ Test `tests/test_site_api.cpp`.
   only path and status (`site: /api/client/auth answered 200`).
 - [ ] **Step 4:** PASS; ships with D3.
 
-### Task D3: the site sign-in card (three ways)
+### Task 18 (D3): the site sign-in card (three ways)
 
 **Files:** Create `src/win/site_signin.{hpp,cpp}`; Modify `src/core/login_card.{hpp,cpp}` (the link «Підтягнути всі
 логіни»), `src/win/login_card.cpp`, `src/win/window_stack.cpp`, strings; Test `tests/test_login_card.cpp`.
@@ -630,7 +630,7 @@ Test `tests/test_site_api.cpp`.
   акаунта сайту» in the chip's menu → `sitekey::forget()`.
 - [ ] **Step 4:** PASS; ship D2+D3 (R) after the owner deployed D1, notes «Вхід з акаунтом сайту».
 
-### Task D4: the shelf with the site's logins and characters
+### Task 19 (D4): the shelf with the site's logins and characters
 
 **Files:** Create `src/core/shelf_merge.{hpp,cpp}`; Modify `src/core/login_shelf.{hpp,cpp}`, `src/win/login_shelf.cpp`,
 `src/win/login_card.cpp`; Test `tests/test_shelf_merge.cpp`, `tests/test_login_shelf.cpp`.
@@ -651,7 +651,7 @@ per login, up to three character cards and «Новий персонаж»).
   `changePassword` then the stored password updated.
 - [ ] **Step 4:** PASS; ship (R), notes «Усі логіни й персонажі з акаунта сайту».
 
-### Task D5: registration in the client
+### Task 20 (D5): registration in the client
 
 **Files:** Create `src/core/register_form.{hpp,cpp}`, `src/win/register_card.{hpp,cpp}`; Modify `src/win/login_card.cpp`
 («Створити акаунт» opens it), `src/win/char_select.cpp` (open «Створити» on an empty account), strings; Test
@@ -686,7 +686,7 @@ TEST(register_form_rules_are_the_sites) {
   then `createLogin`.
 - [ ] **Step 4:** PASS; ship (R), notes «Реєстрація прямо в клієнті».
 
-### Task D6: the owner's deploy and the end-to-end checks
+### Task 21 (D6): the owner's deploy and the end-to-end checks
 
 - [ ] **Step 1:** tell the owner `bash $S/site_db/deploy-login.sh` (and the rollback command); after it, run the
   live probes from loki: `curl -s https://uaro.kiev.ua/api/public/now.json?lang=ua` → JSON; `curl -s -o /dev/null
