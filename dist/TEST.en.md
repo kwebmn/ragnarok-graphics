@@ -1,3 +1,10 @@
+# uaRO Graphics 3.0.11-beta.191 — what's new
+
+**The bars under the characters — under the windows (for real now)**:
+- The HP and SP bar under the character, the cast bar and the other players' bars are no longer drawn over the new
+  interface's windows. In the game they are small "windows" riding with the character — now drawn with the world,
+  before the windows.
+
 # uaRO Graphics 3.0.11-beta.190 — what's new
 
 **The HP bars under the characters — under the windows**:
