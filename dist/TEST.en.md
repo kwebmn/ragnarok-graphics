@@ -1,3 +1,12 @@
+# uaRO Graphics 3.0.11-beta.185 — what's new
+
+**The interface's windows over the world again**:
+- Water, trees, monsters and characters are no longer drawn over the new windows ("Skills", the character card and
+  the others). It showed without DLSS: the game's own windows were moved over ours together with almost the whole
+  frame of the world.
+- Over our windows now only the game's own windows and its cursor; the names over the heads and the chat's balloons
+  under them.
+
 # uaRO Graphics 3.0.11-beta.184 — what's new
 
 **The camera remembers its zoom**:
