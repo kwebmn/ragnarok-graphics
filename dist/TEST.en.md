@@ -1,3 +1,13 @@
+# uaRO Graphics 3.0.11-beta.160 — what's new
+
+**The homunculus in the new look** (the ninth group of the remaining windows):
+- Alt+R shows a card: its name and level, HP, SP and experience bars with numbers, "Fullness" (of 100) and
+  "Closeness" in the game's word ("Hostile"... "Loyal"), its eight stats (ATK, MATK, HIT, CRIT, DEF, MDEF, FLEE, ASPD).
+- The buttons "Feed" (the game asks first) and "Skills"; "Delete" small at the foot, the game shows its red warning
+  first.
+- The controller: left/right between "Feed" and "Skills", A presses, B closes.
+- The switch "Homunculus card" under "Interface", on with the new minimap.
+
 # uaRO Graphics 3.0.11-beta.159 — what's new
 
 **The pet in the new look** (the ninth group of the remaining windows, its start):
