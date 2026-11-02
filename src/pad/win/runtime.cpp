@@ -54,6 +54,7 @@
 #include "win/char_select.hpp"
 #include "win/party_setup.hpp"
 #include "win/homun_card.hpp"
+#include "win/merc_card.hpp"
 #include "win/pet_card.hpp"
 #include "win/pick_card.hpp"
 #include "win/vend_shop.hpp"
@@ -752,6 +753,18 @@ bool homunPad(const PadState& pad, DWORD now) {
     return true;
 }
 
+// 3.0.11-beta.161: the mercenary's card - A its skills, B closes
+bool mercPad(const PadState& pad) {
+    State& s = S();
+    const uint16_t buttons = pad.connected ? pad.buttons : 0;
+    const uint16_t down = uint16_t(buttons & ~s.prevPadButtons);
+    s.prevPadButtons = buttons;
+    using uagfx::win::merccardwin::PadCommand;
+    if (down & kPadA) uagfx::win::merccardwin::padCommand(PadCommand::Press);
+    if (down & kPadB) uagfx::win::merccardwin::padCommand(PadCommand::Close);
+    return true;
+}
+
 // 3.0.11-beta.92: «Характеристики» open - the D-pad (or the left stick) chooses a stat, A adds a point, B or Start
 // close it
 bool statsPad(const PadState& pad, DWORD now) {
@@ -1051,7 +1064,7 @@ constexpr const char* kTopNames[] = {"«Речі»",  "«Характерист�
                                      "the menu", "the item card", "the skill card", "the request",
                                      "the message box", "the login", "the character select",
                                      "the character make", "«Візок»", "«Лавка»", "the choice of things",
-                                     "the party's settings", "the pet", "the homunculus"};
+                                     "the party's settings", "the pet", "the homunculus", "the mercenary"};
 static_assert(std::size(kTopNames) == size_t(uagfx::winstack::kWins), "a name for each window");
 
 void tick() {
@@ -1128,6 +1141,7 @@ void tick() {
                   : drive && *top == Win::PartySetup               ? partySetupPad(pad, now)  // .158
                   : drive && *top == Win::Pet                      ? petPad(pad, now)         // .159
                   : drive && *top == Win::Homun                    ? homunPad(pad, now)       // .160
+                  : drive && *top == Win::Merc                     ? mercPad(pad)             // .161
                                                                    : runMenu(pad, view, now);
     if (s.npcSupported) view.dialog = clientnpc::read();
     double clientTurn = 0;

@@ -17,6 +17,7 @@
 #include "win/item_window.hpp"
 #include "win/login_card.hpp"
 #include "win/menu_window.hpp"
+#include "win/merc_card.hpp"
 #include "win/msg_box.hpp"
 #include "win/log.hpp"
 #include "win/npc_talk.hpp"
@@ -42,7 +43,7 @@ constexpr const char* kNames[] = {"«Речі»",  "«Характеристик
                                   "the menu", "the item card", "the skill card", "the request",
                                   "the message box", "the login", "the character select", "the character make",
                                   "«Візок»", "«Лавка»", "the choice of things", "the party's settings",
-                                  "the pet", "the homunculus"};
+                                  "the pet", "the homunculus", "the mercenary"};
 static_assert(std::size(kNames) == size_t(winstack::kWins), "a name for each window");
 constexpr int kMostTold = 40;
 
@@ -98,6 +99,7 @@ bool shown(Win w) {
         case Win::PartySetup: return partysetupwin::shown();  // 3.0.11-beta.158
         case Win::Pet: return petcardwin::shown();  // 3.0.11-beta.159
         case Win::Homun: return homuncardwin::shown();  // 3.0.11-beta.160
+        case Win::Merc: return merccardwin::shown();  // 3.0.11-beta.161
     }
     return false;
 }
@@ -126,6 +128,7 @@ Blocker blockerOf(Win w) {
         case Win::PartySetup: return Blocker::PartySetup;
         case Win::Pet: return Blocker::Pet;
         case Win::Homun: return Blocker::Homun;
+        case Win::Merc: return Blocker::Merc;
         case Win::Reference: break;
     }
     return Blocker::Reference;
@@ -156,6 +159,7 @@ void drawOne(Win w, FrameRecord& record, gpu::Renderer& renderer) {
         case Win::PartySetup: partysetupwin::draw(record, renderer); break;
         case Win::Pet: petcardwin::draw(record, renderer); break;
         case Win::Homun: homuncardwin::draw(record, renderer); break;
+        case Win::Merc: merccardwin::draw(record, renderer); break;
     }
 }
 
@@ -184,6 +188,7 @@ bool mouseOne(Win w, HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
         case Win::PartySetup: return partysetupwin::mouse(game, m, wp, lp, result);
         case Win::Pet: return petcardwin::mouse(game, m, wp, lp, result);
         case Win::Homun: return homuncardwin::mouse(game, m, wp, lp, result);
+        case Win::Merc: return merccardwin::mouse(game, m, wp, lp, result);
     }
     return false;
 }
@@ -208,7 +213,8 @@ bool keyOne(Win w, UINT m, WPARAM wp, LPARAM lp) {  // the windows with keys of 
 bool movable(Win w) {  // .140: the menu centred; .149: a card beside the cursor that opened it
     return w != Win::Npc && w != Win::Reference && w != Win::Menu && w != Win::ItemCard && w != Win::SkillCard &&
            w != Win::Ask && w != Win::Message && w != Win::Login && w != Win::CharSelect && w != Win::CharMake &&
-           w != Win::Vending && w != Win::Pick && w != Win::PartySetup && w != Win::Pet && w != Win::Homun;
+           w != Win::Vending && w != Win::Pick && w != Win::PartySetup && w != Win::Pet && w != Win::Homun &&
+           w != Win::Merc;
 }
 
 bool boxOf(Win w, winstack::Box& b) {
@@ -236,6 +242,7 @@ bool boxOf(Win w, winstack::Box& b) {
         case Win::PartySetup: return partysetupwin::box(b.x, b.y, b.w, b.h);
         case Win::Pet: return petcardwin::box(b.x, b.y, b.w, b.h);
         case Win::Homun: return homuncardwin::box(b.x, b.y, b.w, b.h);
+        case Win::Merc: return merccardwin::box(b.x, b.y, b.w, b.h);
     }
     return false;
 }
@@ -347,6 +354,7 @@ bool close(Win w) {
         case Win::PartySetup: return partysetupwin::close();  // 3.0.11-beta.158: cancel
         case Win::Pet: return petcardwin::close();              // 3.0.11-beta.159
         case Win::Homun: return homuncardwin::close();          // 3.0.11-beta.160
+        case Win::Merc: return merccardwin::close();            // 3.0.11-beta.161
         default: return false;
     }
 }

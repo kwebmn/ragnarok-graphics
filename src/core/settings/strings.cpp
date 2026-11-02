@@ -5649,6 +5649,26 @@ constexpr Entry kTexts[] = {
     {Text::HomunClose1, "Unfriendly", "Неприязний", "Неприязненный"},
     {Text::HomunClose2, "Awkward", "Уникає", "Избегает"},
     {Text::HomunClose7, "Unknown", "Невідомо", "Неизвестно"},
+    // 3.0.11-beta.161: the mercenary
+    {Text::InterfaceMerc, "Mercenary card", "Картка найманця", "Карточка наёмника"},
+    {Text::InterfaceMercHint,
+     "The mercenary's window (Ctrl+R) as a card in the new look: its kind, name and level, HP and SP bars, the "
+     "contract's end, loyalty, summons and kills, its eight stats, its skills (dismissing it small at the foot, the "
+     "game asks first). Off: the game's own window.",
+     "Вікно найманця (Ctrl+R) карткою в новому вигляді: вид, ім'я й рівень, смуги HP і SP, кінець контракту, "
+     "вірність, виклики й убиті, вісім характеристик, навички (звільнення — дрібно внизу, гра перепитує). "
+     "Вимкнено: власне вікно гри.",
+     "Окно наёмника (Ctrl+R) карточкой в новом виде: вид, имя и уровень, полосы HP и SP, конец контракта, "
+     "верность, вызовы и убитые, восемь характеристик, навыки (увольнение — мелко внизу, игра переспрашивает). "
+     "Выключено: собственное окно игры."},
+    {Text::MercArcher, "Mercenary archer", "Найманець-лучник", "Наёмник-лучник"},
+    {Text::MercSpearman, "Mercenary spearman", "Найманець-списник", "Наёмник-копейщик"},
+    {Text::MercSwordsman, "Mercenary swordsman", "Найманець-мечник", "Наёмник-мечник"},
+    {Text::MercEnds, "Contract until", "Контракт до", "Контракт до"},
+    {Text::MercLoyalty, "Loyalty", "Вірність", "Верность"},
+    {Text::MercSummons, "Summons", "Викликів", "Вызовов"},
+    {Text::MercKills, "Kills", "Убито", "Убито"},
+    {Text::MercDismiss, "Dismiss", "Звільнити", "Уволить"},
     // 3.0.11-beta.141: the character block's experience (forms: one, a few, many)
     {Text::CharSkillPoints, "skill point|skill points", "очко навичок|очки навичок|очок навичок",
      "очко навыков|очка навыков|очков навыков"},
