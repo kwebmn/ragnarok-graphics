@@ -1,3 +1,15 @@
+# uaRO Graphics 3.0.11-beta.170 — what's new
+
+**Logging in works again** (a fix for betas .151–.169):
+- The new login window mixed up the fields: what was typed into "Password" went into the game's own login field,
+  and the server answered "Unregistered ID". The window now tells the fields by the game itself (the game draws the
+  password's field as asterisks); when it cannot tell, the game's own window stays.
+- If logging in failed in those betas: the password may have gone to the server as the login, and with "Remember
+  the login" the game may have saved it as the login. Check the "Login" field (clear what does not belong) and
+  better change the password in the site's cabinet.
+- The game's message card no longer grows with the same line ("Failed to Connect to Server." dozens of times) when
+  the game repeats one message.
+
 # uaRO Graphics 3.0.11-beta.169 — what's new
 
 **The chat's macros in the new look** (the eighth group of the remaining windows):
