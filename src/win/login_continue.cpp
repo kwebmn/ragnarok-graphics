@@ -10,8 +10,10 @@
 #include "core/settings/strings.hpp"
 #include "core/ui_style.hpp"
 #include "win/accounts_store.hpp"
+#include "win/class_pictures.hpp"
 #include "win/code_page.hpp"
 #include "win/game_camera.hpp"
+#include "win/game_logins.hpp"
 #include "win/log.hpp"
 #include "win/picture_draw.hpp"
 #include "win/real_ddraw.hpp"
@@ -65,6 +67,7 @@ lco::Texts texts() {
     t.create = say(settings::Text::ShelfCreate);
     t.noChar = say(settings::Text::ShelfNoChar);
     t.refused = say(settings::Text::ShelfRefused);
+    t.busy = say(settings::Text::ShelfBusy);
     return t;
 }
 
@@ -139,6 +142,13 @@ void frame(double k, int targetWidth, int targetHeight, unsigned codePage) {
         s.account.level = a.last.level;
         s.account.login = utf8Of(widened(a.login, codePage));
         s.account.refused = a.refused;
+        for (const auto& b : gamelogins::others())  // 3.0.11-beta.178: played in another game window
+            if (b.login == accounts::loginHash(a.login)) s.account.busyWindow = b.window;
+        if (a.last.slot >= 0) {  // 3.0.11-beta.178: its class's portrait, else its head
+            s.account.art = classpictures::forJob(a.last.jobId);
+            if (!s.account.art)
+                s.account.head = classpictures::head(a.last.sex, a.last.hair, a.last.hairColour, int(150 * s.scale));
+        }
     }
     const lco::Texts t = texts();
     s.layout = lco::layout(targetWidth, targetHeight, s.scale, t);
@@ -151,7 +161,9 @@ void frame(double k, int targetWidth, int targetHeight, unsigned codePage) {
     const std::string key = std::to_string(s.layout.x) + ',' + std::to_string(s.layout.y) + ',' +
                             std::to_string(s.layout.w) + ';' + std::to_string(int(s.show.hover)) +
                             (s.dropOpen ? "o" : "") + ';' + a.name + ',' + a.job + ',' + a.map + ',' + a.login + ',' +
-                            std::to_string(a.level) + (a.refused ? "r" : "") + '#' +
+                            std::to_string(a.level) + (a.refused ? "r" : "") + (a.art ? "a" : a.head ? "h" : "") +
+                            std::to_string(a.busyWindow) +
+                            '#' +
                             std::to_string(uistyle::generation());
     if (key != s.key) {
         s.key = key;

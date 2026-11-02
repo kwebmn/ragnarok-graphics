@@ -17,7 +17,9 @@ struct Card {
     std::string label, name, job, map, login;  // UTF-8; name "" - no character yet (the login big)
     int level = 0;
     bool busy = false, refused = false, hasPassword = true;
-    const panel::Picture* art = nullptr;  // the class's picture; null - a plain ground
+    int busyWindow = 0;  // 3.0.11-beta.178: the game window that plays it («вже в грі (вікно N)»)
+    const panel::Picture* art = nullptr;   // the class's portrait (core/class_art); null - its head or a plain ground
+    const panel::Picture* head = nullptr;  // 3.0.11-beta.178: the character's head (no portrait for the job)
 };
 struct Texts {
     std::string title, titleHint;  // «Оберіть акаунт», «— один клік, і ви в грі»

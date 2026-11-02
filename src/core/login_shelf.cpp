@@ -4,6 +4,7 @@
 #include <cctype>
 #include <cmath>
 
+#include "core/class_art.hpp"
 #include "core/ui_style.hpp"
 
 namespace uagfx::loginshelf {
@@ -113,10 +114,15 @@ void paint(panel::Picture& out, const Layout& L, const std::vector<Card>& cards,
         const bool focus = sh.focus == index, hot = sh.hover == index;
         panel::roundRect(out, b, 14 * s, kCard, std::max(0.94f, uistyle::window()), focus ? kGold : kWhite,
                          focus ? 0.95f : hot ? 0.30f : 0.12f, (focus ? 2.0f : 1.0f) * s);
-        // its picture's place: the class's art over it (3.0.11-beta.177), a gold-dark ground till then
+        // its picture: the class's portrait (3.0.11-beta.178), else the character's head on a gold-dark ground
         const panel::Box pic{b.x + 1 * s, b.y + 1 * s, b.w - 2 * s, kPicH * s};
-        panel::roundRect(out, pic, 13 * s, 0x2A2416, 0.9f);
-        panel::roundRect(out, panel::Box{pic.x, pic.y + pic.h - 14 * s, pic.w, 14 * s}, 0, 0x2A2416, 0.9f);
+        if (c.art) {
+            classart::cover(out, pic, c.art->px, c.art->width, c.art->height, 13 * s, classart::kTopCorners);
+        } else {
+            panel::roundRect(out, pic, 13 * s, 0x2A2416, 0.9f);
+            panel::roundRect(out, panel::Box{pic.x, pic.y + pic.h - 14 * s, pic.w, 14 * s}, 0, 0x2A2416, 0.9f);
+            if (c.head) classart::centre(out, pic, *c.head);
+        }
         if (!c.label.empty() || sh.editing == index) {
             const std::string& label = sh.editing == index ? sh.editText : c.label;
             const float lw = panel::wordsWidth(label, 12 * s, true) + 16 * s + (sh.editing == index ? 6 * s : 0);
@@ -174,7 +180,10 @@ std::vector<Words> words(const Layout& L, const std::vector<Card>& cards, const 
         const bool hasChar = !c.name.empty();
         out.push_back(Words{panel::Box{bodyX, bodyY, bodyW, 26 * s}, hasChar ? c.name : c.login, kText, 19 * s, true,
                             Align::Left});
-        const std::string line = c.refused ? t.refused : c.busy ? t.busy : hasChar ? jobLine(c) : t.noChar;
+        const std::string line = c.busy      ? fill(t.busy, std::to_string(c.busyWindow))
+                                 : c.refused ? t.refused
+                                 : hasChar   ? jobLine(c)
+                                             : t.noChar;
         const uint32_t rgb = c.refused ? kRed : c.busy ? kAmber : kMuted;
         out.push_back(
             Words{panel::Box{bodyX, bodyY + 27 * s, bodyW, 20 * s}, line, rgb, 13.5f * s, false, Align::Left});

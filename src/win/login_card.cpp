@@ -25,6 +25,7 @@
 #include "win/code_page.hpp"
 #include "win/game_camera.hpp"
 #include "win/log.hpp"
+#include "win/game_logins.hpp"
 #include "win/login_continue.hpp"
 #include "win/login_refusal.hpp"
 #include "win/login_shelf.hpp"
@@ -491,6 +492,7 @@ bool onShelf(const std::string& login) {
 void accepted(State& s) {
     s.pendingShelf = false;
     s.loggedIn = s.tryAccount;
+    gamelogins::accepted(s.loggedIn);  // 3.0.11-beta.178: the other game windows' «вже в грі»
     accounts::Shelf& shelf = accountsstore::shelf();
     const bool there = onShelf(s.tryAccount);
     const unsigned long long hash = accounts::loginHash(s.tryAccount);
@@ -779,7 +781,13 @@ void frame(HWND game, bool on, bool status, bool news, loginview::View view, uns
         s.pendingShelf = s.tookLast && !s.tryAccount.empty();  // 3.0.11-beta.175: waits for the character select
         loginshelfwin::classic(false);  // 3.0.11-beta.176: the next login screen the shelf again
     }
-    if (window && !s.hadWindow) s.pendingShelf = false;  // the window back: refused, or not reached
+    if (window && !s.hadWindow) {  // the window back: refused, not reached, or back from the game
+        s.pendingShelf = false;
+        if (!s.loggedIn.empty()) {  // 3.0.11-beta.178: this game plays no login now
+            gamelogins::left();
+            s.loggedIn.clear();
+        }
+    }
     s.hadWindow = window != 0;
     shelfFrame(s, game, k, targetWidth, targetHeight);
     s.places = window ? placesOf(window) : lc::FieldPlaces{};
@@ -1056,14 +1064,18 @@ bool loginWith(const accounts::Account& a, bool stopAtSelect) {
     const uint32_t window = gameLogin();
     if (!window || !s.places.known() || a.login.empty()) return false;
     const unsigned long long hash = accounts::loginHash(a.login);
-    const accounts::Plan p = accounts::planFor(a, stopAtSelect || GetKeyState(VK_SHIFT) < 0, false);
+    bool busy = false;  // 3.0.11-beta.178: played in another game window - its login there would throw it out
+    for (const auto& b : gamelogins::others()) busy = busy || b.login == hash;
+    const accounts::Plan p = accounts::planFor(a, stopAtSelect || GetKeyState(VK_SHIFT) < 0, busy);
     putFields(s, window, a.login, p.fillPassword ? a.password : std::string());
     s.seenAccount = a.login;  // the window may go before the next frame reads them
     s.seenPassword = p.fillPassword ? a.password : std::string();
     s.key.clear();
-    if (!p.enterAtOnce) {  // its password to type: the keys to that field
+    if (!p.enterAtOnce) {  // the card shows it: its password to type, or «Увійти» pressed knowingly (another window)
+        loginshelfwin::classic(true);
         reinterpret_cast<SetFocusFn>(uintptr_t(kSetFocus))(kWindowMgr, read32(window + s.places.password));
-        LOG_INFO("login: the shelf's %016llx - its password asked", hash);
+        LOG_INFO("login: the shelf's %016llx - %s", hash, busy ? "played in another game window: the card shows it"
+                                                              : "its password asked");
         return true;
     }
     s.oneClick = a.login;

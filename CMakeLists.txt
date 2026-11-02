@@ -100,8 +100,10 @@ elseif(WIN32)
     # 2.9: uaRO Pad's Windows part (DirectInput 7 wrappers, the client's memory, its windows), mounted by the driver
     file(GLOB UAGFX_PAD_WIN_SOURCES CONFIGURE_DEPENDS src/pad/win/*.cpp)
     # 3.0.11-beta.66: IBM Plex Sans (third_party/plex) as its resources - the new interface's words (win/ui_font)
-    add_library(ddraw SHARED ${UAGFX_WIN_SOURCES} ${UAGFX_PAD_WIN_SOURCES} src/win/ddraw.def src/win/ui_font.rc)
-    target_include_directories(ddraw PRIVATE third_party/plex)  # the .rc's fonts
+    # 3.0.11-beta.178: the classes' portraits of the login screen's cards too (src/win/class_art.rc)
+    add_library(ddraw SHARED ${UAGFX_WIN_SOURCES} ${UAGFX_PAD_WIN_SOURCES} src/win/ddraw.def src/win/ui_font.rc
+                src/win/class_art.rc)
+    target_include_directories(ddraw PRIVATE third_party/plex third_party/class_art)  # the .rc's files
     set_target_properties(ddraw PROPERTIES PREFIX "" OUTPUT_NAME "ddraw")
     target_compile_definitions(ddraw PRIVATE WIN32_LEAN_AND_MEAN NOMINMAX WIDL_EXPLICIT_AGGREGATE_RETURNS
                                DIRECTINPUT_VERSION=0x0700)

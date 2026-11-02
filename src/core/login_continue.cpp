@@ -4,6 +4,7 @@
 #include <cctype>
 #include <cmath>
 
+#include "core/class_art.hpp"
 #include "core/login_card.hpp"
 #include "core/ui_style.hpp"
 
@@ -67,9 +68,14 @@ void paint(panel::Picture& out, const Layout& L, const Account& a, const Show& s
     const float s = L.s;
     const panel::Box all{0, 0, float(L.w), float(L.h)};
     panel::roundRect(out, all, 14 * s, kCard, std::max(0.94f, uistyle::window()), kWhite, 0.12f, 1.0f * s);
-    if (!a.art) {  // its picture's place: the class's art over it, a gold-dark ground till then
-        panel::roundRect(out, panel::Box{1 * s, 1 * s, L.art.w, L.art.h - 2 * s}, 13 * s, 0x2A2416, 0.9f);
-        panel::roundRect(out, panel::Box{L.art.w - 14 * s, 1 * s, 14 * s, L.art.h - 2 * s}, 0, 0x2A2416, 0.9f);
+    // its picture: the class's portrait (3.0.11-beta.178), else the character's head on a gold-dark ground
+    const panel::Box pic{1 * s, 1 * s, L.art.w - 1 * s, L.art.h - 2 * s};
+    if (a.art) {
+        classart::cover(out, pic, a.art->px, a.art->width, a.art->height, 13 * s, classart::kLeftCorners);
+    } else {
+        panel::roundRect(out, pic, 13 * s, 0x2A2416, 0.9f);
+        panel::roundRect(out, panel::Box{pic.x + pic.w - 14 * s, pic.y, 14 * s, pic.h}, 0, 0x2A2416, 0.9f);
+        if (a.head) classart::centre(out, pic, *a.head);
     }
     const bool hot = sh.hover == Part::Play;
     panel::roundRect(out, L.play, 9 * s, kGold, hot ? 0.36f : 0.26f, kGold, 0.9f, 1.0f * s);
@@ -85,7 +91,9 @@ std::vector<Words> words(const Layout& L, const Account& a, const Show& sh, cons
     const bool hasChar = !a.name.empty();
     out.push_back(Words{L.name, hasChar ? a.name : a.login, kText, 32 * s, true, Align::Left});
     std::string line;
-    if (a.refused) {
+    if (a.busyWindow > 0) {  // 3.0.11-beta.178
+        line = fill(t.busy, std::to_string(a.busyWindow));
+    } else if (a.refused) {
         line = t.refused;
     } else if (hasChar) {
         line = a.job;
@@ -95,7 +103,8 @@ std::vector<Words> words(const Layout& L, const Account& a, const Show& sh, cons
     } else {
         line = t.noChar;
     }
-    out.push_back(Words{L.line, line, a.refused ? kRed : kMuted, 15 * s, false, Align::Left});
+    out.push_back(Words{L.line, line, a.busyWindow > 0 ? 0xF2C46B : a.refused ? kRed : kMuted, 15 * s, false,
+                        Align::Left});
     const float pw = panel::wordsWidth(t.play, 19 * s, true), kw = panel::wordsWidth(t.enterKey, 12.5f * s, false);
     const float px = L.play.x + (L.play.w - (pw + (kw > 0 ? 10 * s + kw : 0))) / 2;
     out.push_back(Words{panel::Box{px, L.play.y, pw + 2, L.play.h}, t.play, kChosenWords, 19 * s, true, Align::Left});

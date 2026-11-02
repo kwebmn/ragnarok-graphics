@@ -9,8 +9,10 @@
 #include "core/settings/strings.hpp"
 #include "core/ui_style.hpp"
 #include "win/accounts_store.hpp"
+#include "win/class_pictures.hpp"
 #include "win/code_page.hpp"
 #include "win/game_camera.hpp"
+#include "win/game_logins.hpp"
 #include "win/log.hpp"
 #include "win/picture_draw.hpp"
 #include "win/real_ddraw.hpp"
@@ -201,6 +203,7 @@ void frame(double k, int targetWidth, int targetHeight, unsigned codePage) {
     s.targetH = targetHeight;
     s.codePage = codePage;
     const accounts::Shelf& shelf = accountsstore::shelf();
+    const std::vector<uagfx::gamelogins::Busy> busy = gamelogins::others();  // 3.0.11-beta.178
     s.cards.clear();
     for (const accounts::Account& a : shelf.list) {
         ls::Card c;
@@ -212,6 +215,15 @@ void frame(double k, int targetWidth, int targetHeight, unsigned codePage) {
         c.login = utf8Of(widened(a.login, codePage));
         c.refused = a.refused;
         c.hasPassword = !a.password.empty();
+        for (const auto& b : busy)
+            if (b.login == accounts::loginHash(a.login)) {
+                c.busy = true;
+                c.busyWindow = b.window;
+            }
+        if (a.last.slot >= 0) {  // 3.0.11-beta.178: its class's portrait, else its head
+            c.art = classpictures::forJob(a.last.jobId);
+            if (!c.art) c.head = classpictures::head(a.last.sex, a.last.hair, a.last.hairColour, int(120 * s.scale));
+        }
         s.cards.push_back(c);
     }
     if (s.menuFor >= int(s.cards.size())) closeMenu(s);
@@ -251,7 +263,7 @@ void frame(double k, int targetWidth, int targetHeight, unsigned codePage) {
                       (s.show.caret ? "|" : "") + '#' + std::to_string(uistyle::generation());
     for (const ls::Card& c : s.cards)
         key += ';' + c.label + ',' + c.name + ',' + c.login + ',' + std::to_string(c.level) + c.map +
-               (c.refused ? "r" : "");
+               (c.refused ? "r" : "") + (c.art ? "a" : c.head ? "h" : "") + std::to_string(c.busyWindow);
     if (key != s.key) {
         s.key = key;
         render(s);

@@ -5533,7 +5533,7 @@ constexpr Entry kTexts[] = {
     {Text::ShelfOther, "Another account", "Інший акаунт", "Другой аккаунт"},
     {Text::ShelfCreate, "Create an account", "Створити акаунт", "Создать аккаунт"},
     {Text::ShelfRefused, "The password does not fit", "Пароль не підходить", "Пароль не подходит"},
-    {Text::ShelfBusy, "Already in the game", "Вже в грі", "Уже в игре"},
+    {Text::ShelfBusy, "Already in the game (window {1})", "Вже в грі (вікно {1})", "Уже в игре (окно {1})"},
     {Text::ShelfNoChar, "Not played yet", "Ще не грали", "Ещё не играли"},
     {Text::ShelfMenuAutoEnter, "Straight into the game", "Одразу в гру", "Сразу в игру"},
     {Text::ShelfMenuKeepPassword, "Keep the password", "Зберігати пароль", "Хранить пароль"},

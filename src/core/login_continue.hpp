@@ -14,12 +14,15 @@ struct Account {
     std::string name, job, map, login;  // UTF-8; name "" - no character yet (the login big)
     int level = 0;
     bool refused = false;
-    const panel::Picture* art = nullptr;  // the class's picture; null - a plain ground
+    int busyWindow = 0;  // 3.0.11-beta.178: played in that game window now (0 not)
+    const panel::Picture* art = nullptr;   // the class's portrait (core/class_art); null - its head or a plain ground
+    const panel::Picture* head = nullptr;  // 3.0.11-beta.178: the character's head (no portrait for the job)
 };
 struct Texts {
     std::string heading, play, enterKey, loginWord;  // «Продовжити гру», «Грати», «Enter», «логін {1}»
     std::string otherChar, change, create;           // the links
     std::string noChar, refused;                     // «Ще не грали», «Пароль не підходить»
+    std::string busy;                                // 3.0.11-beta.178: «Вже в грі (вікно {1})»
 };
 struct Layout {
     float s = 1;
