@@ -2,8 +2,12 @@
 
 #include <windows.h>
 
+#include <algorithm>
 #include <cstdint>
 #include <cstring>
+#include <iterator>
+#include <utility>
+#include <vector>
 
 #include "win/char_block.hpp"
 #include "win/context.hpp"
@@ -83,6 +87,48 @@ size_t interfaceFaces() {
 
 namespace {
 
+// 3.0.11-beta.191 (R-FG9GCX «не пофиксилось хп под плашкой интерфейса»): the bars under the characters are the
+// manager's windows too - an actor's HP/SP gauge (60 x 9 at its + 0x360, class 0x696D4C), its other gauge (60 x 5 at
+// + 0x364, 0x696CB4), its cast's (60 x 6 at + 0x220, 0x696C18; message 0x52) - each drawn by the manager's own draw
+// (FUN_004cd720: a window with its shown flag + 0x38, from its list + 0x38 - a node: next + 0, the window + 8). A pass
+// of that draw of theirs alone first (the other windows' flags held at 0): their faces among those before the game's
+// windows, under the driver's; then the rest with theirs held at 0
+constexpr uint32_t kWorldGauges[] = {0x696D4C, 0x696CB4, 0x696C18};
+constexpr uint32_t kWindowsList = 0x38, kWindowShown = 0x38;
+constexpr size_t kMostWindows = 512;
+int g_gaugesTold = 0;
+
+bool worldGauge(uint32_t window) {
+    const uint32_t cls = *reinterpret_cast<const uint32_t*>(uintptr_t(window));
+    return std::find(std::begin(kWorldGauges), std::end(kWorldGauges), cls) != std::end(kWorldGauges);
+}
+
+// The shown windows of the manager's list that are (gauges) or are not (the rest) the bars under the characters, their
+// shown flags held at 0 (kept in `held` to put back)
+size_t holdShown(uint32_t manager, bool gauges, std::vector<std::pair<uint32_t, int32_t>>& held) {
+    const uint32_t head = *reinterpret_cast<const uint32_t*>(uintptr_t(manager + kWindowsList));
+    size_t seen = 0, others = 0;
+    for (uint32_t node = head ? *reinterpret_cast<const uint32_t*>(uintptr_t(head)) : 0;
+         node && node != head && seen < kMostWindows; node = *reinterpret_cast<const uint32_t*>(uintptr_t(node))) {
+        ++seen;
+        const uint32_t w = *reinterpret_cast<const uint32_t*>(uintptr_t(node + 8));
+        auto* shown = reinterpret_cast<int32_t*>(uintptr_t(w + kWindowShown));
+        if (!w || !*shown) continue;
+        if (worldGauge(w) != gauges) {
+            ++others;
+            continue;
+        }
+        held.emplace_back(w, *shown);
+        *shown = 0;
+    }
+    return others;  // the shown ones left drawn
+}
+
+void putBack(std::vector<std::pair<uint32_t, int32_t>>& held) {
+    for (const auto& [w, shown] : held) *reinterpret_cast<int32_t*>(uintptr_t(w + kWindowShown)) = shown;
+    held.clear();
+}
+
 void __attribute__((thiscall)) windowsDraw(uint32_t manager) {
     itemswin::beforeGameDraw();   // «Речі»
     statswin::beforeGameDraw();   // «Характеристики»
@@ -117,13 +163,24 @@ void __attribute__((thiscall)) windowsDraw(uint32_t manager) {
     charpanel::beforeGameDraw();  // the Basic Info window
     hotbarwin::beforeGameDraw();  // the hotkeys' bar
     chatwin::beforeGameDraw();    // the chat (out of sight)
+    std::vector<std::pair<uint32_t, int32_t>> held;
+    const size_t gauges = holdShown(manager, false, held);  // 3.0.11-beta.191: the bars under the characters first
+    if (gauges > 0) reinterpret_cast<DrawFn>(uintptr_t(kDraw))(manager);
+    putBack(held);
     Context::get().markGameWindows(interfaceFaces());  // 3.0.11-beta.109: its own windows from here on - over ours
     if (g_told < 1) {
         ++g_told;
         LOG_INFO("windows draw: the game's replaced windows hidden before it draws its windows (uaRO.exe 0x%X)",
                  kDrawCall);
     }
+    if (gauges > 0 && g_gaugesTold < 3) {
+        ++g_gaugesTold;
+        LOG_INFO("windows draw: %zu bar(s) under the characters (HP/SP, cast) drawn before the game's windows - under "
+                 "the driver's", gauges);
+    }
+    if (gauges > 0) holdShown(manager, true, held);
     reinterpret_cast<DrawFn>(uintptr_t(kDraw))(manager);
+    putBack(held);
 }
 
 }  // namespace
