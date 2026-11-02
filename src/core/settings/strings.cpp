@@ -5603,6 +5603,33 @@ constexpr Entry kTexts[] = {
     {Text::PartyShared, "Shared", "Спільно", "Сообща"},
     {Text::PartyLeaderOnly, "Only the party's leader changes them", "Змінює лише лідер групи",
      "Меняет только лидер группы"},
+    // 3.0.11-beta.159: the pet
+    {Text::InterfacePet, "Pet card", "Картка улюбленця", "Карточка питомца"},
+    {Text::InterfacePetHint,
+     "The pet's window (Alt+J) as a card in the new look: its name and level, fullness and closeness as bars with the "
+     "game's words, feed, perform, the accessory off, back into the egg. Off: the game's own window.",
+     "Вікно улюбленця (Alt+J) карткою в новому вигляді: ім'я й рівень, ситість і близькість смугами зі словами гри, "
+     "нагодувати, трюк, зняти прикрасу, повернути в яйце. Вимкнено: власне вікно гри.",
+     "Окно питомца (Alt+J) карточкой в новом виде: имя и уровень, сытость и близость полосами со словами игры, "
+     "покормить, трюк, снять украшение, вернуть в яйцо. Выключено: собственное окно игры."},
+    {Text::PetTitle, "Pet", "Улюбленець", "Питомец"},
+    {Text::PetLevel, "Level {1}", "Рівень {1}", "Уровень {1}"},
+    {Text::PetHunger, "Fullness", "Ситість", "Сытость"},
+    {Text::PetIntimacy, "Closeness", "Близькість", "Близость"},
+    {Text::PetHungry0, "Very hungry", "Дуже голодний", "Очень голоден"},
+    {Text::PetHungry1, "Hungry", "Голодний", "Голоден"},
+    {Text::PetHungry2, "Neutral", "Звичайно", "Нормально"},
+    {Text::PetHungry3, "Satisfied", "Ситий", "Сыт"},
+    {Text::PetHungry4, "Stuffed", "Переїв", "Объелся"},
+    {Text::PetClose0, "Awkward", "Неприязний", "Неприязненный"},
+    {Text::PetClose1, "Shy", "Сором'язливий", "Стеснительный"},
+    {Text::PetClose2, "Neutral", "Звичайний", "Обычный"},
+    {Text::PetClose3, "Cordial", "Довіряє", "Доверяет"},
+    {Text::PetClose4, "Loyal", "Відданий", "Преданный"},
+    {Text::PetFeed, "Feed", "Нагодувати", "Покормить"},
+    {Text::PetPerform, "Perform", "Трюк", "Трюк"},
+    {Text::PetUnequip, "Accessory off", "Зняти прикрасу", "Снять украшение"},
+    {Text::PetEgg, "Into the egg", "У яйце", "В яйцо"},
     // 3.0.11-beta.141: the character block's experience (forms: one, a few, many)
     {Text::CharSkillPoints, "skill point|skill points", "очко навичок|очки навичок|очок навичок",
      "очко навыков|очка навыков|очков навыков"},

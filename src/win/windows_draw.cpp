@@ -24,6 +24,7 @@
 #include "win/char_make.hpp"
 #include "win/char_select.hpp"
 #include "win/party_setup.hpp"
+#include "win/pet_card.hpp"
 #include "win/pick_card.hpp"
 #include "win/vend_shop.hpp"
 #include "win/login_card.hpp"
@@ -69,6 +70,7 @@ void __attribute__((thiscall)) windowsDraw(uint32_t manager) {
     vendshopwin::beforeGameDraw();    // 3.0.11-beta.156: «Лавка»
     pickcardwin::beforeGameDraw();    // 3.0.11-beta.157: the choice of things
     partysetupwin::beforeGameDraw();  // 3.0.11-beta.158: the party's settings
+    petcardwin::beforeGameDraw();     // 3.0.11-beta.159: the pet
     mobhpwin::beforeGameDraw();   // 3.0.11-beta.100: the monsters' per cent asked
     charpanel::beforeGameDraw();  // the Basic Info window
     hotbarwin::beforeGameDraw();  // the hotkeys' bar

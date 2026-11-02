@@ -399,6 +399,7 @@ Config parseConfig(const std::string& text) {
     bool vendSet = false;                         // 3.0.11-beta.156
     bool pickSet = false;                         // 3.0.11-beta.157
     bool partySetupSet = false;                   // 3.0.11-beta.158
+    bool petSet = false;                          // 3.0.11-beta.159
     std::istringstream in(text);
     std::string line;
     std::string section;
@@ -631,6 +632,9 @@ Config parseConfig(const std::string& text) {
         } else if (key == "interface.party_setup") {  // 3.0.11-beta.158: the party's settings
             partySetupSet = val == "0" || val == "1" || val == "on" || val == "off" || val == "true" || val == "false";
             setBool(val, c.partySetupWindow);
+        } else if (key == "interface.pet") {  // 3.0.11-beta.159: the pet
+            petSet = val == "0" || val == "1" || val == "on" || val == "off" || val == "true" || val == "false";
+            setBool(val, c.petWindow);
         } else if (key == "interface.skill_cells") {  // 3.0.11-beta.142: a ground skill's cells on the ground
             setBool(val, c.skillCells);
         } else if (key == "interface.ground_counts") {  // 3.0.11-beta.143: walls standing, traps left on the bar
@@ -943,6 +947,7 @@ Config parseConfig(const std::string& text) {
     if (c.newMinimap && !vendSet) c.vendWindow = true;              // 3.0.11-beta.156
     if (c.newMinimap && !pickSet) c.pickWindows = true;             // 3.0.11-beta.157
     if (c.newMinimap && !partySetupSet) c.partySetupWindow = true;  // 3.0.11-beta.158
+    if (c.newMinimap && !petSet) c.petWindow = true;                // 3.0.11-beta.159
     return c;
 }
 

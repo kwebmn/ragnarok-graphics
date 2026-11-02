@@ -550,6 +550,10 @@ enum class Text : uint16_t {
     // 3.0.11-beta.158: the party's settings
     InterfacePartySetup, InterfacePartySetupHint, PartySetupTitle, PartyExp, PartyPickup, PartyShare, PartyEach,
     PartyEven, PartyShared, PartyLeaderOnly,
+    // 3.0.11-beta.159: the pet
+    InterfacePet, InterfacePetHint, PetTitle, PetLevel, PetHunger, PetIntimacy, PetHungry0, PetHungry1, PetHungry2,
+    PetHungry3, PetHungry4, PetClose0, PetClose1, PetClose2, PetClose3, PetClose4, PetFeed, PetPerform, PetUnequip,
+    PetEgg,
     // 3.0.11-beta.141: the character block's experience - the free skill points, the last level, an hour, a minute,
     // the experience's tip, the portrait's tip (Alt+V)
     CharSkillPoints, CharExpMax, CharHour, CharMinute, CharToLevel, CharLevelIn, CharPerHour, CharSession, CharLastGain,

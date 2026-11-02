@@ -63,6 +63,7 @@
 #include "win/char_make.hpp"
 #include "win/char_select.hpp"
 #include "win/party_setup.hpp"
+#include "win/pet_card.hpp"
 #include "win/pick_card.hpp"
 #include "win/vend_shop.hpp"
 #include "win/login_card.hpp"
@@ -961,6 +962,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     vendshopwin::frame(window, config.vendWindow, gameCodePage(config), pk, pw, ph);          // 3.0.11-beta.156
     pickcardwin::frame(window, config.pickWindows, gameCodePage(config), pk, pw, ph);         // 3.0.11-beta.157
     partysetupwin::frame(window, config.partySetupWindow, gameCodePage(config), pk, pw, ph);  // 3.0.11-beta.158
+    petcardwin::frame(window, config.petWindow, gameCodePage(config), pk, pw, ph);            // 3.0.11-beta.159
     // 3.0.11-beta.7: [interface] reference - «Довідник» (Ctrl+F)
     referencewin::frame(window, config.referenceWindow, pk, pw, ph);
     padcarrywin::frame(window, pk, pw, ph);  // 3.0.11-beta.121: a thing the controller carries - its places now

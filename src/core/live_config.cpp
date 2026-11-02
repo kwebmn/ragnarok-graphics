@@ -363,6 +363,10 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("party_setup", flag(running.partySetupWindow), flag(file.partySetupWindow)));
         n.partySetupWindow = file.partySetupWindow;
     }
+    if (file.petWindow != running.petWindow) {  // 3.0.11-beta.159: the pet's card, at once
+        u.applied.push_back(change("pet", flag(running.petWindow), flag(file.petWindow)));
+        n.petWindow = file.petWindow;
+    }
     if (file.skillCells != running.skillCells) {  // 3.0.11-beta.142: a ground skill's cells, at once
         u.applied.push_back(change("skill_cells", flag(running.skillCells), flag(file.skillCells)));
         n.skillCells = file.skillCells;
