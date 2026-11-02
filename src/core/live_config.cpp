@@ -383,6 +383,10 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("social", flag(running.socialWindow), flag(file.socialWindow)));
         n.socialWindow = file.socialWindow;
     }
+    if (file.serverWindow != running.serverWindow) {  // 3.0.11-beta.164: the server select, at once
+        u.applied.push_back(change("servers", flag(running.serverWindow), flag(file.serverWindow)));
+        n.serverWindow = file.serverWindow;
+    }
     if (file.skillCells != running.skillCells) {  // 3.0.11-beta.142: a ground skill's cells, at once
         u.applied.push_back(change("skill_cells", flag(running.skillCells), flag(file.skillCells)));
         n.skillCells = file.skillCells;

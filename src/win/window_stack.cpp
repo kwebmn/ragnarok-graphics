@@ -26,6 +26,7 @@
 #include "win/pet_card.hpp"
 #include "win/pick_card.hpp"
 #include "win/reference_window.hpp"
+#include "win/server_card.hpp"
 #include "win/shop_window.hpp"
 #include "win/skill_window.hpp"
 #include "win/social_card.hpp"
@@ -46,7 +47,7 @@ constexpr const char* kNames[] = {"«Речі»",  "«Характеристик
                                   "the message box", "the login", "the character select", "the character make",
                                   "«Візок»", "«Лавка»", "the choice of things", "the party's settings",
                                   "the pet", "the homunculus", "the mercenary", "the game's options",
-                                  "the friends and the party"};
+                                  "the friends and the party", "the server select"};
 static_assert(std::size(kNames) == size_t(winstack::kWins), "a name for each window");
 constexpr int kMostTold = 40;
 
@@ -105,6 +106,7 @@ bool shown(Win w) {
         case Win::Merc: return merccardwin::shown();  // 3.0.11-beta.161
         case Win::Options: return optionscardwin::shown();  // 3.0.11-beta.162
         case Win::Social: return socialcardwin::shown();  // 3.0.11-beta.163
+        case Win::Servers: return servercardwin::shown();  // 3.0.11-beta.164
     }
     return false;
 }
@@ -136,6 +138,7 @@ Blocker blockerOf(Win w) {
         case Win::Merc: return Blocker::Merc;
         case Win::Options: return Blocker::Options;
         case Win::Social: return Blocker::Social;
+        case Win::Servers: return Blocker::Servers;
         case Win::Reference: break;
     }
     return Blocker::Reference;
@@ -169,6 +172,7 @@ void drawOne(Win w, FrameRecord& record, gpu::Renderer& renderer) {
         case Win::Merc: merccardwin::draw(record, renderer); break;
         case Win::Options: optionscardwin::draw(record, renderer); break;
         case Win::Social: socialcardwin::draw(record, renderer); break;
+        case Win::Servers: servercardwin::draw(record, renderer); break;
     }
 }
 
@@ -200,6 +204,7 @@ bool mouseOne(Win w, HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
         case Win::Merc: return merccardwin::mouse(game, m, wp, lp, result);
         case Win::Options: return optionscardwin::mouse(game, m, wp, lp, result);
         case Win::Social: return socialcardwin::mouse(game, m, wp, lp, result);
+        case Win::Servers: return servercardwin::mouse(game, m, wp, lp, result);
     }
     return false;
 }
@@ -225,7 +230,7 @@ bool movable(Win w) {  // .140: the menu centred; .149: a card beside the cursor
     return w != Win::Npc && w != Win::Reference && w != Win::Menu && w != Win::ItemCard && w != Win::SkillCard &&
            w != Win::Ask && w != Win::Message && w != Win::Login && w != Win::CharSelect && w != Win::CharMake &&
            w != Win::Vending && w != Win::Pick && w != Win::PartySetup && w != Win::Pet && w != Win::Homun &&
-           w != Win::Merc && w != Win::Options && w != Win::Social;
+           w != Win::Merc && w != Win::Options && w != Win::Social && w != Win::Servers;
 }
 
 bool boxOf(Win w, winstack::Box& b) {
@@ -256,6 +261,7 @@ bool boxOf(Win w, winstack::Box& b) {
         case Win::Merc: return merccardwin::box(b.x, b.y, b.w, b.h);
         case Win::Options: return optionscardwin::box(b.x, b.y, b.w, b.h);
         case Win::Social: return socialcardwin::box(b.x, b.y, b.w, b.h);
+        case Win::Servers: return servercardwin::box(b.x, b.y, b.w, b.h);
     }
     return false;
 }

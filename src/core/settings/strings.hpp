@@ -566,6 +566,8 @@ enum class Text : uint16_t {
     // 3.0.11-beta.163: the friends and the party
     InterfaceSocial, InterfaceSocialHint, SocialFriends, SocialParty, SocialOffline, SocialEmpty, SocialNoParty,
     SocialPartyName, SocialFriendCount, SocialWhisper, SocialExpel, SocialLeave, SocialSettings, SocialDelete,
+    // 3.0.11-beta.164: the server select
+    InterfaceServers, InterfaceServersHint, ServersTitle, ServersHint, ServersNext, ServersEmpty,
     // 3.0.11-beta.141: the character block's experience - the free skill points, the last level, an hour, a minute,
     // the experience's tip, the portrait's tip (Alt+V)
     CharSkillPoints, CharExpMax, CharHour, CharMinute, CharToLevel, CharLevelIn, CharPerHour, CharSession, CharLastGain,

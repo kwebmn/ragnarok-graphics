@@ -56,6 +56,7 @@
 #include "win/homun_card.hpp"
 #include "win/merc_card.hpp"
 #include "win/options_card.hpp"
+#include "win/server_card.hpp"
 #include "win/social_card.hpp"
 #include "win/pet_card.hpp"
 #include "win/pick_card.hpp"
@@ -799,6 +800,20 @@ bool socialPad(const PadState& pad, DWORD now) {
     return true;
 }
 
+// 3.0.11-beta.164: the server select - up and down a server, A «Далі», B «Назад»
+bool serversPad(const PadState& pad, DWORD now) {
+    State& s = S();
+    const uint16_t buttons = pad.connected ? pad.buttons : 0;
+    const uint16_t down = uint16_t((buttons & ~s.prevPadButtons) | stickSteps(pad, now));
+    s.prevPadButtons = buttons;
+    using uagfx::win::servercardwin::PadCommand;
+    const std::pair<uint16_t, PadCommand> keys[] = {{kPadUp, PadCommand::Up}, {kPadDown, PadCommand::Down},
+                                                    {kPadA, PadCommand::Ok},  {kPadB, PadCommand::Back}};
+    for (const auto& [button, command] : keys)
+        if (down & button) uagfx::win::servercardwin::padCommand(command);
+    return true;
+}
+
 // 3.0.11-beta.92: «Характеристики» open - the D-pad (or the left stick) chooses a stat, A adds a point, B or Start
 // close it
 bool statsPad(const PadState& pad, DWORD now) {
@@ -1099,7 +1114,7 @@ constexpr const char* kTopNames[] = {"«Речі»",  "«Характерист�
                                      "the message box", "the login", "the character select",
                                      "the character make", "«Візок»", "«Лавка»", "the choice of things",
                                      "the party's settings", "the pet", "the homunculus", "the mercenary",
-                                     "the game's options", "the friends and the party"};
+                                     "the game's options", "the friends and the party", "the server select"};
 static_assert(std::size(kTopNames) == size_t(uagfx::winstack::kWins), "a name for each window");
 
 void tick() {
@@ -1179,6 +1194,7 @@ void tick() {
                   : drive && *top == Win::Merc                     ? mercPad(pad)             // .161
                   : drive && *top == Win::Options                  ? optionsPad(pad, now)     // .162
                   : drive && *top == Win::Social                   ? socialPad(pad, now)      // .163
+                  : drive && *top == Win::Servers                  ? serversPad(pad, now)     // .164
                                                                    : runMenu(pad, view, now);
     if (s.npcSupported) view.dialog = clientnpc::read();
     double clientTurn = 0;

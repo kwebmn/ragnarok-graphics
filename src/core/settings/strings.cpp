@@ -5711,6 +5711,19 @@ constexpr Entry kTexts[] = {
     {Text::SocialLeave, "Leave the party", "Вийти з групи", "Выйти из группы"},
     {Text::SocialSettings, "Settings", "Налаштування", "Настройки"},
     {Text::SocialDelete, "Delete", "Видалити", "Удалить"},
+    // 3.0.11-beta.164: the server select
+    {Text::InterfaceServers, "Server select", "Вибір сервера", "Выбор сервера"},
+    {Text::InterfaceServersHint,
+     "The game's server select between the login and the characters in the new look: a row a server (the only one "
+     "chosen at once), two clicks go on. Off: the game's own window.",
+     "Вибір сервера між входом і персонажами в новому вигляді: рядок на сервер (єдиний обрано одразу), подвійний клік "
+     "— далі. Вимкнено: власне вікно гри.",
+     "Выбор сервера между входом и персонажами в новом виде: строка на сервер (единственный выбран сразу), двойной "
+     "клик — дальше. Выключено: собственное окно игры."},
+    {Text::ServersTitle, "Server select", "Вибір сервера", "Выбор сервера"},
+    {Text::ServersHint, "Choose the server", "Оберіть сервер", "Выберите сервер"},
+    {Text::ServersNext, "Next", "Далі", "Далее"},
+    {Text::ServersEmpty, "No server found", "Сервери не знайдено", "Серверы не найдены"},
     // 3.0.11-beta.141: the character block's experience (forms: one, a few, many)
     {Text::CharSkillPoints, "skill point|skill points", "очко навичок|очки навичок|очок навичок",
      "очко навыков|очка навыков|очков навыков"},
