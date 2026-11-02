@@ -4,12 +4,16 @@
 
 #include <algorithm>
 #include <cstdint>
+#include <cstdio>
 #include <cstring>
 #include <iterator>
+#include <string>
 #include <utility>
 #include <vector>
 
 #include "win/char_block.hpp"
+#include "pad/win/client_mouse.hpp"
+#include "pad/win/game_window.hpp"
 #include "win/context.hpp"
 #include "win/game_camera.hpp"
 #include "win/chat_window.hpp"
@@ -124,6 +128,37 @@ size_t holdShown(uint32_t manager, bool gauges, std::vector<std::pair<uint32_t, 
     return others;  // the shown ones left drawn
 }
 
+// 3.0.11-beta.192 (R-2456EU «когда мышкой наводишь всеравно полоска появляется»): the cursor over a part of the
+// driver's - the game's shown windows under it told the log (their class and place), every 1.5 s, 15 times at most
+void tellWindowsAtCursor(uint32_t manager) {
+    static ULONGLONG at = 0;
+    static int told = 0;
+    const ULONGLONG now = GetTickCount64();
+    if (told >= 15 || now - at < 1500) return;
+    int x = 0, y = 0, w = 0, h = 0;
+    if (!uapad::clientmouse::read(x, y, w, h) || uapad::gamewindow::blockedUnder(x, y, w, h) < 0) return;
+    at = now;
+    ++told;
+    std::string line;
+    const uint32_t head = *reinterpret_cast<const uint32_t*>(uintptr_t(manager + kWindowsList));
+    size_t seen = 0;
+    for (uint32_t node = head ? *reinterpret_cast<const uint32_t*>(uintptr_t(head)) : 0;
+         node && node != head && seen < kMostWindows; node = *reinterpret_cast<const uint32_t*>(uintptr_t(node))) {
+        ++seen;
+        const uint32_t win = *reinterpret_cast<const uint32_t*>(uintptr_t(node + 8));
+        if (!win || !*reinterpret_cast<const int32_t*>(uintptr_t(win + kWindowShown))) continue;
+        const auto* r = reinterpret_cast<const int32_t*>(uintptr_t(win + 0x14));  // x, y, width, height
+        if (x < r[0] || y < r[1] || x >= r[0] + r[2] || y >= r[1] + r[3]) continue;
+        char part[80];
+        const uint32_t cls = *reinterpret_cast<const uint32_t*>(uintptr_t(win));
+        std::snprintf(part, sizeof part, " class 0x%X %d,%d %dx%d%s;", cls, r[0], r[1], r[2], r[3],
+                      worldGauge(win) ? " (a bar)" : "");
+        line += part;
+    }
+    LOG_INFO("diag: the cursor at %d,%d over the driver's part - the game's shown windows under it:%s", x, y,
+             line.empty() ? " none" : line.c_str());
+}
+
 void putBack(std::vector<std::pair<uint32_t, int32_t>>& held) {
     for (const auto& [w, shown] : held) *reinterpret_cast<int32_t*>(uintptr_t(w + kWindowShown)) = shown;
     held.clear();
@@ -163,6 +198,7 @@ void __attribute__((thiscall)) windowsDraw(uint32_t manager) {
     charpanel::beforeGameDraw();  // the Basic Info window
     hotbarwin::beforeGameDraw();  // the hotkeys' bar
     chatwin::beforeGameDraw();    // the chat (out of sight)
+    tellWindowsAtCursor(manager);  // 3.0.11-beta.192
     std::vector<std::pair<uint32_t, int32_t>> held;
     const size_t gauges = holdShown(manager, false, held);  // 3.0.11-beta.191: the bars under the characters first
     if (gauges > 0) reinterpret_cast<DrawFn>(uintptr_t(kDraw))(manager);

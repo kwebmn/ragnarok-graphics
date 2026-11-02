@@ -79,6 +79,10 @@ public:
     // in all (win/windows_draw interfaceFaces): its windows and its cursor are the faces from facesBefore to there; the
     // depth-sorted screen list drawn after them (the bars under the characters) stays under the driver's windows
     void markInterfaceEnd(size_t faces);
+    // 3.0.11-beta.192 (R-2456EU «когда мышкой наводишь всеравно полоска появляется»): the cursor over a part of the
+    // driver's - the interface's draws under it told the log by their place in the frame (before the game's windows,
+    // moved over the driver's, after), their size, place and texture; every 1.5 s, 15 times at most
+    void tellDrawsAtCursor(size_t from, size_t to);
     bool readTarget(std::vector<uint32_t>& argb);
     void writeTarget(const Rect& rect, const uint32_t* argb);
     void flushIfFull();  // past FrameRecord::kFlushBytes: play the record now (a map's first frame, big writes)
@@ -113,6 +117,8 @@ private:
     bool gameWindowsMarked_ = false;      // 3.0.11-beta.109: the game drew its own windows this frame
     size_t gameWindowsFaces_ = SIZE_MAX;  // 3.0.11-beta.185: its interface's faces filed before them
     size_t interfaceFaces_ = SIZE_MAX;    // 3.0.11-beta.190: and in all, at its scene's begin
+    ULONGLONG cursorDrawsAt_ = 0;         // 3.0.11-beta.192: tellDrawsAtCursor's last and how many
+    int cursorDrawsTold_ = 0;
     bool gameWindowsTold_ = false;
     Context();
     // One log line every 30 seconds and one at close: frames shown and reads of the frame from the GPU. Reads
