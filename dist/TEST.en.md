@@ -1,3 +1,14 @@
+# uaRO Graphics 3.0.11-beta.187 — what's new
+
+**The interface: more fixes after the tester**:
+- "Server select" and the other choice lists: with more rows than shown, a scroll bar at the right tells that
+  there is more below (the wheel scrolls). No more empty dark squares in place of the servers' icons.
+- The minimap: the camera's view fan is a neutral light now, not blue like the arrow — no longer taken for the
+  character's sight (the arrow shows where the character faces). A new box "The camera's view on the minimap"
+  ("Interface", on) — off, and the arrow stays alone.
+- The minimap: zoomed out to the end (the whole map) and back in, the map no longer gets even smaller at the first
+  step — the steps wider than the map itself are skipped.
+
 # uaRO Graphics 3.0.11-beta.186 — what's new
 
 **The interface: fixes after the tester**:
