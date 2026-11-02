@@ -12,6 +12,7 @@
 
 #include "core/accounts.hpp"
 #include "core/login_card.hpp"
+#include "core/site_signin.hpp"
 #include "core/login_chrome.hpp"
 #include "core/reference_live.hpp"
 #include "core/server_status.hpp"
@@ -29,6 +30,10 @@
 #include "win/login_continue.hpp"
 #include "win/login_refusal.hpp"
 #include "win/login_shelf.hpp"
+#include "win/open_page.hpp"
+#include "win/site_accounts.hpp"
+#include "win/site_key.hpp"
+#include "win/site_signin.hpp"
 #include "win/paths.hpp"
 #include "win/reference_load.hpp"
 #include "win/server_probe.hpp"
@@ -65,7 +70,6 @@ using GetTextFn = const char*(__attribute__((thiscall)) *)(uint32_t edit);
 using LengthFn = int(__attribute__((thiscall)) *)(uint32_t edit);
 using SetFocusFn = void(__attribute__((thiscall)) *)(uint32_t manager, uint32_t control);
 using SetTextFn = void(__attribute__((thiscall)) *)(uint32_t edit, const char* text);
-using ShellExecuteFn = HINSTANCE(WINAPI*)(HWND, const wchar_t*, const wchar_t*, const wchar_t*, const wchar_t*, int);
 
 struct State {
     WindowShadow shadow;
@@ -119,7 +123,7 @@ struct State {
     // 3.0.11-beta.176: the login a shelf row sent with one click, and «Одразу в гру»'s character (UTF-8; "" the select)
     std::string oneClick, autoName;
     // 3.0.11-beta.176-177: what shows in the login window's place - the card, «Полиця», «Продовжити»
-    enum class Mode : uint8_t { Card, Shelf, Continue };
+    enum class Mode : uint8_t { Card, Shelf, Continue, Site };  // 3.0.11-beta.180: the site sign-in card
     Mode mode = Mode::Card;
     loginview::View view = loginview::View::Shelf;  // the view now ([interface] login_view, or picked on the strip)
     std::optional<loginview::View> viewPicked;       // picked on the strip until the settings say the same
@@ -252,6 +256,8 @@ lc::Texts texts(loginview::View view) {
     t.addShelf = say(settings::Text::LoginAddShelf);  // 3.0.11-beta.175
     t.shelf = say(view == loginview::View::Continue ? settings::Text::ContinueBack
                                                      : settings::Text::ShelfBack);  // 3.0.11-beta.176
+    t.siteOffer = say(settings::Text::SiteOffer);  // 3.0.11-beta.180
+    t.siteOut = say(settings::Text::SiteOut);
     return t;
 }
 
@@ -280,8 +286,9 @@ void block(const State& s, HWND game) {
     panel::Box b = s.layout.glass;
     float x0 = float(s.layout.x) + b.x, y0 = float(s.layout.y) + b.y;
     int sx = 0, sy = 0, sw = 0, sh = 0;
-    const bool other = s.mode == State::Mode::Shelf   ? loginshelfwin::box(sx, sy, sw, sh)
+    const bool other = s.mode == State::Mode::Shelf      ? loginshelfwin::box(sx, sy, sw, sh)
                        : s.mode == State::Mode::Continue ? logincontinuewin::box(sx, sy, sw, sh)
+                       : s.mode == State::Mode::Site     ? sitesigninwin::box(sx, sy, sw, sh)
                                                          : false;
     if (other) {  // 3.0.11-beta.176-177: the shelf's or «Продовжити»'s place
         b = panel::Box{0, 0, float(sw), float(sh)};
@@ -452,13 +459,7 @@ void chooseLanguage(int segment) {
 }
 
 // A page of the site in the player's browser (shell32 asked for only now: the driver's imports stay the four it has)
-bool openUrl(const wchar_t* url) {
-    const HMODULE shell = LoadLibraryA("shell32.dll");
-    const auto open = reinterpret_cast<ShellExecuteFn>(
-        reinterpret_cast<void*>(shell ? GetProcAddress(shell, "ShellExecuteW") : nullptr));
-    if (open) open(nullptr, L"open", url, nullptr, nullptr, SW_SHOWNORMAL);
-    return open != nullptr;
-}
+bool openUrl(const wchar_t* url) { return openPage(url); }
 
 // 3.0.11-beta.174: the news line's click - the item's page, or the site's news in the player's language
 void openNews(const State& s, bool all) {
@@ -569,6 +570,19 @@ void press(State& s, lc::Part p) {
         LOG_INFO("login: the registration page %s (uaro.kiev.ua/account/register)", opened ? "opened" : "not opened");
         return;
     }
+    if (p == lc::Part::Site && !sitekey::token().empty()) p = lc::Part::None;  // the chip's words: nothing
+    if (p == lc::Part::SiteOut && sitekey::token().empty()) p = lc::Part::Site;  // the offer's line, all of it
+    if (p == lc::Part::Site) {  // 3.0.11-beta.180: the site sign-in card
+        sitesigninwin::open();
+        s.key.clear();
+        return;
+    }
+    if (p == lc::Part::SiteOut) {
+        sitekey::forget();
+        LOG_INFO("site: signed out on the login screen");
+        s.key.clear();
+        return;
+    }
     if (p == lc::Part::Forgot) {  // 3.0.11-beta.177
         const bool opened = openUrl(kForgot);
         LOG_INFO("login: the password's reset page %s", opened ? "opened" : "not opened");
@@ -605,11 +619,24 @@ void act(State& s, const loginshelfwin::Asked& a) {
     using A = loginshelfwin::Act;
     accounts::Shelf& shelf = accountsstore::shelf();
     const uint32_t window = gameLogin();
-    const bool row = a.index >= 0 && a.index < int(shelf.list.size());
+    const shelfmerge::Row* r = loginshelfwin::row(a.index);  // 3.0.11-beta.181: this computer's or the site's
+    accounts::Account account;
+    if (r && r->local >= 0 && r->local < int(shelf.list.size())) {
+        account = shelf.list[size_t(r->local)];
+    } else if (r) {
+        account.login = r->login;  // the site's alone: its password asked once
+    }
     switch (a.act) {
         case A::Login:
-            if (row) loginWith(shelf.list[size_t(a.index)]);
+        case A::CharLogin:
+        case A::CharNew:
+            if (r) loginWith(account, a.act == A::CharNew, a.act == A::CharLogin ? a.name : std::string());
             break;
+        case A::GamePassword:
+            if (r) sitesigninwin::openForm(int(sitesignin::Way::GamePassword), r->accountId, r->login);
+            break;
+        case A::NewLogin: sitesigninwin::openForm(int(sitesignin::Way::NewLogin), 0, std::string()); break;
+        case A::LinkLogin: sitesigninwin::openForm(int(sitesignin::Way::Link), 0, std::string()); break;
         case A::Add:
             if (!shelf.addAfterLogin) {
                 shelf.addAfterLogin = true;
@@ -626,8 +653,8 @@ void act(State& s, const loginshelfwin::Asked& a) {
             break;
         case A::Edit:
             loginshelfwin::classic(true);
-            if (row && window && s.places.known()) {
-                putFields(s, window, shelf.list[size_t(a.index)].login, std::string());
+            if (r && window && s.places.known()) {
+                putFields(s, window, r->login, std::string());
                 reinterpret_cast<SetFocusFn>(uintptr_t(kSetFocus))(kWindowMgr, read32(window + s.places.password));
             }
             break;
@@ -649,7 +676,7 @@ void actContinue(State& s, const logincontinuewin::Asked& a) {
         case A::OtherChar:
             if (row) loginWith(shelf.list[size_t(a.index)], a.act == A::OtherChar);
             break;
-        case A::Other: act(s, loginshelfwin::Asked{loginshelfwin::Act::Other, -1}); break;
+        case A::Other: act(s, loginshelfwin::Asked{loginshelfwin::Act::Other, -1, {}}); break;
         case A::Create: openUrl(kRegister); break;
         case A::None: break;
     }
@@ -868,22 +895,28 @@ void frame(HWND game, bool on, bool status, bool news, loginview::View view, uns
     // the card whichever view
     const accounts::Shelf& shelf = accountsstore::shelf();
     const bool any = !shelf.list.empty(), forOne = loginshelfwin::classicChosen();
-    const State::Mode mode = !any || forOne || s.view == loginview::View::Classic ? State::Mode::Card
+    sitesigninwin::probe();  // 3.0.11-beta.180: the site's client API there? (asked once; again while not)
+    if (sitesigninwin::takeSignedIn()) siteaccounts::refresh(true);  // 3.0.11-beta.181: the shelf from the site
+    const State::Mode mode = sitesigninwin::isOpen()                                    ? State::Mode::Site
+                             : !any || forOne || s.view == loginview::View::Classic ? State::Mode::Card
                              : s.view == loginview::View::Shelf                    ? State::Mode::Shelf
                                                                                    : State::Mode::Continue;
     if (mode != s.mode) {
         s.mode = mode;
         s.key.clear();
         s.dropOpen = false;
-        LOG_INFO("login: %s shown", mode == State::Mode::Shelf ? "«Полиця»" : mode == State::Mode::Continue
-                                                                               ? "«Продовжити»"
-                                                                               : "the login card");
+        LOG_INFO("login: %s shown", mode == State::Mode::Shelf      ? "«Полиця»"
+                                    : mode == State::Mode::Continue ? "«Продовжити»"
+                                    : mode == State::Mode::Site     ? "the site sign-in card"
+                                                                    : "the login card");
     }
     if (mode != State::Mode::Card) {
         if (mode == State::Mode::Shelf)
             loginshelfwin::frame(k, targetWidth, targetHeight, codePage);
-        else
+        else if (mode == State::Mode::Continue)
             logincontinuewin::frame(k, targetWidth, targetHeight, codePage);
+        else
+            sitesigninwin::frame(k, targetWidth, targetHeight);
         chromeFrame(s, targetWidth, targetHeight);
         s.shown = true;
         block(s, game);
@@ -898,11 +931,19 @@ void frame(HWND game, bool on, bool status, bool news, loginview::View view, uns
     s.fields.dropOpen = s.dropOpen;
     s.fields.shelfBack = any && forOne && s.view != loginview::View::Classic;
     s.fields.note = !any && shelf.addAfterLogin ? say(settings::Text::ShelfFirstNote) : "";
+    const std::string siteNick = sitekey::token().empty() ? std::string() : sitekey::nick();  // 3.0.11-beta.180
+    s.fields.site = !sitekey::token().empty()   ? lc::SiteLine::Chip
+                    : sitesigninwin::siteReady() ? lc::SiteLine::Offer
+                                                 : lc::SiteLine::None;
+    s.fields.siteChip = settings::fmt(say(settings::Text::SiteChip),
+                                      {siteNick.empty() ? std::string("uaro.kiev.ua") : siteNick,
+                                       std::to_string(siteaccounts::logins().size())});
     lc::Options o;
     o.errorAt = s.error.empty() ? s.fields.hintField : s.fields.errorField;
     o.note = !s.fields.note.empty();
     o.back = s.fields.shelfBack;
     o.drop = any;
+    o.site = s.fields.site != lc::SiteLine::None;
     s.layout = lc::layout(targetWidth, targetHeight, s.scale, o);
     s.show.hover = 0;
     int cx = 0, cy = 0;
@@ -913,7 +954,8 @@ void frame(HWND game, bool on, bool status, bool news, loginview::View view, uns
     const std::string key = f.account + ';' + std::to_string(f.passwordLength) + ';' + std::to_string(int(f.focus)) +
                             (f.caret ? "|" : "") + (f.remember ? "r" : "") + (f.addShelf ? "s" : "") +
                             (f.shelfBack ? "b" : "") + f.note + (f.passwordShown.empty() ? "" : "e") +
-                            (f.dropOpen ? "d" : "") + std::to_string(int(s.view)) + ';' +
+                            (f.dropOpen ? "d" : "") + std::to_string(int(s.view)) + std::to_string(int(f.site)) +
+                            f.siteChip + ';' +
                             std::to_string(s.layout.x) + ',' +
                             std::to_string(s.layout.y) + ';' + std::to_string(s.show.hover) + '#' +
                             std::to_string(uistyle::generation()) + '!' + s.error + '?' + s.fields.hint;
@@ -937,6 +979,8 @@ void draw(FrameRecord& record, gpu::Renderer& renderer) {
         loginshelfwin::draw(record, renderer);
     } else if (s.mode == State::Mode::Continue) {  // 3.0.11-beta.177: «Продовжити»
         logincontinuewin::draw(record, renderer);
+    } else if (s.mode == State::Mode::Site) {  // 3.0.11-beta.180: the site sign-in card
+        sitesigninwin::draw(record, renderer);
     } else if (s.picture.width > 0 && s.picture.height > 0) {
         const panel::Box& g = s.layout.glass;
         s.shadow.draw(record, renderer, s.layout.x + int(g.x), s.layout.y + int(g.y), int(g.w), int(g.h),
@@ -981,6 +1025,11 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
         if (!took) return false;
         result = 0;
         act(s, a);
+        return true;
+    }
+    if (s.mode == State::Mode::Site) {  // 3.0.11-beta.180
+        if (!sitesigninwin::mouse(m, tx, ty)) return false;
+        result = 0;
         return true;
     }
     if (s.mode == State::Mode::Continue) {  // 3.0.11-beta.177
@@ -1060,7 +1109,7 @@ bool toastMouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
 
 const std::string& loggedIn() { return state().loggedIn; }
 
-bool loginWith(const accounts::Account& a, bool stopAtSelect) {
+bool loginWith(const accounts::Account& a, bool stopAtSelect, const std::string& character) {
     State& s = state();
     const uint32_t window = gameLogin();
     if (!window || !s.places.known() || a.login.empty()) return false;
@@ -1075,12 +1124,18 @@ bool loginWith(const accounts::Account& a, bool stopAtSelect) {
     if (!p.enterAtOnce) {  // the card shows it: its password to type, or «Увійти» pressed knowingly (another window)
         loginshelfwin::classic(true);
         reinterpret_cast<SetFocusFn>(uintptr_t(kSetFocus))(kWindowMgr, read32(window + s.places.password));
+        if (!character.empty() && !busy) {  // 3.0.11-beta.181: entered with it once its password is typed
+            s.oneClick = a.login;
+            s.autoName = character;
+        }
         LOG_INFO("login: the shelf's %016llx - %s", hash, busy ? "played in another game window: the card shows it"
                                                               : "its password asked");
         return true;
     }
     s.oneClick = a.login;
-    s.autoName = p.autoCharacter ? a.last.name : std::string();
+    s.autoName = stopAtSelect ? std::string() : !character.empty() ? character  // 3.0.11-beta.181: the one clicked
+                                              : p.autoCharacter     ? a.last.name
+                                                                    : std::string();
     LOG_INFO("login: the shelf's %016llx sent with one click%s", hash, p.autoCharacter ? " («Одразу в гру»)" : "");
     pressEnter(window);
     return true;
@@ -1115,6 +1170,8 @@ bool key(UINT m, WPARAM wp, LPARAM lp) {
     if (s.mode == State::Mode::Shelf) {
         const loginshelfwin::Asked a = loginshelfwin::key(m, wp, took);
         if (a.act != loginshelfwin::Act::None) act(s, a);
+    } else if (s.mode == State::Mode::Site) {  // 3.0.11-beta.180: its fields
+        took = sitesigninwin::key(m, wp);
     } else if (s.mode == State::Mode::Continue) {  // 3.0.11-beta.177
         const logincontinuewin::Asked a = logincontinuewin::key(m, wp, took);
         if (a.act != logincontinuewin::Act::None) actContinue(s, a);
@@ -1188,6 +1245,7 @@ bool box(int& x, int& y, int& w, int& h) {
     if (!s.shown) return false;
     if (s.mode == State::Mode::Shelf) return loginshelfwin::box(x, y, w, h);         // 3.0.11-beta.176
     if (s.mode == State::Mode::Continue) return logincontinuewin::box(x, y, w, h);  // 3.0.11-beta.177
+    if (s.mode == State::Mode::Site) return sitesigninwin::box(x, y, w, h);          // 3.0.11-beta.180
     x = s.layout.x;
     y = s.layout.y;
     w = s.layout.w;

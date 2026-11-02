@@ -13,6 +13,8 @@ namespace uagfx::logincard {
 // as dots), «Запам'ятати логін», «Увійти» and «Вийти» pressing its own buttons, the site's registration under them. The
 // parts that need no Windows; the words by GDI (win/login_card).
 enum class Focus : uint8_t { None, Account, Password };
+// 3.0.11-beta.180: the card's foot - «Підтягнути всі логіни» (the site account not signed in), its chip (signed in)
+enum class SiteLine : uint8_t { None, Offer, Chip };
 struct Fields {
     std::string account;     // UTF-8, as the game's field has it
     int passwordLength = 0;  // its letters' count only
@@ -32,6 +34,8 @@ struct Fields {
     std::string note;
     std::string passwordShown;  // 3.0.11-beta.177: the password's letters while the eye is held (else empty: dots)
     bool dropOpen = false;      // 3.0.11-beta.177: the saved logins' list shown
+    SiteLine site = SiteLine::None;  // 3.0.11-beta.180
+    std::string siteChip;            // «kweb · логінів: 3»
 };
 struct Texts {
     std::string title, subtitle;     // «uaRO», «Вхід у гру»
@@ -43,6 +47,7 @@ struct Texts {
     std::string addShelf;                      // 3.0.11-beta.175: «Додати на полицю після входу»
     std::string shelf;                         // 3.0.11-beta.176: «‹ Полиця»
     std::string forgot;                        // 3.0.11-beta.177: «Забули пароль?» (register_: «Створити акаунт»)
+    std::string siteOffer, siteOut;            // 3.0.11-beta.180: «Підтягнути всі логіни», the chip's «Вийти»
 };
 struct Show {
     int hover = 0;  // a Part's number, 0 none
@@ -58,16 +63,19 @@ struct Layout {
     // 3.0.11-beta.177: ▾ in the account's field (0 wide: no saved logins), the eye in the password's, «Забули
     // пароль?» at the right of the links' row («Створити акаунт», link, at its left)
     panel::Box drop, eye, forgot;
+    panel::Box site, siteOut;  // 3.0.11-beta.180: the foot's line (0 high: none), the chip's «Вийти» at its right
 };
 // What the card has besides its fields: a refusal's line, the first launch's note, «‹ Полиця», ▾
 struct Options {
     loginerr::Field errorAt = loginerr::Field::None;
     bool note = false, back = false, drop = false;
+    bool site = false;  // 3.0.11-beta.180: the site account's line
 };
 Layout layout(int targetW, int targetH, float scale, const Options& o);
 Layout layout(int targetW, int targetH, float scale, loginerr::Field errorAt = loginerr::Field::None);
 enum class Part : uint8_t {
-    None, Account, Password, Remember, Enter, Exit, Register, ErrorAction, AddShelf, Shelf, Drop, Eye, Forgot
+    None, Account, Password, Remember, Enter, Exit, Register, ErrorAction, AddShelf, Shelf, Drop, Eye, Forgot, Site,
+    SiteOut
 };
 Part hitTest(const Layout& L, float x, float y);
 int gameButton(Part p);  // the game's window's own: 0x78 enter, 0x9b exit, 0x93 the box; 0 none

@@ -549,6 +549,14 @@ enum class Text : uint16_t {
     // 3.0.11-beta.177: the views, «Класичний»'s links and list, «Продовжити»
     InterfaceLoginView, InterfaceLoginViewHint, LoginViewLabel, LoginViewClassic, LoginViewShelf, LoginViewContinue,
     LoginForgot, LoginOtherLogin, ContinueHeading, ContinueOtherChar, ContinueChange, ContinueBack,
+    // 3.0.11-beta.180: the site account in the client
+    SiteOffer, SiteOut, SiteChip, SiteTitle, SiteSubtitle, SiteWayPassword, SiteWayBrowser, SiteWayKey, SiteCode2fa,
+    SiteKeyLabel, SiteStartBrowser, SiteWaiting, SiteBack, SiteErrEmpty, SiteErrNoAnswer, SiteErrFailed, SiteErrTwofa,
+    SiteErrKey, SiteErrExpired,
+    // 3.0.11-beta.181: the site's logins on the shelf, «Персонажі», the forms
+    ShelfNoPassword, ShelfNoPasswordShort, ShelfChars, ShelfNewLogin, ShelfLinkLogin, ShelfMenuGamePassword,
+    ShelfCharsTitle, ShelfCharsBack, ShelfNewChar, SiteFormNewLogin, SiteFormLink, SiteFormGamePassword, SiteGamePass,
+    SiteCurrentPass, SiteNewPass, SiteSexM, SiteSexF, SiteCreate, SiteLink, SiteChange, SiteErrForm,
     // 3.0.11-beta.152: the character select
     InterfaceCharSelect, InterfaceCharSelectHint, CharsTitle, CharsEnter, CharsMake, CharsRemove, CharsBack, CharsEmpty,
     CharsMakeHint,

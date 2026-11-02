@@ -16,9 +16,10 @@ constexpr float kCardW = 228, kCardH = 338, kGap = 20, kPicH = 196, kTitleH = 34
 constexpr float kButtonH = 42, kButtonGap = 14, kOtherW = 210, kCreateW = 210, kExitW = 150;
 constexpr float kArrowW = 36, kArrowH = 56, kArrowGap = 16, kPlayH = 40, kPlayIn = 14, kDotsW = 30, kDotsH = 26;
 constexpr float kMenuRowH = 32, kMenuPad = 6;
+constexpr float kSiteH = 34;  // 3.0.11-beta.181: the site's links' row under the buttons
 constexpr uint32_t kCard = 0x10141C, kWhite = 0xFFFFFF, kGold = 0xC9A55B, kGold2 = 0xE6CB8A, kText = 0xEEF2F8;
 constexpr uint32_t kMuted = 0x9AA3B5, kLogin = 0x7E879A, kRed = 0xFF5A4E, kAmber = 0xF2C46B, kPill = 0x0A0C12;
-constexpr uint32_t kChosenWords = 0xF5E6BE, kKey = 0xB9A47A;
+constexpr uint32_t kChosenWords = 0xF5E6BE, kKey = 0xB9A47A, kLink = 0x8CB8FF;
 
 float rowWidth(int slots) { return slots * kCardW + std::max(0, slots - 1) * kGap; }
 
@@ -35,7 +36,7 @@ std::string fill(const std::string& pattern, const std::string& v) {
 
 }  // namespace
 
-Layout layout(int targetW, int targetH, float scale, size_t cards, int first) {
+Layout layout(int targetW, int targetH, float scale, size_t cards, int first, bool site) {
     Layout L;
     const float s = scale > 0 ? scale : 1.0f;
     L.s = s;
@@ -43,7 +44,7 @@ Layout layout(int targetW, int targetH, float scale, size_t cards, int first) {
     L.first = std::clamp(first, 0, std::max(0, slots - kInSight));
     const int inSight = std::min(kInSight, slots - L.first);
     const float w = (rowWidth(kInSight) + 2 * (kArrowGap + kArrowW)) * s;
-    const float h = (kTitleH + kTitleGap + kCardH + kRowGap + kButtonH) * s;
+    const float h = (kTitleH + kTitleGap + kCardH + kRowGap + kButtonH + (site ? kSiteH : 0.0f)) * s;
     L.w = int(std::ceil(w));
     L.h = int(std::ceil(h));
     L.x = std::max(0, targetW / 2 - L.w / 2);
@@ -68,6 +69,12 @@ Layout layout(int targetW, int targetH, float scale, size_t cards, int first) {
     L.create = panel::Box{bx, by, kCreateW * s, kButtonH * s};
     bx += (kCreateW + kButtonGap) * s;
     L.exit = panel::Box{bx, by, kExitW * s, kButtonH * s};
+    if (site) {  // 3.0.11-beta.181: the site account's parts
+        L.chars = panel::Box{w - 150 * s, 0, 150 * s, kTitleH * s};
+        const float ly = by + (kButtonH + 12) * s;
+        L.newLogin = panel::Box{w / 2 - 230 * s, ly, 220 * s, 22 * s};
+        L.linkLogin = panel::Box{w / 2 + 10 * s, ly, 220 * s, 22 * s};
+    }
     return L;
 }
 
@@ -85,6 +92,9 @@ Hit hitTest(const Layout& L, float x, float y) {
     if (L.add.w > 0 && L.add.contains(x, y)) return Hit{Part::Add, -1};
     if (L.left.w > 0 && L.left.contains(x, y)) return Hit{Part::Left, -1};
     if (L.right.w > 0 && L.right.contains(x, y)) return Hit{Part::Right, -1};
+    if (L.chars.w > 0 && L.chars.contains(x, y)) return Hit{Part::Chars, -1};  // 3.0.11-beta.181
+    if (L.newLogin.w > 0 && L.newLogin.contains(x, y)) return Hit{Part::NewLogin, -1};
+    if (L.linkLogin.w > 0 && L.linkLogin.contains(x, y)) return Hit{Part::LinkLogin, -1};
     if (L.other.contains(x, y)) return Hit{Part::Other, -1};
     if (L.create.contains(x, y)) return Hit{Part::Create, -1};
     if (L.exit.contains(x, y)) return Hit{Part::Exit, -1};
@@ -182,8 +192,10 @@ std::vector<Words> words(const Layout& L, const std::vector<Card>& cards, const 
         const bool hasChar = !c.name.empty();
         out.push_back(Words{panel::Box{bodyX, bodyY, bodyW, 26 * s}, hasChar ? c.name : c.login, kText, 19 * s, true,
                             Align::Left});
+        const bool once = c.fromSite && !c.hasPassword;  // 3.0.11-beta.181: its password asked once
         const std::string line = c.busy      ? fill(t.busy, std::to_string(c.busyWindow))
                                  : c.refused ? t.refused
+                                 : once      ? t.noPassword
                                  : hasChar   ? jobLine(c)
                                              : t.noChar;
         const uint32_t rgb = c.refused ? kRed : c.busy ? kAmber : kMuted;
@@ -216,16 +228,145 @@ std::vector<Words> words(const Layout& L, const std::vector<Card>& cards, const 
     }
     if (L.left.w > 0) out.push_back(Words{L.left, "‹", kText, 28 * s, false, Align::Center});
     if (L.right.w > 0) out.push_back(Words{L.right, "›", kText, 28 * s, false, Align::Center});
+    if (L.chars.w > 0)  // 3.0.11-beta.181
+        out.push_back(Words{L.chars, t.chars, sh.hoverPart == Part::Chars ? kGold2 : kLink, 13.5f * s, false,
+                            Align::Right});
+    if (L.newLogin.w > 0) {
+        out.push_back(Words{L.newLogin, t.newLogin, sh.hoverPart == Part::NewLogin ? kGold2 : kLink, 13 * s, false,
+                            Align::Right});
+        out.push_back(Words{L.linkLogin, t.linkLogin, sh.hoverPart == Part::LinkLogin ? kGold2 : kLink, 13 * s,
+                            false, Align::Left});
+    }
     out.push_back(Words{L.other, t.other, kText, 15 * s, true, Align::Center});
     out.push_back(Words{L.create, t.create, kText, 15 * s, true, Align::Center});
     out.push_back(Words{L.exit, t.exit, kText, 15 * s, true, Align::Center});
     return out;
 }
 
+CharLayout characterRows(int targetW, int targetH, float scale, const std::vector<int>& charsPerLogin, int first) {
+    constexpr float kCardW2 = 200, kCardH2 = 120, kGap2 = 14, kLabelH = 22, kRowGap = 16, kArrow = 28;
+    CharLayout L;
+    const float s = scale > 0 ? scale : 1.0f;
+    L.s = s;
+    const int count = int(charsPerLogin.size());
+    L.first = std::clamp(first, 0, std::max(0, count - kRowsInSight));
+    const int inSight = std::min(kRowsInSight, count - L.first);
+    const float w = ((kCharsInRow + 1) * kCardW2 + kCharsInRow * kGap2) * s;
+    const float rowH = (kLabelH + kCardH2 + kRowGap) * s;
+    const float h = (kTitleH + kTitleGap) * s + kArrow * s + std::max(1, inSight) * rowH + kArrow * s;
+    L.w = int(std::ceil(w));
+    L.h = int(std::ceil(h));
+    L.x = std::max(0, targetW / 2 - L.w / 2);
+    L.y = std::max(0, targetH / 2 - L.h / 2);
+    L.title = panel::Box{0, 0, w, kTitleH * s};
+    L.back = panel::Box{0, 0, 120 * s, kTitleH * s};
+    float y = (kTitleH + kTitleGap) * s;
+    if (L.first > 0) L.up = panel::Box{w / 2 - 40 * s, y, 80 * s, kArrow * s};
+    y += kArrow * s;
+    for (int i = 0; i < inSight; ++i) {
+        CharRow r;
+        r.label = panel::Box{0, y, w, kLabelH * s};
+        const float cy = y + kLabelH * s;
+        const int n = std::min(kCharsInRow, std::max(0, charsPerLogin[size_t(L.first + i)]));
+        for (int c = 0; c < n; ++c)
+            r.cards.push_back(panel::Box{c * (kCardW2 + kGap2) * s, cy, kCardW2 * s, kCardH2 * s});
+        r.newChar = panel::Box{n * (kCardW2 + kGap2) * s, cy, kCardW2 * s, kCardH2 * s};
+        L.rows.push_back(r);
+        y += rowH;
+    }
+    if (L.first + inSight < count) L.down = panel::Box{w / 2 - 40 * s, y, 80 * s, kArrow * s};
+    return L;
+}
+
+CharHit characterHit(const CharLayout& L, float x, float y) {
+    CharHit h;
+    if (L.back.contains(x, y)) {
+        h.back = true;
+        return h;
+    }
+    if (L.up.w > 0 && L.up.contains(x, y)) h.up = true;
+    if (L.down.w > 0 && L.down.contains(x, y)) h.down = true;
+    for (size_t i = 0; i < L.rows.size(); ++i) {
+        const CharRow& r = L.rows[i];
+        for (size_t c = 0; c < r.cards.size(); ++c)
+            if (r.cards[c].contains(x, y)) {
+                h.row = L.first + int(i);
+                h.card = int(c);
+                return h;
+            }
+        if (r.newChar.contains(x, y)) {
+            h.row = L.first + int(i);
+            h.newChar = true;
+            return h;
+        }
+    }
+    return h;
+}
+
+void paintCharacters(panel::Picture& out, const CharLayout& L, const std::vector<CharLogin>& logins,
+                     const CharShow& sh) {
+    const float s = L.s;
+    for (size_t i = 0; i < L.rows.size(); ++i) {
+        const int login = L.first + int(i);
+        const CharRow& r = L.rows[i];
+        for (size_t c = 0; c < r.cards.size(); ++c) {
+            const panel::Box& b = r.cards[c];
+            const bool hot = sh.hoverRow == login && sh.hoverCard == int(c);
+            panel::roundRect(out, b, 12 * s, kCard, 0.94f, hot ? kGold : kWhite, hot ? 0.9f : 0.12f, 1.0f * s);
+            const panel::Picture* art = size_t(login) < logins.size() && c < logins[size_t(login)].art.size()
+                                            ? logins[size_t(login)].art[c]
+                                            : nullptr;
+            const panel::Box pic{b.x + 1 * s, b.y + 1 * s, b.h - 2 * s, b.h - 2 * s};  // a square at its left
+            if (art)
+                classart::cover(out, pic, art->px, art->width, art->height, 11 * s, classart::kLeftCorners);
+            else
+                panel::roundRect(out, pic, 11 * s, 0x2A2416, 0.9f);
+        }
+        const bool hot = sh.hoverRow == login && sh.hoverCard < 0;
+        panel::roundRect(out, r.newChar, 12 * s, kCard, 0.70f, kWhite, hot ? 0.45f : 0.28f, 1.5f * s);
+    }
+    for (const panel::Box* a : {&L.up, &L.down})
+        if (a->w > 0) panel::roundRect(out, *a, 8 * s, kPill, 0.72f, kWhite, 0.14f, 1.0f * s);
+}
+
+std::vector<Words> characterWords(const CharLayout& L, const std::vector<CharLogin>& logins, const CharShow& sh,
+                                  const CharTexts& t) {
+    std::vector<Words> out;
+    const float s = L.s;
+    out.push_back(Words{L.title, t.title, kText, 17 * s, true, Align::Center});
+    out.push_back(Words{L.back, t.back, sh.hoverBack ? kGold2 : kLink, 13.5f * s, false, Align::Left});
+    for (size_t i = 0; i < L.rows.size(); ++i) {
+        const size_t login = size_t(L.first) + i;
+        if (login >= logins.size()) break;
+        const CharLogin& g = logins[login];
+        const CharRow& r = L.rows[i];
+        out.push_back(Words{r.label, g.hasPassword ? g.login : g.login + " · " + t.noPassword, kMuted, 13 * s, true,
+                            Align::Left});
+        for (size_t c = 0; c < r.cards.size() && c < g.chars.size(); ++c) {
+            const siteapi::SiteChar& ch = g.chars[c];
+            const panel::Box& b = r.cards[c];
+            const float tx = b.x + b.h + 10 * s, tw = b.w - b.h - 16 * s;
+            out.push_back(Words{panel::Box{tx, b.y + 14 * s, tw, 22 * s}, ch.name, kText, 15 * s, true, Align::Left});
+            out.push_back(Words{panel::Box{tx, b.y + 40 * s, tw, 18 * s},
+                                ch.job + (ch.level > 0 ? " · " + std::to_string(ch.level) : ""), kMuted, 12 * s, false,
+                                Align::Left});
+            out.push_back(Words{panel::Box{tx, b.y + 62 * s, tw, 18 * s}, capital(ch.map), kLogin, 12 * s, false,
+                                Align::Left});
+        }
+        out.push_back(Words{r.newChar, t.newChar, sh.hoverRow == int(login) && sh.hoverCard < 0 ? kGold2 : kText,
+                            14 * s, true, Align::Center});
+    }
+    if (L.up.w > 0) out.push_back(Words{L.up, "↑", kText, 16 * s, false, Align::Center});
+    if (L.down.w > 0) out.push_back(Words{L.down, "↓", kText, 16 * s, false, Align::Center});
+    return out;
+}
+
 std::vector<MenuItem> menu(const Card& c) {
-    (void)c;
-    return {MenuItem::AutoEnter, MenuItem::KeepPassword, MenuItem::Label,  MenuItem::Edit,
-            MenuItem::MoveLeft,  MenuItem::MoveRight,    MenuItem::Remove};
+    if (!c.localRow) return {MenuItem::Edit, MenuItem::GamePassword};  // 3.0.11-beta.181: the site's alone
+    std::vector<MenuItem> items{MenuItem::AutoEnter, MenuItem::KeepPassword, MenuItem::Label, MenuItem::Edit,
+                                MenuItem::MoveLeft,  MenuItem::MoveRight,    MenuItem::Remove};
+    if (c.fromSite) items.push_back(MenuItem::GamePassword);
+    return items;
 }
 
 MenuLayout menuLayout(const Layout& L, int visible, size_t items) {
@@ -280,6 +421,9 @@ std::vector<Words> menuWords(const MenuLayout& M, const std::vector<MenuItem>& i
             case MenuItem::Remove:
                 out.push_back(Words{text, sh.removeSure ? t.removeSure : t.remove, kRed, 13 * s, sh.removeSure,
                                     Align::Left});
+                break;
+            case MenuItem::GamePassword:
+                out.push_back(Words{text, t.gamePassword, kText, 13 * s, false, Align::Left});
                 break;
         }
     }

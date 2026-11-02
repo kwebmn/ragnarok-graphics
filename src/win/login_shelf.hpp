@@ -2,6 +2,7 @@
 #include <windows.h>
 
 #include "core/frame.hpp"
+#include "core/shelf_merge.hpp"
 
 namespace uagfx::gpu {
 class Renderer;
@@ -13,12 +14,21 @@ namespace uagfx::win::loginshelfwin {
 // win/login_card in place of its card while this Windows user's shelf (win/accounts_store) has accounts and the
 // classic card was not asked for («Інший акаунт», «Додати акаунт», a refused password: the card for one login, back
 // with its «‹ Полиця»). A card's click enters; its menu (its toggles, its label typed in, its place, off the shelf),
-// the arrows, the keys (← → Enter; Esc closes the menu or the label). On the game's thread.
-enum class Act : uint8_t { None, Login, Add, Other, Edit, Create, Exit };
+// the arrows, the keys (← → Enter; Esc closes the menu or the label). 3.0.11-beta.181: signed in to the site - its
+// other logins on the shelf too (their passwords asked once), «Персонажі» (a row a login, a click enters with that
+// character), a new game login, an existing one linked, a game password changed. On the game's thread.
+enum class Act : uint8_t {
+    None, Login, Add, Other, Edit, Create, Exit,
+    NewLogin, LinkLogin, GamePassword, CharLogin, CharNew  // 3.0.11-beta.181: the site account's
+};
 struct Asked {
     Act act = Act::None;
-    int index = -1;  // Login, Edit: the account's place on the shelf
+    int index = -1;    // Login, Edit, GamePassword, CharLogin, CharNew: the row's place (row())
+    std::string name;  // CharLogin: the character's (UTF-8)
 };
+// 3.0.11-beta.181: the shelf's rows now - this computer's accounts and the site account's other logins
+// (core/shelf_merge); null: no such row
+const shelfmerge::Row* row(int index);
 void classic(bool on);  // the card for one login (on), the shelf again (off)
 bool classicChosen();
 void frame(double k, int targetWidth, int targetHeight, unsigned codePage);

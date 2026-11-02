@@ -230,3 +230,26 @@ TEST(login_card_dropdown_and_eye) {
     const auto dw = logincard::dropWords(D, rows, -1, "+ Інший логін", 1.0f);
     CHECK(has(dw, "kweb") && has(dw, "Raphael · High Priest 99") && has(dw, "kweb_shop") && has(dw, "+ Інший логін"));
 }
+
+// 3.0.11-beta.180 (the login concept: the site account in the client): at the card's foot «Підтягнути всі логіни»
+// (the site account not signed in), or the site account's chip with «Вийти» (signed in); each its own part
+TEST(login_card_site_link_on_first_launch) {
+    logincard::Options o;
+    o.site = true;
+    const logincard::Layout L = logincard::layout(1920, 1080, 1.0f, o);
+    const logincard::Layout plain = logincard::layout(1920, 1080, 1.0f);
+    CHECK(L.site.h > 0 && L.site.y >= L.link.y + L.link.h - 0.5f && L.h > plain.h && plain.site.h == 0);
+    CHECK(logincard::hitTest(L, L.site.x + 4, L.site.y + L.site.h / 2) == logincard::Part::Site);
+    logincard::Texts t = texts();
+    t.siteOffer = "Підтягнути всі логіни";
+    t.siteOut = "Вийти";
+    logincard::Fields f;
+    f.site = logincard::SiteLine::Offer;
+    CHECK(has(logincard::words(L, f, logincard::Show{}, t), "Підтягнути всі логіни"));
+    f.site = logincard::SiteLine::Chip;
+    f.siteChip = "kweb · логінів: 3";
+    const auto w = logincard::words(L, f, logincard::Show{}, t);
+    CHECK(has(w, "kweb · логінів: 3") && has(w, "Вийти") && !has(w, "Підтягнути всі логіни"));
+    CHECK(logincard::hitTest(L, L.siteOut.x + L.siteOut.w - 4, L.siteOut.y + L.siteOut.h / 2) ==
+          logincard::Part::SiteOut);
+}

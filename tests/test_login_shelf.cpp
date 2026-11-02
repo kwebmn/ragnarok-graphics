@@ -116,3 +116,81 @@ TEST(login_shelf_pad_moves) {
     CHECK(loginshelf::padMove(1, 3, -1) == 0);
     CHECK(loginshelf::padMove(0, 0, +1) == 0);  // no cards
 }
+
+// 3.0.11-beta.181: «Персонажі» - a row a login, up to three character cards in it and «Новий персонаж» after them
+TEST(login_shelf_character_rows) {
+    const loginshelf::CharLayout L = loginshelf::characterRows(1920, 1080, 1.0f, {2, 1});
+    CHECK(L.rows.size() == 2);
+    CHECK(L.rows[0].cards.size() == 2 && L.rows[0].newChar.w > 0 && L.rows[1].cards.size() == 1);
+    CHECK(L.rows[0].newChar.x > L.rows[0].cards[1].x + L.rows[0].cards[1].w - 0.5f);
+    CHECK(L.rows[1].label.y > L.rows[0].label.y);
+    CHECK(std::fabs(float(L.x) + float(L.w) / 2 - 960) <= 2);
+    const loginshelf::CharHit h = loginshelf::characterHit(L, L.rows[1].cards[0].x + 5, L.rows[1].cards[0].y + 5);
+    CHECK(h.row == 1 && h.card == 0 && !h.newChar);
+    const loginshelf::CharHit n = loginshelf::characterHit(L, L.rows[0].newChar.x + 5, L.rows[0].newChar.y + 5);
+    CHECK(n.row == 0 && n.newChar);
+    const loginshelf::CharLayout full = loginshelf::characterRows(1920, 1080, 1.0f, {5});
+    CHECK(full.rows[0].cards.size() == 3);  // three at most in a row
+}
+
+// 3.0.11-beta.181: signed in to the site - «Персонажі ›» at the title's right, «+ Новий ігровий логін» and
+// «Прив'язати наявний» under the buttons; a site login with no password here says it is asked once
+TEST(login_shelf_site_parts) {
+    const loginshelf::Layout plain = loginshelf::layout(1920, 1080, 1.0f, 2, 0);
+    const loginshelf::Layout L = loginshelf::layout(1920, 1080, 1.0f, 2, 0, true);
+    CHECK(plain.chars.w == 0 && plain.newLogin.w == 0 && L.chars.w > 0 && L.newLogin.w > 0 && L.linkLogin.w > 0);
+    CHECK(L.newLogin.y > L.other.y + L.other.h - 0.5f && L.linkLogin.x > L.newLogin.x);
+    using P = loginshelf::Part;
+    CHECK(loginshelf::hitTest(L, L.chars.x + 4, L.chars.y + L.chars.h / 2).part == P::Chars);
+    CHECK(loginshelf::hitTest(L, L.newLogin.x + 4, L.newLogin.y + L.newLogin.h / 2).part == P::NewLogin);
+    CHECK(loginshelf::hitTest(L, L.linkLogin.x + 4, L.linkLogin.y + L.linkLogin.h / 2).part == P::LinkLogin);
+    loginshelf::Card c;
+    c.login = "kweb_main";
+    c.hasPassword = false;
+    c.fromSite = true;
+    loginshelf::Texts t;
+    t.noPassword = "Пароль — ввести один раз";
+    t.noChar = "Ще не грали";
+    const auto w = loginshelf::words(L, {c}, loginshelf::Show{}, t);
+    CHECK(std::any_of(w.begin(), w.end(),
+                      [](const loginshelf::Words& x) { return x.text == "Пароль — ввести один раз"; }));
+}
+
+// 3.0.11-beta.181: «Персонажі»'s words - each row's login, each card's name, job and level, map; «+ Новий персонаж»;
+// a login with no password here says so on its row
+TEST(login_shelf_character_words) {
+    std::vector<loginshelf::CharLogin> logins(2);
+    logins[0].login = "kweb";
+    logins[0].hasPassword = true;
+    logins[0].chars.push_back(siteapi::SiteChar{"Raphael", "High Priest", "prontera", 4009, 99, 2, false});
+    logins[1].login = "kweb_alt";
+    const loginshelf::CharLayout L = loginshelf::characterRows(1920, 1080, 1.0f, {1, 0});
+    loginshelf::CharTexts t;
+    t.title = "Персонажі";
+    t.back = "‹ Акаунти";
+    t.newChar = "+ Новий персонаж";
+    t.noPassword = "пароль — ввести один раз";
+    const auto w = loginshelf::characterWords(L, logins, loginshelf::CharShow{}, t);
+    const auto has = [&](const std::string& s) {
+        return std::any_of(w.begin(), w.end(), [&](const loginshelf::Words& x) { return x.text == s; });
+    };
+    CHECK(has("kweb") && has("Raphael") && has("High Priest · 99") && has("Prontera") && has("+ Новий персонаж"));
+    CHECK(has("kweb_alt · пароль — ввести один раз") && has("‹ Акаунти") && has("Персонажі"));
+    panel::Picture p;
+    panel::blank(p, L.w, L.h);
+    loginshelf::paintCharacters(p, L, logins, loginshelf::CharShow{});
+    const panel::Box& c = L.rows[0].cards[0];
+    CHECK((p.px[size_t(c.y + c.h / 2) * size_t(L.w) + size_t(c.x + c.w - 10)] >> 24) > 0x80);  // the card's ground
+}
+
+// 3.0.11-beta.181: a site login's menu has «Змінити пароль гри»; one only on the site (not on this computer's shelf)
+// - its password typed once and the game password changed, nothing of this computer's
+TEST(login_shelf_site_menu) {
+    using M = loginshelf::MenuItem;
+    loginshelf::Card c;
+    c.fromSite = true;
+    const std::vector<M> both = loginshelf::menu(c);
+    CHECK(both.size() == 8 && both.back() == M::GamePassword);
+    c.localRow = false;
+    CHECK((loginshelf::menu(c) == std::vector<M>{M::Edit, M::GamePassword}));
+}

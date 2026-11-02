@@ -4,14 +4,13 @@
 
 #include <string>
 
-#include "win/dpapi.hpp"
 #include "win/log.hpp"
+#include "win/user_files.hpp"
 
 namespace uagfx::win::accountsstore {
 namespace {
 
-constexpr const wchar_t* kFolder = L"\\uaroGraphics";  // under %LOCALAPPDATA%: this Windows user's, any game folder
-constexpr const wchar_t* kFile = L"\\accounts.dat";
+constexpr const char* kFile = "accounts.dat";  // under %LOCALAPPDATA%\uaroGraphics (win/user_files)
 constexpr ULONGLONG kLookEveryMs = 2000;
 
 struct State {
@@ -26,66 +25,16 @@ State& state() {
     return s;
 }
 
-std::wstring folder() {
-    wchar_t buf[MAX_PATH] = {};
-    const DWORD n = GetEnvironmentVariableW(L"LOCALAPPDATA", buf, MAX_PATH);
-    if (n == 0 || n >= MAX_PATH) return {};
-    return std::wstring(buf) + kFolder;
-}
-
-std::wstring filePath() {
-    const std::wstring f = folder();
-    return f.empty() ? f : f + kFile;
-}
-
-unsigned long long writeTime(const std::wstring& path) {
-    WIN32_FILE_ATTRIBUTE_DATA a{};
-    if (path.empty() || !GetFileAttributesExW(path.c_str(), GetFileExInfoStandard, &a)) return 0;
-    return (unsigned long long)a.ftLastWriteTime.dwHighDateTime << 32 | a.ftLastWriteTime.dwLowDateTime;
-}
-
-bool readAll(const std::wstring& path, std::string& out) {
-    const HANDLE h = CreateFileW(path.c_str(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_DELETE, nullptr,
-                                 OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
-    if (h == INVALID_HANDLE_VALUE) return false;
-    LARGE_INTEGER size{};
-    bool ok = GetFileSizeEx(h, &size) && size.QuadPart >= 0 && size.QuadPart < (16 << 20);
-    if (ok) {
-        out.resize(size_t(size.QuadPart));
-        DWORD got = 0;
-        ok = out.empty() || (ReadFile(h, out.data(), DWORD(out.size()), &got, nullptr) && got == out.size());
-    }
-    CloseHandle(h);
-    return ok;
-}
-
-bool writeAll(const std::wstring& path, const std::string& bytes) {
-    const std::wstring tmp = path + L".tmp";
-    const HANDLE h = CreateFileW(tmp.c_str(), GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
-    if (h == INVALID_HANDLE_VALUE) return false;
-    DWORD put = 0;
-    const bool ok = WriteFile(h, bytes.data(), DWORD(bytes.size()), &put, nullptr) && put == bytes.size();
-    CloseHandle(h);
-    if (!ok || !MoveFileExW(tmp.c_str(), path.c_str(), MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH)) {
-        DeleteFileW(tmp.c_str());
-        return false;
-    }
-    return true;
-}
-
 void load(State& s) {
-    const std::wstring path = filePath();
     s.shelf = accounts::Shelf{};
-    s.stamp = writeTime(path);
+    s.stamp = userfiles::writeTime(kFile);
     if (!s.stamp) return;  // none yet: an empty shelf
-    std::string blob, words;
-    if (readAll(path, blob) && dpapi::unprotect(blob, words) && accounts::fromJson(words, s.shelf)) {
-        SecureZeroMemory(words.data(), words.size());
-        return;
-    }
+    std::string words;
+    const bool ok = userfiles::readSealed(kFile, words) && accounts::fromJson(words, s.shelf);
     SecureZeroMemory(words.data(), words.size());
+    if (ok) return;
     s.shelf = accounts::Shelf{};
-    MoveFileExW(path.c_str(), (path + L".bad").c_str(), MOVEFILE_REPLACE_EXISTING);
+    userfiles::keepAside(kFile);
     s.stamp = 0;
     LOG_INFO("login: the saved accounts could not be read - kept as accounts.dat.bad");
 }
@@ -97,7 +46,7 @@ accounts::Shelf& shelf() {
     const ULONGLONG now = GetTickCount64();
     if (!s.read || now - s.lookedAt >= kLookEveryMs) {
         s.lookedAt = now;
-        if (!s.read || writeTime(filePath()) != s.stamp) load(s);  // another game window changed it, or forgot it
+        if (!s.read || userfiles::writeTime(kFile) != s.stamp) load(s);  // another game window changed it, or forgot it
         s.read = true;
     }
     return s.shelf;
@@ -105,18 +54,14 @@ accounts::Shelf& shelf() {
 
 bool save() {
     State& s = state();
-    const std::wstring dir = folder();
-    if (dir.empty()) return false;
-    CreateDirectoryW(dir.c_str(), nullptr);
-    std::string words = accounts::toJson(s.shelf), blob;
-    const bool sealed = dpapi::protect(words, blob);
+    std::string words = accounts::toJson(s.shelf);
+    const bool saved = userfiles::writeSealed(kFile, words);
     SecureZeroMemory(words.data(), words.size());
-    if (!sealed || !writeAll(filePath(), blob)) {
-        LOG_ERROR("login: the accounts could not be saved (%s)",
-                  sealed ? "not written" : "Windows did not protect them");
+    if (!saved) {
+        LOG_ERROR("login: the accounts could not be saved");
         return false;
     }
-    s.stamp = writeTime(filePath());
+    s.stamp = userfiles::writeTime(kFile);
     s.read = true;
     return true;
 }

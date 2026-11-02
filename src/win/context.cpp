@@ -75,6 +75,7 @@
 #include "win/vend_shop.hpp"
 #include "win/whisper_setup.hpp"
 #include "win/login_card.hpp"
+#include "win/site_http.hpp"
 #include "win/login_refusal.hpp"
 #include "win/macro_card.hpp"
 #include "win/msg_box.hpp"
@@ -968,6 +969,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     infocardwin::frame(window, config.cardWindows, gameCodePage(config), pk, pw, ph);  // 3.0.11-beta.149
     askcardwin::frame(window, config.askWindows, config.countWindow, gameCodePage(config), pk, pw, ph);  // .150, .155
     msgboxwin::frame(window, config.messageBoxes, gameCodePage(config), pk, pw, ph);   // 3.0.11-beta.151
+    sitehttp::pump();  // 3.0.11-beta.180: the site's answers on the game's thread (the login screen's site account)
     loginwin::frame(window, config.loginWindow, config.loginStatus, config.loginNews, config.loginView,
                     gameCodePage(config), pk, pw, ph);  // .151, .173, .174, .177
     charselectwin::frame(window, config.charSelectWindow, gameCodePage(config), pk, pw, ph);  // 3.0.11-beta.152

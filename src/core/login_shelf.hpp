@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 
+#include "core/site_api.hpp"
 #include "core/window_panel.hpp"
 
 namespace uagfx::loginshelf {
@@ -17,6 +18,8 @@ struct Card {
     std::string label, name, job, map, login;  // UTF-8; name "" - no character yet (the login big)
     int level = 0;
     bool busy = false, refused = false, hasPassword = true;
+    bool fromSite = false;  // 3.0.11-beta.181: the site account's login (no password here: asked once)
+    bool localRow = true;   // on this computer's shelf (false: the site's alone)
     int busyWindow = 0;  // 3.0.11-beta.178: the game window that plays it («вже в грі (вікно N)»)
     const panel::Picture* art = nullptr;   // the class's portrait (core/class_art); null - its head or a plain ground
     const panel::Picture* head = nullptr;  // 3.0.11-beta.178: the character's head (no portrait for the job)
@@ -28,6 +31,8 @@ struct Texts {
     std::string add, addHint;      // «Додати акаунт», «логін і пароль один раз, далі — в один клік»
     std::string other, create, exit;
     std::string refused, busy, noChar;  // «Пароль не підходить», «Вже в грі», «Ще не грали»
+    std::string noPassword;             // 3.0.11-beta.181: «Пароль — ввести один раз»
+    std::string chars, newLogin, linkLogin;  // «Персонажі ›», «+ Новий ігровий логін», «Прив'язати наявний»
 };
 struct Layout {
     float s = 1;
@@ -37,11 +42,12 @@ struct Layout {
     panel::Box add;                 // 0 wide: not in sight
     panel::Box left, right;         // the arrows: 0 wide when nothing is beyond
     panel::Box other, create, exit;
+    panel::Box chars, newLogin, linkLogin;  // 3.0.11-beta.181: signed in to the site (0 wide: not)
     int first = 0;
 };
 constexpr int kInSight = 4;
-Layout layout(int targetW, int targetH, float scale, size_t cards, int first);
-enum class Part : uint8_t { None, Card, Menu, Add, Other, Create, Exit, Left, Right };
+Layout layout(int targetW, int targetH, float scale, size_t cards, int first, bool site = false);
+enum class Part : uint8_t { None, Card, Menu, Add, Other, Create, Exit, Left, Right, Chars, NewLogin, LinkLogin };
 struct Hit {
     Part part = Part::None;
     int index = -1;  // Card, Menu: the account's
@@ -72,8 +78,47 @@ struct Words {
 };
 std::vector<Words> words(const Layout& L, const std::vector<Card>& cards, const Show& sh, const Texts& t);
 
+// 3.0.11-beta.181 (the site account): «Персонажі» - a row a login (its name over it), up to three character cards and
+// «Новий персонаж» after them; four rows in sight, ▲ ▼ beyond; «‹ Акаунти» back to the cards
+struct CharRow {
+    panel::Box label;
+    std::vector<panel::Box> cards;
+    panel::Box newChar;
+};
+struct CharLayout {
+    float s = 1;
+    int x = 0, y = 0, w = 0, h = 0;  // in the target's pixels; the boxes in the picture's
+    panel::Box title, back, up, down;  // up / down 0 wide: nothing beyond
+    std::vector<CharRow> rows;         // the rows in sight: rows[i] is the login first + i
+    int first = 0;
+};
+constexpr int kCharsInRow = 3, kRowsInSight = 4;
+CharLayout characterRows(int targetW, int targetH, float scale, const std::vector<int>& charsPerLogin, int first = 0);
+struct CharHit {
+    int row = -1, card = -1;  // the login's (its place in charsPerLogin), its character's
+    bool newChar = false, back = false, up = false, down = false;
+};
+CharHit characterHit(const CharLayout& L, float x, float y);
+struct CharLogin {  // a row's login and its characters (the site's)
+    std::string login;  // UTF-8
+    bool hasPassword = false;
+    std::vector<siteapi::SiteChar> chars;
+    std::vector<const panel::Picture*> art;  // a portrait a character (core/class_art), null none
+};
+struct CharTexts {
+    std::string title, back, newChar, noPassword;
+};
+struct CharShow {
+    int hoverRow = -1, hoverCard = -1;  // hoverCard -1 with a row: its «Новий персонаж»
+    bool hoverBack = false;
+};
+void paintCharacters(panel::Picture& out, const CharLayout& L, const std::vector<CharLogin>& logins,
+                     const CharShow& sh);
+std::vector<Words> characterWords(const CharLayout& L, const std::vector<CharLogin>& logins, const CharShow& sh,
+                                  const CharTexts& t);
+
 // A card's menu, over the card under its ⋯: a row an item
-enum class MenuItem : uint8_t { AutoEnter, KeepPassword, Label, Edit, MoveLeft, MoveRight, Remove };
+enum class MenuItem : uint8_t { AutoEnter, KeepPassword, Label, Edit, MoveLeft, MoveRight, Remove, GamePassword };
 std::vector<MenuItem> menu(const Card& c);
 struct MenuLayout {
     float x = 0, y = 0, w = 0, h = 0;  // in the shelf's picture
@@ -83,6 +128,7 @@ MenuLayout menuLayout(const Layout& L, int visible, size_t items);
 int menuHit(const MenuLayout& M, float x, float y);  // the row, -1 none
 struct MenuTexts {
     std::string autoEnter, keepPassword, label, edit, moveLeft, moveRight, remove, removeSure;
+    std::string gamePassword;  // 3.0.11-beta.181: «Змінити пароль гри»
 };
 struct MenuShow {
     int hover = -1;

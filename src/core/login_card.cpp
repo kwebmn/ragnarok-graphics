@@ -95,6 +95,11 @@ Layout layout(int targetW, int targetH, float scale, const Options& o) {
         L.note = panel::Box{pad, y + 6 * s, fw, 2 * kNoteLine * s};
         y += 6 * s + 2 * kNoteLine * s;
     }
+    if (o.site) {  // 3.0.11-beta.180: the site account's line
+        L.site = panel::Box{pad, y + 8 * s, fw, kLinkH * s};
+        L.siteOut = panel::Box{pad + fw - 70 * s, y + 8 * s, 70 * s, kLinkH * s};
+        y += 8 * s + kLinkH * s;
+    }
     y += pad;
     if (back) L.back = panel::Box{pad - 6 * s, pad - 6 * s, 96 * s, 24 * s};  // 3.0.11-beta.176: the title row's left
     if (o.drop) L.drop = panel::Box{L.account.x + L.account.w - 36 * s, L.account.y, 36 * s, L.account.h};  // .177
@@ -104,7 +109,8 @@ Layout layout(int targetW, int targetH, float scale, const Options& o) {
     L.h = int(std::ceil(y));
     L.x = std::max(0, targetW / 2 - L.w / 2);
     // 3.0.11-beta.172: placed by its height without a line under a field - the top stays, it grows downward
-    const float grown = (L.error.h > 0 ? 2 * kErrorH * s : 0) + (note ? 6 * s + 2 * kNoteLine * s : 0);
+    const float grown = (L.error.h > 0 ? 2 * kErrorH * s : 0) + (note ? 6 * s + 2 * kNoteLine * s : 0) +
+                        (o.site ? 8 * s + kLinkH * s : 0);
     L.y = std::max(0, targetH / 2 - int(std::ceil(y - grown)) / 2);
     return L;
 }
@@ -120,6 +126,8 @@ Part hitTest(const Layout& L, float x, float y) {
     if (L.addShelf.contains(x, y)) return Part::AddShelf;
     if (L.enter.contains(x, y)) return Part::Enter;
     if (L.exit.contains(x, y)) return Part::Exit;
+    if (L.site.h > 0 && L.siteOut.contains(x, y)) return Part::SiteOut;  // 3.0.11-beta.180 (the chip's only)
+    if (L.site.h > 0 && L.site.contains(x, y)) return Part::Site;
     if (L.link.contains(x, y)) return Part::Register;
     if (L.forgot.contains(x, y)) return Part::Forgot;
     return Part::None;
@@ -216,6 +224,15 @@ std::vector<Words> words(const Layout& L, const Fields& f, const Show& sh, const
         for (size_t i = 0; i < ls.size() && i < 2; ++i)
             out.push_back(Words{panel::Box{L.note.x, L.note.y + float(i) * kNoteLine * s, L.note.w, kNoteLine * s},
                                 ls[i], kMuted, 12 * s, false, Align::Center});
+    }
+    if (L.site.h > 0 && f.site == SiteLine::Offer)  // 3.0.11-beta.180
+        out.push_back(Words{L.site, t.siteOffer, sh.hover == int(Part::Site) ? kGold2 : kLink, 12.5f * s, false,
+                            Align::Center});
+    if (L.site.h > 0 && f.site == SiteLine::Chip) {
+        out.push_back(Words{panel::Box{L.site.x, L.site.y, L.site.w - L.siteOut.w, L.site.h}, f.siteChip, kMuted,
+                            12.5f * s, false, Align::Left});
+        out.push_back(Words{L.siteOut, t.siteOut, sh.hover == int(Part::SiteOut) ? kGold2 : kLink, 12.5f * s, false,
+                            Align::Right});
     }
     if (f.error.empty() && !f.hint.empty() && L.error.h > 0)
         out.push_back(Words{L.error, f.hint, kAmber, 12 * s, false, Align::Left});

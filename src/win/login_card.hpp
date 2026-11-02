@@ -46,7 +46,8 @@ const std::string& loggedIn();
 // 3.0.11-beta.176 (a click on the shelf enters): a shelf row's login and password into the game's fields, sent at
 // once as accounts::planFor says (Shift held: the character select shown; no password, or refused: the keys to the
 // password's field), «Одразу в гру» handed to the character select. False: the game's login is not there.
-bool loginWith(const accounts::Account& a, bool stopAtSelect = false);  // .177: «Інший персонаж» - the select
+// .177: «Інший персонаж» - the select; .181: `character` - «Персонажі»'s, entered with (its password typed first)
+bool loginWith(const accounts::Account& a, bool stopAtSelect = false, const std::string& character = std::string());
 // 3.0.11-beta.176: the keys while «Полиця» shows (← → Enter, a label typed in; a login typed - the card for it)
 bool key(UINT m, WPARAM wp, LPARAM lp);
 // 3.0.11-beta.179 (the login concept: the pad on the login screen): «Полиця» - ◀ ▶ the card, A plays, X another
