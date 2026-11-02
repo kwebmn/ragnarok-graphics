@@ -17,8 +17,9 @@ enum class Win : uint8_t { Items, Stats, Skills, Equip, Shop, Npc, Reference, St
                            CharMake,  // 3.0.11-beta.153
                            Cart,  // 3.0.11-beta.154
                            Vending,  // 3.0.11-beta.156
-                           Pick };  // 3.0.11-beta.157
-constexpr int kWins = 20;
+                           Pick,  // 3.0.11-beta.157
+                           PartySetup };  // 3.0.11-beta.158
+constexpr int kWins = 21;
 
 class Stack {
 public:

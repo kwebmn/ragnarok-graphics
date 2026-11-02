@@ -698,6 +698,8 @@ struct Config {
     bool vendWindow = false;
     // 3.0.11-beta.157: [interface] picks - the magnifier's and a card's choice of things (win/pick_card)
     bool pickWindows = false;
+    // 3.0.11-beta.158: [interface] party_setup - the party's settings (Alt+P, win/party_setup) as a card
+    bool partySetupWindow = false;
     // 3.0.11-beta.142 (the owner's concept «маг, прист и хант на геймпаде», answer 9 «дать»): [interface] skill_cells -
     // a ground skill's cells, as the server makes them (core/skill_area), shown on the ground after a cast by the pad
     // or the mouse (win/ground_marks); 0: none

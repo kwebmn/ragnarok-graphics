@@ -5582,6 +5582,27 @@ constexpr Entry kTexts[] = {
     {Text::PickCompoundHint, "Choose the thing for the card", "Оберіть річ для карти", "Выберите вещь для карты"},
     {Text::PickCompoundOk, "Insert", "Вставити", "Вставить"},
     {Text::PickEmpty, "No thing fits", "Немає відповідних речей", "Нет подходящих вещей"},
+    // 3.0.11-beta.158: the party's settings
+    {Text::InterfacePartySetup, "Party settings", "Налаштування групи", "Настройки группы"},
+    {Text::InterfacePartySetupHint,
+     "The party's settings (Alt+P) as a card in the new look: the experience, the things picked up and their sharing, "
+     "two choices each (the game's own leader check). The controller: up and down a row, left and right its choice, A "
+     "OK, B cancel. Off: the game's own window.",
+     "Налаштування групи (Alt+P) карткою в новому вигляді: досвід, підбір речей і їх розподіл, по два варіанти "
+     "(перевірка лідера — самої гри). Контролер: вгору й униз — рядок, вліво й управо — вибір, A — готово, "
+     "B — скасувати. Вимкнено: власне вікно гри.",
+     "Настройки группы (Alt+P) карточкой в новом виде: опыт, подбор вещей и их распределение, по два варианта "
+     "(проверка лидера — самой игры). Контроллер: вверх и вниз — строка, влево и вправо — выбор, A — готово, "
+     "B — отменить. Выключено: собственное окно игры."},
+    {Text::PartySetupTitle, "Party settings", "Налаштування групи", "Настройки группы"},
+    {Text::PartyExp, "Experience", "Досвід", "Опыт"},
+    {Text::PartyPickup, "Things picked up", "Підбір речей", "Подбор вещей"},
+    {Text::PartyShare, "Sharing the things", "Розподіл речей", "Распределение вещей"},
+    {Text::PartyEach, "Each takes", "Кожному своє", "Каждому своё"},
+    {Text::PartyEven, "Shared evenly", "Порівну", "Поровну"},
+    {Text::PartyShared, "Shared", "Спільно", "Сообща"},
+    {Text::PartyLeaderOnly, "Only the party's leader changes them", "Змінює лише лідер групи",
+     "Меняет только лидер группы"},
     // 3.0.11-beta.141: the character block's experience (forms: one, a few, many)
     {Text::CharSkillPoints, "skill point|skill points", "очко навичок|очки навичок|очок навичок",
      "очко навыков|очка навыков|очков навыков"},

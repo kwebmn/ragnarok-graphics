@@ -359,6 +359,10 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("picks", flag(running.pickWindows), flag(file.pickWindows)));
         n.pickWindows = file.pickWindows;
     }
+    if (file.partySetupWindow != running.partySetupWindow) {  // 3.0.11-beta.158: the party's settings, at once
+        u.applied.push_back(change("party_setup", flag(running.partySetupWindow), flag(file.partySetupWindow)));
+        n.partySetupWindow = file.partySetupWindow;
+    }
     if (file.skillCells != running.skillCells) {  // 3.0.11-beta.142: a ground skill's cells, at once
         u.applied.push_back(change("skill_cells", flag(running.skillCells), flag(file.skillCells)));
         n.skillCells = file.skillCells;
