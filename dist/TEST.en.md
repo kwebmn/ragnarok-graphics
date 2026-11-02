@@ -1,3 +1,12 @@
+# uaRO Graphics 3.0.11-beta.159 — what's new
+
+**The pet in the new look** (the ninth group of the remaining windows, its start):
+- Alt+J shows a card: the pet's name and level, "Fullness" and "Closeness" as bars with the game's own words
+  ("Hungry", "Satisfied"... "Shy", "Loyal"...).
+- The buttons "Feed" (the game still asks first), "Perform", "Accessory off" (only with one worn) and "Into the egg".
+- The controller: the D-pad over the buttons, A presses, B closes.
+- The switch "Pet card" under "Interface", on with the new minimap.
+
 # uaRO Graphics 3.0.11-beta.158 — what's new
 
 **The party's settings in the new look** (the sixth group of the remaining windows, its start):
