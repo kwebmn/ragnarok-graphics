@@ -1,3 +1,9 @@
+# uaRO Graphics 3.0.11-beta.171 — what's new
+
+**The server choice is skipped** (the first step of the new login screen):
+- When the server list has one row, the card picks it and presses "Next" by itself — the window is not shown. The
+  same for the character servers' list after the login. Two rows or more — the choice card as before.
+
 # uaRO Graphics 3.0.11-beta.170 — what's new
 
 **Logging in works again** (a fix for betas .151–.169):
