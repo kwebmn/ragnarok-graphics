@@ -53,6 +53,7 @@
 #include "win/char_make.hpp"
 #include "win/char_select.hpp"
 #include "win/party_setup.hpp"
+#include "win/guild_card.hpp"
 #include "win/homun_card.hpp"
 #include "win/merc_card.hpp"
 #include "win/options_card.hpp"
@@ -814,6 +815,21 @@ bool serversPad(const PadState& pad, DWORD now) {
     return true;
 }
 
+// 3.0.11-beta.165: the guild - up and down scroll its members, LB / RB the tabs, B closes
+bool guildPad(const PadState& pad, DWORD now) {
+    State& s = S();
+    const uint16_t buttons = pad.connected ? pad.buttons : 0;
+    const uint16_t down = uint16_t((buttons & ~s.prevPadButtons) | stickSteps(pad, now));
+    s.prevPadButtons = buttons;
+    using uagfx::win::guildcardwin::PadCommand;
+    const std::pair<uint16_t, PadCommand> keys[] = {{kPadUp, PadCommand::Up},       {kPadDown, PadCommand::Down},
+                                                    {kPadLB, PadCommand::TabBack},  {kPadRB, PadCommand::TabOn},
+                                                    {kPadB, PadCommand::Close}};
+    for (const auto& [button, command] : keys)
+        if (down & button) uagfx::win::guildcardwin::padCommand(command);
+    return true;
+}
+
 // 3.0.11-beta.92: «Характеристики» open - the D-pad (or the left stick) chooses a stat, A adds a point, B or Start
 // close it
 bool statsPad(const PadState& pad, DWORD now) {
@@ -1114,7 +1130,8 @@ constexpr const char* kTopNames[] = {"«Речі»",  "«Характерист�
                                      "the message box", "the login", "the character select",
                                      "the character make", "«Візок»", "«Лавка»", "the choice of things",
                                      "the party's settings", "the pet", "the homunculus", "the mercenary",
-                                     "the game's options", "the friends and the party", "the server select"};
+                                     "the game's options", "the friends and the party", "the server select",
+                                     "the guild"};
 static_assert(std::size(kTopNames) == size_t(uagfx::winstack::kWins), "a name for each window");
 
 void tick() {
@@ -1195,6 +1212,7 @@ void tick() {
                   : drive && *top == Win::Options                  ? optionsPad(pad, now)     // .162
                   : drive && *top == Win::Social                   ? socialPad(pad, now)      // .163
                   : drive && *top == Win::Servers                  ? serversPad(pad, now)     // .164
+                  : drive && *top == Win::Guild                    ? guildPad(pad, now)       // .165
                                                                    : runMenu(pad, view, now);
     if (s.npcSupported) view.dialog = clientnpc::read();
     double clientTurn = 0;

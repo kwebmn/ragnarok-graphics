@@ -24,6 +24,7 @@
 #include "win/char_make.hpp"
 #include "win/char_select.hpp"
 #include "win/party_setup.hpp"
+#include "win/guild_card.hpp"
 #include "win/homun_card.hpp"
 #include "win/merc_card.hpp"
 #include "win/options_card.hpp"
@@ -81,6 +82,7 @@ void __attribute__((thiscall)) windowsDraw(uint32_t manager) {
     optionscardwin::beforeGameDraw();  // 3.0.11-beta.162: the game's options
     socialcardwin::beforeGameDraw();   // 3.0.11-beta.163: the friends and the party
     servercardwin::beforeGameDraw();   // 3.0.11-beta.164: the server select
+    guildcardwin::beforeGameDraw();    // 3.0.11-beta.165: the guild
     mobhpwin::beforeGameDraw();   // 3.0.11-beta.100: the monsters' per cent asked
     charpanel::beforeGameDraw();  // the Basic Info window
     hotbarwin::beforeGameDraw();  // the hotkeys' bar

@@ -387,6 +387,10 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("servers", flag(running.serverWindow), flag(file.serverWindow)));
         n.serverWindow = file.serverWindow;
     }
+    if (file.guildWindow != running.guildWindow) {  // 3.0.11-beta.165: the guild card, at once
+        u.applied.push_back(change("guild", flag(running.guildWindow), flag(file.guildWindow)));
+        n.guildWindow = file.guildWindow;
+    }
     if (file.skillCells != running.skillCells) {  // 3.0.11-beta.142: a ground skill's cells, at once
         u.applied.push_back(change("skill_cells", flag(running.skillCells), flag(file.skillCells)));
         n.skillCells = file.skillCells;

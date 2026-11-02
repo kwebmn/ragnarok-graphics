@@ -63,6 +63,7 @@
 #include "win/char_make.hpp"
 #include "win/char_select.hpp"
 #include "win/party_setup.hpp"
+#include "win/guild_card.hpp"
 #include "win/homun_card.hpp"
 #include "win/merc_card.hpp"
 #include "win/options_card.hpp"
@@ -973,6 +974,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     optionscardwin::frame(window, config.optionsWindow, gameCodePage(config), pk, pw, ph);    // 3.0.11-beta.162
     socialcardwin::frame(window, config.socialWindow, gameCodePage(config), pk, pw, ph);      // 3.0.11-beta.163
     servercardwin::frame(window, config.serverWindow, gameCodePage(config), pk, pw, ph);      // 3.0.11-beta.164
+    guildcardwin::frame(window, config.guildWindow, gameCodePage(config), pk, pw, ph);        // 3.0.11-beta.165
     // 3.0.11-beta.7: [interface] reference - «Довідник» (Ctrl+F)
     referencewin::frame(window, config.referenceWindow, pk, pw, ph);
     padcarrywin::frame(window, pk, pw, ph);  // 3.0.11-beta.121: a thing the controller carries - its places now

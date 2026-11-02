@@ -712,6 +712,8 @@ struct Config {
     bool socialWindow = false;
     // 3.0.11-beta.164: [interface] servers - the game's server select (win/server_card) as a card
     bool serverWindow = false;
+    // 3.0.11-beta.165: [interface] guild - the guild's window (Alt+G, win/guild_card) as a card
+    bool guildWindow = false;
     // 3.0.11-beta.142 (the owner's concept «маг, прист и хант на геймпаде», answer 9 «дать»): [interface] skill_cells -
     // a ground skill's cells, as the server makes them (core/skill_area), shown on the ground after a cast by the pad
     // or the mouse (win/ground_marks); 0: none

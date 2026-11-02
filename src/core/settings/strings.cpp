@@ -5724,6 +5724,28 @@ constexpr Entry kTexts[] = {
     {Text::ServersHint, "Choose the server", "Оберіть сервер", "Выберите сервер"},
     {Text::ServersNext, "Next", "Далі", "Далее"},
     {Text::ServersEmpty, "No server found", "Сервери не знайдено", "Серверы не найдены"},
+    // 3.0.11-beta.165: the guild
+    {Text::InterfaceGuild, "Guild card", "Картка гільдії", "Карточка гильдии"},
+    {Text::InterfaceGuildHint,
+     "The guild's window (Alt+G) as a card in the new look: its information (the master, the level, the members, "
+     "the experience, the tax, the territory) and its members (online or not, the title, the job and the level). "
+     "Off: the game's own window with all its tabs.",
+     "Вікно гільдії (Alt+G) карткою в новому вигляді: інформація (майстер, рівень, учасники, досвід, податок, "
+     "територія) і учасники (у грі чи ні, звання, професія й рівень). Вимкнено: власне вікно гри з усіма вкладками.",
+     "Окно гильдии (Alt+G) карточкой в новом виде: информация (мастер, уровень, участники, опыт, налог, территория) "
+     "и участники (в игре или нет, звание, профессия и уровень). Выключено: собственное окно игры со всеми "
+     "вкладками."},
+    {Text::GuildTitle, "Guild", "Гільдія", "Гильдия"},
+    {Text::GuildInfo, "Information", "Інформація", "Информация"},
+    {Text::GuildMembers, "Members", "Учасники", "Участники"},
+    {Text::GuildMaster, "Master", "Майстер", "Мастер"},
+    {Text::GuildLevel, "Level", "Рівень", "Уровень"},
+    {Text::GuildAverage, "Average level", "Середній рівень", "Средний уровень"},
+    {Text::GuildExp, "Experience", "Досвід", "Опыт"},
+    {Text::GuildTax, "Tax points", "Податок", "Налог"},
+    {Text::GuildTerritory, "Territory", "Територія", "Территория"},
+    {Text::GuildNone, "none", "немає", "нет"},
+    {Text::GuildOnline, "{1} of {2} online", "{1} з {2} у грі", "{1} из {2} в игре"},
     // 3.0.11-beta.141: the character block's experience (forms: one, a few, many)
     {Text::CharSkillPoints, "skill point|skill points", "очко навичок|очки навичок|очок навичок",
      "очко навыков|очка навыков|очков навыков"},

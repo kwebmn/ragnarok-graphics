@@ -568,6 +568,9 @@ enum class Text : uint16_t {
     SocialPartyName, SocialFriendCount, SocialWhisper, SocialExpel, SocialLeave, SocialSettings, SocialDelete,
     // 3.0.11-beta.164: the server select
     InterfaceServers, InterfaceServersHint, ServersTitle, ServersHint, ServersNext, ServersEmpty,
+    // 3.0.11-beta.165: the guild
+    InterfaceGuild, InterfaceGuildHint, GuildTitle, GuildInfo, GuildMembers, GuildMaster, GuildLevel, GuildAverage,
+    GuildExp, GuildTax, GuildTerritory, GuildNone, GuildOnline,
     // 3.0.11-beta.141: the character block's experience - the free skill points, the last level, an hour, a minute,
     // the experience's tip, the portrait's tip (Alt+V)
     CharSkillPoints, CharExpMax, CharHour, CharMinute, CharToLevel, CharLevelIn, CharPerHour, CharSession, CharLastGain,
