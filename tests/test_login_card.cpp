@@ -76,3 +76,18 @@ TEST(login_card_words) {
     logincard::paint(p, L, f, logincard::Show{});
     CHECK((p.px[size_t(L.h / 2) * size_t(L.w) + size_t(L.w / 2)] >> 24) > 0x80);
 }
+
+// 3.0.11-beta.170 (R-4TNJP8, «не входит в игру» - «Unregistered ID» on every try): .151 had the game's two fields the
+// wrong way round. The game's login window keeps the account at + 0x60 and the password at + 0x64 - the one it draws
+// as '*' (the field's mask letter + 0x50; it loads the saved login into + 0x60 and saves it from there), so the
+// password typed into «Пароль» went into the game's account field and to the server as the login. Which is which now
+// from the mask itself: the masked one the password; both or neither masked - not known, the game's own window kept
+TEST(login_card_fields_by_the_games_mask) {
+    const logincard::FieldPlaces game = logincard::fieldPlaces(0x60, 0, 0x64, '*');
+    CHECK(game.known() && game.account == 0x60 && game.password == 0x64);
+    const logincard::FieldPlaces other = logincard::fieldPlaces(0x60, '*', 0x64, 0);
+    CHECK(other.known() && other.account == 0x64 && other.password == 0x60);
+    CHECK(!logincard::fieldPlaces(0x60, 0, 0x64, 0).known());      // no password field
+    CHECK(!logincard::fieldPlaces(0x60, '*', 0x64, '*').known());  // no account field
+    CHECK(!logincard::FieldPlaces{}.known());
+}

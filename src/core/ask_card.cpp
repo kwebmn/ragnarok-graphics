@@ -80,6 +80,11 @@ Layout layout(const Card& c, int targetW, int targetH, float scale, const Texts&
     return L;
 }
 
+std::string boxWords(const std::string& now, const std::string& words, bool boxUp, bool adds) {
+    if (!boxUp) return words;
+    return adds && !words.empty() ? now + "\n" + words : now;
+}
+
 int buttonAt(const Layout& L, float x, float y) {
     for (size_t i = 0; i < L.buttons.size(); ++i)
         if (L.buttons[i].contains(x, y)) return int(i);

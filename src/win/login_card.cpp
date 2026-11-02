@@ -26,10 +26,12 @@ namespace lc = uagfx::logincard;
 using uapad::gamewindow::Blocker;
 
 // uaRO.exe's: the login window - where the manager keeps it, its class's vtable, its SendMsg (message 6 with a button's
-// id); its fields (an edit control each: its words FUN_00443300, their count FUN_00443330 - thiscall), «Запам'ятати»;
-// the manager's control with the keys (+ 0x6C) and its SetFocus
+// id); its two fields (an edit control each: its words FUN_00443300, their count FUN_00443330 - thiscall; the letter it
+// draws in their place + 0x50 - the password's '*'), «Запам'ятати»; the manager's control with the keys (+ 0x6C) and
+// its SetFocus. 3.0.11-beta.170 (R-4TNJP8): the account + 0x60, the password + 0x64 - told by the mask, not assumed
 constexpr uint32_t kWindowMgr = 0x727ED8, kLoginAt = kWindowMgr + 0x88, kLoginClass = 0x697A70, kLoginSend = 0x457280;
-constexpr uint32_t kAccountEdit = 0x64, kPasswordEdit = 0x60, kRemember = 0x68, kRect = 0x14, kSendMsgSlot = 0x94;
+constexpr uint32_t kFirstField = 0x60, kSecondField = 0x64, kMaskAt = 0x50;
+constexpr uint32_t kRemember = 0x68, kRect = 0x14, kSendMsgSlot = 0x94;
 constexpr uint32_t kGetText = 0x443300, kTextLength = 0x443330, kFocus = kWindowMgr + 0x6C, kSetFocus = 0x4CE510;
 constexpr int kButtonMsg = 6;
 constexpr int kAway = -4000;
@@ -49,6 +51,8 @@ struct State {
     int targetW = 0, targetH = 0;
     int oldX = 0;
     uint32_t window = 0;
+    lc::FieldPlaces places;
+    bool toldPlaces = false, toldUnknown = false;
     lc::Fields fields;
     lc::Show show;
     lc::Layout layout;
@@ -82,6 +86,13 @@ uint32_t gameLogin() {
     return w && read32(w) == kLoginClass && read32(read32(w) + kSendMsgSlot) == kLoginSend ? w : 0;
 }
 
+// Which field is which: the one the game masks is the password's (none or both masked - not known)
+lc::FieldPlaces placesOf(uint32_t window) {
+    const uint32_t first = read32(window + kFirstField), second = read32(window + kSecondField);
+    if (!first || !second) return lc::FieldPlaces{};
+    return lc::fieldPlaces(kFirstField, read32(first + kMaskAt), kSecondField, read32(second + kMaskAt));
+}
+
 // Off the screen while ours shows (its fields keep the keys); back when ours is off
 void hold(State& s, uint32_t window, bool on) {
     if (!window) {
@@ -103,7 +114,7 @@ void hold(State& s, uint32_t window, bool on) {
 
 lc::Fields fieldsOf(const State& s, uint32_t window) {
     lc::Fields f;
-    const uint32_t account = read32(window + kAccountEdit), password = read32(window + kPasswordEdit);
+    const uint32_t account = read32(window + s.places.account), password = read32(window + s.places.password);
     if (account) {
         const char* t = reinterpret_cast<GetTextFn>(uintptr_t(kGetText))(account);
         char buf[64] = {};
@@ -174,7 +185,9 @@ void press(State& s, lc::Part p) {
     const uint32_t window = gameLogin();
     if (!window) return;
     if (p == lc::Part::Account || p == lc::Part::Password) {  // the keys to that field
-        const uint32_t edit = read32(window + (p == lc::Part::Account ? kAccountEdit : kPasswordEdit));
+        const lc::FieldPlaces places = placesOf(window);
+        if (!places.known()) return;
+        const uint32_t edit = read32(window + (p == lc::Part::Account ? places.account : places.password));
         if (edit) reinterpret_cast<SetFocusFn>(uintptr_t(kSetFocus))(kWindowMgr, edit);
         s.key.clear();
         return;
@@ -212,8 +225,19 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
         LOG_INFO("login: [interface] login = %d", on ? 1 : 0);
     }
     const uint32_t window = gameLogin();
-    hold(s, window, on);
-    if (!on || !window || !game || k <= 0 || targetWidth <= 0 || targetHeight <= 0) {
+    s.places = window ? placesOf(window) : lc::FieldPlaces{};
+    if (on && window && !s.places.known() && !s.toldUnknown) {
+        s.toldUnknown = true;
+        LOG_INFO("login: the game's fields not as known (no single one drawn as its mask) - its own window kept");
+    }
+    if (s.places.known() && !s.toldPlaces) {
+        s.toldPlaces = true;
+        LOG_INFO("login: the game's fields - the login + 0x%X, the password + 0x%X (drawn as «*»)",
+                 unsigned(s.places.account), unsigned(s.places.password));
+    }
+    const bool take = on && s.places.known();
+    hold(s, window, take);
+    if (!take || !window || !game || k <= 0 || targetWidth <= 0 || targetHeight <= 0) {
         hide(s);
         s.window = 0;
         return;
@@ -279,7 +303,7 @@ bool shown() { return state().shown; }
 
 void beforeGameDraw() {
     State& s = state();
-    if (s.on) hold(s, gameLogin(), true);
+    if (s.on && s.places.known()) hold(s, gameLogin(), true);
 }
 
 bool box(int& x, int& y, int& w, int& h) {

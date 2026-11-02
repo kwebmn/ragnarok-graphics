@@ -62,6 +62,14 @@ Part hitTest(const Layout& L, float x, float y) {
     return Part::None;
 }
 
+FieldPlaces fieldPlaces(uint32_t first, uint32_t firstMask, uint32_t second, uint32_t secondMask) {
+    FieldPlaces f;
+    if ((firstMask != 0) == (secondMask != 0)) return f;
+    f.account = firstMask ? second : first;
+    f.password = firstMask ? first : second;
+    return f;
+}
+
 int gameButton(Part p) {
     switch (p) {
         case Part::Enter: return 0x78;

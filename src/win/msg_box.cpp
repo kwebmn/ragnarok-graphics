@@ -63,6 +63,7 @@ struct State {
     int texW = 0, texH = 0;
     bool upload = false;
     int told = 0;
+    bool toldAgain = false;  // a call while its box is up logged (once a box)
 };
 
 State& state() {
@@ -93,13 +94,21 @@ std::string copied(const char* text) {
 int __attribute__((thiscall)) errorMsg(uint32_t manager, const char* text, int kind, int a, int b, int c) {
     State& s = state();
     const std::string words = copied(text);
-    if (read32(kBoxAt)) {  // a box up already: the game adds the line to it
-        if (!words.empty()) s.text += "\n" + words;
-    } else {
-        s.text = words;
+    const bool up = read32(kBoxAt) != 0;
+    // 3.0.11-beta.170 (R-KD2UQQ): a box up already - the game adds the line only when the call asks (b), else it
+    // answers the call at once (its login asks again each turn while «Failed to Connect to Server.» is up)
+    s.text = ac::boxWords(s.text, words, up, b != 0);
+    if (!up) {
         s.kind = kind == 2 ? ac::Kind::Question : kind == 4 ? ac::Kind::Choice : ac::Kind::Message;
+        s.toldAgain = false;
+        if (s.told++ < 30) LOG_INFO("messages: the game's box (kind %d) - «%s»", kind, words.c_str());
+    } else if (b) {
+        if (s.told++ < 30) LOG_INFO("messages: a line added to the game's box - «%s»", words.c_str());
+    } else if (!s.toldAgain) {
+        s.toldAgain = true;
+        LOG_INFO("messages: the game asks for its box again while it is up («%s») - answered at once, as the game does",
+                 words.c_str());
     }
-    if (s.told++ < 30) LOG_INFO("messages: the game's box (kind %d) - «%s»", kind, words.c_str());
     return reinterpret_cast<ErrorFn>(g_error)(manager, text, kind, a, b, c);
 }
 

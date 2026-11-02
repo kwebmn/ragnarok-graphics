@@ -40,6 +40,15 @@ enum class Part : uint8_t { None, Account, Password, Remember, Enter, Exit, Regi
 Part hitTest(const Layout& L, float x, float y);
 int gameButton(Part p);  // the game's window's own: 0x78 enter, 0x9b exit, 0x93 the box; 0 none
 
+// 3.0.11-beta.170 (R-4TNJP8): which of the game's two fields is the account's - the password's is the one the game
+// draws as its mask letter ('*'), the account's has none; both or neither masked: not known (the game's own window
+// kept)
+struct FieldPlaces {
+    uint32_t account = 0, password = 0;  // the fields' places in the game's window
+    bool known() const { return account && password; }
+};
+FieldPlaces fieldPlaces(uint32_t first, uint32_t firstMask, uint32_t second, uint32_t secondMask);
+
 void paint(panel::Picture& out, const Layout& L, const Fields& f, const Show& sh);
 
 enum class Align : uint8_t { Left, Right, Center };

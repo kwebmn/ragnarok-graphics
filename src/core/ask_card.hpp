@@ -52,6 +52,9 @@ Layout layout(const Card& c, int targetW, int targetH, float scale, const Texts&
 // 3.0.11-beta.151: the message's room across (its rows measured against it by the window part)
 float messageWidth(float scale);
 int buttonAt(const Layout& L, float x, float y);  // the picture's pixels; -1 none
+// 3.0.11-beta.170 (R-KD2UQQ): the game's box's words after an ErrorMsg call - a new box the call's words; a call while
+// one is up adds its line only when it asks for that (the game answers it at once), else the words stay
+std::string boxWords(const std::string& now, const std::string& words, bool boxUp, bool adds);
 // 3.0.11-beta.155: a count's quick choices - one, half, all of its most (half at least one)
 enum class Quick : uint8_t { One, Half, All };
 int quickAt(const Layout& L, float x, float y);  // the picture's pixels; -1 none

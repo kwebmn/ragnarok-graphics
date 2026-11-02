@@ -163,3 +163,16 @@ TEST(ask_card_the_games_count) {
     npc.kind = askcard::Kind::Number;
     CHECK(askcard::layout(npc, 1920, 1080, 1.0f, t).quick.empty());
 }
+
+// 3.0.11-beta.170 (R-KD2UQQ: «Failed to Connect to Server.» 29 times over half a second - the game's login asks for its
+// box again each turn while one is up; the game answers such a call at once and adds its line only when the call asks
+// for that, its fourth argument): the box's words after a call - a new box its own; another call while one is up: the
+// line added only when asked, else the words as they were
+TEST(ask_card_the_box_words_after_another_call) {
+    CHECK(askcard::boxWords("", "Unregistered ID.", false, false) == "Unregistered ID.");
+    CHECK(askcard::boxWords("Old.", "Unregistered ID.", false, true) == "Unregistered ID.");  // a new box
+    const std::string once = "Failed to Connect to Server.";
+    CHECK(askcard::boxWords(once, once, true, false) == once);
+    CHECK(askcard::boxWords("A line.", "Another.", true, true) == "A line.\nAnother.");
+    CHECK(askcard::boxWords("A line.", "", true, true) == "A line.");
+}
