@@ -5746,6 +5746,21 @@ constexpr Entry kTexts[] = {
     {Text::GuildTerritory, "Territory", "Територія", "Территория"},
     {Text::GuildNone, "none", "немає", "нет"},
     {Text::GuildOnline, "{1} of {2} online", "{1} з {2} у грі", "{1} из {2} в игре"},
+    // 3.0.11-beta.166: one's own open shop
+    {Text::InterfaceMyShop, "Own shop card", "Картка своєї лавки", "Карточка своей лавки"},
+    {Text::InterfaceMyShopHint,
+     "One's own open shop as a card in the new look: the sign, a row a thing still for sale with its price and how "
+     "many are left, what is left is worth, closing the shop (the controller's Y). Off: the game's own window.",
+     "Своя відкрита лавка карткою в новому вигляді: вивіска, рядок на річ, що ще продається, з ціною і скільки "
+     "лишилось, на скільки ще товару, закрити лавку (Y на контролері). Вимкнено: власне вікно гри.",
+     "Своя открытая лавка карточкой в новом виде: вывеска, строка на вещь, что ещё продаётся, с ценой и сколько "
+     "осталось, на сколько ещё товара, закрыть лавку (Y на контроллере). Выключено: собственное окно игры."},
+    {Text::MyShopTitle, "My shop", "Моя лавка", "Моя лавка"},
+    {Text::MyShopSign, "My shop: {1}", "Моя лавка: {1}", "Моя лавка: {1}"},
+    {Text::MyShopLeft, "{1} left", "лишилось {1}", "осталось {1}"},
+    {Text::MyShopWorth, "Still for sale", "Ще на продаж", "Ещё на продажу"},
+    {Text::MyShopClose, "Close the shop", "Закрити лавку", "Закрыть лавку"},
+    {Text::MyShopSold, "All sold", "Усе продано", "Всё продано"},
     // 3.0.11-beta.141: the character block's experience (forms: one, a few, many)
     {Text::CharSkillPoints, "skill point|skill points", "очко навичок|очки навичок|очок навичок",
      "очко навыков|очка навыков|очков навыков"},

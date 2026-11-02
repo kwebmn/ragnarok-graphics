@@ -56,6 +56,7 @@
 #include "win/guild_card.hpp"
 #include "win/homun_card.hpp"
 #include "win/merc_card.hpp"
+#include "win/my_shop.hpp"
 #include "win/options_card.hpp"
 #include "win/server_card.hpp"
 #include "win/social_card.hpp"
@@ -830,6 +831,20 @@ bool guildPad(const PadState& pad, DWORD now) {
     return true;
 }
 
+// 3.0.11-beta.166: one's own open shop - up and down scroll, Y «Закрити лавку» (not B: the shop stays by chance)
+bool myShopPad(const PadState& pad, DWORD now) {
+    State& s = S();
+    const uint16_t buttons = pad.connected ? pad.buttons : 0;
+    const uint16_t down = uint16_t((buttons & ~s.prevPadButtons) | stickSteps(pad, now));
+    s.prevPadButtons = buttons;
+    using uagfx::win::myshopwin::PadCommand;
+    const std::pair<uint16_t, PadCommand> keys[] = {
+        {kPadUp, PadCommand::Up}, {kPadDown, PadCommand::Down}, {kPadY, PadCommand::Close}};
+    for (const auto& [button, command] : keys)
+        if (down & button) uagfx::win::myshopwin::padCommand(command);
+    return true;
+}
+
 // 3.0.11-beta.92: «Характеристики» open - the D-pad (or the left stick) chooses a stat, A adds a point, B or Start
 // close it
 bool statsPad(const PadState& pad, DWORD now) {
@@ -1131,7 +1146,7 @@ constexpr const char* kTopNames[] = {"«Речі»",  "«Характерист�
                                      "the character make", "«Візок»", "«Лавка»", "the choice of things",
                                      "the party's settings", "the pet", "the homunculus", "the mercenary",
                                      "the game's options", "the friends and the party", "the server select",
-                                     "the guild"};
+                                     "the guild", "one's own shop"};
 static_assert(std::size(kTopNames) == size_t(uagfx::winstack::kWins), "a name for each window");
 
 void tick() {
@@ -1213,6 +1228,7 @@ void tick() {
                   : drive && *top == Win::Social                   ? socialPad(pad, now)      // .163
                   : drive && *top == Win::Servers                  ? serversPad(pad, now)     // .164
                   : drive && *top == Win::Guild                    ? guildPad(pad, now)       // .165
+                  : drive && *top == Win::MyShop                   ? myShopPad(pad, now)      // .166
                                                                    : runMenu(pad, view, now);
     if (s.npcSupported) view.dialog = clientnpc::read();
     double clientTurn = 0;

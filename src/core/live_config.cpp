@@ -391,6 +391,10 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("guild", flag(running.guildWindow), flag(file.guildWindow)));
         n.guildWindow = file.guildWindow;
     }
+    if (file.myShopWindow != running.myShopWindow) {  // 3.0.11-beta.166: one's own shop card, at once
+        u.applied.push_back(change("my_shop", flag(running.myShopWindow), flag(file.myShopWindow)));
+        n.myShopWindow = file.myShopWindow;
+    }
     if (file.skillCells != running.skillCells) {  // 3.0.11-beta.142: a ground skill's cells, at once
         u.applied.push_back(change("skill_cells", flag(running.skillCells), flag(file.skillCells)));
         n.skillCells = file.skillCells;

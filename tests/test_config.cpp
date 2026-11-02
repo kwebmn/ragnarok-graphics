@@ -861,7 +861,7 @@ TEST(config_interface_minimap) {
     // 3.0.11-beta.70: the tracker; 3.0.11-beta.96: «Навички»; 3.0.11-beta.97: «Спорядження»; .98: the NPC talk;
     // .100: the shops; .115: the storage; .116: the trade; .140: the menu; .149: the item and skill cards; .150: the
     // requests and the NPC's inputs; .151: the game's message boxes and its login
-    CHECK(u.waiting.empty() && u.applied.size() == 36 && u.applied[0] == "minimap 0 -> 1");
+    CHECK(u.waiting.empty() && u.applied.size() == 37 && u.applied[0] == "minimap 0 -> 1");
     CHECK(u.applied[1] == "buffs off -> column" && u.applied[2] == "items 0 -> 1" && u.applied[3] == "status 0 -> 1");
     CHECK(u.applied[4] == "skills 0 -> 1" && u.applied[5] == "equip 0 -> 1" && u.applied[6] == "npc_talk 0 -> 1");
     CHECK(u.applied[7] == "shop 0 -> 1" && u.applied[8] == "storage 0 -> 1" && u.applied[9] == "trade 0 -> 1");
@@ -872,9 +872,10 @@ TEST(config_interface_minimap) {
     CHECK(u.applied[20] == "picks 0 -> 1" && u.applied[21] == "party_setup 0 -> 1" && u.applied[22] == "pet 0 -> 1");
     CHECK(u.applied[23] == "homun 0 -> 1" && u.applied[24] == "merc 0 -> 1" && u.applied[25] == "options 0 -> 1");
     CHECK(u.applied[26] == "social 0 -> 1" && u.applied[27] == "servers 0 -> 1" && u.applied[28] == "guild 0 -> 1");
-    CHECK(u.applied[29] == "cast 0 -> 1" && u.applied[30] == "chat 0 -> 1" && u.applied[31] == "hotbar 0 -> 1");
-    CHECK(u.applied[32] == "tracker 0 -> 1" && u.applied[33] == "party 0 -> 1" && u.applied[34] == "target 0 -> 1");
-    CHECK(u.applied[35] == "character off -> bars");
+    CHECK(u.applied[29] == "my_shop 0 -> 1");
+    CHECK(u.applied[30] == "cast 0 -> 1" && u.applied[31] == "chat 0 -> 1" && u.applied[32] == "hotbar 0 -> 1");
+    CHECK(u.applied[33] == "tracker 0 -> 1" && u.applied[34] == "party 0 -> 1" && u.applied[35] == "target 0 -> 1");
+    CHECK(u.applied[36] == "character off -> bars");
     CHECK(appliesNow("interface.minimap"));
 }
 
@@ -1669,6 +1670,18 @@ TEST(config_interface_guild) {
     CHECK(s != nullptr && s->page == settings::Page::Interface);
     CHECK(appliesNow("interface.guild"));
     CHECK(liveUpdate(parseConfig(""), parseConfig("[interface]\nguild = 1\n")).next.guildWindow);
+}
+
+// 3.0.11-beta.166: [interface] my_shop - one's own open shop as a card, on with the new minimap, at once
+TEST(config_interface_my_shop) {
+    CHECK(!parseConfig("").myShopWindow);
+    CHECK(parseConfig("[interface]\nminimap = 1\n").myShopWindow);
+    CHECK(!parseConfig("[interface]\nminimap = 1\nmy_shop = 0\n").myShopWindow);
+    CHECK(parseConfig("[interface]\nmy_shop = 1\n").myShopWindow);
+    const settings::IniSetting* s = settings::findSetting("interface.my_shop");
+    CHECK(s != nullptr && s->page == settings::Page::Interface);
+    CHECK(appliesNow("interface.my_shop"));
+    CHECK(liveUpdate(parseConfig(""), parseConfig("[interface]\nmy_shop = 1\n")).next.myShopWindow);
 }
 
 // 3.0.11-beta.103 (the owner: «можешь сделать настройку, чтобы можно было выбрать эту стрелку в конфигураторе»):

@@ -406,6 +406,7 @@ Config parseConfig(const std::string& text) {
     bool socialSet = false;                       // 3.0.11-beta.163
     bool serverSet = false;                       // 3.0.11-beta.164
     bool guildSet = false;                        // 3.0.11-beta.165
+    bool myShopSet = false;                       // 3.0.11-beta.166
     std::istringstream in(text);
     std::string line;
     std::string section;
@@ -659,6 +660,9 @@ Config parseConfig(const std::string& text) {
         } else if (key == "interface.guild") {  // 3.0.11-beta.165: the guild
             guildSet = val == "0" || val == "1" || val == "on" || val == "off" || val == "true" || val == "false";
             setBool(val, c.guildWindow);
+        } else if (key == "interface.my_shop") {  // 3.0.11-beta.166: one's own open shop
+            myShopSet = val == "0" || val == "1" || val == "on" || val == "off" || val == "true" || val == "false";
+            setBool(val, c.myShopWindow);
         } else if (key == "interface.skill_cells") {  // 3.0.11-beta.142: a ground skill's cells on the ground
             setBool(val, c.skillCells);
         } else if (key == "interface.ground_counts") {  // 3.0.11-beta.143: walls standing, traps left on the bar
@@ -978,6 +982,7 @@ Config parseConfig(const std::string& text) {
     if (c.newMinimap && !socialSet) c.socialWindow = true;          // 3.0.11-beta.163
     if (c.newMinimap && !serverSet) c.serverWindow = true;          // 3.0.11-beta.164
     if (c.newMinimap && !guildSet) c.guildWindow = true;            // 3.0.11-beta.165
+    if (c.newMinimap && !myShopSet) c.myShopWindow = true;          // 3.0.11-beta.166
     return c;
 }
 
