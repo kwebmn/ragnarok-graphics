@@ -1,3 +1,15 @@
+# uaRO Graphics 3.0.11-beta.174 — what's new
+
+**Language and news on the login screen** (the new login screen, steps 4–5):
+- At the bottom right of the login screen "УКР / РУС / ENG": a click changes our windows' language at once, without
+  a restart, and keeps it (the same language as the settings app's). The game's own texts (its messages, the item
+  names) stay as they were.
+- A language changed in the settings app while the game runs applies at once too — to all our windows and the
+  controller's hints.
+- Above the server's state — the event on now or next, else the newest news from uaro.kiev.ua. A click opens it in
+  the browser, "All news" - the site's news. The line shows once the site serves it.
+- The switch "News on the login" under "Interface".
+
 # uaRO Graphics 3.0.11-beta.173 — what's new
 
 **The server's state on the login screen** (the new login screen, step 3):
