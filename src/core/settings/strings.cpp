@@ -6896,6 +6896,16 @@ constexpr Entry kTexts[] = {
      "вгорі екрана. Вимкнено: віконце гри, як раніше. Працює з увімкненими «Речі».",
      "+1 и название вещи на 2 секунды над сумкой (внизу посередине экрана, когда она закрыта) вместо собственного "
      "окошка игры вверху экрана. Выключено: окошко игры, как раньше. Работает с включёнными «Вещи»."},
+    // 3.0.11-beta.187 (the tester took the fan for the character's sight): the camera's fan on the minimap
+    {Text::InterfaceMinimapView, "The camera's view on the minimap", "Огляд камери на міні-карті",
+     "Обзор камеры на миникарте"},
+    {Text::InterfaceMinimapViewHint,
+     "A light fan round the arrow: what the camera sees. The arrow shows where the character faces. Off: the arrow "
+     "alone.",
+     "Світле віяло навколо стрілки: те, що бачить камера. Куди дивиться персонаж, показує стрілка. Вимкнено: лише "
+     "стрілка.",
+     "Светлый веер вокруг стрелки: то, что видит камера. Куда смотрит персонаж, показывает стрелка. Выключено: только "
+     "стрелка."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

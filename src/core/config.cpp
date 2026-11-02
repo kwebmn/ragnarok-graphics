@@ -531,6 +531,8 @@ Config parseConfig(const std::string& text) {
             setBool(val, c.minimapKafra);
         } else if (key == "interface.minimap_party") {
             setBool(val, c.minimapParty);
+        } else if (key == "interface.minimap_view") {  // 3.0.11-beta.187
+            setBool(val, c.minimapView);
         } else if (key == "interface.minimap_reach") {  // 3.0.11-beta.65: where one can walk, an experiment
             setBool(val, c.minimapReach);
         } else if (key == "interface.minimap_hd") {  // 3.0.11-beta.72: the maps' pictures four times bigger

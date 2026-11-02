@@ -572,6 +572,9 @@ struct Config {
     // 3.0.11-beta.119 (R-5Z6J2S): [interface] minimap_kafra / minimap_party - the Kafras and the party's faces, each a
     // layer of its own (core/minimap_proto Layer), switched on the maps themselves too
     bool minimapKafra = true, minimapParty = true;
+    // 3.0.11-beta.187 (the tester took it for the character's sight): [interface] minimap_view - the camera's fan round
+    // the minimap's arrow (core/minimap_proto Scene::viewFan)
+    bool minimapView = true;
     // 3.0.11-beta.120 (the owner: «карта ... какаято не красивая»): [interface] minimap_style - the minimap's and the
     // big map's picture: the game's own, or «Схема» drawn from the server's walkable cells (core/minimap_proto
     // schemePixels); switched on the maps themselves too

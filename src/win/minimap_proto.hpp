@@ -28,6 +28,7 @@ struct Show {
     // 3.0.11-beta.119 (R-5Z6J2S): [interface] minimap_kafra / minimap_party - the Kafras, the party's faces; each
     // layer (with npcs and warps) also switched by the maps' own buttons, written to uaro-graphics.ini
     bool kafra = true, party = true;
+    bool viewFan = true;  // 3.0.11-beta.187: [interface] minimap_view - the camera's fan round the arrow
     // 3.0.11-beta.120 (the owner: «карта ... какаято не красивая»): [interface] minimap_style = scheme - the maps drawn
     // from the server's walkable cells (core/minimap_proto schemePixels) in place of the game's picture; switched by
     // the maps' own button too

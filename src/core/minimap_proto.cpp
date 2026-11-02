@@ -24,7 +24,9 @@ constexpr uint32_t kAccent = 0xC9A55B, kAccent2 = 0xE6CB8A, kText = 0xECEFF5, kM
 constexpr uint32_t kGround = 0xFF141922;   // the map's square where it has no picture
 constexpr uint32_t kKafra = 0xE86AA8;      // the concept's «K»
 constexpr uint32_t kPortal = 0x23285A, kPortalRing = 0x8E9BFF;
-constexpr uint32_t kArrow = 0x4FA3FF, kCone = 0x5AB4FF;
+// 3.0.11-beta.187 (the tester took the fan for the character's sight): the camera's fan a neutral light, the arrow
+// alone blue
+constexpr uint32_t kArrow = 0x4FA3FF, kCone = 0xDDE6F2;
 constexpr uint32_t kMemberRing = 0x7FD3FF, kDeadRing = 0xFF5A4E;  // 3.0.11-beta.83: the party's (as the chat's)
 
 // a smooth line `width` wide and a ring - each pixel's coverage by its distance (inside `clip`)
@@ -450,7 +452,10 @@ void overMap(panel::Picture& out, const panel::Box& box, const Scene& sc, const 
         if (inBox(x, y, 0)) pin(out, x, y, 5 * s * big);
     }
     place(sc.player, x, y);
-    if (inBox(x, y, 0)) player(out, box, x, y, sc.lookX, sc.lookY, sc.headX, sc.headY, 9.5f * s * big);
+    if (inBox(x, y, 0))
+        player(out, box, x, y, sc.viewFan ? sc.lookX : 0.0f, sc.viewFan ? sc.lookY : 0.0f,
+               sc.viewFan || std::hypot(sc.headX, sc.headY) > 1e-4f ? sc.headX : sc.lookX,
+               sc.viewFan || std::hypot(sc.headX, sc.headY) > 1e-4f ? sc.headY : sc.lookY, 9.5f * s * big);
 }
 
 uint32_t orText(uint32_t rgb) { return rgb ? rgb : kText; }
@@ -508,8 +513,19 @@ bool cellUnder(const View& v, const MapSize& map, float px, float py, Cell& out)
 
 int cellsAt(int step, const MapSize& map) {
     step = std::clamp(step, 0, kZoomSteps - 1);
-    if (step == kZoomSteps - 1) return std::max(1, std::max(map.w, map.h));
-    return kZoomCells[step];
+    const int whole = std::max(1, std::max(map.w, map.h));
+    if (step == kZoomSteps - 1) return whole;
+    return std::min(kZoomCells[step], whole);  // 3.0.11-beta.187: never farther out than the whole map
+}
+
+int zoomStep(int from, int by, const MapSize& map) {
+    const int last = kZoomSteps - 1, whole = std::max(1, std::max(map.w, map.h));
+    const auto own = [&](int step) { return step == last || kZoomCells[step] < whole; };  // not the whole map again
+    int at = std::clamp(from, 0, last);
+    if (!own(at)) at = last;
+    for (int step = at + (by < 0 ? -1 : 1); by != 0 && step >= 0 && step <= last; step += by < 0 ? -1 : 1)
+        if (own(step)) return step;
+    return at;
 }
 
 std::vector<uint32_t> schemePixels(const walkgrid::Grid& g, const std::vector<uint8_t>* reach, int px, int& width,

@@ -375,6 +375,50 @@ TEST(minimap_proto_view_fan_as_before) {
     }
 }
 
+// 3.0.11-beta.187 (the tester: «коли зум робиш до самого мінімуму, а потім підвищуєш, в перший раз він стає ще
+// менший, а потім збільшується»): a step showing the whole map or more is the whole map's - on a map under 220 cells
+// the 220 step came after the whole map's and showed it farther out; the buttons and the wheel move past such steps
+TEST(minimap_proto_zoom_never_farther_than_the_whole_map) {
+    const minimap::MapSize small{200, 180}, tiny{30, 30}, big{400, 300};
+    const int whole = minimap::kZoomSteps - 1;
+    CHECK(minimap::cellsAt(4, small) == 200 && minimap::cellsAt(3, small) == 150);
+    CHECK(minimap::zoomStep(whole, -1, small) == 3);  // nearer from the whole map: 150, not 220
+    CHECK(minimap::zoomStep(3, 1, small) == whole && minimap::zoomStep(whole, 1, small) == whole);
+    CHECK(minimap::zoomStep(4, -1, small) == 3);  // a step kept from a bigger map counts as the whole one
+    CHECK(minimap::zoomStep(0, -1, small) == 0 && minimap::zoomStep(1, -1, small) == 0);
+    CHECK(minimap::zoomStep(whole, -1, big) == 4 && minimap::cellsAt(4, big) == 220);  // a big map as before
+    CHECK(minimap::zoomStep(whole, -1, tiny) == whole && minimap::cellsAt(0, tiny) == 30);  // nothing nearer to go to
+    for (int step = 0; step < minimap::kZoomSteps; ++step)
+        CHECK(minimap::cellsAt(step, small) <= minimap::cellsAt(whole, small));
+}
+
+// 3.0.11-beta.187 (the tester: «погляд персонажа не в ту сторону куди стрілочка», «іконка показу камери виглядає як
+// іконка "зору", тому заплутався»): the fan is the camera's view, not the character's sight - neutral, not the arrow's
+// blue; [interface] minimap_view off: the arrow alone
+TEST(minimap_proto_view_fan_neutral_and_switchable) {
+    const minimap::Layout L = minimap::layout(1920, 1080, 2.0f, false, 0);
+    minimap::Scene sc;
+    sc.map = minimap::MapSize{100, 100};
+    sc.player = minimap::Cell{50, 50};
+    sc.lookY = 1;  // the camera north
+    sc.headX = 1;  // the character east
+    panel::Picture pic;
+    minimap::paint(pic, L, sc, minimap::Texts{});
+    float px = 0, py = 0;
+    minimap::cellToPanel(minimap::view(sc.map, sc.player, sc.cells, int(L.map.w)), sc.map, sc.player, px, py);
+    px += L.map.x;
+    py += L.map.y;
+    const float ahead = 9.5f * L.s * 2.2f;
+    const auto at = [&](float x, float y) { return pic.px[size_t(y) * size_t(pic.width) + size_t(x)]; };
+    const uint32_t fan = at(px, py - ahead);
+    const int r = int((fan >> 16) & 0xFF), b = int(fan & 0xFF);
+    CHECK(b > 0x22 + 0x10);  // over the ground
+    CHECK(b - r < 0x18);     // neutral: not the arrow's blue
+    sc.viewFan = false;
+    minimap::paint(pic, L, sc, minimap::Texts{});
+    CHECK(at(px, py - ahead) == 0xFF141922u);
+}
+
 // 3.0.11-beta.71 (the owner: «иконка игрока не поворачивается в сторону куда идешь», «туда куда чар смотрит»): the
 // character's facing as the game keeps it (its object + 0x38, degrees - FUN_00544da0 turns it toward a point:
 // atan2(east, -north); the packet 0x9c sets (dir + 4) * 45) into the arrow's way, east and north

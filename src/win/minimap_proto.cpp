@@ -717,6 +717,7 @@ minimap::Scene sceneOf(const State& s) {
     sc.player = s.cell;
     sc.lookX = s.lookX;
     sc.lookY = s.lookY;
+    sc.viewFan = s.show.viewFan;  // 3.0.11-beta.187: [interface] minimap_view
     sc.cells = minimap::cellsAt(s.zoom, s.size);
     sc.marks = s.marks;
     if (s.show.party)  // 3.0.11-beta.119: the party a layer
@@ -862,8 +863,9 @@ void setBig(State& s, bool open) {
     LOG_INFO("minimap: the big map %s", open ? "opened" : "closed");
 }
 
-void setZoom(State& s, int step) {
-    step = std::clamp(step, 0, minimap::kZoomSteps - 1);
+// 3.0.11-beta.187: `by` steps nearer (-1) or farther (+1), past those that show the whole map or more
+void setZoom(State& s, int by) {
+    const int step = minimap::zoomStep(s.zoom, by, s.size);
     if (step == s.zoom) return;
     s.zoom = step;
     s.dirty = true;
@@ -996,6 +998,10 @@ void frame(HWND game, const Show& show, double k, int targetWidth, int targetHei
         s.index = index;
         s.show = want;
         buildHints(s);
+        s.dirty = s.bigDirty = true;
+    }
+    if (want.viewFan != s.show.viewFan) {  // 3.0.11-beta.187: [interface] minimap_view
+        s.show.viewFan = want.viewFan;
         s.dirty = s.bigDirty = true;
     }
     if (want.scheme != s.show.scheme) {  // 3.0.11-beta.120: «Схема» or the game's picture
@@ -1181,7 +1187,7 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     const minimap::Part part = minimap::partAt(s.layout, px, py);
     if (part == minimap::Part::None) return false;
     if (m == WM_MOUSEWHEEL) {  // 3.0.11-beta.31: the wheel over it zooms
-        if (part == minimap::Part::Map) setZoom(s, s.zoom + (GET_WHEEL_DELTA_WPARAM(wp) > 0 ? -1 : 1));
+        if (part == minimap::Part::Map) setZoom(s, GET_WHEEL_DELTA_WPARAM(wp) > 0 ? -1 : 1);
         result = 0;
         return true;
     }
@@ -1192,8 +1198,8 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
         switch (part) {
             case minimap::Part::Layer: switchLayer(s, minimap::layerAt(s.layout, px, py)); break;  // .119
             case minimap::Part::Style: switchStyle(s); break;                                      // .120
-            case minimap::Part::ZoomIn: setZoom(s, s.zoom - 1); break;  // fewer cells: nearer
-            case minimap::Part::ZoomOut: setZoom(s, s.zoom + 1); break;
+            case minimap::Part::ZoomIn: setZoom(s, -1); break;  // fewer cells: nearer
+            case minimap::Part::ZoomOut: setZoom(s, 1); break;
             case minimap::Part::Expand: setBig(s, !s.big); break;
             case minimap::Part::Fold:
                 s.folded = !s.folded;

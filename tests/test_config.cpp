@@ -1370,6 +1370,21 @@ TEST(config_interface_trade) {
     CHECK(liveUpdate(parseConfig(""), parseConfig("[interface]\ntrade = 1\n")).next.tradeWindow);
 }
 
+// 3.0.11-beta.187 (the tester took the minimap's fan for the character's sight): [interface] minimap_view - the
+// camera's fan round the arrow, on; off: the arrow alone
+TEST(config_reads_the_minimap_view) {
+    CHECK(parseConfig("").minimapView);
+    CHECK(!parseConfig("[interface]\nminimap_view = 0\n").minimapView);
+    const settings::IniSetting* s = settings::findSetting("interface.minimap_view");
+    CHECK(s != nullptr);
+    if (!s) return;
+    CHECK(s->page == settings::Page::Interface && s->control == settings::Control::Check);
+    CHECK(appliesNow("interface.minimap_view"));
+    const LiveUpdate u = liveUpdate(parseConfig(""), parseConfig("[interface]\nminimap_view = 0\n"));
+    CHECK(!u.next.minimapView && u.applied.size() == 1 && u.waiting.empty());
+    CHECK_EQ(settings::tokenOf(*s, parseConfig("[interface]\nminimap_view = 0\n")), std::string("0"));
+}
+
 // 3.0.11-beta.119 (R-5Z6J2S, the owner «делать»): [interface] minimap_kafra and minimap_party - the Kafras and the
 // party on the maps, each its own layer (on at first), switched on the maps themselves too; boxes of «Інтерфейс»,
 // at once

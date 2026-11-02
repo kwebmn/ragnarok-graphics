@@ -41,6 +41,11 @@ constexpr int kZoomCells[] = {40, 60, 100, 150, 220};
 constexpr int kZoomSteps = 6;  // those and the whole map
 constexpr int kZoomFirst = 2;  // 100 cells, as before
 int cellsAt(int step, const MapSize& map);
+// 3.0.11-beta.187 (the tester: «коли зум робиш до самого мінімуму, а потім підвищуєш, в перший раз він стає ще
+// менший»): the step `by` (-1 nearer, +1 farther) from `from`, past the steps that show the whole map or more (on a
+// map under 220 cells the 220 step came after the whole map's, farther out); one standing on such a step is on the
+// whole map's
+int zoomStep(int from, int by, const MapSize& map);
 
 // 3.0.11-beta.119 (R-5Z6J2S: «потрібно щоб на мінікарті та на великій карті була можливість включати та виключати
 // НПЦ, портали та інше»; the owner «делать»): the map's layers - each switched on the maps themselves (a round button
@@ -127,6 +132,7 @@ struct Scene {
     // 3.0.11-beta.71 (the owner: «туда куда чар смотрит»): which way the character faces (east, north; facingOf) - the
     // arrow's way; the camera's (look) the fan's. 0, 0 not known: the arrow the camera's way as before
     float headX = 0, headY = 0;
+    bool viewFan = true;  // 3.0.11-beta.187: [interface] minimap_view - the camera's fan; off: the arrow alone
     int cells = 100;             // the zoom
     std::vector<Mark> marks;
     std::vector<Cell> path;  // the way over this map, from the player on (walkpath)

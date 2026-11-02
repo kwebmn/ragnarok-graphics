@@ -29,9 +29,13 @@ struct Layout {
     int x = 0, y = 0, w = 0, h = 0;
     panel::Box glass, title, message, list, hint, ok, cancel;
     std::vector<panel::Box> rows;  // shown (7 at most)
+    panel::Box bar;  // 3.0.11-beta.187: the scroll's bar at the list's right - 0 wide when all rows are shown
 };
 Layout layout(int targetW, int targetH, float scale, size_t count);
 int mostScroll(const Layout& L, size_t count);
+// 3.0.11-beta.187 (the tester: «мені не вистачає скрола тут»): the bar's thumb - as long as the share of the rows
+// shown, where `scroll` is; 0 high with no bar
+panel::Box thumb(const Layout& L, int scroll, size_t count);
 enum class Part : uint8_t { None, Row, Ok, Cancel };
 struct Hit {
     Part part = Part::None;
