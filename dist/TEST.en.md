@@ -1,3 +1,9 @@
+# uaRO Graphics 3.0.11-beta.197 — what's new
+
+**The tester's notes, part three**:
+- A white square round the head (Assumptio with Angel Wings): an HD picture keeps its edge's colour under its see-through parts, and a draw that adds it ignoring its transparency showed that colour as a square. Such a draw now takes the HD picture's colour times its transparency, as the game's own picture would add. The log says when it happens («AI textures: an HD copy added ...»).
+- «Кадри» → «Інші вікна гри — легкі»: the hint said 10 frames a second; it is 5 (2 when wholly behind another game window).
+
 # uaRO Graphics 3.0.11-beta.196 — what's new
 
 **The tester's notes, part two**:
