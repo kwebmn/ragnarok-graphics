@@ -337,6 +337,24 @@ float markRadius(Glyph g, float s) {
     return g == Glyph::Warp ? 5.5f * s : g == Glyph::Kafra ? 6 * s : g == Glyph::Member ? 7 * s : 2.8f * s;
 }
 
+// 3.0.11-beta.196: a mark's own - a Kafra with its face as big as a member's
+float radiusOf(const Mark& m, float s) {
+    return markRadius(m.glyph == Glyph::Kafra && m.picture ? Glyph::Member : m.glyph, s);
+}
+
+// 3.0.11-beta.196 (the tester: «відображення нпц перекриває значок кафри»): the marks in the order they are drawn - by
+// their kind, the NPCs' dots first, then the warps, the Kafras, the party; the list's order within a kind
+std::vector<size_t> drawOrder(const std::vector<Mark>& marks) {
+    std::vector<size_t> order(marks.size());
+    for (size_t i = 0; i < order.size(); ++i) order[i] = i;
+    const auto rank = [](Glyph g) {
+        return g == Glyph::Dot ? 0 : g == Glyph::Warp ? 1 : g == Glyph::Kafra ? 2 : 3;
+    };
+    std::stable_sort(order.begin(), order.end(),
+                     [&](size_t a, size_t b) { return rank(marks[a].glyph) < rank(marks[b].glyph); });
+    return order;
+}
+
 // 3.0.11-beta.83: a premultiplied picture inside a circle round (cx, cy), over what is there
 void faceIn(panel::Picture& out, const panel::Picture& pic, float cx, float cy, float r) {
     const int ox = int(std::floor(cx - float(pic.width) / 2)), oy = int(std::floor(cy - float(pic.height) / 2));
@@ -401,10 +419,10 @@ void overMap(panel::Picture& out, const panel::Box& box, const Scene& sc, const 
         return x >= box.x - r && y >= box.y - r && x <= box.x + box.w + r && y <= box.y + box.h + r;
     };
     float x = 0, y = 0;
-    for (size_t i = 0; i < sc.marks.size(); ++i) {
+    for (const size_t i : drawOrder(sc.marks)) {
         const Mark& m = sc.marks[i];
         place(m.cell, x, y);
-        const float r = markRadius(m.glyph, s) * big;
+        const float r = radiusOf(m, s) * big;
         if (!inBox(x, y, r)) continue;
         if (int(i) == sc.hoverMark) ring(out, x, y, r + 3 * s, 1.6f * s, kWhite, 0.95f);
         switch (m.glyph) {
@@ -414,9 +432,16 @@ void overMap(panel::Picture& out, const panel::Box& box, const Scene& sc, const 
                 ring(out, x, y, r - 0.8f * s, 1.5f * s, kPortalRing, 1.0f);
                 panel::circle(out, x, y, r * 0.3f, kWhite, 1.0f);
                 break;
-            case Glyph::Kafra:  // the concept's pink «K» (its letter over it by GDI)
-                panel::roundRect(out, panel::Box{x - r, y - r, 2 * r, 2 * r}, 3 * s * big, kKafra, 1.0f, kWhite,
-                                 0.9f, std::max(1.0f, s));
+            case Glyph::Kafra:
+                if (m.picture && m.picture->width > 0) {  // 3.0.11-beta.196: its face in a round, a pink ring
+                    panel::circle(out, x, y, r + 1.5f, kBlack, 0.7f);
+                    panel::circle(out, x, y, r, kDark, 1.0f);
+                    faceIn(out, *m.picture, x, y, r - 1.2f * s);
+                    ring(out, x, y, r - 0.6f * s, 1.6f * s, kKafra, 1.0f);
+                } else {  // the concept's pink «K» (its letter over it by GDI)
+                    panel::roundRect(out, panel::Box{x - r, y - r, 2 * r, 2 * r}, 3 * s * big, kKafra, 1.0f, kWhite,
+                                     0.9f, std::max(1.0f, s));
+                }
                 break;
             case Glyph::Dot:
                 panel::circle(out, x, y, r + 1.2f, kBlack, 0.8f);
@@ -729,8 +754,8 @@ std::vector<Words> words(const Layout& L, const Scene& sc, const Texts& t) {
     std::vector<Words> out;
     const float s = L.s;
     const View v = view(sc.map, sc.player, sc.cells, int(L.map.w));
-    for (const Mark& m : sc.marks) {  // the Kafras' «K»
-        if (m.glyph != Glyph::Kafra) continue;
+    for (const Mark& m : sc.marks) {  // the Kafras' «K» (3.0.11-beta.196: not over a face)
+        if (m.glyph != Glyph::Kafra || m.picture) continue;
         float x = 0, y = 0;
         cellToPanel(v, sc.map, m.cell, x, y);
         const float r = markRadius(m.glyph, s);
@@ -803,7 +828,7 @@ int markAt(const Layout& L, const Scene& sc, float x, float y) {
     for (size_t i = 0; i < sc.marks.size(); ++i) {
         float px = 0, py = 0;
         cellToPanel(v, sc.map, sc.marks[i].cell, px, py);
-        const float reach = markRadius(sc.marks[i].glyph, L.s) + 4 * L.s;  // a hand's width more
+        const float reach = radiusOf(sc.marks[i], L.s) + 4 * L.s;  // a hand's width more
         const float d = (px - x) * (px - x) + (py - y) * (py - y);
         if (d <= reach * reach && (best < 0 || d < bestD)) {
             best = int(i);
@@ -851,7 +876,7 @@ std::vector<Label> bigLabels(const Big& b, const Scene& sc) {
         cellToPanel(v, sc.map, m.cell, x, y);
         x += b.map.x;
         y += b.map.y;
-        const float r = markRadius(m.glyph, s) * 1.5f, w = guess(m.label) + 14 * s, h = 22 * s;
+        const float r = radiusOf(m, s) * 1.5f, w = guess(m.label) + 14 * s, h = 22 * s;
         panel::Box box{x + r + 4 * s, y - h / 2, w, h};
         if (box.x + box.w > b.map.x + b.map.w) box.x = x - r - 4 * s - w;  // past the right edge: on the left
         box.x = std::clamp(box.x, b.map.x, std::max(b.map.x, b.map.x + b.map.w - box.w));
@@ -986,8 +1011,8 @@ std::vector<Words> bigWords(const Big& b, const Scene& sc, const std::string& ti
                         Align::Right});
     out.push_back(Words{b.close, "✕", sc.bigHover == BigPart::Close ? kText : kMuted, 16 * s, false, Align::Center});
     const View v = bigView(b, sc);
-    for (const Mark& m : sc.marks) {  // the Kafras' «K»
-        if (m.glyph != Glyph::Kafra) continue;
+    for (const Mark& m : sc.marks) {  // the Kafras' «K» (3.0.11-beta.196: not over a face)
+        if (m.glyph != Glyph::Kafra || m.picture) continue;
         float x = 0, y = 0;
         cellToPanel(v, sc.map, m.cell, x, y);
         const float r = markRadius(m.glyph, s) * 1.5f;
@@ -1024,7 +1049,7 @@ int bigMarkAt(const Big& b, const Scene& sc, float x, float y) {
         cellToPanel(v, sc.map, sc.marks[i].cell, px, py);
         px += b.map.x;
         py += b.map.y;
-        const float reach = markRadius(sc.marks[i].glyph, b.s) * 1.5f + 5 * b.s;
+        const float reach = radiusOf(sc.marks[i], b.s) * 1.5f + 5 * b.s;
         const float d = (px - x) * (px - x) + (py - y) * (py - y);
         if (d <= reach * reach && (best < 0 || d < bestD)) {
             best = int(i);

@@ -262,4 +262,18 @@ Image fitted(const Image& in, int w, int h, int most) {
     return o;
 }
 
+Image topSquare(const Image& in, float share) {
+    Image out;
+    if (in.w <= 0 || in.h <= 0 || in.argb.size() < size_t(in.w) * size_t(in.h)) return out;
+    const int side = std::min(in.w, std::max(1, int(std::lround(float(in.h) * share))));
+    const int x0 = (in.w - side) / 2;
+    out.w = side;
+    out.h = std::min(side, in.h);
+    out.argb.resize(size_t(out.w) * size_t(out.h));
+    for (int y = 0; y < out.h; ++y)
+        for (int x = 0; x < out.w; ++x)
+            out.argb[size_t(y) * size_t(out.w) + size_t(x)] = in.argb[size_t(y) * size_t(in.w) + size_t(x0 + x)];
+    return out;
+}
+
 }  // namespace uagfx::spritefile

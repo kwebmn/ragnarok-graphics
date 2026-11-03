@@ -46,5 +46,8 @@ bool frameImageScaled(const Sprite& s, const Act& a, size_t action, size_t frame
 // A picture fitted into a w x h box (premultiplied ARGB, see-through around it): small ones grown by whole steps (the
 // pixels kept sharp, at most `most` times), big ones shrunk smoothly
 Image fitted(const Image& in, int w, int h, int most = 3);
+// 3.0.11-beta.196: a face from an NPC's whole picture - the square at its top, as wide as the picture or `share` of its
+// height (the narrower), in its middle
+Image topSquare(const Image& in, float share);
 
 }  // namespace uagfx::spritefile

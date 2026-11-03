@@ -246,15 +246,18 @@ void paint(panel::Picture& out, const Layout& L, const std::vector<Card>& cards,
     button(L.other, Part::Other);
     button(L.create, Part::Create);
     button(L.exit, Part::Exit);
-    const auto link = [&](const panel::Box& b, const std::string& words, float size, bool right) {
+    // 3.0.11-beta.196 (the tester: «ці кнопочки сині і фон синій + напівпрозорість = візуально зливаються з фоном»):
+    // the links' plates nearly opaque, a clearer edge (their words light: words())
+    const auto link = [&](const panel::Box& b, const std::string& words, float size, bool right, Part p) {
         if (b.w <= 0 || words.empty()) return;
         const float pw = std::min(b.w, panel::wordsWidth(words, size * s, false) + 2 * kLinkPad * s);
-        panel::roundRect(out, panel::Box{right ? b.x + b.w - pw : b.x, b.y, pw, b.h}, b.h / 2, kPill, 0.72f, kWhite,
-                         0.10f, 1.0f * s);
+        const bool hot = sh.hoverPart == p;
+        panel::roundRect(out, panel::Box{right ? b.x + b.w - pw : b.x, b.y, pw, b.h}, b.h / 2, kPill,
+                         hot ? 0.94f : 0.88f, kWhite, hot ? 0.36f : 0.22f, 1.0f * s);
     };
-    link(L.chars, t.chars, 13.5f, true);
-    link(L.newLogin, t.newLogin, 13, true);
-    link(L.linkLogin, t.linkLogin, 13, false);
+    link(L.chars, t.chars, 13.5f, true, Part::Chars);
+    link(L.newLogin, t.newLogin, 13, true, Part::NewLogin);
+    link(L.linkLogin, t.linkLogin, 13, false, Part::LinkLogin);
 }
 
 std::vector<Words> words(const Layout& L, const std::vector<Card>& cards, const Show& sh, const Texts& t) {
@@ -302,8 +305,9 @@ std::vector<Words> words(const Layout& L, const std::vector<Card>& cards, const 
             const float px = play.x + (play.w - (pw + 10 * s + kw)) / 2;
             out.push_back(Words{panel::Box{px, play.y, pw + 2, play.h}, t.play, kChosenWords, 15.5f * s, true,
                                 Align::Left});
-            out.push_back(Words{panel::Box{px + pw + 10 * s, play.y, kw + 2, play.h}, t.enterKey, kKey, 11.5f * s,
-                                false, Align::Left});
+            out.push_back(Words{panel::Box{px + pw + 10 * s, play.y + panel::baselineDrop(15.5f * s, 11.5f * s),
+                                           kw + 2, play.h},
+                                t.enterKey, kKey, 11.5f * s, false, Align::Left});  // 3.0.11-beta.196
         } else {
             out.push_back(Words{play, t.play, focus || hot ? kChosenWords : kText, 15.5f * s, true, Align::Center});
         }
@@ -338,13 +342,13 @@ std::vector<Words> words(const Layout& L, const std::vector<Card>& cards, const 
     const auto inLeft = [&](const panel::Box& b) {
         return panel::Box{b.x + kLinkPad * s, b.y, b.w - kLinkPad * s, b.h};
     };
-    if (L.chars.w > 0)
-        out.push_back(Words{inRight(L.chars), t.chars, sh.hoverPart == Part::Chars ? kGold2 : kLink, 13.5f * s, false,
+    if (L.chars.w > 0)  // 3.0.11-beta.196: light words, not the links' blue (lost on the blue wallpaper)
+        out.push_back(Words{inRight(L.chars), t.chars, sh.hoverPart == Part::Chars ? kGold2 : kText, 13.5f * s, false,
                             Align::Right});
     if (L.newLogin.w > 0) {
-        out.push_back(Words{inRight(L.newLogin), t.newLogin, sh.hoverPart == Part::NewLogin ? kGold2 : kLink, 13 * s,
+        out.push_back(Words{inRight(L.newLogin), t.newLogin, sh.hoverPart == Part::NewLogin ? kGold2 : kText, 13 * s,
                             false, Align::Right});
-        out.push_back(Words{inLeft(L.linkLogin), t.linkLogin, sh.hoverPart == Part::LinkLogin ? kGold2 : kLink,
+        out.push_back(Words{inLeft(L.linkLogin), t.linkLogin, sh.hoverPart == Part::LinkLogin ? kGold2 : kText,
                             13 * s, false, Align::Left});
     }
     out.push_back(Words{L.other, t.other, kText, 15 * s, true, Align::Center});

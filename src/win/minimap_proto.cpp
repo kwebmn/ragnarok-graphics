@@ -27,6 +27,7 @@
 #include "win/game_camera.hpp"
 #include "win/game_files.hpp"
 #include "win/ground_way.hpp"
+#include "win/head_picture.hpp"
 #include "win/hud_edit.hpp"
 #include "win/log.hpp"
 #include "win/map_hd.hpp"
@@ -102,6 +103,10 @@ struct State {
     std::string hintsMap;
     bool hintsMade = false;
     std::vector<minimap::Mark> marks;
+    // 3.0.11-beta.196 (the tester: «значок кафри ... сприймається як значок хрестика»): the Kafras' marks with a
+    // Kafra's face (4_F_KAFRA1, the classic one: one sign for them all), made once a size
+    panel::Picture kafraFace;
+    int kafraSide = 0;
     std::vector<Line> lines;
     int hover = -1;                              // the mark under the pointer
     minimap::Part part = minimap::Part::None;    // 3.0.11-beta.31: the panel's part under it
@@ -229,6 +234,18 @@ void keepState(const State& s) {
     if (!writeFileAtomic(path, text)) LOG_INFO("minimap: %s cannot be written", path.c_str());
 }
 
+// 3.0.11-beta.196: the Kafras' face at the marks' size (as the party's faces); null: the sprite not found - the «K»
+const panel::Picture* kafraFace(State& s) {
+    const int side = std::max(8, int(std::lround(12 * s.scale)));
+    if (side != s.kafraSide) {
+        s.kafraSide = side;
+        std::string from;
+        const bool made = headpicture::npcFace("4_F_KAFRA1", side, s.kafraFace, &from);
+        LOG_INFO("minimap: the Kafras' face - %s", made ? from.c_str() : (from + ", their «K»").c_str());
+    }
+    return s.kafraFace.width > 0 ? &s.kafraFace : nullptr;
+}
+
 // 3.0.11-beta.6: the map's hints from the reference - marks with their words, the monsters' lines
 void buildHints(State& s) {
     s.marks.clear();
@@ -242,11 +259,13 @@ void buildHints(State& s) {
         if (it != s.index->maps.end()) h = &it->second;
     }
     if (h && (s.show.npcs || s.show.kafra)) {  // 3.0.11-beta.119: the Kafras a layer of their own
+        const panel::Picture* face = kafraFace(s);
         for (const refindex::Npc& n : h->npcs) {
             const bool kafra = n.kind == refindex::NpcKind::Kafra;
             if (kafra ? !s.show.kafra : !s.show.npcs) continue;
             s.marks.push_back(minimap::Mark{minimap::Cell{n.x, n.y}, refindex::colorOf(n.kind),
                                             kafra ? minimap::Glyph::Kafra : minimap::Glyph::Dot, n.name});
+            if (kafra) s.marks.back().picture = face;
         }
     }
     if (h && s.show.warps) {

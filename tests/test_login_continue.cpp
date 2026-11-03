@@ -50,3 +50,29 @@ TEST(login_continue_places) {
     CHECK(has("Raphael") && has("High Priest · 99 · Prontera · логін kweb") && has("Продовжити гру"));
     CHECK(has("Грати") && has("Інший персонаж") && has("Змінити акаунт") && has("Створити акаунт"));
 }
+
+// 3.0.11-beta.196 (the tester: «обидві текстовки (Грати та enter) по центру, а enter мала би бути по нижньому краю
+// тексту "грати"»): «Enter» on «Грати»'s line - the words are drawn centred in their boxes (GDI's DT_VCENTER over
+// Plex's 1025 / 275 cell: the line 0.375 of a size under the middle), so the smaller word's box drops by 0.375 of the
+// sizes' difference
+TEST(login_continue_enter_on_plays_line) {
+    CHECK(std::fabs(panel::baselineDrop(19, 12.5f) - 0.375f * 6.5f) < 1e-4f);
+    CHECK(panel::baselineDrop(13, 13) == 0.0f);
+    const logincontinue::Layout L = logincontinue::layout(1920, 1080, 1.0f);
+    logincontinue::Texts t;
+    t.play = "Грати";
+    t.enterKey = "Enter";
+    const auto w = logincontinue::words(L, logincontinue::Account{}, logincontinue::Show{}, t);
+    const logincontinue::Words* play = nullptr;
+    const logincontinue::Words* enter = nullptr;
+    for (const logincontinue::Words& x : w) {
+        if (x.text == "Грати") play = &x;
+        if (x.text == "Enter") enter = &x;
+    }
+    CHECK(play && enter);
+    if (play && enter) {
+        const float line = play->box.y + play->box.h / 2 + 0.375f * play->px;     // «Грати»'s
+        const float its = enter->box.y + enter->box.h / 2 + 0.375f * enter->px;  // «Enter»'s
+        CHECK(std::fabs(line - its) < 0.01f);
+    }
+}

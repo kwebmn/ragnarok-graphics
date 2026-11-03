@@ -170,6 +170,10 @@ void roundRect(Picture& p, const Box& b, float r, uint32_t fill, float fillA, ui
 void circle(Picture& p, float cx, float cy, float r, uint32_t rgb, float a);
 // 3.0.11-beta.35: words' width as GDI draws them at `px` (an estimate a little wide: boxes made from it hold the words)
 float wordsWidth(const std::string& utf8, float px, bool bold);
+// 3.0.11-beta.196: how far a smaller word's box drops to stand on a bigger word's line beside it, both drawn centred in
+// their boxes (GDI's DT_VCENTER over Plex's cell: 1025 over its line, 275 under - the line 0.375 of a size under the
+// middle)
+inline float baselineDrop(float bigPx, float smallPx) { return 0.375f * (bigPx - smallPx); }
 // A bar's colour (0xRRGGBB): red under 25 % as the game's own gauges (0x4490d0); else green HP, blue SP
 uint32_t barColour(int percent, bool hp);
 constexpr uint32_t kText = 0xECEFF5, kMuted = 0x969EAE, kOnBadge = 0x0F172A;  // the words' colours

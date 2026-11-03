@@ -154,3 +154,26 @@ TEST(sprite_file_frame_bigger) {
     CHECK_EQ(im.argb[size_t(1 * 12 + 5)], 0xFFFF0000u);
     CHECK_EQ(im.argb[size_t(1 * 12 + 1)], 0u);
 }
+
+// 3.0.11-beta.196 (the tester: «треба додати портрет кафри якийсь як іконку»): a face from an NPC's whole picture -
+// the square at its top, as wide as the picture or `share` of its height (the narrower), in its middle
+TEST(sprite_file_top_square) {
+    spritefile::Image tall;  // 40 x 100: the whole width, the top 40 rows
+    tall.w = 40;
+    tall.h = 100;
+    tall.argb.resize(4000);
+    for (int y = 0; y < 100; ++y)
+        for (int x = 0; x < 40; ++x) tall.argb[size_t(y * 40 + x)] = 0xFF000000u | uint32_t(y << 8) | uint32_t(x);
+    const spritefile::Image a = spritefile::topSquare(tall, 0.42f);
+    CHECK(a.w == 40 && a.h == 40 && a.argb.size() == 1600);
+    CHECK(a.argb[0] == tall.argb[0] && a.argb[size_t(39 * 40 + 39)] == tall.argb[size_t(39 * 40 + 39)]);
+    spritefile::Image wide = tall;  // 80 x 100: 42 wide (0.42 of its height), from x 19
+    wide.w = 80;
+    wide.argb.assign(8000, 0);
+    for (int y = 0; y < 100; ++y)
+        for (int x = 0; x < 80; ++x) wide.argb[size_t(y * 80 + x)] = 0xFF000000u | uint32_t(y << 8) | uint32_t(x);
+    const spritefile::Image b = spritefile::topSquare(wide, 0.42f);
+    CHECK(b.w == 42 && b.h == 42);
+    CHECK(b.argb[0] == wide.argb[19] && b.argb[size_t(41 * 42 + 41)] == wide.argb[size_t(41 * 80 + 60)]);
+    CHECK(spritefile::topSquare(spritefile::Image{}, 0.42f).w == 0);
+}

@@ -11,5 +11,8 @@ namespace uagfx::win::headpicture {
 // colour's palette (data\palette\머리\머리<name>_<colour>.pal), fitted into `side`, premultiplied. `from`: what it was
 // made of, or why not (for the log). False: no such sprite in the game's files.
 bool make(int sex, int head, int colour, int side, panel::Picture& out, std::string* from = nullptr);
+// 3.0.11-beta.196 (the tester: «треба додати портрет кафри якийсь як іконку»): an NPC's face - its sprite's
+// (data\sprite\npc\<sprite>) first frame, the square at its top (spritefile::topSquare), fitted into `side`
+bool npcFace(const std::string& sprite, int side, panel::Picture& out, std::string* from = nullptr);
 
 }  // namespace uagfx::win::headpicture

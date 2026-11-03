@@ -283,6 +283,19 @@ TEST(item_window_six_tabs_and_the_starred) {
     CHECK(!at("\xE2\x98\x86", L.cells[1]) && !at("\xE2\x98\x85", L.cells[1]));  // neither: none
 }
 
+// 3.0.11-beta.196 (the tester: «ітему має бути можливість тицьнути зірочку - але on hover зникає занадто рано, і до
+// зірочки мишку підвести не можливо»): the pointer on a cell's star still points at the cell - its ☆ stays to be
+// pressed
+TEST(item_window_star_keeps_its_cell_pointed) {
+    const itemwin::Texts t = itemTexts();
+    const itemwin::Layout L = itemwin::layout(0, 0, 1.0f, t, itemwin::Measure(panel::wordsWidth));
+    const panel::Box& c = L.cells[2];
+    CHECK(itemwin::pointedCell(itemwin::hitTest(L, 4, 0, c.x + 6, c.y + c.h - 6)) == 2);  // on its star
+    CHECK(itemwin::pointedCell(itemwin::hitTest(L, 4, 0, c.x + c.w / 2, c.y + c.h / 2)) == 2);  // on the cell
+    CHECK(itemwin::pointedCell(itemwin::hitTest(L, 2, 0, c.x + c.w / 2, c.y + c.h / 2)) == -1);  // an empty one
+    CHECK(itemwin::pointedCell(itemwin::Hit{itemwin::Part::Tab, 2}) == -1);
+}
+
 // 3.0.11-beta.113: the starred things kept per character (uaro-graphics\items-starred.txt: its name, a tab, the
 // items' numbers)
 TEST(item_window_starred_kept_per_character) {

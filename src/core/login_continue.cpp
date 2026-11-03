@@ -109,8 +109,9 @@ std::vector<Words> words(const Layout& L, const Account& a, const Show& sh, cons
     const float px = L.play.x + (L.play.w - (pw + (kw > 0 ? 10 * s + kw : 0))) / 2;
     out.push_back(Words{panel::Box{px, L.play.y, pw + 2, L.play.h}, t.play, kChosenWords, 19 * s, true, Align::Left});
     if (!t.enterKey.empty())
-        out.push_back(Words{panel::Box{px + pw + 10 * s, L.play.y, kw + 2, L.play.h}, t.enterKey, kKey, 12.5f * s,
-                            false, Align::Left});
+        out.push_back(Words{panel::Box{px + pw + 10 * s, L.play.y + panel::baselineDrop(19 * s, 12.5f * s), kw + 2,
+                                       L.play.h},
+                            t.enterKey, kKey, 12.5f * s, false, Align::Left});  // 3.0.11-beta.196: on «Грати»'s line
     const auto link = [&](const panel::Box& b, const std::string& words, Part p, float less) {
         out.push_back(Words{panel::Box{b.x, b.y, b.w - less, b.h}, words, sh.hover == p ? kGold2 : kLink,
                             kLinkPx * s, false, Align::Left});

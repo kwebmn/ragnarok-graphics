@@ -178,6 +178,34 @@ TEST(login_shelf_buttons_on_plates) {
     CHECK(alpha(L.newLogin.x + 2, L.newLogin.y + L.newLogin.h / 2) == 0);  // not the whole box: just round the words
 }
 
+// 3.0.11-beta.196 (the tester: «ці кнопочки сині і фон синій + напівпрозорість = візуально зливаються з фоном»): the
+// site's links on nearly opaque plates, their words light - not blue on the blue wallpaper; gold when pointed at
+TEST(login_shelf_links_stand_out) {
+    const loginshelf::Layout L = loginshelf::layout(1920, 1080, 1.0f, 2, 0, true);
+    panel::Picture p;
+    p.width = L.w;
+    p.height = L.h;
+    p.px.assign(size_t(L.w) * size_t(L.h), 0);
+    loginshelf::Texts t = texts();
+    t.chars = "Персонажі ›";
+    t.newLogin = "+ Новий ігровий логін";
+    t.linkLogin = "Прив'язати наявний логін";
+    loginshelf::paint(p, L, {loginshelf::Card{}, loginshelf::Card{}}, loginshelf::Show{}, t);
+    const auto alpha = [&](float x, float y) { return int(p.px[size_t(y) * size_t(p.width) + size_t(x)] >> 24); };
+    CHECK(alpha(L.newLogin.x + L.newLogin.w - 20, L.newLogin.y + L.newLogin.h / 2) >= 215);
+    CHECK(alpha(L.linkLogin.x + 20, L.linkLogin.y + L.linkLogin.h / 2) >= 215);
+    CHECK(alpha(L.chars.x + L.chars.w - 20, L.chars.y + L.chars.h / 2) >= 215);
+    int found = 0;
+    for (const loginshelf::Words& w : loginshelf::words(L, {loginshelf::Card{}, loginshelf::Card{}}, loginshelf::Show{},
+                                                         t)) {
+        if (w.text != t.newLogin && w.text != t.linkLogin && w.text != t.chars) continue;
+        ++found;
+        const int r = int(w.rgb >> 16 & 0xFF), b = int(w.rgb & 0xFF);
+        CHECK(r >= 0xC0 && b - r < 0x30);  // light, not blue
+    }
+    CHECK(found == 3);
+}
+
 // 3.0.11-beta.189 (the owner: «если там много аккаунтов, сделай какието стрелочки, скрол чтобы мотать было
 // интереснее. возможно еще и поиск», «чтобы мышкой скролить можно было»): the row glides to its place, the cards half
 // in sight clipped to the row; a bar under it with the part in sight, a click there goes there; the arrows by the

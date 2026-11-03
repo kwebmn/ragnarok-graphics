@@ -50,6 +50,12 @@ constexpr uint32_t kMsgString = 0x504FB0;
 constexpr int kNoServerLine = 1;
 using MsgStringFn = const char*(__cdecl*)(int line);
 constexpr int kButtonMsg = 6;
+// 3.0.11-beta.196 (the tester: «віконечко пліс вейт, теж треба в загальний стиль переробити» - and the ones «при зміні
+// на "інший персонаж"»): the game's own «Please wait...» - UI window 6 (class 0x698370, MakeWindow puts it in the
+// manager's list + 0x38 with no field of its own; its words msgstringtable's 0x79) - as the wait's card too
+constexpr uint32_t kPleaseWaitClass = 0x698370, kWindowsList = kWindowMgr + 0x38;
+constexpr int kPleaseWaitLine = 0x79;
+constexpr size_t kMostWindows = 512;
 using ErrorFn = int(__attribute__((thiscall)) *)(uint32_t manager, const char* text, int kind, int a, int b, int c);
 using WaitFn = int(__attribute__((thiscall)) *)(uint32_t manager, const char* text, int a);
 using SendMsgFn = int(__attribute__((thiscall)) *)(uint32_t self, uint32_t sender, int msg, int a, int b, int c);
@@ -176,6 +182,18 @@ uint32_t gameBox(bool& wait) {
     return cls == kErrorClass || cls == kWaitClass ? b : 0;
 }
 
+// The game's «Please wait...» window in its list, shown or held hidden by the card; 0 none
+uint32_t pleaseWait() {
+    const uint32_t head = read32(kWindowsList);
+    size_t seen = 0;
+    for (uint32_t node = head ? read32(head) : 0; node && node != head && seen < kMostWindows; node = read32(node)) {
+        ++seen;
+        const uint32_t w = read32(node + 8);
+        if (w && read32(w) == kPleaseWaitClass) return w;
+    }
+    return 0;
+}
+
 std::string utf8(const State& s, const std::string& game) { return utf8Of(widened(game, s.codePage)); }
 
 ac::Texts texts(const State& s) {
@@ -288,7 +306,15 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
         LOG_INFO("messages: [interface] messages = %d", on ? 1 : 0);
     }
     bool wait = false;
-    const uint32_t box = g_error || g_wait ? gameBox(wait) : 0;
+    uint32_t box = g_error || g_wait ? gameBox(wait) : 0;
+    if (!box && (box = pleaseWait()) != 0) {  // 3.0.11-beta.196: no box of the manager's - its «Please wait...»
+        wait = true;
+        s.text = copied(reinterpret_cast<MsgStringFn>(kMsgString)(kPleaseWaitLine));
+        s.ownWords = false;
+        s.kind = ac::Kind::Wait;
+        if (box != s.box && s.told++ < 30) LOG_INFO("messages: the game's «Please wait» window (UI window 6) - «%s»",
+                                                    s.text.c_str());
+    }
     if (box) {  // the game's box hidden while ours shows; back when ours is off
         if (on && read32(box + kShown) && write32(box + kShown, 0)) s.hid = true;
         else if (!on && s.hid && write32(box + kShown, 1)) s.hid = false;
@@ -389,9 +415,9 @@ void beforeGameDraw() {
     State& s = state();
     bool wait = false;
     if (!s.on) return;
-    if (const uint32_t b = gameBox(wait)) {
-        if (read32(b + kShown) && write32(b + kShown, 0)) s.hid = true;
-    }
+    uint32_t b = gameBox(wait);
+    if (!b) b = pleaseWait();  // 3.0.11-beta.196
+    if (b && read32(b + kShown) && write32(b + kShown, 0)) s.hid = true;
 }
 
 void padCommand(PadCommand c) {

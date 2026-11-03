@@ -84,4 +84,27 @@ bool make(int sex, int head, int colour, int side, panel::Picture& out, std::str
     return true;
 }
 
+bool npcFace(const std::string& sprite, int side, panel::Picture& out, std::string* from) {
+    out = panel::Picture{};
+    const std::string base = "data\\sprite\\npc\\" + sprite;
+    std::string spr, act;
+    if (!readFile(base + ".spr", spr) || !readFile(base + ".act", act)) {
+        if (from) *from = "no sprite " + base + ".spr";
+        return false;
+    }
+    spritefile::Sprite sp;
+    spritefile::Act ac;
+    spritefile::Image im;
+    if (!spritefile::readSpr(spr, sp) || !spritefile::readAct(act, ac) || !spritefile::frameImage(sp, ac, 0, 0, im)) {
+        if (from) *from = "the sprite " + base + ".spr not read";
+        return false;
+    }
+    const spritefile::Image fit = spritefile::fitted(spritefile::topSquare(im, 0.42f), side, side);
+    out.width = fit.w;
+    out.height = fit.h;
+    out.px = fit.argb;
+    if (from) *from = base + ".spr (" + std::to_string(im.w) + "x" + std::to_string(im.h) + ")";
+    return out.width > 0;
+}
+
 }  // namespace uagfx::win::headpicture

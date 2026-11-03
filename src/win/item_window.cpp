@@ -570,7 +570,7 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     if (readGameCursor(cx, cy) && !s.moving) {
         const float lx = float(cx) * float(k) - float(s.layout.x), ly = float(cy) * float(k) - float(s.layout.y);
         const iw::Hit h = iw::hitTest(s.layout, s.shownItems.size(), s.show.scroll, lx, ly);
-        if (h.part == iw::Part::Cell) s.show.hover = h.index;
+        s.show.hover = iw::pointedCell(h);  // 3.0.11-beta.196: on its star too
         if (h.part == iw::Part::Tab) s.show.hoverTab = h.index;
         s.show.hoverClose = h.part == iw::Part::Close;
     }

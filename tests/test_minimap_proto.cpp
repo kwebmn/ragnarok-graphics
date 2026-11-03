@@ -509,6 +509,46 @@ TEST(minimap_proto_party_members) {
     CHECK(minimap::markAt(L, sc, px + 1, py - 1) == 1);
 }
 
+// 3.0.11-beta.196 (the tester: «значок кафри без окулярів сприймається як значок хрестика щоб щос закрити ...
+// відображення нпц перекриває значок кафри ... треба додати портрет кафри якийсь як іконку і зробити не перекриваємим
+// іншими значками»): a Kafra's mark with its face - in a pink ring, no «K» over it; the marks drawn by their kind, the
+// NPCs' dots first, the Kafras over them whatever the list's order
+TEST(minimap_proto_kafra_face_over_the_npcs) {
+    const minimap::Layout L = minimap::layout(1280, 720, 1.0f, false, 0);
+    panel::Picture face;
+    face.width = face.height = 14;
+    face.px.assign(196, 0xFF40C060u);  // a green face, told from the pink ring and the dot
+    minimap::Scene sc;
+    sc.map = minimap::MapSize{100, 100};
+    sc.player = minimap::Cell{50, 50};
+    minimap::Mark kafra{minimap::Cell{30, 70}, 0, minimap::Glyph::Kafra, "Kafra Employee"};
+    kafra.picture = &face;
+    const minimap::Mark npc{minimap::Cell{30, 70}, 0xFFFFFF, minimap::Glyph::Dot, "Guide"};  // the same cell, after
+    sc.marks = {kafra, npc};
+    panel::Picture pic;
+    minimap::paint(pic, L, sc, minimap::Texts{});
+    const auto at = [&](float x, float y) { return pic.px[size_t(y) * size_t(pic.width) + size_t(x)]; };
+    const minimap::View v = minimap::view(sc.map, sc.player, 100, int(L.map.w));
+    float px = 0, py = 0;
+    minimap::cellToPanel(v, sc.map, minimap::Cell{30, 70}, px, py);
+    const uint32_t middle = at(L.map.x + px, L.map.y + py);
+    CHECK(((middle >> 8) & 0xFF) > 0xA0 && ((middle >> 16) & 0xFF) < 0x80);  // its face, not the white dot over it
+    int pink = 0;  // its ring
+    for (int dx = -10; dx <= 10; ++dx) {
+        const uint32_t c = at(L.map.x + px + float(dx), L.map.y + py);
+        pink += ((c >> 16) & 0xFF) > 0xC0 && ((c >> 8) & 0xFF) < 0x90 && (c & 0xFF) > 0x80;
+    }
+    CHECK(pink > 0);
+    const std::vector<minimap::Words> w = minimap::words(L, sc, minimap::Texts{});
+    CHECK(std::none_of(w.begin(), w.end(), [&](const minimap::Words& x) {
+        return x.text == "K" && x.box.y > L.map.y + 8;  // no «K» on the face (the layers' button's stays)
+    }));
+    sc.marks[0].picture = nullptr;  // no face: the concept's pink «K», still over the dot
+    minimap::paint(pic, L, sc, minimap::Texts{});
+    const uint32_t k = at(L.map.x + px + 4, L.map.y + py + 4);
+    CHECK(((k >> 16) & 0xFF) > 0xC0 && ((k >> 8) & 0xFF) < 0x90);
+}
+
 // 3.0.11-beta.119 (R-5Z6J2S: «потрібно щоб на мінікарті та на великій карті була можливість включати та виключати НПЦ,
 // портали та інше»; the owner «делать»): the map's layers - portals, NPCs, Kafras, the party - each switched by a round
 // button in the minimap's top left and a chip under the big map; a layer off: its marks not drawn nor pointed at
