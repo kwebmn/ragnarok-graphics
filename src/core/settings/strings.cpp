@@ -6430,8 +6430,8 @@ constexpr Entry kTexts[] = {
     {Text::StatsEffectVit, "Max HP +1 %, DEF", "Max HP +1 %, DEF", "Max HP +1 %, DEF"},
     {Text::StatsEffectInt, "MATK +{1} ~ +{2}, Max SP +1 %", "MATK +{1} ~ +{2}, Max SP +1 %",
      "MATK +{1} ~ +{2}, Max SP +1 %"},
-    {Text::StatsEffectDex, "HIT {1} \xC2\xB7 the cast {2} % shorter", "HIT {1} \xC2\xB7 каст коротший на {2} %",
-     "HIT {1} \xC2\xB7 каст короче на {2} %"},
+    {Text::StatsEffectDex, "HIT {1} \xC2\xB7 the cast shorter: {2} \xE2\x86\x92 {3} %",  // 3.0.11-beta.202
+     "HIT {1} \xC2\xB7 каст коротший: {2} \xE2\x86\x92 {3} %", "HIT {1} \xC2\xB7 каст короче: {2} \xE2\x86\x92 {3} %"},
     {Text::StatsEffectLuk, "CRIT +0.3 %", "CRIT +0,3 %", "CRIT +0,3 %"},
     {Text::StatsHint, "Point at a stat: its price and what the next point gives",
      "Наведіть на стат — ціна й що дає наступне очко", "Наведите на стат — цена и что даёт следующее очко"},

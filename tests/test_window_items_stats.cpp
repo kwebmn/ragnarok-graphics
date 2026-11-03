@@ -45,7 +45,7 @@ statwin::Texts statTexts() {
     t.effects[1] = "FLEE {1}";
     t.effects[2] = "Max HP +1 %";
     t.effects[3] = "MATK +{1} ~ +{2}";
-    t.effects[4] = "HIT {1} · каст коротший на {2} %";
+    t.effects[4] = "HIT {1} · каст коротший: {2} → {3} %";  // 3.0.11-beta.202: from the cast now to the next
     t.effects[5] = "CRIT +0,3 %";
     t.hint = "наведіть на стат";
     return t;
@@ -324,7 +324,21 @@ TEST(stat_window_prices_and_points) {
     d.aspd = 161;
     CHECK(statwin::canRaise(d, 0) && !statwin::canRaise(d, 1) && !statwin::canRaise(d, 3) && statwin::canRaise(d, 5));
     CHECK(statwin::explain(d, 4, t) == "DEX 74 → 75 коштує 9, у вас 3 \xE2\x80\x94 бракує 6 \xC2\xB7 HIT 157 \xC2\xB7 "
-                                       "каст коротший на 56,7 %");
+                                       "каст коротший: 56 → 56,7 %");
+    // 3.0.11-beta.202 (the tester: «різний час касту при наведенні на дексу і у списку»): the list's cast as the
+    // hint's - to a tenth, a whole number without its «,0»
+    const auto castRow = [&](const statwin::Data& x) {
+        for (const statwin::Row& r : statwin::battleRows(x, t))
+            if (r.name == t.cast) return r.value;
+        return std::string();
+    };
+    CHECK(castRow(d) == "\xE2\x88\x92" "56 %");
+    d.bonus[4] = 6;
+    d.base[4] = 61;  // DEX 67, as the tester's
+    CHECK(castRow(d) == "\xE2\x88\x92" "44,7 %");
+    CHECK(statwin::explain(d, 4, t).find("каст коротший: 44,7 → 45,3 %") != std::string::npos);
+    d.base[4] = 74;
+    d.bonus[4] = 10;
     CHECK(statwin::explain(d, 3, t) == "INT 99 — максимум");
     CHECK(statwin::explain(d, 0, t) == "STR 1 → 2 коштує 2, у вас 3 \xC2\xB7 ATK +1, вантаж +30");  // 11 -> 12
     d.base[0] = 9;

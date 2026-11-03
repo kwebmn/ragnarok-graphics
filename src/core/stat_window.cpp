@@ -36,6 +36,14 @@ std::string decimal(double v, char sep) {
     return s;
 }
 
+// 3.0.11-beta.202 (the tester: «різний час касту при наведенні на дексу і у списку»): the cast's per cent to a tenth, a
+// whole one without its «,0» - the list's and the hint's alike
+std::string tenth(double v, char sep) {
+    std::string s = decimal(v, sep);
+    if (s.size() > 2 && s.compare(s.size() - 2, 2, std::string(1, sep) + "0") == 0) s.resize(s.size() - 2);
+    return s;
+}
+
 int total(const Data& d, int i) { return d.base[i] + d.bonus[i]; }
 
 }  // namespace
@@ -49,6 +57,7 @@ bool canRaise(const Data& d, int stat) {
 std::vector<Row> battleRows(const Data& d, const Texts& t) {
     const auto plus = [](int a, int b) { return std::to_string(a) + " + " + std::to_string(b); };
     const double cast = std::min(100.0, double(total(d, 4)) * 100.0 / 150.0);
+    const std::string castWords = tenth(cast, t.decimal);  // 3.0.11-beta.202: to a tenth, as the hint
     return {Row{"ATK", plus(d.atk, d.atk2)},
             Row{"MATK", std::to_string(d.matkMin) + " ~ " + std::to_string(d.matkMax)},
             Row{"HIT", std::to_string(d.hit)},
@@ -57,7 +66,7 @@ std::vector<Row> battleRows(const Data& d, const Texts& t) {
             Row{"DEF", plus(d.def, d.def2)},
             Row{"MDEF", plus(d.mdef, d.mdef2)},
             Row{"ASPD", std::to_string(d.aspd)},
-            Row{t.cast, cast > 0 ? "\xE2\x88\x92" + std::to_string(int(cast)) + " %" : "0 %"}};  // −56 %
+            Row{t.cast, cast > 0 ? "\xE2\x88\x92" + castWords + " %" : "0 %"}};  // −56 %, −44,7 %
 }
 
 std::string explain(const Data& d, int i, const Texts& t) {
@@ -83,9 +92,10 @@ std::string explain(const Data& d, int i, const Texts& t) {
             effect = fill(t.effects[3], {std::to_string(low), std::to_string(high)});
             break;
         }
-        case 4: {  // HIT +1; the cast a 150th shorter a point
-            const double cast = std::min(100.0, double(v + 1) * 100.0 / 150.0);
-            effect = fill(t.effects[4], {std::to_string(d.hit + 1), decimal(cast, t.decimal)});
+        case 4: {  // HIT +1; the cast a 150th shorter a point - 3.0.11-beta.202: from now to the next point's
+            const double now = std::min(100.0, double(v) * 100.0 / 150.0);
+            const double next = std::min(100.0, double(v + 1) * 100.0 / 150.0);
+            effect = fill(t.effects[4], {std::to_string(d.hit + 1), tenth(now, t.decimal), tenth(next, t.decimal)});
             break;
         }
         default: effect = t.effects[5]; break;

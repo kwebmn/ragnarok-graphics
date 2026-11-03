@@ -114,6 +114,7 @@
 #include "win/profiler.hpp"
 #include "win/real_ddraw.hpp"
 #include "win/window_mode.hpp"
+#include "win/weight_rules.hpp"
 #include "win/window_guard.hpp"
 #include "win/windows_draw.hpp"
 #include "win/world_dim.hpp"
@@ -435,6 +436,7 @@ bool Context::open(std::string& error) {
     installShadowFix();                // 3.0.4-beta.9: a shadow drawn while a map loads (R-VBDSCP)
     installBlindFix();                 // 2.6.18: blindness's darkness over the whole screen (R-MCVUC8)
     installHitHook();                  // 0.96: the hits' sounds (the flash itself is effects.hit_flash)
+    weightrules::install();            // 3.0.11-beta.202: the game's line about the weight at uaRO's 70 %
     renderer->setIconSink(&crisp::iconReady, nullptr);
     renderer->setGameDir(gameDir());  // 0.25: the maps' files (uaro-render64.exe has the folder already)
     crisp::setAiIcons(config.ai.on() && config.ai.icons && (renderer->remote() || aiHere) && config.crispText,
@@ -1008,6 +1010,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     infocardwin::frame(window, config.cardWindows, gameCodePage(config), pk, pw, ph);  // 3.0.11-beta.149
     askcardwin::frame(window, config.askWindows, config.countWindow, gameCodePage(config), pk, pw, ph);  // .150, .155
     msgboxwin::frame(window, config.messageBoxes, gameCodePage(config), pk, pw, ph);   // 3.0.11-beta.151
+    weightrules::frame();  // 3.0.11-beta.202: msgstringtable's line about the weight at 70 %
     sitehttp::pump();  // 3.0.11-beta.180: the site's answers on the game's thread (the login screen's site account)
     loginwin::frame(window, config.loginWindow, config.loginStatus, config.loginNews, config.loginView,
                     gameCodePage(config), pk, pw, ph);  // .151, .173, .174, .177

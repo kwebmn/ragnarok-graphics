@@ -207,7 +207,7 @@ const char* stateName(uint16_t icon) {
         case 32: return "Broken Armor";
         case 33: return "Broken Weapon";
         case 34: return "Hallucination";
-        case 35: return "Weight 50 %";
+        case 35: return "Weight 70 %";  // 3.0.11-beta.202: uAthena on uaRO sends it at 70 %
         case 36: return "Weight 90 %";
         case 95: return "Stop";
         case 124: return "Bleeding";

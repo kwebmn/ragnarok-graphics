@@ -225,6 +225,25 @@ bool readFile(State& s, const std::string& entry, std::string& out) {
     return true;
 }
 
+// 3.0.11-beta.202 (the tester: «тут теж на 70% показує іконку 50»): the game's «50%» weight icon (SI_WEIGHT50, 35) -
+// uAthena on uaRO sends it at 70 % of the most weight: the interface's own in its place, its «70%» in words
+constexpr uint16_t kWeight50 = 35;
+const panel::Picture* weightIcon(int side) {
+    static std::map<int, panel::Picture> made;
+    if (side <= 0) return nullptr;
+    auto it = made.find(side);
+    if (it != made.end()) return &it->second;
+    panel::Picture& p = made[side];
+    p.width = p.height = side;
+    p.px.assign(size_t(side) * size_t(side), 0u);
+    const float r = float(side) * 0.18f;
+    panel::roundRect(p, panel::Box{0, 0, float(side), float(side)}, r, 0xC92A2A, 0.95f, 0xFFB3B3, 0.55f,
+                     std::max(1.0f, float(side) / 24.0f));
+    drawWords(p, {Words{panel::Box{0, 0, float(side), float(side)}, L"70%", 0xFFFFFF, float(side) * 0.42f, true,
+                        DT_CENTER}});
+    return &p;
+}
+
 const panel::Picture* pictureOf(State& s, const GameIcon& g, int side) {
     Icon& ic = s.icons[g.file];
     // 3.0.11-beta.74: the AI texture pack's picture when it has one ([interface] pack_icons), read again when that
@@ -432,7 +451,8 @@ void frame(HWND game, BuffsLook look, BuffsOverflow overflow, double k, int targ
         for (const buffs::Timers::Running& r : running)
             if (r.icon == g.icon && r.end > r.from && r.end > now)
                 e.left = std::clamp(float(double(r.end - now) / double(r.end - r.from)), 0.0f, 1.0f);
-        e.picture = pictureOf(s, g, bp::iconSide(e.kind, scale));
+        e.picture = g.icon == kWeight50 ? weightIcon(bp::iconSide(e.kind, scale))  // 3.0.11-beta.202: «70%»
+                                        : pictureOf(s, g, bp::iconSide(e.kind, scale));
         s.entries.push_back(e);
     }
     if (s.entries.empty()) {  // nothing on the character: no glass either
@@ -540,6 +560,7 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
 }
 
 const panel::Picture* iconPicture(uint16_t icon, int side) {
+    if (icon == kWeight50) return weightIcon(side);  // 3.0.11-beta.202
     State& s = state();
     const auto image = reinterpret_cast<ImageFn>(uintptr_t(kIconImage));
     void* session = reinterpret_cast<void*>(uintptr_t(kSession));

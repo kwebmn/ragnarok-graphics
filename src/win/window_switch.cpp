@@ -5,6 +5,7 @@
 
 #include <algorithm>
 
+#include "core/double_click.hpp"
 #include "pad/win/game_window.hpp"
 #include "pad/win/runtime.hpp"
 #include "win/answer_card.hpp"
@@ -113,11 +114,22 @@ LRESULT CALLBACK gameProc(HWND w, UINT m, WPARAM wp, LPARAM lp) {
             LOG_INFO("windows: a press (0x%X) at (%d, %d) of a %ldx%ld client, the game's cursor at (%d, %d)", m,
                      GET_X_LPARAM(lp), GET_Y_LPARAM(lp), client.right, client.bottom, cx, cy);
         }
+        // 3.0.11-beta.202 (the tester: «треба повернути знімання дабл кліком по речі»): the game's window class sends
+        // no double clicks (no CS_DBLCLKS) - the parts get one made of two left presses soon and near each other
+        // (Windows' own time and box); the game its press as it came
+        UINT pm = m;
+        if (m == WM_LBUTTONDOWN) {
+            static dblclick::Clicks clicks;
+            if (dblclick::second(clicks, int64_t(GetTickCount64()), GET_X_LPARAM(lp), GET_Y_LPARAM(lp),
+                                 int(GetDoubleClickTime()), GetSystemMetrics(SM_CXDOUBLECLK) / 2,
+                                 GetSystemMetrics(SM_CYDOUBLECLK) / 2))
+                pm = WM_LBUTTONDBLCLK;
+        }
         // 3.0.11-beta.77 (the owner: «чтобы без быстрых кнопок можно было двигать, чтобы сразу все мышкой»): a press
         // on a part held till it moves (the part dragged) or is let go (the part's click after all, given first)
-        switch (hudedit::gate(w, m, wp, lp)) {
+        switch (hudedit::gate(w, pm, wp, lp)) {
             case hudedit::Gate::Take:
-                claimed(m);
+                claimed(pm);
                 return 0;
             case hudedit::Gate::PressFirst: {
                 UINT pm = 0;
@@ -131,8 +143,8 @@ LRESULT CALLBACK gameProc(HWND w, UINT m, WPARAM wp, LPARAM lp) {
             case hudedit::Gate::Pass: break;
         }
         LRESULT answer = 0;  // 3.0.3-beta.8: the mouse over the panel in the game's picture is the panel's
-        if (partsMouse(w, m, wp, lp, answer)) {
-            claimed(m);  // 3.0.11-beta.33: its press stays the part's until let go
+        if (partsMouse(w, pm, wp, lp, answer)) {
+            claimed(pm);  // 3.0.11-beta.33: its press stays the part's until let go
             return answer;
         }
     }

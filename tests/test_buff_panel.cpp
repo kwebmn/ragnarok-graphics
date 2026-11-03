@@ -36,7 +36,7 @@ uint32_t pixel(const panel::Picture& p, float x, float y) {
 TEST(buff_panel_debuffs_and_names) {
     for (const uint16_t icon : {0, 8, 13, 22, 35, 36, 50, 53, 124, 201, 282, 286}) CHECK(buffpanel::debuff(icon));
     for (const uint16_t icon : {10, 12, 20, 21, 200, 241}) CHECK(!buffpanel::debuff(icon));  // Blessing ... food
-    CHECK(std::string(buffpanel::stateName(35)) == "Weight 50 %" && std::string(buffpanel::stateName(32)) ==
+    CHECK(std::string(buffpanel::stateName(35)) == "Weight 70 %" && std::string(buffpanel::stateName(32)) ==
                                                                         "Broken Armor");
     CHECK(std::string(buffpanel::stateName(10)).empty());  // Blessing: its skill names it
 }

@@ -176,7 +176,8 @@ void draw(FrameRecord& record, gpu::Renderer& renderer) {
 
 bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     State& s = state();
-    if (!s.shown || (m != WM_LBUTTONDOWN && m != WM_LBUTTONUP && m != WM_MOUSEMOVE && m != WM_RBUTTONDOWN))
+    if (!s.shown || (m != WM_LBUTTONDOWN && m != WM_LBUTTONDBLCLK && m != WM_LBUTTONUP && m != WM_MOUSEMOVE &&
+                      m != WM_RBUTTONDOWN))
         return false;
     float tx = 0, ty = 0;
     if (!pointerInTarget(game, m, lp, double(s.k), s.targetW, s.targetH, tx, ty)) return false;
@@ -187,10 +188,10 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
         return false;
     }
     result = 0;
-    if (m == WM_LBUTTONDOWN && tile >= 0) {
+    if ((m == WM_LBUTTONDOWN || m == WM_LBUTTONDBLCLK) && tile >= 0) {
         s.focus = tile;
         run(s);
-    } else if (m == WM_LBUTTONDOWN || m == WM_RBUTTONDOWN) {
+    } else if (m == WM_LBUTTONDOWN || m == WM_LBUTTONDBLCLK || m == WM_RBUTTONDOWN) {
         if (!s.layout.glass.contains(x, y)) close(s, "a click outside");
     }
     (void)wp;
