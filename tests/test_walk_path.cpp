@@ -202,3 +202,20 @@ TEST(walk_path_through_points) {
           std::vector<walkpath::Cell>({walkpath::Cell(0, 0), walkpath::Cell(3, 3)}));
     CHECK(walkpath::through(c, {0, 0}, {}).empty());
 }
+
+// 3.0.11-beta.201 (the tester: «ставиш точку куди хочеш піти в непрохідне місце - малює лінію пряму», «будувати все ж
+// шлях до найближчої прохідної клітинки»): a point set off the walked cells goes to the nearest walked one; one beyond
+// the map or with none near: none
+TEST(walk_path_nearest_walked_cell) {
+    walkpath::Cells c;
+    c.w = 20;
+    c.h = 10;
+    c.walk.assign(200, 0);
+    for (int x = 2; x < 8; ++x)
+        for (int y = 2; y < 5; ++y) c.walk[size_t(y) * 20 + size_t(x)] = 1;  // a room 2..7 x 2..4
+    CHECK(walkpath::nearestWalked(c, {4, 3}, 30) == walkpath::Cell(4, 3));   // walked already
+    CHECK(walkpath::nearestWalked(c, {10, 3}, 30) == walkpath::Cell(7, 3));  // right of the room: its edge
+    CHECK(walkpath::nearestWalked(c, {4, 8}, 30) == walkpath::Cell(4, 4));   // under it
+    CHECK(walkpath::nearestWalked(c, {18, 9}, 5) == walkpath::Cell(-1, -1)); // none within 5
+    CHECK(walkpath::nearestWalked(c, {25, 3}, 30) == walkpath::Cell(-1, -1)); // beyond the map
+}

@@ -47,6 +47,10 @@ std::vector<Cell> straightened(const Cells& c, const std::vector<Cell>& path);
 // leg over the walked cells from the last one's end (straightened); a leg nothing walked reaches (no cells known,
 // another part of the map): straight to its point. The corners in order; empty: no points
 std::vector<Cell> through(const Cells& c, Cell from, const std::vector<Cell>& points);
+// 3.0.11-beta.201 (the tester: «ставиш точку ... в непрохідне місце - малює лінію пряму», «будувати все ж шлях до
+// найближчої прохідної клітинки»): the walked cell nearest `at` (itself if walked) within `most` cells of it - the
+// nearest by the straight distance, the rings round it looked through in turn; {-1, -1}: none, or `at` off the map
+Cell nearestWalked(const Cells& c, Cell at, int most);
 
 // 3.0.11-beta.34 (the owner: «каждый шаг перестраивается маршрут», «каждый раз перестраивается линия, можно так чтобы
 // она не очень дергалась»): the way kept while the player keeps to it, not made again from each cell they step on -

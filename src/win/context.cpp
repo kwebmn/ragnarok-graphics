@@ -669,6 +669,7 @@ void Context::endScene() {
         partywin::draw(record, *renderer);      // 3.0.11-beta.39: the party's panel
         hotbarwin::draw(record, *renderer);     // 3.0.11-beta.40: the hotbar
         chatwin::draw(record, *renderer);       // 3.0.11-beta.41: the chat
+        minimapproto::drawBig(record, *renderer);  // 3.0.11-beta.201: the big map over the panels, under the windows
         // 3.0.11-beta.108: «Речі», «Характеристики», «Навички», «Спорядження», the NPC talk, the shop and «Довідник»
         // in their stack's order - the last opened or clicked in on top (they were each in a place of its own)
         windowstack::draw(record, *renderer);
@@ -729,6 +730,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
         partywin::draw(record, *renderer);      // 3.0.11-beta.39
         hotbarwin::draw(record, *renderer);     // 3.0.11-beta.40
         chatwin::draw(record, *renderer);       // 3.0.11-beta.41
+        minimapproto::drawBig(record, *renderer);  // 3.0.11-beta.201
         windowstack::draw(record, *renderer);  // 3.0.11-beta.108
         itemswin::drawToast(record, *renderer);  // 3.0.11-beta.112
         loginwin::drawToast(record, *renderer);  // 3.0.11-beta.175

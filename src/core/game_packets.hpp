@@ -170,10 +170,26 @@ struct ShopSign {
     std::string title;  // in the game's code page
 };
 
+// 3.0.11-beta.201 (the tester: «ще не видно согільдійців на мінімапі», «була якась команда типу пошук мобів на
+// мінімапі»): a mark on the minimap - 0x0144 <npc>.L <type>.L (1 put, 2 taken off) <x>.L <y>.L <id>.B <colour>.L
+// (uAthena's clif_viewpoint: an NPC's «viewpoint», @showmobs' monsters for 5 s); a guild mate's cell on the same map -
+// 0x01eb <account>.L <x>.W <y>.W (clif_guild_xy)
+struct Viewpoint {
+    uint32_t npc = 0;
+    int type = 0;
+    int x = 0, y = 0;
+    int id = 0;
+    uint32_t colour = 0;  // 0xRRGGBB
+};
+struct GuildPos {
+    uint32_t account = 0;
+    uint16_t x = 0, y = 0;
+};
+
 using Event = std::variant<std::monostate, Whisper, PartyInvite, TradeRequest, GuildInvite, FriendRequest, StatusIcon,
                            Vanish, SkillCast, Hit, PartyList, PartyMember, PartyLeft, PartyHp, PartyChat, GuildChat,
                            Chat, Status, Pickup, StatusLong, Casting, Appear, PartyPos, ActorInfo, NpcSay, NpcMenu,
-                           StorageCount, ShopSign>;
+                           StorageCount, ShopSign, Viewpoint, GuildPos>;
 
 // A packet as the game took it, `size` bytes of it readable: one of the above, or nothing (another packet, one cut
 // short or naming more bytes than there are).

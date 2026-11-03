@@ -669,3 +669,91 @@ TEST(minimap_proto_net_plate_under_the_bar) {
     CHECK(green(at(g.x + g.w - 3.5f, g.y + g.h - 0.5f)));  // 50 ms: low and green
     CHECK(!green(at(g.x + g.w - 3.5f, g.y + 0.5f)));
 }
+
+// 3.0.11-beta.201 (the tester: «ще не видно согільдійців на мінімапі», «була якась команда типу пошук мобів на
+// мінімапі»): a server's mark (an NPC's viewpoint, @showmobs) - always shown, over the rest, in its colour; a guild
+// mate - with the party's layer
+TEST(minimap_proto_spots_and_guild_mates) {
+    minimap::Mark spot{minimap::Cell{40, 40}, 0xFF8000, minimap::Glyph::Spot, ""};
+    minimap::Mark mate{minimap::Cell{60, 40}, 0, minimap::Glyph::Guild, ""};
+    CHECK(minimap::layerOf(mate) == minimap::Layer::Party);
+    minimap::Layers none;
+    for (bool& on : none.on) on = false;
+    const std::vector<minimap::Mark> shown = minimap::shownMarks({spot, mate}, none);
+    CHECK(shown.size() == 1 && shown[0].glyph == minimap::Glyph::Spot);  // the server's mark whatever the layers
+    const minimap::Layout L = minimap::layout(1280, 720, 1.0f, false, 0);
+    minimap::Scene sc;
+    sc.map = minimap::MapSize{100, 100};
+    sc.player = minimap::Cell{50, 50};
+    const minimap::Mark dot{minimap::Cell{40, 40}, 0x37B24D, minimap::Glyph::Dot, "Guide"};
+    sc.marks = {spot, dot, mate};  // the dot after the spot, at its cell
+    panel::Picture pic;
+    minimap::paint(pic, L, sc, minimap::Texts{});
+    const minimap::View v = minimap::view(sc.map, sc.player, 100, int(L.map.w));
+    float px = 0, py = 0;
+    minimap::cellToPanel(v, sc.map, minimap::Cell{40, 40}, px, py);
+    const uint32_t c = pic.px[size_t(L.map.y + py) * size_t(pic.width) + size_t(L.map.x + px + 4)];
+    CHECK(((c >> 16) & 0xFF) > 0xD0 && ((c >> 8) & 0xFF) > 0x60 && ((c >> 8) & 0xFF) < 0xA0);  // the spot's orange
+    const uint32_t mid = pic.px[size_t(L.map.y + py) * size_t(pic.width) + size_t(L.map.x + px)];
+    CHECK((mid & 0xFF) > 0xE0 && ((mid >> 8) & 0xFF) > 0xE0);  // its white middle over the dot under it
+    minimap::cellToPanel(v, sc.map, minimap::Cell{60, 40}, px, py);
+    CHECK((pic.px[size_t(L.map.y + py) * size_t(pic.width) + size_t(L.map.x + px)] >> 24) > 0x80);  // the mate drawn
+}
+
+// 3.0.11-beta.201 (the tester: «великі іконки коли зум максимальний (видно всю мапу ...) і зменшуються коли
+// збільшується зум»): the marks bigger the more of the map the minimap shows - smaller up close
+TEST(minimap_proto_marks_by_the_zoom) {
+    const minimap::MapSize map{300, 300};
+    CHECK(minimap::markScale(40, map) < 0.95f);
+    CHECK(std::fabs(minimap::markScale(100, map) - 1.0f) < 0.12f);
+    CHECK(minimap::markScale(300, map) > 1.2f);
+    CHECK(minimap::markScale(40, map) < minimap::markScale(60, map));
+    CHECK(minimap::markScale(150, map) < minimap::markScale(220, map));
+    const minimap::MapSize small{120, 100};
+    CHECK(minimap::markScale(120, small) > 1.2f);  // the whole of a small map: as big
+}
+
+// 3.0.11-beta.201 (the tester: «іконки кафр зробили, а у легенді зверху - забули поміняти»): the Kafras' layer button
+// shows the Kafra's face too (no «K» over it) where the face is known
+TEST(minimap_proto_kafra_layer_button_face) {
+    const minimap::Layout L = minimap::layout(1280, 720, 1.0f, false, 0);
+    panel::Picture face;
+    face.width = face.height = 12;
+    face.px.assign(144, 0xFF40C060u);
+    minimap::Scene sc;
+    sc.map = minimap::MapSize{100, 100};
+    sc.player = minimap::Cell{50, 50};
+    sc.kafraFace = &face;
+    panel::Picture pic;
+    minimap::paint(pic, L, sc, minimap::Texts{});
+    const panel::Box& b = L.layers[int(minimap::Layer::Kafra)];
+    CHECK(b.w > 0);
+    const uint32_t mid = pic.px[size_t(b.y + b.h / 2) * size_t(pic.width) + size_t(b.x + b.w / 2)];
+    CHECK(((mid >> 8) & 0xFF) > 0x90 && ((mid >> 16) & 0xFF) < 0x80);  // the face's green
+    const std::vector<minimap::Words> w = minimap::words(L, sc, minimap::Texts{});
+    CHECK(std::none_of(w.begin(), w.end(), [](const minimap::Words& x) { return x.text == "K"; }));
+}
+
+// 3.0.11-beta.201 (the tester: «є 2 типи порталів ... треба прибрати "зайві" (червоні портали)»): the game's map
+// pictures mark the warps with pure red dots (texture_x4.zip's pay_dun01: two, 2601 pixels; prontera's at its gates) -
+// the minimap marks them itself (its rings, their words); the dots taken out, their place as round them, the rest kept
+TEST(minimap_proto_drops_the_pictures_warp_dots) {
+    const int w = 64, h = 64;
+    std::vector<uint32_t> px(size_t(w) * h, 0xFF505050u);           // a grey floor
+    for (int x = 40; x < 50; ++x) px[size_t(10) * w + x] = 0xFFB4502Du;  // a brown roof's row: not a dot
+    for (int y = 0; y < h; ++y)
+        for (int x = 0; x < w; ++x) {
+            const float d = std::hypot(float(x) - 20.0f, float(y) - 20.0f);
+            if (d <= 6) px[size_t(y) * w + x] = 0xFFF00000u;                   // the dot
+            else if (d <= 7) px[size_t(y) * w + x] = 0xFF901818u;              // its soft edge
+        }
+    CHECK(minimap::dropWarpDots(px, w, h) == 1);
+    int red = 0;
+    for (const uint32_t c : px) red += ((c >> 16) & 0xFF) > 130 && ((c >> 8) & 0xFF) < 70 && (c & 0xFF) < 70;
+    CHECK(red == 0);
+    for (int x = 40; x < 50; ++x) CHECK(px[size_t(10) * w + x] == 0xFFB4502Du);  // the roof kept
+    const uint32_t mid = px[size_t(20) * w + 20];
+    CHECK(std::abs(int((mid >> 16) & 0xFF) - 0x50) < 12 && std::abs(int(mid & 0xFF) - 0x50) < 12);  // the floor's
+    std::vector<uint32_t> plain(size_t(w) * h, 0xFF505050u);
+    CHECK(minimap::dropWarpDots(plain, w, h) == 0);
+}

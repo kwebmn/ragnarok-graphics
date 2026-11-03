@@ -12,6 +12,7 @@
 #include <string>
 #include <vector>
 
+#include "core/game_packets.hpp"
 #include "core/layout.hpp"
 #include "core/minimap_proto.hpp"
 #include "core/pack_source.hpp"
@@ -164,9 +165,25 @@ struct State {
     // 3.0.11-beta.83 (the owner's 3): the party's members on this map - their faces at their cells
     std::vector<minimap::Mark> members;
     std::string membersKey;
+    // 3.0.11-beta.201 (the tester: «ще не видно согільдійців на мінімапі», «команда типу пошук мобів на мінімапі»): the
+    // server's marks (0x0144: an NPC's viewpoint, @showmobs' monsters) by their NPC and number, the guild's mates
+    // (0x01eb) by their account with when last told; both forgotten with the map
+    struct Spot {
+        int x = 0, y = 0;
+        uint32_t colour = 0xFFFFFF;
+    };
+    struct Mate {
+        int x = 0, y = 0;
+        ULONGLONG at = 0;
+    };
+    std::map<std::pair<uint32_t, int>, Spot> spots;
+    std::map<uint32_t, Mate> mates;
+    std::string othersKey;
+    std::vector<minimap::Mark> others;
 };
 
 constexpr ULONGLONG kPaintEveryMs = 33;
+constexpr uint32_t kOwnAccount = 0x771F7C;  // 3.0.11-beta.201: the character's account (not its own mate)
 
 State& state() {
     static State s;
@@ -472,7 +489,23 @@ void clearPlot(State& s) {
 }
 
 // A click's cell: the way to it (Shift: one more point after those set, at most 8)
-void setPlot(State& s, const minimap::Cell& at, bool add) {
+void setPlot(State& s, minimap::Cell at, bool add) {
+    // 3.0.11-beta.201 (the tester: «ставиш точку ... в непрохідне місце - малює лінію пряму», «не давати можливість
+    // поставити точку поза мапою, або будувати шлях до найближчої прохідної клітинки»): a cell off the walked ones -
+    // the nearest walked one; off the map or none within 40 cells: no point
+    loadCells(s);
+    if (s.cells.w > 0) {
+        const walkpath::Cell walked = walkpath::nearestWalked(s.cells, walkpath::Cell{at.x, at.y}, 40);
+        if (walked.first < 0) {
+            LOG_INFO("route: %d, %d on %s is off its walked cells, none near - no point set", at.x, at.y,
+                     s.map.c_str());
+            return;
+        }
+        if (walked.first != at.x || walked.second != at.y)
+            LOG_INFO("route: %d, %d on %s is off its walked cells - the point at the nearest walked one, %d, %d", at.x,
+                     at.y, s.map.c_str(), walked.first, walked.second);
+        at = minimap::Cell{walked.first, walked.second};
+    }
     if (!add || s.plotMap != s.map || s.plotThereAt) s.plot.clear();
     if (s.plot.size() >= 8) s.plot.pop_back();
     s.plot.push_back(at);
@@ -741,6 +774,10 @@ minimap::Scene sceneOf(const State& s) {
     sc.marks = s.marks;
     if (s.show.party)  // 3.0.11-beta.119: the party a layer
         sc.marks.insert(sc.marks.end(), s.members.begin(), s.members.end());  // 3.0.11-beta.83: after the hints
+    // 3.0.11-beta.201: the guild's mates (the party's layer) and the server's marks (always)
+    for (const minimap::Mark& m : s.others)
+        if (m.glyph == minimap::Glyph::Spot || s.show.party) sc.marks.push_back(m);
+    sc.kafraFace = s.kafraFace.width > 0 ? &s.kafraFace : nullptr;  // 3.0.11-beta.201: the layer's button
     sc.layers = layersOf(s.show);
     sc.hoverLayer = s.hoverLayer;
     sc.scheme = s.show.scheme && !s.scheme.levels.empty();  // 3.0.11-beta.120
@@ -925,6 +962,8 @@ void frame(HWND game, const Show& show, double k, int targetWidth, int targetHei
     }
     if (map != s.map) {
         s.map = map;
+        s.spots.clear();  // 3.0.11-beta.201: the server's marks and the guild's mates were the map's
+        s.mates.clear();
         s.clicks = 0;
         s.remade = 0;
         s.cellKnown = false;
@@ -1047,6 +1086,32 @@ void frame(HWND game, const Show& show, double k, int targetWidth, int targetHei
             s.dirty = s.bigDirty = true;
         }
     }
+    {  // 3.0.11-beta.201: the guild's mates told in the last 20 s, the server's marks
+        const ULONGLONG now = GetTickCount64();
+        std::vector<minimap::Mark> others;
+        std::string key;
+        for (auto it = s.mates.begin(); it != s.mates.end();) {
+            if (now - it->second.at > 20000) {
+                it = s.mates.erase(it);
+                continue;
+            }
+            others.push_back(minimap::Mark{minimap::Cell{it->second.x, it->second.y}, 0, minimap::Glyph::Guild,
+                                           say(settings::Text::MinimapGuildMate)});
+            key += 'g' + std::to_string(it->second.x) + ',' + std::to_string(it->second.y) + ';';
+            ++it;
+        }
+        for (const auto& [id, spot] : s.spots) {
+            others.push_back(minimap::Mark{minimap::Cell{spot.x, spot.y}, spot.colour, minimap::Glyph::Spot, ""});
+            key += 's' + std::to_string(spot.x) + ',' + std::to_string(spot.y) + ',' + std::to_string(spot.colour) +
+                   ';';
+        }
+        if (key != s.othersKey) {
+            s.othersKey = key;
+            s.others = std::move(others);
+            s.dirty = s.bigDirty = true;
+        }
+        if (s.kafraFace.width <= 0 && s.kafraSide == 0) kafraFace(s);  // the layer's button's face before any Kafra
+    }
     reachFrame(s, show.reach);  // 3.0.11-beta.65
     // the part and the mark under the game's cursor: a button lit, a mark naming itself
     int cx = 0, cy = 0, hover = -1;
@@ -1148,12 +1213,19 @@ void draw(FrameRecord& record, gpu::Renderer& renderer) {
         drawPart(record, renderer, s.picture, s.texture, s.texW, s.texH, s.upload, s.layout.x, s.layout.y, s.k);
         ++mine;
     }
-    if (s.big && s.bigPicture.width > 0) {  // 3.0.11-beta.31: the big map over the rest of the game's picture
-        drawPart(record, renderer, s.bigPicture, s.bigTexture, s.bigTexW, s.bigTexH, s.bigUpload, s.bigLayout.x,
-                    s.bigLayout.y, s.k);
-        ++mine;
-    }
     if (cursor >= 0 && mine > 0) record.moveLastBefore(record.commands().size() - size_t(cursor) - 1, size_t(cursor));
+}
+
+// 3.0.11-beta.201 (the tester: «мапа має перекривати всі»): the big map apart - drawn after the panels (the chat, the
+// hotbar, the character's), under the windows
+void drawBig(FrameRecord& record, gpu::Renderer& renderer) {
+    State& s = state();
+    if (!s.shown || s.k <= 0 || !s.big || s.bigPicture.width <= 0) return;
+    int cursor = -1, cx = 0, cy = 0;
+    if (readGameCursor(cx, cy)) cursor = panel::cursorDraw(record, float(cx), float(cy));
+    drawPart(record, renderer, s.bigPicture, s.bigTexture, s.bigTexW, s.bigTexH, s.bigUpload, s.bigLayout.x,
+             s.bigLayout.y, s.k);
+    if (cursor >= 0) record.moveLastBefore(record.commands().size() - size_t(cursor) - 1, size_t(cursor));
 }
 
 bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
@@ -1340,6 +1412,26 @@ bool following(std::string& target, bool& walk) {
     target = s.follow.target;
     walk = s.follow.walk;
     return true;
+}
+
+void packet(const packets::Event& e) {
+    State& s = state();
+    if (const auto* v = std::get_if<packets::Viewpoint>(&e)) {  // 3.0.11-beta.201: the server's mark
+        const std::pair<uint32_t, int> key{v->npc, v->id};
+        if (v->type == 2 || (v->x == 0 && v->y == 0)) {
+            s.spots.erase(key);
+        } else {
+            s.spots[key] = State::Spot{v->x, v->y, v->colour};
+            static int told = 0;
+            if (told++ < 5)
+                LOG_INFO("minimap: the server's mark %d of %u at %d, %d (#%06X)", v->id, v->npc, v->x, v->y,
+                         unsigned(v->colour));
+        }
+    } else if (const auto* g = std::get_if<packets::GuildPos>(&e)) {  // 3.0.11-beta.201: a guild mate's cell
+        uint32_t own = 0;
+        readGame(kOwnAccount, &own, sizeof own);
+        if (g->account != own) s.mates[g->account] = State::Mate{g->x, g->y, GetTickCount64()};
+    }
 }
 
 }  // namespace uagfx::win::minimapproto

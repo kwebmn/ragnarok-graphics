@@ -41,6 +41,9 @@ constexpr int kZoomCells[] = {40, 60, 100, 150, 220};
 constexpr int kZoomSteps = 6;  // those and the whole map
 constexpr int kZoomFirst = 2;  // 100 cells, as before
 int cellsAt(int step, const MapSize& map);
+// 3.0.11-beta.201 (the tester: «великі іконки коли зум максимальний ... і зменшуються коли збільшується зум»): the
+// marks' size for `cells` across the minimap - 0.85 at the closest, about 1 at 100, 1.3 from 300 or the whole map
+float markScale(int cells, const MapSize& map);
 // 3.0.11-beta.187 (the tester: «коли зум робиш до самого мінімуму, а потім підвищуєш, в перший раз він стає ще
 // менший»): the step `by` (-1 nearer, +1 farther) from `from`, past the steps that show the whole map or more (on a
 // map under 220 cells the 220 step came after the whole map's, farther out); one standing on such a step is on the
@@ -94,6 +97,10 @@ inline bool keyedPink(uint32_t argb) {
     return !(argb >> 24) || (r < b ? r : b) - g > 110;
 }
 MapPicture prepare(const std::vector<uint32_t>& argb, int width, int height);
+// 3.0.11-beta.201 (the tester: «є 2 типи порталів ... треба прибрати "зайві" (червоні портали)»): the game's map
+// pictures mark the warps with pure red dots - the minimap marks them itself; each dot (its pure red middle and its
+// soft red edge) filled from round it, ring by ring. The dots taken out
+int dropWarpDots(std::vector<uint32_t>& argb, int width, int height);
 
 // 3.0.11-beta.120 (the owner: «карту в отчете, она какаято не красивая, может другую попробовать или сделать
 // переключалку слоев разных?»): «Схема» - the map drawn from its walkable cells (walkgrid, the server's .gat): the
@@ -106,7 +113,9 @@ std::vector<uint32_t> schemePixels(const walkgrid::Grid& g, const std::vector<ui
 
 // What the map shows
 // 3.0.11-beta.83 (the owner's 3): Member - a party member, its face in a round with a blue ring (a dead one's red)
-enum class Glyph : uint8_t { Dot, Kafra, Warp, Member };
+// 3.0.11-beta.201: Spot - a server's mark (an NPC's viewpoint, @showmobs: the packet 0x0144) in its colour, shown
+// whatever the layers, over the rest; Guild - a guild mate (0x01eb), with the party's layer
+enum class Glyph : uint8_t { Dot, Kafra, Warp, Member, Spot, Guild };
 struct Mark {
     Cell cell;
     uint32_t rgb = 0;
@@ -135,6 +144,9 @@ struct Scene {
     bool viewFan = true;  // 3.0.11-beta.187: [interface] minimap_view - the camera's fan; off: the arrow alone
     int cells = 100;             // the zoom
     std::vector<Mark> marks;
+    // 3.0.11-beta.201 (the tester: «у легенді зверху - забули поміняти»): the Kafras' face for their layer's button
+    // and chip (null: the concept's «K»)
+    const panel::Picture* kafraFace = nullptr;
     std::vector<Cell> path;  // the way over this map, from the player on (walkpath)
     bool pin = false;        // the way's next move: a gold pin there
     Cell pinCell;

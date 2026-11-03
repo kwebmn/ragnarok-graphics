@@ -167,6 +167,13 @@ Event parse(const uint8_t* p, size_t size) {
         case 0x0107:  // 3.0.11-beta.82: a party member's cell
             if (size < 10) return {};
             return PartyPos{rd32(p, 2), rd16(p, 6), rd16(p, 8)};
+        case 0x0144:  // 3.0.11-beta.201: a mark on the minimap
+            if (size < 23) return {};
+            return Viewpoint{rd32(p, 2), int(rd32(p, 6)), int(rd32(p, 10)), int(rd32(p, 14)), p[18],
+                             rd32(p, 19) & 0xFFFFFFu};
+        case 0x01eb:  // 3.0.11-beta.201: a guild mate's cell
+            if (size < 10) return {};
+            return GuildPos{rd32(p, 2), rd16(p, 6), rd16(p, 8)};
         case 0x022a:  // 3.0.11-beta.80: a character in sight
             if (size < 58) return {};
             return Appear{rd32(p, 2), rd16(p, 16), rd16(p, 18), rd16(p, 30), rd16(p, 56), p[49], p[55] == 1};

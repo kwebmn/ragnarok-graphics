@@ -426,3 +426,20 @@ TEST(game_packets_a_shops_sign) {
     const auto* g = std::get_if<packets::ShopSign>(&e);
     CHECK(g != nullptr && g->account == 2000123u && g->title.empty());
 }
+
+// 3.0.11-beta.201 (the tester: «ще не видно согільдійців на мінімапі», «була якась команда типу пошук мобів на
+// мінімапі»): a mark on the minimap - 0x0144 <npc>.L <type>.L (1 put, 2 taken off) <x>.L <y>.L <id>.B <colour>.L
+// (uAthena's clif_viewpoint: an NPC's «viewpoint», @showmobs' monsters for 5 s); a guild mate's cell on the same map -
+// 0x01eb <account>.L <x>.W <y>.W (clif_guild_xy)
+TEST(game_packets_viewpoint_and_guild_pos) {
+    const uint8_t mark[23] = {0x44, 0x01, 1, 0, 0,    0,    1, 0, 0, 0,    0x96, 0,
+                              0,    0,    0x2C, 0x01, 0, 0, 7, 0x00, 0x80, 0xFF, 0};
+    const packets::Event e = packets::parse(mark, sizeof mark);
+    const auto* v = std::get_if<packets::Viewpoint>(&e);
+    CHECK(v && v->npc == 1 && v->type == 1 && v->x == 150 && v->y == 300 && v->id == 7 && v->colour == 0xFF8000);
+    CHECK(std::holds_alternative<std::monostate>(packets::parse(mark, 22)));  // cut short
+    const uint8_t pos[10] = {0xEB, 0x01, 0x39, 0x30, 0, 0, 0x2A, 0, 0x45, 0};
+    const packets::Event g = packets::parse(pos, sizeof pos);
+    const auto* q = std::get_if<packets::GuildPos>(&g);
+    CHECK(q && q->account == 0x3039 && q->x == 42 && q->y == 69);
+}

@@ -6618,6 +6618,7 @@ constexpr Entry kTexts[] = {
     {Text::MinimapRouteLeft, "{1} left", "ще {1}", "ещё {1}"},
     {Text::MinimapRouteThere, "You are there", "Ви на місці", "Вы на месте"},
     {Text::MinimapRouteNone, "No way from here", "Звідси шляху немає", "Отсюда пути нет"},
+    {Text::MinimapGuildMate, "A guild mate", "Член гільдії", "Член гильдии"},  // 3.0.11-beta.201
     // 3.0.11-beta.10: the players now (core/reference_live, the site's «Онлайн»)
     {Text::RefPlayersNow, "players now: {1}", "гравців зараз: {1}", "игроков сейчас: {1}"},
     // 3.0.11-beta.11: the world map (core/world_map, the site's sheet and the client's minimaps)

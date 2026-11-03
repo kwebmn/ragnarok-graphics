@@ -230,4 +230,25 @@ std::vector<Cell> through(const Cells& c, Cell from, const std::vector<Cell>& po
     return out;
 }
 
+Cell nearestWalked(const Cells& c, Cell at, int most) {
+    const auto [x0, y0] = at;
+    if (x0 < 0 || y0 < 0 || x0 >= c.w || y0 >= c.h) return {-1, -1};
+    if (c.at(x0, y0)) return at;
+    Cell best{-1, -1};
+    int bestD2 = 0;
+    for (int r = 1; r <= most; ++r) {
+        if (best.first >= 0 && r * r > bestD2) break;  // no nearer one on the rings further out
+        for (int dy = -r; dy <= r; ++dy)
+            for (int dx = -r; dx <= r; ++dx) {
+                if (std::max(std::abs(dx), std::abs(dy)) != r || !c.at(x0 + dx, y0 + dy)) continue;
+                const int d2 = dx * dx + dy * dy;
+                if (best.first < 0 || d2 < bestD2) {
+                    best = {x0 + dx, y0 + dy};
+                    bestD2 = d2;
+                }
+            }
+    }
+    return best;
+}
+
 }  // namespace uagfx::walkpath

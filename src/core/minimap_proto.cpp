@@ -23,6 +23,7 @@ constexpr uint32_t kCard = 0x10141C, kWhite = 0xFFFFFF, kBlack = 0x000000, kDark
 constexpr uint32_t kAccent = 0xC9A55B, kAccent2 = 0xE6CB8A, kText = 0xECEFF5, kMuted = 0x9AA3B5;
 constexpr uint32_t kGround = 0xFF141922;   // the map's square where it has no picture
 constexpr uint32_t kKafra = 0xE86AA8;      // the concept's «K»
+constexpr uint32_t kGuildRing = 0x63C174;  // 3.0.11-beta.201: a guild mate's
 constexpr uint32_t kPortal = 0x23285A, kPortalRing = 0x8E9BFF;
 // 3.0.11-beta.187 (the tester took the fan for the character's sight): the camera's fan a neutral light, the arrow
 // alone blue
@@ -205,9 +206,123 @@ uint32_t overGround(uint32_t p) {
 
 }  // namespace
 
-MapPicture prepare(const std::vector<uint32_t>& argb, int width, int height) {
+int dropWarpDots(std::vector<uint32_t>& argb, int width, int height) {
+    if (width <= 0 || height <= 0 || argb.size() < size_t(width) * size_t(height)) return 0;
+    const auto rgbOf = [](uint32_t c, int& r, int& g, int& b) {
+        r = int((c >> 16) & 0xFF), g = int((c >> 8) & 0xFF), b = int(c & 0xFF);
+    };
+    const auto pure = [&](uint32_t c) {  // opaque: the pictures' dots are (an AI picture's soft edge is not one)
+        int r, g, b;
+        rgbOf(c, r, g, b);
+        return (c >> 24) >= 0xF0 && r >= 200 && g <= 50 && b <= 50;
+    };
+    const auto reddish = [&](uint32_t c) {
+        int r, g, b;
+        rgbOf(c, r, g, b);
+        return r >= 90 && r - std::max(g, b) >= 50 && std::abs(g - b) <= 24;
+    };
+    const size_t n = size_t(width) * size_t(height);
+    std::vector<uint8_t> fill(n, 0);  // 1 to fill
+    std::vector<int> blob(n, -1);
+    int dots = 0;
+    std::vector<size_t> stack;
+    for (size_t i = 0; i < n; ++i) {
+        if (blob[i] >= 0 || !pure(argb[i])) continue;
+        // a dot: its pure middle by flood, then its soft red edge within 3 pixels
+        stack.assign(1, i);
+        blob[i] = dots;
+        std::vector<size_t> core;
+        while (!stack.empty()) {
+            const size_t j = stack.back();
+            stack.pop_back();
+            core.push_back(j);
+            const int x = int(j % size_t(width)), y = int(j / size_t(width));
+            for (int dy = -1; dy <= 1; ++dy)
+                for (int dx = -1; dx <= 1; ++dx) {
+                    const int u = x + dx, v = y + dy;
+                    if (u < 0 || v < 0 || u >= width || v >= height) continue;
+                    const size_t k = size_t(v) * size_t(width) + size_t(u);
+                    if (blob[k] < 0 && pure(argb[k])) {
+                        blob[k] = dots;
+                        stack.push_back(k);
+                    }
+                }
+        }
+        // its round whole (an enlarged picture's dot is hatched dark red inside): from its middle out past its farthest
+        // pure pixel by 2.5, the reddish ones round it by 4 more
+        double cx = 0, cy = 0;
+        for (const size_t j : core) cx += double(j % size_t(width)), cy += double(j / size_t(width));
+        cx = cx / double(core.size()) + 0.5, cy = cy / double(core.size()) + 0.5;
+        double radius = 0;
+        for (const size_t j : core)
+            radius = std::max(radius, std::hypot(double(j % size_t(width)) + 0.5 - cx,
+                                                 double(j / size_t(width)) + 0.5 - cy));
+        const int reach = int(std::ceil(radius + 6.5));
+        for (int v = std::max(0, int(cy) - reach); v <= std::min(height - 1, int(cy) + reach); ++v)
+            for (int u = std::max(0, int(cx) - reach); u <= std::min(width - 1, int(cx) + reach); ++u) {
+                const size_t k = size_t(v) * size_t(width) + size_t(u);
+                const double d = std::hypot(double(u) + 0.5 - cx, double(v) + 0.5 - cy);
+                if (keyedPink(argb[k])) continue;
+                if (d <= radius + 2.5 || (d <= radius + 6.5 && reddish(argb[k]))) fill[k] = 1;
+            }
+        ++dots;
+    }
+    if (!dots) return 0;
+    // filled ring by ring from its known pixels round it (the key's pink not taken where another colour is near)
+    for (bool more = true; more;) {
+        more = false;
+        std::vector<std::pair<size_t, uint32_t>> ring;
+        for (size_t i = 0; i < n; ++i) {
+            if (!fill[i]) continue;
+            const int x = int(i % size_t(width)), y = int(i / size_t(width));
+            int sum[3] = {0, 0, 0}, count = 0, keyed = 0;
+            uint32_t key = 0;
+            for (int dy = -1; dy <= 1; ++dy)
+                for (int dx = -1; dx <= 1; ++dx) {
+                    const int u = x + dx, v = y + dy;
+                    if ((!dx && !dy) || u < 0 || v < 0 || u >= width || v >= height) continue;
+                    const size_t k = size_t(v) * size_t(width) + size_t(u);
+                    if (fill[k]) continue;
+                    if (keyedPink(argb[k])) {
+                        ++keyed;
+                        key = argb[k];
+                        continue;
+                    }
+                    int r, g, b;
+                    rgbOf(argb[k], r, g, b);
+                    sum[0] += r, sum[1] += g, sum[2] += b;
+                    ++count;
+                }
+            if (count)
+                ring.emplace_back(i, 0xFF000000u | uint32_t(sum[0] / count) << 16 | uint32_t(sum[1] / count) << 8 |
+                                         uint32_t(sum[2] / count));
+            else if (keyed)
+                ring.emplace_back(i, key);
+        }
+        for (const auto& [i, c] : ring) {
+            argb[i] = c;
+            fill[i] = 0;
+            more = true;
+        }
+    }
+    return dots;
+}
+
+MapPicture prepare(const std::vector<uint32_t>& given, int width, int height) {
     MapPicture m;
-    if (width <= 0 || height <= 0 || argb.size() < size_t(width) * size_t(height)) return m;
+    if (width <= 0 || height <= 0 || given.size() < size_t(width) * size_t(height)) return m;
+    // 3.0.11-beta.201: the picture's warp dots out (the minimap's rings mark the warps) - on a copy, where it has any
+    std::vector<uint32_t> undotted;
+    const bool dotted = std::any_of(given.begin(), given.begin() + ptrdiff_t(size_t(width) * size_t(height)),
+                                    [](uint32_t c) {
+                                        return (c >> 24) >= 0xF0 && ((c >> 16) & 0xFF) >= 200 &&
+                                               ((c >> 8) & 0xFF) <= 50 && (c & 0xFF) <= 50;
+                                    });
+    if (dotted) {
+        undotted.assign(given.begin(), given.begin() + ptrdiff_t(size_t(width) * size_t(height)));
+        dropWarpDots(undotted, width, height);
+    }
+    const std::vector<uint32_t>& argb = dotted ? undotted : given;
     MapPicture::Level first{width, height, std::vector<uint32_t>(size_t(width) * size_t(height))};
     std::vector<uint8_t> key(first.px.size());
     for (size_t i = 0; i < key.size(); ++i) key[i] = keyedPink(argb[i]);
@@ -334,7 +449,15 @@ void mapPixels(panel::Picture& out, const panel::Box& box, const Scene& sc, cons
 }
 
 float markRadius(Glyph g, float s) {
-    return g == Glyph::Warp ? 5.5f * s : g == Glyph::Kafra ? 6 * s : g == Glyph::Member ? 7 * s : 2.8f * s;
+    switch (g) {
+        case Glyph::Warp: return 5.5f * s;
+        case Glyph::Kafra: return 6 * s;
+        case Glyph::Member: return 7 * s;
+        case Glyph::Spot: return 5 * s;   // 3.0.11-beta.201
+        case Glyph::Guild: return 4.2f * s;
+        case Glyph::Dot: break;
+    }
+    return 2.8f * s;
 }
 
 // 3.0.11-beta.196: a mark's own - a Kafra with its face as big as a member's
@@ -347,8 +470,9 @@ float radiusOf(const Mark& m, float s) {
 std::vector<size_t> drawOrder(const std::vector<Mark>& marks) {
     std::vector<size_t> order(marks.size());
     for (size_t i = 0; i < order.size(); ++i) order[i] = i;
-    const auto rank = [](Glyph g) {
-        return g == Glyph::Dot ? 0 : g == Glyph::Warp ? 1 : g == Glyph::Kafra ? 2 : 3;
+    const auto rank = [](Glyph g) {  // 3.0.11-beta.201: the guild's under the party's, the server's marks on top
+        return g == Glyph::Dot ? 0 : g == Glyph::Warp ? 1 : g == Glyph::Kafra ? 2 : g == Glyph::Guild ? 3
+                                                                              : g == Glyph::Member ? 4 : 5;
     };
     std::stable_sort(order.begin(), order.end(),
                      [&](size_t a, size_t b) { return rank(marks[a].glyph) < rank(marks[b].glyph); });
@@ -376,8 +500,20 @@ void faceIn(panel::Picture& out, const panel::Picture& pic, float cx, float cy, 
 }
 
 // 3.0.11-beta.119: a layer's sign - as its marks look on the map - at (x, y), `r` across; a layer off dimmed and struck
-void layerSign(panel::Picture& out, Layer l, float x, float y, float r, float s, bool on) {
+void layerSign(panel::Picture& out, Layer l, float x, float y, float r, float s, bool on,
+               const panel::Picture* kafraFace = nullptr) {
     const float k = on ? 1.0f : 0.35f;
+    if (l == Layer::Kafra && kafraFace && kafraFace->width > 0) {  // 3.0.11-beta.201: as its marks - the face
+        panel::circle(out, x, y, r + 1.0f, kDark, 1.0f);
+        faceIn(out, *kafraFace, x, y, r - 0.8f * s);
+        ring(out, x, y, r - 0.4f * s, 1.3f * s, kKafra, 1.0f);
+        if (!on) {
+            panel::circle(out, x, y, r + 1.0f, kDark, 0.6f);
+            segment(out, panel::Box{0, 0, float(out.width), float(out.height)}, x - r, y + r, x + r, y - r, 1.8f * s,
+                    kMuted, 0.9f);
+        }
+        return;
+    }
     switch (l) {
         case Layer::Warps:
             panel::circle(out, x, y, r, kPortal, 0.95f * k);
@@ -409,7 +545,8 @@ void schemeSign(panel::Picture& out, float x, float y, float r, bool on) {
 }
 
 // The marks, the way, its pin and the player over the map's picture in `box` (a view's pixels from its corner)
-void overMap(panel::Picture& out, const panel::Box& box, const Scene& sc, const View& v, float s, float big) {
+void overMap(panel::Picture& out, const panel::Box& box, const Scene& sc, const View& v, float s, float big,
+             float marks = 1.0f) {
     const auto place = [&](const Cell& c, float& x, float& y) {
         cellToPanel(v, sc.map, c, x, y);
         x += box.x;
@@ -422,7 +559,7 @@ void overMap(panel::Picture& out, const panel::Box& box, const Scene& sc, const 
     for (const size_t i : drawOrder(sc.marks)) {
         const Mark& m = sc.marks[i];
         place(m.cell, x, y);
-        const float r = radiusOf(m, s) * big;
+        const float r = radiusOf(m, s) * big * marks;  // 3.0.11-beta.201: the minimap's by its zoom
         if (!inBox(x, y, r)) continue;
         if (int(i) == sc.hoverMark) ring(out, x, y, r + 3 * s, 1.6f * s, kWhite, 0.95f);
         switch (m.glyph) {
@@ -446,6 +583,17 @@ void overMap(panel::Picture& out, const panel::Box& box, const Scene& sc, const 
             case Glyph::Dot:
                 panel::circle(out, x, y, r + 1.2f, kBlack, 0.8f);
                 panel::circle(out, x, y, r, m.rgb, 1.0f);
+                break;
+            case Glyph::Spot:  // 3.0.11-beta.201: a server's mark - its colour round a white middle, a dark edge
+                panel::circle(out, x, y, r + 1.5f, kBlack, 0.75f);
+                panel::circle(out, x, y, r, m.rgb, 1.0f);
+                panel::circle(out, x, y, r * 0.32f, kWhite, 1.0f);
+                break;
+            case Glyph::Guild:  // 3.0.11-beta.201: a guild mate - a dark round, a green ring and middle
+                panel::circle(out, x, y, r + 1.2f, kBlack, 0.7f);
+                panel::circle(out, x, y, r, kDark, 1.0f);
+                ring(out, x, y, r - 0.6f * s, 1.4f * s, kGuildRing, 1.0f);
+                panel::circle(out, x, y, r * 0.42f, kGuildRing, 1.0f);
                 break;
             case Glyph::Member:  // 3.0.11-beta.83: its face in a dark round, a blue ring (a dead one's red)
                 panel::circle(out, x, y, r + 1.5f, kBlack, 0.7f);
@@ -536,6 +684,14 @@ bool cellUnder(const View& v, const MapSize& map, float px, float py, Cell& out)
 
 }  // namespace
 
+float markScale(int cells, const MapSize& map) {
+    const int whole = std::max(1, std::max(map.w, map.h));
+    if (cells >= whole) return 1.3f;  // the whole map: as big as they get
+    const float t = std::clamp(
+        (std::log(float(std::max(cells, 1))) - std::log(40.0f)) / (std::log(300.0f) - std::log(40.0f)), 0.0f, 1.0f);
+    return 0.85f + 0.45f * t;
+}
+
 int cellsAt(int step, const MapSize& map) {
     step = std::clamp(step, 0, kZoomSteps - 1);
     const int whole = std::max(1, std::max(map.w, map.h));
@@ -584,7 +740,9 @@ Layer layerOf(const Mark& m) {
     switch (m.glyph) {
         case Glyph::Warp: return Layer::Warps;
         case Glyph::Kafra: return Layer::Kafra;
-        case Glyph::Member: return Layer::Party;
+        case Glyph::Member:
+        case Glyph::Guild: return Layer::Party;  // 3.0.11-beta.201: the guild's mates with the party's
+        case Glyph::Spot:
         case Glyph::Dot: break;
     }
     return Layer::Npcs;
@@ -593,7 +751,7 @@ Layer layerOf(const Mark& m) {
 std::vector<Mark> shownMarks(const std::vector<Mark>& marks, const Layers& layers) {
     std::vector<Mark> out;
     for (const Mark& m : marks)
-        if (layers.on[int(layerOf(m))]) out.push_back(m);
+        if (m.glyph == Glyph::Spot || layers.on[int(layerOf(m))]) out.push_back(m);  // .201: a server's always
     return out;
 }
 
@@ -680,7 +838,7 @@ void paint(panel::Picture& out, const Layout& L, const Scene& sc, const Texts& t
     const float s = L.s, edge = std::max(1.0f, s);
     const View v = view(sc.map, sc.player, sc.cells, int(L.map.w));
     mapPixels(out, L.map, sc, v);
-    overMap(out, L.map, sc, v, s, 1.0f);
+    overMap(out, L.map, sc, v, s, 1.0f, markScale(sc.cells, sc.map));
     roundCorners(out, L.map, kRadius * s);
     panel::roundRect(out, L.map, kRadius * s, kWhite, 0.0f, kWhite, 0.16f, edge);
     const float arm = 15 * s, thick = std::max(1.5f, 2 * s);  // the concept's gold corners
@@ -708,7 +866,7 @@ void paint(panel::Picture& out, const Layout& L, const Scene& sc, const Texts& t
         if (b.w <= 0) continue;
         const bool over = sc.hover == Part::Layer && sc.hoverLayer == i;
         panel::roundRect(out, b, b.w / 2, over ? kAccent : kDark, over ? 0.55f : 0.72f, kWhite, 0.18f, edge);
-        layerSign(out, Layer(i), b.x + b.w / 2, b.y + b.h / 2, 5.5f * s, s, sc.layers.on[i]);
+        layerSign(out, Layer(i), b.x + b.w / 2, b.y + b.h / 2, 5.5f * s, s, sc.layers.on[i], sc.kafraFace);
     }
     if (L.style.w > 0) {  // 3.0.11-beta.120: the picture's switch - lit gold while «Схема» shows
         const panel::Box& b = L.style;
@@ -763,7 +921,7 @@ std::vector<Words> words(const Layout& L, const Scene& sc, const Texts& t) {
         out.push_back(Words{panel::Box{x - r, y - r, 2 * r, 2 * r}, "K", kWhite, 9 * s, true, Align::Center});
     }
     const panel::Box& kafra = L.layers[int(Layer::Kafra)];  // 3.0.11-beta.119: the Kafras' button's «K»
-    if (kafra.w > 0)
+    if (kafra.w > 0 && !sc.kafraFace)  // 3.0.11-beta.201: not over the face
         out.push_back(Words{kafra, "K", sc.layers.on[int(Layer::Kafra)] ? kWhite : kMuted, 8 * s, true,
                             Align::Center});
     const panel::Box& c = L.caption;
@@ -828,7 +986,7 @@ int markAt(const Layout& L, const Scene& sc, float x, float y) {
     for (size_t i = 0; i < sc.marks.size(); ++i) {
         float px = 0, py = 0;
         cellToPanel(v, sc.map, sc.marks[i].cell, px, py);
-        const float reach = radiusOf(sc.marks[i], L.s) + 4 * L.s;  // a hand's width more
+        const float reach = radiusOf(sc.marks[i], L.s) * markScale(sc.cells, sc.map) + 4 * L.s;  // a hand more
         const float d = (px - x) * (px - x) + (py - y) * (py - y);
         if (d <= reach * reach && (best < 0 || d < bestD)) {
             best = int(i);
@@ -987,7 +1145,7 @@ void paintBig(panel::Picture& out, const panel::Picture& map, const Big& b, cons
         const bool on = sc.layers.on[i], over = sc.bigHover == BigPart::Layer && sc.hoverLayer == i;
         panel::roundRect(out, c, c.h / 2, on ? kAccent : kDark, on ? (over ? 0.32f : 0.22f) : (over ? 0.9f : 0.7f),
                          on ? kAccent : kWhite, on ? 0.7f : 0.16f, edge);
-        layerSign(out, Layer(i), c.x + c.h / 2, c.y + c.h / 2, 6 * s, s, on);
+        layerSign(out, Layer(i), c.x + c.h / 2, c.y + c.h / 2, 6 * s, s, on, sc.kafraFace);
     }
     if (b.styleChip.w > 0) {  // 3.0.11-beta.120: «Схема» - lit gold while it shows
         const panel::Box& c = b.styleChip;
@@ -1027,7 +1185,7 @@ std::vector<Words> bigWords(const Big& b, const Scene& sc, const std::string& ti
         const bool on = sc.layers.on[i];
         out.push_back(Words{panel::Box{c.x + c.h, c.y, c.w - c.h - 8 * s, c.h}, layerNames[i], on ? kText : kMuted,
                             12 * s, true, Align::Left});
-        if (i == int(Layer::Kafra))
+        if (i == int(Layer::Kafra) && !sc.kafraFace)  // 3.0.11-beta.201: not over the face
             out.push_back(Words{panel::Box{c.x + c.h / 2 - 6 * s, c.y + c.h / 2 - 6 * s, 12 * s, 12 * s}, "K",
                                 on ? kWhite : kMuted, 9 * s, true, Align::Center});
     }

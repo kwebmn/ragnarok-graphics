@@ -1,4 +1,5 @@
 #pragma once
+#include "core/game_packets.hpp"
 #include <windows.h>
 
 #include <string>
@@ -41,6 +42,8 @@ void frame(HWND game, const Show& show, double k, int targetWidth, int targetHei
 // 3.0.11-beta.35: its panel's box in the target while it shows (the buffs' column stands under it); false: not shown
 bool panelBox(int& x, int& y, int& w, int& h);
 void draw(FrameRecord& record, gpu::Renderer& renderer);
+// 3.0.11-beta.201: the big map - after the panels, under the windows (win/context)
+void drawBig(FrameRecord& record, gpu::Renderer& renderer);
 // 3.0.11-beta.31: and the wheel over the map zooms it; the big map's clicks first
 bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result);
 // 3.0.11-beta.4 (the owner: «на Ctrl+Tab ничего не происходит»): Ctrl+Tab while the prototype is on - its look goes
@@ -50,6 +53,8 @@ bool key(unsigned vk);
 // two lines under the map (where to, how many moves left, where to take the move); made again wherever the player
 // goes; «Ви на місці» on the map, then it stops. canFollow: the new minimap on
 bool canFollow();
+// 3.0.11-beta.201: the server's marks (0x0144) and the guild's mates (0x01eb) from the packets (win/packet_tap)
+void packet(const packets::Event& e);
 // 3.0.11-beta.90 (the controller's windows' tile): the big map opened or closed; false: the new minimap is off
 bool showBig(bool open);
 // 3.0.11-beta.93: the big map shows now (the controller's B closes it)

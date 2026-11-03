@@ -11,6 +11,7 @@
 #include "win/cast_bar.hpp"
 #include "win/chat_window.hpp"
 #include "win/item_window.hpp"
+#include "win/minimap_proto.hpp"
 #include "win/mob_hp.hpp"
 #include "win/net_watch.hpp"
 #include "win/ask_card.hpp"
@@ -87,6 +88,7 @@ uint16_t __attribute__((thiscall)) take(void* connection, const uint8_t* packet)
         itemswin::packet(e);     // 3.0.11-beta.107: an item come into the bag told the log
         storagewin::packet(e);   // 3.0.11-beta.115: the storage's places used of the most
         vendshopwin::packet(e);  // 3.0.11-beta.156: the shops' signs
+        minimapproto::packet(e);  // 3.0.11-beta.201: the server's marks, the guild's mates
     }
     return id;
 }

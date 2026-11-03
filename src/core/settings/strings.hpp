@@ -683,7 +683,7 @@ enum class Text : uint16_t {
     RefRoute, RefRouteFrom, RefRouteWalk, RefRouteKafra, RefRouteNpc, RefRouteMoves, RefRouteExit, RefRouteStairs,
     RefRouteVaries, RefRouteCondition, RefRouteConditionNote, RefRouteNone,
     // 3.0.11-beta.9: the way followed on the minimap
-    RefRouteFollow, RefRouteFollowing, MinimapRouteLeft, MinimapRouteThere, MinimapRouteNone,
+    RefRouteFollow, RefRouteFollowing, MinimapRouteLeft, MinimapRouteThere, MinimapRouteNone, MinimapGuildMate,
     RefPlayersNow,  // 3.0.11-beta.10: the site's «Онлайн»
     RefWorld, RefWorldHint, RefDungeons, RefWorldNone, RefWorldHelp,  // 3.0.11-beta.11: the world map
     // 3.0.11-beta.12: the players' public MVP timers, the site's market
