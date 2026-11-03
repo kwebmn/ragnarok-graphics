@@ -26,6 +26,7 @@
 #include "win/shop_window.hpp"
 #include "win/skill_window.hpp"
 #include "win/stat_window.hpp"
+#include "win/window_guard.hpp"
 #include "win/storage_window.hpp"
 #include "win/ask_card.hpp"
 #include "win/info_card.hpp"
@@ -165,6 +166,7 @@ void putBack(std::vector<std::pair<uint32_t, int32_t>>& held) {
 }
 
 void __attribute__((thiscall)) windowsDraw(uint32_t manager) {
+    mendWindowFields(manager, "before its windows' draw");  // 3.0.11-beta.194 (R-ZS5B2D): a freed one's name
     itemswin::beforeGameDraw();   // «Речі»
     statswin::beforeGameDraw();   // «Характеристики»
     skillswin::beforeGameDraw();  // 3.0.11-beta.96: «Навички»

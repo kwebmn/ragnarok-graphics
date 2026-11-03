@@ -114,6 +114,7 @@
 #include "win/profiler.hpp"
 #include "win/real_ddraw.hpp"
 #include "win/window_mode.hpp"
+#include "win/window_guard.hpp"
 #include "win/windows_draw.hpp"
 #include "win/world_dim.hpp"
 
@@ -424,6 +425,7 @@ bool Context::open(std::string& error) {
     installSortGuard();                // 3.0.11-beta.148 (R-DEHAHA): the see-through faces' sort, a NaN depth mended
     installWorldMouse();               // 3.0.11-beta.24: the driver's parts are windows for the game's cursor
     installWindowsDraw();              // 3.0.11-beta.53: the replaced windows hidden before the game draws them
+    installWindowGuard();              // 3.0.11-beta.194 (R-ZS5B2D): Enter through a freed window's name
     buffcolumn::installBuffIcons();    // 3.0.11-beta.35: the game's status icons hidden for the buffs' column
     chatwin::install();                // 3.0.11-beta.41: the game's chat lines read for the new chat
     msgboxwin::install();              // 3.0.11-beta.151: the game's message boxes' words caught
