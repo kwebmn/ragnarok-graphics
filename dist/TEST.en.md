@@ -1,3 +1,12 @@
+# uaRO Graphics 3.0.11-beta.196 — what's new
+
+**The tester's notes, part two**:
+- The game's «Please wait...» (on login, on the way to the character select) is now the new interface's waiting card, not the old light-blue window.
+- «Продовжити»: «Enter» stands on «Грати»'s line instead of floating in the middle (on the shelf's cards too).
+- The shelf's «+ Новий ігровий логін» and «Прив'язати наявний логін» sit on dark plates with light words — no longer lost on the blue wallpaper.
+- The minimap: a Kafra is shown by a Kafra's face in a pink ring (the pink «K» was taken for a «close» cross), and the Kafras are drawn over the other NPCs' dots.
+- «Речі»: the ☆ of a thing stays while the pointer goes onto it, so it can be pressed.
+
 # uaRO Graphics 3.0.11-beta.195 — what's new
 
 **The tester's notes, part one**:
