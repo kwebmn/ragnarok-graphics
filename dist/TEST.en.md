@@ -1,3 +1,8 @@
+# uaRO Graphics 3.0.11-beta.204 — what's new
+
+**The tester's third list, part five**:
+- «Tip of the Day» in the new look: the card «Порада дня» at the screen's middle on the first map after the start - the tip in the game's words, its number of all, «Назад», «Далі», «Закрити» and the game's own box «Показувати поради під час входу в гру» (it keeps working as before: off - no tips at the next start). The arrows ← → turn the tips, Esc closes; on a controller A and X, B closes, Y the box. A new switch «Картка поради дня» under «Інтерфейс» (and in the console); off - the game's own window.
+
 # uaRO Graphics 3.0.11-beta.203 — what's new
 
 **The tester's third list, part four**:
