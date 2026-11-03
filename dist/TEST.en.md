@@ -1,3 +1,11 @@
+# uaRO Graphics 3.0.11-beta.200 — what's new
+
+**The tester's third list, part one**:
+- A skill's description: the card said «Не вивчено» and showed no words for a learned skill (Coin Flip 5/5) - the game's card keeps the skill's name as shown, not its code; the card now finds the skill by its name: its level and its description.
+- «Налаштування гри» → «Непрозорі вікна гри»: the game only kept this switch and drew nothing by it. Now on, the new interface's windows are whole; off, they are as «Прозорість вікон» has them.
+- The party's settings: in a party already the server changes the experience's sharing alone (the things' stay as set when the party was made) - those two rows are not offered then, a line says so.
+- The party: its members on the same map were taken for elsewhere (the server names a map «pay_dun03.rsw», the game «pay_dun03») - their way and buffs were not shown, they were missing on the minimap, the list showed the map's file. Now the map is compared rightly, and a member elsewhere shows its map's name («Payon Cave 3»).
+
 # uaRO Graphics 3.0.11-beta.199 — what's new
 
 **The cursor in the game's console**:
