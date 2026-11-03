@@ -98,3 +98,17 @@ TEST(reference_index_reads_the_clients_map_names) {
     CHECK_EQ(refindex::shortName(names.at("prontera")), std::string("Prontera City"));  // one line under the map
     CHECK_EQ(refindex::shortName("Turtle Island"), std::string("Turtle Island"));
 }
+
+// 3.0.11-beta.200 (the tester: «в паті лісті виводиться назва файла мапи, треба прибрати» - «pay_dun03.rsw»): a map's
+// words for a list - the client's name, its number added where the name is more than one map's («Payon Cave 3»), the
+// code where the client names none
+TEST(reference_index_map_words) {
+    const std::map<std::string, std::string> names = refindex::mapNames(
+        "pay_dun00.rsw#Payon Cave #\npay_dun03.rsw#Payon Cave #\nprt_fild08.rsw#Prontera Field #\n"
+        "prt_fild10.rsw#Prontera Field #\nyuno_fild08.rsw#Kiel Hyre's Academy#\n");
+    CHECK(refindex::mapWords(names, "pay_dun03") == "Payon Cave 3");
+    CHECK(refindex::mapWords(names, "pay_dun00") == "Payon Cave 0");
+    CHECK(refindex::mapWords(names, "prt_fild08") == "Prontera Field 8");
+    CHECK(refindex::mapWords(names, "yuno_fild08") == "Kiel Hyre's Academy");  // the only one of its name
+    CHECK(refindex::mapWords(names, "new_map") == "new_map");
+}

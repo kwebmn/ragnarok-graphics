@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cctype>
 #include <cstdint>
+#include <cstdlib>
 #include <cstring>
 #include <tuple>
 
@@ -288,6 +289,18 @@ std::map<std::string, std::string> mapNames(const std::string& text) {
 
 std::string shortName(const std::string& name) {
     return trim(name.substr(0, name.find(',')));
+}
+
+std::string mapWords(const std::map<std::string, std::string>& names, const std::string& code) {
+    const auto named = names.find(code);
+    const std::string name = named == names.end() ? "" : shortName(named->second);
+    if (name.empty()) return code;
+    size_t same = 0;
+    for (const auto& [other, words] : names) same += shortName(words) == name;
+    size_t digits = code.size();
+    while (digits > 0 && std::isdigit(static_cast<unsigned char>(code[digits - 1]))) --digits;
+    if (same < 2 || digits == code.size() || code.size() - digits > 4) return name;
+    return name + " " + std::to_string(std::atoi(code.c_str() + digits));
 }
 
 std::vector<std::string> spriteNames(const Mob& m) {

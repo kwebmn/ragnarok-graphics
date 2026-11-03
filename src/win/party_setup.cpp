@@ -99,6 +99,7 @@ ps::Texts texts() {
     t.ok = say(settings::Text::AskOk);
     t.cancel = say(settings::Text::MsgCancel);
     t.leaderOnly = say(settings::Text::PartyLeaderOnly);
+    t.thingsFixed = say(settings::Text::PartyThingsFixed);  // 3.0.11-beta.200
     return t;
 }
 
@@ -148,6 +149,7 @@ void send(State& s, uint32_t sender, int id, const char* what) {
 void choose(State& s, int row, int choice) {
     const uint32_t window = gameSetup();
     if (!window || row < 0 || row > 2 || choice < 0 || choice > 1) return;
+    if (!ps::changeable(s.show, row)) return;  // 3.0.11-beta.200: the things' as the party was made
     const uint32_t button = read32(window + ps::kRows[row].buttons + 4 * uint32_t(choice));
     if (button) send(s, button, ps::kChooseMsg, "a choice pressed (its radio button)");
 }
@@ -182,6 +184,7 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
         s.show.present[r] = read32(window + ps::kRows[r].buttons) && read32(window + ps::kRows[r].buttons + 4);
     }
     s.show.canChange = read32(kParty) == 0 || read32(kLeader) != 0;
+    s.show.thingsFixed = read32(kParty) != 0;  // 3.0.11-beta.200: a party already - its experience alone sent
     s.layout = ps::layout(targetWidth, targetHeight, s.scale);
     s.show.hoverRow = s.show.hoverChoice = -1;
     s.show.hoverPart = 0;

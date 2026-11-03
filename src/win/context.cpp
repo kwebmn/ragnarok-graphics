@@ -7,6 +7,7 @@
 #include <string>
 #include <vector>
 
+#include "core/options_card.hpp"
 #include "core/effect_costs.hpp"
 #include "core/effect_exe.hpp"
 #include "core/effect_groups.hpp"
@@ -959,7 +960,10 @@ void Context::present(const Rect& source, bool waitForVblank) {
     buffcolumn::frame(window, config.buffs, config.buffsOverflow, pk, pw, ph);
     trackerwin::frame(window, config.tracker, pk, pw, ph);  // 3.0.11-beta.70: left of the buffs' column
     motion::setOn(config.animations);  // 3.0.11-beta.46: [interface] animations - the new interface's motion
-    uistyle::set(config.hudOpacity, config.windowOpacity);  // 3.0.11-beta.47: its grounds
+    // 3.0.11-beta.47: its grounds; 3.0.11-beta.200: the windows whole while the game's «opaque» is on
+    uint32_t opaque = 0;
+    readGame(optionscard::kOpaqueFlag, &opaque, sizeof opaque);
+    uistyle::set(config.hudOpacity, optionscard::windowOpacity(config.windowOpacity, opaque != 0));
     // 3.0.11-beta.36: [interface] character - the character block at the top left, the game's Basic Info hidden
     charpanel::frame(window, config.character, gameCodePage(config), pk, pw, ph);
     // 3.0.11-beta.38: [interface] target - the target's card at the top middle

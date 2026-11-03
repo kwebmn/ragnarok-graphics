@@ -21,6 +21,7 @@ constexpr GameRow kRows[3] = {{0x60, 0x68}, {0x6C, 0x74}, {0x78, 0x80}};
 
 struct Texts {
     std::string title, ok, cancel, leaderOnly;
+    std::string thingsFixed;  // 3.0.11-beta.200: «Речі діляться так, як задано при створенні групи»
     std::string rows[3];
     std::string choices[3][2];
 };
@@ -28,6 +29,9 @@ struct Show {
     int values[3] = {0, 0, 0};
     bool present[3] = {true, true, true};  // a row whose buttons the game made
     bool canChange = true;                 // the leader (or a party being made)
+    // 3.0.11-beta.200 (the tester: «судячи з шари луту справді не вносить зміни»): in a party already - the game sends
+    // the experience's choice alone (the packet 0x0102), uAthena keeps the things' as the party was made
+    bool thingsFixed = false;
     int hoverRow = -1, hoverChoice = -1;
     int hoverPart = 0;  // its Part
     int focus = -1;     // the controller's row
@@ -46,6 +50,7 @@ struct Hit {
     int row = -1, choice = -1;
 };
 Hit hitTest(const Layout& L, float x, float y);
+bool changeable(const Show& sh, int row);  // 3.0.11-beta.200: a row's choices pressed: the leader's, not the things'
 
 void paint(panel::Picture& out, const Layout& L, const Show& sh);
 

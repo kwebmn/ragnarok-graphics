@@ -41,8 +41,8 @@ constexpr GameCard kGame[2] = {{kWindowMgr + 0xC8, 0x698D88, 0x478300}, {kWindow
 constexpr uint32_t kShown = 0x38, kSendMsgSlot = 0x94;
 constexpr int kButtonMsg = 6, kCloseButton = 0x87;
 // The item card's ITEM_INFO at +0x60: its count +0x10, its slots' four cards +0x1C, its number's words (an MSVC 6
-// std::string: its text +0x30, its length +0x34), identified +0x3C, refined +0x40. The skill card's skill: its AEGIS
-// name's text +0x78, its length +0x7C
+// std::string: its text +0x30, its length +0x34), identified +0x3C, refined +0x40. The skill card's skill: its name
+// as shown (FUN_00505d60's, «Coin Flip» - 3.0.11-beta.200: not its AEGIS name) - its text +0x78, its length +0x7C
 constexpr uint32_t kInfo = 0x60, kCount = kInfo + 0x10, kSlots = kInfo + 0x1C, kNameText = kInfo + 0x30;
 constexpr uint32_t kNameLen = kInfo + 0x34, kKnown = kInfo + 0x3C, kRefine = kInfo + 0x40;
 constexpr uint32_t kAegisText = 0x78, kAegisLen = 0x7C;
@@ -234,23 +234,29 @@ void itemCard(State& s, One& o, uint32_t window) {
                  c.picture ? ", its big picture" : "");
 }
 
-int learnedLevel(const std::string& aegis) {
+// The character's skills: their AEGIS names and levels (the session's list, as «Навички» reads it)
+std::vector<ic::LearnedSkill> sessionSkills() {
+    std::vector<ic::LearnedSkill> out;
     const uint32_t head = read32(kSkills);
-    if (!head) return 0;
+    if (!head) return out;
     uint32_t node = read32(head);
     for (size_t n = 0; node && node != head && n < kMostNodes; ++n, node = read32(node)) {
         char name[48] = {};
         const uint32_t at = read32(node + kSkillName);
         if (!at || !readGame(at, name, sizeof name - 1)) continue;
         name[sizeof name - 1] = 0;
-        if (aegis == name) return int(read32(node + kSkillLevel));
+        out.push_back(ic::LearnedSkill{name, int(read32(node + kSkillLevel))});
     }
-    return 0;
+    return out;
 }
 
 void skillCard(State& s, One& o, uint32_t window) {
-    const std::string aegis = text(read32(window + kAegisText), read32(window + kAegisLen));
-    const int level = learnedLevel(aegis);
+    // 3.0.11-beta.200: the game's card keeps the skill's name as shown (FUN_00505d60's) - its AEGIS name and level
+    // the character's skill of that name (core/info_card skillOfCard)
+    const std::string shown = text(read32(window + kAegisText), read32(window + kAegisLen));
+    const ic::LearnedSkill skill = ic::skillOfCard(shown, sessionSkills(), clienttables::skillNames());
+    const std::string& aegis = skill.aegis;
+    const int level = skill.level;
     const std::string what = aegis + '|' + std::to_string(level) + '@' + std::to_string(s.scale);
     if (what == o.what) return;
     if (o.what.rfind(aegis + '|', 0) != 0) o.show.scroll = 0;

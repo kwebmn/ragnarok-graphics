@@ -139,3 +139,24 @@ TEST(info_card_picture_fitted) {
     const panel::Picture none = infocard::fitted({}, 0, 0, 150, 150);
     CHECK(none.width == 0);
 }
+
+// 3.0.11-beta.200 (the tester: «скіл вивчено, а замість його опису пише що не вивчено» - Coin Flip 5/5): the game's
+// skill card keeps the skill's name as shown (FUN_00505d60's, «Coin Flip»: the table's «Coin_Flip» spaced), not its
+// AEGIS name - the card's skill is the session's one of that name (its AEGIS name, its level), else the table's
+TEST(info_card_skill_by_its_shown_name) {
+    const std::vector<infocard::LearnedSkill> session = {
+        {"GS_GLITTERING", 5}, {"GS_FLING", 0}, {"GS_TRACKING", 0}, {"GS_SINGLEACTION", 10}};
+    const std::map<std::string, std::string> names = {{"GS_GLITTERING", "Coin_Flip"}, {"GS_FLING", "Coin_Fling"},
+                                                      {"GS_TRACKING", "Tracking"}, {"GS_SINGLEACTION", "Single_Action"},
+                                                      {"AL_HEAL", "Heal"}};
+    infocard::LearnedSkill s = infocard::skillOfCard("Coin Flip", session, names);
+    CHECK(s.aegis == "GS_GLITTERING" && s.level == 5);
+    s = infocard::skillOfCard("Tracking", session, names);
+    CHECK(s.aegis == "GS_TRACKING" && s.level == 0);
+    s = infocard::skillOfCard("GS_SINGLEACTION", session, names);  // an AEGIS name, as before
+    CHECK(s.aegis == "GS_SINGLEACTION" && s.level == 10);
+    s = infocard::skillOfCard("Heal", session, names);  // not the character's: the table's, not learned
+    CHECK(s.aegis == "AL_HEAL" && s.level == 0);
+    s = infocard::skillOfCard("Nothing Such", session, names);
+    CHECK(s.aegis == "Nothing Such" && s.level == 0);
+}

@@ -579,7 +579,7 @@ enum class Text : uint16_t {
     PickCompoundHint, PickCompoundOk, PickEmpty,
     // 3.0.11-beta.158: the party's settings
     InterfacePartySetup, InterfacePartySetupHint, PartySetupTitle, PartyExp, PartyPickup, PartyShare, PartyEach,
-    PartyEven, PartyShared, PartyLeaderOnly,
+    PartyEven, PartyShared, PartyLeaderOnly, PartyThingsFixed,
     // 3.0.11-beta.159: the pet
     InterfacePet, InterfacePetHint, PetTitle, PetLevel, PetHunger, PetIntimacy, PetHungry0, PetHungry1, PetHungry2,
     PetHungry3, PetHungry4, PetClose0, PetClose1, PetClose2, PetClose3, PetClose4, PetFeed, PetPerform, PetUnequip,

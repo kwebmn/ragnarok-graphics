@@ -77,3 +77,26 @@ TEST(party_setup_words_and_picture) {
     partysetup::paint(p, L, sh);
     CHECK((p.px[size_t(L.h / 2) * size_t(L.w) + size_t(L.w / 2)] >> 24) > 0x80);
 }
+
+// 3.0.11-beta.200 (the tester: «виставлення шари в паті не працює ... судячи з шари луту справді не вносить зміни»):
+// in a party already, the game sends the experience's choice alone (its OK: the mode's 0x6D, the packet 0x0102) and
+// uAthena keeps the things' as the party was made (clif_parse_PartyChangeOption) - those two rows not to be changed
+// then, a line saying so; making a party, all three
+TEST(party_setup_things_set_when_the_party_is_made) {
+    partysetup::Show sh;
+    CHECK(partysetup::changeable(sh, 0) && partysetup::changeable(sh, 1) && partysetup::changeable(sh, 2));
+    sh.thingsFixed = true;
+    CHECK(partysetup::changeable(sh, 0) && !partysetup::changeable(sh, 1) && !partysetup::changeable(sh, 2));
+    sh.canChange = false;
+    CHECK(!partysetup::changeable(sh, 0));
+    sh.canChange = true;
+    const partysetup::Layout L = partysetup::layout(1920, 1080, 1.0f);
+    partysetup::Texts t;
+    t.leaderOnly = "Змінює лише лідер групи";
+    t.thingsFixed = "Речі діляться так, як задано при створенні групи";
+    const std::vector<partysetup::Words> w = partysetup::words(L, sh, t);
+    CHECK(std::any_of(w.begin(), w.end(), [&](const partysetup::Words& x) { return x.text == t.thingsFixed; }));
+    sh.thingsFixed = false;
+    const std::vector<partysetup::Words> w2 = partysetup::words(L, sh, t);
+    CHECK(std::none_of(w2.begin(), w2.end(), [&](const partysetup::Words& x) { return x.text == t.thingsFixed; }));
+}

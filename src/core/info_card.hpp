@@ -19,6 +19,16 @@ namespace uagfx::infocard {
 // The game's description tables: «1201#», its lines, «#» (items); «MG_FIREWALL#» alike (skills) - a key to its lines;
 // the «//» lines and the CRs left out
 std::map<std::string, std::vector<std::string>> descriptions(const std::string& text);
+// 3.0.11-beta.200 (the tester: «скіл вивчено, а замість його опису пише що не вивчено»): the game's skill card keeps
+// the skill's name as shown (FUN_00505d60: skillnametable's «Coin_Flip» spaced, «Coin Flip»), not its AEGIS name;
+// the card's skill: the character's one of that name (its AEGIS name and level), else the table's (not learned),
+// else the words themselves (an AEGIS name as before 3.0.11-beta.200 had it)
+struct LearnedSkill {
+    std::string aegis;
+    int level = 0;
+};
+LearnedSkill skillOfCard(const std::string& shown, const std::vector<LearnedSkill>& session,
+                         const std::map<std::string, std::string>& names);
 // itemslotcounttable.txt: «1101#3#» - an item's number to its slots
 std::map<int, int> slotCounts(const std::string& text);
 // The folder of data\ the game reads its language's tables from, by Windows' language (uaRO.exe 0x4EF2xx, its primary

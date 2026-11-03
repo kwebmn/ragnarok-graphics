@@ -5801,6 +5801,8 @@ constexpr Entry kTexts[] = {
     {Text::PartyShared, "Shared", "Спільно", "Сообща"},
     {Text::PartyLeaderOnly, "Only the party's leader changes them", "Змінює лише лідер групи",
      "Меняет только лидер группы"},
+    {Text::PartyThingsFixed, "The things are shared as set when the party was made",  // 3.0.11-beta.200
+     "Речі діляться так, як задано при створенні групи", "Вещи делятся так, как задано при создании группы"},
     // 3.0.11-beta.159: the pet
     {Text::InterfacePet, "Pet card", "Картка улюбленця", "Карточка питомца"},
     {Text::InterfacePetHint,

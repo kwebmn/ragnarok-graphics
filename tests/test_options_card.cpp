@@ -76,3 +76,12 @@ TEST(options_card_words_and_picture) {
     optionscard::paint(p, L, v, optionscard::Show{});
     CHECK((p.px[size_t(L.h / 2) * size_t(L.w) + size_t(L.w / 2)] >> 24) > 0x80);
 }
+
+// 3.0.11-beta.200 (the tester: «непрозорі вікна - тогл не працює, робить непрозорі але не повертає прозорі»): uaRO.exe
+// only keeps its «opaque» (m_isOpaque, the session's + 0x814) - nothing draws by it; on, the interface's windows are
+// whole (100 %), off, as «Прозорість вікон» has them
+TEST(options_card_opaque_windows) {
+    CHECK(optionscard::windowOpacity(80, true) == 100);
+    CHECK(optionscard::windowOpacity(80, false) == 80);
+    CHECK(optionscard::windowOpacity(55, false) == 55);
+}

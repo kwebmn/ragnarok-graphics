@@ -15,6 +15,8 @@
 #include "core/char_block.hpp"
 #include "core/layout.hpp"
 #include "core/party_panel.hpp"
+#include "core/reference_index.hpp"
+#include "core/ai/texture_cache.hpp"
 #include "core/settings/strings.hpp"
 #include "core/ui_style.hpp"
 #include "pad/win/game_window.hpp"
@@ -24,6 +26,7 @@
 #include "win/client_tables.hpp"
 #include "win/code_page.hpp"
 #include "win/game_camera.hpp"
+#include "win/game_files.hpp"
 #include "win/head_picture.hpp"
 #include "win/hud_edit.hpp"
 #include "win/log.hpp"
@@ -97,6 +100,8 @@ struct State {
     int facesTold = 0;
     std::vector<uint32_t> rowsOf;  // 3.0.11-beta.82: each row's account (a click's member)
     unsigned codePage = 0;         // 3.0.11-beta.83: the names' (the minimap's members)
+    std::map<std::string, std::string> mapNames;  // 3.0.11-beta.200: the client's data\mapnametable.txt, read once
+    bool namesRead = false;
     bool on = false, shown = false;
     float k = 0, scale = 1;
     int targetW = 0, targetH = 0;
@@ -182,11 +187,25 @@ void keepState(const State& s) {
     writeFileAtomic(layout::join(gameDir(), layout::kPartyState), text);
 }
 
+// 3.0.11-beta.200: the client's names of the maps (the members elsewhere: «Payon Cave 3», not «pay_dun03.rsw»)
+const std::map<std::string, std::string>& mapNames(State& s) {
+    if (!s.namesRead) {
+        s.namesRead = true;
+        gamefiles::Reader files(gameDir());
+        std::vector<uint8_t> bytes;
+        if (files.read("data\\mapnametable.txt", bytes, nullptr))
+            s.mapNames = refindex::mapNames(std::string(bytes.begin(), bytes.end()));
+    }
+    return s.mapNames;
+}
+
 void take(State& s, uint32_t account, const std::string& name, const std::string& map, bool leader, bool online) {
     if (!s.seats.count(account)) s.order.push_back(account);
     Seat& seat = s.seats[account];
     seat.name = name;
-    if (!map.empty()) seat.map = map;
+    // 3.0.11-beta.200: the party's packets name a map with its file's ending («pay_dun03.rsw»), the game's own map
+    // has none - compared and shown by its code
+    if (!map.empty()) seat.map = ai::mapName(map.c_str(), map.size());
     seat.leader = leader;
     seat.online = online;
 }
@@ -465,7 +484,7 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
         }
         m.leader = seat.leader;
         m.online = seat.online;
-        if (!seat.map.empty() && seat.map != here) m.where = seat.map;
+        if (!seat.map.empty() && seat.map != here) m.where = refindex::mapWords(mapNames(s), seat.map);  // .200
         if (seat.most > 0 && seat.hp >= 0) m.percent = int(int64_t(seat.hp) * 100 / seat.most);
         m.chosen = chosen != 0 && account == chosen;  // 3.0.11-beta.85: the pad's support skill would go on it
         s.members.push_back(m);

@@ -4,6 +4,7 @@
 #include <cmath>
 #include <cstdlib>
 
+#include "core/hotbar_panel.hpp"
 #include "core/ui_icons.hpp"
 #include "core/ui_style.hpp"
 
@@ -81,6 +82,19 @@ int rowOf(const Layout& L, const npctalk::Placed& p) {
 }
 
 }  // namespace
+
+LearnedSkill skillOfCard(const std::string& shown, const std::vector<LearnedSkill>& session,
+                         const std::map<std::string, std::string>& names) {
+    const auto shownAs = [&](const std::string& aegis) {
+        const auto n = names.find(aegis);
+        return n != names.end() && hotbar::spaced(n->second) == shown;
+    };
+    for (const LearnedSkill& k : session)
+        if (k.aegis == shown || shownAs(k.aegis)) return k;
+    for (const auto& [aegis, name] : names)
+        if (aegis == shown || hotbar::spaced(name) == shown) return LearnedSkill{aegis, 0};
+    return LearnedSkill{shown, 0};
+}
 
 std::map<std::string, std::vector<std::string>> descriptions(const std::string& text) {
     std::map<std::string, std::vector<std::string>> out;

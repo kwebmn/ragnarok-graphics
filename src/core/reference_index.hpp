@@ -151,6 +151,9 @@ uint32_t colorOf(NpcKind k);
 std::map<std::string, std::string> mapNames(const std::string& text);
 // A name for the minimap's one line: up to its first comma («Prontera City, Capitol of Rune-Midgard» - «Prontera City»)
 std::string shortName(const std::string& name);
+// 3.0.11-beta.200 (the tester: «в паті лісті виводиться назва файла мапи»): a map's words for a list - the client's
+// name, its code's number added where the name is more than one map's («Payon Cave 3»), else its code
+std::string mapWords(const std::map<std::string, std::string>& names, const std::string& code);
 // 3.0.11-beta.14: the client's sprite files a monster may have, the likeliest first: the server's sprite name, it
 // without an event's «_» or a variant's prefix (m_desert_wolf - desert_wolf: the client draws them alike), its name
 std::vector<std::string> spriteNames(const Mob& m);
