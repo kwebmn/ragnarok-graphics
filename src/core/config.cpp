@@ -565,6 +565,9 @@ Config parseConfig(const std::string& text) {
             if (val == "arrow") c.padWalk = PadWalk::Arrow;
         } else if (key == "interface.walk_mark") {  // 3.0.11-beta.105: the mark at the arrow's end
             setBool(val, c.walkMark);
+        } else if (key == "interface.cursor") {  // 3.0.11-beta.198: the cursor's look
+            for (const CursorLook l : {CursorLook::Game, CursorLook::Dark, CursorLook::Light})
+                if (val == cursorLookToken(l)) c.cursorLook = l;
         } else if (key == "interface.walk_arrow") {  // 3.0.11-beta.103: the look of the stick's arrow
             for (const WalkLook w : {WalkLook::Off, WalkLook::Chevrons, WalkLook::Slim, WalkLook::Concept,
                                      WalkLook::Ring, WalkLook::Dots, WalkLook::Cell})
@@ -1089,6 +1092,15 @@ const char* walkLookToken(WalkLook w) {
         case WalkLook::Chevrons: break;
     }
     return "chevrons";
+}
+
+const char* cursorLookToken(CursorLook l) {
+    switch (l) {
+        case CursorLook::Dark: return "dark";
+        case CursorLook::Light: return "light";
+        case CursorLook::Game: break;
+    }
+    return "game";
 }
 
 const char* targetRingToken(TargetRing r) {

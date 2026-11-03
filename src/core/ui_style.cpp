@@ -108,28 +108,30 @@ panel::Picture edge(int w, int h, float radius, float width, uint32_t rgb, float
     return p;
 }
 
-panel::Picture shadow(int w, int h, float radius, float spread, float alpha) {
+panel::Picture shadow(int w, int h, float radius, float spread, float alpha, int down) {
     panel::Picture p;
-    const int m = int(std::ceil(std::max(0.0f, spread)));
+    const int m = int(std::ceil(std::max(0.0f, spread))), dn = std::max(0, down);
     if (w <= 0 || h <= 0 || m <= 0) return p;
     p.width = w + 2 * m;
-    p.height = h + 2 * m;
+    p.height = h + 2 * m + dn;
     p.px.assign(size_t(p.width) * size_t(p.height), 0u);
     const float hx = float(w) / 2, hy = float(h) / 2, cx = float(m) + hx, cy = float(m) + hy;
     const float r = std::clamp(radius, 0.0f, std::min(hx, hy));
-    // 3.0.11-beta.55 (R-9PP79T): the rows beside the box's straight sides have their shadow only left and right of it
-    // (46 ms for a window of 1520 x 1200 pixel by pixel, the first time it opened)
+    const auto outOf = [&](float x, float y, float top) {  // the distance out of the rounded box (signed)
+        const float qx = std::fabs(x - cx) - (hx - r), qy = std::fabs(y - (cy + top)) - (hy - r);
+        return panel::length(std::max(qx, 0.0f), std::max(qy, 0.0f)) + std::min(std::max(qx, qy), 0.0f) - r;
+    };
+    // 3.0.11-beta.55 (R-9PP79T): the rows beside the window's straight sides have their shadow only left and right of
+    // it (46 ms for a window of 1520 x 1200 pixel by pixel, the first time it opened)
     const int sideFrom = m + int(std::ceil(r)), sideTo = m + h - int(std::ceil(r));
     for (int y = 0; y < p.height; ++y)
         for (int x = 0; x < p.width; ++x) {
-            if (y >= sideFrom && y < sideTo && x == m) x = m + w;  // the box itself: no shadow under it
-            // the distance out of the rounded box (its signed distance, outside only)
-            const float qx = std::fabs(float(x) + 0.5f - cx) - (hx - r);
-            const float qy = std::fabs(float(y) + 0.5f - cy) - (hy - r);
-            const float out =
-                panel::length(std::max(qx, 0.0f), std::max(qy, 0.0f)) + std::min(std::max(qx, qy), 0.0f) - r;
-            if (out <= 0 || out >= spread) continue;
-            const float t = 1 - out / spread;
+            if (y >= sideFrom && y < sideTo && x == m) x = m + w;  // the window itself: no shadow under it
+            const float px = float(x) + 0.5f, py = float(y) + 0.5f;
+            if (outOf(px, py, 0) <= 0) continue;
+            const float out = outOf(px, py, float(dn));  // from the box dropped
+            if (out >= spread) continue;
+            const float t = out <= 0 ? 1.0f : 1 - out / spread;
             const uint32_t a = uint32_t(panel::roundOf(std::clamp(alpha * t * t, 0.0f, 1.0f) * 255));
             p.px[size_t(y) * size_t(p.width) + size_t(x)] = a << 24;  // black, premultiplied
         }

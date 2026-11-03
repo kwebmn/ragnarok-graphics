@@ -40,7 +40,9 @@ float readingScale(double k);  // their scale: partScale's times text(), 0.5-6
 // 3.0.11-beta.49 (the concept: «тень только у окон»): a window's shadow - dark at a rounded box's edge (`alpha`),
 // fading out `spread` away, none under the box itself (its glass stays as it is); the picture (w + 2 spread) x
 // (h + 2 spread), premultiplied, the box at (spread, spread)
-panel::Picture shadow(int w, int h, float radius, float spread, float alpha);
+// 3.0.11-beta.198: dropped `down` pixels - as dark as `alpha` under the box it is dropped from (right under the
+// window's bottom edge too), the picture `down` taller
+panel::Picture shadow(int w, int h, float radius, float spread, float alpha, int down = 0);
 // 3.0.11-beta.108 (the concept «Концепция окон и инвентаря», question 6): the top window's edge - a rounded ring
 // `width` thick at a w x h box's edge in `rgb` at `alpha` (its outer and inner sides smoothed), nothing inside;
 // premultiplied, w x h (only the band at the edge painted: a large window's picture made fast)

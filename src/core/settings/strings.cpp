@@ -6060,6 +6060,21 @@ constexpr Entry kTexts[] = {
     {Text::WalkArrowDots, "Dots of the way", "Точки шляху", "Точки пути"},
     {Text::WalkArrowCell, "The cell alone", "Лише клітинка", "Только клетка"},
     {Text::WalkArrowOff, "None", "Немає", "Нет"},
+    // 3.0.11-beta.198 (the tester: «курсор миші стандартний не дуже підходить в загальний стиль»; the owner: «да,
+    // сделай возможность курсор менять»)
+    {Text::InterfaceCursor, "Cursor", "Курсор", "Курсор"},
+    {Text::InterfaceCursorHint,
+     "The mouse cursor: the game's own, or in the new interface's style - dark glass in a gold edge, or white in a "
+     "dark one. A shape for each of the game's: the arrow, talk, attack, pick up, a warp, a target, the camera turned, "
+     "not allowed.",
+     "Курсор миші: власний курсор гри або в стилі нового інтерфейсу — темне скло в золотому краї чи білий у темному. "
+     "Своя фігура на кожен випадок гри: стрілка, розмова, атака, підняти, портал, ціль, поворот камери, заборона.",
+     "Курсор мыши: собственный курсор игры или в стиле нового интерфейса — тёмное стекло в золотом крае или белый в "
+     "тёмном. Своя фигура на каждый случай игры: стрелка, разговор, атака, поднять, портал, цель, поворот камеры, "
+     "запрет."},
+    {Text::CursorGame, "The game's", "Гри", "Игры"},
+    {Text::CursorDark, "Dark", "Темний", "Тёмный"},
+    {Text::CursorLight, "Light", "Світлий", "Светлый"},
     {Text::InterfaceWalkMark, "The cell it goes to", "Клітинка, куди йти", "Клетка, куда идти"},  // 3.0.11-beta.105
     {Text::InterfaceWalkMarkHint,
      "A mark at the walking arrow's end where the character goes: a gold diamond (chevrons), the cell's corners (slim "

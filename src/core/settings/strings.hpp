@@ -617,6 +617,7 @@ enum class Text : uint16_t {
     InterfacePadWalk, InterfacePadWalkHint, InterfacePadWalkMouse, InterfacePadWalkArrow,  // 3.0.11-beta.88
     InterfaceWalkArrow, InterfaceWalkArrowHint, WalkArrowChevrons, WalkArrowSlim, WalkArrowConcept, WalkArrowRing,
     WalkArrowDots, WalkArrowCell, WalkArrowOff,  // 3.0.11-beta.103
+    InterfaceCursor, InterfaceCursorHint, CursorGame, CursorDark, CursorLight,  // 3.0.11-beta.198
     InterfaceWalkMark, InterfaceWalkMarkHint,    // 3.0.11-beta.105
     InterfacePadTiles, InterfacePadTilesHint, TilesTitle, TileSkills, TileEquip, TileMap, TileOptions, TilesOpen,
     TilesClose,  // 3.0.11-beta.90

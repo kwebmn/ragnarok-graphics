@@ -37,6 +37,21 @@ TEST(ui_style_window_shadow) {
     CHECK(uistyle::shadow(0, 60, 12, 16, 0.5f).width == 0);
 }
 
+// 3.0.11-beta.198 (the owner: «сузить. должно быть акуратно»): the shadow dropped a few pixels - its darkest right
+// under the window's bottom edge (no light gap there: beta.49's moved its whole picture down, the empty place under
+// the window with it), none under the window itself; the picture `down` taller
+TEST(ui_style_window_shadow_dropped) {
+    const panel::Picture p = uistyle::shadow(100, 60, 12, 12, 0.4f, 3);
+    CHECK(p.width == 124 && p.height == 87);  // 12 round, 3 more under
+    const auto alpha = [&](int x, int y) { return int(p.px[size_t(y) * size_t(p.width) + size_t(x)] >> 24); };
+    CHECK(alpha(62, 42) == 0);                                  // under the window (12 .. 72 down): none
+    CHECK(alpha(62, 72) >= 100 && alpha(62, 74) >= 100);        // right under its bottom edge: the darkest
+    CHECK(alpha(62, 80) > 0 && alpha(62, 80) < alpha(62, 74));  // fading out under it
+    CHECK(alpha(62, 86) == 0);                                  // its spread's end
+    CHECK(alpha(62, 11) < alpha(62, 74));                       // over its top edge: less (dropped)
+    CHECK(alpha(0, 0) == 0);
+}
+
 // 3.0.11-beta.108 (the concept «Концепция окон и инвентаря», question 6): the top window's gold edge - a rounded ring
 // `width` thick at the box's edge, nothing inside or past its corners
 TEST(ui_style_window_edge) {

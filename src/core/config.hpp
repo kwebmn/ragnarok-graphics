@@ -37,6 +37,10 @@ enum class PadWalk : uint8_t { Mouse, Arrow };
 // контроллера - варианты»: chevrons (its advice, B), a slim tapered arrow (A), beta.102's arrow of the concept, a ring
 // round the feet with a pointer (C), dots of the way (D), the cell alone (E), none
 enum class WalkLook : uint8_t { Off, Chevrons, Slim, Concept, Ring, Dots, Cell };
+// 3.0.11-beta.198 (the tester: «курсор миші стандартний не дуже підходить в загальний стиль»; the owner: «да, сделай
+// возможность курсор менять»): [interface] cursor - the game's own cursor, or the interface's: dark glass in a gold
+// edge, or white in a dark one (core/cursor_art)
+enum class CursorLook : uint8_t { Game, Dark, Light };
 // 3.0.11-beta.35: [interface] buffs - the character's buffs: the game's own icons (off), the driver's column under the
 // minimap, a row under it
 enum class BuffsLook : uint8_t { Off, Column, Row };
@@ -629,6 +633,7 @@ struct Config {
     PadWalk padWalk = PadWalk::Arrow;  // 3.0.11-beta.102: by the map's cells by default (core/stick_walk)
     // 3.0.11-beta.103: [interface] walk_arrow - how the arrow of pad_walk = arrow looks (core/ground_way walkShape)
     WalkLook walkArrow = WalkLook::Chevrons;
+    CursorLook cursorLook = CursorLook::Game;  // 3.0.11-beta.198: [interface] cursor
     // 3.0.11-beta.105 (the owner: «а можно клетку куда идти над стрелкой не рисовать?»): [interface] walk_mark - the
     // mark at the arrow's end where the character goes (a diamond, a cell's corners or frame, a small ring)
     bool walkMark = false;
@@ -911,6 +916,7 @@ const char* targetRingToken(TargetRing r);    // 3.0.11-beta.87
 const char* mobHpToken(MobHp m);              // 3.0.11-beta.95
 const char* padWalkToken(PadWalk w);          // 3.0.11-beta.88
 const char* walkLookToken(WalkLook w);        // 3.0.11-beta.103
+const char* cursorLookToken(CursorLook l);    // 3.0.11-beta.198
 const char* buffsLookToken(BuffsLook b);       // 3.0.11-beta.35
 const char* buffsOverflowToken(BuffsOverflow b);  // 3.0.11-beta.63
 const char* characterLookToken(CharacterLook c);  // 3.0.11-beta.36

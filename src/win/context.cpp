@@ -46,6 +46,7 @@
 #include "win/code_page.hpp"
 #include "win/party_panel.hpp"
 #include "win/hotbar.hpp"
+#include "win/cursor_look.hpp"
 #include "win/hud_edit.hpp"
 #include "win/chat_window.hpp"
 #include "win/item_window.hpp"
@@ -681,6 +682,7 @@ void Context::endScene() {
         padcarrywin::draw(record, *renderer);   // 3.0.11-beta.121: the carried thing over its place
         padhintwin::draw(record, *renderer);    // 3.0.11-beta.92: the controller's hint line
         hudedit::draw(record, *renderer);       // 3.0.11-beta.75: the parts' frames while they are placed
+        cursorlook::draw(record, *renderer);    // 3.0.11-beta.198: the interface's cursor over all of it
         record.takeWork();  // the driver's own draws are not the game's
     }
     gameWindowsMarked_ = false;  // 3.0.11-beta.109: the next frame's own
@@ -735,6 +737,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
         padassignwin::draw(record, *renderer);  // 3.0.11-beta.91
         padhintwin::draw(record, *renderer);    // 3.0.11-beta.92
         hudedit::draw(record, *renderer);       // 3.0.11-beta.75
+        cursorlook::draw(record, *renderer);    // 3.0.11-beta.198
     }
     record.takeWork();  // the driver's own draws are not the game's
     flush();
@@ -1025,6 +1028,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
                                      // top); 3.0.11-beta.109: one opening where another stands goes beside it
     // 3.0.11-beta.75: «Розміщення інтерфейсу» (Ctrl+Shift+L, the console) - over the parts placed this frame
     hudedit::frame(window, pk, pw, ph);
+    cursorlook::frame(config.cursorLook, pk);  // 3.0.11-beta.198: [interface] cursor
     // 2.5.16: [quality] world_scale - Direct3D 11 draws the world smaller and makes it larger before the interface;
     // Pause draws it whole (the game's own picture to compare with)
     renderer->setWorldScale(enhanced_ ? std::min(config.worldScale, light_.worldScaleMax) / 100.0 : 1.0);
