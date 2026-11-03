@@ -1,3 +1,8 @@
+# uaRO Graphics 3.0.11-beta.199 — what's new
+
+**The cursor in the game's console**:
+- «Курсор» («Гри», «Темний», «Світлий») is in the console (Ctrl + the key left of 1) too - in its «Інтерфейс» part right under «Розміщення інтерфейсу»; it changes at once.
+
 # uaRO Graphics 3.0.11-beta.198 — what's new
 
 **The windows' shadow narrower and neat**:
