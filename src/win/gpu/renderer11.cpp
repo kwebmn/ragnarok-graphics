@@ -13,6 +13,7 @@
 #include <iterator>
 #include <string>
 
+#include "core/ai_copy_blend.hpp"
 #include "core/ai/kinds.hpp"
 #include "core/d3d7.hpp"
 #include "core/d3d_map.hpp"
@@ -1605,6 +1606,16 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
     // 2.7.38 (draw.cpp): a skill's added light laid over softly, the target's colour its factor
     const bool softAdd = effect_exe::softAdd(effects_.skillsSoft, !s.ui && adds, d.effect, s.srcBlend);
     if (softAdd && s.srcBlend == d3d7::BLEND_SRCALPHA) c.alphaTest |= 1u << 23;
+    // 3.0.11-beta.197: an HD copy added with the source's factor one - its colour times its alpha (gpu/draw.cpp)
+    if (aicopy::colourTimesAlpha(aiDrawn[0], s.blend, s.srcBlend)) {
+        c.alphaTest |= 1u << 23;
+        static int told = 0;
+        if (told < 5) {
+            ++told;
+            LOG_INFO("AI textures: an HD copy added with the source's factor one (its alpha unused) - its colour times "
+                     "its alpha (Direct3D 11, destination factor %u)", unsigned(s.dstBlend));
+        }
+    }
     if (toGlow) glowDrawn_ = true;
     const bool effectDraw = effect_exe::softEffect(adds, d.effect);  // 2.7.13: not a hit flash
     const bool soft = !water && !smoke && !lava && !ray && !warpDrawn && !s.ui && effects_.softParticles &&

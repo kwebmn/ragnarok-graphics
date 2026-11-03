@@ -4384,13 +4384,16 @@ constexpr Entry kTexts[] = {
     {Text::WindowsOthersLight, "The other game windows light",
      "Інші вікна гри — легкі",
      "Другие окна игры — лёгкие"},
-    {Text::WindowsOthersLightHint,
+    {Text::WindowsOthersLightHint,  // 3.0.11-beta.197: 5 frames (2 wholly behind another game window), as light_mode
      "With several game windows open, the ones you are not playing in draw without effects, HD pictures and DLSS, at "
-     "half the resolution and 10 frames a second. The window you switch to is whole again at once.",
+     "half the resolution and 5 frames a second (2 wholly behind another game window). The window you switch to is "
+     "whole again at once.",
      "Коли відкрито кілька вікон гри, ті, у яких ви зараз не граєте, малюють без ефектів, HD-картинок і DLSS, у "
-     "половинній роздільності й 10 кадрів на секунду. Вікно, на яке ви перейшли, одразу знову повне.",
+     "половинній роздільності й 5 кадрів на секунду (2 — цілком за іншим вікном гри). Вікно, на яке ви перейшли, "
+     "одразу знову повне.",
      "Когда открыто несколько окон игры, те, в которых вы сейчас не играете, рисуют без эффектов, HD-картинок и DLSS, "
-     "в половинном разрешении и 10 кадров в секунду. Окно, на которое вы перешли, сразу снова полное."},
+     "в половинном разрешении и 5 кадров в секунду (2 — целиком за другим окном игры). Окно, на которое вы перешли, "
+     "сразу снова полное."},
     {Text::WindowsOthersMusic, "Music in the other game windows",
      "Музика в інших вікнах гри",
      "Музыка в других окнах игры"},

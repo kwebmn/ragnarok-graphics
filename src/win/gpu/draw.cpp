@@ -3,6 +3,7 @@
 #include <cmath>
 #include <cstring>
 
+#include "core/ai_copy_blend.hpp"
 #include "core/ai/kinds.hpp"
 #include "core/d3d7.hpp"
 #include "core/daylight.hpp"
@@ -427,6 +428,22 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
         c.alphaTest |= 1u << 19;
     if (toGlow && adds && d.effect == uint8_t(effect_exe::Kind::Skill)) c.alphaTest |= 1u << 22;  // 2.7.36: 40 %
     if (softAdd && s.srcBlend == d3d7::BLEND_SRCALPHA) c.alphaTest |= 1u << 23;  // 2.7.38: its light times its alpha
+    // 3.0.11-beta.197 (the tester: «візуальний баг ассумптіо + енжел вінгс на топ голові» - a white square round the
+    // head): an HD copy keeps its edge's colour under its see-through texels (for its filtering), the game's own
+    // picture black there - a draw adding it with the source's factor one, its alpha unused, showed that colour as a
+    // square; the copy's colour times its alpha, as the game's own would add
+    if (aicopy::colourTimesAlpha(aiDrawn[0], s.blend, s.srcBlend)) {
+        c.alphaTest |= 1u << 23;
+        static int told = 0;
+        if (told < 5) {
+            ++told;
+            const auto it = textures.find(d.texture[0]);
+            LOG_INFO("AI textures: an HD copy added with the source's factor one (its alpha unused) - its colour times "
+                     "its alpha (%ux%u, kind %d, destination factor %u)",
+                     it != textures.end() ? it->second.width : 0u, it != textures.end() ? it->second.height : 0u,
+                     it != textures.end() ? int(it->second.aiKind) : -1, unsigned(s.dstBlend));
+        }
+    }
     if (soft) {  // 0.67: its fade (shaders.cpp shade())
         c.alphaTest |= 1u << 20;
         if (s.srcBlend == d3d7::BLEND_ONE) c.alphaTest |= 1u << 21;  // added or premultiplied: the colour too
