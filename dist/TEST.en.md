@@ -1,3 +1,13 @@
+# uaRO Graphics 3.0.11-beta.195 — what's new
+
+**The tester's notes, part one**:
+- «Навички»: a right click on a skill opens its description (the game's skill card in the new look); again on the same skill closes it. The hint under the list says so.
+- The words over the heads (a skill's shout like «Raging Quadruple Blow !!», the chat) and the chat rooms' and shops' signs no longer come over the new windows — they stay under them, as the HP bars do.
+- The character card: a long name no longer runs into «Base · Job» — the job is left out where it does not fit, the name gets a size smaller, and is cut short only if even then it does not fit.
+- The «Вікна» panel takes the mouse where it is drawn: over the character card it can be dragged and clicked.
+- The Kafras' menus («Save / Teleport / Storage»; the voting staff's) come in the new NPC talk too — a menu with no words before it used to stay in the old look.
+- The old «Hit Point / Defence Rate» bar of the NPC shop no longer shows while the new shop is on (it stays with a player's shop).
+
 # uaRO Graphics 3.0.11-beta.194 — what's new
 
 **Enter no longer crashes the game through a window that is already gone**:
