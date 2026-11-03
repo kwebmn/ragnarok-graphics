@@ -1,3 +1,12 @@
+# uaRO Graphics 3.0.11-beta.198 — what's new
+
+**The windows' shadow narrower and neat**:
+- 12 pixels instead of 18, a little lighter, dropped 3 pixels — and no light line any more between a window's bottom edge and its shadow (the shadow's whole picture used to be moved down, the empty place under the window with it).
+
+**A cursor of your choice** — «Інтерфейс» → «Курсор»:
+- «Гри» — the game's own (as before), «Темний» — dark glass in the interface's gold edge, «Світлий» — white in a dark edge.
+- A shape for each of the game's cursors: the arrow, talk, a button, attack, pick up, a warp, a target, the camera turned, not allowed; sharp at any size, with a soft shadow, its size following the interface's.
+
 # uaRO Graphics 3.0.11-beta.197 — what's new
 
 **The tester's notes, part three**:
