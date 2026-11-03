@@ -57,6 +57,7 @@ namespace {
 // with its shown flag +0x38 set) and its call in the game mode's frame
 using DrawFn = void(__attribute__((thiscall)) *)(uint32_t manager);
 constexpr uint32_t kDraw = 0x4CD720, kDrawCall = 0x559972;
+constexpr uint32_t kOtherCalls[] = {0x4EAD24, 0x5A030E};  // 3.0.11-beta.203: the login's modes' (FUN_004ea9a0, ..a0180)
 struct Known {
     uint32_t at;
     const char* bytes;
@@ -133,8 +134,9 @@ void putBack(std::vector<std::pair<uint32_t, int32_t>>& held) {
     held.clear();
 }
 
-void __attribute__((thiscall)) windowsDraw(uint32_t manager) {
-    mendWindowFields(manager, "before its windows' draw");  // 3.0.11-beta.194 (R-ZS5B2D): a freed one's name
+// The windows the driver draws anew - each one's game window out of sight before the game draws its windows
+// (3.0.11-beta.203: in the login's modes too - their message boxes, «Please wait...», the login, the characters)
+void hideReplaced() {
     itemswin::beforeGameDraw();   // «Речі»
     statswin::beforeGameDraw();   // «Характеристики»
     skillswin::beforeGameDraw();  // 3.0.11-beta.96: «Навички»
@@ -168,6 +170,11 @@ void __attribute__((thiscall)) windowsDraw(uint32_t manager) {
     charpanel::beforeGameDraw();  // the Basic Info window
     hotbarwin::beforeGameDraw();  // the hotkeys' bar
     chatwin::beforeGameDraw();    // the chat (out of sight)
+}
+
+void __attribute__((thiscall)) windowsDraw(uint32_t manager) {
+    mendWindowFields(manager, "before its windows' draw");  // 3.0.11-beta.194 (R-ZS5B2D): a freed one's name
+    hideReplaced();
     std::vector<std::pair<uint32_t, int32_t>> held;
     const size_t gauges = holdShown(manager, false, held);  // 3.0.11-beta.191: the bars under the characters first
     if (gauges > 0) reinterpret_cast<DrawFn>(uintptr_t(kDraw))(manager);
@@ -186,6 +193,14 @@ void __attribute__((thiscall)) windowsDraw(uint32_t manager) {
     if (gauges > 0) holdShown(manager, true, held);
     reinterpret_cast<DrawFn>(uintptr_t(kDraw))(manager);
     putBack(held);
+}
+
+// 3.0.11-beta.203 (the tester: «при логіні ... там залишились в старому стилі please wait вікна»): the login's modes
+// draw the game's windows too (FUN_004ea9a0, FUN_005a0180) - the replaced ones were drawn a frame before the driver's
+// frame hid them; out of sight before, as in the game mode
+void __attribute__((thiscall)) otherModesDraw(uint32_t manager) {
+    hideReplaced();
+    reinterpret_cast<DrawFn>(uintptr_t(kDraw))(manager);
 }
 
 }  // namespace
@@ -217,6 +232,28 @@ bool installWindowsDraw() {
     VirtualProtect(rel, 4, old, &unused);
     FlushInstructionCache(GetCurrentProcess(), rel, 4);
     done = 1;
+    // 3.0.11-beta.203: the login's modes' calls of the draw (mov ecx, the manager; call), each where this build has it
+    int others = 0;
+    for (const uint32_t call : kOtherCalls) {
+        uint8_t code[10] = {};
+        SIZE_T got = 0;
+        if (!ReadProcessMemory(GetCurrentProcess(), reinterpret_cast<const void*>(uintptr_t(call - 5)), code,
+                               sizeof code, &got) ||
+            got != sizeof code || std::memcmp(code, "\xB9\xD8\x7E\x72\x00\xE8", 6) != 0)
+            continue;
+        int32_t to = 0;
+        std::memcpy(&to, code + 6, 4);
+        if (call + 5 + uint32_t(to) != kDraw) continue;
+        auto* at = reinterpret_cast<uint8_t*>(uintptr_t(call + 1));
+        if (!VirtualProtect(at, 4, PAGE_EXECUTE_READWRITE, &old)) continue;
+        const int32_t mine = int32_t(reinterpret_cast<uintptr_t>(&otherModesDraw) - (uintptr_t(call) + 5));
+        std::memcpy(at, &mine, sizeof mine);
+        VirtualProtect(at, 4, old, &unused);
+        FlushInstructionCache(GetCurrentProcess(), at, 4);
+        ++others;
+    }
+    LOG_INFO("windows draw: %d of the login's modes' draws of the game's windows hide the replaced ones first too",
+             others);
     return true;
 }
 

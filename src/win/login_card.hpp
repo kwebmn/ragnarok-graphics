@@ -40,6 +40,9 @@ void draw(FrameRecord& record, gpu::Renderer& renderer);
 // the login the card sent was accepted and put on the shelf - drawn over the windows (the character select, or the
 // world with «Одразу в гру»), its «Скасувати» takes the login off again
 void drawToast(FrameRecord& record, gpu::Renderer& renderer);
+// 3.0.11-beta.203 (the tester: «приховав це додатковим вікном завантаження»): the veil over the way into the game a
+// one-click login goes by itself (core/enter_veil) - over the windows, under the cursor
+void drawVeil(FrameRecord& record, gpu::Renderer& renderer);
 bool toastMouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result);
 // 3.0.11-beta.175: the login of the session the server accepted (the game's words; empty before)
 const std::string& loggedIn();

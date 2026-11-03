@@ -6930,6 +6930,7 @@ constexpr Entry kTexts[] = {
      "стрелка."},
     // 3.0.11-beta.189 (the owner: «возможно еще и поиск»): the shelf's search
     {Text::ShelfSearch, "Search…", "Пошук…", "Поиск…"},
+    {Text::EnterVeilTitle, "Entering the game…", "Вхід у гру…", "Вход в игру…"},  // 3.0.11-beta.203
     {Text::ShelfNoMatch, "Nothing found", "Нічого не знайдено", "Ничего не найдено"},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");

@@ -737,7 +737,7 @@ enum class Text : uint16_t {
     CameraRemember, CameraRememberHint,  // 3.0.11-beta.184 (R-ANMTEJ): the camera's zoom kept between the games
     InterfaceItemToast, InterfaceItemToastHint,  // 3.0.11-beta.186: the line on a thing picked up
     InterfaceMinimapView, InterfaceMinimapViewHint,  // 3.0.11-beta.187: the camera's fan on the minimap
-    ShelfSearch, ShelfNoMatch,  // 3.0.11-beta.189: the shelf's search
+    ShelfSearch, EnterVeilTitle, ShelfNoMatch,  // 3.0.11-beta.189: the shelf's search
     Count
 };
 

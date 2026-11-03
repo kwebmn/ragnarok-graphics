@@ -22,6 +22,7 @@ void draw(FrameRecord& record, gpu::Renderer& renderer);
 bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result);
 bool key(UINT m, WPARAM wp, LPARAM lp);  // Enter and Esc: the box's own answers to them
 bool shown();
+bool asking();  // 3.0.11-beta.203: its card shown asking or telling - not «Please wait» (win/login_card's veil)
 bool close();  // Esc from the windows' stack
 void beforeGameDraw();
 enum class PadCommand : uint8_t { First, Second };  // A, B

@@ -401,6 +401,11 @@ bool key(UINT m, WPARAM wp, LPARAM) {
 
 bool shown() { return state().shown; }
 
+bool asking() {  // 3.0.11-beta.203: a box that asks or tells (not the wait's card)
+    const State& s = state();
+    return s.shown && s.card.kind != ac::Kind::Wait;
+}
+
 bool close() {
     State& s = state();
     if (!s.shown || s.card.kind == ac::Kind::Wait) return false;

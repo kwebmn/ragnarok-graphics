@@ -10,6 +10,7 @@
 #include <string>
 #include <vector>
 
+#include "core/enter_veil.hpp"
 #include "core/accounts.hpp"
 #include "core/login_card.hpp"
 #include "core/site_signin.hpp"
@@ -26,6 +27,7 @@
 #include "win/code_page.hpp"
 #include "win/game_camera.hpp"
 #include "win/log.hpp"
+#include "win/msg_box.hpp"
 #include "win/game_logins.hpp"
 #include "win/login_continue.hpp"
 #include "win/login_refusal.hpp"
@@ -71,7 +73,22 @@ using LengthFn = int(__attribute__((thiscall)) *)(uint32_t edit);
 using SetFocusFn = void(__attribute__((thiscall)) *)(uint32_t manager, uint32_t control);
 using SetTextFn = void(__attribute__((thiscall)) *)(uint32_t edit, const char* text);
 
+// 3.0.11-beta.203: the veil while the login enters the game by itself (core/enter_veil)
+struct Veil {
+    bool on = false;
+    ULONGLONG since = 0;
+    enterveil::Texts texts;
+    enterveil::Layout layout;
+    float k = 0;
+    int w = 0, h = 0, phase = -1;
+    panel::Picture picture;
+    uint32_t texture = 0;
+    int texW = 0, texH = 0;
+    bool upload = false;
+};
+
 struct State {
+    Veil veil;  // 3.0.11-beta.203
     WindowShadow shadow;
     bool on = false, shown = false, moved = false;
     unsigned codePage = 0;
@@ -755,6 +772,20 @@ void dropPick(State& s, int row) {
 // 3.0.11-beta.175: each frame, the login window there or not - the shelf's moments (the login accepted, the world
 // entered) and its «додано» note's place, kept from the game's mouse while it shows
 void shelfFrame(State& s, HWND game, double k, int targetWidth, int targetHeight) {
+    if (s.veil.on) {  // 3.0.11-beta.203: the veil's end
+        const ULONGLONG now = GetTickCount64();
+        const enterveil::End end = enterveil::ending(!readGameMap().empty(), msgboxwin::asking(),
+                                                     s.shown && now - s.veil.since > 1500, s.veil.since, now);
+        if (end != enterveil::End::No) {
+            s.veil.on = false;
+            static const char* const kWhy[] = {"", "the map started", "a box asks", "the login card back", "30 s"};
+            LOG_INFO("login: the veil off - %s after %llu ms", kWhy[int(end)],
+                     static_cast<unsigned long long>(now - s.veil.since));
+        }
+        s.veil.k = float(k);
+        s.veil.w = targetWidth;
+        s.veil.h = targetHeight;
+    }
     const bool selectUp = charselectwin::gameUp();
     if (selectUp && !s.selectWasUp) {
         if (s.pendingShelf) accepted(s);
@@ -1089,6 +1120,30 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
 
 bool shown() { return state().shown; }
 
+void drawVeil(FrameRecord& record, gpu::Renderer& renderer) {  // 3.0.11-beta.203
+    Veil& v = state().veil;
+    if (!v.on || v.k <= 0 || v.w <= 0 || v.h <= 0) return;
+    drawShade(record, 0, 0, v.w, v.h, v.k, 0.94f);
+    const float scale = uistyle::readingScale(v.k);
+    const int phase = int((GetTickCount64() - v.since) / 350 % 3);
+    const enterveil::Layout L = enterveil::layout(v.w, v.h, scale);
+    if (phase != v.phase || L.w != v.layout.w || L.h != v.layout.h) {
+        v.phase = phase;
+        v.layout = L;
+        enterveil::paint(v.picture, L, phase);
+        std::vector<Words> words;
+        for (const enterveil::Words& w : enterveil::words(L, v.texts))
+            words.push_back(Words{w.box, utf8Wide(w.text), w.rgb, w.px, w.bold,
+                                  UINT(w.align == enterveil::Align::Left    ? DT_LEFT
+                                       : w.align == enterveil::Align::Right ? DT_RIGHT
+                                                                            : DT_CENTER),
+                                  false});
+        drawWords(v.picture, words);
+        v.upload = true;
+    }
+    drawPart(record, renderer, v.picture, v.texture, v.texW, v.texH, v.upload, L.x, L.y, v.k);
+}
+
 void drawToast(FrameRecord& record, gpu::Renderer& renderer) {
     State& s = state();
     const ULONGLONG now = GetTickCount64();
@@ -1161,6 +1216,18 @@ bool loginWith(const accounts::Account& a, bool stopAtSelect, const std::string&
                                               : p.autoCharacter     ? a.last.name
                                                                     : std::string();
     LOG_INFO("login: the shelf's %016llx sent with one click%s", hash, p.autoCharacter ? " («Одразу в гру»)" : "");
+    if (!s.autoName.empty()) {  // 3.0.11-beta.203: on to the map by itself - under the veil
+        Veil& v = s.veil;
+        v.on = true;
+        v.since = GetTickCount64();
+        v.texts.title = say(settings::Text::EnterVeilTitle);
+        v.texts.name = s.autoName;  // UTF-8, as the shelf keeps it
+        v.texts.line = s.autoName == a.last.name
+                           ? a.last.job + (a.last.level > 0 ? " \xC2\xB7 " + std::to_string(a.last.level) : "")
+                           : std::string();
+        v.phase = -1;
+        LOG_INFO("login: the veil «%s» over the way into the game", v.texts.title.c_str());
+    }
     pressEnter(window);
     return true;
 }
