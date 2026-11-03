@@ -160,6 +160,8 @@ void Console::build(Lang lang, const Config& config) {
         if (settingOf("interface.minimap")) {
             rows_.push_back(Row{Kind::Heading, tr(lang, Text::InterfaceHeading), 0});
             rows_.push_back(Row{Kind::Layout, "", 0});  // 3.0.11-beta.75: «Розміщення інтерфейсу»
+            // 3.0.11-beta.199 (the owner: «а настройки его в консоль можно добавить?»): the cursor's look, near the top
+            if (settingOf("interface.cursor")) rows_.push_back(Row{Kind::Choice, "interface.cursor", 0});
             rows_.push_back(Row{Kind::Box, "interface.minimap", 0});
             for (const char* k : {"interface.minimap_npcs", "interface.minimap_warps", "interface.minimap_kafra",
                                   "interface.minimap_party", "interface.minimap_style", "interface.net_badge",
