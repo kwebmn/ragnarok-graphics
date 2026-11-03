@@ -1,3 +1,14 @@
+# uaRO Graphics 3.0.11-beta.201 — what's new
+
+**The tester's third list, part two: the maps**:
+- The server's marks on the minimap: an NPC's «viewpoint» and @showmobs' monsters - a round in their colour, always shown, over the rest (they were not shown at all).
+- Guild mates on the same map on the minimap (a green ring), with the party's layer.
+- The Kafras' layer button shows the Kafra's face too, not the old «K».
+- The minimap's marks grow as more of the map is shown and get smaller up close.
+- The game's map pictures mark the warps with red dots of their own - taken out: the minimap's rings with their words mark the warps.
+- A point set on the big map off the walked cells goes to the nearest walked one (it drew a straight line through the walls); off the map or with none near - no point.
+- The big map lies over the panels (the chat, the hotbar, the character), under the windows.
+
 # uaRO Graphics 3.0.11-beta.200 — what's new
 
 **The tester's third list, part one**:
