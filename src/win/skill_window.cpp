@@ -53,9 +53,16 @@ constexpr int kRaiseMsg = 0x4A, kUseMsg = 0x7E, kDragMsg = 0x51;
 // comes up (as «Речі»'s, item_window)
 constexpr int kDropMsg = 0x12;
 constexpr ULONGLONG kReadMs = 200;
+// 3.0.11-beta.195 (the tester: «опис скілів тепер не почитати»): a skill's description is the game's own skill card
+// (UI window 0x2E at the manager's + 0xD4) - MakeWindow, then its SendMsg 0x3D with the skill's id, as the game's skill
+// tree and hotbar do on a right click; the card is drawn anew (win/info_card)
+constexpr uint32_t kMakeWindow = 0x4D42D0, kDeleteWindow = 0x4D1E60, kCardAt = kWindowMgr + 0xD4;
+constexpr int kSkillCard = 0x2E, kShowSkill = 0x3D;
 
 using SendMsgFn = int(__attribute__((thiscall)) *)(uint32_t self, uint32_t sender, int msg, int a, int b, int c);
 using ModeMsgFn = int(__attribute__((thiscall)) *)(uint32_t mode, int msg, int a, int b, int c);
+using MakeFn = uint32_t(__attribute__((thiscall)) *)(uint32_t manager, int id);
+using DeleteFn = void(__attribute__((thiscall)) *)(uint32_t manager, int id);
 
 struct Raw {  // a skill as the session keeps it
     uint32_t record = 0, name = 0;
@@ -94,6 +101,7 @@ struct State {
     uint32_t dragTexture = 0;
     int dragW = 0, dragH = 0;
     bool dragUpload = false;
+    int cardSkill = 0;  // 3.0.11-beta.195: the skill whose card the window opened
 };
 
 State& state() {
@@ -366,6 +374,24 @@ const kw::Skill* skillAt(const State& s, int index) {
     return &s.data.tabs[size_t(tab)].skills[size_t(index)];
 }
 
+// 3.0.11-beta.195: a right click on a skill - its card; on the same skill again, the card closed
+void toggleCard(State& s, int index) {
+    const kw::Skill* k = skillAt(s, index);
+    if (!k || k->id <= 0) return;
+    if (read32(kCardAt) && s.cardSkill == k->id) {
+        reinterpret_cast<DeleteFn>(uintptr_t(kDeleteWindow))(kWindowMgr, kSkillCard);
+        s.cardSkill = 0;
+        return;
+    }
+    const uint32_t window = reinterpret_cast<MakeFn>(uintptr_t(kMakeWindow))(kWindowMgr, kSkillCard);
+    const uint32_t send = window ? read32(read32(window) + kSendMsgSlot) : 0;
+    if (!send) return;
+    reinterpret_cast<SendMsgFn>(uintptr_t(send))(window, 0, kShowSkill, k->id, 0, 0);
+    s.cardSkill = k->id;
+    if (s.told++ < 20)
+        LOG_INFO("skills: %s's description - the game's skill card (UI window 0x2E, its 0x3D)", k->aegis.c_str());
+}
+
 void raise(State& s, int index, const char* by) {
     const kw::Skill* k = skillAt(s, index);
     if (!k || !kw::canRaise(*k, s.data.points)) return;
@@ -617,6 +643,12 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
         const int count = s.data.tabs.empty() ? 0 : int(s.data.tabs[size_t(s.show.tab)].skills.size());
         const int by = GET_WHEEL_DELTA_WPARAM(wp) > 0 ? -3 : 3;
         s.show.scroll = std::clamp(s.layout.first + by, 0, std::max(0, count - kw::kRows));
+        s.key.clear();
+        return true;
+    }
+    if (m == WM_RBUTTONDOWN && h.part == kw::Part::Row) {  // 3.0.11-beta.195: its description
+        s.show.focus = h.index;
+        toggleCard(s, h.index);
         s.key.clear();
         return true;
     }

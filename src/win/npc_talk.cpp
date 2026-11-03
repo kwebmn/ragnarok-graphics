@@ -203,12 +203,13 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
         if (!on) holdGame(false);
         LOG_INFO("npc: [interface] npc_talk = %d", on ? 1 : 0);
     }
+    // 3.0.11-beta.195 (the tester: the Kafras' menus «у старому стилі»): a script's menu with no words before it is
+    // the game's menu window alone - the talk shows it too, its options alone
     const uint32_t sayWin = inGameWorld() ? window(kSayWnd, kSayClass) : 0;
-    if (!sayWin) {
-        s.lines.clear();
-        s.options.clear();
-    }
-    if (!on || !sayWin || !game || k <= 0 || targetWidth <= 0 || targetHeight <= 0) {
+    const uint32_t menuWin = inGameWorld() ? window(kMenuWnd, kMenuClass) : 0;
+    if (!sayWin) s.lines.clear();
+    if (!sayWin && !menuWin) s.options.clear();
+    if (!on || (!sayWin && !menuWin) || !game || k <= 0 || targetWidth <= 0 || targetHeight <= 0) {
         hide(s);
         return;
     }
@@ -221,7 +222,7 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     s.targetH = targetHeight;
     nt::Talk t;
     for (const std::string& line : s.lines) t.lines.push_back(utf8Of(widened(line, codePage)));
-    if (const uint32_t menu = window(kMenuWnd, kMenuClass)) {
+    if (const uint32_t menu = menuWin) {
         const uint32_t begin = read32(menu + kRowsBegin), end = read32(menu + kRowsEnd);
         for (uint32_t at = begin; begin && at < end && at < begin + 4 * 64; at += 4) {
             const int idx = int(read32(at));

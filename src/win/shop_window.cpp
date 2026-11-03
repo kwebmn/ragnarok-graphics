@@ -47,6 +47,10 @@ constexpr uint32_t kWindowMgr = 0x727ED8;
 constexpr uint32_t kListAt = kWindowMgr + 0xEC, kBuyAt = kWindowMgr + 0xF0, kSellAt = kWindowMgr + 0xF4;
 constexpr uint32_t kChooseAt = kWindowMgr + 0xF8;
 constexpr uint32_t kListClass = 0x69B3E0, kBuyClass = 0x69B5A8, kSellClass = 0x69B6D8, kChooseClass = 0x699410;
+// 3.0.11-beta.195 (the tester: «менюшка ... яка вилазить - у старому стилі»): the buy cart's bar (UI window 0x32 at
+// +0xD0, «Hit Point ... Defence Rate ...» of the item pointed at - MakeWindow 0x17 makes it with the cart, nothing but
+// a map's change deletes it) out of sight while the new shop is on, but with a player's shop (the game's own cart)
+constexpr uint32_t kBarAt = kWindowMgr + 0xD0, kBarClass = 0x6988C8;
 constexpr uint32_t kBuySendMsg = 0x4B35D0, kSellSendMsg = 0x4B6B70, kChooseSendMsg = 0x47E430;
 constexpr uint32_t kShown = 0x38, kSendMsgSlot = 0x94, kCartKind = 0xA0, kChooseNpc = 0x60;
 constexpr int kButtonMsg = 6, kOk = 0x76, kCancel = 0x77, kChooseSell = 0x9D, kChooseBuy = 0x9E;
@@ -89,6 +93,7 @@ struct State {
     WindowShadow shadow;
     WindowEdge edge;  // 3.0.11-beta.108: the top of two or more windows (win/window_stack)
     bool on = false, shown = false, hid = false, stateRead = false;
+    bool barHid = false;  // 3.0.11-beta.195: the cart's bar hidden by the shop
     float k = 0, scale = 1;
     int targetW = 0, targetH = 0;
     float fx = 0.5f, fy = 0.3f;
@@ -153,6 +158,17 @@ Deal dealNow() {
 }
 
 bool ours(const Deal& d) { return d.choose || (d.list && (d.buy || d.sell)); }
+
+void holdBar(State& s) {
+    const uint32_t bar = window(kBarAt, kBarClass);
+    if (!bar) return;
+    const uint32_t cart = window(kBuyAt, kBuyClass);
+    const uint32_t want = s.on && !(cart && read32(cart + kCartKind) != 0) ? 0 : 1;
+    if (read32(bar + kShown) == want || (want && !s.barHid)) return;
+    write32(bar + kShown, want);
+    s.barHid = !want;
+    if (s.told++ < 30) LOG_INFO("shop: the game's cart's bar (UI window 0x32) %s", want ? "back" : "hidden");
+}
 
 void hold(State& s, const Deal& d, bool hidden) {  // the game's deal windows out of sight while ours shows
     for (const uint32_t w : {d.choose, d.list, d.buy, d.sell}) {
@@ -570,7 +586,10 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     if (on != s.on) {
         s.on = on;
         s.key.clear();
-        if (!on && inGameWorld()) hold(s, dealNow(), false);
+        if (!on && inGameWorld()) {
+            hold(s, dealNow(), false);
+            holdBar(s);
+        }
         LOG_INFO("shop: [interface] shop = %d", on ? 1 : 0);
     }
     const ULONGLONG now = GetTickCount64();
@@ -999,6 +1018,7 @@ void beforeGameDraw() {
     if (!s.on || !inGameWorld()) return;
     const Deal d = dealNow();
     if (ours(d)) hold(s, d, true);
+    holdBar(s);  // 3.0.11-beta.195
     if (!d.choose) {
         s.chosen = 0;
         return;

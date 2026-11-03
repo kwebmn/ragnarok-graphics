@@ -490,3 +490,52 @@ TEST(char_block_durations) {
     CHECK(charblock::duration(125, "год", "хв") == "2 год 5 хв" && charblock::duration(120, "год", "хв") == "2 год");
     CHECK(charblock::duration(768, "год", "хв") == "13 год" && charblock::duration(70000, "год", "хв") == "> 999 год");
 }
+
+// 3.0.11-beta.195 (the tester: «щось написано під base - job ... щось злиплося» - «Людмила Павличенко», a
+// Gunslinger): the name and the job keep off the levels on the full card's first line - the job left out where it
+// does not fit, the name cut short with «…» where even it does not
+TEST(char_block_long_name_keeps_off_the_levels) {
+    const charblock::Layout L = charblock::layout(charblock::View::Full, charblock::Look::Bars, 0, 0, 1.0f);
+    const auto line = [&](const charblock::Data& d) {
+        std::vector<charblock::Words> out;
+        for (const charblock::Words& w : charblock::words(L, d, texts(), charblock::Show{}))
+            if (w.box.y < L.name.y + L.name.h && w.box.y + w.box.h > L.name.y) out.push_back(w);
+        return out;
+    };
+    const auto levelsOf = [](const std::vector<charblock::Words>& ws) -> const charblock::Words* {
+        for (const charblock::Words& w : ws)
+            if (w.text.rfind("Base ", 0) == 0) return &w;
+        return nullptr;
+    };
+    charblock::Data d = sora();
+    d.name = "\xD0\x9B\xD1\x8E\xD0\xB4\xD0\xBC\xD0\xB8\xD0\xBB\xD0\xB0 \xD0\x9F\xD0\xB0\xD0\xB2\xD0\xBB\xD0\xB8\xD1\x87"
+             "\xD0\xB5\xD0\xBD\xD0\xBA\xD0\xBE";  // Людмила Павличенко
+    d.job = "Gunslinger";
+    d.baseLevel = 62;
+    d.jobLevel = 38;
+    std::vector<charblock::Words> ws = line(d);
+    const charblock::Words* lv = levelsOf(ws);
+    CHECK(lv != nullptr);
+    bool named = false;
+    for (const charblock::Words& w : ws) {
+        if (lv && &w != lv) CHECK(w.box.x + panel::wordsWidth(w.text, w.px, w.bold) <= lv->box.x + 0.5f);
+        named = named || w.text == d.name;
+    }
+    CHECK(named);  // the name itself whole: only the job gave way
+    d.name = "\xD0\x9B\xD1\x8E\xD0\xB4\xD0\xBC\xD0\xB8\xD0\xBB\xD0\xB0 \xD0\x9F\xD0\xB0\xD0\xB2\xD0\xBB\xD0\xB8\xD1\x87"
+             "\xD0\xB5\xD0\xBD\xD0\xBA\xD0\xBE \xD0\x9F\xD0\xB0\xD0\xB2\xD0\xBB\xD0\xB8\xD1\x87\xD0\xB5\xD0\xBD\xD0\xBA"
+             "\xD0\xBE\xD0\xB2\xD0\xB0";  // a name longer than the line
+    ws = line(d);
+    lv = levelsOf(ws);
+    CHECK(lv != nullptr);
+    bool cut = false;
+    for (const charblock::Words& w : ws) {
+        if (lv && &w != lv) CHECK(w.box.x + panel::wordsWidth(w.text, w.px, w.bold) <= lv->box.x + 0.5f);
+        cut = cut || (w.text.size() > 3 && w.text.compare(w.text.size() - 3, 3, "\xE2\x80\xA6") == 0);
+        CHECK(w.text != d.job);
+    }
+    CHECK(cut);
+    d = sora();  // a short one: its job beside it as before
+    ws = line(d);
+    CHECK(std::any_of(ws.begin(), ws.end(), [&](const charblock::Words& w) { return w.text == d.job; }));
+}

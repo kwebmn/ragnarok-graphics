@@ -108,6 +108,20 @@ std::string counted(const std::string& forms, int n) {
     return "+" + std::to_string(n) + " " + f[i];
 }
 
+// The words cut at a whole letter to fit `room`, «…» after them; whole when they fit
+std::string fitted(const std::string& text, float px, bool bold, float room) {
+    if (panel::wordsWidth(text, px, bold) <= room) return text;
+    const std::string dots = "\xE2\x80\xA6";
+    for (size_t end = text.size(); end > 0;) {
+        do --end;
+        while (end > 0 && (static_cast<unsigned char>(text[end]) & 0xC0) == 0x80);  // a whole letter off
+        std::string cut = text.substr(0, end);
+        while (!cut.empty() && cut.back() == ' ') cut.pop_back();
+        if (panel::wordsWidth(cut + dots, px, bold) <= room) return cut + dots;
+    }
+    return dots;
+}
+
 std::string levels(const Data& d) {
     return "Base " + std::to_string(d.baseLevel) + " \xC2\xB7 Job " + std::to_string(d.jobLevel);
 }
@@ -527,17 +541,23 @@ std::vector<Words> words(const Layout& L, const Data& d, const Texts& t, const S
                                               Align::Left});
         if (d.spMost > 0) out.push_back(Words{L.spText, "SP " + grouped(d.sp), kText, 13 * s, true, Align::Right});
     } else {
-        const float nameW = panel::wordsWidth(d.name, 16 * s, true);
-        out.push_back(Words{panel::Box{L.name.x, L.name.y, nameW + 4 * s, L.name.h}, d.name, kText, 16 * s, true,
-                            Align::Left});
-        if (!d.job.empty())
-            out.push_back(Words{panel::Box{L.name.x + nameW + 8 * s, L.name.y + 2 * s,
-                                           panel::wordsWidth(d.job, 13 * s, false) + 4 * s, L.name.h - 2 * s},
-                                d.job, kMuted, 13 * s, false, Align::Left});
+        // 3.0.11-beta.195 (the tester: «щось написано під base - job ... щось злиплося»): the name and the job keep off
+        // the levels (their words start 4 px into their box) - the job left out where it does not fit, the name a size
+        // or two smaller where even it does not, cut short at the smallest
         const std::string lv = levels(d);
-        const float lvW = panel::wordsWidth(lv, 13 * s, true) + 4 * s;
-        out.push_back(Words{panel::Box{L.levels.x + L.levels.w - lvW, L.levels.y, lvW, L.levels.h}, lv, kGold2,
-                            13 * s, true, Align::Right});
+        const float lvW = panel::wordsWidth(lv, 13 * s, true) + 4 * s, lvX = L.levels.x + L.levels.w - lvW;
+        const float room = lvX - L.name.x;
+        float namePx = 16 * s;
+        while (namePx > 14 * s && panel::wordsWidth(d.name, namePx, true) > room) namePx -= 1 * s;
+        const std::string name = fitted(d.name, namePx, true, room);
+        const float nameW = panel::wordsWidth(name, namePx, true);
+        out.push_back(Words{panel::Box{L.name.x, L.name.y, nameW + 4 * s, L.name.h}, name, kText, namePx, true,
+                            Align::Left});
+        const float jobW = panel::wordsWidth(d.job, 13 * s, false);
+        if (!d.job.empty() && nameW + 8 * s + jobW <= room - 4 * s)
+            out.push_back(Words{panel::Box{L.name.x + nameW + 8 * s, L.name.y + 2 * s, jobW + 4 * s, L.name.h - 2 * s},
+                                d.job, kMuted, 13 * s, false, Align::Left});
+        out.push_back(Words{panel::Box{lvX, L.levels.y, lvW, L.levels.h}, lv, kGold2, 13 * s, true, Align::Right});
         // the weight (3.0.11-beta.141: in the game's numbers), the zeny along the info line; the free points (stats',
         // skills') and the arrows running low along the points' line under it
         float x = L.info.x;

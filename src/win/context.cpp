@@ -51,8 +51,6 @@
 #include "win/item_window.hpp"
 #include "win/stat_window.hpp"
 #include "win/window_stack.hpp"
-#include "pad/win/client_mouse.hpp"
-#include "pad/win/game_window.hpp"
 #include "pad/win/runtime.hpp"
 #include "win/ground_marks.hpp"
 #include "win/pad_assign.hpp"
@@ -622,42 +620,6 @@ void Context::markInterfaceEnd(size_t faces) {
     interfaceFaces_ = faces;
 }
 
-void Context::tellDrawsAtCursor(size_t from, size_t to) {
-    if (cursorDrawsTold_ >= 15) return;
-    const ULONGLONG now = GetTickCount64();
-    if (now - cursorDrawsAt_ < 1500) return;
-    int x = 0, y = 0, w = 0, h = 0;
-    if (!uapad::clientmouse::read(x, y, w, h) || uapad::gamewindow::blockedUnder(x, y, w, h) < 0) return;
-    cursorDrawsAt_ = now;
-    ++cursorDrawsTold_;
-    const std::vector<Command>& cmds = record.commands();
-    const std::vector<uint8_t>& bytes = record.vertexBytes();
-    const size_t firstUi = record.firstInterface();
-    std::string line;
-    int found = 0;
-    for (size_t i = firstUi; i < cmds.size() && found < 12; ++i) {
-        if (cmds[i].type != Cmd::Draw) continue;
-        const DrawCmd& d = record.draws()[cmds[i].index];
-        const uint32_t stride = FrameRecord::stride(d.fvf);
-        if (!stride || !d.vertexCount || d.vertexOffset + size_t(d.vertexCount) * stride > bytes.size()) continue;
-        float x0 = 1e9f, y0 = 1e9f, x1 = -1e9f, y1 = -1e9f;
-        for (uint32_t v = 0; v < d.vertexCount; ++v) {
-            float p[2];
-            std::memcpy(p, bytes.data() + d.vertexOffset + size_t(v) * stride, sizeof p);
-            x0 = std::min(x0, p[0]), y0 = std::min(y0, p[1]), x1 = std::max(x1, p[0]), y1 = std::max(y1, p[1]);
-        }
-        if (float(x) < x0 - 2 || float(x) > x1 + 2 || float(y) < y0 - 2 || float(y) > y1 + 2) continue;
-        char part[96];
-        std::snprintf(part, sizeof part, " #%zu %s %.0fx%.0f at %.0f,%.0f tex %u;", i,
-                      i < from ? "before" : i < to ? "moved" : "after", x1 - x0, y1 - y0, x0, y0, d.texture[0]);
-        line += part;
-        ++found;
-    }
-    LOG_INFO("diag: the cursor at %d,%d over the driver's part - the interface from #%zu, the game's windows "
-             "#%zu..#%zu of %zu:%s",
-             x, y, firstUi, from, to, cmds.size(), line.empty() ? " none under it" : line.c_str());
-}
-
 void Context::endScene() {
     // 3.0.3-beta.12 (the user's R-KVTEMT: «всеравно курсор не видно»): the scene goes to the GPU here, before the
     // present - beta.9's and beta.11's panel, put in at the present, found no cursor in an empty record and covered it
@@ -681,7 +643,6 @@ void Context::endScene() {
                                   ? record.interfaceDraw(interfaceFaces_)
                                   : record.commands().size();
             sorted = record.commands().size() - std::min(to, record.commands().size());
-            tellDrawsAtCursor(from, to);  // 3.0.11-beta.192
             game = record.takeRange(from, to);
         }
         // 3.0.11-beta.193 (R-9RSSAW): the game's cursor is among them - while they are out, a part looking for it

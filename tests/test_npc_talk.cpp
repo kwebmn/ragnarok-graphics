@@ -92,3 +92,25 @@ TEST(npc_talk_layout_words_options_and_buttons) {
     w = npctalk::words(L, t, sh, texts(), measure);
     CHECK(!has("1–8 вибір · Enter далі · Esc закрити") && has("Далі"));
 }
+
+// 3.0.11-beta.195 (the tester: the Kafras' menus «у старому стилі» - in Glast Heim, the voting staff, Prontera's): a
+// script's menu with no words before it (the game's menu window alone, no text window) - the talk shows its options
+// alone, numbered, with nothing above them
+TEST(npc_talk_a_menu_alone) {
+    npctalk::Talk t;
+    t.options = {"Save", "Teleport to Prontera", "Open Storage", "Cancel"};
+    t.selected = 0;
+    t = npctalk::named(t);
+    CHECK(t.name.empty() && t.lines.empty());
+    npctalk::Show sh;
+    const npctalk::Layout L = npctalk::layout(960, 900, 1.0f, t, sh, texts(), measure);
+    CHECK(L.options.size() == 4 && L.lines.empty() && L.button.w == 0);
+    CHECK(L.h > 0 && L.y + L.h <= 900 && L.options[0].y >= L.body.y);
+    for (size_t i = 0; i < L.options.size(); ++i) {
+        const panel::Box& b = L.options[i];
+        const npctalk::Hit h = npctalk::hitTest(L, b.x + b.w / 2, b.y + b.h / 2);
+        CHECK(h.part == npctalk::Part::Option && h.index == int(i));
+    }
+    const std::vector<npctalk::Words> w = npctalk::words(L, t, sh, texts(), measure);
+    CHECK(std::any_of(w.begin(), w.end(), [](const npctalk::Words& x) { return x.text == "Open Storage"; }));
+}

@@ -66,6 +66,9 @@ bool partsMouse(HWND w, UINT m, WPARAM wp, LPARAM lp, LRESULT& answer) {
         hudedit::mouse(w, m, wp, lp, answer) ||      // 3.0.11-beta.75: all of it while the parts are framed
         padtileswin::mouse(w, m, wp, lp, answer) ||  // 3.0.11-beta.90: the controller's windows' tile (modal)
         padassignwin::mouse(w, m, wp, lp, answer) ||  // 3.0.11-beta.91: «Призначити» (modal)
+        // 3.0.11-beta.195 (the tester: «панель вікон - виглядає наче зверху, а перетягнути не можна бо воно фактично
+        // перекрите панеллю персонажа»): the windows' panel as it is drawn - over the panels, the windows, the card
+        (g_switch && g_switch->mouse(w, m, lp, answer)) ||
         answercard::mouse(w, m, lp, answer) ||        // 3.0.9-beta.4: and over the answer card the card's
         loginwin::toastMouse(w, m, wp, lp, answer))   // 3.0.11-beta.175: «… додано на полицю · Скасувати»
         return true;
@@ -80,8 +83,7 @@ bool partsMouse(HWND w, UINT m, WPARAM wp, LPARAM lp, LRESULT& answer) {
            targetpanel::mouse(w, m, wp, lp, answer) ||   // 3.0.11-beta.38: the target's card's
            partywin::mouse(w, m, wp, lp, answer) ||      // 3.0.11-beta.39: the party's panel's
            hotbarwin::mouse(w, m, wp, lp, answer) ||     // 3.0.11-beta.40: the hotbar's
-           chatwin::mouse(w, m, wp, lp, answer) ||       // 3.0.11-beta.41: the chat's
-           (g_switch && g_switch->mouse(w, m, lp, answer));
+           chatwin::mouse(w, m, wp, lp, answer);         // 3.0.11-beta.41: the chat's
 }
 
 LRESULT CALLBACK gameProc(HWND w, UINT m, WPARAM wp, LPARAM lp) {
