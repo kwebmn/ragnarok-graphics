@@ -1,3 +1,10 @@
+# uaRO Graphics 3.0.11-beta.202 — what's new
+
+**The tester's third list, part three**:
+- Double clicks work in the new windows again: the game's window gets none from Windows, so «Спорядження» (a double click takes a thing off), «Навички» (uses a skill), the choice cards, the server select, the friends, «Лавка» and «Розміщення інтерфейсу» waited for them in vain. Now two left presses soon and near each other are one. Dragging stays.
+- The weight on uaRO: HP and SP stop coming back at 70 % of the most weight (not 50 %). The game's line about it now says 70 % and comes at 70 %; its status icon shows «70%» instead of the game's «50%»; the buffs list names it «Weight 70 %».
+- «Характеристики»: the cast time in the list to a tenth, as the DEX hint, and the hint shows from now to the next point (44,7 → 45,3 %).
+
 # uaRO Graphics 3.0.11-beta.201 — what's new
 
 **The tester's third list, part two: the maps**:
