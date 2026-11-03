@@ -1,3 +1,9 @@
+# uaRO Graphics 3.0.11-beta.203 — what's new
+
+**The tester's third list, part four**:
+- No more old-style windows on the way in: the login's screens (the login, the characters, the server select) drew the game's own window a frame before the new one hid it - «Please wait...», the message boxes and the rest flashed in the game's look. They are now out of sight before the game draws them, as in the world.
+- «Одразу в гру» no longer shows the windows clicking through: while the shelf's one click takes you from the login to the map, the screen is dark under a card «Вхід у гру…» with the character's name, job and level and three running dots. It goes away when the map starts loading, when a box asks something (a refusal, an error), when the login card comes back, or after 30 seconds.
+
 # uaRO Graphics 3.0.11-beta.202 — what's new
 
 **The tester's third list, part three**:
