@@ -1,3 +1,8 @@
+# uaRO Graphics 3.0.11-beta.205 — what's new
+
+**The tester's third list, part six**:
+- The emotion list (Alt+L) in the new look: the card «Емоції» - all 49 emotions seven a row, each with the game's own picture over its command. A click puts the emotion into the chat's line, as before (or into the macros' field while «Макроси чату» is open); a double click shows it at once (the chat's line sent as Enter does). ✕ or Esc closes. A new switch «Картка емоцій» under «Інтерфейс» (and in the console); off - the game's own window.
+
 # uaRO Graphics 3.0.11-beta.204 — what's new
 
 **The tester's third list, part five**:
