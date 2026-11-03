@@ -1,3 +1,10 @@
+# uaRO Graphics 3.0.11-beta.194 — what's new
+
+**Enter no longer crashes the game through a window that is already gone**:
+- A player's game closed on Enter: the game still kept the address of its menu (Esc) after the menu itself had been
+  freed, and Enter "pressed OK" in it. Now the driver checks before every frame and on Enter that each window the game
+  answers Enter with is still among its windows; a freed one is forgotten and written to the log instead of a crash.
+
 # uaRO Graphics 3.0.11-beta.193 — what's new
 
 **The bar under the character no longer comes over a window on hover**:
