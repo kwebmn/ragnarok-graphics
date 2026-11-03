@@ -65,6 +65,7 @@
 #include "win/pick_card.hpp"
 #include "win/vend_shop.hpp"
 #include "win/whisper_setup.hpp"
+#include "win/tip_window.hpp"
 #include "win/info_card.hpp"
 #include "win/menu_window.hpp"
 #include "win/msg_box.hpp"
@@ -789,6 +790,21 @@ bool mercPad(const PadState& pad) {
     return true;
 }
 
+// 3.0.11-beta.204: the tip of the day - A or → the next, X or ← the one before, Y the start box, B closes
+bool tipPad(const PadState& pad, DWORD now) {
+    State& s = S();
+    const uint16_t buttons = pad.connected ? pad.buttons : 0;
+    const uint16_t down = uint16_t((buttons & ~s.prevPadButtons) | stickSteps(pad, now));
+    s.prevPadButtons = buttons;
+    using uagfx::win::tipwin::PadCommand;
+    const std::pair<uint16_t, PadCommand> keys[] = {{kPadA, PadCommand::Next},    {kPadRight, PadCommand::Next},
+                                                    {kPadX, PadCommand::Back},    {kPadLeft, PadCommand::Back},
+                                                    {kPadY, PadCommand::Startup}, {kPadB, PadCommand::Close}};
+    for (const auto& [button, command] : keys)
+        if (down & button) uagfx::win::tipwin::padCommand(command);
+    return true;
+}
+
 // 3.0.11-beta.162: the game's options - up and down a row, left and right a volume (a switch flips), A flips, B closes
 bool optionsPad(const PadState& pad, DWORD now) {
     State& s = S();
@@ -1185,7 +1201,8 @@ constexpr const char* kTopNames[] = {"«Речі»",  "«Характерист�
                                      "the character make", "«Візок»", "«Лавка»", "the choice of things",
                                      "the party's settings", "the pet", "the homunculus", "the mercenary",
                                      "the game's options", "the friends and the party", "the server select",
-                                     "the guild", "one's own shop", "the whisper's settings", "the chat's macros"};
+                                     "the guild", "one's own shop", "the whisper's settings", "the chat's macros",
+                                     "the tip of the day"};
 static_assert(std::size(kTopNames) == size_t(uagfx::winstack::kWins), "a name for each window");
 
 void tick() {
@@ -1271,6 +1288,7 @@ void tick() {
                   : drive && *top == Win::Guild                    ? guildPad(pad, now)       // .165
                   : drive && *top == Win::MyShop                   ? myShopPad(pad, now)      // .166
                   : drive && *top == Win::WhisperSetup             ? whisperSetupPad(pad, now)  // .168
+                  : drive && *top == Win::Tip                      ? tipPad(pad, now)           // .204
                                                                    : runMenu(pad, view, now);
     if (s.npcSupported) view.dialog = clientnpc::read();
     double clientTurn = 0;

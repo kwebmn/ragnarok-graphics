@@ -28,8 +28,9 @@ enum class Win : uint8_t { Items, Stats, Skills, Equip, Shop, Npc, Reference, St
                            Guild,  // 3.0.11-beta.165
                            MyShop,  // 3.0.11-beta.166
                            WhisperSetup,  // 3.0.11-beta.168
-                           Macros };  // 3.0.11-beta.169
-constexpr int kWins = 31;
+                           Macros,  // 3.0.11-beta.169
+                           Tip };  // 3.0.11-beta.204
+constexpr int kWins = 32;
 
 class Stack {
 public:

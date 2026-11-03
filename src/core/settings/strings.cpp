@@ -5990,6 +5990,23 @@ constexpr Entry kTexts[] = {
     {Text::MacroHint, "Alt and a digit write the line into the chat", "Alt+цифра пише рядок у чат",
      "Alt+цифра пишет строку в чат"},
     {Text::MacroSave, "Save", "Зберегти", "Сохранить"},
+    // 3.0.11-beta.204: the game's tip of the day
+    {Text::InterfaceTips, "Tip of the day card", "Картка поради дня", "Карточка совета дня"},
+    {Text::InterfaceTipsHint,
+     "The game's tip of the day (on the first map after the start, when the game shows them) as a card in the new "
+     "look: the tip, its number, back, next, close and the game's own box to show the tips at the start. Off: the "
+     "game's own window.",
+     "Порада дня гри (на першій мапі після запуску, якщо гра їх показує) карткою в новому вигляді: порада, її номер, "
+     "назад, далі, закрити й власна галочка гри показувати поради під час входу. Вимкнено: власне вікно гри.",
+     "Совет дня игры (на первой карте после запуска, если игра их показывает) карточкой в новом виде: совет, его "
+     "номер, назад, далее, закрыть и собственная галочка игры показывать советы при входе. Выключено: собственное "
+     "окно игры."},
+    {Text::TipTitle, "Tip of the day", "Порада дня", "Совет дня"},
+    {Text::TipBack, "Back", "Назад", "Назад"},
+    {Text::TipNext, "Next", "Далі", "Далее"},
+    {Text::TipClose, "Close", "Закрити", "Закрыть"},
+    {Text::TipStartup, "Show the tips when the game starts", "Показувати поради під час входу в гру",
+     "Показывать советы при входе в игру"},
     // 3.0.11-beta.141: the character block's experience (forms: one, a few, many)
     {Text::CharSkillPoints, "skill point|skill points", "очко навичок|очки навичок|очок навичок",
      "очко навыков|очка навыков|очков навыков"},

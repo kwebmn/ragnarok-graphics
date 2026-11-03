@@ -83,6 +83,7 @@
 #include "win/site_http.hpp"
 #include "win/login_refusal.hpp"
 #include "win/macro_card.hpp"
+#include "win/tip_window.hpp"
 #include "win/msg_box.hpp"
 #include "win/menu_window.hpp"
 #include "win/net_predict.hpp"
@@ -1032,6 +1033,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     myshopwin::frame(window, config.myShopWindow, gameCodePage(config), pk, pw, ph);          // 3.0.11-beta.166
     whispersetupwin::frame(window, config.whisperSetupWindow, gameCodePage(config), pk, pw, ph);  // .168
     macrocardwin::frame(window, config.macroWindow, gameCodePage(config), pk, pw, ph);        // 3.0.11-beta.169
+    tipwin::frame(window, config.tipWindow, gameCodePage(config), pk, pw, ph);                // 3.0.11-beta.204
     // 3.0.11-beta.7: [interface] reference - «Довідник» (Ctrl+F)
     referencewin::frame(window, config.referenceWindow, pk, pw, ph);
     padcarrywin::frame(window, pk, pw, ph);  // 3.0.11-beta.121: a thing the controller carries - its places now

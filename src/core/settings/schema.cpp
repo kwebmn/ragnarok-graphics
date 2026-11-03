@@ -252,6 +252,8 @@ const std::vector<IniSetting>& iniSettings() {
          Text::InterfaceWhisperSetup, Text::InterfaceWhisperSetupHint, ""},  // 3.0.11-beta.168
         {"interface", "macros", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::InterfaceMacros,
          Text::InterfaceMacrosHint, ""},  // 3.0.11-beta.169
+        {"interface", "tips", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::InterfaceTips,
+         Text::InterfaceTipsHint, ""},  // 3.0.11-beta.204
         {"interface", "skill_cells", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {},
          Text::InterfaceSkillCells, Text::InterfaceSkillCellsHint, ""},  // 3.0.11-beta.142
         {"interface", "ground_counts", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {},
@@ -1152,6 +1154,7 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "interface.my_shop") return c.myShopWindow ? "1" : "0";          // 3.0.11-beta.166
     if (k == "interface.whisper_setup") return c.whisperSetupWindow ? "1" : "0";  // 3.0.11-beta.168
     if (k == "interface.macros") return c.macroWindow ? "1" : "0";            // 3.0.11-beta.169
+    if (k == "interface.tips") return c.tipWindow ? "1" : "0";                // 3.0.11-beta.204
     if (k == "interface.skill_cells") return c.skillCells ? "1" : "0";  // 3.0.11-beta.142
     if (k == "interface.ground_counts") return c.groundCounts ? "1" : "0";  // 3.0.11-beta.143
     if (k == "interface.animations") return c.animations ? "1" : "0";  // 3.0.11-beta.46
