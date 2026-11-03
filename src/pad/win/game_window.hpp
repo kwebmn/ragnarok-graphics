@@ -49,9 +49,10 @@ enum class Blocker { Panel, Card, Minimap, Reference, BigMap, Buffs, Character, 
                      Macros,  // 3.0.11-beta.169
                      LoginBar,  // 3.0.11-beta.174
                      ShelfToast,  // 3.0.11-beta.175
-                     Tip };  // 3.0.11-beta.204
+                     Tip,  // 3.0.11-beta.204
+                     Emotes };  // 3.0.11-beta.205
 // 3.0.11-beta.33: their number (win/world_mouse names each)
-constexpr int kBlockerCount = int(Blocker::Tip) + 1;
+constexpr int kBlockerCount = int(Blocker::Emotes) + 1;
 void setBlocked(Blocker who, HWND game, const RECT* rect, bool all);
 // 3.0.11-beta.77: a part's rectangle as it set it (the client's pixels) - false while it has none
 bool blockerRect(Blocker who, RECT& out);

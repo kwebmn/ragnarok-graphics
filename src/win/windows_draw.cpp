@@ -47,6 +47,7 @@
 #include "win/login_card.hpp"
 #include "win/macro_card.hpp"
 #include "win/tip_window.hpp"
+#include "win/emote_window.hpp"
 #include "win/msg_box.hpp"
 #include "win/menu_window.hpp"
 #include "win/trade_window.hpp"
@@ -168,6 +169,7 @@ void hideReplaced() {
     whispersetupwin::beforeGameDraw();  // 3.0.11-beta.168: the whisper's settings
     macrocardwin::beforeGameDraw();     // 3.0.11-beta.169: the chat's macros
     tipwin::beforeGameDraw();           // 3.0.11-beta.204: the tip of the day
+    emotewin::beforeGameDraw();         // 3.0.11-beta.205: the emotion list
     mobhpwin::beforeGameDraw();   // 3.0.11-beta.100: the monsters' per cent asked
     charpanel::beforeGameDraw();  // the Basic Info window
     hotbarwin::beforeGameDraw();  // the hotkeys' bar

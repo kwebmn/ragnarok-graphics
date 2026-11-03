@@ -6007,6 +6007,18 @@ constexpr Entry kTexts[] = {
     {Text::TipClose, "Close", "Закрити", "Закрыть"},
     {Text::TipStartup, "Show the tips when the game starts", "Показувати поради під час входу в гру",
      "Показывать советы при входе в игру"},
+    // 3.0.11-beta.205: the game's emotion list
+    {Text::InterfaceEmotes, "Emotions card", "Картка емоцій", "Карточка эмоций"},
+    {Text::InterfaceEmotesHint,
+     "The game's emotion list (Alt+L) as a card in the new look: the game's pictures over their commands; a click "
+     "puts the emotion into the chat, a double click shows it at once. Off: the game's own window.",
+     "Список емоцій гри (Alt+L) карткою в новому вигляді: малюнки гри над їхніми командами; клік ставить емоцію в "
+     "чат, подвійний клік показує її одразу. Вимкнено: власне вікно гри.",
+     "Список эмоций игры (Alt+L) карточкой в новом виде: картинки игры над их командами; клик ставит эмоцию в чат, "
+     "двойной клик показывает её сразу. Выключено: собственное окно игры."},
+    {Text::EmoteTitle, "Emotions", "Емоції", "Эмоции"},
+    {Text::EmoteHint, "A click puts it into the chat, a double click shows it at once",
+     "Клік — у чат, подвійний клік — одразу", "Клик — в чат, двойной клик — сразу"},
     // 3.0.11-beta.141: the character block's experience (forms: one, a few, many)
     {Text::CharSkillPoints, "skill point|skill points", "очко навичок|очки навичок|очок навичок",
      "очко навыков|очка навыков|очков навыков"},

@@ -610,6 +610,8 @@ enum class Text : uint16_t {
     InterfaceMacros, InterfaceMacrosHint, MacroTitle, MacroHint, MacroSave,
     // 3.0.11-beta.204: the game's «Tip of the Day»
     InterfaceTips, InterfaceTipsHint, TipTitle, TipBack, TipNext, TipClose, TipStartup,
+    // 3.0.11-beta.205: the game's emotion list
+    InterfaceEmotes, InterfaceEmotesHint, EmoteTitle, EmoteHint,
     // 3.0.11-beta.141: the character block's experience - the free skill points, the last level, an hour, a minute,
     // the experience's tip, the portrait's tip (Alt+V)
     CharSkillPoints, CharExpMax, CharHour, CharMinute, CharToLevel, CharLevelIn, CharPerHour, CharSession, CharLastGain,

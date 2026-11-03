@@ -36,6 +36,7 @@
 #include "win/stat_window.hpp"
 #include "win/storage_window.hpp"
 #include "win/tip_window.hpp"
+#include "win/emote_window.hpp"
 #include "win/trade_window.hpp"
 #include "win/vend_shop.hpp"
 #include "win/whisper_setup.hpp"
@@ -53,7 +54,8 @@ constexpr const char* kNames[] = {"«Речі»",  "«Характеристик
                                   "«Візок»", "«Лавка»", "the choice of things", "the party's settings",
                                   "the pet", "the homunculus", "the mercenary", "the game's options",
                                   "the friends and the party", "the server select", "the guild", "one's own shop",
-                                  "the whisper's settings", "the chat's macros", "the tip of the day"};
+                                  "the whisper's settings", "the chat's macros", "the tip of the day",
+                                  "the emotions"};
 static_assert(std::size(kNames) == size_t(winstack::kWins), "a name for each window");
 constexpr int kMostTold = 40;
 
@@ -118,6 +120,7 @@ bool shown(Win w) {
         case Win::WhisperSetup: return whispersetupwin::shown();  // 3.0.11-beta.168
         case Win::Macros: return macrocardwin::shown();  // 3.0.11-beta.169
         case Win::Tip: return tipwin::shown();  // 3.0.11-beta.204
+        case Win::Emotes: return emotewin::shown();  // 3.0.11-beta.205
     }
     return false;
 }
@@ -155,6 +158,7 @@ Blocker blockerOf(Win w) {
         case Win::WhisperSetup: return Blocker::WhisperSetup;
         case Win::Macros: return Blocker::Macros;
         case Win::Tip: return Blocker::Tip;
+        case Win::Emotes: return Blocker::Emotes;
         case Win::Reference: break;
     }
     return Blocker::Reference;
@@ -194,6 +198,7 @@ void drawOne(Win w, FrameRecord& record, gpu::Renderer& renderer) {
         case Win::WhisperSetup: whispersetupwin::draw(record, renderer); break;
         case Win::Macros: macrocardwin::draw(record, renderer); break;
         case Win::Tip: tipwin::draw(record, renderer); break;
+        case Win::Emotes: emotewin::draw(record, renderer); break;
     }
 }
 
@@ -231,6 +236,7 @@ bool mouseOne(Win w, HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
         case Win::WhisperSetup: return whispersetupwin::mouse(game, m, wp, lp, result);
         case Win::Macros: return macrocardwin::mouse(game, m, wp, lp, result);
         case Win::Tip: return tipwin::mouse(game, m, wp, lp, result);
+        case Win::Emotes: return emotewin::mouse(game, m, wp, lp, result);
     }
     return false;
 }
@@ -259,7 +265,8 @@ bool movable(Win w) {  // .140: the menu centred; .149: a card beside the cursor
            w != Win::Ask && w != Win::Message && w != Win::Login && w != Win::CharSelect && w != Win::CharMake &&
            w != Win::Vending && w != Win::Pick && w != Win::PartySetup && w != Win::Pet && w != Win::Homun &&
            w != Win::Merc && w != Win::Options && w != Win::Social && w != Win::Servers && w != Win::Guild &&
-           w != Win::MyShop && w != Win::WhisperSetup && w != Win::Macros && w != Win::Tip;
+           w != Win::MyShop && w != Win::WhisperSetup && w != Win::Macros && w != Win::Tip &&
+           w != Win::Emotes;
 }
 
 bool boxOf(Win w, winstack::Box& b) {
@@ -296,6 +303,7 @@ bool boxOf(Win w, winstack::Box& b) {
         case Win::WhisperSetup: return whispersetupwin::box(b.x, b.y, b.w, b.h);
         case Win::Macros: return macrocardwin::box(b.x, b.y, b.w, b.h);
         case Win::Tip: return tipwin::box(b.x, b.y, b.w, b.h);
+        case Win::Emotes: return emotewin::box(b.x, b.y, b.w, b.h);
     }
     return false;
 }
@@ -414,6 +422,7 @@ bool close(Win w) {
         case Win::WhisperSetup: return whispersetupwin::close();  // 3.0.11-beta.168
         case Win::Macros: return macrocardwin::close();         // 3.0.11-beta.169
         case Win::Tip: return tipwin::close();                  // 3.0.11-beta.204
+        case Win::Emotes: return emotewin::close();             // 3.0.11-beta.205
         default: return false;
     }
 }

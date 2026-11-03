@@ -874,8 +874,9 @@ TEST(config_interface_minimap) {
     // windows; 3.0.11-beta.48: the cast's label (3.0.11-beta.49's dimmed world no longer comes with it: beta.55);
     // 3.0.11-beta.70: the tracker; 3.0.11-beta.96: «Навички»; 3.0.11-beta.97: «Спорядження»; .98: the NPC talk;
     // .100: the shops; .115: the storage; .116: the trade; .140: the menu; .149: the item and skill cards; .150: the
-    // requests and the NPC's inputs; .151: the game's message boxes and its login; .204: the tip of the day
-    CHECK(u.waiting.empty() && u.applied.size() == 40 && u.applied[0] == "minimap 0 -> 1");
+    // requests and the NPC's inputs; .151: the game's message boxes and its login; .204: the tip of the day; .205:
+    // the emotion list
+    CHECK(u.waiting.empty() && u.applied.size() == 41 && u.applied[0] == "minimap 0 -> 1");
     CHECK(u.applied[1] == "buffs off -> column" && u.applied[2] == "items 0 -> 1" && u.applied[3] == "status 0 -> 1");
     CHECK(u.applied[4] == "skills 0 -> 1" && u.applied[5] == "equip 0 -> 1" && u.applied[6] == "npc_talk 0 -> 1");
     CHECK(u.applied[7] == "shop 0 -> 1" && u.applied[8] == "storage 0 -> 1" && u.applied[9] == "trade 0 -> 1");
@@ -887,10 +888,10 @@ TEST(config_interface_minimap) {
     CHECK(u.applied[23] == "homun 0 -> 1" && u.applied[24] == "merc 0 -> 1" && u.applied[25] == "options 0 -> 1");
     CHECK(u.applied[26] == "social 0 -> 1" && u.applied[27] == "servers 0 -> 1" && u.applied[28] == "guild 0 -> 1");
     CHECK(u.applied[29] == "my_shop 0 -> 1" && u.applied[30] == "whisper_setup 0 -> 1" &&
-          u.applied[31] == "macros 0 -> 1" && u.applied[32] == "tips 0 -> 1");
-    CHECK(u.applied[33] == "cast 0 -> 1" && u.applied[34] == "chat 0 -> 1" && u.applied[35] == "hotbar 0 -> 1");
-    CHECK(u.applied[36] == "tracker 0 -> 1" && u.applied[37] == "party 0 -> 1" && u.applied[38] == "target 0 -> 1");
-    CHECK(u.applied[39] == "character off -> bars");
+          u.applied[31] == "macros 0 -> 1" && u.applied[32] == "tips 0 -> 1" && u.applied[33] == "emotes 0 -> 1");
+    CHECK(u.applied[34] == "cast 0 -> 1" && u.applied[35] == "chat 0 -> 1" && u.applied[36] == "hotbar 0 -> 1");
+    CHECK(u.applied[37] == "tracker 0 -> 1" && u.applied[38] == "party 0 -> 1" && u.applied[39] == "target 0 -> 1");
+    CHECK(u.applied[40] == "character off -> bars");
     CHECK(appliesNow("interface.minimap"));
 }
 
@@ -1764,6 +1765,19 @@ TEST(config_interface_tips) {
     CHECK(appliesNow("interface.tips"));
     CHECK(liveUpdate(parseConfig(""), parseConfig("[interface]\ntips = 1\n")).next.tipWindow);
     CHECK(settings::tokenOf(*s, parseConfig("[interface]\ntips = 1\n")) == "1");
+}
+
+// 3.0.11-beta.205: [interface] emotes - the game's emotion list (Alt+L) as a card, on with the new minimap, at once
+TEST(config_interface_emotes) {
+    CHECK(!parseConfig("").emoteWindow);
+    CHECK(parseConfig("[interface]\nminimap = 1\n").emoteWindow);
+    CHECK(!parseConfig("[interface]\nminimap = 1\nemotes = 0\n").emoteWindow);
+    CHECK(parseConfig("[interface]\nemotes = 1\n").emoteWindow);
+    const settings::IniSetting* s = settings::findSetting("interface.emotes");
+    CHECK(s != nullptr && s->page == settings::Page::Interface);
+    CHECK(appliesNow("interface.emotes"));
+    CHECK(liveUpdate(parseConfig(""), parseConfig("[interface]\nemotes = 1\n")).next.emoteWindow);
+    CHECK(settings::tokenOf(*s, parseConfig("[interface]\nemotes = 1\n")) == "1");
 }
 
 // 3.0.11-beta.103 (the owner: «можешь сделать настройку, чтобы можно было выбрать эту стрелку в конфигураторе»):
