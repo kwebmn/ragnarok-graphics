@@ -1,3 +1,8 @@
+# uaRO Graphics 3.0.11-beta.206 — what's new
+
+**The tester's third list, part seven**:
+- The game's command list (Alt+Y; Alt+J in this client is the pet's window, already in the new look) as the card «Список команд»: three tabs - «Перемикачі» (/battlemode, /noctrl, /showname ... each with its state «увімк.» / «вимк.»), «Команди» (/sit, /where, /memo ...) and «Вікна» (each window by its Alt key, named in your language). A click does what the game's click does: a switch flips, a command runs, a window opens. ✕ or Esc closes. A new switch «Картка списку команд» under «Інтерфейс» (and in the console); off - the game's own window.
+
 # uaRO Graphics 3.0.11-beta.205 — what's new
 
 **The tester's third list, part six**:
