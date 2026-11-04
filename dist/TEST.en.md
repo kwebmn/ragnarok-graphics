@@ -1,3 +1,12 @@
+# uaRO Graphics 3.0.11-beta.224 — what's new
+
+**«Skills» (Alt+S): the «Tree» view** (the second stage of the new skills window):
+- The window's title has the buttons «List» and «Tree». The list opens first, as before; the choice is kept.
+- «Tree»: the job's skills in columns by the depth of their requirements, a line from each requirement with the level it needs (gold - met, red - not). The requirements from the job before are chips on the left with your level.
+- Point at a skill: its whole chain of requirements lights up, and a line at the window's bottom says «To Spear Stab: 6 more points».
+- «+», a double click, dragging onto the bar and a right click (the description) work as in the list.
+- The tree scrolls with the wheel (with Shift - sideways) or by dragging its empty ground.
+
 # uaRO Graphics 3.0.11-beta.223 — what's new
 
 **«Skills» (Alt+S)**: every skill of the job shows, not only the open ones (the first stage of the new skills window):
