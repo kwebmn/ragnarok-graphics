@@ -1,3 +1,10 @@
+# uaRO Graphics 3.0.11-beta.218 — what's new
+
+**The mercenary** (report R-S8BERR):
+- The right numbers on the "Mercenary" card and in its block: HP and SP with their most, "Contract until", "Loyalty", "Summons". The uaRO server sends the mercenary's packet in a later field order than the 2007 client reads - the graphics now lays it out in the client's order before the game reads it. The server does not send "Kills" in that packet, so it starts at 0.
+- The mercenary's skills are now listed on the card itself: each one's name and level. The game's own skills window was empty - the client does not know the mercenaries' skill names. The "Skills" button is gone.
+- The question on dismissing the mercenary is now in your language ("Dismiss the mercenary? Everything it has gained so far will be lost.") instead of broken Korean letters. The game's colour marks (^ff0000) no longer show in messages.
+
 # uaRO Graphics 3.0.11-beta.217 — what's new
 
 - A mercenary no longer brings up "AI.lua error" ("cannot read ./AI/AI_M.lua", "attempt to call a nil value"). The game runs the mercenary's AI from AI\AI_M.lua (with /merai - AI\USER_AI\AI_M.lua), and the uaRO client has no such file. Now the graphics puts an AI there that does nothing at the game's start: on uaRO the server leads the mercenary. An empty file, or one without an AI function, is replaced; your own AI stays as it is.
