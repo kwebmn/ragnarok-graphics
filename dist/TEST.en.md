@@ -1,3 +1,12 @@
+# uaRO Graphics 3.0.11-beta.231 — what's new
+
+**Buffs and debuffs without the black plate** (the concept «Buffs and debuffs», variant C, «Column» and «Row»):
+- The icons stand straight on the picture at the right edge, as the game's own: no common column, no rings, just a thin dark outline and a shadow.
+- The time gone darkens the icon clockwise from twelve. The numbers always show, on the icon's foot, with a dark outline. The last 10 seconds in orange.
+- Debuffs in a red outline, last.
+- Instead of the «‹ Names» plate, a small round button over the icons (three lines); point at it for «Names» / «Icons». The names stand left of the icons, on the picture too; the icons do not move.
+- The icons a little larger: favourites 36, the rest 30 pixels.
+
 # uaRO Graphics 3.0.11-beta.230 — what's new
 
 **«Skills» (Alt+S): the skill's panel in «List» too**
