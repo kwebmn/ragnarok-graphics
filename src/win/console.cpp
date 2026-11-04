@@ -6,6 +6,7 @@
 #include <map>
 #include <set>
 
+#include "core/console_box.hpp"
 #include "core/console_key.hpp"
 #include "core/effect_costs.hpp"
 #include "core/effect_groups.hpp"
@@ -23,6 +24,7 @@ namespace uagfx::win {
 
 std::vector<Console::Subclassed> Console::subclassed_;
 Console* Console::active_ = nullptr;
+bool Console::askedOpen_ = false;
 ULONGLONG Console::skipCharUntil_ = 0;
 
 namespace {
@@ -235,6 +237,7 @@ void Console::build(Lang lang, const Config& config) {
                   "interface.merc", "interface.options", "interface.social", "interface.servers",
                   "interface.guild", "interface.my_shop", "interface.whisper_setup", "interface.macros",
                   "interface.tips", "interface.emotes", "interface.commands", "interface.chat_rooms",
+                  "interface.detail_console",
                   "interface.skill_cells", "interface.ground_counts"})
                 if (settingOf(key)) rows_.push_back(Row{Kind::Box, key, 0});
             if (settingOf("interface.login_view"))  // 3.0.11-beta.177: the login screen's view
@@ -402,7 +405,9 @@ bool Console::present(HWND game, bool foreground, const std::string& iniPath, co
         return false;
     }
     const bool toggled = pressed(console::kKey, toggle_, false, now);  // its edge, with Ctrl or not
-    if (toggled && console::toggles(GetAsyncKeyState(VK_CONTROL) < 0, console::kKey)) {
+    const bool asked = askedOpen_ && !open_;  // 3.0.11-beta.209: Alt+D
+    askedOpen_ = false;
+    if (asked || (toggled && console::toggles(GetAsyncKeyState(VK_CONTROL) < 0, console::kKey))) {
         open_ = !open_;
         if (open_) {
             std::string text;
@@ -513,7 +518,7 @@ void Console::draw(HWND game, const Config& file, const GpuTiming* timing) {
     // Redrawn when anything shown changed: the values come from the config the driver read (2.2: as the set has them).
     const Config config = shownConfig(file);
     std::string state = std::to_string(at_) + "|" + comparing_ + "|" + std::to_string(timing ? timing->serial : 0) +
-                        "|" + filter_ + "|" + (thisMap_ ? "1" : "0") + map_;
+                        "|" + filter_ + "|" + (thisMap_ ? "1" : "0") + map_ + "|" + std::to_string(file.hudOpacity);
     for (const Row& r : rows_)
         if (r.kind != Kind::Heading)
             if (const IniSetting* s = settingOf(r.key)) state += tokenOf(*s, config) + ",";
@@ -529,18 +534,24 @@ void Console::draw(HWND game, const Config& file, const GpuTiming* timing) {
     GetClientRect(game, &client);
     HDC screen = GetDC(nullptr);
     HDC dc = CreateCompatibleDC(screen);
-    const int fontH = std::max(14, GetDeviceCaps(screen, LOGPIXELSY) * 15 / 96);
-    const int line = fontH * 3 / 2;
-    const int w = std::max(fontH * 26, int(client.right - client.left) * 2 / 5);
-    const int h = std::max(line * 8, int(client.bottom - client.top) * 3 / 4);
-    const int visible = std::max(3, (h - line * 4) / line);  // the title, two lines of keys at the foot
-    if (at_ < top_) top_ = at_;
-    if (at_ >= top_ + visible) top_ = at_ - visible + 1;
-    top_ = std::clamp(top_, 0, std::max(0, int(rows_.size()) - visible));
+    // 3.0.11-beta.209 (the tester: «не влазить на маленьких екранах»): its size by the game's window (core/console_box)
+    const consolebox::Box box = consolebox::box(int(client.right - client.left), int(client.bottom - client.top),
+                                                std::max(14, GetDeviceCaps(screen, LOGPIXELSY) * 15 / 96));
+    const int fontH = box.fontH, line = box.line, w = box.w, h = box.h;
     HFONT font = CreateFontW(-fontH, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS,
                              CLIP_DEFAULT_PRECIS, ANTIALIASED_QUALITY, DEFAULT_PITCH, L"Segoe UI");
     HFONT bold = CreateFontW(-fontH, 0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS,
                              CLIP_DEFAULT_PRECIS, ANTIALIASED_QUALITY, DEFAULT_PITCH, L"Segoe UI");
+    const std::wstring keys = wide(tr(lang_, Text::ConsoleKeys));
+    RECT measured{0, 0, w - 2 * fontH, 0};  // the foot's lines as GDI breaks them at this width
+    HGDIOBJ measuring = SelectObject(dc, font);
+    DrawTextW(dc, keys.c_str(), int(keys.size()), &measured, DT_CALCRECT | DT_WORDBREAK | DT_LEFT | DT_NOPREFIX);
+    SelectObject(dc, measuring);
+    const int footH = std::max(line, int(measured.bottom - measured.top));
+    const int visible = consolebox::visibleRows(box, footH);  // the title, the foot's lines
+    if (at_ < top_) top_ = at_;
+    if (at_ >= top_ + visible) top_ = at_ - visible + 1;
+    top_ = std::clamp(top_, 0, std::max(0, int(rows_.size()) - visible));
     BITMAPINFO bi{};
     bi.bmiHeader.biSize = sizeof bi.bmiHeader;
     bi.bmiHeader.biWidth = w;
@@ -682,21 +693,21 @@ void Console::draw(HWND game, const Config& file, const GpuTiming* timing) {
                 textRight(w - fontH, y, L"◂ " + wide(choice) + L" ▸", RGB(240, 236, 226));
             }
         }
-        RECT foot{fontH, h - 2 * line - line / 4, w - fontH, h};  // 2.2.1: two lines, wrapped
+        RECT foot{fontH, h - footH - line / 4, w - fontH, h};  // 2.2.1: wrapped (3.0.11-beta.209: as many lines)
         SelectObject(dc, font);
         SetTextColor(dc, RGB(150, 160, 160));
-        const std::wstring keys = wide(tr(lang_, Text::ConsoleKeys));
         DrawTextW(dc, keys.c_str(), int(keys.size()), &foot, DT_WORDBREAK | DT_LEFT | DT_NOPREFIX);
+        const uint32_t ground = consolebox::groundAlpha(file.hudOpacity);  // 3.0.11-beta.209: as the panels
         for (size_t i = 0; i < size_t(w) * size_t(h); ++i) {
             const uint32_t c = px[i] & 0xFFFFFF;
             const uint32_t v = std::max({c & 0xFF, (c >> 8) & 0xFF, c >> 16});
-            const uint32_t a = v > 0x50 ? 255u : 215u;  // the panel a little see-through, the text solid
+            const uint32_t a = v > 0x50 ? 255u : ground;  // the panel see-through, the text solid
             const uint32_t r = (c >> 16) * a / 255, g = ((c >> 8) & 0xFF) * a / 255, b = (c & 0xFF) * a / 255;
             px[i] = a << 24 | r << 16 | g << 8 | b;
         }
         POINT at{0, 0};
         ClientToScreen(game, &at);
-        POINT pos{at.x + fontH, at.y + fontH * 3}, origin{0, 0};
+        POINT pos{at.x + box.x, at.y + box.y}, origin{0, 0};
         SIZE extent{w, h};
         BLENDFUNCTION blend{AC_SRC_OVER, 0, 255, AC_SRC_ALPHA};
         UpdateLayeredWindow(window_, screen, &pos, &extent, dc, &origin, 0, &blend, ULW_ALPHA);

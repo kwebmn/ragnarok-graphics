@@ -622,6 +622,8 @@ enum class Text : uint16_t {
     RoomPassword, RoomCreate, RoomCancel,
     // 3.0.11-beta.208: the room's own card and its settings
     RoomSetupTitle, RoomSave, RoomMembers, RoomSetup, RoomLeave, RoomKick, RoomOwner, RoomFriend,
+    // 3.0.11-beta.209: Alt+D - the driver's console
+    InterfaceDetailConsole, InterfaceDetailConsoleHint,
     // 3.0.11-beta.141: the character block's experience - the free skill points, the last level, an hour, a minute,
     // the experience's tip, the portrait's tip (Alt+V)
     CharSkillPoints, CharExpMax, CharHour, CharMinute, CharToLevel, CharLevelIn, CharPerHour, CharSession, CharLastGain,

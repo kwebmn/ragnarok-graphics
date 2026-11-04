@@ -6077,6 +6077,18 @@ constexpr Entry kTexts[] = {
     {Text::RoomKick, "Kick out", "Вигнати", "Выгнать"},
     {Text::RoomOwner, "Make the owner", "Зробити власником", "Сделать владельцем"},
     {Text::RoomFriend, "Add as a friend", "У друзі", "В друзья"},
+    // 3.0.11-beta.209: Alt+D - the driver's console
+    {Text::InterfaceDetailConsole, "Alt+D opens the graphics console", "Alt+D відкриває консоль графіки",
+     "Alt+D открывает консоль графики"},
+    {Text::InterfaceDetailConsoleHint,
+     "The game's own detail window (Alt+D: object detail, shadows, trilinear) changes almost nothing with this "
+     "renderer - Alt+D opens this console with the real settings instead (as Ctrl+` does). Off: the game's window.",
+     "Власне вікно деталізації гри (Alt+D: деталізація об'єктів, тіні, трилінійна фільтрація) з цим рендерером майже "
+     "нічого не змінює — Alt+D натомість відкриває цю консоль зі справжніми налаштуваннями (як Ctrl+`). Вимкнено: "
+     "вікно гри.",
+     "Собственное окно детализации игры (Alt+D: детализация объектов, тени, трилинейная фильтрация) с этим "
+     "рендерером почти ничего не меняет — Alt+D вместо него открывает эту консоль с настоящими настройками (как "
+     "Ctrl+`). Выключено: окно игры."},
     // 3.0.11-beta.141: the character block's experience (forms: one, a few, many)
     {Text::CharSkillPoints, "skill point|skill points", "очко навичок|очки навичок|очок навичок",
      "очко навыков|очка навыков|очков навыков"},

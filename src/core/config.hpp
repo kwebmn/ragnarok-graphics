@@ -749,6 +749,9 @@ struct Config {
     bool commandWindow = false;
     // 3.0.11-beta.207: [interface] chat_rooms - the game's chat room windows (Alt+C, win/chatroom_window) as cards
     bool chatRoomWindows = false;
+    // 3.0.11-beta.209: [interface] detail_console - Alt+D opens the driver's console in place of the game's «Arrange
+    // Detail» window (win/detail_window)
+    bool detailConsole = false;
     // 3.0.11-beta.142 (the owner's concept «маг, прист и хант на геймпаде», answer 9 «дать»): [interface] skill_cells -
     // a ground skill's cells, as the server makes them (core/skill_area), shown on the ground after a cast by the pad
     // or the mouse (win/ground_marks); 0: none

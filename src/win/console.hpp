@@ -36,6 +36,8 @@ public:
         testAsked_ = false;
         return asked;
     }
+    // 3.0.11-beta.209: opened at its next present (Alt+D in place of the game's detail window: win/detail_window)
+    static void askOpen() { askedOpen_ = true; }
     // 3.0.11-beta.75: «Розмістити інтерфейс» chosen (the console closed with it) - true once
     bool takeLayoutAsk() {
         const bool asked = layoutAsked_;
@@ -88,6 +90,7 @@ private:
     };
     static std::vector<Subclassed> subclassed_;
     static Console* active_;
+    static bool askedOpen_;  // 3.0.11-beta.209
     static ULONGLONG skipCharUntil_;  // 2.6.22: the ~ key's own letter (` or ё) is not typed
 };
 

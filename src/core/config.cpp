@@ -413,6 +413,7 @@ Config parseConfig(const std::string& text) {
     bool emoteSet = false;                        // 3.0.11-beta.205
     bool commandSet = false;                      // 3.0.11-beta.206
     bool chatRoomSet = false;                     // 3.0.11-beta.207
+    bool detailSet = false;                       // 3.0.11-beta.209
     std::istringstream in(text);
     std::string line;
     std::string section;
@@ -701,6 +702,9 @@ Config parseConfig(const std::string& text) {
         } else if (key == "interface.chat_rooms") {  // 3.0.11-beta.207: the game's chat room windows
             chatRoomSet = val == "0" || val == "1" || val == "on" || val == "off" || val == "true" || val == "false";
             setBool(val, c.chatRoomWindows);
+        } else if (key == "interface.detail_console") {  // 3.0.11-beta.209: Alt+D - the driver's console
+            detailSet = val == "0" || val == "1" || val == "on" || val == "off" || val == "true" || val == "false";
+            setBool(val, c.detailConsole);
         } else if (key == "interface.skill_cells") {  // 3.0.11-beta.142: a ground skill's cells on the ground
             setBool(val, c.skillCells);
         } else if (key == "interface.ground_counts") {  // 3.0.11-beta.143: walls standing, traps left on the bar
@@ -1032,6 +1036,7 @@ Config parseConfig(const std::string& text) {
     if (c.newMinimap && !emoteSet) c.emoteWindow = true;            // 3.0.11-beta.205
     if (c.newMinimap && !commandSet) c.commandWindow = true;        // 3.0.11-beta.206
     if (c.newMinimap && !chatRoomSet) c.chatRoomWindows = true;     // 3.0.11-beta.207
+    if (c.newMinimap && !detailSet) c.detailConsole = true;         // 3.0.11-beta.209
     return c;
 }
 
