@@ -1,3 +1,11 @@
+# uaRO Graphics 3.0.11-beta.226 — what's new
+
+**«Skills» (Alt+S): the «Next» tab** (the fourth stage of the new skills window):
+- The last tab holds the new skills of the job you may change to next. With two choices (Swordsman → Knight or Crusader, Taekwon → Star Gladiator or Soul Linker) two buttons stand over the list; the window remembers which one you looked at. With one (Knight → Lord Knight) it is in the tab's name: «Next · Lord Knight».
+- The requirements are marked by your current levels: Spiral Pierce waits for Spear Mastery 10. All met - «After the job change».
+- Works in «Tree» and «Plan» too: what you plan for the next job is kept and applied after the change.
+- A Novice has no such tab.
+
 # uaRO Graphics 3.0.11-beta.225 — what's new
 
 **«Skills» (Alt+S): «Plan»** (the third stage of the new skills window):
