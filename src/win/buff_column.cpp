@@ -124,6 +124,7 @@ struct State {
     std::vector<GameIcon> game;
     std::vector<bp::Entry> entries;
     bp::Layout layout;
+    int pressesLogged = 0;  // 3.0.11-beta.233
     int hover = -1, tip = -1;  // 3.0.11-beta.51: its tip's - the hovered one's after 0.4 s (the concept's)
     uint64_t hoverSince = 0;
     std::string shape, fill;  // what the picture shows: its parts, its times
@@ -315,14 +316,6 @@ void render(State& s) {
     drawWords(s.picture, gdiWords(bp::words(s.layout, s.entries, s.tip, t)));
     s.upload = true;
     s.paintedAt = GetTickCount64();
-}
-
-bool toTarget(const State& s, HWND game, int x, int y, float& tx, float& ty) {
-    RECT client{};
-    if (!GetClientRect(game, &client) || client.right <= 0 || client.bottom <= 0) return false;
-    tx = float(x) * float(s.targetW) / float(client.right);  // Windows' size of the window (uaRO.exe is not DPI-aware)
-    ty = float(y) * float(s.targetH) / float(client.bottom);
-    return true;
 }
 
 void block(const State& s, HWND game) {  // the mouse's clicks over it are its own, not the game's
@@ -532,16 +525,19 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
                         m == WM_RBUTTONUP || m == WM_RBUTTONDBLCLK || m == WM_MBUTTONDOWN || m == WM_MBUTTONUP;
     if (!button && m != WM_MOUSEWHEEL) return false;
     (void)wp;
-    POINT p{GET_X_LPARAM(lp), GET_Y_LPARAM(lp)};
-    if (m == WM_MOUSEWHEEL && !ScreenToClient(game, &p)) return false;  // the wheel's point is the screen's
+    // 3.0.11-beta.233 (the owner: «на иконку бургера нажимаю и оно не срабатывает на второй третий раз»): the press
+    // where the game's own cursor stands - as the hover follows it and every other part takes its clicks
+    // (game_camera pointerInTarget, 3.0.11-beta.43); the message's own point strayed from it on a scaled 4K screen
     float tx = 0, ty = 0;
-    if (!toTarget(s, game, p.x, p.y, tx, ty)) return false;
+    if (!pointerInTarget(game, m, lp, s.k, s.targetW, s.targetH, tx, ty)) return false;
     const float px = tx - float(s.layout.x), py = ty - float(s.layout.y);
     if (!s.layout.hit.contains(px, py) && !s.layout.linesHit.contains(px, py)) return false;
     // 3.0.11-beta.232 («кнопочка переключалки иногда работает а иногда нет»): a quick second click comes as a double
     // click - a press too
     if (m == WM_LBUTTONDOWN || m == WM_LBUTTONDBLCLK) {
         const bp::Hit h = bp::hitTest(s.layout, px, py);
+        if (s.pressesLogged++ < 12)
+            LOG_INFO("buffs: a press at the column's (%.0f, %.0f) - part %d", px, py, int(h.part));
         if (h.part == bp::Part::Toggle || (h.part == bp::Part::More && s.look == BuffsLook::Column)) {
             s.names = h.part == bp::Part::More ? true : !s.names;  // «ще N»: the names list holds more
             keepState(s);
