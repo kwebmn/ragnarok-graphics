@@ -6114,6 +6114,50 @@ constexpr Entry kTexts[] = {
      "отправляет как и раньше) и кнопка отправки. Выключено: собственные окна игры."},
     {Text::WhisperCardWith, "Whisper: {1}", "Шепіт: {1}", "Шёпот: {1}"},
     {Text::WhisperCardSend, "Send", "Надіслати", "Отправить"},
+    // 3.0.11-beta.214: the chat wheel
+    {Text::WheelPhrases, "Phrases", "Фрази", "Фразы"},
+    {Text::WheelEmotes, "Emotions", "Емоції", "Эмоции"},
+    {Text::WheelNear, "Everyone", "Усім", "Всем"},
+    {Text::WheelParty, "Party", "Групі", "Группе"},
+    {Text::WheelGuild, "Guild", "Гільдії", "Гильдии"},
+    {Text::WheelKeyboard, "{1} keyboard", "{1} клавіатура", "{1} клавиатура"},
+    {Text::WheelVoice, "{1} voice", "{1} голос", "{1} голос"},
+    {Text::WheelHint, "Stick: choose · let go: send · {1}/{2}: page · {3}/{4}: channel",
+     "Стик: вибір · відпустіть: надіслати · {1}/{2}: сторінка · {3}/{4}: канал",
+     "Стик: выбор · отпустите: отправить · {1}/{2}: страница · {3}/{4}: канал"},
+    {Text::WheelPhrase1, "Hi!", "Привіт!", "Привет!"},
+    {Text::WheelPhrase2, "Thanks!", "Дякую!", "Спасибо!"},
+    {Text::WheelPhrase3, "Heal please", "Хіл, будь ласка", "Хил, пожалуйста"},
+    {Text::WheelPhrase4, "Coming", "Йду", "Иду"},
+    {Text::WheelPhrase5, "Wait", "Зачекайте", "Подождите"},
+    {Text::WheelPhrase6, "Yes", "Так", "Да"},
+    {Text::WheelPhrase7, "No", "Ні", "Нет"},
+    {Text::WheelPhrase8, "Buff please", "Бафніть, будь ласка", "Бафните, пожалуйста"},
+    {Text::PadChatHeading, "Chat wheel", "Колесо чату", "Колесо чата"},
+    {Text::PadChatWheel, "Chat wheel (hold the talk button)", "Колесо чату (утримати кнопку розмови)",
+     "Колесо чата (удерживать кнопку разговора)"},
+    {Text::PadChatWheelHint,
+     "The talk button (the D-pad down) held opens a wheel: the right stick points at a phrase or an emotion, letting "
+     "the button go sends it; LB and RB the page, LT and RT everyone, the party or the guild; Y the Windows voice "
+     "typing into the chat's line. A tap still talks to the nearest NPC.",
+     "Утримана кнопка розмови (хрестовина вниз) відкриває колесо: правий стик вказує на фразу чи емоцію, відпущена "
+     "кнопка надсилає її; LB і RB — сторінка, LT і RT — усім, групі чи гільдії; Y — голосове введення Windows у "
+     "рядок чату. Коротке натискання, як і раніше, — розмова з найближчим NPC.",
+     "Удержанная кнопка разговора (крестовина вниз) открывает колесо: правый стик указывает на фразу или эмоцию, "
+     "отпущенная кнопка отправляет её; LB и RB — страница, LT и RT — всем, группе или гильдии; Y — голосовой ввод "
+     "Windows в строку чата. Короткое нажатие, как и раньше, — разговор с ближайшим NPC."},
+    {Text::PadChatPhrase, "Phrase {1}", "Фраза {1}", "Фраза {1}"},
+    {Text::PadChatEmotes, "The wheel's emotions", "Емоції колеса", "Эмоции колеса"},
+    {Text::PadChatEmotesHint,
+     "Ten emotion commands by spaces, as the chat takes them (/! /? /ho ...); empty - the game's own Alt+1 to Alt+0.",
+     "Десять команд емоцій через пробіл, як їх приймає чат (/! /? /ho ...); порожньо — власні Alt+1…Alt+0 гри.",
+     "Десять команд эмоций через пробел, как их принимает чат (/! /? /ho ...); пусто — собственные Alt+1…Alt+0 "
+     "игры."},
+    {Text::OskSpace, "space", "пробіл", "пробел"},
+    {Text::OskSend, "Send", "Надіслати", "Отправить"},
+    {Text::OskHint, "{1} type · {2} erase · {3} space · {4}/{5} language · {6} Shift · Start send · {7} close",
+     "{1} ввести · {2} стерти · {3} пробіл · {4}/{5} мова · {6} Shift · Start надіслати · {7} закрити",
+     "{1} ввести · {2} стереть · {3} пробел · {4}/{5} язык · {6} Shift · Start отправить · {7} закрыть"},
     // 3.0.11-beta.141: the character block's experience (forms: one, a few, many)
     {Text::CharSkillPoints, "skill point|skill points", "очко навичок|очки навичок|очок навичок",
      "очко навыков|очка навыков|очков навыков"},

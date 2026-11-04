@@ -174,6 +174,12 @@ Config parseConfig(const std::string& text) {
             if (val == "start") c.touchpad = kPadStart;
         } else if (key == "npc.hint") {  // 0.7
             setBool(val, c.npcHint);
+        } else if (key == "chat.wheel") {  // 3.0.11-beta.214: the chat wheel
+            setBool(val, c.chatWheel);
+        } else if (key.size() == 12 && key.compare(0, 11, "chat.phrase") == 0 && key[11] >= '1' && key[11] <= '8') {
+            c.phrases[size_t(key[11] - '1')] = val;
+        } else if (key == "chat.emotes") {
+            c.emotes = val;
         } else if (key == "general.language") {
             if (auto l = parseLang(val)) c.lang = *l;
         } else if (key == "mouse.lock") {

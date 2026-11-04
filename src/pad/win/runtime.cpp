@@ -45,6 +45,8 @@
 #include "win/paths.hpp"
 #include "core/walk_path.hpp"
 #include "win/char_block.hpp"
+#include "win/chat_wheel.hpp"
+#include "win/osk_window.hpp"
 #include "win/game_camera.hpp"
 #include "win/ground_marks.hpp"
 #include "win/item_window.hpp"
@@ -90,6 +92,8 @@
 namespace uapad::runtime {
 namespace {
 
+constexpr DWORD kTalkHoldMs = 350;  // 3.0.11-beta.214: the Talk button held this long - the chat wheel
+
 struct State {
     bool initDone = false;
     bool failed = false;
@@ -115,6 +119,9 @@ struct State {
     SettingsMenu menu;          // behind Start
     bool swallowMouse = false;  // mouse buttons are the menu's: while it is open and until let go after
     uint16_t prevPadButtons = 0;
+    // 3.0.11-beta.214: the Talk button - held past kTalkHoldMs the chat wheel, let go sooner a tap (the NPC talk)
+    bool talkDown = false, talkOwned = false, talkWheel = false, wheelLt = false, wheelRt = false;
+    DWORD talkSince = 0;
     std::string bindsPath;      // uaro-pad-binds.ini
     std::string iniPath;        // uaro-pad.ini
     int sleepWhenOn = 10;       // background_sleep_ms to write when the menu switches the CPU saving on
@@ -461,6 +468,61 @@ bool referencePad(const PadState& pad) {
 // 3.0.11-beta.90 (the concept's stage 6): the windows' tile open - the pad's buttons are its: the D-pad (or the left
 // stick) moves its frame, A opens, B or Start closes; the character waits meanwhile
 uint16_t stickSteps(const PadState& pad, DWORD now);
+
+// 3.0.11-beta.214: the chat wheel open - the right stick points, the Talk button let go sends, LB/RB the page, LT/RT
+// the channel, Y the voice, B closes; the character waits meanwhile
+bool wheelPad(const PadState& pad, bool talkHeld) {
+    State& s = S();
+    const uint16_t buttons = pad.connected ? pad.buttons : 0;
+    const uint16_t down = uint16_t(buttons & ~s.prevPadButtons);
+    s.prevPadButtons = buttons;
+    const bool lt = pad.lt > 0.5f, rt = pad.rt > 0.5f;
+    uagfx::win::chatwheelwin::Pad p;
+    p.rx = pad.rx;
+    p.ry = pad.ry;
+    p.held = talkHeld;
+    p.pageBack = (down & kPadLB) != 0;
+    p.pageOn = (down & kPadRB) != 0;
+    p.channelBack = lt && !s.wheelLt;
+    p.channelOn = rt && !s.wheelRt;
+    s.wheelLt = lt;
+    s.wheelRt = rt;
+    p.voice = (down & kPadY) != 0;
+    p.cancel = (down & kPadB) != 0;
+    p.keyboard = (down & kPadA) != 0;
+    uagfx::win::chatwheelwin::pad(p);
+    return true;
+}
+
+// 3.0.11-beta.214: the on-screen keyboard open - the D-pad or the left stick moves, A types, X erases, Y a space,
+// LB/RB the language, LT Shift, Start sends, B closes
+bool keyboardPad(const PadState& pad, DWORD now) {
+    State& s = S();
+    const uint16_t buttons = pad.connected ? pad.buttons : 0;
+    const uint16_t down = uint16_t((buttons & ~s.prevPadButtons) | stickSteps(pad, now));
+    s.prevPadButtons = buttons;
+    const bool lt = pad.lt > 0.5f;
+    using uagfx::win::oskwin::Command;
+    const std::pair<uint16_t, Command> keys[] = {
+        {kPadLeft, Command::Left},     {kPadRight, Command::Right},  {kPadUp, Command::Up},
+        {kPadDown, Command::Down},     {kPadA, Command::Press},      {kPadX, Command::Erase},
+        {kPadY, Command::Space},       {kPadLB, Command::LangBack},  {kPadRB, Command::LangOn},
+        {kPadStart, Command::Send},    {kPadB, Command::Close}};
+    for (const auto& [button, c] : keys)
+        if (down & button) uagfx::win::oskwin::command(c);
+    if (lt && !s.wheelLt) uagfx::win::oskwin::command(Command::Shift);
+    s.wheelLt = lt;
+    return true;
+}
+
+// 3.0.11-beta.214: the button the Talk action is bound to (a digital one; 0 none)
+uint16_t talkButton(State& s) {
+    const Bindings& b = s.session->controller().bindings();
+    for (size_t i = 0; i < kBindableCount; ++i)
+        if (b[i].kind == Action::Kind::Talk && kBindableButtons[i] != kPadLT && kBindableButtons[i] != kPadRT)
+            return kBindableButtons[i];
+    return 0;
+}
 
 bool tilePad(const PadState& pad, DWORD now) {
     State& s = S();
@@ -1257,7 +1319,31 @@ void tick() {
     const bool drive = top && (*top == Win::Reference || (pad.connected && *top != Win::Npc));
     if (drive && top != s.padTop) LOG_INFO("pad: %s takes the controller (the top window)", kTopNames[int(*top)]);
     s.padTop = drive ? top : std::nullopt;
-    view.paused = uagfx::win::padcarrywin::active() && !menuOpen   ? carryPad(pad, now)   // 3.0.11-beta.121
+    // 3.0.11-beta.214 (the owner: «как сделать удобно начинать общение с геймпада» - «придумай»): the Talk button held
+    // kTalkHoldMs opens the chat wheel; let go sooner it is the tap it was (the NPC talk, given the controller below)
+    const uint16_t talk = s.cfg.chatWheel && pad.connected ? talkButton(s) : 0;
+    const bool talkHeld = talk && (pad.buttons & talk);
+    bool talkTap = false;
+    if (talkHeld && !s.talkDown) {
+        s.talkDown = true;
+        s.talkSince = now;
+        s.talkWheel = false;
+        s.talkOwned = !menuOpen && !drive && !uagfx::win::padcarrywin::active() &&
+                      !uagfx::win::padassignwin::isOpen() && !uagfx::win::padtileswin::isOpen() &&
+                      !uagfx::win::oskwin::isOpen() && !uagfx::win::chatwheelwin::isOpen() &&
+                      s.session->controller().dialog() == NpcDialog::None && view.focused;
+    }
+    if (s.talkDown && s.talkOwned && !s.talkWheel && talkHeld && now - s.talkSince >= kTalkHoldMs) {
+        s.talkWheel = true;
+        uagfx::win::chatwheelwin::open(uagfx::win::chatwheelwin::Setup{s.cfg.phrases, s.cfg.emotes});
+    }
+    if (!talkHeld && s.talkDown) {
+        s.talkDown = false;
+        talkTap = s.talkOwned && !s.talkWheel;
+    }
+    view.paused = uagfx::win::oskwin::isOpen() && !menuOpen                ? keyboardPad(pad, now)    // .214
+                  : uagfx::win::chatwheelwin::isOpen() && !menuOpen        ? wheelPad(pad, talkHeld)  // .214
+                  : uagfx::win::padcarrywin::active() && !menuOpen   ? carryPad(pad, now)   // 3.0.11-beta.121
                   : uagfx::win::padassignwin::isOpen() && !menuOpen ? assignPad(pad, now)  // 3.0.11-beta.91
                   : uagfx::win::padtileswin::isOpen() && !menuOpen ? tilePad(pad, now)    // 3.0.11-beta.90
                   : drive && *top == Win::Reference                ? referencePad(pad)    // 3.0.11-beta.21
@@ -1300,6 +1386,8 @@ void tick() {
     s.session->setFriends(uagfx::win::partywin::hereIds());  // 3.0.11-beta.85: whom a support skill may go on
     lookAndGround(now);  // 3.0.11-beta.88
     PadState padIn = pad;
+    if (talk && s.talkDown && s.talkOwned) padIn.buttons = uint16_t(padIn.buttons & ~talk);  // .214: not yet a tap
+    if (talkTap) padIn.buttons = uint16_t(padIn.buttons | talk);  // .214: the tap - a press this tick, let go the next
     backCloses(padIn, view);  // 3.0.11-beta.93: each tick, so the press closing the tile closes nothing more
     const TickOutput out = s.session->tick(padIn, view, now);
     if (s.session->controller().aimView())  // 3.0.11-beta.146 (R-VYV3AG): the pad aims - the game's own wait ended

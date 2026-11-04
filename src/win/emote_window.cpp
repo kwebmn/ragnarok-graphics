@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
+#include <map>
 #include <memory>
 #include <string>
 #include <vector>
@@ -54,7 +55,6 @@ struct State {
     std::vector<std::string> commands;
     std::vector<panel::Picture> icons;
     int iconSide = 0;
-    bool iconsTried = false;
     ec::Show show;
     ec::Layout layout;
     std::string key;
@@ -100,33 +100,41 @@ bool readFile(const std::string& entry, std::string& out) {
     return true;
 }
 
-// The list's pictures at `side`, read once a size
-void loadIcons(State& s, int side) {
-    if (side == s.iconSide && (s.iconsTried || !s.icons.empty())) return;
-    s.iconSide = side;
-    s.iconsTried = true;
-    s.icons.assign(size_t(ec::kEmotions), panel::Picture{});
+// The list's pictures at `side`, read once a size (the card's and the chat wheel's)
+const std::vector<panel::Picture>& picturesAt(int side) {
+    static std::map<int, std::vector<panel::Picture>> made;
+    const auto it = made.find(side);
+    if (it != made.end()) return it->second;
+    std::vector<panel::Picture>& out = made[side];
+    out.assign(size_t(ec::kEmotions), panel::Picture{});
     std::string spr, act;
     spritefile::Sprite sp;
     spritefile::Act ac;
     if (!readFile(kEffects + "emotion.spr", spr) || !readFile(kEffects + "emotion_index3.act", act) ||
         !spritefile::readSpr(spr, sp) || !spritefile::readAct(act, ac)) {
         LOG_INFO("emotions: the list's pictures not read (emotion.spr, emotion_index3.act) - the commands alone");
-        return;
+        return out;
     }
-    int made = 0;
+    int count = 0;
     for (int i = 0; i < ec::kEmotions; ++i) {
         spritefile::Image im;
         if (!spritefile::frameImage(sp, ac, size_t(i), 0, im)) continue;
         const spritefile::Image fit = spritefile::fitted(im, side, side);
-        panel::Picture& p = s.icons[size_t(i)];
+        panel::Picture& p = out[size_t(i)];
         p.width = fit.w;
         p.height = fit.h;
         p.px = fit.argb;
-        ++made;
+        ++count;
     }
-    LOG_INFO("emotions: %d of the list's %d pictures at %d px (emotion.spr by emotion_index3.act)", made,
+    LOG_INFO("emotions: %d of the list's %d pictures at %d px (emotion.spr by emotion_index3.act)", count,
              ec::kEmotions, side);
+    return out;
+}
+
+void loadIcons(State& s, int side) {
+    if (side == s.iconSide && !s.icons.empty()) return;
+    s.iconSide = side;
+    s.icons = picturesAt(side);
 }
 
 void readCommands(State& s, uint32_t window) {
@@ -316,6 +324,26 @@ bool box(int& x, int& y, int& w, int& h) {
     w = s.layout.w;
     h = s.layout.h;
     return true;
+}
+
+const std::vector<panel::Picture>& emotionPictures(int side) { return picturesAt(side); }
+
+int emotionNumber(const std::string& command) {
+    using MsgStringFn = const char*(__cdecl*)(int line);
+    static std::vector<std::string> list;
+    if (list.empty()) {
+        const auto add = [](int from, int to) {
+            for (int i = from; i <= to; ++i) {
+                const char* t = reinterpret_cast<MsgStringFn>(uintptr_t(0x504FB0))(i);
+                list.push_back(t ? t : "");
+            }
+        };
+        add(0x220, 0x23D);
+        add(0x304, 0x30F);
+        add(0x3B1, 0x3B7);
+    }
+    const auto it = std::find(list.begin(), list.end(), command);
+    return it == list.end() ? -1 : int(it - list.begin());
 }
 
 }  // namespace uagfx::win::emotewin

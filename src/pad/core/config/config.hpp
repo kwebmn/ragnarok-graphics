@@ -58,6 +58,12 @@ struct Config {
     uint32_t lightbar = 0x0040FF;  // [sony] lightbar: the light bar's colour, 0xRRGGBB (0 = off)
     uint16_t touchpad = 0;         // [sony] touchpad: what its click is - none (0), back, start
     bool npcHint = true;           // 0.7: [npc] hint - the line over the game while an NPC window takes the buttons
+    // 3.0.11-beta.214: [chat] - the chat wheel (the Talk button held, win/chat_wheel): wheel on; phrase1-8 the
+    // player's phrases (UTF-8; empty - the interface's); emotes the emotions' commands by spaces (empty - the game's
+    // own Alt+1-0)
+    bool chatWheel = true;
+    std::array<std::string, 8> phrases{};
+    std::string emotes;
 };
 
 // "none" / "F1"..."F9" in uaro-pad.ini <-> 0 / 1...9.

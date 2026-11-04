@@ -91,6 +91,8 @@
 #include "win/detail_window.hpp"
 #include "win/popup_window.hpp"
 #include "win/whisper_window.hpp"
+#include "win/chat_wheel.hpp"
+#include "win/osk_window.hpp"
 #include "win/msg_box.hpp"
 #include "win/menu_window.hpp"
 #include "win/net_predict.hpp"
@@ -693,6 +695,8 @@ void Context::endScene() {
         padtileswin::draw(record, *renderer);   // 3.0.11-beta.90: the controller's windows' tile
         padassignwin::draw(record, *renderer);  // 3.0.11-beta.91: «Призначити»
         padcarrywin::draw(record, *renderer);   // 3.0.11-beta.121: the carried thing over its place
+        chatwheelwin::draw(record, *renderer);  // 3.0.11-beta.214: the chat wheel (the Talk button held)
+        oskwin::draw(record, *renderer);        // 3.0.11-beta.214: the on-screen keyboard
         padhintwin::draw(record, *renderer);    // 3.0.11-beta.92: the controller's hint line
         hudedit::draw(record, *renderer);       // 3.0.11-beta.75: the parts' frames while they are placed
         cursorlook::draw(record, *renderer);    // 3.0.11-beta.198: the interface's cursor over all of it
@@ -750,6 +754,8 @@ void Context::present(const Rect& source, bool waitForVblank) {
         windowSwitch_.draw(record, *renderer);
         padtileswin::draw(record, *renderer);   // 3.0.11-beta.90
         padassignwin::draw(record, *renderer);  // 3.0.11-beta.91
+        chatwheelwin::draw(record, *renderer);  // 3.0.11-beta.214
+        oskwin::draw(record, *renderer);        // 3.0.11-beta.214
         padhintwin::draw(record, *renderer);    // 3.0.11-beta.92
         hudedit::draw(record, *renderer);       // 3.0.11-beta.75
         cursorlook::draw(record, *renderer);    // 3.0.11-beta.198
@@ -990,6 +996,8 @@ void Context::present(const Rect& source, bool waitForVblank) {
     uapad::runtime::setTiles(config.padTiles);                        // 3.0.11-beta.90: Start opens the tile
     padtileswin::frame(window, pk, pw, ph);
     padassignwin::frame(window, pk, pw, ph);  // 3.0.11-beta.91: «Призначити»
+    chatwheelwin::frame(window, gameCodePage(config), pk, pw, ph);  // 3.0.11-beta.214: the chat wheel
+    oskwin::frame(window, gameCodePage(config), pk, pw, ph);        // 3.0.11-beta.214: the on-screen keyboard
     padhintwin::frame(window, config.padHints, pk, pw, ph);  // 3.0.11-beta.92: the hint line in the interface's style
     // 3.0.11-beta.39: [interface] party - the party's panel under the character block
     partywin::frame(window, config.partyPanel, gameCodePage(config), pk, pw, ph);

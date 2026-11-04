@@ -144,3 +144,16 @@ TEST(config_target_mark_styles) {
         CHECK(parseMarkStyle(markStyleToken(MarkStyle(i))) &&
               *parseMarkStyle(markStyleToken(MarkStyle(i))) == MarkStyle(i));
 }
+
+// 3.0.11-beta.214: [chat] - the chat wheel (the Talk button held): on unless switched off; the player's phrases
+// (phrase1-8, UTF-8, kept as written) and emotions (the commands by spaces); none - the defaults (empty here)
+TEST(pad_config_chat_wheel) {
+    const uapad::Config d = uapad::parseConfig("");
+    CHECK(d.chatWheel);
+    CHECK(d.phrases[0].empty() && d.phrases[7].empty() && d.emotes.empty());
+    const uapad::Config c = uapad::parseConfig(
+        "[chat]\nwheel = 0\nphrase1 = Привіт усім!\nphrase8 = Бафніть, будь ласка\nphrase9 = no\nemotes = /heh /kis\n");
+    CHECK(!c.chatWheel);
+    CHECK(c.phrases[0] == "Привіт усім!" && c.phrases[7] == "Бафніть, будь ласка" && c.phrases[1].empty());
+    CHECK(c.emotes == "/heh /kis");
+}

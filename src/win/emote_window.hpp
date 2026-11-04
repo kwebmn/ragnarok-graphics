@@ -2,8 +2,11 @@
 #include <windows.h>
 
 #include <cstdint>
+#include <string>
+#include <vector>
 
 #include "core/frame.hpp"
+#include "core/window_panel.hpp"
 
 namespace uagfx::gpu {
 class Renderer;
@@ -26,5 +29,10 @@ bool shown();
 bool close();  // Esc: its close
 void beforeGameDraw();
 bool box(int& x, int& y, int& w, int& h);
+// 3.0.11-beta.214 (the chat wheel too): the list's 49 pictures at `side` px in its order (made once a size; empty
+// ones when the game's files are not read); an emotion command's number in the list (msgstringtable's lines
+// 0x220-0x23D, 0x304-0x30F, 0x3B1-0x3B7 as the game's list fills itself), -1 none. On the game's thread.
+const std::vector<panel::Picture>& emotionPictures(int side);
+int emotionNumber(const std::string& command);
 
 }  // namespace uagfx::win::emotewin

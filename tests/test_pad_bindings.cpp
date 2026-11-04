@@ -172,7 +172,7 @@ TEST(bindings_a_0_5_file_keeps_r3_as_saved) {
 TEST(bindings_talk_round_trips_and_older_layouts_get_it_on_down) {
     CHECK(actionToken(kind(Action::Kind::Talk)) == "talk");
     CHECK(parseAction("talk") == kind(Action::Kind::Talk));
-    CHECK(actionLabel(kind(Action::Kind::Talk), Lang::Ru) == "Говорить с NPC");
+    CHECK(actionLabel(kind(Action::Kind::Talk), Lang::Ru) == "Говорить с NPC · удержать: чат");
     // 0.6 and older: D-pad down on its default F9 becomes talk; one moved elsewhere, or a file of 0.7, stays.
     const Profiles old = parseProfiles("[file]\nversion = 2\n[default]\nDOWN = slot 9\n[char 7]\nDOWN = slot 3\n");
     CHECK(old.fallback[indexOf(kPadDown)] == kind(Action::Kind::Talk));

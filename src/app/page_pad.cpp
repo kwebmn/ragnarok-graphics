@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <cmath>
 #include <cstdio>
 
@@ -7,6 +8,7 @@
 #include "app/setting_ids.hpp"
 #include "app/text.hpp"
 #include "core/layout.hpp"
+#include "core/settings/game_settings.hpp"
 #include "core/settings/ini_edit.hpp"
 #include "core/settings/pad_files.hpp"
 #include "core/version.hpp"
@@ -31,6 +33,8 @@ constexpr int kWho = 1517;
 constexpr int kWalk = 1518;  // a slider: its number 1519
 constexpr int kMark = 1521;
 constexpr int kButton0 = 1530;  // the 14 buttons' choices, uapad::kBindableButtons' order
+// 3.0.11-beta.214: the chat wheel - its switch, the eight phrases' lines, the emotions' line
+constexpr int kChatWheel = 1560, kChatPhrase0 = 1561, kChatEmotes = 1570;
 
 uint32_t g_who = 0;  // the character whose buttons the page shows (0 the default ones); pages are made anew
 
@@ -128,6 +132,22 @@ public:
         const auto mark = uapad::parseMarkStyle(value("aim.mark", "gasp"));
         p.choice(kMark, t(Text::PadMark), marks, mark ? int(*mark) : int(uapad::MarkStyle::Gasp), t(Text::PadMarkHint));
         p.check(kNpcHint, t(Text::PadNpcHint), value("npc.hint", "1") != "0", t(Text::PadNpcHintHint));
+        p.gap();  // 3.0.11-beta.214: the chat wheel - its switch, the phrases, the emotions
+        p.heading(t(Text::PadChatHeading));
+        p.check(kChatWheel, t(Text::PadChatWheel), value("chat.wheel", "1") != "0", t(Text::PadChatWheelHint));
+        const Text cues[8] = {Text::WheelPhrase1, Text::WheelPhrase2, Text::WheelPhrase3, Text::WheelPhrase4,
+                              Text::WheelPhrase5, Text::WheelPhrase6, Text::WheelPhrase7, Text::WheelPhrase8};
+        std::vector<LineItem> phrases;
+        for (int i = 0; i < 8; ++i) {
+            const std::string key = "chat.phrase" + std::to_string(i + 1);
+            phrases.push_back({kChatPhrase0 + i, tf(Text::PadChatPhrase, {std::to_string(i + 1)}),
+                               wide(value(key.c_str(), "")), t(cues[i])});
+        }
+        p.lines(phrases, 60, L"", true);
+        std::string builtIn;
+        for (int i = 0; i < 10; ++i) builtIn += std::string(i ? " " : "") + settings::builtInMacro(i);
+        p.lines({{kChatEmotes, t(Text::PadChatEmotes), wide(value("chat.emotes", "")), wide(builtIn)}}, 120,
+                t(Text::PadChatEmotesHint), true);
         p.note(t(Text::PadSettingsNote));
     }
 
@@ -143,6 +163,13 @@ public:
             write(id == kRumble ? "rumble" : "general", "enabled", checked ? "1" : "0");
         } else if (id == kNpcHint && code == BN_CLICKED) {
             write("npc", "hint", checked ? "1" : "0");
+        } else if (id == kChatWheel && code == BN_CLICKED) {  // 3.0.11-beta.214: the chat wheel
+            write("chat", "wheel", checked ? "1" : "0");
+        } else if (code == EN_KILLFOCUS && ((id >= kChatPhrase0 && id < kChatPhrase0 + 8) || id == kChatEmotes)) {
+            std::string text = controlText(ctl);
+            std::replace(text.begin(), text.end(), ';', ',');  // the file's comments start at a semicolon
+            const std::string key = id == kChatEmotes ? "emotes" : "phrase" + std::to_string(id - kChatPhrase0 + 1);
+            write("chat", key.c_str(), text.c_str());
         } else if (code == CBN_SELCHANGE && sel >= 0) {
             if (id == kType && sel < 3) {
                 write("pad", "type", kTypes[sel]);

@@ -630,6 +630,12 @@ enum class Text : uint16_t {
     InterfacePopups, InterfacePopupsHint,
     // 3.0.11-beta.212: the game's 1:1 whisper windows
     InterfaceWhispers, InterfaceWhispersHint, WhisperCardWith, WhisperCardSend,
+    // 3.0.11-beta.214: the chat wheel (the controller's Talk held) - its pages, channels, buttons, the default phrases,
+    // the Gamepad page's rows
+    WheelPhrases, WheelEmotes, WheelNear, WheelParty, WheelGuild, WheelKeyboard, WheelVoice, WheelHint,
+    WheelPhrase1, WheelPhrase2, WheelPhrase3, WheelPhrase4, WheelPhrase5, WheelPhrase6, WheelPhrase7, WheelPhrase8,
+    PadChatHeading, PadChatWheel, PadChatWheelHint, PadChatPhrase, PadChatEmotes, PadChatEmotesHint,
+    OskSpace, OskSend, OskHint,  // the controller's on-screen keyboard
     // 3.0.11-beta.141: the character block's experience - the free skill points, the last level, an hour, a minute,
     // the experience's tip, the portrait's tip (Alt+V)
     CharSkillPoints, CharExpMax, CharHour, CharMinute, CharToLevel, CharLevelIn, CharPerHour, CharSession, CharLastGain,
