@@ -1,3 +1,16 @@
+# uaRO Graphics 3.0.11-beta.219 — what's new
+
+**Controller** (report R-4DDZ4R):
+- Pick a far monster with the stick and kill it with one shot while A is still down - the game no longer moves on to a nearer one by itself. Only A held for 0.4 s and longer goes on to the next monster.
+
+**"Tip of the day"** (the tester's list):
+- The tips are now in the interface's language - Ukrainian, Russian or English - instead of the client's Russian file. All 68 tips rewritten; weight thresholds as on uaRO (70 %).
+
+**The minimap and the big map** (the tester's list):
+- Guild mates are violet triangles, not green rounds like the NPCs'.
+- The "Party" layer button is now "Party and guild", showing both signs - the party's ring and the guild's triangle.
+- The big map writes the character's name instead of "A guild mate" (from the guild's list; if the game has not got it yet, open the guild window, Alt+G).
+
 # uaRO Graphics 3.0.11-beta.218 — what's new
 
 **The mercenary** (report R-S8BERR):
