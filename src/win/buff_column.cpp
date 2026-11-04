@@ -302,7 +302,7 @@ std::vector<Words> gdiWords(const std::vector<bp::Words>& in) {
                             UINT(w.align == bp::Align::Right    ? DT_RIGHT
                                  : w.align == bp::Align::Center ? DT_CENTER
                                                                 : DT_LEFT),
-                            false});
+                            false, w.halo});
     return out;
 }
 
@@ -488,10 +488,11 @@ void frame(HWND game, BuffsLook look, BuffsOverflow overflow, double k, int targ
         const bp::Hit h = bp::hitTest(s.layout, float(cx) * float(k) - float(s.layout.x),
                                       float(cy) * float(k) - float(s.layout.y));
         if (h.part == bp::Part::Icon) hover = h.slot;
+        if (h.part == bp::Part::Toggle) hover = bp::kToggleTip;  // 3.0.11-beta.231: its words in a tip
     }
     if (hover != s.hover) s.hoverSince = now;
     s.hover = hover;
-    s.tip = hover >= 0 && now - s.hoverSince >= kTipMs ? hover : -1;
+    s.tip = hover != -1 && now - s.hoverSince >= kTipMs ? hover : -1;
     std::string shape = std::to_string(int(panelLook)) + ';' + std::to_string(s.layout.w) + 'x' +
                         std::to_string(s.layout.h) + ';' + std::to_string(hover) + ',' + std::to_string(s.tip) + ';' +
                         std::to_string(scale) + ';' +

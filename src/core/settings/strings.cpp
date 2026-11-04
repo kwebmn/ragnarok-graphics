@@ -6299,16 +6299,18 @@ constexpr Entry kTexts[] = {
     {Text::InterfaceMinimapWayOff, "Off", "Вимкнено", "Выключено"},
     // 3.0.11-beta.35: the buffs' column (stage 7 of the new interface)
     {Text::InterfaceBuffs, "Buffs on the character", "Бафи на персонажі", "Бафы на персонаже"},
-    {Text::InterfaceBuffsHint,
-     "The character's buffs in a column at the screen's right edge under the minimap, or a row under it: each icon "
-     "in a ring of its time left, the time under it; favourites first and larger (a click on an icon), debuffs last "
-     "in red. As in the game: the game's own icons.",
-     "Бафи персонажа стовпчиком біля правого краю під мінікартою або рядком під нею: кожен значок у кільці часу, що "
-     "лишився, час під ним; обрані — першими й більшими (клік по значку), дебафи — останніми, червоні. Як у грі — "
-     "значки самої гри.",
-     "Бафы персонажа столбиком у правого края под миникартой или строкой под ней: каждый значок в кольце "
-     "оставшегося времени, время под ним; избранные — первыми и крупнее (клик по значку), дебафы — последними, "
-     "красные. Как в игре — значки самой игры."},
+    {Text::InterfaceBuffsHint,  // 3.0.11-beta.231: no glass, the time gone dark over the icon
+     "The character's buffs in a column at the screen's right edge under the minimap, or a row under it: the icons "
+     "straight on the picture, the time gone darkening each, its numbers over its foot; favourites first and larger "
+     "(a click on an icon), debuffs last with a red outline; the round button over them shows the names. As in the "
+     "game: the game's own icons.",
+     "Бафи персонажа стовпчиком біля правого краю під мінікартою або рядком під нею: значки просто на картинці, "
+     "минулий час затемнює кожен, цифри — на його нижньому краї; обрані — першими й більшими (клік по значку), "
+     "дебафи — останніми, у червоній обвідці; кругла кнопка над ними показує назви. Як у грі — значки самої гри.",
+     "Бафы персонажа столбиком у правого края под миникартой или строкой под ней: значки прямо на картинке, "
+     "прошедшее время затемняет каждый, цифры — на его нижнем крае; избранные — первыми и крупнее (клик по значку), "
+     "дебафы — последними, в красной обводке; круглая кнопка над ними показывает названия. Как в игре — значки самой "
+     "игры."},
     {Text::InterfaceBuffsOff, "As in the game", "Як у грі", "Как в игре"},
     {Text::InterfaceBuffsColumn, "Column", "Стовпчиком", "Столбиком"},
     {Text::InterfaceBuffsRow, "Row", "Рядком", "Строкой"},

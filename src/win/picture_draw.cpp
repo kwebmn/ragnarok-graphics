@@ -206,6 +206,23 @@ void drawWords(panel::Picture& pic, const std::vector<Words>& words, const Rect&
         Coverage& c = it->second;
         c.used = g.clock;
         const int lit = c.x1 - c.x0;  // each coverage over the picture in the word's colour, inside the area
+        if (word.halo && lit > 0) {  // 3.0.11-beta.231: under the letters, their coverage grown by 2 pixels in black
+            const int rows = c.y1 - c.y0;
+            const auto at = [&](int cx, int cy) -> int {
+                return cx < 0 || cy < 0 || cx >= lit || cy >= rows ? 0 : c.cover[size_t(cy) * size_t(lit) + size_t(cx)];
+            };
+            for (int y = std::max(a.top, top + c.y0 - 2); y < std::min(a.bottom, top + c.y1 + 2); ++y) {
+                uint32_t* row = pic.px.data() + size_t(y) * size_t(pic.width);
+                for (int x = std::max(a.left, left + c.x0 - 2); x < std::min(a.right, left + c.x1 + 2); ++x) {
+                    int most = 0;
+                    const int cx = x - left - c.x0, cy = y - top - c.y0;
+                    for (int dy = -2; dy <= 2 && most < 255; ++dy)
+                        for (int dx = -2; dx <= 2; ++dx)
+                            if (dx * dx + dy * dy <= 5) most = std::max(most, at(cx + dx, cy + dy));
+                    if (most) panel::over(row[x], 0x000000, 0.85f * float(most) / 255.0f);
+                }
+            }
+        }
         for (int y = std::max(a.top, top + c.y0); y < std::min(a.bottom, top + c.y1); ++y) {
             const uint8_t* from = c.cover.data() + size_t(y - top - c.y0) * size_t(lit);
             uint32_t* row = pic.px.data() + size_t(y) * size_t(pic.width);

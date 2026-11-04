@@ -41,7 +41,8 @@ const char* stateName(uint16_t icon);
 // The order shown: favourites, the rest, debuffs - each kind as the game has them
 std::vector<int> order(const std::vector<Entry>& entries);
 
-constexpr int kBig = 32, kSmall = 24;  // the icons' sides at scale 1: favourites, the rest and debuffs
+// the icons' sides at scale 1: favourites, the rest and debuffs (3.0.11-beta.231: 36 and 30, no ring round them)
+constexpr int kBig = 36, kSmall = 30;
 int iconSide(Kind kind, float scale);   // the target's pixels
 
 struct Slot {
@@ -79,6 +80,8 @@ struct Hit {
     int slot = -1;
 };
 Hit hitTest(const Layout& L, float x, float y);  // the picture's pixels; None inside `hit` is still the panel's
+// 3.0.11-beta.231: the hover / tip index of the names' round button (a slot's otherwise)
+constexpr int kToggleTip = -2;
 
 // The tip over a slot: its box in the picture (the column: left of the glass, centred on the icon; the row: under
 // the glass) for words `width` wide
@@ -96,6 +99,7 @@ struct Words {
     float px = 12;
     bool bold = false;
     Align align = Align::Left;
+    bool halo = false;  // 3.0.11-beta.231: a dark outline round the words - they stand on the picture itself
 };
 struct Texts {
     std::string names, hideNames;  // the toggle's: «Назви», «Іконки» (3.0.11-beta.186; «назви», «сховати назви»)

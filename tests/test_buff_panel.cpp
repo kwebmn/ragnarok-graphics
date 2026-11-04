@@ -46,8 +46,8 @@ TEST(buff_panel_order) {
     const std::vector<buffpanel::Entry> e{entry(13, K::Debuff), entry(9, K::Buff), entry(10, K::Favourite),
                                           entry(21, K::Buff), entry(12, K::Favourite)};
     CHECK(buffpanel::order(e) == std::vector<int>({2, 4, 1, 3, 0}));  // favourites, the rest, debuffs; each as given
-    CHECK(buffpanel::iconSide(K::Favourite, 1) == 32 && buffpanel::iconSide(K::Buff, 1) == 24 &&
-          buffpanel::iconSide(K::Debuff, 2) == 48);
+    CHECK(buffpanel::iconSide(K::Favourite, 1) == 36 && buffpanel::iconSide(K::Buff, 1) == 30 &&
+          buffpanel::iconSide(K::Debuff, 2) == 60);  // 3.0.11-beta.231
 }
 
 TEST(buff_panel_column) {
@@ -58,23 +58,24 @@ TEST(buff_panel_column) {
     CHECK(L.x + L.w == 1900 && L.y == 300);
     CHECK(L.slots.size() == 5 && L.hidden == 0 && L.more.w == 0);
     CHECK(L.slots[0].entry == 1 && L.slots[1].entry == 4 && L.slots[4].entry == 2);  // as order() puts them
-    CHECK(L.slots[0].frame.w == 40 && L.slots[0].icon.w == 32 && L.slots[2].frame.w == 30 && L.slots[2].icon.w == 24);
-    CHECK_EQ(L.seps.size(), size_t(2));  // favourites | the rest | debuffs
-    CHECK(L.body.w == 54 && std::fabs(L.body.x + L.body.w - float(L.w)) < 1e-3f);  // at the picture's right edge
-    CHECK(L.toggle.w > 0 && L.toggle.y + L.toggle.h <= L.body.y && std::fabs(L.toggle.x + L.toggle.w - float(L.w)) <
-                                                                       1e-3f);
+    // 3.0.11-beta.231 (variant C): no ring - the icon its frame, 36 a favourite's, 30 the rest's
+    CHECK(L.slots[0].frame.w == 36 && L.slots[0].icon.w == 36 && L.slots[2].frame.w == 30 && L.slots[2].icon.w == 30);
+    CHECK_EQ(L.seps.size(), size_t(2));  // favourites | the rest | debuffs (a gap, no line drawn)
+    CHECK(L.body.w == 42 && std::fabs(L.body.x + L.body.w - float(L.w)) < 1e-3f);  // at the picture's right edge
+    CHECK(L.toggle.w == 22 && L.toggle.h == 22 && L.toggle.y + L.toggle.h <= L.body.y);  // the round button
+    CHECK(std::fabs((L.toggle.x + L.toggle.w / 2) - (L.body.x + L.body.w / 2)) < 0.51f);  // over the icons
     for (size_t i = 0; i < L.slots.size(); ++i) {
         const buffpanel::Slot& s = L.slots[i];
         CHECK(inside(L.body, s.frame) && inside(s.frame, s.icon));
-        CHECK(s.time.y >= s.frame.y + s.frame.h && inside(L.body, s.time));  // the time under its icon
+        CHECK(std::fabs(s.time.y + s.time.h - (s.frame.y + s.frame.h)) < 0.01f && s.time.y > s.frame.y);  // its foot
         CHECK(std::fabs((s.frame.x + s.frame.w / 2) - (L.body.x + L.body.w / 2)) < 0.51f);  // centred
-        if (i) CHECK(s.frame.y > L.slots[i - 1].time.y);                                       // down the column
+        if (i) CHECK(s.frame.y > L.slots[i - 1].frame.y + L.slots[i - 1].frame.h);       // down the column
     }
     CHECK(inside(L.hit, L.body) && inside(L.hit, L.toggle));
     CHECK(L.tipRoom.w > 0 && L.tipRoom.x + L.tipRoom.w <= L.body.x);  // the tip left of the column
     // twice the scale: twice the sizes
     const buffpanel::Layout L2 = buffpanel::layout(e, buffpanel::Look::Column, 1900, 300, 2000, 0, 2.0f);
-    CHECK(L2.slots[0].frame.w == 80 && L2.body.w == 108);
+    CHECK(L2.slots[0].frame.w == 72 && L2.body.w == 84);
 }
 
 TEST(buff_panel_names_and_row) {
@@ -83,11 +84,12 @@ TEST(buff_panel_names_and_row) {
     const buffpanel::Layout N = buffpanel::layout(e, buffpanel::Look::Names, 1900, 300, 1030, 0, 1.0f);
     CHECK(N.body.w >= 190 && N.toggle.w > 0 && N.tipRoom.w == 0);
     for (const buffpanel::Slot& s : N.slots)
-        CHECK(s.name.w > 40 && s.name.x > s.frame.x + s.frame.w && s.time.x > s.name.x && inside(N.body, s.time));
+        CHECK(s.name.w > 40 && s.name.x + s.name.w <= s.frame.x && inside(N.body, s.frame));  // the name left of it
     const buffpanel::Layout R = buffpanel::layout(e, buffpanel::Look::Row, 1900, 300, 1030, 400, 1.0f);
     CHECK(R.toggle.w == 0 && R.x + R.w == 1900 && R.slots.size() == 3);
     CHECK(R.slots[0].frame.x < R.slots[1].frame.x && R.slots[1].frame.x < R.slots[2].frame.x);  // left to right
-    CHECK(R.slots[0].frame.y == R.slots[1].frame.y && R.slots[2].time.y >= R.slots[2].frame.y + R.slots[2].frame.h);
+    const auto midY = [](const buffpanel::Slot& s) { return s.frame.y + s.frame.h / 2; };
+    CHECK(std::fabs(midY(R.slots[0]) - midY(R.slots[1])) < 0.01f && R.slots[2].time.y > R.slots[2].frame.y);
     CHECK_EQ(R.seps.size(), size_t(2));
     CHECK(R.tipRoom.w > 0 && R.tipRoom.y >= R.body.y + R.body.h);  // the tip under the row
     CHECK(std::fabs(R.body.x + R.body.w - float(R.w)) < 1e-3f);
@@ -101,7 +103,7 @@ TEST(buff_panel_what_does_not_fit) {
     e.push_back(entry(8, K::Debuff));
     const buffpanel::Layout L = buffpanel::layout(e, buffpanel::Look::Column, 1900, 300, 800, 0, 1.0f);
     CHECK(L.y + L.h <= 800 && L.hidden > 0 && L.more.w > 0 && inside(L.body, L.more));
-    CHECK(L.more.h == 28 && L.more.w == L.body.w - 14 && L.lines.empty());  // the concept's: its whole width, 28 px
+    CHECK(L.more.h == 28 && L.more.w == L.body.w - 6 && L.lines.empty());  // the concept's: its whole width, 28 px
     CHECK_EQ(L.slots.size() + size_t(L.hidden), e.size());
     // the favourite and both debuffs shown; the rest's last ones hidden, its first ones kept
     const auto shownIn = [](const buffpanel::Layout& of, int i) {
@@ -149,10 +151,10 @@ TEST(buff_panel_debuffs_open_columns) {
     for (uint16_t i = 0; i < 9; ++i) d.push_back(entry(uint16_t(200 + i), K::Debuff));
     const buffpanel::Layout D = buffpanel::layout(d, buffpanel::Look::Column, 1900, 300, 500, 0, 1.0f);
     CHECK(D.slots.size() == 9 && D.hidden == 0 && D.more.w == 0 && D.x + D.w == 1900 && D.y + D.h <= 500);
-    CHECK_EQ(D.lines.size(), size_t(2));  // three a column in 200 px
+    CHECK_EQ(D.lines.size(), size_t(2));  // four a column in 200 px (3.0.11-beta.231: 30 px icons, no time line)
     CHECK(D.lines[0].x + D.lines[0].w <= D.body.x && D.lines[1].x + D.lines[1].w <= D.lines[0].x);  // to the left
     CHECK(D.lines[0].y == D.body.y && D.lines[0].w == D.body.w && D.lines[0].h <= D.body.h);
-    CHECK(glassOf(D, 0) == 0 && glassOf(D, 2) == 0 && glassOf(D, 3) == 1 && glassOf(D, 5) == 1 && glassOf(D, 8) == 2);
+    CHECK(glassOf(D, 0) == 0 && glassOf(D, 3) == 0 && glassOf(D, 4) == 1 && glassOf(D, 7) == 1 && glassOf(D, 8) == 2);
     for (size_t i = 0; i < D.slots.size(); ++i) CHECK_EQ(D.slots[i].entry, int(i));  // in their order
     // the mouse: one in a further column is its own; the tips left of them all
     const buffpanel::Slot& s = D.slots[4];
@@ -167,7 +169,7 @@ TEST(buff_panel_debuffs_open_columns) {
     d.push_back(entry(9, K::Buff));
     const buffpanel::Layout M = buffpanel::layout(d, buffpanel::Look::Column, 1900, 300, 500, 0, 1.0f);
     CHECK(M.hidden == 1 && inside(M.body, M.more) && M.slots.size() == 9 && M.y + M.h <= 500);
-    CHECK(glassOf(M, 0) == 0 && glassOf(M, 2) == 1 && glassOf(M, 9) == -1);
+    CHECK(glassOf(M, 0) == 0 && glassOf(M, 2) == 0 && glassOf(M, 3) == 1 && glassOf(M, 9) == -1);
     // the row: a second row under the first
     std::vector<buffpanel::Entry> r;
     for (uint16_t i = 0; i < 12; ++i) r.push_back(entry(uint16_t(200 + i), K::Debuff));
@@ -246,9 +248,10 @@ TEST(buff_panel_picture) {
     keyed[16 * 32 + 16] = 0xFF00FF00u;
     const panel::Picture k = buffpanel::iconPicture(keyed, 32, 32, false, 32, 0);
     CHECK((pixel(k, 2, 2) >> 24) == 0 && pixel(k, 16, 16) == 0xFF00FF00u);
-    // the ring: a quarter of its time left - gold from twelve o'clock to three, dark the rest
+    // 3.0.11-beta.231 (variant C): a quarter of its time left - the icon bright from twelve o'clock to three, the rest
+    // gone dark over it; a debuff's red outline round it
     std::vector<buffpanel::Entry> e{entry(10, K::Favourite, "1:00", 0.25f), entry(13, K::Debuff, "0:24", 1.0f)};
-    const panel::Picture big = buffpanel::iconPicture(red, 32, 32, true, 32, 5);
+    const panel::Picture big = buffpanel::iconPicture(red, 32, 32, true, 36, 5);
     e[0].picture = &big;
     const buffpanel::Layout L = buffpanel::layout(e, buffpanel::Look::Column, 400, 0, 600, 0, 1.0f);
     panel::Picture out;
@@ -256,14 +259,14 @@ TEST(buff_panel_picture) {
     out.height = L.h;
     out.px.assign(size_t(L.w) * size_t(L.h), 0u);
     buffpanel::paint(out, L, e, -1);
-    const panel::Box& f = L.slots[0].frame;
-    const uint32_t gold = pixel(out, f.x + f.w * 0.75f, f.y + 1.5f), dark = pixel(out, f.x + f.w * 0.25f, f.y + 1.5f);
-    CHECK(((gold >> 16) & 0xFF) > 0xB0 && ((gold >> 8) & 0xFF) > 0x90 && (gold & 0xFF) < ((gold >> 8) & 0xFF));
-    CHECK(((dark >> 16) & 0xFF) < 0x40);
-    const panel::Box& r = L.slots[1].frame;  // a debuff's ring red
-    const uint32_t red2 = pixel(out, r.x + r.w * 0.5f, r.y + 1.5f);
-    CHECK(((red2 >> 16) & 0xFF) > 0xB0 && ((red2 >> 8) & 0xFF) < 0x80);
-    CHECK(pixel(out, L.slots[0].icon.x + 16, L.slots[0].icon.y + 16) == 0xFFFF0000u);  // its icon over the glass
+    const panel::Box& f = L.slots[0].icon;
+    const uint32_t lit = pixel(out, f.x + f.w * 0.75f, f.y + f.h * 0.25f), gone = pixel(out, f.x + f.w * 0.25f,
+                                                                                          f.y + f.h * 0.25f);
+    CHECK(((lit >> 16) & 0xFF) > 0xE0 && ((gone >> 16) & 0xFF) < 0x80);
+    const panel::Box& r = L.slots[1].frame;
+    const uint32_t edge = pixel(out, r.x + r.w * 0.5f, r.y - 0.5f);
+    CHECK(((edge >> 16) & 0xFF) > 0xB0 && ((edge >> 8) & 0xFF) < 0x80);
+    CHECK((pixel(out, L.toggle.x + L.toggle.w / 2, L.toggle.y + 2) >> 24) > 0x40);  // the round button
     // the words: times under, a debuff's in its red, the toggle's, the hovered one's tip
     const buffpanel::Texts t{"назви", "сховати назви", "ще {1}", "клік — в обрані", "клік — прибрати з обраних"};
     const std::vector<buffpanel::Words> w = buffpanel::words(L, e, 0, t);
@@ -271,7 +274,10 @@ TEST(buff_panel_picture) {
         return std::find_if(w.begin(), w.end(), [&](const buffpanel::Words& x) { return x.text == text; });
     };
     CHECK(has("1:00") != w.end() && has("0:24") != w.end() && has("0:24")->rgb != has("1:00")->rgb);
-    CHECK(has("\xE2\x80\xB9 назви") != w.end() || has("назви") != w.end());
+    CHECK(has("назви") == w.end());  // 3.0.11-beta.231: the button's words only in its tip
+    const std::vector<buffpanel::Words> tw = buffpanel::words(L, e, buffpanel::kToggleTip, t);
+    CHECK(std::any_of(tw.begin(), tw.end(), [](const buffpanel::Words& x) { return x.text == "назви"; }));
+    CHECK(has("1:00")->halo && has("0:24")->halo);  // outlined: they stand on the picture
     CHECK(has("Buff 10 \xC2\xB7 1:00") != w.end() && has("клік — прибрати з обраних") != w.end());  // a favourite's
     // its ground left of the column, the words in it; a debuff's tip one line, no click
     const panel::Box tip = buffpanel::tipOf(L, e, 0, t);

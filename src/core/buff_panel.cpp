@@ -8,11 +8,13 @@
 namespace uagfx::buffpanel {
 namespace {
 
-// The concept's sizes at scale 1 (build18/19 .vb): a favourite's ring 40 (its icon 32, 4 of ring), the rest's 30 (24,
-// 3); the glass 7 in, 4 between, a time's line 15 under its ring; a line between the kinds 7 with its room
-constexpr float kFrameBig = 40, kFrameSmall = 30, kPad = 7, kGap = 4, kTimeGap = 1, kTimeH = 15, kSep = 7;
-constexpr float kColumnW = 54, kNamesW = 204, kNameGap = 10, kTimeW = 38;
-constexpr float kToggleH = 22, kToggleGap = 6, kToggleColumn = 72, kToggleNames = 136;
+// 3.0.11-beta.231 (the owner: «на черной плашке все както не красиво, в оригинале сделано лучше»; the concept
+// «Бафы и дебафы», variant C): no glass, no rings - each icon straight on the picture as the game's own, a dark
+// outline and shadow round it, the time gone darkening it clockwise from twelve, its numbers over its foot; a
+// favourite 36, the rest 30; the names list a round button of its own over the icons
+constexpr float kFrameBig = 36, kFrameSmall = 30, kPad = 3, kGap = 5, kTimeH = 14, kSep = 6;
+constexpr float kColumnW = kFrameBig + 2 * kPad, kNamesW = 204, kNameGap = 8;
+constexpr float kToggleH = 22, kToggleGap = 6;
 constexpr float kTipW = 230, kTipGap = 6, kTipH = 42, kTipLine = 26, kRowTip = 50, kRowGap = 6;
 constexpr float kMoreH = 28, kMoreW = 40;  // 3.0.11-beta.63: «ще N» 28 high (the concept's «не ниже 28 px»)
 constexpr float kLineGap = 6;               // between the columns (the rows): two columns 114 wide, as the concept's
@@ -64,19 +66,19 @@ void put(panel::Picture& out, const panel::Picture& pic, const panel::Box& at, f
         }
 }
 
-// The ring's share of its time: from twelve o'clock round to `part` of the circle, over the ring's dark (the
-// concept's conic-gradient on the rounded frame)
-void arc(panel::Picture& p, const panel::Box& b, float r, float part, uint32_t rgb) {
+// 3.0.11-beta.231 (variant C): the time gone dark over the icon - from twelve o'clock clockwise, past `left` of the
+// circle (its share left), as a cooldown's sweep; the edge between them smoothed
+void sweep(panel::Picture& p, const panel::Box& b, float r, float left) {
     const float cx = b.x + b.w / 2, cy = b.y + b.h / 2;
-    for (int y = std::max(0, int(b.y) - 1); y < std::min(p.height, int(std::ceil(b.y + b.h)) + 1); ++y)
-        for (int x = std::max(0, int(b.x) - 1); x < std::min(p.width, int(std::ceil(b.x + b.w)) + 1); ++x) {
+    for (int y = std::max(0, int(b.y)); y < std::min(p.height, int(std::ceil(b.y + b.h))); ++y)
+        for (int x = std::max(0, int(b.x)); x < std::min(p.width, int(std::ceil(b.x + b.w))); ++x) {
             const float px = float(x) + 0.5f, py = float(y) + 0.5f, k = cover(roundBox(px, py, b, r));
             if (k <= 0) continue;
             float turn = std::atan2(px - cx, cy - py) / 6.2831853f;  // clockwise from twelve o'clock
             if (turn < 0) turn += 1;
             const float dist = panel::length(px - cx, py - cy);
-            const float soft = std::clamp((part - turn) * 6.2831853f * std::max(dist, 1.0f) + 0.5f, 0.0f, 1.0f);
-            if (soft > 0) panel::over(p.px[size_t(y) * size_t(p.width) + size_t(x)], rgb, k * soft);
+            const float gone = std::clamp((turn - left) * 6.2831853f * std::max(dist, 1.0f) + 0.5f, 0.0f, 1.0f);
+            if (gone > 0) panel::over(p.px[size_t(y) * size_t(p.width) + size_t(x)], 0x000000, 0.6f * k * gone);
         }
 }
 
@@ -104,7 +106,7 @@ float lengthOf(const std::vector<Entry>& e, const Line& l, Look look) {
         ++groups;
         for (const int i : *list) {
             const float f = frameOf(e[size_t(i)].kind);
-            len += look == Look::Column ? f + kTimeGap + kTimeH : f;
+            len += f;
             ++items;
         }
     }
@@ -257,25 +259,19 @@ void place(Layout& L, const std::vector<Entry>& entries, const Line& line, const
             Slot slot;
             slot.entry = i;
             const float f = frameOf(entries[size_t(i)].kind) * s;
-            const float ring = (entries[size_t(i)].kind == Kind::Favourite ? kFrameBig - kBig : kFrameSmall - kSmall) /
-                               2 * s;
+            // the icons' middles in line: the column's (the names') at the glass's right, the row's on its middle
+            const float mid = glass.x + glass.w - pad - kFrameBig * s / 2;
             if (row) {
-                slot.frame = panel::Box{at, glass.y + pad, f, f};
-                slot.time = panel::Box{at - gap / 2, slot.frame.y + f + kTimeGap * s, f + gap, kTimeH * s};
-                at += f + gap;
-            } else if (L.look == Look::Names) {
-                slot.frame = panel::Box{glass.x + pad, at, f, f};
-                const float timeX = glass.x + glass.w - pad - kTimeW * s;
-                slot.name = panel::Box{slot.frame.x + f + kNameGap * s, at, timeX - (slot.frame.x + f + kNameGap * s),
-                                       f};
-                slot.time = panel::Box{timeX, at, kTimeW * s, f};
+                slot.frame = panel::Box{at, glass.y + glass.h / 2 - f / 2, f, f};
                 at += f + gap;
             } else {
-                slot.frame = panel::Box{glass.x + (glass.w - f) / 2, at, f, f};
-                slot.time = panel::Box{glass.x + 2 * s, at + f + kTimeGap * s, glass.w - 4 * s, kTimeH * s};
-                at += f + kTimeGap * s + kTimeH * s + gap;
+                slot.frame = panel::Box{mid - f / 2, at, f, f};
+                if (L.look == Look::Names)
+                    slot.name = panel::Box{glass.x, at, slot.frame.x - kNameGap * s - glass.x, f};
+                at += f + gap;
             }
-            slot.icon = panel::Box{slot.frame.x + ring, slot.frame.y + ring, f - 2 * ring, f - 2 * ring};
+            slot.time = panel::Box{slot.frame.x - 6 * s, slot.frame.y + f - kTimeH * s, f + 12 * s, kTimeH * s};
+            slot.icon = slot.frame;
             L.slots.push_back(slot);
         }
         // the debuffs, when there, are the last kind: «ще N» after the kind before them, else after the last
@@ -308,7 +304,7 @@ Layout layout(const std::vector<Entry>& entries, Look look, int right, int top, 
         for (size_t i = 0; i < n; ++i) {  // each under the last, at the right; a favourite's taller
             const float length = lengthOf(entries, plan.lines[i], look) * s;
             const float frame = plan.lines[i].fav.empty() ? kFrameSmall : kFrameBig;
-            const float h = 2 * kPad * s + (frame + kTimeGap + kTimeH) * s;
+            const float h = 2 * kPad * s + frame * s;
             glass[i] = panel::Box{float(L.w) - length, y, length, h};
             y += h + lineGap;
         }
@@ -317,7 +313,7 @@ Layout layout(const std::vector<Entry>& entries, Look look, int right, int top, 
         L.tipRoom = panel::Box{0, under, float(L.w), float(L.h) - under};
     } else {
         const float bodyW = (look == Look::Names ? kNamesW : kColumnW) * s;
-        const float toggleW = (look == Look::Names ? kToggleNames : kToggleColumn) * s;
+        const float toggleW = kToggleH * s;
         const float tip = look == Look::Column ? (kTipW + kTipGap) * s : 0.0f;
         const float span = float(n) * bodyW + float(n - 1) * lineGap;
         L.w = int(std::ceil(tip + std::max(span, toggleW)));
@@ -329,7 +325,8 @@ Layout layout(const std::vector<Entry>& entries, Look look, int right, int top, 
             longest = std::max(longest, length);
         }
         L.h = int(std::ceil(bodyY + longest));
-        L.toggle = panel::Box{float(L.w) - toggleW, 0, toggleW, kToggleH * s};
+        // over the icons' middle (the names' and the column's icons stand at the glass's right alike)
+        L.toggle = panel::Box{float(L.w) - kPad * s - (kFrameBig * s + toggleW) / 2, 0, toggleW, kToggleH * s};
         if (look == Look::Column) L.tipRoom = panel::Box{0, bodyY, glass[n - 1].x - kTipGap * s, longest};
     }
     L.x = right - L.w;
@@ -358,10 +355,10 @@ Hit hitTest(const Layout& L, float x, float y) {
     if (L.more.w > 0 && L.more.contains(x, y)) return Hit{Part::More, -1};
     for (size_t i = 0; i < L.slots.size(); ++i) {
         const Slot& s = L.slots[i];
-        panel::Box b = s.frame;  // the ring, its time under it (or beside: the names), its name
+        panel::Box b = s.frame;  // the icon, its time over its foot, its name left of it (the names)
         const float x1 = std::max({s.frame.x + s.frame.w, s.time.x + s.time.w, s.name.x + s.name.w});
         const float y1 = std::max({s.frame.y + s.frame.h, s.time.y + s.time.h, s.name.y + s.name.h});
-        b.x = std::min(b.x, s.time.x);
+        b.x = std::min({b.x, s.time.x, s.name.w > 0 ? s.name.x : b.x});
         b.w = x1 - b.x;
         b.h = y1 - b.y;
         if (b.contains(x, y)) return Hit{Part::Icon, int(i)};
@@ -386,28 +383,30 @@ panel::Box tipBox(const Layout& L, int slot, float width) {
 
 void paint(panel::Picture& out, const Layout& L, const std::vector<Entry>& entries, int hover) {
     const float s = L.s;
-    if (L.toggle.w > 0) panel::roundRect(out, L.toggle, 8 * s, kCard, uistyle::panel(), kWhite, 0.09f, 1.0f * s);
-    panel::roundRect(out, L.body, kRadius * s, kCard, uistyle::panel(), kWhite, 0.09f, 1.0f * s);
-    for (const panel::Box& b : L.lines)  // 3.0.11-beta.63: the further columns' (rows')
-        panel::roundRect(out, b, kRadius * s, kCard, uistyle::panel(), kWhite, 0.09f, 1.0f * s);
-    for (const panel::Box& b : L.seps) panel::roundRect(out, b, 0, kWhite, 0.15f);
-    if (L.more.w > 0) panel::roundRect(out, L.more, 7 * s, kWhite, 0.08f);
+    if (L.toggle.w > 0) {  // 3.0.11-beta.231: the names' round button - three lines, gold while the names show
+        const bool on = L.look == Look::Names;
+        panel::roundRect(out, L.toggle, L.toggle.h / 2, kBlack, hover == kToggleTip ? 0.62f : 0.45f,
+                         on ? kGold : kWhite, on ? 0.85f : 0.28f, 1.0f * s);
+        const float lw = 10 * s, lx = L.toggle.x + (L.toggle.w - lw) / 2, cy = L.toggle.y + L.toggle.h / 2;
+        for (int k = -1; k <= 1; ++k)
+            panel::roundRect(out, panel::Box{lx, cy + float(k) * 4 * s - 0.75f * s, lw, 1.5f * s}, 0.75f * s,
+                             on ? kGold : kWhite, 0.9f);
+    }
     for (size_t i = 0; i < L.slots.size(); ++i) {
         const Slot& slot = L.slots[i];
         const Entry& e = entries[size_t(slot.entry)];
         const bool bad = e.kind == Kind::Debuff;
-        if (bad) panel::roundRect(out, grow(slot.frame, 2 * s), (kFrameRadius + 2) * s, kRed, 0.22f);  // its glow
-        panel::roundRect(out, slot.frame, kFrameRadius * s, kBlack, 0.7f);
-        if (e.left >= 0)
-            arc(out, slot.frame, kFrameRadius * s, std::clamp(e.left, 0.0f, 1.0f), bad ? kRed : e.warn ? kWarn : kGold);
-        else  // no time known: a quiet ring all round
-            panel::roundRect(out, slot.frame, kFrameRadius * s, bad ? kRed : kWhite, bad ? 0.9f : 0.18f);
+        panel::roundRect(out, grow(slot.frame, 2.5f * s), (kIconRadius + 2.5f) * s, kBlack, 0.22f);  // its shadow
+        panel::roundRect(out, grow(slot.frame, 1.0f * s), (kIconRadius + 1) * s, kBlack, 0.7f);      // its outline
         if (e.picture && e.picture->width > 0)
             put(out, *e.picture, slot.icon, kIconRadius * s);
         else
             panel::roundRect(out, slot.icon, kIconRadius * s, kTile, 1.0f);
+        if (e.left >= 0) sweep(out, slot.icon, kIconRadius * s, std::clamp(e.left, 0.0f, 1.0f));
+        if (bad)
+            panel::roundRect(out, grow(slot.frame, 1.0f * s), (kIconRadius + 1) * s, 0, 0, kRed, 0.95f, 1.6f * s);
         if (int(i) == hover)
-            panel::roundRect(out, grow(slot.frame, 1.5f * s), (kFrameRadius + 1.5f) * s, 0, 0, kWhite, 0.85f,
+            panel::roundRect(out, grow(slot.frame, 1.5f * s), (kIconRadius + 1.5f) * s, 0, 0, kWhite, 0.85f,
                              1.5f * s);
     }
 }
@@ -417,8 +416,14 @@ namespace {
 // The tip's two lines and its box: the name and the time; a favourite's click off, the rest's on; a debuff none
 panel::Box tipLines(const Layout& L, const std::vector<Entry>& entries, int hover, const Texts& t, std::string& first,
                     std::string& second) {
-    if (hover < 0 || hover >= int(L.slots.size()) || L.look == Look::Names) return panel::Box{};
     const float s = L.s;
+    if (hover == kToggleTip && L.toggle.w > 0) {  // 3.0.11-beta.231: what the round button does, left of it
+        first = L.look == Look::Names ? t.hideNames : t.names;
+        second.clear();
+        const float w = wordsWidth(first, 13 * s, true) + 20 * s, h = kTipLine * s;
+        return panel::Box{std::max(0.0f, L.toggle.x - kTipGap * s - w), L.toggle.y + (L.toggle.h - h) / 2, w, h};
+    }
+    if (hover < 0 || hover >= int(L.slots.size()) || L.look == Look::Names) return panel::Box{};
     const Entry& e = entries[size_t(L.slots[size_t(hover)].entry)];
     first = e.time.empty() ? e.name : e.name + " \xC2\xB7 " + e.time;
     second = e.kind == Kind::Debuff ? std::string() : e.kind == Kind::Favourite ? t.unstar : t.star;
@@ -433,32 +438,16 @@ panel::Box tipLines(const Layout& L, const std::vector<Entry>& entries, int hove
 std::vector<Words> words(const Layout& L, const std::vector<Entry>& entries, int hover, const Texts& t) {
     std::vector<Words> out;
     const float s = L.s;
-    if (L.toggle.w > 0) {
-        const panel::Box& b = L.toggle;
-        if (L.look == Look::Names) {
-            out.push_back(Words{panel::Box{b.x + 9 * s, b.y, b.w - 26 * s, b.h}, t.hideNames, kText, 12 * s, true,
-                                Align::Left});
-            out.push_back(Words{panel::Box{b.x + b.w - 17 * s, b.y, 10 * s, b.h}, "\xE2\x80\xBA", kGold, 13 * s, true,
-                                Align::Left});
-        } else {
-            out.push_back(Words{panel::Box{b.x + 8 * s, b.y, 10 * s, b.h}, "\xE2\x80\xB9", kGold, 13 * s, true,
-                                Align::Left});
-            out.push_back(Words{panel::Box{b.x + 21 * s, b.y, b.w - 27 * s, b.h}, t.names, kText, 12 * s, true,
-                                Align::Left});
-        }
-    }
-    if (L.more.w > 0)
-        out.push_back(Words{L.more, fmtCount(t.more, L.hidden), kMuted, 12 * s, true, Align::Center});
+    if (L.more.w > 0)  // 3.0.11-beta.231: on the picture, its dark outline round the words
+        out.push_back(Words{L.more, fmtCount(t.more, L.hidden), kText, 12 * s, true, Align::Center, true});
     for (const Slot& slot : L.slots) {
         const Entry& e = entries[size_t(slot.entry)];
         const bool bad = e.kind == Kind::Debuff;
         const uint32_t timeRgb = bad ? kRedText : e.warn ? kWarn : kText;
-        if (L.look == Look::Names) {
-            out.push_back(Words{slot.name, e.name, bad ? kRedText : kText, 13.5f * s, true, Align::Left});
-            if (!e.time.empty()) out.push_back(Words{slot.time, e.time, timeRgb, 13 * s, true, Align::Right});
-        } else if (!e.time.empty()) {
-            out.push_back(Words{slot.time, e.time, timeRgb, 12.5f * s, true, Align::Center});
-        }
+        if (L.look == Look::Names)  // left of its icon, right-aligned, outlined
+            out.push_back(Words{slot.name, e.name, bad ? kRedText : kText, 13 * s, true, Align::Right, true});
+        if (!e.time.empty())  // over the icon's foot, outlined
+            out.push_back(Words{slot.time, e.time, timeRgb, 11.5f * s, true, Align::Center, true});
     }
     std::string first, second;
     const panel::Box b = tipLines(L, entries, hover, t, first, second);

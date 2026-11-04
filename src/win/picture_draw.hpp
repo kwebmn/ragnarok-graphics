@@ -24,6 +24,7 @@ struct Words {
     bool bold = false;
     UINT align = DT_LEFT;
     bool wrap = false;  // 3.0.11-beta.16: lines broken at words in the box, from its top (a quest's steps)
+    bool halo = false;  // 3.0.11-beta.231: a dark outline round the letters, 2 pixels (words straight on the picture)
 };
 
 // The words, white on black by GDI into a picture of its size: each one's coverage in its own colour over the
