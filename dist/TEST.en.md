@@ -1,3 +1,14 @@
+# uaRO Graphics 3.0.11-beta.235 — what's new
+
+**The character block (Alt+V), full view - more information** (the concept «Character block»):
+- Under the name, the guild and the party («Party Maze · 3/4» - how many in the game of all).
+- The weight as a bar with marks at 70 % (no HP/SP regen) and 90 % (no attacks); the exact numbers in its tip.
+- Under HP and SP, the regen: «+88 every 6 s» and «full in ≈ 2 min» (the server's formulas). From 70 % weight - «no regen: overweight».
+- An ATK · DEF · FLEE · ASPD line; a click on it opens «Status».
+- At the last levels, in place of the empty experience rows - «Session»: time in the game, zeny this session and an hour, kills (monsters you hit), deaths.
+- **Tips** on everything: point at the weight, zeny, guild, points, regen, each battle number or session cell - what it is and where it comes from.
+- A click on the block is taken where the game's cursor is (as in the other windows).
+
 # uaRO Graphics 3.0.11-beta.234 — what's new
 
 - **Quick clicks on the interface's parts are no longer lost** (R-G4QKMZ: the buffs' names button «shows, then doesn't»). A press on a part the mouse can move waits for the button's release to tell a click from a drag. When a game frame fell right between the release and Windows' message about it, the press was forgotten. Now it waits for the message; a drag starts only with the button down. The buffs' button, the minimap, the character block, the party and the other parts.
