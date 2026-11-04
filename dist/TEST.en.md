@@ -1,3 +1,10 @@
+# uaRO Graphics 3.0.11-beta.216 — what's new
+
+**The mercenary in the interface** ("Mercenary card" switch):
+- While a mercenary is hired, its block shows under the party's panel (or the character block): its kind and level, its name, HP and SP bars with numbers, the contract's time left (orange in its last five minutes) and its loyalty. A click on the block opens or closes the "Mercenary" card - the same as Ctrl+R; while the card is open the block is edged gold.
+- Controller: the Start menu gets a tenth tile, "Mercenary" (under the middle column), opening the same card.
+- There are no orders for the mercenary (attack, come back): the server leads it on its own - it fights enemies nearby and keeps close to you.
+
 # uaRO Graphics 3.0.11-beta.215 — what's new
 
 **Controller**:
