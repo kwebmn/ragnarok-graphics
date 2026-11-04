@@ -10,6 +10,7 @@ struct Info {
     uint16_t id;
     uint8_t inf;   // the game's: 0 passive, 1 an enemy, 2 the ground, 4 itself, 16 a friend, 32 a trap
     uint8_t inf2;  // kQuest, kWedding, kSoulLink
+    const char* name;  // 3.0.11-beta.228: the server's (English)
 };
 constexpr uint8_t kQuest = 1, kWedding = 4, kSoulLink = 8;
 
@@ -17,5 +18,6 @@ int type(int id);  // -1: not in the tree
 bool quest(int id);
 bool wedding(int id);
 bool soulLink(int id);
+const char* name(int id);  // 3.0.11-beta.228: "" none
 
 }  // namespace uagfx::skillinfo

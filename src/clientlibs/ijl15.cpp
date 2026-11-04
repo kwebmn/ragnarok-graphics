@@ -97,7 +97,12 @@ int read(CoreProps* p, int mode) {
 int write(CoreProps* p, int mode) {
     if (mode != kFileWrite && mode != kBufferWrite) return ijl::kInvalidProperties;
     std::vector<uint8_t> jpg;
-    const int r = ijl::writeImage(dibOf(*p), int(p->jquality), jpg);
+    // 3.0.11-beta.228 (R-P6U4YJ: Print Screen crashed at a 2194-pixel-wide window): the game's Print Screen
+    // (FUN_00411bc0) fills a buffer of width x height x 3 with its rows unpadded, yet tells the padding to 4 bytes
+    // (dibPadBytes) - its rows read as padded ran 2 bytes a row past the buffer's end. Written as it fills them.
+    ijl::Dib dib = dibOf(*p);
+    dib.padBytes = 0;
+    const int r = ijl::writeImage(dib, int(p->jquality), jpg);
     if (r != ijl::kOk) return r;
     if (mode == kBufferWrite) {
         if (!p->jpgBytes || jpg.size() > p->jpgSizeBytes) return ijl::kBufferTooSmall;

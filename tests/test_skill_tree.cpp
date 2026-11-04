@@ -2,6 +2,7 @@
 // db/skill_tree.txt) - a skill's most levels for a job, the jobs a character's tabs come from, the tab a skill sits
 // on (the job it first comes with) and what it needs
 #include <algorithm>
+#include <string>
 #include <vector>
 
 #include "core/skill_info.hpp"
@@ -49,4 +50,7 @@ TEST(skill_tree_a_jobs_skills_and_how_they_are_learned) {
     CHECK_EQ(skillinfo::type(13000), -1);
     CHECK(skillinfo::quest(1001) && skillinfo::quest(142) && !skillinfo::quest(5));  // Charge Attack, First Aid
     CHECK(skillinfo::wedding(410) && skillinfo::soulLink(495));  // Call Baby, Onehand Quicken
+    // 3.0.11-beta.228: the server's names, for the skills the client's table has none of
+    CHECK(std::string(skillinfo::name(681)) == "Increase Weight Limit R");
+    CHECK(std::string(skillinfo::name(13000)).empty());
 }

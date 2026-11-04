@@ -30,4 +30,9 @@ bool quest(int id) { return has(id, kQuest); }
 bool wedding(int id) { return has(id, kWedding); }
 bool soulLink(int id) { return has(id, kSoulLink); }
 
+const char* name(int id) {
+    const Info* e = find(id);
+    return e && e->name ? e->name : "";
+}
+
 }  // namespace uagfx::skillinfo

@@ -198,7 +198,19 @@ std::string aegisById(State& s, int id) {
         s.namesKnown = names && readString(read32(names + 4)) == "NV_BASIC";
     }
     if (!s.namesKnown || id <= 0 || id >= kMostSkill) return "";
-    return readString(read32(read32(kSkillNames) + 4 * uint32_t(id)));
+    std::string aegis = readString(read32(read32(kSkillNames) + 4 * uint32_t(id)));
+    // 3.0.11-beta.228: the game's table holds «Skill not defined !!» for a skill it has no name of
+    if (aegis.rfind("Skill not defined", 0) == 0) aegis.clear();
+    return aegis;
+}
+
+// 3.0.11-beta.228: a skill's name by its id - the client's words for its AEGIS name, else the server's (English)
+std::string nameOf(const State& s, const std::string& aegis);
+std::string nameById(State& s, int id) {
+    const std::string aegis = aegisById(s, id);
+    if (!aegis.empty()) return nameOf(s, aegis);
+    const char* named = skillinfo::name(id);
+    return named && *named ? named : "#" + std::to_string(id);
 }
 
 std::string nameOf(const State& s, const std::string& aegis) {
@@ -285,7 +297,7 @@ kw::Skill closedSkill(State& s, int id, int last, const std::vector<int>& chain,
     kw::Skill k;
     k.id = id;
     k.aegis = aegisById(s, id);
-    k.name = k.aegis.empty() ? "#" + std::to_string(id) : nameOf(s, k.aegis);
+    k.name = nameById(s, id);
     k.type = std::max(0, skillinfo::type(id));
     k.most = skilltree::maxLevel(last, id);
     k.req = skilltree::needs(last, id);
@@ -303,9 +315,7 @@ kw::Skill closedSkill(State& s, int id, int last, const std::vector<int>& chain,
         std::string needs;  // the requirements not met yet
         for (const auto& [need, lv] : skilltree::needs(last, id)) {
             if (levelOf(need) >= lv) continue;
-            const std::string aegis = aegisById(s, need);
-            needs += (needs.empty() ? "" : ", ") + (aegis.empty() ? "#" + std::to_string(need) : nameOf(s, aegis)) +
-                     " " + std::to_string(lv);
+            needs += (needs.empty() ? "" : ", ") + nameById(s, need) + " " + std::to_string(lv);
         }
         k.needs = needs;
         k.lock = needs.empty() ? kw::Lock::Earlier : kw::Lock::Needs;
@@ -381,11 +391,8 @@ void readData(State& s) {
             k.req = skilltree::needs(last, r.id);
             if (r.level <= 0) {
                 std::string needs;
-                for (const auto& [id, lv] : skilltree::needs(last, r.id)) {
-                    const std::string aegis = aegisById(s, id);
-                    const std::string named = aegis.empty() ? "#" + std::to_string(id) : nameOf(s, aegis);
-                    needs += (needs.empty() ? "" : ", ") + named + " " + std::to_string(lv);
-                }
+                for (const auto& [id, lv] : skilltree::needs(last, r.id))
+                    needs += (needs.empty() ? "" : ", ") + nameById(s, id) + " " + std::to_string(lv);
                 k.needs = needs;
             }
             k.icon = r.aegis.empty() ? nullptr : clienttables::icon(hotbar::lowered(r.aegis), int(side), 4 * s.scale);
@@ -550,7 +557,7 @@ const kw::Skill* skillAt(const State& s, int index) {
 // 3.0.11-beta.195: a right click on a skill - its card; on the same skill again, the card closed
 void toggleCard(State& s, int index) {
     const kw::Skill* k = skillAt(s, index);
-    if (!k || k->id <= 0) return;
+    if (!k || k->id <= 0 || k->aegis.empty()) return;  // 3.0.11-beta.228: none the client knows - «Unknown-Skill»
     if (read32(kCardAt) && s.cardSkill == k->id) {
         reinterpret_cast<DeleteFn>(uintptr_t(kDeleteWindow))(kWindowMgr, kSkillCard);
         s.cardSkill = 0;
