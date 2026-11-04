@@ -1,3 +1,8 @@
+# uaRO Graphics 3.0.11-beta.232 — what's new
+
+- **The buffs' round names button works on every press.** A quick second press came from Windows as a double click and the button let it pass; a click on an icon (favourites) the same.
+- **Unknown effects have names** (R-DS774A): Auto Berserk showed as «#132». Now the name comes from the server's skill giving the effect, for every such icon (effects without a time, toggles).
+
 # uaRO Graphics 3.0.11-beta.231 — what's new
 
 **Buffs and debuffs without the black plate** (the concept «Buffs and debuffs», variant C, «Column» and «Row»):
