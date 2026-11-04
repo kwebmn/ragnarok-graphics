@@ -13,6 +13,7 @@
 #include "core/effect_groups.hpp"
 #include "core/first_game.hpp"
 #include "core/grid_cell.hpp"
+#include "core/merc_ai.hpp"
 #include "core/layout.hpp"
 #include "core/live_config.hpp"
 #include "core/outdoors.hpp"
@@ -169,6 +170,20 @@ std::string foregroundName() {
 // 3.0.11-beta.102 (the concept «Контроллер в интерфейсе uaRO»: «Курсор при игре с контроллера скрыт и не прыгает;
 // двинул мышь — он там, где был»): the game's cursor out of the frame while the controller plays and its stick walks
 // by the map's cells (nothing to point at: the arrow on the ground shows the way)
+// 3.0.11-beta.217 (core/merc_ai): the mercenary's AI files the game runs - an AI doing nothing where one is missing
+void ensureMercAi() {
+    const std::string dir = gameDir();
+    for (const char* name : {"\\AI\\AI_M.lua", "\\AI\\USER_AI\\AI_M.lua"}) {
+        const std::string path = dir + name;
+        std::string now;
+        if (fileExists(path) && readTextFile(path, now) && !mercai::needsOurs(now)) continue;
+        const std::string folder = path.substr(0, path.find_last_of('\\'));
+        const bool done = makeFolders(folder) && writeFileAtomic(path, mercai::text());
+        LOG_INFO("merc: %s %s - the game's mercenary AI %s", name + 1, done ? "written" : "NOT written",
+                 now.empty() ? "was missing" : "had no AI function");
+    }
+}
+
 void hidePadCursor(FrameRecord& record, PadWalk walk) {
     static bool told = false;
     if (walk != PadWalk::Arrow || !uapad::runtime::look().shown) return;
@@ -448,6 +463,7 @@ bool Context::open(std::string& error) {
     installShadowFix();                // 3.0.4-beta.9: a shadow drawn while a map loads (R-VBDSCP)
     installBlindFix();                 // 2.6.18: blindness's darkness over the whole screen (R-MCVUC8)
     installGridCell();                 // 3.0.11-beta.215: no cell under the mouse while the controller plays
+    ensureMercAi();                    // 3.0.11-beta.217: AI\AI_M.lua - hiring a mercenary errored without it
     installHitHook();                  // 0.96: the hits' sounds (the flash itself is effects.hit_flash)
     weightrules::install();            // 3.0.11-beta.202: the game's line about the weight at uaRO's 70 %
     renderer->setIconSink(&crisp::iconReady, nullptr);
