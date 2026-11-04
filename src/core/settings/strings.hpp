@@ -772,6 +772,7 @@ enum class Text : uint16_t {
     HomunSkillsHead,  // 3.0.11-beta.221
     InterfaceMinimapClassic, InterfaceMinimapClassicHint,  // 3.0.11-beta.222
     SkillsQuest, SkillsWedding, SkillsSoulLink, SkillsEarlier, SkillsEarlierNotice, SkillsBasicNotice,  // .223
+    SkillsViewList, SkillsViewTree, SkillsPath,  // 3.0.11-beta.224
     Count
 };
 

@@ -7141,6 +7141,10 @@ constexpr Entry kTexts[] = {
      "Навыки {1} откроются, когда потратите свободные очки на навыки {2}"},
     {Text::SkillsBasicNotice, "A job change needs Basic Skill 9", "Для зміни професії потрібен Basic Skill 9",
      "Для смены профессии нужен Basic Skill 9"},
+    // 3.0.11-beta.224 (the skills concept, stage 2): the tree view
+    {Text::SkillsViewList, "List", "Список", "Список"},
+    {Text::SkillsViewTree, "Tree", "Дерево", "Дерево"},
+    {Text::SkillsPath, "To {1}: {2} more points", "До {1} — ще очок: {2}", "До {1} — ещё очков: {2}"},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

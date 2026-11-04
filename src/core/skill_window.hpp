@@ -2,8 +2,10 @@
 #include <cstdint>
 #include <functional>
 #include <string>
+#include <utility>
 #include <vector>
 
+#include "core/skill_tree_view.hpp"
 #include "core/window_drag.hpp"
 #include "core/window_panel.hpp"
 
@@ -33,6 +35,7 @@ struct Skill {
     bool up = false;  // the server lets a point raise it
     Lock lock = Lock::None;  // not sent by the server: shown after the sent ones, dimmed, without «+»
     std::string lockJob;     // Lock::Earlier: the job whose points come first
+    std::vector<std::pair<int, int>> req;  // 3.0.11-beta.224: what it needs (a skill, its level) - the tree's links
     const panel::Picture* icon = nullptr;  // at iconSide(), premultiplied
 };
 struct Tab {
@@ -54,6 +57,8 @@ struct Texts {
     // 3.0.11-beta.223: a closed skill's line - «Квест — очками не вчиться», «Лише для подружжя», «Лише під Soul
     // Link», «Спершу витратьте очки {1}»
     std::string quest, wedding, soulLink, earlier;
+    // 3.0.11-beta.224 (stage 2): the view's buttons «Список», «Дерево»; the path's line «До {1} — ще очок: {2}»
+    std::string list, tree, path;
 };
 
 bool canRaise(const Skill& k, int points);  // a free point and the server's leave, below its most
@@ -70,6 +75,11 @@ struct Show {
     int focus = -1;  // the controller's row (its index in the tab)
     bool hoverClose = false;
     bool pad = false, sony = false;  // played with the controller: its buttons under the rows
+    // 3.0.11-beta.224 (stage 2): «Дерево» - the tab as a tree (core/skill_tree_view), scrolled both ways (its content's
+    // pixels at scale 1); the player's choice, kept
+    bool tree = false;
+    bool hoverList = false, hoverTree = false;
+    float treeX = 0, treeY = 0;
 };
 
 struct Layout {
@@ -78,6 +88,13 @@ struct Layout {
     int tab = 0, first = 0;  // the tab shown, its first row's index
     panel::Box glass, title, close, tabsRow, list, footer, scroll;
     panel::Box notice;  // 3.0.11-beta.223: Data::notice's line (w 0: none)
+    // 3.0.11-beta.224: the view's buttons; «Дерево»: the tree's place (rows, icons and pluses: a box per skill of the
+    // tab by its index, the window's - first 0), its content, scrolled by (scrollX, scrollY) of at most (maxX, maxY)
+    panel::Box viewList, viewTree;
+    bool tree = false;
+    panel::Box view, scrollH;
+    skilltreeview::Plan plan;
+    float scrollX = 0, scrollY = 0, maxX = 0, maxY = 0;
     std::vector<panel::Box> tabs;
     // a row each shown, its parts (w 0: none)
     std::vector<panel::Box> rows, icons, pluses, less, more, dots;
@@ -92,12 +109,16 @@ using windrag::pressed;
 using windrag::moved;
 using windrag::released;
 
-enum class Part : uint8_t { None, Close, Tab, Row, Plus, Less, More, Title, Body };
+enum class Part : uint8_t { None, Close, Tab, Row, Plus, Less, More, Title, Body, ViewList, ViewTree, View };
 struct Hit {
     Part part = Part::None;
     int index = -1;  // a tab's; for a row's parts the skill's in its tab
 };
 Hit hitTest(const Layout& L, float x, float y);
+
+// 3.0.11-beta.224: «Дерево» scrolled by window pixels; scrolled to show a skill (the controller's)
+void scrollTree(Show& sh, const Layout& L, float dx, float dy);
+bool treeInSight(Show& sh, const Layout& L, int index);  // true: it moved
 
 void paint(panel::Picture& out, const Layout& L, const Data& d, const Show& sh);
 

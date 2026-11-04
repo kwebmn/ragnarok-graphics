@@ -103,6 +103,8 @@ struct State {
     int dragW = 0, dragH = 0;
     bool dragUpload = false;
     int cardSkill = 0;  // 3.0.11-beta.195: the skill whose card the window opened
+    bool panning = false;  // 3.0.11-beta.224: «Дерево» dragged by its ground
+    float panX = 0, panY = 0;
 };
 
 State& state() {
@@ -165,11 +167,13 @@ void readState(State& s) {
     }
     if (const size_t at = text.find("tab "); at != std::string::npos && std::sscanf(text.c_str() + at, "tab %d", &tab))
         s.show.tab = std::max(0, tab);
+    s.show.tree = text.find("view tree") != std::string::npos;  // 3.0.11-beta.224: the player's choice
 }
 
 void keepState(const State& s) {
-    char text[64];
-    std::snprintf(text, sizeof text, "at %.4f %.4f\ntab %d\n", s.fx, s.fy, s.show.tab);
+    char text[96];
+    std::snprintf(text, sizeof text, "at %.4f %.4f\ntab %d\nview %s\n", s.fx, s.fy, s.show.tab,
+                  s.show.tree ? "tree" : "list");
     const std::string path = layout::join(gameDir(), layout::kSkillsState);
     if (!writeFileAtomic(path, std::string(text))) LOG_INFO("skills: %s cannot be written", path.c_str());
 }
@@ -234,6 +238,7 @@ kw::Skill closedSkill(State& s, int id, int last, const std::vector<int>& chain,
     k.name = k.aegis.empty() ? "#" + std::to_string(id) : nameOf(s, k.aegis);
     k.type = std::max(0, skillinfo::type(id));
     k.most = skilltree::maxLevel(last, id);
+    k.req = skilltree::needs(last, id);
     const auto levelOf = [&](int need) {
         const auto at = levels.find(need);
         return at == levels.end() ? 0 : at->second;
@@ -322,6 +327,7 @@ void readData(State& s) {
             k.sp = r.sp;
             k.range = r.range;
             k.up = r.up != 0;
+            k.req = skilltree::needs(last, r.id);
             if (r.level <= 0) {
                 std::string needs;
                 for (const auto& [id, lv] : skilltree::needs(last, r.id)) {
@@ -371,6 +377,9 @@ kw::Texts texts() {
     t.wedding = say(settings::Text::SkillsWedding);
     t.soulLink = say(settings::Text::SkillsSoulLink);
     t.earlier = say(settings::Text::SkillsEarlier);
+    t.list = say(settings::Text::SkillsViewList);
+    t.tree = say(settings::Text::SkillsViewTree);
+    t.path = say(settings::Text::SkillsPath);
     t.use = say(settings::Text::SkillsPadUse);
     t.raise = say(settings::Text::SkillsPadRaise);
     t.assign = say(settings::Text::SkillsPadAssign);
@@ -515,6 +524,7 @@ void setTab(State& s, int tab) {
     s.show.tab = tab;
     s.show.scroll = 0;
     s.show.focus = 0;
+    s.show.treeX = s.show.treeY = 0;
     keepState(s);
 }
 
@@ -557,10 +567,12 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     }
     const kw::Texts t = texts();
     s.layout = kw::layout(0, 0, scale, s.data, s.show, t, measure);
+    if (s.show.pad && s.show.tree && kw::treeInSight(s.show, s.layout, s.show.focus))  // 3.0.11-beta.224
+        s.layout = kw::layout(0, 0, scale, s.data, s.show, t, measure);
     s.layout.x = int(std::lround(s.fx * float(std::max(0, targetWidth - s.layout.w))));
     s.layout.y = int(std::lround(s.fy * float(std::max(0, targetHeight - s.layout.h))));
     s.show.hoverTab = s.show.hoverRow = s.show.hoverPlus = s.show.hoverLess = s.show.hoverMore = -1;
-    s.show.hoverClose = false;
+    s.show.hoverClose = s.show.hoverList = s.show.hoverTree = false;
     int cx = 0, cy = 0;
     if (readGameCursor(cx, cy) && !s.moving) {
         const kw::Hit h = kw::hitTest(s.layout, float(cx) * float(k) - float(s.layout.x),
@@ -572,6 +584,8 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
             case kw::Part::Less: s.show.hoverLess = h.index; break;
             case kw::Part::More: s.show.hoverMore = h.index; break;
             case kw::Part::Close: s.show.hoverClose = true; break;
+            case kw::Part::ViewList: s.show.hoverList = true; break;
+            case kw::Part::ViewTree: s.show.hoverTree = true; break;
             default: break;
         }
     }
@@ -581,6 +595,8 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
                       std::to_string(s.show.hoverPlus) + ',' + std::to_string(s.show.hoverLess) + ',' +
                       std::to_string(s.show.hoverMore) + ',' + std::to_string(s.show.focus) +
                       (s.show.hoverClose ? "x" : "") + (s.show.pad ? (s.show.sony ? "S" : "X") : "") + ';' +
+                      (s.show.tree ? "T" : "L") + (s.show.hoverList ? "l" : "") + (s.show.hoverTree ? "t" : "") +
+                      std::to_string(int(s.layout.scrollX)) + ',' + std::to_string(int(s.layout.scrollY)) + ';' +
                       std::to_string(s.data.points) + ';';
     for (const kw::Tab& tab : s.data.tabs)
         for (const kw::Skill& sk : tab.skills)
@@ -685,6 +701,15 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
         result = 0;
         return true;
     }
+    if (s.panning && (m == WM_MOUSEMOVE || m == WM_LBUTTONUP)) {  // 3.0.11-beta.224: «Дерево» dragged by its ground
+        kw::scrollTree(s.show, s.layout, s.panX - tx, s.panY - ty);
+        s.panX = tx;
+        s.panY = ty;
+        if (m == WM_LBUTTONUP) s.panning = false;
+        s.key.clear();
+        result = 0;
+        return true;
+    }
     if (s.press.index >= 0 && (m == WM_MOUSEMOVE || m == WM_LBUTTONUP)) {  // a skill pressed: dragged, or a click
         if (m == WM_MOUSEMOVE) {
             const bool was = s.press.dragging, now = kw::moved(s.press, tx, ty, s.scale);
@@ -713,6 +738,15 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     }
     if (h.part == kw::Part::None || m == WM_MOUSEMOVE) return false;
     result = 0;
+    if (m == WM_MOUSEWHEEL && s.show.tree) {  // 3.0.11-beta.224: «Дерево» - up and down, with Shift sideways
+        const float by = (GET_WHEEL_DELTA_WPARAM(wp) > 0 ? -60.0f : 60.0f) * s.scale;
+        if (GetKeyState(VK_SHIFT) < 0)
+            kw::scrollTree(s.show, s.layout, by, 0);
+        else
+            kw::scrollTree(s.show, s.layout, 0, by);
+        s.key.clear();
+        return true;
+    }
     if (m == WM_MOUSEWHEEL) {  // the list scrolled, three rows a notch
         const int count = s.data.tabs.empty() ? 0 : int(s.data.tabs[size_t(s.show.tab)].skills.size());
         const int by = GET_WHEEL_DELTA_WPARAM(wp) > 0 ? -3 : 3;
@@ -733,6 +767,20 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
             closeGameWindow();
             break;
         case kw::Part::Tab: setTab(s, h.index); break;
+        case kw::Part::ViewList:  // 3.0.11-beta.224: the player's view, kept
+        case kw::Part::ViewTree:
+            if (s.show.tree != (h.part == kw::Part::ViewTree)) {
+                s.show.tree = h.part == kw::Part::ViewTree;
+                s.show.treeX = s.show.treeY = 0;
+                keepState(s);
+                if (s.told++ < 20) LOG_INFO("skills: the view - %s", s.show.tree ? "the tree" : "the list");
+            }
+            break;
+        case kw::Part::View:  // its ground: the tree dragged
+            s.panning = true;
+            s.panX = tx;
+            s.panY = ty;
+            break;
         case kw::Part::Plus:
             s.show.focus = h.index;
             raise(s, h.index, "its «+»:");

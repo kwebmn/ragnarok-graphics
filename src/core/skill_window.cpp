@@ -2,6 +2,8 @@
 
 #include <algorithm>
 #include <cmath>
+#include <set>
+#include <utility>
 
 #include "core/pad_glyphs.hpp"
 #include "core/ui_style.hpp"
@@ -10,7 +12,7 @@ namespace uagfx::skillwin {
 namespace {
 
 // The concept's sizes at scale 1: 700 wide, the title 46, the tabs 32, a row 46, the footer 40
-constexpr float kW = 700, kTitleH = 46, kTabsH = 32, kRowH = 46, kFooterH = 40, kSide = 16;
+constexpr float kW = 700, kTreeW = 900, kTitleH = 46, kTabsH = 32, kRowH = 46, kFooterH = 40, kSide = 16;
 constexpr float kDot = 7, kDotStep = 10, kDotsMost = 10 * kDotStep - (kDotStep - kDot), kLevelW = 46, kPlus = 24;
 constexpr float kArrowW = 18, kArrowH = 22, kUseNumW = 26, kGlyph = 17;
 constexpr uint32_t kCard = 0x10141C, kWhite = 0xFFFFFF, kGold = 0xF3C653, kGold2 = 0xC9A55B;
@@ -24,6 +26,15 @@ std::string fill(std::string form, const std::string& v) {
 }
 
 const std::string kDotSep = " \xC2\xB7 ";  // « · »
+
+std::string fill2(std::string form, const std::string& a, const std::string& b) {  // {1}, {2}
+    for (const auto& [key, v] : {std::pair<std::string, std::string>{"{1}", a}, {"{2}", b}})
+        for (size_t at = form.find(key); at != std::string::npos; at = form.find(key, at + v.size()))
+            form.replace(at, key.size(), v);
+    return form;
+}
+
+constexpr uint32_t kRose = 0xEF8FA0;
 
 void put(panel::Picture& out, const panel::Picture& pic, const panel::Box& box, float k) {
     const int ox = int(std::lround(box.x + (box.w - float(pic.width)) / 2));
@@ -85,6 +96,122 @@ void padBoxes(Layout& L, const Texts& t, const Measure& m) {
     }
 }
 
+// 3.0.11-beta.224 (stage 2): a link of «Дерево» in the content's pixels - from its requirement's right to the skill's
+// left, the links into one skill spread down its left edge; an elbow at x - 14
+struct Elbow {
+    float x1, y1, xm, x2, y2;
+};
+Elbow elbowOf(const Layout& L, size_t link) {
+    const skilltreeview::Link& l = L.plan.links[link];
+    const panel::Box& to = L.plan.nodes[size_t(l.to)].box;
+    const panel::Box& from = l.chip ? L.plan.chips[size_t(l.from)].box : L.plan.nodes[size_t(l.from)].box;
+    int k = 0, n = 0;
+    for (size_t i = 0; i < L.plan.links.size(); ++i)
+        if (L.plan.links[i].to == l.to) {
+            if (i < link) ++k;
+            ++n;
+        }
+    const float y2 = to.y + to.h * float(k + 1) / float(n + 1);
+    return Elbow{from.x + from.w, from.y + from.h / 2, to.x - 14 * L.s, to.x, y2};
+}
+
+bool inView(const Layout& L, const panel::Box& b) {  // a window box wholly in the tree's view
+    return b.x >= L.view.x - 0.5f && b.y >= L.view.y - 0.5f && b.x + b.w <= L.view.x + L.view.w + 0.5f &&
+           b.y + b.h <= L.view.y + L.view.h + 0.5f;
+}
+
+panel::Box toWindow(const Layout& L, const panel::Box& c) {  // the content's box in the window
+    return panel::Box{c.x + L.view.x - L.scrollX, c.y + L.view.y - L.scrollY, c.w, c.h};
+}
+
+int litIndex(const Show& sh) { return sh.hoverRow >= 0 ? sh.hoverRow : sh.hoverPlus >= 0 ? sh.hoverPlus : sh.focus; }
+
+void paintTree(panel::Picture& out, const Layout& L, const Data& d, const Show& sh) {
+    const float s = L.s;
+    const Tab* tab = tabOf(d, L.tab);
+    if (!tab || L.plan.w <= 0 || L.plan.h <= 0) return;
+    panel::Picture c;
+    c.width = int(std::ceil(L.plan.w));
+    c.height = int(std::ceil(L.plan.h));
+    c.px.assign(size_t(c.width) * size_t(c.height), 0u);
+    const int lit = litIndex(sh);
+    const bool litOk = lit >= 0 && lit < int(tab->skills.size());
+    std::set<int> chain = litOk ? skilltreeview::chain(d, tab->skills[size_t(lit)].id) : std::set<int>{};
+    if (litOk) chain.insert(tab->skills[size_t(lit)].id);
+    for (size_t i = 0; i < L.plan.links.size(); ++i) {
+        const skilltreeview::Link& l = L.plan.links[i];
+        const Elbow e = elbowOf(L, i);
+        const int fromId = l.chip ? L.plan.chips[size_t(l.from)].id : tab->skills[size_t(l.from)].id;
+        const bool on = chain.count(tab->skills[size_t(l.to)].id) && chain.count(fromId);
+        const uint32_t rgb = on ? kGold : l.met ? kGold2 : kWhite;
+        const float a = on ? 0.95f : l.met ? 0.5f : 0.16f, t = (on ? 2.0f : 1.4f) * s;
+        panel::roundRect(c, panel::Box{e.x1, e.y1 - t / 2, std::max(0.0f, e.xm - e.x1 + t / 2), t}, 0, rgb, a);
+        const float top = std::min(e.y1, e.y2) - t / 2, bottom = std::max(e.y1, e.y2) + t / 2;
+        panel::roundRect(c, panel::Box{e.xm - t / 2, top, t, bottom - top}, 0, rgb, a);
+        panel::roundRect(c, panel::Box{e.xm, e.y2 - t / 2, e.x2 - e.xm, t}, 0, rgb, a);
+    }
+    for (const skilltreeview::Chip& ch : L.plan.chips)
+        panel::roundRect(c, ch.box, 6 * s, kWhite, chain.count(ch.id) ? 0.10f : 0.04f, chain.count(ch.id) ? kGold
+                                                                                                          : kWhite,
+                         chain.count(ch.id) ? 0.8f : 0.2f, 1.0f * s);
+    for (const skilltreeview::Node& n : L.plan.nodes) {
+        const Skill& k = tab->skills[size_t(n.index)];
+        const bool closed = k.lock != Lock::None, learned = k.level > 0;
+        float fillA = closed ? 0.03f : learned ? 0.10f : 0.06f;
+        if (n.index == sh.hoverRow || n.index == sh.hoverPlus) fillA += 0.06f;
+        uint32_t edge = learned ? kGold : kWhite;
+        float edgeA = closed ? 0.10f : learned ? 0.6f : 0.25f, edgeW = 1.0f * s;
+        if (chain.count(k.id)) {
+            edge = kGold;
+            edgeA = 0.95f;
+        }
+        if (n.index == sh.focus) {
+            edge = kGold;
+            edgeA = 1.0f;
+            edgeW = 1.8f * s;
+        }
+        panel::roundRect(c, n.box, 8 * s, learned ? kGold2 : kWhite, fillA, edge, edgeA, edgeW);
+        const panel::Box icon{n.box.x + 6 * s, n.box.y + (n.box.h - 26 * s) / 2, 26 * s, 26 * s};
+        if (k.icon && k.icon->width > 0) put(c, *k.icon, icon, closed ? 0.3f : learned ? 1.0f : 0.5f);
+        if (canRaise(k, d.points)) {
+            const panel::Box plus{n.box.x + n.box.w - skilltreeview::kPlus * s * 0.65f, n.box.y - 5 * s,
+                                  skilltreeview::kPlus * s, skilltreeview::kPlus * s};
+            panel::roundRect(c, plus, 5 * s, kGold, n.index == sh.hoverPlus ? 1.0f : 0.85f);
+        }
+    }
+    const int x0 = int(std::lround(L.view.x)), y0 = int(std::lround(L.view.y));
+    const int sx = int(std::lround(L.scrollX)), sy = int(std::lround(L.scrollY));
+    const int vw = int(std::lround(L.view.w)), vh = int(std::lround(L.view.h));
+    for (int y = 0; y < vh; ++y) {
+        const int cy = y + sy, ty = y0 + y;
+        if (cy < 0 || cy >= c.height || ty < 0 || ty >= out.height) continue;
+        for (int x = 0; x < vw; ++x) {
+            const int cx = x + sx, tx = x0 + x;
+            if (cx < 0 || cx >= c.width || tx < 0 || tx >= out.width) continue;
+            const uint32_t v = c.px[size_t(cy) * size_t(c.width) + size_t(cx)];
+            if (!(v >> 24)) continue;
+            uint32_t& o = out.px[size_t(ty) * size_t(out.width) + size_t(tx)];
+            const uint32_t keep = 255 - (v >> 24);
+            const auto ch = [&](int sh2) {
+                return std::min<uint32_t>(255, ((v >> sh2) & 0xFF) + ((o >> sh2) & 0xFF) * keep / 255);
+            };
+            o = ch(24) << 24 | ch(16) << 16 | ch(8) << 8 | ch(0);
+        }
+    }
+    if (L.scroll.w > 0) {  // its scroll bars
+        panel::roundRect(out, L.scroll, L.scroll.w / 2, kWhite, 0.05f);
+        const float h = std::max(L.scroll.h * L.view.h / L.plan.h, 16 * s);
+        const float y = L.scroll.y + (L.scroll.h - h) * (L.maxY > 0 ? L.scrollY / L.maxY : 0);
+        panel::roundRect(out, panel::Box{L.scroll.x, y, L.scroll.w, h}, L.scroll.w / 2, kWhite, 0.28f);
+    }
+    if (L.scrollH.w > 0) {
+        panel::roundRect(out, L.scrollH, L.scrollH.h / 2, kWhite, 0.05f);
+        const float w = std::max(L.scrollH.w * L.view.w / L.plan.w, 16 * s);
+        const float x = L.scrollH.x + (L.scrollH.w - w) * (L.maxX > 0 ? L.scrollX / L.maxX : 0);
+        panel::roundRect(out, panel::Box{x, L.scrollH.y, w, L.scrollH.h}, L.scrollH.h / 2, kWhite, 0.28f);
+    }
+}
+
 }  // namespace
 
 bool canRaise(const Skill& k, int points) {
@@ -130,9 +257,16 @@ Layout layout(int x, int y, float scale, const Data& d, const Show& sh, const Te
     Layout L;
     const float s = scale > 0 ? scale : 1.0f;
     L.s = s;
-    const float w = kW * s, side = kSide * s;
+    L.tree = sh.tree;
+    const float w = (sh.tree ? kTreeW : kW) * s, side = kSide * s;
     L.title = panel::Box{0, 0, w, kTitleH * s};
     L.close = panel::Box{w - side - 26 * s, (kTitleH * s - 26 * s) / 2, 26 * s, 26 * s};
+    if (!t.list.empty() && !t.tree.empty()) {  // 3.0.11-beta.224: the view's buttons left of the close
+        const float bh = 24 * s, by = (kTitleH * s - bh) / 2;
+        const float tw = m(t.tree, 12 * s, false) + 22 * s, lw = m(t.list, 12 * s, false) + 22 * s;
+        L.viewTree = panel::Box{L.close.x - 12 * s - tw, by, tw, bh};
+        L.viewList = panel::Box{L.viewTree.x - lw, by, lw, bh};
+    }
     L.tabsRow = panel::Box{side, kTitleH * s, w - 2 * side, kTabsH * s};
     float tx = side;
     for (const Tab& tab : d.tabs) {
@@ -143,13 +277,46 @@ Layout layout(int x, int y, float scale, const Data& d, const Show& sh, const Te
     const Tab* tab = tabOf(d, sh.tab);
     L.tab = tab ? int(tab - d.tabs.data()) : 0;
     const int count = tab ? int(tab->skills.size()) : 0;
-    const int shown = rowsShown(d);
+    const int shown = sh.tree ? kRows : rowsShown(d);
     L.first = std::clamp(sh.scroll, 0, std::max(0, count - kRows));
     const bool scrolls = count > kRows;
     float listY = L.tabsRow.y + L.tabsRow.h + 6 * s;
     if (!d.notice.empty()) {  // 3.0.11-beta.223: why skills are closed
         L.notice = panel::Box{side, listY, w - 2 * side, 28 * s};
         listY += L.notice.h + 6 * s;
+    }
+    if (sh.tree) {  // 3.0.11-beta.224: «Дерево»
+        L.view = panel::Box{side, listY, w - 2 * side - 10 * s, float(shown) * kRowH * s - 10 * s};
+        L.list = panel::Box{side, listY, w - 2 * side, float(shown) * kRowH * s};
+        L.plan = skilltreeview::arrange(d, L.tab, s);
+        L.maxX = std::max(0.0f, L.plan.w - L.view.w);
+        L.maxY = std::max(0.0f, L.plan.h - L.view.h);
+        L.scrollX = std::clamp(sh.treeX * s, 0.0f, L.maxX);
+        L.scrollY = std::clamp(sh.treeY * s, 0.0f, L.maxY);
+        if (L.maxY > 0) L.scroll = panel::Box{L.view.x + L.view.w + 4 * s, L.view.y + 2 * s, 5 * s, L.view.h - 4 * s};
+        if (L.maxX > 0) L.scrollH = panel::Box{L.view.x + 2 * s, L.view.y + L.view.h + 4 * s, L.view.w - 4 * s, 5 * s};
+        L.first = 0;
+        for (const skilltreeview::Node& n : L.plan.nodes) {
+            const Skill& k = tab->skills[size_t(n.index)];
+            const panel::Box b = toWindow(L, n.box);
+            L.rows.push_back(b);
+            L.icons.push_back(panel::Box{b.x + 6 * s, b.y + (b.h - 26 * s) / 2, 26 * s, 26 * s});
+            L.pluses.push_back(canRaise(k, d.points)
+                                   ? panel::Box{b.x + b.w - skilltreeview::kPlus * s * 0.65f, b.y - 5 * s,
+                                                skilltreeview::kPlus * s, skilltreeview::kPlus * s}
+                                   : panel::Box{});
+            L.less.push_back(panel::Box{});
+            L.more.push_back(panel::Box{});
+            L.dots.push_back(panel::Box{});
+        }
+        L.footer = panel::Box{0, L.list.y + L.list.h + 6 * s, w, kFooterH * s};
+        if (sh.pad) padBoxes(L, t, m);
+        L.glass = panel::Box{0, 0, w, L.footer.y + L.footer.h};
+        L.w = int(std::ceil(w));
+        L.h = int(std::ceil(L.glass.h));
+        L.x = x;
+        L.y = y;
+        return L;
     }
     const float rowW = w - 2 * side - (scrolls ? 12 * s : 0);
     L.list = panel::Box{side, listY, w - 2 * side, float(shown) * kRowH * s};
@@ -194,8 +361,18 @@ Layout layout(int x, int y, float scale, const Data& d, const Show& sh, const Te
 Hit hitTest(const Layout& L, float x, float y) {
     if (!L.glass.contains(x, y)) return Hit{};
     if (L.close.contains(x, y)) return Hit{Part::Close, -1};
+    if (L.viewList.w > 0 && L.viewList.contains(x, y)) return Hit{Part::ViewList, -1};
+    if (L.viewTree.w > 0 && L.viewTree.contains(x, y)) return Hit{Part::ViewTree, -1};
     for (size_t i = 0; i < L.tabs.size(); ++i)
         if (L.tabs[i].contains(x, y)) return Hit{Part::Tab, int(i)};
+    if (L.tree) {  // 3.0.11-beta.224: only what the view shows
+        if (!L.view.contains(x, y)) return Hit{y < L.title.y + L.title.h ? Part::Title : Part::Body, -1};
+        for (size_t i = 0; i < L.rows.size(); ++i)
+            if (L.pluses[i].w > 0 && L.pluses[i].contains(x, y)) return Hit{Part::Plus, int(i)};
+        for (size_t i = 0; i < L.rows.size(); ++i)
+            if (L.rows[i].contains(x, y)) return Hit{Part::Row, int(i)};
+        return Hit{Part::View, -1};
+    }
     for (size_t i = 0; i < L.rows.size(); ++i) {
         const int index = L.first + int(i);
         if (L.pluses[i].w > 0 && L.pluses[i].contains(x, y)) return Hit{Part::Plus, index};
@@ -211,6 +388,14 @@ void paint(panel::Picture& out, const Layout& L, const Data& d, const Show& sh) 
     const float s = L.s;
     panel::roundRect(out, L.glass, 12 * s, kCard, uistyle::window(), kWhite, 0.09f, 1.0f * s);
     if (sh.hoverClose) panel::roundRect(out, L.close, 7 * s, kWhite, 0.12f);
+    if (L.viewList.w > 0) {  // 3.0.11-beta.224: «Список» | «Дерево», the shown one lit
+        const panel::Box both{L.viewList.x, L.viewList.y, L.viewTree.x + L.viewTree.w - L.viewList.x, L.viewList.h};
+        panel::roundRect(out, both, 7 * s, kWhite, 0.03f, kWhite, 0.16f, 1.0f * s);
+        const panel::Box& on = L.tree ? L.viewTree : L.viewList;
+        panel::roundRect(out, on, 7 * s, kWhite, 0.14f);
+        const panel::Box& off = L.tree ? L.viewList : L.viewTree;
+        if (L.tree ? sh.hoverList : sh.hoverTree) panel::roundRect(out, off, 7 * s, kWhite, 0.07f);
+    }
     for (size_t i = 0; i < L.tabs.size(); ++i) {  // the tab shown underlined in gold
         const panel::Box& b = L.tabs[i];
         if (int(i) == sh.hoverTab && int(i) != L.tab) panel::roundRect(out, b, 6 * s, kWhite, 0.05f);
@@ -220,7 +405,8 @@ void paint(panel::Picture& out, const Layout& L, const Data& d, const Show& sh) 
     panel::roundRect(out, panel::Box{L.tabsRow.x, L.tabsRow.y + L.tabsRow.h, L.tabsRow.w, 1 * s}, 0, kWhite, 0.08f);
     if (L.notice.w > 0) panel::roundRect(out, L.notice, 7 * s, kGold2, 0.12f, kGold2, 0.45f, 1.0f * s);
     const Tab* tab = tabOf(d, L.tab);
-    for (size_t i = 0; i < L.rows.size() && tab; ++i) {
+    if (L.tree) paintTree(out, L, d, sh);
+    for (size_t i = 0; i < L.rows.size() && tab && !L.tree; ++i) {
         const int index = L.first + int(i);
         const Skill& k = tab->skills[size_t(index)];
         const panel::Box& r = L.rows[i];
@@ -251,7 +437,7 @@ void paint(panel::Picture& out, const Layout& L, const Data& d, const Show& sh) 
             panel::roundRect(out, L.more[i], 5 * s, kWhite, index == sh.hoverMore ? 0.16f : 0.06f);
         }
     }
-    if (L.scroll.w > 0 && tab) {
+    if (L.scroll.w > 0 && tab && !L.tree) {
         panel::roundRect(out, L.scroll, L.scroll.w / 2, kWhite, 0.05f);
         const float count = float(tab->skills.size());
         const float h = std::max(L.scroll.h * float(kRows) / count, 16 * s);
@@ -276,6 +462,10 @@ std::vector<Words> words(const Layout& L, const Data& d, const Show& sh, const T
     out.push_back(Words{panel::Box{side + titleW + 8 * s, 0, m(t.hotkey, 11 * s, false) + 2, L.title.h}, t.hotkey,
                         kFaint, 11 * s, false, Align::Left});
     out.push_back(Words{L.close, "\xC3\x97", sh.hoverClose ? kText : kMuted, 16 * s, false, Align::Center});
+    if (L.viewList.w > 0) {  // 3.0.11-beta.224
+        out.push_back(Words{L.viewList, t.list, L.tree ? kMuted : kText, 12 * s, !L.tree, Align::Center});
+        out.push_back(Words{L.viewTree, t.tree, L.tree ? kText : kMuted, 12 * s, L.tree, Align::Center});
+    }
     for (size_t i = 0; i < L.tabs.size(); ++i)
         out.push_back(Words{L.tabs[i], d.tabs[i].name, int(i) == L.tab ? kText : kMuted, 12.5f * s, int(i) == L.tab,
                             Align::Center});
@@ -283,7 +473,37 @@ std::vector<Words> words(const Layout& L, const Data& d, const Show& sh, const T
         out.push_back(Words{panel::Box{L.notice.x + 10 * s, L.notice.y, L.notice.w - 20 * s, L.notice.h}, d.notice,
                             kText, 12 * s, false, Align::Left});
     const Tab* tab = tabOf(d, L.tab);
-    for (size_t i = 0; i < L.rows.size() && tab; ++i) {
+    if (L.tree && tab) {  // 3.0.11-beta.224: «Дерево» - the words wholly in its view
+        for (size_t i = 0; i < L.rows.size(); ++i) {
+            const Skill& k = tab->skills[i];
+            const panel::Box& r = L.rows[i];
+            const panel::Box name{r.x + 38 * s, r.y + 4 * s, r.w - 44 * s, 17 * s};
+            const panel::Box level{r.x + 38 * s, r.y + 21 * s, r.w - 44 * s, 15 * s};
+            const uint32_t rgb = k.lock != Lock::None ? kFaint : k.level > 0 ? kText : kMuted;
+            if (inView(L, name)) out.push_back(Words{name, k.name, rgb, 12 * s, true, Align::Left});
+            const std::string lv =
+                k.most > 0 ? std::to_string(k.level) + "/" + std::to_string(k.most) : std::to_string(k.level);
+            if (inView(L, level))
+                out.push_back(Words{level, lv, k.level > 0 ? kGold2 : kFaint, 10.5f * s, false, Align::Left});
+            if (L.pluses[i].w > 0 && inView(L, L.pluses[i]))
+                out.push_back(Words{L.pluses[i], "+", kCard, 13 * s, true, Align::Center});
+        }
+        for (const skilltreeview::Chip& ch : L.plan.chips) {
+            const panel::Box b = toWindow(L, ch.box);
+            const panel::Box in{b.x + 8 * s, b.y, b.w - 12 * s, b.h};
+            if (inView(L, b))
+                out.push_back(Words{in, ch.name + " " + std::to_string(ch.level), kMuted, 11 * s, false, Align::Left});
+        }
+        for (size_t i = 0; i < L.plan.links.size(); ++i) {  // the level each link needs, at its end
+            const skilltreeview::Link& l = L.plan.links[i];
+            const Elbow e = elbowOf(L, i);
+            const panel::Box b = toWindow(L, panel::Box{e.xm + 1 * s, e.y2 - 13 * s, e.x2 - e.xm - 1 * s, 11 * s});
+            if (inView(L, b))
+                out.push_back(Words{b, std::to_string(l.level), l.met ? kGold2 : kRose, 9.5f * s, true,
+                                    Align::Center});
+        }
+    }
+    for (size_t i = 0; i < L.rows.size() && tab && !L.tree; ++i) {
         const Skill& k = tab->skills[size_t(L.first) + i];
         const panel::Box& r = L.rows[i];
         const float textX = r.x + 48 * s;
@@ -313,6 +533,21 @@ std::vector<Words> words(const Layout& L, const Data& d, const Show& sh, const T
     const std::string points = fill(t.points, std::to_string(d.points));
     out.push_back(Words{panel::Box{side, L.footer.y, m(points, 12 * s, true) + 4, L.footer.h}, points,
                         d.points > 0 ? kGold : kFaint, 12 * s, true, Align::Left});
+    if (L.tree && tab && !t.path.empty()) {  // 3.0.11-beta.224: what the path to a closed skill costs
+        const int lit = litIndex(sh);
+        if (lit >= 0 && lit < int(tab->skills.size()) && tab->skills[size_t(lit)].level <= 0) {
+            const Skill& k = tab->skills[size_t(lit)];
+            const int cost = skilltreeview::pathCost(d, k.id);
+            if (cost > 0 && k.lock != Lock::Quest && k.lock != Lock::Wedding && k.lock != Lock::SoulLink) {
+                const std::string line = fill2(t.path, k.name, std::to_string(cost));
+                const float lw = m(line, 12 * s, true) + 4;
+                const float lx = side + m(points, 12 * s, true) + 24 * s;
+                out.push_back(Words{panel::Box{lx, L.footer.y, lw, L.footer.h}, line, cost > d.points ? kRose : kGold2,
+                                    12 * s, true, Align::Left});
+                if (!sh.pad) return out;  // in the drag hint's place
+            }
+        }
+    }
     if (!sh.pad) {
         const float dw = m(t.drag, 11.5f * s, false) + 2;
         out.push_back(Words{panel::Box{L.footer.w - side - dw, L.footer.y, dw, L.footer.h}, t.drag, kFaint, 11.5f * s,
@@ -328,6 +563,27 @@ std::vector<Words> words(const Layout& L, const Data& d, const Show& sh, const T
         out.push_back(Words{L.padWords[i], *items[i].words, kText, 12 * s, false, Align::Left});
     }
     return out;
+}
+
+void scrollTree(Show& sh, const Layout& L, float dx, float dy) {
+    if (!L.tree || L.s <= 0) return;
+    sh.treeX = std::clamp(L.scrollX + dx, 0.0f, L.maxX) / L.s;
+    sh.treeY = std::clamp(L.scrollY + dy, 0.0f, L.maxY) / L.s;
+}
+
+bool treeInSight(Show& sh, const Layout& L, int index) {
+    if (!L.tree || index < 0 || index >= int(L.rows.size())) return false;
+    const panel::Box& b = L.rows[size_t(index)];
+    const float pad = 12 * L.s;
+    float dx = 0, dy = 0;
+    if (b.x - pad < L.view.x) dx = b.x - pad - L.view.x;
+    if (b.x + b.w + pad > L.view.x + L.view.w) dx = b.x + b.w + pad - L.view.x - L.view.w;
+    if (b.y - pad < L.view.y) dy = b.y - pad - L.view.y;
+    if (b.y + b.h + pad > L.view.y + L.view.h) dy = b.y + b.h + pad - L.view.y - L.view.h;
+    if (dx == 0 && dy == 0) return false;
+    const float x = sh.treeX, y = sh.treeY;
+    scrollTree(sh, L, dx, dy);
+    return std::abs(sh.treeX - x) > 0.01f || std::abs(sh.treeY - y) > 0.01f;
 }
 
 }  // namespace uagfx::skillwin
