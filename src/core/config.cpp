@@ -544,6 +544,8 @@ Config parseConfig(const std::string& text) {
             setBool(val, c.minimapClassic);
         } else if (key == "interface.exp_bars") {  // 3.0.11-beta.236
             setBool(val, c.expBars);
+        } else if (key == "interface.exp_gain") {  // 3.0.11-beta.237
+            setBool(val, c.expGain);
         } else if (key == "interface.minimap_reach") {  // 3.0.11-beta.65: where one can walk, an experiment
             setBool(val, c.minimapReach);
         } else if (key == "interface.minimap_hd") {  // 3.0.11-beta.72: the maps' pictures four times bigger

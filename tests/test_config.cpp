@@ -1963,3 +1963,9 @@ TEST(config_reads_the_experience_bars) {
     CHECK(parseConfig("").expBars);
     CHECK(!parseConfig("[interface]\nexp_bars = 0\n").expBars);
 }
+
+// 3.0.11-beta.237: [interface] exp_gain - a kill's experience over the monster, on by default
+TEST(config_reads_the_experience_gains) {
+    CHECK(parseConfig("").expGain);
+    CHECK(!parseConfig("[interface]\nexp_gain = 0\n").expGain);
+}

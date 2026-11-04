@@ -48,6 +48,7 @@
 #include "win/cast_bar.hpp"
 #include "win/char_block.hpp"
 #include "win/exp_bars.hpp"
+#include "win/exp_gain.hpp"
 #include "win/code_page.hpp"
 #include "win/party_panel.hpp"
 #include "win/hotbar.hpp"
@@ -694,6 +695,7 @@ void Context::endScene() {
         worlddim::draw(record);                 // 3.0.11-beta.49: the world dimmed under the windows (where it ends)
         lowhpedge::draw(record, *renderer);     // 3.0.11-beta.50: the low HP edge, there too
         mobhpwin::draw(record, *renderer);      // 3.0.11-beta.95: the monsters' HP bars, under the cast
+        expgainwin::draw(record, *renderer);    // 3.0.11-beta.237: a kill's experience over the monster
         castwin::draw(record, *renderer);       // 3.0.11-beta.48: the cast over the hero, under the panels
         minimapproto::draw(record, *renderer);  // 3.0.11-beta.1: the new minimap (prototype)
         trackerwin::draw(record, *renderer);    // 3.0.11-beta.70: the tracker (under the buffs' tips)
@@ -760,6 +762,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
         worlddim::draw(record);                 // 3.0.11-beta.49
         lowhpedge::draw(record, *renderer);     // 3.0.11-beta.50
         mobhpwin::draw(record, *renderer);      // 3.0.11-beta.95
+        expgainwin::draw(record, *renderer);    // 3.0.11-beta.237
         castwin::draw(record, *renderer);       // 3.0.11-beta.48
         minimapproto::draw(record, *renderer);  // 3.0.11-beta.1
         trackerwin::draw(record, *renderer);    // 3.0.11-beta.70
@@ -1013,6 +1016,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     uistyle::set(config.hudOpacity, optionscard::windowOpacity(config.windowOpacity, opaque != 0));
     // 3.0.11-beta.36: [interface] character - the character block at the top left, the game's Basic Info hidden
     charpanel::frame(window, config.character, gameCodePage(config), pk, pw, ph);
+    expgainwin::frame(config.expGain, pk, pw, ph);  // 3.0.11-beta.237: [interface] exp_gain (the bars' label)
     expbars::frame(config.expBars, pk, pw, ph);  // 3.0.11-beta.236: [interface] exp_bars, the bottom's strip
     // 3.0.11-beta.38: [interface] target - the target's card at the top middle
     targetpanel::frame(window, config.targetCard, config.padHints, pk, pw, ph);

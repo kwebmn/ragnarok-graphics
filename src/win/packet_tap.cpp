@@ -1,4 +1,3 @@
-#include "win/char_block.hpp"
 #include "win/packet_tap.hpp"
 
 #include <windows.h>
@@ -8,6 +7,8 @@
 
 #include "core/game_packets.hpp"
 #include "win/buff_overlay.hpp"
+#include "win/char_block.hpp"
+#include "win/exp_gain.hpp"
 #include "win/party_panel.hpp"
 #include "win/cast_bar.hpp"
 #include "win/chat_window.hpp"
@@ -91,6 +92,7 @@ uint16_t __attribute__((thiscall)) take(void* connection, const uint8_t* packet)
         vendshopwin::packet(e);  // 3.0.11-beta.156: the shops' signs
         minimapproto::packet(e);  // 3.0.11-beta.201: the server's marks, the guild's mates
         charpanel::packet(e);     // 3.0.11-beta.235: the session's kills and deaths
+        expgainwin::packet(e);    // 3.0.11-beta.237: a kill's experience over the monster
     }
     return id;
 }

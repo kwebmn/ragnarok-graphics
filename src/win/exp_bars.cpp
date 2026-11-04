@@ -10,6 +10,7 @@
 #include "core/char_block.hpp"
 #include "core/ui_style.hpp"
 #include "win/char_block.hpp"
+#include "win/exp_gain.hpp"
 #include "win/game_camera.hpp"
 #include "win/log.hpp"
 #include "win/picture_draw.hpp"
@@ -33,6 +34,13 @@ struct State {
     bool stripUpload = false, tipUpload = false, tipShown = false;
     ULONGLONG hoverSince = 0;
     bool hovered = false;
+    // 3.0.11-beta.237: the last gain's label over the bars' right end (win/exp_gain), fading
+    std::string gainKey;
+    panel::Picture gain;
+    uint32_t gainTexture = 0;
+    int gainW = 0, gainH = 0, gainX = 0, gainY = 0;
+    bool gainUpload = false;
+    float gainAlpha = 0;
 };
 
 State& state() {
@@ -69,6 +77,32 @@ void frame(bool on, double k, int targetWidth, int targetHeight) {
         s.strip.px.assign(size_t(targetWidth) * size_t(h), 0u);
         cb::paintStrip(s.strip, d, scale);
         s.stripUpload = true;
+    }
+    s.gainAlpha = 0;  // 3.0.11-beta.237: the last gain by the bars, its part of each level
+    const expgain::Label g = expgainwin::label();
+    if (g.ms) {
+        const double baseOf = g.base > 0 && d.baseNext > 0 ? double(g.base) / double(d.baseNext) : -1;
+        const double jobOf = g.job > 0 && d.jobNext > 0 ? double(g.job) / double(d.jobNext) : -1;
+        const std::string text = expgain::text(g.base, g.job, t.decimal, baseOf, jobOf);
+        if (!text.empty()) {
+            const std::string gkey = text + '@' + std::to_string(scale);
+            if (gkey != s.gainKey) {
+                s.gainKey = gkey;
+                const std::wstring wide = utf8Wide(text);
+                const float px = 13 * scale;
+                const int w = wordsWidth(wide, px, true) + int(std::lround(12 * scale));
+                const int hh = int(std::lround(20 * scale));
+                s.gain.width = w;
+                s.gain.height = hh;
+                s.gain.px.assign(size_t(w) * size_t(hh), 0u);
+                drawWords(s.gain, {Words{panel::Box{0, 0, float(w), float(hh)}, wide, 0xF3D27A, px, true, DT_CENTER,
+                                         false, true}});
+                s.gainUpload = true;
+            }
+            s.gainX = targetWidth - s.gain.width - int(12 * scale);
+            s.gainY = targetHeight - h - s.gain.height - int(2 * scale);
+            s.gainAlpha = expgain::opacity(g.ms, GetTickCount64(), expgain::kLabelMs, expgain::kFadeMs);
+        }
     }
     int cx = 0, cy = 0;  // pointed at: the bottom 14 px (the strip and a little over it)
     const bool over = readGameCursor(cx, cy) && float(cy) * float(k) >= float(targetHeight) - 14.0f * scale;
@@ -110,6 +144,9 @@ void draw(FrameRecord& record, gpu::Renderer& renderer) {
     if (!s.shown || s.k <= 0 || s.strip.width <= 0) return;
     drawPart(record, renderer, s.strip, s.stripTexture, s.stripW, s.stripH, s.stripUpload, 0,
              s.targetH - s.strip.height, s.k);
+    if (s.gainAlpha > 0 && s.gain.width > 0)  // 3.0.11-beta.237
+        drawPart(record, renderer, s.gain, s.gainTexture, s.gainW, s.gainH, s.gainUpload, s.gainX, s.gainY, s.k,
+                 s.gainAlpha);
     if (s.tipShown && s.tip.width > 0)
         drawPart(record, renderer, s.tip, s.tipTexture, s.tipW, s.tipH, s.tipUpload, s.tipX, s.tipY, s.k);
 }

@@ -203,6 +203,10 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("minimap_kafra", flag(running.minimapKafra), flag(file.minimapKafra)));
         n.minimapKafra = file.minimapKafra;
     }
+    if (file.expGain != running.expGain) {  // 3.0.11-beta.237: a kill's experience over the monster, at once
+        u.applied.push_back(change("exp_gain", flag(running.expGain), flag(file.expGain)));
+        n.expGain = file.expGain;
+    }
     if (file.expBars != running.expBars) {  // 3.0.11-beta.236: the experience's bars at the bottom, at once
         u.applied.push_back(change("exp_bars", flag(running.expBars), flag(file.expBars)));
         n.expBars = file.expBars;

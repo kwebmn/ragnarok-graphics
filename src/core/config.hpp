@@ -585,6 +585,9 @@ struct Config {
     // 3.0.11-beta.236 (the concept «Блок персонажа»: «внизу экрана показывать опыт… включить»): [interface]
     // exp_bars - the base's and the job's experience as thin bars along the screen's bottom (win/exp_bars)
     bool expBars = true;
+    // 3.0.11-beta.237 (the owner: «над мобом было типа + столько то опыта»): [interface] exp_gain - a kill's experience
+    // rising over the monster, and its label by the bars (win/exp_gain)
+    bool expGain = true;
     // 3.0.11-beta.120 (the owner: «карта ... какаято не красивая»): [interface] minimap_style - the minimap's and the
     // big map's picture: the game's own, or «Схема» drawn from the server's walkable cells (core/minimap_proto
     // schemePixels); switched on the maps themselves too

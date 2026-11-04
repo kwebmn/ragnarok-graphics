@@ -128,6 +128,9 @@ const std::vector<IniSetting>& iniSettings() {
         // 3.0.11-beta.236: the experience's bars at the screen's bottom
         {"interface", "exp_bars", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::InterfaceExpBars,
          Text::InterfaceExpBarsHint, ""},
+        // 3.0.11-beta.237: a kill's experience over the monster
+        {"interface", "exp_gain", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::InterfaceExpGain,
+         Text::InterfaceExpGainHint, ""},
         {"interface", "minimap_mobs", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {},
          Text::InterfaceMinimapMobs, Text::InterfaceMinimapMobsHint, ""},
         // 3.0.11-beta.65: where one can walk from here - the concept's experiment
@@ -1115,6 +1118,7 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "interface.minimap_view") return c.minimapView ? "1" : "0";    // 3.0.11-beta.187
     if (k == "interface.minimap_classic") return c.minimapClassic ? "1" : "0";  // 3.0.11-beta.222
     if (k == "interface.exp_bars") return c.expBars ? "1" : "0";                // 3.0.11-beta.236
+    if (k == "interface.exp_gain") return c.expGain ? "1" : "0";                // 3.0.11-beta.237
     if (k == "interface.minimap_party") return c.minimapParty ? "1" : "0";
     if (k == "interface.minimap_reach") return c.minimapReach ? "1" : "0";  // 3.0.11-beta.65
     if (k == "interface.minimap_hd") return c.minimapHd ? "1" : "0";        // 3.0.11-beta.72

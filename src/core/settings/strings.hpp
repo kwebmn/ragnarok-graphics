@@ -783,6 +783,7 @@ enum class Text : uint16_t {
     CharTipFlee, CharTipAspd, CharTipOpen, CharTipTime, CharTipZeny, CharTipKills, CharTipDeaths,
     CharTipOnline,  // 3.0.11-beta.235
     InterfaceExpBars, InterfaceExpBarsHint,  // 3.0.11-beta.236
+    InterfaceExpGain, InterfaceExpGainHint,  // 3.0.11-beta.237
     Count
 };
 

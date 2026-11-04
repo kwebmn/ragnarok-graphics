@@ -7215,6 +7215,17 @@ constexpr Entry kTexts[] = {
      "час до рівня. На максимальних рівнях зникають.",
      "Две тонкие полоски вдоль нижнего края экрана: опыт Base над опытом Job. Наведите — процент, числа, темп и время "
      "до уровня. На максимальных уровнях исчезают."},
+    // 3.0.11-beta.237 (the owner: «над мобом было типа + столько то опыта»)
+    {Text::InterfaceExpGain, "Experience over a killed monster", "Досвід над убитим монстром",
+     "Опыт над убитым монстром"},
+    {Text::InterfaceExpGainHint,
+     "A monster you hit dies: the experience it gave rises over it for a moment, and shows by the experience bars at "
+     "the bottom for three seconds with its part of the level. Experience from the party or a quest - by the bars "
+     "only.",
+     "Монстр, якого ти бив, помирає: досвід за нього на мить спливає над ним і три секунди видно біля смужок досвіду "
+     "внизу, з часткою рівня. Досвід від групи чи квесту — лише біля смужок.",
+     "Монстр, которого ты бил, умирает: опыт за него на миг всплывает над ним и три секунды виден у полосок опыта "
+     "внизу, с долей уровня. Опыт от группы или квеста — только у полосок."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 
