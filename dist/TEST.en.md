@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.11-beta.217 — what's new
+
+- A mercenary no longer brings up "AI.lua error" ("cannot read ./AI/AI_M.lua", "attempt to call a nil value"). The game runs the mercenary's AI from AI\AI_M.lua (with /merai - AI\USER_AI\AI_M.lua), and the uaRO client has no such file. Now the graphics puts an AI there that does nothing at the game's start: on uaRO the server leads the mercenary. An empty file, or one without an AI function, is replaced; your own AI stays as it is.
+
 # uaRO Graphics 3.0.11-beta.216 — what's new
 
 **The mercenary in the interface** ("Mercenary card" switch):
