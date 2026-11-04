@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.11-beta.233 — what's new
+
+- **The buffs' round names button (three lines) works every time.** The press was taken from the point Windows sends, the hover from the game's own cursor; on a scaled 4K screen they parted and the second or third press missed. Now the press is where the game's cursor is, as in every other window. A click on an icon (favourites) the same.
+
 # uaRO Graphics 3.0.11-beta.232 — what's new
 
 - **The buffs' round names button works on every press.** A quick second press came from Windows as a double click and the button let it pass; a click on an icon (favourites) the same.
