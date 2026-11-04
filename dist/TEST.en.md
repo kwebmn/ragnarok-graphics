@@ -1,3 +1,11 @@
+# uaRO Graphics 3.0.11-beta.225 — what's new
+
+**«Skills» (Alt+S): «Plan»** (the third stage of the new skills window):
+- A «Plan» button in the title. In the plan «+» asks the server nothing - it sets a blue level; «−» takes it off with whatever needed it.
+- Requirements count by the planned levels: plan Pierce 5 and Spear Stab right away, even a closed one.
+- At the bottom «Free points: 3 · planned: 7» and the buttons «Reset» and «Apply». «Apply» raises the skills one by one, each once the server confirmed the one before. If the server does not let a skill rise (say, the job before's points come first), the plan stops and the line over the list names the skill.
+- The plan is kept between games, per character, and shows in blue in the list and the tree even with «Plan» off.
+
 # uaRO Graphics 3.0.11-beta.224 — what's new
 
 **«Skills» (Alt+S): the «Tree» view** (the second stage of the new skills window):
