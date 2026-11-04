@@ -1,10 +1,20 @@
+# uaRO Graphics 3.0.11-beta.215 — what's new
+
+**Controller**:
+- The right stick picks a monster by the camera's real turn: the direction comes from the game's camera every frame. Before, while the character walked by the arrow without the mouse, the stick did not know the camera's turn and took it as looking north - with the camera turned it pointed at the wrong monster. The same is fixed for aiming ground skills with the sticks and the D-pad and for picking an NPC with the right stick.
+- A monster you have attacked (with A or a skill) stays the target when you step back with the stick: the next A goes on hitting it, not the nearest neighbour - while it is alive and within 15 cells. Pick another with the right stick; "Clear target" (L3 by default) drops the target. A target not attacked yet gives way to the nearest one as before.
+- The cell under the mouse on the ground (the game's Alt+Home turns it on) no longer shows while you play with the controller and the mouse cursor is hidden; move the mouse and it is back.
+
+**Walk without waiting for the server (an experiment)**:
+- While the character sits, no step is guessed. The server walks no one sitting, and a guessed step put the character back standing while the server had it sitting - so the next clicks led nowhere until "Sit / stand" was pressed once more.
+
 # uaRO Graphics 3.0.11-beta.214 — what's new
 
 **Chatting from the controller**:
 - The chat wheel: hold the talk button (the D-pad down, «Говорити з NPC · утримати: чат») - a wheel opens at the screen's middle; the right stick points at a phrase, letting the button go sends it. LB/RB switch «Фрази» and «Емоції» (ten emotions, shown instantly), LT/RT the channel: «Усім», «Групі», «Гільдії». A short press still talks to the nearest NPC. Your own words in the chat line stay where they were.
 - A on the wheel - the on-screen keyboard (a grid, as on consoles): the D-pad or the left stick moves, A types, X erases, Y a space, LB/RB the language (Ukrainian, Russian, English, symbols), LT Shift, Start sends, B closes. It types into the chat line, or into the whisper card or the chat room that has the keys.
 - Y on the wheel - Windows voice typing (Win+H) into the chat line.
-- The settings app, page «Геймпад», part «Колесо чату»: switch it off, write your own eight phrases (empty - the defaults «Привіт!», «Дякую!», «Хіл, будь ласка», «Йду», «Зачекайте», «Так», «Ні», «Бафніть, будь ласка») and the wheel's emotions (empty - the game's own Alt+1 to Alt+0: /! /? /ho /lv /swt /ic /an /ag /$ /...).
+- The settings app, page «Контролер», part «Колесо чату»: switch it off, write your own eight phrases (empty - the defaults «Привіт!», «Дякую!», «Хіл, будь ласка», «Йду», «Зачекайте», «Так», «Ні», «Бафніть, будь ласка») and the wheel's emotions (empty - the game's own Alt+1 to Alt+0: /! /? /ho /lv /swt /ic /an /ag /$ /...).
 
 # uaRO Graphics 3.0.11-beta.213 — what's new
 
