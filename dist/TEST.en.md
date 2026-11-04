@@ -1,3 +1,11 @@
+# uaRO Graphics 3.0.11-beta.223 — what's new
+
+**«Skills» (Alt+S)**: every skill of the job shows, not only the open ones (the first stage of the new skills window):
+- The skills the server has not sent yet sit on their job's tab after the open ones - dimmed, without «+», a gold line over them.
+- Each says why it is closed: «Needs: Twohand Quicken 10» (only what is still missing), «Quest - not learned with points», «Married characters only», «Only under a Soul Link».
+- After a job change, while the points of the job before are not spent, a line over the list: «Knight skills open once the free points go into Swordsman skills». A Novice sees «A job change needs Basic Skill 9».
+- A right click on a closed skill shows its description, as on an open one.
+
 # uaRO Graphics 3.0.11-beta.222 — what's new
 
 **The minimap and the big map** (the tester's list):
