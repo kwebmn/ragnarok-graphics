@@ -1,3 +1,8 @@
+# uaRO Graphics 3.0.11-beta.212 — what's new
+
+**The tester's list, the new part (2)**:
+- The 1:1 whisper windows in the new look: a card «Шепіт: name» for each partner (several cascade at the screen's left; a click brings one to the top) with the conversation's lines, the game's own line to type into (a click gives it the keys, Enter sends as before), «Надіслати» and ✕. A new switch «Вікна шепоту» under «Інтерфейс» (and in the console); off - the game's own windows.
+
 # uaRO Graphics 3.0.11-beta.211 — what's new
 
 **The tester's list, the new part**:
