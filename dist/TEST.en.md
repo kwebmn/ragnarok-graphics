@@ -1,3 +1,11 @@
+# uaRO Graphics 3.0.11-beta.220 — what's new
+
+**The guild - all six tabs in the new look** (the "Guild card" switch, Alt+G):
+- "Positions": each position's name, rights ("Invite", "Expel") and tax. "Change" opens the game's own window to rename positions or change rights and tax; another tab brings the card back.
+- "Skills": the guild's skills with their levels and the points left; a "+" by a skill that can rise (the guild master sees it).
+- "Expelled": name, account and reason.
+- "Notice": its subject and text. "Change" opens the game's window to write a new one.
+
 # uaRO Graphics 3.0.11-beta.219 — what's new
 
 **Controller** (report R-4DDZ4R):
