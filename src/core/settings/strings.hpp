@@ -617,6 +617,9 @@ enum class Text : uint16_t {
     CmdWinChat, CmdWinStatus, CmdWinDetail, CmdWinOptions, CmdWinItems, CmdWinCart, CmdWinSkills, CmdWinEquip,
     CmdWinBasic, CmdWinGuild, CmdWinParty, CmdWinFriendSetup, CmdWinFriends, CmdWinWhispers, CmdWinMacros,
     CmdWinEmotions, CmdWinPet,
+    // 3.0.11-beta.207: the game's chat rooms - the making card
+    InterfaceChatRooms, InterfaceChatRoomsHint, RoomNewTitle, RoomName, RoomPlaces, RoomOpen, RoomLocked,
+    RoomPassword, RoomCreate, RoomCancel,
     // 3.0.11-beta.141: the character block's experience - the free skill points, the last level, an hour, a minute,
     // the experience's tip, the portrait's tip (Alt+V)
     CharSkillPoints, CharExpMax, CharHour, CharMinute, CharToLevel, CharLevelIn, CharPerHour, CharSession, CharLastGain,

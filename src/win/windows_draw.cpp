@@ -49,6 +49,7 @@
 #include "win/tip_window.hpp"
 #include "win/emote_window.hpp"
 #include "win/command_window.hpp"
+#include "win/chatroom_window.hpp"
 #include "win/msg_box.hpp"
 #include "win/menu_window.hpp"
 #include "win/trade_window.hpp"
@@ -172,6 +173,7 @@ void hideReplaced() {
     tipwin::beforeGameDraw();           // 3.0.11-beta.204: the tip of the day
     emotewin::beforeGameDraw();         // 3.0.11-beta.205: the emotion list
     commandwin::beforeGameDraw();       // 3.0.11-beta.206: the command list
+    chatroomwin::beforeGameDraw();      // 3.0.11-beta.207: the chat rooms
     mobhpwin::beforeGameDraw();   // 3.0.11-beta.100: the monsters' per cent asked
     charpanel::beforeGameDraw();  // the Basic Info window
     hotbarwin::beforeGameDraw();  // the hotkeys' bar

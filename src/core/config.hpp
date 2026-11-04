@@ -747,6 +747,8 @@ struct Config {
     bool emoteWindow = false;
     // 3.0.11-beta.206: [interface] commands - the game's command list (Alt+Y, win/command_window) as a card
     bool commandWindow = false;
+    // 3.0.11-beta.207: [interface] chat_rooms - the game's chat room windows (Alt+C, win/chatroom_window) as cards
+    bool chatRoomWindows = false;
     // 3.0.11-beta.142 (the owner's concept «маг, прист и хант на геймпаде», answer 9 «дать»): [interface] skill_cells -
     // a ground skill's cells, as the server makes them (core/skill_area), shown on the ground after a cast by the pad
     // or the mouse (win/ground_marks); 0: none

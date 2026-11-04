@@ -6051,6 +6051,23 @@ constexpr Entry kTexts[] = {
     {Text::CmdWinMacros, "Chat macros", "Макроси чату", "Макросы чата"},
     {Text::CmdWinEmotions, "Emotions", "Емоції", "Эмоции"},
     {Text::CmdWinPet, "Pet", "Улюбленець", "Питомец"},
+    // 3.0.11-beta.207: the game's chat rooms
+    {Text::InterfaceChatRooms, "Chat room cards", "Картки чат-кімнат", "Карточки чат-комнат"},
+    {Text::InterfaceChatRoomsHint,
+     "The game's chat room windows (Alt+C) as cards in the new look: a new room's name, places, open or with a "
+     "password - the game's own fields typed as before. Off: the game's own windows.",
+     "Вікна чат-кімнат гри (Alt+C) картками в новому вигляді: назва нової кімнати, місця, відкрита чи з паролем — "
+     "власні поля гри набираються як раніше. Вимкнено: власні вікна гри.",
+     "Окна чат-комнат игры (Alt+C) карточками в новом виде: название новой комнаты, места, открытая или с паролем — "
+     "собственные поля игры набираются как раньше. Выключено: собственные окна игры."},
+    {Text::RoomNewTitle, "New chat room", "Нова чат-кімната", "Новая чат-комната"},
+    {Text::RoomName, "Name", "Назва", "Название"},
+    {Text::RoomPlaces, "Places", "Місць", "Мест"},
+    {Text::RoomOpen, "Open", "Відкрита", "Открытая"},
+    {Text::RoomLocked, "With a password", "З паролем", "С паролем"},
+    {Text::RoomPassword, "Password (4 to 8 characters)", "Пароль (від 4 до 8 знаків)", "Пароль (от 4 до 8 знаков)"},
+    {Text::RoomCreate, "Create", "Створити", "Создать"},
+    {Text::RoomCancel, "Cancel", "Скасувати", "Отмена"},
     // 3.0.11-beta.141: the character block's experience (forms: one, a few, many)
     {Text::CharSkillPoints, "skill point|skill points", "очко навичок|очки навичок|очок навичок",
      "очко навыков|очка навыков|очков навыков"},

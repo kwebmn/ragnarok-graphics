@@ -38,6 +38,7 @@
 #include "win/tip_window.hpp"
 #include "win/emote_window.hpp"
 #include "win/command_window.hpp"
+#include "win/chatroom_window.hpp"
 #include "win/trade_window.hpp"
 #include "win/vend_shop.hpp"
 #include "win/whisper_setup.hpp"
@@ -56,7 +57,7 @@ constexpr const char* kNames[] = {"«Речі»",  "«Характеристик
                                   "the pet", "the homunculus", "the mercenary", "the game's options",
                                   "the friends and the party", "the server select", "the guild", "one's own shop",
                                   "the whisper's settings", "the chat's macros", "the tip of the day",
-                                  "the emotions", "the command list"};
+                                  "the emotions", "the command list", "the chat room"};
 static_assert(std::size(kNames) == size_t(winstack::kWins), "a name for each window");
 constexpr int kMostTold = 40;
 
@@ -123,6 +124,7 @@ bool shown(Win w) {
         case Win::Tip: return tipwin::shown();  // 3.0.11-beta.204
         case Win::Emotes: return emotewin::shown();  // 3.0.11-beta.205
         case Win::Commands: return commandwin::shown();  // 3.0.11-beta.206
+        case Win::ChatRoom: return chatroomwin::shown();  // 3.0.11-beta.207
     }
     return false;
 }
@@ -162,6 +164,7 @@ Blocker blockerOf(Win w) {
         case Win::Tip: return Blocker::Tip;
         case Win::Emotes: return Blocker::Emotes;
         case Win::Commands: return Blocker::Commands;
+        case Win::ChatRoom: return Blocker::ChatRoom;
         case Win::Reference: break;
     }
     return Blocker::Reference;
@@ -203,6 +206,7 @@ void drawOne(Win w, FrameRecord& record, gpu::Renderer& renderer) {
         case Win::Tip: tipwin::draw(record, renderer); break;
         case Win::Emotes: emotewin::draw(record, renderer); break;
         case Win::Commands: commandwin::draw(record, renderer); break;
+        case Win::ChatRoom: chatroomwin::draw(record, renderer); break;
     }
 }
 
@@ -242,6 +246,7 @@ bool mouseOne(Win w, HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
         case Win::Tip: return tipwin::mouse(game, m, wp, lp, result);
         case Win::Emotes: return emotewin::mouse(game, m, wp, lp, result);
         case Win::Commands: return commandwin::mouse(game, m, wp, lp, result);
+        case Win::ChatRoom: return chatroomwin::mouse(game, m, wp, lp, result);
     }
     return false;
 }
@@ -271,7 +276,7 @@ bool movable(Win w) {  // .140: the menu centred; .149: a card beside the cursor
            w != Win::Vending && w != Win::Pick && w != Win::PartySetup && w != Win::Pet && w != Win::Homun &&
            w != Win::Merc && w != Win::Options && w != Win::Social && w != Win::Servers && w != Win::Guild &&
            w != Win::MyShop && w != Win::WhisperSetup && w != Win::Macros && w != Win::Tip &&
-           w != Win::Emotes && w != Win::Commands;
+           w != Win::Emotes && w != Win::Commands && w != Win::ChatRoom;
 }
 
 bool boxOf(Win w, winstack::Box& b) {
@@ -310,6 +315,7 @@ bool boxOf(Win w, winstack::Box& b) {
         case Win::Tip: return tipwin::box(b.x, b.y, b.w, b.h);
         case Win::Emotes: return emotewin::box(b.x, b.y, b.w, b.h);
         case Win::Commands: return commandwin::box(b.x, b.y, b.w, b.h);
+        case Win::ChatRoom: return chatroomwin::box(b.x, b.y, b.w, b.h);
     }
     return false;
 }
@@ -430,6 +436,7 @@ bool close(Win w) {
         case Win::Tip: return tipwin::close();                  // 3.0.11-beta.204
         case Win::Emotes: return emotewin::close();             // 3.0.11-beta.205
         case Win::Commands: return commandwin::close();         // 3.0.11-beta.206
+        case Win::ChatRoom: return chatroomwin::close();        // 3.0.11-beta.207
         default: return false;
     }
 }

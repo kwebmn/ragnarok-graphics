@@ -444,6 +444,10 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("commands", flag(running.commandWindow), flag(file.commandWindow)));
         n.commandWindow = file.commandWindow;
     }
+    if (file.chatRoomWindows != running.chatRoomWindows) {  // 3.0.11-beta.207: the chat rooms as cards, at once
+        u.applied.push_back(change("chat_rooms", flag(running.chatRoomWindows), flag(file.chatRoomWindows)));
+        n.chatRoomWindows = file.chatRoomWindows;
+    }
     if (file.skillCells != running.skillCells) {  // 3.0.11-beta.142: a ground skill's cells, at once
         u.applied.push_back(change("skill_cells", flag(running.skillCells), flag(file.skillCells)));
         n.skillCells = file.skillCells;
