@@ -9,8 +9,10 @@
 #include <cstring>
 #include <string>
 
+#include "core/merc_packet.hpp"
 #include "win/game_camera.hpp"
 #include "win/log.hpp"
+#include "win/merc_card.hpp"
 #include "win/net_predict.hpp"
 #include "win/net_smooth.hpp"
 
@@ -60,6 +62,7 @@ using TimeFn = DWORD(WINAPI*)();
 struct State {
     netwatch::Watch watch;
     void* connection = nullptr;
+    int mercTold = 0;  // 3.0.11-beta.218
     SOCKET nodelayOf = INVALID_SOCKET;  // the socket TCP_NODELAY was set on
     ULONGLONG readAt = 0;
     bool loaded = false, infoTold = false;
@@ -132,6 +135,15 @@ int rd16(const uint8_t* p, size_t at) { return int(uint16_t(p[at] | p[at + 1] <<
 void packet(void* connection, uint16_t id, const uint8_t* data) {
     State& s = state();
     s.connection = connection;
+    // 3.0.11-beta.218 (core/merc_packet): the mercenary's ZC_MER_INIT laid out as this build of the game reads it
+    if (id == mercpacket::kInit && data &&
+        mercpacket::laidOut(const_cast<uint8_t*>(data), mercpacket::kInitSize) && s.mercTold++ < 3)
+        LOG_INFO("merc: its 0x029b laid out for the game (HP, SP, the contract's end, loyalty as uaRO.exe reads them)");
+    if (id == mercpacket::kSkills && data) {  // 3.0.11-beta.218: the mercenary's skills, for its card's list
+        uint16_t len = 0;
+        std::memcpy(&len, data + 2, 2);
+        merccardwin::skillsSeen(data, len);
+    }
     if (!inGameWorld()) return;
     const ULONGLONG now = GetTickCount64();
     s.watch.packet(now);

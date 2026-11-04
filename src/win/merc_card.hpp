@@ -30,6 +30,8 @@ bool box(int& x, int& y, int& w, int& h);
 // under the party's panel, or the character block - shown while one is hired (the game's flag 0x772F64 and a
 // mercenary's class); a click opens or closes the card as Ctrl+R does (uaRO.exe FUN_004d96e0: DeleteWindow 0x84, else
 // MakeWindow 0x84). Under the same [interface] merc.
+// 3.0.11-beta.218: its skills as the server listed them (0x029d, core/merc_packet) - the card lists them itself
+void skillsSeen(const uint8_t* packet, size_t size);
 bool hired();
 bool toggleCard();
 void blockFrame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int targetHeight);

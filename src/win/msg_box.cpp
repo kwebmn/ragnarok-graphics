@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "core/ask_card.hpp"
+#include "core/game_words.hpp"
 #include "core/login_refusals.hpp"
 #include "core/settings/strings.hpp"
 #include "core/ui_style.hpp"
@@ -336,7 +337,9 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     s.card = ac::Card{};
     s.card.kind = wait ? ac::Kind::Wait : s.kind;
     s.card.title = say(wait ? settings::Text::MsgWaitTitle : settings::Text::MsgTitle);
-    s.card.message = s.ownWords ? s.text : utf8(s, s.text);
+    // 3.0.11-beta.218 (core/game_words): the game's own Korean ones in the player's language, its colour marks out
+    const std::string known = s.ownWords ? std::string() : gamewords::known(s.text, language());
+    s.card.message = s.ownWords ? s.text : !known.empty() ? known : utf8(s, gamewords::withoutColours(s.text));
     s.card.messageLines = rowsOf(s, s.card.message);
     s.layout = ac::layout(s.card, targetWidth, targetHeight, s.scale, texts(s));
     s.show.hover = -1;

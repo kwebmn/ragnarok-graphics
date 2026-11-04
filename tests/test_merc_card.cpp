@@ -38,7 +38,8 @@ TEST(merc_card_places_and_the_mouse) {
     CHECK(L.sp.y > L.hp.y && L.facts[3].y > L.sp.y && L.stats[7].y > L.facts[3].y && L.skills.y > L.stats[7].y);
     CHECK(L.dismiss.y > L.skills.y && L.dismiss.w < L.skills.w);
     using B = merccard::Button;
-    CHECK(merccard::hitTest(L, mid(L.skills).first, mid(L.skills).second).button == B::Skills);
+    // 3.0.11-beta.218: «Навички» a list in the card - its heading no button (the game's window lists nothing)
+    CHECK(merccard::hitTest(L, mid(L.skills).first, mid(L.skills).second).part == merccard::Part::None);
     CHECK(merccard::hitTest(L, mid(L.dismiss).first, mid(L.dismiss).second).button == B::Dismiss);
     CHECK(merccard::hitTest(L, mid(L.close).first, mid(L.close).second).button == B::Close);
     CHECK(merccard::hitTest(L, -5, -5).part == merccard::Part::None);
@@ -84,4 +85,27 @@ TEST(merc_card_words_and_picture) {
     p.px.assign(size_t(L.w) * size_t(L.h), 0u);
     merccard::paint(p, L, i, merccard::Show{});
     CHECK((p.px[size_t(L.h / 2) * size_t(L.w) + size_t(L.w / 2)] >> 24) > 0x80);
+}
+
+// 3.0.11-beta.218 (R-S8BERR: «блок со скилами наемника пустой»): its skills listed in the card - a row each, the name
+// and the level; none known: a dash
+TEST(merc_card_lists_its_skills) {
+    const merccard::Layout none = merccard::layout(1920, 1080, 1.0f);
+    const merccard::Layout L = merccard::layout(1920, 1080, 1.0f, 2);
+    CHECK_EQ(L.skillRows.size(), size_t(2));
+    CHECK_EQ(none.skillRows.size(), size_t(1));  // the dash's
+    CHECK(L.skillRows[0].y > L.skills.y && L.skillRows[1].y > L.skillRows[0].y && L.dismiss.y > L.skillRows[1].y);
+    CHECK(L.h > none.h);
+    merccard::Info i;
+    i.skills = {{"Double Strafe", 2}, {"Berserk", 1}};
+    merccard::Texts t;
+    t.skills = "Навички";
+    t.skillLevel = "Рів. {1}";
+    const std::vector<merccard::Words> w = merccard::words(L, i, merccard::Show{}, t);
+    const auto has = [&](const std::string& s) {
+        return std::any_of(w.begin(), w.end(), [&](const merccard::Words& x) { return x.text == s; });
+    };
+    CHECK(has("Навички") && has("Double Strafe") && has("Рів. 2") && has("Berserk") && has("Рів. 1"));
+    const std::vector<merccard::Words> dash = merccard::words(none, merccard::Info{}, merccard::Show{}, t);
+    CHECK(std::any_of(dash.begin(), dash.end(), [](const merccard::Words& x) { return x.text == "\xE2\x80\x94"; }));
 }

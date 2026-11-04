@@ -12,6 +12,7 @@
 
 #include "core/merc_block.hpp"
 #include "core/merc_card.hpp"
+#include "core/merc_packet.hpp"
 #include "core/settings/strings.hpp"
 #include "core/ui_style.hpp"
 #include "pad/win/game_window.hpp"
@@ -72,6 +73,11 @@ State& state() {
     return s;
 }
 
+std::vector<mercpacket::Skill>& seenSkills() {  // 3.0.11-beta.218
+    static std::vector<mercpacket::Skill> v;
+    return v;
+}
+
 std::string say(settings::Text t) { return settings::tr(language(), t); }
 
 uint32_t read32(uint32_t at) {
@@ -121,6 +127,10 @@ mc::Info infoOf(const State& s) {
     i.loyalty = int32_t(read32(kLoyalty));
     i.summons = int32_t(read32(kSummons));
     i.kills = int32_t(read32(kKills));
+    for (const mercpacket::Skill& k : seenSkills()) {  // 3.0.11-beta.218
+        const std::string name = mercpacket::skillName(k.id);
+        i.skills.push_back(mc::SkillRow{name.empty() ? "#" + std::to_string(k.id) : name, k.lv});
+    }
     const time_t ends = time_t(int32_t(read32(kEnds)));
     char when[32] = {};
     const std::tm* lt = ends > 0 ? std::localtime(&ends) : nullptr;
@@ -141,6 +151,7 @@ mc::Texts texts() {
     t.facts[3] = say(settings::Text::MercKills);
     t.skills = say(settings::Text::HomunSkills);
     t.dismiss = say(settings::Text::MercDismiss);
+    t.skillLevel = say(settings::Text::MercLevelShort);
     return t;
 }
 
@@ -215,7 +226,7 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     s.targetW = targetWidth;
     s.targetH = targetHeight;
     s.info = infoOf(s);
-    s.layout = mc::layout(targetWidth, targetHeight, s.scale);
+    s.layout = mc::layout(targetWidth, targetHeight, s.scale, int(s.info.skills.size()));
     s.show.hover = -1;
     int cx = 0, cy = 0;
     if (readGameCursor(cx, cy)) {
@@ -231,6 +242,7 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
                       std::to_string(s.show.hover) + (s.show.focus ? "f" : "") + ';' + std::to_string(s.layout.x) +
                       ',' + std::to_string(s.layout.y) + '#' + std::to_string(uistyle::generation());
     for (int st : i.stats) key += ',' + std::to_string(st);
+    for (const mc::SkillRow& r : i.skills) key += ';' + r.name + std::to_string(r.level);
     if (key != s.key) {
         s.key = key;
         render(s);
@@ -287,8 +299,7 @@ void padCommand(PadCommand c) {
     State& s = state();
     if (!s.shown) return;
     s.show.focus = true;
-    if (c == PadCommand::Press) press(s, mc::Button::Skills);
-    else press(s, mc::Button::Close);
+    if (c == PadCommand::Close) press(s, mc::Button::Close);  // 3.0.11-beta.218: its skills listed in it, no button
     s.key.clear();
 }
 
@@ -391,6 +402,14 @@ void blockPlace(BlockState& s) {
 }
 
 }  // namespace
+
+void skillsSeen(const uint8_t* packet, size_t size) {
+    seenSkills() = mercpacket::skills(packet, size);
+    std::string list;
+    for (const mercpacket::Skill& k : seenSkills()) list += ' ' + std::to_string(k.id) + '/' + std::to_string(k.lv);
+    LOG_INFO("merc: its skills (0x029d):%s", list.empty() ? " none" : list.c_str());
+    state().key.clear();
+}
 
 bool hired() {
     if (!inGameWorld() || !read32(kHired)) return false;

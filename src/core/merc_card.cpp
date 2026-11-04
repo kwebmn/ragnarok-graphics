@@ -9,7 +9,7 @@ namespace uagfx::merccard {
 namespace {
 
 // At scale 1: the card 320 wide, 16 in; its title 30; the name 24; a bar's row 16 over its 7-high bar; a fact 18
-constexpr float kW = 320, kPad = 16, kTitleH = 30, kNameH = 24, kRowH = 16, kBarH = 7, kLineH = 18, kButtonH = 34;
+constexpr float kW = 320, kPad = 16, kTitleH = 30, kNameH = 24, kRowH = 16, kBarH = 7, kLineH = 18;
 constexpr float kGap = 8;
 constexpr uint32_t kCard = 0x10141C, kWhite = 0xFFFFFF, kGold = 0xC9A55B, kGold2 = 0xE6CB8A, kText = 0xEEF2F8;
 constexpr uint32_t kMuted = 0x9AA3B5, kHp = 0x4CC777, kSp = 0x3D7EEB, kDanger = 0xE0675C;
@@ -34,7 +34,7 @@ int gameButton(Button b) {
     return 0x87;
 }
 
-Layout layout(int targetW, int targetH, float scale) {
+Layout layout(int targetW, int targetH, float scale, int skillCount) {
     Layout L;
     const float s = scale > 0 ? scale : 1.0f;
     L.s = s;
@@ -62,8 +62,13 @@ Layout layout(int targetW, int targetH, float scale) {
     for (int i = 0; i < 8; ++i)
         L.stats[i] = panel::Box{pad + float(i % 2) * (cw + kGap * s), y + float(i / 2) * kLineH * s, cw, kLineH * s};
     y += 4 * kLineH * s + 10 * s;
-    L.skills = panel::Box{pad, y, inner, kButtonH * s};
-    y += kButtonH * s + 6 * s;
+    L.skills = panel::Box{pad, y, inner, kLineH * s + 4 * s};  // 3.0.11-beta.218: the list's heading
+    y += kLineH * s + 6 * s;
+    for (int k = 0; k < std::max(1, skillCount); ++k) {
+        L.skillRows.push_back(panel::Box{pad, y, inner, kLineH * s});
+        y += kLineH * s;
+    }
+    y += 10 * s;
     L.dismiss = panel::Box{w / 2 - 50 * s, y, 100 * s, 18 * s};
     y += 18 * s + pad / 2;
     L.glass = panel::Box{0, 0, w, y};
@@ -76,7 +81,6 @@ Layout layout(int targetW, int targetH, float scale) {
 
 Hit hitTest(const Layout& L, float x, float y) {
     if (L.close.contains(x, y)) return Hit{Part::Button, Button::Close};
-    if (L.skills.contains(x, y)) return Hit{Part::Button, Button::Skills};
     if (L.dismiss.contains(x, y)) return Hit{Part::Button, Button::Dismiss};
     return Hit{};
 }
@@ -93,9 +97,8 @@ void paint(panel::Picture& out, const Layout& L, const Info& i, const Show& sh) 
     };
     bar(L.hp, i.hp, i.maxHp, kHp);
     bar(L.sp, i.sp, i.maxSp, kSp);
-    const bool hot = sh.hover == int(Button::Skills) || sh.focus;
-    panel::roundRect(out, L.skills, 8 * s, kGold, hot ? 0.34f : 0.22f, kGold, sh.focus ? 0.95f : 0.8f,
-                     (sh.focus ? 1.5f : 1.0f) * s);
+    panel::roundRect(out, panel::Box{L.skills.x, L.skills.y + L.skills.h - 1 * s, L.skills.w, 1 * s}, 0, kGold,
+                     0.45f);  // 3.0.11-beta.218: the list's heading underlined
     if (sh.hover == int(Button::Dismiss)) panel::roundRect(out, L.dismiss, 6 * s, kDanger, 0.12f);
 }
 
@@ -124,7 +127,19 @@ std::vector<Words> words(const Layout& L, const Info& i, const Show& sh, const T
         out.push_back(Words{L.stats[k], std::to_string(k < 7 ? i.stats[k] : (2000 - i.aspd) / 10), kText, 12 * s,
                             true, Align::Right});
     }
-    out.push_back(Words{L.skills, t.skills, kText, 12.5f * s, true, Align::Center});
+    out.push_back(Words{L.skills, t.skills, kGold2, 12.5f * s, true, Align::Left});
+    for (size_t k = 0; k < L.skillRows.size(); ++k) {
+        if (k >= i.skills.size()) {
+            if (i.skills.empty()) out.push_back(Words{L.skillRows[k], "\xE2\x80\x94", kMuted, 12 * s, false,
+                                                      Align::Left});  // —
+            continue;
+        }
+        out.push_back(Words{L.skillRows[k], i.skills[k].name, kText, 12 * s, false, Align::Left});
+        std::string lv = t.skillLevel;
+        if (const size_t p = lv.find("{1}"); p != std::string::npos)
+            lv.replace(p, 3, std::to_string(i.skills[k].level));
+        out.push_back(Words{L.skillRows[k], lv, kMuted, 11.5f * s, false, Align::Right});
+    }
     out.push_back(Words{L.dismiss, t.dismiss, kDanger, 11 * s, false, Align::Center});
     return out;
 }

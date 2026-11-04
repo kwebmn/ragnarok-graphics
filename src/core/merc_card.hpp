@@ -14,6 +14,11 @@ namespace uagfx::merccard {
 // The parts that need no Windows; the words by GDI (win/merc_card).
 enum class Kind : uint8_t { Archer, Spearman, Swordsman };
 Kind kindOf(int cls);  // 6017-6026 archers, 6037-6046 spearmen, else swordsmen
+// 3.0.11-beta.218: a skill of its in the card's list (the game's own skills window lists nothing for them)
+struct SkillRow {
+    std::string name;  // UTF-8
+    int level = 0;
+};
 struct Info {
     Kind kind = Kind::Swordsman;
     std::string name, ends;  // UTF-8; ends: the contract's end as the window part writes it
@@ -21,6 +26,7 @@ struct Info {
     int loyalty = 0, summons = 0, kills = 0;
     int stats[7] = {0, 0, 0, 0, 0, 0, 0};  // ATK MATK HIT CRIT DEF MDEF FLEE
     int aspd = 0;                          // the game's delay (shown as (2000 - it) / 10)
+    std::vector<SkillRow> skills;          // 3.0.11-beta.218
 };
 enum class Button : uint8_t { Skills, Dismiss, Close };
 int gameButton(Button b);
@@ -29,6 +35,7 @@ struct Texts {
     std::string kinds[3], level;  // level: «Рівень {1}»
     std::string facts[4];         // «Контракт до», «Вірність», «Викликів», «Убито»
     std::string skills, dismiss;
+    std::string skillLevel;  // 3.0.11-beta.218: «Рів. {1}»
 };
 struct Show {
     int hover = -1;  // a Button
@@ -40,8 +47,9 @@ struct Layout {
     panel::Box glass, title, close, name, level, hpLabel, hp, spLabel, sp, skills, dismiss;
     panel::Box facts[4];
     panel::Box stats[8];
+    std::vector<panel::Box> skillRows;  // 3.0.11-beta.218: under «Навички» (its heading `skills`), one at least
 };
-Layout layout(int targetW, int targetH, float scale);
+Layout layout(int targetW, int targetH, float scale, int skillCount = 0);
 enum class Part : uint8_t { None, Button };
 struct Hit {
     Part part = Part::None;

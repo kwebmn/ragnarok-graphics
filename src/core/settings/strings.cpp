@@ -7108,6 +7108,9 @@ constexpr Entry kTexts[] = {
     {Text::MercLevelShort, "Lv. {1}", "Рів. {1}", "Ур. {1}"},
     {Text::MercLeftMinutes, "{1} min left", "ще {1} хв", "ещё {1} мин"},
     {Text::MercLeftHours, "{1} h {2} min left", "ще {1} год {2} хв", "ещё {1} ч {2} мин"},
+    {Text::MercDismissAsk, "Dismiss the mercenary? Everything it has gained so far will be lost.",
+     "Звільнити найманця? Усе, чого він набув досі, буде втрачено.",
+     "Уволить наёмника? Всё, что он накопил до сих пор, будет потеряно."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 
