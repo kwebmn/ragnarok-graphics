@@ -1,3 +1,8 @@
+# uaRO Graphics 3.0.11-beta.236 — what's new
+
+- **Experience bars at the bottom of the screen** (the concept «Character block»): two thin bars along the bottom edge - Base over Job, ticks each 10 %. Point at them for the per cent, the numbers, the pace an hour and the time to the level. Gone at the last levels. The switch «Experience bars at the bottom» (Interface), on at first.
+- **Tips on the rings' dots** (the compact «Rings» look): gold - «+3 points» of free stats (a click opens «Status»), orange or red - the weight and what it stops.
+
 # uaRO Graphics 3.0.11-beta.235 — what's new
 
 **The character block (Alt+V), full view - more information** (the concept «Character block»):
