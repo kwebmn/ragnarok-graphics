@@ -1,3 +1,11 @@
+# uaRO Graphics 3.0.11-beta.214 — what's new
+
+**Chatting from the controller**:
+- The chat wheel: hold the talk button (the D-pad down, «Говорити з NPC · утримати: чат») - a wheel opens at the screen's middle; the right stick points at a phrase, letting the button go sends it. LB/RB switch «Фрази» and «Емоції» (ten emotions, shown instantly), LT/RT the channel: «Усім», «Групі», «Гільдії». A short press still talks to the nearest NPC. Your own words in the chat line stay where they were.
+- A on the wheel - the on-screen keyboard (a grid, as on consoles): the D-pad or the left stick moves, A types, X erases, Y a space, LB/RB the language (Ukrainian, Russian, English, symbols), LT Shift, Start sends, B closes. It types into the chat line, or into the whisper card or the chat room that has the keys.
+- Y on the wheel - Windows voice typing (Win+H) into the chat line.
+- The settings app, page «Геймпад», part «Колесо чату»: switch it off, write your own eight phrases (empty - the defaults «Привіт!», «Дякую!», «Хіл, будь ласка», «Йду», «Зачекайте», «Так», «Ні», «Бафніть, будь ласка») and the wheel's emotions (empty - the game's own Alt+1 to Alt+0: /! /? /ho /lv /swt /ic /an /ag /$ /...).
+
 # uaRO Graphics 3.0.11-beta.213 — what's new
 
 - @mobsearch on the new minimap: type, for example, `@mobsearch Poring` - every monster the server lists is marked with an orange mark at its cell on the minimap and the big map (pointed at - its name), and a plate under the minimap's bar says what was searched and how many («◆ Poring · 12»). Its ✕ clears the marks; a new search replaces them; another map clears them too. The monsters walk on, so the marks show where they were at the search.
