@@ -15,6 +15,7 @@
 #include "core/layout.hpp"
 #include "core/settings/strings.hpp"
 #include "core/skill_info.hpp"
+#include "core/skill_plan.hpp"
 #include "core/skill_tree.hpp"
 #include "core/skill_window.hpp"
 #include "core/ui_style.hpp"
@@ -105,6 +106,13 @@ struct State {
     int cardSkill = 0;  // 3.0.11-beta.195: the skill whose card the window opened
     bool panning = false;  // 3.0.11-beta.224: «Дерево» dragged by its ground
     float panX = 0, panY = 0;
+    // 3.0.11-beta.225 (stage 3: «План»): the character's plan (kept in its own file), the raise asked last while
+    // «Застосувати» runs (its skill, the level it had, when, how many times), why it stopped
+    skillplan::Targets targets;
+    std::string planOf;  // the character's name the plan is
+    int applyId = -1, applyLevel = 0, applyTries = 0;
+    ULONGLONG applySent = 0;
+    std::string stopped;
 };
 
 State& state() {
@@ -228,6 +236,43 @@ void readSkills(std::vector<Raw>& out) {
         }
         node = read32(node);
     }
+}
+
+// 3.0.11-beta.225: the plan's file - uaro-graphics\skills-plan-<the name's bytes in hex>.txt, «id level» a line
+std::string planPath(const std::string& name) {
+    std::string hex;
+    char b[3];
+    for (unsigned char c : name) {
+        std::snprintf(b, sizeof b, "%02x", c);
+        hex += b;
+    }
+    return layout::join(gameDir(), "uaro-graphics\\skills-plan-" + hex + ".txt");
+}
+
+void readPlan(State& s, const std::string& name) {
+    s.planOf = name;
+    s.targets.clear();
+    std::string text;
+    if (name.empty() || !readTextFile(planPath(name), text)) return;
+    size_t at = 0;
+    while (at < text.size()) {
+        const size_t end = text.find('\n', at);
+        int id = 0, level = 0;
+        if (std::sscanf(text.c_str() + at, "%d %d", &id, &level) == 2 && id > 0 && level > 0 && level < 100)
+            s.targets[id] = level;
+        if (end == std::string::npos) break;
+        at = end + 1;
+    }
+    if (!s.targets.empty()) LOG_INFO("skills: the plan read - %zu skill(s)", s.targets.size());
+}
+
+void keepPlan(State& s) {
+    s.targets = skillplan::taken(s.data);
+    if (s.planOf.empty()) return;
+    std::string text;
+    for (const auto& [id, level] : s.targets) text += std::to_string(id) + " " + std::to_string(level) + "\n";
+    const std::string path = planPath(s.planOf);
+    if (!writeFileAtomic(path, text)) LOG_INFO("skills: %s cannot be written", path.c_str());
 }
 
 // 3.0.11-beta.223 (the skills concept, stage 1): a skill of the tree the server has not sent, and why
@@ -354,6 +399,10 @@ void readData(State& s) {
         s.data.notice = settings::fmt(say(settings::Text::SkillsEarlierNotice), {earlierHome, earlierBefore});
     else if (chain.size() == 1 && basic != levels.end() && basic->second < 9 && skilltree::maxLevel(last, 1) == 9)
         s.data.notice = say(settings::Text::SkillsBasicNotice);
+    // 3.0.11-beta.225: the character's plan onto its skills (another character: its own plan)
+    if (const std::string name = readOwnName(); name != s.planOf) readPlan(s, name);
+    skillplan::put(s.data, s.targets);
+    if (!s.stopped.empty()) s.data.notice = s.stopped;
     if (!s.data.tabs.empty()) s.show.tab = std::clamp(s.show.tab, 0, int(s.data.tabs.size()) - 1);
 }
 
@@ -380,6 +429,11 @@ kw::Texts texts() {
     t.list = say(settings::Text::SkillsViewList);
     t.tree = say(settings::Text::SkillsViewTree);
     t.path = say(settings::Text::SkillsPath);
+    t.plan = say(settings::Text::SkillsPlan);
+    t.apply = say(settings::Text::SkillsPlanApply);
+    t.applying = say(settings::Text::SkillsPlanApplying);
+    t.reset = say(settings::Text::SkillsPlanReset);
+    t.planned = say(settings::Text::SkillsPlanned);
     t.use = say(settings::Text::SkillsPadUse);
     t.raise = say(settings::Text::SkillsPadRaise);
     t.assign = say(settings::Text::SkillsPadAssign);
@@ -476,6 +530,14 @@ void toggleCard(State& s, int index) {
 }
 
 void raise(State& s, int index, const char* by) {
+    if (s.show.plan) {  // 3.0.11-beta.225: «План» - a level planned, nothing asked
+        const kw::Skill* p = skillAt(s, index);
+        if (p && skillplan::up(s.data, p->id)) {
+            s.stopped.clear();
+            keepPlan(s);
+        }
+        return;
+    }
     const kw::Skill* k = skillAt(s, index);
     if (!k || !kw::canRaise(*k, s.data.points)) return;
     const bool sent = modeMsg(kRaiseMsg, k->id, 0, 0);
@@ -530,6 +592,57 @@ void setTab(State& s, int tab) {
 
 }  // namespace
 
+// 3.0.11-beta.225: «Застосувати» - the plan's raises asked one by one, each once the one before is learned (the
+// server answers a raise with the skill's new level); stopped when none is left the server lets raise, or a raise
+// went unanswered twice
+void applyStep(State& s, ULONGLONG now) {
+    if (!s.show.applying) return;
+    const auto levelOf = [&](int id) {
+        for (const kw::Tab& t : s.data.tabs)
+            for (const kw::Skill& k : t.skills)
+                if (k.id == id) return k.level;
+        return 0;
+    };
+    const auto stop = [&](const char* why) {
+        s.show.applying = false;
+        s.applyId = -1;
+        const int left = skillplan::cost(s.data);
+        if (left > 0) {
+            std::string name;
+            for (const kw::Tab& t : s.data.tabs)
+                for (const kw::Skill& k : t.skills)
+                    if (name.empty() && skillplan::extra(k) > 0) name = k.name;
+            s.stopped = settings::fmt(say(settings::Text::SkillsPlanStopped), {name});
+            s.data.notice = s.stopped;
+        }
+        LOG_INFO("skills: the plan's raises stopped - %s, %d planned level(s) left", why, left);
+        keepPlan(s);
+    };
+    if (s.applyId >= 0) {
+        if (levelOf(s.applyId) > s.applyLevel) {  // learned: the next
+            s.applyId = -1;
+            s.applyTries = 0;
+        } else if (now - s.applySent < 1500) {
+            return;
+        } else if (++s.applyTries >= 2) {
+            stop("the server did not raise it");
+            return;
+        }
+    }
+    const int id = skillplan::nextToApply(s.data);
+    if (id < 0) {
+        stop(skillplan::cost(s.data) > 0 ? "none the server lets raise now" : "all applied");
+        return;
+    }
+    s.applyLevel = levelOf(id);
+    s.applyId = id;
+    s.applySent = now;
+    const bool sent = modeMsg(kRaiseMsg, id, 0, 0);
+    if (s.told++ < 40)
+        LOG_INFO("skills: the plan raises skill %d (level %d)%s", id, s.applyLevel, sent ? "" : " - not sent");
+    s.key.clear();
+}
+
 void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int targetHeight) {
     State& s = state();
     if (on != s.on) {
@@ -556,6 +669,7 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     if (fresh || now - s.readAt >= kReadMs) {
         s.readAt = now;
         readData(s);
+        applyStep(s, now);
     }
     const uapad::runtime::Look pad = uapad::runtime::look();
     s.show.pad = pad.shown;
@@ -573,6 +687,8 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     s.layout.y = int(std::lround(s.fy * float(std::max(0, targetHeight - s.layout.h))));
     s.show.hoverTab = s.show.hoverRow = s.show.hoverPlus = s.show.hoverLess = s.show.hoverMore = -1;
     s.show.hoverClose = s.show.hoverList = s.show.hoverTree = false;
+    s.show.hoverPlan = s.show.hoverApply = s.show.hoverReset = false;
+    s.show.hoverMinus = -1;
     int cx = 0, cy = 0;
     if (readGameCursor(cx, cy) && !s.moving) {
         const kw::Hit h = kw::hitTest(s.layout, float(cx) * float(k) - float(s.layout.x),
@@ -586,6 +702,10 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
             case kw::Part::Close: s.show.hoverClose = true; break;
             case kw::Part::ViewList: s.show.hoverList = true; break;
             case kw::Part::ViewTree: s.show.hoverTree = true; break;
+            case kw::Part::Plan: s.show.hoverPlan = true; break;
+            case kw::Part::Apply: s.show.hoverApply = true; break;
+            case kw::Part::Reset: s.show.hoverReset = true; break;
+            case kw::Part::Minus: s.show.hoverMinus = h.index; break;
             default: break;
         }
     }
@@ -596,11 +716,15 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
                       std::to_string(s.show.hoverMore) + ',' + std::to_string(s.show.focus) +
                       (s.show.hoverClose ? "x" : "") + (s.show.pad ? (s.show.sony ? "S" : "X") : "") + ';' +
                       (s.show.tree ? "T" : "L") + (s.show.hoverList ? "l" : "") + (s.show.hoverTree ? "t" : "") +
+                      (s.show.plan ? "P" : "") + (s.show.applying ? "A" : "") + (s.show.hoverPlan ? "p" : "") +
+                      (s.show.hoverApply ? "a" : "") + (s.show.hoverReset ? "r" : "") +
+                      std::to_string(s.show.hoverMinus) + ',' +
                       std::to_string(int(s.layout.scrollX)) + ',' + std::to_string(int(s.layout.scrollY)) + ';' +
                       std::to_string(s.data.points) + ';';
     for (const kw::Tab& tab : s.data.tabs)
         for (const kw::Skill& sk : tab.skills)
-            key += std::to_string(sk.id) + ':' + std::to_string(sk.level) + '/' + std::to_string(sk.use) +
+            key += std::to_string(sk.id) + ':' + std::to_string(sk.level) + '>' + std::to_string(sk.target) + '/' +
+                   std::to_string(sk.use) +
                    (sk.up ? "u" : "") + (sk.icon ? "i" : "") + ',';
     if (const std::string drawn = key + '#' + std::to_string(uistyle::generation()); drawn != s.key) {
         s.key = drawn;
@@ -775,6 +899,33 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
                 keepState(s);
                 if (s.told++ < 20) LOG_INFO("skills: the view - %s", s.show.tree ? "the tree" : "the list");
             }
+            break;
+        case kw::Part::Plan:  // 3.0.11-beta.225: «План» on or off (the plan itself kept)
+            s.show.plan = !s.show.plan;
+            s.show.applying = false;
+            if (s.told++ < 20) LOG_INFO("skills: the plan %s", s.show.plan ? "opened" : "closed");
+            break;
+        case kw::Part::Minus:
+            if (const kw::Skill* k = skillAt(s, h.index); k && skillplan::down(s.data, k->id)) {
+                s.stopped.clear();
+                keepPlan(s);
+            }
+            break;
+        case kw::Part::Apply:
+            if (skillplan::cost(s.data) > 0 && !s.show.applying) {
+                s.show.applying = true;
+                s.applyId = -1;
+                s.applyTries = 0;
+                s.stopped.clear();
+                LOG_INFO("skills: the plan applied - %d level(s)", skillplan::cost(s.data));
+            }
+            break;
+        case kw::Part::Reset:
+            s.show.applying = false;
+            s.stopped.clear();
+            for (kw::Tab& tab : s.data.tabs)
+                for (kw::Skill& k : tab.skills) k.target = 0;
+            keepPlan(s);
             break;
         case kw::Part::View:  // its ground: the tree dragged
             s.panning = true;

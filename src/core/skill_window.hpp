@@ -36,6 +36,7 @@ struct Skill {
     Lock lock = Lock::None;  // not sent by the server: shown after the sent ones, dimmed, without «+»
     std::string lockJob;     // Lock::Earlier: the job whose points come first
     std::vector<std::pair<int, int>> req;  // 3.0.11-beta.224: what it needs (a skill, its level) - the tree's links
+    int target = 0;  // 3.0.11-beta.225: the level planned (core/skill_plan); 0 none
     const panel::Picture* icon = nullptr;  // at iconSide(), premultiplied
 };
 struct Tab {
@@ -59,9 +60,13 @@ struct Texts {
     std::string quest, wedding, soulLink, earlier;
     // 3.0.11-beta.224 (stage 2): the view's buttons «Список», «Дерево»; the path's line «До {1} — ще очок: {2}»
     std::string list, tree, path;
+    // 3.0.11-beta.225 (stage 3): «План», «Застосувати», «Застосовується…», «Скинути», «У плані: {1}»
+    std::string plan, apply, applying, reset, planned;
 };
 
 bool canRaise(const Skill& k, int points);  // a free point and the server's leave, below its most
+// 3.0.11-beta.225: a «+» on it - in «План» one more level fits the plan, else canRaise
+bool plusOn(const Data& d, const Skill& k, bool plan);
 bool usable(const Skill& k);                // learned and not passive
 std::string info(const Skill& k, const Texts& t);
 int keepInSight(int focus, int scroll, int count);  // the scroll that shows the focused row
@@ -80,6 +85,10 @@ struct Show {
     bool tree = false;
     bool hoverList = false, hoverTree = false;
     float treeX = 0, treeY = 0;
+    // 3.0.11-beta.225 (stage 3): «План» - a «+» plans a level, a «−» takes one off; the plan's buttons in the footer
+    bool plan = false, applying = false;
+    bool hoverPlan = false, hoverApply = false, hoverReset = false;
+    int hoverMinus = -1;
 };
 
 struct Layout {
@@ -91,6 +100,8 @@ struct Layout {
     // 3.0.11-beta.224: the view's buttons; «Дерево»: the tree's place (rows, icons and pluses: a box per skill of the
     // tab by its index, the window's - first 0), its content, scrolled by (scrollX, scrollY) of at most (maxX, maxY)
     panel::Box viewList, viewTree;
+    panel::Box planButton, apply, reset;  // 3.0.11-beta.225 (apply, reset: w 0 out of «План»)
+    std::vector<panel::Box> minuses;      // a row's «−» (w 0: none)
     bool tree = false;
     panel::Box view, scrollH;
     skilltreeview::Plan plan;
@@ -109,7 +120,9 @@ using windrag::pressed;
 using windrag::moved;
 using windrag::released;
 
-enum class Part : uint8_t { None, Close, Tab, Row, Plus, Less, More, Title, Body, ViewList, ViewTree, View };
+enum class Part : uint8_t {
+    None, Close, Tab, Row, Plus, Less, More, Title, Body, ViewList, ViewTree, View, Plan, Minus, Apply, Reset
+};
 struct Hit {
     Part part = Part::None;
     int index = -1;  // a tab's; for a row's parts the skill's in its tab

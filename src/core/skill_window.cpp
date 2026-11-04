@@ -6,6 +6,7 @@
 #include <utility>
 
 #include "core/pad_glyphs.hpp"
+#include "core/skill_plan.hpp"
 #include "core/ui_style.hpp"
 
 namespace uagfx::skillwin {
@@ -34,7 +35,7 @@ std::string fill2(std::string form, const std::string& a, const std::string& b) 
     return form;
 }
 
-constexpr uint32_t kRose = 0xEF8FA0;
+constexpr uint32_t kRose = 0xEF8FA0, kPlanBlue = 0x6EA3FF;
 
 void put(panel::Picture& out, const panel::Picture& pic, const panel::Box& box, float k) {
     const int ox = int(std::lround(box.x + (box.w - float(pic.width)) / 2));
@@ -94,6 +95,23 @@ void padBoxes(Layout& L, const Texts& t, const Measure& m) {
                                     kGlyph * s};
         right = L.padGlyphs[i].x - 16 * s;
     }
+}
+
+// The footer's right: «План»'s buttons, or the controller's; the glass's size
+void footerEnd(Layout& L, const Show& sh, const Texts& t, const Measure& m) {
+    const float s = L.s, w = L.title.w;
+    if (sh.plan) {  // 3.0.11-beta.225: «Застосувати» at the right, «Скинути» left of it
+        const float bh = 26 * s, by = L.footer.y + (L.footer.h - bh) / 2;
+        const std::string& go = sh.applying ? t.applying : t.apply;
+        const float aw = m(go, 12 * s, true) + 24 * s, rw = m(t.reset, 12 * s, false) + 24 * s;
+        L.apply = panel::Box{w - kSide * s - aw, by, aw, bh};
+        L.reset = panel::Box{L.apply.x - 8 * s - rw, by, rw, bh};
+    } else if (sh.pad) {
+        padBoxes(L, t, m);
+    }
+    L.glass = panel::Box{0, 0, w, L.footer.y + L.footer.h};
+    L.w = int(std::ceil(w));
+    L.h = int(std::ceil(L.glass.h));
 }
 
 // 3.0.11-beta.224 (stage 2): a link of «Дерево» in the content's pixels - from its requirement's right to the skill's
@@ -165,6 +183,10 @@ void paintTree(panel::Picture& out, const Layout& L, const Data& d, const Show& 
             edge = kGold;
             edgeA = 0.95f;
         }
+        if (skillplan::extra(k) > 0 && !chain.count(k.id)) {  // 3.0.11-beta.225: planned
+            edge = kPlanBlue;
+            edgeA = 0.85f;
+        }
         if (n.index == sh.focus) {
             edge = kGold;
             edgeA = 1.0f;
@@ -173,11 +195,13 @@ void paintTree(panel::Picture& out, const Layout& L, const Data& d, const Show& 
         panel::roundRect(c, n.box, 8 * s, learned ? kGold2 : kWhite, fillA, edge, edgeA, edgeW);
         const panel::Box icon{n.box.x + 6 * s, n.box.y + (n.box.h - 26 * s) / 2, 26 * s, 26 * s};
         if (k.icon && k.icon->width > 0) put(c, *k.icon, icon, closed ? 0.3f : learned ? 1.0f : 0.5f);
-        if (canRaise(k, d.points)) {
-            const panel::Box plus{n.box.x + n.box.w - skilltreeview::kPlus * s * 0.65f, n.box.y - 5 * s,
-                                  skilltreeview::kPlus * s, skilltreeview::kPlus * s};
-            panel::roundRect(c, plus, 5 * s, kGold, n.index == sh.hoverPlus ? 1.0f : 0.85f);
-        }
+        const float px = n.box.x + n.box.w - skilltreeview::kPlus * s * 0.65f, ps = skilltreeview::kPlus * s;
+        if (plusOn(d, k, sh.plan))
+            panel::roundRect(c, panel::Box{px, n.box.y - 5 * s, ps, ps}, 5 * s, sh.plan ? kPlanBlue : kGold,
+                             n.index == sh.hoverPlus ? 1.0f : 0.85f);
+        if (sh.plan && skillplan::extra(k) > 0)
+            panel::roundRect(c, panel::Box{px - ps - 3 * s, n.box.y - 5 * s, ps, ps}, 5 * s, kCard, 1.0f, kPlanBlue,
+                             n.index == sh.hoverMinus ? 1.0f : 0.7f, 1.0f * s);
     }
     const int x0 = int(std::lround(L.view.x)), y0 = int(std::lround(L.view.y));
     const int sx = int(std::lround(L.scrollX)), sy = int(std::lround(L.scrollY));
@@ -216,6 +240,10 @@ void paintTree(panel::Picture& out, const Layout& L, const Data& d, const Show& 
 
 bool canRaise(const Skill& k, int points) {
     return points > 0 && k.up && k.lock == Lock::None && (k.most <= 0 || k.level < k.most);
+}
+
+bool plusOn(const Data& d, const Skill& k, bool plan) {
+    return plan ? skillplan::canPlan(d, k) : canRaise(k, d.points);
 }
 
 bool usable(const Skill& k) { return k.level > 0 && k.type != 0; }
@@ -266,6 +294,10 @@ Layout layout(int x, int y, float scale, const Data& d, const Show& sh, const Te
         const float tw = m(t.tree, 12 * s, false) + 22 * s, lw = m(t.list, 12 * s, false) + 22 * s;
         L.viewTree = panel::Box{L.close.x - 12 * s - tw, by, tw, bh};
         L.viewList = panel::Box{L.viewTree.x - lw, by, lw, bh};
+        if (!t.plan.empty()) {  // 3.0.11-beta.225
+            const float pw = m(t.plan, 12 * s, false) + 22 * s;
+            L.planButton = panel::Box{L.viewList.x - 10 * s - pw, by, pw, bh};
+        }
     }
     L.tabsRow = panel::Box{side, kTitleH * s, w - 2 * side, kTabsH * s};
     float tx = side;
@@ -301,19 +333,16 @@ Layout layout(int x, int y, float scale, const Data& d, const Show& sh, const Te
             const panel::Box b = toWindow(L, n.box);
             L.rows.push_back(b);
             L.icons.push_back(panel::Box{b.x + 6 * s, b.y + (b.h - 26 * s) / 2, 26 * s, 26 * s});
-            L.pluses.push_back(canRaise(k, d.points)
-                                   ? panel::Box{b.x + b.w - skilltreeview::kPlus * s * 0.65f, b.y - 5 * s,
-                                                skilltreeview::kPlus * s, skilltreeview::kPlus * s}
-                                   : panel::Box{});
+            const float px = b.x + b.w - skilltreeview::kPlus * s * 0.65f, ps = skilltreeview::kPlus * s;
+            L.pluses.push_back(plusOn(d, k, sh.plan) ? panel::Box{px, b.y - 5 * s, ps, ps} : panel::Box{});
+            L.minuses.push_back(sh.plan && skillplan::extra(k) > 0 ? panel::Box{px - ps - 3 * s, b.y - 5 * s, ps, ps}
+                                                                    : panel::Box{});
             L.less.push_back(panel::Box{});
             L.more.push_back(panel::Box{});
             L.dots.push_back(panel::Box{});
         }
         L.footer = panel::Box{0, L.list.y + L.list.h + 6 * s, w, kFooterH * s};
-        if (sh.pad) padBoxes(L, t, m);
-        L.glass = panel::Box{0, 0, w, L.footer.y + L.footer.h};
-        L.w = int(std::ceil(w));
-        L.h = int(std::ceil(L.glass.h));
+        footerEnd(L, sh, t, m);
         L.x = x;
         L.y = y;
         return L;
@@ -327,7 +356,7 @@ Layout layout(int x, int y, float scale, const Data& d, const Show& sh, const Te
         L.rows.push_back(r);
         L.icons.push_back(panel::Box{r.x + 6 * s, r.y + (r.h - 32 * s) / 2, 32 * s, 32 * s});
         const float plusX = r.x + r.w - 8 * s - kPlus * s;
-        L.pluses.push_back(canRaise(k, d.points)
+        L.pluses.push_back(plusOn(d, k, sh.plan)
                                ? panel::Box{plusX, r.y + (r.h - kPlus * s) / 2, kPlus * s, kPlus * s}
                                : panel::Box{});
         const float levelX = plusX - 10 * s - kLevelW * s;
@@ -338,7 +367,13 @@ Layout layout(int x, int y, float scale, const Data& d, const Show& sh, const Te
         } else {
             L.dots.push_back(panel::Box{});
         }
-        if (usable(k) && k.level > 1) {
+        if (sh.plan && skillplan::extra(k) > 0) {  // 3.0.11-beta.225: «−» where the use level's arrows stand
+            const float cx = dotsRight - kDotsMost * s - 14 * s - kPlus * s;
+            L.minuses.push_back(panel::Box{cx, r.y + (r.h - kPlus * s) / 2, kPlus * s, kPlus * s});
+        } else {
+            L.minuses.push_back(panel::Box{});
+        }
+        if (usable(k) && k.level > 1 && !sh.plan) {
             const float cx = dotsRight - kDotsMost * s - 14 * s - (2 * kArrowW + kUseNumW) * s;
             const float cy = r.y + (r.h - kArrowH * s) / 2;
             L.less.push_back(panel::Box{cx, cy, kArrowW * s, kArrowH * s});
@@ -349,10 +384,7 @@ Layout layout(int x, int y, float scale, const Data& d, const Show& sh, const Te
         }
     }
     L.footer = panel::Box{0, L.list.y + L.list.h + 6 * s, w, kFooterH * s};
-    if (sh.pad) padBoxes(L, t, m);
-    L.glass = panel::Box{0, 0, w, L.footer.y + L.footer.h};
-    L.w = int(std::ceil(w));
-    L.h = int(std::ceil(L.glass.h));
+    footerEnd(L, sh, t, m);
     L.x = x;
     L.y = y;
     return L;
@@ -361,14 +393,20 @@ Layout layout(int x, int y, float scale, const Data& d, const Show& sh, const Te
 Hit hitTest(const Layout& L, float x, float y) {
     if (!L.glass.contains(x, y)) return Hit{};
     if (L.close.contains(x, y)) return Hit{Part::Close, -1};
+    if (L.planButton.w > 0 && L.planButton.contains(x, y)) return Hit{Part::Plan, -1};
+    if (L.apply.w > 0 && L.apply.contains(x, y)) return Hit{Part::Apply, -1};
+    if (L.reset.w > 0 && L.reset.contains(x, y)) return Hit{Part::Reset, -1};
     if (L.viewList.w > 0 && L.viewList.contains(x, y)) return Hit{Part::ViewList, -1};
     if (L.viewTree.w > 0 && L.viewTree.contains(x, y)) return Hit{Part::ViewTree, -1};
     for (size_t i = 0; i < L.tabs.size(); ++i)
         if (L.tabs[i].contains(x, y)) return Hit{Part::Tab, int(i)};
     if (L.tree) {  // 3.0.11-beta.224: only what the view shows
         if (!L.view.contains(x, y)) return Hit{y < L.title.y + L.title.h ? Part::Title : Part::Body, -1};
-        for (size_t i = 0; i < L.rows.size(); ++i)
+        for (size_t i = 0; i < L.rows.size(); ++i) {
             if (L.pluses[i].w > 0 && L.pluses[i].contains(x, y)) return Hit{Part::Plus, int(i)};
+            if (i < L.minuses.size() && L.minuses[i].w > 0 && L.minuses[i].contains(x, y))
+                return Hit{Part::Minus, int(i)};
+        }
         for (size_t i = 0; i < L.rows.size(); ++i)
             if (L.rows[i].contains(x, y)) return Hit{Part::Row, int(i)};
         return Hit{Part::View, -1};
@@ -376,6 +414,7 @@ Hit hitTest(const Layout& L, float x, float y) {
     for (size_t i = 0; i < L.rows.size(); ++i) {
         const int index = L.first + int(i);
         if (L.pluses[i].w > 0 && L.pluses[i].contains(x, y)) return Hit{Part::Plus, index};
+        if (i < L.minuses.size() && L.minuses[i].w > 0 && L.minuses[i].contains(x, y)) return Hit{Part::Minus, index};
         if (L.less[i].w > 0 && L.less[i].contains(x, y)) return Hit{Part::Less, index};
         if (L.more[i].w > 0 && L.more[i].contains(x, y)) return Hit{Part::More, index};
         if (L.rows[i].contains(x, y)) return Hit{Part::Row, index};
@@ -388,6 +427,20 @@ void paint(panel::Picture& out, const Layout& L, const Data& d, const Show& sh) 
     const float s = L.s;
     panel::roundRect(out, L.glass, 12 * s, kCard, uistyle::window(), kWhite, 0.09f, 1.0f * s);
     if (sh.hoverClose) panel::roundRect(out, L.close, 7 * s, kWhite, 0.12f);
+    if (L.planButton.w > 0)  // 3.0.11-beta.225: «План», lit blue while on
+        panel::roundRect(out, L.planButton, 7 * s, sh.plan ? kPlanBlue : kWhite,
+                         (sh.plan ? 0.24f : 0.03f) + (sh.hoverPlan ? 0.07f : 0.0f), sh.plan ? kPlanBlue : kWhite,
+                         sh.plan ? 0.8f : 0.16f, 1.0f * s);
+    if (L.apply.w > 0) {
+        const bool any = skillplan::cost(d) > 0 && !sh.applying;
+        panel::roundRect(out, L.apply, 7 * s, kPlanBlue, (any ? 0.32f : 0.08f) + (sh.hoverApply && any ? 0.1f : 0.0f),
+                         kPlanBlue, any ? 0.9f : 0.3f, 1.0f * s);
+        panel::roundRect(out, L.reset, 7 * s, kWhite, sh.hoverReset ? 0.12f : 0.05f, kWhite, 0.18f, 1.0f * s);
+    }
+    for (size_t i = 0; i < L.minuses.size(); ++i)  // 3.0.11-beta.225: «−» (the tree's: drawn by its own)
+        if (L.minuses[i].w > 0 && !L.tree)
+            panel::roundRect(out, L.minuses[i], 6 * s, kWhite, int(i) + L.first == sh.hoverMinus ? 0.22f : 0.10f,
+                             kPlanBlue, 0.7f, 1.0f * s);
     if (L.viewList.w > 0) {  // 3.0.11-beta.224: «Список» | «Дерево», the shown one lit
         const panel::Box both{L.viewList.x, L.viewList.y, L.viewTree.x + L.viewTree.w - L.viewList.x, L.viewList.h};
         panel::roundRect(out, both, 7 * s, kWhite, 0.03f, kWhite, 0.16f, 1.0f * s);
@@ -426,12 +479,14 @@ void paint(panel::Picture& out, const Layout& L, const Data& d, const Show& sh) 
                 const float cx = dots.x + (float(n) * kDotStep + kDot / 2) * s, cy = dots.y + dots.h / 2;
                 if (n < k.level)
                     panel::circle(out, cx, cy, kDot / 2 * s, kGold, 1.0f);
+                else if (n < k.target)  // 3.0.11-beta.225: planned
+                    panel::circle(out, cx, cy, kDot / 2 * s, kPlanBlue, 1.0f);
                 else
                     panel::circle(out, cx, cy, kDot / 2 * s, kWhite, 0.14f);
             }
         if (L.pluses[i].w > 0)
-            panel::roundRect(out, L.pluses[i], 6 * s, kWhite, index == sh.hoverPlus ? 0.22f : 0.12f, kGold2, 0.7f,
-                             1.0f * s);
+            panel::roundRect(out, L.pluses[i], 6 * s, kWhite, index == sh.hoverPlus ? 0.22f : 0.12f,
+                             sh.plan ? kPlanBlue : kGold2, 0.7f, 1.0f * s);
         if (L.less[i].w > 0) {
             panel::roundRect(out, L.less[i], 5 * s, kWhite, index == sh.hoverLess ? 0.16f : 0.06f);
             panel::roundRect(out, L.more[i], 5 * s, kWhite, index == sh.hoverMore ? 0.16f : 0.06f);
@@ -462,6 +517,16 @@ std::vector<Words> words(const Layout& L, const Data& d, const Show& sh, const T
     out.push_back(Words{panel::Box{side + titleW + 8 * s, 0, m(t.hotkey, 11 * s, false) + 2, L.title.h}, t.hotkey,
                         kFaint, 11 * s, false, Align::Left});
     out.push_back(Words{L.close, "\xC3\x97", sh.hoverClose ? kText : kMuted, 16 * s, false, Align::Center});
+    if (L.planButton.w > 0)  // 3.0.11-beta.225
+        out.push_back(Words{L.planButton, t.plan, sh.plan ? kText : kMuted, 12 * s, sh.plan, Align::Center});
+    if (L.apply.w > 0) {
+        out.push_back(Words{L.apply, sh.applying ? t.applying : t.apply,
+                            skillplan::cost(d) > 0 || sh.applying ? kText : kFaint, 12 * s, true, Align::Center});
+        out.push_back(Words{L.reset, t.reset, kMuted, 12 * s, false, Align::Center});
+    }
+    for (size_t i = 0; i < L.minuses.size(); ++i)
+        if (L.minuses[i].w > 0 && (!L.tree || inView(L, L.minuses[i])))
+            out.push_back(Words{L.minuses[i], "\xE2\x88\x92", kText, 14 * s, true, Align::Center});
     if (L.viewList.w > 0) {  // 3.0.11-beta.224
         out.push_back(Words{L.viewList, t.list, L.tree ? kMuted : kText, 12 * s, !L.tree, Align::Center});
         out.push_back(Words{L.viewTree, t.tree, L.tree ? kText : kMuted, 12 * s, L.tree, Align::Center});
@@ -481,10 +546,13 @@ std::vector<Words> words(const Layout& L, const Data& d, const Show& sh, const T
             const panel::Box level{r.x + 38 * s, r.y + 21 * s, r.w - 44 * s, 15 * s};
             const uint32_t rgb = k.lock != Lock::None ? kFaint : k.level > 0 ? kText : kMuted;
             if (inView(L, name)) out.push_back(Words{name, k.name, rgb, 12 * s, true, Align::Left});
+            const bool planned = skillplan::extra(k) > 0;
+            const int shownLv = planned ? k.target : k.level;
             const std::string lv =
-                k.most > 0 ? std::to_string(k.level) + "/" + std::to_string(k.most) : std::to_string(k.level);
+                k.most > 0 ? std::to_string(shownLv) + "/" + std::to_string(k.most) : std::to_string(shownLv);
             if (inView(L, level))
-                out.push_back(Words{level, lv, k.level > 0 ? kGold2 : kFaint, 10.5f * s, false, Align::Left});
+                out.push_back(Words{level, lv, planned ? kPlanBlue : k.level > 0 ? kGold2 : kFaint, 10.5f * s, planned,
+                                    Align::Left});
             if (L.pluses[i].w > 0 && inView(L, L.pluses[i]))
                 out.push_back(Words{L.pluses[i], "+", kCard, 13 * s, true, Align::Center});
         }
@@ -515,10 +583,12 @@ std::vector<Words> words(const Layout& L, const Data& d, const Show& sh, const T
         out.push_back(Words{panel::Box{textX, r.y + 24 * s, textRight - textX, 16 * s}, info(k, t), kMuted, 11.5f * s,
                             false, Align::Left});
         const float plusX = r.x + r.w - 8 * s - kPlus * s;
+        const bool planned = skillplan::extra(k) > 0;  // 3.0.11-beta.225: the planned level in blue
+        const int shownLv = planned ? k.target : k.level;
         const std::string level =
-            k.most > 0 ? std::to_string(k.level) + "/" + std::to_string(k.most) : std::to_string(k.level);
+            k.most > 0 ? std::to_string(shownLv) + "/" + std::to_string(k.most) : std::to_string(shownLv);
         out.push_back(Words{panel::Box{plusX - 10 * s - kLevelW * s, r.y, kLevelW * s, r.h}, level,
-                            k.level > 0 ? kText : kFaint, 12.5f * s, false, Align::Right});
+                            planned ? kPlanBlue : k.level > 0 ? kText : kFaint, 12.5f * s, planned, Align::Right});
         if (L.pluses[i].w > 0) out.push_back(Words{L.pluses[i], "+", kText, 15 * s, true, Align::Center});
         if (L.less[i].w > 0) {
             out.push_back(Words{L.less[i], "\xE2\x80\xB9", k.use > 1 ? kText : kFaint, 14 * s, true, Align::Center});
@@ -530,9 +600,12 @@ std::vector<Words> words(const Layout& L, const Data& d, const Show& sh, const T
                                 Align::Center});
         }
     }
-    const std::string points = fill(t.points, std::to_string(d.points));
+    const int planCost = skillplan::cost(d);  // 3.0.11-beta.225: the points the plan leaves, and what it takes
+    std::string points = fill(t.points, std::to_string(planCost > 0 ? skillplan::left(d) : d.points));
+    if (planCost > 0 && !t.planned.empty()) points += kDotSep + fill(t.planned, std::to_string(planCost));
     out.push_back(Words{panel::Box{side, L.footer.y, m(points, 12 * s, true) + 4, L.footer.h}, points,
-                        d.points > 0 ? kGold : kFaint, 12 * s, true, Align::Left});
+                        planCost > 0 ? kPlanBlue : d.points > 0 ? kGold : kFaint, 12 * s, true, Align::Left});
+    if (sh.plan) return out;  // its buttons in the hints' place
     if (L.tree && tab && !t.path.empty()) {  // 3.0.11-beta.224: what the path to a closed skill costs
         const int lit = litIndex(sh);
         if (lit >= 0 && lit < int(tab->skills.size()) && tab->skills[size_t(lit)].level <= 0) {

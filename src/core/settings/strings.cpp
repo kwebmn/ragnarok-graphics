@@ -7145,6 +7145,15 @@ constexpr Entry kTexts[] = {
     {Text::SkillsViewList, "List", "Список", "Список"},
     {Text::SkillsViewTree, "Tree", "Дерево", "Дерево"},
     {Text::SkillsPath, "To {1}: {2} more points", "До {1} — ще очок: {2}", "До {1} — ещё очков: {2}"},
+    // 3.0.11-beta.225 (the skills concept, stage 3): the plan
+    {Text::SkillsPlan, "Plan", "План", "План"},
+    {Text::SkillsPlanApply, "Apply", "Застосувати", "Применить"},
+    {Text::SkillsPlanApplying, "Applying…", "Застосовується…", "Применяется…"},
+    {Text::SkillsPlanReset, "Reset", "Скинути", "Сбросить"},
+    {Text::SkillsPlanned, "planned: {1}", "у плані: {1}", "в плане: {1}"},
+    {Text::SkillsPlanStopped, "The plan stopped at {1}: the server does not let raise it yet",
+     "План зупинився на {1}: сервер поки не дає її підняти",
+     "План остановился на {1}: сервер пока не даёт его поднять"},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

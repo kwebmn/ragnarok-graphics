@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 
+#include "core/skill_plan.hpp"
 #include "core/skill_tree_view.hpp"
 #include "core/skill_window.hpp"
 #include "test.hpp"
@@ -43,6 +44,7 @@ skillwin::Data knight() {
                       {skill(55, "Spear Mastery", 1, 10), pierce, skill(58, "Spear Stab", 0, 10, {{56, 5}}),
                        skill(60, "Twohand Quicken", 10, 10, {{3, 1}}),
                        skill(62, "Bowling Bash", 0, 10, {{5, 10}, {7, 3}, {3, 5}, {60, 10}})}});
+    d.tabs[1].skills[4].lock = skillwin::Lock::None;  // all its requirements met: sent
     return d;
 }
 
@@ -150,4 +152,76 @@ TEST(skill_tree_view_scrolls_and_keeps_a_skill_in_sight) {
     CHECK(skillwin::hitTest(L, L.rows[0].x + 3, L.rows[0].y + 3).part != skillwin::Part::Row);
     skillwin::scrollTree(sh, L, -100000, 0);
     CHECK(sh.treeX == 0);
+}
+
+// 3.0.11-beta.225 (the skills concept, stage 3: «План»): levels planned without asking the server - a requirement
+// counts by its planned level, taking a level off takes off what needed it, the points the plan leaves; «Застосувати»
+// asks the raises the server lets now, one by one; the plan's buttons in the window
+TEST(skill_plan_levels_points_and_requirements) {
+    skillwin::Data d = knight();
+    d.tabs[1].skills[2].lock = skillwin::Lock::Needs;  // Spear Stab: Pierce 5 needed
+    CHECK(!skillplan::canPlan(d, d.tabs[1].skills[2]));
+    for (int i = 0; i < 4; ++i) CHECK(skillplan::up(d, 56));  // Pierce 0 -> 4 of the 4 free points
+    CHECK(!skillplan::up(d, 56) && skillplan::left(d) == 0 && skillplan::cost(d) == 4);
+    d.points = 10;
+    CHECK(skillplan::up(d, 56) && skillplan::planLevel(d, 56) == 5);
+    CHECK(skillplan::up(d, 58) && skillplan::up(d, 58) && skillplan::cost(d) == 7);  // Spear Stab by the planned Pierce
+    CHECK(skillplan::down(d, 56) && skillplan::planLevel(d, 58) == 0 && skillplan::cost(d) == 4);  // and it went
+    CHECK(!skillplan::down(d, 58));
+    skillwin::Skill quest;
+    quest.id = 1001;
+    quest.most = 1;
+    quest.lock = skillwin::Lock::Quest;
+    d.tabs[1].skills.push_back(quest);
+    CHECK(!skillplan::up(d, 1001));
+    // kept as targets, back onto the skills; a level learned since drops out of the plan
+    const skillplan::Targets t = skillplan::taken(d);
+    CHECK(t.size() == 1 && t.at(56) == 4);
+    d.tabs[1].skills[1].target = 0;
+    d.tabs[1].skills[1].level = 4;
+    skillplan::put(d, t);
+    CHECK(skillplan::extra(d.tabs[1].skills[1]) == 0 && skillplan::cost(d) == 0);
+}
+
+TEST(skill_plan_applies_what_the_server_lets_raise) {
+    skillwin::Data d = knight();
+    d.tabs[1].skills[2].lock = skillwin::Lock::Needs;
+    CHECK(skillplan::up(d, 56) && skillplan::up(d, 62));
+    CHECK_EQ(skillplan::nextToApply(d), 56);  // Pierce first (the server's order)
+    d.tabs[1].skills[1].level = 1;            // learned
+    CHECK_EQ(skillplan::nextToApply(d), 62);
+    d.tabs[1].skills[4].up = false;  // the server does not let it
+    CHECK_EQ(skillplan::nextToApply(d), -1);
+    d.tabs[1].skills[4].up = true;
+    d.points = 0;
+    CHECK_EQ(skillplan::nextToApply(d), -1);
+}
+
+TEST(skill_plan_in_the_window) {
+    skillwin::Data d = knight();
+    skillwin::Texts t = texts();
+    t.plan = "План";
+    t.apply = "Застосувати";
+    t.applying = "Застосовується…";
+    t.reset = "Скинути";
+    t.planned = "у плані: {1}";
+    skillwin::Show sh;
+    sh.tab = 1;
+    skillwin::Layout L = skillwin::layout(0, 0, 1.0f, d, sh, t, measure);
+    CHECK(L.planButton.w > 0 && L.planButton.x + L.planButton.w < L.viewList.x && L.apply.w == 0);
+    CHECK(skillwin::hitTest(L, L.planButton.x + 3, L.planButton.y + 3).part == skillwin::Part::Plan);
+    sh.plan = true;
+    CHECK(skillplan::up(d, 56));
+    L = skillwin::layout(0, 0, 1.0f, d, sh, t, measure);
+    CHECK(L.apply.w > 0 && L.reset.x + L.reset.w < L.apply.x);
+    CHECK(L.minuses[1].w > 0 && L.minuses[0].w == 0);  // Pierce planned: its «−»
+    CHECK(skillwin::hitTest(L, L.minuses[1].x + 3, L.minuses[1].y + 3).part == skillwin::Part::Minus);
+    std::vector<skillwin::Words> w = skillwin::words(L, d, sh, t, measure);
+    const auto has = [&](const std::string& text) {
+        return std::any_of(w.begin(), w.end(), [&](const skillwin::Words& x) { return x.text == text; });
+    };
+    CHECK(has("Вільних очок: 3 · у плані: 1") && has("Застосувати") && has("Скинути") && has("1/10"));
+    sh.tree = true;
+    L = skillwin::layout(0, 0, 1.0f, d, sh, t, measure);
+    CHECK(L.minuses[1].w > 0 && L.pluses[1].w > 0 && L.minuses[1].x < L.pluses[1].x);
 }
