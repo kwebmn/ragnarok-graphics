@@ -533,6 +533,16 @@ void draw(FrameRecord& record, gpu::Renderer& renderer) {
     if (cursor >= 0) record.moveLastBefore(record.commands().size() - size_t(cursor) - 1, size_t(cursor));
 }
 
+bool panelBox(int& x, int& y, int& w, int& h) {
+    const State& s = state();
+    if (!s.shown) return false;
+    x = s.layout.x + int(s.layout.glass.x);
+    y = s.layout.y + int(s.layout.glass.y);
+    w = int(s.layout.glass.w);
+    h = int(s.layout.glass.h);
+    return true;
+}
+
 bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     State& s = state();
     if (!s.shown) return false;

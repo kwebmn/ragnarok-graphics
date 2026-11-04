@@ -13,22 +13,27 @@ namespace {
 constexpr float kTileW = 112, kTileH = 100, kGap = 10, kPad = 18, kTitleH = 34, kHintsH = 36, kGlyph = 20;
 constexpr uint32_t kCard = 0x10141C, kWhite = 0xFFFFFF, kGold = 0xC9A55B, kGold2 = 0xE6CB8A, kText = 0xECEFF5;
 constexpr uint32_t kMuted = 0x9AA3B5;
-constexpr uiicons::Icon kIcons[kTiles] = {uiicons::Icon::Bag,     uiicons::Icon::Stats,    uiicons::Icon::Skill,
-                                          uiicons::Icon::Equip,   uiicons::Icon::Friends,  uiicons::Icon::Location,
-                                          uiicons::Icon::Quest,   uiicons::Icon::Gear,     uiicons::Icon::Gamepad};
+constexpr uiicons::Icon kIcons[kMostTiles] = {
+    uiicons::Icon::Bag,   uiicons::Icon::Stats, uiicons::Icon::Skill, uiicons::Icon::Equip,   uiicons::Icon::Friends,
+    uiicons::Icon::Location, uiicons::Icon::Quest, uiicons::Icon::Gear, uiicons::Icon::Gamepad, uiicons::Icon::Battle};
+
+int countOf(int count) { return count > kTiles ? kMostTiles : kTiles; }
 
 }  // namespace
 
-Layout layout(int centreX, int centreY, float scale) {
+Layout layout(int centreX, int centreY, float scale, int count) {
     Layout L;
     const float s = scale > 0 ? scale : 1.0f;
     L.s = s;
-    const float gridW = 3 * kTileW + 2 * kGap, gridH = 3 * kTileH + 2 * kGap;
+    const int n = countOf(count), rows = (n + 2) / 3;
+    const float gridW = 3 * kTileW + 2 * kGap, gridH = float(rows) * kTileH + float(rows - 1) * kGap;
     L.glass = panel::Box{0, 0, (gridW + 2 * kPad) * s, (kPad + kTitleH + gridH + 12 + kHintsH + 10) * s};
     L.title = panel::Box{kPad * s, kPad * s, gridW * s, kTitleH * s};
-    for (int i = 0; i < kTiles; ++i)
-        L.tiles.push_back(panel::Box{(kPad + float(i % 3) * (kTileW + kGap)) * s,
+    for (int i = 0; i < n; ++i) {
+        const int col = i < kTiles ? i % 3 : 1;  // the mercenary's under the middle
+        L.tiles.push_back(panel::Box{(kPad + float(col) * (kTileW + kGap)) * s,
                                      (kPad + kTitleH + float(i / 3) * (kTileH + kGap)) * s, kTileW * s, kTileH * s});
+    }
     L.hints = panel::Box{kPad * s, (kPad + kTitleH + gridH + 12) * s, gridW * s, kHintsH * s};
     L.w = int(std::ceil(L.glass.w));
     L.h = int(std::ceil(L.glass.h));
@@ -43,9 +48,16 @@ int hitTest(const Layout& L, float x, float y) {
     return -1;
 }
 
-int moved(int at, int dx, int dy) {
-    const int col = ((at % 3) + dx + 3) % 3, row = ((at / 3) + dy + 3) % 3;
-    return row * 3 + col;
+int moved(int at, int dx, int dy, int count) {
+    const int rows = (countOf(count) + 2) / 3;
+    if (at >= kTiles) {  // the mercenary's, alone in its row: up and down by the middle column
+        if (dy == 0) return at;
+        const int row = (3 + dy + rows) % rows;
+        return row == 3 ? at : row * 3 + 1;
+    }
+    const int row = ((at / 3) + dy + rows) % rows;
+    if (row == 3) return kTiles;
+    return row * 3 + ((at % 3) + dx + 3) % 3;
 }
 
 void paint(panel::Picture& out, const Layout& L, int focus, bool sony) {

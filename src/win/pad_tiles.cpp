@@ -14,6 +14,7 @@
 #include "win/char_block.hpp"
 #include "win/game_camera.hpp"
 #include "win/log.hpp"
+#include "win/merc_card.hpp"
 #include "win/minimap_proto.hpp"
 #include "win/picture_draw.hpp"
 #include "win/real_ddraw.hpp"
@@ -30,6 +31,7 @@ constexpr int kItems = 0x80, kStats = 0x7E, kSkills = 0x82, kEquip = 0x81, kFrie
 struct State {
     bool open = false, shown = false;
     int focus = 0;
+    int count = pt::kTiles;  // 3.0.11-beta.216: ten with a mercenary hired («Найманець»)
     pt::Layout layout;
     panel::Picture picture;
     uint32_t texture = 0;
@@ -65,7 +67,7 @@ void render(State& s, bool sony) {
                                             settings::tr(l, Text::TileSkills),   settings::tr(l, Text::TileEquip),
                                             settings::tr(l, Text::PartyTitle),   settings::tr(l, Text::TileMap),
                                             settings::tr(l, Text::RefTitle),     settings::tr(l, Text::TileOptions),
-                                            settings::tr(l, Text::PagePad)};
+                                            settings::tr(l, Text::PagePad),      settings::tr(l, Text::MercTile)};
     drawWords(s.picture, gdiWords(pt::words(s.layout, names, settings::tr(l, Text::TilesTitle),
                                             settings::tr(l, Text::TilesOpen), settings::tr(l, Text::TilesClose),
                                             sony)));
@@ -117,6 +119,7 @@ void run(State& s) {
             break;
         case pt::Tile::Reference: what = "«Довідник»"; referencewin::toggleFromPad(); break;
         case pt::Tile::Pad: what = "the controller's own menu"; uapad::runtime::openPadMenu(); break;
+        case pt::Tile::Merc: what = "the mercenary's card"; done = merccardwin::toggleCard(); break;  // .216
     }
     LOG_INFO("pad tile: %s%s", what, done ? "" : " - not possible now");
 }
@@ -136,10 +139,10 @@ void command(Command c) {
     State& s = state();
     if (!s.open) return;
     switch (c) {
-        case Command::Up: s.focus = pt::moved(s.focus, 0, -1); break;
-        case Command::Down: s.focus = pt::moved(s.focus, 0, 1); break;
-        case Command::Left: s.focus = pt::moved(s.focus, -1, 0); break;
-        case Command::Right: s.focus = pt::moved(s.focus, 1, 0); break;
+        case Command::Up: s.focus = pt::moved(s.focus, 0, -1, s.count); break;
+        case Command::Down: s.focus = pt::moved(s.focus, 0, 1, s.count); break;
+        case Command::Left: s.focus = pt::moved(s.focus, -1, 0, s.count); break;
+        case Command::Right: s.focus = pt::moved(s.focus, 1, 0, s.count); break;
         case Command::Enter: run(s); break;
         case Command::Close: close(s, "B or Start"); break;
     }
@@ -156,10 +159,13 @@ void frame(HWND game, double k, int targetWidth, int targetHeight) {
     s.k = float(k);
     s.targetW = targetWidth;
     s.targetH = targetHeight;
-    s.layout = pt::layout(targetWidth / 2, targetHeight / 2, scale);
+    s.count = merccardwin::hired() ? pt::kMostTiles : pt::kTiles;
+    if (s.focus >= s.count) s.focus = 0;
+    s.layout = pt::layout(targetWidth / 2, targetHeight / 2, scale, s.count);
     const bool sony = uapad::runtime::look().sony;
     const std::string key = std::to_string(s.layout.w) + 'x' + std::to_string(s.layout.h) + ';' +
-                            std::to_string(s.focus) + (sony ? "S" : "X") + '#' + std::to_string(uistyle::generation());
+                            std::to_string(s.focus) + '/' + std::to_string(s.count) + (sony ? "S" : "X") + '#' +
+                            std::to_string(uistyle::generation());
     if (key != s.key) {
         s.key = key;
         render(s, sony);

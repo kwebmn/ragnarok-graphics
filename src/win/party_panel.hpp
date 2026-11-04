@@ -35,5 +35,7 @@ std::vector<OnMap> onMap(int faceSide);
 // 3.0.11-beta.85: the members online on the character's map and not dead, in the panel's order - whom the pad's
 // support skill may go on (uapad::Controller::setFriends)
 std::vector<uint32_t> hereIds();
+// 3.0.11-beta.216: its box in the target while it shows (the mercenary's block stands under it); false: not shown
+bool panelBox(int& x, int& y, int& w, int& h);
 
 }  // namespace uagfx::win::partywin

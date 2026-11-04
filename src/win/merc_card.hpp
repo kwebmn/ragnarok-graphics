@@ -26,4 +26,14 @@ enum class PadCommand : uint8_t { Press, Close };
 void padCommand(PadCommand c);
 bool box(int& x, int& y, int& w, int& h);
 
+// 3.0.11-beta.216 (the owner: «в интерфейсе нету управления наемниками»): the hired mercenary's block (core/merc_block)
+// under the party's panel, or the character block - shown while one is hired (the game's flag 0x772F64 and a
+// mercenary's class); a click opens or closes the card as Ctrl+R does (uaRO.exe FUN_004d96e0: DeleteWindow 0x84, else
+// MakeWindow 0x84). Under the same [interface] merc.
+bool hired();
+bool toggleCard();
+void blockFrame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int targetHeight);
+void blockDraw(FrameRecord& record, gpu::Renderer& renderer);
+bool blockMouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result);
+
 }  // namespace uagfx::win::merccardwin

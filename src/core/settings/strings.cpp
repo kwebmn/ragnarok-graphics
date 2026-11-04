@@ -5854,13 +5854,16 @@ constexpr Entry kTexts[] = {
     {Text::InterfaceMercHint,
      "The mercenary's window (Ctrl+R) as a card in the new look: its kind, name and level, HP and SP bars, the "
      "contract's end, loyalty, summons and kills, its eight stats, its skills (dismissing it small at the foot, the "
-     "game asks first). Off: the game's own window.",
+     "game asks first). While one is hired, its block under the party's panel: HP, SP, the contract's time left - a "
+     "click opens the card. Off: the game's own window.",
      "Вікно найманця (Ctrl+R) карткою в новому вигляді: вид, ім'я й рівень, смуги HP і SP, кінець контракту, "
      "вірність, виклики й убиті, вісім характеристик, навички (звільнення — дрібно внизу, гра перепитує). "
-     "Вимкнено: власне вікно гри.",
+     "Поки найманця найнято — його блок під панеллю групи: HP, SP, скільки лишилось контракту; клік відкриває "
+     "картку. Вимкнено: власне вікно гри.",
      "Окно наёмника (Ctrl+R) карточкой в новом виде: вид, имя и уровень, полосы HP и SP, конец контракта, "
      "верность, вызовы и убитые, восемь характеристик, навыки (увольнение — мелко внизу, игра переспрашивает). "
-     "Выключено: собственное окно игры."},
+     "Пока наёмник нанят — его блок под панелью группы: HP, SP, сколько осталось контракта; клик открывает "
+     "карточку. Выключено: собственное окно игры."},
     {Text::MercArcher, "Mercenary archer", "Найманець-лучник", "Наёмник-лучник"},
     {Text::MercSpearman, "Mercenary spearman", "Найманець-списник", "Наёмник-копейщик"},
     {Text::MercSwordsman, "Mercenary swordsman", "Найманець-мечник", "Наёмник-мечник"},
@@ -7100,6 +7103,11 @@ constexpr Entry kTexts[] = {
     {Text::ShelfSearch, "Search…", "Пошук…", "Поиск…"},
     {Text::EnterVeilTitle, "Entering the game…", "Вхід у гру…", "Вход в игру…"},  // 3.0.11-beta.203
     {Text::ShelfNoMatch, "Nothing found", "Нічого не знайдено", "Ничего не найдено"},
+    // 3.0.11-beta.216 (the owner: «в интерфейсе нету управления наемниками»): the mercenary's block and tile
+    {Text::MercTile, "Mercenary", "Найманець", "Наёмник"},
+    {Text::MercLevelShort, "Lv. {1}", "Рів. {1}", "Ур. {1}"},
+    {Text::MercLeftMinutes, "{1} min left", "ще {1} хв", "ещё {1} мин"},
+    {Text::MercLeftHours, "{1} h {2} min left", "ще {1} год {2} хв", "ещё {1} ч {2} мин"},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

@@ -1,6 +1,7 @@
 // 3.0.11-beta.90 (the concept «Контроллер в интерфейсе uaRO», stage 6): Start on the controller opens a tile of the
 // game's windows - nine in three rows, the chosen one in gold, the buttons' hints under them (core/pad_tiles)
 #include <algorithm>
+#include <cstdlib>
 #include <string>
 #include <vector>
 
@@ -41,4 +42,25 @@ TEST(pad_tiles_picture_and_words) {
         return std::any_of(w.begin(), w.end(), [&](const padtiles::Words& x) { return x.text == text; });
     };
     CHECK(has("Tile 0") && has("Tile 8") && has("Меню") && has("Відкрити") && has("Закрити") && has("A") && has("B"));
+}
+
+// 3.0.11-beta.216 (the owner: «в интерфейсе нету управления наемниками»): a hired mercenary adds a tenth tile,
+// «Найманець», alone in a fourth row under the middle column; the frame reaches it down the middle and comes back up
+TEST(pad_tiles_tenth_for_the_mercenary) {
+    const padtiles::Layout L = padtiles::layout(960, 540, 1.0f, padtiles::kMostTiles);
+    CHECK_EQ(L.tiles.size(), size_t(10));
+    CHECK_EQ(int(padtiles::Tile::Merc), 9);
+    const padtiles::Layout nine = padtiles::layout(960, 540, 1.0f);
+    CHECK(L.h > nine.h && L.w == nine.w);
+    const panel::Box& m = L.tiles[9];
+    CHECK(m.y > L.tiles[7].y + L.tiles[7].h && std::abs(m.x - L.tiles[7].x) < 1.0f);  // under the middle column
+    CHECK(L.hints.y > m.y + m.h);
+    CHECK_EQ(padtiles::moved(7, 0, 1, 10), 9);
+    CHECK_EQ(padtiles::moved(6, 0, 1, 10), 9);  // any column down from the third row
+    CHECK_EQ(padtiles::moved(9, 0, 1, 10), 1);  // round to the top, the middle
+    CHECK_EQ(padtiles::moved(9, 0, -1, 10), 7);
+    CHECK_EQ(padtiles::moved(9, 1, 0, 10), 9);  // alone in its row
+    CHECK_EQ(padtiles::moved(1, 0, -1, 10), 9);
+    CHECK_EQ(padtiles::moved(0, 0, -1, 10), 9);
+    CHECK_EQ(padtiles::moved(0, 0, -1), 6);  // nine as before
 }

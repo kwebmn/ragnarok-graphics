@@ -3,19 +3,23 @@
 #include <windowsx.h>
 
 #include <algorithm>
+#include <cmath>
 #include <cstdint>
 #include <cstring>
 #include <ctime>
 #include <string>
 #include <vector>
 
+#include "core/merc_block.hpp"
 #include "core/merc_card.hpp"
 #include "core/settings/strings.hpp"
 #include "core/ui_style.hpp"
 #include "pad/win/game_window.hpp"
 #include "win/code_page.hpp"
+#include "win/char_block.hpp"
 #include "win/game_camera.hpp"
 #include "win/log.hpp"
+#include "win/party_panel.hpp"
 #include "win/picture_draw.hpp"
 #include "win/real_ddraw.hpp"
 #include "win/ui_cost.hpp"
@@ -37,6 +41,12 @@ constexpr uint32_t kName = 0x772EE0, kStats = 0x772F00, kDelay = 0x772F1C, kClas
 constexpr uint32_t kHp = 0x772F28, kMaxHp = 0x772F2C, kSp = 0x772F30, kMaxSp = 0x772F34, kLoyalty = 0x772F38;
 constexpr uint32_t kSummons = 0x772F3C, kKills = 0x772F40, kEnds = 0x772F48;
 constexpr int kButtonMsg = 6;
+// 3.0.11-beta.216: the game's «a mercenary hired» flag (its Ctrl+R looks at it), the window's number, the manager's
+// DeleteWindow / MakeWindow (thiscall, the window's number); the mercenaries' classes
+constexpr uint32_t kHired = 0x772F64, kDeleteWindow = 0x4D1E60, kMakeWindow = 0x4D42D0;
+constexpr int kMercWindow = 0x84, kFirstClass = 6017, kLastClass = 6046;
+using DeleteFn = bool(__attribute__((thiscall)) *)(uint32_t manager, int id);
+using MakeFn = uint32_t(__attribute__((thiscall)) *)(uint32_t manager, int id);
 using SendMsgFn = int(__attribute__((thiscall)) *)(uint32_t self, uint32_t sender, int msg, int a, int b, int c);
 
 struct State {
@@ -289,6 +299,186 @@ bool box(int& x, int& y, int& w, int& h) {
     y = s.layout.y;
     w = s.layout.w;
     h = s.layout.h;
+    return true;
+}
+
+// 3.0.11-beta.216: the mercenary's block
+namespace {
+
+namespace mb = uagfx::mercblock;
+
+struct BlockState {
+    bool on = false, shown = false;
+    unsigned codePage = 0;
+    float k = 0, scale = 1;
+    int targetW = 0, targetH = 0;
+    mb::Info info;
+    mb::Show show;
+    mb::Layout layout;
+    std::string key;
+    panel::Picture picture;
+    uint32_t texture = 0;
+    int texW = 0, texH = 0;
+    bool upload = false, told = false;
+};
+
+BlockState& blockState() {
+    static BlockState s;
+    return s;
+}
+
+mb::Info blockInfo(unsigned codePage) {
+    mb::Info i;
+    char name[25] = {};
+    readGame(kName, name, 24);
+    i.name = utf8Of(widened(name, codePage));
+    i.kind = mc::kindOf(int32_t(read32(kClass)));
+    i.level = int32_t(read32(kLevel));
+    i.hp = int32_t(read32(kHp));
+    i.maxHp = int32_t(read32(kMaxHp));
+    i.sp = int32_t(read32(kSp));
+    i.maxSp = int32_t(read32(kMaxSp));
+    i.loyalty = int32_t(read32(kLoyalty));
+    const int64_t ends = int32_t(read32(kEnds));
+    i.secondsLeft = ends > 0 ? int(std::max<int64_t>(0, ends - int64_t(std::time(nullptr)))) : 0;
+    return i;
+}
+
+void blockRender(BlockState& s) {
+    const uicost::Paint cost("the mercenary's block", s.layout.w, s.layout.h);
+    if (!panel::blank(s.picture, s.layout.w, s.layout.h)) return;
+    mb::paint(s.picture, s.layout, s.info, s.show);
+    mb::Texts t;
+    t.kinds[0] = say(settings::Text::MercArcher);
+    t.kinds[1] = say(settings::Text::MercSpearman);
+    t.kinds[2] = say(settings::Text::MercSwordsman);
+    t.level = say(settings::Text::MercLevelShort);
+    t.left = mb::leftText(s.info.secondsLeft, say(settings::Text::MercLeftMinutes),
+                          say(settings::Text::MercLeftHours));
+    t.loyalty = say(settings::Text::MercLoyalty);
+    std::vector<Words> out;
+    for (const mb::Words& w : mb::words(s.layout, s.info, t))
+        out.push_back(Words{w.box, utf8Wide(w.text), w.rgb, w.px, w.bold,
+                            UINT(w.align == mb::Align::Right    ? DT_RIGHT
+                                 : w.align == mb::Align::Center ? DT_CENTER
+                                                                : DT_LEFT),
+                            false});
+    drawWords(s.picture, out);
+    s.upload = true;
+}
+
+void blockHide(BlockState& s) {
+    if (s.shown) uapad::gamewindow::setBlocked(Blocker::MercBlock, nullptr, nullptr, false);
+    s.shown = false;
+}
+
+// Under the party's panel, else under the character block, else at the top left
+void blockPlace(BlockState& s) {
+    int x = 0, y = 0, w = 0, h = 0;
+    const int gap = int(std::lround(8 * s.scale));
+    int width = 0;
+    if (partywin::panelBox(x, y, w, h)) {
+        width = w;
+        y += h + gap;
+    } else if (charpanel::panelBox(x, y, w, h)) {
+        width = w;
+        y += h + gap;
+    } else {
+        x = int(std::lround(10 * s.scale));
+        y = int(std::lround(10 * s.scale));
+    }
+    s.layout = mb::layout(x, y, width, s.scale);
+}
+
+}  // namespace
+
+bool hired() {
+    if (!inGameWorld() || !read32(kHired)) return false;
+    const int cls = int32_t(read32(kClass));
+    return cls >= kFirstClass && cls <= kLastClass;
+}
+
+bool toggleCard() {
+    if (!inGameWorld()) return false;
+    if (reinterpret_cast<DeleteFn>(uintptr_t(kDeleteWindow))(kWindowMgr, kMercWindow)) {
+        LOG_INFO("merc: its card closed from the block (the game's window 0x84 deleted)");
+        return true;
+    }
+    if (!read32(kHired)) return false;
+    const uint32_t made = reinterpret_cast<MakeFn>(uintptr_t(kMakeWindow))(kWindowMgr, kMercWindow);
+    LOG_INFO("merc: its card opened from the block (the game's window 0x84 %s)", made ? "made" : "not made");
+    return made != 0;
+}
+
+void blockFrame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int targetHeight) {
+    BlockState& s = blockState();
+    s.on = on;
+    s.codePage = codePage;
+    if (!on || !game || k <= 0 || targetWidth <= 0 || targetHeight <= 0 || !hired()) {
+        blockHide(s);
+        return;
+    }
+    if (!s.told) {
+        s.told = true;
+        LOG_INFO("merc: a mercenary hired - its block shows (class %d)", int32_t(read32(kClass)));
+    }
+    s.k = float(k);
+    s.scale = uistyle::readingScale(k);
+    s.targetW = targetWidth;
+    s.targetH = targetHeight;
+    s.info = blockInfo(codePage);
+    blockPlace(s);
+    s.show.open = gameMerc() != 0;
+    s.show.hover = false;
+    int cx = 0, cy = 0;
+    if (readGameCursor(cx, cy))
+        s.show.hover = mb::hit(s.layout, float(cx) * float(k) - float(s.layout.x), float(cy) * float(k) -
+                                                                                  float(s.layout.y));
+    const mb::Info& i = s.info;
+    const std::string key = i.name + ';' + std::to_string(int(i.kind)) + ',' + std::to_string(i.level) + ',' +
+                            std::to_string(i.hp) + '/' + std::to_string(i.maxHp) + ',' + std::to_string(i.sp) + '/' +
+                            std::to_string(i.maxSp) + ',' + std::to_string(i.loyalty) + ',' +
+                            std::to_string((i.secondsLeft + 59) / 60) + (mb::ending(i.secondsLeft) ? "e" : "") +
+                            (s.show.open ? "o" : "") + (s.show.hover ? "h" : "") + ';' + std::to_string(s.layout.w) +
+                            '#' + std::to_string(uistyle::generation());
+    if (key != s.key) {
+        s.key = key;
+        blockRender(s);
+    }
+    s.shown = true;
+    RECT client{};
+    if (!GetClientRect(game, &client)) return;
+    const RECT r{LONG(int64_t(s.layout.x) * client.right / targetWidth),
+                 LONG(int64_t(s.layout.y) * client.bottom / targetHeight),
+                 LONG(int64_t(s.layout.x + s.layout.w) * client.right / targetWidth + 1),
+                 LONG(int64_t(s.layout.y + s.layout.h) * client.bottom / targetHeight + 1)};
+    uapad::gamewindow::setBlocked(Blocker::MercBlock, game, &r, false);
+}
+
+void blockDraw(FrameRecord& record, gpu::Renderer& renderer) {
+    BlockState& s = blockState();
+    if (!s.shown || s.k <= 0 || s.picture.width <= 0 || s.picture.height <= 0) return;
+    int cursor = -1, cx = 0, cy = 0;
+    if (readGameCursor(cx, cy)) cursor = panel::cursorDraw(record, float(cx), float(cy));
+    drawPart(record, renderer, s.picture, s.texture, s.texW, s.texH, s.upload, s.layout.x, s.layout.y, s.k);
+    if (cursor >= 0) record.moveLastBefore(record.commands().size() - size_t(cursor) - 1, size_t(cursor));
+}
+
+bool blockMouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
+    BlockState& s = blockState();
+    (void)wp;
+    if (!s.shown) return false;
+    const bool button = m == WM_LBUTTONDOWN || m == WM_LBUTTONUP || m == WM_LBUTTONDBLCLK || m == WM_RBUTTONDOWN ||
+                        m == WM_RBUTTONUP || m == WM_RBUTTONDBLCLK || m == WM_MBUTTONDOWN || m == WM_MBUTTONUP;
+    if (!button && m != WM_MOUSEWHEEL) return false;
+    float tx = 0, ty = 0;
+    if (!pointerInTarget(game, m, lp, s.k, s.targetW, s.targetH, tx, ty, nullptr)) return false;
+    if (!mb::hit(s.layout, tx - float(s.layout.x), ty - float(s.layout.y))) return false;
+    result = 0;  // the click is the block's, not the world's
+    if (m == WM_LBUTTONDOWN) {
+        toggleCard();
+        s.key.clear();
+    }
     return true;
 }
 

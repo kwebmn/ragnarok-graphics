@@ -13,7 +13,10 @@ namespace uagfx::padtiles {
 // gold frame, A opens the one framed, B or Start closes the tile. The parts that need no Windows; the words by GDI.
 
 constexpr int kTiles = 9;
-enum class Tile : uint8_t { Items, Stats, Skills, Equip, Party, Map, Reference, Options, Pad };
+// 3.0.11-beta.216 (the owner: «в интерфейсе нету управления наемниками»): a hired mercenary adds «Найманець», alone
+// in a fourth row under the middle column (`count` kMostTiles)
+constexpr int kMostTiles = 10;
+enum class Tile : uint8_t { Items, Stats, Skills, Equip, Party, Map, Reference, Options, Pad, Merc };
 
 struct Layout {
     float s = 1;
@@ -21,9 +24,9 @@ struct Layout {
     panel::Box glass, title, hints;
     std::vector<panel::Box> tiles;
 };
-Layout layout(int centreX, int centreY, float scale);  // its middle at the screen's
+Layout layout(int centreX, int centreY, float scale, int count = kTiles);  // its middle at the screen's
 int hitTest(const Layout& L, float x, float y);         // the tile there; -1 none
-int moved(int at, int dx, int dy);                     // the frame moved round its row or its column
+int moved(int at, int dx, int dy, int count = kTiles);  // the frame moved round its row or its column
 
 void paint(panel::Picture& out, const Layout& L, int focus, bool sony);
 

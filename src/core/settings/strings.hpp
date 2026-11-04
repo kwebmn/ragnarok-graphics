@@ -766,6 +766,7 @@ enum class Text : uint16_t {
     InterfaceItemToast, InterfaceItemToastHint,  // 3.0.11-beta.186: the line on a thing picked up
     InterfaceMinimapView, InterfaceMinimapViewHint,  // 3.0.11-beta.187: the camera's fan on the minimap
     ShelfSearch, EnterVeilTitle, ShelfNoMatch,  // 3.0.11-beta.189: the shelf's search
+    MercTile, MercLevelShort, MercLeftMinutes, MercLeftHours,  // 3.0.11-beta.216: the mercenary's block and tile
     Count
 };
 

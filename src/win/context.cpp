@@ -684,6 +684,7 @@ void Context::endScene() {
         charpanel::draw(record, *renderer);     // 3.0.11-beta.36: the character block
         targetpanel::draw(record, *renderer);   // 3.0.11-beta.38: the target's card
         partywin::draw(record, *renderer);      // 3.0.11-beta.39: the party's panel
+        merccardwin::blockDraw(record, *renderer);  // 3.0.11-beta.216: the mercenary's block
         hotbarwin::draw(record, *renderer);     // 3.0.11-beta.40: the hotbar
         chatwin::draw(record, *renderer);       // 3.0.11-beta.41: the chat
         minimapproto::drawBig(record, *renderer);  // 3.0.11-beta.201: the big map over the panels, under the windows
@@ -748,6 +749,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
         charpanel::draw(record, *renderer);     // 3.0.11-beta.36
         targetpanel::draw(record, *renderer);   // 3.0.11-beta.38
         partywin::draw(record, *renderer);      // 3.0.11-beta.39
+        merccardwin::blockDraw(record, *renderer);  // 3.0.11-beta.216
         hotbarwin::draw(record, *renderer);     // 3.0.11-beta.40
         chatwin::draw(record, *renderer);       // 3.0.11-beta.41
         minimapproto::drawBig(record, *renderer);  // 3.0.11-beta.201
@@ -1046,6 +1048,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     petcardwin::frame(window, config.petWindow, gameCodePage(config), pk, pw, ph);            // 3.0.11-beta.159
     homuncardwin::frame(window, config.homunWindow, gameCodePage(config), pk, pw, ph);        // 3.0.11-beta.160
     merccardwin::frame(window, config.mercWindow, gameCodePage(config), pk, pw, ph);          // 3.0.11-beta.161
+    merccardwin::blockFrame(window, config.mercWindow, gameCodePage(config), pk, pw, ph);     // 3.0.11-beta.216
     optionscardwin::frame(window, config.optionsWindow, gameCodePage(config), pk, pw, ph);    // 3.0.11-beta.162
     socialcardwin::frame(window, config.socialWindow, gameCodePage(config), pk, pw, ph);      // 3.0.11-beta.163
     servercardwin::frame(window, config.serverWindow, gameCodePage(config), pk, pw, ph);      // 3.0.11-beta.164
