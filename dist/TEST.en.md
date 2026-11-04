@@ -1,3 +1,11 @@
+# uaRO Graphics 3.0.11-beta.230 — what's new
+
+**«Skills» (Alt+S): the skill's panel in «List» too**
+- Right of the list stands the same panel as in «Tree»: the level, what it does or why it is closed, «Needs» with your levels, «Opens», the points to it.
+- New in the panel: «SP by level» (every level, yours in gold, planned ones in blue) and the game's description of the skill, as much as fits.
+- The window is always eight rows high, so the panel has room.
+- Controller: RT switches «List» / «Tree» (the choice is kept).
+
 # uaRO Graphics 3.0.11-beta.229 — what's new
 
 **«Skills», the «Tree» view redone** (R-EQDQWH: «a tree nobody can make sense of»):
