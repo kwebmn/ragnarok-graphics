@@ -5930,14 +5930,15 @@ constexpr Entry kTexts[] = {
     // 3.0.11-beta.165: the guild
     {Text::InterfaceGuild, "Guild card", "Картка гільдії", "Карточка гильдии"},
     {Text::InterfaceGuildHint,
-     "The guild's window (Alt+G) as a card in the new look: its information (the master, the level, the members, "
-     "the experience, the tax, the territory) and its members (online or not, the title, the job and the level). "
-     "Off: the game's own window with all its tabs.",
-     "Вікно гільдії (Alt+G) карткою в новому вигляді: інформація (майстер, рівень, учасники, досвід, податок, "
-     "територія) і учасники (у грі чи ні, звання, професія й рівень). Вимкнено: власне вікно гри з усіма вкладками.",
-     "Окно гильдии (Alt+G) карточкой в новом виде: информация (мастер, уровень, участники, опыт, налог, территория) "
-     "и участники (в игре или нет, звание, профессия и уровень). Выключено: собственное окно игры со всеми "
-     "вкладками."},
+     "The guild's window (Alt+G) as a card in the new look, all six tabs: its information, its members, the "
+     "positions (rights and tax), the guild's skills (a plus to raise one), the expelled and the notice; changing the "
+     "positions or the notice opens the game's own window. Off: the game's own window with all its tabs.",
+     "Вікно гільдії (Alt+G) карткою в новому вигляді, усі шість вкладок: інформація, учасники, посади (права й "
+     "податок), навички гільдії (плюс, щоб підняти), вигнані й оголошення; зміна посад чи оголошення відкриває власне "
+     "вікно гри. Вимкнено: власне вікно гри з усіма вкладками.",
+     "Окно гильдии (Alt+G) карточкой в новом виде, все шесть вкладок: информация, участники, должности (права и "
+     "налог), навыки гильдии (плюс, чтобы поднять), изгнанные и объявление; изменение должностей или объявления "
+     "открывает собственное окно игры. Выключено: собственное окно игры со всеми вкладками."},
     {Text::GuildTitle, "Guild", "Гільдія", "Гильдия"},
     {Text::GuildInfo, "Information", "Інформація", "Информация"},
     {Text::GuildMembers, "Members", "Учасники", "Участники"},
@@ -7111,6 +7112,13 @@ constexpr Entry kTexts[] = {
     {Text::MercDismissAsk, "Dismiss the mercenary? Everything it has gained so far will be lost.",
      "Звільнити найманця? Усе, чого він набув досі, буде втрачено.",
      "Уволить наёмника? Всё, что он накопил до сих пор, будет потеряно."},
+    // 3.0.11-beta.220 (the owner «1-3 делай»): the guild's tabs 2-5 on the card
+    {Text::GuildEdit, "Change", "Змінити", "Изменить"},
+    {Text::GuildPositionsHead, "Positions: {1} - rights and tax", "Посад: {1} — права й податок",
+     "Должностей: {1} — права и налог"},
+    {Text::GuildRightInvite, "Invite", "Запрошення", "Приглашение"},
+    {Text::GuildRightExpel, "Expel", "Вигнання", "Изгнание"},
+    {Text::GuildSkillPoints, "Skill points left: {1}", "Вільних очок навичок: {1}", "Свободных очков навыков: {1}"},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

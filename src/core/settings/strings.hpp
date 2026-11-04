@@ -768,6 +768,7 @@ enum class Text : uint16_t {
     ShelfSearch, EnterVeilTitle, ShelfNoMatch,  // 3.0.11-beta.189: the shelf's search
     MercTile, MercLevelShort, MercLeftMinutes, MercLeftHours,  // 3.0.11-beta.216: the mercenary's block and tile
     MercDismissAsk,  // 3.0.11-beta.218: the game's Korean question on dismissing it
+    GuildEdit, GuildPositionsHead, GuildRightInvite, GuildRightExpel, GuildSkillPoints,  // 3.0.11-beta.220
     Count
 };
 

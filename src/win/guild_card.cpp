@@ -10,6 +10,7 @@
 
 #include "core/char_block.hpp"
 #include "core/guild_card.hpp"
+#include "core/guild_tabs.hpp"
 #include "core/settings/strings.hpp"
 #include "core/ui_style.hpp"
 #include "pad/win/game_window.hpp"
@@ -41,6 +42,11 @@ constexpr uint32_t kMembers = 0x74B70C, kMember = 8;
 constexpr uint32_t kRights = 0x74B6D0;  // 3.0.11-beta.210: the tabs' rights (FUN_0049c4d0 checks them)
 constexpr int kButtonMsg = 6;
 constexpr size_t kMostMembers = 100;
+// 3.0.11-beta.220: the game mode's SendMsg (FUN_005707d0, its vtable + 0x14) - 0x4A raises a skill (the packet 0x0112,
+// the server's guild_skillup for the guild's 10000 on)
+constexpr uint32_t kModeNow = 0x74B57C, kModeMsgSlot = 0x14, kModeMsg = 0x5707D0;
+constexpr int kRaiseMsg = 0x4A;
+using ModeMsgFn = int(__attribute__((thiscall)) *)(uint32_t mode, int msg, int a, int b, int c);
 using SendMsgFn = int(__attribute__((thiscall)) *)(uint32_t self, uint32_t sender, int msg, int a, int b, int c);
 
 struct State {
@@ -60,6 +66,9 @@ struct State {
     int texW = 0, texH = 0;
     bool upload = false;
     int told = 0;
+    guildtabs::Data tabs;     // 3.0.11-beta.220: tabs 2-5 as the server sent them
+    gc::More more;
+    uint32_t editing = 0;     // 3.0.11-beta.220: the game's own tab window «Змінити» showed (0 none)
 };
 
 State& state() {
@@ -96,7 +105,7 @@ void switchTab(State& s, int tab) {
     int now = -1;
     const uint32_t window = gameGuild(&now);
     if (!window || tab == now || !gc::allowed(tab, read32(kRights))) return;
-    if (s.told++ < 30) LOG_INFO("guild: the game's tab %d%s", tab, gc::gameDrawn(tab) ? " (its own window)" : "");
+    if (s.told++ < 30) LOG_INFO("guild: the game's tab %d", tab);
     reinterpret_cast<SendMsgFn>(uintptr_t(read32(read32(window) + kSendMsgSlot)))(window, 0, gc::kTabMsg, tab, 0, 0);
     s.key.clear();
 }
@@ -170,7 +179,48 @@ gc::Texts texts() {
     for (int i = 0; i < 7; ++i) t.facts[i] = say(facts[i]);
     t.none = say(settings::Text::GuildNone);
     t.online = say(settings::Text::GuildOnline);
+    t.edit = say(settings::Text::GuildEdit);  // 3.0.11-beta.220
     return t;
+}
+
+// 3.0.11-beta.220: tabs 2-5's rows from the server's packets
+gc::More moreOf(const State& s) {
+    gc::More m;
+    const auto utf = [&](const std::string& game) { return utf8Of(widened(game, s.codePage)); };
+    const guildtabs::Data& d = s.tabs;
+    switch (s.show.tab) {
+        case gc::Tab::Positions:
+            m.head = settings::fmt(say(settings::Text::GuildPositionsHead), {std::to_string(d.positions.size())});
+            for (const guildtabs::Position& p : d.positions) {
+                std::string rights;
+                if (p.invite) rights = say(settings::Text::GuildRightInvite);
+                if (p.expel) rights += (rights.empty() ? "" : " \xC2\xB7 ") + say(settings::Text::GuildRightExpel);
+                m.lines.push_back(gc::Line{utf(p.name), rights.empty() ? "\xE2\x80\x94" : rights,
+                                           std::to_string(p.tax) + " %", false});
+            }
+            break;
+        case gc::Tab::Skills:
+            m.head = settings::fmt(say(settings::Text::GuildSkillPoints), {std::to_string(d.points)});
+            for (const guildtabs::Skill& k : d.skills) {
+                const std::string name = guildtabs::skillName(k.id);
+                m.lines.push_back(gc::Line{name.empty() ? "#" + std::to_string(k.id) : name,
+                                           settings::fmt(say(settings::Text::MercLevelShort), {std::to_string(k.lv)}),
+                                           "", k.up && d.points > 0});
+            }
+            break;
+        case gc::Tab::Expelled:
+            m.head = say(settings::Text::GuildTabExpelled);
+            for (const guildtabs::Expelled& e : d.expelled)
+                m.lines.push_back(gc::Line{utf(e.name), utf(e.account), utf(e.reason), false});
+            break;
+        case gc::Tab::Notice:
+            m.subject = utf(d.subject);
+            m.body = utf(d.body);
+            break;
+        default:
+            break;
+    }
+    return m;
 }
 
 std::vector<Words> gdiWords(const std::vector<gc::Words>& in) {
@@ -187,8 +237,8 @@ std::vector<Words> gdiWords(const std::vector<gc::Words>& in) {
 void render(State& s) {
     const uicost::Paint cost("the guild", s.layout.w, s.layout.h);
     if (!panel::blank(s.picture, s.layout.w, s.layout.h)) return;
-    gc::paint(s.picture, s.layout, s.members, s.show);
-    drawWords(s.picture, gdiWords(gc::words(s.layout, s.info, s.members, s.show, texts())));
+    gc::paint(s.picture, s.layout, s.members, s.more, s.show);
+    drawWords(s.picture, gdiWords(gc::words(s.layout, s.info, s.members, s.more, s.show, texts())));
     s.upload = true;
 }
 
@@ -206,6 +256,30 @@ void block(const State& s, HWND game) {
 void hide(State& s) {
     if (s.shown) uapad::gamewindow::setBlocked(Blocker::Guild, nullptr, nullptr, false);
     s.shown = false;
+}
+
+// 3.0.11-beta.220: a guild skill's «+» - the game mode's 0x4A as its own window's (the packet 0x0112)
+void raiseSkill(State& s, int row) {
+    if (s.show.tab != gc::Tab::Skills || row < 0 || size_t(row) >= s.tabs.skills.size()) return;
+    const guildtabs::Skill& k = s.tabs.skills[size_t(row)];
+    if (!k.up || s.tabs.points <= 0) return;
+    const uint32_t mode = read32(kModeNow);
+    const bool sent = mode && read32(read32(mode) + kModeMsgSlot) == kModeMsg;
+    if (sent) reinterpret_cast<ModeMsgFn>(uintptr_t(kModeMsg))(mode, kRaiseMsg, k.id, 0, 0);
+    if (s.told++ < 30)
+        LOG_INFO("guild: its skill %d +1 (level %d) %s", k.id, k.lv,
+                 sent ? "asked (0x4A, the packet 0x0112)" : "not asked");
+    s.key.clear();
+}
+
+// 3.0.11-beta.220: «Змінити» - the game's own tab window shown to edit the positions or the notice
+void editInGame(State& s) {
+    int tab = -1;
+    const uint32_t window = gameGuild(&tab);
+    if (!window || !gc::gameDrawn(tab, true)) return;
+    s.editing = window;
+    LOG_INFO("guild: «Змінити» - the game's own tab %d shown to edit (back to the card on another tab)", tab);
+    s.key.clear();
 }
 
 void closeIt(State& s) {
@@ -230,9 +304,10 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     const bool world = inGameWorld();
     int tab = 0;
     const uint32_t window = world ? gameGuild(&tab) : 0;
-    // 3.0.11-beta.210: the positions, the skills, the expelled, the notice - the game's own windows for now
-    const bool ours = window && !gc::gameDrawn(tab);
-    if (world) hold(s, ours ? window : 0, on);
+    // 3.0.11-beta.220: all six tabs the card's; the game's own window while «Змінити» edits there (till it goes)
+    if (s.editing && s.editing != window) s.editing = 0;
+    const bool ours = window && !gc::gameDrawn(tab, s.editing == window);
+    if (world) hold(s, window, on && ours);
     if (!on || !ours || !game || k <= 0 || targetWidth <= 0 || targetHeight <= 0) {
         hide(s);
         return;
@@ -245,16 +320,23 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     s.targetW = targetWidth;
     s.targetH = targetHeight;
     readGuild(s);
-    s.layout = gc::layout(targetWidth, targetHeight, s.scale, s.show.tab, s.members.size());
-    s.show.scroll = std::clamp(s.show.scroll, 0, gc::mostScroll(s.layout, s.members.size()));
+    s.more = moreOf(s);
+    const size_t rows = s.show.tab == gc::Tab::Members ? s.members.size() : s.more.lines.size();
+    s.layout = gc::layout(targetWidth, targetHeight, s.scale, s.show.tab, rows);
+    s.show.scroll = std::clamp(s.show.scroll, 0, gc::mostScroll(s.layout, rows));
+    s.show.canEdit = gc::allowed(tab, s.show.rights);
     s.show.hoverTab = -1;
     s.show.hoverClose = false;
+    s.show.hoverPlus = -1;
+    s.show.hoverEdit = false;
     int cx = 0, cy = 0;
     if (readGameCursor(cx, cy)) {
         const gc::Hit h = gc::hitTest(s.layout, float(cx) * float(k) - float(s.layout.x),
                                       float(cy) * float(k) - float(s.layout.y));
         if (h.part == gc::Part::Tab) s.show.hoverTab = h.index;
+        if (h.part == gc::Part::Plus) s.show.hoverPlus = h.index;
         s.show.hoverClose = h.part == gc::Part::Close;
+        s.show.hoverEdit = h.part == gc::Part::Edit;
     }
     const gc::Info& g = s.info;
     std::string key = g.name + ';' + g.master + ';' + g.territory + ';' + std::to_string(g.level) + ',' +
@@ -266,6 +348,9 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
                       std::to_string(s.layout.y) + '#' + std::to_string(uistyle::generation());
     for (const gc::Member& m : s.members)
         key += ';' + m.name + ',' + m.title + ',' + std::to_string(m.level) + (m.online ? "o" : "");
+    key += '|' + s.more.head + '|' + s.more.subject + '|' + s.more.body + '|' + std::to_string(s.show.hoverPlus) +
+           (s.show.hoverEdit ? "e" : "") + (s.show.canEdit ? "c" : "");
+    for (const gc::Line& l : s.more.lines) key += ';' + l.left + ',' + l.middle + ',' + l.right + (l.plus ? "+" : "");
     if (key != s.key) {
         s.key = key;
         render(s);
@@ -299,7 +384,8 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     result = 0;
     if (m == WM_MOUSEWHEEL) {
         const int by = GET_WHEEL_DELTA_WPARAM(wp) > 0 ? -1 : 1;
-        s.show.scroll = std::clamp(s.show.scroll + by, 0, gc::mostScroll(s.layout, s.members.size()));
+        const size_t rows = s.show.tab == gc::Tab::Members ? s.members.size() : s.more.lines.size();
+        s.show.scroll = std::clamp(s.show.scroll + by, 0, gc::mostScroll(s.layout, rows));
         s.key.clear();
         return true;
     }
@@ -310,6 +396,10 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
         switchTab(s, h.index);  // 3.0.11-beta.210: the game's own tab with it (the card follows it)
     } else if (h.part == gc::Part::Close) {
         closeIt(s);
+    } else if (h.part == gc::Part::Plus) {
+        raiseSkill(s, h.index + s.show.scroll);
+    } else if (h.part == gc::Part::Edit && s.show.canEdit) {
+        editInGame(s);
     }
     return true;
 }
@@ -328,7 +418,7 @@ void beforeGameDraw() {
     if (!s.on || !inGameWorld()) return;
     int tab = 0;
     const uint32_t window = gameGuild(&tab);
-    hold(s, window && !gc::gameDrawn(tab) ? window : 0, true);  // 3.0.11-beta.210: tabs 2-5 the game's own
+    hold(s, window, !gc::gameDrawn(tab, s.editing && s.editing == window));  // 3.0.11-beta.220: unless editing
 }
 
 void padCommand(PadCommand c) {
@@ -336,9 +426,11 @@ void padCommand(PadCommand c) {
     if (!s.shown) return;
     switch (c) {
         case PadCommand::Up: s.show.scroll = std::max(0, s.show.scroll - 1); break;
-        case PadCommand::Down:
-            s.show.scroll = std::min(gc::mostScroll(s.layout, s.members.size()), s.show.scroll + 1);
+        case PadCommand::Down: {
+            const size_t rows = s.show.tab == gc::Tab::Members ? s.members.size() : s.more.lines.size();
+            s.show.scroll = std::min(gc::mostScroll(s.layout, rows), s.show.scroll + 1);
             break;
+        }
         case PadCommand::TabBack:
         case PadCommand::TabOn: {  // 3.0.11-beta.210: the next allowed tab, as the game's own
             const int by = c == PadCommand::TabOn ? 1 : gc::kTabs - 1;
@@ -364,6 +456,14 @@ bool box(int& x, int& y, int& w, int& h) {
     w = s.layout.w;
     h = s.layout.h;
     return true;
+}
+
+void packet(uint16_t id, const uint8_t* data, size_t size) {
+    State& s = state();
+    if (guildtabs::read(s.tabs, data, size)) {
+        if (s.told++ < 30) LOG_INFO("guild: the server's 0x%04X taken for the card's tabs", unsigned(id));
+        s.key.clear();
+    }
 }
 
 std::string mateName(uint32_t account) {

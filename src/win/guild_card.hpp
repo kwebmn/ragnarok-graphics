@@ -28,6 +28,8 @@ enum class PadCommand : uint8_t { Up, Down, TabBack, TabOn, Close };
 void padCommand(PadCommand c);
 bool box(int& x, int& y, int& w, int& h);
 
+// 3.0.11-beta.220: the server's guild packets for tabs 2-5 (0x0160, 0x0162, 0x0163, 0x0166, 0x016f) - the packet tap
+void packet(uint16_t id, const uint8_t* data, size_t size);
 // 3.0.11-beta.219 (the tester: «на великій мапі ... пишіть нік замість "Член гільдії"»): a guild mate's name by its
 // account (0x01eb's) from the game's members' list (a member's first field its account, its second its character);
 // "" when not in it

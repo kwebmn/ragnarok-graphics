@@ -109,8 +109,8 @@ TEST(guild_card_six_tabs) {
         const guildcard::Hit h = guildcard::hitTest(L, mid(L.tabs[i]).first, mid(L.tabs[i]).second);
         CHECK(h.part == guildcard::Part::Tab && h.index == i);
     }
-    CHECK(!guildcard::gameDrawn(0) && !guildcard::gameDrawn(1));
-    CHECK(guildcard::gameDrawn(2) && guildcard::gameDrawn(3) && guildcard::gameDrawn(4) && guildcard::gameDrawn(5));
+    // 3.0.11-beta.220: all six the card's - the game's own only while «Змінити» edits positions or the notice
+    for (int i = 0; i < guildcard::kTabs; ++i) CHECK(!guildcard::gameDrawn(i, false));
     CHECK(guildcard::allowed(0, 0) && guildcard::allowed(3, 0));
     CHECK(!guildcard::allowed(1, 0) && guildcard::allowed(1, 1));
     CHECK(!guildcard::allowed(2, 1) && guildcard::allowed(2, 2));

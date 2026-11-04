@@ -11,6 +11,7 @@
 
 #include "core/merc_packet.hpp"
 #include "win/game_camera.hpp"
+#include "win/guild_card.hpp"
 #include "win/log.hpp"
 #include "win/merc_card.hpp"
 #include "win/net_predict.hpp"
@@ -139,6 +140,11 @@ void packet(void* connection, uint16_t id, const uint8_t* data) {
     if (id == mercpacket::kInit && data &&
         mercpacket::laidOut(const_cast<uint8_t*>(data), mercpacket::kInitSize) && s.mercTold++ < 3)
         LOG_INFO("merc: its 0x029b laid out for the game (HP, SP, the contract's end, loyalty as uaRO.exe reads them)");
+    if (data && (id == 0x0160 || id == 0x0162 || id == 0x0163 || id == 0x0166 || id == 0x016F)) {  // .220
+        uint16_t len = 182;  // 0x016f's fixed
+        if (id != 0x016F) std::memcpy(&len, data + 2, 2);
+        guildcardwin::packet(id, data, len);
+    }
     if (id == mercpacket::kSkills && data) {  // 3.0.11-beta.218: the mercenary's skills, for its card's list
         uint16_t len = 0;
         std::memcpy(&len, data + 2, 2);
