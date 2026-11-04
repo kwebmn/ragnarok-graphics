@@ -1203,7 +1203,7 @@ constexpr const char* kTopNames[] = {"«Речі»",  "«Характерист�
                                      "the game's options", "the friends and the party", "the server select",
                                      "the guild", "one's own shop", "the whisper's settings", "the chat's macros",
                                      "the tip of the day", "the emotions", "the command list", "the chat room",
-                                     "the chat room's own"};
+                                     "the chat room's own", "a popup menu"};
 static_assert(std::size(kTopNames) == size_t(uagfx::winstack::kWins), "a name for each window");
 
 void tick() {

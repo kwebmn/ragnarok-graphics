@@ -2,6 +2,8 @@
 
 #include <windows.h>
 
+#include <algorithm>
+#include <cmath>
 #include <cstdint>
 #include <cstring>
 #include <iterator>
@@ -10,6 +12,7 @@
 #include "pad/win/game_window.hpp"
 #include "win/hotbar.hpp"
 #include "win/equip_window.hpp"
+#include "win/game_camera.hpp"
 #include "win/item_window.hpp"
 #include "win/log.hpp"
 #include "win/cart_window.hpp"
@@ -79,7 +82,7 @@ const char* const kParts[] = {"the windows' panel", "the answer card", "the new 
                               "the new own shop card", "the new whisper settings", "the new macros card",
                               "the login screen's bar", "the shelf's «додано» note", "the new tip of the day",
                               "the new emotions card", "the new command list", "the new chat room card",
-                              "the new chat room"};
+                              "the new chat room", "the new popup menu"};
 static_assert(std::size(kParts) == size_t(uapad::gamewindow::kBlockerCount), "a name for each part");
 // 3.0.11-beta.167: 64 bits - the parts passed 32 at 3.0.11-beta.154 («Візок»: part 32), a 32-bit 1u << 32 wrapped
 uint64_t g_told = 0;    // the parts whose first cursor over them is logged
@@ -131,8 +134,61 @@ void* pickedUnder(uint32_t world, float x, float y) {
     return nullptr;
 }
 
+// 3.0.11-beta.211 (the tester: «якось важко відкрити його, наче треба влучити в якийсь хітбокс менший за розмірами
+// ніж персонаж»): the facts first - at a right press in the world, the actors' pick boxes near the cursor (the pick's
+// quad tree: a leaf's list +0x28 of {next, prev, box: x0 y0 z x1 y1 depth}, children +0x14..+0x20) and the game's
+// smallest box (0x76D2BC: 40 x its screen scale, made once)
+constexpr uint32_t kSmallestBox = 0x76D2BC;
+struct Closest {
+    float dist = 1e9f, w = 0, h = 0;
+    int boxes = 0;
+};
+
+void nearBoxes(uint32_t node, float x, float y, int depth, Closest& out) {
+    if (!node || depth > 8) return;
+    uint32_t children[4] = {};
+    if (!readGame(node + 0x14, children, sizeof children)) return;
+    if (children[0]) {
+        for (const uint32_t c : children) nearBoxes(c, x, y, depth + 1, out);
+        return;
+    }
+    uint32_t head = 0;
+    if (!readGame(node + 0x28, &head, 4) || !head) return;
+    uint32_t at = 0;
+    readGame(head, &at, 4);
+    for (int n = 0; at && at != head && n < 512; ++n) {
+        uint32_t boxAt = 0, next = 0;
+        float b[6] = {};
+        if (!readGame(at + 8, &boxAt, 4) || !readGame(at, &next, 4) || !boxAt || !readGame(boxAt, b, sizeof b)) break;
+        ++out.boxes;
+        const float dx = std::max({0.0f, b[0] - x, x - b[3]}), dy = std::max({0.0f, b[1] - y, y - b[4]});
+        const float d = std::sqrt(dx * dx + dy * dy);
+        if (d < out.dist) out = Closest{d, b[3] - b[0], b[4] - b[1], out.boxes};
+        at = next;
+    }
+}
+
+void tellRightPress(uint32_t world, float x, float y, const void* actor) {
+    static bool wasDown = false;
+    static int told = 0;
+    const bool down = GetAsyncKeyState(VK_RBUTTON) < 0;
+    const bool pressed = down && !wasDown;
+    wasDown = down;
+    if (!pressed || told >= 30 || g_answer == 1) return;
+    ++told;
+    Closest c;
+    nearBoxes(world, x, y, 0, c);
+    uint32_t smallest = 0;
+    readGame(kSmallestBox, &smallest, 4);
+    LOG_INFO("world mouse: a right press at (%d, %d) - %s; the nearest of %d boxes %.0f px away, %.0fx%.0f (the "
+             "game's smallest %u)",
+             int(x), int(y), actor ? "an actor under it" : "no actor under it", c.boxes, c.boxes ? c.dist : -1.0f,
+             c.w, c.h, smallest);
+}
+
 void* __attribute__((thiscall)) pickedActor(uint32_t world, float x, float y) {
     void* const actor = pickedUnder(world, x, y);
+    tellRightPress(world, x, y, actor);  // 3.0.11-beta.211: the facts about the pick boxes
     g_pointed = 0;  // 3.0.11-beta.99: over a window the world's actor is not pointed at
     if (actor && g_answer != 1) std::memcpy(&g_pointed, static_cast<const uint8_t*>(actor) + kRecordId, 4);
     g_pointedAt = GetTickCount();

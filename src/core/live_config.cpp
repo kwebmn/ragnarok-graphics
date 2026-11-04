@@ -452,6 +452,10 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("detail_console", flag(running.detailConsole), flag(file.detailConsole)));
         n.detailConsole = file.detailConsole;
     }
+    if (file.popupMenus != running.popupMenus) {  // 3.0.11-beta.211: the popup menus as cards, at once
+        u.applied.push_back(change("popups", flag(running.popupMenus), flag(file.popupMenus)));
+        n.popupMenus = file.popupMenus;
+    }
     if (file.skillCells != running.skillCells) {  // 3.0.11-beta.142: a ground skill's cells, at once
         u.applied.push_back(change("skill_cells", flag(running.skillCells), flag(file.skillCells)));
         n.skillCells = file.skillCells;

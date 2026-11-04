@@ -6094,6 +6094,15 @@ constexpr Entry kTexts[] = {
     {Text::GuildTabSkills, "Skills", "Навички", "Навыки"},
     {Text::GuildTabExpelled, "Expelled", "Вигнані", "Изгнанные"},
     {Text::GuildTabNotice, "Notice", "Оголошення", "Объявление"},
+    // 3.0.11-beta.211: the game's popup menus
+    {Text::InterfacePopups, "Popup menus", "Спливні меню", "Всплывающие меню"},
+    {Text::InterfacePopupsHint,
+     "The game's popup menus (a right click on a player, a chat room member, a guild member) in the new look, at the "
+     "click; their items as the game gives them. Off: the game's own menus.",
+     "Спливні меню гри (правий клік по гравцю, учаснику чат-кімнати, учаснику гільдії) у новому вигляді, біля "
+     "кліку; пункти як їх дає гра. Вимкнено: власні меню гри.",
+     "Всплывающие меню игры (правый клик по игроку, участнику чат-комнаты, участнику гильдии) в новом виде, у "
+     "клика; пункты как их даёт игра. Выключено: собственные меню игры."},
     // 3.0.11-beta.141: the character block's experience (forms: one, a few, many)
     {Text::CharSkillPoints, "skill point|skill points", "очко навичок|очки навичок|очок навичок",
      "очко навыков|очка навыков|очков навыков"},

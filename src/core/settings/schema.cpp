@@ -262,6 +262,8 @@ const std::vector<IniSetting>& iniSettings() {
          Text::InterfaceChatRooms, Text::InterfaceChatRoomsHint, ""},  // 3.0.11-beta.207
         {"interface", "detail_console", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {},
          Text::InterfaceDetailConsole, Text::InterfaceDetailConsoleHint, ""},  // 3.0.11-beta.209
+        {"interface", "popups", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::InterfacePopups,
+         Text::InterfacePopupsHint, ""},  // 3.0.11-beta.211
         {"interface", "skill_cells", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {},
          Text::InterfaceSkillCells, Text::InterfaceSkillCellsHint, ""},  // 3.0.11-beta.142
         {"interface", "ground_counts", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {},
@@ -1167,6 +1169,7 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "interface.commands") return c.commandWindow ? "1" : "0";        // 3.0.11-beta.206
     if (k == "interface.chat_rooms") return c.chatRoomWindows ? "1" : "0";    // 3.0.11-beta.207
     if (k == "interface.detail_console") return c.detailConsole ? "1" : "0";  // 3.0.11-beta.209
+    if (k == "interface.popups") return c.popupMenus ? "1" : "0";             // 3.0.11-beta.211
     if (k == "interface.skill_cells") return c.skillCells ? "1" : "0";  // 3.0.11-beta.142
     if (k == "interface.ground_counts") return c.groundCounts ? "1" : "0";  // 3.0.11-beta.143
     if (k == "interface.animations") return c.animations ? "1" : "0";  // 3.0.11-beta.46
