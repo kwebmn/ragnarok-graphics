@@ -256,6 +256,8 @@ const std::vector<IniSetting>& iniSettings() {
          Text::InterfaceTipsHint, ""},  // 3.0.11-beta.204
         {"interface", "emotes", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::InterfaceEmotes,
          Text::InterfaceEmotesHint, ""},  // 3.0.11-beta.205
+        {"interface", "commands", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::InterfaceCommands,
+         Text::InterfaceCommandsHint, ""},  // 3.0.11-beta.206
         {"interface", "skill_cells", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {},
          Text::InterfaceSkillCells, Text::InterfaceSkillCellsHint, ""},  // 3.0.11-beta.142
         {"interface", "ground_counts", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {},
@@ -1158,6 +1160,7 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "interface.macros") return c.macroWindow ? "1" : "0";            // 3.0.11-beta.169
     if (k == "interface.tips") return c.tipWindow ? "1" : "0";                // 3.0.11-beta.204
     if (k == "interface.emotes") return c.emoteWindow ? "1" : "0";            // 3.0.11-beta.205
+    if (k == "interface.commands") return c.commandWindow ? "1" : "0";        // 3.0.11-beta.206
     if (k == "interface.skill_cells") return c.skillCells ? "1" : "0";  // 3.0.11-beta.142
     if (k == "interface.ground_counts") return c.groundCounts ? "1" : "0";  // 3.0.11-beta.143
     if (k == "interface.animations") return c.animations ? "1" : "0";  // 3.0.11-beta.46

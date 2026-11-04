@@ -411,6 +411,7 @@ Config parseConfig(const std::string& text) {
     bool macroSet = false;                        // 3.0.11-beta.169
     bool tipSet = false;                          // 3.0.11-beta.204
     bool emoteSet = false;                        // 3.0.11-beta.205
+    bool commandSet = false;                      // 3.0.11-beta.206
     std::istringstream in(text);
     std::string line;
     std::string section;
@@ -693,6 +694,9 @@ Config parseConfig(const std::string& text) {
         } else if (key == "interface.emotes") {  // 3.0.11-beta.205: the game's emotion list
             emoteSet = val == "0" || val == "1" || val == "on" || val == "off" || val == "true" || val == "false";
             setBool(val, c.emoteWindow);
+        } else if (key == "interface.commands") {  // 3.0.11-beta.206: the game's command list
+            commandSet = val == "0" || val == "1" || val == "on" || val == "off" || val == "true" || val == "false";
+            setBool(val, c.commandWindow);
         } else if (key == "interface.skill_cells") {  // 3.0.11-beta.142: a ground skill's cells on the ground
             setBool(val, c.skillCells);
         } else if (key == "interface.ground_counts") {  // 3.0.11-beta.143: walls standing, traps left on the bar
@@ -1022,6 +1026,7 @@ Config parseConfig(const std::string& text) {
     if (c.newMinimap && !macroSet) c.macroWindow = true;            // 3.0.11-beta.169
     if (c.newMinimap && !tipSet) c.tipWindow = true;                // 3.0.11-beta.204
     if (c.newMinimap && !emoteSet) c.emoteWindow = true;            // 3.0.11-beta.205
+    if (c.newMinimap && !commandSet) c.commandWindow = true;        // 3.0.11-beta.206
     return c;
 }
 

@@ -234,7 +234,7 @@ void Console::build(Lang lang, const Config& config) {
                   "interface.picks", "interface.party_setup", "interface.pet", "interface.homun",
                   "interface.merc", "interface.options", "interface.social", "interface.servers",
                   "interface.guild", "interface.my_shop", "interface.whisper_setup", "interface.macros",
-                  "interface.tips", "interface.emotes",
+                  "interface.tips", "interface.emotes", "interface.commands",
                   "interface.skill_cells", "interface.ground_counts"})
                 if (settingOf(key)) rows_.push_back(Row{Kind::Box, key, 0});
             if (settingOf("interface.login_view"))  // 3.0.11-beta.177: the login screen's view

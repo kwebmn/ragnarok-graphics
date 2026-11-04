@@ -78,7 +78,7 @@ const char* const kParts[] = {"the windows' panel", "the answer card", "the new 
                               "the new friends and party card", "the new server select", "the new guild card",
                               "the new own shop card", "the new whisper settings", "the new macros card",
                               "the login screen's bar", "the shelf's «додано» note", "the new tip of the day",
-                              "the new emotions card"};
+                              "the new emotions card", "the new command list"};
 static_assert(std::size(kParts) == size_t(uapad::gamewindow::kBlockerCount), "a name for each part");
 // 3.0.11-beta.167: 64 bits - the parts passed 32 at 3.0.11-beta.154 («Візок»: part 32), a 32-bit 1u << 32 wrapped
 uint64_t g_told = 0;    // the parts whose first cursor over them is logged

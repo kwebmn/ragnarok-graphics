@@ -85,6 +85,7 @@
 #include "win/macro_card.hpp"
 #include "win/tip_window.hpp"
 #include "win/emote_window.hpp"
+#include "win/command_window.hpp"
 #include "win/msg_box.hpp"
 #include "win/menu_window.hpp"
 #include "win/net_predict.hpp"
@@ -1036,6 +1037,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     macrocardwin::frame(window, config.macroWindow, gameCodePage(config), pk, pw, ph);        // 3.0.11-beta.169
     tipwin::frame(window, config.tipWindow, gameCodePage(config), pk, pw, ph);                // 3.0.11-beta.204
     emotewin::frame(window, config.emoteWindow, gameCodePage(config), pk, pw, ph);            // 3.0.11-beta.205
+    commandwin::frame(window, config.commandWindow, gameCodePage(config), pk, pw, ph);        // 3.0.11-beta.206
     // 3.0.11-beta.7: [interface] reference - «Довідник» (Ctrl+F)
     referencewin::frame(window, config.referenceWindow, pk, pw, ph);
     padcarrywin::frame(window, pk, pw, ph);  // 3.0.11-beta.121: a thing the controller carries - its places now
