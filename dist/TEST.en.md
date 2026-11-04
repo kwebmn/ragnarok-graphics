@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.11-beta.234 — what's new
+
+- **Quick clicks on the interface's parts are no longer lost** (R-G4QKMZ: the buffs' names button «shows, then doesn't»). A press on a part the mouse can move waits for the button's release to tell a click from a drag. When a game frame fell right between the release and Windows' message about it, the press was forgotten. Now it waits for the message; a drag starts only with the button down. The buffs' button, the minimap, the character block, the party and the other parts.
+
 # uaRO Graphics 3.0.11-beta.233 — what's new
 
 - **The buffs' round names button (three lines) works every time.** The press was taken from the point Windows sends, the hover from the game's own cursor; on a scaled 4K screen they parted and the second or third press missed. Now the press is where the game's cursor is, as in every other window. A click on an icon (favourites) the same.
