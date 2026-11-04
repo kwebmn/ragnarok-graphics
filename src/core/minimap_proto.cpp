@@ -755,7 +755,7 @@ std::vector<Mark> shownMarks(const std::vector<Mark>& marks, const Layers& layer
     return out;
 }
 
-Layout layout(int targetW, int targetH, float scale, bool route, int listLines, bool net) {
+Layout layout(int targetW, int targetH, float scale, bool route, int listLines, bool net, bool found) {
     Layout L;
     const float s = std::max(0.5f, scale);
     L.s = s;
@@ -779,6 +779,14 @@ Layout layout(int targetW, int targetH, float scale, bool route, int listLines, 
         const float w = std::round((kNetPad + kNetText + 6 + kNetGraphW + kNetPad) * s);
         L.net = panel::Box{0, y, w, std::round(kNetH * s)};
         y += L.net.h;
+    }
+    if (found) {  // 3.0.11-beta.213: a search's plate, as wide as the map
+        y += std::round(4 * s);
+        const float h = std::round(kNetH * s);
+        L.found = panel::Box{0, y, side, h};
+        L.foundClear = panel::Box{side - std::round(26 * s), y + std::round(2 * s), std::round(22 * s),
+                                  h - std::round(4 * s)};
+        y += h;
     }
     if (route) {
         y += gap;
@@ -812,6 +820,8 @@ int layerAt(const Layout& L, float x, float y) {
 }
 
 Part partAt(const Layout& L, float x, float y) {
+    if (L.foundClear.w > 0 && L.foundClear.contains(x, y)) return Part::FoundClear;  // 3.0.11-beta.213
+    if (L.found.w > 0 && L.found.contains(x, y)) return Part::Found;
     if (layerAt(L, x, y) >= 0) return Part::Layer;  // 3.0.11-beta.119: over the map's square
     if (L.style.w > 0 && L.style.contains(x, y)) return Part::Style;  // 3.0.11-beta.120
     for (const auto& [box, part] : {std::pair{L.zoomIn, Part::ZoomIn}, std::pair{L.zoomOut, Part::ZoomOut},
@@ -877,6 +887,10 @@ void paint(panel::Picture& out, const Layout& L, const Scene& sc, const Texts& t
     }
     panel::roundRect(out, L.caption, 8 * s, kCard, uistyle::panel(), kWhite, 0.12f, edge);  // the bar: name, cell, ▾
     if (sc.hover == Part::Fold) panel::roundRect(out, L.fold, 6 * s, kWhite, 0.10f);
+    if (L.found.w > 0) {  // 3.0.11-beta.213: a search's plate
+        panel::roundRect(out, L.found, L.found.h / 2, kCard, uistyle::panel(), kWhite, 0.12f, edge);
+        panel::roundRect(out, L.foundClear, L.foundClear.h / 2, kWhite, 0.08f);
+    }
     if (L.net.w > 0) {  // 3.0.11-beta.127: the round trip's plate - its ground, the graph's baseline and bars
         panel::roundRect(out, L.net, L.net.h / 2, kCard, uistyle::panel(), kWhite, 0.12f, edge);
         const panel::Box g = netGraphBox(L);
@@ -946,6 +960,12 @@ std::vector<Words> words(const Layout& L, const Scene& sc, const Texts& t) {
     }
     out.push_back(Words{L.fold, t.folded ? "▸" : "▾", sc.hover == Part::Fold ? kText : kMuted, 12 * s, false,
                         Align::Center});
+    if (L.found.w > 0 && !t.found.empty()) {  // 3.0.11-beta.213: a search's words and its ✕
+        out.push_back(Words{panel::Box{L.found.x + std::round(kNetPad * s), L.found.y,
+                                       L.foundClear.x - L.found.x - std::round(kNetPad * s), L.found.h},
+                            "\xE2\x97\x86 " + t.found, kFoundRgb, 11.5f * s, true, Align::Left});  // ◆
+        out.push_back(Words{L.foundClear, "\xE2\x9C\x95", kText, 11 * s, false, Align::Center});  // ✕
+    }
     if (L.net.w > 0 && !t.net.empty())  // 3.0.11-beta.127: the round trip on its plate (.122: on the bar)
         out.push_back(Words{panel::Box{L.net.x + std::round(kNetPad * s), L.net.y, std::round(kNetText * s), L.net.h},
                             "\xE2\x97\x8F " + t.net, t.netRgb ? t.netRgb : kMuted, 11.5f * s, true, Align::Left});

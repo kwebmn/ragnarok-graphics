@@ -69,11 +69,17 @@ struct Layout {
     // 3.0.11-beta.127 (the owner: «пинги вынеси в отдельную плашку, можешь еще график строить. но небольшую. там где
     // карта оно название карты сокращает»): the round trip's plate under the bar - its dot and words, a small graph
     panel::Box net;
+    // 3.0.11-beta.213 (the owner: «вывод команды @mobsearch показывался на миникарте ... чтобы это можно было потом
+    // убрать»): a search's plate under the bar while its marks show - its words, ✕ that clears them
+    panel::Box found, foundClear;
     float lineH = 0;
 };
-Layout layout(int targetW, int targetH, float scale, bool route, int listLines, bool net = false);
+Layout layout(int targetW, int targetH, float scale, bool route, int listLines, bool net = false, bool found = false);
 panel::Box netGraphBox(const Layout& L);  // 3.0.11-beta.127: the plate's graph (w 0 none)
-enum class Part : uint8_t { None, Map, ZoomIn, ZoomOut, Expand, Caption, Fold, Route, Stop, List, Layer, Style };
+enum class Part : uint8_t {
+    None, Map, ZoomIn, ZoomOut, Expand, Caption, Fold, Route, Stop, List, Layer, Style,
+    Found, FoundClear  // 3.0.11-beta.213
+};
 Part partAt(const Layout& L, float x, float y);
 int layerAt(const Layout& L, float x, float y);  // 3.0.11-beta.119: the layer's button there, -1 none
 enum class BigPart : uint8_t { None, Header, Close, Map, Layer, Style };  // the big map's (below)
@@ -191,7 +197,9 @@ struct Texts {
     std::string style;            // 3.0.11-beta.120: «Схема» (its button pointed at)
     std::string net;              // 3.0.11-beta.122: the round trip («45 мс», on its plate since .127); "" none
     uint32_t netRgb = 0;          // its colour
+    std::string found;            // 3.0.11-beta.213: the search's plate («Poring · 12»); "" none
 };
+constexpr uint32_t kFoundRgb = 0xFF8A3D;  // 3.0.11-beta.213: a search's marks and its plate's words
 // The panel's picture (premultiplied: see-through round its parts), the words over it
 void paint(panel::Picture& out, const Layout& L, const Scene& sc, const Texts& t);
 std::vector<Words> words(const Layout& L, const Scene& sc, const Texts& t);

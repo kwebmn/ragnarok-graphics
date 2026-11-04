@@ -22,6 +22,7 @@
 #include "win/game_camera.hpp"
 #include "win/hud_edit.hpp"
 #include "win/log.hpp"
+#include "win/minimap_proto.hpp"
 #include "win/picture_draw.hpp"
 #include "win/real_ddraw.hpp"
 #include "win/reference_load.hpp"
@@ -133,6 +134,8 @@ int __attribute__((thiscall)) pushed(uint32_t manager, int msg, const char* text
         std::vector<Raw>& p = state().pending;
         if (p.size() >= kMostPending) p.erase(p.begin());
         p.push_back(Raw{std::string(text, strnlen(text, 512)), uint32_t(colour), source, GetTickCount64()});
+        // 3.0.11-beta.213: @mobsearch's answers for the minimap (whatever the new chat's switch)
+        minimapproto::heard(utf8Of(widened(p.back().text, state().codePage)), p.back().ms);
     }
     return reinterpret_cast<PushFn>(g_push)(manager, msg, text, colour, more);
 }

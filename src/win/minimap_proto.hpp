@@ -55,6 +55,11 @@ bool key(unsigned vk);
 bool canFollow();
 // 3.0.11-beta.201: the server's marks (0x0144) and the guild's mates (0x01eb) from the packets (win/packet_tap)
 void packet(const packets::Event& e);
+// 3.0.11-beta.213 (the owner: «вывод команды @mobsearch показывался на миникарте ... чтобы это можно было потом
+// убрать»): the chat's lines as the game pushes them (UTF-8) - @mobsearch's answer read (core/mob_search): its
+// monsters' cells marked on the maps while the plate under the bar shows the search; its ✕, another search or another
+// map clears them
+void heard(const std::string& line, unsigned long long ms);
 // 3.0.11-beta.90 (the controller's windows' tile): the big map opened or closed; false: the new minimap is off
 bool showBig(bool open);
 // 3.0.11-beta.93: the big map shows now (the controller's B closes it)

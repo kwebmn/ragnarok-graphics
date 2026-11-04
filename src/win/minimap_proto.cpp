@@ -15,6 +15,7 @@
 #include "core/game_packets.hpp"
 #include "core/layout.hpp"
 #include "core/minimap_proto.hpp"
+#include "core/mob_search.hpp"
 #include "core/pack_source.hpp"
 #include "core/reference_index.hpp"
 #include "core/reference_live.hpp"
@@ -178,6 +179,7 @@ struct State {
     };
     std::map<std::pair<uint32_t, int>, Spot> spots;
     std::map<uint32_t, Mate> mates;
+    mobsearch::Reader found;  // 3.0.11-beta.213: @mobsearch's answer
     std::string othersKey;
     std::vector<minimap::Mark> others;
 };
@@ -818,6 +820,11 @@ std::string layerName(int i) {  // 3.0.11-beta.119
     return settings::tr(language(), names[i]);
 }
 
+// 3.0.11-beta.213: @mobsearch's answer for the map shown
+bool foundHere(const State& s) {
+    return s.found.active() && !s.found.result().points.empty() && mobsearch::sameMap(s.found.result().map, s.map);
+}
+
 void render(State& s) {
     minimap::Texts t;
     t.name = shortTitle(s, s.map);
@@ -827,12 +834,14 @@ void render(State& s) {
     t.style = settings::tr(language(), settings::Text::MinimapLayerScheme);  // 3.0.11-beta.120
     t.net = s.net;  // 3.0.11-beta.122
     t.netRgb = s.netRgb;
+    if (foundHere(s))  // 3.0.11-beta.213: «Poring · 12»
+        t.found = s.found.result().what + " \xC2\xB7 " + std::to_string(s.found.result().points.size());
     t.route = !s.plotLines.empty() ? s.plotLines : s.routeLines;  // 3.0.11-beta.71: the way set on the map first
     for (const Line& l : s.lines)
         t.list.push_back(minimap::Line{l.left, l.right, l.boss ? kBossText : 0u,
                                        l.timer ? minimap::kRouteRgb : 0u, l.boss});
     s.layout = minimap::layout(s.targetW, s.targetH, s.scale, !t.route.empty(), s.folded ? 0 : int(t.list.size()),
-                               !t.net.empty());  // 3.0.11-beta.127: the round trip's plate
+                               !t.net.empty(), !t.found.empty());  // .127: the round trip's plate; .213 a search's
     hudedit::place(hudlayout::Part::Minimap, s.k, s.targetW, s.targetH, s.layout.w, s.layout.h, s.layout.x,
                    s.layout.y);  // 3.0.11-beta.75: where the player put it
     const uicost::Paint cost("minimap", s.layout.w, s.layout.h);  // 3.0.11-beta.55 (beta.57: its size known)
@@ -964,6 +973,7 @@ void frame(HWND game, const Show& show, double k, int targetWidth, int targetHei
         s.map = map;
         s.spots.clear();  // 3.0.11-beta.201: the server's marks and the guild's mates were the map's
         s.mates.clear();
+        if (s.found.active() && !mobsearch::sameMap(s.found.result().map, map)) s.found.clear();  // .213
         s.clicks = 0;
         s.remade = 0;
         s.cellKnown = false;
@@ -1104,6 +1114,14 @@ void frame(HWND game, const Show& show, double k, int targetWidth, int targetHei
             others.push_back(minimap::Mark{minimap::Cell{spot.x, spot.y}, spot.colour, minimap::Glyph::Spot, ""});
             key += 's' + std::to_string(spot.x) + ',' + std::to_string(spot.y) + ',' + std::to_string(spot.colour) +
                    ';';
+        }
+        if (foundHere(s)) {  // 3.0.11-beta.213: @mobsearch's monsters
+            for (const mobsearch::Point& p : s.found.result().points) {
+                others.push_back(minimap::Mark{minimap::Cell{p.x, p.y}, minimap::kFoundRgb, minimap::Glyph::Spot,
+                                               p.name});
+                key += 'f' + std::to_string(p.x) + ',' + std::to_string(p.y) + ';';
+            }
+            key += s.found.result().what;
         }
         if (key != s.othersKey) {
             s.othersKey = key;
@@ -1287,6 +1305,13 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
                  s.cell.y, s.map.c_str());
     if (m == WM_LBUTTONDOWN) {
         switch (part) {
+            case minimap::Part::FoundClear:  // 3.0.11-beta.213: @mobsearch's marks cleared
+                LOG_INFO("minimap: @mobsearch's %zu marks cleared", s.found.result().points.size());
+                s.found.clear();
+                s.othersKey.clear();
+                s.dirty = s.bigDirty = true;
+                break;
+            case minimap::Part::Found: break;
             case minimap::Part::Layer: switchLayer(s, minimap::layerAt(s.layout, px, py)); break;  // .119
             case minimap::Part::Style: switchStyle(s); break;                                      // .120
             case minimap::Part::ZoomIn: setZoom(s, -1); break;  // fewer cells: nearer
@@ -1412,6 +1437,18 @@ bool following(std::string& target, bool& walk) {
     target = s.follow.target;
     walk = s.follow.walk;
     return true;
+}
+
+void heard(const std::string& line, unsigned long long ms) {
+    State& s = state();
+    const size_t before = s.found.result().points.size();
+    const bool fresh = line.compare(0, 14, "Mob Search... ") == 0;
+    if (!s.found.line(line, ms)) return;
+    if (fresh) LOG_INFO("minimap: @mobsearch «%s» on %s", s.found.result().what.c_str(), s.found.result().map.c_str());
+    if (s.found.result().points.size() != before || fresh) {
+        s.othersKey.clear();
+        s.dirty = s.bigDirty = true;
+    }
 }
 
 void packet(const packets::Event& e) {

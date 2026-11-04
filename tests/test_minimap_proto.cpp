@@ -757,3 +757,26 @@ TEST(minimap_proto_drops_the_pictures_warp_dots) {
     std::vector<uint32_t> plain(size_t(w) * h, 0xFF505050u);
     CHECK(minimap::dropWarpDots(plain, w, h) == 0);
 }
+
+// 3.0.11-beta.213 (the owner: «вывод команды @mobsearch показывался на миникарте ... чтобы это можно было потом убрать
+// с миникарты»): a plate under the bar while a search's marks show - its words and ✕ that clears them
+TEST(minimap_proto_found_plate) {
+    const minimap::Layout plain = minimap::layout(1920, 1080, 1.0f, false, 0, true);
+    const minimap::Layout found = minimap::layout(1920, 1080, 1.0f, false, 0, true, true);
+    CHECK(plain.found.w <= 0 && found.found.w > 0);
+    CHECK(found.found.y >= found.caption.y + found.caption.h && found.found.y >= found.net.y + found.net.h);
+    CHECK(found.h > plain.h);
+    CHECK(found.foundClear.w > 0 && found.foundClear.x + found.foundClear.w <= found.found.x + found.found.w + 0.5f);
+    const auto mid = [](const panel::Box& b) { return std::pair<float, float>{b.x + b.w / 2, b.y + b.h / 2}; };
+    CHECK(minimap::partAt(found, mid(found.foundClear).first, mid(found.foundClear).second) ==
+          minimap::Part::FoundClear);
+    CHECK(minimap::partAt(found, found.found.x + 6, mid(found.found).second) == minimap::Part::Found);
+    minimap::Texts t;
+    t.found = "Poring \xC2\xB7 12";
+    const std::vector<minimap::Words> w = minimap::words(found, minimap::Scene{}, t);
+    const auto has = [&](const std::string& x) {
+        return std::any_of(w.begin(), w.end(),
+                           [&](const minimap::Words& y) { return y.text.find(x) != std::string::npos; });
+    };
+    CHECK(has("Poring \xC2\xB7 12") && has("\xE2\x9C\x95"));
+}
