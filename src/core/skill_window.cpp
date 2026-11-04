@@ -682,4 +682,25 @@ bool treeInSight(Show& sh, const Layout& L, int index) {
     return std::abs(sh.treeX - x) > 0.01f || std::abs(sh.treeY - y) > 0.01f;
 }
 
+int treeStep(const Layout& L, int from, int dx, int dy) {
+    if (!L.tree || from < 0 || from >= int(L.plan.nodes.size())) return from;
+    const panel::Box& a = L.plan.nodes[size_t(from)].box;
+    const float ax = a.x + a.w / 2, ay = a.y + a.h / 2;
+    int best = from;
+    float bestScore = 0;
+    for (size_t i = 0; i < L.plan.nodes.size(); ++i) {
+        if (int(i) == from) continue;
+        const panel::Box& b = L.plan.nodes[i].box;
+        const float ex = b.x + b.w / 2 - ax, ey = b.y + b.h / 2 - ay;
+        const float along = dx ? ex * float(dx) : ey * float(dy), across = std::abs(dx ? ey : ex);
+        if (along < 1.0f) continue;  // not that way
+        const float score = along + 2 * across;
+        if (best == from || score < bestScore) {
+            best = int(i);
+            bestScore = score;
+        }
+    }
+    return best;
+}
+
 }  // namespace uagfx::skillwin

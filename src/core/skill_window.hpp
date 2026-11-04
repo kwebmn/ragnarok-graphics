@@ -141,6 +141,9 @@ Hit hitTest(const Layout& L, float x, float y);
 // 3.0.11-beta.224: «Дерево» scrolled by window pixels; scrolled to show a skill (the controller's)
 void scrollTree(Show& sh, const Layout& L, float dx, float dy);
 bool treeInSight(Show& sh, const Layout& L, int index);  // true: it moved
+// 3.0.11-beta.227 (stage 5: the controller in «Дерево»): the skill the D-pad goes to from `from` - the nearest one
+// that way (dx, dy: -1, 0, 1), across counted twice; `from` when none
+int treeStep(const Layout& L, int from, int dx, int dy);
 
 void paint(panel::Picture& out, const Layout& L, const Data& d, const Show& sh);
 

@@ -362,7 +362,8 @@ void readData(State& s) {
             return skilltree::order(j, s.raw[size_t(a)].id) < skilltree::order(j, s.raw[size_t(b)].id);
         });
         const char* named = charblock::jobName(j);
-        kw::Tab tab{named && *named ? named : "#" + std::to_string(j), {}};
+        kw::Tab tab;
+        tab.name = named && *named ? named : "#" + std::to_string(j);
         for (int i : list) {
             const Raw& r = s.raw[size_t(i)];
             kw::Skill k;
@@ -813,11 +814,34 @@ void padCommand(PadCommand c) {
     if (!s.shown || s.data.tabs.empty()) return;
     const int count = int(s.data.tabs[size_t(s.show.tab)].skills.size());
     s.show.focus = std::clamp(s.show.focus, 0, std::max(0, count - 1));
+    if (s.show.tree && s.layout.tree &&  // 3.0.11-beta.227: «Дерево» - the D-pad goes the way it points
+        (c == PadCommand::Up || c == PadCommand::Down || c == PadCommand::Less || c == PadCommand::More)) {
+        const int dx = c == PadCommand::Less ? -1 : c == PadCommand::More ? 1 : 0;
+        const int dy = c == PadCommand::Up ? -1 : c == PadCommand::Down ? 1 : 0;
+        s.show.focus = kw::treeStep(s.layout, s.show.focus, dx, dy);
+        s.key.clear();
+        return;
+    }
     switch (c) {
         case PadCommand::Up: s.show.focus = count ? (s.show.focus + count - 1) % count : 0; break;
         case PadCommand::Down: s.show.focus = count ? (s.show.focus + 1) % count : 0; break;
         case PadCommand::Less: changeUse(s, s.show.focus, -1); break;
         case PadCommand::More: changeUse(s, s.show.focus, +1); break;
+        case PadCommand::Plan:  // 3.0.11-beta.227
+            s.show.plan = !s.show.plan;
+            s.show.applying = false;
+            break;
+        case PadCommand::Start:
+            if (!s.show.plan) {
+                closeGameWindow();
+            } else if (skillplan::cost(s.data) > 0 && !s.show.applying) {
+                s.show.applying = true;
+                s.applyId = -1;
+                s.applyTries = 0;
+                s.stopped.clear();
+                LOG_INFO("skills: the plan applied by the controller - %d level(s)", skillplan::cost(s.data));
+            }
+            break;
         case PadCommand::TabBack: {
             const int tabs = int(s.data.tabs.size());
             setTab(s, (s.show.tab + tabs - 1) % tabs);
@@ -827,6 +851,10 @@ void padCommand(PadCommand c) {
         case PadCommand::Use: use(s, s.show.focus, "the controller's A"); break;
         case PadCommand::Raise: raise(s, s.show.focus, "the controller's Y:"); break;
         case PadCommand::Assign: {  // 3.0.11-beta.121: X - «Взяти» (win/pad_carry; it took «Призначити»'s place)
+            if (s.show.plan) {  // 3.0.11-beta.227: in «План» a planned level off
+                if (const kw::Skill* k = skillAt(s, s.show.focus); k && skillplan::down(s.data, k->id)) keepPlan(s);
+                break;
+            }
             uagfx::padcarry::Thing t;
             float x = 0, y = 0;
             const panel::Picture* icon = nullptr;

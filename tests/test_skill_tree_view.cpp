@@ -261,3 +261,22 @@ TEST(skill_next_jobs_and_their_tab) {
     sh.tab = 1;
     CHECK(skillwin::layout(0, 0, 1.0f, d, sh, t, measure).choices.empty());
 }
+
+// 3.0.11-beta.227 (the skills concept, stage 5: the controller in «Дерево»): the D-pad goes to the nearest skill the
+// way it points, staying put at the tree's edge
+TEST(skill_tree_view_the_d_pad_goes_the_way_it_points) {
+    const skillwin::Data d = knight();
+    skillwin::Show sh;
+    sh.tab = 1;
+    sh.tree = true;
+    const skillwin::Layout L = skillwin::layout(0, 0, 1.0f, d, sh, texts(), measure);
+    // Spear Mastery (0) - Pierce (1) - Spear Stab (2) on one row; Twohand Quicken (3) under Spear Mastery, Bowling
+    // Bash (4) right of it
+    CHECK_EQ(skillwin::treeStep(L, 0, 1, 0), 1);
+    CHECK_EQ(skillwin::treeStep(L, 1, 1, 0), 2);
+    CHECK_EQ(skillwin::treeStep(L, 2, 1, 0), 2);  // the edge
+    CHECK_EQ(skillwin::treeStep(L, 0, 0, 1), 3);
+    CHECK_EQ(skillwin::treeStep(L, 3, 1, 0), 4);
+    CHECK_EQ(skillwin::treeStep(L, 4, -1, 0), 3);
+    CHECK_EQ(skillwin::treeStep(L, 3, 0, -1), 0);
+}

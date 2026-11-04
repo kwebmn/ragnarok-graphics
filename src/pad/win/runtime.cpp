@@ -973,10 +973,12 @@ bool statsPad(const PadState& pad, DWORD now) {
 }
 
 // 3.0.11-beta.96: «Навички» open - the D-pad (or the left stick) moves its frame up and down, left and right the level
-// a skill is used at, LB / RB its tabs, A uses, Y raises, X «Призначити», B or Start close it
+// a skill is used at, LB / RB its tabs, A uses, Y raises, X «Призначити», B or Start close it; 3.0.11-beta.227: in
+// «Дерево» the D-pad goes the way it points, LT «План» on or off - in it Y plans a level, X takes one off, Start
+// «Застосувати»
 bool skillsPad(const PadState& pad, DWORD now) {
     State& s = S();
-    const uint16_t buttons = pad.connected ? pad.buttons : 0;
+    const uint16_t buttons = pad.connected ? uint16_t(pad.buttons | (pad.lt > 0.5f ? kPadLT : 0)) : 0;
     const uint16_t down = uint16_t((buttons & ~s.prevPadButtons) | stickSteps(pad, now));
     s.prevPadButtons = buttons;
     using uagfx::win::skillswin::PadCommand;
@@ -984,7 +986,7 @@ bool skillsPad(const PadState& pad, DWORD now) {
         {kPadUp, PadCommand::Up},       {kPadDown, PadCommand::Down},     {kPadLeft, PadCommand::Less},
         {kPadRight, PadCommand::More},  {kPadLB, PadCommand::TabBack},    {kPadRB, PadCommand::TabOn},
         {kPadA, PadCommand::Use},       {kPadY, PadCommand::Raise},       {kPadX, PadCommand::Assign},
-        {kPadB, PadCommand::Close},     {kPadStart, PadCommand::Close}};
+        {kPadB, PadCommand::Close},     {kPadStart, PadCommand::Start},   {kPadLT, PadCommand::Plan}};
     for (const auto& [button, command] : keys)
         if (down & button) uagfx::win::skillswin::padCommand(command);
     return true;
