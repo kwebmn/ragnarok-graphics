@@ -190,3 +190,23 @@ TEST(net_predict_settled_and_put_back_as_a_loss) {
     CHECK(netpredict::lastLoss(9000, 12000) == 12000 && netpredict::lastLoss(15000, 12000) == 15000);
     CHECK(!netpredict::calm(20000, netpredict::lastLoss(0, 12000), 60));  // 8 s after a put back
 }
+
+// 3.0.11-beta.215 (the owner: «бывают моменты что не понимает что сидит ... приходится ещё раз отправлять команду
+// сесть/встать»): the server walks no one sitting - the character's sitting from its own ZC_NOTIFY_ACT, 2 sat down and
+// 3 stood up; another's, or another kind, leaves it
+TEST(net_predict_knows_the_character_sits) {
+    const uint32_t own = 2000001;
+    netpredict::Act a;
+    a.src = own;
+    a.type = 2;
+    CHECK(netpredict::sitsAfter(false, a, own));
+    a.type = 3;
+    CHECK(!netpredict::sitsAfter(true, a, own));
+    a.type = 0;  // a hit of its own: whatever it was
+    CHECK(netpredict::sitsAfter(true, a, own));
+    CHECK(!netpredict::sitsAfter(false, a, own));
+    a.src = 2000002;  // another sits down
+    a.type = 2;
+    CHECK(!netpredict::sitsAfter(false, a, own));
+    CHECK(!netpredict::sitsAfter(false, a, 0));  // the own account not known yet
+}

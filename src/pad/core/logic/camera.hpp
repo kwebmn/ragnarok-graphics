@@ -22,6 +22,11 @@ public:
     // and from where it counts is learned from the walk samples taken at two turns at least 30 degrees apart;
     // from then on the directions follow the client's turn at once, without walking.
     void setClientTurn(double radians) { client_ = radians; }
+    // 3.0.11-beta.215: the camera's look along the ground (east, north; any length) as the game's view has it - the
+    // turn itself, over anything learned
+    void setLook(double east, double north) { look_ = std::make_pair(east, north); }
+    void clearLook() { look_.reset(); }
+    bool hasLook() const { return look_.has_value(); }
     void clearClientTurn() { client_.reset(); }
     bool calibrated() const { return calibrated_; }
     int calibratedSign() const { return sign_; }
@@ -38,6 +43,7 @@ private:
     std::deque<double> diffs_;  // map minus screen bearing of the latest samples
     double yaw_ = 0;
     std::optional<double> client_;
+    std::optional<std::pair<double, double>> look_;
     std::deque<std::pair<double, double>> pairs_;  // a sample's bearing difference and the client's turn then
     bool calibrated_ = false;
     int sign_ = 1;

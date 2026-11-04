@@ -120,3 +120,21 @@ TEST(camera_needs_turns_far_apart_to_calibrate) {
     c.clearClientTurn();
     CHECK(nearDeg(c.radians(), 40 * kDeg, 6));
 }
+
+// 3.0.11-beta.215 (the owner: «правый стик както не правильно работает по поводу выбора мобов»): the camera's look
+// along the ground read from the game's view (east, north) is the turn itself - no walk samples needed, it wins
+TEST(camera_look_from_the_view_is_the_turn) {
+    CameraYaw c;
+    c.setLook(1, 0);  // the camera looks east
+    CHECK(near(deg(c.radians()), -90));
+    double wx = 0, wy = 0;
+    c.toWorld(0, -1, wx, wy);  // screen up -> east
+    CHECK(near(wx, 1) && near(wy, 0));
+    c.toWorld(1, 0, wx, wy);  // screen right -> south
+    CHECK(near(wx, 0) && near(wy, -1));
+    c.addSample(132, 0, 0, 7);  // a walk sample says otherwise: the look stays
+    c.toWorld(0, -1, wx, wy);
+    CHECK(near(wx, 1) && near(wy, 0));
+    c.clearLook();  // gone: back to what the samples learned
+    CHECK(near(deg(c.radians()), 90));
+}

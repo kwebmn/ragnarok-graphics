@@ -1129,13 +1129,13 @@ void lookAndGround(DWORD now) {
     State& s = S();
     Controller& control = s.session->control();
     control.setDirectWalk(s.directWalk);
-    if (!s.directWalk) return;
-    float view[12];
+    float view[12];  // 3.0.11-beta.215: in both walks - the right stick and the aim turn by it too
     const float len = uagfx::win::readGameCamera(view) ? std::hypot(view[2], view[8]) : 0.0f;
     if (len > 1e-3f)
         control.setLook(double(view[2] / len), double(view[8] / len));
     else
         control.clearLook();
+    if (!s.directWalk) return;
     int cx = 0, cy = 0, cw = 0, ch = 0;  // 3.0.11-beta.102: the character's cell as the game shows it now
     if (uagfx::win::readPlayerCell(cx, cy, cw, ch))
         control.setSelfCell(Cell{cx, cy});

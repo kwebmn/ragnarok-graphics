@@ -109,8 +109,14 @@ public:
     // stick itself (the camera's look along the ground gives the way, the map's walkable cells where it ends) instead
     // of holding the client's cursor out; walkTarget() - where the stick walks now (the arrow's end on the ground)
     void setDirectWalk(bool on) { directWalk_ = on; }
-    void setLook(double east, double north) { look_ = std::make_pair(east, north); }
-    void clearLook() { look_.reset(); }
+    void setLook(double east, double north) {  // 3.0.11-beta.215: the right stick and the aim turn by it too
+        look_ = std::make_pair(east, north);
+        camera_.setLook(east, north);
+    }
+    void clearLook() {
+        look_.reset();
+        camera_.clearLook();
+    }
     void setGround(const GroundGrid* g) { ground_ = g; }
     // 3.0.11-beta.102: the character's cell as the game shows it now (none: the walk packets' guess) - the stick's
     // cells are counted from it (core/stick_walk)
@@ -214,8 +220,10 @@ private:
     uint32_t target_ = 0;
     uint32_t preview_ = 0;  // 3.0.11-beta.87
     bool picked_ = false;      // target_ was chosen with the right stick: presses keep it
+    bool fought_ = false;      // 3.0.11-beta.215: an attack of ours went at target_: presses go on with it after a walk
     bool cameraMode_ = false;
     bool loggedCalibration_ = false;
+    bool loggedLook_ = false;  // 3.0.11-beta.215
     std::optional<uint32_t> cameraMs_;  // the last camera tick, for the turn and zoom rates
     float zoomCarry_ = 0;               // notches building up between ticks
     bool wantAttack_ = false;  // we want the server to be attacking target_

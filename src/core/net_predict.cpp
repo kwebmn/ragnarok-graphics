@@ -70,6 +70,11 @@ uint32_t holdUntil(uint32_t until, const Act& a, uint32_t own) {
 
 bool heldNow(uint32_t serverNow, uint32_t until) { return until && int32_t(serverNow - (until + 50)) < 0; }
 
+bool sitsAfter(bool sitting, const Act& a, uint32_t own) {
+    if (!own || a.src != own || (a.type != 2 && a.type != 3)) return sitting;
+    return a.type == 2;
+}
+
 bool walking(uint32_t serverNow, uint32_t walkEnd) { return walkEnd && heldNow(serverNow, walkEnd + 250); }
 
 bool inFlight(uint64_t askedMs, uint64_t answeredMs, uint64_t nowMs, uint32_t waitMs) {

@@ -47,6 +47,8 @@ struct State {
     int behindTold = 0;
     uint64_t enteredAt = 0, putBackAt = 0;  // 3.0.11-beta.138: on this map since; the last guess put back
     int enteringTold = 0;
+    bool sitting = false;  // 3.0.11-beta.215: the server has the character sitting (its own 0x008a 2, till 3)
+    int sitTold = 0;
 };
 
 State& state() {
@@ -89,6 +91,11 @@ void guess(State& s, uint64_t now) {
     if (!actor || !readPlayerCell(x, y, w, h)) return;
     const bool still = s.stillSince && now - s.stillSince >= kStillMs;
     if (!still || casting(actor) || !np::predicts(x, y, s.askX, s.askY) || dead()) return;
+    if (s.sitting) {  // 3.0.11-beta.215: the server walks no one sitting - a guess would stand it up in the game alone
+        if (s.sitTold++ < 10)
+            LOG_INFO("net: the walk not guessed - the character sits (the server walks no one sitting)");
+        return;
+    }
     if (const uint32_t clock = netwatchwin::serverNow(); np::heldNow(clock, s.holdUntil)) {  // 3.0.11-beta.132
         if (s.heldTold++ < 10)
             LOG_INFO("net: the walk not guessed - the server holds the character %d ms more (hit or attacking)",
@@ -169,7 +176,9 @@ void ownMove(uint8_t* packet) {
     State& s = state();
     s.asked = false;  // the server's answer before the frame guessed it: the game walks by it alone
     np::Move m;
-    if (!s.on || !np::readOwnMove(packet, 12, m)) return;
+    if (!np::readOwnMove(packet, 12, m)) return;
+    s.sitting = false;  // 3.0.11-beta.215: the server walks it - it stands
+    if (!s.on) return;
     const uint64_t now = GetTickCount64();
     const np::Move before = s.lastMove;
     const uint64_t beforeAt = s.lastMoveAt;
@@ -219,7 +228,10 @@ void ownFix(int x, int y) {
 void act(const uint8_t* packet) {
     State& s = state();
     np::Act a;
-    if (s.on && np::readAct(packet, 29, a)) s.holdUntil = np::holdUntil(s.holdUntil, a, read32(kOwnAccount));
+    if (!np::readAct(packet, 29, a)) return;
+    const uint32_t own = read32(kOwnAccount);
+    s.sitting = np::sitsAfter(s.sitting, a, own);  // 3.0.11-beta.215: kept while off too - turned on sitting
+    if (s.on) s.holdUntil = np::holdUntil(s.holdUntil, a, own);
 }
 
 void beginScene() {
@@ -231,6 +243,7 @@ void beginScene() {
     if (!inGameWorld() || !readPlayerWorld(at, w, h, cell)) {
         s.placed = np::Placed{};  // 3.0.11-beta.136: another map - nothing known there yet
         s.enteredAt = 0;          // 3.0.11-beta.138
+        s.sitting = false;        // 3.0.11-beta.215: a new map's character stands
         s.stillSince = 0;
         s.asked = false;
         s.guess.pending = false;

@@ -12,6 +12,7 @@
 #include "core/effect_exe.hpp"
 #include "core/effect_groups.hpp"
 #include "core/first_game.hpp"
+#include "core/grid_cell.hpp"
 #include "core/layout.hpp"
 #include "core/live_config.hpp"
 #include "core/outdoors.hpp"
@@ -23,6 +24,7 @@
 #include "core/ui_style.hpp"
 #include "core/version.hpp"
 #include "win/blind_patch.hpp"
+#include "win/grid_cell_hook.hpp"
 #include "win/chat_patch.hpp"
 #include "win/crisp/crisp.hpp"
 #include "win/dpi.hpp"
@@ -445,6 +447,7 @@ bool Context::open(std::string& error) {
     installChatFix();                  // 2.6.12: Enter in the chat box while a map loads (R-PVF8AV)
     installShadowFix();                // 3.0.4-beta.9: a shadow drawn while a map loads (R-VBDSCP)
     installBlindFix();                 // 2.6.18: blindness's darkness over the whole screen (R-MCVUC8)
+    installGridCell();                 // 3.0.11-beta.215: no cell under the mouse while the controller plays
     installHitHook();                  // 0.96: the hits' sounds (the flash itself is effects.hit_flash)
     weightrules::install();            // 3.0.11-beta.202: the game's line about the weight at uaRO's 70 %
     renderer->setIconSink(&crisp::iconReady, nullptr);
@@ -638,6 +641,8 @@ void Context::endScene() {
     // 3.0.3-beta.12 (the user's R-KVTEMT: «всеравно курсор не видно»): the scene goes to the GPU here, before the
     // present - beta.9's and beta.11's panel, put in at the present, found no cursor in an empty record and covered it
     const bool drawn = record.takeWork() > 0;
+    // 3.0.11-beta.215: the next frames' cell under the mouse - none while the cursor is hidden (hidePadCursor's rule)
+    hideGridCell(gridcell::hides(config.padWalk == PadWalk::Arrow, uapad::runtime::look().shown));
     if (photo_) record.dropInterface();  // 3.0.4-beta.5: the photo mode - the world alone
     if (drawn && renderer && !photo_) buffoverlay::draw(record, *renderer);  // 3.0.4-beta.6: the buffs' times
     if (panelSlot_.endScene(drawn) && renderer && !photo_) {

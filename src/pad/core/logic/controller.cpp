@@ -88,7 +88,7 @@ bool Controller::targetAlive(const WorldState& world) const {
 
 bool Controller::keepsTarget(const WorldState& world) const {
     const bool walkingUp = approach_ && !approach_->pickup && approach_->id == target_;
-    return targetAlive(world) && (wantAttack_ || picked_ || walkingUp);
+    return targetAlive(world) && (wantAttack_ || picked_ || fought_ || walkingUp);
 }
 
 namespace {
@@ -141,6 +141,7 @@ void Controller::setTarget(uint32_t id, uint32_t now, TickOutput& out) {
     if (id == target_) return;
     target_ = id;
     picked_ = false;
+    fought_ = false;
     attackSent_ = false;
     engagedSinceMs_.reset();
     if (approach_ && !approach_->pickup && approach_->id != id) approach_.reset();  // a skill for the old one
@@ -253,6 +254,13 @@ TickOutput Controller::tick(const PadState& pad, const WorldState& world, const 
         char text[96];
         std::snprintf(text, sizeof text, "camera: follows the client's turn (sign %d, offset %.0f degrees)",
                       camera_.calibratedSign(), camera_.calibratedOffset() * 180.0 / kPi);
+        out.notes.push_back(text);
+    }
+    if (camera_.hasLook() != loggedLook_) {  // 3.0.11-beta.215: where the right stick's directions come from
+        loggedLook_ = camera_.hasLook();
+        char text[112];
+        std::snprintf(text, sizeof text, "camera: the right stick turns %s (%.0f degrees)",
+                      loggedLook_ ? "by the game's view" : "by what the walks taught", camera_.radians() * 180.0 / kPi);
         out.notes.push_back(text);
     }
     if (aim_.active()) {  // 3.0.11-beta.145: the aim - the character stands, the sticks and the D-pad move it
@@ -418,6 +426,10 @@ void Controller::aim(const PadState& pad, const WorldState& world, uint32_t now,
     }
     setTarget(best, now, out);  // a running attack follows: setTarget asks for a new attack request
     picked_ = true;
+    char text[96];
+    std::snprintf(text, sizeof text, "right stick: picked %u pointing east %.2f north %.2f on the map", unsigned(best),
+                  dirX, dirY);
+    out.notes.push_back(text);
 }
 
 void Controller::handleButtons(uint16_t held, uint16_t down, const WorldState& world, uint32_t now,
@@ -722,7 +734,8 @@ void Controller::attack(const WorldState& world, uint32_t now, TickOutput& out) 
     if (keepsTarget(world)) {
         const std::optional<Cell> pos = world.actorPos(target_, now);
         out.notes.push_back("attack: keeps " + std::to_string(target_) +
-                            (picked_ ? " (picked with the right stick)" : " (being fought)") +
+                            (picked_ ? " (picked with the right stick)"
+                                     : wantAttack_ ? " (being fought)" : " (fought before the walk)") +
                             (pos ? " at " + cellText(*pos) : std::string()));
     } else if (takeNearest(world, now, "attack", out) == 0) {
         deny(out, "no monsters around");
@@ -822,6 +835,9 @@ void Controller::act(SlotDecision d, int slot, bool repeat, const Hotkey& key, c
             if (!repeat) deny(out, d.reason);
             break;
         case SlotDecision::Kind::Send:
+            if (d.packet.size() == 25 && rd16(d.packet.data(), 0) == 0x0072 && target_ != 0 &&
+                rd32(d.packet.data(), 21) == target_)
+                fought_ = true;  // a skill at the monster: A goes on with it after a walk
             out.packets.push_back(std::move(d.packet));
             if (!repeat)
                 out.notes.push_back(hotkeyName(slot) + ": " +
@@ -953,6 +969,7 @@ void Controller::stepApproach(const WorldState& world, uint32_t now, TickOutput&
             out.packets.push_back(buildSkillToPos(ap.skill, ap.lv, *goal));
         else
             out.packets.push_back(buildSkillToId(ap.skill, ap.lv, ap.id));
+        if (!ap.pickup && !ap.ground && ap.id == target_) fought_ = true;
         if (ap.slot >= 0) lastSlotMs_[size_t(ap.slot)] = now;  // a held button waits its turn again
         const bool skill = !ap.pickup;
         approach_.reset();
@@ -1008,6 +1025,7 @@ void Controller::maintainTarget(bool attackHeld, const WorldState& world, uint32
         out.packets.push_back(buildAction(target_, kActionAttack));
         lastAttackMs_ = now;
         attackSent_ = true;
+        fought_ = true;
         if (!engagedSinceMs_) engagedSinceMs_ = now;
     }
 }

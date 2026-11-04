@@ -41,6 +41,10 @@ struct Act {  // ZC_NOTIFY_ACT (0x008a, 29 bytes)
 bool readAct(const uint8_t* packet, size_t size, Act& a);
 uint32_t holdUntil(uint32_t until, const Act& a, uint32_t own);  // the server's clock the own walk is held to
 bool heldNow(uint32_t serverNow, uint32_t until);
+// 3.0.11-beta.215 (the owner: «я сел а игра думает что стою и по этому не идет»): the server walks no one sitting
+// (uAthena unit_can_move: pc_issit) - a walk guessed then was put back standing while the server had the character
+// sitting. Sitting from its own ZC_NOTIFY_ACT: 2 sat down, 3 stood up; another's, or another kind, leaves it.
+bool sitsAfter(bool sitting, const Act& a, uint32_t own);
 
 // 3.0.11-beta.134 (R-U436CU: guessed from 286, 124 while the server walked it from 290, 124 - the client still showed
 // it standing): when the server's walk of the character ends - its tick, 10 a straight cell and 14 a diagonal one at

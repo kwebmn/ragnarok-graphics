@@ -81,6 +81,8 @@ void CameraYaw::calibrate() {
 }
 
 double CameraYaw::radians() const {
+    if (look_ && std::hypot(look_->first, look_->second) > 1e-9)  // screen up is where the camera looks
+        return wrap(std::atan2(look_->second, look_->first) - kPi / 2.0);
     if (calibrated_ && client_) return wrap(sign_ * *client_ + offset_);
     return yaw_;
 }

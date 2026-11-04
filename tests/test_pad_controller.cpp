@@ -432,7 +432,10 @@ TEST(ctl_slot_with_only_a_far_monster_is_denied) {
 
 // --- which monster a press goes for: the nearest, unless it is being fought or was picked with the right stick
 
-TEST(ctl_press_takes_the_nearest_not_a_remembered_target) {
+// 3.0.11-beta.215 (the owner: «когда атакую моба ... отбегаю то активный моб переключается на ближайшего»): the press
+// goes on with the monster fought before the stick walk (alive, in reach), not the nearest; one never fought (taken,
+// no attack sent) gives way to the nearest as before
+TEST(ctl_press_goes_on_with_the_monster_fought) {
     Controller c(Config{});
     WorldState w = world();  // we stand at (100, 100)
     addMob(w, 110000001, Cell{102, 100});
@@ -445,8 +448,27 @@ TEST(ctl_press_takes_the_nearest_not_a_remembered_target) {
     w.apply(EvSetPos{110000001, Cell{108, 100}}, 1400);
     addMob(w, 110000002, Cell{98, 101});  // now the nearest
     TickOutput o = c.tick(pad(kPadA), w, view(), 1500);
+    CHECK_EQ(c.target(), 110000001u);
+    CHECK(o.mark == 0u || o.mark == 110000001u);
+}
+
+TEST(ctl_press_takes_the_nearest_after_a_target_never_fought) {
+    Controller c(Config{});
+    WorldState w = world();
+    w.apply(EvAction{kSelf, 0, 2}, 0);  // sitting: the press takes a target, sends no attack
+    addMob(w, 110000001, Cell{102, 100});
+    c.tick(pad(kPadA), w, view(), 1000);
+    CHECK_EQ(c.target(), 110000001u);
+    c.tick(pad(), w, view(), 1100);
+    PadState walk = pad();
+    walk.lx = 1.0f;
+    w.apply(EvAction{kSelf, 0, 3}, 1150);  // stood up
+    c.tick(walk, w, view(), 1200);
+    c.tick(pad(), w, view(), 1300);
+    w.apply(EvSetPos{110000001, Cell{108, 100}}, 1400);
+    addMob(w, 110000002, Cell{98, 101});
+    c.tick(pad(kPadA), w, view(), 1500);
     CHECK_EQ(c.target(), 110000002u);
-    CHECK_EQ(o.mark, 110000002u);
 }
 
 TEST(ctl_press_keeps_the_monster_under_attack) {
@@ -471,7 +493,8 @@ TEST(ctl_press_keeps_a_right_stick_pick) {
     CHECK_EQ(c.target(), 110000001u);
 }
 
-TEST(ctl_slot_takes_the_nearest_when_not_fighting) {
+// 3.0.11-beta.215: a slot goes on with the monster it hit, not a newcomer nearer
+TEST(ctl_slot_goes_on_with_the_monster_it_hit) {
     Controller c(Config{});
     WorldState w = slotWorld();  // X: Bash (range 1)
     addMob(w, 110000001, Cell{101, 100});
@@ -479,6 +502,25 @@ TEST(ctl_slot_takes_the_nearest_when_not_fighting) {
     c.tick(pad(), w, view(), 1100);
     CHECK_EQ(c.target(), 110000001u);
     w.apply(EvSetPos{110000001, Cell{104, 100}}, 1200);
+    addMob(w, 110000002, Cell{99, 100});
+    TickOutput o = c.tick(pad(kPadX), w, view(), 1700);
+    CHECK_EQ(c.target(), 110000001u);
+    bool other = false;
+    for (const Bytes& p : o.packets) other = other || (pid(p) == 0x0072 && rd32(p.data(), 21) == 110000002u);
+    CHECK(!other);
+}
+
+TEST(ctl_slot_takes_the_nearest_after_a_target_never_hit) {
+    Controller c(Config{});
+    WorldState w = slotWorld();  // X: Bash (range 1)
+    addMob(w, 110000001, Cell{104, 100});
+    c.tick(pad(kPadX), w, view(), 1000);  // out of reach: a walk up, nothing hit yet
+    c.tick(pad(), w, view(), 1100);
+    CHECK_EQ(c.target(), 110000001u);
+    PadState walk = pad();
+    walk.lx = -1.0f;
+    c.tick(walk, w, view(), 1200);  // the stick takes the legs: the walk up ends
+    c.tick(pad(), w, view(), 1300);
     addMob(w, 110000002, Cell{99, 100});
     TickOutput o = c.tick(pad(kPadX), w, view(), 1700);
     CHECK_EQ(c.target(), 110000002u);
@@ -1823,4 +1865,82 @@ TEST(ctl_ground_aim_hint_line) {
         CHECK((parts[3].buttons == std::vector<uint16_t>{kPadL3, kPadR3}) && parts[3].words == "скасувати");
     }
     CHECK(aimHint(kPadX, Lang::En).find("let go") != std::string::npos);
+}
+
+// 3.0.11-beta.215 (the owner: «когда атакую моба с геймпада, отбегаю то активный моб переключается на ближайшего,
+// получается что атакую соседнего»): the time the player walks with the stick is no time the attack went without hits -
+// the monster under attack is not given up on (nor shunned 10 s): the next A goes on with it
+TEST(ctl_walking_away_keeps_the_target) {
+    Controller c(Config{});  // give up after 4 s without hits
+    WorldState w = world();
+    addMob(w, 110000001, Cell{101, 100});  // the one fought
+    addMob(w, 110000002, Cell{95, 100});
+    c.tick(pad(kPadA), w, view(), 1000);
+    CHECK_EQ(c.target(), 110000001u);
+    c.tick(pad(), w, view(), 1100);
+    PadState away = pad();
+    away.ly = -1.0f;
+    for (uint32_t t = 1500; t <= 6500; t += 500) c.tick(away, w, view(), t);  // five seconds walking off
+    CHECK_EQ(c.target(), 110000001u);
+    w.apply(EvSetPos{kSelf, Cell{96, 100}}, 6800);  // now by the other one: it is the nearest
+    c.tick(pad(), w, view(), 7000);
+    CHECK_EQ(c.target(), 110000001u);
+    TickOutput o = c.tick(pad(kPadA), w, view(), 7600);
+    CHECK_EQ(c.target(), 110000001u);
+    bool attacked = false;
+    for (size_t i = 0; i < o.packets.size(); ++i)
+        if (pid(pkt(o, i)) == 0x0190 && rd32(pkt(o, i).data(), 5) == 110000001u) attacked = true;
+    CHECK(attacked);
+}
+
+// 3.0.11-beta.215: a skill thrown at the monster is fighting it too - after a stick walk A goes on with that one
+TEST(ctl_walking_away_after_a_skill_keeps_the_target) {
+    Controller c(Config{});
+    WorldState w = slotWorld();
+    addMob(w, 110000001, Cell{103, 100});  // within Fire Bolt's 9 cells
+    addMob(w, 110000002, Cell{95, 100});
+    TickOutput o = c.tick(pad(kPadUp), w, view(), 1000);  // F7: Fire Bolt at the nearest
+    CHECK_EQ(c.target(), 110000001u);
+    CHECK(o.packets.size() == 1u && pid(pkt(o, 0)) == 0x0072);
+    c.tick(pad(), w, view(), 1100);
+    PadState away = pad();
+    away.ly = -1.0f;
+    for (uint32_t t = 1500; t <= 2500; t += 500) c.tick(away, w, view(), t);
+    w.apply(EvSetPos{kSelf, Cell{96, 100}}, 2800);  // now by the other one
+    c.tick(pad(), w, view(), 3000);
+    o = c.tick(pad(kPadA), w, view(), 3600);
+    CHECK_EQ(c.target(), 110000001u);
+}
+
+// 3.0.11-beta.215: with the camera turned (looking east) the right stick pushed up points east on the map - the look
+// read from the game's view, not the walk samples (none come while the stick walks without the mouse)
+TEST(ctl_right_stick_follows_the_cameras_look) {
+    Controller c(Config{});
+    c.setDirectWalk(true);
+    c.setLook(1, 0);  // the camera looks east: screen up is east
+    WorldState w = world();  // we stand at (100, 100)
+    addMob(w, 110000001, Cell{100, 106});  // north
+    addMob(w, 110000002, Cell{106, 100});  // east
+    c.tick(padR(0, 1), w, view(), 1000);
+    CHECK_EQ(c.target(), 110000002u);
+}
+
+TEST(ctl_logs_where_the_right_stick_turns_from) {
+    Controller c(Config{});
+    WorldState w = world();
+    c.setLook(1, 0);
+    addMob(w, 110000002, Cell{106, 100});
+    TickOutput o = c.tick(padR(0, 1), w, view(), 1000);
+    bool by = false, picked = false;
+    for (const std::string& n : o.notes) {
+        by = by || n == "camera: the right stick turns by the game's view (-90 degrees)";
+        picked = picked || n == "right stick: picked 110000002 pointing east 1.00 north 0.00 on the map";
+    }
+    CHECK(by);
+    CHECK(picked);
+    c.clearLook();
+    o = c.tick(pad(), w, view(), 1100);
+    by = false;
+    for (const std::string& n : o.notes) by = by || n.rfind("camera: the right stick turns by what the walks", 0) == 0;
+    CHECK(by);
 }
