@@ -3,6 +3,7 @@
 
 #include "core/config.hpp"
 #include "core/frame.hpp"
+#include "core/char_block.hpp"
 #include "core/game_packets.hpp"
 
 namespace uagfx::gpu {
@@ -33,6 +34,8 @@ void beforeGameDraw();
 bool key(UINT m, WPARAM wp, LPARAM lp);
 // 3.0.11-beta.235: the session's kills and deaths
 void packet(const packets::Event& e);
+// 3.0.11-beta.236: the block's numbers and words now (the experience's strip at the screen's bottom); false not shown
+bool expInfo(charblock::Data& d, charblock::Texts& t);
 
 // 3.0.11-beta.90 (the controller's windows' tile): one of the game's Basic Info window's buttons pressed as its own
 // (its SendMsg message 6 with the command: 0x7E stats, 0x81 equip, 0x80 items, 0x82 skills, 0x85 friends, 0x7F

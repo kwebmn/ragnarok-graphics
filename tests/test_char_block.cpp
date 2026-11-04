@@ -613,3 +613,35 @@ TEST(char_block_more_lines_and_their_tips) {
     sh.hoverZone = int(charblock::Zone::Social);
     CHECK(hasText(charblock::words(S, d, t, sh), "3 з 4 у грі"));
 }
+
+// 3.0.11-beta.236 (the concept «Блок персонажа»): the rings' dots their own tips (the free points', the weight's);
+// the experience's strip at the screen's bottom - the base's bar over the job's, its tip
+TEST(char_block_ring_dots_and_the_bottom_strip) {
+    charblock::Texts t = texts();
+    t.tipPoints = "Вільні очки характеристик: Alt+A";
+    t.tipWeight = "70 %: HP і SP не відновлюються";
+    charblock::Data d = soraInNumbers();
+    const charblock::Layout R = charblock::layout(charblock::View::Compact, charblock::Look::Rings, 0, 0, 1.0f);
+    const panel::Box& pd = R.pointsDot;
+    charblock::Hit h = charblock::hitTest(R, pd.x + pd.w / 2, pd.y + pd.h / 2);
+    CHECK(h.part == charblock::Part::Zone && h.index == int(charblock::Zone::Points));
+    charblock::Show sh;
+    sh.hoverZone = h.index;
+    std::vector<charblock::Words> w = charblock::words(R, d, t, sh);
+    CHECK(hasText(w, "+3 очки") && hasText(w, "Вільні очки характеристик: Alt+A"));
+    const panel::Box& wd = R.weightDot;
+    h = charblock::hitTest(R, wd.x + wd.w / 2, wd.y + wd.h / 2);
+    CHECK(h.part == charblock::Part::Zone && h.index == int(charblock::Zone::Weight));
+    CHECK(charblock::hitTest(R, R.cx, R.cy).part == charblock::Part::Portrait);
+    // the strip: 8 px at scale 1, the base's 46,3 % lit, past it dark; the job's under it
+    CHECK(charblock::stripHeight(1.0f) == 8 && charblock::stripHeight(2.0f) == 16);
+    panel::Picture p;
+    p.width = 1000;
+    p.height = charblock::stripHeight(1.0f);
+    p.px.assign(size_t(p.width) * size_t(p.height), 0u);
+    charblock::paintStrip(p, d, 1.0f);
+    const auto red = [](uint32_t c) { return (c >> 16) & 0xFF; };
+    CHECK(red(pixel(p, 250, 2)) > 0x90 && red(pixel(p, 650, 2)) < 0x30);  // off the 10 % ticks
+    const std::vector<std::string> tip = charblock::stripTip(d, t);
+    CHECK(tip.size() == 2 && tip[0].rfind("Base 46,3", 0) == 0 && tip[1].rfind("Job", 0) == 0);
+}

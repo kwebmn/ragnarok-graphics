@@ -627,7 +627,8 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
             LOG_INFO("character: the block %s", s.view == cb::View::Full      ? "full"
                                                 : s.view == cb::View::Compact ? "compact"
                                                                               : "folded to its icon");
-        } else if (h.part == cb::Part::Zone && h.index >= 0 && cb::opensStats(cb::Zone(h.index))) {
+        } else if (h.part == cb::Part::Zone && h.index >= 0 &&
+                   (cb::opensStats(cb::Zone(h.index)) || h.index == int(cb::Zone::Points))) {
             // 3.0.11-beta.235: the battle's numbers - «Характеристики»
             const bool sent = press(cb::kButton[0].command);
             if (s.clicksLogged++ < 10)
@@ -692,6 +693,14 @@ void packet(const packets::Event& e) {
             ++s.kills;
         }
     }
+}
+
+bool expInfo(charblock::Data& d, charblock::Texts& t) {
+    const State& s = state();
+    if (!s.shown || s.data.baseLevel <= 0) return false;
+    d = s.data;
+    t = texts();
+    return true;
 }
 
 }  // namespace uagfx::win::charpanel

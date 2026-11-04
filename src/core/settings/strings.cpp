@@ -7205,6 +7205,16 @@ constexpr Entry kTexts[] = {
      "Монстры, которых ты бил и которые погибли за сессию"},
     {Text::CharTipDeaths, "Your deaths this session", "Твої смерті за сесію", "Твои смерти за сессию"},
     {Text::CharTipOnline, "{1} of {2} in the game", "{1} з {2} у грі", "{1} из {2} в игре"},
+    // 3.0.11-beta.236 (the concept «Блок персонажа»): the experience's bars at the screen's bottom
+    {Text::InterfaceExpBars, "Experience bars at the bottom", "Смужки досвіду внизу екрана",
+     "Полоски опыта внизу экрана"},
+    {Text::InterfaceExpBarsHint,
+     "Two thin bars along the screen's bottom edge: the base's experience over the job's. Point at them for the per "
+     "cent, the numbers, the pace and the time to the level. Gone at the last levels.",
+     "Дві тонкі смужки вздовж нижнього краю екрана: досвід Base над досвідом Job. Наведіть — відсоток, числа, темп і "
+     "час до рівня. На максимальних рівнях зникають.",
+     "Две тонкие полоски вдоль нижнего края экрана: опыт Base над опытом Job. Наведите — процент, числа, темп и время "
+     "до уровня. На максимальных уровнях исчезают."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

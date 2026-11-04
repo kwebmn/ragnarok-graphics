@@ -47,6 +47,7 @@
 #include "win/buff_overlay.hpp"
 #include "win/cast_bar.hpp"
 #include "win/char_block.hpp"
+#include "win/exp_bars.hpp"
 #include "win/code_page.hpp"
 #include "win/party_panel.hpp"
 #include "win/hotbar.hpp"
@@ -703,6 +704,7 @@ void Context::endScene() {
         merccardwin::blockDraw(record, *renderer);  // 3.0.11-beta.216: the mercenary's block
         hotbarwin::draw(record, *renderer);     // 3.0.11-beta.40: the hotbar
         chatwin::draw(record, *renderer);       // 3.0.11-beta.41: the chat
+        expbars::draw(record, *renderer);       // 3.0.11-beta.236: the experience's strip at the bottom
         minimapproto::drawBig(record, *renderer);  // 3.0.11-beta.201: the big map over the panels, under the windows
         // 3.0.11-beta.108: «Речі», «Характеристики», «Навички», «Спорядження», the NPC talk, the shop and «Довідник»
         // in their stack's order - the last opened or clicked in on top (they were each in a place of its own)
@@ -768,6 +770,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
         merccardwin::blockDraw(record, *renderer);  // 3.0.11-beta.216
         hotbarwin::draw(record, *renderer);     // 3.0.11-beta.40
         chatwin::draw(record, *renderer);       // 3.0.11-beta.41
+        expbars::draw(record, *renderer);       // 3.0.11-beta.236
         minimapproto::drawBig(record, *renderer);  // 3.0.11-beta.201
         windowstack::draw(record, *renderer);  // 3.0.11-beta.108
         itemswin::drawToast(record, *renderer);  // 3.0.11-beta.112
@@ -1010,6 +1013,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     uistyle::set(config.hudOpacity, optionscard::windowOpacity(config.windowOpacity, opaque != 0));
     // 3.0.11-beta.36: [interface] character - the character block at the top left, the game's Basic Info hidden
     charpanel::frame(window, config.character, gameCodePage(config), pk, pw, ph);
+    expbars::frame(config.expBars, pk, pw, ph);  // 3.0.11-beta.236: [interface] exp_bars, the bottom's strip
     // 3.0.11-beta.38: [interface] target - the target's card at the top middle
     targetpanel::frame(window, config.targetCard, config.padHints, pk, pw, ph);
     groundmarks::look(config.targetRing);  // 3.0.11-beta.87: the target's ring on the ground

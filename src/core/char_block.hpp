@@ -113,6 +113,7 @@ struct Layout {
 };
 // 3.0.11-beta.235: both levels the last - the session in place of the experience rows
 bool lastLevels(const Data& d);
+
 // Its top left at (left, top) in the target, its sizes at `scale`
 Layout layout(View view, Look look, int left, int top, float scale, bool sessionRows = false);
 
@@ -172,5 +173,13 @@ struct Words {
 };
 std::vector<Words> words(const Layout& L, const Data& d, const Texts& t, const Show& show);
 std::vector<Words> warningWords(const Layout& L, const Data& d, const Texts& t);  // paintWarning's
+
+// 3.0.11-beta.236 (the concept «Блок персонажа»: «внизу экрана показывать опыт бейз/джоб полосками» - «включить»): the
+// experience's strip at the screen's bottom edge - its height at `scale`, its picture (`out` as wide as the screen and
+// that high: the base's bar over the job's on a dark band), its tip's lines (each experience's per cent and numbers,
+// its pace and the time to the level)
+int stripHeight(float scale);
+void paintStrip(panel::Picture& out, const Data& d, float scale);
+std::vector<std::string> stripTip(const Data& d, const Texts& t);
 
 }  // namespace uagfx::charblock

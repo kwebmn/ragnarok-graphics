@@ -307,8 +307,12 @@ std::vector<std::string> tipLines(const Layout& L, const Data& d, const Texts& t
         return {t.buttons[show.hoverButton]};
     if (L.view == View::Full && (show.hoverExp == 0 || show.hoverExp == 1))
         return expTip(show.hoverExp == 0 ? baseOf(d) : jobOf(d), t);
-    if (L.view == View::Full && show.hoverZone >= 0 && show.hoverZone < kZones)  // 3.0.11-beta.235
-        return zoneTip(Zone(show.hoverZone), d, t);
+    if ((L.view == View::Full || rings(L)) && show.hoverZone >= 0 && show.hoverZone < kZones) {  // 3.0.11-beta.235
+        std::vector<std::string> lines = zoneTip(Zone(show.hoverZone), d, t);
+        if (rings(L) && show.hoverZone == int(Zone::Points) && d.statusPoints > 0)  // 3.0.11-beta.236: how many
+            lines.insert(lines.begin(), counted(t.points, d.statusPoints));
+        if (!lines.empty() || L.view == View::Full) return lines;
+    }
     const std::string& key = L.view == View::Full ? t.fold : t.unfold;
     const auto experience = [&](std::vector<std::string>& lines) {
         for (const Exp& e : {baseOf(d), jobOf(d)})
@@ -529,6 +533,13 @@ Layout layout(View view, Look look, int left, int top, float scale, bool session
 Hit hitTest(const Layout& L, float x, float y) {
     const bool round = rings(L);
     if (round) {
+        // 3.0.11-beta.236 (the owner: «точки… для чего они?» - «подсказки когда наводишь на непонятное»): the rings'
+        // dots their own - the free points', the weight's
+        const auto near = [&](const panel::Box& b) {
+            return b.w > 0 && std::hypot(x - (b.x + b.w / 2), y - (b.y + b.h / 2)) <= b.w / 2 + 3 * L.s;
+        };
+        if (near(L.pointsDot)) return Hit{Part::Zone, int(Zone::Points)};
+        if (near(L.weightDot)) return Hit{Part::Zone, int(Zone::Weight)};
         if (std::hypot(x - L.cx, y - L.cy) <= L.hpR) return Hit{Part::Portrait, -1};  // the whole round: its button
         return L.badge.contains(x, y) ? Hit{Part::Portrait, -1} : Hit{};
     }
@@ -837,6 +848,33 @@ std::vector<Words> warningWords(const Layout& L, const Data& d, const Texts& t) 
     if (warn.w <= 0) return {};
     return {Words{warn, "! " + replaced(t.lowHp, std::to_string(lowPercent(d))), kText, 13 * L.s, true,
                   Align::Center}};
+}
+
+int stripHeight(float scale) { return std::max(5, int(std::lround(8 * (scale > 0 ? scale : 1.0f)))); }
+
+void paintStrip(panel::Picture& out, const Data& d, float scale) {
+    const float s = scale > 0 ? scale : 1.0f, w = float(out.width), h = float(out.height);
+    panel::roundRect(out, panel::Box{0, 0, w, h}, 0, kBlack, 0.55f);
+    const float barH = (h - 3 * s) / 2;
+    const auto one = [&](float y, const Exp& e, uint32_t rgb) {
+        const float f = e.next == 0 ? 1.0f : std::clamp(e.share, 0.0f, 1.0f);
+        if (f > 0) panel::roundRect(out, panel::Box{0, y, w * f, barH}, 0, rgb, e.next == 0 ? 0.45f : 1.0f);
+        for (int i = 1; i < 10; ++i)  // a tick each 10 %
+            panel::roundRect(out, panel::Box{w * float(i) / 10, y, 1.0f * s, barH}, 0, kBlack, 0.6f);
+    };
+    one(1 * s, baseOf(d), kBaseExp);
+    one(2 * s + barH, jobOf(d), kJobExp);
+}
+
+std::vector<std::string> stripTip(const Data& d, const Texts& t) {
+    std::vector<std::string> lines;
+    for (const Exp& e : {baseOf(d), jobOf(d)}) {
+        std::string line = expLine(e, t);
+        if (line.empty()) continue;
+        if (const std::string speed = pace(e, t, true); !speed.empty()) line += " \xC2\xB7 " + speed;
+        lines.push_back(line);
+    }
+    return lines;
 }
 
 }  // namespace uagfx::charblock

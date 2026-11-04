@@ -782,6 +782,7 @@ enum class Text : uint16_t {
     CharDeaths, CharTipWeight, CharTipPoints, CharTipSkillPoints, CharTipRegen1, CharTipRegen2, CharTipAtk, CharTipDef,
     CharTipFlee, CharTipAspd, CharTipOpen, CharTipTime, CharTipZeny, CharTipKills, CharTipDeaths,
     CharTipOnline,  // 3.0.11-beta.235
+    InterfaceExpBars, InterfaceExpBarsHint,  // 3.0.11-beta.236
     Count
 };
 

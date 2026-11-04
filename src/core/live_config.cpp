@@ -203,6 +203,10 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("minimap_kafra", flag(running.minimapKafra), flag(file.minimapKafra)));
         n.minimapKafra = file.minimapKafra;
     }
+    if (file.expBars != running.expBars) {  // 3.0.11-beta.236: the experience's bars at the bottom, at once
+        u.applied.push_back(change("exp_bars", flag(running.expBars), flag(file.expBars)));
+        n.expBars = file.expBars;
+    }
     if (file.minimapClassic != running.minimapClassic) {  // 3.0.11-beta.222: the marks' look, at once
         u.applied.push_back(change("minimap_classic", flag(running.minimapClassic), flag(file.minimapClassic)));
         n.minimapClassic = file.minimapClassic;

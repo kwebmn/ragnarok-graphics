@@ -1956,3 +1956,10 @@ TEST(config_reads_the_minimap_classic_marks) {
     CHECK(u.next.minimapClassic && u.applied.size() == 1 && u.waiting.empty());
     if (s) CHECK_EQ(settings::tokenOf(*s, parseConfig("[interface]\nminimap_classic = 1\n")), std::string("1"));
 }
+
+// 3.0.11-beta.236 (the concept «Блок персонажа»: the experience at the screen's bottom - «включить»): [interface]
+// exp_bars, on by default
+TEST(config_reads_the_experience_bars) {
+    CHECK(parseConfig("").expBars);
+    CHECK(!parseConfig("[interface]\nexp_bars = 0\n").expBars);
+}
