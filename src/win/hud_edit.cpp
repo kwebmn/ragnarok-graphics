@@ -397,11 +397,14 @@ void frame(HWND game, double k, int targetW, int targetH) {
     int cx = 0, cy = 0;
     const bool pointer = cursor(s, cx, cy);
     const bool down = buttonDown();
-    // 3.0.11-beta.77: a held press that moved - its part dragged; one let go outside the window - forgotten
-    if (s.held && !down) s.held = false;
+    // 3.0.11-beta.77: a held press that moved - its part dragged; one let go outside the window - forgotten.
+    // 3.0.11-beta.234 (R-G4QKMZ: the buffs' button «то появляется то не появляется» - a quick click let go before this
+    // frame while its WM_LBUTTONUP was still on its way lost its press: forgotten here, the release found none to give
+    // the part): forgotten only a second after the press with the button up, its release never come
+    if (s.held && !down && GetTickCount64() - s.pressAt > 1000) s.held = false;
     // 3.0.11-beta.147 (R-VYV3AG: a click on the hotbar slipped 6 game pixels in 148 ms - the whole bar dragged away):
-    // held 0.3 s too
-    if (s.held && pointer && s.heldPart >= 0 &&
+    // held 0.3 s too; 3.0.11-beta.234: the button still down
+    if (s.held && down && pointer && s.heldPart >= 0 &&
         hudlayout::dragStarts(std::hypot(float(cx - s.pressX), float(cy - s.pressY)), s.k,
                               GetTickCount64() - s.pressAt)) {
         s.held = false;
