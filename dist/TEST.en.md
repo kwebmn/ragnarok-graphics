@@ -1,3 +1,9 @@
+# uaRO Graphics 3.0.11-beta.222 — what's new
+
+**The minimap and the big map** (the tester's list):
+- A guild mate's triangle is now pink - the colour the game itself marks them with.
+- A new switch, "Map marks as in the game" (Interface): guild mates and party members as round dots in the game's colours instead of the triangle and the faces. Off at first.
+
 # uaRO Graphics 3.0.11-beta.221 — what's new
 
 **The homunculus** (the "Homunculus card" switch, Alt+R):
