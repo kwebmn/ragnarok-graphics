@@ -22,5 +22,8 @@ std::vector<int> chain(int job);
 int homeJob(const std::vector<int>& jobs, int id);
 int order(int job, int id);  // its place in that job's tree; a large number when not there
 std::vector<std::pair<int, int>> needs(int job, int id);  // the skills it needs and their levels
+// 3.0.11-beta.223 (the skills concept, stage 1): every skill of a job's tree, in the server's order (its earlier
+// jobs' too)
+std::vector<int> skills(int job);
 
 }  // namespace uagfx::skilltree

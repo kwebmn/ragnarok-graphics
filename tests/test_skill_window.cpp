@@ -176,3 +176,39 @@ TEST(skill_window_a_press_becomes_a_drag_past_ten_pixels) {
     CHECK(skillwin::released(p) < 0);           // a click: no drag
 }
 
+
+// 3.0.11-beta.223 (the skills concept, stage 1: «Ще закриті»): the tree's skills the server has not sent, after the
+// sent ones - why each is closed, never a «+»; a line over the list says why a whole job is closed
+TEST(skill_window_closed_skills_and_the_notice) {
+    skillwin::Texts t = texts();
+    t.quest = "Квест — очками не вчиться";
+    t.wedding = "Лише для подружжя";
+    t.soulLink = "Лише під Soul Link";
+    t.earlier = "Спершу витратьте очки {1}";
+    skillwin::Skill bb = skill(62, "Bowling Bash", 1, 0, 10, true);
+    bb.lock = skillwin::Lock::Needs;
+    bb.needs = "Twohand Quicken 10";
+    CHECK(skillwin::info(bb, t) == "Потрібно: Twohand Quicken 10" && !skillwin::canRaise(bb, 5));
+    skillwin::Skill charge = skill(1001, "Charge Attack", 1, 0, 1, false);
+    charge.lock = skillwin::Lock::Quest;
+    CHECK(skillwin::info(charge, t) == t.quest);
+    skillwin::Skill pierce = skill(56, "Pierce", 1, 0, 10, false);
+    pierce.lock = skillwin::Lock::Earlier;
+    pierce.lockJob = "Swordsman";
+    CHECK(skillwin::info(pierce, t) == "Спершу витратьте очки Swordsman");
+    skillwin::Data d = knight();
+    d.tabs[1].skills.push_back(bb);
+    d.notice = "Навички Knight відкриються, коли витратите вільні очки на навички Swordsman";
+    skillwin::Show sh;
+    sh.tab = 1;
+    const skillwin::Layout L = skillwin::layout(0, 0, 1.0f, d, sh, t, measure);
+    CHECK(L.notice.w > 0 && L.list.y >= L.notice.y + L.notice.h && L.rows.size() == 4);
+    CHECK(L.pluses[3].w == 0);  // the closed one: no «+»
+    const std::vector<skillwin::Words> w = skillwin::words(L, d, sh, t, measure);
+    const auto has = [&](const std::string& text) {
+        return std::any_of(w.begin(), w.end(), [&](const skillwin::Words& x) { return x.text == text; });
+    };
+    CHECK(has(d.notice) && has("Потрібно: Twohand Quicken 10"));
+    d.notice.clear();
+    CHECK(skillwin::layout(0, 0, 1.0f, d, sh, t, measure).notice.w == 0);
+}

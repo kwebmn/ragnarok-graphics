@@ -87,11 +87,21 @@ void padBoxes(Layout& L, const Texts& t, const Measure& m) {
 
 }  // namespace
 
-bool canRaise(const Skill& k, int points) { return points > 0 && k.up && (k.most <= 0 || k.level < k.most); }
+bool canRaise(const Skill& k, int points) {
+    return points > 0 && k.up && k.lock == Lock::None && (k.most <= 0 || k.level < k.most);
+}
 
 bool usable(const Skill& k) { return k.level > 0 && k.type != 0; }
 
 std::string info(const Skill& k, const Texts& t) {
+    switch (k.lock) {
+        case Lock::Quest: return t.quest;
+        case Lock::Wedding: return t.wedding;
+        case Lock::SoulLink: return t.soulLink;
+        case Lock::Earlier: return fill(t.earlier, k.lockJob);
+        case Lock::Needs: return k.needs.empty() ? t.unlearned : fill(t.needs, k.needs);
+        case Lock::None: break;
+    }
     if (k.level <= 0) return k.needs.empty() ? t.unlearned : fill(t.needs, k.needs);
     if (k.type == 0) return t.passive;
     const std::string& kind = (k.type & 32) ? t.trap
@@ -136,7 +146,11 @@ Layout layout(int x, int y, float scale, const Data& d, const Show& sh, const Te
     const int shown = rowsShown(d);
     L.first = std::clamp(sh.scroll, 0, std::max(0, count - kRows));
     const bool scrolls = count > kRows;
-    const float listY = L.tabsRow.y + L.tabsRow.h + 6 * s;
+    float listY = L.tabsRow.y + L.tabsRow.h + 6 * s;
+    if (!d.notice.empty()) {  // 3.0.11-beta.223: why skills are closed
+        L.notice = panel::Box{side, listY, w - 2 * side, 28 * s};
+        listY += L.notice.h + 6 * s;
+    }
     const float rowW = w - 2 * side - (scrolls ? 12 * s : 0);
     L.list = panel::Box{side, listY, w - 2 * side, float(shown) * kRowH * s};
     if (scrolls) L.scroll = panel::Box{w - side - 5 * s, listY + 4 * s, 5 * s, L.list.h - 8 * s};
@@ -204,6 +218,7 @@ void paint(panel::Picture& out, const Layout& L, const Data& d, const Show& sh) 
             panel::roundRect(out, panel::Box{b.x + 6 * s, b.y + b.h - 3 * s, b.w - 12 * s, 2 * s}, 1 * s, kGold, 1.0f);
     }
     panel::roundRect(out, panel::Box{L.tabsRow.x, L.tabsRow.y + L.tabsRow.h, L.tabsRow.w, 1 * s}, 0, kWhite, 0.08f);
+    if (L.notice.w > 0) panel::roundRect(out, L.notice, 7 * s, kGold2, 0.12f, kGold2, 0.45f, 1.0f * s);
     const Tab* tab = tabOf(d, L.tab);
     for (size_t i = 0; i < L.rows.size() && tab; ++i) {
         const int index = L.first + int(i);
@@ -214,7 +229,11 @@ void paint(panel::Picture& out, const Layout& L, const Data& d, const Show& sh) 
             panel::roundRect(out, r, 7 * s, kGold2, 0.08f, kGold, 0.9f, 1.5f * s);
         if (i + 1 < L.rows.size())
             panel::roundRect(out, panel::Box{r.x + 8 * s, r.y + r.h - 1 * s, r.w - 16 * s, 1 * s}, 0, kWhite, 0.05f);
-        if (k.icon && k.icon->width > 0) put(out, *k.icon, L.icons[i], k.level > 0 ? 1.0f : 0.45f);
+        if (k.icon && k.icon->width > 0)
+            put(out, *k.icon, L.icons[i], k.lock != Lock::None ? 0.3f : k.level > 0 ? 1.0f : 0.45f);
+        // 3.0.11-beta.223: a gold hairline over the first closed skill («Ще закриті» below it)
+        if (k.lock != Lock::None && (index == 0 || tab->skills[size_t(index) - 1].lock == Lock::None))
+            panel::roundRect(out, panel::Box{r.x + 4 * s, r.y, r.w - 8 * s, 1 * s}, 0, kGold2, 0.55f);
         const panel::Box& dots = L.dots[i];
         if (dots.w > 0)
             for (int n = 0; n < k.most; ++n) {
@@ -260,6 +279,9 @@ std::vector<Words> words(const Layout& L, const Data& d, const Show& sh, const T
     for (size_t i = 0; i < L.tabs.size(); ++i)
         out.push_back(Words{L.tabs[i], d.tabs[i].name, int(i) == L.tab ? kText : kMuted, 12.5f * s, int(i) == L.tab,
                             Align::Center});
+    if (L.notice.w > 0)
+        out.push_back(Words{panel::Box{L.notice.x + 10 * s, L.notice.y, L.notice.w - 20 * s, L.notice.h}, d.notice,
+                            kText, 12 * s, false, Align::Left});
     const Tab* tab = tabOf(d, L.tab);
     for (size_t i = 0; i < L.rows.size() && tab; ++i) {
         const Skill& k = tab->skills[size_t(L.first) + i];
@@ -267,7 +289,7 @@ std::vector<Words> words(const Layout& L, const Data& d, const Show& sh, const T
         const float textX = r.x + 48 * s;
         const float textRight = (L.less[i].w > 0 ? L.less[i].x : L.dots[i].w > 0 ? L.dots[i].x : r.x + r.w * 0.6f) -
                                 10 * s;
-        const uint32_t nameRgb = k.level > 0 ? kText : kMuted;
+        const uint32_t nameRgb = k.lock != Lock::None ? kFaint : k.level > 0 ? kText : kMuted;
         out.push_back(Words{panel::Box{textX, r.y + 5 * s, textRight - textX, 18 * s}, k.name, nameRgb, 13.5f * s,
                             true, Align::Left});
         out.push_back(Words{panel::Box{textX, r.y + 24 * s, textRight - textX, 16 * s}, info(k, t), kMuted, 11.5f * s,

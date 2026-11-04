@@ -7131,6 +7131,16 @@ constexpr Entry kTexts[] = {
      "блакитні. Вимкнено: нові позначки — рожевий трикутник члена гільдії, обличчя учасника групи.",
      "Отметки на мини-карте и большой карте — круглыми точками в цветах самой игры: члены гильдии розовые, группы — "
      "голубые. Выключено: новые отметки — розовый треугольник члена гильдии, лицо участника группы."},
+    // 3.0.11-beta.223 (the skills concept, stage 1): the skills the server has not sent, and why
+    {Text::SkillsQuest, "Quest - not learned with points", "Квест — очками не вчиться", "Квест — очками не изучается"},
+    {Text::SkillsWedding, "Married characters only", "Лише для подружжя", "Только для супругов"},
+    {Text::SkillsSoulLink, "Only under a Soul Link", "Лише під Soul Link", "Только под Soul Link"},
+    {Text::SkillsEarlier, "Spend the {1} points first", "Спершу витратьте очки {1}", "Сначала потратьте очки {1}"},
+    {Text::SkillsEarlierNotice, "{1} skills open once the free points go into {2} skills",
+     "Навички {1} відкриються, коли витратите вільні очки на навички {2}",
+     "Навыки {1} откроются, когда потратите свободные очки на навыки {2}"},
+    {Text::SkillsBasicNotice, "A job change needs Basic Skill 9", "Для зміни професії потрібен Basic Skill 9",
+     "Для смены профессии нужен Basic Skill 9"},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

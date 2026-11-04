@@ -18,6 +18,11 @@ namespace uagfx::skillwin {
 // The parts that need no Windows; the words by GDI.
 constexpr int kRows = 8;  // rows shown at once; more scroll
 
+// 3.0.11-beta.223 (the skills concept, stage 1: «Ще закриті»): why a skill of the tree is not the player's to raise -
+// the server sends a skill only once its requirements are met (pc_calc_skilltree), never a quest, wedding or Soul Link
+// one by them, and while the points of the job before are not spent (player_skillup_limit) not the next job's
+enum class Lock : uint8_t { None, Needs, Quest, Wedding, SoulLink, Earlier };
+
 struct Skill {
     int id = 0;
     std::string name, aegis;
@@ -26,6 +31,8 @@ struct Skill {
     int level = 0, most = 0, use = 0;  // learned, its most (0 not known), the level it is used at
     int sp = 0, range = 0;
     bool up = false;  // the server lets a point raise it
+    Lock lock = Lock::None;  // not sent by the server: shown after the sent ones, dimmed, without «+»
+    std::string lockJob;     // Lock::Earlier: the job whose points come first
     const panel::Picture* icon = nullptr;  // at iconSide(), premultiplied
 };
 struct Tab {
@@ -35,6 +42,7 @@ struct Tab {
 struct Data {
     std::vector<Tab> tabs;
     int points = 0;  // the free skill points
+    std::string notice;  // 3.0.11-beta.223: a line over the list - why skills are closed; "" none
 };
 
 struct Texts {
@@ -43,6 +51,9 @@ struct Texts {
     std::string passive, enemy, ground, self, ally, trap;  // what a skill is used on
     std::string sp, range, needs, unlearned;               // «SP {1}», «дальність {1}», «Потрібно: {1}», «Не вивчено»
     std::string use, raise, assign, close;                 // the controller's: «Застосувати», «+1 рівень» ...
+    // 3.0.11-beta.223: a closed skill's line - «Квест — очками не вчиться», «Лише для подружжя», «Лише під Soul
+    // Link», «Спершу витратьте очки {1}»
+    std::string quest, wedding, soulLink, earlier;
 };
 
 bool canRaise(const Skill& k, int points);  // a free point and the server's leave, below its most
@@ -66,6 +77,7 @@ struct Layout {
     int x = 0, y = 0, w = 0, h = 0;
     int tab = 0, first = 0;  // the tab shown, its first row's index
     panel::Box glass, title, close, tabsRow, list, footer, scroll;
+    panel::Box notice;  // 3.0.11-beta.223: Data::notice's line (w 0: none)
     std::vector<panel::Box> tabs;
     // a row each shown, its parts (w 0: none)
     std::vector<panel::Box> rows, icons, pluses, less, more, dots;

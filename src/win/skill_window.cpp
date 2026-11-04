@@ -14,6 +14,7 @@
 #include "core/hotbar_panel.hpp"
 #include "core/layout.hpp"
 #include "core/settings/strings.hpp"
+#include "core/skill_info.hpp"
 #include "core/skill_tree.hpp"
 #include "core/skill_window.hpp"
 #include "core/ui_style.hpp"
@@ -225,24 +226,83 @@ void readSkills(std::vector<Raw>& out) {
     }
 }
 
+// 3.0.11-beta.223 (the skills concept, stage 1): a skill of the tree the server has not sent, and why
+kw::Skill closedSkill(State& s, int id, int last, const std::vector<int>& chain, const std::map<int, int>& levels) {
+    kw::Skill k;
+    k.id = id;
+    k.aegis = aegisById(s, id);
+    k.name = k.aegis.empty() ? "#" + std::to_string(id) : nameOf(s, k.aegis);
+    k.type = std::max(0, skillinfo::type(id));
+    k.most = skilltree::maxLevel(last, id);
+    const auto levelOf = [&](int need) {
+        const auto at = levels.find(need);
+        return at == levels.end() ? 0 : at->second;
+    };
+    if (skillinfo::quest(id)) {
+        k.lock = kw::Lock::Quest;
+    } else if (skillinfo::wedding(id)) {
+        k.lock = kw::Lock::Wedding;
+    } else if (skillinfo::soulLink(id)) {
+        k.lock = kw::Lock::SoulLink;
+    } else {
+        std::string needs;  // the requirements not met yet
+        for (const auto& [need, lv] : skilltree::needs(last, id)) {
+            if (levelOf(need) >= lv) continue;
+            const std::string aegis = aegisById(s, need);
+            needs += (needs.empty() ? "" : ", ") + (aegis.empty() ? "#" + std::to_string(need) : nameOf(s, aegis)) +
+                     " " + std::to_string(lv);
+        }
+        k.needs = needs;
+        k.lock = needs.empty() ? kw::Lock::Earlier : kw::Lock::Needs;
+        if (k.lock == kw::Lock::Earlier) {  // all met and still not sent: the job before's points come first
+            const int home = skilltree::homeJob(chain, id);
+            const auto at = std::find(chain.begin(), chain.end(), home);
+            const int before = at != chain.end() && at != chain.begin() ? *(at - 1) : chain.front();
+            const char* named = charblock::jobName(before);
+            k.lockJob = named && *named ? named : "#" + std::to_string(before);
+        }
+    }
+    const float side = float(kw::iconSide(s.scale));
+    k.icon = k.aegis.empty() ? nullptr : clienttables::icon(hotbar::lowered(k.aegis), int(side), 4 * s.scale);
+    return k;
+}
+
 void readData(State& s) {
     readSkills(s.raw);
     const int job = int(read32(kJob));
     const std::vector<int> chain = skilltree::chain(job);
     std::map<int, std::vector<int>> byJob;  // the tab's job to the skills' indices
+    std::map<int, int> levels;              // 3.0.11-beta.223: the sent skills' learned levels
     for (size_t i = 0; i < s.raw.size(); ++i) {
         int home = skilltree::homeJob(chain, s.raw[i].id);
         if (home < 0) home = chain.back();
         byJob[home].push_back(int(i));
+        levels[s.raw[i].id] = s.raw[i].level;
+    }
+    const int last = chain.back();
+    // 3.0.11-beta.223: the tree's skills the server has not sent - on their job's tab, after the sent ones
+    std::map<int, std::vector<kw::Skill>> closed;
+    std::string earlierHome, earlierBefore;
+    for (int id : skilltree::skills(last)) {
+        if (levels.count(id)) continue;
+        int home = skilltree::homeJob(chain, id);
+        if (home < 0) home = last;
+        kw::Skill k = closedSkill(s, id, last, chain, levels);
+        if (k.lock == kw::Lock::Earlier && earlierHome.empty()) {
+            const char* named = charblock::jobName(home);
+            earlierHome = named && *named ? named : "#" + std::to_string(home);
+            earlierBefore = k.lockJob;
+        }
+        closed[home].push_back(std::move(k));
     }
     s.data.tabs.clear();
     s.tabRaw.clear();
-    const int last = chain.back();
     const float side = float(kw::iconSide(s.scale));
     for (int j : chain) {
         auto it = byJob.find(j);
-        if (it == byJob.end()) continue;
-        std::vector<int>& list = it->second;
+        const auto shut = closed.find(j);
+        if (it == byJob.end() && shut == closed.end()) continue;
+        std::vector<int> list = it == byJob.end() ? std::vector<int>{} : it->second;
         std::stable_sort(list.begin(), list.end(), [&](int a, int b) {
             return skilltree::order(j, s.raw[size_t(a)].id) < skilltree::order(j, s.raw[size_t(b)].id);
         });
@@ -274,10 +334,20 @@ void readData(State& s) {
             k.icon = r.aegis.empty() ? nullptr : clienttables::icon(hotbar::lowered(r.aegis), int(side), 4 * s.scale);
             tab.skills.push_back(k);
         }
+        if (shut != closed.end())  // after the sent ones (their indices past tabRaw's: no raw skill)
+            for (kw::Skill& k : shut->second) tab.skills.push_back(std::move(k));
         s.data.tabs.push_back(tab);
         s.tabRaw.push_back(list);
     }
     s.data.points = int(read32(kSkillPoints));
+    // 3.0.11-beta.223: why skills are closed - the job before's points first (player_skillup_limit), a Novice's Basic
+    // Skill 9 before a job change
+    s.data.notice.clear();
+    const auto basic = levels.find(1);
+    if (!earlierHome.empty())
+        s.data.notice = settings::fmt(say(settings::Text::SkillsEarlierNotice), {earlierHome, earlierBefore});
+    else if (chain.size() == 1 && basic != levels.end() && basic->second < 9 && skilltree::maxLevel(last, 1) == 9)
+        s.data.notice = say(settings::Text::SkillsBasicNotice);
     if (!s.data.tabs.empty()) s.show.tab = std::clamp(s.show.tab, 0, int(s.data.tabs.size()) - 1);
 }
 
@@ -297,6 +367,10 @@ kw::Texts texts() {
     t.range = say(settings::Text::SkillsRange);
     t.needs = say(settings::Text::SkillsNeeds);
     t.unlearned = say(settings::Text::SkillsUnlearned);
+    t.quest = say(settings::Text::SkillsQuest);
+    t.wedding = say(settings::Text::SkillsWedding);
+    t.soulLink = say(settings::Text::SkillsSoulLink);
+    t.earlier = say(settings::Text::SkillsEarlier);
     t.use = say(settings::Text::SkillsPadUse);
     t.raise = say(settings::Text::SkillsPadRaise);
     t.assign = say(settings::Text::SkillsPadAssign);
@@ -672,7 +746,7 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
             s.show.focus = h.index;
             if (m == WM_LBUTTONDBLCLK)
                 use(s, h.index, "a double click");
-            else
+            else if (rawAt(s, h.index))  // 3.0.11-beta.223: a closed skill is not dragged
                 kw::pressed(s.press, h.index, tx, ty);  // 3.0.11-beta.106: a drag once it moves
             break;
         case kw::Part::Title:

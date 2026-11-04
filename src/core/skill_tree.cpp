@@ -88,4 +88,11 @@ std::vector<std::pair<int, int>> needs(int job, int id) {
     return out;
 }
 
+std::vector<int> skills(int job) {
+    std::vector<int> out;
+    for (const Entry& e : kTree)
+        if (e.job == job) out.push_back(e.id);
+    return out;
+}
+
 }  // namespace uagfx::skilltree

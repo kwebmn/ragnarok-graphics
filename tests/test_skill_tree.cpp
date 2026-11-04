@@ -1,8 +1,10 @@
 // 3.0.11-beta.96 («Навички», the concept's skills window): the server's skill tree (core/skill_tree, generated from
 // db/skill_tree.txt) - a skill's most levels for a job, the jobs a character's tabs come from, the tab a skill sits
 // on (the job it first comes with) and what it needs
+#include <algorithm>
 #include <vector>
 
+#include "core/skill_info.hpp"
 #include "core/skill_tree.hpp"
 #include "test.hpp"
 
@@ -33,4 +35,18 @@ TEST(skill_tree_what_a_skill_needs) {
     CHECK(magnum.size() == 1 && magnum[0].first == 5 && magnum[0].second == 5);
     CHECK(skilltree::needs(1, 5).empty());
     CHECK(skilltree::needs(4008, 359).empty());  // Frenzy's «50, 0» is no need
+}
+
+// 3.0.11-beta.223: every skill of a job's tree in the server's order, and what the server never sends by the
+// requirements (core/skill_info from db/skill_db.txt)
+TEST(skill_tree_a_jobs_skills_and_how_they_are_learned) {
+    const std::vector<int> knight = skilltree::skills(7);
+    CHECK(knight.size() == 26 && knight.front() == 1);
+    CHECK(std::find(knight.begin(), knight.end(), 62) != knight.end());  // Bowling Bash
+    CHECK(skilltree::skills(31000).empty());
+    CHECK_EQ(skillinfo::type(5), 1);   // Bash: on an enemy
+    CHECK_EQ(skillinfo::type(2), 0);   // Sword Mastery: passive
+    CHECK_EQ(skillinfo::type(13000), -1);
+    CHECK(skillinfo::quest(1001) && skillinfo::quest(142) && !skillinfo::quest(5));  // Charge Attack, First Aid
+    CHECK(skillinfo::wedding(410) && skillinfo::soulLink(495));  // Call Baby, Onehand Quicken
 }

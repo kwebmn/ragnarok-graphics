@@ -771,6 +771,7 @@ enum class Text : uint16_t {
     GuildEdit, GuildPositionsHead, GuildRightInvite, GuildRightExpel, GuildSkillPoints,  // 3.0.11-beta.220
     HomunSkillsHead,  // 3.0.11-beta.221
     InterfaceMinimapClassic, InterfaceMinimapClassicHint,  // 3.0.11-beta.222
+    SkillsQuest, SkillsWedding, SkillsSoulLink, SkillsEarlier, SkillsEarlierNotice, SkillsBasicNotice,  // .223
     Count
 };
 
