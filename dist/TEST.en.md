@@ -1,3 +1,8 @@
+# uaRO Graphics 3.0.11-beta.228 — what's new
+
+- **Print Screen no longer crashes** (R-P6U4YJ): at some sizes of the game's window (a width not divisible by 4) the screenshot read past the picture's end and the game fell. Now it is saved at any size.
+- «Skills»: skills the client's name table lacks show the server's name instead of «Skill not defined !!»; a right click on one no longer opens an empty «Unknown-Skill» card.
+
 # uaRO Graphics 3.0.11-beta.227 — what's new
 
 **«Skills» (Alt+S): the controller in the tree and the plan** (the fifth stage of the new skills window):
