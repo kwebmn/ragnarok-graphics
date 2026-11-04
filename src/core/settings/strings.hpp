@@ -775,6 +775,8 @@ enum class Text : uint16_t {
     SkillsViewList, SkillsViewTree, SkillsPath,  // 3.0.11-beta.224
     SkillsPlan, SkillsPlanApply, SkillsPlanApplying, SkillsPlanReset, SkillsPlanned, SkillsPlanStopped,  // .225
     SkillsNextTab, SkillsAfterChange,  // 3.0.11-beta.226
+    CardNoDescription, CardMostLevel,  // 3.0.11-beta.229
+    SkillsLevelOf, SkillsNeedsHead, SkillsUnlocks, SkillsSideHint,  // 3.0.11-beta.229
     Count
 };
 

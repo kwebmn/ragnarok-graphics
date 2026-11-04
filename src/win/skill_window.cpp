@@ -477,6 +477,10 @@ kw::Texts texts() {
     t.reset = say(settings::Text::SkillsPlanReset);
     t.planned = say(settings::Text::SkillsPlanned);
     t.afterChange = say(settings::Text::SkillsAfterChange);
+    t.levelOf = say(settings::Text::SkillsLevelOf);
+    t.needsHead = say(settings::Text::SkillsNeedsHead);
+    t.unlocks = say(settings::Text::SkillsUnlocks);
+    t.sideHint = say(settings::Text::SkillsSideHint);
     t.use = say(settings::Text::SkillsPadUse);
     t.raise = say(settings::Text::SkillsPadRaise);
     t.assign = say(settings::Text::SkillsPadAssign);

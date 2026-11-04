@@ -59,30 +59,35 @@ skillwin::Texts texts() {
     t.list = "Список";
     t.tree = "Дерево";
     t.path = "До {1} — ще очок: {2}";
+    t.levelOf = "Рівень {1} з {2}";
+    t.needsHead = "Потрібно";
+    t.unlocks = "Відкриває";
+    t.sideHint = "Наведіть на навичку";
     return t;
 }
 
 }  // namespace
 
-TEST(skill_tree_view_columns_chips_and_links) {
+TEST(skill_tree_view_columns_and_links) {
     const skillwin::Data d = knight();
     const skilltreeview::Plan p = skilltreeview::arrange(d, 1, 1.0f);
     CHECK(p.nodes.size() == 5);
     const auto col = [&](int index) { return p.nodes[size_t(index)].col; };
     CHECK(col(0) == 0 && col(1) == 1 && col(2) == 2 && col(3) == 0 && col(4) == 1);  // Bowling Bash after Quicken
     CHECK(p.nodes[1].row == p.nodes[0].row && p.nodes[2].row == p.nodes[1].row);    // a chain on one row
-    // the chips: Two-Handed (for Quicken and Bowling Bash), Bash, Magnum Break - once each, in a column of their own
-    CHECK(p.chips.size() == 3 && p.chips[0].id == 3 && p.chips[0].level == 10 && p.chips[0].name == "Two-Handed Sword "
-                                                                                                   "Mastery");
-    CHECK(p.nodes[0].box.x >= p.chips[0].box.x + p.chips[0].box.w);
-    int toBowling = 0, met = 0;
+    // 3.0.11-beta.229: no chips - the jobs before's requirements only in the side panel; links on the tab only
+    CHECK(p.chips.empty());
+    int toBowling = 0;
     for (const skilltreeview::Link& l : p.links)
         if (l.to == 4) {
             ++toBowling;
-            met += l.met;
+            CHECK(l.from == 3 && l.met);  // Twohand Quicken 10
+            const skilltreeview::Route r = skilltreeview::route(p, l, 1.0f);
+            CHECK(r.n == 4 && r.x[0] == p.nodes[3].box.x + p.nodes[3].box.w && r.x[3] == p.nodes[4].box.x);
+            CHECK(r.x[1] > r.x[0] && r.x[1] < r.x[3] && r.x[1] == r.x[2]);  // down the gutter between the columns
         }
-    CHECK(toBowling == 4 && met == 4);  // all met: Bowling Bash only waits for the server (a point)
-    CHECK(p.w > p.nodes[2].box.x + p.nodes[2].box.w && p.h > p.chips[2].box.y);
+    CHECK(toBowling == 1);
+    CHECK(p.w > p.nodes[2].box.x + p.nodes[2].box.w);
     // twice the scale: twice the boxes
     const skilltreeview::Plan big = skilltreeview::arrange(d, 1, 2.0f);
     CHECK(std::abs(big.nodes[2].box.x - 2 * p.nodes[2].box.x) < 0.01f);
@@ -123,7 +128,8 @@ TEST(skill_tree_view_in_the_window) {
         return std::any_of(w.begin(), w.end(), [&](const skillwin::Words& x) { return x.text == text; });
     };
     CHECK(has("До Spear Stab — ще очок: 6") && has("Список") && has("Дерево") && has("Spear Stab") && has("1/10"));
-    CHECK(has("Bash 10") && !has(t.drag));
+    CHECK(has("Рівень 0 з 10") && has("Потрібно") && has("Pierce 5") && has("0/5") && has(t.drag));
+    CHECK(L.side.w > 0 && L.side.x >= L.view.x + L.view.w);
     panel::Picture p;
     p.width = L.w;
     p.height = L.h;
@@ -279,4 +285,29 @@ TEST(skill_tree_view_the_d_pad_goes_the_way_it_points) {
     CHECK_EQ(skillwin::treeStep(L, 3, 1, 0), 4);
     CHECK_EQ(skillwin::treeStep(L, 4, -1, 0), 3);
     CHECK_EQ(skillwin::treeStep(L, 3, 0, -1), 0);
+}
+
+// 3.0.11-beta.229 (R-EQDQWH: «дерево в котором невозможно разобраться»): a link past the next column runs along the
+// gap over its skill's row, never under the skills between
+TEST(skill_tree_view_a_far_link_runs_through_the_gaps) {
+    skillwin::Data d;
+    d.points = 1;
+    skillwin::Tab tab{"Knight", {}};
+    tab.skills.push_back(skill(63, "Peco Peco Ride", 1, 1));
+    tab.skills.push_back(skill(55, "Spear Mastery", 1, 10));
+    tab.skills.push_back(skill(56, "Pierce", 1, 10, {{55, 1}}));
+    tab.skills.push_back(skill(58, "Spear Stab", 3, 10, {{56, 1}}));
+    tab.skills.push_back(skill(57, "Brandish Spear", 0, 10, {{63, 1}, {58, 3}}));
+    d.tabs.push_back(tab);
+    const skilltreeview::Plan p = skilltreeview::arrange(d, 0, 1.0f);
+    const skilltreeview::Node& ride = p.nodes[0];
+    const skilltreeview::Node& brandish = p.nodes[4];
+    CHECK(brandish.col == 3 && ride.col == 0);
+    for (const skilltreeview::Link& l : p.links) {
+        if (l.from != 0 || l.to != 4) continue;
+        const skilltreeview::Route r = skilltreeview::route(p, l, 1.0f);
+        CHECK(r.n == 6 && r.y[2] == r.y[3] && r.y[2] < brandish.box.y && r.y[2] > brandish.box.y - 10);
+        for (const skilltreeview::Node& n : p.nodes)  // the lane along the gap crosses no skill
+            CHECK(!(r.y[2] > n.box.y && r.y[2] < n.box.y + n.box.h && n.box.x < r.x[3] && n.box.x + n.box.w > r.x[2]));
+    }
 }

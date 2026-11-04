@@ -502,6 +502,15 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
             s.told = w;
             tell(s, "raised by a click", w);
         }
+        // 3.0.11-beta.229 (R-ZUY4CM: «описание под плашкой меню»): a right click that showed a card (a skill's, a
+        // thing's) keeps the card over the window clicked, also when the card was open already and only changed
+        if (m == WM_RBUTTONDOWN)
+            for (const Win card : {Win::SkillCard, Win::ItemCard})
+                if (card != w && shown(card) && s.stack.top() != card) {
+                    s.stack.raise(card);
+                    s.told = card;
+                    tell(s, "on top after a right click", card);
+                }
         return true;
     }
     return false;

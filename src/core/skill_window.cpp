@@ -13,7 +13,7 @@ namespace uagfx::skillwin {
 namespace {
 
 // The concept's sizes at scale 1: 700 wide, the title 46, the tabs 32, a row 46, the footer 40
-constexpr float kW = 700, kTreeW = 900, kTitleH = 46, kTabsH = 32, kRowH = 46, kFooterH = 40, kSide = 16;
+constexpr float kW = 700, kTreeW = 1000, kSideW = 268, kTitleH = 46, kTabsH = 32, kRowH = 46, kFooterH = 40, kSide = 16;
 constexpr float kDot = 7, kDotStep = 10, kDotsMost = 10 * kDotStep - (kDotStep - kDot), kLevelW = 46, kPlus = 24;
 constexpr float kArrowW = 18, kArrowH = 22, kUseNumW = 26, kGlyph = 17;
 constexpr uint32_t kCard = 0x10141C, kWhite = 0xFFFFFF, kGold = 0xF3C653, kGold2 = 0xC9A55B;
@@ -114,25 +114,6 @@ void footerEnd(Layout& L, const Show& sh, const Texts& t, const Measure& m) {
     L.h = int(std::ceil(L.glass.h));
 }
 
-// 3.0.11-beta.224 (stage 2): a link of «Дерево» in the content's pixels - from its requirement's right to the skill's
-// left, the links into one skill spread down its left edge; an elbow at x - 14
-struct Elbow {
-    float x1, y1, xm, x2, y2;
-};
-Elbow elbowOf(const Layout& L, size_t link) {
-    const skilltreeview::Link& l = L.plan.links[link];
-    const panel::Box& to = L.plan.nodes[size_t(l.to)].box;
-    const panel::Box& from = l.chip ? L.plan.chips[size_t(l.from)].box : L.plan.nodes[size_t(l.from)].box;
-    int k = 0, n = 0;
-    for (size_t i = 0; i < L.plan.links.size(); ++i)
-        if (L.plan.links[i].to == l.to) {
-            if (i < link) ++k;
-            ++n;
-        }
-    const float y2 = to.y + to.h * float(k + 1) / float(n + 1);
-    return Elbow{from.x + from.w, from.y + from.h / 2, to.x - 14 * L.s, to.x, y2};
-}
-
 bool inView(const Layout& L, const panel::Box& b) {  // a window box wholly in the tree's view
     return b.x >= L.view.x - 0.5f && b.y >= L.view.y - 0.5f && b.x + b.w <= L.view.x + L.view.w + 0.5f &&
            b.y + b.h <= L.view.y + L.view.h + 0.5f;
@@ -156,29 +137,24 @@ void paintTree(panel::Picture& out, const Layout& L, const Data& d, const Show& 
     const bool litOk = lit >= 0 && lit < int(tab->skills.size());
     std::set<int> chain = litOk ? skilltreeview::chain(d, tab->skills[size_t(lit)].id) : std::set<int>{};
     if (litOk) chain.insert(tab->skills[size_t(lit)].id);
-    for (size_t i = 0; i < L.plan.links.size(); ++i) {
-        const skilltreeview::Link& l = L.plan.links[i];
-        const Elbow e = elbowOf(L, i);
-        const int fromId = l.chip ? L.plan.chips[size_t(l.from)].id : tab->skills[size_t(l.from)].id;
-        const bool on = chain.count(tab->skills[size_t(l.to)].id) && chain.count(fromId);
+    for (const skilltreeview::Link& l : L.plan.links) {  // 3.0.11-beta.229: through the gaps, no levels on them
+        const skilltreeview::Route r = skilltreeview::route(L.plan, l, s);
+        const bool on = chain.count(tab->skills[size_t(l.to)].id) && chain.count(tab->skills[size_t(l.from)].id);
         const uint32_t rgb = on ? kGold : l.met ? kGold2 : kWhite;
-        const float a = on ? 0.95f : l.met ? 0.5f : 0.16f, t = (on ? 2.0f : 1.4f) * s;
-        panel::roundRect(c, panel::Box{e.x1, e.y1 - t / 2, std::max(0.0f, e.xm - e.x1 + t / 2), t}, 0, rgb, a);
-        const float top = std::min(e.y1, e.y2) - t / 2, bottom = std::max(e.y1, e.y2) + t / 2;
-        panel::roundRect(c, panel::Box{e.xm - t / 2, top, t, bottom - top}, 0, rgb, a);
-        panel::roundRect(c, panel::Box{e.xm, e.y2 - t / 2, e.x2 - e.xm, t}, 0, rgb, a);
+        const float a = on ? 0.95f : litOk ? 0.12f : l.met ? 0.45f : 0.2f, t = (on ? 2.0f : 1.3f) * s;
+        for (int k = 0; k + 1 < r.n; ++k) {
+            const float x0 = std::min(r.x[k], r.x[k + 1]), x1 = std::max(r.x[k], r.x[k + 1]);
+            const float y0 = std::min(r.y[k], r.y[k + 1]), y1 = std::max(r.y[k], r.y[k + 1]);
+            panel::roundRect(c, panel::Box{x0 - t / 2, y0 - t / 2, x1 - x0 + t, y1 - y0 + t}, 0, rgb, a);
+        }
     }
-    for (const skilltreeview::Chip& ch : L.plan.chips)
-        panel::roundRect(c, ch.box, 6 * s, kWhite, chain.count(ch.id) ? 0.10f : 0.04f, chain.count(ch.id) ? kGold
-                                                                                                          : kWhite,
-                         chain.count(ch.id) ? 0.8f : 0.2f, 1.0f * s);
     for (const skilltreeview::Node& n : L.plan.nodes) {
         const Skill& k = tab->skills[size_t(n.index)];
         const bool closed = k.lock != Lock::None, learned = k.level > 0;
-        float fillA = closed ? 0.03f : learned ? 0.10f : 0.06f;
+        float fillA = closed ? 0.05f : learned ? 0.10f : 0.07f;
         if (n.index == sh.hoverRow || n.index == sh.hoverPlus) fillA += 0.06f;
         uint32_t edge = learned ? kGold : kWhite;
-        float edgeA = closed ? 0.10f : learned ? 0.6f : 0.25f, edgeW = 1.0f * s;
+        float edgeA = closed ? 0.18f : learned ? 0.6f : 0.3f, edgeW = 1.0f * s;
         if (chain.count(k.id)) {
             edge = kGold;
             edgeA = 0.95f;
@@ -194,7 +170,7 @@ void paintTree(panel::Picture& out, const Layout& L, const Data& d, const Show& 
         }
         panel::roundRect(c, n.box, 8 * s, learned ? kGold2 : kWhite, fillA, edge, edgeA, edgeW);
         const panel::Box icon{n.box.x + 6 * s, n.box.y + (n.box.h - 26 * s) / 2, 26 * s, 26 * s};
-        if (k.icon && k.icon->width > 0) put(c, *k.icon, icon, closed ? 0.3f : learned ? 1.0f : 0.5f);
+        if (k.icon && k.icon->width > 0) put(c, *k.icon, icon, closed ? 0.45f : learned ? 1.0f : 0.6f);
         const float px = n.box.x + n.box.w - skilltreeview::kPlus * s * 0.65f, ps = skilltreeview::kPlus * s;
         if (plusOn(d, k, sh.plan))
             panel::roundRect(c, panel::Box{px, n.box.y - 5 * s, ps, ps}, 5 * s, sh.plan ? kPlanBlue : kGold,
@@ -233,6 +209,69 @@ void paintTree(panel::Picture& out, const Layout& L, const Data& d, const Show& 
         const float w = std::max(L.scrollH.w * L.view.w / L.plan.w, 16 * s);
         const float x = L.scrollH.x + (L.scrollH.w - w) * (L.maxX > 0 ? L.scrollX / L.maxX : 0);
         panel::roundRect(out, panel::Box{x, L.scrollH.y, w, L.scrollH.h}, L.scrollH.h / 2, kWhite, 0.28f);
+    }
+}
+
+// 3.0.11-beta.229 (R-EQDQWH): the side panel of «Дерево» - the skill pointed at (else the controller's): its level,
+// what it is or why closed, every requirement with its own level (the jobs before's too), what it opens, the path's
+// points
+void sideWords(std::vector<Words>& out, const Layout& L, const Data& d, const Show& sh, const Texts& t) {
+    const float s = L.s;
+    const panel::Box& p = L.side;
+    if (p.w <= 0) return;
+    const Tab* tab = tabOf(d, L.tab);
+    const int lit = litIndex(sh);
+    const float x = p.x + 14 * s, w = p.w - 28 * s;
+    float y = p.y + 12 * s;
+    const auto line = [&](const std::string& text, uint32_t rgb, float px, bool bold, float h) {
+        out.push_back(Words{panel::Box{x, y, w, h * s}, text, rgb, px * s, bold, Align::Left});
+        y += h * s;
+    };
+    if (!tab || lit < 0 || lit >= int(tab->skills.size())) {
+        if (!t.sideHint.empty()) line(t.sideHint, kFaint, 12, false, 20);
+        return;
+    }
+    const Skill& k = tab->skills[size_t(lit)];
+    line(k.name, kText, 14.5f, true, 24);
+    std::string lv = fill2(t.levelOf, std::to_string(k.level), std::to_string(std::max(k.most, k.level)));
+    if (skillplan::extra(k) > 0 && !t.planned.empty()) lv += kDotSep + fill(t.planned, std::to_string(k.target));
+    line(lv, skillplan::extra(k) > 0 ? kPlanBlue : k.level > 0 ? kGold2 : kMuted, 12, false, 20);
+    if (k.lock != Lock::Needs) line(info(k, t), kMuted, 11.5f, false, 22);
+    y += 6 * s;
+    if (!k.req.empty()) {
+        line(t.needsHead, kFaint, 11, true, 18);
+        for (const auto& [need, want] : k.req) {
+            const Skill* r = skilltreeview::find(d, need);
+            const int have = skilltreeview::levelOf(d, need);
+            const bool met = have >= want;
+            const std::string name = (r ? r->name : "#" + std::to_string(need)) + " " + std::to_string(want);
+            out.push_back(Words{panel::Box{x, y, w - 46 * s, 19 * s}, name, met ? kText : 0xC9D0DC, 12 * s, false,
+                                Align::Left});
+            out.push_back(Words{panel::Box{x + w - 46 * s, y, 46 * s, 19 * s},
+                                met ? "\xE2\x9C\x93" : std::to_string(have) + "/" + std::to_string(want),
+                                met ? kGold : kRose, 12 * s, true, Align::Right});
+            y += 19 * s;
+        }
+        y += 6 * s;
+    }
+    std::string opens;  // what it opens, on any tab
+    int count = 0;
+    for (const Tab& other : d.tabs)
+        for (const Skill& o : other.skills)
+            for (const auto& [need, want] : o.req)
+                if (need == k.id && count < 5) {
+                    opens += (opens.empty() ? "" : ", ") + o.name;
+                    ++count;
+                }
+    if (!opens.empty() && y + 38 * s < p.y + p.h) {
+        line(t.unlocks, kFaint, 11, true, 18);
+        line(opens, kMuted, 11.5f, false, 20);
+    }
+    const bool byPoints = k.lock != Lock::Quest && k.lock != Lock::Wedding && k.lock != Lock::SoulLink;
+    const int cost = k.level <= 0 && byPoints ? skilltreeview::pathCost(d, k.id) : 0;
+    if (cost > 0 && !t.path.empty()) {
+        y = std::max(y, p.y + p.h - 32 * s);
+        line(fill2(t.path, k.name, std::to_string(cost)), cost > d.points ? kRose : kGold2, 12, true, 20);
     }
 }
 
@@ -328,7 +367,10 @@ Layout layout(int x, int y, float scale, const Data& d, const Show& sh, const Te
         listY += 26 * s + 8 * s;
     }
     if (sh.tree) {  // 3.0.11-beta.224: «Дерево»
-        L.view = panel::Box{side, listY, w - 2 * side - 10 * s, float(shown) * kRowH * s - 10 * s};
+        // 3.0.11-beta.229 (R-EQDQWH): the side panel of the skill pointed at on the right
+        const float sideW = kSideW * s;
+        L.view = panel::Box{side, listY, w - 2 * side - 10 * s - sideW - 14 * s, float(shown) * kRowH * s - 10 * s};
+        L.side = panel::Box{w - side - sideW, listY, sideW, float(shown) * kRowH * s};
         L.list = panel::Box{side, listY, w - 2 * side, float(shown) * kRowH * s};
         L.plan = skilltreeview::arrange(d, L.tab, s);
         L.maxX = std::max(0.0f, L.plan.w - L.view.w);
@@ -478,6 +520,7 @@ void paint(panel::Picture& out, const Layout& L, const Data& d, const Show& sh) 
         }
     const Tab* tab = tabOf(d, L.tab);
     if (L.tree) paintTree(out, L, d, sh);
+    if (L.side.w > 0) panel::roundRect(out, L.side, 9 * s, kWhite, 0.035f, kWhite, 0.09f, 1.0f * s);
     for (size_t i = 0; i < L.rows.size() && tab && !L.tree; ++i) {
         const int index = L.first + int(i);
         const Skill& k = tab->skills[size_t(index)];
@@ -567,7 +610,7 @@ std::vector<Words> words(const Layout& L, const Data& d, const Show& sh, const T
             const panel::Box& r = L.rows[i];
             const panel::Box name{r.x + 38 * s, r.y + 4 * s, r.w - 44 * s, 17 * s};
             const panel::Box level{r.x + 38 * s, r.y + 21 * s, r.w - 44 * s, 15 * s};
-            const uint32_t rgb = k.lock != Lock::None ? kFaint : k.level > 0 ? kText : kMuted;
+            const uint32_t rgb = k.lock != Lock::None ? kMuted : k.level > 0 ? kText : 0xC9D0DC;
             if (inView(L, name)) out.push_back(Words{name, k.name, rgb, 12 * s, true, Align::Left});
             const bool planned = skillplan::extra(k) > 0;
             const int shownLv = planned ? k.target : k.level;
@@ -579,20 +622,7 @@ std::vector<Words> words(const Layout& L, const Data& d, const Show& sh, const T
             if (L.pluses[i].w > 0 && inView(L, L.pluses[i]))
                 out.push_back(Words{L.pluses[i], "+", kCard, 13 * s, true, Align::Center});
         }
-        for (const skilltreeview::Chip& ch : L.plan.chips) {
-            const panel::Box b = toWindow(L, ch.box);
-            const panel::Box in{b.x + 8 * s, b.y, b.w - 12 * s, b.h};
-            if (inView(L, b))
-                out.push_back(Words{in, ch.name + " " + std::to_string(ch.level), kMuted, 11 * s, false, Align::Left});
-        }
-        for (size_t i = 0; i < L.plan.links.size(); ++i) {  // the level each link needs, at its end
-            const skilltreeview::Link& l = L.plan.links[i];
-            const Elbow e = elbowOf(L, i);
-            const panel::Box b = toWindow(L, panel::Box{e.xm + 1 * s, e.y2 - 13 * s, e.x2 - e.xm - 1 * s, 11 * s});
-            if (inView(L, b))
-                out.push_back(Words{b, std::to_string(l.level), l.met ? kGold2 : kRose, 9.5f * s, true,
-                                    Align::Center});
-        }
+        sideWords(out, L, d, sh, t);
     }
     for (size_t i = 0; i < L.rows.size() && tab && !L.tree; ++i) {
         const Skill& k = tab->skills[size_t(L.first) + i];
@@ -629,21 +659,6 @@ std::vector<Words> words(const Layout& L, const Data& d, const Show& sh, const T
     out.push_back(Words{panel::Box{side, L.footer.y, m(points, 12 * s, true) + 4, L.footer.h}, points,
                         planCost > 0 ? kPlanBlue : d.points > 0 ? kGold : kFaint, 12 * s, true, Align::Left});
     if (sh.plan) return out;  // its buttons in the hints' place
-    if (L.tree && tab && !t.path.empty()) {  // 3.0.11-beta.224: what the path to a closed skill costs
-        const int lit = litIndex(sh);
-        if (lit >= 0 && lit < int(tab->skills.size()) && tab->skills[size_t(lit)].level <= 0) {
-            const Skill& k = tab->skills[size_t(lit)];
-            const int cost = skilltreeview::pathCost(d, k.id);
-            if (cost > 0 && k.lock != Lock::Quest && k.lock != Lock::Wedding && k.lock != Lock::SoulLink) {
-                const std::string line = fill2(t.path, k.name, std::to_string(cost));
-                const float lw = m(line, 12 * s, true) + 4;
-                const float lx = side + m(points, 12 * s, true) + 24 * s;
-                out.push_back(Words{panel::Box{lx, L.footer.y, lw, L.footer.h}, line, cost > d.points ? kRose : kGold2,
-                                    12 * s, true, Align::Left});
-                if (!sh.pad) return out;  // in the drag hint's place
-            }
-        }
-    }
     if (!sh.pad) {
         const float dw = m(t.drag, 11.5f * s, false) + 2;
         out.push_back(Words{panel::Box{L.footer.w - side - dw, L.footer.y, dw, L.footer.h}, t.drag, kFaint, 11.5f * s,

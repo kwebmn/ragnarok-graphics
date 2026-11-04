@@ -14,6 +14,9 @@
 #include "core/hotbar_panel.hpp"
 #include "core/info_card.hpp"
 #include "core/settings/strings.hpp"
+#include "core/skill_costs.hpp"
+#include "core/skill_info.hpp"
+#include "core/skill_tree.hpp"
 #include "core/ui_style.hpp"
 #include "pad/win/game_window.hpp"
 #include "win/client_tables.hpp"
@@ -250,6 +253,51 @@ std::vector<ic::LearnedSkill> sessionSkills() {
     return out;
 }
 
+// 3.0.11-beta.229 (R-EQDQWH: «на некоторых скилах нету описания» - Parry has none in the game's table): what the
+// driver knows of a skill instead - what it is used on, its levels, SP by level, what it needs (the server's tables)
+std::vector<std::string> skillFacts(State& s, const std::string& aegis) {
+    std::vector<std::string> out;
+    int id = 0;
+    for (int i = 1; i < 0x3FD && !id; ++i)
+        if (clienttables::skillAegis(i) == aegis) id = i;
+    if (!id) return out;
+    const std::vector<int> jobs = skilltree::chain(int(read32(0x771148 + 0xE44)));
+    const int job = jobs.empty() ? 0 : jobs.back();
+    out.push_back(say(settings::Text::CardNoDescription));
+    const int type = skillinfo::type(id);
+    if (type >= 0) {
+        const settings::Text t = type == 0           ? settings::Text::SkillsPassive
+                                 : (type & 32) != 0 ? settings::Text::SkillsTrap
+                                 : (type & 16) != 0 ? settings::Text::SkillsAlly
+                                 : (type & 2) != 0  ? settings::Text::SkillsGround
+                                 : (type & 4) != 0  ? settings::Text::SkillsSelf
+                                                    : settings::Text::SkillsEnemy;
+        out.push_back(say(t));
+    }
+    const int most = skilltree::maxLevel(job, id);
+    if (most > 0) out.push_back(settings::fmt(say(settings::Text::CardMostLevel), {std::to_string(most)}));
+    std::string sp;
+    for (int lv = 1; lv <= std::max(1, most) && lv <= 10; ++lv) {
+        const int v = skillcost::sp(id, lv);
+        if (v < 0) break;
+        sp += (sp.empty() ? "" : " / ") + std::to_string(v);
+    }
+    if (!sp.empty()) out.push_back(settings::fmt(say(settings::Text::SkillsSp), {sp}));
+    std::string needs;
+    for (const auto& [need, lv] : skilltree::needs(job, id)) {
+        const std::string a = clienttables::skillAegis(need);
+        const auto& names = clienttables::skillNames();
+        const auto n = names.find(a);
+        const char* server = skillinfo::name(need);
+        const std::string named = n != names.end() ? utf8(s, hotbar::spaced(n->second))
+                                  : server && *server ? std::string(server)
+                                                      : "#" + std::to_string(need);
+        needs += (needs.empty() ? "" : ", ") + named + " " + std::to_string(lv);
+    }
+    if (!needs.empty()) out.push_back(settings::fmt(say(settings::Text::SkillsNeeds), {needs}));
+    return out;
+}
+
 void skillCard(State& s, One& o, uint32_t window) {
     // 3.0.11-beta.200: the game's card keeps the skill's name as shown (FUN_00505d60's) - its AEGIS name and level
     // the character's skill of that name (core/info_card skillOfCard)
@@ -273,6 +321,7 @@ void skillCard(State& s, One& o, uint32_t window) {
         if (!c.lines.empty() && c.lines.front() == utf8(s, n != names.end() ? hotbar::spaced(n->second) : aegis))
             c.lines.erase(c.lines.begin());  // its first line its name again
     }
+    if (c.lines.empty()) c.lines = skillFacts(s, aegis);  // 3.0.11-beta.229
     c.icon = clienttables::icon(hotbar::lowered(aegis), ic::iconSide(s.scale), 4 * s.scale);
     o.card = c;
     if (s.told++ < 40)

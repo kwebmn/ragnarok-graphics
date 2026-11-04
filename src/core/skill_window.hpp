@@ -69,6 +69,8 @@ struct Texts {
     // 3.0.11-beta.225 (stage 3): «План», «Застосувати», «Застосовується…», «Скинути», «У плані: {1}»
     std::string plan, apply, applying, reset, planned;
     std::string afterChange;  // 3.0.11-beta.226: «Після зміни професії»
+    // 3.0.11-beta.229: the side panel - «Рівень {1} з {2}», «Потрібно», «Відкриває», «Наведіть на навичку»
+    std::string levelOf, needsHead, unlocks, sideHint;
 };
 
 bool canRaise(const Skill& k, int points);  // a free point and the server's leave, below its most
@@ -113,6 +115,7 @@ struct Layout {
     std::vector<panel::Box> choices;      // 3.0.11-beta.226: «Наступна»'s jobs
     bool tree = false;
     panel::Box view, scrollH;
+    panel::Box side;  // 3.0.11-beta.229: the side panel
     skilltreeview::Plan plan;
     float scrollX = 0, scrollY = 0, maxX = 0, maxY = 0;
     std::vector<panel::Box> tabs;

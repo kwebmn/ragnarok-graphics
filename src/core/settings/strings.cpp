@@ -7157,6 +7157,14 @@ constexpr Entry kTexts[] = {
     // 3.0.11-beta.226 (the skills concept, stage 4): the next job's tab
     {Text::SkillsNextTab, "Next", "Наступна", "Следующая"},
     {Text::SkillsAfterChange, "After the job change", "Після зміни професії", "После смены профессии"},
+    // 3.0.11-beta.229: a skill the game's table has no description of - what the driver knows
+    {Text::CardNoDescription, "The game has no description of it", "Опису в грі немає", "Описания в игре нет"},
+    {Text::CardMostLevel, "Levels: {1}", "Рівнів: {1}", "Уровней: {1}"},
+    // 3.0.11-beta.229 (R-EQDQWH): the tree's side panel
+    {Text::SkillsLevelOf, "Level {1} of {2}", "Рівень {1} з {2}", "Уровень {1} из {2}"},
+    {Text::SkillsNeedsHead, "Needs", "Потрібно", "Нужно"},
+    {Text::SkillsUnlocks, "Opens", "Відкриває", "Открывает"},
+    {Text::SkillsSideHint, "Point at a skill", "Наведіть на навичку", "Наведите на навык"},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

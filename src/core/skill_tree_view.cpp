@@ -7,8 +7,6 @@
 #include "core/skill_window.hpp"
 
 namespace uagfx::skilltreeview {
-namespace {
-
 const skillwin::Skill* find(const skillwin::Data& d, int id) {
     for (const skillwin::Tab& t : d.tabs)
         for (const skillwin::Skill& k : t.skills)
@@ -16,7 +14,33 @@ const skillwin::Skill* find(const skillwin::Data& d, int id) {
     return nullptr;
 }
 
-}  // namespace
+Route route(const Plan& p, const Link& l, float scale) {
+    Route r;
+    if (l.chip || l.from < 0 || l.to < 0 || size_t(l.from) >= p.nodes.size() || size_t(l.to) >= p.nodes.size())
+        return r;
+    const float s = scale > 0 ? scale : 1.0f;
+    const Node& a = p.nodes[size_t(l.from)];
+    const Node& b = p.nodes[size_t(l.to)];
+    const float gutter = (kColStep - kNodeW) * s / 2, gap = (kRowStep - kNodeH) * s / 2;
+    const float x1 = a.box.x + a.box.w, y1 = a.box.y + a.box.h / 2, y2 = b.box.y + b.box.h / 2;
+    const auto add = [&](float x, float y) {
+        r.x[r.n] = x;
+        r.y[r.n] = y;
+        ++r.n;
+    };
+    add(x1, y1);
+    add(x1 + gutter, y1);
+    if (b.col == a.col + 1) {  // the next column: down the gutter between them
+        add(x1 + gutter, y2);
+    } else {  // farther: up or down the gutter to the gap over its row, along it, down the gutter before it
+        const float lane = b.box.y - gap;
+        add(x1 + gutter, lane);
+        add(b.box.x - gutter, lane);
+        add(b.box.x - gutter, y2);
+    }
+    add(b.box.x, y2);
+    return r;
+}
 
 int levelOf(const skillwin::Data& d, int id) {
     const skillwin::Skill* k = find(d, id);
@@ -69,22 +93,7 @@ Plan arrange(const skillwin::Data& d, int tab, float scale) {
         }
         return depth[size_t(i)] = most;
     };
-    // the chips: the requirements from the jobs before, in the order their first dependants come
-    std::map<int, int> chipOf;
-    for (size_t i = 0; i < t.skills.size(); ++i)
-        for (const auto& [need, lv] : t.skills[i].req)
-            if (!onTab.count(need) && !chipOf.count(need)) {
-                chipOf[need] = int(p.chips.size());
-                Chip c;
-                c.id = need;
-                const skillwin::Skill* k = find(d, need);
-                c.name = k ? k->name : "#" + std::to_string(need);
-                c.level = k ? k->level : 0;
-                p.chips.push_back(c);
-            }
-    const float left = (p.chips.empty() ? kMargin : kChipsW) * s;
-    for (size_t i = 0; i < p.chips.size(); ++i)
-        p.chips[i].box = panel::Box{kMargin * s, (kMargin + float(i) * kChipStep) * s, kChipW * s, kChipH * s};
+    const float left = kMargin * s;
     // the rows: each column top down; a skill as high as its first requirement's row, else the next free
     std::map<int, std::set<int>> taken;  // a column's rows
     std::vector<int> rowOf(t.skills.size(), 0);
@@ -98,8 +107,6 @@ Plan arrange(const skillwin::Data& d, int tab, float scale) {
             int r = -1;
             if (const auto at = onTab.find(need); at != onTab.end() && depthOf(at->second) < depthOf(i))
                 r = rowOf[size_t(at->second)];
-            else if (const auto c = chipOf.find(need); c != chipOf.end())
-                r = int(p.chips[size_t(c->second)].box.y / (kRowStep * s) + 0.5f);
             if (r >= 0 && (!found || r < want)) {
                 want = r;
                 found = true;
@@ -120,22 +127,18 @@ Plan arrange(const skillwin::Data& d, int tab, float scale) {
     std::sort(p.nodes.begin(), p.nodes.end(), [](const Node& a, const Node& b) { return a.index < b.index; });
     for (const Node& n : p.nodes) {
         for (const auto& [need, lv] : t.skills[size_t(n.index)].req) {
+            const auto at = onTab.find(need);
+            if (at == onTab.end()) continue;  // a job before's: the side panel lists it
             Link l;
             l.to = n.index;
+            l.from = at->second;
             l.level = lv;
             l.met = levelOf(d, need) >= lv;
-            if (const auto at = onTab.find(need); at != onTab.end()) {
-                l.from = at->second;
-            } else {
-                l.from = chipOf[need];
-                l.chip = true;
-            }
             p.links.push_back(l);
         }
         p.w = std::max(p.w, n.box.x + n.box.w + kMargin * s + kPlus * s / 2);
         p.h = std::max(p.h, n.box.y + n.box.h + kMargin * s);
     }
-    for (const Chip& c : p.chips) p.h = std::max(p.h, c.box.y + c.box.h + kMargin * s);
     return p;
 }
 
