@@ -1,3 +1,8 @@
+# uaRO Graphics 3.0.11-beta.207 — what's new
+
+**The tester's third list, part eight**:
+- Making a chat room (Alt+C) in the new look: the card «Нова чат-кімната» - the room's name (the game's own field, typed as before), the places as chips (2 to 20), «Відкрита» or «З паролем» (its password field then gets the keys; the password is shown as dots only), «Створити» (the game checks the name and the password and makes the room, as its OK did) and «Скасувати». Esc cancels. A new switch «Картки чат-кімнат» under «Інтерфейс» (and in the console); off - the game's own windows. The room's own window comes next.
+
 # uaRO Graphics 3.0.11-beta.206 — what's new
 
 **The tester's third list, part seven**:
