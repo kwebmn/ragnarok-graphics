@@ -87,6 +87,7 @@
 #include "win/emote_window.hpp"
 #include "win/command_window.hpp"
 #include "win/chatroom_window.hpp"
+#include "win/room_window.hpp"
 #include "win/msg_box.hpp"
 #include "win/menu_window.hpp"
 #include "win/net_predict.hpp"
@@ -1040,6 +1041,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     emotewin::frame(window, config.emoteWindow, gameCodePage(config), pk, pw, ph);            // 3.0.11-beta.205
     commandwin::frame(window, config.commandWindow, gameCodePage(config), pk, pw, ph);        // 3.0.11-beta.206
     chatroomwin::frame(window, config.chatRoomWindows, gameCodePage(config), pk, pw, ph);     // 3.0.11-beta.207
+    roomwin::frame(window, config.chatRoomWindows, gameCodePage(config), pk, pw, ph);         // 3.0.11-beta.208
     // 3.0.11-beta.7: [interface] reference - «Довідник» (Ctrl+F)
     referencewin::frame(window, config.referenceWindow, pk, pw, ph);
     padcarrywin::frame(window, pk, pw, ph);  // 3.0.11-beta.121: a thing the controller carries - its places now

@@ -29,6 +29,9 @@ using uapad::gamewindow::Blocker;
 // radios, the chosen radio, the combo the message 0x27 picks for, the chosen places, the places' list); an edit's
 // words and length (thiscall), the manager's control with the keys and its SetFocus
 constexpr uint32_t kWindowMgr = 0x727ED8, kMakeAt = kWindowMgr + 0xFC, kMakeClass = 0x699968, kMakeSend = 0x482220;
+// 3.0.11-beta.208: the room's settings (UI window 0x1E, its owner's): the making window's kind with its own SendMsg
+// (its OK changes the room: the mode's message 0x31)
+constexpr uint32_t kSetupAt = kWindowMgr + 0x100, kSetupClass = 0x699A00, kSetupSend = 0x482A20;
 constexpr uint32_t kSendMsgSlot = 0x94, kRect = 0x14, kTitleEdit = 0x70, kPasswordEdit = 0x74, kRadios = 0x78;
 constexpr uint32_t kRadioChosen = 0x8C, kComboFor = 0x90, kPlaces = 0x94, kPlacesList = 0xC0;
 constexpr uint32_t kGetText = 0x443300, kGetLength = 0x443330, kFocus = kWindowMgr + 0x6C, kSetFocus = 0x4CE510;
@@ -41,7 +44,7 @@ using SetFocusFn = void(__attribute__((thiscall)) *)(uint32_t manager, uint32_t 
 
 struct State {
     WindowShadow shadow;
-    bool on = false, shown = false, moved = false;
+    bool on = false, shown = false, moved = false, setup = false;
     unsigned codePage = 0;
     float k = 0, scale = 1;
     int targetW = 0, targetH = 0, oldX = 0;
@@ -73,10 +76,18 @@ bool write32(uint32_t at, uint32_t v) {
     return WriteProcessMemory(GetCurrentProcess(), reinterpret_cast<void*>(uintptr_t(at)), &v, 4, &n) && n == 4;
 }
 
-uint32_t gameMaking() {
+// The making window, or the room's settings (`setup` set) - the one up
+uint32_t gameMaking(bool* setup = nullptr) {
     const uint32_t w = read32(kMakeAt);
-    return w && read32(w) == kMakeClass && read32(kMakeClass + kSendMsgSlot) == kMakeSend ? w : 0;
+    if (setup) *setup = false;
+    if (w && read32(w) == kMakeClass && read32(kMakeClass + kSendMsgSlot) == kMakeSend) return w;
+    const uint32_t v = read32(kSetupAt);
+    if (!v || read32(v) != kSetupClass || read32(kSetupClass + kSendMsgSlot) != kSetupSend) return 0;
+    if (setup) *setup = true;
+    return v;
 }
+
+uint32_t sendOf(uint32_t window) { return read32(read32(window) + kSendMsgSlot); }
 
 void hold(State& s, uint32_t window, bool on) {
     if (!window) {
@@ -123,15 +134,15 @@ void readCard(State& s, uint32_t window) {
     c.closed = read32(window + kRadioChosen) == 1;
 }
 
-rc::Texts texts() {
+rc::Texts texts(const State& s) {
     rc::Texts t;
-    t.heading = say(settings::Text::RoomNewTitle);
+    t.heading = say(s.setup ? settings::Text::RoomSetupTitle : settings::Text::RoomNewTitle);
     t.titleLabel = say(settings::Text::RoomName);
     t.limitLabel = say(settings::Text::RoomPlaces);
     t.open = say(settings::Text::RoomOpen);
     t.closed = say(settings::Text::RoomLocked);
     t.passwordLabel = say(settings::Text::RoomPassword);
-    t.create = say(settings::Text::RoomCreate);
+    t.create = say(s.setup ? settings::Text::RoomSave : settings::Text::RoomCreate);
     t.cancel = say(settings::Text::RoomCancel);
     return t;
 }
@@ -151,7 +162,7 @@ void render(State& s) {
     const uicost::Paint cost("the chat room making", s.layout.w, s.layout.h);
     if (!panel::blank(s.picture, s.layout.w, s.layout.h)) return;
     rc::paint(s.picture, s.layout, s.card, s.show);
-    drawWords(s.picture, gdiWords(rc::words(s.layout, s.card, s.show, texts())));
+    drawWords(s.picture, gdiWords(rc::words(s.layout, s.card, s.show, texts(s))));
     s.upload = true;
 }
 
@@ -174,8 +185,8 @@ void hide(State& s) {
 void send(State& s, uint32_t sender, int msg, int a, const char* what) {
     const uint32_t w = gameMaking();
     if (!w) return;
-    if (s.told++ < 30) LOG_INFO("chat rooms: %s", what);
-    reinterpret_cast<SendMsgFn>(uintptr_t(kMakeSend))(w, sender, msg, a, 0, 0);
+    if (s.told++ < 30) LOG_INFO("chat rooms: %s%s", s.setup ? "the room's settings - " : "", what);
+    reinterpret_cast<SendMsgFn>(uintptr_t(sendOf(w)))(w, sender, msg, a, 0, 0);
     s.key.clear();
 }
 
@@ -225,13 +236,17 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
         LOG_INFO("chat rooms: [interface] chat_rooms = %d", on ? 1 : 0);
     }
     const bool world = inGameWorld();
-    const uint32_t window = world ? gameMaking() : 0;
+    bool setup = false;
+    const uint32_t window = world ? gameMaking(&setup) : 0;
     if (world) hold(s, window, on);
     if (!on || !window || !game || k <= 0 || targetWidth <= 0 || targetHeight <= 0) {
         hide(s);
         return;
     }
-    if (!s.shown) LOG_INFO("chat rooms: the game's making window (Alt+C) - the new card shows it");
+    if (!s.shown || setup != s.setup)
+        LOG_INFO("chat rooms: the game's %s - the new card shows it",
+                 setup ? "room settings (UI window 0x1E)" : "making window (Alt+C)");
+    s.setup = setup;
     s.k = float(k);
     s.scale = uistyle::readingScale(k);
     s.targetW = targetWidth;
@@ -244,7 +259,8 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
         s.show.hover = rc::hitTest(s.layout, float(cx) * float(k) - float(s.layout.x),
                                    float(cy) * float(k) - float(s.layout.y));
     const rc::Card& c = s.card;
-    const std::string key = c.title + ';' + std::to_string(c.passwordLength) + ';' + std::to_string(int(c.focus)) +
+    const std::string key = std::string(s.setup ? "S" : "M") + c.title + ';' + std::to_string(c.passwordLength) +
+                            ';' + std::to_string(int(c.focus)) +
                             (c.caret ? "|" : "") + ';' + std::to_string(c.limit) + (c.closed ? "c" : "o") + ';' +
                             std::to_string(int(s.show.hover.part)) + ',' + std::to_string(s.show.hover.index) + ';' +
                             std::to_string(s.layout.x) + ',' + std::to_string(s.layout.y) + '#' +

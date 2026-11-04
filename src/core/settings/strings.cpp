@@ -6068,6 +6068,15 @@ constexpr Entry kTexts[] = {
     {Text::RoomPassword, "Password (4 to 8 characters)", "Пароль (від 4 до 8 знаків)", "Пароль (от 4 до 8 знаков)"},
     {Text::RoomCreate, "Create", "Створити", "Создать"},
     {Text::RoomCancel, "Cancel", "Скасувати", "Отмена"},
+    // 3.0.11-beta.208: the room's own card and its settings
+    {Text::RoomSetupTitle, "Room settings", "Налаштування кімнати", "Настройки комнаты"},
+    {Text::RoomSave, "Save", "Зберегти", "Сохранить"},
+    {Text::RoomMembers, "Members", "Учасники", "Участники"},
+    {Text::RoomSetup, "Settings", "Налаштування", "Настройки"},
+    {Text::RoomLeave, "Leave", "Вийти", "Выйти"},
+    {Text::RoomKick, "Kick out", "Вигнати", "Выгнать"},
+    {Text::RoomOwner, "Make the owner", "Зробити власником", "Сделать владельцем"},
+    {Text::RoomFriend, "Add as a friend", "У друзі", "В друзья"},
     // 3.0.11-beta.141: the character block's experience (forms: one, a few, many)
     {Text::CharSkillPoints, "skill point|skill points", "очко навичок|очки навичок|очок навичок",
      "очко навыков|очка навыков|очков навыков"},
