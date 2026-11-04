@@ -6103,6 +6103,17 @@ constexpr Entry kTexts[] = {
      "кліку; пункти як їх дає гра. Вимкнено: власні меню гри.",
      "Всплывающие меню игры (правый клик по игроку, участнику чат-комнаты, участнику гильдии) в новом виде, у "
      "клика; пункты как их даёт игра. Выключено: собственные меню игры."},
+    // 3.0.11-beta.212: the game's 1:1 whisper windows
+    {Text::InterfaceWhispers, "Whisper windows", "Вікна шепоту", "Окна шёпота"},
+    {Text::InterfaceWhispersHint,
+     "The game's 1:1 whisper windows as cards in the new look: the partner, the lines, the game's own line to type "
+     "into (Enter sends as before) and a send button. Off: the game's own windows.",
+     "Вікна шепоту гри (1:1) картками в новому вигляді: співрозмовник, рядки, власний рядок гри для набору (Enter "
+     "надсилає як і раніше) і кнопка надсилання. Вимкнено: власні вікна гри.",
+     "Окна шёпота игры (1:1) карточками в новом виде: собеседник, строки, собственная строка игры для набора (Enter "
+     "отправляет как и раньше) и кнопка отправки. Выключено: собственные окна игры."},
+    {Text::WhisperCardWith, "Whisper: {1}", "Шепіт: {1}", "Шёпот: {1}"},
+    {Text::WhisperCardSend, "Send", "Надіслати", "Отправить"},
     // 3.0.11-beta.141: the character block's experience (forms: one, a few, many)
     {Text::CharSkillPoints, "skill point|skill points", "очко навичок|очки навичок|очок навичок",
      "очко навыков|очка навыков|очков навыков"},

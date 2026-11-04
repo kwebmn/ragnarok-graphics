@@ -456,6 +456,10 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("popups", flag(running.popupMenus), flag(file.popupMenus)));
         n.popupMenus = file.popupMenus;
     }
+    if (file.whisperWindows != running.whisperWindows) {  // 3.0.11-beta.212: the whisper windows as cards, at once
+        u.applied.push_back(change("whispers", flag(running.whisperWindows), flag(file.whisperWindows)));
+        n.whisperWindows = file.whisperWindows;
+    }
     if (file.skillCells != running.skillCells) {  // 3.0.11-beta.142: a ground skill's cells, at once
         u.applied.push_back(change("skill_cells", flag(running.skillCells), flag(file.skillCells)));
         n.skillCells = file.skillCells;

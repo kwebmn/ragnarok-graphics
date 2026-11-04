@@ -628,6 +628,8 @@ enum class Text : uint16_t {
     GuildTabPositions, GuildTabSkills, GuildTabExpelled, GuildTabNotice,
     // 3.0.11-beta.211: the game's popup menus
     InterfacePopups, InterfacePopupsHint,
+    // 3.0.11-beta.212: the game's 1:1 whisper windows
+    InterfaceWhispers, InterfaceWhispersHint, WhisperCardWith, WhisperCardSend,
     // 3.0.11-beta.141: the character block's experience - the free skill points, the last level, an hour, a minute,
     // the experience's tip, the portrait's tip (Alt+V)
     CharSkillPoints, CharExpMax, CharHour, CharMinute, CharToLevel, CharLevelIn, CharPerHour, CharSession, CharLastGain,

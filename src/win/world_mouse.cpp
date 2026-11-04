@@ -82,7 +82,7 @@ const char* const kParts[] = {"the windows' panel", "the answer card", "the new 
                               "the new own shop card", "the new whisper settings", "the new macros card",
                               "the login screen's bar", "the shelf's «додано» note", "the new tip of the day",
                               "the new emotions card", "the new command list", "the new chat room card",
-                              "the new chat room", "the new popup menu"};
+                              "the new chat room", "the new popup menu", "the new whisper cards"};
 static_assert(std::size(kParts) == size_t(uapad::gamewindow::kBlockerCount), "a name for each part");
 // 3.0.11-beta.167: 64 bits - the parts passed 32 at 3.0.11-beta.154 («Візок»: part 32), a 32-bit 1u << 32 wrapped
 uint64_t g_told = 0;    // the parts whose first cursor over them is logged

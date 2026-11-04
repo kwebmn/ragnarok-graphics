@@ -415,6 +415,7 @@ Config parseConfig(const std::string& text) {
     bool chatRoomSet = false;                     // 3.0.11-beta.207
     bool detailSet = false;                       // 3.0.11-beta.209
     bool popupSet = false;                        // 3.0.11-beta.211
+    bool whispersSet = false;                     // 3.0.11-beta.212
     std::istringstream in(text);
     std::string line;
     std::string section;
@@ -709,6 +710,9 @@ Config parseConfig(const std::string& text) {
         } else if (key == "interface.popups") {  // 3.0.11-beta.211: the game's popup menus
             popupSet = val == "0" || val == "1" || val == "on" || val == "off" || val == "true" || val == "false";
             setBool(val, c.popupMenus);
+        } else if (key == "interface.whispers") {  // 3.0.11-beta.212: the game's 1:1 whisper windows
+            whispersSet = val == "0" || val == "1" || val == "on" || val == "off" || val == "true" || val == "false";
+            setBool(val, c.whisperWindows);
         } else if (key == "interface.skill_cells") {  // 3.0.11-beta.142: a ground skill's cells on the ground
             setBool(val, c.skillCells);
         } else if (key == "interface.ground_counts") {  // 3.0.11-beta.143: walls standing, traps left on the bar
@@ -1042,6 +1046,7 @@ Config parseConfig(const std::string& text) {
     if (c.newMinimap && !chatRoomSet) c.chatRoomWindows = true;     // 3.0.11-beta.207
     if (c.newMinimap && !detailSet) c.detailConsole = true;         // 3.0.11-beta.209
     if (c.newMinimap && !popupSet) c.popupMenus = true;             // 3.0.11-beta.211
+    if (c.newMinimap && !whispersSet) c.whisperWindows = true;      // 3.0.11-beta.212
     return c;
 }
 

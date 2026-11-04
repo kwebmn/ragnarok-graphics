@@ -754,6 +754,8 @@ struct Config {
     bool detailConsole = false;
     // 3.0.11-beta.211: [interface] popups - the game's popup menus (win/popup_window) as cards
     bool popupMenus = false;
+    // 3.0.11-beta.212: [interface] whispers - the game's 1:1 whisper windows (win/whisper_window) as cards
+    bool whisperWindows = false;
     // 3.0.11-beta.142 (the owner's concept «маг, прист и хант на геймпаде», answer 9 «дать»): [interface] skill_cells -
     // a ground skill's cells, as the server makes them (core/skill_area), shown on the ground after a cast by the pad
     // or the mouse (win/ground_marks); 0: none

@@ -90,6 +90,7 @@
 #include "win/room_window.hpp"
 #include "win/detail_window.hpp"
 #include "win/popup_window.hpp"
+#include "win/whisper_window.hpp"
 #include "win/msg_box.hpp"
 #include "win/menu_window.hpp"
 #include "win/net_predict.hpp"
@@ -1046,6 +1047,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     roomwin::frame(window, config.chatRoomWindows, gameCodePage(config), pk, pw, ph);         // 3.0.11-beta.208
     detailwin::frame(config.detailConsole);                                                   // 3.0.11-beta.209
     popupwin::frame(window, config.popupMenus, gameCodePage(config), pk, pw, ph);              // 3.0.11-beta.211
+    whisperwin::frame(window, config.whisperWindows, gameCodePage(config), pk, pw, ph);        // 3.0.11-beta.212
     // 3.0.11-beta.7: [interface] reference - «Довідник» (Ctrl+F)
     referencewin::frame(window, config.referenceWindow, pk, pw, ph);
     padcarrywin::frame(window, pk, pw, ph);  // 3.0.11-beta.121: a thing the controller carries - its places now

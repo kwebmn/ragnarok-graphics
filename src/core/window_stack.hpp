@@ -34,8 +34,9 @@ enum class Win : uint8_t { Items, Stats, Skills, Equip, Shop, Npc, Reference, St
                            Commands,  // 3.0.11-beta.206
                            ChatRoom,  // 3.0.11-beta.207
                            Room,  // 3.0.11-beta.208
-                           Popup };  // 3.0.11-beta.211
-constexpr int kWins = 37;
+                           Popup,  // 3.0.11-beta.211
+                           Whispers };  // 3.0.11-beta.212
+constexpr int kWins = 38;
 
 class Stack {
 public:
