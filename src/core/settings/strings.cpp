@@ -5834,14 +5834,14 @@ constexpr Entry kTexts[] = {
     {Text::InterfaceHomun, "Homunculus card", "Картка гомункула", "Карточка гомункула"},
     {Text::InterfaceHomunHint,
      "The homunculus' window (Alt+R) as a card in the new look: its name and level, HP, SP and experience bars, "
-     "fullness and closeness, its eight stats, feed and its skills (deleting it small at the foot, the game asks "
-     "first). Off: the game's own window.",
+     "fullness and closeness, its eight stats, feed and its skills listed (a click uses one, a plus raises it; "
+     "deleting it small at the foot, the game asks first). Off: the game's own window.",
      "Вікно гомункула (Alt+R) карткою в новому вигляді: ім'я й рівень, смуги HP, SP і досвіду, ситість і "
-     "близькість, вісім характеристик, нагодувати і навички (видалення — дрібно внизу, гра перепитує). Вимкнено: "
-     "власне вікно гри.",
+     "близькість, вісім характеристик, нагодувати й перелік навичок (клік застосовує, плюс піднімає; видалення — "
+     "дрібно внизу, гра перепитує). Вимкнено: власне вікно гри.",
      "Окно гомункула (Alt+R) карточкой в новом виде: имя и уровень, полосы HP, SP и опыта, сытость и близость, "
-     "восемь характеристик, покормить и навыки (удаление — мелко внизу, игра переспрашивает). Выключено: "
-     "собственное окно игры."},
+     "восемь характеристик, покормить и список навыков (щелчок применяет, плюс поднимает; удаление — мелко внизу, "
+     "игра переспрашивает). Выключено: собственное окно игры."},
     {Text::HomunTitle, "Homunculus", "Гомункул", "Гомункул"},
     {Text::HomunSkills, "Skills", "Навички", "Навыки"},
     {Text::HomunDelete, "Delete", "Видалити", "Удалить"},
@@ -7119,6 +7119,8 @@ constexpr Entry kTexts[] = {
     {Text::GuildRightInvite, "Invite", "Запрошення", "Приглашение"},
     {Text::GuildRightExpel, "Expel", "Вигнання", "Изгнание"},
     {Text::GuildSkillPoints, "Skill points left: {1}", "Вільних очок навичок: {1}", "Свободных очков навыков: {1}"},
+    {Text::HomunSkillsHead, "Skills - points left: {1}", "Навички · вільних очок: {1}",
+     "Навыки · свободных очков: {1}"},  // 3.0.11-beta.221
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

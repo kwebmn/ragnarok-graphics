@@ -12,6 +12,13 @@ namespace uagfx::homuncard {
 // fullness (0-100) and closeness (0-1000, the game's eight words), its eight stats (ATK MATK HIT CRIT DEF MDEF FLEE
 // ASPD), the window's own buttons: feed (0xe0: the game asks first), its skills' window (0xdf), delete (0xe1: the
 // game's red question first), ✕ (0x87). The parts that need no Windows; the words by GDI (win/homun_card).
+// 3.0.11-beta.221: a skill of its in the card's list
+struct SkillRow {
+    std::string name;  // UTF-8
+    int level = 0;
+    bool up = false;  // can rise (the server's flag) - a «+» with points left
+};
+std::string skillName(int id);  // the homunculi's skills (8001-8016) as the server's skill_db names them; "" else
 struct Info {
     std::string name;  // UTF-8
     int level = 0, hp = 0, maxHp = 0, sp = 0, maxSp = 0;
@@ -19,6 +26,8 @@ struct Info {
     int hunger = 0, intimacy = 0;
     int stats[7] = {0, 0, 0, 0, 0, 0, 0};  // ATK MATK HIT CRIT DEF MDEF FLEE
     int aspd = 0;                          // the game's delay (shown as (2000 - it) / 10)
+    std::vector<SkillRow> skills;          // 3.0.11-beta.221
+    int points = 0;                        // its skill points left
 };
 int intimacyState(int intimacy);  // 0 hostile ... 6 loyal, 7 unknown (the game's 3/10/100/250/750/910/1000)
 int aspd(int delay);
@@ -29,10 +38,12 @@ struct Texts {
     std::string title, level, hunger, intimacy;  // level: «Рівень {1}»
     std::string intimacyStates[8];
     std::string feed, skills, remove;
+    std::string skillsHead, skillLevel;  // 3.0.11-beta.221: «Навички · вільних очок: {1}», «Рів. {1}»
 };
 struct Show {
     int hover = -1;  // a Button
     int focus = -1;  // the controller's (Feed or Skills)
+    int hoverPlus = -1, hoverSkill = -1;  // 3.0.11-beta.221
 };
 struct Layout {
     float s = 1;
@@ -40,13 +51,16 @@ struct Layout {
     panel::Box glass, title, close, name, level, hpLabel, hp, spLabel, sp, expLabel, exp, hungerLabel, hunger,
         intimacyLabel, intimacy, remove;
     panel::Box stats[8];
-    panel::Box buttons[2];  // feed, skills
+    panel::Box buttons[2];  // feed, skills (3.0.11-beta.221: w 0 - its skills listed below instead)
+    panel::Box skillsHead;  // 3.0.11-beta.221
+    std::vector<panel::Box> skillRows, skillPlus;
 };
-Layout layout(int targetW, int targetH, float scale);
-enum class Part : uint8_t { None, Button };
+Layout layout(int targetW, int targetH, float scale, int skillCount = 0);
+enum class Part : uint8_t { None, Button, Plus, Skill };
 struct Hit {
     Part part = Part::None;
     Button button = Button::Close;
+    int index = -1;  // 3.0.11-beta.221: a skill's row
 };
 Hit hitTest(const Layout& L, float x, float y);
 

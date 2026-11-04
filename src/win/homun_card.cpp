@@ -36,6 +36,15 @@ constexpr uint32_t kName = 0x772E38, kStats = 0x772E58, kDelay = 0x772E74, kKnow
 constexpr uint32_t kHp = 0x772E80, kMaxHp = 0x772E84, kSp = 0x772E88, kMaxSp = 0x772E8C, kExp = 0x772E90;
 constexpr uint32_t kMaxExp = 0x772E94, kHunger = 0x772E98, kIntimacy = 0x772EA0;
 constexpr int kButtonMsg = 6;
+// 3.0.11-beta.221: its skills as the game keeps them (the server's 0x0235, FUN_005891e0: a std::list at 0x771438, a
+// node's record at +8 - 1, the id, its kind, level, SP, can rise, range, its name), its skill points (0x022e's at 67);
+// the game mode's SendMsg - 0x4A raises a skill (0x0112), 0x7E uses one (a record, the level: as the game's own skills
+// window does for a homunculus' FUN_004bdd90)
+constexpr uint32_t kSkillList = 0x771438, kSkillPoints = 0x771FAC;
+constexpr uint32_t kModeNow = 0x74B57C, kModeMsgSlot = 0x14, kModeMsg = 0x5707D0;
+constexpr int kRaiseMsg = 0x4A, kUseMsg = 0x7E;
+constexpr size_t kMostSkills = 20;
+using ModeMsgFn = int(__attribute__((thiscall)) *)(uint32_t mode, int msg, int a, int b, int c);
 using SendMsgFn = int(__attribute__((thiscall)) *)(uint32_t self, uint32_t sender, int msg, int a, int b, int c);
 
 struct State {
@@ -54,6 +63,8 @@ struct State {
     int texW = 0, texH = 0;
     bool upload = false;
     int told = 0;
+    std::vector<uint32_t> records;  // 3.0.11-beta.221: the game's records of its skills, the list's order
+    std::vector<int> ids;
 };
 
 State& state() {
@@ -110,7 +121,49 @@ hc::Info infoOf(const State& s) {
     i.maxExp = int32_t(read32(kMaxExp));
     i.hunger = int32_t(read32(kHunger));
     i.intimacy = int32_t(read32(kIntimacy));
+    i.points = int32_t(read32(kSkillPoints));  // 3.0.11-beta.221
     return i;
+}
+
+// 3.0.11-beta.221: its skills from the game's list
+void readSkills(State& s) {
+    s.records.clear();
+    s.ids.clear();
+    s.info.skills.clear();
+    const uint32_t head = read32(kSkillList);
+    if (!head) return;
+    uint32_t node = read32(head);
+    for (size_t n = 0; node && node != head && n < kMostSkills; ++n, node = read32(node)) {
+        int32_t r[8] = {};
+        if (!readGame(node + 8, r, sizeof r)) break;
+        const std::string name = hc::skillName(r[1]);
+        s.records.push_back(node + 8);
+        s.ids.push_back(r[1]);
+        s.info.skills.push_back(
+            hc::SkillRow{name.empty() ? "#" + std::to_string(r[1]) : name, r[3], (r[5] & 0xFF) != 0});
+    }
+}
+
+bool modeMsg(int msg, int a, int b, int c) {
+    const uint32_t mode = read32(kModeNow);
+    if (!mode || !inGameWorld() || read32(read32(mode) + kModeMsgSlot) != kModeMsg) return false;
+    reinterpret_cast<ModeMsgFn>(uintptr_t(kModeMsg))(mode, msg, a, b, c);
+    return true;
+}
+
+void raiseSkill(State& s, int row) {
+    if (row < 0 || size_t(row) >= s.ids.size() || !s.info.skills[size_t(row)].up || s.info.points <= 0) return;
+    const bool sent = modeMsg(kRaiseMsg, s.ids[size_t(row)], 0, 0);
+    if (s.told++ < 30) LOG_INFO("homun: its skill %d +1 %s", s.ids[size_t(row)], sent ? "asked (0x4A)" : "not asked");
+    s.key.clear();
+}
+
+void useSkill(State& s, int row) {
+    if (row < 0 || size_t(row) >= s.records.size() || s.info.skills[size_t(row)].level <= 0) return;
+    const bool sent = modeMsg(kUseMsg, int(s.records[size_t(row)]), s.info.skills[size_t(row)].level, 0);
+    if (s.told++ < 30)
+        LOG_INFO("homun: its skill %d used at level %d %s", s.ids[size_t(row)], s.info.skills[size_t(row)].level,
+                 sent ? "(0x7E, as the game's own skills window)" : "- not sent");
 }
 
 hc::Texts texts() {
@@ -127,6 +180,8 @@ hc::Texts texts() {
     t.feed = say(settings::Text::PetFeed);
     t.skills = say(settings::Text::HomunSkills);
     t.remove = say(settings::Text::HomunDelete);
+    t.skillsHead = say(settings::Text::HomunSkillsHead);  // 3.0.11-beta.221
+    t.skillLevel = say(settings::Text::MercLevelShort);
     return t;
 }
 
@@ -201,13 +256,17 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     s.targetW = targetWidth;
     s.targetH = targetHeight;
     s.info = infoOf(s);
-    s.layout = hc::layout(targetWidth, targetHeight, s.scale);
+    readSkills(s);
+    s.layout = hc::layout(targetWidth, targetHeight, s.scale, int(s.info.skills.size()));
     s.show.hover = -1;
+    s.show.hoverPlus = s.show.hoverSkill = -1;
     int cx = 0, cy = 0;
     if (readGameCursor(cx, cy)) {
         const hc::Hit h = hc::hitTest(s.layout, float(cx) * float(k) - float(s.layout.x),
                                       float(cy) * float(k) - float(s.layout.y));
         if (h.part == hc::Part::Button) s.show.hover = int(h.button);
+        if (h.part == hc::Part::Plus) s.show.hoverPlus = h.index;
+        if (h.part == hc::Part::Skill) s.show.hoverSkill = h.index;
     }
     const hc::Info& i = s.info;
     std::string key = i.name + ';' + std::to_string(i.level) + ',' + std::to_string(i.hp) + '/' +
@@ -217,6 +276,9 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
                       ',' + std::to_string(s.show.focus) + ';' + std::to_string(s.layout.x) + ',' +
                       std::to_string(s.layout.y) + '#' + std::to_string(uistyle::generation());
     for (int st : i.stats) key += ',' + std::to_string(st);
+    key += ";p" + std::to_string(i.points) + ',' + std::to_string(s.show.hoverPlus) + ',' +
+           std::to_string(s.show.hoverSkill);
+    for (const hc::SkillRow& r : i.skills) key += ';' + r.name + std::to_string(r.level) + (r.up ? "+" : "");
     if (key != s.key) {
         s.key = key;
         render(s);
@@ -252,6 +314,8 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     if (m != WM_LBUTTONDOWN && m != WM_LBUTTONDBLCLK) return true;
     const hc::Hit h = hc::hitTest(s.layout, lx, ly);
     if (h.part == hc::Part::Button) press(s, h.button);
+    if (h.part == hc::Part::Plus) raiseSkill(s, h.index);  // 3.0.11-beta.221
+    if (h.part == hc::Part::Skill) useSkill(s, h.index);
     return true;
 }
 

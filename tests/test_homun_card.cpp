@@ -44,8 +44,8 @@ TEST(homun_card_places_and_the_mouse) {
     CHECK(L.remove.y > L.buttons[0].y && L.remove.w < L.buttons[0].w);
     using P = homuncard::Part;
     using B = homuncard::Button;
-    const homuncard::Hit h = homuncard::hitTest(L, mid(L.buttons[1]).first, mid(L.buttons[1]).second);
-    CHECK(h.part == P::Button && h.button == B::Skills);
+    // 3.0.11-beta.221: its skills listed in the card - no button for the game's window (it named none of them)
+    CHECK(L.buttons[1].w == 0 && L.buttons[0].w > 200);
     CHECK(homuncard::hitTest(L, mid(L.remove).first, mid(L.remove).second).button == B::Delete);
     CHECK(homuncard::hitTest(L, mid(L.close).first, mid(L.close).second).button == B::Close);
     CHECK(homuncard::hitTest(L, -5, -5).part == P::None);
@@ -89,4 +89,32 @@ TEST(homun_card_words_and_picture) {
     p.px.assign(size_t(L.w) * size_t(L.h), 0u);
     homuncard::paint(p, L, i, homuncard::Show{});
     CHECK((p.px[size_t(L.h / 2) * size_t(L.w) + size_t(L.w / 2)] >> 24) > 0x80);
+}
+
+// 3.0.11-beta.221 (the owner «1-3 делай»: the homunculus' skills - the game's window named none: its skills 8001 on
+// past the game's 0x3FD names): a row each under «Навички» - the name, the level, a «+» where it can rise and points
+// are left; a click on the name uses it
+TEST(homun_card_lists_its_skills) {
+    const homuncard::Layout L = homuncard::layout(1920, 1080, 1.0f, 3);
+    CHECK(L.skillRows.size() == 3 && L.skillPlus.size() == 3 && L.skillRows[0].y > L.buttons[0].y);
+    CHECK(L.remove.y > L.skillRows[2].y);
+    const homuncard::Hit plus = homuncard::hitTest(L, mid(L.skillPlus[1]).first, mid(L.skillPlus[1]).second);
+    CHECK(plus.part == homuncard::Part::Plus && plus.index == 1);
+    const homuncard::Hit use = homuncard::hitTest(L, L.skillRows[2].x + 10, mid(L.skillRows[2]).second);
+    CHECK(use.part == homuncard::Part::Skill && use.index == 2);
+    homuncard::Info i;
+    i.points = 2;
+    i.skills = {{"Healing Touch", 3, true}, {"Avoid", 1, false}};
+    homuncard::Texts t;
+    t.skillsHead = "Навички · вільних очок: {1}";
+    t.skillLevel = "Рів. {1}";
+    const homuncard::Layout two = homuncard::layout(1920, 1080, 1.0f, 2);
+    const std::vector<homuncard::Words> w = homuncard::words(two, i, homuncard::Show{}, t);
+    const auto has = [&](const std::string& x) {
+        return std::any_of(w.begin(), w.end(), [&](const homuncard::Words& y) { return y.text == x; });
+    };
+    CHECK(has("Навички · вільних очок: 2") && has("Healing Touch") && has("Рів. 3") && has("Avoid") && has("+"));
+    CHECK_EQ(homuncard::skillName(8001), std::string("Healing Touch"));
+    CHECK_EQ(homuncard::skillName(8016), std::string("Bio Explosion"));
+    CHECK(homuncard::skillName(8100).empty());
 }

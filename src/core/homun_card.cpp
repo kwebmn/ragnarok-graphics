@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 
+#include "core/settings/strings.hpp"
 #include "core/ui_style.hpp"
 
 namespace uagfx::homuncard {
@@ -39,7 +40,16 @@ int gameButton(Button b) {
     return 0x87;
 }
 
-Layout layout(int targetW, int targetH, float scale) {
+std::string skillName(int id) {
+    static const char* const kNames[] = {"Healing Touch",  "Avoid",          "Brain Surgery", "Change",
+                                         "Castling",       "Defense",        "Adamantium Skin", "Bloodlust",
+                                         "Moonlight",      "Fleeting Move",  "Speed",         "S.B.R.44",
+                                         "Caprice",        "Benediction of Chaos", "Instruct", "Bio Explosion"};
+    const int i = id - 8001;
+    return i >= 0 && i < int(sizeof kNames / sizeof kNames[0]) ? kNames[i] : "";
+}
+
+Layout layout(int targetW, int targetH, float scale, int skillCount) {
     Layout L;
     const float s = scale > 0 ? scale : 1.0f;
     L.s = s;
@@ -67,10 +77,19 @@ Layout layout(int targetW, int targetH, float scale) {
     for (int i = 0; i < 8; ++i)
         L.stats[i] = panel::Box{pad + float(i % 2) * (cw + kGap * s), y + float(i / 2) * kStatH * s, cw, kStatH * s};
     y += 4 * kStatH * s + 10 * s;
-    const float bw = (inner - kGap * s) / 2;
-    L.buttons[0] = panel::Box{pad, y, bw, kButtonH * s};
-    L.buttons[1] = panel::Box{pad + bw + kGap * s, y, bw, kButtonH * s};
-    y += kButtonH * s + 6 * s;
+    L.buttons[0] = panel::Box{pad, y, inner, kButtonH * s};  // 3.0.11-beta.221: feed alone, its skills listed
+    y += kButtonH * s + 10 * s;
+    L.skillsHead = panel::Box{pad, y, inner, kStatH * s + 2 * s};
+    y += kStatH * s + 6 * s;
+    for (int k = 0; k < std::max(1, skillCount); ++k) {
+        L.skillRows.push_back(panel::Box{pad, y, inner, kStatH * s + 2 * s});
+        L.skillPlus.push_back(panel::Box{pad + inner - 22 * s, y + 1 * s, 22 * s, kStatH * s});
+        y += kStatH * s + 4 * s;
+    }
+    if (skillCount <= 0) {  // a dash's row: no «+»
+        L.skillPlus.clear();
+    }
+    y += 6 * s;
     L.remove = panel::Box{w / 2 - 50 * s, y, 100 * s, 18 * s};
     y += 18 * s + pad / 2;
     L.glass = panel::Box{0, 0, w, y};
@@ -84,7 +103,11 @@ Layout layout(int targetW, int targetH, float scale) {
 Hit hitTest(const Layout& L, float x, float y) {
     if (L.close.contains(x, y)) return Hit{Part::Button, Button::Close};
     if (L.buttons[0].contains(x, y)) return Hit{Part::Button, Button::Feed};
-    if (L.buttons[1].contains(x, y)) return Hit{Part::Button, Button::Skills};
+    for (size_t k = 0; k < L.skillPlus.size(); ++k)
+        if (L.skillPlus[k].contains(x, y)) return Hit{Part::Plus, Button::Close, int(k)};
+    if (!L.skillPlus.empty())
+        for (size_t k = 0; k < L.skillRows.size(); ++k)
+            if (L.skillRows[k].contains(x, y)) return Hit{Part::Skill, Button::Close, int(k)};
     if (L.remove.contains(x, y)) return Hit{Part::Button, Button::Delete};
     return Hit{};
 }
@@ -103,7 +126,16 @@ void paint(panel::Picture& out, const Layout& L, const Info& i, const Show& sh) 
     bar(L.sp, i.sp, i.maxSp, kSp);
     bar(L.exp, i.exp, i.maxExp, kExp);
     bar(L.hunger, i.hunger, 100, kFull);
+    panel::roundRect(out, panel::Box{L.skillsHead.x, L.skillsHead.y + L.skillsHead.h - 1 * s, L.skillsHead.w, 1 * s},
+                     0, kGold, 0.45f);  // 3.0.11-beta.221: the skills' heading underlined
+    for (size_t k = 0; k < L.skillRows.size() && k < i.skills.size(); ++k) {
+        if (sh.hoverSkill == int(k)) panel::roundRect(out, L.skillRows[k], 6 * s, kWhite, 0.07f);
+        if (k < L.skillPlus.size() && i.skills[k].up && i.points > 0)
+            panel::roundRect(out, L.skillPlus[k], 6 * s, kGold, sh.hoverPlus == int(k) ? 0.45f : 0.28f, kGold, 0.85f,
+                             1.0f * s);
+    }
     for (int k = 0; k < 2; ++k) {
+        if (L.buttons[k].w <= 0) continue;
         const Button b = k == 0 ? Button::Feed : Button::Skills;
         const bool hot = sh.hover == int(b) || sh.focus == int(b);
         panel::roundRect(out, L.buttons[k], 8 * s, k == 0 ? kGold : kWhite,
@@ -141,7 +173,21 @@ std::vector<Words> words(const Layout& L, const Info& i, const Show& sh, const T
                             Align::Right});
     }
     out.push_back(Words{L.buttons[0], t.feed, kText, 12.5f * s, true, Align::Center});
-    out.push_back(Words{L.buttons[1], t.skills, kText, 12.5f * s, false, Align::Center});
+    out.push_back(Words{L.skillsHead, settings::fmt(t.skillsHead, {std::to_string(i.points)}), kGold2, 12 * s, true,
+                        Align::Left});
+    for (size_t k = 0; k < L.skillRows.size(); ++k) {
+        const panel::Box& r = L.skillRows[k];
+        if (k >= i.skills.size()) {
+            if (i.skills.empty()) out.push_back(Words{r, "\xE2\x80\x94", kMuted, 12 * s, false, Align::Left});  // —
+            continue;
+        }
+        out.push_back(Words{panel::Box{r.x + 6 * s, r.y, r.w * 0.6f, r.h}, i.skills[k].name, kText, 12 * s, false,
+                            Align::Left});
+        out.push_back(Words{panel::Box{r.x, r.y, r.w - 30 * s, r.h}, settings::fmt(t.skillLevel, {std::to_string(
+                            i.skills[k].level)}), kMuted, 11.5f * s, false, Align::Right});
+        if (k < L.skillPlus.size() && i.skills[k].up && i.points > 0)
+            out.push_back(Words{L.skillPlus[k], "+", kText, 13 * s, true, Align::Center});
+    }
     out.push_back(Words{L.remove, t.remove, kDanger, 11 * s, false, Align::Center});
     return out;
 }
