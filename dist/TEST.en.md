@@ -1,3 +1,10 @@
+# uaRO Graphics 3.0.11-beta.227 — what's new
+
+**«Skills» (Alt+S): the controller in the tree and the plan** (the fifth stage of the new skills window):
+- In «Tree» the D-pad (or the left stick) goes to the nearest skill the way it points; the tree scrolls to it.
+- LT turns «Plan» on and off. In the plan Y adds a planned level, X takes one off, Start is «Apply». Without the plan Start closes the window as before.
+- A, X (take onto the bar), LB / RB and B work as before.
+
 # uaRO Graphics 3.0.11-beta.226 — what's new
 
 **«Skills» (Alt+S): the «Next» tab** (the fourth stage of the new skills window):
