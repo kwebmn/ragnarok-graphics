@@ -1,3 +1,10 @@
+# uaRO Graphics 3.0.11-beta.221 — what's new
+
+**The homunculus** (the "Homunculus card" switch, Alt+R):
+- The homunculus' skills are now listed on the card itself: each one's name and level and the skill points left. The game's own skills window did not know their names.
+- A "+" by a skill that can rise while points are left.
+- A click on a skill's name uses it - as the game's own skills window does.
+
 # uaRO Graphics 3.0.11-beta.220 — what's new
 
 **The guild - all six tabs in the new look** (the "Guild card" switch, Alt+G):
