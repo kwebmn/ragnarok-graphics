@@ -6089,6 +6089,11 @@ constexpr Entry kTexts[] = {
      "Собственное окно детализации игры (Alt+D: детализация объектов, тени, трилинейная фильтрация) с этим "
      "рендерером почти ничего не меняет — Alt+D вместо него открывает эту консоль с настоящими настройками (как "
      "Ctrl+`). Выключено: окно игры."},
+    // 3.0.11-beta.210: the guild card's other tabs
+    {Text::GuildTabPositions, "Positions", "Посади", "Должности"},
+    {Text::GuildTabSkills, "Skills", "Навички", "Навыки"},
+    {Text::GuildTabExpelled, "Expelled", "Вигнані", "Изгнанные"},
+    {Text::GuildTabNotice, "Notice", "Оголошення", "Объявление"},
     // 3.0.11-beta.141: the character block's experience (forms: one, a few, many)
     {Text::CharSkillPoints, "skill point|skill points", "очко навичок|очки навичок|очок навичок",
      "очко навыков|очка навыков|очков навыков"},

@@ -16,7 +16,17 @@ constexpr uint32_t kMuted = 0x9AA3B5, kOnline = 0x4CC777, kOffline = 0x5C6370;
 
 std::string ofMost(long long a, long long b) { return std::to_string(a) + " / " + std::to_string(b); }
 
+constexpr uint32_t kTabRights[kTabs] = {0, 0x01, 0x02, 0, 0x10, 0x80};  // FUN_0049c4d0's
+constexpr uint32_t kDim = 0x5E6575;
+
 }  // namespace
+
+bool gameDrawn(int tab) { return tab >= 2 && tab < kTabs; }
+
+bool allowed(int tab, uint32_t rights) {
+    if (tab < 0 || tab >= kTabs) return false;
+    return kTabRights[tab] == 0 || (rights & kTabRights[tab]) != 0;
+}
 
 Layout layout(int targetW, int targetH, float scale, Tab tab, size_t members) {
     Layout L;
@@ -26,10 +36,11 @@ Layout layout(int targetW, int targetH, float scale, Tab tab, size_t members) {
     L.title = panel::Box{pad, pad, inner - 28 * s, kTitleH * s};
     L.close = panel::Box{w - pad - 24 * s, pad + 2 * s, 24 * s, 24 * s};
     float y = pad + kTitleH * s + 4 * s;
-    const float tw = (inner - kGap * s) / 2;
-    L.tabs[0] = panel::Box{pad, y, tw, kTabH * s};
-    L.tabs[1] = panel::Box{pad + tw + kGap * s, y, tw, kTabH * s};
-    y += kTabH * s + 8 * s;
+    const float tw = (inner - 2 * kGap * s) / 3;  // 3.0.11-beta.210: two rows of three
+    for (int i = 0; i < kTabs; ++i)
+        L.tabs[i] = panel::Box{pad + float(i % 3) * (tw + kGap * s), y + float(i / 3) * (kTabH + kGap) * s, tw,
+                               kTabH * s};
+    y += 2 * kTabH * s + kGap * s + 8 * s;
     L.head = panel::Box{pad, y, inner, 20 * s};
     y += 24 * s;
     if (tab == Tab::Info) {
@@ -58,7 +69,7 @@ int mostScroll(const Layout& L, size_t members) { return std::max(0, int(members
 
 Hit hitTest(const Layout& L, float x, float y) {
     if (L.close.contains(x, y)) return Hit{Part::Close, -1};
-    for (int i = 0; i < 2; ++i)
+    for (int i = 0; i < kTabs; ++i)
         if (L.tabs[i].contains(x, y)) return Hit{Part::Tab, i};
     if (L.glass.contains(x, y)) return Hit{Part::Body, -1};
     return Hit{};
@@ -68,8 +79,8 @@ void paint(panel::Picture& out, const Layout& L, const std::vector<Member>& memb
     const float s = L.s;
     panel::roundRect(out, L.glass, 12 * s, kCard, std::max(0.94f, uistyle::window()), kWhite, 0.12f, 1.0f * s);
     panel::roundRect(out, L.close, 6 * s, kWhite, sh.hoverClose ? 0.14f : 0.06f);
-    for (int i = 0; i < 2; ++i) {
-        const bool on = int(sh.tab) == i, hot = sh.hoverTab == i;
+    for (int i = 0; i < kTabs; ++i) {
+        const bool on = int(sh.tab) == i, hot = sh.hoverTab == i && allowed(i, sh.rights);
         panel::roundRect(out, L.tabs[i], 8 * s, on ? kGold : kWhite, on ? 0.24f : hot ? 0.10f : 0.04f,
                          on ? kGold : kWhite, on ? 0.8f : 0.12f, 1.0f * s);
     }
@@ -89,8 +100,9 @@ std::vector<Words> words(const Layout& L, const Info& g, const std::vector<Membe
     const float s = L.s;
     out.push_back(Words{L.title, g.name.empty() ? t.title : g.name, kGold2, 15 * s, true, Align::Left});
     out.push_back(Words{L.close, "\xC3\x97", kText, 14 * s, false, Align::Center});  // ×
-    for (int i = 0; i < 2; ++i)
-        out.push_back(Words{L.tabs[i], t.tabs[i], kText, 13 * s, int(sh.tab) == i, Align::Center});
+    for (int i = 0; i < kTabs; ++i)
+        out.push_back(Words{L.tabs[i], t.tabs[i], allowed(i, sh.rights) ? kText : kDim, 12.5f * s, int(sh.tab) == i,
+                            Align::Center});
     if (sh.tab == Tab::Info) {
         out.push_back(Words{L.head, t.title, kMuted, 12 * s, false, Align::Left});
         const std::string values[7] = {g.master,

@@ -38,6 +38,7 @@ constexpr uint32_t kSends[gc::kWindows] = {0x49D980, 0x4A1A50, 0x4A3630, 0x4A592
 constexpr uint32_t kName = 0x74B654, kMaster = 0x74B664, kTerritory = 0x74B6A8, kLevel = 0x74B690;
 constexpr uint32_t kMost = 0x74B69C, kAverage = 0x74B6A0, kExp = 0x74B6B4, kNextExp = 0x74B6B8, kTax = 0x74B6C0;
 constexpr uint32_t kMembers = 0x74B70C, kMember = 8;
+constexpr uint32_t kRights = 0x74B6D0;  // 3.0.11-beta.210: the tabs' rights (FUN_0049c4d0 checks them)
 constexpr int kButtonMsg = 6;
 constexpr size_t kMostMembers = 100;
 using SendMsgFn = int(__attribute__((thiscall)) *)(uint32_t self, uint32_t sender, int msg, int a, int b, int c);
@@ -78,13 +79,26 @@ bool write32(uint32_t at, uint32_t v) {
     return WriteProcessMemory(GetCurrentProcess(), reinterpret_cast<void*>(uintptr_t(at)), &v, 4, &n) && n == 4;
 }
 
-// The guild's tab open now (its window), 0 none
-uint32_t gameGuild() {
+// The guild's tab open now (its window), 0 none; `tab` its number
+uint32_t gameGuild(int* tab = nullptr) {
     for (int i = 0; i < gc::kWindows; ++i) {
         const uint32_t w = read32(kWindowMgr + gc::kFirstAt + 4 * uint32_t(i));
-        if (w && read32(w) == kClasses[i] && read32(read32(w) + kSendMsgSlot) == kSends[i]) return w;
+        if (w && read32(w) == kClasses[i] && read32(read32(w) + kSendMsgSlot) == kSends[i]) {
+            if (tab) *tab = i;
+            return w;
+        }
     }
     return 0;
+}
+
+// 3.0.11-beta.210: the game's own tab switched to `tab` (its message 0x45: the game checks the rights)
+void switchTab(State& s, int tab) {
+    int now = -1;
+    const uint32_t window = gameGuild(&now);
+    if (!window || tab == now || !gc::allowed(tab, read32(kRights))) return;
+    if (s.told++ < 30) LOG_INFO("guild: the game's tab %d%s", tab, gc::gameDrawn(tab) ? " (its own window)" : "");
+    reinterpret_cast<SendMsgFn>(uintptr_t(read32(read32(window) + kSendMsgSlot)))(window, 0, gc::kTabMsg, tab, 0, 0);
+    s.key.clear();
 }
 
 void hold(State& s, uint32_t window, bool on) {
@@ -145,6 +159,10 @@ gc::Texts texts() {
     t.title = say(settings::Text::GuildTitle);
     t.tabs[0] = say(settings::Text::GuildInfo);
     t.tabs[1] = say(settings::Text::GuildMembers);
+    t.tabs[2] = say(settings::Text::GuildTabPositions);  // 3.0.11-beta.210
+    t.tabs[3] = say(settings::Text::GuildTabSkills);
+    t.tabs[4] = say(settings::Text::GuildTabExpelled);
+    t.tabs[5] = say(settings::Text::GuildTabNotice);
     const settings::Text facts[7] = {settings::Text::GuildMaster,  settings::Text::GuildLevel,
                                      settings::Text::GuildMembers, settings::Text::GuildAverage,
                                      settings::Text::GuildExp,     settings::Text::GuildTax,
@@ -210,12 +228,17 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
         LOG_INFO("guild: [interface] guild = %d", on ? 1 : 0);
     }
     const bool world = inGameWorld();
-    const uint32_t window = world ? gameGuild() : 0;
-    if (world) hold(s, window, on);
-    if (!on || !window || !game || k <= 0 || targetWidth <= 0 || targetHeight <= 0) {
+    int tab = 0;
+    const uint32_t window = world ? gameGuild(&tab) : 0;
+    // 3.0.11-beta.210: the positions, the skills, the expelled, the notice - the game's own windows for now
+    const bool ours = window && !gc::gameDrawn(tab);
+    if (world) hold(s, ours ? window : 0, on);
+    if (!on || !ours || !game || k <= 0 || targetWidth <= 0 || targetHeight <= 0) {
         hide(s);
         return;
     }
+    s.show.tab = gc::Tab(tab);
+    s.show.rights = read32(kRights);
     if (!s.shown) LOG_INFO("guild: the game's guild window - the new card shows it");
     s.k = float(k);
     s.scale = uistyle::readingScale(k);
@@ -237,7 +260,8 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     std::string key = g.name + ';' + g.master + ';' + g.territory + ';' + std::to_string(g.level) + ',' +
                       std::to_string(g.most) + ',' + std::to_string(g.average) + ',' + std::to_string(g.exp) + ',' +
                       std::to_string(g.nextExp) + ',' + std::to_string(g.tax) + ';' + std::to_string(int(s.show.tab)) +
-                      ',' + std::to_string(s.show.scroll) + ',' + std::to_string(s.show.hoverTab) +
+                      ',' + std::to_string(s.show.scroll) + ',' + std::to_string(s.show.hoverTab) + ',' +
+                      std::to_string(s.show.rights) +
                       (s.show.hoverClose ? "x" : "") + ';' + std::to_string(s.layout.x) + ',' +
                       std::to_string(s.layout.y) + '#' + std::to_string(uistyle::generation());
     for (const gc::Member& m : s.members)
@@ -282,9 +306,8 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     if (m != WM_LBUTTONDOWN && m != WM_LBUTTONDBLCLK) return true;
     const gc::Hit h = gc::hitTest(s.layout, lx, ly);
     if (h.part == gc::Part::Tab) {
-        s.show.tab = gc::Tab(h.index);
         s.show.scroll = 0;
-        s.key.clear();
+        switchTab(s, h.index);  // 3.0.11-beta.210: the game's own tab with it (the card follows it)
     } else if (h.part == gc::Part::Close) {
         closeIt(s);
     }
@@ -302,7 +325,10 @@ bool close() {
 
 void beforeGameDraw() {
     State& s = state();
-    if (s.on && inGameWorld()) hold(s, gameGuild(), true);
+    if (!s.on || !inGameWorld()) return;
+    int tab = 0;
+    const uint32_t window = gameGuild(&tab);
+    hold(s, window && !gc::gameDrawn(tab) ? window : 0, true);  // 3.0.11-beta.210: tabs 2-5 the game's own
 }
 
 void padCommand(PadCommand c) {
@@ -314,10 +340,17 @@ void padCommand(PadCommand c) {
             s.show.scroll = std::min(gc::mostScroll(s.layout, s.members.size()), s.show.scroll + 1);
             break;
         case PadCommand::TabBack:
-        case PadCommand::TabOn:
-            s.show.tab = s.show.tab == gc::Tab::Info ? gc::Tab::Members : gc::Tab::Info;
+        case PadCommand::TabOn: {  // 3.0.11-beta.210: the next allowed tab, as the game's own
+            const int by = c == PadCommand::TabOn ? 1 : gc::kTabs - 1;
+            int next = int(s.show.tab);
+            for (int n = 0; n < gc::kTabs; ++n) {
+                next = (next + by) % gc::kTabs;
+                if (gc::allowed(next, s.show.rights)) break;
+            }
             s.show.scroll = 0;
+            switchTab(s, next);
             break;
+        }
         case PadCommand::Close: closeIt(s); break;
     }
     s.key.clear();

@@ -624,6 +624,8 @@ enum class Text : uint16_t {
     RoomSetupTitle, RoomSave, RoomMembers, RoomSetup, RoomLeave, RoomKick, RoomOwner, RoomFriend,
     // 3.0.11-beta.209: Alt+D - the driver's console
     InterfaceDetailConsole, InterfaceDetailConsoleHint,
+    // 3.0.11-beta.210: the guild card's other tabs (the game's own windows for now)
+    GuildTabPositions, GuildTabSkills, GuildTabExpelled, GuildTabNotice,
     // 3.0.11-beta.141: the character block's experience - the free skill points, the last level, an hour, a minute,
     // the experience's tip, the portrait's tip (Alt+V)
     CharSkillPoints, CharExpMax, CharHour, CharMinute, CharToLevel, CharLevelIn, CharPerHour, CharSession, CharLastGain,

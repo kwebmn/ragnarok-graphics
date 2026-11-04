@@ -16,6 +16,13 @@ namespace uagfx::guildcard {
 constexpr int kWindows = 6, kCloseButton = 0x87;
 constexpr uint32_t kFirstAt = 0x170;  // the manager's place of the first of them (4 apart)
 enum class Tab : uint8_t { Info, Members };
+// 3.0.11-beta.210 (the tester: «alt g відкриває режим гільди, але у ГМа немає купи функцій»): all six of the game's
+// tabs on the card (two rows of three) - a click switches the game's own (its message 0x45 with the tab; the game
+// checks its rights, the 0x0168 bits); the information and the members drawn by the card, the positions, the guild's
+// skills, the expelled and the notice the game's own windows for now (all of a master's tools in them)
+constexpr int kTabs = 6, kTabMsg = 0x45;
+bool gameDrawn(int tab);
+bool allowed(int tab, uint32_t rights);  // the game's rights for the tab (members 1, positions 2, expelled 0x10, ...)
 struct Info {
     std::string name, master, territory;  // UTF-8
     int level = 0, members = 0, most = 0, average = 0, tax = 0;
@@ -27,10 +34,11 @@ struct Member {
     bool online = false;
 };
 struct Texts {
-    std::string title, tabs[2], facts[7], none, online;  // online: «{1} з {2} у грі»
+    std::string title, tabs[kTabs], facts[7], none, online;  // online: «{1} з {2} у грі»
 };
 struct Show {
     Tab tab = Tab::Info;
+    uint32_t rights = 0xFF;  // 3.0.11-beta.210: the game's tab rights (a tab not allowed dimmed)
     int scroll = 0;
     int hoverTab = -1;
     bool hoverClose = false;
@@ -39,7 +47,7 @@ struct Layout {
     float s = 1;
     int x = 0, y = 0, w = 0, h = 0;
     panel::Box glass, title, close, head, list;
-    panel::Box tabs[2];
+    panel::Box tabs[kTabs];
     panel::Box facts[7];
     std::vector<panel::Box> rows;  // the members shown (12 at most)
 };

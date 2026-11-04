@@ -21,6 +21,10 @@ guildcard::Texts texts() {
     t.title = "Гільдія";
     t.tabs[0] = "Інформація";
     t.tabs[1] = "Учасники";
+    t.tabs[2] = "Посади";
+    t.tabs[3] = "Навички";
+    t.tabs[4] = "Вигнані";
+    t.tabs[5] = "Оголошення";
     const char* const facts[7] = {"Майстер", "Рівень", "Учасники", "Середній рівень", "Досвід", "Податок", "Територія"};
     for (int i = 0; i < 7; ++i) t.facts[i] = facts[i];
     t.none = "немає";
@@ -90,4 +94,35 @@ TEST(guild_card_words_and_picture) {
     p.px.assign(size_t(L.w) * size_t(L.h), 0u);
     guildcard::paint(p, L, m, sh);
     CHECK((p.px[size_t(L.h / 2) * size_t(L.w) + size_t(L.w / 2)] >> 24) > 0x80);
+}
+
+// 3.0.11-beta.210 (the tester: «alt g відкриває режим гільди, але у ГМа немає купи функцій»): all six of the game's
+// tabs on the card, two rows of three; the game's own rights for four of them (its 0x0168 bits: members 1, positions
+// 2, the expelled 0x10, the notice 0x80); the information and the members drawn by the card, the rest the game's own
+// windows for now (every master's tool in them)
+TEST(guild_card_six_tabs) {
+    const guildcard::Layout L = guildcard::layout(1920, 1080, 1.0f, guildcard::Tab::Info, 3);
+    CHECK(L.tabs[0].y == L.tabs[2].y && L.tabs[3].y > L.tabs[0].y && L.tabs[3].y == L.tabs[5].y);
+    CHECK(L.tabs[0].x < L.tabs[1].x && L.tabs[1].x < L.tabs[2].x && L.tabs[3].x == L.tabs[0].x);
+    CHECK(L.head.y >= L.tabs[5].y + L.tabs[5].h);
+    for (int i = 0; i < guildcard::kTabs; ++i) {
+        const guildcard::Hit h = guildcard::hitTest(L, mid(L.tabs[i]).first, mid(L.tabs[i]).second);
+        CHECK(h.part == guildcard::Part::Tab && h.index == i);
+    }
+    CHECK(!guildcard::gameDrawn(0) && !guildcard::gameDrawn(1));
+    CHECK(guildcard::gameDrawn(2) && guildcard::gameDrawn(3) && guildcard::gameDrawn(4) && guildcard::gameDrawn(5));
+    CHECK(guildcard::allowed(0, 0) && guildcard::allowed(3, 0));
+    CHECK(!guildcard::allowed(1, 0) && guildcard::allowed(1, 1));
+    CHECK(!guildcard::allowed(2, 1) && guildcard::allowed(2, 2));
+    CHECK(!guildcard::allowed(4, 0xEF) && guildcard::allowed(4, 0x10));
+    CHECK(!guildcard::allowed(5, 0x7F) && guildcard::allowed(5, 0x80));
+    std::vector<guildcard::Member> none;
+    guildcard::Show sh;
+    sh.rights = 0x01;
+    const std::vector<guildcard::Words> w = guildcard::words(L, guildcard::Info{}, none, sh, texts());
+    const auto word = [&](const std::string& t) {
+        return std::find_if(w.begin(), w.end(), [&](const guildcard::Words& x) { return x.text == t; });
+    };
+    CHECK(word("Посади") != w.end() && word("Учасники") != w.end() && word("Оголошення") != w.end());
+    CHECK(word("Посади")->rgb != word("Учасники")->rgb);  // not allowed: dimmed
 }
