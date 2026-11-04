@@ -23,8 +23,9 @@ constexpr uint32_t kCard = 0x10141C, kWhite = 0xFFFFFF, kBlack = 0x000000, kDark
 constexpr uint32_t kAccent = 0xC9A55B, kAccent2 = 0xE6CB8A, kText = 0xECEFF5, kMuted = 0x9AA3B5;
 constexpr uint32_t kGround = 0xFF141922;   // the map's square where it has no picture
 constexpr uint32_t kKafra = 0xE86AA8;      // the concept's «K»
-// 3.0.11-beta.201: a guild mate's; 3.0.11-beta.219 (the tester: «колір схожий з нпц») violet, not the NPCs' green
-constexpr uint32_t kGuildRing = 0xB58CFF;
+// 3.0.11-beta.201: a guild mate's; 3.0.11-beta.222 (the tester: «з відсилкою на оригінал і старим кольором») the
+// game's own pink for them (its mode's message 0xB8 files the mark 0xFFA6D2), not the NPCs' green
+constexpr uint32_t kGuildRing = 0xFFA6D2;
 constexpr uint32_t kPortal = 0x23285A, kPortalRing = 0x8E9BFF;
 // 3.0.11-beta.187 (the tester took the fan for the character's sight): the camera's fan a neutral light, the arrow
 // alone blue
@@ -603,10 +604,20 @@ void overMap(panel::Picture& out, const panel::Box& box, const Scene& sc, const 
                 panel::circle(out, x, y, r, m.rgb, 1.0f);
                 panel::circle(out, x, y, r * 0.32f, kWhite, 1.0f);
                 break;
-            case Glyph::Guild:  // 3.0.11-beta.219: a guild mate - a violet triangle pointing up, a dark edge
-                guildSign(out, x, y, r, s);
+            case Glyph::Guild:  // 3.0.11-beta.219: a guild mate - a pink triangle pointing up, a dark edge
+                if (sc.classicMarks) {  // 3.0.11-beta.222: a round dot, as the game drew it
+                    panel::circle(out, x, y, r + 1.2f, kBlack, 0.8f);
+                    panel::circle(out, x, y, r, kGuildRing, 1.0f);
+                } else {
+                    guildSign(out, x, y, r, s);
+                }
                 break;
             case Glyph::Member:  // 3.0.11-beta.83: its face in a dark round, a blue ring (a dead one's red)
+                if (sc.classicMarks) {  // 3.0.11-beta.222: a round dot, as the game drew it
+                    panel::circle(out, x, y, r * 0.6f + 1.2f, kBlack, 0.8f);
+                    panel::circle(out, x, y, r * 0.6f, m.dead ? kDeadRing : kMemberRing, 1.0f);
+                    break;
+                }
                 panel::circle(out, x, y, r + 1.5f, kBlack, 0.7f);
                 panel::circle(out, x, y, r, kDark, 1.0f);
                 if (m.picture && m.picture->width > 0) faceIn(out, *m.picture, x, y, r - 1.2f * s);

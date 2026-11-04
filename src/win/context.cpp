@@ -992,6 +992,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     minimapShow.kafra = config.minimapKafra;  // 3.0.11-beta.119: the map's layers
     minimapShow.party = config.minimapParty;
     minimapShow.viewFan = config.minimapView;  // 3.0.11-beta.187
+    minimapShow.classic = config.minimapClassic;  // 3.0.11-beta.222
     minimapShow.scheme = config.minimapStyle == MapStyle::Scheme;  // 3.0.11-beta.120: the maps' picture
     minimapShow.netBadge = config.netBadge;                         // 3.0.11-beta.122: the round trip's badge
     netwatchwin::frame();  // 3.0.11-beta.122: the map server's connection read each second (the minimap's badge)

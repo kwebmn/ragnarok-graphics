@@ -203,6 +203,10 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("minimap_kafra", flag(running.minimapKafra), flag(file.minimapKafra)));
         n.minimapKafra = file.minimapKafra;
     }
+    if (file.minimapClassic != running.minimapClassic) {  // 3.0.11-beta.222: the marks' look, at once
+        u.applied.push_back(change("minimap_classic", flag(running.minimapClassic), flag(file.minimapClassic)));
+        n.minimapClassic = file.minimapClassic;
+    }
     if (file.minimapView != running.minimapView) {  // 3.0.11-beta.187: the camera's fan, at once
         u.applied.push_back(change("minimap_view", flag(running.minimapView), flag(file.minimapView)));
         n.minimapView = file.minimapView;

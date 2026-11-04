@@ -800,7 +800,30 @@ TEST(minimap_proto_guild_mate_violet_triangle) {
     };
     const uint32_t mid = at(0, 1);
     const int r = int((mid >> 16) & 0xFF), g = int((mid >> 8) & 0xFF), b = int(mid & 0xFF);
-    CHECK(b > g + 40 && r > g + 20);  // violet, not green
+    CHECK(b > g + 30 && r > g + 60);  // 3.0.11-beta.222: the game's own pink (0xFFA6D2), not the NPCs' green
     const uint32_t corner = at(-3.5f, -3.5f);  // a triangle's top corners are empty: no round there
     CHECK(((corner >> 8) & 0xFF) < g || (corner & 0xFF) < b - 40);
+}
+
+// 3.0.11-beta.222 (the tester: «зробити гарний трикутник з відсилкою на оригінал і старим кольором ... togle в
+// налаштуваннях старий \ новий стиль»): the guild mates' triangle in the game's own colour for them (its mode's
+// 0xB8: 0xFFA6D2); [interface] minimap_classic - the marks as round dots, as the game drew them
+TEST(minimap_proto_classic_marks_round) {
+    const minimap::Layout L = minimap::layout(1280, 720, 1.0f, false, 0);
+    minimap::Scene sc;
+    sc.map = minimap::MapSize{100, 100};
+    sc.player = minimap::Cell{50, 50};
+    sc.marks = {minimap::Mark{minimap::Cell{60, 40}, 0, minimap::Glyph::Guild, ""}};
+    sc.classicMarks = true;
+    panel::Picture pic;
+    minimap::paint(pic, L, sc, minimap::Texts{});
+    const minimap::View v = minimap::view(sc.map, sc.player, 100, int(L.map.w));
+    float px = 0, py = 0;
+    minimap::cellToPanel(v, sc.map, minimap::Cell{60, 40}, px, py);
+    const auto at = [&](float dx, float dy) {
+        return pic.px[size_t(L.map.y + py + dy) * size_t(pic.width) + size_t(L.map.x + px + dx)];
+    };
+    const uint32_t mid = at(0, 0), top = at(0, -2.5f);
+    CHECK(((mid >> 16) & 0xFF) > 0xE0 && ((mid >> 8) & 0xFF) > 0x90 && ((mid >> 8) & 0xFF) < 0xC0);  // pink
+    CHECK(((top >> 16) & 0xFF) > 0xE0);  // round: its top filled too (the triangle's apex is thin there)
 }

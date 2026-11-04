@@ -122,6 +122,9 @@ const std::vector<IniSetting>& iniSettings() {
         // 3.0.11-beta.187: the camera's fan round the arrow
         {"interface", "minimap_view", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {},
          Text::InterfaceMinimapView, Text::InterfaceMinimapViewHint, ""},
+        // 3.0.11-beta.222: the marks as the game drew them
+        {"interface", "minimap_classic", Page::Interface, Control::Check, 0, 1, 0, {"0", "1"}, {},
+         Text::InterfaceMinimapClassic, Text::InterfaceMinimapClassicHint, ""},
         {"interface", "minimap_mobs", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {},
          Text::InterfaceMinimapMobs, Text::InterfaceMinimapMobsHint, ""},
         // 3.0.11-beta.65: where one can walk from here - the concept's experiment
@@ -1107,6 +1110,7 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "interface.minimap_style") return mapStyleToken(c.minimapStyle);  // 3.0.11-beta.120
     if (k == "interface.minimap_kafra") return c.minimapKafra ? "1" : "0";  // 3.0.11-beta.119
     if (k == "interface.minimap_view") return c.minimapView ? "1" : "0";    // 3.0.11-beta.187
+    if (k == "interface.minimap_classic") return c.minimapClassic ? "1" : "0";  // 3.0.11-beta.222
     if (k == "interface.minimap_party") return c.minimapParty ? "1" : "0";
     if (k == "interface.minimap_reach") return c.minimapReach ? "1" : "0";  // 3.0.11-beta.65
     if (k == "interface.minimap_hd") return c.minimapHd ? "1" : "0";        // 3.0.11-beta.72

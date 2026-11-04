@@ -1943,3 +1943,16 @@ TEST(config_interface_login_news) {
     CHECK(appliesNow("interface.login_news"));
     CHECK(!liveUpdate(parseConfig(""), parseConfig("[interface]\nlogin_news = 0\n")).next.loginNews);
 }
+
+// 3.0.11-beta.222 (the tester: «togle в налаштуваннях старий \ новий стиль»): [interface] minimap_classic - the
+// minimap's marks as round dots in the game's colours; off at first, at once
+TEST(config_reads_the_minimap_classic_marks) {
+    CHECK(!parseConfig("").minimapClassic);
+    CHECK(parseConfig("[interface]\nminimap_classic = 1\n").minimapClassic);
+    const settings::IniSetting* s = settings::findSetting("interface.minimap_classic");
+    CHECK(s != nullptr);
+    CHECK(appliesNow("interface.minimap_classic"));
+    const LiveUpdate u = liveUpdate(parseConfig(""), parseConfig("[interface]\nminimap_classic = 1\n"));
+    CHECK(u.next.minimapClassic && u.applied.size() == 1 && u.waiting.empty());
+    if (s) CHECK_EQ(settings::tokenOf(*s, parseConfig("[interface]\nminimap_classic = 1\n")), std::string("1"));
+}

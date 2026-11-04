@@ -773,6 +773,7 @@ minimap::Scene sceneOf(const State& s) {
     sc.lookX = s.lookX;
     sc.lookY = s.lookY;
     sc.viewFan = s.show.viewFan;  // 3.0.11-beta.187: [interface] minimap_view
+    sc.classicMarks = s.show.classic;  // 3.0.11-beta.222: [interface] minimap_classic
     sc.cells = minimap::cellsAt(s.zoom, s.size);
     sc.marks = s.marks;
     if (s.show.party)  // 3.0.11-beta.119: the party a layer
@@ -1067,6 +1068,10 @@ void frame(HWND game, const Show& show, double k, int targetWidth, int targetHei
         s.index = index;
         s.show = want;
         buildHints(s);
+        s.dirty = s.bigDirty = true;
+    }
+    if (want.classic != s.show.classic) {  // 3.0.11-beta.222: [interface] minimap_classic
+        s.show.classic = want.classic;
         s.dirty = s.bigDirty = true;
     }
     if (want.viewFan != s.show.viewFan) {  // 3.0.11-beta.187: [interface] minimap_view

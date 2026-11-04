@@ -7121,6 +7121,16 @@ constexpr Entry kTexts[] = {
     {Text::GuildSkillPoints, "Skill points left: {1}", "Вільних очок навичок: {1}", "Свободных очков навыков: {1}"},
     {Text::HomunSkillsHead, "Skills - points left: {1}", "Навички · вільних очок: {1}",
      "Навыки · свободных очков: {1}"},  // 3.0.11-beta.221
+    // 3.0.11-beta.222 (the tester: «togle в налаштуваннях старий \ новий стиль»)
+    {Text::InterfaceMinimapClassic, "Map marks as in the game", "Позначки на карті як у грі",
+     "Отметки на карте как в игре"},
+    {Text::InterfaceMinimapClassicHint,
+     "The minimap's and the big map's marks as round dots in the game's own colours: guild mates pink, party members "
+     "blue. Off: the new marks - a guild mate's pink triangle, a party member's face.",
+     "Позначки на міні-карті й великій карті — круглими крапками в кольорах самої гри: члени гільдії рожеві, групи — "
+     "блакитні. Вимкнено: нові позначки — рожевий трикутник члена гільдії, обличчя учасника групи.",
+     "Отметки на мини-карте и большой карте — круглыми точками в цветах самой игры: члены гильдии розовые, группы — "
+     "голубые. Выключено: новые отметки — розовый треугольник члена гильдии, лицо участника группы."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 
