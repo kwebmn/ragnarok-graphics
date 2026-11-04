@@ -1,3 +1,9 @@
+# uaRO Graphics 3.0.11-beta.211 — what's new
+
+**The tester's list, the new part**:
+- The game's popup menus in the new look: a right click on another player («Request a deal», «Open 1:1 Chat», «Register as a Friend», …), on a chat room's member, on a guild's member - a card at the click with the game's own items; a click on an item does what the game's did, a click elsewhere or Esc closes it. A new switch «Спливні меню» under «Інтерфейс» (and in the console); off - the game's own menus.
+- «Hard to hit a player to open the menu»: before changing how the game picks a character under the cursor, this beta writes down what it sees at each right click (the nearest pick box, its size and distance, the game's smallest box) - a report after a few right clicks on players tells what to widen.
+
 # uaRO Graphics 3.0.11-beta.210 — what's new
 
 **The tester's third list, part eleven**:
