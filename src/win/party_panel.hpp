@@ -37,5 +37,8 @@ std::vector<OnMap> onMap(int faceSide);
 std::vector<uint32_t> hereIds();
 // 3.0.11-beta.216: its box in the target while it shows (the mercenary's block stands under it); false: not shown
 bool panelBox(int& x, int& y, int& w, int& h);
+// 3.0.11-beta.235 (the character block's party line): the party's members in the game and all, the character with
+// them, as the panel last read them; false none known
+bool counts(int& online, int& total);
 
 }  // namespace uagfx::win::partywin

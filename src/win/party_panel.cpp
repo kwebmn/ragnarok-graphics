@@ -533,6 +533,15 @@ void draw(FrameRecord& record, gpu::Renderer& renderer) {
     if (cursor >= 0) record.moveLastBefore(record.commands().size() - size_t(cursor) - 1, size_t(cursor));
 }
 
+bool counts(int& online, int& total) {
+    const State& s = state();
+    if (s.seats.empty()) return false;  // the party's list, the character's own seat not among them
+    online = 1;
+    total = 1 + int(s.seats.size());
+    for (const auto& [account, seat] : s.seats) online += seat.online ? 1 : 0;
+    return true;
+}
+
 bool panelBox(int& x, int& y, int& w, int& h) {
     const State& s = state();
     if (!s.shown) return false;

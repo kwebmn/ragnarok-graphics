@@ -778,6 +778,10 @@ enum class Text : uint16_t {
     CardNoDescription, CardMostLevel,  // 3.0.11-beta.229
     SkillsLevelOf, SkillsNeedsHead, SkillsUnlocks, SkillsSideHint,  // 3.0.11-beta.229
     SkillsSpByLevel,  // 3.0.11-beta.230
+    CharGuild, CharParty, CharRegen, CharRegenFull, CharRegenToFull, CharRegenNone, CharSessionHead, CharKilled,
+    CharDeaths, CharTipWeight, CharTipPoints, CharTipSkillPoints, CharTipRegen1, CharTipRegen2, CharTipAtk, CharTipDef,
+    CharTipFlee, CharTipAspd, CharTipOpen, CharTipTime, CharTipZeny, CharTipKills, CharTipDeaths,
+    CharTipOnline,  // 3.0.11-beta.235
     Count
 };
 

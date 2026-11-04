@@ -8,12 +8,14 @@
 #include <cstdlib>
 #include <cstring>
 #include <memory>
+#include <set>
 #include <string>
 #include <vector>
 
 #include "core/char_block.hpp"
 #include "core/char_status.hpp"
 #include "core/exp_rate.hpp"
+#include "core/game_packets.hpp"
 #include "core/layout.hpp"
 #include "core/settings/strings.hpp"
 #include "core/sprite_file.hpp"
@@ -27,6 +29,7 @@
 #include "win/head_picture.hpp"
 #include "win/hud_edit.hpp"
 #include "win/log.hpp"
+#include "win/party_panel.hpp"
 #include "win/paths.hpp"
 #include "win/picture_draw.hpp"
 #include "win/real_ddraw.hpp"
@@ -47,6 +50,11 @@ using SendMsgFn = int(__attribute__((thiscall)) *)(uint32_t self, uint32_t sende
 // The session's character: its class, its sex (+0x1CA4, which GetSex FUN_006425b0 keeps in +0x770), its head and
 // hair colour (its head's sprite: win/head_picture)
 constexpr uint32_t kJob = 0x771F8C, kSex = 0x772DEC, kHead = 0x7718F4, kHairColour = 0x771910;
+// 3.0.11-beta.235 (the concept «Блок персонажа»): the guild's name (a std::string's text and length, as the guild
+// window reads it - win/guild_card), the party's name (char*), the character's account (its hits and its death)
+constexpr uint32_t kGuildName = 0x74B654, kPartyName = 0x772D88, kOwnAccount = 0x771F7C;
+// the server's natural regen periods (uAthena conf/battle/player.conf natural_healhp_interval / sp)
+constexpr int kHpEverySec = 6, kSpEverySec = 8;
 constexpr ULONGLONG kWarnMs = 2000;  // the low HP warning's
 constexpr ULONGLONG kTipMs = 400, kPressMs = 160;  // 3.0.11-beta.51: the concept's tip after 0.4 s; a press shown
 // 3.0.11-beta.114 (the concept «Концепция окон и инвентаря», question 10 «можна»): the ammo worn running low on the
@@ -71,6 +79,12 @@ struct State {
     int texW = 0, texH = 0;
     bool upload = false;
     int clicksLogged = 0;
+    // 3.0.11-beta.235: this session (from the character's first frame): its start, its zeny then, the monsters it hit
+    // (the recent ones), those of them that died, its deaths
+    ULONGLONG sessionAt = 0;
+    long long zenyAt = -1;
+    std::set<uint32_t> hit;
+    int kills = 0, deaths = 0;
     // 3.0.11-beta.46 (the concept's motion): a picture of its own with its texture - the view before a change (fading
     // out under the new one), the low HP warning (sliding in, fading out), a new level's gold edge (flaring once)
     struct Layer {
@@ -233,6 +247,30 @@ cb::Texts texts() {
     t.lastGain = say(settings::Text::CharLastGain);
     t.fold = say(settings::Text::CharFold);
     t.unfold = say(settings::Text::CharUnfold);
+    t.guild = say(settings::Text::CharGuild);  // 3.0.11-beta.235
+    t.party = say(settings::Text::CharParty);
+    t.regen = say(settings::Text::CharRegen);
+    t.regenFull = say(settings::Text::CharRegenFull);
+    t.regenToFull = say(settings::Text::CharRegenToFull);
+    t.regenNone = say(settings::Text::CharRegenNone);
+    t.sessionHead = say(settings::Text::CharSessionHead);
+    t.killed = say(settings::Text::CharKilled);
+    t.deaths = say(settings::Text::CharDeaths);
+    t.tipWeight = say(settings::Text::CharTipWeight);
+    t.tipPoints = say(settings::Text::CharTipPoints);
+    t.tipSkillPoints = say(settings::Text::CharTipSkillPoints);
+    t.tipRegen1 = say(settings::Text::CharTipRegen1);
+    t.tipRegen2 = say(settings::Text::CharTipRegen2);
+    t.tipAtk = say(settings::Text::CharTipAtk);
+    t.tipDef = say(settings::Text::CharTipDef);
+    t.tipFlee = say(settings::Text::CharTipFlee);
+    t.tipAspd = say(settings::Text::CharTipAspd);
+    t.tipOpen = say(settings::Text::CharTipOpen);
+    t.tipTime = say(settings::Text::CharTipTime);
+    t.tipZeny = say(settings::Text::CharTipZeny);
+    t.tipKills = say(settings::Text::CharTipKills);
+    t.tipDeaths = say(settings::Text::CharTipDeaths);
+    t.tipOnline = say(settings::Text::CharTipOnline);
     const settings::Text names[cb::kButtons] = {settings::Text::CharStats,  settings::Text::CharEquip,
                                                 settings::Text::CharItems,  settings::Text::CharSkills,
                                                 settings::Text::CharFriends, settings::Text::CharOptions};
@@ -293,14 +331,6 @@ void render(State& s) {
     cb::paint(s.picture, s.layout, s.data, t, s.show);
     drawWords(s.picture, gdiWords(cb::words(s.layout, s.data, t, s.show)));
     s.upload = true;
-}
-
-bool toTarget(const State& s, HWND game, int x, int y, float& tx, float& ty) {
-    RECT client{};
-    if (!GetClientRect(game, &client) || client.right <= 0 || client.bottom <= 0) return false;
-    tx = float(x) * float(s.targetW) / float(client.right);  // Windows' size of the window (uaRO.exe is not DPI-aware)
-    ty = float(y) * float(s.targetH) / float(client.bottom);
-    return true;
 }
 
 void block(const State& s, HWND game) {  // the mouse's clicks over it are its own, not the game's
@@ -368,7 +398,9 @@ void frame(HWND game, CharacterLook look, unsigned codePage, double k, int targe
         }
         s.shownView = view;
     }
-    s.layout = cb::layout(view, panelLook, int(std::lround(10 * scale)), int(std::lround(10 * scale)), scale);
+    // 3.0.11-beta.235: the session's rows at the last levels (as the last frame's numbers had them)
+    s.layout = cb::layout(view, panelLook, int(std::lround(10 * scale)), int(std::lround(10 * scale)), scale,
+                          cb::lastLevels(s.data));
     hudedit::place(hudlayout::Part::Character, float(k), targetWidth, targetHeight, s.layout.w, s.layout.h, s.layout.x,
                    s.layout.y);  // 3.0.11-beta.75: where the player put it
     makePortrait(s, int(std::lround(s.layout.portrait.w * 0.86f)));
@@ -406,6 +438,10 @@ void frame(HWND game, CharacterLook look, unsigned codePage, double k, int targe
         s.baseTrack.reset();
         s.jobTrack.reset();
         s.paceAt = 0;
+        s.sessionAt = now;  // 3.0.11-beta.235: another character - its own session
+        s.zenyAt = st.zeny;
+        s.hit.clear();
+        s.kills = s.deaths = 0;
     }
     s.baseTrack.feed(now, st.baseLevel, st.baseExp, st.baseNext);
     s.jobTrack.feed(now, st.jobLevel, st.jobExp, st.jobNext);
@@ -424,6 +460,38 @@ void frame(HWND game, CharacterLook look, unsigned codePage, double k, int targe
     d.jobSession = s.jobTrack.session();
     d.baseLast = s.baseTrack.last();
     d.jobLast = s.jobTrack.last();
+    // 3.0.11-beta.235: the guild and the party, the natural regen (uAthena status_calc_regen: HP 1 + VIT/5 + MaxHP/200
+    // each 6 s, SP 1 + INT/6 + MaxSP/100 each 8 s, more past INT 120), the battle's numbers, this session
+    const auto text = [&](uint32_t ptr, uint32_t len) -> std::string {
+        if (!ptr || !len || len > 40) return "";
+        char buf[41] = {};
+        return readGame(ptr, buf, len) ? utf8Of(widened(std::string(buf, len), codePage)) : "";
+    };
+    d.guild = text(read32(kGuildName), read32(kGuildName + 4));
+    {
+        char party[25] = {};
+        const uint32_t at = read32(kPartyName);
+        d.party =
+            at && readGame(at, party, 24) ? utf8Of(widened(std::string(party, strnlen(party, 24)), codePage)) : "";
+        d.partyOnline = d.partyTotal = 0;
+        if (!d.party.empty()) partywin::counts(d.partyOnline, d.partyTotal);
+    }
+    const int vit = st.statBase[2] + st.statBonus[2], intel = st.statBase[3] + st.statBonus[3];
+    d.hpRegen = st.hpMost > 0 ? 1 + vit / 5 + st.hpMost / 200 : -1;
+    d.spRegen = st.spMost > 0 ? 1 + intel / 6 + st.spMost / 100 + (intel >= 120 ? (intel - 120) / 2 + 4 : 0) : -1;
+    d.hpEverySec = kHpEverySec;
+    d.spEverySec = kSpEverySec;
+    d.atk = st.atk;
+    d.atk2 = st.atk2;
+    d.def = st.def;
+    d.def2 = st.def2;
+    d.flee = st.flee;
+    d.flee2 = st.flee2;
+    d.aspd = st.aspd;
+    d.sessionMinutes = s.sessionAt ? (long long)((now - s.sessionAt) / 60000) : -1;
+    d.zenyGain = s.zenyAt >= 0 ? (long long)st.zeny - s.zenyAt : 0;
+    d.kills = s.kills;
+    d.deaths = s.deaths;
     // low HP: a short warning as it falls under a quarter
     const ammowatch::Ammo& ammo = ammowatch::read(now);  // 3.0.11-beta.114 (.125: win/ammo_watch)
     d.ammo = ammo.count;
@@ -451,11 +519,13 @@ void frame(HWND game, CharacterLook look, unsigned codePage, double k, int targe
                                       float(cy) * float(k) - float(s.layout.y));
         if (h.part == cb::Part::Button) show.hoverButton = h.index;
         if (h.part == cb::Part::Exp) show.hoverExp = h.index;  // 3.0.11-beta.141: an experience row's tip
+        if (h.part == cb::Part::Zone) show.hoverZone = h.index;  // 3.0.11-beta.235: a part's tip
         show.hoverPortrait = h.part == cb::Part::Portrait;     // 3.0.11-beta.141: Alt+V in its tip
         show.hoverBlock = h.part != cb::Part::None;
     }
     const int hoverId = show.hoverButton >= 0 ? 100 + show.hoverButton
                         : show.hoverExp >= 0  ? 200 + show.hoverExp
+                        : show.hoverZone >= 0 ? 300 + show.hoverZone
                         : show.hoverPortrait  ? 2
                         : show.hoverBlock     ? 1
                                               : 0;
@@ -482,7 +552,14 @@ void frame(HWND game, CharacterLook look, unsigned codePage, double k, int targe
         std::to_string(d.jobNext) + ';' + std::to_string(std::llround(d.basePerHour)) + ',' +
         std::to_string(std::llround(d.jobPerHour)) + ';' + std::to_string(d.baseSession) + ',' +
         std::to_string(d.jobSession) + ',' + std::to_string(d.baseLast) + ',' + std::to_string(d.jobLast) + ';' +
-        std::to_string(d.skillPoints) + 'e' + std::to_string(show.hoverExp) + (show.hoverPortrait ? "f" : "");
+        std::to_string(d.skillPoints) + 'e' + std::to_string(show.hoverExp) + (show.hoverPortrait ? "f" : "") + ';' +
+        // 3.0.11-beta.235: the social line, the regen, the battle, the session, the part pointed at
+        d.guild + '|' + d.party + std::to_string(d.partyOnline) + '/' + std::to_string(d.partyTotal) + ';' +
+        std::to_string(d.hpRegen) + ',' + std::to_string(d.spRegen) + ';' + std::to_string(d.atk) + ',' +
+        std::to_string(d.atk2) + ',' + std::to_string(d.def) + ',' + std::to_string(d.def2) + ',' +
+        std::to_string(d.flee) + ',' + std::to_string(d.flee2) + ',' + std::to_string(d.aspd) + ';' +
+        std::to_string(d.sessionMinutes) + ',' + std::to_string(d.zenyGain) + ',' + std::to_string(d.kills) + ',' +
+        std::to_string(d.deaths) + 'z' + std::to_string(show.hoverZone);
     if (const std::string drawn = key + '#' + std::to_string(uistyle::generation()); drawn != s.key) {  // its grounds
         s.key = drawn;
         render(s);
@@ -539,10 +616,9 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
                         m == WM_RBUTTONUP || m == WM_RBUTTONDBLCLK || m == WM_MBUTTONDOWN || m == WM_MBUTTONUP;
     if (!button && m != WM_MOUSEWHEEL) return false;
     (void)wp;
-    POINT p{GET_X_LPARAM(lp), GET_Y_LPARAM(lp)};
-    if (m == WM_MOUSEWHEEL && !ScreenToClient(game, &p)) return false;  // the wheel's point is the screen's
+    // 3.0.11-beta.235: the press where the game's own cursor stands, as the hover (game_camera pointerInTarget)
     float tx = 0, ty = 0;
-    if (!toTarget(s, game, p.x, p.y, tx, ty)) return false;
+    if (!pointerInTarget(game, m, lp, s.k, s.targetW, s.targetH, tx, ty)) return false;
     const cb::Hit h = cb::hitTest(s.layout, tx - float(s.layout.x), ty - float(s.layout.y));
     if (h.part == cb::Part::None) return false;
     if (m == WM_LBUTTONDOWN) {
@@ -551,6 +627,11 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
             LOG_INFO("character: the block %s", s.view == cb::View::Full      ? "full"
                                                 : s.view == cb::View::Compact ? "compact"
                                                                               : "folded to its icon");
+        } else if (h.part == cb::Part::Zone && h.index >= 0 && cb::opensStats(cb::Zone(h.index))) {
+            // 3.0.11-beta.235: the battle's numbers - «Характеристики»
+            const bool sent = press(cb::kButton[0].command);
+            if (s.clicksLogged++ < 10)
+                LOG_INFO("character: the battle's line - «Характеристики» %s", sent ? "opened" : "not opened");
         } else if (h.part == cb::Part::Button && h.index >= 0 && h.index < cb::kButtons) {
             s.pressedButton = h.index;  // 3.0.11-beta.51: shown pressed a moment
             s.pressedUntil = GetTickCount64() + kPressMs;
@@ -590,6 +671,27 @@ bool gameOpen(int command) {
                         : command == 0x85 ? kWindowMgr + 0x11C
                                           : 0;
     return at && inGameWorld() && read32(at) != 0;
+}
+
+// 3.0.11-beta.235: this session's kills and deaths - a monster the character hit (0x008a, its skills) that died
+// (0x0080 type 1), the character's own death
+void packet(const packets::Event& e) {
+    State& s = state();
+    const uint32_t me = read32(kOwnAccount);
+    if (!me) return;
+    if (const auto* h = std::get_if<packets::Hit>(&e)) {
+        if (h->source == me && h->target != me && h->target) {
+            if (s.hit.size() > 256) s.hit.clear();
+            s.hit.insert(h->target);
+        }
+    } else if (const auto* v = std::get_if<packets::Vanish>(&e)) {
+        if (v->type != 1) return;
+        if (v->id == me) {
+            ++s.deaths;
+        } else if (s.hit.erase(v->id)) {
+            ++s.kills;
+        }
+    }
 }
 
 }  // namespace uagfx::win::charpanel

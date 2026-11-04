@@ -50,6 +50,17 @@ struct Data {
     double basePerHour = -1, jobPerHour = -1;
     long long baseSession = 0, jobSession = 0, baseLast = 0, jobLast = 0;
     int skillPoints = 0;
+    // 3.0.11-beta.235 (the concept «Блок персонажа»: «больше информации», «подсказки когда наводишь на непонятное»):
+    // the guild's and the party's names ("" none), the party's members in the game and all; the natural regen a tick
+    // (-1 not known) and its period; the battle's numbers as «Характеристики» has them (atk < 0 not known); this
+    // session's minutes (< 0 not known), its zeny gained (less spent), the monsters the character hit that died, its
+    // deaths
+    std::string guild, party;
+    int partyOnline = 0, partyTotal = 0;
+    int hpRegen = -1, spRegen = -1, hpEverySec = 6, spEverySec = 8;
+    int atk = -1, atk2 = 0, def = 0, def2 = 0, flee = 0, flee2 = 0, aspd = 0;
+    long long sessionMinutes = -1, zenyGain = 0;
+    int kills = 0, deaths = 0;
 };
 constexpr int kAmmoLow = 50, kAmmoVeryLow = 10;  // 3.0.11-beta.114: amber under 50, red at 10 or fewer
 bool lowHp(const Data& d);  // under a quarter of the most, as the game's own gauges turn red
@@ -68,6 +79,12 @@ struct Button {
     uiicons::Icon icon;
 };
 extern const Button kButton[kButtons];
+
+// 3.0.11-beta.235: the full block's parts that tell more in a tip (Layout::zones)
+enum class Zone : uint8_t { Weight, Zeny, Social, Points, HpRegen, SpRegen, Atk, Def, Flee, Aspd, Time, Gain, Kills,
+                            Deaths };
+constexpr int kZones = 14;
+bool opensStats(Zone z);  // the battle's numbers: a click opens «Характеристики»
 
 struct Layout {
     float s = 1;
@@ -88,11 +105,18 @@ struct Layout {
     panel::Box pointsDot, weightDot;  // the rings': free points (gold), heavy (orange)
     panel::Box buttons[kButtons];     // full
     panel::Box under;                 // under the block: the low HP warning, then a tip
+    // 3.0.11-beta.235 (full): the social line, the weight's bar, the regen lines, the battle's four cells and the
+    // session's four (in place of the experience rows at the last levels); each Zone's box (w 0: none)
+    panel::Box social, weightBar, hpRegen, spRegen, battle[4], session[4], sessionHead;
+    bool sessionShown = false;
+    panel::Box zones[kZones];
 };
+// 3.0.11-beta.235: both levels the last - the session in place of the experience rows
+bool lastLevels(const Data& d);
 // Its top left at (left, top) in the target, its sizes at `scale`
-Layout layout(View view, Look look, int left, int top, float scale);
+Layout layout(View view, Look look, int left, int top, float scale, bool sessionRows = false);
 
-enum class Part : uint8_t { None, Portrait, Button, Body, Exp };
+enum class Part : uint8_t { None, Portrait, Button, Body, Exp, Zone };
 struct Hit {
     Part part = Part::None;
     int index = -1;  // the button; the experience's row (0 the base, 1 the job)
@@ -113,6 +137,11 @@ struct Texts {
     std::string skillPoints, expMax, hour, minute;
     std::string toLevel, levelIn, perHour, session, lastGain;
     std::string fold, unfold;
+    // 3.0.11-beta.235: «Гільдія {1}», «Група {1} · {2}/{3}», «+{1} кожні {2} с», «повне», «до повного ≈ {1}», «не
+    // відновлюється», «Сесія · {1}», «вбито», «смертей»; the tips' lines (the parts pointed at)
+    std::string guild, party, regen, regenFull, regenToFull, regenNone, sessionHead, killed, deaths;
+    std::string tipWeight, tipPoints, tipSkillPoints, tipRegen1, tipRegen2, tipAtk, tipDef, tipFlee, tipAspd, tipOpen;
+    std::string tipTime, tipZeny, tipKills, tipDeaths, tipOnline;
 };
 struct Show {
     int hoverButton = -1;
@@ -122,6 +151,7 @@ struct Show {
     bool tip = true;            // 3.0.11-beta.51: the tip (the concept's: after 0.4 s pointed at)
     int pressedButton = -1;     // pressed: 1 px down, its backing darker
     int hoverExp = -1;          // 3.0.11-beta.141: the full block's experience row pointed at (0 the base, 1 the job)
+    int hoverZone = -1;         // 3.0.11-beta.235: the Zone pointed at (its tip)
     bool hoverPortrait = false;  // 3.0.11-beta.141: the portrait pointed at (its tip tells Alt+V)
 };
 void paint(panel::Picture& out, const Layout& L, const Data& d, const Texts& t, const Show& show);

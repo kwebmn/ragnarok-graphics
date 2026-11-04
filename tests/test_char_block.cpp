@@ -428,8 +428,12 @@ TEST(char_block_weight_and_points_lines) {
     d.weightMost = 4500;
     d.overweight = 0;
     const std::vector<charblock::Words> w = charblock::words(L, d, texts(), charblock::Show{});
-    const charblock::Words* weight = wordsOf(w, "1\xC2\xA0" "710 / 4\xC2\xA0" "500 \xC2\xB7 38\xC2\xA0%");
-    CHECK(weight && std::fabs(weight->box.y - L.info.y) < 1);
+    // 3.0.11-beta.235: its per cent by its bar on the info line, the numbers in its tip
+    const charblock::Words* weight = wordsOf(w, "38\xC2\xA0%");
+    CHECK(weight && std::fabs(weight->box.y - L.info.y) < 1 && weight->box.x > L.weightBar.x + L.weightBar.w);
+    charblock::Show tip;
+    tip.hoverZone = int(charblock::Zone::Weight);
+    CHECK(hasText(charblock::words(L, d, texts(), tip), "Вага 1\xC2\xA0" "710 / 4\xC2\xA0" "500 \xC2\xB7 38\xC2\xA0%"));
     const charblock::Words* points = wordsOf(w, "+3 очки");
     const charblock::Words* skills = wordsOf(w, "+2 очки навичок");
     CHECK(points && skills && std::fabs(points->box.y - L.points.y) < 1 && skills->box.x > points->box.x);
@@ -538,4 +542,74 @@ TEST(char_block_long_name_keeps_off_the_levels) {
     d = sora();  // a short one: its job beside it as before
     ws = line(d);
     CHECK(std::any_of(ws.begin(), ws.end(), [&](const charblock::Words& w) { return w.text == d.job; }));
+}
+
+// 3.0.11-beta.235 (the concept «Блок персонажа»: «больше информации», «подсказки когда наводишь на непонятное»): the
+// guild's and the party's line, the regen under HP and SP, the battle's four cells (a click opens «Характеристики»),
+// the session in place of the experience rows at the last levels; a tip on each
+TEST(char_block_more_lines_and_their_tips) {
+    charblock::Texts t = texts();
+    t.guild = "Гільдія {1}";
+    t.party = "Група {1}";
+    t.regen = "+{1} кожні {2} с";
+    t.regenFull = "повне";
+    t.regenToFull = "до повного \xE2\x89\x88 {1}";
+    t.regenNone = "не відновлюється: вага";
+    t.sessionHead = "Сесія \xC2\xB7 {1}";
+    t.killed = "вбито";
+    t.deaths = "смертей";
+    t.tipAspd = "{1} удару за секунду; межа сервера 190";
+    t.tipOpen = "Клік відкриває «Характеристики»";
+    t.tipKills = "Монстри, яких ти бив і які загинули за сесію";
+    t.tipOnline = "{1} з {2} у грі";
+    charblock::Data d = soraInNumbers();
+    d.guild = "Heroes";
+    d.party = "Maze";
+    d.partyOnline = 3;
+    d.partyTotal = 4;
+    d.hp = 900;
+    d.hpMost = 1000;
+    d.hpRegen = 10;
+    d.spRegen = 4;
+    d.sp = d.spMost = 200;
+    d.atk = 213;
+    d.atk2 = 180;
+    d.def = 45;
+    d.def2 = 65;
+    d.flee = 189;
+    d.flee2 = 1;
+    d.aspd = 182;
+    const charblock::Layout L = charblock::layout(charblock::View::Full, charblock::Look::Bars, 0, 0, 1.0f);
+    CHECK(!L.sessionShown && L.baseRow.w > 0 && L.battle[3].x > L.battle[0].x && L.buttons[0].y > L.jobRow.y);
+    std::vector<charblock::Words> w = charblock::words(L, d, t, charblock::Show{});
+    CHECK(hasText(w, "Гільдія Heroes") && hasText(w, "Група Maze \xC2\xB7 3/4"));
+    CHECK(hasText(w, "+10 кожні 6 с") && hasText(w, "до повного \xE2\x89\x88 1 хв"));  // 10 ticks of 6 s
+    CHECK(hasText(w, "+4 кожні 8 с") && hasText(w, "повне"));
+    CHECK(hasText(w, "213+180") && hasText(w, "ASPD") && hasText(w, "182"));
+    const panel::Box& aspd = L.battle[3];
+    const charblock::Hit h = charblock::hitTest(L, aspd.x + 4, aspd.y + 4);
+    CHECK(h.part == charblock::Part::Zone && charblock::opensStats(charblock::Zone(h.index)));
+    charblock::Show sh;
+    sh.hoverZone = h.index;
+    w = charblock::words(L, d, t, sh);
+    CHECK(hasText(w, "2,78 удару за секунду; межа сервера 190") && hasText(w, "Клік відкриває «Характеристики»"));
+    d.overweight = 1;  // from 70 %: no regen
+    CHECK(hasText(charblock::words(L, d, t, charblock::Show{}), "не відновлюється: вага"));
+    // the last levels: the session in place of the experience
+    d.overweight = 0;
+    d.baseNext = d.jobNext = 0;
+    d.sessionMinutes = 134;
+    d.zenyGain = 125400;
+    d.kills = 312;
+    d.deaths = 3;
+    CHECK(charblock::lastLevels(d));
+    const charblock::Layout S = charblock::layout(charblock::View::Full, charblock::Look::Bars, 0, 0, 1.0f, true);
+    CHECK(S.sessionShown && S.baseRow.w == 0 && S.session[2].w > 0 && S.buttons[0].y > S.session[0].y);
+    w = charblock::words(S, d, t, charblock::Show{});
+    CHECK(hasText(w, "Сесія \xC2\xB7 2 год 14 хв") && hasText(w, "+125\xC2\xA0" "400 z") && hasText(w, "312") &&
+          hasText(w, "вбито"));
+    sh.hoverZone = int(charblock::Zone::Kills);
+    CHECK(hasText(charblock::words(S, d, t, sh), "Монстри, яких ти бив і які загинули за сесію"));
+    sh.hoverZone = int(charblock::Zone::Social);
+    CHECK(hasText(charblock::words(S, d, t, sh), "3 з 4 у грі"));
 }

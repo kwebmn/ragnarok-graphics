@@ -1,3 +1,4 @@
+#include "win/char_block.hpp"
 #include "win/packet_tap.hpp"
 
 #include <windows.h>
@@ -89,6 +90,7 @@ uint16_t __attribute__((thiscall)) take(void* connection, const uint8_t* packet)
         storagewin::packet(e);   // 3.0.11-beta.115: the storage's places used of the most
         vendshopwin::packet(e);  // 3.0.11-beta.156: the shops' signs
         minimapproto::packet(e);  // 3.0.11-beta.201: the server's marks, the guild's mates
+        charpanel::packet(e);     // 3.0.11-beta.235: the session's kills and deaths
     }
     return id;
 }

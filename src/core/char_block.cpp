@@ -14,7 +14,9 @@ namespace {
 // (3.0.11-beta.141: the base's and the job's, their numbers under them); the compact one 300 x 74 (portrait 46, the
 // experience's two thin lines at its foot); the rings round a 62 portrait (HP 5 outer, SP 4 inner); the icon's round 36
 constexpr float kFullW = 372, kPad = 12, kPortrait = 54, kNumbersW = 124, kButtonW = 32, kButtonH = 26, kButtonGap = 6;
-constexpr float kButtonsY = 198, kBaseRowY = 126, kJobRowY = 160;
+// 3.0.11-beta.235 (the concept «Блок персонажа»): the full block's rows - the social line, the regen under HP and SP,
+// the battle's cells; the experience rows (or the session's) and the buttons after them
+constexpr float kHpY = 94, kSpY = 126, kBattleY = 160, kCellH = 32, kLowerY = 200, kRowStep = 34;
 constexpr float kCompactW = 300, kCompactH = 74, kCompactPortrait = 46;
 constexpr float kRingHp = 46, kRingHpW = 5, kRingSp = 39, kRingSpW = 4, kRingPortrait = 31;
 constexpr float kIconHp = 28, kIconHpW = 4, kIconSp = 23, kIconSpW = 3, kIconPortrait = 18;
@@ -90,6 +92,12 @@ void bar(panel::Picture& p, const panel::Box& b, float share, uint32_t rgb) {
 
 std::string replaced(std::string text, const std::string& value) {
     const size_t at = text.find("{1}");
+    if (at != std::string::npos) text.replace(at, 3, value);
+    return text;
+}
+
+std::string replaced2(std::string text, const std::string& value) {  // 3.0.11-beta.235: «{2}»
+    const size_t at = text.find("{2}");
     if (at != std::string::npos) text.replace(at, 3, value);
     return text;
 }
@@ -217,6 +225,80 @@ void weightLines(std::vector<std::string>& lines, const Data& d, const Texts& t)
     if (over == 2 && !t.overweight2.empty()) lines.push_back(t.overweight2);
 }
 
+// 3.0.11-beta.235: a Zone's tip - what the part pointed at means
+std::vector<std::string> zoneTip(Zone z, const Data& d, const Texts& t) {
+    std::vector<std::string> lines;
+    const auto add = [&](const std::string& line) {
+        if (!line.empty()) lines.push_back(line);
+    };
+    switch (z) {
+        case Zone::Weight:
+            weightLines(lines, d, t);
+            add(t.tipWeight);
+            break;
+        case Zone::Zeny:
+            if (d.zeny >= 0) add(grouped(d.zeny) + " z");
+            if (d.sessionMinutes >= 0) add(replaced(t.tipZeny, (d.zenyGain >= 0 ? "+" : "") + grouped(d.zenyGain)));
+            break;
+        case Zone::Social:
+            if (!d.guild.empty()) add(replaced(t.guild, d.guild));
+            if (!d.party.empty()) {
+                add(replaced(t.party, d.party));
+                if (d.partyTotal > 0)
+                    add(replaced2(replaced(t.tipOnline, std::to_string(d.partyOnline)), std::to_string(d.partyTotal)));
+            }
+            break;
+        case Zone::Points:
+            if (d.statusPoints > 0) add(t.tipPoints);
+            if (d.skillPoints > 0) add(t.tipSkillPoints);
+            break;
+        case Zone::HpRegen:
+        case Zone::SpRegen: {
+            const bool hp = z == Zone::HpRegen;
+            const int v = hp ? d.hpRegen : d.spRegen;
+            if (v < 0) break;
+            add(std::string(hp ? "HP " : "SP ") + replaced2(replaced(t.regen, std::to_string(v)),
+                                                            std::to_string(hp ? d.hpEverySec : d.spEverySec)));
+            if (overweightOf(d) >= 1) add(t.overweight1);
+            add(t.tipRegen1);
+            add(t.tipRegen2);
+            break;
+        }
+        case Zone::Atk:
+            if (d.atk >= 0) add(replaced2(replaced(t.tipAtk, std::to_string(d.atk)), std::to_string(d.atk2)));
+            add(t.tipOpen);
+            break;
+        case Zone::Def:
+            if (d.atk >= 0) add(replaced2(replaced(t.tipDef, std::to_string(d.def)), std::to_string(d.def2)));
+            add(t.tipOpen);
+            break;
+        case Zone::Flee:
+            if (d.atk >= 0) add(replaced2(replaced(t.tipFlee, std::to_string(d.flee)), std::to_string(d.flee2)));
+            add(t.tipOpen);
+            break;
+        case Zone::Aspd:
+            if (d.atk >= 0 && d.aspd > 0 && d.aspd < 200) {
+                char hits[16];
+                std::snprintf(hits, sizeof hits, "%.2f", 50.0 / double(200 - d.aspd));
+                std::string h = hits;
+                for (char& c : h)
+                    if (c == '.') c = t.decimal;
+                add(replaced(t.tipAspd, h));
+            }
+            add(t.tipOpen);
+            break;
+        case Zone::Time:
+            if (d.sessionMinutes >= 0) add(replaced(t.tipTime, duration(d.sessionMinutes, t.hour, t.minute)));
+            break;
+        case Zone::Gain:
+            if (d.sessionMinutes >= 0) add(replaced(t.tipZeny, (d.zenyGain >= 0 ? "+" : "") + grouped(d.zenyGain)));
+            break;
+        case Zone::Kills: add(t.tipKills); break;
+        case Zone::Deaths: add(t.tipDeaths); break;
+    }
+    return lines;
+}
+
 // The tip's lines: a button's words; an experience row's (3.0.11-beta.141); the rings' numbers; the portrait's Alt+V;
 // the compact block's numbers
 std::vector<std::string> tipLines(const Layout& L, const Data& d, const Texts& t, const Show& show) {
@@ -225,6 +307,8 @@ std::vector<std::string> tipLines(const Layout& L, const Data& d, const Texts& t
         return {t.buttons[show.hoverButton]};
     if (L.view == View::Full && (show.hoverExp == 0 || show.hoverExp == 1))
         return expTip(show.hoverExp == 0 ? baseOf(d) : jobOf(d), t);
+    if (L.view == View::Full && show.hoverZone >= 0 && show.hoverZone < kZones)  // 3.0.11-beta.235
+        return zoneTip(Zone(show.hoverZone), d, t);
     const std::string& key = L.view == View::Full ? t.fold : t.unfold;
     const auto experience = [&](std::vector<std::string>& lines) {
         for (const Exp& e : {baseOf(d), jobOf(d)})
@@ -277,6 +361,10 @@ View altV(View shown, View small) {
 }
 
 bool lowHp(const Data& d) { return d.hpMost > 0 && d.hp * 4 < d.hpMost; }
+
+bool lastLevels(const Data& d) { return d.baseNext == 0 && d.jobNext == 0; }
+
+bool opensStats(Zone z) { return z == Zone::Atk || z == Zone::Def || z == Zone::Flee || z == Zone::Aspd; }
 
 const char* jobName(int job) {
     static const char* const kFirst[] = {
@@ -332,7 +420,7 @@ const Button kButton[kButtons] = {{0x7E, uiicons::Icon::Stats},   {0x81, uiicons
                                   {0x80, uiicons::Icon::Bag},     {0x82, uiicons::Icon::Skill},
                                   {0x85, uiicons::Icon::Friends}, {0x7F, uiicons::Icon::Gear}};
 
-Layout layout(View view, Look look, int left, int top, float scale) {
+Layout layout(View view, Look look, int left, int top, float scale, bool sessionRows) {
     Layout L;
     const float s = scale > 0 ? scale : 1.0f;
     L.s = s;
@@ -375,14 +463,22 @@ Layout layout(View view, Look look, int left, int top, float scale) {
         L.name = panel::Box{x0, 14 * s, right - x0, 20 * s};
         L.levels = panel::Box{x0, 14 * s, right - x0, 20 * s};
         L.info = panel::Box{x0, 36 * s, right - x0, 17 * s};
-        L.points = panel::Box{x0, 54 * s, right - x0, 16 * s};  // 3.0.11-beta.141: the free points, the arrows
+        // 3.0.11-beta.235: the weight's bar after its word, the guild's and the party's line, the points' under it
+        L.weightBar = panel::Box{x0 + 40 * s, 36 * s + 6 * s, 60 * s, 5 * s};
+        L.social = panel::Box{x0, 54 * s, right - x0, 16 * s};
+        L.points = panel::Box{x0, 71 * s, right - x0, 16 * s};
         const float numbersX = right - kNumbersW * s, barX = p + 36 * s, barW = numbersX - 8 * s - barX;
-        L.hpLabel = panel::Box{p, 80 * s, 30 * s, 16 * s};
-        L.hpBar = panel::Box{barX, 83 * s, barW, 10 * s};
-        L.hpText = panel::Box{numbersX, 80 * s, kNumbersW * s, 16 * s};
-        L.spLabel = panel::Box{p, 102 * s, 30 * s, 16 * s};
-        L.spBar = panel::Box{barX, 105 * s, barW, 10 * s};
-        L.spText = panel::Box{numbersX, 102 * s, kNumbersW * s, 16 * s};
+        L.hpLabel = panel::Box{p, kHpY * s, 30 * s, 16 * s};
+        L.hpBar = panel::Box{barX, (kHpY + 3) * s, barW, 10 * s};
+        L.hpText = panel::Box{numbersX, kHpY * s, kNumbersW * s, 16 * s};
+        L.hpRegen = panel::Box{barX, (kHpY + 15) * s, right - barX, 13 * s};
+        L.spLabel = panel::Box{p, kSpY * s, 30 * s, 16 * s};
+        L.spBar = panel::Box{barX, (kSpY + 3) * s, barW, 10 * s};
+        L.spText = panel::Box{numbersX, kSpY * s, kNumbersW * s, 16 * s};
+        L.spRegen = panel::Box{barX, (kSpY + 15) * s, right - barX, 13 * s};
+        const float cellGap = 6 * s, cellW = (right - p - 3 * cellGap) / 4;
+        for (int i = 0; i < 4; ++i)
+            L.battle[i] = panel::Box{p + float(i) * (cellW + cellGap), kBattleY * s, cellW, kCellH * s};
         // 3.0.11-beta.141: the experience's rows as HP's and SP's - the word, the bar, the per cent; its numbers under
         // them across the row
         const auto row = [&](float y, panel::Box& label, panel::Box& bar, panel::Box& pct, panel::Box& text,
@@ -393,12 +489,35 @@ Layout layout(View view, Look look, int left, int top, float scale) {
             text = panel::Box{barX, y + 16 * s, right - barX, 14 * s};
             whole = panel::Box{p, y, right - p, 30 * s};
         };
-        row(kBaseRowY * s, L.baseLabel, L.expBar, L.basePct, L.baseText, L.baseRow);
-        row(kJobRowY * s, L.jobLabel, L.jobBar, L.jobPct, L.jobText, L.jobRow);
+        float lowerEnd = 0;
+        if (sessionRows) {  // 3.0.11-beta.235: the last levels - this session in place of the experience
+            L.sessionShown = true;
+            L.sessionHead = panel::Box{p, kLowerY * s, right - p, 14 * s};
+            const float sw = (right - p - 2 * cellGap) / 3;
+            for (int i = 0; i < 3; ++i)
+                L.session[i] = panel::Box{p + float(i) * (sw + cellGap), (kLowerY + 18) * s, sw, kCellH * s};
+            lowerEnd = (kLowerY + 18 + kCellH) * s;
+        } else {
+            row(kLowerY * s, L.baseLabel, L.expBar, L.basePct, L.baseText, L.baseRow);
+            row((kLowerY + kRowStep) * s, L.jobLabel, L.jobBar, L.jobPct, L.jobText, L.jobRow);
+            lowerEnd = (kLowerY + kRowStep + 30) * s;
+        }
+        const float buttonsY = lowerEnd + 10 * s;
         for (int i = 0; i < kButtons; ++i)
             L.buttons[i] =
-                panel::Box{p + float(i) * (kButtonW + kButtonGap) * s, kButtonsY * s, kButtonW * s, kButtonH * s};
-        L.block = panel::Box{0, 0, w, (kButtonsY + kButtonH) * s + p};
+                panel::Box{p + float(i) * (kButtonW + kButtonGap) * s, buttonsY, kButtonW * s, kButtonH * s};
+        L.block = panel::Box{0, 0, w, buttonsY + kButtonH * s + p};
+        L.zones[int(Zone::Weight)] = panel::Box{x0, L.info.y, 150 * s, L.info.h};
+        L.zones[int(Zone::Zeny)] = panel::Box{x0 + 156 * s, L.info.y, right - x0 - 156 * s, L.info.h};
+        L.zones[int(Zone::Social)] = L.social;
+        L.zones[int(Zone::Points)] = L.points;
+        L.zones[int(Zone::HpRegen)] = L.hpRegen;
+        L.zones[int(Zone::SpRegen)] = L.spRegen;
+        for (int i = 0; i < 4; ++i) L.zones[int(Zone::Atk) + i] = L.battle[i];
+        if (L.sessionShown) {
+            L.zones[int(Zone::Time)] = L.sessionHead;
+            for (int i = 0; i < 3; ++i) L.zones[int(Zone::Gain) + i] = L.session[i];
+        }
     }
     const float underY = L.block.y + L.block.h + kGap * s;
     L.w = int(std::ceil(std::max(L.block.w, kUnderW * s)));
@@ -420,6 +539,8 @@ Hit hitTest(const Layout& L, float x, float y) {
         if (L.buttons[i].w > 0 && L.buttons[i].contains(x, y)) return Hit{Part::Button, i};
     if (L.baseRow.w > 0 && L.baseRow.contains(x, y)) return Hit{Part::Exp, 0};  // 3.0.11-beta.141
     if (L.jobRow.w > 0 && L.jobRow.contains(x, y)) return Hit{Part::Exp, 1};
+    for (int i = 0; i < kZones; ++i)  // 3.0.11-beta.235
+        if (L.zones[i].w > 0 && L.zones[i].contains(x, y)) return Hit{Part::Zone, i};
     return Hit{Part::Body, -1};
 }
 
@@ -454,6 +575,30 @@ void paint(panel::Picture& out, const Layout& L, const Data& d, const Texts& t, 
         };
         experience(L.expBar, baseOf(d), kBaseExp);
         experience(L.jobBar, jobOf(d), kJobExp);
+        if (L.view == View::Full) {  // 3.0.11-beta.235: the weight's bar with its marks, the cells
+            const panel::Box& wb = L.weightBar;
+            if (d.weight >= 0 && wb.w > 0) {
+                const int over = overweightOf(d);
+                panel::roundRect(out, wb, wb.h / 2, kBlack, 0.45f);
+                const float f = std::clamp(float(d.weight) / 100.0f, 0.0f, 1.0f);
+                if (f > 0)
+                    panel::roundRect(out, panel::Box{wb.x, wb.y, std::max(wb.h, wb.w * f), wb.h}, wb.h / 2,
+                                     over == 2 ? kHpLow : over == 1 ? kWarn : kGold, 1.0f);
+                for (const auto& [at, rgb] : {std::pair<float, uint32_t>{0.7f, kWarn}, {0.9f, kHpLow}})
+                    panel::roundRect(out,
+                                     panel::Box{wb.x + wb.w * at - 0.75f * s, wb.y - 2 * s, 1.5f * s, wb.h + 4 * s}, 0,
+                                     rgb, 0.95f);
+            }
+            const auto cell = [&](const panel::Box& b, Zone z) {
+                if (b.w <= 0) return;
+                const bool hot = show.hoverZone == int(z);
+                panel::roundRect(out, b, 7 * s, kWhite, hot ? 0.10f : 0.05f, kWhite, hot ? 0.18f : 0.08f, 1.0f * s);
+            };
+            if (d.atk >= 0)
+                for (int i = 0; i < 4; ++i) cell(L.battle[i], Zone(int(Zone::Atk) + i));
+            if (L.sessionShown)
+                for (int i = 0; i < 3; ++i) cell(L.session[i], Zone(int(Zone::Gain) + i));
+        }
         for (int i = 0; i < kButtons; ++i) {
             panel::Box b = L.buttons[i];
             if (b.w <= 0) continue;
@@ -567,17 +712,25 @@ std::vector<Words> words(const Layout& L, const Data& d, const Texts& t, const S
             out.push_back(Words{panel::Box{x, line->y, w, line->h}, text, rgb, 12.5f * s, bold, Align::Left});
             x += w + gap * s;
         };
-        if (d.weight >= 0) {
+        if (d.weight >= 0) {  // 3.0.11-beta.235: its word, its bar (paint), its per cent; the numbers in its tip
             put(t.weight, kMuted, false, 4);
+            x = L.weightBar.x + L.weightBar.w + 6 * s;
             const int over = overweightOf(d);  // 3.0.11-beta.139: by the server's state
-            const std::string per = std::to_string(d.weight) + "\xC2\xA0%";
-            put(d.weightMost > 0 && d.weightNow >= 0 ? pair(d.weightNow, d.weightMost) + " \xC2\xB7 " + per : per,
-                over == 2 ? kHpLow : over == 1 ? kWarn : kText, true, 12);
+            put(std::to_string(d.weight) + "\xC2\xA0%", over == 2 ? kHpLow : over == 1 ? kWarn : kText, true, 12);
         }
         if (d.zeny >= 0) {
+            x = std::max(x, L.zones[int(Zone::Zeny)].x);
             put(grouped(d.zeny), kText, true, 2);
             put("z", kMuted, false, 12);
         }
+        x = L.social.x;  // 3.0.11-beta.235: the guild's and the party's
+        line = &L.social;
+        if (!d.guild.empty()) put(replaced(t.guild, d.guild), kMuted, false, 10);
+        if (!d.party.empty())
+            put(replaced(t.party, d.party) + (d.partyTotal > 0 ? " \xC2\xB7 " + std::to_string(d.partyOnline) + "/" +
+                                                                    std::to_string(d.partyTotal)
+                                                              : std::string()),
+                kMuted, false, 0);
         x = L.points.x;
         line = &L.points;
         if (d.statusPoints > 0) put(counted(t.points, d.statusPoints), kGold2, false, 12);
@@ -619,6 +772,51 @@ std::vector<Words> words(const Layout& L, const Data& d, const Texts& t, const S
         };
         experience(baseOf(d), L.baseLabel, L.basePct, L.baseText);
         experience(jobOf(d), L.jobLabel, L.jobPct, L.jobText);
+        // 3.0.11-beta.235: the regen under each bar - a tick's and its period at the left, «повне» or the time to full
+        // at the right; none from 70 % of the weight
+        const auto regen = [&](const panel::Box& b, int per, int every, int now, int most) {
+            if (per < 0 || b.w <= 0) return;
+            const float px = 11 * s;
+            if (overweightOf(d) >= 1) {
+                out.push_back(Words{b, t.regenNone, kWarn, px, false, Align::Left});
+                return;
+            }
+            out.push_back(Words{b, replaced2(replaced(t.regen, std::to_string(per)), std::to_string(every)), kMuted, px,
+                                false, Align::Left});
+            if (most <= 0) return;
+            if (now >= most) {
+                out.push_back(Words{b, t.regenFull, kMuted, px, false, Align::Right});
+            } else if (per > 0) {
+                const long long ticks = (most - now + per - 1) / per;
+                const long long minutes = (ticks * every + 59) / 60;
+                out.push_back(Words{b, replaced(t.regenToFull, duration(minutes, t.hour, t.minute)), kMuted, px, false,
+                                    Align::Right});
+            }
+        };
+        regen(L.hpRegen, d.hpRegen, d.hpEverySec, d.hp, d.hpMost);
+        regen(L.spRegen, d.spRegen, d.spEverySec, d.sp, d.spMost);
+        const auto cell = [&](const panel::Box& b, const std::string& key, const std::string& value, uint32_t rgb) {
+            if (b.w <= 0) return;
+            out.push_back(Words{panel::Box{b.x + 7 * s, b.y + 2 * s, b.w - 10 * s, 12 * s}, key, kMuted, 9.5f * s, true,
+                                Align::Left});
+            out.push_back(Words{panel::Box{b.x + 7 * s, b.y + 14 * s, b.w - 10 * s, 16 * s}, value, rgb, 12.5f * s,
+                                true, Align::Left});
+        };
+        if (d.atk >= 0) {  // 3.0.11-beta.235: the battle's four, as «Характеристики» has them
+            cell(L.battle[0], "ATK", std::to_string(d.atk) + "+" + std::to_string(d.atk2), kText);
+            cell(L.battle[1], "DEF", std::to_string(d.def) + "+" + std::to_string(d.def2), kText);
+            cell(L.battle[2], "FLEE", std::to_string(d.flee) + "+" + std::to_string(d.flee2), kText);
+            cell(L.battle[3], "ASPD", std::to_string(d.aspd), kText);
+        }
+        if (L.sessionShown && d.sessionMinutes >= 0) {  // 3.0.11-beta.235: this session at the last levels
+            out.push_back(Words{L.sessionHead, replaced(t.sessionHead, duration(d.sessionMinutes, t.hour, t.minute)),
+                                kMuted, 10.5f * s, true, Align::Left});
+            const long long perHour = d.sessionMinutes > 0 ? d.zenyGain * 60 / d.sessionMinutes : 0;
+            cell(L.session[0], (perHour >= 0 ? "+" : "") + grouped(perHour) + " z/" + t.hour,
+                 (d.zenyGain >= 0 ? "+" : "") + grouped(d.zenyGain) + " z", d.zenyGain >= 0 ? kGold2 : kHpLow);
+            cell(L.session[1], t.killed, std::to_string(d.kills), kText);
+            cell(L.session[2], t.deaths, std::to_string(d.deaths), d.deaths > 0 ? kWarn : kText);
+        }
     }
     const panel::Box warn = warnBox(L, d, t, show);
     if (warn.w > 0 && !show.warningApart)

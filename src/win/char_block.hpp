@@ -3,6 +3,7 @@
 
 #include "core/config.hpp"
 #include "core/frame.hpp"
+#include "core/game_packets.hpp"
 
 namespace uagfx::gpu {
 class Renderer;
@@ -30,6 +31,8 @@ void beforeGameDraw();
 // small) - the block full or small (core/char_block altV) while it shows; true: taken, not given the game (its hidden
 // window stays as it is)
 bool key(UINT m, WPARAM wp, LPARAM lp);
+// 3.0.11-beta.235: the session's kills and deaths
+void packet(const packets::Event& e);
 
 // 3.0.11-beta.90 (the controller's windows' tile): one of the game's Basic Info window's buttons pressed as its own
 // (its SendMsg message 6 with the command: 0x7E stats, 0x81 equip, 0x80 items, 0x82 skills, 0x85 friends, 0x7F
