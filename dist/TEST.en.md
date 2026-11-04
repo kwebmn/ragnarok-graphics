@@ -1,3 +1,9 @@
+# uaRO Graphics 3.0.11-beta.208 — what's new
+
+**The tester's third list, part nine**:
+- The chat room itself in the new look (under «Картки чат-кімнат»): a card at the screen's left - «Відкрита» or «З паролем», the room's name and how many are in it, its lines (the newest at the bottom), «Учасники» (the owner with ★), the room's line to type into (a click gives it the keys, Enter sends as before) and «Вийти». The owner gets «Налаштування»; a member clicked shows «Вигнати» and «Зробити власником» (the owner's) and «У друзі». Esc no longer risks leaving the room.
+- The room's settings (the owner's) use the new card too: «Налаштування кімнати» with the same name, places, open or with a password, and «Зберегти».
+
 # uaRO Graphics 3.0.11-beta.207 — what's new
 
 **The tester's third list, part eight**:
