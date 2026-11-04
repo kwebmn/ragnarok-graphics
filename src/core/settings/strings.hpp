@@ -777,6 +777,7 @@ enum class Text : uint16_t {
     SkillsNextTab, SkillsAfterChange,  // 3.0.11-beta.226
     CardNoDescription, CardMostLevel,  // 3.0.11-beta.229
     SkillsLevelOf, SkillsNeedsHead, SkillsUnlocks, SkillsSideHint,  // 3.0.11-beta.229
+    SkillsSpByLevel,  // 3.0.11-beta.230
     Count
 };
 

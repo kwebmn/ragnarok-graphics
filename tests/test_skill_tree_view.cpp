@@ -311,3 +311,26 @@ TEST(skill_tree_view_a_far_link_runs_through_the_gaps) {
             CHECK(!(r.y[2] > n.box.y && r.y[2] < n.box.y + n.box.h && n.box.x < r.x[3] && n.box.x + n.box.w > r.x[2]));
     }
 }
+
+// 3.0.11-beta.230: the side panel in «Список» too - the list as wide as before, the panel right of it with the skill
+// pointed at: SP by level (the learned one lit) and the game's description
+TEST(skill_window_side_panel_in_the_list) {
+    skillwin::Data d = knight();
+    d.tabs[1].skills[3].spLevels = {14, 18, 22, 26, 30, 34, 38, 42, 46, 50};
+    d.tabs[1].skills[3].desc = {"Faster attacks with a two-handed sword.", "", "Lv 1: 30 s"};
+    skillwin::Texts t = texts();
+    t.spByLevel = "SP за рівнями";
+    skillwin::Show sh;
+    sh.tab = 1;
+    sh.hoverRow = 3;
+    const skillwin::Layout L = skillwin::layout(0, 0, 1.0f, d, sh, t, measure);
+    CHECK(!L.tree && L.side.w > 0 && L.side.x >= L.list.x + L.list.w && std::abs(L.list.w - 668) < 1);
+    const std::vector<skillwin::Words> w = skillwin::words(L, d, sh, t, measure);
+    const auto find = [&](const std::string& text) {
+        return std::find_if(w.begin(), w.end(), [&](const skillwin::Words& x) { return x.text == text; });
+    };
+    CHECK(find("SP за рівнями") != w.end() && find("1: 14") != w.end() && find("10: 50") != w.end());
+    CHECK(find("10: 50")->bold && !find("1: 14")->bold);  // its learned level, 10
+    CHECK(find("Faster attacks with a two-handed sword.") != w.end() && find("Lv 1: 30 s") != w.end());
+    CHECK(find("Twohand Quicken") != w.end() && find("Рівень 10 з 10") != w.end());
+}

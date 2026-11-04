@@ -64,12 +64,6 @@ const Tab* tabOf(const Data& d, int tab) {
     return &d.tabs[size_t(std::clamp(tab, 0, int(d.tabs.size()) - 1))];
 }
 
-int rowsShown(const Data& d) {  // the same height on every tab
-    size_t most = 1;
-    for (const Tab& t : d.tabs) most = std::max(most, t.skills.size());
-    return int(std::min<size_t>(size_t(kRows), most));
-}
-
 struct PadItem {
     padglyph::Button button;
     const std::string* words;
@@ -254,6 +248,19 @@ void sideWords(std::vector<Words>& out, const Layout& L, const Data& d, const Sh
         }
         y += 6 * s;
     }
+    const float bottom = p.y + p.h - 10 * s;
+    if (!k.spLevels.empty() && y + 38 * s < bottom) {  // 3.0.11-beta.230: SP by level, five a row
+        if (!t.spByLevel.empty()) line(t.spByLevel, kFaint, 11, true, 18);
+        const float cw = w / 5;
+        for (size_t i = 0; i < k.spLevels.size() && i < 10; ++i) {
+            const int lv = int(i) + 1;
+            const uint32_t rgb = lv == k.level ? kGold : lv > k.level && lv <= k.target ? kPlanBlue : kMuted;
+            out.push_back(Words{panel::Box{x + cw * float(i % 5), y + 17 * s * float(i / 5), cw, 17 * s},
+                                std::to_string(lv) + ": " + std::to_string(k.spLevels[i]), rgb, 11 * s,
+                                lv == k.level, Align::Left});
+        }
+        y += 17 * s * float((std::min<size_t>(k.spLevels.size(), 10) + 4) / 5) + 6 * s;
+    }
     std::string opens;  // what it opens, on any tab
     int count = 0;
     for (const Tab& other : d.tabs)
@@ -263,12 +270,19 @@ void sideWords(std::vector<Words>& out, const Layout& L, const Data& d, const Sh
                     opens += (opens.empty() ? "" : ", ") + o.name;
                     ++count;
                 }
-    if (!opens.empty() && y + 38 * s < p.y + p.h) {
+    if (!opens.empty() && y + 38 * s < bottom) {
         line(t.unlocks, kFaint, 11, true, 18);
         line(opens, kMuted, 11.5f, false, 20);
     }
     const bool byPoints = k.lock != Lock::Quest && k.lock != Lock::Wedding && k.lock != Lock::SoulLink;
     const int cost = k.level <= 0 && byPoints ? skilltreeview::pathCost(d, k.id) : 0;
+    const float descEnd = bottom - (cost > 0 && !t.path.empty() ? 24 * s : 0);
+    if (!k.desc.empty()) y += 4 * s;
+    for (const std::string& l : k.desc) {  // 3.0.11-beta.230: the game's description, as much as there is room for
+        if (y + 16 * s > descEnd) break;
+        if (!l.empty()) out.push_back(Words{panel::Box{x, y, w, 16 * s}, l, 0xB7BFCC, 11 * s, false, Align::Left});
+        y += (l.empty() ? 8 : 16) * s;
+    }
     if (cost > 0 && !t.path.empty()) {
         y = std::max(y, p.y + p.h - 32 * s);
         line(fill2(t.path, k.name, std::to_string(cost)), cost > d.points ? kRose : kGold2, 12, true, 20);
@@ -326,7 +340,8 @@ Layout layout(int x, int y, float scale, const Data& d, const Show& sh, const Te
     const float s = scale > 0 ? scale : 1.0f;
     L.s = s;
     L.tree = sh.tree;
-    const float w = (sh.tree ? kTreeW : kW) * s, side = kSide * s;
+    // 3.0.11-beta.230: the side panel in «Список» too - the list as wide as before, the panel right of it
+    const float w = (sh.tree ? kTreeW : kW + kSideW + 14) * s, side = kSide * s;
     L.title = panel::Box{0, 0, w, kTitleH * s};
     L.close = panel::Box{w - side - 26 * s, (kTitleH * s - 26 * s) / 2, 26 * s, 26 * s};
     if (!t.list.empty() && !t.tree.empty()) {  // 3.0.11-beta.224: the view's buttons left of the close
@@ -349,7 +364,7 @@ Layout layout(int x, int y, float scale, const Data& d, const Show& sh, const Te
     const Tab* tab = tabOf(d, sh.tab);
     L.tab = tab ? int(tab - d.tabs.data()) : 0;
     const int count = tab ? int(tab->skills.size()) : 0;
-    const int shown = sh.tree ? kRows : rowsShown(d);
+    const int shown = kRows;  // 3.0.11-beta.230: always eight rows high - room for the side panel
     L.first = std::clamp(sh.scroll, 0, std::max(0, count - kRows));
     const bool scrolls = count > kRows;
     float listY = L.tabsRow.y + L.tabsRow.h + 6 * s;
@@ -399,9 +414,11 @@ Layout layout(int x, int y, float scale, const Data& d, const Show& sh, const Te
         L.y = y;
         return L;
     }
-    const float rowW = w - 2 * side - (scrolls ? 12 * s : 0);
-    L.list = panel::Box{side, listY, w - 2 * side, float(shown) * kRowH * s};
-    if (scrolls) L.scroll = panel::Box{w - side - 5 * s, listY + 4 * s, 5 * s, L.list.h - 8 * s};
+    const float sideW = kSideW * s, bodyW = w - 2 * side - sideW - 14 * s;
+    const float rowW = bodyW - (scrolls ? 12 * s : 0);
+    L.list = panel::Box{side, listY, bodyW, float(shown) * kRowH * s};
+    L.side = panel::Box{w - side - sideW, listY, sideW, L.list.h};
+    if (scrolls) L.scroll = panel::Box{side + bodyW - 5 * s, listY + 4 * s, 5 * s, L.list.h - 8 * s};
     for (int i = L.first; i < count && i < L.first + kRows; ++i) {
         const Skill& k = tab->skills[size_t(i)];
         const panel::Box r{side, listY + float(i - L.first) * kRowH * s, rowW, kRowH * s};
@@ -622,8 +639,8 @@ std::vector<Words> words(const Layout& L, const Data& d, const Show& sh, const T
             if (L.pluses[i].w > 0 && inView(L, L.pluses[i]))
                 out.push_back(Words{L.pluses[i], "+", kCard, 13 * s, true, Align::Center});
         }
-        sideWords(out, L, d, sh, t);
     }
+    sideWords(out, L, d, sh, t);  // 3.0.11-beta.230: in both views
     for (size_t i = 0; i < L.rows.size() && tab && !L.tree; ++i) {
         const Skill& k = tab->skills[size_t(L.first) + i];
         const panel::Box& r = L.rows[i];

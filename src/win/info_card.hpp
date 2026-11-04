@@ -2,6 +2,8 @@
 #include <windows.h>
 
 #include <cstdint>
+#include <string>
+#include <vector>
 
 #include "core/frame.hpp"
 
@@ -28,5 +30,8 @@ void beforeGameDraw();  // the game's cards hidden
 enum class PadCommand : uint8_t { Up, Down, Close };
 void padCommand(Kind kind, PadCommand c);
 bool box(Kind kind, int& x, int& y, int& w, int& h);
+// 3.0.11-beta.230 («Навички»' side panel): a skill's description as the game's table has it, UTF-8 without its colour
+// marks and without its first line when that is the name again; empty when the table has none
+std::vector<std::string> skillDescription(const std::string& aegis, const std::string& name);
 
 }  // namespace uagfx::win::infocardwin

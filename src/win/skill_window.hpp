@@ -31,7 +31,8 @@ bool shown();
 // The controller's (pad runtime skillsPad): the D-pad or the left stick moves the frame up and down, left and right
 // the level it is used at, LB / RB the tabs, A uses, Y raises, X «Призначити», B or Start close
 // 3.0.11-beta.227 (stage 5): Plan - «План» on or off (LT); Start - «Застосувати» in the plan, else closes
-enum class PadCommand : uint8_t { Up, Down, Less, More, TabBack, TabOn, Use, Raise, Assign, Close, Plan, Start };
+// 3.0.11-beta.230: View - «Список» or «Дерево» (RT)
+enum class PadCommand : uint8_t { Up, Down, Less, More, TabBack, TabOn, Use, Raise, Assign, Close, Plan, Start, View };
 void padCommand(PadCommand c);
 
 // 3.0.11-beta.109 (the concept «Концепция окон и инвентаря», question 4): where it is on the target (win/window_stack:

@@ -38,6 +38,10 @@ struct Skill {
     std::string lockJob;     // Lock::Earlier: the job whose points come first
     std::vector<std::pair<int, int>> req;  // 3.0.11-beta.224: what it needs (a skill, its level) - the tree's links
     int target = 0;  // 3.0.11-beta.225: the level planned (core/skill_plan); 0 none
+    // 3.0.11-beta.230 (the side panel in both views): SP by level (the server's table; empty none known) and the game's
+    // description lines (UTF-8, no colour marks)
+    std::vector<int> spLevels;
+    std::vector<std::string> desc;
     const panel::Picture* icon = nullptr;  // at iconSide(), premultiplied
 };
 struct Tab {
@@ -71,6 +75,7 @@ struct Texts {
     std::string afterChange;  // 3.0.11-beta.226: «Після зміни професії»
     // 3.0.11-beta.229: the side panel - «Рівень {1} з {2}», «Потрібно», «Відкриває», «Наведіть на навичку»
     std::string levelOf, needsHead, unlocks, sideHint;
+    std::string spByLevel;  // 3.0.11-beta.230: «SP за рівнями»
 };
 
 bool canRaise(const Skill& k, int points);  // a free point and the server's leave, below its most

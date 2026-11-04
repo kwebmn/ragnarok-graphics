@@ -15,6 +15,7 @@
 #include "core/layout.hpp"
 #include "core/settings/strings.hpp"
 #include "core/skill_info.hpp"
+#include "core/skill_costs.hpp"
 #include "core/skill_plan.hpp"
 #include "core/skill_tree.hpp"
 #include "core/skill_window.hpp"
@@ -24,6 +25,7 @@
 #include "win/client_tables.hpp"
 #include "win/code_page.hpp"
 #include "win/game_camera.hpp"
+#include "win/info_card.hpp"
 #include "win/log.hpp"
 #include "win/pad_carry.hpp"
 #include "win/paths.hpp"
@@ -114,6 +116,7 @@ struct State {
     ULONGLONG applySent = 0;
     std::string stopped;
     int nextChoice = 0;  // 3.0.11-beta.226: «Наступна»'s job shown (of two), kept
+    std::map<std::string, std::vector<std::string>> descs;  // 3.0.11-beta.230: the game's descriptions by AEGIS name
 };
 
 State& state() {
@@ -432,6 +435,19 @@ void readData(State& s) {
             s.tabRaw.push_back({});
         }
     }
+    for (kw::Tab& tab : s.data.tabs)  // 3.0.11-beta.230: the side panel's SP by level and the game's description
+        for (kw::Skill& k : tab.skills) {
+            for (int lv = 1; lv <= std::min(std::max(k.most, 1), 10); ++lv) {
+                const int sp = skillcost::sp(k.id, lv);
+                if (sp < 0) break;
+                k.spLevels.push_back(sp);
+            }
+            if (k.aegis.empty()) continue;
+            auto at = s.descs.find(k.aegis);
+            if (at == s.descs.end())
+                at = s.descs.emplace(k.aegis, infocardwin::skillDescription(k.aegis, k.name)).first;
+            k.desc = at->second;
+        }
     s.data.points = int(read32(kSkillPoints));
     // 3.0.11-beta.223: why skills are closed - the job before's points first (player_skillup_limit), a Novice's Basic
     // Skill 9 before a job change
@@ -481,6 +497,7 @@ kw::Texts texts() {
     t.needsHead = say(settings::Text::SkillsNeedsHead);
     t.unlocks = say(settings::Text::SkillsUnlocks);
     t.sideHint = say(settings::Text::SkillsSideHint);
+    t.spByLevel = say(settings::Text::SkillsSpByLevel);
     t.use = say(settings::Text::SkillsPadUse);
     t.raise = say(settings::Text::SkillsPadRaise);
     t.assign = say(settings::Text::SkillsPadAssign);
@@ -838,6 +855,11 @@ void padCommand(PadCommand c) {
         case PadCommand::Down: s.show.focus = count ? (s.show.focus + 1) % count : 0; break;
         case PadCommand::Less: changeUse(s, s.show.focus, -1); break;
         case PadCommand::More: changeUse(s, s.show.focus, +1); break;
+        case PadCommand::View:  // 3.0.11-beta.230: RT - «Список» or «Дерево», kept
+            s.show.tree = !s.show.tree;
+            s.show.treeX = s.show.treeY = 0;
+            keepState(s);
+            break;
         case PadCommand::Plan:  // 3.0.11-beta.227
             s.show.plan = !s.show.plan;
             s.show.applying = false;

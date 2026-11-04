@@ -7165,6 +7165,7 @@ constexpr Entry kTexts[] = {
     {Text::SkillsNeedsHead, "Needs", "Потрібно", "Нужно"},
     {Text::SkillsUnlocks, "Opens", "Відкриває", "Открывает"},
     {Text::SkillsSideHint, "Point at a skill", "Наведіть на навичку", "Наведите на навык"},
+    {Text::SkillsSpByLevel, "SP by level", "SP за рівнями", "SP по уровням"},  // 3.0.11-beta.230
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

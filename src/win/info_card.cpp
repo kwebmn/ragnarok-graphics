@@ -11,6 +11,7 @@
 #include <string>
 #include <vector>
 
+#include "core/game_words.hpp"
 #include "core/hotbar_panel.hpp"
 #include "core/info_card.hpp"
 #include "core/settings/strings.hpp"
@@ -524,6 +525,17 @@ bool box(Kind kind, int& x, int& y, int& w, int& h) {
     w = o.layout.w;
     h = o.layout.h;
     return true;
+}
+
+std::vector<std::string> skillDescription(const std::string& aegis, const std::string& name) {
+    State& s = state();
+    readTables(s);
+    std::vector<std::string> out;
+    const auto d = s.tables.skills.find(aegis);
+    if (d == s.tables.skills.end()) return out;
+    for (const std::string& l : d->second) out.push_back(utf8(s, gamewords::withoutColours(l)));
+    if (!out.empty() && (out.front() == name || out.front().empty())) out.erase(out.begin());
+    return out;
 }
 
 }  // namespace uagfx::win::infocardwin
