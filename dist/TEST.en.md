@@ -1,3 +1,14 @@
+# uaRO Graphics 3.0.11-beta.229 — what's new
+
+**«Skills», the «Tree» view redone** (R-EQDQWH: «a tree nobody can make sense of»):
+- On the right, a panel of the skill pointed at (or the controller's): its level, what it does or why it is closed, «Needs» - every requirement with your level (✓ or «0/5»), the earlier jobs' too, «Opens» and the points to it.
+- No more column of the earlier job's chips on the left and no numbers on the links. Links only between the tab's skills, through the gaps, never under another skill. Point at a skill: its chain turns gold, the other links fade.
+- Closed skills read better: brighter name and icon.
+
+**The skill's description card** (R-ZUY4CM: «the description under the window»):
+- A right click on a skill in «Skills» always shows the card over the window, also when it was open for another skill.
+- A skill the game has no description of (like Parry) shows what is known: «The game has no description of it», its kind, levels, SP by level, requirements.
+
 # uaRO Graphics 3.0.11-beta.228 — what's new
 
 - **Print Screen no longer crashes** (R-P6U4YJ): at some sizes of the game's window (a width not divisible by 4) the screenshot read past the picture's end and the game fell. Now it is saved at any size.
