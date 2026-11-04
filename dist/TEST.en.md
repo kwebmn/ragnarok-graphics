@@ -1,3 +1,8 @@
+# uaRO Graphics 3.0.11-beta.210 — what's new
+
+**The tester's third list, part eleven**:
+- The guild card (Alt+G) has all six of the game's tabs now: «Інформація», «Учасники», «Посади», «Навички», «Вигнані», «Оголошення» - a tab the game does not allow you is dimmed. «Посади», «Навички», «Вигнані» and «Оголошення» open the game's own window for now, with all of the guild master's tools in it (positions and tax, guild skills, the notice); its tabs bring you back to the card. They get the new look one by one next.
+
 # uaRO Graphics 3.0.11-beta.209 — what's new
 
 **The tester's third list, part ten**:
