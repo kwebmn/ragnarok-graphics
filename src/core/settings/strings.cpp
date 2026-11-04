@@ -4968,7 +4968,7 @@ constexpr Entry kTexts[] = {
     {Text::MinimapLayerWarps, "Portals", "Портали", "Порталы"},
     {Text::MinimapLayerNpcs, "NPC", "NPC", "NPC"},
     {Text::MinimapLayerKafra, "Kafra", "Кафра", "Кафра"},
-    {Text::MinimapLayerParty, "Party", "Група", "Группа"},
+    {Text::MinimapLayerParty, "Party and guild", "Група й гільдія", "Группа и гильдия"},  // .219: both
     // 3.0.11-beta.120: the maps' picture
     {Text::InterfaceMinimapStyle, "The maps' picture", "Картинка карт", "Картинка карт"},
     {Text::InterfaceMinimapStyleHint,

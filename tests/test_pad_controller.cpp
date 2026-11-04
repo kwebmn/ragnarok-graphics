@@ -1944,3 +1944,39 @@ TEST(ctl_logs_where_the_right_stick_turns_from) {
     for (const std::string& n : o.notes) by = by || n.rfind("camera: the right stick turns by what the walks", 0) == 0;
     CHECK(by);
 }
+
+// 3.0.11-beta.219 (R-4DDZ4R: «якщо стіком вибрати моба дальшого то б'є його, але потім ще й б'є ближчого іноді»): an
+// archer kills the picked one with a shot 60 ms after the press, A still down - a tap is no hold: the next monster only
+// for A held 400 ms and longer
+TEST(ctl_quick_kill_under_a_tap_takes_no_next) {
+    Controller c(Config{});
+    WorldState w = world();
+    addMob(w, 110000001, Cell{108, 100});  // the far one, picked
+    addMob(w, 110000002, Cell{100, 102});  // the near one, north
+    c.tick(padR(1, 0), w, view(), 900);
+    c.tick(pad(), w, view(), 950);
+    CHECK_EQ(c.target(), 110000001u);
+    c.tick(pad(kPadA), w, view(), 1000);
+    w.apply(EvVanish{110000001, 1}, 1050);  // one shot
+    c.tick(pad(kPadA), w, view(), 1060);
+    c.tick(pad(kPadA), w, view(), 1150);
+    c.tick(pad(), w, view(), 1200);  // let go
+    c.tick(pad(), w, view(), 1400);
+    CHECK_EQ(c.target(), 0u);
+    CHECK(!c.attacking());
+}
+
+TEST(ctl_quick_kill_under_a_hold_goes_on) {
+    Controller c(Config{});
+    WorldState w = world();
+    addMob(w, 110000001, Cell{108, 100});
+    addMob(w, 110000002, Cell{100, 102});
+    c.tick(padR(1, 0), w, view(), 900);
+    c.tick(pad(), w, view(), 950);
+    c.tick(pad(kPadA), w, view(), 1000);
+    w.apply(EvVanish{110000001, 1}, 1050);
+    c.tick(pad(kPadA), w, view(), 1060);
+    CHECK_EQ(c.target(), 0u);  // not yet: maybe a tap
+    c.tick(pad(kPadA), w, view(), 1400);  // held on: the next
+    CHECK_EQ(c.target(), 110000002u);
+}

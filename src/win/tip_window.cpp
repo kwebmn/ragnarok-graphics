@@ -9,6 +9,7 @@
 
 #include "core/settings/strings.hpp"
 #include "core/tip_card.hpp"
+#include "core/tip_texts.hpp"
 #include "core/ui_style.hpp"
 #include "pad/core/config/bindings.hpp"
 #include "pad/win/game_window.hpp"
@@ -40,6 +41,7 @@ using SendMsgFn = int(__attribute__((thiscall)) *)(uint32_t self, uint32_t sende
 struct State {
     WindowShadow shadow;
     bool on = false, shown = false, hid = false, padNow = false;
+    int oursTold = 0;  // 3.0.11-beta.219
     unsigned codePage = 0;
     float k = 0, scale = 1;
     int targetW = 0, targetH = 0;
@@ -190,6 +192,20 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
         int count = 0;
         std::vector<std::string> lines = tipLines(uint32_t(number), count);
         for (std::string& l : lines) l = utf8Of(widened(l, codePage));
+        // 3.0.11-beta.219 (core/tip_texts): uaRO's tips in the interface's language
+        int all = 0;
+        const std::vector<std::string> first = tipLines(0, all);
+        if (const std::string ours = tiptexts::tip(number, language());
+            !first.empty() && tiptexts::isUaroList(all, first.front()) && !ours.empty()) {
+            lines.clear();
+            for (size_t at = 0;;) {
+                const size_t end = ours.find('\n', at);
+                lines.push_back(ours.substr(at, end == std::string::npos ? std::string::npos : end - at));
+                if (end == std::string::npos) break;
+                at = end + 1;
+            }
+            if (s.oursTold++ == 0) LOG_INFO("tips: uaRO's tips in the interface's language (the driver's words)");
+        }
         s.card.paragraphs = tc::paragraphs(lines);
         s.card.number = number + 1;
         s.card.count = count;

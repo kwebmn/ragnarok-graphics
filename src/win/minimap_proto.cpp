@@ -27,6 +27,7 @@
 #include "core/walk_path.hpp"
 #include "pad/win/game_window.hpp"
 #include "win/game_camera.hpp"
+#include "win/guild_card.hpp"
 #include "win/game_files.hpp"
 #include "win/ground_way.hpp"
 #include "win/head_picture.hpp"
@@ -1105,8 +1106,9 @@ void frame(HWND game, const Show& show, double k, int targetWidth, int targetHei
                 it = s.mates.erase(it);
                 continue;
             }
+            const std::string name = guildcardwin::mateName(it->first);  // 3.0.11-beta.219: its name
             others.push_back(minimap::Mark{minimap::Cell{it->second.x, it->second.y}, 0, minimap::Glyph::Guild,
-                                           say(settings::Text::MinimapGuildMate)});
+                                           name.empty() ? say(settings::Text::MinimapGuildMate) : name});
             key += 'g' + std::to_string(it->second.x) + ',' + std::to_string(it->second.y) + ';';
             ++it;
         }

@@ -220,6 +220,7 @@ private:
     uint32_t target_ = 0;
     uint32_t preview_ = 0;  // 3.0.11-beta.87
     bool picked_ = false;      // target_ was chosen with the right stick: presses keep it
+    std::optional<uint32_t> attackDownMs_;  // 3.0.11-beta.219: since when the attack button is held
     bool fought_ = false;      // 3.0.11-beta.215: an attack of ours went at target_: presses go on with it after a walk
     bool cameraMode_ = false;
     bool loggedCalibration_ = false;

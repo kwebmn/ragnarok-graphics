@@ -366,4 +366,27 @@ bool box(int& x, int& y, int& w, int& h) {
     return true;
 }
 
+std::string mateName(uint32_t account) {
+    if (!account) return {};
+    const uint32_t head = read32(kMembers);
+    if (!head) return {};
+    uint32_t node = read32(head);
+    for (size_t n = 0; node && node != head && n < kMostMembers; ++n, node = read32(node)) {
+        uint32_t f[5] = {};
+        if (!readGame(node + kMember, f, sizeof f)) break;
+        if (f[0] != account && f[1] != account) continue;
+        char buf[65] = {};
+        const uint32_t len = std::min<uint32_t>(f[4], 64);
+        if (!len || !readGame(f[3], buf, len)) return {};
+        static bool told = false;
+        if (!told) {
+            told = true;
+            LOG_INFO("guild: a mate's name on the map from the members' list (the account in its field %d)",
+                     f[0] == account ? 0 : 1);
+        }
+        return utf8Of(widened(std::string(buf, len), state().codePage));
+    }
+    return {};
+}
+
 }  // namespace uagfx::win::guildcardwin

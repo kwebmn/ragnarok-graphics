@@ -2,6 +2,7 @@
 #include <windows.h>
 
 #include <cstdint>
+#include <string>
 
 #include "core/frame.hpp"
 
@@ -26,5 +27,10 @@ void beforeGameDraw();
 enum class PadCommand : uint8_t { Up, Down, TabBack, TabOn, Close };
 void padCommand(PadCommand c);
 bool box(int& x, int& y, int& w, int& h);
+
+// 3.0.11-beta.219 (the tester: «на великій мапі ... пишіть нік замість "Член гільдії"»): a guild mate's name by its
+// account (0x01eb's) from the game's members' list (a member's first field its account, its second its character);
+// "" when not in it
+std::string mateName(uint32_t account);  // in the game's code page as its frame was told it
 
 }  // namespace uagfx::win::guildcardwin

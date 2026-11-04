@@ -23,7 +23,8 @@ constexpr uint32_t kCard = 0x10141C, kWhite = 0xFFFFFF, kBlack = 0x000000, kDark
 constexpr uint32_t kAccent = 0xC9A55B, kAccent2 = 0xE6CB8A, kText = 0xECEFF5, kMuted = 0x9AA3B5;
 constexpr uint32_t kGround = 0xFF141922;   // the map's square where it has no picture
 constexpr uint32_t kKafra = 0xE86AA8;      // the concept's «K»
-constexpr uint32_t kGuildRing = 0x63C174;  // 3.0.11-beta.201: a guild mate's
+// 3.0.11-beta.201: a guild mate's; 3.0.11-beta.219 (the tester: «колір схожий з нпц») violet, not the NPCs' green
+constexpr uint32_t kGuildRing = 0xB58CFF;
 constexpr uint32_t kPortal = 0x23285A, kPortalRing = 0x8E9BFF;
 // 3.0.11-beta.187 (the tester took the fan for the character's sight): the camera's fan a neutral light, the arrow
 // alone blue
@@ -499,6 +500,18 @@ void faceIn(panel::Picture& out, const panel::Picture& pic, float cx, float cy, 
         }
 }
 
+// 3.0.11-beta.219: a guild mate's mark - a violet triangle pointing up round (x, y), `r` its middle to a side's end
+void guildSign(panel::Picture& out, float x, float y, float r, float s) {
+    const float k = r * 1.25f, e = 1.3f * s;
+    const auto tri = [&](float grow) {
+        return std::vector<std::array<float, 6>>{
+            {x, y - k - grow * 1.6f, x + k * 0.95f + grow, y + k * 0.62f + grow, x - k * 0.95f - grow,
+             y + k * 0.62f + grow}};
+    };
+    triangles(out, tri(e), kBlack, 0.75f);
+    triangles(out, tri(0), kGuildRing, 1.0f);
+}
+
 // 3.0.11-beta.119: a layer's sign - as its marks look on the map - at (x, y), `r` across; a layer off dimmed and struck
 void layerSign(panel::Picture& out, Layer l, float x, float y, float r, float s, bool on,
                const panel::Picture* kafraFace = nullptr) {
@@ -526,9 +539,10 @@ void layerSign(panel::Picture& out, Layer l, float x, float y, float r, float s,
         case Layer::Kafra:
             panel::roundRect(out, panel::Box{x - r, y - r, 2 * r, 2 * r}, 3 * s, kKafra, k);
             break;
-        case Layer::Party:
-            panel::circle(out, x, y, r, kDark, k);
-            ring(out, x, y, r - 0.6f * s, 1.6f * s, kMemberRing, k);
+        case Layer::Party:  // 3.0.11-beta.219: the party's ring and a guild mate's triangle - both on this layer
+            panel::circle(out, x - r * 0.28f, y, r * 0.78f, kDark, k);
+            ring(out, x - r * 0.28f, y, r * 0.78f - 0.6f * s, 1.4f * s, kMemberRing, k);
+            if (on) guildSign(out, x + r * 0.45f, y + r * 0.25f, r * 0.42f, s);
             break;
     }
     if (!on) segment(out, panel::Box{0, 0, float(out.width), float(out.height)}, x - r, y + r, x + r, y - r, 1.8f * s,
@@ -589,11 +603,8 @@ void overMap(panel::Picture& out, const panel::Box& box, const Scene& sc, const 
                 panel::circle(out, x, y, r, m.rgb, 1.0f);
                 panel::circle(out, x, y, r * 0.32f, kWhite, 1.0f);
                 break;
-            case Glyph::Guild:  // 3.0.11-beta.201: a guild mate - a dark round, a green ring and middle
-                panel::circle(out, x, y, r + 1.2f, kBlack, 0.7f);
-                panel::circle(out, x, y, r, kDark, 1.0f);
-                ring(out, x, y, r - 0.6f * s, 1.4f * s, kGuildRing, 1.0f);
-                panel::circle(out, x, y, r * 0.42f, kGuildRing, 1.0f);
+            case Glyph::Guild:  // 3.0.11-beta.219: a guild mate - a violet triangle pointing up, a dark edge
+                guildSign(out, x, y, r, s);
                 break;
             case Glyph::Member:  // 3.0.11-beta.83: its face in a dark round, a blue ring (a dead one's red)
                 panel::circle(out, x, y, r + 1.5f, kBlack, 0.7f);

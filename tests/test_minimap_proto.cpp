@@ -780,3 +780,27 @@ TEST(minimap_proto_found_plate) {
     };
     CHECK(has("Poring \xC2\xB7 12") && has("\xE2\x9C\x95"));
 }
+
+// 3.0.11-beta.219 (the tester: «почало показувати согільдійців на мінімапі - але колір схожий з нпц»): a guild mate
+// a violet triangle (pointing up) - not the NPCs' green dot nor the party's blue ring; the party's legend button shows
+// both
+TEST(minimap_proto_guild_mate_violet_triangle) {
+    const minimap::Layout L = minimap::layout(1280, 720, 1.0f, false, 0);
+    minimap::Scene sc;
+    sc.map = minimap::MapSize{100, 100};
+    sc.player = minimap::Cell{50, 50};
+    sc.marks = {minimap::Mark{minimap::Cell{60, 40}, 0, minimap::Glyph::Guild, ""}};
+    panel::Picture pic;
+    minimap::paint(pic, L, sc, minimap::Texts{});
+    const minimap::View v = minimap::view(sc.map, sc.player, 100, int(L.map.w));
+    float px = 0, py = 0;
+    minimap::cellToPanel(v, sc.map, minimap::Cell{60, 40}, px, py);
+    const auto at = [&](float dx, float dy) {
+        return pic.px[size_t(L.map.y + py + dy) * size_t(pic.width) + size_t(L.map.x + px + dx)];
+    };
+    const uint32_t mid = at(0, 1);
+    const int r = int((mid >> 16) & 0xFF), g = int((mid >> 8) & 0xFF), b = int(mid & 0xFF);
+    CHECK(b > g + 40 && r > g + 20);  // violet, not green
+    const uint32_t corner = at(-3.5f, -3.5f);  // a triangle's top corners are empty: no round there
+    CHECK(((corner >> 8) & 0xFF) < g || (corner & 0xFF) < b - 40);
+}

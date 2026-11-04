@@ -23,6 +23,7 @@ constexpr double kAimSwitchMargin = 8.0;  // aim score points a new monster must
 constexpr uint32_t kSlotIntervalMs = 150;
 constexpr uint32_t kChooseMs = 8000;  // 3.0.11-beta.85: a support skill waits this long for whom
 constexpr uint32_t kAimHoldMs = 250;  // 3.0.11-beta.145: a ground skill's button held this long aims it
+constexpr uint32_t kHoldGoesOnMs = 400;  // 3.0.11-beta.219: A held this long goes on to the next monster
 constexpr uint32_t kInfGround = 2;    // a skill placed on a cell (0x010f's inf)
 // 3.0.11-beta.88: walking without the mouse - 6 cells along the stick in half-cell steps; another way asked for 150 ms
 // on, the same again every 350 ms (the server walks to a cell and stops)
@@ -1009,7 +1010,13 @@ void Controller::maintainTarget(bool attackHeld, const WorldState& world, uint32
     else if (target_ == 0)
         stopAttacking();
     const bool idle = !walking_ && !approach_ && !world.sitting();
-    if (wantAttack_ && target_ == 0 && idle) {
+    // 3.0.11-beta.219 (R-4DDZ4R): the next one for a hold only - a monster killed under a tap leaves no target
+    if (!attackHeld)
+        attackDownMs_.reset();
+    else if (!attackDownMs_)
+        attackDownMs_ = now;
+    const bool holding = attackHeld && now - *attackDownMs_ >= kHoldGoesOnMs;
+    if (wantAttack_ && target_ == 0 && idle && holding) {
         if (nearestTarget(world, now) != 0) takeNearest(world, now, "held attack", out);
     }
     // The server drops our attack for many reasons (a skill, a cast, a click elsewhere). Standing still with
