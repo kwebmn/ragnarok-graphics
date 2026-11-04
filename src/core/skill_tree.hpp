@@ -25,5 +25,8 @@ std::vector<std::pair<int, int>> needs(int job, int id);  // the skills it needs
 // 3.0.11-beta.223 (the skills concept, stage 1): every skill of a job's tree, in the server's order (its earlier
 // jobs' too)
 std::vector<int> skills(int job);
+// 3.0.11-beta.226 (stage 4: «Наступна»): the jobs a character of `job` may change to next, as the game's NPCs give
+// them (a first job's two, a second job's transcendent one; an Archer's Bard or Dancer by `male`); none past them
+std::vector<int> nextJobs(int job, bool male);
 
 }  // namespace uagfx::skilltree

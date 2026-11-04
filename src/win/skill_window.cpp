@@ -113,6 +113,7 @@ struct State {
     int applyId = -1, applyLevel = 0, applyTries = 0;
     ULONGLONG applySent = 0;
     std::string stopped;
+    int nextChoice = 0;  // 3.0.11-beta.226: «Наступна»'s job shown (of two), kept
 };
 
 State& state() {
@@ -176,12 +177,16 @@ void readState(State& s) {
     if (const size_t at = text.find("tab "); at != std::string::npos && std::sscanf(text.c_str() + at, "tab %d", &tab))
         s.show.tab = std::max(0, tab);
     s.show.tree = text.find("view tree") != std::string::npos;  // 3.0.11-beta.224: the player's choice
+    int next = 0;
+    if (const size_t at = text.find("next "); at != std::string::npos && std::sscanf(text.c_str() + at, "next %d",
+                                                                                     &next) == 1)
+        s.nextChoice = std::clamp(next, 0, 1);
 }
 
 void keepState(const State& s) {
-    char text[96];
-    std::snprintf(text, sizeof text, "at %.4f %.4f\ntab %d\nview %s\n", s.fx, s.fy, s.show.tab,
-                  s.show.tree ? "tree" : "list");
+    char text[128];
+    std::snprintf(text, sizeof text, "at %.4f %.4f\ntab %d\nview %s\nnext %d\n", s.fx, s.fy, s.show.tab,
+                  s.show.tree ? "tree" : "list", s.nextChoice);
     const std::string path = layout::join(gameDir(), layout::kSkillsState);
     if (!writeFileAtomic(path, std::string(text))) LOG_INFO("skills: %s cannot be written", path.c_str());
 }
@@ -390,6 +395,35 @@ void readData(State& s) {
         s.data.tabs.push_back(tab);
         s.tabRaw.push_back(list);
     }
+    // 3.0.11-beta.226 (stage 4: «Наступна»): the next job's new skills - one of two shown by the player's choice
+    constexpr uint32_t kSex = 0x772DEC;  // not 0: a man (FUN_0062e7b0)
+    const std::vector<int> nexts = skilltree::nextJobs(job, read32(kSex) != 0);
+    if (!nexts.empty()) {
+        const int chosen = std::clamp(s.nextChoice, 0, int(nexts.size()) - 1);
+        const int nj = nexts[size_t(chosen)];
+        std::vector<int> nextChain = chain;
+        nextChain.push_back(nj);
+        const std::vector<int> have = skilltree::skills(last);
+        kw::Tab tab;
+        tab.next = true;
+        tab.chosen = chosen;
+        for (int j : nexts) {
+            const char* named = charblock::jobName(j);
+            tab.choices.push_back(named && *named ? named : "#" + std::to_string(j));
+        }
+        tab.name = say(settings::Text::SkillsNextTab);
+        if (nexts.size() == 1) tab.name += " \xC2\xB7 " + tab.choices.front();
+        for (int id : skilltree::skills(nj)) {
+            if (std::find(have.begin(), have.end(), id) != have.end() || levels.count(id)) continue;
+            kw::Skill k = closedSkill(s, id, nj, nextChain, levels);
+            if (k.lock == kw::Lock::Earlier) k.lock = kw::Lock::NextJob;
+            tab.skills.push_back(std::move(k));
+        }
+        if (!tab.skills.empty()) {
+            s.data.tabs.push_back(tab);
+            s.tabRaw.push_back({});
+        }
+    }
     s.data.points = int(read32(kSkillPoints));
     // 3.0.11-beta.223: why skills are closed - the job before's points first (player_skillup_limit), a Novice's Basic
     // Skill 9 before a job change
@@ -434,6 +468,7 @@ kw::Texts texts() {
     t.applying = say(settings::Text::SkillsPlanApplying);
     t.reset = say(settings::Text::SkillsPlanReset);
     t.planned = say(settings::Text::SkillsPlanned);
+    t.afterChange = say(settings::Text::SkillsAfterChange);
     t.use = say(settings::Text::SkillsPadUse);
     t.raise = say(settings::Text::SkillsPadRaise);
     t.assign = say(settings::Text::SkillsPadAssign);
@@ -688,7 +723,7 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     s.show.hoverTab = s.show.hoverRow = s.show.hoverPlus = s.show.hoverLess = s.show.hoverMore = -1;
     s.show.hoverClose = s.show.hoverList = s.show.hoverTree = false;
     s.show.hoverPlan = s.show.hoverApply = s.show.hoverReset = false;
-    s.show.hoverMinus = -1;
+    s.show.hoverMinus = s.show.hoverChoice = -1;
     int cx = 0, cy = 0;
     if (readGameCursor(cx, cy) && !s.moving) {
         const kw::Hit h = kw::hitTest(s.layout, float(cx) * float(k) - float(s.layout.x),
@@ -706,6 +741,7 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
             case kw::Part::Apply: s.show.hoverApply = true; break;
             case kw::Part::Reset: s.show.hoverReset = true; break;
             case kw::Part::Minus: s.show.hoverMinus = h.index; break;
+            case kw::Part::Choice: s.show.hoverChoice = h.index; break;
             default: break;
         }
     }
@@ -718,7 +754,8 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
                       (s.show.tree ? "T" : "L") + (s.show.hoverList ? "l" : "") + (s.show.hoverTree ? "t" : "") +
                       (s.show.plan ? "P" : "") + (s.show.applying ? "A" : "") + (s.show.hoverPlan ? "p" : "") +
                       (s.show.hoverApply ? "a" : "") + (s.show.hoverReset ? "r" : "") +
-                      std::to_string(s.show.hoverMinus) + ',' +
+                      std::to_string(s.show.hoverMinus) + ',' + std::to_string(s.show.hoverChoice) + ',' +
+                      std::to_string(s.nextChoice) + ',' +
                       std::to_string(int(s.layout.scrollX)) + ',' + std::to_string(int(s.layout.scrollY)) + ';' +
                       std::to_string(s.data.points) + ';';
     for (const kw::Tab& tab : s.data.tabs)
@@ -898,6 +935,16 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
                 s.show.treeX = s.show.treeY = 0;
                 keepState(s);
                 if (s.told++ < 20) LOG_INFO("skills: the view - %s", s.show.tree ? "the tree" : "the list");
+            }
+            break;
+        case kw::Part::Choice:  // 3.0.11-beta.226: «Наступна»'s job
+            if (h.index != s.nextChoice) {
+                s.nextChoice = h.index;
+                s.show.focus = 0;
+                s.show.scroll = 0;
+                s.show.treeX = s.show.treeY = 0;
+                keepState(s);
+                readData(s);
             }
             break;
         case kw::Part::Plan:  // 3.0.11-beta.225: «План» on or off (the plan itself kept)

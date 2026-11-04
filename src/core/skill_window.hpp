@@ -23,7 +23,8 @@ constexpr int kRows = 8;  // rows shown at once; more scroll
 // 3.0.11-beta.223 (the skills concept, stage 1: «Ще закриті»): why a skill of the tree is not the player's to raise -
 // the server sends a skill only once its requirements are met (pc_calc_skilltree), never a quest, wedding or Soul Link
 // one by them, and while the points of the job before are not spent (player_skillup_limit) not the next job's
-enum class Lock : uint8_t { None, Needs, Quest, Wedding, SoulLink, Earlier };
+// 3.0.11-beta.226: NextJob - a skill of the job a character may change to next («Наступна»), all its requirements met
+enum class Lock : uint8_t { None, Needs, Quest, Wedding, SoulLink, Earlier, NextJob };
 
 struct Skill {
     int id = 0;
@@ -42,6 +43,11 @@ struct Skill {
 struct Tab {
     std::string name;  // the job's
     std::vector<Skill> skills;
+    // 3.0.11-beta.226 (stage 4: «Наступна»): the next job's new skills - when the character may change to one of two,
+    // their names as buttons over the list, the one shown
+    bool next = false;
+    std::vector<std::string> choices;
+    int chosen = 0;
 };
 struct Data {
     std::vector<Tab> tabs;
@@ -62,6 +68,7 @@ struct Texts {
     std::string list, tree, path;
     // 3.0.11-beta.225 (stage 3): «План», «Застосувати», «Застосовується…», «Скинути», «У плані: {1}»
     std::string plan, apply, applying, reset, planned;
+    std::string afterChange;  // 3.0.11-beta.226: «Після зміни професії»
 };
 
 bool canRaise(const Skill& k, int points);  // a free point and the server's leave, below its most
@@ -89,6 +96,7 @@ struct Show {
     bool plan = false, applying = false;
     bool hoverPlan = false, hoverApply = false, hoverReset = false;
     int hoverMinus = -1;
+    int hoverChoice = -1;  // 3.0.11-beta.226
 };
 
 struct Layout {
@@ -102,6 +110,7 @@ struct Layout {
     panel::Box viewList, viewTree;
     panel::Box planButton, apply, reset;  // 3.0.11-beta.225 (apply, reset: w 0 out of «План»)
     std::vector<panel::Box> minuses;      // a row's «−» (w 0: none)
+    std::vector<panel::Box> choices;      // 3.0.11-beta.226: «Наступна»'s jobs
     bool tree = false;
     panel::Box view, scrollH;
     skilltreeview::Plan plan;
@@ -121,7 +130,7 @@ using windrag::moved;
 using windrag::released;
 
 enum class Part : uint8_t {
-    None, Close, Tab, Row, Plus, Less, More, Title, Body, ViewList, ViewTree, View, Plan, Minus, Apply, Reset
+    None, Close, Tab, Row, Plus, Less, More, Title, Body, ViewList, ViewTree, View, Plan, Minus, Apply, Reset, Choice
 };
 struct Hit {
     Part part = Part::None;

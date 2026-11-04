@@ -95,4 +95,42 @@ std::vector<int> skills(int job) {
     return out;
 }
 
+std::vector<int> nextJobs(int job, bool male) {
+    switch (job) {
+        case 1: return {7, 14};  // Swordman: Knight, Crusader
+        case 2: return {9, 16};  // Mage: Wizard, Sage
+        case 3: return {11, male ? 19 : 20};  // Archer: Hunter, Bard or Dancer
+        case 4: return {8, 15};   // Acolyte: Priest, Monk
+        case 5: return {10, 18};  // Merchant: Blacksmith, Alchemist
+        case 6: return {12, 17};  // Thief: Assassin, Rogue
+        case 7: case 13: return {4008};
+        case 8: return {4009};
+        case 9: return {4010};
+        case 10: return {4011};
+        case 11: return {4012};
+        case 12: return {4013};
+        case 14: case 21: return {4015};
+        case 15: return {4016};
+        case 16: return {4017};
+        case 17: return {4018};
+        case 18: return {4019};
+        case 19: return {4020};
+        case 20: return {4021};
+        case 4002: return {4008, 4015};
+        case 4003: return {4010, 4017};
+        case 4004: return {4012, male ? 4020 : 4021};
+        case 4005: return {4009, 4016};
+        case 4006: return {4011, 4019};
+        case 4007: return {4013, 4018};
+        case 4024: return {4030, 4037};
+        case 4025: return {4032, 4039};
+        case 4026: return {4034, male ? 4042 : 4043};
+        case 4027: return {4031, 4038};
+        case 4028: return {4033, 4041};
+        case 4029: return {4035, 4040};
+        case 4046: return {4047, 4049};  // Taekwon: Star Gladiator, Soul Linker
+        default: return {};
+    }
+}
+
 }  // namespace uagfx::skilltree

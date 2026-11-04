@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "core/skill_plan.hpp"
+#include "core/skill_tree.hpp"
 #include "core/skill_tree_view.hpp"
 #include "core/skill_window.hpp"
 #include "test.hpp"
@@ -224,4 +225,39 @@ TEST(skill_plan_in_the_window) {
     sh.tree = true;
     L = skillwin::layout(0, 0, 1.0f, d, sh, t, measure);
     CHECK(L.minuses[1].w > 0 && L.pluses[1].w > 0 && L.minuses[1].x < L.pluses[1].x);
+}
+
+// 3.0.11-beta.226 (the skills concept, stage 4: «Наступна»): the jobs a character may change to next, and the tab of
+// the next job's new skills - two jobs as buttons over it, one shown
+TEST(skill_next_jobs_and_their_tab) {
+    CHECK(skilltree::nextJobs(1, true) == std::vector<int>({7, 14}));      // Swordman: Knight, Crusader
+    CHECK(skilltree::nextJobs(3, true) == std::vector<int>({11, 19}));     // a man: Hunter, Bard
+    CHECK(skilltree::nextJobs(3, false) == std::vector<int>({11, 20}));    // a woman: Hunter, Dancer
+    CHECK(skilltree::nextJobs(7, true) == std::vector<int>({4008}));       // Knight: Lord Knight
+    CHECK(skilltree::nextJobs(4046, true) == std::vector<int>({4047, 4049}));
+    CHECK(skilltree::nextJobs(0, true).empty() && skilltree::nextJobs(4008, true).empty());
+    for (int j : {7, 14, 4008, 4047, 4049, 4030, 4043})  // every next job has its tree
+        CHECK(!skilltree::skills(j).empty());
+    skillwin::Data d = knight();
+    skillwin::Tab next;
+    next.name = "Наступна";
+    next.next = true;
+    next.choices = {"Knight", "Crusader"};
+    next.chosen = 1;
+    skillwin::Skill shield = skill(250, "Smite", 0, 5, {{3, 1}});
+    shield.lock = skillwin::Lock::NextJob;
+    next.skills.push_back(shield);
+    d.tabs.push_back(next);
+    skillwin::Texts t = texts();
+    t.afterChange = "Після зміни професії";
+    CHECK(skillwin::info(shield, t) == t.afterChange && skillplan::canPlan(d, shield));
+    skillwin::Show sh;
+    sh.tab = 2;
+    const skillwin::Layout L = skillwin::layout(0, 0, 1.0f, d, sh, t, measure);
+    CHECK(L.choices.size() == 2 && L.choices[1].x > L.choices[0].x && L.list.y > L.choices[0].y + L.choices[0].h);
+    const skillwin::Hit h = skillwin::hitTest(L, L.choices[1].x + 3, L.choices[1].y + 3);
+    CHECK(h.part == skillwin::Part::Choice && h.index == 1);
+    CHECK(L.pluses[0].w == 0);  // nothing to raise before the change
+    sh.tab = 1;
+    CHECK(skillwin::layout(0, 0, 1.0f, d, sh, t, measure).choices.empty());
 }

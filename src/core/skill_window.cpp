@@ -254,6 +254,7 @@ std::string info(const Skill& k, const Texts& t) {
         case Lock::Wedding: return t.wedding;
         case Lock::SoulLink: return t.soulLink;
         case Lock::Earlier: return fill(t.earlier, k.lockJob);
+        case Lock::NextJob: return t.afterChange;
         case Lock::Needs: return k.needs.empty() ? t.unlearned : fill(t.needs, k.needs);
         case Lock::None: break;
     }
@@ -316,6 +317,15 @@ Layout layout(int x, int y, float scale, const Data& d, const Show& sh, const Te
     if (!d.notice.empty()) {  // 3.0.11-beta.223: why skills are closed
         L.notice = panel::Box{side, listY, w - 2 * side, 28 * s};
         listY += L.notice.h + 6 * s;
+    }
+    if (tab && tab->choices.size() > 1) {  // 3.0.11-beta.226: «Наступна»'s jobs as buttons
+        float cx = side;
+        for (const std::string& c : tab->choices) {
+            const float cw = m(c, 12 * s, true) + 26 * s;
+            L.choices.push_back(panel::Box{cx, listY, cw, 26 * s});
+            cx += cw + 6 * s;
+        }
+        listY += 26 * s + 8 * s;
     }
     if (sh.tree) {  // 3.0.11-beta.224: «Дерево»
         L.view = panel::Box{side, listY, w - 2 * side - 10 * s, float(shown) * kRowH * s - 10 * s};
@@ -400,6 +410,8 @@ Hit hitTest(const Layout& L, float x, float y) {
     if (L.viewTree.w > 0 && L.viewTree.contains(x, y)) return Hit{Part::ViewTree, -1};
     for (size_t i = 0; i < L.tabs.size(); ++i)
         if (L.tabs[i].contains(x, y)) return Hit{Part::Tab, int(i)};
+    for (size_t i = 0; i < L.choices.size(); ++i)
+        if (L.choices[i].contains(x, y)) return Hit{Part::Choice, int(i)};
     if (L.tree) {  // 3.0.11-beta.224: only what the view shows
         if (!L.view.contains(x, y)) return Hit{y < L.title.y + L.title.h ? Part::Title : Part::Body, -1};
         for (size_t i = 0; i < L.rows.size(); ++i) {
@@ -457,6 +469,13 @@ void paint(panel::Picture& out, const Layout& L, const Data& d, const Show& sh) 
     }
     panel::roundRect(out, panel::Box{L.tabsRow.x, L.tabsRow.y + L.tabsRow.h, L.tabsRow.w, 1 * s}, 0, kWhite, 0.08f);
     if (L.notice.w > 0) panel::roundRect(out, L.notice, 7 * s, kGold2, 0.12f, kGold2, 0.45f, 1.0f * s);
+    if (const Tab* shown = tabOf(d, L.tab))  // 3.0.11-beta.226: «Наступна»'s jobs, the shown one lit
+        for (size_t i = 0; i < L.choices.size(); ++i) {
+            const bool on = int(i) == shown->chosen;
+            panel::roundRect(out, L.choices[i], 7 * s, on ? kGold2 : kWhite,
+                             (on ? 0.22f : 0.04f) + (int(i) == sh.hoverChoice ? 0.07f : 0.0f), on ? kGold : kWhite,
+                             on ? 0.8f : 0.16f, 1.0f * s);
+        }
     const Tab* tab = tabOf(d, L.tab);
     if (L.tree) paintTree(out, L, d, sh);
     for (size_t i = 0; i < L.rows.size() && tab && !L.tree; ++i) {
@@ -537,6 +556,10 @@ std::vector<Words> words(const Layout& L, const Data& d, const Show& sh, const T
     if (L.notice.w > 0)
         out.push_back(Words{panel::Box{L.notice.x + 10 * s, L.notice.y, L.notice.w - 20 * s, L.notice.h}, d.notice,
                             kText, 12 * s, false, Align::Left});
+    if (const Tab* shown = tabOf(d, L.tab))  // 3.0.11-beta.226
+        for (size_t i = 0; i < L.choices.size() && i < shown->choices.size(); ++i)
+            out.push_back(Words{L.choices[i], shown->choices[i], int(i) == shown->chosen ? kText : kMuted, 12 * s,
+                                int(i) == shown->chosen, Align::Center});
     const Tab* tab = tabOf(d, L.tab);
     if (L.tree && tab) {  // 3.0.11-beta.224: «Дерево» - the words wholly in its view
         for (size_t i = 0; i < L.rows.size(); ++i) {

@@ -7154,6 +7154,9 @@ constexpr Entry kTexts[] = {
     {Text::SkillsPlanStopped, "The plan stopped at {1}: the server does not let raise it yet",
      "План зупинився на {1}: сервер поки не дає її підняти",
      "План остановился на {1}: сервер пока не даёт его поднять"},
+    // 3.0.11-beta.226 (the skills concept, stage 4): the next job's tab
+    {Text::SkillsNextTab, "Next", "Наступна", "Следующая"},
+    {Text::SkillsAfterChange, "After the job change", "Після зміни професії", "После смены профессии"},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

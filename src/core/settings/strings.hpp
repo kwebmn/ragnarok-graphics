@@ -774,6 +774,7 @@ enum class Text : uint16_t {
     SkillsQuest, SkillsWedding, SkillsSoulLink, SkillsEarlier, SkillsEarlierNotice, SkillsBasicNotice,  // .223
     SkillsViewList, SkillsViewTree, SkillsPath,  // 3.0.11-beta.224
     SkillsPlan, SkillsPlanApply, SkillsPlanApplying, SkillsPlanReset, SkillsPlanned, SkillsPlanStopped,  // .225
+    SkillsNextTab, SkillsAfterChange,  // 3.0.11-beta.226
     Count
 };
 
