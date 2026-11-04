@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.11-beta.213 — what's new
+
+- @mobsearch on the new minimap: type, for example, `@mobsearch Poring` - every monster the server lists is marked with an orange mark at its cell on the minimap and the big map (pointed at - its name), and a plate under the minimap's bar says what was searched and how many («◆ Poring · 12»). Its ✕ clears the marks; a new search replaces them; another map clears them too. The monsters walk on, so the marks show where they were at the search.
+
 # uaRO Graphics 3.0.11-beta.212 — what's new
 
 **The tester's list, the new part (2)**:
