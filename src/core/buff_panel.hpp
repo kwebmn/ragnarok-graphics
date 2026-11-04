@@ -36,7 +36,8 @@ struct Entry {
 // Decrease AGI, Lex Aeterna, broken armour and weapon, Hallucination, the weights, the strips, Stop, Bleeding, Joint
 // Beat, Wink Charm, Close Confine on its target, Slow Cast, Critical Wounds
 bool debuff(uint16_t icon);
-// Words for an icon no skill or item of the server's gives (the weights, the broken gear ...); "" none
+// Words for an icon no skill or item of the server's gives (the weights, the broken gear ...), else (3.0.11-beta.232)
+// the name of the skill giving it (core/buff_icon_names.inc, its status.c); "" none
 const char* stateName(uint16_t icon);
 // The order shown: favourites, the rest, debuffs - each kind as the game has them
 std::vector<int> order(const std::vector<Entry>& entries);

@@ -38,7 +38,10 @@ TEST(buff_panel_debuffs_and_names) {
     for (const uint16_t icon : {10, 12, 20, 21, 200, 241}) CHECK(!buffpanel::debuff(icon));  // Blessing ... food
     CHECK(std::string(buffpanel::stateName(35)) == "Weight 70 %" && std::string(buffpanel::stateName(32)) ==
                                                                         "Broken Armor");
-    CHECK(std::string(buffpanel::stateName(10)).empty());  // Blessing: its skill names it
+    // 3.0.11-beta.232 (R-DS774A): any other icon a skill gives - by the server's status.c
+    CHECK(std::string(buffpanel::stateName(132)) == "Auto Berserk");
+    CHECK(std::string(buffpanel::stateName(10)) == "Blessing");
+    CHECK(std::string(buffpanel::stateName(9999)).empty());
 }
 
 TEST(buff_panel_order) {

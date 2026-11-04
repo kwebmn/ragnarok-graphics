@@ -1,6 +1,7 @@
 #include "core/buff_panel.hpp"
 
 #include <algorithm>
+#include <iterator>
 #include <cmath>
 
 #include "core/ui_style.hpp"
@@ -213,8 +214,17 @@ const char* stateName(uint16_t icon) {
         case 36: return "Weight 90 %";
         case 95: return "Stop";
         case 124: return "Bleeding";
-        default: return "";
+        default: break;
     }
+    // 3.0.11-beta.232 (R-DS774A: Auto Berserk's «#132»): the skill giving it, as the server's status.c has it
+    struct IconName {
+        uint16_t icon;
+        const char* name;
+    };
+#include "core/buff_icon_names.inc"
+    const auto at = std::lower_bound(std::begin(kIconNames), std::end(kIconNames), icon,
+                                     [](const IconName& e, uint16_t v) { return e.icon < v; });
+    return at != std::end(kIconNames) && at->icon == icon ? at->name : "";
 }
 
 std::vector<int> order(const std::vector<Entry>& entries) {

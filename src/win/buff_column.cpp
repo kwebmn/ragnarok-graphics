@@ -538,7 +538,9 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     if (!toTarget(s, game, p.x, p.y, tx, ty)) return false;
     const float px = tx - float(s.layout.x), py = ty - float(s.layout.y);
     if (!s.layout.hit.contains(px, py) && !s.layout.linesHit.contains(px, py)) return false;
-    if (m == WM_LBUTTONDOWN) {
+    // 3.0.11-beta.232 («кнопочка переключалки иногда работает а иногда нет»): a quick second click comes as a double
+    // click - a press too
+    if (m == WM_LBUTTONDOWN || m == WM_LBUTTONDBLCLK) {
         const bp::Hit h = bp::hitTest(s.layout, px, py);
         if (h.part == bp::Part::Toggle || (h.part == bp::Part::More && s.look == BuffsLook::Column)) {
             s.names = h.part == bp::Part::More ? true : !s.names;  // «ще N»: the names list holds more
