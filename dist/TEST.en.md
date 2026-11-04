@@ -1,3 +1,9 @@
+# uaRO Graphics 3.0.11-beta.237 — what's new
+
+- **Experience over a killed monster**: a monster you hit dies - «+1 234 Base · +567 Job» rises over where it stood and fades in a second and a half (gold, dark outline).
+- **By the experience bars at the bottom** for three seconds: how much came, with its part of the level - «+1 234 Base (0.05 %) · +567 Job (0.2 %)». Several kills in a row add up. Experience from the party or a quest - by the bars only.
+- The switch «Experience over a killed monster» (Interface), on at first.
+
 # uaRO Graphics 3.0.11-beta.236 — what's new
 
 - **Experience bars at the bottom of the screen** (the concept «Character block»): two thin bars along the bottom edge - Base over Job, ticks each 10 %. Point at them for the per cent, the numbers, the pace an hour and the time to the level. Gone at the last levels. The switch «Experience bars at the bottom» (Interface), on at first.
