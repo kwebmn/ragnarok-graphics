@@ -1,3 +1,9 @@
+# uaRO Graphics 3.0.11-beta.209 — what's new
+
+**The tester's third list, part ten**:
+- Alt+D: the game's own detail window (object detail, shadows, trilinear - with this renderer it changes almost nothing) no longer opens; Alt+D opens the graphics console with the real settings instead (as Ctrl+` does), from «Список команд» too. A new switch «Alt+D відкриває консоль графіки» under «Інтерфейс» (and in the console); off - the game's window.
+- The graphics console fits small windows: its letters get smaller in a small window, all of it stays inside the window, and its foot with the keys gets as many lines as it needs (it was cut at the bottom). Its ground is as see-through as the interface's panels («Непрозорість панелей»).
+
 # uaRO Graphics 3.0.11-beta.208 — what's new
 
 **The tester's third list, part nine**:
