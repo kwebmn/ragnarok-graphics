@@ -466,6 +466,21 @@ void packet(uint16_t id, const uint8_t* data, size_t size) {
     }
 }
 
+bool mateLook(uint32_t account, MateLook& out) {
+    if (!account) return false;
+    const uint32_t head = read32(kMembers);
+    if (!head) return false;
+    uint32_t node = read32(head);
+    for (size_t n = 0; node && node != head && n < kMostMembers; ++n, node = read32(node)) {
+        uint32_t f[16] = {};  // the account, the character, the name (a string), hair +0x18, colour, class, sex
+        if (!readGame(node + kMember, f, sizeof f)) break;
+        if (f[0] != account) continue;
+        out = MateLook{int(f[9]) ? 1 : 0, int(f[6]), int(f[7]), int(f[8]), int(f[15])};
+        return out.hair > 0 && out.hair < 1000;
+    }
+    return false;
+}
+
 std::string mateName(uint32_t account) {
     if (!account) return {};
     const uint32_t head = read32(kMembers);

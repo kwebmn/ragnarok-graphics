@@ -38,7 +38,26 @@ using uapad::gamewindow::Blocker;
 // Portal's places from 0x011c); its list a vector of 16-byte strings (+0x6C its first, +0x70 past the last; a
 // string's words at +4, its length +8), the chosen row in its list box (+0x60, the box's +100), the skill at +0x64;
 // the game puts «cancel» last (left out here: the card's own cancel sends it)
-enum class Kind : uint8_t { Identify, Compound, Menu };
+// 3.0.11-beta.263 (the tester: «подивитися по коду які вміння генерують меню (крафт стріл, крафт поушенів і т.д) і всі
+// поміняти проактивно»): the skills' other lists - Weapon Repair's (0x01FC, UI window 0x6B), the upgrade's (0x0221,
+// 0x6F), Forging's and Pharmacy's (0x018D, 0x4F) with their rows in a list box as Menu's (its words +0x58 / +0x5C,
+// 16-byte strings); Arrow Crafting's and cooking's (0x01AD / 0x025A, 0x5E: cooking when its +0x98 is 2) and the
+// incubator's eggs (0x01A6, 0x5A) with things' nodes as the magnifier's. Not Auto Spell's (0x63: skills, not things)
+enum class Kind : uint8_t { Identify, Compound, Menu, Repair, Upgrade, Produce, Arrows, Eggs };
+bool boxed(Kind k) { return k == Kind::Menu || k == Kind::Repair || k == Kind::Upgrade || k == Kind::Produce; }
+const char* nameOf(Kind k) {
+    switch (k) {
+        case Kind::Identify: return "magnifier's";
+        case Kind::Compound: return "card's";
+        case Kind::Menu: return "skill menu's";
+        case Kind::Repair: return "repair's";
+        case Kind::Upgrade: return "upgrade's";
+        case Kind::Produce: return "making's";
+        case Kind::Arrows: return "arrows' or cooking's";
+        case Kind::Eggs: return "incubator's";
+    }
+    return "";
+}
 struct GamePick {
     Kind kind;
     uint32_t at, cls, send;
@@ -49,7 +68,13 @@ struct GamePick {
 constexpr uint32_t kWindowMgr = 0x727ED8;
 constexpr GamePick kPicks[] = {{Kind::Identify, kWindowMgr + 0xAC, 0x699118, 0x47C580},
                                {Kind::Compound, kWindowMgr + 0xB8, 0x6991B0, 0x47CF20},
-                               {Kind::Menu, kWindowMgr + 0xBC, 0x698FE8, 0x47AB10}};
+                               {Kind::Menu, kWindowMgr + 0xBC, 0x698FE8, 0x47AB10},
+                               {Kind::Repair, kWindowMgr + 0xB0, 0x69BCE8, 0x4C4B70},
+                               {Kind::Upgrade, kWindowMgr + 0xB4, 0x69BD80, 0x4C5550},
+                               {Kind::Produce, kWindowMgr + 0x19C, 0x69BE18, 0x4C5EB0},
+                               {Kind::Arrows, kWindowMgr + 0x1C0, 0x699E30, 0x488E00},
+                               {Kind::Eggs, kWindowMgr + 0x1B8, 0x699D98, 0x4888E0}};
+constexpr uint32_t kBoxFirst = 0x58, kBoxPast = 0x5C, kArrowsWhat = 0x98;
 constexpr uint32_t kMenuFirst = 0x6C, kMenuPast = 0x70, kMenuBox = 0x60, kMenuBoxChosen = 100, kMenuSkill = 0x64;
 constexpr uint32_t kList = 0x7C, kChosen = 0x68, kShown = 0x38, kSendMsgSlot = 0x94, kInfo = 8;
 constexpr int kButtonMsg = 6;
@@ -101,7 +126,7 @@ uint32_t rd32(const uint8_t* p, size_t at) {
 
 // Where the game keeps the chosen row (0: nowhere)
 uint32_t chosenAt(uint32_t window, Kind kind) {
-    if (kind != Kind::Menu) return window + kChosen;
+    if (!boxed(kind)) return window + kChosen;
     const uint32_t box = read32(window + kMenuBox);
     return box ? box + kMenuBoxChosen : 0;
 }
@@ -126,7 +151,7 @@ void hold(State& s, uint32_t window, bool on) {
     if (on && window) {
         if (read32(window + kShown) && write32(window + kShown, 0) && s.hidden != window) {
             LOG_INFO("picks: the game's %s window hidden for the new card (its shown flag 0)",
-                     s.kind == Kind::Identify ? "magnifier's" : s.kind == Kind::Menu ? "skill menu's" : "card's");
+                     nameOf(s.kind));
             s.hidden = window;
         }
     } else if (s.hidden && s.hidden == window) {
@@ -137,9 +162,12 @@ void hold(State& s, uint32_t window, bool on) {
     }
 }
 
-std::vector<pc::Entry> readMenu(uint32_t window, unsigned codePage) {
+std::vector<pc::Entry> readMenu(uint32_t window, unsigned codePage, bool box) {
     std::vector<pc::Entry> out;
-    const uint32_t first = read32(window + kMenuFirst), past = read32(window + kMenuPast);
+    const uint32_t list = box ? read32(window + kMenuBox) : window;  // .263: the list box's own words
+    if (!list) return out;
+    const uint32_t first = read32(list + (box ? kBoxFirst : kMenuFirst)),
+                   past = read32(list + (box ? kBoxPast : kMenuPast));
     if (!first || past <= first || (past - first) / 16 > 64) return out;
     for (uint32_t at = first; at < past; at += 16) {
         char buf[65] = {};
@@ -157,7 +185,7 @@ std::vector<pc::Entry> readMenu(uint32_t window, unsigned codePage) {
 }
 
 std::vector<pc::Entry> readList(const State& s, uint32_t window) {
-    if (s.kind == Kind::Menu) return readMenu(window, s.codePage);
+    if (boxed(s.kind)) return readMenu(window, s.codePage, s.kind != Kind::Menu);
     std::vector<pc::Entry> out;
     const auto& names = clienttables::itemNames();
     const auto& unknown = clienttables::unknownNames();
@@ -202,8 +230,22 @@ pc::Texts texts(const State& s) {
     if (s.kind == Kind::Menu) {  // 3.0.11-beta.261: the skill's name over its menu
         const char* skill = s.window ? skillinfo::name(int(read32(s.window + kMenuSkill))) : "";
         t.title = *skill ? std::string(skill) : say(settings::Text::PickMenuTitle);
+    }
+    if (s.kind != Kind::Identify && s.kind != Kind::Compound) {  // .261, .263: a choice of the skill's
         t.message = say(settings::Text::PickMenuHint);
         t.ok = say(settings::Text::PickMenuOk);
+    }
+    uint16_t what = 0;  // .263: Arrow Crafting's window cooks too
+    if (s.kind == Kind::Arrows && s.window) readGame(s.window + kArrowsWhat, &what, 2);
+    switch (s.kind) {
+        case Kind::Repair: t.title = say(settings::Text::PickRepairTitle); break;
+        case Kind::Upgrade: t.title = say(settings::Text::PickUpgradeTitle); break;
+        case Kind::Produce: t.title = say(settings::Text::PickProduceTitle); break;
+        case Kind::Arrows:
+            t.title = say(what == 2 ? settings::Text::PickCookTitle : settings::Text::PickArrowsTitle);
+            break;
+        case Kind::Eggs: t.title = say(settings::Text::PickEggsTitle); break;
+        default: break;
     }
     t.cancel = say(settings::Text::MsgCancel);
     t.empty = say(settings::Text::PickEmpty);
@@ -264,7 +306,7 @@ void press(State& s, int id) {
     if (id == pc::kOkButton && chosenOf(window, kind) < 0) return;  // nothing chosen: the game's ignores it
     if (s.told++ < 30)
         LOG_INFO("picks: %s - the game's %s window's 0x%X", id == pc::kOkButton ? "OK" : "cancel",
-                 kind == Kind::Identify ? "magnifier's" : kind == Kind::Menu ? "skill menu's" : "card's", unsigned(id));
+                 nameOf(kind), unsigned(id));
     reinterpret_cast<SendMsgFn>(uintptr_t(read32(read32(window) + kSendMsgSlot)))(window, 0, kButtonMsg, id, 0, 0);
     s.key.clear();
 }
@@ -294,7 +336,7 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     if (!s.shown || window != s.window) {
         s.show = pc::Show{};
         LOG_INFO("picks: the game's %s window - the new card shows it",
-                 kind == Kind::Identify ? "magnifier's" : kind == Kind::Menu ? "skill menu's" : "card's");
+                 nameOf(kind));
     }
     s.window = window;
     s.k = float(k);

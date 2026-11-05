@@ -34,5 +34,12 @@ void packet(uint16_t id, const uint8_t* data, size_t size);
 // account (0x01eb's) from the game's members' list (a member's first field its account, its second its character);
 // "" when not in it
 std::string mateName(uint32_t account);  // in the game's code page as its frame was told it
+// 3.0.11-beta.263 (the tester: «в список гільдії беремо портрети без необхідності бачити согільдійця, чому б просто не
+// перевикористати логіку?»): a guild mate's looks from the game's members' list (0x0154: its hair, the hair's colour,
+// sex, class, level); false - no such mate
+struct MateLook {
+    int sex = 0, hair = 0, colour = 0, job = 0, level = 0;
+};
+bool mateLook(uint32_t account, MateLook& out);
 
 }  // namespace uagfx::win::guildcardwin

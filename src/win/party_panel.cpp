@@ -27,6 +27,7 @@
 #include "win/code_page.hpp"
 #include "win/game_camera.hpp"
 #include "win/game_files.hpp"
+#include "win/guild_card.hpp"
 #include "win/head_picture.hpp"
 #include "win/hud_edit.hpp"
 #include "win/log.hpp"
@@ -152,7 +153,16 @@ void keepLooks(State& s) {
 
 // A member's face: its head as last seen, made once a look and a size
 const panel::Picture* faceOf(State& s, uint32_t account, int side, const std::string& name) {
-    const auto it = s.looks.find(account);
+    auto it = s.looks.find(account);
+    if (it == s.looks.end()) {  // 3.0.11-beta.263: not seen yet - a guild mate's looks from the guild's list
+        guildcardwin::MateLook g;
+        if (guildcardwin::mateLook(account, g)) {
+            it = s.looks.emplace(account, Look{g.sex, g.hair, g.colour, g.job, g.level}).first;
+            if (!s.looksChangedAt) s.looksChangedAt = GetTickCount64();
+            if (s.facesTold < 20)
+                LOG_INFO("party: %s's looks from the guild's list (not seen yet)", name.c_str());
+        }
+    }
     if (it == s.looks.end() || side <= 0) return nullptr;
     const Look& l = it->second;
     const std::string key = std::to_string(l.sex) + ':' + std::to_string(l.hair) + ':' + std::to_string(l.colour) +

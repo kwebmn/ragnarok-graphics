@@ -5778,13 +5778,14 @@ constexpr Entry kTexts[] = {
     {Text::InterfacePicks, "Choice of things", "Вибір речі", "Выбор вещи"},
     {Text::InterfacePicksHint,
      "The magnifier's list of things not known yet and a card's list of the things it goes into, in the new look: a "
-     "row a thing with its icon, a click chooses, two clicks choose and confirm; a skill's menu (Teleport, Warp "
-     "Portal) too. Off: the game's own windows.",
+     "row a thing with its icon, a click chooses, two clicks choose and confirm; the skills' lists too (Teleport, "
+     "repair, making, arrows, cooking, eggs). Off: the game's own windows.",
      "Список речей для лупи й список речей, у які йде карта, у новому вигляді: рядок на річ з іконкою, клік обирає, "
-     "подвійний клік — обрати й підтвердити; так само меню вмінь (Teleport, Warp Portal). Вимкнено: власні вікна гри.",
+     "подвійний клік — обрати й підтвердити; так само списки вмінь (Teleport, ремонт, "
+     "виготовлення, стріли, готування, яйця). Вимкнено: власні вікна гри.",
      "Список вещей для лупы и список вещей, в которые идёт карта, в новом виде: строка на вещь с иконкой, клик "
-     "выбирает, двойной клик — выбрать и подтвердить; так же меню умений (Teleport, Warp Portal). Выключено: "
-     "собственные окна игры."},
+     "выбирает, двойной клик — выбрать и подтвердить; так же списки умений (Teleport, ремонт, "
+     "изготовление, стрелы, готовка, яйца). Выключено: собственные окна игры."},
     {Text::PickIdentifyTitle, "Identify", "Опізнати річ", "Опознать вещь"},
     {Text::PickIdentifyHint, "Choose the thing to identify", "Оберіть річ, яку опізнати",
      "Выберите вещь для опознания"},
@@ -5799,6 +5800,13 @@ constexpr Entry kTexts[] = {
     {Text::PickMenuHint, "Choose one and press «Choose»", "Оберіть варіант і натисніть «Вибрати»",
      "Выберите вариант и нажмите «Выбрать»"},
     {Text::PickMenuOk, "Choose", "Вибрати", "Выбрать"},
+    // 3.0.11-beta.263: the skills' other lists
+    {Text::PickRepairTitle, "Repair", "Ремонт", "Ремонт"},
+    {Text::PickUpgradeTitle, "Upgrade a weapon", "Покращення зброї", "Улучшение оружия"},
+    {Text::PickProduceTitle, "Make", "Виготовлення", "Изготовление"},
+    {Text::PickArrowsTitle, "Arrow Crafting", "Виготовлення стріл", "Изготовление стрел"},
+    {Text::PickCookTitle, "Cooking", "Готування", "Готовка"},
+    {Text::PickEggsTitle, "Pet incubator", "Інкубатор улюбленця", "Инкубатор питомца"},
     // 3.0.11-beta.158: the party's settings
     {Text::InterfacePartySetup, "Party settings", "Налаштування групи", "Настройки группы"},
     {Text::InterfacePartySetupHint,
