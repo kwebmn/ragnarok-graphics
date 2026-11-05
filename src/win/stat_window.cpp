@@ -55,6 +55,7 @@ struct State {
     ULONGLONG readAt = 0;
     sw::Show show;
     int tab = 0, refJob = -1;  // 3.0.11-beta.267: the tab shown, the class «Довідка» tells of (-1 the character's)
+    int planFor = -1;          // .268: the level and the free points the plan was last made from
     sw::Layout layout;
     std::string key;
     panel::Picture picture;
@@ -242,7 +243,14 @@ sw::Texts texts() {
                                              settings::Text::StatsUsesDex, settings::Text::StatsUsesLuk};
     for (int i = 0; i < sw::kStats; ++i) t.uses[i] = say(uses[i]);
     t.tabs[0] = say(settings::Text::StatsTabChar);  // 3.0.11-beta.267: stage 3
-    t.tabs[1] = say(settings::Text::StatsTabRef);
+    t.tabs[1] = say(settings::Text::StatsTabPlan);  // .268
+    t.tabs[2] = say(settings::Text::StatsTabRef);
+    t.planLevel = say(settings::Text::StatsPlanLevel);
+    t.planPoints = say(settings::Text::StatsPlanPoints);
+    t.planShort = say(settings::Text::StatsPlanShort);
+    t.planResult = say(settings::Text::StatsPlanResult);
+    t.planReset = say(settings::Text::StatsPlanReset);
+    t.planNote = say(settings::Text::StatsPlanNote);
     t.refClass = say(settings::Text::StatsRefClass);
     t.refAspd = say(settings::Text::StatsRefAspd);
     t.refWeapon = say(settings::Text::StatsRefWeapon);
@@ -343,6 +351,18 @@ void frame(HWND game, bool on, double k, int targetWidth, int targetHeight) {
     s.layout.x = int(std::lround(s.fx * float(std::max(0, targetWidth - s.layout.w))));
     s.layout.y = int(std::lround(s.fy * float(std::max(0, targetHeight - s.layout.h))));
     s.show.hoverRow = s.show.hoverPlus = s.show.hoverBattle = s.show.hoverTab = s.show.hoverArrow = -1;
+    s.show.hoverPlan = s.show.hoverPlanIndex = -1;
+    // 3.0.11-beta.268: the plan starts from the character as it is, and again after a level or a point spent
+    if (s.show.plan.level < s.data.baseLevel || s.planFor != s.data.baseLevel * 1000 + s.data.free) {
+        const bool fresh = s.show.plan.level == 0 || s.show.plan.level < s.data.baseLevel;
+        sw::Plan p = sw::planFrom(s.data);
+        if (!fresh) {  // the planned stats kept where they are still above the character's
+            p.level = std::max(p.level, s.show.plan.level);
+            for (int i = 0; i < sw::kStats; ++i) p.base[i] = std::max(p.base[i], s.show.plan.base[i]);
+        }
+        s.show.plan = p;
+        s.planFor = s.data.baseLevel * 1000 + s.data.free;
+    }
     s.show.hoverClose = false;
     int cx = 0, cy = 0;
     if (readGameCursor(cx, cy) && !s.moving) {
@@ -353,6 +373,11 @@ void frame(HWND game, bool on, double k, int targetWidth, int targetHeight) {
         if (h.part == sw::Part::Battle) s.show.hoverBattle = h.index;  // 3.0.11-beta.266
         if (h.part == sw::Part::Tab) s.show.hoverTab = h.index;        // 3.0.11-beta.267
         if (h.part == sw::Part::Arrow) s.show.hoverArrow = h.index;
+        if (h.part == sw::Part::PlanMinus || h.part == sw::Part::PlanPlus || h.part == sw::Part::PlanLevel ||
+            h.part == sw::Part::PlanReset) {  // .268
+            s.show.hoverPlan = int(h.part);
+            s.show.hoverPlanIndex = h.index;
+        }
         s.show.hoverClose = h.part == sw::Part::Close;
     }
     if (uapad::runtime::look().shown) {  // 3.0.11-beta.92: the controller's stat - its «+» lit
@@ -368,7 +393,9 @@ void frame(HWND game, bool on, double k, int targetWidth, int targetHeight) {
                       ',' + std::to_string(d.hpMost) + ',' + std::to_string(d.spMost) + ',' + std::to_string(d.weight) +
                       ',' + std::to_string(d.weightMost) + ';' + std::to_string(s.tab) + ',' +
                       std::to_string(s.layout.refJob) + ',' + std::to_string(s.show.hoverTab) + ',' +
-                      std::to_string(s.show.hoverArrow) + ';';
+                      std::to_string(s.show.hoverArrow) + ';' + std::to_string(s.show.hoverPlan) + ',' +
+                      std::to_string(s.show.hoverPlanIndex) + ';' + std::to_string(s.show.plan.level) + ':';
+    for (int i = 0; i < sw::kStats; ++i) key += std::to_string(s.show.plan.base[i]) + ',';
     for (int i = 0; i < sw::kStats; ++i)
         key += std::to_string(d.base[i]) + '+' + std::to_string(d.bonus[i]) + '/' + std::to_string(d.need[i]) + ',';
     const int battle[] = {d.atk, d.atk2, d.matkMin, d.matkMax, d.hit, d.crit, d.def, d.def2, d.mdef, d.mdef2, d.flee,
@@ -471,6 +498,23 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
         case sw::Part::Tab:  // 3.0.11-beta.267: «Персонаж» or «Довідка»
             s.tab = h.index;
             if (s.told++ < 12) LOG_INFO("stats: the tab %d", h.index);
+            break;
+        case sw::Part::PlanMinus:  // .268: a planned stat down to the character's own, up to 99 (a baby's 80)
+        case sw::Part::PlanPlus: {
+            const int most = uagfx::statmath::baby(s.data.job) ? uagfx::statmath::kMaxBabyStat
+                                                                : uagfx::statmath::kMaxStat;
+            const int step = GetKeyState(VK_SHIFT) < 0 ? 10 : 1;
+            int& v = s.show.plan.base[h.index];
+            v = std::clamp(v + (h.part == sw::Part::PlanPlus ? step : -step), s.data.base[h.index], most);
+            break;
+        }
+        case sw::Part::PlanLevel: {  // the plan's level: the character's to 99
+            const int step = GetKeyState(VK_SHIFT) < 0 ? 10 : 1;
+            s.show.plan.level = std::clamp(s.show.plan.level + (h.index ? step : -step), s.data.baseLevel, 99);
+            break;
+        }
+        case sw::Part::PlanReset:
+            s.show.plan = sw::planFrom(s.data);
             break;
         case sw::Part::Arrow: {  // .267: «Довідка»'s class, the previous or the next of the server's
             const std::vector<int> jobs = uagfx::statmath::jobs();

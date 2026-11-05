@@ -141,6 +141,58 @@ std::vector<AspdRow> aspdTable(int job, int agi, int dex) {
     return out;
 }
 
+Plan planFrom(const Data& d) {
+    Plan p;
+    std::copy(d.base, d.base + kStats, p.base);
+    p.level = d.baseLevel;
+    return p;
+}
+
+int planAvailable(const Data& d, const Plan& p) {
+    const int now = statmath::pointsAt(d.baseLevel), then = statmath::pointsAt(p.level);
+    return d.free + (now > 0 && then > now ? then - now : 0);
+}
+
+int planUsed(const Data& d, const Plan& p) {
+    int used = 0;
+    for (int i = 0; i < kStats; ++i) used += statmath::pointsBetween(d.base[i], p.base[i]);
+    return used;
+}
+
+std::vector<PlanRow> planRows(const Data& d, const Plan& p, const Texts& t) {
+    namespace sm = uagfx::statmath;
+    int a[kStats], b[kStats];
+    for (int i = 0; i < kStats; ++i) {
+        a[i] = total(d, i);
+        b[i] = p.base[i] + d.bonus[i];
+    }
+    const int lv = d.baseLevel, plv = std::max(p.level, lv), w = weaponOf(d);
+    std::vector<PlanRow> out;
+    const auto row = [&](const std::string& name, int now, int then) {
+        out.push_back(PlanRow{name, std::to_string(now), std::to_string(then), now != then});
+    };
+    row("ATK", d.atk, d.atk + sm::atk(b, w) - sm::atk(a, w));
+    row("MATK", d.matkMax, d.matkMax + sm::matkMax(b[3]) - sm::matkMax(a[3]));
+    row("HIT", d.hit, d.hit + sm::hit(plv, b[4]) - sm::hit(lv, a[4]));
+    row("FLEE", d.flee, d.flee + sm::flee(plv, b[1]) - sm::flee(lv, a[1]));
+    if (w >= 0) {  // ASPD to a tenth by the formula, the server's whole one now
+        const int then = sm::aspd10(sm::amotion(d.job, w, b[1], b[4]));
+        out.push_back(PlanRow{"ASPD", std::to_string(d.aspd), decimal(then / 10.0, t.decimal),
+                              then != sm::aspd10(sm::amotion(d.job, w, a[1], a[4]))});
+    }
+    out.push_back(PlanRow{"CRIT", decimal(sm::crit10(a[5]) / 10.0, t.decimal) + " %",
+                          decimal(sm::crit10(b[5]) / 10.0, t.decimal) + " %", a[5] != b[5]});
+    if (d.job >= 0 && d.hpMost > 0) {
+        row("Max HP", d.hpMost, d.hpMost + sm::maxHp(d.job, plv, b[2]) - sm::maxHp(d.job, lv, a[2]));
+        row("Max SP", d.spMost, d.spMost + sm::maxSp(d.job, plv, b[3]) - sm::maxSp(d.job, lv, a[3]));
+    }
+    out.push_back(PlanRow{t.cast, std::to_string(sm::castPercent(a[4])) + " %",
+                          std::to_string(sm::castPercent(b[4])) + " %", a[4] != b[4]});
+    if (d.job >= 0 && d.weightMost > 0)
+        row(t.weight, d.weightMost, d.weightMost + sm::weightMost(d.job, p.base[0]) - sm::weightMost(d.job, d.base[0]));
+    return out;
+}
+
 int explainedItem(const Show& sh) {
     if (sh.hoverRow >= 0) return sh.hoverRow;
     if (sh.hoverPlus >= 0) return sh.hoverPlus;
@@ -323,7 +375,7 @@ Layout layout(int x, int y, float scale, const Data& d, const Texts& t, const Me
     Layout L;
     const float s = scale > 0 ? scale : 1.0f;
     L.s = s;
-    L.tab = tab == 1 ? 1 : 0;
+    L.tab = tab >= 0 && tab < kTabs ? tab : 0;
     L.refJob = refJob >= 0 ? refJob : d.job;
     const float w = kW * s, side = kSide * s;
     L.title = panel::Box{0, 0, w, kTitleH * s};
@@ -333,7 +385,7 @@ Layout layout(int x, int y, float scale, const Data& d, const Texts& t, const Me
     L.freeChip = panel::Box{L.close.x - 14 * s - chipW, (kTitleH * s - 22 * s) / 2, chipW, 22 * s};
     // 3.0.11-beta.267 (stage 3): the tabs after the title and its key
     float tx = side + m(t.title, 15 * s, true) + 2 + 8 * s + m(t.hotkey, 11 * s, false) + 2 + 22 * s;
-    for (int i = 0; i < 2; ++i) {
+    for (int i = 0; i < kTabs; ++i) {
         const float tw = m(t.tabs[i], 12 * s, true) + 24 * s;
         L.tabs[i] = panel::Box{tx, (kTitleH * s - 26 * s) / 2, tw, 26 * s};
         tx += tw + 6 * s;
@@ -361,8 +413,27 @@ Layout layout(int x, int y, float scale, const Data& d, const Texts& t, const Me
     L.cost = panel::Box{side, L.aspd.y + L.aspd.h + gap, w - 2 * side, headH * 2 + rowH};
     L.bonus = panel::Box{side, L.cost.y + L.cost.h + gap, w - 2 * side, headH + float(kStats) * 20 * s};
     const float refBottom = L.bonus.y + L.bonus.h + 10 * s;
+    // «Планування» (.268): the level's row, six stats' rows at the left with − and +, the results at the right
+    L.planLevelRow = panel::Box{side, kTitleH * s + 6 * s, kTableW * s, 30 * s};
+    L.levelPrev = panel::Box{side + 150 * s, L.planLevelRow.y + 3 * s, 24 * s, 24 * s};
+    L.levelNext = panel::Box{side + 250 * s, L.planLevelRow.y + 3 * s, 24 * s, 24 * s};
+    const float py = L.planLevelRow.y + L.planLevelRow.h + 34 * s;
+    for (int i = 0; i < kStats; ++i) {
+        const panel::Box r{side, py + float(i) * kRowH * s, kTableW * s, kRowH * s};
+        L.planRowsBoxes.push_back(r);
+        L.planMinus.push_back(panel::Box{r.x + 90 * s, r.y + (r.h - 24 * s) / 2, 24 * s, 24 * s});
+        L.planPlus.push_back(panel::Box{r.x + 250 * s, r.y + (r.h - 24 * s) / 2, 24 * s, 24 * s});
+    }
+    L.planResults = panel::Box{bx, L.planLevelRow.y, w - side - bx, kHeaderH * s + 11 * kBattleRowH * s};
+    L.planReset = panel::Box{side, py + float(kStats) * kRowH * s + 16 * s, 120 * s, 32 * s};
     L.glass = panel::Box{0, 0, w, std::max(L.line.y + L.line.h, refBottom)};  // one height for both tabs
-    if (L.tab == 1) {  // «Довідка»: none of «Персонаж»'s rows to point at
+    if (L.tab != kPlanTab) {  // .268: the plan's parts only in «Планування»
+        L.planRowsBoxes.clear();
+        L.planMinus.clear();
+        L.planPlus.clear();
+        L.levelPrev = L.levelNext = L.planReset = panel::Box{};
+    }
+    if (L.tab != 0) {  // «Планування», «Довідка»: none of «Персонаж»'s rows to point at
         L.rows.clear();
         L.pluses.clear();
         L.battleRows.clear();
@@ -377,10 +448,17 @@ Layout layout(int x, int y, float scale, const Data& d, const Texts& t, const Me
 Hit hitTest(const Layout& L, float x, float y) {
     if (!L.glass.contains(x, y)) return Hit{};
     if (L.close.contains(x, y)) return Hit{Part::Close, -1};
-    for (int i = 0; i < 2; ++i)  // 3.0.11-beta.267
+    for (int i = 0; i < kTabs; ++i)  // 3.0.11-beta.267
         if (L.tabs[i].contains(x, y)) return Hit{Part::Tab, i};
-    if (L.tab == 1 && L.prev.contains(x, y)) return Hit{Part::Arrow, 0};
-    if (L.tab == 1 && L.next.contains(x, y)) return Hit{Part::Arrow, 1};
+    for (size_t i = 0; i < L.planMinus.size(); ++i) {  // .268
+        if (L.planMinus[i].contains(x, y)) return Hit{Part::PlanMinus, int(i)};
+        if (L.planPlus[i].contains(x, y)) return Hit{Part::PlanPlus, int(i)};
+    }
+    if (L.tab == kPlanTab && L.levelPrev.contains(x, y)) return Hit{Part::PlanLevel, 0};
+    if (L.tab == kPlanTab && L.levelNext.contains(x, y)) return Hit{Part::PlanLevel, 1};
+    if (L.tab == kPlanTab && L.planReset.contains(x, y)) return Hit{Part::PlanReset, -1};
+    if (L.tab == kRefTab && L.prev.contains(x, y)) return Hit{Part::Arrow, 0};
+    if (L.tab == kRefTab && L.next.contains(x, y)) return Hit{Part::Arrow, 1};
     for (size_t i = 0; i < L.pluses.size(); ++i)
         if (L.pluses[i].contains(x, y)) return Hit{Part::Plus, int(i)};
     for (size_t i = 0; i < L.rows.size(); ++i)
@@ -391,44 +469,74 @@ Hit hitTest(const Layout& L, float x, float y) {
     return Hit{Part::Body, -1};
 }
 
-void paint(panel::Picture& out, const Layout& L, const Data& d, const Show& sh) {
+namespace {
+
+// 3.0.11-beta.268 (stage 4): «Планування»'s grounds - the − and + of each stat, the level's ‹ ›, «Скинути»
+void paintPlan(panel::Picture& out, const Layout& L, const Show& sh) {
     const float s = L.s;
-    panel::roundRect(out, L.glass, 12 * s, kCard, uistyle::window(), kWhite, 0.09f, 1.0f * s);
-    if (sh.hoverClose) panel::roundRect(out, L.close, 7 * s, kWhite, 0.12f);
-    if (d.free > 0) panel::roundRect(out, L.freeChip, 6 * s, kGold, 0.18f, kGold, 0.5f, 1.0f * s);
-    for (int i = 0; i < 2; ++i)  // 3.0.11-beta.267: the tabs, the shown one lit
-        panel::roundRect(out, L.tabs[i], 13 * s, kWhite, i == L.tab ? 0.14f : sh.hoverTab == i ? 0.08f : 0.0f,
-                         i == L.tab ? kGold2 : kWhite, i == L.tab ? 0.7f : 0.1f, 1.0f * s);
-    if (L.tab == 1) {
-        for (int i = 0; i < 2; ++i)
-            panel::roundRect(out, i ? L.next : L.prev, 6 * s, kWhite, sh.hoverArrow == i ? 0.2f : 0.08f);
-        for (const panel::Box* b : {&L.aspd, &L.cost, &L.bonus})
-            panel::roundRect(out, panel::Box{b->x, b->y + 26 * s - 1 * s, b->w, 1 * s}, 0, kWhite, 0.1f);
-        return;
+    const auto lit = [&](Part part, int i) { return sh.hoverPlan == int(part) && sh.hoverPlanIndex == i; };
+    for (int i = 0; i < kStats && i < int(L.planMinus.size()); ++i) {
+        panel::roundRect(out, L.planMinus[size_t(i)], 6 * s, kWhite, lit(Part::PlanMinus, i) ? 0.2f : 0.07f, kWhite,
+                         0.15f, 1.0f * s);
+        panel::roundRect(out, L.planPlus[size_t(i)], 6 * s, kWhite, lit(Part::PlanPlus, i) ? 0.2f : 0.07f, kGreen,
+                         0.6f, 1.0f * s);
     }
-    panel::roundRect(out, panel::Box{L.header.x, L.header.y + L.header.h - 1 * s, L.header.w, 1 * s}, 0, kWhite,
-                     0.08f);
-    const int lit = sh.hoverRow >= 0 ? sh.hoverRow : sh.hoverPlus >= 0 ? sh.hoverPlus : sh.selected;
-    for (int i = 0; i < kStats; ++i) {
-        const panel::Box& r = L.rows[size_t(i)];
-        if (i == lit) panel::roundRect(out, r, 6 * s, kWhite, 0.06f);
-        if (i < kStats - 1)
-            panel::roundRect(out, panel::Box{r.x, r.y + r.h - 1 * s, r.w, 1 * s}, 0, kWhite, 0.05f);
-        if (d.base[i] >= 99) continue;
-        const bool can = canRaise(d, i);
-        const panel::Box& p = L.pluses[size_t(i)];
-        panel::roundRect(out, p, 6 * s, can ? kWhite : kWhite, can ? (i == sh.hoverPlus ? 0.22f : 0.12f) : 0.03f,
-                         can ? kGold2 : kWhite, can ? 0.7f : 0.06f, 1.0f * s);
-    }
-    const int lit2 = sh.hoverBattle >= 0 ? sh.hoverBattle : sh.pinnedBattle;  // 3.0.11-beta.266
-    if (lit2 >= 0 && lit2 < int(L.battleRows.size()))
-        panel::roundRect(out, L.battleRows[size_t(lit2)], 6 * s, kWhite, sh.pinnedBattle == lit2 ? 0.09f : 0.06f);
-    // the panel «Як рахується»: a tinted ground under the formulas
-    const panel::Box ground{kSide * s / 2, L.line.y + 4 * s, L.glass.w - kSide * s, L.line.h - 10 * s};
-    panel::roundRect(out, ground, 8 * s, kWhite, 0.04f, kWhite, 0.08f, 1.0f * s);
+    for (int i = 0; i < 2; ++i)
+        panel::roundRect(out, i ? L.levelNext : L.levelPrev, 6 * s, kWhite, lit(Part::PlanLevel, i) ? 0.2f : 0.08f);
+    panel::roundRect(out, L.planReset, 8 * s, kWhite, lit(Part::PlanReset, -1) ? 0.16f : 0.07f, kWhite, 0.2f,
+                     1.0f * s);
+    panel::roundRect(out, panel::Box{L.planResults.x, L.planResults.y + kHeaderH * s - 1 * s, L.planResults.w, 1 * s},
+                     0, kWhite, 0.1f);
 }
 
-namespace {
+void planWords(std::vector<Words>& out, const Layout& L, const Data& d, const Show& sh, const Texts& t) {
+    namespace sm = uagfx::statmath;
+    const float s = L.s;
+    const Plan& p = sh.plan;
+    const auto word = [&](const panel::Box& b, const std::string& text, uint32_t rgb, float px, bool bold, Align a) {
+        out.push_back(Words{b, text, rgb, px, bold, a});
+    };
+    const panel::Box& lr = L.planLevelRow;
+    word(panel::Box{lr.x, lr.y, 150 * s, lr.h}, t.planLevel, kMuted, 12.5f * s, false, Align::Left);
+    word(L.levelPrev, "\xE2\x80\xB9", kText, 14 * s, true, Align::Center);
+    word(panel::Box{L.levelPrev.x + L.levelPrev.w, lr.y, L.levelNext.x - L.levelPrev.x - L.levelPrev.w, lr.h},
+         std::to_string(p.level), p.level > d.baseLevel ? kGold : kText, 13 * s, true, Align::Center);
+    word(L.levelNext, "\xE2\x80\xBA", kText, 14 * s, true, Align::Center);
+    const int avail = planAvailable(d, p), used = planUsed(d, p);
+    std::string points = fill(t.planPoints, {std::to_string(d.free), std::to_string(avail - d.free),
+                                             std::to_string(p.level), std::to_string(avail), std::to_string(used)});
+    if (used > avail) points += " \xE2\x80\x94 " + fill(t.planShort, {std::to_string(used - avail)});
+    word(panel::Box{lr.x, lr.y + lr.h, L.planResults.x - lr.x - 10 * s, 30 * s}, points,
+         used > avail ? 0xE07A6A : kFaint, 11.5f * s, false, Align::Left);
+    for (int i = 0; i < kStats && i < int(L.planRowsBoxes.size()); ++i) {
+        const panel::Box& r = L.planRowsBoxes[size_t(i)];
+        const bool moved = p.base[i] != d.base[i];
+        word(panel::Box{r.x + 6 * s, r.y, 80 * s, r.h}, kNames[i], moved ? kText : kMuted, 13 * s, true, Align::Left);
+        word(L.planMinus[size_t(i)], "\xE2\x88\x92", kText, 14 * s, true, Align::Center);
+        const std::string v = moved ? std::to_string(d.base[i]) + " \xE2\x86\x92 " + std::to_string(p.base[i])
+                                    : std::to_string(d.base[i]);
+        word(panel::Box{r.x + 120 * s, r.y, 124 * s, r.h}, v, moved ? kText : 0xC9D1DE, 13 * s, moved, Align::Center);
+        word(L.planPlus[size_t(i)], "+", kGreen, 14 * s, true, Align::Center);
+        if (moved)
+            word(panel::Box{r.x + 286 * s, r.y, 100 * s, r.h},
+                 std::to_string(sm::pointsBetween(d.base[i], p.base[i])), kFaint, 11.5f * s, false, Align::Left);
+    }
+    word(L.planReset, t.planReset, kText, 12.5f * s, false, Align::Center);
+    word(panel::Box{L.planReset.x + L.planReset.w + 12 * s, L.planReset.y, L.planResults.x - L.planReset.x -
+                        L.planReset.w - 20 * s, L.planReset.h},
+         t.planNote, kFaint, 11 * s, false, Align::Left);
+    const panel::Box& res = L.planResults;
+    word(panel::Box{res.x, res.y, res.w, kHeaderH * s}, t.planResult, kText, 13 * s, true, Align::Left);
+    const std::vector<PlanRow> rows = planRows(d, p, t);
+    for (size_t i = 0; i < rows.size(); ++i) {
+        const float y = res.y + kHeaderH * s + float(i) * kBattleRowH * s;
+        word(panel::Box{res.x, y, res.w * 0.42f, kBattleRowH * s}, rows[i].name, 0xC9D1DE, 12.5f * s, false,
+             Align::Left);
+        const std::string v = rows[i].changed ? rows[i].now + " \xE2\x86\x92 " + rows[i].then : rows[i].now;
+        word(panel::Box{res.x + res.w * 0.42f, y, res.w * 0.58f, kBattleRowH * s}, v, rows[i].changed ? kGreen : kText,
+             12.5f * s, rows[i].changed, Align::Right);
+    }
+}
 
 // 3.0.11-beta.267 (stage 3): «Довідка» - the class (‹ ›), its weapons' ASPD at AGI 1 / 50 / 80 / 99 and at the
 // character's own AGI (the character's DEX), what a stat costs up to 50 ... 99, the job levels giving each stat
@@ -505,6 +613,47 @@ void referenceWords(std::vector<Words>& out, const Layout& L, const Data& d, con
 
 }  // namespace
 
+void paint(panel::Picture& out, const Layout& L, const Data& d, const Show& sh) {
+    const float s = L.s;
+    panel::roundRect(out, L.glass, 12 * s, kCard, uistyle::window(), kWhite, 0.09f, 1.0f * s);
+    if (sh.hoverClose) panel::roundRect(out, L.close, 7 * s, kWhite, 0.12f);
+    if (d.free > 0) panel::roundRect(out, L.freeChip, 6 * s, kGold, 0.18f, kGold, 0.5f, 1.0f * s);
+    for (int i = 0; i < kTabs; ++i)  // 3.0.11-beta.267: the tabs, the shown one lit
+        panel::roundRect(out, L.tabs[i], 13 * s, kWhite, i == L.tab ? 0.14f : sh.hoverTab == i ? 0.08f : 0.0f,
+                         i == L.tab ? kGold2 : kWhite, i == L.tab ? 0.7f : 0.1f, 1.0f * s);
+    if (L.tab == kPlanTab) {
+        paintPlan(out, L, sh);
+        return;
+    }
+    if (L.tab == kRefTab) {
+        for (int i = 0; i < 2; ++i)
+            panel::roundRect(out, i ? L.next : L.prev, 6 * s, kWhite, sh.hoverArrow == i ? 0.2f : 0.08f);
+        for (const panel::Box* b : {&L.aspd, &L.cost, &L.bonus})
+            panel::roundRect(out, panel::Box{b->x, b->y + 26 * s - 1 * s, b->w, 1 * s}, 0, kWhite, 0.1f);
+        return;
+    }
+    panel::roundRect(out, panel::Box{L.header.x, L.header.y + L.header.h - 1 * s, L.header.w, 1 * s}, 0, kWhite,
+                     0.08f);
+    const int lit = sh.hoverRow >= 0 ? sh.hoverRow : sh.hoverPlus >= 0 ? sh.hoverPlus : sh.selected;
+    for (int i = 0; i < kStats; ++i) {
+        const panel::Box& r = L.rows[size_t(i)];
+        if (i == lit) panel::roundRect(out, r, 6 * s, kWhite, 0.06f);
+        if (i < kStats - 1)
+            panel::roundRect(out, panel::Box{r.x, r.y + r.h - 1 * s, r.w, 1 * s}, 0, kWhite, 0.05f);
+        if (d.base[i] >= 99) continue;
+        const bool can = canRaise(d, i);
+        const panel::Box& p = L.pluses[size_t(i)];
+        panel::roundRect(out, p, 6 * s, can ? kWhite : kWhite, can ? (i == sh.hoverPlus ? 0.22f : 0.12f) : 0.03f,
+                         can ? kGold2 : kWhite, can ? 0.7f : 0.06f, 1.0f * s);
+    }
+    const int lit2 = sh.hoverBattle >= 0 ? sh.hoverBattle : sh.pinnedBattle;  // 3.0.11-beta.266
+    if (lit2 >= 0 && lit2 < int(L.battleRows.size()))
+        panel::roundRect(out, L.battleRows[size_t(lit2)], 6 * s, kWhite, sh.pinnedBattle == lit2 ? 0.09f : 0.06f);
+    // the panel «Як рахується»: a tinted ground under the formulas
+    const panel::Box ground{kSide * s / 2, L.line.y + 4 * s, L.glass.w - kSide * s, L.line.h - 10 * s};
+    panel::roundRect(out, ground, 8 * s, kWhite, 0.04f, kWhite, 0.08f, 1.0f * s);
+}
+
 std::vector<Words> words(const Layout& L, const Data& d, const Show& sh, const Texts& t, const Measure& m) {
     std::vector<Words> out;
     const float s = L.s, side = kSide * s;
@@ -515,9 +664,13 @@ std::vector<Words> words(const Layout& L, const Data& d, const Show& sh, const T
     out.push_back(Words{L.close, "\xC3\x97", sh.hoverClose ? kText : kMuted, 16 * s, false, Align::Center});
     out.push_back(Words{L.freeChip, fill(t.free, {std::to_string(d.free)}), d.free > 0 ? kGold : kFaint, 11.5f * s,
                         true, Align::Center});
-    for (int i = 0; i < 2; ++i)  // 3.0.11-beta.267: the tabs
+    for (int i = 0; i < kTabs; ++i)  // 3.0.11-beta.267: the tabs
         out.push_back(Words{L.tabs[i], t.tabs[i], i == L.tab ? kGold : kMuted, 12 * s, i == L.tab, Align::Center});
-    if (L.tab == 1) {
+    if (L.tab == kPlanTab) {
+        planWords(out, L, d, sh, t);
+        return out;
+    }
+    if (L.tab == kRefTab) {
         referenceWords(out, L, d, t);
         return out;
     }

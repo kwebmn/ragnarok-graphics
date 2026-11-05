@@ -46,10 +46,29 @@ struct Texts {
     std::string howAspdGoal, howAspdNever, howDef, howMdef, howPerfect, howCast, howCastNone, howDelay, howRegen;
     std::string howWeight, howJob, howNext;
     std::string uses[kStats];  // what each stat goes into
-    // 3.0.11-beta.267 (stage 3): the tabs «Персонаж», «Довідка»; the reference's words
-    std::string tabs[2], refClass, refAspd, refWeapon, refDelay, refYourAgi, refCost, refCostFrom, refCostPoints;
+    // 3.0.11-beta.267 (stage 3): the tabs «Персонаж», «Планування» (.268), «Довідка»; the reference's words
+    std::string tabs[3], refClass, refAspd, refWeapon, refDelay, refYourAgi, refCost, refCostFrom, refCostPoints;
     std::string refBonus, refBonusNone, refBonusNow;
+    // 3.0.11-beta.268 (stage 4): «Планування»'s words
+    std::string planLevel, planPoints, planShort, planResult, planReset, planNote;
 };
+
+// 3.0.11-beta.268 (stage 4, the owner: «только показать»): a plan of the stats - each stat's base planned, at a base
+// level planned; nothing of it goes to the server
+struct Plan {
+    int base[kStats] = {};
+    int level = 0;
+};
+Plan planFrom(const Data& d);  // the character as it is
+int planAvailable(const Data& d, const Plan& p);  // the free points now and the levels' to come
+int planUsed(const Data& d, const Plan& p);       // the points the planned stats take
+struct PlanRow {
+    std::string name, now, then;
+    bool changed = false;
+};
+// The numbers now and with the plan: the server's now, the plan's by the formulas' difference (the things' and the
+// buffs' part kept)
+std::vector<PlanRow> planRows(const Data& d, const Plan& p, const Texts& t);
 
 struct Row {
     std::string name, value;
@@ -76,6 +95,8 @@ struct Show {
     int hoverRow = -1, hoverPlus = -1, selected = -1;
     int hoverBattle = -1, pinnedBattle = -1;  // 3.0.11-beta.266: a battle row under the mouse, the one clicked
     int hoverTab = -1, hoverArrow = -1;       // 3.0.11-beta.267: a tab, the class's ‹ (0) or › (1)
+    int hoverPlan = -1, hoverPlanIndex = -1;  // 3.0.11-beta.268: a plan's part (its Part) and its index
+    Plan plan;                                // .268: «Планування»'s (the window's, kept while the game runs)
     bool hoverClose = false;
 };
 
@@ -88,7 +109,11 @@ struct Layout {
     // 3.0.11-beta.267 (stage 3): the tab shown (0 «Персонаж», 1 «Довідка») and the class the reference tells of;
     // the tabs, the class's arrows and the reference's parts
     int tab = 0, refJob = -1;
-    panel::Box tabs[2], prev, next, classRow, aspd, cost, bonus;
+    panel::Box tabs[3], prev, next, classRow, aspd, cost, bonus;
+    // 3.0.11-beta.268 (stage 4): «Планування» - the level's row and its ‹ ›, the stats' rows with − and +, the
+    // results, «Скинути»
+    panel::Box planLevelRow, levelPrev, levelNext, planResults, planReset;
+    std::vector<panel::Box> planRowsBoxes, planMinus, planPlus;
 };
 // The weapons the class can use: its delay, the ASPD at AGI 1, 50, 80, 99 and at the AGI given, with the DEX given
 struct AspdRow {
@@ -98,11 +123,14 @@ struct AspdRow {
 constexpr int kAgiSteps[4] = {1, 50, 80, 99}, kCostSteps[5] = {50, 70, 80, 90, 99}, kMostAspdRows = 12;
 std::vector<AspdRow> aspdTable(int job, int agi, int dex);
 const char* weaponName(int weapon);
-// tab 1 «Довідка»: refJob - the class told of (-1: the character's)
+constexpr int kTabs = 3, kPlanTab = 1, kRefTab = 2;  // .268: «Персонаж», «Планування», «Довідка»
+// tab kRefTab «Довідка»: refJob - the class told of (-1: the character's)
 Layout layout(int x, int y, float scale, const Data& d, const Texts& t, const Measure& m, int tab = 0,
               int refJob = -1);
 
-enum class Part : uint8_t { None, Close, Plus, Row, Title, Body, Battle, Tab, Arrow };  // .266 Battle, .267 Tab, Arrow
+// .266 Battle, .267 Tab and Arrow, .268 the plan's
+enum class Part : uint8_t { None, Close, Plus, Row, Title, Body, Battle, Tab, Arrow, PlanMinus, PlanPlus, PlanLevel,
+                            PlanReset };
 struct Hit {
     Part part = Part::None;
     int index = -1;

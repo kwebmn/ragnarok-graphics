@@ -536,8 +536,9 @@ TEST(stat_window_reference_tab) {
     t.tabs[1] = "Довідка";
     statwin::Data d;
     d.job = 7;
-    const statwin::Layout L = statwin::layout(0, 0, 1.0f, d, t, statwin::Measure(panel::wordsWidth), 1, 1);
-    CHECK(L.tab == 1 && L.refJob == 1 && L.rows.empty() && L.battleRows.empty());
+    const statwin::Layout L =
+        statwin::layout(0, 0, 1.0f, d, t, statwin::Measure(panel::wordsWidth), statwin::kRefTab, 1);
+    CHECK(L.tab == statwin::kRefTab && L.refJob == 1 && L.rows.empty() && L.battleRows.empty());
     const statwin::Hit tab = statwin::hitTest(L, L.tabs[0].x + 5, L.tabs[0].y + 5);
     CHECK(tab.part == statwin::Part::Tab && tab.index == 0);
     const statwin::Hit next = statwin::hitTest(L, L.next.x + 5, L.next.y + 5);
@@ -548,4 +549,47 @@ TEST(stat_window_reference_tab) {
     for (const statwin::Words& w : statwin::words(L, d, statwin::Show{}, t, statwin::Measure(panel::wordsWidth)))
         swordsman = swordsman || w.text == "Swordsman";
     CHECK(swordsman);
+}
+
+// 3.0.11-beta.268 (stage 4): «Планування» on the concept's knight - level 98 -> 99, AGI 70 -> 73, DEX 40 -> 41
+TEST(stat_window_plan) {
+    statwin::Texts t = statTexts();
+    t.tabs[1] = "Планування";
+    statwin::Data d;
+    const int base[6] = {62, 70, 30, 1, 40, 1}, bonus[6] = {4, 6, 2, 0, 3, 1};
+    for (int i = 0; i < 6; ++i) {
+        d.base[i] = base[i];
+        d.bonus[i] = bonus[i];
+    }
+    d.job = 7;
+    d.baseLevel = 98;
+    d.free = 12;
+    d.aspd = 164;
+    d.hit = 141;
+    d.flee = 174;
+    d.atk = 260;
+    d.hpMost = 10319;
+    d.spMost = 300;
+    d.weightMost = 4660;
+    statwin::Plan p = statwin::planFrom(d);
+    CHECK(p.level == 98 && p.base[1] == 70);
+    CHECK(statwin::planUsed(d, p) == 0 && statwin::planAvailable(d, p) == 12);
+    p.level = 99;
+    p.base[1] = 73;
+    p.base[4] = 41;
+    CHECK_EQ(statwin::planUsed(d, p), 26 + 5);
+    CHECK_EQ(statwin::planAvailable(d, p), 12 + statmath::pointsAt(99) - statmath::pointsAt(98));
+    const std::vector<statwin::PlanRow> rows = statwin::planRows(d, p, t);
+    const auto find = [&](const std::string& name) {
+        for (const statwin::PlanRow& r : rows)
+            if (r.name == name) return r;
+        return statwin::PlanRow{};
+    };
+    CHECK(find("HIT").then == "143" && find("FLEE").then == "178" && find("ASPD").then == "164,8");
+    CHECK(find("ATK").changed == false && find("Max HP").then != "10319");
+    const statwin::Layout L = statwin::layout(0, 0, 1.0f, d, t, statwin::Measure(panel::wordsWidth), statwin::kPlanTab);
+    CHECK(L.planMinus.size() == 6 && L.rows.empty());
+    const statwin::Hit plus = statwin::hitTest(L, L.planPlus[1].x + 4, L.planPlus[1].y + 4);
+    CHECK(plus.part == statwin::Part::PlanPlus && plus.index == 1);
+    CHECK(statwin::hitTest(L, L.levelNext.x + 4, L.levelNext.y + 4).part == statwin::Part::PlanLevel);
 }
