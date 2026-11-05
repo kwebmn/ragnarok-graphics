@@ -13,6 +13,7 @@
 #include "core/settings/strings.hpp"
 #include "core/ui_style.hpp"
 #include "pad/win/game_window.hpp"
+#include "win/chat_window.hpp"
 #include "win/game_camera.hpp"
 #include "win/hotbar.hpp"
 #include "win/log.hpp"
@@ -600,6 +601,7 @@ Gate gate(HWND game, UINT m, WPARAM wp, LPARAM lp) {
             return Gate::Pass;
     }
     if (hotbarwin::ownsPress(game, lp)) return Gate::Pass;  // 3.0.11-beta.147: a cell's icon - lifted by the hotbar
+    if (chatwin::ownsPress(game, lp)) return Gate::Pass;    // 3.0.11-beta.241: the chat's corner - its size
     const int part = partAt(s, x, y, true);
     if (part < 0) return Gate::Pass;
     s.held = true;

@@ -200,3 +200,23 @@ TEST(chat_commands_and_their_hints) {
     const std::vector<Words> w = words(L, {}, in, sh, t, estimate);
     CHECK(std::any_of(w.begin(), w.end(), [](const Words& x) { return x.text == "/r текст — відповісти Bob"; }));
 }
+
+// 3.0.11-beta.241 (the chat concept, stage 2: «размер мышью»): its corner dragged - the width and the rows it gives,
+// its bottom left staying; held to 360..900 wide, 4..20 rows
+TEST(chat_size_by_its_corner) {
+    Texts t;
+    Show sh;
+    Input in;
+    const Layout L = layout(10, 1070, 1.0f, 7, false, sh, in, t, estimate, 640);
+    CHECK(L.w == 640 && L.grip.w > 0 && L.grip.x + L.grip.w <= L.glass.w + 0.5f && L.grip.y < L.lines.y);
+    CHECK(hitTest(L, {}, sh, L.grip.x + 4, L.grip.y + 4).part == Part::Grip);
+    int w = 0, r = 0;
+    sizeTo(L, float(L.x) + 800, float(L.y) - 18 * 3, w, r);  // wider, three rows taller
+    CHECK(w == 800 && r == 10);
+    sizeTo(L, float(L.x) + 100, float(L.y + L.h), w, r);  // too small: held
+    CHECK(w == kLeastWidth && r == kLeastRows);
+    sizeTo(L, float(L.x) + 5000, float(L.y) - 5000, w, r);
+    CHECK(w == kMostWidth && r == kMostRows);
+    const Layout Q = layout(10, 1070, 1.0f, 7, false, sh, in, t, estimate, 100);
+    CHECK(Q.w == kLeastWidth);
+}

@@ -11,7 +11,7 @@ namespace {
 
 // The concept's sizes at scale 1 (v23 chat): 520 wide, the tabs' row 30, a line's row 18 (its words 12.5), the
 // input's row 28; the glass 86 % (the concept: chat and windows not under 80 %), idle 55 %
-constexpr float kW = 520, kTabsH = 30, kRowH = 18, kInputH = 28, kPad = 12;
+constexpr float kTabsH = 30, kRowH = 18, kInputH = 28, kPad = 12;
 constexpr uint32_t kCard = 0x10141C, kWhite = 0xFFFFFF, kBlack = 0x000000, kGold = 0xF3C653, kAccent = 0x5DB2FF;
 constexpr uint32_t kOnBadge = 0x08111F, kHoverTab = 0xC9D1DE;
 
@@ -269,7 +269,7 @@ std::vector<Row> wrap(const std::vector<const Line*>& lines, float width, float 
 }
 
 Layout layout(int left, int bottom, float scale, int rows, bool quiet, const Show& sh, const Input& in, const Texts& t,
-              const Measure& m) {
+              const Measure& m, int width) {
     Layout L;
     const float s = scale > 0 ? scale : 1.0f;
     L.s = s;
@@ -279,13 +279,14 @@ Layout layout(int left, int bottom, float scale, int rows, bool quiet, const Sho
     L.px = 12.5f * s;
     L.rowH = kRowH * s;
     L.rows = std::max(1, rows);
-    const float w = kW * s, pad = kPad * s;
+    const float w = float(std::clamp(width > 0 ? width : kWidth, kLeastWidth, kMostWidth)) * s, pad = kPad * s;
     const float tabsH = kTabsH * s, inputH = kInputH * s;
     const float top = tabsH + 4 * s;
     const float linesH = float(L.rows) * L.rowH;
     const float h = top + linesH + 6 * s + inputH + 8 * s;
     L.glass = panel::Box{0, 0, w, h};
     L.lines = panel::Box{pad, top, w - 2 * pad, linesH};
+    L.grip = panel::Box{w - 18 * s, 0, 18 * s, 18 * s};  // 3.0.11-beta.241
     {
         L.tabsRow = panel::Box{0, 0, w, tabsH};
         float x = 8 * s;
@@ -332,6 +333,7 @@ void shown(const Layout& L, const std::vector<Row>& rows, int scroll, size_t& fi
 
 Hit hitTest(const Layout& L, const std::vector<Row>& rows, const Show& sh, float x, float y) {
     if (!L.glass.contains(x, y)) return Hit{};
+    if (L.grip.w > 0 && L.grip.contains(x, y)) return Hit{Part::Grip, -1};  // 3.0.11-beta.241
     {
         for (size_t i = 0; i < L.tabs.size(); ++i)
             if (L.tabs[i].contains(x, y)) return Hit{Part::Tab, int(i)};
@@ -405,6 +407,15 @@ void paint(panel::Picture& out, const Layout& L, const std::vector<Row>& rows, c
         }
         if (L.newer.w > 0) panel::roundRect(out, L.newer, 6 * s, kAccent, sh.hoverNewer ? 0.45f : 0.28f);
         if (L.hints.w > 0) panel::roundRect(out, L.hints, 8 * s, kCard, 0.96f, kWhite, 0.14f, 1.0f * s);
+        // 3.0.11-beta.241: the corner's grip - two short slants, brighter pointed at
+        const float a = sh.hoverGrip ? 0.8f : L.quiet ? 0.15f : 0.35f;
+        for (int k = 0; k < 2; ++k) {
+            const float d = (5 + 4 * float(k)) * s;
+            for (float t2 = 0; t2 < d; t2 += 1.0f * s)
+                panel::roundRect(out, panel::Box{L.grip.x + L.grip.w - 4 * s - d + t2, L.grip.y + 4 * s + t2, 1.2f * s,
+                                                 1.2f * s},
+                                 0, kWhite, a);
+        }
     }
     if (sh.hoverLine >= 0) {  // the name pointed at: underlined
         size_t first = 0, count = 0;
@@ -527,6 +538,14 @@ bool command(const std::string& utf8, const std::string& replyTo, Command& out) 
     out.words = rest.substr(std::min(rest.size(), end));
     while (!out.words.empty() && out.words.front() == ' ') out.words.erase(out.words.begin());
     return !out.whisper.empty() && !out.words.empty();
+}
+
+void sizeTo(const Layout& L, float x, float y, int& width, int& rows) {
+    const float s = L.s > 0 ? L.s : 1.0f;
+    width = std::clamp(int(std::lround((x - float(L.x)) / s)), kLeastWidth, kMostWidth);
+    const float fixed = float(L.h) - float(L.rows) * L.rowH;  // its tabs, input and edges
+    const float linesH = float(L.y + L.h) - y - fixed;
+    rows = std::clamp(int(std::lround(linesH / L.rowH)), kLeastRows, kMostRows);
 }
 
 }  // namespace uagfx::chatpanel

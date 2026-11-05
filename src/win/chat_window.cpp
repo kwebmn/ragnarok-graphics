@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
+#include <cstdio>
 #include <cstring>
 #include <deque>
 #include <map>
@@ -14,6 +15,7 @@
 
 #include "core/chat_panel.hpp"
 #include "core/hotbar_panel.hpp"
+#include "core/layout.hpp"
 #include "core/settings/strings.hpp"
 #include "core/ui_style.hpp"
 #include "pad/win/game_window.hpp"
@@ -23,6 +25,7 @@
 #include "win/hud_edit.hpp"
 #include "win/log.hpp"
 #include "win/minimap_proto.hpp"
+#include "win/paths.hpp"
 #include "win/picture_draw.hpp"
 #include "win/real_ddraw.hpp"
 #include "win/reference_load.hpp"
@@ -125,6 +128,10 @@ struct State {
     ULONGLONG restoreAt = 0;
     ULONGLONG fadeMs = 12000;
     int commandsTold = 0;
+    // 3.0.11-beta.241 (the chat concept, stage 2): its size by its corner - the width at scale 1, the rows (0: F10's),
+    // being dragged, read once
+    int width = cp::kWidth, customRows = 0;
+    bool sizing = false, sizeRead = false;
 };
 
 State& state() {
@@ -292,6 +299,26 @@ bool inputEmpty() {
 }
 
 namespace {
+
+// 3.0.11-beta.241: the size by the corner - «width 640», «rows 10» (rows 0: F10's)
+void readSize(State& s) {
+    s.sizeRead = true;
+    std::string text;
+    if (!readTextFile(layout::join(gameDir(), layout::kChatState), text)) return;
+    int w = 0, r = 0;
+    const size_t wAt = text.find("width ");
+    if (wAt != std::string::npos && std::sscanf(text.c_str() + wAt, "width %d", &w) == 1)
+        s.width = std::clamp(w, cp::kLeastWidth, cp::kMostWidth);
+    if (const size_t at = text.find("rows "); at != std::string::npos && std::sscanf(text.c_str() + at, "rows %d", &r))
+        s.customRows = r == 0 ? 0 : std::clamp(r, cp::kLeastRows, cp::kMostRows);
+}
+
+void keepSize(const State& s) {
+    char text[64];
+    std::snprintf(text, sizeof text, "width %d\nrows %d\n", s.width, s.customRows);
+    const std::string path = layout::join(gameDir(), layout::kChatState);
+    if (!writeFileAtomic(path, std::string(text))) LOG_INFO("chat: %s cannot be written", path.c_str());
+}
 
 void readInput(State& s) {
     cp::Input in;
@@ -637,8 +664,11 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     s.show.hoverMode = hit.part == cp::Part::Mode;
     s.show.hoverClear = hit.part == cp::Part::Clear;
     s.show.hoverNewer = hit.part == cp::Part::Newer;
+    if (!s.sizeRead) readSize(s);
+    s.show.hoverGrip = hit.part == cp::Part::Grip || s.sizing;
     s.layout = cp::layout(int(std::lround(10 * scale)), targetHeight - int(std::lround(10 * scale)), scale,
-                          kHeights[s.height % 3], quiet, s.show, s.input, texts(), measure);
+                          s.customRows > 0 ? s.customRows : kHeights[s.height % 3], quiet && !s.sizing, s.show,
+                          s.input, texts(), measure, s.width);
     hudedit::place(hudlayout::Part::Chat, float(k), targetWidth, targetHeight, s.layout.w, s.layout.h, s.layout.x,
                    s.layout.y);  // 3.0.11-beta.75: where the player put it
     makeRows(s);
@@ -685,9 +715,20 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     if (!s.shown) return false;
     const bool button = m == WM_LBUTTONDOWN || m == WM_LBUTTONUP || m == WM_LBUTTONDBLCLK || m == WM_RBUTTONDOWN ||
                         m == WM_RBUTTONUP || m == WM_RBUTTONDBLCLK || m == WM_MBUTTONDOWN || m == WM_MBUTTONUP;
-    if (!button && m != WM_MOUSEWHEEL) return false;
+    if (!button && m != WM_MOUSEWHEEL && !(m == WM_MOUSEMOVE && s.sizing)) return false;
     float tx = 0, ty = 0;  // 3.0.11-beta.43: where the game's cursor stands, as the hover
     if (!pointerInTarget(game, m, lp, s.k, s.targetW, s.targetH, tx, ty)) return false;
+    if (s.sizing) {  // 3.0.11-beta.241: its corner dragged - the width and the rows follow, kept when let go
+        cp::sizeTo(s.layout, tx, ty, s.width, s.customRows);
+        if (m == WM_LBUTTONUP) {
+            s.sizing = false;
+            keepSize(s);
+            LOG_INFO("chat: its size by its corner - %d wide, %d rows", s.width, s.customRows);
+        }
+        s.key.clear();
+        result = 0;
+        return true;
+    }
     const cp::Hit h = cp::hitTest(s.layout, s.rows, s.show, tx - float(s.layout.x), ty - float(s.layout.y));
     if (h.part == cp::Part::None) return false;
     result = 0;
@@ -700,6 +741,10 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     if (m != WM_LBUTTONDOWN) return true;
     const char* did = "";
     switch (h.part) {
+        case cp::Part::Grip:  // 3.0.11-beta.241
+            s.sizing = true;
+            did = "its corner taken";
+            break;
         case cp::Part::Tab:
             s.show.tab = cp::Tab(h.index);
             s.show.unread[h.index] = 0;
@@ -760,6 +805,8 @@ bool key(UINT m, WPARAM wp, LPARAM lp) {
             s.folded = !s.folded;
         else {
             s.height = (s.height + 1) % 3;
+            s.customRows = 0;  // 3.0.11-beta.241: F10's heights over the corner's rows
+            keepSize(s);
             s.folded = false;
         }
         s.key.clear();
@@ -817,6 +864,14 @@ void setFade(int seconds) {  // 3.0.11-beta.240
         s.fadeMs = ms;
         LOG_INFO("chat: [interface] chat_fade = %d s", seconds);
     }
+}
+
+bool ownsPress(HWND game, LPARAM lp) {  // 3.0.11-beta.241: its corner - its size, not the part dragged
+    const State& s = state();
+    float tx = 0, ty = 0;
+    if (!s.shown || !pointerInTarget(game, WM_LBUTTONDOWN, lp, s.k, s.targetW, s.targetH, tx, ty)) return false;
+    return cp::hitTest(s.layout, s.rows, s.show, tx - float(s.layout.x), ty - float(s.layout.y)).part ==
+           cp::Part::Grip;
 }
 
 }  // namespace uagfx::win::chatwin

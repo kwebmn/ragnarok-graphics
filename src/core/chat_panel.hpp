@@ -104,6 +104,7 @@ struct Show {
     int unread[kTabs] = {};
     int hoverTab = -1, hoverLine = -1;  // the line whose name is pointed at
     bool hoverMode = false, hoverClear = false, hoverNewer = false;
+    bool hoverGrip = false;  // 3.0.11-beta.241
 };
 
 struct Layout {
@@ -114,13 +115,18 @@ struct Layout {
     float px = 12.5f, rowH = 18;      // the lines' words and rows
     panel::Box glass, tabsRow, lines, input, mode, clear, field, newer;
     panel::Box hints;  // 3.0.11-beta.240: the commands' hints over the rows (w 0: none)
+    panel::Box grip;   // 3.0.11-beta.241: its top right corner - drags its size
     std::vector<panel::Box> tabs;
 };
-// Its bottom left at (left, bottom) in the target
+// Its bottom left at (left, bottom) in the target; 3.0.11-beta.241: `width` at scale 1 (kLeast..kMost, by its corner)
+constexpr int kWidth = 520, kLeastWidth = 360, kMostWidth = 900, kLeastRows = 4, kMostRows = 20;
 Layout layout(int left, int bottom, float scale, int rows, bool quiet, const Show& sh, const Input& in, const Texts& t,
-              const Measure& m);
+              const Measure& m, int width = kWidth);
+// 3.0.11-beta.241 (the chat concept, stage 2: «размер мышью»): its corner dragged to (x, y) in the target - the width
+// (scale 1) and the rows it gives, its bottom left staying
+void sizeTo(const Layout& L, float x, float y, int& width, int& rows);
 
-enum class Part : uint8_t { None, Tab, Name, Lines, Mode, Clear, Field, Newer, Body };
+enum class Part : uint8_t { None, Tab, Name, Lines, Mode, Clear, Field, Newer, Body, Grip };
 struct Hit {
     Part part = Part::None;
     int index = -1;  // a tab's; a name's line (of the rows' lines)
