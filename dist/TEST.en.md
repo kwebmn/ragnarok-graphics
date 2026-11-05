@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.11-beta.274 — what's new
+
+**Feature 4 — the session's summary:** the character select shows under the places the chosen character's last game: how long, how much of a Base and a Job level gained (per cent of a level), the zeny won or spent. For example: «Остання гра Ліра: 1 год 20 хв · Base +40 % · +12 500 z».
+
 # uaRO Graphics 3.0.11-beta.273 — what's new
 
 **Characters — new features 1 and 3:**
