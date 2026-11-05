@@ -1,3 +1,10 @@
+# uaRO Graphics 3.0.11-beta.258 — what's new
+
+**Talking to NPCs with the pad, stage 4 — numbers by their digits:**
+- When an NPC asks for a number, ←/→ pick the digit (units, tens, hundreds…) and ↑/↓ add or take away one of that digit. 1,250 takes six presses instead of nineteen.
+- LB sets 0, RB puts in the number you entered last time.
+- The hint line at the bottom shows which digit is changing («↑ ↓: ±100»). It also shows over the talk window while the number field is open.
+
 # uaRO Graphics 3.0.11-beta.257 — what's new
 
 **Talking to NPCs with the pad, stage 3 — NPCs across the screen:**
