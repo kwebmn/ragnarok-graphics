@@ -1,3 +1,12 @@
+# uaRO Graphics 3.0.11-beta.270 — what's new
+
+**From the tester's list:**
+- Descriptions of skills several jobs have (Cure, Heal, Divine Protection and others — 29 lines in the client's table): instead of «4Skill Requirements…, 8Skill Requirements…» only your job's line; when yours is not there — each with its job's name («Acolyte: …»).
+- The party window and «Налаштування групи» are dragged by their empty part.
+- The party window's map without «.rsw» («pay_dun01»).
+- «Налаштування групи» of a party already made: the experience's sharing alone; the things' sharing is set only when the party is made.
+- The Alt+D console: the mouse cursor shows over it now.
+
 # uaRO Graphics 3.0.11-beta.269 — what's new
 
 **«Характеристики», stage 5 — «Цілі» in «Планування»:**
