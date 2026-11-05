@@ -92,13 +92,15 @@ double hitsPerSecond(int amotionValue) { return amotionValue > 0 ? 500.0 / amoti
 int maxHp(int job, int baseLevel, int vit) {
     const Job* j = find(job);
     if (!j || baseLevel < 1) return 0;
+    // 3.0.11-beta.265 (R-VZ69Q2: an archer of level 38 has 610 by the server, 611 with the 35 counted in): the 35
+    // added after the VIT's per cents
     int val = 0;
     for (int i = 1; i <= baseLevel; ++i) val += (i * j->hpFactor + 50) / 100;
-    val += 35 + baseLevel * j->hpMultiplicator / 100;
+    val += baseLevel * j->hpMultiplicator / 100;
     if (job == 24 || job == 25) val += 100;  // the Gunslinger's and the Ninja's, as the server's
     if (upper(job)) val += val * 25 / 100;
     else if (baby(job)) val -= val * 30 / 100;
-    return val + val * vit / 100;
+    return val + val * vit / 100 + 35;
 }
 
 int maxSp(int job, int baseLevel, int intel) {
@@ -119,9 +121,9 @@ int spRegen(int intel, int maxSpValue) {
     return val;
 }
 
-int weightMost(int job, int str) {
+int weightMost(int job, int baseStr) {  // .265 (R-VZ69Q2: 2630, not 2660): the base STR
     const Job* j = find(job);
-    return j ? (j->weight + str * 300) / 10 : 0;
+    return j ? (j->weight + baseStr * 300) / 10 : 0;
 }
 
 int castPercent(int dex) { return std::clamp((kCastDex - dex) * 100 / kCastDex, 0, 100); }

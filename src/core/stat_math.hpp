@@ -30,7 +30,8 @@ int pointsAt(int baseLevel);              // statpoint.txt: the stat points a le
 int jobBonus(int job, int jobLevel, int stat);  // the stat's «+» from the job levels so far
 
 bool ranged(int weapon);  // a bow, an instrument, a whip, a gun: the ATK by DEX
-int atk(const int stats[kStats], int weapon);  // the left number
+// the stats' part of the left number - the server's has the weapon's ATK in it too (R-VZ69Q2: 164 = 99 + a bow's 65)
+int atk(const int stats[kStats], int weapon);
 int matkMin(int intel);
 int matkMax(int intel);
 int hit(int baseLevel, int dex);
@@ -48,7 +49,7 @@ int maxHp(int job, int baseLevel, int vit);
 int maxSp(int job, int baseLevel, int intel);
 int hpRegen(int vit, int maxHpValue);   // a tick's (6 s, sitting 3 s)
 int spRegen(int intel, int maxSpValue); // a tick's (8 s, sitting 4 s)
-int weightMost(int job, int str);       // whole units, as the game shows it
+int weightMost(int job, int baseStr);   // whole units, as the game shows it; the base STR, not its bonus
 int castPercent(int dex);               // the cast's time left, 0-100 %
 int delayPercent(int dex);              // the delay after a skill left: the same on uaRO
 

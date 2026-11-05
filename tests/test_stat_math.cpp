@@ -53,11 +53,13 @@ TEST(stat_math_aspd) {
 TEST(stat_math_hp_sp_weight_cast) {
     CHECK_EQ(sm::maxHp(0, 1, 1), 40);   // a new novice
     CHECK_EQ(sm::maxSp(0, 1, 1), 11);
-    CHECK_EQ(sm::maxHp(7, 98, 32), 10330);
-    CHECK_EQ(sm::maxHp(4008, 99, 1), 10074);  // a Lord Knight: a quarter more
+    CHECK_EQ(sm::maxHp(7, 98, 32), 10319);
+    CHECK_EQ(sm::maxHp(3, 38, 1), 610);  // R-VZ69Q2: the server's archer
+    CHECK_EQ(sm::maxHp(4008, 99, 1), 10065);  // a Lord Knight: a quarter more
     CHECK(sm::maxHp(4030, 50, 1) < sm::maxHp(7, 50, 1));  // a baby's less
     CHECK_EQ(sm::weightMost(7, 66), 4780);
-    CHECK(sm::hpRegen(32, 10330) == 1 + 6 + 51 && sm::spRegen(130, 1000) == 1 + 21 + 10 + 9);
+    CHECK_EQ(sm::weightMost(3, 1), 2630);  // R-VZ69Q2: the base STR's
+    CHECK(sm::hpRegen(32, 10319) == 1 + 6 + 51 && sm::spRegen(130, 1000) == 1 + 21 + 10 + 9);
     CHECK(sm::castPercent(43) == 71 && sm::castPercent(150) == 0 && sm::castPercent(200) == 0);
     CHECK_EQ(sm::delayPercent(75), 50);
 }

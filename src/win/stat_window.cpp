@@ -142,13 +142,14 @@ void serverCheck(const charstatus::Status& st) {
     }
     char line[512];
     std::snprintf(line, sizeof line,
-                  "job %d lv %d/%d: ATK %d (ours %d melee, %d ranged), MATK %d~%d (%d~%d), HIT %d (%d), FLEE %d (%d), "
+                  "job %d lv %d/%d: ATK %d (ours %d melee, %d ranged, the weapon's the rest), MATK %d~%d (%d~%d), "
+                  "HIT %d (%d), FLEE %d (%d), "
                   "CRIT %d (%d.%d), MDEF+%d (%d), HP %d (%d), SP %d (%d), weight %d (%d), ASPD %d (weapons %s)",
                   job, lv, st.jobLevel, st.atk, sm::atk(t, 0), sm::atk(t, 11), st.matkMin, st.matkMax,
                   sm::matkMin(t[sm::Int]), sm::matkMax(t[sm::Int]), st.hit, sm::hit(lv, t[sm::Dex]), st.flee,
                   sm::flee(lv, t[sm::Agi]), st.crit, sm::crit10(t[sm::Luk]) / 10, sm::crit10(t[sm::Luk]) % 10, st.mdef2,
                   sm::softMdef(t[sm::Int], t[sm::Vit]), st.hpMost, sm::maxHp(job, lv, t[sm::Vit]), st.spMost,
-                  sm::maxSp(job, lv, t[sm::Int]), st.weightMost, sm::weightMost(job, t[sm::Str]), st.aspd,
+                  sm::maxSp(job, lv, t[sm::Int]), st.weightMost, sm::weightMost(job, st.statBase[sm::Str]), st.aspd,
                   aspdWeapons.empty() ? "none" : aspdWeapons.c_str());
     if (line == told) return;
     told = line;
