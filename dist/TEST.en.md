@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.11-beta.272 — what's new
+
+**Fixed a crash after a warp (R-EP778D):** the smoothing of other units' moves kept a monster's address from the map before; after the warp its memory was freed but not yet written over, and the driver called a function through garbage. Each unit is checked now — of this map and truly the game's object — or left alone.
+
 # uaRO Graphics 3.0.11-beta.271 — what's new
 
 **The guild notice is edited in the new look:** on «Оголошення», «Змінити» opens the fields «Тема» and «Текст» right on the card (no old game window). A click or Tab — the other field, Enter or «Зберегти» — send, Esc or «Скасувати» — no change. The lengths as the server's (the subject 59, the text 119 bytes).
