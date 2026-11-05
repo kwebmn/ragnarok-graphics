@@ -20,7 +20,7 @@ Trace::Seen* Trace::find(uint32_t unit) {
 
 void Trace::add(const Event& e) {
     events_.push_back(e);
-    while (!events_.empty() && (e.ms - events_.front().ms > kKeepMs || events_.size() > 400)) events_.pop_front();
+    while (!events_.empty() && (e.ms - events_.front().ms > kKeepMs || events_.size() > 3000)) events_.pop_front();
     if (e.kind == Kind::HitIt || e.kind == Kind::HitsMe) {
         Seen* s = find(e.unit);
         if (!s) {
@@ -39,8 +39,12 @@ bool Trace::fought(uint32_t unit, uint64_t ms) const {
 }
 
 std::string line(const Event& e, uint64_t first) {
-    char shown[40] = "";
-    if (e.shownX >= 0) std::snprintf(shown, sizeof shown, " (shown at %d, %d)", e.shownX, e.shownY);
+    char shown[80] = "";
+    if (e.shownX >= 0 && e.ownX >= 0)
+        std::snprintf(shown, sizeof shown, " (shown at %d, %d; the character at %d, %d)", e.shownX, e.shownY, e.ownX,
+                      e.ownY);
+    else if (e.shownX >= 0)
+        std::snprintf(shown, sizeof shown, " (shown at %d, %d)", e.shownX, e.shownY);
     char buf[160];
     const unsigned at = unsigned(e.ms - first);
     switch (e.kind) {

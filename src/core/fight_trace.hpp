@@ -18,12 +18,13 @@ struct Event {
     // (Other); the game's actors of its id, ours one of them (Shown: where the game moves it after a dump)
     int a = -1, b = -1, c = -1, d = -1;
     int shownX = -1, shownY = -1;        // where the game showed the unit (-1 not known)
+    int ownX = -1, ownY = -1;            // 3.0.11-beta.250: where it showed the character
 };
 
 // 0x0086's way <from x>.10b <from y>.10b <to x>.10b <to y>.10b <sx>.4b <sy>.4b in 6 bytes
 void way(const uint8_t* p, int& fromX, int& fromY, int& toX, int& toY);
 
-constexpr uint64_t kKeepMs = 3000;     // the history kept
+constexpr uint64_t kKeepMs = 8000;     // the history kept (3.0.11-beta.250: was 3 s - a walk began before)
 constexpr uint64_t kFoughtMs = 10000;  // a unit hit (or hitting) this recently is one fought
 constexpr int kDumpsMost = 20;         // a session's dumps
 

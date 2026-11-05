@@ -154,7 +154,9 @@ void trace(State& s, uint16_t id, const uint8_t* data, ULONGLONG now) {
         e.b = int(std::min<uint32_t>(flinch, 100000));
         e.c = int(int16_t(rd16(data, 22)));
     } else {
-        if (unit == me || !s.trace.fought(unit, now)) return;
+        // 3.0.11-beta.250: every unit's walks and fixes kept (a fight may begin after its walk did), the rest of the
+        // fought ones only
+        if (unit == me || !unit || (id != kMove && id != kFixPos && !s.trace.fought(unit, now))) return;
         e.unit = unit;
         if (id == kMove) {
             e.kind = Kind::Move;
@@ -171,6 +173,7 @@ void trace(State& s, uint16_t id, const uint8_t* data, ULONGLONG now) {
         }
     }
     shownCell(e.unit, e.shownX, e.shownY);
+    shownCell(me, e.ownX, e.ownY);
     s.trace.add(e);
     int away = 0;
     const char* what = nullptr;
@@ -190,7 +193,7 @@ void trace(State& s, uint16_t id, const uint8_t* data, ULONGLONG now) {
         away = std::max(std::abs(e.shownX - ownAt.x), std::abs(e.shownY - ownAt.y));
         what = "hits the character from";
     }
-    if (!what || away < 2) return;
+    if (!what || away < 2 || !s.trace.fought(e.unit, now)) return;
     char why[80];
     std::snprintf(why, sizeof why, "%s %d cells from where the game showed it", what, away);
     // 3.0.11-beta.249 (R-GKXJT6): the game's own list of it - two of one id, or ours a stale one
