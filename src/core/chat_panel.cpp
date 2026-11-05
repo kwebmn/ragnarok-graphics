@@ -202,6 +202,11 @@ bool shows(Tab tab, const Line& line) {
     return false;
 }
 
+bool showsWith(Tab tab, const std::string& person, const Line& line) {
+    if (!shows(tab, line)) return false;
+    return tab != Tab::Whisper || person.empty() || line.who == person;
+}
+
 int unreadOn(const Line& line) {
     return line.kind == Kind::Party ? 1 : line.kind == Kind::Guild ? 2 : line.kind == Kind::Whisper ? 3 : -1;
 }
@@ -281,11 +286,40 @@ Layout layout(int left, int bottom, float scale, int rows, bool quiet, const Sho
     L.rows = std::max(1, rows);
     const float w = float(std::clamp(width > 0 ? width : kWidth, kLeastWidth, kMostWidth)) * s, pad = kPad * s;
     const float tabsH = kTabsH * s, inputH = kInputH * s;
-    const float top = tabsH + 4 * s;
+    // 3.0.11-beta.242: on «Шепіт» the row of the ones whispered with under the tabs
+    const bool peopleShown = sh.tab == Tab::Whisper && !sh.people.empty();
+    const float peopleH = peopleShown ? 26 * s : 0;
+    const float top = tabsH + 4 * s + peopleH;
     const float linesH = float(L.rows) * L.rowH;
     const float h = top + linesH + 6 * s + inputH + 8 * s;
     L.glass = panel::Box{0, 0, w, h};
     L.lines = panel::Box{pad, top, w - 2 * pad, linesH};
+    if (peopleShown) {
+        L.peopleRow = panel::Box{pad, tabsH + 4 * s, w - 2 * pad, 22 * s};
+        float x = L.peopleRow.x;
+        const auto chip = [&](const std::string& name, int unread) {
+            float cw = m(name, 11.5f * s, true) + 16 * s;
+            if (unread > 0) cw += m(std::to_string(std::min(unread, 99)), 10 * s, true) + 10 * s;
+            if (x + cw > L.peopleRow.x + L.peopleRow.w) return false;
+            L.people.push_back(panel::Box{x, L.peopleRow.y, cw, L.peopleRow.h});
+            x += cw + 4 * s;
+            return true;
+        };
+        chip(t.all, 0);
+        for (size_t i = 0; i < sh.people.size(); ++i)
+            if (!chip(sh.people[i], i < sh.peopleUnread.size() ? sh.peopleUnread[i] : 0)) break;
+    }
+    if (sh.menuLine >= 0) {  // a name's menu where it was asked for, inside the chat
+        float mw = 0;
+        for (const std::string& item : t.menu) mw = std::max(mw, m(item, 12 * s, false));
+        mw += 24 * s;
+        const float mh = (3 * 22 + 8) * s;
+        const float mx = std::clamp(sh.menuX, 4 * s, w - mw - 4 * s);
+        const float my = std::clamp(sh.menuY - mh, 4 * s, h - mh - 4 * s);
+        L.menu = panel::Box{mx, my, mw, mh};
+        for (int i = 0; i < 3; ++i)
+            L.items.push_back(panel::Box{mx + 4 * s, my + (4 + 22 * float(i)) * s, mw - 8 * s, 22 * s});
+    }
     L.grip = panel::Box{w - 18 * s, 0, 18 * s, 18 * s};  // 3.0.11-beta.241
     {
         L.tabsRow = panel::Box{0, 0, w, tabsH};
@@ -333,7 +367,12 @@ void shown(const Layout& L, const std::vector<Row>& rows, int scroll, size_t& fi
 
 Hit hitTest(const Layout& L, const std::vector<Row>& rows, const Show& sh, float x, float y) {
     if (!L.glass.contains(x, y)) return Hit{};
+    for (size_t i = 0; i < L.items.size(); ++i)  // 3.0.11-beta.242: a name's menu over all
+        if (L.items[i].contains(x, y)) return Hit{Part::Item, int(i)};
+    if (L.menu.w > 0 && L.menu.contains(x, y)) return Hit{Part::Body, -1};
     if (L.grip.w > 0 && L.grip.contains(x, y)) return Hit{Part::Grip, -1};  // 3.0.11-beta.241
+    for (size_t i = 0; i < L.people.size(); ++i)  // 3.0.11-beta.242: index 0 «Усі», then the ones whispered with
+        if (L.people[i].contains(x, y)) return Hit{Part::Person, int(i)};
     {
         for (size_t i = 0; i < L.tabs.size(); ++i)
             if (L.tabs[i].contains(x, y)) return Hit{Part::Tab, int(i)};
@@ -407,6 +446,12 @@ void paint(panel::Picture& out, const Layout& L, const std::vector<Row>& rows, c
         }
         if (L.newer.w > 0) panel::roundRect(out, L.newer, 6 * s, kAccent, sh.hoverNewer ? 0.45f : 0.28f);
         if (L.hints.w > 0) panel::roundRect(out, L.hints, 8 * s, kCard, 0.96f, kWhite, 0.14f, 1.0f * s);
+        for (size_t i = 0; i < L.people.size(); ++i) {  // 3.0.11-beta.242: the chosen one lit in the whispers' pink
+            const bool on = i == 0 ? sh.person.empty() : sh.person == sh.people[i - 1];
+            panel::roundRect(out, L.people[i], L.people[i].h / 2, on ? kWhisper : kWhite,
+                             on ? 0.22f : int(i) == sh.hoverPerson ? 0.10f : 0.05f, on ? kWhisper : kWhite,
+                             on ? 0.7f : 0.12f, 1.0f * s);
+        }
         // 3.0.11-beta.241: the corner's grip - two short slants, brighter pointed at
         const float a = sh.hoverGrip ? 0.8f : L.quiet ? 0.15f : 0.35f;
         for (int k = 0; k < 2; ++k) {
@@ -416,6 +461,11 @@ void paint(panel::Picture& out, const Layout& L, const std::vector<Row>& rows, c
                                                  1.2f * s},
                                  0, kWhite, a);
         }
+    }
+    if (L.menu.w > 0) {  // 3.0.11-beta.242: a name's menu
+        panel::roundRect(out, L.menu, 8 * s, kCard, 0.97f, kWhite, 0.16f, 1.0f * s);
+        if (sh.hoverItem >= 0 && sh.hoverItem < int(L.items.size()))
+            panel::roundRect(out, L.items[size_t(sh.hoverItem)], 6 * s, kWhite, 0.10f);
     }
     if (sh.hoverLine >= 0) {  // the name pointed at: underlined
         size_t first = 0, count = 0;
@@ -465,6 +515,21 @@ std::vector<Words> words(const Layout& L, const std::vector<Row>& rows, const In
     if (L.clear.w > 0)
         out.push_back(Words{L.clear, "\xC3\x97", sh.hoverClear ? kText : kMuted, 13 * s, true, Align::Center});  // ×
     if (L.newer.w > 0) out.push_back(Words{L.newer, t.newer, kText, 11 * s, true, Align::Center});
+    for (size_t i = 0; i < L.people.size(); ++i) {  // 3.0.11-beta.242
+        const std::string& name = i == 0 ? t.all : sh.people[i - 1];
+        const bool on = i == 0 ? sh.person.empty() : sh.person == name;
+        const int unread = i == 0 || i - 1 >= sh.peopleUnread.size() ? 0 : sh.peopleUnread[i - 1];
+        const panel::Box& b = L.people[i];
+        const float nw = std::ceil(m(name, 11.5f * s, true)) + 2;
+        out.push_back(Words{panel::Box{b.x + 8 * s, b.y, nw, b.h}, name, on ? kText : kMuted, 11.5f * s, true,
+                            Align::Left});
+        if (unread > 0)
+            out.push_back(Words{panel::Box{b.x + 8 * s + nw + 2 * s, b.y, b.w - nw - 14 * s, b.h},
+                                std::to_string(std::min(unread, 99)), kWhisper, 10 * s, true, Align::Left});
+    }
+    for (size_t i = 0; i < L.items.size(); ++i)
+        out.push_back(Words{panel::Box{L.items[i].x + 8 * s, L.items[i].y, L.items[i].w - 12 * s, L.items[i].h},
+                            t.menu[i], int(i) == sh.hoverItem ? kText : kMuted, 12 * s, false, Align::Left});
     if (L.hints.w > 0) {  // 3.0.11-beta.240: the commands, the one being typed lit
         for (int i = 0; i < 4; ++i) {
             std::string line = t.commands[i];

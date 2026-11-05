@@ -220,3 +220,44 @@ TEST(chat_size_by_its_corner) {
     const Layout Q = layout(10, 1070, 1.0f, 7, false, sh, in, t, estimate, 100);
     CHECK(Q.w == kLeastWidth);
 }
+
+// 3.0.11-beta.242 (the chat concept, stage 3: «шёпот по собеседникам»): on «Шепіт» a row of the ones whispered with
+// («Усі» first, their unread), one chosen shows only theirs; a right click on a name - its menu
+TEST(chat_whispers_by_person_and_a_names_menu) {
+    Texts t;
+    t.from = "від {1}";
+    t.to = "до {1}";
+    t.all = "Усі";
+    t.menu[0] = "Шепнути";
+    t.menu[1] = "Блокувати шепіт";
+    t.menu[2] = "Копіювати ім'я";
+    const Line ann = fromGame(Source::Whisper, "( From Ann ) : hi", 0, t, 0);
+    const Line bob = fromGame(Source::WhisperResult, "( To Bob ) : yo", 0, t, 0);
+    CHECK(ann.who == "Ann" && bob.who == "Bob");
+    CHECK(showsWith(Tab::Whisper, "", ann) && showsWith(Tab::Whisper, "Ann", ann));
+    CHECK(!showsWith(Tab::Whisper, "Ann", bob));
+    CHECK(showsWith(Tab::All, "Ann", bob));  // the choice only on «Шепіт»
+    Show sh;
+    sh.tab = Tab::Whisper;
+    sh.people = {"Ann", "Bob"};
+    sh.peopleUnread = {2, 0};
+    Input in;
+    Layout L = layout(10, 1070, 1.0f, 7, false, sh, in, t, estimate);
+    CHECK(L.people.size() == 3 && L.peopleRow.w > 0 && L.lines.y >= L.peopleRow.y + L.peopleRow.h);
+    CHECK(hitTest(L, {}, sh, L.people[1].x + 3, L.people[1].y + 3).part == Part::Person);
+    std::vector<Words> w = words(L, {}, in, sh, t, estimate);
+    const auto has = [&](const std::string& x) {
+        return std::any_of(w.begin(), w.end(), [&](const Words& y) { return y.text == x; });
+    };
+    CHECK(has("Усі") && has("Ann") && has("2") && has("Bob"));
+    sh.tab = Tab::All;  // no row on another tab
+    CHECK(layout(10, 1070, 1.0f, 7, false, sh, in, t, estimate).people.empty());
+    sh.menuLine = 0;
+    sh.menuX = 100;
+    sh.menuY = 120;
+    L = layout(10, 1070, 1.0f, 7, false, sh, in, t, estimate);
+    CHECK(L.menu.w > 0 && L.items.size() == 3);
+    CHECK(hitTest(L, {}, sh, L.items[2].x + 3, L.items[2].y + 3).part == Part::Item);
+    w = words(L, {}, in, sh, t, estimate);
+    CHECK(has("Копіювати ім'я"));
+}

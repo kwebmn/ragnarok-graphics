@@ -788,6 +788,7 @@ enum class Text : uint16_t {
     CharFightCost,  // 3.0.11-beta.238
     ChatCmdParty, ChatCmdGuild, ChatCmdWhisper, ChatCmdReply, InterfaceChatFade, InterfaceChatFadeHint,
     InterfaceChatFade12, InterfaceChatFade30, InterfaceChatFadeNever,  // 3.0.11-beta.240
+    ChatMenuWhisper, ChatMenuBlock, ChatMenuCopy,  // 3.0.11-beta.242
     Count
 };
 

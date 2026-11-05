@@ -132,6 +132,7 @@ struct State {
     // being dragged, read once
     int width = cp::kWidth, customRows = 0;
     bool sizing = false, sizeRead = false;
+    std::map<std::string, int> personUnread;  // 3.0.11-beta.242: each one's whispers not read yet
 };
 
 State& state() {
@@ -185,6 +186,10 @@ cp::Texts texts() {
     t.commands[1] = say(settings::Text::ChatCmdGuild);
     t.commands[2] = say(settings::Text::ChatCmdWhisper);
     t.commands[3] = say(settings::Text::ChatCmdReply);
+    t.all = say(settings::Text::ChatTabAll);  // 3.0.11-beta.242
+    t.menu[0] = say(settings::Text::ChatMenuWhisper);
+    t.menu[1] = say(settings::Text::ChatMenuBlock);
+    t.menu[2] = say(settings::Text::ChatMenuCopy);
     return t;
 }
 
@@ -231,6 +236,14 @@ void take(State& s) {
         }
         cp::Line line = cp::fromGame(r.source, utf8(s, r.text), r.colour, t, r.ms);
         if (r.source == cp::Source::Whisper && !line.who.empty()) s.replyTo = line.who;  // 3.0.11-beta.240: /r
+        if (line.kind == cp::Kind::Whisper && !line.who.empty()) {  // 3.0.11-beta.242: the ones whispered with
+            std::vector<std::string>& p = s.show.people;
+            p.erase(std::remove(p.begin(), p.end(), line.who), p.end());
+            p.insert(p.begin(), line.who);
+            if (p.size() > 12) p.pop_back();
+            const bool reading = s.show.tab == cp::Tab::Whisper && (s.show.person.empty() || s.show.person == line.who);
+            if (r.source == cp::Source::Whisper && !reading) ++s.personUnread[line.who];
+        }
         add(s, std::move(line));
     }
     s.pending.clear();
@@ -516,7 +529,7 @@ void render(State& s) {
 
 // The tab's lines as rows, made again when a line came or changed, the tab or the width changed
 void makeRows(State& s) {
-    const std::string key = std::to_string(s.version) + ';' + std::to_string(int(s.show.tab)) + ';' +
+    const std::string key = std::to_string(s.version) + ';' + std::to_string(int(s.show.tab)) + s.show.person + ';' +
                             std::to_string(int(s.layout.lines.w)) + ';' + std::to_string(s.layout.px);
     if (key == s.rowsKey) return;
     s.rowsKey = key;
@@ -536,7 +549,7 @@ void makeRows(State& s) {
         }
     } else {
         for (const cp::Line& l : s.lines)
-            if (cp::shows(s.show.tab, l)) s.rowLines.push_back(&l);
+            if (cp::showsWith(s.show.tab, s.show.person, l)) s.rowLines.push_back(&l);  // 3.0.11-beta.242
     }
     if (s.rowLines.size() > 200) s.rowLines.erase(s.rowLines.begin(), s.rowLines.end() - 200);
     s.rows = cp::wrap(s.rowLines, s.layout.lines.w, s.layout.px, measure);
@@ -664,6 +677,10 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     s.show.hoverMode = hit.part == cp::Part::Mode;
     s.show.hoverClear = hit.part == cp::Part::Clear;
     s.show.hoverNewer = hit.part == cp::Part::Newer;
+    s.show.hoverPerson = hit.part == cp::Part::Person ? hit.index : -1;  // 3.0.11-beta.242
+    s.show.hoverItem = hit.part == cp::Part::Item ? hit.index : -1;
+    s.show.peopleUnread.clear();
+    for (const std::string& p : s.show.people) s.show.peopleUnread.push_back(s.personUnread[p]);
     if (!s.sizeRead) readSize(s);
     s.show.hoverGrip = hit.part == cp::Part::Grip || s.sizing;
     s.layout = cp::layout(int(std::lround(10 * scale)), targetHeight - int(std::lround(10 * scale)), scale,
@@ -681,6 +698,11 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
                       std::to_string(s.show.hoverLine) + (s.show.hoverMode ? "m" : "") +
                       (s.show.hoverClear ? "c" : "") + (s.show.hoverNewer ? "n" : "") + ';';
     for (int u : s.show.unread) key += std::to_string(u) + ',';
+    // 3.0.11-beta.242: the whispers' row, the one chosen, a name's menu; 3.0.11-beta.241: the grip pointed at
+    key += ';' + s.show.person + '|' + std::to_string(s.show.hoverPerson) + ',' + std::to_string(s.show.menuLine) +
+           ',' + std::to_string(s.show.hoverItem) + (s.show.hoverGrip ? "g" : "") + ';';
+    for (size_t i = 0; i < s.show.people.size(); ++i)
+        key += s.show.people[i] + ':' + std::to_string(s.show.peopleUnread[i]) + ',';
     key += ';' + in.text + '|' + std::to_string(in.caret) + '|' + in.whisper + '|' + std::to_string(in.mode) +
            (in.whisperFocus ? "f" : "") + (in.battle ? "b" : "") + (in.typing ? "t" : "") + (caret ? "|" : "");
     if (const std::string drawn = key + '#' + std::to_string(uistyle::generation()); drawn != s.key) {  // its grounds
@@ -730,7 +752,13 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
         return true;
     }
     const cp::Hit h = cp::hitTest(s.layout, s.rows, s.show, tx - float(s.layout.x), ty - float(s.layout.y));
-    if (h.part == cp::Part::None) return false;
+    if (h.part == cp::Part::None) {
+        if (m == WM_LBUTTONDOWN && s.show.menuLine >= 0) {  // 3.0.11-beta.242: a press away closes a name's menu
+            s.show.menuLine = -1;
+            s.key.clear();
+        }
+        return false;
+    }
     result = 0;
     if (m == WM_MOUSEWHEEL) {  // three rows a notch, up into the history
         const int by = GET_WHEEL_DELTA_WPARAM(wp) > 0 ? 3 : -3;
@@ -738,9 +766,67 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
         s.key.clear();
         return true;
     }
+    // 3.0.11-beta.242: a right click on a name - its menu; a press elsewhere closes it
+    if (m == WM_RBUTTONDOWN && h.part == cp::Part::Name && h.index >= 0) {
+        s.show.menuLine = h.index;
+        s.show.menuX = tx - float(s.layout.x);
+        s.show.menuY = ty - float(s.layout.y);
+        s.key.clear();
+        return true;
+    }
     if (m != WM_LBUTTONDOWN) return true;
+    const int menuLine = s.show.menuLine;
+    s.show.menuLine = -1;
     const char* did = "";
     switch (h.part) {
+        case cp::Part::Person:  // 3.0.11-beta.242: one's whispers alone (0: all), the input to them
+            s.show.person = h.index <= 0 || size_t(h.index - 1) >= s.show.people.size()
+                                ? std::string()
+                                : s.show.people[size_t(h.index - 1)];
+            s.show.scroll = 0;
+            if (!s.show.person.empty()) {
+                s.personUnread[s.show.person] = 0;
+                setName(s, s.show.person);
+                giveKeys(wordsEdit());
+            }
+            did = s.show.person.empty() ? "all the whispers" : "one's whispers";
+            break;
+        case cp::Part::Item:  // 3.0.11-beta.242: a name's menu
+            if (s.rowsVersion == s.version && menuLine >= 0 && size_t(menuLine) < s.rowLines.size() &&
+                !s.rowLines[size_t(menuLine)]->who.empty()) {
+                const std::string who = s.rowLines[size_t(menuLine)]->who;
+                if (h.index == 0) {  // whisper
+                    setName(s, who);
+                    giveKeys(wordsEdit());
+                    did = "the menu - a whisper";
+                } else if (h.index == 1) {  // the game's own «/ex Name» in the field, the player's Enter sends it
+                    const uint32_t words = wordsEdit();
+                    if (words && read32(read32(words) + kSetTextSlot) == kSetText) {
+                        setName(s, "");
+                        const std::string game = narrowed(utf8Wide("/ex " + who), s.codePage);
+                        reinterpret_cast<SetTextFn>(uintptr_t(kSetText))(words, game.c_str());
+                        giveKeys(words);
+                    }
+                    did = "the menu - «/ex» put in the field";
+                } else {  // the name to the clipboard
+                    const std::wstring wide = utf8Wide(who);
+                    if (OpenClipboard(game)) {
+                        EmptyClipboard();
+                        if (HGLOBAL g = GlobalAlloc(GMEM_MOVEABLE, (wide.size() + 1) * sizeof(wchar_t))) {
+                            if (void* p = GlobalLock(g)) {
+                                std::memcpy(p, wide.c_str(), (wide.size() + 1) * sizeof(wchar_t));
+                                GlobalUnlock(g);
+                                if (!SetClipboardData(CF_UNICODETEXT, g)) GlobalFree(g);
+                            } else {
+                                GlobalFree(g);
+                            }
+                        }
+                        CloseClipboard();
+                    }
+                    did = "the menu - the name copied";
+                }
+            }
+            break;
         case cp::Part::Grip:  // 3.0.11-beta.241
             s.sizing = true;
             did = "its corner taken";

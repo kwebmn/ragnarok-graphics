@@ -7252,6 +7252,10 @@ constexpr Entry kTexts[] = {
     {Text::InterfaceChatFade12, "After 12 s", "Через 12 с", "Через 12 с"},
     {Text::InterfaceChatFade30, "After 30 s", "Через 30 с", "Через 30 с"},
     {Text::InterfaceChatFadeNever, "Never", "Ніколи", "Никогда"},
+    // 3.0.11-beta.242 (the chat concept, stage 3): a name's menu
+    {Text::ChatMenuWhisper, "Whisper", "Шепнути", "Шепнуть"},
+    {Text::ChatMenuBlock, "Block whispers", "Блокувати шепіт", "Блокировать шёпот"},
+    {Text::ChatMenuCopy, "Copy the name", "Копіювати ім'я", "Копировать имя"},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

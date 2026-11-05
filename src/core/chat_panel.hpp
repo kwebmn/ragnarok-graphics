@@ -46,6 +46,8 @@ struct Texts {
     // 3.0.11-beta.240 (the chat concept, stage 1): the commands' hints over the input while «/» is typed - «/p — у
     // групу», «/g — у гільдію», «/w Ім'я — шепіт», «/r — відповісти {1}»
     std::string commands[4];
+    std::string all;          // 3.0.11-beta.242: «Усі» on the whispers' row
+    std::string menu[3];      // «Шепнути», «Блокувати шепіт», «Копіювати ім'я»
 };
 // 3.0.11-beta.240: the input's own commands - «/p words» the party, «/g words» the guild, «/w Name words» (a name with
 // spaces in quotes) a whisper, «/r words» a whisper to the last who whispered; false none of them (the words as typed)
@@ -68,6 +70,8 @@ constexpr int kTabs = 6;
 // What a tab shows: «Усі» all but the battle's hits (its kills and pick-ups too), «Торг» one near selling or buying,
 // «Бій» the battle's hits, kills, experience and pick-ups
 bool shows(Tab tab, const Line& line);
+// 3.0.11-beta.242: on «Шепіт» with one chosen - that one's whispers only
+bool showsWith(Tab tab, const std::string& person, const Line& line);
 int unreadOn(const Line& line);  // the tab a new line counts on while another one is open; -1 none
 
 // The input's row as the game has it now (its edit's words and caret, its send mode, the whisper's name)
@@ -105,6 +109,14 @@ struct Show {
     int hoverTab = -1, hoverLine = -1;  // the line whose name is pointed at
     bool hoverMode = false, hoverClear = false, hoverNewer = false;
     bool hoverGrip = false;  // 3.0.11-beta.241
+    // 3.0.11-beta.242 (the chat concept, stage 3: «шёпот по собеседникам»): on «Шепіт» the ones whispered with, the
+    // latest first, their unread; the one shown ("" all); a name's menu (its line, where; -1 none) and the item pointed
+    std::vector<std::string> people;
+    std::vector<int> peopleUnread;
+    std::string person;
+    int hoverPerson = -1;
+    int menuLine = -1, hoverItem = -1;
+    float menuX = 0, menuY = 0;
 };
 
 struct Layout {
@@ -116,6 +128,9 @@ struct Layout {
     panel::Box glass, tabsRow, lines, input, mode, clear, field, newer;
     panel::Box hints;  // 3.0.11-beta.240: the commands' hints over the rows (w 0: none)
     panel::Box grip;   // 3.0.11-beta.241: its top right corner - drags its size
+    // 3.0.11-beta.242: the whispers' row (its «Усі» first, then each one), a name's menu and its items
+    panel::Box peopleRow, menu;
+    std::vector<panel::Box> people, items;
     std::vector<panel::Box> tabs;
 };
 // Its bottom left at (left, bottom) in the target; 3.0.11-beta.241: `width` at scale 1 (kLeast..kMost, by its corner)
@@ -126,7 +141,7 @@ Layout layout(int left, int bottom, float scale, int rows, bool quiet, const Sho
 // (scale 1) and the rows it gives, its bottom left staying
 void sizeTo(const Layout& L, float x, float y, int& width, int& rows);
 
-enum class Part : uint8_t { None, Tab, Name, Lines, Mode, Clear, Field, Newer, Body, Grip };
+enum class Part : uint8_t { None, Tab, Name, Lines, Mode, Clear, Field, Newer, Body, Grip, Person, Item };
 struct Hit {
     Part part = Part::None;
     int index = -1;  // a tab's; a name's line (of the rows' lines)
