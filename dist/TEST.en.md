@@ -1,3 +1,12 @@
+# uaRO Graphics 3.0.11-beta.260 — what's new
+
+**From the tester's list:**
+- Class portraits on the login screen: every class has its own now — the novices, the first and second jobs, Taekwon. The second jobs used to show the transcendent portrait, Taekwon and the first jobs only the head.
+- The Alt+D console: an opaque ground; rows take mouse clicks (a slider or a choice: the left half less, the right half more), the wheel scrolls; Alt+D again closes it, as Esc does.
+- «Емоції» (Alt+L): the card is dragged by any place outside the emotions.
+- The small cards (emotions, commands, chat room, pet, homunculus, guild, the game's questions and others) follow «Непрозорість вікон» too, no longer always nearly opaque.
+- The big map acts as a window: opened or pressed, it lies over «Речі» and the NPC talk; press in a window or open a new one and that one is over the map again.
+
 # uaRO Graphics 3.0.11-beta.259 — what's new
 
 **Talking to NPCs with the pad, stage 5 — hold to page on:**
