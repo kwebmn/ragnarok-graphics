@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.11-beta.286 — what's new
+
+**Search across characters:** the game now remembers what lies in each of your characters' bag and cart and in the account's storage (as last seen). When you search in the items window, the storage or the cart, a line at the bottom shows where else such things are: «Also: Storage ×12 · Anna ×3 · Boris, cart ×1». Open each character's items window once (the storage — open it) so the game learns its things.
+
 # uaRO Graphics 3.0.11-beta.285 — what's new
 
 **Gear compare:** in the items window the tip over a weapon or an armour now has a third line comparing it with what is worn there: «Instead of +4 Knife: ATK 25 → 31 (+6)», DEF for armour, and the slots when their number differs. Worked out from the server's numbers with the refine (without cards and special effects). With nothing worn there: «Nothing worn there: ATK 31».
