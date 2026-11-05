@@ -9,7 +9,8 @@
 namespace uagfx::hudlayout {
 namespace {
 
-const char* const kKeys[kParts] = {"character", "minimap", "buffs", "tracker", "hotbar", "target", "party", "chat"};
+const char* const kKeys[kParts] = {"character", "minimap", "buffs", "tracker", "hotbar",
+                                   "target",    "party",   "chat",  "hunt"};  // .278: the hunt's panel
 
 float within(float size) { return std::clamp(size, kLeastSize, kMostSize); }
 

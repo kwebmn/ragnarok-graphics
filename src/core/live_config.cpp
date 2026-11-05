@@ -327,6 +327,10 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("equip", flag(running.equipWindow), flag(file.equipWindow)));
         n.equipWindow = file.equipWindow;
     }
+    if (file.huntPanel != running.huntPanel) {  // 3.0.11-beta.278: «Полювання», at once
+        u.applied.push_back(change("hunt_panel", flag(running.huntPanel), flag(file.huntPanel)));
+        n.huntPanel = file.huntPanel;
+    }
     if (file.deathRecap != running.deathRecap) {  // 3.0.11-beta.277: the death's last hits, at once
         u.applied.push_back(change("death_recap", flag(running.deathRecap), flag(file.deathRecap)));
         n.deathRecap = file.deathRecap;

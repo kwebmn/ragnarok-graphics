@@ -5107,6 +5107,7 @@ constexpr Entry kTexts[] = {
     {Text::HudPartTarget, "Target card", "Картка цілі", "Карточка цели"},
     {Text::HudPartParty, "Party", "Група", "Группа"},
     {Text::HudPartChat, "Chat", "Чат", "Чат"},
+    {Text::HudPartHunt, "Hunt", "Полювання", "Охота"},  // 3.0.11-beta.278
     {Text::ConsoleHudEdit, "Arrange the interface (Ctrl+Shift+L)", "Розмістити інтерфейс (Ctrl+Shift+L)",
      "Разместить интерфейс (Ctrl+Shift+L)"},
     {Text::InterfaceLayoutNote,
@@ -5320,6 +5321,20 @@ constexpr Entry kTexts[] = {
     {Text::RecapTitle, "Last hits · {1} damage", "Останні удари · {1} шкоди", "Последние удары · {1} урона"},
     {Text::RecapAttack, "attack", "удар", "удар"},
     {Text::RecapAgo, "{1} s before", "{1} с до того", "{1} с до того"},
+    {Text::InterfaceHunt, "Hunt panel", "Панель полювання", "Панель охоты"},  // 3.0.11-beta.278
+    {Text::InterfaceHuntHint,
+     "A panel over the game: damage a second (10 s and a minute) and the skills' shares, experience an hour and the "
+     "time to the level, zeny an hour, monsters killed. The round arrow begins it anew; its place is set in «Hunt».",
+     "Панель над грою: шкода за секунду (10 с і хвилина) та частки навичок, досвід за годину й час до рівня, зені "
+     "за годину, убиті монстри. Кругла стрілка починає наново; місце задається в «Полювання».",
+     "Панель над игрой: урон в секунду (10 с и минута) и доли навыков, опыт в час и время до уровня, зени в час, "
+     "убитые монстры. Круглая стрелка начинает заново; место задаётся в «Охота»."},
+    {Text::HuntTitle, "Hunt · {1}", "Полювання · {1}", "Охота · {1}"},
+    {Text::HuntDps, "DPS {1} · a minute {2}", "DPS {1} · за хв {2}", "DPS {1} · за мин {2}"},
+    {Text::HuntExp, "Exp {1} %/h", "Досвід {1} %/год", "Опыт {1} %/ч"},
+    {Text::HuntToLevel, "level in {1}", "до рівня {1}", "до уровня {1}"},
+    {Text::HuntZeny, "Zeny {1}/h", "Зені {1}/год", "Зени {1}/ч"},
+    {Text::HuntKills, "Killed {1}: {2}", "Убито {1}: {2}", "Убито {1}: {2}"},
     {Text::NpcTalkTag, "Talk", "Говорити", "Говорить"},  // 3.0.11-beta.256: the NPC's plate before its name comes
     {Text::InterfaceShop, "NPC shops", "Крамниці NPC", "Магазины NPC"},  // 3.0.11-beta.100
     {Text::InterfaceShopHint,  // 3.0.11-beta.101: the keys, the amount typed, the description

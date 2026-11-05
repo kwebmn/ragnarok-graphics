@@ -28,15 +28,17 @@ using hudlayout::Part;
 using uapad::gamewindow::Blocker;
 constexpr int kParts = hudlayout::kParts;
 // The order the parts are drawn in (win/context): the last drawn is the one under the pointer first
-constexpr Part kOnTop[] = {Part::Chat, Part::Hotbar, Part::Party, Part::Target, Part::Character,
+constexpr Part kOnTop[] = {Part::Hunt, Part::Chat, Part::Hotbar, Part::Party, Part::Target, Part::Character,
                            Part::Buffs, Part::Tracker, Part::Minimap};
 const settings::Text kNames[kParts] = {settings::Text::HudPartCharacter, settings::Text::HudPartMinimap,
                                        settings::Text::HudPartBuffs,     settings::Text::HudPartTracker,
                                        settings::Text::HudPartHotbar,    settings::Text::HudPartTarget,
-                                       settings::Text::HudPartParty,     settings::Text::HudPartChat};
+                                       settings::Text::HudPartParty,     settings::Text::HudPartChat,
+                                       settings::Text::HudPartHunt};  // 3.0.11-beta.278
 // 3.0.11-beta.77: each part's own blocked rectangle - its solid part, what takes its clicks
 const Blocker kSolid[kParts] = {Blocker::Character, Blocker::Minimap, Blocker::Buffs, Blocker::Tracker,
-                                Blocker::Hotbar,    Blocker::Target,  Blocker::Party, Blocker::Chat};
+                                Blocker::Hotbar,    Blocker::Target,  Blocker::Party, Blocker::Chat,
+                                Blocker::Hunt};
 // The windows over the parts: a press there is theirs
 const Blocker kWindows[] = {Blocker::Panel, Blocker::Card, Blocker::Reference, Blocker::BigMap, Blocker::Items,
                             Blocker::Stats};

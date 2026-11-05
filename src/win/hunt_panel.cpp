@@ -1,0 +1,197 @@
+#include "win/hunt_panel.hpp"
+
+#include <windowsx.h>
+
+#include <algorithm>
+#include <cmath>
+#include <string>
+#include <unordered_map>
+#include <vector>
+
+#include "core/char_status.hpp"
+#include "core/hud_layout.hpp"
+#include "core/hunt_stats.hpp"
+#include "core/reference_index.hpp"
+#include "core/settings/strings.hpp"
+#include "core/skill_info.hpp"
+#include "core/ui_style.hpp"
+#include "pad/win/game_window.hpp"
+#include "win/game_camera.hpp"
+#include "win/hud_edit.hpp"
+#include "win/log.hpp"
+#include "win/picture_draw.hpp"
+#include "win/real_ddraw.hpp"
+#include "win/reference_load.hpp"
+#include "win/ui_cost.hpp"
+
+namespace uagfx::win::huntwin {
+namespace {
+
+using uapad::gamewindow::Blocker;
+constexpr uint32_t kOwnAccount = 0x771F7C, kActorClass = 0x20C;
+constexpr uint32_t kCard = 0x10141C, kWhite = 0xFFFFFF, kText = 0xEEF2F8, kMuted = 0x9AA3B5, kGold = 0xE6CB8A;
+constexpr float kW = 300, kLineH = 19, kPad = 10, kTitleH = 24;
+
+struct State {
+    bool on = false, shown = false, upload = false;
+    hunt::Stats stats;
+    std::unordered_map<uint32_t, std::pair<std::string, uint64_t>> fought;  // a monster hit: its name, when
+    float k = 0, scale = 1;
+    int targetW = 0, targetH = 0, x = 0, y = 0, w = 0, h = 0;
+    panel::Box reset;
+    bool hoverReset = false;
+    std::string key;
+    panel::Picture picture;
+    uint32_t texture = 0;
+    int texW = 0, texH = 0;
+    int told = 0;
+};
+
+State& state() {
+    static State s;
+    return s;
+}
+
+std::string say(settings::Text t) { return settings::tr(language(), t); }
+
+uint32_t own() {
+    uint32_t v = 0;
+    return readGame(kOwnAccount, &v, 4) ? v : 0;
+}
+
+std::string monsterName(uint32_t id) {
+    const uint32_t actor = actorAddress(id);
+    uint32_t cls = 0;
+    if (!actor || !readGame(actor + kActorClass, &cls, 4)) return "";
+    const auto index = reference::index();
+    if (!index) return "";
+    const auto m = index->mobs.find(int(cls));
+    return m == index->mobs.end() ? std::string() : m->second.name;
+}
+
+}  // namespace
+
+void packet(const packets::Event& e) {
+    State& s = state();
+    if (!s.on) return;
+    const uint64_t now = GetTickCount64();
+    if (const auto* h = std::get_if<packets::Hit>(&e)) {
+        const uint32_t me = own();
+        if (!me || h->source != me || h->target == me) return;
+        s.stats.hit(h->damage, h->skill, now);
+        if (s.fought.size() > 500) s.fought.clear();
+        auto& f = s.fought[h->target];
+        if (f.first.empty()) f.first = monsterName(h->target);
+        f.second = now;
+    } else if (const auto* v = std::get_if<packets::Vanish>(&e)) {
+        const auto it = s.fought.find(v->id);
+        if (v->type == 1 && it != s.fought.end() && now - it->second.second < 15000 && !it->second.first.empty())
+            s.stats.kill(it->second.first);
+        if (it != s.fought.end() && v->type == 1) s.fought.erase(it);
+    }
+}
+
+void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int targetHeight) {
+    (void)codePage;
+    State& s = state();
+    if (on != s.on) {
+        s.on = on;
+        s.key.clear();
+        LOG_INFO("hunt: [interface] hunt_panel = %d", on ? 1 : 0);
+    }
+    const auto hide = [&] {
+        if (s.shown) uapad::gamewindow::setBlocked(Blocker::Hunt, nullptr, nullptr, false);
+        s.shown = false;
+    };
+    if (!on || !game || k <= 0 || targetWidth <= 0 || targetHeight <= 0 || !inGameWorld()) return hide();
+    const uint64_t now = GetTickCount64();
+    charstatus::Status st;
+    if (readOwnStatus(st)) s.stats.status(st.baseLevel, st.baseExp, st.baseNext, st.zeny, now);
+    if (!s.stats.started()) s.stats.reset(now);
+    const float scale = uistyle::partScale(k) * hudedit::sizeOf(hudlayout::Part::Hunt);
+    s.k = float(k);
+    s.scale = scale;
+    s.targetW = targetWidth;
+    s.targetH = targetHeight;
+    s.w = int(std::lround(kW * scale));
+    s.h = int(std::lround((2 * kPad + kTitleH + 5 * kLineH) * scale));
+    s.x = targetWidth - s.w - int(std::lround(12 * scale));
+    s.y = int(targetHeight * 0.52f);
+    hudedit::place(hudlayout::Part::Hunt, float(k), targetWidth, targetHeight, s.w, s.h, s.x, s.y);
+    s.reset = panel::Box{float(s.w) - (kPad + 22) * scale, kPad * scale, 22 * scale, 20 * scale};
+    s.hoverReset = false;
+    int cx = 0, cy = 0;
+    if (readGameCursor(cx, cy))
+        s.hoverReset = s.reset.contains(float(cx) * float(k) - float(s.x), float(cy) * float(k) - float(s.y));
+    const hunt::Texts t{say(settings::Text::HuntTitle),  say(settings::Text::HuntDps),
+                        say(settings::Text::RecapAttack), say(settings::Text::HuntExp),
+                        say(settings::Text::HuntToLevel), say(settings::Text::HuntZeny),
+                        say(settings::Text::HuntKills),   "\xE2\x80\x94"};
+    const hunt::View v = s.stats.view(now);
+    std::vector<std::string> names;
+    for (const auto& [skill, share] : v.skills) names.push_back(skill ? skillinfo::name(skill) : "");
+    const std::vector<std::string> lines = hunt::lines(v, t, names);
+    std::string key = std::to_string(s.w) + 'x' + std::to_string(s.h) + (s.hoverReset ? "r" : "") + '#' +
+                      std::to_string(uistyle::generation());
+    for (const std::string& l : lines) key += '|' + l;
+    if (key != s.key) {
+        s.key = key;
+        const uicost::Paint cost("the hunt's panel", s.w, s.h);
+        if (panel::blank(s.picture, s.w, s.h)) {
+            const float sc = scale;
+            panel::roundRect(s.picture, panel::Box{0, 0, float(s.w), float(s.h)}, 10 * sc, kCard, uistyle::panel(),
+                             kWhite, 0.09f, 1.0f * sc);
+            panel::roundRect(s.picture, s.reset, 6 * sc, kWhite, s.hoverReset ? 0.16f : 0.06f);
+            std::vector<Words> out;
+            for (size_t i = 0; i < lines.size(); ++i) {
+                const float y = i == 0 ? kPad * sc : (kPad + kTitleH + float(i - 1) * kLineH) * sc;
+                out.push_back(Words{panel::Box{kPad * sc, y, float(s.w) - (2 * kPad + (i ? 0 : 26)) * sc,
+                                               (i ? kLineH : kTitleH - 4) * sc},
+                                    utf8Wide(lines[i]), i == 0 ? kGold : i == 1 ? kText : kMuted,
+                                    (i == 0 ? 13 : 12) * sc, i < 2, DT_LEFT, false});
+            }
+            out.push_back(Words{s.reset, L"↺", kText, 13 * sc, true, DT_CENTER, false});
+            drawWords(s.picture, out);
+            s.upload = true;
+        }
+    }
+    s.shown = true;
+    RECT client{};
+    if (!GetClientRect(game, &client)) return;
+    const RECT r{LONG(int64_t(s.x) * client.right / targetWidth), LONG(int64_t(s.y) * client.bottom / targetHeight),
+                 LONG(int64_t(s.x + s.w) * client.right / targetWidth + 1),
+                 LONG(int64_t(s.y + s.h) * client.bottom / targetHeight + 1)};
+    uapad::gamewindow::setBlocked(Blocker::Hunt, game, &r, false);
+}
+
+void draw(FrameRecord& record, gpu::Renderer& renderer) {
+    State& s = state();
+    if (!s.shown || s.k <= 0 || s.picture.width <= 0 || s.picture.height <= 0) return;
+    int cursor = -1, cx = 0, cy = 0;
+    if (readGameCursor(cx, cy)) cursor = panel::cursorDraw(record, float(cx), float(cy));
+    drawPart(record, renderer, s.picture, s.texture, s.texW, s.texH, s.upload, s.x, s.y, s.k);
+    if (cursor >= 0) record.moveLastBefore(record.commands().size() - size_t(cursor) - 1, size_t(cursor));
+}
+
+bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
+    State& s = state();
+    (void)wp;
+    if (!s.shown) return false;
+    const bool button = m == WM_LBUTTONDOWN || m == WM_LBUTTONUP || m == WM_LBUTTONDBLCLK || m == WM_RBUTTONDOWN ||
+                        m == WM_RBUTTONUP || m == WM_RBUTTONDBLCLK || m == WM_MBUTTONDOWN || m == WM_MBUTTONUP;
+    if (!button && m != WM_MOUSEWHEEL) return false;
+    float tx = 0, ty = 0;
+    if (!pointerInTarget(game, m, lp, s.k, s.targetW, s.targetH, tx, ty, nullptr)) return false;
+    const float lx = tx - float(s.x), ly = ty - float(s.y);
+    if (lx < 0 || ly < 0 || lx >= float(s.w) || ly >= float(s.h)) return false;
+    result = 0;
+    if (m == WM_LBUTTONDOWN && s.reset.contains(lx, ly)) {
+        s.stats.reset(GetTickCount64());
+        s.fought.clear();
+        s.key.clear();
+        if (s.told++ < 10) LOG_INFO("hunt: begun anew («↺»)");
+    }
+    return true;
+}
+
+}  // namespace uagfx::win::huntwin

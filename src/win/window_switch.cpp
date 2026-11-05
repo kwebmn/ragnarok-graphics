@@ -11,6 +11,7 @@
 #include "win/answer_card.hpp"
 #include "win/buff_column.hpp"
 #include "win/char_block.hpp"
+#include "win/hunt_panel.hpp"
 #include "win/merc_card.hpp"
 #include "win/party_panel.hpp"
 #include "win/hotbar.hpp"
@@ -89,6 +90,7 @@ bool partsMouse(HWND w, UINT m, WPARAM wp, LPARAM lp, LRESULT& answer) {
            charpanel::mouse(w, m, wp, lp, answer) ||     // 3.0.11-beta.36: the character block's
            targetpanel::mouse(w, m, wp, lp, answer) ||   // 3.0.11-beta.38: the target's card's
            partywin::mouse(w, m, wp, lp, answer) ||      // 3.0.11-beta.39: the party's panel's
+           huntwin::mouse(w, m, wp, lp, answer) ||  // 3.0.11-beta.278: «Полювання»
            merccardwin::blockMouse(w, m, wp, lp, answer) ||  // 3.0.11-beta.216: the mercenary's block's
            hotbarwin::mouse(w, m, wp, lp, answer) ||     // 3.0.11-beta.40: the hotbar's
            chatwin::mouse(w, m, wp, lp, answer);         // 3.0.11-beta.41: the chat's
