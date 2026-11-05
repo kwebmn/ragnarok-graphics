@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.11-beta.276 — what's new
+
+**Feature 7 — the delay after a skill on the hotbar:** after a skill the hotbar's skills darken and clear clockwise until the server allows the next one. The time is the server's for the skill's level, cut by DEX as on uaRO (× (150 − DEX) / 150). The switch «Затримка після вміння на панелі» in «Інтерфейс».
+
 # uaRO Graphics 3.0.11-beta.275 — what's new
 
 **Feature 2 — the character select as a carousel:** the chosen character in the middle and larger, two neighbours each side smaller. ‹ ›, the wheel, the D-pad or a click on a neighbour go round all the account's places (all the game's pages together), «N / M» at the top. A double click on the middle one enters. The switch «Вибір персонажа каруселлю» in «Інтерфейс» (off: the three places as before).
