@@ -5311,6 +5311,15 @@ constexpr Entry kTexts[] = {
      "затримка, на uaRO коротша з DEX).",
      "После умения умения на панели темнеют и светлеют по часовой стрелке, пока сервер не даёт следующее (его "
      "задержка, на uaRO короче с DEX)."},
+    // 3.0.11-beta.277: what killed the character
+    {Text::InterfaceDeathRecap, "What killed me", "Що мене вбило", "Что меня убило"},
+    {Text::InterfaceDeathRecapHint,
+     "The death screen lists the last hits of the 10 seconds before it: who, by which skill, how much and when.",
+     "Екран смерті показує останні удари за 10 секунд до неї: хто, яким умінням, скільки й коли.",
+     "Экран смерти показывает последние удары за 10 секунд до неё: кто, каким умением, сколько и когда."},
+    {Text::RecapTitle, "Last hits · {1} damage", "Останні удари · {1} шкоди", "Последние удары · {1} урона"},
+    {Text::RecapAttack, "attack", "удар", "удар"},
+    {Text::RecapAgo, "{1} s before", "{1} с до того", "{1} с до того"},
     {Text::NpcTalkTag, "Talk", "Говорити", "Говорить"},  // 3.0.11-beta.256: the NPC's plate before its name comes
     {Text::InterfaceShop, "NPC shops", "Крамниці NPC", "Магазины NPC"},  // 3.0.11-beta.100
     {Text::InterfaceShopHint,  // 3.0.11-beta.101: the keys, the amount typed, the description

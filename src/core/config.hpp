@@ -701,6 +701,8 @@ struct Config {
     // 3.0.11-beta.276 (the owner's feature 7): [interface] delay_ring - the delay after a skill (the server's, cut by
     // DEX) swept over the hotbar's skills (win/skill_delay_watch)
     bool delayRing = true;
+    // 3.0.11-beta.277 (the owner's feature 8): [interface] death_recap - the last hits on the death screen
+    bool deathRecap = true;
     // 3.0.11-beta.100: [interface] shop - the NPCs' shops (core/shop_window) in place of the game's deal windows
     bool shopWindow = false;
     // 3.0.11-beta.115: [interface] storage - the Kafra storage (win/storage_window: «Склад», «Речі» beside it) in

@@ -512,6 +512,7 @@ enum class Text : uint16_t {
     InterfacePortraits, InterfacePortraitsHint,  // 3.0.11-beta.273
     InterfaceCarousel, InterfaceCarouselHint,  // 3.0.11-beta.275
     InterfaceDelayRing, InterfaceDelayRingHint,  // 3.0.11-beta.276
+    InterfaceDeathRecap, InterfaceDeathRecapHint, RecapTitle, RecapAttack, RecapAgo,  // 3.0.11-beta.277
     NpcTalkTag,  // 3.0.11-beta.256
     InterfaceShop, InterfaceShopHint, ShopTitle, ShopBuy, ShopSell, ShopSearch, ShopWare, ShopPrice,  // .100
     ShopWeight, ShopCart, ShopAmount, ShopSum, ShopTotal, ShopLeft, ShopAfter, ShopWeightBuy, ShopWeightSell,

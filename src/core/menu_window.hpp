@@ -24,6 +24,9 @@ struct Texts {
     std::string menu, dead;  // the title: «Меню», «Ви загинули»
     std::string revive, savePoint, charSelect, exit, back;
     std::string enter, esc;  // the keys' hints (the controller's buttons while played with it)
+    // 3.0.11-beta.277 (the owner's feature 8): the death's last hits - «Останні удари · {1} шкоди», their lines
+    std::string recapTitle;
+    std::vector<std::string> recap;
 };
 struct Show {
     int hover = -1;  // the button under the pointer
@@ -34,8 +37,9 @@ struct Layout {
     int x = 0, y = 0, w = 0, h = 0;  // the picture in the target
     panel::Box glass, title;
     std::vector<panel::Box> buttons;  // the picture's pixels
+    panel::Box recap;                 // 3.0.11-beta.277: the last hits' lines over the buttons (h 0: none)
 };
-Layout layout(Kind k, int targetW, int targetH, float scale);
+Layout layout(Kind k, int targetW, int targetH, float scale, size_t recapLines = 0);
 int buttonAt(const Layout& L, float x, float y);  // the picture's pixels; -1 none
 
 using Words = itemwin::Words;

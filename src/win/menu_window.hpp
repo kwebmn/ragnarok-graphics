@@ -18,6 +18,7 @@ namespace uagfx::win::menuwin {
 // held at 0; our buttons press its own (message 6 with the button's id) - the game does what its own did (the game
 // mode's 0x1B restart: 0 the save point, 1 character select; 0x65 the exit; 0x10A the token's revival) and deletes its
 // window. Esc stays the game's (it closes its window, or opens it). On the game's thread.
+void setRecap(bool on);  // 3.0.11-beta.277: [interface] death_recap - the last hits on the death screen
 void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int targetHeight);
 void draw(FrameRecord& record, gpu::Renderer& renderer);
 bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result);

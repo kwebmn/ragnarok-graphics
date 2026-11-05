@@ -1,3 +1,4 @@
+#include "win/death_recap_watch.hpp"
 #include "win/skill_delay_watch.hpp"
 #include "win/packet_tap.hpp"
 
@@ -97,6 +98,7 @@ uint16_t __attribute__((thiscall)) take(void* connection, const uint8_t* packet)
         charpanel::packet(e);     // 3.0.11-beta.235: the session's kills and deaths
         expgainwin::packet(e);    // 3.0.11-beta.237: a kill's experience over the monster
         npctagwin::packet(e);     // 3.0.11-beta.256: the NPCs' names for the controller's plate
+        deathrecapwin::packet(e);  // 3.0.11-beta.277: the hits on the character for its death screen
     }
     return id;
 }

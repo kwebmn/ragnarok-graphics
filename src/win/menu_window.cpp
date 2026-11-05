@@ -14,6 +14,7 @@
 #include "pad/win/game_window.hpp"
 #include "pad/win/runtime.hpp"
 #include "win/code_page.hpp"
+#include "win/death_recap_watch.hpp"
 #include "win/game_camera.hpp"
 #include "win/log.hpp"
 #include "win/paths.hpp"
@@ -44,6 +45,9 @@ using SendMsgFn = int(__attribute__((thiscall)) *)(uint32_t self, uint32_t sende
 struct State {
     WindowShadow shadow;
     bool on = false, shown = false, hid = false, padNow = false;
+    bool recapOn = true;  // 3.0.11-beta.277: [interface] death_recap
+    std::string recapTitle;
+    std::vector<std::string> recap;
     unsigned codePage = 0;
     float k = 0, scale = 1;
     int targetW = 0, targetH = 0;
@@ -116,6 +120,8 @@ mw::Texts texts(bool pad) {
     t.back = say(settings::Text::MenuBack);
     t.enter = pad ? uapad::buttonLabel(0) : "Enter";
     t.esc = pad ? uapad::buttonLabel(1) : "Esc";
+    t.recapTitle = state().recapTitle;  // 3.0.11-beta.277
+    t.recap = state().recap;
     return t;
 }
 
@@ -186,6 +192,12 @@ void press(State& s, int row) {
 
 }  // namespace
 
+void setRecap(bool on) {  // 3.0.11-beta.277
+    State& s = state();
+    if (on != s.recapOn) LOG_INFO("menu: [interface] death_recap = %d", on ? 1 : 0);
+    s.recapOn = on;
+}
+
 void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int targetHeight) {
     State& s = state();
     s.codePage = codePage;
@@ -205,6 +217,8 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     }
     if (!s.shown || window != s.window || kind != s.kind) {  // opened: the safe row in focus
         s.show.focus = mw::firstFocus(kind);
+        s.recap.clear();  // 3.0.11-beta.277: the death's last hits, taken once as it shows
+        if (kind != mw::Kind::Alive && s.recapOn) s.recap = deathrecapwin::lines(s.recapTitle);
         if (s.told++ < 30)
             LOG_INFO("menu: %s - the new menu shows it", kind == mw::Kind::Alive ? "the game's menu (Esc)"
                                                          : kind == mw::Kind::Dead ? "the death"
@@ -216,7 +230,7 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     s.scale = uistyle::readingScale(k);
     s.targetW = targetWidth;
     s.targetH = targetHeight;
-    s.layout = mw::layout(kind, targetWidth, targetHeight, s.scale);
+    s.layout = mw::layout(kind, targetWidth, targetHeight, s.scale, s.recap.size());
     s.show.hover = -1;
     int cx = 0, cy = 0;
     if (readGameCursor(cx, cy)) {

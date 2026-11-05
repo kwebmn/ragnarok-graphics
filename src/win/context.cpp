@@ -1073,6 +1073,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     shopwin::frame(window, config.shopWindow, gameCodePage(config), pk, pw, ph);      // 3.0.11-beta.100
     storagewin::frame(window, config.storageWindow, gameCodePage(config), pk, pw, ph);  // 3.0.11-beta.115
     tradewin::frame(window, config.tradeWindow, gameCodePage(config), pk, pw, ph);      // 3.0.11-beta.116
+    menuwin::setRecap(config.deathRecap);  // 3.0.11-beta.277
     menuwin::frame(window, config.menuWindow, gameCodePage(config), pk, pw, ph);        // 3.0.11-beta.140
     infocardwin::frame(window, config.cardWindows, gameCodePage(config), pk, pw, ph);  // 3.0.11-beta.149
     askcardwin::frame(window, config.askWindows, config.countWindow, gameCodePage(config), pk, pw, ph);  // .150, .155

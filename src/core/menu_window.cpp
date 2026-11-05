@@ -52,15 +52,20 @@ int buttonId(Kind k, Action a) {
 
 int firstFocus(Kind k) { return int(actions(k).size()) - 1; }
 
-Layout layout(Kind k, int targetW, int targetH, float scale) {
+Layout layout(Kind k, int targetW, int targetH, float scale, size_t recapLines) {
     Layout L;
     const float s = scale > 0 ? scale : 1.0f;
     L.s = s;
     const size_t n = actions(k).size();
-    const float w = std::round(kWide * s), pad = std::round(kPad * s);
+    const bool recap = k != Kind::Alive && recapLines > 0;  // .277: wider for the hits' lines
+    const float w = std::round((recap ? 420.0f : kWide) * s), pad = std::round(kPad * s);
     float y = pad;
     L.title = panel::Box{pad, y, w - 2 * pad, std::round(kTitleH * s)};
     y += L.title.h + std::round(kTitleGap * s);
+    if (k != Kind::Alive && recapLines > 0) {  // .277: «Останні удари» and a line a hit
+        L.recap = panel::Box{pad, y, w - 2 * pad, std::round((24 + 19 * float(recapLines) + 8) * s)};
+        y += L.recap.h + std::round(kTitleGap * s);
+    }
     for (size_t i = 0; i < n; ++i) {
         L.buttons.push_back(panel::Box{pad, y, w - 2 * pad, std::round(kButtonH * s)});
         y += std::round(kButtonH * s) + (i + 1 < n ? std::round(kGap * s) : 0.0f);
@@ -85,6 +90,7 @@ void paint(panel::Picture& out, const Layout& L, Kind k, const Show& sh, const T
     (void)t;
     const float s = L.s;
     panel::roundRect(out, L.glass, 12 * s, kCard, uistyle::window(), kWhite, 0.12f, 1.0f * s);
+    if (L.recap.h > 0) panel::roundRect(out, L.recap, 8 * s, 0x000000, 0.25f);  // .277
     for (size_t i = 0; i < L.buttons.size(); ++i) {
         const panel::Box& b = L.buttons[i];
         const bool lit = int(i) == sh.hover || int(i) == sh.focus;
@@ -102,6 +108,14 @@ std::vector<Words> words(const Layout& L, Kind k, const Show& sh, const Texts& t
     const float s = L.s;
     const bool dead = k != Kind::Alive;
     out.push_back(Words{L.title, dead ? t.dead : t.menu, dead ? kDeadRed : kText, 17 * s, true, itemwin::Align::Left});
+    if (L.recap.h > 0) {  // 3.0.11-beta.277: the last hits, the last first
+        out.push_back(Words{panel::Box{L.recap.x + 10 * s, L.recap.y + 4 * s, L.recap.w - 20 * s, 20 * s},
+                            t.recapTitle, kDeadRed, 12.5f * s, true, itemwin::Align::Left});
+        for (size_t i = 0; i < t.recap.size(); ++i)
+            out.push_back(Words{panel::Box{L.recap.x + 10 * s, L.recap.y + (24 + 19 * float(i)) * s,
+                                           L.recap.w - 20 * s, 19 * s},
+                                t.recap[i], i == 0 ? kText : kMuted, 12 * s, i == 0, itemwin::Align::Left});
+    }
     const std::vector<Action> as = actions(k);
     for (size_t i = 0; i < L.buttons.size() && i < as.size(); ++i) {
         const panel::Box& b = L.buttons[i];
