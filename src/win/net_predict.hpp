@@ -11,6 +11,8 @@ namespace uagfx::win::netpredictwin {
 // where it is); another - the server's as before; none within four round trips and 200 ms (at least 600) - the player
 // put back on its cell (message 0x13). On the game's thread.
 void setOn(bool on);
+// 3.0.11-beta.238 (the character block's regen): the server has the character sitting (its own act 2, till 3)
+bool sitting();
 void walkAsked(int x, int y);   // the game sent its walk request - the pad's send hook
 void ownMove(uint8_t* packet);  // ZC_NOTIFY_PLAYERMOVE before the game reads it - the packet tap
 // 3.0.11-beta.132: ZC_NOTIFY_ACT - the character hit or attacking: the server holds its walk for the motion (no guess

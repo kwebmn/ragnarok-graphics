@@ -58,6 +58,13 @@ struct Data {
     std::string guild, party;
     int partyOnline = 0, partyTotal = 0;
     int hpRegen = -1, spRegen = -1, hpEverySec = 6, spEverySec = 8;
+    // 3.0.11-beta.238 (the owner: «когда сидишь, реген совсем другой»): sitting (the natural regen twice as often),
+    // the skills' regen each 10 s standing or sitting (Increase HP / SP Recovery, Spirit of the Blade), the skills'
+    // sitting only (Spiritual Cadence); the last fight's cost - HP and SP spent from its first hit to the kill, a share
+    // of the most (< 0 none), how much of it still shows (0..1, fading)
+    bool sitting = false;
+    int hpSkill = 0, spSkill = 0, hpSitSkill = 0, spSitSkill = 0;
+    float hpCost = -1, spCost = -1, costShown = 0;
     int atk = -1, atk2 = 0, def = 0, def2 = 0, flee = 0, flee2 = 0, aspd = 0;
     long long sessionMinutes = -1, zenyGain = 0;
     int kills = 0, deaths = 0;
@@ -141,6 +148,9 @@ struct Texts {
     // 3.0.11-beta.235: «Гільдія {1}», «Група {1} · {2}/{3}», «+{1} кожні {2} с», «повне», «до повного ≈ {1}», «не
     // відновлюється», «Сесія · {1}», «вбито», «смертей»; the tips' lines (the parts pointed at)
     std::string guild, party, regen, regenFull, regenToFull, regenNone, sessionHead, killed, deaths;
+    // 3.0.11-beta.238: «+{1}/хв · {2}», «стоячи», «сидячи», the tip's «Природне: +{1} кожні {2} с», «Від навички: +{1}
+    // кожні 10 с», «Сидячи, від навички: +{1} кожні 10 с», the fight's «останній бій −{1}»
+    std::string regenPerMin, standing, sitting, regenNatural, regenSkill, regenSitSkill, fightCost;
     std::string tipWeight, tipPoints, tipSkillPoints, tipRegen1, tipRegen2, tipAtk, tipDef, tipFlee, tipAspd, tipOpen;
     std::string tipTime, tipZeny, tipKills, tipDeaths, tipOnline;
 };

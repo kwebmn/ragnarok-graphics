@@ -8,6 +8,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <memory>
+#include <map>
 #include <set>
 #include <string>
 #include <vector>
@@ -29,6 +30,7 @@
 #include "win/head_picture.hpp"
 #include "win/hud_edit.hpp"
 #include "win/log.hpp"
+#include "win/net_predict.hpp"
 #include "win/party_panel.hpp"
 #include "win/paths.hpp"
 #include "win/picture_draw.hpp"
@@ -55,6 +57,12 @@ constexpr uint32_t kJob = 0x771F8C, kSex = 0x772DEC, kHead = 0x7718F4, kHairColo
 constexpr uint32_t kGuildName = 0x74B654, kPartyName = 0x772D88, kOwnAccount = 0x771F7C;
 // the server's natural regen periods (uAthena conf/battle/player.conf natural_healhp_interval / sp)
 constexpr int kHpEverySec = 6, kSpEverySec = 8;
+// 3.0.11-beta.238: the session's skills (a std::list: its head at +0x2D8, a node's record at +8 - its id the second
+// int, its level the fourth, as «Навички» reads them); the regen skills' ids (uAthena skill_db); the last fight's cost
+// shown this long, its last second fading
+constexpr uint32_t kSkillList = 0x771148 + 0x2D8;
+constexpr int kHpRecovery = 4, kSpRecovery = 9, kSpiritualCadence = 260, kMeditatio = 363, kNinpou = 533;
+constexpr ULONGLONG kCostMs = 4000, kCostFadeMs = 1000, kFightIdleMs = 8000;
 constexpr ULONGLONG kWarnMs = 2000;  // the low HP warning's
 constexpr ULONGLONG kTipMs = 400, kPressMs = 160;  // 3.0.11-beta.51: the concept's tip after 0.4 s; a press shown
 // 3.0.11-beta.114 (the concept «Концепция окон и инвентаря», question 10 «можна»): the ammo worn running low on the
@@ -85,6 +93,14 @@ struct State {
     long long zenyAt = -1;
     std::set<uint32_t> hit;
     int kills = 0, deaths = 0;
+    // 3.0.11-beta.238: the regen skills' levels (read once a second), the fight under way (HP and SP at its first hit,
+    // the last hit), the last fight's cost and when
+    std::map<int, int> skills;
+    ULONGLONG skillsAt = 0;
+    bool fight = false;
+    int fightHp = 0, fightSp = 0;
+    ULONGLONG lastHitAt = 0, costAt = 0;
+    float hpCost = -1, spCost = -1;
     // 3.0.11-beta.46 (the concept's motion): a picture of its own with its texture - the view before a change (fading
     // out under the new one), the low HP warning (sliding in, fading out), a new level's gold edge (flaring once)
     struct Layer {
@@ -271,6 +287,13 @@ cb::Texts texts() {
     t.tipKills = say(settings::Text::CharTipKills);
     t.tipDeaths = say(settings::Text::CharTipDeaths);
     t.tipOnline = say(settings::Text::CharTipOnline);
+    t.regenPerMin = say(settings::Text::CharRegenPerMin);  // 3.0.11-beta.238
+    t.standing = say(settings::Text::CharStanding);
+    t.sitting = say(settings::Text::CharSitting);
+    t.regenNatural = say(settings::Text::CharRegenNatural);
+    t.regenSkill = say(settings::Text::CharRegenSkill);
+    t.regenSitSkill = say(settings::Text::CharRegenSitSkill);
+    t.fightCost = say(settings::Text::CharFightCost);
     const settings::Text names[cb::kButtons] = {settings::Text::CharStats,  settings::Text::CharEquip,
                                                 settings::Text::CharItems,  settings::Text::CharSkills,
                                                 settings::Text::CharFriends, settings::Text::CharOptions};
@@ -481,6 +504,37 @@ void frame(HWND game, CharacterLook look, unsigned codePage, double k, int targe
     d.spRegen = st.spMost > 0 ? 1 + intel / 6 + st.spMost / 100 + (intel >= 120 ? (intel - 120) / 2 + 4 : 0) : -1;
     d.hpEverySec = kHpEverySec;
     d.spEverySec = kSpEverySec;
+    // 3.0.11-beta.238 (the owner: «когда сидишь, реген совсем другой»): sitting, and the skills' regen (uAthena
+    // status_calc_regen: Increase HP Recovery lv*5 + MaxHP*lv/500, Increase SP Recovery / Spirit of the Blade lv*3 +
+    // MaxSP*lv/500 each 10 s; Meditatio the natural SP +3 % a level; Spiritual Cadence sitting only)
+    if (now - s.skillsAt >= 1000) {
+        s.skillsAt = now;
+        s.skills.clear();
+        const uint32_t head = read32(kSkillList);
+        uint32_t node = head ? read32(head) : 0;
+        for (int n = 0; node && node != head && n < 600; ++n, node = read32(node)) {
+            int32_t r[4] = {};
+            if (!readGame(node + 8, r, sizeof r)) break;
+            if (r[1] > 0 && r[1] < 0x10000 && r[3] > 0) s.skills[r[1]] = r[3];
+        }
+    }
+    const auto lv = [&](int id) {
+        const auto it = s.skills.find(id);
+        return it == s.skills.end() ? 0 : it->second;
+    };
+    d.sitting = netpredictwin::sitting();
+    if (d.spRegen > 0 && lv(kMeditatio) > 0) d.spRegen = d.spRegen * (100 + 3 * lv(kMeditatio)) / 100;
+    d.hpSkill = lv(kHpRecovery) * 5 + lv(kHpRecovery) * st.hpMost / 500;
+    d.spSkill = lv(kSpRecovery) * 3 + lv(kSpRecovery) * st.spMost / 500;
+    d.spSkill += lv(kNinpou) * 3 + lv(kNinpou) * st.spMost / 500;
+    d.hpSitSkill = lv(kSpiritualCadence) * 4 + lv(kSpiritualCadence) * st.hpMost / 500;
+    d.spSitSkill = lv(kSpiritualCadence) * 2 + lv(kSpiritualCadence) * st.spMost / 500;
+    // 3.0.11-beta.238: the last fight's cost, a while after its kill
+    d.hpCost = s.hpCost;
+    d.spCost = s.spCost;
+    d.costShown = 0;
+    if (s.costAt && now - s.costAt < kCostMs)
+        d.costShown = now - s.costAt + kCostFadeMs <= kCostMs ? 1.0f : float(kCostMs - (now - s.costAt)) / kCostFadeMs;
     d.atk = st.atk;
     d.atk2 = st.atk2;
     d.def = st.def;
@@ -559,7 +613,10 @@ void frame(HWND game, CharacterLook look, unsigned codePage, double k, int targe
         std::to_string(d.atk2) + ',' + std::to_string(d.def) + ',' + std::to_string(d.def2) + ',' +
         std::to_string(d.flee) + ',' + std::to_string(d.flee2) + ',' + std::to_string(d.aspd) + ';' +
         std::to_string(d.sessionMinutes) + ',' + std::to_string(d.zenyGain) + ',' + std::to_string(d.kills) + ',' +
-        std::to_string(d.deaths) + 'z' + std::to_string(show.hoverZone);
+        std::to_string(d.deaths) + 'z' + std::to_string(show.hoverZone) + ';' + (d.sitting ? "s" : "u") +
+        std::to_string(d.hpSkill) + ',' + std::to_string(d.spSkill) + ',' + std::to_string(d.hpSitSkill) + ',' +
+        std::to_string(d.spSitSkill) + ',' + std::to_string(int(d.hpCost * 1000)) + ',' +
+        std::to_string(int(d.spCost * 1000)) + ',' + std::to_string(int(d.costShown * 20));
     if (const std::string drawn = key + '#' + std::to_string(uistyle::generation()); drawn != s.key) {  // its grounds
         s.key = drawn;
         render(s);
@@ -680,10 +737,17 @@ void packet(const packets::Event& e) {
     State& s = state();
     const uint32_t me = read32(kOwnAccount);
     if (!me) return;
+    const ULONGLONG now = GetTickCount64();
     if (const auto* h = std::get_if<packets::Hit>(&e)) {
         if (h->source == me && h->target != me && h->target) {
             if (s.hit.size() > 256) s.hit.clear();
             s.hit.insert(h->target);
+            if (!s.fight || now - s.lastHitAt > kFightIdleMs) {  // 3.0.11-beta.238: a fight begins - HP and SP then
+                s.fight = true;
+                s.fightHp = s.data.hp;
+                s.fightSp = s.data.sp;
+            }
+            s.lastHitAt = now;
         }
     } else if (const auto* v = std::get_if<packets::Vanish>(&e)) {
         if (v->type != 1) return;
@@ -691,6 +755,14 @@ void packet(const packets::Event& e) {
             ++s.deaths;
         } else if (s.hit.erase(v->id)) {
             ++s.kills;
+            // 3.0.11-beta.238: what it cost; the next one's from here
+            if (s.fight && s.data.hpMost > 0 && s.data.spMost > 0) {
+                s.hpCost = float(std::max(0, s.fightHp - s.data.hp)) / float(s.data.hpMost);
+                s.spCost = float(std::max(0, s.fightSp - s.data.sp)) / float(s.data.spMost);
+                s.costAt = now;
+                s.fightHp = s.data.hp;
+                s.fightSp = s.data.sp;
+            }
         }
     }
 }

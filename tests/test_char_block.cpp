@@ -645,3 +645,48 @@ TEST(char_block_ring_dots_and_the_bottom_strip) {
     const std::vector<std::string> tip = charblock::stripTip(d, t);
     CHECK(tip.size() == 2 && tip[0].rfind("Base 46,3", 0) == 0 && tip[1].rfind("Job", 0) == 0);
 }
+
+// 3.0.11-beta.238 (the owner: «когда сидишь, реген совсем другой»; «желтеньким сколько примерно % заняло убийство
+// последнего моба»): a minute's regen as the server gives it - the natural twice as often sitting, the skills' each
+// 10 s; the last fight's cost in yellow after each bar's fill, its words in the time to full's place
+TEST(char_block_regen_sitting_skills_and_the_fight) {
+    charblock::Texts t = texts();
+    t.regenPerMin = "+{1}/хв \xC2\xB7 {2}";
+    t.standing = "стоячи";
+    t.sitting = "сидячи";
+    t.regenNatural = "природне +{1} кожні {2} с";
+    t.regenSkill = "Від навички: +{1} кожні 10 с";
+    t.fightCost = "останній бій −{1}";
+    t.regenFull = "повне";
+    charblock::Data d = soraInNumbers();
+    d.hp = 5000;
+    d.hpMost = 15137;
+    d.hpRegen = 88;   // 1 + VIT/5 + MaxHP/200
+    d.hpSkill = 352;  // Increase HP Recovery 10
+    d.sp = d.spMost = 477;
+    d.spRegen = 10;
+    const charblock::Layout L = charblock::layout(charblock::View::Full, charblock::Look::Bars, 0, 0, 1.0f);
+    std::vector<charblock::Words> w = charblock::words(L, d, t, charblock::Show{});
+    CHECK(hasText(w, "+2\xC2\xA0" "992/хв \xC2\xB7 стоячи"));  // 88 x 10 + 352 x 6
+    d.sitting = true;
+    w = charblock::words(L, d, t, charblock::Show{});
+    CHECK(hasText(w, "+3\xC2\xA0" "872/хв \xC2\xB7 сидячи"));  // 88 x 20 + 352 x 6
+    charblock::Show sh;
+    sh.hoverZone = int(charblock::Zone::HpRegen);
+    w = charblock::words(L, d, t, sh);
+    CHECK(hasText(w, "HP природне +88 кожні 3 с") && hasText(w, "Від навички: +352 кожні 10 с"));
+    // the fight: 12 % of HP spent - its words and its yellow after the fill
+    d.hpCost = 0.12f;
+    d.spCost = 0;
+    d.costShown = 1;
+    w = charblock::words(L, d, t, charblock::Show{});
+    CHECK(hasText(w, "останній бій −12,0\xC2\xA0%"));
+    panel::Picture p;
+    p.width = L.w;
+    p.height = L.h;
+    p.px.assign(size_t(L.w) * size_t(L.h), 0u);
+    charblock::paint(p, L, d, t, charblock::Show{});
+    const float fill = 5000.0f / 15137.0f;
+    const uint32_t y = pixel(p, L.hpBar.x + L.hpBar.w * (fill + 0.06f), L.hpBar.y + L.hpBar.h / 2);
+    CHECK(((y >> 16) & 0xFF) > 0xB0 && ((y >> 8) & 0xFF) > 0x90 && (y & 0xFF) < 0x90);  // yellow
+}

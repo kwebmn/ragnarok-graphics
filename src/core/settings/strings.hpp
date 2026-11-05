@@ -784,6 +784,8 @@ enum class Text : uint16_t {
     CharTipOnline,  // 3.0.11-beta.235
     InterfaceExpBars, InterfaceExpBarsHint,  // 3.0.11-beta.236
     InterfaceExpGain, InterfaceExpGainHint,  // 3.0.11-beta.237
+    CharRegenPerMin, CharStanding, CharSitting, CharRegenNatural, CharRegenSkill, CharRegenSitSkill,
+    CharFightCost,  // 3.0.11-beta.238
     Count
 };
 

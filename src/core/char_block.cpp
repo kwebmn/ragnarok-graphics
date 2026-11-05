@@ -26,6 +26,7 @@ constexpr uint32_t kCard = 0x10141C, kWhite = 0xFFFFFF, kBlack = 0x000000, kTile
 constexpr uint32_t kGold = 0xC9A55B, kGold2 = 0xE6CB8A, kText = 0xECEFF5, kMuted = 0x9AA3B5, kWarn = 0xF0A050;
 constexpr uint32_t kHp = 0x5BD36C, kHpLow = 0xFF5A4E, kSp = 0x4F8BFF, kWarnGround = 0x3A1414;
 constexpr uint32_t kBaseExp = 0xB7A6FF, kJobExp = 0x7FD3C3;  // 3.0.11-beta.141: the concept's experience colours
+constexpr uint32_t kFight = 0xF3D27A;  // 3.0.11-beta.238: the last fight's cost on the bars, yellow
 
 float part(int value, int most) { return most > 0 ? std::clamp(float(value) / float(most), 0.0f, 1.0f) : 0.0f; }
 
@@ -225,6 +226,14 @@ void weightLines(std::vector<std::string>& lines, const Data& d, const Texts& t)
     if (over == 2 && !t.overweight2.empty()) lines.push_back(t.overweight2);
 }
 
+// 3.0.11-beta.238: the regen a minute as the server gives it - the natural each period (twice as often sitting), the
+// skills' each 10 s (uAthena natural_heal_skill_interval), the sitting skills' each 10 s while sitting
+long long perMinute(int natural, int every, int skill, int sitSkill, bool sitting) {
+    if (natural < 0) return -1;
+    const long long nat = every > 0 ? (long long)natural * 60 / every * (sitting ? 2 : 1) : 0;
+    return nat + (long long)skill * 6 + (sitting ? (long long)sitSkill * 6 : 0);
+}
+
 // 3.0.11-beta.235: a Zone's tip - what the part pointed at means
 std::vector<std::string> zoneTip(Zone z, const Data& d, const Texts& t) {
     std::vector<std::string> lines;
@@ -257,8 +266,14 @@ std::vector<std::string> zoneTip(Zone z, const Data& d, const Texts& t) {
             const bool hp = z == Zone::HpRegen;
             const int v = hp ? d.hpRegen : d.spRegen;
             if (v < 0) break;
-            add(std::string(hp ? "HP " : "SP ") + replaced2(replaced(t.regen, std::to_string(v)),
-                                                            std::to_string(hp ? d.hpEverySec : d.spEverySec)));
+            // 3.0.11-beta.238: each source of it - the natural (sitting twice as often), the skills'
+            const int every = hp ? d.hpEverySec : d.spEverySec;
+            add(std::string(hp ? "HP " : "SP ") +
+                replaced2(replaced(t.regenNatural.empty() ? t.regen : t.regenNatural, std::to_string(v)),
+                          std::to_string(d.sitting ? every / 2 : every)));
+            if (const int sk = hp ? d.hpSkill : d.spSkill; sk > 0) add(replaced(t.regenSkill, std::to_string(sk)));
+            if (const int sk = hp ? d.hpSitSkill : d.spSitSkill; sk > 0 && d.sitting)
+                add(replaced(t.regenSitSkill, std::to_string(sk)));
             if (overweightOf(d) >= 1) add(t.overweight1);
             add(t.tipRegen1);
             add(t.tipRegen2);
@@ -571,6 +586,17 @@ void paint(panel::Picture& out, const Layout& L, const Data& d, const Texts& t, 
         if (L.view == View::Full) corners(out, L.block, s);
         bar(out, L.hpBar, part(d.hp, d.hpMost), hpRgb);
         bar(out, L.spBar, part(d.sp, d.spMost), kSp);
+        // 3.0.11-beta.238 (the owner: «желтеньким сколько примерно % заняло убийство последнего моба»): the last
+        // fight's cost after each bar's fill, fading
+        const auto cost = [&](const panel::Box& b, float now, float spent) {
+            if (b.w <= 0 || spent <= 0 || d.costShown <= 0 || L.view != View::Full) return;
+            const float from = std::clamp(now, 0.0f, 1.0f), to = std::clamp(now + spent, 0.0f, 1.0f);
+            if (to - from <= 0) return;
+            panel::roundRect(out, panel::Box{b.x + b.w * from, b.y, std::max(1.0f, b.w * (to - from)), b.h}, 0, kFight,
+                             0.85f * d.costShown);
+        };
+        cost(L.hpBar, part(d.hp, d.hpMost), d.hpCost);
+        cost(L.spBar, part(d.sp, d.spMost), d.spCost);
         // 3.0.11-beta.141: the base's experience and the job's (the concept's colours), the full block's a tick each
         // 10 %; the last level full and faint
         const auto experience = [&](const panel::Box& b, const Exp& e, uint32_t rgb) {
@@ -785,27 +811,38 @@ std::vector<Words> words(const Layout& L, const Data& d, const Texts& t, const S
         experience(jobOf(d), L.jobLabel, L.jobPct, L.jobText);
         // 3.0.11-beta.235: the regen under each bar - a tick's and its period at the left, «повне» or the time to full
         // at the right; none from 70 % of the weight
-        const auto regen = [&](const panel::Box& b, int per, int every, int now, int most) {
+        // 3.0.11-beta.238: a minute's regen as the server gives it, standing or sitting (the owner: «когда сидишь,
+        // реген совсем другой»); the last fight's cost in yellow for a while in the time to full's place
+        const auto regen = [&](const panel::Box& b, int per, int every, int skill, int sitSkill, int now, int most,
+                               float cost) {
             if (per < 0 || b.w <= 0) return;
             const float px = 11 * s;
             if (overweightOf(d) >= 1) {
                 out.push_back(Words{b, t.regenNone, kWarn, px, false, Align::Left});
                 return;
             }
-            out.push_back(Words{b, replaced2(replaced(t.regen, std::to_string(per)), std::to_string(every)), kMuted, px,
-                                false, Align::Left});
+            const long long minute = perMinute(per, every, skill, sitSkill, d.sitting);
+            const std::string left =
+                t.regenPerMin.empty()
+                    ? replaced2(replaced(t.regen, std::to_string(per)), std::to_string(every))
+                    : replaced2(replaced(t.regenPerMin, grouped(minute)), d.sitting ? t.sitting : t.standing);
+            out.push_back(Words{b, left, d.sitting ? kText : kMuted, px, d.sitting, Align::Left});
+            if (cost > 0 && d.costShown > 0 && !t.fightCost.empty()) {
+                out.push_back(
+                    Words{b, replaced(t.fightCost, percent(cost, t.decimal)), kFight, px, true, Align::Right});
+                return;
+            }
             if (most <= 0) return;
             if (now >= most) {
                 out.push_back(Words{b, t.regenFull, kMuted, px, false, Align::Right});
-            } else if (per > 0) {
-                const long long ticks = (most - now + per - 1) / per;
-                const long long minutes = (ticks * every + 59) / 60;
+            } else if (minute > 0) {
+                const long long minutes = ((long long)(most - now) + minute - 1) / minute;
                 out.push_back(Words{b, replaced(t.regenToFull, duration(minutes, t.hour, t.minute)), kMuted, px, false,
                                     Align::Right});
             }
         };
-        regen(L.hpRegen, d.hpRegen, d.hpEverySec, d.hp, d.hpMost);
-        regen(L.spRegen, d.spRegen, d.spEverySec, d.sp, d.spMost);
+        regen(L.hpRegen, d.hpRegen, d.hpEverySec, d.hpSkill, d.hpSitSkill, d.hp, d.hpMost, d.hpCost);
+        regen(L.spRegen, d.spRegen, d.spEverySec, d.spSkill, d.spSitSkill, d.sp, d.spMost, d.spCost);
         const auto cell = [&](const panel::Box& b, const std::string& key, const std::string& value, uint32_t rgb) {
             if (b.w <= 0) return;
             out.push_back(Words{panel::Box{b.x + 7 * s, b.y + 2 * s, b.w - 10 * s, 12 * s}, key, kMuted, 9.5f * s, true,

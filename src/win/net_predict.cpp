@@ -153,6 +153,8 @@ void guess(State& s, uint64_t now) {
 
 }  // namespace
 
+bool sitting() { return state().sitting; }
+
 void setOn(bool on) {
     State& s = state();
     if (on == s.on) return;

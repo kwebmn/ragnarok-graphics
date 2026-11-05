@@ -7188,8 +7188,9 @@ constexpr Entry kTexts[] = {
     {Text::CharTipRegen1, "Standing; sitting twice as fast, walking half as fast",
      "Стоячи; сидячи — удвічі швидше, на ходу — удвічі повільніше",
      "Стоя; сидя — вдвое быстрее, на ходу — вдвое медленнее"},
-    {Text::CharTipRegen2, "The server's formulas, without skills and items",
-     "За формулами сервера, без навичок і предметів", "По формулам сервера, без навыков и предметов"},
+    {Text::CharTipRegen2, "The server's formulas with the skills; items and buffs not counted",
+     "За формулами сервера з навичками; предмети й бафи не враховано",
+     "По формулам сервера с навыками; предметы и бафы не учтены"},
     {Text::CharTipAtk, "{1} from STR, DEX and LUK; {2} from the weapon and its refine",
      "{1} — від STR, DEX і LUK; {2} — від зброї та заточки", "{1} — от STR, DEX и LUK; {2} — от оружия и заточки"},
     {Text::CharTipDef, "{1} from the armour (a share of the damage); {2} from VIT",
@@ -7226,6 +7227,16 @@ constexpr Entry kTexts[] = {
      "внизу, з часткою рівня. Досвід від групи чи квесту — лише біля смужок.",
      "Монстр, которого ты бил, умирает: опыт за него на миг всплывает над ним и три секунды виден у полосок опыта "
      "внизу, с долей уровня. Опыт от группы или квеста — только у полосок."},
+    // 3.0.11-beta.238 (the owner: «когда сидишь, реген совсем другой»; «желтеньким … убийство последнего моба»)
+    {Text::CharRegenPerMin, "+{1}/min · {2}", "+{1}/хв · {2}", "+{1}/мин · {2}"},
+    {Text::CharStanding, "standing", "стоячи", "стоя"},
+    {Text::CharSitting, "sitting", "сидячи", "сидя"},
+    {Text::CharRegenNatural, "natural +{1} every {2} s", "природне +{1} кожні {2} с", "естественное +{1} каждые {2} с"},
+    {Text::CharRegenSkill, "From a skill: +{1} every 10 s", "Від навички: +{1} кожні 10 с",
+     "От навыка: +{1} каждые 10 с"},
+    {Text::CharRegenSitSkill, "Sitting, from a skill: +{1} every 10 s", "Сидячи, від навички: +{1} кожні 10 с",
+     "Сидя, от навыка: +{1} каждые 10 с"},
+    {Text::CharFightCost, "last fight −{1}", "останній бій −{1}", "последний бой −{1}"},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 
