@@ -392,6 +392,9 @@ std::vector<Words> words(const Layout& L, const std::vector<Cell>& cells, int ro
                             lines[i].text, lines[i].rgb, (i ? 11.5f : 13) * s, i == 0, Align::Left});
     if (show.hoverToggle)
         out.push_back(Words{toggleTip(L, t), toggleText(L, t), kText, 12 * s, false, Align::Center});
+    if (show.profile > 1)  // 3.0.11-beta.288: the bar's profile, its number in the toggle's top right corner
+        out.push_back(Words{panel::Box{L.toggle.x + L.toggle.w - 6 * s, L.toggle.y - 7 * s, 12 * s, 12 * s},
+                            std::to_string(show.profile), kGold2, 10 * s, true, Align::Center});
     return out;
 }
 

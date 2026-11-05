@@ -191,6 +191,8 @@ struct State {
     bool barsChecked = false, barsCan = false, barsRead = false;
     hb::Bars bars;
     std::string barOf;  // the character whose own bar the game's is now ("" none yet)
+    int profile = 1;    // 3.0.11-beta.288 (the owner's feature 20): its bar's profile now (1-3, Ctrl+Shift+1..3)
+    ULONGLONG profileShownAt = 0;
     enum class BarStep : uint8_t { None, Put, Kept } barStep = BarStep::None;
     ULONGLONG barSince = 0, barReadAt = 0, barChangedAt = 0;
     hb::Bar barKept;                // as last kept for barOf
@@ -424,6 +426,11 @@ void keepBar(State& s, const std::string& name, const hb::Bar& bar) {
     if (!writeFileAtomic(path, hb::barsText(s.bars))) LOG_INFO("hotbar: %s cannot be written", layout::kHotbarBars);
 }
 
+// 3.0.11-beta.288 (the owner's feature 20): a character's bar's profile kept as «<name>#<n>» (the first its name alone)
+std::string profileKey(const std::string& name, int profile) {
+    return profile <= 1 ? name : name + "#" + std::to_string(profile);
+}
+
 int filled(const hb::Bar& bar) {
     int n = 0;
     for (const std::string& v : bar.slots) n += !v.empty();
@@ -459,6 +466,7 @@ void ownBar(State& s, bool own, unsigned codePage) {
     if (name.empty()) return;
     if (name != s.barOf) {  // another character came in: its own bar
         s.barOf = name;
+        s.profile = 1;  // 3.0.11-beta.288: its first profile
         s.barStep = State::BarStep::Put;
         s.barSince = now;
         s.barChangedAt = 0;
@@ -498,8 +506,9 @@ void ownBar(State& s, bool own, unsigned codePage) {
     } else if (now - s.barChangedAt >= kBarSettleMs) {
         s.barChangedAt = 0;
         s.barKept = bar;
-        keepBar(s, name, bar);
-        LOG_INFO("hotbar: %s's own bar kept - %d cells", utf8Of(widened(name, codePage)).c_str(), filled(bar));
+        keepBar(s, profileKey(name, s.profile), bar);  // 3.0.11-beta.288: its profile's
+        LOG_INFO("hotbar: %s's own bar kept (profile %d) - %d cells", utf8Of(widened(name, codePage)).c_str(),
+                 s.profile, filled(bar));
     }
 }
 
@@ -932,6 +941,35 @@ std::vector<barhint::Skill> barSkills() {
     return out;
 }
 
+// 3.0.11-beta.288 (the owner's feature 20): Ctrl+Shift+1..3 - the character's bar's profile: the bar now kept as the
+// profile it was, the one asked put in (met the first time: the bar now copied to it)
+bool profileKeyPress(UINT m, WPARAM wp, LPARAM lp) {
+    State& s = state();
+    (void)lp;
+    if (m != WM_KEYDOWN || wp < '1' || wp > '3' || GetKeyState(VK_CONTROL) >= 0 || GetKeyState(VK_SHIFT) >= 0 ||
+        GetKeyState(VK_MENU) < 0)
+        return false;
+    if (s.barStep != State::BarStep::Kept || s.barOf.empty() || !inGameWorld()) return false;
+    const int want = int(wp - '0');
+    if (want == s.profile) return true;
+    const hb::Bar now = barNow();
+    keepBar(s, profileKey(s.barOf, s.profile), now);
+    const auto it = s.bars.find(profileKey(s.barOf, want));
+    const bool known = it != s.bars.end();
+    const hb::Bar next = known ? it->second : now;
+    if (known) putBar(next);
+    else keepBar(s, profileKey(s.barOf, want), next);
+    s.barKept = next;
+    s.barChangedAt = 0;
+    LOG_INFO("hotbar: profile %d -> %d (%s, %d cells)", s.profile, want, known ? "put in" : "new - the bar copied",
+             filled(next));
+    s.profile = want;
+    s.profileShownAt = GetTickCount64();
+    return true;
+}
+
+int profileNow() { return state().profile; }
+
 void setPotionWarn(bool on) {  // 3.0.11-beta.281
     State& s = state();
     if (on != s.potionWarn) LOG_INFO("hotbar: [interface] potion_warn = %d", on ? 1 : 0);
@@ -1035,6 +1073,7 @@ void frame(HWND game, bool on, bool ownBars, bool padHints, bool ammo, bool coun
     show.sony = pad.sony;
     show.ammo = ammoOf(s, now, ammo);  // 3.0.11-beta.125
     show.delay = s.delayRing ? skilldelaywin::left() : 0.0f;  // 3.0.11-beta.276: the delay after a skill
+    show.profile = s.barStep == State::BarStep::Kept ? s.profile : 1;  // 3.0.11-beta.288
     if (show.pad != s.padTold) {
         s.padTold = show.pad;
         LOG_INFO("hotbar: %s", show.pad ? (show.sony ? "the controller's buttons (PlayStation)"
@@ -1048,7 +1087,7 @@ void frame(HWND game, bool on, bool ownBars, bool padHints, bool ammo, bool coun
                       ',' + std::to_string(show.lifted) + ',' + std::to_string(show.over) +
                       (show.pad ? (show.sony ? "S" : "X") : "") + (show.dropping ? "D" : "") + ';' +
                       std::to_string(show.ammo.count) + (show.ammo.icon ? "i" : "") + show.ammo.warning + ';' +
-                      std::to_string(int(show.delay * 40)) + ';';  // .276: the sweep in 40 steps
+                      std::to_string(int(show.delay * 40)) + 'p' + std::to_string(show.profile) + ';';  // .276, .288
     for (size_t i = 0; i < s.cells.size(); ++i) {
         const hb::Cell& c = s.cells[i];
         key += c.key + '|' + c.name + '|' + std::to_string(c.level) + '|' + std::to_string(c.count) +

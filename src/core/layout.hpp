@@ -98,6 +98,7 @@ constexpr const char* kTradeState = "uaro-graphics\\trade-state.txt";  // 3.0.11
 constexpr const char* kTrackerState = "uaro-graphics\\tracker-state.txt";  // 3.0.11-beta.70: the tracker's pins
 // 3.0.11-beta.75: «Розміщення інтерфейсу» - the parts the player moved or sized (core/hud_layout)
 constexpr const char* kHudLayout = "uaro-graphics\\hud-layout.txt";
+constexpr const char* kHudLayouts = "uaro-graphics\\layouts";  // 3.0.11-beta.288: each character's own
 // 3.0.11-beta.78: each character's own hotkeys bar (core/hotbar_bars)
 constexpr const char* kHotbarBars = "uaro-graphics\\hotbar-bars.txt";
 // 3.0.11-beta.148 (2.6.17, parked till R-4FBB8B): the moment before which no character selection goes (Windows'

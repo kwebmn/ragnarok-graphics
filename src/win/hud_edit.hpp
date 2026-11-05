@@ -31,6 +31,9 @@ void setLocked(bool locked);  // [interface] lock_layout, each frame
 
 bool on();
 void open(HWND game, const char* by);
+// 3.0.11-beta.288 (the owner's feature 20): [interface] layout_per_char - each character's own layout
+// (uaro-graphics\\layouts), the common one until changed for it; called each frame
+void setPerChar(bool on);
 void frame(HWND game, double k, int targetW, int targetH);  // after the parts' own
 void draw(FrameRecord& record, gpu::Renderer& renderer);    // over them
 bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result);  // all of the mouse's while framed

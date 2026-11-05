@@ -327,6 +327,10 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("equip", flag(running.equipWindow), flag(file.equipWindow)));
         n.equipWindow = file.equipWindow;
     }
+    if (file.layoutPerChar != running.layoutPerChar) {  // 3.0.11-beta.288: each character's layout, at once
+        u.applied.push_back(change("layout_per_char", flag(running.layoutPerChar), flag(file.layoutPerChar)));
+        n.layoutPerChar = file.layoutPerChar;
+    }
     if (file.dropNames != running.dropNames) {  // 3.0.11-beta.283: the items on the ground named with Alt, at once
         u.applied.push_back(change("drop_names", flag(running.dropNames), flag(file.dropNames)));
         n.dropNames = file.dropNames;

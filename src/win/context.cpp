@@ -1132,6 +1132,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     windowstack::frame(pw, ph, pk);  // 3.0.11-beta.108: who of them is shown - their stack's order (the last opened on
                                      // top); 3.0.11-beta.109: one opening where another stands goes beside it
     // 3.0.11-beta.75: «Розміщення інтерфейсу» (Ctrl+Shift+L, the console) - over the parts placed this frame
+    hudedit::setPerChar(config.layoutPerChar);  // 3.0.11-beta.288
     hudedit::frame(window, pk, pw, ph);
     cursorlook::frame(config.cursorLook, pk);  // 3.0.11-beta.198: [interface] cursor
     // 2.5.16: [quality] world_scale - Direct3D 11 draws the world smaller and makes it larger before the interface;

@@ -716,6 +716,8 @@ struct Config {
     // 3.0.11-beta.283 (the owner's features 12 and 11): [interface] drop_names - the items on the ground named while
     // Alt is held; [interface] drop_highlight - the valuable ones (cards, gear, dear) always
     bool dropNames = true, dropHighlight = true;
+    // 3.0.11-beta.288 (the owner's feature 20): [interface] layout_per_char - each character's own interface layout
+    bool layoutPerChar = false;
     // 3.0.11-beta.100: [interface] shop - the NPCs' shops (core/shop_window) in place of the game's deal windows
     bool shopWindow = false;
     // 3.0.11-beta.115: [interface] storage - the Kafra storage (win/storage_window: «Склад», «Речі» beside it) in

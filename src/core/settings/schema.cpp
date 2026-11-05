@@ -232,6 +232,8 @@ const std::vector<IniSetting>& iniSettings() {
          Text::InterfaceDropNames, Text::InterfaceDropNamesHint, ""},  // 3.0.11-beta.283
         {"interface", "drop_highlight", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {},
          Text::InterfaceDropHighlight, Text::InterfaceDropHighlightHint, ""},  // 3.0.11-beta.283
+        {"interface", "layout_per_char", Page::Interface, Control::Check, 0, 1, 0, {"0", "1"}, {},
+         Text::InterfaceLayoutPerChar, Text::InterfaceLayoutPerCharHint, ""},  // 3.0.11-beta.288
         {"interface", "shop", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::InterfaceShop,
          Text::InterfaceShopHint, ""},  // 3.0.11-beta.100
         {"interface", "storage", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::InterfaceStorage,
@@ -1191,6 +1193,7 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "interface.party_alarm") return c.partyAlarm ? "1" : "0";  // 3.0.11-beta.282
     if (k == "interface.drop_names") return c.dropNames ? "1" : "0";  // 3.0.11-beta.283
     if (k == "interface.drop_highlight") return c.dropHighlight ? "1" : "0";  // 3.0.11-beta.283
+    if (k == "interface.layout_per_char") return c.layoutPerChar ? "1" : "0";  // 3.0.11-beta.288
     if (k == "interface.shop") return c.shopWindow ? "1" : "0";      // 3.0.11-beta.100
     if (k == "interface.storage") return c.storageWindow ? "1" : "0";  // 3.0.11-beta.115
     if (k == "interface.trade") return c.tradeWindow ? "1" : "0";      // 3.0.11-beta.116

@@ -55,6 +55,8 @@ struct Drawn {  // a picture of the editor's, its texture
 struct State {
     bool read = false;
     hudlayout::Layout layout;
+    bool perChar = false;   // 3.0.11-beta.288: [interface] layout_per_char
+    std::string perCharOf;  // the character whose own layout is read (the game's spelling); "" the common one
     std::array<int, kParts> stamps{};
     std::array<hudlayout::Box, kParts> boxes{};  // the parts' pictures
     std::array<hudlayout::Box, kParts> solid{};  // their solid parts (3.0.11-beta.77)
@@ -96,18 +98,32 @@ State& state() {
 
 std::string say(settings::Text t) { return settings::tr(language(), t); }
 
+// 3.0.11-beta.288 (the owner's feature 20): [interface] layout_per_char - each character's own layout
+// (uaro-graphics\layouts\<its name's bytes in hex>.txt), the common one until it is changed for it
+std::string layoutPath(const State& s) {
+    if (s.perCharOf.empty()) return layout::join(gameDir(), layout::kHudLayout);
+    static const char* digits = "0123456789abcdef";
+    std::string hex;
+    for (const char c : s.perCharOf) hex += std::string(1, digits[uint8_t(c) >> 4]) + digits[uint8_t(c) & 15];
+    return layout::join(layout::join(gameDir(), layout::kHudLayouts), hex + ".txt");
+}
+
 void readLayout(State& s) {
     if (s.read) return;
     s.read = true;
     std::string text;
-    if (readTextFile(layout::join(gameDir(), layout::kHudLayout), text)) s.layout = hudlayout::parse(text);
+    s.layout = hudlayout::Layout{};
+    const std::string own = layoutPath(s);
+    if (readTextFile(own, text) || readTextFile(layout::join(gameDir(), layout::kHudLayout), text))
+        s.layout = hudlayout::parse(text);
     int moved = 0;
     for (const hudlayout::Place& p : s.layout) moved += p.moved || std::fabs(p.size - 1) > 1e-3f;
     if (moved) LOG_INFO("interface layout: %d parts placed or sized by the player (%s)", moved, layout::kHudLayout);
 }
 
 void save(State& s, Part part, const char* what) {
-    const bool ok = writeFileAtomic(layout::join(gameDir(), layout::kHudLayout), hudlayout::text(s.layout));
+    if (!s.perCharOf.empty()) CreateDirectoryA(layout::join(gameDir(), layout::kHudLayouts).c_str(), nullptr);
+    const bool ok = writeFileAtomic(layoutPath(s), hudlayout::text(s.layout));
     if (int(part) < kParts) {
         const hudlayout::Place& p = s.layout[size_t(part)];
         const std::string where = p.moved ? "at the screen's point " + std::to_string(p.anchor) + " " +
@@ -359,6 +375,17 @@ void open(HWND, const char* by) {
     s.drag = -1;
     s.hover = -1;
     LOG_INFO("interface layout: open (%s) - drag the parts, the wheel sizes them, a right click puts one back", by);
+}
+
+void setPerChar(bool on) {  // 3.0.11-beta.288
+    State& s = state();
+    if (on != s.perChar) LOG_INFO("interface layout: [interface] layout_per_char = %d", on ? 1 : 0);
+    s.perChar = on;
+    const std::string name = on && inGameWorld() ? readOwnName() : std::string();
+    if (name == s.perCharOf || (on && name.empty() && inGameWorld())) return;
+    s.perCharOf = name;
+    s.read = false;  // read again: the character's own (or the common one)
+    if (!name.empty()) LOG_INFO("interface layout: a character's own layout (%s)", layoutPath(s).c_str());
 }
 
 void frame(HWND game, double k, int targetW, int targetH) {

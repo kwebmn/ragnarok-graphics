@@ -131,6 +131,8 @@ struct Show {
     // 3.0.11-beta.276 (the owner's feature 7): the delay after a skill - its share left (0 none) darkening every
     // skill's cell clockwise from twelve, as the buffs' sweep
     float delay = 0;
+    int profile = 1;  // 3.0.11-beta.288 (the owner's feature 20): the bar's profile - past the first its number by the
+                      // toggle
 };
 // The ammo's pill over the glass's left end (w 0: none worn); a cell's tip over it hides it a while
 panel::Box ammoBox(const Layout& L, const Show& show);

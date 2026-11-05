@@ -643,6 +643,8 @@ Config parseConfig(const std::string& text) {
             setBool(val, c.dropNames);
         } else if (key == "interface.drop_highlight") {  // 3.0.11-beta.283
             setBool(val, c.dropHighlight);
+        } else if (key == "interface.layout_per_char") {  // 3.0.11-beta.288
+            setBool(val, c.layoutPerChar);
         } else if (key == "interface.shop") {  // 3.0.11-beta.100: the NPCs' shops
             shopSet = val == "0" || val == "1" || val == "on" || val == "off" || val == "true" || val == "false";
             setBool(val, c.shopWindow);

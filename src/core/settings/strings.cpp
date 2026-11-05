@@ -5398,6 +5398,15 @@ constexpr Entry kTexts[] = {
     {Text::StashCart, "cart", "візок", "тележка"},
     {Text::ItemsMarket, "Market: from {1} z · {2} lots", "Ринок: від {1} z · лотів {2}",
      "Рынок: от {1} z · лотов {2}"},  // 3.0.11-beta.287
+    {Text::InterfaceLayoutPerChar, "Layout per character", "Розміщення для кожного персонажа",
+     "Размещение для каждого персонажа"},  // 3.0.11-beta.288
+    {Text::InterfaceLayoutPerCharHint,
+     "Each character keeps its own places and sizes of the interface's parts (the common ones until you change them "
+     "for it). The hotbar has three sets for each character: Ctrl+Shift+1, 2, 3.",
+     "Кожен персонаж має власні місця й розміри частин інтерфейсу (спільні, доки ви не зміните їх для нього). Панель "
+     "швидких клавіш має три набори для кожного персонажа: Ctrl+Shift+1, 2, 3.",
+     "Каждый персонаж хранит свои места и размеры частей интерфейса (общие, пока вы не измените их для него). Панель "
+     "быстрых клавиш имеет три набора для каждого персонажа: Ctrl+Shift+1, 2, 3."},
     {Text::NpcTalkTag, "Talk", "Говорити", "Говорить"},  // 3.0.11-beta.256: the NPC's plate before its name comes
     {Text::InterfaceShop, "NPC shops", "Крамниці NPC", "Магазины NPC"},  // 3.0.11-beta.100
     {Text::InterfaceShopHint,  // 3.0.11-beta.101: the keys, the amount typed, the description
