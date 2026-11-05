@@ -304,7 +304,7 @@ void strandFrame(State& s, uint64_t now) {
             block[6] = uint32_t(k.toY);
         }
         const uint32_t send = read32(read32(actor) + kSendMsgSlot);
-        if (!send) continue;
+        if (!gameObject(actor) || !gameCode(send)) continue;  // .272 (R-EP778D): never a freed actor's
         const auto sameUnit = [&](const Pending& p) { return p.id == k.id; };
         s.pending.erase(std::remove_if(s.pending.begin(), s.pending.end(), sameUnit), s.pending.end());
         s.pending.push_back(Pending{k.id, at[0], at[2], true});
@@ -362,7 +362,8 @@ void beginScene() {
         gl.wrote = true;
         if (!going) {  // there: the game told the server's cell, as its packet would have (its own state the same)
             const uint32_t send = read32(read32(actor) + kSendMsgSlot);
-            if (send) reinterpret_cast<SendMsgFn>(uintptr_t(send))(actor, 0, kPutMsg, gl.cellX, gl.cellY, 0);
+            if (gameObject(actor) && gameCode(send))  // .272
+                reinterpret_cast<SendMsgFn>(uintptr_t(send))(actor, 0, kPutMsg, gl.cellX, gl.cellY, 0);
             it = s.glides.erase(it);
             continue;
         }

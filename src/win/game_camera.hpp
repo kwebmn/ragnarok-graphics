@@ -35,6 +35,12 @@ bool readPlayerFacing(float& degrees);
 bool readActorWorld(uint32_t id, float at[3]);
 // 3.0.11-beta.123: the unit's object (its world place at +4: x, height, z), the character's the world's player; 0 none
 uint32_t actorAddress(uint32_t id);
+// 3.0.11-beta.272 (R-EP778D): uaRO.exe's own object - its vtable in the exe's read-only data - and its own code (a
+// function a vtable names); a pointer that is neither is freed or another's memory: never called through
+constexpr uint32_t kGameTextFrom = 0x401000, kGameTextTo = 0x694230, kGameRdataFrom = 0x695000,
+                   kGameRdataTo = 0x6B7000;  // uaRO.exe's .text and .rdata
+bool gameObject(uint32_t object);
+bool gameCode(uint32_t function);
 // Its sprite's box on the screen the game keeps to pick actors with the mouse (0x74B5F0 + 0x28, FUN_004f9890: a
 // record's left, top +0, +4, right, bottom +0xC, +0x10, its id +0x18) - left, top, right, bottom in the game's pixels
 bool readActorBox(uint32_t id, float box[4]);

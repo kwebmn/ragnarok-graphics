@@ -67,8 +67,8 @@ uint32_t player() {
 }
 
 bool tell(uint32_t actor, int msg, int a, int b) {
-    const uint32_t send = actor ? read32(read32(actor) + kSendMsgSlot) : 0;
-    if (!send) return false;
+    const uint32_t send = actor && gameObject(actor) ? read32(read32(actor) + kSendMsgSlot) : 0;  // .272
+    if (!gameCode(send)) return false;
     reinterpret_cast<SendMsgFn>(uintptr_t(send))(actor, 0, msg, a, b, 0);
     return true;
 }

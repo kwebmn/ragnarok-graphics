@@ -450,9 +450,14 @@ uint32_t actorAddress(uint32_t id) {
         uint32_t player = 0;
         return read(world + kWorldPlayer, &player, 4) ? player : 0;
     }
-    static uint32_t cachedId = 0, cachedActor = 0;  // the last one found: still it while its id reads the same
+    // the last one found: still it while its id reads the same - 3.0.11-beta.272 (R-EP778D, a crash after a warp: an
+    // actor's freed memory still read its id, its SendMsg called through garbage) only in the same world, its
+    // vtable still the game's
+    static uint32_t cachedId = 0, cachedActor = 0, cachedWorld = 0;
     uint32_t actor = 0, aid = 0;
-    if (cachedId == id && cachedActor && read(cachedActor + kActorId, &aid, 4) && aid == id) actor = cachedActor;
+    if (cachedId == id && cachedActor && cachedWorld == world && gameObject(cachedActor) &&
+        read(cachedActor + kActorId, &aid, 4) && aid == id)
+        actor = cachedActor;
     if (!actor) {
         if (!read(world + kWorldActors, &head, 4) || !head || !read(head, &node, 4)) return 0;
         for (size_t n = 0; node && node != head && n < 4096 && !actor; ++n) {
@@ -461,12 +466,20 @@ uint32_t actorAddress(uint32_t id) {
             if (a && read(a + kActorId, &aid, 4) && aid == id) actor = a;
             if (!actor && !read(node, &node, 4)) return 0;
         }
-        if (!actor) return 0;
+        if (!actor || !gameObject(actor)) return 0;
         cachedId = id;
         cachedActor = actor;
+        cachedWorld = world;
     }
     return actor;
 }
+
+bool gameObject(uint32_t object) {
+    uint32_t vtable = 0;
+    return object && read(object, &vtable, 4) && vtable >= kGameRdataFrom && vtable < kGameRdataTo;
+}
+
+bool gameCode(uint32_t function) { return function >= kGameTextFrom && function < kGameTextTo; }
 
 bool readActorWorld(uint32_t id, float at[3]) {
     const uint32_t actor = actorAddress(id);
