@@ -26,6 +26,7 @@
 #include "win/ammo_watch.hpp"
 #include "win/buff_overlay.hpp"
 #include "win/code_page.hpp"
+#include "win/exp_gain.hpp"
 #include "win/game_camera.hpp"
 #include "win/head_picture.hpp"
 #include "win/hud_edit.hpp"
@@ -532,6 +533,11 @@ void frame(HWND game, CharacterLook look, unsigned codePage, double k, int targe
     // 3.0.11-beta.238: the last fight's cost, a while after its kill
     d.hpCost = s.hpCost;
     d.spCost = s.spCost;
+    // 3.0.11-beta.239 (the owner: «в самом диалоге по опыту ничего не видно»): the last gain on the experience rows
+    const expgain::Label gain = expgainwin::label();
+    d.gainBase = gain.base;
+    d.gainJob = gain.job;
+    d.gainShown = gain.ms ? expgain::opacity(gain.ms, now, kCostMs, kCostFadeMs) : 0.0f;
     d.costShown = 0;
     if (s.costAt && now - s.costAt < kCostMs)
         d.costShown = now - s.costAt + kCostFadeMs <= kCostMs ? 1.0f : float(kCostMs - (now - s.costAt)) / kCostFadeMs;
@@ -616,7 +622,8 @@ void frame(HWND game, CharacterLook look, unsigned codePage, double k, int targe
         std::to_string(d.deaths) + 'z' + std::to_string(show.hoverZone) + ';' + (d.sitting ? "s" : "u") +
         std::to_string(d.hpSkill) + ',' + std::to_string(d.spSkill) + ',' + std::to_string(d.hpSitSkill) + ',' +
         std::to_string(d.spSitSkill) + ',' + std::to_string(int(d.hpCost * 1000)) + ',' +
-        std::to_string(int(d.spCost * 1000)) + ',' + std::to_string(int(d.costShown * 20));
+        std::to_string(int(d.spCost * 1000)) + ',' + std::to_string(int(d.costShown * 20)) + ';' +
+        std::to_string(d.gainBase) + ',' + std::to_string(d.gainJob) + ',' + std::to_string(int(d.gainShown * 20));
     if (const std::string drawn = key + '#' + std::to_string(uistyle::generation()); drawn != s.key) {  // its grounds
         s.key = drawn;
         render(s);

@@ -612,6 +612,16 @@ void paint(panel::Picture& out, const Layout& L, const Data& d, const Texts& t, 
         };
         experience(L.expBar, baseOf(d), kBaseExp);
         experience(L.jobBar, jobOf(d), kJobExp);
+        // 3.0.11-beta.239: the last gain lit at the end of each experience's fill, fading
+        const auto gained = [&](const panel::Box& b, const Exp& e, long long gain) {
+            if (b.w <= 0 || gain <= 0 || e.next <= 0 || d.gainShown <= 0 || L.view != View::Full) return;
+            const float to = std::clamp(e.share, 0.0f, 1.0f);
+            const float from = std::max(0.0f, to - float(double(gain) / double(e.next)));
+            panel::roundRect(out, panel::Box{b.x + b.w * from, b.y, std::max(1.5f * s, b.w * (to - from)), b.h}, 0,
+                             kFight, 0.95f * d.gainShown);
+        };
+        gained(L.expBar, baseOf(d), d.gainBase);
+        gained(L.jobBar, jobOf(d), d.gainJob);
         if (L.view == View::Full) {  // 3.0.11-beta.235: the weight's bar with its marks, the cells
             const panel::Box& wb = L.weightBar;
             if (d.weight >= 0 && wb.w > 0) {
@@ -799,6 +809,19 @@ std::vector<Words> words(const Layout& L, const Data& d, const Texts& t, const S
             const std::string level = grouped(e.now) + " / " + grouped(e.next);
             const float levelW = panel::wordsWidth(level, px, false) + 4 * s;
             out.push_back(Words{panel::Box{text.x, text.y, levelW, text.h}, level, kMuted, px, false, Align::Left});
+            const long long gain = e.name[0] == 'B' ? d.gainBase : d.gainJob;  // 3.0.11-beta.239: the last gain
+            if (gain > 0 && d.gainShown > 0 && e.next > 0) {
+                char buf[32];
+                const double p = double(gain) / double(e.next) * 100;
+                std::snprintf(buf, sizeof buf, p >= 10 ? " (%.1f\xC2\xA0%%)" : " (%.2f\xC2\xA0%%)", p);
+                std::string g = "+" + grouped(gain) + buf;
+                for (char& c : g)
+                    if (c == '.') c = t.decimal;
+                const float gw = panel::wordsWidth(g, px, true) + 4 * s;
+                out.push_back(Words{panel::Box{text.x + text.w - gw, text.y, gw, text.h}, g, kFight, px, true,
+                                    Align::Right});
+                return;
+            }
             std::string speed = pace(e, t, true);
             if (!speed.empty() && levelW + panel::wordsWidth(speed, px, false) + 12 * s > text.w)
                 speed = pace(e, t, false);  // no room for the time: the pace alone

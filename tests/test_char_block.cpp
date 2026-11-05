@@ -690,3 +690,24 @@ TEST(char_block_regen_sitting_skills_and_the_fight) {
     const uint32_t y = pixel(p, L.hpBar.x + L.hpBar.w * (fill + 0.06f), L.hpBar.y + L.hpBar.h / 2);
     CHECK(((y >> 16) & 0xFF) > 0xB0 && ((y >> 8) & 0xFF) > 0x90 && (y & 0xFF) < 0x90);  // yellow
 }
+
+// 3.0.11-beta.239 (the owner: «в самом диалоге по опыту ничего не видно»): the last gain on the block's experience rows
+// - lit at the end of each fill, its amount and part of the level in the pace's place
+TEST(char_block_the_last_gain_on_the_experience_rows) {
+    charblock::Data d = soraInNumbers();  // base 1 234 567 of 2 666 000
+    d.gainBase = 26660;                   // 1 % of the level
+    d.gainShown = 1;
+    const charblock::Layout L = charblock::layout(charblock::View::Full, charblock::Look::Bars, 0, 0, 1.0f);
+    const std::vector<charblock::Words> w = charblock::words(L, d, texts(), charblock::Show{});
+    CHECK(hasText(w, "+26\xC2\xA0" "660 (1,00\xC2\xA0%)"));
+    panel::Picture p;
+    p.width = L.w;
+    p.height = L.h;
+    p.px.assign(size_t(L.w) * size_t(L.h), 0u);
+    charblock::paint(p, L, d, texts(), charblock::Show{});
+    const float share = 1234567.0f / 2666000.0f;
+    const uint32_t lit = pixel(p, L.expBar.x + L.expBar.w * (share - 0.005f), L.expBar.y + L.expBar.h / 2);
+    CHECK(((lit >> 16) & 0xFF) > 0xD0 && ((lit >> 8) & 0xFF) > 0xB0);  // yellow
+    d.gainShown = 0;
+    CHECK(!hasText(charblock::words(L, d, texts(), charblock::Show{}), "+26\xC2\xA0" "660 (1,00\xC2\xA0%)"));
+}

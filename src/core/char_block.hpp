@@ -65,6 +65,10 @@ struct Data {
     bool sitting = false;
     int hpSkill = 0, spSkill = 0, hpSitSkill = 0, spSitSkill = 0;
     float hpCost = -1, spCost = -1, costShown = 0;
+    // 3.0.11-beta.239 (the owner: «в самом диалоге по опыту ничего не видно»): the last gain (core/exp_gain) on the
+    // block's experience rows too - how much each, how much of it still shows (0..1, fading)
+    long long gainBase = 0, gainJob = 0;
+    float gainShown = 0;
     int atk = -1, atk2 = 0, def = 0, def2 = 0, flee = 0, flee2 = 0, aspd = 0;
     long long sessionMinutes = -1, zenyGain = 0;
     int kills = 0, deaths = 0;
