@@ -23,6 +23,9 @@ struct Data {
     int free = 0;  // the status points
     int atk = 0, atk2 = 0, matkMin = 0, matkMax = 0, hit = 0, crit = 0;
     int def = 0, def2 = 0, mdef = 0, mdef2 = 0, flee = 0, flee2 = 0, aspd = 0;
+    // 3.0.11-beta.266 (the concept «Характеристики», stage 2): the class (-1 not known), the levels, the server's most
+    // HP and SP, the weight now and its most (whole units)
+    int job = -1, baseLevel = 0, jobLevel = 0, hpMost = 0, spMost = 0, weight = 0, weightMost = 0;
 };
 // As the game's window shows its «+» (FUN_004722a0, message 0x23): a price, the points for it, under 99
 bool canRaise(const Data& d, int stat);
@@ -37,6 +40,12 @@ struct Texts {
     std::string effects[kStats];  // what a point gives: «ATK +{1}, вантаж +30» ...
     std::string hint;             // nothing pointed at
     char decimal = ',';
+    // 3.0.11-beta.266 (stage 2): the new rows, «{1}/с» after ASPD, the panel «Як рахується»'s words
+    std::string delay, regen, weight, perSecond;
+    std::string how, howNone, howSame, howMore, howWeapon, howLevel, howAspdWeapon, howAspdUnknown, howHits;
+    std::string howAspdGoal, howAspdNever, howDef, howMdef, howPerfect, howCast, howCastNone, howDelay, howRegen;
+    std::string howWeight, howJob, howNext;
+    std::string uses[kStats];  // what each stat goes into
 };
 
 struct Row {
@@ -47,28 +56,41 @@ struct Row {
 std::vector<Row> battleRows(const Data& d, const Texts& t);
 // The line about a stat: its next point's price against the free points and what it gives; the hint for -1
 std::string explain(const Data& d, int stat, const Texts& t);
+// 3.0.11-beta.266 (stage 2, the panel «Як рахується»): what is explained - a stat (0-5) or a battle row (kBattle + its
+// index in battleRows), -1 nothing; its title and its lines - the server's formula on the character's own numbers
+constexpr int kBattle = 100, kExplainLines = 4;
+struct Explained {
+    std::string title;
+    std::vector<std::string> lines;  // kExplainLines at most
+};
+Explained explained(const Data& d, int item, const Texts& t);
+// The weapon type (job_db1's column) the server's ASPD comes from with these stats; -1 none fits (skills or things)
+int weaponOf(const Data& d);
 
 using Measure = std::function<float(const std::string& utf8, float px, bool bold)>;
 
 struct Show {
     int hoverRow = -1, hoverPlus = -1, selected = -1;
+    int hoverBattle = -1, pinnedBattle = -1;  // 3.0.11-beta.266: a battle row under the mouse, the one clicked
     bool hoverClose = false;
 };
 
 struct Layout {
     float s = 1;
     int x = 0, y = 0, w = 0, h = 0;
-    panel::Box glass, title, close, freeChip, table, header, battle, line;
+    panel::Box glass, title, close, freeChip, table, header, battle, line;  // .266: line - the panel «Як рахується»
     std::vector<panel::Box> rows, pluses;  // the six stats' rows and «+»
+    std::vector<panel::Box> battleRows;    // 3.0.11-beta.266
 };
 Layout layout(int x, int y, float scale, const Data& d, const Texts& t, const Measure& m);
 
-enum class Part : uint8_t { None, Close, Plus, Row, Title, Body };
+enum class Part : uint8_t { None, Close, Plus, Row, Title, Body, Battle };  // .266: Battle
 struct Hit {
     Part part = Part::None;
     int index = -1;
 };
 Hit hitTest(const Layout& L, float x, float y);
+int explainedItem(const Show& sh);  // .266: the stat or battle row the panel tells of
 
 void paint(panel::Picture& out, const Layout& L, const Data& d, const Show& sh);
 

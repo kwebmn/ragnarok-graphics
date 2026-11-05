@@ -180,6 +180,13 @@ void readData(State& s) {
     d.flee = st.flee;
     d.flee2 = st.flee2;
     d.aspd = st.aspd;
+    d.job = int(read32(kJobAt));  // 3.0.11-beta.266: the panel «Як рахується»'s
+    d.baseLevel = st.baseLevel;
+    d.jobLevel = st.jobLevel;
+    d.hpMost = st.hpMost;
+    d.spMost = st.spMost;
+    d.weight = st.weight;
+    d.weightMost = st.weightMost;
     serverCheck(st);  // 3.0.11-beta.264
 }
 
@@ -203,6 +210,36 @@ sw::Texts texts() {
                                                 settings::Text::StatsEffectDex, settings::Text::StatsEffectLuk};
     for (int i = 0; i < sw::kStats; ++i) t.effects[i] = say(effects[i]);
     t.hint = say(settings::Text::StatsHint);
+    // 3.0.11-beta.266: stage 2's rows and the panel «Як рахується»
+    t.delay = say(settings::Text::StatsRowDelay);
+    t.regen = say(settings::Text::StatsRowRegen);
+    t.weight = say(settings::Text::StatsRowWeight);
+    t.perSecond = say(settings::Text::StatsPerSecond);
+    t.how = say(settings::Text::StatsHow);
+    t.howNone = say(settings::Text::StatsHowNone);
+    t.howSame = say(settings::Text::StatsHowSame);
+    t.howMore = say(settings::Text::StatsHowMore);
+    t.howWeapon = say(settings::Text::StatsHowWeapon);
+    t.howLevel = say(settings::Text::StatsHowLevel);
+    t.howAspdWeapon = say(settings::Text::StatsHowAspdWeapon);
+    t.howAspdUnknown = say(settings::Text::StatsHowAspdUnknown);
+    t.howHits = say(settings::Text::StatsHowHits);
+    t.howAspdGoal = say(settings::Text::StatsHowAspdGoal);
+    t.howAspdNever = say(settings::Text::StatsHowAspdNever);
+    t.howDef = say(settings::Text::StatsHowDef);
+    t.howMdef = say(settings::Text::StatsHowMdef);
+    t.howPerfect = say(settings::Text::StatsHowPerfect);
+    t.howCast = say(settings::Text::StatsHowCast);
+    t.howCastNone = say(settings::Text::StatsHowCastNone);
+    t.howDelay = say(settings::Text::StatsHowDelay);
+    t.howRegen = say(settings::Text::StatsHowRegen);
+    t.howWeight = say(settings::Text::StatsHowWeight);
+    t.howJob = say(settings::Text::StatsHowJob);
+    t.howNext = say(settings::Text::StatsHowNext);
+    const settings::Text uses[sw::kStats] = {settings::Text::StatsUsesStr, settings::Text::StatsUsesAgi,
+                                             settings::Text::StatsUsesVit, settings::Text::StatsUsesInt,
+                                             settings::Text::StatsUsesDex, settings::Text::StatsUsesLuk};
+    for (int i = 0; i < sw::kStats; ++i) t.uses[i] = say(uses[i]);
     t.decimal = language() == settings::Lang::En ? '.' : ',';
     return t;
 }
@@ -291,7 +328,7 @@ void frame(HWND game, bool on, double k, int targetWidth, int targetHeight) {
     s.layout = sw::layout(0, 0, scale, s.data, t, measure);
     s.layout.x = int(std::lround(s.fx * float(std::max(0, targetWidth - s.layout.w))));
     s.layout.y = int(std::lround(s.fy * float(std::max(0, targetHeight - s.layout.h))));
-    s.show.hoverRow = s.show.hoverPlus = -1;
+    s.show.hoverRow = s.show.hoverPlus = s.show.hoverBattle = -1;
     s.show.hoverClose = false;
     int cx = 0, cy = 0;
     if (readGameCursor(cx, cy) && !s.moving) {
@@ -299,6 +336,7 @@ void frame(HWND game, bool on, double k, int targetWidth, int targetHeight) {
                                       float(cy) * float(k) - float(s.layout.y));
         if (h.part == sw::Part::Row) s.show.hoverRow = h.index;
         if (h.part == sw::Part::Plus) s.show.hoverPlus = h.index;
+        if (h.part == sw::Part::Battle) s.show.hoverBattle = h.index;  // 3.0.11-beta.266
         s.show.hoverClose = h.part == sw::Part::Close;
     }
     if (uapad::runtime::look().shown) {  // 3.0.11-beta.92: the controller's stat - its «+» lit
@@ -309,7 +347,10 @@ void frame(HWND game, bool on, double k, int targetWidth, int targetHeight) {
     std::string key = std::to_string(s.layout.x) + ',' + std::to_string(s.layout.y) + ';' + std::to_string(scale) +
                       ';' + std::to_string(s.show.hoverRow) + ',' + std::to_string(s.show.hoverPlus) + ',' +
                       std::to_string(s.show.selected) + (s.show.hoverClose ? "x" : "") + ';' + std::to_string(d.free) +
-                      ';';
+                      ';' + std::to_string(s.show.hoverBattle) + ',' + std::to_string(s.show.pinnedBattle) + ';' +
+                      std::to_string(d.job) + ',' + std::to_string(d.baseLevel) + ',' + std::to_string(d.jobLevel) +
+                      ',' + std::to_string(d.hpMost) + ',' + std::to_string(d.spMost) + ',' + std::to_string(d.weight) +
+                      ',' + std::to_string(d.weightMost) + ';';
     for (int i = 0; i < sw::kStats; ++i)
         key += std::to_string(d.base[i]) + '+' + std::to_string(d.bonus[i]) + '/' + std::to_string(d.need[i]) + ',';
     const int battle[] = {d.atk, d.atk2, d.matkMin, d.matkMax, d.hit, d.crit, d.def, d.def2, d.mdef, d.mdef2, d.flee,
@@ -407,6 +448,10 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
             break;
         case sw::Part::Row:
             s.show.selected = h.index;
+            s.show.pinnedBattle = -1;
+            break;
+        case sw::Part::Battle:  // 3.0.11-beta.266: a battle row's formulas kept in the panel (again: let go)
+            s.show.pinnedBattle = s.show.pinnedBattle == h.index ? -1 : h.index;
             break;
         case sw::Part::Title:
             s.moving = true;

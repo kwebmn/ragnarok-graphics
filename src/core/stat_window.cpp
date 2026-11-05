@@ -4,6 +4,8 @@
 #include <cmath>
 #include <cstdio>
 
+#include "core/char_block.hpp"
+#include "core/stat_math.hpp"
 #include "core/ui_style.hpp"
 
 namespace uagfx::statwin {
@@ -11,7 +13,10 @@ namespace {
 
 // The concept's sizes at scale 1 (v17_windows): 760 wide; the title 46; the table's header 30, its rows 38; the
 // battle's rows 26; the line under them 42
-constexpr float kW = 760, kTitleH = 46, kHeaderH = 30, kRowH = 38, kBattleRowH = 26, kLineH = 42, kSide = 18;
+constexpr float kW = 760, kTitleH = 46, kHeaderH = 30, kRowH = 38, kBattleRowH = 26, kSide = 18;
+// 3.0.11-beta.266 (stage 2): the panel «Як рахується» under them - its title and kExplainLines lines
+constexpr float kExplainTitleH = 30, kExplainLineH = 21, kExplainPad = 10;
+constexpr int kBattleRows = 14;
 constexpr float kTableW = 410;
 constexpr uint32_t kCard = 0x10141C, kWhite = 0xFFFFFF, kGold = 0xF3C653, kGold2 = 0xC9A55B;
 constexpr uint32_t kText = 0xEEF2F8, kMuted = 0x9AA3B5, kFaint = 0x7E889A, kGreen = 0x5FD08A;
@@ -58,6 +63,19 @@ std::vector<Row> battleRows(const Data& d, const Texts& t) {
     const auto plus = [](int a, int b) { return std::to_string(a) + " + " + std::to_string(b); };
     const double cast = std::min(100.0, double(total(d, 4)) * 100.0 / 150.0);
     const std::string castWords = tenth(cast, t.decimal);  // 3.0.11-beta.202: to a tenth, as the hint
+    // 3.0.11-beta.266: ASPD with its hits a second; the delay after a skill (by DEX on uaRO), HP, SP, their
+    // recovery a tick and the weight after the cast
+    std::string aspd = std::to_string(d.aspd);
+    if (d.aspd > 0 && d.aspd < 200 && !t.perSecond.empty())
+        aspd += " \xC2\xB7 " + fill(t.perSecond, {decimal(statmath::hitsPerSecond(2000 - d.aspd * 10), t.decimal)});
+    const auto known = [](int v) { return v > 0 ? std::to_string(v) : std::string("\xE2\x80\x94"); };
+    const int vit = total(d, 2), intel = total(d, 3);
+    const std::string regen = d.hpMost > 0 ? "+" + std::to_string(statmath::hpRegen(vit, d.hpMost)) + " / +" +
+                                                 std::to_string(statmath::spRegen(intel, d.spMost))
+                                           : std::string("\xE2\x80\x94");
+    const std::string weight =
+        d.weightMost > 0 ? std::to_string(d.weight) + " / " + std::to_string(d.weightMost) : "\xE2\x80\x94";
+    const std::string castCut = cast > 0 ? "\xE2\x88\x92" + castWords + " %" : "0 %";  // −56 %, −44,7 %
     return {Row{"ATK", plus(d.atk, d.atk2)},
             Row{"MATK", std::to_string(d.matkMin) + " ~ " + std::to_string(d.matkMax)},
             Row{"HIT", std::to_string(d.hit)},
@@ -65,8 +83,186 @@ std::vector<Row> battleRows(const Data& d, const Texts& t) {
             Row{"CRIT", std::to_string(d.crit)},
             Row{"DEF", plus(d.def, d.def2)},
             Row{"MDEF", plus(d.mdef, d.mdef2)},
-            Row{"ASPD", std::to_string(d.aspd)},
-            Row{t.cast, cast > 0 ? "\xE2\x88\x92" + castWords + " %" : "0 %"}};  // −56 %, −44,7 %
+            Row{"ASPD", aspd},
+            Row{t.cast, castCut},
+            Row{t.delay, castCut},
+            Row{"Max HP", known(d.hpMost)},
+            Row{"Max SP", known(d.spMost)},
+            Row{t.regen, regen},
+            Row{t.weight, weight}};
+}
+
+int weaponOf(const Data& d) {
+    if (d.job < 0 || d.aspd <= 0) return -1;
+    for (int w = 0; w < statmath::kWeapons; ++w) {
+        const int a = statmath::amotion(d.job, w, total(d, 1), total(d, 4));
+        if (a > 0 && statmath::aspd10(a) / 10 == d.aspd) return w;
+    }
+    return -1;
+}
+
+namespace {
+
+const char* const kWeaponNames[statmath::kWeapons] = {
+    "Fist",   "Dagger", "One-Handed Sword", "Two-Handed Sword", "One-Handed Spear", "Two-Handed Spear",
+    "Axe",    "Two-Handed Axe", "Mace", "Two-Handed Mace", "Rod", "Bow", "Knuckle", "Instrument", "Whip", "Book",
+    "Katar",  "Revolver", "Rifle", "Shotgun", "Gatling Gun", "Grenade Launcher", "Fuuma Shuriken"};
+
+std::string n(int v) { return std::to_string(v); }
+
+// The server's number against the formula's: the same, or the rest from things, buffs and skills
+std::string versus(int server, int ours, const Texts& t) {
+    if (server <= 0) return "";
+    if (server == ours) return fill(t.howSame, {n(server)});
+    return fill(t.howMore, {n(server), n(ours), (server > ours ? "+" : "") + n(server - ours)});
+}
+
+std::string pct10(int tenths, char sep) { return decimal(double(tenths) / 10.0, sep); }
+
+}  // namespace
+
+int explainedItem(const Show& sh) {
+    if (sh.hoverRow >= 0) return sh.hoverRow;
+    if (sh.hoverPlus >= 0) return sh.hoverPlus;
+    if (sh.hoverBattle >= 0) return kBattle + sh.hoverBattle;
+    if (sh.pinnedBattle >= 0) return kBattle + sh.pinnedBattle;
+    return sh.selected;
+}
+
+Explained explained(const Data& d, int item, const Texts& t) {
+    namespace sm = uagfx::statmath;
+    Explained e;
+    if (item < 0 || (item >= kStats && item < kBattle) || item >= kBattle + kBattleRows) {
+        e.title = t.howNone;
+        return e;
+    }
+    int s[kStats];
+    for (int i = 0; i < kStats; ++i) s[i] = total(d, i);
+    const int lv = d.baseLevel;
+    const std::string level = fill(t.howLevel, {n(lv)});
+    auto& L = e.lines;
+    const auto add = [&](const std::string& line) {
+        if (!line.empty() && int(L.size()) < kExplainLines) L.push_back(line);
+    };
+    if (item < kStats) {  // a stat: its price, the job's part, what it goes into
+        e.title = fill(t.how, {kNames[item]});
+        add(explain(d, item, t));
+        if (const int job = d.job >= 0 ? sm::jobBonus(d.job, d.jobLevel, item) : 0; job > 0)
+            add(fill(t.howJob, {n(job)}));
+        add(t.uses[item]);
+        return e;
+    }
+    const int row = item - kBattle;
+    const std::vector<Row> rows = battleRows(d, t);
+    e.title = fill(t.how, {rows[size_t(row)].name});
+    const int weapon = weaponOf(d);
+    switch (row) {
+        case 0: {  // ATK: the stats' part, the weapon's, the next point's
+            const bool far = sm::ranged(weapon);
+            const int a = far ? s[4] : s[0], b = far ? s[0] : s[4], ours = sm::atk(s, weapon);
+            add(std::string(far ? "DEX " : "STR ") + n(a) + " + (" + n(a) + "/10)\xC2\xB2 " + n((a / 10) * (a / 10)) +
+                " + " + (far ? "STR " : "DEX ") + n(b) + "/5 " + n(b / 5) + " + LUK " + n(s[5]) + "/5 " + n(s[5] / 5) +
+                " = " + n(ours));
+            add(fill(t.howWeapon, {n(std::max(0, d.atk - ours)), n(d.atk2)}));
+            int next[kStats];
+            std::copy(s, s + kStats, next);
+            ++next[far ? 4 : 0];
+            add(fill(t.howNext, {far ? "DEX" : "STR", "ATK +" + n(sm::atk(next, weapon) - ours)}));
+            break;
+        }
+        case 1:  // MATK
+            add("min INT " + n(s[3]) + " + (" + n(s[3]) + "/7)\xC2\xB2 = " + n(sm::matkMin(s[3])) +
+                " \xC2\xB7 max INT " + n(s[3]) + " + (" + n(s[3]) + "/5)\xC2\xB2 = " + n(sm::matkMax(s[3])));
+            add(versus(d.matkMax, sm::matkMax(s[3]), t));
+            add(fill(t.howNext, {"INT", "MATK +" + n(sm::matkMin(s[3] + 1) - sm::matkMin(s[3])) + " ~ +" +
+                                            n(sm::matkMax(s[3] + 1) - sm::matkMax(s[3]))}));
+            break;
+        case 2:  // HIT
+            add("HIT = " + level + " + DEX " + n(s[4]) + " = " + n(sm::hit(lv, s[4])));
+            add(versus(d.hit, sm::hit(lv, s[4]), t));
+            add(fill(t.howNext, {"DEX", "HIT +1"}));
+            break;
+        case 3:  // FLEE and the perfect dodge
+            add("FLEE = " + level + " + AGI " + n(s[1]) + " = " + n(sm::flee(lv, s[1])));
+            add(versus(d.flee, sm::flee(lv, s[1]), t));
+            add(fill(t.howPerfect, {n(d.flee2), pct10(sm::perfectDodge10(s[5]), t.decimal)}));
+            break;
+        case 4:  // CRIT
+            add("CRIT = 1 + LUK " + n(s[5]) + " \xC3\x97 0" + std::string(1, t.decimal) + "3 = " +
+                pct10(sm::crit10(s[5]), t.decimal) + " %");
+            add(fill(t.howNext, {"LUK", "CRIT +0" + std::string(1, t.decimal) + "3 %"}));
+            break;
+        case 5:  // DEF: the armour's per cent, VIT's taken off
+            add(fill(t.howDef, {n(d.def), n(sm::vitDefLeast(s[2])), n(sm::vitDefMost(s[2]))}));
+            add("VIT " + n(s[2]) + ": VIT/2 .. VIT/2 + VIT \xC3\x97 (VIT \xE2\x88\x92 15)/150 \xE2\x88\x92 1");
+            break;
+        case 6:  // MDEF
+            add(fill(t.howMdef, {n(d.mdef), n(sm::softMdef(s[3], s[2]))}));
+            add(versus(d.mdef2, sm::softMdef(s[3], s[2]), t));
+            break;
+        case 7: {  // ASPD: the class's delay for the weapon, AGI and DEX, the next whole ASPD
+            if (weapon < 0) {
+                add(t.howAspdUnknown);
+                break;
+            }
+            const sm::Class c = sm::classOf(d.job);
+            const int base = c.delays[weapon], cut = base * (4 * s[1] + s[4]) / 1000;
+            const int mo = sm::amotion(d.job, weapon, s[1], s[4]);
+            const char* cls = charblock::jobName(d.job);
+            add(fill(t.howAspdWeapon, {*cls ? cls : "#" + n(d.job), kWeaponNames[weapon], n(base)}));
+            add("\xE2\x88\x92 " + n(base) + " \xC3\x97 (4 \xC3\x97 AGI " + n(s[1]) + " + DEX " + n(s[4]) +
+                ") / 1000 = " + n(cut) + " \xE2\x86\x92 " + n(mo) + " \xC2\xB7 ASPD = 200 \xE2\x88\x92 " + n(mo) +
+                "/10 = " + pct10(sm::aspd10(mo), t.decimal));
+            add(fill(t.howHits, {decimal(sm::hitsPerSecond(mo), t.decimal)}));
+            const int want = d.aspd + 1;
+            int agi = s[1];
+            while (agi < 300 && sm::aspd10(sm::amotion(d.job, weapon, agi, s[4])) / 10 < want) ++agi;
+            const int baseAgi = d.base[1] + (agi - s[1]);
+            add(fill(baseAgi > sm::kMaxStat ? t.howAspdNever : t.howAspdGoal, {n(want), n(agi)}));
+            break;
+        }
+        case 8:  // the cast
+            add("\xC3\x97 (150 \xE2\x88\x92 DEX " + n(s[4]) + ") / 150 = " + n(sm::castPercent(s[4])) + " %");
+            add(s[4] >= sm::kCastDex ? t.howCastNone : fill(t.howCast, {n(sm::kCastDex - s[4])}));
+            break;
+        case 9:  // the delay after a skill
+            add("\xC3\x97 (150 \xE2\x88\x92 DEX " + n(s[4]) + ") / 150 = " + n(sm::delayPercent(s[4])) + " %");
+            add(t.howDelay);
+            break;
+        case 10: {  // Max HP
+            if (d.job < 0) break;
+            const int base = sm::maxHp(d.job, lv, 0) - 35, ours = sm::maxHp(d.job, lv, s[2]);
+            add(level + ": " + n(base) + (sm::upper(d.job) ? " (\xC3\x97 1" + std::string(1, t.decimal) + "25)" : "") +
+                " \xC3\x97 (1 + VIT " + n(s[2]) + "/100) + 35 = " + n(ours));
+            add(versus(d.hpMost, ours, t));
+            add(fill(t.howNext, {"VIT", "Max HP +" + n(sm::maxHp(d.job, lv, s[2] + 1) - ours)}));
+            break;
+        }
+        case 11: {  // Max SP
+            if (d.job < 0) break;
+            const int base = sm::maxSp(d.job, lv, 0), ours = sm::maxSp(d.job, lv, s[3]);
+            add(level + ": " + n(base) + " \xC3\x97 (1 + INT " + n(s[3]) + "/100) = " + n(ours));
+            add(versus(d.spMost, ours, t));
+            add(fill(t.howNext, {"INT", "Max SP +" + n(sm::maxSp(d.job, lv, s[3] + 1) - ours)}));
+            break;
+        }
+        case 12:  // the recovery a tick
+            add("HP 1 + VIT " + n(s[2]) + "/5 + " + n(d.hpMost) + "/200 = " + n(sm::hpRegen(s[2], d.hpMost)) +
+                " \xC2\xB7 SP 1 + INT " + n(s[3]) + "/6 + " + n(d.spMost) + "/100 = " + n(sm::spRegen(s[3], d.spMost)));
+            add(t.howRegen);
+            break;
+        case 13: {  // the weight
+            if (d.job < 0) break;
+            const int cls = sm::classOf(d.job).weight / 10, ours = sm::weightMost(d.job, d.base[0]);
+            add(n(cls) + " + 30 \xC3\x97 STR " + n(d.base[0]) + " = " + n(ours));
+            add(versus(d.weightMost, ours, t));
+            const int most = d.weightMost > 0 ? d.weightMost : ours;
+            add(fill(t.howWeight, {n(most * 70 / 100), n(most * 90 / 100)}));
+            break;
+        }
+        default: break;
+    }
+    return e;
 }
 
 std::string explain(const Data& d, int i, const Texts& t) {
@@ -121,9 +317,12 @@ Layout layout(int x, int y, float scale, const Data& d, const Texts& t, const Me
         L.pluses.push_back(panel::Box{r.x + kPlusX * s, r.y + (r.h - 24 * s) / 2, 24 * s, 24 * s});
     }
     const float bx = L.table.x + L.table.w + 26 * s;
-    L.battle = panel::Box{bx, L.table.y, w - side - bx, kHeaderH * s + 9 * kBattleRowH * s};
+    L.battle = panel::Box{bx, L.table.y, w - side - bx, kHeaderH * s + float(kBattleRows) * kBattleRowH * s};
+    for (int i = 0; i < kBattleRows; ++i)  // 3.0.11-beta.266: each row pointed at or clicked
+        L.battleRows.push_back(panel::Box{bx - 6 * s, L.battle.y + kHeaderH * s + float(i) * kBattleRowH * s,
+                                          L.battle.w + 12 * s, kBattleRowH * s});
     const float bottom = std::max(L.table.y + L.table.h, L.battle.y + L.battle.h) + 8 * s;
-    L.line = panel::Box{0, bottom, w, kLineH * s};
+    L.line = panel::Box{0, bottom, w, (kExplainTitleH + float(kExplainLines) * kExplainLineH + kExplainPad) * s};
     L.glass = panel::Box{0, 0, w, L.line.y + L.line.h};
     L.w = int(std::ceil(w));
     L.h = int(std::ceil(L.glass.h));
@@ -139,6 +338,8 @@ Hit hitTest(const Layout& L, float x, float y) {
         if (L.pluses[i].contains(x, y)) return Hit{Part::Plus, int(i)};
     for (size_t i = 0; i < L.rows.size(); ++i)
         if (L.rows[i].contains(x, y)) return Hit{Part::Row, int(i)};
+    for (size_t i = 0; i < L.battleRows.size(); ++i)
+        if (L.battleRows[i].contains(x, y)) return Hit{Part::Battle, int(i)};
     if (y < L.title.y + L.title.h) return Hit{Part::Title, -1};
     return Hit{Part::Body, -1};
 }
@@ -162,7 +363,12 @@ void paint(panel::Picture& out, const Layout& L, const Data& d, const Show& sh) 
         panel::roundRect(out, p, 6 * s, can ? kWhite : kWhite, can ? (i == sh.hoverPlus ? 0.22f : 0.12f) : 0.03f,
                          can ? kGold2 : kWhite, can ? 0.7f : 0.06f, 1.0f * s);
     }
-    panel::roundRect(out, panel::Box{0, L.line.y, L.glass.w, 1 * s}, 0, kWhite, 0.08f);
+    const int lit2 = sh.hoverBattle >= 0 ? sh.hoverBattle : sh.pinnedBattle;  // 3.0.11-beta.266
+    if (lit2 >= 0 && lit2 < int(L.battleRows.size()))
+        panel::roundRect(out, L.battleRows[size_t(lit2)], 6 * s, kWhite, sh.pinnedBattle == lit2 ? 0.09f : 0.06f);
+    // the panel «Як рахується»: a tinted ground under the formulas
+    const panel::Box ground{kSide * s / 2, L.line.y + 4 * s, L.glass.w - kSide * s, L.line.h - 10 * s};
+    panel::roundRect(out, ground, 8 * s, kWhite, 0.04f, kWhite, 0.08f, 1.0f * s);
 }
 
 std::vector<Words> words(const Layout& L, const Data& d, const Show& sh, const Texts& t, const Measure& m) {
@@ -210,9 +416,15 @@ std::vector<Words> words(const Layout& L, const Data& d, const Show& sh, const T
         out.push_back(Words{panel::Box{L.battle.x + L.battle.w / 2, y, L.battle.w / 2, kBattleRowH * s}, rows[i].value,
                             kText, 12.5f * s, true, Align::Right});
     }
-    const int lit = sh.hoverRow >= 0 ? sh.hoverRow : sh.hoverPlus >= 0 ? sh.hoverPlus : sh.selected;
-    out.push_back(Words{panel::Box{side, L.line.y, L.glass.w - 2 * side, L.line.h}, explain(d, lit, t),
-                        lit >= 0 ? 0xC9D1DE : kFaint, 12 * s, false, Align::Left});
+    // 3.0.11-beta.266: the panel «Як рахується» - the item's title, its formulas on the character's numbers
+    const Explained e = explained(d, explainedItem(sh), t);
+    const float px = L.line.y + 4 * s + kExplainPad * s / 2;
+    out.push_back(Words{panel::Box{side, px, L.glass.w - 2 * side, kExplainTitleH * s - 6 * s}, e.title,
+                        e.lines.empty() ? kFaint : kGold, 12.5f * s, !e.lines.empty(), Align::Left});
+    for (size_t i = 0; i < e.lines.size(); ++i)
+        out.push_back(Words{panel::Box{side, px + kExplainTitleH * s - 6 * s + float(i) * kExplainLineH * s,
+                                       L.glass.w - 2 * side, kExplainLineH * s},
+                            e.lines[i], i == 0 ? kText : 0xC9D1DE, 12 * s, false, Align::Left});
     return out;
 }
 

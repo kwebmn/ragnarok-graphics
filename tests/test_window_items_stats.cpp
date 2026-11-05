@@ -48,6 +48,24 @@ statwin::Texts statTexts() {
     t.effects[4] = "HIT {1} · каст коротший: {2} → {3} %";  // 3.0.11-beta.202: from the cast now to the next
     t.effects[5] = "CRIT +0,3 %";
     t.hint = "наведіть на стат";
+    t.delay = "Затримка після вміння";  // 3.0.11-beta.266
+    t.regen = "Відновлення за тік";
+    t.weight = "Вага";
+    t.perSecond = "{1}/с";
+    t.how = "Як рахується · {1}";
+    t.howNone = "Наведіть на рядок";
+    t.howSame = "сервер: {1} — збігається";
+    t.howMore = "сервер: {1} — статами {2}, речі {3}";
+    t.howWeapon = "ATK зброї: {1} · заточка: + {2}";
+    t.howLevel = "рівень {1}";
+    t.howAspdWeapon = "{1} із {2}: затримка {3}";
+    t.howAspdUnknown = "зброю не визначено";
+    t.howHits = "{1} удару на секунду";
+    t.howAspdGoal = "до ASPD {1} потрібно AGI {2}";
+    t.howAspdNever = "до ASPD {1} потрібно AGI {2}: більше за 99";
+    t.howNext = "наступне очко {1}: {2}";
+    t.howJob = "від рівнів професії: +{1}";
+    t.howWeight = "70 %: {1} · 90 %: {2}";
     return t;
 }
 
@@ -346,7 +364,8 @@ TEST(stat_window_prices_and_points) {
     CHECK(statwin::explain(d, 0, t).find("ATK +2,") != std::string::npos);  // 9 -> 10: 1 + 1
     CHECK(statwin::explain(d, -1, t) == "наведіть на стат");
     const std::vector<statwin::Row> rows = statwin::battleRows(d, t);
-    CHECK(rows.size() == 9 && rows[3].value == "132 + 1" && rows[8].name == "Час касту");
+    CHECK(rows.size() == 14 && rows[3].value == "132 + 1" && rows[8].name == "Час касту");  // .266: 14
+    CHECK(rows[9].name == "Затримка після вміння" && rows[13].name == "Вага");
     CHECK(rows[8].value == "\xE2\x88\x92" "56 %");
 }
 
@@ -445,4 +464,57 @@ TEST(item_window_weight_bar_by_the_servers_state) {
     CHECK(r(regen) > g(regen) && g(regen) > 0x90);  // gold
     CHECK(r(ninety) > 0xD0 && g(ninety) < 0x90);    // red
     CHECK(unknown == regen);       // not known: 60 % by the classic 50 %
+}
+
+// 3.0.11-beta.266 (the «Характеристики» concept, stage 2): the panel «Як рахується» on the concept's knight - level
+// 98, a two-handed sword, AGI 76 and DEX 43 - and the archer of R-VZ69Q2 (HP 610)
+TEST(stat_window_explained_formulas) {
+    const statwin::Texts t = statTexts();
+    statwin::Data d;
+    const int base[6] = {62, 70, 30, 1, 40, 1}, bonus[6] = {4, 6, 2, 0, 3, 1};
+    for (int i = 0; i < 6; ++i) {
+        d.base[i] = base[i];
+        d.bonus[i] = bonus[i];
+        d.need[i] = 2;
+    }
+    d.job = 7;
+    d.baseLevel = 98;
+    d.jobLevel = 50;
+    d.aspd = 164;
+    d.atk = 260;
+    d.atk2 = 7;
+    d.hit = 141;
+    d.hpMost = 10319;
+    d.weight = 1710;
+    d.weightMost = 4780;
+    CHECK_EQ(statwin::weaponOf(d), 3);  // ASPD 164 with these stats: the knight's two-handed sword
+    const statwin::Explained aspd = statwin::explained(d, statwin::kBattle + 7, t);
+    CHECK(aspd.title == "Як рахується · ASPD" && aspd.lines.size() == 4);
+    CHECK(aspd.lines[0] == "Knight із Two-Handed Sword: затримка 550");
+    CHECK(aspd.lines[1].find("= 190 \xE2\x86\x92 360") != std::string::npos);
+    CHECK(aspd.lines[2] == "1,4 удару на секунду");
+    CHECK(aspd.lines[3].rfind("до ASPD 165 потрібно AGI ", 0) == 0);
+    const statwin::Explained atk = statwin::explained(d, statwin::kBattle, t);
+    CHECK(atk.lines[0] == "STR 66 + (66/10)\xC2\xB2 36 + DEX 43/5 8 + LUK 2/5 0 = 110");
+    CHECK(atk.lines[1] == "ATK зброї: 150 \xC2\xB7 заточка: + 7");
+    CHECK(statwin::explained(d, statwin::kBattle + 2, t).lines[1] == "сервер: 141 — збігається");
+    CHECK(statwin::explained(d, statwin::kBattle + 10, t).lines[1] == "сервер: 10319 — збігається");
+    const statwin::Explained weight = statwin::explained(d, statwin::kBattle + 13, t);
+    CHECK(weight.lines[0] == "2800 + 30 \xC3\x97 STR 62 = 4660" && weight.lines[2] == "70 %: 3346 · 90 %: 4302");
+    CHECK(weight.lines[1] == "сервер: 4780 — статами 4660, речі +120");
+    CHECK(statwin::explained(d, -1, t).title == "Наведіть на рядок" && statwin::explained(d, -1, t).lines.empty());
+    CHECK(statwin::explained(d, 0, t).title == "Як рахується · STR");
+    d.aspd = 170;  // sped up by a skill: no weapon of the knight gives it
+    CHECK(statwin::weaponOf(d) == -1);
+    CHECK(statwin::explained(d, statwin::kBattle + 7, t).lines[0] == "зброю не визначено");
+    statwin::Show sh;
+    sh.pinnedBattle = 7;
+    CHECK_EQ(statwin::explainedItem(sh), statwin::kBattle + 7);
+    sh.hoverRow = 2;  // the mouse over a stat tells of it, the pinned row back after
+    CHECK_EQ(statwin::explainedItem(sh), 2);
+    const statwin::Layout L = statwin::layout(0, 0, 1.0f, d, t, statwin::Measure(panel::wordsWidth));
+    CHECK(L.battleRows.size() == 14);
+    const statwin::Hit b = statwin::hitTest(L, L.battleRows[7].x + 20, L.battleRows[7].y + 5);
+    CHECK(b.part == statwin::Part::Battle && b.index == 7);
+    CHECK(L.line.y >= L.battle.y + L.battle.h && L.h >= int(L.line.y + L.line.h));
 }

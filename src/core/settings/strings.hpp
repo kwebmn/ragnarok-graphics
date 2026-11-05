@@ -693,6 +693,12 @@ enum class Text : uint16_t {
     StatsTitle, StatsFree, StatsColumnStat, StatsColumnBase, StatsColumnBonus, StatsColumnTotal, StatsColumnCost,
     StatsBattle, StatsCast, StatsMaxed, StatsCost, StatsShort, StatsTop, StatsEffectStr, StatsEffectAgi,
     StatsEffectVit, StatsEffectInt, StatsEffectDex, StatsEffectLuk, StatsHint, ItemsWorn,
+    // 3.0.11-beta.266: «Характеристики» stage 2
+    StatsRowDelay, StatsRowRegen, StatsRowWeight, StatsPerSecond, StatsHow, StatsHowNone, StatsHowSame,
+    StatsHowMore, StatsHowWeapon, StatsHowLevel, StatsHowAspdWeapon, StatsHowAspdUnknown, StatsHowHits,
+    StatsHowAspdGoal, StatsHowAspdNever, StatsHowDef, StatsHowMdef, StatsHowPerfect, StatsHowCast, StatsHowCastNone,
+    StatsHowDelay, StatsHowRegen, StatsHowWeight, StatsHowJob, StatsHowNext, StatsUsesStr, StatsUsesAgi,
+    StatsUsesVit, StatsUsesInt, StatsUsesDex, StatsUsesLuk,
     MinimapRespawn, MinimapMore,
     MinimapNoReference, MinimapNoMonsters,
     // 3.0.11-beta.7: «Довідник» - its switch, the window's words, the cards' words
