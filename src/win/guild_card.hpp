@@ -24,6 +24,7 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result);
 bool shown();
 bool close();  // Esc: its close
 void beforeGameDraw();
+bool key(UINT m, WPARAM wp, LPARAM lp);  // 3.0.11-beta.271: the notice's fields while it is edited
 enum class PadCommand : uint8_t { Up, Down, TabBack, TabOn, Close };
 void padCommand(PadCommand c);
 bool box(int& x, int& y, int& w, int& h);

@@ -48,7 +48,12 @@ struct More {
 struct Texts {
     std::string title, tabs[kTabs], facts[7], none, online;  // online: «{1} з {2} у грі»
     std::string edit;                                        // 3.0.11-beta.220: «Змінити»
+    // 3.0.11-beta.271 (the tester: «вікно формування привітання в гільдії - в старому стилі»): the notice edited on
+    // the card - «Тема», «Текст», «Зберегти», «Скасувати», the keys' hint
+    std::string fieldTitle, fieldBody, save, cancel, editHint;
 };
+// .271: the server's notice: its subject up to 59 bytes, its body up to 119 (the game's code page)
+constexpr size_t kSubjectMost = 59, kBodyMost = 119;
 struct Show {
     Tab tab = Tab::Info;
     uint32_t rights = 0xFF;  // 3.0.11-beta.210: the game's tab rights (a tab not allowed dimmed)
@@ -58,6 +63,14 @@ struct Show {
     int hoverPlus = -1;      // 3.0.11-beta.220
     bool hoverEdit = false;  // 3.0.11-beta.220
     bool canEdit = false;    // 3.0.11-beta.220: «Змінити» shown (the tab's rights)
+    // 3.0.11-beta.271: the notice being edited on the card - its fields (UTF-8), the one typed into (0 the subject),
+    // the caret shown
+    bool editing = false;
+    std::string subject, body;
+    int field = 0;
+    bool caret = true;
+    int hoverField = -1;
+    bool hoverCancel = false;
 };
 struct Layout {
     float s = 1;
@@ -68,10 +81,12 @@ struct Layout {
     std::vector<panel::Box> rows;  // the members shown (12 at most); 3.0.11-beta.220: the positions, skills, expelled
     std::vector<panel::Box> plus;  // 3.0.11-beta.220: the skills' «+», one a row
     panel::Box notice, edit;       // 3.0.11-beta.220: the notice's text; «Змінити» (w 0: none)
+    panel::Box fields[2], cancel;  // 3.0.11-beta.271: editing - the subject's and the body's fields; «Скасувати»
 };
-Layout layout(int targetW, int targetH, float scale, Tab tab, size_t members);
+// .271: `editing` - the notice's fields, «Зберегти» in «Змінити»'s place and «Скасувати» beside it
+Layout layout(int targetW, int targetH, float scale, Tab tab, size_t members, bool editing = false);
 int mostScroll(const Layout& L, size_t members);
-enum class Part : uint8_t { None, Tab, Close, Body, Plus, Edit };
+enum class Part : uint8_t { None, Tab, Close, Body, Plus, Edit, Field, Cancel };  // .271: Field, Cancel
 struct Hit {
     Part part = Part::None;
     int index = -1;

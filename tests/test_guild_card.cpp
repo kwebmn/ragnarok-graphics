@@ -126,3 +126,28 @@ TEST(guild_card_six_tabs) {
     CHECK(word("Посади") != w.end() && word("Учасники") != w.end() && word("Оголошення") != w.end());
     CHECK(word("Посади")->rgb != word("Учасники")->rgb);  // not allowed: dimmed
 }
+
+// 3.0.11-beta.271 (the tester: «вікно формування привітання в гільдії - в старому стилі»): the notice edited on the
+// card - its two fields and «Скасувати» beside «Зберегти»; the subject's caret
+TEST(guild_card_notice_edited_on_the_card) {
+    const guildcard::Layout L = guildcard::layout(1920, 1080, 1.0f, guildcard::Tab::Notice, 0, true);
+    CHECK(L.fields[0].w > 0 && L.fields[1].h > L.fields[0].h && L.cancel.w > 0);
+    CHECK(L.fields[0].y + L.fields[0].h < L.fields[1].y);
+    const guildcard::Hit body = guildcard::hitTest(L, L.fields[1].x + 5, L.fields[1].y + 5);
+    CHECK(body.part == guildcard::Part::Field && body.index == 1);
+    CHECK(guildcard::hitTest(L, L.cancel.x + 5, L.cancel.y + 5).part == guildcard::Part::Cancel);
+    const guildcard::Layout plain = guildcard::layout(1920, 1080, 1.0f, guildcard::Tab::Notice, 0);
+    CHECK(plain.fields[0].w == 0 && plain.cancel.w == 0 && plain.edit.w > 0);
+    guildcard::Show sh;
+    sh.tab = guildcard::Tab::Notice;
+    sh.canEdit = sh.editing = true;
+    sh.subject = "Збір";
+    guildcard::Texts t;
+    t.save = "Зберегти";
+    bool caret = false, save = false;
+    for (const guildcard::Words& w : guildcard::words(L, guildcard::Info{}, {}, guildcard::More{}, sh, t)) {
+        caret = caret || w.text == "Збір|";
+        save = save || w.text == "Зберегти";
+    }
+    CHECK(caret && save);
+}

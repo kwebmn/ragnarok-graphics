@@ -28,7 +28,7 @@ bool allowed(int tab, uint32_t rights) {
     return kTabRights[tab] == 0 || (rights & kTabRights[tab]) != 0;
 }
 
-Layout layout(int targetW, int targetH, float scale, Tab tab, size_t members) {
+Layout layout(int targetW, int targetH, float scale, Tab tab, size_t members, bool editing) {
     Layout L;
     const float s = scale > 0 ? scale : 1.0f;
     L.s = s;
@@ -52,6 +52,11 @@ Layout layout(int targetW, int targetH, float scale, Tab tab, size_t members) {
     } else if (tab == Tab::Notice) {  // 3.0.11-beta.220: its subject and body
         L.notice = panel::Box{pad, y, inner, 7 * kRowH * s};
         L.list = L.notice;
+        if (editing) {  // .271: «Тема» over its field, «Текст» over its taller one
+            L.fields[0] = panel::Box{pad + 8 * s, y + 24 * s, inner - 16 * s, 30 * s};
+            L.fields[1] = panel::Box{pad + 8 * s, y + 24 * s + 30 * s + 28 * s, inner - 16 * s,
+                                     L.notice.h - (24 + 30 + 28 + 8) * s};
+        }
         y += L.notice.h;
     } else {
         const size_t shown = std::min(members, kMostRows);
@@ -67,6 +72,7 @@ Layout layout(int targetW, int targetH, float scale, Tab tab, size_t members) {
     if (tab == Tab::Positions || tab == Tab::Notice) {  // 3.0.11-beta.220: «Змінити» - the game's own window
         y += 8 * s;
         L.edit = panel::Box{pad + inner - 140 * s, y, 140 * s, 28 * s};
+        if (editing && tab == Tab::Notice) L.cancel = panel::Box{L.edit.x - 10 * s - 120 * s, y, 120 * s, 28 * s};
         y += 28 * s;
     }
     y += pad;
@@ -87,6 +93,9 @@ Hit hitTest(const Layout& L, float x, float y) {
     for (size_t i = 0; i < L.plus.size(); ++i)
         if (L.plus[i].contains(x, y)) return Hit{Part::Plus, int(i)};
     if (L.edit.w > 0 && L.edit.contains(x, y)) return Hit{Part::Edit, -1};
+    if (L.cancel.w > 0 && L.cancel.contains(x, y)) return Hit{Part::Cancel, -1};  // .271
+    for (int i = 0; i < 2; ++i)
+        if (L.fields[i].w > 0 && L.fields[i].contains(x, y)) return Hit{Part::Field, i};
     if (L.glass.contains(x, y)) return Hit{Part::Body, -1};
     return Hit{};
 }
@@ -108,6 +117,14 @@ void paint(panel::Picture& out, const Layout& L, const std::vector<Member>& memb
     panel::roundRect(out, L.list, 8 * s, 0x000000, 0.16f);
     if (L.edit.w > 0 && sh.canEdit)
         panel::roundRect(out, L.edit, 8 * s, kGold, sh.hoverEdit ? 0.34f : 0.22f, kGold, 0.8f, 1.0f * s);
+    if (sh.editing && sh.tab == Tab::Notice) {  // .271: the fields, the one typed into in gold; «Скасувати»
+        for (int i = 0; i < 2; ++i)
+            if (L.fields[i].w > 0)
+                panel::roundRect(out, L.fields[i], 6 * s, kWhite, sh.hoverField == i ? 0.10f : 0.06f,
+                                 sh.field == i ? kGold : kWhite, sh.field == i ? 0.8f : 0.16f, 1.0f * s);
+        if (L.cancel.w > 0)
+            panel::roundRect(out, L.cancel, 8 * s, kWhite, sh.hoverCancel ? 0.14f : 0.06f, kWhite, 0.18f, 1.0f * s);
+    }
     if (sh.tab != Tab::Members) {  // 3.0.11-beta.220: tabs 2-5 - a skill's «+» where it can rise
         for (size_t i = 0; i < L.plus.size(); ++i) {
             const size_t at = i + size_t(std::max(0, sh.scroll));
@@ -156,7 +173,23 @@ std::vector<Words> words(const Layout& L, const Info& g, const std::vector<Membe
         }
         return out;
     }
-    if (L.edit.w > 0 && sh.canEdit) out.push_back(Words{L.edit, t.edit, kText, 12.5f * s, true, Align::Center});
+    if (L.edit.w > 0 && sh.canEdit)
+        out.push_back(Words{L.edit, sh.editing && sh.tab == Tab::Notice ? t.save : t.edit, kText, 12.5f * s, true,
+                            Align::Center});
+    if (sh.tab == Tab::Notice && sh.editing) {  // .271: the notice's fields with their caret
+        out.push_back(Words{L.head, t.editHint, kMuted, 11.5f * s, false, Align::Left});
+        const std::string caret = sh.caret ? "|" : "";
+        for (int i = 0; i < 2; ++i) {
+            const panel::Box& f = L.fields[i];
+            out.push_back(Words{panel::Box{f.x, f.y - 22 * s, f.w, 20 * s}, i ? t.fieldBody : t.fieldTitle, kMuted,
+                                12 * s, false, Align::Left});
+            out.push_back(Words{panel::Box{f.x + 8 * s, f.y + 4 * s, f.w - 16 * s, f.h - 8 * s},
+                                (i ? sh.body : sh.subject) + (sh.field == i ? caret : ""), kText, 13 * s, i == 0,
+                                Align::Left});
+        }
+        if (L.cancel.w > 0) out.push_back(Words{L.cancel, t.cancel, kText, 12.5f * s, false, Align::Center});
+        return out;
+    }
     if (sh.tab == Tab::Notice) {  // 3.0.11-beta.220
         const panel::Box& n = L.notice;
         out.push_back(Words{L.head, t.tabs[int(Tab::Notice)], kMuted, 12 * s, false, Align::Left});

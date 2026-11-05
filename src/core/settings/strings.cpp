@@ -7296,6 +7296,16 @@ constexpr Entry kTexts[] = {
      "Уволить наёмника? Всё, что он накопил до сих пор, будет потеряно."},
     // 3.0.11-beta.220 (the owner «1-3 делай»): the guild's tabs 2-5 on the card
     {Text::GuildEdit, "Change", "Змінити", "Изменить"},
+    // 3.0.11-beta.271: the notice edited on the card
+    {Text::GuildNoticeSubject, "Subject", "Тема",
+     "Тема"},
+    {Text::GuildNoticeBody, "Text", "Текст",
+     "Текст"},
+    {Text::GuildNoticeSave, "Save", "Зберегти",
+     "Сохранить"},
+    {Text::GuildNoticeHint, "Tab - the other field · Enter - save · Esc - cancel",
+     "Tab — інше поле · Enter — зберегти · Esc — скасувати",
+     "Tab — другое поле · Enter — сохранить · Esc — отменить"},
     {Text::GuildPositionsHead, "Positions: {1} - rights and tax", "Посад: {1} — права й податок",
      "Должностей: {1} — права и налог"},
     {Text::GuildRightInvite, "Invite", "Запрошення", "Приглашение"},

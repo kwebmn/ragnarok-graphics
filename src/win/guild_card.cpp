@@ -180,6 +180,11 @@ gc::Texts texts() {
     t.none = say(settings::Text::GuildNone);
     t.online = say(settings::Text::GuildOnline);
     t.edit = say(settings::Text::GuildEdit);  // 3.0.11-beta.220
+    t.fieldTitle = say(settings::Text::GuildNoticeSubject);  // 3.0.11-beta.271
+    t.fieldBody = say(settings::Text::GuildNoticeBody);
+    t.save = say(settings::Text::GuildNoticeSave);
+    t.cancel = say(settings::Text::MsgCancel);
+    t.editHint = say(settings::Text::GuildNoticeHint);
     return t;
 }
 
@@ -230,7 +235,7 @@ std::vector<Words> gdiWords(const std::vector<gc::Words>& in) {
                             UINT(w.align == gc::Align::Right    ? DT_RIGHT
                                  : w.align == gc::Align::Center ? DT_CENTER
                                                                 : DT_LEFT),
-                            false});
+                            w.box.h > 3 * w.px});  // .271: a tall box's words wrapped (the notice's body)
     return out;
 }
 
@@ -269,6 +274,48 @@ void raiseSkill(State& s, int row) {
     if (s.told++ < 30)
         LOG_INFO("guild: its skill %d +1 (level %d) %s", k.id, k.lv,
                  sent ? "asked (0x4A, the packet 0x0112)" : "not asked");
+    s.key.clear();
+}
+
+// 3.0.11-beta.271: the notice edited on the card - started from the notice there is; saved through the game mode's
+// message 0x83 (the guild, the subject, the body: the packet 0x016e, as the game's own notice window sends it)
+constexpr uint32_t kGuildId = 0x74B6D4;
+constexpr int kNoticeMsg = 0x83;
+
+std::string gameBytes(const std::string& utf8, unsigned codePage, size_t most) {
+    const std::wstring w = utf8Wide(utf8);
+    std::string out;
+    for (const wchar_t c : w) {  // whole letters only, up to the server's room
+        char buf[8] = {};
+        const int n = WideCharToMultiByte(codePage ? codePage : CP_ACP, 0, &c, 1, buf, int(sizeof buf), nullptr,
+                                          nullptr);
+        if (n <= 0 || out.size() + size_t(n) > most) break;
+        out.append(buf, size_t(n));
+    }
+    return out;
+}
+
+void startNotice(State& s) {
+    s.show.editing = true;
+    s.show.subject = s.more.subject;
+    s.show.body = s.more.body;
+    s.show.field = 0;
+    LOG_INFO("guild: the notice edited on the card");
+    s.key.clear();
+}
+
+void saveNotice(State& s) {
+    const uint32_t mode = read32(kModeNow), guild = read32(kGuildId);
+    const std::string subject = gameBytes(s.show.subject, s.codePage, gc::kSubjectMost);
+    const std::string body = gameBytes(s.show.body, s.codePage, gc::kBodyMost);
+    const bool sent = mode && guild && read32(read32(mode) + kModeMsgSlot) == kModeMsg;
+    if (sent)
+        reinterpret_cast<ModeMsgFn>(uintptr_t(kModeMsg))(mode, kNoticeMsg, int(guild),
+                                                          int(reinterpret_cast<uintptr_t>(subject.c_str())),
+                                                          int(reinterpret_cast<uintptr_t>(body.c_str())));
+    LOG_INFO("guild: the notice saved - %zu + %zu bytes %s", subject.size(), body.size(),
+             sent ? "sent (0x83, the packet 0x016e)" : "not sent (no game mode or guild)");
+    s.show.editing = false;
     s.key.clear();
 }
 
@@ -322,13 +369,17 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     readGuild(s);
     s.more = moreOf(s);
     const size_t rows = s.show.tab == gc::Tab::Members ? s.members.size() : s.more.lines.size();
-    s.layout = gc::layout(targetWidth, targetHeight, s.scale, s.show.tab, rows);
+    if (s.show.editing && s.show.tab != gc::Tab::Notice) s.show.editing = false;  // .271: another tab - let go
+    s.layout = gc::layout(targetWidth, targetHeight, s.scale, s.show.tab, rows, s.show.editing);
+    s.show.caret = (GetTickCount64() / 500) % 2 == 0;
     s.show.scroll = std::clamp(s.show.scroll, 0, gc::mostScroll(s.layout, rows));
     s.show.canEdit = gc::allowed(tab, s.show.rights);
     s.show.hoverTab = -1;
     s.show.hoverClose = false;
     s.show.hoverPlus = -1;
     s.show.hoverEdit = false;
+    s.show.hoverField = -1;
+    s.show.hoverCancel = false;
     int cx = 0, cy = 0;
     if (readGameCursor(cx, cy)) {
         const gc::Hit h = gc::hitTest(s.layout, float(cx) * float(k) - float(s.layout.x),
@@ -337,6 +388,8 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
         if (h.part == gc::Part::Plus) s.show.hoverPlus = h.index;
         s.show.hoverClose = h.part == gc::Part::Close;
         s.show.hoverEdit = h.part == gc::Part::Edit;
+        if (h.part == gc::Part::Field) s.show.hoverField = h.index;  // .271
+        s.show.hoverCancel = h.part == gc::Part::Cancel;
     }
     const gc::Info& g = s.info;
     std::string key = g.name + ';' + g.master + ';' + g.territory + ';' + std::to_string(g.level) + ',' +
@@ -350,6 +403,9 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
         key += ';' + m.name + ',' + m.title + ',' + std::to_string(m.level) + (m.online ? "o" : "");
     key += '|' + s.more.head + '|' + s.more.subject + '|' + s.more.body + '|' + std::to_string(s.show.hoverPlus) +
            (s.show.hoverEdit ? "e" : "") + (s.show.canEdit ? "c" : "");
+    if (s.show.editing)  // .271
+        key += "|E" + std::to_string(s.show.field) + (s.show.caret ? "|" : "") + std::to_string(s.show.hoverField) +
+               (s.show.hoverCancel ? "x" : "") + '|' + s.show.subject + '|' + s.show.body;
     for (const gc::Line& l : s.more.lines) key += ';' + l.left + ',' + l.middle + ',' + l.right + (l.plus ? "+" : "");
     if (key != s.key) {
         s.key = key;
@@ -399,7 +455,15 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     } else if (h.part == gc::Part::Plus) {
         raiseSkill(s, h.index + s.show.scroll);
     } else if (h.part == gc::Part::Edit && s.show.canEdit) {
-        editInGame(s);
+        if (s.show.tab != gc::Tab::Notice) editInGame(s);  // the positions: the game's own window still
+        else if (s.show.editing) saveNotice(s);           // .271: the notice on the card
+        else startNotice(s);
+    } else if (h.part == gc::Part::Cancel && s.show.editing) {
+        s.show.editing = false;
+        s.key.clear();
+    } else if (h.part == gc::Part::Field && s.show.editing) {
+        s.show.field = h.index;
+        s.key.clear();
     }
     return true;
 }
@@ -411,6 +475,44 @@ bool close() {
     if (!s.shown) return false;
     closeIt(s);
     return true;
+}
+
+bool key(UINT m, WPARAM wp, LPARAM lp) {  // .271: the notice's fields take the keys while it is edited
+    State& s = state();
+    (void)lp;
+    if (!s.shown || !s.show.editing) return false;
+    std::string& f = s.show.field ? s.show.body : s.show.subject;
+    if (m == WM_KEYDOWN || m == WM_SYSKEYDOWN) {
+        if (GetKeyState(VK_MENU) < 0) return false;
+        switch (wp) {
+            case VK_ESCAPE: s.show.editing = false; break;
+            case VK_RETURN: saveNotice(s); break;
+            case VK_TAB: s.show.field = 1 - s.show.field; break;
+            case VK_BACK: {  // a whole letter off (UTF-8)
+                while (!f.empty() && (static_cast<unsigned char>(f.back()) & 0xC0) == 0x80) f.pop_back();
+                if (!f.empty()) f.pop_back();
+                break;
+            }
+            default: break;
+        }
+        s.key.clear();
+        return true;
+    }
+    if (m == WM_CHAR) {  // the game's window is ANSI: a letter in the system's code page
+        const unsigned char byte = static_cast<unsigned char>(wp);
+        if (byte >= 0x20 && byte != 0x7F) {
+            wchar_t w = 0;
+            const char c = char(byte);
+            if (MultiByteToWideChar(CP_ACP, 0, &c, 1, &w, 1) == 1) {
+                const std::string add = utf8Of(std::wstring(1, w));
+                const size_t most = s.show.field ? gc::kBodyMost : gc::kSubjectMost;
+                if (gameBytes(f + add, s.codePage, most + 1).size() <= most) f += add;
+            }
+        }
+        s.key.clear();
+        return true;
+    }
+    return m == WM_KEYUP || m == WM_SYSKEYUP || m == WM_DEADCHAR;
 }
 
 void beforeGameDraw() {

@@ -282,6 +282,7 @@ bool keyOne(Win w, UINT m, WPARAM wp, LPARAM lp) {  // the windows with keys of 
         case Win::Login: return loginwin::key(m, wp, lp);     // 3.0.11-beta.176: «Полиця»'s
         case Win::Cart: return cartwin::key(m, wp, lp);       // 3.0.11-beta.154: its search's
         case Win::Tip: return tipwin::key(m, wp, lp);         // 3.0.11-beta.204: ← →
+        case Win::Guild: return guildcardwin::key(m, wp, lp);  // 3.0.11-beta.271: the notice's fields
         default: return false;
     }
 }
