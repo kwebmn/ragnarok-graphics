@@ -1,3 +1,9 @@
+# uaRO Graphics 3.0.11-beta.238 — what's new
+
+**The character block (Alt+V):**
+- **The regen as the server gives it, standing and sitting.** The line under HP and SP now says how much a minute and the pose: «+3 872/min · sitting». Counted: sitting, the natural regen twice as often (each 3 s, not 6), Increase HP / SP Recovery and Spirit of the Blade (each 10 s), Meditatio, a Monk's Spiritual Cadence while sitting. The tip splits it: natural and from skills.
+- **What the last fight took.** After a monster dies, the HP and SP bars show in yellow for 4 seconds how many per cent this fight took (from the first hit to the monster's death), and «last fight −12 %» at the right.
+
 # uaRO Graphics 3.0.11-beta.237 — what's new
 
 - **Experience over a killed monster**: a monster you hit dies - «+1 234 Base · +567 Job» rises over where it stood and fades in a second and a half (gold, dark outline).
