@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.11-beta.289 — what's new
+
+**Skill level by the wheel on the hotbar:** point at a skill on the hotbar and turn the mouse wheel — the level it is used at goes from 1 up to the one learned («Lv» in the tip; its third line says «wheel — level»). For example, Teleport can be set to level 1 — it warps at once, without the choice menu. The level is kept like the rest of the bar.
+
 # uaRO Graphics 3.0.11-beta.288 — what's new
 
 **Hotbar profiles:** each character now has three hotbar sets — Ctrl+Shift+1, 2, 3 switch between them (the current one is kept). A new set starts as a copy of the current one. The set's number (2 or 3) shows by the bar's toggle. Works with the per-character hotbar (on).
