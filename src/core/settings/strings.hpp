@@ -789,6 +789,8 @@ enum class Text : uint16_t {
     ChatCmdParty, ChatCmdGuild, ChatCmdWhisper, ChatCmdReply, InterfaceChatFade, InterfaceChatFadeHint,
     InterfaceChatFade12, InterfaceChatFade30, InterfaceChatFadeNever,  // 3.0.11-beta.240
     ChatMenuWhisper, ChatMenuBlock, ChatMenuCopy,  // 3.0.11-beta.242
+    ChatFilterSystem, ChatFilterLoot, ChatFilterAnnounce, ChatFilterTrade, ChatSysAutoloot, ChatSysAutolootOff,
+    ChatSysExpOn, ChatSysExpOff, ChatSysZenyOn, ChatSysZenyOff, ChatSysExpGained,  // 3.0.11-beta.243
     Count
 };
 

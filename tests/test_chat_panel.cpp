@@ -261,3 +261,45 @@ TEST(chat_whispers_by_person_and_a_names_menu) {
     w = words(L, {}, in, sh, t, estimate);
     CHECK(has("Копіювати ім'я"));
 }
+
+// 3.0.11-beta.243 (the chat concept, stage 4): «Усі»'s filters, the server's own lines short, «×N» on a line said
+// again, a line's time when pointed at
+TEST(chat_filters_short_lines_repeats_and_times) {
+    Texts t;
+    t.autoloot = "Автолут: до {1}";
+    t.autolootOff = "Автолут вимкнено";
+    t.expOn = "Показ досвіду ввімкнено";
+    t.expGained = "Досвід: Base +{1} · Job +{2}";
+    t.filters[0] = "Системні рядки";
+    t.filters[1] = "Підібране й досвід";
+    t.filters[2] = "Оголошення";
+    t.filters[3] = "Торгівля";
+    const Line loot = fromGame(Source::Other, "Autolooting items with drop rates of 100.00% and below.", 0, t, 0);
+    CHECK(loot.kind == Kind::System && loot.spans.size() == 1 && loot.spans[0].text == "Автолут: до 100.00%");
+    CHECK(fromGame(Source::Other, "Autoloot is now off.", 0, t, 0).spans[0].text == "Автолут вимкнено");
+    const Line gained = fromGame(Source::Other, "Experience Gained Base:1442 (0.00%) Job:952 (0.00%)", 0, t, 0);
+    CHECK(gained.kind == Kind::Loot && gained.spans[0].text == "Досвід: Base +1 442 · Job +952");
+    CHECK(fromGame(Source::Other, "Something else.", 0, t, 0).spans[0].text == "Something else.");
+    // the filters: «Усі» only
+    const Line sale = fromGame(Source::Public, "Ann : S> Elu 50k", 0, t, 0);
+    CHECK(sale.trade && showsWith(Tab::All, "", sale) && !showsWith(Tab::All, "", sale, kHideTrade));
+    CHECK(!showsWith(Tab::All, "", loot, kHideSystem) && showsWith(Tab::All, "", loot, kHideTrade));
+    CHECK(!showsWith(Tab::All, "", gained, kHideLoot) && showsWith(Tab::Trade, "", sale, kHideTrade));
+    // «×3» after a line said three times
+    Line again = fromGame(Source::Public, "Bob : hi", 0, t, 0);
+    again.repeat = 3;
+    const std::vector<const Line*> ls{&again};
+    const std::vector<Row> rows = wrap(ls, 400, 12.5f, estimate);
+    std::string all;
+    for (const Piece& p : rows[0]) all += p.text;
+    CHECK(all.find("\xC3\x97" "3") != std::string::npos);
+    // the time: 90 s ago at 14:32:10 -> 14:30
+    CHECK(clock(90000, 14 * 3600 + 32 * 60 + 10) == "14:30" && clock(120000, 30) == "23:58");
+    // the gear on «Усі» and its menu
+    Show sh;
+    sh.filtersOpen = true;
+    Input in;
+    const Layout L = layout(10, 1070, 1.0f, 7, false, sh, in, t, estimate);
+    CHECK(L.filtersButton.w > 0 && L.filtersButton.x + L.filtersButton.w <= L.grip.x + 0.5f && L.filters.size() == 4);
+    CHECK(hitTest(L, {}, sh, L.filters[3].x + 3, L.filters[3].y + 3).part == Part::Filter);
+}

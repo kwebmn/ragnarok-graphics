@@ -7256,6 +7256,19 @@ constexpr Entry kTexts[] = {
     {Text::ChatMenuWhisper, "Whisper", "Шепнути", "Шепнуть"},
     {Text::ChatMenuBlock, "Block whispers", "Блокувати шепіт", "Блокировать шёпот"},
     {Text::ChatMenuCopy, "Copy the name", "Копіювати ім'я", "Копировать имя"},
+    // 3.0.11-beta.243 (the chat concept, stage 4): «Усі»'s filters, the server's own lines made short
+    {Text::ChatFilterSystem, "The server's lines", "Системні рядки", "Системные строки"},
+    {Text::ChatFilterLoot, "Picked up and experience", "Підібране й досвід", "Подобранное и опыт"},
+    {Text::ChatFilterAnnounce, "Announcements", "Оголошення", "Объявления"},
+    {Text::ChatFilterTrade, "Trade", "Торгівля", "Торговля"},
+    {Text::ChatSysAutoloot, "Autoloot: up to {1}", "Автолут: до {1}", "Автолут: до {1}"},
+    {Text::ChatSysAutolootOff, "Autoloot off", "Автолут вимкнено", "Автолут выключен"},
+    {Text::ChatSysExpOn, "Experience shown", "Показ досвіду ввімкнено", "Показ опыта включён"},
+    {Text::ChatSysExpOff, "Experience not shown", "Показ досвіду вимкнено", "Показ опыта выключен"},
+    {Text::ChatSysZenyOn, "Zeny shown", "Показ зені ввімкнено", "Показ зени включён"},
+    {Text::ChatSysZenyOff, "Zeny not shown", "Показ зені вимкнено", "Показ зени выключен"},
+    {Text::ChatSysExpGained, "Experience: Base +{1} · Job +{2}", "Досвід: Base +{1} · Job +{2}",
+     "Опыт: Base +{1} · Job +{2}"},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

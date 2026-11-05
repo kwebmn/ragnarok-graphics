@@ -190,6 +190,17 @@ cp::Texts texts() {
     t.menu[0] = say(settings::Text::ChatMenuWhisper);
     t.menu[1] = say(settings::Text::ChatMenuBlock);
     t.menu[2] = say(settings::Text::ChatMenuCopy);
+    t.filters[0] = say(settings::Text::ChatFilterSystem);  // 3.0.11-beta.243
+    t.filters[1] = say(settings::Text::ChatFilterLoot);
+    t.filters[2] = say(settings::Text::ChatFilterAnnounce);
+    t.filters[3] = say(settings::Text::ChatFilterTrade);
+    t.autoloot = say(settings::Text::ChatSysAutoloot);
+    t.autolootOff = say(settings::Text::ChatSysAutolootOff);
+    t.expOn = say(settings::Text::ChatSysExpOn);
+    t.expOff = say(settings::Text::ChatSysExpOff);
+    t.zenyOn = say(settings::Text::ChatSysZenyOn);
+    t.zenyOff = say(settings::Text::ChatSysZenyOff);
+    t.expGained = say(settings::Text::ChatSysExpGained);
     return t;
 }
 
@@ -213,6 +224,22 @@ const char* sourceName(cp::Source s) {
 
 void add(State& s, cp::Line line) {
     const ULONGLONG now = GetTickCount64();
+    // 3.0.11-beta.243 (the chat concept, stage 4): the same line again within a minute - «×N» on the one before
+    if (line.kind != cp::Kind::Battle && !s.lines.empty()) {
+        cp::Line& last = s.lines.back();
+        const auto words = [](const cp::Line& l) {
+            std::string w;
+            for (const cp::Span& sp : l.spans) w += sp.text;
+            return w;
+        };
+        if (last.kind == line.kind && last.who == line.who && line.ms >= last.ms && line.ms - last.ms < 60000 &&
+            words(last) == words(line)) {
+            ++last.repeat;
+            last.ms = line.ms;
+            ++s.version;
+            return;
+        }
+    }
     const int u = cp::unreadOn(line);
     if (u >= 0 && u != int(s.show.tab)) ++s.show.unread[u];
     if (cp::shows(s.show.tab, line)) s.lastLine = now;
@@ -324,11 +351,14 @@ void readSize(State& s) {
         s.width = std::clamp(w, cp::kLeastWidth, cp::kMostWidth);
     if (const size_t at = text.find("rows "); at != std::string::npos && std::sscanf(text.c_str() + at, "rows %d", &r))
         s.customRows = r == 0 ? 0 : std::clamp(r, cp::kLeastRows, cp::kMostRows);
+    int hide = 0;  // 3.0.11-beta.243: «Усі»'s filters
+    const size_t hAt = text.find("hide ");
+    if (hAt != std::string::npos && std::sscanf(text.c_str() + hAt, "hide %d", &hide) == 1) s.show.hide = hide & 15;
 }
 
 void keepSize(const State& s) {
     char text[64];
-    std::snprintf(text, sizeof text, "width %d\nrows %d\n", s.width, s.customRows);
+    std::snprintf(text, sizeof text, "width %d\nrows %d\nhide %d\n", s.width, s.customRows, s.show.hide);
     const std::string path = layout::join(gameDir(), layout::kChatState);
     if (!writeFileAtomic(path, std::string(text))) LOG_INFO("chat: %s cannot be written", path.c_str());
 }
@@ -529,7 +559,8 @@ void render(State& s) {
 
 // The tab's lines as rows, made again when a line came or changed, the tab or the width changed
 void makeRows(State& s) {
-    const std::string key = std::to_string(s.version) + ';' + std::to_string(int(s.show.tab)) + s.show.person + ';' +
+    const std::string key = std::to_string(s.version) + ';' + std::to_string(int(s.show.tab)) + s.show.person + 'h' +
+                            std::to_string(s.show.hide) + ';' +
                             std::to_string(int(s.layout.lines.w)) + ';' + std::to_string(s.layout.px);
     if (key == s.rowsKey) return;
     s.rowsKey = key;
@@ -549,7 +580,7 @@ void makeRows(State& s) {
         }
     } else {
         for (const cp::Line& l : s.lines)
-            if (cp::showsWith(s.show.tab, s.show.person, l)) s.rowLines.push_back(&l);  // 3.0.11-beta.242
+            if (cp::showsWith(s.show.tab, s.show.person, l, s.show.hide)) s.rowLines.push_back(&l);  // .242, .243
     }
     if (s.rowLines.size() > 200) s.rowLines.erase(s.rowLines.begin(), s.rowLines.end() - 200);
     s.rows = cp::wrap(s.rowLines, s.layout.lines.w, s.layout.px, measure);
@@ -679,6 +710,15 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     s.show.hoverNewer = hit.part == cp::Part::Newer;
     s.show.hoverPerson = hit.part == cp::Part::Person ? hit.index : -1;  // 3.0.11-beta.242
     s.show.hoverItem = hit.part == cp::Part::Item ? hit.index : -1;
+    s.show.hoverFilters = hit.part == cp::Part::Filters;  // 3.0.11-beta.243
+    s.show.hoverFilter = hit.part == cp::Part::Filter ? hit.index : -1;
+    s.show.hoverRowLine = hit.part == cp::Part::Lines || hit.part == cp::Part::Name ? hit.index : -1;
+    {
+        SYSTEMTIME st{};
+        GetLocalTime(&st);
+        s.show.clockSec = st.wHour * 3600 + st.wMinute * 60 + st.wSecond;
+        s.show.nowMs = GetTickCount64();
+    }
     s.show.peopleUnread.clear();
     for (const std::string& p : s.show.people) s.show.peopleUnread.push_back(s.personUnread[p]);
     if (!s.sizeRead) readSize(s);
@@ -689,6 +729,9 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     hudedit::place(hudlayout::Part::Chat, float(k), targetWidth, targetHeight, s.layout.w, s.layout.h, s.layout.x,
                    s.layout.y);  // 3.0.11-beta.75: where the player put it
     makeRows(s);
+    s.show.lineTimes.clear();  // 3.0.11-beta.243: the rows' lines' times (the one pointed at shows its own)
+    if (s.rowsVersion == s.version)
+        for (const cp::Line* l : s.rowLines) s.show.lineTimes.push_back(l->ms);
     s.show.scroll = std::min(s.show.scroll, mostScroll(s));
     const cp::Input& in = s.input;
     const bool caret = !quiet && in.caretOn && (in.whisperFocus || (in.typing && !in.text.empty()));
@@ -698,6 +741,10 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
                       std::to_string(s.show.hoverLine) + (s.show.hoverMode ? "m" : "") +
                       (s.show.hoverClear ? "c" : "") + (s.show.hoverNewer ? "n" : "") + ';';
     for (int u : s.show.unread) key += std::to_string(u) + ',';
+    key += std::to_string(s.show.hoverRowLine) +
+           (s.show.hoverRowLine >= 0 ? std::to_string(s.show.clockSec / 60) : std::string()) +
+           (s.show.filtersOpen ? "F" : "") + (s.show.hoverFilters ? "f" : "") + std::to_string(s.show.hoverFilter) +
+           ';';  // 3.0.11-beta.243
     // 3.0.11-beta.242: the whispers' row, the one chosen, a name's menu; 3.0.11-beta.241: the grip pointed at
     key += ';' + s.show.person + '|' + std::to_string(s.show.hoverPerson) + ',' + std::to_string(s.show.menuLine) +
            ',' + std::to_string(s.show.hoverItem) + (s.show.hoverGrip ? "g" : "") + ';';
@@ -777,8 +824,20 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     if (m != WM_LBUTTONDOWN) return true;
     const int menuLine = s.show.menuLine;
     s.show.menuLine = -1;
+    if (h.part != cp::Part::Filter && h.part != cp::Part::Filters) s.show.filtersOpen = false;  // 3.0.11-beta.243
     const char* did = "";
     switch (h.part) {
+        case cp::Part::Filters:  // 3.0.11-beta.243: «Усі»'s filters' menu
+            s.show.filtersOpen = !s.show.filtersOpen;
+            did = "the filters";
+            break;
+        case cp::Part::Filter:
+            if (h.index >= 0 && h.index < 4) {
+                s.show.hide ^= 1 << h.index;
+                keepSize(s);
+                did = "a filter";
+            }
+            break;
         case cp::Part::Person:  // 3.0.11-beta.242: one's whispers alone (0: all), the input to them
             s.show.person = h.index <= 0 || size_t(h.index - 1) >= s.show.people.size()
                                 ? std::string()

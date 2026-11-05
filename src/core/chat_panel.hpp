@@ -36,6 +36,7 @@ struct Line {
     std::string who;     // who said it ("" none), as the game wrote it (UTF-8)
     bool trade = false;  // one near selling or buying
     uint64_t ms = 0;
+    int repeat = 1;      // 3.0.11-beta.243: the same line again right after: «×N»
 };
 
 struct Texts {
@@ -48,7 +49,19 @@ struct Texts {
     std::string commands[4];
     std::string all;          // 3.0.11-beta.242: «Усі» on the whispers' row
     std::string menu[3];      // «Шепнути», «Блокувати шепіт», «Копіювати ім'я»
+    // 3.0.11-beta.243 (the chat concept, stage 4): «Усі»'s filters - «Системні рядки», «Підібране й досвід»,
+    // «Оголошення», «Торгівля»; the server's own lines shorter - «Автолут: до {1}», «Автолут вимкнено», «Показ досвіду
+    // ввімкнено» / «вимкнено», «Показ зені ввімкнено» / «вимкнено», «Досвід: Base +{1} · Job +{2}»
+    std::string filters[4];
+    std::string autoloot, autolootOff, expOn, expOff, zenyOn, zenyOff, expGained;
 };
+// 3.0.11-beta.243: «Усі»'s filters - each bit hides one kind there
+constexpr int kHideSystem = 1, kHideLoot = 2, kHideAnnounce = 4, kHideTrade = 8;
+// The server's own words made short (the autoloot, the shown experience and zeny, «Experience Gained …»); false: as
+// they came. A gained experience's line becomes the loot's (its filter, «Бій»)
+bool shortSystem(const std::string& text, const Texts& t, Line& out);
+// «14:32» for a line `ago` ms old when the day's clock stands at `nowSec` seconds
+std::string clock(uint64_t ago, int nowSec);
 // 3.0.11-beta.240: the input's own commands - «/p words» the party, «/g words» the guild, «/w Name words» (a name with
 // spaces in quotes) a whisper, «/r words» a whisper to the last who whispered; false none of them (the words as typed)
 struct Command {
@@ -71,7 +84,7 @@ constexpr int kTabs = 6;
 // «Бій» the battle's hits, kills, experience and pick-ups
 bool shows(Tab tab, const Line& line);
 // 3.0.11-beta.242: on «Шепіт» with one chosen - that one's whispers only
-bool showsWith(Tab tab, const std::string& person, const Line& line);
+bool showsWith(Tab tab, const std::string& person, const Line& line, int hide = 0);
 int unreadOn(const Line& line);  // the tab a new line counts on while another one is open; -1 none
 
 // The input's row as the game has it now (its edit's words and caret, its send mode, the whisper's name)
@@ -117,6 +130,13 @@ struct Show {
     int hoverPerson = -1;
     int menuLine = -1, hoverItem = -1;
     float menuX = 0, menuY = 0;
+    // 3.0.11-beta.243: «Усі»'s filters (kHide*), their menu open, pointed at; the line pointed at (its time), the clock
+    int hide = 0;
+    bool filtersOpen = false, hoverFilters = false;
+    int hoverFilter = -1, hoverRowLine = -1;
+    uint64_t nowMs = 0;
+    int clockSec = -1;  // the day's seconds now; < 0 no times
+    std::vector<uint64_t> lineTimes;  // the rows' lines' ms (as their Line::ms), by the rows' line index
 };
 
 struct Layout {
@@ -131,6 +151,8 @@ struct Layout {
     // 3.0.11-beta.242: the whispers' row (its «Усі» first, then each one), a name's menu and its items
     panel::Box peopleRow, menu;
     std::vector<panel::Box> people, items;
+    panel::Box filtersButton, filtersMenu;  // 3.0.11-beta.243
+    std::vector<panel::Box> filters;
     std::vector<panel::Box> tabs;
 };
 // Its bottom left at (left, bottom) in the target; 3.0.11-beta.241: `width` at scale 1 (kLeast..kMost, by its corner)
@@ -141,7 +163,9 @@ Layout layout(int left, int bottom, float scale, int rows, bool quiet, const Sho
 // (scale 1) and the rows it gives, its bottom left staying
 void sizeTo(const Layout& L, float x, float y, int& width, int& rows);
 
-enum class Part : uint8_t { None, Tab, Name, Lines, Mode, Clear, Field, Newer, Body, Grip, Person, Item };
+enum class Part : uint8_t {
+    None, Tab, Name, Lines, Mode, Clear, Field, Newer, Body, Grip, Person, Item, Filters, Filter
+};
 struct Hit {
     Part part = Part::None;
     int index = -1;  // a tab's; a name's line (of the rows' lines)

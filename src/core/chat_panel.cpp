@@ -1,6 +1,9 @@
 #include "core/chat_panel.hpp"
 
 #include <algorithm>
+#include <cctype>
+#include <cstdio>
+#include <cstdlib>
 #include <cmath>
 
 #include "core/ui_icons.hpp"
@@ -181,6 +184,7 @@ Line fromGame(Source source, const std::string& text, uint32_t colorRef, const T
             l.spans = {Span{text, own == kText ? kSystem : own, true, false}};
             return l;
         case Source::Other:
+            if (shortSystem(text, t, l)) return l;  // 3.0.11-beta.243
             break;
     }
     if (l.spans.empty()) {
@@ -202,8 +206,14 @@ bool shows(Tab tab, const Line& line) {
     return false;
 }
 
-bool showsWith(Tab tab, const std::string& person, const Line& line) {
+bool showsWith(Tab tab, const std::string& person, const Line& line, int hide) {
     if (!shows(tab, line)) return false;
+    if (tab == Tab::All && hide) {  // 3.0.11-beta.243: «Усі»'s filters
+        if ((hide & kHideSystem) && line.kind == Kind::System) return false;
+        if ((hide & kHideLoot) && line.kind == Kind::Loot) return false;
+        if ((hide & kHideAnnounce) && line.kind == Kind::Announce) return false;
+        if ((hide & kHideTrade) && line.kind == Kind::Public && line.trade) return false;
+    }
     return tab != Tab::Whisper || person.empty() || line.who == person;
 }
 
@@ -230,7 +240,10 @@ std::vector<Row> wrap(const std::vector<const Line*>& lines, float width, float 
             row.clear();
             x = 0;
         };
-        for (const Span& sp : lines[li]->spans) {
+        std::vector<Span> spans = lines[li]->spans;  // 3.0.11-beta.243: «×N» after a line said again
+        if (lines[li]->repeat > 1)
+            spans.push_back(Span{" \xC3\x97" + std::to_string(lines[li]->repeat), kMuted, true, false});
+        for (const Span& sp : spans) {
             size_t i = 0;
             while (i < sp.text.size()) {  // a word with its space after it
                 const size_t sp1 = sp.text.find(' ', i);
@@ -321,6 +334,19 @@ Layout layout(int left, int bottom, float scale, int rows, bool quiet, const Sho
             L.items.push_back(panel::Box{mx + 4 * s, my + (4 + 22 * float(i)) * s, mw - 8 * s, 22 * s});
     }
     L.grip = panel::Box{w - 18 * s, 0, 18 * s, 18 * s};  // 3.0.11-beta.241
+    if (sh.tab == Tab::All) {  // 3.0.11-beta.243: «Усі»'s filters - a gear left of the grip, its menu under it
+        L.filtersButton = panel::Box{w - 46 * s, 5 * s, 22 * s, 22 * s};
+        if (sh.filtersOpen) {
+            float fw = 0;
+            for (const std::string& f : t.filters) fw = std::max(fw, m(f, 12 * s, false));
+            fw += 40 * s;
+            const float fh = (4 * 22 + 8) * s;
+            L.filtersMenu = panel::Box{w - fw - 8 * s, 30 * s, fw, fh};
+            for (int i = 0; i < 4; ++i)
+                L.filters.push_back(panel::Box{L.filtersMenu.x + 4 * s, L.filtersMenu.y + (4 + 22 * float(i)) * s,
+                                               fw - 8 * s, 22 * s});
+        }
+    }
     {
         L.tabsRow = panel::Box{0, 0, w, tabsH};
         float x = 8 * s;
@@ -369,6 +395,10 @@ Hit hitTest(const Layout& L, const std::vector<Row>& rows, const Show& sh, float
     if (!L.glass.contains(x, y)) return Hit{};
     for (size_t i = 0; i < L.items.size(); ++i)  // 3.0.11-beta.242: a name's menu over all
         if (L.items[i].contains(x, y)) return Hit{Part::Item, int(i)};
+    for (size_t i = 0; i < L.filters.size(); ++i)  // 3.0.11-beta.243: the filters' menu
+        if (L.filters[i].contains(x, y)) return Hit{Part::Filter, int(i)};
+    if (L.filtersMenu.w > 0 && L.filtersMenu.contains(x, y)) return Hit{Part::Body, -1};
+    if (L.filtersButton.w > 0 && L.filtersButton.contains(x, y)) return Hit{Part::Filters, -1};
     if (L.menu.w > 0 && L.menu.contains(x, y)) return Hit{Part::Body, -1};
     if (L.grip.w > 0 && L.grip.contains(x, y)) return Hit{Part::Grip, -1};  // 3.0.11-beta.241
     for (size_t i = 0; i < L.people.size(); ++i)  // 3.0.11-beta.242: index 0 «Усі», then the ones whispered with
@@ -390,6 +420,7 @@ Hit hitTest(const Layout& L, const std::vector<Row>& rows, const Show& sh, float
             if (r < first + count)
                 for (const Piece& p : rows[r])
                     if (p.name && x >= L.lines.x + p.x && x < L.lines.x + p.x + p.w) return Hit{Part::Name, p.line};
+            if (r < first + count && !rows[r].empty()) return Hit{Part::Lines, rows[r].front().line};  // .243
         }
         return Hit{Part::Lines, -1};
     }
@@ -462,6 +493,24 @@ void paint(panel::Picture& out, const Layout& L, const std::vector<Row>& rows, c
                                  0, kWhite, a);
         }
     }
+    if (L.filtersButton.w > 0) {  // 3.0.11-beta.243: the gear, lit while filters hide something or it is open
+        const panel::Box& b = L.filtersButton;
+        if (sh.hoverFilters || sh.filtersOpen) panel::roundRect(out, b, 6 * s, kWhite, 0.10f);
+        const float icon = 14 * s;
+        uiicons::draw(out, uiicons::Icon::Gear, b.x + (b.w - icon) / 2, b.y + (b.h - icon) / 2, icon,
+                      sh.hide ? kGold : kMuted, 1.0f, 2.0f);
+    }
+    if (L.filtersMenu.w > 0) {
+        panel::roundRect(out, L.filtersMenu, 8 * s, kCard, 0.97f, kWhite, 0.16f, 1.0f * s);
+        for (size_t i = 0; i < L.filters.size(); ++i) {
+            const panel::Box& f = L.filters[i];
+            if (int(i) == sh.hoverFilter) panel::roundRect(out, f, 6 * s, kWhite, 0.08f);
+            const bool on = !(sh.hide & (1 << i));  // a tick: shown
+            const panel::Box box{f.x + 6 * s, f.y + (f.h - 12 * s) / 2, 12 * s, 12 * s};
+            panel::roundRect(out, box, 3 * s, on ? kGold : kWhite, on ? 0.9f : 0.05f, on ? kGold : kWhite, 0.6f,
+                             1.0f * s);
+        }
+    }
     if (L.menu.w > 0) {  // 3.0.11-beta.242: a name's menu
         panel::roundRect(out, L.menu, 8 * s, kCard, 0.97f, kWhite, 0.16f, 1.0f * s);
         if (sh.hoverItem >= 0 && sh.hoverItem < int(L.items.size()))
@@ -530,6 +579,26 @@ std::vector<Words> words(const Layout& L, const std::vector<Row>& rows, const In
     for (size_t i = 0; i < L.items.size(); ++i)
         out.push_back(Words{panel::Box{L.items[i].x + 8 * s, L.items[i].y, L.items[i].w - 12 * s, L.items[i].h},
                             t.menu[i], int(i) == sh.hoverItem ? kText : kMuted, 12 * s, false, Align::Left});
+    for (size_t i = 0; i < L.filters.size(); ++i)  // 3.0.11-beta.243
+        out.push_back(Words{panel::Box{L.filters[i].x + 26 * s, L.filters[i].y, L.filters[i].w - 30 * s,
+                                       L.filters[i].h},
+                            t.filters[i], int(i) == sh.hoverFilter ? kText : kMuted, 12 * s, false, Align::Left});
+    if (sh.hoverRowLine >= 0 && sh.clockSec >= 0) {  // 3.0.11-beta.243: the line pointed at - its time at its right
+        size_t first = 0, count = 0;
+        shown(L, rows, sh.scroll, first, count);
+        const float top = L.lines.y + L.lines.h - float(count) * L.rowH;
+        for (size_t r = first; r < first + count; ++r) {
+            if (rows[r].empty() || rows[r].front().line != sh.hoverRowLine) continue;
+            const uint64_t at =
+                size_t(sh.hoverRowLine) < sh.lineTimes.size() ? sh.lineTimes[size_t(sh.hoverRowLine)] : 0;
+            if (!at || at > sh.nowMs) break;
+            const std::string when = clock(sh.nowMs - at, sh.clockSec);
+            const float tw = std::ceil(m(when, 10.5f * s, false)) + 6;
+            out.push_back(Words{panel::Box{L.lines.x + L.lines.w - tw, top + float(r - first) * L.rowH, tw, L.rowH},
+                                when, kFaint, 10.5f * s, false, Align::Right});
+            break;
+        }
+    }
     if (L.hints.w > 0) {  // 3.0.11-beta.240: the commands, the one being typed lit
         for (int i = 0; i < 4; ++i) {
             std::string line = t.commands[i];
@@ -611,6 +680,61 @@ void sizeTo(const Layout& L, float x, float y, int& width, int& rows) {
     const float fixed = float(L.h) - float(L.rows) * L.rowH;  // its tabs, input and edges
     const float linesH = float(L.y + L.h) - y - fixed;
     rows = std::clamp(int(std::lround(linesH / L.rowH)), kLeastRows, kMostRows);
+}
+
+namespace {
+// «… of 12.50% and below» -> «12.50%»; a number after `key`, as text
+bool after(const std::string& text, const std::string& key, std::string& value) {
+    const size_t at = text.find(key);
+    if (at == std::string::npos) return false;
+    size_t i = at + key.size(), j = i;
+    while (j < text.size() && (std::isdigit(static_cast<unsigned char>(text[j])) || text[j] == '.' || text[j] == '%'))
+        ++j;
+    value = text.substr(i, j - i);
+    return !value.empty();
+}
+
+std::string put2(std::string form, const std::string& a, const std::string& b) {
+    for (const auto& [k, v] : {std::pair<std::string, std::string>{"{1}", a}, {"{2}", b}})
+        if (const size_t at = form.find(k); at != std::string::npos) form.replace(at, 2 + 1, v);
+    return form;
+}
+}  // namespace
+
+bool shortSystem(const std::string& text, const Texts& t, Line& out) {
+    std::string v, w;
+    std::string said;
+    if (after(text, "Autolooting items with drop rates of ", v) && !t.autoloot.empty()) {
+        said = put2(t.autoloot, v, "");
+    } else if (text.rfind("Autoloot is now off", 0) == 0 && !t.autolootOff.empty()) {
+        said = t.autolootOff;
+    } else if (text.rfind("Gained exp is now shown", 0) == 0 && !t.expOn.empty()) {
+        said = t.expOn;
+    } else if (text.rfind("Gained exp will not be shown", 0) == 0 && !t.expOff.empty()) {
+        said = t.expOff;
+    } else if (text.rfind("Gained zeny is now shown", 0) == 0 && !t.zenyOn.empty()) {
+        said = t.zenyOn;
+    } else if (text.rfind("Gained zeny will not be shown", 0) == 0 && !t.zenyOff.empty()) {
+        said = t.zenyOff;
+    } else if (after(text, "Experience Gained Base:", v) && after(text, "Job:", w) && !t.expGained.empty()) {
+        out.kind = Kind::Loot;  // a kill's experience: the loot's filter, «Бій»
+        out.spans = {Span{put2(t.expGained, grouped(std::atoll(v.c_str())), grouped(std::atoll(w.c_str()))),
+                          kBaseExp, false, false}};
+        return true;
+    }
+    if (said.empty()) return false;
+    out.kind = Kind::System;
+    out.spans = {Span{said, kSystem, false, false}};
+    return true;
+}
+
+std::string clock(uint64_t ago, int nowSec) {
+    long long sec = (long long)nowSec - (long long)(ago / 1000);
+    sec %= 86400;
+    if (sec < 0) sec += 86400;
+    char buf[8];
+    std::snprintf(buf, sizeof buf, "%02lld:%02lld", sec / 3600, (sec / 60) % 60);
+    return buf;
 }
 
 }  // namespace uagfx::chatpanel
