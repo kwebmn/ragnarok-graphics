@@ -5366,6 +5366,14 @@ constexpr Entry kTexts[] = {
      "Лікувальні предмети на панелі: тихий сигнал, коли лишилось 10 і коли не лишилось жодного; число червоніє від 10.",
      "Лечебные предметы на панели: тихий сигнал, когда осталось 10 и когда не осталось ни одного; число краснеет от "
      "10."},
+    {Text::InterfacePartyAlarm, "Healer's alarm", "Тривога для лікаря", "Тревога для лекаря"},  // .282
+    {Text::InterfacePartyAlarmHint,
+     "When someone of your party nearby falls under 30 % HP, a short chime sounds and their row on the party panel "
+     "pulses red for 3 seconds.",
+     "Коли хтось із групи поруч падає нижче 30 % HP, лунає короткий сигнал, а його рядок на панелі групи 3 секунди "
+     "пульсує червоним.",
+     "Когда кто-то из группы рядом падает ниже 30 % HP, звучит короткий сигнал, а его строка на панели группы 3 "
+     "секунды пульсирует красным."},
     {Text::NpcTalkTag, "Talk", "Говорити", "Говорить"},  // 3.0.11-beta.256: the NPC's plate before its name comes
     {Text::InterfaceShop, "NPC shops", "Крамниці NPC", "Магазины NPC"},  // 3.0.11-beta.100
     {Text::InterfaceShopHint,  // 3.0.11-beta.101: the keys, the amount typed, the description

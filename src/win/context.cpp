@@ -1055,6 +1055,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     oskwin::frame(window, gameCodePage(config), pk, pw, ph);        // 3.0.11-beta.214: the on-screen keyboard
     padhintwin::frame(window, config.padHints, pk, pw, ph);  // 3.0.11-beta.92: the hint line in the interface's style
     // 3.0.11-beta.39: [interface] party - the party's panel under the character block
+    partywin::setAlarm(config.partyAlarm);  // 3.0.11-beta.282
     partywin::frame(window, config.partyPanel, gameCodePage(config), pk, pw, ph);
     // 3.0.11-beta.41: [interface] chat - the chat at the bottom left, the game's own out of sight (before the hotbar:
     // it keeps clear of it)

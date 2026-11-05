@@ -327,6 +327,10 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("equip", flag(running.equipWindow), flag(file.equipWindow)));
         n.equipWindow = file.equipWindow;
     }
+    if (file.partyAlarm != running.partyAlarm) {  // 3.0.11-beta.282: the healer's alarm, at once
+        u.applied.push_back(change("party_alarm", flag(running.partyAlarm), flag(file.partyAlarm)));
+        n.partyAlarm = file.partyAlarm;
+    }
     if (file.potionWarn != running.potionWarn) {  // 3.0.11-beta.281: the healing items' warning, at once
         u.applied.push_back(change("potion_warn", flag(running.potionWarn), flag(file.potionWarn)));
         n.potionWarn = file.potionWarn;

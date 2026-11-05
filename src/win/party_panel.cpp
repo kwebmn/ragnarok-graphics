@@ -1,3 +1,4 @@
+#include "win/sound_hook.hpp"
 #include "win/party_panel.hpp"
 
 #include <windowsx.h>
@@ -11,6 +12,8 @@
 #include <variant>
 #include <vector>
 
+#include "core/party_alarm.hpp"
+#include "core/ui_chime.hpp"
 #include "core/buff_timers.hpp"
 #include "core/char_block.hpp"
 #include "core/layout.hpp"
@@ -91,6 +94,9 @@ struct Buffs {
 };
 
 struct State {
+    partyalarm::Watch alarm;  // 3.0.11-beta.282: the healer's alarm ([interface] party_alarm)
+    bool alarmOn = true;
+    int alarmTold = 0;
     std::map<uint32_t, Buffs> buffs;  // 3.0.11-beta.80: by the account
     std::vector<uint32_t> order;
     std::map<uint32_t, Seat> seats;
@@ -402,6 +408,12 @@ void packet(const packets::Event& e) {
     }
 }
 
+void setAlarm(bool on) {  // 3.0.11-beta.282
+    State& s = state();
+    if (on != s.alarmOn) LOG_INFO("party: [interface] party_alarm = %d", on ? 1 : 0);
+    s.alarmOn = on;
+}
+
 void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int targetHeight) {
     State& s = state();
     if (on != s.on) {
@@ -500,6 +512,22 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
         s.members.push_back(m);
         s.rowsOf.push_back(account);
     }
+    {  // 3.0.11-beta.282 (the owner's feature 18): one here falling under 30 % HP - a chime, its row pulsing red
+        const uint64_t now = GetTickCount64();
+        const uint32_t me = own();
+        std::map<uint32_t, int> percents;
+        for (size_t i = 0; i < s.members.size() && i < s.rowsOf.size(); ++i)
+            if (s.rowsOf[i] != me && s.members[i].online && s.members[i].where.empty() && !s.members[i].dead)
+                percents[s.rowsOf[i]] = s.members[i].percent;
+        if (s.alarm.step(percents, now) && s.alarmOn) {
+            static const std::vector<uint8_t> sound = chime::wav(chime::Kind::PartyLow);
+            const bool played = win::playOwn(sound.data());
+            if (s.alarmTold++ < 20)
+                LOG_INFO("party: one fell under 30 %% HP - the alarm %s", played ? "played" : "not played (sound off)");
+        }
+        for (size_t i = 0; i < s.members.size() && i < s.rowsOf.size(); ++i)
+            s.members[i].alarm = s.alarmOn ? s.alarm.pulse(s.rowsOf[i], now) : 0;
+    }
     const float scale = uistyle::partScale(k) * hudedit::sizeOf(hudlayout::Part::Party);  // 3.0.11-beta.75: its size
     s.k = float(k);
     s.scale = scale;
@@ -515,7 +543,8 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
                       (s.folded ? ";f;" : ";;");
     for (const pp::Member& m : s.members)
         key += m.name + '|' + m.where + '|' + (m.leader ? "L" : "") + (m.online ? "" : "o") +
-               std::to_string(m.percent) + (m.face ? std::to_string(uintptr_t(m.face)) : "") + (m.chosen ? "c;" : ";");
+               std::to_string(m.percent) + (m.face ? std::to_string(uintptr_t(m.face)) : "") + (m.chosen ? "c" : "") +
+               std::to_string(int(m.alarm * 8)) + ';';
     for (const pp::Member& m : s.members) {  // 3.0.11-beta.80: its buffs, their times by twentieths (.81: glow)
         for (const pp::Buff& b : m.buffs)
             key += std::to_string(uintptr_t(b.icon)) + ':' + std::to_string(int(b.left * 20)) + ':' +

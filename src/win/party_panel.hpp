@@ -19,6 +19,9 @@ namespace uagfx::win::partywin {
 // (0x00fb: each seat's map, leader, online), one joining or changed (0x01e9), one gone (0x0105), their HP as the server
 // sends it to those near (0x0106; the character's own never); a member seen dying (0x0080) at 0. On the game's thread.
 void packet(const packets::Event& e);
+// 3.0.11-beta.282 (the owner's feature 18): [interface] party_alarm - one of the party here falling under 30 % HP: a
+// short chime and its row pulsing red 3 s (core/party_alarm)
+void setAlarm(bool on);
 void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int targetHeight);
 void draw(FrameRecord& record, gpu::Renderer& renderer);
 bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result);

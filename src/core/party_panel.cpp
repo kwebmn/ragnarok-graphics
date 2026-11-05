@@ -157,6 +157,8 @@ void paint(panel::Picture& out, const Layout& L, const std::vector<Member>& memb
             panel::roundRect(out, r.box, 7 * s, kGold, 0.22f, kGold, 1.0f, 2.0f * s);
         else if (L.targeting && here(m))  // 3.0.11-beta.82: a skill waits for a target - a click here casts it
             panel::roundRect(out, r.box, 7 * s, kGold, 0.08f, kGold, 0.9f, 1.2f * s);
+        else if (m.alarm > 0)  // 3.0.11-beta.282: the healer's alarm - its row pulsing red
+            panel::roundRect(out, r.box, 7 * s, kRed, 0.10f + 0.30f * m.alarm, kRed, 1.0f, (1.2f + m.alarm) * s);
         else if (bad)
             panel::roundRect(out, r.box, 7 * s, kRed, 0.10f, kRed, 0.85f, 1.2f * s);  // the row edged red
         panel::circle(out, r.round.x + r.round.w / 2, r.round.y + r.round.h / 2, r.round.w / 2, kTile, 1.0f);

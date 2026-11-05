@@ -226,6 +226,8 @@ const std::vector<IniSetting>& iniSettings() {
          Text::InterfaceMvp, Text::InterfaceMvpHint, ""},  // 3.0.11-beta.280
         {"interface", "potion_warn", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {},
          Text::InterfacePotionWarn, Text::InterfacePotionWarnHint, ""},  // 3.0.11-beta.281
+        {"interface", "party_alarm", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {},
+         Text::InterfacePartyAlarm, Text::InterfacePartyAlarmHint, ""},  // 3.0.11-beta.282
         {"interface", "shop", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::InterfaceShop,
          Text::InterfaceShopHint, ""},  // 3.0.11-beta.100
         {"interface", "storage", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::InterfaceStorage,
@@ -1182,6 +1184,7 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "interface.mob_card") return c.mobCard ? "1" : "0";  // 3.0.11-beta.279
     if (k == "interface.mvp_timers") return c.mvpTimers ? "1" : "0";  // 3.0.11-beta.280
     if (k == "interface.potion_warn") return c.potionWarn ? "1" : "0";  // 3.0.11-beta.281
+    if (k == "interface.party_alarm") return c.partyAlarm ? "1" : "0";  // 3.0.11-beta.282
     if (k == "interface.shop") return c.shopWindow ? "1" : "0";      // 3.0.11-beta.100
     if (k == "interface.storage") return c.storageWindow ? "1" : "0";  // 3.0.11-beta.115
     if (k == "interface.trade") return c.tradeWindow ? "1" : "0";      // 3.0.11-beta.116

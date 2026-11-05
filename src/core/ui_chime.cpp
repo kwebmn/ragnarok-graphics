@@ -37,9 +37,10 @@ void put32(std::vector<uint8_t>& out, uint32_t v) {
 }  // namespace
 
 std::vector<uint8_t> wav(Kind kind) {
-    const std::vector<Note> notes = kind == Kind::AmmoLow
-                                        ? std::vector<Note>{{1046.5, 0, 0.16}, {784.0, 0.12, 0.22}}
-                                        : std::vector<Note>{{1046.5, 0, 0.16}, {784.0, 0.14, 0.18}, {523.25, 0.28, 0.32}};
+    const std::vector<Note> notes =
+        kind == Kind::AmmoLow   ? std::vector<Note>{{1046.5, 0, 0.16}, {784.0, 0.12, 0.22}}
+        : kind == Kind::AmmoOut ? std::vector<Note>{{1046.5, 0, 0.16}, {784.0, 0.14, 0.18}, {523.25, 0.28, 0.32}}
+                                : std::vector<Note>{{1318.5, 0, 0.11}, {1318.5, 0.13, 0.11}, {1568.0, 0.26, 0.2}};
     double end = 0;
     for (const Note& n : notes) end = std::max(end, n.at + n.length);
     const size_t count = size_t(std::ceil(end * kRate));

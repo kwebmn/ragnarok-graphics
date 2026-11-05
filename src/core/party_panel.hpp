@@ -34,6 +34,7 @@ struct Member {
     float castPart = -1;
     bool dead = false;
     bool chosen = false;  // 3.0.11-beta.85: the pad's support skill would go on it - its row filled gold
+    float alarm = 0;  // 3.0.11-beta.282: just fell under 30 % HP - its row pulsing red this strong (0..1)
     // 3.0.11-beta.82 (the owner's 2 and 4): here - its cells away (< 0 not known) and its way on the screen (a unit
     // vector, x right, y down); elsewhere its map's name with a route mark (a click goes there)
     int cells = -1;

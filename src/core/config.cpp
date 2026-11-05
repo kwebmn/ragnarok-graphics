@@ -637,6 +637,8 @@ Config parseConfig(const std::string& text) {
             setBool(val, c.mvpTimers);
         } else if (key == "interface.potion_warn") {  // 3.0.11-beta.281
             setBool(val, c.potionWarn);
+        } else if (key == "interface.party_alarm") {  // 3.0.11-beta.282
+            setBool(val, c.partyAlarm);
         } else if (key == "interface.shop") {  // 3.0.11-beta.100: the NPCs' shops
             shopSet = val == "0" || val == "1" || val == "on" || val == "off" || val == "true" || val == "false";
             setBool(val, c.shopWindow);

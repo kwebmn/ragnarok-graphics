@@ -10,7 +10,8 @@ namespace uagfx::chime {
 // files (win/sound_hook playOwn). No Windows here.
 enum class Kind : uint8_t {
     AmmoLow,  // 10 or fewer left: two notes, C6 then G5
-    AmmoOut   // none left: three, C6 G5 C5, the last longer
+    AmmoOut,  // none left: three, C6 G5 C5, the last longer
+    PartyLow  // 3.0.11-beta.282: one of the party under 30 % HP - E6 E6 G6, quick
 };
 std::vector<uint8_t> wav(Kind kind);
 
