@@ -1,3 +1,11 @@
+# uaRO Graphics 3.0.11-beta.266 — what's new
+
+**«Характеристики», stage 2 — «Як рахується»:**
+- New rows: «Затримка після вміння», Max HP, Max SP, «Відновлення за тік», «Вага»; hits a second beside ASPD.
+- The panel «Як рахується» always open at the window's bottom: point at any row (a stat or a battle number) — the server's formula on your character's numbers, what the server says and how much things, buffs and skills add, what the next point gives.
+- A click on a battle row keeps it in the panel (another click lets it go).
+- For ASPD: the class and the weapon with its delay, the count, hits a second and the AGI to the next ASPD.
+
 # uaRO Graphics 3.0.11-beta.265 — what's new
 
 **«Характеристики», stage 1 — checked against the server (R-VZ69Q2):** the Max HP and weight formulas follow the server's numbers now (HP: the 35 added after VIT's per cents; weight by the base STR). The rest matched. A report from a transcendent character (Alt+A open) helps the next check.
