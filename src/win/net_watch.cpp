@@ -83,6 +83,9 @@ struct State {
     ULONGLONG polledAt = 0, readGap = 0;  // 3.0.11-beta.131: the game's last read of its socket, the one before it
     ULONGLONG longGapAt = 0;              // 3.0.11-beta.134: the last long pause between reads (a backlog after it)
     fighttrace::Trace trace;              // 3.0.11-beta.247 (R-AMNV99)
+    uint32_t follow = 0;                  // 3.0.11-beta.249: the unit dumped last, its shown cell followed
+    ULONGLONG followFrom = 0;
+    int followX = -1, followY = -1;
 };
 
 State& state() {
@@ -108,6 +111,18 @@ bool shownCell(uint32_t unit, int& x, int& y) {
     x = c.x;
     y = c.y;
     return true;
+}
+
+// 3.0.11-beta.249: the packets of a unit at +2 traced besides - one coming into sight (standing, walking: 0x0078,
+// 0x007b, 0x007c and the later 0x01d8-0x01da, 0x022a-0x022c), its facing 0x009c, looks 0x0119/0x0229, a cast 0x013e,
+// a class 0x01b0, an emotion 0x00c0, its name 0x0095/0x0195
+bool traced(uint16_t id) {
+    switch (id) {
+        case 0x008A: case 0x0086: case 0x0088: case 0x0080: case 0x0078: case 0x007B: case 0x007C: case 0x01D8:
+        case 0x01D9: case 0x01DA: case 0x022A: case 0x022B: case 0x022C: case 0x009C: case 0x0119: case 0x0229:
+        case 0x013E: case 0x01B0: case 0x00C0: case 0x0095: case 0x0195: return true;
+        default: return false;
+    }
 }
 
 // 3.0.11-beta.247 (R-AMNV99 «замерал и телепортировался»): the fought units' packets kept, written out when one jumps
@@ -151,7 +166,8 @@ void trace(State& s, uint16_t id, const uint8_t* data, ULONGLONG now) {
         } else if (id == kVanish && data[6] == 1) {
             e.kind = Kind::Died;
         } else {
-            return;
+            e.kind = Kind::Other;  // 3.0.11-beta.249: its other packets (the walking ones of a changed speed, ...)
+            e.a = id;
         }
     }
     shownCell(e.unit, e.shownX, e.shownY);
@@ -177,8 +193,40 @@ void trace(State& s, uint16_t id, const uint8_t* data, ULONGLONG now) {
     if (!what || away < 2) return;
     char why[80];
     std::snprintf(why, sizeof why, "%s %d cells from where the game showed it", what, away);
+    // 3.0.11-beta.249 (R-GKXJT6): the game's own list of it - two of one id, or ours a stale one
+    bool listed = false;
+    const int copies = actorsOfId(e.unit, actorAddress(e.unit), listed);
+    Event list;
+    list.ms = now;
+    list.kind = Kind::Shown;
+    list.unit = e.unit;
+    list.a = copies;
+    list.b = listed ? 1 : 0;
+    s.trace.add(list);
     const std::string out = s.trace.dump(e.unit, now, why);
-    if (!out.empty()) LOG_INFO("%s", out.c_str());
+    if (out.empty()) return;
+    LOG_INFO("%s", out.c_str());
+    s.follow = e.unit;
+    s.followFrom = now;
+    s.followX = e.shownX;
+    s.followY = e.shownY;
+}
+
+// 3.0.11-beta.249: after a dump, where the game moves the unit over the next 3 s
+void followFrame(State& s, ULONGLONG now) {
+    if (!s.follow) return;
+    int x = -1, y = -1;
+    const bool seen = shownCell(s.follow, x, y);
+    if (!seen || now - s.followFrom > 3000) {
+        LOG_INFO("fight trace: %u %s %u ms after", s.follow, seen ? "followed till" : "gone from the game's world",
+                 unsigned(now - s.followFrom));
+        s.follow = 0;
+        return;
+    }
+    if (x == s.followX && y == s.followY) return;
+    LOG_INFO("fight trace: %u shown at %d, %d %u ms after", s.follow, x, y, unsigned(now - s.followFrom));
+    s.followX = x;
+    s.followY = y;
 }
 
 // ws2_32's own two, without importing it into ddraw.dll (the game loaded it already)
@@ -241,7 +289,7 @@ void packet(void* connection, uint16_t id, const uint8_t* data) {
     if (!inGameWorld()) return;
     const ULONGLONG now = GetTickCount64();
     s.watch.packet(now);
-    if (data && (id == kAct || id == kMove || id == kFixPos || id == kVanish)) trace(s, id, data, now);  // .247
+    if (data && traced(id)) trace(s, id, data, now);  // 3.0.11-beta.247
     if ((id == kMove || id == kOwnMove || id == kAct) && data) {  // 3.0.11-beta.128: held by a lost packet?
         const int late = lateness(s, data, id == kMove ? 12 : id == kOwnMove ? 2 : 10);
         const int way = netwatch::onTheWay(late, uint32_t(std::min<ULONGLONG>(s.readGap, 60000)));  // .131
@@ -276,6 +324,7 @@ void packet(void* connection, uint16_t id, const uint8_t* data) {
 void frame() {
     State& s = state();
     const ULONGLONG now = GetTickCount64();
+    if (inGameWorld()) followFrame(s, now);  // 3.0.11-beta.249
     if (!inGameWorld() || now - s.readAt < kReadMs) return;
     s.readAt = now;
     load(s);

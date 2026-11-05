@@ -57,6 +57,11 @@ std::string line(const Event& e, uint64_t first) {
                           e.c, shown);
             break;
         case Kind::Died: std::snprintf(buf, sizeof buf, "+%u ms died%s", at, shown); break;
+        case Kind::Other: std::snprintf(buf, sizeof buf, "+%u ms packet 0x%04x%s", at, unsigned(e.a), shown); break;
+        case Kind::Shown:
+            std::snprintf(buf, sizeof buf, "+%u ms the game's list holds %d of its id, the one read %s%s", at, e.a,
+                          e.b ? "among them" : "NOT among them (a stale object)", shown);
+            break;
     }
     return buf;
 }

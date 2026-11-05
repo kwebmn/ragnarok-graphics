@@ -32,3 +32,12 @@ TEST(fight_trace_way_and_dump) {
     CHECK(t.dump(7, 1600, "again").empty());  // told within a second
     CHECK(!t.dump(7, 2600, "later").empty());
 }
+
+// 3.0.11-beta.249 (R-GKXJT6): the other packets of the unit and the game's own list of it in the lines
+TEST(fight_trace_other_lines) {
+    using K = fighttrace::Kind;
+    CHECK(fighttrace::line({1100, K::Other, 7, 0x7b, -1, -1, -1, 3, 4}, 1000) ==
+          "+100 ms packet 0x007b (shown at 3, 4)");
+    CHECK(fighttrace::line({1000, K::Shown, 7, 2, 0, -1, -1, -1, -1}, 1000) ==
+          "+0 ms the game's list holds 2 of its id, the one read NOT among them (a stale object)");
+}

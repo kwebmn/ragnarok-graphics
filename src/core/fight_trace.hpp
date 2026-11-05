@@ -9,12 +9,14 @@ namespace uagfx::fighttrace {
 // the server told about a unit the character fights, each with where the game showed the unit then - written to the
 // log when that unit jumps (the server's fix 0x0088, or a move starting away from where it was shown), so the cause is
 // read off the packets: a stop the game did not show, a hit's swing, a late move.
-enum class Kind : uint8_t { Move, Fix, HitIt, HitsMe, Died };
+enum class Kind : uint8_t { Move, Fix, HitIt, HitsMe, Died, Other, Shown };
 struct Event {
     uint64_t ms = 0;
     Kind kind = Kind::Move;
     uint32_t unit = 0;
-    int a = -1, b = -1, c = -1, d = -1;  // a move's from x, y, to x, y; a fix's x, y; a hit's swing, flinch, damage
+    // a move's from x, y, to x, y; a fix's x, y; a hit's swing, flinch, damage; 3.0.11-beta.249: another packet's id
+    // (Other); the game's actors of its id, ours one of them (Shown: where the game moves it after a dump)
+    int a = -1, b = -1, c = -1, d = -1;
     int shownX = -1, shownY = -1;        // where the game showed the unit (-1 not known)
 };
 

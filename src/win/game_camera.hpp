@@ -45,6 +45,9 @@ void readActorBoxes(std::unordered_map<uint32_t, std::array<float, 4>>& out,
 // 3.0.11-beta.148: every actor's place in the world at once (the world's actors' list, as readActorWorld's) - its id
 // to x, height, z; the character itself not among them
 void readActorPlaces(std::unordered_map<uint32_t, std::array<float, 3>>& out);
+// 3.0.11-beta.249 (R-GKXJT6, a monster shown standing while the server walked it): how many of the world's actors
+// carry the id, and whether `actor` is one of them
+int actorsOfId(uint32_t id, uint32_t actor, bool& listed);
 // The game's own minimap: it is drawn while its UI window 14 exists (UIWindowMgr+0x7C); hidden and made again as
 // Ctrl+Tab does (UI command 0x99: DeleteWindow / MakeWindow of window 14, the latter only where the map has one) -
 // false when not done (another build, nothing to do). On the game's thread.

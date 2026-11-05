@@ -493,6 +493,27 @@ void readActorPlaces(std::unordered_map<uint32_t, std::array<float, 3>>& out) {
     }
 }
 
+int actorsOfId(uint32_t id, uint32_t actor, bool& listed) {
+    constexpr uint32_t kWorldActors = 0x18, kActorId = 0x208;
+    listed = false;
+    uint32_t world = 0, head = 0, node = 0;
+    const uint32_t mode = gameMode();
+    if (!id || !mode || !read(mode + kModeWorld, &world, 4) || !world || !read(world + kWorldActors, &head, 4) ||
+        !head || !read(head, &node, 4))
+        return -1;
+    int count = 0;
+    for (size_t n = 0; node && node != head && n < 4096; ++n) {
+        uint32_t a = 0, aid = 0;
+        if (!read(node + 8, &a, 4)) break;
+        if (a && read(a + kActorId, &aid, 4) && aid == id) {
+            ++count;
+            if (a == actor) listed = true;
+        }
+        if (!read(node, &node, 4)) break;
+    }
+    return count;
+}
+
 bool readActorBox(uint32_t id, float box[4]) {
     constexpr uint32_t kPickList = 0x74B5F0 + 0x28, kRecordId = 0x18;
     uint32_t head = 0, node = 0;
