@@ -1,3 +1,11 @@
+# uaRO Graphics 3.0.11-beta.243 — what's new
+
+**The chat, stage four:**
+- **«All»'s filters.** On «All», by the size grip - a gear. Its menu: «The server's lines», «Picked up and experience», «Announcements», «Trade» - untick one and it leaves «All» (its own tabs keep it). The choice is kept; the gear turns gold while something is hidden.
+- **Repeats.** The same line again within a minute is not doubled - it gets «×2», «×3»…
+- **The server's lines shorter:** «Autoloot: up to 100.00%», «Autoloot off», «Experience shown», «Zeny shown»; «Experience Gained Base:… Job:…» → «Experience: Base +1 442 · Job +952» (and it is now among the picked up and experience, and on «Battle»).
+- **A line's time.** Point at a line - its time («14:32») at its right.
+
 # uaRO Graphics 3.0.11-beta.242 — what's new
 
 **The chat, stage three:**
