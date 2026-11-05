@@ -51,6 +51,10 @@ struct Hit {
     uint32_t source = 0, target = 0;
     int32_t damage = 0;
     uint16_t skill = 0;  // 3.0.11-beta.41 (the chat's «Бій»): a skill's (0x01de, 0x0114 <skill>.W at 2); 0 an attack
+    // 3.0.11-beta.246 (R-Q2C54N): the attacker's swing, ms - the game shows the hit (and a death it brings) this long
+    // after the packet (0x008a <sDelay>.L at 14, 0x01de and 0x0114 at 16); uaRO's server deals it at once
+    // (delay_battle_damage: no)
+    uint32_t delay = 0;
 };
 // 3.0.7-beta.6 (the user's notifications 6, 7, 8; uAthena clif.c): the party - 0x00fb its list <len>.W <party>.24B
 // {<account>.L <nick>.24B <map>.16B <leader>.B <offline>.B}.46B* from 28; 0x01e9 one joining or changed (<account>.L

@@ -7,15 +7,22 @@
 
 namespace uagfx::expgain {
 
-void Tracker::hit(uint32_t target) {
+void Tracker::hit(uint32_t target, uint64_t shownAt) {
     if (hit_.size() > 256) hit_.clear();
-    hit_[target] = true;
+    uint64_t& at = hit_[target];
+    at = std::max(at, shownAt);
 }
 
-bool Tracker::died(uint32_t id) { return hit_.erase(id) > 0; }
+bool Tracker::died(uint32_t id, uint64_t* shownAt) {
+    const auto it = hit_.find(id);
+    if (it == hit_.end()) return false;
+    if (shownAt) *shownAt = it->second;
+    hit_.erase(it);
+    return true;
+}
 
-void Tracker::killedAt(uint32_t, float x, float y, uint64_t ms) {
-    kills_.push_back(Kill{x, y, ms});
+void Tracker::killedAt(uint32_t, float x, float y, uint64_t ms, uint64_t shownAt) {
+    kills_.push_back(Kill{x, y, ms, std::clamp(shownAt, ms, ms + kSwingMostMs)});
     if (kills_.size() > 16) kills_.erase(kills_.begin());
 }
 
@@ -35,7 +42,7 @@ void Tracker::experience(int type, uint32_t value, uint64_t ms) {
 
 void Tracker::show(const Gain& g, const Kill* k) {
     if (k) {
-        floaters_.push_back(Floater{k->x, k->y, g.base, g.job, g.ms});
+        floaters_.push_back(Floater{k->x, k->y, g.base, g.job, g.ms});  // g.ms: when it shows
         if (floaters_.size() > 8) floaters_.erase(floaters_.begin());
     }
     if (label_.ms && g.ms - label_.ms < 600) {  // one more right after: added up
@@ -59,11 +66,24 @@ void Tracker::step(uint64_t ms) {
             }
         }
         if (best || ms - gain_.ms >= kGainWaitMs) {
-            const Kill k = best ? *best : Kill{};
-            if (best) kills_.erase(kills_.begin() + (best - kills_.data()));
-            show(gain_, best ? &k : nullptr);
+            Due d{gain_, best ? *best : Kill{}, best != nullptr, gain_.ms};
+            if (best) {
+                d.at = std::max(d.at, best->at);
+                kills_.erase(kills_.begin() + (best - kills_.data()));
+            }
+            due_.push_back(d);
             gain_ = Gain{};
         }
+    }
+    for (size_t i = 0; i < due_.size();) {  // 3.0.11-beta.246: when the game shows the death
+        if (ms < due_[i].at) {
+            ++i;
+            continue;
+        }
+        Due d = due_[i];
+        due_.erase(due_.begin() + long(i));
+        d.gain.ms = d.at;
+        show(d.gain, d.killed ? &d.kill : nullptr);
     }
     kills_.erase(std::remove_if(kills_.begin(), kills_.end(), [&](const Kill& k) { return ms - k.ms > kPairMs; }),
                  kills_.end());

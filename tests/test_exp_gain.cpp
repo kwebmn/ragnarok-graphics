@@ -53,3 +53,29 @@ TEST(exp_gain_rising_fading_and_words) {
     CHECK(expgain::text(0, 567, ',') == "+567 Job");
     CHECK(expgain::text(1234, 0, ',', 0.0005) == "+1\xC2\xA0" "234 Base (0,05\xC2\xA0%)");
 }
+
+// 3.0.11-beta.246 (R-Q2C54N «строка опыта появляется перед тем как моб убит»): the server deals the hit at once, the
+// game shows it after the swing - the gain waits for that
+TEST(exp_gain_waits_for_the_swing) {
+    expgain::Tracker t;
+    t.experience(1, 100, 0);
+    t.hit(90, 1000 + 600);  // the packet at 1000, the swing 600 ms
+    uint64_t at = 0;
+    CHECK(t.died(90, &at) && at == 1600);
+    t.killedAt(90, 50, 60, 1010, at);
+    t.experience(1, 130, 1020);
+    t.step(1030);
+    CHECK(t.floaters().empty() && t.label().ms == 0);  // the game has not shown it yet
+    t.step(1599);
+    CHECK(t.floaters().empty());
+    t.step(1600);
+    CHECK(t.floaters().size() == 1 && t.floaters()[0].base == 30 && t.floaters()[0].ms == 1600);
+    CHECK(t.label().base == 30 && t.label().ms == 1600);
+    // a swing past reason taken at most kSwingMostMs
+    t.hit(91, 5000 + 60000);
+    CHECK(t.died(91, &at));
+    t.killedAt(91, 0, 0, 5000, at);
+    t.experience(1, 140, 5000);
+    t.step(5000 + expgain::kSwingMostMs);
+    CHECK(t.floaters().size() == 1 && t.floaters().back().ms == 5000 + expgain::kSwingMostMs);
+}

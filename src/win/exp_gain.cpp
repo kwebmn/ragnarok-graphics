@@ -58,11 +58,12 @@ void packet(const packets::Event& e) {
     }
     const uint64_t now = GetTickCount64();
     if (const auto* h = std::get_if<packets::Hit>(&e)) {
-        if (h->source == me && h->target && h->target != me) s.tracker.hit(h->target);
+        if (h->source == me && h->target && h->target != me) s.tracker.hit(h->target, now + h->delay);
     } else if (const auto* v = std::get_if<packets::Vanish>(&e)) {
-        if (v->type != 1 || v->id == me || !s.tracker.died(v->id)) return;
+        uint64_t shownAt = 0;
+        if (v->type != 1 || v->id == me || !s.tracker.died(v->id, &shownAt)) return;
         float box[4] = {};
-        if (readActorBox(v->id, box)) s.tracker.killedAt(v->id, (box[0] + box[2]) / 2, box[1], now);
+        if (readActorBox(v->id, box)) s.tracker.killedAt(v->id, (box[0] + box[2]) / 2, box[1], now, shownAt);
     } else if (const auto* x = std::get_if<packets::StatusLong>(&e)) {
         if (x->type == 1 || x->type == 2) s.tracker.experience(x->type, x->value, now);
     }
