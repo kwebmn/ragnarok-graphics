@@ -786,6 +786,8 @@ enum class Text : uint16_t {
     InterfaceExpGain, InterfaceExpGainHint,  // 3.0.11-beta.237
     CharRegenPerMin, CharStanding, CharSitting, CharRegenNatural, CharRegenSkill, CharRegenSitSkill,
     CharFightCost,  // 3.0.11-beta.238
+    ChatCmdParty, ChatCmdGuild, ChatCmdWhisper, ChatCmdReply, InterfaceChatFade, InterfaceChatFadeHint,
+    InterfaceChatFade12, InterfaceChatFade30, InterfaceChatFadeNever,  // 3.0.11-beta.240
     Count
 };
 

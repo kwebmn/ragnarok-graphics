@@ -546,6 +546,9 @@ Config parseConfig(const std::string& text) {
             setBool(val, c.expBars);
         } else if (key == "interface.exp_gain") {  // 3.0.11-beta.237
             setBool(val, c.expGain);
+        } else if (key == "interface.chat_fade") {  // 3.0.11-beta.240
+            const int v = std::atoi(val.c_str());
+            c.chatFade = v == 30 ? 30 : v == 0 && val == "0" ? 0 : 12;
         } else if (key == "interface.minimap_reach") {  // 3.0.11-beta.65: where one can walk, an experiment
             setBool(val, c.minimapReach);
         } else if (key == "interface.minimap_hd") {  // 3.0.11-beta.72: the maps' pictures four times bigger

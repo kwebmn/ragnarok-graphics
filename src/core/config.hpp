@@ -588,6 +588,9 @@ struct Config {
     // 3.0.11-beta.237 (the owner: «над мобом было типа + столько то опыта»): [interface] exp_gain - a kill's experience
     // rising over the monster, and its label by the bars (win/exp_gain)
     bool expGain = true;
+    // 3.0.11-beta.240 (the chat concept, stage 1): [interface] chat_fade - idle seconds before the chat's ground fades
+    // (12, 30; 0 never)
+    int chatFade = 12;
     // 3.0.11-beta.120 (the owner: «карта ... какаято не красивая»): [interface] minimap_style - the minimap's and the
     // big map's picture: the game's own, or «Схема» drawn from the server's walkable cells (core/minimap_proto
     // schemePixels); switched on the maps themselves too

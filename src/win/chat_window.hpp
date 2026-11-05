@@ -20,6 +20,8 @@ namespace uagfx::win::chatwin {
 void install();
 void packet(const packets::Event& e);
 void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int targetHeight);
+// 3.0.11-beta.240: [interface] chat_fade - idle this many seconds, its ground fades (its tabs and input stay); 0 never
+void setFade(int seconds);
 void draw(FrameRecord& record, gpu::Renderer& renderer);
 bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result);
 // F10 its height, Alt+F10 folded to its input, Tab the channel - while it shows

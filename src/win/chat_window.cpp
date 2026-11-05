@@ -116,6 +116,15 @@ struct State {
     ULONGLONG killAt = 0;
     std::map<uint16_t, std::string> skillNames;
     int linesTold = 0, clicksTold = 0;
+    // 3.0.11-beta.240 (the chat concept, stage 1): the last who whispered (/r), a command's channel and whisper to put
+    // back once its words are sent, how long the chat stays lit when idle ([interface] chat_fade; 0 always)
+    std::string replyTo;
+    bool restoreOn = false;
+    int restoreMode = 0;
+    std::string restoreName;
+    ULONGLONG restoreAt = 0;
+    ULONGLONG fadeMs = 12000;
+    int commandsTold = 0;
 };
 
 State& state() {
@@ -165,6 +174,10 @@ cp::Texts texts() {
     t.send = say(settings::Text::ChatHintSend);
     t.type = say(settings::Text::ChatHintType);
     t.newer = "\xE2\x86\x93";  // ↓
+    t.commands[0] = say(settings::Text::ChatCmdParty);  // 3.0.11-beta.240
+    t.commands[1] = say(settings::Text::ChatCmdGuild);
+    t.commands[2] = say(settings::Text::ChatCmdWhisper);
+    t.commands[3] = say(settings::Text::ChatCmdReply);
     return t;
 }
 
@@ -209,7 +222,9 @@ void take(State& s) {
             ++s.linesTold;
             LOG_INFO("chat: a line from %s (%zu bytes, colour %06X)", sourceName(r.source), r.text.size(), r.colour);
         }
-        add(s, cp::fromGame(r.source, utf8(s, r.text), r.colour, t, r.ms));
+        cp::Line line = cp::fromGame(r.source, utf8(s, r.text), r.colour, t, r.ms);
+        if (r.source == cp::Source::Whisper && !line.who.empty()) s.replyTo = line.who;  // 3.0.11-beta.240: /r
+        add(s, std::move(line));
     }
     s.pending.clear();
 }
@@ -300,6 +315,7 @@ void readInput(State& s) {
     in.battle = read32(kBattle) != 0;
     in.typing = !in.battle || read32(kTyping) != 0;
     in.caretOn = (GetTickCount64() / kBlinkMs) % 2 == 0;
+    in.replyTo = s.replyTo;  // 3.0.11-beta.240
     s.input = in;
 }
 
@@ -596,6 +612,12 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     s.targetW = targetWidth;
     s.targetH = targetHeight;
     readInput(s);
+    // 3.0.11-beta.240: a command's words sent (the field empty again) - its channel and whisper put back
+    if (s.restoreOn && (s.input.text.empty() || GetTickCount64() - s.restoreAt > 3000)) {
+        s.restoreOn = false;
+        write32(kMode, uint32_t(s.restoreMode));
+        setName(s, s.restoreName);
+    }
     const ULONGLONG now = GetTickCount64();
     int cx = 0, cy = 0;
     cp::Hit hit;
@@ -608,7 +630,8 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
         hide(s);
         return;
     }
-    const bool quiet = !busy && !over && s.show.scroll == 0 && now - s.lastLine > kQuietMs;
+    // 3.0.11-beta.240: [interface] chat_fade - its ground fades after this long idle; 0 never
+    const bool quiet = s.fadeMs > 0 && !busy && !over && s.show.scroll == 0 && now - s.lastLine > s.fadeMs;
     s.show.hoverTab = hit.part == cp::Part::Tab ? hit.index : -1;
     s.show.hoverLine = hit.part == cp::Part::Name ? hit.index : -1;
     s.show.hoverMode = hit.part == cp::Part::Mode;
@@ -743,6 +766,35 @@ bool key(UINT m, WPARAM wp, LPARAM lp) {
         LOG_INFO("chat: %s", s.folded ? "folded away (Alt+F10)" : "its height changed (F10)");
         return true;
     }
+    // 3.0.11-beta.240 (the chat concept, stage 1): Enter on «/p», «/g», «/w Ім'я», «/r» - the words alone into the
+    // game's field, its channel (or whisper's name) set for them; the game sends as its own, the channel put back after
+    if (wp == VK_RETURN && m == WM_KEYDOWN && s.shown) {
+        const uint32_t words = wordsEdit();
+        if (words && read32(kFocus) == words) {
+            cp::Command c;
+            if (cp::command(utf8(s, editText(words)), s.replyTo, c) &&
+                read32(read32(words) + kSetTextSlot) == kSetText) {
+                if (!s.restoreOn) {
+                    s.restoreMode = s.input.mode;
+                    s.restoreName = s.input.whisper;
+                }
+                const std::string game = narrowed(utf8Wide(c.words), s.codePage);
+                reinterpret_cast<SetTextFn>(uintptr_t(kSetText))(words, game.c_str());
+                if (!c.whisper.empty()) {
+                    setName(s, c.whisper);
+                } else {
+                    setName(s, "");
+                    write32(kMode, uint32_t(c.mode));
+                }
+                s.restoreOn = true;
+                s.restoreAt = GetTickCount64();
+                if (s.commandsTold++ < 10)
+                    LOG_INFO("chat: a command - %s", !c.whisper.empty() ? "a whisper" : c.mode == 1 ? "the party"
+                                                                                                   : "the guild");
+            }
+        }
+        return false;  // the game's Enter sends
+    }
     if (wp == VK_TAB && m == WM_KEYDOWN && GetKeyState(VK_CONTROL) >= 0 && GetKeyState(VK_MENU) >= 0 && s.shown) {
         const uint32_t words = wordsEdit();
         if (!words || read32(kFocus) != words) return false;  // the name's field: the game's own Tab
@@ -756,6 +808,15 @@ bool key(UINT m, WPARAM wp, LPARAM lp) {
 void beforeGameDraw() {
     State& s = state();
     if (s.on && inGameWorld()) holdOldChat(s, true);
+}
+
+void setFade(int seconds) {  // 3.0.11-beta.240
+    State& s = state();
+    const ULONGLONG ms = seconds > 0 ? ULONGLONG(seconds) * 1000 : 0;
+    if (ms != s.fadeMs) {
+        s.fadeMs = ms;
+        LOG_INFO("chat: [interface] chat_fade = %d s", seconds);
+    }
 }
 
 }  // namespace uagfx::win::chatwin

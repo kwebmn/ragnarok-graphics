@@ -1969,3 +1969,11 @@ TEST(config_reads_the_experience_gains) {
     CHECK(parseConfig("").expGain);
     CHECK(!parseConfig("[interface]\nexp_gain = 0\n").expGain);
 }
+
+// 3.0.11-beta.240 (the chat concept, stage 1): [interface] chat_fade - 12 by default, 30, 0 never; others 12
+TEST(config_reads_the_chat_fade) {
+    CHECK(parseConfig("").chatFade == 12);
+    CHECK(parseConfig("[interface]\nchat_fade = 30\n").chatFade == 30);
+    CHECK(parseConfig("[interface]\nchat_fade = 0\n").chatFade == 0);
+    CHECK(parseConfig("[interface]\nchat_fade = 7\n").chatFade == 12);
+}

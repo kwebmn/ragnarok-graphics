@@ -7237,6 +7237,21 @@ constexpr Entry kTexts[] = {
     {Text::CharRegenSitSkill, "Sitting, from a skill: +{1} every 10 s", "Сидячи, від навички: +{1} кожні 10 с",
      "Сидя, от навыка: +{1} каждые 10 с"},
     {Text::CharFightCost, "last fight −{1}", "останній бій −{1}", "последний бой −{1}"},
+    // 3.0.11-beta.240 (the chat concept, stage 1): the input's commands, the fade
+    {Text::ChatCmdParty, "/p words: to the party", "/p текст — у групу", "/p текст — в группу"},
+    {Text::ChatCmdGuild, "/g words: to the guild", "/g текст — у гільдію", "/g текст — в гильдию"},
+    {Text::ChatCmdWhisper, "/w Name words: a whisper", "/w Ім'я текст — шепіт", "/w Имя текст — шёпот"},
+    {Text::ChatCmdReply, "/r words: answer {1}", "/r текст — відповісти {1}", "/r текст — ответить {1}"},
+    {Text::InterfaceChatFade, "The chat fades when idle", "Чат згасає без нових рядків",
+     "Чат гаснет без новых строк"},
+    {Text::InterfaceChatFadeHint,
+     "With no new lines for this long the chat's ground grows faint; its tabs, its lines and the input stay where "
+     "they are.",
+     "Коли нових рядків немає стільки часу, фон чату блідне; вкладки, рядки й поле введення лишаються на місці.",
+     "Когда новых строк нет столько времени, фон чата бледнеет; вкладки, строки и поле ввода остаются на месте."},
+    {Text::InterfaceChatFade12, "After 12 s", "Через 12 с", "Через 12 с"},
+    {Text::InterfaceChatFade30, "After 30 s", "Через 30 с", "Через 30 с"},
+    {Text::InterfaceChatFadeNever, "Never", "Ніколи", "Никогда"},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

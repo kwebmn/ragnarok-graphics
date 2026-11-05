@@ -43,7 +43,19 @@ struct Texts {
     std::string from, to;      // «від {1}», «до {1}»
     std::string send, type;    // the empty field's hint: «Enter — надіслати · Tab — канал», «Enter — писати …»
     std::string newer;         // the scrolled history's way back down
+    // 3.0.11-beta.240 (the chat concept, stage 1): the commands' hints over the input while «/» is typed - «/p — у
+    // групу», «/g — у гільдію», «/w Ім'я — шепіт», «/r — відповісти {1}»
+    std::string commands[4];
 };
+// 3.0.11-beta.240: the input's own commands - «/p words» the party, «/g words» the guild, «/w Name words» (a name with
+// spaces in quotes) a whisper, «/r words» a whisper to the last who whispered; false none of them (the words as typed)
+struct Command {
+    int mode = 0;          // 0 near, 1 the party, 2 the guild
+    std::string whisper;   // the name a whisper goes to; "" none
+    std::string words;     // what is sent
+};
+bool command(const std::string& utf8, const std::string& replyTo, Command& out);
+bool commandHints(const std::string& utf8);  // «/», «/p» ... typed and no space yet: the hints shown
 
 uint32_t gameRgb(uint32_t colorRef);  // the game's 0x00BBGGRR as 0xRRGGBB
 // A line the game pushed into its chat (UTF-8), from where it came, in the game's colour
@@ -68,6 +80,7 @@ struct Input {
     std::string whisper;         // the name the words go to (UTF-8); "" none
     bool whisperFocus = false;   // the name being typed
     bool caretOn = true;         // the caret's blink
+    std::string replyTo;         // 3.0.11-beta.240: the last who whispered (UTF-8); "" none
 };
 
 using Measure = std::function<float(const std::string& utf8, float px, bool bold)>;
@@ -100,6 +113,7 @@ struct Layout {
     int rows = 0;                     // the lines' rows shown
     float px = 12.5f, rowH = 18;      // the lines' words and rows
     panel::Box glass, tabsRow, lines, input, mode, clear, field, newer;
+    panel::Box hints;  // 3.0.11-beta.240: the commands' hints over the rows (w 0: none)
     std::vector<panel::Box> tabs;
 };
 // Its bottom left at (left, bottom) in the target

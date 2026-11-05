@@ -102,7 +102,7 @@ std::string chipText(const Input& in, const Texts& t) {
 
 // A tab's count of new lines: its pill right of its name; w 0 none
 panel::Box badgeBox(const Layout& L, int i, const Show& sh, const Texts& t, const Measure& m) {
-    if (L.quiet || i < 0 || i >= int(L.tabs.size()) || sh.unread[i] <= 0 || i == int(sh.tab)) return panel::Box{};
+    if (i < 0 || i >= int(L.tabs.size()) || sh.unread[i] <= 0 || i == int(sh.tab)) return panel::Box{};
     const float s = L.s;
     const panel::Box& b = L.tabs[size_t(i)];
     const float lw = std::ceil(m(t.tabs[i], 12 * s, true)) + 2;
@@ -273,18 +273,20 @@ Layout layout(int left, int bottom, float scale, int rows, bool quiet, const Sho
     Layout L;
     const float s = scale > 0 ? scale : 1.0f;
     L.s = s;
+    // 3.0.11-beta.240 (the chat concept, stage 1: «затухание без исчезновения»): idle, only its ground fades - its
+    // tabs, its rows and its input stay where they were (the chat no longer jumps under the pointer)
     L.quiet = quiet;
     L.px = 12.5f * s;
     L.rowH = kRowH * s;
-    L.rows = quiet ? std::min(std::max(1, rows), 3) : std::max(1, rows);
+    L.rows = std::max(1, rows);
     const float w = kW * s, pad = kPad * s;
-    const float tabsH = quiet ? 0 : kTabsH * s, inputH = quiet ? 0 : kInputH * s;
-    const float top = quiet ? 8 * s : tabsH + 4 * s;
+    const float tabsH = kTabsH * s, inputH = kInputH * s;
+    const float top = tabsH + 4 * s;
     const float linesH = float(L.rows) * L.rowH;
-    const float h = top + linesH + (quiet ? 8 * s : 6 * s + inputH + 8 * s);
+    const float h = top + linesH + 6 * s + inputH + 8 * s;
     L.glass = panel::Box{0, 0, w, h};
     L.lines = panel::Box{pad, top, w - 2 * pad, linesH};
-    if (!quiet) {
+    {
         L.tabsRow = panel::Box{0, 0, w, tabsH};
         float x = 8 * s;
         for (int i = 0; i < kTabs; ++i) {
@@ -306,6 +308,12 @@ Layout layout(int left, int bottom, float scale, int rows, bool quiet, const Sho
         L.field = panel::Box{fieldX, L.input.y, L.input.x + L.input.w - 8 * s - fieldX, inputH};
         if (sh.scroll > 0)
             L.newer = panel::Box{L.lines.x + L.lines.w - 30 * s, L.lines.y + L.lines.h - 19 * s, 30 * s, 18 * s};
+        if (commandHints(in.text)) {  // 3.0.11-beta.240: over the rows' bottom, under the newest
+            float hw = 0;
+            for (const std::string& c : t.commands) hw = std::max(hw, m(c, 12 * s, false));
+            const float hh = (4 * 18 + 8) * s;
+            L.hints = panel::Box{L.lines.x, L.lines.y + L.lines.h - hh, std::min(L.lines.w, hw + 20 * s), hh};
+        }
     }
     L.w = int(std::ceil(w));
     L.h = int(std::ceil(h));
@@ -324,7 +332,7 @@ void shown(const Layout& L, const std::vector<Row>& rows, int scroll, size_t& fi
 
 Hit hitTest(const Layout& L, const std::vector<Row>& rows, const Show& sh, float x, float y) {
     if (!L.glass.contains(x, y)) return Hit{};
-    if (!L.quiet) {
+    {
         for (size_t i = 0; i < L.tabs.size(); ++i)
             if (L.tabs[i].contains(x, y)) return Hit{Part::Tab, int(i)};
         if (L.newer.w > 0 && L.newer.contains(x, y)) return Hit{Part::Newer, -1};
@@ -365,8 +373,9 @@ std::string fieldText(const Layout& L, const Input& in, const Measure& m, float&
 void paint(panel::Picture& out, const Layout& L, const std::vector<Row>& rows, const Input& in, const Show& sh,
            const Texts& t, const Measure& m) {
     const float s = L.s;
-    panel::roundRect(out, L.glass, 10 * s, kCard, L.quiet ? 0.55f : uistyle::chat(), kWhite, 0.09f, 1.0f * s);
-    if (!L.quiet) {
+    panel::roundRect(out, L.glass, 10 * s, kCard, L.quiet ? uistyle::chat() * 0.45f : uistyle::chat(), kWhite,
+                     L.quiet ? 0.04f : 0.09f, 1.0f * s);
+    {
         for (size_t i = 0; i < L.tabs.size(); ++i) {
             const panel::Box& b = L.tabs[i];
             const bool on = int(i) == int(sh.tab);
@@ -395,6 +404,7 @@ void paint(panel::Picture& out, const Layout& L, const std::vector<Row>& rows, c
                              kText, 0.95f);
         }
         if (L.newer.w > 0) panel::roundRect(out, L.newer, 6 * s, kAccent, sh.hoverNewer ? 0.45f : 0.28f);
+        if (L.hints.w > 0) panel::roundRect(out, L.hints, 8 * s, kCard, 0.96f, kWhite, 0.14f, 1.0f * s);
     }
     if (sh.hoverLine >= 0) {  // the name pointed at: underlined
         size_t first = 0, count = 0;
@@ -414,7 +424,7 @@ std::vector<Words> words(const Layout& L, const std::vector<Row>& rows, const In
                          const Texts& t, const Measure& m) {
     std::vector<Words> out;
     const float s = L.s;
-    if (!L.quiet) {
+    {
         for (size_t i = 0; i < L.tabs.size(); ++i) {
             const panel::Box& b = L.tabs[i];
             const bool on = int(i) == int(sh.tab);
@@ -438,13 +448,25 @@ std::vector<Words> words(const Layout& L, const std::vector<Row>& rows, const In
             out.push_back(Words{panel::Box{L.lines.x + p.x, top + float(r - first) * L.rowH, p.w, L.rowH}, text,
                                 p.rgb, L.px, p.bold, Align::Left});
         }
-    if (L.quiet) return out;
     const std::string chip = chipText(in, t);
     out.push_back(Words{panel::Box{L.mode.x + 8 * s, L.mode.y, std::ceil(m(chip, 12 * s, true)) + 2, L.mode.h}, chip,
                         chipRgb(in), 12 * s, true, Align::Left});
     if (L.clear.w > 0)
         out.push_back(Words{L.clear, "\xC3\x97", sh.hoverClear ? kText : kMuted, 13 * s, true, Align::Center});  // ×
     if (L.newer.w > 0) out.push_back(Words{L.newer, t.newer, kText, 11 * s, true, Align::Center});
+    if (L.hints.w > 0) {  // 3.0.11-beta.240: the commands, the one being typed lit
+        for (int i = 0; i < 4; ++i) {
+            std::string line = t.commands[i];
+            if (i == 3) {
+                const size_t at = line.find("{1}");
+                if (at != std::string::npos) line.replace(at, 3, in.replyTo.empty() ? "\xE2\x80\x94" : in.replyTo);
+            }
+            const bool typed = in.text.size() > 1 && line.rfind(in.text, 0) == 0;
+            out.push_back(Words{panel::Box{L.hints.x + 10 * s, L.hints.y + (4 + 18 * float(i)) * s, L.hints.w - 14 * s,
+                                           18 * s},
+                                line, typed ? kText : kMuted, 12 * s, typed, Align::Left});
+        }
+    }
     if (in.text.empty()) {
         const std::string& hint = in.battle && !in.typing ? t.type : t.send;
         out.push_back(Words{panel::Box{L.field.x, L.field.y, L.field.w, L.field.h}, hint, kFaint, 11.5f * s, false,
@@ -465,6 +487,46 @@ std::string grouped(long long n) {
         out += digits[i];
     }
     return n < 0 ? "-" + out : out;
+}
+
+bool commandHints(const std::string& utf8) {
+    if (utf8.empty() || utf8[0] != '/' || utf8.find(' ') != std::string::npos || utf8.size() > 2) return false;
+    return utf8.size() == 1 || std::string("pgwr").find(utf8[1]) != std::string::npos;
+}
+
+bool command(const std::string& utf8, const std::string& replyTo, Command& out) {
+    if (utf8.size() < 3 || utf8[0] != '/' || utf8[2] != ' ') return false;
+    const char c = utf8[1];
+    std::string rest = utf8.substr(3);
+    while (!rest.empty() && rest.front() == ' ') rest.erase(rest.begin());
+    out = Command{};
+    if (c == 'p' || c == 'g') {
+        if (rest.empty()) return false;
+        out.mode = c == 'p' ? 1 : 2;
+        out.words = rest;
+        return true;
+    }
+    if (c == 'r') {
+        if (rest.empty() || replyTo.empty()) return false;
+        out.whisper = replyTo;
+        out.words = rest;
+        return true;
+    }
+    if (c != 'w') return false;
+    size_t end = 0;
+    if (!rest.empty() && rest[0] == '"') {  // a name with spaces: in quotes
+        end = rest.find('"', 1);
+        if (end == std::string::npos) return false;
+        out.whisper = rest.substr(1, end - 1);
+        ++end;
+    } else {
+        end = rest.find(' ');
+        if (end == std::string::npos) return false;
+        out.whisper = rest.substr(0, end);
+    }
+    out.words = rest.substr(std::min(rest.size(), end));
+    while (!out.words.empty() && out.words.front() == ' ') out.words.erase(out.words.begin());
+    return !out.whisper.empty() && !out.words.empty();
 }
 
 }  // namespace uagfx::chatpanel

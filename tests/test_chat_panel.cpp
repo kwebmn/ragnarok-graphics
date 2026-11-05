@@ -1,5 +1,6 @@
 // 3.0.11-beta.41: the chat (core/chat_panel) - the game's lines into its channels, the tabs, the rows broken at words,
 // its places and the mouse over them
+#include <algorithm>
 #include <string>
 #include <vector>
 
@@ -109,7 +110,8 @@ TEST(chat_layout_and_mouse) {
     CHECK(L.lines.h == 7 * 18 && L.input.y > L.lines.y + L.lines.h && L.field.x > L.mode.x + L.mode.w);
     CHECK(L.tabs[2].x > L.tabs[1].x + L.tabs[1].w && L.tabs[5].x + L.tabs[5].w < L.glass.w);
     const Layout Q = layout(10, 1070, 1.0f, 7, true, sh, in, t, estimate);
-    CHECK(Q.quiet && Q.tabs.empty() && Q.rows == 3 && Q.h < L.h && Q.input.w == 0);
+    // 3.0.11-beta.240 (the chat concept, stage 1): idle, only its ground fades - its tabs, rows and input stay
+    CHECK(Q.quiet && Q.tabs.size() == 6 && Q.rows == 7 && Q.h == L.h && Q.input.w == L.input.w);
     std::vector<Line> lines;
     for (int i = 0; i < 12; ++i)
         lines.push_back(fromGame(Source::Public, "P" + std::to_string(i) + " : hello", 0, t, 0));
@@ -166,4 +168,35 @@ TEST(chat_picture_and_words) {
     in.caret = std::string::npos;
     const std::string shown = fieldText(L, in, estimate, caretX);
     CHECK(shown.size() < in.text.size() && shown.rfind("\xE2\x80\xA6", 0) == 0 && caretX <= L.field.w);
+}
+
+// 3.0.11-beta.240 (the chat concept, stage 1): the input's own commands - /p, /g, /w Name (a name with spaces in
+// quotes), /r to the last who whispered; their hints while «/» is typed
+TEST(chat_commands_and_their_hints) {
+    chatpanel::Command c;
+    CHECK(command("/p hi all", "", c) && c.mode == 1 && c.whisper.empty() && c.words == "hi all");
+    CHECK(command("/g  hello", "", c) && c.mode == 2 && c.words == "hello");
+    CHECK(command("/w Ann hi there", "", c) && c.whisper == "Ann" && c.words == "hi there");
+    CHECK(command("/w \"Dark Lord\" sell?", "", c) && c.whisper == "Dark Lord" && c.words == "sell?");
+    CHECK(command("/r ok", "Bob", c) && c.whisper == "Bob" && c.words == "ok");
+    CHECK(!command("/r ok", "", c));       // no one whispered yet
+    CHECK(!command("/p ", "", c));          // nothing to send
+    CHECK(!command("/sit", "", c));         // the game's own
+    CHECK(!command("/w Ann", "", c));       // no words
+    CHECK(!command("hello /p x", "", c));
+    CHECK(commandHints("/") && commandHints("/p") && !commandHints("/p x") && !commandHints("/sit") &&
+          !commandHints("hi"));
+    Texts t;
+    t.commands[0] = "/p текст — у групу";
+    t.commands[1] = "/g текст — у гільдію";
+    t.commands[2] = "/w Ім'я текст — шепіт";
+    t.commands[3] = "/r текст — відповісти {1}";
+    Show sh;
+    Input in;
+    in.text = "/";
+    in.replyTo = "Bob";
+    const Layout L = layout(10, 1070, 1.0f, 7, false, sh, in, t, estimate);
+    CHECK(L.hints.w > 0 && L.hints.y >= L.lines.y && L.hints.y + L.hints.h <= L.lines.y + L.lines.h + 0.5f);
+    const std::vector<Words> w = words(L, {}, in, sh, t, estimate);
+    CHECK(std::any_of(w.begin(), w.end(), [](const Words& x) { return x.text == "/r текст — відповісти Bob"; }));
 }

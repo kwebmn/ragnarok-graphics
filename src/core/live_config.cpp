@@ -203,6 +203,10 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("minimap_kafra", flag(running.minimapKafra), flag(file.minimapKafra)));
         n.minimapKafra = file.minimapKafra;
     }
+    if (file.chatFade != running.chatFade) {  // 3.0.11-beta.240: the chat's fade, at once
+        u.applied.push_back(change("chat_fade", std::to_string(running.chatFade), std::to_string(file.chatFade)));
+        n.chatFade = file.chatFade;
+    }
     if (file.expGain != running.expGain) {  // 3.0.11-beta.237: a kill's experience over the monster, at once
         u.applied.push_back(change("exp_gain", flag(running.expGain), flag(file.expGain)));
         n.expGain = file.expGain;
