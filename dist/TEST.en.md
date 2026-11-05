@@ -1,3 +1,9 @@
+# uaRO Graphics 3.0.11-beta.288 — what's new
+
+**Hotbar profiles:** each character now has three hotbar sets — Ctrl+Shift+1, 2, 3 switch between them (the current one is kept). A new set starts as a copy of the current one. The set's number (2 or 3) shows by the bar's toggle. Works with the per-character hotbar (on).
+
+**Layout per character:** a new switch «Layout per character» under «Interface» (off): the places and sizes of the interface's parts are kept for each character separately; until you change them for a character, the common ones are used.
+
 # uaRO Graphics 3.0.11-beta.287 — what's new
 
 **Market price in tips:** in the items window, the storage and the cart, the tip over an item shows the site's market: «Market: from 12 000 z · 3 lots» — the cheapest active lot (per piece) and how many lots. The same data as the in-game reference, refreshed every few minutes.
