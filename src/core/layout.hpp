@@ -111,6 +111,7 @@ constexpr const char* kStatsState = "uaro-graphics\\stats-state.txt";
 constexpr const char* kCharDiary = "uaro-graphics\\characters.txt";  // 3.0.11-beta.273: core/char_diary
 constexpr const char* kPortraits = "uaro-graphics\\portraits";  // 3.0.11-beta.273: win/portrait
 constexpr const char* kMvpTimers = "uaro-graphics\\mvp.txt";  // 3.0.11-beta.280: core/mvp_timers
+constexpr const char* kStash = "uaro-graphics\\stash.txt";  // 3.0.11-beta.286: core/stash_book
 // 3.0.11-beta.96: «Навички»'s place («at 0.2 0.15») and its tab («tab 2»)
 constexpr const char* kSkillsState = "uaro-graphics\\skills-state.txt";
 // 3.0.11-beta.241: the chat's size by its corner («width 640», «rows 10»)

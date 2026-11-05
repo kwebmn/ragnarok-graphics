@@ -1,3 +1,4 @@
+#include "win/stash_watch.hpp"
 #include "win/item_window.hpp"
 
 #include <windowsx.h>
@@ -557,6 +558,7 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     if (now - s.readAt >= kReadMs || s.items.empty()) {
         s.readAt = now;
         readBag(s);
+        stashwatch::note(stashbook::Kind::Bag, s.items, s.codePage);  // 3.0.11-beta.286
         charstatus::Status st;
         if (readOwnStatus(st)) {
             s.show.weight = st.weight;
@@ -579,6 +581,7 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
         ++f;
     }
     s.shownItems = iw::shownOf(s.items, s.show.tab, s.show.search);
+    s.show.also = stashwatch::also(s.show.search, s.codePage, {stashbook::Kind::Bag});  // 3.0.11-beta.286
     s.show.scroll = std::clamp(s.show.scroll, 0, iw::mostScroll(s.layout, s.shownItems.size()));
     s.show.caretOn = (now / kBlinkMs) % 2 == 0;
     s.show.hover = -1;

@@ -1,3 +1,4 @@
+#include "win/stash_watch.hpp"
 #include "win/cart_window.hpp"
 
 #include <windowsx.h>
@@ -407,6 +408,7 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     if (now - s.readAt >= kReadMs || read32(kCartCount) != s.countRead) {
         s.readAt = now;
         readCart(s);
+        stashwatch::note(stashbook::Kind::Cart, s.items, s.codePage);  // 3.0.11-beta.286
     }
     if (!s.shown)
         LOG_INFO("cart: the cart open - «Візок» shows it (%d of %d things, weight %d of %d)", s.count, s.most,
@@ -416,6 +418,8 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     s.show.zeny = -1;
     place(s);
     s.shownItems = iw::shownOf(s.items, s.show.tab, s.show.search);
+    s.show.also =  // 3.0.11-beta.286
+        stashwatch::also(s.show.search, s.codePage, {stashbook::Kind::Cart, stashbook::Kind::Bag});
     s.show.scroll = std::clamp(s.show.scroll, 0, iw::mostScroll(s.layout, s.shownItems.size()));
     s.show.caretOn = (now / kBlinkMs) % 2 == 0;
     s.show.hover = -1;

@@ -312,8 +312,8 @@ void paint(panel::Picture& out, const Layout& L, const std::vector<Item>& items,
     }
     panel::roundRect(out, panel::Box{0, L.footer.y, L.glass.w, 1 * s}, 0, kWhite, 0.08f);
     const float share = sh.weightMost > 0 ? std::clamp(float(sh.weight) / float(sh.weightMost), 0.0f, 1.0f) : 0.0f;
-    panel::roundRect(out, L.bar, 3 * s, kWhite, 0.10f);
-    if (share > 0)
+    if (sh.also.empty()) panel::roundRect(out, L.bar, 3 * s, kWhite, 0.10f);  // 3.0.11-beta.286: else the «Ще» line
+    if (share > 0 && sh.also.empty())
         panel::roundRect(out, panel::Box{L.bar.x, L.bar.y, L.bar.w * share, L.bar.h}, 3 * s,
                          (sh.overweight >= 0 ? sh.overweight == 2 : share >= 0.9f)   ? kRed
                          : (sh.overweight >= 0 ? sh.overweight == 1 : share >= 0.5f) ? kGold
@@ -411,16 +411,21 @@ std::vector<Words> words(const Layout& L, const std::vector<Item>& items, const 
                                 it.starred ? kGold : kMuted, 11 * s, false, Align::Center});
     }
     const float side = kSide * s;
-    out.push_back(
-        Words{panel::Box{side, L.footer.y, 60 * s, L.footer.h}, t.weight, kMuted, 12 * s, false, Align::Left});
-    if (sh.weightMost > 0) {
+    if (!sh.also.empty()) {  // 3.0.11-beta.286: where else such things lie, over the whole footer
+        out.push_back(Words{panel::Box{side, L.footer.y, L.glass.w - 2 * side, L.footer.h}, sh.also, kGold, 12 * s,
+                            true, Align::Left});
+    } else {
+        out.push_back(
+            Words{panel::Box{side, L.footer.y, 60 * s, L.footer.h}, t.weight, kMuted, 12 * s, false, Align::Left});
+    }
+    if (sh.weightMost > 0 && sh.also.empty()) {
         const int percent = int(int64_t(sh.weight) * 100 / sh.weightMost);
         const std::string w = grouped(sh.weight) + " / " + grouped(sh.weightMost) + " \xC2\xB7 " +
                               std::to_string(percent) + " %";
         out.push_back(Words{panel::Box{L.bar.x + L.bar.w + 12 * s, L.footer.y, m(w, 12 * s, false) + 4, L.footer.h}, w,
                             0xC9D1DE, 12 * s, false, Align::Left});
     }
-    if (sh.zeny >= 0) {  // 3.0.11-beta.115: none in «Склад»
+    if (sh.zeny >= 0 && sh.also.empty()) {  // 3.0.11-beta.115: none in «Склад»
         const std::string z = grouped(sh.zeny) + " z";
         const float zw = m(z, 12 * s, true) + 4;
         out.push_back(Words{panel::Box{L.glass.w - side - zw, L.footer.y, zw, L.footer.h}, z, kText, 12 * s, true,

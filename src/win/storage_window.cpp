@@ -1,3 +1,4 @@
+#include "win/stash_watch.hpp"
 #include "win/storage_window.hpp"
 
 #include <windowsx.h>
@@ -409,12 +410,15 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     if (now - s.readAt >= kReadMs || read32(kStorageCount) != s.countRead) {
         s.readAt = now;
         readStorage(s);
+        stashwatch::note(stashbook::Kind::Storage, s.items, s.codePage);  // 3.0.11-beta.286
     }
     s.show.weight = s.places;
     s.show.weightMost = s.most;
     s.show.zeny = -1;
     place(s);
     s.shownItems = iw::shownOf(s.items, s.show.tab, s.show.search);
+    s.show.also =  // 3.0.11-beta.286
+        stashwatch::also(s.show.search, s.codePage, {stashbook::Kind::Storage, stashbook::Kind::Bag});
     s.show.scroll = std::clamp(s.show.scroll, 0, iw::mostScroll(s.layout, s.shownItems.size()));
     s.show.caretOn = (now / kBlinkMs) % 2 == 0;
     s.show.hover = -1;

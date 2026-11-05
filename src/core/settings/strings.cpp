@@ -5393,6 +5393,9 @@ constexpr Entry kTexts[] = {
     {Text::ItemsCompareInstead, "Instead of {1}: {2}", "Замість {1}: {2}", "Вместо {1}: {2}"},  // .285
     {Text::ItemsCompareNone, "Nothing worn there: {1}", "Там нічого не вдягнуто: {1}", "Там ничего не надето: {1}"},
     {Text::ItemsCompareSlots, "slots", "слоти", "слоты"},
+    {Text::StashAlso, "Also: {1}", "Ще: {1}", "Ещё: {1}"},  // 3.0.11-beta.286
+    {Text::StashStorage, "Storage", "Склад", "Склад"},
+    {Text::StashCart, "cart", "візок", "тележка"},
     {Text::NpcTalkTag, "Talk", "Говорити", "Говорить"},  // 3.0.11-beta.256: the NPC's plate before its name comes
     {Text::InterfaceShop, "NPC shops", "Крамниці NPC", "Магазины NPC"},  // 3.0.11-beta.100
     {Text::InterfaceShopHint,  // 3.0.11-beta.101: the keys, the amount typed, the description

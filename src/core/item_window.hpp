@@ -96,6 +96,9 @@ struct Show {
     bool dropping = false;  // 3.0.11-beta.110: a worn thing dragged out of «Спорядження» - the grid lit (taken off)
     std::string search;   // UTF-8
     bool caretOn = true;
+    // 3.0.11-beta.286 (the owner's feature 15): while searching - where else such things lie («Ще: Склад ×12 · Анна
+    // ×3», core/stash_book), in the footer instead of the weight and the zeny; "" none
+    std::string also;
     int weight = 0, weightMost = 0;  // 3.0.11-beta.115: «Склад» - its places used of the most
     // 3.0.11-beta.139: the server's overweight state (1 no regen - uaRO from 70 %, 2 the 90 % one, 0 none) - the bar's
     // colour; < 0 not known (and «Склад»): by the share, 50 % and 90 %
