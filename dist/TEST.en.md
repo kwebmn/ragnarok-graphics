@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.11-beta.279 — what's new
+
+**Monster card by the cursor:** point the mouse at a monster (or pick a target with the controller) and a card shows next to it: name and level, HP, element, race and size, your chance to hit it, its chance to hit you, its blow after your DEF and its damage per second, your blow and how many blows it takes. Worked out by the server's rules (without element, size and cards). Switch «Monster card by the cursor» under «Interface», on.
+
 - **Hunt.** A new panel over the game: damage per second (the last 10 s and the last minute) and each skill's share, experience per hour as a share of the level and the time to the next level, zeny per hour, how many monsters and which were killed. The round arrow in its corner starts counting anew. Turn it on in «Interface» → «Hunt panel»; its place and size are in the interface layout («Hunt»).
 
 # uaRO Graphics 3.0.11-beta.277 — what's new
