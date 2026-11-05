@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.11-beta.284 — what's new
+
+**Chat search:** click into the chat's field and press Ctrl+F — the field becomes «Search»: what you type is looked for in the open tab's lines (in the words and the speaker's name), regardless of case. Backspace erases, Esc or Enter close it, so does Ctrl+F again. Outside the chat's field Ctrl+F still opens the in-game reference.
+
 # uaRO Graphics 3.0.11-beta.283 — what's new
 
 **Item names on Alt:** hold Alt and every item on the ground gets a small plate with its name and amount. Switch «Item names on Alt» under «Interface», on.
