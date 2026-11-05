@@ -1,3 +1,9 @@
+# uaRO Graphics 3.0.11-beta.269 — what's new
+
+**«Характеристики», stage 5 — «Цілі» in «Планування»:**
+- The ASPD you aim at (‹ › by one, up to 190): the AGI it takes with your planned DEX and the points still needed — or that the base stat up to 99 cannot reach it (only skills or things).
+- «Без касту»: the DEX to 150 (with bonuses) and its points, or how much more things or buffs must give.
+
 # uaRO Graphics 3.0.11-beta.268 — what's new
 
 **«Характеристики», stage 4 — the «Планування» tab** (between «Персонаж» and «Довідка»):
