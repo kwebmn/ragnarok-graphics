@@ -706,12 +706,15 @@ bool cellUnder(const View& v, const MapSize& map, float px, float py, Cell& out)
 
 }  // namespace
 
-float markScale(int cells, const MapSize& map) {
+float markScale(int cells, const MapSize& map, float partScale) {
     const int whole = std::max(1, std::max(map.w, map.h));
-    if (cells >= whole) return 1.3f;  // the whole map: as big as they get
-    const float t = std::clamp(
-        (std::log(float(std::max(cells, 1))) - std::log(40.0f)) / (std::log(300.0f) - std::log(40.0f)), 0.0f, 1.0f);
-    return 0.85f + 0.45f * t;
+    const float t = cells >= whole ? 1.0f  // the whole map: as big as they get
+                                   : std::clamp((std::log(float(std::max(cells, 1))) - std::log(40.0f)) /
+                                                    (std::log(300.0f) - std::log(40.0f)),
+                                                0.0f, 1.0f);
+    const float plain = 0.85f + 0.45f * t;
+    const float grow = std::clamp(1.0f / std::max(partScale, 0.01f), 1.0f, 2.0f);  // .262: a small window's more
+    return std::max(0.5f, 1.0f + (plain - 1.0f) * grow);
 }
 
 int cellsAt(int step, const MapSize& map) {
@@ -870,7 +873,7 @@ void paint(panel::Picture& out, const Layout& L, const Scene& sc, const Texts& t
     const float s = L.s, edge = std::max(1.0f, s);
     const View v = view(sc.map, sc.player, sc.cells, int(L.map.w));
     mapPixels(out, L.map, sc, v);
-    overMap(out, L.map, sc, v, s, 1.0f, markScale(sc.cells, sc.map));
+    overMap(out, L.map, sc, v, s, 1.0f, markScale(sc.cells, sc.map, L.s));
     roundCorners(out, L.map, kRadius * s);
     panel::roundRect(out, L.map, kRadius * s, kWhite, 0.0f, kWhite, 0.16f, edge);
     const float arm = 15 * s, thick = std::max(1.5f, 2 * s);  // the concept's gold corners
@@ -1028,7 +1031,7 @@ int markAt(const Layout& L, const Scene& sc, float x, float y) {
     for (size_t i = 0; i < sc.marks.size(); ++i) {
         float px = 0, py = 0;
         cellToPanel(v, sc.map, sc.marks[i].cell, px, py);
-        const float reach = radiusOf(sc.marks[i], L.s) * markScale(sc.cells, sc.map) + 4 * L.s;  // a hand more
+        const float reach = radiusOf(sc.marks[i], L.s) * markScale(sc.cells, sc.map, L.s) + 4 * L.s;  // a hand more
         const float d = (px - x) * (px - x) + (py - y) * (py - y);
         if (d <= reach * reach && (best < 0 || d < bestD)) {
             best = int(i);

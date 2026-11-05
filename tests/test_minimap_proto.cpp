@@ -711,6 +711,11 @@ TEST(minimap_proto_marks_by_the_zoom) {
     CHECK(minimap::markScale(150, map) < minimap::markScale(220, map));
     const minimap::MapSize small{120, 100};
     CHECK(minimap::markScale(120, small) > 1.2f);  // the whole of a small map: as big
+    // 3.0.11-beta.262: a small window's minimap (its scale 0.6) - the zoom's change larger, the same at 100 cells
+    const float closeUp = minimap::markScale(40, map, 0.6f), wide = minimap::markScale(300, map, 0.6f);
+    CHECK(wide - closeUp > (minimap::markScale(300, map) - minimap::markScale(40, map)) * 1.5f);
+    CHECK(std::fabs(minimap::markScale(100, map, 0.6f) - minimap::markScale(100, map)) < 0.06f);
+    CHECK(minimap::markScale(40, map, 0.3f) >= 0.5f);
 }
 
 // 3.0.11-beta.201 (the tester: «іконки кафр зробили, а у легенді зверху - забули поміняти»): the Kafras' layer button
