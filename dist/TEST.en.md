@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.11-beta.262 — what's new
+
+**Minimap:** in a small game window the marks change size with the zoom more visibly — the smaller the window, the more (up to twice), so the difference shows on a small minimap too.
+
 # uaRO Graphics 3.0.11-beta.261 — what's new
 
 **From the tester's second list:**
