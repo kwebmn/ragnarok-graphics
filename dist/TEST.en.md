@@ -1,3 +1,11 @@
+# uaRO Graphics 3.0.11-beta.268 — what's new
+
+**«Характеристики», stage 4 — the «Планування» tab** (between «Персонаж» and «Довідка»):
+- «Рівень плану» ‹ › — from your level to 99 (Shift: by 10); the points that level brings, what the plan takes, and whether they suffice.
+- Each stat has − / + (Shift: by 10): «70 → 73» and its price in points.
+- At the right «БУЛО → СТАНЕ»: ATK, MATK, HIT, FLEE, ASPD (to a tenth), CRIT, Max HP, Max SP, the cast, the weight — the server's numbers now and what they become by the formulas, things and buffs as they are.
+- The plan only shows: nothing goes to the server, you put the points yourself with «+» on «Персонаж». «Скинути» brings the plan back to the character.
+
 # uaRO Graphics 3.0.11-beta.267 — what's new
 
 **«Характеристики», stage 3 — the «Довідка» tab:** the window's title has the tabs «Персонаж» and «Довідка». In «Довідка»:
