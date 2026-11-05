@@ -36,6 +36,21 @@ Class classOf(int job) {
 }
 
 bool upper(int job) { return job >= 4001 && job <= 4022; }
+
+std::vector<int> jobs() {
+    std::vector<int> out;
+    for (const Job& j : kJobs) out.push_back(j.id);
+    return out;
+}
+
+std::vector<int> bonusLevels(int job, int stat) {
+    std::vector<int> out;
+    const Job* j = find(job);
+    if (!j || stat < 0 || stat >= kStats) return out;
+    for (int i = 0; j->bonuses[i]; ++i)
+        if (j->bonuses[i] - '1' == stat) out.push_back(i + 1);
+    return out;
+}
 bool baby(int job) { return job >= 4023 && job <= 4045; }
 
 int pointCost(int value) { return (std::max(value, 1) - 1) / 10 + 2; }

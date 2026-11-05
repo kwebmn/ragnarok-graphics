@@ -121,6 +121,26 @@ std::string pct10(int tenths, char sep) { return decimal(double(tenths) / 10.0, 
 
 }  // namespace
 
+const char* weaponName(int weapon) {
+    return weapon >= 0 && weapon < statmath::kWeapons ? kWeaponNames[weapon] : "";
+}
+
+std::vector<AspdRow> aspdTable(int job, int agi, int dex) {
+    std::vector<AspdRow> out;
+    const statmath::Class c = statmath::classOf(job);
+    if (!c.known) return out;
+    for (int w = 0; w < statmath::kWeapons && int(out.size()) < kMostAspdRows; ++w) {
+        if (c.delays[w] >= 2000) continue;
+        AspdRow r;
+        r.weapon = w;
+        r.delay = c.delays[w];
+        for (int i = 0; i < 4; ++i) r.at[i] = statmath::aspd10(statmath::amotion(job, w, kAgiSteps[i], dex)) / 10;
+        r.mine = statmath::aspd10(statmath::amotion(job, w, agi, dex)) / 10;
+        out.push_back(r);
+    }
+    return out;
+}
+
 int explainedItem(const Show& sh) {
     if (sh.hoverRow >= 0) return sh.hoverRow;
     if (sh.hoverPlus >= 0) return sh.hoverPlus;
@@ -299,16 +319,25 @@ std::string explain(const Data& d, int i, const Texts& t) {
     return effect.empty() ? line : line + " \xC2\xB7 " + effect;
 }
 
-Layout layout(int x, int y, float scale, const Data& d, const Texts& t, const Measure& m) {
+Layout layout(int x, int y, float scale, const Data& d, const Texts& t, const Measure& m, int tab, int refJob) {
     Layout L;
     const float s = scale > 0 ? scale : 1.0f;
     L.s = s;
+    L.tab = tab == 1 ? 1 : 0;
+    L.refJob = refJob >= 0 ? refJob : d.job;
     const float w = kW * s, side = kSide * s;
     L.title = panel::Box{0, 0, w, kTitleH * s};
     L.close = panel::Box{w - side - 26 * s, (kTitleH * s - 26 * s) / 2, 26 * s, 26 * s};
     const std::string chip = fill(t.free, {std::to_string(d.free)});
     const float chipW = m(chip, 11.5f * s, true) + 18 * s;
     L.freeChip = panel::Box{L.close.x - 14 * s - chipW, (kTitleH * s - 22 * s) / 2, chipW, 22 * s};
+    // 3.0.11-beta.267 (stage 3): the tabs after the title and its key
+    float tx = side + m(t.title, 15 * s, true) + 2 + 8 * s + m(t.hotkey, 11 * s, false) + 2 + 22 * s;
+    for (int i = 0; i < 2; ++i) {
+        const float tw = m(t.tabs[i], 12 * s, true) + 24 * s;
+        L.tabs[i] = panel::Box{tx, (kTitleH * s - 26 * s) / 2, tw, 26 * s};
+        tx += tw + 6 * s;
+    }
     L.table = panel::Box{side, kTitleH * s + 4 * s, kTableW * s, kHeaderH * s + float(kStats) * kRowH * s};
     L.header = panel::Box{L.table.x, L.table.y, L.table.w, kHeaderH * s};
     for (int i = 0; i < kStats; ++i) {
@@ -323,7 +352,21 @@ Layout layout(int x, int y, float scale, const Data& d, const Texts& t, const Me
                                           L.battle.w + 12 * s, kBattleRowH * s});
     const float bottom = std::max(L.table.y + L.table.h, L.battle.y + L.battle.h) + 8 * s;
     L.line = panel::Box{0, bottom, w, (kExplainTitleH + float(kExplainLines) * kExplainLineH + kExplainPad) * s};
-    L.glass = panel::Box{0, 0, w, L.line.y + L.line.h};
+    // «Довідка»: the class's row with ‹ ›, the ASPD's table (kMostAspdRows at most), the stat's price, the job's
+    const float rowH = 22 * s, headH = 26 * s, gap = 12 * s;
+    L.classRow = panel::Box{side, kTitleH * s + 6 * s, w - 2 * side, 30 * s};
+    L.prev = panel::Box{L.classRow.x + 150 * s, L.classRow.y + 3 * s, 24 * s, 24 * s};
+    L.next = panel::Box{L.classRow.x + 360 * s, L.classRow.y + 3 * s, 24 * s, 24 * s};
+    L.aspd = panel::Box{side, L.classRow.y + L.classRow.h + gap, w - 2 * side, headH * 2 + kMostAspdRows * rowH};
+    L.cost = panel::Box{side, L.aspd.y + L.aspd.h + gap, w - 2 * side, headH * 2 + rowH};
+    L.bonus = panel::Box{side, L.cost.y + L.cost.h + gap, w - 2 * side, headH + float(kStats) * 20 * s};
+    const float refBottom = L.bonus.y + L.bonus.h + 10 * s;
+    L.glass = panel::Box{0, 0, w, std::max(L.line.y + L.line.h, refBottom)};  // one height for both tabs
+    if (L.tab == 1) {  // «Довідка»: none of «Персонаж»'s rows to point at
+        L.rows.clear();
+        L.pluses.clear();
+        L.battleRows.clear();
+    }
     L.w = int(std::ceil(w));
     L.h = int(std::ceil(L.glass.h));
     L.x = x;
@@ -334,6 +377,10 @@ Layout layout(int x, int y, float scale, const Data& d, const Texts& t, const Me
 Hit hitTest(const Layout& L, float x, float y) {
     if (!L.glass.contains(x, y)) return Hit{};
     if (L.close.contains(x, y)) return Hit{Part::Close, -1};
+    for (int i = 0; i < 2; ++i)  // 3.0.11-beta.267
+        if (L.tabs[i].contains(x, y)) return Hit{Part::Tab, i};
+    if (L.tab == 1 && L.prev.contains(x, y)) return Hit{Part::Arrow, 0};
+    if (L.tab == 1 && L.next.contains(x, y)) return Hit{Part::Arrow, 1};
     for (size_t i = 0; i < L.pluses.size(); ++i)
         if (L.pluses[i].contains(x, y)) return Hit{Part::Plus, int(i)};
     for (size_t i = 0; i < L.rows.size(); ++i)
@@ -349,6 +396,16 @@ void paint(panel::Picture& out, const Layout& L, const Data& d, const Show& sh) 
     panel::roundRect(out, L.glass, 12 * s, kCard, uistyle::window(), kWhite, 0.09f, 1.0f * s);
     if (sh.hoverClose) panel::roundRect(out, L.close, 7 * s, kWhite, 0.12f);
     if (d.free > 0) panel::roundRect(out, L.freeChip, 6 * s, kGold, 0.18f, kGold, 0.5f, 1.0f * s);
+    for (int i = 0; i < 2; ++i)  // 3.0.11-beta.267: the tabs, the shown one lit
+        panel::roundRect(out, L.tabs[i], 13 * s, kWhite, i == L.tab ? 0.14f : sh.hoverTab == i ? 0.08f : 0.0f,
+                         i == L.tab ? kGold2 : kWhite, i == L.tab ? 0.7f : 0.1f, 1.0f * s);
+    if (L.tab == 1) {
+        for (int i = 0; i < 2; ++i)
+            panel::roundRect(out, i ? L.next : L.prev, 6 * s, kWhite, sh.hoverArrow == i ? 0.2f : 0.08f);
+        for (const panel::Box* b : {&L.aspd, &L.cost, &L.bonus})
+            panel::roundRect(out, panel::Box{b->x, b->y + 26 * s - 1 * s, b->w, 1 * s}, 0, kWhite, 0.1f);
+        return;
+    }
     panel::roundRect(out, panel::Box{L.header.x, L.header.y + L.header.h - 1 * s, L.header.w, 1 * s}, 0, kWhite,
                      0.08f);
     const int lit = sh.hoverRow >= 0 ? sh.hoverRow : sh.hoverPlus >= 0 ? sh.hoverPlus : sh.selected;
@@ -371,6 +428,83 @@ void paint(panel::Picture& out, const Layout& L, const Data& d, const Show& sh) 
     panel::roundRect(out, ground, 8 * s, kWhite, 0.04f, kWhite, 0.08f, 1.0f * s);
 }
 
+namespace {
+
+// 3.0.11-beta.267 (stage 3): «Довідка» - the class (‹ ›), its weapons' ASPD at AGI 1 / 50 / 80 / 99 and at the
+// character's own AGI (the character's DEX), what a stat costs up to 50 ... 99, the job levels giving each stat
+void referenceWords(std::vector<Words>& out, const Layout& L, const Data& d, const Texts& t) {
+    namespace sm = uagfx::statmath;
+    const float s = L.s, rowH = 22 * s, headH = 26 * s;
+    const int job = L.refJob, agi = total(d, 1), dex = total(d, 4);
+    const char* cls = job >= 0 ? charblock::jobName(job) : "";
+    const auto word = [&](float x, float y, float w, float h, const std::string& text, uint32_t rgb, float px,
+                          bool bold, Align a) { out.push_back(Words{panel::Box{x, y, w, h}, text, rgb, px, bold, a}); };
+    const panel::Box& c = L.classRow;
+    word(c.x, c.y, 150 * s, c.h, t.refClass, kMuted, 12.5f * s, false, Align::Left);
+    word(L.prev.x, L.prev.y, L.prev.w, L.prev.h, "\xE2\x80\xB9", kText, 14 * s, true, Align::Center);
+    word(L.prev.x + L.prev.w, c.y, L.next.x - L.prev.x - L.prev.w, c.h,
+         *cls ? std::string(cls) : (job >= 0 ? "#" + std::to_string(job) : std::string("\xE2\x80\x94")),
+         job == d.job ? kGold : kText, 13 * s, true, Align::Center);
+    word(L.next.x, L.next.y, L.next.w, L.next.h, "\xE2\x80\xBA", kText, 14 * s, true, Align::Center);
+    // ASPD: Зброя | Затримка | AGI 1 50 80 99 | your AGI
+    const panel::Box& a = L.aspd;
+    word(a.x, a.y, a.w, headH, fill(t.refAspd, {std::to_string(dex)}), kText, 13 * s, true, Align::Left);
+    const float c0 = a.x, c1 = a.x + 300 * s, step = 62 * s;
+    const float hy = a.y + headH;
+    word(c0, hy, 200 * s, headH, t.refWeapon, kFaint, 11.5f * s, false, Align::Left);
+    word(c1 - 80 * s, hy, 80 * s, headH, t.refDelay, kFaint, 11.5f * s, false, Align::Right);
+    for (int i = 0; i < 4; ++i)
+        word(c1 + float(i) * step, hy, step, headH, "AGI " + std::to_string(kAgiSteps[i]), kFaint, 11.5f * s, false,
+             Align::Right);
+    word(c1 + 4 * step, hy, step + 30 * s, headH, fill(t.refYourAgi, {std::to_string(agi)}), kGold, 11.5f * s, true,
+         Align::Right);
+    const int worn = job == d.job ? weaponOf(d) : -1;
+    const std::vector<AspdRow> rows = aspdTable(job, agi, dex);
+    for (size_t i = 0; i < rows.size(); ++i) {
+        const AspdRow& r = rows[i];
+        const float y = hy + headH + float(i) * rowH;
+        const uint32_t ink = r.weapon == worn ? kGold : kText;
+        word(c0, y, 260 * s, rowH, weaponName(r.weapon), ink, 12 * s, r.weapon == worn, Align::Left);
+        word(c1 - 80 * s, y, 80 * s, rowH, std::to_string(r.delay), kMuted, 12 * s, false, Align::Right);
+        for (int k = 0; k < 4; ++k)
+            word(c1 + float(k) * step, y, step, rowH, std::to_string(r.at[k]), 0xC9D1DE, 12 * s, false, Align::Right);
+        word(c1 + 4 * step, y, step + 30 * s, rowH, std::to_string(r.mine), kGold, 12 * s, true, Align::Right);
+    }
+    // the stat's price from 1
+    const panel::Box& p = L.cost;
+    word(p.x, p.y, p.w, headH, t.refCost, kText, 13 * s, true, Align::Left);
+    word(c0, p.y + headH, 200 * s, headH, t.refCostFrom, kFaint, 11.5f * s, false, Align::Left);
+    word(c0, p.y + 2 * headH, 200 * s, rowH, t.refCostPoints, kMuted, 12 * s, false, Align::Left);
+    for (int i = 0; i < 5; ++i) {
+        const float x = c1 - 80 * s + float(i) * step;
+        word(x, p.y + headH, step, headH, std::to_string(kCostSteps[i]), kFaint, 11.5f * s, false, Align::Right);
+        word(x, p.y + 2 * headH, step, rowH, std::to_string(sm::pointsBetween(1, kCostSteps[i])), kText, 12 * s, true,
+             Align::Right);
+    }
+    // the job levels' stats
+    const panel::Box& b = L.bonus;
+    word(b.x, b.y, b.w, headH, t.refBonus, kText, 13 * s, true, Align::Left);
+    for (int i = 0; i < kStats; ++i) {
+        const std::vector<int> lv = sm::bonusLevels(job, i);
+        std::string list;
+        int now = 0;
+        for (int l : lv) {
+            list += (list.empty() ? "" : ", ") + std::to_string(l);
+            if (job == d.job && l <= d.jobLevel) ++now;
+        }
+        const float y = b.y + headH + float(i) * 20 * s;
+        word(c0, y, 60 * s, 20 * s, kNames[i], kText, 12 * s, true, Align::Left);
+        word(c0 + 60 * s, y, b.w - 60 * s, 20 * s,
+             lv.empty() ? t.refBonusNone
+                        : list + (job == d.job ? "  " + fill(t.refBonusNow,
+                                                              {std::to_string(now), std::to_string(lv.size())})
+                                               : std::string()),
+             lv.empty() ? kFaint : 0xC9D1DE, 12 * s, false, Align::Left);
+    }
+}
+
+}  // namespace
+
 std::vector<Words> words(const Layout& L, const Data& d, const Show& sh, const Texts& t, const Measure& m) {
     std::vector<Words> out;
     const float s = L.s, side = kSide * s;
@@ -381,6 +515,12 @@ std::vector<Words> words(const Layout& L, const Data& d, const Show& sh, const T
     out.push_back(Words{L.close, "\xC3\x97", sh.hoverClose ? kText : kMuted, 16 * s, false, Align::Center});
     out.push_back(Words{L.freeChip, fill(t.free, {std::to_string(d.free)}), d.free > 0 ? kGold : kFaint, 11.5f * s,
                         true, Align::Center});
+    for (int i = 0; i < 2; ++i)  // 3.0.11-beta.267: the tabs
+        out.push_back(Words{L.tabs[i], t.tabs[i], i == L.tab ? kGold : kMuted, 12 * s, i == L.tab, Align::Center});
+    if (L.tab == 1) {
+        referenceWords(out, L, d, t);
+        return out;
+    }
     const float hx = L.header.x;
     const float rights[4] = {kBaseRight, kBonusRight, kTotalRight, kCostRight};
     out.push_back(Words{panel::Box{hx + 6 * s, L.header.y, 70 * s, L.header.h}, t.columns[0], kFaint, 11.5f * s,

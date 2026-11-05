@@ -54,6 +54,7 @@ struct State {
     sw::Data data;
     ULONGLONG readAt = 0;
     sw::Show show;
+    int tab = 0, refJob = -1;  // 3.0.11-beta.267: the tab shown, the class «Довідка» tells of (-1 the character's)
     sw::Layout layout;
     std::string key;
     panel::Picture picture;
@@ -240,6 +241,19 @@ sw::Texts texts() {
                                              settings::Text::StatsUsesVit, settings::Text::StatsUsesInt,
                                              settings::Text::StatsUsesDex, settings::Text::StatsUsesLuk};
     for (int i = 0; i < sw::kStats; ++i) t.uses[i] = say(uses[i]);
+    t.tabs[0] = say(settings::Text::StatsTabChar);  // 3.0.11-beta.267: stage 3
+    t.tabs[1] = say(settings::Text::StatsTabRef);
+    t.refClass = say(settings::Text::StatsRefClass);
+    t.refAspd = say(settings::Text::StatsRefAspd);
+    t.refWeapon = say(settings::Text::StatsRefWeapon);
+    t.refDelay = say(settings::Text::StatsRefDelay);
+    t.refYourAgi = say(settings::Text::StatsRefYourAgi);
+    t.refCost = say(settings::Text::StatsRefCost);
+    t.refCostFrom = say(settings::Text::StatsRefCostFrom);
+    t.refCostPoints = say(settings::Text::StatsRefCostPoints);
+    t.refBonus = say(settings::Text::StatsRefBonus);
+    t.refBonusNone = say(settings::Text::StatsRefBonusNone);
+    t.refBonusNow = say(settings::Text::StatsRefBonusNow);
     t.decimal = language() == settings::Lang::En ? '.' : ',';
     return t;
 }
@@ -325,10 +339,10 @@ void frame(HWND game, bool on, double k, int targetWidth, int targetHeight) {
         readData(s);
     }
     const sw::Texts t = texts();
-    s.layout = sw::layout(0, 0, scale, s.data, t, measure);
+    s.layout = sw::layout(0, 0, scale, s.data, t, measure, s.tab, s.refJob);
     s.layout.x = int(std::lround(s.fx * float(std::max(0, targetWidth - s.layout.w))));
     s.layout.y = int(std::lround(s.fy * float(std::max(0, targetHeight - s.layout.h))));
-    s.show.hoverRow = s.show.hoverPlus = s.show.hoverBattle = -1;
+    s.show.hoverRow = s.show.hoverPlus = s.show.hoverBattle = s.show.hoverTab = s.show.hoverArrow = -1;
     s.show.hoverClose = false;
     int cx = 0, cy = 0;
     if (readGameCursor(cx, cy) && !s.moving) {
@@ -337,6 +351,8 @@ void frame(HWND game, bool on, double k, int targetWidth, int targetHeight) {
         if (h.part == sw::Part::Row) s.show.hoverRow = h.index;
         if (h.part == sw::Part::Plus) s.show.hoverPlus = h.index;
         if (h.part == sw::Part::Battle) s.show.hoverBattle = h.index;  // 3.0.11-beta.266
+        if (h.part == sw::Part::Tab) s.show.hoverTab = h.index;        // 3.0.11-beta.267
+        if (h.part == sw::Part::Arrow) s.show.hoverArrow = h.index;
         s.show.hoverClose = h.part == sw::Part::Close;
     }
     if (uapad::runtime::look().shown) {  // 3.0.11-beta.92: the controller's stat - its «+» lit
@@ -350,7 +366,9 @@ void frame(HWND game, bool on, double k, int targetWidth, int targetHeight) {
                       ';' + std::to_string(s.show.hoverBattle) + ',' + std::to_string(s.show.pinnedBattle) + ';' +
                       std::to_string(d.job) + ',' + std::to_string(d.baseLevel) + ',' + std::to_string(d.jobLevel) +
                       ',' + std::to_string(d.hpMost) + ',' + std::to_string(d.spMost) + ',' + std::to_string(d.weight) +
-                      ',' + std::to_string(d.weightMost) + ';';
+                      ',' + std::to_string(d.weightMost) + ';' + std::to_string(s.tab) + ',' +
+                      std::to_string(s.layout.refJob) + ',' + std::to_string(s.show.hoverTab) + ',' +
+                      std::to_string(s.show.hoverArrow) + ';';
     for (int i = 0; i < sw::kStats; ++i)
         key += std::to_string(d.base[i]) + '+' + std::to_string(d.bonus[i]) + '/' + std::to_string(d.need[i]) + ',';
     const int battle[] = {d.atk, d.atk2, d.matkMin, d.matkMax, d.hit, d.crit, d.def, d.def2, d.mdef, d.mdef2, d.flee,
@@ -450,6 +468,19 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
             s.show.selected = h.index;
             s.show.pinnedBattle = -1;
             break;
+        case sw::Part::Tab:  // 3.0.11-beta.267: «Персонаж» or «Довідка»
+            s.tab = h.index;
+            if (s.told++ < 12) LOG_INFO("stats: the tab %d", h.index);
+            break;
+        case sw::Part::Arrow: {  // .267: «Довідка»'s class, the previous or the next of the server's
+            const std::vector<int> jobs = uagfx::statmath::jobs();
+            const int now = s.layout.refJob;
+            auto at = std::find(jobs.begin(), jobs.end(), now);
+            int i = at == jobs.end() ? 0 : int(at - jobs.begin());
+            i = (i + (h.index ? 1 : int(jobs.size()) - 1)) % std::max<int>(1, int(jobs.size()));
+            s.refJob = jobs.empty() ? -1 : jobs[size_t(i)];
+            break;
+        }
         case sw::Part::Battle:  // 3.0.11-beta.266: a battle row's formulas kept in the panel (again: let go)
             s.show.pinnedBattle = s.show.pinnedBattle == h.index ? -1 : h.index;
             break;

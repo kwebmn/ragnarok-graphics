@@ -46,6 +46,9 @@ struct Texts {
     std::string howAspdGoal, howAspdNever, howDef, howMdef, howPerfect, howCast, howCastNone, howDelay, howRegen;
     std::string howWeight, howJob, howNext;
     std::string uses[kStats];  // what each stat goes into
+    // 3.0.11-beta.267 (stage 3): the tabs «Персонаж», «Довідка»; the reference's words
+    std::string tabs[2], refClass, refAspd, refWeapon, refDelay, refYourAgi, refCost, refCostFrom, refCostPoints;
+    std::string refBonus, refBonusNone, refBonusNow;
 };
 
 struct Row {
@@ -72,6 +75,7 @@ using Measure = std::function<float(const std::string& utf8, float px, bool bold
 struct Show {
     int hoverRow = -1, hoverPlus = -1, selected = -1;
     int hoverBattle = -1, pinnedBattle = -1;  // 3.0.11-beta.266: a battle row under the mouse, the one clicked
+    int hoverTab = -1, hoverArrow = -1;       // 3.0.11-beta.267: a tab, the class's ‹ (0) or › (1)
     bool hoverClose = false;
 };
 
@@ -81,10 +85,24 @@ struct Layout {
     panel::Box glass, title, close, freeChip, table, header, battle, line;  // .266: line - the panel «Як рахується»
     std::vector<panel::Box> rows, pluses;  // the six stats' rows and «+»
     std::vector<panel::Box> battleRows;    // 3.0.11-beta.266
+    // 3.0.11-beta.267 (stage 3): the tab shown (0 «Персонаж», 1 «Довідка») and the class the reference tells of;
+    // the tabs, the class's arrows and the reference's parts
+    int tab = 0, refJob = -1;
+    panel::Box tabs[2], prev, next, classRow, aspd, cost, bonus;
 };
-Layout layout(int x, int y, float scale, const Data& d, const Texts& t, const Measure& m);
+// The weapons the class can use: its delay, the ASPD at AGI 1, 50, 80, 99 and at the AGI given, with the DEX given
+struct AspdRow {
+    int weapon = 0, delay = 0;
+    int at[4] = {}, mine = 0;  // whole ASPD
+};
+constexpr int kAgiSteps[4] = {1, 50, 80, 99}, kCostSteps[5] = {50, 70, 80, 90, 99}, kMostAspdRows = 12;
+std::vector<AspdRow> aspdTable(int job, int agi, int dex);
+const char* weaponName(int weapon);
+// tab 1 «Довідка»: refJob - the class told of (-1: the character's)
+Layout layout(int x, int y, float scale, const Data& d, const Texts& t, const Measure& m, int tab = 0,
+              int refJob = -1);
 
-enum class Part : uint8_t { None, Close, Plus, Row, Title, Body, Battle };  // .266: Battle
+enum class Part : uint8_t { None, Close, Plus, Row, Title, Body, Battle, Tab, Arrow };  // .266 Battle, .267 Tab, Arrow
 struct Hit {
     Part part = Part::None;
     int index = -1;

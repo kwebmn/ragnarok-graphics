@@ -1,5 +1,6 @@
 #pragma once
 #include <string>
+#include <vector>
 
 namespace uagfx::statmath {
 
@@ -22,6 +23,8 @@ struct Class {
 };
 Class classOf(int job);
 bool upper(int job);  // the transcendent ones (4001-4022)
+std::vector<int> jobs();  // 3.0.11-beta.267: the classes the server's tables have, in their order
+std::vector<int> bonusLevels(int job, int stat);  // .267: the job levels that give the stat its +1
 bool baby(int job);   // 4023-4045
 
 int pointCost(int value);                 // the points value -> value + 1 costs

@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "core/item_window.hpp"
+#include "core/stat_math.hpp"
 #include "core/stat_window.hpp"
 #include "test.hpp"
 
@@ -517,4 +518,34 @@ TEST(stat_window_explained_formulas) {
     const statwin::Hit b = statwin::hitTest(L, L.battleRows[7].x + 20, L.battleRows[7].y + 5);
     CHECK(b.part == statwin::Part::Battle && b.index == 7);
     CHECK(L.line.y >= L.battle.y + L.battle.h && L.h >= int(L.line.y + L.line.h));
+}
+
+// 3.0.11-beta.267 (stage 3): «Довідка» - the knight's weapons' ASPD, the Swordman's STR levels; the tabs and the
+// class's arrows pointed at
+TEST(stat_window_reference_tab) {
+    const std::vector<statwin::AspdRow> rows = statwin::aspdTable(7, 76, 43);
+    CHECK_EQ(rows.size(), size_t(10));  // the knight's ten: the fist to the two-handed mace
+    const statwin::AspdRow& sword = rows[3];
+    CHECK(sword.weapon == 3 && sword.delay == 550 && sword.mine == 164);
+    CHECK(sword.at[0] == 147 && sword.at[3] == 169);
+    CHECK(std::string(statwin::weaponName(3)) == "Two-Handed Sword" && std::string(statwin::weaponName(99)).empty());
+    CHECK(statmath::bonusLevels(1, statmath::Str) == std::vector<int>({2, 14, 33, 40, 47, 49, 50}));
+    CHECK(!statmath::jobs().empty() && statmath::jobs().front() == 0);
+    statwin::Texts t = statTexts();
+    t.tabs[0] = "Персонаж";
+    t.tabs[1] = "Довідка";
+    statwin::Data d;
+    d.job = 7;
+    const statwin::Layout L = statwin::layout(0, 0, 1.0f, d, t, statwin::Measure(panel::wordsWidth), 1, 1);
+    CHECK(L.tab == 1 && L.refJob == 1 && L.rows.empty() && L.battleRows.empty());
+    const statwin::Hit tab = statwin::hitTest(L, L.tabs[0].x + 5, L.tabs[0].y + 5);
+    CHECK(tab.part == statwin::Part::Tab && tab.index == 0);
+    const statwin::Hit next = statwin::hitTest(L, L.next.x + 5, L.next.y + 5);
+    CHECK(next.part == statwin::Part::Arrow && next.index == 1);
+    const statwin::Layout P = statwin::layout(0, 0, 1.0f, d, t, statwin::Measure(panel::wordsWidth));
+    CHECK(P.h == L.h && P.refJob == 7 && P.rows.size() == 6);  // one height for both tabs
+    bool swordsman = false;
+    for (const statwin::Words& w : statwin::words(L, d, statwin::Show{}, t, statwin::Measure(panel::wordsWidth)))
+        swordsman = swordsman || w.text == "Swordsman";
+    CHECK(swordsman);
 }
