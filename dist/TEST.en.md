@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.11-beta.271 — what's new
+
+**The guild notice is edited in the new look:** on «Оголошення», «Змінити» opens the fields «Тема» and «Текст» right on the card (no old game window). A click or Tab — the other field, Enter or «Зберегти» — send, Esc or «Скасувати» — no change. The lengths as the server's (the subject 59, the text 119 bytes).
+
 # uaRO Graphics 3.0.11-beta.270 — what's new
 
 **From the tester's list:**
