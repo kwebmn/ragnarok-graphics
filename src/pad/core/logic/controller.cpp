@@ -943,7 +943,8 @@ void Controller::clearTarget(const WorldState& world, uint32_t now, TickOutput& 
 void Controller::dropFarTarget(const WorldState& world, uint32_t now, TickOutput& out) {
     if (target_ == 0) return;
     const std::optional<Cell> pos = world.actorPos(target_, now);
-    if (!pos || cellDistance(world.selfPos(now), *pos) <= kTargetReach) return;
+    const int reach = fought_ || picked_ || wantAttack_ ? kKeepReach : kTargetReach;  // 3.0.11-beta.253
+    if (!pos || cellDistance(world.selfPos(now), *pos) <= reach) return;
     out.notes.push_back("target " + std::to_string(target_) + " is too far, dropped");
     if (wantAttack_ || attackSent_) out.packets.push_back(buildStopAttack());
     target_ = 0;

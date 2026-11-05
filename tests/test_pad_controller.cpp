@@ -343,7 +343,7 @@ TEST(ctl_held_attack_moves_on_to_next) {
     CHECK_EQ(rd32(pkt(o, 0).data(), 5), 110000002u);
 }
 
-TEST(ctl_target_further_than_15_cells_is_dropped) {
+TEST(ctl_target_further_than_24_cells_is_dropped) {  // 3.0.11-beta.253: was 15 (a fought one: kKeepReach)
     Controller c(Config{});
     WorldState w = world();  // we stand at (100, 100)
     addMob(w, 110000001, Cell{102, 100});
@@ -352,7 +352,10 @@ TEST(ctl_target_further_than_15_cells_is_dropped) {
     w.apply(EvSetPos{110000001, Cell{109, 100}}, 1200);  // 9 cells: a hunter shooting from afar keeps it
     c.tick(pad(), w, view(), 1300);
     CHECK_EQ(c.target(), 110000001u);
-    w.apply(EvSetPos{110000001, Cell{116, 100}}, 1400);  // 16 cells
+    w.apply(EvSetPos{110000001, Cell{116, 100}}, 1400);  // 16 cells: kept now
+    c.tick(pad(), w, view(), 1450);
+    CHECK_EQ(c.target(), 110000001u);
+    w.apply(EvSetPos{110000001, Cell{125, 100}}, 1460);  // 25 cells
     TickOutput o = c.tick(pad(), w, view(), 1500);
     CHECK_EQ(c.target(), 0u);
     CHECK(!c.attacking());
@@ -370,7 +373,10 @@ TEST(ctl_held_attack_leaves_a_far_target_for_the_nearest) {
     addMob(w, 110000002, Cell{97, 100});
     c.tick(pad(kPadA), w, view(), 1000);
     CHECK_EQ(c.target(), 110000001u);
-    w.apply(EvSetPos{110000001, Cell{120, 100}}, 1100);
+    w.apply(EvSetPos{110000001, Cell{120, 100}}, 1100);  // 3.0.11-beta.253: 20 cells - a fought one still kept
+    c.tick(pad(kPadA), w, view(), 1250);
+    CHECK_EQ(c.target(), 110000001u);
+    w.apply(EvSetPos{110000001, Cell{126, 100}}, 1300);  // past kKeepReach: left for the nearest
     TickOutput o = c.tick(pad(kPadA), w, view(), 1400);
     CHECK_EQ(c.target(), 110000002u);
     CHECK_EQ(o.packets.size(), 2u);
@@ -388,7 +394,7 @@ TEST(ctl_slot_does_not_cast_on_a_far_target) {
     c.tick(pad(kPadA), w, view(), 1000);
     c.tick(pad(), w, view(), 1100);
     CHECK_EQ(c.target(), 110000001u);
-    w.apply(EvSetPos{110000001, Cell{100, 120}}, 1200);
+    w.apply(EvSetPos{110000001, Cell{100, 126}}, 1200);  // 3.0.11-beta.253: past kKeepReach
     TickOutput o = c.tick(pad(kPadX), w, view(), 1300);
     CHECK_EQ(c.target(), 110000002u);
     bool cast = false;
@@ -1997,4 +2003,20 @@ TEST(ctl_presses_leave_the_walk_up_to_the_target_alone) {
     w.apply(EvSetPos{w.selfId(), Cell{105, 100}}, 2400);  // there, standing
     o = c.tick(pad(kPadA), w, view(), 2500);
     CHECK_EQ(o.packets.size(), 1u);  // standing: asked again
+}
+
+// 3.0.11-beta.253 (the owner: «теряется выбраный моб когда я от него убегаю»): running ahead of the monster being
+// fought keeps it - 18 cells behind is still the one A goes for, not a nearer newcomer
+TEST(ctl_kiting_keeps_the_fought_monster) {
+    Controller c(Config{});
+    WorldState w = world();
+    addMob(w, 110000001, Cell{105, 100});
+    c.tick(pad(kPadA), w, view(), 1000);
+    c.tick(pad(), w, view(), 1100);
+    CHECK_EQ(c.target(), 110000001u);
+    w.apply(EvSetPos{110000001, Cell{118, 100}}, 1200);  // left behind while running
+    addMob(w, 110000002, Cell{96, 100});                 // another one near
+    c.tick(pad(), w, view(), 1300);
+    c.tick(pad(kPadA), w, view(), 1400);
+    CHECK_EQ(c.target(), 110000001u);
 }

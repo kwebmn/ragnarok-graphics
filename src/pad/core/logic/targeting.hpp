@@ -11,6 +11,10 @@ namespace uapad {
 // How far (in RO steps) a target may be: the right stick looks no further, and a target left further
 // behind is dropped.
 constexpr int kTargetReach = 15;
+// 3.0.11-beta.253 (the owner: «теряется выбраный моб когда я от него убегаю, переключается на другого. а я отбегаю
+// чтобы проатаковать и сново отбежать пока они за мной бегут»): a monster already fought or picked on purpose is kept
+// this far - an archer running ahead of the ones chasing it; one only seen still needs kTargetReach
+constexpr int kKeepReach = 24;
 
 // Monsters we may target — within kTargetReach — nearest first: by straight-line distance, then RO steps,
 // then id.
