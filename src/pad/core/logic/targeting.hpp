@@ -15,6 +15,9 @@ constexpr int kTargetReach = 15;
 // чтобы проатаковать и сново отбежать пока они за мной бегут»): a monster already fought or picked on purpose is kept
 // this far - an archer running ahead of the ones chasing it; one only seen still needs kTargetReach
 constexpr int kKeepReach = 24;
+// 3.0.11-beta.257 (the NPC concept, stage 3; the owner: «3. ограничивать»): an NPC talked to this far - about the
+// screen; uaRO's server takes a click on an NPC up to area_size 50 + 1 cells away (npc_checknear2), so no walk up
+constexpr int kNpcReach = 20;
 
 // Monsters we may target — within kTargetReach — nearest first: by straight-line distance, then RO steps,
 // then id.
@@ -25,7 +28,9 @@ std::vector<uint32_t> targetCandidates(const WorldState& world, uint32_t nowMs,
 // How well monster `id` matches the map direction (dirX, dirY) (+y north, any length): degrees off the
 // direction plus 2 per cell of distance, lower is better. Nothing when it is more than 45 degrees off,
 // more than kTargetReach away, on our own cell or unknown.
-std::optional<double> aimScore(const WorldState& world, uint32_t nowMs, uint32_t id, double dirX, double dirY);
+// 3.0.11-beta.257: `reach` - kNpcReach for an NPC
+std::optional<double> aimScore(const WorldState& world, uint32_t nowMs, uint32_t id, double dirX, double dirY,
+                               int reach = kTargetReach);
 
 // The monster the player points at: the lowest aimScore (ties by id) among monsters that are not
 // blacklisted, or 0.

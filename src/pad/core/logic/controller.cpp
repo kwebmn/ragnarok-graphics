@@ -290,7 +290,7 @@ TickOutput Controller::tick(const PadState& pad, const WorldState& world, const 
     }
     if (npcChoice_ != 0) {  // gone, or left out of reach
         const std::optional<Cell> at = world.actorPos(npcChoice_, now);
-        if (!at || cellDistance(world.selfPos(now), *at) > kTargetReach) npcChoice_ = 0;
+        if (!at || cellDistance(world.selfPos(now), *at) > kNpcReach) npcChoice_ = 0;
     }
     if (choosing_) {  // 3.0.11-beta.85: the buttons choose whom the support skill goes on; the sticks go on
         choose(down, world, now, out);

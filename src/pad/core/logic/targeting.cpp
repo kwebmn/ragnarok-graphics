@@ -41,13 +41,14 @@ std::vector<uint32_t> targetCandidates(const WorldState& world, uint32_t nowMs,
     return ids;
 }
 
-std::optional<double> aimScore(const WorldState& world, uint32_t nowMs, uint32_t id, double dirX, double dirY) {
+std::optional<double> aimScore(const WorldState& world, uint32_t nowMs, uint32_t id, double dirX, double dirY,
+                               int most) {
     auto pos = world.actorPos(id, nowMs);
     const double len = std::hypot(dirX, dirY);
     if (!pos || len == 0) return std::nullopt;
     const Cell me = world.selfPos(nowMs);
     const int reach = cellDistance(me, *pos);
-    if (reach == 0 || reach > kTargetReach) return std::nullopt;
+    if (reach == 0 || reach > most) return std::nullopt;
     const double dx = pos->x - me.x;
     const double dy = pos->y - me.y;
     const double dist = std::hypot(dx, dy);
@@ -83,9 +84,9 @@ uint32_t pickNpc(const WorldState& world, uint32_t nowMs, double dirX, double di
         const uint32_t id = entry.first;
         if (!world.isNpc(entry.second)) continue;
         auto pos = world.actorPos(id, nowMs);
-        if (!pos || cellDistance(me, *pos) > kTargetReach) continue;
+        if (!pos || cellDistance(me, *pos) > kNpcReach) continue;  // 3.0.11-beta.257: was kTargetReach
         std::optional<double> score = std::hypot(double(pos->x - me.x), double(pos->y - me.y));
-        if (aimed) score = aimScore(world, nowMs, id, dirX, dirY);
+        if (aimed) score = aimScore(world, nowMs, id, dirX, dirY, kNpcReach);
         if (!score) continue;
         if (best == 0 || *score < bestScore || (*score == bestScore && id < best)) {
             best = id;

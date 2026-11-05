@@ -1455,7 +1455,7 @@ std::vector<uint32_t> npcNear() {
     const Cell me = w.selfPos(now);
     for (const auto& [id, a] : w.actors())
         if (w.isNpc(a))
-            if (const auto at = w.actorPos(id, now); at && cellDistance(me, *at) <= kTargetReach) out.push_back(id);
+            if (const auto at = w.actorPos(id, now); at && cellDistance(me, *at) <= kNpcReach) out.push_back(id);
     return out;
 }
 

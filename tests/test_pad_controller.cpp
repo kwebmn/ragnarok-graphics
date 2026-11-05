@@ -2067,3 +2067,18 @@ TEST(ctl_npc_tag_nearest_pointed_and_hidden_in_a_fight) {
     c.tick(pad(kPadA), w, view(), 1400);  // a fight
     CHECK_EQ(c.npcTag(w, 1500), 0u);
 }
+
+// 3.0.11-beta.257 (the NPC concept, stage 3: «ограничивать»): an NPC up to kNpcReach (20 cells, the screen) talked to
+// from where the character stands - the server takes clicks up to area_size 50; past it none
+TEST(ctl_talk_reaches_an_npc_across_the_screen) {
+    Controller c(Config{});
+    WorldState w = world();
+    w.apply(EvActor{110000201, 86, 0, 200, Cell{118, 100}, Cell{118, 100}}, 0);  // 18 cells east
+    TickOutput o = c.tick(pad(kPadDown), w, view(), 1000);
+    CHECK(!o.packets.empty() && rd32(pkt(o, o.packets.size() - 1).data(), 2) == 110000201u);
+    c.tick(pad(), w, view(), 1100);
+    WorldState far = world();
+    far.apply(EvActor{110000202, 86, 0, 200, Cell{125, 100}, Cell{125, 100}}, 0);  // 25: off the screen
+    o = c.tick(pad(kPadDown), far, view(), 1200);
+    CHECK(o.rumble == Rumble::Denied);
+}
