@@ -1,3 +1,11 @@
+# uaRO Graphics 3.0.11-beta.240 — what's new
+
+**The chat, the first stage of its new concept:**
+- With no new lines the chat no longer hides its tabs and input - only its ground fades. It no longer jumps under the mouse; the unread counts always show.
+- The switch «The chat fades when idle» (Interface): «After 12 s» (as before), «After 30 s», «Never».
+- Commands in the input: `/p words` - to the party, `/g words` - to the guild, `/w Name words` - a whisper (a name with spaces in quotes), `/r words` - answer the last who whispered. The channel stays as it was after sending.
+- Type `/` - the commands show over the input.
+
 # uaRO Graphics 3.0.11-beta.239 — what's new
 
 - **The character block: the experience gained on the Base / Job rows too.** After a kill the block's own experience bars light the part gained in yellow for 4 seconds, and the row says «+1 234 (0.05 %)» in the pace's place. Job the same.
