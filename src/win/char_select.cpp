@@ -19,6 +19,7 @@
 #include "win/code_page.hpp"
 #include "win/game_camera.hpp"
 #include "win/head_picture.hpp"
+#include "win/login_card.hpp"
 #include "win/log.hpp"
 #include "win/picture_draw.hpp"
 #include "win/real_ddraw.hpp"
@@ -300,6 +301,8 @@ void press(State& s, cs::Button b) {
     if (!cs::allowed(sl, b)) return;
     const char* const what[4] = {"«Увійти»", "«Створити»", "«Видалити»", "«Назад»"};
     send(s, 0, cs::gameButton(b), what[int(b)]);
+    if (b == cs::Button::Enter)  // 3.0.11-beta.261: the veil till the map shows, not the game's loading
+        loginwin::veilOver(sl.name, sl.job + (sl.level > 0 ? " \xC2\xB7 " + std::to_string(sl.level) : ""));
 }
 
 }  // namespace

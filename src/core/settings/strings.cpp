@@ -5778,11 +5778,13 @@ constexpr Entry kTexts[] = {
     {Text::InterfacePicks, "Choice of things", "Вибір речі", "Выбор вещи"},
     {Text::InterfacePicksHint,
      "The magnifier's list of things not known yet and a card's list of the things it goes into, in the new look: a "
-     "row a thing with its icon, a click chooses, two clicks choose and confirm. Off: the game's own windows.",
+     "row a thing with its icon, a click chooses, two clicks choose and confirm; a skill's menu (Teleport, Warp "
+     "Portal) too. Off: the game's own windows.",
      "Список речей для лупи й список речей, у які йде карта, у новому вигляді: рядок на річ з іконкою, клік обирає, "
-     "подвійний клік — обрати й підтвердити. Вимкнено: власні вікна гри.",
+     "подвійний клік — обрати й підтвердити; так само меню вмінь (Teleport, Warp Portal). Вимкнено: власні вікна гри.",
      "Список вещей для лупы и список вещей, в которые идёт карта, в новом виде: строка на вещь с иконкой, клик "
-     "выбирает, двойной клик — выбрать и подтвердить. Выключено: собственные окна игры."},
+     "выбирает, двойной клик — выбрать и подтвердить; так же меню умений (Teleport, Warp Portal). Выключено: "
+     "собственные окна игры."},
     {Text::PickIdentifyTitle, "Identify", "Опізнати річ", "Опознать вещь"},
     {Text::PickIdentifyHint, "Choose the thing to identify", "Оберіть річ, яку опізнати",
      "Выберите вещь для опознания"},
@@ -5791,6 +5793,12 @@ constexpr Entry kTexts[] = {
     {Text::PickCompoundHint, "Choose the thing for the card", "Оберіть річ для карти", "Выберите вещь для карты"},
     {Text::PickCompoundOk, "Insert", "Вставити", "Вставить"},
     {Text::PickEmpty, "No thing fits", "Немає відповідних речей", "Нет подходящих вещей"},
+    // 3.0.11-beta.261 (the tester: «телепорт в старому стилі»): a skill's menu (Teleport, Warp Portal) - its title the
+    // skill's name when known
+    {Text::PickMenuTitle, "Choose", "Вибір", "Выбор"},
+    {Text::PickMenuHint, "Choose one and press «Choose»", "Оберіть варіант і натисніть «Вибрати»",
+     "Выберите вариант и нажмите «Выбрать»"},
+    {Text::PickMenuOk, "Choose", "Вибрати", "Выбрать"},
     // 3.0.11-beta.158: the party's settings
     {Text::InterfacePartySetup, "Party settings", "Налаштування групи", "Настройки группы"},
     {Text::InterfacePartySetupHint,

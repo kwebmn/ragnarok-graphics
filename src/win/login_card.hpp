@@ -43,6 +43,9 @@ void drawToast(FrameRecord& record, gpu::Renderer& renderer);
 // 3.0.11-beta.203 (the tester: «приховав це додатковим вікном завантаження»): the veil over the way into the game a
 // one-click login goes by itself (core/enter_veil) - over the windows, under the cursor
 void drawVeil(FrameRecord& record, gpu::Renderer& renderer);
+// 3.0.11-beta.261 (the tester: «після вибору персонажа, 2 вікна завантаження. 1 в новому стилі, після нього в
+// старому»): the veil over the way in after «Увійти» in the character select too - its name and «job · level» (UTF-8)
+void veilOver(const std::string& name, const std::string& line);
 bool toastMouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result);
 // 3.0.11-beta.175: the login of the session the server accepted (the game's words; empty before)
 const std::string& loggedIn();

@@ -1232,6 +1232,20 @@ bool loginWith(const accounts::Account& a, bool stopAtSelect, const std::string&
     return true;
 }
 
+void veilOver(const std::string& name, const std::string& line) {
+    State& s = state();
+    if (!s.on) return;  // the login's new look off: the game's own way in
+    Veil& v = s.veil;
+    v.on = true;
+    v.since = GetTickCount64();
+    v.texts.title = say(settings::Text::EnterVeilTitle);
+    v.texts.name = name;
+    v.texts.line = line;
+    v.phase = -1;
+    LOG_INFO("login: the veil «%s» over the way into the game («Увійти» in the character select)",
+             v.texts.title.c_str());
+}
+
 bool active() {
     const State& s = state();
     return s.on && s.tookLast;

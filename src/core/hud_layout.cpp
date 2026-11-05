@@ -38,7 +38,7 @@ Layout parse(const std::string& text) {
         std::string key;
         int anchor = 0;
         float dx = 0, dy = 0, size = 1;
-        if (!(words >> key >> anchor >> dx >> dy >> size) || anchor < -1 || anchor > 8 || !std::isfinite(dx) ||
+        if (!(words >> key >> anchor >> dx >> dy >> size) || anchor < -1 || anchor > 11 || !std::isfinite(dx) ||
             !std::isfinite(dy) || !std::isfinite(size))
             continue;
         for (int i = 0; i < kParts; ++i)
@@ -62,9 +62,11 @@ std::string text(const Layout& layout) {
 
 void apply(const Place& p, float k, int targetW, int targetH, int w, int h, int& x, int& y) {
     if (!p.moved || k <= 0) return;
-    const float fx = float(p.anchor % 3) * 0.5f, fy = float(p.anchor / 3) * 0.5f;
+    const bool topKept = p.anchor >= 9;  // 3.0.11-beta.261: the middle row by the part's top
+    const float fx = float(p.anchor % 3) * 0.5f, fy = topKept ? 0.5f : float(p.anchor / 3) * 0.5f;
+    const float own = topKept ? 0.0f : fy;  // the part's own point: its top, its middle or its bottom
     x = int(std::lround(fx * float(targetW) + p.dx * k - fx * float(w)));
-    y = int(std::lround(fy * float(targetH) + p.dy * k - fy * float(h)));
+    y = int(std::lround(fy * float(targetH) + p.dy * k - own * float(h)));
     x = std::clamp(x, 0, std::max(0, targetW - w));
     y = std::clamp(y, 0, std::max(0, targetH - h));
 }
@@ -77,10 +79,10 @@ Place placeOf(const Box& b, float k, int targetW, int targetH, float size) {
     const float cx = float(b.x) + float(b.w) / 2, cy = float(b.y) + float(b.h) / 2;
     const int column = cx < float(targetW) / 3 ? 0 : cx < float(targetW) * 2 / 3 ? 1 : 2;
     const int row = cy < float(targetH) / 3 ? 0 : cy < float(targetH) * 2 / 3 ? 1 : 2;
-    p.anchor = column + 3 * row;
-    const float fx = float(column) * 0.5f, fy = float(row) * 0.5f;
+    p.anchor = row == 1 ? 9 + column : column + 3 * row;  // 3.0.11-beta.261: the middle row by the top
+    const float fx = float(column) * 0.5f, fy = float(row) * 0.5f, own = row == 1 ? 0.0f : fy;
     p.dx = (float(b.x) + fx * float(b.w) - fx * float(targetW)) / k;
-    p.dy = (float(b.y) + fy * float(b.h) - fy * float(targetH)) / k;
+    p.dy = (float(b.y) + own * float(b.h) - fy * float(targetH)) / k;
     return p;
 }
 

@@ -12,6 +12,7 @@
 #include "core/hotbar_panel.hpp"
 #include "core/item_window.hpp"
 #include "core/pick_card.hpp"
+#include "core/skill_info.hpp"
 #include "core/settings/strings.hpp"
 #include "core/ui_style.hpp"
 #include "pad/core/config/bindings.hpp"
@@ -33,7 +34,11 @@ namespace pc = uagfx::pickcard;
 namespace iw = uagfx::itemwin;
 using uapad::gamewindow::Blocker;
 
-enum class Kind : uint8_t { Identify, Compound };
+// 3.0.11-beta.261 (the tester: «телепорт в старому стилі»): Menu - a skill's menu (UI window 0x27: Teleport's and Warp
+// Portal's places from 0x011c); its list a vector of 16-byte strings (+0x6C its first, +0x70 past the last; a
+// string's words at +4, its length +8), the chosen row in its list box (+0x60, the box's +100), the skill at +0x64;
+// the game puts «cancel» last (left out here: the card's own cancel sends it)
+enum class Kind : uint8_t { Identify, Compound, Menu };
 struct GamePick {
     Kind kind;
     uint32_t at, cls, send;
@@ -43,7 +48,9 @@ struct GamePick {
 // the chosen place (-1 none); a window's shown flag
 constexpr uint32_t kWindowMgr = 0x727ED8;
 constexpr GamePick kPicks[] = {{Kind::Identify, kWindowMgr + 0xAC, 0x699118, 0x47C580},
-                               {Kind::Compound, kWindowMgr + 0xB8, 0x6991B0, 0x47CF20}};
+                               {Kind::Compound, kWindowMgr + 0xB8, 0x6991B0, 0x47CF20},
+                               {Kind::Menu, kWindowMgr + 0xBC, 0x698FE8, 0x47AB10}};
+constexpr uint32_t kMenuFirst = 0x6C, kMenuPast = 0x70, kMenuBox = 0x60, kMenuBoxChosen = 100, kMenuSkill = 0x64;
 constexpr uint32_t kList = 0x7C, kChosen = 0x68, kShown = 0x38, kSendMsgSlot = 0x94, kInfo = 8;
 constexpr int kButtonMsg = 6;
 constexpr size_t kInfoSize = 0x48, kMostNodes = 200;
@@ -92,6 +99,18 @@ uint32_t rd32(const uint8_t* p, size_t at) {
     return v;
 }
 
+// Where the game keeps the chosen row (0: nowhere)
+uint32_t chosenAt(uint32_t window, Kind kind) {
+    if (kind != Kind::Menu) return window + kChosen;
+    const uint32_t box = read32(window + kMenuBox);
+    return box ? box + kMenuBoxChosen : 0;
+}
+
+int32_t chosenOf(uint32_t window, Kind kind) {
+    const uint32_t at = chosenAt(window, kind);
+    return at ? int32_t(read32(at)) : -1;
+}
+
 uint32_t gamePick(Kind& kind) {
     for (const GamePick& g : kPicks) {
         const uint32_t w = read32(g.at);
@@ -107,7 +126,7 @@ void hold(State& s, uint32_t window, bool on) {
     if (on && window) {
         if (read32(window + kShown) && write32(window + kShown, 0) && s.hidden != window) {
             LOG_INFO("picks: the game's %s window hidden for the new card (its shown flag 0)",
-                     s.kind == Kind::Identify ? "magnifier's" : "card's");
+                     s.kind == Kind::Identify ? "magnifier's" : s.kind == Kind::Menu ? "skill menu's" : "card's");
             s.hidden = window;
         }
     } else if (s.hidden && s.hidden == window) {
@@ -118,7 +137,27 @@ void hold(State& s, uint32_t window, bool on) {
     }
 }
 
+std::vector<pc::Entry> readMenu(uint32_t window, unsigned codePage) {
+    std::vector<pc::Entry> out;
+    const uint32_t first = read32(window + kMenuFirst), past = read32(window + kMenuPast);
+    if (!first || past <= first || (past - first) / 16 > 64) return out;
+    for (uint32_t at = first; at < past; at += 16) {
+        char buf[65] = {};
+        const uint32_t words = read32(at + 4), len = read32(at + 8);
+        if (words && len) readGame(words, buf, std::min<uint32_t>(len, 64));
+        std::string name = buf;
+        if (at + 16 >= past && name == "cancel") break;  // the game's own last row
+        for (const char* end : {".gat", ".rsw"})  // Teleport's save point: its map's name
+            if (name.size() > 4 && name.compare(name.size() - 4, 4, end) == 0) name.resize(name.size() - 4);
+        pc::Entry e;
+        e.name = name.empty() ? "-" : utf8Of(widened(name, codePage));
+        out.push_back(std::move(e));
+    }
+    return out;
+}
+
 std::vector<pc::Entry> readList(const State& s, uint32_t window) {
+    if (s.kind == Kind::Menu) return readMenu(window, s.codePage);
     std::vector<pc::Entry> out;
     const auto& names = clienttables::itemNames();
     const auto& unknown = clienttables::unknownNames();
@@ -160,6 +199,12 @@ pc::Texts texts(const State& s) {
     t.title = say(identify ? settings::Text::PickIdentifyTitle : settings::Text::PickCompoundTitle);
     t.message = say(identify ? settings::Text::PickIdentifyHint : settings::Text::PickCompoundHint);
     t.ok = say(identify ? settings::Text::PickIdentifyOk : settings::Text::PickCompoundOk);
+    if (s.kind == Kind::Menu) {  // 3.0.11-beta.261: the skill's name over its menu
+        const char* skill = s.window ? skillinfo::name(int(read32(s.window + kMenuSkill))) : "";
+        t.title = *skill ? std::string(skill) : say(settings::Text::PickMenuTitle);
+        t.message = say(settings::Text::PickMenuHint);
+        t.ok = say(settings::Text::PickMenuOk);
+    }
     t.cancel = say(settings::Text::MsgCancel);
     t.empty = say(settings::Text::PickEmpty);
     if (s.padNow)
@@ -205,7 +250,9 @@ void hide(State& s) {
 
 void choose(State& s, int row) {
     if (!s.window || row < 0 || row >= int(s.entries.size())) return;
-    write32(s.window + kChosen, uint32_t(row));
+    const uint32_t at = chosenAt(s.window, s.kind);
+    if (!at) return;
+    write32(at, uint32_t(row));
     s.show.selected = row;
     s.key.clear();
 }
@@ -214,10 +261,10 @@ void press(State& s, int id) {
     Kind kind = Kind::Identify;
     const uint32_t window = gamePick(kind);
     if (!window) return;
-    if (id == pc::kOkButton && int32_t(read32(window + kChosen)) < 0) return;  // nothing chosen: the game's ignores it
+    if (id == pc::kOkButton && chosenOf(window, kind) < 0) return;  // nothing chosen: the game's ignores it
     if (s.told++ < 30)
         LOG_INFO("picks: %s - the game's %s window's 0x%X", id == pc::kOkButton ? "OK" : "cancel",
-                 kind == Kind::Identify ? "magnifier's" : "card's", unsigned(id));
+                 kind == Kind::Identify ? "magnifier's" : kind == Kind::Menu ? "skill menu's" : "card's", unsigned(id));
     reinterpret_cast<SendMsgFn>(uintptr_t(read32(read32(window) + kSendMsgSlot)))(window, 0, kButtonMsg, id, 0, 0);
     s.key.clear();
 }
@@ -247,7 +294,7 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     if (!s.shown || window != s.window) {
         s.show = pc::Show{};
         LOG_INFO("picks: the game's %s window - the new card shows it",
-                 kind == Kind::Identify ? "magnifier's" : "card's");
+                 kind == Kind::Identify ? "magnifier's" : kind == Kind::Menu ? "skill menu's" : "card's");
     }
     s.window = window;
     s.k = float(k);
@@ -256,7 +303,7 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     s.targetH = targetHeight;
     s.padNow = uapad::runtime::look().shown;
     s.entries = readList(s, window);
-    s.show.selected = int32_t(read32(window + kChosen));
+    s.show.selected = chosenOf(window, kind);
     if (s.show.selected >= int(s.entries.size())) s.show.selected = -1;
     s.layout = pc::layout(targetWidth, targetHeight, s.scale, s.entries.size());
     s.show.scroll = std::clamp(s.show.scroll, 0, pc::mostScroll(s.layout, s.entries.size()));

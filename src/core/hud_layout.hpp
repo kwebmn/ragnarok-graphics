@@ -20,6 +20,8 @@ constexpr float kLeastSize = 0.6f, kMostSize = 1.6f, kSizeStep = 0.05f;
 struct Place {
     bool moved = false;
     int anchor = 0;        // the screen's point it keeps to: its column (0 left, 1 middle, 2 right) + 3 x its row
+    // 3.0.11-beta.261 (the tester: «бафи все ще ростуть від центра вверх та вниз і залазять на мапу»): 9-11 - the
+    // screen's middle row, the part's TOP kept to it (it grows down only); placeOf gives these for the middle row
     float dx = 0, dy = 0;  // the part's own matching point from it, in the game's pixels
     float size = 1;        // kLeastSize..kMostSize
 };

@@ -51,6 +51,15 @@ TEST(hud_layout_keeps_its_corner) {
     CHECK_EQ(p.anchor, 1);
     hudlayout::apply(p, 2, 1920, 1080, 400, 100, x, y);
     CHECK(std::abs(x - (1920 / 2 - 200 + 60)) <= 1 && std::abs(y - 30) <= 1);
+    // 3.0.11-beta.261: one placed in the middle row keeps its top there - it grows down only
+    const hudlayout::Box m{3000, 1000, 300, 200};
+    p = hudlayout::placeOf(m, 2, 3840, 2160, 1.0f);
+    CHECK_EQ(p.anchor, 11);
+    hudlayout::apply(p, 2, 3840, 2160, 300, 200, x, y);
+    CHECK(std::abs(x - 3000) <= 1 && std::abs(y - 1000) <= 1);
+    hudlayout::apply(p, 2, 3840, 2160, 300, 600, x, y);  // taller: the same top
+    CHECK(std::abs(y - 1000) <= 1);
+    CHECK_EQ(hudlayout::parse("buffs 11 -10.0 5.0 1.00\n")[int(hudlayout::Part::Buffs)].anchor, 11);
     // never off the screen
     p.dx = 5000;
     hudlayout::apply(p, 2, 1920, 1080, 400, 100, x, y);

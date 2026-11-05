@@ -228,19 +228,24 @@ bool readFile(State& s, const std::string& entry, std::string& out) {
 
 // 3.0.11-beta.202 (the tester: «тут теж на 70% показує іконку 50»): the game's «50%» weight icon (SI_WEIGHT50, 35) -
 // uAthena on uaRO sends it at 70 % of the most weight: the interface's own in its place, its «70%» in words
-constexpr uint16_t kWeight50 = 35;
-const panel::Picture* weightIcon(int side) {
+// 3.0.11-beta.261 (the tester: «іконки статусів перегрузу різні, 70% нова, 90% стара»): SI_WEIGHT90 (36) the same way,
+// «90%» on a deeper red
+constexpr uint16_t kWeight50 = 35, kWeight90 = 36;
+const panel::Picture* weightIcon(int side, bool ninety = false) {
     static std::map<int, panel::Picture> made;
     if (side <= 0) return nullptr;
+    side = ninety ? -side : side;  // its own entry
     auto it = made.find(side);
     if (it != made.end()) return &it->second;
     panel::Picture& p = made[side];
+    side = std::abs(side);
     p.width = p.height = side;
     p.px.assign(size_t(side) * size_t(side), 0u);
     const float r = float(side) * 0.18f;
-    panel::roundRect(p, panel::Box{0, 0, float(side), float(side)}, r, 0xC92A2A, 0.95f, 0xFFB3B3, 0.55f,
-                     std::max(1.0f, float(side) / 24.0f));
-    drawWords(p, {Words{panel::Box{0, 0, float(side), float(side)}, L"70%", 0xFFFFFF, float(side) * 0.42f, true,
+    panel::roundRect(p, panel::Box{0, 0, float(side), float(side)}, r, ninety ? 0x8E1414 : 0xC92A2A, 0.95f,
+                     ninety ? 0xFF6B6B : 0xFFB3B3, ninety ? 0.8f : 0.55f, std::max(1.0f, float(side) / 24.0f));
+    drawWords(p, {Words{panel::Box{0, 0, float(side), float(side)}, ninety ? L"90%" : L"70%", 0xFFFFFF,
+                        float(side) * 0.42f, true,
                         DT_CENTER}});
     return &p;
 }
@@ -444,8 +449,9 @@ void frame(HWND game, BuffsLook look, BuffsOverflow overflow, double k, int targ
         for (const buffs::Timers::Running& r : running)
             if (r.icon == g.icon && r.end > r.from && r.end > now)
                 e.left = std::clamp(float(double(r.end - now) / double(r.end - r.from)), 0.0f, 1.0f);
-        e.picture = g.icon == kWeight50 ? weightIcon(bp::iconSide(e.kind, scale))  // 3.0.11-beta.202: «70%»
-                                        : pictureOf(s, g, bp::iconSide(e.kind, scale));
+        e.picture = g.icon == kWeight50 || g.icon == kWeight90  // 3.0.11-beta.202: «70%» (.261: «90%»)
+                        ? weightIcon(bp::iconSide(e.kind, scale), g.icon == kWeight90)
+                        : pictureOf(s, g, bp::iconSide(e.kind, scale));
         s.entries.push_back(e);
     }
     if (s.entries.empty()) {  // nothing on the character: no glass either
@@ -470,6 +476,14 @@ void frame(HWND game, BuffsLook look, BuffsOverflow overflow, double k, int targ
                           s.overflow == BuffsOverflow::Column ? bp::Overflow::Lines : bp::Overflow::More);
     hudedit::place(hudlayout::Part::Buffs, float(k), targetWidth, targetHeight, s.layout.w, s.layout.h, s.layout.x,
                    s.layout.y);  // 3.0.11-beta.75: where the player put it
+    if (hudedit::movedOf(hudlayout::Part::Buffs) && s.layout.y + s.layout.h > bottom) {
+        // 3.0.11-beta.261 (the tester: «треба щоб тільки вниз було, а потім в 2 колонки»): put lower than its own
+        // place - the icons counted again from there down to the bottom (the further columns, «ще N»), placed again
+        s.layout = bp::layout(s.entries, panelLook, s.layout.x + s.layout.w, s.layout.y, bottom, widest, scale,
+                              s.overflow == BuffsOverflow::Column ? bp::Overflow::Lines : bp::Overflow::More);
+        hudedit::place(hudlayout::Part::Buffs, float(k), targetWidth, targetHeight, s.layout.w, s.layout.h,
+                       s.layout.x, s.layout.y);
+    }
     if (s.layout.lines.size() != s.linesTold) {  // 3.0.11-beta.63: a further column opened or closed
         s.linesTold = s.layout.lines.size();
         if (s.linesLogged++ < 20)
@@ -559,7 +573,7 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
 }
 
 const panel::Picture* iconPicture(uint16_t icon, int side) {
-    if (icon == kWeight50) return weightIcon(side);  // 3.0.11-beta.202
+    if (icon == kWeight50 || icon == kWeight90) return weightIcon(side, icon == kWeight90);  // .202, .261
     State& s = state();
     const auto image = reinterpret_cast<ImageFn>(uintptr_t(kIconImage));
     void* session = reinterpret_cast<void*>(uintptr_t(kSession));
