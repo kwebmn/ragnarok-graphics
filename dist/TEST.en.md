@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.11-beta.252 — what's new
+
+- **Archers shoot distant monsters from the pad again** (report R-3T958C). When a monster is beyond the bow's reach, the server asks the game to walk the character up, and the game starts walking. Every new press of A sent the attack again, and the server stopped the walk on it, so the character stood still and never shot. Now pressing A again on the same target while the character walks up to it leaves the walk alone.
+
 # uaRO Graphics 3.0.11-beta.251 — what's new
 
 - **Monsters no longer get stuck far away and hit from a distance** (reports R-AMNV99, R-GKXJT6, R-RWR2Z8, R-UCE7J8, R-YB4S2K).
