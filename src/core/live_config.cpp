@@ -327,6 +327,10 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("equip", flag(running.equipWindow), flag(file.equipWindow)));
         n.equipWindow = file.equipWindow;
     }
+    if (file.mvpTimers != running.mvpTimers) {  // 3.0.11-beta.280: the bosses' timers, at once
+        u.applied.push_back(change("mvp_timers", flag(running.mvpTimers), flag(file.mvpTimers)));
+        n.mvpTimers = file.mvpTimers;
+    }
     if (file.mobCard != running.mobCard) {  // 3.0.11-beta.279: the monster's card, at once
         u.applied.push_back(change("mob_card", flag(running.mobCard), flag(file.mobCard)));
         n.mobCard = file.mobCard;

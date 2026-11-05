@@ -5108,6 +5108,7 @@ constexpr Entry kTexts[] = {
     {Text::HudPartParty, "Party", "Група", "Группа"},
     {Text::HudPartChat, "Chat", "Чат", "Чат"},
     {Text::HudPartHunt, "Hunt", "Полювання", "Охота"},  // 3.0.11-beta.278
+    {Text::HudPartMvp, "MVP", "MVP", "MVP"},  // 3.0.11-beta.280
     {Text::ConsoleHudEdit, "Arrange the interface (Ctrl+Shift+L)", "Розмістити інтерфейс (Ctrl+Shift+L)",
      "Разместить интерфейс (Ctrl+Shift+L)"},
     {Text::InterfaceLayoutNote,
@@ -5348,6 +5349,17 @@ constexpr Entry kTexts[] = {
     {Text::MobCardIts, "It hits you {1} %", "Він влучає {1} %", "Он попадает {1} %"},
     {Text::MobCardBlow, "Its blow {1}–{2} · {3}/s", "Його удар {1}–{2} · {3}/с", "Его удар {1}–{2} · {3}/с"},
     {Text::MobCardMine, "Your blow ≈{1} · {2} blows", "Ваш удар ≈{1} · ударів {2}", "Ваш удар ≈{1} · ударов {2}"},
+    {Text::InterfaceMvp, "Boss timers", "Таймери босів", "Таймеры боссов"},  // 3.0.11-beta.280
+    {Text::InterfaceMvpHint,
+     "When a boss dies in front of you, a panel counts down to its return by the server's rule: name, map, time left; "
+     "a plus once it is back. A click on a row forgets it. Kept between starts; its place is set in «MVP».",
+     "Коли бос гине у вас на очах, панель відлічує час до його повернення за правилом сервера: ім'я, карта, скільки "
+     "лишилось; плюс — коли він уже мав повернутися. Клік по рядку забуває його. Зберігається між запусками; місце "
+     "задається в «MVP».",
+     "Когда босс погибает у вас на глазах, панель отсчитывает время до его возвращения по правилу сервера: имя, "
+     "карта, сколько осталось; плюс — когда он уже должен был вернуться. Клик по строке забывает его. Сохраняется "
+     "между запусками; место задаётся в «MVP»."},
+    {Text::MvpTitle, "Bosses", "Боси", "Боссы"},
     {Text::NpcTalkTag, "Talk", "Говорити", "Говорить"},  // 3.0.11-beta.256: the NPC's plate before its name comes
     {Text::InterfaceShop, "NPC shops", "Крамниці NPC", "Магазины NPC"},  // 3.0.11-beta.100
     {Text::InterfaceShopHint,  // 3.0.11-beta.101: the keys, the amount typed, the description

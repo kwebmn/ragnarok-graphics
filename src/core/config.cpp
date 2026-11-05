@@ -633,6 +633,8 @@ Config parseConfig(const std::string& text) {
             setBool(val, c.huntPanel);
         } else if (key == "interface.mob_card") {  // 3.0.11-beta.279
             setBool(val, c.mobCard);
+        } else if (key == "interface.mvp_timers") {  // 3.0.11-beta.280
+            setBool(val, c.mvpTimers);
         } else if (key == "interface.shop") {  // 3.0.11-beta.100: the NPCs' shops
             shopSet = val == "0" || val == "1" || val == "on" || val == "off" || val == "true" || val == "false";
             setBool(val, c.shopWindow);

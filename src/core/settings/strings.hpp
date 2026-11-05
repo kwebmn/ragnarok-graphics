@@ -490,7 +490,7 @@ enum class Text : uint16_t {
     InterfacePackIcons, InterfacePackIconsHint,        // 3.0.11-beta.74
     // 3.0.11-beta.75: «Розміщення інтерфейсу» - its bar, the parts' names, the console's row, the app's note
     HudEditTitle, HudEditHint, HudEditReset, HudEditDone, HudPartCharacter, HudPartMinimap, HudPartBuffs,
-    HudPartTracker, HudPartHotbar, HudPartTarget, HudPartParty, HudPartChat, HudPartHunt, ConsoleHudEdit,
+    HudPartTracker, HudPartHotbar, HudPartTarget, HudPartParty, HudPartChat, HudPartHunt, HudPartMvp, ConsoleHudEdit,
     InterfaceLayoutNote,
     HudEditUnseen,
     InterfaceLockLayout, InterfaceLockLayoutHint,  // 3.0.11-beta.77
@@ -516,6 +516,7 @@ enum class Text : uint16_t {
     InterfaceDeathRecap, InterfaceDeathRecapHint, RecapTitle, RecapAttack, RecapAgo,  // 3.0.11-beta.277
     InterfaceHunt, InterfaceHuntHint, HuntTitle, HuntDps, HuntExp, HuntToLevel, HuntZeny, HuntKills,  // .278
     InterfaceMobCard, InterfaceMobCardHint, MobCardHit, MobCardIts, MobCardBlow, MobCardMine,  // 3.0.11-beta.279
+    InterfaceMvp, InterfaceMvpHint, MvpTitle,  // 3.0.11-beta.280
     NpcTalkTag,  // 3.0.11-beta.256
     InterfaceShop, InterfaceShopHint, ShopTitle, ShopBuy, ShopSell, ShopSearch, ShopWare, ShopPrice,  // .100
     ShopWeight, ShopCart, ShopAmount, ShopSum, ShopTotal, ShopLeft, ShopAfter, ShopWeightBuy, ShopWeightSell,

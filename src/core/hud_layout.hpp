@@ -11,7 +11,8 @@ namespace uagfx::hudlayout {
 // kept to the screen's nearest corner, edge's middle or centre (a new resolution or size keeps it there), and sized
 // 60-160 %; a part not moved stands where it always does (some by others: the buffs under the minimap). The file:
 // uaro-graphics\hud-layout.txt, a line a part.
-enum class Part : uint8_t { Character, Minimap, Buffs, Tracker, Hotbar, Target, Party, Chat, Hunt, kCount };  // .278
+// .278 Hunt, .280 Mvp
+enum class Part : uint8_t { Character, Minimap, Buffs, Tracker, Hotbar, Target, Party, Chat, Hunt, Mvp, kCount };
 constexpr int kParts = int(Part::kCount);
 const char* keyOf(Part p);  // its word in the file: "character", "minimap", ...
 
