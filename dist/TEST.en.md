@@ -1,3 +1,9 @@
+# uaRO Graphics 3.0.11-beta.273 — what's new
+
+**Characters — new features 1 and 3:**
+- **Character portraits:** now and then, while the character stands with no window open, its look in the game (hair, headgear, gear) is kept and shown on its place in the character select instead of the plain head. The first a minute into the game, then at most once in 10 minutes. The switch «Портрет персонажа» in «Інтерфейс».
+- **When and where played:** the character select's place shows the map it was last on and «2 год тому» by its levels. Only this computer's (uaro-graphics\characters.txt).
+
 # uaRO Graphics 3.0.11-beta.272 — what's new
 
 **Fixed a crash after a warp (R-EP778D):** the smoothing of other units' moves kept a monster's address from the map before; after the warp its memory was freed but not yet written over, and the driver called a function through garbage. Each unit is checked now — of this map and truly the game's object — or left alone.
