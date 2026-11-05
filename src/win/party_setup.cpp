@@ -11,6 +11,7 @@
 #include "core/settings/strings.hpp"
 #include "core/ui_style.hpp"
 #include "pad/win/game_window.hpp"
+#include "win/card_drag.hpp"
 #include "win/code_page.hpp"
 #include "win/game_camera.hpp"
 #include "win/log.hpp"
@@ -34,6 +35,7 @@ using SendMsgFn = int(__attribute__((thiscall)) *)(uint32_t self, uint32_t sende
 
 struct State {
     WindowShadow shadow;
+    CardDrag drag;  // 3.0.11-beta.270
     bool on = false, shown = false;
     uint32_t hidden = 0;
     float k = 0, scale = 1;
@@ -185,7 +187,9 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     }
     s.show.canChange = read32(kParty) == 0 || read32(kLeader) != 0;
     s.show.thingsFixed = read32(kParty) != 0;  // 3.0.11-beta.200: a party already - its experience alone sent
-    s.layout = ps::layout(targetWidth, targetHeight, s.scale);
+    s.layout = ps::layout(targetWidth, targetHeight, s.scale, s.show.thingsFixed ? 1 : 3);  // .270
+    s.drag.apply(s.layout.x, s.layout.y, s.layout.w, s.layout.h, targetWidth, targetHeight, k,
+                 48 * s.scale);  // .270: moved by its empty part
     s.show.hoverRow = s.show.hoverChoice = -1;
     s.show.hoverPart = 0;
     int cx = 0, cy = 0;
@@ -233,13 +237,14 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     const float lx = tx - float(s.layout.x), ly = ty - float(s.layout.y);
     if (!s.layout.glass.contains(lx, ly)) return false;
     result = 0;
+    if (m == WM_LBUTTONUP) s.drag.end();
     if (m != WM_LBUTTONDOWN && m != WM_LBUTTONDBLCLK) return true;
     const ps::Hit h = ps::hitTest(s.layout, lx, ly);
     switch (h.part) {
         case ps::Part::Choice: choose(s, h.row, h.choice); break;
         case ps::Part::Ok: send(s, 0, ps::kOkButton, "OK"); break;
         case ps::Part::Cancel: send(s, 0, ps::kCancelButton, "cancel"); break;
-        case ps::Part::None: break;
+        case ps::Part::None: s.drag.begin(tx, ty); break;  // .270: dragged by its empty part
     }
     return true;
 }

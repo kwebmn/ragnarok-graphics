@@ -12,6 +12,7 @@
 #include "core/social_card.hpp"
 #include "core/ui_style.hpp"
 #include "pad/win/game_window.hpp"
+#include "win/card_drag.hpp"
 #include "win/code_page.hpp"
 #include "win/game_camera.hpp"
 #include "win/log.hpp"
@@ -38,6 +39,7 @@ using SendMsgFn = int(__attribute__((thiscall)) *)(uint32_t self, uint32_t sende
 
 struct State {
     WindowShadow shadow;
+    CardDrag drag;  // 3.0.11-beta.270
     bool on = false, shown = false;
     uint32_t hidden = 0;
     unsigned codePage = 0;
@@ -111,7 +113,8 @@ std::vector<sc::Entry> readList(const State& s, uint32_t window, bool party) {
         sc::Entry e;
         const std::string name = words(f[6], f[7]);
         std::string map = words(f[10], f[11]);
-        if (map.size() > 4 && map.compare(map.size() - 4, 4, ".gat") == 0) map.resize(map.size() - 4);
+        for (const char* ext : {".gat", ".rsw"})  // 3.0.11-beta.270 (the tester: «pay_dun01.rsw»): the .rsw too
+            if (map.size() > 4 && map.compare(map.size() - 4, 4, ext) == 0) map.resize(map.size() - 4);
         e.name = utf8Of(widened(name, s.codePage));
         e.map = utf8Of(widened(map, s.codePage));
         e.leader = party && f[13] == 0;
@@ -252,6 +255,8 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     s.show.selected = int32_t(read32(window + kChosen));
     if (s.show.selected >= int(s.entries.size())) s.show.selected = -1;
     s.layout = sc::layout(targetWidth, targetHeight, s.scale, s.show.tab, s.entries.size());
+    s.drag.apply(s.layout.x, s.layout.y, s.layout.w, s.layout.h, targetWidth, targetHeight, k,
+                 48 * s.scale);  // .270: moved by its empty part
     s.show.scroll = std::clamp(s.show.scroll, 0, sc::mostScroll(s.layout, s.entries.size()));
     s.show.hoverRow = s.show.hoverButton = s.show.hoverTab = -1;
     s.show.hoverClose = false;
@@ -309,6 +314,7 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
         s.key.clear();
         return true;
     }
+    if (m == WM_LBUTTONUP) s.drag.end();
     if (m != WM_LBUTTONDOWN && m != WM_LBUTTONDBLCLK) return true;
     const sc::Hit h = sc::hitTest(s.layout, s.show.scroll, s.entries.size(), lx, ly);
     switch (h.part) {
@@ -319,7 +325,7 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
             break;
         case sc::Part::Button: act(s, h.index); break;
         case sc::Part::Close: send(s, sc::gameButton(sc::Action::Close), 0, "close"); break;
-        case sc::Part::None: break;
+        case sc::Part::None: s.drag.begin(tx, ty); break;  // .270: dragged by its empty part
     }
     return true;
 }

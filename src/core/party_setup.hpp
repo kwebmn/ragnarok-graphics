@@ -43,7 +43,9 @@ struct Layout {
     panel::Box labels[3];
     panel::Box choices[3][2];
 };
-Layout layout(int targetW, int targetH, float scale);
+// .270: `rows` shown (1: a party already - the things' rows left out, the tester: «можливо прибрати з налаштувань
+// дійсної паті, і залишити тільки при створенні»)
+Layout layout(int targetW, int targetH, float scale, int rows = 3);
 enum class Part : uint8_t { None, Choice, Ok, Cancel };
 struct Hit {
     Part part = Part::None;

@@ -14,7 +14,7 @@ constexpr uint32_t kCard = 0x10141C, kWhite = 0xFFFFFF, kGold = 0xC9A55B, kText 
 
 }  // namespace
 
-Layout layout(int targetW, int targetH, float scale) {
+Layout layout(int targetW, int targetH, float scale, int rows) {
     Layout L;
     const float s = scale > 0 ? scale : 1.0f;
     L.s = s;
@@ -22,6 +22,10 @@ Layout layout(int targetW, int targetH, float scale) {
     L.title = panel::Box{pad, pad, w - 2 * pad, kTitleH * s};
     float y = pad + kTitleH * s + 4 * s;
     for (int r = 0; r < 3; ++r) {
+        if (r >= rows) {  // .270: not shown - nothing there to press
+            L.labels[r] = L.choices[r][0] = L.choices[r][1] = panel::Box{};
+            continue;
+        }
         L.labels[r] = panel::Box{pad, y, w - 2 * pad, kLabelH * s};
         y += kLabelH * s + 2 * s;
         L.choices[r][0] = panel::Box{pad, y, cw, kChoiceH * s};
@@ -55,7 +59,7 @@ void paint(panel::Picture& out, const Layout& L, const Show& sh) {
     const float s = L.s;
     panel::roundRect(out, L.glass, 12 * s, kCard, uistyle::window(), kWhite, 0.12f, 1.0f * s);
     for (int r = 0; r < 3; ++r) {
-        if (!sh.present[r]) continue;
+        if (!sh.present[r] || L.choices[r][0].w <= 0) continue;
         if (sh.focus == r)
             panel::roundRect(out,
                              panel::Box{L.choices[r][0].x - 4 * s, L.choices[r][0].y - 3 * s,
@@ -82,7 +86,7 @@ std::vector<Words> words(const Layout& L, const Show& sh, const Texts& t) {
     const float s = L.s;
     out.push_back(Words{L.title, t.title, kText, 15 * s, true, Align::Left});
     for (int r = 0; r < 3; ++r) {
-        if (!sh.present[r]) continue;
+        if (!sh.present[r] || L.choices[r][0].w <= 0) continue;
         out.push_back(Words{L.labels[r], t.rows[r], kMuted, 12 * s, false, Align::Left});
         for (int c = 0; c < 2; ++c)
             out.push_back(Words{L.choices[r][c], t.choices[r][c], changeable(sh, r) ? kText : kMuted, 13 * s,

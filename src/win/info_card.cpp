@@ -11,6 +11,7 @@
 #include <string>
 #include <vector>
 
+#include "core/char_block.hpp"
 #include "core/game_words.hpp"
 #include "core/hotbar_panel.hpp"
 #include "core/info_card.hpp"
@@ -168,6 +169,14 @@ void readTables(State& s) {
              d.c_str(), t.unknownFiles.size());
 }
 
+// 3.0.11-beta.270: the character's job (the session's, as the character block reads it) and a job's English name
+int ownJob() {
+    uint32_t v = 0;
+    return readGame(0x771F8C, &v, 4) ? int(v) : -1;
+}
+
+std::string jobWords(int job) { return charblock::jobName(job); }
+
 std::vector<std::string> utf8Lines(const State& s, const std::vector<std::string>& lines) {
     std::vector<std::string> out;
     for (const std::string& l : lines) out.push_back(utf8(s, l));
@@ -318,7 +327,7 @@ void skillCard(State& s, One& o, uint32_t window) {
                        : say(settings::Text::CardNotLearned);
     const auto d = s.tables.skills.find(aegis);
     if (d != s.tables.skills.end()) {
-        c.lines = utf8Lines(s, d->second);
+        c.lines = utf8Lines(s, ic::forJob(d->second, ownJob(), jobWords));  // .270: the character's job's
         if (!c.lines.empty() && c.lines.front() == utf8(s, n != names.end() ? hotbar::spaced(n->second) : aegis))
             c.lines.erase(c.lines.begin());  // its first line its name again
     }
@@ -533,7 +542,8 @@ std::vector<std::string> skillDescription(const std::string& aegis, const std::s
     std::vector<std::string> out;
     const auto d = s.tables.skills.find(aegis);
     if (d == s.tables.skills.end()) return out;
-    for (const std::string& l : d->second) out.push_back(utf8(s, gamewords::withoutColours(l)));
+    for (const std::string& l : ic::forJob(d->second, ownJob(), jobWords))  // .270: the character's job's
+        out.push_back(utf8(s, gamewords::withoutColours(l)));
     if (!out.empty() && (out.front() == name || out.front().empty())) out.erase(out.begin());
     return out;
 }

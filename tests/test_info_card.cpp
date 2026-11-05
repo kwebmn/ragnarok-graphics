@@ -160,3 +160,17 @@ TEST(info_card_skill_by_its_shown_name) {
     s = infocard::skillOfCard("Nothing Such", session, names);
     CHECK(s.aegis == "Nothing Such" && s.level == 0);
 }
+
+// 3.0.11-beta.270 (the tester: Cure's «4Skill Requirements : Heal 2 / 8Skill Requirements ...»): a class's own lines
+TEST(info_card_lines_for_the_job) {
+    const std::vector<std::string> cure = {"MAX Lv : 1", "4^777777Skill Requirements : Heal 2^000000",
+                                           "8^777777Skill Requirements : Heal 2^000000",
+                                           "14^777777Skill Requirements : Faith 5^000000", "Target: ^777777Player"};
+    const auto name = [](int job) { return job == 4 ? std::string("Acolyte") : job == 14 ? "Crusader" : ""; };
+    const std::vector<std::string> crusader = infocard::forJob(cure, 14, name);
+    CHECK(crusader.size() == 3 && crusader[1] == "^777777Skill Requirements : Faith 5^000000");
+    const std::vector<std::string> mage = infocard::forJob(cure, 2, name);  // none of its own: each named
+    CHECK(mage.size() == 5 && mage[1] == "Acolyte: ^777777Skill Requirements : Heal 2^000000");
+    CHECK(mage[2] == "#8: ^777777Skill Requirements : Heal 2^000000");
+    CHECK(infocard::forJob({"2^ff0000", "12 monsters"}, 2, name).size() == 2);  // «12 monsters»: no colour after it
+}

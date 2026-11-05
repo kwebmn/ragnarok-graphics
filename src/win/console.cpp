@@ -566,6 +566,12 @@ void Console::draw(HWND game, const Config& file, const GpuTiming* timing) {
     const Config config = shownConfig(file);
     std::string state = std::to_string(at_) + "|" + comparing_ + "|" + std::to_string(timing ? timing->serial : 0) +
                         "|" + filter_ + "|" + (thisMap_ ? "1" : "0") + map_ + "|" + std::to_string(file.hudOpacity);
+    // 3.0.11-beta.270 (the tester: «перекриває і курсор миші, і прицілитись важко»): the console opaque over the
+    // game's cursor - an arrow of its own drawn where the mouse is over it
+    POINT mouseAt{-1, -1};
+    if (GetCursorPos(&mouseAt) && game) ScreenToClient(game, &mouseAt);
+    const bool mouseIn = drawnLine_ > 0 && PtInRect(&drawnBox_, mouseAt);
+    if (mouseIn) state += "|m" + std::to_string(mouseAt.x) + "," + std::to_string(mouseAt.y);
     for (const Row& r : rows_)
         if (r.kind != Kind::Heading)
             if (const IniSetting* s = settingOf(r.key)) state += tokenOf(*s, config) + ",";
@@ -744,6 +750,24 @@ void Console::draw(HWND game, const Config& file, const GpuTiming* timing) {
         SelectObject(dc, font);
         SetTextColor(dc, RGB(150, 160, 160));
         DrawTextW(dc, keys.c_str(), int(keys.size()), &foot, DT_WORDBREAK | DT_LEFT | DT_NOPREFIX);
+        if (mouseIn) {  // .270: the arrow, white with a dark edge, its tip at the mouse
+            const int mx = int(mouseAt.x - box.x), my = int(mouseAt.y - box.y), a = std::max(12, fontH);
+            const POINT arrow[7] = {{mx, my},
+                                    {mx, my + a * 17 / 12},
+                                    {mx + a * 4 / 12, my + a * 13 / 12},
+                                    {mx + a * 7 / 12, my + a * 19 / 12},
+                                    {mx + a * 9 / 12, my + a * 18 / 12},
+                                    {mx + a * 6 / 12, my + a * 12 / 12},
+                                    {mx + a * 10 / 12, my + a * 12 / 12}};
+            HPEN pen = CreatePen(PS_SOLID, std::max(1, a / 12), RGB(16, 16, 16));
+            HBRUSH brush = CreateSolidBrush(RGB(250, 250, 250));
+            HGDIOBJ oldPen = SelectObject(dc, pen), oldBrush = SelectObject(dc, brush);
+            Polygon(dc, arrow, 7);
+            SelectObject(dc, oldPen);
+            SelectObject(dc, oldBrush);
+            DeleteObject(pen);
+            DeleteObject(brush);
+        }
         // 3.0.11-beta.260 (the tester: «написано непрозорим, а воно прозоре»): its ground opaque, not the panels'
         const uint32_t ground = 255;
         for (size_t i = 0; i < size_t(w) * size_t(h); ++i) {

@@ -1,5 +1,6 @@
 #pragma once
 #include <cstdint>
+#include <functional>
 #include <map>
 #include <string>
 #include <vector>
@@ -19,6 +20,12 @@ namespace uagfx::infocard {
 // The game's description tables: «1201#», its lines, «#» (items); «MG_FIREWALL#» alike (skills) - a key to its lines;
 // the «//» lines and the CRs left out
 std::map<std::string, std::vector<std::string>> descriptions(const std::string& text);
+// 3.0.11-beta.270 (the tester: «у скіла Cure ... криво виводяться прохідні скіли» - «4Skill Requirements : Heal 2»):
+// a description's lines a class's own - its job's number before the colour («4^777777Skill Requirements ...», the
+// client's way for a skill several classes have): the character's job's kept without the number, the others' dropped;
+// none for the job - each with its class's name (`name` of the job, "" unknown) before it
+std::vector<std::string> forJob(const std::vector<std::string>& lines, int job,
+                                const std::function<std::string(int)>& name);
 // 3.0.11-beta.200 (the tester: «скіл вивчено, а замість його опису пише що не вивчено»): the game's skill card keeps
 // the skill's name as shown (FUN_00505d60: skillnametable's «Coin_Flip» spaced, «Coin Flip»), not its AEGIS name;
 // the card's skill: the character's one of that name (its AEGIS name and level), else the table's (not learned),

@@ -124,6 +124,31 @@ std::map<std::string, std::vector<std::string>> descriptions(const std::string& 
     return out;
 }
 
+std::vector<std::string> forJob(const std::vector<std::string>& lines, int job,
+                                const std::function<std::string(int)>& name) {
+    const auto jobOf = [](const std::string& l, size_t& digits) {  // the job's number before a colour, -1 none
+        digits = 0;
+        while (digits < l.size() && digits < 5 && l[digits] >= '0' && l[digits] <= '9') ++digits;
+        return digits > 0 && digits < l.size() && l[digits] == '^' ? std::atoi(l.substr(0, digits).c_str()) : -1;
+    };
+    bool mine = false;
+    size_t n = 0;
+    for (const std::string& l : lines) mine = mine || (job >= 0 && jobOf(l, n) == job);
+    std::vector<std::string> out;
+    for (const std::string& l : lines) {
+        const int j = jobOf(l, n);
+        if (j < 0) {
+            out.push_back(l);
+        } else if (mine) {
+            if (j == job) out.push_back(l.substr(n));
+        } else {
+            const std::string who = name ? name(j) : std::string();
+            out.push_back((who.empty() ? "#" + std::to_string(j) : who) + ": " + l.substr(n));
+        }
+    }
+    return out;
+}
+
 std::map<int, int> slotCounts(const std::string& text) {
     std::map<int, int> out;
     size_t at = 0;
