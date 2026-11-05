@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.11-beta.275 — what's new
+
+**Feature 2 — the character select as a carousel:** the chosen character in the middle and larger, two neighbours each side smaller. ‹ ›, the wheel, the D-pad or a click on a neighbour go round all the account's places (all the game's pages together), «N / M» at the top. A double click on the middle one enters. The switch «Вибір персонажа каруселлю» in «Інтерфейс» (off: the three places as before).
+
 # uaRO Graphics 3.0.11-beta.274 — what's new
 
 **Feature 4 — the session's summary:** the character select shows under the places the chosen character's last game: how long, how much of a Base and a Job level gained (per cent of a level), the zeny won or spent. For example: «Остання гра Ліра: 1 год 20 хв · Base +40 % · +12 500 z».
