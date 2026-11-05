@@ -5,11 +5,14 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <string>
 
+#include "core/fight_trace.hpp"
 #include "core/merc_packet.hpp"
+#include "core/minimap_proto.hpp"
 #include "win/game_camera.hpp"
 #include "win/guild_card.hpp"
 #include "win/log.hpp"
@@ -79,6 +82,7 @@ struct State {
     int holdsTold = 0;
     ULONGLONG polledAt = 0, readGap = 0;  // 3.0.11-beta.131: the game's last read of its socket, the one before it
     ULONGLONG longGapAt = 0;              // 3.0.11-beta.134: the last long pause between reads (a backlog after it)
+    fighttrace::Trace trace;              // 3.0.11-beta.247 (R-AMNV99)
 };
 
 State& state() {
@@ -89,6 +93,83 @@ State& state() {
 uint32_t read32(uint32_t at) {
     uint32_t v = 0;
     return readGame(at, &v, 4) ? v : 0;
+}
+
+int rd16(const uint8_t* p, size_t at) { return int(uint16_t(p[at] | p[at + 1] << 8)); }
+
+// 3.0.11-beta.247: the cell the game shows a unit on (before it takes the packet)
+bool shownCell(uint32_t unit, int& x, int& y) {
+    float world[3] = {}, own[3] = {};
+    int w = 0, h = 0, cell = 0;
+    minimap::Cell c;
+    if (!readActorWorld(unit, world) || !readPlayerWorld(own, w, h, cell) ||
+        !minimap::cellOf(world[0], world[2], w, h, cell, c))
+        return false;
+    x = c.x;
+    y = c.y;
+    return true;
+}
+
+// 3.0.11-beta.247 (R-AMNV99 «замерал и телепортировался»): the fought units' packets kept, written out when one jumps
+constexpr uint16_t kVanish = 0x0080;  // ZC_NOTIFY_VANISH <unit>.L <type>.B (1 died)
+void trace(State& s, uint16_t id, const uint8_t* data, ULONGLONG now) {
+    using fighttrace::Event;
+    using fighttrace::Kind;
+    const uint32_t me = read32(kOwnAccount);
+    if (!me) return;
+    uint32_t unit = 0;
+    std::memcpy(&unit, data + 2, 4);
+    Event e;
+    e.ms = now;
+    if (id == kAct) {
+        uint32_t target = 0, swing = 0, flinch = 0;
+        std::memcpy(&target, data + 6, 4);
+        std::memcpy(&swing, data + 14, 4);
+        std::memcpy(&flinch, data + 18, 4);
+        if (unit == me && target && target != me) {
+            e.kind = Kind::HitIt;
+            e.unit = target;
+        } else if (target == me && unit && unit != me) {
+            e.kind = Kind::HitsMe;
+            e.unit = unit;
+        } else {
+            return;
+        }
+        e.a = int(std::min<uint32_t>(swing, 100000));
+        e.b = int(std::min<uint32_t>(flinch, 100000));
+        e.c = int(int16_t(rd16(data, 22)));
+    } else {
+        if (unit == me || !s.trace.fought(unit, now)) return;
+        e.unit = unit;
+        if (id == kMove) {
+            e.kind = Kind::Move;
+            fighttrace::way(data + 6, e.a, e.b, e.c, e.d);
+        } else if (id == kFixPos) {
+            e.kind = Kind::Fix;
+            e.a = rd16(data, 6);
+            e.b = rd16(data, 8);
+        } else if (id == kVanish && data[6] == 1) {
+            e.kind = Kind::Died;
+        } else {
+            return;
+        }
+    }
+    shownCell(e.unit, e.shownX, e.shownY);
+    s.trace.add(e);
+    int away = 0;
+    const char* what = nullptr;
+    if (e.shownX >= 0 && e.kind == Kind::Fix) {
+        away = std::max(std::abs(e.shownX - e.a), std::abs(e.shownY - e.b));
+        what = "put";
+    } else if (e.shownX >= 0 && e.kind == Kind::Move) {
+        away = std::max(std::abs(e.shownX - e.a), std::abs(e.shownY - e.b));
+        what = "walks from";
+    }
+    if (!what || away < 2) return;
+    char why[80];
+    std::snprintf(why, sizeof why, "%s %d cells from where the game showed it", what, away);
+    const std::string out = s.trace.dump(e.unit, now, why);
+    if (!out.empty()) LOG_INFO("%s", out.c_str());
 }
 
 // ws2_32's own two, without importing it into ddraw.dll (the game loaded it already)
@@ -129,8 +210,6 @@ SOCKET socketOf(void* connection) {
     return sock;
 }
 
-int rd16(const uint8_t* p, size_t at) { return int(uint16_t(p[at] | p[at + 1] << 8)); }
-
 }  // namespace
 
 void packet(void* connection, uint16_t id, const uint8_t* data) {
@@ -153,6 +232,7 @@ void packet(void* connection, uint16_t id, const uint8_t* data) {
     if (!inGameWorld()) return;
     const ULONGLONG now = GetTickCount64();
     s.watch.packet(now);
+    if (data && (id == kAct || id == kMove || id == kFixPos || id == kVanish)) trace(s, id, data, now);  // .247
     if ((id == kMove || id == kOwnMove || id == kAct) && data) {  // 3.0.11-beta.128: held by a lost packet?
         const int late = lateness(s, data, id == kMove ? 12 : id == kOwnMove ? 2 : 10);
         const int way = netwatch::onTheWay(late, uint32_t(std::min<ULONGLONG>(s.readGap, 60000)));  // .131
