@@ -734,6 +734,15 @@ void Controller::steerCamera(const PadState& pad, uint32_t now, TickOutput& out)
 void Controller::attack(const WorldState& world, uint32_t now, TickOutput& out) {
     if (keepsTarget(world)) {
         const std::optional<Cell> pos = world.actorPos(target_, now);
+        // 3.0.11-beta.252 (R-3T958C «с геймпада перестал атаковать стрелами»): a monster beyond the bow's reach -
+        // the server answers 0x0139 and the game walks the character up; each press asking again stopped that walk
+        // (an attack request stops it first) and the character stood: a press on the same target while walking
+        // up to it leaves the walk alone
+        if (wantAttack_ && attackSent_ && !walking_ && world.selfMoving(now)) {
+            out.notes.push_back("attack: walking up to " + std::to_string(target_) +
+                                (pos ? " at " + cellText(*pos) : std::string()) + " - not asked again");
+            return;
+        }
         out.notes.push_back("attack: keeps " + std::to_string(target_) +
                             (picked_ ? " (picked with the right stick)"
                                      : wantAttack_ ? " (being fought)" : " (fought before the walk)") +

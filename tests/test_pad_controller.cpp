@@ -1980,3 +1980,21 @@ TEST(ctl_quick_kill_under_a_hold_goes_on) {
     c.tick(pad(kPadA), w, view(), 1400);  // held on: the next
     CHECK_EQ(c.target(), 110000002u);
 }
+
+// 3.0.11-beta.252 (R-3T958C «с геймпада перестал атаковать стрелами»): a monster beyond the bow's reach - the game
+// walks the character up (the server's 0x0139); more presses on it leave that walk alone instead of asking again
+TEST(ctl_presses_leave_the_walk_up_to_the_target_alone) {
+    Controller c(Config{});
+    WorldState w = world();
+    addMob(w, 110000001, Cell{112, 100});  // 12 cells: past a bow
+    TickOutput o = c.tick(pad(kPadA), w, view(), 1000);
+    CHECK_EQ(o.packets.size(), 1u);  // asked
+    c.tick(pad(), w, view(), 1050);
+    w.apply(EvSelfWalk{Cell{100, 100}, Cell{105, 100}}, 1100);  // the game walks it up
+    o = c.tick(pad(kPadA), w, view(), 1500);
+    CHECK(o.packets.empty());  // not asked again: the walk goes on
+    c.tick(pad(), w, view(), 1550);
+    w.apply(EvSetPos{w.selfId(), Cell{105, 100}}, 2400);  // there, standing
+    o = c.tick(pad(kPadA), w, view(), 2500);
+    CHECK_EQ(o.packets.size(), 1u);  // standing: asked again
+}
