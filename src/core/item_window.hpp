@@ -33,6 +33,9 @@ struct Item {
     // 3.0.11-beta.118 (the owner: «нету стрел»): the arrows worn - they stay in the bag (the game's own window lists
     // them); a green «E» in its cell's corner, «вдягнуто» first in its tip
     bool worn = false;
+    // 3.0.11-beta.285 (the owner's feature 13): gear against the one worn where it goes - its tip's third line
+    // («Замість +4 Knife: ATK 17 → 25 (+8)», core/gear_compare); "" none
+    std::string compare;
 };
 
 // 3.0.11-beta.113 (the concept «Концепция окон и инвентаря», question 9 «давай»): «Усе», «Витратне» (potions, food,

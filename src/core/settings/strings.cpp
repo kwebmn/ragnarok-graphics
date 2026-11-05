@@ -5390,6 +5390,9 @@ constexpr Entry kTexts[] = {
     {Text::ChatSearch, "Search", "Пошук", "Поиск"},  // 3.0.11-beta.284
     {Text::ChatSearchHint, "Type to find in the lines · Esc closes", "Пишіть, щоб знайти в рядках · Esc — закрити",
      "Пишите, чтобы найти в строках · Esc — закрыть"},
+    {Text::ItemsCompareInstead, "Instead of {1}: {2}", "Замість {1}: {2}", "Вместо {1}: {2}"},  // .285
+    {Text::ItemsCompareNone, "Nothing worn there: {1}", "Там нічого не вдягнуто: {1}", "Там ничего не надето: {1}"},
+    {Text::ItemsCompareSlots, "slots", "слоти", "слоты"},
     {Text::NpcTalkTag, "Talk", "Говорити", "Говорить"},  // 3.0.11-beta.256: the NPC's plate before its name comes
     {Text::InterfaceShop, "NPC shops", "Крамниці NPC", "Магазины NPC"},  // 3.0.11-beta.100
     {Text::InterfaceShopHint,  // 3.0.11-beta.101: the keys, the amount typed, the description

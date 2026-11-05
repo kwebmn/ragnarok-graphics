@@ -12,6 +12,7 @@
 #include <string>
 #include <vector>
 
+#include "core/gear_compare.hpp"
 #include "core/char_status.hpp"
 #include "core/hotbar_panel.hpp"
 #include "core/item_window.hpp"
@@ -261,13 +262,24 @@ void readBag(State& s) {
     if (!head) return;
     const uint32_t ammo = read32(kAmmoNow);
     uint32_t node = read32(head);
+    std::vector<gearcompare::Worn> wornNow;
     for (size_t n = 0; node && node != head && n < kMostNodes; ++n, node = read32(node)) {
         uint8_t raw[kInfoSize] = {};
         if (!readGame(node + kInfo, raw, sizeof raw)) break;
         const uint32_t index = rd32(raw, 0x08), worn = rd32(raw, 0x0C), ptr = rd32(raw, 0x30), len = rd32(raw, 0x34);
-        if (!index || (worn && !(worn & kAmmoBit)) || !ptr || !len || len > 16) continue;
+        if (!index || !ptr || !len || len > 16) continue;
         char digits[17] = {};
         if (!readGame(ptr, digits, len)) continue;
+        if (worn && !(worn & kAmmoBit)) {  // 3.0.11-beta.285: the gear worn, for the bag's gear compared with it
+            const std::string wid = std::to_string(std::atoi(digits));
+            const auto wn = names.find(wid);
+            const int r = int(rd32(raw, 0x40));
+            const std::string name = wn != names.end() ? utf8Of(widened(hotbar::spaced(wn->second), s.codePage))
+                                                       : "#" + wid;
+            wornNow.push_back(gearcompare::Worn{std::atoi(digits), r > 0 && r <= 99 ? r : 0,
+                                                (r > 0 && r <= 99 ? "+" + std::to_string(r) + " " : "") + name});
+            continue;
+        }
         iw::Item it;
         it.index = int(index);
         it.id = std::atoi(digits);
@@ -295,6 +307,12 @@ void readBag(State& s) {
         s.infos.push_back(node + kInfo);
     }
     readStarred(s);  // 3.0.11-beta.113: «★» - this character's starred things
+    {  // 3.0.11-beta.285 (the owner's feature 13): the bag's gear against the worn
+        const gearcompare::Texts ct{say(settings::Text::ItemsCompareInstead), say(settings::Text::ItemsCompareNone),
+                                    say(settings::Text::ItemsCompareSlots)};
+        for (iw::Item& it : s.items)
+            if (it.identified && it.location) it.compare = gearcompare::line(it.id, it.refine, wornNow, ct);
+    }
     for (iw::Item& it : s.items) {
         it.fresh = s.fresh.count(it.index) > 0;  // 3.0.11-beta.112
         it.starred = s.starred.count(it.id) > 0;
