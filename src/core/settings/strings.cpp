@@ -5387,6 +5387,9 @@ constexpr Entry kTexts[] = {
      "золотим.",
      "Ценные предметы на земле подписаны всегда: карты фиолетовым, оружие и броня синим, остальное от 10 000 зени "
      "— золотым."},
+    {Text::ChatSearch, "Search", "Пошук", "Поиск"},  // 3.0.11-beta.284
+    {Text::ChatSearchHint, "Type to find in the lines · Esc closes", "Пишіть, щоб знайти в рядках · Esc — закрити",
+     "Пишите, чтобы найти в строках · Esc — закрыть"},
     {Text::NpcTalkTag, "Talk", "Говорити", "Говорить"},  // 3.0.11-beta.256: the NPC's plate before its name comes
     {Text::InterfaceShop, "NPC shops", "Крамниці NPC", "Магазины NPC"},  // 3.0.11-beta.100
     {Text::InterfaceShopHint,  // 3.0.11-beta.101: the keys, the amount typed, the description

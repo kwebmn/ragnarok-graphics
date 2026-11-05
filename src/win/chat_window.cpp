@@ -14,6 +14,7 @@
 #include <vector>
 
 #include "core/chat_panel.hpp"
+#include "core/settings/search.hpp"
 #include "core/hotbar_panel.hpp"
 #include "core/layout.hpp"
 #include "core/settings/strings.hpp"
@@ -94,6 +95,9 @@ struct Raw {
 struct State {
     bool on = false, shown = false, moved = false, forced = false, oldTold = false, folded = false;
     bool inputTold = false, swallowTab = false;
+    bool searching = false;  // 3.0.11-beta.284 (the owner's feature 17): Ctrl+F in the field - its words the search's
+    std::string search;      // UTF-8
+    WPARAM skipChar = 0;     // the character a key the search took makes next
     unsigned codePage = 0;
     std::vector<Raw> pending;
     std::deque<cp::Line> lines, battle;
@@ -204,6 +208,8 @@ cp::Texts texts() {
     t.zenyOn = say(settings::Text::ChatSysZenyOn);
     t.zenyOff = say(settings::Text::ChatSysZenyOff);
     t.expGained = say(settings::Text::ChatSysExpGained);
+    t.search = say(settings::Text::ChatSearch);  // 3.0.11-beta.284
+    t.searchHint = say(settings::Text::ChatSearchHint);
     return t;
 }
 
@@ -564,8 +570,9 @@ void render(State& s) {
 
 // The tab's lines as rows, made again when a line came or changed, the tab or the width changed
 void makeRows(State& s) {
+    const std::string folded = s.searching ? settings::foldCase(s.search) : std::string();  // 3.0.11-beta.284
     const std::string key = std::to_string(s.version) + ';' + std::to_string(int(s.show.tab)) + s.show.person + 'h' +
-                            std::to_string(s.show.hide) + ';' +
+                            std::to_string(s.show.hide) + ';' + folded + ';' +
                             std::to_string(int(s.layout.lines.w)) + ';' + std::to_string(s.layout.px);
     if (key == s.rowsKey) return;
     s.rowsKey = key;
@@ -587,6 +594,10 @@ void makeRows(State& s) {
         for (const cp::Line& l : s.lines)
             if (cp::showsWith(s.show.tab, s.show.person, l, s.show.hide)) s.rowLines.push_back(&l);  // .242, .243
     }
+    if (!folded.empty())  // 3.0.11-beta.284: the search's - the lines with its words
+        s.rowLines.erase(std::remove_if(s.rowLines.begin(), s.rowLines.end(),
+                                        [&](const cp::Line* l) { return !cp::matches(*l, folded); }),
+                         s.rowLines.end());
     if (s.rowLines.size() > 200) s.rowLines.erase(s.rowLines.begin(), s.rowLines.end() - 200);
     s.rows = cp::wrap(s.rowLines, s.layout.lines.w, s.layout.px, measure);
 }
@@ -693,6 +704,20 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
         s.restoreOn = false;
         write32(kMode, uint32_t(s.restoreMode));
         setName(s, s.restoreName);
+    }
+    if (s.searching) {  // 3.0.11-beta.284: the field shows the search's words
+        if (wordsEdit() == 0 || read32(kFocus) != wordsEdit()) {
+            s.searching = false;
+            s.search.clear();
+            s.key.clear();
+            LOG_INFO("chat: the search closed (the field left)");
+        } else {
+            s.input.text = s.search;
+            s.input.caret = std::string::npos;
+            s.input.whisper.clear();
+            s.input.whisperFocus = false;
+            s.input.searching = true;
+        }
     }
     const ULONGLONG now = GetTickCount64();
     int cx = 0, cy = 0;
@@ -968,6 +993,64 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     if (*did && s.clicksTold++ < 12) LOG_INFO("chat: %s", did);
     s.key.clear();
     return true;
+}
+
+// 3.0.11-beta.284 (the owner's feature 17): Ctrl+F in the chat's field - the search: the words typed (the game's
+// field keeps its own), the tab's lines with them; Backspace, Esc or Enter (closes), Ctrl+F again closes. Ctrl+F
+// elsewhere stays «Довідник»'s
+bool searchKey(UINT m, WPARAM wp, LPARAM lp) {
+    State& s = state();
+    (void)lp;
+    if ((m == WM_CHAR || m == WM_SYSCHAR) && s.skipChar && wp == s.skipChar) {
+        s.skipChar = 0;
+        return true;
+    }
+    if (!s.on || !s.shown || !inGameWorld()) return false;
+    const uint32_t words = wordsEdit();
+    const bool inField = words && read32(kFocus) == words;
+    const bool ctrl = GetKeyState(VK_CONTROL) < 0, alt = GetKeyState(VK_MENU) < 0;
+    const auto close = [&](const char* why) {
+        s.searching = false;
+        s.search.clear();
+        s.key.clear();
+        LOG_INFO("chat: the search closed (%s)", why);
+    };
+    if (m == WM_KEYDOWN && wp == 'F' && ctrl && !alt && (inField || s.searching)) {
+        if (s.searching) {
+            close("Ctrl+F");
+        } else {
+            s.searching = true;
+            s.search.clear();
+            s.key.clear();
+            LOG_INFO("chat: the search opened (Ctrl+F in the field)");
+        }
+        s.skipChar = 6;
+        return true;
+    }
+    if (!s.searching) return false;
+    if (m == WM_KEYDOWN) {
+        if (wp == VK_ESCAPE || wp == VK_RETURN) {
+            close(wp == VK_ESCAPE ? "Esc" : "Enter");
+            s.skipChar = wp == VK_ESCAPE ? 27 : 13;
+            return true;
+        }
+        if (wp == VK_BACK) {
+            while (!s.search.empty() && (uint8_t(s.search.back()) & 0xC0) == 0x80) s.search.pop_back();
+            if (!s.search.empty()) s.search.pop_back();
+            s.skipChar = 8;
+            s.key.clear();
+            return true;
+        }
+        return wp != VK_CONTROL && wp != VK_SHIFT && wp != VK_MENU && !ctrl;  // the game's keys held back
+    }
+    if (m == WM_CHAR && wp >= 32 && !ctrl) {
+        const char c = char(wp);
+        s.search += utf8(s, std::string(1, c));
+        if (s.search.size() > 60) s.search.resize(60);
+        s.key.clear();
+        return true;
+    }
+    return false;
 }
 
 bool key(UINT m, WPARAM wp, LPARAM lp) {

@@ -6,6 +6,7 @@
 #include <cstdlib>
 #include <cmath>
 
+#include "core/settings/search.hpp"
 #include "core/ui_icons.hpp"
 #include "core/ui_style.hpp"
 
@@ -94,11 +95,13 @@ bool whispered(const std::string& text, const char* head, std::string& who, std:
 }
 
 uint32_t chipRgb(const Input& in) {
+    if (in.searching) return kSystem;  // 3.0.11-beta.284
     if (!in.whisper.empty() || in.whisperFocus) return kWhisper;
     return in.mode == 1 ? kParty : in.mode == 2 ? kGuild : kText;
 }
 
 std::string chipText(const Input& in, const Texts& t) {
+    if (in.searching) return t.search;  // 3.0.11-beta.284
     if (!in.whisper.empty() || in.whisperFocus) return "\xE2\x86\x92 " + in.whisper;  // → Name
     return t.tabs[in.mode == 1 ? 1 : in.mode == 2 ? 2 : 0];
 }
@@ -223,6 +226,13 @@ bool showsWith(Tab tab, const std::string& person, const Line& line, int hide) {
         if ((hide & kHideTrade) && line.kind == Kind::Public && line.trade) return false;
     }
     return tab != Tab::Whisper || person.empty() || line.who == person;
+}
+
+bool matches(const Line& line, const std::string& foldedWords) {
+    if (foldedWords.empty()) return true;
+    std::string all = line.who;
+    for (const Span& sp : line.spans) all += ' ' + sp.text;
+    return settings::foldCase(all).find(foldedWords) != std::string::npos;
 }
 
 int unreadOn(const Line& line) {
@@ -637,7 +647,7 @@ std::vector<Words> words(const Layout& L, const std::vector<Row>& rows, const In
         }
     }
     if (in.text.empty()) {
-        const std::string& hint = in.battle && !in.typing ? t.type : t.send;
+        const std::string& hint = in.searching ? t.searchHint : in.battle && !in.typing ? t.type : t.send;
         out.push_back(Words{panel::Box{L.field.x, L.field.y, L.field.w, L.field.h}, hint, kFaint, 11.5f * s, false,
                             Align::Left});
     } else {

@@ -55,6 +55,7 @@ struct Texts {
     // ввімкнено» / «вимкнено», «Показ зені ввімкнено» / «вимкнено», «Досвід: Base +{1} · Job +{2}»
     std::string filters[4];
     std::string autoloot, autolootOff, expOn, expOff, zenyOn, zenyOff, expGained;
+    std::string search, searchHint;  // 3.0.11-beta.284: «Пошук», «Шукати в рядках · Esc — закрити»
 };
 // 3.0.11-beta.243: «Усі»'s filters - each bit hides one kind there
 constexpr int kHideSystem = 1, kHideLoot = 2, kHideAnnounce = 4, kHideTrade = 8;
@@ -87,6 +88,8 @@ bool shows(Tab tab, const Line& line);
 // 3.0.11-beta.242: on «Шепіт» with one chosen - that one's whispers only
 bool showsWith(Tab tab, const std::string& person, const Line& line, int hide = 0);
 int unreadOn(const Line& line);  // the tab a new line counts on while another one is open; -1 none
+// 3.0.11-beta.284 (the owner's feature 17): a line with these words (case folded, in its words or its speaker's)
+bool matches(const Line& line, const std::string& foldedWords);
 
 // The input's row as the game has it now (its edit's words and caret, its send mode, the whisper's name)
 struct Input {
@@ -99,6 +102,7 @@ struct Input {
     bool whisperFocus = false;   // the name being typed
     bool caretOn = true;         // the caret's blink
     std::string replyTo;         // 3.0.11-beta.240: the last who whispered (UTF-8); "" none
+    bool searching = false;      // 3.0.11-beta.284: the field is the search's (Ctrl+F in it): `text` its words
 };
 
 using Measure = std::function<float(const std::string& utf8, float px, bool bold)>;

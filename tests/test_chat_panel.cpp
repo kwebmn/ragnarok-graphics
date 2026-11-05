@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "core/chat_panel.hpp"
+#include "core/settings/search.hpp"
 #include "test.hpp"
 
 using namespace uagfx;
@@ -354,4 +355,15 @@ TEST(chat_scroll_bar_and_the_servers_own_lines) {
     std::vector<Row> rows(70);
     for (Row& r : rows) r.push_back(Piece{"x", kText, false, false, 0, 5, 0});
     CHECK(hitTest(L, rows, sh, L.bar.x + 2, L.bar.y + 10).part == Part::Bar);
+}
+
+TEST(chat_search_matches_words_and_speaker) {  // 3.0.11-beta.284 (the owner's feature 17)
+    chatpanel::Line l;
+    l.who = "Ольга";
+    l.spans.push_back(chatpanel::Span{"Продам Poring Card", chatpanel::kText});
+    CHECK(chatpanel::matches(l, ""));
+    CHECK(chatpanel::matches(l, settings::foldCase("poring")));
+    CHECK(chatpanel::matches(l, settings::foldCase("ПРОДАМ")));
+    CHECK(chatpanel::matches(l, settings::foldCase("ольга")));
+    CHECK(!chatpanel::matches(l, settings::foldCase("куплю")));
 }
