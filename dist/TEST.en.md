@@ -1,3 +1,12 @@
+# uaRO Graphics 3.0.11-beta.245 — what's new
+
+**Chat:**
+- **Scroll bar.** A thin bar now runs to the right of the chat history. Drag its thumb with the mouse, or click the bar to jump to that place. The wheel works as before.
+- **Server lines.** The server's own messages, such as «Autolooting items…», are now shortened like other system lines. They go to the system lines instead of the public chat.
+
+**«Навички» (Skills):**
+- **Draggable scroll bars.** In the tree, the bottom and side scroll bars can now be dragged with the mouse and clicked. The list's bar works the same way (report R-YCYYXU).
+
 # uaRO Graphics 3.0.11-beta.244 — what's new
 
 **The chat, stage five:**
