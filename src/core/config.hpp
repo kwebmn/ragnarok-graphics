@@ -718,6 +718,9 @@ struct Config {
     bool dropNames = true, dropHighlight = true;
     // 3.0.11-beta.288 (the owner's feature 20): [interface] layout_per_char - each character's own interface layout
     bool layoutPerChar = false;
+    // 3.0.11-beta.290 (the owner's feature 22): [interface] homun_ai - our homunculus and mercenary AI written into
+    // AI\USER_AI (/hoai, /merai); homun_aggressive, homun_defend, homun_skills - its choices
+    bool homunAi = true, homunAggressive = false, homunDefend = true, homunSkills = true;
     // 3.0.11-beta.100: [interface] shop - the NPCs' shops (core/shop_window) in place of the game's deal windows
     bool shopWindow = false;
     // 3.0.11-beta.115: [interface] storage - the Kafra storage (win/storage_window: «Склад», «Речі» beside it) in

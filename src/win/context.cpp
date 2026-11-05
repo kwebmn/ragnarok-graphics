@@ -57,6 +57,7 @@
 #include "win/cursor_look.hpp"
 #include "win/hud_edit.hpp"
 #include "win/ground_items.hpp"
+#include "win/homun_ai_files.hpp"
 #include "win/hunt_panel.hpp"
 #include "win/mob_card.hpp"
 #include "win/mvp_panel.hpp"
@@ -1133,6 +1134,13 @@ void Context::present(const Rect& source, bool waitForVblank) {
                                      // top); 3.0.11-beta.109: one opening where another stands goes beside it
     // 3.0.11-beta.75: «Розміщення інтерфейсу» (Ctrl+Shift+L, the console) - over the parts placed this frame
     hudedit::setPerChar(config.layoutPerChar);  // 3.0.11-beta.288
+    {  // 3.0.11-beta.290: our homunculus and mercenary AI's files and choices
+        homunai::Choices ai;
+        ai.aggressive = config.homunAggressive;
+        ai.defend = config.homunDefend;
+        ai.skills = config.homunSkills;
+        homunaifiles::apply(config.homunAi, ai);
+    }
     hudedit::frame(window, pk, pw, ph);
     cursorlook::frame(config.cursorLook, pk);  // 3.0.11-beta.198: [interface] cursor
     // 2.5.16: [quality] world_scale - Direct3D 11 draws the world smaller and makes it larger before the interface;

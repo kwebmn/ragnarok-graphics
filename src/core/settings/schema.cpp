@@ -234,6 +234,14 @@ const std::vector<IniSetting>& iniSettings() {
          Text::InterfaceDropHighlight, Text::InterfaceDropHighlightHint, ""},  // 3.0.11-beta.283
         {"interface", "layout_per_char", Page::Interface, Control::Check, 0, 1, 0, {"0", "1"}, {},
          Text::InterfaceLayoutPerChar, Text::InterfaceLayoutPerCharHint, ""},  // 3.0.11-beta.288
+        {"interface", "homun_ai", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {},
+         Text::InterfaceHomunAi, Text::InterfaceHomunAiHint, ""},  // 3.0.11-beta.290
+        {"interface", "homun_aggressive", Page::Interface, Control::Check, 0, 1, 0, {"0", "1"}, {},
+         Text::InterfaceHomunAggressive, Text::InterfaceHomunAggressiveHint, ""},
+        {"interface", "homun_defend", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {},
+         Text::InterfaceHomunDefend, Text::InterfaceHomunDefendHint, ""},
+        {"interface", "homun_skills", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {},
+         Text::InterfaceHomunSkills, Text::InterfaceHomunSkillsHint, ""},
         {"interface", "shop", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::InterfaceShop,
          Text::InterfaceShopHint, ""},  // 3.0.11-beta.100
         {"interface", "storage", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::InterfaceStorage,
@@ -1194,6 +1202,10 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "interface.drop_names") return c.dropNames ? "1" : "0";  // 3.0.11-beta.283
     if (k == "interface.drop_highlight") return c.dropHighlight ? "1" : "0";  // 3.0.11-beta.283
     if (k == "interface.layout_per_char") return c.layoutPerChar ? "1" : "0";  // 3.0.11-beta.288
+    if (k == "interface.homun_ai") return c.homunAi ? "1" : "0";  // 3.0.11-beta.290
+    if (k == "interface.homun_aggressive") return c.homunAggressive ? "1" : "0";
+    if (k == "interface.homun_defend") return c.homunDefend ? "1" : "0";
+    if (k == "interface.homun_skills") return c.homunSkills ? "1" : "0";
     if (k == "interface.shop") return c.shopWindow ? "1" : "0";      // 3.0.11-beta.100
     if (k == "interface.storage") return c.storageWindow ? "1" : "0";  // 3.0.11-beta.115
     if (k == "interface.trade") return c.tradeWindow ? "1" : "0";      // 3.0.11-beta.116

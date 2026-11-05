@@ -526,6 +526,8 @@ enum class Text : uint16_t {
     ItemsMarket,  // 3.0.11-beta.287
     InterfaceLayoutPerChar, InterfaceLayoutPerCharHint,  // 3.0.11-beta.288
     HotbarWheelLevel,  // 3.0.11-beta.289
+    InterfaceHomunAi, InterfaceHomunAiHint, InterfaceHomunAggressive, InterfaceHomunAggressiveHint,  // .290
+    InterfaceHomunDefend, InterfaceHomunDefendHint, InterfaceHomunSkills, InterfaceHomunSkillsHint,
     NpcTalkTag,  // 3.0.11-beta.256
     InterfaceShop, InterfaceShopHint, ShopTitle, ShopBuy, ShopSell, ShopSearch, ShopWare, ShopPrice,  // .100
     ShopWeight, ShopCart, ShopAmount, ShopSum, ShopTotal, ShopLeft, ShopAfter, ShopWeightBuy, ShopWeightSell,

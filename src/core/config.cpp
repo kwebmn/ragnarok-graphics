@@ -645,6 +645,14 @@ Config parseConfig(const std::string& text) {
             setBool(val, c.dropHighlight);
         } else if (key == "interface.layout_per_char") {  // 3.0.11-beta.288
             setBool(val, c.layoutPerChar);
+        } else if (key == "interface.homun_ai") {  // 3.0.11-beta.290
+            setBool(val, c.homunAi);
+        } else if (key == "interface.homun_aggressive") {
+            setBool(val, c.homunAggressive);
+        } else if (key == "interface.homun_defend") {
+            setBool(val, c.homunDefend);
+        } else if (key == "interface.homun_skills") {
+            setBool(val, c.homunSkills);
         } else if (key == "interface.shop") {  // 3.0.11-beta.100: the NPCs' shops
             shopSet = val == "0" || val == "1" || val == "on" || val == "off" || val == "true" || val == "false";
             setBool(val, c.shopWindow);

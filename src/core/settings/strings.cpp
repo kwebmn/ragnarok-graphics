@@ -5408,6 +5408,27 @@ constexpr Entry kTexts[] = {
      "Каждый персонаж хранит свои места и размеры частей интерфейса (общие, пока вы не измените их для него). Панель "
      "быстрых клавиш имеет три набора для каждого персонажа: Ctrl+Shift+1, 2, 3."},
     {Text::HotbarWheelLevel, "wheel — level (1–{1})", "колесо — рівень (1–{1})", "колесо — уровень (1–{1})"},
+    {Text::InterfaceHomunAi, "uaRO AI for the homunculus and mercenary", "ШІ uaRO для гомункула й найманця",
+     "ИИ uaRO для гомункула и наёмника"},  // 3.0.11-beta.290
+    {Text::InterfaceHomunAiHint,
+     "Our own AI, put into the game's AI\\USER_AI folder (never over another AI): follows you, defends you, heals. "
+     "Turn on «Own homunculus AI (/hoai)» and «Own mercenary AI (/merai)» for the game to use it.",
+     "Власний ШІ, кладеться в теку гри AI\\USER_AI (ніколи поверх іншого ШІ): ходить за вами, захищає, лікує. "
+     "Увімкніть «Свій ШІ гомункула (/hoai)» і «Свій ШІ найманця (/merai)», щоб гра його брала.",
+     "Собственный ИИ, кладётся в папку игры AI\\USER_AI (никогда поверх другого ИИ): ходит за вами, защищает, "
+     "лечит. Включите «Свой ИИ гомункула (/hoai)» и «Свой ИИ наёмника (/merai)», чтобы игра его брала."},
+    {Text::InterfaceHomunAggressive, "AI: attacks by itself", "ШІ: нападає сам", "ИИ: нападает сам"},
+    {Text::InterfaceHomunAggressiveHint, "It attacks monsters near you without waiting for them to attack.",
+     "Нападає на монстрів поруч із вами, не чекаючи, поки вони нападуть.",
+     "Нападает на монстров рядом с вами, не дожидаясь, пока они нападут."},
+    {Text::InterfaceHomunDefend, "AI: defends you", "ШІ: захищає вас", "ИИ: защищает вас"},
+    {Text::InterfaceHomunDefendHint, "It attacks monsters that attack you or it.",
+     "Нападає на монстрів, що нападають на вас чи на нього.", "Нападает на монстров, атакующих вас или его."},
+    {Text::InterfaceHomunSkills, "AI: uses skills", "ШІ: використовує навички", "ИИ: использует навыки"},
+    {Text::InterfaceHomunSkillsHint,
+     "Lif heals you under half HP; Filir and Vanilmirth open a fight with their skill (level 1).",
+     "Lif лікує вас, коли HP менше половини; Filir і Vanilmirth починають бій своєю навичкою (рівень 1).",
+     "Lif лечит вас, когда HP меньше половины; Filir и Vanilmirth начинают бой своим навыком (уровень 1)."},
     {Text::NpcTalkTag, "Talk", "Говорити", "Говорить"},  // 3.0.11-beta.256: the NPC's plate before its name comes
     {Text::InterfaceShop, "NPC shops", "Крамниці NPC", "Магазины NPC"},  // 3.0.11-beta.100
     {Text::InterfaceShopHint,  // 3.0.11-beta.101: the keys, the amount typed, the description

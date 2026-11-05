@@ -327,6 +327,14 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("equip", flag(running.equipWindow), flag(file.equipWindow)));
         n.equipWindow = file.equipWindow;
     }
+    if (file.homunAi != running.homunAi || file.homunAggressive != running.homunAggressive ||
+        file.homunDefend != running.homunDefend || file.homunSkills != running.homunSkills) {  // .290: at once
+        u.applied.push_back(change("homun_ai", flag(running.homunAi), flag(file.homunAi)));
+        n.homunAi = file.homunAi;
+        n.homunAggressive = file.homunAggressive;
+        n.homunDefend = file.homunDefend;
+        n.homunSkills = file.homunSkills;
+    }
     if (file.layoutPerChar != running.layoutPerChar) {  // 3.0.11-beta.288: each character's layout, at once
         u.applied.push_back(change("layout_per_char", flag(running.layoutPerChar), flag(file.layoutPerChar)));
         n.layoutPerChar = file.layoutPerChar;
