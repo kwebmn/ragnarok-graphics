@@ -107,6 +107,7 @@ struct State {
     bool dragUpload = false;
     int cardSkill = 0;  // 3.0.11-beta.195: the skill whose card the window opened
     bool panning = false;  // 3.0.11-beta.224: «Дерево» dragged by its ground
+    int barDrag = 0;       // 3.0.11-beta.245: a scroll bar dragged - 1 the upright one, 2 the level one
     float panX = 0, panY = 0;
     // 3.0.11-beta.225 (stage 3: «План»): the character's plan (kept in its own file), the raise asked last while
     // «Застосувати» runs (its skill, the level it had, when, how many times), why it stopped
@@ -923,6 +924,13 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
         result = 0;
         return true;
     }
+    if (s.barDrag && (m == WM_MOUSEMOVE || m == WM_LBUTTONUP)) {  // 3.0.11-beta.245: a scroll bar dragged
+        kw::barTo(s.show, s.layout, s.data, s.barDrag == 2, tx - float(s.layout.x), ty - float(s.layout.y));
+        if (m == WM_LBUTTONUP) s.barDrag = 0;
+        s.key.clear();
+        result = 0;
+        return true;
+    }
     if (s.panning && (m == WM_MOUSEMOVE || m == WM_LBUTTONUP)) {  // 3.0.11-beta.224: «Дерево» dragged by its ground
         kw::scrollTree(s.show, s.layout, s.panX - tx, s.panY - ty);
         s.panX = tx;
@@ -1034,6 +1042,11 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
             for (kw::Tab& tab : s.data.tabs)
                 for (kw::Skill& k : tab.skills) k.target = 0;
             keepPlan(s);
+            break;
+        case kw::Part::BarV:  // 3.0.11-beta.245 (R-YCYYXU): a scroll bar - to where it was pressed, dragged on
+        case kw::Part::BarH:
+            s.barDrag = h.part == kw::Part::BarH ? 2 : 1;
+            kw::barTo(s.show, s.layout, s.data, s.barDrag == 2, tx - float(s.layout.x), ty - float(s.layout.y));
             break;
         case kw::Part::View:  // its ground: the tree dragged
             s.panning = true;

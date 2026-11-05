@@ -471,6 +471,12 @@ Hit hitTest(const Layout& L, float x, float y) {
         if (L.tabs[i].contains(x, y)) return Hit{Part::Tab, int(i)};
     for (size_t i = 0; i < L.choices.size(); ++i)
         if (L.choices[i].contains(x, y)) return Hit{Part::Choice, int(i)};
+    const auto nearBar = [&](const panel::Box& b) {  // 3.0.11-beta.245: a scroll bar, a little wider to take
+        const float m = 4 * L.s;
+        return b.w > 0 && x >= b.x - m && x <= b.x + b.w + m && y >= b.y - m && y <= b.y + b.h + m;
+    };
+    if (nearBar(L.scroll)) return Hit{Part::BarV, -1};
+    if (L.tree && nearBar(L.scrollH)) return Hit{Part::BarH, -1};
     if (L.tree) {  // 3.0.11-beta.224: only what the view shows
         if (!L.view.contains(x, y)) return Hit{y < L.title.y + L.title.h ? Part::Title : Part::Body, -1};
         for (size_t i = 0; i < L.rows.size(); ++i) {
@@ -733,6 +739,27 @@ int treeStep(const Layout& L, int from, int dx, int dy) {
         }
     }
     return best;
+}
+
+void barTo(Show& sh, const Layout& L, const Data& d, bool horizontal, float x, float y) {
+    const float s = L.s > 0 ? L.s : 1.0f;
+    if (L.tree) {
+        const panel::Box& b = horizontal ? L.scrollH : L.scroll;
+        if (b.w <= 0) return;
+        const float track = horizontal ? b.w : b.h, view = horizontal ? L.view.w : L.view.h;
+        const float whole = horizontal ? L.plan.w : L.plan.h, most = horizontal ? L.maxX : L.maxY;
+        const float thumb = std::max(track * view / std::max(whole, 1.0f), 16 * s);
+        const float at = (horizontal ? x - b.x : y - b.y) - thumb / 2;
+        const float part = std::clamp(at / std::max(1.0f, track - thumb), 0.0f, 1.0f);
+        (horizontal ? sh.treeX : sh.treeY) = part * most / s;
+        return;
+    }
+    const Tab* tab = tabOf(d, L.tab);
+    if (!tab || L.scroll.w <= 0) return;
+    const float count = float(tab->skills.size());
+    const float thumb = std::max(L.scroll.h * float(kRows) / count, 16 * s);
+    const float part = std::clamp((y - L.scroll.y - thumb / 2) / std::max(1.0f, L.scroll.h - thumb), 0.0f, 1.0f);
+    sh.scroll = int(std::lround(part * (count - float(kRows))));
 }
 
 }  // namespace uagfx::skillwin

@@ -138,7 +138,8 @@ using windrag::moved;
 using windrag::released;
 
 enum class Part : uint8_t {
-    None, Close, Tab, Row, Plus, Less, More, Title, Body, ViewList, ViewTree, View, Plan, Minus, Apply, Reset, Choice
+    None, Close, Tab, Row, Plus, Less, More, Title, Body, ViewList, ViewTree, View, Plan, Minus, Apply, Reset, Choice,
+    BarV, BarH  // 3.0.11-beta.245 (R-YCYYXU: «скрол не крутится внизу»): the scroll bars, taken by the mouse
 };
 struct Hit {
     Part part = Part::None;
@@ -149,6 +150,9 @@ Hit hitTest(const Layout& L, float x, float y);
 // 3.0.11-beta.224: «Дерево» scrolled by window pixels; scrolled to show a skill (the controller's)
 void scrollTree(Show& sh, const Layout& L, float dx, float dy);
 bool treeInSight(Show& sh, const Layout& L, int index);  // true: it moved
+// 3.0.11-beta.245: a scroll bar pressed or dragged at (x, y) - the list (its rows) or the tree (either way) scrolled so
+// that its thumb's middle stands there
+void barTo(Show& sh, const Layout& L, const Data& d, bool horizontal, float x, float y);
 // 3.0.11-beta.227 (stage 5: the controller in «Дерево»): the skill the D-pad goes to from `from` - the nearest one
 // that way (dx, dy: -1, 0, 1), across counted twice; `from` when none
 int treeStep(const Layout& L, int from, int dx, int dy);

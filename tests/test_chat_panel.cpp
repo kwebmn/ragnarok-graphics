@@ -330,3 +330,28 @@ TEST(chat_links_and_a_lines_menu) {
     sh.menuNamed = false;
     CHECK(layout(10, 1070, 1.0f, 7, false, sh, in, t, estimate).items.size() == 1);
 }
+
+// 3.0.11-beta.245 (the owner: «в чате нету скрола»; R-YCYYXU): the history's scroll bar - its thumb at the bottom for
+// the newest, taken and dragged; the server's own lines (0x008e, no «name :») short and the system's
+TEST(chat_scroll_bar_and_the_servers_own_lines) {
+    Texts t;
+    t.autoloot = "Автолут: до {1}";
+    t.expOn = "Показ досвіду ввімкнено";
+    const Line own = fromGame(Source::PublicOwn, "Autolooting items with drop rates of 100.00% and below.", 0, t, 0);
+    CHECK(own.kind == Kind::System && own.spans[0].text == "Автолут: до 100.00%");
+    const Line other = fromGame(Source::PublicOwn, "Welcome to the server!", 0, t, 0);
+    CHECK(other.kind == Kind::System);
+    const Line said = fromGame(Source::PublicOwn, "Me : hello", 0, t, 0);
+    CHECK(said.kind == Kind::Public && said.who == "Me");
+    Show sh;
+    Input in;
+    const Layout L = layout(10, 1070, 1.0f, 7, false, sh, in, t, estimate);
+    CHECK(L.bar.w > 0 && L.bar.x >= L.lines.x + L.lines.w);
+    CHECK(barThumb(L, 5, 0).w == 0);  // all shown: no bar
+    const panel::Box newest = barThumb(L, 70, 0), oldest = barThumb(L, 70, 63);
+    CHECK(newest.w > 0 && newest.y > oldest.y && std::fabs(newest.y + newest.h - (L.bar.y + L.bar.h)) < 0.5f);
+    CHECK(scrollAt(L, 70, L.bar.y) == 63 && scrollAt(L, 70, L.bar.y + L.bar.h) == 0);
+    std::vector<Row> rows(70);
+    for (Row& r : rows) r.push_back(Piece{"x", kText, false, false, 0, 5, 0});
+    CHECK(hitTest(L, rows, sh, L.bar.x + 2, L.bar.y + 10).part == Part::Bar);
+}

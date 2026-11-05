@@ -334,3 +334,35 @@ TEST(skill_window_side_panel_in_the_list) {
     CHECK(find("Faster attacks with a two-handed sword.") != w.end() && find("Lv 1: 30 s") != w.end());
     CHECK(find("Twohand Quicken") != w.end() && find("Рівень 10 з 10") != w.end());
 }
+
+// 3.0.11-beta.245 (R-YCYYXU: «скрол не крутится внизу»): the scroll bars taken by the mouse - the tree's level one and
+// upright one, the list's
+TEST(skill_window_scroll_bars_by_the_mouse) {
+    skillwin::Data d;
+    d.points = 1;
+    skillwin::Tab tab{"Monk", {}};
+    tab.skills.push_back(skill(1000, "First", 1, 10));
+    for (int i = 1; i < 9; ++i) tab.skills.push_back(skill(1000 + i, "Next", 0, 5, {{1000 + i - 1, 1}}));
+    d.tabs.push_back(tab);
+    skillwin::Show sh;
+    sh.tree = true;
+    const skillwin::Texts t = texts();
+    const skillwin::Layout L = skillwin::layout(0, 0, 1.0f, d, sh, t, measure);
+    CHECK(L.scrollH.w > 0);
+    CHECK(skillwin::hitTest(L, L.scrollH.x + L.scrollH.w / 2, L.scrollH.y + 1).part == skillwin::Part::BarH);
+    skillwin::barTo(sh, L, d, true, L.scrollH.x + L.scrollH.w, L.scrollH.y);  // the far end: all the way
+    CHECK(std::abs(sh.treeX - L.maxX) < 0.5f);
+    skillwin::barTo(sh, L, d, true, L.scrollH.x, L.scrollH.y);
+    CHECK(sh.treeX == 0);
+    // the list's
+    skillwin::Data many;
+    many.points = 0;
+    skillwin::Tab big{"Knight", {}};
+    for (int i = 0; i < 20; ++i) big.skills.push_back(skill(2000 + i, "S", 1, 10));
+    many.tabs.push_back(big);
+    skillwin::Show ls;
+    const skillwin::Layout M = skillwin::layout(0, 0, 1.0f, many, ls, t, measure);
+    CHECK(M.scroll.w > 0 && skillwin::hitTest(M, M.scroll.x + 1, M.scroll.y + 5).part == skillwin::Part::BarV);
+    skillwin::barTo(ls, M, many, false, M.scroll.x, M.scroll.y + M.scroll.h);
+    CHECK(ls.scroll == 20 - skillwin::kRows);
+}

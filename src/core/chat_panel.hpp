@@ -124,6 +124,7 @@ struct Show {
     int hoverTab = -1, hoverLine = -1;  // the line whose name is pointed at
     bool hoverMode = false, hoverClear = false, hoverNewer = false;
     bool hoverGrip = false;  // 3.0.11-beta.241
+    bool hoverBar = false;   // 3.0.11-beta.245
     // 3.0.11-beta.242 (the chat concept, stage 3: «шёпот по собеседникам»): on «Шепіт» the ones whispered with, the
     // latest first, their unread; the one shown ("" all); a name's menu (its line, where; -1 none) and the item pointed
     std::vector<std::string> people;
@@ -156,6 +157,7 @@ struct Layout {
     panel::Box peopleRow, menu;
     std::vector<panel::Box> people, items;
     panel::Box filtersButton, filtersMenu;  // 3.0.11-beta.243
+    panel::Box bar;  // 3.0.11-beta.245 (the owner: «в чате нету скрола»): the history's scroll bar's track
     std::vector<panel::Box> filters;
     std::vector<panel::Box> tabs;
 };
@@ -168,8 +170,12 @@ Layout layout(int left, int bottom, float scale, int rows, bool quiet, const Sho
 void sizeTo(const Layout& L, float x, float y, int& width, int& rows);
 
 enum class Part : uint8_t {
-    None, Tab, Name, Lines, Mode, Clear, Field, Newer, Body, Grip, Person, Item, Filters, Filter, Link
+    None, Tab, Name, Lines, Mode, Clear, Field, Newer, Body, Grip, Person, Item, Filters, Filter, Link, Bar
 };
+// 3.0.11-beta.245: the scroll bar - its thumb for `total` rows (w 0: all of them shown), the scroll (rows up from the
+// newest) the cursor's y on its track gives (the thumb's middle there)
+panel::Box barThumb(const Layout& L, size_t total, int scroll);
+int scrollAt(const Layout& L, size_t total, float y);
 // 3.0.11-beta.244: a menu's item - by its place, the action it does (0 whisper, 1 block, 2 copy the name, 3 the line)
 int menuAction(const Show& sh, int index);
 struct Hit {

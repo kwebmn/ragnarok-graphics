@@ -134,6 +134,7 @@ struct State {
     int width = cp::kWidth, customRows = 0;
     bool sizing = false, sizeRead = false;
     std::map<std::string, int> personUnread;  // 3.0.11-beta.242: each one's whispers not read yet
+    bool barDrag = false;  // 3.0.11-beta.245: the scroll bar's thumb dragged
 };
 
 State& state() {
@@ -715,6 +716,7 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     s.show.hoverPerson = hit.part == cp::Part::Person ? hit.index : -1;  // 3.0.11-beta.242
     s.show.hoverItem = hit.part == cp::Part::Item ? hit.index : -1;
     s.show.hoverLink = hit.part == cp::Part::Link ? hit.index : 0;  // 3.0.11-beta.244
+    s.show.hoverBar = hit.part == cp::Part::Bar || s.barDrag;      // 3.0.11-beta.245
     s.show.hoverFilters = hit.part == cp::Part::Filters;  // 3.0.11-beta.243
     s.show.hoverFilter = hit.part == cp::Part::Filter ? hit.index : -1;
     s.show.hoverRowLine = hit.part == cp::Part::Lines || hit.part == cp::Part::Name ? hit.index : -1;
@@ -753,7 +755,7 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     // 3.0.11-beta.242: the whispers' row, the one chosen, a name's menu; 3.0.11-beta.241: the grip pointed at
     key += ';' + s.show.person + '|' + std::to_string(s.show.hoverPerson) + ',' + std::to_string(s.show.menuLine) +
            ',' + std::to_string(s.show.hoverItem) + (s.show.hoverGrip ? "g" : "") + (s.show.menuNamed ? "N" : "") +
-           std::to_string(s.show.hoverLink) + ';';
+           std::to_string(s.show.hoverLink) + (s.show.hoverBar ? "b" : "") + ';';
     for (size_t i = 0; i < s.show.people.size(); ++i)
         key += s.show.people[i] + ':' + std::to_string(s.show.peopleUnread[i]) + ',';
     key += ';' + in.text + '|' + std::to_string(in.caret) + '|' + in.whisper + '|' + std::to_string(in.mode) +
@@ -790,9 +792,16 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     if (!s.shown) return false;
     const bool button = m == WM_LBUTTONDOWN || m == WM_LBUTTONUP || m == WM_LBUTTONDBLCLK || m == WM_RBUTTONDOWN ||
                         m == WM_RBUTTONUP || m == WM_RBUTTONDBLCLK || m == WM_MBUTTONDOWN || m == WM_MBUTTONUP;
-    if (!button && m != WM_MOUSEWHEEL && !(m == WM_MOUSEMOVE && s.sizing)) return false;
+    if (!button && m != WM_MOUSEWHEEL && !(m == WM_MOUSEMOVE && (s.sizing || s.barDrag))) return false;
     float tx = 0, ty = 0;  // 3.0.11-beta.43: where the game's cursor stands, as the hover
     if (!pointerInTarget(game, m, lp, s.k, s.targetW, s.targetH, tx, ty)) return false;
+    if (s.barDrag) {  // 3.0.11-beta.245: the scroll bar's thumb dragged - the history follows
+        s.show.scroll = std::clamp(cp::scrollAt(s.layout, s.rows.size(), ty - float(s.layout.y)), 0, mostScroll(s));
+        if (m == WM_LBUTTONUP) s.barDrag = false;
+        s.key.clear();
+        result = 0;
+        return true;
+    }
     if (s.sizing) {  // 3.0.11-beta.241: its corner dragged - the width and the rows follow, kept when let go
         cp::sizeTo(s.layout, tx, ty, s.width, s.customRows);
         if (m == WM_LBUTTONUP) {
@@ -835,6 +844,11 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     if (h.part != cp::Part::Filter && h.part != cp::Part::Filters) s.show.filtersOpen = false;  // 3.0.11-beta.243
     const char* did = "";
     switch (h.part) {
+        case cp::Part::Bar:  // 3.0.11-beta.245: the scroll bar - to where it was pressed, dragged on
+            s.barDrag = true;
+            s.show.scroll = std::clamp(cp::scrollAt(s.layout, s.rows.size(), ty - float(s.layout.y)), 0, mostScroll(s));
+            did = "the scroll bar";
+            break;
         case cp::Part::Link:  // 3.0.11-beta.244: a thing or a monster in «Довідник»
             if (h.index > 0)
                 referencewin::openItem(h.index);
@@ -1036,8 +1050,8 @@ bool ownsPress(HWND game, LPARAM lp) {  // 3.0.11-beta.241: its corner - its siz
     const State& s = state();
     float tx = 0, ty = 0;
     if (!s.shown || !pointerInTarget(game, WM_LBUTTONDOWN, lp, s.k, s.targetW, s.targetH, tx, ty)) return false;
-    return cp::hitTest(s.layout, s.rows, s.show, tx - float(s.layout.x), ty - float(s.layout.y)).part ==
-           cp::Part::Grip;
+    const cp::Part p = cp::hitTest(s.layout, s.rows, s.show, tx - float(s.layout.x), ty - float(s.layout.y)).part;
+    return p == cp::Part::Grip || p == cp::Part::Bar;  // 3.0.11-beta.245: its scroll bar too
 }
 
 }  // namespace uagfx::win::chatwin

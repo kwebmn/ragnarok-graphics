@@ -150,6 +150,14 @@ Line fromGame(Source source, const std::string& text, uint32_t colorRef, const T
                 l.spans = {Span{who, own, true, true}, Span{": " + rest, own, false, false}};
                 return l;
             }
+            // 3.0.11-beta.245 (R-YCYYXU: «Autolooting items…» as it came): the server's own lines come as the
+            // character's (0x008e, no «name :») - short where known, the system's (its filter) either way
+            if (source == Source::PublicOwn) {
+                if (shortSystem(text, t, l)) return l;
+                l.kind = Kind::System;
+                l.spans = {Span{text, own, false, false}};
+                return l;
+            }
             break;
         case Source::Party:
         case Source::Guild: {
@@ -307,7 +315,8 @@ Layout layout(int left, int bottom, float scale, int rows, bool quiet, const Sho
     const float linesH = float(L.rows) * L.rowH;
     const float h = top + linesH + 6 * s + inputH + 8 * s;
     L.glass = panel::Box{0, 0, w, h};
-    L.lines = panel::Box{pad, top, w - 2 * pad, linesH};
+    L.lines = panel::Box{pad, top, w - 2 * pad - 10 * s, linesH};  // 3.0.11-beta.245: room for the scroll bar
+    L.bar = panel::Box{w - pad - 5 * s, top + 2 * s, 5 * s, linesH - 4 * s};
     if (peopleShown) {
         L.peopleRow = panel::Box{pad, tabsH + 4 * s, w - 2 * pad, 22 * s};
         float x = L.peopleRow.x;
@@ -413,6 +422,9 @@ Hit hitTest(const Layout& L, const std::vector<Row>& rows, const Show& sh, float
         if (L.mode.contains(x, y)) return Hit{Part::Mode, -1};
         if (L.input.contains(x, y)) return Hit{Part::Field, -1};
     }
+    if (rows.size() > size_t(std::max(0, L.rows)) &&  // 3.0.11-beta.245: the scroll bar (a little wider to take)
+        x >= L.bar.x - 4 * L.s && x <= L.bar.x + L.bar.w + 4 * L.s && y >= L.bar.y && y <= L.bar.y + L.bar.h)
+        return Hit{Part::Bar, -1};
     if (L.lines.contains(x, y)) {
         size_t first = 0, count = 0;
         shown(L, rows, sh.scroll, first, count);
@@ -498,6 +510,10 @@ void paint(panel::Picture& out, const Layout& L, const std::vector<Row>& rows, c
                                                  1.2f * s},
                                  0, kWhite, a);
         }
+    }
+    if (const panel::Box th = barThumb(L, rows.size(), sh.scroll); th.w > 0) {  // 3.0.11-beta.245: the scroll bar
+        panel::roundRect(out, L.bar, L.bar.w / 2, kWhite, 0.05f);
+        panel::roundRect(out, th, th.w / 2, kWhite, sh.hoverBar ? 0.45f : 0.25f);
     }
     if (L.filtersButton.w > 0) {  // 3.0.11-beta.243: the gear, lit while filters hide something or it is open
         const panel::Box& b = L.filtersButton;
@@ -746,5 +762,23 @@ std::string clock(uint64_t ago, int nowSec) {
 }
 
 int menuAction(const Show& sh, int index) { return sh.menuNamed ? std::clamp(index, 0, 3) : 3; }
+
+panel::Box barThumb(const Layout& L, size_t total, int scroll) {
+    const size_t shownRows = size_t(std::max(1, L.rows));
+    if (total <= shownRows || L.bar.h <= 0) return panel::Box{};
+    const float h = std::max(L.bar.h * float(shownRows) / float(total), 14 * L.s);
+    const float most = float(total - shownRows);
+    const float up = std::clamp(float(scroll), 0.0f, most) / most;  // 0 the newest (the bottom), 1 the oldest
+    return panel::Box{L.bar.x, L.bar.y + (L.bar.h - h) * (1 - up), L.bar.w, h};
+}
+
+int scrollAt(const Layout& L, size_t total, float y) {
+    const size_t shownRows = size_t(std::max(1, L.rows));
+    if (total <= shownRows || L.bar.h <= 0) return 0;
+    const float h = std::max(L.bar.h * float(shownRows) / float(total), 14 * L.s);
+    const float room = std::max(1.0f, L.bar.h - h);
+    const float top = std::clamp(y - h / 2 - L.bar.y, 0.0f, room);
+    return int(std::lround((1 - top / room) * float(total - shownRows)));
+}
 
 }  // namespace uagfx::chatpanel
