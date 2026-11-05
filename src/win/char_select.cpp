@@ -160,6 +160,10 @@ std::vector<cs::Slot> slotsOf(State& s, int page) {
                                          say(settings::Text::AgoMonths)};
             sl.ago = chardiary::ago(chardiarywin::nowUnix(), e->lastSeen, at);
             sl.map = e->map;
+            const chardiary::SummaryTexts st{say(settings::Text::SessionHead), say(settings::Text::SessionHours),
+                                             say(settings::Text::SessionMinutes), say(settings::Text::SessionBase),
+                                             say(settings::Text::SessionJob), say(settings::Text::SessionZeny)};
+            sl.summary = chardiary::summary(sl.name, *e, st, ',');  // 3.0.11-beta.274: its last session
         }
     }
     return out;

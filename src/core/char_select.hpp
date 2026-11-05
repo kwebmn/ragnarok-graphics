@@ -19,6 +19,7 @@ struct Slot {
     int stats[6] = {0, 0, 0, 0, 0, 0};          // STR AGI VIT INT DEX LUK
     const panel::Picture* face = nullptr;  // its head at faceSide(scale), premultiplied
     std::string ago, map;  // 3.0.11-beta.273: when last played here («2 год тому»), its map then ("" not known)
+    std::string summary;   // 3.0.11-beta.274: its last session («Остання гра …: 1 год 20 хв · Base +34 %»), "" none
 };
 int faceSide(float scale);
 
@@ -39,6 +40,7 @@ struct Layout {
     panel::Box glass, title, page, pageLeft, pageRight;
     std::vector<panel::Box> slots;    // three
     std::vector<panel::Box> buttons;  // Button's order
+    panel::Box summary;               // 3.0.11-beta.274: the chosen character's last session, over the buttons
 };
 Layout layout(int targetW, int targetH, float scale);
 enum class Part : uint8_t { None, Slot, Button, PageLeft, PageRight };

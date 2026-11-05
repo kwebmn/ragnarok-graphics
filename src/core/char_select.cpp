@@ -78,7 +78,8 @@ Layout layout(int targetW, int targetH, float scale) {
     L.pageRight = panel::Box{w - pad - 28 * s, pad + 6 * s, 28 * s, 28 * s};
     const float top = pad + kTitleH * s + 8 * s;
     for (int i = 0; i < 3; ++i) L.slots.push_back(panel::Box{pad + float(i) * (sw + gap), top, sw, kSlotH * s});
-    const float by = top + kSlotH * s + 16 * s, bw = (w - 2 * pad - 3 * gap) / 4;
+    L.summary = panel::Box{pad, top + kSlotH * s + 6 * s, w - 2 * pad, 22 * s};  // 3.0.11-beta.274
+    const float by = top + kSlotH * s + 34 * s, bw = (w - 2 * pad - 3 * gap) / 4;
     for (int i = 0; i < 4; ++i) L.buttons.push_back(panel::Box{pad + float(i) * (bw + gap), by, bw, kButtonH * s});
     const float h = by + kButtonH * s + pad;
     L.glass = panel::Box{0, 0, w, h};
@@ -192,6 +193,10 @@ std::vector<Words> words(const Layout& L, const std::vector<Slot>& slots, const 
                                 Align::Left});
     }
     const std::string* names[4] = {&t.enter, &t.make, &t.remove, &t.back};
+    // 3.0.11-beta.274: the chosen character's last session over the buttons
+    const int chosen = sh.selected;
+    if (chosen >= 0 && chosen < int(slots.size()) && !slots[size_t(chosen)].summary.empty())
+        out.push_back(Words{L.summary, slots[size_t(chosen)].summary, kMuted, 12 * s, false, Align::Center});
     for (size_t i = 0; i < L.buttons.size(); ++i)
         out.push_back(Words{L.buttons[i], *names[i], kText, 14 * s, i == 0, Align::Center});
     return out;

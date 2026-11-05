@@ -23,6 +23,9 @@ struct State {
     std::string name, map;
     int level = 0, jobLevel = 0;
     ULONGLONG lastTick = 0, writtenAt = 0;
+    // 3.0.11-beta.274 (feature 4): where the session began - its time, levels, experience, zeny
+    long long startedAt = 0, startZeny = 0, startBaseExp = 0, startBaseNext = 0, startJobExp = 0, startJobNext = 0;
+    int startBase = 0, startJob = 0;
     int told = 0;
 };
 
@@ -69,7 +72,23 @@ void frame(unsigned codePage) {
     const std::string name = utf8Of(widened(raw, codePage));
     chardiary::Entry& e = s.diary[name];
     const bool changed = name != s.name || map != s.map || st.baseLevel != s.level || st.jobLevel != s.jobLevel;
-    if (name != s.name && s.told++ < 20) LOG_INFO("characters: %s in the game - kept in the diary", name.c_str());
+    if (name != s.name) {  // .274: a session begins
+        if (s.told++ < 20) LOG_INFO("characters: %s in the game - kept in the diary", name.c_str());
+        s.startedAt = nowUnix();
+        s.startBase = st.baseLevel;
+        s.startJob = st.jobLevel;
+        s.startBaseExp = st.baseExp;
+        s.startBaseNext = st.baseNext;
+        s.startJobExp = st.jobExp;
+        s.startJobNext = st.jobNext;
+        s.startZeny = st.zeny;
+    }
+    e.sessionSeconds = nowUnix() - s.startedAt;  // .274: the session so far, its gains
+    e.sessionEnd = nowUnix();
+    e.baseGain = chardiary::gained(s.startBase, s.startBaseExp, s.startBaseNext, st.baseLevel, st.baseExp,
+                                   st.baseNext);
+    e.jobGain = chardiary::gained(s.startJob, s.startJobExp, s.startJobNext, st.jobLevel, st.jobExp, st.jobNext);
+    e.zenyGain = static_cast<long long>(st.zeny) - s.startZeny;
     e.lastSeen = nowUnix();
     e.map = map;
     e.level = st.baseLevel;

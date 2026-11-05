@@ -709,6 +709,7 @@ enum class Text : uint16_t {
     StatsGoals, StatsGoalAspd, StatsGoalAspdNever, StatsGoalAspdNone, StatsGoalCast, StatsGoalCastDone,
     StatsGoalCastNever,
     AgoNow, AgoMinutes, AgoHours, AgoDays, AgoMonths,  // 3.0.11-beta.273
+    SessionHead, SessionHours, SessionMinutes, SessionBase, SessionJob, SessionZeny,  // .274
     MinimapRespawn, MinimapMore,
     MinimapNoReference, MinimapNoMonsters,
     // 3.0.11-beta.7: «Довідник» - its switch, the window's words, the cards' words

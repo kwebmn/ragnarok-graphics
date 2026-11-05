@@ -54,3 +54,23 @@ TEST(shot_spec_crop_and_raw) {
     CHECK(shotspec::readRaw(bytes, argb, w, h) && w == 2 && h == 1 && argb[1] == 0xFF445566u);
     CHECK(!shotspec::readRaw("junk", argb, w, h));
 }
+
+// 3.0.11-beta.274 (feature 4): a session's gains - level 37 at 80 % to 38 at 20 % is 40 % of a level; its line
+TEST(char_diary_session_summary) {
+    CHECK_EQ(chardiary::gained(37, 800, 1000, 38, 200, 1000), 40);
+    CHECK_EQ(chardiary::gained(10, 0, 100, 12, 50, 200), 225);
+    chardiary::Entry e;
+    e.sessionSeconds = 4800;
+    e.baseGain = 40;
+    e.zenyGain = 12500;
+    const chardiary::SummaryTexts t{"Остання гра {1}:", "{1} год {2} хв", "{1} хв", "Base +{1} %", "Job +{1} %",
+                                    "{1} z"};
+    CHECK(chardiary::summary("Ліра", e, t, ',') ==
+          "Остання гра Ліра: 1 год 20 хв \xC2\xB7 Base +40 % \xC2\xB7 +12 500 z");
+    e.sessionSeconds = 30;
+    CHECK(chardiary::summary("Ліра", e, t, ',').empty());  // under a minute: none
+    chardiary::Diary d;
+    e.sessionSeconds = 600;
+    d["Ліра"] = e;
+    CHECK(chardiary::parse(chardiary::text(d)).at("Ліра").zenyGain == 12500);
+}

@@ -13,11 +13,23 @@ struct Entry {
     std::string map;
     int level = 0, jobLevel = 0, job = -1;
     long long played = 0;  // seconds in the game on this computer
+    // 3.0.11-beta.274 (the owner's feature 4): its last session - how long, the base levels' share gained (per cent of
+    // a level, 100 a whole one), the job's, the zeny's change, when it ended
+    long long sessionSeconds = 0, zenyGain = 0, sessionEnd = 0;
+    int baseGain = 0, jobGain = 0;
 };
+// The share of levels gained between two points (level, exp, next): 100 a whole level; next 0 the level alone
+int gained(int levelFrom, long long expFrom, long long nextFrom, int levelTo, long long expTo, long long nextTo);
 using Diary = std::map<std::string, Entry>;
 
 Diary parse(const std::string& text);
 std::string text(const Diary& d);
+
+struct SummaryTexts {
+    std::string head, hours, minutes, base, job, zeny;  // «Остання гра {1}:», «{1} год {2} хв», «{1} хв», «Base +{1} %»
+};
+// «Остання гра Лучниця: 1 год 20 хв · Base +134 % · Job +40 % · +12 500 z»; "" no session kept
+std::string summary(const std::string& name, const Entry& e, const SummaryTexts& t, char decimal);
 
 struct AgoTexts {
     std::string now, minutes, hours, days, months;  // «щойно», «{1} хв тому», «{1} год тому», «{1} дн. тому», ...

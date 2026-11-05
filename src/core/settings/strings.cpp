@@ -6805,6 +6805,13 @@ constexpr Entry kTexts[] = {
     {Text::AgoHours, "{1} h ago", "{1} год тому", "{1} ч назад"},
     {Text::AgoDays, "{1} d ago", "{1} дн. тому", "{1} дн. назад"},
     {Text::AgoMonths, "{1} mo ago", "{1} міс. тому", "{1} мес. назад"},
+    // 3.0.11-beta.274: the last session
+    {Text::SessionHead, "Last game {1}:", "Остання гра {1}:", "Последняя игра {1}:"},
+    {Text::SessionHours, "{1} h {2} min", "{1} год {2} хв", "{1} ч {2} мин"},
+    {Text::SessionMinutes, "{1} min", "{1} хв", "{1} мин"},
+    {Text::SessionBase, "Base +{1} %", "Base +{1} %", "Base +{1} %"},
+    {Text::SessionJob, "Job +{1} %", "Job +{1} %", "Job +{1} %"},
+    {Text::SessionZeny, "{1} z", "{1} z", "{1} z"},
     {Text::MinimapRespawn, "{1} min", "{1} хв", "{1} мин"},
     {Text::MinimapMore, "and {1} more", "і ще {1}", "и ещё {1}"},
     {Text::MinimapNoReference, "No game reference yet", "Довідника гри ще немає", "Справочника игры ещё нет"},
