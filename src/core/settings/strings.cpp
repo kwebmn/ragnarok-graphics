@@ -5360,6 +5360,12 @@ constexpr Entry kTexts[] = {
      "карта, сколько осталось; плюс — когда он уже должен был вернуться. Клик по строке забывает его. Сохраняется "
      "между запусками; место задаётся в «MVP»."},
     {Text::MvpTitle, "Bosses", "Боси", "Боссы"},
+    {Text::InterfacePotionWarn, "Potions running low", "Зілля закінчуються", "Зелья заканчиваются"},  // .281
+    {Text::InterfacePotionWarnHint,
+     "Healing items on the hotbar: a soft chime when 10 are left and when none are, the count turns red from 10 down.",
+     "Лікувальні предмети на панелі: тихий сигнал, коли лишилось 10 і коли не лишилось жодного; число червоніє від 10.",
+     "Лечебные предметы на панели: тихий сигнал, когда осталось 10 и когда не осталось ни одного; число краснеет от "
+     "10."},
     {Text::NpcTalkTag, "Talk", "Говорити", "Говорить"},  // 3.0.11-beta.256: the NPC's plate before its name comes
     {Text::InterfaceShop, "NPC shops", "Крамниці NPC", "Магазины NPC"},  // 3.0.11-beta.100
     {Text::InterfaceShopHint,  // 3.0.11-beta.101: the keys, the amount typed, the description

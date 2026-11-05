@@ -32,6 +32,9 @@ namespace uagfx::win::hotbarwin {
 // 3.0.11-beta.276 (the owner's feature 7): [interface] delay_ring - the delay after a skill swept over the skills'
 // cells
 void setDelayRing(bool on);
+// 3.0.11-beta.281 (the owner's feature 16): [interface] potion_warn - the bar's healing items: a chime at 10 left and
+// at none, their counts red from 10 down (core/potion_warn)
+void setPotionWarn(bool on);
 void frame(HWND game, bool on, bool ownBars, bool padHints, bool ammo, bool counts, unsigned codePage, double k,
            int targetWidth, int targetHeight);
 void draw(FrameRecord& record, gpu::Renderer& renderer);

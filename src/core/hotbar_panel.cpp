@@ -369,7 +369,7 @@ std::vector<Words> words(const Layout& L, const std::vector<Cell>& cells, int ro
             const std::string n = std::to_string(c.count);
             const float w = panel::wordsWidth(n, 11 * s, true) + 6 * s;
             out.push_back(Words{panel::Box{b.x + b.w - w - 2 * s, b.y + b.h - 15 * s, w, 13 * s}, n,
-                                c.count == 0 ? kMuted : kText, 11 * s, true, Align::Center});
+                                c.count == 0 ? kMuted : c.low ? kAmmoOut : kText, 11 * s, true, Align::Center});
         }
         if (c.count < 0 && !c.standing.empty())  // 3.0.11-beta.143
             out.push_back(Words{standingBox(b, c.standing, s), c.standing, c.standingOut ? kAmmoOut : kText, 11 * s,

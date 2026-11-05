@@ -31,8 +31,11 @@
 #include "win/code_page.hpp"
 #include "win/game_camera.hpp"
 #include "win/ground_units.hpp"
+#include "core/potion_warn.hpp"
+#include "core/ui_chime.hpp"
 #include "win/hud_edit.hpp"
 #include "win/skill_delay_watch.hpp"
+#include "win/sound_hook.hpp"
 #include "win/log.hpp"
 #include "win/paths.hpp"
 #include "win/picture_draw.hpp"
@@ -127,6 +130,10 @@ struct Learned {
 
 struct State {
     bool delayRing = true;  // 3.0.11-beta.276: [interface] delay_ring
+    bool potionWarn = true;  // 3.0.11-beta.281: [interface] potion_warn
+    potionwarn::Watch potions;
+    std::set<std::string> healing;  // the bar's healing items now (their counts red when low)
+    int potionTold = 0;
     // 3.0.11-beta.117 (R-8YW96B, R-5JGPFX: it jumped right for a second while walking): moved aside only for a window
     // standing over its place 1.5 s; what was there told the log (the first few)
     hb::Settle settle;
@@ -199,6 +206,31 @@ struct State {
 State& state() {
     static State s;
     return s;
+}
+
+// 3.0.11-beta.281 (the owner's feature 16): the bar's healing items (the reference pack's type 0) - a fall to 10 or
+// fewer a soft chime, none left a lower one (the arrows' chimes, core/ui_chime); their counts red from 10 down
+void potionsLow(State& s) {
+    std::map<int, int> counts;
+    s.healing.clear();
+    const auto index = reference::index();
+    if (!index) return;
+    for (const Slot& at : s.slots) {
+        if (at.what.kind != hb::Slot::Kind::Item) continue;
+        const int id = std::atoi(at.what.id.c_str());
+        const auto it = index->items.find(id);
+        if (id <= 0 || it == index->items.end() || it->second.type != 0) continue;
+        s.healing.insert(at.what.id);
+        const auto b = s.bag.find(at.what.id);
+        counts[id] = b != s.bag.end() ? b->second : 0;
+    }
+    const int fresh = s.potions.step(counts, !s.bag.empty());
+    if (!s.potionWarn || fresh < 2) return;
+    static const std::vector<uint8_t> low = chime::wav(chime::Kind::AmmoLow), out = chime::wav(chime::Kind::AmmoOut);
+    const bool played = win::playOwn(fresh == 3 ? out.data() : low.data());
+    if (s.potionTold++ < 20)
+        LOG_INFO("hotbar: a healing item %s - the chime %s", fresh == 3 ? "ran out" : "fell to 10 or fewer",
+                 played ? "played" : "not played: the game's sound is off");
 }
 
 std::string say(settings::Text t) { return settings::tr(language(), t); }
@@ -481,6 +513,7 @@ void readSlots(State& s) {
         s.slots[j].skillId = skill ? int(read32(bar + kBarIds + 4 * uint32_t(j)) & 0xFFFF) : 0;
     }
     s.bag = readBag();
+    potionsLow(s);  // 3.0.11-beta.281
     s.skills = readSkills();
     bool came = false;  // 3.0.11-beta.78: a skill's cell greyed when the character has not learned it
     s.learned = readLearned(&came);
@@ -559,6 +592,7 @@ hb::Cell cellOf(State& s, int slot, const std::string& key, unsigned codePage) {
         c.name = n != items.end() ? utf8Of(widened(hb::spaced(n->second), codePage)) : "#" + at.what.id;
         const auto b = s.bag.find(at.what.id);
         c.count = b != s.bag.end() ? b->second : 0;
+        c.low = s.potionWarn && s.healing.count(at.what.id) && potionwarn::low(c.count);  // 3.0.11-beta.281
         const auto& files = clienttables::itemFiles();
         const auto f = files.find(at.what.id);
         if (f != files.end()) c.icon = iconOf(s, f->second, side);
@@ -898,6 +932,12 @@ std::vector<barhint::Skill> barSkills() {
     return out;
 }
 
+void setPotionWarn(bool on) {  // 3.0.11-beta.281
+    State& s = state();
+    if (on != s.potionWarn) LOG_INFO("hotbar: [interface] potion_warn = %d", on ? 1 : 0);
+    s.potionWarn = on;
+}
+
 void setDelayRing(bool on) {  // 3.0.11-beta.276
     State& s = state();
     if (on != s.delayRing) LOG_INFO("hotbar: [interface] delay_ring = %d", on ? 1 : 0);
@@ -1012,7 +1052,7 @@ void frame(HWND game, bool on, bool ownBars, bool padHints, bool ammo, bool coun
     for (size_t i = 0; i < s.cells.size(); ++i) {
         const hb::Cell& c = s.cells[i];
         key += c.key + '|' + c.name + '|' + std::to_string(c.level) + '|' + std::to_string(c.count) +
-               (c.icon ? "i" : "") + (c.selected ? "s" : "") + (c.spHave < c.spNeed ? "d" : "") +
+               (c.icon ? "i" : "") + (c.low ? "l" : "") + (c.selected ? "s" : "") + (c.spHave < c.spNeed ? "d" : "") +
                std::to_string(int(c.notHere)) + ',' + std::to_string(c.pad) + ',' + c.standing +
                std::to_string(int(c.flash * 10)) + ';';  // 3.0.11-beta.143: the flash in ten steps
         if (int(i) == show.hover && show.tip)  // its tip's numbers

@@ -327,6 +327,10 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("equip", flag(running.equipWindow), flag(file.equipWindow)));
         n.equipWindow = file.equipWindow;
     }
+    if (file.potionWarn != running.potionWarn) {  // 3.0.11-beta.281: the healing items' warning, at once
+        u.applied.push_back(change("potion_warn", flag(running.potionWarn), flag(file.potionWarn)));
+        n.potionWarn = file.potionWarn;
+    }
     if (file.mvpTimers != running.mvpTimers) {  // 3.0.11-beta.280: the bosses' timers, at once
         u.applied.push_back(change("mvp_timers", flag(running.mvpTimers), flag(file.mvpTimers)));
         n.mvpTimers = file.mvpTimers;

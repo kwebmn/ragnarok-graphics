@@ -33,6 +33,7 @@ struct Cell {
     std::string name;   // its skill's or item's words; "" an empty cell
     int level = 0;      // a skill's
     int count = -1;     // an item's in the bag (0: none there); -1 not an item
+    bool low = false;   // 3.0.11-beta.281: a healing item 10 or fewer - its count red
     const panel::Picture* icon = nullptr;  // at iconSide(), premultiplied
     bool selected = false;       // 3.0.11-beta.45: the game waits for this skill's target - a gold outline 2 px
     int spNeed = 0, spHave = 0;  // a skill's SP price and the SP there: more needed than had - dimmed, a blue «SP»

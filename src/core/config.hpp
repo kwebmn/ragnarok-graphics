@@ -709,6 +709,8 @@ struct Config {
     bool mobCard = true;
     // 3.0.11-beta.280 (the owner's feature 9): [interface] mvp_timers - the bosses seen dying and their return
     bool mvpTimers = true;
+    // 3.0.11-beta.281 (the owner's feature 16): [interface] potion_warn - the hotbar's healing items running low
+    bool potionWarn = true;
     // 3.0.11-beta.100: [interface] shop - the NPCs' shops (core/shop_window) in place of the game's deal windows
     bool shopWindow = false;
     // 3.0.11-beta.115: [interface] storage - the Kafra storage (win/storage_window: «Склад», «Речі» beside it) in

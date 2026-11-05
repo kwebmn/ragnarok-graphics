@@ -517,6 +517,7 @@ enum class Text : uint16_t {
     InterfaceHunt, InterfaceHuntHint, HuntTitle, HuntDps, HuntExp, HuntToLevel, HuntZeny, HuntKills,  // .278
     InterfaceMobCard, InterfaceMobCardHint, MobCardHit, MobCardIts, MobCardBlow, MobCardMine,  // 3.0.11-beta.279
     InterfaceMvp, InterfaceMvpHint, MvpTitle,  // 3.0.11-beta.280
+    InterfacePotionWarn, InterfacePotionWarnHint,  // 3.0.11-beta.281
     NpcTalkTag,  // 3.0.11-beta.256
     InterfaceShop, InterfaceShopHint, ShopTitle, ShopBuy, ShopSell, ShopSearch, ShopWare, ShopPrice,  // .100
     ShopWeight, ShopCart, ShopAmount, ShopSum, ShopTotal, ShopLeft, ShopAfter, ShopWeightBuy, ShopWeightSell,
