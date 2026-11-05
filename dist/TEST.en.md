@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.11-beta.247 — what's new
+
+- **A record for «the monster teleports».** When a monster you fight jumps, the log gets everything the server said about it in the last 3 seconds: its steps, hits and stops, and where the screen showed it at each moment. A jump counts when the server puts the monster 2+ cells from where the game showed it. If you see such a jump, send a report right after it (report R-AMNV99).
+
 # uaRO Graphics 3.0.11-beta.246 — what's new
 
 - **Experience with the hit.** The server counts a hit at once, but the game shows it only after the character's swing. Because of that, «+… Base» over the monster and by the bars appeared before the monster fell. Now the label waits for the swing and appears when the game shows the kill (report R-Q2C54N).
