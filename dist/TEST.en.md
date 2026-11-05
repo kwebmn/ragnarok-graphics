@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.11-beta.277 — what's new
+
+**Feature 8 — «What killed me»:** the death screen lists the last hits of the 10 seconds before it (up to six, the last on top): who, by which skill or a plain attack, how much damage and how long before the death, with all the damage together in its title. The switch «Що мене вбило» in «Інтерфейс».
+
 # uaRO Graphics 3.0.11-beta.276 — what's new
 
 **Feature 7 — the delay after a skill on the hotbar:** after a skill the hotbar's skills darken and clear clockwise until the server allows the next one. The time is the server's for the skill's level, cut by DEX as on uaRO (× (150 − DEX) / 150). The switch «Затримка після вміння на панелі» in «Інтерфейс».
