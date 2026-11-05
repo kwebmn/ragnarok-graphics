@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.11-beta.290 — what's new
+
+**uaRO AI for the homunculus and mercenary:** our own AI, put by the driver into the game's AI\USER_AI folder (never over another AI): it follows you, defends you and itself, attacks by itself if you want, Lif heals you under half HP, Filir and Vanilmirth open a fight with their skill. The game's commands (move, attack, stop, follow) work. Settings under «Interface»: «uaRO AI for the homunculus and mercenary», «AI: attacks by itself» (off), «AI: defends you», «AI: uses skills». For the game to use it, turn on «Own homunculus AI (/hoai)» and «Own mercenary AI (/merai)».
+
 # uaRO Graphics 3.0.11-beta.289 — what's new
 
 **Skill level by the wheel on the hotbar:** point at a skill on the hotbar and turn the mouse wheel — the level it is used at goes from 1 up to the one learned («Lv» in the tip; its third line says «wheel — level»). For example, Teleport can be set to level 1 — it warps at once, without the choice menu. The level is kept like the rest of the bar.
