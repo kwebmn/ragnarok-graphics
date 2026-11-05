@@ -1,3 +1,8 @@
+# uaRO Graphics 3.0.11-beta.241 — what's new
+
+**The chat, stage two:**
+- **Its size by the mouse.** A grip (two slants) at the chat's top right corner. Drag it: 360 to 900 pixels wide, 4 to 20 rows high. The size is kept. F10 still goes round 7 / 12 / 4 rows (and drops the corner's height).
+
 # uaRO Graphics 3.0.11-beta.240 — what's new
 
 **The chat, the first stage of its new concept:**
