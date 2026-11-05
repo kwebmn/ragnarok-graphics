@@ -293,6 +293,11 @@ void packet(void* connection, uint16_t id, const uint8_t* data) {
     const ULONGLONG now = GetTickCount64();
     s.watch.packet(now);
     if (data && traced(id)) trace(s, id, data, now);  // 3.0.11-beta.247
+    if (id == kVanish && data) {  // 3.0.11-beta.251: no walk kept for a unit gone
+        uint32_t unit = 0;
+        std::memcpy(&unit, data + 2, 4);
+        netsmoothwin::gone(unit);
+    }
     if ((id == kMove || id == kOwnMove || id == kAct) && data) {  // 3.0.11-beta.128: held by a lost packet?
         const int late = lateness(s, data, id == kMove ? 12 : id == kOwnMove ? 2 : 10);
         const int way = netwatch::onTheWay(late, uint32_t(std::min<ULONGLONG>(s.readGap, 60000)));  // .131
@@ -308,7 +313,10 @@ void packet(void* connection, uint16_t id, const uint8_t* data) {
     if (id == kMove && data) {  // 3.0.11-beta.124: where it is shown before the game walks it (its jump faded)
         uint32_t unit = 0;
         std::memcpy(&unit, data + 2, 4);
-        if (unit != read32(kOwnAccount)) netsmoothwin::moveSeen(unit);
+        if (unit != read32(kOwnAccount)) {
+            netsmoothwin::moveSeen(unit);
+            netsmoothwin::walkSeen(unit, data);  // 3.0.11-beta.251
+        }
         return;
     }
     if (id != kFixPos || !data) return;

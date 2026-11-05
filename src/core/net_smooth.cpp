@@ -1,6 +1,7 @@
 #include "core/net_smooth.hpp"
 
 #include <algorithm>
+#include <cstdlib>
 
 namespace uagfx::netsmooth {
 
@@ -27,6 +28,14 @@ bool at(const Glide& g, uint64_t nowMs, float& x, float& z) {
 }
 
 bool easesJump(float cells) { return cells >= 0.4f && cells <= 4.0f; }
+
+bool stranded(int shownX, int shownY, int toX, int toY, uint64_t stillMs) {
+    return stillMs >= kStrandMs && std::max(std::abs(shownX - toX), std::abs(shownY - toY)) >= 1;
+}
+
+bool easesFar(float cells) { return cells >= 0.4f && cells <= 12.0f; }
+
+uint32_t farFadeMs(float cells) { return uint32_t(120 + 35 * std::min(cells, 10.0f)); }
 
 bool offsetAt(const Offset& o, uint64_t nowMs, float& x, float& z) {
     const float t = o.durationMs ? float(nowMs > o.startMs ? nowMs - o.startMs : 0) / float(o.durationMs) : 1.0f;

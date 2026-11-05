@@ -54,3 +54,13 @@ TEST(net_smooth_a_moves_jump_fades) {
     CHECK(netsmooth::offsetAt(o, 1100, x, z) && x > 0 && x < 5);      // fading (eased out)
     CHECK(!netsmooth::offsetAt(o, 1200, x, z) && x == 0 && z == 0);   // gone: the game's own place
 }
+
+// 3.0.11-beta.251 (R-UCE7J8, R-YB4S2K «моб бьет стоя гдето далеко»): a unit the game left standing off its
+// server's cell
+TEST(net_smooth_stranded_units) {
+    CHECK(!netsmooth::stranded(139, 182, 132, 177, netsmooth::kStrandMs - 1));  // not long enough
+    CHECK(netsmooth::stranded(139, 182, 132, 177, netsmooth::kStrandMs));
+    CHECK(!netsmooth::stranded(132, 177, 132, 177, 5000));  // on its cell: standing as it should
+    CHECK(netsmooth::easesFar(7) && !netsmooth::easesFar(13) && !netsmooth::easesFar(0.2f));
+    CHECK(netsmooth::farFadeMs(7) > netsmooth::farFadeMs(1) && netsmooth::farFadeMs(30) == netsmooth::farFadeMs(10));
+}

@@ -16,6 +16,10 @@ int fix(uint32_t id, uint8_t* packet);
 // jump of 0.4-4 cells when the game walks it on (late: from where it should be by now; or from another cell) drawn away
 // over 140-280 ms, an offset from the game's own place fading out (the character's own not: the camera follows it)
 void moveSeen(uint32_t id);
+// 3.0.11-beta.251 (R-YB4S2K): another unit's walk (0x0086, the packet) and its death or leaving (0x0080) - kept to
+// give the walk to the game again when its shown hit's flinch left the unit standing (core/net_smooth stranded)
+void walkSeen(uint32_t id, const uint8_t* packet);
+void gone(uint32_t id);
 void beginScene();
 
 }  // namespace uagfx::win::netsmoothwin

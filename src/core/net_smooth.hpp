@@ -34,6 +34,17 @@ struct Offset {
 };
 bool offsetAt(const Offset& o, uint64_t nowMs, float& x, float& z);
 
+// 3.0.11-beta.251 (R-UCE7J8, R-YB4S2K: «моб бьет стоя гдето далеко», then «телепортировался»): uaRO's server deals a
+// hit at once (delay_battle_damage: no) and walks a monster on after its flinch; the game shows the hit after the
+// swing and its flinch stops the walk the server had already resumed - the unit left standing. The server's stop
+// (0x0088) is the game's «stop the walk here» (msg 0x13): a unit already standing ignores it. A unit standing this long
+// off the cell its last walk or stop put it on is stranded - its walk given to the game again
+constexpr uint64_t kStrandMs = 300;
+bool stranded(int shownX, int shownY, int toX, int toY, uint64_t stillMs);
+constexpr int kResendMost = 2;  // a walk or stop given again at most this many times
+bool easesFar(float cells);     // a stranded unit put back: 0.4-12 cells drawn away
+uint32_t farFadeMs(float cells);
+
 // A cell's middle in the world as uaRO.exe counts cells (FUN_0055c220's x / cell + w / 2, the other way)
 void cellMiddle(int cellX, int cellY, int width, int height, int cellSize, float& x, float& z);
 

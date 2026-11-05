@@ -12,6 +12,7 @@
 #include "core/net_smooth.hpp"
 #include "win/game_camera.hpp"
 #include "win/log.hpp"
+#include "win/net_watch.hpp"
 
 namespace uagfx::win::netsmoothwin {
 namespace {
@@ -22,6 +23,8 @@ namespace ns = uagfx::netsmooth;
 // game's 0x0088 does (the packet loop at 0x579f41 / 0x579f77)
 constexpr uint32_t kSendMsgSlot = 8;
 constexpr int kPutMsg = 0x13;
+constexpr int kWalkMsg = 0;  // 3.0.11-beta.251: a walk - <tick, from x, y, sub x, sub y, to x, y> (FUN_0057e1f0's)
+constexpr uint32_t kOwnAccount = 0x771F7C;
 using SendMsgFn = int(__attribute__((thiscall)) *)(uint32_t self, uint32_t sender, int msg, int a, int b, int c);
 
 struct Glide {
@@ -35,6 +38,17 @@ struct Glide {
 struct Pending {  // 3.0.11-beta.124: a move seen - where the unit was shown before the game took it
     uint32_t id = 0;
     float x = 0, z = 0;
+    bool distant = false;  // 3.0.11-beta.251: a stranded unit put back - up to 12 cells drawn away
+};
+// 3.0.11-beta.251: the walk or stop the server gave a unit last, and how long the game has shown it standing
+struct Kept {
+    uint32_t id = 0;
+    bool walking = false;
+    uint32_t block[7] = {};  // the game's walk message: tick, from x, y, sub x, sub y, to x, y
+    int toX = 0, toY = 0;
+    uint64_t seenMs = 0, stillSince = 0;
+    float lastX = 0, lastZ = 0;
+    int resent = 0;
 };
 struct Fade {  // a move's jump fading out over the game's own place
     ns::Offset o;
@@ -46,6 +60,8 @@ struct State {
     std::vector<Glide> glides;
     std::vector<Pending> pending;
     std::vector<Fade> fades;
+    std::vector<Kept> kept;  // 3.0.11-beta.251
+    int strandedTold = 0, stranded = 0;
     int eased = 0, told = 0, faded = 0, fadesTold = 0;
     int leftTold = 0;  // 3.0.11-beta.248 (R-AMNV99): glides the game took over before their end
 };
@@ -61,6 +77,15 @@ uint32_t read32(uint32_t at) {
 }
 
 bool samePlace(float a, float b) { return std::fabs(a - b) < 0.01f; }
+
+Kept& keep(State& s, uint32_t id) {
+    for (Kept& k : s.kept)
+        if (k.id == id) return k;
+    if (s.kept.size() >= 64) s.kept.erase(s.kept.begin());
+    s.kept.push_back(Kept{});
+    s.kept.back().id = id;
+    return s.kept.back();
+}
 
 bool writeFloat(uint32_t at, float v) {
     SIZE_T n = 0;
@@ -99,6 +124,15 @@ int fix(uint32_t id, uint8_t* packet) {
         !minimap::cellOf(world[0], world[2], w, h, cell, now))
         return -1;
     const int cells = std::max(std::abs(now.x - x), std::abs(now.y - y));
+    if (s.on && id != read32(kOwnAccount)) {  // 3.0.11-beta.251: where the server stopped it
+        Kept& k = keep(s, id);
+        k.walking = false;
+        k.toX = x;
+        k.toY = y;
+        k.seenMs = GetTickCount64();
+        k.stillSince = 0;
+        k.resent = 0;
+    }
     if (!s.on || !ns::eases(cells)) return cells;
     // the game told to stop the unit where it stands (no jump), the unit drawn on to the server's cell
     put16(packet, 6, now.x);
@@ -148,13 +182,13 @@ void startFades(State& s, uint64_t now) {
         if (!readActorWorld(p.id, at)) continue;
         const float dx = p.x - at[0], dz = p.z - at[2];
         const float cells = std::max(std::fabs(dx), std::fabs(dz)) / float(cell);
-        if (!ns::easesJump(cells)) continue;
+        if (!(p.distant ? ns::easesFar(cells) : ns::easesJump(cells))) continue;
         Fade f;
         f.o.id = p.id;
         f.o.offX = dx;
         f.o.offZ = dz;
         f.o.startMs = now;
-        f.o.durationMs = uint32_t(100 + 45 * std::min(cells, 4.0f));
+        f.o.durationMs = p.distant ? ns::farFadeMs(cells) : uint32_t(100 + 45 * std::min(cells, 4.0f));
         s.fades.erase(std::remove_if(s.fades.begin(), s.fades.end(), [&](const Fade& o) { return o.o.id == p.id; }),
                       s.fades.end());
         s.fades.push_back(f);
@@ -198,11 +232,103 @@ void fadeFrame(State& s, uint64_t now) {
 
 }  // namespace
 
+void walkSeen(uint32_t id, const uint8_t* p) {
+    State& s = state();
+    if (!s.on || !id || !p || id == read32(kOwnAccount)) return;
+    Kept& k = keep(s, id);
+    k.walking = true;
+    uint32_t tick = 0;
+    std::memcpy(&tick, p + 12, 4);
+    const uint8_t* w = p + 6;  // FUN_0057d420's way
+    k.block[0] = tick;
+    k.block[1] = uint32_t((w[0] << 2) | (w[1] >> 6));
+    k.block[2] = uint32_t(((w[1] & 0x3F) << 4) | (w[2] >> 4));
+    k.block[3] = uint32_t(w[5] >> 4);
+    k.block[4] = uint32_t(w[5] & 0x0F);
+    k.block[5] = uint32_t(((w[2] & 0x0F) << 6) | (w[3] >> 2));
+    k.block[6] = uint32_t(((w[3] & 0x03) << 8) | w[4]);
+    k.toX = int(k.block[5]);
+    k.toY = int(k.block[6]);
+    k.seenMs = GetTickCount64();
+    k.stillSince = 0;
+    k.resent = 0;
+}
+
+void gone(uint32_t id) {
+    State& s = state();
+    s.kept.erase(std::remove_if(s.kept.begin(), s.kept.end(), [&](const Kept& k) { return k.id == id; }),
+                 s.kept.end());
+}
+
+namespace {
+
+// 3.0.11-beta.251: the units the game left standing off their server's cell - their walk (or a walk to the stop's
+// cell, long past: the game puts them there) given again, the jump drawn away
+void strandFrame(State& s, uint64_t now) {
+    if (s.kept.empty()) return;
+    float own[3] = {};
+    int w = 0, h = 0, cell = 0;
+    if (!readPlayerWorld(own, w, h, cell) || cell <= 0) return;
+    for (auto it = s.kept.begin(); it != s.kept.end();) {
+        Kept& k = *it;
+        const uint32_t actor = actorAddress(k.id);
+        float at[3] = {};
+        if (!actor || now - k.seenMs > 15000 || !readGame(actor + 4, at, sizeof at)) {
+            it = s.kept.erase(it);
+            continue;
+        }
+        ++it;
+        const bool gliding =
+            std::any_of(s.glides.begin(), s.glides.end(), [&](const Glide& g) { return g.g.id == k.id; });
+        if (gliding || !k.stillSince || !samePlace(at[0], k.lastX) || !samePlace(at[2], k.lastZ)) {
+            k.lastX = at[0];
+            k.lastZ = at[2];
+            k.stillSince = now;
+            continue;
+        }
+        minimap::Cell shown;
+        if (k.resent >= ns::kResendMost || now - k.seenMs < ns::kStrandMs ||
+            !minimap::cellOf(at[0], at[2], w, h, cell, shown) ||
+            !ns::stranded(shown.x, shown.y, k.toX, k.toY, now - k.stillSince))
+            continue;
+        uint32_t block[7];
+        if (k.walking) {
+            std::memcpy(block, k.block, sizeof block);  // its own tick: the game walks it on from where it is by now
+        } else {
+            const uint32_t clock = netwatchwin::serverNow();
+            block[0] = clock - 60000;  // long past: the game puts it on the cell
+            block[1] = uint32_t(shown.x);
+            block[2] = uint32_t(shown.y);
+            block[3] = block[4] = 8;
+            block[5] = uint32_t(k.toX);
+            block[6] = uint32_t(k.toY);
+        }
+        const uint32_t send = read32(read32(actor) + kSendMsgSlot);
+        if (!send) continue;
+        const auto sameUnit = [&](const Pending& p) { return p.id == k.id; };
+        s.pending.erase(std::remove_if(s.pending.begin(), s.pending.end(), sameUnit), s.pending.end());
+        s.pending.push_back(Pending{k.id, at[0], at[2], true});
+        reinterpret_cast<SendMsgFn>(uintptr_t(send))(actor, 0, kWalkMsg, int(uintptr_t(block)), 0, 0);
+        ++k.resent;
+        k.stillSince = now;
+        if (s.strandedTold < 20) {
+            ++s.strandedTold;
+            LOG_INFO("net: %u left standing by the game at %d, %d - %s %d, %d given again (%d so far)", k.id, shown.x,
+                     shown.y, k.walking ? "its walk to" : "the server's stop on", k.toX, k.toY, ++s.stranded);
+        } else {
+            ++s.stranded;
+        }
+    }
+}
+
+}  // namespace
+
 void beginScene() {
     State& s = state();
     const uint64_t now = GetTickCount64();
     startFades(s, now);  // 3.0.11-beta.124
     fadeFrame(s, now);
+    if (s.on) strandFrame(s, now);  // 3.0.11-beta.251
     if (s.glides.empty()) return;
     for (auto it = s.glides.begin(); it != s.glides.end();) {
         Glide& gl = *it;
