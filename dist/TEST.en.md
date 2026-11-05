@@ -1,3 +1,11 @@
+# uaRO Graphics 3.0.11-beta.256 — what's new
+
+**Talking to NPCs with the pad, stage 2 — you can see who you will talk to:**
+- **A plate over the NPC.** When you play with the pad, a small plate floats over the NPC the Talk button (↓) will take. It shows the button's glyph and the NPC's name, or «Talk» until the server has sent the name.
+- **Other NPCs nearby** get a faint gold dot over their heads: you can pick them too.
+- **The right stick moves the plate.** Tilt it toward another NPC and the plate moves there. The choice stays while that NPC is within reach, and ↓ talks to it.
+- **In a fight the plate is hidden** so it does not get in the way. ↓ works as before.
+
 # uaRO Graphics 3.0.11-beta.255 — what's new
 
 **Talking to NPCs with the pad, stage 1 — menus:**
