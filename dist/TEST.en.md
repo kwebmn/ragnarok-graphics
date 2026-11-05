@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.11-beta.246 — what's new
+
+- **Experience with the hit.** The server counts a hit at once, but the game shows it only after the character's swing. Because of that, «+… Base» over the monster and by the bars appeared before the monster fell. Now the label waits for the swing and appears when the game shows the kill (report R-Q2C54N).
+
 # uaRO Graphics 3.0.11-beta.245 — what's new
 
 **Chat:**
