@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.11-beta.249 — what's new
+
+- **A fuller record for «the monster stands far away and teleports»** (report R-GKXJT6). There, the game showed a monster on one cell for 6 seconds while the server had it next to the character. The game ignored even the server's «stand here». Now the log also has every other packet about that monster, how many copies of it the game holds, and where the game moves it over the next 3 seconds. If the glitch comes back, send a report right after it.
+
 # uaRO Graphics 3.0.11-beta.248 — what's new
 
 - **A record for «the monster hits from afar».** When a monster hits the character from 2+ cells away from where the game shows it, its last 3 seconds go to the log.
