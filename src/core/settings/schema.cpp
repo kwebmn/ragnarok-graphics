@@ -220,6 +220,8 @@ const std::vector<IniSetting>& iniSettings() {
          Text::InterfaceDeathRecap, Text::InterfaceDeathRecapHint, ""},  // 3.0.11-beta.277
         {"interface", "hunt_panel", Page::Interface, Control::Check, 0, 1, 0, {"0", "1"}, {},
          Text::InterfaceHunt, Text::InterfaceHuntHint, ""},  // 3.0.11-beta.278
+        {"interface", "mob_card", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {},
+         Text::InterfaceMobCard, Text::InterfaceMobCardHint, ""},  // 3.0.11-beta.279
         {"interface", "shop", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::InterfaceShop,
          Text::InterfaceShopHint, ""},  // 3.0.11-beta.100
         {"interface", "storage", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::InterfaceStorage,
@@ -1173,6 +1175,7 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "interface.delay_ring") return c.delayRing ? "1" : "0";  // 3.0.11-beta.276
     if (k == "interface.death_recap") return c.deathRecap ? "1" : "0";  // 3.0.11-beta.277
     if (k == "interface.hunt_panel") return c.huntPanel ? "1" : "0";  // 3.0.11-beta.278
+    if (k == "interface.mob_card") return c.mobCard ? "1" : "0";  // 3.0.11-beta.279
     if (k == "interface.shop") return c.shopWindow ? "1" : "0";      // 3.0.11-beta.100
     if (k == "interface.storage") return c.storageWindow ? "1" : "0";  // 3.0.11-beta.115
     if (k == "interface.trade") return c.tradeWindow ? "1" : "0";      // 3.0.11-beta.116

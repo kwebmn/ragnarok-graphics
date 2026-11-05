@@ -705,6 +705,8 @@ struct Config {
     bool deathRecap = true;
     // 3.0.11-beta.278 (the owner's features 6 and 10): [interface] hunt_panel - «Полювання»: DPS, exp/h, zeny/h, kills
     bool huntPanel = false;
+    // 3.0.11-beta.279 (the owner's feature 5): [interface] mob_card - the monster's card by the cursor
+    bool mobCard = true;
     // 3.0.11-beta.100: [interface] shop - the NPCs' shops (core/shop_window) in place of the game's deal windows
     bool shopWindow = false;
     // 3.0.11-beta.115: [interface] storage - the Kafra storage (win/storage_window: «Склад», «Речі» beside it) in

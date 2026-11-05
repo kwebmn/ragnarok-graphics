@@ -57,6 +57,7 @@
 #include "win/cursor_look.hpp"
 #include "win/hud_edit.hpp"
 #include "win/hunt_panel.hpp"
+#include "win/mob_card.hpp"
 #include "win/chat_window.hpp"
 #include "win/item_window.hpp"
 #include "win/stat_window.hpp"
@@ -710,6 +711,7 @@ void Context::endScene() {
         partywin::draw(record, *renderer);      // 3.0.11-beta.39: the party's panel
         merccardwin::blockDraw(record, *renderer);  // 3.0.11-beta.216: the mercenary's block
         huntwin::draw(record, *renderer);  // 3.0.11-beta.278: «Полювання»
+        mobcardwin::draw(record, *renderer);  // 3.0.11-beta.279: the monster's card
         hotbarwin::draw(record, *renderer);     // 3.0.11-beta.40: the hotbar
         chatwin::draw(record, *renderer);       // 3.0.11-beta.41: the chat
         expbars::draw(record, *renderer);       // 3.0.11-beta.236: the experience's strip at the bottom
@@ -780,6 +782,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
         partywin::draw(record, *renderer);      // 3.0.11-beta.39
         merccardwin::blockDraw(record, *renderer);  // 3.0.11-beta.216
         huntwin::draw(record, *renderer);  // 3.0.11-beta.278
+        mobcardwin::draw(record, *renderer);  // 3.0.11-beta.279
         hotbarwin::draw(record, *renderer);     // 3.0.11-beta.40
         chatwin::draw(record, *renderer);       // 3.0.11-beta.41
         expbars::draw(record, *renderer);       // 3.0.11-beta.236
@@ -1097,6 +1100,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     merccardwin::frame(window, config.mercWindow, gameCodePage(config), pk, pw, ph);          // 3.0.11-beta.161
     merccardwin::blockFrame(window, config.mercWindow, gameCodePage(config), pk, pw, ph);     // 3.0.11-beta.216
     huntwin::frame(window, config.huntPanel, gameCodePage(config), pk, pw, ph);  // 3.0.11-beta.278
+    mobcardwin::frame(window, config.mobCard, pk, pw, ph);  // 3.0.11-beta.279
     optionscardwin::frame(window, config.optionsWindow, gameCodePage(config), pk, pw, ph);    // 3.0.11-beta.162
     socialcardwin::frame(window, config.socialWindow, gameCodePage(config), pk, pw, ph);      // 3.0.11-beta.163
     servercardwin::frame(window, config.serverWindow, gameCodePage(config), pk, pw, ph);      // 3.0.11-beta.164

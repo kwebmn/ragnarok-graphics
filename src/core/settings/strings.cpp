@@ -5335,6 +5335,19 @@ constexpr Entry kTexts[] = {
     {Text::HuntToLevel, "level in {1}", "до рівня {1}", "до уровня {1}"},
     {Text::HuntZeny, "Zeny {1}/h", "Зені {1}/год", "Зени {1}/ч"},
     {Text::HuntKills, "Killed {1}: {2}", "Убито {1}: {2}", "Убито {1}: {2}"},
+    {Text::InterfaceMobCard, "Monster card by the cursor", "Картка монстра біля курсора",
+     "Карточка монстра у курсора"},  // 3.0.11-beta.279
+    {Text::InterfaceMobCardHint,
+     "Point at a monster: its level, HP, element, race and size, your chance to hit it and its chance to hit you, its "
+     "blow after your DEF and your blow by the server's rules (without element, size and cards).",
+     "Наведіть на монстра: рівень, HP, стихія, раса й розмір, ваш шанс влучити й його шанс влучити у вас, його удар "
+     "після вашої DEF і ваш удар за правилами сервера (без стихії, розміру й карток).",
+     "Наведите на монстра: уровень, HP, стихия, раса и размер, ваш шанс попасть и его шанс попасть по вам, его удар "
+     "после вашей DEF и ваш удар по правилам сервера (без стихии, размера и карт)."},
+    {Text::MobCardHit, "You hit {1} %", "Ви влучаєте {1} %", "Вы попадаете {1} %"},
+    {Text::MobCardIts, "It hits you {1} %", "Він влучає {1} %", "Он попадает {1} %"},
+    {Text::MobCardBlow, "Its blow {1}–{2} · {3}/s", "Його удар {1}–{2} · {3}/с", "Его удар {1}–{2} · {3}/с"},
+    {Text::MobCardMine, "Your blow ≈{1} · {2} blows", "Ваш удар ≈{1} · ударів {2}", "Ваш удар ≈{1} · ударов {2}"},
     {Text::NpcTalkTag, "Talk", "Говорити", "Говорить"},  // 3.0.11-beta.256: the NPC's plate before its name comes
     {Text::InterfaceShop, "NPC shops", "Крамниці NPC", "Магазины NPC"},  // 3.0.11-beta.100
     {Text::InterfaceShopHint,  // 3.0.11-beta.101: the keys, the amount typed, the description

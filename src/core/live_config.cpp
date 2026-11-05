@@ -327,6 +327,10 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("equip", flag(running.equipWindow), flag(file.equipWindow)));
         n.equipWindow = file.equipWindow;
     }
+    if (file.mobCard != running.mobCard) {  // 3.0.11-beta.279: the monster's card, at once
+        u.applied.push_back(change("mob_card", flag(running.mobCard), flag(file.mobCard)));
+        n.mobCard = file.mobCard;
+    }
     if (file.huntPanel != running.huntPanel) {  // 3.0.11-beta.278: «Полювання», at once
         u.applied.push_back(change("hunt_panel", flag(running.huntPanel), flag(file.huntPanel)));
         n.huntPanel = file.huntPanel;
