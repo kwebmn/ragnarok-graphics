@@ -24,7 +24,10 @@ namespace uapad {
 enum class NpcDialog : uint8_t { None, Next, Close, Waiting, Menu, Number };
 
 // What the pad asks of an NPC window, done through the client's own buttons.
-enum class DialogCommand : uint8_t { Next, Close, MenuUp, MenuDown, MenuOk, MenuCancel, NumberOk };
+// 3.0.11-beta.255: MenuLeft / MenuRight (the talk window's two columns), MenuPageUp / MenuPageDown (LB / RB)
+enum class DialogCommand : uint8_t {
+    Next, Close, MenuUp, MenuDown, MenuOk, MenuCancel, NumberOk, MenuLeft, MenuRight, MenuPageUp, MenuPageDown
+};
 
 struct ViewInfo {
     bool focused = false;

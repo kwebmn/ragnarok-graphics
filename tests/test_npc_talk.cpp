@@ -114,3 +114,30 @@ TEST(npc_talk_a_menu_alone) {
     const std::vector<npctalk::Words> w = npctalk::words(L, t, sh, texts(), measure);
     CHECK(std::any_of(w.begin(), w.end(), [](const npctalk::Words& x) { return x.text == "Open Storage"; }));
 }
+
+// 3.0.11-beta.255 (the concept «Разговор с NPC с геймпада», stage 1): the menu's two columns by the D-pad, LB / RB by
+// eight, A's wait after a new page, the option chosen last time kept by its menu
+TEST(npc_talk_pad_menu_moves_wait_and_memory) {
+    using npctalk::Move;
+    using npctalk::moved;
+    CHECK(moved(0, 5, Move::Down) == 2 && moved(2, 5, Move::Down) == 4 && moved(4, 5, Move::Down) == 4);
+    CHECK(moved(3, 5, Move::Down) == 4);  // the last row has one: the odd column goes to it
+    CHECK(moved(3, 6, Move::Down) == 5 && moved(1, 6, Move::Up) == 1 && moved(3, 6, Move::Up) == 1);
+    CHECK(moved(0, 6, Move::Right) == 1 && moved(1, 6, Move::Right) == 1 && moved(1, 6, Move::Left) == 0);
+    CHECK(moved(4, 5, Move::Right) == 4);  // nothing to its right
+    CHECK(moved(3, 30, Move::PageDown) == 11 && moved(27, 30, Move::PageDown) == 29 && moved(5, 30, Move::PageUp) == 0);
+    CHECK(moved(0, 0, Move::Down) == -1);
+    CHECK(npctalk::waiting(1000, 1000) == 1 && npctalk::waiting(1000, 1200) > 0.4f &&
+          npctalk::waiting(1000, 1000 + npctalk::kGuardMs) == 0 && npctalk::waiting(0, 5) == 0);
+    npctalk::Talk t;
+    t.name = "Kafra Employee";
+    t.place = "prontera";
+    t.options = {"Save", "Teleport", "Storage"};
+    npctalk::Talk u = t;
+    u.options.push_back("Cancel");
+    CHECK(npctalk::menuKey(t) != npctalk::menuKey(u));
+    std::map<std::string, int> c{{npctalk::menuKey(t), 1}, {npctalk::menuKey(u), 3}};
+    const std::map<std::string, int> back = npctalk::readChoices(npctalk::writeChoices(c));
+    CHECK(back == c);
+    CHECK(npctalk::readChoices("x\tbroken\n\tno index\n5").empty());
+}

@@ -1053,7 +1053,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     statswin::frame(window, config.statusWindow, pk, pw, ph);
     skillswin::frame(window, config.skillsWindow, gameCodePage(config), pk, pw, ph);  // 3.0.11-beta.96: «Навички»
     equipwin::frame(window, config.equipWindow, gameCodePage(config), pk, pw, ph);    // 3.0.11-beta.97
-    npcwin::frame(window, config.npcWindow, gameCodePage(config), pk, pw, ph);        // 3.0.11-beta.98
+    npcwin::frame(window, config.npcWindow, config.npcRemember, gameCodePage(config), pk, pw, ph);  // .98, .255
     shopwin::frame(window, config.shopWindow, gameCodePage(config), pk, pw, ph);      // 3.0.11-beta.100
     storagewin::frame(window, config.storageWindow, gameCodePage(config), pk, pw, ph);  // 3.0.11-beta.115
     tradewin::frame(window, config.tradeWindow, gameCodePage(config), pk, pw, ph);      // 3.0.11-beta.116

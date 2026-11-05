@@ -208,6 +208,8 @@ const std::vector<IniSetting>& iniSettings() {
          Text::InterfaceEquipHint, ""},  // 3.0.11-beta.97
         {"interface", "npc_talk", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::InterfaceNpc,
          Text::InterfaceNpcHint, ""},  // 3.0.11-beta.98
+        {"interface", "npc_remember", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {},
+         Text::InterfaceNpcRemember, Text::InterfaceNpcRememberHint, ""},  // 3.0.11-beta.255
         {"interface", "shop", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::InterfaceShop,
          Text::InterfaceShopHint, ""},  // 3.0.11-beta.100
         {"interface", "storage", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::InterfaceStorage,
@@ -1155,6 +1157,7 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "interface.skills") return c.skillsWindow ? "1" : "0";  // 3.0.11-beta.96
     if (k == "interface.equip") return c.equipWindow ? "1" : "0";    // 3.0.11-beta.97
     if (k == "interface.npc_talk") return c.npcWindow ? "1" : "0";   // 3.0.11-beta.98
+    if (k == "interface.npc_remember") return c.npcRemember ? "1" : "0";  // 3.0.11-beta.255
     if (k == "interface.shop") return c.shopWindow ? "1" : "0";      // 3.0.11-beta.100
     if (k == "interface.storage") return c.storageWindow ? "1" : "0";  // 3.0.11-beta.115
     if (k == "interface.trade") return c.tradeWindow ? "1" : "0";      // 3.0.11-beta.116

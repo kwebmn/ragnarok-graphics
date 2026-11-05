@@ -3,6 +3,7 @@
 
 #include "core/frame.hpp"
 #include "core/game_packets.hpp"
+#include "pad/core/logic/controller.hpp"
 
 namespace uagfx::gpu {
 class Renderer;
@@ -18,12 +19,17 @@ namespace uagfx::win::npcwin {
 // the text window's +0x88 set (a Next pressed) begins a new page; the game's number field stays the game's. Keys
 // 1-9 choose, Enter answers, Esc closes - while the chat's line is empty. On the game's thread.
 void packet(const packets::Event& e);
-void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int targetHeight);
+// 3.0.11-beta.255: `remember` - [interface] npc_remember, the option chosen last time at the same menu chosen again
+void frame(HWND game, bool on, bool remember, unsigned codePage, double k, int targetWidth, int targetHeight);
 void draw(FrameRecord& record, gpu::Renderer& renderer);
 bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result);
 bool key(UINT m, WPARAM wp, LPARAM lp);
 void beforeGameDraw();
 bool shown();
+// 3.0.11-beta.255 (the concept «Разговор с NPC с геймпада», stage 1): a controller's command for the talk while this
+// window shows - the menu's moves by its two columns (D-pad, LB / RB), A's (Next, OK) held kGuardMs after a new page
+// or menu; true when taken here (done or held), false: the pad's own way (client_npc)
+bool padCommand(uapad::DialogCommand c);
 
 // 3.0.11-beta.109 (the concept «Концепция окон и инвентаря», question 4): where it is on the target (win/window_stack:
 // a window opening where another stands goes beside it); false not shown

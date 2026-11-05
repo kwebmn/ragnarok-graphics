@@ -5272,6 +5272,16 @@ constexpr Entry kTexts[] = {
      "1-9 вибір \xC2\xB7 Enter далі \xC2\xB7 Esc закрити", "1-9 выбор \xC2\xB7 Enter далее \xC2\xB7 Esc закрыть"},
     {Text::NpcServer, "The text is the server's", "Текст — як у сервера", "Текст — как у сервера"},
     {Text::NpcChoose, "choose", "вибір", "выбор"},
+    {Text::InterfaceNpcRemember, "Remember NPC menu choices", "Пам'ятати вибір у меню NPC",
+     "Запоминать выбор в меню NPC"},  // 3.0.11-beta.255
+    {Text::InterfaceNpcRememberHint,
+     "At the same NPC's same menu the option chosen last time is chosen again when it opens, marked «last time»: a "
+     "Kafra's teleport to the same town is A and A. Each character has its own.",
+     "У того самого NPC в тому самому меню одразу вибрано те, що обирали минулого разу, з позначкою «минулого разу»: "
+     "телепорт Kafra в те саме місто — A і A. У кожного персонажа своє.",
+     "У того же NPC в том же меню сразу выбрано то, что выбирали в прошлый раз, с пометкой «в прошлый раз»: "
+     "телепорт Kafra в тот же город — A и A. У каждого персонажа своё."},
+    {Text::NpcLastTime, "last time", "минулого разу", "в прошлый раз"},
     {Text::InterfaceShop, "NPC shops", "Крамниці NPC", "Магазины NPC"},  // 3.0.11-beta.100
     {Text::InterfaceShopHint,  // 3.0.11-beta.101: the keys, the amount typed, the description
      "The NPCs' shops in the new look: the list on the left with a search, the cart on the right, the total, the zeny "

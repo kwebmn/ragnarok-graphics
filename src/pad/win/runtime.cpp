@@ -50,6 +50,7 @@
 #include "win/game_camera.hpp"
 #include "win/ground_marks.hpp"
 #include "win/hotbar.hpp"
+#include "win/npc_talk.hpp"
 #include "win/item_window.hpp"
 #include "win/ask_card.hpp"
 #include "win/cart_window.hpp"
@@ -1173,8 +1174,11 @@ void lookAndGround(DWORD now) {
 // while a support skill asks whom).
 void answerNpc(const TickOutput& out, const ViewInfo& view, const PadState& pad) {
     State& s = S();
-    for (DialogCommand c : out.dialog)
+    for (DialogCommand c : out.dialog) {
+        // 3.0.11-beta.255 (the NPC concept, stage 1): the talk window's first - its two columns, its wait for A
+        if (uagfx::win::npcwin::padCommand(c)) continue;
         if (!clientnpc::answer(c)) LOG_INFO("NPC window: command %d found no window to answer", int(c));
+    }
     if (out.number) clientnpc::typeNumber(s.hwnd, *out.number);
     const bool answering = s.session->controller().dialog() != NpcDialog::None && view.dialog != NpcDialog::None;
     const uint16_t choiceKey = s.session->controller().choosingButton();  // 3.0.11-beta.85: a support skill asks whom

@@ -2033,3 +2033,21 @@ TEST(ctl_slot_press_names_its_slot) {
     o = c.tick(pad(), w, view(), 1200);
     CHECK_EQ(o.slotUsed, -1);
 }
+
+// 3.0.11-beta.255 (the NPC concept, stage 1): left and right in the menu's row, LB / RB a page
+TEST(ctl_npc_menu_columns_and_pages) {
+    Controller c(Config{});
+    WorldState w = npcWorld();
+    const ViewInfo menu = dialogView(NpcDialog::Menu);
+    TickOutput o = c.tick(pad(kPadRight), w, menu, 1000);
+    CHECK(o.dialog.size() == 1 && o.dialog[0] == DialogCommand::MenuRight);
+    c.tick(pad(), w, menu, 1050);
+    o = c.tick(pad(kPadLeft), w, menu, 1100);
+    CHECK(o.dialog.size() == 1 && o.dialog[0] == DialogCommand::MenuLeft);
+    c.tick(pad(), w, menu, 1150);
+    o = c.tick(pad(kPadRB), w, menu, 1200);
+    CHECK(o.dialog.size() == 1 && o.dialog[0] == DialogCommand::MenuPageDown);
+    c.tick(pad(), w, menu, 1250);
+    o = c.tick(pad(kPadLB), w, menu, 1300);
+    CHECK(o.dialog.size() == 1 && o.dialog[0] == DialogCommand::MenuPageUp);
+}

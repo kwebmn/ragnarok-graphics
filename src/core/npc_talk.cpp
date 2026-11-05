@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdio>
 
 #include "core/pad_glyphs.hpp"
 #include "core/ui_style.hpp"
@@ -37,9 +38,9 @@ struct PadItem {
     std::string words;
 };
 
-std::vector<PadItem> padItems(const Talk& t, const Texts& tx) {
+std::vector<PadItem> padItems(const Talk& t, const Texts& tx) {  // 3.0.11-beta.255: A first, its wait drawn on it
     if (!t.options.empty())
-        return {{padglyph::Button::Down, tx.choose}, {padglyph::Button::A, tx.ok}, {padglyph::Button::B, tx.close}};
+        return {{padglyph::Button::A, tx.ok}, {padglyph::Button::Down, tx.choose}, {padglyph::Button::B, tx.close}};
     if (t.button == Button::Next) return {{padglyph::Button::A, tx.next}, {padglyph::Button::B, tx.close}};
     if (t.button == Button::Close) return {{padglyph::Button::A, tx.close}};
     return {{padglyph::Button::B, tx.close}};
@@ -194,8 +195,11 @@ void paint(panel::Picture& out, const Layout& L, const Talk& t, const Show& sh) 
     if (sh.pad) {
         const padglyph::Family f = sh.sony ? padglyph::Family::Sony : padglyph::Family::Xbox;
         const std::vector<PadItem> items = padItems(t, Texts{});
-        for (size_t i = 0; i < items.size() && i < L.padGlyphs.size(); ++i)
+        for (size_t i = 0; i < items.size() && i < L.padGlyphs.size(); ++i) {
             padglyph::paint(out, items[i].button, f, L.padGlyphs[i].x, L.padGlyphs[i].y, kGlyph * s);
+            if (items[i].button == padglyph::Button::A && sh.waitA > 0)  // 3.0.11-beta.255: not taken yet
+                panel::roundRect(out, L.padGlyphs[i], L.padGlyphs[i].h / 2, 0x0B0E14, 0.7f * sh.waitA);
+        }
     }
 }
 
@@ -218,8 +222,14 @@ std::vector<Words> words(const Layout& L, const Talk& t, const Show& sh, const T
         const std::vector<Run> runs = colours(t.options[i], kText);
         std::string plain;
         for (const Run& r : runs) plain += r.text;
-        out.push_back(Words{panel::Box{b.x + 36 * s, b.y, b.w - 42 * s, b.h}, plain, runs.front().rgb, 13 * s,
-                            int(i) == t.selected, Align::Left});
+        float tagW = 0;  // 3.0.11-beta.255: «минулого разу» at its right
+        if (int(i) == sh.remembered && !tx.lastTime.empty()) {
+            tagW = m(tx.lastTime, 10.5f * s, false) + 4;
+            out.push_back(Words{panel::Box{b.x + b.w - 8 * s - tagW, b.y, tagW, b.h}, tx.lastTime, kFaint, 10.5f * s,
+                                false, Align::Right});
+        }
+        out.push_back(Words{panel::Box{b.x + 36 * s, b.y, b.w - 42 * s - (tagW > 0 ? tagW + 6 * s : 0), b.h}, plain,
+                            runs.front().rgb, 13 * s, int(i) == t.selected, Align::Left});
     }
     if (L.button.w > 0)
         out.push_back(Words{L.button, t.button == Button::Next ? tx.next : tx.close, kText, 13 * s, true,
@@ -237,9 +247,64 @@ std::vector<Words> words(const Layout& L, const Talk& t, const Show& sh, const T
     for (size_t i = 0; i < items.size() && i < L.padGlyphs.size(); ++i) {
         const padglyph::Letter l = padglyph::letter(items[i].button, f, L.padGlyphs[i].x, L.padGlyphs[i].y,
                                                     kGlyph * s);
-        if (!l.text.empty()) out.push_back(Words{l.box, l.text, l.rgb, l.px, true, Align::Center});
+        const bool held = items[i].button == padglyph::Button::A && sh.waitA > 0;  // 3.0.11-beta.255
+        if (!l.text.empty()) out.push_back(Words{l.box, l.text, held ? kFaint : l.rgb, l.px, true, Align::Center});
         out.push_back(Words{L.padWords[i], items[i].words, kText, 11.5f * s, false, Align::Left});
     }
+    return out;
+}
+
+int moved(int selected, int count, Move m) {
+    if (count <= 0) return -1;
+    const int at = std::clamp(selected, 0, count - 1);
+    int to = at;
+    switch (m) {
+        case Move::Up: to = at - 2; break;
+        case Move::Down: to = at + 2 < count ? at + 2 : (at % 2 == 1 && at + 1 < count ? at + 1 : at); break;
+        case Move::Left: to = at % 2 == 1 ? at - 1 : at; break;
+        case Move::Right: to = at % 2 == 0 && at + 1 < count ? at + 1 : at; break;
+        case Move::PageUp: to = at - kPage; break;
+        case Move::PageDown: to = at + kPage; break;
+    }
+    if (m == Move::Up && to < 0) return at;
+    return std::clamp(to, 0, count - 1);
+}
+
+float waiting(uint64_t changedMs, uint64_t nowMs) {
+    if (!changedMs || nowMs >= changedMs + kGuardMs) return 0;
+    if (nowMs <= changedMs) return 1;
+    return 1.0f - float(nowMs - changedMs) / float(kGuardMs);
+}
+
+std::string menuKey(const Talk& t) {
+    std::string key = t.name + '\x1F' + t.place;
+    for (const std::string& o : t.options) key += '\x1F' + o;
+    for (char& c : key)
+        if (c == '\n' || c == '\r' || c == '\t') c = ' ';
+    return key;
+}
+
+std::map<std::string, int> readChoices(const std::string& text) {
+    std::map<std::string, int> out;
+    size_t at = 0;
+    while (at < text.size()) {
+        size_t end = text.find('\n', at);
+        if (end == std::string::npos) end = text.size();
+        const std::string line = text.substr(at, end - at);
+        const size_t tab = line.find('\t');
+        if (tab != std::string::npos && tab > 0) {
+            int index = -1;
+            if (std::sscanf(line.c_str(), "%d", &index) == 1 && index >= 0 && index < 1000)
+                out[line.substr(tab + 1)] = index;
+        }
+        at = end + 1;
+    }
+    return out;
+}
+
+std::string writeChoices(const std::map<std::string, int>& choices) {
+    std::string out;
+    for (const auto& [key, index] : choices) out += std::to_string(index) + '\t' + key + '\n';
     return out;
 }
 

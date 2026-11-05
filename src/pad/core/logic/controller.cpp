@@ -679,6 +679,11 @@ void Controller::answerDialog(NpcDialog d, uint16_t held, uint16_t down, uint32_
         case NpcDialog::Menu:
             if (dialogRepeat(kPadUp, held, down, now)) out.dialog.push_back(DialogCommand::MenuUp);
             if (dialogRepeat(kPadDown, held, down, now)) out.dialog.push_back(DialogCommand::MenuDown);
+            // 3.0.11-beta.255 (the concept, stage 1): the row's other column, a page of options
+            if (dialogRepeat(kPadLeft, held, down, now)) out.dialog.push_back(DialogCommand::MenuLeft);
+            if (dialogRepeat(kPadRight, held, down, now)) out.dialog.push_back(DialogCommand::MenuRight);
+            if (dialogRepeat(kPadLB, held, down, now)) out.dialog.push_back(DialogCommand::MenuPageUp);
+            if (dialogRepeat(kPadRB, held, down, now)) out.dialog.push_back(DialogCommand::MenuPageDown);
             if (a) out.dialog.push_back(DialogCommand::MenuOk);
             if (b) out.dialog.push_back(DialogCommand::MenuCancel);
             break;

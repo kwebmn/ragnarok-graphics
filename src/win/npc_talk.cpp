@@ -5,10 +5,13 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
+#include <cstdio>
+#include <map>
 #include <string>
 #include <variant>
 #include <vector>
 
+#include "core/layout.hpp"
 #include "core/npc_talk.hpp"
 #include "core/settings/strings.hpp"
 #include "core/ui_style.hpp"
@@ -19,6 +22,7 @@
 #include "win/code_page.hpp"
 #include "win/game_camera.hpp"
 #include "win/log.hpp"
+#include "win/paths.hpp"
 #include "win/picture_draw.hpp"
 #include "win/real_ddraw.hpp"
 #include "win/ui_cost.hpp"
@@ -58,6 +62,14 @@ struct State {
     int texW = 0, texH = 0;
     bool upload = false;
     int told = 0;
+    // 3.0.11-beta.255 (the concept «Разговор с NPC с геймпада», stage 1): the option chosen last time, A's wait
+    bool remember = true;
+    std::string menuShown;               // the menu's key whose remembered option was put (once a menu)
+    std::map<std::string, int> choices;  // the character's
+    std::string choicesOf;               // whose they are (its name)
+    std::string content;                 // the page's words, options and button: a change starts A's wait
+    uint64_t changedAt = 0;
+    int heldTold = 0;
 };
 
 State& state() {
@@ -110,6 +122,7 @@ nt::Texts texts() {
     t.server = say(settings::Text::NpcServer);
     t.choose = say(settings::Text::NpcChoose);
     t.ok = "OK";
+    t.lastTime = say(settings::Text::NpcLastTime);  // 3.0.11-beta.255
     return t;
 }
 
@@ -152,17 +165,57 @@ void hide(State& s) {
     s.shown = false;
 }
 
+// 3.0.11-beta.255: uaro-graphics\npc-choices-<the name's bytes in hex>.txt
+std::string choicesPath(const std::string& name) {
+    std::string hex;
+    char b[3];
+    for (unsigned char c : name) {
+        std::snprintf(b, sizeof b, "%02x", c);
+        hex += b;
+    }
+    return layout::join(gameDir(), "uaro-graphics\\npc-choices-" + hex + ".txt");
+}
+
+void loadChoices(State& s) {
+    const std::string name = readOwnName();
+    if (name == s.choicesOf) return;
+    s.choicesOf = name;
+    s.choices.clear();
+    std::string text;
+    if (!name.empty() && readTextFile(choicesPath(name), text)) s.choices = nt::readChoices(text);
+}
+
+void remember(State& s, int row) {
+    if (!s.remember || row < 0 || s.talk.options.empty()) return;
+    loadChoices(s);
+    if (s.choicesOf.empty()) return;
+    const std::string key = nt::menuKey(s.talk);
+    if (const auto at = s.choices.find(key); at != s.choices.end() && at->second == row) return;
+    if (s.choices.size() >= nt::kChoicesMost) s.choices.erase(s.choices.begin());
+    s.choices[key] = row;
+    const std::string path = choicesPath(s.choicesOf);
+    if (!writeFileAtomic(path, nt::writeChoices(s.choices))) LOG_INFO("npc: %s cannot be written", path.c_str());
+}
+
+int chosenRow() {
+    const uint32_t menu = window(kMenuWnd, kMenuClass);
+    const uint32_t list = menu ? read32(menu + kList) : 0;
+    return list ? int(read32(list + kListChosen)) : -1;
+}
+
 bool choose(State& s, int row, const char* by) {
     const uint32_t menu = window(kMenuWnd, kMenuClass);
     const uint32_t list = menu ? read32(menu + kList) : 0;
     if (!list || row < 0 || row >= int(s.talk.options.size())) return false;
     write32(list + kListChosen, uint32_t(row));
+    remember(s, row);  // 3.0.11-beta.255
     const bool done = uapad::clientnpc::answer(uapad::DialogCommand::MenuOk);
     if (s.told++ < 20) LOG_INFO("npc: %s chose the option %d %s", by, row + 1, done ? "(the menu's own OK)" : "- not");
     return done;
 }
 
 bool press(State& s, uapad::DialogCommand c, const char* by) {
+    if (c == uapad::DialogCommand::MenuOk) remember(s, chosenRow());  // 3.0.11-beta.255
     const bool done = uapad::clientnpc::answer(c);
     if (s.told++ < 20)
         LOG_INFO("npc: %s - %s %s", by,
@@ -195,8 +248,12 @@ void packet(const packets::Event& e) {
     }
 }
 
-void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int targetHeight) {
+void frame(HWND game, bool on, bool remember, unsigned codePage, double k, int targetWidth, int targetHeight) {
     State& s = state();
+    if (remember != s.remember) {  // 3.0.11-beta.255
+        s.remember = remember;
+        LOG_INFO("npc: [interface] npc_remember = %d", remember ? 1 : 0);
+    }
     if (on != s.on) {
         s.on = on;
         s.key.clear();
@@ -209,8 +266,10 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     const uint32_t menuWin = inGameWorld() ? window(kMenuWnd, kMenuClass) : 0;
     if (!sayWin) s.lines.clear();
     if (!sayWin && !menuWin) s.options.clear();
+    if (!menuWin) s.menuShown.clear();
     if (!on || (!sayWin && !menuWin) || !game || k <= 0 || targetWidth <= 0 || targetHeight <= 0) {
         hide(s);
+        s.content.clear();
         return;
     }
     holdGame(true);
@@ -239,9 +298,37 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     const std::string map = readGameMap();
     t.place = map;
     s.talk = nt::named(t);
+    // 3.0.11-beta.255: a new menu - the option chosen last time there put as the chosen one
+    s.show.remembered = -1;
+    if (menuWin && !s.talk.options.empty()) {
+        const std::string mk = nt::menuKey(s.talk);
+        loadChoices(s);
+        const auto at = s.choices.find(mk);
+        const int last = at != s.choices.end() && at->second < int(s.talk.options.size()) ? at->second : -1;
+        if (s.remember && last >= 0) s.show.remembered = last;
+        if (mk != s.menuShown) {
+            s.menuShown = mk;
+            const uint32_t list = read32(menuWin + kList);
+            if (s.remember && last >= 0 && list) {
+                write32(list + kListChosen, uint32_t(last));
+                s.talk.selected = last;
+                if (s.told++ < 20) LOG_INFO("npc: the option %d chosen last time put first at this menu", last + 1);
+            }
+        }
+    }
+    // 3.0.11-beta.255: a new page, menu or button - A taken after kGuardMs
+    std::string content = std::to_string(int(s.talk.button)) + '|';
+    for (const std::string& l : s.talk.lines) content += l + '\n';
+    for (const std::string& o : s.talk.options) content += o + '|';
+    const uint64_t now = GetTickCount64();
+    if (content != s.content) {
+        s.content = content;
+        s.changedAt = now;
+    }
     const uapad::runtime::Look pad = uapad::runtime::look();
     s.show.pad = pad.shown;
     s.show.sony = pad.sony;
+    s.show.waitA = pad.shown ? nt::waiting(s.changedAt, now) : 0;
     const nt::Texts tx = texts();
     s.layout = nt::layout(targetWidth / 2, targetHeight - int(std::lround(200 * scale)), scale, s.talk, s.show, tx,
                           measure);
@@ -258,6 +345,7 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     std::string key = std::to_string(s.layout.x) + ',' + std::to_string(s.layout.y) + ';' + std::to_string(scale) +
                       ';' + std::to_string(s.show.hoverOption) + (s.show.hoverButton ? "b" : "") +
                       (s.show.hoverClose ? "x" : "") + (s.show.pad ? (s.show.sony ? "S" : "X") : "") + ';' +
+                      std::to_string(int(s.show.waitA * 8)) + ';' + std::to_string(s.show.remembered) + ';' +
                       std::to_string(s.talk.selected) + ';' + std::to_string(int(s.talk.button)) + ';' + s.talk.name +
                       ';' + s.talk.place + ';';
     for (const std::string& l : s.talk.lines) key += l + '\n';
@@ -291,6 +379,45 @@ void draw(FrameRecord& record, gpu::Renderer& renderer) {
 }
 
 bool shown() { return state().shown; }
+
+bool padCommand(uapad::DialogCommand c) {
+    using uapad::DialogCommand;
+    State& s = state();
+    if (!s.shown) return false;
+    const uint64_t now = GetTickCount64();
+    switch (c) {
+        case DialogCommand::Next:
+        case DialogCommand::MenuOk:
+            if (nt::waiting(s.changedAt, now) > 0) {  // a new page or menu: A not taken yet
+                if (s.heldTold++ < 10) LOG_INFO("npc: the controller's A held - the page or menu is new");
+                return true;
+            }
+            if (c == DialogCommand::MenuOk) remember(s, chosenRow());
+            return false;
+        case DialogCommand::MenuUp:
+        case DialogCommand::MenuDown:
+        case DialogCommand::MenuLeft:
+        case DialogCommand::MenuRight:
+        case DialogCommand::MenuPageUp:
+        case DialogCommand::MenuPageDown: {
+            const uint32_t menu = window(kMenuWnd, kMenuClass);
+            const uint32_t list = menu ? read32(menu + kList) : 0;
+            const int count = int(s.talk.options.size());
+            if (!list || count <= 0) return false;
+            const nt::Move m = c == DialogCommand::MenuUp       ? nt::Move::Up
+                               : c == DialogCommand::MenuDown   ? nt::Move::Down
+                               : c == DialogCommand::MenuLeft   ? nt::Move::Left
+                               : c == DialogCommand::MenuRight  ? nt::Move::Right
+                               : c == DialogCommand::MenuPageUp ? nt::Move::PageUp
+                                                                : nt::Move::PageDown;
+            const int to = nt::moved(int(read32(list + kListChosen)), count, m);
+            if (to >= 0) write32(list + kListChosen, uint32_t(to));
+            s.key.clear();
+            return true;
+        }
+        default: return false;
+    }
+}
 
 bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     State& s = state();

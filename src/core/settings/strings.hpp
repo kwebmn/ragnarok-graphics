@@ -508,6 +508,7 @@ enum class Text : uint16_t {
     EquipAccessory, EquipHeadTop, EquipWeapon, EquipShield, EquipShoes, EquipAmmo, EquipCards, EquipDrag, EquipLevel,
     EquipPickTitle, EquipPickNone, EquipPadOff, EquipPadPut, EquipPadChange, EquipPadCard, EquipPadBack,  // .97
     InterfaceNpc, InterfaceNpcHint, NpcNext, NpcKeys, NpcServer, NpcChoose,  // 3.0.11-beta.98
+    InterfaceNpcRemember, InterfaceNpcRememberHint, NpcLastTime,  // 3.0.11-beta.255
     InterfaceShop, InterfaceShopHint, ShopTitle, ShopBuy, ShopSell, ShopSearch, ShopWare, ShopPrice,  // .100
     ShopWeight, ShopCart, ShopAmount, ShopSum, ShopTotal, ShopLeft, ShopAfter, ShopWeightBuy, ShopWeightSell,
     ShopClear, ShopNote, ShopEmpty, ShopWaiting, ShopChoose, ShopToCart, ShopKeyAmount, ShopRemove, ShopInfo,  // .101

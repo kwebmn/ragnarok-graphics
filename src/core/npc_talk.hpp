@@ -1,6 +1,7 @@
 #pragma once
 #include <cstdint>
 #include <functional>
+#include <map>
 #include <string>
 #include <vector>
 
@@ -36,6 +37,7 @@ struct Texts {
     std::string next, close;   // «Далі», «Закрити»
     std::string keys, server;  // «1–8 вибір · Enter далі · Esc закрити», «Текст — як у сервера»
     std::string choose, ok;    // the controller's: «вибір», «OK»
+    std::string lastTime;      // 3.0.11-beta.255: «минулого разу» by the option chosen last time
 };
 
 using Measure = std::function<float(const std::string& utf8, float px, bool bold)>;
@@ -44,6 +46,8 @@ struct Show {
     int hoverOption = -1;
     bool hoverButton = false, hoverClose = false;
     bool pad = false, sony = false;
+    float waitA = 0;      // 3.0.11-beta.255: A not taken yet - 1 just shown, 0 ready (the A glyph dimmed by it)
+    int remembered = -1;  // 3.0.11-beta.255: the option chosen last time at this menu
 };
 
 struct Placed {  // a run of words placed in the window
@@ -82,5 +86,24 @@ struct Words {
     Align align = Align::Left;
 };
 std::vector<Words> words(const Layout& L, const Talk& t, const Show& sh, const Texts& tx, const Measure& m);
+
+// 3.0.11-beta.255 (the concept «Разговор с NPC с геймпада», stage 1; the owner: «8. вверхвниз ходить тоже надо»): the
+// menu's options in two columns row by row (1 2 / 3 4) - the controller's D-pad moves the choice as it looks: up and
+// down by a row, left and right in the row; LB / RB by kPage options
+enum class Move : uint8_t { Up, Down, Left, Right, PageUp, PageDown };
+constexpr int kPage = 8;
+int moved(int selected, int count, Move m);
+
+// 3.0.11-beta.255: a new page or menu takes A only after kGuardMs (an attack's A pressed on as the window came) -
+// how much of the wait is left, 1 to 0
+constexpr uint64_t kGuardMs = 400;
+float waiting(uint64_t changedMs, uint64_t nowMs);
+
+// 3.0.11-beta.255 (question 6 «ок»): the option chosen last time at the same NPC's same menu - each character's own
+// (uaro-graphics\npc-choices-<name>.txt, «index<TAB>key» a line); the key its NPC, place and options
+std::string menuKey(const Talk& t);
+std::map<std::string, int> readChoices(const std::string& text);
+std::string writeChoices(const std::map<std::string, int>& choices);
+constexpr size_t kChoicesMost = 400;
 
 }  // namespace uagfx::npctalk

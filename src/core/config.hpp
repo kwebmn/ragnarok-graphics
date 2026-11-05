@@ -689,6 +689,9 @@ struct Config {
     bool equipWindow = false;
     // 3.0.11-beta.98: [interface] npc_talk - the NPC talk (core/npc_talk) in place of the game's text and menu windows
     bool npcWindow = false;
+    // 3.0.11-beta.255 (the NPC concept, question 6): [interface] npc_remember - the option chosen last time at the
+    // same NPC's menu chosen again when it opens (each character's own, win/npc_talk)
+    bool npcRemember = true;
     // 3.0.11-beta.100: [interface] shop - the NPCs' shops (core/shop_window) in place of the game's deal windows
     bool shopWindow = false;
     // 3.0.11-beta.115: [interface] storage - the Kafra storage (win/storage_window: «Склад», «Речі» beside it) in

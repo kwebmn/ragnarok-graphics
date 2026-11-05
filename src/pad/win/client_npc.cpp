@@ -120,6 +120,15 @@ bool answer(DialogCommand c) {
         case DialogCommand::MenuOk: return send(menu, kMsgCommand, kBtnOk);
         case DialogCommand::MenuCancel: return send(menu, kMsgCommand, kBtnCancel);
         case DialogCommand::NumberOk: return send(window(kNumberWnd, kNumberVtable), kMsgCommand, kBtnOk);
+        case DialogCommand::MenuLeft:
+        case DialogCommand::MenuRight: return menu != 0;  // 3.0.11-beta.255: the game's own list is one column
+        case DialogCommand::MenuPageUp:
+        case DialogCommand::MenuPageDown: {  // 3.0.11-beta.255: eight rows at once
+            bool done = menu != 0;
+            for (int i = 0; i < 8 && done; ++i)
+                done = send(menu, c == DialogCommand::MenuPageUp ? kMsgUp : kMsgDown, 0);
+            return done;
+        }
     }
     return false;
 }

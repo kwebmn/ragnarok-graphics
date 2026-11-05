@@ -327,6 +327,10 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("equip", flag(running.equipWindow), flag(file.equipWindow)));
         n.equipWindow = file.equipWindow;
     }
+    if (file.npcRemember != running.npcRemember) {  // 3.0.11-beta.255: the option chosen last time, at once
+        u.applied.push_back(change("npc_remember", flag(running.npcRemember), flag(file.npcRemember)));
+        n.npcRemember = file.npcRemember;
+    }
     if (file.npcWindow != running.npcWindow) {  // 3.0.11-beta.98: the NPC talk, at once
         u.applied.push_back(change("npc_talk", flag(running.npcWindow), flag(file.npcWindow)));
         n.npcWindow = file.npcWindow;
