@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.11-beta.254 — what's new
+
+- **Pad buttons light their hotbar cells.** Before, only a cell used from the keyboard (F1–F9 or the battle-mode keys) showed a short press. The pad uses skills and items directly rather than through the keys, so the hotbar never knew. Now a pad button lights its cell the same way, ground-aimed skills included.
+
 # uaRO Graphics 3.0.11-beta.253 — what's new
 
 - **The pad keeps your monster when you run away from it.** The target used to drop as soon as it was more than 15 cells away, and the next A took another monster. An archer who runs off and shoots again got switched to someone else. Now a monster you are already fighting, or picked with the right stick, is kept up to 24 cells. A still takes a new monster within 15 cells, as before.
