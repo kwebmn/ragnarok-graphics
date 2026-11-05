@@ -409,6 +409,7 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
         s.readAt = now;
         readCart(s);
         stashwatch::note(stashbook::Kind::Cart, s.items, s.codePage);  // 3.0.11-beta.286
+        stashwatch::prices(s.items);  // 3.0.11-beta.287: the site's market in the tips
     }
     if (!s.shown)
         LOG_INFO("cart: the cart open - «Візок» shows it (%d of %d things, weight %d of %d)", s.count, s.most,

@@ -16,6 +16,7 @@ constexpr float kW = 500, kTitleH = 46, kTabsH = 32, kSearchH = 34, kCell = 48, 
 constexpr int kColumns = 8, kRows = 5;
 constexpr uint32_t kCard = 0x10141C, kWhite = 0xFFFFFF, kBlack = 0x000000, kGold = 0xF3C653, kGold2 = 0xC9A55B;
 constexpr uint32_t kCompare = 0xF2CF7A;  // 3.0.11-beta.285: the gear compared, gold
+constexpr uint32_t kMarket = 0x9FE07C;   // 3.0.11-beta.287: the site's market, green
 constexpr uint32_t kText = 0xEEF2F8, kMuted = 0x9AA3B5, kFaint = 0x7E889A, kGreen = 0x5FD08A, kRed = 0xFF7D6E;
 
 size_t utf8Next(const std::string& s, size_t i) {
@@ -70,9 +71,11 @@ panel::Box tipBox(const Layout& L, const Item& it, int cell, const Texts& t, con
     if (cell < 0 || cell >= int(L.cells.size())) return panel::Box{};
     const float s = L.s;
     const float w = std::max({m(tipFirst(it), 13 * s, true), m(tipSecond(it, t), 11.5f * s, false),
-                              it.compare.empty() ? 0.0f : m(it.compare, 11.5f * s, true)}) +
+                              it.compare.empty() ? 0.0f : m(it.compare, 11.5f * s, true),
+                              it.market.empty() ? 0.0f : m(it.market, 11.5f * s, false)}) +
                     22 * s;
-    const float h = (it.compare.empty() ? 44 : 61) * s;  // 3.0.11-beta.285: the gear compared, a third line
+    // 3.0.11-beta.285: the gear compared, a third line; .287 the market's after it
+    const float h = float(44 + (it.compare.empty() ? 0 : 17) + (it.market.empty() ? 0 : 17)) * s;
     const panel::Box& c = L.cells[size_t(cell)];
     const float x = std::clamp(c.x + c.w / 2 - w / 2, L.glass.x + 6 * s, L.glass.x + L.glass.w - w - 6 * s);
     const bool under = c.y - h - 6 * s < L.grid.y;
@@ -449,9 +452,15 @@ std::vector<Words> words(const Layout& L, const std::vector<Item>& items, const 
                                 13 * s, true, Align::Left});
             out.push_back(Words{panel::Box{tip.x + 11 * s, tip.y + 23 * s, tip.w - 22 * s, 16 * s},
                                 tipSecond(it, t), kMuted, 11.5f * s, false, Align::Left});
-            if (!it.compare.empty())  // 3.0.11-beta.285
-                out.push_back(Words{panel::Box{tip.x + 11 * s, tip.y + 40 * s, tip.w - 22 * s, 16 * s}, it.compare,
-                                    kCompare, 11.5f * s, true, Align::Left});
+            float y = tip.y + 40 * s;
+            if (!it.compare.empty()) {  // 3.0.11-beta.285
+                out.push_back(Words{panel::Box{tip.x + 11 * s, y, tip.w - 22 * s, 16 * s}, it.compare, kCompare,
+                                    11.5f * s, true, Align::Left});
+                y += 17 * s;
+            }
+            if (!it.market.empty())  // 3.0.11-beta.287
+                out.push_back(Words{panel::Box{tip.x + 11 * s, y, tip.w - 22 * s, 16 * s}, it.market, kMarket,
+                                    11.5f * s, false, Align::Left});
         }
     }
     return out;

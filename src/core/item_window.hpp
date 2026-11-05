@@ -36,6 +36,8 @@ struct Item {
     // 3.0.11-beta.285 (the owner's feature 13): gear against the one worn where it goes - its tip's third line
     // («Замість +4 Knife: ATK 17 → 25 (+8)», core/gear_compare); "" none
     std::string compare;
+    // 3.0.11-beta.287 (the owner's feature 14): the site's market - «Ринок: від 12 000 z · лотів 3»
+    std::string market;
 };
 
 // 3.0.11-beta.113 (the concept «Концепция окон и инвентаря», question 9 «давай»): «Усе», «Витратне» (potions, food,

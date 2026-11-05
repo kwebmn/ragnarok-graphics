@@ -559,6 +559,7 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
         s.readAt = now;
         readBag(s);
         stashwatch::note(stashbook::Kind::Bag, s.items, s.codePage);  // 3.0.11-beta.286
+        stashwatch::prices(s.items);  // 3.0.11-beta.287: the site's market in the tips
         charstatus::Status st;
         if (readOwnStatus(st)) {
             s.show.weight = st.weight;

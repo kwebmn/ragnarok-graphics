@@ -13,6 +13,7 @@
 #include "win/log.hpp"
 #include "win/paths.hpp"
 #include "win/real_ddraw.hpp"
+#include "win/reference_load.hpp"
 
 namespace uagfx::win::stashwatch {
 namespace {
@@ -67,6 +68,22 @@ void note(stashbook::Kind kind, const std::vector<uagfx::itemwin::Item>& items, 
     s.lastSearch.clear();
     if (!writeFileAtomic(path(), s.book.text()) && s.told++ < 5)
         LOG_INFO("stash: %s cannot be written", path().c_str());
+}
+
+void prices(std::vector<uagfx::itemwin::Item>& items) {
+    const auto live = reference::live();
+    const std::string words = say(settings::Text::ItemsMarket);
+    for (auto& it : items) {
+        it.market.clear();
+        if (!live) continue;
+        const auto m = live->market.find(it.id);
+        if (m == live->market.end() || m->second.cheapest <= 0) continue;
+        std::string line = words;
+        const std::string price = uagfx::itemwin::grouped(m->second.cheapest), lots = std::to_string(m->second.lots);
+        if (const size_t at = line.find("{1}"); at != std::string::npos) line.replace(at, 3, price);
+        if (const size_t at = line.find("{2}"); at != std::string::npos) line.replace(at, 3, lots);
+        it.market = line;
+    }
 }
 
 std::string also(const std::string& search, unsigned codePage, const std::vector<stashbook::Kind>& shownHere) {

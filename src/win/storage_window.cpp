@@ -411,6 +411,7 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
         s.readAt = now;
         readStorage(s);
         stashwatch::note(stashbook::Kind::Storage, s.items, s.codePage);  // 3.0.11-beta.286
+        stashwatch::prices(s.items);  // 3.0.11-beta.287: the site's market in the tips
     }
     s.show.weight = s.places;
     s.show.weightMost = s.most;

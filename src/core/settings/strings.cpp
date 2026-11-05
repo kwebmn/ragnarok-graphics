@@ -5396,6 +5396,8 @@ constexpr Entry kTexts[] = {
     {Text::StashAlso, "Also: {1}", "Ще: {1}", "Ещё: {1}"},  // 3.0.11-beta.286
     {Text::StashStorage, "Storage", "Склад", "Склад"},
     {Text::StashCart, "cart", "візок", "тележка"},
+    {Text::ItemsMarket, "Market: from {1} z · {2} lots", "Ринок: від {1} z · лотів {2}",
+     "Рынок: от {1} z · лотов {2}"},  // 3.0.11-beta.287
     {Text::NpcTalkTag, "Talk", "Говорити", "Говорить"},  // 3.0.11-beta.256: the NPC's plate before its name comes
     {Text::InterfaceShop, "NPC shops", "Крамниці NPC", "Магазины NPC"},  // 3.0.11-beta.100
     {Text::InterfaceShopHint,  // 3.0.11-beta.101: the keys, the amount typed, the description
