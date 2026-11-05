@@ -230,10 +230,11 @@ std::vector<Row> wrap(const std::vector<const Line*>& lines, float width, float 
         Row row;
         float x = 0;
         const auto put = [&](const std::string& unit, const Span& sp) {
-            if (!row.empty() && row.back().rgb == sp.rgb && row.back().bold == sp.bold && row.back().name == sp.name)
+            if (!row.empty() && row.back().rgb == sp.rgb && row.back().bold == sp.bold && row.back().name == sp.name &&
+                row.back().item == sp.item && row.back().mob == sp.mob)
                 row.back().text += unit;
             else
-                row.push_back(Piece{unit, sp.rgb, sp.bold, sp.name, 0, 0, int(li)});
+                row.push_back(Piece{unit, sp.rgb, sp.bold, sp.name, 0, 0, int(li), sp.item, sp.mob});
         };
         const auto next = [&]() {
             rows.push_back(row);
@@ -322,15 +323,16 @@ Layout layout(int left, int bottom, float scale, int rows, bool quiet, const Sho
         for (size_t i = 0; i < sh.people.size(); ++i)
             if (!chip(sh.people[i], i < sh.peopleUnread.size() ? sh.peopleUnread[i] : 0)) break;
     }
-    if (sh.menuLine >= 0) {  // a name's menu where it was asked for, inside the chat
+    if (sh.menuLine >= 0) {  // a name's menu where it was asked for, inside the chat (3.0.11-beta.244: a line's too)
+        const int n = sh.menuNamed ? 4 : 1;
         float mw = 0;
-        for (const std::string& item : t.menu) mw = std::max(mw, m(item, 12 * s, false));
+        for (int i = 0; i < n; ++i) mw = std::max(mw, m(t.menu[menuAction(sh, i)], 12 * s, false));
         mw += 24 * s;
-        const float mh = (3 * 22 + 8) * s;
+        const float mh = (float(n) * 22 + 8) * s;
         const float mx = std::clamp(sh.menuX, 4 * s, w - mw - 4 * s);
         const float my = std::clamp(sh.menuY - mh, 4 * s, h - mh - 4 * s);
         L.menu = panel::Box{mx, my, mw, mh};
-        for (int i = 0; i < 3; ++i)
+        for (int i = 0; i < n; ++i)
             L.items.push_back(panel::Box{mx + 4 * s, my + (4 + 22 * float(i)) * s, mw - 8 * s, 22 * s});
     }
     L.grip = panel::Box{w - 18 * s, 0, 18 * s, 18 * s};  // 3.0.11-beta.241
@@ -419,7 +421,11 @@ Hit hitTest(const Layout& L, const std::vector<Row>& rows, const Show& sh, float
             const size_t r = first + size_t((y - top) / L.rowH);
             if (r < first + count)
                 for (const Piece& p : rows[r])
-                    if (p.name && x >= L.lines.x + p.x && x < L.lines.x + p.x + p.w) return Hit{Part::Name, p.line};
+                    if (x >= L.lines.x + p.x && x < L.lines.x + p.x + p.w) {
+                        if (p.name) return Hit{Part::Name, p.line};
+                        if (p.item) return Hit{Part::Link, p.item};  // 3.0.11-beta.244
+                        if (p.mob) return Hit{Part::Link, -p.mob};
+                    }
             if (r < first + count && !rows[r].empty()) return Hit{Part::Lines, rows[r].front().line};  // .243
         }
         return Hit{Part::Lines, -1};
@@ -516,13 +522,14 @@ void paint(panel::Picture& out, const Layout& L, const std::vector<Row>& rows, c
         if (sh.hoverItem >= 0 && sh.hoverItem < int(L.items.size()))
             panel::roundRect(out, L.items[size_t(sh.hoverItem)], 6 * s, kWhite, 0.10f);
     }
-    if (sh.hoverLine >= 0) {  // the name pointed at: underlined
+    if (sh.hoverLine >= 0 || sh.hoverLink != 0) {  // the name (3.0.11-beta.244: the link) pointed at: underlined
         size_t first = 0, count = 0;
         shown(L, rows, sh.scroll, first, count);
         const float top = L.lines.y + L.lines.h - float(count) * L.rowH;
         for (size_t r = first; r < first + count; ++r)
             for (const Piece& p : rows[r])
-                if (p.name && p.line == sh.hoverLine)
+                if ((p.name && p.line == sh.hoverLine) ||
+                    (sh.hoverLink != 0 && (p.item == sh.hoverLink || (p.mob && -p.mob == sh.hoverLink))))
                     panel::roundRect(out,
                                      panel::Box{L.lines.x + p.x, top + float(r - first + 1) * L.rowH - 3 * s,
                                                 p.w - 1, 1 * s},
@@ -578,7 +585,8 @@ std::vector<Words> words(const Layout& L, const std::vector<Row>& rows, const In
     }
     for (size_t i = 0; i < L.items.size(); ++i)
         out.push_back(Words{panel::Box{L.items[i].x + 8 * s, L.items[i].y, L.items[i].w - 12 * s, L.items[i].h},
-                            t.menu[i], int(i) == sh.hoverItem ? kText : kMuted, 12 * s, false, Align::Left});
+                            t.menu[menuAction(sh, int(i))], int(i) == sh.hoverItem ? kText : kMuted, 12 * s, false,
+                            Align::Left});
     for (size_t i = 0; i < L.filters.size(); ++i)  // 3.0.11-beta.243
         out.push_back(Words{panel::Box{L.filters[i].x + 26 * s, L.filters[i].y, L.filters[i].w - 30 * s,
                                        L.filters[i].h},
@@ -736,5 +744,7 @@ std::string clock(uint64_t ago, int nowSec) {
     std::snprintf(buf, sizeof buf, "%02lld:%02lld", sec / 3600, (sec / 60) % 60);
     return buf;
 }
+
+int menuAction(const Show& sh, int index) { return sh.menuNamed ? std::clamp(index, 0, 3) : 3; }
 
 }  // namespace uagfx::chatpanel

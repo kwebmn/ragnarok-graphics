@@ -29,6 +29,7 @@
 #include "win/picture_draw.hpp"
 #include "win/real_ddraw.hpp"
 #include "win/reference_load.hpp"
+#include "win/reference_window.hpp"
 #include "win/target_card.hpp"
 #include "win/ui_cost.hpp"
 
@@ -190,6 +191,7 @@ cp::Texts texts() {
     t.menu[0] = say(settings::Text::ChatMenuWhisper);
     t.menu[1] = say(settings::Text::ChatMenuBlock);
     t.menu[2] = say(settings::Text::ChatMenuCopy);
+    t.menu[3] = say(settings::Text::ChatMenuCopyLine);  // 3.0.11-beta.244
     t.filters[0] = say(settings::Text::ChatFilterSystem);  // 3.0.11-beta.243
     t.filters[1] = say(settings::Text::ChatFilterLoot);
     t.filters[2] = say(settings::Text::ChatFilterAnnounce);
@@ -480,12 +482,13 @@ void battleHit(State& s, const packets::Hit& h, uint32_t me) {
 }
 
 // «{1} переможено»: the form's words round the name
-void named(cp::Line& l, const std::string& form, const std::string& name, uint32_t nameRgb) {
+void named(cp::Line& l, const std::string& form, const std::string& name, uint32_t nameRgb, int item = 0,
+           int mob = 0) {
     const size_t at = form.find("{1}");
     const std::string before = at == std::string::npos ? "" : form.substr(0, at);
     const std::string after = at == std::string::npos ? " " + form : form.substr(at + 3);
     if (!before.empty()) l.spans.push_back(cp::Span{before, cp::kMuted, false, false});
-    l.spans.push_back(cp::Span{name, nameRgb, true, false});
+    l.spans.push_back(cp::Span{name, nameRgb, true, false, item, mob});  // 3.0.11-beta.244: a link to «Довідник»
     if (!after.empty()) l.spans.push_back(cp::Span{after, cp::kMuted, false, false});
 }
 
@@ -493,7 +496,8 @@ void killed(State& s, uint32_t id, uint32_t me) {
     cp::Line l;
     l.kind = cp::Kind::Loot;
     l.ms = GetTickCount64();
-    named(l, say(settings::Text::ChatKilled), actorName(s, id, me), cp::kText);
+    const int cls = targetpanel::actorClass(id);  // 3.0.11-beta.244: a monster's - its page in «Довідник»
+    named(l, say(settings::Text::ChatKilled), actorName(s, id, me), cp::kText, 0, cls >= 1001 && cls < 4000 ? cls : 0);
     add(s, std::move(l));
     s.killLine = &s.lines.back();
     s.killAt = GetTickCount64();
@@ -506,7 +510,7 @@ void picked(State& s, const packets::Pickup& p) {
     cp::Line l;
     l.kind = cp::Kind::Loot;
     l.ms = GetTickCount64();
-    named(l, say(settings::Text::ChatPicked), name, cp::kText);
+    named(l, say(settings::Text::ChatPicked), name, cp::kText, p.item > 0 ? int(p.item) : 0);
     l.spans.push_back(cp::Span{" \xC3\x97" + std::to_string(p.amount), cp::kMuted, false, false});  // ×N
     add(s, std::move(l));
 }
@@ -710,6 +714,7 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     s.show.hoverNewer = hit.part == cp::Part::Newer;
     s.show.hoverPerson = hit.part == cp::Part::Person ? hit.index : -1;  // 3.0.11-beta.242
     s.show.hoverItem = hit.part == cp::Part::Item ? hit.index : -1;
+    s.show.hoverLink = hit.part == cp::Part::Link ? hit.index : 0;  // 3.0.11-beta.244
     s.show.hoverFilters = hit.part == cp::Part::Filters;  // 3.0.11-beta.243
     s.show.hoverFilter = hit.part == cp::Part::Filter ? hit.index : -1;
     s.show.hoverRowLine = hit.part == cp::Part::Lines || hit.part == cp::Part::Name ? hit.index : -1;
@@ -747,7 +752,8 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
            ';';  // 3.0.11-beta.243
     // 3.0.11-beta.242: the whispers' row, the one chosen, a name's menu; 3.0.11-beta.241: the grip pointed at
     key += ';' + s.show.person + '|' + std::to_string(s.show.hoverPerson) + ',' + std::to_string(s.show.menuLine) +
-           ',' + std::to_string(s.show.hoverItem) + (s.show.hoverGrip ? "g" : "") + ';';
+           ',' + std::to_string(s.show.hoverItem) + (s.show.hoverGrip ? "g" : "") + (s.show.menuNamed ? "N" : "") +
+           std::to_string(s.show.hoverLink) + ';';
     for (size_t i = 0; i < s.show.people.size(); ++i)
         key += s.show.people[i] + ':' + std::to_string(s.show.peopleUnread[i]) + ',';
     key += ';' + in.text + '|' + std::to_string(in.caret) + '|' + in.whisper + '|' + std::to_string(in.mode) +
@@ -814,7 +820,9 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
         return true;
     }
     // 3.0.11-beta.242: a right click on a name - its menu; a press elsewhere closes it
-    if (m == WM_RBUTTONDOWN && h.part == cp::Part::Name && h.index >= 0) {
+    // 3.0.11-beta.244: on another part of a line - its own menu (copy it)
+    if (m == WM_RBUTTONDOWN && (h.part == cp::Part::Name || h.part == cp::Part::Lines) && h.index >= 0) {
+        s.show.menuNamed = h.part == cp::Part::Name;
         s.show.menuLine = h.index;
         s.show.menuX = tx - float(s.layout.x);
         s.show.menuY = ty - float(s.layout.y);
@@ -827,6 +835,13 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     if (h.part != cp::Part::Filter && h.part != cp::Part::Filters) s.show.filtersOpen = false;  // 3.0.11-beta.243
     const char* did = "";
     switch (h.part) {
+        case cp::Part::Link:  // 3.0.11-beta.244: a thing or a monster in «Довідник»
+            if (h.index > 0)
+                referencewin::openItem(h.index);
+            else if (h.index < 0)
+                referencewin::openMob(-h.index);
+            did = "a link to «Довідник»";
+            break;
         case cp::Part::Filters:  // 3.0.11-beta.243: «Усі»'s filters' menu
             s.show.filtersOpen = !s.show.filtersOpen;
             did = "the filters";
@@ -852,13 +867,14 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
             break;
         case cp::Part::Item:  // 3.0.11-beta.242: a name's menu
             if (s.rowsVersion == s.version && menuLine >= 0 && size_t(menuLine) < s.rowLines.size() &&
-                !s.rowLines[size_t(menuLine)]->who.empty()) {
+                (cp::menuAction(s.show, h.index) == 3 || !s.rowLines[size_t(menuLine)]->who.empty())) {
                 const std::string who = s.rowLines[size_t(menuLine)]->who;
-                if (h.index == 0) {  // whisper
+                const int action = cp::menuAction(s.show, h.index);  // 3.0.11-beta.244
+                if (action == 0) {  // whisper
                     setName(s, who);
                     giveKeys(wordsEdit());
                     did = "the menu - a whisper";
-                } else if (h.index == 1) {  // the game's own «/ex Name» in the field, the player's Enter sends it
+                } else if (action == 1) {  // the game's own «/ex Name» in the field, the player's Enter sends it
                     const uint32_t words = wordsEdit();
                     if (words && read32(read32(words) + kSetTextSlot) == kSetText) {
                         setName(s, "");
@@ -867,8 +883,13 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
                         giveKeys(words);
                     }
                     did = "the menu - «/ex» put in the field";
-                } else {  // the name to the clipboard
-                    const std::wstring wide = utf8Wide(who);
+                } else {  // the name (3.0.11-beta.244: or the whole line) to the clipboard
+                    std::string text = who;
+                    if (action == 3) {
+                        text.clear();
+                        for (const cp::Span& sp : s.rowLines[size_t(menuLine)]->spans) text += sp.text;
+                    }
+                    const std::wstring wide = utf8Wide(text);
                     if (OpenClipboard(game)) {
                         EmptyClipboard();
                         if (HGLOBAL g = GlobalAlloc(GMEM_MOVEABLE, (wide.size() + 1) * sizeof(wchar_t))) {
@@ -882,7 +903,7 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
                         }
                         CloseClipboard();
                     }
-                    did = "the menu - the name copied";
+                    did = action == 3 ? "the menu - the line copied" : "the menu - the name copied";
                 }
             }
             break;

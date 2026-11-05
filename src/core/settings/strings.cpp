@@ -7269,6 +7269,7 @@ constexpr Entry kTexts[] = {
     {Text::ChatSysZenyOff, "Zeny not shown", "Показ зені вимкнено", "Показ зени выключен"},
     {Text::ChatSysExpGained, "Experience: Base +{1} · Job +{2}", "Досвід: Base +{1} · Job +{2}",
      "Опыт: Base +{1} · Job +{2}"},
+    {Text::ChatMenuCopyLine, "Copy the line", "Копіювати рядок", "Копировать строку"},  // 3.0.11-beta.244
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

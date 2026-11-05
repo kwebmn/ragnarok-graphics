@@ -256,7 +256,7 @@ TEST(chat_whispers_by_person_and_a_names_menu) {
     sh.menuX = 100;
     sh.menuY = 120;
     L = layout(10, 1070, 1.0f, 7, false, sh, in, t, estimate);
-    CHECK(L.menu.w > 0 && L.items.size() == 3);
+    CHECK(L.menu.w > 0 && L.items.size() == 4);  // 3.0.11-beta.244: and «Копіювати рядок»
     CHECK(hitTest(L, {}, sh, L.items[2].x + 3, L.items[2].y + 3).part == Part::Item);
     w = words(L, {}, in, sh, t, estimate);
     CHECK(has("Копіювати ім'я"));
@@ -302,4 +302,31 @@ TEST(chat_filters_short_lines_repeats_and_times) {
     const Layout L = layout(10, 1070, 1.0f, 7, false, sh, in, t, estimate);
     CHECK(L.filtersButton.w > 0 && L.filtersButton.x + L.filtersButton.w <= L.grip.x + 0.5f && L.filters.size() == 4);
     CHECK(hitTest(L, {}, sh, L.filters[3].x + 3, L.filters[3].y + 3).part == Part::Filter);
+}
+
+// 3.0.11-beta.244 (the chat concept, stage 5): a thing's or a monster's name a link (its piece carries its id); a
+// line's own menu copies it, a name's has all four
+TEST(chat_links_and_a_lines_menu) {
+    Line picked;
+    picked.kind = Kind::Loot;
+    picked.spans = {Span{"Підібрано: ", kMuted, false, false}, Span{"Jellopy", kText, true, false, 909, 0},
+                    Span{" ×3", kMuted, false, false}};
+    const std::vector<const Line*> ls{&picked};
+    const std::vector<Row> rows = wrap(ls, 400, 12.5f, estimate);
+    const auto link = std::find_if(rows[0].begin(), rows[0].end(), [](const Piece& p) { return p.item == 909; });
+    CHECK(link != rows[0].end() && link->text.find("Jellopy") != std::string::npos);
+    Texts t;
+    Show sh;
+    Input in;
+    const Layout L = layout(10, 1070, 1.0f, 7, false, sh, in, t, estimate);
+    const float top = L.lines.y + L.lines.h - L.rowH;
+    const Hit h = hitTest(L, rows, sh, L.lines.x + link->x + 2, top + 4);
+    CHECK(h.part == Part::Link && h.index == 909);
+    sh.menuNamed = false;
+    CHECK(menuAction(sh, 0) == 3);
+    sh.menuNamed = true;
+    CHECK(menuAction(sh, 0) == 0 && menuAction(sh, 3) == 3);
+    sh.menuLine = 0;
+    sh.menuNamed = false;
+    CHECK(layout(10, 1070, 1.0f, 7, false, sh, in, t, estimate).items.size() == 1);
 }

@@ -29,6 +29,7 @@ struct Span {
     uint32_t rgb = kText;
     bool bold = false;
     bool name = false;  // the one who said it: a click whispers to them
+    int item = 0, mob = 0;  // 3.0.11-beta.244: a thing's or a monster's name - a click opens it in «Довідник»
 };
 struct Line {
     Kind kind = Kind::System;
@@ -48,7 +49,7 @@ struct Texts {
     // групу», «/g — у гільдію», «/w Ім'я — шепіт», «/r — відповісти {1}»
     std::string commands[4];
     std::string all;          // 3.0.11-beta.242: «Усі» on the whispers' row
-    std::string menu[3];      // «Шепнути», «Блокувати шепіт», «Копіювати ім'я»
+    std::string menu[4];      // «Шепнути», «Блокувати шепіт», «Копіювати ім'я»; .244 «Копіювати рядок»
     // 3.0.11-beta.243 (the chat concept, stage 4): «Усі»'s filters - «Системні рядки», «Підібране й досвід»,
     // «Оголошення», «Торгівля»; the server's own lines shorter - «Автолут: до {1}», «Автолут вимкнено», «Показ досвіду
     // ввімкнено» / «вимкнено», «Показ зені ввімкнено» / «вимкнено», «Досвід: Base +{1} · Job +{2}»
@@ -110,6 +111,7 @@ struct Piece {
     bool bold = false, name = false;
     float x = 0, w = 0;
     int line = -1;  // which of the lines given
+    int item = 0, mob = 0;  // 3.0.11-beta.244: as its span's
 };
 using Row = std::vector<Piece>;
 // The lines as rows `width` wide at `px`, broken at spaces (a word wider than a row by its letters)
@@ -129,6 +131,8 @@ struct Show {
     std::string person;
     int hoverPerson = -1;
     int menuLine = -1, hoverItem = -1;
+    bool menuNamed = true;  // 3.0.11-beta.244: a name's menu (its four), else a line's (copy it alone)
+    int hoverLink = 0;      // 3.0.11-beta.244: the link pointed at - a thing's id, a monster's as -id; 0 none
     float menuX = 0, menuY = 0;
     // 3.0.11-beta.243: «Усі»'s filters (kHide*), their menu open, pointed at; the line pointed at (its time), the clock
     int hide = 0;
@@ -164,8 +168,10 @@ Layout layout(int left, int bottom, float scale, int rows, bool quiet, const Sho
 void sizeTo(const Layout& L, float x, float y, int& width, int& rows);
 
 enum class Part : uint8_t {
-    None, Tab, Name, Lines, Mode, Clear, Field, Newer, Body, Grip, Person, Item, Filters, Filter
+    None, Tab, Name, Lines, Mode, Clear, Field, Newer, Body, Grip, Person, Item, Filters, Filter, Link
 };
+// 3.0.11-beta.244: a menu's item - by its place, the action it does (0 whisper, 1 block, 2 copy the name, 3 the line)
+int menuAction(const Show& sh, int index);
 struct Hit {
     Part part = Part::None;
     int index = -1;  // a tab's; a name's line (of the rows' lines)
