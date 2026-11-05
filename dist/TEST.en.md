@@ -1,3 +1,10 @@
+# uaRO Graphics 3.0.11-beta.259 — what's new
+
+**Talking to NPCs with the pad, stage 5 — hold to page on:**
+- Hold A on an NPC's text, and the «Далі» pages turn one after another.
+- Paging stops at a menu, a number field or «Закрити». A held A never chooses or closes: the decision stays yours.
+- An A held from before the talk opened turns no pages.
+
 # uaRO Graphics 3.0.11-beta.258 — what's new
 
 **Talking to NPCs with the pad, stage 4 — numbers by their digits:**
