@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.11-beta.285 — what's new
+
+**Gear compare:** in the items window the tip over a weapon or an armour now has a third line comparing it with what is worn there: «Instead of +4 Knife: ATK 25 → 31 (+6)», DEF for armour, and the slots when their number differs. Worked out from the server's numbers with the refine (without cards and special effects). With nothing worn there: «Nothing worn there: ATK 31».
+
 # uaRO Graphics 3.0.11-beta.284 — what's new
 
 **Chat search:** click into the chat's field and press Ctrl+F — the field becomes «Search»: what you type is looked for in the open tab's lines (in the words and the speaker's name), regardless of case. Backspace erases, Esc or Enter close it, so does Ctrl+F again. Outside the chat's field Ctrl+F still opens the in-game reference.
