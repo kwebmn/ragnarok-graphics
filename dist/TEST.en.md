@@ -1,3 +1,9 @@
+# uaRO Graphics 3.0.11-beta.244 — what's new
+
+**The chat, stage five:**
+- **Links to «Reference».** In «Picked up: …» lines the thing's name and in «… defeated» the monster's are links: point (underlined), click - its card opens in «Reference».
+- **Copy a line.** A right click on any chat line - «Copy the line». On a name the menu now has four: «Whisper», «Block whispers», «Copy the name», «Copy the line».
+
 # uaRO Graphics 3.0.11-beta.243 — what's new
 
 **The chat, stage four:**
