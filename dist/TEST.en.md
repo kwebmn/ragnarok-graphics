@@ -1,3 +1,9 @@
+# uaRO Graphics 3.0.11-beta.283 — what's new
+
+**Item names on Alt:** hold Alt and every item on the ground gets a small plate with its name and amount. Switch «Item names on Alt» under «Interface», on.
+
+**Valuable drops:** valuable items on the ground are always named, without Alt: cards purple, weapons and armour blue, others worth 10 000 zeny or more gold. Switch «Valuable drops» under «Interface», on.
+
 # uaRO Graphics 3.0.11-beta.282 — what's new
 
 **Healer's alarm:** when someone of your party on your map falls under 30 % HP, a short chime sounds and their row on the party panel pulses red for 3 seconds. Switch «Healer's alarm» under «Interface», on (works with the party panel).
