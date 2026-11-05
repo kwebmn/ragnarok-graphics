@@ -1,3 +1,11 @@
+# uaRO Graphics 3.0.11-beta.267 — what's new
+
+**«Характеристики», stage 3 — the «Довідка» tab:** the window's title has the tabs «Персонаж» and «Довідка». In «Довідка»:
+- the class (‹ › go through any class of the server, yours first);
+- ASPD for each of the class's weapons at AGI 1 / 50 / 80 / 99 and at your AGI (with your DEX), your weapon lit;
+- the points a stat costs from 1 to 50, 70, 80, 90, 99;
+- the job levels giving each stat its +1 (and how many you have already).
+
 # uaRO Graphics 3.0.11-beta.266 — what's new
 
 **«Характеристики», stage 2 — «Як рахується»:**
