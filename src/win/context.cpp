@@ -47,6 +47,8 @@
 #include "win/buff_overlay.hpp"
 #include "win/cast_bar.hpp"
 #include "win/char_block.hpp"
+#include "win/char_diary.hpp"
+#include "win/portrait.hpp"
 #include "win/exp_bars.hpp"
 #include "win/exp_gain.hpp"
 #include "win/code_page.hpp"
@@ -929,6 +931,12 @@ void Context::present(const Rect& source, bool waitForVblank) {
                      view[6], view[7], view[8], view[9], view[10], view[11], screenWidth, screenHeight);
         if (reportNow) startReport(screenshot, readGameMap());
     }
+    if (screenshot.empty() && config.portraits) {  // 3.0.11-beta.273: the character's picture now and then
+        const std::string own = readOwnName();
+        if (!own.empty())
+            screenshot = portraitwin::wanted(true, utf8Of(widened(own, gameCodePage(config))), screenWidth,
+                                             screenHeight);
+    }
     // Stage 3: the window's real pixels and the scale for them. The first present switches from the game's size:
     // the start-up calibration has run by then (spec §4.3).
     const SIZE out = window ? clientPixels(window, config.highResolution) : SIZE{shadow.width(), shadow.height()};
@@ -1021,6 +1029,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     uistyle::set(config.hudOpacity, optionscard::windowOpacity(config.windowOpacity, opaque != 0));
     // 3.0.11-beta.36: [interface] character - the character block at the top left, the game's Basic Info hidden
     charpanel::frame(window, config.character, gameCodePage(config), pk, pw, ph);
+    chardiarywin::frame(gameCodePage(config));  // 3.0.11-beta.273: the characters' diary
     expgainwin::frame(config.expGain, pk, pw, ph);  // 3.0.11-beta.237: [interface] exp_gain (the bars' label)
     expbars::frame(config.expBars, pk, pw, ph);  // 3.0.11-beta.236: [interface] exp_bars, the bottom's strip
     // 3.0.11-beta.38: [interface] target - the target's card at the top middle

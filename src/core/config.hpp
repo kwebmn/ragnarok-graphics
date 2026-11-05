@@ -692,6 +692,9 @@ struct Config {
     // 3.0.11-beta.255 (the NPC concept, question 6): [interface] npc_remember - the option chosen last time at the
     // same NPC's menu chosen again when it opens (each character's own, win/npc_talk)
     bool npcRemember = true;
+    // 3.0.11-beta.273 (the owner's feature 1): [interface] portraits - the character's picture as it stands in the
+    // game, taken now and then while it plays (win/portrait), on its character select's place
+    bool portraits = true;
     // 3.0.11-beta.100: [interface] shop - the NPCs' shops (core/shop_window) in place of the game's deal windows
     bool shopWindow = false;
     // 3.0.11-beta.115: [interface] storage - the Kafra storage (win/storage_window: «Склад», «Речі» beside it) in

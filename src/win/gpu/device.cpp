@@ -14,6 +14,7 @@
 #include "core/frame_fit.hpp"
 #include "core/full_colour.hpp"
 #include "core/png_write.hpp"
+#include "core/shot_spec.hpp"
 #include "core/region_look.hpp"
 #include "core/effect_light.hpp"
 #include "core/game_camera.hpp"
@@ -3016,7 +3017,7 @@ void Renderer::present(HWND window, int outputWidth, int outputHeight, const Rec
         D3D12_RANGE all{0, SIZE_T(m.shotSize)};
         bool ok = false;
         if (!m.lost && SUCCEEDED(m.shotBuffer->Map(0, &all, reinterpret_cast<void**>(&data)))) {
-            ok = writePng(m.shotPath, data, m.shotWidth, m.shotHeight, m.shotPitch);
+            ok = shotspec::write(m.shotPath, data, m.shotWidth, m.shotHeight, m.shotPitch);  // .273: a part too
             D3D12_RANGE none{0, 0};
             m.shotBuffer->Unmap(0, &none);
         }

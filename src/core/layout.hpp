@@ -108,6 +108,8 @@ constexpr const char* kPartyState = "uaro-graphics\\party-state.txt";
 // 3.0.11-beta.80: the party's members' looks as last seen («<account> <sex> <hair> <colour> <class> <level>» lines)
 constexpr const char* kPartyLooks = "uaro-graphics\\party-looks.txt";
 constexpr const char* kStatsState = "uaro-graphics\\stats-state.txt";
+constexpr const char* kCharDiary = "uaro-graphics\\characters.txt";  // 3.0.11-beta.273: core/char_diary
+constexpr const char* kPortraits = "uaro-graphics\\portraits";  // 3.0.11-beta.273: win/portrait
 // 3.0.11-beta.96: «Навички»'s place («at 0.2 0.15») and its tab («tab 2»)
 constexpr const char* kSkillsState = "uaro-graphics\\skills-state.txt";
 // 3.0.11-beta.241: the chat's size by its corner («width 640», «rows 10»)

@@ -621,6 +621,8 @@ Config parseConfig(const std::string& text) {
             setBool(val, c.npcWindow);
         } else if (key == "interface.npc_remember") {  // 3.0.11-beta.255
             setBool(val, c.npcRemember);
+        } else if (key == "interface.portraits") {  // 3.0.11-beta.273
+            setBool(val, c.portraits);
         } else if (key == "interface.shop") {  // 3.0.11-beta.100: the NPCs' shops
             shopSet = val == "0" || val == "1" || val == "on" || val == "off" || val == "true" || val == "false";
             setBool(val, c.shopWindow);

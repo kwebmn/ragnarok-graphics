@@ -5282,6 +5282,15 @@ constexpr Entry kTexts[] = {
      "У того же NPC в том же меню сразу выбрано то, что выбирали в прошлый раз, с пометкой «в прошлый раз»: "
      "телепорт Kafra в тот же город — A и A. У каждого персонажа своё."},
     {Text::NpcLastTime, "last time", "минулого разу", "в прошлый раз"},
+    // 3.0.11-beta.273: the character's picture
+    {Text::InterfacePortraits, "Character portraits", "Портрет персонажа", "Портрет персонажа"},
+    {Text::InterfacePortraitsHint,
+     "Now and then, while the character stands still with no window open, its picture as it looks in the game (hair, "
+     "headgear, gear) is kept and shown on its place in the character select instead of the plain head.",
+     "Час від часу, коли персонаж стоїть без відкритих вікон, його вигляд у грі (зачіска, шапки, спорядження) "
+     "зберігається й показується на його місці у виборі персонажа замість простої голови.",
+     "Время от времени, когда персонаж стоит без открытых окон, его вид в игре (причёска, шапки, снаряжение) "
+     "сохраняется и показывается на его месте в выборе персонажа вместо простой головы."},
     {Text::NpcTalkTag, "Talk", "Говорити", "Говорить"},  // 3.0.11-beta.256: the NPC's plate before its name comes
     {Text::InterfaceShop, "NPC shops", "Крамниці NPC", "Магазины NPC"},  // 3.0.11-beta.100
     {Text::InterfaceShopHint,  // 3.0.11-beta.101: the keys, the amount typed, the description
@@ -6790,6 +6799,12 @@ constexpr Entry kTexts[] = {
     {Text::StatsGoalCastNever, "No cast: DEX {1}, past 99 - {2} more from things or buffs",
      "Без касту: DEX {1}, більше за 99 — ще {2} від речей чи бафів",
      "Без каста: DEX {1}, больше 99 — ещё {2} от вещей или бафов"},
+    // 3.0.11-beta.273: how long ago a character was played
+    {Text::AgoNow, "just now", "щойно", "только что"},
+    {Text::AgoMinutes, "{1} min ago", "{1} хв тому", "{1} мин назад"},
+    {Text::AgoHours, "{1} h ago", "{1} год тому", "{1} ч назад"},
+    {Text::AgoDays, "{1} d ago", "{1} дн. тому", "{1} дн. назад"},
+    {Text::AgoMonths, "{1} mo ago", "{1} міс. тому", "{1} мес. назад"},
     {Text::MinimapRespawn, "{1} min", "{1} хв", "{1} мин"},
     {Text::MinimapMore, "and {1} more", "і ще {1}", "и ещё {1}"},
     {Text::MinimapNoReference, "No game reference yet", "Довідника гри ще немає", "Справочника игры ещё нет"},

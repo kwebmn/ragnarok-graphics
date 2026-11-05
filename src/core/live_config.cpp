@@ -327,6 +327,10 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("equip", flag(running.equipWindow), flag(file.equipWindow)));
         n.equipWindow = file.equipWindow;
     }
+    if (file.portraits != running.portraits) {  // 3.0.11-beta.273: the character's picture, at once
+        u.applied.push_back(change("portraits", flag(running.portraits), flag(file.portraits)));
+        n.portraits = file.portraits;
+    }
     if (file.npcRemember != running.npcRemember) {  // 3.0.11-beta.255: the option chosen last time, at once
         u.applied.push_back(change("npc_remember", flag(running.npcRemember), flag(file.npcRemember)));
         n.npcRemember = file.npcRemember;

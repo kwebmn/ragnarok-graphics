@@ -509,6 +509,7 @@ enum class Text : uint16_t {
     EquipPickTitle, EquipPickNone, EquipPadOff, EquipPadPut, EquipPadChange, EquipPadCard, EquipPadBack,  // .97
     InterfaceNpc, InterfaceNpcHint, NpcNext, NpcKeys, NpcServer, NpcChoose,  // 3.0.11-beta.98
     InterfaceNpcRemember, InterfaceNpcRememberHint, NpcLastTime,  // 3.0.11-beta.255
+    InterfacePortraits, InterfacePortraitsHint,  // 3.0.11-beta.273
     NpcTalkTag,  // 3.0.11-beta.256
     InterfaceShop, InterfaceShopHint, ShopTitle, ShopBuy, ShopSell, ShopSearch, ShopWare, ShopPrice,  // .100
     ShopWeight, ShopCart, ShopAmount, ShopSum, ShopTotal, ShopLeft, ShopAfter, ShopWeightBuy, ShopWeightSell,
@@ -707,6 +708,7 @@ enum class Text : uint16_t {
     // 3.0.11-beta.269: stage 5
     StatsGoals, StatsGoalAspd, StatsGoalAspdNever, StatsGoalAspdNone, StatsGoalCast, StatsGoalCastDone,
     StatsGoalCastNever,
+    AgoNow, AgoMinutes, AgoHours, AgoDays, AgoMonths,  // 3.0.11-beta.273
     MinimapRespawn, MinimapMore,
     MinimapNoReference, MinimapNoMonsters,
     // 3.0.11-beta.7: «Довідник» - its switch, the window's words, the cards' words

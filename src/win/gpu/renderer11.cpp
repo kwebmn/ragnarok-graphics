@@ -29,6 +29,7 @@
 #include "core/game_camera.hpp"
 #include "core/pipeline_key.hpp"
 #include "core/png_write.hpp"
+#include "core/shot_spec.hpp"
 #include "core/region_look.hpp"
 #include "core/scale.hpp"
 #include "core/shader_cache.hpp"
@@ -3744,7 +3745,8 @@ void Renderer11::saveScreenshot(const std::string& path) {
         ctx_->CopyResource(staging, back);
         D3D11_MAPPED_SUBRESOURCE m{};
         if (SUCCEEDED(ctx_->Map(staging, 0, D3D11_MAP_READ, 0, &m))) {
-            ok = writePng(path, static_cast<const uint8_t*>(m.pData), int(d.Width), int(d.Height), m.RowPitch);
+            ok = shotspec::write(path, static_cast<const uint8_t*>(m.pData), int(d.Width), int(d.Height),
+                                 m.RowPitch);  // 3.0.11-beta.273: a part too
             ctx_->Unmap(staging, 0);
         }
     }

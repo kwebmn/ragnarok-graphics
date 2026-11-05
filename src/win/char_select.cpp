@@ -18,6 +18,8 @@
 #include "pad/win/game_window.hpp"
 #include "win/code_page.hpp"
 #include "win/game_camera.hpp"
+#include "win/char_diary.hpp"
+#include "win/portrait.hpp"
 #include "win/head_picture.hpp"
 #include "win/login_card.hpp"
 #include "win/log.hpp"
@@ -150,6 +152,15 @@ std::vector<cs::Slot> slotsOf(State& s, int page) {
             f = s.faces.emplace(key, std::move(p)).first;
         }
         sl.face = f->second.width > 0 ? &f->second : nullptr;
+        if (const panel::Picture* p = portraitwin::face(utf8Of(widened(name, s.codePage)), side))
+            sl.face = p;  // 3.0.11-beta.273: its picture as it stood in the game
+        if (const chardiary::Entry* e = chardiarywin::find(sl.name)) {  // 3.0.11-beta.273: when and where last played
+            const chardiary::AgoTexts at{say(settings::Text::AgoNow), say(settings::Text::AgoMinutes),
+                                         say(settings::Text::AgoHours), say(settings::Text::AgoDays),
+                                         say(settings::Text::AgoMonths)};
+            sl.ago = chardiary::ago(chardiarywin::nowUnix(), e->lastSeen, at);
+            sl.map = e->map;
+        }
     }
     return out;
 }

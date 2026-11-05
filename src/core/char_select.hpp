@@ -18,6 +18,7 @@ struct Slot {
     int level = 0, jobLevel = 0, hp = 0, maxHp = 0, sp = 0, maxSp = 0;
     int stats[6] = {0, 0, 0, 0, 0, 0};          // STR AGI VIT INT DEX LUK
     const panel::Picture* face = nullptr;  // its head at faceSide(scale), premultiplied
+    std::string ago, map;  // 3.0.11-beta.273: when last played here («2 год тому»), its map then ("" not known)
 };
 int faceSide(float scale);
 

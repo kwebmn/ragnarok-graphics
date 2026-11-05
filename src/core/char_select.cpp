@@ -176,8 +176,12 @@ std::vector<Words> words(const Layout& L, const std::vector<Slot>& slots, const 
         }
         const Inner in = inner(b, s);
         out.push_back(Words{in.name, sl->name, kText, 15 * s, true, Align::Center});
-        out.push_back(Words{in.job, sl->job, kGold2, 12.5f * s, false, Align::Center});
-        out.push_back(Words{in.level, "Lv " + std::to_string(sl->level) + " / " + std::to_string(sl->jobLevel),
+        // 3.0.11-beta.273: the map it was last on after its job, when it was played after its levels
+        out.push_back(Words{in.job, sl->map.empty() ? sl->job : sl->job + " \xC2\xB7 " + sl->map, kGold2, 12.5f * s,
+                            false, Align::Center});
+        out.push_back(Words{in.level,
+                            "Lv " + std::to_string(sl->level) + " / " + std::to_string(sl->jobLevel) +
+                                (sl->ago.empty() ? std::string() : " \xC2\xB7 " + sl->ago),
                             kMuted, 12 * s, false, Align::Center});
         out.push_back(Words{in.hp, "HP " + std::to_string(sl->hp) + " / " + std::to_string(sl->maxHp), kText,
                             11.5f * s, false, Align::Left});
