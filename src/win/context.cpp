@@ -56,6 +56,7 @@
 #include "win/hotbar.hpp"
 #include "win/cursor_look.hpp"
 #include "win/hud_edit.hpp"
+#include "win/ground_items.hpp"
 #include "win/hunt_panel.hpp"
 #include "win/mob_card.hpp"
 #include "win/mvp_panel.hpp"
@@ -700,6 +701,7 @@ void Context::endScene() {
         }
         worlddim::draw(record);                 // 3.0.11-beta.49: the world dimmed under the windows (where it ends)
         lowhpedge::draw(record, *renderer);     // 3.0.11-beta.50: the low HP edge, there too
+        groundwin::draw(record, *renderer);  // 3.0.11-beta.283: the items on the ground named, under the bars
         mobhpwin::draw(record, *renderer);      // 3.0.11-beta.95: the monsters' HP bars, under the cast
         npctagwin::draw(record, *renderer);     // 3.0.11-beta.256: the controller's NPC plate
         expgainwin::draw(record, *renderer);    // 3.0.11-beta.237: a kill's experience over the monster
@@ -772,6 +774,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
         hidePadCursor(record, config.padWalk);  // 3.0.11-beta.102
         worlddim::draw(record);                 // 3.0.11-beta.49
         lowhpedge::draw(record, *renderer);     // 3.0.11-beta.50
+        groundwin::draw(record, *renderer);  // 3.0.11-beta.283
         mobhpwin::draw(record, *renderer);      // 3.0.11-beta.95
         npctagwin::draw(record, *renderer);     // 3.0.11-beta.256
         expgainwin::draw(record, *renderer);    // 3.0.11-beta.237
@@ -1067,6 +1070,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     lowhpedge::frame(config.lowHpEdge, pk, pw, ph);
     // 3.0.11-beta.48: [interface] cast - the character's cast over the hero, the game's own gauge hidden
     mobhpwin::frame(window, config.mobHp, pk, pw, ph);  // 3.0.11-beta.95
+    groundwin::frame(window, config.dropNames, config.dropHighlight, gameCodePage(config), pk, pw, ph);  // .283
     npctagwin::frame(window, gameCodePage(config), pk, pw, ph);  // 3.0.11-beta.256
     castwin::frame(window, config.castLabel, gameCodePage(config), pk, pw, ph);
     // 3.0.11-beta.40: [interface] hotbar - the hotkeys' bar at the bottom middle, the game's own hidden

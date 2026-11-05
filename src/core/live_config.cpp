@@ -327,6 +327,14 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("equip", flag(running.equipWindow), flag(file.equipWindow)));
         n.equipWindow = file.equipWindow;
     }
+    if (file.dropNames != running.dropNames) {  // 3.0.11-beta.283: the items on the ground named with Alt, at once
+        u.applied.push_back(change("drop_names", flag(running.dropNames), flag(file.dropNames)));
+        n.dropNames = file.dropNames;
+    }
+    if (file.dropHighlight != running.dropHighlight) {  // 3.0.11-beta.283: the valuable ones always, at once
+        u.applied.push_back(change("drop_highlight", flag(running.dropHighlight), flag(file.dropHighlight)));
+        n.dropHighlight = file.dropHighlight;
+    }
     if (file.partyAlarm != running.partyAlarm) {  // 3.0.11-beta.282: the healer's alarm, at once
         u.applied.push_back(change("party_alarm", flag(running.partyAlarm), flag(file.partyAlarm)));
         n.partyAlarm = file.partyAlarm;

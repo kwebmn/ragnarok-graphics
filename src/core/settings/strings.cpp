@@ -5374,6 +5374,19 @@ constexpr Entry kTexts[] = {
      "пульсує червоним.",
      "Когда кто-то из группы рядом падает ниже 30 % HP, звучит короткий сигнал, а его строка на панели группы 3 "
      "секунды пульсирует красным."},
+    {Text::InterfaceDropNames, "Item names on Alt", "Назви предметів по Alt", "Названия предметов по Alt"},
+    {Text::InterfaceDropNamesHint,
+     "Hold Alt: every item on the ground gets its name and amount on a small plate over it.",
+     "Затисніть Alt: кожен предмет на землі отримує назву й кількість на маленькій плашці над ним.",
+     "Зажмите Alt: каждый предмет на земле получает название и количество на маленькой плашке над ним."},
+    {Text::InterfaceDropHighlight, "Valuable drops", "Цінна здобич", "Ценная добыча"},
+    {Text::InterfaceDropHighlightHint,
+     "Valuable items on the ground are always named: cards purple, weapons and armour blue, others worth 10 000 "
+     "zeny or more gold.",
+     "Цінні предмети на землі підписані завжди: картки фіолетовим, зброя й броня синім, інше від 10 000 зені — "
+     "золотим.",
+     "Ценные предметы на земле подписаны всегда: карты фиолетовым, оружие и броня синим, остальное от 10 000 зени "
+     "— золотым."},
     {Text::NpcTalkTag, "Talk", "Говорити", "Говорить"},  // 3.0.11-beta.256: the NPC's plate before its name comes
     {Text::InterfaceShop, "NPC shops", "Крамниці NPC", "Магазины NPC"},  // 3.0.11-beta.100
     {Text::InterfaceShopHint,  // 3.0.11-beta.101: the keys, the amount typed, the description

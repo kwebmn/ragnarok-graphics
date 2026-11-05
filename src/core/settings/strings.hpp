@@ -519,6 +519,7 @@ enum class Text : uint16_t {
     InterfaceMvp, InterfaceMvpHint, MvpTitle,  // 3.0.11-beta.280
     InterfacePotionWarn, InterfacePotionWarnHint,  // 3.0.11-beta.281
     InterfacePartyAlarm, InterfacePartyAlarmHint,  // 3.0.11-beta.282
+    InterfaceDropNames, InterfaceDropNamesHint, InterfaceDropHighlight, InterfaceDropHighlightHint,  // .283
     NpcTalkTag,  // 3.0.11-beta.256
     InterfaceShop, InterfaceShopHint, ShopTitle, ShopBuy, ShopSell, ShopSearch, ShopWare, ShopPrice,  // .100
     ShopWeight, ShopCart, ShopAmount, ShopSum, ShopTotal, ShopLeft, ShopAfter, ShopWeightBuy, ShopWeightSell,
