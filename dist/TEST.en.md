@@ -1,3 +1,5 @@
+- **Hunt.** A new panel over the game: damage per second (the last 10 s and the last minute) and each skill's share, experience per hour as a share of the level and the time to the next level, zeny per hour, how many monsters and which were killed. The round arrow in its corner starts counting anew. Turn it on in «Interface» → «Hunt panel»; its place and size are in the interface layout («Hunt»).
+
 # uaRO Graphics 3.0.11-beta.277 — what's new
 
 **Feature 8 — «What killed me»:** the death screen lists the last hits of the 10 seconds before it (up to six, the last on top): who, by which skill or a plain attack, how much damage and how long before the death, with all the damage together in its title. The switch «Що мене вбило» in «Інтерфейс».
