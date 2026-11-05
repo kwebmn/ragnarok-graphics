@@ -51,6 +51,8 @@ struct Texts {
     std::string refBonus, refBonusNone, refBonusNow;
     // 3.0.11-beta.268 (stage 4): «Планування»'s words
     std::string planLevel, planPoints, planShort, planResult, planReset, planNote;
+    // 3.0.11-beta.269 (stage 5): the goals
+    std::string goals, goalAspd, goalAspdNever, goalAspdNone, goalCast, goalCastDone, goalCastNever;
 };
 
 // 3.0.11-beta.268 (stage 4, the owner: «только показать»): a plan of the stats - each stat's base planned, at a base
@@ -69,6 +71,9 @@ struct PlanRow {
 // The numbers now and with the plan: the server's now, the plan's by the formulas' difference (the things' and the
 // buffs' part kept)
 std::vector<PlanRow> planRows(const Data& d, const Plan& p, const Texts& t);
+// 3.0.11-beta.269 (stage 5, the concept's «Цели»): what the plan still needs for ASPD `aspdGoal` (with the plan's DEX)
+// and for no cast at all (DEX 150 with the bonuses) - the stat it takes and its points past the plan's
+std::vector<std::string> planGoals(const Data& d, const Plan& p, int aspdGoal, const Texts& t);
 
 struct Row {
     std::string name, value;
@@ -97,6 +102,7 @@ struct Show {
     int hoverTab = -1, hoverArrow = -1;       // 3.0.11-beta.267: a tab, the class's ‹ (0) or › (1)
     int hoverPlan = -1, hoverPlanIndex = -1;  // 3.0.11-beta.268: a plan's part (its Part) and its index
     Plan plan;                                // .268: «Планування»'s (the window's, kept while the game runs)
+    int aspdGoal = 0;                         // .269: the ASPD aimed at (0: the plan's + 5)
     bool hoverClose = false;
 };
 
@@ -113,6 +119,7 @@ struct Layout {
     // 3.0.11-beta.268 (stage 4): «Планування» - the level's row and its ‹ ›, the stats' rows with − and +, the
     // results, «Скинути»
     panel::Box planLevelRow, levelPrev, levelNext, planResults, planReset;
+    panel::Box goals, goalPrev, goalNext;  // .269
     std::vector<panel::Box> planRowsBoxes, planMinus, planPlus;
 };
 // The weapons the class can use: its delay, the ASPD at AGI 1, 50, 80, 99 and at the AGI given, with the DEX given
@@ -130,7 +137,7 @@ Layout layout(int x, int y, float scale, const Data& d, const Texts& t, const Me
 
 // .266 Battle, .267 Tab and Arrow, .268 the plan's
 enum class Part : uint8_t { None, Close, Plus, Row, Title, Body, Battle, Tab, Arrow, PlanMinus, PlanPlus, PlanLevel,
-                            PlanReset };
+                            PlanReset, Goal };  // .269: Goal - the ASPD aimed at, ‹ (0) or › (1)
 struct Hit {
     Part part = Part::None;
     int index = -1;

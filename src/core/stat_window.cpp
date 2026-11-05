@@ -193,6 +193,34 @@ std::vector<PlanRow> planRows(const Data& d, const Plan& p, const Texts& t) {
     return out;
 }
 
+std::vector<std::string> planGoals(const Data& d, const Plan& p, int aspdGoal, const Texts& t) {
+    namespace sm = uagfx::statmath;
+    std::vector<std::string> out;
+    const int most = sm::baby(d.job) ? sm::kMaxBabyStat : sm::kMaxStat;
+    const int w = weaponOf(d), dex = p.base[4] + d.bonus[4];
+    if (w < 0) {
+        out.push_back(t.goalAspdNone);
+    } else {
+        int agi = p.base[1] + d.bonus[1];
+        while (agi < 400 && sm::aspd10(sm::amotion(d.job, w, agi, dex)) < aspdGoal * 10) ++agi;
+        const int base = agi - d.bonus[1];
+        if (base > most)
+            out.push_back(fill(t.goalAspdNever, {std::to_string(aspdGoal), std::to_string(agi)}));
+        else
+            out.push_back(fill(t.goalAspd, {std::to_string(aspdGoal), std::to_string(agi),
+                                            std::to_string(sm::pointsBetween(p.base[1], std::max(base, p.base[1])))}));
+    }
+    const int need = sm::kCastDex - d.bonus[4];  // the base DEX for no cast
+    if (dex >= sm::kCastDex)
+        out.push_back(t.goalCastDone);
+    else if (need > most)
+        out.push_back(fill(t.goalCastNever, {std::to_string(sm::kCastDex), std::to_string(need - most)}));
+    else
+        out.push_back(
+            fill(t.goalCast, {std::to_string(sm::kCastDex), std::to_string(sm::pointsBetween(p.base[4], need))}));
+    return out;
+}
+
 int explainedItem(const Show& sh) {
     if (sh.hoverRow >= 0) return sh.hoverRow;
     if (sh.hoverPlus >= 0) return sh.hoverPlus;
@@ -426,12 +454,15 @@ Layout layout(int x, int y, float scale, const Data& d, const Texts& t, const Me
     }
     L.planResults = panel::Box{bx, L.planLevelRow.y, w - side - bx, kHeaderH * s + 11 * kBattleRowH * s};
     L.planReset = panel::Box{side, py + float(kStats) * kRowH * s + 16 * s, 120 * s, 32 * s};
+    L.goals = panel::Box{side, L.planReset.y + L.planReset.h + 18 * s, w - 2 * side, 26 * s + 3 * 22 * s};  // .269
+    L.goalPrev = panel::Box{side + 200 * s, L.goals.y + 1 * s, 24 * s, 24 * s};
+    L.goalNext = panel::Box{side + 280 * s, L.goals.y + 1 * s, 24 * s, 24 * s};
     L.glass = panel::Box{0, 0, w, std::max(L.line.y + L.line.h, refBottom)};  // one height for both tabs
     if (L.tab != kPlanTab) {  // .268: the plan's parts only in «Планування»
         L.planRowsBoxes.clear();
         L.planMinus.clear();
         L.planPlus.clear();
-        L.levelPrev = L.levelNext = L.planReset = panel::Box{};
+        L.levelPrev = L.levelNext = L.planReset = L.goalPrev = L.goalNext = panel::Box{};
     }
     if (L.tab != 0) {  // «Планування», «Довідка»: none of «Персонаж»'s rows to point at
         L.rows.clear();
@@ -457,6 +488,8 @@ Hit hitTest(const Layout& L, float x, float y) {
     if (L.tab == kPlanTab && L.levelPrev.contains(x, y)) return Hit{Part::PlanLevel, 0};
     if (L.tab == kPlanTab && L.levelNext.contains(x, y)) return Hit{Part::PlanLevel, 1};
     if (L.tab == kPlanTab && L.planReset.contains(x, y)) return Hit{Part::PlanReset, -1};
+    if (L.tab == kPlanTab && L.goalPrev.contains(x, y)) return Hit{Part::Goal, 0};  // .269
+    if (L.tab == kPlanTab && L.goalNext.contains(x, y)) return Hit{Part::Goal, 1};
     if (L.tab == kRefTab && L.prev.contains(x, y)) return Hit{Part::Arrow, 0};
     if (L.tab == kRefTab && L.next.contains(x, y)) return Hit{Part::Arrow, 1};
     for (size_t i = 0; i < L.pluses.size(); ++i)
@@ -485,6 +518,9 @@ void paintPlan(panel::Picture& out, const Layout& L, const Show& sh) {
         panel::roundRect(out, i ? L.levelNext : L.levelPrev, 6 * s, kWhite, lit(Part::PlanLevel, i) ? 0.2f : 0.08f);
     panel::roundRect(out, L.planReset, 8 * s, kWhite, lit(Part::PlanReset, -1) ? 0.16f : 0.07f, kWhite, 0.2f,
                      1.0f * s);
+    for (int i = 0; i < 2; ++i)  // .269: the ASPD aimed at, ‹ ›
+        panel::roundRect(out, i ? L.goalNext : L.goalPrev, 6 * s, kWhite, lit(Part::Goal, i) ? 0.2f : 0.08f);
+    panel::roundRect(out, panel::Box{L.goals.x, L.goals.y - 8 * s, L.goals.w, 1 * s}, 0, kWhite, 0.08f);
     panel::roundRect(out, panel::Box{L.planResults.x, L.planResults.y + kHeaderH * s - 1 * s, L.planResults.w, 1 * s},
                      0, kWhite, 0.1f);
 }
@@ -525,6 +561,17 @@ void planWords(std::vector<Words>& out, const Layout& L, const Data& d, const Sh
     word(panel::Box{L.planReset.x + L.planReset.w + 12 * s, L.planReset.y, L.planResults.x - L.planReset.x -
                         L.planReset.w - 20 * s, L.planReset.h},
          t.planNote, kFaint, 11 * s, false, Align::Left);
+    // .269: the goals - ASPD aimed at (‹ ›), no cast
+    const int goal = sh.aspdGoal > 0 ? sh.aspdGoal : std::min(sm::kMaxAspd, d.aspd + 5);
+    word(panel::Box{L.goals.x, L.goals.y, 190 * s, 26 * s}, t.goals, kText, 13 * s, true, Align::Left);
+    word(L.goalPrev, "\xE2\x80\xB9", kText, 14 * s, true, Align::Center);
+    word(panel::Box{L.goalPrev.x + L.goalPrev.w, L.goals.y, L.goalNext.x - L.goalPrev.x - L.goalPrev.w, 26 * s},
+         "ASPD " + std::to_string(goal), kGold, 12.5f * s, true, Align::Center);
+    word(L.goalNext, "\xE2\x80\xBA", kText, 14 * s, true, Align::Center);
+    const std::vector<std::string> goals = planGoals(d, p, goal, t);
+    for (size_t i = 0; i < goals.size(); ++i)
+        word(panel::Box{L.goals.x, L.goals.y + 26 * s + float(i) * 22 * s, L.goals.w, 22 * s}, goals[i], 0xC9D1DE,
+             12 * s, false, Align::Left);
     const panel::Box& res = L.planResults;
     word(panel::Box{res.x, res.y, res.w, kHeaderH * s}, t.planResult, kText, 13 * s, true, Align::Left);
     const std::vector<PlanRow> rows = planRows(d, p, t);

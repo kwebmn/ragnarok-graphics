@@ -704,6 +704,9 @@ enum class Text : uint16_t {
     StatsRefCost, StatsRefCostFrom, StatsRefCostPoints, StatsRefBonus, StatsRefBonusNone, StatsRefBonusNow,
     // 3.0.11-beta.268: stage 4
     StatsTabPlan, StatsPlanLevel, StatsPlanPoints, StatsPlanShort, StatsPlanResult, StatsPlanReset, StatsPlanNote,
+    // 3.0.11-beta.269: stage 5
+    StatsGoals, StatsGoalAspd, StatsGoalAspdNever, StatsGoalAspdNone, StatsGoalCast, StatsGoalCastDone,
+    StatsGoalCastNever,
     MinimapRespawn, MinimapMore,
     MinimapNoReference, MinimapNoMonsters,
     // 3.0.11-beta.7: «Довідник» - its switch, the window's words, the cards' words

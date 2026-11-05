@@ -593,3 +593,32 @@ TEST(stat_window_plan) {
     CHECK(plus.part == statwin::Part::PlanPlus && plus.index == 1);
     CHECK(statwin::hitTest(L, L.levelNext.x + 4, L.levelNext.y + 4).part == statwin::Part::PlanLevel);
 }
+
+// 3.0.11-beta.269 (stage 5): the goals of the concept's knight - ASPD 165 and 170 within reach, 185 not; the cast
+TEST(stat_window_plan_goals) {
+    statwin::Texts t = statTexts();
+    t.goalAspd = "ASPD {1}: AGI {2} — ще {3} очок";
+    t.goalAspdNever = "ASPD {1}: AGI {2}, більше за 99";
+    t.goalAspdNone = "ASPD: зброю не визначено";
+    t.goalCast = "Без касту: DEX {1} — ще {2} очок";
+    t.goalCastDone = "Без касту: уже";
+    t.goalCastNever = "Без касту: DEX {1}, більше за 99 — ще {2}";
+    statwin::Data d;
+    const int base[6] = {62, 70, 30, 1, 40, 1}, bonus[6] = {4, 6, 2, 0, 3, 1};
+    for (int i = 0; i < 6; ++i) {
+        d.base[i] = base[i];
+        d.bonus[i] = bonus[i];
+    }
+    d.job = 7;
+    d.baseLevel = 98;
+    d.aspd = 164;
+    const statwin::Plan p = statwin::planFrom(d);
+    const std::vector<std::string> g = statwin::planGoals(d, p, 165, t);
+    CHECK(g.size() == 2 && g[0].rfind("ASPD 165: AGI ", 0) == 0);
+    // ASPD 170: AGI 103 in all, the base 97 with the bonus of 6 - within reach; 185 past the base's 99
+    CHECK(statwin::planGoals(d, p, 170, t)[0] == "ASPD 170: AGI 103 — ще 264 очок");
+    CHECK(statwin::planGoals(d, p, 185, t)[0].find("більше за 99") != std::string::npos);
+    CHECK(g[1] == "Без касту: DEX 150, більше за 99 — ще 48");  // DEX 3 from bonuses: 147 base needed
+    d.aspd = 175;  // sped up: no weapon
+    CHECK(statwin::planGoals(d, p, 180, t)[0] == "ASPD: зброю не визначено");
+}

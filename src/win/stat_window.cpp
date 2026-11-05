@@ -251,6 +251,13 @@ sw::Texts texts() {
     t.planResult = say(settings::Text::StatsPlanResult);
     t.planReset = say(settings::Text::StatsPlanReset);
     t.planNote = say(settings::Text::StatsPlanNote);
+    t.goals = say(settings::Text::StatsGoals);  // .269
+    t.goalAspd = say(settings::Text::StatsGoalAspd);
+    t.goalAspdNever = say(settings::Text::StatsGoalAspdNever);
+    t.goalAspdNone = say(settings::Text::StatsGoalAspdNone);
+    t.goalCast = say(settings::Text::StatsGoalCast);
+    t.goalCastDone = say(settings::Text::StatsGoalCastDone);
+    t.goalCastNever = say(settings::Text::StatsGoalCastNever);
     t.refClass = say(settings::Text::StatsRefClass);
     t.refAspd = say(settings::Text::StatsRefAspd);
     t.refWeapon = say(settings::Text::StatsRefWeapon);
@@ -374,7 +381,7 @@ void frame(HWND game, bool on, double k, int targetWidth, int targetHeight) {
         if (h.part == sw::Part::Tab) s.show.hoverTab = h.index;        // 3.0.11-beta.267
         if (h.part == sw::Part::Arrow) s.show.hoverArrow = h.index;
         if (h.part == sw::Part::PlanMinus || h.part == sw::Part::PlanPlus || h.part == sw::Part::PlanLevel ||
-            h.part == sw::Part::PlanReset) {  // .268
+            h.part == sw::Part::PlanReset || h.part == sw::Part::Goal) {  // .268, .269
             s.show.hoverPlan = int(h.part);
             s.show.hoverPlanIndex = h.index;
         }
@@ -394,7 +401,8 @@ void frame(HWND game, bool on, double k, int targetWidth, int targetHeight) {
                       ',' + std::to_string(d.weightMost) + ';' + std::to_string(s.tab) + ',' +
                       std::to_string(s.layout.refJob) + ',' + std::to_string(s.show.hoverTab) + ',' +
                       std::to_string(s.show.hoverArrow) + ';' + std::to_string(s.show.hoverPlan) + ',' +
-                      std::to_string(s.show.hoverPlanIndex) + ';' + std::to_string(s.show.plan.level) + ':';
+                      std::to_string(s.show.hoverPlanIndex) + ';' + std::to_string(s.show.plan.level) + ':' +
+                      std::to_string(s.show.aspdGoal) + ':';
     for (int i = 0; i < sw::kStats; ++i) key += std::to_string(s.show.plan.base[i]) + ',';
     for (int i = 0; i < sw::kStats; ++i)
         key += std::to_string(d.base[i]) + '+' + std::to_string(d.bonus[i]) + '/' + std::to_string(d.need[i]) + ',';
@@ -516,6 +524,11 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
         case sw::Part::PlanReset:
             s.show.plan = sw::planFrom(s.data);
             break;
+        case sw::Part::Goal: {  // .269: the ASPD aimed at, a whole one up to 190
+            const int now = s.show.aspdGoal > 0 ? s.show.aspdGoal : std::min(190, s.data.aspd + 5);
+            s.show.aspdGoal = std::clamp(now + (h.index ? 1 : -1), std::max(1, s.data.aspd), 190);
+            break;
+        }
         case sw::Part::Arrow: {  // .267: «Довідка»'s class, the previous or the next of the server's
             const std::vector<int> jobs = uagfx::statmath::jobs();
             const int now = s.layout.refJob;
