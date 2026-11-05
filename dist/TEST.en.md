@@ -1,3 +1,10 @@
+# uaRO Graphics 3.0.11-beta.255 — what's new
+
+**Talking to NPCs with the pad, stage 1 — menus:**
+- **The D-pad moves the way the menu looks.** Options sit in two columns: ↑/↓ move a row up or down, ←/→ move to the other column. LB/RB page by 8 options.
+- **Remembered choices.** At the same NPC's same menu, the option you chose last time is already selected and marked «last time». A Kafra teleport to the same town is A, then A. Each character has its own memory. It works with the mouse and keyboard too. Switch: «Пам'ятати вибір у меню NPC» under «Інтерфейс».
+- **No accidental A.** For the first 0.4 s after a new page or menu, A does nothing, and the A glyph at the bottom of the window is dimmed meanwhile. An A already held when the window opened (attacking, picking up) is not passed to it.
+
 # uaRO Graphics 3.0.11-beta.254 — what's new
 
 - **Pad buttons light their hotbar cells.** Before, only a cell used from the keyboard (F1–F9 or the battle-mode keys) showed a short press. The pad uses skills and items directly rather than through the keys, so the hotbar never knew. Now a pad button lights its cell the same way, ground-aimed skills included.
