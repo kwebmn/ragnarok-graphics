@@ -1,3 +1,11 @@
+# uaRO Graphics 3.0.11-beta.261 — what's new
+
+**From the tester's second list:**
+- Overweight: the «90%» icon is in the new style now too, like «70%».
+- Buffs placed in the middle of the screen keep their top edge and grow down only, not over the map; what does not fit down to the bottom goes into a second column («Бафи, що не вміщаються» → «У другий стовпчик») or under «N more». Buffs moved before need dragging once more.
+- Skill menus (Teleport, Warp Portal) in the new look: the skill's name, a row per choice, «Вибрати» and «Скасувати», a double click chooses at once.
+- After «Увійти» in the character select, the «Вхід у гру…» veil until the map shows, not the game's old loading window.
+
 # uaRO Graphics 3.0.11-beta.260 — what's new
 
 **From the tester's list:**
