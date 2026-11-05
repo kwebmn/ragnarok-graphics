@@ -1,5 +1,7 @@
 #include "win/console.hpp"
 
+#include <windowsx.h>
+
 #include <algorithm>
 #include <cstdio>
 #include <cstdlib>
@@ -103,6 +105,7 @@ LRESULT CALLBACK Console::wndProc(HWND w, UINT msg, WPARAM wp, LPARAM lp) {
         skipCharUntil_ = 0;
         return 0;
     }
+    if (msg == WM_SYSKEYDOWN && wp == 'D' && active_ && active_->open_) active_->closeAsked_ = true;  // .260: Alt+D
     if (msg == WM_CHAR && active_ && active_->open_ && (wp == 8 || (wp > L' ' && wp != 127)))
         active_->typed_.push_back(wchar_t(wp));  // 2.6.22: letters and Backspace for the search
     const bool toggleKey = msg != WM_CHAR && msg != WM_SYSCHAR && console::toggles(ctrl, unsigned(wp));
@@ -417,6 +420,8 @@ bool Console::present(HWND game, bool foreground, const std::string& iniPath, co
             lang_ = startLang(lang);
             filter_.clear();
             typed_.clear();
+            clicks_.clear();
+            closeAsked_ = false;
             map_ = map;
             build(lang_, config);
             LOG_INFO("console: open");
@@ -475,6 +480,31 @@ bool Console::present(HWND game, bool foreground, const std::string& iniPath, co
         comparing_.clear();
         return changed;
     }
+    for (const Click& c : clicks_) {  // 3.0.11-beta.260: the mouse
+        if (c.wheel) {
+            move(c.wheel > 0 ? -3 : 3);
+            continue;
+        }
+        if (drawnLine_ <= 0 || c.y < drawnFirstRow_) continue;
+        const int row = top_ + (c.y - drawnFirstRow_) / drawnLine_;
+        if ((c.y - drawnFirstRow_) / drawnLine_ >= drawnVisible_ || row < 0 || row >= n) continue;
+        if (rows_[size_t(row)].kind == Kind::Heading) continue;
+        at_ = row;
+        dirty_ = true;
+        const IniSetting* s = settingOf(rows_[size_t(row)].key);
+        const bool stepped = s && (s->control == Control::Slider || s->control == Control::Choice);
+        const int half = int(drawnBox_.right - drawnBox_.left) / 2;
+        changed = change(iniPath, config, stepped ? (c.x >= half ? 1 : -1) : 0) || changed;
+    }
+    clicks_.clear();
+    if (closeAsked_) {  // 3.0.11-beta.260: Alt+D while it is open
+        closeAsked_ = false;
+        LOG_INFO("console: Alt+D - closed");
+        open_ = false;
+        hide();
+        comparing_.clear();
+        return changed;
+    }
     if (pressed(VK_ESCAPE, escape_, false, now)) {
         if (!filter_.empty()) {  // 2.6.22: the letters cleared first, then the console closed
             filter_.clear();
@@ -507,6 +537,23 @@ bool Console::present(HWND game, bool foreground, const std::string& iniPath, co
     if (changed) dirty_ = true;
     draw(game, config, timing);
     return changed;
+}
+
+bool Console::mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
+    Console* c = active_;
+    if (!c || !c->open_ || c->game_ != game || c->drawnLine_ <= 0) return false;
+    const bool button = m == WM_LBUTTONDOWN || m == WM_LBUTTONUP || m == WM_LBUTTONDBLCLK || m == WM_RBUTTONDOWN ||
+                        m == WM_RBUTTONUP || m == WM_RBUTTONDBLCLK || m == WM_MBUTTONDOWN || m == WM_MBUTTONUP;
+    if (!button && m != WM_MOUSEWHEEL) return false;
+    POINT p{GET_X_LPARAM(lp), GET_Y_LPARAM(lp)};
+    if (m == WM_MOUSEWHEEL && !ScreenToClient(game, &p)) return false;  // the wheel's point is the screen's
+    if (!PtInRect(&c->drawnBox_, p)) return false;
+    result = 0;
+    if (m == WM_MOUSEWHEEL)
+        c->clicks_.push_back(Click{0, 0, GET_WHEEL_DELTA_WPARAM(wp)});
+    else if (m == WM_LBUTTONDOWN || m == WM_LBUTTONDBLCLK)
+        c->clicks_.push_back(Click{int(p.x - c->drawnBox_.left), int(p.y - c->drawnBox_.top), 0});
+    return true;
 }
 
 void Console::hide() {
@@ -697,7 +744,8 @@ void Console::draw(HWND game, const Config& file, const GpuTiming* timing) {
         SelectObject(dc, font);
         SetTextColor(dc, RGB(150, 160, 160));
         DrawTextW(dc, keys.c_str(), int(keys.size()), &foot, DT_WORDBREAK | DT_LEFT | DT_NOPREFIX);
-        const uint32_t ground = consolebox::groundAlpha(file.hudOpacity);  // 3.0.11-beta.209: as the panels
+        // 3.0.11-beta.260 (the tester: «написано непрозорим, а воно прозоре»): its ground opaque, not the panels'
+        const uint32_t ground = 255;
         for (size_t i = 0; i < size_t(w) * size_t(h); ++i) {
             const uint32_t c = px[i] & 0xFFFFFF;
             const uint32_t v = std::max({c & 0xFF, (c >> 8) & 0xFF, c >> 16});
@@ -705,6 +753,10 @@ void Console::draw(HWND game, const Config& file, const GpuTiming* timing) {
             const uint32_t r = (c >> 16) * a / 255, g = ((c >> 8) & 0xFF) * a / 255, b = (c & 0xFF) * a / 255;
             px[i] = a << 24 | r << 16 | g << 8 | b;
         }
+        drawnBox_ = RECT{box.x, box.y, box.x + w, box.y + h};  // 3.0.11-beta.260: where the mouse finds the rows
+        drawnFirstRow_ = line + line / 2 - line / 8;
+        drawnLine_ = line;
+        drawnVisible_ = visible;
         POINT at{0, 0};
         ClientToScreen(game, &at);
         POINT pos{at.x + box.x, at.y + box.y}, origin{0, 0};

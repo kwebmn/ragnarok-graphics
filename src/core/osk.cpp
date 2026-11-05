@@ -141,7 +141,7 @@ Layout layout(const Grid& g, int targetW, int targetH, float scale) {
 
 void paint(panel::Picture& out, const Layout& L, const Grid& g, Focus f, bool shift) {
     const float s = L.s;
-    panel::roundRect(out, L.glass, 12 * s, kCard, std::max(0.94f, uistyle::window()), kWhite, 0.12f, 1.0f * s);
+    panel::roundRect(out, L.glass, 12 * s, kCard, uistyle::window(), kWhite, 0.12f, 1.0f * s);
     panel::roundRect(out, L.line, 8 * s, kBlack, 0.35f, kGold, 0.6f, 1.0f * s);
     for (size_t r = 0; r < L.keys.size() && r < g.size(); ++r)
         for (size_t c = 0; c < L.keys[r].size() && c < g[r].size(); ++c) {

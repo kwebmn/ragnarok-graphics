@@ -63,7 +63,7 @@ int rowAt(const Layout& L, const std::vector<Item>& items, float x, float y) {
 
 void paint(panel::Picture& out, const Layout& L, const std::vector<Item>& items, int hover) {
     const float s = L.s;
-    panel::roundRect(out, L.glass, 10 * s, kCard, std::max(0.94f, uistyle::window()), kWhite, 0.14f, 1.0f * s);
+    panel::roundRect(out, L.glass, 10 * s, kCard, uistyle::window(), kWhite, 0.14f, 1.0f * s);
     for (size_t i = 0; i < L.rows.size() && i < items.size(); ++i) {
         const panel::Box& r = L.rows[i];
         if (items[i].separator) {

@@ -53,7 +53,7 @@ Hit hitTest(const Layout& L, float x, float y) {
 
 void paint(panel::Picture& out, const Layout& L, const Show& sh) {
     const float s = L.s;
-    panel::roundRect(out, L.glass, 12 * s, kCard, std::max(0.94f, uistyle::window()), kWhite, 0.12f, 1.0f * s);
+    panel::roundRect(out, L.glass, 12 * s, kCard, uistyle::window(), kWhite, 0.12f, 1.0f * s);
     for (int r = 0; r < 3; ++r) {
         if (!sh.present[r]) continue;
         if (sh.focus == r)

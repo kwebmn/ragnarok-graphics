@@ -38,6 +38,10 @@ public:
     }
     // 3.0.11-beta.209: opened at its next present (Alt+D in place of the game's detail window: win/detail_window)
     static void askOpen() { askedOpen_ = true; }
+    // 3.0.11-beta.260 (the tester: «не клікабельне»): the game window's mouse over the open console (its client's
+    // point; the wheel's the screen's) - a click chooses a row and switches it (a slider or a choice: its left half
+    // less, its right half more), the wheel scrolls; true: it was over the console (not the game's or the parts')
+    static bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result);
     // 3.0.11-beta.75: «Розмістити інтерфейс» chosen (the console closed with it) - true once
     bool takeLayoutAsk() {
         const bool asked = layoutAsked_;
@@ -91,6 +95,15 @@ private:
     static std::vector<Subclassed> subclassed_;
     static Console* active_;
     static bool askedOpen_;  // 3.0.11-beta.209
+    // 3.0.11-beta.260: Alt+D again closes it (the tester: «більш інтуітивно щоб і альт+д закривало»); the clicks and
+    // the wheel not taken yet (its box's point; 0: a wheel's step) and where the rows were drawn
+    bool closeAsked_ = false;
+    struct Click {
+        int x = 0, y = 0, wheel = 0;
+    };
+    std::vector<Click> clicks_;
+    RECT drawnBox_{};
+    int drawnFirstRow_ = 0, drawnLine_ = 0, drawnVisible_ = 0;
     static ULONGLONG skipCharUntil_;  // 2.6.22: the ~ key's own letter (` or ё) is not typed
 };
 

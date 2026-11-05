@@ -262,7 +262,7 @@ int scrolled(const Layout& L, int scroll, int notches) {
 
 void paint(panel::Picture& out, const Layout& L, const Card& c, const Show& sh) {
     const float s = L.s;
-    panel::roundRect(out, L.glass, 12 * s, kCard, std::max(0.92f, uistyle::window()), kWhite, 0.12f, 1.0f * s);
+    panel::roundRect(out, L.glass, 12 * s, kCard, uistyle::window(), kWhite, 0.12f, 1.0f * s);
     panel::roundRect(out, panel::Box{L.glass.x + 1 * s, L.glass.y + 1 * s, L.glass.w - 2 * s, L.body.y - 6 * s},
                      11 * s, kWhite, 0.035f);  // the title's band
     if (c.icon && c.icon->width > 0) put(out, *c.icon, L.icon);

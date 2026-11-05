@@ -713,6 +713,7 @@ void Context::endScene() {
         // 3.0.11-beta.108: «Речі», «Характеристики», «Навички», «Спорядження», the NPC talk, the shop and «Довідник»
         // in their stack's order - the last opened or clicked in on top (they were each in a place of its own)
         windowstack::draw(record, *renderer);
+        minimapproto::drawBig(record, *renderer, true);  // 3.0.11-beta.260: or over them, raised by a press
         itemswin::drawToast(record, *renderer);   // 3.0.11-beta.112: «+N …» of a thing come into the bag
         loginwin::drawToast(record, *renderer);   // 3.0.11-beta.175: «… додано на полицю»
         loginwin::drawVeil(record, *renderer);    // 3.0.11-beta.203: «Вхід у гру…» over the way in
@@ -779,6 +780,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
         expbars::draw(record, *renderer);       // 3.0.11-beta.236
         minimapproto::drawBig(record, *renderer);  // 3.0.11-beta.201
         windowstack::draw(record, *renderer);  // 3.0.11-beta.108
+        minimapproto::drawBig(record, *renderer, true);  // 3.0.11-beta.260
         itemswin::drawToast(record, *renderer);  // 3.0.11-beta.112
         loginwin::drawToast(record, *renderer);  // 3.0.11-beta.175
         loginwin::drawVeil(record, *renderer);   // 3.0.11-beta.203

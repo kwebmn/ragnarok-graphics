@@ -44,7 +44,14 @@ void frame(HWND game, const Show& show, double k, int targetWidth, int targetHei
 bool panelBox(int& x, int& y, int& w, int& h);
 void draw(FrameRecord& record, gpu::Renderer& renderer);
 // 3.0.11-beta.201: the big map - after the panels, under the windows (win/context)
-void drawBig(FrameRecord& record, gpu::Renderer& renderer);
+// 3.0.11-beta.260 (the tester: «інвентар та меню нпц перекриває, і клік по мапі не переводить її на передній план»):
+// as a window among them - opened or pressed it comes over the windows, a press in a window or another one opened
+// puts it under them again; drawBig(over) draws it where it stands now (called under and over the windows)
+void drawBig(FrameRecord& record, gpu::Renderer& renderer, bool over = false);
+bool bigOnTop();
+void lowerBig();
+// the mouse of the big map alone while it lies over the windows (before theirs)
+bool mouseBig(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result);
 // 3.0.11-beta.31: and the wheel over the map zooms it; the big map's clicks first
 bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result);
 // 3.0.11-beta.4 (the owner: «на Ctrl+Tab ничего не происходит»): Ctrl+Tab while the prototype is on - its look goes

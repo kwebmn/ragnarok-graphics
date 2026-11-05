@@ -12,32 +12,42 @@ struct Picture {
     int resource;  // its RCDATA id (src/win/class_art.rc)
 };
 constexpr Picture kPictures[] = {
-    {"assassin-cross.jpg", 3001}, {"champion.jpg", 3002},    {"clown.jpg", 3003},       {"creator.jpg", 3004},
-    {"gunslinger.jpg", 3005},     {"gypsy.jpg", 3006},       {"high-priest.jpg", 3007}, {"high-wizard.jpg", 3008},
-    {"lord-knight.jpg", 3009},    {"ninja.jpg", 3010},       {"paladin.jpg", 3011},     {"professor.jpg", 3012},
-    {"sniper.jpg", 3013},         {"soul-linker.jpg", 3014}, {"stalker.jpg", 3015},     {"star-gladiator.jpg", 3016},
-    {"whitesmith.jpg", 3017},
+    {"assassin-cross.jpg", 3001}, {"champion.jpg", 3002}, {"clown.jpg", 3003}, {"creator.jpg", 3004},
+    {"gunslinger.jpg", 3005}, {"gypsy.jpg", 3006}, {"high-priest.jpg", 3007}, {"high-wizard.jpg", 3008},
+    {"lord-knight.jpg", 3009}, {"ninja.jpg", 3010}, {"paladin.jpg", 3011}, {"professor.jpg", 3012},
+    {"sniper.jpg", 3013}, {"soul-linker.jpg", 3014}, {"stalker.jpg", 3015}, {"star-gladiator.jpg", 3016},
+    {"whitesmith.jpg", 3017}, {"acolyte.jpg", 3018}, {"alchemist.jpg", 3019}, {"archer.jpg", 3020},
+    {"assassin.jpg", 3021}, {"bard.jpg", 3022}, {"blacksmith.jpg", 3023}, {"crusader.jpg", 3024},
+    {"dancer.jpg", 3025}, {"hunter.jpg", 3026}, {"knight.jpg", 3027}, {"mage.jpg", 3028}, {"merchant.jpg", 3029},
+    {"monk.jpg", 3030}, {"novice.jpg", 3031}, {"priest.jpg", 3032}, {"rogue.jpg", 3033}, {"sage.jpg", 3034},
+    {"super-novice.jpg", 3035}, {"swordman.jpg", 3036}, {"taekwon.jpg", 3037}, {"thief.jpg", 3038},
+    {"wizard.jpg", 3039},
 };
 
 struct Job {
     int id;
     const char* file;
 };
-// The second class, the transcendent one, the baby (and the mounts): the transcendent's portrait
+// 3.0.11-beta.260 (the tester: «у тейквона і ганслінгера немає картінки»): every class its own portrait - the
+// novices, the first and the second classes (the high and the baby ones as theirs), the transcendent ones, the
+// expanded ones (Taekwon, Star Gladiator, Soul Linker, Gunslinger, Ninja); the mounts as the class
 constexpr Job kJobs[] = {
-    {7, "lord-knight.jpg"},     {13, "lord-knight.jpg"},    {4008, "lord-knight.jpg"},    {4014, "lord-knight.jpg"},
-    {4030, "lord-knight.jpg"},  {4036, "lord-knight.jpg"},  {8, "high-priest.jpg"},       {4009, "high-priest.jpg"},
-    {4031, "high-priest.jpg"},  {9, "high-wizard.jpg"},     {4010, "high-wizard.jpg"},    {4032, "high-wizard.jpg"},
-    {10, "whitesmith.jpg"},     {4011, "whitesmith.jpg"},   {4033, "whitesmith.jpg"},     {11, "sniper.jpg"},
-    {4012, "sniper.jpg"},       {4034, "sniper.jpg"},       {12, "assassin-cross.jpg"},   {4013, "assassin-cross.jpg"},
-    {4035, "assassin-cross.jpg"}, {14, "paladin.jpg"},      {21, "paladin.jpg"},          {4015, "paladin.jpg"},
-    {4022, "paladin.jpg"},      {4037, "paladin.jpg"},      {4044, "paladin.jpg"},        {15, "champion.jpg"},
-    {4016, "champion.jpg"},     {4038, "champion.jpg"},     {16, "professor.jpg"},        {4017, "professor.jpg"},
-    {4039, "professor.jpg"},    {17, "stalker.jpg"},        {4018, "stalker.jpg"},        {4040, "stalker.jpg"},
-    {18, "creator.jpg"},        {4019, "creator.jpg"},      {4041, "creator.jpg"},        {19, "clown.jpg"},
-    {4020, "clown.jpg"},        {4042, "clown.jpg"},        {20, "gypsy.jpg"},            {4021, "gypsy.jpg"},
-    {4043, "gypsy.jpg"},        {24, "gunslinger.jpg"},     {25, "ninja.jpg"},            {4047, "star-gladiator.jpg"},
-    {4048, "star-gladiator.jpg"}, {4049, "soul-linker.jpg"},
+    {0, "novice.jpg"}, {1, "swordman.jpg"}, {2, "mage.jpg"}, {3, "archer.jpg"}, {4, "acolyte.jpg"},
+    {5, "merchant.jpg"}, {6, "thief.jpg"}, {7, "knight.jpg"}, {8, "priest.jpg"}, {9, "wizard.jpg"},
+    {10, "blacksmith.jpg"}, {11, "hunter.jpg"}, {12, "assassin.jpg"}, {13, "knight.jpg"}, {14, "crusader.jpg"},
+    {15, "monk.jpg"}, {16, "sage.jpg"}, {17, "rogue.jpg"}, {18, "alchemist.jpg"}, {19, "bard.jpg"},
+    {20, "dancer.jpg"}, {21, "crusader.jpg"}, {23, "super-novice.jpg"}, {24, "gunslinger.jpg"}, {25, "ninja.jpg"},
+    {4001, "novice.jpg"}, {4002, "swordman.jpg"}, {4003, "mage.jpg"}, {4004, "archer.jpg"}, {4005, "acolyte.jpg"},
+    {4006, "merchant.jpg"}, {4007, "thief.jpg"}, {4008, "lord-knight.jpg"}, {4009, "high-priest.jpg"},
+    {4010, "high-wizard.jpg"}, {4011, "whitesmith.jpg"}, {4012, "sniper.jpg"}, {4013, "assassin-cross.jpg"},
+    {4014, "lord-knight.jpg"}, {4015, "paladin.jpg"}, {4016, "champion.jpg"}, {4017, "professor.jpg"},
+    {4018, "stalker.jpg"}, {4019, "creator.jpg"}, {4020, "clown.jpg"}, {4021, "gypsy.jpg"}, {4022, "paladin.jpg"},
+    {4023, "novice.jpg"}, {4024, "swordman.jpg"}, {4025, "mage.jpg"}, {4026, "archer.jpg"}, {4027, "acolyte.jpg"},
+    {4028, "merchant.jpg"}, {4029, "thief.jpg"}, {4030, "knight.jpg"}, {4031, "priest.jpg"}, {4032, "wizard.jpg"},
+    {4033, "blacksmith.jpg"}, {4034, "hunter.jpg"}, {4035, "assassin.jpg"}, {4036, "knight.jpg"},
+    {4037, "crusader.jpg"}, {4038, "monk.jpg"}, {4039, "sage.jpg"}, {4040, "rogue.jpg"}, {4041, "alchemist.jpg"},
+    {4042, "bard.jpg"}, {4043, "dancer.jpg"}, {4044, "crusader.jpg"}, {4045, "super-novice.jpg"},
+    {4046, "taekwon.jpg"}, {4047, "star-gladiator.jpg"}, {4048, "star-gladiator.jpg"}, {4049, "soul-linker.jpg"},
 };
 
 uint32_t at(const std::vector<uint32_t>& argb, int w, int h, int x, int y) {

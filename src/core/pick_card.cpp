@@ -99,7 +99,7 @@ Hit hitTest(const Layout& L, int scroll, size_t count, float x, float y) {
 
 void paint(panel::Picture& out, const Layout& L, const std::vector<Entry>& entries, const Show& sh) {
     const float s = L.s;
-    panel::roundRect(out, L.glass, 12 * s, kCard, std::max(0.94f, uistyle::window()), kWhite, 0.12f, 1.0f * s);
+    panel::roundRect(out, L.glass, 12 * s, kCard, uistyle::window(), kWhite, 0.12f, 1.0f * s);
     if (L.rows.empty()) panel::roundRect(out, L.list, 9 * s, kBlack, 0.20f);
     for (size_t i = 0; i < L.rows.size(); ++i) {
         const size_t at = i + size_t(std::max(0, sh.scroll));

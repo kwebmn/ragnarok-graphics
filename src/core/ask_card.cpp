@@ -109,7 +109,7 @@ int quickValue(Quick q, int most) {
 
 void paint(panel::Picture& out, const Layout& L, const Card& c, const Show& sh) {
     const float s = L.s;
-    panel::roundRect(out, L.glass, 12 * s, kCard, std::max(0.94f, uistyle::window()), kWhite, 0.12f, 1.0f * s);
+    panel::roundRect(out, L.glass, 12 * s, kCard, uistyle::window(), kWhite, 0.12f, 1.0f * s);
     if (L.field.w > 0) panel::roundRect(out, L.field, 7 * s, kBlack, 0.35f, kGold, 0.55f, 1.0f * s);
     for (size_t i = 0; i < L.quick.size(); ++i)  // 3.0.11-beta.155: a count's quick choices
         panel::roundRect(out, L.quick[i], 7 * s, kWhite, int(i) == sh.quickHover ? 0.14f : 0.06f, kWhite, 0.16f,

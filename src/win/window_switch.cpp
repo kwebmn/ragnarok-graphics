@@ -31,6 +31,7 @@
 #include "win/minimap_proto.hpp"
 #include "win/reference_window.hpp"
 #include "win/code_page.hpp"
+#include "win/console.hpp"
 #include "win/game_camera.hpp"
 #include "win/log.hpp"
 #include "win/log_slot.hpp"
@@ -76,8 +77,12 @@ bool partsMouse(HWND w, UINT m, WPARAM wp, LPARAM lp, LRESULT& answer) {
         return true;
     // 3.0.11-beta.115: a press over a window of the game's own (drawn over the driver's since beta.109) is the game's
     if (gamepress::pressOver(m)) return false;
-    return // 3.0.11-beta.108: the windows over the panels, the stack's top first (a press raises the one it is in)
-           windowstack::mouse(w, m, wp, lp, answer) ||
+    if (minimapproto::mouseBig(w, m, wp, lp, answer)) return true;  // 3.0.11-beta.260: the big map over the windows
+    if (windowstack::mouse(w, m, wp, lp, answer)) {  // 3.0.11-beta.108: the windows, the stack's top first
+        if (m == WM_LBUTTONDOWN || m == WM_RBUTTONDOWN || m == WM_LBUTTONDBLCLK) minimapproto::lowerBig();  // .260
+        return true;
+    }
+    return // the panels under the windows
            minimapproto::mouse(w, m, wp, lp, answer) ||  // 3.0.11-beta.1: the new minimap's
            buffcolumn::mouse(w, m, wp, lp, answer) ||    // 3.0.11-beta.35: the buffs' column's
            trackerwin::mouse(w, m, wp, lp, answer) ||    // 3.0.11-beta.70: the tracker's
@@ -126,6 +131,11 @@ LRESULT CALLBACK gameProc(HWND w, UINT m, WPARAM wp, LPARAM lp) {
                                  int(GetDoubleClickTime()), GetSystemMetrics(SM_CXDOUBLECLK) / 2,
                                  GetSystemMetrics(SM_CYDOUBLECLK) / 2))
                 pm = WM_LBUTTONDBLCLK;
+        }
+        LRESULT taken = 0;  // 3.0.11-beta.260: the open console's over everything
+        if (Console::mouse(w, pm, wp, lp, taken)) {
+            claimed(pm);
+            return taken;
         }
         // 3.0.11-beta.77 (the owner: «чтобы без быстрых кнопок можно было двигать, чтобы сразу все мышкой»): a press
         // on a part held till it moves (the part dragged) or is let go (the part's click after all, given first)

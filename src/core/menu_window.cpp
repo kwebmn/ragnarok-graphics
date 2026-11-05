@@ -84,7 +84,7 @@ int buttonAt(const Layout& L, float x, float y) {
 void paint(panel::Picture& out, const Layout& L, Kind k, const Show& sh, const Texts& t) {
     (void)t;
     const float s = L.s;
-    panel::roundRect(out, L.glass, 12 * s, kCard, std::max(0.92f, uistyle::window()), kWhite, 0.12f, 1.0f * s);
+    panel::roundRect(out, L.glass, 12 * s, kCard, uistyle::window(), kWhite, 0.12f, 1.0f * s);
     for (size_t i = 0; i < L.buttons.size(); ++i) {
         const panel::Box& b = L.buttons[i];
         const bool lit = int(i) == sh.hover || int(i) == sh.focus;

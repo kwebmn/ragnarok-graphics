@@ -70,7 +70,7 @@ bool closeAt(const Layout& L, float x, float y) { return L.close.contains(x, y);
 
 void paint(panel::Picture& out, const Layout& L, const Show& sh, const std::vector<panel::Picture>& icons) {
     const float s = L.s;
-    panel::roundRect(out, L.glass, 12 * s, kCard, std::max(0.94f, uistyle::window()), kWhite, 0.12f, 1.0f * s);
+    panel::roundRect(out, L.glass, 12 * s, kCard, uistyle::window(), kWhite, 0.12f, 1.0f * s);
     panel::roundRect(out, L.close, 6 * s, kWhite, sh.hoverClose ? 0.14f : 0.0f, kWhite, sh.hoverClose ? 0.3f : 0.0f,
                      1.0f * s);
     for (size_t i = 0; i < L.cells.size(); ++i) {

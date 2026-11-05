@@ -118,7 +118,7 @@ int gameButton(Part p) {
 
 void paint(panel::Picture& out, const Layout& L, const Card& c, const Show& sh) {
     const float s = L.s;
-    panel::roundRect(out, L.glass, 12 * s, kCard, std::max(0.94f, uistyle::window()), kWhite, 0.12f, 1.0f * s);
+    panel::roundRect(out, L.glass, 12 * s, kCard, uistyle::window(), kWhite, 0.12f, 1.0f * s);
     const bool tickHot = sh.hover == Part::Startup;
     panel::roundRect(out, L.tick, 4 * s, c.startup ? kGold : kWhite, c.startup ? 0.85f : (tickHot ? 0.14f : 0.06f),
                      c.startup ? kGold : kWhite, c.startup ? 1.0f : 0.35f, 1.0f * s);

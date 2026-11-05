@@ -56,7 +56,7 @@ Part hitTest(const Layout& L, float x, float y) {
 
 void paint(panel::Picture& out, const Layout& L, const Card& c, Part hover) {
     const float s = L.s;
-    panel::roundRect(out, L.glass, 12 * s, kCard, std::max(0.94f, uistyle::window()), kWhite, 0.12f, 1.0f * s);
+    panel::roundRect(out, L.glass, 12 * s, kCard, uistyle::window(), kWhite, 0.12f, 1.0f * s);
     panel::roundRect(out, L.close, 6 * s, kWhite, hover == Part::Close ? 0.14f : 0.0f, kWhite,
                      hover == Part::Close ? 0.3f : 0.0f, 1.0f * s);
     panel::roundRect(out, L.lines, 8 * s, kBlack, 0.25f, kWhite, 0.06f, 1.0f * s);

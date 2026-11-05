@@ -1,5 +1,5 @@
 // 3.0.11-beta.178 (the login concept's cards): the classes' pictures (core/class_art) - which job shows which of the
-// site's 17 portraits (the transcendent ones', their second classes, babies and mounts with them), their resources in
+// site's portraits (3.0.11-beta.260: every class its own; babies and mounts as theirs), their resources in
 // ddraw.dll, and a portrait laid over a card's place (its upper part, the rounded corners clear)
 #include <cstdint>
 #include <string>
@@ -20,11 +20,16 @@ std::string art(int job) {
 TEST(class_art_known_jobs) {
     CHECK(art(4009) == "high-priest.jpg" && art(4011) == "whitesmith.jpg" && art(4013) == "assassin-cross.jpg");
     CHECK(art(4008) == "lord-knight.jpg" && art(4014) == "lord-knight.jpg");  // on the Peco Peco too
-    CHECK(art(8) == "high-priest.jpg" && art(12) == "assassin-cross.jpg" && art(4031) == "high-priest.jpg");
+    // 3.0.11-beta.260: the second classes, their babies, the first ones, the novices and Taekwon each their own
+    CHECK(art(8) == "priest.jpg" && art(12) == "assassin.jpg" && art(4031) == "priest.jpg" && art(13) == "knight.jpg");
     CHECK(art(25) == "ninja.jpg" && art(24) == "gunslinger.jpg" && art(4047) == "star-gladiator.jpg");
-    CHECK(art(4049) == "soul-linker.jpg" && art(20) == "gypsy.jpg" && art(19) == "clown.jpg");
-    CHECK(classart::pictureFor(0) == nullptr && classart::pictureFor(4001) == nullptr);  // the novices, the first
-    CHECK(classart::pictureFor(1) == nullptr && classart::pictureFor(99999) == nullptr);
+    CHECK(art(4049) == "soul-linker.jpg" && art(4042) == "bard.jpg" && art(4020) == "clown.jpg");
+    CHECK(art(4046) == "taekwon.jpg" && art(0) == "novice.jpg" && art(4001) == "novice.jpg");
+    CHECK(art(23) == "super-novice.jpg" && art(4045) == "super-novice.jpg");
+    CHECK(art(1) == "swordman.jpg" && art(4002) == "swordman.jpg" && art(4029) == "thief.jpg");
+    CHECK(classart::pictureFor(22) == nullptr && classart::pictureFor(99999) == nullptr);  // the wedding suit
+    for (int job : {0, 1, 7, 23, 24, 25, 4001, 4008, 4023, 4030, 4045, 4046, 4047, 4048, 4049})
+        CHECK(classart::resourceOf(classart::pictureFor(job)) > 0);
     CHECK(classart::resourceOf("high-priest.jpg") > 0 && classart::resourceOf("nothing.jpg") == 0);
     CHECK(classart::resourceOf("ninja.jpg") != classart::resourceOf("paladin.jpg"));
 }

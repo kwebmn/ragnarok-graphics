@@ -41,6 +41,7 @@
 #include "win/real_ddraw.hpp"
 #include "win/reference_load.hpp"
 #include "win/reference_window.hpp"
+#include "win/window_stack.hpp"
 #include "win/ui_cost.hpp"
 
 namespace uagfx::win::minimapproto {
@@ -138,6 +139,7 @@ struct State {
     int keptLogged = 0;  // on this map
     // 3.0.11-beta.31 (the owner: «нету возможности карту развернуть на весь екран»): the map big in the middle
     bool big = false, bigDirty = true, bigUpload = true;
+    bool bigTop = false;  // 3.0.11-beta.260: over the windows
     minimap::Big bigLayout;
     minimap::BigPart bigPart = minimap::BigPart::None;
     panel::Picture bigMap, bigPicture;  // its map's picture alone (made once a map and a size), and all of it
@@ -924,6 +926,7 @@ void unblock() {
 void setBig(State& s, bool open) {
     if (s.big == open) return;
     s.big = open;
+    s.bigTop = open;  // 3.0.11-beta.260: opened - over the windows
     s.bigDirty = true;
     s.bigPaintedAt = 0;  // 3.0.11-beta.57: opened - painted at once
     s.bigPart = minimap::BigPart::None;
@@ -1243,8 +1246,18 @@ void draw(FrameRecord& record, gpu::Renderer& renderer) {
 
 // 3.0.11-beta.201 (the tester: «мапа має перекривати всі»): the big map apart - drawn after the panels (the chat, the
 // hotbar, the character's), under the windows
-void drawBig(FrameRecord& record, gpu::Renderer& renderer) {
+void drawBig(FrameRecord& record, gpu::Renderer& renderer, bool over) {
     State& s = state();
+    if (!over) {  // 3.0.11-beta.260: a window opened (another top of their stack) - the map under them again
+        static std::optional<winstack::Win> lastTop;
+        const std::optional<winstack::Win> top = windowstack::top();
+        if (top != lastTop && top && s.bigTop) {
+            s.bigTop = false;
+            LOG_INFO("minimap: the big map under the windows (one opened)");
+        }
+        lastTop = top;
+    }
+    if (over != s.bigTop) return;
     if (!s.shown || s.k <= 0 || !s.big || s.bigPicture.width <= 0) return;
     int cursor = -1, cx = 0, cy = 0;
     if (readGameCursor(cx, cy)) cursor = panel::cursorDraw(record, float(cx), float(cy));
@@ -1253,7 +1266,30 @@ void drawBig(FrameRecord& record, gpu::Renderer& renderer) {
     if (cursor >= 0) record.moveLastBefore(record.commands().size() - size_t(cursor) - 1, size_t(cursor));
 }
 
-bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
+bool bigOnTop() {
+    const State& s = state();
+    return s.shown && s.big && s.bigTop;
+}
+
+void lowerBig() {
+    State& s = state();
+    if (!s.bigTop) return;
+    s.bigTop = false;
+    if (s.big) LOG_INFO("minimap: the big map under the windows (a press in one)");
+}
+
+namespace {
+bool mouseOf(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result, bool bigOnly);
+}
+
+bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) { return mouseOf(game, m, wp, lp, result, false); }
+
+bool mouseBig(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
+    return bigOnTop() && mouseOf(game, m, wp, lp, result, true);
+}
+
+namespace {
+bool mouseOf(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result, bool bigOnly) {
     State& s = state();
     if (!s.shown) return false;
     const bool button = m == WM_LBUTTONDOWN || m == WM_LBUTTONUP || m == WM_LBUTTONDBLCLK || m == WM_RBUTTONDOWN ||
@@ -1268,6 +1304,10 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
         const float bx = tx - float(s.bigLayout.x), by = ty - float(s.bigLayout.y);
         const minimap::BigPart bp = minimap::bigPartAt(s.bigLayout, bx, by);
         if (bp != minimap::BigPart::None) {
+            if ((m == WM_LBUTTONDOWN || m == WM_RBUTTONDOWN) && !s.bigTop) {  // 3.0.11-beta.260: raised
+                s.bigTop = true;
+                LOG_INFO("minimap: the big map over the windows (pressed)");
+            }
             if (m == WM_LBUTTONDOWN && bp == minimap::BigPart::Close) setBig(s, false);
             if (m == WM_LBUTTONDOWN && bp == minimap::BigPart::Layer)  // 3.0.11-beta.119: a layer on or off
                 switchLayer(s, minimap::bigLayerAt(s.bigLayout, bx, by));
@@ -1298,7 +1338,7 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
             return true;
         }
     }
-    if (s.look == minimap::Look::Hidden) return false;
+    if (bigOnly || s.look == minimap::Look::Hidden) return false;
     const float px = tx - float(s.layout.x), py = ty - float(s.layout.y);
     const minimap::Part part = minimap::partAt(s.layout, px, py);
     if (part == minimap::Part::None) return false;
@@ -1360,6 +1400,7 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     result = 0;
     return true;
 }
+}  // namespace
 
 bool showBig(bool open) {
     State& s = state();

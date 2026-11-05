@@ -101,7 +101,7 @@ void paint(panel::Picture& out, const Layout& L, int count, int hover, Page page
             uint32_t& p = out.px[size_t(py) * size_t(out.width) + size_t(px)];
             const float edgeOut = std::clamp(L.outer - d + 0.5f, 0.0f, 1.0f);
             if (d < L.inner - 6 * s) {  // the middle: its own disc
-                panel::over(p, kCard, std::max(0.94f, uistyle::window()) * std::clamp(L.inner - 6 * s - d + 0.5f,
+                panel::over(p, kCard, uistyle::window() * std::clamp(L.inner - 6 * s - d + 0.5f,
                                                                                          0.0f, 1.0f));
                 continue;
             }

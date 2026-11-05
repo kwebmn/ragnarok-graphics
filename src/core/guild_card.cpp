@@ -98,7 +98,7 @@ void paint(panel::Picture& out, const Layout& L, const std::vector<Member>& memb
 void paint(panel::Picture& out, const Layout& L, const std::vector<Member>& members, const More& more,
            const Show& sh) {
     const float s = L.s;
-    panel::roundRect(out, L.glass, 12 * s, kCard, std::max(0.94f, uistyle::window()), kWhite, 0.12f, 1.0f * s);
+    panel::roundRect(out, L.glass, 12 * s, kCard, uistyle::window(), kWhite, 0.12f, 1.0f * s);
     panel::roundRect(out, L.close, 6 * s, kWhite, sh.hoverClose ? 0.14f : 0.06f);
     for (int i = 0; i < kTabs; ++i) {
         const bool on = int(sh.tab) == i, hot = sh.hoverTab == i && allowed(i, sh.rights);

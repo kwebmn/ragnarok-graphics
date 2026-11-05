@@ -77,7 +77,7 @@ Hit hitTest(const Layout& L, float x, float y) {
 
 void paint(panel::Picture& out, const Layout& L, const Card& c, const Show& sh) {
     const float s = L.s;
-    panel::roundRect(out, L.glass, 12 * s, kCard, std::max(0.94f, uistyle::window()), kWhite, 0.12f, 1.0f * s);
+    panel::roundRect(out, L.glass, 12 * s, kCard, uistyle::window(), kWhite, 0.12f, 1.0f * s);
     const bool closeHot = sh.hover.part == Part::Close;
     panel::roundRect(out, L.close, 6 * s, kWhite, closeHot ? 0.14f : 0.0f, kWhite, closeHot ? 0.3f : 0.0f, 1.0f * s);
     const auto field = [&](const panel::Box& b, bool focused, bool dim) {

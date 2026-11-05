@@ -63,6 +63,10 @@ struct State {
     int texW = 0, texH = 0;
     bool upload = false;
     int told = 0;
+    // 3.0.11-beta.260 (the tester: «вікно емоцій не перетягується»): moved by a press outside its emotions - its shift
+    // from the middle (the target's pixels, kept while the game runs), the press's point against it while dragged
+    float offX = 0, offY = 0, grabX = 0, grabY = 0;
+    bool dragging = false;
 };
 
 State& state() {
@@ -244,16 +248,33 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     readCommands(s, window);
     loadIcons(s, int(std::lround(ec::kIconSide * s.scale)));
     s.layout = ec::layout(targetWidth, targetHeight, s.scale);
-    s.show = ec::Show{};
     int cx = 0, cy = 0;
-    if (readGameCursor(cx, cy)) {
+    const bool cursor = readGameCursor(cx, cy);
+    if (s.dragging) {  // .260: it follows the cursor while the button is held
+        const int button = GetSystemMetrics(SM_SWAPBUTTON) ? VK_RBUTTON : VK_LBUTTON;
+        if (!cursor || GetAsyncKeyState(button) >= 0) {
+            s.dragging = false;
+        } else {
+            s.offX = float(cx) * float(k) - s.grabX;
+            s.offY = float(cy) * float(k) - s.grabY;
+        }
+    }
+    const float baseX = float(s.layout.x), baseY = float(s.layout.y);  // inside the screen, a hand of it at least
+    const float hand = 48 * s.scale;
+    s.offX = std::clamp(s.offX, hand - baseX - float(s.layout.w), float(targetWidth) - hand - baseX);
+    s.offY = std::clamp(s.offY, -baseY, float(targetHeight) - hand - baseY);
+    s.layout.x = int(std::lround(baseX + s.offX));
+    s.layout.y = int(std::lround(baseY + s.offY));
+    s.show = ec::Show{};
+    if (cursor) {
         const float lx = float(cx) * float(k) - float(s.layout.x), ly = float(cy) * float(k) - float(s.layout.y);
         s.show.hover = ec::cellAt(s.layout, lx, ly);
         s.show.hoverClose = ec::closeAt(s.layout, lx, ly);
     }
+    // .260: not its place (it is dragged), its size
     std::string key = std::to_string(s.show.hover) + (s.show.hoverClose ? "x" : "") + ';' +
-                      std::to_string(s.layout.x) + ',' + std::to_string(s.layout.y) + ',' + std::to_string(s.layout.w) +
-                      ';' + std::to_string(s.iconSide) + '#' + std::to_string(uistyle::generation());
+                      std::to_string(s.layout.w) + ';' + std::to_string(s.iconSide) + '#' +
+                      std::to_string(uistyle::generation());
     for (const std::string& c : s.commands) key += ';' + c;
     if (key != s.key) {
         s.key = key;
@@ -279,6 +300,11 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     State& s = state();
     (void)wp;
     if (!s.shown) return false;
+    if (s.dragging && m == WM_LBUTTONUP) {  // .260: the drag over, wherever the button comes up
+        s.dragging = false;
+        result = 0;
+        return true;
+    }
     const bool button = m == WM_LBUTTONDOWN || m == WM_LBUTTONUP || m == WM_LBUTTONDBLCLK || m == WM_RBUTTONDOWN ||
                         m == WM_RBUTTONUP || m == WM_RBUTTONDBLCLK || m == WM_MBUTTONDOWN || m == WM_MBUTTONUP;
     if (!button && m != WM_MOUSEWHEEL) return false;
@@ -293,7 +319,13 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
         return true;
     }
     const int i = ec::cellAt(s.layout, lx, ly);
-    if (i >= 0) use(s, i, m == WM_LBUTTONDBLCLK);
+    if (i >= 0) {
+        use(s, i, m == WM_LBUTTONDBLCLK);
+    } else if (m == WM_LBUTTONDOWN) {  // .260: outside the emotions - the card dragged
+        s.dragging = true;
+        s.grabX = tx - s.offX;
+        s.grabY = ty - s.offY;
+    }
     return true;
 }
 
