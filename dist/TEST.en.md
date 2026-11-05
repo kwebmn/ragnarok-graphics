@@ -1,3 +1,9 @@
+# uaRO Graphics 3.0.11-beta.263 — what's new
+
+**Skill lists in the new look** — all the client has, not only Teleport: weapon repair, weapon upgrade, forging and potions (Forging, Pharmacy), arrow crafting, cooking, the pet incubator. A row per choice, «Вибрати» and «Скасувати», a double click chooses at once. Only Auto Spell stays as it was (it lists skills, not things).
+
+**Party members' portraits:** a party member who is also in your guild gets a portrait on the map and minimap from the guild's list, even before you have seen them nearby.
+
 # uaRO Graphics 3.0.11-beta.262 — what's new
 
 **Minimap:** in a small game window the marks change size with the zoom more visibly — the smaller the window, the more (up to twice), so the difference shows on a small minimap too.
