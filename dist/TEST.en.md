@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.11-beta.253 — what's new
+
+- **The pad keeps your monster when you run away from it.** The target used to drop as soon as it was more than 15 cells away, and the next A took another monster. An archer who runs off and shoots again got switched to someone else. Now a monster you are already fighting, or picked with the right stick, is kept up to 24 cells. A still takes a new monster within 15 cells, as before.
+
 # uaRO Graphics 3.0.11-beta.252 — what's new
 
 - **Archers shoot distant monsters from the pad again** (report R-3T958C). When a monster is beyond the bow's reach, the server asks the game to walk the character up, and the game starts walking. Every new press of A sent the attack again, and the server stopped the walk on it, so the character stood still and never shot. Now pressing A again on the same target while the character walks up to it leaves the walk alone.
