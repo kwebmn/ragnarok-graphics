@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.11-beta.282 — what's new
+
+**Healer's alarm:** when someone of your party on your map falls under 30 % HP, a short chime sounds and their row on the party panel pulses red for 3 seconds. Switch «Healer's alarm» under «Interface», on (works with the party panel).
+
 # uaRO Graphics 3.0.11-beta.281 — what's new
 
 **Potions running low:** healing items on the hotbar are now watched like arrows: a soft chime when 10 are left and a lower one when they run out; the count on the cell turns red from 10 down. Switch «Potions running low» under «Interface», on.
