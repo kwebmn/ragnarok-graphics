@@ -32,6 +32,7 @@ struct Cell {
     std::string key;    // «F1», «Q», «,»
     std::string name;   // its skill's or item's words; "" an empty cell
     int level = 0;      // a skill's
+    int levelMost = 0;  // 3.0.11-beta.289: the level learned (the wheel's range 1 .. this; < 2 none)
     int count = -1;     // an item's in the bag (0: none there); -1 not an item
     bool low = false;   // 3.0.11-beta.281: a healing item 10 or fewer - its count red
     const panel::Picture* icon = nullptr;  // at iconSide(), premultiplied
@@ -93,6 +94,7 @@ struct Texts {
     std::string notHere;     // «Не тут · {1}»
     std::string unlearned;   // 3.0.11-beta.78: «Персонаж не має цієї навички»
     std::vector<std::string> reasons;  // by NotHere: «на цій карті телепорт заборонено», ...
+    std::string wheel;  // 3.0.11-beta.289: a skill's third line - «колесо — рівень (1–{1})»
 };
 // 3.0.11-beta.125 (the owner: «когда играю арчером, есть стрелы, и не видно сколько осталось ... чтобы словить момент
 // когда они заканчиваются»): the ammo worn on a pill over the bar's left end - its picture and how many, amber under 50,

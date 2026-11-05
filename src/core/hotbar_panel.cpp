@@ -103,6 +103,10 @@ std::vector<TipLine> tipLines(const Cell& c, const Texts& t) {
     if (noSp(c))
         return {{first, kText},
                 {settings::fmt(t.noSp, {std::to_string(c.spNeed), std::to_string(c.spHave)}), kSpWords}};
+    if (c.levelMost > 1 && !t.wheel.empty())  // 3.0.11-beta.289: the wheel sets its level
+        return {{first, kText},
+                {t.use, kMuted},
+                {settings::fmt(t.wheel, {std::to_string(c.levelMost)}), kMuted}};
     return {{first, kText}, {t.use, kMuted}};
 }
 

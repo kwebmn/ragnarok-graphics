@@ -5407,6 +5407,7 @@ constexpr Entry kTexts[] = {
      "швидких клавіш має три набори для кожного персонажа: Ctrl+Shift+1, 2, 3.",
      "Каждый персонаж хранит свои места и размеры частей интерфейса (общие, пока вы не измените их для него). Панель "
      "быстрых клавиш имеет три набора для каждого персонажа: Ctrl+Shift+1, 2, 3."},
+    {Text::HotbarWheelLevel, "wheel — level (1–{1})", "колесо — рівень (1–{1})", "колесо — уровень (1–{1})"},
     {Text::NpcTalkTag, "Talk", "Говорити", "Говорить"},  // 3.0.11-beta.256: the NPC's plate before its name comes
     {Text::InterfaceShop, "NPC shops", "Крамниці NPC", "Магазины NPC"},  // 3.0.11-beta.100
     {Text::InterfaceShopHint,  // 3.0.11-beta.101: the keys, the amount typed, the description

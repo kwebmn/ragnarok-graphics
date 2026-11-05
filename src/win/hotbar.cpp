@@ -193,6 +193,7 @@ struct State {
     std::string barOf;  // the character whose own bar the game's is now ("" none yet)
     int profile = 1;    // 3.0.11-beta.288 (the owner's feature 20): its bar's profile now (1-3, Ctrl+Shift+1..3)
     ULONGLONG profileShownAt = 0;
+    int levelTold = 0;  // 3.0.11-beta.289
     enum class BarStep : uint8_t { None, Put, Kept } barStep = BarStep::None;
     ULONGLONG barSince = 0, barReadAt = 0, barChangedAt = 0;
     hb::Bar barKept;                // as last kept for barOf
@@ -587,6 +588,7 @@ hb::Cell cellOf(State& s, int slot, const std::string& key, unsigned codePage) {
         c.selected = s.waiting > 0 && at.skillId == s.waiting;
         const auto learned = s.skills.find(at.skillId);
         const int level = at.level > 0 ? at.level : learned != s.skills.end() ? learned->second.level : 0;
+        c.levelMost = learned != s.skills.end() ? learned->second.level : 0;  // 3.0.11-beta.289: the wheel's
         int price = at.skillId > 0 ? skillcost::sp(at.skillId, level) : -1;
         if (learned != s.skills.end() && learned->second.level == level && learned->second.sp > 0)
             price = learned->second.sp;  // the server's own word for the level learned
@@ -704,6 +706,7 @@ hb::Texts texts() {
     t.battleOn = say(settings::Text::HotbarBattleOn);  // 3.0.11-beta.147
     t.battleOff = say(settings::Text::HotbarBattleOff);
     t.use = say(settings::Text::HotbarUse);
+    t.wheel = say(settings::Text::HotbarWheelLevel);  // 3.0.11-beta.289
     t.unlearned = say(settings::Text::HotbarUnlearned);  // 3.0.11-beta.78
     t.noSp = say(settings::Text::HotbarNoSp);
     t.notHere = say(settings::Text::HotbarNotHere);
@@ -1172,13 +1175,42 @@ void draw(FrameRecord& record, gpu::Renderer& renderer) {
     if (cursor >= 0) record.moveLastBefore(record.commands().size() - size_t(cursor) - 1, size_t(cursor));
 }
 
+// 3.0.11-beta.289 (the owner's feature 21: «Teleport 1-го рівня з панелі»): the wheel over a skill's cell - the level
+// it is used at, 1 .. the one learned (the game's own per cell, its S_SKILL_USE_LEVEL; Teleport at 1 warps at once
+// on uaRO - skip_teleport_lv1_menu), set by the game's setter as its loader sets it
+void wheelLevel(State& s, int cell, int step) {
+    const int slot = hb::gameSlot(s.mode, s.row, cell);
+    if (slot < 0 || slot >= kSlots) return;
+    Slot& at = s.slots[slot];
+    if (at.what.kind != hb::Slot::Kind::Skill || at.skillId <= 0) return;
+    const auto learned = s.skills.find(at.skillId);
+    const int most = learned != s.skills.end() ? learned->second.level : 0;
+    if (most <= 1) return;
+    const int now = at.level > 0 ? at.level : most, want = std::clamp(now + step, 1, most);
+    if (want == now) return;
+    static const int can = sameCode(kSetLevel, kSetLevelCode, sizeof kSetLevelCode) ? 1 : 0;
+    if (!can) {
+        if (s.levelTold++ < 3) LOG_INFO("hotbar: the game's level setter is not this build's - no level by the wheel");
+        return;
+    }
+    uint8_t row = 0;
+    readGame(kRow, &row, 1);
+    write8(kRow, uint8_t(slot / 9));
+    reinterpret_cast<SetLevelFn>(uintptr_t(kSetLevel))(kSession, want, slot);
+    write8(kRow, row < 3 ? row : 0);
+    if (const uint32_t window = gameBar())
+        reinterpret_cast<SendMsgFn>(uintptr_t(kSendMsg))(window, 0, kRefreshMsg, 0, 0, 0);
+    at.level = want;
+    s.key.clear();
+    if (s.levelTold++ < 20) LOG_INFO("hotbar: %s used at level %d now (the wheel)", nameOf(s, cell), want);
+}
+
 bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     State& s = state();
     if (!s.shown) return false;
     const bool button = m == WM_LBUTTONDOWN || m == WM_LBUTTONUP || m == WM_LBUTTONDBLCLK || m == WM_RBUTTONDOWN ||
                         m == WM_RBUTTONUP || m == WM_RBUTTONDBLCLK || m == WM_MBUTTONDOWN || m == WM_MBUTTONUP;
     if (!button && m != WM_MOUSEWHEEL) return false;
-    (void)wp;
     float tx = 0, ty = 0;  // 3.0.11-beta.43: where the game's cursor stands, as the hover
     if (!pointerInTarget(game, m, lp, s.k, s.targetW, s.targetH, tx, ty)) return false;
     const hb::Hit h = hb::hitTest(s.layout, tx - float(s.layout.x), ty - float(s.layout.y));
@@ -1197,6 +1229,8 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
             s.pressedUntil = ~0ULL;  // shown pressed while held
             s.key.clear();
         }
+    } else if (m == WM_MOUSEWHEEL && filled) {  // 3.0.11-beta.289: a skill's level to use, 1 .. learned
+        wheelLevel(s, h.cell, GET_WHEEL_DELTA_WPARAM(wp) > 0 ? 1 : -1);
     } else if (m == WM_RBUTTONDOWN && filled) {  // 3.0.11-beta.147: its card, the game's own
         const bool shownCard = card(s, h.cell);
         if (s.cardsTold++ < 10)
