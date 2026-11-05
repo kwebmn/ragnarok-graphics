@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.11-beta.265 — what's new
+
+**«Характеристики», stage 1 — checked against the server (R-VZ69Q2):** the Max HP and weight formulas follow the server's numbers now (HP: the 35 added after VIT's per cents; weight by the base STR). The rest matched. A report from a transcendent character (Alt+A open) helps the next check.
+
 # uaRO Graphics 3.0.11-beta.264 — what's new
 
 **«Характеристики» with explanations, stage 1 (nothing visible yet):** the driver now has the server's formulas and every class's numbers (HP, SP, weight, weapon delays, job bonuses, points per level). Opening «Характеристики» logs a check: what the server sent against what the formulas give. To check it: a character with no gear and no buffs, open Alt+A and send an in-game report.
