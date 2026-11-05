@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.11-beta.287 — what's new
+
+**Market price in tips:** in the items window, the storage and the cart, the tip over an item shows the site's market: «Market: from 12 000 z · 3 lots» — the cheapest active lot (per piece) and how many lots. The same data as the in-game reference, refreshed every few minutes.
+
 # uaRO Graphics 3.0.11-beta.286 — what's new
 
 **Search across characters:** the game now remembers what lies in each of your characters' bag and cart and in the account's storage (as last seen). When you search in the items window, the storage or the cart, a line at the bottom shows where else such things are: «Also: Storage ×12 · Anna ×3 · Boris, cart ×1». Open each character's items window once (the storage — open it) so the game learns its things.
