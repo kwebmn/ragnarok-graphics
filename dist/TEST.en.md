@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.11-beta.281 — what's new
+
+**Potions running low:** healing items on the hotbar are now watched like arrows: a soft chime when 10 are left and a lower one when they run out; the count on the cell turns red from 10 down. Switch «Potions running low» under «Interface», on.
+
 # uaRO Graphics 3.0.11-beta.280 — what's new
 
 **Boss timers:** when a boss dies in front of you, a «Bosses» panel shows on the right: name, map and the time left until it returns, by the server's rule (exactly its spawn delay after death). Once the time is up it shows «+» and how long ago. A click on a row removes it. Timers are kept between game starts. Switch «Boss timers» under «Interface», on; the panel's place is in the interface layout («MVP»).
