@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.11-beta.264 — what's new
+
+**«Характеристики» with explanations, stage 1 (nothing visible yet):** the driver now has the server's formulas and every class's numbers (HP, SP, weight, weapon delays, job bonuses, points per level). Opening «Характеристики» logs a check: what the server sent against what the formulas give. To check it: a character with no gear and no buffs, open Alt+A and send an in-game report.
+
 # uaRO Graphics 3.0.11-beta.263 — what's new
 
 **Skill lists in the new look** — all the client has, not only Teleport: weapon repair, weapon upgrade, forging and potions (Forging, Pharmacy), arrow crafting, cooking, the pet incubator. A row per choice, «Вибрати» and «Скасувати», a double click chooses at once. Only Auto Spell stays as it was (it lists skills, not things).
