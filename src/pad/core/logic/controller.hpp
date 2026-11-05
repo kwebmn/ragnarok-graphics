@@ -106,6 +106,7 @@ public:
     // 3.0.11-beta.87 (the concept's stage 3): the monster a light tilt of the right stick points at - where a push
     // would take the aim (a dashed ring under it); 0 none
     uint32_t preview() const { return preview_; }
+    int numberPlace() const;  // 3.0.11-beta.258: the number field's place value the D-pad changes (1, 10, 100 ...)
     // 3.0.11-beta.256 (the NPC concept, stage 2): the NPC the Talk button would take now - the one the right stick
     // pointed at last while it is within reach, else the nearest; 0 in a fight (a monster target fought) or none
     uint32_t npcTag(const WorldState& world, uint32_t nowMs) const;
@@ -268,6 +269,8 @@ private:
     uint32_t aimMs_ = 0;  // the aim's last tick
     NpcDialog dialog_ = NpcDialog::None;
     int number_ = 0;                       // what the pad put into the number field
+    int numberDigit_ = 0;                  // 3.0.11-beta.258: the place the D-pad changes (0 the units)
+    int lastNumber_ = 0;                   // 3.0.11-beta.258: the number given last (RB puts it)
     std::optional<uint32_t> bHeldSinceMs_;  // B held in a window without a button: closes it after a second
     double talkDirX_ = 0;                  // the right stick's direction on the map when it points (talk)
     double talkDirY_ = 0;

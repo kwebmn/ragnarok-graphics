@@ -18,7 +18,7 @@ void put(std::string& s, const std::string& key, const std::string& value) {
 
 }  // namespace
 
-std::string npcHint(NpcDialog d, Lang lang) {
+std::string npcHint(NpcDialog d, Lang lang, int digit) {
     Text t = Text::HintNext;
     switch (d) {
         case NpcDialog::None: return "";
@@ -29,6 +29,7 @@ std::string npcHint(NpcDialog d, Lang lang) {
         case NpcDialog::Number: t = Text::HintNumber; break;
     }
     std::string s = tr(lang, t);
+    put(s, "{DIGIT}", std::to_string(digit));
     put(s, "{A}", label(kPadA));
     put(s, "{B}", label(kPadB));
     put(s, "{LB}", label(kPadLB));
@@ -106,7 +107,7 @@ std::vector<HintPart> hintParts(const std::string& line, uint16_t key) {
     return out;
 }
 
-std::vector<HintPart> npcHintParts(NpcDialog d, Lang lang) {
+std::vector<HintPart> npcHintParts(NpcDialog d, Lang lang, int digit) {
     Text t = Text::HintNext;
     switch (d) {
         case NpcDialog::None: return {};
@@ -116,7 +117,9 @@ std::vector<HintPart> npcHintParts(NpcDialog d, Lang lang) {
         case NpcDialog::Menu: t = Text::HintMenu; break;
         case NpcDialog::Number: t = Text::HintNumber; break;
     }
-    return hintParts(tr(lang, t));
+    std::string s = tr(lang, t);
+    put(s, "{DIGIT}", std::to_string(digit));
+    return hintParts(s);
 }
 
 std::vector<HintPart> choiceHintParts(uint16_t key, Lang lang) { return hintParts(tr(lang, Text::HintChoose), key); }

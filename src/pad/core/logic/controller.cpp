@@ -45,6 +45,7 @@ constexpr uint32_t kDialogRepeatFirstMs = 400;  // a held D-pad in an NPC window
 constexpr uint32_t kDialogRepeatMs = 120;
 constexpr uint32_t kDialogForceCloseMs = 1000;  // B held this long closes a window the NPC left without a button
 constexpr int kNumberMax = 99999999;
+constexpr int kNumberDigits = 8;  // 3.0.11-beta.258
 
 bool due(const std::optional<uint32_t>& last, uint32_t now, uint32_t interval) {
     return !last || now - *last >= interval;
@@ -232,7 +233,10 @@ TickOutput Controller::tick(const PadState& pad, const WorldState& world, const 
             groundPress_.reset();
             out.notes.push_back("NPC window: the buttons answer it");
         }
-        if (view.dialog == NpcDialog::Number && dialog_ != NpcDialog::Number) number_ = 0;  // the client's "0"
+        if (view.dialog == NpcDialog::Number && dialog_ != NpcDialog::Number) {  // the client's "0"
+            number_ = 0;
+            numberDigit_ = 0;
+        }
         dialog_ = view.dialog;
         PadState still = pad;
         still.lx = still.ly = 0;
@@ -637,6 +641,12 @@ void Controller::fire(const Action& a, bool repeat, const WorldState& world, uin
 }
 
 // 0.7: a click on the NPC, as the client sends it; the server opens the dialog the way it does for a mouse click.
+int Controller::numberPlace() const {
+    int p = 1;
+    for (int i = 0; i < numberDigit_; ++i) p *= 10;
+    return p;
+}
+
 uint32_t Controller::npcTag(const WorldState& world, uint32_t now) const {
     if (target_ != 0 && targetAlive(world) && (wantAttack_ || attackSent_ || fought_)) return 0;
     return npcChoice_ != 0 ? npcChoice_ : pickNpc(world, now);
@@ -706,17 +716,23 @@ void Controller::answerDialog(NpcDialog d, uint16_t held, uint16_t down, uint32_
             if (a) out.dialog.push_back(DialogCommand::MenuOk);
             if (b) out.dialog.push_back(DialogCommand::MenuCancel);
             break;
-        case NpcDialog::Number: {
+        case NpcDialog::Number: {  // 3.0.11-beta.258 (the NPC concept, stage 4): by its digits
             int n = number_;
-            const std::pair<uint16_t, int> steps[] = {{kPadUp, 1},    {kPadDown, -1},   {kPadRB, 10},
-                                                      {kPadLB, -10},  {kPadRight, 100}, {kPadLeft, -100}};
-            for (const auto& [button, step] : steps)
-                if (dialogRepeat(button, held, down, now)) n = std::clamp(n + step, 0, kNumberMax);
+            if (dialogRepeat(kPadLeft, held, down, now)) numberDigit_ = std::min(numberDigit_ + 1, kNumberDigits - 1);
+            if (dialogRepeat(kPadRight, held, down, now)) numberDigit_ = std::max(numberDigit_ - 1, 0);
+            const int step = numberPlace();
+            if (dialogRepeat(kPadUp, held, down, now)) n = std::clamp(n + step, 0, kNumberMax);
+            if (dialogRepeat(kPadDown, held, down, now)) n = std::clamp(n - step, 0, kNumberMax);
+            if (down & kPadLB) n = 0;
+            if (down & kPadRB) n = lastNumber_;
             if (n != number_) {
                 number_ = n;
                 out.number = n;
             }
-            if (a) out.dialog.push_back(DialogCommand::NumberOk);
+            if (a) {
+                lastNumber_ = number_;
+                out.dialog.push_back(DialogCommand::NumberOk);
+            }
             break;
         }
     }

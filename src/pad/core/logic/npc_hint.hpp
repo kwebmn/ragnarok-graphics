@@ -10,7 +10,8 @@ namespace uapad {
 
 // 0.7: the line shown over the game while an NPC window takes the buttons (UTF-8), with the controller's own button
 // names (Cross and L1 on a PlayStation one); "" for no window.
-std::string npcHint(NpcDialog d, Lang lang);
+// 3.0.11-beta.258: `digit` - the number field's place value the D-pad changes (1, 10, 100 ...)
+std::string npcHint(NpcDialog d, Lang lang, int digit = 1);
 // 3.0.11-beta.85: the line while a support skill asks whom; `key`: the skill's own button (on the character)
 std::string choiceHint(uint16_t key, Lang lang);
 
@@ -28,7 +29,7 @@ struct HintPart {
     std::string words;
 };
 std::vector<HintPart> hintParts(const std::string& line, uint16_t key = 0);  // a line with {A}, {B}, ↑ ↓ ...
-std::vector<HintPart> npcHintParts(NpcDialog d, Lang lang);
+std::vector<HintPart> npcHintParts(NpcDialog d, Lang lang, int digit = 1);
 std::vector<HintPart> choiceHintParts(uint16_t key, Lang lang);
 std::vector<HintPart> windowHintParts(Lang lang);
 std::vector<HintPart> aimHintParts(uint16_t key, Lang lang);

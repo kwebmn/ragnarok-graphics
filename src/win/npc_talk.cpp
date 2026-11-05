@@ -380,6 +380,8 @@ void draw(FrameRecord& record, gpu::Renderer& renderer) {
 
 bool shown() { return state().shown; }
 
+bool numberOpen() { return inGameWorld() && window(kNumberWnd, kNumberClass) != 0; }
+
 bool padCommand(uapad::DialogCommand c) {
     using uapad::DialogCommand;
     State& s = state();

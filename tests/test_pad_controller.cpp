@@ -1701,20 +1701,31 @@ TEST(ctl_npc_menu_moves_with_repeat_and_answers) {
     CHECK(o.dialog.size() == 1 && o.dialog[0] == DialogCommand::MenuCancel);
 }
 
-TEST(ctl_npc_number_steps_by_1_10_100) {
+TEST(ctl_npc_number_by_its_digits) {  // 3.0.11-beta.258 (was by 1 / 10 / 100)
     Controller c(Config{});
     WorldState w = npcWorld();
     const ViewInfo num = dialogView(NpcDialog::Number);
     CHECK(!c.tick(pad(kPadDown), w, num, 1000).number);  // not below 0
     c.tick(pad(), w, num, 1050);
     CHECK(c.tick(pad(kPadUp), w, num, 1100).number == std::optional<int>(1));
-    CHECK(c.tick(pad(kPadRB), w, num, 1200).number == std::optional<int>(11));
-    CHECK(c.tick(pad(kPadRight), w, num, 1300).number == std::optional<int>(111));
-    CHECK(c.tick(pad(kPadLB), w, num, 1400).number == std::optional<int>(101));
-    TickOutput o = c.tick(pad(kPadA), w, num, 1500);
+    c.tick(pad(), w, num, 1150);
+    c.tick(pad(kPadLeft), w, num, 1200);  // the tens
+    c.tick(pad(), w, num, 1250);
+    c.tick(pad(kPadLeft), w, num, 1300);  // the hundreds
+    CHECK_EQ(c.numberPlace(), 100);
+    c.tick(pad(), w, num, 1350);
+    CHECK(c.tick(pad(kPadUp), w, num, 1400).number == std::optional<int>(101));
+    c.tick(pad(), w, num, 1450);
+    c.tick(pad(kPadRight), w, num, 1500);  // the tens
+    c.tick(pad(), w, num, 1550);
+    CHECK(c.tick(pad(kPadUp), w, num, 1600).number == std::optional<int>(111));
+    TickOutput o = c.tick(pad(kPadA), w, num, 1700);
     CHECK(o.dialog.size() == 1 && o.dialog[0] == DialogCommand::NumberOk);
-    c.tick(pad(), w, view(), 1600);  // a new number field starts from the client's 0 again
-    CHECK(c.tick(pad(kPadUp), w, num, 1700).number == std::optional<int>(1));
+    c.tick(pad(), w, view(), 1800);  // a new number field starts from the client's 0 again, the units
+    CHECK(c.tick(pad(kPadRB), w, num, 1900).number == std::optional<int>(111));  // RB: the last one
+    CHECK_EQ(c.numberPlace(), 1);
+    c.tick(pad(), w, num, 1950);
+    CHECK(c.tick(pad(kPadLB), w, num, 2000).number == std::optional<int>(0));    // LB: 0
 }
 
 TEST(ctl_npc_window_without_a_button_closes_with_b_held) {
@@ -1752,9 +1763,10 @@ TEST(ctl_hint_parts) {
     p = npcHintParts(NpcDialog::Waiting, Lang::Uk);
     CHECK(p.size() == 2 && p[0].buttons.empty() && p[0].words == "NPC говорить");
     CHECK(p[1].before == "утримати" && p[1].buttons == std::vector<uint16_t>({kPadB}) && p[1].words == "закрити");
-    p = npcHintParts(NpcDialog::Number, Lang::En);
-    CHECK(p.size() == 4 && p[1].buttons == std::vector<uint16_t>({kPadLB, kPadRB}) && p[1].words == "±10");
-    CHECK(p[2].buttons == std::vector<uint16_t>({kPadLeft, kPadRight}));
+    p = npcHintParts(NpcDialog::Number, Lang::En, 100);  // 3.0.11-beta.258: by the digits
+    CHECK(p.size() == 5 && p[0].buttons == std::vector<uint16_t>({kPadLeft, kPadRight}) && p[0].words == "digit");
+    CHECK(p[1].buttons == std::vector<uint16_t>({kPadUp, kPadDown}) && p[1].words == "±100");
+    CHECK(p[3].buttons == std::vector<uint16_t>({kPadRB}) && p[3].words == "last");
     p = choiceHintParts(kPadY, Lang::Uk);
     CHECK(p.size() == 4 && p[2].buttons == std::vector<uint16_t>({kPadY}) && p[2].words == "на себе");
     CHECK(npcHintParts(NpcDialog::None, Lang::En).empty());
@@ -1785,7 +1797,7 @@ TEST(ctl_npc_hint_names_the_buttons) {
     CHECK(npcHint(NpcDialog::Menu, Lang::Ru) == "↑ ↓: выбор  ·  A: OK  ·  B: отмена");
     useSonyLabels(true);
     CHECK(npcHint(NpcDialog::Close, Lang::Uk) == "Cross / Circle: закрити");
-    CHECK(npcHint(NpcDialog::Number, Lang::En).find("L1 / R1: ±10") != std::string::npos);
+    CHECK(npcHint(NpcDialog::Number, Lang::En).find("R1: last") != std::string::npos);
     useSonyLabels(false);
 }
 

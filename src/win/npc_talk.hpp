@@ -26,6 +26,7 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result);
 bool key(UINT m, WPARAM wp, LPARAM lp);
 void beforeGameDraw();
 bool shown();
+bool numberOpen();  // 3.0.11-beta.258: the game's number field open (its hint line shows the digits)
 // 3.0.11-beta.255 (the concept «Разговор с NPC с геймпада», stage 1): a controller's command for the talk while this
 // window shows - the menu's moves by its two columns (D-pad, LB / RB), A's (Next, OK) held kGuardMs after a new page
 // or menu; true when taken here (done or held), false: the pad's own way (client_npc)

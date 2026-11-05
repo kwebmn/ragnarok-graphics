@@ -1188,6 +1188,7 @@ void answerNpc(const TickOutput& out, const ViewInfo& view, const PadState& pad)
     const bool shown = pad.connected && view.focused && !view.paused;
     // 3.0.11-beta.93: a window B closes open while the player plays with the pad
     const bool closing = s.windows.last() >= 0 && s.mode.padShown(GetTickCount64());
+    const int place = s.session->controller().numberPlace();  // 3.0.11-beta.258
     // 3.0.11-beta.179: the login screen's own line (its window takes the pad: the game paused for it)
     const LoginHint login = pad.connected && view.focused && s.padTop && *s.padTop == uagfx::winstack::Win::Login
                                 ? uagfx::win::loginwin::padHint()
@@ -1196,14 +1197,14 @@ void answerNpc(const TickOutput& out, const ViewInfo& view, const PadState& pad)
                              : !shown          ? std::string()
                              : aimKey != 0     ? aimHint(aimKey, s.cfg.lang)
                              : choiceKey != 0  ? choiceHint(choiceKey, s.cfg.lang)
-                             : s.cfg.npcHint && answering ? npcHint(view.dialog, s.cfg.lang)
+                             : s.cfg.npcHint && answering ? npcHint(view.dialog, s.cfg.lang, place)
                              : closing && view.dialog == NpcDialog::None ? windowHint(s.cfg.lang)
                                                           : std::string();
     s.hintParts = text.empty()     ? std::vector<HintPart>{}  // 3.0.11-beta.92: for the interface's own line
                   : login != LoginHint::None ? loginHintParts(login, s.cfg.lang)
                   : aimKey != 0    ? aimHintParts(aimKey, s.cfg.lang)
                   : choiceKey != 0 ? choiceHintParts(choiceKey, s.cfg.lang)
-                  : s.cfg.npcHint && answering ? npcHintParts(view.dialog, s.cfg.lang)
+                  : s.cfg.npcHint && answering ? npcHintParts(view.dialog, s.cfg.lang, place)
                                                : windowHintParts(s.cfg.lang);
     if (s.ownHints) {  // drawn by the interface: the pad's own window away
         if (!s.shownHint.empty()) hint::hide();

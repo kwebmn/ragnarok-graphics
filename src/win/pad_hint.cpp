@@ -55,7 +55,9 @@ void frame(HWND game, bool on, double k, int targetWidth, int targetHeight) {
     uapad::runtime::setOwnHints(on);
     s.parts.clear();
     // .98: the NPC talk's own footer; .100: the shop's
-    if (on && game && k > 0 && targetWidth > 0 && targetHeight > 0 && !npcwin::shown() && !shopwin::shown())
+    // 3.0.11-beta.258: over the talk too while the game's number field is open (its digits' hint)
+    const bool talk = npcwin::shown() && !npcwin::numberOpen();
+    if (on && game && k > 0 && targetWidth > 0 && targetHeight > 0 && !talk && !shopwin::shown())
         for (const uapad::HintPart& p : uapad::runtime::hints()) {
             ph::Part part{p.before, {}, p.words};
             for (uint16_t b : p.buttons) {

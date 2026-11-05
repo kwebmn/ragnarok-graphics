@@ -63,8 +63,10 @@ const Entry kTexts[] = {
      "NPC говорит  ·  удерживать {B}: закрыть"},
     {"↑ ↓: choose  ·  {A}: OK  ·  {B}: cancel", "↑ ↓: вибір  ·  {A}: OK  ·  {B}: скасувати",
      "↑ ↓: выбор  ·  {A}: OK  ·  {B}: отмена"},
-    {"↑ ↓: ±1  ·  {LB} / {RB}: ±10  ·  ← →: ±100  ·  {A}: OK", "↑ ↓: ±1  ·  {LB} / {RB}: ±10  ·  ← →: ±100  ·  {A}: OK",
-     "↑ ↓: ±1  ·  {LB} / {RB}: ±10  ·  ← →: ±100  ·  {A}: OK"},
+    // 3.0.11-beta.258 (the NPC concept, stage 4): the number by its digits - {DIGIT} the place's value
+    {"← →: digit  ·  ↑ ↓: ±{DIGIT}  ·  {LB}: 0  ·  {RB}: last  ·  {A}: OK",
+     "← →: розряд  ·  ↑ ↓: ±{DIGIT}  ·  {LB}: 0  ·  {RB}: минуле  ·  {A}: OK",
+     "← →: разряд  ·  ↑ ↓: ±{DIGIT}  ·  {LB}: 0  ·  {RB}: прошлое  ·  {A}: OK"},
     {"Reference (uaRO Graphics)", "Довідник (uaRO Graphics)", "Справочник (uaRO Graphics)"},
     {"↑ ↓: whom  ·  {A}: cast  ·  {KEY}: on yourself  ·  {B}: cancel",
      "↑ ↓: кому  ·  {A}: застосувати  ·  {KEY}: на себе  ·  {B}: скасувати",
