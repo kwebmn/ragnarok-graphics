@@ -165,6 +165,15 @@ void trace(State& s, uint16_t id, const uint8_t* data, ULONGLONG now) {
         away = std::max(std::abs(e.shownX - e.a), std::abs(e.shownY - e.b));
         what = "walks from";
     }
+    // 3.0.11-beta.248 (the owner: «моб бьет стоя гдето далеко»): a hit at the character from 2+ cells as shown
+    float own[3] = {};
+    int w = 0, h = 0, cell = 0;
+    minimap::Cell ownAt;
+    if (e.kind == Kind::HitsMe && e.shownX >= 0 && readPlayerWorld(own, w, h, cell) &&
+        minimap::cellOf(own[0], own[2], w, h, cell, ownAt)) {
+        away = std::max(std::abs(e.shownX - ownAt.x), std::abs(e.shownY - ownAt.y));
+        what = "hits the character from";
+    }
     if (!what || away < 2) return;
     char why[80];
     std::snprintf(why, sizeof why, "%s %d cells from where the game showed it", what, away);

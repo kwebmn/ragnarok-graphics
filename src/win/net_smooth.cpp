@@ -47,6 +47,7 @@ struct State {
     std::vector<Pending> pending;
     std::vector<Fade> fades;
     int eased = 0, told = 0, faded = 0, fadesTold = 0;
+    int leftTold = 0;  // 3.0.11-beta.248 (R-AMNV99): glides the game took over before their end
 };
 
 State& state() {
@@ -216,6 +217,13 @@ void beginScene() {
         const bool ours = (samePlace(at[0], gl.lastX) && samePlace(at[2], gl.lastZ)) ||
                           (samePlace(at[0], gl.restX) && samePlace(at[2], gl.restZ));
         if (gl.wrote && !ours) {
+            // 3.0.11-beta.248 (R-AMNV99 «моб бьет стоя гдето далеко»): the game moved it before the end - the
+            // server's cell never told by us then
+            if (s.leftTold < 20) {
+                ++s.leftTold;
+                LOG_INFO("net: the glide of %u to %d, %d left to the game after %u of %u ms - it moved the unit itself",
+                         gl.g.id, gl.cellX, gl.cellY, unsigned(now - gl.g.startMs), gl.g.durationMs);
+            }
             it = s.glides.erase(it);
             continue;
         }
