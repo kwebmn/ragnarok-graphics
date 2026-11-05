@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.11-beta.280 — what's new
+
+**Boss timers:** when a boss dies in front of you, a «Bosses» panel shows on the right: name, map and the time left until it returns, by the server's rule (exactly its spawn delay after death). Once the time is up it shows «+» and how long ago. A click on a row removes it. Timers are kept between game starts. Switch «Boss timers» under «Interface», on; the panel's place is in the interface layout («MVP»).
+
 # uaRO Graphics 3.0.11-beta.279 — what's new
 
 **Monster card by the cursor:** point the mouse at a monster (or pick a target with the controller) and a card shows next to it: name and level, HP, element, race and size, your chance to hit it, its chance to hit you, its blow after your DEF and its damage per second, your blow and how many blows it takes. Worked out by the server's rules (without element, size and cards). Switch «Monster card by the cursor» under «Interface», on.
