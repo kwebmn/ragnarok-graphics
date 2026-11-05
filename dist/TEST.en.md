@@ -1,3 +1,9 @@
+# uaRO Graphics 3.0.11-beta.242 — what's new
+
+**The chat, stage three:**
+- **Whispers by person.** On «Whisper», under the tabs, a row of names (the latest first), each with its unread. A click on a name shows only that talk and the input goes to that person; «All» - everyone again.
+- **A name's menu.** A right click on a name in any chat line: «Whisper», «Block whispers» (puts the game's own «/ex Name» into the field - press Enter), «Copy the name».
+
 # uaRO Graphics 3.0.11-beta.241 — what's new
 
 **The chat, stage two:**
