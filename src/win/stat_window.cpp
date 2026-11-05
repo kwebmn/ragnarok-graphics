@@ -12,6 +12,7 @@
 #include "core/char_status.hpp"
 #include "core/layout.hpp"
 #include "core/settings/strings.hpp"
+#include "core/stat_math.hpp"
 #include "core/stat_window.hpp"
 #include "core/ui_style.hpp"
 #include "pad/win/game_window.hpp"
@@ -122,6 +123,39 @@ void keepState(const State& s) {
     if (!writeFileAtomic(path, std::string(text))) LOG_INFO("stats: %s cannot be written", path.c_str());
 }
 
+// 3.0.11-beta.264 (the «Характеристики» concept, stage 1): the server's numbers against core/stat_math's from the
+// stats alone - told the log once a change (20 at most): with nothing worn and no buffs they must be the same; a
+// difference elsewhere is the things' and the buffs' (or a formula of ours to look at)
+constexpr uint32_t kJobAt = 0x771F8C;
+void serverCheck(const charstatus::Status& st) {
+    namespace sm = uagfx::statmath;
+    static std::string told;
+    static int times = 0;
+    const int job = int(read32(kJobAt)), lv = st.baseLevel;
+    if (lv <= 0 || times >= 20) return;
+    int t[sm::kStats];
+    for (int i = 0; i < sm::kStats; ++i) t[i] = st.statBase[i] + st.statBonus[i];
+    std::string aspdWeapons;  // the job's weapons that give the server's ASPD with these stats
+    for (int w = 0; w < sm::kWeapons; ++w) {
+        const int a = sm::amotion(job, w, t[sm::Agi], t[sm::Dex]);
+        if (a > 0 && sm::aspd10(a) / 10 == st.aspd) aspdWeapons += (aspdWeapons.empty() ? "" : ",") + std::to_string(w);
+    }
+    char line[512];
+    std::snprintf(line, sizeof line,
+                  "job %d lv %d/%d: ATK %d (ours %d melee, %d ranged), MATK %d~%d (%d~%d), HIT %d (%d), FLEE %d (%d), "
+                  "CRIT %d (%d.%d), MDEF+%d (%d), HP %d (%d), SP %d (%d), weight %d (%d), ASPD %d (weapons %s)",
+                  job, lv, st.jobLevel, st.atk, sm::atk(t, 0), sm::atk(t, 11), st.matkMin, st.matkMax,
+                  sm::matkMin(t[sm::Int]), sm::matkMax(t[sm::Int]), st.hit, sm::hit(lv, t[sm::Dex]), st.flee,
+                  sm::flee(lv, t[sm::Agi]), st.crit, sm::crit10(t[sm::Luk]) / 10, sm::crit10(t[sm::Luk]) % 10, st.mdef2,
+                  sm::softMdef(t[sm::Int], t[sm::Vit]), st.hpMost, sm::maxHp(job, lv, t[sm::Vit]), st.spMost,
+                  sm::maxSp(job, lv, t[sm::Int]), st.weightMost, sm::weightMost(job, t[sm::Str]), st.aspd,
+                  aspdWeapons.empty() ? "none" : aspdWeapons.c_str());
+    if (line == told) return;
+    told = line;
+    ++times;
+    LOG_INFO("stats: the server's against the formulas - %s", line);
+}
+
 void readData(State& s) {
     charstatus::Status st;
     if (!readOwnStatus(st)) return;
@@ -145,6 +179,7 @@ void readData(State& s) {
     d.flee = st.flee;
     d.flee2 = st.flee2;
     d.aspd = st.aspd;
+    serverCheck(st);  // 3.0.11-beta.264
 }
 
 sw::Texts texts() {
