@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "core/char_diary.hpp"
+#include "core/char_select.hpp"
 #include "core/shot_spec.hpp"
 #include "test.hpp"
 
@@ -73,4 +74,17 @@ TEST(char_diary_session_summary) {
     e.sessionSeconds = 600;
     d["Ліра"] = e;
     CHECK(chardiary::parse(chardiary::text(d)).at("Ліра").zenyGain == 12500);
+}
+
+// 3.0.11-beta.275 (feature 2): the carousel - the places round the chosen one, each once when fewer than five
+TEST(char_select_carousel_places) {
+    CHECK(charselect::placeAt(0, 2, 9) == 0 && charselect::placeAt(0, 1, 9) == 8 && charselect::placeAt(0, 4, 9) == 2);
+    CHECK(charselect::placeAt(8, 3, 9) == 0);
+    CHECK(charselect::placeAt(0, 0, 3) == -1 && charselect::placeAt(0, 1, 3) == 2 && charselect::placeAt(0, 3, 3) == 1);
+    CHECK(charselect::placeAt(1, 4, 4) == -1 && charselect::placeAt(1, 0, 4) == 3);  // four: two left, one right
+    CHECK(charselect::placeAt(0, 2, 1) == 0 && charselect::placeAt(0, 1, 1) == -1);
+    const charselect::Layout L = charselect::carouselLayout(1920, 1080, 1.0f);
+    CHECK(L.carousel && L.slots.size() == 5 && L.slots[2].w > L.slots[1].w && L.slots[1].w > L.slots[0].w);
+    const charselect::Hit mid = charselect::hitTest(L, L.slots[2].x + L.slots[2].w / 2, L.slots[2].y + 20);
+    CHECK(mid.part == charselect::Part::Slot && mid.index == 2);  // the middle over its neighbours
 }

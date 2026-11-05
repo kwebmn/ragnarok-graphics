@@ -327,6 +327,10 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("equip", flag(running.equipWindow), flag(file.equipWindow)));
         n.equipWindow = file.equipWindow;
     }
+    if (file.charCarousel != running.charCarousel) {  // 3.0.11-beta.275: the character select's look, at once
+        u.applied.push_back(change("char_carousel", flag(running.charCarousel), flag(file.charCarousel)));
+        n.charCarousel = file.charCarousel;
+    }
     if (file.portraits != running.portraits) {  // 3.0.11-beta.273: the character's picture, at once
         u.applied.push_back(change("portraits", flag(running.portraits), flag(file.portraits)));
         n.portraits = file.portraits;

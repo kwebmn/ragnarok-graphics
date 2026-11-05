@@ -71,6 +71,9 @@ struct State {
     std::string wanted;         // 3.0.11-beta.176: «Одразу в гру»'s character (UTF-8)
     ULONGLONG wantedAt = 0, stepAt = 0;
     bool makeWanted = false;  // 3.0.11-beta.181: a character made on the first empty place
+    bool carousel = false;    // 3.0.11-beta.275: [interface] char_carousel
+    int goTo = -1;            // .275: the place (of all pages) the carousel steps the game's choice to
+    std::vector<int> shownPlaces;  // .275: the place each position shows (-1 none)
 };
 
 State& state() {
@@ -115,13 +118,13 @@ void hold(State& s, uint32_t window, bool on) {
 uint16_t u16(const uint8_t* p, size_t at) { return uint16_t(p[at] | p[at + 1] << 8); }
 
 // The page's three characters as the game mode gives them
-std::vector<cs::Slot> slotsOf(State& s, int page) {
+std::vector<cs::Slot> slotsOf(State& s, int page, float faceScale = 1.0f) {
     std::vector<cs::Slot> out(3);
     const uint32_t mode = read32(kModeNow);
     const uint32_t send = mode ? read32(read32(mode) + kModeMsgSlot) : 0;
     if (!send) return out;
     const int sex = read32(kSex) != 0 ? 1 : 0;
-    const int side = cs::faceSide(s.scale);
+    const int side = cs::faceSide(s.scale * faceScale);
     for (int i = 0; i < 3; ++i) {
         const uint32_t info = reinterpret_cast<ModeMsgFn>(uintptr_t(send))(mode, kInfoMsg, page * 3 + i, 0, 0);
         uint8_t raw[kInfoSize] = {};
@@ -309,6 +312,24 @@ void wantFrame(State& s, uint32_t window) {
     }
 }
 
+// 3.0.11-beta.275: the carousel's choice made the game's - its page, then its place, a step a frame
+void goToFrame(State& s, uint32_t window) {
+    const ULONGLONG now = GetTickCount64();
+    if (s.goTo < 0 || now - s.stepAt < 150) return;
+    const int page = s.goTo / 3, place = s.goTo % 3, pageNow = int(read32(window + kPage));
+    s.stepAt = now;
+    if (page != pageNow) send(s, 0, cs::pageButton(page > pageNow), "a page (the carousel)");
+    else if (place != int(read32(window + kChosen))) choose(s, place);
+    else s.goTo = -1;
+}
+
+void step(State& s, int by) {  // .275: the carousel one place on (round)
+    const int total = s.show.pages * 3;
+    if (total <= 0) return;
+    const int now = s.goTo >= 0 ? s.goTo : s.show.page;  // carousel: show.page holds the chosen place
+    s.goTo = ((now + by) % total + total) % total;
+}
+
 void press(State& s, cs::Button b) {
     const int chosen = s.show.selected;
     const cs::Slot none;
@@ -321,6 +342,13 @@ void press(State& s, cs::Button b) {
 }
 
 }  // namespace
+
+void setCarousel(bool on) {  // 3.0.11-beta.275
+    State& s = state();
+    if (on != s.carousel) LOG_INFO("characters: [interface] char_carousel = %d", on ? 1 : 0);
+    s.carousel = on;
+    s.key.clear();
+}
 
 void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int targetHeight) {
     State& s = state();
@@ -354,8 +382,30 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     s.show.pages = std::clamp(int(read32(window + kPages)), 1, 3);
     s.show.page = std::clamp(int(read32(window + kPage)), 0, s.show.pages - 1);
     s.show.selected = std::clamp(int(read32(window + kChosen)), 0, 2);
-    s.slots = slotsOf(s, s.show.page);
-    s.layout = cs::layout(targetWidth, targetHeight, s.scale);
+    if (s.carousel) {  // 3.0.11-beta.275: every page's places round the chosen one
+        goToFrame(s, window);
+        const int total = s.show.pages * 3, chosen = s.show.page * 3 + s.show.selected;
+        s.layout = cs::carouselLayout(targetWidth, targetHeight, s.scale);
+        s.slots.assign(cs::kPositions, cs::Slot{});
+        s.shownPlaces.assign(cs::kPositions, -1);
+        for (int p = 0; p < cs::kPositions; ++p) {
+            const int place = cs::placeAt(chosen, p, total);
+            s.shownPlaces[size_t(p)] = place;
+            if (place < 0) {
+                s.slots[size_t(p)].none = true;
+                continue;
+            }
+            const int pg = place / 3;
+            const std::vector<cs::Slot> one = slotsOf(s, pg, s.layout.scales[size_t(p)]);
+            s.slots[size_t(p)] = one[size_t(place % 3)];
+        }
+        s.show.selected = cs::kMiddle;
+        s.show.page = chosen;  // «N / M»: the chosen place of all
+        s.show.pages = total;
+    } else {
+        s.slots = slotsOf(s, s.show.page);
+        s.layout = cs::layout(targetWidth, targetHeight, s.scale);
+    }
     s.show.hover = s.show.hoverButton = -1;
     int cx = 0, cy = 0;
     if (readGameCursor(cx, cy)) {
@@ -396,6 +446,16 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     const bool button = m == WM_LBUTTONDOWN || m == WM_LBUTTONUP || m == WM_LBUTTONDBLCLK || m == WM_RBUTTONDOWN ||
                         m == WM_RBUTTONUP || m == WM_RBUTTONDBLCLK || m == WM_MBUTTONDOWN || m == WM_MBUTTONUP;
     if (!button && m != WM_MOUSEWHEEL) return false;
+    if (m == WM_MOUSEWHEEL && s.carousel) {  // 3.0.11-beta.275: the wheel goes round the carousel
+        float wx = 0, wy = 0;
+        if (pointerInTarget(game, m, lp, s.k, s.targetW, s.targetH, wx, wy, nullptr) &&
+            s.layout.glass.contains(wx - float(s.layout.x), wy - float(s.layout.y))) {
+            step(s, GET_WHEEL_DELTA_WPARAM(wp) < 0 ? 1 : -1);
+            result = 0;
+            return true;
+        }
+        return false;
+    }
     if (m == WM_MOUSEWHEEL && s.show.pages > 1) {  // the wheel over it turns the pages
         float wx = 0, wy = 0;
         if (pointerInTarget(game, m, lp, s.k, s.targetW, s.targetH, wx, wy, nullptr) &&
@@ -413,7 +473,12 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     result = 0;
     if (m == WM_LBUTTONDOWN || m == WM_LBUTTONDBLCLK) {
         const cs::Hit h = cs::hitTest(s.layout, lx, ly);
-        if (h.part == cs::Part::Slot) {
+        if (h.part == cs::Part::Slot && s.carousel && h.index != cs::kMiddle) {  // .275: a neighbour to the middle
+            const int place = h.index < int(s.shownPlaces.size()) ? s.shownPlaces[size_t(h.index)] : -1;
+            if (place >= 0) s.goTo = place;
+        } else if ((h.part == cs::Part::PageLeft || h.part == cs::Part::PageRight) && s.carousel) {
+            step(s, h.part == cs::Part::PageRight ? 1 : -1);
+        } else if (h.part == cs::Part::Slot) {
             const ULONGLONG now = GetTickCount64();
             const bool twice = h.index == s.show.selected && h.index == s.clickPlace &&
                                (m == WM_LBUTTONDBLCLK || now - s.clickMs <= GetDoubleClickTime());
@@ -467,8 +532,14 @@ void padCommand(PadCommand c) {
     State& s = state();
     if (!s.shown) return;
     switch (c) {
-        case PadCommand::Left: choose(s, std::max(0, s.show.selected - 1)); break;
-        case PadCommand::Right: choose(s, std::min(2, s.show.selected + 1)); break;
+        case PadCommand::Left:
+            if (s.carousel) step(s, -1);  // .275
+            else choose(s, std::max(0, s.show.selected - 1));
+            break;
+        case PadCommand::Right:
+            if (s.carousel) step(s, 1);
+            else choose(s, std::min(2, s.show.selected + 1));
+            break;
         case PadCommand::Enter: press(s, cs::Button::Enter); break;
         case PadCommand::Back: press(s, cs::Button::Back); break;
         case PadCommand::Make: press(s, cs::Button::Make); break;

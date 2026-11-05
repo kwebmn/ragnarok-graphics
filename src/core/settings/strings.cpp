@@ -5291,6 +5291,16 @@ constexpr Entry kTexts[] = {
      "зберігається й показується на його місці у виборі персонажа замість простої голови.",
      "Время от времени, когда персонаж стоит без открытых окон, его вид в игре (причёска, шапки, снаряжение) "
      "сохраняется и показывается на его месте в выборе персонажа вместо простой головы."},
+    // 3.0.11-beta.275: the character select as a carousel
+    {Text::InterfaceCarousel, "Character select as a carousel", "Вибір персонажа каруселлю",
+     "Выбор персонажа каруселью"},
+    {Text::InterfaceCarouselHint,
+     "The chosen character in the middle, two neighbours each side smaller; ‹ ›, the wheel, the D-pad or a click on a "
+     "neighbour go round all the places.",
+     "Вибраний персонаж посередині, по двоє сусідів з боків менші; ‹ ›, коліщатко, хрестовина чи клік по сусіду ведуть "
+     "по колу всіма місцями.",
+     "Выбранный персонаж посередине, по двое соседей по бокам меньше; ‹ ›, колёсико, крестовина или клик по соседу "
+     "ведут по кругу через все места."},
     {Text::NpcTalkTag, "Talk", "Говорити", "Говорить"},  // 3.0.11-beta.256: the NPC's plate before its name comes
     {Text::InterfaceShop, "NPC shops", "Крамниці NPC", "Магазины NPC"},  // 3.0.11-beta.100
     {Text::InterfaceShopHint,  // 3.0.11-beta.101: the keys, the amount typed, the description

@@ -1080,6 +1080,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     sitehttp::pump();  // 3.0.11-beta.180: the site's answers on the game's thread (the login screen's site account)
     loginwin::frame(window, config.loginWindow, config.loginStatus, config.loginNews, config.loginView,
                     gameCodePage(config), pk, pw, ph);  // .151, .173, .174, .177
+    charselectwin::setCarousel(config.charCarousel);  // 3.0.11-beta.275
     charselectwin::frame(window, config.charSelectWindow, gameCodePage(config), pk, pw, ph);  // 3.0.11-beta.152
     charmakewin::frame(window, config.charMakeWindow, gameCodePage(config), pk, pw, ph);      // 3.0.11-beta.153
     cartwin::frame(window, config.cartWindow, gameCodePage(config), pk, pw, ph);              // 3.0.11-beta.154

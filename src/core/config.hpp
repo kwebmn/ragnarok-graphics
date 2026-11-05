@@ -695,6 +695,9 @@ struct Config {
     // 3.0.11-beta.273 (the owner's feature 1): [interface] portraits - the character's picture as it stands in the
     // game, taken now and then while it plays (win/portrait), on its character select's place
     bool portraits = true;
+    // 3.0.11-beta.275 (the owner's feature 2): [interface] char_carousel - the character select's places round the
+    // chosen one, two neighbours each side (core/char_select carouselLayout)
+    bool charCarousel = true;
     // 3.0.11-beta.100: [interface] shop - the NPCs' shops (core/shop_window) in place of the game's deal windows
     bool shopWindow = false;
     // 3.0.11-beta.115: [interface] storage - the Kafra storage (win/storage_window: «Склад», «Речі» beside it) in

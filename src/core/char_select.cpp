@@ -90,7 +90,48 @@ Layout layout(int targetW, int targetH, float scale) {
     return L;
 }
 
+Layout carouselLayout(int targetW, int targetH, float scale) {
+    Layout L;
+    const float s = scale > 0 ? scale : 1.0f;
+    L.s = s;
+    L.carousel = true;
+    L.scales = {0.68f, 0.84f, 1.08f, 0.84f, 0.68f};
+    const float pad = kPad * s, sw = kSlotW * s, step = sw * 0.78f;
+    const float w = 2 * pad + 4 * step + sw * 1.08f;
+    L.title = panel::Box{pad, pad, w - 2 * pad - 140 * s, kTitleH * s};
+    L.page = panel::Box{w - pad - 92 * s, pad + 6 * s, 64 * s, 28 * s};
+    const float top = pad + kTitleH * s + 8 * s, tallest = kSlotH * s * 1.08f, mid = w / 2;
+    for (int i = 0; i < kPositions; ++i) {
+        const float f = L.scales[size_t(i)], cw = sw * f, ch = kSlotH * s * f;
+        const float cx = mid + float(i - kMiddle) * step;
+        L.slots.push_back(panel::Box{cx - cw / 2, top + (tallest - ch) / 2, cw, ch});
+    }
+    L.pageLeft = panel::Box{pad / 2, top + tallest / 2 - 20 * s, 28 * s, 40 * s};
+    L.pageRight = panel::Box{w - pad / 2 - 28 * s, top + tallest / 2 - 20 * s, 28 * s, 40 * s};
+    L.summary = panel::Box{pad, top + tallest + 6 * s, w - 2 * pad, 22 * s};
+    const float by = top + tallest + 34 * s, gap = kGap * s, bw = (w - 2 * pad - 3 * gap) / 4;
+    for (int i = 0; i < 4; ++i) L.buttons.push_back(panel::Box{pad + float(i) * (bw + gap), by, bw, kButtonH * s});
+    const float h = by + kButtonH * s + pad;
+    L.glass = panel::Box{0, 0, w, h};
+    L.w = int(std::ceil(w));
+    L.h = int(std::ceil(h));
+    L.x = std::max(0, targetW / 2 - L.w / 2);
+    L.y = std::max(0, targetH / 2 - L.h / 2);
+    return L;
+}
+
+int placeAt(int chosen, int position, int count) {
+    if (count <= 0) return -1;
+    const int offset = position - kMiddle;
+    if (2 * std::abs(offset) >= count + (offset > 0 ? 0 : 1)) return -1;  // each place shown once
+    return ((chosen + offset) % count + count) % count;
+}
+
 Hit hitTest(const Layout& L, float x, float y) {
+    if (L.carousel) {  // 3.0.11-beta.275: the nearer positions over the farther
+        for (const int i : {kMiddle, 1, 3, 0, 4})
+            if (i < int(L.slots.size()) && L.slots[size_t(i)].contains(x, y)) return Hit{Part::Slot, i};
+    }
     for (size_t i = 0; i < L.slots.size(); ++i)
         if (L.slots[i].contains(x, y)) return Hit{Part::Slot, int(i)};
     for (size_t i = 0; i < L.buttons.size(); ++i)
@@ -126,14 +167,21 @@ void paint(panel::Picture& out, const Layout& L, const std::vector<Slot>& slots,
     const float s = L.s;
     panel::roundRect(out, L.glass, 14 * s, kCard, std::max(0.94f, uistyle::window()), kWhite, 0.12f, 1.0f * s);
     for (const panel::Box* b : {&L.pageLeft, &L.pageRight}) panel::roundRect(out, *b, 7 * s, kWhite, 0.06f);
-    for (size_t i = 0; i < L.slots.size(); ++i) {
+    const std::vector<size_t> order =
+        L.carousel ? std::vector<size_t>{0, 4, 1, 3, 2} : std::vector<size_t>{0, 1, 2};  // .275: far ones first
+    for (const size_t i : order) {
+        if (i >= L.slots.size()) continue;
         const panel::Box& b = L.slots[i];
         const bool chosen = int(i) == sh.selected, hot = int(i) == sh.hover;
         const Slot* sl = i < slots.size() ? &slots[i] : nullptr;
-        panel::roundRect(out, b, 12 * s, kWhite, hot ? 0.07f : 0.04f, chosen ? kGold : kWhite,
+        if (sl && sl->none) continue;
+        const float f = L.carousel ? L.scales[i] : 1.0f;
+        // .275: a carousel's card opaque under its neighbours, the farther ones fainter
+        panel::roundRect(out, b, 12 * s * f, L.carousel ? kCard : kWhite,
+                         L.carousel ? (f < 0.8f ? 0.82f : 0.92f) : hot ? 0.07f : 0.04f, chosen ? kGold : kWhite,
                          chosen ? 1.0f : hot ? 0.24f : 0.12f, (chosen ? 2.0f : 1.0f) * s);
         if (!sl || !sl->used) continue;
-        const Inner in = inner(b, s);
+        const Inner in = inner(b, s * f);
         panel::roundRect(out, in.face, in.face.w / 2, kBlack, 0.30f);
         if (sl->face && sl->face->width > 0) put(out, *sl->face, in.face);
         const auto bar = [&](const panel::Box& bb, int now, int most, uint32_t rgb) {
@@ -165,9 +213,15 @@ std::vector<Words> words(const Layout& L, const std::vector<Slot>& slots, const 
                         12.5f * s, false, Align::Center});
     out.push_back(Words{L.pageLeft, "\xE2\x80\xB9", kText, 16 * s, true, Align::Center});   // ‹
     out.push_back(Words{L.pageRight, "\xE2\x80\xBA", kText, 16 * s, true, Align::Center});  // ›
-    for (size_t i = 0; i < L.slots.size(); ++i) {
+    const std::vector<size_t> order =
+        L.carousel ? std::vector<size_t>{0, 4, 1, 3, 2} : std::vector<size_t>{0, 1, 2};  // .275
+    for (const size_t i : order) {
+        if (i >= L.slots.size()) continue;
         const panel::Box& b = L.slots[i];
         const Slot* sl = i < slots.size() ? &slots[i] : nullptr;
+        if (sl && sl->none) continue;
+        const float s0 = s;
+        const float s = s0 * (L.carousel ? L.scales[i] : 1.0f);  // .275: a carousel's card at its own size
         if (!sl || !sl->used) {
             out.push_back(Words{panel::Box{b.x, b.y + b.h / 2 - 22 * s, b.w, 20 * s}, t.empty, kMuted, 14 * s, true,
                                 Align::Center});

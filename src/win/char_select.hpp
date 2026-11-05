@@ -19,6 +19,7 @@ namespace uagfx::win::charselectwin {
 // CHARACTER_INFO - its name + 0x4A), its face (win/head_picture); a click chooses a place as a click on the game's
 // own (message 6, 0x8A from that place's control), two clicks enter; the buttons press its own (0x76 enter, 0x89
 // make, 0x91 delete, 0x77 back, 0x96 / 0x97 the pages); the game's window off the screen. On the game's thread.
+void setCarousel(bool on);  // 3.0.11-beta.275: [interface] char_carousel
 void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int targetHeight);
 void draw(FrameRecord& record, gpu::Renderer& renderer);
 bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result);

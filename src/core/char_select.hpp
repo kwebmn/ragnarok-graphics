@@ -20,6 +20,7 @@ struct Slot {
     const panel::Picture* face = nullptr;  // its head at faceSide(scale), premultiplied
     std::string ago, map;  // 3.0.11-beta.273: when last played here («2 год тому»), its map then ("" not known)
     std::string summary;   // 3.0.11-beta.274: its last session («Остання гра …: 1 год 20 хв · Base +34 %»), "" none
+    bool none = false;     // 3.0.11-beta.275: a carousel's position with no place (fewer places than positions)
 };
 int faceSide(float scale);
 
@@ -41,8 +42,17 @@ struct Layout {
     std::vector<panel::Box> slots;    // three
     std::vector<panel::Box> buttons;  // Button's order
     panel::Box summary;               // 3.0.11-beta.274: the chosen character's last session, over the buttons
+    // 3.0.11-beta.275 (the owner's feature 2, nostalRE's line-up): the carousel - five positions, the chosen one in the
+    // middle (2), two neighbours each side smaller and fainter; each position's size against the middle's
+    bool carousel = false;
+    std::vector<float> scales;
 };
 Layout layout(int targetW, int targetH, float scale);
+constexpr int kPositions = 5, kMiddle = 2;
+Layout carouselLayout(int targetW, int targetH, float scale);
+// The place (of `count`, wrapping) a position shows when `chosen` is in the middle; -1 none (fewer places than
+// positions: each place once)
+int placeAt(int chosen, int position, int count);
 enum class Part : uint8_t { None, Slot, Button, PageLeft, PageRight };
 struct Hit {
     Part part = Part::None;
