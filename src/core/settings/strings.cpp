@@ -5301,6 +5301,16 @@ constexpr Entry kTexts[] = {
      "по колу всіма місцями.",
      "Выбранный персонаж посередине, по двое соседей по бокам меньше; ‹ ›, колёсико, крестовина или клик по соседу "
      "ведут по кругу через все места."},
+    // 3.0.11-beta.276: the delay after a skill on the hotbar
+    {Text::InterfaceDelayRing, "Delay after a skill on the hotbar", "Затримка після вміння на панелі",
+     "Задержка после умения на панели"},
+    {Text::InterfaceDelayRingHint,
+     "After a skill the hotbar's skills darken and clear clockwise for as long as the server keeps you from the next "
+     "one (its delay, shorter with DEX on uaRO).",
+     "Після вміння вміння на панелі темніють і світлішають за годинниковою стрілкою, поки сервер не дає наступне (його "
+     "затримка, на uaRO коротша з DEX).",
+     "После умения умения на панели темнеют и светлеют по часовой стрелке, пока сервер не даёт следующее (его "
+     "задержка, на uaRO короче с DEX)."},
     {Text::NpcTalkTag, "Talk", "Говорити", "Говорить"},  // 3.0.11-beta.256: the NPC's plate before its name comes
     {Text::InterfaceShop, "NPC shops", "Крамниці NPC", "Магазины NPC"},  // 3.0.11-beta.100
     {Text::InterfaceShopHint,  // 3.0.11-beta.101: the keys, the amount typed, the description

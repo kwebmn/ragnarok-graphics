@@ -1,3 +1,4 @@
+#include "win/skill_delay_watch.hpp"
 #include "win/packet_tap.hpp"
 
 #include <windows.h>
@@ -77,6 +78,7 @@ uint16_t __attribute__((thiscall)) take(void* connection, const uint8_t* packet)
     const uint16_t id = g_take(connection, packet);
     netwatchwin::packet(connection, id, packet);  // 3.0.11-beta.122: the connection watched, the position fixes
     groundunitswin::packet(id, packet);           // 3.0.11-beta.143: the own walls and pillars standing
+    skilldelaywin::packet(id, packet);            // 3.0.11-beta.276: the delay after the own skills
     const packets::Event e = packets::parse(packet, kReadable);
     if (!std::holds_alternative<std::monostate>(e)) {
         notifier::packet(e);

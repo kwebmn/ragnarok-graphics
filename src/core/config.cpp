@@ -625,6 +625,8 @@ Config parseConfig(const std::string& text) {
             setBool(val, c.portraits);
         } else if (key == "interface.char_carousel") {  // 3.0.11-beta.275
             setBool(val, c.charCarousel);
+        } else if (key == "interface.delay_ring") {  // 3.0.11-beta.276
+            setBool(val, c.delayRing);
         } else if (key == "interface.shop") {  // 3.0.11-beta.100: the NPCs' shops
             shopSet = val == "0" || val == "1" || val == "on" || val == "off" || val == "true" || val == "false";
             setBool(val, c.shopWindow);

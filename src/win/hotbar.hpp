@@ -29,6 +29,9 @@ namespace uagfx::win::hotbarwin {
 // 3.0.11-beta.125: ammo - [interface] hotbar_ammo, the ammo worn and how many left on a pill over it (win/ammo_watch)
 // 3.0.11-beta.143: counts - [interface] ground_counts, a ground skill's walls standing or a trap's Traps left on its
 // slot (win/ground_units), its edge flashing when a wall burnt out
+// 3.0.11-beta.276 (the owner's feature 7): [interface] delay_ring - the delay after a skill swept over the skills'
+// cells
+void setDelayRing(bool on);
 void frame(HWND game, bool on, bool ownBars, bool padHints, bool ammo, bool counts, unsigned codePage, double k,
            int targetWidth, int targetHeight);
 void draw(FrameRecord& record, gpu::Renderer& renderer);

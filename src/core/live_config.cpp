@@ -327,6 +327,10 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("equip", flag(running.equipWindow), flag(file.equipWindow)));
         n.equipWindow = file.equipWindow;
     }
+    if (file.delayRing != running.delayRing) {  // 3.0.11-beta.276: the hotbar's delay sweep, at once
+        u.applied.push_back(change("delay_ring", flag(running.delayRing), flag(file.delayRing)));
+        n.delayRing = file.delayRing;
+    }
     if (file.charCarousel != running.charCarousel) {  // 3.0.11-beta.275: the character select's look, at once
         u.applied.push_back(change("char_carousel", flag(running.charCarousel), flag(file.charCarousel)));
         n.charCarousel = file.charCarousel;

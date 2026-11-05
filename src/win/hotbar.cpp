@@ -32,6 +32,7 @@
 #include "win/game_camera.hpp"
 #include "win/ground_units.hpp"
 #include "win/hud_edit.hpp"
+#include "win/skill_delay_watch.hpp"
 #include "win/log.hpp"
 #include "win/paths.hpp"
 #include "win/picture_draw.hpp"
@@ -125,6 +126,7 @@ struct Learned {
 };
 
 struct State {
+    bool delayRing = true;  // 3.0.11-beta.276: [interface] delay_ring
     // 3.0.11-beta.117 (R-8YW96B, R-5JGPFX: it jumped right for a second while walking): moved aside only for a window
     // standing over its place 1.5 s; what was there told the log (the first few)
     hb::Settle settle;
@@ -896,6 +898,12 @@ std::vector<barhint::Skill> barSkills() {
     return out;
 }
 
+void setDelayRing(bool on) {  // 3.0.11-beta.276
+    State& s = state();
+    if (on != s.delayRing) LOG_INFO("hotbar: [interface] delay_ring = %d", on ? 1 : 0);
+    s.delayRing = on;
+}
+
 void frame(HWND game, bool on, bool ownBars, bool padHints, bool ammo, bool counts, unsigned codePage, double k,
            int targetWidth, int targetHeight) {
     State& s = state();
@@ -986,6 +994,7 @@ void frame(HWND game, bool on, bool ownBars, bool padHints, bool ammo, bool coun
     show.dropping = windrag::now().kind == windrag::Kind::Item || windrag::now().kind == windrag::Kind::Skill;  // .110
     show.sony = pad.sony;
     show.ammo = ammoOf(s, now, ammo);  // 3.0.11-beta.125
+    show.delay = s.delayRing ? skilldelaywin::left() : 0.0f;  // 3.0.11-beta.276: the delay after a skill
     if (show.pad != s.padTold) {
         s.padTold = show.pad;
         LOG_INFO("hotbar: %s", show.pad ? (show.sony ? "the controller's buttons (PlayStation)"
@@ -998,7 +1007,8 @@ void frame(HWND game, bool on, bool ownBars, bool padHints, bool ammo, bool coun
                       ',' + std::to_string(show.pressed) + (show.tip ? "t" : "") + (show.hoverToggle ? "e" : "") +
                       ',' + std::to_string(show.lifted) + ',' + std::to_string(show.over) +
                       (show.pad ? (show.sony ? "S" : "X") : "") + (show.dropping ? "D" : "") + ';' +
-                      std::to_string(show.ammo.count) + (show.ammo.icon ? "i" : "") + show.ammo.warning + ';';
+                      std::to_string(show.ammo.count) + (show.ammo.icon ? "i" : "") + show.ammo.warning + ';' +
+                      std::to_string(int(show.delay * 40)) + ';';  // .276: the sweep in 40 steps
     for (size_t i = 0; i < s.cells.size(); ++i) {
         const hb::Cell& c = s.cells[i];
         key += c.key + '|' + c.name + '|' + std::to_string(c.level) + '|' + std::to_string(c.count) +

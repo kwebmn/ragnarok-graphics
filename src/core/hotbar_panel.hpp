@@ -127,6 +127,9 @@ struct Show {
     Ammo ammo;              // 3.0.11-beta.125
     // 3.0.11-beta.147: a cell's icon lifted (dragged) - that cell's faded where it was, the cell it is over outlined
     int lifted = -1, over = -1;
+    // 3.0.11-beta.276 (the owner's feature 7): the delay after a skill - its share left (0 none) darkening every
+    // skill's cell clockwise from twelve, as the buffs' sweep
+    float delay = 0;
 };
 // The ammo's pill over the glass's left end (w 0: none worn); a cell's tip over it hides it a while
 panel::Box ammoBox(const Layout& L, const Show& show);

@@ -63,3 +63,13 @@ TEST(stat_math_hp_sp_weight_cast) {
     CHECK(sm::castPercent(43) == 71 && sm::castPercent(150) == 0 && sm::castPercent(200) == 0);
     CHECK_EQ(sm::delayPercent(75), 50);
 }
+
+// 3.0.11-beta.276 (feature 7): the delay after a skill - Lord of Vermilion's (85) 5 s, Fire Bolt's (19) by level,
+// cut by DEX as uaRO's server does it
+#include "core/skill_delay.hpp"
+TEST(skill_delay_by_level_and_dex) {
+    CHECK(skilldelay::afterCast(85, 1) == 5000 && skilldelay::afterCast(19, 3) == 1400);
+    CHECK(skilldelay::afterCast(19, 20) == 2800 && skilldelay::afterCast(1, 1) == 0);
+    CHECK(skilldelay::withDex(1500, 75) == 750 && skilldelay::withDex(1500, 160) == 0);
+    CHECK(skilldelay::left(1000, 2000, 2000) == 0.5f && skilldelay::left(1000, 2000, 3500) == 0.0f);
+}

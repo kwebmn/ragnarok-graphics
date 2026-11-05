@@ -266,6 +266,20 @@ void paint(panel::Picture& out, const Layout& L, const std::vector<Cell>& cells,
             put(out, *c->icon, b,
                 (barred ? 0.45f : dry ? 0.5f : c->count == 0 ? 0.3f : 1.0f) * (int(i) == show.lifted ? 0.3f : 1.0f),
                 barred || dry);
+        if (c && c->count < 0 && !c->name.empty() && show.delay > 0) {  // .276: the delay after a skill, clockwise
+            const float cx = b.x + b.w / 2, cy = b.y + b.h / 2, rr = 7 * s;
+            for (int y = std::max(0, int(b.y)); y < std::min(out.height, int(std::ceil(b.y + b.h))); ++y)
+                for (int x = std::max(0, int(b.x)); x < std::min(out.width, int(std::ceil(b.x + b.w))); ++x) {
+                    const float px = float(x) + 0.5f, py = float(y) + 0.5f;
+                    const float ex = std::max(0.0f, std::max(b.x + rr - px, px - (b.x + b.w - rr)));
+                    const float ey = std::max(0.0f, std::max(b.y + rr - py, py - (b.y + b.h - rr)));
+                    if (ex * ex + ey * ey > rr * rr) continue;  // outside the rounded corner
+                    float turn = std::atan2(px - cx, cy - py) / 6.2831853f;
+                    if (turn < 0) turn += 1;
+                    if (turn >= 1.0f - show.delay)
+                        panel::over(out.px[size_t(y) * size_t(out.width) + size_t(x)], kBlack, 0.55f);
+                }
+        }
         if (barred) {  // a crossed circle over its icon
             const float side = std::min(b.w, b.h) * 0.7f;
             uiicons::draw(out, uiicons::Icon::Blocked, b.x + (b.w - side) / 2, b.y + (b.h - side) / 2, side, kText,
