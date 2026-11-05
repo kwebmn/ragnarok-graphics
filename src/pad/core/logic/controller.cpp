@@ -44,6 +44,9 @@ constexpr int kPickupReach = 1;
 constexpr uint32_t kDialogRepeatFirstMs = 400;  // a held D-pad in an NPC window: first repeat, then every
 constexpr uint32_t kDialogRepeatMs = 120;
 constexpr uint32_t kDialogForceCloseMs = 1000;  // B held this long closes a window the NPC left without a button
+// 3.0.11-beta.259 (the NPC concept, stage 5): A held this long in the talk pages «Далі» on, one every kPageOnMs - up
+// to a menu, a number or «Закрити» (none taken by a held A); a new page still waits its kGuardMs (win/npc_talk)
+constexpr uint32_t kPageOnAfterMs = 500, kPageOnMs = 150;
 constexpr int kNumberMax = 99999999;
 constexpr int kNumberDigits = 8;  // 3.0.11-beta.258
 
@@ -232,6 +235,7 @@ TickOutput Controller::tick(const PadState& pad, const WorldState& world, const 
             aim_.stop();  // 3.0.11-beta.145
             groundPress_.reset();
             out.notes.push_back("NPC window: the buttons answer it");
+            aHeldSinceMs_.reset();  // 3.0.11-beta.259: an A held into a new talk pages nothing
         }
         if (view.dialog == NpcDialog::Number && dialog_ != NpcDialog::Number) {  // the client's "0"
             number_ = 0;
@@ -689,11 +693,18 @@ void Controller::answerDialog(NpcDialog d, uint16_t held, uint16_t down, uint32_
     const bool b = down & kPadB;
     if (!(held & kPadB)) bHeldSinceMs_.reset();
     else if (b) bHeldSinceMs_ = now;
+    if (!(held & kPadA)) aHeldSinceMs_.reset();  // 3.0.11-beta.259: pressed here, not held from before the window
+    else if (a) aHeldSinceMs_ = now;
     switch (d) {
         case NpcDialog::None:
             break;
         case NpcDialog::Next:
-            if (a) out.dialog.push_back(DialogCommand::Next);
+            if (a) {
+                out.dialog.push_back(DialogCommand::Next);
+            } else if (aHeldSinceMs_ && now - *aHeldSinceMs_ >= kPageOnAfterMs && now - aPagedMs_ >= kPageOnMs) {
+                aPagedMs_ = now;  // 3.0.11-beta.259: held - the next page
+                out.dialog.push_back(DialogCommand::Next);
+            }
             break;
         case NpcDialog::Close:
             if (a || b) out.dialog.push_back(DialogCommand::Close);

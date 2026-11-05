@@ -272,6 +272,8 @@ private:
     int numberDigit_ = 0;                  // 3.0.11-beta.258: the place the D-pad changes (0 the units)
     int lastNumber_ = 0;                   // 3.0.11-beta.258: the number given last (RB puts it)
     std::optional<uint32_t> bHeldSinceMs_;  // B held in a window without a button: closes it after a second
+    std::optional<uint32_t> aHeldSinceMs_;  // 3.0.11-beta.259: A pressed in the talk and held - pages on
+    uint32_t aPagedMs_ = 0;
     double talkDirX_ = 0;                  // the right stick's direction on the map when it points (talk)
     double talkDirY_ = 0;
     uint32_t npcChoice_ = 0;  // 3.0.11-beta.256: the NPC the right stick pointed at last

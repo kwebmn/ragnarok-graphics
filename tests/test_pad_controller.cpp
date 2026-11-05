@@ -2094,3 +2094,24 @@ TEST(ctl_talk_reaches_an_npc_across_the_screen) {
     o = c.tick(pad(kPadDown), far, view(), 1200);
     CHECK(o.rumble == Rumble::Denied);
 }
+
+// 3.0.11-beta.259 (the NPC concept, stage 5): A held in the talk pages «Далі» on; never a menu's OK, a number's OK or
+// «Закрити»; an A held from before the window pages nothing
+TEST(ctl_npc_held_a_pages_on_to_a_decision) {
+    Controller c(Config{});
+    WorldState w = npcWorld();
+    const ViewInfo next = dialogView(NpcDialog::Next);
+    TickOutput o = c.tick(pad(kPadA), w, next, 1000);
+    CHECK(o.dialog.size() == 1 && o.dialog[0] == DialogCommand::Next);  // the press
+    CHECK(c.tick(pad(kPadA), w, next, 1300).dialog.empty());            // held, not yet
+    o = c.tick(pad(kPadA), w, next, 1550);
+    CHECK(o.dialog.size() == 1 && o.dialog[0] == DialogCommand::Next);  // paging on
+    CHECK(c.tick(pad(kPadA), w, next, 1600).dialog.empty());            // one every 150 ms
+    CHECK(c.tick(pad(kPadA), w, next, 1710).dialog.size() == 1u);
+    CHECK(c.tick(pad(kPadA), w, dialogView(NpcDialog::Menu), 1900).dialog.empty());   // a menu: stops
+    CHECK(c.tick(pad(kPadA), w, dialogView(NpcDialog::Close), 2100).dialog.empty());  // «Закрити»: stops
+    Controller d(Config{});
+    d.tick(pad(kPadA), w, view(), 3000);  // held before the window
+    CHECK(d.tick(pad(kPadA), w, next, 3100).dialog.empty());
+    CHECK(d.tick(pad(kPadA), w, next, 4000).dialog.empty());
+}
