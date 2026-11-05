@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.11-beta.239 — what's new
+
+- **The character block: the experience gained on the Base / Job rows too.** After a kill the block's own experience bars light the part gained in yellow for 4 seconds, and the row says «+1 234 (0.05 %)» in the pace's place. Job the same.
+
 # uaRO Graphics 3.0.11-beta.238 — what's new
 
 **The character block (Alt+V):**
