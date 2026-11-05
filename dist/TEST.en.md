@@ -1,3 +1,9 @@
+# uaRO Graphics 3.0.11-beta.257 — what's new
+
+**Talking to NPCs with the pad, stage 3 — NPCs across the screen:**
+- The Talk button now reaches NPCs up to 20 cells away, about the whole visible screen. It was 15 before. The right stick picks distant NPCs the same way.
+- No need to walk up: the uaRO server accepts talking from far away, so the talk starts right where you stand. The pad does not take NPCs beyond the screen.
+
 # uaRO Graphics 3.0.11-beta.256 — what's new
 
 **Talking to NPCs with the pad, stage 2 — you can see who you will talk to:**
