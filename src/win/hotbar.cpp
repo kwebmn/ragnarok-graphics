@@ -1034,6 +1034,17 @@ void key(UINT m, WPARAM wp, LPARAM lp) {
     s.pressedUntil = GetTickCount64() + kPressMs;
 }
 
+void padUsed(int slot) {
+    State& s = state();
+    if (!s.shown || slot < 0) return;
+    for (int cell = 0; cell < int(s.cells.size()); ++cell) {
+        if (hb::gameSlot(s.mode, s.row, cell) != slot) continue;
+        s.pressed = cell;
+        s.pressedUntil = GetTickCount64() + kPressMs;
+        return;
+    }
+}
+
 bool drop(int x, int y, uint32_t drag) {
     State& s = state();
     if (!s.shown || s.k <= 0) return false;

@@ -2020,3 +2020,16 @@ TEST(ctl_kiting_keeps_the_fought_monster) {
     c.tick(pad(kPadA), w, view(), 1400);
     CHECK_EQ(c.target(), 110000001u);
 }
+
+// 3.0.11-beta.254 (the owner: «на консоле нажимаю кнопки, и на панельке с кнопками они не подсвечиваются»): a button
+// that uses a slot names it for the hotbar to light its cell; an empty one names none
+TEST(ctl_slot_press_names_its_slot) {
+    Controller c(Config{});
+    WorldState w = slotWorld();  // X: Bash
+    addMob(w, 110000001, Cell{101, 100});
+    TickOutput o = c.tick(pad(kPadX), w, view(), 1000);
+    CHECK(o.slotUsed >= 0);
+    c.tick(pad(), w, view(), 1100);
+    o = c.tick(pad(), w, view(), 1200);
+    CHECK_EQ(o.slotUsed, -1);
+}

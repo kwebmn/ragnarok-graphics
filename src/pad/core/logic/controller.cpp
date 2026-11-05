@@ -578,6 +578,7 @@ void Controller::castAim(const WorldState& world, uint32_t now, TickOutput& out)
     }
     out.packets.push_back(buildSkillToPos(aim_.skill(), aim_.level(), aim_.cell()));
     lastSlotMs_[size_t(aim_.slot())] = now;
+    out.slotUsed = aim_.slot();  // 3.0.11-beta.254
     out.notes.push_back(name + ": skill " + std::to_string(aim_.skill()) + " lv " + std::to_string(aim_.level()) +
                         " aimed at " + cellText(aim_.cell()));
 }
@@ -771,6 +772,7 @@ void Controller::useSlot(int slot, bool repeat, const WorldState& world, uint32_
     std::optional<uint32_t>& last = lastSlotMs_[size_t(slot)];
     if (!due(last, now, kSlotIntervalMs)) return;
     last = now;
+    if (!repeat) out.slotUsed = slot;  // 3.0.11-beta.254: its cell shown pressed
     if (!repeat && key.type != 0) {  // 3.0.11-beta.85: a support skill with party members in sight asks whom
         auto sk = world.skill(uint16_t(key.id));
         if (sk && sk->lv > 0 && choosesWhom(*sk)) {

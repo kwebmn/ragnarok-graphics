@@ -62,4 +62,7 @@ std::string slotWords(int slot);
 // keeps (assign's: the row shown, the battle mode's three rows); none while not shown
 std::vector<uagfx::padcarry::Place> cellPlaces();
 
+// 3.0.11-beta.254: a controller's button used the game's slot (0-26) - its cell shown pressed as for its key
+void padUsed(int slot);
+
 }  // namespace uagfx::win::hotbarwin

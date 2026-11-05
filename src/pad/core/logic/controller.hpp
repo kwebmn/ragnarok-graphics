@@ -58,6 +58,9 @@ struct TickOutput {
     std::vector<DialogCommand> dialog;  // 0.7: for the NPC window, in order
     std::optional<int> number;          // 0.7: the number to put into the NPC's number field
     bool reference = false;             // 3.0.11-beta.22: «Довідник» opened or closed (win/reference_window)
+    // 3.0.11-beta.254 (the owner: «на консоле нажимаю кнопки, и на панельке с кнопками они не подсвечиваются»): the
+    // hotkey slot (0-26) a button pressed - the hotbar shows its cell pressed as for its key; -1 none
+    int slotUsed = -1;
 };
 
 // The left stick walks, the right stick picks a monster, Back switches the pad off; every other button does
