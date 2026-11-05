@@ -1,3 +1,9 @@
+# uaRO Graphics 3.0.11-beta.248 — what's new
+
+- **A record for «the monster hits from afar».** When a monster hits the character from 2+ cells away from where the game shows it, its last 3 seconds go to the log.
+- The log also notes when the game cuts a monster's smooth position fix short. The monster may then stay on its old cell.
+- To compare: switch off «Плавні поправки позиції» (Smooth position fixes) under «Інтерфейс» and see whether «hits from afar / teleports» remains.
+
 # uaRO Graphics 3.0.11-beta.247 — what's new
 
 - **A record for «the monster teleports».** When a monster you fight jumps, the log gets everything the server said about it in the last 3 seconds: its steps, hits and stops, and where the screen showed it at each moment. A jump counts when the server puts the monster 2+ cells from where the game showed it. If you see such a jump, send a report right after it (report R-AMNV99).
