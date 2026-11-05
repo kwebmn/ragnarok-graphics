@@ -62,6 +62,7 @@
 #include "win/ground_marks.hpp"
 #include "win/pad_assign.hpp"
 #include "win/mob_hp.hpp"
+#include "win/npc_tag.hpp"
 #include "win/equip_window.hpp"
 #include "win/npc_talk.hpp"
 #include "win/shop_window.hpp"
@@ -695,6 +696,7 @@ void Context::endScene() {
         worlddim::draw(record);                 // 3.0.11-beta.49: the world dimmed under the windows (where it ends)
         lowhpedge::draw(record, *renderer);     // 3.0.11-beta.50: the low HP edge, there too
         mobhpwin::draw(record, *renderer);      // 3.0.11-beta.95: the monsters' HP bars, under the cast
+        npctagwin::draw(record, *renderer);     // 3.0.11-beta.256: the controller's NPC plate
         expgainwin::draw(record, *renderer);    // 3.0.11-beta.237: a kill's experience over the monster
         castwin::draw(record, *renderer);       // 3.0.11-beta.48: the cast over the hero, under the panels
         minimapproto::draw(record, *renderer);  // 3.0.11-beta.1: the new minimap (prototype)
@@ -762,6 +764,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
         worlddim::draw(record);                 // 3.0.11-beta.49
         lowhpedge::draw(record, *renderer);     // 3.0.11-beta.50
         mobhpwin::draw(record, *renderer);      // 3.0.11-beta.95
+        npctagwin::draw(record, *renderer);     // 3.0.11-beta.256
         expgainwin::draw(record, *renderer);    // 3.0.11-beta.237
         castwin::draw(record, *renderer);       // 3.0.11-beta.48
         minimapproto::draw(record, *renderer);  // 3.0.11-beta.1
@@ -1043,6 +1046,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     lowhpedge::frame(config.lowHpEdge, pk, pw, ph);
     // 3.0.11-beta.48: [interface] cast - the character's cast over the hero, the game's own gauge hidden
     mobhpwin::frame(window, config.mobHp, pk, pw, ph);  // 3.0.11-beta.95
+    npctagwin::frame(window, gameCodePage(config), pk, pw, ph);  // 3.0.11-beta.256
     castwin::frame(window, config.castLabel, gameCodePage(config), pk, pw, ph);
     // 3.0.11-beta.40: [interface] hotbar - the hotkeys' bar at the bottom middle, the game's own hidden
     hotbarwin::frame(window, config.hotbar, config.hotbarPerCharacter, config.padHints, config.hotbarAmmo,

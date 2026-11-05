@@ -100,6 +100,9 @@ Event parse(const uint8_t* p, size_t size) {
         case 0x0132:
             if (size < 6) return {};
             return ShopSign{rd32(p, 2), ""};
+        case 0x0095:  // 3.0.11-beta.256: a unit's name
+            if (size < 30) return {};
+            return ActorName{rd32(p, 2), name(p, 6)};
         case 0x0195:  // 3.0.11-beta.95: a unit's name line - a monster's HP % in its party's place
             if (size < 102) return {};
             return ActorInfo{rd32(p, 2), hpOf(name(p, 30))};

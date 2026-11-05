@@ -106,6 +106,9 @@ public:
     // 3.0.11-beta.87 (the concept's stage 3): the monster a light tilt of the right stick points at - where a push
     // would take the aim (a dashed ring under it); 0 none
     uint32_t preview() const { return preview_; }
+    // 3.0.11-beta.256 (the NPC concept, stage 2): the NPC the Talk button would take now - the one the right stick
+    // pointed at last while it is within reach, else the nearest; 0 in a fight (a monster target fought) or none
+    uint32_t npcTag(const WorldState& world, uint32_t nowMs) const;
     bool attacking() const { return wantAttack_; }
     bool approaching() const { return approach_.has_value(); }
     bool cameraMode() const { return cameraMode_; }  // the right stick turns the camera instead of picking
@@ -268,6 +271,7 @@ private:
     std::optional<uint32_t> bHeldSinceMs_;  // B held in a window without a button: closes it after a second
     double talkDirX_ = 0;                  // the right stick's direction on the map when it points (talk)
     double talkDirY_ = 0;
+    uint32_t npcChoice_ = 0;  // 3.0.11-beta.256: the NPC the right stick pointed at last
     CameraYaw camera_;
 };
 

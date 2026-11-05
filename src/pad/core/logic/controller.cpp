@@ -282,6 +282,16 @@ TickOutput Controller::tick(const PadState& pad, const WorldState& world, const 
     talkDirX_ = talkDirY_ = 0;  // talk: the NPC the right stick points at, or the nearest
     if (!cameraMode_ && std::hypot(double(pad.rx), double(pad.ry)) > kAimOn)
         camera_.toWorld(pad.rx, -pad.ry, talkDirX_, talkDirY_);
+    if (talkDirX_ != 0 || talkDirY_ != 0) {  // 3.0.11-beta.256: the tag goes to the NPC pointed at
+        if (const uint32_t n = pickNpc(world, now, talkDirX_, talkDirY_); n != 0 && n != npcChoice_) {
+            npcChoice_ = n;
+            out.notes.push_back("right stick: the NPC " + std::to_string(n) + " to talk to");
+        }
+    }
+    if (npcChoice_ != 0) {  // gone, or left out of reach
+        const std::optional<Cell> at = world.actorPos(npcChoice_, now);
+        if (!at || cellDistance(world.selfPos(now), *at) > kTargetReach) npcChoice_ = 0;
+    }
     if (choosing_) {  // 3.0.11-beta.85: the buttons choose whom the support skill goes on; the sticks go on
         choose(down, world, now, out);
         armed_ = 0;  // nothing held then repeats or attacks
@@ -627,8 +637,17 @@ void Controller::fire(const Action& a, bool repeat, const WorldState& world, uin
 }
 
 // 0.7: a click on the NPC, as the client sends it; the server opens the dialog the way it does for a mouse click.
+uint32_t Controller::npcTag(const WorldState& world, uint32_t now) const {
+    if (target_ != 0 && targetAlive(world) && (wantAttack_ || attackSent_ || fought_)) return 0;
+    return npcChoice_ != 0 ? npcChoice_ : pickNpc(world, now);
+}
+
 void Controller::talk(const WorldState& world, uint32_t now, TickOutput& out) {
-    const uint32_t npc = pickNpc(world, now, talkDirX_, talkDirY_);
+    // 3.0.11-beta.256: the stick's way now, else the NPC tagged (pointed at before), else the nearest
+    const bool pointing = talkDirX_ != 0 || talkDirY_ != 0;
+    const uint32_t npc = pointing ? pickNpc(world, now, talkDirX_, talkDirY_)
+                         : npcChoice_ != 0 ? npcChoice_
+                                           : pickNpc(world, now);
     if (npc == 0) {
         deny(out, talkDirX_ != 0 || talkDirY_ != 0 ? "no NPC that way" : "no NPC within reach");
         return;

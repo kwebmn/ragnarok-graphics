@@ -27,6 +27,7 @@
 #include "pad/core/logic/mouse_gate.hpp"
 #include "pad/core/logic/npc_hint.hpp"
 #include "pad/core/logic/settings_menu.hpp"
+#include "pad/core/logic/targeting.hpp"
 #include "pad/core/logic/vbutton.hpp"
 #include "pad/core/logic/window_order.hpp"
 #include "pad/core/session.hpp"
@@ -1440,6 +1441,25 @@ Look look() {
 uint32_t target() { return healthy() && S().session ? S().session->controller().target() : 0; }
 
 uint32_t preview() { return healthy() && S().session ? S().session->controller().preview() : 0; }
+
+uint32_t npcTag() {
+    if (!healthy() || !S().session) return 0;
+    return S().session->controller().npcTag(S().session->world(), GetTickCount());
+}
+
+std::vector<uint32_t> npcNear() {
+    std::vector<uint32_t> out;
+    if (!healthy() || !S().session) return out;
+    const WorldState& w = S().session->world();
+    const uint32_t now = GetTickCount();
+    const Cell me = w.selfPos(now);
+    for (const auto& [id, a] : w.actors())
+        if (w.isNpc(a))
+            if (const auto at = w.actorPos(id, now); at && cellDistance(me, *at) <= kTargetReach) out.push_back(id);
+    return out;
+}
+
+uint16_t talkButtonBit() { return healthy() && S().session ? talkButton(S()) : 0; }
 
 bool aimCells(uint16_t& skill, int& lv, int& x, int& y) {
     if (!healthy() || !S().session) return false;

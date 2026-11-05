@@ -15,6 +15,7 @@
 #include "win/item_window.hpp"
 #include "win/minimap_proto.hpp"
 #include "win/mob_hp.hpp"
+#include "win/npc_tag.hpp"
 #include "win/net_watch.hpp"
 #include "win/ask_card.hpp"
 #include "win/npc_talk.hpp"
@@ -93,6 +94,7 @@ uint16_t __attribute__((thiscall)) take(void* connection, const uint8_t* packet)
         minimapproto::packet(e);  // 3.0.11-beta.201: the server's marks, the guild's mates
         charpanel::packet(e);     // 3.0.11-beta.235: the session's kills and deaths
         expgainwin::packet(e);    // 3.0.11-beta.237: a kill's experience over the monster
+        npctagwin::packet(e);     // 3.0.11-beta.256: the NPCs' names for the controller's plate
     }
     return id;
 }

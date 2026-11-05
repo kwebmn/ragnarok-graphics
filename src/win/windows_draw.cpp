@@ -21,6 +21,7 @@
 #include "win/log.hpp"
 #include "win/equip_window.hpp"
 #include "win/mob_hp.hpp"
+#include "win/npc_tag.hpp"
 #include "win/npc_talk.hpp"
 #include "win/shop_window.hpp"
 #include "win/skill_window.hpp"
@@ -183,6 +184,7 @@ void hideReplaced() {
     popupwin::beforeGameDraw();         // 3.0.11-beta.211: the popup menus
     whisperwin::beforeGameDraw();       // 3.0.11-beta.212: the whisper windows
     mobhpwin::beforeGameDraw();   // 3.0.11-beta.100: the monsters' per cent asked
+    npctagwin::beforeGameDraw();  // 3.0.11-beta.256: the tagged NPC's name asked
     charpanel::beforeGameDraw();  // the Basic Info window
     hotbarwin::beforeGameDraw();  // the hotkeys' bar
     chatwin::beforeGameDraw();    // the chat (out of sight)

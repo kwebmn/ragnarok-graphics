@@ -2051,3 +2051,19 @@ TEST(ctl_npc_menu_columns_and_pages) {
     o = c.tick(pad(kPadLB), w, menu, 1300);
     CHECK(o.dialog.size() == 1 && o.dialog[0] == DialogCommand::MenuPageUp);
 }
+
+// 3.0.11-beta.256 (the NPC concept, stage 2): the tag over the NPC the Talk button takes - the nearest, or the one the
+// right stick pointed at; none in a fight
+TEST(ctl_npc_tag_nearest_pointed_and_hidden_in_a_fight) {
+    Controller c(Config{});
+    WorldState w = npcWorld();
+    CHECK_EQ(c.npcTag(w, 1000), 110000101u);  // the nearest (3 cells east)
+    c.tick(padR(-1, 0), w, view(), 1000);       // pointed west
+    c.tick(pad(), w, view(), 1100);
+    CHECK_EQ(c.npcTag(w, 1200), 110000102u);  // kept after the stick let go
+    TickOutput o = c.tick(pad(kPadDown), w, view(), 1300);  // Talk: the tagged one
+    CHECK(!o.packets.empty() && rd32(pkt(o, o.packets.size() - 1).data(), 2) == 110000102u);
+    c.tick(pad(), w, view(), 1350);
+    c.tick(pad(kPadA), w, view(), 1400);  // a fight
+    CHECK_EQ(c.npcTag(w, 1500), 0u);
+}

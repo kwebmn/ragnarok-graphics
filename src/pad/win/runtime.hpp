@@ -47,6 +47,11 @@ void noteKeysOrMouse(bool click);
 // (the rings under them, win/ground_marks); 0 none
 uint32_t target();
 uint32_t preview();
+// 3.0.11-beta.256 (the NPC concept, stage 2): the NPC the Talk button takes now (0 none, or in a fight), the other
+// NPCs within its reach, and the Talk button (a kPad bit, 0 none bound)
+uint32_t npcTag();
+std::vector<uint32_t> npcNear();
+uint16_t talkButtonBit();
 // 3.0.11-beta.88 (stage 4): [interface] pad_walk = arrow - the left stick walks without the mouse (win/context, each
 // frame); where it walks now (the arrow's end, the map's cells); false none
 void setDirectWalk(bool on);

@@ -5282,6 +5282,7 @@ constexpr Entry kTexts[] = {
      "У того же NPC в том же меню сразу выбрано то, что выбирали в прошлый раз, с пометкой «в прошлый раз»: "
      "телепорт Kafra в тот же город — A и A. У каждого персонажа своё."},
     {Text::NpcLastTime, "last time", "минулого разу", "в прошлый раз"},
+    {Text::NpcTalkTag, "Talk", "Говорити", "Говорить"},  // 3.0.11-beta.256: the NPC's plate before its name comes
     {Text::InterfaceShop, "NPC shops", "Крамниці NPC", "Магазины NPC"},  // 3.0.11-beta.100
     {Text::InterfaceShopHint,  // 3.0.11-beta.101: the keys, the amount typed, the description
      "The NPCs' shops in the new look: the list on the left with a search, the cart on the right, the total, the zeny "
