@@ -1,3 +1,13 @@
+# uaRO Graphics 3.0.11-beta.251 — what's new
+
+- **Monsters no longer get stuck far away and hit from a distance** (reports R-AMNV99, R-GKXJT6, R-RWR2Z8, R-UCE7J8, R-YB4S2K).
+
+  **Cause.** The server counts a hit at once, and the monster walks on right after a short flinch. The game shows the same hit later, after the swing. Its flinch then cuts off the new step, leaving the monster standing on its old spot. The game carries out the server's «stand here» only for a walking monster, so that order was lost too.
+
+  **Fix.** If a monster stands for more than 0.3 s away from where the server put it, the client gives the game its step again. The monster slides over to its real place and fights from there.
+
+  Switched off together with «Плавні поправки позиції» (Smooth position fixes) under «Інтерфейс».
+
 # uaRO Graphics 3.0.11-beta.250 — what's new
 
 - **A longer «monster stands far away» record.** Report R-RWR2Z8 showed the monster started walking after the character before the record began. The log now keeps 8 seconds instead of 3 and the steps of every monster, not just the ones you fight. Each line also has the character's cell.
