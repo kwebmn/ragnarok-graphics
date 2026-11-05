@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.11-beta.250 — what's new
+
+- **A longer «monster stands far away» record.** Report R-RWR2Z8 showed the monster started walking after the character before the record began. The log now keeps 8 seconds instead of 3 and the steps of every monster, not just the ones you fight. Each line also has the character's cell.
+
 # uaRO Graphics 3.0.11-beta.249 — what's new
 
 - **A fuller record for «the monster stands far away and teleports»** (report R-GKXJT6). There, the game showed a monster on one cell for 6 seconds while the server had it next to the character. The game ignored even the server's «stand here». Now the log also has every other packet about that monster, how many copies of it the game holds, and where the game moves it over the next 3 seconds. If the glitch comes back, send a report right after it.
