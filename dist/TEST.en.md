@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.11-beta.300 — what's new
+
+**Prontera's benches no longer sway in the wind:** the wrought bench is painted blue-green with the gaps between its bars cut out - the driver took it for a tree's leaves and swayed it with the grass. Only a yellow-green now counts as leaves (as all the client's real leaves are - checked over 867 textures of trees and outdoor props).
+
 # uaRO Graphics 3.0.11-beta.299 — what's new
 
 **Grass and sky on green maps the driver took for indoors:** Mjolnir (all 12 maps), the novice grounds, the guild castles' fields (Greenwood Lake, Luina, Valkyrie Realm, Nidhoggur Realm), Alberta Island, Glast Heim's outskirts, Jawaii, Byalan Island, Moscovia's forests, Prairie of Morestone, Odin Shrine, Capitolina Abbey, Good Turtles Village, Hvergelmir, Payon's PvP copies, Ile du Printemps, Poring War and the Monster Race Arena. They now get grass, flowers, butterflies and birds, the sun and its shadows, sky rays, morning fog and pollen like other fields. Where the ground is not very green (the novice grounds) there is less grass.
