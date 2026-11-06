@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.13-beta.3 — what's new
+
+**Boss HP bars** (a new switch «Boss HP bars» on the Interface page, off by default). An MVP's bar is wider and gold, a mini-boss's wider and violet - a boss stands out even in a crowd. Below a quarter of HP it turns red like any other.
+
 # uaRO Graphics 3.0.13-beta.2 — what's new
 
 **A lighter minimap.** It is redrawn at every step and was the dearest part of the new interface. Now the map's picture round you is made once and only shifted at a step - the minimap draws about 40 % faster, more noticeable on weak computers.
