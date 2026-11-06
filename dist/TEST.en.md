@@ -1,3 +1,9 @@
+# uaRO Graphics 3.0.11-beta.302 — what's new
+
+**The interface page in sections:** instead of 109 rows in one list - Main, Panels on the screen, Minimap, Fight, Things on the ground, Login and characters, Homunculus and mercenary, Connection and Windows in the new look. The 35 windows are behind a «Show each window» button. The controller's rows are on the Controller page (the windows' tile joined them).
+
+**The in-game console (~, Alt+D):** the interface in the same sections - every row of it now, the fight, the login and the homunculus included; the windows open with one row. Typing letters in the console finds the interface's rows too, not only the effects.
+
 # uaRO Graphics 3.0.11-beta.301 — what's new
 
 **The settings search finds:**
