@@ -5250,6 +5250,18 @@ constexpr Entry kTexts[] = {
      "Teleport and Fly Wing on the same map without the game's quarter-second darkening: the new place at once.",
      "Teleport і Fly Wing у межах карти без затемнення гри на чверть секунди: нове місце одразу.",
      "Teleport и Fly Wing в пределах карты без затемнения игры на четверть секунды: новое место сразу."},
+    {Text::InterfaceScreenShake, "Screen shake", "Тряска екрана", "Тряска экрана"},  // 3.0.13-beta.8
+    {Text::InterfaceScreenShakeHint,
+     "Earthquake and similar skills shake the camera, as in the game. Off: the picture stays still.",
+     "Earthquake і подібні навички трясуть камеру, як у грі. Вимкнено: картинка лишається нерухомою.",
+     "Earthquake и подобные навыки трясут камеру, как в игре. Выключено: картинка остаётся неподвижной."},
+    {Text::InterfaceSkillJokes, "Frost Joke and Scream lines in the chat", "Жарти Frost Joke і Scream у чат",
+     "Шутки Frost Joke и Scream в чат"},  // 3.0.13-beta.8
+    {Text::InterfaceSkillJokesHint,
+     "Your Frost Joke and Scream say a joke line in the public chat, as in the game. Off: the skill works, the chat "
+     "stays quiet.",
+     "Ваші Frost Joke і Scream кажуть рядок-жарт у загальний чат, як у грі. Вимкнено: навичка працює, чат мовчить.",
+     "Ваши Frost Joke и Scream говорят строку-шутку в общий чат, как в игре. Выключено: навык работает, чат молчит."},
     {Text::InterfaceChatColourParty, "Chat: the party's colour", "Чат: колір групи", "Чат: цвет группы"},  // .3
     {Text::InterfaceChatColourGuild, "Chat: the guild's colour", "Чат: колір гільдії", "Чат: цвет гильдии"},
     {Text::InterfaceChatColourOwn, "Chat: your own lines", "Чат: ваші рядки", "Чат: ваши строки"},

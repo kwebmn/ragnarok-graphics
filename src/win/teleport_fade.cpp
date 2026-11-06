@@ -4,7 +4,10 @@
 
 #include <cstring>
 
+#include "core/screen_shake_exe.hpp"
+#include "core/skill_jokes_exe.hpp"
 #include "core/teleport_fade_exe.hpp"
+#include "win/code_switch.hpp"
 #include "win/log.hpp"
 
 namespace uagfx::win {
@@ -37,6 +40,20 @@ void quickTeleport(bool wanted) {
         LOG_INFO("teleport: on the same map %s", wanted ? "at once - without the game's 255 ms of darkening"
                                                         : "with the game's darkening");
     now = wanted ? 1 : 0;
+}
+
+void stillScreen(bool wanted) {
+    namespace ss = screen_shake_exe;
+    static CodeSwitch shake{"screen shake (Earthquake and the like) off", ss::kShakeStart, ss::kGame, ss::kNone,
+                            sizeof ss::kGame};
+    shake.want(wanted);
+}
+
+void silentJokes(bool wanted) {
+    namespace sj = skill_jokes_exe;
+    static CodeSwitch jokes{"Frost Joke and Scream: no line in the chat", sj::kOpened, sj::kGame, sj::kSilent,
+                            sizeof sj::kGame};
+    jokes.want(wanted);
 }
 
 }  // namespace uagfx::win

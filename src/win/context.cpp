@@ -890,6 +890,8 @@ void Context::present(const Rect& source, bool waitForVblank) {
     limitZoom(config.cameraZoomLimit);     // 3.0.4-beta.17: no further out than the character is drawn
     tiltCamera(config.cameraTilt);  // 3.0.13-beta.5: [camera] tilt
     quickTeleport(config.quickTeleport);  // 3.0.13-beta.7: [interface] quick_teleport
+    stillScreen(!config.screenShake);     // 3.0.13-beta.8: [interface] screen_shake
+    silentJokes(!config.skillJokes);      // 3.0.13-beta.8: [interface] skill_jokes
     rememberCamera(config.cameraRemember);  // 3.0.11-beta.184: the zoom and tilt kept between the games (R-ANMTEJ)
     raiseWaterBoxes(enhanced_ && effects().ownGround);  // 3.0.4-beta.20: the game's water to its far plane
     // 2.3: Ctrl+Shift+F9 - uaRO Studio's X-ray: the AI pictures' textures tinted by how they are shown; written too,

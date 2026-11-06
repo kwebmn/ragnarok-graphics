@@ -655,6 +655,12 @@ struct Config {
     // 3.0.13-beta.7 (the owner's pick 18 of «50 идей»): [interface] quick_teleport - a teleport on the same map without
     // the game's 255 ms of darkening (win/teleport_fade)
     bool quickTeleport = false;
+    // 3.0.13-beta.8 (the owner's pick 2 of «50 идей»): [interface] screen_shake - Earthquake and the like shake the
+    // camera (the game's); 0 never (win/teleport_fade stillScreen)
+    bool screenShake = true;
+    // 3.0.13-beta.8 (the owner's pick 23 of «50 идей»): [interface] skill_jokes - Frost Joke and Scream say their line
+    // in the chat (the game's); 0 not
+    bool skillJokes = true;
     // 3.0.11-beta.88 (stage 4): [interface] pad_walk - the left stick walks without the mouse, an arrow on the ground
     // (a prototype for the owner: off till checked)
     PadWalk padWalk = PadWalk::Arrow;  // 3.0.11-beta.102: by the map's cells by default (core/stick_walk)
