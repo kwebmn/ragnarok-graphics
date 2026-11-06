@@ -344,6 +344,36 @@ TEST(frame_takes_a_range) {
     CHECK(r.takeRange(5, 9).empty() && r.takeRange(1, 1).empty() && r.commands().size() == 2);
 }
 
+// 3.0.11-beta.294 (R-WTXHXN: a crab and a ghost over the driver's chat): the game's windows' range taken over the
+// driver's interface - the world's draws within it and the uploads stay where they were, under the driver's panels
+TEST(frame_takes_the_interface_alone) {
+    FrameRecord f;
+    uint8_t v[4 * 32] = {};
+    DrawSetup world, ui;
+    ui.ui = true;
+    DrawCmd d;
+    d.primitive = d3d7::PT_TRIANGLESTRIP;
+    d.fvf = d3d7::FVF_TL1;
+    const uint32_t worldState = f.addState(world), uiState = f.addState(ui);
+    d.state = worldState;
+    f.draw(d, v, 4, nullptr, 0);  // 0 the ground
+    d.state = uiState;
+    f.draw(d, v, 4, nullptr, 0);  // 1 the game's window
+    d.state = worldState;
+    f.draw(d, v, 4, nullptr, 0);  // 2 a monster drawn among them
+    const uint32_t px[4] = {1, 2, 3, 4};
+    f.upload(7, 0, Rect{0, 0, 2, 2}, px);  // 3 an upload
+    d.state = uiState;
+    f.draw(d, v, 4, nullptr, 0);  // 4 its cursor
+    size_t kept = 99;
+    std::vector<Command> game = f.takeInterface(1, 99, kept);
+    CHECK_EQ(kept, size_t(1));
+    CHECK(game.size() == 2 && game[0].index == 1 && game[1].index == 3);  // the window and the cursor (draws 1, 3)
+    CHECK(f.commands().size() == 3 && f.commands()[1].type == Cmd::Draw && f.commands()[1].index == 2 &&
+          f.commands()[2].type == Cmd::Upload);
+    CHECK(f.takeInterface(5, 9, kept).empty() && kept == 0);
+}
+
 // 3.0.4-beta.5 (the user's idea 5): the photo mode - the game's interface (the draws after its depth went off: the
 // windows, the text, the cursor) and the driver's own panel out of the frame, the world, its clears and uploads kept
 TEST(frame_drops_the_interface) {

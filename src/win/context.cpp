@@ -688,7 +688,15 @@ void Context::endScene() {
                                   ? record.interfaceDraw(interfaceFaces_)
                                   : record.commands().size();
             sorted = record.commands().size() - std::min(to, record.commands().size());
-            game = record.takeRange(from, to);
+            size_t world = 0;  // 3.0.11-beta.294 (R-WTXHXN): the world's draws among them stay under the panels
+            game = record.takeInterface(from, to, world);
+            if (world > 0 && worldInWindowsTold_ < 5) {
+                ++worldInWindowsTold_;
+                LOG_INFO("windows: %zu of the world's draws among the game's own windows (from its interface draw "
+                         "%zu, %zu faces filed before them%s) - kept under the driver's interface",
+                         world, from, gameWindowsFaces_,
+                         interfaceFaces_ == SIZE_MAX ? ", its interface list's end not known" : "");
+            }
         }
         // 3.0.11-beta.193 (R-9RSSAW): the game's cursor is among them - while they are out, a part looking for it
         // (panel::cursorDraw, to stay under it) finds none, not the bar under the mouse

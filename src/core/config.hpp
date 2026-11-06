@@ -709,7 +709,7 @@ struct Config {
     // 3.0.11-beta.278 (the owner's features 6 and 10): [interface] hunt_panel - «Полювання»: DPS, exp/h, zeny/h, kills
     bool huntPanel = false;
     // 3.0.11-beta.279 (the owner's feature 5): [interface] mob_card - the monster's card by the cursor
-    bool mobCard = true;
+    bool mobCard = false;  // 3.0.11-beta.294 (the owner: «выключить по умолчанию, с геймпада это не удобно»)
     // 3.0.11-beta.280 (the owner's feature 9): [interface] mvp_timers - the bosses seen dying and their return
     bool mvpTimers = true;
     // 3.0.11-beta.281 (the owner's feature 16): [interface] potion_warn - the hotbar's healing items running low

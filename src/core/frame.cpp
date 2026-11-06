@@ -120,6 +120,19 @@ std::vector<Command> FrameRecord::takeRange(size_t from, size_t to) {
     return taken;
 }
 
+std::vector<Command> FrameRecord::takeInterface(size_t from, size_t to, size_t& world) {
+    world = 0;
+    std::vector<Command> range = takeRange(from, to);
+    std::vector<Command> taken, kept;
+    for (const Command& c : range) {
+        const bool worldDraw = c.type == Cmd::Draw && !states_[draws_[c.index].state].ui;
+        if (worldDraw) ++world;
+        (worldDraw || c.type == Cmd::Upload ? kept : taken).push_back(c);
+    }
+    commands_.insert(commands_.begin() + std::ptrdiff_t(std::min(from, commands_.size())), kept.begin(), kept.end());
+    return taken;
+}
+
 std::vector<Command> FrameRecord::takeTail(size_t from) {
     if (from >= commands_.size()) return {};
     std::vector<Command> tail(commands_.begin() + std::ptrdiff_t(from), commands_.end());

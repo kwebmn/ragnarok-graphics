@@ -132,6 +132,10 @@ public:
     std::vector<Command> takeTail(size_t from);
     // 3.0.11-beta.190: the commands [from, to) taken out (to past the end: the end), the rest kept in order
     std::vector<Command> takeRange(size_t from, size_t to);
+    // 3.0.11-beta.294 (R-WTXHXN: monsters and their bars over the driver's chat): the same for the game's windows, but
+    // the world's draws among them (not interface draws) and the uploads stay at `from`, under what is drawn later;
+    // `world` - how many draws stayed
+    std::vector<Command> takeInterface(size_t from, size_t to, size_t& world);
     void putBack(std::vector<Command>& tail);
     uint64_t generation() const { return generation_; }
     // 3.0.11-beta.193 (R-9RSSAW): the game's cursor out of the record with its windows while the driver draws its

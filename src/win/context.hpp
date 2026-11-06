@@ -114,6 +114,7 @@ private:
     size_t gameWindowsFaces_ = SIZE_MAX;  // 3.0.11-beta.185: its interface's faces filed before them
     size_t interfaceFaces_ = SIZE_MAX;    // 3.0.11-beta.190: and in all, at its scene's begin
     bool gameWindowsTold_ = false;
+    int worldInWindowsTold_ = 0;  // 3.0.11-beta.294: the world's draws among the game's windows told
     Context();
     // One log line every 30 seconds and one at close: frames shown and reads of the frame from the GPU. Reads
     // should stay near 0 while playing: the per-frame Lock must not cause any (Review Focus 1).
