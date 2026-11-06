@@ -63,11 +63,20 @@ uint32_t pointed(const Table& t, bool pad, uint32_t padTarget, uint32_t underCur
 
 uint32_t fillColour(int hp);  // ARGB: green, red below a quarter
 
+// 3.0.13-beta.3 (the owner's pick 10 of «50 идей»: «Строка HP у боссов и мини-боссов шире и своего цвета»): [interface]
+// boss_bars - an MVP's bar (a boss with an MVP's reward) wider and gold, another boss's wider and violet; red below a
+// quarter all the same
+enum class Rank : uint8_t { Normal, MiniBoss, Mvp };
+Rank rankOf(bool boss, bool mvpReward);
+uint32_t fillColour(int hp, Rank rank);
+
 // The bar over a sprite's box (left, top, right, bottom in the game's pixels, the game `screenHeight` pixels high)
 struct Bar {
     float x = 0, y = 0, w = 0, h = 0;
 };
 Bar barOver(const float box[4], bool target, int screenHeight);
+// 3.0.13-beta.3: a boss's bar - wider and taller about the same middle, its bottom where it was
+Bar ranked(Bar b, Rank rank);
 // 3.0.11-beta.148 (the owner: «хп над мобом дергается когда тот ходит», «когда моба атакую, хп дергается туда сюда»):
 // a bar steady over its monster - across the middle of its feet on the screen (its place in the world as the game
 // projects it), at its tallest frame's height of late: the sprite's box (the bar's place before) changes with each

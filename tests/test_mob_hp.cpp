@@ -130,3 +130,22 @@ TEST(mob_hp_bar_steady_over_the_feet) {
     const mobhp::Bar c = mobhp::barOver(box, false, 1080);
     CHECK(std::fabs(c.x - a.x) < 1e-3f && std::fabs(c.y - a.y) < 1e-3f);
 }
+
+// 3.0.13-beta.3 (the owner's pick 10 of «50 идей»): [interface] boss_bars - an MVP's bar wider and gold, a mini-boss's
+// wider and violet, about the same middle and bottom; red below a quarter for all
+TEST(mob_hp_boss_bars_wider_and_coloured) {
+    CHECK(mobhp::rankOf(false, true) == mobhp::Rank::Normal);
+    CHECK(mobhp::rankOf(true, false) == mobhp::Rank::MiniBoss);
+    CHECK(mobhp::rankOf(true, true) == mobhp::Rank::Mvp);
+    const float box[4] = {100, 200, 140, 260};
+    const mobhp::Bar plain = mobhp::barOver(box, false, 1080);
+    const mobhp::Bar mvp = mobhp::ranked(plain, mobhp::Rank::Mvp), mini = mobhp::ranked(plain, mobhp::Rank::MiniBoss);
+    CHECK(mvp.w > mini.w && mini.w > plain.w && mvp.h > plain.h);
+    CHECK(std::abs((mvp.x + mvp.w / 2) - (plain.x + plain.w / 2)) < 0.01f);
+    CHECK(std::abs((mvp.y + mvp.h) - (plain.y + plain.h)) < 0.01f);
+    CHECK(mobhp::ranked(plain, mobhp::Rank::Normal).w == plain.w);
+    CHECK(mobhp::fillColour(80, mobhp::Rank::Mvp) == 0xFFF2C14Eu);
+    CHECK(mobhp::fillColour(80, mobhp::Rank::MiniBoss) == 0xFFB07CFFu);
+    CHECK(mobhp::fillColour(20, mobhp::Rank::Mvp) == mobhp::fillColour(20));
+    CHECK(mobhp::fillColour(80, mobhp::Rank::Normal) == mobhp::fillColour(80));
+}

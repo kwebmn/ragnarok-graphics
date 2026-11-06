@@ -68,6 +68,24 @@ uint32_t pointed(const Table& t, bool pad, uint32_t padTarget, uint32_t underCur
 
 uint32_t fillColour(int hp) { return hp < 25 ? 0xFFE5534Bu : 0xFF5BD36Cu; }
 
+Rank rankOf(bool boss, bool mvpReward) { return !boss ? Rank::Normal : mvpReward ? Rank::Mvp : Rank::MiniBoss; }
+
+uint32_t fillColour(int hp, Rank rank) {
+    if (rank == Rank::Normal || hp < 25) return fillColour(hp);
+    return rank == Rank::Mvp ? 0xFFF2C14Eu : 0xFFB07CFFu;  // the interface's gold; a violet
+}
+
+Bar ranked(Bar b, Rank rank) {
+    if (rank == Rank::Normal) return b;
+    const float wide = rank == Rank::Mvp ? 1.7f : 1.35f, tall = rank == Rank::Mvp ? 1.6f : 1.3f;
+    const float mid = b.x + b.w / 2, bottom = b.y + b.h;
+    b.w *= wide;
+    b.h *= tall;
+    b.x = mid - b.w / 2;
+    b.y = bottom - b.h;
+    return b;
+}
+
 Bar barOver(const float box[4], bool target, int screenHeight) {
     const float k = std::max(0.6f, float(screenHeight) / 1080.0f);
     Bar b;

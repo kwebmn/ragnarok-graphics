@@ -12,11 +12,13 @@
 #include "core/game_camera.hpp"
 #include "core/mob_hp.hpp"
 #include "core/own_ground.hpp"
+#include "core/reference_index.hpp"
 #include "core/ui_style.hpp"
 #include "pad/win/runtime.hpp"
 #include "win/game_camera.hpp"
 #include "win/log.hpp"
 #include "win/picture_draw.hpp"
+#include "win/reference_load.hpp"
 #include "win/target_card.hpp"
 #include "win/world_mouse.hpp"
 
@@ -29,12 +31,16 @@ struct Bar {
     int hp = 0;
     uint32_t id = 0;  // 3.0.11-beta.99: whose (the ring's chevron stands over any)
     bool target = false;
+    mobhp::Rank rank = mobhp::Rank::Normal;  // 3.0.13-beta.3
 };
 
 struct State {
     MobHp mode = MobHp::All;
     bool modeTold = false;
     bool percent = false;  // 3.0.11-beta.293: [interface] mob_hp_percent
+    bool bossBars = false;  // 3.0.13-beta.3: [interface] boss_bars
+    std::unordered_map<int, mobhp::Rank> ranks;  // a class's, as the reference has it
+    int rankTold = 0;
     mobhp::Table table;
     std::unordered_map<uint32_t, std::array<float, 4>> boxes;
     // 3.0.11-beta.148 (the owner: «хп над мобом дергается когда тот ходит», «когда моба атакую, хп дергается туда
@@ -117,6 +123,30 @@ void packet(const packets::Event& e) {
 }
 
 void setPercent(bool on) { state().percent = on; }
+void setBossBars(bool on) { state().bossBars = on; }
+
+namespace {
+// 3.0.13-beta.3: a monster class's rank by the reference - a boss (mode 0x20), an MVP by its MVP reward; none loaded
+// yet: plain, asked again later
+mobhp::Rank rankOf(State& s, int cls) {
+    if (cls < kFirstMonster || cls > kLastMonster) return mobhp::Rank::Normal;
+    if (const auto it = s.ranks.find(cls); it != s.ranks.end()) return it->second;
+    const std::shared_ptr<const refindex::Index> index = reference::index();
+    if (!index) return mobhp::Rank::Normal;
+    const auto mob = index->mobs.find(cls);
+    bool mvp = false;
+    if (mob != index->mobs.end())
+        for (const refindex::Drop& d : mob->second.drops) mvp = mvp || d.kind == 1;
+    const mobhp::Rank r = mobhp::rankOf(mob != index->mobs.end() && mob->second.boss, mvp);
+    s.ranks[cls] = r;
+    if (r != mobhp::Rank::Normal && s.rankTold < 10) {
+        ++s.rankTold;
+        LOG_INFO("mob hp: %s - %d %s, its bar wider", r == mobhp::Rank::Mvp ? "an MVP" : "a boss", cls,
+                 mob->second.name.c_str());
+    }
+    return r;
+}
+}  // namespace
 
 void frame(HWND game, MobHp mode, double k, int targetWidth, int targetHeight) {
     State& s = state();
@@ -140,7 +170,7 @@ void frame(HWND game, MobHp mode, double k, int targetWidth, int targetHeight) {
     const uint32_t target = targetNow(s);
     const std::vector<mobhp::Shown> list = s.table.shown(mode, target, GetTickCount());
     if (list.empty() && mode != MobHp::All) return;
-    readActorBoxes(s.boxes, mode == MobHp::All ? &s.classes : nullptr);
+    readActorBoxes(s.boxes, mode == MobHp::All || s.bossBars ? &s.classes : nullptr);  // 3.0.13-beta.3: ranks
     const float kk = float(k);
     const int gameHeight = int(std::lround(float(targetHeight) / kk));
     if (mode == MobHp::All) {  // 3.0.11-beta.100: the monsters on the screen not known yet, the nearest first
@@ -189,7 +219,11 @@ void frame(HWND game, MobHp mode, double k, int targetWidth, int targetHeight) {
         } else {
             b = mobhp::barOver(it->second.data(), m.target, gameHeight);
         }
-        s.bars.push_back(Bar{b.x * kk, b.y * kk, b.w * kk, b.h * kk, b.y, m.hp, m.id, m.target});
+        mobhp::Rank rank = mobhp::Rank::Normal;  // 3.0.13-beta.3
+        if (s.bossBars)
+            if (const auto c = s.classes.find(m.id); c != s.classes.end()) rank = rankOf(s, c->second);
+        b = mobhp::ranked(b, rank);
+        s.bars.push_back(Bar{b.x * kk, b.y * kk, b.w * kk, b.h * kk, b.y, m.hp, m.id, m.target, rank});
         if (!m.target) continue;
         s.target = m.id;
         if (!s.percent) continue;  // 3.0.11-beta.293: the plate off
@@ -234,7 +268,7 @@ void draw(FrameRecord& record, gpu::Renderer& renderer) {
     for (const Bar& b : s.bars) {
         drawFill(record, b.x - edge, b.y - edge, b.w + 2 * edge, b.h + 2 * edge, s.k, 0xB4000000u);
         const float done = b.w * float(std::clamp(b.hp, 0, 100)) / 100.0f;
-        drawFill(record, b.x, b.y, done, b.h, s.k, mobhp::fillColour(b.hp));
+        drawFill(record, b.x, b.y, done, b.h, s.k, mobhp::fillColour(b.hp, b.rank));
     }
     if (s.text)
         drawPart(record, renderer, s.picture, s.texture, s.texW, s.texH, s.upload, s.textX, s.textY, s.k);

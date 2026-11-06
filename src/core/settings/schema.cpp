@@ -168,6 +168,8 @@ const std::vector<IniSetting>& iniSettings() {
          Text::InterfaceMobHp, Text::InterfaceMobHpHint, ""},
         {"interface", "mob_hp_percent", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {},  // 3.0.11-beta.293
          Text::InterfaceMobHpPercent, Text::InterfaceMobHpPercentHint, ""},
+        {"interface", "boss_bars", Page::Interface, Control::Check, 0, 1, 0, {"0", "1"}, {},  // 3.0.13-beta.3
+         Text::InterfaceBossBars, Text::InterfaceBossBarsHint, ""},
         {"interface", "pad_tiles", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {},  // 3.0.11-beta.90
          Text::InterfacePadTiles, Text::InterfacePadTilesHint, ""},
         {"interface", "pad_walk", Page::Interface, Control::Choice, 0, 0, 0, {"mouse", "arrow"},  // 3.0.11-beta.88
@@ -1176,6 +1178,7 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "interface.target_ring") return targetRingToken(c.targetRing);                // 3.0.11-beta.87
     if (k == "interface.mob_hp") return mobHpToken(c.mobHp);                               // 3.0.11-beta.95
     if (k == "interface.mob_hp_percent") return c.mobHpPercent ? "1" : "0";                // 3.0.11-beta.293
+    if (k == "interface.boss_bars") return c.bossBars ? "1" : "0";                         // 3.0.13-beta.3
     if (k == "interface.pad_walk") return padWalkToken(c.padWalk);                         // 3.0.11-beta.88
     if (k == "interface.walk_arrow") return walkLookToken(c.walkArrow);                    // 3.0.11-beta.103
     if (k == "interface.cursor") return cursorLookToken(c.cursorLook);                     // 3.0.11-beta.198

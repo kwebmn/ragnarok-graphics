@@ -643,6 +643,9 @@ struct Config {
     // 3.0.11-beta.293 (R-9R6G7A, the owner: «это окошко возле моба не надо»): [interface] mob_hp_percent - the per
     // cent's plate by the target's bar
     bool mobHpPercent = false;
+    // 3.0.13-beta.3 (the owner's pick 10 of «50 идей»): [interface] boss_bars - an MVP's bar wider and gold, another
+    // boss's wider and violet; off as new looks are
+    bool bossBars = false;
     // 3.0.11-beta.88 (stage 4): [interface] pad_walk - the left stick walks without the mouse, an arrow on the ground
     // (a prototype for the owner: off till checked)
     PadWalk padWalk = PadWalk::Arrow;  // 3.0.11-beta.102: by the map's cells by default (core/stick_walk)

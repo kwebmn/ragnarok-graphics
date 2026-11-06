@@ -5239,6 +5239,11 @@ constexpr Entry kTexts[] = {
      "A small dark plate with the target's HP per cent (95 %) to the right of its bar.",
      "Маленька темна плашка з відсотком HP цілі (95 %) праворуч від її смужки.",
      "Маленькая тёмная плашка с процентом HP цели (95 %) справа от её полоски."},
+    {Text::InterfaceBossBars, "Boss HP bars", "Смужки HP босів", "Полоски HP боссов"},  // 3.0.13-beta.3
+    {Text::InterfaceBossBarsHint,
+     "An MVP's bar wider and gold, a mini-boss's wider and violet - seen at once in a crowd.",
+     "Смужка MVP ширша й золота, міні-боса — ширша й фіолетова: видно одразу навіть у натовпі.",
+     "Полоска MVP шире и золотая, мини-босса — шире и фиолетовая: видно сразу даже в толпе."},
     {Text::InterfaceSkills, "Skills", "Навички", "Навыки"},  // 3.0.11-beta.96
     {Text::InterfaceSkillsHint,
      "The skill tree (Alt+S) in the new look: tabs by the jobs the character passed through, each skill's level out of "
