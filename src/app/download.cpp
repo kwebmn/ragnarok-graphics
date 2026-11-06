@@ -96,16 +96,32 @@ bool downloadFrom(const std::string& host, const std::string& path, const std::w
                   const std::function<bool(uint64_t done, uint64_t total)>& progress, std::string& error) {
     const std::string file = path.substr(0, path.find('?'));  // for the messages
     const std::wstring part = to + L".part";
-    for (int attempt = 0; attempt < 2; ++attempt) {
+    // 3.0.11-beta.291: a passing failure (no answer, 5xx, 429, a broken connection) is tried again after 2, 4, 8 s -
+    // raw.githubusercontent.com answers 503 now and then; the .part is continued
+    int retries = 3;
+    const auto again = [&]() {
+        if (retries <= 0) return false;
+        Sleep(DWORD(2000) << (3 - retries));
+        --retries;
+        return true;
+    };
+    bool restarted = false;
+    for (;;) {
         uint64_t have = sizeOf(part);
         Get g;
-        if (!open(g, host, path, have, error)) return false;
+        if (!open(g, host, path, have, error)) {
+            if (again()) continue;
+            return false;
+        }
         if (have && g.status == 416) {  // the .part is the whole file or more: start over once
             DeleteFileW(part.c_str());
+            if (restarted) break;
+            restarted = true;
             continue;
         }
         if (g.status != 200 && g.status != 206) {
             error = host + " answered " + std::to_string(g.status) + " for " + file;
+            if ((g.status >= 500 || g.status == 429) && again()) continue;
             return false;
         }
         if (g.status == 200) have = 0;  // the whole file again
@@ -139,7 +155,8 @@ bool downloadFrom(const std::string& host, const std::string& path, const std::w
         if (!ok) return false;
         if (g.length && done != total) {
             error = "the connection broke at " + std::to_string(done) + " of " + std::to_string(total) + " bytes";
-            return false;  // the .part stays: the next try continues it
+            if (again()) continue;  // the .part stays: the next try continues it
+            return false;
         }
         if (!MoveFileExW(part.c_str(), to.c_str(), MOVEFILE_REPLACE_EXISTING)) {
             error = "cannot write " + utf8(to);
