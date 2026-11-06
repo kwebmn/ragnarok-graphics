@@ -1,3 +1,9 @@
+# uaRO Graphics 3.0.12-beta.2 — what's new
+
+**Arrows on the side of the hotbar with room.** A hotbar in the screen's upper half shows the arrows left and the skill tips under it, and the bar itself goes up to the screen's edge. At the bottom of the screen it stays as before, over the bar.
+
+**The NPC talk window is smaller and moves.** Its width follows the NPC's words (short lines, a narrow window; long ones, wider), and the window can be dragged by its title or its text.
+
 # uaRO Graphics 3.0.12 — what's new
 
 **The mouse in the new interface with the controller off.** With «Gamepad (uaRO Pad)» cleared, the new interface's windows did not answer clicks: tabs, the close cross and buttons lit up but did not press. They work without the controller now; the controller itself stays off.
