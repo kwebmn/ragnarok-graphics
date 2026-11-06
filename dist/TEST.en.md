@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.11-beta.297 — what's new
+
+**Buffs in the stats plan (Alt+A):** the planning tab has a «Buffs in the plan» row - Improve Concentration (when learned), Blessing and Increase AGI. A buff on the character now is marked «now». A click (or left/right on a controller) counts it in the plan or not. Improve Concentration counts as a percentage of the planned AGI and DEX, so its share grows with them. The results, the ASPD/cast goals and the map's monsters follow the chosen buffs. Passive skills (Owl's Eye, Vulture's Eye and the like) were counted before. The choice is kept with the plan.
+
 # uaRO Graphics 3.0.11-beta.296 — what's new
 
 **The stats window (Alt+A) — the rest of the concept:**
