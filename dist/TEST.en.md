@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.11-beta.304 — what's new
+
+**The blue dot no longer turns parts of the new interface off:** with «New interface» on, its parts (the target card, the panels, the windows) counted as «recommended off», and since 3.0.11-beta.303 a click on the dot turned them off. Their recommended values now follow «New interface». If something went missing, turn it on again on the Interface page (e.g. «Target card» under Panels on the screen).
+
 # uaRO Graphics 3.0.11-beta.303 — what's new
 
 **Marks in the settings:**
