@@ -1,3 +1,9 @@
+# uaRO Graphics 3.0.13-beta.8 — what's new
+
+**Screen shake can be turned off** (a switch «Screen shake» on the Interface page; on, as in the game). Clear it and Earthquake and similar skills no longer shake the camera - the picture stays still.
+
+**No Frost Joke and Scream lines in the chat** (a switch «Frost Joke and Scream lines in the chat»; on, as in the game). Clear it and the skill works as always, but your character no longer says its joke line in the public chat.
+
 # uaRO Graphics 3.0.13-beta.7 — what's new
 
 **Quick teleport on the map** (a new switch «Quick teleport on the map» on the Interface page, off by default). Teleport and Fly Wing within one map without the darkening: the game no longer stops for a quarter of a second, the new place shows at once - handy when farming with wings. Moving to other maps stays as it was.
