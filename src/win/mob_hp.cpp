@@ -34,6 +34,7 @@ struct Bar {
 struct State {
     MobHp mode = MobHp::All;
     bool modeTold = false;
+    bool percent = false;  // 3.0.11-beta.293: [interface] mob_hp_percent
     mobhp::Table table;
     std::unordered_map<uint32_t, std::array<float, 4>> boxes;
     // 3.0.11-beta.148 (the owner: «хп над мобом дергается когда тот ходит», «когда моба атакую, хп дергается туда
@@ -115,6 +116,8 @@ void packet(const packets::Event& e) {
     }
 }
 
+void setPercent(bool on) { state().percent = on; }
+
 void frame(HWND game, MobHp mode, double k, int targetWidth, int targetHeight) {
     State& s = state();
     if (mode != s.mode || !s.modeTold) {
@@ -189,6 +192,7 @@ void frame(HWND game, MobHp mode, double k, int targetWidth, int targetHeight) {
         s.bars.push_back(Bar{b.x * kk, b.y * kk, b.w * kk, b.h * kk, b.y, m.hp, m.id, m.target});
         if (!m.target) continue;
         s.target = m.id;
+        if (!s.percent) continue;  // 3.0.11-beta.293: the plate off
         const float scale = uistyle::partScale(k);
         const std::string text = mobhp::percentText(m.hp);
         const std::string key = text + ';' + std::to_string(scale);

@@ -289,6 +289,10 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("mob_hp", mobHpToken(running.mobHp), mobHpToken(file.mobHp)));
         n.mobHp = file.mobHp;
     }
+    if (file.mobHpPercent != running.mobHpPercent) {  // 3.0.11-beta.293
+        u.applied.push_back(change("mob_hp_percent", flag(running.mobHpPercent), flag(file.mobHpPercent)));
+        n.mobHpPercent = file.mobHpPercent;
+    }
     if (file.targetRing != running.targetRing) {  // 3.0.11-beta.87: the target's ring on the ground
         u.applied.push_back(
             change("target_ring", targetRingToken(running.targetRing), targetRingToken(file.targetRing)));

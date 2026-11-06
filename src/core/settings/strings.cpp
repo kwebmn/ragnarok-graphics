@@ -5207,6 +5207,12 @@ constexpr Entry kTexts[] = {
     {Text::InterfaceMobHpTarget, "The target only", "Лише ціль", "Только цель"},
     {Text::InterfaceMobHpWounded, "The target and the wounded", "Ціль і поранені", "Цель и раненые"},
     {Text::InterfaceMobHpAll, "All", "Усі", "Все"},
+    {Text::InterfaceMobHpPercent, "HP per cent by the target's bar", "Відсоток HP біля смужки цілі",
+     "Процент HP возле полоски цели"},
+    {Text::InterfaceMobHpPercentHint,
+     "A small dark plate with the target's HP per cent (95 %) to the right of its bar.",
+     "Маленька темна плашка з відсотком HP цілі (95 %) праворуч від її смужки.",
+     "Маленькая тёмная плашка с процентом HP цели (95 %) справа от её полоски."},
     {Text::InterfaceSkills, "Skills", "Навички", "Навыки"},  // 3.0.11-beta.96
     {Text::InterfaceSkillsHint,
      "The skill tree (Alt+S) in the new look: tabs by the jobs the character passed through, each skill's level out of "

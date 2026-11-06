@@ -574,6 +574,8 @@ Config parseConfig(const std::string& text) {
             if (val == "target") c.mobHp = MobHp::Target;
             if (val == "wounded") c.mobHp = MobHp::Wounded;
             if (val == "all") c.mobHp = MobHp::All;
+        } else if (key == "interface.mob_hp_percent") {  // 3.0.11-beta.293
+            setBool(val, c.mobHpPercent);
         } else if (key == "interface.pad_tiles") {  // 3.0.11-beta.90: Start opens the windows' tile
             setBool(val, c.padTiles);
         } else if (key == "interface.pad_walk") {  // 3.0.11-beta.88: the left stick without the mouse

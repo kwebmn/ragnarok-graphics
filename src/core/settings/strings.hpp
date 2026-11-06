@@ -503,6 +503,7 @@ enum class Text : uint16_t {
     InterfaceTargetRingAlways,
     InterfaceMobHp, InterfaceMobHpHint, InterfaceMobHpOff, InterfaceMobHpTarget, InterfaceMobHpWounded,
     InterfaceMobHpAll,  // 3.0.11-beta.95
+    InterfaceMobHpPercent, InterfaceMobHpPercentHint,  // 3.0.11-beta.293
     InterfaceSkills, InterfaceSkillsHint, SkillsTitle, SkillsPoints, SkillsDrag, SkillsPassive, SkillsEnemy,
     SkillsGround, SkillsSelf, SkillsAlly, SkillsTrap, SkillsSp, SkillsRange, SkillsNeeds, SkillsUnlearned, SkillsPadUse,
     SkillsPadRaise, SkillsPadAssign, SkillsPadClose,  // 3.0.11-beta.96

@@ -640,6 +640,9 @@ struct Config {
     // 3.0.11-beta.95 (the owner: «Полоски HP мобов - всем показывай»): [interface] mob_hp - HP bars over the monsters'
     // heads from their name lines' per cent (core/mob_hp, win/mob_hp); the target's and the wounded's
     MobHp mobHp = MobHp::All;  // 3.0.11-beta.100 (the owner: «а можно чтобы над мобами всегда хп висело?»)
+    // 3.0.11-beta.293 (R-9R6G7A, the owner: «это окошко возле моба не надо»): [interface] mob_hp_percent - the per
+    // cent's plate by the target's bar
+    bool mobHpPercent = false;
     // 3.0.11-beta.88 (stage 4): [interface] pad_walk - the left stick walks without the mouse, an arrow on the ground
     // (a prototype for the owner: off till checked)
     PadWalk padWalk = PadWalk::Arrow;  // 3.0.11-beta.102: by the map's cells by default (core/stick_walk)
