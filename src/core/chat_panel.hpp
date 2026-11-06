@@ -56,7 +56,16 @@ struct Texts {
     std::string filters[4];
     std::string autoloot, autolootOff, expOn, expOff, zenyOn, zenyOff, expGained, noSp;  // .243, 3.0.12-beta.3
     std::string search, searchHint;  // 3.0.11-beta.284: «Пошук», «Шукати в рядках · Esc — закрити»
+    // 3.0.13-beta.3 (the owner's pick 24 of «50 идей»: «Свои цвета каналов чата»): the party's and the guild's
+    // colours, one's own and the others' words in the public chat (0: the game's) - a GM's own colour kept
+    uint32_t party = kParty, guild = kGuild, own = 0, others = 0;
 };
+// 3.0.13-beta.3 (the owner's pick 28 of «50 идей»: «Журнал чата в файл по дням»): [interface] chat_log - a line as
+// the log keeps it, «[hh:mm:ss] words ×N»; "" a line the log skips (the fight's)
+std::string logLine(const Line& l, int hour, int minute, int second);
+// 3.0.13-beta.3: [interface] chat_party, chat_guild, chat_own, chat_others - a colour by its name; "default" (or
+// unknown) `fallback`
+uint32_t chatColour(const std::string& token, uint32_t fallback);
 // 3.0.11-beta.243: «Усі»'s filters - each bit hides one kind there
 constexpr int kHideSystem = 1, kHideLoot = 2, kHideAnnounce = 4, kHideTrade = 8;
 // The server's own words made short (the autoloot, the shown experience and zeny, «Experience Gained …»); false: as

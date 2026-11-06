@@ -389,3 +389,34 @@ TEST(chat_tidies_the_server_mvp_lines_and_no_sp) {
     CHECK(text(fromGame(Source::Public, "Rin : Your reward item isX", 0xFFFFFF, t, 0)).find("isX") !=
           std::string::npos);
 }
+
+// 3.0.13-beta.3 (the owner's pick 24 of «50 идей»): the chat's colours - the party's, the guild's, one's own and the
+// others' words; a GM's (the game's own colour) kept
+TEST(chat_lines_in_the_players_colours) {
+    Texts t = texts();
+    t.party = chatColour("orange", kParty);
+    t.guild = chatColour("violet", kGuild);
+    t.own = chatColour("yellow", 0);
+    t.others = chatColour("white", 0);
+    CHECK(chatColour("default", kParty) == kParty && chatColour("nonsense", 7) == 7);
+    CHECK(fromGame(Source::Party, "Tor : hi", 0xFFFFFF, t, 0).spans[0].rgb == 0xFFB067);
+    CHECK(fromGame(Source::Guild, "Kael : hi", 0xFFFFFF, t, 0).spans[0].rgb == 0xC3A6FF);
+    CHECK(fromGame(Source::PublicOwn, "Me : hi", 0xFFFFFF, t, 0).spans[1].rgb == 0xF3E27A);
+    CHECK(fromGame(Source::Public, "Rin : hi", 0xFFFFFF, t, 0).spans[1].rgb == 0xFFFFFF);
+    CHECK(fromGame(Source::Public, "GM : hi", 0x00FFFF, t, 0).spans[1].rgb != 0xFFFFFF);  // a GM's own colour
+    const Texts plain = texts();
+    CHECK(fromGame(Source::Public, "Rin : hi", 0xFFFFFF, plain, 0).spans[1].rgb == kText);
+}
+
+// 3.0.13-beta.3 (the owner's pick 28 of «50 идей»): [interface] chat_log - a line with its time, the fight's skipped
+TEST(chat_log_line_with_its_time) {
+    const Texts t = texts();
+    const Line party = fromGame(Source::Party, "Tor : hi\nall", 0xFFFFFF, t, 0);
+    const std::string l = logLine(party, 9, 5, 7);
+    CHECK(l.rfind("[09:05:07] ", 0) == 0 && l.find("Tor") != std::string::npos);
+    CHECK(l.find('\n') == l.size() - 1 && l.find("hi all") != std::string::npos);
+    Line fight;
+    fight.kind = Kind::Battle;
+    fight.spans = {Span{"Poring -12", kText, false, false}};
+    CHECK(logLine(fight, 1, 2, 3).empty());
+}

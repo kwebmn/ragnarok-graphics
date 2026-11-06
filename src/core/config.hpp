@@ -591,6 +591,12 @@ struct Config {
     // 3.0.11-beta.240 (the chat concept, stage 1): [interface] chat_fade - idle seconds before the chat's ground fades
     // (12, 30; 0 never)
     int chatFade = 12;
+    // 3.0.13-beta.3 (the owner's pick 24 of «50 идей»): [interface] chat_party, chat_guild, chat_own, chat_others -
+    // the chat's colours by name (core/chat_panel chatColour), "default" the chat's own
+    // 3.0.13-beta.3 (the owner's pick 28): [interface] chat_log - the chat's lines into uaro-graphics\chat-logs, a
+    // file a day; off unless asked (whispers stay on the disk)
+    bool chatLog = false;
+    std::string chatParty = "default", chatGuild = "default", chatOwn = "default", chatOthers = "default";
     // 3.0.11-beta.120 (the owner: «карта ... какаято не красивая»): [interface] minimap_style - the minimap's and the
     // big map's picture: the game's own, or «Схема» drawn from the server's walkable cells (core/minimap_proto
     // schemePixels); switched on the maps themselves too

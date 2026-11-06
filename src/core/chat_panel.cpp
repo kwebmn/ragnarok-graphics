@@ -162,6 +162,29 @@ std::string tidied(const std::string& text, const Texts& t) {
 }
 }  // namespace
 
+std::string logLine(const Line& l, int hour, int minute, int second) {
+    if (l.kind == Kind::Battle) return "";
+    std::string words;
+    for (const Span& s : l.spans) words += s.text;
+    if (words.empty()) return "";
+    for (char& c : words)
+        if (c == '\r' || c == '\n') c = ' ';
+    char at[16];
+    std::snprintf(at, sizeof at, "[%02d:%02d:%02d] ", hour, minute, second);
+    return at + words + "\r\n";
+}
+
+uint32_t chatColour(const std::string& token, uint32_t fallback) {
+    if (token == "blue") return 0x7FD3FF;
+    if (token == "green") return 0x9FE07C;
+    if (token == "yellow") return 0xF3E27A;
+    if (token == "orange") return 0xFFB067;
+    if (token == "pink") return 0xFFAEE0;
+    if (token == "violet") return 0xC3A6FF;
+    if (token == "white") return 0xFFFFFF;
+    return fallback;
+}
+
 Line fromGame(Source source, const std::string& gameText, uint32_t colorRef, const Texts& t, uint64_t ms) {
     const std::string text = source == Source::Public || source == Source::Party || source == Source::Guild ||
                                      source == Source::Whisper
@@ -178,7 +201,10 @@ Line fromGame(Source source, const std::string& gameText, uint32_t colorRef, con
             if (said(text, who, rest)) {  // a GM's in the game's colour, the rest as the words
                 l.who = who;
                 l.trade = tradeLike(rest);
-                l.spans = {Span{who, own, true, true}, Span{": " + rest, own, false, false}};
+                uint32_t c = own;  // 3.0.13-beta.3: one's own or the others' colour - a GM's kept
+                if (own == kText && (source == Source::PublicOwn ? t.own : t.others))
+                    c = source == Source::PublicOwn ? t.own : t.others;
+                l.spans = {Span{who, c, true, true}, Span{": " + rest, c, false, false}};
                 return l;
             }
             // 3.0.11-beta.245 (R-YCYYXU: «Autolooting items…» as it came): the server's own lines come as the
@@ -193,7 +219,7 @@ Line fromGame(Source source, const std::string& gameText, uint32_t colorRef, con
         case Source::Party:
         case Source::Guild: {
             const bool party = source == Source::Party;
-            const uint32_t c = party ? kParty : kGuild;
+            const uint32_t c = party ? t.party : t.guild;  // 3.0.13-beta.3: the player's colours
             l.kind = party ? Kind::Party : Kind::Guild;
             const std::string tag = "[" + t.tabs[party ? 1 : 2] + "] ";
             if (said(text, who, rest)) {

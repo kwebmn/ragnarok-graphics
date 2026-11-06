@@ -1,5 +1,6 @@
 #include "core/live_config.hpp"
 
+#include <tuple>
 #include <utility>
 
 #include "core/settings/schema.hpp"
@@ -203,6 +204,21 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
     if (file.minimapKafra != running.minimapKafra) {  // 3.0.11-beta.119: the map's layers, at once
         u.applied.push_back(change("minimap_kafra", flag(running.minimapKafra), flag(file.minimapKafra)));
         n.minimapKafra = file.minimapKafra;
+    }
+    for (const auto& [name, f, r] : {std::tuple{"chat_party", &file.chatParty, &running.chatParty},
+                                     std::tuple{"chat_guild", &file.chatGuild, &running.chatGuild},
+                                     std::tuple{"chat_own", &file.chatOwn, &running.chatOwn},
+                                     std::tuple{"chat_others", &file.chatOthers, &running.chatOthers}})
+        if (*f != *r) {  // 3.0.13-beta.3: the chat's colours, at once (the lines coming from now)
+            u.applied.push_back(change(name, *r, *f));
+            if (std::string(name) == "chat_party") n.chatParty = *f;
+            if (std::string(name) == "chat_guild") n.chatGuild = *f;
+            if (std::string(name) == "chat_own") n.chatOwn = *f;
+            if (std::string(name) == "chat_others") n.chatOthers = *f;
+        }
+    if (file.chatLog != running.chatLog) {  // 3.0.13-beta.3
+        u.applied.push_back(change("chat_log", flag(running.chatLog), flag(file.chatLog)));
+        n.chatLog = file.chatLog;
     }
     if (file.chatFade != running.chatFade) {  // 3.0.11-beta.240: the chat's fade, at once
         u.applied.push_back(change("chat_fade", std::to_string(running.chatFade), std::to_string(file.chatFade)));

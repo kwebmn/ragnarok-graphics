@@ -1073,6 +1073,8 @@ void Context::present(const Rect& source, bool waitForVblank) {
     // 3.0.11-beta.41: [interface] chat - the chat at the bottom left, the game's own out of sight (before the hotbar:
     // it keeps clear of it)
     chatwin::setFade(config.chatFade);  // 3.0.11-beta.240
+    chatwin::setLog(config.chatLog);  // 3.0.13-beta.3
+    chatwin::setColours(config.chatParty, config.chatGuild, config.chatOwn, config.chatOthers);  // 3.0.13-beta.3
     chatwin::frame(window, config.chat, gameCodePage(config), pk, pw, ph);
     // 3.0.11-beta.49: [interface] dim_world - the world dimmed while the new windows are open
     worlddim::frame(config.dimWorld, pk, pw, ph);

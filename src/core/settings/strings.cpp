@@ -5244,6 +5244,29 @@ constexpr Entry kTexts[] = {
      "An MVP's bar wider and gold, a mini-boss's wider and violet - seen at once in a crowd.",
      "Смужка MVP ширша й золота, міні-боса — ширша й фіолетова: видно одразу навіть у натовпі.",
      "Полоска MVP шире и золотая, мини-босса — шире и фиолетовая: видно сразу даже в толпе."},
+    {Text::InterfaceChatColourParty, "Chat: the party's colour", "Чат: колір групи", "Чат: цвет группы"},  // .3
+    {Text::InterfaceChatColourGuild, "Chat: the guild's colour", "Чат: колір гільдії", "Чат: цвет гильдии"},
+    {Text::InterfaceChatColourOwn, "Chat: your own lines", "Чат: ваші рядки", "Чат: ваши строки"},
+    {Text::InterfaceChatColourOthers, "Chat: the others' lines", "Чат: рядки інших", "Чат: строки других"},
+    {Text::InterfaceChatLog, "Chat log to a file", "Журнал чату у файл", "Журнал чата в файл"},  // 3.0.13-beta.3
+    {Text::InterfaceChatLogHint,
+     "Every chat line with its time into uaro-graphics\\chat-logs, a file a day - for disputes over trades. Whispers "
+     "too; the file stays on this computer and is never sent with a report.",
+     "Кожен рядок чату з часом — у uaro-graphics\\chat-logs, файл на день: для суперечок про угоди. Шепіт теж; файл "
+     "лишається на цьому комп'ютері й ніколи не йде зі звітом.",
+     "Каждая строка чата со временем — в uaro-graphics\\chat-logs, файл на день: для споров о сделках. Шёпот тоже; "
+     "файл остаётся на этом компьютере и никогда не уходит с отчётом."},
+    {Text::InterfaceChatColourHint, "The colour of these lines in the chat; a GM's lines keep their own.",
+     "Колір цих рядків у чаті; рядки GM лишаються своїм кольором.",
+     "Цвет этих строк в чате; строки GM остаются своим цветом."},
+    {Text::ChatColourDefault, "As it is", "Як є", "Как есть"},
+    {Text::ChatColourBlue, "Blue", "Блакитний", "Голубой"},
+    {Text::ChatColourGreen, "Green", "Зелений", "Зелёный"},
+    {Text::ChatColourYellow, "Yellow", "Жовтий", "Жёлтый"},
+    {Text::ChatColourOrange, "Orange", "Помаранчевий", "Оранжевый"},
+    {Text::ChatColourPink, "Pink", "Рожевий", "Розовый"},
+    {Text::ChatColourViolet, "Violet", "Фіолетовий", "Фиолетовый"},
+    {Text::ChatColourWhite, "White", "Білий", "Белый"},
     {Text::InterfaceSkills, "Skills", "Навички", "Навыки"},  // 3.0.11-beta.96
     {Text::InterfaceSkillsHint,
      "The skill tree (Alt+S) in the new look: tabs by the jobs the character passed through, each skill's level out of "

@@ -546,6 +546,18 @@ Config parseConfig(const std::string& text) {
             setBool(val, c.expBars);
         } else if (key == "interface.exp_gain") {  // 3.0.11-beta.237
             setBool(val, c.expGain);
+        } else if (key == "interface.chat_log") {  // 3.0.13-beta.3
+            setBool(val, c.chatLog);
+        } else if (key == "interface.chat_party" || key == "interface.chat_guild" || key == "interface.chat_own" ||
+                   key == "interface.chat_others") {  // 3.0.13-beta.3
+            std::string& to = key == "interface.chat_party"   ? c.chatParty
+                              : key == "interface.chat_guild" ? c.chatGuild
+                              : key == "interface.chat_own"   ? c.chatOwn
+                                                              : c.chatOthers;
+            bool known = false;  // the names core/chat_panel's chatColour knows (not linked here: the app's own list)
+            for (const char* name : {"blue", "green", "yellow", "orange", "pink", "violet", "white"})
+                known = known || val == name;
+            to = known ? val : "default";
         } else if (key == "interface.chat_fade") {  // 3.0.11-beta.240
             const int v = std::atoi(val.c_str());
             c.chatFade = v == 30 ? 30 : v == 0 && val == "0" ? 0 : 12;

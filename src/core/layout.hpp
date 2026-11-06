@@ -53,6 +53,8 @@ constexpr const char* kPingSent = "uaro-graphics\\cache\\ping-sent.txt";
 constexpr const char* kWindowPlaces = "uaro-graphics\\uaro-windows.txt";
 // 3.0.11-beta.184 (R-ANMTEJ): the camera's zoom and tilt as the player left them (core/camera_memory), by the games
 constexpr const char* kCameraMemory = "uaro-graphics\\camera.txt";
+// 3.0.13-beta.3: [interface] chat_log - the chat's lines, a file a day (YYYY-MM-DD.txt); never sent with a report
+constexpr const char* kChatLogs = "uaro-graphics\\chat-logs";
 // 2.13: «Звернення» (app/reports): the computer's random key - the site's reports belong to it, no login - and the
 // reports the site did not take yet (queued-*.json, sent at the app's next start)
 constexpr const char* kReports = "uaro-graphics\\reports";

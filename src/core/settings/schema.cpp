@@ -35,6 +35,12 @@ Text pageName(Page p) {
 
 const std::vector<IniSetting>& iniSettings() {
     using E = EffectSettings;  // 2.2.2: [effects] entries bound to their fields
+    // 3.0.13-beta.3: the chat's colours (core/chat_panel chatColour)
+    const std::vector<const char*> kChatColours{"default", "blue", "green", "yellow",
+                                                "orange",  "pink", "violet", "white"};
+    const std::vector<Text> kChatColourNames{Text::ChatColourDefault, Text::ChatColourBlue,   Text::ChatColourGreen,
+                                             Text::ChatColourYellow,  Text::ChatColourOrange, Text::ChatColourPink,
+                                             Text::ChatColourViolet,  Text::ChatColourWhite};
     static const std::vector<IniSetting> list{
         {"renderer", "api", Page::Render, Control::Choice, 0, 0, 0, {"d3d12", "d3d11", "auto", "system"},
          {Text::RenderApiD3d12, Text::RenderApiD3d11, Text::RenderApiAuto, Text::RenderApiSystem}, Text::RenderApi,
@@ -128,6 +134,16 @@ const std::vector<IniSetting>& iniSettings() {
         // 3.0.11-beta.236: the experience's bars at the screen's bottom
         {"interface", "exp_bars", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::InterfaceExpBars,
          Text::InterfaceExpBarsHint, ""},
+        {"interface", "chat_log", Page::Interface, Control::Check, 0, 1, 0, {"0", "1"}, {},  // 3.0.13-beta.3
+         Text::InterfaceChatLog, Text::InterfaceChatLogHint, ""},
+        {"interface", "chat_party", Page::Interface, Control::Choice, 0, 0, 0, kChatColours, kChatColourNames,
+         Text::InterfaceChatColourParty, Text::InterfaceChatColourHint, ""},  // 3.0.13-beta.3
+        {"interface", "chat_guild", Page::Interface, Control::Choice, 0, 0, 0, kChatColours, kChatColourNames,
+         Text::InterfaceChatColourGuild, Text::InterfaceChatColourHint, ""},  // 3.0.13-beta.3
+        {"interface", "chat_own", Page::Interface, Control::Choice, 0, 0, 0, kChatColours, kChatColourNames,
+         Text::InterfaceChatColourOwn, Text::InterfaceChatColourHint, ""},  // 3.0.13-beta.3
+        {"interface", "chat_others", Page::Interface, Control::Choice, 0, 0, 0, kChatColours, kChatColourNames,
+         Text::InterfaceChatColourOthers, Text::InterfaceChatColourHint, ""},  // 3.0.13-beta.3
         // 3.0.11-beta.240: the chat's fade when idle
         {"interface", "chat_fade", Page::Interface, Control::Choice, 0, 0, 0, {"12", "30", "0"},
          {Text::InterfaceChatFade12, Text::InterfaceChatFade30, Text::InterfaceChatFadeNever}, Text::InterfaceChatFade,
@@ -1166,6 +1182,11 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "interface.exp_bars") return c.expBars ? "1" : "0";                // 3.0.11-beta.236
     if (k == "interface.exp_gain") return c.expGain ? "1" : "0";                // 3.0.11-beta.237
     if (k == "interface.chat_fade") return std::to_string(c.chatFade);          // 3.0.11-beta.240
+    if (k == "interface.chat_log") return c.chatLog ? "1" : "0";                // 3.0.13-beta.3
+    if (k == "interface.chat_party") return c.chatParty;                        // 3.0.13-beta.3
+    if (k == "interface.chat_guild") return c.chatGuild;
+    if (k == "interface.chat_own") return c.chatOwn;
+    if (k == "interface.chat_others") return c.chatOthers;
     if (k == "interface.minimap_party") return c.minimapParty ? "1" : "0";
     if (k == "interface.minimap_reach") return c.minimapReach ? "1" : "0";  // 3.0.11-beta.65
     if (k == "interface.minimap_hd") return c.minimapHd ? "1" : "0";        // 3.0.11-beta.72

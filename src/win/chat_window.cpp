@@ -125,6 +125,10 @@ struct State {
     // 3.0.12-beta.3 (a player's screenshot: «Досвід: Base +19 950 · Job +25 110» and then «Base EXP +19 950», «Job
     // EXP +25 110»): the server tells the experience itself (@showexp) - when it last did; ours not added meanwhile
     ULONGLONG serverExpAt = 0;
+    bool log = false;  // 3.0.13-beta.3: [interface] chat_log
+    int logTold = 0;
+    std::string coloursKey;  // 3.0.13-beta.3: [interface] chat_* colours
+    uint32_t party = cp::kParty, guild = cp::kGuild, own = 0, others = 0;
     int serverExpTold = 0;
     ULONGLONG killAt = 0;
     std::map<uint16_t, std::string> skillNames;
@@ -237,7 +241,29 @@ const char* sourceName(cp::Source s) {
     return "?";
 }
 
+// 3.0.13-beta.3: [interface] chat_log - the line appended to today's file (several game windows append to it too)
+void logged(State& s, const cp::Line& line) {
+    if (!s.log) return;
+    SYSTEMTIME t{};
+    GetLocalTime(&t);
+    const std::string text = cp::logLine(line, t.wHour, t.wMinute, t.wSecond);
+    if (text.empty()) return;
+    const std::string folder = layout::join(gameDir(), layout::kChatLogs);
+    CreateDirectoryA(folder.c_str(), nullptr);
+    char day[16];
+    std::snprintf(day, sizeof day, "%04d-%02d-%02d.txt", t.wYear, t.wMonth, t.wDay);
+    const std::string file = folder + "\\" + day;
+    FILE* f = std::fopen(file.c_str(), "ab");
+    if (!f) {
+        if (s.logTold++ < 3) LOG_INFO("chat: [interface] chat_log - %s could not be opened", file.c_str());
+        return;
+    }
+    std::fwrite(text.data(), 1, text.size(), f);
+    std::fclose(f);
+}
+
 void add(State& s, cp::Line line) {
+    logged(s, line);  // 3.0.13-beta.3
     const ULONGLONG now = GetTickCount64();
     // 3.0.11-beta.243 (the chat concept, stage 4): the same line again within a minute - «×N» on the one before
     if (line.kind != cp::Kind::Battle && !s.lines.empty()) {
@@ -285,7 +311,12 @@ void take(State& s) {
         } else if (words.rfind("Gained exp will not be shown", 0) == 0) {
             s.serverExpAt = 0;
         }
-        cp::Line line = cp::fromGame(r.source, words, r.colour, t, r.ms);
+        cp::Texts tc = t;  // 3.0.13-beta.3: the player's colours
+        tc.party = s.party;
+        tc.guild = s.guild;
+        tc.own = s.own;
+        tc.others = s.others;
+        cp::Line line = cp::fromGame(r.source, words, r.colour, tc, r.ms);
         if (r.source == cp::Source::Whisper && !line.who.empty()) s.replyTo = line.who;  // 3.0.11-beta.240: /r
         if (line.kind == cp::Kind::Whisper && !line.who.empty()) {  // 3.0.11-beta.242: the ones whispered with
             std::vector<std::string>& p = s.show.people;
@@ -1134,6 +1165,26 @@ bool key(UINT m, WPARAM wp, LPARAM lp) {
 void beforeGameDraw() {
     State& s = state();
     if (s.on && inGameWorld()) holdOldChat(s, true);
+}
+
+void setColours(const std::string& party, const std::string& guild, const std::string& own,
+                const std::string& others) {  // 3.0.13-beta.3
+    State& s = state();
+    const std::string key = party + ',' + guild + ',' + own + ',' + others;
+    if (key == s.coloursKey) return;
+    s.coloursKey = key;
+    s.party = cp::chatColour(party, cp::kParty);
+    s.guild = cp::chatColour(guild, cp::kGuild);
+    s.own = cp::chatColour(own, 0);
+    s.others = cp::chatColour(others, 0);
+    LOG_INFO("chat: the colours - party %s, guild %s, own %s, others %s", party.c_str(), guild.c_str(), own.c_str(),
+             others.c_str());
+}
+
+void setLog(bool on) {  // 3.0.13-beta.3
+    State& s = state();
+    if (on != s.log) LOG_INFO("chat: [interface] chat_log = %d (uaro-graphics\\chat-logs)", on ? 1 : 0);
+    s.log = on;
 }
 
 void setFade(int seconds) {  // 3.0.11-beta.240
