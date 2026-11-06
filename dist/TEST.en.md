@@ -1,3 +1,13 @@
+# uaRO Graphics 3.0.11-beta.298 — what's new
+
+**Every class's buffs in the stats plan (Alt+A):** the «Buffs in the plan» row now has:
+- for everyone - Blessing, Increase AGI, Gloria, Angelus, Impositio Manus, Wind Walk and the speed potions (Concentration, Awakening, Berserk Potion);
+- class skills when learned or on now - Improve Concentration, Two-Hand Quicken, One-Hand Quicken, Spear Quicken, Adrenaline Rush (and for anyone with an axe or a mace), Loud Exclamation, True Sight, Fury.
+
+What each gives is counted: stats, HIT, FLEE, CRIT, ATK, VIT DEF (Angelus) and attack speed - the best skill's (only with its weapon) plus the best potion's, as the server does. The results, the goals and the map's monsters follow the chosen buffs.
+
+**Fixed:** with a speed potion or another haste on, the window could not tell the weapon, and the ASPD row and the ASPD goal disappeared.
+
 # uaRO Graphics 3.0.11-beta.297 — what's new
 
 **Buffs in the stats plan (Alt+A):** the planning tab has a «Buffs in the plan» row - Improve Concentration (when learned), Blessing and Increase AGI. A buff on the character now is marked «now». A click (or left/right on a controller) counts it in the plan or not. Improve Concentration counts as a percentage of the planned AGI and DEX, so its share grows with them. The results, the ASPD/cast goals and the map's monsters follow the chosen buffs. Passive skills (Owl's Eye, Vulture's Eye and the like) were counted before. The choice is kept with the plan.
