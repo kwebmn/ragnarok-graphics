@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.11-beta.291 — what's new
+
+**Updates ride out GitHub hiccups:** when the download server briefly answers with an error (503), does not answer or drops the connection, the app tries three more times (after 2, 4 and 8 seconds) and continues the file where it stopped, instead of failing at once.
+
 # uaRO Graphics 3.0.11-beta.290 — what's new
 
 **uaRO AI for the homunculus and mercenary:** our own AI, put by the driver into the game's AI\USER_AI folder (never over another AI): it follows you, defends you and itself, attacks by itself if you want, Lif heals you under half HP, Filir and Vanilmirth open a fight with their skill. The game's commands (move, attack, stop, follow) work. Settings under «Interface»: «uaRO AI for the homunculus and mercenary», «AI: attacks by itself» (off), «AI: defends you», «AI: uses skills». For the game to use it, turn on «Own homunculus AI (/hoai)» and «Own mercenary AI (/merai)».
