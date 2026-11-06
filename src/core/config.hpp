@@ -569,7 +569,7 @@ struct Config {
     bool panelShow = true, panelHidden = false;
     // 3.0.11-beta.1: [interface] minimap - the new interface's minimap prototype (stage 1): the game's own hidden, the
     // driver's panel in its corner with the player's cell (core/minimap_proto)
-    bool newMinimap = false;
+    bool newMinimap = true;  // 3.0.11 (the owner before the release: «Включить всем») - the new interface for all
     // 3.0.11-beta.6: [interface] minimap_npcs / minimap_warps / minimap_mobs - its hints from the game's reference
     // (core/reference_index): the NPCs as dots, the warps to other maps as rings, the map's monsters under it
     bool minimapNpcs = true, minimapWarps = true, minimapMobs = true;
@@ -832,7 +832,7 @@ struct Config {
     // chat, «Довідник», «Речі», «Характеристики») larger or smaller as a whole, per cent of [interface] size's
     int textSize = 100;
     // 3.0.11-beta.7: [interface] reference - «Довідник» (win/reference_window): Ctrl+F in the game
-    bool referenceWindow = false;
+    bool referenceWindow = true;  // 3.0.11 (the owner: the new interface for all) - «Довідник» with it
     PanelLayout panelLayout = PanelLayout::Row;
     int panelSize = 100, panelOpacity = 90;
     std::string panelPlace;

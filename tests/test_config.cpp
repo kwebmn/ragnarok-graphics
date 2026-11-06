@@ -860,15 +860,21 @@ TEST(config_buff_timers) {
     CHECK(!liveUpdate(parseConfig(""), parseConfig("[buffs]\ntimers = 0\n")).next.buffTimers);
 }
 
+// 3.0.11 (the owner: the new interface for all): the interface's tests of a part off until «Новий інтерфейс» turns it
+// on start from a file that turns it off
+const std::string kNoUi = "[interface]\nminimap = 0\n";
+Config noUi(const std::string& more) { return parseConfig(kNoUi + more); }  // more: [interface]'s lines, or sections
+
 TEST(config_interface_minimap) {
-    // 3.0.11-beta.1: the new interface's minimap prototype - off unless asked for, changed in a running game
-    CHECK(!parseConfig("").newMinimap);
-    CHECK(parseConfig("[interface]\nminimap = 1\n").newMinimap);
-    CHECK(!parseConfig("[interface]\nminimap = 0\n").newMinimap);
+    // 3.0.11-beta.1: the new interface's minimap prototype - off unless asked for, changed in a running game;
+    // 3.0.11 (the owner: «Включить всем»): on unless the file turns it off
+    CHECK(parseConfig("").newMinimap && parseConfig("").referenceWindow && parseConfig("").targetCard);
+    CHECK(noUi("minimap = 1\n").newMinimap);
+    CHECK(!noUi("minimap = 0\n").newMinimap);
     const settings::IniSetting* s = settings::findSetting("interface.minimap");
     CHECK(s != nullptr);
-    if (s) CHECK_EQ(settings::tokenOf(*s, parseConfig("[interface]\nminimap = 1\n")), std::string("1"));
-    const LiveUpdate u = liveUpdate(parseConfig(""), parseConfig("[interface]\nminimap = 1\n"));
+    if (s) CHECK_EQ(settings::tokenOf(*s, noUi("minimap = 1\n")), std::string("1"));
+    const LiveUpdate u = liveUpdate(noUi("minimap = 0\n"), noUi("minimap = 1\n"));
     // 3.0.11-beta.37: the buffs' column and the character block come with it; 3.0.11-beta.38: the target's card too;
     // 3.0.11-beta.39: the party's panel; 3.0.11-beta.40: the hotbar; 3.0.11-beta.41: the chat; 3.0.11-beta.42: the
     // windows; 3.0.11-beta.48: the cast's label (3.0.11-beta.49's dimmed world no longer comes with it: beta.55);
@@ -902,16 +908,16 @@ TEST(config_interface_minimap) {
 // 3.0.11-beta.65 (the concept's «Подсветка, куда можно дойти» - an experiment, off): [interface] minimap_reach - the
 // minimap dims what the player cannot reach on foot; a box of «Інтерфейс», applied at once
 TEST(config_reads_the_reach_on_the_minimap) {
-    CHECK(!parseConfig("").minimapReach);
-    CHECK(parseConfig("[interface]\nminimap_reach = 1\n").minimapReach);
-    CHECK(!parseConfig("[interface]\nminimap = 1\n").minimapReach);  // an experiment: not with the new minimap
+    CHECK(!noUi("").minimapReach);
+    CHECK(noUi("minimap_reach = 1\n").minimapReach);
+    CHECK(!noUi("minimap = 1\n").minimapReach);  // an experiment: not with the new minimap
     const settings::IniSetting* s = settings::findSetting("interface.minimap_reach");
     CHECK(s != nullptr);
     if (!s) return;
     CHECK(s->page == settings::Page::Interface && s->control == settings::Control::Check);
-    CHECK_EQ(settings::tokenOf(*s, parseConfig("[interface]\nminimap_reach = 1\n")), std::string("1"));
+    CHECK_EQ(settings::tokenOf(*s, noUi("minimap_reach = 1\n")), std::string("1"));
     CHECK(appliesNow("interface.minimap_reach"));
-    const LiveUpdate u = liveUpdate(parseConfig(""), parseConfig("[interface]\nminimap_reach = 1\n"));
+    const LiveUpdate u = liveUpdate(noUi(""), noUi("minimap_reach = 1\n"));
     CHECK(u.next.minimapReach);
 }
 
@@ -919,81 +925,81 @@ TEST(config_reads_the_reach_on_the_minimap) {
 // picture four times bigger when the game has one (the AI pack's, the old client's texture_x4.zip); on by default, a
 // box of «Інтерфейс», applied at once
 TEST(config_reads_the_sharp_map_pictures) {
-    CHECK(parseConfig("").minimapHd);
-    CHECK(!parseConfig("[interface]\nminimap_hd = 0\n").minimapHd);
+    CHECK(noUi("").minimapHd);
+    CHECK(!noUi("minimap_hd = 0\n").minimapHd);
     const settings::IniSetting* s = settings::findSetting("interface.minimap_hd");
     CHECK(s != nullptr);
     if (!s) return;
     CHECK(s->page == settings::Page::Interface && s->control == settings::Control::Check);
-    CHECK_EQ(settings::tokenOf(*s, parseConfig("[interface]\nminimap_hd = 0\n")), std::string("0"));
+    CHECK_EQ(settings::tokenOf(*s, noUi("minimap_hd = 0\n")), std::string("0"));
     CHECK(appliesNow("interface.minimap_hd"));
-    const LiveUpdate u = liveUpdate(parseConfig(""), parseConfig("[interface]\nminimap_hd = 0\n"));
+    const LiveUpdate u = liveUpdate(noUi(""), noUi("minimap_hd = 0\n"));
     CHECK(!u.next.minimapHd);
 }
 
 // 3.0.11-beta.74 (the owner: «иконки скилов, предметов, и всего остального также по возможности грузить в текстур
 // которые обработаны»): [interface] pack_icons - the panels' icons from the AI texture pack; on, a box of «Інтерфейс»
 TEST(config_reads_the_pack_icons) {
-    CHECK(parseConfig("").packIcons);
-    CHECK(!parseConfig("[interface]\npack_icons = 0\n").packIcons);
+    CHECK(noUi("").packIcons);
+    CHECK(!noUi("pack_icons = 0\n").packIcons);
     const settings::IniSetting* s = settings::findSetting("interface.pack_icons");
     CHECK(s != nullptr);
     if (!s) return;
     CHECK(s->page == settings::Page::Interface && s->control == settings::Control::Check);
-    CHECK_EQ(settings::tokenOf(*s, parseConfig("[interface]\npack_icons = 0\n")), std::string("0"));
+    CHECK_EQ(settings::tokenOf(*s, noUi("pack_icons = 0\n")), std::string("0"));
     CHECK(appliesNow("interface.pack_icons"));
-    const LiveUpdate u = liveUpdate(parseConfig(""), parseConfig("[interface]\npack_icons = 0\n"));
+    const LiveUpdate u = liveUpdate(noUi(""), noUi("pack_icons = 0\n"));
     CHECK(!u.next.packIcons);
 }
 
 // 3.0.11-beta.77 (the owner: «чтобы без быстрых кнопок можно было двигать, чтобы сразу все мышкой»): [interface]
 // lock_layout - the parts kept where they are (no dragging); off by default, a box of «Інтерфейс», applied at once
 TEST(config_reads_the_layout_lock) {
-    CHECK(!parseConfig("").lockLayout);
-    CHECK(parseConfig("[interface]\nlock_layout = 1\n").lockLayout);
+    CHECK(!noUi("").lockLayout);
+    CHECK(noUi("lock_layout = 1\n").lockLayout);
     const settings::IniSetting* s = settings::findSetting("interface.lock_layout");
     CHECK(s != nullptr);
     if (!s) return;
     CHECK(s->page == settings::Page::Interface && s->control == settings::Control::Check);
-    CHECK_EQ(settings::tokenOf(*s, parseConfig("[interface]\nlock_layout = 1\n")), std::string("1"));
+    CHECK_EQ(settings::tokenOf(*s, noUi("lock_layout = 1\n")), std::string("1"));
     CHECK(appliesNow("interface.lock_layout"));
-    CHECK(liveUpdate(parseConfig(""), parseConfig("[interface]\nlock_layout = 1\n")).next.lockLayout);
+    CHECK(liveUpdate(noUi(""), noUi("lock_layout = 1\n")).next.lockLayout);
 }
 
 // 3.0.11-beta.78 (the owner: «на панели скилов не те скилы появляются, с других аккаунтов»): [interface]
 // hotbar_per_character - each character's own bar (the game keeps one by the selection screen's place); on, a box of
 // «Інтерфейс», applied at once
 TEST(config_reads_the_bar_per_character) {
-    CHECK(parseConfig("").hotbarPerCharacter);
-    CHECK(!parseConfig("[interface]\nhotbar_per_character = 0\n").hotbarPerCharacter);
+    CHECK(noUi("").hotbarPerCharacter);
+    CHECK(!noUi("hotbar_per_character = 0\n").hotbarPerCharacter);
     const settings::IniSetting* s = settings::findSetting("interface.hotbar_per_character");
     CHECK(s != nullptr);
     if (!s) return;
     CHECK(s->page == settings::Page::Interface && s->control == settings::Control::Check);
     CHECK(appliesNow("interface.hotbar_per_character"));
-    CHECK(!liveUpdate(parseConfig(""), parseConfig("[interface]\nhotbar_per_character = 0\n")).next.hotbarPerCharacter);
+    CHECK(!liveUpdate(noUi(""), noUi("hotbar_per_character = 0\n")).next.hotbarPerCharacter);
 }
 
 // 3.0.11-beta.86 (the concept «Контроллер в интерфейсе uaRO», stage 2): [interface] pad_hints - the controller's
 // buttons on the interface while played with it; on, a box of «Інтерфейс», at once
 TEST(config_pad_hints) {
-    CHECK(parseConfig("").padHints);
-    CHECK(!parseConfig("[interface]\npad_hints = 0\n").padHints);
+    CHECK(noUi("").padHints);
+    CHECK(!noUi("pad_hints = 0\n").padHints);
     const settings::IniSetting* s = settings::findSetting("interface.pad_hints");
     CHECK(s != nullptr && s->page == settings::Page::Interface && s->control == settings::Control::Check);
     CHECK(appliesNow("interface.pad_hints"));
-    CHECK(!liveUpdate(parseConfig(""), parseConfig("[interface]\npad_hints = 0\n")).next.padHints);
+    CHECK(!liveUpdate(noUi(""), noUi("pad_hints = 0\n")).next.padHints);
 }
 
 // 3.0.11-beta.87 (stage 3): [interface] target_ring = off | pad | always - the target's ring on the ground; pad
 TEST(config_target_ring) {
-    CHECK(parseConfig("").targetRing == TargetRing::Pad);
-    CHECK(parseConfig("[interface]\ntarget_ring = always\n").targetRing == TargetRing::Always);
-    CHECK(parseConfig("[interface]\ntarget_ring = off\n").targetRing == TargetRing::Off);
+    CHECK(noUi("").targetRing == TargetRing::Pad);
+    CHECK(noUi("target_ring = always\n").targetRing == TargetRing::Always);
+    CHECK(noUi("target_ring = off\n").targetRing == TargetRing::Off);
     const settings::IniSetting* s = settings::findSetting("interface.target_ring");
     CHECK(s != nullptr && s->page == settings::Page::Interface && s->control == settings::Control::Choice);
     CHECK(appliesNow("interface.target_ring"));
-    CHECK(liveUpdate(parseConfig(""), parseConfig("[interface]\ntarget_ring = off\n")).next.targetRing ==
+    CHECK(liveUpdate(noUi(""), noUi("target_ring = off\n")).next.targetRing ==
           TargetRing::Off);
 }
 
@@ -1001,59 +1007,59 @@ TEST(config_target_ring) {
 TEST(config_pad_walk) {
     // 3.0.11-beta.102 (the owner: «проработал передвижение с контролером»): the stick walks by the map's cells and the
     // arrow by default; the cursor held out as before when asked for
-    CHECK(parseConfig("").padWalk == PadWalk::Arrow);
-    CHECK(parseConfig("[interface]\npad_walk = mouse\n").padWalk == PadWalk::Mouse);
-    CHECK(parseConfig("[interface]\npad_walk = arrow\n").padWalk == PadWalk::Arrow);
+    CHECK(noUi("").padWalk == PadWalk::Arrow);
+    CHECK(noUi("pad_walk = mouse\n").padWalk == PadWalk::Mouse);
+    CHECK(noUi("pad_walk = arrow\n").padWalk == PadWalk::Arrow);
     const settings::IniSetting* s = settings::findSetting("interface.pad_walk");
     CHECK(s != nullptr && s->page == settings::Page::Interface && s->control == settings::Control::Choice);
     CHECK(appliesNow("interface.pad_walk"));
-    CHECK(liveUpdate(parseConfig(""), parseConfig("[interface]\npad_walk = arrow\n")).next.padWalk == PadWalk::Arrow);
+    CHECK(liveUpdate(noUi(""), noUi("pad_walk = arrow\n")).next.padWalk == PadWalk::Arrow);
 }
 
 // 3.0.11-beta.90 (stage 6): [interface] pad_tiles - Start opens the windows' tile; on
 TEST(config_pad_tiles) {
-    CHECK(parseConfig("").padTiles);
-    CHECK(!parseConfig("[interface]\npad_tiles = 0\n").padTiles);
+    CHECK(noUi("").padTiles);
+    CHECK(!noUi("pad_tiles = 0\n").padTiles);
     const settings::IniSetting* s = settings::findSetting("interface.pad_tiles");
     CHECK(s != nullptr && s->page == settings::Page::Interface && s->control == settings::Control::Check);
     CHECK(appliesNow("interface.pad_tiles"));
-    CHECK(!liveUpdate(parseConfig(""), parseConfig("[interface]\npad_tiles = 0\n")).next.padTiles);
+    CHECK(!liveUpdate(noUi(""), noUi("pad_tiles = 0\n")).next.padTiles);
 }
 
 // 3.0.11-beta.33 (the owner: «полоска с маршрутом может лучше бы была выполнена такими типа следами типа шажков»):
 // [interface] minimap_way - the way on the ground as footprints (steps), the strip (line) or none; a choice of
 // «Інтерфейс», applied at once
 TEST(config_reads_the_way_on_the_ground) {
-    CHECK(parseConfig("").minimapWay == WayOnGround::Steps);
-    CHECK(parseConfig("[interface]\nminimap_way = line\n").minimapWay == WayOnGround::Line);
-    CHECK(parseConfig("[interface]\nminimap_way = off\n").minimapWay == WayOnGround::Off);
-    CHECK(parseConfig("[interface]\nminimap_way = dots\n").minimapWay == WayOnGround::Steps);
+    CHECK(noUi("").minimapWay == WayOnGround::Steps);
+    CHECK(noUi("minimap_way = line\n").minimapWay == WayOnGround::Line);
+    CHECK(noUi("minimap_way = off\n").minimapWay == WayOnGround::Off);
+    CHECK(noUi("minimap_way = dots\n").minimapWay == WayOnGround::Steps);
     const settings::IniSetting* s = settings::findSetting("interface.minimap_way");
     CHECK(s != nullptr);
     if (!s) return;
     CHECK(s->page == settings::Page::Interface && s->control == settings::Control::Choice);
-    CHECK_EQ(settings::tokenOf(*s, parseConfig("[interface]\nminimap_way = line\n")), std::string("line"));
-    CHECK_EQ(settings::tokenOf(*s, parseConfig("")), std::string("steps"));
+    CHECK_EQ(settings::tokenOf(*s, noUi("minimap_way = line\n")), std::string("line"));
+    CHECK_EQ(settings::tokenOf(*s, noUi("")), std::string("steps"));
     CHECK(appliesNow("interface.minimap_way"));
-    const LiveUpdate u = liveUpdate(parseConfig(""), parseConfig("[interface]\nminimap_way = off\n"));
+    const LiveUpdate u = liveUpdate(noUi(""), noUi("minimap_way = off\n"));
     CHECK(u.next.minimapWay == WayOnGround::Off);
 }
 
 // 3.0.11-beta.35 (stage 7 of the new interface, the owner's approved buffs column, the row a choice): [interface] buffs
 // - the game's own icons (off), the driver's column, its row; a choice of «Інтерфейс», applied at once
 TEST(config_reads_the_buffs_look) {
-    CHECK(parseConfig("").buffs == BuffsLook::Off);
-    CHECK(parseConfig("[interface]\nbuffs = column\n").buffs == BuffsLook::Column);
-    CHECK(parseConfig("[interface]\nbuffs = row\n").buffs == BuffsLook::Row);
-    CHECK(parseConfig("[interface]\nbuffs = grid\n").buffs == BuffsLook::Off);
+    CHECK(noUi("").buffs == BuffsLook::Off);
+    CHECK(noUi("buffs = column\n").buffs == BuffsLook::Column);
+    CHECK(noUi("buffs = row\n").buffs == BuffsLook::Row);
+    CHECK(noUi("buffs = grid\n").buffs == BuffsLook::Off);
     const settings::IniSetting* s = settings::findSetting("interface.buffs");
     CHECK(s != nullptr);
     if (!s) return;
     CHECK(s->page == settings::Page::Interface && s->control == settings::Control::Choice);
-    CHECK_EQ(settings::tokenOf(*s, parseConfig("[interface]\nbuffs = row\n")), std::string("row"));
-    CHECK_EQ(settings::tokenOf(*s, parseConfig("")), std::string("off"));
+    CHECK_EQ(settings::tokenOf(*s, noUi("buffs = row\n")), std::string("row"));
+    CHECK_EQ(settings::tokenOf(*s, noUi("")), std::string("off"));
     CHECK(appliesNow("interface.buffs"));
-    const LiveUpdate u = liveUpdate(parseConfig(""), parseConfig("[interface]\nbuffs = column\n"));
+    const LiveUpdate u = liveUpdate(noUi(""), noUi("buffs = column\n"));
     CHECK(u.next.buffs == BuffsLook::Column);
 }
 
@@ -1061,36 +1067,36 @@ TEST(config_reads_the_buffs_look) {
 // [interface] buffs_overflow - what the buffs' column does not hold: under «ще N» or in a second column on its left
 // (the row: a second row); a choice of «Інтерфейс», applied at once
 TEST(config_reads_the_buffs_overflow) {
-    CHECK(parseConfig("").buffsOverflow == BuffsOverflow::More);
-    CHECK(parseConfig("[interface]\nbuffs_overflow = column\n").buffsOverflow == BuffsOverflow::Column);
-    CHECK(parseConfig("[interface]\nbuffs_overflow = more\n").buffsOverflow == BuffsOverflow::More);
-    CHECK(parseConfig("[interface]\nbuffs_overflow = scroll\n").buffsOverflow == BuffsOverflow::More);
+    CHECK(noUi("").buffsOverflow == BuffsOverflow::More);
+    CHECK(noUi("buffs_overflow = column\n").buffsOverflow == BuffsOverflow::Column);
+    CHECK(noUi("buffs_overflow = more\n").buffsOverflow == BuffsOverflow::More);
+    CHECK(noUi("buffs_overflow = scroll\n").buffsOverflow == BuffsOverflow::More);
     const settings::IniSetting* s = settings::findSetting("interface.buffs_overflow");
     CHECK(s != nullptr);
     if (!s) return;
     CHECK(s->page == settings::Page::Interface && s->control == settings::Control::Choice);
-    CHECK_EQ(settings::tokenOf(*s, parseConfig("[interface]\nbuffs_overflow = column\n")), std::string("column"));
-    CHECK_EQ(settings::tokenOf(*s, parseConfig("")), std::string("more"));
+    CHECK_EQ(settings::tokenOf(*s, noUi("buffs_overflow = column\n")), std::string("column"));
+    CHECK_EQ(settings::tokenOf(*s, noUi("")), std::string("more"));
     CHECK(appliesNow("interface.buffs_overflow"));
-    const LiveUpdate u = liveUpdate(parseConfig(""), parseConfig("[interface]\nbuffs_overflow = column\n"));
+    const LiveUpdate u = liveUpdate(noUi(""), noUi("buffs_overflow = column\n"));
     CHECK(u.next.buffsOverflow == BuffsOverflow::Column);
 }
 
 // 3.0.11-beta.36 (the owner: «кольца или полоски на выбор. приступай»): [interface] character - the game's own Basic
 // Info window (off), the character block with bars, with rings; a choice of «Інтерфейс», applied at once
 TEST(config_reads_the_character_block) {
-    CHECK(parseConfig("").character == CharacterLook::Off);
-    CHECK(parseConfig("[interface]\ncharacter = bars\n").character == CharacterLook::Bars);
-    CHECK(parseConfig("[interface]\ncharacter = rings\n").character == CharacterLook::Rings);
-    CHECK(parseConfig("[interface]\ncharacter = boxes\n").character == CharacterLook::Off);
+    CHECK(noUi("").character == CharacterLook::Off);
+    CHECK(noUi("character = bars\n").character == CharacterLook::Bars);
+    CHECK(noUi("character = rings\n").character == CharacterLook::Rings);
+    CHECK(noUi("character = boxes\n").character == CharacterLook::Off);
     const settings::IniSetting* s = settings::findSetting("interface.character");
     CHECK(s != nullptr);
     if (!s) return;
     CHECK(s->page == settings::Page::Interface && s->control == settings::Control::Choice);
-    CHECK_EQ(settings::tokenOf(*s, parseConfig("[interface]\ncharacter = rings\n")), std::string("rings"));
-    CHECK_EQ(settings::tokenOf(*s, parseConfig("")), std::string("off"));
+    CHECK_EQ(settings::tokenOf(*s, noUi("character = rings\n")), std::string("rings"));
+    CHECK_EQ(settings::tokenOf(*s, noUi("")), std::string("off"));
     CHECK(appliesNow("interface.character"));
-    const LiveUpdate u = liveUpdate(parseConfig(""), parseConfig("[interface]\ncharacter = bars\n"));
+    const LiveUpdate u = liveUpdate(noUi(""), noUi("character = bars\n"));
     CHECK(u.next.character == CharacterLook::Bars);
 }
 
@@ -1098,115 +1104,115 @@ TEST(config_reads_the_character_block) {
 // over the game's buff icons hid them): with the new minimap on, the buffs' column and the character block come with it
 // unless the file says otherwise
 TEST(config_new_interface_parts_come_with_the_minimap) {
-    const Config on = parseConfig("[interface]\nminimap = 1\n");
+    const Config on = noUi("minimap = 1\n");
     CHECK(on.buffs == BuffsLook::Column && on.character == CharacterLook::Bars);
-    const Config chosen = parseConfig("[interface]\nminimap = 1\nbuffs = off\ncharacter = rings\n");
+    const Config chosen = noUi("minimap = 1\nbuffs = off\ncharacter = rings\n");
     CHECK(chosen.buffs == BuffsLook::Off && chosen.character == CharacterLook::Rings);
-    const Config off = parseConfig("[interface]\nminimap = 0\n");
+    const Config off = noUi("minimap = 0\n");
     CHECK(off.buffs == BuffsLook::Off && off.character == CharacterLook::Off);
     const settings::IniSetting* s = settings::findSetting("interface.buffs");
     CHECK(s != nullptr && settings::tokenOf(*s, on) == "column");  // the app shows what is in effect
-    const LiveUpdate u = liveUpdate(parseConfig(""), on);  // the minimap switched on: they come at once
+    const LiveUpdate u = liveUpdate(noUi(""), on);  // the minimap switched on: they come at once
     CHECK(u.next.buffs == BuffsLook::Column && u.next.character == CharacterLook::Bars);
 }
 
 // 3.0.11-beta.38 (the owner: «делай карточку цели»): [interface] target - the target's card at the top middle; it
 // comes with the new minimap as the other parts do, unless the file names it
 TEST(config_reads_the_target_card) {
-    CHECK(!parseConfig("").targetCard);
-    CHECK(parseConfig("[interface]\ntarget = 1\n").targetCard);
-    CHECK(parseConfig("[interface]\nminimap = 1\n").targetCard);
-    CHECK(!parseConfig("[interface]\nminimap = 1\ntarget = 0\n").targetCard);
+    CHECK(!noUi("").targetCard);
+    CHECK(noUi("target = 1\n").targetCard);
+    CHECK(noUi("minimap = 1\n").targetCard);
+    CHECK(!noUi("minimap = 1\ntarget = 0\n").targetCard);
     const settings::IniSetting* s = settings::findSetting("interface.target");
     CHECK(s != nullptr);
     if (!s) return;
     CHECK(s->page == settings::Page::Interface && s->control == settings::Control::Check);
-    CHECK_EQ(settings::tokenOf(*s, parseConfig("[interface]\nminimap = 1\n")), std::string("1"));
+    CHECK_EQ(settings::tokenOf(*s, noUi("minimap = 1\n")), std::string("1"));
     CHECK(appliesNow("interface.target"));
-    CHECK(liveUpdate(parseConfig(""), parseConfig("[interface]\ntarget = 1\n")).next.targetCard);
+    CHECK(liveUpdate(noUi(""), noUi("target = 1\n")).next.targetCard);
 }
 
 // 3.0.11-beta.39 (the owner: «делай» - the party): [interface] party - the party's panel at the top left; it comes with
 // the new minimap as the other parts do, unless the file names it
 TEST(config_reads_the_party_panel) {
-    CHECK(!parseConfig("").partyPanel);
-    CHECK(parseConfig("[interface]\nparty = 1\n").partyPanel);
-    CHECK(parseConfig("[interface]\nminimap = 1\n").partyPanel);
-    CHECK(!parseConfig("[interface]\nminimap = 1\nparty = 0\n").partyPanel);
+    CHECK(!noUi("").partyPanel);
+    CHECK(noUi("party = 1\n").partyPanel);
+    CHECK(noUi("minimap = 1\n").partyPanel);
+    CHECK(!noUi("minimap = 1\nparty = 0\n").partyPanel);
     const settings::IniSetting* s = settings::findSetting("interface.party");
     CHECK(s != nullptr);
     if (!s) return;
     CHECK(s->page == settings::Page::Interface && s->control == settings::Control::Check);
     CHECK(appliesNow("interface.party"));
-    CHECK(liveUpdate(parseConfig(""), parseConfig("[interface]\nparty = 1\n")).next.partyPanel);
+    CHECK(liveUpdate(noUi(""), noUi("party = 1\n")).next.partyPanel);
 }
 
 // 3.0.11-beta.70 (the concept's tracker, «держать перед глазами»): [interface] tracker - the pinned quests, way and
 // items left of the buffs; it comes with the new minimap as the other parts do, unless the file names it
 TEST(config_reads_the_tracker) {
-    CHECK(!parseConfig("").tracker);
-    CHECK(parseConfig("[interface]\ntracker = 1\n").tracker);
-    CHECK(parseConfig("[interface]\nminimap = 1\n").tracker);
-    CHECK(!parseConfig("[interface]\nminimap = 1\ntracker = 0\n").tracker);
+    CHECK(!noUi("").tracker);
+    CHECK(noUi("tracker = 1\n").tracker);
+    CHECK(noUi("minimap = 1\n").tracker);
+    CHECK(!noUi("minimap = 1\ntracker = 0\n").tracker);
     const settings::IniSetting* s = settings::findSetting("interface.tracker");
     CHECK(s != nullptr);
     if (!s) return;
     CHECK(s->page == settings::Page::Interface && s->control == settings::Control::Check);
     CHECK(appliesNow("interface.tracker"));
-    CHECK(liveUpdate(parseConfig(""), parseConfig("[interface]\ntracker = 1\n")).next.tracker);
+    CHECK(liveUpdate(noUi(""), noUi("tracker = 1\n")).next.tracker);
 }
 
 // 3.0.11-beta.40 (the owner: «делай дальше» - stage 8, the hotbar first): [interface] hotbar - the hotkeys' bar
 // redrawn at the bottom middle; it comes with the new minimap as the other parts do, unless the file names it
 TEST(config_reads_the_hotbar) {
-    CHECK(!parseConfig("").hotbar);
-    CHECK(parseConfig("[interface]\nhotbar = 1\n").hotbar);
-    CHECK(parseConfig("[interface]\nminimap = 1\n").hotbar);
-    CHECK(!parseConfig("[interface]\nminimap = 1\nhotbar = 0\n").hotbar);
+    CHECK(!noUi("").hotbar);
+    CHECK(noUi("hotbar = 1\n").hotbar);
+    CHECK(noUi("minimap = 1\n").hotbar);
+    CHECK(!noUi("minimap = 1\nhotbar = 0\n").hotbar);
     const settings::IniSetting* s = settings::findSetting("interface.hotbar");
     CHECK(s != nullptr);
     if (!s) return;
     CHECK(s->page == settings::Page::Interface && s->control == settings::Control::Check);
     CHECK(appliesNow("interface.hotbar"));
-    CHECK(liveUpdate(parseConfig(""), parseConfig("[interface]\nhotbar = 1\n")).next.hotbar);
+    CHECK(liveUpdate(noUi(""), noUi("hotbar = 1\n")).next.hotbar);
 }
 
 // 3.0.11-beta.41 (the owner: «делай чат»): [interface] chat - the chat redrawn at the bottom left; it comes with the
 // new minimap as the other parts do, unless the file names it
 TEST(config_reads_the_chat) {
-    CHECK(!parseConfig("").chat);
-    CHECK(parseConfig("[interface]\nchat = 1\n").chat);
-    CHECK(parseConfig("[interface]\nminimap = 1\n").chat);
-    CHECK(!parseConfig("[interface]\nminimap = 1\nchat = 0\n").chat);
+    CHECK(!noUi("").chat);
+    CHECK(noUi("chat = 1\n").chat);
+    CHECK(noUi("minimap = 1\n").chat);
+    CHECK(!noUi("minimap = 1\nchat = 0\n").chat);
     const settings::IniSetting* s = settings::findSetting("interface.chat");
     CHECK(s != nullptr);
     if (!s) return;
     CHECK(s->page == settings::Page::Interface && s->control == settings::Control::Check);
     CHECK(appliesNow("interface.chat"));
-    CHECK(liveUpdate(parseConfig(""), parseConfig("[interface]\nchat = 1\n")).next.chat);
+    CHECK(liveUpdate(noUi(""), noUi("chat = 1\n")).next.chat);
 }
 
 // 3.0.11-beta.186 (the tester: «тут дублюючий інтерфейс, треба десь вимикач зробити»): [interface] item_toast - «+N …»
 // of a thing picked up over the bag, the game's own box at the top hidden for it; off: the game's box alone
 TEST(config_reads_the_item_toast) {
-    CHECK(parseConfig("").itemToast);
-    CHECK(!parseConfig("[interface]\nitem_toast = 0\n").itemToast);
+    CHECK(noUi("").itemToast);
+    CHECK(!noUi("item_toast = 0\n").itemToast);
     const settings::IniSetting* s = settings::findSetting("interface.item_toast");
     CHECK(s != nullptr);
     if (!s) return;
     CHECK(s->page == settings::Page::Interface && s->control == settings::Control::Check);
     CHECK(appliesNow("interface.item_toast"));
-    const LiveUpdate u = liveUpdate(parseConfig(""), parseConfig("[interface]\nitem_toast = 0\n"));
+    const LiveUpdate u = liveUpdate(noUi(""), noUi("item_toast = 0\n"));
     CHECK(!u.next.itemToast && u.applied.size() == 1 && u.waiting.empty());
-    CHECK_EQ(settings::tokenOf(*s, parseConfig("[interface]\nitem_toast = 0\n")), std::string("0"));
+    CHECK_EQ(settings::tokenOf(*s, noUi("item_toast = 0\n")), std::string("0"));
 }
 
 // 3.0.11-beta.42 (the owner: «делай окна»): [interface] items and status - «Речі» and «Характеристики» redrawn; they
 // come with the new minimap as the other parts do, unless the file names them
 TEST(config_reads_the_windows) {
-    CHECK(!parseConfig("").itemsWindow && !parseConfig("").statusWindow);
-    CHECK(parseConfig("[interface]\nitems = 1\n").itemsWindow && parseConfig("[interface]\nstatus = 1\n").statusWindow);
-    const Config c = parseConfig("[interface]\nminimap = 1\nstatus = 0\n");
+    CHECK(!noUi("").itemsWindow && !noUi("").statusWindow);
+    CHECK(noUi("items = 1\n").itemsWindow && noUi("status = 1\n").statusWindow);
+    const Config c = noUi("minimap = 1\nstatus = 0\n");
     CHECK(c.itemsWindow && !c.statusWindow);
     for (const char* key : {"interface.items", "interface.status"}) {
         const settings::IniSetting* s = settings::findSetting(key);
@@ -1215,28 +1221,28 @@ TEST(config_reads_the_windows) {
         CHECK(s->page == settings::Page::Interface && s->control == settings::Control::Check);
         CHECK(appliesNow(key));
     }
-    CHECK(liveUpdate(parseConfig(""), parseConfig("[interface]\nitems = 1\n")).next.itemsWindow);
+    CHECK(liveUpdate(noUi(""), noUi("items = 1\n")).next.itemsWindow);
 }
 
 // 3.0.11-beta.46 (the concept's motion): [interface] animations - on unless the file says 0, at once
 TEST(config_reads_the_animations) {
-    CHECK(parseConfig("").animations && parseConfig("[interface]\nanimations = 1\n").animations);
-    CHECK(!parseConfig("[interface]\nanimations = 0\n").animations);
+    CHECK(noUi("").animations && noUi("animations = 1\n").animations);
+    CHECK(!noUi("animations = 0\n").animations);
     const settings::IniSetting* s = settings::findSetting("interface.animations");
     CHECK(s != nullptr);
     if (!s) return;
     CHECK(s->page == settings::Page::Interface && s->control == settings::Control::Check);
     CHECK(appliesNow("interface.animations"));
-    CHECK(!liveUpdate(parseConfig(""), parseConfig("[interface]\nanimations = 0\n")).next.animations);
+    CHECK(!liveUpdate(noUi(""), noUi("animations = 0\n")).next.animations);
 }
 
 // 3.0.11-beta.47 (the concept's «Непрозрачность»): [interface] panel_opacity 50-100 (80), window_opacity 80-100 (90)
 TEST(config_reads_the_opacities) {
-    const Config d = parseConfig("");
+    const Config d = noUi("");
     CHECK(d.hudOpacity == 80 && d.windowOpacity == 90);
-    const Config c = parseConfig("[interface]\npanel_opacity = 65\nwindow_opacity = 95\n");
+    const Config c = noUi("panel_opacity = 65\nwindow_opacity = 95\n");
     CHECK(c.hudOpacity == 65 && c.windowOpacity == 95);
-    const Config low = parseConfig("[interface]\npanel_opacity = 10\nwindow_opacity = 40\n");
+    const Config low = noUi("panel_opacity = 10\nwindow_opacity = 40\n");
     CHECK(low.hudOpacity == 50 && low.windowOpacity == 80);
     for (const char* key : {"interface.panel_opacity", "interface.window_opacity"}) {
         const settings::IniSetting* s = settings::findSetting(key);
@@ -1250,23 +1256,23 @@ TEST(config_reads_the_opacities) {
 
 // 3.0.11-beta.48 (the concept's cast label): [interface] cast - on with the new minimap unless the file names it
 TEST(config_reads_the_cast_label) {
-    CHECK(!parseConfig("").castLabel && parseConfig("[interface]\ncast = 1\n").castLabel);
-    CHECK(parseConfig("[interface]\nminimap = 1\n").castLabel);
-    CHECK(!parseConfig("[interface]\nminimap = 1\ncast = 0\n").castLabel);
+    CHECK(!noUi("").castLabel && noUi("cast = 1\n").castLabel);
+    CHECK(noUi("minimap = 1\n").castLabel);
+    CHECK(!noUi("minimap = 1\ncast = 0\n").castLabel);
     const settings::IniSetting* s = settings::findSetting("interface.cast");
     CHECK(s != nullptr);
     if (!s) return;
     CHECK(s->page == settings::Page::Interface && s->control == settings::Control::Check);
     CHECK(appliesNow("interface.cast"));
-    CHECK(liveUpdate(parseConfig(""), parseConfig("[interface]\ncast = 1\n")).next.castLabel);
+    CHECK(liveUpdate(noUi(""), noUi("cast = 1\n")).next.castLabel);
 }
 
 // 3.0.11-beta.49 (the concept's open windows): [interface] dim_world; 3.0.11-beta.55 (the owner: «надо убрать
 // затемнение интерфейса... мешает») off unless the file asks for it, the new minimap or not
 TEST(config_reads_the_world_dim) {
-    CHECK(!parseConfig("").dimWorld && parseConfig("[interface]\ndim_world = 1\n").dimWorld);
-    CHECK(!parseConfig("[interface]\nminimap = 1\n").dimWorld);
-    CHECK(parseConfig("[interface]\nminimap = 1\ndim_world = 1\n").dimWorld);
+    CHECK(!noUi("").dimWorld && noUi("dim_world = 1\n").dimWorld);
+    CHECK(!noUi("minimap = 1\n").dimWorld);
+    CHECK(noUi("minimap = 1\ndim_world = 1\n").dimWorld);
     const settings::IniSetting* s = settings::findSetting("interface.dim_world");
     CHECK(s != nullptr);
     if (!s) return;
@@ -1276,9 +1282,9 @@ TEST(config_reads_the_world_dim) {
 
 // 3.0.11-beta.50 (the concept's low HP): [interface] low_hp_edge 0-100 - none unless asked for
 TEST(config_reads_the_low_hp_edge) {
-    CHECK(parseConfig("").lowHpEdge == 0 && parseConfig("[interface]\nminimap = 1\n").lowHpEdge == 0);
-    CHECK(parseConfig("[interface]\nlow_hp_edge = 60\n").lowHpEdge == 60);
-    CHECK(parseConfig("[interface]\nlow_hp_edge = 250\n").lowHpEdge == 100);
+    CHECK(noUi("").lowHpEdge == 0 && noUi("minimap = 1\n").lowHpEdge == 0);
+    CHECK(noUi("low_hp_edge = 60\n").lowHpEdge == 60);
+    CHECK(noUi("low_hp_edge = 250\n").lowHpEdge == 100);
     const settings::IniSetting* s = settings::findSetting("interface.low_hp_edge");
     CHECK(s != nullptr);
     if (!s) return;
@@ -1289,33 +1295,33 @@ TEST(config_reads_the_low_hp_edge) {
 // 3.0.11-beta.67 (the concept: «Масштаб текста — отдельная настройка 80–150 %»): [interface] text_size - the
 // windows one reads in, per cent; a choice of «Інтерфейс», applied at once
 TEST(config_reads_the_text_size) {
-    CHECK(parseConfig("").textSize == 100);
-    CHECK(parseConfig("[interface]\ntext_size = 130\n").textSize == 130);
-    CHECK(parseConfig("[interface]\ntext_size = 40\n").textSize == 80);
-    CHECK(parseConfig("[interface]\ntext_size = 900\n").textSize == 150);
-    CHECK(parseConfig("[interface]\ntext_size = big\n").textSize == 100);
+    CHECK(noUi("").textSize == 100);
+    CHECK(noUi("text_size = 130\n").textSize == 130);
+    CHECK(noUi("text_size = 40\n").textSize == 80);
+    CHECK(noUi("text_size = 900\n").textSize == 150);
+    CHECK(noUi("text_size = big\n").textSize == 100);
     const settings::IniSetting* s = settings::findSetting("interface.text_size");
     CHECK(s != nullptr);
     if (!s) return;
     CHECK(s->page == settings::Page::Interface && s->control == settings::Control::Choice);
-    CHECK_EQ(settings::tokenOf(*s, parseConfig("[interface]\ntext_size = 115\n")), std::string("115"));
-    CHECK_EQ(settings::tokenOf(*s, parseConfig("")), std::string("100"));
+    CHECK_EQ(settings::tokenOf(*s, noUi("text_size = 115\n")), std::string("115"));
+    CHECK_EQ(settings::tokenOf(*s, noUi("")), std::string("100"));
     CHECK(appliesNow("interface.text_size"));
-    const LiveUpdate u = liveUpdate(parseConfig(""), parseConfig("[interface]\ntext_size = 150\n"));
+    const LiveUpdate u = liveUpdate(noUi(""), noUi("text_size = 150\n"));
     CHECK(u.next.textSize == 150);
 }
 
 // 3.0.11-beta.54 (R-JK5455): [interface] size - auto unless a per cent is named
 TEST(config_reads_the_interface_size) {
-    CHECK(parseConfig("").uiSize == 0 && parseConfig("[interface]\nsize = auto\n").uiSize == 0);
-    CHECK(parseConfig("[interface]\nsize = 85\n").uiSize == 85);
-    CHECK(parseConfig("[interface]\nsize = 400\n").uiSize == 150);
+    CHECK(noUi("").uiSize == 0 && noUi("size = auto\n").uiSize == 0);
+    CHECK(noUi("size = 85\n").uiSize == 85);
+    CHECK(noUi("size = 400\n").uiSize == 150);
     const settings::IniSetting* s = settings::findSetting("interface.size");
     CHECK(s != nullptr);
     if (!s) return;
     CHECK(s->page == settings::Page::Interface && s->control == settings::Control::Choice);
-    CHECK_EQ(settings::tokenOf(*s, parseConfig("[interface]\nsize = 115\n")), std::string("115"));
-    CHECK_EQ(settings::tokenOf(*s, parseConfig("")), std::string("auto"));
+    CHECK_EQ(settings::tokenOf(*s, noUi("size = 115\n")), std::string("115"));
+    CHECK_EQ(settings::tokenOf(*s, noUi("")), std::string("auto"));
     CHECK(appliesNow("interface.size"));
 }
 
@@ -1323,88 +1329,88 @@ TEST(config_reads_the_interface_size) {
 // the monsters' HP bars; the target and the wounded by default, a choice of «Інтерфейс», at once
 TEST(config_mob_hp) {
     // 3.0.11-beta.100 (the owner: «а можно чтобы над мобами всегда хп висело?»): every monster's by default
-    CHECK(parseConfig("").mobHp == MobHp::All);
-    CHECK(parseConfig("[interface]\nmob_hp = wounded\n").mobHp == MobHp::Wounded);
-    CHECK(parseConfig("[interface]\nmob_hp = all\n").mobHp == MobHp::All);
-    CHECK(parseConfig("[interface]\nmob_hp = target\n").mobHp == MobHp::Target);
-    CHECK(parseConfig("[interface]\nmob_hp = off\n").mobHp == MobHp::Off);
+    CHECK(noUi("").mobHp == MobHp::All);
+    CHECK(noUi("mob_hp = wounded\n").mobHp == MobHp::Wounded);
+    CHECK(noUi("mob_hp = all\n").mobHp == MobHp::All);
+    CHECK(noUi("mob_hp = target\n").mobHp == MobHp::Target);
+    CHECK(noUi("mob_hp = off\n").mobHp == MobHp::Off);
     const settings::IniSetting* s = settings::findSetting("interface.mob_hp");
     CHECK(s != nullptr && s->page == settings::Page::Interface && s->control == settings::Control::Choice);
     CHECK(appliesNow("interface.mob_hp"));
-    CHECK(liveUpdate(parseConfig(""), parseConfig("[interface]\nmob_hp = off\n")).next.mobHp == MobHp::Off);
+    CHECK(liveUpdate(noUi(""), noUi("mob_hp = off\n")).next.mobHp == MobHp::Off);
 }
 
 // 3.0.11-beta.100 (the owner: «доделаем окна интерфейсов»; the concept's «Магазин»): [interface] shop - the NPCs' shops
 // in the new look; on with the new minimap unless the file says, a box of «Інтерфейс», at once
 TEST(config_interface_shop) {
-    CHECK(!parseConfig("").shopWindow);
-    CHECK(parseConfig("[interface]\nminimap = 1\n").shopWindow);
-    CHECK(!parseConfig("[interface]\nminimap = 1\nshop = 0\n").shopWindow);
-    CHECK(parseConfig("[interface]\nshop = 1\n").shopWindow);
+    CHECK(!noUi("").shopWindow);
+    CHECK(noUi("minimap = 1\n").shopWindow);
+    CHECK(!noUi("minimap = 1\nshop = 0\n").shopWindow);
+    CHECK(noUi("shop = 1\n").shopWindow);
     const settings::IniSetting* s = settings::findSetting("interface.shop");
     CHECK(s != nullptr);
-    if (s) CHECK_EQ(settings::tokenOf(*s, parseConfig("[interface]\nshop = 1\n")), std::string("1"));
+    if (s) CHECK_EQ(settings::tokenOf(*s, noUi("shop = 1\n")), std::string("1"));
     CHECK(appliesNow("interface.shop"));
 }
 
 // 3.0.11-beta.115 (the windows plan's stage 6): [interface] storage - the Kafra storage in the new look («Склад» beside
 // «Речі»); on with the new minimap unless the file says, a box of «Інтерфейс», at once
 TEST(config_interface_storage) {
-    CHECK(!parseConfig("").storageWindow);
-    CHECK(parseConfig("[interface]\nminimap = 1\n").storageWindow);
-    CHECK(!parseConfig("[interface]\nminimap = 1\nstorage = 0\n").storageWindow);
-    CHECK(parseConfig("[interface]\nstorage = 1\n").storageWindow);
+    CHECK(!noUi("").storageWindow);
+    CHECK(noUi("minimap = 1\n").storageWindow);
+    CHECK(!noUi("minimap = 1\nstorage = 0\n").storageWindow);
+    CHECK(noUi("storage = 1\n").storageWindow);
     const settings::IniSetting* s = settings::findSetting("interface.storage");
     CHECK(s != nullptr && s->page == settings::Page::Interface);
-    if (s) CHECK_EQ(settings::tokenOf(*s, parseConfig("[interface]\nstorage = 1\n")), std::string("1"));
+    if (s) CHECK_EQ(settings::tokenOf(*s, noUi("storage = 1\n")), std::string("1"));
     CHECK(appliesNow("interface.storage"));
-    CHECK(liveUpdate(parseConfig(""), parseConfig("[interface]\nstorage = 1\n")).next.storageWindow);
+    CHECK(liveUpdate(noUi(""), noUi("storage = 1\n")).next.storageWindow);
 }
 
 // 3.0.11-beta.116 (the windows plan's stage 7): [interface] trade - the trade in the new look («Обмін» beside «Речі»);
 // on with the new minimap unless the file says, a box of «Інтерфейс», at once
 TEST(config_interface_trade) {
-    CHECK(!parseConfig("").tradeWindow);
-    CHECK(parseConfig("[interface]\nminimap = 1\n").tradeWindow);
-    CHECK(!parseConfig("[interface]\nminimap = 1\ntrade = 0\n").tradeWindow);
-    CHECK(parseConfig("[interface]\ntrade = 1\n").tradeWindow);
+    CHECK(!noUi("").tradeWindow);
+    CHECK(noUi("minimap = 1\n").tradeWindow);
+    CHECK(!noUi("minimap = 1\ntrade = 0\n").tradeWindow);
+    CHECK(noUi("trade = 1\n").tradeWindow);
     const settings::IniSetting* s = settings::findSetting("interface.trade");
     CHECK(s != nullptr && s->page == settings::Page::Interface);
-    if (s) CHECK_EQ(settings::tokenOf(*s, parseConfig("[interface]\ntrade = 1\n")), std::string("1"));
+    if (s) CHECK_EQ(settings::tokenOf(*s, noUi("trade = 1\n")), std::string("1"));
     CHECK(appliesNow("interface.trade"));
-    CHECK(liveUpdate(parseConfig(""), parseConfig("[interface]\ntrade = 1\n")).next.tradeWindow);
+    CHECK(liveUpdate(noUi(""), noUi("trade = 1\n")).next.tradeWindow);
 }
 
 // 3.0.11-beta.187 (the tester took the minimap's fan for the character's sight): [interface] minimap_view - the
 // camera's fan round the arrow, on; off: the arrow alone
 TEST(config_reads_the_minimap_view) {
-    CHECK(parseConfig("").minimapView);
-    CHECK(!parseConfig("[interface]\nminimap_view = 0\n").minimapView);
+    CHECK(noUi("").minimapView);
+    CHECK(!noUi("minimap_view = 0\n").minimapView);
     const settings::IniSetting* s = settings::findSetting("interface.minimap_view");
     CHECK(s != nullptr);
     if (!s) return;
     CHECK(s->page == settings::Page::Interface && s->control == settings::Control::Check);
     CHECK(appliesNow("interface.minimap_view"));
-    const LiveUpdate u = liveUpdate(parseConfig(""), parseConfig("[interface]\nminimap_view = 0\n"));
+    const LiveUpdate u = liveUpdate(noUi(""), noUi("minimap_view = 0\n"));
     CHECK(!u.next.minimapView && u.applied.size() == 1 && u.waiting.empty());
-    CHECK_EQ(settings::tokenOf(*s, parseConfig("[interface]\nminimap_view = 0\n")), std::string("0"));
+    CHECK_EQ(settings::tokenOf(*s, noUi("minimap_view = 0\n")), std::string("0"));
 }
 
 // 3.0.11-beta.119 (R-5Z6J2S, the owner «делать»): [interface] minimap_kafra and minimap_party - the Kafras and the
 // party on the maps, each its own layer (on at first), switched on the maps themselves too; boxes of «Інтерфейс»,
 // at once
 TEST(config_interface_minimap_layers) {
-    const Config c = parseConfig("");
+    const Config c = noUi("");
     CHECK(c.minimapKafra && c.minimapParty);
-    CHECK(!parseConfig("[interface]\nminimap_kafra = 0\n").minimapKafra);
-    CHECK(!parseConfig("[interface]\nminimap_party = 0\n").minimapParty);
+    CHECK(!noUi("minimap_kafra = 0\n").minimapKafra);
+    CHECK(!noUi("minimap_party = 0\n").minimapParty);
     for (const char* key : {"interface.minimap_kafra", "interface.minimap_party"}) {
         const settings::IniSetting* s = settings::findSetting(key);
         CHECK(s != nullptr && s->page == settings::Page::Interface);
         CHECK(appliesNow(key));
     }
     const LiveUpdate u =
-        liveUpdate(parseConfig(""), parseConfig("[interface]\nminimap_kafra = 0\nminimap_party = 0\n"));
+        liveUpdate(noUi(""), noUi("minimap_kafra = 0\nminimap_party = 0\n"));
     CHECK(!u.next.minimapKafra && !u.next.minimapParty);
 }
 
@@ -1412,450 +1418,450 @@ TEST(config_interface_minimap_layers) {
 // разных?»): [interface] minimap_style - the maps' picture: the game's own (picture) or «Схема» from the walkable cells
 // (scheme); a choice of «Інтерфейс», at once, switched on the maps themselves too
 TEST(config_interface_minimap_style) {
-    CHECK(parseConfig("").minimapStyle == MapStyle::Picture);
-    CHECK(parseConfig("[interface]\nminimap_style = scheme\n").minimapStyle == MapStyle::Scheme);
-    CHECK(parseConfig("[interface]\nminimap_style = other\n").minimapStyle == MapStyle::Picture);
+    CHECK(noUi("").minimapStyle == MapStyle::Picture);
+    CHECK(noUi("minimap_style = scheme\n").minimapStyle == MapStyle::Scheme);
+    CHECK(noUi("minimap_style = other\n").minimapStyle == MapStyle::Picture);
     const settings::IniSetting* s = settings::findSetting("interface.minimap_style");
     CHECK(s != nullptr && s->page == settings::Page::Interface && s->control == settings::Control::Choice);
-    if (s) CHECK_EQ(settings::tokenOf(*s, parseConfig("[interface]\nminimap_style = scheme\n")), std::string("scheme"));
+    if (s) CHECK_EQ(settings::tokenOf(*s, noUi("minimap_style = scheme\n")), std::string("scheme"));
     CHECK(appliesNow("interface.minimap_style"));
-    CHECK(liveUpdate(parseConfig(""), parseConfig("[interface]\nminimap_style = scheme\n")).next.minimapStyle ==
+    CHECK(liveUpdate(noUi(""), noUi("minimap_style = scheme\n")).next.minimapStyle ==
           MapStyle::Scheme);
 }
 
 // 3.0.11-beta.122 (the network ideas, 7): [interface] net_badge - the round trip to the map server on the minimap's bar
 // (a coloured dot, a stall in red); on at first, a box of «Інтерфейс», at once
 TEST(config_interface_net_badge) {
-    CHECK(parseConfig("").netBadge);
-    CHECK(!parseConfig("[interface]\nnet_badge = 0\n").netBadge);
+    CHECK(noUi("").netBadge);
+    CHECK(!noUi("net_badge = 0\n").netBadge);
     const settings::IniSetting* s = settings::findSetting("interface.net_badge");
     CHECK(s != nullptr && s->page == settings::Page::Interface);
     CHECK(appliesNow("interface.net_badge"));
-    CHECK(!liveUpdate(parseConfig(""), parseConfig("[interface]\nnet_badge = 0\n")).next.netBadge);
+    CHECK(!liveUpdate(noUi(""), noUi("net_badge = 0\n")).next.netBadge);
 }
 
 // 3.0.11-beta.123 (the network plan's step 3): [interface] smooth_fixes - the server's position fixes of 1-3 cells
 // glided to, not jumped; on at first, a box of «Інтерфейс», at once
 TEST(config_interface_smooth_fixes) {
-    CHECK(parseConfig("").smoothFixes);
-    CHECK(!parseConfig("[interface]\nsmooth_fixes = 0\n").smoothFixes);
+    CHECK(noUi("").smoothFixes);
+    CHECK(!noUi("smooth_fixes = 0\n").smoothFixes);
     const settings::IniSetting* s = settings::findSetting("interface.smooth_fixes");
     CHECK(s != nullptr && s->page == settings::Page::Interface);
     CHECK(appliesNow("interface.smooth_fixes"));
-    CHECK(!liveUpdate(parseConfig(""), parseConfig("[interface]\nsmooth_fixes = 0\n")).next.smoothFixes);
+    CHECK(!liveUpdate(noUi(""), noUi("smooth_fixes = 0\n")).next.smoothFixes);
 }
 
 // 3.0.11-beta.125 (the owner: «когда играю арчером ... не видно сколько осталось»): [interface] hotbar_ammo - the ammo
 // worn and how many left on a pill over the hotbar; on at first, a box of «Інтерфейс», at once
 TEST(config_interface_hotbar_ammo) {
-    CHECK(parseConfig("").hotbarAmmo);
-    CHECK(!parseConfig("[interface]\nhotbar_ammo = 0\n").hotbarAmmo);
+    CHECK(noUi("").hotbarAmmo);
+    CHECK(!noUi("hotbar_ammo = 0\n").hotbarAmmo);
     const settings::IniSetting* s = settings::findSetting("interface.hotbar_ammo");
     CHECK(s != nullptr && s->page == settings::Page::Interface);
     CHECK(appliesNow("interface.hotbar_ammo"));
-    CHECK(!liveUpdate(parseConfig(""), parseConfig("[interface]\nhotbar_ammo = 0\n")).next.hotbarAmmo);
+    CHECK(!liveUpdate(noUi(""), noUi("hotbar_ammo = 0\n")).next.hotbarAmmo);
 }
 
 // 3.0.11-beta.128 (the network plan's step 5): [debug] quick_acks - the game's socket acknowledges each of the server's
 // packets at once (Windows waits up to 200 ms for a lone one): the server sees a lost packet sooner; on, the
 // developer's page, at once
 TEST(config_debug_quick_acks) {
-    CHECK(parseConfig("").quickAcks);
-    CHECK(!parseConfig("[debug]\nquick_acks = 0\n").quickAcks);
+    CHECK(noUi("").quickAcks);
+    CHECK(!noUi("[debug]\nquick_acks = 0\n").quickAcks);
     const settings::IniSetting* s = settings::findSetting("debug.quick_acks");
     CHECK(s != nullptr && s->page == settings::Page::Debug);
     CHECK(appliesNow("debug.quick_acks"));
-    CHECK(!liveUpdate(parseConfig(""), parseConfig("[debug]\nquick_acks = 0\n")).next.quickAcks);
+    CHECK(!liveUpdate(noUi(""), noUi("[debug]\nquick_acks = 0\n")).next.quickAcks);
 }
 
 // 3.0.11-beta.129 (the owner «делай»): [interface] ammo_sound - a short soft chime when 10 arrows are left and when none
 // are; on at first, a box of «Інтерфейс», at once
 TEST(config_interface_ammo_sound) {
-    CHECK(parseConfig("").ammoSound);
-    CHECK(!parseConfig("[interface]\nammo_sound = 0\n").ammoSound);
+    CHECK(noUi("").ammoSound);
+    CHECK(!noUi("ammo_sound = 0\n").ammoSound);
     const settings::IniSetting* s = settings::findSetting("interface.ammo_sound");
     CHECK(s != nullptr && s->page == settings::Page::Interface);
     CHECK(appliesNow("interface.ammo_sound"));
-    CHECK(!liveUpdate(parseConfig(""), parseConfig("[interface]\nammo_sound = 0\n")).next.ammoSound);
+    CHECK(!liveUpdate(noUi(""), noUi("ammo_sound = 0\n")).next.ammoSound);
 }
 
 // 3.0.11-beta.130 (the network plan's step 5; the owner «делаем»): [interface] predict_walk - the character walks at the
 // click, not a round trip later (an experiment); OFF at first, a box of «Інтерфейс», at once
 TEST(config_interface_predict_walk) {
-    CHECK(!parseConfig("").predictWalk);
-    CHECK(parseConfig("[interface]\npredict_walk = 1\n").predictWalk);
+    CHECK(!noUi("").predictWalk);
+    CHECK(noUi("predict_walk = 1\n").predictWalk);
     const settings::IniSetting* s = settings::findSetting("interface.predict_walk");
     CHECK(s != nullptr && s->page == settings::Page::Interface);
     CHECK(appliesNow("interface.predict_walk"));
-    CHECK(liveUpdate(parseConfig(""), parseConfig("[interface]\npredict_walk = 1\n")).next.predictWalk);
+    CHECK(liveUpdate(noUi(""), noUi("predict_walk = 1\n")).next.predictWalk);
 }
 
 // 3.0.11-beta.140 (the owner «давай»): [interface] menu - the game's menu and death screen redrawn; on with the new
 // interface (its minimap) unless the file names it, as the other windows; a box of «Інтерфейс», at once
 TEST(config_interface_menu_window) {
-    CHECK(!parseConfig("").menuWindow);
-    CHECK(parseConfig("[interface]\nminimap = 1\n").menuWindow);
-    CHECK(!parseConfig("[interface]\nminimap = 1\nmenu = 0\n").menuWindow);
-    CHECK(parseConfig("[interface]\nmenu = 1\n").menuWindow);
+    CHECK(!noUi("").menuWindow);
+    CHECK(noUi("minimap = 1\n").menuWindow);
+    CHECK(!noUi("minimap = 1\nmenu = 0\n").menuWindow);
+    CHECK(noUi("menu = 1\n").menuWindow);
     const settings::IniSetting* s = settings::findSetting("interface.menu");
     CHECK(s != nullptr && s->page == settings::Page::Interface);
     CHECK(appliesNow("interface.menu"));
-    CHECK(liveUpdate(parseConfig(""), parseConfig("[interface]\nmenu = 1\n")).next.menuWindow);
+    CHECK(liveUpdate(noUi(""), noUi("menu = 1\n")).next.menuWindow);
 }
 
 // 3.0.11-beta.149 (the owner: «сделай все без остановки»): [interface] cards - the item card and the skill card in the
 // new look, on with the new minimap, at once
 TEST(config_interface_cards) {
-    CHECK(!parseConfig("").cardWindows);
-    CHECK(parseConfig("[interface]\nminimap = 1\n").cardWindows);
-    CHECK(!parseConfig("[interface]\nminimap = 1\ncards = 0\n").cardWindows);
-    CHECK(parseConfig("[interface]\ncards = 1\n").cardWindows);
+    CHECK(!noUi("").cardWindows);
+    CHECK(noUi("minimap = 1\n").cardWindows);
+    CHECK(!noUi("minimap = 1\ncards = 0\n").cardWindows);
+    CHECK(noUi("cards = 1\n").cardWindows);
     const settings::IniSetting* s = settings::findSetting("interface.cards");
     CHECK(s != nullptr && s->page == settings::Page::Interface);
     CHECK(appliesNow("interface.cards"));
-    CHECK(liveUpdate(parseConfig(""), parseConfig("[interface]\ncards = 1\n")).next.cardWindows);
+    CHECK(liveUpdate(noUi(""), noUi("cards = 1\n")).next.cardWindows);
 }
 
 // 3.0.11-beta.150: [interface] asks - the requests and the NPC's inputs in the new look, on with the new minimap,
 // at once
 TEST(config_interface_asks) {
-    CHECK(!parseConfig("").askWindows);
-    CHECK(parseConfig("[interface]\nminimap = 1\n").askWindows);
-    CHECK(!parseConfig("[interface]\nminimap = 1\nasks = 0\n").askWindows);
-    CHECK(parseConfig("[interface]\nasks = 1\n").askWindows);
+    CHECK(!noUi("").askWindows);
+    CHECK(noUi("minimap = 1\n").askWindows);
+    CHECK(!noUi("minimap = 1\nasks = 0\n").askWindows);
+    CHECK(noUi("asks = 1\n").askWindows);
     const settings::IniSetting* s = settings::findSetting("interface.asks");
     CHECK(s != nullptr && s->page == settings::Page::Interface);
     CHECK(appliesNow("interface.asks"));
-    CHECK(liveUpdate(parseConfig(""), parseConfig("[interface]\nasks = 1\n")).next.askWindows);
+    CHECK(liveUpdate(noUi(""), noUi("asks = 1\n")).next.askWindows);
 }
 
 // 3.0.11-beta.151: [interface] messages - the game's message boxes in the new look, on with the new minimap, at once
 TEST(config_interface_messages) {
-    CHECK(!parseConfig("").messageBoxes);
-    CHECK(parseConfig("[interface]\nminimap = 1\n").messageBoxes);
-    CHECK(!parseConfig("[interface]\nminimap = 1\nmessages = 0\n").messageBoxes);
-    CHECK(parseConfig("[interface]\nmessages = 1\n").messageBoxes);
+    CHECK(!noUi("").messageBoxes);
+    CHECK(noUi("minimap = 1\n").messageBoxes);
+    CHECK(!noUi("minimap = 1\nmessages = 0\n").messageBoxes);
+    CHECK(noUi("messages = 1\n").messageBoxes);
     const settings::IniSetting* s = settings::findSetting("interface.messages");
     CHECK(s != nullptr && s->page == settings::Page::Interface);
     CHECK(appliesNow("interface.messages"));
-    CHECK(liveUpdate(parseConfig(""), parseConfig("[interface]\nmessages = 1\n")).next.messageBoxes);
+    CHECK(liveUpdate(noUi(""), noUi("messages = 1\n")).next.messageBoxes);
 }
 
 // 3.0.11-beta.151: [interface] login - the game's login window in the new look, on with the new minimap, at once
 TEST(config_interface_login) {
-    CHECK(!parseConfig("").loginWindow);
-    CHECK(parseConfig("[interface]\nminimap = 1\n").loginWindow);
-    CHECK(!parseConfig("[interface]\nminimap = 1\nlogin = 0\n").loginWindow);
-    CHECK(parseConfig("[interface]\nlogin = 1\n").loginWindow);
+    CHECK(!noUi("").loginWindow);
+    CHECK(noUi("minimap = 1\n").loginWindow);
+    CHECK(!noUi("minimap = 1\nlogin = 0\n").loginWindow);
+    CHECK(noUi("login = 1\n").loginWindow);
     const settings::IniSetting* s = settings::findSetting("interface.login");
     CHECK(s != nullptr && s->page == settings::Page::Interface);
     CHECK(appliesNow("interface.login"));
-    CHECK(liveUpdate(parseConfig(""), parseConfig("[interface]\nlogin = 1\n")).next.loginWindow);
+    CHECK(liveUpdate(noUi(""), noUi("login = 1\n")).next.loginWindow);
 }
 
 // 3.0.11-beta.152: [interface] char_select - the game's character select in the new look, on with the new minimap, at
 // once
 TEST(config_interface_char_select) {
-    CHECK(!parseConfig("").charSelectWindow);
-    CHECK(parseConfig("[interface]\nminimap = 1\n").charSelectWindow);
-    CHECK(!parseConfig("[interface]\nminimap = 1\nchar_select = 0\n").charSelectWindow);
-    CHECK(parseConfig("[interface]\nchar_select = 1\n").charSelectWindow);
+    CHECK(!noUi("").charSelectWindow);
+    CHECK(noUi("minimap = 1\n").charSelectWindow);
+    CHECK(!noUi("minimap = 1\nchar_select = 0\n").charSelectWindow);
+    CHECK(noUi("char_select = 1\n").charSelectWindow);
     const settings::IniSetting* s = settings::findSetting("interface.char_select");
     CHECK(s != nullptr && s->page == settings::Page::Interface);
     CHECK(appliesNow("interface.char_select"));
-    CHECK(liveUpdate(parseConfig(""), parseConfig("[interface]\nchar_select = 1\n")).next.charSelectWindow);
+    CHECK(liveUpdate(noUi(""), noUi("char_select = 1\n")).next.charSelectWindow);
 }
 
 // 3.0.11-beta.153: [interface] char_make - the game's character make in the new look, on with the new minimap, at once
 TEST(config_interface_char_make) {
-    CHECK(!parseConfig("").charMakeWindow);
-    CHECK(parseConfig("[interface]\nminimap = 1\n").charMakeWindow);
-    CHECK(!parseConfig("[interface]\nminimap = 1\nchar_make = 0\n").charMakeWindow);
-    CHECK(parseConfig("[interface]\nchar_make = 1\n").charMakeWindow);
+    CHECK(!noUi("").charMakeWindow);
+    CHECK(noUi("minimap = 1\n").charMakeWindow);
+    CHECK(!noUi("minimap = 1\nchar_make = 0\n").charMakeWindow);
+    CHECK(noUi("char_make = 1\n").charMakeWindow);
     const settings::IniSetting* s = settings::findSetting("interface.char_make");
     CHECK(s != nullptr && s->page == settings::Page::Interface);
     CHECK(appliesNow("interface.char_make"));
-    CHECK(liveUpdate(parseConfig(""), parseConfig("[interface]\nchar_make = 1\n")).next.charMakeWindow);
+    CHECK(liveUpdate(noUi(""), noUi("char_make = 1\n")).next.charMakeWindow);
 }
 
 // 3.0.11-beta.154: [interface] cart - the merchant's cart as «Візок», on with the new minimap, at once
 TEST(config_interface_cart) {
-    CHECK(!parseConfig("").cartWindow);
-    CHECK(parseConfig("[interface]\nminimap = 1\n").cartWindow);
-    CHECK(!parseConfig("[interface]\nminimap = 1\ncart = 0\n").cartWindow);
-    CHECK(parseConfig("[interface]\ncart = 1\n").cartWindow);
+    CHECK(!noUi("").cartWindow);
+    CHECK(noUi("minimap = 1\n").cartWindow);
+    CHECK(!noUi("minimap = 1\ncart = 0\n").cartWindow);
+    CHECK(noUi("cart = 1\n").cartWindow);
     const settings::IniSetting* s = settings::findSetting("interface.cart");
     CHECK(s != nullptr && s->page == settings::Page::Interface);
     CHECK(appliesNow("interface.cart"));
-    CHECK(liveUpdate(parseConfig(""), parseConfig("[interface]\ncart = 1\n")).next.cartWindow);
+    CHECK(liveUpdate(noUi(""), noUi("cart = 1\n")).next.cartWindow);
 }
 
 // 3.0.11-beta.155: [interface] counts - the game's «how many» window as a card, on with the new minimap, at once
 TEST(config_interface_counts) {
-    CHECK(!parseConfig("").countWindow);
-    CHECK(parseConfig("[interface]\nminimap = 1\n").countWindow);
-    CHECK(!parseConfig("[interface]\nminimap = 1\ncounts = 0\n").countWindow);
-    CHECK(parseConfig("[interface]\ncounts = 1\n").countWindow);
+    CHECK(!noUi("").countWindow);
+    CHECK(noUi("minimap = 1\n").countWindow);
+    CHECK(!noUi("minimap = 1\ncounts = 0\n").countWindow);
+    CHECK(noUi("counts = 1\n").countWindow);
     const settings::IniSetting* s = settings::findSetting("interface.counts");
     CHECK(s != nullptr && s->page == settings::Page::Interface);
     CHECK(appliesNow("interface.counts"));
-    CHECK(liveUpdate(parseConfig(""), parseConfig("[interface]\ncounts = 1\n")).next.countWindow);
+    CHECK(liveUpdate(noUi(""), noUi("counts = 1\n")).next.countWindow);
 }
 
 // 3.0.11-beta.156: [interface] vending - another's shop as «Лавка», on with the new minimap, at once
 TEST(config_interface_vending) {
-    CHECK(!parseConfig("").vendWindow);
-    CHECK(parseConfig("[interface]\nminimap = 1\n").vendWindow);
-    CHECK(!parseConfig("[interface]\nminimap = 1\nvending = 0\n").vendWindow);
-    CHECK(parseConfig("[interface]\nvending = 1\n").vendWindow);
+    CHECK(!noUi("").vendWindow);
+    CHECK(noUi("minimap = 1\n").vendWindow);
+    CHECK(!noUi("minimap = 1\nvending = 0\n").vendWindow);
+    CHECK(noUi("vending = 1\n").vendWindow);
     const settings::IniSetting* s = settings::findSetting("interface.vending");
     CHECK(s != nullptr && s->page == settings::Page::Interface);
     CHECK(appliesNow("interface.vending"));
-    CHECK(liveUpdate(parseConfig(""), parseConfig("[interface]\nvending = 1\n")).next.vendWindow);
+    CHECK(liveUpdate(noUi(""), noUi("vending = 1\n")).next.vendWindow);
 }
 
 // 3.0.11-beta.157: [interface] picks - the magnifier's and a card's choice of things, on with the new minimap, at once
 TEST(config_interface_picks) {
-    CHECK(!parseConfig("").pickWindows);
-    CHECK(parseConfig("[interface]\nminimap = 1\n").pickWindows);
-    CHECK(!parseConfig("[interface]\nminimap = 1\npicks = 0\n").pickWindows);
-    CHECK(parseConfig("[interface]\npicks = 1\n").pickWindows);
+    CHECK(!noUi("").pickWindows);
+    CHECK(noUi("minimap = 1\n").pickWindows);
+    CHECK(!noUi("minimap = 1\npicks = 0\n").pickWindows);
+    CHECK(noUi("picks = 1\n").pickWindows);
     const settings::IniSetting* s = settings::findSetting("interface.picks");
     CHECK(s != nullptr && s->page == settings::Page::Interface);
     CHECK(appliesNow("interface.picks"));
-    CHECK(liveUpdate(parseConfig(""), parseConfig("[interface]\npicks = 1\n")).next.pickWindows);
+    CHECK(liveUpdate(noUi(""), noUi("picks = 1\n")).next.pickWindows);
 }
 
 // 3.0.11-beta.158: [interface] party_setup - the party's settings as a card, on with the new minimap, at once
 TEST(config_interface_party_setup) {
-    CHECK(!parseConfig("").partySetupWindow);
-    CHECK(parseConfig("[interface]\nminimap = 1\n").partySetupWindow);
-    CHECK(!parseConfig("[interface]\nminimap = 1\nparty_setup = 0\n").partySetupWindow);
-    CHECK(parseConfig("[interface]\nparty_setup = 1\n").partySetupWindow);
+    CHECK(!noUi("").partySetupWindow);
+    CHECK(noUi("minimap = 1\n").partySetupWindow);
+    CHECK(!noUi("minimap = 1\nparty_setup = 0\n").partySetupWindow);
+    CHECK(noUi("party_setup = 1\n").partySetupWindow);
     const settings::IniSetting* s = settings::findSetting("interface.party_setup");
     CHECK(s != nullptr && s->page == settings::Page::Interface);
     CHECK(appliesNow("interface.party_setup"));
-    CHECK(liveUpdate(parseConfig(""), parseConfig("[interface]\nparty_setup = 1\n")).next.partySetupWindow);
+    CHECK(liveUpdate(noUi(""), noUi("party_setup = 1\n")).next.partySetupWindow);
 }
 
 // 3.0.11-beta.159: [interface] pet - the pet's window as a card, on with the new minimap, at once
 TEST(config_interface_pet) {
-    CHECK(!parseConfig("").petWindow);
-    CHECK(parseConfig("[interface]\nminimap = 1\n").petWindow);
-    CHECK(!parseConfig("[interface]\nminimap = 1\npet = 0\n").petWindow);
-    CHECK(parseConfig("[interface]\npet = 1\n").petWindow);
+    CHECK(!noUi("").petWindow);
+    CHECK(noUi("minimap = 1\n").petWindow);
+    CHECK(!noUi("minimap = 1\npet = 0\n").petWindow);
+    CHECK(noUi("pet = 1\n").petWindow);
     const settings::IniSetting* s = settings::findSetting("interface.pet");
     CHECK(s != nullptr && s->page == settings::Page::Interface);
     CHECK(appliesNow("interface.pet"));
-    CHECK(liveUpdate(parseConfig(""), parseConfig("[interface]\npet = 1\n")).next.petWindow);
+    CHECK(liveUpdate(noUi(""), noUi("pet = 1\n")).next.petWindow);
 }
 
 // 3.0.11-beta.160: [interface] homun - the homunculus' window as a card, on with the new minimap, at once
 TEST(config_interface_homun) {
-    CHECK(!parseConfig("").homunWindow);
-    CHECK(parseConfig("[interface]\nminimap = 1\n").homunWindow);
-    CHECK(!parseConfig("[interface]\nminimap = 1\nhomun = 0\n").homunWindow);
-    CHECK(parseConfig("[interface]\nhomun = 1\n").homunWindow);
+    CHECK(!noUi("").homunWindow);
+    CHECK(noUi("minimap = 1\n").homunWindow);
+    CHECK(!noUi("minimap = 1\nhomun = 0\n").homunWindow);
+    CHECK(noUi("homun = 1\n").homunWindow);
     const settings::IniSetting* s = settings::findSetting("interface.homun");
     CHECK(s != nullptr && s->page == settings::Page::Interface);
     CHECK(appliesNow("interface.homun"));
-    CHECK(liveUpdate(parseConfig(""), parseConfig("[interface]\nhomun = 1\n")).next.homunWindow);
+    CHECK(liveUpdate(noUi(""), noUi("homun = 1\n")).next.homunWindow);
 }
 
 // 3.0.11-beta.161: [interface] merc - the mercenary's window as a card, on with the new minimap, at once
 TEST(config_interface_merc) {
-    CHECK(!parseConfig("").mercWindow);
-    CHECK(parseConfig("[interface]\nminimap = 1\n").mercWindow);
-    CHECK(!parseConfig("[interface]\nminimap = 1\nmerc = 0\n").mercWindow);
-    CHECK(parseConfig("[interface]\nmerc = 1\n").mercWindow);
+    CHECK(!noUi("").mercWindow);
+    CHECK(noUi("minimap = 1\n").mercWindow);
+    CHECK(!noUi("minimap = 1\nmerc = 0\n").mercWindow);
+    CHECK(noUi("merc = 1\n").mercWindow);
     const settings::IniSetting* s = settings::findSetting("interface.merc");
     CHECK(s != nullptr && s->page == settings::Page::Interface);
     CHECK(appliesNow("interface.merc"));
-    CHECK(liveUpdate(parseConfig(""), parseConfig("[interface]\nmerc = 1\n")).next.mercWindow);
+    CHECK(liveUpdate(noUi(""), noUi("merc = 1\n")).next.mercWindow);
 }
 
 // 3.0.11-beta.162: [interface] options - the game's options window as a card, on with the new minimap, at once
 TEST(config_interface_options) {
-    CHECK(!parseConfig("").optionsWindow);
-    CHECK(parseConfig("[interface]\nminimap = 1\n").optionsWindow);
-    CHECK(!parseConfig("[interface]\nminimap = 1\noptions = 0\n").optionsWindow);
-    CHECK(parseConfig("[interface]\noptions = 1\n").optionsWindow);
+    CHECK(!noUi("").optionsWindow);
+    CHECK(noUi("minimap = 1\n").optionsWindow);
+    CHECK(!noUi("minimap = 1\noptions = 0\n").optionsWindow);
+    CHECK(noUi("options = 1\n").optionsWindow);
     const settings::IniSetting* s = settings::findSetting("interface.options");
     CHECK(s != nullptr && s->page == settings::Page::Interface);
     CHECK(appliesNow("interface.options"));
-    CHECK(liveUpdate(parseConfig(""), parseConfig("[interface]\noptions = 1\n")).next.optionsWindow);
+    CHECK(liveUpdate(noUi(""), noUi("options = 1\n")).next.optionsWindow);
 }
 
 // 3.0.11-beta.163: [interface] social - the friends and party window as a card, on with the new minimap, at once
 TEST(config_interface_social) {
-    CHECK(!parseConfig("").socialWindow);
-    CHECK(parseConfig("[interface]\nminimap = 1\n").socialWindow);
-    CHECK(!parseConfig("[interface]\nminimap = 1\nsocial = 0\n").socialWindow);
-    CHECK(parseConfig("[interface]\nsocial = 1\n").socialWindow);
+    CHECK(!noUi("").socialWindow);
+    CHECK(noUi("minimap = 1\n").socialWindow);
+    CHECK(!noUi("minimap = 1\nsocial = 0\n").socialWindow);
+    CHECK(noUi("social = 1\n").socialWindow);
     const settings::IniSetting* s = settings::findSetting("interface.social");
     CHECK(s != nullptr && s->page == settings::Page::Interface);
     CHECK(appliesNow("interface.social"));
-    CHECK(liveUpdate(parseConfig(""), parseConfig("[interface]\nsocial = 1\n")).next.socialWindow);
+    CHECK(liveUpdate(noUi(""), noUi("social = 1\n")).next.socialWindow);
 }
 
 // 3.0.11-beta.164: [interface] servers - the game's server select as a card, on with the new minimap, at once
 TEST(config_interface_servers) {
-    CHECK(!parseConfig("").serverWindow);
-    CHECK(parseConfig("[interface]\nminimap = 1\n").serverWindow);
-    CHECK(!parseConfig("[interface]\nminimap = 1\nservers = 0\n").serverWindow);
-    CHECK(parseConfig("[interface]\nservers = 1\n").serverWindow);
+    CHECK(!noUi("").serverWindow);
+    CHECK(noUi("minimap = 1\n").serverWindow);
+    CHECK(!noUi("minimap = 1\nservers = 0\n").serverWindow);
+    CHECK(noUi("servers = 1\n").serverWindow);
     const settings::IniSetting* s = settings::findSetting("interface.servers");
     CHECK(s != nullptr && s->page == settings::Page::Interface);
     CHECK(appliesNow("interface.servers"));
-    CHECK(liveUpdate(parseConfig(""), parseConfig("[interface]\nservers = 1\n")).next.serverWindow);
+    CHECK(liveUpdate(noUi(""), noUi("servers = 1\n")).next.serverWindow);
 }
 
 // 3.0.11-beta.165: [interface] guild - the guild's window as a card, on with the new minimap, at once
 TEST(config_interface_guild) {
-    CHECK(!parseConfig("").guildWindow);
-    CHECK(parseConfig("[interface]\nminimap = 1\n").guildWindow);
-    CHECK(!parseConfig("[interface]\nminimap = 1\nguild = 0\n").guildWindow);
-    CHECK(parseConfig("[interface]\nguild = 1\n").guildWindow);
+    CHECK(!noUi("").guildWindow);
+    CHECK(noUi("minimap = 1\n").guildWindow);
+    CHECK(!noUi("minimap = 1\nguild = 0\n").guildWindow);
+    CHECK(noUi("guild = 1\n").guildWindow);
     const settings::IniSetting* s = settings::findSetting("interface.guild");
     CHECK(s != nullptr && s->page == settings::Page::Interface);
     CHECK(appliesNow("interface.guild"));
-    CHECK(liveUpdate(parseConfig(""), parseConfig("[interface]\nguild = 1\n")).next.guildWindow);
+    CHECK(liveUpdate(noUi(""), noUi("guild = 1\n")).next.guildWindow);
 }
 
 // 3.0.11-beta.166: [interface] my_shop - one's own open shop as a card, on with the new minimap, at once
 TEST(config_interface_my_shop) {
-    CHECK(!parseConfig("").myShopWindow);
-    CHECK(parseConfig("[interface]\nminimap = 1\n").myShopWindow);
-    CHECK(!parseConfig("[interface]\nminimap = 1\nmy_shop = 0\n").myShopWindow);
-    CHECK(parseConfig("[interface]\nmy_shop = 1\n").myShopWindow);
+    CHECK(!noUi("").myShopWindow);
+    CHECK(noUi("minimap = 1\n").myShopWindow);
+    CHECK(!noUi("minimap = 1\nmy_shop = 0\n").myShopWindow);
+    CHECK(noUi("my_shop = 1\n").myShopWindow);
     const settings::IniSetting* s = settings::findSetting("interface.my_shop");
     CHECK(s != nullptr && s->page == settings::Page::Interface);
     CHECK(appliesNow("interface.my_shop"));
-    CHECK(liveUpdate(parseConfig(""), parseConfig("[interface]\nmy_shop = 1\n")).next.myShopWindow);
+    CHECK(liveUpdate(noUi(""), noUi("my_shop = 1\n")).next.myShopWindow);
 }
 
 // 3.0.11-beta.168: [interface] whisper_setup - the whisper's settings as a card, on with the new minimap, at once
 TEST(config_interface_whisper_setup) {
-    CHECK(!parseConfig("").whisperSetupWindow);
-    CHECK(parseConfig("[interface]\nminimap = 1\n").whisperSetupWindow);
-    CHECK(!parseConfig("[interface]\nminimap = 1\nwhisper_setup = 0\n").whisperSetupWindow);
-    CHECK(parseConfig("[interface]\nwhisper_setup = 1\n").whisperSetupWindow);
+    CHECK(!noUi("").whisperSetupWindow);
+    CHECK(noUi("minimap = 1\n").whisperSetupWindow);
+    CHECK(!noUi("minimap = 1\nwhisper_setup = 0\n").whisperSetupWindow);
+    CHECK(noUi("whisper_setup = 1\n").whisperSetupWindow);
     const settings::IniSetting* s = settings::findSetting("interface.whisper_setup");
     CHECK(s != nullptr && s->page == settings::Page::Interface);
     CHECK(appliesNow("interface.whisper_setup"));
-    CHECK(liveUpdate(parseConfig(""), parseConfig("[interface]\nwhisper_setup = 1\n")).next.whisperSetupWindow);
+    CHECK(liveUpdate(noUi(""), noUi("whisper_setup = 1\n")).next.whisperSetupWindow);
 }
 
 // 3.0.11-beta.169: [interface] macros - the chat's macros as a card, on with the new minimap, at once
 TEST(config_interface_macros) {
-    CHECK(!parseConfig("").macroWindow);
-    CHECK(parseConfig("[interface]\nminimap = 1\n").macroWindow);
-    CHECK(!parseConfig("[interface]\nminimap = 1\nmacros = 0\n").macroWindow);
-    CHECK(parseConfig("[interface]\nmacros = 1\n").macroWindow);
+    CHECK(!noUi("").macroWindow);
+    CHECK(noUi("minimap = 1\n").macroWindow);
+    CHECK(!noUi("minimap = 1\nmacros = 0\n").macroWindow);
+    CHECK(noUi("macros = 1\n").macroWindow);
     const settings::IniSetting* s = settings::findSetting("interface.macros");
     CHECK(s != nullptr && s->page == settings::Page::Interface);
     CHECK(appliesNow("interface.macros"));
-    CHECK(liveUpdate(parseConfig(""), parseConfig("[interface]\nmacros = 1\n")).next.macroWindow);
+    CHECK(liveUpdate(noUi(""), noUi("macros = 1\n")).next.macroWindow);
 }
 
 // 3.0.11-beta.204: [interface] tips - the game's «Tip of the Day» as a card, on with the new minimap, at once
 TEST(config_interface_tips) {
-    CHECK(!parseConfig("").tipWindow);
-    CHECK(parseConfig("[interface]\nminimap = 1\n").tipWindow);
-    CHECK(!parseConfig("[interface]\nminimap = 1\ntips = 0\n").tipWindow);
-    CHECK(parseConfig("[interface]\ntips = 1\n").tipWindow);
+    CHECK(!noUi("").tipWindow);
+    CHECK(noUi("minimap = 1\n").tipWindow);
+    CHECK(!noUi("minimap = 1\ntips = 0\n").tipWindow);
+    CHECK(noUi("tips = 1\n").tipWindow);
     const settings::IniSetting* s = settings::findSetting("interface.tips");
     CHECK(s != nullptr && s->page == settings::Page::Interface);
     CHECK(appliesNow("interface.tips"));
-    CHECK(liveUpdate(parseConfig(""), parseConfig("[interface]\ntips = 1\n")).next.tipWindow);
-    CHECK(settings::tokenOf(*s, parseConfig("[interface]\ntips = 1\n")) == "1");
+    CHECK(liveUpdate(noUi(""), noUi("tips = 1\n")).next.tipWindow);
+    CHECK(settings::tokenOf(*s, noUi("tips = 1\n")) == "1");
 }
 
 // 3.0.11-beta.205: [interface] emotes - the game's emotion list (Alt+L) as a card, on with the new minimap, at once
 TEST(config_interface_emotes) {
-    CHECK(!parseConfig("").emoteWindow);
-    CHECK(parseConfig("[interface]\nminimap = 1\n").emoteWindow);
-    CHECK(!parseConfig("[interface]\nminimap = 1\nemotes = 0\n").emoteWindow);
-    CHECK(parseConfig("[interface]\nemotes = 1\n").emoteWindow);
+    CHECK(!noUi("").emoteWindow);
+    CHECK(noUi("minimap = 1\n").emoteWindow);
+    CHECK(!noUi("minimap = 1\nemotes = 0\n").emoteWindow);
+    CHECK(noUi("emotes = 1\n").emoteWindow);
     const settings::IniSetting* s = settings::findSetting("interface.emotes");
     CHECK(s != nullptr && s->page == settings::Page::Interface);
     CHECK(appliesNow("interface.emotes"));
-    CHECK(liveUpdate(parseConfig(""), parseConfig("[interface]\nemotes = 1\n")).next.emoteWindow);
-    CHECK(settings::tokenOf(*s, parseConfig("[interface]\nemotes = 1\n")) == "1");
+    CHECK(liveUpdate(noUi(""), noUi("emotes = 1\n")).next.emoteWindow);
+    CHECK(settings::tokenOf(*s, noUi("emotes = 1\n")) == "1");
 }
 
 // 3.0.11-beta.206: [interface] commands - the game's command list (Alt+Y) as a card, on with the new minimap, at once
 TEST(config_interface_commands) {
-    CHECK(!parseConfig("").commandWindow);
-    CHECK(parseConfig("[interface]\nminimap = 1\n").commandWindow);
-    CHECK(!parseConfig("[interface]\nminimap = 1\ncommands = 0\n").commandWindow);
-    CHECK(parseConfig("[interface]\ncommands = 1\n").commandWindow);
+    CHECK(!noUi("").commandWindow);
+    CHECK(noUi("minimap = 1\n").commandWindow);
+    CHECK(!noUi("minimap = 1\ncommands = 0\n").commandWindow);
+    CHECK(noUi("commands = 1\n").commandWindow);
     const settings::IniSetting* s = settings::findSetting("interface.commands");
     CHECK(s != nullptr && s->page == settings::Page::Interface);
     CHECK(appliesNow("interface.commands"));
-    CHECK(liveUpdate(parseConfig(""), parseConfig("[interface]\ncommands = 1\n")).next.commandWindow);
-    CHECK(settings::tokenOf(*s, parseConfig("[interface]\ncommands = 1\n")) == "1");
+    CHECK(liveUpdate(noUi(""), noUi("commands = 1\n")).next.commandWindow);
+    CHECK(settings::tokenOf(*s, noUi("commands = 1\n")) == "1");
 }
 
 // 3.0.11-beta.207: [interface] chat_rooms - the game's chat room windows (Alt+C) as cards, on with the new minimap
 TEST(config_interface_chat_rooms) {
-    CHECK(!parseConfig("").chatRoomWindows);
-    CHECK(parseConfig("[interface]\nminimap = 1\n").chatRoomWindows);
-    CHECK(!parseConfig("[interface]\nminimap = 1\nchat_rooms = 0\n").chatRoomWindows);
-    CHECK(parseConfig("[interface]\nchat_rooms = 1\n").chatRoomWindows);
+    CHECK(!noUi("").chatRoomWindows);
+    CHECK(noUi("minimap = 1\n").chatRoomWindows);
+    CHECK(!noUi("minimap = 1\nchat_rooms = 0\n").chatRoomWindows);
+    CHECK(noUi("chat_rooms = 1\n").chatRoomWindows);
     const settings::IniSetting* s = settings::findSetting("interface.chat_rooms");
     CHECK(s != nullptr && s->page == settings::Page::Interface);
     CHECK(appliesNow("interface.chat_rooms"));
-    CHECK(liveUpdate(parseConfig(""), parseConfig("[interface]\nchat_rooms = 1\n")).next.chatRoomWindows);
-    CHECK(settings::tokenOf(*s, parseConfig("[interface]\nchat_rooms = 1\n")) == "1");
+    CHECK(liveUpdate(noUi(""), noUi("chat_rooms = 1\n")).next.chatRoomWindows);
+    CHECK(settings::tokenOf(*s, noUi("chat_rooms = 1\n")) == "1");
 }
 
 // 3.0.11-beta.209: [interface] detail_console - Alt+D opens the driver's console in place of the game's «Arrange
 // Detail» window, on with the new minimap, at once
 TEST(config_interface_detail_console) {
-    CHECK(!parseConfig("").detailConsole);
-    CHECK(parseConfig("[interface]\nminimap = 1\n").detailConsole);
-    CHECK(!parseConfig("[interface]\nminimap = 1\ndetail_console = 0\n").detailConsole);
-    CHECK(parseConfig("[interface]\ndetail_console = 1\n").detailConsole);
+    CHECK(!noUi("").detailConsole);
+    CHECK(noUi("minimap = 1\n").detailConsole);
+    CHECK(!noUi("minimap = 1\ndetail_console = 0\n").detailConsole);
+    CHECK(noUi("detail_console = 1\n").detailConsole);
     const settings::IniSetting* s = settings::findSetting("interface.detail_console");
     CHECK(s != nullptr && s->page == settings::Page::Interface);
     CHECK(appliesNow("interface.detail_console"));
-    CHECK(liveUpdate(parseConfig(""), parseConfig("[interface]\ndetail_console = 1\n")).next.detailConsole);
-    CHECK(settings::tokenOf(*s, parseConfig("[interface]\ndetail_console = 1\n")) == "1");
+    CHECK(liveUpdate(noUi(""), noUi("detail_console = 1\n")).next.detailConsole);
+    CHECK(settings::tokenOf(*s, noUi("detail_console = 1\n")) == "1");
 }
 
 // 3.0.11-beta.211: [interface] popups - the game's popup menus (a player's, a room member's, a guild member's) as
 // cards, on with the new minimap, at once
 TEST(config_interface_popups) {
-    CHECK(!parseConfig("").popupMenus);
-    CHECK(parseConfig("[interface]\nminimap = 1\n").popupMenus);
-    CHECK(!parseConfig("[interface]\nminimap = 1\npopups = 0\n").popupMenus);
-    CHECK(parseConfig("[interface]\npopups = 1\n").popupMenus);
+    CHECK(!noUi("").popupMenus);
+    CHECK(noUi("minimap = 1\n").popupMenus);
+    CHECK(!noUi("minimap = 1\npopups = 0\n").popupMenus);
+    CHECK(noUi("popups = 1\n").popupMenus);
     const settings::IniSetting* s = settings::findSetting("interface.popups");
     CHECK(s != nullptr && s->page == settings::Page::Interface);
     CHECK(appliesNow("interface.popups"));
-    CHECK(liveUpdate(parseConfig(""), parseConfig("[interface]\npopups = 1\n")).next.popupMenus);
-    CHECK(settings::tokenOf(*s, parseConfig("[interface]\npopups = 1\n")) == "1");
+    CHECK(liveUpdate(noUi(""), noUi("popups = 1\n")).next.popupMenus);
+    CHECK(settings::tokenOf(*s, noUi("popups = 1\n")) == "1");
 }
 
 // 3.0.11-beta.212: [interface] whispers - the game's 1:1 whisper windows as cards, on with the new minimap, at once
 TEST(config_interface_whispers) {
-    CHECK(!parseConfig("").whisperWindows);
-    CHECK(parseConfig("[interface]\nminimap = 1\n").whisperWindows);
-    CHECK(!parseConfig("[interface]\nminimap = 1\nwhispers = 0\n").whisperWindows);
-    CHECK(parseConfig("[interface]\nwhispers = 1\n").whisperWindows);
+    CHECK(!noUi("").whisperWindows);
+    CHECK(noUi("minimap = 1\n").whisperWindows);
+    CHECK(!noUi("minimap = 1\nwhispers = 0\n").whisperWindows);
+    CHECK(noUi("whispers = 1\n").whisperWindows);
     const settings::IniSetting* s = settings::findSetting("interface.whispers");
     CHECK(s != nullptr && s->page == settings::Page::Interface);
     CHECK(appliesNow("interface.whispers"));
-    CHECK(liveUpdate(parseConfig(""), parseConfig("[interface]\nwhispers = 1\n")).next.whisperWindows);
-    CHECK(settings::tokenOf(*s, parseConfig("[interface]\nwhispers = 1\n")) == "1");
+    CHECK(liveUpdate(noUi(""), noUi("whispers = 1\n")).next.whisperWindows);
+    CHECK(settings::tokenOf(*s, noUi("whispers = 1\n")) == "1");
 }
 
 // 3.0.11-beta.103 (the owner: «можешь сделать настройку, чтобы можно было выбрать эту стрелку в конфигураторе»):
 // [interface] walk_arrow - the look of the stick's walking arrow, the doc's variants; the chevrons by default (its
 // advice), a choice of «Інтерфейс» applied at once
 TEST(config_walk_arrow) {
-    CHECK(parseConfig("").walkArrow == WalkLook::Chevrons);
+    CHECK(noUi("").walkArrow == WalkLook::Chevrons);
     const char* tokens[] = {"chevrons", "slim", "concept", "ring", "dots", "cell", "off"};
     const WalkLook looks[] = {WalkLook::Chevrons, WalkLook::Slim, WalkLook::Concept, WalkLook::Ring,
                               WalkLook::Dots,     WalkLook::Cell, WalkLook::Off};
@@ -1866,7 +1872,7 @@ TEST(config_walk_arrow) {
     const settings::IniSetting* s = settings::findSetting("interface.walk_arrow");
     CHECK(s != nullptr && s->page == settings::Page::Interface && s->control == settings::Control::Choice);
     CHECK(appliesNow("interface.walk_arrow"));
-    CHECK(liveUpdate(parseConfig(""), parseConfig("[interface]\nwalk_arrow = ring\n")).next.walkArrow ==
+    CHECK(liveUpdate(noUi(""), noUi("walk_arrow = ring\n")).next.walkArrow ==
           WalkLook::Ring);
 }
 
@@ -1874,12 +1880,12 @@ TEST(config_walk_arrow) {
 // at the arrow's end where the character goes (the diamond, the cell's corners or frame, the small ring); off by
 // default
 TEST(config_walk_mark) {
-    CHECK(!parseConfig("").walkMark);
-    CHECK(parseConfig("[interface]\nwalk_mark = 1\n").walkMark);
+    CHECK(!noUi("").walkMark);
+    CHECK(noUi("walk_mark = 1\n").walkMark);
     const settings::IniSetting* s = settings::findSetting("interface.walk_mark");
     CHECK(s != nullptr && s->page == settings::Page::Interface && s->control == settings::Control::Check);
     CHECK(appliesNow("interface.walk_mark"));
-    CHECK(liveUpdate(parseConfig(""), parseConfig("[interface]\nwalk_mark = 1\n")).next.walkMark);
+    CHECK(liveUpdate(noUi(""), noUi("walk_mark = 1\n")).next.walkMark);
 }
 
 
@@ -1887,93 +1893,93 @@ TEST(config_walk_mark) {
 // ground skill's cells shown on the ground (core/skill_area: the server's own) after a cast, for the pad and the mouse;
 // on unless the file says 0, a box of «Інтерфейс», at once
 TEST(config_interface_skill_cells) {
-    CHECK(parseConfig("").skillCells);
-    CHECK(!parseConfig("[interface]\nskill_cells = 0\n").skillCells);
+    CHECK(noUi("").skillCells);
+    CHECK(!noUi("skill_cells = 0\n").skillCells);
     const settings::IniSetting* s = settings::findSetting("interface.skill_cells");
     CHECK(s != nullptr && s->page == settings::Page::Interface);
     CHECK(appliesNow("interface.skill_cells"));
-    CHECK(!liveUpdate(parseConfig(""), parseConfig("[interface]\nskill_cells = 0\n")).next.skillCells);
+    CHECK(!liveUpdate(noUi(""), noUi("skill_cells = 0\n")).next.skillCells);
 }
 
 // 3.0.11-beta.143 (the concept «маг, прист и хант на геймпаде»): [interface] ground_counts - on a ground skill's slot
 // of the hotbar its walls standing («2/3») or a trap's Traps in the bag («×37»), its edge flashing when a wall burnt
 // out; on unless the file says 0, a box of «Інтерфейс», at once
 TEST(config_interface_ground_counts) {
-    CHECK(parseConfig("").groundCounts);
-    CHECK(!parseConfig("[interface]\nground_counts = 0\n").groundCounts);
+    CHECK(noUi("").groundCounts);
+    CHECK(!noUi("ground_counts = 0\n").groundCounts);
     const settings::IniSetting* s = settings::findSetting("interface.ground_counts");
     CHECK(s != nullptr && s->page == settings::Page::Interface);
     CHECK(appliesNow("interface.ground_counts"));
-    CHECK(!liveUpdate(parseConfig(""), parseConfig("[interface]\nground_counts = 0\n")).next.groundCounts);
+    CHECK(!liveUpdate(noUi(""), noUi("ground_counts = 0\n")).next.groundCounts);
 }
 
 // 3.0.11-beta.173 (the login concept): [interface] login_status - the server's status line under the login window
 // (it answers, the players online, the ping; not answering: one line and a quiet retry); on at first, a box of
 // «Інтерфейс», at once
 TEST(config_interface_login_status) {
-    CHECK(parseConfig("").loginStatus);
-    CHECK(!parseConfig("[interface]\nlogin_status = 0\n").loginStatus);
+    CHECK(noUi("").loginStatus);
+    CHECK(!noUi("login_status = 0\n").loginStatus);
     const settings::IniSetting* s = settings::findSetting("interface.login_status");
     CHECK(s != nullptr && s->page == settings::Page::Interface);
     CHECK(appliesNow("interface.login_status"));
-    CHECK(!liveUpdate(parseConfig(""), parseConfig("[interface]\nlogin_status = 0\n")).next.loginStatus);
+    CHECK(!liveUpdate(noUi(""), noUi("login_status = 0\n")).next.loginStatus);
 }
 
 // 3.0.11-beta.177 (the login concept's views): [interface] login_view - «Полиця» at first, «Класичний» or
 // «Продовжити» chosen (the login screen's «Вигляд» or «Інтерфейс»), any other word the first; a choice applied at once
 TEST(config_interface_login_view) {
-    CHECK(parseConfig("").loginView == loginview::View::Shelf);
-    CHECK(parseConfig("[interface]\nlogin_view = classic\n").loginView == loginview::View::Classic);
-    CHECK(parseConfig("[interface]\nlogin_view = continue\n").loginView == loginview::View::Continue);
-    CHECK(parseConfig("[interface]\nlogin_view = wall\n").loginView == loginview::View::Shelf);
+    CHECK(noUi("").loginView == loginview::View::Shelf);
+    CHECK(noUi("login_view = classic\n").loginView == loginview::View::Classic);
+    CHECK(noUi("login_view = continue\n").loginView == loginview::View::Continue);
+    CHECK(noUi("login_view = wall\n").loginView == loginview::View::Shelf);
     const settings::IniSetting* s = settings::findSetting("interface.login_view");
     CHECK(s != nullptr && s->page == settings::Page::Interface && s->control == settings::Control::Choice);
     CHECK(appliesNow("interface.login_view"));
-    CHECK(liveUpdate(parseConfig(""), parseConfig("[interface]\nlogin_view = continue\n")).next.loginView ==
+    CHECK(liveUpdate(noUi(""), noUi("login_view = continue\n")).next.loginView ==
           loginview::View::Continue);
 }
 
 // 3.0.11-beta.174 (the login concept's news line): [interface] login_news - the site's event or news now above the
 // status line on the login screen (a click opens it on uaro.kiev.ua); on at first, a box of «Інтерфейс», at once
 TEST(config_interface_login_news) {
-    CHECK(parseConfig("").loginNews);
-    CHECK(!parseConfig("[interface]\nlogin_news = 0\n").loginNews);
+    CHECK(noUi("").loginNews);
+    CHECK(!noUi("login_news = 0\n").loginNews);
     const settings::IniSetting* s = settings::findSetting("interface.login_news");
     CHECK(s != nullptr && s->page == settings::Page::Interface);
     CHECK(appliesNow("interface.login_news"));
-    CHECK(!liveUpdate(parseConfig(""), parseConfig("[interface]\nlogin_news = 0\n")).next.loginNews);
+    CHECK(!liveUpdate(noUi(""), noUi("login_news = 0\n")).next.loginNews);
 }
 
 // 3.0.11-beta.222 (the tester: «togle в налаштуваннях старий \ новий стиль»): [interface] minimap_classic - the
 // minimap's marks as round dots in the game's colours; off at first, at once
 TEST(config_reads_the_minimap_classic_marks) {
-    CHECK(!parseConfig("").minimapClassic);
-    CHECK(parseConfig("[interface]\nminimap_classic = 1\n").minimapClassic);
+    CHECK(!noUi("").minimapClassic);
+    CHECK(noUi("minimap_classic = 1\n").minimapClassic);
     const settings::IniSetting* s = settings::findSetting("interface.minimap_classic");
     CHECK(s != nullptr);
     CHECK(appliesNow("interface.minimap_classic"));
-    const LiveUpdate u = liveUpdate(parseConfig(""), parseConfig("[interface]\nminimap_classic = 1\n"));
+    const LiveUpdate u = liveUpdate(noUi(""), noUi("minimap_classic = 1\n"));
     CHECK(u.next.minimapClassic && u.applied.size() == 1 && u.waiting.empty());
-    if (s) CHECK_EQ(settings::tokenOf(*s, parseConfig("[interface]\nminimap_classic = 1\n")), std::string("1"));
+    if (s) CHECK_EQ(settings::tokenOf(*s, noUi("minimap_classic = 1\n")), std::string("1"));
 }
 
 // 3.0.11-beta.236 (the concept «Блок персонажа»: the experience at the screen's bottom - «включить»): [interface]
 // exp_bars, on by default
 TEST(config_reads_the_experience_bars) {
-    CHECK(parseConfig("").expBars);
-    CHECK(!parseConfig("[interface]\nexp_bars = 0\n").expBars);
+    CHECK(noUi("").expBars);
+    CHECK(!noUi("exp_bars = 0\n").expBars);
 }
 
 // 3.0.11-beta.237: [interface] exp_gain - a kill's experience over the monster, on by default
 TEST(config_reads_the_experience_gains) {
-    CHECK(parseConfig("").expGain);
-    CHECK(!parseConfig("[interface]\nexp_gain = 0\n").expGain);
+    CHECK(noUi("").expGain);
+    CHECK(!noUi("exp_gain = 0\n").expGain);
 }
 
 // 3.0.11-beta.240 (the chat concept, stage 1): [interface] chat_fade - 12 by default, 30, 0 never; others 12
 TEST(config_reads_the_chat_fade) {
-    CHECK(parseConfig("").chatFade == 12);
-    CHECK(parseConfig("[interface]\nchat_fade = 30\n").chatFade == 30);
-    CHECK(parseConfig("[interface]\nchat_fade = 0\n").chatFade == 0);
-    CHECK(parseConfig("[interface]\nchat_fade = 7\n").chatFade == 12);
+    CHECK(noUi("").chatFade == 12);
+    CHECK(noUi("chat_fade = 30\n").chatFade == 30);
+    CHECK(noUi("chat_fade = 0\n").chatFade == 0);
+    CHECK(noUi("chat_fade = 7\n").chatFade == 12);
 }
