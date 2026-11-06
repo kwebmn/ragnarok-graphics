@@ -66,10 +66,15 @@ struct Layout {
     panel::Box toggle;                // 3.0.11-beta.147: the battle mode's button (the pencil's place)
     std::vector<panel::Box> cells;    // normal 9; battle 27, the shown rows' order
     std::vector<panel::Box> rowLabels;  // battle: each shown row's number
-    panel::Box tipRoom;               // over the glass
+    panel::Box tipRoom;               // over the glass (under it when `below`)
+    bool below = false;               // 3.0.12-beta.2: the tips and the ammo's pill under the glass
 };
 // Its bottom middle at (centreX, bottom) in the target
 Layout layout(Mode mode, int centreX, int bottom, float scale);
+// 3.0.12-beta.2 (a player's wish: «вікно запасу стріл перемістити вниз від скілів»; the owner: «если плашка навыков
+// вверху то стрелы надо вниз, а если внизу то вверху стрелы»): the same picture, the glass at its top and the room for
+// the tips and the ammo's pill under it - a bar in the screen's upper half goes up to the edge
+void flip(Layout& L);
 
 // 3.0.11-beta.117 (R-8YW96B: the bar jumped right for a second while walking): a window over the bar's place moves it
 // aside only once it has stood there `afterMs` - a window there a moment no longer makes it jump; gone, it is back

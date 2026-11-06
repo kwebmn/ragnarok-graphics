@@ -593,3 +593,21 @@ TEST(hotbar_lifted_cell_and_its_place) {
     const uint32_t gold = edge(L.cells[4]), plain = edge(L.cells[3]);
     CHECK(((gold >> 16) & 0xFF) > ((plain >> 16) & 0xFF) + 60 && ((gold >> 16) & 0xFF) > (gold & 0xFF) + 40);
 }
+
+// 3.0.12-beta.2 (a player's wish: «вікно запасу стріл перемістити вниз від скілів»; the owner: «если плашка навыков
+// вверху то стрелы надо вниз, а если внизу то вверху стрелы»): flipped, the glass at the picture's top, the tips and
+// the ammo's pill under it, the picture's size the same
+TEST(hotbar_flipped_puts_the_ammo_and_tips_under_the_bar) {
+    hotbar::Layout L = hotbar::layout(hotbar::Mode::Normal, 960, 300, 1.0f);
+    const hotbar::Layout before = L;
+    hotbar::flip(L);
+    CHECK(L.below && L.glass.y == 0 && L.w == before.w && L.h == before.h);
+    CHECK(L.cells[0].y == before.cells[0].y - before.glass.y && L.toggle.y < L.glass.y + L.glass.h);
+    CHECK(L.tipRoom.y >= L.glass.y + L.glass.h && L.tipRoom.y + L.tipRoom.h <= float(L.h) + 0.5f);
+    hotbar::Show sh;
+    sh.ammo.count = 300;
+    const panel::Box b = hotbar::ammoBox(L, sh);
+    CHECK(b.w > 0 && b.y >= L.glass.y + L.glass.h && b.y + b.h <= float(L.h) + 0.5f);
+    hotbar::flip(L);  // twice: no further
+    CHECK(L.glass.y == 0 && L.below);
+}

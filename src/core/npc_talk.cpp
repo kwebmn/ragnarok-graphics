@@ -14,6 +14,9 @@ namespace {
 constexpr float kW = 860, kTitleH = 40, kSide = 18, kLineH = 22, kTextPx = 14, kOptionH = 34, kOptionGap = 8;
 constexpr float kFooterH = 34, kButtonW = 120, kButtonH = 30, kGlyph = 16;
 constexpr size_t kMostLines = 12;
+// 3.0.12-beta.2 (a player's wish: «зробити трохи менші ... вікна чатів з НПЦ»): the window as wide as its words, no
+// less than kMinW, no more than kW; an option's room past its words (its number and edges)
+constexpr float kMinW = 460, kOptionRoom = 56;
 constexpr uint32_t kCard = 0x10141C, kWhite = 0xFFFFFF, kGold = 0xF3C653, kGold2 = 0xC9A55B, kTile = 0x1B1D24;
 constexpr uint32_t kText = 0xEEF2F8, kMuted = 0x9AA3B5, kFaint = 0x7E889A;
 
@@ -92,7 +95,18 @@ Layout layout(int centreX, int bottom, float scale, const Talk& t, const Show& s
     Layout L;
     const float s = scale > 0 ? scale : 1.0f;
     L.s = s;
-    const float w = kW * s, side = kSide * s, px = kTextPx * s;
+    const float side = kSide * s, px = kTextPx * s;
+    float need = 0;  // 3.0.12-beta.2: the widest line, the options' two columns
+    for (const std::string& line : t.lines) {
+        float lw = 0;
+        for (const Run& r : colours(line, kText)) lw += m(r.text, px, false);
+        need = std::max(need, lw + 2 * side + 4 * s);
+    }
+    float option = 0;
+    for (const std::string& o : t.options) option = std::max(option, m(o, px, false) + kOptionRoom * s);
+    if (!t.options.empty())
+        need = std::max(need, 2 * side + (t.options.size() > 1 ? 2 * option + kOptionGap * s : option));
+    const float w = std::clamp(std::ceil(need), kMinW * s, kW * s);
     L.title = panel::Box{0, 0, w, kTitleH * s};
     L.close = panel::Box{w - side - 24 * s, (kTitleH * s - 24 * s) / 2, 24 * s, 24 * s};
     // the words wrapped at the window's width, word by word, each colour's run apart

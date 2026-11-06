@@ -18,6 +18,7 @@
 #include "pad/win/client_npc.hpp"
 #include "pad/win/game_window.hpp"
 #include "pad/win/runtime.hpp"
+#include "win/card_drag.hpp"
 #include "win/chat_window.hpp"
 #include "win/code_page.hpp"
 #include "win/game_camera.hpp"
@@ -56,6 +57,8 @@ struct State {
     nt::Talk talk;
     nt::Show show;
     nt::Layout layout;
+    CardDrag drag;  // 3.0.12-beta.2 (a player: «вікно розмови з НПЦ ... не дає можливості його редагувати»)
+    int dragTold = 0;
     std::string key;
     panel::Picture picture;
     uint32_t texture = 0;
@@ -332,6 +335,8 @@ void frame(HWND game, bool on, bool remember, unsigned codePage, double k, int t
     const nt::Texts tx = texts();
     s.layout = nt::layout(targetWidth / 2, targetHeight - int(std::lround(200 * scale)), scale, s.talk, s.show, tx,
                           measure);
+    s.drag.apply(s.layout.x, s.layout.y, s.layout.w, s.layout.h, targetWidth, targetHeight, k,
+                 48 * scale);  // 3.0.12-beta.2: moved by its title or its words
     s.show.hoverOption = -1;
     s.show.hoverButton = s.show.hoverClose = false;
     int cx = 0, cy = 0;
@@ -433,8 +438,17 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     const nt::Hit h = nt::hitTest(s.layout, tx - float(s.layout.x), ty - float(s.layout.y));
     if (h.part == nt::Part::None || m == WM_MOUSEMOVE) return false;
     result = 0;
+    if (m == WM_LBUTTONUP) s.drag.end();
     if (m != WM_LBUTTONDOWN) return true;
     switch (h.part) {
+        case nt::Part::Title:
+        case nt::Part::Body:  // 3.0.12-beta.2: dragged by its empty part
+            if (s.dragTold < 5) {
+                ++s.dragTold;
+                LOG_INFO("npc: the talk's window dragged");
+            }
+            s.drag.begin(tx, ty);
+            break;
         case nt::Part::Option: choose(s, h.index, "a click"); break;
         case nt::Part::Button:
             press(s, s.talk.button == nt::Button::Next ? uapad::DialogCommand::Next : uapad::DialogCommand::Close,

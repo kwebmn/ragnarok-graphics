@@ -141,3 +141,24 @@ TEST(npc_talk_pad_menu_moves_wait_and_memory) {
     CHECK(back == c);
     CHECK(npctalk::readChoices("x\tbroken\n\tno index\n5").empty());
 }
+
+// 3.0.12-beta.2 (a player's wish: «зробити трохи менші ... вікна чатів з НПЦ»): as wide as its words - a few short
+// lines a narrow window, a long line up to the old width, the options' columns room for their words
+TEST(npc_talk_window_as_wide_as_its_words) {
+    npctalk::Talk t;
+    t.name = "Employee";
+    t.lines = {"Welcome", "How can I help you?"};
+    t.button = npctalk::Button::Next;
+    npctalk::Show sh;
+    npctalk::Layout L = npctalk::layout(960, 900, 1.0f, t, sh, texts(), measure);
+    CHECK(L.w >= 460 && L.w <= 462);
+    CHECK(std::abs(L.x + L.w / 2 - 960) <= 1);
+    t.lines = {std::string(200, 'w')};
+    L = npctalk::layout(960, 900, 1.0f, t, sh, texts(), measure);
+    CHECK(L.w == 860);
+    t.lines = {"Hi"};
+    t.options = {std::string(40, 'o'), "Cancel"};
+    t.button = npctalk::Button::None;
+    L = npctalk::layout(960, 900, 1.0f, t, sh, texts(), measure);
+    CHECK(L.w > 460 && L.w < 860 && L.options[0].w >= measure(t.options[0], 14, false));
+}

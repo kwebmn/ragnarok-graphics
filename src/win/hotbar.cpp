@@ -202,6 +202,7 @@ struct State {
     // 3.0.11-beta.125: the ammo's pill - its warning shown by how low it fell, the one last told the log
     hb::AmmoWarn ammoWarn;
     int ammoTold = 0;
+    bool belowTold = false;  // 3.0.12-beta.2
     bool ammoOn = true;
     bool countsOn = true;  // 3.0.11-beta.143: [interface] ground_counts
 };
@@ -696,6 +697,11 @@ void place(State& s) {
             L = hb::layout(s.mode, s.targetW / 2, int(std::lround(top - s8)), s.scale);
     }
     hudedit::place(hudlayout::Part::Hotbar, s.k, s.targetW, s.targetH, L.w, L.h, L.x, L.y);  // 3.0.11-beta.75
+    if (float(L.y) + float(L.h) / 2 < float(s.targetH) / 2) {  // 3.0.12-beta.2: in the upper half - the room under it
+        hb::flip(L);
+        if (!s.belowTold) LOG_INFO("hotbar: in the screen's upper half - its tips and the ammo's pill under it");
+        s.belowTold = true;
+    }
     s.layout = L;
 }
 
@@ -1085,7 +1091,8 @@ void frame(HWND game, bool on, bool ownBars, bool padHints, bool ammo, bool coun
     }
     tellStates(s, waitingWas);
     std::string key = std::to_string(int(s.mode)) + ';' + std::to_string(s.row) + ';' + std::to_string(scale) + ';' +
-                      std::to_string(s.layout.w) + 'x' + std::to_string(s.layout.h) + ';' + std::to_string(show.hover) +
+                      std::to_string(s.layout.w) + 'x' + std::to_string(s.layout.h) +
+                      (s.layout.below ? "v" : "") + ';' + std::to_string(show.hover) +
                       ',' + std::to_string(show.pressed) + (show.tip ? "t" : "") + (show.hoverToggle ? "e" : "") +
                       ',' + std::to_string(show.lifted) + ',' + std::to_string(show.over) +
                       (show.pad ? (show.sony ? "S" : "X") : "") + (show.dropping ? "D" : "") + ';' +

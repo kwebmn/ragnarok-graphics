@@ -118,7 +118,7 @@ panel::Box tipBox(const Layout& L, int hover, const std::vector<TipLine>& lines)
     w += 20 * L.s;
     const panel::Box& c = L.cells[size_t(hover)];
     const float x = std::clamp(c.x + c.w / 2 - w / 2, 0.0f, std::max(0.0f, float(L.w) - w));
-    return panel::Box{x, L.tipRoom.y + L.tipRoom.h - kTipH * L.s, w, kTipH * L.s};
+    return panel::Box{x, L.below ? L.tipRoom.y : L.tipRoom.y + L.tipRoom.h - kTipH * L.s, w, kTipH * L.s};
 }
 
 // 3.0.11-beta.147: the battle mode button's tip over it - what a click does
@@ -128,7 +128,7 @@ const std::string& toggleText(const Layout& L, const Texts& t) {
 panel::Box toggleTip(const Layout& L, const Texts& t) {
     const float w = panel::wordsWidth(toggleText(L, t), 12 * L.s, false) + 20 * L.s;
     const float x = std::clamp(L.toggle.x + L.toggle.w / 2 - w / 2, 0.0f, std::max(0.0f, float(L.w) - w));
-    return panel::Box{x, L.tipRoom.y + L.tipRoom.h - 26 * L.s, w, 22 * L.s};
+    return panel::Box{x, L.below ? L.tipRoom.y + 4 * L.s : L.tipRoom.y + L.tipRoom.h - 26 * L.s, w, 22 * L.s};
 }
 
 bool overlap(const panel::Box& a, const panel::Box& b) {
@@ -148,7 +148,8 @@ panel::Box ammoPlace(const Layout& L, const Ammo& a) {
     const float s = L.s;
     const float w = 8 * s + kAmmoIcon * s + 6 * s + panel::wordsWidth(ammoText(a), kAmmoPx * s, true) + 10 * s;
     const float x = std::clamp(L.glass.x, 0.0f, std::max(0.0f, float(L.w) - w));
-    return panel::Box{x, L.glass.y - kAmmoH * s - 6 * s, w, kAmmoH * s};
+    const float y = L.below ? L.glass.y + L.glass.h + 6 * s : L.glass.y - kAmmoH * s - 6 * s;  // 3.0.12-beta.2
+    return panel::Box{x, y, w, kAmmoH * s};
 }
 
 // Shown: not under the hovered cell's tip nor the battle mode button's
@@ -234,6 +235,17 @@ Layout layout(Mode mode, int centreX, int bottom, float scale) {
     L.x = centreX - L.w / 2;
     L.y = bottom - L.h;
     return L;
+}
+
+void flip(Layout& L) {
+    if (L.below) return;
+    const float up = L.glass.y, gap = L.glass.y - L.tipRoom.h;  // the room's height and its gap to the glass
+    for (panel::Box* b : {&L.glass, &L.row, &L.header, &L.toggle})
+        if (b->w > 0) b->y -= up;
+    for (panel::Box& b : L.cells) b.y -= up;
+    for (panel::Box& b : L.rowLabels) b.y -= up;
+    L.tipRoom.y = L.glass.y + L.glass.h + gap;
+    L.below = true;
 }
 
 panel::Box ammoBox(const Layout& L, const Show& show) { return ammoPlace(L, show.ammo); }
