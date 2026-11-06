@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.11-beta.295 — what's new
+
+**Auto Spell in the new look:** the Sage's Auto Spell list now shows in the same card as the other skill lists: a row per skill with its icon, «Choose» and «Cancel», a double click chooses at once, the D-pad and buttons on a controller. The game's old window is hidden.
+
 # uaRO Graphics 3.0.11-beta.294 — what's new
 
 **Monsters should no longer be drawn over the chat:** when the game drew part of the world (monster sprites) among its own windows, our code lifted them over our panels together with the game's windows - a crab and a ghost ended up over the chat. Now only the game's windows and its cursor are lifted; the world stays under our panels. Each such case is written to the log.
