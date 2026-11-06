@@ -67,4 +67,9 @@ struct InterfaceSection {
 const std::vector<InterfaceSection>& interfaceSections();
 const std::vector<const char*>& padInterfaceKeys();
 
+// 3.0.11-beta.303 (the review, E): the rows new to the player - the schema's keys not in the known list (a key a
+// line); none when there is no list yet (a first start marks nothing). knownRowsText - the list of every key now.
+std::vector<std::string> newRows(const std::string& knownText, const std::vector<std::string>& keysNow);
+std::string knownRowsText(const std::vector<std::string>& keysNow);
+
 }  // namespace uagfx::settings

@@ -56,6 +56,9 @@ public:
         rows_->buildRow(p, "sound.engine");
         rows_->buildRow(p, "sound.output");  // 3.0.4-beta.1: the Simple mode has no Sound page
         rows_->buildRow(p, "pad.enabled");  // 2.9: uaRO Pad inside the driver, on by default
+        // 3.0.11-beta.303 (the review «Ревизия конфигуратора», E): the new interface and its text on the Main page
+        rows_->buildRow(p, "interface.minimap");
+        rows_->buildRow(p, "interface.text_size");
         rows_->buildRow(p, "frames.battery_saver");
         p.buttons({{kRecommended, t(Text::MainRecommended), true, true},  // blue (the user)
                    {kWhatsNew, tf(Text::MainWhatsNew, {kVersion})}});

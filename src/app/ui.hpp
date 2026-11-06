@@ -100,7 +100,10 @@ public:
     // 2.6: tabs - push-like radio buttons in a row (ids firstId + n), the selected one pressed.
     void tabs(int firstId, const std::vector<std::wstring>& names, int selected);
     // 2.6: a dot in the accent colour in the margin left of a row's control: its value is not the recommended one.
-    HWND dot(HWND row, const std::wstring& hint);
+    // 3.0.11-beta.303: `id` (0 none: a click on it a command), its tone and its mark, `inset` how far left of the
+    // row (96 dpi) - «нове» further than the recommended value's dot
+    HWND dot(HWND row, const std::wstring& hint, int id = 0, Tone tone = Tone::Accent, const wchar_t* mark = L"●",
+             int inset = 14);
     size_t madeCount() const { return made_.size(); }
     HWND madeAt(size_t i) const { return made_[i]; }
     bool toneOf(HWND ctl, Tone& tone) const;

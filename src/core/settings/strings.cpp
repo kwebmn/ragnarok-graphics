@@ -3361,6 +3361,9 @@ constexpr Entry kTexts[] = {
      "Налаштування контролера для інтерфейсу - на сторінці «Контролер».",
      "Настройки контроллера для интерфейса - на странице «Контроллер»."},
     // 2.6: the status bar, the "changed" dots, the page's reset, "What's new"
+    {Text::DotHintReset, "Recommended for this computer: {1} - a click sets it",
+     "Рекомендовано для цього комп'ютера: {1} - клік поверне", "Рекомендуется для этого компьютера: {1} - клик вернёт"},
+    {Text::DotNew, "New since the last update", "Нове після останнього оновлення", "Новое после последнего обновления"},
     {Text::StripNoPack, "No texture pack", "Пакета текстур немає", "Пакета текстур нет"},
     {Text::DotHint, "Recommended for this computer: {1}", "Рекомендовано для цього комп'ютера: {1}",
      "Рекомендуется для этого компьютера: {1}"},

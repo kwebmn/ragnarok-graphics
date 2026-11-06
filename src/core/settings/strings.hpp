@@ -334,7 +334,7 @@ enum class Text : uint16_t {
     SearchOtherMode,  // 3.0.11-beta.301
     InterfaceSecMain, InterfaceSecPanels, InterfaceSecMinimap, InterfaceSecFight, InterfaceSecGround,  // .302
     InterfaceSecLogin, InterfaceSecHomun, InterfaceSecNet, InterfaceSecWindows, InterfaceWindowsShow,
-    InterfaceWindowsHide, InterfacePadNote,
+    InterfaceWindowsHide, InterfacePadNote, DotHintReset, DotNew,  // .303
     // 2.6: the status bar, the "changed" dots, the page's reset, "What's new"
     StripNoPack, DotHint, DotOn, DotOff, DotLegend, ResetPage, ResetPageAsk, WhatsNewTitle,
     ConsoleGroupOff,  // 2.6.8: an effect on whose group is off

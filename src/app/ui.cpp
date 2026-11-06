@@ -505,14 +505,14 @@ void Panel::tabs(int firstId, const std::vector<std::wstring>& names, int select
     y_ += at(kRow + 6) + at(kGap * 2);
 }
 
-HWND Panel::dot(HWND row, const std::wstring& hint) {
+HWND Panel::dot(HWND row, const std::wstring& hint, int id, Tone tone, const wchar_t* mark, int inset) {
     RECT r;
     GetWindowRect(row, &r);
     MapWindowPoints(nullptr, owner_, reinterpret_cast<POINT*>(&r), 2);
     const int side = at(12);
-    HWND c = make(L"STATIC", L"●", SS_CENTER | SS_NOPREFIX | SS_NOTIFY, area_.left - at(14),
-                  r.top + (r.bottom - r.top - side) / 2, side, side, 0, 0, false);
-    tones_[c] = Tone::Accent;
+    HWND c = make(L"STATIC", mark, SS_CENTER | SS_NOPREFIX | SS_NOTIFY, area_.left - at(inset),
+                  r.top + (r.bottom - r.top - side) / 2, side, side, id, 0, false);
+    tones_[c] = tone;
     if (tooltip_ && !hint.empty()) {  // the dot's own mouse (SS_NOTIFY): no tool over the view's rectangle
         TOOLINFOW ti{};
         ti.cbSize = sizeof ti;

@@ -12,6 +12,8 @@
 #include "app/installer.hpp"
 #include "app/text.hpp"
 #include "app/update_run.hpp"
+#include "core/layout.hpp"
+#include "core/settings/navigation.hpp"
 #include "core/card_speed.hpp"
 #include "core/effect_groups.hpp"
 #include "core/settings/compat_flags.hpp"
@@ -76,7 +78,25 @@ Model::Model() {
     load();
 }
 
+// 3.0.11-beta.303: the rows the player has had - read once a run, the list then made the schema's of now
+void Model::readKnownRows() {
+    if (knownRead_) return;
+    knownRead_ = true;
+    std::vector<std::string> keys;
+    for (const settings::IniSetting& s : settings::iniSettings()) keys.push_back(settings::sectionKey(s));
+    const std::wstring path = paths_.dir + L"\\" + wide(layout::kKnownRows);
+    std::string text;
+    readFile(path, text);
+    newRows_ = settings::newRows(text, keys);
+    writeFileAtomic(path, settings::knownRowsText(keys));
+}
+
+bool Model::isNew(const std::string& sectionKey) const {
+    return std::find(newRows_.begin(), newRows_.end(), sectionKey) != newRows_.end();
+}
+
 void Model::load() {
+    readKnownRows();
     Snapshot s;
     s.iniExists = readFile(paths_.ini, s.iniText);
     s.config = parseConfig(s.iniText);

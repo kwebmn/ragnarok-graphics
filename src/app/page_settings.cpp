@@ -174,6 +174,16 @@ public:
 
     void command(int id, int code) override {
         Model& m = host_.model();
+        if (id >= kRows && (id - kRows) % 4 == 3 && code == STN_CLICKED) {  // 3.0.11-beta.303: a dot - recommended
+            const size_t i = size_t(id - kRows) / 4;
+            if (i < iniSettings().size()) {
+                const std::string rec = m.recommended(iniSettings()[i]);
+                if (!rec.empty()) m.setToken(iniSettings()[i], rec);
+                host_.changed();
+                host_.rebuild();
+            }
+            return;
+        }
         if (id == kWindowsList && code == BN_CLICKED) {  // 3.0.11-beta.302: the windows' list shown or not
             g_windowsOpen = !g_windowsOpen;
             host_.rebuild();
@@ -609,10 +619,12 @@ private:
             case Control::Number: row = p.number(id, t(s.label), wide(token), t(s.hint)); break;
             case Control::Line: break;  // the game's key only: a key of uaro-graphics.ini is never a line of text
         }
-        // 2.6: a dot before a row whose value is not the one recommended for this computer
+        // 2.6: a dot before a row whose value is not the one recommended for this computer; 3.0.11-beta.303: a click on
+        // it sets that value; a row new since the app last ran here marked further left
         const std::string recommended = host_.model().recommended(s);
         if (row && !recommended.empty() && recommended != token)
-            p.dot(row, tf(Text::DotHint, {utf8(tokenText(s, recommended))}));
+            p.dot(row, tf(Text::DotHintReset, {utf8(tokenText(s, recommended))}), rowId(i) + 3);
+        if (row && host_.model().isNew(sectionKey(s))) p.dot(row, t(Text::DotNew), 0, Tone::Good, L"★", 28);
         return row;
     }
 

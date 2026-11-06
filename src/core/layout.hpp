@@ -39,6 +39,9 @@ constexpr const char* kRedirected = "uaro-graphics\\cache\\launcher-redirect.txt
 constexpr const char* kCardLevel = "uaro-graphics\\card-level.txt";  // 3.0.4-beta.35: the card judge's verdict
 // 3.0.11-beta.61 (the autopilot): the first game's outcome (core/first_game) and the mark that the site took it
 constexpr const char* kFirstGame = "uaro-graphics\\cache\\first-game.txt";
+// 3.0.11-beta.303: the settings app's rows the player has had - those not in it are marked «нове» (core/settings
+// navigation newRows)
+constexpr const char* kKnownRows = "uaro-graphics\\cache\\known-rows.txt";
 constexpr const char* kFirstGameSent = "uaro-graphics\\cache\\first-game.sent";
 constexpr const char* kFailedStarts = "uaro-graphics\\cache\\failed-starts.txt";
 constexpr const char* kSafeModeNote = "uaro-graphics\\cache\\safe-mode.txt";

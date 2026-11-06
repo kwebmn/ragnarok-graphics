@@ -190,8 +190,14 @@ public:
     std::wstring setSwitchedOff(bool off, settings::Lang l);
     // 2.6: the word recommended for a row on this computer - the auto setup's, else the shipped default.
     std::string recommended(const settings::IniSetting& s) const;
+    // 3.0.11-beta.303: a row new since the app last ran here (uaro-graphics\cache\known-rows.txt) - marked «нове»
+    // for this run; the list written anew at the first load
+    bool isNew(const std::string& sectionKey) const;
 
 private:
+    std::vector<std::string> newRows_;  // 3.0.11-beta.303
+    bool knownRead_ = false;
+    void readKnownRows();
     // The ini as it is on disk now - what Notepad or use-*.bat wrote since load() stays - or the shipped defaults
     // when there is none.
     std::string currentIni() const;

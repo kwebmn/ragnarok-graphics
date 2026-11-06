@@ -231,6 +231,30 @@ const std::vector<InterfaceSection>& interfaceSections() {
     return list;
 }
 
+std::vector<std::string> newRows(const std::string& knownText, const std::vector<std::string>& keysNow) {
+    std::vector<std::string> known, out;
+    std::string line;
+    for (char c : knownText + "\n") {
+        if (c == '\n' || c == '\r') {
+            if (!line.empty()) known.push_back(line);
+            line.clear();
+        } else {
+            line += c;
+        }
+    }
+    if (known.empty()) return out;
+    std::sort(known.begin(), known.end());
+    for (const std::string& k : keysNow)
+        if (!std::binary_search(known.begin(), known.end(), k)) out.push_back(k);
+    return out;
+}
+
+std::string knownRowsText(const std::vector<std::string>& keysNow) {
+    std::string out;
+    for (const std::string& k : keysNow) out += k + "\n";
+    return out;
+}
+
 const std::vector<const char*>& padInterfaceKeys() {
     static const std::vector<const char*> list{"interface.pad_hints", "interface.pad_tiles", "interface.pad_walk",
                                                "interface.walk_arrow", "interface.walk_mark"};

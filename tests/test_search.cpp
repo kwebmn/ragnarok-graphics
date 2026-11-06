@@ -135,3 +135,12 @@ TEST(interface_sections_hold_every_row) {
     }
     for (const std::string& k : seen) CHECK(findSetting(k) != nullptr);
 }
+
+// 3.0.11-beta.303 (the review, E): «нове» - the keys not in the known list; a first start (no list) marks none
+TEST(new_rows_are_the_unknown_keys) {
+    const std::vector<std::string> now{"a.one", "a.two", "b.three"};
+    CHECK(newRows("", now).empty());
+    const std::vector<std::string> fresh = newRows("a.one\r\nb.three\n", now);
+    CHECK(fresh.size() == 1 && fresh[0] == "a.two");
+    CHECK(newRows(knownRowsText(now), now).empty());
+}
