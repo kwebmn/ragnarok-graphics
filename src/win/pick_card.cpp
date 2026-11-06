@@ -42,8 +42,11 @@ using uapad::gamewindow::Blocker;
 // поміняти проактивно»): the skills' other lists - Weapon Repair's (0x01FC, UI window 0x6B), the upgrade's (0x0221,
 // 0x6F), Forging's and Pharmacy's (0x018D, 0x4F) with their rows in a list box as Menu's (its words +0x58 / +0x5C,
 // 16-byte strings); Arrow Crafting's and cooking's (0x01AD / 0x025A, 0x5E: cooking when its +0x98 is 2) and the
-// incubator's eggs (0x01A6, 0x5A) with things' nodes as the magnifier's. Not Auto Spell's (0x63: skills, not things)
-enum class Kind : uint8_t { Identify, Compound, Menu, Repair, Upgrade, Produce, Arrows, Eggs };
+// incubator's eggs (0x01A6, 0x5A) with things' nodes as the magnifier's.
+// 3.0.11-beta.295 (the owner: «Меню Auto Spell — надо сделать»): Auto Spell's (0x01CD, UI window 0x63 at the
+// manager's +0x1C8, class 0x699FF8, SendMsg 0x48A7B0): its skills' numbers a vector (+0x9C first, +0xA0 past the last,
+// message 0x1F adds one), the chosen row +0x68; OK 0x76 sends mode message 0xB1 with the chosen skill, 0x77 closes
+enum class Kind : uint8_t { Identify, Compound, Menu, Repair, Upgrade, Produce, Arrows, Eggs, AutoSpell };
 bool boxed(Kind k) { return k == Kind::Menu || k == Kind::Repair || k == Kind::Upgrade || k == Kind::Produce; }
 const char* nameOf(Kind k) {
     switch (k) {
@@ -55,6 +58,7 @@ const char* nameOf(Kind k) {
         case Kind::Produce: return "making's";
         case Kind::Arrows: return "arrows' or cooking's";
         case Kind::Eggs: return "incubator's";
+        case Kind::AutoSpell: return "Auto Spell's";
     }
     return "";
 }
@@ -73,8 +77,12 @@ constexpr GamePick kPicks[] = {{Kind::Identify, kWindowMgr + 0xAC, 0x699118, 0x4
                                {Kind::Upgrade, kWindowMgr + 0xB4, 0x69BD80, 0x4C5550},
                                {Kind::Produce, kWindowMgr + 0x19C, 0x69BE18, 0x4C5EB0},
                                {Kind::Arrows, kWindowMgr + 0x1C0, 0x699E30, 0x488E00},
-                               {Kind::Eggs, kWindowMgr + 0x1B8, 0x699D98, 0x4888E0}};
+                               {Kind::Eggs, kWindowMgr + 0x1B8, 0x699D98, 0x4888E0},
+                               {Kind::AutoSpell, kWindowMgr + 0x1C8, 0x699FF8, 0x48A7B0}};
 constexpr uint32_t kBoxFirst = 0x58, kBoxPast = 0x5C, kArrowsWhat = 0x98;
+constexpr uint32_t kSpellsFirst = 0x9C, kSpellsPast = 0xA0;  // .295: Auto Spell's skills
+constexpr uint32_t kSkillNames = 0x74B9AC;  // the game's AEGIS names by skill number (win/skill_window)
+constexpr int kMostSkill = 3000;
 constexpr uint32_t kMenuFirst = 0x6C, kMenuPast = 0x70, kMenuBox = 0x60, kMenuBoxChosen = 100, kMenuSkill = 0x64;
 constexpr uint32_t kList = 0x7C, kChosen = 0x68, kShown = 0x38, kSendMsgSlot = 0x94, kInfo = 8;
 constexpr int kButtonMsg = 6;
@@ -184,7 +192,35 @@ std::vector<pc::Entry> readMenu(uint32_t window, unsigned codePage, bool box) {
     return out;
 }
 
+std::string readText(uint32_t at) {
+    char buf[64] = {};
+    if (!at || !readGame(at, buf, sizeof buf - 1)) return "";
+    return buf;
+}
+
+// .295: Auto Spell's skills - a skill's name (the server's, English) and its icon (its AEGIS name in small letters)
+std::vector<pc::Entry> readSpells(const State& s, uint32_t window) {
+    std::vector<pc::Entry> out;
+    const uint32_t first = read32(window + kSpellsFirst), past = read32(window + kSpellsPast);
+    if (!first || past <= first || (past - first) / 4 > 16) return out;
+    const uint32_t names = read32(kSkillNames);
+    const bool known = names && readText(read32(names + 4)) == "NV_BASIC";
+    for (uint32_t at = first; at < past; at += 4) {
+        const int id = int(read32(at));
+        std::string aegis = known && id > 0 && id < kMostSkill ? readText(read32(names + 4 * uint32_t(id))) : "";
+        if (aegis.rfind("Skill not defined", 0) == 0) aegis.clear();
+        const char* named = skillinfo::name(id);
+        pc::Entry e;
+        e.name = *named ? std::string(named) : !aegis.empty() ? aegis : "#" + std::to_string(id);
+        if (!aegis.empty())
+            e.icon = clienttables::icon(hotbar::lowered(aegis), iw::iconSide(s.scale) * 7 / 8, 4 * s.scale);
+        out.push_back(std::move(e));
+    }
+    return out;
+}
+
 std::vector<pc::Entry> readList(const State& s, uint32_t window) {
+    if (s.kind == Kind::AutoSpell) return readSpells(s, window);
     if (boxed(s.kind)) return readMenu(window, s.codePage, s.kind != Kind::Menu);
     std::vector<pc::Entry> out;
     const auto& names = clienttables::itemNames();
@@ -245,6 +281,7 @@ pc::Texts texts(const State& s) {
             t.title = say(what == 2 ? settings::Text::PickCookTitle : settings::Text::PickArrowsTitle);
             break;
         case Kind::Eggs: t.title = say(settings::Text::PickEggsTitle); break;
+        case Kind::AutoSpell: t.title = "Auto Spell"; break;  // .295: as players call it (the server: «Hindsight»)
         default: break;
     }
     t.cancel = say(settings::Text::MsgCancel);
