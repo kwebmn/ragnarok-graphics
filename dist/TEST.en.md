@@ -1,3 +1,13 @@
+# uaRO Graphics 3.0.12-beta.3 — what's new
+
+**Experience in the chat once.** With the server's experience lines on, it showed twice: «Experience: Base … · Job …» and then «Base EXP …», «Job EXP …» again. Now only the server's line.
+
+**MVP lines spaced:** «Your reward EXP Points are 29587 acquired!», «Your reward item is Blue Potion» instead of glued words.
+
+**«Not enough SP»** in the interface's language.
+
+**NPC talk:** the NPCs' leading spaces dropped - the text starts at the edge.
+
 # uaRO Graphics 3.0.12-beta.2 — what's new
 
 **Arrows on the side of the hotbar with room.** A hotbar in the screen's upper half shows the arrows left and the skill tips under it, and the bar itself goes up to the screen's edge. At the bottom of the screen it stays as before, over the bar.
