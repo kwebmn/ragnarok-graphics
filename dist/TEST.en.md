@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.12 — what's new
+
+**The mouse in the new interface with the controller off.** With «Gamepad (uaRO Pad)» cleared, the new interface's windows did not answer clicks: tabs, the close cross and buttons lit up but did not press. They work without the controller now; the controller itself stays off.
+
 # uaRO Graphics 3.0.12-beta.1 — what's new
 
 **The mouse in the new interface with the controller off.** With «Gamepad (uaRO Pad)» cleared, the new interface's windows did not answer clicks: tabs, the close cross and buttons lit up but did not press. They work without the controller now; the controller itself stays off.
