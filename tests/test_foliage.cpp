@@ -48,3 +48,17 @@ TEST(foliage_swings_far_enough_to_be_seen) {
     CHECK(foliage::kSwing == 4.0f);
 }
 
+
+// 3.0.11-beta.300 (the players: «в пронтере лавочка вместе с травой движется»): Prontera's wrought bench, painted a
+// blue green with its gaps keyed out (pron-bench1.bmp: 28, 78, 44), is no leaves; a yellow green one with the same
+// holes (mo-leaves1.bmp: 41, 73, 18) and the bluest real leaves (mo-v-3.bmp: 27, 47, 29) still are
+TEST(foliage_a_blue_green_bench_is_no_leaves) {
+    const auto with = [](uint32_t colour) {
+        std::vector<uint32_t> v(32 * 32);
+        for (int i = 0; i < 32 * 32; ++i) v[size_t(i)] = (i * 7 % 10) < 4 ? 0x00000000u : colour;
+        return v;
+    };
+    CHECK(!foliage::leafy(with(0xFF1C4E2Cu).data(), 32, 32));
+    CHECK(foliage::leafy(with(0xFF294912u).data(), 32, 32));
+    CHECK(foliage::leafy(with(0xFF1B2F1Du).data(), 32, 32));
+}

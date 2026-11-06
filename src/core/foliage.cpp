@@ -24,7 +24,10 @@ bool leafy(const uint32_t* argb, int width, int height) {
     const double hole = double(holes) / double(n);
     const double mr = double(r) / solid, mg = double(g) / solid, mb = double(b) / solid;
     // Leaves: holes between them (not a solid wall, not a lone small shape), green over red and blue.
-    return hole > 0.12 && hole < 0.85 && mg > mr * 1.08 && mg > mb * 1.15 && mg > 40.0;
+    // 3.0.11-beta.300 (the players: «в пронтере лавочка вместе с травой движется»): and a leaf's green is a yellow one
+    // - Prontera's wrought bench (외부소품\pron-bench1-3.bmp: R 20-28, B 32-44) is painted a blue green; the client's
+    // 45 leaves' textures have blue at most 2 over red (867 of its trees' and props' textures looked at)
+    return hole > 0.12 && hole < 0.85 && mg > mr * 1.08 && mg > mb * 1.15 && mg > 40.0 && mb <= mr + 8.0;
 }
 
 bool leafyTexture(const uint32_t* argb, int width, int height, bool spriteCache) {
