@@ -16,6 +16,12 @@ namespace uapad::runtime {
 
 // 3.0.12-beta.1: false - [pad] enabled = 0: the runtime runs for the mouse only, no controller read (before init)
 void allowController(bool allowed);
+// 3.0.13-beta.11 (pick 42 of «50 идей»): [interface] follow - the player Shift+clicked followed for good (the
+// controller's follow, core/logic); stopped by a plain click on the world, Esc, or the leader out of sight
+void setFollow(bool on);
+void followActor(uint32_t id);
+void stopFollow(const char* why);
+bool following();
 void init();
 bool healthy();
 void setGameWindow(HWND hwnd);

@@ -309,6 +309,10 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("mob_hp_percent", flag(running.mobHpPercent), flag(file.mobHpPercent)));
         n.mobHpPercent = file.mobHpPercent;
     }
+    if (file.follow != running.follow) {  // 3.0.13-beta.11
+        u.applied.push_back(change("follow", flag(running.follow), flag(file.follow)));
+        n.follow = file.follow;
+    }
     if (file.escCutin != running.escCutin) {  // 3.0.13-beta.10
         u.applied.push_back(change("esc_cutin", flag(running.escCutin), flag(file.escCutin)));
         n.escCutin = file.escCutin;

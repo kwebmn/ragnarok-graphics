@@ -8,6 +8,7 @@
 #include "core/double_click.hpp"
 #include "pad/win/game_window.hpp"
 #include "pad/win/runtime.hpp"
+#include "win/world_mouse.hpp"
 #include "win/answer_card.hpp"
 #include "win/buff_column.hpp"
 #include "win/char_block.hpp"
@@ -167,6 +168,11 @@ LRESULT CALLBACK gameProc(HWND w, UINT m, WPARAM wp, LPARAM lp) {
             return answer;
         }
     }
+    // 3.0.13-beta.11 (pick 42 of «50 идей»): a press the game gets - Shift on a player: followed for good; a plain one
+    // on the world: the following ends (the game's own windows' presses aside); Esc too
+    if (m == WM_LBUTTONDOWN && (wp & MK_SHIFT) && pointedActor()) uapad::runtime::followActor(pointedActor());
+    else if (m == WM_LBUTTONDOWN && !(wp & MK_SHIFT) && cursorOverWorld()) uapad::runtime::stopFollow("a click");
+    else if (m == WM_KEYDOWN && wp == VK_ESCAPE) uapad::runtime::stopFollow("Esc");
     return CallWindowProcA(g_original, w, m, wp, lp);
 }
 

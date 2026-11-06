@@ -209,7 +209,7 @@ const std::vector<InterfaceSection>& interfaceSections() {
           "interface.minimap_mobs", "interface.minimap_way", "interface.minimap_reach"}},
         {Text::InterfaceSecFight,
          {"interface.mob_hp", "interface.mob_hp_percent", "interface.boss_bars", "interface.quick_teleport",
-          "interface.screen_shake", "interface.esc_cutin",
+          "interface.screen_shake", "interface.esc_cutin", "interface.follow",
           "interface.target_ring",
           "interface.mob_card",
           "interface.delay_ring", "interface.skill_cells", "interface.ground_counts", "interface.death_recap",

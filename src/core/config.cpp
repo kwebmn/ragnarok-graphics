@@ -600,6 +600,8 @@ Config parseConfig(const std::string& text) {
             setBool(val, c.swearFilter);
         } else if (key == "interface.esc_cutin") {  // 3.0.13-beta.10
             setBool(val, c.escCutin);
+        } else if (key == "interface.follow") {  // 3.0.13-beta.11
+            setBool(val, c.follow);
         } else if (key == "interface.pad_tiles") {  // 3.0.11-beta.90: Start opens the windows' tile
             setBool(val, c.padTiles);
         } else if (key == "interface.pad_walk") {  // 3.0.11-beta.88: the left stick without the mouse

@@ -1540,6 +1540,37 @@ void noteKeysOrMouse(bool click) {
 
 void allowController(bool allowed) { S().controllerAllowed = allowed; }
 
+namespace {
+bool g_followOn = true;
+}
+
+void setFollow(bool on) {
+    if (on == g_followOn) return;
+    g_followOn = on;
+    if (!on) stopFollow("[interface] follow off");
+}
+
+void followActor(uint32_t id) {
+    State& s = S();
+    if (!g_followOn || !s.session) return;
+    const auto was = s.session->controller().following();
+    if (was && *was == id) return;
+    if (s.session->control().follow(id, s.session->world(), GetTickCount()))
+        LOG_INFO("follow: Shift+click on %u - followed until a plain click, Esc or out of sight", id);
+}
+
+void stopFollow(const char* why) {
+    State& s = S();
+    if (!s.session || !s.session->controller().following()) return;
+    s.session->control().stopFollow();
+    LOG_INFO("follow: stopped - %s", why);
+}
+
+bool following() {
+    State& s = S();
+    return s.session && s.session->controller().following().has_value();
+}
+
 void init() {
     State& s = S();
     if (s.initDone || s.failed) return;

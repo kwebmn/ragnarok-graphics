@@ -272,4 +272,6 @@ uint32_t pointedActor() {
     return g_pointed && GetTickCount() - g_pointedAt <= kPointedMs ? g_pointed : 0;
 }
 
+bool cursorOverWorld() { return g_answer != 1; }  // 3.0.13-beta.11
+
 }  // namespace uagfx::win

@@ -894,6 +894,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     silentJokes(!config.skillJokes);      // 3.0.13-beta.8: [interface] skill_jokes
     noSwearFilter(!config.swearFilter);   // 3.0.13-beta.9: [interface] swear_filter
     npcwin::setCutinEsc(config.escCutin);  // 3.0.13-beta.10: [interface] esc_cutin
+    uapad::runtime::setFollow(config.follow);  // 3.0.13-beta.11: [interface] follow
     rememberCamera(config.cameraRemember);  // 3.0.11-beta.184: the zoom and tilt kept between the games (R-ANMTEJ)
     raiseWaterBoxes(enhanced_ && effects().ownGround);  // 3.0.4-beta.20: the game's water to its far plane
     // 2.3: Ctrl+Shift+F9 - uaRO Studio's X-ray: the AI pictures' textures tinted by how they are shown; written too,

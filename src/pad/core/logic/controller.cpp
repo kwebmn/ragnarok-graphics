@@ -178,6 +178,40 @@ uint16_t Controller::readButtons(const PadState& pad) {
     return b;
 }
 
+bool Controller::follow(uint32_t id, const WorldState& world, uint32_t nowMs) {
+    const auto it = world.actors().find(id);
+    if (it == world.actors().end() || id == world.selfId() || world.isMonster(it->second) || world.isNpc(it->second) ||
+        !world.actorPos(id, nowMs))
+        return false;
+    followId_ = id;
+    followSeenMs_ = nowMs;
+    followAskedMs_.reset();
+    return true;
+}
+
+void Controller::followStep(const WorldState& world, uint32_t now, TickOutput& out) {
+    if (!followId_ || !world.inGame() || world.dead() || world.sitting()) return;
+    const auto it = world.actors().find(*followId_);
+    if (it == world.actors().end() || !world.actorPos(*followId_, now)) {
+        if (now - followSeenMs_ > kFollowLostMs) {
+            out.notes.push_back("follow: the leader " + std::to_string(*followId_) + " out of sight - stopped");
+            followId_.reset();
+        }
+        return;
+    }
+    followSeenMs_ = now;
+    const Cell goal = it->second.to;  // where the leader goes (its cell when standing)
+    const Cell me = world.selfDest();
+    if (std::max(std::abs(goal.x - me.x), std::abs(goal.y - me.y)) <= 1) return;
+    if (followAskedMs_ && (now - *followAskedMs_ < kFollowAgainMs ||
+                           (goal == followAsked_ && now - *followAskedMs_ < kFollowSameMs)))
+        return;
+    out.packets.push_back(buildWalk(goal));
+    if (!followAskedMs_) out.notes.push_back("follow: after " + std::to_string(*followId_) + " to " + cellText(goal));
+    followAsked_ = goal;
+    followAskedMs_ = now;
+}
+
 TickOutput Controller::tick(const PadState& pad, const WorldState& world, const ViewInfo& view, uint32_t now) {
     TickOutput out;
     preview_ = 0;  // 3.0.11-beta.87: aim() tells it anew
@@ -215,6 +249,7 @@ TickOutput Controller::tick(const PadState& pad, const WorldState& world, const 
         out.notes.push_back(enabled_ ? "pad on" : "pad off");
         if (!enabled_) stopAttacking();
     }
+    followStep(world, now, out);  // 3.0.13-beta.11: with the window behind and no pad too
     if (!enabled_ || !pad.connected || !view.focused || !world.inGame() || world.dead()) {
         walking_ = false;
         ringSteadyFromMs_.reset();

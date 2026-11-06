@@ -148,7 +148,22 @@ public:
     }
     const CameraYaw& camera() const { return camera_; }
 
+    // 3.0.13-beta.11 (the owner on pick 42 of «50 идей»: «с шифтом цепляешься за игроком, но оно прекращается когда ты
+    // останавливаешься ... чтобы второе окно бегало за тобой»): a player followed for good - the game's own Shift+click
+    // ends when the leader stops; this one walks to where the leader goes whenever it is more than a cell away, with
+    // the window behind others, without the pad, until stopped or the leader is gone for kFollowLostMs
+    static constexpr uint32_t kFollowLostMs = 15000, kFollowAgainMs = 300, kFollowSameMs = 1500;
+    bool follow(uint32_t id, const WorldState& world, uint32_t nowMs);  // false: not a player in sight
+    void stopFollow() { followId_.reset(); }
+    std::optional<uint32_t> following() const { return followId_; }
+
 private:
+    void followStep(const WorldState& world, uint32_t now, TickOutput& out);
+    std::optional<uint32_t> followId_;  // 3.0.13-beta.11
+    uint32_t followSeenMs_ = 0;
+    std::optional<uint32_t> followAskedMs_;  // none: nothing asked since it began
+    Cell followAsked_{};
+
     struct Choosing {  // 3.0.11-beta.85
         int slot = -1;
         std::vector<uint32_t> who;  // the members in sight, the character last

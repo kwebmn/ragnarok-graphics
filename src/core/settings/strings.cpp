@@ -5276,6 +5276,15 @@ constexpr Entry kTexts[] = {
      "The big picture of an NPC that sometimes stays on the screen after a talk goes away with Esc.",
      "Велика картинка NPC, що іноді лишається на екрані після розмови, зникає по Esc.",
      "Большая картинка NPC, которая иногда остаётся на экране после разговора, исчезает по Esc."},
+    {Text::InterfaceFollow, "Steady following of a player", "Стійке слідування за гравцем",
+     "Устойчивое следование за игроком"},  // 3.0.13-beta.11
+    {Text::InterfaceFollowHint,
+     "Shift+click on a player: the character follows them and keeps following when they stop - even with this game "
+     "window behind another (a priest in a second window after you). A plain click on the ground or Esc stops it.",
+     "Shift+клік по гравцю: персонаж іде за ним і не зупиняється, коли той став, — навіть коли це вікно гри за іншим "
+     "(прист у другому вікні за вами). Звичайний клік по землі або Esc — зупинити.",
+     "Shift+клик по игроку: персонаж идёт за ним и не останавливается, когда тот встал, — даже когда это окно игры за "
+     "другим (прист во втором окне за вами). Обычный клик по земле или Esc — остановить."},
     {Text::InterfaceChatColourParty, "Chat: the party's colour", "Чат: колір групи", "Чат: цвет группы"},  // .3
     {Text::InterfaceChatColourGuild, "Chat: the guild's colour", "Чат: колір гільдії", "Чат: цвет гильдии"},
     {Text::InterfaceChatColourOwn, "Chat: your own lines", "Чат: ваші рядки", "Чат: ваши строки"},

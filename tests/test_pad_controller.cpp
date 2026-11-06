@@ -2115,3 +2115,30 @@ TEST(ctl_npc_held_a_pages_on_to_a_decision) {
     CHECK(d.tick(pad(kPadA), w, next, 3100).dialog.empty());
     CHECK(d.tick(pad(kPadA), w, next, 4000).dialog.empty());
 }
+
+// 3.0.13-beta.11 (pick 42 of «50 идей»: «чтобы второе окно бегало за тобой»): a player followed for good - with no pad
+// and the window behind others, a walk to where the leader goes whenever it is more than a cell away, not again
+// within kFollowAgainMs; a monster is not followed; a leader out of sight long enough ends it
+TEST(ctl_follows_a_player_for_good) {
+    Controller c(Config{});
+    WorldState w = world();
+    const uint32_t lead = 2000002, mob = 9000;
+    w.apply(EvActor{lead, 4, 0, 150, Cell{105, 100}, Cell{105, 100}}, 0);
+    addMob(w, mob, Cell{101, 101});
+    CHECK(!c.follow(mob, w, 0));
+    CHECK(c.follow(lead, w, 0));
+    PadState none{};
+    const ViewInfo behind{false, 800, 600};
+    TickOutput o = c.tick(none, w, behind, 100);
+    CHECK_EQ(o.packets.size(), 1u);
+    CHECK(decodePos3(pkt(o, 0).data(), 5) == (Cell{105, 100}));
+    o = c.tick(none, w, behind, 200);  // too soon again
+    CHECK(o.packets.empty());
+    w.apply(EvActor{lead, 4, 0, 150, Cell{105, 100}, Cell{112, 100}}, 300);  // the leader walks on
+    o = c.tick(none, w, behind, 700);
+    CHECK_EQ(o.packets.size(), 1u);
+    CHECK(decodePos3(pkt(o, 0).data(), 5) == (Cell{112, 100}));
+    c.stopFollow();
+    CHECK(!c.following());
+    CHECK(c.tick(none, w, behind, 5000).packets.empty());
+}
