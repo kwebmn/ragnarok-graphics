@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.13-beta.7 — what's new
+
+**Quick teleport on the map** (a new switch «Quick teleport on the map» on the Interface page, off by default). Teleport and Fly Wing within one map without the darkening: the game no longer stops for a quarter of a second, the new place shows at once - handy when farming with wings. Moving to other maps stays as it was.
+
 # uaRO Graphics 3.0.13-beta.6 — what's new
 
 **Small windows for several games.** The uaRO program's window sizes now include 960×540, 800×600 and 640×480 - several games side by side on one screen. Nothing under 640×480: the game's interface would not fit.
