@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cctype>
 #include <cstdio>
+#include <cstring>
 #include <cstdint>
 #include <ctime>
 #include <set>
@@ -891,8 +892,16 @@ Machine Model::machine() const {
 
 std::string Model::recommended(const IniSetting& s) const {
     if (recommended_.empty()) recommended_ = recommendedTokens(parseConfig(defaultIni()), autoSetup(machine()));
-    const auto it = recommended_.find(sectionKey(s));
-    return it == recommended_.end() ? std::string() : it->second;
+    // 3.0.11-beta.304 (the owner: «пропала плашка вверху екрана где про моба писалось»): with «Новий інтерфейс» on
+    // its parts are on by default too - the card of the target was «recommended off», and .303's click on that dot
+    // turned it off
+    const bool newUi = std::strcmp(s.section, "interface") == 0 && pendingConfig().newMinimap;
+    if (newUi && recommendedNewUi_.empty())
+        recommendedNewUi_ =
+            recommendedTokens(parseConfig(defaultIni() + "\n[interface]\nminimap = 1\n"), autoSetup(machine()));
+    const auto& from = newUi ? recommendedNewUi_ : recommended_;
+    const auto it = from.find(sectionKey(s));
+    return it == from.end() ? std::string() : it->second;
 }
 
 std::wstring Model::setStats(bool send, Lang l) {

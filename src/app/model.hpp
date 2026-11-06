@@ -221,6 +221,8 @@ private:
     std::map<std::string, std::string> wroteNow_;  // "section.key" -> the word before the first writeNow
     bool backedUp_ = false;
     mutable std::map<std::string, std::string> recommended_;  // 2.6: recommendedTokens, made at the first ask
+    // 3.0.11-beta.304: the same with «Новий інтерфейс» on - its parts on with it (config.cpp newMinimap)
+    mutable std::map<std::string, std::string> recommendedNewUi_;
     std::optional<settings::AutoSetup> lastAuto_;              // 2.12: this start's silent setup («Гра»'s card)
 };
 
