@@ -34,3 +34,14 @@ TEST(outdoors_floors_shine_where_they_are_smooth) {
     CHECK(floorShine("prontera") == 0.0f && floorShine("moc_fild15") == 0.0f);  // under the sky: the rain decides
     CHECK(floorShine("") == 0.0f);
 }
+
+// 3.0.11-beta.299 (the owner: «нубзона, мжолниры ... плоской карта быть не должна»): the green open maps the name
+// rule took for a roof - Mjolnir, the novice grounds, the guild castles' fields, Byalan Island, Moscovia's forests -
+// under the sky now; their castles, the school's rooms and the dungeons still not
+TEST(outdoors_the_green_open_maps) {
+    for (const char* m : {"mjolnir_01", "mjolnir_12", "new_1-2", "new_5-3", "new_zone03", "pay_gld", "izlu2dun",
+                          "mosk_dun01", "glast_01", "alb2trea", "pvp_y_2-3", "prt_monk"})
+        CHECK(uagfx::outdoors(m));
+    for (const char* m : {"new_1-1", "new_1-4", "payg_cas01", "izlu_dun01", "mosk_in", "gl_cas01", "gefenia01"})
+        CHECK(!uagfx::outdoors(m));
+}

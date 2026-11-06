@@ -1,9 +1,27 @@
 #include "core/outdoors.hpp"
 
+#include <string>
+
 namespace uagfx {
 
 bool outdoors(const std::string& map) {
     if (map.empty()) return false;
+    // 3.0.11-beta.299 (the owner: «карты где травы нету, например нубзона, мжолниры» - «плоской карта быть не должна»;
+    // the census of 921 maps, artifact XH2FtVBnnhGnRDEheuuxV1): green open maps the name rule took for a roof - no
+    // grass, flowers, sun or sky there. Before the indoor words (izlu2dun, mosk_dun01 are under the sky)
+    static const char* const kOpenPrefixes[] = {"mjolnir_", "new_zone0"};
+    for (const char* p : kOpenPrefixes)
+        if (map.compare(0, std::char_traits<char>::length(p), p) == 0) return true;
+    if (map.size() == 7 && map.compare(0, 4, "new_") == 0 && map[5] == '-' && (map[6] == '2' || map[6] == '3'))
+        return true;  // the novice grounds new_N-2, new_N-3 (N-1 and N-4 are the school's rooms)
+    static const char* const kOpen[] = {
+        "alb2trea", "glast_01",  "jawaii",    "izlu2dun",  "arug_que01", "mosk_dun01", "mosk_dun02", "mosk_dun03",
+        "pay_gld",  "alde_gld",  "prt_gld",   "sch_gld",   "te_alde_gld", "te_prt_gld", "odin_tem01",
+        "odin_tem02", "odin_tem03", "prt_monk", "job_monk", "tur_dun03", "yggdrasil01", "pvp_y_1-3", "pvp_y_2-3",
+        "pvp_y_3-3", "pvp_y_4-3", "pvp_y_5-3", "pvp_y_6-3", "pvp_y_7-3", "pvp_y_8-3", "pvp_flo", "poring_w01",
+        "poring_w02", "p_track01", "p_track02"};
+    for (const char* o : kOpen)
+        if (map == o) return true;
     static const char* const kIndoors[] = {"_in", "dun", "@", "cas", "gld", "tower", "pvp", "arena", "que_", "job",
                                            "evt", "sec_", "bat_", "guild", "room", "prison", "maze", "campin"};
     for (const char* k : kIndoors)
