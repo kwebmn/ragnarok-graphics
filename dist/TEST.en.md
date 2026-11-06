@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.13-beta.9 — what's new
+
+**The game's swear filter can be turned off** (a switch «The game's swear filter» on the Interface page; on, as in the game). The game refused to send a line holding a word of its list - even inside an ordinary word (computer, say). Clear the switch and every line goes.
+
 # uaRO Graphics 3.0.13-beta.8 — what's new
 
 **Screen shake can be turned off** (a switch «Screen shake» on the Interface page; on, as in the game). Clear it and Earthquake and similar skills no longer shake the camera - the picture stays still.
