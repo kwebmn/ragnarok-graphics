@@ -190,6 +190,8 @@ const std::vector<IniSetting>& iniSettings() {
          Text::InterfaceMobHpPercent, Text::InterfaceMobHpPercentHint, ""},
         {"interface", "screen_shake", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {},  // 3.0.13-beta.8
          Text::InterfaceScreenShake, Text::InterfaceScreenShakeHint, ""},
+        {"interface", "esc_cutin", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {},  // 3.0.13-beta.10
+         Text::InterfaceEscCutin, Text::InterfaceEscCutinHint, ""},
         {"interface", "quick_teleport", Page::Interface, Control::Check, 0, 1, 0, {"0", "1"}, {},  // 3.0.13-beta.7
          Text::InterfaceQuickTeleport, Text::InterfaceQuickTeleportHint, ""},
         {"interface", "boss_bars", Page::Interface, Control::Check, 0, 1, 0, {"0", "1"}, {},  // 3.0.13-beta.3
@@ -1214,6 +1216,7 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "interface.mob_hp") return mobHpToken(c.mobHp);                               // 3.0.11-beta.95
     if (k == "interface.mob_hp_percent") return c.mobHpPercent ? "1" : "0";                // 3.0.11-beta.293
     if (k == "interface.screen_shake") return c.screenShake ? "1" : "0";                   // 3.0.13-beta.8
+    if (k == "interface.esc_cutin") return c.escCutin ? "1" : "0";                         // 3.0.13-beta.10
     if (k == "interface.quick_teleport") return c.quickTeleport ? "1" : "0";               // 3.0.13-beta.7
     if (k == "interface.boss_bars") return c.bossBars ? "1" : "0";                         // 3.0.13-beta.3
     if (k == "interface.pad_walk") return padWalkToken(c.padWalk);                         // 3.0.11-beta.88

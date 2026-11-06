@@ -36,4 +36,10 @@ bool padCommand(uapad::DialogCommand c);
 // a window opening where another stands goes beside it); false not shown
 bool box(int& x, int& y, int& w, int& h);
 
+// 3.0.13-beta.10 (the owner's pick 29 of «50 идей»: «Esc закрывает картинку NPC (cut-in), которая иногда зависает»):
+// [interface] esc_cutin - Esc with the NPC's picture shown closes it as the server does (the game mode's message 0x71,
+// no name, type -1); the key goes on to the rest
+void cutinEsc(UINT m, WPARAM wp);
+void setCutinEsc(bool on);
+
 }  // namespace uagfx::win::npcwin

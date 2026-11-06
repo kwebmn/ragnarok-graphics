@@ -107,6 +107,7 @@ LRESULT CALLBACK gameProc(HWND w, UINT m, WPARAM wp, LPARAM lp) {
         // and the NPC talk's keys); Esc closes the top one
         if (hotbarwin::profileKeyPress(m, wp, lp)) return 0;  // 3.0.11-beta.288: Ctrl+Shift+1..3, the bar's profiles
         if (chatwin::searchKey(m, wp, lp)) return 0;  // 3.0.11-beta.284: Ctrl+F in the chat's field, its search
+        npcwin::cutinEsc(m, wp);  // 3.0.13-beta.10: Esc closes the NPC's picture too (the key goes on)
         if (windowstack::key(m, wp, lp)) return 0;
         if (chatwin::key(m, wp, lp)) return 0;       // 3.0.11-beta.41: the new chat's F10, Alt+F10 and Tab
         if (charpanel::key(m, wp, lp)) return 0;     // 3.0.11-beta.141: Alt+V, the character block full or small

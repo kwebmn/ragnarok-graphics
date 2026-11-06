@@ -5270,6 +5270,12 @@ constexpr Entry kTexts[] = {
      "Вимкнено: йде кожен рядок.",
      "Игра не отправляет строку со словом из своего списка (manner.txt) — даже внутри другого слова, как computer. "
      "Выключено: уходит каждая строка."},
+    {Text::InterfaceEscCutin, "Esc closes the NPC's picture", "Esc закриває картинку NPC",
+     "Esc закрывает картинку NPC"},  // 3.0.13-beta.10
+    {Text::InterfaceEscCutinHint,
+     "The big picture of an NPC that sometimes stays on the screen after a talk goes away with Esc.",
+     "Велика картинка NPC, що іноді лишається на екрані після розмови, зникає по Esc.",
+     "Большая картинка NPC, которая иногда остаётся на экране после разговора, исчезает по Esc."},
     {Text::InterfaceChatColourParty, "Chat: the party's colour", "Чат: колір групи", "Чат: цвет группы"},  // .3
     {Text::InterfaceChatColourGuild, "Chat: the guild's colour", "Чат: колір гільдії", "Чат: цвет гильдии"},
     {Text::InterfaceChatColourOwn, "Chat: your own lines", "Чат: ваші рядки", "Чат: ваши строки"},

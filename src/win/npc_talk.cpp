@@ -461,6 +461,31 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     return true;
 }
 
+namespace {
+// 3.0.13-beta.10: the NPC's picture - the windows' manager's +0x198 (made by FUN_004ab7e0, its class 0x69B048); the
+// game mode's messages (vtable + 0x14, FUN_005707d0 in this build): 0x71 shows a picture, an empty one with type -1
+// closes it (the packet 0x01B3 with 255, uaRO.exe 0x57B657)
+constexpr uint32_t kCutinWnd = 0x727ED8 + 0x198, kCutinClass = 0x69B048;
+constexpr uint32_t kModeNow = 0x74B57C, kModeMsgSlot = 0x14, kModeMsg = 0x5707D0, kCutinMsg = 0x71;
+using ModeMsgFn = int(__attribute__((thiscall)) *)(uint32_t mode, int msg, int a, int b, int c);
+bool g_cutinEsc = true;
+int g_cutinTold = 0;
+}  // namespace
+
+void setCutinEsc(bool on) { g_cutinEsc = on; }
+
+void cutinEsc(UINT m, WPARAM wp) {
+    if (!g_cutinEsc || m != WM_KEYDOWN || wp != VK_ESCAPE) return;
+    const uint32_t w = window(kCutinWnd, kCutinClass);
+    if (!w || !read32(w + kShown)) return;
+    const uint32_t mode = read32(kModeNow);
+    if (!mode || read32(read32(mode) + kModeMsgSlot) != kModeMsg) return;
+    static const char none[1] = {0};
+    reinterpret_cast<ModeMsgFn>(uintptr_t(kModeMsg))(mode, int(kCutinMsg), int(reinterpret_cast<uintptr_t>(none)), -1,
+                                                     0);
+    if (g_cutinTold++ < 5) LOG_INFO("npc: Esc - the NPC's picture closed as the server closes it");
+}
+
 bool key(UINT m, WPARAM wp, LPARAM lp) {
     State& s = state();
     (void)lp;

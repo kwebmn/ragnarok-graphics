@@ -309,6 +309,10 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("mob_hp_percent", flag(running.mobHpPercent), flag(file.mobHpPercent)));
         n.mobHpPercent = file.mobHpPercent;
     }
+    if (file.escCutin != running.escCutin) {  // 3.0.13-beta.10
+        u.applied.push_back(change("esc_cutin", flag(running.escCutin), flag(file.escCutin)));
+        n.escCutin = file.escCutin;
+    }
     if (file.swearFilter != running.swearFilter) {  // 3.0.13-beta.9
         u.applied.push_back(change("swear_filter", flag(running.swearFilter), flag(file.swearFilter)));
         n.swearFilter = file.swearFilter;
