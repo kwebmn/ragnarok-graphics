@@ -151,20 +151,21 @@ void keepPlans(State& s) {
         LOG_INFO("stats: %s cannot be written", path.c_str());
 }
 
-// .297: Improve Concentration's learned level from the session's skill list (win/skill_window's: a node's record at
-// +8 - the skill +4, its level +12), 0 none
+// .297, .298: the plan buffs' skills as learned, from the session's skill list (win/skill_window's: a node's record
+// at +8 - the skill +4, its level +12)
 constexpr uint32_t kSkillList = 0x771148 + 0x2D8;
-constexpr int kConcentration = 45;
-int concentrationLevel() {
+void readLearned(sw::Data& d) {
+    for (int& l : d.learned) l = 0;
     const uint32_t head = read32(kSkillList);
-    if (!head) return 0;
+    if (!head) return;
     uint32_t node = read32(head);
     for (int n = 0; node && node != head && n < 600; ++n, node = read32(node)) {
         int32_t r[4] = {};
         if (!readGame(node + 8, r, sizeof r)) break;
-        if (r[1] == kConcentration) return std::clamp(int(r[3]), 0, 10);
+        for (int i = 0; i < sw::kPlanBuffs; ++i)
+            if (sw::kPlanBuffSpecs[i].skill && r[1] == sw::kPlanBuffSpecs[i].skill)
+                d.learned[i] = std::clamp(int(r[3]), 0, 10);
     }
-    return 0;
 }
 
 // .296: the map's monsters, the most spawned first, no bosses (the site's pack, as «Довідник»)
@@ -259,8 +260,8 @@ void readData(State& s) {
     d.weight = st.weight;
     d.weightMost = st.weightMost;
     readMapMobs(d);  // 3.0.11-beta.296
-    d.icLevel = concentrationLevel();  // 3.0.11-beta.297: the buffs the plan can count
-    for (int i = 0; i < sw::kPlanBuffs; ++i) d.buffNow[i] = buffoverlay::timers().on(sw::kPlanBuffIcons[i]);
+    readLearned(d);  // 3.0.11-beta.297, .298: the buffs the plan can count
+    for (int i = 0; i < sw::kPlanBuffs; ++i) d.buffNow[i] = buffoverlay::timers().on(sw::kPlanBuffSpecs[i].icon);
     serverCheck(st);  // 3.0.11-beta.264
 }
 
@@ -507,7 +508,8 @@ void frame(HWND game, bool on, double k, int targetWidth, int targetHeight) {
                       std::to_string(s.show.hoverPlanIndex) + ';' + std::to_string(s.show.plan.level) + ':' +
                       std::to_string(s.show.aspdGoal) + ':';
     for (int i = 0; i < sw::kStats; ++i) key += std::to_string(s.show.plan.base[i]) + ',';
-    key += ';' + std::to_string(d.icLevel);  // .297
+    key += ';';  // .297, .298
+    for (int i = 0; i < sw::kPlanBuffs; ++i) key += std::to_string(d.learned[i]);
     for (int i = 0; i < sw::kPlanBuffs; ++i)
         key += std::to_string(s.show.plan.buffs[i]) + (d.buffNow[i] ? "n" : "") + (s.show.buffOn[i] ? "o," : ",");
     for (int i = 0; i < sw::kStats; ++i)

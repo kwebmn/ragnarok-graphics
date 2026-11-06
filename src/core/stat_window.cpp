@@ -4,6 +4,7 @@
 #include <array>
 #include <cmath>
 #include <cstdio>
+#include <cstdlib>
 
 #include "core/char_block.hpp"
 #include "core/mob_battle.hpp"
@@ -56,7 +57,27 @@ int total(const Data& d, int i) { return d.base[i] + d.bonus[i]; }
 }  // namespace
 
 const char* const kNames[kStats] = {"STR", "AGI", "VIT", "INT", "DEX", "LUK"};
-const char* const kPlanBuffNames[kPlanBuffs] = {"Improve Concentration", "Blessing", "Increase AGI"};
+// .298: every class's buffs the plan counts (kPlanBuffSpecs' comment in the header)
+constexpr uint32_t kAxesMaces = 1u << 6 | 1u << 7 | 1u << 8 | 1u << 9;
+const PlanBuffSpec kPlanBuffSpecs[kPlanBuffs] = {
+    {"Improve Concentration", 3, 45, {}, 0, 0, 0, 0, 0, 0, false, 0},
+    {"Blessing", 10, 0, {10, 0, 0, 10, 10, 0}, 0, 0, 0, 0, 0, 0, false, 0},
+    {"Increase AGI", 12, 0, {0, 12, 0, 0, 0, 0}, 0, 0, 0, 0, 0, 0, false, 0},
+    {"Gloria", 21, 0, {0, 0, 0, 0, 0, 30}, 0, 0, 0, 0, 0, 0, false, 0},
+    {"Angelus", 9, 0, {}, 0, 0, 0, 0, 50, 0, false, 0},
+    {"Impositio Manus", 15, 0, {}, 0, 0, 0, 25, 0, 0, false, 0},
+    {"Wind Walk", 116, 0, {}, 0, 5, 0, 0, 0, 0, false, 0},
+    {"Loud Exclamation", 30, 155, {4, 0, 0, 0, 0, 0}, 0, 0, 0, 0, 0, 0, false, 0},
+    {"True Sight", 115, 380, {5, 5, 5, 5, 5, 5}, 30, 0, 100, 0, 0, 0, false, 0},
+    {"Fury", 86, 270, {}, 0, 0, 200, 0, 0, 0, false, 0},
+    {"Two-Hand Quicken", 2, 60, {}, 0, 0, 0, 0, 0, 300, false, 1u << 3},
+    {"One-Hand Quicken", 161, 495, {}, 0, 0, 0, 0, 0, 300, false, 1u << 2},
+    {"Spear Quicken", 68, 258, {}, 0, 0, 0, 0, 0, 300, false, 1u << 5},
+    {"Adrenaline Rush", 23, 111, {}, 0, 0, 0, 0, 0, 300, false, kAxesMaces},  // 200 cast by another
+    {"Concentration Potion", 37, 0, {}, 0, 0, 0, 0, 0, 100, true, 0},
+    {"Awakening Potion", 38, 0, {}, 0, 0, 0, 0, 0, 150, true, 0},
+    {"Berserk Potion", 39, 0, {}, 0, 0, 0, 0, 0, 200, true, 0},
+};
 
 bool canRaise(const Data& d, int stat) {
     return stat >= 0 && stat < kStats && d.need[stat] > 0 && d.need[stat] <= d.free && d.base[stat] < 99;
@@ -98,7 +119,8 @@ std::vector<Row> battleRows(const Data& d, const Texts& t) {
 int weaponOf(const Data& d) {
     if (d.job < 0 || d.aspd <= 0) return -1;
     for (int w = 0; w < statmath::kWeapons; ++w) {
-        const int a = statmath::amotion(d.job, w, total(d, 1), total(d, 4));
+        // .298: the speed buffs on now counted (a Concentration Potion's ASPD matched no weapon)
+        const int a = statmath::amotionRated(d.job, w, total(d, 1), total(d, 4), aspdRate(d, w, false, nullptr));
         if (a > 0 && statmath::aspd10(a) / 10 == d.aspd) return w;
     }
     return -1;
@@ -152,17 +174,40 @@ Plan planFrom(const Data& d) {
 }
 
 namespace {
-const int kBlessing[kStats] = {10, 0, 0, 10, 10, 0}, kAgility[kStats] = {0, 12, 0, 0, 0, 0};
-
 int concentration(const Data& d, int stat, int base, int level) {  // AGI and DEX alone
     if ((stat != 1 && stat != 4) || level <= 0) return 0;
     const int job = d.job >= 0 ? statmath::jobBonus(d.job, d.jobLevel, stat) : 0;
     return (base + job) * (2 + level) / 100;
 }
+
+bool counted(const Data& d, const Plan* p, int buff) {  // on now (p null) or in the plan
+    return p ? planBuff(d, *p, buff) : d.buffNow[buff];
+}
+
+// .298: the flat parts of the buffs counted - HIT, FLEE, CRIT tenths, ATK, VIT DEF per cent
+struct Flat {
+    int hit = 0, flee = 0, crit10 = 0, atk = 0, defPercent = 0;
+};
+Flat flatOf(const Data& d, const Plan* p) {
+    Flat f;
+    for (int i = 0; i < kPlanBuffs; ++i) {
+        if (!counted(d, p, i)) continue;
+        const PlanBuffSpec& b = kPlanBuffSpecs[i];
+        f.hit += b.hit;
+        f.flee += b.flee;
+        f.crit10 += b.crit10;
+        f.atk += b.atk;
+        f.defPercent += b.defPercent;
+    }
+    return f;
+}
 }  // namespace
 
 bool planBuffOffered(const Data& d, int buff) {
-    return buff != kBuffConcentration || d.icLevel > 0 || d.buffNow[kBuffConcentration];
+    if (buff < 0 || buff >= kPlanBuffs) return false;
+    if (kPlanBuffSpecs[buff].skill == 0 || d.learned[buff] > 0 || d.buffNow[buff]) return true;
+    const int w = buff == kBuffAdrenaline ? weaponOf(d) : -1;  // a blacksmith's party: axes and maces
+    return w >= 0 && (kPlanBuffSpecs[buff].weapons >> w & 1);
 }
 
 bool planBuff(const Data& d, const Plan& p, int buff) {
@@ -170,18 +215,29 @@ bool planBuff(const Data& d, const Plan& p, int buff) {
     return p.buffs[buff] < 0 ? d.buffNow[buff] : p.buffs[buff] != 0;
 }
 
+int aspdRate(const Data& d, int weapon, bool planned, const Plan* p) {
+    int skill = 0, potion = 0;
+    for (int i = 0; i < kPlanBuffs; ++i) {
+        const PlanBuffSpec& b = kPlanBuffSpecs[i];
+        if (!b.aspd || !counted(d, planned ? p : nullptr, i)) continue;
+        if (b.weapons && (weapon < 0 || !(b.weapons >> weapon & 1))) continue;
+        int v = b.aspd;
+        if (i == kBuffAdrenaline && d.learned[i] <= 0) v = 200;  // cast by a party's blacksmith
+        (b.potion ? potion : skill) = std::max(b.potion ? potion : skill, v);
+    }
+    return 1000 - skill - potion;
+}
+
 void planTotals(const Data& d, const Plan& p, int out[kStats]) {
-    const int ic = d.icLevel > 0 ? d.icLevel : 10;
+    const int ic = d.learned[kBuffConcentration] > 0 ? d.learned[kBuffConcentration] : 10;
     for (int i = 0; i < kStats; ++i) {
         int other = d.bonus[i];  // the things', the passive skills' and the job's: the buffs on now taken out
+        for (int k = 0; k < kPlanBuffs; ++k) {
+            if (d.buffNow[k]) other -= kPlanBuffSpecs[k].stats[i];
+            if (planBuff(d, p, k)) other += kPlanBuffSpecs[k].stats[i];
+        }
         if (d.buffNow[kBuffConcentration]) other -= concentration(d, i, d.base[i], ic);
-        if (d.buffNow[kBuffBlessing]) other -= kBlessing[i];
-        if (d.buffNow[kBuffAgility]) other -= kAgility[i];
-        int v = p.base[i] + other;
-        if (planBuff(d, p, kBuffConcentration)) v += concentration(d, i, p.base[i], ic);
-        if (planBuff(d, p, kBuffBlessing)) v += kBlessing[i];
-        if (planBuff(d, p, kBuffAgility)) v += kAgility[i];
-        out[i] = v;
+        out[i] = p.base[i] + other + (planBuff(d, p, kBuffConcentration) ? concentration(d, i, p.base[i], ic) : 0);
     }
 }
 
@@ -206,17 +262,19 @@ std::vector<PlanRow> planRows(const Data& d, const Plan& p, const Texts& t) {
     const auto row = [&](const std::string& name, int now, int then) {
         out.push_back(PlanRow{name, std::to_string(now), std::to_string(then), now != then});
     };
-    row("ATK", d.atk, d.atk + sm::atk(b, w) - sm::atk(a, w));
+    const Flat fn = flatOf(d, nullptr), fp = flatOf(d, &p);  // .298: the buffs' own HIT, FLEE, CRIT, ATK
+    row("ATK", d.atk, d.atk + sm::atk(b, w) - sm::atk(a, w) + fp.atk - fn.atk);
     row("MATK", d.matkMax, d.matkMax + sm::matkMax(b[3]) - sm::matkMax(a[3]));
-    row("HIT", d.hit, d.hit + sm::hit(plv, b[4]) - sm::hit(lv, a[4]));
-    row("FLEE", d.flee, d.flee + sm::flee(plv, b[1]) - sm::flee(lv, a[1]));
-    if (w >= 0) {  // ASPD to a tenth by the formula, the server's whole one now
-        const int then = sm::aspd10(sm::amotion(d.job, w, b[1], b[4]));
-        out.push_back(PlanRow{"ASPD", std::to_string(d.aspd), decimal(then / 10.0, t.decimal),
-                              then != sm::aspd10(sm::amotion(d.job, w, a[1], a[4]))});
+    row("HIT", d.hit, d.hit + sm::hit(plv, b[4]) - sm::hit(lv, a[4]) + fp.hit - fn.hit);
+    row("FLEE", d.flee, d.flee + sm::flee(plv, b[1]) - sm::flee(lv, a[1]) + fp.flee - fn.flee);
+    if (w >= 0) {  // ASPD to a tenth by the formula, the server's whole one now; .298 the speed buffs counted
+        const int then = sm::aspd10(sm::amotionRated(d.job, w, b[1], b[4], aspdRate(d, w, true, &p)));
+        const int now = sm::aspd10(sm::amotionRated(d.job, w, a[1], a[4], aspdRate(d, w, false, nullptr)));
+        out.push_back(PlanRow{"ASPD", std::to_string(d.aspd), decimal(then / 10.0, t.decimal), then != now});
     }
-    out.push_back(PlanRow{"CRIT", decimal(sm::crit10(a[5]) / 10.0, t.decimal) + " %",
-                          decimal(sm::crit10(b[5]) / 10.0, t.decimal) + " %", a[5] != b[5]});
+    const int critNow = sm::crit10(a[5]) + fn.crit10, critThen = sm::crit10(b[5]) + fp.crit10;
+    out.push_back(PlanRow{"CRIT", decimal(critNow / 10.0, t.decimal) + " %", decimal(critThen / 10.0, t.decimal) + " %",
+                          critNow != critThen});
     if (d.job >= 0 && d.hpMost > 0) {
         row("Max HP", d.hpMost, d.hpMost + sm::maxHp(d.job, plv, b[2]) - sm::maxHp(d.job, lv, a[2]));
         row("Max SP", d.spMost, d.spMost + sm::maxSp(d.job, plv, b[3]) - sm::maxSp(d.job, lv, a[3]));
@@ -239,8 +297,11 @@ std::vector<MobRow> planMobs(const Data& d, const Plan& p) {
     then.hit += sm::hit(plv, b[4]) - sm::hit(lv, a[4]);
     then.flee += sm::flee(plv, b[1]) - sm::flee(lv, a[1]);
     then.perfectDodge += sm::perfectDodge10(b[5]) / 10 - sm::perfectDodge10(a[5]) / 10;
-    then.def2 += b[2] - a[2];
-    then.atk += sm::atk(b, w) - sm::atk(a, w);
+    const Flat fn = flatOf(d, nullptr), fp = flatOf(d, &p);  // .298: the buffs' own parts
+    then.hit += fp.hit - fn.hit;
+    then.flee += fp.flee - fn.flee;
+    then.def2 = (d.def2 * 100 / (100 + fn.defPercent) + b[2] - a[2]) * (100 + fp.defPercent) / 100;  // Angelus
+    then.atk += sm::atk(b, w) - sm::atk(a, w) + fp.atk - fn.atk;
     std::vector<MobRow> out;
     for (const MapMob& mm : d.mapMobs) {
         const mobbattle::Mob* m = mobbattle::find(mm.id);
@@ -264,9 +325,9 @@ std::string plansText(const std::map<std::string, SavedPlan>& plans) {
         }
         out += ' ' + std::to_string(sp.plan.level);
         for (int i = 0; i < kStats; ++i) out += ' ' + std::to_string(sp.plan.base[i]);
-        int buffs = 0, place = 1;  // .297: each buff -1 / 0 / 1 as a base-3 digit 0 / 1 / 2
-        for (int i = 0; i < kPlanBuffs; ++i, place *= 3) buffs += (std::clamp(sp.plan.buffs[i], -1, 1) + 1) * place;
-        out += ' ' + std::to_string(sp.aspdGoal) + ' ' + std::to_string(buffs) + '\n';
+        out += ' ' + std::to_string(sp.aspdGoal) + " b";  // .298: each buff -1 / 0 / 1 as a digit 0 / 1 / 2
+        for (int i = 0; i < kPlanBuffs; ++i) out += char('0' + std::clamp(sp.plan.buffs[i], -1, 1) + 1);
+        out += '\n';
     }
     return out;
 }
@@ -294,12 +355,17 @@ std::map<std::string, SavedPlan> parsePlans(const std::string& text) {
         }
         SavedPlan sp;
         int v[kStats + 3] = {};
-        const int got = std::sscanf(line.c_str() + space, "%d %d %d %d %d %d %d %d %d", &v[0], &v[1], &v[2], &v[3],
-                                    &v[4], &v[5], &v[6], &v[7], &v[8]);
+        char buffs[64] = {};
+        const int got = std::sscanf(line.c_str() + space, "%d %d %d %d %d %d %d %d %63s", &v[0], &v[1], &v[2], &v[3],
+                                    &v[4], &v[5], &v[6], &v[7], buffs);
         if (!ok || got < kStats + 2 || v[0] < 1 || v[0] > 99) continue;
-        if (got == kStats + 3)  // .297: the buffs (.296's lines have none: as on the character)
-            for (int i = 0, code = std::clamp(v[kStats + 2], 0, 26); i < kPlanBuffs; ++i, code /= 3)
+        if (got == kStats + 3 && buffs[0] == 'b') {  // .298: a digit a buff (.296's lines have none: as on now)
+            for (int i = 0; i < kPlanBuffs && buffs[1 + i] >= '0' && buffs[1 + i] <= '2'; ++i)
+                sp.plan.buffs[i] = buffs[1 + i] - '0' - 1;
+        } else if (got == kStats + 3) {  // .297's: three as a base-3 number
+            for (int i = 0, code = std::clamp(std::atoi(buffs), 0, 26); i < 3; ++i, code /= 3)
                 sp.plan.buffs[i] = code % 3 - 1;
+        }
         sp.plan.level = v[0];
         for (int i = 0; i < kStats; ++i) sp.plan.base[i] = std::clamp(v[1 + i], 1, 99);
         sp.aspdGoal = std::clamp(v[kStats + 1], 0, 190);
@@ -328,7 +394,7 @@ std::vector<std::string> planGoals(const Data& d, const Plan& p, int aspdGoal, c
         for (; base < 300; ++base) {
             const std::array<int, kStats> v = totalAt(1, base);
             agi = v[1];
-            if (sm::aspd10(sm::amotion(d.job, w, agi, v[4])) >= aspdGoal * 10) break;
+            if (sm::aspd10(sm::amotionRated(d.job, w, agi, v[4], aspdRate(d, w, true, &p))) >= aspdGoal * 10) break;
         }
         if (base > most)
             out.push_back(fill(t.goalAspdNever, {std::to_string(aspdGoal), std::to_string(agi)}));
@@ -582,15 +648,23 @@ Layout layout(int x, int y, float scale, const Data& d, const Texts& t, const Me
     L.planResults = panel::Box{bx, L.planLevelRow.y, w - side - bx, kHeaderH * s + 11 * kBattleRowH * s};
     L.planReset = panel::Box{side, py + float(kStats) * kRowH * s + 16 * s, 120 * s, 32 * s};
     // .297: the buffs the plan counts, a chip each (Improve Concentration only when learned or on)
+    // .298: every class's - as many rows as they take
     L.buffsRow = panel::Box{side, L.planReset.y + L.planReset.h + 12 * s, w - 2 * side, 28 * s};
-    float chipX = side + m(t.planBuffs, 12 * s, false) + 14 * s;
+    const float chipLeft = side + m(t.planBuffs, 12 * s, false) + 14 * s;
+    float chipX = chipLeft, chipY = L.buffsRow.y + 2 * s;
     for (int i = 0; i < kPlanBuffs; ++i) {
         if (!planBuffOffered(d, i)) continue;
-        const std::string label = kPlanBuffNames[i] + std::string(d.buffNow[i] ? " \xC2\xB7 " + t.planBuffNow : "");
-        const float cw = m(label, 11.5f * s, true) + 30 * s;
-        L.buffChips[i] = panel::Box{chipX, L.buffsRow.y + 2 * s, cw, 24 * s};
-        chipX += cw + 8 * s;
+        const std::string label = std::string("\xE2\x9C\x93 ") + kPlanBuffSpecs[i].name +
+                                  (d.buffNow[i] ? " \xC2\xB7 " + t.planBuffNow : std::string());
+        const float cw = m(label, 11 * s, true) + 22 * s;
+        if (chipX > chipLeft && chipX + cw > w - side) {
+            chipX = chipLeft;
+            chipY += 28 * s;
+        }
+        L.buffChips[i] = panel::Box{chipX, chipY, cw, 24 * s};
+        chipX += cw + 6 * s;
     }
+    L.buffsRow.h = chipY + 26 * s - L.buffsRow.y;
     L.goals = panel::Box{side, L.buffsRow.y + L.buffsRow.h + 16 * s, w - 2 * side, 26 * s + 3 * 22 * s};  // .269
     L.goalPrev = panel::Box{side + 200 * s, L.goals.y + 1 * s, 24 * s, 24 * s};
     L.goalNext = panel::Box{side + 280 * s, L.goals.y + 1 * s, 24 * s, 24 * s};
@@ -712,15 +786,15 @@ void planWords(std::vector<Words>& out, const Layout& L, const Data& d, const Sh
                         L.planReset.w - 20 * s, L.planReset.h},
          t.planNote, kFaint, 11 * s, false, Align::Left);
     // .297: the buffs the plan counts
-    word(panel::Box{L.buffsRow.x, L.buffsRow.y, L.buffsRow.w, L.buffsRow.h}, t.planBuffs, kMuted, 12 * s, false,
+    word(panel::Box{L.buffsRow.x, L.buffsRow.y, L.buffsRow.w, 28 * s}, t.planBuffs, kMuted, 12 * s, false,
          Align::Left);
     for (int i = 0; i < kPlanBuffs; ++i) {
         if (L.buffChips[i].w <= 0) continue;
         const bool on = planBuff(d, p, i);
         word(L.buffChips[i],
-             std::string(on ? "\xE2\x9C\x93 " : "") + kPlanBuffNames[i] +
+             std::string(on ? "\xE2\x9C\x93 " : "") + kPlanBuffSpecs[i].name +
                  (d.buffNow[i] ? " \xC2\xB7 " + t.planBuffNow : std::string()),
-             on ? kGold : kMuted, 11.5f * s, on, Align::Center);
+             on ? kGold : kMuted, 11 * s, on, Align::Center);
     }
     // .269: the goals - ASPD aimed at (‹ ›), no cast
     const int goal = sh.aspdGoal > 0 ? sh.aspdGoal : std::min(sm::kMaxAspd, d.aspd + 5);

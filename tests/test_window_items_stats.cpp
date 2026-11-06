@@ -683,7 +683,7 @@ TEST(stat_window_plan_buffs) {
     d.job = 3;  // an archer
     d.baseLevel = 50;
     d.jobLevel = 1;
-    d.icLevel = 10;
+    d.learned[statwin::kBuffConcentration] = 10;
     d.buffNow[statwin::kBuffConcentration] = true;  // 12 % of AGI 60 and DEX 50: +7, +6 in the bonus
     statwin::Plan p = statwin::planFrom(d);
     int t[6];
@@ -704,4 +704,37 @@ TEST(stat_window_plan_buffs) {
     const auto back = statwin::parsePlans(statwin::plansText(plans));
     CHECK(back.at("A").plan.buffs[0] == 0 && back.at("A").plan.buffs[1] == 1 && back.at("A").plan.buffs[2] == -1);
     CHECK(statwin::parsePlans("41 50 1 1 1 1 1 1 0\n").at("A").plan.buffs[0] == -1);  // .296's line
+}
+
+// 3.0.11-beta.298 (the owner: «делай для всех классов»): a Concentration Potion on now - the bow still found by the
+// server's ASPD; the plan without it slower, with Berserk Potion faster; Two-Hand Quicken offered to a knight alone,
+// Gloria to everyone; True Sight's HIT in the plan's rows
+TEST(stat_window_plan_class_buffs) {
+    statwin::Data d;
+    const int base[6] = {1, 70, 20, 1, 60, 1};
+    for (int i = 0; i < 6; ++i) d.base[i] = base[i];
+    d.job = 3;  // an archer with a bow (11)
+    d.baseLevel = 60;
+    d.jobLevel = 1;
+    d.hit = 100;
+    d.buffNow[14] = true;  // Concentration Potion
+    d.aspd = statmath::aspd10(statmath::amotionRated(3, 11, 70, 60, 900)) / 10;
+    CHECK_EQ(statwin::weaponOf(d), 11);
+    statwin::Plan p = statwin::planFrom(d);
+    CHECK_EQ(statwin::aspdRate(d, 11, true, &p), 900);
+    p.buffs[14] = 0;
+    CHECK_EQ(statwin::aspdRate(d, 11, true, &p), 1000);
+    p.buffs[16] = 1;
+    CHECK_EQ(statwin::aspdRate(d, 11, true, &p), 800);
+    p.buffs[15] = 1;  // the best potion alone
+    CHECK_EQ(statwin::aspdRate(d, 11, true, &p), 800);
+    CHECK(!statwin::planBuffOffered(d, 10) && statwin::planBuffOffered(d, 3));
+    d.learned[10] = 10;
+    CHECK(statwin::planBuffOffered(d, 10));
+    CHECK_EQ(statwin::aspdRate(d, 11, true, &p), 800);  // Two-Hand Quicken not with a bow
+    d.learned[8] = 10;  // True Sight
+    p.buffs[8] = 1;
+    statwin::Texts t = statTexts();
+    for (const statwin::PlanRow& r : statwin::planRows(d, p, t))
+        if (r.name == "HIT") CHECK_EQ(r.then, std::to_string(100 + 5 + 30));
 }

@@ -33,10 +33,10 @@ struct Data {
     // 3.0.11-beta.266 (the concept «Характеристики», stage 2): the class (-1 not known), the levels, the server's most
     // HP and SP, the weight now and its most (whole units)
     int job = -1, baseLevel = 0, jobLevel = 0, hpMost = 0, spMost = 0, weight = 0, weightMost = 0;
-    // 3.0.11-beta.297 (the owner: «в планировании без учетов скилов типа impove consentration»): the buffs the plan can
-    // count - Improve Concentration's learned level (0 none), and which of kPlanBuffs are on the character now
-    int icLevel = 0;
-    bool buffNow[3] = {};
+    // 3.0.11-beta.297 (the owner: «в планировании без учетов скилов типа impove consentration»), .298 («делай для всех
+    // классов»): each plan buff's skill as learned (its level, 0 none) and whether it is on the character now
+    int learned[17] = {};
+    bool buffNow[17] = {};
     std::string map;                // .296: the map's name, its monsters (the most spawned first, no bosses)
     std::vector<MapMob> mapMobs;
 };
@@ -73,20 +73,34 @@ struct Texts {
 
 // 3.0.11-beta.268 (stage 4, the owner: «только показать»): a plan of the stats - each stat's base planned, at a base
 // level planned; nothing of it goes to the server
-// 3.0.11-beta.297: the buffs a plan counts - Improve Concentration (AGI and DEX +(2 + level) % of the base and the
-// job's bonus, as the server's SC_CONCENTRATION), Blessing (STR, INT, DEX +10) and Increase AGI (AGI +12); each as
-// on the character now (-1), off (0) or on (1)
-constexpr int kPlanBuffs = 3, kBuffConcentration = 0, kBuffBlessing = 1, kBuffAgility = 2;
-constexpr uint16_t kPlanBuffIcons[kPlanBuffs] = {3, 10, 12};  // the server's status icons
-extern const char* const kPlanBuffNames[kPlanBuffs];
+// 3.0.11-beta.297: the buffs a plan counts, each as on the character now (-1), off (0) or on (1); .298 every class's
+// (pre-renewal eAthena's status.c, uAthena's own): Improve Concentration AGI and DEX +(2 + level) % of the base and
+// the job's bonus; flat stats, HIT, FLEE, CRIT (tenths), ATK; Angelus VIT DEF +50 %; the attack's delay per mille
+// less - the skills' best one (only with their weapons), the potions' best one on top of it
+struct PlanBuffSpec {
+    const char* name;
+    uint16_t icon, skill;  // the server's status icon; the skill that gives it (0: others' or a potion - offered all)
+    int stats[kStats];
+    int hit, flee, crit10, atk, defPercent, aspd;
+    bool potion;
+    uint32_t weapons;  // the weapon types (bits of job_db1's columns) it works with; 0 any
+};
+constexpr int kPlanBuffs = 17, kBuffConcentration = 0, kBuffBlessing = 1, kBuffAgility = 2, kBuffAdrenaline = 13;
+extern const PlanBuffSpec kPlanBuffSpecs[kPlanBuffs];
+static_assert(sizeof(Data::learned) / sizeof(int) == kPlanBuffs && sizeof(Data::buffNow) == kPlanBuffs);
 struct Plan {
     int base[kStats] = {};
     int level = 0;
-    int buffs[kPlanBuffs] = {-1, -1, -1};
+    int buffs[kPlanBuffs];
+    Plan() {
+        for (int& b : buffs) b = -1;
+    }
 };
 Plan planFrom(const Data& d);  // the character as it is
 bool planBuff(const Data& d, const Plan& p, int buff);  // .297: the buff counted in the plan
-bool planBuffOffered(const Data& d, int buff);          // Improve Concentration only when learned or on
+bool planBuffOffered(const Data& d, int buff);  // a class skill's only when learned or on; others' to everyone
+// .298: the attack's delay in per mille (1000 none) with the buffs counted - now (on the character) or the plan's
+int aspdRate(const Data& d, int weapon, bool planned, const Plan* p);
 // .297: the plan's six stats in all - its base, the things' and the passive skills' part kept, its buffs counted
 void planTotals(const Data& d, const Plan& p, int out[kStats]);
 int planAvailable(const Data& d, const Plan& p);  // the free points now and the levels' to come
@@ -148,7 +162,7 @@ struct Show {
     int hoverPlan = -1, hoverPlanIndex = -1;  // 3.0.11-beta.268: a plan's part (its Part) and its index
     Plan plan;                                // .268: «Планування»'s (the window's, kept while the game runs)
     int aspdGoal = 0;                         // .269: the ASPD aimed at (0: the plan's + 5)
-    bool buffOn[3] = {};                      // .297: each plan buff counted (paint has no Data: set with the plan)
+    bool buffOn[kPlanBuffs] = {};             // .297: each plan buff counted (paint has no Data: set with the plan)
     bool hoverClose = false;
 };
 

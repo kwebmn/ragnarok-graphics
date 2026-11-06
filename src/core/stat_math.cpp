@@ -101,6 +101,13 @@ int amotion(int job, int weapon, int agi, int dex) {
 
 int aspd10(int amotionValue) { return 2000 - amotionValue; }
 
+int amotionRated(int job, int weapon, int agi, int dex, int rate) {
+    const Job* j = find(job);
+    if (!j || weapon < 0 || weapon >= kWeapons || j->delays[weapon] >= 2000) return 0;
+    const int base = j->delays[weapon];
+    return std::max((200 - kMaxAspd) * 10, (base - base * (4 * agi + dex) / 1000) * rate / 1000);
+}
+
 // a hit each 2 amotion ms
 double hitsPerSecond(int amotionValue) { return amotionValue > 0 ? 500.0 / amotionValue : 0.0; }
 

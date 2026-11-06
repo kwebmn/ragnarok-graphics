@@ -47,6 +47,9 @@ int vitDefMost(int vit);
 // The attack's motion (the server's amotion, ms: a hit each 2 of it) and ASPD tenths: 2000 - it; 0: not the class's
 int amotion(int job, int weapon, int agi, int dex);
 int aspd10(int amotion);
+// 3.0.11-beta.298: the delay with the buffs' per mille (1000 none), as the server's status_calc: the formula's, then
+// the rate, then the server's least (max_aspd 190)
+int amotionRated(int job, int weapon, int agi, int dex, int rate);
 double hitsPerSecond(int amotion);  // 50 / (200 - ASPD)
 int maxHp(int job, int baseLevel, int vit);
 int maxSp(int job, int baseLevel, int intel);
