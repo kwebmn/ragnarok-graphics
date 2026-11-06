@@ -87,7 +87,10 @@ const std::vector<int>& uiSteps() {
     return steps;
 }
 
+// 3.0.13-beta.6 (the owner's pick 19 of «50 идей»: «Любое разрешение окна ... для игры в несколько окон»): smaller
+// windows down to the game's least (kGameMin) - several games side by side; offered, never taken by themselves
 const Size kStandard[] = {{1920, 1080}, {1600, 900}, {1366, 768}, {1280, 720}, {1024, 768}};
+const Size kSmall[] = {{960, 540}, {800, 600}, {640, 480}};
 
 std::vector<Size> windowSizes(const MonitorInfo& m, const Frame& frame) {
     std::vector<Size> out;
@@ -96,6 +99,7 @@ std::vector<Size> windowSizes(const MonitorInfo& m, const Frame& frame) {
             out.push_back(w);
     };
     for (Size game : kStandard) add(scaled(game, m.scale, 100));
+    for (Size game : kSmall) add(scaled(game, m.scale, 100));  // 3.0.13-beta.6
     if (m.pixels.width > 0 && m.pixels.height > 0) {  // the largest with the monitor's proportions
         Size w;
         w.height = m.work.height - scaled(frame.height, m.scale, 100);

@@ -1,3 +1,4 @@
+#include <algorithm>
 #include "core/settings/screen.hpp"
 #include "test.hpp"
 
@@ -188,4 +189,14 @@ TEST(screen_game_size_in_a_window_is_rounded_as_the_plan) {
     c.window = {2560, 1440};
     c.ui = 175;
     CHECK(planScreen(c, {fourK()}, RoextWindow{}, Frame{}).game == gameSize(c.window, c.ui));
+}
+
+// 3.0.13-beta.6 (the owner's pick 19 of «50 идей»): windows down to 640x480 offered for several games side by side,
+// never the first run's own
+TEST(screen_offers_small_windows_for_several_games) {
+    const std::vector<Size> sizes = windowSizes(fullHd(), {});
+    const auto has = [&](Size w) { return std::find(sizes.begin(), sizes.end(), w) != sizes.end(); };
+    CHECK(has(Size{960, 540}) && has(Size{800, 600}) && has(Size{640, 480}));
+    CHECK(sizes.back() == (Size{640, 480}));  // the smallest last
+    CHECK(defaultWindow(fullHd(), {}) == (Size{1600, 900}));
 }
