@@ -14,6 +14,8 @@
 // after an internal error it does nothing and the client keeps working.
 namespace uapad::runtime {
 
+// 3.0.12-beta.1: false - [pad] enabled = 0: the runtime runs for the mouse only, no controller read (before init)
+void allowController(bool allowed);
 void init();
 bool healthy();
 void setGameWindow(HWND hwnd);

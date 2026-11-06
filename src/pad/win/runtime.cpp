@@ -98,6 +98,7 @@ namespace {
 constexpr DWORD kTalkHoldMs = 350;  // 3.0.11-beta.214: the Talk button held this long - the chat wheel
 
 struct State {
+    bool controllerAllowed = true;  // 3.0.12-beta.1: [pad] enabled = 0 - false: the mouse's part only
     bool initDone = false;
     bool failed = false;
     DWORD gameThread = 0;
@@ -1290,7 +1291,7 @@ void tick() {
     followDriverLanguage(s.cfg);  // 3.0.11-beta.174: the login screen's or the settings app's language at once
     if (g_unseenUp.exchange(false)) s.session->onUnobserved(s.session->mapSocket(), Direction::ClientToServer);
     if (g_unseenDown.exchange(false)) s.session->onUnobserved(s.session->mapSocket(), Direction::ServerToClient);
-    const PadState pad = s.pad.poll();
+    const PadState pad = s.controllerAllowed ? s.pad.poll() : PadState{};  // 3.0.12-beta.1
     logPad(pad);
     if (pad.connected) {  // 3.0.11-beta.86: an intentional pad input shows its buttons on the interface
         const uint16_t pressed = uint16_t((pad.buttons & ~s.modeButtons) | (pad.lt > 0.5f || pad.rt > 0.5f ? 1 : 0));
@@ -1537,6 +1538,8 @@ void noteKeysOrMouse(bool click) {
     s.mode.mouse(GetTickCount64());
 }
 
+void allowController(bool allowed) { S().controllerAllowed = allowed; }
+
 void init() {
     State& s = S();
     if (s.initDone || s.failed) return;
@@ -1551,6 +1554,7 @@ void init() {
         s.iniPath = uagfx::win::ourFile(game, layout::File::PadIni);
         s.bindsPath = uagfx::win::ourFile(game, layout::File::PadBinds);
         s.cfg = parseConfig(readFile(s.iniPath));
+        if (!s.controllerAllowed) s.cfg.enabled = false;  // 3.0.12-beta.1: the driver's [pad] enabled = 0
         followDriverLanguage(s.cfg);  // 3.0.11-beta.89: the pad speaks the interface's language
         uagfx::win::makeFolders(layout::join(game, layout::kLogs));
         wlog::open(layout::join(game, layout::now(layout::File::PadLog)), s.cfg.logLevel);
@@ -1585,7 +1589,9 @@ void init() {
         LOG_INFO(s.barSupported ? "hotkey bar: read from the client's memory"
                                 : "hotkey bar: unknown client build; slots only from the server's 0x02b9 / 0x02ba");
         s.pad.configure(s.cfg);  // 0.6: [pad] type, [sony]
-        if (s.pad.load())
+        if (!s.controllerAllowed)
+            LOG_INFO("controller off ([pad] enabled = 0): the mouse's part only");
+        else if (s.pad.load())
             LOG_INFO("XInput: %s", s.pad.dllName());
         else
             LOG_INFO("XInput not found: gamepad unavailable");

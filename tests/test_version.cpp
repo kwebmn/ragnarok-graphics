@@ -3,4 +3,4 @@
 #include "core/version.hpp"
 #include "test.hpp"
 
-TEST(version_is_3_0_11) { CHECK(std::strcmp(uagfx::kVersion, "3.0.11") == 0); }
+TEST(version_is_3_0_12_beta_1) { CHECK(std::strcmp(uagfx::kVersion, "3.0.12-beta.1") == 0); }

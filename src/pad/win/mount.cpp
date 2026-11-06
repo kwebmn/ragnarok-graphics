@@ -50,7 +50,10 @@ bool oldPad(HMODULE dinput) {
 }  // namespace
 
 Mounted mount(bool enabled) {
-    if (!enabled) return Mounted::Off;
+    // 3.0.12-beta.1 (R-C6S4U2: no clicks in the new windows with the controller off): the proxy mounted with [pad]
+    // enabled = 0 too - the mouse freed from DirectInput's exclusive hold (else Windows sends the game's window no
+    // button messages) and the presses the driver's parts take kept from the game; the controller itself not read
+    runtime::allowController(enabled);
     const HMODULE dinput = GetModuleHandleA("dinput.dll");
     if (!dinput) return Mounted::NoSlot;
     if (oldPad(dinput)) return Mounted::OldPad;
@@ -60,7 +63,8 @@ Mounted mount(bool enabled) {
     g_original = create;
     g_mounted = iat::patch(GetModuleHandleA(nullptr), reinterpret_cast<void*>(create),
                            reinterpret_cast<void*>(&proxyDirectInputCreateA)) != nullptr;
-    return g_mounted ? Mounted::Yes : Mounted::NoSlot;
+    if (!g_mounted) return Mounted::NoSlot;
+    return enabled ? Mounted::Yes : Mounted::Off;
 }
 
 void unmount() {
@@ -71,7 +75,8 @@ const char* mountedText(Mounted m) {
     switch (m) {
         case Mounted::Yes: return "uaRO Pad mounted ([pad] enabled = 1): DirectInput through the pad, its log "
                                   "uaro-graphics\\logs\\uaro-pad.log";
-        case Mounted::Off: return "uaRO Pad off ([pad] enabled = 0)";
+        case Mounted::Off: return "uaRO Pad off ([pad] enabled = 0): no controller read; DirectInput still "
+                                  "through it - the mouse free and the interface's presses its own";
         case Mounted::OldPad: return "uaRO Pad: an old uaRO Pad dinput.dll is in the game's folder and runs instead "
                                      "- the settings app removes it while the game is closed";
         case Mounted::NoSlot: return "uaRO Pad not mounted: the game has no DINPUT.dll!DirectInputCreateA import";
