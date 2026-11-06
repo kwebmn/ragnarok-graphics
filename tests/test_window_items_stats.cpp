@@ -1,6 +1,7 @@
 // 3.0.11-beta.42: the windows «Речі» (core/item_window) and «Характеристики» (core/stat_window) - their tabs and
 // uses as the game's, the search, their places and the mouse, the stats' prices and what a point gives
 #include <algorithm>
+#include <map>
 #include <set>
 #include <string>
 #include <vector>
@@ -621,4 +622,51 @@ TEST(stat_window_plan_goals) {
     CHECK(g[1] == "Без касту: DEX 150, більше за 99 — ще 48");  // DEX 3 from bonuses: 147 base needed
     d.aspd = 175;  // sped up: no weapon
     CHECK(statwin::planGoals(d, p, 180, t)[0] == "ASPD: зброю не визначено");
+}
+
+// 3.0.11-beta.296: the map's monsters now and with the plan - more DEX hits a Poring no worse, more AGI dodges more;
+// a monster not of the server's is left out; the block below the goals within the window
+TEST(stat_window_plan_mobs) {
+    statwin::Data d;
+    const int base[6] = {40, 30, 20, 1, 20, 1};
+    for (int i = 0; i < 6; ++i) d.base[i] = base[i];
+    d.job = 3;
+    d.baseLevel = 30;
+    d.hit = 50;
+    d.flee = 60;
+    d.flee2 = 1;
+    d.atk = 60;
+    d.def2 = 20;
+    d.map = "prt_fild08";
+    d.mapMobs = {statwin::MapMob{1002, 1, 50, "Poring"}, statwin::MapMob{999999, 5, 10, "None"}};
+    statwin::Plan p = statwin::planFrom(d);
+    std::vector<statwin::MobRow> rows = statwin::planMobs(d, p);
+    CHECK(rows.size() == 1 && rows[0].name == "Poring" && rows[0].hitNow == rows[0].hitThen);
+    CHECK(rows[0].dodgeNow == rows[0].dodgeThen && rows[0].hitsNow == rows[0].hitsThen);
+    p.base[1] = 60;
+    p.base[0] = 60;
+    rows = statwin::planMobs(d, p);
+    CHECK(rows[0].dodgeThen >= rows[0].dodgeNow && rows[0].hitsThen <= rows[0].hitsNow);
+    statwin::Texts t = statTexts();
+    const statwin::Layout L = statwin::layout(0, 0, 1.0f, d, t, statwin::Measure(panel::wordsWidth), statwin::kPlanTab);
+    CHECK(L.mobs.y > L.goals.y + L.goals.h && L.mobs.y + L.mobs.h <= L.glass.h);
+}
+
+// 3.0.11-beta.296: the plans kept by character - written and read back, a broken line left out
+TEST(stat_window_plans_kept) {
+    std::map<std::string, statwin::SavedPlan> plans;
+    statwin::SavedPlan a;
+    a.plan.level = 77;
+    const int base[6] = {90, 50, 30, 1, 40, 5};
+    for (int i = 0; i < 6; ++i) a.plan.base[i] = base[i];
+    a.aspdGoal = 170;
+    plans["Анна"] = a;
+    plans["Bob 2"] = statwin::SavedPlan{};
+    plans["Bob 2"].plan.level = 10;
+    for (int i = 0; i < 6; ++i) plans["Bob 2"].plan.base[i] = 1;
+    const std::string text = statwin::plansText(plans);
+    std::map<std::string, statwin::SavedPlan> back = statwin::parsePlans(text + "zz 1 2\nabc 5 1 1 1 1 1 1 0\n");
+    CHECK(back.size() == 2 && back.count("Анна") && back.count("Bob 2"));
+    CHECK(back["Анна"].plan.level == 77 && back["Анна"].plan.base[0] == 90 && back["Анна"].aspdGoal == 170);
+    CHECK(statwin::plansText(back) == text);
 }

@@ -5,6 +5,7 @@
 #include <cstdio>
 
 #include "core/char_block.hpp"
+#include "core/mob_battle.hpp"
 #include "core/stat_math.hpp"
 #include "core/ui_style.hpp"
 
@@ -190,6 +191,83 @@ std::vector<PlanRow> planRows(const Data& d, const Plan& p, const Texts& t) {
                           std::to_string(sm::castPercent(b[4])) + " %", a[4] != b[4]});
     if (d.job >= 0 && d.weightMost > 0)
         row(t.weight, d.weightMost, d.weightMost + sm::weightMost(d.job, p.base[0]) - sm::weightMost(d.job, d.base[0]));
+    return out;
+}
+
+std::vector<MobRow> planMobs(const Data& d, const Plan& p) {
+    namespace sm = uagfx::statmath;
+    int a[kStats], b[kStats];
+    for (int i = 0; i < kStats; ++i) {
+        a[i] = total(d, i);
+        b[i] = p.base[i] + d.bonus[i];
+    }
+    const int lv = d.baseLevel, plv = std::max(p.level, lv), w = weaponOf(d);
+    const mobbattle::Own now{d.hit, d.flee, d.flee2, d.def, d.def2, d.atk, d.atk2};
+    mobbattle::Own then = now;
+    then.hit += sm::hit(plv, b[4]) - sm::hit(lv, a[4]);
+    then.flee += sm::flee(plv, b[1]) - sm::flee(lv, a[1]);
+    then.perfectDodge += sm::perfectDodge10(b[5]) / 10 - sm::perfectDodge10(a[5]) / 10;
+    then.def2 += b[2] - a[2];
+    then.atk += sm::atk(b, w) - sm::atk(a, w);
+    std::vector<MobRow> out;
+    for (const MapMob& mm : d.mapMobs) {
+        const mobbattle::Mob* m = mobbattle::find(mm.id);
+        if (!m) continue;
+        const mobbattle::Fight f0 = mobbattle::fight(*m, now, mm.hp), f1 = mobbattle::fight(*m, then, mm.hp);
+        out.push_back(MobRow{mm.name, mm.level, f0.hitChance, f1.hitChance, 100 - f0.itsHitChance,
+                             100 - f1.itsHitChance, f0.hitsToKill, f1.hitsToKill});
+        if (int(out.size()) >= kMobRows) break;
+    }
+    return out;
+}
+
+std::string plansText(const std::map<std::string, SavedPlan>& plans) {
+    std::string out;
+    static const char* const kHex = "0123456789abcdef";
+    for (const auto& [name, sp] : plans) {
+        if (name.empty()) continue;
+        for (const unsigned char c : name) {
+            out += kHex[c >> 4];
+            out += kHex[c & 15];
+        }
+        out += ' ' + std::to_string(sp.plan.level);
+        for (int i = 0; i < kStats; ++i) out += ' ' + std::to_string(sp.plan.base[i]);
+        out += ' ' + std::to_string(sp.aspdGoal) + '\n';
+    }
+    return out;
+}
+
+std::map<std::string, SavedPlan> parsePlans(const std::string& text) {
+    std::map<std::string, SavedPlan> out;
+    size_t at = 0;
+    while (at < text.size()) {
+        size_t end = text.find('\n', at);
+        if (end == std::string::npos) end = text.size();
+        const std::string line = text.substr(at, end - at);
+        at = end + 1;
+        const size_t space = line.find(' ');
+        if (space == std::string::npos || space == 0 || space % 2) continue;
+        std::string name;
+        bool ok = true;
+        for (size_t i = 0; i + 1 < space && ok; i += 2) {
+            const auto digit = [&](char c) {
+                if (c >= '0' && c <= '9') return c - '0';
+                if (c >= 'a' && c <= 'f') return c - 'a' + 10;
+                ok = false;
+                return 0;
+            };
+            name += char(digit(line[i]) * 16 + digit(line[i + 1]));
+        }
+        SavedPlan sp;
+        int v[kStats + 2] = {};
+        const int got = std::sscanf(line.c_str() + space, "%d %d %d %d %d %d %d %d", &v[0], &v[1], &v[2], &v[3],
+                                    &v[4], &v[5], &v[6], &v[7]);
+        if (!ok || got != kStats + 2 || v[0] < 1 || v[0] > 99) continue;
+        sp.plan.level = v[0];
+        for (int i = 0; i < kStats; ++i) sp.plan.base[i] = std::clamp(v[1 + i], 1, 99);
+        sp.aspdGoal = std::clamp(v[kStats + 1], 0, 190);
+        out[name] = sp;
+    }
     return out;
 }
 
@@ -457,7 +535,9 @@ Layout layout(int x, int y, float scale, const Data& d, const Texts& t, const Me
     L.goals = panel::Box{side, L.planReset.y + L.planReset.h + 18 * s, w - 2 * side, 26 * s + 3 * 22 * s};  // .269
     L.goalPrev = panel::Box{side + 200 * s, L.goals.y + 1 * s, 24 * s, 24 * s};
     L.goalNext = panel::Box{side + 280 * s, L.goals.y + 1 * s, 24 * s, 24 * s};
-    L.glass = panel::Box{0, 0, w, std::max(L.line.y + L.line.h, refBottom)};  // one height for both tabs
+    // .296: the map's monsters under the goals
+    L.mobs = panel::Box{side, L.goals.y + L.goals.h + 12 * s, w - 2 * side, 26 * s + float(kMobRows + 1) * 22 * s};
+    L.glass = panel::Box{0, 0, w, std::max({L.line.y + L.line.h, refBottom, L.mobs.y + L.mobs.h + 10 * s})};
     if (L.tab != kPlanTab) {  // .268: the plan's parts only in «Планування»
         L.planRowsBoxes.clear();
         L.planMinus.clear();
@@ -521,6 +601,7 @@ void paintPlan(panel::Picture& out, const Layout& L, const Show& sh) {
     for (int i = 0; i < 2; ++i)  // .269: the ASPD aimed at, ‹ ›
         panel::roundRect(out, i ? L.goalNext : L.goalPrev, 6 * s, kWhite, lit(Part::Goal, i) ? 0.2f : 0.08f);
     panel::roundRect(out, panel::Box{L.goals.x, L.goals.y - 8 * s, L.goals.w, 1 * s}, 0, kWhite, 0.08f);
+    panel::roundRect(out, panel::Box{L.mobs.x, L.mobs.y - 6 * s, L.mobs.w, 1 * s}, 0, kWhite, 0.08f);  // .296
     panel::roundRect(out, panel::Box{L.planResults.x, L.planResults.y + kHeaderH * s - 1 * s, L.planResults.w, 1 * s},
                      0, kWhite, 0.1f);
 }
@@ -572,6 +653,35 @@ void planWords(std::vector<Words>& out, const Layout& L, const Data& d, const Sh
     for (size_t i = 0; i < goals.size(); ++i)
         word(panel::Box{L.goals.x, L.goals.y + 26 * s + float(i) * 22 * s, L.goals.w, 22 * s}, goals[i], 0xC9D1DE,
              12 * s, false, Align::Left);
+    // .296: the map's monsters - now and with the plan
+    const panel::Box& mb = L.mobs;
+    const float rowH = 22 * s, nameW = mb.w * 0.40f, colW = (mb.w - nameW) / 3;
+    word(panel::Box{mb.x, mb.y, nameW, 26 * s}, fill(t.mobs, {d.map}), kText, 13 * s, true, Align::Left);
+    const std::string heads[3] = {t.mobsHit, t.mobsDodge, t.mobsHits};
+    for (int c = 0; c < 3; ++c)
+        word(panel::Box{mb.x + nameW + float(c) * colW, mb.y, colW, 26 * s}, heads[c], kFaint, 11.5f * s, false,
+             Align::Right);
+    const std::vector<MobRow> mobs = planMobs(d, p);
+    if (mobs.empty())
+        word(panel::Box{mb.x, mb.y + 26 * s, mb.w, rowH}, t.mobsNone, kFaint, 12 * s, false, Align::Left);
+    const auto value = [&](int now, int then, bool lowerBetter, const char* unit) {
+        const auto one = [&](int v) { return v > 0 ? std::to_string(v) + unit : std::string("\xE2\x80\x94"); };
+        if (now == then) return std::make_pair(one(now), kText);
+        const bool better = lowerBetter ? (then > 0 && (now == 0 || then < now)) : then > now;
+        return std::make_pair(one(now) + " \xE2\x86\x92 " + one(then), better ? kGreen : 0xE07A6Au);
+    };
+    for (size_t i = 0; i < mobs.size(); ++i) {
+        const MobRow& r = mobs[i];
+        const float y = mb.y + 26 * s + float(i) * rowH;
+        word(panel::Box{mb.x, y, nameW, rowH}, r.name + "  Lv " + std::to_string(r.level), 0xC9D1DE, 12 * s, false,
+             Align::Left);
+        const std::pair<std::string, uint32_t> cells[3] = {value(r.hitNow, r.hitThen, false, " %"),
+                                                           value(r.dodgeNow, r.dodgeThen, false, " %"),
+                                                           value(r.hitsNow, r.hitsThen, true, "")};
+        for (int c = 0; c < 3; ++c)
+            word(panel::Box{mb.x + nameW + float(c) * colW, y, colW, rowH}, cells[c].first, cells[c].second, 12 * s,
+                 cells[c].second != kText, Align::Right);
+    }
     const panel::Box& res = L.planResults;
     word(panel::Box{res.x, res.y, res.w, kHeaderH * s}, t.planResult, kText, 13 * s, true, Align::Left);
     const std::vector<PlanRow> rows = planRows(d, p, t);

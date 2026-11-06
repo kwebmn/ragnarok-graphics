@@ -967,9 +967,11 @@ bool statsPad(const PadState& pad, DWORD now) {
     const uint16_t down = uint16_t((buttons & ~s.prevPadButtons) | stickSteps(pad, now));
     s.prevPadButtons = buttons;
     using uagfx::win::statswin::PadCommand;
-    const std::pair<uint16_t, PadCommand> keys[] = {{kPadUp, PadCommand::Up},    {kPadDown, PadCommand::Down},
-                                                    {kPadA, PadCommand::Raise},  {kPadB, PadCommand::Close},
-                                                    {kPadStart, PadCommand::Close}};
+    const std::pair<uint16_t, PadCommand> keys[] = {
+        {kPadUp, PadCommand::Up},       {kPadDown, PadCommand::Down},  {kPadA, PadCommand::Raise},
+        {kPadB, PadCommand::Close},     {kPadStart, PadCommand::Close}, {kPadLeft, PadCommand::Left},  // .296
+        {kPadRight, PadCommand::Right}, {kPadLB, PadCommand::TabBack}, {kPadRB, PadCommand::TabOn},
+        {kPadY, PadCommand::Reset}};
     for (const auto& [button, command] : keys)
         if (down & button) uagfx::win::statswin::padCommand(command);
     return true;

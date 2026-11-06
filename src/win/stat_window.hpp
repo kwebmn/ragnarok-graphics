@@ -24,8 +24,9 @@ void beforeGameDraw();
 
 // 3.0.11-beta.92 (the concept «Контроллер в интерфейсе uaRO», stage 6): played with the controller - the D-pad
 // chooses a stat (its «+» lit, the line saying what a point gives), A adds a point (the game's own message 0x20), B
-// closes
-enum class PadCommand : uint8_t { Up, Down, Raise, Close };
+// closes; 3.0.11-beta.296: LB / RB the tabs; in «Планування» up and down its rows (the level, the stats, the ASPD
+// aimed at), left and right less or more, Y the plan reset; in «Довідка» left and right the class
+enum class PadCommand : uint8_t { Up, Down, Raise, Close, Left, Right, TabBack, TabOn, Reset };
 void padCommand(PadCommand c);
 
 // 3.0.11-beta.109 (the concept «Концепция окон и инвентаря», question 4): where it is on the target (win/window_stack:

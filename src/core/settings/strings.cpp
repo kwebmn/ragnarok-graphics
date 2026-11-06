@@ -6955,6 +6955,13 @@ constexpr Entry kTexts[] = {
     {Text::StatsGoalCastNever, "No cast: DEX {1}, past 99 - {2} more from things or buffs",
      "Без касту: DEX {1}, більше за 99 — ще {2} від речей чи бафів",
      "Без каста: DEX {1}, больше 99 — ещё {2} от вещей или бафов"},
+    // 3.0.11-beta.296: the map's monsters now and with the plan
+    {Text::StatsMobs, "Monsters of {1}", "Монстри карти {1}", "Монстры карты {1}"},
+    {Text::StatsMobsHit, "You hit", "Влучання", "Попадание"},
+    {Text::StatsMobsDodge, "You dodge", "Ухилення", "Уклонение"},
+    {Text::StatsMobsHits, "Blows to kill", "Ударів", "Ударов"},
+    {Text::StatsMobsNone, "No monsters known on this map", "На цій карті монстрів не знайдено",
+     "На этой карте монстров не найдено"},
     // 3.0.11-beta.273: how long ago a character was played
     {Text::AgoNow, "just now", "щойно", "только что"},
     {Text::AgoMinutes, "{1} min ago", "{1} хв тому", "{1} мин назад"},

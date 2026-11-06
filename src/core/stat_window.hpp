@@ -1,6 +1,7 @@
 #pragma once
 #include <cstdint>
 #include <functional>
+#include <map>
 #include <string>
 #include <vector>
 
@@ -18,6 +19,12 @@ namespace uagfx::statwin {
 constexpr int kStats = 6;
 extern const char* const kNames[kStats];  // STR AGI VIT INT DEX LUK
 
+// 3.0.11-beta.296 (the concept «Характеристики», the rest): a monster of the map the character is on (the server's
+// spawns from the site's pack), for the plan's comparison
+struct MapMob {
+    int id = 0, level = 0, hp = 0;
+    std::string name;
+};
 struct Data {
     int base[kStats] = {}, bonus[kStats] = {}, need[kStats] = {};
     int free = 0;  // the status points
@@ -26,6 +33,8 @@ struct Data {
     // 3.0.11-beta.266 (the concept «Характеристики», stage 2): the class (-1 not known), the levels, the server's most
     // HP and SP, the weight now and its most (whole units)
     int job = -1, baseLevel = 0, jobLevel = 0, hpMost = 0, spMost = 0, weight = 0, weightMost = 0;
+    std::string map;                // .296: the map's name, its monsters (the most spawned first, no bosses)
+    std::vector<MapMob> mapMobs;
 };
 // As the game's window shows its «+» (FUN_004722a0, message 0x23): a price, the points for it, under 99
 bool canRaise(const Data& d, int stat);
@@ -53,6 +62,8 @@ struct Texts {
     std::string planLevel, planPoints, planShort, planResult, planReset, planNote;
     // 3.0.11-beta.269 (stage 5): the goals
     std::string goals, goalAspd, goalAspdNever, goalAspdNone, goalCast, goalCastDone, goalCastNever;
+    // 3.0.11-beta.296: «Монстри карти {1}», its columns, nothing known
+    std::string mobs, mobsHit, mobsDodge, mobsHits, mobsNone;
 };
 
 // 3.0.11-beta.268 (stage 4, the owner: «только показать»): a plan of the stats - each stat's base planned, at a base
@@ -74,6 +85,24 @@ std::vector<PlanRow> planRows(const Data& d, const Plan& p, const Texts& t);
 // 3.0.11-beta.269 (stage 5, the concept's «Цели»): what the plan still needs for ASPD `aspdGoal` (with the plan's DEX)
 // and for no cast at all (DEX 150 with the bonuses) - the stat it takes and its points past the plan's
 std::vector<std::string> planGoals(const Data& d, const Plan& p, int aspdGoal, const Texts& t);
+// 3.0.11-beta.296 (the concept's monster comparison and HIT/FLEE by the map's monsters): each monster of the map now
+// and with the plan by the server's rules (core/mob_battle): the character's chance to hit it, to dodge it, the blows
+// it takes (0 not known); the plan's numbers by the formulas' difference, as planRows
+struct MobRow {
+    std::string name;
+    int level = 0;
+    int hitNow = 0, hitThen = 0, dodgeNow = 0, dodgeThen = 0, hitsNow = 0, hitsThen = 0;
+};
+constexpr int kMobRows = 5;
+std::vector<MobRow> planMobs(const Data& d, const Plan& p);
+// .296: the plans kept across the game's starts (uaro-graphics\stat-plans.txt), by the character's name: one line a
+// character - its name in hex, the level, the six stats, the ASPD aimed at
+struct SavedPlan {
+    Plan plan;
+    int aspdGoal = 0;
+};
+std::string plansText(const std::map<std::string, SavedPlan>& plans);
+std::map<std::string, SavedPlan> parsePlans(const std::string& text);
 
 struct Row {
     std::string name, value;
@@ -120,6 +149,7 @@ struct Layout {
     // results, «Скинути»
     panel::Box planLevelRow, levelPrev, levelNext, planResults, planReset;
     panel::Box goals, goalPrev, goalNext;  // .269
+    panel::Box mobs;                       // .296: «Монстри карти»
     std::vector<panel::Box> planRowsBoxes, planMinus, planPlus;
 };
 // The weapons the class can use: its delay, the ASPD at AGI 1, 50, 80, 99 and at the AGI given, with the DEX given

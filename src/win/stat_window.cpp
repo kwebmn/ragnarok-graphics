@@ -6,6 +6,7 @@
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
+#include <map>
 #include <string>
 #include <vector>
 
@@ -22,6 +23,7 @@
 #include "win/paths.hpp"
 #include "win/picture_draw.hpp"
 #include "win/real_ddraw.hpp"
+#include "win/reference_load.hpp"
 #include "win/ui_cost.hpp"
 #include "win/window_shadow.hpp"
 #include "win/window_stack.hpp"
@@ -56,6 +58,11 @@ struct State {
     sw::Show show;
     int tab = 0, refJob = -1;  // 3.0.11-beta.267: the tab shown, the class «Довідка» tells of (-1 the character's)
     int planFor = -1;          // .268: the level and the free points the plan was last made from
+    // 3.0.11-beta.296: the plans kept by character (uaro-graphics\stat-plans.txt), whose this one is, what was written
+    std::map<std::string, sw::SavedPlan> plans;
+    bool plansRead = false;
+    std::string planOwner, plansWritten;
+    int padRow = 0;  // .296: «Планування»'s row the controller is on - 0 the level, 1-6 the stats, 7 the ASPD aimed at
     sw::Layout layout;
     std::string key;
     panel::Picture picture;
@@ -115,6 +122,48 @@ void readState(State& s) {
         std::sscanf(text.c_str(), "at %f %f", &x, &y) == 2 && x >= 0 && x <= 1 && y >= 0 && y <= 1) {
         s.fx = x;
         s.fy = y;
+    }
+}
+
+// 3.0.11-beta.296: the plans across the game's starts - read once, a character's taken when its name is known,
+// written when one changed
+void readPlans(State& s) {
+    if (s.plansRead) return;
+    s.plansRead = true;
+    std::string text;
+    if (readTextFile(layout::join(gameDir(), layout::kStatPlans), text)) s.plans = sw::parsePlans(text);
+    s.plansWritten = sw::plansText(s.plans);
+}
+
+void keepPlans(State& s) {
+    if (s.planOwner.empty()) return;
+    s.plans[s.planOwner] = sw::SavedPlan{s.show.plan, s.show.aspdGoal};
+    const std::string text = sw::plansText(s.plans);
+    if (text == s.plansWritten) return;
+    const std::string path = layout::join(gameDir(), layout::kStatPlans);
+    if (writeFileAtomic(path, text))
+        s.plansWritten = text;
+    else if (s.told++ < 12)
+        LOG_INFO("stats: %s cannot be written", path.c_str());
+}
+
+// .296: the map's monsters, the most spawned first, no bosses (the site's pack, as «Довідник»)
+void readMapMobs(sw::Data& d) {
+    std::string map = readGameMap();
+    const size_t dot = map.rfind('.');
+    if (dot != std::string::npos) map.resize(dot);
+    const auto index = reference::index();
+    if (map == d.map && (!d.mapMobs.empty() || !index)) return;
+    d.map = map;
+    d.mapMobs.clear();
+    if (!index) return;
+    const auto hints = index->maps.find(map);
+    if (hints == index->maps.end()) return;
+    for (const auto& on : hints->second.mobs) {
+        const auto m = index->mobs.find(on.id);
+        if (m == index->mobs.end() || m->second.boss) continue;
+        d.mapMobs.push_back(sw::MapMob{on.id, m->second.lv, m->second.hp, m->second.name});
+        if (int(d.mapMobs.size()) >= sw::kMobRows * 2) break;  // some may be none of the server's
     }
 }
 
@@ -189,6 +238,7 @@ void readData(State& s) {
     d.spMost = st.spMost;
     d.weight = st.weight;
     d.weightMost = st.weightMost;
+    readMapMobs(d);  // 3.0.11-beta.296
     serverCheck(st);  // 3.0.11-beta.264
 }
 
@@ -258,6 +308,11 @@ sw::Texts texts() {
     t.goalCast = say(settings::Text::StatsGoalCast);
     t.goalCastDone = say(settings::Text::StatsGoalCastDone);
     t.goalCastNever = say(settings::Text::StatsGoalCastNever);
+    t.mobs = say(settings::Text::StatsMobs);  // 3.0.11-beta.296
+    t.mobsHit = say(settings::Text::StatsMobsHit);
+    t.mobsDodge = say(settings::Text::StatsMobsDodge);
+    t.mobsHits = say(settings::Text::StatsMobsHits);
+    t.mobsNone = say(settings::Text::StatsMobsNone);
     t.refClass = say(settings::Text::StatsRefClass);
     t.refAspd = say(settings::Text::StatsRefAspd);
     t.refWeapon = say(settings::Text::StatsRefWeapon);
@@ -359,6 +414,17 @@ void frame(HWND game, bool on, double k, int targetWidth, int targetHeight) {
     s.layout.y = int(std::lround(s.fy * float(std::max(0, targetHeight - s.layout.h))));
     s.show.hoverRow = s.show.hoverPlus = s.show.hoverBattle = s.show.hoverTab = s.show.hoverArrow = -1;
     s.show.hoverPlan = s.show.hoverPlanIndex = -1;
+    // 3.0.11-beta.296: the character's kept plan, once its name is known
+    readPlans(s);
+    if (const std::string own = readOwnName(); !own.empty() && own != s.planOwner && s.data.baseLevel > 0) {
+        s.planOwner = own;
+        const auto kept = s.plans.find(own);
+        s.show.plan = kept != s.plans.end() ? kept->second.plan : sw::Plan{};
+        s.show.aspdGoal = kept != s.plans.end() ? kept->second.aspdGoal : 0;
+        s.planFor = -1;
+        if (kept != s.plans.end() && s.told++ < 12)
+            LOG_INFO("stats: the kept plan taken (level %d)", s.show.plan.level);
+    }
     // 3.0.11-beta.268: the plan starts from the character as it is, and again after a level or a point spent
     if (s.show.plan.level < s.data.baseLevel || s.planFor != s.data.baseLevel * 1000 + s.data.free) {
         const bool fresh = s.show.plan.level == 0 || s.show.plan.level < s.data.baseLevel;
@@ -370,6 +436,7 @@ void frame(HWND game, bool on, double k, int targetWidth, int targetHeight) {
         s.show.plan = p;
         s.planFor = s.data.baseLevel * 1000 + s.data.free;
     }
+    keepPlans(s);  // .296: written when it changed
     s.show.hoverClose = false;
     int cx = 0, cy = 0;
     if (readGameCursor(cx, cy) && !s.moving) {
@@ -387,9 +454,16 @@ void frame(HWND game, bool on, double k, int targetWidth, int targetHeight) {
         }
         s.show.hoverClose = h.part == sw::Part::Close;
     }
-    if (uapad::runtime::look().shown) {  // 3.0.11-beta.92: the controller's stat - its «+» lit
+    if (uapad::runtime::look().shown && s.tab == 0) {  // 3.0.11-beta.92: the controller's stat - its «+» lit
         if (s.show.selected < 0 || s.show.selected > 5) s.show.selected = 0;
         s.show.hoverPlus = s.show.selected;
+    }
+    if (uapad::runtime::look().shown && s.tab == sw::kPlanTab) {  // .296: the controller's row - its › or + lit
+        s.padRow = std::clamp(s.padRow, 0, sw::kStats + 1);
+        s.show.hoverPlan = int(s.padRow == 0                ? sw::Part::PlanLevel
+                               : s.padRow <= sw::kStats ? sw::Part::PlanPlus
+                                                        : sw::Part::Goal);
+        s.show.hoverPlanIndex = s.padRow >= 1 && s.padRow <= sw::kStats ? s.padRow - 1 : 1;
     }
     const sw::Data& d = s.data;
     std::string key = std::to_string(s.layout.x) + ',' + std::to_string(s.layout.y) + ';' + std::to_string(scale) +
@@ -434,10 +508,48 @@ void draw(FrameRecord& record, gpu::Renderer& renderer) {
 
 bool shown() { return state().shown; }
 
+// .296: a plan's row moved by the controller's left (-1) or right (+1): the level, a stat, the ASPD aimed at
+void padPlanStep(State& s, int by) {
+    const int most = uagfx::statmath::baby(s.data.job) ? uagfx::statmath::kMaxBabyStat : uagfx::statmath::kMaxStat;
+    if (s.padRow == 0) {
+        s.show.plan.level = std::clamp(s.show.plan.level + by, s.data.baseLevel, 99);
+    } else if (s.padRow <= sw::kStats) {
+        int& v = s.show.plan.base[s.padRow - 1];
+        v = std::clamp(v + by, s.data.base[s.padRow - 1], most);
+    } else {
+        const int now = s.show.aspdGoal > 0 ? s.show.aspdGoal : std::min(190, s.data.aspd + 5);
+        s.show.aspdGoal = std::clamp(now + by, std::max(1, s.data.aspd), 190);
+    }
+}
+
 void padCommand(PadCommand c) {
     State& s = state();
     if (!s.shown) return;
     if (s.show.selected < 0 || s.show.selected > 5) s.show.selected = 0;
+    switch (c) {  // 3.0.11-beta.296: the tabs, «Планування»'s rows and «Довідка»'s classes too
+        case PadCommand::TabBack:
+        case PadCommand::TabOn:
+            s.tab = (s.tab + (c == PadCommand::TabOn ? 1 : sw::kTabs - 1)) % sw::kTabs;
+            return;
+        case PadCommand::Close: closeGameWindow(); return;
+        default: break;
+    }
+    if (s.tab == sw::kPlanTab) {
+        if (c == PadCommand::Up) s.padRow = (s.padRow + sw::kStats + 1) % (sw::kStats + 2);
+        if (c == PadCommand::Down) s.padRow = (s.padRow + 1) % (sw::kStats + 2);
+        if (c == PadCommand::Left || c == PadCommand::Right) padPlanStep(s, c == PadCommand::Right ? 1 : -1);
+        if (c == PadCommand::Reset) s.show.plan = sw::planFrom(s.data);
+        return;
+    }
+    if (s.tab == sw::kRefTab) {
+        if (c != PadCommand::Left && c != PadCommand::Right) return;
+        const std::vector<int> jobs = uagfx::statmath::jobs();
+        auto at = std::find(jobs.begin(), jobs.end(), s.layout.refJob);
+        int i = at == jobs.end() ? 0 : int(at - jobs.begin());
+        i = (i + (c == PadCommand::Right ? 1 : int(jobs.size()) - 1)) % std::max<int>(1, int(jobs.size()));
+        s.refJob = jobs.empty() ? -1 : jobs[size_t(i)];
+        return;
+    }
     switch (c) {
         case PadCommand::Up: s.show.selected = (s.show.selected + 5) % 6; break;
         case PadCommand::Down: s.show.selected = (s.show.selected + 1) % 6; break;
@@ -446,7 +558,7 @@ void padCommand(PadCommand c) {
             LOG_INFO("stats: the controller's A - a point to the stat %d%s", s.show.selected, sent ? "" : " not sent");
             break;
         }
-        case PadCommand::Close: closeGameWindow(); break;
+        default: break;
     }
 }
 

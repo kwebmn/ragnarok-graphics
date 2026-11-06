@@ -109,6 +109,8 @@ constexpr const char* kPartyState = "uaro-graphics\\party-state.txt";
 // 3.0.11-beta.80: the party's members' looks as last seen («<account> <sex> <hair> <colour> <class> <level>» lines)
 constexpr const char* kPartyLooks = "uaro-graphics\\party-looks.txt";
 constexpr const char* kStatsState = "uaro-graphics\\stats-state.txt";
+// 3.0.11-beta.296: «Планування»'s plans by character (core/stat_window plansText)
+constexpr const char* kStatPlans = "uaro-graphics\\stat-plans.txt";
 constexpr const char* kCharDiary = "uaro-graphics\\characters.txt";  // 3.0.11-beta.273: core/char_diary
 constexpr const char* kPortraits = "uaro-graphics\\portraits";  // 3.0.11-beta.273: win/portrait
 constexpr const char* kMvpTimers = "uaro-graphics\\mvp.txt";  // 3.0.11-beta.280: core/mvp_timers
