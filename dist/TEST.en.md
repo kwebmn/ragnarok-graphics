@@ -1,3 +1,9 @@
+# uaRO Graphics 3.0.11-beta.292 — what's new
+
+**Even frames under Windows scaling (test):** a new switch «Window with Windows scaling (test)» on the quality page, after «High resolution». At 125–175 % Windows scaling the game's window came out a pixel short of the monitor (3839×2159 of 3840×2160) and Windows composed every frame itself - on a 144 Hz monitor that is jumps between 72 and 48 frames. With the switch the game's window tells Windows it follows the scaling itself, covers the monitor pixel for pixel, and the picture goes to the screen directly. Takes effect after the game's restart. Off by default. If the mouse starts missing, turn it off and send a report.
+
+The areas of our panels that keep clicks from the game are now told again in the window size they are checked in.
+
 # uaRO Graphics 3.0.11-beta.291 — what's new
 
 **Updates ride out GitHub hiccups:** when the download server briefly answers with an error (503), does not answer or drops the connection, the app tries three more times (after 2, 4 and 8 seconds) and continues the file where it stopped, instead of failing at once.
