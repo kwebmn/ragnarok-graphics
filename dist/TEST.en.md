@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.13-beta.5 — what's new
+
+**The camera lower, down to the ground.** A new choice «Camera tilt» on the game page: as the game (-28°), lower (-13°) or to the ground (-3°) - how low Shift with the right button (or the wheel) tilts the camera. As the game by default. In buildings it stays steeper; on another map the game brings back its usual tilt.
+
 # uaRO Graphics 3.0.13-beta.4 — what's new
 
 **Your own chat colours.** On the Interface page: the party's, the guild's, your own and the others' lines - blue, green, yellow, orange, pink, violet, white or «As it is». A GM's lines keep their colour. A new colour applies to the lines coming after the change.
