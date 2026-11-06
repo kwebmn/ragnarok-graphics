@@ -23,6 +23,14 @@ void blackenGameWindow();
 // size after, the first dozen. In DllMain, before the game makes its window.
 void installWindowTrace();
 
+// 3.0.11-beta.292: [display] dpi_aware - the game's window made under a per-monitor DPI aware (v2) context, its
+// creation alone: Windows keeps its size in real pixels (no 3839x2159 at 175 %, no stretch of its picture) while the
+// game's thread, unaware, is told the scaled sizes as before; the window's procedure runs in real pixels (Windows
+// switches the thread's context for it). In DllMain after installRoext (its hook is wrapped).
+void installDpiAware();
+// The game's window's DPI awareness as words for the log ("unaware", "per-monitor aware", ...)
+const char* windowDpiAwareness(HWND hwnd);
+
 // The calling thread's biggest visible top-level window - the game's (the IME's windows are small or hidden) -
 // or null. Part 4: RTX Remix's device is made on it when the renderer starts.
 HWND findGameWindow();

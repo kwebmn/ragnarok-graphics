@@ -446,6 +446,8 @@ const std::vector<IniSetting>& iniSettings() {
          Text::QualitySuperLightHint, ""},  // 2.5.20: first - over the rest of the page
         {"display", "high_resolution", Page::Quality, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::QualityHighRes,
          Text::QualityHighResHint, ""},
+        {"display", "dpi_aware", Page::Quality, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::QualityDpiAware,
+         Text::QualityDpiAwareHint, ""},  // 3.0.11-beta.292
         {"quality", "render_scale", Page::Quality, Control::Slider, 50, 200, 10, {}, {}, Text::QualityRenderScale,
          Text::QualityRenderScaleHint, " %"},
         {"quality", "world_scale", Page::Quality, Control::Slider, 50, 100, 5, {}, {}, Text::QualityWorldScale,
@@ -1276,6 +1278,7 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "renderer.render_thread") return c.renderThread ? "1" : "0";
     if (k == "renderer.remix") return c.remix ? "1" : "0";
     if (k == "display.high_resolution") return c.highResolution ? "1" : "0";
+    if (k == "display.dpi_aware") return c.dpiAware ? "1" : "0";
     if (k == "quality.render_scale") return std::to_string(c.renderScale);
     if (k == "quality.world_scale") return std::to_string(c.worldScale);  // 2.5.16
     if (k == "quality.full_colour") return c.fullColour ? "1" : "0";        // 2.5.18

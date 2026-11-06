@@ -107,6 +107,18 @@ constexpr Entry kTexts[] = {
     {Text::QualityHighResHint, "Draw the game at the window's real pixels: with Windows scaling the world is sharper.",
      "Малювати гру в справжніх точках вікна: при масштабі Windows світ чіткіший.",
      "Рисовать игру в настоящих точках окна: при масштабе Windows мир чётче."},
+    {Text::QualityDpiAware, "Window with Windows scaling (test)", "Вікно з масштабом Windows (тест)",
+     "Окно с масштабом Windows (тест)"},
+    {Text::QualityDpiAwareHint,
+     "For Windows scaling of 125-175 %: the game's window is told to follow it, so it covers the monitor pixel for "
+     "pixel and Windows shows the picture straight on it - even frames instead of jumps between 72 and 48. Takes "
+     "effect after the game's restart. If the mouse misses, turn it off.",
+     "Для масштабу Windows 125–175 %: вікно гри повідомляє Windows, що саме зважає на масштаб, тож закриває монітор "
+     "точка в точку, і Windows показує картинку прямо на ньому — рівні кадри замість стрибків між 72 і 48. Діє після "
+     "перезапуску гри. Якщо миша промахується — вимкніть.",
+     "Для масштаба Windows 125–175 %: окно игры сообщает Windows, что само учитывает масштаб, поэтому закрывает "
+     "монитор точка в точку, и Windows показывает картинку прямо на нём — ровные кадры вместо скачков между 72 и 48. "
+     "Действует после перезапуска игры. Если мышь промахивается — выключите."},
     {Text::QualityRenderScale, "Render scale", "Масштаб рендера", "Масштаб рендера"},
     {Text::QualityRenderScaleHint,
      "Over 100 %: the frame is drawn larger and shrunk when shown - smoother edges, more work for the graphics card. "

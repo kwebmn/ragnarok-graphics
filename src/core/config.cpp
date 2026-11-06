@@ -865,6 +865,8 @@ Config parseConfig(const std::string& text) {
             if (val == "borderless") c.mode = DisplayMode::Borderless;
         } else if (key == "display.high_resolution") {
             setBool(val, c.highResolution);
+        } else if (key == "display.dpi_aware") {
+            setBool(val, c.dpiAware);
         } else if (key == "display.ui_filter") {
             if (val == "sharp") c.uiFilter = UiFilter::Sharp;
             if (val == "smooth") c.uiFilter = UiFilter::Smooth;

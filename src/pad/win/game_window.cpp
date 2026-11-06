@@ -22,6 +22,33 @@ constexpr int kBlockers = kBlockerCount;
 Blocked g_parts[kBlockers];
 std::vector<int> g_order;  // 3.0.11-beta.108: the parts looked at first (the window stack's top first)
 HWND g_partsWindow = nullptr;  // 3.0.11-beta.24: the window their rectangles are in
+// 3.0.11-beta.292 ([display] dpi_aware): the client size each rectangle was made against. A DPI aware game window is
+// measured in real pixels in its window procedure and in scaled ones on the game's thread: a rectangle is told again
+// in the size the caller measures now.
+SIZE g_partsIn[kBlockers] = {};
+
+SIZE clientNow(HWND w) {
+    RECT c{};
+    if (!w || !GetClientRect(w, &c)) return SIZE{0, 0};
+    return SIZE{c.right - c.left, c.bottom - c.top};
+}
+
+Blocked toNow(int i, SIZE now) {
+    Blocked b = g_parts[i];
+    const SIZE was = g_partsIn[i];
+    if (!b.on || was.cx <= 0 || was.cy <= 0 || now.cx <= 0 || now.cy <= 0 || (was.cx == now.cx && was.cy == now.cy))
+        return b;
+    b.left = int(int64_t(b.left) * now.cx / was.cx);
+    b.right = int(int64_t(b.right) * now.cx / was.cx);
+    b.top = int(int64_t(b.top) * now.cy / was.cy);
+    b.bottom = int(int64_t(b.bottom) * now.cy / was.cy);
+    return b;
+}
+
+// every part told in the size measured now
+void partsNow(Blocked (&out)[kBlockers], SIZE now) {
+    for (int i = 0; i < kBlockers; ++i) out[i] = toNow(i, now);
+}
 uint8_t g_claimed = 0;          // 3.0.11-beta.33: claimPress's since the last poll
 
 LRESULT CALLBACK proc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
@@ -121,12 +148,13 @@ void setBlocked(Blocker who, HWND game, const RECT* rect, bool all) {
         b.right = rect->right;
         b.bottom = rect->bottom;
         if (game) g_partsWindow = game;
+        g_partsIn[static_cast<int>(who)] = clientNow(game ? game : g_partsWindow);
     }
 }
 
 bool blockerRect(Blocker who, RECT& out) {
-    const Blocked& b = g_parts[static_cast<int>(who)];
-    if (!b.on) return false;
+    if (!g_parts[static_cast<int>(who)].on) return false;
+    const Blocked b = toNow(static_cast<int>(who), clientNow(g_partsWindow));
     out = RECT{b.left, b.top, b.right, b.bottom};
     return true;
 }
@@ -134,7 +162,9 @@ bool blockerRect(Blocker who, RECT& out) {
 int blockedUnder(int x, int y, int width, int height) {
     RECT client{};
     if (!g_partsWindow || !GetClientRect(g_partsWindow, &client)) return -1;
-    return blockedAtGame(g_parts, kBlockers, client.right, client.bottom, x, y, width, height, g_order);
+    Blocked now[kBlockers];
+    partsNow(now, SIZE{client.right, client.bottom});
+    return blockedAtGame(now, kBlockers, client.right, client.bottom, x, y, width, height, g_order);
 }
 
 void setOrder(const std::vector<Blocker>& topFirst) {
@@ -156,7 +186,9 @@ bool cursorOverGame(HWND game, POINT screen) {
     if (!game || !GetClientRect(game, &client) || !ScreenToClient(game, &p) || !PtInRect(&client, p)) return false;
     // 3.0.3-beta.8: the driver's panel of the game windows drawn in the game's picture - a click on it is the
     // panel's, and while it is dragged the held button is not the game's anywhere
-    if (blockedAtOrdered(g_parts, kBlockers, g_order, p.x, p.y) >= 0) return false;
+    Blocked now[kBlockers];
+    partsNow(now, SIZE{client.right, client.bottom});
+    if (blockedAtOrdered(now, kBlockers, g_order, p.x, p.y) >= 0) return false;
     // Any window of the client's own process counts: a graphics wrapper may present the picture in a window
     // of its own over the game's. A window of another program on top does not.
     const HWND under = WindowFromPoint(screen);

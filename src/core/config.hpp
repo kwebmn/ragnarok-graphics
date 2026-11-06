@@ -858,6 +858,9 @@ struct Config {
     int windowWidth = 0;   // window mode: inner size in pixels; 0 = the size the game asks for
     int windowHeight = 0;
     bool highResolution = true;  // draw at the window's real pixels under Windows scaling (stage 3); false = 0.2
+    // 3.0.11-beta.292: the game's window made per-monitor DPI aware (its creation only; the game's thread stays
+    // unaware): a whole pixel window, no DWM stretch at 175 % (R-PSFZ8K 3839x2159). After the game's restart
+    bool dpiAware = false;
     UiFilter uiFilter = UiFilter::Sharp;
     bool crispText = true;       // window text and lines at the window's real pixels when k > 1 (stage 6)
     WindowArt windowArt = WindowArt::Xbr;  // 0.41

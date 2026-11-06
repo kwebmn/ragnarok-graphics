@@ -93,7 +93,7 @@ TEST(schema_live_keys_are_the_specs) {
                                 k.compare(0, 7, "client.") != 0 &&  // 3.0.1-beta.5: the libraries, the game closed
                                 k.compare(0, 6, "roext.") != 0 &&   // 3.0.1-beta.8: read as the game starts
                                 k != "renderer.safe_mode" &&     // 2.12: the start's renderer
-                                k != "display.ui_native" &&
+                                k != "display.ui_native" && k != "display.dpi_aware" &&
                                 k != "display.hdr" &&
                                 k.compare(0, 12, "quality.dlss") != 0 &&  // 2.4.2: its own size and model too
                                 k != "frames.allow_tearing" && k != "frames.frame_generation" &&

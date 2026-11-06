@@ -22,6 +22,7 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
     u.next = running;
     Config& n = u.next;
     if (file.bridge != running.bridge) u.waiting.push_back("bridge");
+    if (file.dpiAware != running.dpiAware) u.waiting.push_back("dpi_aware");  // the window is made with it
     if (file.remix != running.remix) u.waiting.push_back("remix");
     if (file.dlss != running.dlss) u.waiting.push_back("dlss");
     if (file.frameGeneration != running.frameGeneration) u.waiting.push_back("frame_generation");

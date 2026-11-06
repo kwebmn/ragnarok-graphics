@@ -4,10 +4,14 @@
 #include <cstdio>
 #include <vector>
 
+#include "core/config.hpp"
+#include "core/layout.hpp"
+#include "core/roext.hpp"
 #include "core/window_plan.hpp"
 #include "win/dpi.hpp"
 #include "win/iat.hpp"
 #include "win/log.hpp"
+#include "win/paths.hpp"
 
 namespace uagfx::win {
 namespace {
@@ -176,6 +180,57 @@ BOOL WINAPI moveWindow(HWND w, int x, int y, int cx, int cy, BOOL repaint) {
 }
 
 }  // namespace
+
+namespace {
+
+using CreateFn = HWND(WINAPI*)(DWORD, LPCSTR, LPCSTR, DWORD, int, int, int, int, HWND, HMENU, HINSTANCE, LPVOID);
+using SetContextFn = DPI_AWARENESS_CONTEXT(WINAPI*)(DPI_AWARENESS_CONTEXT);
+using WindowContextFn = DPI_AWARENESS_CONTEXT(WINAPI*)(HWND);
+using AwarenessFn = DPI_AWARENESS(WINAPI*)(DPI_AWARENESS_CONTEXT);
+CreateFn g_create = nullptr;
+SetContextFn g_setContext = nullptr;
+
+template <typename Fn>
+Fn user32(const char* name) {
+    return reinterpret_cast<Fn>(reinterpret_cast<void*>(GetProcAddress(GetModuleHandleA("user32.dll"), name)));
+}
+
+HWND WINAPI createAware(DWORD ex, LPCSTR cls, LPCSTR name, DWORD style, int x, int y, int w, int h, HWND parent,
+                        HMENU menu, HINSTANCE inst, LPVOID param) {
+    if (!roext::isGameWindow(ex, style, parent != nullptr, menu != nullptr, param != nullptr))
+        return g_create(ex, cls, name, style, x, y, w, h, parent, menu, inst, param);
+    const DPI_AWARENESS_CONTEXT old = g_setContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
+    const HWND made = g_create(ex, cls, name, style, x, y, w, h, parent, menu, inst, param);
+    if (old) g_setContext(old);
+    LOG_INFO("window: the game's window made per-monitor DPI aware ([display] dpi_aware) - it is %s",
+             made ? windowDpiAwareness(made) : "not made");
+    return made;
+}
+
+}  // namespace
+
+const char* windowDpiAwareness(HWND hwnd) {
+    static const WindowContextFn of = user32<WindowContextFn>("GetWindowDpiAwarenessContext");
+    static const AwarenessFn awareness = user32<AwarenessFn>("GetAwarenessFromDpiAwarenessContext");
+    if (!of || !awareness || !hwnd) return "of unknown DPI awareness (Windows before 10 1607)";
+    switch (awareness(of(hwnd))) {
+        case DPI_AWARENESS_UNAWARE: return "DPI unaware (Windows stretches it)";
+        case DPI_AWARENESS_SYSTEM_AWARE: return "system DPI aware";
+        case DPI_AWARENESS_PER_MONITOR_AWARE: return "per-monitor DPI aware (real pixels)";
+        default: break;
+    }
+    return "of unknown DPI awareness";
+}
+
+void installDpiAware() {
+    if (!GetModuleHandleA("dinput.dll")) return;  // the game alone, as installRoext
+    std::string text;
+    readTextFile(ourFile(layout::File::Ini), text);
+    if (!parseConfig(text).dpiAware) return;
+    g_setContext = user32<SetContextFn>("SetThreadDpiAwarenessContext");
+    if (!g_setContext) return;  // Windows before 10 1607: nothing to do
+    hookImport("user32.dll", "CreateWindowExA", &createAware, g_create);
+}
 
 void installWindowTrace() {
     hookImport("user32.dll", "ShowWindow", &showWindow, g_show);

@@ -836,6 +836,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
         // SetWindowPos sends WM_MOVE, and the client may present again from its handler (L457929).
         windowApplied = true;
         applyWindowMode(window, config, gameFullscreen, shadow.width(), shadow.height());
+        LOG_INFO("window: the game's window is %s", windowDpiAwareness(window));  // 3.0.11-beta.292
     }
     // 3.0.3-beta.2: several game windows - the name in the title, each character's window at its place, four times
     // a second. Here, before the frame is made, and not within itself: moving the window sends WM_MOVE, and the
