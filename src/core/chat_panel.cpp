@@ -174,6 +174,29 @@ std::string logLine(const Line& l, int hour, int minute, int second) {
     return at + words + "\r\n";
 }
 
+std::vector<std::string> pieces(const std::string& text, size_t most) {
+    std::vector<std::string> out;
+    if (most == 0) return out;
+    size_t at = 0;
+    while (at < text.size()) {
+        while (at < text.size() && text[at] == ' ') ++at;  // no piece starts with a space
+        if (at >= text.size()) break;
+        if (text.size() - at <= most) {
+            std::string last = text.substr(at);
+            while (!last.empty() && last.back() == ' ') last.pop_back();
+            out.push_back(last);
+            break;
+        }
+        size_t cut = text.rfind(' ', at + most);
+        if (cut == std::string::npos || cut <= at) cut = at + most;  // one long word: cut where it must
+        std::string piece = text.substr(at, cut - at);
+        while (!piece.empty() && piece.back() == ' ') piece.pop_back();
+        out.push_back(piece);
+        at = cut;
+    }
+    return out;
+}
+
 uint32_t chatColour(const std::string& token, uint32_t fallback) {
     if (token == "blue") return 0x7FD3FF;
     if (token == "green") return 0x9FE07C;

@@ -63,6 +63,11 @@ struct Texts {
 // 3.0.13-beta.3 (the owner's pick 28 of «50 идей»: «Журнал чата в файл по дням»): [interface] chat_log - a line as
 // the log keeps it, «[hh:mm:ss] words ×N»; "" a line the log skips (the fight's)
 std::string logLine(const Line& l, int hour, int minute, int second);
+// 3.0.13-beta.12 (the owner's pick 21 of «50 идей»: «Длиннее строка чата»): the server takes a line of 70 letters at
+// most (uAthena CHATBOX_SIZE; a public one longer is dropped, a whisper cut) - a longer one sent as several, cut at
+// spaces, each `most` bytes at most (a word longer than that cut where it must); the game's code page's bytes
+constexpr size_t kChatPiece = 68, kChatLongest = 234;
+std::vector<std::string> pieces(const std::string& text, size_t most);
 // 3.0.13-beta.3: [interface] chat_party, chat_guild, chat_own, chat_others - a colour by its name; "default" (or
 // unknown) `fallback`
 uint32_t chatColour(const std::string& token, uint32_t fallback);

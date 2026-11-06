@@ -134,6 +134,8 @@ const std::vector<IniSetting>& iniSettings() {
         // 3.0.11-beta.236: the experience's bars at the screen's bottom
         {"interface", "exp_bars", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::InterfaceExpBars,
          Text::InterfaceExpBarsHint, ""},
+        {"interface", "long_chat", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {},  // 3.0.13-beta.12
+         Text::InterfaceLongChat, Text::InterfaceLongChatHint, ""},
         {"interface", "chat_log", Page::Interface, Control::Check, 0, 1, 0, {"0", "1"}, {},  // 3.0.13-beta.3
          Text::InterfaceChatLog, Text::InterfaceChatLogHint, ""},
         {"interface", "skill_jokes", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {},  // 3.0.13-beta.8
@@ -1198,6 +1200,7 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "interface.exp_bars") return c.expBars ? "1" : "0";                // 3.0.11-beta.236
     if (k == "interface.exp_gain") return c.expGain ? "1" : "0";                // 3.0.11-beta.237
     if (k == "interface.chat_fade") return std::to_string(c.chatFade);          // 3.0.11-beta.240
+    if (k == "interface.long_chat") return c.longChat ? "1" : "0";              // 3.0.13-beta.12
     if (k == "interface.chat_log") return c.chatLog ? "1" : "0";                // 3.0.13-beta.3
     if (k == "interface.skill_jokes") return c.skillJokes ? "1" : "0";          // 3.0.13-beta.8
     if (k == "interface.swear_filter") return c.swearFilter ? "1" : "0";        // 3.0.13-beta.9

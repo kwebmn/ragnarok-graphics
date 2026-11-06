@@ -71,6 +71,9 @@ constexpr uint32_t kFocus = kWindowMgr + 0x6C, kSetFocus = 0x4CE510;
 constexpr uint32_t kShown = 0x38, kRect = 0x14, kMoveSlot = 0x18, kMove = 0x45E880;
 constexpr uint32_t kWordsEdit = 0x68, kNameEdit = 0x6C, kWordsClass = 0x696438, kNameClass = 0x696394;
 constexpr uint32_t kGetText = 0x443300, kCaretAt = 0x4C, kSetTextSlot = 0x98, kSetText = 0x446210;
+// 3.0.13-beta.12: the words' field's own SetText (its class 0x696438's vtable + 0x98) - not the name's 0x446210: the
+// checks for that one on the words' field never passed (the «/p» line and the menu's «/ex» left the field as it was)
+constexpr uint32_t kSetTextWords = 0x4431C0;
 constexpr uint32_t kMode = 0x772D60, kBattle = 0x772D54, kTyping = 0x772D58;
 // The character's account, the session's skills (a list: a node's next at +0, its SKILL_INFO at +8 - its id +4, its
 // name +0x1C, FUN_00642860)
@@ -126,6 +129,8 @@ struct State {
     // EXP +25 110»): the server tells the experience itself (@showexp) - when it last did; ours not added meanwhile
     ULONGLONG serverExpAt = 0;
     bool log = false;  // 3.0.13-beta.3: [interface] chat_log
+    bool longLines = true;  // 3.0.13-beta.12: [interface] long_chat
+    int longTold = 0;
     int logTold = 0;
     std::string coloursKey;  // 3.0.13-beta.3: [interface] chat_* colours
     uint32_t party = cp::kParty, guild = cp::kGuild, own = 0, others = 0;
@@ -182,6 +187,12 @@ uint32_t read32(uint32_t at) {
 bool write32(uint32_t at, uint32_t v) {
     SIZE_T n = 0;
     return WriteProcessMemory(GetCurrentProcess(), reinterpret_cast<void*>(uintptr_t(at)), &v, 4, &n) && n == 4;
+}
+
+// 3.0.13-beta.12: an edit's SetText as its own class has it (the words' 0x4431C0, the name's 0x446210); 0 another
+uint32_t setTextOf(uint32_t edit) {
+    const uint32_t f = edit ? read32(read32(edit) + kSetTextSlot) : 0;
+    return f == kSetText || f == kSetTextWords ? f : 0;
 }
 
 std::string utf8(const State& s, const std::string& game) { return utf8Of(widened(game, s.codePage)); }
@@ -374,6 +385,31 @@ void holdOldChat(State& s, bool on) {
 std::string editText(uint32_t edit) {
     const char* t = reinterpret_cast<GetTextFn>(uintptr_t(kGetText))(edit);
     return t ? std::string(t, strnlen(t, 256)) : std::string();
+}
+
+// 3.0.13-beta.12 (pick 21 of «50 идей»): [interface] long_chat - the game's field takes kChatLongest letters (its
+// edit's most, +0x54, 70 the game's own); Enter on a longer line sends all its pieces but the last through the chat
+// window's own Enter (its message 6 with the field's 0x76, vtable + 0x94, FUN_0045ef90: the field's words read,
+// the field emptied, sent by the channel or the whisper set) - the last left in the field for the game's own Enter
+constexpr uint32_t kEditMost = 0x54, kWindowMsgSlot = 0x94, kWindowMsg = 0x45EF90, kEnterMsg = 6, kWordsId = 0x76;
+using WindowMsgFn = int(__attribute__((thiscall)) *)(uint32_t window, uint32_t from, int msg, int a, int b, int c);
+
+uint32_t wordsEdit();
+
+void sendLong(State& s, uint32_t words) {
+    const std::string text = editText(words);
+    if (text.size() <= cp::kChatPiece || text[0] == '/') return;  // the game's own line, or a command
+    const uint32_t chat = gameChat();
+    if (!chat || read32(read32(chat) + kWindowMsgSlot) != kWindowMsg || !setTextOf(words))
+        return;
+    const std::vector<std::string> parts = cp::pieces(text, cp::kChatPiece);
+    if (parts.size() < 2) return;
+    for (size_t i = 0; i + 1 < parts.size(); ++i) {
+        reinterpret_cast<SetTextFn>(uintptr_t(setTextOf(words)))(words, parts[i].c_str());
+        reinterpret_cast<WindowMsgFn>(uintptr_t(kWindowMsg))(chat, words, kEnterMsg, kWordsId, 0, 0);
+    }
+    reinterpret_cast<SetTextFn>(uintptr_t(setTextOf(words)))(words, parts.back().c_str());
+    if (s.longTold++ < 10) LOG_INFO("chat: a long line (%zu bytes) sent as %zu", text.size(), parts.size());
 }
 
 uint32_t wordsEdit() {
@@ -962,10 +998,10 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
                     did = "the menu - a whisper";
                 } else if (action == 1) {  // the game's own «/ex Name» in the field, the player's Enter sends it
                     const uint32_t words = wordsEdit();
-                    if (words && read32(read32(words) + kSetTextSlot) == kSetText) {
+                    if (words && setTextOf(words)) {
                         setName(s, "");
                         const std::string game = narrowed(utf8Wide("/ex " + who), s.codePage);
-                        reinterpret_cast<SetTextFn>(uintptr_t(kSetText))(words, game.c_str());
+                        reinterpret_cast<SetTextFn>(uintptr_t(setTextOf(words)))(words, game.c_str());
                         giveKeys(words);
                     }
                     did = "the menu - «/ex» put in the field";
@@ -1130,13 +1166,13 @@ bool key(UINT m, WPARAM wp, LPARAM lp) {
         if (words && read32(kFocus) == words) {
             cp::Command c;
             if (cp::command(utf8(s, editText(words)), s.replyTo, c) &&
-                read32(read32(words) + kSetTextSlot) == kSetText) {
+                setTextOf(words)) {
                 if (!s.restoreOn) {
                     s.restoreMode = s.input.mode;
                     s.restoreName = s.input.whisper;
                 }
                 const std::string game = narrowed(utf8Wide(c.words), s.codePage);
-                reinterpret_cast<SetTextFn>(uintptr_t(kSetText))(words, game.c_str());
+                reinterpret_cast<SetTextFn>(uintptr_t(setTextOf(words)))(words, game.c_str());
                 if (!c.whisper.empty()) {
                     setName(s, c.whisper);
                 } else {
@@ -1150,6 +1186,7 @@ bool key(UINT m, WPARAM wp, LPARAM lp) {
                                                                                                    : "the guild");
             }
         }
+        if (s.longLines && words && read32(kFocus) == words) sendLong(s, words);  // 3.0.13-beta.12
         return false;  // the game's Enter sends
     }
     if (wp == VK_TAB && m == WM_KEYDOWN && GetKeyState(VK_CONTROL) >= 0 && GetKeyState(VK_MENU) >= 0 && s.shown) {
@@ -1179,6 +1216,15 @@ void setColours(const std::string& party, const std::string& guild, const std::s
     s.others = cp::chatColour(others, 0);
     LOG_INFO("chat: the colours - party %s, guild %s, own %s, others %s", party.c_str(), guild.c_str(), own.c_str(),
              others.c_str());
+}
+
+void setLongLines(bool on) {  // 3.0.13-beta.12: the field's most each frame
+    State& s = state();
+    s.longLines = on;
+    const uint32_t words = wordsEdit();
+    if (!words) return;
+    const uint32_t want = on ? uint32_t(cp::kChatLongest) : 70u, now = read32(words + kEditMost);
+    if ((now == 70u || now == uint32_t(cp::kChatLongest)) && now != want) write32(words + kEditMost, want);
 }
 
 void setLog(bool on) {  // 3.0.13-beta.3

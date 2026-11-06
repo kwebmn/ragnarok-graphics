@@ -548,6 +548,8 @@ Config parseConfig(const std::string& text) {
             setBool(val, c.expGain);
         } else if (key == "interface.chat_log") {  // 3.0.13-beta.3
             setBool(val, c.chatLog);
+        } else if (key == "interface.long_chat") {  // 3.0.13-beta.12
+            setBool(val, c.longChat);
         } else if (key == "interface.chat_party" || key == "interface.chat_guild" || key == "interface.chat_own" ||
                    key == "interface.chat_others") {  // 3.0.13-beta.3
             std::string& to = key == "interface.chat_party"   ? c.chatParty

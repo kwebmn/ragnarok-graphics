@@ -199,7 +199,7 @@ const std::vector<InterfaceSection>& interfaceSections() {
         {Text::InterfaceSecPanels,
          {"interface.character", "interface.target", "interface.party", "interface.buffs", "interface.buffs_overflow",
           "interface.hotbar", "interface.hotbar_per_character", "interface.hotbar_ammo", "interface.ammo_sound",
-          "interface.chat", "interface.chat_fade", "interface.chat_log", "interface.skill_jokes",
+          "interface.chat", "interface.chat_fade", "interface.chat_log", "interface.long_chat", "interface.skill_jokes",
           "interface.swear_filter", "interface.chat_party", "interface.chat_guild",
           "interface.chat_own", "interface.chat_others", "interface.tracker", "interface.cast", "interface.exp_bars",
           "interface.exp_gain", "interface.item_toast", "interface.hunt_panel", "interface.mvp_timers"}},

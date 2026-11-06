@@ -596,6 +596,8 @@ struct Config {
     // 3.0.13-beta.3 (the owner's pick 28): [interface] chat_log - the chat's lines into uaro-graphics\chat-logs, a
     // file a day; off unless asked (whispers stay on the disk)
     bool chatLog = false;
+    // 3.0.13-beta.12 (the owner's pick 21): [interface] long_chat - the field takes 234 letters, sent in pieces
+    bool longChat = true;
     std::string chatParty = "default", chatGuild = "default", chatOwn = "default", chatOthers = "default";
     // 3.0.11-beta.120 (the owner: «карта ... какаято не красивая»): [interface] minimap_style - the minimap's and the
     // big map's picture: the game's own, or «Схема» drawn from the server's walkable cells (core/minimap_proto

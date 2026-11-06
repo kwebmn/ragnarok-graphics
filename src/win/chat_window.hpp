@@ -23,6 +23,7 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
 // 3.0.11-beta.240: [interface] chat_fade - idle this many seconds, its ground fades (its tabs and input stay); 0 never
 void setFade(int seconds);
 void setLog(bool on);  // 3.0.13-beta.3: [interface] chat_log
+void setLongLines(bool on);  // 3.0.13-beta.12: [interface] long_chat
 // 3.0.13-beta.3: [interface] chat_party, chat_guild, chat_own, chat_others - the lines coming from now in them
 void setColours(const std::string& party, const std::string& guild, const std::string& own, const std::string& others);
 // 3.0.11-beta.241: a press on its corner - its own (its size), not the interface's drag of the whole chat

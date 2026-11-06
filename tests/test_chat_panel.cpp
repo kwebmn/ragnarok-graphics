@@ -420,3 +420,21 @@ TEST(chat_log_line_with_its_time) {
     fight.spans = {Span{"Poring -12", kText, false, false}};
     CHECK(logLine(fight, 1, 2, 3).empty());
 }
+
+// 3.0.13-beta.12 (the owner's pick 21 of «50 идей»): a line past the server's 70 sent as pieces cut between words,
+// none longer than the piece, none starting with a space; one long word cut where it must
+TEST(chat_long_line_cut_between_words) {
+    std::string text;
+    for (int i = 0; i < 30; ++i) text += "word" + std::to_string(i) + " ";
+    const std::vector<std::string> p = pieces(text, kChatPiece);
+    CHECK(p.size() >= 3);
+    std::string joined;
+    for (const std::string& s : p) {
+        CHECK(!s.empty() && s.size() <= kChatPiece && s.front() != ' ' && s.back() != ' ');
+        joined += s + " ";
+    }
+    CHECK(joined == text);  // nothing lost, the spaces between the pieces the ones cut at
+    CHECK(pieces("short", kChatPiece).size() == 1);
+    const std::vector<std::string> word = pieces(std::string(150, 'x'), kChatPiece);
+    CHECK(word.size() == 3 && word[0].size() == kChatPiece && word[2].size() == 150 - 2 * kChatPiece);
+}

@@ -216,6 +216,10 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
             if (std::string(name) == "chat_own") n.chatOwn = *f;
             if (std::string(name) == "chat_others") n.chatOthers = *f;
         }
+    if (file.longChat != running.longChat) {  // 3.0.13-beta.12
+        u.applied.push_back(change("long_chat", flag(running.longChat), flag(file.longChat)));
+        n.longChat = file.longChat;
+    }
     if (file.chatLog != running.chatLog) {  // 3.0.13-beta.3
         u.applied.push_back(change("chat_log", flag(running.chatLog), flag(file.chatLog)));
         n.chatLog = file.chatLog;

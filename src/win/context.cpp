@@ -1082,6 +1082,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     // it keeps clear of it)
     chatwin::setFade(config.chatFade);  // 3.0.11-beta.240
     chatwin::setLog(config.chatLog);  // 3.0.13-beta.3
+    chatwin::setLongLines(config.longChat);  // 3.0.13-beta.12
     chatwin::setColours(config.chatParty, config.chatGuild, config.chatOwn, config.chatOthers);  // 3.0.13-beta.3
     chatwin::frame(window, config.chat, gameCodePage(config), pk, pw, ph);
     // 3.0.11-beta.49: [interface] dim_world - the world dimmed while the new windows are open

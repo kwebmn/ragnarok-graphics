@@ -5285,6 +5285,14 @@ constexpr Entry kTexts[] = {
      "(прист у другому вікні за вами). Звичайний клік по землі або Esc — зупинити.",
      "Shift+клик по игроку: персонаж идёт за ним и не останавливается, когда тот встал, — даже когда это окно игры за "
      "другим (прист во втором окне за вами). Обычный клик по земле или Esc — остановить."},
+    {Text::InterfaceLongChat, "Long chat lines", "Довгі рядки чату", "Длинные строки чата"},  // 3.0.13-beta.12
+    {Text::InterfaceLongChatHint,
+     "The chat's field takes up to 234 letters instead of 70; the server takes 70 at most, so a longer line goes as "
+     "several, cut between words.",
+     "Поле чату приймає до 234 літер замість 70; сервер бере щонайбільше 70, тож довший рядок іде кількома, "
+     "розрізаний між словами.",
+     "Поле чата принимает до 234 букв вместо 70; сервер берёт не больше 70, поэтому более длинная строка уходит "
+     "несколькими, разрезанная между словами."},
     {Text::InterfaceChatColourParty, "Chat: the party's colour", "Чат: колір групи", "Чат: цвет группы"},  // .3
     {Text::InterfaceChatColourGuild, "Chat: the guild's colour", "Чат: колір гільдії", "Чат: цвет гильдии"},
     {Text::InterfaceChatColourOwn, "Chat: your own lines", "Чат: ваші рядки", "Чат: ваши строки"},
