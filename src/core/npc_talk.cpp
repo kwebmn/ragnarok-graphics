@@ -121,6 +121,10 @@ Layout layout(int centreX, int bottom, float scale, const Talk& t, const Show& s
                 size_t end = r.text.find(' ', from);
                 end = end == std::string::npos ? r.text.size() : end + 1;
                 const std::string word = r.text.substr(from, end - from);
+                if (x == 0 && word.find_first_not_of(' ') == std::string::npos) {  // 3.0.12-beta.3: no lead spaces
+                    from = end;
+                    continue;
+                }
                 const float ww = m(word, px, false);
                 if (x > 0 && x + ww > textW) {
                     rows.emplace_back();

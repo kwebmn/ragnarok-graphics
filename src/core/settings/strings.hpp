@@ -839,6 +839,7 @@ enum class Text : uint16_t {
     ChatMenuWhisper, ChatMenuBlock, ChatMenuCopy,  // 3.0.11-beta.242
     ChatFilterSystem, ChatFilterLoot, ChatFilterAnnounce, ChatFilterTrade, ChatSysAutoloot, ChatSysAutolootOff,
     ChatSysExpOn, ChatSysExpOff, ChatSysZenyOn, ChatSysZenyOff, ChatSysExpGained,  // 3.0.11-beta.243
+    ChatSysNoSp,  // 3.0.12-beta.3
     ChatMenuCopyLine,  // 3.0.11-beta.244
     Count
 };

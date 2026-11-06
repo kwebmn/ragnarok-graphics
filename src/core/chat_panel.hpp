@@ -54,7 +54,7 @@ struct Texts {
     // «Оголошення», «Торгівля»; the server's own lines shorter - «Автолут: до {1}», «Автолут вимкнено», «Показ досвіду
     // ввімкнено» / «вимкнено», «Показ зені ввімкнено» / «вимкнено», «Досвід: Base +{1} · Job +{2}»
     std::string filters[4];
-    std::string autoloot, autolootOff, expOn, expOff, zenyOn, zenyOff, expGained;
+    std::string autoloot, autolootOff, expOn, expOff, zenyOn, zenyOff, expGained, noSp;  // .243, 3.0.12-beta.3
     std::string search, searchHint;  // 3.0.11-beta.284: «Пошук», «Шукати в рядках · Esc — закрити»
 };
 // 3.0.11-beta.243: «Усі»'s filters - each bit hides one kind there

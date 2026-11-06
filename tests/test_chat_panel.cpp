@@ -367,3 +367,25 @@ TEST(chat_search_matches_words_and_speaker) {  // 3.0.11-beta.284 (the owner's f
     CHECK(chatpanel::matches(l, settings::foldCase("ольга")));
     CHECK(!chatpanel::matches(l, settings::foldCase("куплю")));
 }
+
+// 3.0.12-beta.3 (players' screenshots): the server's MVP lines glued - spaced; «Not Enough SP» in the player's
+// language; a player's own words never touched
+TEST(chat_tidies_the_server_mvp_lines_and_no_sp) {
+    Texts t = texts();
+    t.noSp = "Недостатньо SP";
+    const auto text = [](const Line& l) {
+        std::string s;
+        for (const Span& p : l.spans) s += p.text;
+        return s;
+    };
+    CHECK(text(fromGame(Source::Other, "Congratulations! You are the MVP! Your reward EXP Points are29587acquired!",
+                        0xFFFF, t, 0)) ==
+          "Congratulations! You are the MVP! Your reward EXP Points are 29587 acquired!");
+    CHECK(text(fromGame(Source::Other, "Congratulations! You are the MVP! Your reward item isBlue Potion", 0xFFFF, t,
+                        0)) == "Congratulations! You are the MVP! Your reward item is Blue Potion");
+    CHECK(text(fromGame(Source::Other, "Not Enough SP", 0x0000FF, t, 0)) == "Недостатньо SP");
+    const Line spaced = fromGame(Source::Other, "Your reward EXP Points are 5 acquired!", 0, t, 0);
+    CHECK(text(spaced) == "Your reward EXP Points are 5 acquired!");
+    CHECK(text(fromGame(Source::Public, "Rin : Your reward item isX", 0xFFFFFF, t, 0)).find("isX") !=
+          std::string::npos);
+}

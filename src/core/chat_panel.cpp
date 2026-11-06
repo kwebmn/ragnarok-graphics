@@ -138,7 +138,35 @@ bool tradeLike(const std::string& utf8) {
     return false;
 }
 
-Line fromGame(Source source, const std::string& text, uint32_t colorRef, const Texts& t, uint64_t ms) {
+namespace {
+// 3.0.12-beta.3 (players' screenshots): the server's MVP lines glued - «are29587acquired», «isBlue Potion» - spaced;
+// the client's «Not Enough SP» in the player's language
+std::string tidied(const std::string& text, const Texts& t) {
+    if (text == "Not Enough SP" && !t.noSp.empty()) return t.noSp;
+    std::string out = text;
+    const auto spaceAfter = [&](const std::string& lead) {
+        const size_t at = out.find(lead);
+        if (at == std::string::npos) return;
+        const size_t end = at + lead.size();
+        if (end < out.size() && out[end] != ' ') out.insert(end, " ");
+    };
+    spaceAfter("Your reward EXP Points are");
+    spaceAfter("Your reward item is");
+    const size_t are = out.find("Your reward EXP Points are ");
+    if (are != std::string::npos) {
+        size_t d = are + 27;
+        while (d < out.size() && out[d] >= '0' && out[d] <= '9') ++d;
+        if (d > are + 27 && d < out.size() && out[d] != ' ' && out[d] != '!') out.insert(d, " ");
+    }
+    return out;
+}
+}  // namespace
+
+Line fromGame(Source source, const std::string& gameText, uint32_t colorRef, const Texts& t, uint64_t ms) {
+    const std::string text = source == Source::Public || source == Source::Party || source == Source::Guild ||
+                                     source == Source::Whisper
+                                 ? gameText
+                                 : tidied(gameText, t);  // 3.0.12-beta.3: never a player's words
     Line l;
     l.ms = ms;
     const uint32_t own = colorRef == 0 || colorRef == 0xFFFFFF ? kText : gameRgb(colorRef);

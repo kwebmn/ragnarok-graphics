@@ -162,3 +162,17 @@ TEST(npc_talk_window_as_wide_as_its_words) {
     L = npctalk::layout(960, 900, 1.0f, t, sh, texts(), measure);
     CHECK(L.w > 460 && L.w < 860 && L.options[0].w >= measure(t.options[0], 14, false));
 }
+
+// 3.0.12-beta.3 (a player's screenshot: «  Слава Україні» indented): a line's leading spaces dropped
+TEST(npc_talk_drops_a_lines_leading_spaces) {
+    npctalk::Talk t;
+    t.lines = {"   Glory", "^FF0000  Red^000000 words"};
+    t.button = npctalk::Button::Next;
+    npctalk::Show sh;
+    const npctalk::Layout L = npctalk::layout(960, 900, 1.0f, t, sh, texts(), measure);
+    CHECK(!L.lines.empty() && L.lines[0].text == "Glory");
+    bool red = false;
+    for (const npctalk::Placed& p : L.lines)
+        if (p.text == "Red") red = p.box.x == L.lines[0].box.x;  // its colour made readable, its place the edge
+    CHECK(red);
+}

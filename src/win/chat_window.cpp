@@ -83,6 +83,7 @@ using MoveFn = void(__attribute__((thiscall)) *)(uint32_t window, int x, int y);
 
 constexpr size_t kMostLines = 400, kMostBattle = 300, kMostPending = 512, kMostNodes = 512;
 constexpr ULONGLONG kQuietMs = 12000, kBlinkMs = 530, kKillExpMs = 2500, kHitKeepMs = 20000;
+constexpr ULONGLONG kServerExpMs = 120000;  // 3.0.12-beta.3
 const int kHeights[] = {7, 12, 4};  // F10 goes round them
 
 struct Raw {
@@ -121,6 +122,10 @@ struct State {
     uint32_t exp[3] = {0, 0, 0};
     bool expKnown[3] = {false, false, false};
     cp::Line* killLine = nullptr;
+    // 3.0.12-beta.3 (a player's screenshot: «Досвід: Base +19 950 · Job +25 110» and then «Base EXP +19 950», «Job
+    // EXP +25 110»): the server tells the experience itself (@showexp) - when it last did; ours not added meanwhile
+    ULONGLONG serverExpAt = 0;
+    int serverExpTold = 0;
     ULONGLONG killAt = 0;
     std::map<uint16_t, std::string> skillNames;
     int linesTold = 0, clicksTold = 0;
@@ -208,6 +213,7 @@ cp::Texts texts() {
     t.zenyOn = say(settings::Text::ChatSysZenyOn);
     t.zenyOff = say(settings::Text::ChatSysZenyOff);
     t.expGained = say(settings::Text::ChatSysExpGained);
+    t.noSp = say(settings::Text::ChatSysNoSp);  // 3.0.12-beta.3
     t.search = say(settings::Text::ChatSearch);  // 3.0.11-beta.284
     t.searchHint = say(settings::Text::ChatSearchHint);
     return t;
@@ -270,7 +276,16 @@ void take(State& s) {
             ++s.linesTold;
             LOG_INFO("chat: a line from %s (%zu bytes, colour %06X)", sourceName(r.source), r.text.size(), r.colour);
         }
-        cp::Line line = cp::fromGame(r.source, utf8(s, r.text), r.colour, t, r.ms);
+        const std::string words = utf8(s, r.text);
+        if (words.find("Experience Gained Base:") != std::string::npos ||
+            words.rfind("Gained exp is now shown", 0) == 0) {  // 3.0.12-beta.3
+            if (!s.serverExpAt && s.serverExpTold++ < 3)
+                LOG_INFO("chat: the server tells the experience - the chat's own lines of it held");
+            s.serverExpAt = GetTickCount64();
+        } else if (words.rfind("Gained exp will not be shown", 0) == 0) {
+            s.serverExpAt = 0;
+        }
+        cp::Line line = cp::fromGame(r.source, words, r.colour, t, r.ms);
         if (r.source == cp::Source::Whisper && !line.who.empty()) s.replyTo = line.who;  // 3.0.11-beta.240: /r
         if (line.kind == cp::Kind::Whisper && !line.who.empty()) {  // 3.0.11-beta.242: the ones whispered with
             std::vector<std::string>& p = s.show.people;
@@ -532,6 +547,7 @@ void experience(State& s, uint16_t type, uint32_t value) {
     const long long grew = (long long)value - (long long)s.exp[type];
     s.exp[type] = value;
     if (grew <= 0) return;  // a level up starts it over
+    if (s.serverExpAt && GetTickCount64() - s.serverExpAt < kServerExpMs) return;  // 3.0.12-beta.3: told by it
     const std::string words = (type == 1 ? "Base EXP +" : "Job EXP +") + cp::grouped(grew);
     const uint32_t rgb = type == 1 ? cp::kBaseExp : cp::kJobExp;
     if (s.killLine && GetTickCount64() - s.killAt < kKillExpMs) {
