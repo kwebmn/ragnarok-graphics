@@ -832,3 +832,46 @@ TEST(minimap_proto_classic_marks_round) {
     CHECK(((mid >> 16) & 0xFF) > 0xE0 && ((mid >> 8) & 0xFF) > 0x90 && ((mid >> 8) & 0xFF) < 0xC0);  // pink
     CHECK(((top >> 16) & 0xFF) > 0xE0);  // round: its top filled too (the triangle's apex is thin there)
 }
+
+// 3.0.13-beta.2 (reports: the minimap the interface's dearest picture, half of it the map's pixels made anew at each
+// step): the map's pixels made once round the view - the steps copy them out, the same picture within a pixel's
+// rounding; made anew past the margin and for another zoom
+TEST(minimap_proto_map_pixels_cached_round_the_view) {
+    const minimap::Layout L = minimap::layout(1920, 1080, 1.5f, false, 0);
+    std::vector<uint32_t> argb(256 * 256);
+    for (int y = 0; y < 256; ++y)
+        for (int x = 0; x < 256; ++x)
+            argb[size_t(y) * 256 + size_t(x)] = 0xFF000000u | uint32_t(x) << 16 | uint32_t(y) << 8;
+    const minimap::MapPicture mp = minimap::prepare(argb, 256, 256);
+    minimap::Scene sc;
+    sc.picture = &mp;
+    sc.map = minimap::MapSize{300, 300};
+    sc.player = minimap::Cell{150, 150};
+    minimap::MapCache cache;
+    panel::Picture direct, cached;
+    const auto close = [&]() {
+        int worst = 0;
+        for (int y = 4; y < int(L.map.h) - 4; ++y)
+            for (int x = 4; x < int(L.map.w) - 4; ++x) {
+                const uint32_t a = direct.px[size_t(y) * size_t(direct.width) + size_t(x)];
+                const uint32_t b = cached.px[size_t(y) * size_t(cached.width) + size_t(x)];
+                for (int sh : {16, 8}) worst = std::max(worst, std::abs(int((a >> sh) & 0xFF) - int((b >> sh) & 0xFF)));
+            }
+        return worst;
+    };
+    for (int step = 0; step < 6; ++step) {
+        sc.player.x = 150 + step;
+        sc.cache = nullptr;
+        minimap::paint(direct, L, sc, minimap::Texts{});
+        sc.cache = &cache;
+        minimap::paint(cached, L, sc, minimap::Texts{});
+        CHECK(close() <= 3);  // a gradient of ~1 a pixel: half a pixel's shift at most
+    }
+    CHECK(cache.made == 1);  // the steps inside the margin
+    sc.player.x = 260;
+    minimap::paint(cached, L, sc, minimap::Texts{});
+    CHECK(cache.made == 2);  // past it
+    sc.cells = 60;
+    minimap::paint(cached, L, sc, minimap::Texts{});
+    CHECK(cache.made == 3);  // another zoom
+}

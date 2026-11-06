@@ -375,7 +375,7 @@ namespace {
 // The map's picture through a view into a box of the picture: each pixel its cell's (the game's magenta: none).
 // 3.0.11-beta.57 (R-T942DZ: the minimap painted again at each step, 15.6 ms at 4K): what a column or a row of the box
 // takes from the picture worked out once for it, not for each of its pixels - the same numbers, the same picture
-void mapPixels(panel::Picture& out, const panel::Box& box, const Scene& sc, const View& v) {
+void mapPixelsMade(panel::Picture& out, const panel::Box& box, const Scene& sc, const View& v) {
     // 3.0.11-beta.72: the prepared picture (made here of argb for a scene without one - the tests); the smallest level
     // with as many pixels a cell as the view shows
     MapPicture made;
@@ -447,6 +447,56 @@ void mapPixels(panel::Picture& out, const panel::Box& box, const Scene& sc, cons
             }
             row[c.at] = pixel;
         }
+    }
+}
+
+// 3.0.13-beta.2: through the scene's cache when it has one - the view's square copied out of the pixels made round it
+void mapPixels(panel::Picture& out, const panel::Box& box, const Scene& sc, const View& v) {
+    MapCache* mc = sc.cache;
+    const MapPicture* pic = sc.picture;
+    const int bw = int(box.w), bh = int(box.h);
+    if (!mc || !pic || pic->levels.empty() || v.cellPx <= 0 || bw <= 0 || bh <= 0 || sc.map.w <= 0 || sc.map.h <= 0) {
+        mapPixelsMade(out, box, sc, v);
+        return;
+    }
+    const std::vector<uint8_t>* reach =
+        sc.reach && sc.reach->size() == size_t(sc.map.w) * size_t(sc.map.h) ? sc.reach : nullptr;
+    const auto offsets = [&](int& ox, int& oy) {
+        ox = int(std::lround((v.left - mc->left) * v.cellPx));
+        oy = int(std::lround((mc->top - v.top) * v.cellPx));
+        return ox >= 0 && oy >= 0 && ox + bw <= mc->w && oy + bh <= mc->h;
+    };
+    int ox = 0, oy = 0;
+    const bool same = mc->level == pic->levels.front().px.data() && mc->cellPx == v.cellPx && mc->mapW == sc.map.w &&
+                      mc->mapH == sc.map.h && (reach ? *reach == mc->reach : mc->reach.empty());
+    if (!same || !offsets(ox, oy)) {
+        const int margin = std::max(8, bw / 3);
+        mc->w = bw + 2 * margin;
+        mc->h = bh + 2 * margin;
+        mc->cellPx = v.cellPx;
+        mc->left = v.left - float(margin) / v.cellPx;
+        mc->top = v.top + float(margin) / v.cellPx;
+        mc->level = pic->levels.front().px.data();
+        mc->mapW = sc.map.w;
+        mc->mapH = sc.map.h;
+        if (reach) mc->reach = *reach;
+        else mc->reach.clear();
+        panel::Picture made;
+        made.width = mc->w;
+        made.height = mc->h;
+        made.px.assign(size_t(mc->w) * size_t(mc->h), 0u);
+        mapPixelsMade(made, panel::Box{0, 0, float(mc->w), float(mc->h)}, sc, View{mc->left, mc->top, v.cellPx});
+        mc->px = std::move(made.px);
+        ++mc->made;
+        offsets(ox, oy);
+    }
+    for (int y = 0; y < bh; ++y) {
+        const int ty = int(box.y) + y;
+        if (ty < 0 || ty >= out.height) continue;
+        const int x0 = std::max(0, -int(box.x)), x1 = std::min(bw, out.width - int(box.x));
+        if (x0 >= x1) continue;
+        const uint32_t* from = mc->px.data() + size_t(oy + y) * size_t(mc->w) + size_t(ox + x0);
+        std::copy(from, from + (x1 - x0), out.px.data() + size_t(ty) * size_t(out.width) + size_t(int(box.x) + x0));
     }
 }
 

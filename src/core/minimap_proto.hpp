@@ -140,7 +140,21 @@ struct Layers {
 };
 std::vector<Mark> shownMarks(const std::vector<Mark>& marks, const Layers& layers);
 
+// 3.0.13-beta.2 (reports: the minimap the interface's dearest picture - 150-200 paintings in 30 s, 3.2 ms each, half
+// of it the map's pixels made anew for every step): the map's pixels round the view made once, a margin about it -
+// each painting copies its square out; made anew when the view leaves the margin or the picture, zoom or reach change
+struct MapCache {
+    std::vector<uint32_t> px;
+    int w = 0, h = 0;
+    float left = 0, top = 0, cellPx = 0;  // the cache's top-left corner in cells, its zoom
+    const void* level = nullptr;          // the picture's level it was made of
+    int mapW = 0, mapH = 0;
+    std::vector<uint8_t> reach;  // the reach it dimmed by (empty: none)
+    int made = 0;                // how many times made (the log, the tests)
+};
+
 struct Scene {
+    MapCache* cache = nullptr;  // 3.0.13-beta.2: the minimap's (none: the pixels made each painting)
     const std::vector<uint32_t>* argb = nullptr;  // the map's own picture (the game's), the whole map, rows north first
     int imgW = 0, imgH = 0;
     const MapPicture* picture = nullptr;  // 3.0.11-beta.72: it prepared (prepare); none: argb's made each painting

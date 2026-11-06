@@ -61,6 +61,8 @@ struct Line {  // a monster under the map: its name, its count (a boss's respawn
 };
 
 struct State {
+    minimap::MapCache mapCache;  // 3.0.13-beta.2
+    int cacheTold = 0;
     // 3.0.11-beta.119 (R-5Z6J2S): a layer switched on the map - wanted so until the settings read again say it
     // (uaro-graphics.ini written at once; the file's next reading a moment later): -1 none, else 0 / 1
     int layerWant[minimap::kLayers] = {-1, -1, -1, -1};
@@ -850,8 +852,15 @@ void render(State& s) {
                    s.layout.y);  // 3.0.11-beta.75: where the player put it
     const uicost::Paint cost("minimap", s.layout.w, s.layout.h);  // 3.0.11-beta.55 (beta.57: its size known)
     s.paintedAt = GetTickCount64();
-    const minimap::Scene sc = sceneOf(s);
+    minimap::Scene sc = sceneOf(s);
+    sc.cache = &s.mapCache;  // 3.0.13-beta.2: the map's pixels made once round the view
+    const int madeBefore = s.mapCache.made;
     minimap::paint(s.picture, s.layout, sc, t);
+    if (s.mapCache.made != madeBefore && s.cacheTold < 5) {
+        ++s.cacheTold;
+        LOG_INFO("minimap: the map's pixels made round the view (%dx%d) - the steps copy them out", s.mapCache.w,
+                 s.mapCache.h);
+    }
     drawWords(s.picture, gdiWords(minimap::words(s.layout, sc, t)));
     if (s.look == minimap::Look::Faded) panel::fade(s.picture, minimap::opacity(s.look));  // Ctrl+Tab's see-through
     s.dirty = false;

@@ -503,7 +503,10 @@ void fade(Picture& p, float opacity) {
 
 void over(uint32_t& dst, uint32_t rgb, float a) {
     if (a <= 0.0f) return;
-    a = std::min(a, 1.0f);
+    if (a >= 1.0f) {  // 3.0.13-beta.2: whole - the colour itself, as the blend below gives it (the marks' insides)
+        dst = 0xFF000000u | (rgb & 0xFFFFFFu);
+        return;
+    }
     const float keep = 1.0f - a;
     const auto channel = [&](int shift) {
         return roundOf(float((rgb >> shift) & 0xFF) * a + float((dst >> shift) & 0xFF) * keep);  // 3.0.11-beta.73
