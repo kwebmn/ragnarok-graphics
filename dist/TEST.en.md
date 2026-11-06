@@ -1,3 +1,9 @@
+# uaRO Graphics 3.0.13-beta.4 — what's new
+
+**Your own chat colours.** On the Interface page: the party's, the guild's, your own and the others' lines - blue, green, yellow, orange, pink, violet, white or «As it is». A GM's lines keep their colour. A new colour applies to the lines coming after the change.
+
+**Chat log to a file** (a switch «Chat log to a file», off by default). Every chat line with its time goes into uaro-graphics\chat-logs, a file a day - handy for disputes over trades. Whispers too; the file stays on your computer and is never sent with a report.
+
 # uaRO Graphics 3.0.13-beta.3 — what's new
 
 **Boss HP bars** (a new switch «Boss HP bars» on the Interface page, off by default). An MVP's bar is wider and gold, a mini-boss's wider and violet - a boss stands out even in a crowd. Below a quarter of HP it turns red like any other.
