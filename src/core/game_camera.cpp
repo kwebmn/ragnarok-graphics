@@ -168,4 +168,6 @@ void viewToClip(const Projection& p, int width, int height, float out[16]) {
     std::memcpy(out, m, sizeof m);
 }
 
+float tiltRoom(const std::string& token) { return token == "ground" ? 45.0f : token == "lower" ? 55.0f : 70.0f; }
+
 }  // namespace uagfx::camera

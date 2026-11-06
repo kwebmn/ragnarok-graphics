@@ -405,6 +405,10 @@ const std::vector<IniSetting>& iniSettings() {
         // 3.0.11-beta.184 (R-ANMTEJ): the camera's zoom and tilt kept between the games
         {"camera", "remember", Page::Game, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::CameraRemember,
          Text::CameraRememberHint, ""},
+        // 3.0.13-beta.5 (the owner's pick 15 of «50 идей»): how near the horizon Shift tilts the camera
+        {"camera", "tilt", Page::Game, Control::Choice, 0, 0, 0, {"game", "lower", "ground"},
+         {Text::CameraTiltGame, Text::CameraTiltLower, Text::CameraTiltGround}, Text::CameraTilt,
+         Text::CameraTiltHint, ""},
         // 3.0.4-beta.6: the time left on the buff icons
         {"buffs", "timers", Page::Game, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::BuffTimers,
          Text::BuffTimersHint, ""},
@@ -1287,6 +1291,7 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "camera.indoor") return c.cameraIndoor ? "1" : "0";                // 3.0.4-beta.5
     if (k == "camera.zoom_limit") return c.cameraZoomLimit ? "1" : "0";         // 3.0.4-beta.17
     if (k == "camera.remember") return c.cameraRemember ? "1" : "0";            // 3.0.11-beta.184
+    if (k == "camera.tilt") return c.cameraTilt;                                // 3.0.13-beta.5
     if (k == "buffs.timers") return c.buffTimers ? "1" : "0";                   // 3.0.4-beta.6
     if (k.compare(0, 7, "notify.") == 0) {                   // 3.0.4-beta.3
         const NotifySettings& n = c.notify;

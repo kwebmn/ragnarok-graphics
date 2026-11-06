@@ -7495,6 +7495,17 @@ constexpr Entry kTexts[] = {
      "Вхід на карту через {1}: сервер ще не відпустив минулий вхід",
      "Вход на карту через {1}: сервер ещё не отпустил прошлый вход"},
     // 3.0.11-beta.184 (R-ANMTEJ): the camera's zoom and tilt kept between the games
+    {Text::CameraTilt, "Camera tilt", "Нахил камери", "Наклон камеры"},  // 3.0.13-beta.5
+    {Text::CameraTiltHint,
+     "How low Shift with the right button (or the wheel) tilts the camera: as the game (-28°), lower (-13°) or down to "
+     "the ground (-3°). In buildings it stays steeper.",
+     "Як низько Shift із правою кнопкою (або колесом) нахиляє камеру: як у грі (-28°), нижче (-13°) або до самої "
+     "землі (-3°). У будівлях лишається крутішою.",
+     "Как низко Shift с правой кнопкой (или колесом) наклоняет камеру: как в игре (-28°), ниже (-13°) или до самой "
+     "земли (-3°). В зданиях остаётся круче."},
+    {Text::CameraTiltGame, "As the game", "Як у грі", "Как в игре"},
+    {Text::CameraTiltLower, "Lower", "Нижче", "Ниже"},
+    {Text::CameraTiltGround, "To the ground", "До землі", "До земли"},
     {Text::CameraRemember, "Remember the camera's zoom", "Пам'ятати віддалення камери",
      "Запоминать отдаление камеры"},
     {Text::CameraRememberHint,

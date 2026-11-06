@@ -855,6 +855,9 @@ struct Config {
     // 3.0.11-beta.184, [camera] remember: the camera's zoom and tilt as the player left them, outdoors and in buildings
     // apart, kept between the games in uaro-graphics\camera.txt (win/game_camera rememberCamera; R-ANMTEJ)
     bool cameraRemember = true;
+    // 3.0.13-beta.5 (the owner's pick 15 of «50 идей»): [camera] tilt - game, lower or ground (core/game_camera
+    // tiltRoom)
+    std::string cameraTilt = "game";
     bool buffTimers = true;  // 3.0.4-beta.6, [buffs] timers: the time left on the buff icons (win/buff_overlay)
     bool clientUpdates = true;  // 3.0.2-beta.5: [client] updates - the GRFs in updates\ over the game's archives
     // 2.12: [renderer] safe_mode - Direct3D 11 without the risky parts (core/safe_mode), asked by the player

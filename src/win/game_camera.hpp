@@ -87,6 +87,9 @@ void cameraBeforeMapExit(uint32_t mode);
 void cameraAfterMapExit(uint32_t mode);
 // [camera] remember, each frame: the camera's zoom and tilt written when they change (looked at every 2 s)
 void rememberCamera(bool wanted);
+// 3.0.13-beta.5: [camera] tilt - how near the horizon Shift tilts the camera (camera::tiltRoom); the game's two sites
+// pointed at the driver's number once, the number set each frame
+void tiltCamera(const std::string& token);
 // 3.0.4-beta.17 (the user chose «Ограничить отдаление», R-35N5QN): the game's outdoors zoom limit (camera::kZoomMost,
 // 2040) held at camera::kZoomLimit while `wanted` - past its far plane, 1500, the game draws neither the character nor
 // the monsters -, its own put back when not; a camera already further out drawn in at once

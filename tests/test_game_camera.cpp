@@ -243,3 +243,12 @@ TEST(game_camera_target_point_is_where_the_camera_looks) {
         CHECK(std::fabs(out[0] - at.x) < 1e-2f && std::fabs(out[1] - at.y) < 1e-2f && std::fabs(out[2] - at.z) < 1e-2f);
     }
 }
+
+// 3.0.13-beta.5 (the owner's pick 15 of «50 идей»): [camera] tilt - the room the game's Shift tilt keeps from the
+// horizon, k 42 outdoors: as the game -28, lower -13, to the ground -3 (the game's own Ctrl limit)
+TEST(camera_tilt_room_by_its_choice) {
+    CHECK(uagfx::camera::tiltRoom("game") == 70.0f && uagfx::camera::tiltRoom("nonsense") == 70.0f);
+    CHECK(42.0f - uagfx::camera::tiltRoom("lower") == -13.0f);
+    CHECK(42.0f - uagfx::camera::tiltRoom("ground") == -3.0f);
+    CHECK(uagfx::camera::kTiltRoomSites[0] == 0x565D48 && uagfx::camera::kTiltRoomSites[1] == 0x5662F2);
+}

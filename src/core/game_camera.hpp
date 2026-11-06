@@ -1,5 +1,6 @@
 #pragma once
 #include <cstdint>
+#include <string>
 
 namespace uagfx::camera {
 
@@ -131,5 +132,14 @@ bool remixPoint(const Projection& p, const float inverseView[16], const RemixSpa
 // and view -> clip as the game projects for width x height.
 void remixView(const float view[12], const RemixSpace& s, float out[16]);
 void remixProjection(const Projection& p, int width, int height, float out[16]);
+
+// 3.0.13-beta.5 (the owner's pick 15 of «50 идей»: «Свободнее наклон камеры - ниже, вплоть до уровня земли»): the
+// tilt with Shift - the wheel FUN_00565c00 and the right button's drag FUN_00565ff0 - stops at k - 70 toward the
+// horizon (k 42 outdoors, 10 in buildings: -28 and -60), with Ctrl near at k - 45; each reads its 70 by `fsub dword
+// [0x69F3F0]` - a constant five other places share, so the two sites read the driver's own number instead
+constexpr uint32_t kTiltRoomSites[2] = {0x565D48, 0x5662F2};  // fsub dword ptr [kTiltRoomGame]: D8 25 F0 F3 69 00
+constexpr uint32_t kTiltRoomGame = 0x69F3F0;                  // .rdata 70.0
+// [camera] tilt: "game" 70 (-28 outdoors), "lower" 55 (-13), "ground" 45 (-3, the game's own Ctrl limit)
+float tiltRoom(const std::string& token);
 
 }  // namespace uagfx::camera

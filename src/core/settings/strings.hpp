@@ -814,6 +814,7 @@ enum class Text : uint16_t {
     MinimapPlotTo, MinimapPlotCells, MinimapPlotHint,
     ConnectionHeading, ConnPatientEntry, ConnPatientEntryHint, ConnEntryPause, ConnEntryPauseHint,  // 2.6.17
     ConnEntryWait,
+    CameraTilt, CameraTiltHint, CameraTiltGame, CameraTiltLower, CameraTiltGround,  // 3.0.13-beta.5
     CameraRemember, CameraRememberHint,  // 3.0.11-beta.184 (R-ANMTEJ): the camera's zoom kept between the games
     InterfaceItemToast, InterfaceItemToastHint,  // 3.0.11-beta.186: the line on a thing picked up
     InterfaceMinimapView, InterfaceMinimapViewHint,  // 3.0.11-beta.187: the camera's fan on the minimap

@@ -265,6 +265,47 @@ void cameraAfterMapExit(uint32_t mode) {
     if (g_rememberWanted && knownBuild()) remember(slotsNow());
 }
 
+namespace {
+float g_tiltRoom = 70.0f;  // what the game's two tilt limits read once pointed here
+}
+
+void tiltCamera(const std::string& token) {
+    static int pointed = -1;  // -1 not tried, 0 not this build, 1 pointed
+    const float want = camera::tiltRoom(token);
+    if (pointed < 0) {
+        pointed = 0;
+        const uint8_t game[6] = {0xD8, 0x25, 0xF0, 0xF3, 0x69, 0x00};
+        bool known = true;
+        for (const uint32_t site : camera::kTiltRoomSites) {
+            uint8_t now[6] = {};
+            known = known && read(site, now, sizeof now) && std::memcmp(now, game, sizeof now) == 0;
+        }
+        float seventy = 0.0f;
+        known = known && read(camera::kTiltRoomGame, &seventy, 4) && seventy == 70.0f;
+        if (!known) {
+            LOG_INFO("camera: the tilt's limit is not where this build of uaRO.exe has it - [camera] tilt the game's");
+            return;
+        }
+        const uint32_t ours = uint32_t(reinterpret_cast<uintptr_t>(&g_tiltRoom));
+        for (const uint32_t site : camera::kTiltRoomSites) {
+            auto* at = reinterpret_cast<uint8_t*>(uintptr_t(site + 2));  // the instruction's address operand
+            DWORD old = 0;
+            if (!VirtualProtect(at, 4, PAGE_EXECUTE_READWRITE, &old)) {
+                LOG_INFO("camera: the tilt's limit cannot be changed (error %lu)", GetLastError());
+                return;
+            }
+            std::memcpy(at, &ours, 4);
+            DWORD unused = 0;
+            VirtualProtect(at, 4, old, &unused);
+            FlushInstructionCache(GetCurrentProcess(), at, 4);
+        }
+        pointed = 1;
+    }
+    if (pointed != 1 || g_tiltRoom == want) return;
+    g_tiltRoom = want;
+    LOG_INFO("camera: [camera] tilt = %s - Shift tilts it to %.0f degrees outdoors", token.c_str(), 42.0f - want);
+}
+
 void rememberCamera(bool wanted) {
     g_rememberWanted = wanted;
     if (!wanted || !knownBuild()) return;
