@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.13-beta.10 — what's new
+
+**Esc closes the NPC's picture.** The big NPC picture that sometimes stays on the screen after a talk now goes away with Esc - the way the server removes it. A switch «Esc closes the NPC's picture» on the Interface page, on.
+
 # uaRO Graphics 3.0.13-beta.9 — what's new
 
 **The game's swear filter can be turned off** (a switch «The game's swear filter» on the Interface page; on, as in the game). The game refused to send a line holding a word of its list - even inside an ordinary word (computer, say). Clear the switch and every line goes.
