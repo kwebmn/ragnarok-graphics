@@ -1,3 +1,9 @@
+# uaRO Graphics 3.0.11-beta.294 — what's new
+
+**Monsters should no longer be drawn over the chat:** when the game drew part of the world (monster sprites) among its own windows, our code lifted them over our panels together with the game's windows - a crab and a ghost ended up over the chat. Now only the game's windows and its cursor are lifted; the world stays under our panels. Each such case is written to the log.
+
+**The monster card by the cursor is off by default:** with a controller it hung by the target all the time. It can be turned on in the interface settings.
+
 # uaRO Graphics 3.0.11-beta.293 — what's new
 
 **No per cent plate by the monster:** the dark plate with the target's HP per cent (e.g. «95%») to the right of its bar is no longer shown. It can be turned back on in the interface settings («HP per cent by the target's bar»). The HP bars over monsters stay as they were.
