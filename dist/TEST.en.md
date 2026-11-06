@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.11-beta.299 — what's new
+
+**Grass and sky on green maps the driver took for indoors:** Mjolnir (all 12 maps), the novice grounds, the guild castles' fields (Greenwood Lake, Luina, Valkyrie Realm, Nidhoggur Realm), Alberta Island, Glast Heim's outskirts, Jawaii, Byalan Island, Moscovia's forests, Prairie of Morestone, Odin Shrine, Capitolina Abbey, Good Turtles Village, Hvergelmir, Payon's PvP copies, Ile du Printemps, Poring War and the Monster Race Arena. They now get grass, flowers, butterflies and birds, the sun and its shadows, sky rays, morning fog and pollen like other fields. Where the ground is not very green (the novice grounds) there is less grass.
+
 # uaRO Graphics 3.0.11-beta.298 — what's new
 
 **Every class's buffs in the stats plan (Alt+A):** the «Buffs in the plan» row now has:

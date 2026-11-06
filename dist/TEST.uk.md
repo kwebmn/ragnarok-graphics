@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.11-beta.299 — що нового
+
+**Трава й небо на зелених картах, які драйвер мав за приміщення:** Mjolnir (усі 12 карт), нубзона (тренувальні поля), поля біля гільдійських замків (Greenwood Lake, Luina, Valkyrie Realm, Nidhoggur Realm), Alberta Island, Glast Heim ззовні, Jawaii, Byalan Island, ліси Moscovia, Prairie of Morestone, Odin Shrine, абатство Capitolina, Good Turtles Village, Hvergelmir, PvP-копії Payon, Ile du Printemps, Poring War і Monster Race Arena. Тепер там трава, квіти, метелики й птахи, сонце й тіні від нього, промені, ранковий туман і пилок — як на інших полях. Де земля не дуже зелена (нубзона), трави буде менше.
+
 # uaRO Graphics 3.0.11-beta.298 — що нового
 
 **Бафи всіх класів у плані «Характеристик» (Alt+A):** у рядку «Бафи в плані» тепер:
