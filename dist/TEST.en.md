@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.13-beta.11 — what's new
+
+**Steady following of a player.** Shift+click on a player and the character follows them and keeps up when they stop: as soon as the leader is more than a cell away, the character runs after them again. It works with the game window behind another too - handy with two windows: a priest in the second window runs after you. A plain click on the ground or Esc in that window stops it; a leader out of sight for 15 seconds ends it by itself. A switch «Steady following of a player» on the Interface page, on.
+
 # uaRO Graphics 3.0.13-beta.10 — what's new
 
 **Esc closes the NPC's picture.** The big NPC picture that sometimes stays on the screen after a talk now goes away with Esc - the way the server removes it. A switch «Esc closes the NPC's picture» on the Interface page, on.
