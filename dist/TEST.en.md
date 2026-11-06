@@ -1,3 +1,10 @@
+# uaRO Graphics 3.0.11-beta.296 — what's new
+
+**The stats window (Alt+A) — the rest of the concept:**
+- **The map's monsters:** on the planning tab under the goals - up to five monsters of the map you are on: your chance to hit, to dodge and the blows to kill, now → with the plan (better green, worse red). By the server's rules, as the monster card.
+- **The plan is kept:** each character's plan (level, stats, ASPD goal) stays after the game restarts.
+- **The controller on every tab:** LB / RB the tabs; on the planning tab up and down the row (level, stats, ASPD goal), left and right less or more, Y resets the plan; on the reference tab left and right the class.
+
 # uaRO Graphics 3.0.11-beta.295 — what's new
 
 **Auto Spell in the new look:** the Sage's Auto Spell list now shows in the same card as the other skill lists: a row per skill with its icon, «Choose» and «Cancel», a double click chooses at once, the D-pad and buttons on a controller. The game's old window is hidden.
