@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.11-beta.293 — what's new
+
+**No per cent plate by the monster:** the dark plate with the target's HP per cent (e.g. «95%») to the right of its bar is no longer shown. It can be turned back on in the interface settings («HP per cent by the target's bar»). The HP bars over monsters stay as they were.
+
 # uaRO Graphics 3.0.11-beta.292 — what's new
 
 **Even frames under Windows scaling (test):** a new switch «Window with Windows scaling (test)» on the quality page, after «High resolution». At 125–175 % Windows scaling the game's window came out a pixel short of the monitor (3839×2159 of 3840×2160) and Windows composed every frame itself - on a 144 Hz monitor that is jumps between 72 and 48 frames. With the switch the game's window tells Windows it follows the scaling itself, covers the monitor pixel for pixel, and the picture goes to the screen directly. Takes effect after the game's restart. Off by default. If the mouse starts missing, turn it off and send a report.
