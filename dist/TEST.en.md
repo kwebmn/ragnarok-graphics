@@ -1,3 +1,11 @@
+# uaRO Graphics 3.0.11-beta.303 — what's new
+
+**Marks in the settings:**
+- the blue dot by a row whose value is not the one recommended for this computer is clickable now: a click sets the recommended value;
+- a green star ★ marks a row added since the last update (shown until the app's next start; nothing is marked on the very first start).
+
+**Main page:** «New interface» and «Text size» are here now - no need to look for them on the Interface page.
+
 # uaRO Graphics 3.0.11-beta.302 — what's new
 
 **The interface page in sections:** instead of 109 rows in one list - Main, Panels on the screen, Minimap, Fight, Things on the ground, Login and characters, Homunculus and mercenary, Connection and Windows in the new look. The 35 windows are behind a «Show each window» button. The controller's rows are on the Controller page (the windows' tile joined them).
