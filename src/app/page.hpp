@@ -41,6 +41,7 @@ public:
     virtual void showView(settings::View view, int tab) = 0;
     // 2.6: the level of the rows the pages show - the mode, the Detailed one for a page opened off the mode's list
     virtual settings::Mode mode() const = 0;
+    virtual void switchMode(settings::Mode m) = 0;  // 3.0.11-beta.301: the search's hit of another mode
     // 2.6: a long text in a window of its own that scrolls ("What's new"); the page stays under it like a box's
     virtual void showNotes(const std::wstring& text) = 0;
     // 2.11: the one way to the game (the bottom row's «Застосувати й грати», «Гра»'s «Грати»): the changes applied,

@@ -181,7 +181,8 @@ enum class Text : uint16_t {
     GfxSoundOurs, GfxSoundRate, GfxSoundRateHint, GfxSoundRateGame, GfxSoundRate44, GfxSoundRate48, GfxSoundVoices,
     GfxSoundVoicesHint,
     GfxSoundBackground, GfxSoundBackgroundHint, GfxSoundLimiter, GfxSoundLimiterHint,
-    GfxSoundStereo, GfxSoundStereoHint, GfxSoundSteal, GfxSoundStealHint, GfxSoundCrossfade, GfxSoundCrossfadeHint,
+    GfxSoundStereo, GfxSoundStereoHint, GfxSoundStereoFlip, GfxSoundStereoFlipHint, GfxSoundSteal,
+    GfxSoundStealHint, GfxSoundCrossfade, GfxSoundCrossfadeHint,
     // 0.94
     FxRipples, FxRipplesHint,
     // 0.95
@@ -330,6 +331,7 @@ enum class Text : uint16_t {
     MainUpdateNone, MainUpdateNew, MainNoD3d, MainDlss, MainNoDlss, MainHd, MainPack, MainNoPack, MainMakePack,
     MainMore, NotesNone,
     SearchCue, SearchFound, SearchNothing, SearchMany, SearchHow,  // 2.6: the header's search
+    SearchOtherMode,  // 3.0.11-beta.301
     // 2.6: the status bar, the "changed" dots, the page's reset, "What's new"
     StripNoPack, DotHint, DotOn, DotOff, DotLegend, ResetPage, ResetPageAsk, WhatsNewTitle,
     ConsoleGroupOff,  // 2.6.8: an effect on whose group is off

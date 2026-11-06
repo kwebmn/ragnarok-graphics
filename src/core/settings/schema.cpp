@@ -1040,6 +1040,8 @@ const std::vector<IniSetting>& iniSettings() {
          Text::GfxSoundLimiterHint, ""},
         {"sound", "stereo", Page::Sound, Control::Slider, 0, 100, 5, {}, {}, Text::GfxSoundStereo,
          Text::GfxSoundStereoHint, "%"},  // 0.92
+        {"sound", "stereo_flip", Page::Sound, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::GfxSoundStereoFlip,
+         Text::GfxSoundStereoFlipHint, ""},  // 3.0.11-beta.301: it was in the file alone
         {"sound", "steal", Page::Sound, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::GfxSoundSteal,
          Text::GfxSoundStealHint, ""},
         {"sound", "crossfade", Page::Sound, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::GfxSoundCrossfade,
@@ -1366,6 +1368,7 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "sound.background") return std::to_string(c.sound.background);
     if (k == "sound.limiter") return c.sound.limiter ? "1" : "0";
     if (k == "sound.stereo") return std::to_string(c.sound.stereo);  // 0.92
+    if (k == "sound.stereo_flip") return c.sound.stereoFlip ? "1" : "0";  // 3.0.11-beta.301
     if (k == "sound.steal") return c.sound.steal ? "1" : "0";
     if (k == "sound.crossfade") return c.sound.crossfade ? "1" : "0";
     if (k == "sound.engine") return c.sound.engine ? "1" : "0";  // 1.1

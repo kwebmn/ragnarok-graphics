@@ -42,8 +42,30 @@ TEST(search_hides_developer_rows) {
 TEST(search_simple_places_main_rows) {
     const std::vector<Hit> hits = findSettings("DLSS", Lang::Ru, Mode::Simple);
     CHECK(hasRow(hits, "quality.dlss"));
-    CHECK(!hasRow(hits, "quality.dlss_model"));  // Detailed
-    for (const Hit& h : hits) CHECK(h.place.view == View::Main || h.place.view == View::Effects);
+    // 3.0.11-beta.301: the Detailed mode's rows found too, after the mode's own and marked to switch the mode
+    CHECK(hasRow(hits, "quality.dlss_model"));
+    bool other = false;
+    for (const Hit& h : hits) {
+        if (h.level == Mode::Simple) CHECK(!other && (h.place.view == View::Main || h.place.view == View::Effects));
+        other = other || h.level != Mode::Simple;
+    }
+    CHECK(other);
+}
+
+// 3.0.11-beta.301 (the review: «травы» found 4 of «трава»'s 13, a Russian word nothing in the Ukrainian app, «шрифт»
+// and «оконный режим» nothing): stems, every language, synonyms, the hand-built pages
+TEST(search_finds_by_stems_languages_and_synonyms) {
+    const size_t grass = findSettings("трава", Lang::Ru, Mode::Detailed).size();
+    CHECK(findSettings("травы", Lang::Ru, Mode::Detailed).size() >= grass);
+    CHECK(hasRow(findSettings("тени", Lang::Uk, Mode::Detailed), "effects.actor_shadows"));
+    CHECK(hasRow(findSettings("шрифт", Lang::Uk, Mode::Detailed), "interface.text_size"));
+    CHECK(queryMatches("Згладжування", "плавность"));
+    CHECK(queryMatches("Курсор", "мышь"));
+    bool window = false;
+    for (const Hit& h : findSettings("оконный режим", Lang::Ru, Mode::Detailed))
+        window = window || (h.kind == HitKind::Action && h.place.view == View::Screen);
+    CHECK(window);
+    CHECK(!findSettings("яскравість", Lang::Uk, Mode::Simple).empty());
 }
 
 TEST(search_short_query_finds_nothing) {
@@ -65,16 +87,16 @@ TEST(search_finds_actions_and_game_rows) {
 TEST(search_keeps_the_lists_order) {
     // Graphics before Effects in the Detailed list: a word both have shows the Graphics row first
     const std::vector<Hit> hits = findSettings("свет", Lang::Ru, Mode::Detailed);
-    int lastView = -1;
-    bool ordered = true;
+    // 3.0.11-beta.301: the matches in a name, then those in a hint alone - each in the list's order
+    int lastView = -1, runs = 1;
     const std::vector<View> list = viewsOf(Mode::Detailed);
     for (const Hit& h : hits) {
         int at = 0;
         while (at < int(list.size()) && list[size_t(at)] != h.place.view) ++at;
-        ordered = ordered && at >= lastView;
+        if (at < lastView) ++runs;
         lastView = at;
     }
-    CHECK(ordered);
+    CHECK(runs <= 2);
     CHECK(hits.size() <= 80);
 }
 

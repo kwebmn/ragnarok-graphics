@@ -34,6 +34,7 @@ public:
     void showPage(settings::Page which) override;
     void showView(settings::View view, int tab) override;
     settings::Mode mode() const override;
+    void switchMode(settings::Mode m) override { setMode(m); }
     void showNotes(const std::wstring& text) override;
     void play() override { doApply(true); }
     void playTest() override { doApply(true, true); }  // 3.0.5-beta.7

@@ -64,14 +64,18 @@ public:
             const Hit& h = hits_[n];
             p.gap(8);
             if (!buildHit(p, h)) p.note(t(labelOf(h)), Tone::Normal);
+            if (h.level > host_.mode())  // 3.0.11-beta.301: a row of another mode - its button switches to it
+                p.note(tf(Text::SearchOtherMode, {utf8(t(modeName(h.level)))}), Tone::Normal);
             p.buttons({{kGoFirst + int(n), whereOf(h)}});
         }
     }
 
     void command(int id, int code) override {
         if (id >= kGoFirst && id < kGoFirst + int(hits_.size())) {
-            const Place to = hits_[size_t(id - kGoFirst)].place;
-            if (code == BN_CLICKED) host_.showView(to.view, to.tab);
+            const Hit& h = hits_[size_t(id - kGoFirst)];
+            if (code != BN_CLICKED) return;
+            if (h.level > host_.mode()) host_.switchMode(h.level);  // .301
+            host_.showView(h.place.view, h.place.tab);
             return;
         }
         const IniSetting* s = settingOfId(id);

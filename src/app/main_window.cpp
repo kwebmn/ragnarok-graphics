@@ -1072,7 +1072,10 @@ LRESULT MainWindow::handle(UINT msg, WPARAM wp, LPARAM lp) {
                 PostMessageW(hwnd_, WM_CLOSE, 0, 0);
             } else if (id == IDOK && GetFocus() == search_) {  // 2.6: Enter in the search - the first one's page
                 const auto hits = findSettings(utf8(searchText()), lang_, mode_);
-                if (!hits.empty()) showView(hits.front().place.view, hits.front().place.tab);
+                if (!hits.empty()) {
+                    if (hits.front().level > mode_) setMode(hits.front().level);  // 3.0.11-beta.301
+                    showView(hits.front().place.view, hits.front().place.tab);
+                }
             } else if (id == IDCANCEL && GetFocus() == search_ && GetWindowTextLengthW(search_) > 0) {
                 clearSearch();  // Esc in the search: the view back
                 buildPage();

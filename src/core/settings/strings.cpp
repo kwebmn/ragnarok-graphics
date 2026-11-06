@@ -1818,6 +1818,10 @@ constexpr Entry kTexts[] = {
      "(everything in the middle).",
      "Звук збоку від персонажа лунає з того боку екрана: наскільки сильно. 0 - як у грі (усе посередині).",
      "Звук сбоку от персонажа звучит с той стороны экрана: насколько сильно. 0 - как в игре (всё посередине)."},
+    {Text::GfxSoundStereoFlip, "Swap left and right", "Поміняти лівий і правий канали",
+     "Поменять левый и правый каналы"},
+    {Text::GfxSoundStereoFlipHint, "For headphones or speakers connected the other way round.",
+     "Для навушників чи колонок, підключених навпаки.", "Для наушников или колонок, подключённых наоборот."},
     {Text::GfxSoundSteal, "Never lose a new sound",
      "Не губити нові звуки",
      "Не терять новые звуки"},
@@ -3339,6 +3343,8 @@ constexpr Entry kTexts[] = {
      "назад.",
      "Меняйте прямо здесь; кнопка под каждым открывает его страницу. Enter открывает страницу первого, Esc "
      "возвращает назад."},
+    {Text::SearchOtherMode, "In the {1} mode: its button switches the app to it",
+     "У режимі {1}: кнопка перемкне застосунок у нього", "В режиме {1}: кнопка переключит приложение в него"},
     // 2.6: the status bar, the "changed" dots, the page's reset, "What's new"
     {Text::StripNoPack, "No texture pack", "Пакета текстур немає", "Пакета текстур нет"},
     {Text::DotHint, "Recommended for this computer: {1}", "Рекомендовано для цього комп'ютера: {1}",
@@ -4479,16 +4485,18 @@ constexpr Entry kTexts[] = {
     {Text::PanelMenuHide, "Hide the panel · Ctrl+Alt+0", "Сховати панель · Ctrl+Alt+0", "Спрятать панель · Ctrl+Alt+0"},
     {Text::WindowsPanelIcons, "Icons", "Іконки", "Иконки"},
     // 3.0.11-beta.1: the new interface's minimap prototype (stage 1)
-    {Text::InterfaceMinimap, "New minimap (prototype)", "Нова мінікарта (прототип)", "Новая миникарта (прототип)"},
+    // 3.0.11-beta.301 (the review: it turns on the whole new interface, not a minimap prototype)
+    {Text::InterfaceMinimap, "New interface", "Новий інтерфейс", "Новый интерфейс"},
     {Text::InterfaceMinimapHint,
-     "A test of the new interface: the game's own minimap is hidden and a new one stands in its corner - the map round "
-     "the character and the character's cell under it (compare it with /where). A click on it does not walk the "
-     "character. Off - the game's minimap is back.",
-     "Перевірка нового інтерфейсу: мінікарта гри ховається, а в її куті стоїть нова - мапа навколо персонажа і "
-     "клітинка персонажа під нею (порівняйте з /where). Клік по ній не веде персонажа. Вимкнено - мінікарта гри "
-     "повертається.",
-     "Проверка нового интерфейса: миникарта игры прячется, а в её углу стоит новая - карта вокруг персонажа и клетка "
-     "персонажа под ней (сравните с /where). Клик по ней не ведёт персонажа. Выключено - миникарта игры возвращается."},
+     "The game's interface redrawn: the minimap and its big map, the character's block, the target's card, the party, "
+     "the buffs, the hotbar, the chat, the windows (items, stats, skills, equipment, storage, shops, NPC talk), the "
+     "login and the character select. Each part has its own switch below. Off - the game's own interface.",
+     "Інтерфейс гри наново: мінікарта і велика карта, блок персонажа, картка цілі, група, бафи, панель клавіш, чат, "
+     "вікна (речі, характеристики, навички, спорядження, склад, крамниці, розмова з NPC), вхід і вибір персонажа. "
+     "Кожна частина має свій перемикач нижче. Вимкнено - власний інтерфейс гри.",
+     "Интерфейс игры заново: миникарта и большая карта, блок персонажа, карточка цели, группа, бафы, панель клавиш, "
+     "чат, окна (вещи, характеристики, навыки, снаряжение, склад, магазины, разговор с NPC), вход и выбор персонажа. "
+     "У каждой части свой переключатель ниже. Выключено - собственный интерфейс игры."},
     {Text::InterfaceHeading, "The new interface", "Новий інтерфейс", "Новый интерфейс"},  // 3.0.11-beta.2
     {Text::ViewInterface, "Interface", "Інтерфейс", "Интерфейс"},  // 3.0.11-beta.3: its own item
     {Text::HelpViewInterface,
@@ -6984,9 +6992,9 @@ constexpr Entry kTexts[] = {
     {Text::MinimapNoMonsters, "No monsters here", "Монстрів тут немає", "Монстров здесь нет"},
     // 3.0.11-beta.7: «Довідник» (win/reference_window, core/reference_pages)
     {Text::InterfaceReference,
-     "Reference (prototype) - Ctrl+F",
-     "Довідник (прототип) - Ctrl+F",
-     "Справочник (прототип) - Ctrl+F"},
+     "Reference - Ctrl+F",
+     "Довідник - Ctrl+F",
+     "Справочник - Ctrl+F"},
     {Text::InterfaceReferenceHint,
      "Ctrl+F in the game opens the game's reference: type a part of a name - monsters, items, maps; a name in a "
      "card opens its own card. Esc closes it, Alt+← (the mouse's back button) goes back. From uaro.kiev.ua's "
