@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.11-beta.305 — what's new
+
+**The new interface and the reference are on for everyone by default.** Whoever did not turn «New interface» off themselves gets it together with the reference (Ctrl+F). To turn it off: Main → «New interface». Whoever turned it off before keeps it off.
+
 # uaRO Graphics 3.0.11-beta.304 — what's new
 
 **The blue dot no longer turns parts of the new interface off:** with «New interface» on, its parts (the target card, the panels, the windows) counted as «recommended off», and since 3.0.11-beta.303 a click on the dot turned them off. Their recommended values now follow «New interface». If something went missing, turn it on again on the Interface page (e.g. «Target card» under Panels on the screen).
