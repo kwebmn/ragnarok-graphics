@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.13-beta.2 — what's new
+
+**A lighter minimap.** It is redrawn at every step and was the dearest part of the new interface. Now the map's picture round you is made once and only shifted at a step - the minimap draws about 40 % faster, more noticeable on weak computers.
+
 # uaRO Graphics 3.0.13-beta.1 — what's new
 
 **Arrows on the side of the hotbar with room.** A hotbar in the screen's upper half shows the arrows left and the skill tips under it, and the bar itself goes up to the screen's edge. At the bottom of the screen it stays as before, over the bar.
