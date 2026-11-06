@@ -5262,6 +5262,14 @@ constexpr Entry kTexts[] = {
      "stays quiet.",
      "Ваші Frost Joke і Scream кажуть рядок-жарт у загальний чат, як у грі. Вимкнено: навичка працює, чат мовчить.",
      "Ваши Frost Joke и Scream говорят строку-шутку в общий чат, как в игре. Выключено: навык работает, чат молчит."},
+    {Text::InterfaceSwearFilter, "The game's swear filter", "Фільтр лайки гри", "Фильтр брани игры"},  // .9
+    {Text::InterfaceSwearFilterHint,
+     "The game refuses to send a line with a word of its list (manner.txt) - even inside another word, computer too. "
+     "Off: every line goes.",
+     "Гра не надсилає рядок зі словом зі свого списку (manner.txt) — навіть усередині іншого слова, як computer. "
+     "Вимкнено: йде кожен рядок.",
+     "Игра не отправляет строку со словом из своего списка (manner.txt) — даже внутри другого слова, как computer. "
+     "Выключено: уходит каждая строка."},
     {Text::InterfaceChatColourParty, "Chat: the party's colour", "Чат: колір групи", "Чат: цвет группы"},  // .3
     {Text::InterfaceChatColourGuild, "Chat: the guild's colour", "Чат: колір гільдії", "Чат: цвет гильдии"},
     {Text::InterfaceChatColourOwn, "Chat: your own lines", "Чат: ваші рядки", "Чат: ваши строки"},

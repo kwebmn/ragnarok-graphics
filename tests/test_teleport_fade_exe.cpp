@@ -36,3 +36,13 @@ TEST(skill_jokes_jump_over_the_unopened_path) {
     CHECK(sj::kOpened + 2 + sj::kGame[1] == 0x577771u);  // where the opened file is read
     CHECK(sj::kSilent[0] == 0x90 && sj::kSilent[1] == 0x90);
 }
+
+// 3.0.13-beta.9 (the owner's pick 25 of «50 идей»): the swear filter's two checks answer «none» at once - xor eax,
+// eax; ret 4 for their one argument, in the five bytes of their prologue
+#include "core/swear_filter_exe.hpp"
+TEST(swear_filter_checks_answer_none) {
+    namespace sf = uagfx::swear_filter_exe;
+    CHECK(sf::kChecks[0] == 0x4FD9A0u && sf::kChecks[1] == 0x4FDAD0u);
+    CHECK(sf::kNever[0] == 0x33 && sf::kNever[1] == 0xC0 && sf::kNever[2] == 0xC2 && sf::kNever[3] == 0x04);
+    CHECK(sizeof sf::kGame == sizeof sf::kNever);
+}

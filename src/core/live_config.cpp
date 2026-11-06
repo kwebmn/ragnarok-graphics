@@ -309,6 +309,10 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("mob_hp_percent", flag(running.mobHpPercent), flag(file.mobHpPercent)));
         n.mobHpPercent = file.mobHpPercent;
     }
+    if (file.swearFilter != running.swearFilter) {  // 3.0.13-beta.9
+        u.applied.push_back(change("swear_filter", flag(running.swearFilter), flag(file.swearFilter)));
+        n.swearFilter = file.swearFilter;
+    }
     if (file.skillJokes != running.skillJokes) {  // 3.0.13-beta.8
         u.applied.push_back(change("skill_jokes", flag(running.skillJokes), flag(file.skillJokes)));
         n.skillJokes = file.skillJokes;

@@ -138,6 +138,8 @@ const std::vector<IniSetting>& iniSettings() {
          Text::InterfaceChatLog, Text::InterfaceChatLogHint, ""},
         {"interface", "skill_jokes", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {},  // 3.0.13-beta.8
          Text::InterfaceSkillJokes, Text::InterfaceSkillJokesHint, ""},
+        {"interface", "swear_filter", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {},  // 3.0.13-beta.9
+         Text::InterfaceSwearFilter, Text::InterfaceSwearFilterHint, ""},
         {"interface", "chat_party", Page::Interface, Control::Choice, 0, 0, 0, kChatColours, kChatColourNames,
          Text::InterfaceChatColourParty, Text::InterfaceChatColourHint, ""},  // 3.0.13-beta.3
         {"interface", "chat_guild", Page::Interface, Control::Choice, 0, 0, 0, kChatColours, kChatColourNames,
@@ -1194,6 +1196,7 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "interface.chat_fade") return std::to_string(c.chatFade);          // 3.0.11-beta.240
     if (k == "interface.chat_log") return c.chatLog ? "1" : "0";                // 3.0.13-beta.3
     if (k == "interface.skill_jokes") return c.skillJokes ? "1" : "0";          // 3.0.13-beta.8
+    if (k == "interface.swear_filter") return c.swearFilter ? "1" : "0";        // 3.0.13-beta.9
     if (k == "interface.chat_party") return c.chatParty;                        // 3.0.13-beta.3
     if (k == "interface.chat_guild") return c.chatGuild;
     if (k == "interface.chat_own") return c.chatOwn;

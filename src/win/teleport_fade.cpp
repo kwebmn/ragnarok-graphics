@@ -6,6 +6,7 @@
 
 #include "core/screen_shake_exe.hpp"
 #include "core/skill_jokes_exe.hpp"
+#include "core/swear_filter_exe.hpp"
 #include "core/teleport_fade_exe.hpp"
 #include "win/code_switch.hpp"
 #include "win/log.hpp"
@@ -54,6 +55,16 @@ void silentJokes(bool wanted) {
     static CodeSwitch jokes{"Frost Joke and Scream: no line in the chat", sj::kOpened, sj::kGame, sj::kSilent,
                             sizeof sj::kGame};
     jokes.want(wanted);
+}
+
+void noSwearFilter(bool wanted) {
+    namespace sf = swear_filter_exe;
+    static CodeSwitch checks[2] = {
+        {"the swear filter (manner.txt) off - its text check", sf::kChecks[0], sf::kGame, sf::kNever,
+         sizeof sf::kGame},
+        {"the swear filter (manner.txt) off - its name check", sf::kChecks[1], sf::kGame, sf::kNever,
+         sizeof sf::kGame}};
+    for (CodeSwitch& c : checks) c.want(wanted);
 }
 
 }  // namespace uagfx::win

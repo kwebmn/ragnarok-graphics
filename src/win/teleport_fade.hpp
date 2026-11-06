@@ -10,5 +10,8 @@ void quickTeleport(bool wanted);
 void stillScreen(bool wanted);
 // 3.0.13-beta.8: [interface] skill_jokes 0 - Frost Joke and Scream say nothing in the chat (core/skill_jokes_exe.hpp)
 void silentJokes(bool wanted);
+// 3.0.13-beta.9: [interface] swear_filter 0 - the game no longer refuses words of manner.txt
+// (core/swear_filter_exe.hpp)
+void noSwearFilter(bool wanted);
 
 }  // namespace uagfx::win

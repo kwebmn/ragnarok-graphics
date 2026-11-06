@@ -661,6 +661,9 @@ struct Config {
     // 3.0.13-beta.8 (the owner's pick 23 of «50 идей»): [interface] skill_jokes - Frost Joke and Scream say their line
     // in the chat (the game's); 0 not
     bool skillJokes = true;
+    // 3.0.13-beta.9 (the owner's pick 25 of «50 идей»): [interface] swear_filter - the game refuses texts with words of
+    // manner.txt (the game's); 0 not
+    bool swearFilter = true;
     // 3.0.11-beta.88 (stage 4): [interface] pad_walk - the left stick walks without the mouse, an arrow on the ground
     // (a prototype for the owner: off till checked)
     PadWalk padWalk = PadWalk::Arrow;  // 3.0.11-beta.102: by the map's cells by default (core/stick_walk)
