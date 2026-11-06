@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.13-beta.13 — what's new
+
+**Who hits me** (a new switch «Who hits me» on the Interface page, off by default). The monsters that hit you in the last 6 seconds get a red frame round their HP bar, and a red ⚔ with their number shows over your character - seen at once when the crowd grows.
+
 # uaRO Graphics 3.0.13-beta.12 — what's new
 
 **Long chat lines.** The chat's field now takes up to 234 letters instead of 70. The server takes 70 at most, so a longer line goes as several messages in a row, cut between words - in the public chat, the party, the guild and whispers. A switch «Long chat lines» on the Interface page, on.
