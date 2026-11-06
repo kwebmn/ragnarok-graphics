@@ -1,3 +1,69 @@
+# uaRO Graphics 3.0.11 — what's new
+
+The biggest update yet: a new game interface, a reference inside the game, the controller in every window, a smoother
+connection. The new interface is on for everyone; to go back to the old one, clear «New interface» on the Main page.
+
+## Highlights
+
+- **Monsters no longer get stuck far away and hit from a distance.** The cause was found: the server dealt the blow
+  before the client showed it, and the monster stopped where it was not on the server. Now it catches up as it should.
+- **A smoother connection.** Commands go to the server at once, without Windows' delay; the server's position fixes
+  glide instead of teleporting; monsters and players no longer jump ahead after a lag. The ping on its own plate with
+  a graph.
+- **HP bars over monsters** - wider on the target; the monster under the cursor gets one too.
+- **Things on the ground are named:** valuable ones (cards, gear, expensive items) always, the rest while Alt is held.
+- **Boss timers.** A boss died before your eyes - a panel counts to its return by the server's rule and remembers it
+  across game starts.
+- **Grass, flowers and sun on green maps that used to be flat:** Mjolnir, the novice grounds, the guild castles'
+  fields, Byalan Island, Alberta Island, Moscovia's forests and more. Prontera's benches no longer sway in the wind.
+- **The camera remembers its zoom** between game sessions.
+- **Our own AI for the homunculus and the mercenary:** follows you, defends, Lif heals. Another AI is never touched;
+  the game uses ours after /hoai and /merai.
+- **Crashes fixed:** entering a map, after a warp, on Print Screen.
+- **Updates ride out GitHub hiccups** - they retry and continue the download.
+
+## The new interface
+
+- **Minimap and big map (Ctrl+M):** the way to a place, NPCs, Kafras, portals, the party, monsters; a «Scheme» look.
+- **Character block (Alt+V):** HP/SP and experience in numbers, weight by the server's rules, regeneration standing
+  and sitting, what the last fight cost; experience bars at the bottom and experience over a killed monster.
+- **Target card, the party with faces and casts** (click a member - a skill on them), **buffs with timers**, **the
+  cast over the hero**, **tracking** of quests and the way.
+- **Hotbar:** each character's own, three sets (Ctrl+Shift+1/2/3), arrows and potions running out - the number turns
+  red with a chime, the delay after a skill as a ring, the mouse wheel over a skill changes its level (Teleport 1 -
+  at once, no menu).
+- **Chat:** tabs and filters, whispers by person, links into the reference, Ctrl+F search, resizable.
+- **Every game window in the new look:** items (tabs, «new», gear comparison, the site market's price, search across
+  all characters' bags), stats, skills (tree and plan), equipment, storage, trade with scam protection, cart, shops,
+  NPC talk, guild, pet, homunculus, mercenary, options, login, character select and creation - over forty windows.
+- **Stats (Alt+A) explain themselves:** how each number is counted on your own numbers, ASPD and stat cost reference,
+  a planner with goals, every class's buffs and a comparison on the current map's monsters.
+- **Login screen:** an account shelf (one-click login), login with the site account, registration, server status,
+  news; character select as a carousel with a portrait and where and when you played.
+- **In a fight:** «What killed me» after a death, a «Hunt» panel (damage per second, experience and zeny per hour), a
+  healer's alarm when an ally's HP is low.
+- **Interface parts move and resize with the mouse** («Place interface» in the console), a layout per character if
+  you like.
+
+## The reference in the game (Ctrl+F)
+
+Monsters, items, maps, NPCs, quests - with pictures, the data from uaro.kiev.ua. How to get to a map, the world map,
+where a monster lives and where an item drops, bosses and MVPs, favourites and recent.
+
+## Controller
+
+Works throughout the new interface: a window tile on Start, moving items, NPC talk (menus, choosing an NPC with the
+stick, numbers digit by digit), ground skills with an aim, walking with the stick and an arrow, a chat phrase wheel,
+logging in.
+
+## Settings app
+
+- **The search finds:** in every mode at once, in any of the three languages, by word stems and synonyms («font»,
+  «lags», «window mode»).
+- **The Interface page in sections**, the windows behind one button; the in-game console (~) has the same sections.
+- **The blue dot** by a value other than the recommended one - a click sets the recommended value. **★** - new since
+  the update.
+
 # uaRO Graphics 3.0.11-beta.305 — what's new
 
 **The new interface and the reference are on for everyone by default.** Whoever did not turn «New interface» off themselves gets it together with the reference (Ctrl+F). To turn it off: Main → «New interface». Whoever turned it off before keeps it off.
