@@ -670,3 +670,38 @@ TEST(stat_window_plans_kept) {
     CHECK(back["Анна"].plan.level == 77 && back["Анна"].plan.base[0] == 90 && back["Анна"].aspdGoal == 170);
     CHECK(statwin::plansText(back) == text);
 }
+
+// 3.0.11-beta.297 (the owner: «в планировании без учетов скилов типа impove consentration»): the plan's buffs -
+// Improve Concentration on now scales with the planned AGI, off takes its part away, Blessing adds DEX; kept
+TEST(stat_window_plan_buffs) {
+    statwin::Data d;
+    const int base[6] = {1, 60, 20, 1, 50, 1}, bonus[6] = {0, 9, 0, 0, 8, 0};
+    for (int i = 0; i < 6; ++i) {
+        d.base[i] = base[i];
+        d.bonus[i] = bonus[i];
+    }
+    d.job = 3;  // an archer
+    d.baseLevel = 50;
+    d.jobLevel = 1;
+    d.icLevel = 10;
+    d.buffNow[statwin::kBuffConcentration] = true;  // 12 % of AGI 60 and DEX 50: +7, +6 in the bonus
+    statwin::Plan p = statwin::planFrom(d);
+    int t[6];
+    statwin::planTotals(d, p, t);
+    CHECK(t[1] == 69 && t[4] == 58);  // as now
+    p.base[1] = 85;
+    statwin::planTotals(d, p, t);
+    CHECK_EQ(t[1], 85 + 2 + 10);  // the other +2 kept, 12 % of 85 = 10
+    p.buffs[statwin::kBuffConcentration] = 0;
+    statwin::planTotals(d, p, t);
+    CHECK(t[1] == 87 && t[4] == 52);
+    p.buffs[statwin::kBuffBlessing] = 1;
+    statwin::planTotals(d, p, t);
+    CHECK(t[4] == 62 && t[0] == 11);
+    CHECK(!statwin::planBuffOffered(statwin::Data{}, statwin::kBuffConcentration));
+    std::map<std::string, statwin::SavedPlan> plans;
+    plans["A"] = statwin::SavedPlan{p, 0};
+    const auto back = statwin::parsePlans(statwin::plansText(plans));
+    CHECK(back.at("A").plan.buffs[0] == 0 && back.at("A").plan.buffs[1] == 1 && back.at("A").plan.buffs[2] == -1);
+    CHECK(statwin::parsePlans("41 50 1 1 1 1 1 1 0\n").at("A").plan.buffs[0] == -1);  // .296's line
+}

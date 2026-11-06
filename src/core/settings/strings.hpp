@@ -729,6 +729,7 @@ enum class Text : uint16_t {
     StatsGoals, StatsGoalAspd, StatsGoalAspdNever, StatsGoalAspdNone, StatsGoalCast, StatsGoalCastDone,
     StatsGoalCastNever,
     StatsMobs, StatsMobsHit, StatsMobsDodge, StatsMobsHits, StatsMobsNone,  // 3.0.11-beta.296
+    StatsPlanBuffs, StatsPlanBuffNow,  // 3.0.11-beta.297
     AgoNow, AgoMinutes, AgoHours, AgoDays, AgoMonths,  // 3.0.11-beta.273
     SessionHead, SessionHours, SessionMinutes, SessionBase, SessionJob, SessionZeny,  // .274
     MinimapRespawn, MinimapMore,

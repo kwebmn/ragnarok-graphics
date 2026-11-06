@@ -6962,6 +6962,9 @@ constexpr Entry kTexts[] = {
     {Text::StatsMobsHits, "Blows to kill", "Ударів", "Ударов"},
     {Text::StatsMobsNone, "No monsters known on this map", "На цій карті монстрів не знайдено",
      "На этой карте монстров не найдено"},
+    // 3.0.11-beta.297: the buffs the plan counts
+    {Text::StatsPlanBuffs, "Buffs in the plan", "Бафи в плані", "Бафы в плане"},
+    {Text::StatsPlanBuffNow, "now", "зараз", "сейчас"},
     // 3.0.11-beta.273: how long ago a character was played
     {Text::AgoNow, "just now", "щойно", "только что"},
     {Text::AgoMinutes, "{1} min ago", "{1} хв тому", "{1} мин назад"},

@@ -18,6 +18,7 @@
 #include "core/ui_style.hpp"
 #include "pad/win/game_window.hpp"
 #include "pad/win/runtime.hpp"
+#include "win/buff_overlay.hpp"
 #include "win/game_camera.hpp"
 #include "win/log.hpp"
 #include "win/paths.hpp"
@@ -62,7 +63,8 @@ struct State {
     std::map<std::string, sw::SavedPlan> plans;
     bool plansRead = false;
     std::string planOwner, plansWritten;
-    int padRow = 0;  // .296: «Планування»'s row the controller is on - 0 the level, 1-6 the stats, 7 the ASPD aimed at
+    int padRow = 0;  // .296: «Планування»'s row the controller is on - 0 the level, 1-6 the stats, 7 the ASPD aimed at,
+                     // .297: 8-10 the buffs
     sw::Layout layout;
     std::string key;
     panel::Picture picture;
@@ -73,6 +75,8 @@ struct State {
     float grabX = 0, grabY = 0;
     int told = 0, pressesTold = 0;
 };
+
+constexpr int kPadRows = sw::kStats + 2 + sw::kPlanBuffs;  // .297
 
 State& state() {
     static State s;
@@ -145,6 +149,22 @@ void keepPlans(State& s) {
         s.plansWritten = text;
     else if (s.told++ < 12)
         LOG_INFO("stats: %s cannot be written", path.c_str());
+}
+
+// .297: Improve Concentration's learned level from the session's skill list (win/skill_window's: a node's record at
+// +8 - the skill +4, its level +12), 0 none
+constexpr uint32_t kSkillList = 0x771148 + 0x2D8;
+constexpr int kConcentration = 45;
+int concentrationLevel() {
+    const uint32_t head = read32(kSkillList);
+    if (!head) return 0;
+    uint32_t node = read32(head);
+    for (int n = 0; node && node != head && n < 600; ++n, node = read32(node)) {
+        int32_t r[4] = {};
+        if (!readGame(node + 8, r, sizeof r)) break;
+        if (r[1] == kConcentration) return std::clamp(int(r[3]), 0, 10);
+    }
+    return 0;
 }
 
 // .296: the map's monsters, the most spawned first, no bosses (the site's pack, as «Довідник»)
@@ -239,6 +259,8 @@ void readData(State& s) {
     d.weight = st.weight;
     d.weightMost = st.weightMost;
     readMapMobs(d);  // 3.0.11-beta.296
+    d.icLevel = concentrationLevel();  // 3.0.11-beta.297: the buffs the plan can count
+    for (int i = 0; i < sw::kPlanBuffs; ++i) d.buffNow[i] = buffoverlay::timers().on(sw::kPlanBuffIcons[i]);
     serverCheck(st);  // 3.0.11-beta.264
 }
 
@@ -313,6 +335,8 @@ sw::Texts texts() {
     t.mobsDodge = say(settings::Text::StatsMobsDodge);
     t.mobsHits = say(settings::Text::StatsMobsHits);
     t.mobsNone = say(settings::Text::StatsMobsNone);
+    t.planBuffs = say(settings::Text::StatsPlanBuffs);  // 3.0.11-beta.297
+    t.planBuffNow = say(settings::Text::StatsPlanBuffNow);
     t.refClass = say(settings::Text::StatsRefClass);
     t.refAspd = say(settings::Text::StatsRefAspd);
     t.refWeapon = say(settings::Text::StatsRefWeapon);
@@ -448,7 +472,8 @@ void frame(HWND game, bool on, double k, int targetWidth, int targetHeight) {
         if (h.part == sw::Part::Tab) s.show.hoverTab = h.index;        // 3.0.11-beta.267
         if (h.part == sw::Part::Arrow) s.show.hoverArrow = h.index;
         if (h.part == sw::Part::PlanMinus || h.part == sw::Part::PlanPlus || h.part == sw::Part::PlanLevel ||
-            h.part == sw::Part::PlanReset || h.part == sw::Part::Goal) {  // .268, .269
+            h.part == sw::Part::PlanReset || h.part == sw::Part::Goal ||
+            h.part == sw::Part::PlanBuff) {  // .268, .269, .297
             s.show.hoverPlan = int(h.part);
             s.show.hoverPlanIndex = h.index;
         }
@@ -459,12 +484,16 @@ void frame(HWND game, bool on, double k, int targetWidth, int targetHeight) {
         s.show.hoverPlus = s.show.selected;
     }
     if (uapad::runtime::look().shown && s.tab == sw::kPlanTab) {  // .296: the controller's row - its › or + lit
-        s.padRow = std::clamp(s.padRow, 0, sw::kStats + 1);
+        s.padRow = std::clamp(s.padRow, 0, kPadRows - 1);
         s.show.hoverPlan = int(s.padRow == 0                ? sw::Part::PlanLevel
-                               : s.padRow <= sw::kStats ? sw::Part::PlanPlus
-                                                        : sw::Part::Goal);
-        s.show.hoverPlanIndex = s.padRow >= 1 && s.padRow <= sw::kStats ? s.padRow - 1 : 1;
+                               : s.padRow <= sw::kStats     ? sw::Part::PlanPlus
+                               : s.padRow == sw::kStats + 1 ? sw::Part::Goal
+                                                            : sw::Part::PlanBuff);  // .297: the buffs' chips
+        s.show.hoverPlanIndex = s.padRow >= 1 && s.padRow <= sw::kStats ? s.padRow - 1
+                                : s.padRow > sw::kStats + 1             ? s.padRow - sw::kStats - 2
+                                                                        : 1;
     }
+    for (int i = 0; i < sw::kPlanBuffs; ++i) s.show.buffOn[i] = sw::planBuff(s.data, s.show.plan, i);  // .297
     const sw::Data& d = s.data;
     std::string key = std::to_string(s.layout.x) + ',' + std::to_string(s.layout.y) + ';' + std::to_string(scale) +
                       ';' + std::to_string(s.show.hoverRow) + ',' + std::to_string(s.show.hoverPlus) + ',' +
@@ -478,6 +507,9 @@ void frame(HWND game, bool on, double k, int targetWidth, int targetHeight) {
                       std::to_string(s.show.hoverPlanIndex) + ';' + std::to_string(s.show.plan.level) + ':' +
                       std::to_string(s.show.aspdGoal) + ':';
     for (int i = 0; i < sw::kStats; ++i) key += std::to_string(s.show.plan.base[i]) + ',';
+    key += ';' + std::to_string(d.icLevel);  // .297
+    for (int i = 0; i < sw::kPlanBuffs; ++i)
+        key += std::to_string(s.show.plan.buffs[i]) + (d.buffNow[i] ? "n" : "") + (s.show.buffOn[i] ? "o," : ",");
     for (int i = 0; i < sw::kStats; ++i)
         key += std::to_string(d.base[i]) + '+' + std::to_string(d.bonus[i]) + '/' + std::to_string(d.need[i]) + ',';
     const int battle[] = {d.atk, d.atk2, d.matkMin, d.matkMax, d.hit, d.crit, d.def, d.def2, d.mdef, d.mdef2, d.flee,
@@ -510,6 +542,11 @@ bool shown() { return state().shown; }
 
 // .296: a plan's row moved by the controller's left (-1) or right (+1): the level, a stat, the ASPD aimed at
 void padPlanStep(State& s, int by) {
+    if (s.padRow > sw::kStats + 1) {  // .297: a buff's chip - on or off
+        const int b = s.padRow - sw::kStats - 2;
+        s.show.plan.buffs[b] = sw::planBuff(s.data, s.show.plan, b) ? 0 : 1;
+        return;
+    }
     const int most = uagfx::statmath::baby(s.data.job) ? uagfx::statmath::kMaxBabyStat : uagfx::statmath::kMaxStat;
     if (s.padRow == 0) {
         s.show.plan.level = std::clamp(s.show.plan.level + by, s.data.baseLevel, 99);
@@ -535,8 +572,14 @@ void padCommand(PadCommand c) {
         default: break;
     }
     if (s.tab == sw::kPlanTab) {
-        if (c == PadCommand::Up) s.padRow = (s.padRow + sw::kStats + 1) % (sw::kStats + 2);
-        if (c == PadCommand::Down) s.padRow = (s.padRow + 1) % (sw::kStats + 2);
+        const auto offered = [&](int row) {  // .297: a buff's row only when its chip is there
+            return row <= sw::kStats + 1 || sw::planBuffOffered(s.data, row - sw::kStats - 2);
+        };
+        if (c == PadCommand::Up || c == PadCommand::Down) {
+            const int by = c == PadCommand::Up ? kPadRows - 1 : 1;
+            do s.padRow = (s.padRow + by) % kPadRows;
+            while (!offered(s.padRow));
+        }
         if (c == PadCommand::Left || c == PadCommand::Right) padPlanStep(s, c == PadCommand::Right ? 1 : -1);
         if (c == PadCommand::Reset) s.show.plan = sw::planFrom(s.data);
         return;
@@ -635,6 +678,9 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
         }
         case sw::Part::PlanReset:
             s.show.plan = sw::planFrom(s.data);
+            break;
+        case sw::Part::PlanBuff:  // .297: a buff counted in the plan or not
+            s.show.plan.buffs[h.index] = sw::planBuff(s.data, s.show.plan, h.index) ? 0 : 1;
             break;
         case sw::Part::Goal: {  // .269: the ASPD aimed at, a whole one up to 190
             const int now = s.show.aspdGoal > 0 ? s.show.aspdGoal : std::min(190, s.data.aspd + 5);

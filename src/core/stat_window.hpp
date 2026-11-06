@@ -33,6 +33,10 @@ struct Data {
     // 3.0.11-beta.266 (the concept «Характеристики», stage 2): the class (-1 not known), the levels, the server's most
     // HP and SP, the weight now and its most (whole units)
     int job = -1, baseLevel = 0, jobLevel = 0, hpMost = 0, spMost = 0, weight = 0, weightMost = 0;
+    // 3.0.11-beta.297 (the owner: «в планировании без учетов скилов типа impove consentration»): the buffs the plan can
+    // count - Improve Concentration's learned level (0 none), and which of kPlanBuffs are on the character now
+    int icLevel = 0;
+    bool buffNow[3] = {};
     std::string map;                // .296: the map's name, its monsters (the most spawned first, no bosses)
     std::vector<MapMob> mapMobs;
 };
@@ -64,15 +68,27 @@ struct Texts {
     std::string goals, goalAspd, goalAspdNever, goalAspdNone, goalCast, goalCastDone, goalCastNever;
     // 3.0.11-beta.296: «Монстри карти {1}», its columns, nothing known
     std::string mobs, mobsHit, mobsDodge, mobsHits, mobsNone;
+    std::string planBuffs, planBuffNow;  // .297: «Бафи в плані», «зараз»
 };
 
 // 3.0.11-beta.268 (stage 4, the owner: «только показать»): a plan of the stats - each stat's base planned, at a base
 // level planned; nothing of it goes to the server
+// 3.0.11-beta.297: the buffs a plan counts - Improve Concentration (AGI and DEX +(2 + level) % of the base and the
+// job's bonus, as the server's SC_CONCENTRATION), Blessing (STR, INT, DEX +10) and Increase AGI (AGI +12); each as
+// on the character now (-1), off (0) or on (1)
+constexpr int kPlanBuffs = 3, kBuffConcentration = 0, kBuffBlessing = 1, kBuffAgility = 2;
+constexpr uint16_t kPlanBuffIcons[kPlanBuffs] = {3, 10, 12};  // the server's status icons
+extern const char* const kPlanBuffNames[kPlanBuffs];
 struct Plan {
     int base[kStats] = {};
     int level = 0;
+    int buffs[kPlanBuffs] = {-1, -1, -1};
 };
 Plan planFrom(const Data& d);  // the character as it is
+bool planBuff(const Data& d, const Plan& p, int buff);  // .297: the buff counted in the plan
+bool planBuffOffered(const Data& d, int buff);          // Improve Concentration only when learned or on
+// .297: the plan's six stats in all - its base, the things' and the passive skills' part kept, its buffs counted
+void planTotals(const Data& d, const Plan& p, int out[kStats]);
 int planAvailable(const Data& d, const Plan& p);  // the free points now and the levels' to come
 int planUsed(const Data& d, const Plan& p);       // the points the planned stats take
 struct PlanRow {
@@ -132,6 +148,7 @@ struct Show {
     int hoverPlan = -1, hoverPlanIndex = -1;  // 3.0.11-beta.268: a plan's part (its Part) and its index
     Plan plan;                                // .268: «Планування»'s (the window's, kept while the game runs)
     int aspdGoal = 0;                         // .269: the ASPD aimed at (0: the plan's + 5)
+    bool buffOn[3] = {};                      // .297: each plan buff counted (paint has no Data: set with the plan)
     bool hoverClose = false;
 };
 
@@ -150,6 +167,7 @@ struct Layout {
     panel::Box planLevelRow, levelPrev, levelNext, planResults, planReset;
     panel::Box goals, goalPrev, goalNext;  // .269
     panel::Box mobs;                       // .296: «Монстри карти»
+    panel::Box buffsRow, buffChips[kPlanBuffs];  // .297: the buffs the plan counts
     std::vector<panel::Box> planRowsBoxes, planMinus, planPlus;
 };
 // The weapons the class can use: its delay, the ASPD at AGI 1, 50, 80, 99 and at the AGI given, with the DEX given
@@ -167,7 +185,8 @@ Layout layout(int x, int y, float scale, const Data& d, const Texts& t, const Me
 
 // .266 Battle, .267 Tab and Arrow, .268 the plan's
 enum class Part : uint8_t { None, Close, Plus, Row, Title, Body, Battle, Tab, Arrow, PlanMinus, PlanPlus, PlanLevel,
-                            PlanReset, Goal };  // .269: Goal - the ASPD aimed at, ‹ (0) or › (1)
+                            PlanReset, Goal,  // .269: Goal - the ASPD aimed at, ‹ (0) or › (1)
+                            PlanBuff };       // .297: a buff of the plan, its index
 struct Hit {
     Part part = Part::None;
     int index = -1;

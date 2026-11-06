@@ -1,6 +1,7 @@
 #include "core/stat_window.hpp"
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstdio>
 
@@ -55,6 +56,7 @@ int total(const Data& d, int i) { return d.base[i] + d.bonus[i]; }
 }  // namespace
 
 const char* const kNames[kStats] = {"STR", "AGI", "VIT", "INT", "DEX", "LUK"};
+const char* const kPlanBuffNames[kPlanBuffs] = {"Improve Concentration", "Blessing", "Increase AGI"};
 
 bool canRaise(const Data& d, int stat) {
     return stat >= 0 && stat < kStats && d.need[stat] > 0 && d.need[stat] <= d.free && d.base[stat] < 99;
@@ -149,6 +151,40 @@ Plan planFrom(const Data& d) {
     return p;
 }
 
+namespace {
+const int kBlessing[kStats] = {10, 0, 0, 10, 10, 0}, kAgility[kStats] = {0, 12, 0, 0, 0, 0};
+
+int concentration(const Data& d, int stat, int base, int level) {  // AGI and DEX alone
+    if ((stat != 1 && stat != 4) || level <= 0) return 0;
+    const int job = d.job >= 0 ? statmath::jobBonus(d.job, d.jobLevel, stat) : 0;
+    return (base + job) * (2 + level) / 100;
+}
+}  // namespace
+
+bool planBuffOffered(const Data& d, int buff) {
+    return buff != kBuffConcentration || d.icLevel > 0 || d.buffNow[kBuffConcentration];
+}
+
+bool planBuff(const Data& d, const Plan& p, int buff) {
+    if (buff < 0 || buff >= kPlanBuffs || !planBuffOffered(d, buff)) return false;
+    return p.buffs[buff] < 0 ? d.buffNow[buff] : p.buffs[buff] != 0;
+}
+
+void planTotals(const Data& d, const Plan& p, int out[kStats]) {
+    const int ic = d.icLevel > 0 ? d.icLevel : 10;
+    for (int i = 0; i < kStats; ++i) {
+        int other = d.bonus[i];  // the things', the passive skills' and the job's: the buffs on now taken out
+        if (d.buffNow[kBuffConcentration]) other -= concentration(d, i, d.base[i], ic);
+        if (d.buffNow[kBuffBlessing]) other -= kBlessing[i];
+        if (d.buffNow[kBuffAgility]) other -= kAgility[i];
+        int v = p.base[i] + other;
+        if (planBuff(d, p, kBuffConcentration)) v += concentration(d, i, p.base[i], ic);
+        if (planBuff(d, p, kBuffBlessing)) v += kBlessing[i];
+        if (planBuff(d, p, kBuffAgility)) v += kAgility[i];
+        out[i] = v;
+    }
+}
+
 int planAvailable(const Data& d, const Plan& p) {
     const int now = statmath::pointsAt(d.baseLevel), then = statmath::pointsAt(p.level);
     return d.free + (now > 0 && then > now ? then - now : 0);
@@ -163,10 +199,8 @@ int planUsed(const Data& d, const Plan& p) {
 std::vector<PlanRow> planRows(const Data& d, const Plan& p, const Texts& t) {
     namespace sm = uagfx::statmath;
     int a[kStats], b[kStats];
-    for (int i = 0; i < kStats; ++i) {
-        a[i] = total(d, i);
-        b[i] = p.base[i] + d.bonus[i];
-    }
+    for (int i = 0; i < kStats; ++i) a[i] = total(d, i);
+    planTotals(d, p, b);  // .297: the plan's buffs counted
     const int lv = d.baseLevel, plv = std::max(p.level, lv), w = weaponOf(d);
     std::vector<PlanRow> out;
     const auto row = [&](const std::string& name, int now, int then) {
@@ -197,10 +231,8 @@ std::vector<PlanRow> planRows(const Data& d, const Plan& p, const Texts& t) {
 std::vector<MobRow> planMobs(const Data& d, const Plan& p) {
     namespace sm = uagfx::statmath;
     int a[kStats], b[kStats];
-    for (int i = 0; i < kStats; ++i) {
-        a[i] = total(d, i);
-        b[i] = p.base[i] + d.bonus[i];
-    }
+    for (int i = 0; i < kStats; ++i) a[i] = total(d, i);
+    planTotals(d, p, b);  // .297: the plan's buffs counted
     const int lv = d.baseLevel, plv = std::max(p.level, lv), w = weaponOf(d);
     const mobbattle::Own now{d.hit, d.flee, d.flee2, d.def, d.def2, d.atk, d.atk2};
     mobbattle::Own then = now;
@@ -232,7 +264,9 @@ std::string plansText(const std::map<std::string, SavedPlan>& plans) {
         }
         out += ' ' + std::to_string(sp.plan.level);
         for (int i = 0; i < kStats; ++i) out += ' ' + std::to_string(sp.plan.base[i]);
-        out += ' ' + std::to_string(sp.aspdGoal) + '\n';
+        int buffs = 0, place = 1;  // .297: each buff -1 / 0 / 1 as a base-3 digit 0 / 1 / 2
+        for (int i = 0; i < kPlanBuffs; ++i, place *= 3) buffs += (std::clamp(sp.plan.buffs[i], -1, 1) + 1) * place;
+        out += ' ' + std::to_string(sp.aspdGoal) + ' ' + std::to_string(buffs) + '\n';
     }
     return out;
 }
@@ -259,10 +293,13 @@ std::map<std::string, SavedPlan> parsePlans(const std::string& text) {
             name += char(digit(line[i]) * 16 + digit(line[i + 1]));
         }
         SavedPlan sp;
-        int v[kStats + 2] = {};
-        const int got = std::sscanf(line.c_str() + space, "%d %d %d %d %d %d %d %d", &v[0], &v[1], &v[2], &v[3],
-                                    &v[4], &v[5], &v[6], &v[7]);
-        if (!ok || got != kStats + 2 || v[0] < 1 || v[0] > 99) continue;
+        int v[kStats + 3] = {};
+        const int got = std::sscanf(line.c_str() + space, "%d %d %d %d %d %d %d %d %d", &v[0], &v[1], &v[2], &v[3],
+                                    &v[4], &v[5], &v[6], &v[7], &v[8]);
+        if (!ok || got < kStats + 2 || v[0] < 1 || v[0] > 99) continue;
+        if (got == kStats + 3)  // .297: the buffs (.296's lines have none: as on the character)
+            for (int i = 0, code = std::clamp(v[kStats + 2], 0, 26); i < kPlanBuffs; ++i, code /= 3)
+                sp.plan.buffs[i] = code % 3 - 1;
         sp.plan.level = v[0];
         for (int i = 0; i < kStats; ++i) sp.plan.base[i] = std::clamp(v[1 + i], 1, 99);
         sp.aspdGoal = std::clamp(v[kStats + 1], 0, 190);
@@ -275,20 +312,32 @@ std::vector<std::string> planGoals(const Data& d, const Plan& p, int aspdGoal, c
     namespace sm = uagfx::statmath;
     std::vector<std::string> out;
     const int most = sm::baby(d.job) ? sm::kMaxBabyStat : sm::kMaxStat;
-    const int w = weaponOf(d), dex = p.base[4] + d.bonus[4];
+    // .297: a stat's total with its base at `base`, the rest of the plan as it is (its buffs counted)
+    const auto totalAt = [&](int stat, int base) {
+        Plan q = p;
+        q.base[stat] = base;
+        std::array<int, kStats> v{};
+        planTotals(d, q, v.data());
+        return v;
+    };
+    const int w = weaponOf(d), dex = totalAt(4, p.base[4])[4];
     if (w < 0) {
         out.push_back(t.goalAspdNone);
     } else {
-        int agi = p.base[1] + d.bonus[1];
-        while (agi < 400 && sm::aspd10(sm::amotion(d.job, w, agi, dex)) < aspdGoal * 10) ++agi;
-        const int base = agi - d.bonus[1];
+        int base = p.base[1], agi = 0;
+        for (; base < 300; ++base) {
+            const std::array<int, kStats> v = totalAt(1, base);
+            agi = v[1];
+            if (sm::aspd10(sm::amotion(d.job, w, agi, v[4])) >= aspdGoal * 10) break;
+        }
         if (base > most)
             out.push_back(fill(t.goalAspdNever, {std::to_string(aspdGoal), std::to_string(agi)}));
         else
             out.push_back(fill(t.goalAspd, {std::to_string(aspdGoal), std::to_string(agi),
                                             std::to_string(sm::pointsBetween(p.base[1], std::max(base, p.base[1])))}));
     }
-    const int need = sm::kCastDex - d.bonus[4];  // the base DEX for no cast
+    int need = p.base[4];  // the base DEX for no cast
+    while (need < 300 && totalAt(4, need)[4] < sm::kCastDex) ++need;
     if (dex >= sm::kCastDex)
         out.push_back(t.goalCastDone);
     else if (need > most)
@@ -532,7 +581,17 @@ Layout layout(int x, int y, float scale, const Data& d, const Texts& t, const Me
     }
     L.planResults = panel::Box{bx, L.planLevelRow.y, w - side - bx, kHeaderH * s + 11 * kBattleRowH * s};
     L.planReset = panel::Box{side, py + float(kStats) * kRowH * s + 16 * s, 120 * s, 32 * s};
-    L.goals = panel::Box{side, L.planReset.y + L.planReset.h + 18 * s, w - 2 * side, 26 * s + 3 * 22 * s};  // .269
+    // .297: the buffs the plan counts, a chip each (Improve Concentration only when learned or on)
+    L.buffsRow = panel::Box{side, L.planReset.y + L.planReset.h + 12 * s, w - 2 * side, 28 * s};
+    float chipX = side + m(t.planBuffs, 12 * s, false) + 14 * s;
+    for (int i = 0; i < kPlanBuffs; ++i) {
+        if (!planBuffOffered(d, i)) continue;
+        const std::string label = kPlanBuffNames[i] + std::string(d.buffNow[i] ? " \xC2\xB7 " + t.planBuffNow : "");
+        const float cw = m(label, 11.5f * s, true) + 30 * s;
+        L.buffChips[i] = panel::Box{chipX, L.buffsRow.y + 2 * s, cw, 24 * s};
+        chipX += cw + 8 * s;
+    }
+    L.goals = panel::Box{side, L.buffsRow.y + L.buffsRow.h + 16 * s, w - 2 * side, 26 * s + 3 * 22 * s};  // .269
     L.goalPrev = panel::Box{side + 200 * s, L.goals.y + 1 * s, 24 * s, 24 * s};
     L.goalNext = panel::Box{side + 280 * s, L.goals.y + 1 * s, 24 * s, 24 * s};
     // .296: the map's monsters under the goals
@@ -543,6 +602,7 @@ Layout layout(int x, int y, float scale, const Data& d, const Texts& t, const Me
         L.planMinus.clear();
         L.planPlus.clear();
         L.levelPrev = L.levelNext = L.planReset = L.goalPrev = L.goalNext = panel::Box{};
+        for (panel::Box& b : L.buffChips) b = panel::Box{};  // .297
     }
     if (L.tab != 0) {  // «Планування», «Довідка»: none of «Персонаж»'s rows to point at
         L.rows.clear();
@@ -570,6 +630,8 @@ Hit hitTest(const Layout& L, float x, float y) {
     if (L.tab == kPlanTab && L.planReset.contains(x, y)) return Hit{Part::PlanReset, -1};
     if (L.tab == kPlanTab && L.goalPrev.contains(x, y)) return Hit{Part::Goal, 0};  // .269
     if (L.tab == kPlanTab && L.goalNext.contains(x, y)) return Hit{Part::Goal, 1};
+    for (int i = 0; i < kPlanBuffs; ++i)  // .297
+        if (L.tab == kPlanTab && L.buffChips[i].w > 0 && L.buffChips[i].contains(x, y)) return Hit{Part::PlanBuff, i};
     if (L.tab == kRefTab && L.prev.contains(x, y)) return Hit{Part::Arrow, 0};
     if (L.tab == kRefTab && L.next.contains(x, y)) return Hit{Part::Arrow, 1};
     for (size_t i = 0; i < L.pluses.size(); ++i)
@@ -598,6 +660,13 @@ void paintPlan(panel::Picture& out, const Layout& L, const Show& sh) {
         panel::roundRect(out, i ? L.levelNext : L.levelPrev, 6 * s, kWhite, lit(Part::PlanLevel, i) ? 0.2f : 0.08f);
     panel::roundRect(out, L.planReset, 8 * s, kWhite, lit(Part::PlanReset, -1) ? 0.16f : 0.07f, kWhite, 0.2f,
                      1.0f * s);
+    for (int i = 0; i < kPlanBuffs; ++i) {  // .297: the buffs' chips, the counted ones gold
+        if (L.buffChips[i].w <= 0) continue;
+        const bool on = sh.buffOn[i];
+        panel::roundRect(out, L.buffChips[i], 12 * s, on ? kGold : kWhite,
+                         lit(Part::PlanBuff, i) ? 0.22f : on ? 0.16f : 0.05f, on ? kGold2 : kWhite, on ? 0.7f : 0.15f,
+                         1.0f * s);
+    }
     for (int i = 0; i < 2; ++i)  // .269: the ASPD aimed at, ‹ ›
         panel::roundRect(out, i ? L.goalNext : L.goalPrev, 6 * s, kWhite, lit(Part::Goal, i) ? 0.2f : 0.08f);
     panel::roundRect(out, panel::Box{L.goals.x, L.goals.y - 8 * s, L.goals.w, 1 * s}, 0, kWhite, 0.08f);
@@ -642,6 +711,17 @@ void planWords(std::vector<Words>& out, const Layout& L, const Data& d, const Sh
     word(panel::Box{L.planReset.x + L.planReset.w + 12 * s, L.planReset.y, L.planResults.x - L.planReset.x -
                         L.planReset.w - 20 * s, L.planReset.h},
          t.planNote, kFaint, 11 * s, false, Align::Left);
+    // .297: the buffs the plan counts
+    word(panel::Box{L.buffsRow.x, L.buffsRow.y, L.buffsRow.w, L.buffsRow.h}, t.planBuffs, kMuted, 12 * s, false,
+         Align::Left);
+    for (int i = 0; i < kPlanBuffs; ++i) {
+        if (L.buffChips[i].w <= 0) continue;
+        const bool on = planBuff(d, p, i);
+        word(L.buffChips[i],
+             std::string(on ? "\xE2\x9C\x93 " : "") + kPlanBuffNames[i] +
+                 (d.buffNow[i] ? " \xC2\xB7 " + t.planBuffNow : std::string()),
+             on ? kGold : kMuted, 11.5f * s, on, Align::Center);
+    }
     // .269: the goals - ASPD aimed at (‹ ›), no cast
     const int goal = sh.aspdGoal > 0 ? sh.aspdGoal : std::min(sm::kMaxAspd, d.aspd + 5);
     word(panel::Box{L.goals.x, L.goals.y, 190 * s, 26 * s}, t.goals, kText, 13 * s, true, Align::Left);
