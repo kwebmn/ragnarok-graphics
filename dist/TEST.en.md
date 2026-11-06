@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.13-beta.6 — what's new
+
+**Small windows for several games.** The uaRO program's window sizes now include 960×540, 800×600 and 640×480 - several games side by side on one screen. Nothing under 640×480: the game's interface would not fit.
+
 # uaRO Graphics 3.0.13-beta.5 — what's new
 
 **The camera lower, down to the ground.** A new choice «Camera tilt» on the game page: as the game (-28°), lower (-13°) or to the ground (-3°) - how low Shift with the right button (or the wheel) tilts the camera. As the game by default. In buildings it stays steeper; on another map the game brings back its usual tilt.
