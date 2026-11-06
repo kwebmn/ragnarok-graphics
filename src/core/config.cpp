@@ -592,6 +592,8 @@ Config parseConfig(const std::string& text) {
             setBool(val, c.mobHpPercent);
         } else if (key == "interface.boss_bars") {  // 3.0.13-beta.3
             setBool(val, c.bossBars);
+        } else if (key == "interface.who_hits") {  // 3.0.13-beta.13
+            setBool(val, c.whoHits);
         } else if (key == "interface.quick_teleport") {  // 3.0.13-beta.7
             setBool(val, c.quickTeleport);
         } else if (key == "interface.screen_shake") {  // 3.0.13-beta.8

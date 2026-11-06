@@ -149,3 +149,14 @@ TEST(mob_hp_boss_bars_wider_and_coloured) {
     CHECK(mobhp::fillColour(20, mobhp::Rank::Mvp) == mobhp::fillColour(20));
     CHECK(mobhp::fillColour(80, mobhp::Rank::Normal) == mobhp::fillColour(80));
 }
+
+// 3.0.13-beta.13 (the owner's pick 44 of «50 идей»): who hits us - each for kHoldMs after its last swing, gone at once
+TEST(mob_hp_hitters_held_a_while) {
+    mobhp::Hitters h;
+    h.hit(1, 1000);
+    h.hit(2, 3000);
+    CHECK(h.hitting(1, 6000) && h.count(6000) == 2);
+    CHECK(!h.hitting(1, 7001) && h.count(7001) == 1);  // the first forgotten
+    h.gone(2);
+    CHECK(h.count(7002) == 0);
+}

@@ -198,6 +198,8 @@ const std::vector<IniSetting>& iniSettings() {
          Text::InterfaceEscCutin, Text::InterfaceEscCutinHint, ""},
         {"interface", "quick_teleport", Page::Interface, Control::Check, 0, 1, 0, {"0", "1"}, {},  // 3.0.13-beta.7
          Text::InterfaceQuickTeleport, Text::InterfaceQuickTeleportHint, ""},
+        {"interface", "who_hits", Page::Interface, Control::Check, 0, 1, 0, {"0", "1"}, {},  // 3.0.13-beta.13
+         Text::InterfaceWhoHits, Text::InterfaceWhoHitsHint, ""},
         {"interface", "boss_bars", Page::Interface, Control::Check, 0, 1, 0, {"0", "1"}, {},  // 3.0.13-beta.3
          Text::InterfaceBossBars, Text::InterfaceBossBarsHint, ""},
         {"interface", "pad_tiles", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {},  // 3.0.11-beta.90
@@ -1224,6 +1226,7 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "interface.follow") return c.follow ? "1" : "0";                              // 3.0.13-beta.11
     if (k == "interface.esc_cutin") return c.escCutin ? "1" : "0";                         // 3.0.13-beta.10
     if (k == "interface.quick_teleport") return c.quickTeleport ? "1" : "0";               // 3.0.13-beta.7
+    if (k == "interface.who_hits") return c.whoHits ? "1" : "0";                           // 3.0.13-beta.13
     if (k == "interface.boss_bars") return c.bossBars ? "1" : "0";                         // 3.0.13-beta.3
     if (k == "interface.pad_walk") return padWalkToken(c.padWalk);                         // 3.0.11-beta.88
     if (k == "interface.walk_arrow") return walkLookToken(c.walkArrow);                    // 3.0.11-beta.103

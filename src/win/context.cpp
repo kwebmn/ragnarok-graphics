@@ -1092,6 +1092,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     // 3.0.11-beta.48: [interface] cast - the character's cast over the hero, the game's own gauge hidden
     mobhpwin::setPercent(config.mobHpPercent);  // 3.0.11-beta.293
     mobhpwin::setBossBars(config.bossBars);     // 3.0.13-beta.3
+    mobhpwin::setWhoHits(config.whoHits);       // 3.0.13-beta.13
     mobhpwin::frame(window, config.mobHp, pk, pw, ph);  // 3.0.11-beta.95
     groundwin::frame(window, config.dropNames, config.dropHighlight, gameCodePage(config), pk, pw, ph);  // .283
     npctagwin::frame(window, gameCodePage(config), pk, pw, ph);  // 3.0.11-beta.256

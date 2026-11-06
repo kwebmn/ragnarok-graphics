@@ -654,6 +654,8 @@ struct Config {
     // 3.0.13-beta.3 (the owner's pick 10 of «50 идей»): [interface] boss_bars - an MVP's bar wider and gold, another
     // boss's wider and violet; off as new looks are
     bool bossBars = false;
+    // 3.0.13-beta.13 (the owner's pick 44 of «50 идей»): [interface] who_hits - the monsters hitting the character
+    bool whoHits = false;
     // 3.0.13-beta.7 (the owner's pick 18 of «50 идей»): [interface] quick_teleport - a teleport on the same map without
     // the game's 255 ms of darkening (win/teleport_fade)
     bool quickTeleport = false;

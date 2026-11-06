@@ -32,6 +32,7 @@ struct Bar {
     uint32_t id = 0;  // 3.0.11-beta.99: whose (the ring's chevron stands over any)
     bool target = false;
     mobhp::Rank rank = mobhp::Rank::Normal;  // 3.0.13-beta.3
+    bool hitting = false;                    // 3.0.13-beta.13: it hit us of late - its edge red
 };
 
 struct State {
@@ -39,6 +40,13 @@ struct State {
     bool modeTold = false;
     bool percent = false;  // 3.0.11-beta.293: [interface] mob_hp_percent
     bool bossBars = false;  // 3.0.13-beta.3: [interface] boss_bars
+    // 3.0.13-beta.13: [interface] who_hits - the monsters that hit us, «⚔ N» over the character (the screen's middle)
+    bool whoHits = false;
+    mobhp::Hitters hitters;
+    panel::Picture countPic;
+    uint32_t countTex = 0;
+    int countW = 0, countH = 0, countX = 0, countY = 0, countShown = 0, hitsTold = 0;
+    bool countUpload = false;
     std::unordered_map<int, mobhp::Rank> ranks;  // a class's, as the reference has it
     int rankTold = 0;
     mobhp::Table table;
@@ -78,6 +86,7 @@ State& state() {
 // 3.0.11-beta.99 (the owner: «hp для мобов должно быть доступно и в обычном режиме»): the controller's target while
 // played with it; with the mouse the monster under its cursor; else the one the character fights - the card on or not
 constexpr uint32_t kModeNow = 0x74B57C, kModeMsgSlot = 0x14, kModeMsg = 0x5707D0, kAskName = 0x560650;
+constexpr uint32_t kOwnAccount = 0x771F7C;  // 3.0.13-beta.13: the character's own id (as death_recap_watch reads it)
 const uint8_t kAskNameCode[] = {0x55, 0x8B, 0xEC, 0x83, 0xEC, 0x24, 0x8B, 0x45,
                                 0x08, 0x53, 0x56, 0x57, 0x85, 0xC0, 0x8B, 0xF9};
 using AskNameFn = void(__attribute__((thiscall)) *)(uint32_t mode, uint32_t id);
@@ -115,7 +124,13 @@ void packet(const packets::Event& e) {
             ++s.heard;
             LOG_INFO("mob hp: %u at %d%% (its name line)", a->id, a->hp);
         }
+    } else if (const auto* h = std::get_if<packets::Hit>(&e)) {  // 3.0.13-beta.13: who hits us
+        uint32_t own = 0;
+        if (s.whoHits && h->source != h->target && readGame(kOwnAccount, &own, 4) && own && h->target == own &&
+            h->source != own)
+            s.hitters.hit(h->source, GetTickCount());
     } else if (const auto* v = std::get_if<packets::Vanish>(&e)) {
+        s.hitters.gone(v->id);  // 3.0.13-beta.13
         s.table.gone(v->id);
         s.asker.forget(v->id);  // 3.0.11-beta.100: asked again as soon as it is back
         s.talls.erase(v->id);   // 3.0.11-beta.148
@@ -124,6 +139,11 @@ void packet(const packets::Event& e) {
 
 void setPercent(bool on) { state().percent = on; }
 void setBossBars(bool on) { state().bossBars = on; }
+void setWhoHits(bool on) {
+    State& s = state();
+    if (!on) s.hitters.last.clear();
+    s.whoHits = on;
+}
 
 namespace {
 // 3.0.13-beta.3: a monster class's rank by the reference - a boss (mode 0x20), an MVP by its MVP reward; none loaded
@@ -158,14 +178,39 @@ void frame(HWND game, MobHp mode, double k, int targetWidth, int targetHeight) {
     s.bars.clear();
     s.text = false;
     s.target = 0;
+    s.countShown = 0;
     if (mode == MobHp::Off || !game || k <= 0 || targetWidth <= 0 || targetHeight <= 0 || !inGameWorld()) return;
     const std::string map = readGameMap();
     if (map != s.map) {  // a new map: its monsters are others
+        s.hitters.last.clear();  // 3.0.13-beta.13
         s.map = map;
         s.table.clear();
         s.asker.clear();
         s.toAsk.clear();
         s.talls.clear();
+    }
+    if (s.whoHits) {  // 3.0.13-beta.13: «⚔ N» over the character - the camera keeps it in the screen's middle
+        const int n = s.hitters.count(GetTickCount());
+        if (n > 0) {
+            const float scale = uistyle::partScale(k);
+            const std::string text = "\xE2\x9A\x94 " + std::to_string(n);
+            const std::wstring wide = utf8Wide(text);
+            const float px = 13 * scale;
+            const int w = wordsWidth(wide, px, true) + int(std::lround(12 * scale)), h = int(std::lround(18 * scale));
+            if (panel::blank(s.countPic, w, h)) {
+                panel::roundRect(s.countPic, panel::Box{0, 0, float(w), float(h)}, float(h) / 2, 0xC62828, 0.85f);
+                drawWords(s.countPic,
+                          {Words{panel::Box{0, 0, float(w), float(h)}, wide, 0xFFFFFF, px, true, DT_CENTER}});
+                s.countUpload = true;
+            }
+            s.countX = targetWidth / 2 - w / 2;
+            s.countY = targetHeight / 2 - int(std::lround(130 * scale)) - h;
+            s.countShown = n;
+            if (s.hitsTold < 5 && n >= 2) {
+                ++s.hitsTold;
+                LOG_INFO("mob hp: %d monsters hit the character of late - «⚔ %d» over it, their bars framed red", n, n);
+            }
+        }
     }
     const uint32_t target = targetNow(s);
     const std::vector<mobhp::Shown> list = s.table.shown(mode, target, GetTickCount());
@@ -223,7 +268,8 @@ void frame(HWND game, MobHp mode, double k, int targetWidth, int targetHeight) {
         if (s.bossBars)
             if (const auto c = s.classes.find(m.id); c != s.classes.end()) rank = rankOf(s, c->second);
         b = mobhp::ranked(b, rank);
-        s.bars.push_back(Bar{b.x * kk, b.y * kk, b.w * kk, b.h * kk, b.y, m.hp, m.id, m.target, rank});
+        s.bars.push_back(Bar{b.x * kk, b.y * kk, b.w * kk, b.h * kk, b.y, m.hp, m.id, m.target, rank,
+                             s.whoHits && s.hitters.hitting(m.id, nowMs)});
         if (!m.target) continue;
         s.target = m.id;
         if (!s.percent) continue;  // 3.0.11-beta.293: the plate off
@@ -266,12 +312,19 @@ void draw(FrameRecord& record, gpu::Renderer& renderer) {
     const size_t world = record.firstInterface(), before = record.commands().size();
     const float edge = std::max(1.0f, s.k * 0.75f);
     for (const Bar& b : s.bars) {
+        if (b.hitting) {  // 3.0.13-beta.13: it hits us - a red frame round its bar
+            const float red = 2.0f * edge;
+            drawFill(record, b.x - red - edge, b.y - red - edge, b.w + 2 * (red + edge), b.h + 2 * (red + edge), s.k,
+                     0xF0FF4D4Du);
+        }
         drawFill(record, b.x - edge, b.y - edge, b.w + 2 * edge, b.h + 2 * edge, s.k, 0xB4000000u);
         const float done = b.w * float(std::clamp(b.hp, 0, 100)) / 100.0f;
         drawFill(record, b.x, b.y, done, b.h, s.k, mobhp::fillColour(b.hp, b.rank));
     }
     if (s.text)
         drawPart(record, renderer, s.picture, s.texture, s.texW, s.texH, s.upload, s.textX, s.textY, s.k);
+    if (s.countShown > 0 && s.countPic.width > 0)  // 3.0.13-beta.13: «⚔ N» over the character
+        drawPart(record, renderer, s.countPic, s.countTex, s.countW, s.countH, s.countUpload, s.countX, s.countY, s.k);
     const size_t added = record.commands().size() - before;  // the per cent's upload too, when it went now
     if (added) record.moveLastBefore(added, world);
 }

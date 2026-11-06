@@ -26,6 +26,8 @@ void frame(HWND game, MobHp mode, double k, int targetWidth, int targetHeight);
 void setPercent(bool on);
 // 3.0.13-beta.3: [interface] boss_bars - an MVP's bar wider and gold, another boss's violet
 void setBossBars(bool on);
+// 3.0.13-beta.13: [interface] who_hits - the monsters that hit the character of late framed red, «⚔ N» over it
+void setWhoHits(bool on);
 void draw(FrameRecord& record, gpu::Renderer& renderer);
 int hp(uint32_t id);  // the per cent the bars show for it; -1 none (not known, or the bars off)
 // 3.0.11-beta.100: «Усі» - the monsters on the screen not known yet asked of the server, before the game draws its

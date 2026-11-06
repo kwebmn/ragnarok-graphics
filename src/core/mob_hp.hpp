@@ -1,5 +1,6 @@
 #pragma once
 #include <cstdint>
+#include <iterator>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -62,6 +63,25 @@ private:
 uint32_t pointed(const Table& t, bool pad, uint32_t padTarget, uint32_t underCursor, uint32_t fighting);
 
 uint32_t fillColour(int hp);  // ARGB: green, red below a quarter
+
+// 3.0.13-beta.13 (the owner's pick 44 of «50 идей»: «Кто бьёт меня: метка над монстрами, держащими нас целью, и их
+// число»): [interface] who_hits - the ones that hit (or missed) the character within kHoldMs; one gone (died, left
+// the sight) no longer
+struct Hitters {
+    static constexpr uint32_t kHoldMs = 6000;
+    std::unordered_map<uint32_t, uint32_t> last;  // its last swing at us
+    void hit(uint32_t id, uint32_t nowMs) { last[id] = nowMs; }
+    void gone(uint32_t id) { last.erase(id); }
+    bool hitting(uint32_t id, uint32_t nowMs) const {
+        const auto it = last.find(id);
+        return it != last.end() && nowMs - it->second <= kHoldMs;
+    }
+    int count(uint32_t nowMs) {  // the old ones forgotten
+        for (auto it = last.begin(); it != last.end();)
+            it = nowMs - it->second > kHoldMs ? last.erase(it) : std::next(it);
+        return int(last.size());
+    }
+};
 
 // 3.0.13-beta.3 (the owner's pick 10 of «50 идей»: «Строка HP у боссов и мини-боссов шире и своего цвета»): [interface]
 // boss_bars - an MVP's bar (a boss with an MVP's reward) wider and gold, another boss's wider and violet; red below a

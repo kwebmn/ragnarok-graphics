@@ -5293,6 +5293,14 @@ constexpr Entry kTexts[] = {
      "розрізаний між словами.",
      "Поле чата принимает до 234 букв вместо 70; сервер берёт не больше 70, поэтому более длинная строка уходит "
      "несколькими, разрезанная между словами."},
+    {Text::InterfaceWhoHits, "Who hits me", "Хто б'є мене", "Кто бьёт меня"},  // 3.0.13-beta.13
+    {Text::InterfaceWhoHitsHint,
+     "The monsters that hit you in the last seconds get a red frame round their HP bar, and a red ⚔ 3 over your "
+     "character counts them - seen at once when the crowd grows.",
+     "Монстри, що били вас останніми секундами, отримують червону рамку довкола смужки HP, а червоне ⚔ 3 над "
+     "персонажем їх рахує — одразу видно, коли натовп росте.",
+     "Монстры, бившие вас последние секунды, получают красную рамку вокруг полоски HP, а червоне ⚔ 3 над персонажем "
+     "их считает — сразу видно, когда толпа растёт."},
     {Text::InterfaceChatColourParty, "Chat: the party's colour", "Чат: колір групи", "Чат: цвет группы"},  // .3
     {Text::InterfaceChatColourGuild, "Chat: the guild's colour", "Чат: колір гільдії", "Чат: цвет гильдии"},
     {Text::InterfaceChatColourOwn, "Chat: your own lines", "Чат: ваші рядки", "Чат: ваши строки"},
