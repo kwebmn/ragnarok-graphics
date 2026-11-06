@@ -652,6 +652,9 @@ struct Config {
     // 3.0.13-beta.3 (the owner's pick 10 of «50 идей»): [interface] boss_bars - an MVP's bar wider and gold, another
     // boss's wider and violet; off as new looks are
     bool bossBars = false;
+    // 3.0.13-beta.7 (the owner's pick 18 of «50 идей»): [interface] quick_teleport - a teleport on the same map without
+    // the game's 255 ms of darkening (win/teleport_fade)
+    bool quickTeleport = false;
     // 3.0.11-beta.88 (stage 4): [interface] pad_walk - the left stick walks without the mouse, an arrow on the ground
     // (a prototype for the owner: off till checked)
     PadWalk padWalk = PadWalk::Arrow;  // 3.0.11-beta.102: by the map's cells by default (core/stick_walk)

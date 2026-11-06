@@ -5244,6 +5244,12 @@ constexpr Entry kTexts[] = {
      "An MVP's bar wider and gold, a mini-boss's wider and violet - seen at once in a crowd.",
      "Смужка MVP ширша й золота, міні-боса — ширша й фіолетова: видно одразу навіть у натовпі.",
      "Полоска MVP шире и золотая, мини-босса — шире и фиолетовая: видно сразу даже в толпе."},
+    {Text::InterfaceQuickTeleport, "Quick teleport on the map", "Швидкий телепорт на карті",
+     "Быстрый телепорт на карте"},  // 3.0.13-beta.7
+    {Text::InterfaceQuickTeleportHint,
+     "Teleport and Fly Wing on the same map without the game's quarter-second darkening: the new place at once.",
+     "Teleport і Fly Wing у межах карти без затемнення гри на чверть секунди: нове місце одразу.",
+     "Teleport и Fly Wing в пределах карты без затемнения игры на четверть секунды: новое место сразу."},
     {Text::InterfaceChatColourParty, "Chat: the party's colour", "Чат: колір групи", "Чат: цвет группы"},  // .3
     {Text::InterfaceChatColourGuild, "Chat: the guild's colour", "Чат: колір гільдії", "Чат: цвет гильдии"},
     {Text::InterfaceChatColourOwn, "Chat: your own lines", "Чат: ваші рядки", "Чат: ваши строки"},

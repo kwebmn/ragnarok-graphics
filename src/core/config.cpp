@@ -590,6 +590,8 @@ Config parseConfig(const std::string& text) {
             setBool(val, c.mobHpPercent);
         } else if (key == "interface.boss_bars") {  // 3.0.13-beta.3
             setBool(val, c.bossBars);
+        } else if (key == "interface.quick_teleport") {  // 3.0.13-beta.7
+            setBool(val, c.quickTeleport);
         } else if (key == "interface.pad_tiles") {  // 3.0.11-beta.90: Start opens the windows' tile
             setBool(val, c.padTiles);
         } else if (key == "interface.pad_walk") {  // 3.0.11-beta.88: the left stick without the mouse

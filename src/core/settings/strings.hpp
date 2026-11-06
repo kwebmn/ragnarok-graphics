@@ -510,6 +510,7 @@ enum class Text : uint16_t {
     InterfaceMobHpAll,  // 3.0.11-beta.95
     InterfaceMobHpPercent, InterfaceMobHpPercentHint,  // 3.0.11-beta.293
     InterfaceBossBars, InterfaceBossBarsHint,  // 3.0.13-beta.3
+    InterfaceQuickTeleport, InterfaceQuickTeleportHint,  // 3.0.13-beta.7
     InterfaceChatColourParty, InterfaceChatColourGuild, InterfaceChatColourOwn, InterfaceChatColourOthers,  // .3
     InterfaceChatLog, InterfaceChatLogHint, InterfaceChatColourHint, ChatColourDefault, ChatColourBlue, ChatColourGreen,
     ChatColourYellow, ChatColourOrange,
