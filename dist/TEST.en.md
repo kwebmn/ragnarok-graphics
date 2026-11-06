@@ -1,3 +1,15 @@
+# uaRO Graphics 3.0.11-beta.301 — what's new
+
+**The settings search finds:**
+- in every mode at once: Simple finds the Detailed mode's settings too - marked, and the button switches the mode;
+- in any of the three languages;
+- by the word's stem: «grasses» finds «Grass»;
+- synonyms: font - text size, smoothness - smoothing, lags - frames and connection, mouse - cursor;
+- the Screen, Gamepad and Play pages: «window mode», «vibration», «graphics test»;
+- matches in a name first, then those only in a hint.
+
+**Honest names:** «New minimap (prototype)» is now «New interface» - it turned the whole new interface on; «Reference» without «(prototype)». The Sound page shows «Swap left and right».
+
 # uaRO Graphics 3.0.11-beta.300 — what's new
 
 **Prontera's benches no longer sway in the wind:** the wrought bench is painted blue-green with the gaps between its bars cut out - the driver took it for a tree's leaves and swayed it with the grass. Only a yellow-green now counts as leaves (as all the client's real leaves are - checked over 867 textures of trees and outdoor props).
