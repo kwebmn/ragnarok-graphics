@@ -1,3 +1,4 @@
+#include <algorithm>
 #include "core/settings/search.hpp"
 #include "test.hpp"
 
@@ -118,4 +119,19 @@ TEST(search_one_setting_by_its_label_hint_and_old_name) {
     CHECK(settingMatches(rim, "факел", Lang::Ru));       // its hint
     CHECK(!settingMatches(rim, "снег", Lang::Ru));
     CHECK(!settingMatches(rim, "", Lang::Ru));           // no words: nothing
+}
+
+// 3.0.11-beta.302 (the review, C): every row of «Інтерфейс» in one of its sections, or the Controller page's - none
+// lost, none twice
+TEST(interface_sections_hold_every_row) {
+    std::vector<std::string> seen;
+    for (const InterfaceSection& s : interfaceSections())
+        for (const char* k : s.keys) seen.push_back(k);
+    for (const char* k : padInterfaceKeys()) seen.push_back(k);
+    for (const IniSetting& s : iniSettings()) {
+        if (s.page != Page::Interface) continue;
+        const std::string key = sectionKey(s);
+        CHECK_EQ(int(std::count(seen.begin(), seen.end(), key)), 1);
+    }
+    for (const std::string& k : seen) CHECK(findSetting(k) != nullptr);
 }

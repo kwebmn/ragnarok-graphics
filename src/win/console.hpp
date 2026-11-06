@@ -72,6 +72,9 @@ private:
 
     bool open_ = false;
     bool groupOpen_[kEffectGroups] = {};  // 2.2.1: the groups opened to their effects
+    bool windowsOpen_ = false;             // 3.0.11-beta.302: the new look's windows shown
+    static constexpr const char* kWindowsKey = "iface:windows";
+    void interfaceRow(const char* key, int depth);
     std::string filter_;   // 2.6.22: the letters typed (UTF-8)
     std::wstring typed_;   // and those not taken yet (wndProc's WM_CHAR; 8 Backspace)
     bool thisMap_ = false; // «Только на этой карте», while the game runs

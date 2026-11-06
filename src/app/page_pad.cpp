@@ -94,6 +94,7 @@ public:
         p.gap();  // 3.0.11-beta.89: the interface's own rows for the controller, as «Інтерфейс» has them
         p.heading(t(Text::PadOnInterface));
         rows_->buildRow(p, "interface.pad_hints");
+        rows_->buildRow(p, "interface.pad_tiles");  // 3.0.11-beta.302: here, not in «Інтерфейс»
         rows_->buildRow(p, "interface.target_ring");
         // 3.0.11-beta.99 (the owner: «hp для мобов должно быть доступно и в обычном режиме»): the HP bars' row in
         // «Інтерфейс» alone - not the controller's

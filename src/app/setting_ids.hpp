@@ -16,6 +16,7 @@ constexpr int kForgetAccounts = 1491;  // 3.0.11-beta.179: «Забути всі
 constexpr int kAuto = 1492;  // 0.50
 constexpr int kGpu = 1493;   // 0.50.2
 constexpr int kOutput = 1494;  // 3.0.4-beta.1: the output device
+constexpr int kWindowsList = 1495;  // 3.0.11-beta.302: «Інтерфейс»'s windows' list shown or hidden
 constexpr int kReg = 1500;   // + 4 x the setting's index in regSettings()
 
 inline int rowId(size_t i) { return kRows + int(i) * 4; }

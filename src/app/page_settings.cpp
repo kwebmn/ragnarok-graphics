@@ -20,6 +20,9 @@
 namespace uagfx::app {
 namespace {
 
+// 3.0.11-beta.302: «Інтерфейс»'s windows' list open (while the app runs)
+bool g_windowsOpen = false;
+
 using namespace settings;
 
 
@@ -143,7 +146,7 @@ public:
             case settings::Page::Interface:  // 3.0.11-beta.3 (the owner: its own item «Інтерфейс»)
                 p.note(t(Text::InterfaceNote));
                 p.note(t(Text::InterfaceLayoutNote));  // 3.0.11-beta.75: «Розміщення інтерфейсу» in the game
-                buildRows(p);
+                buildInterface(p);  // 3.0.11-beta.302: in sections
                 // 3.0.11-beta.5: the game's reference pack there (the game's watcher fetches it)
                 if (const auto pack = referenceThere(host_.model().paths().dir)) {
                     p.note(tf(Text::ReferenceThere, {refpack::dateOf(*pack), pack->commit.substr(0, 8),
@@ -171,6 +174,11 @@ public:
 
     void command(int id, int code) override {
         Model& m = host_.model();
+        if (id == kWindowsList && code == BN_CLICKED) {  // 3.0.11-beta.302: the windows' list shown or not
+            g_windowsOpen = !g_windowsOpen;
+            host_.rebuild();
+            return;
+        }
         if (id == kGpu && code == CBN_SELCHANGE) {
             const LRESULT sel = SendMessageW(GetDlgItem(host_.window(), id), CB_GETCURSEL, 0, 0);
             if (sel >= 0 && size_t(sel) < gpuWords_.size()) m.setToken(*findSetting("renderer.gpu"), gpuWords_[sel]);
@@ -615,6 +623,25 @@ private:
             for (size_t c = 0; c < s.choices.size() && c < s.tokens.size(); ++c)
                 if (token == s.tokens[c]) return t(s.choices[c]);
         return wide(token + s.unit);
+    }
+
+    // 3.0.11-beta.302 (the review, C): «Інтерфейс» in its sections (core/settings/navigation), the windows' list
+    // behind a button, the controller's rows on its own page
+    void buildInterface(Panel& p) {
+        for (const InterfaceSection& sec : interfaceSections()) {
+            p.gap();
+            p.heading(t(sec.heading));
+            if (sec.folded) {
+                p.buttons({{kWindowsList, g_windowsOpen ? t(Text::InterfaceWindowsHide)
+                                                        : tf(Text::InterfaceWindowsShow,
+                                                             {std::to_string(sec.keys.size())})}});
+                if (!g_windowsOpen) continue;
+            }
+            for (const char* k : sec.keys) buildRow(p, k);
+        }
+        p.gap();
+        p.note(t(Text::InterfacePadNote));
+        p.note(t(host_.model().now().gameRunning ? Text::LiveNoteRunning : Text::LiveNote));
     }
 
     // 3.0.3-beta.4: a page's rows of one section alone (nullptr: all); `liveNote` - the note on applying at the end

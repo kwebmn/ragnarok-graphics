@@ -189,6 +189,54 @@ bool fitsMachine(const std::string& k, const Machine& m) {
     return true;
 }
 
+const std::vector<InterfaceSection>& interfaceSections() {
+    static const std::vector<InterfaceSection> list{
+        {Text::InterfaceSecMain,
+         {"interface.minimap", "interface.size", "interface.text_size", "interface.panel_opacity",
+          "interface.window_opacity", "interface.animations", "interface.cursor", "interface.lock_layout",
+          "interface.layout_per_char", "interface.pack_icons", "interface.dim_world", "interface.low_hp_edge",
+          "interface.reference"}},
+        {Text::InterfaceSecPanels,
+         {"interface.character", "interface.target", "interface.party", "interface.buffs", "interface.buffs_overflow",
+          "interface.hotbar", "interface.hotbar_per_character", "interface.hotbar_ammo", "interface.ammo_sound",
+          "interface.chat", "interface.chat_fade", "interface.tracker", "interface.cast", "interface.exp_bars",
+          "interface.exp_gain", "interface.item_toast", "interface.hunt_panel", "interface.mvp_timers"}},
+        {Text::InterfaceSecMinimap,
+         {"interface.minimap_style", "interface.minimap_hd", "interface.minimap_classic", "interface.minimap_view",
+          "interface.minimap_npcs", "interface.minimap_warps", "interface.minimap_kafra", "interface.minimap_party",
+          "interface.minimap_mobs", "interface.minimap_way", "interface.minimap_reach"}},
+        {Text::InterfaceSecFight,
+         {"interface.mob_hp", "interface.mob_hp_percent", "interface.target_ring", "interface.mob_card",
+          "interface.delay_ring", "interface.skill_cells", "interface.ground_counts", "interface.death_recap",
+          "interface.potion_warn", "interface.party_alarm"}},
+        {Text::InterfaceSecGround, {"interface.drop_names", "interface.drop_highlight"}},
+        {Text::InterfaceSecLogin,
+         {"interface.login", "interface.login_status", "interface.login_news", "interface.login_view",
+          "interface.char_select", "interface.char_make", "interface.portraits", "interface.char_carousel"}},
+        {Text::InterfaceSecHomun,
+         {"interface.homun_ai", "interface.homun_aggressive", "interface.homun_defend", "interface.homun_skills"}},
+        {Text::InterfaceSecNet, {"interface.smooth_fixes", "interface.predict_walk", "interface.net_badge"}},
+        {Text::InterfaceSecWindows,
+         {"interface.items",     "interface.status",       "interface.skills",       "interface.equip",
+          "interface.npc_talk",  "interface.npc_remember", "interface.shop",         "interface.storage",
+          "interface.trade",     "interface.cart",         "interface.vending",      "interface.my_shop",
+          "interface.menu",      "interface.options",      "interface.cards",        "interface.asks",
+          "interface.messages",  "interface.counts",       "interface.picks",        "interface.party_setup",
+          "interface.pet",       "interface.homun",        "interface.merc",         "interface.social",
+          "interface.guild",     "interface.servers",      "interface.whispers",     "interface.whisper_setup",
+          "interface.macros",    "interface.tips",         "interface.emotes",       "interface.commands",
+          "interface.chat_rooms", "interface.detail_console", "interface.popups"},
+         true},
+    };
+    return list;
+}
+
+const std::vector<const char*>& padInterfaceKeys() {
+    static const std::vector<const char*> list{"interface.pad_hints", "interface.pad_tiles", "interface.pad_walk",
+                                               "interface.walk_arrow", "interface.walk_mark"};
+    return list;
+}
+
 bool resettable(View v, int tab) {
     return v == View::Graphics || v == View::Effects || v == View::Sound || (v == View::Ai && tab < 2);
 }

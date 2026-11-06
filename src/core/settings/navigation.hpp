@@ -56,4 +56,15 @@ bool resettable(View v, int tab);
 // on), HDR with an HDR screen; a hidden row keeps its value. A card not known (no probe): none hidden for it.
 bool fitsMachine(const std::string& sectionKey, const Machine& m);
 
+// 3.0.11-beta.302 (the review «Ревизия конфигуратора», C: 109 rows in the order the betas added them): «Інтерфейс»
+// in sections, each with its heading and its rows in order; `folded` - shown behind a button (the 35 windows). The
+// controller's rows are the Controller page's (padInterfaceKeys), not here.
+struct InterfaceSection {
+    Text heading;
+    std::vector<const char*> keys;
+    bool folded = false;
+};
+const std::vector<InterfaceSection>& interfaceSections();
+const std::vector<const char*>& padInterfaceKeys();
+
 }  // namespace uagfx::settings

@@ -15,6 +15,7 @@
 #include "core/effect_where.hpp"
 #include "core/settings/effects_layout.hpp"
 #include "core/settings/ini_edit.hpp"
+#include "core/settings/navigation.hpp"
 #include "core/settings/schema.hpp"
 #include "core/settings/search.hpp"
 #include "win/context.hpp"  // 3.0.4-beta.35: the card's level now (judged by its speed)
@@ -119,6 +120,16 @@ LRESULT CALLBACK Console::wndProc(HWND w, UINT msg, WPARAM wp, LPARAM lp) {
 // to its effects (each with its own settings under it); some thirty rows, not a hundred and fifty. 2.6.22: letters
 // typed - only the effects they find (by the name, the hint, the name before; a group's own name: all of it), under
 // their groups' names; «Только на этой карте» - only what can show on the map, a group with none of it left out.
+// 3.0.11-beta.302: an interface row as its control asks - a box, a list or a slider; none for a number or a row the
+// schema has not
+void Console::interfaceRow(const char* key, int depth) {
+    const IniSetting* s = settingOf(key);
+    if (!s) return;
+    if (s->control == Control::Check) rows_.push_back(Row{Kind::Box, key, depth});
+    if (s->control == Control::Choice) rows_.push_back(Row{Kind::Choice, key, depth});
+    if (s->control == Control::Slider) rows_.push_back(Row{Kind::Slider, key, depth});
+}
+
 void Console::build(Lang lang, const Config& config) {
     rows_.clear();
     const EffectLayout* fx = effectLayout();
@@ -136,6 +147,17 @@ void Console::build(Lang lang, const Config& config) {
             if (settingOf(e.sliders[k])) rows_.push_back(Row{Kind::Slider, e.sliders[k], depth + 1});
     };
     if (!filter_.empty()) {
+        // 3.0.11-beta.302: the interface's rows found too, under their sections
+        for (const InterfaceSection& sec : interfaceSections()) {
+            bool named = false;
+            for (const char* k : sec.keys) {
+                const IniSetting* st = settingOf(k);
+                if (!st || !settingMatches(*st, filter_, lang)) continue;
+                if (!named) rows_.push_back(Row{Kind::Heading, tr(lang, sec.heading), 0});
+                named = true;
+                interfaceRow(k, 1);
+            }
+        }
         for (int g = 0; g < kEffectGroups; ++g) {
             const IniSetting* group = settingOf(groupKey(g));
             if (!group) continue;
@@ -161,94 +183,21 @@ void Console::build(Lang lang, const Config& config) {
         rows_.push_back(Row{Kind::Box, "frames.fps_counter", 0});  // the frame counter (Ctrl+Shift+F11 as well)
         // 3.0.5-beta.6: «Тест графіки» - not the first row, where the console opens: a Space there starts nothing
         rows_.push_back(Row{Kind::Test, "", 0});
-        // 3.0.11-beta.2: the new interface's minimap prototype - on and off in the game (the owner could not find it)
+        // 3.0.11-beta.2: the new interface on and off in the game; 3.0.11-beta.302 (the review «Ревизия
+        // конфигуратора», D): its rows in the app's sections (core/settings/navigation interfaceSections) - every row
+        // of them, the windows behind a row that opens them, the controller's on the Controller page
         if (settingOf("interface.minimap")) {
             rows_.push_back(Row{Kind::Heading, tr(lang, Text::InterfaceHeading), 0});
             rows_.push_back(Row{Kind::Layout, "", 0});  // 3.0.11-beta.75: «Розміщення інтерфейсу»
-            // 3.0.11-beta.199 (the owner: «а настройки его в консоль можно добавить?»): the cursor's look, near the top
-            if (settingOf("interface.cursor")) rows_.push_back(Row{Kind::Choice, "interface.cursor", 0});
-            rows_.push_back(Row{Kind::Box, "interface.minimap", 0});
-            for (const char* k : {"interface.minimap_npcs", "interface.minimap_warps", "interface.minimap_kafra",
-                                  "interface.minimap_party", "interface.minimap_style", "interface.net_badge",
-                                  "interface.smooth_fixes", "interface.predict_walk",
-                                  "interface.minimap_mobs",
-                                  "interface.reference"})
-                if (settingOf(k)) rows_.push_back(Row{Kind::Box, k, 0});  // 3.0.11-beta.6: its hints
-            if (settingOf("interface.minimap_way"))  // 3.0.11-beta.33: the way on the ground
-                rows_.push_back(Row{Kind::Choice, "interface.minimap_way", 1});
-            if (settingOf("interface.minimap_reach"))  // 3.0.11-beta.65: where one can walk, an experiment
-                rows_.push_back(Row{Kind::Box, "interface.minimap_reach", 0});
-            if (settingOf("interface.minimap_hd"))  // 3.0.11-beta.72: the maps' pictures four times bigger
-                rows_.push_back(Row{Kind::Box, "interface.minimap_hd", 0});
-            if (settingOf("interface.pack_icons"))  // 3.0.11-beta.74: the panels' icons from the AI pack
-                rows_.push_back(Row{Kind::Box, "interface.pack_icons", 0});
-            if (settingOf("interface.lock_layout"))  // 3.0.11-beta.77: the parts kept where they are
-                rows_.push_back(Row{Kind::Box, "interface.lock_layout", 0});
-            if (settingOf("interface.hotbar_per_character"))  // 3.0.11-beta.78: each character's own bar
-                rows_.push_back(Row{Kind::Box, "interface.hotbar_per_character", 0});
-            if (settingOf("interface.hotbar_ammo"))  // 3.0.11-beta.125: the ammo left over the hotbar
-                rows_.push_back(Row{Kind::Box, "interface.hotbar_ammo", 0});
-            if (settingOf("interface.ammo_sound"))  // 3.0.11-beta.129: the chime at 10 left and at none
-                rows_.push_back(Row{Kind::Box, "interface.ammo_sound", 0});
-            if (settingOf("interface.pad_hints"))  // 3.0.11-beta.86: the controller's buttons on the interface
-                rows_.push_back(Row{Kind::Box, "interface.pad_hints", 0});
-            if (settingOf("interface.target_ring"))  // 3.0.11-beta.87: the target's ring on the ground
-                rows_.push_back(Row{Kind::Choice, "interface.target_ring", 0});
-            if (settingOf("interface.mob_hp"))  // 3.0.11-beta.95: the monsters' HP bars
-                rows_.push_back(Row{Kind::Choice, "interface.mob_hp", 0});
-            if (settingOf("interface.pad_tiles"))  // 3.0.11-beta.90: Start opens the windows' tile
-                rows_.push_back(Row{Kind::Box, "interface.pad_tiles", 0});
-            if (settingOf("interface.pad_walk"))  // 3.0.11-beta.88: the left stick without the mouse
-                rows_.push_back(Row{Kind::Choice, "interface.pad_walk", 0});
-            if (settingOf("interface.walk_arrow"))  // 3.0.11-beta.103: the look of the stick's arrow
-                rows_.push_back(Row{Kind::Choice, "interface.walk_arrow", 1});
-            if (settingOf("interface.walk_mark"))  // 3.0.11-beta.105: the mark at the arrow's end
-                rows_.push_back(Row{Kind::Box, "interface.walk_mark", 1});
-            if (settingOf("interface.buffs"))  // 3.0.11-beta.35: the buffs' column
-                rows_.push_back(Row{Kind::Choice, "interface.buffs", 0});
-            if (settingOf("interface.buffs_overflow"))  // 3.0.11-beta.63: what it does not hold
-                rows_.push_back(Row{Kind::Choice, "interface.buffs_overflow", 1});
-            if (settingOf("interface.character"))  // 3.0.11-beta.36: the character block
-                rows_.push_back(Row{Kind::Choice, "interface.character", 0});
-            if (settingOf("interface.target"))  // 3.0.11-beta.38: the target's card
-                rows_.push_back(Row{Kind::Box, "interface.target", 0});
-            if (settingOf("interface.party"))  // 3.0.11-beta.39: the party's panel
-                rows_.push_back(Row{Kind::Box, "interface.party", 0});
-            if (settingOf("interface.tracker"))  // 3.0.11-beta.70: the tracker
-                rows_.push_back(Row{Kind::Box, "interface.tracker", 0});
-            if (settingOf("interface.hotbar"))  // 3.0.11-beta.40: the hotkeys' bar
-                rows_.push_back(Row{Kind::Box, "interface.hotbar", 0});
-            if (settingOf("interface.chat"))  // 3.0.11-beta.41: the chat
-                rows_.push_back(Row{Kind::Box, "interface.chat", 0});
-            if (settingOf("interface.cast"))  // 3.0.11-beta.48: the cast's label over the hero
-                rows_.push_back(Row{Kind::Box, "interface.cast", 0});
-            if (settingOf("interface.dim_world"))  // 3.0.11-beta.49: the world dimmed under the windows
-                rows_.push_back(Row{Kind::Box, "interface.dim_world", 0});
-            if (settingOf("interface.low_hp_edge"))  // 3.0.11-beta.50: the screen's edges red at low HP
-                rows_.push_back(Row{Kind::Slider, "interface.low_hp_edge", 0});
-            if (settingOf("interface.size"))  // 3.0.11-beta.54: the new interface's size
-                rows_.push_back(Row{Kind::Choice, "interface.size", 0});
-            if (settingOf("interface.text_size"))  // 3.0.11-beta.67: the reading windows' text
-                rows_.push_back(Row{Kind::Choice, "interface.text_size", 0});
-            for (const char* key :
-                 {"interface.items", "interface.status", "interface.skills", "interface.equip", "interface.npc_talk",
-                  "interface.shop", "interface.storage", "interface.trade", "interface.menu", "interface.cards",
-                  "interface.asks", "interface.messages", "interface.login", "interface.login_status",
-                  "interface.login_news", "interface.char_select",
-                  "interface.char_make", "interface.cart", "interface.counts", "interface.vending",
-                  "interface.picks", "interface.party_setup", "interface.pet", "interface.homun",
-                  "interface.merc", "interface.options", "interface.social", "interface.servers",
-                  "interface.guild", "interface.my_shop", "interface.whisper_setup", "interface.macros",
-                  "interface.tips", "interface.emotes", "interface.commands", "interface.chat_rooms",
-                  "interface.detail_console", "interface.popups", "interface.whispers",
-                  "interface.skill_cells", "interface.ground_counts"})
-                if (settingOf(key)) rows_.push_back(Row{Kind::Box, key, 0});
-            if (settingOf("interface.login_view"))  // 3.0.11-beta.177: the login screen's view
-                rows_.push_back(Row{Kind::Choice, "interface.login_view", 0});
-            if (settingOf("interface.animations"))  // 3.0.11-beta.46: the new interface's motion
-                rows_.push_back(Row{Kind::Box, "interface.animations", 0});
-            for (const char* key : {"interface.panel_opacity", "interface.window_opacity"})  // 3.0.11-beta.47
-                if (settingOf(key)) rows_.push_back(Row{Kind::Slider, key, 0});
+            for (const InterfaceSection& sec : interfaceSections()) {
+                rows_.push_back(Row{Kind::Heading, tr(lang, sec.heading), 0});
+                if (sec.folded) {
+                    rows_.push_back(Row{Kind::Open, kWindowsKey, 0});
+                    if (!windowsOpen_) continue;
+                }
+                for (const char* k : sec.keys) interfaceRow(k, 0);
+            }
+            for (const char* k : padInterfaceKeys()) interfaceRow(k, 0);  // the controller's here too: in the game
         }
         // 3.0.3-beta.8: the game windows' panel (the user: on or off in the console too)
         if (settingOf("panel.show")) {
@@ -324,6 +273,7 @@ bool Console::change(const std::string& iniPath, const Config& config, int step)
     if (r.kind == Kind::Open) {  // 2.2.1: a group's effects shown or hidden - Space, Enter, right opens, left closes
         for (int g = 0; g < kEffectGroups; ++g)
             if (r.key == groupKey(g)) groupOpen_[g] = step == 0 ? !groupOpen_[g] : step > 0;
+        if (r.key == kWindowsKey) windowsOpen_ = step == 0 ? !windowsOpen_ : step > 0;  // 3.0.11-beta.302
         build(lang_, config);
         dirty_ = true;
         return false;
@@ -658,6 +608,16 @@ void Console::draw(HWND game, const Config& file, const GpuTiming* timing) {
                     std::fill(px + size_t(yy) * size_t(w), px + size_t(yy + 1) * size_t(w), 0x00384048u);
             if (r.kind == Kind::Heading) {
                 text(fontH, y, wide(r.key), RGB(229, 169, 78), true);
+                continue;
+            }
+            if (r.kind == Kind::Open && r.key == kWindowsKey) {  // 3.0.11-beta.302: the new look's windows
+                size_t n = 0;
+                for (const InterfaceSection& sec : interfaceSections())
+                    if (sec.folded) n += sec.keys.size();
+                const std::string label =
+                    windowsOpen_ ? std::string(tr(lang_, Text::InterfaceWindowsHide))
+                                 : fmt(tr(lang_, Text::InterfaceWindowsShow), {std::to_string(n)});
+                text(fontH + r.depth * fontH * 2, y, wide(label), RGB(140, 180, 220));
                 continue;
             }
             if (r.kind == Kind::Open) {  // 2.2.1: "the group's effects >" (2.6.22: "3 of 7 on") or "hide the effects"
