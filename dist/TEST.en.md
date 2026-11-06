@@ -1,3 +1,9 @@
+# uaRO Graphics 3.0.13-beta.12 — what's new
+
+**Long chat lines.** The chat's field now takes up to 234 letters instead of 70. The server takes 70 at most, so a longer line goes as several messages in a row, cut between words - in the public chat, the party, the guild and whispers. A switch «Long chat lines» on the Interface page, on.
+
+**The /p, /g, /w commands and «/ex» from the chat's menu** now really put their words into the field - the game skipped them silently before.
+
 # uaRO Graphics 3.0.13-beta.11 — what's new
 
 **Steady following of a player.** Shift+click on a player and the character follows them and keeps up when they stop: as soon as the leader is more than a cell away, the character runs after them again. It works with the game window behind another too - handy with two windows: a priest in the second window runs after you. A plain click on the ground or Esc in that window stops it; a leader out of sight for 15 seconds ends it by itself. A switch «Steady following of a player» on the Interface page, on.
