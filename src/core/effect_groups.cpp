@@ -38,6 +38,7 @@ const Member kMembers[] = {
     {"fade_models", Characters, 1, &E::fadeModels},    // 3.0.13-beta.17
 
     {"skills_soft", SkillEffects, 1, &E::skillsSoft},
+    {"crowd_effects", SkillEffects, 1, &E::crowdEffects},  // 3.0.13-beta.20
     {"skill_sparks", SkillEffects, 2, &E::skillSparks},
     {"fire_light", SkillEffects, 1, &E::fireLight},
 

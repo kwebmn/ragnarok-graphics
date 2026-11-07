@@ -999,6 +999,15 @@ constexpr Entry kTexts[] = {
      "пройшли, — персонаж ніколи не губиться за ними.",
      "Дом, дерево или стена между камерой и вашим персонажем плавно становятся прозрачными и возвращаются, как только "
      "вы прошли, — персонаж никогда не теряется за ними."},
+    {Text::FxCrowdEffects, "Others' skill effects fainter", "Чужі ефекти навичок блідіші",
+     "Чужие эффекты навыков бледнее"},  // 3.0.13-beta.20
+    {Text::FxCrowdEffectsHint,
+     "Skill effects on other players and their monsters at a third of their strength; yours and your party's as "
+     "bright as ever - you see your own in a guild war or on the market.",
+     "Ефекти навичок на інших гравцях і їхніх монстрах — на третину сили; ваші й вашої групи — як завжди яскраві: "
+     "свої видно і на війні гільдій, і на ринку.",
+     "Эффекты навыков на других игроках и их монстрах — на треть силы; ваши и вашей группы — как всегда яркие: "
+     "свои видно и на войне гильдий, и на рынке."},
     {Text::FxFireflies, "The maps' fireflies", "Світлячки карт", "Светлячки карт"},
     {Text::FxFirefliesHint,  // 3.0.7-beta.3: lamps at their places, the fireflies themselves «Світлячки в повітрі»
      "Each of the maps' fireflies lights the ground, the walls and the characters around its place like a lamp, in a "

@@ -34,6 +34,19 @@ effect_exe::Faces g_faces;
 // 2.6.3: the character whose shadow the game asked for last - its sprites come next (the characters' shadows).
 effect_exe::Owner g_owner;
 
+// 3.0.13-beta.20: the id of the actor an effect is on - read carefully, the actor may be gone
+uint32_t ownerOf(uint32_t effect) {
+    uint32_t actor = 0, id = 0;
+    SIZE_T n = 0;
+    const auto* at = reinterpret_cast<const void*>(uintptr_t(effect + effect_exe::kEffectMaster));
+    if (!ReadProcessMemory(GetCurrentProcess(), at, &actor, 4, &n) || n != 4 || !actor)
+        return 0;
+    if (!ReadProcessMemory(GetCurrentProcess(), reinterpret_cast<const void*>(uintptr_t(actor + effect_exe::kActorId)),
+                           &id, 4, &n) || n != 4)
+        return 0;
+    return id;
+}
+
 void __attribute__((thiscall)) primRender(uint32_t prim, void* matrix) {
     // The effect it is of, as the game's own update reads it (FUN_00611bf0: 0 once the effect is gone).
     const uint32_t master = *reinterpret_cast<const uint32_t*>(uintptr_t(prim) + effect_exe::kPrimMaster);
@@ -45,6 +58,7 @@ void __attribute__((thiscall)) primRender(uint32_t prim, void* matrix) {
         tag.seed = uint8_t((prim >> 4) * 2654435761u >> 24);  // the primitive's own
         tag.id = id > 0 && id < 65536 ? uint16_t(id) : 0;      // 2.7.21
         tag.raised = *reinterpret_cast<const float*>(uintptr_t(prim) + effect_exe::kPrimLift) < -1.0f;  // 2.7.27
+        if (tag.kind == Kind::Skill) tag.owner = ownerOf(master);  // 3.0.13-beta.20
     }
     g_current = tag;
     reinterpret_cast<RenderFn>(g_render)(prim, matrix);
@@ -57,6 +71,7 @@ void __attribute__((thiscall)) effectRender(uint32_t effect, void* matrix) {
     const int id = *reinterpret_cast<const int*>(uintptr_t(effect) + effect_exe::kEffectId);
     g_current = Tag{effect_exe::kindOf(id), uint8_t((effect >> 4) * 2654435761u >> 24), effect_exe::auraExtra(id),
                     id > 0 && id < 65536 ? uint16_t(id) : uint16_t(0)};  // 2.7.21: its number too
+    if (g_current.kind == Kind::Skill) g_current.owner = ownerOf(effect);  // 3.0.13-beta.20
     reinterpret_cast<RenderFn>(g_effect)(effect, matrix);
     g_current = before;
 }

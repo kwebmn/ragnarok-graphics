@@ -18,6 +18,10 @@ constexpr uint32_t kPrimSize = 0xF9E4;
 constexpr uint32_t kPrimMaster = 0xF8;
 constexpr uint32_t kEffectVtable = 0x69F9CC;
 constexpr uint32_t kEffectId = 0x100;
+// 3.0.13-beta.20 (the owner's pick 9 of «50 идей»: «В толпе — только свои эффекты и эффекты группы»): the actor an
+// effect is on (FUN_005ba930's +0xF4: its place, its flags) and that actor's id (CGameActor +0x208, the account or GID)
+constexpr uint32_t kEffectMaster = 0xF4, kActorId = 0x208;
+constexpr int kCrowdPercent = 30;  // another's skill effect at this much of the game's strength
 // 2.7.27: a primitive's height over its effect's place (a float, y down positive: FUN_00612de0 adds it to the
 // effect's) - Ruwach's orbs -10, their shadows on the ground 0 (FUN_005CC5D0)
 constexpr uint32_t kPrimLift = 0x35C;
@@ -89,6 +93,7 @@ struct Tag {
     bool auraExtra = false;  // 0.63: the aura's ring or bubbles (auraExtra): what /aura shows
     uint16_t id = 0;         // 2.7.21: the effect's own number (kEffectId; 0 none) - Ruwach's orbs light by it
     bool raised = false;     // 2.7.27: its primitive lifted over the effect's place (kPrimLift) - not a shadow
+    uint32_t owner = 0;      // 3.0.13-beta.20: the id of the actor the effect is on (0 none known)
 };
 // 0.63: the level 99 aura's parts /aura turns on - the ring and bubbles (200, 201; 397, 398 transcendent), not the
 // circles (202, 362) the game always shows - and where the game keeps /aura (0 off; read only as an aura is made).

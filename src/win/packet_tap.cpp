@@ -1,3 +1,4 @@
+#include "win/context.hpp"
 #include "win/death_recap_watch.hpp"
 #include "win/ground_items.hpp"
 #include "win/hunt_panel.hpp"
@@ -93,6 +94,8 @@ uint16_t __attribute__((thiscall)) take(void* connection, const uint8_t* packet)
         chatwin::packet(e);      // 3.0.11-beta.41: the chat's battle log
         castwin::packet(e);      // 3.0.11-beta.48: the cast's label - which skill
         mobhpwin::packet(e);     // 3.0.11-beta.95: the monsters' HP bars
+        if (const auto* h = std::get_if<packets::Hit>(&e))  // 3.0.13-beta.20: a friend's target - its effects theirs
+            Context::get().noteHit(h->source, h->target);
         npcwin::packet(e);       // 3.0.11-beta.98: the NPC talk's words
         askcardwin::packet(e);   // 3.0.11-beta.150: the requests' names
         itemswin::packet(e);     // 3.0.11-beta.107: an item come into the bag told the log

@@ -577,6 +577,8 @@ const std::vector<IniSetting>& iniSettings() {
          Text::FxLightOrbsHint, "", &E::lightOrbs},  // 2.7.25: a part of fire_light
         {"effects", "aura", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxAura, Text::FxAuraHint,
          "", &E::aura},
+        {"effects", "crowd_effects", Page::Effects, Control::Check, 0, 1, 0, {"0", "1"}, {}, Text::FxCrowdEffects,
+         Text::FxCrowdEffectsHint, "", &E::crowdEffects},  // 3.0.13-beta.20
         {"effects", "fade_models", Page::Effects, Control::Check, 0, 1, 0, {"0", "1"}, {}, Text::FxFadeModels,
          Text::FxFadeModelsHint, "", &E::fadeModels},  // 3.0.13-beta.17
         {"effects", "aura_portals", Page::Effects, Control::Check, 0, 1, 0, {"0", "1"}, {}, Text::FxAuraPortals,

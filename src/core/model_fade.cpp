@@ -37,7 +37,15 @@ Focus focusOf(const camera::Projection& p, const float view[12], const float at[
     f.y = c[1] / c[2] * p.f1 + p.cy;
     f.z = c[2];
     f.h = std::fabs(p.f1) * kBodyUnits / c[2];
-    f.known = std::isfinite(f.x) && std::isfinite(f.y) && f.h > 0;
+    f.p = p;
+    std::memcpy(f.view, view, sizeof f.view);
+    float cam[3];  // the camera's place: w = M (c - t) at c = 0
+    for (int i = 0; i < 3; ++i)
+        cam[i] = -(view[3 * i] * view[9] + view[3 * i + 1] * view[10] + view[3 * i + 2] * view[11]);
+    f.camX = cam[0];
+    f.camZ = cam[2];
+    f.ground = std::hypot(at[0] - cam[0], at[2] - cam[2]);
+    f.known = std::isfinite(f.x) && std::isfinite(f.y) && f.h > 0 && std::isfinite(f.ground);
     return f;
 }
 
@@ -56,7 +64,14 @@ bool covers(const uint8_t* vertices, uint32_t stride, uint32_t vertexCount, cons
         const V a = at(vertices, stride, i0), b = at(vertices, stride, i1), c = at(vertices, stride, i2);
         for (int s = 0; s < kPoints; ++s) {
             const float z = depthIn(a, b, c, f.x, py[s]);
-            if (z > 0 && z < f.z - kNearer) return true;
+            if (!(z > 0 && z < f.z - kNearer)) continue;
+            // 3.0.13-beta.20: the point back into the world - nearer the camera along the ground than the character
+            const float v[3] = {(f.x - f.p.cx) * z / f.p.f0, (py[s] - f.p.cy) * z / f.p.f1, z};
+            float w[3];
+            for (int i = 0; i < 3; ++i)
+                w[i] = f.view[3 * i] * (v[0] - f.view[9]) + f.view[3 * i + 1] * (v[1] - f.view[10]) +
+                       f.view[3 * i + 2] * (v[2] - f.view[11]);
+            if (std::hypot(w[0] - f.camX, w[2] - f.camZ) < f.ground - kNearer) return true;
         }
     }
     return false;

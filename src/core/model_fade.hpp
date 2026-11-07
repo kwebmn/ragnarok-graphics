@@ -16,6 +16,12 @@ namespace uagfx::modelfade {
 struct Focus {
     bool known = false;
     float x = 0, y = 0, z = 0, h = 0;
+    // 3.0.13-beta.20 (R-UQ7AGY: Prontera's fountain behind the character went see-through - the camera looks down, a
+    // tall thing behind is nearer along its view): the projection, the camera, the camera's place and how far the
+    // character is from it along the ground (the world's x, z; y is up) - a model covers only nearer along the ground
+    camera::Projection p;
+    float view[12] = {};
+    float camX = 0, camZ = 0, ground = 0;
 };
 constexpr float kBodyUnits = 45.0f;  // a character sprite's height in the world's units, about
 // a draw this much nearer than the feet covers the body; 3.0.13-beta.18 (R-TAA3SB: a wall right before the character

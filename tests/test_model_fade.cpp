@@ -1,5 +1,6 @@
-// 3.0.13-beta.17 (the owner's pick 1 of «50 идей»): a model's draw over the character's body nearer than it covers it;
-// the ground at its feet, a wall behind it or one beside it does not; the see-through glides down and back
+// 3.0.13-beta.17 (the owner's pick 1 of «50 идей»): a model's draw over the character's body covers it when it is
+// nearer the camera along the ground (3.0.13-beta.20, R-UQ7AGY: the fountain behind, nearer along the view only, not);
+// the see-through glides down and back; a house's other parts go with it (3.0.13-beta.19)
 #include <cmath>
 #include <cstring>
 #include <vector>
@@ -10,31 +11,45 @@
 using namespace uagfx;
 
 namespace {
-// a quad of TL1 vertices (32 bytes each) at one depth
-std::vector<uint8_t> quad(float x0, float y0, float x1, float y1, float z) {
-    const float xy[4][2] = {{x0, y0}, {x1, y0}, {x0, y1}, {x1, y1}};
-    std::vector<uint8_t> v(4 * 32, 0);
-    for (int i = 0; i < 4; ++i) {
-        const float f[4] = {xy[i][0], xy[i][1], 0.5f, 1.0f / z};
-        std::memcpy(v.data() + i * 32, f, sizeof f);
+// a camera looking down at 45 degrees from the south, `d` away along its view: c_x = w_x, c_y = w_y cos + w_z (-sin)
+// ... as the game keeps it (c_j = sum_i w_i * view[3i+j] + t_j); the world's y up is negative
+struct Cam {
+    float view[12] = {};
+    camera::Projection p = camera::projectionFor(800, 600);
+    explicit Cam(float d) {
+        const float s = std::sqrt(0.5f), c = s;
+        view[0] = 1;
+        view[4] = c;
+        view[5] = s;
+        view[7] = -s;
+        view[8] = c;
+        view[11] = d;
     }
-    return v;
-}
+    void put(const float w[3], uint8_t* out) const {  // a TL1 vertex of a world point
+        float cv[3];
+        for (int j = 0; j < 3; ++j) cv[j] = w[0] * view[j] + w[1] * view[3 + j] + w[2] * view[6 + j] + view[9 + j];
+        const float f[4] = {cv[0] / cv[2] * p.f0 + p.cx, cv[1] / cv[2] * p.f1 + p.cy, 0.5f, 1.0f / cv[2]};
+        std::memcpy(out, f, sizeof f);
+    }
+    // a wall across x from -40 to 40 at z (north +), from the ground (y 0) up to `top` (negative), as a strip
+    std::vector<uint8_t> wall(float z, float top) const {
+        std::vector<uint8_t> v(4 * 32, 0);
+        const float corners[4][3] = {{-40, 0, z}, {40, 0, z}, {-40, top, z}, {40, top, z}};
+        for (int i = 0; i < 4; ++i) put(corners[i], v.data() + i * 32);
+        return v;
+    }
+};
 }  // namespace
 
-TEST(model_fade_covers_the_body_only_when_nearer) {
-    modelfade::Focus f;
-    f.known = true;
-    f.x = 400;
-    f.y = 300;
-    f.z = 200;
-    f.h = 60;
-    const auto front = quad(350, 200, 450, 320, 150), behind = quad(350, 200, 450, 320, 260);
-    const auto beside = quad(500, 200, 600, 320, 150), feet = quad(350, 295, 450, 305, 199);
+TEST(model_fade_covers_only_what_stands_before_the_character) {
+    const Cam cam(300);
+    const float at[3] = {0, 0, 0};
+    const modelfade::Focus f = modelfade::focusOf(cam.p, cam.view, at);
+    CHECK(f.known && f.h > 0);
+    const auto front = cam.wall(-20, -120), close = cam.wall(-6, -120), behind = cam.wall(25, -150);
     CHECK(modelfade::covers(front.data(), 32, 4, nullptr, 0, true, f));
-    CHECK(!modelfade::covers(behind.data(), 32, 4, nullptr, 0, true, f));
-    CHECK(!modelfade::covers(beside.data(), 32, 4, nullptr, 0, true, f));
-    CHECK(!modelfade::covers(feet.data(), 32, 4, nullptr, 0, true, f));
+    CHECK(modelfade::covers(close.data(), 32, 4, nullptr, 0, true, f));   // .18: right before it
+    CHECK(!modelfade::covers(behind.data(), 32, 4, nullptr, 0, true, f));  // .20: tall behind - nearer along the view
     modelfade::Focus none;
     CHECK(!modelfade::covers(front.data(), 32, 4, nullptr, 0, true, none));
 }
@@ -54,31 +69,16 @@ TEST(model_fade_glides_down_and_back) {
     CHECK(fd.fading() == 0);
 }
 
-// 3.0.13-beta.18 (R-TAA3SB): a wall right before the character (a few units nearer) and a roof over its feet alone
-// cover it too
-TEST(model_fade_close_walls_and_roofs_over_the_feet) {
-    modelfade::Focus f;
-    f.known = true;
-    f.x = 400;
-    f.y = 300;
-    f.z = 200;
-    f.h = 60;
-    const auto close = quad(350, 200, 450, 320, 196), roof = quad(350, 290, 450, 320, 150);
-    CHECK(modelfade::covers(close.data(), 32, 4, nullptr, 0, true, f));
-    CHECK(modelfade::covers(roof.data(), 32, 4, nullptr, 0, true, f));
-}
-
-// 3.0.13-beta.19 (R-KVR7K3): a house's other parts go with the one over the body - over its box the frame before and
-// before the character; a part behind the character, or one elsewhere, stays
 TEST(model_fade_the_whole_house) {
     modelfade::Fader fd;
-    modelfade::Box over{350, 200, 450, 320, 150};
-    fd.covered(over);
+    fd.covered(modelfade::Box{350, 200, 450, 320, 150});
     fd.frameDone(1);  // the next frame asks about it
     CHECK(fd.alongside(modelfade::Box{300, 300, 500, 450, 120}, 200));   // its front, before the character
     CHECK(!fd.alongside(modelfade::Box{300, 100, 500, 250, 240}, 200));  // its roof behind the character
     CHECK(!fd.alongside(modelfade::Box{600, 100, 700, 250, 120}, 200));  // another house
-    const auto q = quad(10, 20, 30, 50, 100);
+    std::vector<uint8_t> q(4 * 32, 0);
+    const float xy[4][4] = {{10, 20, 0, 0.01f}, {30, 20, 0, 0.01f}, {10, 50, 0, 0.01f}, {30, 50, 0, 0.01f}};
+    for (int i = 0; i < 4; ++i) std::memcpy(q.data() + i * 32, xy[i], 16);
     modelfade::Box b;
     CHECK(modelfade::boxOf(q.data(), 32, 4, b) && b.x0 == 10 && b.y1 == 50 && std::abs(b.nearest - 100) < 0.01f);
 }

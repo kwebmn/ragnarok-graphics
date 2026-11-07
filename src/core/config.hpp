@@ -187,6 +187,9 @@ struct EffectSettings {
     // 3.0.13-beta.17 (the owner's pick 1 of «50 идей»): buildings and trees between the camera and the character drawn
     // see-through, gliding (core/model_fade) - off as new looks are
     bool fadeModels = false;
+    // 3.0.13-beta.20 (the owner's pick 9 of «50 идей»): others' skill effects - on actors neither the character nor a
+    // party member here - at 30 % of the game's (a guild war, the market); off as new looks are
+    bool crowdEffects = false;
     // 0.28: the maps' fireflies - those the game shows and those the maps' makers placed that it does not - glow,
     // flash now and then and light a little around them. On by default.
     bool fireflies = true;

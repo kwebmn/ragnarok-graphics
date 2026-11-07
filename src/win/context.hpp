@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <set>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 #include "core/card_speed.hpp"
@@ -205,6 +206,22 @@ private:
     // 3.0.13-beta.16 (the owner's pick 20 of «50 идей»: «Режим скриншота»): Ctrl+Alt+F11 - the frames left of a big
     // shot: the world alone at 200 % (no DLSS, TAA, own interface scale), the target saved whole at the last
     int bigShot_ = 0;
+    // 3.0.13-beta.20: [effects] crowd_effects - the character and the party's members here, as the frame began
+    std::vector<uint32_t> friends_;
+    std::unordered_map<uint32_t, uint64_t> touched_;  // a target a friend hit of late, and when
+public:
+    // the character, a party member here, or one of them hit within 3 s (its effects theirs: a bolt on a monster)
+    bool friendOf(uint32_t id) const {
+        if (std::find(friends_.begin(), friends_.end(), id) != friends_.end()) return true;
+        const auto it = touched_.find(id);
+        return it != touched_.end() && GetTickCount64() - it->second < 3000;
+    }
+    void noteHit(uint32_t source, uint32_t target) {  // 3.0.13-beta.20: from the packets
+        if (friends_.empty() || std::find(friends_.begin(), friends_.end(), source) == friends_.end()) return;
+        if (touched_.size() > 256) touched_.clear();
+        touched_[target] = GetTickCount64();
+    }
+private:
     bool photoNow() const { return photo_ || bigShot_ > 0; }
     // 2.2.1: the statistics of the settings played with, with the player's leave ([stats] send; core/usage.hpp)
     usage::Recorder usage_;

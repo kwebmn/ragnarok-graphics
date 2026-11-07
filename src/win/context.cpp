@@ -897,6 +897,11 @@ void Context::present(const Rect& source, bool waitForVblank) {
     limitZoom(config.cameraZoomLimit);     // 3.0.4-beta.17: no further out than the character is drawn
     tiltCamera(config.cameraTilt);  // 3.0.13-beta.5: [camera] tilt
     quickTeleport(config.quickTeleport);  // 3.0.13-beta.7: [interface] quick_teleport
+    if (effects().crowdEffects) {  // 3.0.13-beta.20: whose skill effects stay whole
+        friends_ = partywin::hereIds();
+        uint32_t own = 0;
+        if (readGame(0x771F7C, &own, 4) && own) friends_.push_back(own);  // the character's id (death_recap_watch's)
+    }
     stillScreen(!config.screenShake);     // 3.0.13-beta.8: [interface] screen_shake
     silentJokes(!config.skillJokes);      // 3.0.13-beta.8: [interface] skill_jokes
     noSwearFilter(!config.swearFilter);   // 3.0.13-beta.9: [interface] swear_filter

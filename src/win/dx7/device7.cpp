@@ -301,7 +301,10 @@ HRESULT Device7::record(D3DPRIMITIVETYPE type, DWORD fvf, const void* vertices, 
     const int skillPercent = std::clamp(fx.skillBrightness, 0, 100);
     // 2.7.39 (the tester: «как светится персонаж во время каста не устраивает»): a casting quieter still
     const int drawPercent = effect_exe::isCasting(tag.id) ? effect_exe::castPercent(skillPercent) : skillPercent;
-    const bool skill = fx.skillsSoft && drawPercent < 100 && tag.kind == effect_exe::Kind::Skill;
+    // 3.0.13-beta.20: [effects] crowd_effects - another's skill effect (on an actor neither the character nor a party
+    // member here) at kCrowdPercent, laid over by alpha too
+    const bool crowd = fx.crowdEffects && tag.kind == effect_exe::Kind::Skill && tag.owner && !c.friendOf(tag.owner);
+    const bool skill = tag.kind == effect_exe::Kind::Skill && (crowd || (fx.skillsSoft && drawPercent < 100));
     if ((aura || skill) && c.enhanced()) {
         static bool logged = false;
         if (!logged && aura)
@@ -310,9 +313,11 @@ HRESULT Device7::record(D3DPRIMITIVETYPE type, DWORD fvf, const void* vertices, 
         const auto* bytes = static_cast<const uint8_t*>(vertices);
         soft_.assign(bytes, bytes + size_t(vertexCount) * FrameRecord::stride(fvf));
         effect_exe::soften(soft_.data(), vertexCount, FrameRecord::stride(fvf),
-                           aura ? auraPercent : drawPercent,
-                           aura ? effect_exe::softenFor(setup.blend, setup.srcBlend, setup.dstBlend)
-                                : effect_exe::softenSkill(setup.blend, setup.srcBlend, setup.dstBlend));
+                           aura    ? auraPercent
+                           : crowd ? std::min(drawPercent, effect_exe::kCrowdPercent)
+                                   : drawPercent,
+                           aura || crowd ? effect_exe::softenFor(setup.blend, setup.srcBlend, setup.dstBlend)
+                                         : effect_exe::softenSkill(setup.blend, setup.srcBlend, setup.dstBlend));
         vertices = soft_.data();
     }
     if (c.enhanced()) {  // 2.7.37: what of the bright draws is made softer, now and then in the log
