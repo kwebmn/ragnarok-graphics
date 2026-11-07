@@ -875,6 +875,9 @@ struct Config {
     // 3.0.11-beta.67: [interface] text_size - the concept's «Масштаб текста 80–150 %»: the windows one reads in (the
     // chat, «Довідник», «Речі», «Характеристики») larger or smaller as a whole, per cent of [interface] size's
     int textSize = 100;
+    // 3.0.15-beta.9 (a player: «а можно якось зробити щоб окна складу і ГІ складу зменшити»): [interface]
+    // item_windows - «Речі», the storage (the guild's too) and the cart smaller, per cent of the reading windows' size
+    int itemWindows = 100;
     // 3.0.11-beta.7: [interface] reference - «Довідник» (win/reference_window): Ctrl+F in the game
     bool referenceWindow = true;  // 3.0.11 (the owner: the new interface for all) - «Довідник» with it
     PanelLayout panelLayout = PanelLayout::Row;

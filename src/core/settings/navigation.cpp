@@ -192,7 +192,8 @@ bool fitsMachine(const std::string& k, const Machine& m) {
 const std::vector<InterfaceSection>& interfaceSections() {
     static const std::vector<InterfaceSection> list{
         {Text::InterfaceSecMain,
-         {"interface.minimap", "interface.size", "interface.text_size", "interface.panel_opacity",
+         {"interface.minimap", "interface.size", "interface.text_size", "interface.item_windows",
+          "interface.panel_opacity",
           "interface.window_opacity", "interface.animations", "interface.cursor", "interface.lock_layout",
           "interface.layout_per_char", "interface.pack_icons", "interface.dim_world", "interface.low_hp_edge",
           "interface.reference"}},

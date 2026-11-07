@@ -610,6 +610,11 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("text_size", std::to_string(running.textSize), std::to_string(file.textSize)));
         n.textSize = file.textSize;
     }
+    if (file.itemWindows != running.itemWindows) {  // 3.0.15-beta.9: the item windows' size, at once
+        u.applied.push_back(
+            change("item_windows", std::to_string(running.itemWindows), std::to_string(file.itemWindows)));
+        n.itemWindows = file.itemWindows;
+    }
     if (file.lowHpEdge != running.lowHpEdge) {  // 3.0.11-beta.50: the low HP edge, at once
         u.applied.push_back(
             change("low_hp_edge", std::to_string(running.lowHpEdge), std::to_string(file.lowHpEdge)));

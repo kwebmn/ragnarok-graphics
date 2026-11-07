@@ -727,6 +727,7 @@ enum class Text : uint16_t {
     InterfaceSize115, InterfaceSize130,
     // 3.0.11-beta.67: the reading windows' text
     InterfaceTextSize, InterfaceTextSizeHint, InterfaceText80, InterfaceText90, InterfaceText150,
+    InterfaceItemWindows, InterfaceItemWindowsHint,  // 3.0.15-beta.9
     InterfaceChat, InterfaceChatHint, ChatTabAll,
     ChatTabParty,
     ChatTabGuild, ChatTabWhisper, ChatTabTrade, ChatTabBattle, ChatFrom, ChatTo, ChatHintSend, ChatHintType,

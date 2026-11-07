@@ -1054,6 +1054,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     uistyle::setSize(config.uiSize > 0 ? float(config.uiSize) / 100.0f
                                        : uistyle::autoSize(shadow.width(), shadow.height(), scaleMade_ ? plan.s : 1.0));
     uistyle::setText(float(config.textSize) / 100.0f);  // 3.0.11-beta.67: [interface] text_size
+    uistyle::setItems(float(config.itemWindows) / 100.0f);  // 3.0.15-beta.9: [interface] item_windows
     // 3.0.11-beta.74: [interface] pack_icons - the panels' icons from the AI texture pack; drawn again once it is read
     packpictures::setIconsOn(config.packIcons);
     hudedit::setLocked(config.lockLayout);  // 3.0.11-beta.77: [interface] lock_layout

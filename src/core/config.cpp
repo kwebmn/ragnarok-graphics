@@ -806,6 +806,9 @@ Config parseConfig(const std::string& text) {
         } else if (key == "interface.text_size") {  // 3.0.11-beta.67: the reading windows' text, per cent
             int n = 0;
             if (toInt(val, -100000, 100000, n)) c.textSize = std::clamp(n, 80, 150);
+        } else if (key == "interface.item_windows") {  // 3.0.15-beta.9: the item windows, per cent
+            int n = 0;
+            if (toInt(val, -100000, 100000, n)) c.itemWindows = std::clamp(n, 60, 100);
         } else if (key == "interface.low_hp_edge") {  // 3.0.11-beta.50: the screen's edges red at low HP
             int n = 0;
             if (toInt(val, -100000, 100000, n)) c.lowHpEdge = std::clamp(n, 0, 100);

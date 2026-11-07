@@ -36,6 +36,9 @@ float partScale(double k);  // a part's scale in its picture's pixels: k times s
 void setText(float text);  // 0.8-1.5; changes draw the parts again
 float text();
 float readingScale(double k);  // their scale: partScale's times text(), 0.5-6
+// 3.0.15-beta.9: [interface] item_windows - «Речі», the storage and the cart: readingScale's times this (0.6-1)
+void setItems(float items);
+float itemScale(double k);
 
 // 3.0.11-beta.49 (the concept: «тень только у окон»): a window's shadow - dark at a rounded box's edge (`alpha`),
 // fading out `spread` away, none under the box itself (its glass stays as it is); the picture (w + 2 spread) x

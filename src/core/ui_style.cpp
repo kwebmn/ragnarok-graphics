@@ -61,6 +61,19 @@ float text() { return g_text; }
 
 float readingScale(double k) { return std::clamp(float(k) * size() * text(), 0.5f, 6.0f); }
 
+namespace {
+std::atomic<float> g_items{1.0f};  // 3.0.15-beta.9
+}  // namespace
+
+void setItems(float items) {
+    items = std::clamp(items, 0.6f, 1.0f);
+    if (std::fabs(items - g_items.load()) < 1e-4f) return;
+    g_items = items;
+    ++g_generation;
+}
+
+float itemScale(double k) { return std::clamp(readingScale(k) * g_items.load(), 0.5f, 6.0f); }
+
 panel::Picture vignette(int w, int h, uint32_t rgb, float alpha, float depth) {
     panel::Picture p;
     if (w <= 0 || h <= 0 || depth <= 0) return p;

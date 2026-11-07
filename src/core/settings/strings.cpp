@@ -6870,6 +6870,12 @@ constexpr Entry kTexts[] = {
     {Text::InterfaceText80, "80 %", "80 %", "80 %"},
     {Text::InterfaceText90, "90 %", "90 %", "90 %"},
     {Text::InterfaceText150, "150 %", "150 %", "150 %"},
+    {Text::InterfaceItemWindows, "Item windows size", "Розмір вікон речей", "Размер окон вещей"},  // 3.0.15-beta.9
+    {Text::InterfaceItemWindowsHint,
+     "«Items», the storage (the guild's too) and the cart smaller, so two of them side by side leave the world in "
+     "view; the other windows stay as they are.",
+     "«Речі», склад (і гільдії) та візок менші, щоб двоє поруч не закривали світ; решта вікон лишається як є.",
+     "«Вещи», склад (и гильдии) и тележка меньше, чтобы два рядом не закрывали мир; остальные окна остаются как есть."},
     // 3.0.11-beta.41: the chat (stage 8 of the new interface)
     {Text::InterfaceChat, "Chat", "Чат", "Чат"},
     {Text::InterfaceChatHint,

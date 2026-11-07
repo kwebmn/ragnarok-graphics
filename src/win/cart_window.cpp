@@ -398,7 +398,7 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
         return;
     }
     readState(s);
-    const float scale = uistyle::readingScale(k);
+    const float scale = uistyle::itemScale(k);  // 3.0.15-beta.9: [interface] item_windows
     s.k = float(k);
     s.scale = scale;
     s.targetW = targetWidth;
