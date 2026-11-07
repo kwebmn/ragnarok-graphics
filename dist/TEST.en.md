@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.13-beta.15 — what's new
+
+**Aura does not hide portals** (a new switch «Aura does not hide portals» in the effects' Characters group, off by default). A level 99 aura over a warp portal goes faint and the portal shows through it: with many aura characters at a portal it is no longer lost under them.
+
 # uaRO Graphics 3.0.13-beta.14 — what's new
 
 **The party's damage in the Hunt panel.** The Hunt panel now shows each party member's share of the damage since the hunt began (or since «↺»): «Party: Lina 60 % · you 30 % · Tor 10 %» - who gave how much on a boss. The blows seen on your screen count: a mate's off the screen do not.
