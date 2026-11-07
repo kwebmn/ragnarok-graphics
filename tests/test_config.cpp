@@ -1462,6 +1462,17 @@ TEST(config_interface_hotbar_ammo) {
     CHECK(!liveUpdate(noUi(""), noUi("hotbar_ammo = 0\n")).next.hotbarAmmo);
 }
 
+// 3.0.16-beta.8 (the owner: «для магов и пристов ... гемов, а для монков ... сферы»): [interface] hotbar_supplies -
+// off at first, a box of «Інтерфейс», at once
+TEST(config_interface_hotbar_supplies) {
+    CHECK(!noUi("").hotbarSupplies);
+    CHECK(noUi("hotbar_supplies = 1\n").hotbarSupplies);
+    const settings::IniSetting* s = settings::findSetting("interface.hotbar_supplies");
+    CHECK(s != nullptr && s->page == settings::Page::Interface);
+    CHECK(appliesNow("interface.hotbar_supplies"));
+    CHECK(liveUpdate(noUi(""), noUi("hotbar_supplies = 1\n")).next.hotbarSupplies);
+}
+
 // 3.0.11-beta.128 (the network plan's step 5): [debug] quick_acks - the game's socket acknowledges each of the server's
 // packets at once (Windows waits up to 200 ms for a lone one): the server sees a lost packet sooner; on, the
 // developer's page, at once

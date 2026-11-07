@@ -375,6 +375,34 @@ TEST(hotbar_shows_the_ammo_left) {
     CHECK((p.px[size_t(w.y + w.h / 2) * size_t(p.width) + size_t(w.x + w.w / 2)] >> 24) > 0x80);  // its ground
 }
 
+// 3.0.16-beta.8: the supplies' pills in a row after the ammo's, drawn; the spheres' wider by their dots
+TEST(hotbar_supplies_after_the_ammo) {
+    const hotbar::Layout L = hotbar::layout(hotbar::Mode::Normal, 800, 900, 1.0f);
+    hotbar::Show sh;
+    sh.ammo.count = 120;
+    hotbar::Supply gem;
+    gem.count = 7;
+    hotbar::Supply spheres;
+    spheres.dots = 5;
+    spheres.count = 3;
+    sh.supplies = {gem, spheres};
+    const panel::Box a = hotbar::ammoBox(L, sh);
+    const std::vector<panel::Box> b = hotbar::supplyBoxes(L, sh);
+    CHECK(b.size() == 2);
+    CHECK(b[0].x >= a.x + a.w && b[1].x >= b[0].x + b[0].w);
+    CHECK(b[0].y == a.y);
+    panel::Picture p;
+    p.width = L.w;
+    p.height = L.h;
+    p.px.assign(size_t(L.w) * size_t(L.h), 0u);
+    std::vector<hotbar::Cell> cells(9);
+    hotbar::paint(p, L, cells, sh, texts());
+    for (const panel::Box& w : b)
+        CHECK((p.px[size_t(w.y + w.h / 2) * size_t(p.width) + size_t(w.x + w.w - 6)] >> 24) > 0x80);
+    sh.ammo.count = -1;  // none worn: from the glass's left end
+    CHECK(hotbar::supplyBoxes(L, sh)[0].x == hotbar::layout(hotbar::Mode::Normal, 800, 900, 1.0f).glass.x);
+}
+
 // 3.0.11-beta.125: when the pill's warning shows - a fall under 50 or to 10 or fewer its words 5 s, none left as long as
 // it lasts; more again (a new stack) quiet at once; none worn nothing
 TEST(hotbar_ammo_warns_as_it_falls) {

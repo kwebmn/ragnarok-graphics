@@ -660,6 +660,10 @@ struct Config {
     // момент когда они заканчиваются»): [interface] hotbar_ammo - the ammo worn and how many left on a pill over the
     // hotbar (core/hotbar_panel Ammo, win/ammo_watch); on
     bool hotbarAmmo = true;
+    // 3.0.16-beta.8 (the owner: «для магов и пристов показывать количество гемов, а для монков ... сферы»):
+    // [interface] hotbar_supplies - what the bar's skills spend (gems, Holy Water, stones, bottles) and the spirit
+    // spheres on pills after the ammo's (core/supplies, win/sphere_watch); off
+    bool hotbarSupplies = false;
     // 3.0.11-beta.129 (the owner «делай»): [interface] ammo_sound - a short soft chime when 10 arrows are left and
     // when none are (core/ui_chime, win/ammo_sound through the game's own sound player); on
     bool ammoSound = true;

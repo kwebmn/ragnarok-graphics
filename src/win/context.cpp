@@ -1130,6 +1130,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     // 3.0.11-beta.40: [interface] hotbar - the hotkeys' bar at the bottom middle, the game's own hidden
     hotbarwin::setDelayRing(config.delayRing);  // 3.0.11-beta.276
     hotbarwin::setPotionWarn(config.potionWarn);  // 3.0.11-beta.281
+    hotbarwin::setSupplies(config.hotbarSupplies);  // 3.0.16-beta.8
     hotbarwin::frame(window, config.hotbar, config.hotbarPerCharacter, config.padHints, config.hotbarAmmo,
                      config.groundCounts, gameCodePage(config), pk, pw, ph);  // .125 the ammo's pill, .143 the walls
     ammosound::frame(config.ammoSound);  // 3.0.11-beta.129: [interface] ammo_sound - the chime at 10 left and at none

@@ -177,6 +177,9 @@ const std::vector<IniSetting>& iniSettings() {
         // 3.0.11-beta.125: the ammo left over the hotbar
         {"interface", "hotbar_ammo", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {},
          Text::InterfaceHotbarAmmo, Text::InterfaceHotbarAmmoHint, ""},
+        // 3.0.16-beta.8: the gems, stones and spheres the bar's skills spend
+        {"interface", "hotbar_supplies", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {},
+         Text::InterfaceHotbarSupplies, Text::InterfaceHotbarSuppliesHint, ""},
         // 3.0.11-beta.129: the chime at 10 arrows left and at none
         {"interface", "ammo_sound", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {},
          Text::InterfaceAmmoSound, Text::InterfaceAmmoSoundHint, ""},
@@ -1354,6 +1357,7 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "interface.whispers") return c.whisperWindows ? "1" : "0";       // 3.0.11-beta.212
     if (k == "interface.skill_cells") return c.skillCells ? "1" : "0";  // 3.0.11-beta.142
     if (k == "interface.mouse_cell") return c.mouseCell ? "1" : "0";    // 3.0.16-beta.7
+    if (k == "interface.hotbar_supplies") return c.hotbarSupplies ? "1" : "0";  // 3.0.16-beta.8
     if (k == "interface.signs") return c.worldSigns ? "1" : "0";        // 3.0.16-beta.7
     if (k == "interface.ground_counts") return c.groundCounts ? "1" : "0";  // 3.0.11-beta.143
     if (k == "interface.animations") return c.animations ? "1" : "0";  // 3.0.11-beta.46

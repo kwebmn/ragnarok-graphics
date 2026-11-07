@@ -152,6 +152,31 @@ panel::Box ammoPlace(const Layout& L, const Ammo& a) {
     return panel::Box{x, y, w, kAmmoH * s};
 }
 
+// 3.0.16-beta.8: the supplies' pills in a row after the ammo's (or where it would be)
+constexpr float kDot = 7, kDotGap = 3;
+std::string supplyText(const Supply& p) { return std::to_string(std::max(0, p.count)); }
+float supplyWidth(const Supply& p, float s) {
+    if (p.dots > 0) return 10 * s + float(p.dots) * kDot * s + float(p.dots - 1) * kDotGap * s + 10 * s;
+    return 8 * s + kAmmoIcon * s + 6 * s + panel::wordsWidth(supplyText(p), kAmmoPx * s, true) + 10 * s;
+}
+std::vector<panel::Box> supplyPlaces(const Layout& L, const Show& show) {
+    std::vector<panel::Box> out;
+    if (show.supplies.empty()) return out;
+    const float s = L.s;
+    const panel::Box a = ammoPlace(L, show.ammo);
+    float x = a.w > 0 ? a.x + a.w + 6 * s : L.glass.x;
+    const float y = L.below ? L.glass.y + L.glass.h + 6 * s : L.glass.y - kAmmoH * s - 6 * s;
+    for (const Supply& p : show.supplies) {
+        const float w = supplyWidth(p, s);
+        out.push_back(panel::Box{x, y, w, kAmmoH * s});
+        x += w + 6 * s;
+    }
+    return out;
+}
+uint32_t supplyRgb(const Supply& p) {
+    return p.dots > 0 ? kText : p.count <= 0 ? kAmmoOut : p.count <= kAmmoVeryLow ? kAmmoWarn : kText;
+}
+
 // Shown: not under the hovered cell's tip nor the battle mode button's
 panel::Box ammoShown(const Layout& L, const Show& show, const panel::Box& tip, const Texts& t) {
     const panel::Box b = ammoPlace(L, show.ammo);
@@ -250,6 +275,8 @@ void flip(Layout& L) {
 
 panel::Box ammoBox(const Layout& L, const Show& show) { return ammoPlace(L, show.ammo); }
 
+std::vector<panel::Box> supplyBoxes(const Layout& L, const Show& show) { return supplyPlaces(L, show); }
+
 Hit hitTest(const Layout& L, float x, float y) {
     if (L.toggle.contains(x, y)) return Hit{Part::Toggle, -1};
     for (size_t i = 0; i < L.cells.size(); ++i)
@@ -346,6 +373,26 @@ void paint(panel::Picture& out, const Layout& L, const std::vector<Cell>& cells,
         if (show.ammo.icon && show.ammo.icon->width > 0)
             put(out, *show.ammo.icon, panel::Box{ammo.x + 8 * s, ammo.y, kAmmoIcon * s, ammo.h}, 1.0f);
     }
+    const std::vector<panel::Box> pills = supplyPlaces(L, show);  // 3.0.16-beta.8
+    for (size_t i = 0; i < pills.size() && i < show.supplies.size(); ++i) {
+        const panel::Box& b = pills[i];
+        const Supply& p = show.supplies[i];
+        if (overlap(b, tip) || (show.hoverToggle && overlap(b, toggleTip(L, t)))) continue;
+        const bool low = p.dots == 0 && p.count <= kAmmoVeryLow;
+        const uint32_t rgb = supplyRgb(p);
+        panel::roundRect(out, b, b.h / 2, kCard, std::max(0.85f, uistyle::panel()), low ? rgb : kWhite,
+                         low ? 0.9f : 0.12f, (low ? 1.5f : 1.0f) * s);
+        if (p.dots > 0) {  // the spheres: lit gold, the places left faint
+            for (int d = 0; d < p.dots; ++d) {
+                const panel::Box dot{b.x + 10 * s + float(d) * (kDot + kDotGap) * s, b.y + (b.h - kDot * s) / 2,
+                                     kDot * s, kDot * s};
+                if (d < p.count) panel::roundRect(out, dot, dot.h / 2, kGold2, 1.0f);
+                else panel::roundRect(out, dot, dot.h / 2, kWhite, 0.08f, kWhite, 0.3f, 1.0f * s);
+            }
+        } else if (p.icon && p.icon->width > 0) {
+            put(out, *p.icon, panel::Box{b.x + 8 * s, b.y, kAmmoIcon * s, b.h}, 1.0f);
+        }
+    }
     if (tip.w > 0) panel::roundRect(out, tip, 8 * s, kCard, 0.94f, kWhite, 0.12f, 1.0f * s);
     if (show.hoverToggle) panel::roundRect(out, toggleTip(L, t), 8 * s, kCard, 0.94f, kWhite, 0.12f, 1.0f * s);
 }
@@ -403,6 +450,14 @@ std::vector<Words> words(const Layout& L, const std::vector<Cell>& cells, int ro
         out.push_back(Words{panel::Box{ammo.x + (8 + kAmmoIcon + 6) * s, ammo.y, ammo.w - (8 + kAmmoIcon + 6 + 4) * s,
                                        ammo.h},
                             ammoText(show.ammo), ammoRgb(show.ammo.count), kAmmoPx * s, true, Align::Left});
+    const std::vector<panel::Box> pills = supplyPlaces(L, show);  // 3.0.16-beta.8: the items' counts
+    for (size_t i = 0; i < pills.size() && i < show.supplies.size(); ++i) {
+        const panel::Box& b = pills[i];
+        const Supply& p = show.supplies[i];
+        if (p.dots > 0 || overlap(b, tip) || (show.hoverToggle && overlap(b, toggleTip(L, t)))) continue;
+        out.push_back(Words{panel::Box{b.x + (8 + kAmmoIcon + 6) * s, b.y, b.w - (8 + kAmmoIcon + 6 + 4) * s, b.h},
+                            supplyText(p), supplyRgb(p), kAmmoPx * s, true, Align::Left});
+    }
     for (size_t i = 0; tip.w > 0 && i < lines.size(); ++i)
         out.push_back(Words{panel::Box{tip.x + 10 * s, tip.y + (4 + 18 * float(i)) * s, tip.w - 20 * s, 17 * s},
                             lines[i].text, lines[i].rgb, (i ? 11.5f : 13) * s, i == 0, Align::Left});

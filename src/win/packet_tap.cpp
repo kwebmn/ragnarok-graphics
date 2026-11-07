@@ -4,6 +4,7 @@
 #include "win/hunt_panel.hpp"
 #include "win/mvp_panel.hpp"
 #include "win/skill_delay_watch.hpp"
+#include "win/sphere_watch.hpp"
 #include "win/packet_tap.hpp"
 
 #include <windows.h>
@@ -86,6 +87,7 @@ uint16_t __attribute__((thiscall)) take(void* connection, const uint8_t* packet)
     groundunitswin::packet(id, packet);           // 3.0.11-beta.143: the own walls and pillars standing
     groundwin::packet(id, packet);  // 3.0.11-beta.283: the items on the ground
     skilldelaywin::packet(id, packet);            // 3.0.11-beta.276: the delay after the own skills
+    spherewatch::packet(id, packet);              // 3.0.16-beta.8: the own spirit spheres (coins)
     const packets::Event e = packets::parse(packet, kReadable);
     if (!std::holds_alternative<std::monostate>(e)) {
         notifier::packet(e);

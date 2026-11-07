@@ -32,9 +32,11 @@
 #include "win/game_camera.hpp"
 #include "win/ground_units.hpp"
 #include "core/potion_warn.hpp"
+#include "core/supplies.hpp"
 #include "core/ui_chime.hpp"
 #include "win/hud_edit.hpp"
 #include "win/skill_delay_watch.hpp"
+#include "win/sphere_watch.hpp"
 #include "win/sound_hook.hpp"
 #include "win/log.hpp"
 #include "win/paths.hpp"
@@ -132,6 +134,10 @@ struct State {
     bool delayRing = true;  // 3.0.11-beta.276: [interface] delay_ring
     bool potionWarn = true;  // 3.0.11-beta.281: [interface] potion_warn
     potionwarn::Watch potions;
+    bool suppliesOn = false;      // 3.0.16-beta.8: [interface] hotbar_supplies
+    potionwarn::Watch supplyWatch;
+    std::string suppliesTold;  // the pick last told the log
+    int supplyChimes = 0;
     std::set<std::string> healing;  // the bar's healing items now (their counts red when low)
     int potionTold = 0;
     // 3.0.11-beta.117 (R-8YW96B, R-5JGPFX: it jumped right for a second while walking): moved aside only for a window
@@ -641,6 +647,55 @@ hb::Ammo ammoOf(State& s, ULONGLONG now, bool on) {
     return a;
 }
 
+// 3.0.16-beta.8 (the owner: «для магов и пристов показывать количество гемов, а для монков например еще и сферы»):
+// what the bar's learned skills spend (core/supplies) - each item's picture and its count in the bag, the spirit
+// spheres as dots; a fall to 10 or fewer and to none the arrows' chimes (as the healing items')
+std::vector<hb::Supply> suppliesOf(State& s) {
+    std::vector<hb::Supply> out;
+    if (!s.suppliesOn) return out;
+    std::vector<uint16_t> skills;
+    for (const Slot& at : s.slots)
+        if (at.what.kind == hb::Slot::Kind::Skill && at.skillId > 0 &&
+            !(s.learnedCame && !s.learned.count(at.what.id)))
+            skills.push_back(uint16_t(at.skillId));
+    const int spheres = spherewatch::count();
+    const supplies::Pick p = supplies::pick(skills, spheres);
+    std::map<int, int> counts;
+    const auto& files = clienttables::itemFiles();
+    std::string told;
+    for (int id : p.items) {
+        hb::Supply x;
+        const auto b = s.bag.find(std::to_string(id));
+        x.count = b != s.bag.end() ? b->second : 0;
+        counts[id] = x.count;
+        const auto f = files.find(std::to_string(id));
+        if (f != files.end()) x.icon = iconOf(s, f->second, hb::ammoIconSide(s.scale));
+        out.push_back(x);
+        told += "#" + std::to_string(id) + " ";
+    }
+    if (p.spheres) {
+        hb::Supply x;
+        x.dots = p.sphereMost;
+        x.count = std::min(spheres, p.sphereMost);
+        out.push_back(x);
+        told += "spheres/" + std::to_string(p.sphereMost);
+    }
+    if (told != s.suppliesTold) {
+        s.suppliesTold = told;
+        LOG_INFO("hotbar: the supplies' pills - %s", told.empty() ? "none" : told.c_str());
+    }
+    const int fresh = s.supplyWatch.step(counts, !s.bag.empty());
+    if (fresh >= 2) {
+        static const std::vector<uint8_t> low = chime::wav(chime::Kind::AmmoLow),
+                                          none = chime::wav(chime::Kind::AmmoOut);
+        const bool played = win::playOwn(fresh == 3 ? none.data() : low.data());
+        if (s.supplyChimes++ < 20)
+            LOG_INFO("hotbar: a supply %s - the chime %s", fresh == 3 ? "ran out" : "fell to 10 or fewer",
+                     played ? "played" : "not played: the game's sound is off");
+    }
+    return out;
+}
+
 // The game's shown windows over the box (the target's pixels), and the new chat (3.0.11-beta.41): the right edge and
 // the top of those; false none (3.0.11-beta.117: `what` - which, for the log)
 bool windowsOver(const State& s, float x0, float y0, float x1, float y1, float& right, float& top, std::string& what) {
@@ -985,6 +1040,15 @@ void setPotionWarn(bool on) {  // 3.0.11-beta.281
     s.potionWarn = on;
 }
 
+void setSupplies(bool on) {  // 3.0.16-beta.8
+    State& s = state();
+    if (on != s.suppliesOn) {
+        LOG_INFO("hotbar: [interface] hotbar_supplies = %d", on ? 1 : 0);
+        s.key.clear();
+    }
+    s.suppliesOn = on;
+}
+
 void setDelayRing(bool on) {  // 3.0.11-beta.276
     State& s = state();
     if (on != s.delayRing) LOG_INFO("hotbar: [interface] delay_ring = %d", on ? 1 : 0);
@@ -1081,6 +1145,7 @@ void frame(HWND game, bool on, bool ownBars, bool padHints, bool ammo, bool coun
     show.dropping = windrag::now().kind == windrag::Kind::Item || windrag::now().kind == windrag::Kind::Skill;  // .110
     show.sony = pad.sony;
     show.ammo = ammoOf(s, now, ammo);  // 3.0.11-beta.125
+    show.supplies = suppliesOf(s);     // 3.0.16-beta.8
     show.delay = s.delayRing ? skilldelaywin::left() : 0.0f;  // 3.0.11-beta.276: the delay after a skill
     show.profile = s.barStep == State::BarStep::Kept ? s.profile : 1;  // 3.0.11-beta.288
     if (show.pad != s.padTold) {
@@ -1098,6 +1163,8 @@ void frame(HWND game, bool on, bool ownBars, bool padHints, bool ammo, bool coun
                       (show.pad ? (show.sony ? "S" : "X") : "") + (show.dropping ? "D" : "") + ';' +
                       std::to_string(show.ammo.count) + (show.ammo.icon ? "i" : "") + show.ammo.warning + ';' +
                       std::to_string(int(show.delay * 40)) + 'p' + std::to_string(show.profile) + ';';  // .276, .288
+    for (const hb::Supply& x : show.supplies)  // 3.0.16-beta.8
+        key += std::to_string(x.count) + '/' + std::to_string(x.dots) + (x.icon ? "i" : "") + ',';
     for (size_t i = 0; i < s.cells.size(); ++i) {
         const hb::Cell& c = s.cells[i];
         key += c.key + '|' + c.name + '|' + std::to_string(c.level) + '|' + std::to_string(c.count) +

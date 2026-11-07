@@ -110,6 +110,14 @@ struct Ammo {
     std::string warning;                   // «Стріли закінчуються» ("" none)
 };
 int ammoIconSide(float scale);
+// 3.0.16-beta.8 (the owner: «для магов и пристов показывать количество гемов, а для монков ... сферы»): what the bar's
+// skills spend (core/supplies) on pills after the ammo's - an item's picture and how many (red edge from 10 down, none
+// red words), or the spirit spheres as dots (dots > 0: that many places, count of them lit)
+struct Supply {
+    int count = 0;
+    const panel::Picture* icon = nullptr;  // at ammoIconSide()
+    int dots = 0;                          // 0 an item; 5 or 10 the spheres' places
+};
 // How low: 0 plenty (50 or more; none worn), 1 under 50, 2 ten or fewer, 3 none left
 int ammoLevel(int count);
 // The level whose words to show with the count now (0 none): a fall to a lower level its words kShowMs, none left as
@@ -133,6 +141,7 @@ struct Show {
     bool pad = false, sony = false;
     bool dropping = false;  // 3.0.11-beta.110: a thing or a skill dragged - the cells lit in gold (a drop takes it)
     Ammo ammo;              // 3.0.11-beta.125
+    std::vector<Supply> supplies;  // 3.0.16-beta.8
     // 3.0.11-beta.147: a cell's icon lifted (dragged) - that cell's faded where it was, the cell it is over outlined
     int lifted = -1, over = -1;
     // 3.0.11-beta.276 (the owner's feature 7): the delay after a skill - its share left (0 none) darkening every
@@ -143,6 +152,8 @@ struct Show {
 };
 // The ammo's pill over the glass's left end (w 0: none worn); a cell's tip over it hides it a while
 panel::Box ammoBox(const Layout& L, const Show& show);
+// 3.0.16-beta.8: the supplies' pills in a row after it (each w 0 when a tip is over it)
+std::vector<panel::Box> supplyBoxes(const Layout& L, const Show& show);
 void paint(panel::Picture& out, const Layout& L, const std::vector<Cell>& cells, const Show& show, const Texts& t);
 
 enum class Align : uint8_t { Left, Right, Center };

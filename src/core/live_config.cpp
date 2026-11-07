@@ -597,6 +597,10 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("skill_cells", flag(running.skillCells), flag(file.skillCells)));
         n.skillCells = file.skillCells;
     }
+    if (file.hotbarSupplies != running.hotbarSupplies) {  // 3.0.16-beta.8: the supplies over the hotbar, at once
+        u.applied.push_back(change("hotbar_supplies", flag(running.hotbarSupplies), flag(file.hotbarSupplies)));
+        n.hotbarSupplies = file.hotbarSupplies;
+    }
     if (file.mouseCell != running.mouseCell) {  // 3.0.16-beta.7: the cell under the mouse, at once
         u.applied.push_back(change("mouse_cell", flag(running.mouseCell), flag(file.mouseCell)));
         n.mouseCell = file.mouseCell;
