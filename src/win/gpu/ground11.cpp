@@ -536,7 +536,7 @@ void Renderer11::noteSilhouette(const FrameRecord& rec, const DrawCmd& d, const 
     DrawCmd cmd = d;
     cmd.state = silhouetteRec_.addState(silhouetteSetup(s));
     std::vector<uint8_t> nearer;  // .32: kSilhouetteMargin nearer
-    silhouetteVertices(v.data() + d.vertexOffset, d.vertexCount, FrameRecord::stride(d.fvf), nearer);
+    silhouetteVertices(v.data() + d.vertexOffset, d.vertexCount, FrameRecord::stride(d.fvf), hole_, nearer);
     silhouetteRec_.draw(cmd, nearer.data(), d.vertexCount, d.indexCount ? ix.data() + d.firstIndex : nullptr,
                 d.indexCount);
 }
