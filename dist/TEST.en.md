@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.15-beta.11 — what's new
+
+**«Mages' new effects»** (effects, «Skills», off by default). The Mage's, Wizard's and Sage's skills in their own look: crisp, in the element's colours, no white blots - the layers the game added on now lie over each other with a crisp edge, the solid parts (spikes, walls) lit by their faces. Boxes under the switch turn each part off on its own: «Casting», «Fire», «Water and ice», «Wind», «Earth», «Ghost and the rest». «New casting look» and «New Storm Gust» are here now.
+
 # uaRO Graphics 3.0.15-beta.10 — what's new
 
 **Getting the mages' new effects ready.** The skill effects record in betas (uaro-graphics\logs\uaro-effects.txt, sent with a report) now takes up to 64 effects a game and names each by the skill the character cast before it - to record all the Mage, Wizard and Sage skills in one go.
