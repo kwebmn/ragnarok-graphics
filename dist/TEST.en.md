@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.13-beta.32 — what's new
+
+**«Character's silhouette behind buildings» nicer.** In place of a flat blue blot, a ghost: a bright rim round the character and a faint cold fill with the sprite itself showing through. The silhouette no longer creeps over the character standing in the open (the ground by its feet nearer the camera than the sprite's bottom): it shows only where something clearly nearer hides it. The head is in the silhouette too.
+
 # uaRO Graphics 3.0.13-beta.31 — what's new
 
 **«See-through houses before the character» removed** - the buildings before the character are as the game draws them again. In their place, **«Character's silhouette behind buildings»**: where a house, a tree or a wall hides your character, its shape shows over them in light blue. The silhouette did not show while the see-through buildings were on: they cut the wall away, leaving nothing to show it over.
