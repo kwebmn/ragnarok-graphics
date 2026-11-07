@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.16-beta.3 — what's new
+
+**«New damage numbers» removed** - the damage numbers are the game's own again.
+
 # uaRO Graphics 3.0.16-beta.2 — what's new
 
 **«New damage numbers»** («Interface», «Fight», off by default). Damage and healing over characters and monsters as crisp numbers with a dark rim in place of the small pixel ones: in the game's colours, a critical larger and orange with a pop, a heal green with a plus; thousands apart (1 234 567), rising and fading.
