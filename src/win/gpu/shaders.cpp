@@ -583,17 +583,17 @@ float4 mageLayer(float4 c, bool haze) {
 // spirit spheres, added on as the game adds them (its alpha fading them in). The game's two passes by their colour:
 // the big blue one a soft aura round the ball, the small yellow one the ball - lit from the top left, white at its
 // heart, light blue to its rim, a blue rim light and a small shine, its edge smooth over a pixel.
-// .11 (the owner: «сферы синие должны быть, как в оригинале», «голубые»): light blue, not .10's gold.
+// .11 (the owner: «сферы синие должны быть, как в оригинале», «голубые»): light blue, not .10's gold; .12 bigger, blue.
 float4 spiritOrb(float2 uv, float4 d) {
     float2 p = (uv - 0.5) * 2.0;
     float r = length(p);
     float fade = saturate(d.a * 5.0);
-    if (d.b > d.r) {  // the aura
-        float t = saturate(1.0 - r);
-        float glow = t * t * 0.8 + t * t * t * t * 0.4;
-        return float4(float3(0.45, 0.80, 1.0), glow * fade);  // .11: light blue, as the game's
+    if (d.b <= d.r) {  // .12: the small yellow pass - only a white heart's glow over the ball
+        float t = saturate(1.0 - r / 0.55);
+        return float4(float3(0.85, 0.93, 1.0), t * t * 0.45 * fade);
     }
-    const float R = 0.78;
+    // .12 (R-4D85CR, the owner: «чуть чуть больше и синие»): the ball in the big pass, about a fifth bigger, blue
+    const float R = 0.5;
     float aa = max(fwidth(r), 1e-3);
     float inside = 1.0 - smoothstep(R - aa, R + aa, r);
     float2 q = p / R;
@@ -601,14 +601,14 @@ float4 spiritOrb(float2 uv, float4 d) {
     float3 n = float3(q, nz);
     float3 l = normalize(float3(-0.45, -0.6, 0.66));
     float diffuse = saturate(dot(n, l));
-    float m = pow(saturate(length(q)), 1.6);
-    float3 rgb = lerp(float3(0.92, 0.98, 1.0), float3(0.30, 0.70, 1.0), m) * (0.62 + 0.48 * diffuse);
-    rgb += (1.0 - length(q)) * (1.0 - length(q)) * 0.45 * float3(0.85, 0.93, 1.0);  // its own light at the heart
-    rgb += pow(1.0 - nz, 2.5) * 0.55 * float3(0.55, 0.88, 1.0);                     // the blue rim light
+    float m = pow(saturate(length(q)), 1.4);
+    float3 rgb = lerp(float3(0.55, 0.78, 1.0), float3(0.08, 0.30, 1.0), m) * (0.6 + 0.5 * diffuse);
+    rgb += pow(1.0 - nz, 2.5) * 0.5 * float3(0.25, 0.55, 1.0);  // the blue rim light
     float3 h = normalize(l + float3(0.0, 0.0, 1.0));
-    rgb += pow(saturate(dot(n, h)), 40.0) * 0.9;                                    // the shine
-    float halo = (1.0 - inside) * pow(saturate(1.0 - (r - R) / (1.0 - R)), 2.0) * 0.5;
-    return float4(lerp(float3(0.50, 0.82, 1.0), saturate(rgb), inside), saturate(inside + halo) * fade);
+    rgb += pow(saturate(dot(n, h)), 40.0) * 0.8;  // the shine
+    float t = saturate(1.0 - (r - R) / (1.0 - R));
+    float aura = (1.0 - inside) * (t * t * 0.55 + t * t * t * t * 0.35);
+    return float4(lerp(float3(0.15, 0.40, 1.0), saturate(rgb), inside), saturate(inside + aura) * fade);
 }
 float4 mageSolid(float4 pos, float2 uv, float4 c) {
     float3 core = float3(r3, r4, r5), edge = float3(r6, r7, r8), deep = float3(r9, r10, r11);
