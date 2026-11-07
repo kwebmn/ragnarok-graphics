@@ -1,6 +1,5 @@
 #pragma once
 #include <cstdint>
-#include <unordered_map>
 #include <vector>
 
 #include "core/game_camera.hpp"
@@ -44,16 +43,25 @@ struct Box {
 };
 bool boxOf(const uint8_t* vertices, uint32_t stride, uint32_t vertexCount, Box& out);
 
-// A draw's place in the world (its first vertex back through the camera), rounded - with its texture and size the key
-// a model keeps over the frames
-uint64_t keyOf(const camera::Projection& p, const float view[12], const uint8_t* vertices, uint32_t vertexCount,
-               uintptr_t texture);
+// A draw's place in the world (its first vertex back through the camera) and its texture and size - the model it is
+// over the frames; 3.0.13-beta.21 (the owner: «когда иду за фонтаном прозрачность "двигается", мигает»): matched by
+// the nearest place within kSameModel, not a rounded key - a moving model (the fountain's water) or a place on the
+// rounding's edge made a new model each frame, starting from whole again
+struct Model {
+    uint64_t id = 0;
+    float w[3] = {0, 0, 0};
+};
+Model modelOf(const camera::Projection& p, const float view[12], const uint8_t* vertices, uint32_t vertexCount,
+              uintptr_t texture);
+constexpr float kSameModel = 24.0f;
 
-// Each model's see-through, gliding kStep a frame toward kSeen while it covers, back to 1 after
+// Each model's see-through, gliding kStep a frame toward kSeen while it covers, back to 1 after; .21: it keeps
+// covering kHoldFrames after it last did - the body's points slipping off the model's edges as one walks made it pulse
 constexpr float kSeen = 0.35f, kStep = 0.08f;
+constexpr uint32_t kHoldFrames = 20;
 class Fader {
 public:
-    float step(uint64_t key, bool covering, uint32_t frame);  // the draw's alpha now (1: as the game draws it)
+    float step(const Model& m, bool covering, uint32_t frame);  // the draw's alpha now (1: as the game draws it)
     void frameDone(uint32_t frame);                          // models not drawn for a while forgotten
     size_t fading() const { return alpha_.size(); }
     void covered(const Box& b) { if (now_.size() < 64) now_.push_back(b); }  // a draw over the body this frame
@@ -63,10 +71,11 @@ public:
 private:
     std::vector<Box> now_, last_;
     struct Entry {
+        Model m;
         float alpha = 1.0f;
-        uint32_t frame = 0;
+        uint32_t frame = 0, coveredAt = 0;
     };
-    std::unordered_map<uint64_t, Entry> alpha_;
+    std::vector<Entry> alpha_;
 };
 
 }  // namespace uagfx::modelfade

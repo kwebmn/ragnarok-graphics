@@ -77,20 +77,19 @@ bool covers(const uint8_t* vertices, uint32_t stride, uint32_t vertexCount, cons
     return false;
 }
 
-uint64_t keyOf(const camera::Projection& p, const float view[12], const uint8_t* vertices, uint32_t vertexCount,
-               uintptr_t texture) {
-    if (!vertices || vertexCount == 0) return 0;
+Model modelOf(const camera::Projection& p, const float view[12], const uint8_t* vertices, uint32_t vertexCount,
+              uintptr_t texture) {
+    Model m;
+    if (!vertices || vertexCount == 0) return m;
+    m.id = (uint64_t(texture) * 0x9E3779B97F4A7C15ull) ^ uint64_t(vertexCount);
     const V v = at(vertices, 32, 0);
-    float w[3] = {0, 0, 0};
     if (v.rhw > 0 && p.f0 != 0 && p.f1 != 0) {
         const float vz = 1.0f / v.rhw, c[3] = {(v.x - p.cx) * vz / p.f0, (v.y - p.cy) * vz / p.f1, vz};
         for (int i = 0; i < 3; ++i)  // the view's rows turned back: w = M (c - t)
-            w[i] = view[3 * i] * (c[0] - view[9]) + view[3 * i + 1] * (c[1] - view[10]) +
-                   view[3 * i + 2] * (c[2] - view[11]);
+            m.w[i] = view[3 * i] * (c[0] - view[9]) + view[3 * i + 1] * (c[1] - view[10]) +
+                     view[3 * i + 2] * (c[2] - view[11]);
     }
-    const auto q = [](float x) { return uint64_t(int64_t(std::lround(x / 8.0f)) & 0xFFFF); };
-    return (uint64_t(texture) * 0x9E3779B97F4A7C15ull) ^ (q(w[0]) << 48) ^ (q(w[1]) << 32) ^ (q(w[2]) << 16) ^
-           uint64_t(vertexCount);
+    return m;
 }
 
 bool boxOf(const uint8_t* vertices, uint32_t stride, uint32_t vertexCount, Box& out) {
@@ -116,27 +115,40 @@ bool Fader::alongside(const Box& b, float z) const {
     return false;
 }
 
-float Fader::step(uint64_t key, bool covering, uint32_t frame) {
-    auto it = alpha_.find(key);
-    if (it == alpha_.end()) {
-        if (!covering) return 1.0f;
-        it = alpha_.emplace(key, Entry{}).first;
+float Fader::step(const Model& m, bool covering, uint32_t frame) {
+    Entry* e = nullptr;
+    float best = kSameModel * kSameModel;
+    for (Entry& o : alpha_) {
+        if (o.m.id != m.id) continue;
+        const float dx = o.m.w[0] - m.w[0], dy = o.m.w[1] - m.w[1], dz = o.m.w[2] - m.w[2];
+        const float d = dx * dx + dy * dy + dz * dz;
+        if (d <= best) best = d, e = &o;
     }
-    Entry& e = it->second;
-    if (e.frame != frame) {  // once a frame, however many draws the model takes
-        e.alpha = covering ? std::max(kSeen, e.alpha - kStep) : std::min(1.0f, e.alpha + kStep);
-        e.frame = frame;
+    if (!e) {
+        if (!covering || alpha_.size() >= 256) return 1.0f;
+        alpha_.push_back(Entry{m, 1.0f, 0, frame});
+        e = &alpha_.back();
     }
-    return e.alpha;
+    if (e->frame != frame) {  // once a frame, however many draws the model takes
+        if (covering) e->coveredAt = frame;
+        const bool held = frame - e->coveredAt <= kHoldFrames;
+        e->alpha = held ? std::max(kSeen, e->alpha - kStep) : std::min(1.0f, e->alpha + kStep);
+        e->frame = frame;
+        e->m = m;  // follows a moving model
+    } else if (covering) {
+        e->coveredAt = frame;
+    }
+    return e->alpha;
 }
 
 void Fader::frameDone(uint32_t frame) {
     last_.swap(now_);  // 3.0.13-beta.19: this frame's covering boxes asked about in the next
     now_.clear();
-    for (auto it = alpha_.begin(); it != alpha_.end();) {
-        const bool done = it->second.alpha >= 1.0f && it->second.frame != frame;
-        it = done || frame - it->second.frame > 120 ? alpha_.erase(it) : std::next(it);
-    }
+    alpha_.erase(std::remove_if(alpha_.begin(), alpha_.end(),
+                                [&](const Entry& e) {
+                                    return (e.alpha >= 1.0f && e.frame != frame) || frame - e.frame > 120;
+                                }),
+                 alpha_.end());
 }
 
 }  // namespace uagfx::modelfade

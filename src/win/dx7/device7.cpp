@@ -250,9 +250,10 @@ HRESULT Device7::record(D3DPRIMITIVETYPE type, DWORD fvf, const void* vertices, 
             else
                 over = fader_.alongside(box, focus_.z);
         }
-        const uint64_t key = modelfade::keyOf(camera::projectionFor(c.screenWidth, c.screenHeight), view_, bytes,
-                                              vertexCount, reinterpret_cast<uintptr_t>(textures_[0]));
-        const float alpha = (over || fader_.fading()) ? fader_.step(key, over, fadeFrame_) : 1.0f;
+        const modelfade::Model model = modelfade::modelOf(camera::projectionFor(c.screenWidth, c.screenHeight),
+                                                          view_, bytes, vertexCount,
+                                                          reinterpret_cast<uintptr_t>(textures_[0]));
+        const float alpha = (over || fader_.fading()) ? fader_.step(model, over, fadeFrame_) : 1.0f;
         if (alpha < 1.0f) {
             faded_.assign(bytes, bytes + size_t(vertexCount) * 32);
             for (uint32_t i = 0; i < vertexCount; ++i) {

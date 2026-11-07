@@ -56,17 +56,41 @@ TEST(model_fade_covers_only_what_stands_before_the_character) {
 
 TEST(model_fade_glides_down_and_back) {
     modelfade::Fader fd;
-    CHECK(fd.step(7, false, 1) == 1.0f && fd.fading() == 0);
+    modelfade::Model m;
+    m.id = 7;
+    CHECK(fd.step(m, false, 1) == 1.0f && fd.fading() == 0);
     float a = 1.0f;
-    for (uint32_t frame = 1; frame <= 20; ++frame) a = fd.step(7, true, frame);
+    for (uint32_t frame = 1; frame <= 20; ++frame) a = fd.step(m, true, frame);
     CHECK(a == modelfade::kSeen);
-    CHECK(fd.step(7, true, 20) == a);  // once a frame
-    a = fd.step(7, false, 21);
+    CHECK(fd.step(m, true, 20) == a);  // once a frame
+    // .21: held a while after it last covered - the body slipping off its edges does not make it pulse
+    for (uint32_t frame = 21; frame <= 20 + modelfade::kHoldFrames; ++frame) CHECK(fd.step(m, false, frame) == a);
+    a = fd.step(m, false, 21 + modelfade::kHoldFrames);
     CHECK(a > modelfade::kSeen && a < 1.0f);
-    for (uint32_t frame = 22; frame <= 40; ++frame) a = fd.step(7, false, frame);
+    for (uint32_t frame = 22 + modelfade::kHoldFrames; frame <= 60; ++frame) a = fd.step(m, false, frame);
     CHECK(a == 1.0f);
-    fd.frameDone(41);
+    fd.frameDone(61);
     CHECK(fd.fading() == 0);
+}
+
+TEST(model_fade_the_same_model_moving) {
+    // .21: the fountain's water moves - still the same model, its see-through kept; another one far off is not it
+    modelfade::Fader fd;
+    modelfade::Model m;
+    m.id = 9;
+    float a = 1.0f;
+    for (uint32_t frame = 1; frame <= 10; ++frame) {
+        m.w[0] = float(frame) * 3.0f;
+        a = fd.step(m, true, frame);
+    }
+    CHECK(a == modelfade::kSeen);  // glided all the way, not started over each frame
+    CHECK(fd.fading() == 1);
+    modelfade::Model far = m;
+    far.w[2] = 200.0f;
+    CHECK(fd.step(far, false, 11) == 1.0f);
+    modelfade::Model other = m;
+    other.id = 10;
+    CHECK(fd.step(other, false, 11) == 1.0f);
 }
 
 TEST(model_fade_the_whole_house) {
