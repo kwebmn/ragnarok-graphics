@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.15-beta.1 — what's new
+
+**Getting ready for new skill effects.** In betas the driver records how the game draws skill effects: each effect's first frames in a game - triangles, blending, textures - into uaro-graphics\logs\uaro-effects.txt (1.2 MB at most), sent with a report. The casting, Heal, Magnus Exorcismus and Storm Gust will be redrawn from these records. Releases record nothing.
+
 # uaRO Graphics 3.0.14 — what's new
 
 Players' ideas from the «50 ideas» list: following a player, long chat lines, the character's silhouette behind buildings, a big screenshot and many smaller things. Everything new that changes the look is off by default - turn it on in the uaRO program.
