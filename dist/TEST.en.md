@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.13-beta.16 — what's new
+
+**A big shot: Ctrl+Alt+F11.** One frame of the game without the interface, drawn twice the screen's size (7680×4320 on a 4K monitor) with all its effects, into the game's ScreenShot folder as uaro-big-….png. The game draws the world at double size for a moment, so a short pause may show. With Direct3D 11 the shot is the screen's size, smoothed from the double one.
+
 # uaRO Graphics 3.0.13-beta.15 — what's new
 
 **Aura does not hide portals** (a new switch «Aura does not hide portals» in the effects' Characters group, off by default). A level 99 aura over a warp portal goes faint and the portal shows through it: with many aura characters at a portal it is no longer lost under them.
