@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.15-beta.12 — what's new
+
+**Every class's new effects** (effects, «Skills», a switch a branch, off by default): «Swordsmen's new effects», «Acolytes'», «Archers'», «Thieves'», «Merchants'», «Other classes'» (Taekwon, Star Gladiator, Soul Linker, Ninja). As the mages': crisp layers in place of white blots, solid parts by their faces, colours of their own - holy white and gold, poison green, dark violet, weapon strikes steel, healing white and green, songs and coins gold.
+
 # uaRO Graphics 3.0.15-beta.11 — what's new
 
 **«Mages' new effects»** (effects, «Skills», off by default). The Mage's, Wizard's and Sage's skills in their own look: crisp, in the element's colours, no white blots - the layers the game added on now lie over each other with a crisp edge, the solid parts (spikes, walls) lit by their faces. Boxes under the switch turn each part off on its own: «Casting», «Fire», «Water and ice», «Wind», «Earth», «Ghost and the rest». «New casting look» and «New Storm Gust» are here now.
