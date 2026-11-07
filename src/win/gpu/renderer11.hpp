@@ -144,6 +144,7 @@ public:
     void setShaderVariants(bool on) { variantsWanted_ = on; }  // 2.5.16: [debug] shader_variants
     void setMergeDraws(bool on) { mergeDraws_ = on; }  // 0.90: [debug] merge_draws
     void setCamera(bool valid, const float view[12], float targetZ = 0);  // 0.99: the game's camera (the modern water)
+    void setSeeThrough(const float hole[8]) { std::copy(hole, hole + 8, hole_); }  // 3.0.13-beta.26
     void setAnisotropy(int anisotropy) { anisotropy_ = anisotropy; }
     // 0.47: the AI textures from the texture pack (none made); false: off, the reason in the log.
     bool startAi(const std::string& gameDir, const AiSettings& settings);
@@ -676,6 +677,7 @@ private:
     float shine_ = 0.0f;  // 2.5.17: how much the map's floor reflects under a roof (floorShine)
     weather::Kind weather_ = weather::Kind::None;
     float cameraTargetZ_ = 0.0f;  // the view depth of what the camera looks at (setCamera), 0 unknown
+    float hole_[8] = {};          // 3.0.13-beta.26: the hole round the character (setSeeThrough)
     // 2.5.1: the soft shadows; the map's file (the lamps' lights, torches11.cpp)
     ID3D11PixelShader* aoPs_ = nullptr;
     ID3D11PixelShader* aoBlurPs_ = nullptr;

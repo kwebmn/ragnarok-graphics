@@ -2145,6 +2145,13 @@ void Renderer::setCamera(bool valid, const float view[12], float targetZ) {
             for (int c = 0; c < 3; ++c) m.viewToWorld[3 * r + c] = inv[4 * r + c];
 }
 
+void Renderer::setSeeThrough(const float hole[8]) {
+    if (remix_) return;
+    if (d3d11_) return d3d11_->setSeeThrough(hole);
+    if (remote_) return remote_->setSeeThrough(hole);
+    std::copy(hole, hole + 8, impl_->hole);
+}
+
 ID3D12Device* Renderer::device() const { return impl_->device; }
 
 bool Renderer::upscaling() const { return impl_->upscale; }

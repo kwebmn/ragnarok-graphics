@@ -552,6 +552,13 @@ void Context::flush() {
         if (!known || !readCameraTargetDepth(targetZ)) targetZ = 0;
         renderer->setCamera(known, view, targetZ);
     }
+    // 3.0.13-beta.26: [effects] fade_models - the hole round the character, told while there is one
+    const bool hole = enhanced_ && hole_[3] > 0.0f;
+    if (hole || holeSent_) {
+        const float none[8] = {};
+        renderer->setSeeThrough(hole ? hole_ : none);
+        holeSent_ = hole;
+    }
     renderer->execute(record);
 }
 

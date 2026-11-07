@@ -1,6 +1,6 @@
-// 3.0.13-beta.17 (the owner's pick 1 of «50 идей»): a model's draw over the character's body covers it when it is
-// nearer the camera along the ground (3.0.13-beta.20, R-UQ7AGY: the fountain behind, nearer along the view only, not);
-// the see-through glides down and back; a house's other parts go with it (3.0.13-beta.19)
+// 3.0.13-beta.17 (the owner's pick 1 of «50 идей»): the models before the character see-through; 3.0.13-beta.26 (the
+// owner: «делай дыру, мигает»): a hole round it the shaders leave - only in what is nearer the camera along the ground
+// (3.0.13-beta.20, R-UQ7AGY: the fountain behind, nearer along the view only, not)
 #include <cmath>
 #include <cstring>
 #include <vector>
@@ -41,101 +41,32 @@ struct Cam {
 };
 }  // namespace
 
-TEST(model_fade_covers_only_what_stands_before_the_character) {
+TEST(model_fade_hole_only_before_the_character) {
     const Cam cam(300);
     const float at[3] = {0, 0, 0};
     const modelfade::Focus f = modelfade::focusOf(cam.p, cam.view, at);
     CHECK(f.known && f.h > 0);
-    const auto front = cam.wall(-20, -120), close = cam.wall(-6, -120), behind = cam.wall(25, -150);
-    CHECK(modelfade::covers(front.data(), 32, 4, nullptr, 0, true, f));
-    CHECK(modelfade::covers(close.data(), 32, 4, nullptr, 0, true, f));   // .18: right before it
-    CHECK(!modelfade::covers(behind.data(), 32, 4, nullptr, 0, true, f));  // .20: tall behind - nearer along the view
+    float hole[8];
+    modelfade::holeOf(f, hole);
+    CHECK(hole[3] > 0 && std::abs(hole[5] * hole[5] + hole[6] * hole[6] - 1.0f) < 1e-4f && hole[7] > 0);
+    // a world point's game pixel and depth, asked of the hole
+    const auto at3 = [&](float x, float y, float z) {
+        uint8_t v[32];
+        const float w[3] = {x, y, z};
+        cam.put(w, v);
+        float q[4];
+        std::memcpy(q, v, sizeof q);
+        return modelfade::holeAt(hole, q[0], q[1], 1.0f / q[3], 800, 600);
+    };
+    CHECK(at3(0, -20, -20) > 0.5f);   // a wall before the body, at its middle
+    CHECK(at3(0, -20, -6) > 0.0f);    // .18: right before it
+    CHECK(at3(0, -60, 25) == 0.0f);   // .20: tall behind - nearer along the view, not along the ground
+    CHECK(at3(0, 0, 0) == 0.0f);      // the feet themselves
+    CHECK(at3(200, -20, -20) == 0.0f);  // far to the side: outside the hole
+    // smooth: a little to the side, fewer of the pixels left out than in the middle, none at the edge
+    const float mid = at3(0, -20, -20), side = at3(14, -20, -20);
+    CHECK(side < mid && side > 0.0f);
     modelfade::Focus none;
-    CHECK(!modelfade::covers(front.data(), 32, 4, nullptr, 0, true, none));
-}
-
-TEST(model_fade_glides_down_and_back) {
-    // .25: by the clock - the same at 60 and at 120 frames a second
-    for (const uint64_t ms : {16ull, 8ull}) {
-        modelfade::Fader fd;
-        modelfade::Model m;
-        m.id = 7;
-        uint64_t now = 1000;
-        uint32_t frame = 1;
-        fd.clock(now);
-        CHECK(fd.step(m, false, frame) == 1.0f && fd.fading() == 0);
-        float a = 1.0f;
-        for (; now < 1000 + uint64_t(modelfade::kDownMs) / 2; now += ms) fd.clock(now), a = fd.step(m, true, ++frame);
-        CHECK(a > modelfade::kSeen + 0.2f && a < 0.8f);  // half way, whatever the frames
-        for (; now < 1400; now += ms) fd.clock(now), a = fd.step(m, true, ++frame);
-        CHECK(a == modelfade::kSeen);
-        CHECK(fd.step(m, true, frame) == a);  // once a frame
-        const uint64_t last = now - ms;
-        // held a while after it last covered - the body slipping off its edges does not make it pulse
-        for (; now <= last + modelfade::kHoldMs; now += ms) {
-            fd.clock(now);
-            CHECK(fd.step(m, false, ++frame) == a);
-        }
-        for (; now < last + modelfade::kHoldMs + 1000; now += ms) fd.clock(now), a = fd.step(m, false, ++frame);
-        CHECK(a == 1.0f);
-        fd.frameDone(++frame);
-        CHECK(fd.fading() == 0);
-    }
-}
-
-TEST(model_fade_the_same_model_moving) {
-    // .21: the fountain's water moves - still the same model, its see-through kept; another one far off is not it
-    modelfade::Fader fd;
-    modelfade::Model m;
-    m.id = 9;
-    float a = 1.0f;
-    for (uint32_t frame = 1; frame <= 30; ++frame) {
-        fd.clock(1000 + frame * 16);
-        m.w[0] = float(frame) * 1.0f;
-        a = fd.step(m, true, frame);
-    }
-    CHECK(a == modelfade::kSeen);  // glided all the way, not started over each frame
-    CHECK(fd.fading() == 1);
-    modelfade::Model far = m;
-    far.w[2] = 200.0f;
-    CHECK(fd.step(far, false, 11) == 1.0f);
-    modelfade::Model other = m;
-    other.id = 10;
-    CHECK(fd.step(other, false, 11) == 1.0f);
-}
-
-TEST(model_fade_the_whole_house) {
-    modelfade::Fader fd;
-    modelfade::Model wall;
-    wall.w[0] = 100, wall.w[2] = 100;
-    fd.covered(wall);
-    fd.frameDone(1);  // the next frame asks about it
-    modelfade::Model roof = wall, fence = wall;
-    roof.w[0] += 30, roof.w[1] -= 40;
-    fence.w[0] += 150;  // .23 (R-QH3H48): a long fence over its box on the screen, far along the ground
-    CHECK(fd.alongside(roof));
-    CHECK(!fd.alongside(fence));
-}
-
-TEST(model_fade_by_the_draws_pieces) {
-    // .24 (R-2KHTSU): one draw holding the wall before the character and another far off - only the wall fades
-    const Cam cam(300);
-    const float at[3] = {0, 0, 0};
-    const modelfade::Focus f = modelfade::focusOf(cam.p, cam.view, at);
-    const auto front = cam.wall(-20, -120);
-    std::vector<uint8_t> far(4 * 32, 0);
-    const float corners[4][3] = {{200, 0, -20}, {280, 0, -20}, {200, -120, -20}, {280, -120, -20}};
-    for (int i = 0; i < 4; ++i) cam.put(corners[i], far.data() + i * 32);
-    std::vector<uint8_t> both(front);
-    both.insert(both.end(), far.begin(), far.end());
-    const uint16_t list[12] = {0, 1, 2, 2, 1, 3, 4, 5, 6, 6, 5, 7};
-    modelfade::Fader fd;
-    modelfade::Fader::Split split;
-    CHECK(fd.fade(both.data(), 8, list, 12, false, 1, f, 1, split));
-    CHECK(split.faded.size() == 6 && split.solid.size() == 6);
-    for (uint16_t i : split.faded) CHECK(i < 4);
-    CHECK(split.alpha[0] < 1.0f && split.alpha[4] == 1.0f);
-    // the far one alone, nothing fading: drawn as the game made it
-    modelfade::Fader none;
-    CHECK(!none.fade(far.data(), 4, nullptr, 0, true, 1, f, 1, split));
+    modelfade::holeOf(none, hole);
+    CHECK(hole[3] == 0.0f && modelfade::holeAt(hole, 400, 300, 10, 800, 600) == 0.0f);
 }

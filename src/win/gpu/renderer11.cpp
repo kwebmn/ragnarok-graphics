@@ -1435,6 +1435,9 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
     c.targetSize[1] = float(target_.height);
     packStage(s.stage[0], d.keyed[0], c.stage0);
     packStage(s.stage[1], d.keyed[1], c.stage1);
+    // 3.0.13-beta.26: [effects] fade_models - the hole round the character (draw.cpp's)
+    if (hole_[3] > 0.0f && d.fvf == d3d7::FVF_TL1 && !s.ui && s.zWrite && !s.blend && d.effect == 0)
+        std::copy(hole_, hole_ + 8, c.hole);
     // 2.5.2: the ground's lightmap (its 256x256 atlas of 8x8 cells) sampled smoothly (as draw.cpp, 0.22.6) - the
     // weak set's own, never set here until now
     if (effects_.smoothLight && !s.ui && d.fvf == d3d7::FVF_TL2 && t[1]->width == 256 && t[1]->height == 256)

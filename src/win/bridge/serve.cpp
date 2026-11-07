@@ -240,6 +240,12 @@ bool Server::dispatch(Msg type, const uint8_t* data, uint32_t size) {
             if (rd.ok()) renderer_.setCamera(valid, view, targetZ);
             break;
         }
+        case Msg::SeeThrough: {  // 3.0.13-beta.26
+            float hole[8];
+            for (float& v : hole) v = rd.f32();
+            if (rd.ok()) renderer_.setSeeThrough(hole);
+            break;
+        }
         case Msg::IconWanted: {
             const uint64_t key = rd.u64();
             const int w = rd.i32(), h = rd.i32();

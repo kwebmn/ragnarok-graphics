@@ -70,14 +70,6 @@ private:
     auraportal::Portals portals_;
     // 3.0.13-beta.17: [effects] fade_models - the character's body on the screen this frame, the camera, each model's
     // see-through
-    modelfade::Focus focus_;
-    float view_[12] = {};
-    uint32_t fadeFrame_ = 0;
-    uint32_t fadeMadeTold_ = 0;  // 3.0.13-beta.22
-    modelfade::Fader fader_;
-    modelfade::Fader::Split split_;  // 3.0.13-beta.24
-    bool fadeNext_ = false;          // .24: the draw recorded now is a split's see-through pieces
-    std::vector<uint8_t> faded_;
     bool fadeTold_ = false;
     bool overPortalTold_ = false;  // 3.0.13-beta.15: [effects] aura_portals - where the portals were drawn
     // 2.7.37, diagnostics (the tester: «все умения, и даже когда кастуется что-то, какие-то очень яркие»): the skills'

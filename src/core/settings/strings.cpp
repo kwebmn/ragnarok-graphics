@@ -993,12 +993,12 @@ constexpr Entry kTexts[] = {
     {Text::FxFadeModels, "See-through buildings before the character", "Прозорі будинки перед персонажем",
      "Прозрачные здания перед персонажем"},  // 3.0.13-beta.17
     {Text::FxFadeModelsHint,
-     "A house, a tree or a wall between the camera and your character goes see-through, gliding, and comes back once "
-     "you have passed it - the character never lost behind them.",
-     "Будинок, дерево чи стіна між камерою й вашим персонажем плавно стають прозорими й повертаються, щойно ви "
-     "пройшли, — персонаж ніколи не губиться за ними.",
-     "Дом, дерево или стена между камерой и вашим персонажем плавно становятся прозрачными и возвращаются, как только "
-     "вы прошли, — персонаж никогда не теряется за ними."},
+     "A see-through window round your character in a house, a tree or a wall between it and the camera - it moves with "
+     "the character, the character never lost behind them.",
+     "Прозоре вікно навколо вашого персонажа в будинку, дереві чи стіні між ним і камерою - воно рухається разом із "
+     "персонажем, персонаж ніколи не губиться за ними.",
+     "Прозрачное окно вокруг вашего персонажа в доме, дереве или стене между ним и камерой - оно движется вместе с "
+     "персонажем, персонаж никогда не теряется за ними."},
     {Text::FxCrowdEffects, "Others' skill effects fainter", "Чужі ефекти навичок блідіші",
      "Чужие эффекты навыков бледнее"},  // 3.0.13-beta.20
     {Text::FxCrowdEffectsHint,

@@ -209,6 +209,8 @@ private:
     // 3.0.13-beta.20: [effects] crowd_effects - the character and the party's members here, as the frame began
     std::vector<uint32_t> friends_;
     std::unordered_map<uint32_t, uint64_t> touched_;  // a target a friend hit of late, and when
+    float hole_[8] = {};    // 3.0.13-beta.26: the hole round the character (setSeeThrough)
+    bool holeSent_ = false;  // a hole told the renderer - zeros once when it goes
 public:
     // the character, a party member here, or one of them hit within 3 s (its effects theirs: a bolt on a monster)
     bool friendOf(uint32_t id) const {
@@ -216,6 +218,8 @@ public:
         const auto it = touched_.find(id);
         return it != touched_.end() && GetTickCount64() - it->second < 3000;
     }
+    // 3.0.13-beta.26: [effects] fade_models - the hole round the character this frame (Device7::BeginScene)
+    void setSeeThrough(const float hole[8]) { std::copy(hole, hole + 8, hole_); }
     void noteHit(uint32_t source, uint32_t target) {  // 3.0.13-beta.20: from the packets
         if (friends_.empty() || std::find(friends_.begin(), friends_.end(), source) == friends_.end()) return;
         if (touched_.size() > 256) touched_.clear();

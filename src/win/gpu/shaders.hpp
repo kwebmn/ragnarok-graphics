@@ -34,8 +34,11 @@ struct Constants {
     float jitter[2];       // 33-34: part 3 (DLSS) - the world's geometry moved this frame, target pixels
     float reproject[12];   // 35-46: motion only - this view -> the previous one (4 x 3)
     float projection[6];   // 47-52: motion only - f0, f1, cx, cy, near, far (core/game_camera.hpp)
+    // 53-60: 3.0.13-beta.26 [effects] fade_models - the hole round the character in the models before it
+    // (core/model_fade.hpp holeOf); 0 none. 61 with the three tables: the 64 DWORDs a root signature holds
+    float hole[8];
 };
 constexpr uint32_t kConstantCount = sizeof(Constants) / 4;
-static_assert(kConstantCount == 53, "Constants must stay 53 DWORDs: the cbuffer in shaders.cpp");
+static_assert(kConstantCount == 61, "Constants must stay 61 DWORDs: the cbuffer in shaders.cpp, the root's 64");
 
 }  // namespace uagfx::gpu

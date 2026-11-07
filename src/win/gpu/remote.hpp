@@ -43,6 +43,7 @@ public:
     bool setTarget(int width, int height);
     bool setScale(double k, int width, int height, int samples, bool upscale);
     void setCamera(bool valid, const float view[12], float targetZ = 0);
+    void setSeeThrough(const float hole[8]);  // 3.0.13-beta.26
     void setMap(const std::string& map);
     void sendIcon(uint64_t key, int width, int height, const uint32_t* argb);
     void setIconSink(Renderer::IconSink sink, void* context) {

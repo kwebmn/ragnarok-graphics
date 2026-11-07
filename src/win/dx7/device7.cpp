@@ -83,20 +83,19 @@ HRESULT STDMETHODCALLTYPE Device7::BeginScene() {
     win::Guard guard;
     scene_.beginScene();
     portals_.frame();  // 3.0.13-beta.15
-    {  // 3.0.13-beta.17: where the character's body is on the screen, for the models over it
+    {  // 3.0.13-beta.17: where the character's body is on the screen, for the models over it; 3.0.13-beta.26: the
+       // hole round it the renderer's shaders leave in them (core/model_fade.hpp holeOf)
         win::Context& c = win::Context::get();
-        fader_.frameDone(fadeFrame_);
-        ++fadeFrame_;
-        fader_.clock(GetTickCount64());  // 3.0.13-beta.25: the glide by the clock
-        if (fadeFrame_ % 600 == 0 && fader_.madeAnew() != fadeMadeTold_) {  // 3.0.13-beta.22: to tell a blink apart
-            LOG_INFO("model fade: %zu models see-through, %u taken up anew in the last 600 frames", fader_.fading(),
-                     fader_.madeAnew() - fadeMadeTold_);
-            fadeMadeTold_ = fader_.madeAnew();
+        float view[12], at[3], hole[8] = {};
+        if (c.effects().fadeModels && c.enhanced() && c.screenWidth > 0 && win::readCameraAndTarget(view, at)) {
+            modelfade::holeOf(modelfade::focusOf(camera::projectionFor(c.screenWidth, c.screenHeight), view, at),
+                              hole);
+            if (hole[3] > 0.0f && !fadeTold_) {
+                fadeTold_ = true;
+                LOG_INFO("effects: a hole round the character in the models before it ([effects] fade_models)");
+            }
         }
-        float at[3];
-        focus_ = modelfade::Focus{};
-        if (c.effects().fadeModels && c.enhanced() && c.screenWidth > 0 && win::readCameraAndTarget(view_, at))
-            focus_ = modelfade::focusOf(camera::projectionFor(c.screenWidth, c.screenHeight), view_, at);
+        c.setSeeThrough(hole);
     }
     win::Context::get().markInterfaceEnd(win::interfaceFaces());  // 3.0.11-beta.190: the game's interface list
     win::groundway::newFrame();    // 3.0.11-beta.31: the way on the ground drawn once in this frame
@@ -242,45 +241,8 @@ HRESULT Device7::record(D3DPRIMITIVETYPE type, DWORD fvf, const void* vertices, 
     // alpha is not 0 - uaRO.exe 0x40E4D0: ZWRITEENABLE on, ALPHAREF 1 - so Ruwach's sprites hide each other, a line;
     // without it they piled up into a ball, the user: «всё равно какой-то шар крутится». Their light is a ground
     // light instead: effect_light::kGroundLight.)
-    // 3.0.13-beta.17: [effects] fade_models - a model's draw over the character's body nearer than it: see-through,
-    // gliding; laid over by its alpha, writing no depth (the character drawn after it shows)
-    if (focus_.known && fvf == d3d7::FVF_TL1 && !setup.ui && setup.zWrite && !setup.blend &&
-        tag.kind == effect_exe::Kind::None) {
-        const auto* bytes = static_cast<const uint8_t*>(vertices);
-        // 3.0.13-beta.24: by the draw's pieces - the solid ones drawn as they were, the see-through after them
-        if (fader_.fade(bytes, vertexCount, indices, indexCount, type == D3DPT_TRIANGLESTRIP,
-                        reinterpret_cast<uintptr_t>(textures_[0]), focus_, fadeFrame_, split_)) {
-            faded_.assign(bytes, bytes + size_t(vertexCount) * 32);
-            for (uint32_t i = 0; i < vertexCount; ++i) {
-                uint8_t& a = faded_[size_t(i) * 32 + 16 + 3];  // the diffuse colour's alpha
-                a = uint8_t(std::lround(float(a) * split_.alpha[i]));
-            }
-            if (!fadeTold_) {
-                fadeTold_ = true;
-                LOG_INFO("effects: a model over the character drawn see-through ([effects] fade_models)");
-            }
-            const modelfade::Focus keep = focus_;
-            focus_.known = false;  // the two draws below as they are
-            HRESULT hr = D3D_OK;
-            if (!split_.solid.empty())
-                hr = record(D3DPT_TRIANGLELIST, fvf, vertices, vertexCount,
-                            reinterpret_cast<const WORD*>(split_.solid.data()), DWORD(split_.solid.size()));
-            fadeNext_ = true;
-            if (SUCCEEDED(hr) && !split_.faded.empty())
-                hr = record(D3DPT_TRIANGLELIST, fvf, faded_.data(), vertexCount,
-                            reinterpret_cast<const WORD*>(split_.faded.data()), DWORD(split_.faded.size()));
-            fadeNext_ = false;
-            focus_ = keep;
-            return hr;
-        }
-    }
-    if (fadeNext_) {  // the see-through pieces: laid over by their alpha, writing no depth
-        setup.blend = true;
-        setup.srcBlend = d3d7::BLEND_SRCALPHA;
-        setup.dstBlend = d3d7::BLEND_INVSRCALPHA;
-        setup.zWrite = false;
-        setup.alphaTest = false;  // a high reference would cut a faded model away whole; blending keeps its holes
-    }
+    // 3.0.13-beta.17: [effects] fade_models - 3.0.13-beta.26: a hole the renderer's shaders leave round the
+    // character (shaders.cpp seeThrough), in place of the models chosen whole here, which went on and off
     cmd.state = c.record.addState(setup);
     cmd.primitive = uint32_t(type);
     cmd.fvf = fvf;

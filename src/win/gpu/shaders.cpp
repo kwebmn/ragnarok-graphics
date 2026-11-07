@@ -27,6 +27,10 @@ cbuffer Params : register(b0) {
     float jitterY;
     float r0, r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11;  // motion only: this view -> the previous one, 4 x 3
     float f0, f1, cx, cy, nearZ, farZ;  // motion only: the game's projection (core/game_camera.hpp)
+    // 3.0.13-beta.26: the hole round the character (core/model_fade.hpp holeOf) - its feet and body's height in game
+    // pixels, its depth, its distance from the camera along the ground, the world's up in the view (y, z), the
+    // projection's f; holeZ 0: none
+    float holeX, holeY, holeH, holeZ, holeG, holeUy, holeUz, holeF;
 };
 #ifdef UAGFX_FIXED
 // 2.5.16: the draw shader made for one state of the game's draws (core/shader_variants.hpp): its Direct3D 7 stages,
@@ -500,6 +504,25 @@ float hillLight(float3 P) {
 }
 #endif
 
+// 3.0.13-beta.26 (the owner: «делай дыру, мигает» - the models chosen whole, on the processor, went on and off as
+// one walked and turned the camera): a model's pixel round the character's body, nearer the camera than it along
+// the ground, left out in a fine pattern - most of them in the middle, none at the edge; it moves with the
+// character smoothly, whatever the game's draws hold
+static const float kHoleDither[16] = {0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5};
+void seeThrough(float4 pos) {
+    if (holeZ <= 0.0 || pos.w >= holeZ - 3.0) return;
+    float2 g = (pos.xy - 0.5 - float2(jitterX, jitterY)) / scale;  // draw_vs turned back: game pixels
+    float e = length((g - float2(holeX, holeY - 0.55 * holeH)) / (holeH * float2(0.8, 0.95)));
+    if (e >= 1.0) return;
+    float2 centre = floor(targetSize / scale * 0.5);
+    float3 p = float3((g - centre) * pos.w / holeF, pos.w);  // the point in the view
+    float up = p.y * holeUy + p.z * holeUz;
+    if (sqrt(max(dot(p, p) - up * up, 0.0)) >= holeG - 3.0) return;  // behind it along the ground (R-UQ7AGY)
+    float gone = (1.0 - smoothstep(0.5, 1.0, e)) * 0.7;  // core/model_fade.hpp holeAt, kHoleMost
+    uint2 q = uint2(pos.xy) & 3;
+    if ((kHoleDither[q.y * 4 + q.x] + 0.5) / 16.0 < gone) discard;
+}
+
 float4 shade(PsIn i) {
     float2 uv0 = ((stage0.y >> 16) & 7) == 1 ? i.uv1 : i.uv0;
     float2 du = ddx(uv0);  // outside any branch; the interface path only uses explicit gradients
@@ -669,6 +692,7 @@ float4 shade(PsIn i) {
     // 2.7.38: a skill's light laid over softly (draw.cpp: the target's colour its factor, not its alpha) - as much
     // of it as its alpha lets through
     if (((alphaTest >> 23) & 1) != 0) c.rgb *= c.a;
+    seeThrough(i.pos);  // 3.0.13-beta.26: last - the gradients above taken by every pixel
     return c;
 }
 
