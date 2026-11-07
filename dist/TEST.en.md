@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.15-beta.4 — what's new
+
+**«New casting look» as in the picture.** In beta.2-beta.3 the card never got the new look: the flame was only lower and the circle was drawn with the game's texture. Now crisp flame tongues and a magic circle with rings, marks and a star in the element's colour. The circle lies on the ground along its slope - its near half no longer sinks into it.
+
 # uaRO Graphics 3.0.15-beta.3 — what's new
 
 **«New casting look» now shows.** The magic circle never appeared: the casting was quietened before its rings at the feet were found - the new look has its own brightness now. The circle and the flame in the element's colour (the game gives it by texture: fire, water, wind, earth), the circle's lines with a thin dark rim so they read on Prontera's light paving too.
