@@ -71,3 +71,18 @@ TEST(hit_flash_finds_the_monster_on_a_hill) {
     float dx = 400, dy = 200;
     CHECK(!gone.aim(dx, dy));
 }
+
+// 3.0.16-beta.7: a monster's death («..._die.wav») flashes longer and brighter than a hit
+TEST(hit_flash_a_deaths_flash) {
+    CHECK(hit_flash::soundKind("data\\wav\\caramel_die.wav") == hit_flash::Sound::Death);
+    CHECK(hit_flash::soundKind("data\\wav\\WRAITH_DIE.WAV") == hit_flash::Sound::Death);
+    CHECK(hit_flash::soundKind("data\\wav\\_hit_sword.wav") == hit_flash::Sound::Hit);
+    CHECK(hit_flash::soundKind("data\\wav\\poring_diet.wav") == hit_flash::Sound::Other);
+    CHECK(hit_flash::soundKind("data\\wav\\poring_attack.wav") == hit_flash::Sound::Other);
+    hit_flash::Flashes f;
+    f.add(400, 300, 1000.0, true);
+    CHECK(f.strength(370, 430, 220, 305, 1050.0) > 1.0f);  // whole and over a hit's at first
+    const float later = f.strength(370, 430, 220, 305, 1000.0 + hit_flash::kFlashMs + 100);
+    CHECK(later > 0.1f && later < 1.0f);  // still fading after a hit's would be gone
+    CHECK(f.strength(370, 430, 220, 305, 1000.0 + hit_flash::kDeathMs + 1) == 0.0f);
+}

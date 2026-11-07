@@ -351,6 +351,10 @@ const std::vector<IniSetting>& iniSettings() {
          Text::InterfaceWhispersHint, ""},  // 3.0.11-beta.212
         {"interface", "skill_cells", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {},
          Text::InterfaceSkillCells, Text::InterfaceSkillCellsHint, ""},  // 3.0.11-beta.142
+        {"interface", "mouse_cell", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {},
+         Text::InterfaceMouseCell, Text::InterfaceMouseCellHint, ""},  // 3.0.16-beta.7
+        {"interface", "signs", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::InterfaceSigns,
+         Text::InterfaceSignsHint, ""},  // 3.0.16-beta.7
         {"interface", "ground_counts", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {},
          Text::InterfaceGroundCounts, Text::InterfaceGroundCountsHint, ""},  // 3.0.11-beta.143
         // 3.0.11-beta.54: the new interface's size
@@ -753,6 +757,8 @@ const std::vector<IniSetting>& iniSettings() {
          Text::FxGlintHint, "", &E::glint},
         {"effects", "hit_flash", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxHitFlash,
          Text::FxHitFlashHint, "", &E::hitFlash},
+        {"effects", "death_flash", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxDeathFlash,
+         Text::FxDeathFlashHint, "", &E::deathFlash},  // 3.0.16-beta.7
         {"effects", "wet_ground", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxWetGround,
          Text::FxWetGroundHint, "", &E::wetGround},
         {"effects", "tree_volume", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxTreeVolume,
@@ -1347,6 +1353,8 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "interface.popups") return c.popupMenus ? "1" : "0";             // 3.0.11-beta.211
     if (k == "interface.whispers") return c.whisperWindows ? "1" : "0";       // 3.0.11-beta.212
     if (k == "interface.skill_cells") return c.skillCells ? "1" : "0";  // 3.0.11-beta.142
+    if (k == "interface.mouse_cell") return c.mouseCell ? "1" : "0";    // 3.0.16-beta.7
+    if (k == "interface.signs") return c.worldSigns ? "1" : "0";        // 3.0.16-beta.7
     if (k == "interface.ground_counts") return c.groundCounts ? "1" : "0";  // 3.0.11-beta.143
     if (k == "interface.animations") return c.animations ? "1" : "0";  // 3.0.11-beta.46
     if (k == "interface.panel_opacity") return std::to_string(c.hudOpacity);  // 3.0.11-beta.47

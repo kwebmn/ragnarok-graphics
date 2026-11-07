@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <cctype>
 #include <cmath>
+#include <cstdint>
 #include <cstring>
 #include <string>
 #include <vector>
@@ -14,16 +15,32 @@ namespace uagfx::hit_flash {
 // a weapon's "_hit_..." or the monster's own "..._damage" - and the driver hears it: the place goes onto the screen
 // and the monster drawn there is drawn once more, adding light, fading over kFlashMs.
 constexpr double kFlashMs = 140.0;
+// 3.0.16-beta.7 (the owner: «делай все» - a death's flash): a monster's death - its «..._die» sound (the game's
+// monsters' own: caramel_die.wav, wraith_die.wav) - flashes brighter and longer, the dying sprite fading under it
+constexpr double kDeathMs = 420.0, kDeathHoldMs = 70.0;
+constexpr float kDeathPeak = 1.18f;  // the draw adds 0.85 of it: a death's whole white (a hit's 85 %)
 
-// A sound file of a hit: data\wav\_hit_sword.wav, data\wav\poring_damage.wav.
-inline bool hitSound(const char* path) {
-    if (!path) return false;
-    std::string name(path);
+enum class Sound : uint8_t { Other, Hit, Death };
+
+inline std::string soundName(const char* path) {
+    std::string name(path ? path : "");
     const size_t slash = name.find_last_of("\\/");
     if (slash != std::string::npos) name = name.substr(slash + 1);
     std::transform(name.begin(), name.end(), name.begin(), [](unsigned char c) { return char(std::tolower(c)); });
-    return name.find("_hit") != std::string::npos || name.find("_damage") != std::string::npos;
+    return name;
 }
+
+// What a sound file is: a hit's (data\wav\_hit_sword.wav, data\wav\poring_damage.wav), a death's (..._die.wav)
+inline Sound soundKind(const char* path) {
+    if (!path) return Sound::Other;
+    const std::string name = soundName(path);
+    if (name.find("_hit") != std::string::npos || name.find("_damage") != std::string::npos) return Sound::Hit;
+    const size_t die = name.rfind("_die");
+    if (die != std::string::npos && die > 0 && (die + 4 == name.size() || name[die + 4] == '.')) return Sound::Death;
+    return Sound::Other;
+}
+
+inline bool hitSound(const char* path) { return soundKind(path) == Sound::Hit; }
 
 // A point of the world onto the game's screen (its pixels) through the view matrix (world -> view, row vectors).
 inline bool toScreen(const float view[12], const camera::Projection& p, float x, float y, float z, float& sx,
@@ -81,8 +98,9 @@ private:
 
 class Flashes {
 public:
-    void add(float sx, float sy, double nowMs) {
-        hits_.push_back(Hit{sx, sy, nowMs});
+    // 3.0.16-beta.7: a death's flash - longer, whole for its first kDeathHoldMs
+    void add(float sx, float sy, double nowMs, bool death = false) {
+        hits_.push_back(Hit{sx, sy, nowMs, death});
         if (hits_.size() > 64) hits_.erase(hits_.begin());
     }
     // How bright the flash over a sprite of this box is now (0 none .. 1): a hit at its feet - across its width, from
@@ -91,14 +109,19 @@ public:
         float best = 0.0f;
         for (size_t i = 0; i < hits_.size();) {
             const double age = nowMs - hits_[i].at;
-            if (age > kFlashMs || age < 0) {
+            const double life = hits_[i].death ? kDeathMs : kFlashMs;
+            if (age > life || age < 0) {
                 hits_.erase(hits_.begin() + long(i));
                 continue;
             }
             const Hit& h = hits_[i];
             const float pad = std::max((x1 - x0) * 0.15f, 6.0f);
             if (h.sx >= x0 - pad && h.sx <= x1 + pad && h.sy >= y0 + (y1 - y0) * 0.5f && h.sy <= y1 + 24.0f)
-                best = std::max(best, float(1.0 - age / kFlashMs));
+                best = std::max(best, h.death ? kDeathPeak * (age < kDeathHoldMs
+                                                                   ? 1.0f
+                                                                   : float(1.0 - (age - kDeathHoldMs) /
+                                                                                     (kDeathMs - kDeathHoldMs)))
+                                              : float(1.0 - age / kFlashMs));
             ++i;
         }
         return best;
@@ -108,6 +131,7 @@ private:
     struct Hit {
         float sx, sy;
         double at;
+        bool death = false;
     };
     std::vector<Hit> hits_;
 };

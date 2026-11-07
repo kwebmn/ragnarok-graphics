@@ -198,6 +198,7 @@ enum class Text : uint16_t {
     FxGlint, FxGlintHint,
     // 0.96
     FxHitFlash, FxHitFlashHint,
+    FxDeathFlash, FxDeathFlashHint,  // 3.0.16-beta.7
     // 0.97
     FxWetGround, FxWetGroundHint,
     GfxSoundEngine, GfxSoundEngineHint, GfxSoundReverb, GfxSoundReverbHint,
@@ -692,6 +693,7 @@ enum class Text : uint16_t {
     CharSkillPoints, CharExpMax, CharHour, CharMinute, CharToLevel, CharLevelIn, CharPerHour, CharSession, CharLastGain,
     CharFold, CharUnfold,
     InterfaceSkillCells, InterfaceSkillCellsHint,  // 3.0.11-beta.142
+    InterfaceMouseCell, InterfaceMouseCellHint, InterfaceSigns, InterfaceSignsHint,  // 3.0.16-beta.7
     InterfaceGroundCounts, InterfaceGroundCountsHint,  // 3.0.11-beta.143
     InterfacePadWalk, InterfacePadWalkHint, InterfacePadWalkMouse, InterfacePadWalkArrow,  // 3.0.11-beta.88
     InterfaceWalkArrow, InterfaceWalkArrowHint, WalkArrowChevrons, WalkArrowSlim, WalkArrowConcept, WalkArrowRing,

@@ -518,7 +518,7 @@ HRESULT Device7::record(D3DPRIMITIVETYPE type, DWORD fvf, const void* vertices, 
     // 0.95: a card lying on the ground sparkles - a star drawn after it. (2.7.10: the sprites' fade-in as they came
     // into view - 0.93 - gone at the user's word.)
     float flash = 0.0f;  // 0.96: a monster just hit - drawn once more, adding light
-    if ((fx.glint || fx.hitFlash) && c.enhanced() && !setup.ui && fvf == d3d7::FVF_TL1 &&
+    if ((fx.glint || fx.hitFlash || fx.deathFlash) && c.enhanced() && !setup.ui && fvf == d3d7::FVF_TL1 &&
         vertexCount == 4 && !indices && textures_[0]) {
         const auto* v = static_cast<const uint8_t*>(vertices);
         float x = 0, y = 0, u = 0, w = 0, z = 0, rhw = 0;
@@ -541,7 +541,7 @@ HRESULT Device7::record(D3DPRIMITIVETYPE type, DWORD fvf, const void* vertices, 
         const Surface7* tex = textures_[0];
         bool card = false;
         const uint8_t kind = tex->spriteAt(u * float(tex->width()), w * float(tex->height()), &card);
-        if (fx.hitFlash && kind == uint8_t(sprite_exe::Source::Monster)) {
+        if ((fx.hitFlash || fx.deathFlash) && kind == uint8_t(sprite_exe::Source::Monster)) {
             c.monsters.note(hit_flash::Box{x0, x1, y0, y1});  // 2.7.10: the next frame's hits find it here
             flash = c.flashes.strength(x0, x1, y0, y1, c.nowMs());
         }

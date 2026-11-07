@@ -427,6 +427,31 @@ TEST(game_packets_a_shops_sign) {
     CHECK(g != nullptr && g->account == 2000123u && g->title.empty());
 }
 
+// 3.0.16-beta.7: a chat room's sign (0x00d7 <len>.W <owner>.L <room>.L <limit>.W <users>.W <type>.B <title>), gone
+// (0x00d8 <room>.L <owner>.L)
+TEST(game_packets_a_chat_rooms_sign) {
+    const char title[] = "Party for OD";
+    std::vector<uint8_t> p = packet(0x00d7, 17 + sizeof title - 1);
+    put16(p, 2, uint16_t(p.size()));
+    put32(p, 4, 2000123);
+    put32(p, 8, 77);
+    put16(p, 12, 20);
+    put16(p, 14, 3);
+    p[16] = 0;
+    putText(p, 17, title);
+    packets::Event e = packets::parse(p.data(), p.size());
+    const auto* r = std::get_if<packets::RoomSign>(&e);
+    CHECK(r != nullptr && r->owner == 2000123u && r->room == 77u && r->limit == 20 && r->users == 3 && r->type == 0 &&
+          r->title == title && !r->gone);
+    CHECK(std::holds_alternative<std::monostate>(packets::parse(p.data(), p.size() - 1)));  // cut short
+    std::vector<uint8_t> q = packet(0x00d8, 10);
+    put32(q, 2, 77);
+    put32(q, 6, 2000123);
+    e = packets::parse(q.data(), q.size());
+    const auto* g = std::get_if<packets::RoomSign>(&e);
+    CHECK(g != nullptr && g->room == 77u && g->gone);
+}
+
 // 3.0.11-beta.201 (the tester: «ще не видно согільдійців на мінімапі», «була якась команда типу пошук мобів на
 // мінімапі»): a mark on the minimap - 0x0144 <npc>.L <type>.L (1 put, 2 taken off) <x>.L <y>.L <id>.B <colour>.L
 // (uAthena's clif_viewpoint: an NPC's «viewpoint», @showmobs' monsters for 5 s); a guild mate's cell on the same map -

@@ -370,6 +370,9 @@ struct EffectSettings {
     // 0.96: hit_flash - a monster hit flashes white for a moment (core/hit_flash.hpp, win/hit_hook.cpp). Off by
     // default.
     bool hitFlash = false;
+    // 3.0.16-beta.7 (the owner: «делай все» - a death's flash): death_flash - a monster dying (its «_die» sound)
+    // flashes brighter and longer than a hit (core/hit_flash.hpp). Off by default.
+    bool deathFlash = false;
     // 0.97: wet_ground - where it rains the ground is darker and puddles mirror the world (floor_reflect_ps, Direct3D
     // 12). Off by default.
     bool wetGround = false;
@@ -857,6 +860,13 @@ struct Config {
     // a ground skill's cells, as the server makes them (core/skill_area), shown on the ground after a cast by the pad
     // or the mouse (win/ground_marks); 0: none
     bool skillCells = true;
+    // 3.0.16-beta.7 (the owner: «делай все» - ground cells): [interface] mouse_cell - the game's cell under the mouse
+    // (grid.tga, uaRO.exe 0x4FAB0E) drawn anew as a ground skill's cell is (win/ground_marks); off: the game's own
+    bool mouseCell = false;
+    // 3.0.16-beta.7 (the owner: «делай все» - shop signs, chat bubbles): [interface] signs - the shops' and the chat
+    // rooms' signs over the characters (the game's world windows 0x69673C, 0x6966A4) as the new look's plates
+    // (win/world_signs); off: the game's own
+    bool worldSigns = false;
     // 3.0.11-beta.143: [interface] ground_counts - on a ground skill's hotbar slot its walls standing («2/3»: Fire
     // Wall, Quagmire, Fire Pillar - core/ground_units) or a trap's Traps in the bag («×37»), its edge flashing amber
     // when a wall burnt out; 0: none

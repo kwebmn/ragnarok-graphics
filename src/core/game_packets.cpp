@@ -100,6 +100,24 @@ Event parse(const uint8_t* p, size_t size) {
         case 0x0132:
             if (size < 6) return {};
             return ShopSign{rd32(p, 2), ""};
+        case 0x00d7: {  // 3.0.16-beta.7: a chat room's sign
+            RoomSign r;
+            if (size < 17 || !textOf(p, size, 17, r.title)) return {};
+            r.owner = rd32(p, 4);
+            r.room = rd32(p, 8);
+            r.limit = rd16(p, 12);
+            r.users = rd16(p, 14);
+            r.type = p[16];
+            return r;
+        }
+        case 0x00d8: {
+            if (size < 10) return {};
+            RoomSign r;
+            r.room = rd32(p, 2);
+            r.owner = rd32(p, 6);
+            r.gone = true;
+            return r;
+        }
         case 0x0095:  // 3.0.11-beta.256: a unit's name
             if (size < 30) return {};
             return ActorName{rd32(p, 2), name(p, 6)};

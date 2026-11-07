@@ -34,6 +34,7 @@ constexpr uint32_t kArrowWhite = 0x96FFFFFF, kArrowShade = 0x50000000, kArrowGol
 constexpr float kFadeInMs = 120, kFadeOutMs = 200;
 constexpr double kFlashMs = 450, kFlashHoldMs = 150;  // 3.0.11-beta.142: a cast's cells - whole, then fading
 constexpr double kRunMs = 600;
+constexpr uint32_t kMouseFill = 0x2EFFFFFF, kMouseLine = 0xA0FFFFFF;  // 3.0.16-beta.7: the cell under the mouse
 
 struct Walk {
     WalkLook look = WalkLook::Chevrons;
@@ -142,6 +143,9 @@ uint32_t gameWaiting(uint32_t& skill) {
 struct State {
     TargetRing ring = TargetRing::Pad;
     bool cellsOn = true;  // 3.0.11-beta.142: [interface] skill_cells
+    bool mouseCellOn = false;  // 3.0.16-beta.7: [interface] mouse_cell
+    int mouseTold = 0;
+    uint32_t coloursSeen[4] = {};
     int cancelsTold = 0;  // 3.0.11-beta.146
     std::vector<Flash> flashes;
     int castsTold = 0;
@@ -269,6 +273,14 @@ void skillCast(uint16_t skill, int lv, int x, int y) {
     s.flashes.push_back(std::move(f));
 }
 
+void mouseCell(bool on) {
+    State& s = state();
+    if (on == s.mouseCellOn) return;
+    s.mouseCellOn = on;
+    LOG_INFO("mouse cell: [interface] mouse_cell = %d - %s", on ? 1 : 0,
+             on ? "the cell under the mouse in the new look" : "the game's own");
+}
+
 bool cancelGameAim(const char* why) {
     constexpr uint32_t kModeMsgSlot = 0x14, kModeMsg = 0x5707D0, kEndWait = 0x4E;
     using ModeMsgFn = int(__attribute__((thiscall)) *)(uint32_t mode, int msg, int a, int b, int c);
@@ -332,7 +344,35 @@ void draw(FrameRecord& record, int width, int height) {
                  unsigned(aimSkill), aimLv, aimX, aimY);
     }
     s.aimTold = aiming ? aimSkill : 0;
-    if (!target && !next && !mate && !arrowShown && s.flashes.empty() && !aiming) return;
+    // 3.0.16-beta.7: the cell under the mouse - where the game would draw its own (its flag 0), the pick's cell (the
+    // game's own 0x76E778 / 0x76E77C without the pick's hook)
+    int cellX = 0, cellY = 0;
+    bool mouseCellShown = false;
+    if (s.mouseCellOn && !padNow && !aiming) {
+        constexpr uint32_t kCellX = 0x76E778, kCellY = 0x76E77C, kCellFlag = 0x76E780, kCellColour = 0x76E784;
+        uint32_t flag = 1, gx = 0, gy = 0, colour = 0;
+        if (readGame(kCellFlag, &flag, 4) && flag == 0 && readGame(kCellX, &gx, 4) && readGame(kCellY, &gy, 4)) {
+            readGame(kCellColour, &colour, 4);
+            int px = 0, py = 0;
+            const bool picked = lastPick(px, py);
+            cellX = picked ? px : int(gx);
+            cellY = picked ? py : int(gy);
+            mouseCellShown = true;
+            bool seen = false;  // the game's colours of the cell, the first four told
+            for (uint32_t& c : s.coloursSeen)
+                if (c == colour || (!c && !seen)) {
+                    if (!c && s.mouseTold < 12) {
+                        c = colour;
+                        ++s.mouseTold;
+                        LOG_INFO("mouse cell: at %d, %d (the game's %u, %u%s) - the game's colour 0x%08X", cellX,
+                                 cellY, gx, gy, picked ? ", the pick's" : "", colour);
+                    }
+                    seen = true;
+                    break;
+                }
+        }
+    }
+    if (!target && !next && !mate && !arrowShown && s.flashes.empty() && !aiming && !mouseCellShown) return;
     float view[12];
     if (!readGameCamera(view)) return;
     const camera::Projection p = camera::projectionFor(width, height);
@@ -399,9 +439,13 @@ void draw(FrameRecord& record, int width, int height) {
     }
     float feet[3];
     int fw = 0, fh = 0, fcs = 0;
-    if ((!s.flashes.empty() || aiming) && readPlayerWorld(feet, fw, fh, fcs)) {  // 3.0.11-beta.142: on the heights
+    if ((!s.flashes.empty() || aiming || mouseCellShown) && readPlayerWorld(feet, fw, fh, fcs)) {  // .142: heights
         float sign = 0;
         const groundway::Heights* heights = heightsHere(s, feet, fw, fh, fcs, sign);
+        if (heights && mouseCellShown)  // 3.0.16-beta.7: a soft light square, a thin edge
+            groundway::placeTris(groundway::cellsShape({{cellX, cellY}}, kMouseFill, kMouseLine, 1.0f, *heights, fcs,
+                                                       sign, kLift),
+                                 view, p, kBias, s.verts);
         int px = 0, py = 0, pw = 0, ph = 0;
         if (heights && aiming && readPlayerCell(px, py, pw, ph)) {  // 3.0.11-beta.144: the mouse's aim, whole
             std::vector<std::pair<int, int>> cells;

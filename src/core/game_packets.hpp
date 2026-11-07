@@ -180,6 +180,16 @@ struct ShopSign {
     std::string title;  // in the game's code page
 };
 
+// 3.0.16-beta.7 (the owner: «делай все» - the signs over the characters): a chat room's sign - 0x00d7 <len>.W
+// <owner>.L <room>.L <limit>.W <users>.W <type>.B <title> (uAthena's clif_dispchat: type 0 locked, 1 open, 2 and 3 an
+// arena's, an NPC's); 0x00d8 <room>.L <owner>.L - it is gone (`gone`)
+struct RoomSign {
+    uint32_t owner = 0, room = 0;
+    int limit = 0, users = 0, type = 1;
+    std::string title;  // in the game's code page
+    bool gone = false;
+};
+
 // 3.0.11-beta.201 (the tester: «ще не видно согільдійців на мінімапі», «була якась команда типу пошук мобів на
 // мінімапі»): a mark on the minimap - 0x0144 <npc>.L <type>.L (1 put, 2 taken off) <x>.L <y>.L <id>.B <colour>.L
 // (uAthena's clif_viewpoint: an NPC's «viewpoint», @showmobs' monsters for 5 s); a guild mate's cell on the same map -
@@ -199,7 +209,7 @@ struct GuildPos {
 using Event = std::variant<std::monostate, Whisper, PartyInvite, TradeRequest, GuildInvite, FriendRequest, StatusIcon,
                            Vanish, SkillCast, Hit, PartyList, PartyMember, PartyLeft, PartyHp, PartyChat, GuildChat,
                            Chat, Status, Pickup, StatusLong, Casting, Appear, PartyPos, ActorInfo, NpcSay, NpcMenu,
-                           StorageCount, ShopSign, Viewpoint, GuildPos, ActorName>;
+                           StorageCount, ShopSign, Viewpoint, GuildPos, ActorName, RoomSign>;
 
 // A packet as the game took it, `size` bytes of it readable: one of the above, or nothing (another packet, one cut
 // short or naming more bytes than there are).

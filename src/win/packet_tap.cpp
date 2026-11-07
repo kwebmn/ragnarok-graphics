@@ -27,6 +27,7 @@
 #include "win/npc_talk.hpp"
 #include "win/storage_window.hpp"
 #include "win/vend_shop.hpp"
+#include "win/world_signs.hpp"
 #include "win/target_card.hpp"
 #include "win/ground_units.hpp"
 #include "win/notifier.hpp"
@@ -101,6 +102,7 @@ uint16_t __attribute__((thiscall)) take(void* connection, const uint8_t* packet)
         itemswin::packet(e);     // 3.0.11-beta.107: an item come into the bag told the log
         storagewin::packet(e);   // 3.0.11-beta.115: the storage's places used of the most
         vendshopwin::packet(e);  // 3.0.11-beta.156: the shops' signs
+        worldsigns::packet(e);   // 3.0.16-beta.7: the shops' and the rooms' signs as plates
         minimapproto::packet(e);  // 3.0.11-beta.201: the server's marks, the guild's mates
         charpanel::packet(e);     // 3.0.11-beta.235: the session's kills and deaths
         expgainwin::packet(e);    // 3.0.11-beta.237: a kill's experience over the monster

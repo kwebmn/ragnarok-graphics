@@ -23,6 +23,11 @@ void walkLook(WalkLook look, bool mark);
 // +0x3C4 1 a place, 5 a trap; the skill +0x3C8, its level +0x3D0) the cells it would make on the cell under the mouse
 // (win/pick_hook lastPick) stand on the ground until the click
 void skillCells(bool on);
+// 3.0.16-beta.7 (the owner: «делай все» - ground cells): [interface] mouse_cell - the game's cell under the mouse
+// (grid.tga, hidden by win/grid_cell_hook while this is on) drawn as a skill's cell: a soft light square with a thin
+// edge on the ground's heights, where the game would show its own (its flag 0x76E780 0), not while the pad plays or
+// a ground skill's cells stand under the mouse
+void mouseCell(bool on);
 void skillCast(uint16_t skill, int lv, int x, int y);
 // 3.0.11-beta.146 (R-VYV3AG «фаерволл постоянно активный»: Fire Wall clicked on the bar with the mouse, then cast with
 // the pad - the game kept waiting for its place, «Select a Target» and the cells under the hidden cursor to the end):

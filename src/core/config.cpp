@@ -212,6 +212,7 @@ EffectSettings effectsOff() {
     e.treeVolume = false;
     e.wetGround = false;
     e.hitFlash = false;
+    e.deathFlash = false;
     e.glint = false;
     e.ripples = false;
     e.softParticles = e.rimLight = e.motes = e.relief = e.floorReflections = e.shafts = e.dayCycle = false;
@@ -287,6 +288,7 @@ bool drawnByRenderer(const EffectSettings& e) {
            e.treeVolume ||
            e.wetGround ||
            e.hitFlash ||
+           e.deathFlash ||
            e.glint ||
            e.ripples ||
            e.softParticles || e.rimLight || e.motes || e.moonLight ||
@@ -792,6 +794,10 @@ Config parseConfig(const std::string& text) {
             setBool(val, c.whisperWindows);
         } else if (key == "interface.skill_cells") {  // 3.0.11-beta.142: a ground skill's cells on the ground
             setBool(val, c.skillCells);
+        } else if (key == "interface.mouse_cell") {  // 3.0.16-beta.7: the cell under the mouse in the new look
+            setBool(val, c.mouseCell);
+        } else if (key == "interface.signs") {  // 3.0.16-beta.7: the shops' and chat rooms' signs as plates
+            setBool(val, c.worldSigns);
         } else if (key == "interface.ground_counts") {  // 3.0.11-beta.143: walls standing, traps left on the bar
             setBool(val, c.groundCounts);
         } else if (key == "interface.dim_world") {  // 3.0.11-beta.49: the world dimmed under the windows (off: .55)

@@ -1984,6 +1984,15 @@ constexpr Entry kTexts[] = {
      "впізнається за звуком.",
      "Монстр, по которому попали, на мгновение вспыхивает белым, как в современных 2D-играх. Нужен включённый звук "
      "игры: удар узнаётся по звуку."},
+    // 3.0.16-beta.7
+    {Text::FxDeathFlash, "Flash on a death", "Спалах при смерті", "Вспышка при смерти"},
+    {Text::FxDeathFlashHint,
+     "A monster that dies lights up white, brighter and longer than from a hit. Needs the game's sound on: the death "
+     "is known by its sound.",
+     "Монстр, що гине, спалахує білим — яскравіше й довше, ніж від удару. Потрібен увімкнений звук гри: смерть "
+     "впізнається за звуком.",
+     "Умирающий монстр вспыхивает белым — ярче и дольше, чем от удара. Нужен включённый звук игры: смерть узнаётся "
+     "по звуку."},
     {Text::FxWetGround, "Wet ground and puddles", "Мокра земля й калюжі", "Мокрая земля и лужи"},
     {Text::FxWetGroundHint,
      "On maps where it rains the ground is a little darker and puddles here and there mirror the houses, the trees "
@@ -6612,6 +6621,23 @@ constexpr Entry kTexts[] = {
      "створить сервер: під мишею, поки гра чекає місце, і коротко після касту з геймпада й мишею.",
      "Куда ляжет умение по земле: 3 или 5 клеток Fire Wall, квадрат Storm Gust, Sanctuary, ловушка — клетки, которые "
      "создаст сервер: под мышью, пока игра ждёт место, и коротко после каста с геймпада и мышью."},
+    // 3.0.16-beta.7
+    {Text::InterfaceMouseCell, "Cell under the mouse", "Клітинка під мишею", "Клетка под мышью"},
+    {Text::InterfaceMouseCellHint,
+     "The cell of the ground under the mouse in the new look: a soft light square with a thin edge, as the skills' "
+     "cells, in place of the game's own.",
+     "Клітинка землі під мишею в новому вигляді: м'який світлий квадрат із тонким краєм, як клітинки навичок, "
+     "замість ігрової.",
+     "Клетка земли под мышью в новом виде: мягкий светлый квадрат с тонким краем, как клетки навыков, вместо "
+     "игровой."},
+    {Text::InterfaceSigns, "Signs over the characters", "Таблички над персонажами", "Таблички над персонажами"},
+    {Text::InterfaceSignsHint,
+     "The shops' and the chat rooms' signs in the new look: a dark plate with the title, gold for a shop, blue for a "
+     "room with its places, grey for a locked one. A click opens them as before.",
+     "Таблички крамниць і чат-кімнат у новому вигляді: темна плашка з назвою, золота для крамниці, синя для кімнати "
+     "з її місцями, сіра для закритої. Клік відкриває їх, як і раніше.",
+     "Таблички лавок и чат-комнат в новом виде: тёмная плашка с названием, золотая для лавки, синяя для комнаты с её "
+     "местами, серая для закрытой. Клик открывает их, как и раньше."},
     {Text::InterfaceGroundCounts, "Walls and traps on the hotbar", "Стіни й пастки на панелі",
      "Стены и ловушки на панели"},
     {Text::InterfaceGroundCountsHint,

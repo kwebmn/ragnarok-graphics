@@ -25,9 +25,9 @@ const uint8_t kPlayerCode[] = {0xB9, 0x78, 0xB5, 0x74, 0x00, 0xE8, 0x4C, 0x14, 0
 constexpr uint32_t kPlayerAt = 0x54567A, kModeKind = 0x74B5D0, kModeNow = 0x74B57C;
 uintptr_t g_trampoline = 0;
 
-void noteHit(const char* name, float x, float y, float z) {
+void noteHit(const char* name, float x, float y, float z, bool death) {
     Context& c = Context::get();
-    if (!c.effects().hitFlash || !c.enhanced()) return;
+    if (!(death ? c.effects().deathFlash : c.effects().hitFlash) || !c.enhanced()) return;
     if (*reinterpret_cast<const int*>(uintptr_t(kModeKind)) != 1) return;
     const uint32_t mode = *reinterpret_cast<const uint32_t*>(uintptr_t(kModeNow));
     const uint32_t world = mode ? *reinterpret_cast<const uint32_t*>(uintptr_t(mode + 0xC4)) : 0;
@@ -43,22 +43,22 @@ void noteHit(const char* name, float x, float y, float z) {
     // drawn last frame under or over it (hit_flash::Monsters)
     const float heardX = sx, heardY = sy;
     const bool aimed = c.monsters.aim(sx, sy);
-    c.flashes.add(sx, sy, c.nowMs());
+    c.flashes.add(sx, sy, c.nowMs(), death);
     static int probes = 0;  // 2.7.11: the first three no monster took - what is drawn there, in the log
     if (!aimed && probes < 3 && c.hitProbe.frames == 0) {
         ++probes;
         c.hitProbe = Context::HitProbe{heardX, heardY, 2, 0};
     }
-    static int told = 0;  // the first hits in the log: heard, and whether a monster took them
-    if (told < 8) {
-        ++told;
-        LOG_INFO("hit flash: %s heard at %.0f,%.0f - %s", name, heardX, heardY,
+    static int told = 0, deaths = 0;  // the first hits in the log: heard, and whether a monster took them
+    if (death ? deaths++ < 8 : told++ < 8) {
+        LOG_INFO("%s: %s heard at %.0f,%.0f - %s", death ? "death flash" : "hit flash", name, heardX, heardY,
                  aimed ? "given to the monster there" : "no monster drawn there");
     }
 }
 
 void __cdecl playAt(const char* name, float x, float y, float z, int reach, int fade, uint32_t volume) {
-    if (hit_flash::hitSound(name)) noteHit(name, x, y, z);
+    const hit_flash::Sound kind = hit_flash::soundKind(name);  // 3.0.16-beta.7: a death's too
+    if (kind != hit_flash::Sound::Other) noteHit(name, x, y, z, kind == hit_flash::Sound::Death);
     reinterpret_cast<PlayAtFn>(g_trampoline)(name, x, y, z, reach, fade, volume);
 }
 

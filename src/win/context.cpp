@@ -70,6 +70,7 @@
 #include "win/ground_marks.hpp"
 #include "win/pad_assign.hpp"
 #include "win/mob_hp.hpp"
+#include "win/world_signs.hpp"
 #include "win/npc_tag.hpp"
 #include "win/equip_window.hpp"
 #include "win/npc_talk.hpp"
@@ -452,7 +453,7 @@ bool Context::open(std::string& error) {
     // 0.61: Direct3D 11 draws the characters' shadows and the torches' light now: they know the sprites by it too.
     const EffectSettings drawn = effects();
     const bool d3d11Hook = (aiHere && cells) || drawn.actorShadows || drawn.torch || drawn.glint ||
-                           drawn.hitFlash;  // 0.95, 0.96: the sprites' kinds
+                           drawn.hitFlash || drawn.deathFlash;  // 0.95, 0.96, 3.0.16-beta.7: the sprites' kinds
     if (d3d11 ? d3d11Hook : ((cells && renderer->remote()) || !config.remix)) installSpriteHook();
     installEffectHook();  // 0.27: the level 99 aura softer (Device7::record)
     setFullColour(config.fullColour);  // 2.5.18: the textures in their pictures' own colours
@@ -676,7 +677,8 @@ void Context::endScene() {
     // present - beta.9's and beta.11's panel, put in at the present, found no cursor in an empty record and covered it
     const bool drawn = record.takeWork() > 0;
     // 3.0.11-beta.215: the next frames' cell under the mouse - none while the cursor is hidden (hidePadCursor's rule)
-    hideGridCell(gridcell::hides(config.padWalk == PadWalk::Arrow, uapad::runtime::look().shown));
+    // 3.0.16-beta.7: [interface] mouse_cell - the game's cell hidden, ours drawn (win/ground_marks)
+    hideGridCell(gridcell::hides(config.padWalk == PadWalk::Arrow, uapad::runtime::look().shown) || config.mouseCell);
     if (photoNow()) record.dropInterface();  // 3.0.4-beta.5: the photo mode - the world alone (.16: a big shot)
     if (drawn && renderer && !photoNow()) buffoverlay::draw(record, *renderer);  // 3.0.4-beta.6: the buffs' times
     if (panelSlot_.endScene(drawn) && renderer && !photoNow()) {
@@ -719,6 +721,7 @@ void Context::endScene() {
         worlddim::draw(record);                 // 3.0.11-beta.49: the world dimmed under the windows (where it ends)
         lowhpedge::draw(record, *renderer);     // 3.0.11-beta.50: the low HP edge, there too
         groundwin::draw(record, *renderer);  // 3.0.11-beta.283: the items on the ground named, under the bars
+        worldsigns::draw(record, *renderer);  // 3.0.16-beta.7: the shops' and the rooms' signs
         mobhpwin::draw(record, *renderer);      // 3.0.11-beta.95: the monsters' HP bars, under the cast
         npctagwin::draw(record, *renderer);     // 3.0.11-beta.256: the controller's NPC plate
         expgainwin::draw(record, *renderer);    // 3.0.11-beta.237: a kill's experience over the monster
@@ -792,6 +795,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
         worlddim::draw(record);                 // 3.0.11-beta.49
         lowhpedge::draw(record, *renderer);     // 3.0.11-beta.50
         groundwin::draw(record, *renderer);  // 3.0.11-beta.283
+        worldsigns::draw(record, *renderer);  // 3.0.16-beta.7
         mobhpwin::draw(record, *renderer);      // 3.0.11-beta.95
         npctagwin::draw(record, *renderer);     // 3.0.11-beta.256
         expgainwin::draw(record, *renderer);    // 3.0.11-beta.237
@@ -1091,6 +1095,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     groundmarks::look(config.targetRing);  // 3.0.11-beta.87: the target's ring on the ground
     groundmarks::walkLook(config.walkArrow, config.walkMark);  // 3.0.11-beta.103: the stick's arrow's look
     groundmarks::skillCells(config.skillCells);                // 3.0.11-beta.142: a ground skill's cells
+    groundmarks::mouseCell(config.mouseCell);                  // 3.0.16-beta.7: the cell under the mouse
     uapad::runtime::setRing(config.targetRing != TargetRing::Off);  // 3.0.11-beta.95: the pad's fake mark off then
     uapad::runtime::setDirectWalk(config.padWalk == PadWalk::Arrow);  // 3.0.11-beta.88: the stick without the mouse
     uapad::runtime::setTiles(config.padTiles);                        // 3.0.11-beta.90: Start opens the tile
@@ -1118,6 +1123,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     mobhpwin::setBossBars(config.bossBars);     // 3.0.13-beta.3
     mobhpwin::setWhoHits(config.whoHits);       // 3.0.13-beta.13
     mobhpwin::frame(window, config.mobHp, pk, pw, ph);  // 3.0.11-beta.95
+    worldsigns::frame(config.worldSigns, gameCodePage(config), pk, pw, ph);  // 3.0.16-beta.7
     groundwin::frame(window, config.dropNames, config.dropHighlight, gameCodePage(config), pk, pw, ph);  // .283
     npctagwin::frame(window, gameCodePage(config), pk, pw, ph);  // 3.0.11-beta.256
     castwin::frame(window, config.castLabel, gameCodePage(config), pk, pw, ph);

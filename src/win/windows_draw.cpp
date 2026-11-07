@@ -12,6 +12,7 @@
 #include <vector>
 
 #include "core/world_windows.hpp"
+#include "win/world_signs.hpp"
 #include "win/char_block.hpp"
 #include "win/context.hpp"
 #include "win/game_camera.hpp"
@@ -138,6 +139,23 @@ size_t holdShown(uint32_t manager, bool gauges, std::vector<std::pair<uint32_t, 
     return others;  // the shown ones left drawn
 }
 
+// 3.0.16-beta.7: [interface] signs - the shops' and the chat rooms' signs drawn anew (win/world_signs): their shown
+// flags held at 0 through both passes of the game's draw (kept in `held` to put back - the clicks still find them)
+void holdSigns(uint32_t manager, std::vector<std::pair<uint32_t, int32_t>>& held) {
+    const uint32_t head = *reinterpret_cast<const uint32_t*>(uintptr_t(manager + kWindowsList));
+    size_t seen = 0;
+    for (uint32_t node = head ? *reinterpret_cast<const uint32_t*>(uintptr_t(head)) : 0;
+         node && node != head && seen < kMostWindows; node = *reinterpret_cast<const uint32_t*>(uintptr_t(node))) {
+        ++seen;
+        const uint32_t w = *reinterpret_cast<const uint32_t*>(uintptr_t(node + 8));
+        if (!w) continue;
+        auto* shown = reinterpret_cast<int32_t*>(uintptr_t(w + kWindowShown));
+        if (!*shown || !worldsigns::take(w)) continue;
+        held.emplace_back(w, *shown);
+        *shown = 0;
+    }
+}
+
 void putBack(std::vector<std::pair<uint32_t, int32_t>>& held) {
     for (const auto& [w, shown] : held) *reinterpret_cast<int32_t*>(uintptr_t(w + kWindowShown)) = shown;
     held.clear();
@@ -193,7 +211,8 @@ void hideReplaced() {
 void __attribute__((thiscall)) windowsDraw(uint32_t manager) {
     mendWindowFields(manager, "before its windows' draw");  // 3.0.11-beta.194 (R-ZS5B2D): a freed one's name
     hideReplaced();
-    std::vector<std::pair<uint32_t, int32_t>> held;
+    std::vector<std::pair<uint32_t, int32_t>> held, signs;
+    holdSigns(manager, signs);  // 3.0.16-beta.7
     const size_t gauges = holdShown(manager, false, held);  // 3.0.11-beta.191: the bars under the characters first
     if (gauges > 0) reinterpret_cast<DrawFn>(uintptr_t(kDraw))(manager);
     putBack(held);
@@ -211,6 +230,7 @@ void __attribute__((thiscall)) windowsDraw(uint32_t manager) {
     if (gauges > 0) holdShown(manager, true, held);
     reinterpret_cast<DrawFn>(uintptr_t(kDraw))(manager);
     putBack(held);
+    putBack(signs);
 }
 
 // 3.0.11-beta.203 (the tester: «при логіні ... там залишились в старому стилі please wait вікна»): the login's modes

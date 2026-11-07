@@ -597,6 +597,14 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("skill_cells", flag(running.skillCells), flag(file.skillCells)));
         n.skillCells = file.skillCells;
     }
+    if (file.mouseCell != running.mouseCell) {  // 3.0.16-beta.7: the cell under the mouse, at once
+        u.applied.push_back(change("mouse_cell", flag(running.mouseCell), flag(file.mouseCell)));
+        n.mouseCell = file.mouseCell;
+    }
+    if (file.worldSigns != running.worldSigns) {  // 3.0.16-beta.7: the signs over the characters, at once
+        u.applied.push_back(change("signs", flag(running.worldSigns), flag(file.worldSigns)));
+        n.worldSigns = file.worldSigns;
+    }
     if (file.groundCounts != running.groundCounts) {  // 3.0.11-beta.143: walls standing, traps left, at once
         u.applied.push_back(change("ground_counts", flag(running.groundCounts), flag(file.groundCounts)));
         n.groundCounts = file.groundCounts;

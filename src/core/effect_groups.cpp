@@ -33,6 +33,7 @@ const Member kMembers[] = {
     {"rim_light", Characters, 2, &E::rimLight},
     {"footprints", Characters, 1, &E::footprints},
     {"hit_flash", Characters, 1, &E::hitFlash},
+    {"death_flash", Characters, 1, &E::deathFlash},  // 3.0.16-beta.7
     {"aura", Characters, 1, &E::aura},
     {"aura_portals", Characters, 1, &E::auraPortals},  // 3.0.13-beta.15
     {"silhouette", Characters, 1, &E::silhouette},     // 3.0.13-beta.30
