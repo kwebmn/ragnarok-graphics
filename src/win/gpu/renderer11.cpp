@@ -1436,8 +1436,7 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
     packStage(s.stage[0], d.keyed[0], c.stage0);
     packStage(s.stage[1], d.keyed[1], c.stage1);
     // 3.0.13-beta.26: [effects] fade_models - the hole round the character (draw.cpp's)
-    if (hole_[3] > 0.0f && d.fvf == d3d7::FVF_TL1 && !s.ui && s.zWrite && !s.blend && d.effect == 0)
-        std::copy(hole_, hole_ + 8, c.hole);
+    if (holeOver(rec, d, s, hole_)) std::copy(hole_, hole_ + 8, c.hole);
     // 2.5.2: the ground's lightmap (its 256x256 atlas of 8x8 cells) sampled smoothly (as draw.cpp, 0.22.6) - the
     // weak set's own, never set here until now
     if (effects_.smoothLight && !s.ui && d.fvf == d3d7::FVF_TL2 && t[1]->width == 256 && t[1]->height == 256)
@@ -1682,8 +1681,10 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
     is.samplers[0] = samplerState(sampled[0], aniso);
     is.samplers[1] = samplerState(sampled[1], aniso);
     const uint8_t srcBlend = softAdd ? uint8_t(d3d7::BLEND_INVDESTCOLOR) : s.srcBlend;  // 2.7.38
-    is.blend = blendState(s.blend, d3dmap::blendOf(srcBlend, d3d7::BLEND_ONE),
-                          d3dmap::blendOf(s.dstBlend, d3d7::BLEND_ZERO),
+    const bool holed = c.hole[3] > 0.0f;  // 3.0.13-beta.27: the hole's rim laid over (draw.cpp's)
+    is.blend = blendState(s.blend || holed, d3dmap::blendOf(holed ? uint8_t(d3d7::BLEND_SRCALPHA) : srcBlend,
+                                                            d3d7::BLEND_ONE),
+                          d3dmap::blendOf(holed ? uint8_t(d3d7::BLEND_INVSRCALPHA) : s.dstBlend, d3d7::BLEND_ZERO),
                           D3D11_COLOR_WRITE_ENABLE_RED | D3D11_COLOR_WRITE_ENABLE_GREEN |
                               D3D11_COLOR_WRITE_ENABLE_BLUE);
     is.depth = depthState(s.zEnable, s.zWrite, d3dmap::compareOf(s.zFunc));

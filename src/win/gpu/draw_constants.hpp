@@ -46,6 +46,27 @@ inline void uiPixels(const FrameRecord& rec, const DrawCmd& d, float out[4]) {
     out[3] = std::ceil(y1) - 1.0f;
 }
 
+// 3.0.13-beta.27: [effects] fade_models - a game's model draw (opaque, writing depth, not an effect's) over the hole
+// round the character (core/model_fade.hpp holeAt's ellipse) and nearer than it somewhere: drawn blended, the hole's
+// pixels left out and its rim laid over (shaders.cpp seeThrough)
+inline bool holeOver(const FrameRecord& rec, const DrawCmd& d, const DrawSetup& s, const float hole[8]) {
+    if (hole[3] <= 0.0f || d.fvf != d3d7::FVF_TL1 || s.ui || !s.zWrite || s.blend || d.effect != 0) return false;
+    const std::vector<uint8_t>& v = rec.vertexBytes();
+    const size_t stride = FrameRecord::stride(d.fvf);
+    float x0 = FLT_MAX, y0 = FLT_MAX, x1 = -FLT_MAX, y1 = -FLT_MAX, rhw = 0.0f;
+    for (uint32_t i = 0; i < d.vertexCount && d.vertexOffset + (i + 1) * stride <= v.size(); ++i) {
+        float xyzw[4];
+        std::memcpy(xyzw, v.data() + d.vertexOffset + i * stride, sizeof xyzw);
+        x0 = std::min(x0, xyzw[0]);
+        y0 = std::min(y0, xyzw[1]);
+        x1 = std::max(x1, xyzw[0]);
+        y1 = std::max(y1, xyzw[1]);
+        rhw = std::max(rhw, xyzw[3]);
+    }
+    const float rx = hole[2] * 0.8f, ry = hole[2] * 0.95f, cy = hole[1] - 0.55f * hole[2];
+    return rhw > 0.0f && 1.0f / rhw < hole[3] - 3.0f && x1 > hole[0] - rx && x0 < hole[0] + rx && y1 > cy - ry &&
+           y0 < cy + ry;
+}
 // 0.64: a draw's top and bottom (game pixels) - the leaves' sway (core/foliage.hpp); false when it has no height.
 inline bool yExtent(const FrameRecord& rec, const DrawCmd& d, float& top, float& bottom) {
     const std::vector<uint8_t>& v = rec.vertexBytes();

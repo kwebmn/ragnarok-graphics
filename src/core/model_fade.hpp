@@ -21,7 +21,9 @@ struct Focus {
     float view[12] = {};
     float camX = 0, camZ = 0, ground = 0;
 };
-constexpr float kBodyUnits = 45.0f;  // a character sprite's height in the world's units, about
+// a character sprite's height in the world's units, about; 3.0.13-beta.27 (R-DRBZ2V: the hole three times the body -
+// 570 game pixels where the sprite is 190 at 2194x1234 and the camera 370 away): 16, not 45
+constexpr float kBodyUnits = 16.0f;
 // a draw this much nearer than the feet covers the body; 3.0.13-beta.18 (R-TAA3SB: a wall right before the character
 // and a roof over its feet stayed whole): 3, not 10 - the ground over the feet lies behind them anyway
 constexpr float kNearer = 3.0f;
@@ -34,9 +36,8 @@ Focus focusOf(const camera::Projection& p, const float view[12], const float at[
 // its distance from the camera along the ground, the world's up in the view (y, z: the game's camera never rolls)
 // and the projection's f; all 0 when the focus is not known
 void holeOf(const Focus& f, float out[8]);
-// The share of a model's pixels left out at game pixel (gx, gy) of a game picture width x height, its view depth z:
-// shaders.cpp seeThrough's, kept the same (0 none, kHoleMost in the middle)
-constexpr float kHoleMost = 0.7f;
+// How much of a model's pixel is kept at game pixel (gx, gy) of a game picture width x height, its view depth z:
+// shaders.cpp seeThrough's, kept the same (1 whole, 0 left out - the hole's middle; .27: no pattern, a rim between)
 float holeAt(const float hole[8], float gx, float gy, float z, int width, int height);
 
 }  // namespace uagfx::modelfade

@@ -58,15 +58,15 @@ TEST(model_fade_hole_only_before_the_character) {
         std::memcpy(q, v, sizeof q);
         return modelfade::holeAt(hole, q[0], q[1], 1.0f / q[3], 800, 600);
     };
-    CHECK(at3(0, -20, -20) > 0.5f);   // a wall before the body, at its middle
-    CHECK(at3(0, -20, -6) > 0.0f);    // .18: right before it
-    CHECK(at3(0, -60, 25) == 0.0f);   // .20: tall behind - nearer along the view, not along the ground
-    CHECK(at3(0, 0, 0) == 0.0f);      // the feet themselves
-    CHECK(at3(200, -20, -20) == 0.0f);  // far to the side: outside the hole
-    // smooth: a little to the side, fewer of the pixels left out than in the middle, none at the edge
-    const float mid = at3(0, -20, -20), side = at3(14, -20, -20);
-    CHECK(side < mid && side > 0.0f);
+    CHECK(at3(0, -18.8f, -10) == 0.0f);  // a wall before the body, over its middle: left out
+    CHECK(at3(0, -12.8f, -4) < 1.0f);  // .18: right before it
+    CHECK(at3(0, -30, 25) == 1.0f);    // .20: tall behind - nearer along the view, not along the ground
+    CHECK(at3(0, 0, 0) == 1.0f);       // the feet themselves
+    CHECK(at3(100, -8, -10) == 1.0f);  // far to the side: outside the hole
+    // .27: a rim between - a little to the side partly kept
+    const float side = at3(10, -18.8f, -10);
+    CHECK(side > 0.0f && side < 1.0f);
     modelfade::Focus none;
     modelfade::holeOf(none, hole);
-    CHECK(hole[3] == 0.0f && modelfade::holeAt(hole, 400, 300, 10, 800, 600) == 0.0f);
+    CHECK(hole[3] == 0.0f && modelfade::holeAt(hole, 400, 300, 10, 800, 600) == 1.0f);
 }

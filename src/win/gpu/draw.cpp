@@ -176,6 +176,12 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     const bool softAdd = effect_exe::softAdd(effects.skillsSoft, adds, d.effect, s.srcBlend);
     DrawSetup laid = s;
     if (softAdd) laid.srcBlend = d3d7::BLEND_INVDESTCOLOR;
+    const bool holed = !inner && holeOver(rec, d, s, hole);  // 3.0.13-beta.27: blended, the hole's rim laid over
+    if (holed) {
+        laid.blend = true;
+        laid.srcBlend = d3d7::BLEND_SRCALPHA;
+        laid.dstBlend = d3d7::BLEND_INVSRCALPHA;
+    }
     // 0.26: the fire of skills (a fire-coloured picture added on) lights around it once the world is drawn.
     // 0.38: a portal's draw, for its light round it once the world is drawn - 2.7.54: a map warp's floor
     if (warp == portal::Part::Floor && portalsWanted() && !torchDone) notePortal(rec, d);
@@ -417,8 +423,7 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     packStage(s.stage[1], d.keyed[1], c.stage1);
     // 3.0.13-beta.26: [effects] fade_models - the hole round the character in the game's models (opaque, writing
     // depth, not an effect's), shaders.cpp seeThrough
-    if (hole[3] > 0.0f && d.fvf == d3d7::FVF_TL1 && !s.ui && s.zWrite && !s.blend && d.effect == 0)
-        std::copy(hole, hole + 8, c.hole);
+    if (holed) std::copy(hole, hole + 8, c.hole);
     // 0.22.6: the ground's lightmap (its 256x256 atlas of 8x8 cells) sampled smoothly. 3.0.4-beta.26: and the own
     // ground's (its atlas 2048 wide, the cells laid as the game lays them: terrain::lightmapAtlas)
     if (effects.smoothLight && !s.ui && d.fvf == d3d7::FVF_TL2 && t[1] &&

@@ -506,21 +506,27 @@ float hillLight(float3 P) {
 
 // 3.0.13-beta.26 (the owner: «делай дыру, мигает» - the models chosen whole, on the processor, went on and off as
 // one walked and turned the camera): a model's pixel round the character's body, nearer the camera than it along
-// the ground, left out in a fine pattern - most of them in the middle, none at the edge; it moves with the
-// character smoothly, whatever the game's draws hold
-static const float kHoleDither[16] = {0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5};
-void seeThrough(float4 pos) {
-    if (holeZ <= 0.0 || pos.w >= holeZ - 3.0) return;
-    float2 g = (pos.xy - 0.5 - float2(jitterX, jitterY)) / scale;  // draw_vs turned back: game pixels
-    float e = length((g - float2(holeX, holeY - 0.55 * holeH)) / (holeH * float2(0.8, 0.95)));
-    if (e >= 1.0) return;
-    float2 centre = floor(targetSize / scale * 0.5);
-    float3 p = float3((g - centre) * pos.w / holeF, pos.w);  // the point in the view
-    float up = p.y * holeUy + p.z * holeUz;
-    if (sqrt(max(dot(p, p) - up * up, 0.0)) >= holeG - 3.0) return;  // behind it along the ground (R-UQ7AGY)
-    float gone = (1.0 - smoothstep(0.5, 1.0, e)) * 0.7;  // core/model_fade.hpp holeAt, kHoleMost
-    uint2 q = uint2(pos.xy) & 3;
-    if ((kHoleDither[q.y * 4 + q.x] + 0.5) / 16.0 < gone) discard;
+// the ground, see-through; it moves with the character smoothly, whatever the game's draws hold. 3.0.13-beta.27 (the
+// owner: «а без решетки можно?», R-DRBZ2V «черное пятно» - the pattern's every other depth darkened by the shadows in
+// the corners): no pattern - the middle left out whole, the rim laid over by its alpha (the draw blended, draw.cpp
+// holeOver; the alpha the texture's under alpha to coverage, else whole)
+void seeThrough(float4 pos, inout float4 c) {
+    if (holeZ <= 0.0) return;
+    float keep = 1.0;
+    if (pos.w < holeZ - 3.0) {
+        float2 g = (pos.xy - 0.5 - float2(jitterX, jitterY)) / scale;  // draw_vs turned back: game pixels
+        float e = length((g - float2(holeX, holeY - 0.55 * holeH)) / (holeH * float2(0.8, 0.95)));
+        if (e < 1.0) {
+            float2 centre = floor(targetSize / scale * 0.5);
+            float3 p = float3((g - centre) * pos.w / holeF, pos.w);  // the point in the view
+            float up = p.y * holeUy + p.z * holeUz;
+            // behind it along the ground (R-UQ7AGY): whole
+            if (sqrt(max(dot(p, p) - up * up, 0.0)) < holeG - 3.0)
+                keep = smoothstep(0.55, 1.0, e);  // core/model_fade.hpp holeAt
+        }
+    }
+    if (keep < 0.02) discard;
+    c.a = (((alphaTest >> 17) & 1) != 0 ? c.a : 1.0) * keep;
 }
 
 float4 shade(PsIn i) {
@@ -692,7 +698,7 @@ float4 shade(PsIn i) {
     // 2.7.38: a skill's light laid over softly (draw.cpp: the target's colour its factor, not its alpha) - as much
     // of it as its alpha lets through
     if (((alphaTest >> 23) & 1) != 0) c.rgb *= c.a;
-    seeThrough(i.pos);  // 3.0.13-beta.26: last - the gradients above taken by every pixel
+    seeThrough(i.pos, c);  // 3.0.13-beta.26: last - the gradients above taken by every pixel
     return c;
 }
 
