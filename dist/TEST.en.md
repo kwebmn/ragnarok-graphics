@@ -1,3 +1,9 @@
+# uaRO Graphics 3.0.13-beta.20 — what's new
+
+**See-through buildings: what is behind no longer fades.** Tall things behind the character (Prontera's fountain) went see-through: the camera looks down and their tops are nearer to it. Now only what is nearer the camera along the ground fades - really between the camera and the character.
+
+**Others' skill effects fainter** (a new switch «Others' skill effects fainter» in the skill effects' group, off by default). Skill effects on other players and on monsters neither you nor your party hit are at a third of their strength; yours and your party's as bright as ever. You see your own in a guild war and on the market.
+
 # uaRO Graphics 3.0.13-beta.19 — what's new
 
 **See-through buildings - the whole house.** Only the parts of a house over the character went see-through before, its front and roof staying whole - a ghostly house. Now all of it before the character fades together; what is behind the character and the houses next to it stay as they are.
