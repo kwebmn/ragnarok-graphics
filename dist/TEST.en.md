@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.13-beta.19 — what's new
+
+**See-through buildings - the whole house.** Only the parts of a house over the character went see-through before, its front and roof staying whole - a ghostly house. Now all of it before the character fades together; what is behind the character and the houses next to it stay as they are.
+
 # uaRO Graphics 3.0.13-beta.18 — what's new
 
 **See-through buildings - close walls and roofs over the feet too.** A wall the character stands right behind and a roof covering only its feet now go see-through as well (in 3.0.13-beta.17 they stayed whole).
