@@ -16,6 +16,8 @@ namespace uagfx::win {
 bool readGameCamera(float view[12]);
 // 1.4.2: the view-space depth of the point the camera looks at - the character; false outside the game.
 bool readCameraTargetDepth(float& z);
+// 3.0.13-beta.17: the game's camera (world -> view) and the point it looks at - the character - in the world
+bool readCameraAndTarget(float view[12], float at[3]);
 
 // AI textures (0.12): the map the game shows ("prontera"), from the same game mode as the camera; "" when there is no
 // world (the login, the character list) or the exe is another build.

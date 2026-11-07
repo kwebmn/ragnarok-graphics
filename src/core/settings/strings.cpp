@@ -990,6 +990,15 @@ constexpr Entry kTexts[] = {
      "ними.",
      "Аура 99 уровня над порталом становится бледной, и портал сквозь неё виден: когда у портала много аур, он "
      "терялся под ними."},
+    {Text::FxFadeModels, "See-through buildings before the character", "Прозорі будинки перед персонажем",
+     "Прозрачные здания перед персонажем"},  // 3.0.13-beta.17
+    {Text::FxFadeModelsHint,
+     "A house, a tree or a wall between the camera and your character goes see-through, gliding, and comes back once "
+     "you have passed it - the character never lost behind them.",
+     "Будинок, дерево чи стіна між камерою й вашим персонажем плавно стають прозорими й повертаються, щойно ви "
+     "пройшли, — персонаж ніколи не губиться за ними.",
+     "Дом, дерево или стена между камерой и вашим персонажем плавно становятся прозрачными и возвращаются, как только "
+     "вы прошли, — персонаж никогда не теряется за ними."},
     {Text::FxFireflies, "The maps' fireflies", "Світлячки карт", "Светлячки карт"},
     {Text::FxFirefliesHint,  // 3.0.7-beta.3: lamps at their places, the fireflies themselves «Світлячки в повітрі»
      "Each of the maps' fireflies lights the ground, the walls and the characters around its place like a lamp, in a "

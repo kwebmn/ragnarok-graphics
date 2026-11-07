@@ -186,7 +186,7 @@ TEST(effect_groups_fourteen_by_what_the_eye_is_on) {
         {"sand_drift", Weather},
         {"actor_shadows", Characters}, {"sprite_light", Characters}, {"round_light", Characters},
         {"rim_light", Characters}, {"footprints", Characters},
-        {"hit_flash", Characters}, {"aura", Characters}, {"aura_portals", Characters},
+        {"hit_flash", Characters}, {"aura", Characters}, {"aura_portals", Characters}, {"fade_models", Characters},
         {"skills_soft", SkillEffects}, {"skill_sparks", SkillEffects}, {"fire_light", SkillEffects},
         {"torch", Fire}, {"embers", Fire}, {"smoke", Fire}, {"lava", Fire}, {"heat", Fire},
         {"lamps", Lights}, {"map_glows", Lights}, {"fireflies", Lights}, {"portals", Lights}, {"glow", Lights},

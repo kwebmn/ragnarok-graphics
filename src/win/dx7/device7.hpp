@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "core/aura_portal.hpp"
+#include "core/model_fade.hpp"
 #include "core/d3d7.hpp"
 #include "core/scene.hpp"
 #include "core/states.hpp"
@@ -67,6 +68,14 @@ private:
     D3DVIEWPORT7 viewport_{};
     std::vector<uint8_t> soft_;  // 0.27: a draw of the level 99 aura's vertices, softer
     auraportal::Portals portals_;
+    // 3.0.13-beta.17: [effects] fade_models - the character's body on the screen this frame, the camera, each model's
+    // see-through
+    modelfade::Focus focus_;
+    float view_[12] = {};
+    uint32_t fadeFrame_ = 0;
+    modelfade::Fader fader_;
+    std::vector<uint8_t> faded_;
+    bool fadeTold_ = false;
     bool overPortalTold_ = false;  // 3.0.13-beta.15: [effects] aura_portals - where the portals were drawn
     // 2.7.37, diagnostics (the tester: «все умения, и даже когда кастуется что-то, какие-то очень яркие»): the skills'
     // draws made softer and the draws that add light of no effect known, told every 10 s

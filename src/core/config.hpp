@@ -184,6 +184,9 @@ struct EffectSettings {
     // 3.0.13-beta.15 (the owner's pick 8 of «50 идей»: «Аура не закрывает порталы»): a level 99 aura standing on a
     // warp portal drawn faint (core/aura_portal) - off as new looks are
     bool auraPortals = false;
+    // 3.0.13-beta.17 (the owner's pick 1 of «50 идей»): buildings and trees between the camera and the character drawn
+    // see-through, gliding (core/model_fade) - off as new looks are
+    bool fadeModels = false;
     // 0.28: the maps' fireflies - those the game shows and those the maps' makers placed that it does not - glow,
     // flash now and then and light a little around them. On by default.
     bool fireflies = true;

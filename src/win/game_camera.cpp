@@ -153,6 +153,13 @@ bool readCameraTargetDepth(float& z) {
     return std::isfinite(z) && z > camera::kNear && z < camera::kFar;
 }
 
+bool readCameraAndTarget(float view[12], float at[3]) {
+    uint32_t cview = 0;
+    const uint32_t mode = gameMode();
+    return mode && read(mode + camera::kModeView, &cview, 4) && read(cview + camera::kViewMatrix, view, 12 * 4) &&
+           read(cview + camera::kViewAt, at, 12) && camera::plausibleView(view);
+}
+
 bool knownGameBuild() { return knownBuild(); }
 
 bool inGameWorld() { return gameMode() != 0; }

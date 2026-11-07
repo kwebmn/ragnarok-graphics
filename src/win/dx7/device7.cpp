@@ -1,6 +1,7 @@
 #include "win/dx7/device7.hpp"
 
 #include <algorithm>
+#include <cmath>
 #include <cstring>
 
 #include "core/device_caps.hpp"
@@ -13,6 +14,7 @@
 #include "win/dx7/formats.hpp"
 #include "win/dx7/surface7.hpp"
 #include "win/effect_hook.hpp"
+#include "win/game_camera.hpp"
 #include "win/ground_marks.hpp"
 #include "win/ground_way.hpp"
 #include "win/log.hpp"
@@ -81,6 +83,15 @@ HRESULT STDMETHODCALLTYPE Device7::BeginScene() {
     win::Guard guard;
     scene_.beginScene();
     portals_.frame();  // 3.0.13-beta.15
+    {  // 3.0.13-beta.17: where the character's body is on the screen, for the models over it
+        win::Context& c = win::Context::get();
+        fader_.frameDone(fadeFrame_);
+        ++fadeFrame_;
+        float at[3];
+        focus_ = modelfade::Focus{};
+        if (c.effects().fadeModels && c.enhanced() && c.screenWidth > 0 && win::readCameraAndTarget(view_, at))
+            focus_ = modelfade::focusOf(camera::projectionFor(c.screenWidth, c.screenHeight), view_, at);
+    }
     win::Context::get().markInterfaceEnd(win::interfaceFaces());  // 3.0.11-beta.190: the game's interface list
     win::groundway::newFrame();    // 3.0.11-beta.31: the way on the ground drawn once in this frame
     win::groundmarks::newFrame();  // 3.0.11-beta.87: the target's ring too
@@ -225,6 +236,34 @@ HRESULT Device7::record(D3DPRIMITIVETYPE type, DWORD fvf, const void* vertices, 
     // alpha is not 0 - uaRO.exe 0x40E4D0: ZWRITEENABLE on, ALPHAREF 1 - so Ruwach's sprites hide each other, a line;
     // without it they piled up into a ball, the user: «всё равно какой-то шар крутится». Their light is a ground
     // light instead: effect_light::kGroundLight.)
+    // 3.0.13-beta.17: [effects] fade_models - a model's draw over the character's body nearer than it: see-through,
+    // gliding; laid over by its alpha, writing no depth (the character drawn after it shows)
+    if (focus_.known && fvf == d3d7::FVF_TL1 && !setup.ui && setup.zWrite && !setup.blend &&
+        tag.kind == effect_exe::Kind::None) {
+        const auto* bytes = static_cast<const uint8_t*>(vertices);
+        const bool strip = type == D3DPT_TRIANGLESTRIP;
+        const bool over = modelfade::covers(bytes, 32, vertexCount, indices, indexCount, strip, focus_);
+        const uint64_t key = modelfade::keyOf(camera::projectionFor(c.screenWidth, c.screenHeight), view_, bytes,
+                                              vertexCount, reinterpret_cast<uintptr_t>(textures_[0]));
+        const float alpha = (over || fader_.fading()) ? fader_.step(key, over, fadeFrame_) : 1.0f;
+        if (alpha < 1.0f) {
+            faded_.assign(bytes, bytes + size_t(vertexCount) * 32);
+            for (uint32_t i = 0; i < vertexCount; ++i) {
+                uint8_t& a = faded_[size_t(i) * 32 + 16 + 3];  // the diffuse colour's alpha
+                a = uint8_t(std::lround(float(a) * alpha));
+            }
+            vertices = faded_.data();
+            setup.blend = true;
+            setup.srcBlend = d3d7::BLEND_SRCALPHA;
+            setup.dstBlend = d3d7::BLEND_INVSRCALPHA;
+            setup.zWrite = false;
+            setup.alphaTest = false;  // a high reference would cut a faded model away whole; blending keeps its holes
+            if (!fadeTold_) {
+                fadeTold_ = true;
+                LOG_INFO("effects: a model over the character drawn see-through ([effects] fade_models)");
+            }
+        }
+    }
     cmd.state = c.record.addState(setup);
     cmd.primitive = uint32_t(type);
     cmd.fvf = fvf;

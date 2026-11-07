@@ -28,6 +28,7 @@ const EffectLayout kEffects[] = {
     {"effects.wet_ground", {}, {}, {}, 0},  // 0.97
     {"effects.aura", {}, {"effects.aura_brightness"}, {}, 0},
     {"effects.aura_portals", {}, {}, {}, 0},  // 3.0.13-beta.15
+    {"effects.fade_models", {}, {}, {}, 0},   // 3.0.13-beta.17
     {"effects.skills_soft", {}, {"effects.skill_brightness"}, {}, 0},
     {"effects.water",
      {"effects.water_foam", "effects.water_glints", "effects.caustics", "effects.waterfalls"},
