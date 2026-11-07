@@ -1,3 +1,23 @@
+# uaRO Graphics 3.0.15 — what's new
+
+New skill effects for every class, the crashes entering castles fixed and smaller item windows. Everything new that changes the look is off by default - turn it on in the uaRO program.
+
+## Fixed
+
+- **A crash loading some maps, guild castles above all** («Unexpected program error», cps.dll). The unpacker of the game's files read and wrote a little past its buffers' ends - it no longer does.
+
+## New skill effects
+
+Effects, «Skills», a switch a branch. In place of white blots: crisp layers in the element's colour, solid parts (spikes, walls) lit by their faces.
+
+- **«Mages' new effects»** - Mage, Wizard, Sage; boxes under it: «Casting», «Fire», «Water and ice», «Wind», «Earth», «Ghost and the rest». **Casting** - a magic circle on the ground in the element's colour and a low crisp flame in place of the column up the screen. **Storm Gust** - crisp snow and cloud in icy blue, faceted spikes.
+- **«Swordsmen's», «Acolytes'», «Archers'», «Thieves'», «Merchants'», «Other classes' new effects»** - colours of their own: holy white and gold, healing white and green, poison green, dark violet, weapon strikes steel, songs and coins gold.
+
+## Interface
+
+- **«Item windows size»** («Interface», «Main»: 70, 85, 100 %) - «Items», the storage (the guild's too) and the cart smaller.
+- **The how many window** («Into the bag», «Into the storage»...): the field empty - type at once; Enter alone takes all. The «1» button is «10».
+
 # uaRO Graphics 3.0.15-beta.12 — what's new
 
 **Every class's new effects** (effects, «Skills», a switch a branch, off by default): «Swordsmen's new effects», «Acolytes'», «Archers'», «Thieves'», «Merchants'», «Other classes'» (Taekwon, Star Gladiator, Soul Linker, Ninja). As the mages': crisp layers in place of white blots, solid parts by their faces, colours of their own - holy white and gold, poison green, dark violet, weapon strikes steel, healing white and green, songs and coins gold.
