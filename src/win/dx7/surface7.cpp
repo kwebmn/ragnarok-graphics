@@ -176,6 +176,17 @@ Place Surface7::place() const {
     return Place::Cpu;
 }
 
+bool Surface7::topArgb(std::vector<uint32_t>& out) const {
+    const Surface7* s = top();
+    if (!s->levels_ || s->levels_->levels() == 0) return false;
+    const Image& img = s->levels_->level(0);
+    out.resize(size_t(img.width()) * size_t(img.height()));
+    for (int y = 0; y < img.height(); ++y)
+        for (int x = 0; x < img.width(); ++x)
+            out[size_t(y) * size_t(img.width()) + size_t(x)] = toArgb8(img.format(), img.pixel(x, y));
+    return true;
+}
+
 Image& Surface7::pixels() { return role_ == SurfaceRole::Texture ? top()->levels_->level(level_) : image_; }
 
 ColorKey Surface7::colorKey() const { return role_ == SurfaceRole::Texture ? top()->levels_->key() : key_; }

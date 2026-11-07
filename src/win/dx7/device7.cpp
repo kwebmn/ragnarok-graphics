@@ -2,11 +2,14 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdio>
 #include <cstring>
 
 #include "core/device_caps.hpp"
 #include "core/frame.hpp"
 #include "core/glint.hpp"
+#include "core/version.hpp"
+#include "core/layout.hpp"
 #include "core/sprite_exe.hpp"
 #include "win/context.hpp"
 #include "win/crisp/crisp.hpp"
@@ -20,6 +23,7 @@
 #include "win/log.hpp"
 #include "win/net_predict.hpp"
 #include "win/net_smooth.hpp"
+#include "win/paths.hpp"
 #include "win/windows_draw.hpp"
 
 namespace uagfx::dx7 {
@@ -108,6 +112,7 @@ HRESULT STDMETHODCALLTYPE Device7::BeginScene() {
 
 HRESULT STDMETHODCALLTYPE Device7::EndScene() {
     win::Guard guard;
+    ++captureFrame_;  // 3.0.15-beta.1
     // the GPU starts on the frame while the client gets ready to present it; 3.0.3-beta.12: the windows' panel into it
     win::Context::get().endScene();
     return D3D_OK;
@@ -216,6 +221,54 @@ HRESULT STDMETHODCALLTYPE Device7::DrawIndexedPrimitive(D3DPRIMITIVETYPE type, D
     return record(type, fvf, vertices, vertexCount, indices, indexCount);
 }
 
+// 3.0.15-beta.1: a skill effect's draw into uaro-graphics\logs\uaro-effects.txt (core/effect_capture.hpp) - betas
+// only, the file begun anew in each game
+void Device7::captureEffect(const effect_exe::Tag& tag, const DrawSetup& setup, DWORD fvf, const void* vertices,
+                            DWORD vertexCount, const WORD* indices, DWORD indexCount) {
+    if (!capture_.take(int(tag.id), captureFrame_)) return;
+    const std::string path = layout::join(win::gameDir(), layout::kEffectCapture);
+    if (captureState_ == 0) {
+        if (!std::strstr(kVersion, "beta")) {
+            captureState_ = -1;
+            return;
+        }
+        FILE* f = std::fopen(path.c_str(), "wb");
+        if (!f) {
+            captureState_ = -1;
+            LOG_INFO("effect capture: %s could not be opened", path.c_str());
+            return;
+        }
+        std::fprintf(f, "uaRO Graphics %s - the skills' effects as the game draws them (core/effect_capture.hpp)\n",
+                     kVersion);
+        std::fclose(f);
+        captureState_ = 1;
+        LOG_INFO("effect capture: the skills' effects' first frames into %s", path.c_str());
+    }
+    const size_t stride = FrameRecord::stride(fvf);
+    const auto* bytes = static_cast<const uint8_t*>(vertices);
+    std::vector<effect_capture::Vertex> v(std::min<DWORD>(vertexCount, 256));
+    for (size_t i = 0; i < v.size(); ++i) {
+        const uint8_t* p = bytes + i * stride;
+        std::memcpy(&v[i].x, p, 16);  // x, y, z, rhw
+        std::memcpy(&v[i].diffuse, p + 16, 4);
+        std::memcpy(&v[i].specular, p + 20, 4);
+        std::memcpy(&v[i].u, p + 24, 8);
+    }
+    Surface7* t = textures_[0];
+    const uint32_t id = t ? t->gpuTexture() : 0;
+    const int w = t ? t->width() : 0, h = t ? t->height() : 0;
+    const int at = capture_.offset(int(tag.id), captureFrame_);
+    std::string text = effect_capture::drawText(int(tag.id), at, setup, id, w, h, v.data(), int(v.size()), indices,
+                                                int(std::min<DWORD>(indices ? indexCount : 0, 768)));
+    std::vector<uint32_t> argb;
+    if (t && capture_.textureTold(id) && t->topArgb(argb)) text += effect_capture::textureText(id, w, h, argb.data());
+    FILE* f = std::fopen(path.c_str(), "ab");
+    if (!f) return;
+    std::fwrite(text.data(), 1, text.size(), f);
+    std::fclose(f);
+    capture_.wrote(text.size());
+}
+
 HRESULT Device7::record(D3DPRIMITIVETYPE type, DWORD fvf, const void* vertices, DWORD vertexCount,
                         const WORD* indices, DWORD indexCount) {
     if (fvf != d3d7::FVF_TL1 && fvf != d3d7::FVF_TL2)
@@ -251,6 +304,8 @@ HRESULT Device7::record(D3DPRIMITIVETYPE type, DWORD fvf, const void* vertices, 
     cmd.effect = uint8_t(tag.kind);
     cmd.effectSeed = tag.seed;
     cmd.effectId = tag.id;  // 2.7.21: Ruwach's orbs light by it
+    if (tag.kind == effect_exe::Kind::Skill && captureState_ >= 0)  // 3.0.15-beta.1
+        captureEffect(tag, setup, fvf, vertices, vertexCount, indices, indexCount);
     const EffectSettings& fx = c.effects();  // 2.5.11: made once a change, not each draw
     // 0.37: the skills likewise, by their own slider. (2.7.37's night that made them softer still gone in 2.7.46 -
     // with 2.7.38's soft adding they do not burn white, and the tester found them «тусклые»)

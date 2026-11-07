@@ -7,6 +7,8 @@
 #include <vector>
 
 #include "core/aura_portal.hpp"
+#include "core/effect_capture.hpp"
+#include "core/effect_exe.hpp"
 #include "core/model_fade.hpp"
 #include "core/d3d7.hpp"
 #include "core/scene.hpp"
@@ -71,6 +73,12 @@ private:
     // 3.0.13-beta.17: [effects] fade_models - the character's body on the screen this frame, the camera, each model's
     // see-through
     bool fadeTold_ = false;
+    // 3.0.15-beta.1: the skills' effects' draws written to uaro-effects.txt in betas (core/effect_capture.hpp)
+    effect_capture::Recorder capture_;
+    uint32_t captureFrame_ = 0;
+    int captureState_ = 0;  // 0 not asked, 1 writing, -1 not (a release, or the file would not open)
+    void captureEffect(const effect_exe::Tag& tag, const DrawSetup& setup, DWORD fvf, const void* vertices,
+                       DWORD vertexCount, const WORD* indices, DWORD indexCount);
     bool overPortalTold_ = false;  // 3.0.13-beta.15: [effects] aura_portals - where the portals were drawn
     // 2.7.37, diagnostics (the tester: «все умения, и даже когда кастуется что-то, какие-то очень яркие»): the skills'
     // draws made softer and the draws that add light of no effect known, told every 10 s

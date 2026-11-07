@@ -55,6 +55,8 @@ constexpr const char* kWindowPlaces = "uaro-graphics\\uaro-windows.txt";
 constexpr const char* kCameraMemory = "uaro-graphics\\camera.txt";
 // 3.0.13-beta.3: [interface] chat_log - the chat's lines, a file a day (YYYY-MM-DD.txt); never sent with a report
 constexpr const char* kChatLogs = "uaro-graphics\\chat-logs";
+// 3.0.15-beta.1: the skills' effects as the game draws them, in betas (core/effect_capture.hpp), sent with a report
+constexpr const char* kEffectCapture = "uaro-graphics\\logs\\uaro-effects.txt";
 // 2.13: «Звернення» (app/reports): the computer's random key - the site's reports belong to it, no login - and the
 // reports the site did not take yet (queued-*.json, sent at the app's next start)
 constexpr const char* kReports = "uaro-graphics\\reports";
