@@ -73,6 +73,7 @@ private:
     modelfade::Focus focus_;
     float view_[12] = {};
     uint32_t fadeFrame_ = 0;
+    uint32_t fadeMadeTold_ = 0;  // 3.0.13-beta.22
     modelfade::Fader fader_;
     std::vector<uint8_t> faded_;
     bool fadeTold_ = false;

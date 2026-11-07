@@ -53,7 +53,9 @@ struct Model {
 };
 Model modelOf(const camera::Projection& p, const float view[12], const uint8_t* vertices, uint32_t vertexCount,
               uintptr_t texture);
-constexpr float kSameModel = 24.0f;
+// .22 (the owner: «за статуей с рукой хожу, она мигает всеравно»): the texture alone and the middle of all its vertices
+// - a draw's first vertex and its count change as the game leaves out faces turned away while one walks
+constexpr float kSameModel = 40.0f;
 
 // Each model's see-through, gliding kStep a frame toward kSeen while it covers, back to 1 after; .21: it keeps
 // covering kHoldFrames after it last did - the body's points slipping off the model's edges as one walks made it pulse
@@ -64,12 +66,14 @@ public:
     float step(const Model& m, bool covering, uint32_t frame);  // the draw's alpha now (1: as the game draws it)
     void frameDone(uint32_t frame);                          // models not drawn for a while forgotten
     size_t fading() const { return alpha_.size(); }
+    uint32_t madeAnew() const { return made_; }  // .22: models taken up anew so far, for the log
     void covered(const Box& b) { if (now_.size() < 64) now_.push_back(b); }  // a draw over the body this frame
     // 3.0.13-beta.19: a draw before the character (`z` the character's) over one that covered it the frame before
     bool alongside(const Box& b, float z) const;
 
 private:
     std::vector<Box> now_, last_;
+    uint32_t made_ = 0;
     struct Entry {
         Model m;
         float alpha = 1.0f;

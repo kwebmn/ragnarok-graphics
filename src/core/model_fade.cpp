@@ -81,14 +81,21 @@ Model modelOf(const camera::Projection& p, const float view[12], const uint8_t* 
               uintptr_t texture) {
     Model m;
     if (!vertices || vertexCount == 0) return m;
-    m.id = (uint64_t(texture) * 0x9E3779B97F4A7C15ull) ^ uint64_t(vertexCount);
-    const V v = at(vertices, 32, 0);
-    if (v.rhw > 0 && p.f0 != 0 && p.f1 != 0) {
+    m.id = uint64_t(texture) * 0x9E3779B97F4A7C15ull;
+    if (p.f0 == 0 || p.f1 == 0) return m;
+    double sum[3] = {0, 0, 0};
+    uint32_t n = 0;
+    for (uint32_t k = 0; k < vertexCount; ++k) {
+        const V v = at(vertices, 32, k);
+        if (!(v.rhw > 0)) continue;
         const float vz = 1.0f / v.rhw, c[3] = {(v.x - p.cx) * vz / p.f0, (v.y - p.cy) * vz / p.f1, vz};
         for (int i = 0; i < 3; ++i)  // the view's rows turned back: w = M (c - t)
-            m.w[i] = view[3 * i] * (c[0] - view[9]) + view[3 * i + 1] * (c[1] - view[10]) +
-                     view[3 * i + 2] * (c[2] - view[11]);
+            sum[i] += view[3 * i] * (c[0] - view[9]) + view[3 * i + 1] * (c[1] - view[10]) +
+                      view[3 * i + 2] * (c[2] - view[11]);
+        ++n;
     }
+    if (n)
+        for (int i = 0; i < 3; ++i) m.w[i] = float(sum[i] / n);
     return m;
 }
 
@@ -127,6 +134,7 @@ float Fader::step(const Model& m, bool covering, uint32_t frame) {
     if (!e) {
         if (!covering || alpha_.size() >= 256) return 1.0f;
         alpha_.push_back(Entry{m, 1.0f, 0, frame});
+        ++made_;
         e = &alpha_.back();
     }
     if (e->frame != frame) {  // once a frame, however many draws the model takes

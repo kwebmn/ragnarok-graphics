@@ -87,6 +87,11 @@ HRESULT STDMETHODCALLTYPE Device7::BeginScene() {
         win::Context& c = win::Context::get();
         fader_.frameDone(fadeFrame_);
         ++fadeFrame_;
+        if (fadeFrame_ % 600 == 0 && fader_.madeAnew() != fadeMadeTold_) {  // 3.0.13-beta.22: to tell a blink apart
+            LOG_INFO("model fade: %zu models see-through, %u taken up anew in the last 600 frames", fader_.fading(),
+                     fader_.madeAnew() - fadeMadeTold_);
+            fadeMadeTold_ = fader_.madeAnew();
+        }
         float at[3];
         focus_ = modelfade::Focus{};
         if (c.effects().fadeModels && c.enhanced() && c.screenWidth > 0 && win::readCameraAndTarget(view_, at))
@@ -250,10 +255,11 @@ HRESULT Device7::record(D3DPRIMITIVETYPE type, DWORD fvf, const void* vertices, 
             else
                 over = fader_.alongside(box, focus_.z);
         }
-        const modelfade::Model model = modelfade::modelOf(camera::projectionFor(c.screenWidth, c.screenHeight),
-                                                          view_, bytes, vertexCount,
-                                                          reinterpret_cast<uintptr_t>(textures_[0]));
-        const float alpha = (over || fader_.fading()) ? fader_.step(model, over, fadeFrame_) : 1.0f;
+        float alpha = 1.0f;
+        if (over || fader_.fading())
+            alpha = fader_.step(modelfade::modelOf(camera::projectionFor(c.screenWidth, c.screenHeight), view_, bytes,
+                                                   vertexCount, reinterpret_cast<uintptr_t>(textures_[0])),
+                                over, fadeFrame_);
         if (alpha < 1.0f) {
             faded_.assign(bytes, bytes + size_t(vertexCount) * 32);
             for (uint32_t i = 0; i < vertexCount; ++i) {
