@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.16-beta.11 — what's new
+
+- **The Monk's spirit spheres around the hero** are light blue again, as in the original: a white heart, a light blue ball and a soft light blue aura with a shine.
+
 # uaRO Graphics 3.0.16-beta.10 — what's new
 
 - **The Monk's spirit spheres around the hero** (the acolytes' new effects) are now warm glowing orbs with a soft aura, depth and a shine, instead of flat blue discs with a yellow dot. The Gunslinger's coins too.
