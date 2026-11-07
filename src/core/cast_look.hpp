@@ -13,7 +13,11 @@ namespace uagfx::castlook {
 // as crisp streaks by the shaders (kRingId), and a magic circle on the ground under the caster (circleQuad, kCircleId).
 constexpr uint16_t kRingId = 0xFFF1, kCircleId = 0xFFF2;  // DrawCmd::effectId of the new look's draws
 constexpr float kBaseAlpha = 150;  // the walls at the feet (180) - not the tall one (60)
-constexpr float kCircleScale = 1.8f;  // the circle's radius in the feet walls' radii
+// .5 (the owner: «сам каст можно меньше сделать?»): the walls drawn kShrink of the game's about their middle, the
+// circle kCircleScale of the game's feet walls (1.8 before), the flame at most kFlameHeight of the screen (0.09)
+constexpr float kCircleScale = 1.25f;  // the circle's radius in the feet walls' radii
+constexpr float kShrink = 0.75f;
+constexpr float kFlameHeight = 0.065f;
 
 struct Box {
     float x0 = 1e9f, y0 = 1e9f, x1 = -1e9f, y1 = -1e9f;

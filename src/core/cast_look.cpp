@@ -58,6 +58,17 @@ void Looks::shorten(uint8_t* v, uint32_t count, uint32_t stride, uint32_t owner,
         f[3] = foot.rhw + (f[3] - foot.rhw) * t;
         std::memcpy(p, f, 16);
     }
+    // .5: all of it kShrink about the feet walls' middle of the frame before (none yet: as it is)
+    const auto it = last_.find(owner);
+    if (it == last_.end() || it->second.n == 0) return;
+    const float cx = (it->second.x0 + it->second.x1) * 0.5f, cy = (it->second.y0 + it->second.y1) * 0.5f;
+    for (uint32_t i = 0; i < count; ++i) {
+        float xy[2];
+        std::memcpy(xy, v + size_t(i) * stride, 8);
+        xy[0] = cx + (xy[0] - cx) * kShrink;
+        xy[1] = cy + (xy[1] - cy) * kShrink;
+        std::memcpy(v + size_t(i) * stride, xy, 8);
+    }
 }
 
 bool Looks::circleQuad(uint32_t owner, uint8_t out[4 * 32]) {

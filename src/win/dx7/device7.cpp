@@ -376,7 +376,7 @@ HRESULT Device7::record(D3DPRIMITIVETYPE type, DWORD fvf, const void* vertices, 
         const uint32_t owner = tag.owner ? tag.owner : tag.seed;
         const auto* bytes = static_cast<const uint8_t*>(vertices);
         cast_.assign(bytes, bytes + size_t(vertexCount) * 32);
-        castLooks_.shorten(cast_.data(), vertexCount, 32, owner, float(c.screenHeight) * 0.09f);
+        castLooks_.shorten(cast_.data(), vertexCount, 32, owner, float(c.screenHeight) * castlook::kFlameHeight);
         vertices = cast_.data();
         cmd.effectId = castlook::kRingId;
     }
