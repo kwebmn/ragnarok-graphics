@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.13-beta.14 — what's new
+
+**The party's damage in the Hunt panel.** The Hunt panel now shows each party member's share of the damage since the hunt began (or since «↺»): «Party: Lina 60 % · you 30 % · Tor 10 %» - who gave how much on a boss. The blows seen on your screen count: a mate's off the screen do not.
+
 # uaRO Graphics 3.0.13-beta.13 — what's new
 
 **Who hits me** (a new switch «Who hits me» on the Interface page, off by default). The monsters that hit you in the last 6 seconds get a red frame round their HP bar, and a red ⚔ with their number shows over your character - seen at once when the crowd grows.
