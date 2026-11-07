@@ -152,11 +152,72 @@ panel::Box ammoPlace(const Layout& L, const Ammo& a) {
     return panel::Box{x, y, w, kAmmoH * s};
 }
 
+// 3.0.16-beta.9 (R-45TDN7, the owner: «сферы какието примитивные кружочки. можна сделать их красивые?»): a spirit
+// sphere as a lit orb - a warm glow around it, a body shaded white-gold at its heart to amber at its rim, lit from the
+// top left with a gold rim light and a small white shine; a place not filled a faint glass bead. 4x4 samples a pixel.
+void over(uint32_t& d, float r, float g, float b, float a) {  // premultiplied r, g, b in 0..1, a its alpha
+    if (a <= 0) return;
+    const float keep = 1.0f - std::min(1.0f, a);
+    const auto ch = [&](int sh, float v) {
+        return uint32_t(std::clamp(v * 255.0f + float((d >> sh) & 0xFF) * keep, 0.0f, 255.0f) + 0.5f);
+    };
+    d = ch(24, a) << 24 | ch(16, r) << 16 | ch(8, g) << 8 | ch(0, b);
+}
+void orb(panel::Picture& out, float cx, float cy, float rad, bool lit) {
+    const float glow = lit ? rad * 1.9f : rad;
+    const int x0 = int(std::floor(cx - glow)), x1 = int(std::ceil(cx + glow));
+    const int y0 = int(std::floor(cy - glow)), y1 = int(std::ceil(cy + glow));
+    const float lx = -0.45f, ly = -0.6f, lz = 0.66f;  // the light, from the top left
+    for (int y = std::max(0, y0); y < std::min(out.height, y1); ++y)
+        for (int x = std::max(0, x0); x < std::min(out.width, x1); ++x) {
+            float r = 0, g = 0, b = 0, a = 0, halo = 0;
+            for (int sy = 0; sy < 4; ++sy)
+                for (int sx = 0; sx < 4; ++sx) {
+                    const float dx = (float(x) + (float(sx) + 0.5f) / 4 - cx) / rad;
+                    const float dy = (float(y) + (float(sy) + 0.5f) / 4 - cy) / rad;
+                    const float d2 = dx * dx + dy * dy;
+                    if (d2 >= 1.0f) {
+                        if (lit) {
+                            const float t = std::max(0.0f, 1.0f - (std::sqrt(d2) - 1.0f) / 0.9f);
+                            halo += t * t * 0.55f;
+                        }
+                        continue;
+                    }
+                    const float nz = std::sqrt(1.0f - d2);
+                    const float diffuse = std::max(0.0f, dx * lx + dy * ly + nz * lz);
+                    if (!lit) {  // a glass bead: dark, a thin rim, a faint shine
+                        const float rim = std::pow(1.0f - nz, 3.0f);
+                        const float v = 0.10f + 0.55f * rim + 0.35f * std::pow(diffuse, 16.0f);
+                        const float al = 0.30f + 0.45f * rim;
+                        r += v * al, g += v * al, b += v * al * 1.05f, a += al;
+                        continue;
+                    }
+                    const float d = std::sqrt(d2), m = std::pow(d, 1.6f);  // heart -> rim
+                    float cr = 1.00f + (0.93f - 1.00f) * m, cg = 0.97f + (0.60f - 0.97f) * m,
+                          cb = 0.84f + (0.20f - 0.84f) * m;
+                    const float shade = 0.62f + 0.48f * diffuse;
+                    cr *= shade, cg *= shade, cb *= shade;
+                    const float heart = (1.0f - d) * (1.0f - d) * 0.45f;  // its own light at the heart
+                    cr += heart, cg += heart * 0.95f, cb += heart * 0.75f;
+                    const float fres = std::pow(1.0f - nz, 2.5f) * 0.55f;  // the gold rim light
+                    cr += fres * 1.0f, cg += fres * 0.80f, cb += fres * 0.35f;
+                    // the shine: the half vector of the light and the eye (0, 0, 1)
+                    const float hx = lx, hy = ly, hz = lz + 1.0f, hl = std::sqrt(hx * hx + hy * hy + hz * hz);
+                    const float spec = std::pow(std::max(0.0f, (dx * hx + dy * hy + nz * hz) / hl), 40.0f) * 0.9f;
+                    cr += spec, cg += spec, cb += spec;
+                    r += std::min(1.0f, cr), g += std::min(1.0f, cg), b += std::min(1.0f, cb), a += 1.0f;
+                }
+            uint32_t& px = out.px[size_t(y) * size_t(out.width) + size_t(x)];
+            if (halo > 0) over(px, halo / 16 * 1.0f, halo / 16 * 0.72f, halo / 16 * 0.30f, halo / 16);
+            if (a > 0) over(px, r / 16, g / 16, b / 16, a / 16);
+        }
+}
+
 // 3.0.16-beta.8: the supplies' pills in a row after the ammo's (or where it would be)
-constexpr float kDot = 7, kDotGap = 3;
+constexpr float kDot = 12, kDotGap = 5;
 std::string supplyText(const Supply& p) { return std::to_string(std::max(0, p.count)); }
 float supplyWidth(const Supply& p, float s) {
-    if (p.dots > 0) return 10 * s + float(p.dots) * kDot * s + float(p.dots - 1) * kDotGap * s + 10 * s;
+    if (p.dots > 0) return 9 * s + float(p.dots) * kDot * s + float(p.dots - 1) * kDotGap * s + 9 * s;
     return 8 * s + kAmmoIcon * s + 6 * s + panel::wordsWidth(supplyText(p), kAmmoPx * s, true) + 10 * s;
 }
 std::vector<panel::Box> supplyPlaces(const Layout& L, const Show& show) {
@@ -383,12 +444,9 @@ void paint(panel::Picture& out, const Layout& L, const std::vector<Cell>& cells,
         panel::roundRect(out, b, b.h / 2, kCard, std::max(0.85f, uistyle::panel()), low ? rgb : kWhite,
                          low ? 0.9f : 0.12f, (low ? 1.5f : 1.0f) * s);
         if (p.dots > 0) {  // the spheres: lit gold, the places left faint
-            for (int d = 0; d < p.dots; ++d) {
-                const panel::Box dot{b.x + 10 * s + float(d) * (kDot + kDotGap) * s, b.y + (b.h - kDot * s) / 2,
-                                     kDot * s, kDot * s};
-                if (d < p.count) panel::roundRect(out, dot, dot.h / 2, kGold2, 1.0f);
-                else panel::roundRect(out, dot, dot.h / 2, kWhite, 0.08f, kWhite, 0.3f, 1.0f * s);
-            }
+            for (int d = 0; d < p.dots; ++d)  // 3.0.16-beta.9: lit orbs, glass beads for the places left
+                orb(out, b.x + 9 * s + (float(d) * (kDot + kDotGap) + kDot / 2) * s, b.y + b.h / 2, kDot / 2 * s,
+                    d < p.count);
         } else if (p.icon && p.icon->width > 0) {
             put(out, *p.icon, panel::Box{b.x + 8 * s, b.y, kAmmoIcon * s, b.h}, 1.0f);
         }
