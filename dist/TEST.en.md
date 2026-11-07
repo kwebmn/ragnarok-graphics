@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.13-beta.22 — what's new
+
+**«See-through houses before the character»: statues and houses no longer blink while you walk behind them.** The game draws a model a little differently each frame, leaving out the faces turned away from the camera, so a statue counted as a new one each time and started fading over again. Now a model is known by its texture and middle.
+
 # uaRO Graphics 3.0.13-beta.21 — what's new
 
 **«See-through houses before the character»: the see-through no longer blinks.** Walking behind a fountain or a house, it keeps one see-through: no flash when the body slips past its edge for a moment, and no fading over again when the model moves (the fountain's water).
