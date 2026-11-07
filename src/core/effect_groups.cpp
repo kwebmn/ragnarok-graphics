@@ -46,6 +46,11 @@ const Member kMembers[] = {
     {"thief_effects", SkillEffects, 1, &E::thiefEffects},  // 3.0.15-beta.12
     {"merchant_effects", SkillEffects, 1, &E::merchantEffects},  // 3.0.15-beta.12
     {"other_effects", SkillEffects, 1, &E::otherEffects},  // 3.0.15-beta.12
+    {"hit_effects", SkillEffects, 1, &E::hitEffects},  // 3.0.16-beta.1
+    {"item_effects", SkillEffects, 1, &E::itemEffects},  // 3.0.16-beta.1
+    {"status_effects", SkillEffects, 1, &E::statusEffects},  // 3.0.16-beta.1
+    {"travel_effects", SkillEffects, 1, &E::travelEffects},  // 3.0.16-beta.1
+    {"monster_effects", SkillEffects, 1, &E::monsterEffects},  // 3.0.16-beta.1
     {"skill_sparks", SkillEffects, 2, &E::skillSparks},
     {"fire_light", SkillEffects, 1, &E::fireLight},
 

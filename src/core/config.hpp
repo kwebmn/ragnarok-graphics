@@ -200,6 +200,8 @@ struct EffectSettings {
     // (core/mage_looks.hpp lookOf), a switch a branch, off as new looks are
     bool swordEffects = false, acolyteEffects = false, archerEffects = false, thiefEffects = false;
     bool merchantEffects = false, otherEffects = false;
+    // 3.0.16-beta.1 (the owner: «делай все»): the hits, items, states, travel, monsters likewise
+    bool hitEffects = false, itemEffects = false, statusEffects = false, travelEffects = false, monsterEffects = false;
     // 0.28: the maps' fireflies - those the game shows and those the maps' makers placed that it does not - glow,
     // flash now and then and light a little around them. On by default.
     bool fireflies = true;

@@ -12,7 +12,10 @@ namespace uagfx::magelook {
 enum class Element : uint8_t { None, Fire, Water, Wind, Earth, Spirit, Holy, Dark, Poison, Steel, Life, Gold };
 // 3.0.15-beta.12 (the owner: «нравится, делай еффекты по всем остальным персонажам»): every class's skills - whose
 // branch an effect is (its switch) and its colours' tone
-enum class Branch : uint8_t { None, Mage, Sword, Acolyte, Archer, Thief, Merchant, Other };
+enum class Branch : uint8_t { None, Mage, Sword, Acolyte, Archer, Thief, Merchant, Other,
+                               // 3.0.16-beta.1 (the owner: «делай все»): the hits, the potions, buffs and items, the
+                               // states, the travel (teleport, levels, refining), the monsters and homunculi
+                               Hits, Items, Status, Travel, Monster };
 struct Look {
     Branch branch = Branch::None;
     Element tone = Element::None;

@@ -609,6 +609,16 @@ const std::vector<IniSetting>& iniSettings() {
          Text::FxMerchantHint, "", &E::merchantEffects},  // 3.0.15-beta.12
         {"effects", "other_effects", Page::Effects, Control::Check, 0, 1, 0, {"0", "1"}, {}, Text::FxOther,
          Text::FxOtherHint, "", &E::otherEffects},  // 3.0.15-beta.12
+        {"effects", "hit_effects", Page::Effects, Control::Check, 0, 1, 0, {"0", "1"}, {}, Text::FxHit,
+         Text::FxHitHint, "", &E::hitEffects},  // 3.0.16-beta.1
+        {"effects", "item_effects", Page::Effects, Control::Check, 0, 1, 0, {"0", "1"}, {}, Text::FxItem,
+         Text::FxItemHint, "", &E::itemEffects},  // 3.0.16-beta.1
+        {"effects", "status_effects", Page::Effects, Control::Check, 0, 1, 0, {"0", "1"}, {}, Text::FxStatus,
+         Text::FxStatusHint, "", &E::statusEffects},  // 3.0.16-beta.1
+        {"effects", "travel_effects", Page::Effects, Control::Check, 0, 1, 0, {"0", "1"}, {}, Text::FxTravel,
+         Text::FxTravelHint, "", &E::travelEffects},  // 3.0.16-beta.1
+        {"effects", "monster_effects", Page::Effects, Control::Check, 0, 1, 0, {"0", "1"}, {}, Text::FxMonster,
+         Text::FxMonsterHint, "", &E::monsterEffects},  // 3.0.16-beta.1
         {"effects", "silhouette", Page::Effects, Control::Check, 0, 1, 0, {"0", "1"}, {}, Text::FxSilhouette,
          Text::FxSilhouetteHint, "", &E::silhouette},  // 3.0.13-beta.30
         {"effects", "aura_portals", Page::Effects, Control::Check, 0, 1, 0, {"0", "1"}, {}, Text::FxAuraPortals,

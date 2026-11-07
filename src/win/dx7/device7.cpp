@@ -376,6 +376,11 @@ HRESULT Device7::record(D3DPRIMITIVETYPE type, DWORD fvf, const void* vertices, 
             case magelook::Branch::Thief: return fx.thiefEffects;
             case magelook::Branch::Merchant: return fx.merchantEffects;
             case magelook::Branch::Other: return fx.otherEffects;
+            case magelook::Branch::Hits: return fx.hitEffects;  // 3.0.16-beta.1
+            case magelook::Branch::Items: return fx.itemEffects;
+            case magelook::Branch::Status: return fx.statusEffects;
+            case magelook::Branch::Travel: return fx.travelEffects;
+            case magelook::Branch::Monster: return fx.monsterEffects;
             default: return false;
         }
     }();
