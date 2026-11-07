@@ -1,3 +1,11 @@
+# uaRO Graphics 3.0.16-beta.7 — what's new
+
+Three new looks, all off by default (turn them on in the uaRO program):
+
+- **«Signs over the characters»** (Interface): the shops' and chat rooms' signs in the new look — a dark plate with the title, gold for a shop, blue for a room with its places (3/20), grey for a locked one. A click opens them as before.
+- **«Cell under the mouse»** (Interface): the ground cell under the mouse as a soft light square with a thin edge, like the skills' cells, in place of the game's own.
+- **«Flash on a death»** (Effects → Characters): a dying monster lights up white, brighter and longer than from a hit. Needs the game's sound on.
+
 - The minimap on ama_dun01 (Tatami Maze) shows the maze again instead of an «X»: the red route on the map's picture is no longer taken for a warp dot. The map's picture is ready at once instead of after 47 seconds.
 
 # uaRO Graphics 3.0.16-beta.5 — what's new
