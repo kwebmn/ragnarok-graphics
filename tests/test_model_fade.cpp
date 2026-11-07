@@ -102,12 +102,29 @@ TEST(model_fade_the_whole_house) {
     modelfade::Model roof = wall, fence = wall;
     roof.w[0] += 30, roof.w[1] -= 40;
     fence.w[0] += 150;  // .23 (R-QH3H48): a long fence over its box on the screen, far along the ground
-    CHECK(fd.alongside(roof, modelfade::Box{300, 300, 500, 450, 120}, 200));   // its front, before the character
-    CHECK(!fd.alongside(roof, modelfade::Box{300, 100, 500, 250, 240}, 200));  // its roof behind the character
-    CHECK(!fd.alongside(fence, modelfade::Box{300, 300, 500, 450, 120}, 200));  // another house, the fence
-    std::vector<uint8_t> q(4 * 32, 0);
-    const float xy[4][4] = {{10, 20, 0, 0.01f}, {30, 20, 0, 0.01f}, {10, 50, 0, 0.01f}, {30, 50, 0, 0.01f}};
-    for (int i = 0; i < 4; ++i) std::memcpy(q.data() + i * 32, xy[i], 16);
-    modelfade::Box b;
-    CHECK(modelfade::boxOf(q.data(), 32, 4, b) && b.x0 == 10 && b.y1 == 50 && std::abs(b.nearest - 100) < 0.01f);
+    CHECK(fd.alongside(roof));
+    CHECK(!fd.alongside(fence));
+}
+
+TEST(model_fade_by_the_draws_pieces) {
+    // .24 (R-2KHTSU): one draw holding the wall before the character and another far off - only the wall fades
+    const Cam cam(300);
+    const float at[3] = {0, 0, 0};
+    const modelfade::Focus f = modelfade::focusOf(cam.p, cam.view, at);
+    const auto front = cam.wall(-20, -120);
+    std::vector<uint8_t> far(4 * 32, 0);
+    const float corners[4][3] = {{200, 0, -20}, {280, 0, -20}, {200, -120, -20}, {280, -120, -20}};
+    for (int i = 0; i < 4; ++i) cam.put(corners[i], far.data() + i * 32);
+    std::vector<uint8_t> both(front);
+    both.insert(both.end(), far.begin(), far.end());
+    const uint16_t list[12] = {0, 1, 2, 2, 1, 3, 4, 5, 6, 6, 5, 7};
+    modelfade::Fader fd;
+    modelfade::Fader::Split split;
+    CHECK(fd.fade(both.data(), 8, list, 12, false, 1, f, 1, split));
+    CHECK(split.faded.size() == 6 && split.solid.size() == 6);
+    for (uint16_t i : split.faded) CHECK(i < 4);
+    CHECK(split.alpha[0] < 1.0f && split.alpha[4] == 1.0f);
+    // the far one alone, nothing fading: drawn as the game made it
+    modelfade::Fader none;
+    CHECK(!none.fade(far.data(), 4, nullptr, 0, true, 1, f, 1, split));
 }

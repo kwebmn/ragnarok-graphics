@@ -1,5 +1,6 @@
 #pragma once
 #include <cstdint>
+#include <unordered_map>
 #include <vector>
 
 #include "core/game_camera.hpp"
@@ -35,24 +36,14 @@ Focus focusOf(const camera::Projection& p, const float view[12], const float at[
 bool covers(const uint8_t* vertices, uint32_t stride, uint32_t vertexCount, const uint16_t* indices,
             uint32_t indexCount, bool strip, const Focus& f);
 
-// 3.0.13-beta.19 (R-KVR7K3: a house half see-through - the parts drawn over the body alone, its front and roof
-// whole): a draw's screen box and its nearest depth; one over the box of a draw that covered the body the frame before,
-// itself before the character, goes with it - the whole house
-struct Box {
-    float x0 = 0, y0 = 0, x1 = 0, y1 = 0, nearest = 0;
-};
-bool boxOf(const uint8_t* vertices, uint32_t stride, uint32_t vertexCount, Box& out);
-
-// A draw's place in the world (its first vertex back through the camera) and its texture and size - the model it is
-// over the frames; 3.0.13-beta.21 (the owner: «когда иду за фонтаном прозрачность "двигается", мигает»): matched by
-// the nearest place within kSameModel, not a rounded key - a moving model (the fountain's water) or a place on the
-// rounding's edge made a new model each frame, starting from whole again
+// A model's place in the world (the middle of its piece's vertices back through the camera) and its texture - the
+// model it is over the frames; 3.0.13-beta.21 (the owner: «когда иду за фонтаном прозрачность "двигается",
+// мигает»): matched by the nearest place within kSameModel, not a rounded key - a moving model (the fountain's
+// water) or a place on the rounding's edge made a new model each frame, starting from whole again
 struct Model {
     uint64_t id = 0;
     float w[3] = {0, 0, 0};
 };
-Model modelOf(const camera::Projection& p, const float view[12], const uint8_t* vertices, uint32_t vertexCount,
-              uintptr_t texture);
 // .22 (the owner: «за статуей с рукой хожу, она мигает всеравно»): the texture alone and the middle of all its vertices
 // - a draw's first vertex and its count change as the game leaves out faces turned away while one walks
 constexpr float kSameModel = 40.0f;
@@ -70,11 +61,39 @@ public:
     uint32_t madeAnew() const { return made_; }  // .22: models taken up anew so far, for the log
     // a draw over the body this frame
     void covered(const Model& m) { if (now_.size() < 64) now_.push_back(m); }
-    // 3.0.13-beta.19: a draw before the character (`z` the character's) beside one that covered it the frame before;
-    // .23 (R-QH3H48 «когда хожу, мигает заборы вокруг чара»): beside in the world, kHouse along the ground from its
-    // middle - not over its box on the screen, which took the long fences round the square in and out at each step
-    bool alongside(const Model& m, const Box& b, float z) const;
+    // 3.0.13-beta.19: the whole house - a model beside one that covered the body the frame before; .23 (R-QH3H48
+    // «когда хожу, мигает заборы вокруг чара»): beside in the world, kHouse along the ground from its middle - not
+    // over its box on the screen, which took the long fences round the square in and out at each step
+    bool alongside(const Model& m) const;
+
+    // 3.0.13-beta.24 (R-2KHTSU: «вдали и вблизи заборы и все остальное мигает» - trees and benches far off faded with
+    // the one over the character): a draw (TL1, 32 bytes a vertex) by its pieces - triangles joined by a corner or a
+    // corner's place, each its own model, as one draw of the game may hold many. true: some piece see-through - its
+    // triangles in `faded` (a list), the rest in `solid`, each vertex's alpha; false: the draw as the game made it
+    struct Split {
+        std::vector<uint16_t> solid, faded;
+        std::vector<float> alpha;
+    };
+    bool fade(const uint8_t* vertices, uint32_t vertexCount, const uint16_t* indices, uint32_t indexCount, bool strip,
+              uintptr_t texture, const Focus& f, uint32_t frame, Split& out);
+
 private:
+    uint32_t root(uint32_t i);
+    struct Tri {
+        uint16_t i[3];
+        bool covers;
+    };
+    struct Piece {
+        double sum[3] = {0, 0, 0};
+        uint32_t n = 0;
+        float nearest = 1e9f, alpha = 1.0f;
+        bool covers = false;
+    };
+    std::vector<Tri> tris_;  // .24: one draw's, kept between draws to spare the allocations
+    std::vector<uint32_t> parent_;
+    std::vector<int> pieceOf_;
+    std::vector<Piece> pieces_;
+    std::unordered_map<uint64_t, uint32_t> twins_;
     std::vector<Model> now_, last_;
     uint32_t made_ = 0;
     struct Entry {

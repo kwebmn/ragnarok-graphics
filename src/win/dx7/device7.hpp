@@ -75,6 +75,8 @@ private:
     uint32_t fadeFrame_ = 0;
     uint32_t fadeMadeTold_ = 0;  // 3.0.13-beta.22
     modelfade::Fader fader_;
+    modelfade::Fader::Split split_;  // 3.0.13-beta.24
+    bool fadeNext_ = false;          // .24: the draw recorded now is a split's see-through pieces
     std::vector<uint8_t> faded_;
     bool fadeTold_ = false;
     bool overPortalTold_ = false;  // 3.0.13-beta.15: [effects] aura_portals - where the portals were drawn

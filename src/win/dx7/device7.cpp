@@ -246,34 +246,39 @@ HRESULT Device7::record(D3DPRIMITIVETYPE type, DWORD fvf, const void* vertices, 
     if (focus_.known && fvf == d3d7::FVF_TL1 && !setup.ui && setup.zWrite && !setup.blend &&
         tag.kind == effect_exe::Kind::None) {
         const auto* bytes = static_cast<const uint8_t*>(vertices);
-        const bool strip = type == D3DPT_TRIANGLESTRIP;
-        bool over = modelfade::covers(bytes, 32, vertexCount, indices, indexCount, strip, focus_);
-        const modelfade::Model model =
-            modelfade::modelOf(camera::projectionFor(c.screenWidth, c.screenHeight), view_, bytes, vertexCount,
-                               reinterpret_cast<uintptr_t>(textures_[0]));
-        modelfade::Box box;  // 3.0.13-beta.19: the whole house - a part beside one that covered (.23: in the world)
-        if (over)
-            fader_.covered(model);
-        else if (modelfade::boxOf(bytes, 32, vertexCount, box))
-            over = fader_.alongside(model, box, focus_.z);
-        const float alpha = (over || fader_.fading()) ? fader_.step(model, over, fadeFrame_) : 1.0f;
-        if (alpha < 1.0f) {
+        // 3.0.13-beta.24: by the draw's pieces - the solid ones drawn as they were, the see-through after them
+        if (fader_.fade(bytes, vertexCount, indices, indexCount, type == D3DPT_TRIANGLESTRIP,
+                        reinterpret_cast<uintptr_t>(textures_[0]), focus_, fadeFrame_, split_)) {
             faded_.assign(bytes, bytes + size_t(vertexCount) * 32);
             for (uint32_t i = 0; i < vertexCount; ++i) {
                 uint8_t& a = faded_[size_t(i) * 32 + 16 + 3];  // the diffuse colour's alpha
-                a = uint8_t(std::lround(float(a) * alpha));
+                a = uint8_t(std::lround(float(a) * split_.alpha[i]));
             }
-            vertices = faded_.data();
-            setup.blend = true;
-            setup.srcBlend = d3d7::BLEND_SRCALPHA;
-            setup.dstBlend = d3d7::BLEND_INVSRCALPHA;
-            setup.zWrite = false;
-            setup.alphaTest = false;  // a high reference would cut a faded model away whole; blending keeps its holes
             if (!fadeTold_) {
                 fadeTold_ = true;
                 LOG_INFO("effects: a model over the character drawn see-through ([effects] fade_models)");
             }
+            const modelfade::Focus keep = focus_;
+            focus_.known = false;  // the two draws below as they are
+            HRESULT hr = D3D_OK;
+            if (!split_.solid.empty())
+                hr = record(D3DPT_TRIANGLELIST, fvf, vertices, vertexCount,
+                            reinterpret_cast<const WORD*>(split_.solid.data()), DWORD(split_.solid.size()));
+            fadeNext_ = true;
+            if (SUCCEEDED(hr) && !split_.faded.empty())
+                hr = record(D3DPT_TRIANGLELIST, fvf, faded_.data(), vertexCount,
+                            reinterpret_cast<const WORD*>(split_.faded.data()), DWORD(split_.faded.size()));
+            fadeNext_ = false;
+            focus_ = keep;
+            return hr;
         }
+    }
+    if (fadeNext_) {  // the see-through pieces: laid over by their alpha, writing no depth
+        setup.blend = true;
+        setup.srcBlend = d3d7::BLEND_SRCALPHA;
+        setup.dstBlend = d3d7::BLEND_INVSRCALPHA;
+        setup.zWrite = false;
+        setup.alphaTest = false;  // a high reference would cut a faded model away whole; blending keeps its holes
     }
     cmd.state = c.record.addState(setup);
     cmd.primitive = uint32_t(type);
