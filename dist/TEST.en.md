@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.16-beta.8 — what's new
+
+- **"Gems and spheres on the skill bar"** (Interface, off at first): next to the ammo's plate - what the skills on your bar spend and how many are in the bag: blue, red and yellow gems, Holy Water, the Sage's and the Ninja's stones, the Alchemist's bottles and coats. A red edge and a short chime at 10 or fewer and when none are left. The Monk's spirit spheres and the Gunslinger's coins as gold dots.
+
 # uaRO Graphics 3.0.16-beta.7 — what's new
 
 Three new looks, all off by default (turn them on in the uaRO program):
