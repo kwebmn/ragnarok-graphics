@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.13-beta.18 — what's new
+
+**See-through buildings - close walls and roofs over the feet too.** A wall the character stands right behind and a roof covering only its feet now go see-through as well (in 3.0.13-beta.17 they stayed whole).
+
 # uaRO Graphics 3.0.13-beta.17 — what's new
 
 **See-through buildings before the character** (a new switch «See-through buildings before the character» in the effects' Characters group, off by default). A house, a tree or a wall between the camera and your character glides half see-through and comes back once you have passed it. The character is no longer lost behind buildings in towns and trees in forests.
