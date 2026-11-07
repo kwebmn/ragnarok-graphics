@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.15-beta.2 — what's new
+
+**New casting look** («New casting look» in the skill effects group, off by default). While a skill is cast: a magic circle on the ground in the element's colour (two rings, marks, a slowly turning star) and a low crisp flame round the character in place of the blurred column up the screen. Made from a record of how the game draws the casting (beta.1's report): the same rings and timing, the flame lower and crisper.
+
 # uaRO Graphics 3.0.15-beta.1 — what's new
 
 **Getting ready for new skill effects.** In betas the driver records how the game draws skill effects: each effect's first frames in a game - triangles, blending, textures - into uaro-graphics\logs\uaro-effects.txt (1.2 MB at most), sent with a report. The casting, Heal, Magnus Exorcismus and Storm Gust will be redrawn from these records. Releases record nothing.
