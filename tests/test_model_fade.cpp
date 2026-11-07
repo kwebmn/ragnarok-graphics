@@ -55,22 +55,32 @@ TEST(model_fade_covers_only_what_stands_before_the_character) {
 }
 
 TEST(model_fade_glides_down_and_back) {
-    modelfade::Fader fd;
-    modelfade::Model m;
-    m.id = 7;
-    CHECK(fd.step(m, false, 1) == 1.0f && fd.fading() == 0);
-    float a = 1.0f;
-    for (uint32_t frame = 1; frame <= 20; ++frame) a = fd.step(m, true, frame);
-    CHECK(a == modelfade::kSeen);
-    CHECK(fd.step(m, true, 20) == a);  // once a frame
-    // .21: held a while after it last covered - the body slipping off its edges does not make it pulse
-    for (uint32_t frame = 21; frame <= 20 + modelfade::kHoldFrames; ++frame) CHECK(fd.step(m, false, frame) == a);
-    a = fd.step(m, false, 21 + modelfade::kHoldFrames);
-    CHECK(a > modelfade::kSeen && a < 1.0f);
-    for (uint32_t frame = 22 + modelfade::kHoldFrames; frame <= 60; ++frame) a = fd.step(m, false, frame);
-    CHECK(a == 1.0f);
-    fd.frameDone(61);
-    CHECK(fd.fading() == 0);
+    // .25: by the clock - the same at 60 and at 120 frames a second
+    for (const uint64_t ms : {16ull, 8ull}) {
+        modelfade::Fader fd;
+        modelfade::Model m;
+        m.id = 7;
+        uint64_t now = 1000;
+        uint32_t frame = 1;
+        fd.clock(now);
+        CHECK(fd.step(m, false, frame) == 1.0f && fd.fading() == 0);
+        float a = 1.0f;
+        for (; now < 1000 + uint64_t(modelfade::kDownMs) / 2; now += ms) fd.clock(now), a = fd.step(m, true, ++frame);
+        CHECK(a > modelfade::kSeen + 0.2f && a < 0.8f);  // half way, whatever the frames
+        for (; now < 1400; now += ms) fd.clock(now), a = fd.step(m, true, ++frame);
+        CHECK(a == modelfade::kSeen);
+        CHECK(fd.step(m, true, frame) == a);  // once a frame
+        const uint64_t last = now - ms;
+        // held a while after it last covered - the body slipping off its edges does not make it pulse
+        for (; now <= last + modelfade::kHoldMs; now += ms) {
+            fd.clock(now);
+            CHECK(fd.step(m, false, ++frame) == a);
+        }
+        for (; now < last + modelfade::kHoldMs + 1000; now += ms) fd.clock(now), a = fd.step(m, false, ++frame);
+        CHECK(a == 1.0f);
+        fd.frameDone(++frame);
+        CHECK(fd.fading() == 0);
+    }
 }
 
 TEST(model_fade_the_same_model_moving) {
@@ -79,8 +89,9 @@ TEST(model_fade_the_same_model_moving) {
     modelfade::Model m;
     m.id = 9;
     float a = 1.0f;
-    for (uint32_t frame = 1; frame <= 10; ++frame) {
-        m.w[0] = float(frame) * 3.0f;
+    for (uint32_t frame = 1; frame <= 30; ++frame) {
+        fd.clock(1000 + frame * 16);
+        m.w[0] = float(frame) * 1.0f;
         a = fd.step(m, true, frame);
     }
     CHECK(a == modelfade::kSeen);  // glided all the way, not started over each frame

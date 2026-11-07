@@ -114,18 +114,19 @@ float Fader::step(const Model& m, bool covering, uint32_t frame) {
     }
     if (!e) {
         if (!covering || alpha_.size() >= 256) return 1.0f;
-        alpha_.push_back(Entry{m, 1.0f, 0, frame});
+        alpha_.push_back(Entry{m, 1.0f, 0, nowMs_});
         ++made_;
         e = &alpha_.back();
     }
     if (e->frame != frame) {  // once a frame, however many draws the model takes
-        if (covering) e->coveredAt = frame;
-        const bool held = frame - e->coveredAt <= kHoldFrames;
-        e->alpha = held ? std::max(kSeen, e->alpha - kStep) : std::min(1.0f, e->alpha + kStep);
+        if (covering) e->coveredMs = nowMs_;
+        const bool held = nowMs_ - e->coveredMs <= kHoldMs;
+        e->alpha = held ? std::max(kSeen, e->alpha - (1.0f - kSeen) * dtMs_ / kDownMs)
+                        : std::min(1.0f, e->alpha + (1.0f - kSeen) * dtMs_ / kUpMs);
         e->frame = frame;
         e->m = m;  // follows a moving model
     } else if (covering) {
-        e->coveredAt = frame;
+        e->coveredMs = nowMs_;
     }
     return e->alpha;
 }
@@ -192,6 +193,10 @@ bool Fader::fade(const uint8_t* v, uint32_t vertexCount, const uint16_t* indices
                          f.view[3 * k + 2] * (c[2] - f.view[11]);
         ++pc.n;
         pc.nearest = std::min(pc.nearest, vz);
+        pc.x0 = std::min(pc.x0, x.x);
+        pc.y0 = std::min(pc.y0, x.y);
+        pc.x1 = std::max(pc.x1, x.x);
+        pc.y1 = std::max(pc.y1, x.y);
     }
     for (const Tri& t : tris_)
         if (t.covers) pieces_[size_t(pieceOf_[root(t.i[0])])].covers = true;
@@ -205,7 +210,8 @@ bool Fader::fade(const uint8_t* v, uint32_t vertexCount, const uint16_t* indices
         if (over)
             covered(m);
         else
-            over = pc.nearest < f.z - kNearer && alongside(m);
+            over = pc.nearest < f.z - kNearer && pc.x1 > f.x - kNearBody * f.h && pc.x0 < f.x + kNearBody * f.h &&
+                   pc.y1 > f.y - (1.0f + kNearBody) * f.h && pc.y0 < f.y + 0.5f * f.h && alongside(m);
         pc.alpha = (over || !alpha_.empty()) ? step(m, over, frame) : 1.0f;
         faded = faded || pc.alpha < 1.0f;
     }
@@ -217,6 +223,11 @@ bool Fader::fade(const uint8_t* v, uint32_t vertexCount, const uint16_t* indices
         to.insert(to.end(), {t.i[0], t.i[1], t.i[2]});
     }
     return true;
+}
+
+void Fader::clock(uint64_t ms) {
+    dtMs_ = lastMs_ && ms >= lastMs_ ? std::min(100.0f, float(ms - lastMs_)) : 16.7f;
+    lastMs_ = nowMs_ = ms;
 }
 
 void Fader::frameDone(uint32_t frame) {

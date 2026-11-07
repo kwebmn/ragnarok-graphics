@@ -47,16 +47,23 @@ struct Model {
 // .22 (the owner: «за статуей с рукой хожу, она мигает всеравно»): the texture alone and the middle of all its vertices
 // - a draw's first vertex and its count change as the game leaves out faces turned away while one walks
 constexpr float kSameModel = 40.0f;
-constexpr float kHouse = 60.0f;  // .23: a house's parts' middles, about
+constexpr float kHouse = 40.0f;  // .23: a house's parts' middles, about; .25: 40, not 60
 
-// Each model's see-through, gliding kStep a frame toward kSeen while it covers, back to 1 after; .21: it keeps
-// covering kHoldFrames after it last did - the body's points slipping off the model's edges as one walks made it pulse
-constexpr float kSeen = 0.35f, kStep = 0.08f;
-constexpr uint32_t kHoldFrames = 30;  // .23: 30, not 20
+// Each model's see-through, gliding toward kSeen while it covers, back to 1 after; .21: it keeps covering a while
+// after it last did - the body's points slipping off the model's edges as one walks made it pulse. 3.0.13-beta.25
+// (R-8KN4Z3 at 118 frames a second: a glide of 8 frames was 70 ms, a blink): by the clock - kDownMs to fade, kUpMs
+// back, held kHoldMs
+constexpr float kSeen = 0.35f;
+constexpr float kDownMs = 250.0f, kUpMs = 400.0f;
+constexpr uint64_t kHoldMs = 600;
+// .25: a piece beside one that covered goes with it only near the body on the screen (kNearBody body heights to the
+// sides and above) - lamp posts and benches round the character faded with a tree over it
+constexpr float kNearBody = 1.5f;
 class Fader {
 public:
     float step(const Model& m, bool covering, uint32_t frame);  // the draw's alpha now (1: as the game draws it)
     void frameDone(uint32_t frame);                          // models not drawn for a while forgotten
+    void clock(uint64_t ms);  // .25: the time of the frame about to be drawn
     size_t fading() const { return alpha_.size(); }
     uint32_t madeAnew() const { return made_; }  // .22: models taken up anew so far, for the log
     // a draw over the body this frame
@@ -87,6 +94,7 @@ private:
         double sum[3] = {0, 0, 0};
         uint32_t n = 0;
         float nearest = 1e9f, alpha = 1.0f;
+        float x0 = 1e9f, y0 = 1e9f, x1 = -1e9f, y1 = -1e9f;  // .25: its box on the screen
         bool covers = false;
     };
     std::vector<Tri> tris_;  // .24: one draw's, kept between draws to spare the allocations
@@ -96,10 +104,13 @@ private:
     std::unordered_map<uint64_t, uint32_t> twins_;
     std::vector<Model> now_, last_;
     uint32_t made_ = 0;
+    uint64_t nowMs_ = 0, lastMs_ = 0;
+    float dtMs_ = 16.7f;
     struct Entry {
         Model m;
         float alpha = 1.0f;
-        uint32_t frame = 0, coveredAt = 0;
+        uint32_t frame = 0;
+        uint64_t coveredMs = 0;
     };
     std::vector<Entry> alpha_;
 };

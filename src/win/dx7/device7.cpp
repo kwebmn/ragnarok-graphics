@@ -87,6 +87,7 @@ HRESULT STDMETHODCALLTYPE Device7::BeginScene() {
         win::Context& c = win::Context::get();
         fader_.frameDone(fadeFrame_);
         ++fadeFrame_;
+        fader_.clock(GetTickCount64());  // 3.0.13-beta.25: the glide by the clock
         if (fadeFrame_ % 600 == 0 && fader_.madeAnew() != fadeMadeTold_) {  // 3.0.13-beta.22: to tell a blink apart
             LOG_INFO("model fade: %zu models see-through, %u taken up anew in the last 600 frames", fader_.fading(),
                      fader_.madeAnew() - fadeMadeTold_);
