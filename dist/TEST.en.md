@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.15-beta.3 — what's new
+
+**«New casting look» now shows.** The magic circle never appeared: the casting was quietened before its rings at the feet were found - the new look has its own brightness now. The circle and the flame in the element's colour (the game gives it by texture: fire, water, wind, earth), the circle's lines with a thin dark rim so they read on Prontera's light paving too.
+
 # uaRO Graphics 3.0.15-beta.2 — what's new
 
 **New casting look** («New casting look» in the skill effects group, off by default). While a skill is cast: a magic circle on the ground in the element's colour (two rings, marks, a slowly turning star) and a low crisp flame round the character in place of the blurred column up the screen. Made from a record of how the game draws the casting (beta.1's report): the same rings and timing, the flame lower and crisper.
