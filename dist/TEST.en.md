@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.16-beta.12 — what's new
+
+- **The Monk's spirit spheres** are a little bigger and blue: a blue ball with a shine, a light heart and a soft blue aura.
+
 # uaRO Graphics 3.0.16-beta.11 — what's new
 
 - **The Monk's spirit spheres around the hero** are light blue again, as in the original: a white heart, a light blue ball and a soft light blue aura with a shine.
