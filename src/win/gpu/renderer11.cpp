@@ -1445,17 +1445,18 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
     if (silhouettePass_) {
         std::copy(hole_, hole_ + 8, c.hole);
     }
+    // 2.5.2: the ground's lightmap (its 256x256 atlas of 8x8 cells) sampled smoothly (as draw.cpp, 0.22.6) - the
+    // weak set's own, never set here until now
+    if (effects_.smoothLight && !s.ui && d.fvf == d3d7::FVF_TL2 && t[1]->width == 256 && t[1]->height == 256)
+        c.stage1[1] |= 1u << 25;
+    c.alphaTest = s.alphaTest ? uint32_t(s.alphaFunc) | uint32_t(s.alphaRef) << 8 | 1u << 16 : 0u;
+    // 3.0.15-beta.4 (beta.2-.3 set these before the line above wrote alphaTest anew: the game's look stayed)
     // 3.0.15-beta.2: [effects] new_casting (draw.cpp's)
     if (d.effectId == castlook::kRingId || d.effectId == castlook::kCircleId) {
         c.alphaTest |= d.effectId == castlook::kRingId ? 1u << 24 : 1u << 25;
         c.twin[0] = 0.0f;
         c.twin[3] = waterTime();
     }
-    // 2.5.2: the ground's lightmap (its 256x256 atlas of 8x8 cells) sampled smoothly (as draw.cpp, 0.22.6) - the
-    // weak set's own, never set here until now
-    if (effects_.smoothLight && !s.ui && d.fvf == d3d7::FVF_TL2 && t[1]->width == 256 && t[1]->height == 256)
-        c.stage1[1] |= 1u << 25;
-    c.alphaTest = s.alphaTest ? uint32_t(s.alphaFunc) | uint32_t(s.alphaRef) << 8 | 1u << 16 : 0u;
     c.fogEnable = gameFogDrawn(s.fog, effects_.noGameFog, outdoors_) ? 1u : 0u;  // 2.6.10
     c.fogColor[0] = float((s.fogColor >> 16) & 255) / 255.0f;
     c.fogColor[1] = float((s.fogColor >> 8) & 255) / 255.0f;

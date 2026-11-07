@@ -432,12 +432,6 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     }
     packStage(s.stage[0], d.keyed[0], c.stage0);
     packStage(s.stage[1], d.keyed[1], c.stage1);
-    // 3.0.15-beta.2: [effects] new_casting - the casting's walls and its circle (core/cast_look.hpp, shaders.cpp)
-    if (d.effectId == castlook::kRingId || d.effectId == castlook::kCircleId) {
-        c.alphaTest |= d.effectId == castlook::kRingId ? 1u << 24 : 1u << 25;
-        c.twin[0] = 0.0f;  // no leaves' sway
-        c.twin[3] = waterTime();
-    }
     if (silhouettePass) {  // 3.0.13-beta.30: the character's shape where it is hidden
         std::copy(hole, hole + 8, c.hole);
     }
@@ -447,6 +441,13 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
         ((t[1]->width == 256 && t[1]->height == 256) || (ownPass && d.texture[1] && d.texture[1] == ownState.atlas)))
         c.stage1[1] |= 1u << 25;
     c.alphaTest = s.alphaTest ? uint32_t(s.alphaFunc) | uint32_t(s.alphaRef) << 8 | 1u << 16 : 0u;
+    // 3.0.15-beta.4 (beta.2-.3 set these before the line above wrote alphaTest anew: the game's look stayed)
+    // 3.0.15-beta.2: [effects] new_casting - the casting's walls and its circle (core/cast_look.hpp, shaders.cpp)
+    if (d.effectId == castlook::kRingId || d.effectId == castlook::kCircleId) {
+        c.alphaTest |= d.effectId == castlook::kRingId ? 1u << 24 : 1u << 25;
+        c.twin[0] = 0.0f;  // no leaves' sway
+        c.twin[3] = waterTime();
+    }
     if (coverage) c.alphaTest |= 1u << 17;
     if (toLayer && !s.blend) c.alphaTest |= 1u << 18;  // part 3: opaque in the layer (0.8 review I2)
     // 0.18: its colour into the glow target - light it adds, or a factor it multiplies the light under it by.

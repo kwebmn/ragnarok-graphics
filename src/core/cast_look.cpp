@@ -27,6 +27,8 @@ void Looks::shorten(uint8_t* v, uint32_t count, uint32_t stride, uint32_t owner,
         feet_[keyOf(uv[0])] = Foot{f[0], f[1], f[2], f[3]};
         if (float(diffuse >> 24) >= kBaseAlpha) {
             Box& b = now_[owner];
+            if (f[1] < b.y0) b.zTop = f[2], b.rhwTop = f[3];
+            if (f[1] > b.y1) b.zBottom = f[2], b.rhwBottom = f[3];
             b.x0 = std::min(b.x0, f[0]);
             b.y0 = std::min(b.y0, f[1]);
             b.x1 = std::max(b.x1, f[0]);
@@ -67,13 +69,21 @@ bool Looks::circleQuad(uint32_t owner, uint8_t out[4 * 32]) {
     const float cx = (b.x0 + b.x1) * 0.5f, cy = (b.y0 + b.y1) * 0.5f;
     const float rx = std::max(4.0f, (b.x1 - b.x0) * 0.5f * kCircleScale);
     const float ry = std::max(2.0f, (b.y1 - b.y0) * 0.5f * kCircleScale);
-    const float z = float(b.z / b.n), rhw = float(b.rhw / b.n);
+    // the depth along the ground's plane through the feet (affine in the screen's y), a little nearer than it
+    const float span = b.y1 - b.y0;
+    const auto at = [&](float y, float top, float bottom, float mean) {
+        if (span < 1.0f) return mean;
+        return top + (bottom - top) * (y - b.y0) / span;
+    };
+    const float zMean = float(b.z / b.n), rhwMean = float(b.rhw / b.n);
     const uint32_t diffuse = b.colour | 0xFF000000u, specular = 0xFF000000u;  // no fog
     const float corner[4][4] = {{cx - rx, cy - ry, 0, 0}, {cx + rx, cy - ry, 1, 0}, {cx - rx, cy + ry, 0, 1},
                                 {cx + rx, cy + ry, 1, 1}};  // a strip
     std::memset(out, 0, 4 * 32);
     for (int i = 0; i < 4; ++i) {
         uint8_t* p = out + i * 32;
+        const float z = std::max(0.0f, at(corner[i][1], b.zTop, b.zBottom, zMean) - 0.0004f);
+        const float rhw = std::max(1e-6f, at(corner[i][1], b.rhwTop, b.rhwBottom, rhwMean));
         const float pos[4] = {corner[i][0], corner[i][1], z, rhw};
         std::memcpy(p, pos, 16);
         std::memcpy(p + 16, &diffuse, 4);

@@ -19,6 +19,9 @@ struct Box {
     float x0 = 1e9f, y0 = 1e9f, x1 = -1e9f, y1 = -1e9f;
     double z = 0, rhw = 0;
     int n = 0;
+    // .4: the depth at the farthest foot (y0, the screen's top) and the nearest (y1) - the ground's plane, z and rhw
+    // affine on the screen: the circle's near half no longer under the ground
+    float zTop = 0, rhwTop = 0, zBottom = 0, rhwBottom = 0;
     uint32_t colour = 0;
 };
 
