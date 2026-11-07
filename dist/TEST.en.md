@@ -1,3 +1,9 @@
+# uaRO Graphics 3.0.16-beta.4 — what's new
+
+**Ctrl+F opens «Reference» again.** The game keeps its chat field active nearly always, and Ctrl+F went to the chat's search - the reference never opened. Now the chat's search only with words typed in its field; else Ctrl+F is the reference.
+
+**Doubled letters looked into:** when one key brings two letters, the log tells by which way - to find the cause.
+
 # uaRO Graphics 3.0.16-beta.3 — what's new
 
 **«New damage numbers» removed** - the damage numbers are the game's own again.
