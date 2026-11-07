@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <vector>
 
+#include "core/aura_portal.hpp"
 #include "core/d3d7.hpp"
 #include "core/scene.hpp"
 #include "core/states.hpp"
@@ -65,6 +66,8 @@ private:
     SceneTracker scene_;  // which draws are interface (stage 3)
     D3DVIEWPORT7 viewport_{};
     std::vector<uint8_t> soft_;  // 0.27: a draw of the level 99 aura's vertices, softer
+    auraportal::Portals portals_;
+    bool overPortalTold_ = false;  // 3.0.13-beta.15: [effects] aura_portals - where the portals were drawn
     // 2.7.37, diagnostics (the tester: «все умения, и даже когда кастуется что-то, какие-то очень яркие»): the skills'
     // draws made softer and the draws that add light of no effect known, told every 10 s
     uint32_t skillDraws_ = 0, plainAdds_ = 0;

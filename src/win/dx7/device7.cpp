@@ -80,6 +80,7 @@ HRESULT STDMETHODCALLTYPE Device7::EnumTextureFormats(LPD3DENUMPIXELFORMATSCALLB
 HRESULT STDMETHODCALLTYPE Device7::BeginScene() {
     win::Guard guard;
     scene_.beginScene();
+    portals_.frame();  // 3.0.13-beta.15
     win::Context::get().markInterfaceEnd(win::interfaceFaces());  // 3.0.11-beta.190: the game's interface list
     win::groundway::newFrame();    // 3.0.11-beta.31: the way on the ground drawn once in this frame
     win::groundmarks::newFrame();  // 3.0.11-beta.87: the target's ring too
@@ -236,7 +237,21 @@ HRESULT Device7::record(D3DPRIMITIVETYPE type, DWORD fvf, const void* vertices, 
     const EffectSettings& fx = c.effects();  // 2.5.11: made once a change, not each draw
     // 0.37: the skills likewise, by their own slider. (2.7.37's night that made them softer still gone in 2.7.46 -
     // with 2.7.38's soft adding they do not burn white, and the tester found them «тусклые»)
-    const bool aura = fx.aura && fx.auraBrightness < 100 && tag.kind == effect_exe::Kind::Aura;
+    // 3.0.13-beta.15: [effects] aura_portals - the portals' boxes this frame; an aura's piece on one of the last
+    // frame's made faint
+    const uint32_t stride = FrameRecord::stride(fvf);
+    if (fx.auraPortals && tag.kind == effect_exe::Kind::Portal && c.enhanced())
+        portals_.portal(static_cast<const uint8_t*>(vertices), vertexCount, stride);
+    const bool overPortal = fx.auraPortals && tag.kind == effect_exe::Kind::Aura &&
+                            portals_.covers(static_cast<const uint8_t*>(vertices), vertexCount, stride);
+    const int auraBase = fx.aura ? fx.auraBrightness : 100;
+    const int auraPercent = overPortal ? std::min(auraBase, auraportal::kOverPercent) : auraBase;
+    if (overPortal && !overPortalTold_) {
+        overPortalTold_ = true;
+        LOG_INFO("effects: a level 99 aura over a warp portal drawn at %d %% - the portal seen through it",
+                 auraPercent);
+    }
+    const bool aura = auraPercent < 100 && tag.kind == effect_exe::Kind::Aura;
     const int skillPercent = std::clamp(fx.skillBrightness, 0, 100);
     // 2.7.39 (the tester: «как светится персонаж во время каста не устраивает»): a casting quieter still
     const int drawPercent = effect_exe::isCasting(tag.id) ? effect_exe::castPercent(skillPercent) : skillPercent;
@@ -249,7 +264,7 @@ HRESULT Device7::record(D3DPRIMITIVETYPE type, DWORD fvf, const void* vertices, 
         const auto* bytes = static_cast<const uint8_t*>(vertices);
         soft_.assign(bytes, bytes + size_t(vertexCount) * FrameRecord::stride(fvf));
         effect_exe::soften(soft_.data(), vertexCount, FrameRecord::stride(fvf),
-                           aura ? fx.auraBrightness : drawPercent,
+                           aura ? auraPercent : drawPercent,
                            aura ? effect_exe::softenFor(setup.blend, setup.srcBlend, setup.dstBlend)
                                 : effect_exe::softenSkill(setup.blend, setup.srcBlend, setup.dstBlend));
         vertices = soft_.data();

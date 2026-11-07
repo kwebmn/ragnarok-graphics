@@ -181,6 +181,9 @@ struct EffectSettings {
     // 0.27: the level 99 aura - its ring, bubbles and circle - softer than the game draws it. On by default.
     bool aura = true;
     int auraBrightness = 50;  // %, 0-100 of the game's
+    // 3.0.13-beta.15 (the owner's pick 8 of «50 идей»: «Аура не закрывает порталы»): a level 99 aura standing on a
+    // warp portal drawn faint (core/aura_portal) - off as new looks are
+    bool auraPortals = false;
     // 0.28: the maps' fireflies - those the game shows and those the maps' makers placed that it does not - glow,
     // flash now and then and light a little around them. On by default.
     bool fireflies = true;

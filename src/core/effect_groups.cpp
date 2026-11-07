@@ -34,6 +34,7 @@ const Member kMembers[] = {
     {"footprints", Characters, 1, &E::footprints},
     {"hit_flash", Characters, 1, &E::hitFlash},
     {"aura", Characters, 1, &E::aura},
+    {"aura_portals", Characters, 1, &E::auraPortals},  // 3.0.13-beta.15
 
     {"skills_soft", SkillEffects, 1, &E::skillsSoft},
     {"skill_sparks", SkillEffects, 2, &E::skillSparks},

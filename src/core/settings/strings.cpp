@@ -981,6 +981,15 @@ constexpr Entry kTexts[] = {
     {Text::FxAuraBrightnessHint, "How bright the aura is, of what the game draws: 100 % as in the game, 0 % none.",
      "Наскільки яскрава аура від того, як її малює гра: 100 % — як у грі, 0 % — немає.",
      "Насколько ярка аура от того, как её рисует игра: 100 % — как в игре, 0 % — нет."},
+    {Text::FxAuraPortals, "Aura does not hide portals", "Аура не закриває портали",
+     "Аура не закрывает порталы"},  // 3.0.13-beta.15
+    {Text::FxAuraPortalsHint,
+     "A level 99 aura over a warp portal goes faint, the portal seen through it - with many auras at a portal it was "
+     "lost under them.",
+     "Аура 99 рівня над порталом стає блідою, і портал крізь неї видно: коли біля порталу багато аур, він губився під "
+     "ними.",
+     "Аура 99 уровня над порталом становится бледной, и портал сквозь неё виден: когда у портала много аур, он "
+     "терялся под ними."},
     {Text::FxFireflies, "The maps' fireflies", "Світлячки карт", "Светлячки карт"},
     {Text::FxFirefliesHint,  // 3.0.7-beta.3: lamps at their places, the fireflies themselves «Світлячки в повітрі»
      "Each of the maps' fireflies lights the ground, the walls and the characters around its place like a lamp, in a "
