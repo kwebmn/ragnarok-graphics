@@ -1,3 +1,8 @@
+# uaRO Graphics 3.0.16-beta.10 — what's new
+
+- **The Monk's spirit spheres around the hero** (the acolytes' new effects) are now warm glowing orbs with a soft aura, depth and a shine, instead of flat blue discs with a yellow dot. The Gunslinger's coins too.
+- The spheres' plate on the skill bar is plain dots again, as in 3.0.16-beta.8.
+
 # uaRO Graphics 3.0.16-beta.9 — what's new
 
 - **Spheres on the skill bar** are now glowing golden orbs with a halo, depth and a shine; empty places are faint glass beads (instead of plain dots).
