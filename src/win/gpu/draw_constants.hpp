@@ -8,6 +8,7 @@
 
 #include "core/frame.hpp"
 #include "core/game_camera.hpp"
+#include "core/model_fade.hpp"
 #include "core/trees.hpp"
 #include "win/gpu/shaders.hpp"
 
@@ -63,7 +64,8 @@ inline bool holeOver(const FrameRecord& rec, const DrawCmd& d, const DrawSetup& 
         y1 = std::max(y1, xyzw[1]);
         rhw = std::max(rhw, xyzw[3]);
     }
-    const float rx = hole[2] * 0.8f, ry = hole[2] * 0.95f, cy = hole[1] - 0.55f * hole[2];
+    const float rx = hole[2] * modelfade::kHoleWide, ry = hole[2] * modelfade::kHoleTall,
+                cy = hole[1] - 0.55f * hole[2];
     return rhw > 0.0f && 1.0f / rhw < hole[3] - 3.0f && x1 > hole[0] - rx && x0 < hole[0] + rx && y1 > cy - ry &&
            y0 < cy + ry;
 }

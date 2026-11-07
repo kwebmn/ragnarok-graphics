@@ -40,6 +40,10 @@ void holeOf(const Focus& f, float out[8]);
 // shaders.cpp seeThrough's, kept the same - 1 whole, kSeen in the hole's middle (.28: see-through, not a hole), a rim
 // between
 constexpr float kSeen = 0.35f;
+// the hole's half width and half height in body heights, and where its rim starts (of 1, its edge); 3.0.13-beta.29
+// (R-X2PWX7, the owner: «круг очень четко видно, надо сделать его еще больше»): 1.4 x 1.5 and from 0.3, not 0.8 x
+// 0.95 from 0.55 - shaders.cpp seeThrough and draw_constants.hpp holeOver keep the same numbers
+constexpr float kHoleWide = 1.4f, kHoleTall = 1.5f, kHoleSolid = 0.3f;
 float holeAt(const float hole[8], float gx, float gy, float z, int width, int height);
 
 }  // namespace uagfx::modelfade

@@ -517,7 +517,7 @@ void seeThrough(float4 pos, inout float4 c) {
     float e = 1.0;
     if (pos.w < holeZ - 3.0) {
         float2 g = (pos.xy - 0.5 - float2(jitterX, jitterY)) / scale;  // draw_vs turned back: game pixels
-        e = length((g - float2(holeX, holeY - 0.55 * holeH)) / (holeH * float2(0.8, 0.95)));
+        e = length((g - float2(holeX, holeY - 0.55 * holeH)) / (holeH * float2(1.4, 1.5)));  // kHoleWide, kHoleTall
         if (e < 1.0) {
             float2 centre = floor(targetSize / scale * 0.5);
             float3 p = float3((g - centre) * pos.w / abs(holeF), pos.w);  // the point in the view
@@ -531,7 +531,7 @@ void seeThrough(float4 pos, inout float4 c) {
     }
     if (!inside) discard;
     // core/model_fade.hpp holeAt, kSeen
-    c.a = (((alphaTest >> 17) & 1) != 0 ? c.a : 1.0) * lerp(0.35, 1.0, smoothstep(0.55, 1.0, e));
+    c.a = (((alphaTest >> 17) & 1) != 0 ? c.a : 1.0) * lerp(0.35, 1.0, smoothstep(0.3, 1.0, e));  // kHoleSolid
 }
 
 float4 shade(PsIn i) {
