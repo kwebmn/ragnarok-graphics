@@ -337,6 +337,10 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("quick_teleport", flag(running.quickTeleport), flag(file.quickTeleport)));
         n.quickTeleport = file.quickTeleport;
     }
+    if (file.damageNumbers != running.damageNumbers) {  // 3.0.16-beta.2
+        u.applied.push_back(change("damage_numbers", flag(running.damageNumbers), flag(file.damageNumbers)));
+        n.damageNumbers = file.damageNumbers;
+    }
     if (file.whoHits != running.whoHits) {  // 3.0.13-beta.13
         u.applied.push_back(change("who_hits", flag(running.whoHits), flag(file.whoHits)));
         n.whoHits = file.whoHits;

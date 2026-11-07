@@ -210,6 +210,7 @@ const std::vector<InterfaceSection>& interfaceSections() {
           "interface.minimap_mobs", "interface.minimap_way", "interface.minimap_reach"}},
         {Text::InterfaceSecFight,
          {"interface.mob_hp", "interface.mob_hp_percent", "interface.boss_bars", "interface.who_hits",
+          "interface.damage_numbers",
           "interface.quick_teleport",
           "interface.screen_shake", "interface.esc_cutin", "interface.follow",
           "interface.target_ring",
