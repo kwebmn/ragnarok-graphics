@@ -1,3 +1,9 @@
+# uaRO Graphics 3.0.15-beta.8 — what's new
+
+**New Storm Gust** («New Storm Gust» in the effects' «Skills» group, off by default). In place of the white blot: crisp snow and cloud in icy blue, lightning in its own colour, a soft haze below, faceted ice spikes with a glint. Made from a record of how the game draws Storm Gust: the same layers and timing.
+
+**One more guard against a crash loading maps (cps.dll):** the unpacker writes no further than the game really allocated.
+
 # uaRO Graphics 3.0.15-beta.7 — what's new
 
 **A crash loading some maps (guild castles) fixed.** Our unpacker of the game's files (cps.dll) read a little past the data's end, and when a file lay in memory right at a boundary the game fell («Unexpected program error», cps.dll). There since 3.0.2.
