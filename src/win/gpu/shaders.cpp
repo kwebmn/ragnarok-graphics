@@ -579,6 +579,36 @@ float4 mageLayer(float4 c, bool haze) {
     rgb = lerp(rgb, saturate(c.rgb / max(most, 1e-3)), saturate(hue * 1.5));
     return float4(rgb, a);
 }
+// 3.0.16-beta.10 (the owner: «эффект крутящийся вокруг героя ... не серьезно выглядит и в графику не заходит»): the
+// spirit spheres, added on as the game adds them (its alpha fading them in). The game's two passes by their colour:
+// the big blue one a soft warm aura round the ball, the small yellow one the ball - lit from the top left, white-gold
+// at its heart, amber to its rim, a gold rim light and a small shine, its edge smooth over a pixel.
+float4 spiritOrb(float2 uv, float4 d) {
+    float2 p = (uv - 0.5) * 2.0;
+    float r = length(p);
+    float fade = saturate(d.a * 5.0);
+    if (d.b > d.r) {  // the aura
+        float t = saturate(1.0 - r);
+        float glow = t * t * 0.8 + t * t * t * t * 0.4;
+        return float4(float3(1.0, 0.80, 0.46), glow * fade);
+    }
+    const float R = 0.78;
+    float aa = max(fwidth(r), 1e-3);
+    float inside = 1.0 - smoothstep(R - aa, R + aa, r);
+    float2 q = p / R;
+    float nz = sqrt(saturate(1.0 - dot(q, q)));
+    float3 n = float3(q, nz);
+    float3 l = normalize(float3(-0.45, -0.6, 0.66));
+    float diffuse = saturate(dot(n, l));
+    float m = pow(saturate(length(q)), 1.6);
+    float3 rgb = lerp(float3(1.0, 0.97, 0.86), float3(0.98, 0.55, 0.15), m) * (0.62 + 0.48 * diffuse);
+    rgb += (1.0 - length(q)) * (1.0 - length(q)) * 0.45 * float3(1.0, 0.95, 0.75);  // its own light at the heart
+    rgb += pow(1.0 - nz, 2.5) * 0.55 * float3(1.0, 0.8, 0.35);                     // the gold rim light
+    float3 h = normalize(l + float3(0.0, 0.0, 1.0));
+    rgb += pow(saturate(dot(n, h)), 40.0) * 0.9;                                    // the shine
+    float halo = (1.0 - inside) * pow(saturate(1.0 - (r - R) / (1.0 - R)), 2.0) * 0.5;
+    return float4(lerp(float3(1.0, 0.78, 0.40), saturate(rgb), inside), saturate(inside + halo) * fade);
+}
 float4 mageSolid(float4 pos, float2 uv, float4 c) {
     float3 core = float3(r3, r4, r5), edge = float3(r6, r7, r8), deep = float3(r9, r10, r11);
     float2 game = targetSize / scale;
@@ -758,6 +788,7 @@ float4 shade(PsIn i) {
 #endif
     if (((alphaTest >> 24) & 1) != 0) c = castRing(i.uv0, i.diffuse);  // 3.0.15-beta.2: [effects] new_casting
     else if (((alphaTest >> 25) & 1) != 0) c = castCircle(i.uv0, du, dv, i.diffuse);
+    else if (((alphaTest >> 26) & 1) != 0 && ((alphaTest >> 28) & 1) != 0) c = spiritOrb(i.uv0, i.diffuse);  // .10
     else if (((alphaTest >> 26) & 1) != 0) c = mageLayer(c, false);  // 3.0.15-beta.8, .11: [effects] mage_effects
     else if (((alphaTest >> 28) & 1) != 0) c = mageLayer(c, true);
     else if (((alphaTest >> 27) & 1) != 0) c = mageSolid(i.pos, i.uv0, c);

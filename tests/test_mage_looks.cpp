@@ -45,3 +45,14 @@ TEST(mage_looks_every_class) {
     CHECK(magelook::lookOf(33).branch == Branch::None);  // Ruwach likewise
     CHECK(magelook::elementOf(312) == Element::None);    // not a mage's
 }
+
+// 3.0.16-beta.10 (the owner: «эффект крутящийся вокруг героя ... не серьезно выглядит»; R-45TDN7): the spirit
+// spheres' added passes their own orb, still added on; the rest of the effects as before
+TEST(mage_looks_spheres_are_orbs) {
+    using magelook::Part;
+    CHECK(magelook::partFor(228, Part::Layer) == Part::Orb);
+    CHECK(magelook::partFor(228, Part::Haze) == Part::Orb);
+    CHECK(magelook::partFor(228, Part::None) == Part::None);
+    CHECK(magelook::partFor(16, Part::Layer) == Part::Layer);
+    CHECK(magelook::partOfId(magelook::idOf(Part::Orb, magelook::Element::Spirit)) == Part::Orb);
+}

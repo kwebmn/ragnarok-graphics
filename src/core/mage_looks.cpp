@@ -180,4 +180,8 @@ Part partOf(bool blend, uint32_t srcBlend, uint32_t dstBlend, uint32_t vertexCou
     return Part::None;
 }
 
+Part partFor(int effectId, Part p) {
+    return effectId == kSpheresEffect && (p == Part::Layer || p == Part::Haze) ? Part::Orb : p;
+}
+
 }  // namespace uagfx::magelook

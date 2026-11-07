@@ -426,11 +426,12 @@ HRESULT Device7::record(D3DPRIMITIVETYPE type, DWORD fvf, const void* vertices, 
             x0 = std::min(x0, x);
             x1 = std::max(x1, x);
         }
-        const magelook::Part part = magelook::partOf(setup.blend, setup.srcBlend, setup.dstBlend, vertexCount,
-                                                     x1 - x0, float(c.screenWidth));
+        const magelook::Part part = magelook::partFor(
+            int(tag.id),
+            magelook::partOf(setup.blend, setup.srcBlend, setup.dstBlend, vertexCount, x1 - x0, float(c.screenWidth)));
         if (part != magelook::Part::None) {
             cmd.effectId = magelook::idOf(part, element);
-            if (part != magelook::Part::Solid) {
+            if (part != magelook::Part::Solid && part != magelook::Part::Orb) {  // .10: the spheres still add light
                 DrawSetup over = setup;
                 over.srcBlend = d3d7::BLEND_SRCALPHA;
                 over.dstBlend = d3d7::BLEND_INVSRCALPHA;

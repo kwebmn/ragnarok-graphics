@@ -29,9 +29,14 @@ struct Palette {
 };
 Palette paletteOf(Element e);
 
-enum class Part : uint8_t { None, Layer, Haze, Solid };
+// 3.0.16-beta.10 (the owner: «эффект крутящийся вокруг героя ... както не серьезно выглядит и в графику не заходит»,
+// R-45TDN7: the crisp layer made the Monk's spirit spheres flat blue discs with a yellow dot): Orb - the spheres'
+// own look, still added on as the game's: the big blue pass a soft warm aura, the small yellow one a lit glowing ball
+enum class Part : uint8_t { None, Layer, Haze, Solid, Orb };
+constexpr int kSpheresEffect = 228;  // the spirit spheres (packet 0x01d0's), EF_SPIRITBALL... the Monk's, the coins
 constexpr float kHazeWidth = 0.25f;  // a layer this share of the screen wide or wider: soft
 Part partOf(bool blend, uint32_t srcBlend, uint32_t dstBlend, uint32_t vertexCount, float width, float screenWidth);
+Part partFor(int effectId, Part p);  // 3.0.16-beta.10: an added part of the spheres' effect - Orb
 
 // DrawCmd::effectId of a part in the new look: 0xFE00 | part << 4 | element; 0 none
 constexpr uint16_t kBase = 0xFE00;

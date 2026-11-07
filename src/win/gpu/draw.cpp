@@ -453,7 +453,10 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     // element's colours in reproject 3-11 (core, edge, deep; motion only otherwise, not a material's or leaves')
     if (magelook::isOurs(d.effectId)) {
         const magelook::Part part = magelook::partOfId(d.effectId);
-        c.alphaTest |= part == magelook::Part::Layer ? 1u << 26 : part == magelook::Part::Solid ? 1u << 27 : 1u << 28;
+        c.alphaTest |= part == magelook::Part::Layer   ? 1u << 26
+                       : part == magelook::Part::Solid ? 1u << 27
+                       : part == magelook::Part::Orb   ? (1u << 26 | 1u << 28)  // 3.0.16-beta.10: both - the spheres
+                                                       : 1u << 28;
         const magelook::Palette pal = magelook::paletteOf(magelook::elementOfId(d.effectId));
         for (int k = 0; k < 3; ++k) {
             c.reproject[3 + k] = pal.core[k];
