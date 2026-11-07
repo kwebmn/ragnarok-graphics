@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.13-beta.25 — what's new
+
+**«See-through houses before the character»: smooth at any frame rate.** The see-through faded and came back in 8 frames: at 120 frames a second that is 70 ms - a blink. Now by the clock: it fades in a quarter of a second, holds half a second after the model stops covering and comes back in 0.4 s. Along with the model over the character, a house's neighbouring parts fade only near the character on the screen - lamp posts and benches round it stay as they are.
+
 # uaRO Graphics 3.0.13-beta.24 — what's new
 
 **«See-through houses before the character»: only what covers the character fades.** The game may draw many alike models at once (all trees of a kind), and along with the tree over the character the trees, benches and fences all over the square faded - and blinked as you walked. Now each model inside such a draw fades on its own.
