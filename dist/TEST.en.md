@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.15-beta.6 — what's new
+
+**«New casting look»: the casting at a target as the game draws it, with a magic circle.** For ground skills (Storm Gust, Lord of Vermilion...) the game draws a casting where the skill will land too: its rings now stay as the game draws them, with one even magic circle under them (a double, crooked one before). The casting under the character keeps the new look, as in beta.5.
+
 # uaRO Graphics 3.0.15-beta.5 — what's new
 
 **«New casting look» smaller.** The flame at three quarters of the game's size and lower, the magic circle clearly narrower (1.25 of the game's rings' radius, not 1.8).
