@@ -1,3 +1,34 @@
+# uaRO Graphics 3.0.14 — what's new
+
+Players' ideas from the «50 ideas» list: following a player, long chat lines, the character's silhouette behind buildings, a big screenshot and many smaller things. Everything new that changes the look is off by default - turn it on in the uaRO program.
+
+## Game
+
+- **Steady following of a player.** Shift+click a player - your character follows and keeps up when they stop and set off again. Handy with two game windows: the priest in the second one runs after you. Stop with a click on the ground or Esc. «Steady following of a player», on.
+- **Long chat lines** - up to 234 letters: a long line goes as several messages, cut between words. «Long chat lines», on. The /p, /g, /w and «/ex» commands from the chat menu now put their text in the field.
+- **The camera lower, down to the ground:** «Camera tilt» - «As the game», «Lower», «To the ground».
+- **Small windows** 960×540, 800×600 and 640×480 - for several game windows side by side.
+- **Esc closes an NPC's picture** left after a talk. «Esc closes the NPC's picture», on.
+- **Screen shake, Frost Joke and Scream lines in the chat and the game's swear filter can be turned off:** «Screen shake», «Frost Joke and Scream lines in the chat», «The game's swear filter» (on, as in the game).
+- **Quick teleport:** Teleport and Fly Wing without the screen going dark - «Quick teleport on the map».
+
+## Interface
+
+- **Boss HP bars:** an MVP's wide and golden, a mini-boss's its own - «Boss HP bars».
+- **«Who hits me»:** monsters hitting you framed in red, and how many over the character.
+- **The party's damage in «Hunt»:** each member's share since the hunt began.
+- **Your own chat colours** for the party, the guild, your lines and others'; **the chat log to a file** - «Chat log to a file».
+- **Arrows and tips** on the side of the hotbar with room; **the NPC talk window** sized to its words, and it can be moved.
+- **Experience in the chat once**, MVP lines with spaces, «Not Enough SP» in the interface's language.
+- **The minimap lighter** on the game.
+
+## Graphics
+
+- **«Character's silhouette behind buildings»:** where a house, a tree or a wall hides your character, its light-blue ghost shows.
+- **«Others' skill effects fainter»:** skill effects on other players and monsters at a third of their strength, yours and your party's bright (guild wars, the market).
+- **«Aura does not hide portals»:** the level 99 aura fades over a portal.
+- **Big screenshot: Ctrl+Alt+F11** - a frame without the interface, twice the screen's size, with every effect.
+
 # uaRO Graphics 3.0.13-beta.33 — what's new
 
 **«Character's silhouette behind buildings»: the neck and head no longer go missing.** While the character walked, the camera trailed it, and the sprite's narrow parts (head, neck) sometimes missed the silhouette - now taken with room to spare. And with the character right behind a wall, its top edge no longer leaves an empty band at the neck.
