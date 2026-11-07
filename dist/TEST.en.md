@@ -1,3 +1,9 @@
+# uaRO Graphics 3.0.15-beta.7 — what's new
+
+**A crash loading some maps (guild castles) fixed.** Our unpacker of the game's files (cps.dll) read a little past the data's end, and when a file lay in memory right at a boundary the game fell («Unexpected program error», cps.dll). There since 3.0.2.
+
+**The how many window («Into the bag», «Into the storage»...):** the field is empty now - type the number at once, no erasing the most; Enter alone still takes all. The «1» button is «10».
+
 # uaRO Graphics 3.0.15-beta.6 — what's new
 
 **«New casting look»: the casting at a target as the game draws it, with a magic circle.** For ground skills (Storm Gust, Lord of Vermilion...) the game draws a casting where the skill will land too: its rings now stay as the game draws them, with one even magic circle under them (a double, crooked one before). The casting under the character keeps the new look, as in beta.5.
