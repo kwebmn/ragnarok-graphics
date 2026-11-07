@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.15-beta.5 — what's new
+
+**«New casting look» smaller.** The flame at three quarters of the game's size and lower, the magic circle clearly narrower (1.25 of the game's rings' radius, not 1.8).
+
 # uaRO Graphics 3.0.15-beta.4 — what's new
 
 **«New casting look» as in the picture.** In beta.2-beta.3 the card never got the new look: the flame was only lower and the circle was drawn with the game's texture. Now crisp flame tongues and a magic circle with rings, marks and a star in the element's colour. The circle lies on the ground along its slope - its near half no longer sinks into it.
