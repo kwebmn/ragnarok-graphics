@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.15-beta.10 — what's new
+
+**Getting the mages' new effects ready.** The skill effects record in betas (uaro-graphics\logs\uaro-effects.txt, sent with a report) now takes up to 64 effects a game and names each by the skill the character cast before it - to record all the Mage, Wizard and Sage skills in one go.
+
 # uaRO Graphics 3.0.15-beta.9 — what's new
 
 **«Item windows size»** (the «Interface» page, «Main»: 70, 85 or 100 %). «Items», the storage (the guild's too) and the cart smaller - two side by side no longer cover the whole screen; the other windows stay as they are. Applied at once, no game restart.
