@@ -506,27 +506,32 @@ float hillLight(float3 P) {
 
 // 3.0.13-beta.26 (the owner: «делай дыру, мигает» - the models chosen whole, on the processor, went on and off as
 // one walked and turned the camera): a model's pixel round the character's body, nearer the camera than it along
-// the ground, see-through; it moves with the character smoothly, whatever the game's draws hold. 3.0.13-beta.27 (the
-// owner: «а без решетки можно?», R-DRBZ2V «черное пятно» - the pattern's every other depth darkened by the shadows in
-// the corners): no pattern - the middle left out whole, the rim laid over by its alpha (the draw blended, draw.cpp
-// holeOver; the alpha the texture's under alpha to coverage, else whole)
+// the ground, see-through; it moves with the character smoothly, whatever the game's draws hold. .27 (R-DRBZ2V): no
+// pattern. 3.0.13-beta.28 (the owner: «надо чтобы прозрачно было а не дыра»; R-6BDX5A: the rim laid over black - the
+// game draws its walls before the ground): two passes - holeF > 0, the model's own draw, the hole left out; holeF < 0,
+// the same draw again once the world is down (draw.cpp holeRec, ao.cpp applyHoles), only the hole, laid over the
+// ground and the character by kSeen in the middle, whole at its rim
 void seeThrough(float4 pos, inout float4 c) {
     if (holeZ <= 0.0) return;
-    float keep = 1.0;
+    bool inside = false;
+    float e = 1.0;
     if (pos.w < holeZ - 3.0) {
         float2 g = (pos.xy - 0.5 - float2(jitterX, jitterY)) / scale;  // draw_vs turned back: game pixels
-        float e = length((g - float2(holeX, holeY - 0.55 * holeH)) / (holeH * float2(0.8, 0.95)));
+        e = length((g - float2(holeX, holeY - 0.55 * holeH)) / (holeH * float2(0.8, 0.95)));
         if (e < 1.0) {
             float2 centre = floor(targetSize / scale * 0.5);
-            float3 p = float3((g - centre) * pos.w / holeF, pos.w);  // the point in the view
+            float3 p = float3((g - centre) * pos.w / abs(holeF), pos.w);  // the point in the view
             float up = p.y * holeUy + p.z * holeUz;
-            // behind it along the ground (R-UQ7AGY): whole
-            if (sqrt(max(dot(p, p) - up * up, 0.0)) < holeG - 3.0)
-                keep = smoothstep(0.55, 1.0, e);  // core/model_fade.hpp holeAt
+            inside = sqrt(max(dot(p, p) - up * up, 0.0)) < holeG - 3.0;  // behind it along the ground: whole
         }
     }
-    if (keep < 0.02) discard;
-    c.a = (((alphaTest >> 17) & 1) != 0 ? c.a : 1.0) * keep;
+    if (holeF > 0.0) {
+        if (inside) discard;
+        return;
+    }
+    if (!inside) discard;
+    // core/model_fade.hpp holeAt, kSeen
+    c.a = (((alphaTest >> 17) & 1) != 0 ? c.a : 1.0) * lerp(0.35, 1.0, smoothstep(0.55, 1.0, e));
 }
 
 float4 shade(PsIn i) {

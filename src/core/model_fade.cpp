@@ -51,7 +51,7 @@ float holeAt(const float hole[8], float gx, float gy, float z, int width, int he
     const float up = p[1] * hole[5] + p[2] * hole[6];
     if (std::sqrt(std::max(p[0] * p[0] + p[1] * p[1] + p[2] * p[2] - up * up, 0.0f)) >= hole[4] - kNearer) return 1.0f;
     const float t = std::clamp((e - 0.55f) / 0.45f, 0.0f, 1.0f);
-    return t * t * (3.0f - 2.0f * t);
+    return kSeen + (1.0f - kSeen) * t * t * (3.0f - 2.0f * t);
 }
 
 }  // namespace uagfx::modelfade

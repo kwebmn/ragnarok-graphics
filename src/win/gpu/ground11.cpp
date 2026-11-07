@@ -524,4 +524,42 @@ void Renderer11::applyDarkness() {
     darknessRec_.reset();
 }
 
+// 3.0.13-beta.28 (noteDarkness's way): a model's draw over the hole round the character, kept for applyHoles.
+void Renderer11::noteHole(const FrameRecord& rec, const DrawCmd& d, const DrawSetup& s) {
+    const std::vector<uint8_t>& v = rec.vertexBytes();
+    const std::vector<uint16_t>& ix = rec.indices();
+    if (holeRec_.draws().size() >= 256 ||
+        d.vertexOffset + size_t(d.vertexCount) * FrameRecord::stride(d.fvf) > v.size() ||
+        size_t(d.firstIndex) + d.indexCount > ix.size())
+        return;
+    DrawCmd cmd = d;
+    cmd.state = holeRec_.addState(s);
+    holeRec_.draw(cmd, v.data() + d.vertexOffset, d.vertexCount, d.indexCount ? ix.data() + d.firstIndex : nullptr,
+                  d.indexCount);
+}
+
+// 3.0.13-beta.28: the models over the hole drawn again in it alone, laid over the ground and the character (as
+// applyDarkness draws its own record)
+void Renderer11::applyHoles() {
+    holesLaid_ = true;
+    if (holeRec_.draws().empty()) return;
+    flushBatch();  // the game's draws gathered so far are of its own vertices
+    const std::vector<uint8_t>& v = holeRec_.vertexBytes();
+    const std::vector<uint16_t>& ix = holeRec_.indices();
+    if (fillBuffer(seamVertices_, seamVertexBytes_, D3D11_BIND_VERTEX_BUFFER, v.data(), v.size(),
+                   bgraVertices_ ? nullptr : &holeRec_) &&
+        (ix.empty() || fillBuffer(seamIndices_, seamIndexBytes_, D3D11_BIND_INDEX_BUFFER, ix.data(),
+                                  ix.size() * sizeof(uint16_t), nullptr))) {
+        std::swap(vertices_, seamVertices_);
+        std::swap(indices_, seamIndices_);
+        holePass_ = true;
+        for (const DrawCmd& cmd : holeRec_.draws()) draw(holeRec_, cmd);
+        flushBatch();
+        holePass_ = false;
+        std::swap(vertices_, seamVertices_);
+        std::swap(indices_, seamIndices_);
+    }
+    holeRec_.reset();
+}
+
 }  // namespace uagfx::gpu

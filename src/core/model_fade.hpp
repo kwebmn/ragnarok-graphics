@@ -36,8 +36,10 @@ Focus focusOf(const camera::Projection& p, const float view[12], const float at[
 // its distance from the camera along the ground, the world's up in the view (y, z: the game's camera never rolls)
 // and the projection's f; all 0 when the focus is not known
 void holeOf(const Focus& f, float out[8]);
-// How much of a model's pixel is kept at game pixel (gx, gy) of a game picture width x height, its view depth z:
-// shaders.cpp seeThrough's, kept the same (1 whole, 0 left out - the hole's middle; .27: no pattern, a rim between)
+// How much a model's pixel covers at game pixel (gx, gy) of a game picture width x height, its view depth z:
+// shaders.cpp seeThrough's, kept the same - 1 whole, kSeen in the hole's middle (.28: see-through, not a hole), a rim
+// between
+constexpr float kSeen = 0.35f;
 float holeAt(const float hole[8], float gx, float gy, float z, int width, int height);
 
 }  // namespace uagfx::modelfade

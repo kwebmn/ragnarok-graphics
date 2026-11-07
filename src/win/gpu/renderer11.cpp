@@ -1269,8 +1269,9 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
     // 0.90: a pass of the driver's own draws over what the game drew so far: the gathered call goes first
     if (s.ui && worldDrawn_ && (!stepsDone_ || !nightDone_ || !lightDone_ || !floorDone_ || !mistDone_ ||
                                 !shaftsDone_ || !heatDone_ || !bloomDone_ ||
-                                !gradeDone_ || !weatherDone_ || !darknessLaid_))
+                                !gradeDone_ || !weatherDone_ || !darknessLaid_ || !holesLaid_))
         flushBatch();
+    if (s.ui && !holesLaid_) applyHoles();  // 3.0.13-beta.28: see-through round the character, under the night
     if (s.ui && worldDrawn_ && !stepsDone_) applySteps();  // 2.5.2: on the ground, under the night
     if (s.ui && worldDrawn_ && !nightDone_) applyNight();  // 0.63: the lights shine out of it
     if (s.ui && worldDrawn_ && !lightDone_) {
@@ -1296,10 +1297,12 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
     const bool toGlow = !s.ui && glowActive_ && d.effect != uint8_t(effect_exe::Kind::Aura) &&  // 1.25
                         !effect_exe::isCasting(d.effectId);                                          // 2.7.39
     // 2.5.2: a torch's layers - the glow and (torch_flame) the flame drawn anew once the world is (takeTorch)
-    if (!seamPass_ && !s.ui && d.vertexCount == 4 && !objectTextures_.empty() && effects_.torch && takeTorch(rec, d))
+    if (!seamPass_ && !holePass_ && !s.ui && d.vertexCount == 4 && !objectTextures_.empty() && effects_.torch &&
+        takeTorch(rec, d))
         return;
     // 2.6.12: the torches off, the game's flames (drawn as it has them) still show the embers where the fires are
-    if (!seamPass_ && !s.ui && d.vertexCount == 4 && !objectTextures_.empty() && !effects_.torch && crittersNeedFire())
+    if (!seamPass_ && !holePass_ && !s.ui && d.vertexCount == 4 && !objectTextures_.empty() && !effects_.torch &&
+        crittersNeedFire())
         noteCritterFlame(rec, d);
     // 2.7.54 (as draw.cpp): a draw of a map warp - its rings, floor or sparks - shaded anew where the game draws it;
     // the light round it (2.5.3) by its floor's middle (notePortal)
@@ -1344,7 +1347,8 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
     if (!seamPass_ && !s.ui && d.fvf == d3d7::FVF_TL2 && s.zWrite && (grassWanted() || hillsWanted() || seamsWanted()))
         noteGround(rec, d);
     // 2.5.9 (draw.cpp 1.16): an opaque draw of the world into the next frame's mirror
-    if (!seamPass_ && !s.ui && !s.blend && s.zEnable && s.zWrite && mirrorCollecting()) noteCaster(rec, d, s);
+    if (!seamPass_ && !holePass_ && !s.ui && !s.blend && s.zEnable && s.zWrite && mirrorCollecting())
+        noteCaster(rec, d, s);
     // 2.5.9 (draw.cpp 1.9): the seams' strips at the first blended draw of the world, before the soft shadows - drawn
     // by this function (seamPass_), which makes no notes and no passes for them
     if (!seamPass_ && !s.ui && s.blend && !seamsDone_ && seamsWanted() && !groundTris_.empty()) {
@@ -1436,7 +1440,14 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
     packStage(s.stage[0], d.keyed[0], c.stage0);
     packStage(s.stage[1], d.keyed[1], c.stage1);
     // 3.0.13-beta.26: [effects] fade_models - the hole round the character (draw.cpp's)
-    if (holeOver(rec, d, s, hole_)) std::copy(hole_, hole_ + 8, c.hole);
+    // 3.0.13-beta.28: draw.cpp's - drawn without the hole, kept; drawn again in it alone, laid over (applyHoles)
+    if (holePass_ || (!seamPass_ && !darknessPass_ && holeOver(rec, d, s, hole_))) {
+        std::copy(hole_, hole_ + 8, c.hole);
+        if (holePass_)
+            c.hole[7] = -c.hole[7];
+        else
+            noteHole(rec, d, s);
+    }
     // 2.5.2: the ground's lightmap (its 256x256 atlas of 8x8 cells) sampled smoothly (as draw.cpp, 0.22.6) - the
     // weak set's own, never set here until now
     if (effects_.smoothLight && !s.ui && d.fvf == d3d7::FVF_TL2 && t[1]->width == 256 && t[1]->height == 256)
@@ -1496,7 +1507,7 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
         l.viewToWorld = cameraValid_ ? viewToWorld_ : nullptr;
         l.projection = camera::projectionFor(gameWidth_, gameHeight_);
         leafShading(rec, d, l, c);
-        if (effects_.leafFall) noteCrown(rec, d);  // 2.5.4: the leaves falling from it (the living world)
+        if (effects_.leafFall && !holePass_) noteCrown(rec, d);  // 2.5.4: the leaves falling from it (the living world)
     }
     // 0.99, the modern water (as draw.cpp): a cell of the map's water by water_vs/water_ps, from the picture and the
     // depth before the frame's first water; without them as the game draws it.
@@ -1681,13 +1692,13 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
     is.samplers[0] = samplerState(sampled[0], aniso);
     is.samplers[1] = samplerState(sampled[1], aniso);
     const uint8_t srcBlend = softAdd ? uint8_t(d3d7::BLEND_INVDESTCOLOR) : s.srcBlend;  // 2.7.38
-    const bool holed = c.hole[3] > 0.0f;  // 3.0.13-beta.27: the hole's rim laid over (draw.cpp's)
-    is.blend = blendState(s.blend || holed, d3dmap::blendOf(holed ? uint8_t(d3d7::BLEND_SRCALPHA) : srcBlend,
-                                                            d3d7::BLEND_ONE),
-                          d3dmap::blendOf(holed ? uint8_t(d3d7::BLEND_INVSRCALPHA) : s.dstBlend, d3d7::BLEND_ZERO),
+    const bool laidOver = holePass_;  // 3.0.13-beta.28: the hole alone, laid over by its alpha, writing no depth
+    is.blend = blendState(s.blend || laidOver, d3dmap::blendOf(laidOver ? uint8_t(d3d7::BLEND_SRCALPHA) : srcBlend,
+                                                               d3d7::BLEND_ONE),
+                          d3dmap::blendOf(laidOver ? uint8_t(d3d7::BLEND_INVSRCALPHA) : s.dstBlend, d3d7::BLEND_ZERO),
                           D3D11_COLOR_WRITE_ENABLE_RED | D3D11_COLOR_WRITE_ENABLE_GREEN |
                               D3D11_COLOR_WRITE_ENABLE_BLUE);
-    is.depth = depthState(s.zEnable, s.zWrite, d3dmap::compareOf(s.zFunc));
+    is.depth = depthState(s.zEnable, s.zWrite && !laidOver, d3dmap::compareOf(s.zFunc));
     // 2.6.3: a model a step of the game's 16-bit Z behind the ground (pipeline_key.hpp behindGround); the 16-bit
     // world's D16 has that step itself
     is.raster = rasterState(d3dmap::cullOf(s.cull), behindGround(s, d.fvf, groundDrawn_) &&
@@ -2251,6 +2262,10 @@ void Renderer11::present(HWND window, int outputWidth, int outputHeight, const R
                   source.height(), fit.width(), fit.height(), fit.left, fit.top, swapWidth_, swapHeight_);
     }
     // 3.0.5-beta.2: each pass its span ([debug] profile; the timed ones by their effect's name)
+    if (!holesLaid_) {
+        pmark("the models see-through round the character");
+        applyHoles();  // 3.0.13-beta.28
+    }
     if (worldDrawn_ && !stepsDone_) {
         pmark(effectName11(kTimeSteps11));
         applySteps();  // 2.5.2
@@ -2350,6 +2365,8 @@ void Renderer11::present(HWND window, int outputWidth, int outputHeight, const R
     critterFlames_.clear();  // 2.6.12
     darknessRec_.reset();  // 2.6.18
     darknessLaid_ = false;
+    holeRec_.reset();  // 3.0.13-beta.28
+    holesLaid_ = false;
     shaftsDone_ = false;  // 2.5.5
     shaftLights_ = 0;
     updateWind();
