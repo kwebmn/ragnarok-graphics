@@ -1,3 +1,5 @@
+- The minimap on ama_dun01 (Tatami Maze) shows the maze again instead of an «X»: the red route on the map's picture is no longer taken for a warp dot. The map's picture is ready at once instead of after 47 seconds.
+
 # uaRO Graphics 3.0.16-beta.5 — what's new
 
 **No more doubled letters.** In the battle mode, after Enter to type, the game put every letter twice into any field but the chat's: an NPC's question, «How many» and the like. The game's own bug; now a letter goes in once.
