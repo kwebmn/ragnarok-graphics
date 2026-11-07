@@ -297,7 +297,9 @@ HRESULT Device7::record(D3DPRIMITIVETYPE type, DWORD fvf, const void* vertices, 
     if (!castCircleNext_ && fvf == d3d7::FVF_TL1 && !setup.ui && tag.kind == effect_exe::Kind::Skill &&
         effect_exe::isCasting(tag.id) && c.effects().newCasting && c.enhanced()) {
         uint8_t quad[4 * 32];
-        if (castLooks_.circleQuad(tag.owner ? tag.owner : tag.seed, quad)) {
+        const uint32_t key = castlook::keyOf(tag.owner, tag.id);
+        if (!tag.owner) castLooks_.note(static_cast<const uint8_t*>(vertices), vertexCount, 32, key);  // .6
+        if (castLooks_.circleQuad(key, quad)) {
             castCircleNext_ = true;
             record(D3DPT_TRIANGLESTRIP, fvf, quad, 4, nullptr, 0);
             castCircleNext_ = false;
@@ -349,7 +351,7 @@ HRESULT Device7::record(D3DPRIMITIVETYPE type, DWORD fvf, const void* vertices, 
     const bool crowd = fx.crowdEffects && tag.kind == effect_exe::Kind::Skill && tag.owner && !c.friendOf(tag.owner);
     // 3.0.15-beta.3 (R-JET379: no circle, the flame faint): the new casting's own brightness, not 2.7.39's quieting -
     // softened first, its feet walls' alpha never reached core/cast_look's kBaseAlpha
-    const bool ownCasting = fx.newCasting && effect_exe::isCasting(tag.id);
+    const bool ownCasting = fx.newCasting && effect_exe::isCasting(tag.id) && tag.owner;  // .6: not at a target
     const bool skill = tag.kind == effect_exe::Kind::Skill && !ownCasting &&
                        (crowd || (fx.skillsSoft && drawPercent < 100));
     if ((aura || skill) && c.enhanced()) {
@@ -372,8 +374,8 @@ HRESULT Device7::record(D3DPRIMITIVETYPE type, DWORD fvf, const void* vertices, 
     if (castCircleNext_) {
         cmd.effectId = castlook::kCircleId;
     } else if (fx.newCasting && c.enhanced() && !setup.ui && fvf == d3d7::FVF_TL1 &&
-               tag.kind == effect_exe::Kind::Skill && effect_exe::isCasting(tag.id)) {
-        const uint32_t owner = tag.owner ? tag.owner : tag.seed;
+               tag.kind == effect_exe::Kind::Skill && effect_exe::isCasting(tag.id) && tag.owner) {
+        const uint32_t owner = castlook::keyOf(tag.owner, tag.id);
         const auto* bytes = static_cast<const uint8_t*>(vertices);
         cast_.assign(bytes, bytes + size_t(vertexCount) * 32);
         castLooks_.shorten(cast_.data(), vertexCount, 32, owner, float(c.screenHeight) * castlook::kFlameHeight);

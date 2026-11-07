@@ -12,6 +12,10 @@ namespace uagfx::castlook {
 // up the screen in two seconds). The new look keeps the game's walls and times: their tops held low (shorten), drawn
 // as crisp streaks by the shaders (kRingId), and a magic circle on the ground under the caster (circleQuad, kCircleId).
 constexpr uint16_t kRingId = 0xFFF1, kCircleId = 0xFFF2;  // DrawCmd::effectId of the new look's draws
+// .6 (the owner on the casting at a ground skill's target: «надо чтобы как вид игры, но с наворотами нового»): a
+// casting on no actor is one at a target - its walls as the game draws them, one circle under it; each of its rings
+// had its own primitive's seed, so its own circle (R-H9XW7J: a double, crooked ring) - all of an effect's under one key
+inline uint32_t keyOf(uint32_t owner, uint16_t id) { return owner ? owner : 0xFFFF0000u | id; }
 constexpr float kBaseAlpha = 150;  // the walls at the feet (180) - not the tall one (60)
 // .5 (the owner: «сам каст можно меньше сделать?»): the walls drawn kShrink of the game's about their middle, the
 // circle kCircleScale of the game's feet walls (1.8 before), the flame at most kFlameHeight of the screen (0.09)
@@ -35,6 +39,8 @@ public:
     // A casting draw (TL1, `stride` bytes a vertex, x y z rhw, diffuse at 16, u v at 24) of `owner` in place: its
     // walls' tops brought down to at most about `most` pixels over their feet; its feet walls' bottoms noted
     void shorten(uint8_t* v, uint32_t count, uint32_t stride, uint32_t owner, float most);
+    // .6: only its feet walls noted (the casting at a ground skill's target: the game's own look, a circle under it)
+    void note(const uint8_t* v, uint32_t count, uint32_t stride, uint32_t owner);
     // The circle under `owner` from the last frame's feet walls (once a frame): false when none or already given
     bool circleQuad(uint32_t owner, uint8_t out[4 * 32]);
 

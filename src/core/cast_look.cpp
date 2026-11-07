@@ -13,6 +13,29 @@ void Looks::frame() {
     if (feet_.size() > 4096) feet_.clear();
 }
 
+void Looks::note(const uint8_t* v, uint32_t count, uint32_t stride, uint32_t owner) {
+    if (!v || stride < 32) return;
+    for (uint32_t i = 0; i < count; ++i) {
+        float f[4], uv[2];
+        uint32_t diffuse;
+        std::memcpy(f, v + size_t(i) * stride, 16);
+        std::memcpy(&diffuse, v + size_t(i) * stride + 16, 4);
+        std::memcpy(uv, v + size_t(i) * stride + 24, 8);
+        if (uv[1] < 0.5f || float(diffuse >> 24) < kBaseAlpha) continue;
+        Box& b = now_[owner];
+        if (f[1] < b.y0) b.zTop = f[2], b.rhwTop = f[3];
+        if (f[1] > b.y1) b.zBottom = f[2], b.rhwBottom = f[3];
+        b.x0 = std::min(b.x0, f[0]);
+        b.y0 = std::min(b.y0, f[1]);
+        b.x1 = std::max(b.x1, f[0]);
+        b.y1 = std::max(b.y1, f[1]);
+        b.z += f[2];
+        b.rhw += f[3];
+        ++b.n;
+        b.colour = diffuse;
+    }
+}
+
 void Looks::shorten(uint8_t* v, uint32_t count, uint32_t stride, uint32_t owner, float most) {
     if (!v || stride < 32 || most <= 0) return;
     const auto keyOf = [&](float u) { return (uint64_t(owner) << 32) | uint32_t(std::lround(u * 1000.0f)); };

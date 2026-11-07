@@ -58,3 +58,26 @@ TEST(cast_look_circle_under_the_feet_walls_once_a_frame) {
     CHECK(a[0] < 80.0f && d[0] > 120.0f && a[1] < 590.0f && d[1] > 610.0f);  // larger than the feet walls, round them
     CHECK(!l.circleQuad(8, quad));  // another caster's own
 }
+
+TEST(cast_look_a_target_casting_is_one_circle_and_the_games_walls) {
+    // .6: a casting on no actor - its rings under one key, noted as they are, one circle the next frame
+    castlook::Looks l;
+    const uint32_t key = castlook::keyOf(0, 54);
+    CHECK(key == castlook::keyOf(0, 54) && key != castlook::keyOf(7, 54));
+    std::vector<uint8_t> a(3 * 32), b(3 * 32);
+    put(a, 0, 80, 590, 0.0f, 1.0f, 180);
+    put(a, 1, 120, 610, 0.5f, 1.0f, 180);
+    put(a, 2, 100, 400, 0.5f, 0.0f, 180);
+    put(b, 0, 60, 580, 0.0f, 1.0f, 180);  // another ring of the same effect
+    put(b, 1, 140, 620, 0.5f, 1.0f, 180);
+    put(b, 2, 100, 400, 0.5f, 0.0f, 180);
+    l.note(a.data(), 3, 32, key);
+    l.note(b.data(), 3, 32, key);
+    CHECK(yOf(a, 2) == 400.0f);  // its wall as the game made it
+    l.frame();
+    uint8_t quad[4 * 32];
+    CHECK(l.circleQuad(key, quad) && !l.circleQuad(key, quad));
+    float first[2];
+    std::memcpy(first, quad, 8);
+    CHECK(first[0] < 60.0f);  // round both rings
+}
