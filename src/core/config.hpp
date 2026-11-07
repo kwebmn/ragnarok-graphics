@@ -193,6 +193,9 @@ struct EffectSettings {
     // 3.0.15-beta.2 (the skills redraw after nostalRE's recipes): the casting crisp and low with a magic circle on the
     // ground (core/cast_look) - off as new looks are
     bool newCasting = false;
+    // 3.0.15-beta.8 (the owner: «давай сделаем полностью стормгаст»): Storm Gust redrawn - its layers laid over, crisp
+    // and icy in place of added white, its ice spikes faceted (core/cast_look.hpp stormPart) - off as new looks are
+    bool newStormGust = false;
     // 0.28: the maps' fireflies - those the game shows and those the maps' makers placed that it does not - glow,
     // flash now and then and light a little around them. On by default.
     bool fireflies = true;

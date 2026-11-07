@@ -38,10 +38,26 @@ static unsigned long readable(const unsigned char* p, unsigned long n) {
     return have < n ? have : n;
 }
 
+// 3.0.15-beta.8 (the same player's third crash: msvcrt's memcpy from in here writing at 0x1192aff0, a page's end):
+// the room told may also be more than the buffer has - the bytes that can be written at `p`, at most `n`
+static unsigned long writable(unsigned char* p, unsigned long n) {
+    unsigned long have = 0;
+    while (have < n) {
+        MEMORY_BASIC_INFORMATION m{};
+        if (!VirtualQuery(p + have, &m, sizeof m)) break;
+        const DWORD canWrite = PAGE_READWRITE | PAGE_WRITECOPY | PAGE_EXECUTE_READWRITE | PAGE_EXECUTE_WRITECOPY;
+        if (m.State != MEM_COMMIT || (m.Protect & (PAGE_NOACCESS | PAGE_GUARD)) || !(m.Protect & canWrite)) break;
+        const auto end = reinterpret_cast<unsigned char*>(m.BaseAddress) + m.RegionSize;
+        have += static_cast<unsigned long>(end - (p + have));
+    }
+    return have < n ? have : n;
+}
+
 // Back: *destLen the room in, the data's length out (Z_OK, Z_BUF_ERROR, Z_DATA_ERROR, Z_MEM_ERROR)
 int uncompress(unsigned char* dest, unsigned long* destLen, const unsigned char* source, unsigned long sourceLen) {
     LARGE_INTEGER a, b;
     QueryPerformanceCounter(&a);
+    if (destLen) *destLen = writable(dest, *destLen);  // .8: past what can be written: Z_BUF_ERROR, not a crash
     const int result = uagfx::client_libs::zlibUncompress(dest, destLen, source, readable(source, sourceLen));
     QueryPerformanceCounter(&b);
     InterlockedIncrement(&g_files);

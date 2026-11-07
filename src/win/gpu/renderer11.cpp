@@ -1457,6 +1457,10 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
         c.twin[0] = 0.0f;
         c.twin[3] = waterTime();
     }
+    // 3.0.15-beta.8: [effects] new_storm_gust's parts (core/cast_look.hpp, shaders.cpp stormLayer/stormIce)
+    if (d.effectId == castlook::kStormLayerId) c.alphaTest |= 1u << 26;
+    if (d.effectId == castlook::kStormIceId) c.alphaTest |= 1u << 27;
+    if (d.effectId == castlook::kStormHazeId) c.alphaTest |= 1u << 28;
     c.fogEnable = gameFogDrawn(s.fog, effects_.noGameFog, outdoors_) ? 1u : 0u;  // 2.6.10
     c.fogColor[0] = float((s.fogColor >> 16) & 255) / 255.0f;
     c.fogColor[1] = float((s.fogColor >> 8) & 255) / 255.0f;

@@ -40,6 +40,7 @@ const Member kMembers[] = {
     {"skills_soft", SkillEffects, 1, &E::skillsSoft},
     {"crowd_effects", SkillEffects, 1, &E::crowdEffects},  // 3.0.13-beta.20
     {"new_casting", SkillEffects, 1, &E::newCasting},      // 3.0.15-beta.2
+    {"new_storm_gust", SkillEffects, 1, &E::newStormGust},  // 3.0.15-beta.8
     {"skill_sparks", SkillEffects, 2, &E::skillSparks},
     {"fire_light", SkillEffects, 1, &E::fireLight},
 

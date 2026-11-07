@@ -188,6 +188,7 @@ TEST(effect_groups_fourteen_by_what_the_eye_is_on) {
         {"rim_light", Characters}, {"footprints", Characters},
         {"hit_flash", Characters}, {"aura", Characters}, {"aura_portals", Characters}, {"silhouette", Characters},
         {"skills_soft", SkillEffects}, {"crowd_effects", SkillEffects}, {"new_casting", SkillEffects},
+        {"new_storm_gust", SkillEffects},
         {"skill_sparks", SkillEffects},
         {"fire_light", SkillEffects},
         {"torch", Fire}, {"embers", Fire}, {"smoke", Fire}, {"lava", Fire}, {"heat", Fire},

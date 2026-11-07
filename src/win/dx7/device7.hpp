@@ -79,7 +79,7 @@ private:
     // 3.0.15-beta.2: [effects] new_casting (core/cast_look.hpp) - the casting's walls in a copy; the circle being drawn
     castlook::Looks castLooks_;
     std::vector<uint8_t> cast_;
-    bool castCircleNext_ = false, castTold_ = false;
+    bool castCircleNext_ = false, castTold_ = false, stormTold_ = false;
     uint32_t captureFrame_ = 0;
     int captureState_ = 0;  // 0 not asked, 1 writing, -1 not (a release, or the file would not open)
     void captureEffect(const effect_exe::Tag& tag, const DrawSetup& setup, DWORD fvf, const void* vertices,

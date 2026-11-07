@@ -581,6 +581,8 @@ const std::vector<IniSetting>& iniSettings() {
          Text::FxCrowdEffectsHint, "", &E::crowdEffects},  // 3.0.13-beta.20
         {"effects", "new_casting", Page::Effects, Control::Check, 0, 1, 0, {"0", "1"}, {}, Text::FxNewCasting,
          Text::FxNewCastingHint, "", &E::newCasting},  // 3.0.15-beta.2
+        {"effects", "new_storm_gust", Page::Effects, Control::Check, 0, 1, 0, {"0", "1"}, {}, Text::FxNewStormGust,
+         Text::FxNewStormGustHint, "", &E::newStormGust},  // 3.0.15-beta.8
         {"effects", "silhouette", Page::Effects, Control::Check, 0, 1, 0, {"0", "1"}, {}, Text::FxSilhouette,
          Text::FxSilhouetteHint, "", &E::silhouette},  // 3.0.13-beta.30
         {"effects", "aura_portals", Page::Effects, Control::Check, 0, 1, 0, {"0", "1"}, {}, Text::FxAuraPortals,

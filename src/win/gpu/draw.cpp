@@ -448,6 +448,10 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
         c.twin[0] = 0.0f;  // no leaves' sway
         c.twin[3] = waterTime();
     }
+    // 3.0.15-beta.8: [effects] new_storm_gust's parts (core/cast_look.hpp, shaders.cpp stormLayer/stormIce)
+    if (d.effectId == castlook::kStormLayerId) c.alphaTest |= 1u << 26;
+    if (d.effectId == castlook::kStormIceId) c.alphaTest |= 1u << 27;
+    if (d.effectId == castlook::kStormHazeId) c.alphaTest |= 1u << 28;
     if (coverage) c.alphaTest |= 1u << 17;
     if (toLayer && !s.blend) c.alphaTest |= 1u << 18;  // part 3: opaque in the layer (0.8 review I2)
     // 0.18: its colour into the glow target - light it adds, or a factor it multiplies the light under it by.

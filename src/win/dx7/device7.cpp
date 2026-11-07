@@ -352,7 +352,9 @@ HRESULT Device7::record(D3DPRIMITIVETYPE type, DWORD fvf, const void* vertices, 
     // 3.0.15-beta.3 (R-JET379: no circle, the flame faint): the new casting's own brightness, not 2.7.39's quieting -
     // softened first, its feet walls' alpha never reached core/cast_look's kBaseAlpha
     const bool ownCasting = fx.newCasting && effect_exe::isCasting(tag.id) && tag.owner;  // .6: not at a target
-    const bool skill = tag.kind == effect_exe::Kind::Skill && !ownCasting &&
+    // 3.0.15-beta.8: [effects] new_storm_gust - its own brightness too
+    const bool ownStorm = fx.newStormGust && tag.kind == effect_exe::Kind::Skill && tag.id == castlook::kStormId;
+    const bool skill = tag.kind == effect_exe::Kind::Skill && !ownCasting && !ownStorm &&
                        (crowd || (fx.skillsSoft && drawPercent < 100));
     if ((aura || skill) && c.enhanced()) {
         static bool logged = false;
@@ -381,6 +383,33 @@ HRESULT Device7::record(D3DPRIMITIVETYPE type, DWORD fvf, const void* vertices, 
         castLooks_.shorten(cast_.data(), vertexCount, 32, owner, float(c.screenHeight) * castlook::kFlameHeight);
         vertices = cast_.data();
         cmd.effectId = castlook::kRingId;
+    }
+    // 3.0.15-beta.8: [effects] new_storm_gust - its parts told to the shaders by their own ids; its added layers laid
+    // over instead (core/cast_look.hpp stormPart)
+    if (ownStorm && c.enhanced() && !setup.ui && fvf == d3d7::FVF_TL1) {
+        const auto* bytes = static_cast<const uint8_t*>(vertices);
+        float x0 = 1e9f, x1 = -1e9f;
+        for (DWORD i = 0; i < vertexCount; ++i) {
+            float x;
+            std::memcpy(&x, bytes + size_t(i) * 32, 4);
+            x0 = std::min(x0, x);
+            x1 = std::max(x1, x);
+        }
+        const castlook::StormPart part = castlook::stormPart(setup.blend, setup.srcBlend, setup.dstBlend, vertexCount,
+                                                             x1 - x0, float(c.screenWidth));
+        if (part == castlook::StormPart::Ice) {
+            cmd.effectId = castlook::kStormIceId;
+        } else if (part != castlook::StormPart::None) {
+            cmd.effectId = part == castlook::StormPart::Haze ? castlook::kStormHazeId : castlook::kStormLayerId;
+            DrawSetup over = setup;
+            over.dstBlend = d3d7::BLEND_INVSRCALPHA;
+            cmd.state = c.record.addState(over);
+        }
+        if (part != castlook::StormPart::None && !stormTold_) {
+            stormTold_ = true;
+            LOG_INFO("effects: Storm Gust in its new look - its layers laid over, crisp and icy, its spikes faceted "
+                     "([effects] new_storm_gust)");
+        }
     }
     if (c.enhanced()) {  // 2.7.37: what of the bright draws is made softer, now and then in the log
         if (tag.kind == effect_exe::Kind::Skill)

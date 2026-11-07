@@ -556,6 +556,44 @@ float4 castCircle(float2 uv, float2 du, float2 dv, float4 d) {
     return float4(lerp(d.rgb * 0.25, lit, saturate(light * 1.5 + glow * 4.0)), a);
 }
 
+// 3.0.15-beta.8 (the owner: «давай сделаем полностью стормгаст»): Storm Gust's parts (core/cast_look.hpp
+// stormPart). alphaTest bit 26, a layer the game added on, laid over now: what it would have added (its brightest
+// channel times its alpha) its cover, crisp at the edge, white where densest and icy blue round it; a coloured texel
+// (the lightning) keeps its hue. Bit 28, the wide whirl: soft, no edge. Bit 27, an ice spike's face: lit by its own
+// slope (the face's normal from the view's depth on the screen) - facets, a glint, whiter to the tip.
+float4 stormLayer(float4 c, bool haze) {
+    float most = max(c.r, max(c.g, c.b));
+    float amount = most * c.a;
+    float3 ice = float3(0.62, 0.80, 1.0);
+    float a;
+    float3 rgb;
+    if (haze) {
+        a = saturate(amount * 1.1) * 0.7;
+        rgb = lerp(ice, float3(1.0, 1.0, 1.0), 0.4);
+    } else {
+        a = smoothstep(0.05, 0.35, amount) * 0.92;
+        rgb = lerp(ice, float3(1.0, 1.0, 1.0), smoothstep(0.12, 0.5, amount));
+    }
+    float hue = (most - min(c.r, min(c.g, c.b))) / max(most, 1e-3);
+    rgb = lerp(rgb, saturate(c.rgb / max(most, 1e-3)), saturate(hue * 1.5));
+    return float4(rgb, a);
+}
+float4 stormIce(float4 pos, float2 uv, float4 c) {
+    float2 game = targetSize / scale;
+    float2 g = (pos.xy - 0.5 - float2(jitterX, jitterY)) / scale;
+    float f = game.y * 0.5 / 0.13165;  // the game's projection: tan(7.5 degrees)
+    float3 p = float3((g - game * 0.5) * pos.w / f, pos.w);
+    float3 n = normalize(cross(ddx(p), ddy(p)));
+    if (n.z > 0.0) n = -n;  // the face towards the camera (the view looks along +z)
+    float3 l = normalize(float3(-0.45, -0.75, -0.5));  // from above (the view's y goes down) and the left
+    float lit = saturate(dot(n, l));
+    float glint = pow(saturate(dot(reflect(-l, n), float3(0.0, 0.0, -1.0))), 24.0);
+    float3 rgb = lerp(float3(0.28, 0.52, 0.84), float3(0.86, 0.95, 1.0), lit);
+    rgb = lerp(rgb, float3(1.0, 1.0, 1.0), 0.35 * saturate(1.0 - uv.y));
+    rgb += 0.12 * (max(c.r, max(c.g, c.b)) - 0.5) + glint * 0.8;
+    return float4(saturate(rgb), 0.88 * saturate(c.a + 0.1));
+}
+
 // 3.0.13-beta.30 (the owner: «давай попробуем просто силует»; .26-.29's see-through models round the character
 // gone in .31): holeZ > 0 - the character's sprite drawn again where something nearer hides it (draw_constants.hpp
 // silhouetteSetup). 3.0.13-beta.32 (R-83PRCU «не красиво» - a flat blue blot): a ghost - a bright rim where the
@@ -718,6 +756,9 @@ float4 shade(PsIn i) {
 #endif
     if (((alphaTest >> 24) & 1) != 0) c = castRing(i.uv0, i.diffuse);  // 3.0.15-beta.2: [effects] new_casting
     else if (((alphaTest >> 25) & 1) != 0) c = castCircle(i.uv0, du, dv, i.diffuse);
+    else if (((alphaTest >> 26) & 1) != 0) c = stormLayer(c, false);  // 3.0.15-beta.8: [effects] new_storm_gust
+    else if (((alphaTest >> 28) & 1) != 0) c = stormLayer(c, true);
+    else if (((alphaTest >> 27) & 1) != 0) c = stormIce(i.pos, i.uv0, c);
     if (fogEnable == 2) c.rgb = lerp(c.rgb, fogColor.rgb, fogColor.a);  // 2.3: uaRO Studio's X-ray, the state's colour
     else if (fogEnable != 0) c.rgb = lerp(fogColor.rgb, c.rgb, i.specular.a);
     float alphaStep = fwidth(c.a);  // outside any branch

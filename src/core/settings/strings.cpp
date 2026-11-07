@@ -1016,6 +1016,14 @@ constexpr Entry kTexts[] = {
      "замість розмитого стовпа гри на весь екран.",
      "Пока навык кастуется: магический круг на земле в цвете стихии и невысокое чёткое пламя вокруг персонажа - "
      "вместо размытого столба игры на весь экран."},
+    {Text::FxNewStormGust, "New Storm Gust", "Новий Storm Gust", "Новый Storm Gust"},  // 3.0.15-beta.8
+    {Text::FxNewStormGustHint,
+     "Storm Gust in its own look: crisp snow and cloud in icy blue in place of the game's white blot, faceted ice "
+     "spikes with a glint.",
+     "Storm Gust у власному вигляді: чіткий сніг і хмара в крижаному блакитному замість білої плями гри, гранчасті "
+     "крижані шипи з відблиском.",
+     "Storm Gust в собственном виде: чёткий снег и облако в ледяном голубом вместо белого пятна игры, гранёные "
+     "ледяные шипы с бликом."},
     {Text::FxFireflies, "The maps' fireflies", "Світлячки карт", "Светлячки карт"},
     {Text::FxFirefliesHint,  // 3.0.7-beta.3: lamps at their places, the fireflies themselves «Світлячки в повітрі»
      "Each of the maps' fireflies lights the ground, the walls and the characters around its place like a lamp, in a "
