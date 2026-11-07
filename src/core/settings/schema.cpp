@@ -583,10 +583,20 @@ const std::vector<IniSetting>& iniSettings() {
          "", &E::aura},
         {"effects", "crowd_effects", Page::Effects, Control::Check, 0, 1, 0, {"0", "1"}, {}, Text::FxCrowdEffects,
          Text::FxCrowdEffectsHint, "", &E::crowdEffects},  // 3.0.13-beta.20
-        {"effects", "new_casting", Page::Effects, Control::Check, 0, 1, 0, {"0", "1"}, {}, Text::FxNewCasting,
-         Text::FxNewCastingHint, "", &E::newCasting},  // 3.0.15-beta.2
-        {"effects", "new_storm_gust", Page::Effects, Control::Check, 0, 1, 0, {"0", "1"}, {}, Text::FxNewStormGust,
-         Text::FxNewStormGustHint, "", &E::newStormGust},  // 3.0.15-beta.8
+        {"effects", "mage_effects", Page::Effects, Control::Check, 0, 1, 0, {"0", "1"}, {}, Text::FxMage,
+         Text::FxMageHint, "", &E::mageEffects},  // 3.0.15-beta.11
+        {"effects", "mage_casting", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxMageCasting,
+         Text::FxMageCastingHint, "", &E::mageCasting},
+        {"effects", "mage_fire", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxMageFire,
+         Text::FxMageFireHint, "", &E::mageFire},
+        {"effects", "mage_water", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxMageWater,
+         Text::FxMageWaterHint, "", &E::mageWater},
+        {"effects", "mage_wind", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxMageWind,
+         Text::FxMageWindHint, "", &E::mageWind},
+        {"effects", "mage_earth", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxMageEarth,
+         Text::FxMageEarthHint, "", &E::mageEarth},
+        {"effects", "mage_spirit", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxMageSpirit,
+         Text::FxMageSpiritHint, "", &E::mageSpirit},
         {"effects", "silhouette", Page::Effects, Control::Check, 0, 1, 0, {"0", "1"}, {}, Text::FxSilhouette,
          Text::FxSilhouetteHint, "", &E::silhouette},  // 3.0.13-beta.30
         {"effects", "aura_portals", Page::Effects, Control::Check, 0, 1, 0, {"0", "1"}, {}, Text::FxAuraPortals,

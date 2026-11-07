@@ -190,12 +190,12 @@ struct EffectSettings {
     // 3.0.13-beta.20 (the owner's pick 9 of «50 идей»): others' skill effects - on actors neither the character nor a
     // party member here - at 30 % of the game's (a guild war, the market); off as new looks are
     bool crowdEffects = false;
-    // 3.0.15-beta.2 (the skills redraw after nostalRE's recipes): the casting crisp and low with a magic circle on the
-    // ground (core/cast_look) - off as new looks are
-    bool newCasting = false;
-    // 3.0.15-beta.8 (the owner: «давай сделаем полностью стормгаст»): Storm Gust redrawn - its layers laid over, crisp
-    // and icy in place of added white, its ice spikes faceted (core/cast_look.hpp stormPart) - off as new looks are
-    bool newStormGust = false;
+    // 3.0.15-beta.11 (the owner: all the mages' skills in one go, «удобно переключать»): [effects] mage_effects - the
+    // Mage's, Wizard's and Sage's skill effects in their own look (core/mage_looks), off as new looks are; under it
+    // each part on its own: the casting (core/cast_look; beta.2's new_casting), the fire, water (beta.8's Storm Gust),
+    // wind, earth and ghost skills
+    bool mageEffects = false;
+    bool mageCasting = true, mageFire = true, mageWater = true, mageWind = true, mageEarth = true, mageSpirit = true;
     // 0.28: the maps' fireflies - those the game shows and those the maps' makers placed that it does not - glow,
     // flash now and then and light a little around them. On by default.
     bool fireflies = true;

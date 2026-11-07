@@ -31,8 +31,12 @@ const EffectLayout kEffects[] = {
     {"effects.silhouette", {}, {}, {}, 0},    // 3.0.13-beta.30
     {"effects.skills_soft", {}, {"effects.skill_brightness"}, {}, 0},
     {"effects.crowd_effects", {}, {}, {}, 0},  // 3.0.13-beta.20
-    {"effects.new_casting", {}, {}, {}, 0},    // 3.0.15-beta.2
-    {"effects.new_storm_gust", {}, {}, {}, 0},  // 3.0.15-beta.8
+    {"effects.mage_effects",  // 3.0.15-beta.11
+     {"effects.mage_casting", "effects.mage_fire", "effects.mage_water", "effects.mage_wind", "effects.mage_earth",
+      "effects.mage_spirit"},
+     {},
+     {},
+     0},
     {"effects.water",
      {"effects.water_foam", "effects.water_glints", "effects.caustics", "effects.waterfalls"},
      {"effects.water_waves", "effects.water_reflections", "effects.water_clarity"},

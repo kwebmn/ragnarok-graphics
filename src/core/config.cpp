@@ -181,6 +181,7 @@ EffectSettings effectsOff() {
     e.portals = e.weather = e.glow = e.ao = e.grade = e.water = e.foliage = false;
     e.nightStrength = 0;  // 2.6.19: the night is the clock's - Pause shows none
     e.litDust = false;
+    e.mageCasting = e.mageFire = e.mageWater = e.mageWind = e.mageEarth = e.mageSpirit = false;  // 3.0.15-beta.11
     e.sharedWind = false;
     e.nightWindows = false;
     e.rainWet = false;

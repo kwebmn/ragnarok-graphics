@@ -6,7 +6,7 @@ namespace uagfx::settings {
 // boxes under it (0.23.2) and its sliders - a slider may need one of those boxes on too - in the page's order, in
 // blocks: 0 the picture's effects, 1 the map's objects (0.23.2), 2 the living world (1.7), 3 the remaster (1.8).
 // 2.4: up to four boxes under one - the parts of what an effect draws, each its own (the water's foam, glints...).
-constexpr int kLayoutChecks = 4;
+constexpr int kLayoutChecks = 6;  // 3.0.15-beta.11: 6 (the mages' effects), 4 before
 struct EffectLayout {
     const char* box;
     const char* checks[kLayoutChecks];

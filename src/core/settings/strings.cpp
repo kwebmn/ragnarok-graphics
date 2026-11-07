@@ -1008,22 +1008,42 @@ constexpr Entry kTexts[] = {
      "свої видно і на війні гільдій, і на ринку.",
      "Эффекты навыков на других игроках и их монстрах — на треть силы; ваши и вашей группы — как всегда яркие: "
      "свои видно и на войне гильдий, и на рынке."},
-    {Text::FxNewCasting, "New casting look", "Новий вигляд касту", "Новый вид каста"},  // 3.0.15-beta.2
-    {Text::FxNewCastingHint,
-     "While a skill is cast: a magic circle on the ground in the element's colour and a low crisp flame round the "
-     "caster, in place of the game's blurred column up the screen.",
-     "Поки навичку кастують: магічне коло на землі в кольорі стихії й невисоке чітке полум'я навколо персонажа - "
-     "замість розмитого стовпа гри на весь екран.",
-     "Пока навык кастуется: магический круг на земле в цвете стихии и невысокое чёткое пламя вокруг персонажа - "
-     "вместо размытого столба игры на весь экран."},
-    {Text::FxNewStormGust, "New Storm Gust", "Новий Storm Gust", "Новый Storm Gust"},  // 3.0.15-beta.8
-    {Text::FxNewStormGustHint,
-     "Storm Gust in its own look: crisp snow and cloud in icy blue in place of the game's white blot, faceted ice "
-     "spikes with a glint.",
-     "Storm Gust у власному вигляді: чіткий сніг і хмара в крижаному блакитному замість білої плями гри, гранчасті "
-     "крижані шипи з відблиском.",
-     "Storm Gust в собственном виде: чёткий снег и облако в ледяном голубом вместо белого пятна игры, гранёные "
-     "ледяные шипы с бликом."},
+    {Text::FxMage, "Mages' new effects", "Нові ефекти магів", "Новые эффекты магов"},  // 3.0.15-beta.11
+    {Text::FxMageHint,
+     "The Mage's, Wizard's and Sage's skills in their own look: crisp, in the element's colours, no white blots; "
+     "the boxes under it turn each part on and off.",
+     "Навички мага, візарда й сейджа у власному вигляді: чіткі, в кольорах стихії, без білих плям; галочки під "
+     "ним вмикають і вимикають кожну частину.",
+     "Навыки мага, визарда и сейджа в собственном виде: чёткие, в цветах стихии, без белых пятен; галочки под "
+     "ним включают и выключают каждую часть."},
+    {Text::FxMageCasting, "Casting", "Каст", "Каст"},
+    {Text::FxMageCastingHint,
+     "A magic circle on the ground in the element's colour and a low crisp flame, in place of the column up the "
+     "screen; at a ground skill's target the game's rings with a circle under them.",
+     "Магічне коло на землі в кольорі стихії й невисоке чітке полум'я замість стовпа на весь екран; у точці цілі "
+     "наземної навички - кільця гри з колом під ними.",
+     "Магический круг на земле в цвете стихии и невысокое чёткое пламя вместо столба на весь экран; в точке цели "
+     "наземного навыка - кольца игры с кругом под ними."},
+    {Text::FxMageFire, "Fire", "Вогонь", "Огонь"},
+    {Text::FxMageFireHint, "Fire Bolt, Fire Ball, Fire Wall, Fire Pillar, Meteor Storm, Sightrasher, Volcano.",
+     "Fire Bolt, Fire Ball, Fire Wall, Fire Pillar, Meteor Storm, Sightrasher, Volcano.",
+     "Fire Bolt, Fire Ball, Fire Wall, Fire Pillar, Meteor Storm, Sightrasher, Volcano."},
+    {Text::FxMageWater, "Water and ice", "Вода й лід", "Вода и лёд"},
+    {Text::FxMageWaterHint, "Cold Bolt, Frost Diver, Ice Wall, Storm Gust, Water Ball, Frost Nova, Deluge.",
+     "Cold Bolt, Frost Diver, Ice Wall, Storm Gust, Water Ball, Frost Nova, Deluge.",
+     "Cold Bolt, Frost Diver, Ice Wall, Storm Gust, Water Ball, Frost Nova, Deluge."},
+    {Text::FxMageWind, "Wind", "Вітер", "Ветер"},
+    {Text::FxMageWindHint, "Lightning Bolt, Thunderstorm, Jupitel Thunder, Lord of Vermilion, Violent Gale.",
+     "Lightning Bolt, Thunderstorm, Jupitel Thunder, Lord of Vermilion, Violent Gale.",
+     "Lightning Bolt, Thunderstorm, Jupitel Thunder, Lord of Vermilion, Violent Gale."},
+    {Text::FxMageEarth, "Earth", "Земля", "Земля"},
+    {Text::FxMageEarthHint, "Earth Spike, Heaven's Drive, Quagmire, Stone Curse, Land Protector.",
+     "Earth Spike, Heaven's Drive, Quagmire, Stone Curse, Land Protector.",
+     "Earth Spike, Heaven's Drive, Quagmire, Stone Curse, Land Protector."},
+    {Text::FxMageSpirit, "Ghost and the rest", "Привид та інше", "Призрак и прочее"},
+    {Text::FxMageSpiritHint, "Soul Strike, Napalm Beat, Safety Wall, Sight, Energy Coat, Dispel, Magic Rod.",
+     "Soul Strike, Napalm Beat, Safety Wall, Sight, Energy Coat, Dispel, Magic Rod.",
+     "Soul Strike, Napalm Beat, Safety Wall, Sight, Energy Coat, Dispel, Magic Rod."},
     {Text::FxFireflies, "The maps' fireflies", "Світлячки карт", "Светлячки карт"},
     {Text::FxFirefliesHint,  // 3.0.7-beta.3: lamps at their places, the fireflies themselves «Світлячки в повітрі»
      "Each of the maps' fireflies lights the ground, the walls and the characters around its place like a lamp, in a "

@@ -6,15 +6,6 @@
 
 namespace uagfx::castlook {
 
-StormPart stormPart(bool blend, uint32_t srcBlend, uint32_t dstBlend, uint32_t vertexCount, float width,
-                    float screenWidth) {
-    if (!blend) return StormPart::None;
-    if (dstBlend == 6 && vertexCount == 3) return StormPart::Ice;  // INVSRCALPHA: the spikes' faces
-    if (srcBlend == 5 && dstBlend == 2)                          // SRCALPHA, ONE: its layers
-        return width >= kHazeWidth * screenWidth ? StormPart::Haze : StormPart::Layer;
-    return StormPart::None;
-}
-
 void Looks::frame() {
     last_.swap(now_);
     now_.clear();

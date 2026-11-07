@@ -14,6 +14,7 @@
 #include <string>
 
 #include "core/cast_look.hpp"
+#include "core/mage_looks.hpp"
 #include "core/ai_copy_blend.hpp"
 #include "core/ai/kinds.hpp"
 #include "core/d3d7.hpp"
@@ -1457,10 +1458,18 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
         c.twin[0] = 0.0f;
         c.twin[3] = waterTime();
     }
-    // 3.0.15-beta.8: [effects] new_storm_gust's parts (core/cast_look.hpp, shaders.cpp stormLayer/stormIce)
-    if (d.effectId == castlook::kStormLayerId) c.alphaTest |= 1u << 26;
-    if (d.effectId == castlook::kStormIceId) c.alphaTest |= 1u << 27;
-    if (d.effectId == castlook::kStormHazeId) c.alphaTest |= 1u << 28;
+    // 3.0.15-beta.8, .11: [effects] mage_effects' parts (core/mage_looks.hpp, shaders.cpp mageLayer/mageSolid) - the
+    // element's colours in reproject 3-11 (core, edge, deep; motion only otherwise, not a material's or leaves')
+    if (magelook::isOurs(d.effectId)) {
+        const magelook::Part part = magelook::partOfId(d.effectId);
+        c.alphaTest |= part == magelook::Part::Layer ? 1u << 26 : part == magelook::Part::Solid ? 1u << 27 : 1u << 28;
+        const magelook::Palette pal = magelook::paletteOf(magelook::elementOfId(d.effectId));
+        for (int k = 0; k < 3; ++k) {
+            c.reproject[3 + k] = pal.core[k];
+            c.reproject[6 + k] = pal.edge[k];
+            c.reproject[9 + k] = pal.deep[k];
+        }
+    }
     c.fogEnable = gameFogDrawn(s.fog, effects_.noGameFog, outdoors_) ? 1u : 0u;  // 2.6.10
     c.fogColor[0] = float((s.fogColor >> 16) & 255) / 255.0f;
     c.fogColor[1] = float((s.fogColor >> 8) & 255) / 255.0f;

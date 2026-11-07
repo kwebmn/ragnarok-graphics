@@ -8,6 +8,7 @@
 #include "core/device_caps.hpp"
 #include "core/frame.hpp"
 #include "core/glint.hpp"
+#include "core/mage_looks.hpp"
 #include "core/version.hpp"
 #include "core/layout.hpp"
 #include "core/sprite_exe.hpp"
@@ -299,7 +300,7 @@ HRESULT Device7::record(D3DPRIMITIVETYPE type, DWORD fvf, const void* vertices, 
     // 3.0.15-beta.2: [effects] new_casting - the casting's magic circle on the ground, drawn before its walls and
     // before anything here uses the scratch copies (it goes through record too)
     if (!castCircleNext_ && fvf == d3d7::FVF_TL1 && !setup.ui && tag.kind == effect_exe::Kind::Skill &&
-        effect_exe::isCasting(tag.id) && c.effects().newCasting && c.enhanced()) {
+        effect_exe::isCasting(tag.id) && c.effects().mageEffects && c.effects().mageCasting && c.enhanced()) {
         uint8_t quad[4 * 32];
         const uint32_t key = castlook::keyOf(tag.owner, tag.id);
         if (!tag.owner) castLooks_.note(static_cast<const uint8_t*>(vertices), vertexCount, 32, key);  // .6
@@ -355,10 +356,17 @@ HRESULT Device7::record(D3DPRIMITIVETYPE type, DWORD fvf, const void* vertices, 
     const bool crowd = fx.crowdEffects && tag.kind == effect_exe::Kind::Skill && tag.owner && !c.friendOf(tag.owner);
     // 3.0.15-beta.3 (R-JET379: no circle, the flame faint): the new casting's own brightness, not 2.7.39's quieting -
     // softened first, its feet walls' alpha never reached core/cast_look's kBaseAlpha
-    const bool ownCasting = fx.newCasting && effect_exe::isCasting(tag.id) && tag.owner;  // .6: not at a target
+    const bool ownCasting = fx.mageEffects && fx.mageCasting && effect_exe::isCasting(tag.id) && tag.owner;  // .6
     // 3.0.15-beta.8: [effects] new_storm_gust - its own brightness too
-    const bool ownStorm = fx.newStormGust && tag.kind == effect_exe::Kind::Skill && tag.id == castlook::kStormId;
-    const bool skill = tag.kind == effect_exe::Kind::Skill && !ownCasting && !ownStorm &&
+    // .11: [effects] mage_effects - the mages' skills by their element (core/mage_looks.hpp)
+    const magelook::Element element = magelook::elementOf(int(tag.id));
+    const bool ownMage = fx.mageEffects && tag.kind == effect_exe::Kind::Skill && element != magelook::Element::None &&
+                         (element == magelook::Element::Fire     ? fx.mageFire
+                          : element == magelook::Element::Water  ? fx.mageWater
+                          : element == magelook::Element::Wind   ? fx.mageWind
+                          : element == magelook::Element::Earth  ? fx.mageEarth
+                                                                 : fx.mageSpirit);
+    const bool skill = tag.kind == effect_exe::Kind::Skill && !ownCasting && !ownMage &&
                        (crowd || (fx.skillsSoft && drawPercent < 100));
     if ((aura || skill) && c.enhanced()) {
         static bool logged = false;
@@ -379,7 +387,7 @@ HRESULT Device7::record(D3DPRIMITIVETYPE type, DWORD fvf, const void* vertices, 
     // circle on the ground drawn first (core/cast_look.hpp)
     if (castCircleNext_) {
         cmd.effectId = castlook::kCircleId;
-    } else if (fx.newCasting && c.enhanced() && !setup.ui && fvf == d3d7::FVF_TL1 &&
+    } else if (ownCasting && c.enhanced() && !setup.ui && fvf == d3d7::FVF_TL1 &&
                tag.kind == effect_exe::Kind::Skill && effect_exe::isCasting(tag.id) && tag.owner) {
         const uint32_t owner = castlook::keyOf(tag.owner, tag.id);
         const auto* bytes = static_cast<const uint8_t*>(vertices);
@@ -388,9 +396,9 @@ HRESULT Device7::record(D3DPRIMITIVETYPE type, DWORD fvf, const void* vertices, 
         vertices = cast_.data();
         cmd.effectId = castlook::kRingId;
     }
-    // 3.0.15-beta.8: [effects] new_storm_gust - its parts told to the shaders by their own ids; its added layers laid
-    // over instead (core/cast_look.hpp stormPart)
-    if (ownStorm && c.enhanced() && !setup.ui && fvf == d3d7::FVF_TL1) {
+    // 3.0.15-beta.8 (Storm Gust), .11 (every mage's skill): [effects] mage_effects - a part told to the shaders by its
+    // own id (its element in it); an added layer laid over instead (core/mage_looks.hpp partOf)
+    if (ownMage && c.enhanced() && !setup.ui && fvf == d3d7::FVF_TL1) {
         const auto* bytes = static_cast<const uint8_t*>(vertices);
         float x0 = 1e9f, x1 = -1e9f;
         for (DWORD i = 0; i < vertexCount; ++i) {
@@ -399,20 +407,21 @@ HRESULT Device7::record(D3DPRIMITIVETYPE type, DWORD fvf, const void* vertices, 
             x0 = std::min(x0, x);
             x1 = std::max(x1, x);
         }
-        const castlook::StormPart part = castlook::stormPart(setup.blend, setup.srcBlend, setup.dstBlend, vertexCount,
-                                                             x1 - x0, float(c.screenWidth));
-        if (part == castlook::StormPart::Ice) {
-            cmd.effectId = castlook::kStormIceId;
-        } else if (part != castlook::StormPart::None) {
-            cmd.effectId = part == castlook::StormPart::Haze ? castlook::kStormHazeId : castlook::kStormLayerId;
-            DrawSetup over = setup;
-            over.dstBlend = d3d7::BLEND_INVSRCALPHA;
-            cmd.state = c.record.addState(over);
-        }
-        if (part != castlook::StormPart::None && !stormTold_) {
-            stormTold_ = true;
-            LOG_INFO("effects: Storm Gust in its new look - its layers laid over, crisp and icy, its spikes faceted "
-                     "([effects] new_storm_gust)");
+        const magelook::Part part = magelook::partOf(setup.blend, setup.srcBlend, setup.dstBlend, vertexCount,
+                                                     x1 - x0, float(c.screenWidth));
+        if (part != magelook::Part::None) {
+            cmd.effectId = magelook::idOf(part, element);
+            if (part != magelook::Part::Solid) {
+                DrawSetup over = setup;
+                over.srcBlend = d3d7::BLEND_SRCALPHA;
+                over.dstBlend = d3d7::BLEND_INVSRCALPHA;
+                cmd.state = c.record.addState(over);
+            }
+            if (!stormTold_) {
+                stormTold_ = true;
+                LOG_INFO("effects: the mages' skills in their own look - laid over crisp in the element's colours, "
+                         "solids faceted ([effects] mage_effects; first: effect %u)", unsigned(tag.id));
+            }
         }
     }
     if (c.enhanced()) {  // 2.7.37: what of the bright draws is made softer, now and then in the log

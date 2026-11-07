@@ -17,6 +17,7 @@
 #include "core/water.hpp"
 #include "win/gpu/ai_textures.hpp"
 #include "core/cast_look.hpp"
+#include "core/mage_looks.hpp"
 #include "win/gpu/draw_constants.hpp"
 #include "win/gpu/impl.hpp"
 #include "win/log.hpp"
@@ -448,10 +449,18 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
         c.twin[0] = 0.0f;  // no leaves' sway
         c.twin[3] = waterTime();
     }
-    // 3.0.15-beta.8: [effects] new_storm_gust's parts (core/cast_look.hpp, shaders.cpp stormLayer/stormIce)
-    if (d.effectId == castlook::kStormLayerId) c.alphaTest |= 1u << 26;
-    if (d.effectId == castlook::kStormIceId) c.alphaTest |= 1u << 27;
-    if (d.effectId == castlook::kStormHazeId) c.alphaTest |= 1u << 28;
+    // 3.0.15-beta.8, .11: [effects] mage_effects' parts (core/mage_looks.hpp, shaders.cpp mageLayer/mageSolid) - the
+    // element's colours in reproject 3-11 (core, edge, deep; motion only otherwise, not a material's or leaves')
+    if (magelook::isOurs(d.effectId)) {
+        const magelook::Part part = magelook::partOfId(d.effectId);
+        c.alphaTest |= part == magelook::Part::Layer ? 1u << 26 : part == magelook::Part::Solid ? 1u << 27 : 1u << 28;
+        const magelook::Palette pal = magelook::paletteOf(magelook::elementOfId(d.effectId));
+        for (int k = 0; k < 3; ++k) {
+            c.reproject[3 + k] = pal.core[k];
+            c.reproject[6 + k] = pal.edge[k];
+            c.reproject[9 + k] = pal.deep[k];
+        }
+    }
     if (coverage) c.alphaTest |= 1u << 17;
     if (toLayer && !s.blend) c.alphaTest |= 1u << 18;  // part 3: opaque in the layer (0.8 review I2)
     // 0.18: its colour into the glow target - light it adds, or a factor it multiplies the light under it by.

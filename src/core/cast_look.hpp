@@ -17,18 +17,6 @@ constexpr uint16_t kRingId = 0xFFF1, kCircleId = 0xFFF2;  // DrawCmd::effectId o
 // had its own primitive's seed, so its own circle (R-H9XW7J: a double, crooked ring) - all of an effect's under one key
 inline uint32_t keyOf(uint32_t owner, uint16_t id) { return owner ? owner : 0xFFFF0000u | id; }
 
-// 3.0.15-beta.8 (the owner: «давай сделаем полностью стормгаст»): [effects] new_storm_gust. Storm Gust (effect 89;
-// R-8X3RCC's record): STR layers added on (SRCALPHA, ONE) - cloud puffs, two sheets of flakes, a whirl up to 835
-// pixels, blue lightning, a ghost's face - and ice spikes of five-sided pyramids laid over (3 vertices a draw, v 0 at
-// the tip, 1 at the base, u 0.2 a face). Its layers laid over in the new look (kStormLayerId; the widest, the whirl,
-// kStormHazeId soft), its spikes faceted (kStormIceId).
-constexpr uint16_t kStormId = 89;
-constexpr uint16_t kStormLayerId = 0xFFF3, kStormIceId = 0xFFF4, kStormHazeId = 0xFFF5;
-constexpr float kHazeWidth = 0.25f;  // a layer this share of the screen wide or wider: the whirl
-enum class StormPart : uint8_t { None, Layer, Haze, Ice };
-// What part of Storm Gust a draw is: by its blending, corners and width on a screen `screenWidth` wide
-StormPart stormPart(bool blend, uint32_t srcBlend, uint32_t dstBlend, uint32_t vertexCount, float width,
-                    float screenWidth);
 constexpr float kBaseAlpha = 150;  // the walls at the feet (180) - not the tall one (60)
 // .5 (the owner: «сам каст можно меньше сделать?»): the walls drawn kShrink of the game's about their middle, the
 // circle kCircleScale of the game's feet walls (1.8 before), the flame at most kFlameHeight of the screen (0.09)
