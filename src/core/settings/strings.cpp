@@ -5423,14 +5423,6 @@ constexpr Entry kTexts[] = {
      "персонажем їх рахує — одразу видно, коли натовп росте.",
      "Монстры, бившие вас последние секунды, получают красную рамку вокруг полоски HP, а червоне ⚔ 3 над персонажем "
      "их считает — сразу видно, когда толпа растёт."},
-    {Text::InterfaceDamageNumbers, "New damage numbers", "Нові цифри урону", "Новые цифры урона"},  // 3.0.16-beta.2
-    {Text::InterfaceDamageNumbersHint,
-     "The damage and healing over the characters as crisp numbers with a dark rim, in the game's colours - a critical "
-     "larger and orange, a heal with a plus - rising and fading.",
-     "Урон і лікування над персонажами чіткими цифрами з темною облямівкою, у кольорах гри — критичний більший і "
-     "помаранчевий, лікування з плюсом — злітають і гаснуть.",
-     "Урон и лечение над персонажами чёткими цифрами с тёмной каймой, в цветах игры — критический крупнее и "
-     "оранжевый, лечение с плюсом — взлетают и гаснут."},
     {Text::InterfaceChatColourParty, "Chat: the party's colour", "Чат: колір групи", "Чат: цвет группы"},  // .3
     {Text::InterfaceChatColourGuild, "Chat: the guild's colour", "Чат: колір гільдії", "Чат: цвет гильдии"},
     {Text::InterfaceChatColourOwn, "Chat: your own lines", "Чат: ваші рядки", "Чат: ваши строки"},

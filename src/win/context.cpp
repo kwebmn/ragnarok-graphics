@@ -53,7 +53,6 @@
 #include "win/exp_bars.hpp"
 #include "win/exp_gain.hpp"
 #include "win/code_page.hpp"
-#include "win/damage_numbers.hpp"
 #include "win/party_panel.hpp"
 #include "win/hotbar.hpp"
 #include "win/cursor_look.hpp"
@@ -470,7 +469,6 @@ bool Context::open(std::string& error) {
     chatwin::install();                // 3.0.11-beta.41: the game's chat lines read for the new chat
     msgboxwin::install();              // 3.0.11-beta.151: the game's message boxes' words caught
     loginrefusal::install();           // 3.0.11-beta.172: the server's refusals of a login in words
-    damagewin::install();              // 3.0.16-beta.2: the game's damage numbers, ours with the switch
     installFastFtol(config.fastFtol);  // 2.5.20: float to integer without switching the x87
     installChatFix();                  // 2.6.12: Enter in the chat box while a map loads (R-PVF8AV)
     installShadowFix();                // 3.0.4-beta.9: a shadow drawn while a map loads (R-VBDSCP)
@@ -722,7 +720,6 @@ void Context::endScene() {
         lowhpedge::draw(record, *renderer);     // 3.0.11-beta.50: the low HP edge, there too
         groundwin::draw(record, *renderer);  // 3.0.11-beta.283: the items on the ground named, under the bars
         mobhpwin::draw(record, *renderer);      // 3.0.11-beta.95: the monsters' HP bars, under the cast
-        damagewin::draw(record, *renderer);     // 3.0.16-beta.2: the damage numbers as words, over the bars
         npctagwin::draw(record, *renderer);     // 3.0.11-beta.256: the controller's NPC plate
         expgainwin::draw(record, *renderer);    // 3.0.11-beta.237: a kill's experience over the monster
         castwin::draw(record, *renderer);       // 3.0.11-beta.48: the cast over the hero, under the panels
@@ -796,7 +793,6 @@ void Context::present(const Rect& source, bool waitForVblank) {
         lowhpedge::draw(record, *renderer);     // 3.0.11-beta.50
         groundwin::draw(record, *renderer);  // 3.0.11-beta.283
         mobhpwin::draw(record, *renderer);      // 3.0.11-beta.95
-        damagewin::draw(record, *renderer);     // 3.0.16-beta.2
         npctagwin::draw(record, *renderer);     // 3.0.11-beta.256
         expgainwin::draw(record, *renderer);    // 3.0.11-beta.237
         castwin::draw(record, *renderer);       // 3.0.11-beta.48
@@ -1123,7 +1119,6 @@ void Context::present(const Rect& source, bool waitForVblank) {
     mobhpwin::setWhoHits(config.whoHits);       // 3.0.13-beta.13
     mobhpwin::frame(window, config.mobHp, pk, pw, ph);  // 3.0.11-beta.95
     groundwin::frame(window, config.dropNames, config.dropHighlight, gameCodePage(config), pk, pw, ph);  // .283
-    damagewin::frame(window, config.damageNumbers, pk, pw, ph);  // 3.0.16-beta.2
     npctagwin::frame(window, gameCodePage(config), pk, pw, ph);  // 3.0.11-beta.256
     castwin::frame(window, config.castLabel, gameCodePage(config), pk, pw, ph);
     // 3.0.11-beta.40: [interface] hotbar - the hotkeys' bar at the bottom middle, the game's own hidden
