@@ -504,6 +504,39 @@ float hillLight(float3 P) {
 }
 #endif
 
+// 3.0.15-beta.2 (the skills redraw after nostalRE's recipes, the casting first - core/cast_look.hpp): alphaTest bit 24,
+// the casting's ring walls as crisp flame tongues going round (u round the wall, v 1 at its foot; twinH the time);
+// bit 25, its magic circle on the ground (a quad, uv 0..1): two rings, marks between them, a six-pointed star turning
+// slowly. The element's colour from the vertices, a little whiter where it is brightest; quiet, as the casting was
+// made in 2.7.39.
+float4 castRing(float2 uv, float4 d) {
+    float base = saturate(uv.y);
+    float tongue = pow(saturate(0.5 + 0.5 * sin(6.2832 * uv.x * 10.0 + twinH * 2.6 + uv.y * 5.0)), 5.0);
+    float flicker = 0.85 + 0.15 * sin(twinH * 7.0 + uv.x * 31.0);
+    float a = d.a * base * (0.22 * base + 0.9 * tongue * flicker);
+    return float4(lerp(d.rgb, float3(1.0, 1.0, 1.0), 0.4 * tongue * base), saturate(a * 1.4));
+}
+float castLine(float dist, float half_, float aa) { return 1.0 - smoothstep(half_ - aa, half_ + aa, dist); }
+float4 castCircle(float2 uv, float2 du, float2 dv, float4 d) {
+    float2 p = uv * 2.0 - 1.0;
+    float r = length(p);
+    float aa = 2.0 * (length(du) + length(dv)) + 1e-4;
+    float lines = castLine(abs(r - 0.95), 0.012, aa) + castLine(abs(r - 0.80), 0.008, aa) +
+                  0.6 * castLine(abs(r - 0.56), 0.006, aa);
+    float turn = atan2(p.y, p.x) + twinH * 0.35;
+    float mark = castLine(abs(frac(turn * 18.0 / 6.2832) - 0.5), 0.07, aa * 9.0) *
+                 step(0.83, r) * step(r, 0.92);
+    float star = 0.0;
+    for (int k = 0; k < 6; ++k) {
+        float t = -twinH * 0.25 + float(k) * 1.0472;
+        star += castLine(abs(dot(p, float2(cos(t), sin(t))) - 0.28), 0.006, aa);
+    }
+    star *= step(r, 0.57);
+    float glow = 0.1 * (1.0 - smoothstep(0.0, 0.95, r));
+    float a = saturate(saturate(lines) + 0.8 * mark + 0.7 * saturate(star) + glow) * (1.0 - step(1.0, r)) * 0.7;
+    return float4(lerp(d.rgb, float3(1.0, 1.0, 1.0), 0.3), a);
+}
+
 // 3.0.13-beta.30 (the owner: «давай попробуем просто силует»; .26-.29's see-through models round the character
 // gone in .31): holeZ > 0 - the character's sprite drawn again where something nearer hides it (draw_constants.hpp
 // silhouetteSetup). 3.0.13-beta.32 (R-83PRCU «не красиво» - a flat blue blot): a ghost - a bright rim where the
@@ -664,6 +697,8 @@ float4 shade(PsIn i) {
         c.a = own ? (1.0 - smoothstep(0.3, 0.9, i.specular.b)) * seamNear : seamOther;
     }
 #endif
+    if (((alphaTest >> 24) & 1) != 0) c = castRing(i.uv0, i.diffuse);  // 3.0.15-beta.2: [effects] new_casting
+    else if (((alphaTest >> 25) & 1) != 0) c = castCircle(i.uv0, du, dv, i.diffuse);
     if (fogEnable == 2) c.rgb = lerp(c.rgb, fogColor.rgb, fogColor.a);  // 2.3: uaRO Studio's X-ray, the state's colour
     else if (fogEnable != 0) c.rgb = lerp(fogColor.rgb, c.rgb, i.specular.a);
     float alphaStep = fwidth(c.a);  // outside any branch

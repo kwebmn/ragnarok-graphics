@@ -1008,6 +1008,14 @@ constexpr Entry kTexts[] = {
      "свої видно і на війні гільдій, і на ринку.",
      "Эффекты навыков на других игроках и их монстрах — на треть силы; ваши и вашей группы — как всегда яркие: "
      "свои видно и на войне гильдий, и на рынке."},
+    {Text::FxNewCasting, "New casting look", "Новий вигляд касту", "Новый вид каста"},  // 3.0.15-beta.2
+    {Text::FxNewCastingHint,
+     "While a skill is cast: a magic circle on the ground in the element's colour and a low crisp flame round the "
+     "caster, in place of the game's blurred column up the screen.",
+     "Поки навичку кастують: магічне коло на землі в кольорі стихії й невисоке чітке полум'я навколо персонажа - "
+     "замість розмитого стовпа гри на весь екран.",
+     "Пока навык кастуется: магический круг на земле в цвете стихии и невысокое чёткое пламя вокруг персонажа - "
+     "вместо размытого столба игры на весь экран."},
     {Text::FxFireflies, "The maps' fireflies", "Світлячки карт", "Светлячки карт"},
     {Text::FxFirefliesHint,  // 3.0.7-beta.3: lamps at their places, the fireflies themselves «Світлячки в повітрі»
      "Each of the maps' fireflies lights the ground, the walls and the characters around its place like a lamp, in a "

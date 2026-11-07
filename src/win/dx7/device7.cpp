@@ -87,6 +87,7 @@ HRESULT STDMETHODCALLTYPE Device7::BeginScene() {
     win::Guard guard;
     scene_.beginScene();
     portals_.frame();  // 3.0.13-beta.15
+    castLooks_.frame();  // 3.0.15-beta.2
     {  // 3.0.13-beta.30: where the character's body is on the screen, for its silhouette (core/model_fade.hpp holeOf)
         win::Context& c = win::Context::get();
         float view[12], at[3], hole[8] = {};
@@ -291,6 +292,22 @@ HRESULT Device7::record(D3DPRIMITIVETYPE type, DWORD fvf, const void* vertices, 
     // 0.27: the level 99 aura softer - its vertices' colour and alpha, in a copy (the game's stay as they are).
     // 0.28: the renderer learns what effect a draw is of (the fireflies are drawn anew).
     const effect_exe::Tag tag = win::drawnEffect(vertices);
+    // 3.0.15-beta.2: [effects] new_casting - the casting's magic circle on the ground, drawn before its walls and
+    // before anything here uses the scratch copies (it goes through record too)
+    if (!castCircleNext_ && fvf == d3d7::FVF_TL1 && !setup.ui && tag.kind == effect_exe::Kind::Skill &&
+        effect_exe::isCasting(tag.id) && c.effects().newCasting && c.enhanced()) {
+        uint8_t quad[4 * 32];
+        if (castLooks_.circleQuad(tag.owner ? tag.owner : tag.seed, quad)) {
+            castCircleNext_ = true;
+            record(D3DPT_TRIANGLESTRIP, fvf, quad, 4, nullptr, 0);
+            castCircleNext_ = false;
+            if (!castTold_) {
+                castTold_ = true;
+                LOG_INFO("effects: the casting's new look - its flame held low, a magic circle under it "
+                         "([effects] new_casting)");
+            }
+        }
+    }
     // (2.7.23's orb sprites without depth gone in 2.7.24: the game writes its laid-over sprites' depth wherever their
     // alpha is not 0 - uaRO.exe 0x40E4D0: ZWRITEENABLE on, ALPHAREF 1 - so Ruwach's sprites hide each other, a line;
     // without it they piled up into a ball, the user: «всё равно какой-то шар крутится». Their light is a ground
@@ -345,6 +362,19 @@ HRESULT Device7::record(D3DPRIMITIVETYPE type, DWORD fvf, const void* vertices, 
                            aura || crowd ? effect_exe::softenFor(setup.blend, setup.srcBlend, setup.dstBlend)
                                          : effect_exe::softenSkill(setup.blend, setup.srcBlend, setup.dstBlend));
         vertices = soft_.data();
+    }
+    // 3.0.15-beta.2: [effects] new_casting - the casting's walls held low and drawn crisp by the shaders, its magic
+    // circle on the ground drawn first (core/cast_look.hpp)
+    if (castCircleNext_) {
+        cmd.effectId = castlook::kCircleId;
+    } else if (fx.newCasting && c.enhanced() && !setup.ui && fvf == d3d7::FVF_TL1 &&
+               tag.kind == effect_exe::Kind::Skill && effect_exe::isCasting(tag.id)) {
+        const uint32_t owner = tag.owner ? tag.owner : tag.seed;
+        const auto* bytes = static_cast<const uint8_t*>(vertices);
+        cast_.assign(bytes, bytes + size_t(vertexCount) * 32);
+        castLooks_.shorten(cast_.data(), vertexCount, 32, owner, float(c.screenHeight) * 0.09f);
+        vertices = cast_.data();
+        cmd.effectId = castlook::kRingId;
     }
     if (c.enhanced()) {  // 2.7.37: what of the bright draws is made softer, now and then in the log
         if (tag.kind == effect_exe::Kind::Skill)

@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "core/aura_portal.hpp"
+#include "core/cast_look.hpp"
 #include "core/effect_capture.hpp"
 #include "core/effect_exe.hpp"
 #include "core/model_fade.hpp"
@@ -75,6 +76,10 @@ private:
     bool fadeTold_ = false;
     // 3.0.15-beta.1: the skills' effects' draws written to uaro-effects.txt in betas (core/effect_capture.hpp)
     effect_capture::Recorder capture_;
+    // 3.0.15-beta.2: [effects] new_casting (core/cast_look.hpp) - the casting's walls in a copy; the circle being drawn
+    castlook::Looks castLooks_;
+    std::vector<uint8_t> cast_;
+    bool castCircleNext_ = false, castTold_ = false;
     uint32_t captureFrame_ = 0;
     int captureState_ = 0;  // 0 not asked, 1 writing, -1 not (a release, or the file would not open)
     void captureEffect(const effect_exe::Tag& tag, const DrawSetup& setup, DWORD fvf, const void* vertices,

@@ -13,6 +13,7 @@
 #include <iterator>
 #include <string>
 
+#include "core/cast_look.hpp"
 #include "core/ai_copy_blend.hpp"
 #include "core/ai/kinds.hpp"
 #include "core/d3d7.hpp"
@@ -1443,6 +1444,12 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
     }
     if (silhouettePass_) {
         std::copy(hole_, hole_ + 8, c.hole);
+    }
+    // 3.0.15-beta.2: [effects] new_casting (draw.cpp's)
+    if (d.effectId == castlook::kRingId || d.effectId == castlook::kCircleId) {
+        c.alphaTest |= d.effectId == castlook::kRingId ? 1u << 24 : 1u << 25;
+        c.twin[0] = 0.0f;
+        c.twin[3] = waterTime();
     }
     // 2.5.2: the ground's lightmap (its 256x256 atlas of 8x8 cells) sampled smoothly (as draw.cpp, 0.22.6) - the
     // weak set's own, never set here until now

@@ -190,6 +190,9 @@ struct EffectSettings {
     // 3.0.13-beta.20 (the owner's pick 9 of «50 идей»): others' skill effects - on actors neither the character nor a
     // party member here - at 30 % of the game's (a guild war, the market); off as new looks are
     bool crowdEffects = false;
+    // 3.0.15-beta.2 (the skills redraw after nostalRE's recipes): the casting crisp and low with a magic circle on the
+    // ground (core/cast_look) - off as new looks are
+    bool newCasting = false;
     // 0.28: the maps' fireflies - those the game shows and those the maps' makers placed that it does not - glow,
     // flash now and then and light a little around them. On by default.
     bool fireflies = true;

@@ -97,6 +97,7 @@ enum class Text : uint16_t {
     FxAuraPortals, FxAuraPortalsHint,  // 3.0.13-beta.15
     FxSilhouette, FxSilhouetteHint,  // 3.0.13-beta.30
     FxCrowdEffects, FxCrowdEffectsHint,  // 3.0.13-beta.20
+    FxNewCasting, FxNewCastingHint,  // 3.0.15-beta.2
     FxFireflies, FxFirefliesHint, FxFirefliesBrightness, FxFirefliesBrightnessHint, FxMapGlows, FxMapGlowsHint,
     FxMapGlowsBrightness, FxMapGlowsBrightnessHint, FxRays, FxRaysHint, FxRaysBrightness, FxRaysBrightnessHint,
     FxLava, FxLavaHint, FxLavaBrightness, FxLavaBrightnessHint, FxActorShadows, FxActorShadowsHint,

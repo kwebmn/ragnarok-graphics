@@ -16,6 +16,7 @@
 #include "core/twin_grid.hpp"
 #include "core/water.hpp"
 #include "win/gpu/ai_textures.hpp"
+#include "core/cast_look.hpp"
 #include "win/gpu/draw_constants.hpp"
 #include "win/gpu/impl.hpp"
 #include "win/log.hpp"
@@ -431,6 +432,12 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     }
     packStage(s.stage[0], d.keyed[0], c.stage0);
     packStage(s.stage[1], d.keyed[1], c.stage1);
+    // 3.0.15-beta.2: [effects] new_casting - the casting's walls and its circle (core/cast_look.hpp, shaders.cpp)
+    if (d.effectId == castlook::kRingId || d.effectId == castlook::kCircleId) {
+        c.alphaTest |= d.effectId == castlook::kRingId ? 1u << 24 : 1u << 25;
+        c.twin[0] = 0.0f;  // no leaves' sway
+        c.twin[3] = waterTime();
+    }
     if (silhouettePass) {  // 3.0.13-beta.30: the character's shape where it is hidden
         std::copy(hole, hole + 8, c.hole);
     }
