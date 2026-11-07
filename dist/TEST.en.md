@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.13-beta.27 — what's new
+
+**«See-through houses before the character»: the window with no pattern and no dark spots.** The middle of the window round the character is now clear, and its rim comes back smoothly in real see-through - the fine pattern is gone, and with it the dark dots of the shadows in the corners. The window is now the character's size (it was three times larger, taking half a wall).
+
 # uaRO Graphics 3.0.13-beta.26 — what's new
 
 **«See-through houses before the character» redone: a see-through window round the character.** The driver used to choose which models to make see-through whole, and they went on and off as you walked and turned the camera. Now the card leaves a see-through window round the character in the houses, trees and walls before it - it moves with the character smoothly, no blinking. Only what is nearer the camera than the character fades; what is behind does not.
