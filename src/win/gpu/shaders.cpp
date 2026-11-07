@@ -27,9 +27,9 @@ cbuffer Params : register(b0) {
     float jitterY;
     float r0, r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11;  // motion only: this view -> the previous one, 4 x 3
     float f0, f1, cx, cy, nearZ, farZ;  // motion only: the game's projection (core/game_camera.hpp)
-    // 3.0.13-beta.26: the hole round the character (core/model_fade.hpp holeOf) - its feet and body's height in game
+    // 3.0.13-beta.26: the character's place (core/model_fade.hpp holeOf) - its feet and body's height in game
     // pixels, its depth, its distance from the camera along the ground, the world's up in the view (y, z), the
-    // projection's f; holeZ 0: none
+    // projection's f; holeZ 0: none (.30: set only on the silhouette's draws)
     float holeX, holeY, holeH, holeZ, holeG, holeUy, holeUz, holeF;
 };
 #ifdef UAGFX_FIXED
@@ -504,41 +504,13 @@ float hillLight(float3 P) {
 }
 #endif
 
-// 3.0.13-beta.26 (the owner: «делай дыру, мигает» - the models chosen whole, on the processor, went on and off as
-// one walked and turned the camera): a model's pixel round the character's body, nearer the camera than it along
-// the ground, see-through; it moves with the character smoothly, whatever the game's draws hold. .27 (R-DRBZ2V): no
-// pattern. 3.0.13-beta.28 (the owner: «надо чтобы прозрачно было а не дыра»; R-6BDX5A: the rim laid over black - the
-// game draws its walls before the ground): two passes - holeF > 0, the model's own draw, the hole left out; holeF < 0,
-// the same draw again once the world is down (draw.cpp holeRec, ao.cpp applyHoles), only the hole, laid over the
-// ground and the character by kSeen in the middle, whole at its rim
+// 3.0.13-beta.30 (the owner: «давай попробуем просто силует»; .26-.29's see-through models round the character
+// gone in .31): holeZ > 0 - the character's sprite drawn again where something nearer hides it (draw_constants.hpp
+// silhouetteSetup), its shape in light blue
 void seeThrough(float4 pos, inout float4 c) {
     if (holeZ <= 0.0) return;
-    // 3.0.13-beta.30 (the owner: «давай попробуем просто силует»): holeG < 0 - the character's sprite again where
-    // something nearer hides it (draw_constants.hpp silhouetteSetup), its shape in light blue
-    if (holeG < 0.0) {
-        c.rgb = float3(0.55, 0.82, 1.0);
-        c.a = saturate(c.a) * 0.6;
-        return;
-    }
-    bool inside = false;
-    float e = 1.0;
-    if (pos.w < holeZ - 3.0) {
-        float2 g = (pos.xy - 0.5 - float2(jitterX, jitterY)) / scale;  // draw_vs turned back: game pixels
-        e = length((g - float2(holeX, holeY - 0.55 * holeH)) / (holeH * float2(0.8, 0.95)));  // kHoleWide, kHoleTall
-        if (e < 1.0) {
-            float2 centre = floor(targetSize / scale * 0.5);
-            float3 p = float3((g - centre) * pos.w / abs(holeF), pos.w);  // the point in the view
-            float up = p.y * holeUy + p.z * holeUz;
-            inside = sqrt(max(dot(p, p) - up * up, 0.0)) < holeG - 3.0;  // behind it along the ground: whole
-        }
-    }
-    if (holeF > 0.0) {
-        if (inside) discard;
-        return;
-    }
-    if (!inside) discard;
-    // core/model_fade.hpp holeAt, kSeen
-    c.a = (((alphaTest >> 17) & 1) != 0 ? c.a : 1.0) * lerp(0.35, 1.0, smoothstep(0.55, 1.0, e));  // kHoleSolid
+    c.rgb = float3(0.55, 0.82, 1.0);
+    c.a = saturate(c.a) * 0.6;
 }
 
 float4 shade(PsIn i) {
@@ -710,7 +682,7 @@ float4 shade(PsIn i) {
     // 2.7.38: a skill's light laid over softly (draw.cpp: the target's colour its factor, not its alpha) - as much
     // of it as its alpha lets through
     if (((alphaTest >> 23) & 1) != 0) c.rgb *= c.a;
-    seeThrough(i.pos, c);  // 3.0.13-beta.26: last - the gradients above taken by every pixel
+    seeThrough(i.pos, c);  // 3.0.13-beta.30: the silhouette - last
     return c;
 }
 

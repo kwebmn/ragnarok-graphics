@@ -394,11 +394,6 @@ private:
     // drawn by then); darknessLaid_: this frame's is down - one after it is drawn in its place
     FrameRecord darknessRec_;
     bool darknessPass_ = false, darknessLaid_ = false;
-    // 3.0.13-beta.28: the models over the hole round the character, drawn again in it (ground11.cpp applyHoles)
-    FrameRecord holeRec_;
-    bool holePass_ = false, holesLaid_ = false;
-    void noteHole(const FrameRecord& rec, const DrawCmd& d, const DrawSetup& s);
-    void applyHoles();
     // 3.0.13-beta.30: [effects] silhouette - the character's sprites drawn again where something hides them
     FrameRecord silhouetteRec_;
     bool silhouettePass_ = false, silhouetteLaid_ = false;

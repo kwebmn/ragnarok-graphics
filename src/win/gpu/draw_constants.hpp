@@ -47,28 +47,6 @@ inline void uiPixels(const FrameRecord& rec, const DrawCmd& d, float out[4]) {
     out[3] = std::ceil(y1) - 1.0f;
 }
 
-// 3.0.13-beta.27: [effects] fade_models - a game's model draw (opaque, writing depth, not an effect's) over the hole
-// round the character (core/model_fade.hpp holeAt's ellipse) and nearer than it somewhere: drawn blended, the hole's
-// pixels left out and its rim laid over (shaders.cpp seeThrough)
-inline bool holeOver(const FrameRecord& rec, const DrawCmd& d, const DrawSetup& s, const float hole[8]) {
-    if (hole[3] <= 0.0f || d.fvf != d3d7::FVF_TL1 || s.ui || !s.zWrite || s.blend || d.effect != 0) return false;
-    const std::vector<uint8_t>& v = rec.vertexBytes();
-    const size_t stride = FrameRecord::stride(d.fvf);
-    float x0 = FLT_MAX, y0 = FLT_MAX, x1 = -FLT_MAX, y1 = -FLT_MAX, rhw = 0.0f;
-    for (uint32_t i = 0; i < d.vertexCount && d.vertexOffset + (i + 1) * stride <= v.size(); ++i) {
-        float xyzw[4];
-        std::memcpy(xyzw, v.data() + d.vertexOffset + i * stride, sizeof xyzw);
-        x0 = std::min(x0, xyzw[0]);
-        y0 = std::min(y0, xyzw[1]);
-        x1 = std::max(x1, xyzw[0]);
-        y1 = std::max(y1, xyzw[1]);
-        rhw = std::max(rhw, xyzw[3]);
-    }
-    const float rx = hole[2] * modelfade::kHoleWide, ry = hole[2] * modelfade::kHoleTall,
-                cy = hole[1] - 0.55f * hole[2];
-    return rhw > 0.0f && 1.0f / rhw < hole[3] - 3.0f && x1 > hole[0] - rx && x0 < hole[0] + rx && y1 > cy - ry &&
-           y0 < cy + ry;
-}
 // 3.0.13-beta.30: [effects] silhouette - a sprite of the game's sprite cache (spriteTexture) standing where the
 // character stands: its feet at the hole's, its depth the character's. The draw kept with a state that draws it only
 // where something nearer hides it, laid over, writing no depth (shaders.cpp seeThrough's silhouette)
@@ -92,6 +70,26 @@ inline bool ownSprite(const FrameRecord& rec, const DrawCmd& d, const DrawSetup&
     const float h = hole[2];
     return rhw > 0.0f && std::fabs(1.0f / rhw - hole[3]) < 25.0f && x0 < hole[0] && hole[0] < x1 &&
            y1 > hole[1] - 0.6f * h && y1 < hole[1] + 0.6f * h && y0 < hole[1] - 0.2f * h;
+}
+// a quad's box (x0, y0, x1, y1, game pixels) and mean depth - for the log
+inline bool spriteBox(const FrameRecord& rec, const DrawCmd& d, float box[4], float& depth) {
+    const std::vector<uint8_t>& v = rec.vertexBytes();
+    const size_t stride = FrameRecord::stride(d.fvf);
+    if (d.vertexCount != 4 || d.vertexOffset + 4 * stride > v.size()) return false;
+    box[0] = box[1] = FLT_MAX;
+    box[2] = box[3] = -FLT_MAX;
+    float rhw = 0.0f;
+    for (uint32_t i = 0; i < 4; ++i) {
+        float xyzw[4];
+        std::memcpy(xyzw, v.data() + d.vertexOffset + i * stride, sizeof xyzw);
+        box[0] = std::min(box[0], xyzw[0]);
+        box[1] = std::min(box[1], xyzw[1]);
+        box[2] = std::max(box[2], xyzw[0]);
+        box[3] = std::max(box[3], xyzw[1]);
+        rhw += xyzw[3] / 4.0f;
+    }
+    depth = rhw > 0.0f ? 1.0f / rhw : 0.0f;
+    return rhw > 0.0f;
 }
 inline DrawSetup silhouetteSetup(DrawSetup s) {
     s.zEnable = true;

@@ -1090,7 +1090,6 @@ struct Renderer::Impl {
         waterCopied = false;  // 0.19: its water copies what is under it anew
         darknessRec.reset();  // 2.6.18
         darknessLaid = false;
-        holeRec.reset();  // 3.0.13-beta.28
         silhouetteRec.reset();  // 3.0.13-beta.30
         aoDone = groundDrawn = gradeDone = torchDone = false;  // 0.20-0.23
         nightDone = false;  // 0.63
@@ -1212,15 +1211,10 @@ struct Renderer::Impl {
     // is drawn in its place.
     FrameRecord darknessRec;
     bool darknessPass = false, darknessLaid = false;
-    // 3.0.13-beta.28: [effects] fade_models - the models over the hole round the character, drawn again in it once
-    // the world is down (ao.cpp applyHoles)
-    FrameRecord holeRec;
-    bool holePass = false;
-    void noteHole(const FrameRecord& rec, const DrawCmd& d, const DrawSetup& s);
-    bool applyHoles();
     // 3.0.13-beta.30: [effects] silhouette - the character's sprites, drawn again where something hides them
     FrameRecord silhouetteRec;
     bool silhouettePass = false;
+    int silhouetteTold = 0;  // the log's first sprites near the character
     void noteSilhouette(const FrameRecord& rec, const DrawCmd& d, const DrawSetup& s);
     bool applySilhouette();
     void noteDarkness(const FrameRecord& rec, const DrawCmd& d, const DrawSetup& s);

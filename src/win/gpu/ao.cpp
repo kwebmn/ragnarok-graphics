@@ -796,7 +796,6 @@ bool Renderer::Impl::finishWorld() {
     if (groundLifeDue() && !applyGroundLife()) return false;  // 1.7
     if (grassDue() && !applyGrass()) return false;            // 0.81
     if (stepsDue() && !applySteps()) return false;            // 0.80: on the ground, under the night
-    if (!applyHoles()) return false;  // 3.0.13-beta.28: the models see-through round the character, under the night
     if (nightDue() && !applyNight()) return false;    // 0.63: the night first - the lights shine out of it
     if (torchDue() && !applyTorches()) return false;  // 0.23: lit and burning before the colours
     if (embersDue() && !applyEmbers()) return false;  // 0.82: the skills' sparks
@@ -823,35 +822,6 @@ void Renderer::Impl::noteDarkness(const FrameRecord& rec, const DrawCmd& d, cons
     cmd.state = darknessRec.addState(s);
     darknessRec.draw(cmd, v.data() + d.vertexOffset, d.vertexCount, d.indexCount ? ix.data() + d.firstIndex : nullptr,
                      d.indexCount);
-}
-
-// 3.0.13-beta.28 (noteDarkness's way): a model's draw over the hole round the character, kept for applyHoles
-void Renderer::Impl::noteHole(const FrameRecord& rec, const DrawCmd& d, const DrawSetup& s) {
-    const std::vector<uint8_t>& v = rec.vertexBytes();
-    const std::vector<uint16_t>& ix = rec.indices();
-    if (holeRec.draws().size() >= 256 ||
-        d.vertexOffset + size_t(d.vertexCount) * FrameRecord::stride(d.fvf) > v.size() ||
-        size_t(d.firstIndex) + d.indexCount > ix.size())
-        return;
-    DrawCmd cmd = d;
-    cmd.state = holeRec.addState(s);
-    holeRec.draw(cmd, v.data() + d.vertexOffset, d.vertexCount, d.indexCount ? ix.data() + d.firstIndex : nullptr,
-                 d.indexCount);
-}
-
-bool Renderer::Impl::applyHoles() {
-    if (holeRec.draws().empty()) return true;
-    crumb("the models see-through round the character");
-    flushDraws();  // the game's draws gathered so far are of its own vertices
-    prepareGeometry(holeRec);
-    if (vertexBase) {
-        holePass = true;
-        for (const DrawCmd& cmd : holeRec.draws()) draw(holeRec, cmd);
-        holePass = false;
-    }
-    geometryList = 0;  // the game's record's vertices go up again with its next draw
-    holeRec.reset();
-    return !lost;
 }
 
 // 3.0.13-beta.30: a sprite of the character's, kept with the silhouette's state (draw_constants.hpp)

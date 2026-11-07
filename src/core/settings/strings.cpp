@@ -990,15 +990,6 @@ constexpr Entry kTexts[] = {
      "ними.",
      "Аура 99 уровня над порталом становится бледной, и портал сквозь неё виден: когда у портала много аур, он "
      "терялся под ними."},
-    {Text::FxFadeModels, "See-through buildings before the character", "Прозорі будинки перед персонажем",
-     "Прозрачные здания перед персонажем"},  // 3.0.13-beta.17
-    {Text::FxFadeModelsHint,
-     "A see-through window round your character in a house, a tree or a wall between it and the camera - it moves with "
-     "the character, the character never lost behind them.",
-     "Прозоре вікно навколо вашого персонажа в будинку, дереві чи стіні між ним і камерою - воно рухається разом із "
-     "персонажем, персонаж ніколи не губиться за ними.",
-     "Прозрачное окно вокруг вашего персонажа в доме, дереве или стене между ним и камерой - оно движется вместе с "
-     "персонажем, персонаж никогда не теряется за ними."},
     {Text::FxSilhouette, "Character's silhouette behind buildings", "Силует персонажа за будинками",
      "Силуэт персонажа за зданиями"},  // 3.0.13-beta.30
     {Text::FxSilhouetteHint,

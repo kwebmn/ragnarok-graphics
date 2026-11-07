@@ -5,9 +5,9 @@
 
 namespace uagfx::modelfade {
 
-// 3.0.13-beta.17 (the owner's pick 1 of «50 идей»: «Здания и деревья перед персонажем становятся прозрачными ...
-// плавное затухание»): [effects] fade_models - a draw of the game's models (opaque, writing depth: TL1 x, y, z, rhw,
-// colour at 16) that covers the character's body nearer than it goes see-through, back again when it no longer does
+// 3.0.13-beta.17 (the owner's pick 1 of «50 идей»): [effects] fade_models, the models before the character
+// see-through - tried as whole models (.17-.25) and as a hole in the shaders (.26-.29), dropped in .31 («чтото не то,
+// возвращай как было»); what stays: where the character is on the screen, for [effects] silhouette (.30)
 
 // The character on the screen: its feet (the camera's target, projected), its depth (view z) and its body's height in
 // pixels (kBodyUnits tall at that depth)
@@ -30,20 +30,9 @@ constexpr float kNearer = 3.0f;
 // view: the game's world -> view (c_j = sum_i w_i * view[3i+j] + view[9+j]); at: the camera's target in the world
 Focus focusOf(const camera::Projection& p, const float view[12], const float at[3]);
 
-// 3.0.13-beta.26 (the owner: «делай дыру, мигает» - betas .17-.25 chose the models over the body whole, here, and
-// they went on and off as one walked and turned the camera): the hole round the character the renderer's shaders
-// leave in the models before it (shaders.cpp seeThrough) - its feet x, y and body's height (game pixels), its depth,
-// its distance from the camera along the ground, the world's up in the view (y, z: the game's camera never rolls)
-// and the projection's f; all 0 when the focus is not known
+// 3.0.13-beta.26: the character's place for the renderer (.26-.29 a see-through hole in the models before it,
+// gone in .31; .30 [effects] silhouette, draw_constants.hpp ownSprite) - its feet x, y and body's height (game
+// pixels), its depth, its distance from the camera along the ground, the world's up in the view (y, z: the game's
+// camera never rolls) and the projection's f; all 0 when the focus is not known
 void holeOf(const Focus& f, float out[8]);
-// How much a model's pixel covers at game pixel (gx, gy) of a game picture width x height, its view depth z:
-// shaders.cpp seeThrough's, kept the same - 1 whole, kSeen in the hole's middle (.28: see-through, not a hole), a rim
-// between
-constexpr float kSeen = 0.35f;
-// the hole's half width and half height in body heights, and where its rim starts (of 1, its edge) - shaders.cpp
-// seeThrough and draw_constants.hpp holeOver keep the same numbers (3.0.13-beta.29's 1.4 x 1.5 from 0.3 back to
-// these in .30, the owner: «чтото не то, возвращай как было»)
-constexpr float kHoleWide = 0.8f, kHoleTall = 0.95f, kHoleSolid = 0.55f;
-float holeAt(const float hole[8], float gx, float gy, float z, int width, int height);
-
 }  // namespace uagfx::modelfade

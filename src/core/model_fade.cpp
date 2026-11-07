@@ -1,6 +1,5 @@
 #include "core/model_fade.hpp"
 
-#include <algorithm>
 #include <cmath>
 #include <cstring>
 
@@ -39,19 +38,6 @@ void holeOf(const Focus& f, float out[8]) {
     out[5] = f.view[4] / up;
     out[6] = f.view[5] / up;
     out[7] = std::fabs(f.p.f1);
-}
-
-float holeAt(const float hole[8], float gx, float gy, float z, int width, int height) {
-    if (hole[3] <= 0.0f || z >= hole[3] - kNearer) return 1.0f;
-    const float e =
-        std::hypot((gx - hole[0]) / (hole[2] * kHoleWide), (gy - (hole[1] - 0.55f * hole[2])) / (hole[2] * kHoleTall));
-    if (e >= 1.0f) return 1.0f;
-    const float p[3] = {(gx - std::floor(width * 0.5f)) * z / hole[7], (gy - std::floor(height * 0.5f)) * z / hole[7],
-                        z};
-    const float up = p[1] * hole[5] + p[2] * hole[6];
-    if (std::sqrt(std::max(p[0] * p[0] + p[1] * p[1] + p[2] * p[2] - up * up, 0.0f)) >= hole[4] - kNearer) return 1.0f;
-    const float t = std::clamp((e - kHoleSolid) / (1.0f - kHoleSolid), 0.0f, 1.0f);
-    return kSeen + (1.0f - kSeen) * t * t * (3.0f - 2.0f * t);
 }
 
 }  // namespace uagfx::modelfade

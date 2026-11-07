@@ -184,9 +184,6 @@ struct EffectSettings {
     // 3.0.13-beta.15 (the owner's pick 8 of «50 идей»: «Аура не закрывает порталы»): a level 99 aura standing on a
     // warp portal drawn faint (core/aura_portal) - off as new looks are
     bool auraPortals = false;
-    // 3.0.13-beta.17 (the owner's pick 1 of «50 идей»): buildings and trees between the camera and the character drawn
-    // see-through, gliding (core/model_fade) - off as new looks are
-    bool fadeModels = false;
     // 3.0.13-beta.30 (the owner: «давай попробуем просто силует», pick 6 of «50 идей»): the character's parts hidden
     // behind a house, a tree or a wall drawn over them as a light silhouette - off as new looks are
     bool silhouette = false;

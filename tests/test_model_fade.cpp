@@ -41,7 +41,7 @@ struct Cam {
 };
 }  // namespace
 
-TEST(model_fade_hole_only_before_the_character) {
+TEST(model_fade_the_characters_place) {
     const Cam cam(300);
     const float at[3] = {0, 0, 0};
     const modelfade::Focus f = modelfade::focusOf(cam.p, cam.view, at);
@@ -49,24 +49,7 @@ TEST(model_fade_hole_only_before_the_character) {
     float hole[8];
     modelfade::holeOf(f, hole);
     CHECK(hole[3] > 0 && std::abs(hole[5] * hole[5] + hole[6] * hole[6] - 1.0f) < 1e-4f && hole[7] > 0);
-    // a world point's game pixel and depth, asked of the hole
-    const auto at3 = [&](float x, float y, float z) {
-        uint8_t v[32];
-        const float w[3] = {x, y, z};
-        cam.put(w, v);
-        float q[4];
-        std::memcpy(q, v, sizeof q);
-        return modelfade::holeAt(hole, q[0], q[1], 1.0f / q[3], 800, 600);
-    };
-    CHECK(std::abs(at3(0, -18.8f, -10) - modelfade::kSeen) < 1e-4f);  // a wall before the body: see-through
-    CHECK(at3(0, -12.8f, -4) < 1.0f);  // .18: right before it
-    CHECK(at3(0, -30, 25) == 1.0f);    // .20: tall behind - nearer along the view, not along the ground
-    CHECK(at3(0, 0, 0) == 1.0f);       // the feet themselves
-    CHECK(at3(100, -8, -10) == 1.0f);  // far to the side: outside the hole
-    // .27: a rim between - a little to the side partly kept
-    const float side = at3(10, -18.8f, -10);
-    CHECK(side > modelfade::kSeen && side < 1.0f);
     modelfade::Focus none;
     modelfade::holeOf(none, hole);
-    CHECK(hole[3] == 0.0f && modelfade::holeAt(hole, 400, 300, 10, 800, 600) == 1.0f);
+    CHECK(hole[3] == 0.0f);
 }

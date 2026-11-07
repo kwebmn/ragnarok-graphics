@@ -62,7 +62,7 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
                                        : "the game's world";
     crumb(span);
     // 1.9: the driver's own draws (no hooks, nothing noted); 3.0.4-beta.10 the own ground's
-    const bool inner = seamPass || darknessPass || ownPass || holePass || silhouettePass;
+    const bool inner = seamPass || darknessPass || ownPass || silhouettePass;
     // 2.6.18: blindness's darkness waits for the world's effects (applyDarkness)
     if (!inner && !s.ui && d.effect == uint8_t(effect_exe::Kind::Darkness) && !darknessLaid) {
         noteDarkness(rec, d, s);
@@ -79,8 +79,7 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     const bool toLayer = upscale && s.ui;
     if (upscale) startFrame();
     // 0.23: the game's torch layers - its glow not drawn, its flame noted - are drawn anew once the world is.
-    if (!s.ui && !holePass && torchWanted() && !torchDone && d.vertexCount == 4 && !objectTextures.empty() &&
-        takeTorch(rec, d))
+    if (!s.ui && torchWanted() && !torchDone && d.vertexCount == 4 && !objectTextures.empty() && takeTorch(rec, d))
         return;
     // 2.6.12: the torches' pass off, the game's flames (drawn as it has them) still show the embers where the fires
     // are
@@ -177,20 +176,21 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     const bool softAdd = effect_exe::softAdd(effects.skillsSoft, adds, d.effect, s.srcBlend);
     DrawSetup laid = s;
     if (softAdd) laid.srcBlend = d3d7::BLEND_INVDESTCOLOR;
-    // 3.0.13-beta.28: a model over the hole round the character - drawn without it, kept for applyHoles, which draws
-    // the hole alone once the world is down: laid over by its alpha, writing no depth (shaders.cpp seeThrough)
-    const bool holed = holePass || (!inner && (holeFlags & 1) && holeOver(rec, d, s, hole));
-    if (holed && !holePass) noteHole(rec, d, s);
     if (!inner && (holeFlags & 2) && d.texture[0]) {  // 3.0.13-beta.30: [effects] silhouette
         const auto st = textures.find(d.texture[0]);
-        if (ownSprite(rec, d, s, hole, st != textures.end() && !st->second.spriteCells.empty()))
-            noteSilhouette(rec, d, s);
-    }
-    if (holePass) {
-        laid.blend = true;
-        laid.srcBlend = d3d7::BLEND_SRCALPHA;
-        laid.dstBlend = d3d7::BLEND_INVSRCALPHA;
-        laid.zWrite = false;
+        const bool spriteTexture = st != textures.end() && !st->second.spriteCells.empty();
+        const bool mine = ownSprite(rec, d, s, hole, spriteTexture);
+        if (mine) noteSilhouette(rec, d, s);
+        // the first sprites near the character told, to see in a report why one was taken or not
+        if (spriteTexture && !s.ui && d.vertexCount == 4 && silhouetteTold < 6) {
+            float b[4], z = 0.0f;
+            if (spriteBox(rec, d, b, z) && b[0] < hole[0] + hole[2] && b[2] > hole[0] - hole[2]) {
+                ++silhouetteTold;
+                LOG_INFO("silhouette: a sprite %.0f,%.0f-%.0f,%.0f depth %.1f (blend %d) by the character at %.0f,%.0f "
+                         "h %.0f depth %.1f - %s", b[0], b[1], b[2], b[3], z, int(s.blend), hole[0], hole[1], hole[2],
+                         hole[3], mine ? "taken" : "not taken");
+            }
+        }
     }
     // 0.26: the fire of skills (a fire-coloured picture added on) lights around it once the world is drawn.
     // 0.38: a portal's draw, for its light round it once the world is drawn - 2.7.54: a map warp's floor
@@ -431,15 +431,8 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     }
     packStage(s.stage[0], d.keyed[0], c.stage0);
     packStage(s.stage[1], d.keyed[1], c.stage1);
-    // 3.0.13-beta.26: [effects] fade_models - the hole round the character in the game's models (opaque, writing
-    // depth, not an effect's), shaders.cpp seeThrough
-    if (holed) {
-        std::copy(hole, hole + 8, c.hole);
-        if (holePass) c.hole[7] = -c.hole[7];  // the hole alone, laid over
-    }
     if (silhouettePass) {  // 3.0.13-beta.30: the character's shape where it is hidden
         std::copy(hole, hole + 8, c.hole);
-        c.hole[4] = -1.0f;
     }
     // 0.22.6: the ground's lightmap (its 256x256 atlas of 8x8 cells) sampled smoothly. 3.0.4-beta.26: and the own
     // ground's (its atlas 2048 wide, the cells laid as the game lays them: terrain::lightmapAtlas)
@@ -534,7 +527,7 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     if (leaves) {  // 1.7
         LeafLook look = leafLook();
         leafShading(rec, d, look, c);
-        if (effects.leafFall && !holePass) noteCrown(rec, d);
+        if (effects.leafFall) noteCrown(rec, d);
     }
     if (matTex) materialConstants(d.fvf == d3d7::FVF_TL2, c);  // 1.8
     if (hilly) hillsConstants(c);  // 1.15

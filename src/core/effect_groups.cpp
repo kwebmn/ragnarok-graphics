@@ -35,7 +35,6 @@ const Member kMembers[] = {
     {"hit_flash", Characters, 1, &E::hitFlash},
     {"aura", Characters, 1, &E::aura},
     {"aura_portals", Characters, 1, &E::auraPortals},  // 3.0.13-beta.15
-    {"fade_models", Characters, 1, &E::fadeModels},    // 3.0.13-beta.17
     {"silhouette", Characters, 1, &E::silhouette},     // 3.0.13-beta.30
 
     {"skills_soft", SkillEffects, 1, &E::skillsSoft},

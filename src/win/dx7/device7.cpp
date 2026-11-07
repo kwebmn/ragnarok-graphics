@@ -83,19 +83,17 @@ HRESULT STDMETHODCALLTYPE Device7::BeginScene() {
     win::Guard guard;
     scene_.beginScene();
     portals_.frame();  // 3.0.13-beta.15
-    {  // 3.0.13-beta.17: where the character's body is on the screen, for the models over it; 3.0.13-beta.26: the
-       // hole round it the renderer's shaders leave in them (core/model_fade.hpp holeOf)
+    {  // 3.0.13-beta.30: where the character's body is on the screen, for its silhouette (core/model_fade.hpp holeOf)
         win::Context& c = win::Context::get();
         float view[12], at[3], hole[8] = {};
-        // 3.0.13-beta.30: [effects] silhouette needs the character's place too
-        const uint8_t flags = uint8_t((c.effects().fadeModels ? 1 : 0) | (c.effects().silhouette ? 2 : 0));
+        // 3.0.13-beta.30: [effects] silhouette (fade_models, .17-.29, gone in .31: «чтото не то, возвращай как было»)
+        const uint8_t flags = c.effects().silhouette ? 2 : 0;
         if (flags && c.enhanced() && c.screenWidth > 0 && win::readCameraAndTarget(view, at)) {
             modelfade::holeOf(modelfade::focusOf(camera::projectionFor(c.screenWidth, c.screenHeight), view, at),
                               hole);
             if (hole[3] > 0.0f && !fadeTold_) {
                 fadeTold_ = true;
-                LOG_INFO("effects: the character's place told the renderer -%s%s", (flags & 1) ? " fade_models" : "",
-                         (flags & 2) ? " silhouette" : "");
+                LOG_INFO("effects: the character's place told the renderer ([effects] silhouette)");
             }
         }
         c.setSeeThrough(hole, flags);
@@ -244,8 +242,6 @@ HRESULT Device7::record(D3DPRIMITIVETYPE type, DWORD fvf, const void* vertices, 
     // alpha is not 0 - uaRO.exe 0x40E4D0: ZWRITEENABLE on, ALPHAREF 1 - so Ruwach's sprites hide each other, a line;
     // without it they piled up into a ball, the user: «всё равно какой-то шар крутится». Their light is a ground
     // light instead: effect_light::kGroundLight.)
-    // 3.0.13-beta.17: [effects] fade_models - 3.0.13-beta.26: a hole the renderer's shaders leave round the
-    // character (shaders.cpp seeThrough), in place of the models chosen whole here, which went on and off
     cmd.state = c.record.addState(setup);
     cmd.primitive = uint32_t(type);
     cmd.fvf = fvf;
