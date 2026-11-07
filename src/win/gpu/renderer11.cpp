@@ -1269,7 +1269,8 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
     // 0.90: a pass of the driver's own draws over what the game drew so far: the gathered call goes first
     if (s.ui && worldDrawn_ && (!stepsDone_ || !nightDone_ || !lightDone_ || !floorDone_ || !mistDone_ ||
                                 !shaftsDone_ || !heatDone_ || !bloomDone_ ||
-                                !gradeDone_ || !weatherDone_ || !darknessLaid_ || !holesLaid_))
+                                !gradeDone_ || !weatherDone_ || !darknessLaid_ || !holesLaid_ ||
+                                !silhouetteLaid_))
         flushBatch();
     if (s.ui && !holesLaid_) applyHoles();  // 3.0.13-beta.28: see-through round the character, under the night
     if (s.ui && worldDrawn_ && !stepsDone_) applySteps();  // 2.5.2: on the ground, under the night
@@ -1287,6 +1288,7 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
     if (s.ui && worldDrawn_ && !gradeDone_) applyGrade();
     if (s.ui && worldDrawn_ && !flies_.empty()) applyFireflies();  // 1.0.1: with the torches' light
     if (s.ui && worldDrawn_ && !weatherDone_) applyWeather();  // 2.5: in front of all of it
+    if (s.ui && !silhouetteLaid_) applySilhouette();  // 3.0.13-beta.30: the character's shape over what hides it
     if (s.ui && !darknessLaid_) applyDarkness();  // 2.6.18: blindness's darkness over all of it
     if (s.ui && glowDrawn_) addGlow();  // 1.0: the world's glow onto it, before the interface
     if (s.ui && inWorld_) pmark("the world made larger");  // 3.0.5-beta.4: [debug] profile's own span
@@ -1441,12 +1443,21 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
     packStage(s.stage[1], d.keyed[1], c.stage1);
     // 3.0.13-beta.26: [effects] fade_models - the hole round the character (draw.cpp's)
     // 3.0.13-beta.28: draw.cpp's - drawn without the hole, kept; drawn again in it alone, laid over (applyHoles)
-    if (holePass_ || (!seamPass_ && !darknessPass_ && holeOver(rec, d, s, hole_))) {
+    const bool own = !seamPass_ && !darknessPass_ && !holePass_ && !silhouettePass_;
+    if (holePass_ || (own && (holeFlags_ & 1) && holeOver(rec, d, s, hole_))) {
         std::copy(hole_, hole_ + 8, c.hole);
         if (holePass_)
             c.hole[7] = -c.hole[7];
         else
             noteHole(rec, d, s);
+    }
+    if (own && (holeFlags_ & 2) && d.texture[0]) {  // 3.0.13-beta.30: [effects] silhouette (draw.cpp's)
+        const auto st = textures_.find(d.texture[0]);
+        if (ownSprite(rec, d, s, hole_, st != textures_.end() && !st->second.cells.empty())) noteSilhouette(rec, d, s);
+    }
+    if (silhouettePass_) {
+        std::copy(hole_, hole_ + 8, c.hole);
+        c.hole[4] = -1.0f;
     }
     // 2.5.2: the ground's lightmap (its 256x256 atlas of 8x8 cells) sampled smoothly (as draw.cpp, 0.22.6) - the
     // weak set's own, never set here until now
@@ -2314,6 +2325,10 @@ void Renderer11::present(HWND window, int outputWidth, int outputHeight, const R
         pmark(effectName11(kTimeWeather11));
         applyWeather();  // 2.5
     }
+    if (!silhouetteLaid_) {
+        pmark("the character's silhouette");
+        applySilhouette();  // 3.0.13-beta.30
+    }
     if (!darknessLaid_) {
         pmark("blindness's darkness");
         applyDarkness();  // 2.6.18
@@ -2367,6 +2382,8 @@ void Renderer11::present(HWND window, int outputWidth, int outputHeight, const R
     darknessLaid_ = false;
     holeRec_.reset();  // 3.0.13-beta.28
     holesLaid_ = false;
+    silhouetteRec_.reset();  // 3.0.13-beta.30
+    silhouetteLaid_ = false;
     shaftsDone_ = false;  // 2.5.5
     shaftLights_ = 0;
     updateWind();

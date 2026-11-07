@@ -69,6 +69,39 @@ inline bool holeOver(const FrameRecord& rec, const DrawCmd& d, const DrawSetup& 
     return rhw > 0.0f && 1.0f / rhw < hole[3] - 3.0f && x1 > hole[0] - rx && x0 < hole[0] + rx && y1 > cy - ry &&
            y0 < cy + ry;
 }
+// 3.0.13-beta.30: [effects] silhouette - a sprite of the game's sprite cache (spriteTexture) standing where the
+// character stands: its feet at the hole's, its depth the character's. The draw kept with a state that draws it only
+// where something nearer hides it, laid over, writing no depth (shaders.cpp seeThrough's silhouette)
+inline bool ownSprite(const FrameRecord& rec, const DrawCmd& d, const DrawSetup& s, const float hole[8],
+                      bool spriteTexture) {
+    if (hole[3] <= 0.0f || !spriteTexture || s.ui || !s.blend || d.fvf != d3d7::FVF_TL1 || d.vertexCount != 4)
+        return false;
+    const std::vector<uint8_t>& v = rec.vertexBytes();
+    const size_t stride = FrameRecord::stride(d.fvf);
+    if (d.vertexOffset + 4 * stride > v.size()) return false;
+    float x0 = FLT_MAX, y0 = FLT_MAX, x1 = -FLT_MAX, y1 = -FLT_MAX, rhw = 0.0f;
+    for (uint32_t i = 0; i < 4; ++i) {
+        float xyzw[4];
+        std::memcpy(xyzw, v.data() + d.vertexOffset + i * stride, sizeof xyzw);
+        x0 = std::min(x0, xyzw[0]);
+        y0 = std::min(y0, xyzw[1]);
+        x1 = std::max(x1, xyzw[0]);
+        y1 = std::max(y1, xyzw[1]);
+        rhw += xyzw[3] / 4.0f;
+    }
+    const float h = hole[2];
+    return rhw > 0.0f && std::fabs(1.0f / rhw - hole[3]) < 25.0f && x0 < hole[0] && hole[0] < x1 &&
+           y1 > hole[1] - 0.6f * h && y1 < hole[1] + 0.6f * h && y0 < hole[1] - 0.2f * h;
+}
+inline DrawSetup silhouetteSetup(DrawSetup s) {
+    s.zEnable = true;
+    s.zWrite = false;
+    s.zFunc = d3d7::CMP_GREATER;  // only where something nearer is drawn
+    s.blend = true;
+    s.srcBlend = d3d7::BLEND_SRCALPHA;
+    s.dstBlend = d3d7::BLEND_INVSRCALPHA;
+    return s;
+}
 // 0.64: a draw's top and bottom (game pixels) - the leaves' sway (core/foliage.hpp); false when it has no height.
 inline bool yExtent(const FrameRecord& rec, const DrawCmd& d, float& top, float& bottom) {
     const std::vector<uint8_t>& v = rec.vertexBytes();

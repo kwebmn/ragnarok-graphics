@@ -187,6 +187,9 @@ struct EffectSettings {
     // 3.0.13-beta.17 (the owner's pick 1 of «50 идей»): buildings and trees between the camera and the character drawn
     // see-through, gliding (core/model_fade) - off as new looks are
     bool fadeModels = false;
+    // 3.0.13-beta.30 (the owner: «давай попробуем просто силует», pick 6 of «50 идей»): the character's parts hidden
+    // behind a house, a tree or a wall drawn over them as a light silhouette - off as new looks are
+    bool silhouette = false;
     // 3.0.13-beta.20 (the owner's pick 9 of «50 идей»): others' skill effects - on actors neither the character nor a
     // party member here - at 30 % of the game's (a guild war, the market); off as new looks are
     bool crowdEffects = false;

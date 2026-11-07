@@ -556,7 +556,7 @@ void Context::flush() {
     const bool hole = enhanced_ && hole_[3] > 0.0f;
     if (hole || holeSent_) {
         const float none[8] = {};
-        renderer->setSeeThrough(hole ? hole_ : none);
+        renderer->setSeeThrough(hole ? hole_ : none, hole ? holeFlags_ : uint8_t(0));
         holeSent_ = hole;
     }
     renderer->execute(record);

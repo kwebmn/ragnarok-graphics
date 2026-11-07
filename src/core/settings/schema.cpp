@@ -581,6 +581,8 @@ const std::vector<IniSetting>& iniSettings() {
          Text::FxCrowdEffectsHint, "", &E::crowdEffects},  // 3.0.13-beta.20
         {"effects", "fade_models", Page::Effects, Control::Check, 0, 1, 0, {"0", "1"}, {}, Text::FxFadeModels,
          Text::FxFadeModelsHint, "", &E::fadeModels},  // 3.0.13-beta.17
+        {"effects", "silhouette", Page::Effects, Control::Check, 0, 1, 0, {"0", "1"}, {}, Text::FxSilhouette,
+         Text::FxSilhouetteHint, "", &E::silhouette},  // 3.0.13-beta.30
         {"effects", "aura_portals", Page::Effects, Control::Check, 0, 1, 0, {"0", "1"}, {}, Text::FxAuraPortals,
          Text::FxAuraPortalsHint, "", &E::auraPortals},  // 3.0.13-beta.15
         {"effects", "aura_brightness", Page::Effects, Control::Slider, 0, 100, 10, {}, {}, Text::FxAuraBrightness,

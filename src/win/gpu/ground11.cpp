@@ -11,6 +11,7 @@
 #include "core/hills.hpp"
 #include "core/own_ground.hpp"
 #include "core/seams.hpp"
+#include "win/gpu/draw_constants.hpp"
 #include "win/gpu/renderer11.hpp"
 #include "win/log.hpp"
 
@@ -536,6 +537,43 @@ void Renderer11::noteHole(const FrameRecord& rec, const DrawCmd& d, const DrawSe
     cmd.state = holeRec_.addState(s);
     holeRec_.draw(cmd, v.data() + d.vertexOffset, d.vertexCount, d.indexCount ? ix.data() + d.firstIndex : nullptr,
                   d.indexCount);
+}
+
+// 3.0.13-beta.30: a sprite of the character's, kept with the silhouette's state (draw_constants.hpp).
+void Renderer11::noteSilhouette(const FrameRecord& rec, const DrawCmd& d, const DrawSetup& s) {
+    const std::vector<uint8_t>& v = rec.vertexBytes();
+    const std::vector<uint16_t>& ix = rec.indices();
+    if (silhouetteRec_.draws().size() >= 32 ||
+        d.vertexOffset + size_t(d.vertexCount) * FrameRecord::stride(d.fvf) > v.size() ||
+        size_t(d.firstIndex) + d.indexCount > ix.size())
+        return;
+    DrawCmd cmd = d;
+    cmd.state = silhouetteRec_.addState(silhouetteSetup(s));
+    silhouetteRec_.draw(cmd, v.data() + d.vertexOffset, d.vertexCount,
+                        d.indexCount ? ix.data() + d.firstIndex : nullptr, d.indexCount);
+}
+
+// 3.0.13-beta.30: the character's sprites again, only where something nearer hides them (applyHoles' way)
+void Renderer11::applySilhouette() {
+    silhouetteLaid_ = true;
+    if (silhouetteRec_.draws().empty()) return;
+    flushBatch();
+    const std::vector<uint8_t>& v = silhouetteRec_.vertexBytes();
+    const std::vector<uint16_t>& ix = silhouetteRec_.indices();
+    if (fillBuffer(seamVertices_, seamVertexBytes_, D3D11_BIND_VERTEX_BUFFER, v.data(), v.size(),
+                   bgraVertices_ ? nullptr : &silhouetteRec_) &&
+        (ix.empty() || fillBuffer(seamIndices_, seamIndexBytes_, D3D11_BIND_INDEX_BUFFER, ix.data(),
+                                  ix.size() * sizeof(uint16_t), nullptr))) {
+        std::swap(vertices_, seamVertices_);
+        std::swap(indices_, seamIndices_);
+        silhouettePass_ = true;
+        for (const DrawCmd& cmd : silhouetteRec_.draws()) draw(silhouetteRec_, cmd);
+        flushBatch();
+        silhouettePass_ = false;
+        std::swap(vertices_, seamVertices_);
+        std::swap(indices_, seamIndices_);
+    }
+    silhouetteRec_.reset();
 }
 
 // 3.0.13-beta.28: the models over the hole drawn again in it alone, laid over the ground and the character (as

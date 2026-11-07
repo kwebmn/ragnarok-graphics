@@ -144,7 +144,10 @@ public:
     void setShaderVariants(bool on) { variantsWanted_ = on; }  // 2.5.16: [debug] shader_variants
     void setMergeDraws(bool on) { mergeDraws_ = on; }  // 0.90: [debug] merge_draws
     void setCamera(bool valid, const float view[12], float targetZ = 0);  // 0.99: the game's camera (the modern water)
-    void setSeeThrough(const float hole[8]) { std::copy(hole, hole + 8, hole_); }  // 3.0.13-beta.26
+    void setSeeThrough(const float hole[8], uint8_t flags) {  // 3.0.13-beta.26; .30 flags
+        std::copy(hole, hole + 8, hole_);
+        holeFlags_ = flags;
+    }
     void setAnisotropy(int anisotropy) { anisotropy_ = anisotropy; }
     // 0.47: the AI textures from the texture pack (none made); false: off, the reason in the log.
     bool startAi(const std::string& gameDir, const AiSettings& settings);
@@ -396,6 +399,11 @@ private:
     bool holePass_ = false, holesLaid_ = false;
     void noteHole(const FrameRecord& rec, const DrawCmd& d, const DrawSetup& s);
     void applyHoles();
+    // 3.0.13-beta.30: [effects] silhouette - the character's sprites drawn again where something hides them
+    FrameRecord silhouetteRec_;
+    bool silhouettePass_ = false, silhouetteLaid_ = false;
+    void noteSilhouette(const FrameRecord& rec, const DrawCmd& d, const DrawSetup& s);
+    void applySilhouette();
     void noteDarkness(const FrameRecord& rec, const DrawCmd& d, const DrawSetup& s);
     void applyDarkness();
     bool seamsDone_ = false, seamsLogged_ = false;
@@ -683,6 +691,7 @@ private:
     weather::Kind weather_ = weather::Kind::None;
     float cameraTargetZ_ = 0.0f;  // the view depth of what the camera looks at (setCamera), 0 unknown
     float hole_[8] = {};          // 3.0.13-beta.26: the hole round the character (setSeeThrough)
+    uint8_t holeFlags_ = 0;       // .30: 1 fade_models, 2 silhouette
     // 2.5.1: the soft shadows; the map's file (the lamps' lights, torches11.cpp)
     ID3D11PixelShader* aoPs_ = nullptr;
     ID3D11PixelShader* aoBlurPs_ = nullptr;

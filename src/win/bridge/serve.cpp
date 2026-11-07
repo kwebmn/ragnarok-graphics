@@ -243,7 +243,8 @@ bool Server::dispatch(Msg type, const uint8_t* data, uint32_t size) {
         case Msg::SeeThrough: {  // 3.0.13-beta.26
             float hole[8];
             for (float& v : hole) v = rd.f32();
-            if (rd.ok()) renderer_.setSeeThrough(hole);
+            const uint8_t flags = rd.left() >= 1 ? rd.u8() : uint8_t(1);  // .30
+            if (rd.ok()) renderer_.setSeeThrough(hole, flags);
             break;
         }
         case Msg::IconWanted: {

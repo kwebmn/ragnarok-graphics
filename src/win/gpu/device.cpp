@@ -2145,11 +2145,12 @@ void Renderer::setCamera(bool valid, const float view[12], float targetZ) {
             for (int c = 0; c < 3; ++c) m.viewToWorld[3 * r + c] = inv[4 * r + c];
 }
 
-void Renderer::setSeeThrough(const float hole[8]) {
+void Renderer::setSeeThrough(const float hole[8], uint8_t flags) {
     if (remix_) return;
-    if (d3d11_) return d3d11_->setSeeThrough(hole);
-    if (remote_) return remote_->setSeeThrough(hole);
+    if (d3d11_) return d3d11_->setSeeThrough(hole, flags);
+    if (remote_) return remote_->setSeeThrough(hole, flags);
     std::copy(hole, hole + 8, impl_->hole);
+    impl_->holeFlags = flags;
 }
 
 ID3D12Device* Renderer::device() const { return impl_->device; }

@@ -290,10 +290,11 @@ void Remote::setCamera(bool valid, const float view[12], float targetZ) {
     send(Msg::Camera, buffer_);
 }
 
-void Remote::setSeeThrough(const float hole[8]) {
+void Remote::setSeeThrough(const float hole[8], uint8_t flags) {
     buffer_.clear();
     WireWriter w(buffer_);
     for (int i = 0; i < 8; ++i) w.f32(hole[i]);
+    w.u8(flags);  // .30
     send(Msg::SeeThrough, buffer_);
 }
 

@@ -62,7 +62,7 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
                                        : "the game's world";
     crumb(span);
     // 1.9: the driver's own draws (no hooks, nothing noted); 3.0.4-beta.10 the own ground's
-    const bool inner = seamPass || darknessPass || ownPass || holePass;
+    const bool inner = seamPass || darknessPass || ownPass || holePass || silhouettePass;
     // 2.6.18: blindness's darkness waits for the world's effects (applyDarkness)
     if (!inner && !s.ui && d.effect == uint8_t(effect_exe::Kind::Darkness) && !darknessLaid) {
         noteDarkness(rec, d, s);
@@ -179,8 +179,13 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     if (softAdd) laid.srcBlend = d3d7::BLEND_INVDESTCOLOR;
     // 3.0.13-beta.28: a model over the hole round the character - drawn without it, kept for applyHoles, which draws
     // the hole alone once the world is down: laid over by its alpha, writing no depth (shaders.cpp seeThrough)
-    const bool holed = holePass || (!inner && holeOver(rec, d, s, hole));
+    const bool holed = holePass || (!inner && (holeFlags & 1) && holeOver(rec, d, s, hole));
     if (holed && !holePass) noteHole(rec, d, s);
+    if (!inner && (holeFlags & 2) && d.texture[0]) {  // 3.0.13-beta.30: [effects] silhouette
+        const auto st = textures.find(d.texture[0]);
+        if (ownSprite(rec, d, s, hole, st != textures.end() && !st->second.spriteCells.empty()))
+            noteSilhouette(rec, d, s);
+    }
     if (holePass) {
         laid.blend = true;
         laid.srcBlend = d3d7::BLEND_SRCALPHA;
@@ -431,6 +436,10 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     if (holed) {
         std::copy(hole, hole + 8, c.hole);
         if (holePass) c.hole[7] = -c.hole[7];  // the hole alone, laid over
+    }
+    if (silhouettePass) {  // 3.0.13-beta.30: the character's shape where it is hidden
+        std::copy(hole, hole + 8, c.hole);
+        c.hole[4] = -1.0f;
     }
     // 0.22.6: the ground's lightmap (its 256x256 atlas of 8x8 cells) sampled smoothly. 3.0.4-beta.26: and the own
     // ground's (its atlas 2048 wide, the cells laid as the game lays them: terrain::lightmapAtlas)

@@ -29,6 +29,7 @@ const EffectLayout kEffects[] = {
     {"effects.aura", {}, {"effects.aura_brightness"}, {}, 0},
     {"effects.aura_portals", {}, {}, {}, 0},  // 3.0.13-beta.15
     {"effects.fade_models", {}, {}, {}, 0},   // 3.0.13-beta.17
+    {"effects.silhouette", {}, {}, {}, 0},    // 3.0.13-beta.30
     {"effects.skills_soft", {}, {"effects.skill_brightness"}, {}, 0},
     {"effects.crowd_effects", {}, {}, {}, 0},  // 3.0.13-beta.20
     {"effects.water",

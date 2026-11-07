@@ -809,6 +809,7 @@ bool Renderer::Impl::finishWorld() {
     if (bloomDue() && !applyBloom()) return false;  // 0.78: before the colours
     if (gradeDue() && !applyGrade()) return false;
     if (weatherDue() && !applyWeather()) return false;  // 0.39: the weather in front of all of it, sharp
+    if (!applySilhouette()) return false;  // 3.0.13-beta.30: the character's shape over what hides it
     return applyDarkness();  // 2.6.18: blindness's darkness over all of it
 }
 
@@ -850,6 +851,35 @@ bool Renderer::Impl::applyHoles() {
     }
     geometryList = 0;  // the game's record's vertices go up again with its next draw
     holeRec.reset();
+    return !lost;
+}
+
+// 3.0.13-beta.30: a sprite of the character's, kept with the silhouette's state (draw_constants.hpp)
+void Renderer::Impl::noteSilhouette(const FrameRecord& rec, const DrawCmd& d, const DrawSetup& s) {
+    const std::vector<uint8_t>& v = rec.vertexBytes();
+    const std::vector<uint16_t>& ix = rec.indices();
+    if (silhouetteRec.draws().size() >= 32 ||
+        d.vertexOffset + size_t(d.vertexCount) * FrameRecord::stride(d.fvf) > v.size() ||
+        size_t(d.firstIndex) + d.indexCount > ix.size())
+        return;
+    DrawCmd cmd = d;
+    cmd.state = silhouetteRec.addState(silhouetteSetup(s));
+    silhouetteRec.draw(cmd, v.data() + d.vertexOffset, d.vertexCount,
+                       d.indexCount ? ix.data() + d.firstIndex : nullptr, d.indexCount);
+}
+
+bool Renderer::Impl::applySilhouette() {
+    if (silhouetteRec.draws().empty()) return true;
+    crumb("the character's silhouette");
+    flushDraws();
+    prepareGeometry(silhouetteRec);
+    if (vertexBase) {
+        silhouettePass = true;
+        for (const DrawCmd& cmd : silhouetteRec.draws()) draw(silhouetteRec, cmd);
+        silhouettePass = false;
+    }
+    geometryList = 0;
+    silhouetteRec.reset();
     return !lost;
 }
 

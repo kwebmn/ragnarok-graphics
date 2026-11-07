@@ -87,15 +87,18 @@ HRESULT STDMETHODCALLTYPE Device7::BeginScene() {
        // hole round it the renderer's shaders leave in them (core/model_fade.hpp holeOf)
         win::Context& c = win::Context::get();
         float view[12], at[3], hole[8] = {};
-        if (c.effects().fadeModels && c.enhanced() && c.screenWidth > 0 && win::readCameraAndTarget(view, at)) {
+        // 3.0.13-beta.30: [effects] silhouette needs the character's place too
+        const uint8_t flags = uint8_t((c.effects().fadeModels ? 1 : 0) | (c.effects().silhouette ? 2 : 0));
+        if (flags && c.enhanced() && c.screenWidth > 0 && win::readCameraAndTarget(view, at)) {
             modelfade::holeOf(modelfade::focusOf(camera::projectionFor(c.screenWidth, c.screenHeight), view, at),
                               hole);
             if (hole[3] > 0.0f && !fadeTold_) {
                 fadeTold_ = true;
-                LOG_INFO("effects: a hole round the character in the models before it ([effects] fade_models)");
+                LOG_INFO("effects: the character's place told the renderer -%s%s", (flags & 1) ? " fade_models" : "",
+                         (flags & 2) ? " silhouette" : "");
             }
         }
-        c.setSeeThrough(hole);
+        c.setSeeThrough(hole, flags);
     }
     win::Context::get().markInterfaceEnd(win::interfaceFaces());  // 3.0.11-beta.190: the game's interface list
     win::groundway::newFrame();    // 3.0.11-beta.31: the way on the ground drawn once in this frame

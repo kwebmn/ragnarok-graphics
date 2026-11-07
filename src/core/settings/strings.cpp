@@ -999,6 +999,15 @@ constexpr Entry kTexts[] = {
      "персонажем, персонаж ніколи не губиться за ними.",
      "Прозрачное окно вокруг вашего персонажа в доме, дереве или стене между ним и камерой - оно движется вместе с "
      "персонажем, персонаж никогда не теряется за ними."},
+    {Text::FxSilhouette, "Character's silhouette behind buildings", "Силует персонажа за будинками",
+     "Силуэт персонажа за зданиями"},  // 3.0.13-beta.30
+    {Text::FxSilhouetteHint,
+     "Where a house, a tree or a wall hides your character, its shape shows over them in light blue - the buildings "
+     "stay as they are.",
+     "Там, де будинок, дерево чи стіна закривають вашого персонажа, його обрис видно поверх них блакитним - будинки "
+     "лишаються як є.",
+     "Там, где дом, дерево или стена закрывают вашего персонажа, его силуэт виден поверх них голубым - здания "
+     "остаются как есть."},
     {Text::FxCrowdEffects, "Others' skill effects fainter", "Чужі ефекти навичок блідіші",
      "Чужие эффекты навыков бледнее"},  // 3.0.13-beta.20
     {Text::FxCrowdEffectsHint,

@@ -72,7 +72,8 @@ enum class Msg : uint32_t {
     SetLight,           // 2.5.20: u8 the light modes' flags (core/light_mode.hpp light::Flag; Direct3D 11's own)
     SetProfile,         // 3.0.5-beta.2: u8 [debug] profile - the frame's spans into the log (core/frame_profile.hpp)
     ProfileCut,         // 3.0.5-beta.6: str tag, u8 by cuts - the graphics test's window ends (frame_profile::Flush)
-    SeeThrough,         // 3.0.13-beta.26: 8 f32, the hole round the character (core/model_fade.hpp holeOf)
+    SeeThrough,         // 3.0.13-beta.26: 8 f32, the hole round the character (core/model_fade.hpp holeOf); .30 u8
+                        // flags: 1 fade_models, 2 silhouette
     // renderer -> driver
     Hello = 100,        // u8 ok, str adapter (ok) or what failed; u8 DLSS ready (when ok)
     Log,                // u8 level, str text
