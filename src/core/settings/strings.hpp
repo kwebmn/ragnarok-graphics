@@ -99,6 +99,8 @@ enum class Text : uint16_t {
     FxCrowdEffects, FxCrowdEffectsHint,  // 3.0.13-beta.20
     FxMage, FxMageHint, FxMageCasting, FxMageCastingHint, FxMageFire, FxMageFireHint, FxMageWater,  // 3.0.15-beta.11
     FxMageWaterHint, FxMageWind, FxMageWindHint, FxMageEarth, FxMageEarthHint, FxMageSpirit, FxMageSpiritHint,
+    FxSword, FxSwordHint, FxAcolyte, FxAcolyteHint, FxArcher, FxArcherHint, FxThief, FxThiefHint, FxMerchant,
+    FxMerchantHint, FxOther, FxOtherHint,  // 3.0.15-beta.12
     FxFireflies, FxFirefliesHint, FxFirefliesBrightness, FxFirefliesBrightnessHint, FxMapGlows, FxMapGlowsHint,
     FxMapGlowsBrightness, FxMapGlowsBrightnessHint, FxRays, FxRaysHint, FxRaysBrightness, FxRaysBrightnessHint,
     FxLava, FxLavaHint, FxLavaBrightness, FxLavaBrightnessHint, FxActorShadows, FxActorShadowsHint,

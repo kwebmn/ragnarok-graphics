@@ -188,6 +188,8 @@ TEST(effect_groups_fourteen_by_what_the_eye_is_on) {
         {"rim_light", Characters}, {"footprints", Characters},
         {"hit_flash", Characters}, {"aura", Characters}, {"aura_portals", Characters}, {"silhouette", Characters},
         {"skills_soft", SkillEffects}, {"crowd_effects", SkillEffects}, {"mage_effects", SkillEffects},
+        {"sword_effects", SkillEffects}, {"acolyte_effects", SkillEffects}, {"archer_effects", SkillEffects},
+        {"thief_effects", SkillEffects}, {"merchant_effects", SkillEffects}, {"other_effects", SkillEffects},
         {"skill_sparks", SkillEffects},
         {"fire_light", SkillEffects},
         {"torch", Fire}, {"embers", Fire}, {"smoke", Fire}, {"lava", Fire}, {"heat", Fire},

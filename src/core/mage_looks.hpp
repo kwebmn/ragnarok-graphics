@@ -9,8 +9,16 @@ namespace uagfx::magelook {
 // Gust's were (3.0.15-beta.8, R-8X3RCC's record): a layer the game adds on laid over crisp in the element's colours,
 // the widest soft, a solid face (three corners, laid over) lit by its own slope. Its switches: the whole and each
 // element, the casting's own look too (core/cast_look.hpp).
-enum class Element : uint8_t { None, Fire, Water, Wind, Earth, Spirit };
-Element elementOf(int effectId);
+enum class Element : uint8_t { None, Fire, Water, Wind, Earth, Spirit, Holy, Dark, Poison, Steel, Life, Gold };
+// 3.0.15-beta.12 (the owner: «нравится, делай еффекты по всем остальным персонажам»): every class's skills - whose
+// branch an effect is (its switch) and its colours' tone
+enum class Branch : uint8_t { None, Mage, Sword, Acolyte, Archer, Thief, Merchant, Other };
+struct Look {
+    Branch branch = Branch::None;
+    Element tone = Element::None;
+};
+Look lookOf(int effectId);
+Element elementOf(int effectId);  // a mage's skill's element (Fire-Spirit), None for the rest
 
 // The element's colours: the core (densest), the edge, the deep (a solid face away from the light)
 struct Palette {

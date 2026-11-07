@@ -196,6 +196,10 @@ struct EffectSettings {
     // wind, earth and ghost skills
     bool mageEffects = false;
     bool mageCasting = true, mageFire = true, mageWater = true, mageWind = true, mageEarth = true, mageSpirit = true;
+    // 3.0.15-beta.12 (the owner: «делай еффекты по всем остальным персонажам»): every other class's skills likewise
+    // (core/mage_looks.hpp lookOf), a switch a branch, off as new looks are
+    bool swordEffects = false, acolyteEffects = false, archerEffects = false, thiefEffects = false;
+    bool merchantEffects = false, otherEffects = false;
     // 0.28: the maps' fireflies - those the game shows and those the maps' makers placed that it does not - glow,
     // flash now and then and light a little around them. On by default.
     bool fireflies = true;

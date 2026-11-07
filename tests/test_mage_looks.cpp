@@ -5,6 +5,7 @@
 using namespace uagfx;
 using magelook::Element;
 using magelook::Part;
+using magelook::Branch;
 
 TEST(mage_looks_elements_by_effect) {
     CHECK(magelook::elementOf(31) == Element::Fire);    // Fire Bolt
@@ -29,4 +30,18 @@ TEST(mage_looks_parts_and_ids) {
     CHECK(magelook::isOurs(id) && magelook::partOfId(id) == Part::Solid && magelook::elementOfId(id) == Element::Earth);
     CHECK(!magelook::isOurs(89) && !magelook::isOurs(0xFFF1));
     CHECK(magelook::paletteOf(Element::Fire).edge[0] > magelook::paletteOf(Element::Fire).edge[2]);  // orange
+}
+
+TEST(mage_looks_every_class) {
+    // 3.0.15-beta.12: every class's skills by branch and tone
+    CHECK(magelook::lookOf(16).branch == Branch::Sword && magelook::lookOf(16).tone == Element::Steel);   // Bash
+    CHECK(magelook::lookOf(312).branch == Branch::Acolyte && magelook::lookOf(312).tone == Element::Life);  // Heal
+    CHECK(magelook::lookOf(113).tone == Element::Holy);                                                    // Magnus
+    CHECK(magelook::lookOf(121).branch == Branch::Thief);                                                  // Sonic Blow
+    CHECK(magelook::lookOf(170).branch == Branch::Merchant);                                       // Cart Revolution
+    CHECK(magelook::lookOf(115).branch == Branch::Archer);                                         // Blitz Beat
+    CHECK(magelook::lookOf(618).branch == Branch::Other && magelook::lookOf(618).tone == Element::Fire);  // Kouenka
+    CHECK(magelook::lookOf(22).branch == Branch::None);  // Sight: its orb lights the ground (effect_light)
+    CHECK(magelook::lookOf(33).branch == Branch::None);  // Ruwach likewise
+    CHECK(magelook::elementOf(312) == Element::None);    // not a mage's
 }

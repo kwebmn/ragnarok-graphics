@@ -359,13 +359,27 @@ HRESULT Device7::record(D3DPRIMITIVETYPE type, DWORD fvf, const void* vertices, 
     const bool ownCasting = fx.mageEffects && fx.mageCasting && effect_exe::isCasting(tag.id) && tag.owner;  // .6
     // 3.0.15-beta.8: [effects] new_storm_gust - its own brightness too
     // .11: [effects] mage_effects - the mages' skills by their element (core/mage_looks.hpp)
-    const magelook::Element element = magelook::elementOf(int(tag.id));
-    const bool ownMage = fx.mageEffects && tag.kind == effect_exe::Kind::Skill && element != magelook::Element::None &&
-                         (element == magelook::Element::Fire     ? fx.mageFire
-                          : element == magelook::Element::Water  ? fx.mageWater
-                          : element == magelook::Element::Wind   ? fx.mageWind
-                          : element == magelook::Element::Earth  ? fx.mageEarth
-                                                                 : fx.mageSpirit);
+    // 3.0.15-beta.12: and every other class's (core/mage_looks.hpp lookOf), a switch a branch
+    const magelook::Look look = magelook::lookOf(int(tag.id));
+    const magelook::Element element = look.tone;
+    const bool branchOn = [&] {
+        switch (look.branch) {
+            case magelook::Branch::Mage:
+                return fx.mageEffects && (element == magelook::Element::Fire    ? fx.mageFire
+                                          : element == magelook::Element::Water ? fx.mageWater
+                                          : element == magelook::Element::Wind  ? fx.mageWind
+                                          : element == magelook::Element::Earth ? fx.mageEarth
+                                                                                : fx.mageSpirit);
+            case magelook::Branch::Sword: return fx.swordEffects;
+            case magelook::Branch::Acolyte: return fx.acolyteEffects;
+            case magelook::Branch::Archer: return fx.archerEffects;
+            case magelook::Branch::Thief: return fx.thiefEffects;
+            case magelook::Branch::Merchant: return fx.merchantEffects;
+            case magelook::Branch::Other: return fx.otherEffects;
+            default: return false;
+        }
+    }();
+    const bool ownMage = tag.kind == effect_exe::Kind::Skill && branchOn;
     const bool skill = tag.kind == effect_exe::Kind::Skill && !ownCasting && !ownMage &&
                        (crowd || (fx.skillsSoft && drawPercent < 100));
     if ((aura || skill) && c.enhanced()) {

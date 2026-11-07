@@ -37,6 +37,12 @@ const EffectLayout kEffects[] = {
      {},
      {},
      0},
+    {"effects.sword_effects", {}, {}, {}, 0},  // 3.0.15-beta.12
+    {"effects.acolyte_effects", {}, {}, {}, 0},  // 3.0.15-beta.12
+    {"effects.archer_effects", {}, {}, {}, 0},  // 3.0.15-beta.12
+    {"effects.thief_effects", {}, {}, {}, 0},  // 3.0.15-beta.12
+    {"effects.merchant_effects", {}, {}, {}, 0},  // 3.0.15-beta.12
+    {"effects.other_effects", {}, {}, {}, 0},  // 3.0.15-beta.12
     {"effects.water",
      {"effects.water_foam", "effects.water_glints", "effects.caustics", "effects.waterfalls"},
      {"effects.water_waves", "effects.water_reflections", "effects.water_clarity"},
