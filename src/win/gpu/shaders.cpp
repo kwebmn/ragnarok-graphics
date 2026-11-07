@@ -506,11 +506,19 @@ float hillLight(float3 P) {
 
 // 3.0.13-beta.30 (the owner: «давай попробуем просто силует»; .26-.29's see-through models round the character
 // gone in .31): holeZ > 0 - the character's sprite drawn again where something nearer hides it (draw_constants.hpp
-// silhouetteSetup), its shape in light blue
-void seeThrough(float4 pos, inout float4 c) {
+// silhouetteSetup). 3.0.13-beta.32 (R-83PRCU «не красиво» - a flat blue blot): a ghost - a bright rim where the
+// sprite's alpha ends (its texture a step and a half to each side), the sprite itself faint and cold inside
+void seeThrough(float4 pos, float2 uv, float2 du, float2 dv, inout float4 c) {
     if (holeZ <= 0.0) return;
-    c.rgb = float3(0.55, 0.82, 1.0);
-    c.a = saturate(c.a) * 0.6;
+    float a = saturate(c.a);
+    float2 x = du * 1.5, y = dv * 1.5;
+    float around = min(min(tex0.SampleGrad(samp0, uv + x, du, dv).a, tex0.SampleGrad(samp0, uv - x, du, dv).a),
+                       min(tex0.SampleGrad(samp0, uv + y, du, dv).a, tex0.SampleGrad(samp0, uv - y, du, dv).a));
+    float rim = saturate((a - around) * 2.0);
+    float grey = dot(c.rgb, float3(0.3, 0.59, 0.11));
+    float3 inside = float3(0.42, 0.66, 1.0) * (0.45 + 0.7 * grey);
+    c.rgb = lerp(inside, float3(0.72, 0.93, 1.0), rim);
+    c.a = a * lerp(0.3, 0.95, rim);
 }
 
 float4 shade(PsIn i) {
@@ -682,7 +690,7 @@ float4 shade(PsIn i) {
     // 2.7.38: a skill's light laid over softly (draw.cpp: the target's colour its factor, not its alpha) - as much
     // of it as its alpha lets through
     if (((alphaTest >> 23) & 1) != 0) c.rgb *= c.a;
-    seeThrough(i.pos, c);  // 3.0.13-beta.30: the silhouette - last
+    seeThrough(i.pos, uv0, du, dv, c);  // 3.0.13-beta.30: the silhouette - last
     return c;
 }
 

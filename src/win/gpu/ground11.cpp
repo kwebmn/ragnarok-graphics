@@ -535,8 +535,10 @@ void Renderer11::noteSilhouette(const FrameRecord& rec, const DrawCmd& d, const 
         return;
     DrawCmd cmd = d;
     cmd.state = silhouetteRec_.addState(silhouetteSetup(s));
-    silhouetteRec_.draw(cmd, v.data() + d.vertexOffset, d.vertexCount,
-                        d.indexCount ? ix.data() + d.firstIndex : nullptr, d.indexCount);
+    std::vector<uint8_t> nearer;  // .32: kSilhouetteMargin nearer
+    silhouetteVertices(v.data() + d.vertexOffset, d.vertexCount, FrameRecord::stride(d.fvf), nearer);
+    silhouetteRec_.draw(cmd, nearer.data(), d.vertexCount, d.indexCount ? ix.data() + d.firstIndex : nullptr,
+                d.indexCount);
 }
 
 // 3.0.13-beta.30: the character's sprites again, only where something nearer hides them (applyDarkness' way)

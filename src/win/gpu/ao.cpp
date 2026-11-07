@@ -834,8 +834,10 @@ void Renderer::Impl::noteSilhouette(const FrameRecord& rec, const DrawCmd& d, co
         return;
     DrawCmd cmd = d;
     cmd.state = silhouetteRec.addState(silhouetteSetup(s));
-    silhouetteRec.draw(cmd, v.data() + d.vertexOffset, d.vertexCount,
-                       d.indexCount ? ix.data() + d.firstIndex : nullptr, d.indexCount);
+    std::vector<uint8_t> nearer;  // .32: kSilhouetteMargin nearer
+    silhouetteVertices(v.data() + d.vertexOffset, d.vertexCount, FrameRecord::stride(d.fvf), nearer);
+    silhouetteRec.draw(cmd, nearer.data(), d.vertexCount, d.indexCount ? ix.data() + d.firstIndex : nullptr,
+               d.indexCount);
 }
 
 bool Renderer::Impl::applySilhouette() {

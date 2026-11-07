@@ -69,7 +69,26 @@ inline bool ownSprite(const FrameRecord& rec, const DrawCmd& d, const DrawSetup&
     }
     const float h = hole[2];
     return rhw > 0.0f && std::fabs(1.0f / rhw - hole[3]) < 25.0f && x0 < hole[0] && hole[0] < x1 &&
-           y1 > hole[1] - 0.6f * h && y1 < hole[1] + 0.6f * h && y0 < hole[1] - 0.2f * h;
+           y1 > hole[1] - 0.9f * h && y1 < hole[1] + 0.6f * h && y0 < hole[1] - 0.2f * h;  // .32: the head's too
+}
+// 3.0.13-beta.32 (R-83PRCU: «кусок силуета налез на саму текстуру персонажа» - the ground by the feet a little nearer
+// than the sprite's bottom): the silhouette's vertices kSilhouetteMargin nearer the camera - it shows only where what
+// hides the character is that much nearer (z by the game's projection, camera::kNear/kFar; rhw likewise)
+constexpr float kSilhouetteMargin = 8.0f;
+inline void silhouetteVertices(const uint8_t* src, uint32_t count, size_t stride, std::vector<uint8_t>& out) {
+    out.assign(src, src + size_t(count) * stride);
+    const auto depthOf = [](float w) {
+        return camera::kFar / (camera::kFar - camera::kNear) * (1.0f - camera::kNear / w);
+    };
+    for (uint32_t i = 0; i < count; ++i) {
+        float xyzw[4];
+        std::memcpy(xyzw, out.data() + i * stride, sizeof xyzw);
+        if (!(xyzw[3] > 0.0f)) continue;
+        const float w = 1.0f / xyzw[3], nearer = std::max(w - kSilhouetteMargin, camera::kNear + 1.0f);
+        xyzw[2] = std::max(0.0f, xyzw[2] - (depthOf(w) - depthOf(nearer)));
+        xyzw[3] = 1.0f / nearer;
+        std::memcpy(out.data() + i * stride, xyzw, sizeof xyzw);
+    }
 }
 // a quad's box (x0, y0, x1, y1, game pixels) and mean depth - for the log
 inline bool spriteBox(const FrameRecord& rec, const DrawCmd& d, float box[4], float& depth) {
