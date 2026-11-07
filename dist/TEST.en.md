@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.13-beta.26 — what's new
+
+**«See-through houses before the character» redone: a see-through window round the character.** The driver used to choose which models to make see-through whole, and they went on and off as you walked and turned the camera. Now the card leaves a see-through window round the character in the houses, trees and walls before it - it moves with the character smoothly, no blinking. Only what is nearer the camera than the character fades; what is behind does not.
+
 # uaRO Graphics 3.0.13-beta.25 — what's new
 
 **«See-through houses before the character»: smooth at any frame rate.** The see-through faded and came back in 8 frames: at 120 frames a second that is 70 ms - a blink. Now by the clock: it fades in a quarter of a second, holds half a second after the model stops covering and comes back in 0.4 s. Along with the model over the character, a house's neighbouring parts fade only near the character on the screen - lamp posts and benches round it stay as they are.
