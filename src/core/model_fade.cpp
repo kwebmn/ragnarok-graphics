@@ -44,7 +44,8 @@ Focus focusOf(const camera::Projection& p, const float view[12], const float at[
 bool covers(const uint8_t* vertices, uint32_t stride, uint32_t vertexCount, const uint16_t* indices,
             uint32_t indexCount, bool strip, const Focus& f) {
     if (!f.known || !vertices || stride < 16 || vertexCount < 3) return false;
-    const float px[3] = {f.x, f.x, f.x}, py[3] = {f.y - f.h * 0.3f, f.y - f.h * 0.6f, f.y - f.h * 0.9f};
+    float py[kPoints];
+    for (int s = 0; s < kPoints; ++s) py[s] = f.y - f.h * kBodyAt[s];
     const uint32_t n = indices ? indexCount : vertexCount;
     const uint32_t triangles = strip ? (n >= 3 ? n - 2 : 0) : n / 3;
     const auto index = [&](uint32_t k) { return indices ? uint32_t(indices[k]) : k; };
@@ -53,8 +54,8 @@ bool covers(const uint8_t* vertices, uint32_t stride, uint32_t vertexCount, cons
         const uint32_t i0 = index(base), i1 = index(base + 1), i2 = index(base + 2);
         if (i0 >= vertexCount || i1 >= vertexCount || i2 >= vertexCount) return false;
         const V a = at(vertices, stride, i0), b = at(vertices, stride, i1), c = at(vertices, stride, i2);
-        for (int s = 0; s < 3; ++s) {
-            const float z = depthIn(a, b, c, px[s], py[s]);
+        for (int s = 0; s < kPoints; ++s) {
+            const float z = depthIn(a, b, c, f.x, py[s]);
             if (z > 0 && z < f.z - kNearer) return true;
         }
     }

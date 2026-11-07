@@ -17,7 +17,11 @@ struct Focus {
     float x = 0, y = 0, z = 0, h = 0;
 };
 constexpr float kBodyUnits = 45.0f;  // a character sprite's height in the world's units, about
-constexpr float kNearer = 10.0f;     // a draw this much nearer than the feet covers the body (not the ground at them)
+// a draw this much nearer than the feet covers the body; 3.0.13-beta.18 (R-TAA3SB: a wall right before the character
+// and a roof over its feet stayed whole): 3, not 10 - the ground over the feet lies behind them anyway
+constexpr float kNearer = 3.0f;
+constexpr int kPoints = 4;
+constexpr float kBodyAt[kPoints] = {0.1f, 0.35f, 0.6f, 0.9f};  // .18: 0.1 - the feet's own, a roof over them
 // view: the game's world -> view (c_j = sum_i w_i * view[3i+j] + view[9+j]); at: the camera's target in the world
 Focus focusOf(const camera::Projection& p, const float view[12], const float at[3]);
 

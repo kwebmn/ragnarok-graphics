@@ -52,3 +52,17 @@ TEST(model_fade_glides_down_and_back) {
     fd.frameDone(41);
     CHECK(fd.fading() == 0);
 }
+
+// 3.0.13-beta.18 (R-TAA3SB): a wall right before the character (a few units nearer) and a roof over its feet alone
+// cover it too
+TEST(model_fade_close_walls_and_roofs_over_the_feet) {
+    modelfade::Focus f;
+    f.known = true;
+    f.x = 400;
+    f.y = 300;
+    f.z = 200;
+    f.h = 60;
+    const auto close = quad(350, 200, 450, 320, 196), roof = quad(350, 290, 450, 320, 150);
+    CHECK(modelfade::covers(close.data(), 32, 4, nullptr, 0, true, f));
+    CHECK(modelfade::covers(roof.data(), 32, 4, nullptr, 0, true, f));
+}
