@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.13-beta.33 — what's new
+
+**«Character's silhouette behind buildings»: the neck and head no longer go missing.** While the character walked, the camera trailed it, and the sprite's narrow parts (head, neck) sometimes missed the silhouette - now taken with room to spare. And with the character right behind a wall, its top edge no longer leaves an empty band at the neck.
+
 # uaRO Graphics 3.0.13-beta.32 — what's new
 
 **«Character's silhouette behind buildings» nicer.** In place of a flat blue blot, a ghost: a bright rim round the character and a faint cold fill with the sprite itself showing through. The silhouette no longer creeps over the character standing in the open (the ground by its feet nearer the camera than the sprite's bottom): it shows only where something clearly nearer hides it. The head is in the silhouette too.
