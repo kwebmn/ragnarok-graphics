@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.13-beta.31 — what's new
+
+**«See-through houses before the character» removed** - the buildings before the character are as the game draws them again. In their place, **«Character's silhouette behind buildings»**: where a house, a tree or a wall hides your character, its shape shows over them in light blue. The silhouette did not show while the see-through buildings were on: they cut the wall away, leaving nothing to show it over.
+
 # uaRO Graphics 3.0.13-beta.30 — what's new
 
 **New: «Character's silhouette behind buildings»** (effects, the characters' group, off by default). Where a house, a tree or a wall hides your character, its shape shows over them in light blue - the buildings stay as they are.
