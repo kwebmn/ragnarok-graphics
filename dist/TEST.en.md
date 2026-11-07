@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.13-beta.21 — what's new
+
+**«See-through houses before the character»: the see-through no longer blinks.** Walking behind a fountain or a house, it keeps one see-through: no flash when the body slips past its edge for a moment, and no fading over again when the model moves (the fountain's water).
+
 # uaRO Graphics 3.0.13-beta.20 — what's new
 
 **See-through buildings: what is behind no longer fades.** Tall things behind the character (Prontera's fountain) went see-through: the camera looks down and their tops are nearer to it. Now only what is nearer the camera along the ground fades - really between the camera and the character.
