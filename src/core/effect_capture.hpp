@@ -12,11 +12,13 @@ namespace uagfx::effect_capture {
 // and Storm Gust first): the facts before any redraw (feedback: the game's real draws first, 2.7.53's portal record
 // its model) - each skill effect's draws the first time its number shows in a game, a few frames of its life, into
 // uaro-graphics\logs\uaro-effects.txt (sent with a report); its textures once, made small. Betas only, kMostBytes.
-constexpr int kFrames[] = {0, 4, 10, 20, 35, 60, 90, 130};  // frames after its first draw that are kept
-constexpr int kMostEffects = 24;
-constexpr int kMostDrawsAFrame = 300;
+// 3.0.15-beta.10 (the owner: all the mages' skills redrawn in one go - «сделай както так чтобы было удобно
+// переключать»): one record for them all - 64 effects, five frames each, textures at 32, its skill named
+constexpr int kFrames[] = {0, 6, 20, 45, 90};  // frames after its first draw that are kept
+constexpr int kMostEffects = 64;
+constexpr int kMostDrawsAFrame = 200;
 constexpr size_t kMostBytes = 1200000;  // the site takes 1.6 M characters a file
-constexpr int kTextureSide = 64;        // a texture written at most this wide and high (its shape, not its texels)
+constexpr int kTextureSide = 32;        // a texture written at most this wide and high (its shape, not its texels)
 
 struct Vertex {
     float x, y, z, rhw;  // the screen's pixels, the depth buffer's z, 1 / the view's depth
@@ -48,6 +50,8 @@ private:
 // A draw's line - the effect, its frame offset, states, texture - then a line each of its vertices and its indices.
 std::string drawText(int id, int offset, const DrawSetup& s, uint32_t texture, int width, int height,
                      const Vertex* v, int count, const uint16_t* indices, int indexCount);
+// .10: an effect's first line - the character's last skill as it began (0 none known)
+std::string firstText(int id, int skill);
 
 // A texture's line and its texels made at most kTextureSide (box-averaged ARGB, little-endian, rows from the top) in
 // base64

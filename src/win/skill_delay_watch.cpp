@@ -2,6 +2,7 @@
 
 #include <windows.h>
 
+#include <atomic>
 #include <cstring>
 
 #include "core/char_status.hpp"
@@ -33,10 +34,21 @@ uint32_t rd32(const uint8_t* p, size_t at) {
 
 }  // namespace
 
+namespace {
+std::atomic<int> g_last{0};  // 3.0.15-beta.10: the character's last skill begun or done
+}  // namespace
+
+int lastSkill() { return g_last.load(); }
+
 void packet(uint16_t id, const uint8_t* p) {
     if (!p) return;
     int skill = 0, level = 0;
     uint32_t source = 0;
+    if (id == 0x013e) {  // 3.0.15-beta.10: a cast begun - <source>.L 2, <skill>.W 14 (core/effect_capture's names)
+        uint32_t own = 0;
+        if (readGame(kOwnAccount, &own, 4) && rd32(p, 2) == own) g_last = rd16(p, 14);
+        return;
+    }
     switch (id) {
         case 0x01de: skill = rd16(p, 2), source = rd32(p, 4), level = rd16(p, 28); break;
         case 0x0114: skill = rd16(p, 2), source = rd32(p, 4), level = rd16(p, 26); break;
@@ -46,6 +58,7 @@ void packet(uint16_t id, const uint8_t* p) {
     }
     uint32_t own = 0;
     if (!skill || !readGame(kOwnAccount, &own, 4) || source != own) return;
+    g_last = skill;  // 3.0.15-beta.10
     const int base = skilldelay::afterCast(skill, level);
     if (base <= 0) return;
     charstatus::Status st;

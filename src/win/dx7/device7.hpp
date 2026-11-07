@@ -4,6 +4,7 @@
 #include <d3d.h>
 
 #include <cstdint>
+#include <set>
 #include <vector>
 
 #include "core/aura_portal.hpp"
@@ -76,6 +77,7 @@ private:
     bool fadeTold_ = false;
     // 3.0.15-beta.1: the skills' effects' draws written to uaro-effects.txt in betas (core/effect_capture.hpp)
     effect_capture::Recorder capture_;
+    std::set<int> captureFirst_;  // 3.0.15-beta.10: the effects whose first line is written
     // 3.0.15-beta.2: [effects] new_casting (core/cast_look.hpp) - the casting's walls in a copy; the circle being drawn
     castlook::Looks castLooks_;
     std::vector<uint8_t> cast_;

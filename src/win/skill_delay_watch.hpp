@@ -9,5 +9,6 @@ namespace uagfx::win::skilldelaywin {
 // begun (core/skill_delay, the character's DEX)
 void packet(uint16_t id, const uint8_t* packet);
 float left();  // the share of the delay left now (0 none) - the hotbar's sweep
+int lastSkill();  // 3.0.15-beta.10: the character's last skill begun (0x013e) or done, 0 none yet
 
 }  // namespace uagfx::win::skilldelaywin

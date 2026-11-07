@@ -10,13 +10,13 @@ using namespace uagfx;
 TEST(effect_capture_keeps_the_first_life_of_each_effect) {
     effect_capture::Recorder r;
     CHECK(r.take(113, 1000));   // Magnus's first draw: frame 0 of its record
-    CHECK(r.offset(113, 1004) == 4);
-    CHECK(r.take(113, 1004));   // a frame kept
+    CHECK(r.offset(113, 1006) == 6);
+    CHECK(r.take(113, 1006));   // a frame kept
     CHECK(!r.take(113, 1005));  // between them: not
     CHECK(r.take(12, 1005));    // another effect starts its own record
     CHECK(!r.take(113, 1300));  // past the last frame kept
     int taken = 0;
-    for (int i = 0; i < 400; ++i) taken += r.take(12, 1009) ? 1 : 0;  // frame 4 of the casting
+    for (int i = 0; i < 400; ++i) taken += r.take(12, 1011) ? 1 : 0;  // frame 6 of the casting
     CHECK(taken == effect_capture::kMostDrawsAFrame);
     CHECK(r.textureTold(7) && !r.textureTold(7));
     r.wrote(effect_capture::kMostBytes);
@@ -32,5 +32,6 @@ TEST(effect_capture_writes_draws_and_small_textures) {
     CHECK(t.find(" i 0 1 0") != std::string::npos);
     std::vector<uint32_t> argb(256 * 128, 0xFF808080u);
     const std::string tex = effect_capture::textureText(5, 256, 128, argb.data());
-    CHECK(tex.find("texture 5 256x128 as 64x64") == 0);
+    CHECK(tex.find("texture 5 256x128 as 32x32") == 0);
+    CHECK(effect_capture::firstText(89, 89) == "first 89 after skill 89\n");
 }

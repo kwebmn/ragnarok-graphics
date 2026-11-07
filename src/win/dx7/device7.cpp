@@ -24,6 +24,7 @@
 #include "win/net_predict.hpp"
 #include "win/net_smooth.hpp"
 #include "win/paths.hpp"
+#include "win/skill_delay_watch.hpp"
 #include "win/windows_draw.hpp"
 
 namespace uagfx::dx7 {
@@ -259,7 +260,10 @@ void Device7::captureEffect(const effect_exe::Tag& tag, const DrawSetup& setup, 
     const uint32_t id = t ? t->gpuTexture() : 0;
     const int w = t ? t->width() : 0, h = t ? t->height() : 0;
     const int at = capture_.offset(int(tag.id), captureFrame_);
-    std::string text = effect_capture::drawText(int(tag.id), at, setup, id, w, h, v.data(), int(v.size()), indices,
+    std::string text = at == 0 && captureFirst_.insert(int(tag.id)).second
+                           ? effect_capture::firstText(int(tag.id), win::skilldelaywin::lastSkill())
+                           : std::string();
+    text += effect_capture::drawText(int(tag.id), at, setup, id, w, h, v.data(), int(v.size()), indices,
                                                 int(std::min<DWORD>(indices ? indexCount : 0, 768)));
     std::vector<uint32_t> argb;
     if (t && capture_.textureTold(id) && t->topArgb(argb)) text += effect_capture::textureText(id, w, h, argb.data());

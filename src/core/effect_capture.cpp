@@ -59,6 +59,10 @@ std::string drawText(int id, int offset, const DrawSetup& s, uint32_t texture, i
     return out;
 }
 
+std::string firstText(int id, int skill) {
+    return "first " + std::to_string(id) + " after skill " + std::to_string(skill) + "\n";
+}
+
 std::string textureText(uint32_t texture, int width, int height, const uint32_t* argb) {
     if (!argb || width <= 0 || height <= 0) return {};
     const int w = std::min(width, kTextureSide), h = std::min(height, kTextureSide);
