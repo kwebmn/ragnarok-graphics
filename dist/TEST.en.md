@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.15-beta.9 — what's new
+
+**«Item windows size»** (the «Interface» page, «Main»: 70, 85 or 100 %). «Items», the storage (the guild's too) and the cart smaller - two side by side no longer cover the whole screen; the other windows stay as they are. Applied at once, no game restart.
+
 # uaRO Graphics 3.0.15-beta.8 — what's new
 
 **New Storm Gust** («New Storm Gust» in the effects' «Skills» group, off by default). In place of the white blot: crisp snow and cloud in icy blue, lightning in its own colour, a soft haze below, faceted ice spikes with a glint. Made from a record of how the game draws Storm Gust: the same layers and timing.
