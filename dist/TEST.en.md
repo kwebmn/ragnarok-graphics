@@ -1,3 +1,9 @@
+# uaRO Graphics 3.0.13-beta.30 — what's new
+
+**New: «Character's silhouette behind buildings»** (effects, the characters' group, off by default). Where a house, a tree or a wall hides your character, its shape shows over them in light blue - the buildings stay as they are.
+
+**«See-through houses before the character»:** the see-through window back to its earlier size (as in beta.28).
+
 # uaRO Graphics 3.0.13-beta.29 — what's new
 
 **«See-through houses before the character»: the see-through window larger and softer.** The window round the character is nearly twice as wide, and its rim fades into the wall smoothly over most of it - no sharp circle any more.
