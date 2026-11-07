@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.16-beta.1 — what's new
+
+**New effects beyond the skills** (effects, «Skills», a switch a group, off by default): «New hits» (the weapons' hit sparks, combos, dark and holy hits), «New potions, buffs and items» (potions, Concentration and Berserk, food, Kaizel, Kaahi, thrown items, cooking), «New states» (frozen, stone, sleep, stun, curse, blind, poison), «New teleport, levels and refining» (teleport, coming and going, Level Up, Job Level Up, a job changed, refining, the MVP's), «New monsters' and homunculi's effects». As the skills': crisp layers in their own colour in place of white blots.
+
 # uaRO Graphics 3.0.15 — what's new
 
 New skill effects for every class, the crashes entering castles fixed and smaller item windows. Everything new that changes the look is off by default - turn it on in the uaRO program.
