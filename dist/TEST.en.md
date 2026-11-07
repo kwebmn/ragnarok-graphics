@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.13-beta.23 — what's new
+
+**«See-through houses before the character»: the fences round the character no longer blink.** Along with a model covering the character only its neighbouring parts in the world fade (the whole house), not everything over it on the screen - the long fences and kerbs round a square no longer go on and off at each step. The see-through holds a little longer after a model stops covering.
+
 # uaRO Graphics 3.0.13-beta.22 — what's new
 
 **«See-through houses before the character»: statues and houses no longer blink while you walk behind them.** The game draws a model a little differently each frame, leaving out the faces turned away from the camera, so a statue counted as a new one each time and started fading over again. Now a model is known by its texture and middle.
