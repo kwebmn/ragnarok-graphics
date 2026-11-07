@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.16-beta.2 — what's new
+
+**«New damage numbers»** («Interface», «Fight», off by default). Damage and healing over characters and monsters as crisp numbers with a dark rim in place of the small pixel ones: in the game's colours, a critical larger and orange with a pop, a heal green with a plus; thousands apart (1 234 567), rising and fading.
+
 # uaRO Graphics 3.0.16-beta.1 — what's new
 
 **New effects beyond the skills** (effects, «Skills», a switch a group, off by default): «New hits» (the weapons' hit sparks, combos, dark and holy hits), «New potions, buffs and items» (potions, Concentration and Berserk, food, Kaizel, Kaahi, thrown items, cooking), «New states» (frozen, stone, sleep, stun, curse, blind, poison), «New teleport, levels and refining» (teleport, coming and going, Level Up, Job Level Up, a job changed, refining, the MVP's), «New monsters' and homunculi's effects». As the skills': crisp layers in their own colour in place of white blots.
