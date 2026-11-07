@@ -58,6 +58,7 @@ struct PresentOptions {
     bool foreground = true;     // the game's window is in front: frame generation only then
     bool vsyncSetting = true;   // vsync as set (vsync above is off for a Blt that shows at once); Remix's interval
     std::string screenshot;     // 0.54: the picture as shown, to this PNG file (Ctrl+Shift+F12); "" none
+    bool screenshotWhole = false;  // 3.0.13-beta.16: the target at its own size (Direct3D 12), not the window's
     bool hdr = false;           // 0.65: [display] hdr - HDR10 where the monitor shows HDR (Direct3D 12)
     bool pacerSleeps = false;   // 2.5.20: the battery saver - fps_limit kept by sleeping alone (FramePacer)
     // 3.0.2-beta.13: the game's loading picture while a map loads - the game's thread does not wait for its present

@@ -200,7 +200,12 @@ private:
     void updateLight();
     ToggleKey fpsKey_;  // 0.54: Ctrl+Shift+F11 - the frame counter
     ToggleKey photoKey_;  // 3.0.4-beta.5: Ctrl+Alt+F12 - the photo mode
+    ToggleKey bigShotKey_;  // 3.0.13-beta.16: Ctrl+Alt+F11 - a big shot
     bool photo_ = false;  // the game's interface, the windows' panel and the counter out of the picture
+    // 3.0.13-beta.16 (the owner's pick 20 of «50 идей»: «Режим скриншота»): Ctrl+Alt+F11 - the frames left of a big
+    // shot: the world alone at 200 % (no DLSS, TAA, own interface scale), the target saved whole at the last
+    int bigShot_ = 0;
+    bool photoNow() const { return photo_ || bigShot_ > 0; }
     // 2.2.1: the statistics of the settings played with, with the player's leave ([stats] send; core/usage.hpp)
     usage::Recorder usage_;
     usage::Setup usageSetup_;

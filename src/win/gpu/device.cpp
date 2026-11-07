@@ -2966,30 +2966,36 @@ void Renderer::present(HWND window, int outputWidth, int outputHeight, const Rec
     if (!options.screenshot.empty() && m.hdrOn)  // 0.65: a PNG has no HDR10's colours
         LOG_INFO("screenshot: not taken with HDR on - turn HDR off for it ([display] hdr)");
     if (!options.screenshot.empty() && !m.hdrOn) {  // 0.54: the picture as shown, read after Present
-        const UINT pitch = UINT(alignUp(UINT64(m.swapWidth) * 4, D3D12_TEXTURE_DATA_PITCH_ALIGNMENT));
-        const UINT64 size = UINT64(pitch) * m.swapHeight;
+        // 3.0.13-beta.16: a big shot - the target itself at its own size (the world drawn at 200 %, finished: its
+        // colour, glow), not the window's picture made smaller from it; with DLSS's own size not (it is off then)
+        const bool whole = options.screenshotWhole && !m.upscale && shown.resource;
+        const UINT shotW = whole ? UINT(m.width) : m.swapWidth, shotH = whole ? UINT(m.height) : m.swapHeight;
+        const UINT pitch = UINT(alignUp(UINT64(shotW) * 4, D3D12_TEXTURE_DATA_PITCH_ALIGNMENT));
+        const UINT64 size = UINT64(pitch) * shotH;
         if (m.shotSize < size) {
             releaseCom(m.shotBuffer);
             m.shotBuffer = createBuffer(m.device, D3D12_HEAP_TYPE_READBACK, size, D3D12_RESOURCE_STATE_COPY_DEST);
             m.shotSize = m.shotBuffer ? size : 0;
         }
         if (m.shotBuffer) {
-            m.transition(m.backBuffers[index], m.backStates[index], D3D12_RESOURCE_STATE_COPY_SOURCE);
+            ID3D12Resource* from = whole ? shown.resource : m.backBuffers[index];
+            D3D12_RESOURCE_STATES& fromState = whole ? *shown.state : m.backStates[index];
+            m.transition(from, fromState, D3D12_RESOURCE_STATE_COPY_SOURCE);
             D3D12_TEXTURE_COPY_LOCATION dst{}, src{};
             dst.pResource = m.shotBuffer;
             dst.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
             dst.PlacedFootprint.Footprint.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
-            dst.PlacedFootprint.Footprint.Width = m.swapWidth;
-            dst.PlacedFootprint.Footprint.Height = m.swapHeight;
+            dst.PlacedFootprint.Footprint.Width = shotW;
+            dst.PlacedFootprint.Footprint.Height = shotH;
             dst.PlacedFootprint.Footprint.Depth = 1;
             dst.PlacedFootprint.Footprint.RowPitch = pitch;
-            src.pResource = m.backBuffers[index];
+            src.pResource = from;
             src.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
             m.list->CopyTextureRegion(&dst, 0, 0, 0, &src, nullptr);
             m.shotPath = options.screenshot;
             m.shotPitch = pitch;
-            m.shotWidth = int(m.swapWidth);
-            m.shotHeight = int(m.swapHeight);
+            m.shotWidth = int(shotW);
+            m.shotHeight = int(shotH);
         }
     }
     m.transition(m.backBuffers[index], m.backStates[index], D3D12_RESOURCE_STATE_PRESENT);

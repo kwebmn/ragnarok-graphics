@@ -611,6 +611,7 @@ void Remote::present(HWND window, int outputWidth, int outputHeight, const Rect&
     w.str(o.screenshot);  // 0.54
     w.u8(o.hdr ? 1 : 0);  // 0.65
     w.u8(o.pacerSleeps ? 1 : 0);  // 2.5.20
+    w.u8(o.screenshotWhole ? 1 : 0);  // 3.0.13-beta.16
     if (!send(Msg::Present, buffer_)) return;
     ++presentsSent_;
     // 2.5.25: with DLSS frame generation the renderer has Reflex on, and Reflex holds each frame back until the card

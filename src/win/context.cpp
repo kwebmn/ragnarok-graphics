@@ -670,9 +670,9 @@ void Context::endScene() {
     const bool drawn = record.takeWork() > 0;
     // 3.0.11-beta.215: the next frames' cell under the mouse - none while the cursor is hidden (hidePadCursor's rule)
     hideGridCell(gridcell::hides(config.padWalk == PadWalk::Arrow, uapad::runtime::look().shown));
-    if (photo_) record.dropInterface();  // 3.0.4-beta.5: the photo mode - the world alone
-    if (drawn && renderer && !photo_) buffoverlay::draw(record, *renderer);  // 3.0.4-beta.6: the buffs' times
-    if (panelSlot_.endScene(drawn) && renderer && !photo_) {
+    if (photoNow()) record.dropInterface();  // 3.0.4-beta.5: the photo mode - the world alone (.16: a big shot)
+    if (drawn && renderer && !photoNow()) buffoverlay::draw(record, *renderer);  // 3.0.4-beta.6: the buffs' times
+    if (panelSlot_.endScene(drawn) && renderer && !photoNow()) {
         hidePadCursor(record, config.padWalk);  // 3.0.11-beta.102: no cursor while the controller plays
         // 3.0.11-beta.109 (the concept «Концепция окон и инвентаря», question 5 «да»): the game's own windows (the ones
         // the driver does not draw anew - the arrows' list, the storage, the trade, its options) and its cursor out of
@@ -780,7 +780,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     // 3.0.3-beta.12: put into the game's scene at its EndScene; here only into a picture drawn without one
     const bool drawnAnew = record.takeWork() > 0;
     drawSparkles();  // 2.7.14: a frame with no interface draw
-    if (panelSlot_.present(drawnAnew) && renderer && !photo_) {
+    if (panelSlot_.present(drawnAnew) && renderer && !photoNow()) {
         hidePadCursor(record, config.padWalk);  // 3.0.11-beta.102
         worlddim::draw(record);                 // 3.0.11-beta.49
         lowhpedge::draw(record, *renderer);     // 3.0.11-beta.50
@@ -886,6 +886,13 @@ void Context::present(const Rect& source, bool waitForVblank) {
         LOG_INFO("photo mode: %s (Ctrl+Alt+F12)", photo_ ? "on - the game's interface, the cursor and the panel hidden"
                                                          : "off");
     }
+    // 3.0.13-beta.16: Ctrl+Alt+F11 - a big shot: three frames at 200 % without the interface, the last one saved
+    const bool bigDown = window && GetForegroundWindow() == window && GetAsyncKeyState(VK_CONTROL) < 0 &&
+                         GetAsyncKeyState(VK_MENU) < 0 && GetAsyncKeyState(VK_F11) < 0;
+    if (bigShotKey_.pressed(bigDown) && bigShot_ == 0 && enhanced_) {
+        bigShot_ = 3;
+        LOG_INFO("big shot: Ctrl+Alt+F11 - the world alone drawn at 200 %% for a moment, saved whole");
+    }
     keepCameraFree(config.cameraIndoor);  // 3.0.4-beta.5: building maps' camera as outdoors
     limitZoom(config.cameraZoomLimit);     // 3.0.4-beta.17: no further out than the character is drawn
     tiltCamera(config.cameraTilt);  // 3.0.13-beta.5: [camera] tilt
@@ -943,14 +950,15 @@ void Context::present(const Rect& source, bool waitForVblank) {
     // 3.0.9-beta.4: while the answer card shows, the same key opens the answer - no «Нове звернення» then
     const bool reportNow = reportKey_.pressed(reportDown) && !answercard::openByKey();
     std::string screenshot;
-    if (shotNow || reportNow) {
+    const bool bigNow = bigShot_ == 1;  // 3.0.13-beta.16: the big shot's last frame
+    if (shotNow || reportNow || bigNow) {
         const std::string folder = gameDir() + "\\ScreenShot";
         CreateDirectoryA(folder.c_str(), nullptr);
         SYSTEMTIME t{};
         GetLocalTime(&t);
         char name[64];
-        std::snprintf(name, sizeof name, "\\uaro-%04u%02u%02u-%02u%02u%02u.png", t.wYear, t.wMonth, t.wDay, t.wHour,
-                      t.wMinute, t.wSecond);
+        std::snprintf(name, sizeof name, "\\uaro-%s%04u%02u%02u-%02u%02u%02u.png", bigNow ? "big-" : "", t.wYear,
+                      t.wMonth, t.wDay, t.wHour, t.wMinute, t.wSecond);
         screenshot = folder + name;
         // 3.0.4-beta.25 (R-GXHFX8 «всеравно корабль разрезаный получается»): the game's camera with the shot - its
         // view (world -> view, rows) and the game's size: the picture made again offline exactly
@@ -972,20 +980,23 @@ void Context::present(const Rect& source, bool waitForVblank) {
     const SIZE out = window ? clientPixels(window, config.highResolution) : SIZE{shadow.width(), shadow.height()};
     // Part 3: DLSS draws the world at its own size and shows it at the picture's - no supersampling on top of it
     // (DLAA at 150% would draw 2.25 times the pixels for nothing).
-    const bool dlss = renderer->upscales() && config.dlss != "off" && !light_.noUpscaler;  // 3.0.3-beta.3
+    const bool big = bigShot_ > 0;  // 3.0.13-beta.16: a big shot draws the world at 200 % itself
+    const bool dlss = !big && renderer->upscales() && config.dlss != "off" && !light_.noUpscaler;  // 3.0.3-beta.3
     // 0.62: [display] ui_native - supersampling the world alone (Direct3D 12 in this process, no DLSS): the target the
     // picture's size, the world render_scale times it, made smaller into it; the interface at the picture's pixels.
-    const bool nativeWanted = !dlss && config.uiNative && config.highResolution && config.renderScale > 100 &&
+    const bool nativeWanted = !big && !dlss && config.uiNative && config.highResolution && config.renderScale > 100 &&
                               !light_.noSupersampling && renderer->canSupersample();
     const bool uiNative =
         nativeWanted && renderer->setSupersample(enhanced_ ? config.renderScale / 100.0 : 1.0) && enhanced_;
     if (!nativeWanted) renderer->setSupersample(1.0);  // turned off in a running game
     // 0.75: [quality] taa - the renderer's own, where neither DLSS nor ui_native is used
     const bool taaWanted =
-        !dlss && !nativeWanted && config.taa && !light_.noSupersampling && renderer->canSupersample();
+        !big && !dlss && !nativeWanted && config.taa && !light_.noSupersampling && renderer->canSupersample();
     const bool taa = taaWanted && renderer->setTaa(enhanced_) && enhanced_;
     if (!taaWanted) renderer->setTaa(false);
-    const int renderScale = dlss || uiNative || taa ? 100 : std::min(config.renderScale, light_.renderScaleMax);
+    const int renderScale = big                         ? 200
+                            : dlss || uiNative || taa ? 100
+                                                      : std::min(config.renderScale, light_.renderScaleMax);
     if (dlss && config.renderScale > 100 && !renderScaleNoted_) {
         renderScaleNoted_ = true;
         LOG_INFO("render_scale %d%% is not used with DLSS: it draws the world at its own size", config.renderScale);
@@ -1280,6 +1291,8 @@ void Context::present(const Rect& source, bool waitForVblank) {
     o.foreground = foreground;
     o.vsyncSetting = config.vsync;
     o.screenshot = screenshot;
+    o.screenshotWhole = bigShot_ == 1 && !screenshot.empty();  // 3.0.13-beta.16: the target at its own size
+    if (bigShot_ > 0) --bigShot_;
     o.hdr = config.hdr && enhanced_;  // 0.65: Pause shows the SDR picture
     // 0.91: quieter in the background; the crowd's limiter thinned out. 3.0.3-beta.3: the music of the main game
     // window alone, unless [windows] others_music
@@ -1308,7 +1321,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     const bool timed = renderer->gpuTiming(gpuNow);
     rendererLoading_ = timed && gpuNow.loading;  // 3.0.6-beta.3: «Тест графіки» measures a set once it is done
     fps_.setGpu(timed ? &gpuNow : nullptr);
-    fps_.present(window, fpsShown_ && !photo_);  // 3.0.4-beta.5: not in the photo mode's picture
+    fps_.present(window, fpsShown_ && !photoNow());  // 3.0.4-beta.5: not in the photo mode's picture
     if (test_.running()) {  // 3.0.5-beta.6: the card's work of the set shown; the statistics leave the test out
         if (timed && gpuNow.serial != testGpuSerial_) {
             testGpuSerial_ = gpuNow.serial;
