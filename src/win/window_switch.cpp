@@ -99,7 +99,45 @@ bool partsMouse(HWND w, UINT m, WPARAM wp, LPARAM lp, LRESULT& answer) {
            chatwin::mouse(w, m, wp, lp, answer);         // 3.0.11-beta.41: the chat's
 }
 
+// 3.0.16-beta.4 (a player: «жму 1 раз @@ ... все подвоює, а закрию кліен і зайду наново стає нормально»): a letter
+// that comes twice for one key - the messages it came by, into the log (the facts before a cure): each key down
+// counts the letters after it; a second one names its message, its code, the one before and how long between
+struct InputWatch {
+    int lettersSinceKey = 0;
+    UINT lastMsg = 0;
+    WPARAM lastWp = 0;
+    ULONGLONG lastAt = 0;
+    int told = 0;
+    bool imeTold = false;
+};
+void watchInput(UINT m, WPARAM wp, LPARAM lp) {
+    static InputWatch iw;
+    if (m == WM_KEYDOWN || m == WM_SYSKEYDOWN) {
+        iw.lettersSinceKey = 0;
+        return;
+    }
+    if (m == WM_IME_CHAR || m == WM_IME_COMPOSITION || m == WM_IME_STARTCOMPOSITION) {
+        if (!iw.imeTold) {
+            iw.imeTold = true;
+            LOG_INFO("input: the keyboard's input method sends its own messages (0x%X) - letters may come by it too",
+                     m);
+        }
+    }
+    if (m != WM_CHAR && m != WM_IME_CHAR && m != WM_SYSCHAR) return;
+    const ULONGLONG now = GetTickCount64();
+    if (++iw.lettersSinceKey == 2 && iw.told < 20) {
+        ++iw.told;
+        LOG_INFO("input: a second letter for one key - 0x%X %u (lParam %08lX) after 0x%X %u %llu ms before", m,
+                 unsigned(wp), static_cast<unsigned long>(lp), iw.lastMsg, unsigned(iw.lastWp),
+                 static_cast<unsigned long long>(now - iw.lastAt));
+    }
+    iw.lastMsg = m;
+    iw.lastWp = wp;
+    iw.lastAt = now;
+}
+
 LRESULT CALLBACK gameProc(HWND w, UINT m, WPARAM wp, LPARAM lp) {
+    watchInput(m, wp, lp);  // 3.0.16-beta.4
     if (g_switch) {
         if (m == WM_KEYDOWN || m == WM_SYSKEYDOWN || m == WM_LBUTTONDOWN || m == WM_RBUTTONDOWN)
             uapad::runtime::noteKeysOrMouse(m != WM_KEYDOWN && m != WM_SYSKEYDOWN);  // 3.0.11-beta.86: keys' names back

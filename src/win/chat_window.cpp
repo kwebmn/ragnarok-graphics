@@ -1090,7 +1090,10 @@ bool searchKey(UINT m, WPARAM wp, LPARAM lp) {
     }
     if (!s.on || !s.shown || !inGameWorld()) return false;
     const uint32_t words = wordsEdit();
-    const bool inField = words && read32(kFocus) == words;
+    // 3.0.16-beta.4 (a player: «щось у мене перестав довидник откриватись ... жму контр F» - the game keeps its chat
+    // field focused nearly always, so Ctrl+F was the chat's search and «Довідник» never came): the chat's search only
+    // with words typed in its field; else Ctrl+F is «Довідник»'s
+    const bool inField = words && read32(kFocus) == words && !editText(words).empty();
     const bool ctrl = GetKeyState(VK_CONTROL) < 0, alt = GetKeyState(VK_MENU) < 0;
     const auto close = [&](const char* why) {
         s.searching = false;
