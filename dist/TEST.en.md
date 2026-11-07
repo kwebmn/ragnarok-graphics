@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.13-beta.24 — what's new
+
+**«See-through houses before the character»: only what covers the character fades.** The game may draw many alike models at once (all trees of a kind), and along with the tree over the character the trees, benches and fences all over the square faded - and blinked as you walked. Now each model inside such a draw fades on its own.
+
 # uaRO Graphics 3.0.13-beta.23 — what's new
 
 **«See-through houses before the character»: the fences round the character no longer blink.** Along with a model covering the character only its neighbouring parts in the world fade (the whole house), not everything over it on the screen - the long fences and kerbs round a square no longer go on and off at each step. The see-through holds a little longer after a model stops covering.
