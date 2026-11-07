@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.16-beta.5 — what's new
+
+**No more doubled letters.** In the battle mode, after Enter to type, the game put every letter twice into any field but the chat's: an NPC's question, «How many» and the like. The game's own bug; now a letter goes in once.
+
 # uaRO Graphics 3.0.16-beta.4 — what's new
 
 **Ctrl+F opens «Reference» again.** The game keeps its chat field active nearly always, and Ctrl+F went to the chat's search - the reference never opened. Now the chat's search only with words typed in its field; else Ctrl+F is the reference.
