@@ -153,7 +153,8 @@ TEST(ask_card_the_games_count) {
     const auto mid = [](const panel::Box& b) { return std::make_pair(b.x + b.w / 2, b.y + b.h / 2); };
     CHECK(askcard::quickAt(L, mid(L.quick[2]).first, mid(L.quick[2]).second) == 2);
     CHECK(askcard::quickAt(L, mid(L.field).first, mid(L.field).second) == -1);
-    CHECK(askcard::quickValue(askcard::Quick::One, 25) == 1);
+    CHECK(askcard::quickValue(askcard::Quick::One, 25) == 10);  // 3.0.15-beta.7: ten
+    CHECK(askcard::quickValue(askcard::Quick::One, 4) == 4);
     CHECK(askcard::quickValue(askcard::Quick::Half, 25) == 12);
     CHECK(askcard::quickValue(askcard::Quick::All, 25) == 25);
     CHECK(askcard::quickValue(askcard::Quick::Half, 1) == 1);

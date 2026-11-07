@@ -268,7 +268,7 @@ ac::Texts texts(const State& s) {
     t.declineKey = s.padNow ? uapad::buttonLabel(1) : "Esc";
     t.okKey = s.padNow ? "" : "Enter";
     t.cancel = say(settings::Text::MsgCancel);  // 3.0.11-beta.155: a count's
-    t.quick[0] = "1";
+    t.quick[0] = "10";  // 3.0.15-beta.7 (a player: «там де 1 шт зробити десятки 10»)
     t.quick[1] = say(settings::Text::CountHalf);
     t.quick[2] = say(settings::Text::CountAll);
     return t;
@@ -319,6 +319,14 @@ void cancelCount(State& s) {
     s.key.clear();
 }
 
+// 3.0.15-beta.7 (a player: «можно убрати щоб сразу 9209 само ставилось ... приходиться стирать в ручну 9209 кожен
+// раз»): the game's count field set - emptied as the card shows, the most put back when OK finds it empty
+void setCountField(uint32_t window, const std::string& text) {
+    const uint32_t edit = window ? read32(window + kEdit) : 0;
+    if (!edit) return;
+    reinterpret_cast<SetTextFn>(uintptr_t(read32(read32(edit) + kSetTextSlot)))(edit, text.c_str());
+}
+
 // 3.0.11-beta.155: a count's quick choice - the game's field set to it and its OK pressed
 void quick(State& s, int value) {
     const uint32_t window = gameCount(), edit = window ? read32(window + kEdit) : 0;
@@ -339,6 +347,7 @@ void press(State& s, ac::Button b) {
             cancelCount(s);
             return;
         }
+        if (s.card.field.empty() && s.card.most > 0) setCountField(window, std::to_string(s.card.most));  // .7
         if (s.told++ < 30) LOG_INFO("asks: the game's «how many» - typed, OK (0x76)");
         reinterpret_cast<SendMsgFn>(uintptr_t(kCountSend))(window, 0, kButtonMsg, 0x76, 0, 0);
         s.key.clear();
@@ -399,6 +408,7 @@ void frame(HWND game, bool on, bool counts, unsigned codePage, double k, int tar
     if (!s.shown || window != s.window || kind != s.kind) {
         if (s.told++ < 30) LOG_INFO("asks: %s - the new card shows it", nameOf(kind));
         s.show = ac::Show{};
+        if (kind == ac::Kind::Count) setCountField(window, "");  // 3.0.15-beta.7: typed from empty, not the most
     }
     s.window = window;
     s.kind = kind;

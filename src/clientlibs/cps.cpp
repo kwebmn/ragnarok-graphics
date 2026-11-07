@@ -21,11 +21,28 @@ int compress(unsigned char* dest, unsigned long* destLen, const unsigned char* s
 static volatile LONG g_files = 0, g_bytes = 0, g_micros = 0;
 static LARGE_INTEGER g_frequency{};
 
+// 3.0.15-beta.7 (R-FPT4KM and a player's «не можу попасти в замок, 2 раз словив це»: an access violation in here
+// reading 0x36c6f000 from 0x36c6effd): uaRO.exe gives a GRF entry's length rounded up (its aligned size), and its
+// buffer may end on a page's end before that - the old zlib stopped at the stream's end, libdeflate reads ahead up to
+// the length it is told. The bytes that can be read from `p`, at most `n` (the pages committed and readable).
+static unsigned long readable(const unsigned char* p, unsigned long n) {
+    unsigned long have = 0;
+    while (have < n) {
+        MEMORY_BASIC_INFORMATION m{};
+        if (!VirtualQuery(p + have, &m, sizeof m)) break;
+        const DWORD no = PAGE_NOACCESS | PAGE_GUARD;
+        if (m.State != MEM_COMMIT || (m.Protect & no) || !m.Protect) break;
+        const auto end = reinterpret_cast<const unsigned char*>(m.BaseAddress) + m.RegionSize;
+        have += static_cast<unsigned long>(end - (p + have));
+    }
+    return have < n ? have : n;
+}
+
 // Back: *destLen the room in, the data's length out (Z_OK, Z_BUF_ERROR, Z_DATA_ERROR, Z_MEM_ERROR)
 int uncompress(unsigned char* dest, unsigned long* destLen, const unsigned char* source, unsigned long sourceLen) {
     LARGE_INTEGER a, b;
     QueryPerformanceCounter(&a);
-    const int result = uagfx::client_libs::zlibUncompress(dest, destLen, source, sourceLen);
+    const int result = uagfx::client_libs::zlibUncompress(dest, destLen, source, readable(source, sourceLen));
     QueryPerformanceCounter(&b);
     InterlockedIncrement(&g_files);
     if (result == 0 && destLen) InterlockedExchangeAdd(&g_bytes, LONG(*destLen));

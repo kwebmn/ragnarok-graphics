@@ -6044,14 +6044,14 @@ constexpr Entry kTexts[] = {
     {Text::InterfaceCounts, "How many window", "Вікно кількості", "Окно количества"},
     {Text::InterfaceCountsHint,
      "The game's how many window (a stack into the storage, the cart, the bag, a trade, a shop) as a card in the new "
-     "look: what for and the most, the number typed as before, one, half or all in a click, Cancel. The controller: A "
-     "takes all, B gives up. Off: the game's own window.",
+     "look: what for and the most, the number typed into an empty field (Enter alone: all), ten, half or all in a "
+     "click, Cancel. The controller: A takes all, B gives up. Off: the game's own window.",
      "Вікно кількості гри (стос на склад, у візок, у сумку, в обмін, до крамниці) карткою в новому вигляді: для чого "
-     "і скільки найбільше, число набирається як раніше, один, половина або всі одним кліком, скасувати. "
-     "Контролер: A — усі, B — скасувати. Вимкнено: власне вікно гри.",
+     "і скільки найбільше, число набирається в порожнє поле (просто Enter — усі), десять, половина або всі одним "
+     "кліком, скасувати. Контролер: A — усі, B — скасувати. Вимкнено: власне вікно гри.",
      "Окно количества игры (стопка на склад, в тележку, в сумку, в обмен, в магазин) карточкой в новом виде: для чего "
-     "и сколько максимум, число набирается как раньше, одна, половина или все одним кликом, отменить. "
-     "Контроллер: A — все, B — отменить. Выключено: собственное окно игры."},
+     "и сколько максимум, число набирается в пустое поле (просто Enter — все), десять, половина или все одним "
+     "кликом, отменить. Контроллер: A — все, B — отменить. Выключено: собственное окно игры."},
     {Text::CountTitle, "How many?", "Скільки?", "Сколько?"},
     {Text::CountHint, "How many? At most {1}", "Скільки штук? Найбільше — {1}", "Сколько штук? Максимум — {1}"},
     {Text::CountHalf, "Half", "Половина", "Половина"},

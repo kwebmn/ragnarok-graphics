@@ -100,7 +100,7 @@ int quickAt(const Layout& L, float x, float y) {
 int quickValue(Quick q, int most) {
     const int m = std::max(1, most);
     switch (q) {
-        case Quick::One: return 1;
+        case Quick::One: return std::min(10, m);  // 3.0.15-beta.7: ten (one before), the most when fewer
         case Quick::Half: return std::max(1, m / 2);
         case Quick::All: break;
     }
