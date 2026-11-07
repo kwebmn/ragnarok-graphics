@@ -347,7 +347,11 @@ HRESULT Device7::record(D3DPRIMITIVETYPE type, DWORD fvf, const void* vertices, 
     // 3.0.13-beta.20: [effects] crowd_effects - another's skill effect (on an actor neither the character nor a party
     // member here) at kCrowdPercent, laid over by alpha too
     const bool crowd = fx.crowdEffects && tag.kind == effect_exe::Kind::Skill && tag.owner && !c.friendOf(tag.owner);
-    const bool skill = tag.kind == effect_exe::Kind::Skill && (crowd || (fx.skillsSoft && drawPercent < 100));
+    // 3.0.15-beta.3 (R-JET379: no circle, the flame faint): the new casting's own brightness, not 2.7.39's quieting -
+    // softened first, its feet walls' alpha never reached core/cast_look's kBaseAlpha
+    const bool ownCasting = fx.newCasting && effect_exe::isCasting(tag.id);
+    const bool skill = tag.kind == effect_exe::Kind::Skill && !ownCasting &&
+                       (crowd || (fx.skillsSoft && drawPercent < 100));
     if ((aura || skill) && c.enhanced()) {
         static bool logged = false;
         if (!logged && aura)

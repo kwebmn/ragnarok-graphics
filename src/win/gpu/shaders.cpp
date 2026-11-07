@@ -509,7 +509,19 @@ float hillLight(float3 P) {
 // bit 25, its magic circle on the ground (a quad, uv 0..1): two rings, marks between them, a six-pointed star turning
 // slowly. The element's colour from the vertices, a little whiter where it is brightest; quiet, as the casting was
 // made in 2.7.39.
+// .3 (R-JET379: Lord of Vermilion's yellow came out white): the element's colour is the game's texture's (one a
+// colour, the vertices white) - eight texels along its bright foot, made as bright as their brightest channel
+float3 castTint() {
+    float3 sum = float3(0.0, 0.0, 0.0);
+    for (int k = 0; k < 8; ++k) {
+        float4 t = tex0.SampleLevel(samp0, float2((float(k) + 0.5) / 8.0, 0.85), 0.0);
+        sum += t.rgb * t.a;
+    }
+    float3 t = sum / max(max(sum.r, max(sum.g, sum.b)), 1e-3);
+    return saturate(1.0 - (1.0 - t) * 3.0);  // the textures are near white (57: 1, 0.97, 0.8): their hue three times
+}
 float4 castRing(float2 uv, float4 d) {
+    d.rgb *= castTint();
     float base = saturate(uv.y);
     float tongue = pow(saturate(0.5 + 0.5 * sin(6.2832 * uv.x * 10.0 + twinH * 2.6 + uv.y * 5.0)), 5.0);
     float flicker = 0.85 + 0.15 * sin(twinH * 7.0 + uv.x * 31.0);
@@ -518,6 +530,7 @@ float4 castRing(float2 uv, float4 d) {
 }
 float castLine(float dist, float half_, float aa) { return 1.0 - smoothstep(half_ - aa, half_ + aa, dist); }
 float4 castCircle(float2 uv, float2 du, float2 dv, float4 d) {
+    d.rgb *= castTint();  // the casting's texture is bound for its circle too
     float2 p = uv * 2.0 - 1.0;
     float r = length(p);
     float aa = 2.0 * (length(du) + length(dv)) + 1e-4;
@@ -533,8 +546,14 @@ float4 castCircle(float2 uv, float2 du, float2 dv, float4 d) {
     }
     star *= step(r, 0.57);
     float glow = 0.1 * (1.0 - smoothstep(0.0, 0.95, r));
-    float a = saturate(saturate(lines) + 0.8 * mark + 0.7 * saturate(star) + glow) * (1.0 - step(1.0, r)) * 0.7;
-    return float4(lerp(d.rgb, float3(1.0, 1.0, 1.0), 0.3), a);
+    float light = saturate(saturate(lines) + 0.8 * mark + 0.7 * saturate(star));
+    // .3 (R-JET379: yellow lines lost on Prontera's white stones): a thin dark rim round each line, a third as strong
+    float rim = saturate(castLine(abs(r - 0.95), 0.03, aa) + castLine(abs(r - 0.80), 0.024, aa) +
+                         castLine(abs(r - 0.56), 0.02, aa));
+    float inside = 1.0 - step(1.0, r);
+    float a = saturate(max(light * 0.85, rim * 0.3) + glow) * inside;
+    float3 lit = lerp(d.rgb, float3(1.0, 1.0, 1.0), 0.45);
+    return float4(lerp(d.rgb * 0.25, lit, saturate(light * 1.5 + glow * 4.0)), a);
 }
 
 // 3.0.13-beta.30 (the owner: «давай попробуем просто силует»; .26-.29's see-through models round the character
