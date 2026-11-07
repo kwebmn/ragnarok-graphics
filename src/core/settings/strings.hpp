@@ -534,6 +534,7 @@ enum class Text : uint16_t {
     InterfaceDelayRing, InterfaceDelayRingHint,  // 3.0.11-beta.276
     InterfaceDeathRecap, InterfaceDeathRecapHint, RecapTitle, RecapAttack, RecapAgo,  // 3.0.11-beta.277
     InterfaceHunt, InterfaceHuntHint, HuntTitle, HuntDps, HuntExp, HuntToLevel, HuntZeny, HuntKills,  // .278
+    HuntParty, HuntMe,  // 3.0.13-beta.14
     InterfaceMobCard, InterfaceMobCardHint, MobCardHit, MobCardIts, MobCardBlow, MobCardMine,  // 3.0.11-beta.279
     InterfaceMvp, InterfaceMvpHint, MvpTitle,  // 3.0.11-beta.280
     InterfacePotionWarn, InterfacePotionWarnHint,  // 3.0.11-beta.281

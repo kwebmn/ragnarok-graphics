@@ -28,11 +28,22 @@ void Stats::reset(uint64_t now) {
     known_ = false;
     killed_.clear();
     kills_ = 0;
+    own_ = 0;
+    party_.clear();
+}
+
+void Stats::partyHit(uint32_t account, const std::string& name, int damage, uint64_t now) {
+    if (!began_) reset(now);
+    if (damage <= 0) return;
+    auto& p = party_[account];
+    if (!name.empty()) p.first = name;
+    p.second += damage;
 }
 
 void Stats::hit(int damage, int skill, uint64_t now) {
     if (!began_) reset(now);
     if (damage <= 0) return;
+    own_ += damage;  // 3.0.13-beta.14
     dealt_.push_back(Dealt{now, damage, skill});
     while (!dealt_.empty() && dealt_.front().at + kMinuteMs < now) dealt_.pop_front();
 }
@@ -89,6 +100,16 @@ View Stats::view(uint64_t now) const {
     for (const auto& [name, n] : killed_) v.killed.emplace_back(name, n);
     std::sort(v.killed.begin(), v.killed.end(), [](const auto& a, const auto& b) { return a.second > b.second; });
     if (v.killed.size() > 3) v.killed.resize(3);
+    if (!party_.empty()) {  // 3.0.13-beta.14: each one's share, the character's too
+        long long all = own_;
+        for (const auto& [id, p] : party_) all += p.second;
+        std::vector<std::pair<std::string, long long>> each{{"", own_}};
+        for (const auto& [id, p] : party_)
+            each.emplace_back(p.first.empty() ? "#" + std::to_string(id) : p.first, p.second);
+        std::stable_sort(each.begin(), each.end(), [](const auto& a, const auto& b) { return a.second > b.second; });
+        for (const auto& [name, d] : each)
+            if (all > 0 && d > 0) v.party.emplace_back(name, int(std::llround(100.0 * double(d) / double(all))));
+    }
     return v;
 }
 
@@ -133,6 +154,13 @@ std::vector<std::string> lines(const View& v, const Texts& t, const std::vector<
     std::string who;
     for (const auto& [name, n] : v.killed) who += (who.empty() ? "" : " \xC2\xB7 ") + name + " " + std::to_string(n);
     out.push_back(fill(t.kills, std::to_string(v.kills), who.empty() ? t.none : who));
+    if (!v.party.empty() && !t.party.empty()) {  // 3.0.13-beta.14
+        std::string each;
+        for (const auto& [name, share] : v.party)
+            each += (each.empty() ? "" : " \xC2\xB7 ") + (name.empty() ? t.me : name) + " " + std::to_string(share) +
+                    " %";
+        out.push_back(fill(t.party, each));
+    }
     return out;
 }
 

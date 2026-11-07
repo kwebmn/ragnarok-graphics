@@ -5465,6 +5465,8 @@ constexpr Entry kTexts[] = {
     {Text::HuntToLevel, "level in {1}", "до рівня {1}", "до уровня {1}"},
     {Text::HuntZeny, "Zeny {1}/h", "Зені {1}/год", "Зени {1}/ч"},
     {Text::HuntKills, "Killed {1}: {2}", "Убито {1}: {2}", "Убито {1}: {2}"},
+    {Text::HuntParty, "Party: {1}", "Група: {1}", "Группа: {1}"},  // 3.0.13-beta.14
+    {Text::HuntMe, "you", "ви", "вы"},
     {Text::InterfaceMobCard, "Monster card by the cursor", "Картка монстра біля курсора",
      "Карточка монстра у курсора"},  // 3.0.11-beta.279
     {Text::InterfaceMobCardHint,

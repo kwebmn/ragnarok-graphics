@@ -36,6 +36,8 @@ struct State {
     bool on = false, shown = false, upload = false;
     hunt::Stats stats;
     std::unordered_map<uint32_t, std::pair<std::string, uint64_t>> fought;  // a monster hit: its name, when
+    std::unordered_map<uint32_t, std::string> party;  // 3.0.13-beta.14: the party's members (account, name)
+    int partyTold = 0;
     float k = 0, scale = 1;
     int targetW = 0, targetH = 0, x = 0, y = 0, w = 0, h = 0;
     panel::Box reset;
@@ -73,10 +75,28 @@ std::string monsterName(uint32_t id) {
 
 void packet(const packets::Event& e) {
     State& s = state();
+    if (const auto* l = std::get_if<packets::PartyList>(&e)) {  // 3.0.13-beta.14: who is in the party
+        s.party.clear();
+        for (const packets::PartySeat& seat : l->seats) s.party[seat.account] = seat.name;
+        return;
+    }
+    if (const auto* m = std::get_if<packets::PartyMember>(&e)) {
+        s.party[m->account] = m->name;
+        return;
+    }
+    if (const auto* gone = std::get_if<packets::PartyLeft>(&e)) {
+        s.party.erase(gone->account);
+        return;
+    }
     if (!s.on) return;
     const uint64_t now = GetTickCount64();
     if (const auto* h = std::get_if<packets::Hit>(&e)) {
         const uint32_t me = own();
+        if (me && h->source != me && h->target != me && s.party.count(h->source) && !s.party.count(h->target)) {
+            s.stats.partyHit(h->source, s.party[h->source], h->damage, now);  // 3.0.13-beta.14: a mate's blow
+            if (s.partyTold++ < 3) LOG_INFO("hunt: the party's damage counted - %s", s.party[h->source].c_str());
+            return;
+        }
         if (!me || h->source != me || h->target == me) return;
         s.stats.hit(h->damage, h->skill, now);
         if (s.fought.size() > 500) s.fought.clear();
@@ -114,7 +134,8 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     s.targetW = targetWidth;
     s.targetH = targetHeight;
     s.w = int(std::lround(kW * scale));
-    s.h = int(std::lround((2 * kPad + kTitleH + 5 * kLineH) * scale));
+    const int rows = s.stats.view(now).party.empty() ? 5 : 6;  // 3.0.13-beta.14: the party's line under the rest
+    s.h = int(std::lround((2 * kPad + kTitleH + float(rows) * kLineH) * scale));
     s.x = targetWidth - s.w - int(std::lround(12 * scale));
     s.y = int(targetHeight * 0.52f);
     hudedit::place(hudlayout::Part::Hunt, float(k), targetWidth, targetHeight, s.w, s.h, s.x, s.y);
@@ -126,7 +147,8 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     const hunt::Texts t{say(settings::Text::HuntTitle),  say(settings::Text::HuntDps),
                         say(settings::Text::RecapAttack), say(settings::Text::HuntExp),
                         say(settings::Text::HuntToLevel), say(settings::Text::HuntZeny),
-                        say(settings::Text::HuntKills),   "\xE2\x80\x94"};
+                        say(settings::Text::HuntKills),   "\xE2\x80\x94",
+                        say(settings::Text::HuntParty),   say(settings::Text::HuntMe)};  // 3.0.13-beta.14
     const hunt::View v = s.stats.view(now);
     std::vector<std::string> names;
     for (const auto& [skill, share] : v.skills) names.push_back(skill ? skillinfo::name(skill) : "");

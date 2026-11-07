@@ -20,12 +20,16 @@ struct View {
     long long seconds = 0;  // since it began
     int kills = 0;
     std::vector<std::pair<std::string, int>> killed;  // the most killed first
+    // 3.0.13-beta.14 (the owner's pick 46 of «50 идей»: «Урон каждого в группе»): each one's share of the damage the
+    // party dealt since it began (the character's own named ""), the most first; empty without a party's hit
+    std::vector<std::pair<std::string, int>> party;
 };
 
 class Stats {
 public:
     void reset(uint64_t now);
     void hit(int damage, int skill, uint64_t now);  // the character's
+    void partyHit(uint32_t account, const std::string& name, int damage, uint64_t now);  // 3.0.13-beta.14: a mate's
     void status(int level, long long exp, long long next, long long zeny, uint64_t now);
     void kill(const std::string& name);
     View view(uint64_t now) const;
@@ -43,11 +47,14 @@ private:
     double gained_ = 0;  // per cent of a level since it began
     bool known_ = false;
     std::map<std::string, int> killed_;
+    long long own_ = 0;                                          // 3.0.13-beta.14: all the character dealt
+    std::map<uint32_t, std::pair<std::string, long long>> party_;  // and each mate
     int kills_ = 0;
 };
 
 struct Texts {
     std::string title, dps, attack, exp, toLevel, zeny, kills, none;
+    std::string party, me;  // 3.0.13-beta.14: «Група: {1}», «ви»
     // «Полювання · {1}», «DPS {1} · за хв {2}», «удар», «Досвід {1} %/год», «до рівня {1}», «Зені {1}/год»,
     // «Убито {1}: {2}», «—»
 };

@@ -28,3 +28,24 @@ TEST(hunt_stats_numbers) {
     CHECK(l.size() == 6 && l[0] == "Полювання · 30:00" && l[4] == "Зені +18 000/год");
     CHECK(l[5] == "Убито 3: Orc Warrior 2 \xC2\xB7 Orc Archer 1");
 }
+
+// 3.0.13-beta.14 (the owner's pick 46 of «50 идей»): each one's share of the party's damage, the most first, the
+// character's own named «ви»; none without a mate's blow
+TEST(hunt_party_damage_shares) {
+    hunt::Stats s;
+    s.reset(1);
+    s.hit(300, 0, 10);
+    hunt::Texts t;
+    t.party = "Група: {1}";
+    t.me = "ви";
+    CHECK(s.view(20).party.empty());
+    s.partyHit(77, "Lina", 600, 30);
+    s.partyHit(88, "Tor", 100, 40);
+    const hunt::View v = s.view(50);
+    CHECK(v.party.size() == 3 && v.party[0].first == "Lina" && v.party[0].second == 60);
+    CHECK(v.party[1].first.empty() && v.party[1].second == 30);
+    const std::vector<std::string> l = hunt::lines(v, t, {});
+    CHECK(l.back().find("Lina 60 %") != std::string::npos && l.back().find("ви 30 %") != std::string::npos);
+    s.reset(60);
+    CHECK(s.view(70).party.empty());
+}
