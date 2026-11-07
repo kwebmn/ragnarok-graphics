@@ -1,5 +1,6 @@
 // 3.0.13-beta.17 (the owner's pick 1 of «50 идей»): a model's draw over the character's body nearer than it covers it;
 // the ground at its feet, a wall behind it or one beside it does not; the see-through glides down and back
+#include <cmath>
 #include <cstring>
 #include <vector>
 
@@ -65,4 +66,19 @@ TEST(model_fade_close_walls_and_roofs_over_the_feet) {
     const auto close = quad(350, 200, 450, 320, 196), roof = quad(350, 290, 450, 320, 150);
     CHECK(modelfade::covers(close.data(), 32, 4, nullptr, 0, true, f));
     CHECK(modelfade::covers(roof.data(), 32, 4, nullptr, 0, true, f));
+}
+
+// 3.0.13-beta.19 (R-KVR7K3): a house's other parts go with the one over the body - over its box the frame before and
+// before the character; a part behind the character, or one elsewhere, stays
+TEST(model_fade_the_whole_house) {
+    modelfade::Fader fd;
+    modelfade::Box over{350, 200, 450, 320, 150};
+    fd.covered(over);
+    fd.frameDone(1);  // the next frame asks about it
+    CHECK(fd.alongside(modelfade::Box{300, 300, 500, 450, 120}, 200));   // its front, before the character
+    CHECK(!fd.alongside(modelfade::Box{300, 100, 500, 250, 240}, 200));  // its roof behind the character
+    CHECK(!fd.alongside(modelfade::Box{600, 100, 700, 250, 120}, 200));  // another house
+    const auto q = quad(10, 20, 30, 50, 100);
+    modelfade::Box b;
+    CHECK(modelfade::boxOf(q.data(), 32, 4, b) && b.x0 == 10 && b.y1 == 50 && std::abs(b.nearest - 100) < 0.01f);
 }

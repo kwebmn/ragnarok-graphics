@@ -242,7 +242,14 @@ HRESULT Device7::record(D3DPRIMITIVETYPE type, DWORD fvf, const void* vertices, 
         tag.kind == effect_exe::Kind::None) {
         const auto* bytes = static_cast<const uint8_t*>(vertices);
         const bool strip = type == D3DPT_TRIANGLESTRIP;
-        const bool over = modelfade::covers(bytes, 32, vertexCount, indices, indexCount, strip, focus_);
+        bool over = modelfade::covers(bytes, 32, vertexCount, indices, indexCount, strip, focus_);
+        modelfade::Box box;  // 3.0.13-beta.19: the whole house - a part over the box of one that covered
+        if (modelfade::boxOf(bytes, 32, vertexCount, box)) {
+            if (over)
+                fader_.covered(box);
+            else
+                over = fader_.alongside(box, focus_.z);
+        }
         const uint64_t key = modelfade::keyOf(camera::projectionFor(c.screenWidth, c.screenHeight), view_, bytes,
                                               vertexCount, reinterpret_cast<uintptr_t>(textures_[0]));
         const float alpha = (over || fader_.fading()) ? fader_.step(key, over, fadeFrame_) : 1.0f;

@@ -1,6 +1,7 @@
 #pragma once
 #include <cstdint>
 #include <unordered_map>
+#include <vector>
 
 #include "core/game_camera.hpp"
 
@@ -29,6 +30,14 @@ Focus focusOf(const camera::Projection& p, const float view[12], const float at[
 bool covers(const uint8_t* vertices, uint32_t stride, uint32_t vertexCount, const uint16_t* indices,
             uint32_t indexCount, bool strip, const Focus& f);
 
+// 3.0.13-beta.19 (R-KVR7K3: a house half see-through - the parts drawn over the body alone, its front and roof
+// whole): a draw's screen box and its nearest depth; one over the box of a draw that covered the body the frame before,
+// itself before the character, goes with it - the whole house
+struct Box {
+    float x0 = 0, y0 = 0, x1 = 0, y1 = 0, nearest = 0;
+};
+bool boxOf(const uint8_t* vertices, uint32_t stride, uint32_t vertexCount, Box& out);
+
 // A draw's place in the world (its first vertex back through the camera), rounded - with its texture and size the key
 // a model keeps over the frames
 uint64_t keyOf(const camera::Projection& p, const float view[12], const uint8_t* vertices, uint32_t vertexCount,
@@ -41,8 +50,12 @@ public:
     float step(uint64_t key, bool covering, uint32_t frame);  // the draw's alpha now (1: as the game draws it)
     void frameDone(uint32_t frame);                          // models not drawn for a while forgotten
     size_t fading() const { return alpha_.size(); }
+    void covered(const Box& b) { if (now_.size() < 64) now_.push_back(b); }  // a draw over the body this frame
+    // 3.0.13-beta.19: a draw before the character (`z` the character's) over one that covered it the frame before
+    bool alongside(const Box& b, float z) const;
 
 private:
+    std::vector<Box> now_, last_;
     struct Entry {
         float alpha = 1.0f;
         uint32_t frame = 0;

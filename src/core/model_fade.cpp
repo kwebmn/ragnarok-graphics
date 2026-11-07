@@ -78,6 +78,29 @@ uint64_t keyOf(const camera::Projection& p, const float view[12], const uint8_t*
            uint64_t(vertexCount);
 }
 
+bool boxOf(const uint8_t* vertices, uint32_t stride, uint32_t vertexCount, Box& out) {
+    if (!vertices || stride < 16 || vertexCount == 0) return false;
+    out = Box{1e9f, 1e9f, -1e9f, -1e9f, 1e9f};
+    float most = 0;
+    for (uint32_t i = 0; i < vertexCount; ++i) {
+        const V v = at(vertices, stride, i);
+        out.x0 = std::min(out.x0, v.x);
+        out.y0 = std::min(out.y0, v.y);
+        out.x1 = std::max(out.x1, v.x);
+        out.y1 = std::max(out.y1, v.y);
+        most = std::max(most, v.rhw);
+    }
+    out.nearest = most > 0 ? 1.0f / most : 1e9f;
+    return out.x1 > out.x0 && out.y1 > out.y0;
+}
+
+bool Fader::alongside(const Box& b, float z) const {
+    if (b.nearest >= z - kNearer) return false;  // behind the character, or beside it
+    for (const Box& o : last_)
+        if (b.x0 <= o.x1 && o.x0 <= b.x1 && b.y0 <= o.y1 && o.y0 <= b.y1) return true;
+    return false;
+}
+
 float Fader::step(uint64_t key, bool covering, uint32_t frame) {
     auto it = alpha_.find(key);
     if (it == alpha_.end()) {
@@ -93,6 +116,8 @@ float Fader::step(uint64_t key, bool covering, uint32_t frame) {
 }
 
 void Fader::frameDone(uint32_t frame) {
+    last_.swap(now_);  // 3.0.13-beta.19: this frame's covering boxes asked about in the next
+    now_.clear();
     for (auto it = alpha_.begin(); it != alpha_.end();) {
         const bool done = it->second.alpha >= 1.0f && it->second.frame != frame;
         it = done || frame - it->second.frame > 120 ? alpha_.erase(it) : std::next(it);
