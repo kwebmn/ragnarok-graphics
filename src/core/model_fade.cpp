@@ -115,10 +115,10 @@ bool boxOf(const uint8_t* vertices, uint32_t stride, uint32_t vertexCount, Box& 
     return out.x1 > out.x0 && out.y1 > out.y0;
 }
 
-bool Fader::alongside(const Box& b, float z) const {
+bool Fader::alongside(const Model& m, const Box& b, float z) const {
     if (b.nearest >= z - kNearer) return false;  // behind the character, or beside it
-    for (const Box& o : last_)
-        if (b.x0 <= o.x1 && o.x0 <= b.x1 && b.y0 <= o.y1 && o.y0 <= b.y1) return true;
+    for (const Model& o : last_)
+        if (std::hypot(o.w[0] - m.w[0], o.w[2] - m.w[2]) < kHouse) return true;
     return false;
 }
 

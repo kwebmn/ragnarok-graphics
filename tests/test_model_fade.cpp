@@ -95,11 +95,16 @@ TEST(model_fade_the_same_model_moving) {
 
 TEST(model_fade_the_whole_house) {
     modelfade::Fader fd;
-    fd.covered(modelfade::Box{350, 200, 450, 320, 150});
+    modelfade::Model wall;
+    wall.w[0] = 100, wall.w[2] = 100;
+    fd.covered(wall);
     fd.frameDone(1);  // the next frame asks about it
-    CHECK(fd.alongside(modelfade::Box{300, 300, 500, 450, 120}, 200));   // its front, before the character
-    CHECK(!fd.alongside(modelfade::Box{300, 100, 500, 250, 240}, 200));  // its roof behind the character
-    CHECK(!fd.alongside(modelfade::Box{600, 100, 700, 250, 120}, 200));  // another house
+    modelfade::Model roof = wall, fence = wall;
+    roof.w[0] += 30, roof.w[1] -= 40;
+    fence.w[0] += 150;  // .23 (R-QH3H48): a long fence over its box on the screen, far along the ground
+    CHECK(fd.alongside(roof, modelfade::Box{300, 300, 500, 450, 120}, 200));   // its front, before the character
+    CHECK(!fd.alongside(roof, modelfade::Box{300, 100, 500, 250, 240}, 200));  // its roof behind the character
+    CHECK(!fd.alongside(fence, modelfade::Box{300, 300, 500, 450, 120}, 200));  // another house, the fence
     std::vector<uint8_t> q(4 * 32, 0);
     const float xy[4][4] = {{10, 20, 0, 0.01f}, {30, 20, 0, 0.01f}, {10, 50, 0, 0.01f}, {30, 50, 0, 0.01f}};
     for (int i = 0; i < 4; ++i) std::memcpy(q.data() + i * 32, xy[i], 16);

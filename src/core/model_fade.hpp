@@ -56,23 +56,26 @@ Model modelOf(const camera::Projection& p, const float view[12], const uint8_t* 
 // .22 (the owner: «за статуей с рукой хожу, она мигает всеравно»): the texture alone and the middle of all its vertices
 // - a draw's first vertex and its count change as the game leaves out faces turned away while one walks
 constexpr float kSameModel = 40.0f;
+constexpr float kHouse = 60.0f;  // .23: a house's parts' middles, about
 
 // Each model's see-through, gliding kStep a frame toward kSeen while it covers, back to 1 after; .21: it keeps
 // covering kHoldFrames after it last did - the body's points slipping off the model's edges as one walks made it pulse
 constexpr float kSeen = 0.35f, kStep = 0.08f;
-constexpr uint32_t kHoldFrames = 20;
+constexpr uint32_t kHoldFrames = 30;  // .23: 30, not 20
 class Fader {
 public:
     float step(const Model& m, bool covering, uint32_t frame);  // the draw's alpha now (1: as the game draws it)
     void frameDone(uint32_t frame);                          // models not drawn for a while forgotten
     size_t fading() const { return alpha_.size(); }
     uint32_t madeAnew() const { return made_; }  // .22: models taken up anew so far, for the log
-    void covered(const Box& b) { if (now_.size() < 64) now_.push_back(b); }  // a draw over the body this frame
-    // 3.0.13-beta.19: a draw before the character (`z` the character's) over one that covered it the frame before
-    bool alongside(const Box& b, float z) const;
-
+    // a draw over the body this frame
+    void covered(const Model& m) { if (now_.size() < 64) now_.push_back(m); }
+    // 3.0.13-beta.19: a draw before the character (`z` the character's) beside one that covered it the frame before;
+    // .23 (R-QH3H48 «когда хожу, мигает заборы вокруг чара»): beside in the world, kHouse along the ground from its
+    // middle - not over its box on the screen, which took the long fences round the square in and out at each step
+    bool alongside(const Model& m, const Box& b, float z) const;
 private:
-    std::vector<Box> now_, last_;
+    std::vector<Model> now_, last_;
     uint32_t made_ = 0;
     struct Entry {
         Model m;

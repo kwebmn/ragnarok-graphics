@@ -248,18 +248,15 @@ HRESULT Device7::record(D3DPRIMITIVETYPE type, DWORD fvf, const void* vertices, 
         const auto* bytes = static_cast<const uint8_t*>(vertices);
         const bool strip = type == D3DPT_TRIANGLESTRIP;
         bool over = modelfade::covers(bytes, 32, vertexCount, indices, indexCount, strip, focus_);
-        modelfade::Box box;  // 3.0.13-beta.19: the whole house - a part over the box of one that covered
-        if (modelfade::boxOf(bytes, 32, vertexCount, box)) {
-            if (over)
-                fader_.covered(box);
-            else
-                over = fader_.alongside(box, focus_.z);
-        }
-        float alpha = 1.0f;
-        if (over || fader_.fading())
-            alpha = fader_.step(modelfade::modelOf(camera::projectionFor(c.screenWidth, c.screenHeight), view_, bytes,
-                                                   vertexCount, reinterpret_cast<uintptr_t>(textures_[0])),
-                                over, fadeFrame_);
+        const modelfade::Model model =
+            modelfade::modelOf(camera::projectionFor(c.screenWidth, c.screenHeight), view_, bytes, vertexCount,
+                               reinterpret_cast<uintptr_t>(textures_[0]));
+        modelfade::Box box;  // 3.0.13-beta.19: the whole house - a part beside one that covered (.23: in the world)
+        if (over)
+            fader_.covered(model);
+        else if (modelfade::boxOf(bytes, 32, vertexCount, box))
+            over = fader_.alongside(model, box, focus_.z);
+        const float alpha = (over || fader_.fading()) ? fader_.step(model, over, fadeFrame_) : 1.0f;
         if (alpha < 1.0f) {
             faded_.assign(bytes, bytes + size_t(vertexCount) * 32);
             for (uint32_t i = 0; i < vertexCount; ++i) {
