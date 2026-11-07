@@ -136,6 +136,36 @@ void watchInput(UINT m, WPARAM wp, LPARAM lp) {
     iw.lastAt = now;
 }
 
+// 3.0.16-beta.5 (R-ZUR7S4: «подвоєння після вставки слова в вікно де треба ввести слово» - 1 typed, 11 in «Скільки
+// штук»): the game's own WM_CHAR (0x6541E0, case 0x102) in the battle mode with its typing on (Enter, 0x772D58) puts
+// a letter for a field other than the chat's in it (0x4F0520) and then once more at 0x654793 - every letter twice
+// until Enter again. Its typing flag cleared for that one message: the letter once, the flag as it was after
+struct BattleTyping {
+    bool held = false;
+};
+BattleTyping holdBattleTyping(UINT m) {
+    constexpr uint32_t kBattle = 0x772D54, kTyping = 0x772D58, kService = 0x74B560;
+    constexpr uint32_t kWindowMgr = 0x727ED8, kFocus = kWindowMgr + 0x6C, kChat = kWindowMgr + 0x84;
+    BattleTyping b;
+    if (m != WM_CHAR) return b;
+    uint32_t battle = 0, typing = 0, service = 0, focus = 0, chat = 0;
+    if (!readGame(kBattle, &battle, 4) || !battle || !readGame(kTyping, &typing, 4) || !typing) return b;
+    if (!readGame(kService, &service, 4) || service == 0xD) return b;  // there the game's own way: once
+    readGame(kFocus, &focus, 4);
+    readGame(kChat, &chat, 4);
+    uint32_t chatWords = 0, chatOther = 0;
+    if (chat) {
+        readGame(chat + 0x68, &chatWords, 4);
+        readGame(chat + 0x6C, &chatOther, 4);
+    }
+    if (!focus || (chat && (focus == chatWords || focus == chatOther))) return b;  // the chat's own field: once
+    static int told = 0;
+    if (told++ < 3) LOG_INFO("input: the battle mode's typing on - a letter for the field 0x%X put in once", focus);
+    *reinterpret_cast<volatile uint32_t*>(uintptr_t(kTyping)) = 0;
+    b.held = true;
+    return b;
+}
+
 LRESULT CALLBACK gameProc(HWND w, UINT m, WPARAM wp, LPARAM lp) {
     watchInput(m, wp, lp);  // 3.0.16-beta.4
     if (g_switch) {
@@ -211,7 +241,10 @@ LRESULT CALLBACK gameProc(HWND w, UINT m, WPARAM wp, LPARAM lp) {
     if (m == WM_LBUTTONDOWN && (wp & MK_SHIFT) && pointedActor()) uapad::runtime::followActor(pointedActor());
     else if (m == WM_LBUTTONDOWN && !(wp & MK_SHIFT) && cursorOverWorld()) uapad::runtime::stopFollow("a click");
     else if (m == WM_KEYDOWN && wp == VK_ESCAPE) uapad::runtime::stopFollow("Esc");
-    return CallWindowProcA(g_original, w, m, wp, lp);
+    const BattleTyping typing = holdBattleTyping(m);
+    const LRESULT r = CallWindowProcA(g_original, w, m, wp, lp);
+    if (typing.held) *reinterpret_cast<volatile uint32_t*>(uintptr_t(0x772D58)) = 1;
+    return r;
 }
 
 // Window a is above window b (nearer the top of Windows' order)
