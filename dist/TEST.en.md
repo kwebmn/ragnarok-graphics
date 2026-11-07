@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.13-beta.29 — what's new
+
+**«See-through houses before the character»: the see-through window larger and softer.** The window round the character is nearly twice as wide, and its rim fades into the wall smoothly over most of it - no sharp circle any more.
+
 # uaRO Graphics 3.0.13-beta.28 — what's new
 
 **«See-through houses before the character»: the wall see-through, not a hole.** Round the character the houses, trees and walls before it go half see-through - the character and the ground show through, the wall itself stays visible. The dark ring at the rim is gone: the game draws its walls before the ground and the rim was laid over nothing - now the see-through part is drawn once the ground and the character are down.
