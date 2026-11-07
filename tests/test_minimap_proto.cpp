@@ -763,6 +763,24 @@ TEST(minimap_proto_drops_the_pictures_warp_dots) {
     CHECK(minimap::dropWarpDots(plain, w, h) == 0);
 }
 
+// 3.0.16-beta.6 (R-W9VM29): ama_dun01's picture draws the maze's route in the same pure red - a line, not a dot: kept
+TEST(minimap_proto_keeps_a_red_route) {
+    const int w = 128, h = 128;
+    std::vector<uint32_t> px(size_t(w) * h, 0xFF505050u);
+    for (int x = 10; x < 118; ++x)
+        for (int t = 0; t < 2; ++t) px[size_t(20 + t) * w + x] = 0xFFFF0000u, px[size_t(100 + t) * w + x] = 0xFFFF0000u;
+    for (int y = 20; y < 102; ++y)
+        for (int t = 0; t < 2; ++t) px[size_t(y) * w + 116 + t] = 0xFFFF0000u;
+    const std::vector<uint32_t> before = px;
+    CHECK(minimap::dropWarpDots(px, w, h) == 0);
+    CHECK(px == before);
+    for (int y = 0; y < h; ++y)  // and a dot beside it still taken
+        for (int x = 0; x < w; ++x)
+            if (std::hypot(float(x) - 50.0f, float(y) - 60.0f) <= 3.0f) px[size_t(y) * w + x] = 0xFFF00000u;
+    CHECK(minimap::dropWarpDots(px, w, h) == 1);
+    CHECK(px[size_t(20) * w + 60] == 0xFFFF0000u);
+}
+
 // 3.0.11-beta.213 (the owner: «вывод команды @mobsearch показывался на миникарте ... чтобы это можно было потом убрать
 // с миникарты»): a plate under the bar while a search's marks show - its words and ✕ that clears them
 TEST(minimap_proto_found_plate) {

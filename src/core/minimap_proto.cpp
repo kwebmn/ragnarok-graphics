@@ -259,6 +259,12 @@ int dropWarpDots(std::vector<uint32_t>& argb, int width, int height) {
         for (const size_t j : core)
             radius = std::max(radius, std::hypot(double(j % size_t(width)) + 0.5 - cx,
                                                  double(j / size_t(width)) + 0.5 - cy));
+        // 3.0.16-beta.6 (R-W9VM29, ama_dun01's «X»: the picture's maze route is drawn in the same pure red - one blob
+        // the whole map round, filled from its edges in, 47 s): a dot is round and small - its pure pixels at least
+        // half its circle, its radius a 32nd of the picture at most (16 pixels at least); a line kept as drawn
+        const double circle = 3.14159265358979 * std::max(1.0, radius * radius);
+        if (double(core.size()) < 0.5 * circle || radius > std::max(16.0, double(std::max(width, height)) / 32.0))
+            continue;
         const int reach = int(std::ceil(radius + 6.5));
         for (int v = std::max(0, int(cy) - reach); v <= std::min(height - 1, int(cy) + reach); ++v)
             for (int u = std::max(0, int(cx) - reach); u <= std::min(width - 1, int(cx) + reach); ++u) {
