@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.16-beta.28 — what's new
+
+- **Check: the pet after entering the game.** The log records the server's pet packets to find out why, after entering, the pet looks like an ordinary monster (no accessory, no menu) until the first teleport. Nothing changes in how the game looks.
+
 # uaRO Graphics 3.0.16-beta.27 — what's new
 
 - **New: "Soft look" for the new skill effects** (Effects → under "Mages' new effects", off at first). Instead of crisp dense layers - the game's own glow and see-through light, tinted a little in the element's colours and brighter. It applies to every class's new effects: Safety Wall, Sanctuary, Pneuma, Magnus and the rest look lighter. The Monk's spheres and Fire Wall keep their own look.
