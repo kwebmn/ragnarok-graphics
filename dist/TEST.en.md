@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.16-beta.26 — what's new
+
+- **"New report": you choose what it is about.** Opened from the game (Ctrl+Shift+F10), "Graphics" is no longer chosen in advance — pick what it is about or leave it empty. "Other" is now "Interface and other": windows, items, NPCs.
+
 # uaRO Graphics 3.0.16-beta.25 — what's new
 
 - **New: "Effects behind the character"** (Effects → Characters, off at first; Direct3D 12 only). The game draws characters so that effects after them lie over the whole body — even the far half of a ring round the hero. Now what is behind a character hides behind its figure, and what is in front is drawn over as before.
