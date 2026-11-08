@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.16-beta.32 — what's new
+
+- **A closer comparison with the monsters.** In "Stats" → "Planning" → "Map monsters" and on a monster's card, your blow now counts the monster's size (a dagger is weaker on large ones, an axe on small ones and so on) and element: a plain blow on ghosts gets through only in part or not at all. The number of blows to win is closer to the real one.
+
 # uaRO Graphics 3.0.16-beta.31 — what's new
 
 - **The homunculus' and the mercenary's skills in their cards.** They now do everything the game's old skills window did: the level a skill is used at is chosen with ‹ ›, a click uses the skill at that level, and a skill can be dragged onto the hotbar. The mercenary's skills can be used and dragged too.
