@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.16-beta.35 — what's new
+
+- **"Shadows from torches and lamps", "Light through the leaves" and "Effects behind the character" now work on Direct3D 11 too** (older graphics cards). They are switched on in the same place, in "Effects", off at first.
+
 # uaRO Graphics 3.0.16-beta.34 — what's new
 
 - **Fixed: the game did not start with "cannot init d3d"** on betas 30–33 (an error in the torch shadows' shader).
