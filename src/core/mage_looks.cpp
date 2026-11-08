@@ -13,7 +13,9 @@ using E = Element;
 // The skills' effects (uAthena's db/const.txt EF_*), by their branch and tone
 constexpr Entry kLooks[] = {
     // the Mage, Wizard, Sage (and their transcendent classes)
-    {24, B::Mage, E::Fire}, {25, B::Mage, E::Fire}, {31, B::Mage, E::Fire}, {49, B::Mage, E::Fire},
+    // 3.0.16-beta.23 (R-P4DFMN «фаервол както смотрится не очень» - «давай попробуем быстро»): EF_FIREWALL (25) left
+    // out - laid over crisp its soft flames came out flat red slabs; the game's own fire, as before beta's looks
+    {24, B::Mage, E::Fire}, {31, B::Mage, E::Fire}, {49, B::Mage, E::Fire},
     {50, B::Mage, E::Fire}, {62, B::Mage, E::Fire}, {92, B::Mage, E::Fire}, {96, B::Mage, E::Fire},
     {97, B::Mage, E::Fire}, {118, B::Mage, E::Fire}, {138, B::Mage, E::Fire}, {173, B::Mage, E::Fire},
     {176, B::Mage, E::Fire}, {225, B::Mage, E::Fire}, {255, B::Mage, E::Fire},

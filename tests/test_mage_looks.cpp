@@ -56,3 +56,9 @@ TEST(mage_looks_spheres_are_orbs) {
     CHECK(magelook::partFor(16, Part::Layer) == Part::Layer);
     CHECK(magelook::partOfId(magelook::idOf(Part::Orb, magelook::Element::Spirit)) == Part::Orb);
 }
+
+// 3.0.16-beta.23 (R-P4DFMN): Fire Wall keeps the game's own fire - no element look of ours
+TEST(mage_looks_fire_wall_its_own) {
+    CHECK(magelook::elementOf(25) == magelook::Element::None);
+    CHECK(magelook::elementOf(24) == magelook::Element::Fire);
+}
