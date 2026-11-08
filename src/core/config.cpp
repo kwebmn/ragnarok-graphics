@@ -778,6 +778,8 @@ Config parseConfig(const std::string& text) {
         } else if (key == "interface.guild") {  // 3.0.11-beta.165: the guild
             guildSet = val == "0" || val == "1" || val == "on" || val == "off" || val == "true" || val == "false";
             setBool(val, c.guildWindow);
+        } else if (key == "interface.vend_setup") {  // 3.0.16-beta.33: opening one's shop
+            setBool(val, c.vendSetupWindow);
         } else if (key == "interface.my_shop") {  // 3.0.11-beta.166: one's own open shop
             myShopSet = val == "0" || val == "1" || val == "on" || val == "off" || val == "true" || val == "false";
             setBool(val, c.myShopWindow);

@@ -88,6 +88,7 @@
 #include "win/homun_card.hpp"
 #include "win/merc_card.hpp"
 #include "win/my_shop.hpp"
+#include "win/vend_setup.hpp"
 #include "win/options_card.hpp"
 #include "win/server_card.hpp"
 #include "win/social_card.hpp"
@@ -1177,6 +1178,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     servercardwin::frame(window, config.serverWindow, gameCodePage(config), pk, pw, ph);      // 3.0.11-beta.164
     guildcardwin::frame(window, config.guildWindow, gameCodePage(config), pk, pw, ph);        // 3.0.11-beta.165
     myshopwin::frame(window, config.myShopWindow, gameCodePage(config), pk, pw, ph);          // 3.0.11-beta.166
+    vendsetupwin::frame(window, config.vendSetupWindow, gameCodePage(config), pk, pw, ph);    // 3.0.16-beta.33
     whispersetupwin::frame(window, config.whisperSetupWindow, gameCodePage(config), pk, pw, ph);  // .168
     macrocardwin::frame(window, config.macroWindow, gameCodePage(config), pk, pw, ph);        // 3.0.11-beta.169
     tipwin::frame(window, config.tipWindow, gameCodePage(config), pk, pw, ph);                // 3.0.11-beta.204

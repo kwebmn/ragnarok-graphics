@@ -231,6 +231,7 @@ const std::vector<InterfaceSection>& interfaceSections() {
          {"interface.items",     "interface.status",       "interface.skills",       "interface.equip",
           "interface.npc_talk",  "interface.npc_remember", "interface.shop",         "interface.storage",
           "interface.trade",     "interface.cart",         "interface.vending",      "interface.my_shop",
+          "interface.vend_setup",
           "interface.menu",      "interface.options",      "interface.cards",        "interface.asks",
           "interface.messages",  "interface.counts",       "interface.picks",        "interface.party_setup",
           "interface.pet",       "interface.homun",        "interface.merc",         "interface.social",

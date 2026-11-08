@@ -557,6 +557,10 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("my_shop", flag(running.myShopWindow), flag(file.myShopWindow)));
         n.myShopWindow = file.myShopWindow;
     }
+    if (file.vendSetupWindow != running.vendSetupWindow) {  // 3.0.16-beta.33: the shop's opening card, at once
+        u.applied.push_back(change("vend_setup", flag(running.vendSetupWindow), flag(file.vendSetupWindow)));
+        n.vendSetupWindow = file.vendSetupWindow;
+    }
     if (file.whisperSetupWindow != running.whisperSetupWindow) {  // 3.0.11-beta.168: the whisper settings, at once
         u.applied.push_back(change("whisper_setup", flag(running.whisperSetupWindow), flag(file.whisperSetupWindow)));
         n.whisperSetupWindow = file.whisperSetupWindow;

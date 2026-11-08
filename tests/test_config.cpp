@@ -1994,3 +1994,14 @@ TEST(config_reads_the_chat_fade) {
     CHECK(noUi("chat_fade = 0\n").chatFade == 0);
     CHECK(noUi("chat_fade = 7\n").chatFade == 12);
 }
+
+// 3.0.16-beta.33: [interface] vend_setup - opening one's shop as one card, off at first (also with the new minimap),
+// at once
+TEST(config_interface_vend_setup) {
+    CHECK(!noUi("").vendSetupWindow);
+    CHECK(!noUi("minimap = 1\n").vendSetupWindow);
+    CHECK(noUi("vend_setup = 1\n").vendSetupWindow);
+    CHECK(settings::findSetting("interface.vend_setup") != nullptr);
+    CHECK(appliesNow("interface.vend_setup"));
+    CHECK(liveUpdate(noUi(""), noUi("vend_setup = 1\n")).next.vendSetupWindow);
+}

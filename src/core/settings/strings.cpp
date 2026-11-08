@@ -6525,6 +6525,28 @@ constexpr Entry kTexts[] = {
     {Text::MyShopWorth, "Still for sale", "Ще на продаж", "Ещё на продажу"},
     {Text::MyShopClose, "Close the shop", "Закрити лавку", "Закрыть лавку"},
     {Text::MyShopSold, "All sold", "Усе продано", "Всё продано"},
+    // 3.0.16-beta.33: the shop's opening
+    {Text::InterfaceVendSetup, "Opening a shop card", "Картка відкриття лавки", "Карточка открытия лавки"},
+    {Text::InterfaceVendSetupHint,
+     "Opening one's shop (Vending) as one card in the new look: the shop's name, the cart's things (a click puts one "
+     "up for sale), the things for sale with a price field each and a cross to take one back, «Open the shop» with "
+     "the game's own checks of the prices. Off at first: the game's own two windows.",
+     "Відкриття своєї лавки (Vending) однією карткою в новому вигляді: назва лавки, речі з візка (клік виставляє на "
+     "продаж), речі на продаж з полем ціни й хрестиком, щоб забрати, «Відкрити лавку» з перевірками цін самої гри. "
+     "Спочатку вимкнено: два власні вікна гри.",
+     "Открытие своей лавки (Vending) одной карточкой в новом виде: название лавки, вещи из тележки (клик выставляет "
+     "на продажу), вещи на продажу с полем цены и крестиком, чтобы убрать, «Открыть лавку» с проверками цен самой "
+     "игры. Сначала выключено: два собственных окна игры."},
+    {Text::VendSetupTitle, "Open a shop", "Відкрити лавку", "Открыть лавку"},
+    {Text::VendSetupSign, "Shop name", "Назва лавки", "Название лавки"},
+    {Text::VendSetupSignHint, "Click and type the name", "Клацніть і напишіть назву", "Нажмите и напишите название"},
+    {Text::VendSetupCart, "Cart · a click puts it up", "Візок · клік — на продаж", "Тележка · клик — на продажу"},
+    {Text::VendSetupSale, "For sale {1} / {2}", "На продаж {1} / {2}", "На продажу {1} / {2}"},
+    {Text::VendSetupOpen, "Open the shop", "Відкрити лавку", "Открыть лавку"},
+    {Text::VendSetupCancel, "Cancel", "Скасувати", "Отмена"},
+    {Text::VendSetupEmpty, "Nothing in the cart", "У візку нічого немає", "В тележке ничего нет"},
+    {Text::VendSetupHint, "Click a thing in the cart to put it up", "Клацніть річ у візку, щоб виставити",
+     "Нажмите вещь в тележке, чтобы выставить"},
     // 3.0.11-beta.168: the whisper's settings
     {Text::InterfaceWhisperSetup, "Whisper settings", "Налаштування шепоту", "Настройки шёпота"},
     {Text::InterfaceWhisperSetupHint,

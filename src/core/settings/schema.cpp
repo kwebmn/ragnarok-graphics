@@ -345,6 +345,8 @@ const std::vector<IniSetting>& iniSettings() {
          Text::InterfaceGuildHint, ""},  // 3.0.11-beta.165
         {"interface", "my_shop", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::InterfaceMyShop,
          Text::InterfaceMyShopHint, ""},  // 3.0.11-beta.166
+        {"interface", "vend_setup", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {},
+         Text::InterfaceVendSetup, Text::InterfaceVendSetupHint, ""},  // 3.0.16-beta.33
         {"interface", "whisper_setup", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {},
          Text::InterfaceWhisperSetup, Text::InterfaceWhisperSetupHint, ""},  // 3.0.11-beta.168
         {"interface", "macros", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::InterfaceMacros,
@@ -1373,6 +1375,7 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "interface.servers") return c.serverWindow ? "1" : "0";          // 3.0.11-beta.164
     if (k == "interface.guild") return c.guildWindow ? "1" : "0";             // 3.0.11-beta.165
     if (k == "interface.my_shop") return c.myShopWindow ? "1" : "0";          // 3.0.11-beta.166
+    if (k == "interface.vend_setup") return c.vendSetupWindow ? "1" : "0";    // 3.0.16-beta.33
     if (k == "interface.whisper_setup") return c.whisperSetupWindow ? "1" : "0";  // 3.0.11-beta.168
     if (k == "interface.macros") return c.macroWindow ? "1" : "0";            // 3.0.11-beta.169
     if (k == "interface.tips") return c.tipWindow ? "1" : "0";                // 3.0.11-beta.204

@@ -39,6 +39,7 @@
 #include "win/homun_card.hpp"
 #include "win/merc_card.hpp"
 #include "win/my_shop.hpp"
+#include "win/vend_setup.hpp"
 #include "win/options_card.hpp"
 #include "win/server_card.hpp"
 #include "win/social_card.hpp"
@@ -191,6 +192,7 @@ void hideReplaced() {
     servercardwin::beforeGameDraw();   // 3.0.11-beta.164: the server select
     guildcardwin::beforeGameDraw();    // 3.0.11-beta.165: the guild
     myshopwin::beforeGameDraw();       // 3.0.11-beta.166: one's own shop
+    vendsetupwin::beforeGameDraw();    // 3.0.16-beta.33: the shop's opening
     whispersetupwin::beforeGameDraw();  // 3.0.11-beta.168: the whisper's settings
     macrocardwin::beforeGameDraw();     // 3.0.11-beta.169: the chat's macros
     tipwin::beforeGameDraw();           // 3.0.11-beta.204: the tip of the day
