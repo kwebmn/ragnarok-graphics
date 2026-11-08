@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.16-beta.24 — what's new
+
+- **Fire Wall is brighter.** The game's soft flames and their flicker stay, but each layer gives about three times the light and a little warmer — the fire shows by day on the grass too.
+
 # uaRO Graphics 3.0.16-beta.23 — what's new
 
 - **Fire Wall has the game's soft fire again.** Our mage look repainted its flames in crisp colours and the three columns came out as flat red slabs. Fire Wall keeps the game's own fire with our glow now.
