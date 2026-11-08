@@ -13,9 +13,7 @@ using E = Element;
 // The skills' effects (uAthena's db/const.txt EF_*), by their branch and tone
 constexpr Entry kLooks[] = {
     // the Mage, Wizard, Sage (and their transcendent classes)
-    // 3.0.16-beta.23 (R-P4DFMN «фаервол както смотрится не очень» - «давай попробуем быстро»): EF_FIREWALL (25) left
-    // out - laid over crisp its soft flames came out flat red slabs; the game's own fire, as before beta's looks
-    {24, B::Mage, E::Fire}, {31, B::Mage, E::Fire}, {49, B::Mage, E::Fire},
+    {24, B::Mage, E::Fire}, {25, B::Mage, E::Fire}, {31, B::Mage, E::Fire}, {49, B::Mage, E::Fire},
     {50, B::Mage, E::Fire}, {62, B::Mage, E::Fire}, {92, B::Mage, E::Fire}, {96, B::Mage, E::Fire},
     {97, B::Mage, E::Fire}, {118, B::Mage, E::Fire}, {138, B::Mage, E::Fire}, {173, B::Mage, E::Fire},
     {176, B::Mage, E::Fire}, {225, B::Mage, E::Fire}, {255, B::Mage, E::Fire},
@@ -183,7 +181,10 @@ Part partOf(bool blend, uint32_t srcBlend, uint32_t dstBlend, uint32_t vertexCou
 }
 
 Part partFor(int effectId, Part p) {
-    return effectId == kSpheresEffect && (p == Part::Layer || p == Part::Haze) ? Part::Orb : p;
+    if (p != Part::Layer && p != Part::Haze) return p;
+    if (effectId == kSpheresEffect) return Part::Orb;
+    if (effectId == kFireWallEffect) return Part::Flame;  // 3.0.16-beta.24
+    return p;
 }
 
 }  // namespace uagfx::magelook

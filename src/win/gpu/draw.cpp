@@ -459,6 +459,7 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
         c.alphaTest |= part == magelook::Part::Layer   ? 1u << 26
                        : part == magelook::Part::Solid ? 1u << 27
                        : part == magelook::Part::Orb   ? (1u << 26 | 1u << 28)  // 3.0.16-beta.10: both - the spheres
+                       : part == magelook::Part::Flame ? (1u << 27 | 1u << 28)  // 3.0.16-beta.24: Fire Wall
                                                        : 1u << 28;
         const magelook::Palette pal = magelook::paletteOf(magelook::elementOfId(d.effectId));
         for (int k = 0; k < 3; ++k) {

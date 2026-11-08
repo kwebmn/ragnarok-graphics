@@ -443,7 +443,8 @@ HRESULT Device7::record(D3DPRIMITIVETYPE type, DWORD fvf, const void* vertices, 
             magelook::partOf(setup.blend, setup.srcBlend, setup.dstBlend, vertexCount, x1 - x0, float(c.screenWidth)));
         if (part != magelook::Part::None) {
             cmd.effectId = magelook::idOf(part, element);
-            if (part != magelook::Part::Solid && part != magelook::Part::Orb) {  // .10: the spheres still add light
+            if (part != magelook::Part::Solid && part != magelook::Part::Orb &&
+                part != magelook::Part::Flame) {  // .10: the spheres still add light; .24 Fire Wall too
                 DrawSetup over = setup;
                 over.srcBlend = d3d7::BLEND_SRCALPHA;
                 over.dstBlend = d3d7::BLEND_INVSRCALPHA;

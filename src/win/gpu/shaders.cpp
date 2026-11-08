@@ -579,6 +579,15 @@ float4 mageLayer(float4 c, bool haze) {
     rgb = lerp(rgb, saturate(c.rgb / max(most, 1e-3)), saturate(hue * 1.5));
     return float4(rgb, a);
 }
+// 3.0.16-beta.24 (R-P4DFMN: the crisp layer made Fire Wall flat red slabs; .23 the game's own came out «слишком
+// тусклый»): its soft flames still added on as the game adds them (the texture's shapes, their flicker), each layer
+// about three times as much light - its alpha doubled, its colour half again and a little warmer towards the top
+float4 fireWallFlame(float4 c) {
+    float a = saturate(c.a * 2.0);
+    float3 rgb = saturate(c.rgb * 1.5 + float3(0.08, 0.03, 0.0) * c.a);
+    return float4(rgb, a);
+}
+
 // 3.0.16-beta.10 (the owner: «эффект крутящийся вокруг героя ... не серьезно выглядит и в графику не заходит»): the
 // spirit spheres, added on as the game adds them (its alpha fading them in). The game's two passes by their colour:
 // the big blue one a soft aura round the ball, the small yellow one the ball - lit from the top left, white at its
@@ -790,6 +799,7 @@ float4 shade(PsIn i) {
     if (((alphaTest >> 24) & 1) != 0) c = castRing(i.uv0, i.diffuse);  // 3.0.15-beta.2: [effects] new_casting
     else if (((alphaTest >> 25) & 1) != 0) c = castCircle(i.uv0, du, dv, i.diffuse);
     else if (((alphaTest >> 26) & 1) != 0 && ((alphaTest >> 28) & 1) != 0) c = spiritOrb(i.uv0, i.diffuse);  // .10
+    else if (((alphaTest >> 27) & 1) != 0 && ((alphaTest >> 28) & 1) != 0) c = fireWallFlame(c);  // 3.0.16-beta.24
     else if (((alphaTest >> 26) & 1) != 0) c = mageLayer(c, false);  // 3.0.15-beta.8, .11: [effects] mage_effects
     else if (((alphaTest >> 28) & 1) != 0) c = mageLayer(c, true);
     else if (((alphaTest >> 27) & 1) != 0) c = mageSolid(i.pos, i.uv0, c);
