@@ -572,6 +572,8 @@ const std::vector<IniSetting>& iniSettings() {
          Text::FxTorchShadowsHint, "", &E::torchShadows},
         {"effects", "torch_shadows_strength", Page::Effects, Control::Slider, 0, 100, 10, {}, {},
          Text::FxTorchShadowsStrength, Text::FxTorchShadowsStrengthHint, " %", nullptr, &E::torchShadowsStrength},
+        {"effects", "torch_leaf_light", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {},
+         Text::FxTorchLeafLight, Text::FxTorchLeafLightHint, "", &E::torchLeafLight},  // 3.0.16-beta.30
         {"effects", "smoke", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxSmoke, Text::FxSmokeHint,
          "", &E::smoke},
         {"effects", "smoke_density", Page::Effects, Control::Slider, 0, 200, 10, {}, {}, Text::FxSmokeDensity,

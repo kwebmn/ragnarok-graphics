@@ -1766,12 +1766,14 @@ TorchIn torch_light_vs(uint id : SV_VertexID, uint inst : SV_InstanceID) {
 // reach. The way from the light into the world (r0-r8 the view's axes there), the face it goes through - the axis it
 // goes most along, its x and y the next two axes round (core/point_shadows.hpp faceOf) - and nine texels about it
 // against the way's length of the reach, a little further from the further pixels (softer).
-float torchShadow(float3 p, float3 n, float3 L, float reach, float slot) {
+// 3.0.16-beta.30 ([effects] torch_leaf_light, leaves > 0.5): the leaves' depths in the rows kMostLights (8) further
+// down - where only they stand in the light's way a part of it comes through, green (per colour: a float3).
+float3 torchShadow(float3 p, float3 n, float3 L, float reach, float slot, float leaves) {
     float3 dv = p + n * 0.6 - L;
     float3 d = dv.x * float3(r0, r1, r2) + dv.y * float3(r3, r4, r5) + dv.z * float3(r6, r7, r8);
     float len = length(d);
     float dist = len / reach;
-    if (dist >= 1.0 || len < 8.0) return 1.0;  // point_shadows::kNearIgnore
+    if (dist >= 1.0 || len < 8.0) return float3(1.0, 1.0, 1.0);  // point_shadows::kNearIgnore
     float3 ad = abs(d);
     int a = 0;
     if (ad.y > ad.x && ad.y >= ad.z) a = 1;
@@ -1789,18 +1791,23 @@ float torchShadow(float3 p, float3 n, float3 L, float reach, float slot) {
     float openFaces = 0.0;
     [unroll] for (int k = 0; k < 6; ++k)
         openFaces += mirrorTex.Load(int3(int(float(k) * F + F * 0.5), int(slot * F + F * 0.5), 0)).r > 0.15 ? 1.0 : 0.0;
-    if (openFaces < 2.0) return 1.0;
+    if (openFaces < 2.0) return float3(1.0, 1.0, 1.0);
     float bias = 0.012 + 0.02 * dist;
     float spread = 1.0 + 1.5 * dist;
-    float lit = 0.0;
+    float lit = 0.0, leafLit = 0.0;
+    float2 leafBase = base + float2(0.0, 8.0 * F);  // point_shadows::kMostLights rows down
     [unroll] for (int y = -1; y <= 1; ++y) {
         [unroll] for (int x = -1; x <= 1; ++x) {
             float2 q = clamp(t + float2(float(x), float(y)) * spread, float2(0.5, 0.5), float2(F - 0.5, F - 0.5));
             float stored = mirrorTex.Load(int3(int2(base + q), 0)).r;
             lit += dist - bias <= stored ? 1.0 : 0.0;
+            if (leaves > 0.5) leafLit += dist - bias <= mirrorTex.Load(int3(int2(leafBase + q), 0)).r ? 1.0 : 0.0;
         }
     }
-    return lit / 9.0;
+    // through the leaves: about half the light, its red and blue held back more than its green
+    float3 through = leaves > 0.5 ? lerp(float3(0.38, 0.55, 0.3), float3(1.0, 1.0, 1.0), leafLit / 9.0)
+                                  : float3(1.0, 1.0, 1.0);
+    return lit / 9.0 * through;
 }
 
 float4 torch_accum_ps(TorchIn i) : SV_Target {
@@ -1846,9 +1853,11 @@ float4 torch_accum_ps(TorchIn i) : SV_Target {
         }
     }
     if (c.w < 0.0) a *= 1.0 - smoothstep(3.0, 7.0, dot(p - t.xyz, -float3(r1, r4, r7)) + 20.0);  // 2.7.24: the ground's
-    float4 sh = tex1.Load(int3(2 * int(i.light), 1, 0));  // 3.0.16-beta.16: its shadow's slot (0 none), darkness
-    if (sh.x > 0.5) a *= 1.0 - sh.y * (1.0 - torchShadow(p, n, t.xyz, t.w, sh.x - 1.0));
-    return float4(c.rgb * a, a);
+    // 3.0.16-beta.16: its shadow's slot (0 none), darkness; .30 z: the leaves let a part through (green)
+    float4 sh = tex1.Load(int3(2 * int(i.light), 1, 0));
+    float3 pass = float3(1.0, 1.0, 1.0);
+    if (sh.x > 0.5) pass = 1.0 - sh.y * (1.0 - torchShadow(p, n, t.xyz, t.w, sh.x - 1.0, sh.z));
+    return float4(c.rgb * a * pass, a * dot(pass, float3(0.3333, 0.3333, 0.3334)));
 }
 
 // The buffer's sums (tex0) into the picture's copy (t2), as torch_light_ps ended; 2.7.47: tex1 the picture before the

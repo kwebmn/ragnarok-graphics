@@ -108,7 +108,7 @@ std::vector<int> Renderer::Impl::drawTorchShadows(const std::vector<point_shadow
         clear.Format = DXGI_FORMAT_D32_FLOAT;
         clear.DepthStencil.Depth = 1.0f;
         shadowAtlas =
-            createTexture2D(device, 6 * kF, point_shadows::kMostLights * kF, 1, DXGI_FORMAT_R32_TYPELESS,
+            createTexture2D(device, 6 * kF, 2 * point_shadows::kMostLights * kF, 1, DXGI_FORMAT_R32_TYPELESS,
                             D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL, D3D12_RESOURCE_STATE_DEPTH_WRITE, &clear);
         if (shadowAtlas && shadowAtlasSrv == kNoSrv) shadowAtlasSrv = allocSrv();
         if (!shadowAtlas || shadowAtlasSrv == kNoSrv) {
@@ -245,10 +245,15 @@ std::vector<int> Renderer::Impl::drawTorchShadows(const std::vector<point_shadow
                 c.projection[k] = l.at[k];
             }
             c.projection[3] = l.reach;
-            const D3D12_VIEWPORT vp{float(f * kF), float(int(s) * kF), float(kF), float(kF), 0.0f, 1.0f};
-            const D3D12_RECT box{LONG(f * kF), LONG(int(s) * kF), LONG((f + 1) * kF), LONG((int(s) + 1) * kF)};
+            // 3.0.16-beta.30: [effects] torch_leaf_light - the leaves into their own rows under the lights' (the
+            // atlas twice as tall), the shader lets a part of the light through where only they stand in its way
+            const int leafRow = int(s) + point_shadows::kMostLights;
             // one caster's draw into this face: its texture (its holes) when it has one
-            const auto drawOne = [&](uint32_t texture, bool alphaTest, float ref, uint32_t first, uint32_t count) {
+            const auto drawOne = [&](uint32_t texture, bool alphaTest, float ref, uint32_t first, uint32_t count,
+                                     bool leaves) {
+                const int row = leaves ? leafRow : int(s);
+                const D3D12_VIEWPORT vp{float(f * kF), float(row * kF), float(kF), float(kF), 0.0f, 1.0f};
+                const D3D12_RECT box{LONG(f * kF), LONG(row * kF), LONG((f + 1) * kF), LONG((row + 1) * kF)};
                 if (!makeRoom(st, st, 0, 2)) return false;
                 const auto tex = textures.find(texture);
                 UINT srv = tex != textures.end() && tex->second.resource ? tex->second.srv : kNoSrv;
@@ -283,7 +288,9 @@ std::vector<int> Renderer::Impl::drawTorchShadows(const std::vector<point_shadow
                     hi[k] = cast.hi[k] - l.at[k];
                 }
                 if (!point_shadows::boxOnFace(lo, hi, f)) continue;
-                if (!drawOne(cast.texture, cast.alphaTest, cast.ref, n.first, cast.count)) return {};
+                const auto ct = textures.find(cast.texture);
+                const bool leaves = effects.torchLeafLight && ct != textures.end() && ct->second.leafy;
+                if (!drawOne(cast.texture, cast.alphaTest, cast.ref, n.first, cast.count, leaves)) return {};
             }
             for (const Turned& tq : turned) {  // 3.0.16-beta.18: the characters, their pictures' holes let through
                 if (tq.light != s) continue;
@@ -293,7 +300,7 @@ std::vector<int> Renderer::Impl::drawTorchShadows(const std::vector<point_shadow
                     hi[k] = tq.hi[k] - l.at[k];
                 }
                 if (!point_shadows::boxOnFace(lo, hi, f)) continue;
-                if (!drawOne(tq.texture, true, 0.5f, tq.first, 6)) return {};
+                if (!drawOne(tq.texture, true, 0.5f, tq.first, 6, false)) return {};
                 ++characters;
             }
         }

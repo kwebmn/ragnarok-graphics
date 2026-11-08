@@ -2044,6 +2044,14 @@ constexpr Entry kTexts[] = {
      "розмиття й мерехтіння. Здалеку — як і раніше. Спочатку вимкнено.",
      "Вблизи спрайты персонажей, монстров и NPC рисуются чистыми квадратиками своих пикселей с мягким краем — без "
      "размытия и мерцания. Издалека — как и раньше. Сначала выключено."},
+    {Text::FxTorchLeafLight, "Light through the leaves", "Світло крізь листя", "Свет сквозь листву"},
+    {Text::FxTorchLeafLightHint,
+     "A tree's leaves between a torch or a lamp and the ground do not cast a black shadow: a part of the light comes "
+     "through, green, in spots. Direct3D 12 only. Off at first.",
+     "Листя дерева між факелом чи лампою і землею не дає чорної тіні: частина світла проходить крізь нього, зеленими "
+     "плямами. Лише Direct3D 12. Спочатку вимкнено.",
+     "Листва дерева между факелом или лампой и землёй не даёт чёрной тени: часть света проходит сквозь неё, зелёными "
+     "пятнами. Только Direct3D 12. Сначала выключено."},
     {Text::InterfaceSkillNeeds, "What a skill lacks", "Чого бракує навичці", "Чего не хватает навыку"},
     {Text::InterfaceSkillNeedsHint,
      "A skill on the bar that cannot go for its gem or its spirit spheres is dimmed with a red plate: ×0 when the "

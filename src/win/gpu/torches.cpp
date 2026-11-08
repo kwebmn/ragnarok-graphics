@@ -1009,6 +1009,7 @@ bool Renderer::Impl::applyTorches() {
             data[0][2 * i + 1][3] = l.strength;
             data[1][2 * i][0] = shadowSlot[i];  // 3.0.16-beta.16
             data[1][2 * i][1] = shadowDark;
+            data[1][2 * i][2] = effects.torchLeafLight ? 1.0f : 0.0f;  // 3.0.16-beta.30: the leaves' rows too
             // 0.39.2: where its reach falls on the screen - the cube about it, each corner projected, the nearer ones
             // further out. A light up in the air lights the ground well below it on the screen: 0.25-0.39.1 cut it off
             // at a square about the light's own place (the skills' light came out square).

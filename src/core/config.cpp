@@ -189,6 +189,7 @@ EffectSettings effectsOff() {
     e.spriteLight = false;
     e.worldReflections = false;
     e.torchShadows = false;  // 3.0.16-beta.16
+    e.torchLeafLight = false;  // 3.0.16-beta.30
     e.bodyStamp = false;     // 3.0.16-beta.25
     e.sharpSprites = false;  // 3.0.16-beta.29
     e.smoothHills = false;
