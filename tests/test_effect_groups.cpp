@@ -186,7 +186,7 @@ TEST(effect_groups_fourteen_by_what_the_eye_is_on) {
         {"sand_drift", Weather},
         {"actor_shadows", Characters}, {"sprite_light", Characters}, {"round_light", Characters},
         {"rim_light", Characters}, {"footprints", Characters},
-        {"hit_flash", Characters}, {"death_flash", Characters}, {"afterimages", Characters},
+        {"hit_flash", Characters}, {"death_flash", Characters},
         {"body_tints", Characters}, {"aura", Characters}, {"aura_portals", Characters},
         {"silhouette", Characters},
         {"skills_soft", SkillEffects}, {"crowd_effects", SkillEffects}, {"mage_effects", SkillEffects},

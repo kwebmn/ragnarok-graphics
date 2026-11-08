@@ -454,7 +454,7 @@ bool Context::open(std::string& error) {
     // 0.61: Direct3D 11 draws the characters' shadows and the torches' light now: they know the sprites by it too.
     const EffectSettings drawn = effects();
     const bool d3d11Hook = (aiHere && cells) || drawn.actorShadows || drawn.torch || drawn.glint ||
-                           drawn.hitFlash || drawn.deathFlash || drawn.afterimages ||
+                           drawn.hitFlash || drawn.deathFlash ||
                            drawn.bodyTints;  // 0.95, 0.96, 3.0.16-beta.7, .13: the sprites' kinds
     if (d3d11 ? d3d11Hook : ((cells && renderer->remote()) || !config.remix)) installSpriteHook();
     installEffectHook();  // 0.27: the level 99 aura softer (Device7::record)

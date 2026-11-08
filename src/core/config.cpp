@@ -213,7 +213,7 @@ EffectSettings effectsOff() {
     e.wetGround = false;
     e.hitFlash = false;
     e.deathFlash = false;
-    e.afterimages = e.bodyTints = false;  // 3.0.16-beta.13
+    e.bodyTints = false;  // 3.0.16-beta.13
     e.glint = false;
     e.ripples = false;
     e.softParticles = e.rimLight = e.motes = e.relief = e.floorReflections = e.shafts = e.dayCycle = false;
@@ -289,7 +289,7 @@ bool drawnByRenderer(const EffectSettings& e) {
            e.treeVolume ||
            e.wetGround ||
            e.hitFlash ||
-           e.deathFlash || e.afterimages || e.bodyTints ||
+           e.deathFlash || e.bodyTints ||
            e.glint ||
            e.ripples ||
            e.softParticles || e.rimLight || e.motes || e.moonLight ||

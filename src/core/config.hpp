@@ -373,10 +373,8 @@ struct EffectSettings {
     // 3.0.16-beta.7 (the owner: «делай все» - a death's flash): death_flash - a monster dying (its «_die» sound)
     // flashes brighter and longer than a hit (core/hit_flash.hpp). Off by default.
     bool deathFlash = false;
-    // 3.0.16-beta.13 (the owner's pick 15 of «20 идей»): afterimages - the character moving faster than a walk its
-    // sprite drawn again behind it along its path, fading; body_tints - Fury a warm red, Steel Body cool steel added
-    // over its body (core/afterimage, Device7)
-    bool afterimages = false;
+    // 3.0.16-beta.13 (the owner's pick 15 of «20 идей»): body_tints - Fury a warm red, Steel Body cool steel added
+    // over its body (core/afterimage, Device7). (.13's afterimages behind a fast hero gone in .14: «убери».)
     bool bodyTints = false;
     // 0.97: wet_ground - where it rains the ground is darker and puddles mirror the world (floor_reflect_ps, Direct3D
     // 12). Off by default.

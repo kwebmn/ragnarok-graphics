@@ -1994,14 +1994,6 @@ constexpr Entry kTexts[] = {
      "Умирающий монстр вспыхивает белым — ярче и дольше, чем от удара. Нужен включённый звук игры: смерть узнаётся "
      "по звуку."},
     // 3.0.16-beta.13 (the owner's picks 1, 5, 6, 15, 19, 20 of «20 идей»)
-    {Text::FxAfterimages, "Afterimages when fast", "Сліди за швидким героєм", "Следы за быстрым героем"},
-    {Text::FxAfterimagesHint,
-     "When your character moves faster than a plain walk (Increase AGI, Snap, Body Relocation, a Peco), a few pale "
-     "copies of it trail behind along its path and fade. Off at first.",
-     "Коли ваш персонаж рухається швидше за звичайний крок (Increase AGI, Snap, Body Relocation, пеко), за ним уздовж "
-     "шляху тягнеться кілька блідих копій, що згасають. Спочатку вимкнено.",
-     "Когда ваш персонаж движется быстрее обычного шага (Increase AGI, Snap, Body Relocation, пеко), за ним вдоль "
-     "пути тянется несколько бледных копий, которые гаснут. Сначала выключено."},
     {Text::FxBodyTints, "Body tints", "Відтінок тіла", "Оттенок тела"},
     {Text::FxBodyTintsHint,
      "Your character's body takes a soft colour while a state is on: a warm red under Fury, cool steel under Steel "

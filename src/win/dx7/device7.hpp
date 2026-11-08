@@ -76,17 +76,11 @@ private:
     // 3.0.13-beta.17: [effects] fade_models - the character's body on the screen this frame, the camera, each model's
     // see-through
     bool fadeTold_ = false;
-    // 3.0.16-beta.13 (the owner's pick 15 of «20 идей»): [effects] afterimages, body_tints - the character's place on
-    // the screen this frame, its trail's ghosts (a screen offset and a strength each) and its tint
-    afterimage::Trail trail_;
+    // 3.0.16-beta.13 (the owner's pick 15 of «20 идей»): [effects] body_tints - the character's place on the screen
+    // this frame and its tint (.14: the afterimages gone)
     modelfade::Focus hero_;
-    struct GhostShift {
-        float dx = 0, dy = 0, alpha = 0;
-    };
-    std::vector<GhostShift> ghosts_;
     afterimage::Tint tint_;
-    std::vector<uint8_t> ghost_;
-    bool ghostTold_ = false, tintTold_ = false;
+    bool tintTold_ = false;
     // 3.0.15-beta.1: the skills' effects' draws written to uaro-effects.txt in betas (core/effect_capture.hpp)
     effect_capture::Recorder capture_;
     std::set<int> captureFirst_;  // 3.0.15-beta.10: the effects whose first line is written

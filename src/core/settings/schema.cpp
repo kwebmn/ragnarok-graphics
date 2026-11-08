@@ -771,9 +771,7 @@ const std::vector<IniSetting>& iniSettings() {
          Text::FxHitFlashHint, "", &E::hitFlash},
         {"effects", "death_flash", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxDeathFlash,
          Text::FxDeathFlashHint, "", &E::deathFlash},  // 3.0.16-beta.7
-        // 3.0.16-beta.13: the afterimages behind a fast character, its body's tints
-        {"effects", "afterimages", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxAfterimages,
-         Text::FxAfterimagesHint, "", &E::afterimages},
+        // 3.0.16-beta.13: the body's tints (.14: the afterimages gone - the owner: «убери»)
         {"effects", "body_tints", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxBodyTints,
          Text::FxBodyTintsHint, "", &E::bodyTints},
         {"effects", "wet_ground", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxWetGround,
