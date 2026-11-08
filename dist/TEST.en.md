@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.16-beta.23 — what's new
+
+- **Fire Wall has the game's soft fire again.** Our mage look repainted its flames in crisp colours and the three columns came out as flat red slabs. Fire Wall keeps the game's own fire with our glow now.
+
 # uaRO Graphics 3.0.16-beta.22 — what's new
 
 - **"Time rings on the ground": the countdown on the hotbar too.** While your Safety Wall, Pneuma, Sanctuary or trap stands, its icon shows a gold bar along the top running down and the seconds in the middle ("32"; with two walls "32 ×2", the one ending first). The countdown is seen even when you stand on the wall and its ring is hidden under you.
