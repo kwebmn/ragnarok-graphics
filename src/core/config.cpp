@@ -213,6 +213,7 @@ EffectSettings effectsOff() {
     e.wetGround = false;
     e.hitFlash = false;
     e.deathFlash = false;
+    e.afterimages = e.bodyTints = false;  // 3.0.16-beta.13
     e.glint = false;
     e.ripples = false;
     e.softParticles = e.rimLight = e.motes = e.relief = e.floorReflections = e.shafts = e.dayCycle = false;
@@ -288,7 +289,7 @@ bool drawnByRenderer(const EffectSettings& e) {
            e.treeVolume ||
            e.wetGround ||
            e.hitFlash ||
-           e.deathFlash ||
+           e.deathFlash || e.afterimages || e.bodyTints ||
            e.glint ||
            e.ripples ||
            e.softParticles || e.rimLight || e.motes || e.moonLight ||
@@ -580,6 +581,14 @@ Config parseConfig(const std::string& text) {
             setBool(val, c.hotbarAmmo);
         } else if (key == "interface.hotbar_supplies") {  // 3.0.16-beta.8: gems, stones, spheres over the hotbar
             setBool(val, c.hotbarSupplies);
+        } else if (key == "interface.skill_needs") {  // 3.0.16-beta.13
+            setBool(val, c.skillNeeds);
+        } else if (key == "interface.combo_window") {
+            setBool(val, c.comboWindow);
+        } else if (key == "interface.broken_gear") {
+            setBool(val, c.brokenGear);
+        } else if (key == "interface.pet_hunger") {
+            setBool(val, c.petHunger);
         } else if (key == "interface.ammo_sound") {  // 3.0.11-beta.129: the chime at 10 left and at none
             setBool(val, c.ammoSound);
         } else if (key == "interface.pad_hints") {  // 3.0.11-beta.86: the controller's buttons on the interface

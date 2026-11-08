@@ -66,6 +66,13 @@ panel::Box levelBox(const panel::Box& cell, int level, float s) {
 }
 
 bool noSp(const Cell& c) { return c.spNeed > 0 && c.spHave < c.spNeed; }
+constexpr uint32_t kLackRed = 0xC8443A, kReadyBlue = 0x4DA3FF;  // 3.0.16-beta.13
+
+// 3.0.16-beta.13: the plate of what it lacks - the top right, as the «SP» one
+panel::Box lackBox(const panel::Box& cell, const std::string& text, float s) {
+    const float w = panel::wordsWidth(text, 11 * s, true) + 6 * s;
+    return panel::Box{cell.x + cell.w - w - 2 * s, cell.y + 2 * s, w, 13 * s};
+}
 
 // 3.0.11-beta.143: a ground skill's own count's plate - the bottom right, as an item's count
 panel::Box standingBox(const panel::Box& cell, const std::string& text, float s) {
@@ -103,6 +110,7 @@ std::vector<TipLine> tipLines(const Cell& c, const Texts& t) {
     if (noSp(c))
         return {{first, kText},
                 {settings::fmt(t.noSp, {std::to_string(c.spNeed), std::to_string(c.spHave)}), kSpWords}};
+    if (!c.lackWhy.empty()) return {{first, kText}, {c.lackWhy, kLackRed}};  // 3.0.16-beta.13
     if (c.levelMost > 1 && !t.wheel.empty())  // 3.0.11-beta.289: the wheel sets its level
         return {{first, kText},
                 {t.use, kMuted},
@@ -304,7 +312,8 @@ void paint(panel::Picture& out, const Layout& L, const std::vector<Cell>& cells,
         const float edgeW = (chosen || lit || under ? 2.0f : 1.0f) * s;
         if (down) panel::roundRect(out, b, 7 * s, kBlack, 0.30f, edge, edgeA, edgeW);
         else panel::roundRect(out, b, 7 * s, kWhite, hot ? 0.10f : 0.05f, edge, edgeA, edgeW);
-        const bool barred = c && (c->notHere != NotHere::No || c->unlearned), dry = c && !barred && noSp(*c);
+        const bool barred = c && (c->notHere != NotHere::No || c->unlearned),
+                   dry = c && !barred && (noSp(*c) || !c->lack.empty());  // .13: what it lacks dims it too
         if (c && c->icon && c->icon->width > 0)  // 3.0.11-beta.147: lifted - faded where it was
             put(out, *c->icon, b,
                 (barred ? 0.45f : dry ? 0.5f : c->count == 0 ? 0.3f : 1.0f) * (int(i) == show.lifted ? 0.3f : 1.0f),
@@ -343,7 +352,15 @@ void paint(panel::Picture& out, const Layout& L, const std::vector<Cell>& cells,
             panel::roundRect(out, standingBox(b, c->standing, s), 3 * s, kBlack, 0.62f);
         if (c && c->flash > 0)  // 3.0.11-beta.143: a wall of it burnt out - its edge amber, fading
             panel::roundRect(out, b, 7 * s, kAmmoWarn, 0.0f, kAmmoWarn, std::min(1.0f, c->flash), 2.0f * s);
-        if (dry) panel::roundRect(out, spBox(b, s), 3 * s, kSpBlue, 0.95f);  // its «SP» plate
+        if (dry && noSp(*c)) panel::roundRect(out, spBox(b, s), 3 * s, kSpBlue, 0.95f);  // its «SP» plate
+        else if (dry) panel::roundRect(out, lackBox(b, c->lack, s), 3 * s, kLackRed, 0.95f);  // .13: what it lacks
+        if (c && !barred && c->combo > 0 && !chosen) {  // 3.0.16-beta.13: it chains now - gold, a bar shrinking
+            panel::roundRect(out, b, 7 * s, kGold2, 0.12f, kGold, 1.0f, 2.0f * s);
+            const float bw = (b.w - 8 * s) * std::min(1.0f, c->combo);
+            panel::roundRect(out, panel::Box{b.x + 4 * s, b.y + b.h - 6 * s, bw, 3 * s}, 1.5f * s, kGold2, 1.0f);
+        } else if (c && !barred && c->ready && !chosen) {  // Asura can go: a blue glow
+            panel::roundRect(out, b, 7 * s, kReadyBlue, 0.14f, kReadyBlue, 0.95f, 2.0f * s);
+        }
         if (show.pad && c && c->pad < 0) panel::roundRect(out, b, 7 * s, kBlack, 0.5f);  // no button uses it
     }
     for (size_t i = 0; show.pad && i < L.cells.size() && i < cells.size(); ++i)  // 3.0.11-beta.86: the badges
@@ -441,6 +458,8 @@ std::vector<Words> words(const Layout& L, const std::vector<Cell>& cells, int ro
             out.push_back(Words{levelBox(b, c.level, s), std::to_string(c.level), kText, 11 * s, true, Align::Center});
         if (c.notHere == NotHere::No && !c.unlearned && noSp(c))
             out.push_back(Words{spBox(b, s), "SP", kWhite, 11 * s, true, Align::Center});
+        else if (c.notHere == NotHere::No && !c.unlearned && !c.lack.empty())  // 3.0.16-beta.13
+            out.push_back(Words{lackBox(b, c.lack, s), c.lack, kWhite, 11 * s, true, Align::Center});
     }
     const std::vector<TipLine> lines = show.tip && show.hover >= 0 && show.hover < int(cells.size())
                                            ? tipLines(cells[size_t(show.hover)], t)

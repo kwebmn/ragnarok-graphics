@@ -48,6 +48,13 @@ struct Cell {
     std::string standing;
     bool standingOut = false;
     float flash = 0;
+    // 3.0.16-beta.13 (the owner's picks 1, 5, 6 of «20 идей»): what it lacks - a red plate at the top right («×0» a gem
+    // none in the bag, «3/5» the spheres had and needed), its icon dimmed, `lackWhy` its tip's line ("" none); `combo`
+    // - it chains now (the window's share left, 0 none): a gold edge and a bar along its bottom shrinking; `ready` -
+    // Asura can go now (5 spheres, Fury on, the SP): a blue glow
+    std::string lack, lackWhy;
+    float combo = 0;
+    bool ready = false;
 };
 int iconSide(Mode mode, float scale);
 

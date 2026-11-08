@@ -72,6 +72,10 @@ struct Data {
     int atk = -1, atk2 = 0, def = 0, def2 = 0, flee = 0, flee2 = 0, aspd = 0;
     long long sessionMinutes = -1, zenyGain = 0;
     int kills = 0, deaths = 0;
+    // 3.0.16-beta.13 (the owner's picks 19, 20 of «20 идей»): the broken gear («Knife», or how many; "" none) and the
+    // pet's and the homunculus's fullness (0-100; < 0 none out) on the points' line - red, amber when hungry
+    std::string broken;
+    int pet = -1, homun = -1;
 };
 constexpr int kAmmoLow = 50, kAmmoVeryLow = 10;  // 3.0.11-beta.114: amber under 50, red at 10 or fewer
 bool lowHp(const Data& d);  // under a quarter of the most, as the game's own gauges turn red
@@ -147,6 +151,7 @@ struct Texts {
     // hour's and a minute's, the tip's lines («До рівня {1}», «Рівень через ≈ {1}», «За годину +{1}», «За сесію +{1}»,
     // «Остання здобич +{1}»), the portrait's tip («Alt+V — згорнути», «Alt+V — розгорнути»)
     std::string skillPoints, expMax, hour, minute;
+    std::string broken, pet, homun;  // 3.0.16-beta.13: «Зламано: {1}», «Пет», «Гомункул»
     std::string toLevel, levelIn, perHour, session, lastGain;
     std::string fold, unfold;
     // 3.0.11-beta.235: «Гільдія {1}», «Група {1} · {2}/{3}», «+{1} кожні {2} с», «повне», «до повного ≈ {1}», «не

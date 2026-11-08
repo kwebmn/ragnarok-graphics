@@ -35,6 +35,10 @@ void setDelayRing(bool on);
 // 3.0.16-beta.8 (the owner: «для магов и пристов ... гемов, а для монков ... сферы»): [interface] hotbar_supplies -
 // what the bar's skills spend (gems, Holy Water, stones, bottles) and the spirit spheres on pills after the ammo's
 void setSupplies(bool on);
+// 3.0.16-beta.13 (the owner's picks 1, 5, 6 of «20 идей»): [interface] skill_needs - a skill short of its gem or its
+// spheres a red plate («×0», «3/5»); [interface] combo_window - the skill that chains now gold with its time shrinking,
+// Asura ready (5 spheres, Fury) blue
+void setNeeds(bool needs, bool comboWindow);
 // 3.0.11-beta.281 (the owner's feature 16): [interface] potion_warn - the bar's healing items: a chime at 10 left and
 // at none, their counts red from 10 down (core/potion_warn)
 void setPotionWarn(bool on);

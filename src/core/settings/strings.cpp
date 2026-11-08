@@ -1993,6 +1993,64 @@ constexpr Entry kTexts[] = {
      "впізнається за звуком.",
      "Умирающий монстр вспыхивает белым — ярче и дольше, чем от удара. Нужен включённый звук игры: смерть узнаётся "
      "по звуку."},
+    // 3.0.16-beta.13 (the owner's picks 1, 5, 6, 15, 19, 20 of «20 идей»)
+    {Text::FxAfterimages, "Afterimages when fast", "Сліди за швидким героєм", "Следы за быстрым героем"},
+    {Text::FxAfterimagesHint,
+     "When your character moves faster than a plain walk (Increase AGI, Snap, Body Relocation, a Peco), a few pale "
+     "copies of it trail behind along its path and fade. Off at first.",
+     "Коли ваш персонаж рухається швидше за звичайний крок (Increase AGI, Snap, Body Relocation, пеко), за ним уздовж "
+     "шляху тягнеться кілька блідих копій, що згасають. Спочатку вимкнено.",
+     "Когда ваш персонаж движется быстрее обычного шага (Increase AGI, Snap, Body Relocation, пеко), за ним вдоль "
+     "пути тянется несколько бледных копий, которые гаснут. Сначала выключено."},
+    {Text::FxBodyTints, "Body tints", "Відтінок тіла", "Оттенок тела"},
+    {Text::FxBodyTintsHint,
+     "Your character's body takes a soft colour while a state is on: a warm red under Fury, cool steel under Steel "
+     "Body. Off at first.",
+     "Тіло вашого персонажа набуває м'якого кольору, поки діє стан: теплий червоний під Fury, холодний сталевий під "
+     "Steel Body. Спочатку вимкнено.",
+     "Тело вашего персонажа приобретает мягкий цвет, пока действует состояние: тёплый красный под Fury, холодный "
+     "стальной под Steel Body. Сначала выключено."},
+    {Text::InterfaceSkillNeeds, "What a skill lacks", "Чого бракує навичці", "Чего не хватает навыку"},
+    {Text::InterfaceSkillNeedsHint,
+     "A skill on the bar that cannot go for its gem or its spirit spheres is dimmed with a red plate: ×0 when the "
+     "gem (Holy Water, a stone) is not in the bag, 3/5 the spheres you have and it needs. Off at first.",
+     "Навичка на панелі, якій бракує каменя чи сфер, тьмяніє з червоною плашкою: ×0, коли каменя (святої води, "
+     "каменя ніндзя) немає в сумці, 3/5 — скільки сфер є і скільки треба. Спочатку вимкнено.",
+     "Навык на панели, которому не хватает камня или сфер, тускнеет с красной плашкой: ×0, когда камня (святой "
+     "воды, камня ниндзя) нет в сумке, 3/5 — сколько сфер есть и сколько нужно. Сначала выключено."},
+    {Text::InterfaceComboWindow, "Combo window", "Вікно комбо", "Окно комбо"},
+    {Text::InterfaceComboWindowHint,
+     "The Monk's combo on the skill bar: the skill that chains now (Chain Combo after Triple Attack, then Combo "
+     "Finish, Tiger Fist, Chain Crush, Asura) is outlined in gold with its time shrinking along its bottom; Asura "
+     "glows blue when it can go - five spheres and Fury on. Off at first.",
+     "Комбо монаха на панелі навичок: навичка, яку можна вдарити зараз (Chain Combo після Triple Attack, далі Combo "
+     "Finish, Tiger Fist, Chain Crush, Asura), обведена золотом, а її час збігає смужкою внизу; Asura світиться "
+     "синім, коли готова — п'ять сфер і Fury. Спочатку вимкнено.",
+     "Комбо монаха на панели навыков: навык, который можно ударить сейчас (Chain Combo после Triple Attack, дальше "
+     "Combo Finish, Tiger Fist, Chain Crush, Asura), обведён золотом, а его время убывает полоской внизу; Asura "
+     "светится синим, когда готова — пять сфер и Fury. Сначала выключено."},
+    {Text::InterfaceBrokenGear, "Broken gear", "Зламане спорядження", "Сломанное снаряжение"},
+    {Text::InterfaceBrokenGearHint,
+     "When a weapon or armour breaks (a Blacksmith's skill, a monster, Acid Terror) a short sound and a red Broken "
+     "with its name in the character block until it is repaired. Off at first.",
+     "Коли ламається зброя чи броня (навичка коваля, монстр, Acid Terror) — короткий сигнал і червоне Зламано: з її "
+     "назвою в блоці персонажа, доки її не полагодять. Спочатку вимкнено.",
+     "Когда ломается оружие или броня (навык кузнеца, монстр, Acid Terror) — короткий сигнал и красное Сломано с "
+     "её названием в блоке персонажа, пока её не починят. Сначала выключено."},
+    {Text::InterfacePetHunger, "Pet and homunculus hunger", "Голод пета й гомункула", "Голод пета и гомункула"},
+    {Text::InterfacePetHungerHint,
+     "The pet's and the homunculus's fullness in the character block - amber when hungry (25 % and less), red when "
+     "very (10 %), with a short sound then: feed it before it runs away. Off at first.",
+     "Ситість пета й гомункула в блоці персонажа — бурштинова, коли голодний (25 % і менше), червона, коли дуже (10 "
+     "%), і тоді короткий сигнал: нагодуйте, доки не втік. Спочатку вимкнено.",
+     "Сытость пета и гомункула в блоке персонажа — янтарная, когда голоден (25 % и меньше), красная, когда очень "
+     "(10 %), и тогда короткий сигнал: покормите, пока не сбежал. Сначала выключено."},
+    {Text::HotbarNoItem, "No {1} in the bag", "Немає {1} у сумці", "Нет {1} в сумке"},
+    {Text::HotbarNoSpheres, "Spheres: needs {1}, you have {2}", "Сфери: потрібно {1}, є {2}",
+     "Сферы: нужно {1}, есть {2}"},
+    {Text::CharBroken, "Broken: {1}", "Зламано: {1}", "Сломано: {1}"},
+    {Text::CharPet, "Pet", "Пет", "Пет"},
+    {Text::CharHomun, "Homunculus", "Гомункул", "Гомункул"},
     {Text::FxWetGround, "Wet ground and puddles", "Мокра земля й калюжі", "Мокрая земля и лужи"},
     {Text::FxWetGroundHint,
      "On maps where it rains the ground is a little darker and puddles here and there mirror the houses, the trees "

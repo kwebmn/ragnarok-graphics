@@ -37,6 +37,8 @@
 #include "win/hud_edit.hpp"
 #include "win/skill_delay_watch.hpp"
 #include "win/sphere_watch.hpp"
+#include "win/combo_watch.hpp"
+#include "win/buff_overlay.hpp"
 #include "win/sound_hook.hpp"
 #include "win/log.hpp"
 #include "win/paths.hpp"
@@ -135,6 +137,8 @@ struct State {
     bool potionWarn = true;  // 3.0.11-beta.281: [interface] potion_warn
     potionwarn::Watch potions;
     bool suppliesOn = false;      // 3.0.16-beta.8: [interface] hotbar_supplies
+    bool needsOn = false, comboOn = false;  // 3.0.16-beta.13: [interface] skill_needs, combo_window
+    int lackTold = 0, comboTold = 0;
     potionwarn::Watch supplyWatch;
     std::string suppliesTold;  // the pick last told the log
     int supplyChimes = 0;
@@ -580,6 +584,45 @@ void groundCount(State& s, uint16_t skill, hb::Cell& c) {
     }
 }
 
+// 3.0.16-beta.13 (the owner's pick 1 of «20 идей»): what a skill lacks for one use - a gem (or other item) none in the
+// bag, fewer spheres than it takes (Asura in a combo takes what is left); an empty bag (a map loading) tells nothing
+void needs(State& s, uint16_t skill, int level, hb::Cell& c, unsigned codePage) {
+    if (s.bag.empty()) return;
+    for (int id : supplies::itemsAt(skill, level)) {
+        const auto b = s.bag.find(std::to_string(id));
+        if (b != s.bag.end() && b->second > 0) continue;
+        const auto& items = clienttables::itemNames();
+        const auto n = items.find(std::to_string(id));
+        const std::string name =
+            n != items.end() ? utf8Of(widened(hb::spaced(n->second), codePage)) : "#" + std::to_string(id);
+        c.lack = "\xC3\x97" "0";  // «×0»
+        c.lackWhy = settings::fmt(say(settings::Text::HotbarNoItem), {name});
+        if (s.lackTold++ < 10) LOG_INFO("hotbar: skill %u lacks item #%d", unsigned(skill), id);
+        return;
+    }
+    int need = supplies::spheresFor(skill, level);
+    const std::vector<uint16_t> chain = combowatch::next();
+    if (skill == 271 && std::find(chain.begin(), chain.end(), uint16_t(271)) != chain.end()) need = 1;
+    const int have = spherewatch::count();
+    if (need > 0 && have < need) {
+        c.lack = std::to_string(have) + "/" + std::to_string(need);
+        c.lackWhy = settings::fmt(say(settings::Text::HotbarNoSpheres), {std::to_string(need), std::to_string(have)});
+    }
+}
+
+// 3.0.16-beta.13 (the owner's picks 5, 6): it chains now (the combo's window), Asura ready (5 spheres, Fury - the
+// status icon 86 - on, not short of SP)
+void comboLook(State& s, uint16_t skill, hb::Cell& c) {
+    const std::vector<uint16_t> chain = combowatch::next();
+    if (std::find(chain.begin(), chain.end(), skill) != chain.end()) {
+        c.combo = std::max(0.02f, combowatch::left());
+        if (s.comboTold++ < 10) LOG_INFO("hotbar: skill %u chains now (the combo's window)", unsigned(skill));
+    }
+    if (skill == 271 && spherewatch::count() >= 5 && buffoverlay::timers().on(86) && c.lack.empty() &&
+        !(c.spNeed > 0 && c.spHave < c.spNeed))
+        c.ready = true;
+}
+
 hb::Cell cellOf(State& s, int slot, const std::string& key, unsigned codePage) {
     hb::Cell c;
     c.key = key;
@@ -604,6 +647,8 @@ hb::Cell cellOf(State& s, int slot, const std::string& key, unsigned codePage) {
             c.spHave = s.sp;
         }
         if (s.countsOn && at.skillId > 0) groundCount(s, uint16_t(at.skillId), c);  // 3.0.11-beta.143
+        if (s.needsOn && at.skillId > 0 && !c.unlearned) needs(s, uint16_t(at.skillId), level, c, codePage);  // .13
+        if (s.comboOn && at.skillId > 0 && !c.unlearned) comboLook(s, uint16_t(at.skillId), c);
     } else if (at.what.kind == hb::Slot::Kind::Item) {
         const auto& items = clienttables::itemNames();
         const auto n = items.find(at.what.id);
@@ -1040,6 +1085,14 @@ void setPotionWarn(bool on) {  // 3.0.11-beta.281
     s.potionWarn = on;
 }
 
+void setNeeds(bool needs, bool comboWindow) {  // 3.0.16-beta.13
+    State& s = state();
+    if (needs != s.needsOn) LOG_INFO("hotbar: [interface] skill_needs = %d", needs ? 1 : 0);
+    if (comboWindow != s.comboOn) LOG_INFO("hotbar: [interface] combo_window = %d", comboWindow ? 1 : 0);
+    s.needsOn = needs;
+    s.comboOn = comboWindow;
+}
+
 void setSupplies(bool on) {  // 3.0.16-beta.8
     State& s = state();
     if (on != s.suppliesOn) {
@@ -1170,7 +1223,8 @@ void frame(HWND game, bool on, bool ownBars, bool padHints, bool ammo, bool coun
         key += c.key + '|' + c.name + '|' + std::to_string(c.level) + '|' + std::to_string(c.count) +
                (c.icon ? "i" : "") + (c.low ? "l" : "") + (c.selected ? "s" : "") + (c.spHave < c.spNeed ? "d" : "") +
                std::to_string(int(c.notHere)) + ',' + std::to_string(c.pad) + ',' + c.standing +
-               std::to_string(int(c.flash * 10)) + ';';  // 3.0.11-beta.143: the flash in ten steps
+               std::to_string(int(c.flash * 10)) + c.lack + ',' + std::to_string(int(c.combo * 24)) +
+               (c.ready ? "R" : "") + ';';  // 3.0.11-beta.143: the flash in ten steps; .13 lacks, combo, ready
         if (int(i) == show.hover && show.tip)  // its tip's numbers
             key += std::to_string(c.spNeed) + '/' + std::to_string(c.spHave) + ';';
     }

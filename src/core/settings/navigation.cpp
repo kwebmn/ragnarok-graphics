@@ -200,6 +200,7 @@ const std::vector<InterfaceSection>& interfaceSections() {
         {Text::InterfaceSecPanels,
          {"interface.character", "interface.target", "interface.party", "interface.buffs", "interface.buffs_overflow",
           "interface.hotbar", "interface.hotbar_per_character", "interface.hotbar_ammo", "interface.hotbar_supplies",
+          "interface.skill_needs", "interface.combo_window", "interface.broken_gear", "interface.pet_hunger",
           "interface.ammo_sound",
           "interface.chat", "interface.chat_fade", "interface.chat_log", "interface.long_chat", "interface.skill_jokes",
           "interface.swear_filter", "interface.chat_party", "interface.chat_guild",

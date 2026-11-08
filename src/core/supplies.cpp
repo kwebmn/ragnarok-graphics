@@ -104,6 +104,23 @@ Pick pick(const std::vector<uint16_t>& barSkills, int spheresNow) {
     return p;
 }
 
+int spheresFor(uint16_t skill, int level) {
+    switch (skill) {
+        case 264: case 266: case 269: case 273: case 371: case 1015:  // Snap, Occult, Blade Stop, Finish, Tiger, Ki
+        case 502: case 503: case 507: case 508: return 1;            // Triple Action, Bull's Eye, Bullet, Cracker
+        case 267: return std::clamp(level, 1, 5);                     // Finger Offensive: its level
+        case 372: case 505: return 2;                                 // Chain Crush, Adjustment
+        case 504: case 506: return 4;                                 // Madness Canceller, Increasing Accuracy
+        case 268: case 270: case 271: case 501: return 5;             // Steel Body, Fury, Asura, Fling
+        default: return 0;
+    }
+}
+
+std::vector<int> itemsAt(uint16_t skill, int level) {
+    if (skill == 80 && level <= 5) return {};  // WZ_FIREPILLAR: no gems at levels 1-5 (skill.c)
+    return itemsOf(skill);
+}
+
 int level(int count) { return count <= 0 ? 2 : potionwarn::low(count) ? 1 : 0; }
 
 }  // namespace uagfx::supplies

@@ -784,8 +784,16 @@ std::vector<Words> words(const Layout& L, const Data& d, const Texts& t, const S
         if (d.skillPoints > 0 && !t.skillPoints.empty()) put(counted(t.skillPoints, d.skillPoints), kGold2, false, 12);
         if (d.ammo >= 0 && d.ammo < kAmmoLow && !t.ammo.empty()) {  // 3.0.11-beta.114: the arrows running low
             put(t.ammo, kMuted, false, 4);
-            put(std::to_string(d.ammo), d.ammo <= kAmmoVeryLow ? kHpLow : kWarn, true, 0);
+            put(std::to_string(d.ammo), d.ammo <= kAmmoVeryLow ? kHpLow : kWarn, true, 12);
         }
+        if (!d.broken.empty() && !t.broken.empty()) put(replaced(t.broken, d.broken), kHpLow, true, 12);  // .13
+        const auto fed = [&](const std::string& who, int full) {  // 3.0.16-beta.13: amber hungry, red very
+            if (full < 0 || who.empty()) return;
+            put(who, kMuted, false, 4);
+            put(std::to_string(full) + "\xC2\xA0%", full <= 10 ? kHpLow : full <= 25 ? kWarn : kText, true, 12);
+        };
+        fed(t.pet, d.pet);
+        fed(t.homun, d.homun);
         out.push_back(Words{L.hpLabel, "HP", kMuted, 11 * s, true, Align::Left});
         out.push_back(Words{L.spLabel, "SP", kMuted, 11 * s, true, Align::Left});
         if (d.hpMost > 0) out.push_back(Words{L.hpText, pair(d.hp, d.hpMost), low ? 0xFF9A8F : kText, 13 * s, true,

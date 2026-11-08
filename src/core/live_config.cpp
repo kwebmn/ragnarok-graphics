@@ -597,6 +597,15 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("skill_cells", flag(running.skillCells), flag(file.skillCells)));
         n.skillCells = file.skillCells;
     }
+    const auto flagAtOnce = [&](const char* key, bool Config::*field) {  // 3.0.16-beta.13
+        if (file.*field == running.*field) return;
+        u.applied.push_back(change(key, flag(running.*field), flag(file.*field)));
+        n.*field = file.*field;
+    };
+    flagAtOnce("skill_needs", &Config::skillNeeds);
+    flagAtOnce("combo_window", &Config::comboWindow);
+    flagAtOnce("broken_gear", &Config::brokenGear);
+    flagAtOnce("pet_hunger", &Config::petHunger);
     if (file.hotbarSupplies != running.hotbarSupplies) {  // 3.0.16-beta.8: the supplies over the hotbar, at once
         u.applied.push_back(change("hotbar_supplies", flag(running.hotbarSupplies), flag(file.hotbarSupplies)));
         n.hotbarSupplies = file.hotbarSupplies;

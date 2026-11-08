@@ -15,6 +15,10 @@ namespace uagfx::supplies {
 std::vector<int> itemsOf(uint16_t skill);  // the items' numbers one use takes (none: empty)
 bool usesSpheres(uint16_t skill);          // spends or makes spirit spheres / coins
 bool coins(uint16_t skill);                // a Gunslinger's (up to 10 coins, else 5 spheres)
+// 3.0.16-beta.13 (the owner's pick 1 of «20 идей»): the spheres one use needs (skill_require_db's SpiritSphereCost,
+// Finger Offensive its level), 0 none; and the items one use needs at this level (Fire Pillar's gem from level 6)
+int spheresFor(uint16_t skill, int level);
+std::vector<int> itemsAt(uint16_t skill, int level);
 
 // The pills over the hotbar after the ammo's: the items the bar's skills spend, in the order the bar has them first,
 // at most kMostItems; the spheres' last when a skill of them is on the bar (or some are up now)

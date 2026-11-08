@@ -373,6 +373,11 @@ struct EffectSettings {
     // 3.0.16-beta.7 (the owner: «делай все» - a death's flash): death_flash - a monster dying (its «_die» sound)
     // flashes brighter and longer than a hit (core/hit_flash.hpp). Off by default.
     bool deathFlash = false;
+    // 3.0.16-beta.13 (the owner's pick 15 of «20 идей»): afterimages - the character moving faster than a walk its
+    // sprite drawn again behind it along its path, fading; body_tints - Fury a warm red, Steel Body cool steel added
+    // over its body (core/afterimage, Device7)
+    bool afterimages = false;
+    bool bodyTints = false;
     // 0.97: wet_ground - where it rains the ground is darker and puddles mirror the world (floor_reflect_ps, Direct3D
     // 12). Off by default.
     bool wetGround = false;
@@ -664,6 +669,10 @@ struct Config {
     // [interface] hotbar_supplies - what the bar's skills spend (gems, Holy Water, stones, bottles) and the spirit
     // spheres on pills after the ammo's (core/supplies, win/sphere_watch); off
     bool hotbarSupplies = false;
+    // 3.0.16-beta.13 (the owner's picks 1, 5, 6, 19, 20 of «20 идей»): [interface] skill_needs (a skill short of its
+    // gem or spheres a red plate), combo_window (the Monk's chain gold, Asura ready blue), broken_gear, pet_hunger
+    // (win/upkeep_watch); all off
+    bool skillNeeds = false, comboWindow = false, brokenGear = false, petHunger = false;
     // 3.0.11-beta.129 (the owner «делай»): [interface] ammo_sound - a short soft chime when 10 arrows are left and
     // when none are (core/ui_chime, win/ammo_sound through the game's own sound player); on
     bool ammoSound = true;

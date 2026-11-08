@@ -1,3 +1,4 @@
+#include "win/upkeep_watch.hpp"
 #include "win/char_block.hpp"
 
 #include <windowsx.h>
@@ -251,6 +252,9 @@ cb::Texts texts() {
     t.points = say(settings::Text::CharPoints);
     t.lowHp = say(settings::Text::CharLowHp);
     t.ammo = say(state().ammoArrows ? settings::Text::CharArrows : settings::Text::CharAmmo);  // 3.0.11-beta.114
+    t.broken = say(settings::Text::CharBroken);  // 3.0.16-beta.13
+    t.pet = say(settings::Text::CharPet);
+    t.homun = say(settings::Text::CharHomun);
     t.overweight1 = say(settings::Text::CharOverweight1);  // 3.0.11-beta.139
     t.overweight2 = say(settings::Text::CharOverweight2);
     t.skillPoints = say(settings::Text::CharSkillPoints);  // 3.0.11-beta.141: the experience's words
@@ -556,6 +560,9 @@ void frame(HWND game, CharacterLook look, unsigned codePage, double k, int targe
     const ammowatch::Ammo& ammo = ammowatch::read(now);  // 3.0.11-beta.114 (.125: win/ammo_watch)
     d.ammo = ammo.count;
     s.ammoArrows = ammo.arrows;
+    d.broken = upkeepwatch::broken(codePage);  // 3.0.16-beta.13
+    d.pet = upkeepwatch::pet();
+    d.homun = upkeepwatch::homun();
     const bool low = cb::lowHp(d);
     if (low && !s.wasLow) {
         s.warnAt = now;
@@ -603,6 +610,7 @@ void frame(HWND game, CharacterLook look, unsigned codePage, double k, int targe
         std::to_string(d.spMost) + ';' + std::to_string(int(d.baseExp * 1000)) + ',' +
         std::to_string(int(d.jobExp * 1000)) + ';' + std::to_string(d.weight) + ';' + std::to_string(d.zeny) + ';' +
         std::to_string(d.statusPoints) + ';' + std::to_string(d.ammo) + (s.ammoArrows ? "a" : "b") + ';' +
+        d.broken + '|' + std::to_string(d.pet) + ',' + std::to_string(d.homun) + ';' +  // 3.0.16-beta.13
         std::to_string(d.weightNow) + '/' + std::to_string(d.weightMost) + 'o' + std::to_string(d.overweight) + ';' +
         s.portraitKey + (d.portrait ? "p" : "") + ';' +
         std::to_string(show.hoverButton) + (show.hoverBlock ? "h" : "") + (show.warning ? "w" : "") +

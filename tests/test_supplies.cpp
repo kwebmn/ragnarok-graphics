@@ -31,3 +31,13 @@ TEST(supplies_level_by_count) {
     CHECK_EQ(supplies::level(1), 1);
     CHECK_EQ(supplies::level(0), 2);
 }
+
+// 3.0.16-beta.13: what one use needs - spheres by the skill (Finger Offensive by its level), Fire Pillar's gem
+TEST(supplies_spheres_and_items_at_a_level) {
+    CHECK_EQ(supplies::spheresFor(271, 5), 5);
+    CHECK_EQ(supplies::spheresFor(267, 3), 3);
+    CHECK_EQ(supplies::spheresFor(372, 1), 2);
+    CHECK_EQ(supplies::spheresFor(28, 10), 0);
+    CHECK(supplies::itemsAt(80, 5).empty());
+    CHECK(supplies::itemsAt(80, 6) == std::vector<int>{717});
+}

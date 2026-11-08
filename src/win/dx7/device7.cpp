@@ -26,6 +26,8 @@
 #include "win/net_smooth.hpp"
 #include "win/paths.hpp"
 #include "win/skill_delay_watch.hpp"
+#include "win/buff_overlay.hpp"
+#include "win/combo_watch.hpp"
 #include "win/windows_draw.hpp"
 
 namespace uagfx::dx7 {
@@ -95,13 +97,38 @@ HRESULT STDMETHODCALLTYPE Device7::BeginScene() {
         float view[12], at[3], hole[8] = {};
         // 3.0.13-beta.30: [effects] silhouette (fade_models, .17-.29, gone in .31: «чтото не то, возвращай как было»)
         const uint8_t flags = c.effects().silhouette ? 2 : 0;
-        if (flags && c.enhanced() && c.screenWidth > 0 && win::readCameraAndTarget(view, at)) {
-            modelfade::holeOf(modelfade::focusOf(camera::projectionFor(c.screenWidth, c.screenHeight), view, at),
-                              hole);
+        const bool trailOn = c.effects().afterimages, tintOn = c.effects().bodyTints;  // 3.0.16-beta.13
+        hero_ = modelfade::Focus{};
+        ghosts_.clear();
+        tint_ = afterimage::Tint{};
+        if ((flags || trailOn || tintOn) && c.enhanced() && c.screenWidth > 0 && win::readCameraAndTarget(view, at)) {
+            const camera::Projection p = camera::projectionFor(c.screenWidth, c.screenHeight);
+            hero_ = modelfade::focusOf(p, view, at);
+            if (flags) modelfade::holeOf(hero_, hole);
             if (hole[3] > 0.0f && !fadeTold_) {
                 fadeTold_ = true;
                 LOG_INFO("effects: the character's place told the renderer ([effects] silhouette)");
             }
+            const uint64_t now = c.nowMs();
+            trail_.note(at, now);
+            if (trailOn && hero_.known)  // its ghosts: where the path was, on the screen as the camera is now
+                for (const afterimage::Ghost& g : trail_.ghosts(now)) {
+                    const float old[3] = {g.at[0], g.at[1], g.at[2]};
+                    const modelfade::Focus o = modelfade::focusOf(p, view, old);
+                    if (o.known) ghosts_.push_back(GhostShift{o.x - hero_.x, o.y - hero_.y, g.alpha});
+                }
+            if (!ghosts_.empty() && !ghostTold_) {
+                ghostTold_ = true;
+                LOG_INFO("effects: the character moves fast - its afterimages drawn ([effects] afterimages)");
+            }
+            if (tintOn) tint_ = afterimage::tintOf(win::buffoverlay::timers().on(86), win::combowatch::steelBody());
+            if (tint_.strength > 0 && !tintTold_) {
+                tintTold_ = true;
+                LOG_INFO("effects: the character's body tinted (%s, [effects] body_tints)",
+                         tint_.r == 255 ? "Fury" : "Steel Body");
+            }
+        } else {
+            trail_.clear();
         }
         c.setSeeThrough(hole, flags);
     }
@@ -519,7 +546,9 @@ HRESULT Device7::record(D3DPRIMITIVETYPE type, DWORD fvf, const void* vertices, 
     // 0.95: a card lying on the ground sparkles - a star drawn after it. (2.7.10: the sprites' fade-in as they came
     // into view - 0.93 - gone at the user's word.)
     float flash = 0.0f;  // 0.96: a monster just hit - drawn once more, adding light
-    if ((fx.glint || fx.hitFlash || fx.deathFlash) && c.enhanced() && !setup.ui && fvf == d3d7::FVF_TL1 &&
+    afterimage::Tint tint;  // 3.0.16-beta.13: the character's own body tinted, drawn once more adding its colour
+    if ((fx.glint || fx.hitFlash || fx.deathFlash || !ghosts_.empty() || tint_.strength > 0) && c.enhanced() &&
+        !setup.ui && fvf == d3d7::FVF_TL1 &&
         vertexCount == 4 && !indices && textures_[0]) {
         const auto* v = static_cast<const uint8_t*>(vertices);
         float x = 0, y = 0, u = 0, w = 0, z = 0, rhw = 0;
@@ -545,6 +574,40 @@ HRESULT Device7::record(D3DPRIMITIVETYPE type, DWORD fvf, const void* vertices, 
         if ((fx.hitFlash || fx.deathFlash) && kind == uint8_t(sprite_exe::Source::Monster)) {
             c.monsters.note(hit_flash::Box{x0, x1, y0, y1});  // 2.7.10: the next frame's hits find it here
             flash = c.flashes.strength(x0, x1, y0, y1, c.nowMs());
+        }
+        // 3.0.16-beta.13: the character's own sprite (a player's, about its feet on the screen): its ghosts first,
+        // behind it along its path, its tint after it
+        if (kind == uint8_t(sprite_exe::Source::Player) && hero_.known && (!ghosts_.empty() || tint_.strength > 0)) {
+            const float band = hero_.h * 0.6f;
+            if (x >= hero_.x - band && x <= hero_.x + band && y1 >= hero_.y - hero_.h * 1.6f &&
+                y0 <= hero_.y + hero_.h * 0.5f) {
+                tint = tint_;
+                for (const GhostShift& g : ghosts_) {
+                    ghost_.assign(v, v + 4 * 32);
+                    for (int i = 0; i < 4; ++i) {
+                        float f[2];
+                        std::memcpy(f, &ghost_[size_t(i) * 32], sizeof f);
+                        f[0] += g.dx;
+                        f[1] += g.dy;
+                        std::memcpy(&ghost_[size_t(i) * 32], f, sizeof f);
+                        uint8_t* colour = &ghost_[size_t(i) * 32 + 16];  // BGRA: a pale blue, its alpha the ghost's
+                        colour[1] = uint8_t(colour[1] * 220 / 255);
+                        colour[2] = uint8_t(colour[2] * 190 / 255);
+                        colour[3] = uint8_t(float(colour[3]) * g.alpha);
+                    }
+                    DrawSetup laid = setup;
+                    laid.blend = true;
+                    laid.srcBlend = d3d7::BLEND_SRCALPHA;
+                    laid.dstBlend = d3d7::BLEND_INVSRCALPHA;
+                    laid.zWrite = false;
+                    DrawCmd again = cmd;
+                    again.state = c.record.addState(laid);
+                    again.effect = uint8_t(effect_exe::Kind::HitFlash);  // no soft particle
+                    again.effectSeed = 0;
+                    again.effectId = 0;
+                    c.record.draw(again, ghost_.data(), 4, nullptr, 0);
+                }
+            }
         }
         if (fx.glint && card && kind == uint8_t(sprite_exe::Source::Item)) {
             const uint32_t seed = uint32_t(int(x) / 8 * 7919 + int(y) / 8 * 104729);
@@ -615,6 +678,9 @@ HRESULT Device7::record(D3DPRIMITIVETYPE type, DWORD fvf, const void* vertices, 
         win::groundmarks::draw(c.record, c.screenWidth, c.screenHeight);  // 3.0.11-beta.87: the target's ring
     }
     c.record.draw(cmd, vertices, vertexCount, indices, indices ? indexCount : 0);
+    if (tint.strength > 0 && flash <= 0.01f) {  // 3.0.16-beta.13: the body's tint - its colour added where it is
+        flash = tint.strength;
+    }
     if (flash > 0.01f) {  // 0.96: the sprite's shape once more in white, added, as strong as the flash is now
         if (vertices != soft_.data()) {
             const auto* v = static_cast<const uint8_t*>(vertices);
@@ -623,6 +689,11 @@ HRESULT Device7::record(D3DPRIMITIVETYPE type, DWORD fvf, const void* vertices, 
         for (int i = 0; i < 4; ++i) {
             uint8_t* colour = &soft_[size_t(i) * 32 + 16];  // the diffuse colour (BGRA bytes): white, the flash's alpha
             colour[0] = colour[1] = colour[2] = 255;
+            if (tint.strength > 0 && flash == tint.strength) {  // 3.0.16-beta.13: the tint's colour (BGRA)
+                colour[0] = tint.b;
+                colour[1] = tint.g;
+                colour[2] = tint.r;
+            }
             colour[3] = uint8_t(std::min(255.0f, 255.0f * flash * 0.85f));
         }
         DrawSetup add = setup;

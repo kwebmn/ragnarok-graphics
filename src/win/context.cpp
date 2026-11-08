@@ -1,3 +1,4 @@
+#include "win/upkeep_watch.hpp"
 #include "win/context.hpp"
 
 #include <algorithm>
@@ -453,7 +454,8 @@ bool Context::open(std::string& error) {
     // 0.61: Direct3D 11 draws the characters' shadows and the torches' light now: they know the sprites by it too.
     const EffectSettings drawn = effects();
     const bool d3d11Hook = (aiHere && cells) || drawn.actorShadows || drawn.torch || drawn.glint ||
-                           drawn.hitFlash || drawn.deathFlash;  // 0.95, 0.96, 3.0.16-beta.7: the sprites' kinds
+                           drawn.hitFlash || drawn.deathFlash || drawn.afterimages ||
+                           drawn.bodyTints;  // 0.95, 0.96, 3.0.16-beta.7, .13: the sprites' kinds
     if (d3d11 ? d3d11Hook : ((cells && renderer->remote()) || !config.remix)) installSpriteHook();
     installEffectHook();  // 0.27: the level 99 aura softer (Device7::record)
     setFullColour(config.fullColour);  // 2.5.18: the textures in their pictures' own colours
@@ -1131,6 +1133,8 @@ void Context::present(const Rect& source, bool waitForVblank) {
     hotbarwin::setDelayRing(config.delayRing);  // 3.0.11-beta.276
     hotbarwin::setPotionWarn(config.potionWarn);  // 3.0.11-beta.281
     hotbarwin::setSupplies(config.hotbarSupplies);  // 3.0.16-beta.8
+    hotbarwin::setNeeds(config.skillNeeds, config.comboWindow);  // 3.0.16-beta.13
+    upkeepwatch::setOn(config.brokenGear, config.petHunger);
     hotbarwin::frame(window, config.hotbar, config.hotbarPerCharacter, config.padHints, config.hotbarAmmo,
                      config.groundCounts, gameCodePage(config), pk, pw, ph);  // .125 the ammo's pill, .143 the walls
     ammosound::frame(config.ammoSound);  // 3.0.11-beta.129: [interface] ammo_sound - the chime at 10 left and at none

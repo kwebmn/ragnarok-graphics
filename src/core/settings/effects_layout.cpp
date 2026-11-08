@@ -26,6 +26,8 @@ const EffectLayout kEffects[] = {
     {"effects.glint", {}, {}, {}, 0},  // 0.95
     {"effects.hit_flash", {}, {}, {}, 0},  // 0.96
     {"effects.death_flash", {}, {}, {}, 0},  // 3.0.16-beta.7
+    {"effects.afterimages", {}, {}, {}, 0},  // 3.0.16-beta.13
+    {"effects.body_tints", {}, {}, {}, 0},
     {"effects.wet_ground", {}, {}, {}, 0},  // 0.97
     {"effects.aura", {}, {"effects.aura_brightness"}, {}, 0},
     {"effects.aura_portals", {}, {}, {}, 0},  // 3.0.13-beta.15
