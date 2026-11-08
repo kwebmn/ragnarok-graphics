@@ -1,3 +1,8 @@
+# uaRO Graphics 3.0.16-beta.17 — what's new
+
+- **A pet's accessory is worn again on a double click in the items window**, as in the game's own window. The new window did nothing with it before.
+- **The pet's right-click menu in Ukrainian and Russian** when the program is in those languages.
+
 # uaRO Graphics 3.0.16-beta.16 — what's new
 
 - **New: "Shadows from torches and lamps"** (Effects → "Fire and smoke", off at first; Direct3D 12 only). Walls, columns, houses and hills stop the light of the nearest torches and lamps: what stands behind them stays in shadow, with soft edges. Up to the 8 brightest lights on screen have shadows. The "Shadow strength" slider sets how much light a shadow takes away. For now walls, models and the ground cast shadows; characters come later.
