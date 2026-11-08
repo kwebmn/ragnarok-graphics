@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.16-beta.30 — what's new
+
+- **New: "Light through the leaves"** (Effects → under "Torch shadows", off at first). A tree's leaves between a torch or a lamp and the ground no longer cast a black shadow: a part of the light comes through in green spots. Direct3D 12 only.
+
 # uaRO Graphics 3.0.16-beta.29 — what's new
 
 - **New: "Sharp character pixels"** (Effects → Characters, off at first). With the camera close, the sprites of characters, monsters and NPCs are drawn as clean squares of their pixels with a soft edge - no blur, no flicker. Far off everything looks as before. Works on Direct3D 12 and 11.
