@@ -34,7 +34,9 @@ Palette paletteOf(Element e);
 // own look, still added on as the game's: the big blue pass a soft warm aura, the small yellow one a lit glowing ball
 // 3.0.16-beta.24 (R-P4DFMN: crisp - flat red slabs; .23 the game's own - «слишком тусклый огонь»): Flame - Fire Wall's
 // soft flames added on as the game adds them, three times as bright and a little warmer
-enum class Part : uint8_t { None, Layer, Haze, Solid, Orb, Flame };
+// 3.0.16-beta.27 ([effects] mage_soft): Soft - a layer or a haze added on as the game adds it, tinted and brighter
+enum class Part : uint8_t { None, Layer, Haze, Solid, Orb, Flame, Soft };
+Part styled(Part p, bool soft);  // a layer or a haze Soft with mage_soft; the rest as they are
 constexpr int kFireWallEffect = 25;  // EF_FIREWALL
 constexpr int kSpheresEffect = 228;  // the spirit spheres (packet 0x01d0's), EF_SPIRITBALL... the Monk's, the coins
 constexpr float kHazeWidth = 0.25f;  // a layer this share of the screen wide or wider: soft

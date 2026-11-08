@@ -180,6 +180,8 @@ Part partOf(bool blend, uint32_t srcBlend, uint32_t dstBlend, uint32_t vertexCou
     return Part::None;
 }
 
+Part styled(Part p, bool soft) { return soft && (p == Part::Layer || p == Part::Haze) ? Part::Soft : p; }
+
 Part partFor(int effectId, Part p) {
     if (p != Part::Layer && p != Part::Haze) return p;
     if (effectId == kSpheresEffect) return Part::Orb;

@@ -1044,6 +1044,15 @@ constexpr Entry kTexts[] = {
     {Text::FxMageSpiritHint, "Soul Strike, Napalm Beat, Safety Wall, Sight, Energy Coat, Dispel, Magic Rod.",
      "Soul Strike, Napalm Beat, Safety Wall, Sight, Energy Coat, Dispel, Magic Rod.",
      "Soul Strike, Napalm Beat, Safety Wall, Sight, Energy Coat, Dispel, Magic Rod."},
+    {Text::FxMageSoft, "Soft look", "М'який вигляд", "Мягкий вид"},
+    {Text::FxMageSoftHint,
+     "All the classes' new skill effects soft: the game's own glow and see-through light, tinted a little in the "
+     "element's colours and brighter, instead of crisp dense layers - Safety Wall, Sanctuary, Pneuma and the rest "
+     "look lighter.",
+     "Усі нові ефекти навичок м'якими: власне світіння гри й прозоре світло, трохи підфарбоване в кольори стихії й "
+     "яскравіше, замість чітких щільних шарів — Safety Wall, Sanctuary, Pneuma та інші виглядають легше.",
+     "Все новые эффекты навыков мягкими: собственное свечение игры и прозрачный свет, немного подкрашенный в цвета "
+     "стихии и ярче, вместо чётких плотных слоёв — Safety Wall, Sanctuary, Pneuma и остальные выглядят легче."},
     {Text::FxSword, "Swordsmen's new effects", "Нові ефекти мечників", "Новые эффекты мечников"},
     {Text::FxSwordHint,
      "Swordsman, Knight, Crusader: Bash, Magnum Break, Bowling Bash, Brandish Spear, Grand Cross, Shield Boomerang.",

@@ -64,3 +64,13 @@ TEST(mage_looks_fire_wall_flames) {
     CHECK(magelook::partFor(25, magelook::Part::Haze) == magelook::Part::Flame);
     CHECK(magelook::partFor(24, magelook::Part::Layer) == magelook::Part::Layer);
 }
+
+// 3.0.16-beta.27: [effects] mage_soft - a layer and a haze soft, the spheres, Fire Wall and the solids as they are
+TEST(mage_looks_soft_style) {
+    CHECK(magelook::styled(magelook::Part::Layer, true) == magelook::Part::Soft);
+    CHECK(magelook::styled(magelook::Part::Haze, true) == magelook::Part::Soft);
+    CHECK(magelook::styled(magelook::Part::Layer, false) == magelook::Part::Layer);
+    CHECK(magelook::styled(magelook::Part::Orb, true) == magelook::Part::Orb);
+    CHECK(magelook::styled(magelook::Part::Flame, true) == magelook::Part::Flame);
+    CHECK(magelook::styled(magelook::Part::Solid, true) == magelook::Part::Solid);
+}

@@ -36,7 +36,7 @@ const EffectLayout kEffects[] = {
     {"effects.crowd_effects", {}, {}, {}, 0},  // 3.0.13-beta.20
     {"effects.mage_effects",  // 3.0.15-beta.11
      {"effects.mage_casting", "effects.mage_fire", "effects.mage_water", "effects.mage_wind", "effects.mage_earth",
-      "effects.mage_spirit"},
+      "effects.mage_spirit", "effects.mage_soft"},
      {},
      {},
      0},

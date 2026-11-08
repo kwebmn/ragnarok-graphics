@@ -579,6 +579,18 @@ float4 mageLayer(float4 c, bool haze) {
     rgb = lerp(rgb, saturate(c.rgb / max(most, 1e-3)), saturate(hue * 1.5));
     return float4(rgb, a);
 }
+// 3.0.16-beta.27 ([effects] mage_soft - the owner: Safety Wall and the like «слишком уж жесткие ... приглушить»): a
+// layer the game adds on, added on still (its soft shapes, see-through), half way to the element's colours by its own
+// brightness (the core where it is densest), a coloured texel (fire's, lightning's) keeping its hue, a third brighter
+float4 mageSoft(float4 c) {
+    float3 core = float3(r3, r4, r5), edge = float3(r6, r7, r8);
+    float most = max(c.r, max(c.g, c.b));
+    float3 tint = lerp(edge, core, smoothstep(0.15, 0.7, most)) * most;
+    float hue = (most - min(c.r, min(c.g, c.b))) / max(most, 1e-3);
+    float3 rgb = lerp(lerp(c.rgb, tint, 0.5), c.rgb, saturate(hue * 1.5));
+    return float4(saturate(rgb * 1.35), saturate(c.a * 1.3));
+}
+
 // 3.0.16-beta.24 (R-P4DFMN: the crisp layer made Fire Wall flat red slabs; .23 the game's own came out «слишком
 // тусклый»): its soft flames still added on as the game adds them (the texture's shapes, their flicker), each layer
 // about three times as much light - its alpha doubled, its colour half again and a little warmer towards the top
@@ -800,6 +812,7 @@ float4 shade(PsIn i) {
     else if (((alphaTest >> 25) & 1) != 0) c = castCircle(i.uv0, du, dv, i.diffuse);
     else if (((alphaTest >> 26) & 1) != 0 && ((alphaTest >> 28) & 1) != 0) c = spiritOrb(i.uv0, i.diffuse);  // .10
     else if (((alphaTest >> 27) & 1) != 0 && ((alphaTest >> 28) & 1) != 0) c = fireWallFlame(c);  // 3.0.16-beta.24
+    else if (((alphaTest >> 26) & 1) != 0 && ((alphaTest >> 27) & 1) != 0) c = mageSoft(c);  // 3.0.16-beta.27
     else if (((alphaTest >> 26) & 1) != 0) c = mageLayer(c, false);  // 3.0.15-beta.8, .11: [effects] mage_effects
     else if (((alphaTest >> 28) & 1) != 0) c = mageLayer(c, true);
     else if (((alphaTest >> 27) & 1) != 0) c = mageSolid(i.pos, i.uv0, c);

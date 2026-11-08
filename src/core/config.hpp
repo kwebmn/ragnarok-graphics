@@ -206,6 +206,10 @@ struct EffectSettings {
     // wind, earth and ghost skills
     bool mageEffects = false;
     bool mageCasting = true, mageFire = true, mageWater = true, mageWind = true, mageEarth = true, mageSpirit = true;
+    // 3.0.16-beta.27 (the owner: Safety Wall's and the portals' look «слишком уж жесткие ... приглушить по типу как мы
+    // сделали с фаерволом» - «2», one choice for all): mage_soft - every class's new skills' effects soft: the game's
+    // own added light, tinted a little in the element's colours and brighter (Part::Soft), not the crisp layer
+    bool mageSoft = false;
     // 3.0.15-beta.12 (the owner: «делай еффекты по всем остальным персонажам»): every other class's skills likewise
     // (core/mage_looks.hpp lookOf), a switch a branch, off as new looks are
     bool swordEffects = false, acolyteEffects = false, archerEffects = false, thiefEffects = false;
