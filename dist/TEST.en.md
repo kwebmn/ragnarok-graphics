@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.16-beta.15 — what's new
+
+- **No more false "crash" reports.** Closing the game and starting it again at once could make the program read the new game's log and send an automatic crash report although the game had closed normally. It now reads the log of the game that closed.
+
 # uaRO Graphics 3.0.16-beta.14 — what's new
 
 - **"Afterimages when fast" removed** — the switch is gone. "Body tints" stays.
