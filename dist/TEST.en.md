@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.16-beta.31 — what's new
+
+- **The homunculus' and the mercenary's skills in their cards.** They now do everything the game's old skills window did: the level a skill is used at is chosen with ‹ ›, a click uses the skill at that level, and a skill can be dragged onto the hotbar. The mercenary's skills can be used and dragged too.
+
 # uaRO Graphics 3.0.16-beta.30 — what's new
 
 - **New: "Light through the leaves"** (Effects → under "Torch shadows", off at first). A tree's leaves between a torch or a lamp and the ground no longer cast a black shadow: a part of the light comes through in green spots. Direct3D 12 only.
