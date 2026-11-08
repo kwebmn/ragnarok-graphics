@@ -175,6 +175,8 @@ void Renderer11::applyActorShadows(const FrameRecord& rec, size_t from) {
     const rsw::World* layout = cameraValid_ && mapWorld_.axes().known() ? mapWorld_.world() : nullptr;
     std::vector<actor_shadows::Light> lights;
     if (layout) lights = actor_shadows::lightsOf(*layout, mapWorld_.lamps(), mapWorld_.axes());
+    // 3.0.16-beta.35 (actor_shadows.cpp): the lights with shadows of their own cast none of these as well
+    if (shadowCollecting() && !shadowedLights_.empty()) lights = actor_shadows::without(lights, shadowedLights_);
     const float flicker = torch::flickerAmount(effects_.torchFlicker);
     const float night = float(std::clamp(effects_.nightNow, 0, 100)) / 100.0f;
     std::vector<actor_shadows::ShadowQuad> quads = actor_shadows::cast(

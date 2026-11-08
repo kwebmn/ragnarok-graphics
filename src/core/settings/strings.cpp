@@ -2015,11 +2015,11 @@ constexpr Entry kTexts[] = {
     {Text::FxTorchShadows, "Shadows from torches and lamps", "Тіні від факелів і ламп", "Тени от факелов и ламп"},
     {Text::FxTorchShadowsHint,
      "Walls, columns, houses, hills and characters stop the light of the nearest torches and lamps: what stands "
-     "behind them stays in shadow, the shadows soft at their edges. Direct3D 12 only. Off at first.",
+     "behind them stays in shadow, the shadows soft at their edges. Off at first.",
      "Стіни, колони, будинки, пагорби й персонажі затримують світло найближчих факелів і ламп: те, що за ними, "
-     "лишається в тіні, краї тіней м'які. Лише Direct3D 12. Спочатку вимкнено.",
+     "лишається в тіні, краї тіней м'які. Спочатку вимкнено.",
      "Стены, колонны, дома, холмы и персонажи задерживают свет ближайших факелов и ламп: то, что за ними, остаётся "
-     "в тени, края теней мягкие. Только Direct3D 12. Сначала выключено."},
+     "в тени, края теней мягкие. Сначала выключено."},
     {Text::FxTorchShadowsStrength, "Shadow strength", "Сила тіні", "Сила тени"},
     {Text::FxTorchShadowsStrengthHint,
      "How much of a torch's or a lamp's light a shadow takes away: 100 % all of it, less leaves some light, as if "
@@ -2031,11 +2031,11 @@ constexpr Entry kTexts[] = {
     {Text::FxBodyStamp, "Effects behind the character", "Ефекти за героєм", "Эффекты за героем"},
     {Text::FxBodyStampHint,
      "An effect behind a character - the far half of a ring round it, a fire at its back - hides behind its figure, "
-     "the part in front of it is drawn over as before. Direct3D 12 only. Off at first.",
+     "the part in front of it is drawn over as before. Off at first.",
      "Ефект позаду персонажа — дальня половина кола навколо нього, вогонь за спиною — ховається за його фігурою, а те, "
-     "що попереду, малюється поверх, як і раніше. Лише Direct3D 12. Спочатку вимкнено.",
+     "що попереду, малюється поверх, як і раніше. Спочатку вимкнено.",
      "Эффект позади персонажа — дальняя половина круга вокруг него, огонь за спиной — прячется за его фигурой, а то, "
-     "что впереди, рисуется поверх, как и раньше. Только Direct3D 12. Сначала выключено."},
+     "что впереди, рисуется поверх, как и раньше. Сначала выключено."},
     {Text::FxSharpSprites, "Sharp character pixels", "Чіткі пікселі героїв", "Чёткие пиксели героев"},
     {Text::FxSharpSpritesHint,
      "Close up, the sprites of characters, monsters and NPCs are drawn as clean squares of their pixels with a soft "
@@ -2047,11 +2047,11 @@ constexpr Entry kTexts[] = {
     {Text::FxTorchLeafLight, "Light through the leaves", "Світло крізь листя", "Свет сквозь листву"},
     {Text::FxTorchLeafLightHint,
      "A tree's leaves between a torch or a lamp and the ground do not cast a black shadow: a part of the light comes "
-     "through, green, in spots. Direct3D 12 only. Off at first.",
+     "through, green, in spots. Off at first.",
      "Листя дерева між факелом чи лампою і землею не дає чорної тіні: частина світла проходить крізь нього, зеленими "
-     "плямами. Лише Direct3D 12. Спочатку вимкнено.",
+     "плямами. Спочатку вимкнено.",
      "Листва дерева между факелом или лампой и землёй не даёт чёрной тени: часть света проходит сквозь неё, зелёными "
-     "пятнами. Только Direct3D 12. Сначала выключено."},
+     "пятнами. Сначала выключено."},
     {Text::InterfaceSkillNeeds, "What a skill lacks", "Чого бракує навичці", "Чего не хватает навыку"},
     {Text::InterfaceSkillNeedsHint,
      "A skill on the bar that cannot go for its gem or its spirit spheres is dimmed with a red plate: ×0 when the "

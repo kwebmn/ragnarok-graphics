@@ -75,7 +75,17 @@ void Renderer11::noteCaster(const FrameRecord& rec, const DrawCmd& d, const Draw
         if (!put(base) || !put(base + 1) || !put(base + 2)) casterVerts_.resize(before);
     }
     c.count = uint32_t(casterVerts_.size() / 6) - c.first;
-    if (c.count) casters_.push_back(c);
+    if (!c.count) return;
+    for (int k = 0; k < 3; ++k) {  // 3.0.16-beta.35: its box, for the lights it can stand in the way of
+        c.lo[k] = 1e30f;
+        c.hi[k] = -1e30f;
+    }
+    for (uint32_t i = c.first; i < c.first + c.count; ++i)
+        for (int k = 0; k < 3; ++k) {
+            c.lo[k] = std::min(c.lo[k], casterVerts_[size_t(i) * 6 + size_t(k)]);
+            c.hi[k] = std::max(c.hi[k], casterVerts_[size_t(i) * 6 + size_t(k)]);
+        }
+    casters_.push_back(c);
 }
 
 // Before the frame's first water: the last frame's casters turned over the water's level and drawn by the game's

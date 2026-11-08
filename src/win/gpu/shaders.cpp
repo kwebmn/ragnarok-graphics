@@ -1655,6 +1655,55 @@ float3 litSurface(float3 day, float lum, float3 colour) {
     return hue * (target / max(dot(hue, luma), 1e-3));
 }
 
+// 3.0.16-beta.16 (the owner: «тени от факелов и ламп»): how much of a light with a shadow (slot: its row of faces in
+// the atlas, t5 - torch_shadows.cpp) reaches the view's p, its surface's n towards the camera; L its place, reach its
+// reach. The way from the light into the world (r0-r8 the view's axes there), the face it goes through - the axis it
+// goes most along, its x and y the next two axes round (core/point_shadows.hpp faceOf) - and nine texels about it
+// against the way's length of the reach, a little further from the further pixels (softer).
+// 3.0.16-beta.30 ([effects] torch_leaf_light, leaves > 0.5): the leaves' depths in the rows kMostLights (8) further
+// down - where only they stand in the light's way a part of it comes through, green (per colour: a float3).
+float3 torchShadow(float3 p, float3 n, float3 L, float reach, float slot, float leaves) {
+    float3 dv = p + n * 0.6 - L;
+    float3 d = dv.x * float3(r0, r1, r2) + dv.y * float3(r3, r4, r5) + dv.z * float3(r6, r7, r8);
+    float len = length(d);
+    float dist = len / reach;
+    if (dist >= 1.0 || len < 8.0) return float3(1.0, 1.0, 1.0);  // point_shadows::kNearIgnore
+    float3 ad = abs(d);
+    int a = 0;
+    if (ad.y > ad.x && ad.y >= ad.z) a = 1;
+    else if (ad.z > ad.x && ad.z > ad.y) a = 2;
+    float along = a == 0 ? d.x : (a == 1 ? d.y : d.z);
+    float m = abs(along);
+    float u = (a == 0 ? d.y : (a == 1 ? d.z : d.x)) / m;
+    float v = (a == 0 ? d.z : (a == 1 ? d.x : d.y)) / m;
+    float face = float(a * 2 + (along >= 0.0 ? 0 : 1));
+    const float F = 256.0;  // point_shadows::kFaceTexels
+    float2 t = float2((u * 0.5 + 0.5) * F, (0.5 - v * 0.5) * F);
+    float2 base = float2(face * F, slot * F);
+    // a light inside a model or a wall (a lamp of the map's file can be): its faces' middles all near - no shadow,
+    // its light as before
+    float openFaces = 0.0;
+    [unroll] for (int k = 0; k < 6; ++k)
+        openFaces += mirrorTex.Load(int3(int(float(k) * F + F * 0.5), int(slot * F + F * 0.5), 0)).r > 0.15 ? 1.0 : 0.0;
+    if (openFaces < 2.0) return float3(1.0, 1.0, 1.0);
+    float bias = 0.012 + 0.02 * dist;
+    float spread = 1.0 + 1.5 * dist;
+    float lit = 0.0, leafLit = 0.0;
+    float2 leafBase = base + float2(0.0, 8.0 * F);  // point_shadows::kMostLights rows down
+    [unroll] for (int y = -1; y <= 1; ++y) {
+        [unroll] for (int x = -1; x <= 1; ++x) {
+            float2 q = clamp(t + float2(float(x), float(y)) * spread, float2(0.5, 0.5), float2(F - 0.5, F - 0.5));
+            float stored = mirrorTex.Load(int3(int2(base + q), 0)).r;
+            lit += dist - bias <= stored ? 1.0 : 0.0;
+            if (leaves > 0.5) leafLit += dist - bias <= mirrorTex.Load(int3(int2(leafBase + q), 0)).r ? 1.0 : 0.0;
+        }
+    }
+    // through the leaves: about half the light, its red and blue held back more than its green
+    float3 through = leaves > 0.5 ? lerp(float3(0.38, 0.55, 0.3), float3(1.0, 1.0, 1.0), leafLit / 9.0)
+                                  : float3(1.0, 1.0, 1.0);
+    return lit / 9.0 * through;
+}
+
 // 0.23, the torches (torches.cpp). Their light, from the picture's copy (t2) and its depth (t3) into the picture -
 // the pixels it reaches only: t1 holds two texels a light (0.25: the torches' and the lamps'), its place in the view
 // (xyz) and (0.39.2) reach (w, world units), then its colour and strength (w: with its flicker and the game's
@@ -1716,8 +1765,13 @@ float4 torch_light_ps(PresentOut i) : SV_Target {
         // the ground effect_light::kGroundLight (20) under it, the world's up -(r1, r4, r7): not the orb's own sprites
         // in the air, whose depth the game writes over their whole soft discs
         if (c.w < 0.0) a *= 1.0 - smoothstep(3.0, 7.0, dot(p - t.xyz, -float3(r1, r4, r7)) + 20.0);
-        light += a;
-        colour += a * c.rgb;
+        // 3.0.16-beta.35 (Direct3D 11's torches11.cpp, as torch_accum_ps): its shadow - t1's second row its slot (0
+        // none), darkness and the leaves' (torchShadow, the atlas t5)
+        float4 sh = tex1.Load(int3(2 * k, 1, 0));
+        float3 reached = float3(1.0, 1.0, 1.0);  // not «shade»: shade() is a function's name
+        if (sh.x > 0.5) reached = 1.0 - sh.y * (1.0 - torchShadow(p, n, t.xyz, t.w, sh.x - 1.0, sh.z));
+        light += a * dot(reached, float3(0.3333, 0.3333, 0.3334));
+        colour += a * c.rgb * reached;
     }
     float3 sc = sceneColor.Load(int3(wp, 0)).rgb;
     const float3 luma = float3(0.2126, 0.7152, 0.0722);
@@ -1759,55 +1813,6 @@ TorchIn torch_light_vs(uint id : SV_VertexID, uint inst : SV_InstanceID) {
     o.pos = float4(p.x / uiPixels.x * 2.0 - 1.0, 1.0 - p.y / uiPixels.y * 2.0, 0.0, 1.0);
     o.light = inst;
     return o;
-}
-
-// 3.0.16-beta.16 (the owner: «тени от факелов и ламп»): how much of a light with a shadow (slot: its row of faces in
-// the atlas, t5 - torch_shadows.cpp) reaches the view's p, its surface's n towards the camera; L its place, reach its
-// reach. The way from the light into the world (r0-r8 the view's axes there), the face it goes through - the axis it
-// goes most along, its x and y the next two axes round (core/point_shadows.hpp faceOf) - and nine texels about it
-// against the way's length of the reach, a little further from the further pixels (softer).
-// 3.0.16-beta.30 ([effects] torch_leaf_light, leaves > 0.5): the leaves' depths in the rows kMostLights (8) further
-// down - where only they stand in the light's way a part of it comes through, green (per colour: a float3).
-float3 torchShadow(float3 p, float3 n, float3 L, float reach, float slot, float leaves) {
-    float3 dv = p + n * 0.6 - L;
-    float3 d = dv.x * float3(r0, r1, r2) + dv.y * float3(r3, r4, r5) + dv.z * float3(r6, r7, r8);
-    float len = length(d);
-    float dist = len / reach;
-    if (dist >= 1.0 || len < 8.0) return float3(1.0, 1.0, 1.0);  // point_shadows::kNearIgnore
-    float3 ad = abs(d);
-    int a = 0;
-    if (ad.y > ad.x && ad.y >= ad.z) a = 1;
-    else if (ad.z > ad.x && ad.z > ad.y) a = 2;
-    float along = a == 0 ? d.x : (a == 1 ? d.y : d.z);
-    float m = abs(along);
-    float u = (a == 0 ? d.y : (a == 1 ? d.z : d.x)) / m;
-    float v = (a == 0 ? d.z : (a == 1 ? d.x : d.y)) / m;
-    float face = float(a * 2 + (along >= 0.0 ? 0 : 1));
-    const float F = 256.0;  // point_shadows::kFaceTexels
-    float2 t = float2((u * 0.5 + 0.5) * F, (0.5 - v * 0.5) * F);
-    float2 base = float2(face * F, slot * F);
-    // a light inside a model or a wall (a lamp of the map's file can be): its faces' middles all near - no shadow,
-    // its light as before
-    float openFaces = 0.0;
-    [unroll] for (int k = 0; k < 6; ++k)
-        openFaces += mirrorTex.Load(int3(int(float(k) * F + F * 0.5), int(slot * F + F * 0.5), 0)).r > 0.15 ? 1.0 : 0.0;
-    if (openFaces < 2.0) return float3(1.0, 1.0, 1.0);
-    float bias = 0.012 + 0.02 * dist;
-    float spread = 1.0 + 1.5 * dist;
-    float lit = 0.0, leafLit = 0.0;
-    float2 leafBase = base + float2(0.0, 8.0 * F);  // point_shadows::kMostLights rows down
-    [unroll] for (int y = -1; y <= 1; ++y) {
-        [unroll] for (int x = -1; x <= 1; ++x) {
-            float2 q = clamp(t + float2(float(x), float(y)) * spread, float2(0.5, 0.5), float2(F - 0.5, F - 0.5));
-            float stored = mirrorTex.Load(int3(int2(base + q), 0)).r;
-            lit += dist - bias <= stored ? 1.0 : 0.0;
-            if (leaves > 0.5) leafLit += dist - bias <= mirrorTex.Load(int3(int2(leafBase + q), 0)).r ? 1.0 : 0.0;
-        }
-    }
-    // through the leaves: about half the light, its red and blue held back more than its green
-    float3 through = leaves > 0.5 ? lerp(float3(0.38, 0.55, 0.3), float3(1.0, 1.0, 1.0), leafLit / 9.0)
-                                  : float3(1.0, 1.0, 1.0);
-    return lit / 9.0 * through;
 }
 
 float4 torch_accum_ps(TorchIn i) : SV_Target {

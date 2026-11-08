@@ -244,6 +244,13 @@ Renderer11::~Renderer11() {
     drop(mirrorPs_);
     drop(mirrorLayout_);
     drop(mirrorVb_);
+    drop(torchShadowVs_);  // 3.0.16-beta.35
+    drop(torchShadowPs_);
+    drop(torchShadowLayout_);
+    drop(shadowAtlasSrv_);
+    drop(shadowAtlasDsv_);
+    drop(shadowAtlas_);
+    drop(torchShadowVb_);
     dropTarget(mirror_);
     drop(mirrorDsv_);
     drop(mirrorDepth_);
@@ -449,7 +456,7 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
         bool optional = false;  // 0.99: an effect's - without it the effect is not drawn, the game is
         bool safe = false;      // 2.2.2: made without the newest features (UAGFX_SAFE)
         bool lean = false;      // 2.5: with UAGFX_LEAN (draw_lean_ps: the world's extras left out)
-    } wants[63] = {{"draw_vs", vs, shaderSource(), {}},    {"draw_ps", ps, shaderSource(), {}},
+    } wants[65] = {{"draw_vs", vs, shaderSource(), {}},    {"draw_ps", ps, shaderSource(), {}},
                    {"present_vs", vs, shaderSource(), {}}, {"present_ps", ps, shaderSource(), {}},
                    {"clear_vs", vs, kClearSource, {}},     {"clear_ps", ps, kClearSource, {}},
                    {"grade_ps", ps, shaderSource(), {}},  // 0.59: the colours (Effects page)
@@ -503,7 +510,9 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
                    {"weather_quad_ps", ps, shaderSource(), {}, true},
                    {"grass_tiles_ps", ps, shaderSource(), {}, true},  // 3.0.5-beta.20: the grass's tiles
                    {"grass_near_ps", ps, shaderSource(), {}, true},
-                   {"ao_depth_ps", ps, shaderSource(), {}, true}};  // 3.0.5-beta.21: the shadows' depths
+                   {"ao_depth_ps", ps, shaderSource(), {}, true},  // 3.0.5-beta.21: the shadows' depths
+                   {"torch_shadow_vs", vs, shaderSource(), {}, true},  // 3.0.16-beta.35: the torches' shadows
+                   {"torch_shadow_ps", ps, shaderSource(), {}, true}};
     const uint64_t key = shader_cache::keyOf(std::string(shaderSource()) + kClearSource + "direct3d 11");
     std::vector<shader_cache::Shader> kept;
     {
@@ -651,6 +660,8 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
     if (wants[60].code.empty() || !psOf(wants[60], grassTilesPs_)) grassTilesPs_ = nullptr;  // 3.0.5-beta.20
     if (wants[61].code.empty() || !psOf(wants[61], grassNearPs_)) grassNearPs_ = nullptr;
     if (wants[62].code.empty() || !psOf(wants[62], aoDepthPs_)) aoDepthPs_ = nullptr;  // 3.0.5-beta.21
+    if (wants[63].code.empty() || !vsOf(wants[63], torchShadowVs_)) torchShadowVs_ = nullptr;  // 3.0.16-beta.35
+    if (wants[64].code.empty() || !psOf(wants[64], torchShadowPs_)) torchShadowPs_ = nullptr;
     if (!wants[1].safe && !wants[22].safe) {  // 2.5.16: none where the player's compiler took the draw shader badly
         std::vector<shader_cache::Shader> all;
         for (const Want& w : wants) all.push_back({w.entry, shader_cache::profileOf(w.profile, w.safe), w.code});
@@ -687,6 +698,15 @@ bool Renderer11::compileShaders(const std::string& cacheFile, Renderer::StartSin
             {"TEXCOORD", 0, DXGI_FORMAT_R32G32B32A32_UINT, 0, 0, D3D11_INPUT_PER_INSTANCE_DATA, 1}};
         if (FAILED(device_->CreateInputLayout(layout, 1, wants[57].code.data(), wants[57].code.size(), &seamLayout_)))
             seamLayout_ = nullptr;
+    }
+    if (torchShadowVs_) {  // 3.0.16-beta.35: the casters' corners as the mirror's (torch_shadows11.cpp)
+        const D3D11_INPUT_ELEMENT_DESC layout[3] = {
+            {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
+            {"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0},
+            {"COLOR", 0, colour, 0, 20, D3D11_INPUT_PER_VERTEX_DATA, 0}};
+        if (FAILED(device_->CreateInputLayout(layout, 3, wants[63].code.data(), wants[63].code.size(),
+                                              &torchShadowLayout_)))
+            torchShadowLayout_ = nullptr;
     }
     if (mirrorVs_) {  // 2.5.9: the mirror's corners (mirror11.cpp) - x y z, u v, the game's colour
         const D3D11_INPUT_ELEMENT_DESC layout[3] = {
@@ -1261,6 +1281,15 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
         (d.indexCount && size_t(d.firstIndex) + d.indexCount > rec.indices().size()))
         return;
     const DrawSetup& s = rec.states()[d.state];
+    // 3.0.16-beta.35: [effects] body_stamp (body_stamp11.cpp) - a character's sprite gathered for the depth; the
+    // gathered ones put down at the next draw of something else
+    const bool innerPass = seamPass_ || darknessPass_ || silhouettePass_ || stampPass_;
+    if (!innerPass && effects_.bodyStamp && !s.ui && remaster()) {
+        if (characterSource(rec, d, s)) noteStamp(rec, d, s);
+        else if (!stampRec_.draws().empty()) applyStamps();
+    } else if (!innerPass && !stampRec_.draws().empty()) {
+        applyStamps();
+    }
     // 2.6.18: blindness's darkness waits for the world's effects (applyDarkness)
     if (!seamPass_ && !darknessPass_ && !s.ui && d.effect == uint8_t(effect_exe::Kind::Darkness) && !darknessLaid_) {
         noteDarkness(rec, d, s);
@@ -1296,11 +1325,13 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
     if (s.ui) exitWorld();              // 2.5.16: the world made larger into the picture, the interface sharp
     if (s.ui) timeDraws(true, false);   // 2.5.15: the interface's span after the world's effects
     // 1.0: from the world's first draw that adds light, its draws write into the glow too
-    if (!s.ui && s.blend && s.dstBlend == d3d7::BLEND_ONE && !glowActive_ && glowWanted()) startGlow();
+    if (!stampPass_ && !s.ui && s.blend && s.dstBlend == d3d7::BLEND_ONE && !glowActive_ && glowWanted())
+        startGlow();
     const bool toGlow = !s.ui && glowActive_ && d.effect != uint8_t(effect_exe::Kind::Aura) &&  // 1.25
                         !effect_exe::isCasting(d.effectId);                                          // 2.7.39
     // 2.5.2: a torch's layers - the glow and (torch_flame) the flame drawn anew once the world is (takeTorch)
-    if (!seamPass_ && !s.ui && d.vertexCount == 4 && !objectTextures_.empty() && effects_.torch && takeTorch(rec, d))
+    if (!seamPass_ && !stampPass_ && !s.ui && d.vertexCount == 4 && !objectTextures_.empty() && effects_.torch &&
+        takeTorch(rec, d))
         return;
     // 2.6.12: the torches off, the game's flames (drawn as it has them) still show the embers where the fires are
     if (!seamPass_ && !s.ui && d.vertexCount == 4 && !objectTextures_.empty() && !effects_.torch && crittersNeedFire())
@@ -1323,8 +1354,9 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
     // colour - not the maps' objects (their own); 2.7.21: an orb of light whatever its blend
     float orb[3];
     const bool orbDraw = !s.ui && s.blend && effect_light::orbOf(d.effectId, orb);
-    if (orbDraw && fireWanted()) noteFire(rec, d, 1.0f, orb, true);
-    if (!s.ui && s.blend && s.dstBlend == d3d7::BLEND_ONE && !orbDraw && fireWanted() && d.texture[0]) {
+    if (orbDraw && fireWanted() && !stampPass_) noteFire(rec, d, 1.0f, orb, true);
+    if (!stampPass_ && !s.ui && s.blend && s.dstBlend == d3d7::BLEND_ONE && !orbDraw && fireWanted() &&
+        d.texture[0]) {
         const auto ft = textures_.find(d.texture[0]);
         const bool mine = (d.effect == uint8_t(effect_exe::Kind::None) ||
                            d.effect == uint8_t(effect_exe::Kind::Skill)) &&
@@ -1348,7 +1380,12 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
     if (!seamPass_ && !s.ui && d.fvf == d3d7::FVF_TL2 && s.zWrite && (grassWanted() || hillsWanted() || seamsWanted()))
         noteGround(rec, d);
     // 2.5.9 (draw.cpp 1.16): an opaque draw of the world into the next frame's mirror
-    if (!seamPass_ && !s.ui && !s.blend && s.zEnable && s.zWrite && mirrorCollecting()) noteCaster(rec, d, s);
+    // 3.0.16-beta.35: also the torches' shadows' casters (this frame's)
+    if (!seamPass_ && !s.ui && !s.blend && s.zEnable && s.zWrite && (mirrorCollecting() || shadowCollecting()))
+        noteCaster(rec, d, s);
+    // 3.0.16-beta.35: a character standing, for the torches' shadows (torch_shadows11.cpp)
+    if (!innerPass && !s.ui && s.blend && d.vertexCount == 4 && d.texture[0] && shadowCollecting())
+        noteStanding(rec, d);
     // 2.5.9 (draw.cpp 1.9): the seams' strips at the first blended draw of the world, before the soft shadows - drawn
     // by this function (seamPass_), which makes no notes and no passes for them
     if (!seamPass_ && !s.ui && s.blend && !seamsDone_ && seamsWanted() && !groundTris_.empty()) {
@@ -1439,7 +1476,7 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
     c.targetSize[1] = float(target_.height);
     packStage(s.stage[0], d.keyed[0], c.stage0);
     packStage(s.stage[1], d.keyed[1], c.stage1);
-    const bool own = !seamPass_ && !darknessPass_ && !silhouettePass_;
+    const bool own = !seamPass_ && !darknessPass_ && !silhouettePass_ && !stampPass_;
     if (own && (holeFlags_ & 2) && d.texture[0]) {  // 3.0.13-beta.30: [effects] silhouette (draw.cpp's)
         const auto st = textures_.find(d.texture[0]);
         if (ownSprite(rec, d, s, hole_, st != textures_.end() && !st->second.cells.empty())) noteSilhouette(rec, d, s);
@@ -2425,6 +2462,8 @@ void Renderer11::present(HWND window, int outputWidth, int outputHeight, const R
     }
     casterVerts_.clear();
     casters_.clear();
+    standing_.clear();  // 3.0.16-beta.35
+    stampRec_.reset();
     mirrorDone_ = mirrorMade_ = false;
     if (!frameFeet_.empty()) {  // 2.5.2: this frame's feet (as Direct3D 12's newPicture)
         footTracker_.update(frameFeet_, waterTime(), stepLife());

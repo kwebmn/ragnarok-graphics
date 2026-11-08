@@ -270,7 +270,7 @@ void Renderer11::applyTorchLight() {
     if (!lightData_ && torchLightPs_) {
         D3D11_TEXTURE2D_DESC d{};
         d.Width = kMaxLights * 2;
-        d.Height = 1;
+        d.Height = 2;  // 3.0.16-beta.35: the second row the shadows' slots
         d.MipLevels = d.ArraySize = 1;
         d.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
         d.SampleDesc.Count = 1;
@@ -396,7 +396,9 @@ void Renderer11::applyTorchLight() {
         }
     }
     // The list of lights for the light's pass, two texels each
-    float data[kMaxLights * 2][4] = {};
+    // 3.0.16-beta.35: a second row - a light's shadow's slot (0 none), darkness, the leaves' (torch_light_ps)
+    float data[2][kMaxLights * 2][4] = {};
+    std::vector<int> casterLights;  // the torches' and the lamps' places in the list: they may have shadows
     float lx0 = float(w), ly0 = float(h), lx1 = 0.0f, ly1 = 0.0f;
     int count = 0;
     skillAirFirst_ = skillAirEnd_ = 0;  // 2.7.36: none until the skills' come
@@ -404,10 +406,10 @@ void Renderer11::applyTorchLight() {
     // the screen (the cube about it, each corner projected) widens the lit rectangle.
     const auto addLight = [&](const float view[3], float reach, const float colour[3], float amountOf) {
         if (count == kMaxLights) return;
-        std::copy(view, view + 3, data[2 * count]);
-        data[2 * count][3] = reach;
-        std::copy(colour, colour + 3, data[2 * count + 1]);
-        data[2 * count + 1][3] = amountOf;
+        std::copy(view, view + 3, data[0][2 * count]);
+        data[0][2 * count][3] = reach;
+        std::copy(colour, colour + 3, data[0][2 * count + 1]);
+        data[0][2 * count + 1][3] = amountOf;
         for (int corner = 0; corner < 8; ++corner) {
             const float px = view[0] + ((corner & 1) ? reach : -reach);
             const float py = view[1] + ((corner & 2) ? reach : -reach);
@@ -429,6 +431,7 @@ void Renderer11::applyTorchLight() {
             const float view[3] = {(mx - proj.cx) * vz / proj.f0, (my - proj.cy) * vz / proj.f1, vz};
             const bool own = f.tint[0] < 0.99f || f.tint[1] < 0.99f || f.tint[2] < 0.99f;  // a hidden one's colour
             const float layers = i < gameFlames ? torch::kGameEffects : 1.0f;  // 2.6.18
+            if (count < kMaxLights) casterLights.push_back(count);  // 3.0.16-beta.35
             addLight(view, kReach, own ? f.tint : kLightColor, strength * calms[i] * f.alpha * layers);
         }
     if (fire) {  // 2.5.1: the fire of skills, gathered by place (cells of 80 game pixels), the brightest 16
@@ -669,7 +672,10 @@ void Renderer11::applyTorchLight() {
             lamps.push_back(l);
         }
         std::sort(lamps.begin(), lamps.end(), [](const Item& a, const Item& b) { return a.view[2] < b.view[2]; });
-        for (const Item& l : lamps) addLight(l.view, l.reach, l.colour, l.strength);
+        for (const Item& l : lamps) {
+            if (count < kMaxLights) casterLights.push_back(count);  // 3.0.16-beta.35
+            addLight(l.view, l.reach, l.colour, l.strength);
+        }
     }
     for (const torch::Flame& f : flames) {  // 2.5.4: the flames' tips in the world, for the embers rising from them
         critters::Point at;
@@ -684,6 +690,26 @@ void Renderer11::applyTorchLight() {
             heatSpots_.push_back(HeatSpot11{(f.baseX + f.upX * 0.9f) * k + 0.5f, (f.baseY + f.upY * 0.9f) * k + 0.5f,
                                             fh * 1.4f, 0.5f * f.alpha * layers * heatUser()});
         }
+    // 3.0.16-beta.35: [effects] torch_shadows - the torches and the lamps picked drawn into the atlas, their slots in
+    // the list's second row (torch_shadows11.cpp)
+    bool shadowed = false;
+    if (shadowCollecting() && !casterLights.empty() && torchLightPs_ && lightData_) {
+        std::vector<point_shadows::Candidate> cands;
+        for (const int at : casterLights)
+            cands.push_back(point_shadows::Candidate{{data[0][2 * at][0], data[0][2 * at][1], data[0][2 * at][2]},
+                                                     data[0][2 * at][3], std::fabs(data[0][2 * at + 1][3])});
+        const std::vector<int> picked = drawTorchShadows(cands);
+        const float dark = float(std::clamp(effects_.torchShadowsStrength, 0, 100)) / 100.0f;
+        for (size_t s = 0; s < picked.size(); ++s) {
+            float* row = data[1][2 * casterLights[size_t(picked[s])]];
+            row[0] = float(s + 1);
+            row[1] = dark;
+            row[2] = effects_.torchLeafLight ? 1.0f : 0.0f;
+        }
+        shadowed = !picked.empty();
+    } else {
+        shadowedLights_.clear();
+    }
     const D3D11_RECT lit{LONG(std::max(0.0f, std::floor(lx0))), LONG(std::max(0.0f, std::floor(ly0))),
                          LONG(std::min(float(w), std::ceil(lx1))), LONG(std::min(float(h), std::ceil(ly1)))};
     const bool light = count && torchLightPs_ && lightData_ && lit.right > lit.left && lit.bottom > lit.top;
@@ -727,7 +753,7 @@ void Renderer11::applyTorchLight() {
         ctx_->Draw(3, 0);
     };
     if (light) {  // the light from the list (torch_light_ps: t1 the list, t2 the copy, t3 the depth)
-        ctx_->UpdateSubresource(lightData_, 0, nullptr, data, UINT(sizeof data), 0);
+        ctx_->UpdateSubresource(lightData_, 0, nullptr, data, UINT(sizeof data[0]), 0);
         shaftLights_ = effects_.shaftsLamps ? count : std::min(airLights, count);  // 2.5.5; 3.0.7-beta.5 the fire's
         Constants lc = c;
         lc.footprint = float(count);
@@ -743,8 +769,11 @@ void Renderer11::applyTorchLight() {
         ctx_->PSSetShader(torchLightPs_, nullptr, 0);
         ID3D11ShaderResourceView* views[4] = {dayKept_ ? day_.srv : scene_.srv, lightDataSrv_, scene_.srv, depthSrv_};
         ctx_->PSSetShaderResources(0, 4, views);
+        ID3D11ShaderResourceView* atlas = shadowed ? shadowAtlasSrv_ : nullptr;  // 3.0.16-beta.35 (t5)
+        ctx_->PSSetShaderResources(5, 1, &atlas);
         cut(lc, float(lit.left), float(lit.top), float(lit.right), float(lit.bottom));
         ctx_->PSSetShaderResources(0, 4, none);
+        ctx_->PSSetShaderResources(5, 1, none);
     }
     ID3D11ShaderResourceView* sceneViews[4] = {nullptr, nullptr, scene_.srv, depthSrv_};
     ctx_->PSSetShaderResources(0, 4, sceneViews);  // t2 the copy, t3 the depth

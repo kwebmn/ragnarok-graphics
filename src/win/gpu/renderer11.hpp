@@ -3,6 +3,7 @@
 #include <dxgiformat.h>
 
 #include <algorithm>
+#include <array>
 #include <cstdint>
 #include <map>
 #include <string>
@@ -23,6 +24,7 @@
 #include "core/shader_cache.hpp"
 #include "core/shader_variants.hpp"
 #include "core/outdoors.hpp"
+#include "core/point_shadows.hpp"
 #include "core/weather.hpp"
 #include "core/wind.hpp"
 #include "win/gpu/map_world.hpp"
@@ -443,6 +445,7 @@ private:
         uint32_t texture = 0;
         bool alphaTest = false;
         float ref = 0.5f;
+        float lo[3] = {0, 0, 0}, hi[3] = {0, 0, 0};  // 3.0.16-beta.35: its box in the world (the torches' shadows)
     };
     std::vector<float> casterVerts_, mirrorVerts_;  // this frame's; the last frame's, drawn into the mirror
     std::vector<Caster11> casters_, mirrorCasters_;
@@ -461,6 +464,35 @@ private:
     }
     void noteCaster(const FrameRecord& rec, const DrawCmd& d, const DrawSetup& s);
     void applyMirror();  // once a frame, before its first water
+    // 3.0.16-beta.35 (the owner: «перенести тени от факелов и отпечаток тел героев на D3D11»): [effects]
+    // torch_shadows on Direct3D 11 (torch_shadows11.cpp, as Direct3D 12's torch_shadows.cpp) - this frame's casters
+    // from the lights picked into the cube faces' atlas (torch_shadow_vs/ps), read by torch_light_ps (t5); the
+    // characters standing, turned to each light
+    ID3D11VertexShader* torchShadowVs_ = nullptr;
+    ID3D11PixelShader* torchShadowPs_ = nullptr;
+    ID3D11InputLayout* torchShadowLayout_ = nullptr;
+    ID3D11Texture2D* shadowAtlas_ = nullptr;
+    ID3D11DepthStencilView* shadowAtlasDsv_ = nullptr;
+    ID3D11ShaderResourceView* shadowAtlasSrv_ = nullptr;
+    ID3D11Buffer* torchShadowVb_ = nullptr;
+    UINT torchShadowVbBytes_ = 0;
+    bool shadowFailed_ = false, shadowLogged_ = false;
+    std::vector<point_shadows::Standing> standing_;
+    std::vector<std::array<float, 3>> shadowedLights_;  // the last ones with shadows (actor_shadows::without)
+    bool shadowCollecting() const {
+        return effects_.torchShadows && effects_.torchShadowsStrength > 0 && (effects_.torch || effects_.lamps) &&
+               remaster() && torchShadowVs_ && torchShadowPs_ && torchShadowLayout_ && !shadowFailed_ &&
+               cameraValid_;
+    }
+    std::vector<int> drawTorchShadows(const std::vector<point_shadows::Candidate>& lights);
+    void noteStanding(const FrameRecord& rec, const DrawCmd& d);
+    // a blended quad of the game's sprite cache that is a player's, a monster's or an NPC's: its source, 0 none
+    uint8_t characterSource(const FrameRecord& rec, const DrawCmd& d, const DrawSetup& s) const;
+    // 3.0.16-beta.35: [effects] body_stamp on Direct3D 11 (body_stamp11.cpp, as body_stamp.cpp)
+    FrameRecord stampRec_;
+    bool stampPass_ = false, stampLogged_ = false;
+    void noteStamp(const FrameRecord& rec, const DrawCmd& d, const DrawSetup& s);
+    void applyStamps();
     bool seasonsShown() const {
         return effects_.seasons && ((effects_.seasonSnow && year_.snow > 0.0f) ||
                                     (effects_.seasonGrass && (year_.dry > 0.0f || year_.lush > 0.0f)));
