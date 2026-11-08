@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.16-beta.37 — what's new
+
+- **New: "Hallucination wave"** (Effects → Screen, off at first). While your character is under Hallucination, the picture of the world sways in slow waves, as in newer clients; the interface stays still. Our client shows nothing but the icon on its own.
+
 # uaRO Graphics 3.0.16-beta.36 — what's new
 
 - **Fixed: after entering the game your own pet was sometimes taken for an ordinary monster** (no right-click menu) until a teleport. The game now recognises it by the server's next message about it (hunger, accessory), usually within seconds.
