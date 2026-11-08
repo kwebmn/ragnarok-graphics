@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.16-beta.25 — what's new
+
+- **New: "Effects behind the character"** (Effects → Characters, off at first; Direct3D 12 only). The game draws characters so that effects after them lie over the whole body — even the far half of a ring round the hero. Now what is behind a character hides behind its figure, and what is in front is drawn over as before.
+
 # uaRO Graphics 3.0.16-beta.24 — what's new
 
 - **Fire Wall is brighter.** The game's soft flames and their flicker stay, but each layer gives about three times the light and a little warmer — the fire shows by day on the grass too.
