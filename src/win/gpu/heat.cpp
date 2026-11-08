@@ -39,7 +39,8 @@ bool Renderer::Impl::applyHeat() {
     const float user = float(std::clamp(effects.heatStrength, 0, 200)) / 100.0f;
     const float desertAmount =  // 2.4: the desert's a box of its own
         heatWanted() && effects.desertHeat && mapDesert && viewToWorldValid ? 0.35f * user : 0.0f;
-    if (spots.empty() && desertAmount <= 0.0f) return true;
+    const float wave = waveNow();  // 3.0.16-beta.37: [effects] hallucination_wave
+    if (spots.empty() && desertAmount <= 0.0f && wave <= 0.0f) return true;
     if (!ensureScene("heat haze")) return true;
     ID3D12PipelineState* pso = heatPipeline(upscale ? 1 : samples);
     if (!pso) return true;
@@ -100,9 +101,10 @@ bool Renderer::Impl::applyHeat() {
     c.uiPixels[1] = float(h);
     c.footprint = float(spots.size());
     c.twin[0] = desertAmount;
+    c.twin[1] = wave;
     c.sharpen = waterTime();
     D3D12_RECT clip{0, 0, w, h};
-    if (desertAmount <= 0.0f)
+    if (desertAmount <= 0.0f && wave <= 0.0f)
         clip = D3D12_RECT{LONG(std::max(0.0f, std::floor(x0))), LONG(std::max(0.0f, std::floor(y0))),
                           LONG(std::min(float(w), std::ceil(x1))), LONG(std::min(float(h), std::ceil(y1)))};
     if (clip.right <= clip.left || clip.bottom <= clip.top) return true;

@@ -740,6 +740,8 @@ const std::vector<IniSetting>& iniSettings() {
          Text::FxShaftsLampsHint, "", &E::shaftsLamps},  // 3.0.7-beta.5: a part of shafts
         {"effects", "day_cycle", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxDayCycle,
          Text::FxDayCycleHint, "", &E::dayCycle},
+        {"effects", "hallucination_wave", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {},
+         Text::FxHallucinationWave, Text::FxHallucinationWaveHint, "", &E::hallucinationWave},  // 3.0.16-beta.37
         {"effects", "bloom", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxBloom,
          Text::FxBloomHint, "", &E::bloom},
         {"effects", "bloom_strength", Page::Effects, Control::Slider, 0, 200, 10, {}, {}, Text::FxBloomStrength,

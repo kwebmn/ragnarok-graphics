@@ -284,6 +284,17 @@ private:
     std::vector<HeatSpot11> heatSpots_;
     void applyHeat();
     bool heatWanted() const { return effects_.heat && effects_.heatStrength > 0 && heatPs_; }
+    // 3.0.16-beta.37 (impl.hpp's): [effects] hallucination_wave - how much the picture sways now (0-1)
+    float waveLevel_ = 0.0f;
+    double waveAt_ = 0.0;
+    float waveNow() {
+        const double now = double(GetTickCount64()) / 1000.0;
+        const float step = float(std::clamp(now - waveAt_, 0.0, 0.25));
+        waveAt_ = now;
+        const bool on = effects_.hallucinationWave && effects_.hallucinatingNow;
+        waveLevel_ = std::clamp(waveLevel_ + (on ? step / 2.0f : -step), 0.0f, 1.0f);
+        return waveLevel_;
+    }
     float heatUser() const { return float(std::clamp(effects_.heatStrength, 0, 200)) / 100.0f; }
     // 2.5.3: the portals (torches.cpp notePortal) followed from frame to frame - a soft light about each (2.7.54: by
     // the map warps' floors' middles, in lilac)

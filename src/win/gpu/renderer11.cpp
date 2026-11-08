@@ -2793,7 +2793,9 @@ void Renderer11::applyHeat() {
     spots.swap(heatSpots_);
     const float desertAmount =
         heatWanted() && effects_.desertHeat && desert_ && cameraValid_ ? 0.35f * heatUser() : 0.0f;
-    if ((spots.empty() && desertAmount <= 0.0f) || !heatPs_ || !target_.texture || !depthViews()) return;
+    const float wave = waveNow();  // 3.0.16-beta.37: [effects] hallucination_wave
+    if ((spots.empty() && desertAmount <= 0.0f && wave <= 0.0f) || !heatPs_ || !target_.texture || !depthViews())
+        return;
     constexpr size_t kMaxHeat = 32;
     if (!heatData_) {
         D3D11_TEXTURE2D_DESC d{};
@@ -2831,7 +2833,7 @@ void Renderer11::applyHeat() {
         y1 = std::max(y1, s.y + s.radius * 0.6f);
     }
     D3D11_RECT clip{0, 0, w, h};
-    if (desertAmount <= 0.0f)
+    if (desertAmount <= 0.0f && wave <= 0.0f)
         clip = D3D11_RECT{LONG(std::max(0.0f, std::floor(x0))), LONG(std::max(0.0f, std::floor(y0))),
                           LONG(std::min(float(w), std::ceil(x1))), LONG(std::min(float(h), std::ceil(y1)))};
     if (clip.right <= clip.left || clip.bottom <= clip.top) return;
@@ -2845,6 +2847,7 @@ void Renderer11::applyHeat() {
     c.uiPixels[1] = float(h);
     c.footprint = float(spots.size());
     c.twin[0] = desertAmount;
+    c.twin[1] = wave;
     c.sharpen = waterTime();
     if (!heatLogged_)
         LOG_INFO("heat haze: %u spots of heat%s (Direct3D 11)", unsigned(spots.size()), desert_ ? ", the desert" : "");

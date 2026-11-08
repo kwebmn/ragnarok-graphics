@@ -212,6 +212,7 @@ TEST(effect_groups_fourteen_by_what_the_eye_is_on) {
         {"wet_walls", Caves}, {"cave_drips", Caves}, {"lit_dust", Caves},
         {"motes", Sky}, {"shared_wind", Sky},
         {"grade", Screen}, {"region_looks", Screen}, {"bloom", Screen},
+        {"hallucination_wave", Screen},
         {"smooth_light", GameFixes}, {"soft_particles", GameFixes}, {"map_fade", GameFixes},
         {"no_game_fog", GameFixes},
     };

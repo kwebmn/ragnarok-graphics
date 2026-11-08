@@ -205,6 +205,7 @@ enum class Text : uint16_t {
     FxBodyStamp, FxBodyStampHint,  // 3.0.16-beta.25
     FxSharpSprites, FxSharpSpritesHint,  // 3.0.16-beta.29
     FxTorchLeafLight, FxTorchLeafLightHint,  // 3.0.16-beta.30
+    FxHallucinationWave, FxHallucinationWaveHint,  // 3.0.16-beta.37
     InterfaceSkillNeeds, InterfaceSkillNeedsHint, InterfaceComboWindow, InterfaceComboWindowHint,
     InterfaceBrokenGear, InterfaceBrokenGearHint, InterfacePetHunger, InterfacePetHungerHint,
     InterfaceGroundTimers, InterfaceGroundTimersHint,  // 3.0.16-beta.21

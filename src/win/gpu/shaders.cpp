@@ -3001,6 +3001,13 @@ float4 heat_ps(PresentOut i) : SV_Target {
         heat += s.w * f * f;
     }
     if (twinX > 0.0) heat += twinX * smoothstep(250.0, 900.0, viewDepth(sceneDepth.Load(int3(int2(p), 0))));
+    // 3.0.16-beta.37: [effects] hallucination_wave (twinY its amount now, 0-1) - the whole picture sways: slow waves
+    // across the screen's height, a smaller one across its width
+    if (twinY > 0.0) {
+        float2 at = p / uiPixels.xy;
+        swirl += float2(sin(at.y * 14.0 + t * 2.1) * 7.0 + sin(at.y * 31.0 - t * 3.3) * 2.0,
+                        sin(at.x * 9.0 + t * 1.6) * 3.0) * twinY * scale;
+    }
     if (heat < 0.002 && dot(swirl, swirl) < 0.01) discard;
     float2 q = p / scale * 0.06;
     float2 n = float2(fbm4(q + float2(0.0, t * 1.4)), fbm4(q * 1.3 + float2(4.1, t * 1.7))) - 0.5;

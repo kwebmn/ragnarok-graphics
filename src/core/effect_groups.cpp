@@ -112,6 +112,7 @@ const Member kMembers[] = {
     {"grade", Screen, 1, &E::grade},
     {"region_looks", Screen, 2, &E::regionLooks},
     {"bloom", Screen, 3, &E::bloom},
+    {"hallucination_wave", Screen, 0, &E::hallucinationWave},  // 3.0.16-beta.37: by hand only
 
     {"smooth_light", GameFixes, 1, &E::smoothLight},
     {"soft_particles", GameFixes, 1, &E::softParticles},
@@ -187,6 +188,7 @@ const OldMember kOldMembers[] = {
     {OldSkills, &E::hitFlash},      {OldSkills, &E::skillSparks},
     {OldSkills, &E::bodyStamp},  // 3.0.16-beta.25
     {OldShadows, &E::sharpSprites},  // 3.0.16-beta.29
+    {OldPicture, &E::hallucinationWave},  // 3.0.16-beta.37
     {OldPicture, &E::grade},        {OldPicture, &E::regionLooks},  {OldPicture, &E::bloom},
 };
 const Strength kOldStrengths[] = {

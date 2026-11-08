@@ -2052,6 +2052,14 @@ constexpr Entry kTexts[] = {
      "плямами. Спочатку вимкнено.",
      "Листва дерева между факелом или лампой и землёй не даёт чёрной тени: часть света проходит сквозь неё, зелёными "
      "пятнами. Сначала выключено."},
+    {Text::FxHallucinationWave, "Hallucination wave", "Хвиля від Hallucination", "Волна от Hallucination"},
+    {Text::FxHallucinationWaveHint,
+     "While your character is under Hallucination, the picture of the world sways in slow waves, as in newer "
+     "clients. The interface stays still. Off at first.",
+     "Поки на персонажі Hallucination, картинка світу гойдається повільними хвилями, як у новіших клієнтах. "
+     "Інтерфейс лишається нерухомим. Спочатку вимкнено.",
+     "Пока на персонаже Hallucination, картинка мира колышется медленными волнами, как в новых клиентах. "
+     "Интерфейс остаётся неподвижным. Сначала выключено."},
     {Text::InterfaceSkillNeeds, "What a skill lacks", "Чого бракує навичці", "Чего не хватает навыку"},
     {Text::InterfaceSkillNeedsHint,
      "A skill on the bar that cannot go for its gem or its spirit spheres is dimmed with a red plate: ×0 when the "

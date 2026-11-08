@@ -1261,6 +1261,16 @@ void Context::present(const Rect& source, bool waitForVblank) {
                                : -1;
         applyClock(fx, t.wHour * 60 + t.wMinute, server);
     }
+    // 3.0.16-beta.37: [effects] hallucination_wave - the character under Hallucination now (its icon 34 in the game's
+    // list of the player's icons, 0x728484..0x728488 - FUN_00593d00's)
+    if (fx.hallucinationWave && inGameWorld()) {
+        uint32_t range[2] = {0, 0};
+        if (readGame(0x728484, range, sizeof range) && range[0] && range[1] > range[0] && range[1] - range[0] <= 4096) {
+            std::vector<int32_t> icons((range[1] - range[0]) / 4);
+            if (!icons.empty() && readGame(range[0], icons.data(), icons.size() * 4))
+                fx.hallucinatingNow = std::find(icons.begin(), icons.end(), 34) != icons.end();
+        }
+    }
     if (!test_.running())  // 3.0.5-beta.6: the test measures the sets as they are
         for (const std::string& k : keepOff_) effect_costs::drop(fx, k);  // 0.76
     // 1.9.3: Tab held in the console - the chosen effect off while it is held (the file as it is, that key 0)
@@ -1279,9 +1289,11 @@ void Context::present(const Rect& source, bool waitForVblank) {
     }
     if (!consoleOff_.empty()) {
         const int night = fx.nightNow, day = fx.dayNow;
+        const bool hallucinating = fx.hallucinatingNow;  // 3.0.16-beta.37
         fx = compareFx_;
         fx.nightNow = night;
         fx.dayNow = day;
+        fx.hallucinatingNow = hallucinating;
     }
     renderer->setEffects(enhanced_ ? fx : effectsOff());  // Pause: the game's own picture
     serverNightFrame(enhanced_ && fx.noServerNight);      // 2.6.13: the server's night by the clock and «Ночь»

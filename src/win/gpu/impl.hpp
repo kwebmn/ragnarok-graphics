@@ -1007,8 +1007,22 @@ struct Renderer::Impl {
     bool mapSun(float toSun[3]) const;
     float sunHeight() const;  // 2.1.3: the sun above the horizon (radians) - the day's, or the map's without the cycle
     bool heatWanted() const { return effects.heat && effects.heatStrength > 0 && heatPs; }
+    // 3.0.16-beta.37: [effects] hallucination_wave - how much the picture sways now (0-1): in over two seconds, out
+    // over one (the frames' own clock)
+    float waveLevel = 0.0f;
+    double waveAt = 0.0;
+    float waveNow() {
+        const double now = double(GetTickCount64()) / 1000.0;
+        const float step = float(std::clamp(now - waveAt, 0.0, 0.25));
+        waveAt = now;
+        const bool on = effects.hallucinationWave && effects.hallucinatingNow;
+        waveLevel = std::clamp(waveLevel + (on ? step / 2.0f : -step), 0.0f, 1.0f);
+        return waveLevel;
+    }
     bool heatDue() const {
-        return heatPs && groundDrawn && !heatDone && (!heatSpots.empty() || (heatWanted() && mapDesert));
+        return heatPs && groundDrawn && !heatDone &&
+               (!heatSpots.empty() || (heatWanted() && mapDesert) || waveLevel > 0.0f ||
+                (effects.hallucinationWave && effects.hallucinatingNow));
     }
     bool portalsWanted() const { return effects.portals && effects.portalsStrength > 0; }  // 0.38
     // 2.7.54: the new portal - the game's own draws of the map warps shaded anew where it draws them

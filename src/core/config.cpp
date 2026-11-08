@@ -234,6 +234,7 @@ EffectSettings effectsOff() {
     e.skyRays = e.treeSeasons = e.dragonflies = false;
     e.nightNow = 0;
     e.dayNow = -1;
+    e.hallucinationWave = e.hallucinatingNow = false;  // 3.0.16-beta.37
     return e;
 }
 
@@ -310,7 +311,8 @@ bool EffectSettings::operator==(const EffectSettings& o) const {
         if (s.flag && this->*s.flag != o.*s.flag) return false;
         if (s.number && this->*s.number != o.*s.number) return false;
     }
-    return nightNow == o.nightNow && dayNow == o.dayNow && clock == o.clock && season == o.season &&
+    return nightNow == o.nightNow && dayNow == o.dayNow && hallucinatingNow == o.hallucinatingNow &&
+           clock == o.clock && season == o.season &&
            weatherKind == o.weatherKind && tier == o.tier && preset == o.preset && grassThin == o.grassThin &&
            std::equal(groups, groups + kEffectGroups, o.groups) &&
            std::equal(groupStrength, groupStrength + kEffectGroups, o.groupStrength) &&

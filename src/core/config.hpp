@@ -306,6 +306,12 @@ struct EffectSettings {
     bool moonLight = true;
     int moonStrength = 100;  // %, 0-200
     int nightNow = 0;
+    // 3.0.16-beta.37 (the owner: «давай дальше» - the backlog's Hallucination wave, nostalro's idea; uaRO.exe draws
+    // nothing for the status, only its icon 34 and its chat line): hallucination_wave - while the character is under
+    // Hallucination the world's picture sways in slow waves (heat_ps, Direct3D 12 and 11); off at first.
+    // hallucinatingNow: the status on now - the driver's, each frame, not the file's
+    bool hallucinationWave = false;
+    bool hallucinatingNow = false;
     bool water = false;
     int waterWaves = 50;        // %, 0-100: 0 a still mirror
     int waterReflections = 50;  // %, 0-100: how much the water reflects
