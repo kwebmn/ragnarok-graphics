@@ -738,3 +738,20 @@ TEST(stat_window_plan_class_buffs) {
     for (const statwin::PlanRow& r : statwin::planRows(d, p, t))
         if (r.name == "HIT") CHECK_EQ(r.then, std::to_string(100 + 5 + 30));
 }
+
+// 3.0.16-beta.17 (R-PTDFCY): a pet's accessory (gear with no place on the body, 10001-10020) worn on a double click as
+// the game's own window does; another gear with no place is not
+TEST(items_a_pets_accessory_is_worn) {
+    itemwin::Item acc;
+    acc.index = 5;
+    acc.type = 8;
+    acc.id = 10006;
+    acc.location = 0;
+    CHECK(itemwin::useOf(acc) == itemwin::Use::Wear);
+    acc.identified = false;
+    CHECK(itemwin::useOf(acc) == itemwin::Use::None);
+    itemwin::Item other = acc;
+    other.identified = true;
+    other.id = 2301;
+    CHECK(itemwin::useOf(other) == itemwin::Use::None);
+}

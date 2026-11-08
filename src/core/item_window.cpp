@@ -119,7 +119,12 @@ Use useOf(const Item& it) {
         case 0xC:
         case 0xD:
         case 0xE:
-        case 0xF: return it.location && it.identified ? Use::Wear : Use::None;
+        case 0xF:
+            if (it.location && it.identified) return Use::Wear;
+            // 3.0.16-beta.17 (R-PTDFCY: a pet's accessory did nothing): a gear with no place on the body, numbered
+            // 10001-10020 - the pets' accessories - worn as the game's own window does (uaRO.exe FUN_004b9a10: wear,
+            // its place 0)
+            return it.id > 10000 && it.id < 0x2725 && it.identified ? Use::Wear : Use::None;
         case 6: return Use::Card;
         case 10:
         case 0x10:

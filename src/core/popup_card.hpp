@@ -3,6 +3,7 @@
 #include <string>
 #include <vector>
 
+#include "core/settings/strings.hpp"
 #include "core/window_panel.hpp"
 
 namespace uagfx::popupcard {
@@ -18,6 +19,9 @@ struct Item {
 };
 std::vector<Item> items(const std::vector<std::string>& raw, const std::string& separator);
 int pickNumber(const std::vector<Item>& items, int row);  // -1: a separator or none
+// 3.0.16-beta.17 (the tester: «контекстне меню [пета] без укр перекладу»): an item of the game's own English words in
+// the player's language - the pet's menu (msgstringtable 593-597); any other as it is, and English as it is
+std::string translated(const std::string& text, settings::Lang lang);
 
 struct Layout {
     float s = 1;

@@ -6346,6 +6346,7 @@ constexpr Entry kTexts[] = {
     {Text::PetPerform, "Perform", "Трюк", "Трюк"},
     {Text::PetUnequip, "Accessory off", "Зняти прикрасу", "Снять украшение"},
     {Text::PetEgg, "Into the egg", "У яйце", "В яйцо"},
+    {Text::PetStatusCheck, "Pet status", "Стан улюбленця", "Состояние питомца"},
     // 3.0.11-beta.160: the homunculus
     {Text::InterfaceHomun, "Homunculus card", "Картка гомункула", "Карточка гомункула"},
     {Text::InterfaceHomunHint,

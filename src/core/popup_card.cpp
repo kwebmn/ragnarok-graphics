@@ -27,6 +27,22 @@ std::vector<Item> items(const std::vector<std::string>& raw, const std::string& 
     return out;
 }
 
+std::string translated(const std::string& text, settings::Lang lang) {
+    if (lang == settings::Lang::En) return text;
+    using settings::Text;
+    static const struct {
+        const char* game;
+        Text ours;
+    } kLines[] = {{"Feed Pet", Text::PetFeed},
+                  {"Performance", Text::PetPerform},
+                  {"Return to Egg Shell", Text::PetEgg},
+                  {"Unequip Accessory", Text::PetUnequip},
+                  {"Check the Pet Status", Text::PetStatusCheck}};
+    for (const auto& l : kLines)
+        if (text == l.game) return settings::tr(lang, l.ours);
+    return text;
+}
+
 int pickNumber(const std::vector<Item>& items, int row) {
     if (row < 0 || row >= int(items.size()) || items[size_t(row)].separator) return -1;
     int n = 0;

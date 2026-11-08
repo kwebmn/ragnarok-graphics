@@ -70,3 +70,11 @@ TEST(popup_card_words) {
     const auto d = std::find_if(w.begin(), w.end(), [](const popupcard::Words& x) { return x.text == "Deal"; });
     CHECK(f != w.end() && d != w.end() && f->rgb != d->rgb);
 }
+
+// 3.0.16-beta.17 (the tester: the pet's menu «без укр перекладу»): the game's pet lines in the player's language
+TEST(popup_card_the_pets_menu_translated) {
+    CHECK(popupcard::translated("Feed Pet", settings::Lang::Uk) == "Нагодувати");
+    CHECK(popupcard::translated("Check the Pet Status", settings::Lang::Ru) == "Состояние питомца");
+    CHECK(popupcard::translated("Feed Pet", settings::Lang::En) == "Feed Pet");
+    CHECK(popupcard::translated("Trade", settings::Lang::Uk) == "Trade");
+}

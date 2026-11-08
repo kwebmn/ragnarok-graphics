@@ -89,7 +89,7 @@ void readItems(State& s, uint32_t window) {
     if (from && past > from && (past - from) / 16 <= uint32_t(2 * kMostItems))
         for (uint32_t at = from; at < past; at += 16) words.push_back(raw(read32(at + 4)));
     s.items = pc::items(words, raw(read32(kSeparator)));
-    for (pc::Item& it : s.items) it.text = utf8Of(widened(it.text, s.codePage));
+    for (pc::Item& it : s.items) it.text = pc::translated(utf8Of(widened(it.text, s.codePage)), language());
 }
 
 std::vector<Words> gdiWords(const std::vector<pc::Words>& in) {
