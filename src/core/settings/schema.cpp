@@ -565,6 +565,11 @@ const std::vector<IniSetting>& iniSettings() {
          Text::FxTorchLightHint, " %", nullptr, &E::torchLight},
         {"effects", "torch_flicker", Page::Effects, Control::Slider, 0, 100, 10, {}, {}, Text::FxTorchFlicker,
          Text::FxTorchFlickerHint, " %", nullptr, &E::torchFlicker},
+        // 3.0.16-beta.16: the torches' and the lamps' shadows (core/point_shadows.hpp)
+        {"effects", "torch_shadows", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxTorchShadows,
+         Text::FxTorchShadowsHint, "", &E::torchShadows},
+        {"effects", "torch_shadows_strength", Page::Effects, Control::Slider, 0, 100, 10, {}, {},
+         Text::FxTorchShadowsStrength, Text::FxTorchShadowsStrengthHint, " %", nullptr, &E::torchShadowsStrength},
         {"effects", "smoke", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxSmoke, Text::FxSmokeHint,
          "", &E::smoke},
         {"effects", "smoke_density", Page::Effects, Control::Slider, 0, 200, 10, {}, {}, Text::FxSmokeDensity,

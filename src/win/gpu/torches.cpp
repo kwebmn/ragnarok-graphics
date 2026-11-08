@@ -429,7 +429,7 @@ bool Renderer::Impl::torchReady() {
         }
     }
     if (!torchData) {  // a texel a torch for the light's pass
-        torchData = createTexture2D(device, int(kMaxLights * 2), 1, 1, DXGI_FORMAT_R32G32B32A32_FLOAT,
+        torchData = createTexture2D(device, int(kMaxLights * 2), 2, 1, DXGI_FORMAT_R32G32B32A32_FLOAT,
                                     D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COPY_DEST, nullptr);
         torchDataSrv = torchData ? allocSrv() : kNoSrv;
         if (!torchData || torchDataSrv == kNoSrv) {
@@ -479,6 +479,7 @@ struct LightItem {
     float strength;
     float color[3];
     float reach;  // world units
+    bool caster = false;  // 3.0.16-beta.16: a torch's or a lamp's - it may have shadows ([effects] torch_shadows)
 };
 
 // 0.25: the map file's torches the game does not show (it knows effect ids up to 629): their colours.
@@ -696,6 +697,7 @@ bool Renderer::Impl::applyTorches() {
         const float calm = torch::flicker(double(time) * 0.5, s ^ 0x5BD1E995u, amount * 0.35f);
         const float layers = i < gameFlames ? torch::kGameEffects : 1.0f;  // 2.6.18
         LightItem l{{vx, vy, vz}, strength * calm * f.alpha * layers, {}, kReach};
+        l.caster = true;  // 3.0.16-beta.16
         const bool hidden = f.tint[0] < 0.99f || f.tint[1] < 0.99f || f.tint[2] < 0.99f;  // its own colour
         std::copy(hidden ? f.tint : kLightColor, (hidden ? f.tint : kLightColor) + 3, l.color);
         lights.push_back(l);
@@ -936,6 +938,7 @@ bool Renderer::Impl::applyTorches() {
             float tint[3];
             for (int k = 0; k < 3; ++k) tint[k] = 0.65f + 0.35f * r.color[k] / top;
             LightItem l{{v.x, v.y, v.z}, lampStrength, {tint[0], tint[1], tint[2]}, reach};
+            l.caster = true;  // 3.0.16-beta.16
             // A fire's colour - red the most, then green, then blue - flickers, each its own way.
             if (r.color[0] >= r.color[1] && r.color[1] >= r.color[2] * 0.9f && r.color[0] > 0.5f)
                 l.strength *= torch::flicker(double(time) * 0.5, torch::seedAt(w.x, w.z), amount * 0.25f);
@@ -974,17 +977,37 @@ bool Renderer::Impl::applyTorches() {
     c.jitter[1] = jy;
     c.uiPixels[0] = float(w);
     c.uiPixels[1] = float(h);
+    // 3.0.16-beta.16: the torches' and the lamps' shadows - the lights picked drawn into the atlas, each one's slot
+    // (1 + its row of faces) and how dark its shadow is in the list's second row
+    std::vector<float> shadowSlot(lights.size(), 0.0f);
+    bool shadowsDrawn = false;
+    if (shadowCollecting() && !lights.empty()) {
+        std::vector<point_shadows::Candidate> cands;
+        std::vector<size_t> of;
+        for (size_t i = 0; i < lights.size(); ++i)
+            if (lights[i].caster && lights[i].strength > 0.0f) {
+                cands.push_back(point_shadows::Candidate{{lights[i].view[0], lights[i].view[1], lights[i].view[2]},
+                                                         lights[i].reach, lights[i].strength});
+                of.push_back(i);
+            }
+        const std::vector<int> picked = drawTorchShadows(cands);
+        for (size_t s = 0; s < picked.size(); ++s) shadowSlot[of[size_t(picked[s])]] = float(s + 1);
+        shadowsDrawn = !picked.empty();
+    }
+    const float shadowDark = float(std::clamp(effects.torchShadowsStrength, 0, 100)) / 100.0f;
     if (!lights.empty()) {  // the list to the GPU: two texels a light
-        float data[kMaxLights * 2][4] = {};
+        float data[2][kMaxLights * 2][4] = {};  // 3.0.16-beta.16: a second row - its shadow's slot and darkness
         float lx0 = float(w), ly0 = float(h), lx1 = 0.0f, ly1 = 0.0f;  // where the light falls on the screen
         for (size_t i = 0; i < lights.size(); ++i) {
             const LightItem& l = lights[i];
             // 0.39.2: its place and reach first, its colour and strength second - the pass reads the second only
             // for the lights that reach a pixel.
-            std::copy(l.view, l.view + 3, data[2 * i]);
-            data[2 * i][3] = l.reach;
-            std::copy(l.color, l.color + 3, data[2 * i + 1]);
-            data[2 * i + 1][3] = l.strength;
+            std::copy(l.view, l.view + 3, data[0][2 * i]);
+            data[0][2 * i][3] = l.reach;
+            std::copy(l.color, l.color + 3, data[0][2 * i + 1]);
+            data[0][2 * i + 1][3] = l.strength;
+            data[1][2 * i][0] = shadowSlot[i];  // 3.0.16-beta.16
+            data[1][2 * i][1] = shadowDark;
             // 0.39.2: where its reach falls on the screen - the cube about it, each corner projected, the nearer ones
             // further out. A light up in the air lights the ground well below it on the screen: 0.25-0.39.1 cut it off
             // at a square about the light's own place (the skills' light came out square).
@@ -1009,9 +1032,9 @@ bool Renderer::Impl::applyTorches() {
         src.PlacedFootprint.Offset = u.offset;
         src.PlacedFootprint.Footprint.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
         src.PlacedFootprint.Footprint.Width = kMaxLights * 2;
-        src.PlacedFootprint.Footprint.Height = 1;
+        src.PlacedFootprint.Footprint.Height = 2;  // 3.0.16-beta.16: the shadows' row
         src.PlacedFootprint.Footprint.Depth = 1;
-        src.PlacedFootprint.Footprint.RowPitch = UINT(sizeof data);  // 2048: a multiple of 256
+        src.PlacedFootprint.Footprint.RowPitch = UINT(sizeof data[0]);  // 2048: a multiple of 256
         to.pResource = torchData;
         to.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
         transition(torchData, torchDataState, D3D12_RESOURCE_STATE_COPY_DEST);
@@ -1049,7 +1072,10 @@ bool Renderer::Impl::applyTorches() {
             list->SetGraphicsRoot32BitConstants(kRootConstants, kConstantCount, &c, 0);
             list->SetGraphicsRootDescriptorTable(kRootTextures, textures);
             list->SetGraphicsRootDescriptorTable(kRootSamplers, samplers);
-            list->SetGraphicsRootDescriptorTable(kRootScene, sceneTable(sceneColorSrv, sceneDepthSrv, sceneColorSrv));
+            // 3.0.16-beta.16: t5 the shadows' atlas when drawn this frame
+            list->SetGraphicsRootDescriptorTable(
+                kRootScene,
+                sceneTable(sceneColorSrv, sceneDepthSrv, sceneColorSrv, shadowsDrawn ? shadowAtlasSrv : kNoSrv));
             list->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
             list->DrawInstanced(6, UINT(lights.size()), 0, 0);
             boundPipeline = nullptr;  // the next draws bind everything again

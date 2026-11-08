@@ -196,7 +196,7 @@ TEST(effect_groups_fourteen_by_what_the_eye_is_on) {
         {"travel_effects", SkillEffects}, {"monster_effects", SkillEffects},
         {"skill_sparks", SkillEffects},
         {"fire_light", SkillEffects},
-        {"torch", Fire}, {"embers", Fire}, {"smoke", Fire}, {"lava", Fire}, {"heat", Fire},
+        {"torch", Fire}, {"torch_shadows", Fire}, {"embers", Fire}, {"smoke", Fire}, {"lava", Fire}, {"heat", Fire},
         {"lamps", Lights}, {"map_glows", Lights}, {"fireflies", Lights}, {"portals", Lights}, {"glow", Lights},
         {"shafts", Lights}, {"rays", Lights},
         {"relief", Ground}, {"materials", Ground}, {"ground_seams", Ground}, {"smooth_hills", Ground}, {"ao", Ground},

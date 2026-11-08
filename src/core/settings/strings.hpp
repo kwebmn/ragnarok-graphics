@@ -200,6 +200,7 @@ enum class Text : uint16_t {
     FxHitFlash, FxHitFlashHint,
     FxDeathFlash, FxDeathFlashHint,  // 3.0.16-beta.7
     FxBodyTints, FxBodyTintsHint,  // 3.0.16-beta.13
+    FxTorchShadows, FxTorchShadowsHint, FxTorchShadowsStrength, FxTorchShadowsStrengthHint,  // 3.0.16-beta.16
     InterfaceSkillNeeds, InterfaceSkillNeedsHint, InterfaceComboWindow, InterfaceComboWindowHint,
     InterfaceBrokenGear, InterfaceBrokenGearHint, InterfacePetHunger, InterfacePetHungerHint,
     HotbarNoItem, HotbarNoSpheres, CharBroken, CharPet, CharHomun,

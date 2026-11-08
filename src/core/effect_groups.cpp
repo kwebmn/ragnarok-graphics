@@ -57,6 +57,7 @@ const Member kMembers[] = {
     {"fire_light", SkillEffects, 1, &E::fireLight},
 
     {"torch", Fire, 1, &E::torch},
+    {"torch_shadows", Fire, 0, &E::torchShadows},  // 3.0.16-beta.16: by hand only
     {"embers", Fire, 2, &E::embers},
     {"smoke", Fire, 1, &E::smoke},
     {"lava", Fire, 1, &E::lava},
@@ -128,6 +129,7 @@ const Strength kStrengths[] = {
     {SkillEffects, &E::skillBrightness, 100},    {SkillEffects, &E::skillSparksAmount, 200},
     {SkillEffects, &E::fireLightStrength, 200},
     {Fire, &E::torchBrightness, 200},  {Fire, &E::torchGlow, 200},    {Fire, &E::torchLight, 200},
+    {Fire, &E::torchShadowsStrength, 100},  // 3.0.16-beta.16
     {Fire, &E::lavaBrightness, 200},   {Fire, &E::heatStrength, 200},
     {Lights, &E::lampsLight, 200},     {Lights, &E::firefliesBrightness, 200}, {Lights, &E::mapGlowsBrightness, 200},
     {Lights, &E::raysBrightness, 200}, {Lights, &E::portalsStrength, 200},     {Lights, &E::glowStrength, 200},
@@ -156,6 +158,7 @@ const OldMember kOldMembers[] = {
     {OldFixes, &E::smoothLight},    {OldFixes, &E::softParticles},  {OldFixes, &E::mapFade},
     {OldFixes, &E::noGameFog},      {OldFixes, &E::noServerNight},
     {OldLight, &E::torch},          {OldLight, &E::smoke},          {OldLight, &E::lamps},
+    {OldLight, &E::torchShadows},  // 3.0.16-beta.16
     {OldLight, &E::fireLight},      {OldLight, &E::fireflies},      {OldLight, &E::mapGlows},
     {OldLight, &E::lava},           {OldLight, &E::portals},        {OldLight, &E::rays},
     {OldLight, &E::glow},           {OldLight, &E::roundLight},     {OldLight, &E::nightWindows},

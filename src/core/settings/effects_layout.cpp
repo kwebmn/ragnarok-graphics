@@ -74,6 +74,7 @@ const EffectLayout kEffects[] = {
      {"effects.torch_brightness", "effects.torch_glow", "effects.torch_light", "effects.torch_flicker"},
      {"effects.torch_flame"},
      1},
+    {"effects.torch_shadows", {}, {"effects.torch_shadows_strength"}, {}, 1},  // 3.0.16-beta.16
     {"effects.smoke", {}, {"effects.smoke_density"}, {}, 1},
     {"effects.lamps", {}, {"effects.lamps_light"}, {}, 1},
     {"effects.fireflies", {"effects.firefly_dots"}, {"effects.fireflies_brightness"}, {}, 1},  // 3.0.7-beta.3 dots

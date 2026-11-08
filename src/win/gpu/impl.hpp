@@ -12,6 +12,7 @@
 #include <array>
 #include <vector>
 
+#include "core/point_shadows.hpp"
 #include "core/pick.hpp"
 #include "core/effect_costs.hpp"
 #include "core/footsteps.hpp"
@@ -135,6 +136,7 @@ constexpr UINT kRtvCount = kRtvAoDepth + 1;
 constexpr UINT kDsvTarget = 0;  // depth views: the target's, the world's (DLSS)
 constexpr UINT kDsvWorld = 1;
 constexpr UINT kDsvMirror = 3;  // 1.16: the mirrored world's depth
+constexpr UINT kDsvShadow = 4;  // 3.0.16-beta.16: the torches' and lamps' shadows' atlas (torch_shadows.cpp)
 
 // What the open command list draws into (bindPass); the glow's passes add its target as the second one (0.18).
 enum Pass { kPassNone = 0, kPassTarget, kPassWorld, kPassLayer, kPassTargetGlow, kPassWorldGlow };
@@ -1370,6 +1372,7 @@ struct Renderer::Impl {
         uint32_t texture = 0;
         bool alphaTest = false;
         float ref = 0.5f;
+        float lo[3] = {0, 0, 0}, hi[3] = {0, 0, 0};  // 3.0.16-beta.16: its box in the world
     };
     std::vector<float> sunVerts;
     std::vector<SunCaster> sunCasters;
@@ -1395,6 +1398,23 @@ struct Renderer::Impl {
     ID3D12PipelineState* mirrorPipeline();
     bool applyMirror();  // once a frame, before its first water; false: lost
     void noteCaster(const FrameRecord& rec, const DrawCmd& d, const DrawSetup& s);
+    // 3.0.16-beta.16 (the owner: «тени от факелов и ламп»): [effects] torch_shadows - the frame's casters (above) seen
+    // from the few lights that matter most, six faces of depth each in one atlas (torch_shadows.cpp); the torches'
+    // light pass reads it (t5) for the lights given a slot
+    ID3DBlob* torchShadowVs = nullptr;
+    ID3DBlob* torchShadowPs = nullptr;
+    ID3D12PipelineState* shadowPso = nullptr;
+    ID3D12Resource* shadowAtlas = nullptr;
+    D3D12_RESOURCE_STATES shadowAtlasState = D3D12_RESOURCE_STATE_DEPTH_WRITE;
+    UINT shadowAtlasSrv = kNoSrv;
+    bool shadowFailed = false, shadowLogged = false;
+    bool shadowCollecting() const {
+        return effects.torchShadows && effects.torchShadowsStrength > 0 && (effects.torch || effects.lamps) &&
+               remaster() && torchShadowVs && torchShadowPs && !shadowFailed && viewToWorldValid;
+    }
+    // the lights picked (indices into `lights`, a light's slot its place in the answer) - drawn into the atlas; none
+    // when off or nothing to draw
+    std::vector<int> drawTorchShadows(const std::vector<point_shadows::Candidate>& lights);
     // 1.17, living characters (draw.cpp): a sprite lit by the sun from its silhouette's sides (shaders.cpp
     // spriteLight, stage 0 bit 28)
     bool spriteLightWanted() const { return effects.spriteLight && effects.spriteLightStrength > 0; }

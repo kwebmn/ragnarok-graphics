@@ -1721,6 +1721,48 @@ TorchIn torch_light_vs(uint id : SV_VertexID, uint inst : SV_InstanceID) {
     return o;
 }
 
+// 3.0.16-beta.16 (the owner: «тени от факелов и ламп»): how much of a light with a shadow (slot: its row of faces in
+// the atlas, t5 - torch_shadows.cpp) reaches the view's p, its surface's n towards the camera; L its place, reach its
+// reach. The way from the light into the world (r0-r8 the view's axes there), the face it goes through - the axis it
+// goes most along, its x and y the next two axes round (core/point_shadows.hpp faceOf) - and nine texels about it
+// against the way's length of the reach, a little further from the further pixels (softer).
+float torchShadow(float3 p, float3 n, float3 L, float reach, float slot) {
+    float3 dv = p + n * 0.6 - L;
+    float3 d = dv.x * float3(r0, r1, r2) + dv.y * float3(r3, r4, r5) + dv.z * float3(r6, r7, r8);
+    float len = length(d);
+    float dist = len / reach;
+    if (dist >= 1.0 || len < 3.0) return 1.0;  // point_shadows::kNearIgnore
+    float3 ad = abs(d);
+    int a = 0;
+    if (ad.y > ad.x && ad.y >= ad.z) a = 1;
+    else if (ad.z > ad.x && ad.z > ad.y) a = 2;
+    float along = a == 0 ? d.x : (a == 1 ? d.y : d.z);
+    float m = abs(along);
+    float u = (a == 0 ? d.y : (a == 1 ? d.z : d.x)) / m;
+    float v = (a == 0 ? d.z : (a == 1 ? d.x : d.y)) / m;
+    float face = float(a * 2 + (along >= 0.0 ? 0 : 1));
+    const float F = 256.0;  // point_shadows::kFaceTexels
+    float2 t = float2((u * 0.5 + 0.5) * F, (0.5 - v * 0.5) * F);
+    float2 base = float2(face * F, slot * F);
+    // a light inside a model or a wall (a lamp of the map's file can be): its faces' middles all near - no shadow,
+    // its light as before
+    float openFaces = 0.0;
+    [unroll] for (int k = 0; k < 6; ++k)
+        openFaces += mirrorTex.Load(int3(int(float(k) * F + F * 0.5), int(slot * F + F * 0.5), 0)).r > 0.15 ? 1.0 : 0.0;
+    if (openFaces < 2.0) return 1.0;
+    float bias = 0.012 + 0.02 * dist;
+    float spread = 1.0 + 1.5 * dist;
+    float lit = 0.0;
+    [unroll] for (int y = -1; y <= 1; ++y) {
+        [unroll] for (int x = -1; x <= 1; ++x) {
+            float2 q = clamp(t + float2(float(x), float(y)) * spread, float2(0.5, 0.5), float2(F - 0.5, F - 0.5));
+            float stored = mirrorTex.Load(int3(int2(base + q), 0)).r;
+            lit += dist - bias <= stored ? 1.0 : 0.0;
+        }
+    }
+    return lit / 9.0;
+}
+
 float4 torch_accum_ps(TorchIn i) : SV_Target {
     int2 wp = int2(i.pos.xy);
     if (sceneDepth.Load(int3(wp, 0)) >= 0.99999) discard;  // nothing drawn there
@@ -1764,6 +1806,8 @@ float4 torch_accum_ps(TorchIn i) : SV_Target {
         }
     }
     if (c.w < 0.0) a *= 1.0 - smoothstep(3.0, 7.0, dot(p - t.xyz, -float3(r1, r4, r7)) + 20.0);  // 2.7.24: the ground's
+    float4 sh = tex1.Load(int3(2 * int(i.light), 1, 0));  // 3.0.16-beta.16: its shadow's slot (0 none), darkness
+    if (sh.x > 0.5) a *= 1.0 - sh.y * (1.0 - torchShadow(p, n, t.xyz, t.w, sh.x - 1.0));
     return float4(c.rgb * a, a);
 }
 
@@ -2662,6 +2706,34 @@ float4 mirror_ps(MirrorIn i) : SV_Target {
     float4 t = tex0.Sample(samp0, i.uv);
     if (footprint > 0.5 && t.a < twinY) discard;
     return float4(t.rgb * i.colour.rgb, 1.0);
+}
+
+// 3.0.16-beta.16, the torches' and lamps' shadows (torch_shadows.cpp): a caster's triangle (x y z, u v, the game's
+// colour - the mirror's) from a light's place (f0 f1 cx, reach cy) into one face of its cube - r0-r2 the face's x,
+// r4-r6 its y, r8-r10 its way (core/point_shadows.hpp face) - its distance of the reach the depth; what lies within
+// point_shadows::kNearIgnore of the light (its own holder) casts nothing. footprint 1: the texture's holes (alpha
+// under twinY) let the light through.
+struct TorchShadowIn {
+    float4 pos : SV_Position;
+    float2 uv : TEXCOORD0;
+    float3 d : TEXCOORD1;
+};
+
+TorchShadowIn torch_shadow_vs(float3 p : POSITION, float2 uv : TEXCOORD0, float4 colour : COLOR0) {
+    TorchShadowIn o;
+    float3 d = p - float3(f0, f1, cx);
+    float w = dot(d, float3(r8, r9, r10));
+    o.pos = float4(dot(d, float3(r0, r1, r2)), dot(d, float3(r4, r5, r6)), w - 0.5, w);
+    o.uv = uv;
+    o.d = d;
+    return o;
+}
+
+float torch_shadow_ps(TorchShadowIn i) : SV_Depth {
+    float len = length(i.d);
+    if (len < 3.0) discard;
+    if (footprint > 0.5 && tex0.Sample(samp0, i.uv).a < twinY) discard;
+    return saturate(len / cy);
 }
 #endif
 

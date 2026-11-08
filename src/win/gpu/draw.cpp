@@ -102,7 +102,8 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
         (seamsWanted() || hillsWanted() || grassCellsWanted()))
         noteGround(rec, d);  // 1.9; 1.15 the smooth hills of the next frame; 2.2.1 the grass's ground
     // 1.16: an opaque draw of the world into the next frame's mirror (2.2: the sun's map is gone)
-    if (!inner && !s.ui && !s.blend && s.zEnable && s.zWrite && mirrorCollecting()) noteCaster(rec, d, s);
+    if (!inner && !s.ui && !s.blend && s.zEnable && s.zWrite && (mirrorCollecting() || shadowCollecting()))
+        noteCaster(rec, d, s);  // 3.0.16-beta.16: the torches' shadows too
     // 3.0.4-beta.10: the own ground in place of the game's (own_ground.cpp) - the game's ground draws noted, not drawn,
     // once its pictures are up; drawn itself at the world's first blended draw after them, or at the interface
     if (!inner && !s.ui && d.fvf == d3d7::FVF_TL2 && s.zWrite && ownGroundWanted()) {

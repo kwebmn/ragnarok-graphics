@@ -478,6 +478,8 @@ void Remote::setEffects(const EffectSettings& e) {
     w.u8(e.mapGlowOrbs ? 1 : 0);  // 3.0.7-beta.1
     w.u8(e.fireflyDots ? 1 : 0);  // 3.0.7-beta.3
     w.u8(e.shaftsLamps ? 1 : 0);  // 3.0.7-beta.5
+    w.u8(e.torchShadows ? 1 : 0);  // 3.0.16-beta.16
+    w.i32(e.torchShadowsStrength);
     if (send(Msg::SetEffects, buffer_)) {
         effects_ = e;
         effectsSent_ = true;

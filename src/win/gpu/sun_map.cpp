@@ -64,7 +64,17 @@ void Renderer::Impl::noteCaster(const FrameRecord& rec, const DrawCmd& d, const 
         if (!put(base) || !put(base + 1) || !put(base + 2)) sunVerts.resize(before);
     }
     c.count = uint32_t(sunVerts.size() / 6) - c.first;
-    if (c.count) sunCasters.push_back(c);
+    if (!c.count) return;
+    for (int k = 0; k < 3; ++k) {  // 3.0.16-beta.16: its box, for the lights it can stand in the way of
+        c.lo[k] = 1e30f;
+        c.hi[k] = -1e30f;
+    }
+    for (uint32_t i = c.first; i < c.first + c.count; ++i)
+        for (int k = 0; k < 3; ++k) {
+            c.lo[k] = std::min(c.lo[k], sunVerts[size_t(i) * 6 + size_t(k)]);
+            c.hi[k] = std::max(c.hi[k], sunVerts[size_t(i) * 6 + size_t(k)]);
+        }
+    sunCasters.push_back(c);
 }
 
 // 1.17: the constants of a character's sprite (shaders.cpp spriteLight): the way to the sun on the screen and its

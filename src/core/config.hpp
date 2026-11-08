@@ -161,6 +161,11 @@ struct EffectSettings {
     int torchGlow = 100;    // %, 0-200: the glow around the flame
     int torchLight = 100;   // %, 0-200: the light it throws around
     int torchFlicker = 50;  // %, 0-100: how much it flickers
+    // 3.0.16-beta.16 (the owner: «тени от факелов и ламп» - «начинай»): torch_shadows - the torches' and the map's
+    // lamps' light stopped by walls, models and the ground between (core/point_shadows.hpp, Direct3D 12); off at first.
+    // torch_shadows_strength %, 0-100: how dark a shadow is (100 none of that light)
+    bool torchShadows = false;
+    int torchShadowsStrength = 80;
     // 0.24: the chimneys' smoke - each puff the game sends up drawn as billowing smoke, its wisps changing as it rises,
     // instead of the same small picture blown up. On by default.
     bool smoke = true;

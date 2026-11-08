@@ -1767,6 +1767,10 @@ void Renderer::Impl::destroy() {
     releaseCom(mirror);  // 1.16
     releaseCom(mirrorDepth);
     releaseCom(mirrorPso);
+    releaseCom(shadowPso);  // 3.0.16-beta.16
+    releaseCom(torchShadowVs);
+    releaseCom(torchShadowPs);
+    releaseCom(shadowAtlas);
     releaseCom(mirrorVs);
     releaseCom(mirrorPs);
     releaseCom(groundLifePs);
@@ -2457,7 +2461,7 @@ bool Renderer::create(std::string& error) {
         !heap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, kGpuSrvCount, true, m.gpuSrv) ||
         !heap(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, kSamplerCount, true, m.samplerHeap) ||
         !heap(D3D12_DESCRIPTOR_HEAP_TYPE_RTV, kRtvCount, false, m.rtvHeap) ||
-        !heap(D3D12_DESCRIPTOR_HEAP_TYPE_DSV, 4, false, m.dsvHeap)) {  // 1.16: kDsvMirror
+        !heap(D3D12_DESCRIPTOR_HEAP_TYPE_DSV, 5, false, m.dsvHeap)) {  // 1.16: kDsvMirror; 3.0.16-beta.16 kDsvShadow
         error = "descriptor heaps";
         return false;
     }
