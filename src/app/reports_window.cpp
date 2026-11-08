@@ -1078,10 +1078,10 @@ std::wstring ReportsWindow::shortTime(const std::string& iso) const {
 void ReportsWindow::startNew() {
     if (pane_ != Pane::New) {
         SetWindowTextW(GetDlgItem(hwnd_, kWhat), L"");
-        // 3.0.9-beta.6: «Про що це?» - from the game «Графіка» already, else none (it may stay none)
-        for (int i = 0; i < 4; ++i)
-            SendMessageW(GetDlgItem(hwnd_, kKind0 + i), BM_SETCHECK,
-                         i == 0 && !start_.shot.empty() ? BST_CHECKED : BST_UNCHECKED, 0);
+        // 3.0.9-beta.6: «Про що це?» - none chosen (it may stay none). 3.0.16-beta.26 (the tester's R-PTDFCY, a pet's
+        // accessory: «пішло у гілку про візуал, не побачив що там можна обрати»): from the game none either - it was
+        // «Графіка» already, and went so unseen
+        for (int i = 0; i < 4; ++i) SendMessageW(GetDlgItem(hwnd_, kKind0 + i), BM_SETCHECK, BST_UNCHECKED, 0);
         picks_.clear();
         SendMessageW(GetDlgItem(hwnd_, kPick), LVM_DELETEALLITEMS, 0, 0);
         ImageList_RemoveAll(thumbs_);

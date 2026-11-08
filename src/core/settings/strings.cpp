@@ -4102,9 +4102,9 @@ constexpr Entry kTexts[] = {
     {Text::ReportKindSlow, "Slow",
      "Гальмує",
      "Тормозит"},
-    {Text::ReportKindOther, "Other",
-     "Інше",
-     "Другое"},
+    {Text::ReportKindOther, "Interface and other",  // 3.0.16-beta.26: windows, items, NPCs - not only «other»
+     "Інтерфейс та інше",
+     "Интерфейс и другое"},
     {Text::ReportTitleCrash, "The game crashed",
      "Гра завершилась аварійно",
      "Игра завершилась аварийно"},
