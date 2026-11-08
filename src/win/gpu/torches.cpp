@@ -981,6 +981,7 @@ bool Renderer::Impl::applyTorches() {
     // (1 + its row of faces) and how dark its shadow is in the list's second row
     std::vector<float> shadowSlot(lights.size(), 0.0f);
     bool shadowsDrawn = false;
+    if (!shadowCollecting()) shadowedLights.clear();  // 3.0.16-beta.20
     if (shadowCollecting() && !lights.empty()) {
         std::vector<point_shadows::Candidate> cands;
         std::vector<size_t> of;

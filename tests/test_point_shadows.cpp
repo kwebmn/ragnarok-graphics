@@ -1,4 +1,5 @@
 // 3.0.16-beta.16: the torches' and lamps' shadows - the cube's faces as the shader reads them
+#include "core/actor_shadows.hpp"
 #include "core/point_shadows.hpp"
 #include <cmath>
 
@@ -69,4 +70,13 @@ TEST(point_shadows_a_character_faces_the_light) {
     for (int c = 0; c < 4; ++c) CHECK(std::fabs(q[c][0] - 4.0f) < 1e-4f);  // across the way, half width + 1 behind
     CHECK(std::fabs(q[1][2] - q[0][2] - 6.0f) < 1e-4f || std::fabs(q[0][2] - q[1][2] - 6.0f) < 1e-4f);
     CHECK(std::fabs(q[2][1] + 16.0f) < 1e-4f);  // still standing as tall
+}
+
+// 3.0.16-beta.20: the characters' shadows leave out a light with a real shadow
+TEST(point_shadows_no_second_shadow_from_a_shadowed_light) {
+    const std::vector<actor_shadows::Light> lights = {{0, 0, 0, 45, 1}, {100, 0, 0, 45, 2}};
+    const std::vector<std::array<float, 3>> shadowed = {{{3, -5, 2}}};
+    const std::vector<actor_shadows::Light> left = actor_shadows::without(lights, shadowed);
+    CHECK(left.size() == 1 && left[0].seed == 2);
+    CHECK(actor_shadows::without(lights, {}).size() == 2);
 }

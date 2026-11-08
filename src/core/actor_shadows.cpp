@@ -189,4 +189,18 @@ float groundDepth(const camera::Projection& p, const float up[3], float feetX, f
     return flat > 0.0f ? std::min(z, flat) : z;  // past the horizon: none
 }
 
+std::vector<Light> without(const std::vector<Light>& lights, const std::vector<std::array<float, 3>>& shadowed,
+                           float near) {
+    std::vector<Light> out;
+    for (const Light& l : lights) {
+        bool twin = false;
+        for (const std::array<float, 3>& s : shadowed) {
+            const float dx = l.x - s[0], dy = l.y - s[1], dz = l.z - s[2];
+            twin = twin || dx * dx + dy * dy + dz * dz < near * near;
+        }
+        if (!twin) out.push_back(l);
+    }
+    return out;
+}
+
 }  // namespace uagfx::actor_shadows

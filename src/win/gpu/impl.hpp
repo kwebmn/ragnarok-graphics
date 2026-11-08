@@ -1419,6 +1419,8 @@ struct Renderer::Impl {
     // 3.0.16-beta.18: the frame's characters' sprites (players', monsters', NPCs') standing in the world - each turned
     // to face a light with a shadow, its picture's holes letting the light through (noteStanding, draw.cpp)
     std::vector<point_shadows::Standing> standingSprites;
+    // 3.0.16-beta.20: the lights given a shadow last (in the world) - the characters' shadows leave theirs out
+    std::vector<std::array<float, 3>> shadowedLights;
     void noteStanding(const FrameRecord& rec, const DrawCmd& d);
     // 1.17, living characters (draw.cpp): a sprite lit by the sun from its silhouette's sides (shaders.cpp
     // spriteLight, stage 0 bit 28)

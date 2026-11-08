@@ -98,6 +98,11 @@ std::vector<Lit> litBy(const std::vector<Light>& lights, float feetX, float feet
 // show), each reaching 40 units and trembling by its place, and its lamps (`lamps`: those not on a torch), reaching
 // as far as their light (0.45 of their range, 15-70), steady - in the game's world by the map's axes.
 std::vector<Light> lightsOf(const rsw::World& map, const std::vector<rsw::Light>& lamps, const map::Axes& axes);
+// 3.0.16-beta.20: the lights but those within `near` of one with a real shadow ([effects] torch_shadows,
+// core/point_shadows.hpp) - a character's shadow from it drawn there already, not twice
+constexpr float kShadowedNear = 12.0f;
+std::vector<Light> without(const std::vector<Light>& lights, const std::vector<std::array<float, 3>>& shadowed,
+                           float near = kShadowedNear);
 
 // 2.6.14: each blob's shadows, `base` long of a layer's height: under the ground from the two nearest of `lights`
 // about its feet (litBy, turned to the screen by the projection and the camera backwards, `known`), none with no fire

@@ -77,6 +77,7 @@ void Renderer::Impl::noteStanding(const FrameRecord& rec, const DrawCmd& d) {
 // their distance from it (of its reach) as the depth (shaders.cpp torch_shadow_vs/ps); no colour target.
 std::vector<int> Renderer::Impl::drawTorchShadows(const std::vector<point_shadows::Candidate>& lights) {
     std::vector<int> picked;
+    shadowedLights.clear();  // 3.0.16-beta.20
     if (!shadowCollecting() || lights.empty() || sunCasters.empty() || !open) return picked;
     if (!shadowPso) {
         const D3D12_INPUT_ELEMENT_DESC layout[3] = {
@@ -303,6 +304,7 @@ std::vector<int> Renderer::Impl::drawTorchShadows(const std::vector<point_shadow
         }
     }
     transition(shadowAtlas, shadowAtlasState, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+    for (const Placed& l : placed) shadowedLights.push_back({l.at[0], l.at[1], l.at[2]});  // 3.0.16-beta.20
     boundPipeline = nullptr;  // the next draws bind everything again
     boundTextures = boundSamplers = ~0ull;
     pass = kPassNone;
