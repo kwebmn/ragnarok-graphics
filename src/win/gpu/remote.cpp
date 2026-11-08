@@ -481,6 +481,7 @@ void Remote::setEffects(const EffectSettings& e) {
     w.u8(e.torchShadows ? 1 : 0);  // 3.0.16-beta.16
     w.i32(e.torchShadowsStrength);
     w.u8(e.bodyStamp ? 1 : 0);  // 3.0.16-beta.25
+    w.u8(e.sharpSprites ? 1 : 0);  // 3.0.16-beta.29
     if (send(Msg::SetEffects, buffer_)) {
         effects_ = e;
         effectsSent_ = true;

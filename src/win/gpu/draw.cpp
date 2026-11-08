@@ -569,6 +569,8 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     if (matTex) materialConstants(d.fvf == d3d7::FVF_TL2, c);  // 1.8
     if (hilly) hillsConstants(c);  // 1.15
     if (sprite && !matTex && c.uiMode == 0) spriteConstants(c, t[0] ? t[0]->width : 0);  // 1.17
+    // 3.0.16-beta.29: [effects] sharp_sprites - a character's sprite sampled as squares of its pixels (sharpTexel)
+    if (effects.sharpSprites && !matTex && c.uiMode == 0 && characterSource(rec, d, s)) c.stage0[1] |= 1u << 29;
     if (seamPass) {  // 1.9: a strip across a seam of the ground - its alpha from the noise over the world (shade())
         c.stage1[1] |= 1u << 31;
         const camera::Projection p = camera::projectionFor(gameWidth, gameHeight);

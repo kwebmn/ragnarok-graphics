@@ -785,6 +785,8 @@ const std::vector<IniSetting>& iniSettings() {
          Text::FxBodyTintsHint, "", &E::bodyTints},
         {"effects", "body_stamp", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxBodyStamp,
          Text::FxBodyStampHint, "", &E::bodyStamp},  // 3.0.16-beta.25
+        {"effects", "sharp_sprites", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxSharpSprites,
+         Text::FxSharpSpritesHint, "", &E::sharpSprites},  // 3.0.16-beta.29
         {"effects", "wet_ground", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxWetGround,
          Text::FxWetGroundHint, "", &E::wetGround},
         {"effects", "tree_volume", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxTreeVolume,

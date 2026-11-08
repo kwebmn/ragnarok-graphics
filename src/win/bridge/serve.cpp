@@ -197,6 +197,7 @@ bool Server::dispatch(Msg type, const uint8_t* data, uint32_t size) {
             e.torchShadows = rd.u8() != 0;  // 3.0.16-beta.16
             e.torchShadowsStrength = rd.i32();
             e.bodyStamp = rd.u8() != 0;  // 3.0.16-beta.25
+            e.sharpSprites = rd.u8() != 0;  // 3.0.16-beta.29
             if (rd.ok()) renderer_.setEffects(e);
             break;
         }

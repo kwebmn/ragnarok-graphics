@@ -171,6 +171,10 @@ struct EffectSettings {
     // after them falls behind the body where it lies behind it (a ring's far half), in front where it lies in front
     // (win/gpu/body_stamp.cpp, Direct3D 12); off at first
     bool bodyStamp = false;
+    // 3.0.16-beta.29 (the owner: «делай» - the sharp pixels, Korangar's idea): sharp_sprites - the characters', the
+    // monsters' and the NPCs' sprites close up drawn as clean squares of their pixels with a soft edge one screen
+    // pixel wide (no blur, no flicker); far off as before (shaders.cpp sharpTexel); off at first
+    bool sharpSprites = false;
     // 0.24: the chimneys' smoke - each puff the game sends up drawn as billowing smoke, its wisps changing as it rises,
     // instead of the same small picture blown up. On by default.
     bool smoke = true;

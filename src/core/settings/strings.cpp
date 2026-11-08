@@ -2036,6 +2036,14 @@ constexpr Entry kTexts[] = {
      "що попереду, малюється поверх, як і раніше. Лише Direct3D 12. Спочатку вимкнено.",
      "Эффект позади персонажа — дальняя половина круга вокруг него, огонь за спиной — прячется за его фигурой, а то, "
      "что впереди, рисуется поверх, как и раньше. Только Direct3D 12. Сначала выключено."},
+    {Text::FxSharpSprites, "Sharp character pixels", "Чіткі пікселі героїв", "Чёткие пиксели героев"},
+    {Text::FxSharpSpritesHint,
+     "Close up, the sprites of characters, monsters and NPCs are drawn as clean squares of their pixels with a soft "
+     "edge - no blur, no flicker. Far off they look as before. Off at first.",
+     "Зблизька спрайти персонажів, монстрів і NPC малюються чистими квадратиками своїх пікселів з м'яким краєм — без "
+     "розмиття й мерехтіння. Здалеку — як і раніше. Спочатку вимкнено.",
+     "Вблизи спрайты персонажей, монстров и NPC рисуются чистыми квадратиками своих пикселей с мягким краем — без "
+     "размытия и мерцания. Издалека — как и раньше. Сначала выключено."},
     {Text::InterfaceSkillNeeds, "What a skill lacks", "Чого бракує навичці", "Чего не хватает навыку"},
     {Text::InterfaceSkillNeedsHint,
      "A skill on the bar that cannot go for its gem or its spirit spheres is dimmed with a red plate: ×0 when the "

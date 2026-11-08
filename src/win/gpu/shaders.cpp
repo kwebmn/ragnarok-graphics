@@ -325,6 +325,20 @@ float relief(float2 uv, float2 du, float2 dv, float seen) {
 }
 #endif
 
+// 3.0.16-beta.29 ([effects] sharp_sprites, Korangar's idea): a character's sprite close up - each of its texels a
+// clean square, the edge between two blended over one screen pixel only (the texel's place moved towards its middle
+// by how many screen pixels a texel spans; the bilinear filter does the rest). A texel smaller than a pixel: the
+// place as it was - far off the same picture as before. The draw's bit 29 of stage0.y.
+float2 sharpTexel(float2 uv, float2 du, float2 dv) {
+    float w, h;
+    tex0.GetDimensions(w, h);
+    float2 size = float2(w, h);
+    float2 t = uv * size;
+    float2 span = max((abs(du) + abs(dv)) * size, float2(1e-4, 1e-4));  // texels a screen pixel (fwidth, no branch)
+    float2 f = frac(t) - 0.5;
+    return (floor(t) + 0.5 + clamp(f / span, -0.5, 0.5)) / size;
+}
+
 #ifndef UAGFX_SAFE
 // 1.17, living characters (draw.cpp spriteConstants): a sprite of a character or a monster lit by the sun as a body.
 // 2.6.4: its silhouette seen from a little way off - its alpha 3 and 6 of the game's texels around, eight ways - as a
@@ -737,10 +751,13 @@ float4 shade(PsIn i) {
         pane = saturate((m.w - 0.74) * 4.0);  // 1.21: a window's pane (material_ps): glass's gloss
         if (m.w > 0.72) m.w = 0.35 * pane;
     }
-    float4 t0 = tex0.SampleGrad(samp0, uv0, du, dv);
+    // 3.0.16-beta.29: [effects] sharp_sprites (bit 29)
+    float2 uvSharp = ((stage0.y >> 29) & 1) != 0 ? sharpTexel(uv0, du, dv) : uv0;
+    float4 t0 = tex0.SampleGrad(samp0, uvSharp, du, dv);
     if (((stage1.y >> 26) & 1) != 0) t0.rgb *= relief(uv0, du, dv, seen);  // 0.71: the ground
 #else
-    float4 t0 = tex0.Sample(samp0, uv0);
+    float4 t0 = ((stage0.y >> 29) & 1) != 0 ? tex0.SampleGrad(samp0, sharpTexel(uv0, du, dv), du, dv)
+                                             : tex0.Sample(samp0, uv0);  // 3.0.16-beta.29: sharp_sprites
 #endif
     if (uiMode == 3)
         t0 = twinTexel(i.pos.xy);

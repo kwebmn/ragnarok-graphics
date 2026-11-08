@@ -33,6 +33,7 @@
 #include "core/png_write.hpp"
 #include "core/shot_spec.hpp"
 #include "core/region_look.hpp"
+#include "core/sprite_exe.hpp"
 #include "core/scale.hpp"
 #include "core/shader_cache.hpp"
 #include "core/step_tiles.hpp"
@@ -1688,6 +1689,24 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
         !t[0]->cells.empty() && !t[0]->leafy &&
         ai::flatQuad(rec.vertexBytes().data() + d.vertexOffset, stride, d.vertexCount, d.indexCount))
         spriteConstants(c, t[0]->width);
+    // 3.0.16-beta.29 (draw.cpp): [effects] sharp_sprites - a player's, a monster's or an NPC's sprite as squares of
+    // its pixels (shaders.cpp sharpTexel)
+    if (!mat && effects_.sharpSprites && !s.ui && s.blend && c.uiMode == 0 && d.vertexCount == 4 &&
+        t[0] != &white_ && !t[0]->cells.empty() && !t[0]->leafy &&
+        ai::flatQuad(rec.vertexBytes().data() + d.vertexOffset, stride, d.vertexCount, d.indexCount)) {
+        const uint8_t* q = rec.vertexBytes().data() + d.vertexOffset;
+        float u0 = 0.0f, v0 = 0.0f;
+        for (int k = 0; k < 4; ++k) {
+            float uv[2];
+            std::memcpy(uv, q + size_t(k) * stride + 24, sizeof uv);
+            u0 += uv[0] * 0.25f;
+            v0 += uv[1] * 0.25f;
+        }
+        const uint8_t from = spriteSourceAt(t[0]->cells, t[0]->width, t[0]->height, u0, v0);
+        if (from == uint8_t(sprite_exe::Source::Player) || from == uint8_t(sprite_exe::Source::Monster) ||
+            from == uint8_t(sprite_exe::Source::Npc))
+            c.stage0[1] |= 1u << 29;
+    }
     // 2.5.9 (draw.cpp 1.15): smooth hills - a draw of the ground (its own or a seam's strip) reads the corners'
     // normals (t3)
     const bool hilly = hillsWanted() && !s.ui && d.fvf == d3d7::FVF_TL2 && !water && !d.twin &&
