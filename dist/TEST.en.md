@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.16-beta.18 — what's new
+
+- **"Shadows from torches and lamps": characters too.** Heroes, monsters and NPCs near a torch or a lamp cast a real shadow of their silhouette from it — on the floor and the walls, away from the light.
+
 # uaRO Graphics 3.0.16-beta.17 — what's new
 
 - **A pet's accessory is worn again on a double click in the items window**, as in the game's own window. The new window did nothing with it before.
