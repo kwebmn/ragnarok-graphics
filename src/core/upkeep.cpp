@@ -69,6 +69,24 @@ std::vector<int> Watch::takeFresh() {
     return out;
 }
 
+uint32_t ownPetOf(uint16_t id, const uint8_t* p, size_t size, uint32_t known) {
+    if (id != 0x01a4 || !p || size < 11 || known != 0 || p[2] == 0) return 0;
+    return rd32(p, 3);
+}
+
+int petClassOf(uint16_t id, const uint8_t* p, size_t size, uint32_t& unit) {
+    if (!p) return 0;
+    if (id == 0x007c && size >= 22 && rd16(p, 14) == 100) {
+        unit = rd32(p, 2);
+        return rd16(p, 20);
+    }
+    if ((id == 0x0078 || id == 0x007b) && size >= 18 && rd16(p, 16) == 100) {
+        unit = rd32(p, 2);
+        return rd16(p, 14);
+    }
+    return 0;
+}
+
 int hungerLevel(int fullness) { return fullness < 0 ? 0 : fullness <= 10 ? 2 : fullness <= 25 ? 1 : 0; }
 
 }  // namespace uagfx::upkeep

@@ -59,3 +59,20 @@ TEST(upkeep_pet_and_homunculus) {
     w.packet(0x0091, move, sizeof move);
     CHECK_EQ(w.pet(), -1);
 }
+
+// 3.0.16-beta.36 (R-XQ5XQP): the own pet's unit from a 0x01a4 of another type while the game knows none
+TEST(upkeep_own_pet_from_other_packets) {
+    uint8_t hunger[11] = {0xa4, 0x01, 2, 0x5f, 0x51, 0x91, 0x06, 95, 0, 0, 0};  // unit 110186847, fullness 95
+    CHECK_EQ(upkeep::ownPetOf(0x01a4, hunger, sizeof hunger, 0), 110186847u);
+    CHECK_EQ(upkeep::ownPetOf(0x01a4, hunger, sizeof hunger, 5), 0u);  // the game knows one
+    hunger[2] = 0;
+    CHECK_EQ(upkeep::ownPetOf(0x01a4, hunger, sizeof hunger, 0), 0u);  // type 0: the game's own way
+    uint8_t spawn[22] = {0x78, 0x00, 0x5f, 0x51, 0x91, 0x06};
+    spawn[14] = 0x05, spawn[15] = 0x04;  // class 1029
+    spawn[16] = 100;
+    uint32_t unit = 0;
+    CHECK_EQ(upkeep::petClassOf(0x0078, spawn, sizeof spawn, unit), 1029);
+    CHECK_EQ(unit, 110186847u);
+    spawn[16] = 0;
+    CHECK_EQ(upkeep::petClassOf(0x0078, spawn, sizeof spawn, unit), 0);
+}

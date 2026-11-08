@@ -97,8 +97,31 @@ void trace(uint16_t id, const uint8_t* p) {
 
 }  // namespace
 
+// 3.0.16-beta.36 (core/upkeep ownPetOf): the game's own pet (uaRO.exe DAT_00771a70, the pet window's and the menu's
+// unit; DAT_00771a9c its class) set from the server's other pet packets when its 0x01a4 type 0 never came - set before
+// the game's handler reads the packet (the tap is the loop's id)
+void ownPet(uint16_t id, const uint8_t* p) {
+    static uint32_t petUnit = 0;
+    static int petClass = 0;
+    static int told = 0;
+    uint32_t unit = 0;
+    if (const int cls = upkeep::petClassOf(id, p, kReadable, unit)) {
+        petUnit = unit;  // the last pet in sight (the own one comes with its owner)
+        petClass = cls;
+    }
+    volatile uint32_t* known = reinterpret_cast<volatile uint32_t*>(uintptr_t(0x771A70));
+    const uint32_t own = upkeep::ownPetOf(id, p, kReadable, *known);
+    if (!own) return;
+    *known = own;
+    if (own == petUnit && petClass > 0) *reinterpret_cast<volatile int32_t*>(uintptr_t(0x771A9C)) = petClass;
+    if (told++ < 5)
+        LOG_INFO("pet: the game knew no own pet - unit %u taken from the server's 0x01a4 type %u (class %d)", own, p[2],
+                 own == petUnit ? petClass : 0);
+}
+
 void packet(uint16_t id, const uint8_t* p) {
     trace(id, p);
+    ownPet(id, p);
     State& s = state();
     if (!s.watch.packet(id, p, kReadable)) return;
     if (id == 0x00a4) {

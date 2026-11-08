@@ -34,4 +34,12 @@ private:
 // How hungry: 0 fine, 1 hungry (25 or less), 2 very (10 or less)
 int hungerLevel(int fullness);
 
+// 3.0.16-beta.36 (the tester: after entering the game the own Isis is a monster - no menu - until a Fly Wing;
+// R-XQ5XQP's trace: the server sent it as a unit in sight, 0x0078 with hair 100, never its 0x01a4 type 0 - the own pet
+// DAT_00771a70 stayed 0): the pet's unit from a later 0x01a4 of another type (its hunger, accessory, a trick - each
+// names the own pet's unit) while the game knows none; 0 nothing to take. The pets in sight by their spawns' hair 100
+// (0x0078 / 0x007b: class +14, hair +16; 0x007c: hair +14, class +20) - their class, for the game's pet kind.
+uint32_t ownPetOf(uint16_t id, const uint8_t* p, size_t size, uint32_t known);
+int petClassOf(uint16_t id, const uint8_t* p, size_t size, uint32_t& unit);  // 0: not a pet's spawn
+
 }  // namespace uagfx::upkeep
