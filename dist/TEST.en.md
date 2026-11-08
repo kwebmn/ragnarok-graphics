@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.16-beta.19 — what's new
+
+- **"Shadows from torches and lamps": no dark patch under braziers.** A brazier's bowl and legs shadowed the ground under its own fire — a dark diamond and a star of rays. A fire's own stand casts no shadow from it now.
+
 # uaRO Graphics 3.0.16-beta.18 — what's new
 
 - **"Shadows from torches and lamps": characters too.** Heroes, monsters and NPCs near a torch or a lamp cast a real shadow of their silhouette from it — on the floor and the walls, away from the light.
