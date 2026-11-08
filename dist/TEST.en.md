@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.16-beta.33 — what's new
+
+- **New: "Opening a shop card"** (Interface → Windows, off at first). Opening your shop (Vending) as one card in the new look: the shop's name, the cart's things (a click puts one up for sale), the things for sale with a price field and a cross to take one back, and the "Open the shop" button. The game itself checks the prices, as before.
+
 # uaRO Graphics 3.0.16-beta.32 — what's new
 
 - **A closer comparison with the monsters.** In "Stats" → "Planning" → "Map monsters" and on a monster's card, your blow now counts the monster's size (a dagger is weaker on large ones, an axe on small ones and so on) and element: a plain blow on ghosts gets through only in part or not at all. The number of blows to win is closer to the real one.
