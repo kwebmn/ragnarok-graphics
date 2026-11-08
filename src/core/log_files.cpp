@@ -31,6 +31,18 @@ std::string previous(const std::string& path) { return withWord(path, "prev"); }
 
 std::string part(const std::string& path) { return withWord(path, "1"); }
 
+std::string firstLine(const std::string& log) {
+    const size_t end = log.find_first_of("\r\n");
+    return log.substr(0, end == std::string::npos ? log.size() : end);
+}
+
+Which whichLog(const std::string& start, const std::string& now, const std::string& nowPart,
+               const std::string& prev) {
+    if (start.empty()) return Which::Now;  // not known at the start: as before
+    if (firstLine(now) == start || firstLine(nowPart) == start) return Which::Now;
+    return firstLine(prev) == start ? Which::Previous : Which::None;
+}
+
 std::string folderOf(const std::string& path) {
     const size_t slash = path.find_last_of('\\');
     return slash == std::string::npos ? std::string() : path.substr(0, slash);

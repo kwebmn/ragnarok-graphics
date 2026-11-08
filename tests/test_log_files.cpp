@@ -29,3 +29,16 @@ TEST(log_files_slot_names) {
     CHECK_EQ(logfiles::slotted("C:\\a.b\\pad", 2), std::string("C:\\a.b\\pad-2"));  // no ".log": at the end
     CHECK(logfiles::kSlots == 8);
 }
+
+// 3.0.16-beta.15 (R-TZUA5M): the watched game's log after it ends - another game started meanwhile moved it to .prev
+TEST(log_files_the_watched_games_log) {
+    const std::string a = "12:25:27.816 INFO  uaRO Graphics 3.0.16-beta.14 in D:\\uaRO.exe\r\nmore\r\n";
+    const std::string b = "12:26:55.440 INFO  uaRO Graphics 3.0.16-beta.14 in D:\\uaRO.exe\r\nrenderer open\r\n";
+    CHECK(logfiles::firstLine(a) == "12:25:27.816 INFO  uaRO Graphics 3.0.16-beta.14 in D:\\uaRO.exe");
+    const std::string start = logfiles::firstLine(a);
+    CHECK(logfiles::whichLog(start, a, "", "") == logfiles::Which::Now);
+    CHECK(logfiles::whichLog(start, b, "", a) == logfiles::Which::Previous);  // started again: its log is .prev
+    CHECK(logfiles::whichLog(start, "later lines\r\n", a, "") == logfiles::Which::Now);  // a long one's start aside
+    CHECK(logfiles::whichLog(start, b, "", b) == logfiles::Which::None);  // gone: nothing sent
+    CHECK(logfiles::whichLog("", b, "", "") == logfiles::Which::Now);
+}

@@ -310,6 +310,12 @@ int watchGame(unsigned long pid, int logSlot) {
     if (!config.reportAuto && !config.statsSend && !answers && !live && !firstPending) return 0;  // nothing to wait for
     HANDLE game = OpenProcess(SYNCHRONIZE, FALSE, pid);
     if (!game) return 0;
+    // 3.0.16-beta.15 (R-TZUA5M): this game's log by its first line - a game started again before the end's read
+    // writes that file anew, this one's moved to .prev
+    const std::wstring driverLog = ourPlace(exeFolder(), layout::now(layout::File::DriverLog));
+    const std::string logPath = logfiles::slotted(utf8(driverLog), logSlot);
+    std::string startLine;
+    if (readFile(wide(logPath), startLine)) startLine = logfiles::firstLine(startLine);
     ULONGLONG answered = GetTickCount64();
     while (WaitForSingleObject(game, live ? kOnlineEveryMs : answers ? kAnswersEveryMs : INFINITE) == WAIT_TIMEOUT) {
         if (live) {
@@ -326,9 +332,15 @@ int watchGame(unsigned long pid, int logSlot) {
     CloseHandle(game);
     if (!config.reportAuto && !config.statsSend && !firstPending) return 0;
     Sleep(2000);  // the log closed and flushed
-    std::string log;  // 3.0.3-beta.1: that game window's
-    const std::wstring driverLog = ourPlace(exeFolder(), layout::now(layout::File::DriverLog));
-    const bool logRead = readFile(wide(logfiles::slotted(utf8(driverLog), logSlot)), log);
+    std::string log, part, prev;  // 3.0.3-beta.1: that game window's
+    bool logRead = readFile(wide(logPath), log);
+    readFile(wide(logfiles::part(logPath)), part);
+    readFile(wide(logfiles::previous(logPath)), prev);
+    switch (logfiles::whichLog(startLine, log, part, prev)) {
+        case logfiles::Which::Now: break;
+        case logfiles::Which::Previous: log = prev; logRead = true; break;
+        case logfiles::Which::None: logRead = false; break;
+    }
     if (firstPending) {  // 3.0.11-beta.61: how it ended and how long - sent at once with the install's mark
         if (readFile(firstPath, firstText)) firstgame::parse(firstText, first);  // its first minute on the maps
         first.end = logRead ? firstgame::endOfLog(log) : "";

@@ -16,5 +16,12 @@ std::string part(const std::string& path);      // the start of a long one: "x\a
 std::string folderOf(const std::string& path);  // "x\y\a.log" -> "x\y"; "" with no backslash
 // 3.0.11-beta.61: the time of day (seconds) of the log's line holding `at`, by its "HH:MM:SS" start; -1 none
 int secondsAt(const std::string& log, size_t at);
+// 3.0.16-beta.15 (R-TZUA5M: a game closed and started again 3 s later - the watcher read the new game's open log and
+// sent a «crash»): a log's first line (its game's start, to the millisecond); which file now holds the watched game's
+// log - its start line `start` heading the log, the start set aside of a long one (part) or the previous game's
+enum class Which { Now, Previous, None };
+std::string firstLine(const std::string& log);
+Which whichLog(const std::string& start, const std::string& now, const std::string& nowPart,
+               const std::string& prev);
 
 }  // namespace uagfx::logfiles
