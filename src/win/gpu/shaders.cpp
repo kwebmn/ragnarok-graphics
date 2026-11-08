@@ -1731,7 +1731,7 @@ float torchShadow(float3 p, float3 n, float3 L, float reach, float slot) {
     float3 d = dv.x * float3(r0, r1, r2) + dv.y * float3(r3, r4, r5) + dv.z * float3(r6, r7, r8);
     float len = length(d);
     float dist = len / reach;
-    if (dist >= 1.0 || len < 3.0) return 1.0;  // point_shadows::kNearIgnore
+    if (dist >= 1.0 || len < 8.0) return 1.0;  // point_shadows::kNearIgnore
     float3 ad = abs(d);
     int a = 0;
     if (ad.y > ad.x && ad.y >= ad.z) a = 1;
@@ -2731,7 +2731,7 @@ TorchShadowIn torch_shadow_vs(float3 p : POSITION, float2 uv : TEXCOORD0, float4
 
 float torch_shadow_ps(TorchShadowIn i) : SV_Depth {
     float len = length(i.d);
-    if (len < 3.0) discard;
+    if (len < 8.0) discard;  // point_shadows::kNearIgnore
     if (footprint > 0.5 && tex0.Sample(samp0, i.uv).a < twinY) discard;
     return saturate(len / cy);
 }

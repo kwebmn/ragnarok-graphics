@@ -11,7 +11,9 @@ namespace uagfx::point_shadows {
 // goes through. The faces' axes are the world's, their x and y the next two axes round (shaders.cpp torchShadow).
 constexpr int kMostLights = 8;   // the lights with shadows in a frame
 constexpr int kFaceTexels = 256; // a face's side
-constexpr float kNearIgnore = 3.0f;  // world units: what lies this near the light (its own holder) casts nothing
+// world units: what lies this near the light (its own holder) casts nothing - 3.0.16-beta.19 (R-F7SCX5, pay_dun00: a
+// dark diamond and a star of legs under each brazier, its bowl and its stand shadowing the ground below): 8, was 3
+constexpr float kNearIgnore = 8.0f;
 
 // Face f (0-5): the axis f / 2, towards + for an even f; right and up the next two axes round.
 struct Face {
