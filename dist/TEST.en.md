@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.16-beta.29 — what's new
+
+- **New: "Sharp character pixels"** (Effects → Characters, off at first). With the camera close, the sprites of characters, monsters and NPCs are drawn as clean squares of their pixels with a soft edge - no blur, no flicker. Far off everything looks as before. Works on Direct3D 12 and 11.
+
 # uaRO Graphics 3.0.16-beta.28 — what's new
 
 - **Check: the pet after entering the game.** The log records the server's pet packets to find out why, after entering, the pet looks like an ordinary monster (no accessory, no menu) until the first teleport. Nothing changes in how the game looks.
