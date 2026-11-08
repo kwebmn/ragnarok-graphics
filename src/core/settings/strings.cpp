@@ -2019,6 +2019,14 @@ constexpr Entry kTexts[] = {
      "стін.",
      "Сколько света факела или лампы забирает тень: 100 % — весь, меньше — оставляет немного света, будто "
      "отражённого от стен."},
+    {Text::FxBodyStamp, "Effects behind the character", "Ефекти за героєм", "Эффекты за героем"},
+    {Text::FxBodyStampHint,
+     "An effect behind a character - the far half of a ring round it, a fire at its back - hides behind its figure, "
+     "the part in front of it is drawn over as before. Direct3D 12 only. Off at first.",
+     "Ефект позаду персонажа — дальня половина кола навколо нього, вогонь за спиною — ховається за його фігурою, а те, "
+     "що попереду, малюється поверх, як і раніше. Лише Direct3D 12. Спочатку вимкнено.",
+     "Эффект позади персонажа — дальняя половина круга вокруг него, огонь за спиной — прячется за его фигурой, а то, "
+     "что впереди, рисуется поверх, как и раньше. Только Direct3D 12. Сначала выключено."},
     {Text::InterfaceSkillNeeds, "What a skill lacks", "Чого бракує навичці", "Чего не хватает навыку"},
     {Text::InterfaceSkillNeedsHint,
      "A skill on the bar that cannot go for its gem or its spirit spheres is dimmed with a red plate: ×0 when the "

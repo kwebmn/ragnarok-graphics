@@ -1093,6 +1093,7 @@ struct Renderer::Impl {
         darknessRec.reset();  // 2.6.18
         darknessLaid = false;
         silhouetteRec.reset();  // 3.0.13-beta.30
+        stampRec.reset();       // 3.0.16-beta.25
         aoDone = groundDrawn = gradeDone = torchDone = false;  // 0.20-0.23
         nightDone = false;  // 0.63
         dayKept = dayWanted = false;  // 2.7.47, 3.0.5-beta.20
@@ -1216,6 +1217,13 @@ struct Renderer::Impl {
     bool darknessPass = false, darknessLaid = false;
     // 3.0.13-beta.30: [effects] silhouette - the character's sprites, drawn again where something hides them
     FrameRecord silhouetteRec;
+    // 3.0.16-beta.25: [effects] body_stamp - the characters' sprites' shapes for the depth, gathered as the game draws
+    // them, put down once a draw of something else comes (body_stamp.cpp)
+    FrameRecord stampRec;
+    bool stampPass = false, stampLogged = false;
+    uint8_t characterSource(const FrameRecord& rec, const DrawCmd& d, const DrawSetup& s);  // 0 none
+    void noteStamp(const FrameRecord& rec, const DrawCmd& d, const DrawSetup& s);
+    bool applyStamps();  // false: lost
     bool silhouettePass = false;
     int silhouetteTold = 0;  // the log's first sprites near the character
     void noteSilhouette(const FrameRecord& rec, const DrawCmd& d, const DrawSetup& s);

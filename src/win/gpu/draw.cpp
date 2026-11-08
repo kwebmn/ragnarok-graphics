@@ -64,7 +64,15 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
                                        : "the game's world";
     crumb(span);
     // 1.9: the driver's own draws (no hooks, nothing noted); 3.0.4-beta.10 the own ground's
-    const bool inner = seamPass || darknessPass || ownPass || silhouettePass;
+    const bool inner = seamPass || darknessPass || ownPass || silhouettePass || stampPass;
+    // 3.0.16-beta.25: [effects] body_stamp - a character's sprite gathered for the depth; the gathered ones put down
+    // before anything else is drawn
+    if (!inner && effects.bodyStamp && !s.ui) {
+        if (characterSource(rec, d, s)) noteStamp(rec, d, s);
+        else if (!stampRec.draws().empty() && !applyStamps()) return;
+    } else if (!inner && !stampRec.draws().empty() && !applyStamps()) {
+        return;
+    }
     // 2.6.18: blindness's darkness waits for the world's effects (applyDarkness)
     if (!inner && !s.ui && d.effect == uint8_t(effect_exe::Kind::Darkness) && !darknessLaid) {
         noteDarkness(rec, d, s);

@@ -781,6 +781,8 @@ const std::vector<IniSetting>& iniSettings() {
         // 3.0.16-beta.13: the body's tints (.14: the afterimages gone - the owner: «убери»)
         {"effects", "body_tints", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxBodyTints,
          Text::FxBodyTintsHint, "", &E::bodyTints},
+        {"effects", "body_stamp", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxBodyStamp,
+         Text::FxBodyStampHint, "", &E::bodyStamp},  // 3.0.16-beta.25
         {"effects", "wet_ground", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxWetGround,
          Text::FxWetGroundHint, "", &E::wetGround},
         {"effects", "tree_volume", Page::Effects, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::FxTreeVolume,

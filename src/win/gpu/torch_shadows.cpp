@@ -45,7 +45,7 @@ void Renderer::Impl::noteStanding(const FrameRecord& rec, const DrawCmd& d) {
     if (d.vertexOffset + 4 * stride > v.size()) return;
     const uint8_t* q = v.data() + d.vertexOffset;
     if (!ai::flatQuad(q, stride, d.vertexCount, d.indexCount)) return;
-    float world[4][3], screen[4][2], uv[4][2], u0 = 0.0f, v0 = 0.0f;
+    float world[4][3], screen[4][2], uv[4][2];
     const camera::Projection p = camera::projectionFor(gameWidth, gameHeight);
     const float* m = viewToWorld;
     for (int i = 0; i < 4; ++i) {
@@ -59,13 +59,8 @@ void Renderer::Impl::noteStanding(const FrameRecord& rec, const DrawCmd& d) {
         world[i][2] = vx * m[2] + vy * m[5] + vz * m[8] + m[11];
         screen[i][0] = xyzw[0];
         screen[i][1] = xyzw[1];
-        u0 += uv[i][0] * 0.25f;
-        v0 += uv[i][1] * 0.25f;
     }
-    const uint8_t source = spriteSourceAt(t->second.spriteCells, t->second.width, t->second.height, u0, v0);
-    if (source != uint8_t(sprite_exe::Source::Player) && source != uint8_t(sprite_exe::Source::Monster) &&
-        source != uint8_t(sprite_exe::Source::Npc))
-        return;
+    if (!characterSource(rec, d, rec.states()[d.state])) return;
     point_shadows::Standing s;
     if (!point_shadows::standingOf(world, screen, uv, s)) return;
     s.texture = d.texture[0];

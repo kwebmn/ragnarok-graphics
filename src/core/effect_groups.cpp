@@ -35,6 +35,7 @@ const Member kMembers[] = {
     {"hit_flash", Characters, 1, &E::hitFlash},
     {"death_flash", Characters, 1, &E::deathFlash},  // 3.0.16-beta.7
     {"body_tints", Characters, 1, &E::bodyTints},
+    {"body_stamp", Characters, 0, &E::bodyStamp},  // 3.0.16-beta.25: by hand only
     {"aura", Characters, 1, &E::aura},
     {"aura_portals", Characters, 1, &E::auraPortals},  // 3.0.13-beta.15
     {"silhouette", Characters, 1, &E::silhouette},     // 3.0.13-beta.30
@@ -183,6 +184,7 @@ const OldMember kOldMembers[] = {
     {OldLife, &E::nightFireflies},  {OldLife, &E::embers},
     {OldSkills, &E::aura},          {OldSkills, &E::skillsSoft},
     {OldSkills, &E::hitFlash},      {OldSkills, &E::skillSparks},
+    {OldSkills, &E::bodyStamp},  // 3.0.16-beta.25
     {OldPicture, &E::grade},        {OldPicture, &E::regionLooks},  {OldPicture, &E::bloom},
 };
 const Strength kOldStrengths[] = {

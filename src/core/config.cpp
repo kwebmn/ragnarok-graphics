@@ -189,6 +189,7 @@ EffectSettings effectsOff() {
     e.spriteLight = false;
     e.worldReflections = false;
     e.torchShadows = false;  // 3.0.16-beta.16
+    e.bodyStamp = false;     // 3.0.16-beta.25
     e.smoothHills = false;
     e.ownGround = false;  // 3.0.4-beta.10
     e.ownFarModels = false;  // 3.0.4-beta.14
@@ -266,7 +267,7 @@ bool drawnByRenderer(const EffectSettings& e) {
            e.rainWet ||
            e.seasons ||
            e.spriteLight ||
-           e.worldReflections || e.torchShadows ||
+           e.worldReflections || e.torchShadows || e.bodyStamp ||
            e.smoothHills ||
            e.ownGround ||
            e.groundSeams ||

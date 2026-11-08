@@ -166,6 +166,11 @@ struct EffectSettings {
     // torch_shadows_strength %, 0-100: how dark a shadow is (100 none of that light)
     bool torchShadows = false;
     int torchShadowsStrength = 80;
+    // 3.0.16-beta.25 (the owner: «давай» - the body's stamp, from nostalRE): body_stamp - after the game's characters'
+    // sprites (drawn writing no depth) each one's shape put into the depth a little behind its feet: an effect drawn
+    // after them falls behind the body where it lies behind it (a ring's far half), in front where it lies in front
+    // (win/gpu/body_stamp.cpp, Direct3D 12); off at first
+    bool bodyStamp = false;
     // 0.24: the chimneys' smoke - each puff the game sends up drawn as billowing smoke, its wisps changing as it rises,
     // instead of the same small picture blown up. On by default.
     bool smoke = true;

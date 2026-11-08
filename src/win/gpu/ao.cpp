@@ -791,6 +791,7 @@ bool Renderer::Impl::applyBloom() {
 }
 
 bool Renderer::Impl::finishWorld() {
+    if (!stampRec.draws().empty() && !applyStamps()) return false;  // 3.0.16-beta.25: the last sprites' shapes
     if (aoDue() && !applyAo()) return false;
     if (seamsDue() && !applySeams()) return false;            // 1.9
     if (groundLifeDue() && !applyGroundLife()) return false;  // 1.7
