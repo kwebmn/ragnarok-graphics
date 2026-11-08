@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.16-beta.27 — what's new
+
+- **New: "Soft look" for the new skill effects** (Effects → under "Mages' new effects", off at first). Instead of crisp dense layers - the game's own glow and see-through light, tinted a little in the element's colours and brighter. It applies to every class's new effects: Safety Wall, Sanctuary, Pneuma, Magnus and the rest look lighter. The Monk's spheres and Fire Wall keep their own look.
+
 # uaRO Graphics 3.0.16-beta.26 — what's new
 
 - **"New report": you choose what it is about.** Opened from the game (Ctrl+Shift+F10), "Graphics" is no longer chosen in advance — pick what it is about or leave it empty. "Other" is now "Interface and other": windows, items, NPCs.
