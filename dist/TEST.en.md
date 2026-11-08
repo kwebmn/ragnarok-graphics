@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.16-beta.14 — what's new
+
+- **"Afterimages when fast" removed** — the switch is gone. "Body tints" stays.
+
 # uaRO Graphics 3.0.16-beta.13 — what's new
 
 Six new switches, all off (turn them on in the uaRO program):
