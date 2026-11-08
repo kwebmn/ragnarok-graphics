@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.16-beta.34 — what's new
+
+- **Fixed: the game did not start with "cannot init d3d"** on betas 30–33 (an error in the torch shadows' shader).
+
 # uaRO Graphics 3.0.16-beta.33 — what's new
 
 - **New: "Opening a shop card"** (Interface → Windows, off at first). Opening your shop (Vending) as one card in the new look: the shop's name, the cart's things (a click puts one up for sale), the things for sale with a price field and a cross to take one back, and the "Open the shop" button. The game itself checks the prices, as before.
