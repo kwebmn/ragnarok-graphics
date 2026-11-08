@@ -1,3 +1,14 @@
+# uaRO Graphics 3.0.16-beta.13 — what's new
+
+Six new switches, all off (turn them on in the uaRO program):
+
+- **"What a skill lacks"** (Interface): a skill on the bar short of its gem or spheres is dimmed with a red plate - ×0 or 3/5, its tip says what.
+- **"Combo window"** (Interface): the Monk's skill that chains now is outlined in gold with its time shrinking; Asura glows blue when it can go (5 spheres and Fury).
+- **"Broken gear"** (Interface): when a weapon or armour breaks - a sound and a red "Broken: ..." in the character block.
+- **"Pet and homunculus hunger"** (Interface): their fullness in the character block, amber and red when hungry, with a sound.
+- **"Afterimages when fast"** (Effects → Characters): pale copies of the hero behind it when it moves faster than a walk.
+- **"Body tints"** (Effects → Characters): a warm red under Fury, steel under Steel Body.
+
 # uaRO Graphics 3.0.16-beta.12 — what's new
 
 - **The Monk's spirit spheres** are a little bigger and blue: a blue ball with a shine, a light heart and a soft blue aura.
