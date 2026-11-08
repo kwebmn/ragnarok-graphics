@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.16-beta.22 — what's new
+
+- **"Time rings on the ground": the countdown on the hotbar too.** While your Safety Wall, Pneuma, Sanctuary or trap stands, its icon shows a gold bar along the top running down and the seconds in the middle ("32"; with two walls "32 ×2", the one ending first). The countdown is seen even when you stand on the wall and its ring is hidden under you.
+
 # uaRO Graphics 3.0.16-beta.21 — what's new
 
 - **New: "Time rings on the ground"** (Interface, off at first). Your own Safety Wall, Pneuma, Sanctuary and traps get a ring on the ground in the skill's colour. Its bright part runs down as their time goes (by the skill's level, as the server counts it) and pulses in the last 3 seconds. A broken wall or a sprung trap takes the ring away at once.
