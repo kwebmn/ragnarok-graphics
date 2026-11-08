@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.16-beta.16 — what's new
+
+- **New: "Shadows from torches and lamps"** (Effects → "Fire and smoke", off at first; Direct3D 12 only). Walls, columns, houses and hills stop the light of the nearest torches and lamps: what stands behind them stays in shadow, with soft edges. Up to the 8 brightest lights on screen have shadows. The "Shadow strength" slider sets how much light a shadow takes away. For now walls, models and the ground cast shadows; characters come later.
+
 # uaRO Graphics 3.0.16-beta.15 — what's new
 
 - **No more false "crash" reports.** Closing the game and starting it again at once could make the program read the new game's log and send an automatic crash report although the game had closed normally. It now reads the log of the game that closed.
