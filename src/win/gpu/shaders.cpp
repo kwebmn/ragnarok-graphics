@@ -1855,9 +1855,9 @@ float4 torch_accum_ps(TorchIn i) : SV_Target {
     if (c.w < 0.0) a *= 1.0 - smoothstep(3.0, 7.0, dot(p - t.xyz, -float3(r1, r4, r7)) + 20.0);  // 2.7.24: the ground's
     // 3.0.16-beta.16: its shadow's slot (0 none), darkness; .30 z: the leaves let a part through (green)
     float4 sh = tex1.Load(int3(2 * int(i.light), 1, 0));
-    float3 pass = float3(1.0, 1.0, 1.0);
-    if (sh.x > 0.5) pass = 1.0 - sh.y * (1.0 - torchShadow(p, n, t.xyz, t.w, sh.x - 1.0, sh.z));
-    return float4(c.rgb * a * pass, a * dot(pass, float3(0.3333, 0.3333, 0.3334)));
+    float3 lit3 = float3(1.0, 1.0, 1.0);  // 3.0.16-beta.34: not «pass» - a word FXC keeps (R-KHP3BE)
+    if (sh.x > 0.5) lit3 = 1.0 - sh.y * (1.0 - torchShadow(p, n, t.xyz, t.w, sh.x - 1.0, sh.z));
+    return float4(c.rgb * a * lit3, a * dot(lit3, float3(0.3333, 0.3333, 0.3334)));
 }
 
 // The buffer's sums (tex0) into the picture's copy (t2), as torch_light_ps ended; 2.7.47: tex1 the picture before the
