@@ -1,5 +1,6 @@
 // 3.0.16-beta.21 (the owner's pick 7 of «20 идей»): time rings for the character's own walls and traps
 #include "core/ground_timers.hpp"
+#include "core/hotbar_panel.hpp"
 #include <cmath>
 
 #include "test.hpp"
@@ -54,4 +55,12 @@ TEST(ground_timers_a_cast_rings_until_its_time_or_its_units_go) {
     trap.caster = me;
     t.seen(trap, me, 30060);
     CHECK(t.rings(30061).size() == 1);
+}
+
+// 3.0.16-beta.22: the time's plate in the slot's middle, as wide as its words
+TEST(ground_timers_the_slots_plate) {
+    const panel::Box cell{100, 50, 40, 40};
+    const panel::Box b = hotbar::timerBox(cell, "32", 1.0f);
+    CHECK(std::fabs((b.x + b.w / 2) - 120.0f) < 0.01f && std::fabs((b.y + b.h / 2) - 70.0f) < 0.01f);
+    CHECK(hotbar::timerBox(cell, "32 \xC3\x97" "2", 1.0f).w > b.w);
 }

@@ -55,7 +55,14 @@ struct Cell {
     std::string lack, lackWhy;
     float combo = 0;
     bool ready = false;
+    // 3.0.16-beta.22 (the owner: on the time ring «когда я туда стаю под мною не видно как идет отсчет» - «1»): its own
+    // Safety Wall, Pneuma, Sanctuary or trap standing - the soonest one's time left (1 at the cast, 0 none) as a gold
+    // bar along its top shrinking, its seconds («32», «32 ×2» with two standing) on a plate in its middle
+    float timer = 0;
+    std::string timerText;
 };
+// The plate of a ground skill's time left - the cell's middle
+panel::Box timerBox(const panel::Box& cell, const std::string& text, float s);
 int iconSide(Mode mode, float scale);
 
 // The battle mode's rows as shown, top down (Q, A, Z as on the keyboard), are the game's rows 1, 2, 0

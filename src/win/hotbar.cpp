@@ -215,6 +215,9 @@ struct State {
     bool belowTold = false;  // 3.0.12-beta.2
     bool ammoOn = true;
     bool countsOn = true;  // 3.0.11-beta.143: [interface] ground_counts
+    bool timersOn = false;  // 3.0.16-beta.22: [interface] ground_timers - their time on the slots too
+    std::vector<groundtimers::Ring> rings;  // the frame's
+    int timersTold = 0;
 };
 
 State& state() {
@@ -584,6 +587,24 @@ void groundCount(State& s, uint16_t skill, hb::Cell& c) {
     }
 }
 
+// 3.0.16-beta.22 (the owner: the time ring hidden under the character standing on it - «1»): a ground skill's own
+// casts standing (win/ground_units rings, the frame's) - the soonest to end: its share left, its seconds, «×n» of them
+void timerLook(State& s, uint16_t skill, hb::Cell& c) {
+    const uint64_t now = GetTickCount64();
+    const groundtimers::Ring* soonest = nullptr;
+    int n = 0;
+    for (const groundtimers::Ring& r : s.rings)
+        if (r.skill == skill && r.endMs > now) {
+            ++n;
+            if (!soonest || r.endMs < soonest->endMs) soonest = &r;
+        }
+    if (!soonest) return;
+    c.timer = std::max(0.02f, soonest->left(now));
+    c.timerText = std::to_string(int((soonest->endMs - now + 999) / 1000));
+    if (n > 1) c.timerText += " \xC3\x97" + std::to_string(n);
+    if (s.timersTold++ < 10) LOG_INFO("hotbar: skill %u's time on its slot (%s)", unsigned(skill), c.timerText.c_str());
+}
+
 // 3.0.16-beta.13 (the owner's pick 1 of «20 идей»): what a skill lacks for one use - a gem (or other item) none in the
 // bag, fewer spheres than it takes (Asura in a combo takes what is left); an empty bag (a map loading) tells nothing
 void needs(State& s, uint16_t skill, int level, hb::Cell& c, unsigned codePage) {
@@ -649,6 +670,7 @@ hb::Cell cellOf(State& s, int slot, const std::string& key, unsigned codePage) {
         if (s.countsOn && at.skillId > 0) groundCount(s, uint16_t(at.skillId), c);  // 3.0.11-beta.143
         if (s.needsOn && at.skillId > 0 && !c.unlearned) needs(s, uint16_t(at.skillId), level, c, codePage);  // .13
         if (s.comboOn && at.skillId > 0 && !c.unlearned) comboLook(s, uint16_t(at.skillId), c);
+        if (s.timersOn && at.skillId > 0) timerLook(s, uint16_t(at.skillId), c);  // 3.0.16-beta.22
     } else if (at.what.kind == hb::Slot::Kind::Item) {
         const auto& items = clienttables::itemNames();
         const auto n = items.find(at.what.id);
@@ -1085,6 +1107,12 @@ void setPotionWarn(bool on) {  // 3.0.11-beta.281
     s.potionWarn = on;
 }
 
+void setTimers(bool on) {  // 3.0.16-beta.22
+    State& s = state();
+    if (on != s.timersOn) LOG_INFO("hotbar: [interface] ground_timers = %d (the time on the slots)", on ? 1 : 0);
+    s.timersOn = on;
+}
+
 void setNeeds(bool needs, bool comboWindow) {  // 3.0.16-beta.13
     State& s = state();
     if (needs != s.needsOn) LOG_INFO("hotbar: [interface] skill_needs = %d", needs ? 1 : 0);
@@ -1159,6 +1187,8 @@ void frame(HWND game, bool on, bool ownBars, bool padHints, bool ammo, bool coun
             if (pad.bindings[i].kind == uapad::Action::Kind::Slot && int(pad.bindings[i].slot) == slot) return int(i);
         return -1;
     };
+    if (s.timersOn) s.rings = groundunitswin::rings();  // 3.0.16-beta.22: the own walls' and traps' time
+    else s.rings.clear();
     if (s.mode == hb::Mode::Battle) {
         for (int r = 0; r < 3; ++r)
             for (int c = 0; c < 9; ++c) {
@@ -1224,7 +1254,8 @@ void frame(HWND game, bool on, bool ownBars, bool padHints, bool ammo, bool coun
                (c.icon ? "i" : "") + (c.low ? "l" : "") + (c.selected ? "s" : "") + (c.spHave < c.spNeed ? "d" : "") +
                std::to_string(int(c.notHere)) + ',' + std::to_string(c.pad) + ',' + c.standing +
                std::to_string(int(c.flash * 10)) + c.lack + ',' + std::to_string(int(c.combo * 24)) +
-               (c.ready ? "R" : "") + ';';  // 3.0.11-beta.143: the flash in ten steps; .13 lacks, combo, ready
+               (c.ready ? "R" : "") + c.timerText + ',' + std::to_string(int(c.timer * 40)) +
+               ';';  // 3.0.11-beta.143: the flash in ten steps; .13 lacks, combo, ready; .22 the time left
         if (int(i) == show.hover && show.tip)  // its tip's numbers
             key += std::to_string(c.spNeed) + '/' + std::to_string(c.spHave) + ';';
     }

@@ -1097,6 +1097,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     groundmarks::look(config.targetRing);  // 3.0.11-beta.87: the target's ring on the ground
     groundmarks::walkLook(config.walkArrow, config.walkMark);  // 3.0.11-beta.103: the stick's arrow's look
     groundmarks::groundTimers(config.groundTimers);  // 3.0.16-beta.21
+    hotbarwin::setTimers(config.groundTimers);       // 3.0.16-beta.22: on the slots too
     groundmarks::skillCells(config.skillCells);                // 3.0.11-beta.142: a ground skill's cells
     groundmarks::mouseCell(config.mouseCell);                  // 3.0.16-beta.7: the cell under the mouse
     uapad::runtime::setRing(config.targetRing != TargetRing::Off);  // 3.0.11-beta.95: the pad's fake mark off then

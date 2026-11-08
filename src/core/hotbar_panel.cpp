@@ -74,6 +74,12 @@ panel::Box lackBox(const panel::Box& cell, const std::string& text, float s) {
     return panel::Box{cell.x + cell.w - w - 2 * s, cell.y + 2 * s, w, 13 * s};
 }
 
+// 3.0.16-beta.22: a ground skill's time left - its plate in the cell's middle
+panel::Box timerPlate(const panel::Box& cell, const std::string& text, float s) {
+    const float w = panel::wordsWidth(text, 12 * s, true) + 8 * s, h = 15 * s;
+    return panel::Box{cell.x + (cell.w - w) / 2, cell.y + (cell.h - h) / 2, w, h};
+}
+
 // 3.0.11-beta.143: a ground skill's own count's plate - the bottom right, as an item's count
 panel::Box standingBox(const panel::Box& cell, const std::string& text, float s) {
     const float w = panel::wordsWidth(text, 11 * s, true) + 6 * s;
@@ -192,6 +198,8 @@ panel::Box ammoShown(const Layout& L, const Show& show, const panel::Box& tip, c
 }
 
 }  // namespace
+
+panel::Box timerBox(const panel::Box& cell, const std::string& text, float s) { return timerPlate(cell, text, s); }
 
 int iconSide(Mode mode, float scale) { return int(std::lround((mode == Mode::Battle ? 30 : 32) * scale)); }
 
@@ -361,6 +369,11 @@ void paint(panel::Picture& out, const Layout& L, const std::vector<Cell>& cells,
         } else if (c && !barred && c->ready && !chosen) {  // Asura can go: a blue glow
             panel::roundRect(out, b, 7 * s, kReadyBlue, 0.14f, kReadyBlue, 0.95f, 2.0f * s);
         }
+        if (c && c->timer > 0 && !c->timerText.empty()) {  // 3.0.16-beta.22: its wall's or trap's time left
+            const float bw = (b.w - 8 * s) * std::min(1.0f, c->timer);
+            panel::roundRect(out, panel::Box{b.x + 4 * s, b.y + 3 * s, bw, 3 * s}, 1.5f * s, kGold, 1.0f);
+            panel::roundRect(out, timerPlate(b, c->timerText, s), 4 * s, kBlack, 0.72f);
+        }
         if (show.pad && c && c->pad < 0) panel::roundRect(out, b, 7 * s, kBlack, 0.5f);  // no button uses it
     }
     for (size_t i = 0; show.pad && i < L.cells.size() && i < cells.size(); ++i)  // 3.0.11-beta.86: the badges
@@ -460,6 +473,8 @@ std::vector<Words> words(const Layout& L, const std::vector<Cell>& cells, int ro
             out.push_back(Words{spBox(b, s), "SP", kWhite, 11 * s, true, Align::Center});
         else if (c.notHere == NotHere::No && !c.unlearned && !c.lack.empty())  // 3.0.16-beta.13
             out.push_back(Words{lackBox(b, c.lack, s), c.lack, kWhite, 11 * s, true, Align::Center});
+        if (c.timer > 0 && !c.timerText.empty())  // 3.0.16-beta.22
+            out.push_back(Words{timerPlate(b, c.timerText, s), c.timerText, kGold, 12 * s, true, Align::Center});
     }
     const std::vector<TipLine> lines = show.tip && show.hover >= 0 && show.hover < int(cells.size())
                                            ? tipLines(cells[size_t(show.hover)], t)
