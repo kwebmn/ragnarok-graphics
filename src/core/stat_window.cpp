@@ -292,7 +292,11 @@ std::vector<MobRow> planMobs(const Data& d, const Plan& p) {
     for (int i = 0; i < kStats; ++i) a[i] = total(d, i);
     planTotals(d, p, b);  // .297: the plan's buffs counted
     const int lv = d.baseLevel, plv = std::max(p.level, lv), w = weaponOf(d);
-    const mobbattle::Own now{d.hit, d.flee, d.flee2, d.def, d.def2, d.atk, d.atk2};
+    mobbattle::Own now{d.hit, d.flee, d.flee2, d.def, d.def2, d.atk, d.atk2};
+    if (w >= 0) {  // 3.0.16-beta.32: the weapon's part of ATK sized for each monster
+        now.batk = sm::atk(a, w);
+        now.weapon = w;
+    }
     mobbattle::Own then = now;
     then.hit += sm::hit(plv, b[4]) - sm::hit(lv, a[4]);
     then.flee += sm::flee(plv, b[1]) - sm::flee(lv, a[1]);
@@ -302,6 +306,7 @@ std::vector<MobRow> planMobs(const Data& d, const Plan& p) {
     then.flee += fp.flee - fn.flee;
     then.def2 = (d.def2 * 100 / (100 + fn.defPercent) + b[2] - a[2]) * (100 + fp.defPercent) / 100;  // Angelus
     then.atk += sm::atk(b, w) - sm::atk(a, w) + fp.atk - fn.atk;
+    if (w >= 0) then.batk = sm::atk(b, w);  // as now: the stats' part alone
     std::vector<MobRow> out;
     for (const MapMob& mm : d.mapMobs) {
         const mobbattle::Mob* m = mobbattle::find(mm.id);

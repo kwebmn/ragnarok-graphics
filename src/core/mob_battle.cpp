@@ -28,6 +28,20 @@ const Mob* find(int id) {
     return at != std::end(kMobs) && at->id == id ? &*at : nullptr;
 }
 
+int sizeFix(int weapon, int size) {
+    static const int kFix[3][23] = {  // rows the target's size, columns the weapon's kind (as the server's file)
+        {100, 100, 75, 75, 75, 75, 50, 50, 75, 100, 100, 100, 100, 75, 75, 100, 75, 100, 100, 100, 100, 100, 100},
+        {100, 75, 100, 75, 75, 75, 75, 75, 100, 100, 100, 100, 75, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100},
+        {100, 50, 75, 100, 100, 100, 100, 100, 100, 100, 100, 75, 50, 75, 50, 50, 75, 100, 100, 100, 100, 100, 100}};
+    return weapon >= 0 && weapon < 23 && size >= 0 && size < 3 ? kFix[size][weapon] : 100;
+}
+
+int neutralFix(int element) {
+    const int type = element % 10, level = element / 20;
+    if (type != 8) return 100;  // Ghost
+    return level <= 2 ? 25 : 0;
+}
+
 Fight fight(const Mob& m, const Own& own, int hp) {
     Fight f;
     f.hitChance = std::clamp(80 + own.hit - (m.level + m.agi), 5, 100);
@@ -41,8 +55,13 @@ Fight fight(const Mob& m, const Own& own, int hp) {
     if (m.attackDelay > 0)
         f.itsPerSecond = (f.itsLeast + f.itsMost) / 2.0 * f.itsHitChance / 100.0 * 1000.0 / m.attackDelay;
     const int mobDef = std::clamp(m.def, 0, 100), mobVit = m.vit + (m.vit / 20) * (m.vit / 20) / 2;
-    f.mine = std::max(1, (own.atk + own.atk2) * (100 - mobDef) / 100 - mobVit);
-    if (hp > 0) f.hitsToKill = (hp + f.mine - 1) / f.mine;
+    // 3.0.16-beta.32: the weapon's part sized, the stats' not (battle_calc_base_damage); then the element
+    int atk = own.atk;
+    if (own.batk >= 0 && own.weapon >= 0 && own.atk > own.batk)
+        atk = own.batk + (own.atk - own.batk) * sizeFix(own.weapon, m.size) / 100;
+    const int fix = neutralFix(m.element);
+    f.mine = fix <= 0 ? 0 : std::max(1, ((atk + own.atk2) * fix / 100) * (100 - mobDef) / 100 - mobVit);
+    if (hp > 0 && f.mine > 0) f.hitsToKill = (hp + f.mine - 1) / f.mine;
     return f;
 }
 

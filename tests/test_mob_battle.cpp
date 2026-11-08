@@ -32,3 +32,25 @@ TEST(mob_battle_chances_clamp) {
     CHECK_EQ(f.hitsToKill, 0);
     CHECK_EQ(f.mine, 1);
 }
+
+// 3.0.16-beta.32 (the owner: «делай» - the monsters compared): the weapon's part of ATK by the monster's size
+// (db/size_fix.txt), a neutral blow on a Ghost (db/attr_fix.txt)
+TEST(mob_battle_size_and_element) {
+    CHECK_EQ(mobbattle::sizeFix(1, 2), 50);   // a dagger on a large one
+    CHECK_EQ(mobbattle::sizeFix(3, 2), 100);  // a two-handed sword on a large one
+    CHECK_EQ(mobbattle::sizeFix(6, 0), 50);   // an axe on a small one
+    CHECK_EQ(mobbattle::sizeFix(-1, 2), 100);
+    CHECK_EQ(mobbattle::neutralFix(20), 100);  // neutral 1
+    CHECK_EQ(mobbattle::neutralFix(28), 25);   // ghost 1
+    CHECK_EQ(mobbattle::neutralFix(68), 0);    // ghost 3
+    const mobbattle::Mob big{1, 10, 10, 20, 0, 0, 1, 0, 1, 1000, 2, 20};
+    mobbattle::Own own;
+    own.atk = 100, own.batk = 40, own.weapon = 1;  // 40 of the stats, 60 of a dagger: half on a large one
+    CHECK_EQ(mobbattle::fight(big, own, 0).mine, 70);
+    own.weapon = -1;  // not known: no size fix
+    CHECK_EQ(mobbattle::fight(big, own, 0).mine, 100);
+    const mobbattle::Mob ghost{1, 10, 10, 20, 0, 0, 1, 0, 1, 1000, 1, 68};
+    CHECK_EQ(mobbattle::fight(ghost, own, 500).mine, 0);
+    CHECK_EQ(mobbattle::fight(ghost, own, 500).hitsToKill, 0);
+    CHECK(mobbattle::find(1002) && mobbattle::find(1002)->size >= 0);
+}
