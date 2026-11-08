@@ -1141,6 +1141,7 @@ struct Renderer::Impl {
         mirrorDone = mirrorMade = false;
         sunVerts.clear();  // 1.12
         sunCasters.clear();
+        standingSprites.clear();  // 3.0.16-beta.18
         frameCrowns.clear();
         waterLevelNoted = false;
         shaftsDone = false;  // 0.73
@@ -1415,6 +1416,10 @@ struct Renderer::Impl {
     // the lights picked (indices into `lights`, a light's slot its place in the answer) - drawn into the atlas; none
     // when off or nothing to draw
     std::vector<int> drawTorchShadows(const std::vector<point_shadows::Candidate>& lights);
+    // 3.0.16-beta.18: the frame's characters' sprites (players', monsters', NPCs') standing in the world - each turned
+    // to face a light with a shadow, its picture's holes letting the light through (noteStanding, draw.cpp)
+    std::vector<point_shadows::Standing> standingSprites;
+    void noteStanding(const FrameRecord& rec, const DrawCmd& d);
     // 1.17, living characters (draw.cpp): a sprite lit by the sun from its silhouette's sides (shaders.cpp
     // spriteLight, stage 0 bit 28)
     bool spriteLightWanted() const { return effects.spriteLight && effects.spriteLightStrength > 0; }

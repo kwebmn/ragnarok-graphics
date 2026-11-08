@@ -2005,12 +2005,12 @@ constexpr Entry kTexts[] = {
     // 3.0.16-beta.16 (the owner: «тени от факелов и ламп»)
     {Text::FxTorchShadows, "Shadows from torches and lamps", "Тіні від факелів і ламп", "Тени от факелов и ламп"},
     {Text::FxTorchShadowsHint,
-     "Walls, columns, houses and hills stop the light of the nearest torches and lamps: what stands behind them stays "
-     "in shadow, the shadows soft at their edges. Direct3D 12 only. Off at first.",
-     "Стіни, колони, будинки й пагорби затримують світло найближчих факелів і ламп: те, що за ними, лишається в "
-     "тіні, краї тіней м'які. Лише Direct3D 12. Спочатку вимкнено.",
-     "Стены, колонны, дома и холмы задерживают свет ближайших факелов и ламп: то, что за ними, остаётся в тени, края "
-     "теней мягкие. Только Direct3D 12. Сначала выключено."},
+     "Walls, columns, houses, hills and characters stop the light of the nearest torches and lamps: what stands "
+     "behind them stays in shadow, the shadows soft at their edges. Direct3D 12 only. Off at first.",
+     "Стіни, колони, будинки, пагорби й персонажі затримують світло найближчих факелів і ламп: те, що за ними, "
+     "лишається в тіні, краї тіней м'які. Лише Direct3D 12. Спочатку вимкнено.",
+     "Стены, колонны, дома, холмы и персонажи задерживают свет ближайших факелов и ламп: то, что за ними, остаётся "
+     "в тени, края теней мягкие. Только Direct3D 12. Сначала выключено."},
     {Text::FxTorchShadowsStrength, "Shadow strength", "Сила тіні", "Сила тени"},
     {Text::FxTorchShadowsStrengthHint,
      "How much of a torch's or a lamp's light a shadow takes away: 100 % all of it, less leaves some light, as if "

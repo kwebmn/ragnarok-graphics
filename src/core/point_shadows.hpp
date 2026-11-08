@@ -32,4 +32,20 @@ struct Candidate {
 };
 std::vector<int> pick(const std::vector<Candidate>& lights, float nearZ, int most = kMostLights);
 
+// 3.0.16-beta.18 (the owner: «давай» - the characters' shadows from the torches): a character's sprite (a player's, a
+// monster's, an NPC's - a quad facing the camera) standing in the world: its bottom's and top's middles, its half
+// width, its corners' texture places (bottom left, bottom right, top left, top right). From its corners in the world
+// and on the screen; false for no quad standing.
+struct Standing {
+    float bottom[3], top[3];
+    float halfWidth = 0;
+    float uv[4][2];
+    uint32_t texture = 0;
+};
+bool standingOf(const float world[4][3], const float screen[4][2], const float uv[4][2], Standing& out);
+// The same picture turned to face a light (about its upright middle), set `push` further from the light - its own
+// picture on the screen not in its shadow: corners as Standing's uv
+void facing(const Standing& s, const float light[3], float push, float out[4][3]);
+constexpr float kSpritePush = 1.0f;  // world units beyond its half width
+
 }  // namespace uagfx::point_shadows

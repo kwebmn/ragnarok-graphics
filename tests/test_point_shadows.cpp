@@ -51,3 +51,22 @@ TEST(point_shadows_pick_the_lights_that_light_the_most) {
     CHECK(p.size() == 2);
     CHECK(p[0] == 2 && p[1] == 1);  // the lamp lights more of the screen (0.5 x 70 / 30) than the near torch
 }
+
+// 3.0.16-beta.18: a character's picture turned to face a torch, set behind it
+TEST(point_shadows_a_character_faces_the_light) {
+    // a quad facing the camera (along z): 6 wide, 16 tall (up is -y), its feet at the origin
+    const float world[4][3] = {{-3, -16, 0}, {3, -16, 0}, {-3, 0, 0}, {3, 0, 0}};
+    const float screen[4][2] = {{100, 50}, {130, 50}, {100, 130}, {130, 130}};
+    const float uv[4][2] = {{0, 0}, {1, 0}, {0, 1}, {1, 1}};
+    point_shadows::Standing s;
+    CHECK(point_shadows::standingOf(world, screen, uv, s));
+    CHECK(std::fabs(s.halfWidth - 3.0f) < 1e-4f);
+    CHECK(std::fabs(s.bottom[1]) < 1e-4f && std::fabs(s.top[1] + 16.0f) < 1e-4f);
+    CHECK(s.uv[0][1] == 1 && s.uv[2][1] == 0);  // the bottom's texture row first
+    const float light[3] = {-30, -20, 0};  // off to its left (-x), up high
+    float q[4][3];
+    point_shadows::facing(s, light, point_shadows::kSpritePush, q);
+    for (int c = 0; c < 4; ++c) CHECK(std::fabs(q[c][0] - 4.0f) < 1e-4f);  // across the way, half width + 1 behind
+    CHECK(std::fabs(q[1][2] - q[0][2] - 6.0f) < 1e-4f || std::fabs(q[0][2] - q[1][2] - 6.0f) < 1e-4f);
+    CHECK(std::fabs(q[2][1] + 16.0f) < 1e-4f);  // still standing as tall
+}
