@@ -290,6 +290,28 @@ size_t ring(float x, float y, float z, float radius, float width, int sides, boo
     return out.size() - before;
 }
 
+size_t arc(float x, float y, float z, float radius, float width, int sides, float fraction, float from,
+           const float view[12], const camera::Projection& p, uint32_t argb, float bias, std::vector<Vertex>& out) {
+    const size_t before = out.size();
+    const int n = std::max(3, sides);
+    const float f = std::clamp(fraction, 0.0f, 1.0f), step = 6.28318530718f / float(n);
+    const float in = std::max(0.0f, radius - width / 2), outR = radius + width / 2;
+    const float span = f * float(n);
+    for (int i = 0; float(i) < span; ++i) {
+        const float a0 = from - step * float(i), a1 = from - step * std::min(float(i + 1), span);
+        const float wa[3] = {x + in * std::cos(a0), y, z + in * std::sin(a0)};
+        const float wb[3] = {x + outR * std::cos(a0), y, z + outR * std::sin(a0)};
+        const float wc[3] = {x + in * std::cos(a1), y, z + in * std::sin(a1)};
+        const float wd[3] = {x + outR * std::cos(a1), y, z + outR * std::sin(a1)};
+        Vertex a{}, b{}, c{}, d{};
+        if (!placed(wa, view, p, bias, argb, a) || !placed(wb, view, p, bias, argb, b) ||
+            !placed(wc, view, p, bias, argb, c) || !placed(wd, view, p, bias, argb, d))
+            continue;
+        out.insert(out.end(), {a, b, c, b, d, c});
+    }
+    return out.size() - before;
+}
+
 size_t notches(float x, float y, float z, float radius, float width, const float view[12], const camera::Projection& p,
                uint32_t argb, float bias, std::vector<Vertex>& out) {
     const size_t before = out.size();

@@ -217,6 +217,7 @@ const std::vector<InterfaceSection>& interfaceSections() {
           "interface.target_ring",
           "interface.mob_card",
           "interface.delay_ring", "interface.skill_cells", "interface.mouse_cell", "interface.ground_counts",
+          "interface.ground_timers",
           "interface.death_recap",
           "interface.potion_warn", "interface.party_alarm"}},
         {Text::InterfaceSecGround, {"interface.drop_names", "interface.drop_highlight", "interface.signs"}},

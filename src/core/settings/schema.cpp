@@ -189,6 +189,8 @@ const std::vector<IniSetting>& iniSettings() {
          Text::InterfaceBrokenGear, Text::InterfaceBrokenGearHint, ""},
         {"interface", "pet_hunger", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {},
          Text::InterfacePetHunger, Text::InterfacePetHungerHint, ""},
+        {"interface", "ground_timers", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {},
+         Text::InterfaceGroundTimers, Text::InterfaceGroundTimersHint, ""},  // 3.0.16-beta.21
         // 3.0.11-beta.129: the chime at 10 arrows left and at none
         {"interface", "ammo_sound", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {},
          Text::InterfaceAmmoSound, Text::InterfaceAmmoSoundHint, ""},
@@ -1379,6 +1381,7 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "interface.combo_window") return c.comboWindow ? "1" : "0";
     if (k == "interface.broken_gear") return c.brokenGear ? "1" : "0";
     if (k == "interface.pet_hunger") return c.petHunger ? "1" : "0";
+    if (k == "interface.ground_timers") return c.groundTimers ? "1" : "0";  // 3.0.16-beta.21
     if (k == "interface.signs") return c.worldSigns ? "1" : "0";        // 3.0.16-beta.7
     if (k == "interface.ground_counts") return c.groundCounts ? "1" : "0";  // 3.0.11-beta.143
     if (k == "interface.animations") return c.animations ? "1" : "0";  // 3.0.11-beta.46

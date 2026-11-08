@@ -1,6 +1,9 @@
 #pragma once
 #include <cstdint>
 
+#include <vector>
+
+#include "core/ground_timers.hpp"
 #include "core/ground_units.hpp"
 
 namespace uagfx::win::groundunitswin {
@@ -11,5 +14,9 @@ namespace uagfx::win::groundunitswin {
 // game's thread.
 void packet(uint16_t id, const uint8_t* packet);
 const groundunits::Tracker& tracker();
+// 3.0.16-beta.21: [interface] ground_timers - the own Safety Wall's, Pneuma's, Sanctuary's and traps' time rings
+// (core/ground_timers): a ground skill the character asked for (0x0113, win/ground_marks skillCast), the rings now
+void asked(uint16_t skill, int level);
+std::vector<groundtimers::Ring> rings();
 
 }  // namespace uagfx::win::groundunitswin

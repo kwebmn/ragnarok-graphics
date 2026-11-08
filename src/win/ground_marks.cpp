@@ -14,6 +14,7 @@
 #include "pad/win/runtime.hpp"
 #include "win/game_camera.hpp"
 #include "win/game_files.hpp"
+#include "win/ground_units.hpp"
 #include "win/log.hpp"
 #include "win/paths.hpp"
 #include "win/mob_hp.hpp"
@@ -26,6 +27,7 @@ namespace {
 // a cell is 5 world units: the ring 4.2 out (a medium monster's feet), its colour 0.9 wide over a dark 1.7
 constexpr float kRadius = 4.2f, kWidth = 0.9f, kEdge = 1.7f, kLift = 0.4f, kBias = 1.5f;
 constexpr int kSides = 40;
+constexpr float kTimerWidth = 0.7f;  // 3.0.16-beta.21: a time ring's
 constexpr uint32_t kGold = 0xF5E6CB8A, kShade = 0x70000000, kWhite = 0xC8FFFFFF, kGreen = 0xF05BD36C;
 // 3.0.11-beta.88: the walk without the mouse's arrow - faint white over a dark edge, a small gold ring at its end
 constexpr float kArrowWidth = 1.0f, kArrowHead = 3.2f, kArrowHeadWidth = 3.0f;
@@ -144,6 +146,7 @@ struct State {
     TargetRing ring = TargetRing::Pad;
     bool cellsOn = true;  // 3.0.11-beta.142: [interface] skill_cells
     bool mouseCellOn = false;  // 3.0.16-beta.7: [interface] mouse_cell
+    bool timersOn = false;     // 3.0.16-beta.21: [interface] ground_timers
     int mouseTold = 0;
     uint32_t coloursSeen[4] = {};
     int cancelsTold = 0;  // 3.0.11-beta.146
@@ -256,6 +259,7 @@ void skillCells(bool on) {
 }
 
 void skillCast(uint16_t skill, int lv, int x, int y) {
+    groundunitswin::asked(skill, lv);  // 3.0.16-beta.21: its time ring's level
     State& s = state();
     int px = 0, py = 0, w = 0, h = 0;
     if (!s.cellsOn || !readPlayerCell(px, py, w, h)) return;
@@ -271,6 +275,13 @@ void skillCast(uint16_t skill, int lv, int x, int y) {
                  y, px, py, f.cells.size());
     if (s.flashes.size() >= 8) s.flashes.erase(s.flashes.begin());
     s.flashes.push_back(std::move(f));
+}
+
+void groundTimers(bool on) {
+    State& s = state();
+    if (s.timersOn == on) return;
+    s.timersOn = on;
+    LOG_INFO("ground timers: [interface] ground_timers = %d", on ? 1 : 0);
 }
 
 void mouseCell(bool on) {
@@ -372,7 +383,12 @@ void draw(FrameRecord& record, int width, int height) {
                 }
         }
     }
-    if (!target && !next && !mate && !arrowShown && s.flashes.empty() && !aiming && !mouseCellShown) return;
+    // 3.0.16-beta.21: the own walls', Pneuma's, Sanctuary's and traps' time rings
+    std::vector<groundtimers::Ring> timeRings;
+    if (s.timersOn) timeRings = groundunitswin::rings();
+    if (!target && !next && !mate && !arrowShown && s.flashes.empty() && !aiming && !mouseCellShown &&
+        timeRings.empty())
+        return;
     float view[12];
     if (!readGameCamera(view)) return;
     const camera::Projection p = camera::projectionFor(width, height);
@@ -439,7 +455,8 @@ void draw(FrameRecord& record, int width, int height) {
     }
     float feet[3];
     int fw = 0, fh = 0, fcs = 0;
-    if ((!s.flashes.empty() || aiming || mouseCellShown) && readPlayerWorld(feet, fw, fh, fcs)) {  // .142: heights
+    if ((!s.flashes.empty() || aiming || mouseCellShown || !timeRings.empty()) &&
+        readPlayerWorld(feet, fw, fh, fcs)) {  // .142: heights
         float sign = 0;
         const groundway::Heights* heights = heightsHere(s, feet, fw, fh, fcs, sign);
         if (heights && mouseCellShown)  // 3.0.16-beta.7: a soft light square, a thin edge
@@ -456,6 +473,28 @@ void draw(FrameRecord& record, int width, int height) {
             colours(aimSkill, fill, line);
             groundway::placeTris(groundway::cellsShape(cells, fill, line, 0.85f, *heights, fcs, sign, kLift), view, p,
                                  kBias, s.verts);
+        }
+        if (heights && fcs > 0) {  // 3.0.16-beta.21: each one's time as a ring running down from the north
+            const uint64_t nowTicks = GetTickCount64();
+            for (const groundtimers::Ring& r : timeRings) {
+                float hgt = 0;
+                if (!heights->at(r.x, r.y, hgt)) continue;
+                const float cs = float(fcs), wx = (r.x - float(fw / 2)) * cs, wz = (r.y - float(fh / 2)) * cs;
+                const float y = sign * hgt - kLift, radius = r.radius * cs;
+                uint32_t fill = 0, line = 0;
+                colours(r.skill, fill, line);
+                const float left = r.left(nowTicks);
+                const uint64_t msLeft = r.endMs > nowTicks ? r.endMs - nowTicks : 0;
+                // the last 3 s: it pulses
+                const float pulse = msLeft < 3000 ? 0.55f + 0.45f * std::cos(float(msLeft) * 0.0105f) : 1.0f;
+                const uint32_t rgb = line & 0x00FFFFFFu;
+                groundway::ring(wx, y, wz, radius, kEdge, kSides, false, view, p, 0x50000000u, kBias, s.verts);
+                groundway::ring(wx, y, wz, radius, kTimerWidth, kSides, false, view, p, 0x38000000u | rgb,
+                                kBias + 0.1f, s.verts);
+                const uint32_t bright = uint32_t(float(0xE6) * pulse) << 24 | rgb;
+                groundway::arc(wx, y, wz, radius, kTimerWidth, kSides, left, 1.5707963f, view, p, bright,
+                               kBias + 0.2f, s.verts);
+            }
         }
         if (heights)
             for (const Flash& f : s.flashes) {

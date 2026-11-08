@@ -2054,6 +2054,16 @@ constexpr Entry kTexts[] = {
      "%), і тоді короткий сигнал: нагодуйте, доки не втік. Спочатку вимкнено.",
      "Сытость пета и гомункула в блоке персонажа — янтарная, когда голоден (25 % и меньше), красная, когда очень "
      "(10 %), и тогда короткий сигнал: покормите, пока не сбежал. Сначала выключено."},
+    {Text::InterfaceGroundTimers, "Time rings on the ground", "Таймери на землі", "Таймеры на земле"},
+    {Text::InterfaceGroundTimersHint,
+     "Your own Safety Wall, Pneuma, Sanctuary and traps get a ring on the ground in the skill's colour that runs down "
+     "as their time goes, pulsing in the last 3 seconds; a broken wall or a sprung trap takes it away. Off at first.",
+     "Ваші Safety Wall, Pneuma, Sanctuary і пастки отримують кільце на землі в кольорі навички, яке зменшується, "
+     "поки спливає їхній час, і блимає в останні 3 секунди; зламана стіна чи спрацьована пастка його прибирає. "
+     "Спочатку вимкнено.",
+     "Ваши Safety Wall, Pneuma, Sanctuary и ловушки получают кольцо на земле в цвете навыка, которое уменьшается, "
+     "пока истекает их время, и мигает в последние 3 секунды; сломанная стена или сработавшая ловушка его убирает. "
+     "Сначала выключено."},
     {Text::HotbarNoItem, "No {1} in the bag", "Немає {1} у сумці", "Нет {1} в сумке"},
     {Text::HotbarNoSpheres, "Spheres: needs {1}, you have {2}", "Сфери: потрібно {1}, є {2}",
      "Сферы: нужно {1}, есть {2}"},

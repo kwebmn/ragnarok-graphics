@@ -28,6 +28,10 @@ void skillCells(bool on);
 // edge on the ground's heights, where the game would show its own (its flag 0x76E780 0), not while the pad plays or
 // a ground skill's cells stand under the mouse
 void mouseCell(bool on);
+// 3.0.16-beta.21 (the owner's pick 7 of «20 идей»): [interface] ground_timers - the character's own Safety Wall,
+// Pneuma, Sanctuary and traps each with a ring on the ground in its skill's colour, its bright part running down
+// round from the north as its time goes (core/ground_timers), pulsing its last 3 s; gone with its units
+void groundTimers(bool on);
 void skillCast(uint16_t skill, int lv, int x, int y);
 // 3.0.11-beta.146 (R-VYV3AG «фаерволл постоянно активный»: Fire Wall clicked on the bar with the mouse, then cast with
 // the pad - the game kept waiting for its place, «Select a Target» and the cells under the hidden cursor to the end):

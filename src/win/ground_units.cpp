@@ -14,6 +14,8 @@ constexpr uint32_t kOwnAccount = 0x771F7C;  // uaRO.exe's session: the character
 
 struct State {
     groundunits::Tracker tracker;
+    groundtimers::Timers timers;  // 3.0.16-beta.21
+    int timersTold = 0;
     int told = 0;
     int rawTold = 0;  // 3.0.11-beta.146 (R-VYV3AG: 19 Fire Walls cast, none counted): the packets as they came
 };
@@ -48,6 +50,7 @@ void packet(uint16_t id, const uint8_t* packet) {
     State& s = state();
     if (id == 0x0091 || id == 0x0092) {
         s.tracker.clear();
+        s.timers.clear();  // 3.0.16-beta.21
         return;
     }
     const uint64_t now = GetTickCount64();
@@ -62,6 +65,13 @@ void packet(uint16_t id, const uint8_t* packet) {
                      selfRead ? "" : ", the character's account not read");
         }
         if (!read || !selfRead) return;
+        if (const uint16_t timed = groundtimers::skillOfUnit(seen.type)) {  // 3.0.16-beta.21
+            const size_t before = s.timers.rings(now).size();
+            s.timers.seen(seen, self, now);
+            if (s.timers.rings(now).size() > before && s.timersTold++ < 20)
+                LOG_INFO("ground timers: skill %u's cast at %d, %d - its ring on the ground", unsigned(timed),
+                         seen.x, seen.y);
+        }
         const uint16_t skill = countedSkill(seen.type);
         if (skill == 0) return;
         const int before = s.tracker.standing(skill);
@@ -77,6 +87,7 @@ void packet(uint16_t id, const uint8_t* packet) {
         ++s.rawTold;
         LOG_INFO("ground units: 0x0120 unit %u gone (%d Fire Walls standing)", unit, s.tracker.standing(18));
     }
+    s.timers.gone(unit);  // 3.0.16-beta.21
     uint64_t was[std::size(kCounted)];
     for (size_t i = 0; i < std::size(kCounted); ++i) was[i] = s.tracker.burntOut(kCounted[i]);
     s.tracker.gone(unit, now);
@@ -87,5 +98,9 @@ void packet(uint16_t id, const uint8_t* packet) {
 }
 
 const groundunits::Tracker& tracker() { return state().tracker; }
+
+void asked(uint16_t skill, int level) { state().timers.asked(skill, level, GetTickCount64()); }
+
+std::vector<groundtimers::Ring> rings() { return state().timers.rings(GetTickCount64()); }
 
 }  // namespace uagfx::win::groundunitswin

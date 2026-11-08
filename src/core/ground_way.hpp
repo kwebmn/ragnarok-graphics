@@ -89,6 +89,10 @@ size_t footprints(const std::vector<Print>& prints, const Heights& g, int cellSi
 // middle `radius` world units out, `sides` pieces (dashed: every other one) - placed as strip() places its corners
 size_t ring(float x, float y, float z, float radius, float width, int sides, bool dashed, const float view[12],
             const camera::Projection& p, uint32_t argb, float bias, std::vector<Vertex>& out);
+// 3.0.16-beta.21 (time rings on the ground): `fraction` (0..1) of such a ring from `from` (radians: 0 east, pi/2
+// north) on round the other way, its last piece cut to it
+size_t arc(float x, float y, float z, float radius, float width, int sides, float fraction, float from,
+           const float view[12], const camera::Projection& p, uint32_t argb, float bias, std::vector<Vertex>& out);
 // Four notches out of such a ring (a friend's): `width` wide, 0.9 world units long from its outer edge
 size_t notches(float x, float y, float z, float radius, float width, const float view[12], const camera::Projection& p,
                uint32_t argb, float bias, std::vector<Vertex>& out);

@@ -203,6 +203,7 @@ enum class Text : uint16_t {
     FxTorchShadows, FxTorchShadowsHint, FxTorchShadowsStrength, FxTorchShadowsStrengthHint,  // 3.0.16-beta.16
     InterfaceSkillNeeds, InterfaceSkillNeedsHint, InterfaceComboWindow, InterfaceComboWindowHint,
     InterfaceBrokenGear, InterfaceBrokenGearHint, InterfacePetHunger, InterfacePetHungerHint,
+    InterfaceGroundTimers, InterfaceGroundTimersHint,  // 3.0.16-beta.21
     HotbarNoItem, HotbarNoSpheres, CharBroken, CharPet, CharHomun,
     // 0.97
     FxWetGround, FxWetGroundHint,

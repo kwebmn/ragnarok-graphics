@@ -590,6 +590,8 @@ Config parseConfig(const std::string& text) {
             setBool(val, c.brokenGear);
         } else if (key == "interface.pet_hunger") {
             setBool(val, c.petHunger);
+        } else if (key == "interface.ground_timers") {  // 3.0.16-beta.21
+            setBool(val, c.groundTimers);
         } else if (key == "interface.ammo_sound") {  // 3.0.11-beta.129: the chime at 10 left and at none
             setBool(val, c.ammoSound);
         } else if (key == "interface.pad_hints") {  // 3.0.11-beta.86: the controller's buttons on the interface

@@ -676,6 +676,9 @@ struct Config {
     // gem or spheres a red plate), combo_window (the Monk's chain gold, Asura ready blue), broken_gear, pet_hunger
     // (win/upkeep_watch); all off
     bool skillNeeds = false, comboWindow = false, brokenGear = false, petHunger = false;
+    // 3.0.16-beta.21 (the owner's pick 7 of «20 идей»): ground_timers - the own walls' and traps' time rings on the
+    // ground (win/ground_marks); off at first
+    bool groundTimers = false;
     // 3.0.11-beta.129 (the owner «делай»): [interface] ammo_sound - a short soft chime when 10 arrows are left and
     // when none are (core/ui_chime, win/ammo_sound through the game's own sound player); on
     bool ammoSound = true;
