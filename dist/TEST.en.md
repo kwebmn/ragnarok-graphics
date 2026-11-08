@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.16-beta.20 — what's new
+
+- **No double shadow from a torch.** With "Shadows from torches and lamps" on, "Characters' shadows" no longer draw their simple shadow from the same fires — one real shadow stays. The sun's shadow and the round spot under the feet stay as they were.
+
 # uaRO Graphics 3.0.16-beta.19 — what's new
 
 - **"Shadows from torches and lamps": no dark patch under braziers.** A brazier's bowl and legs shadowed the ground under its own fire — a dark diamond and a star of rays. A fire's own stand casts no shadow from it now.
