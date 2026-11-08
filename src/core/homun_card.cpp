@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 
+#include "core/companion_skills.hpp"
 #include "core/settings/strings.hpp"
 #include "core/ui_style.hpp"
 
@@ -84,10 +85,17 @@ Layout layout(int targetW, int targetH, float scale, int skillCount) {
     for (int k = 0; k < std::max(1, skillCount); ++k) {
         L.skillRows.push_back(panel::Box{pad, y, inner, kStatH * s + 2 * s});
         L.skillPlus.push_back(panel::Box{pad + inner - 22 * s, y + 1 * s, 22 * s, kStatH * s});
+        const companion::RowParts rp = companion::rowParts(L.skillRows.back(), s, true);  // 3.0.16-beta.31
+        L.skillLess.push_back(rp.less);
+        L.skillMore.push_back(rp.more);
+        L.skillLevel.push_back(rp.level);
         y += kStatH * s + 4 * s;
     }
-    if (skillCount <= 0) {  // a dash's row: no «+»
+    if (skillCount <= 0) {  // a dash's row: no «+», no ‹ ›
         L.skillPlus.clear();
+        L.skillLess.clear();
+        L.skillMore.clear();
+        L.skillLevel.clear();
     }
     y += 6 * s;
     L.remove = panel::Box{w / 2 - 50 * s, y, 100 * s, 18 * s};
@@ -105,6 +113,10 @@ Hit hitTest(const Layout& L, float x, float y) {
     if (L.buttons[0].contains(x, y)) return Hit{Part::Button, Button::Feed};
     for (size_t k = 0; k < L.skillPlus.size(); ++k)
         if (L.skillPlus[k].contains(x, y)) return Hit{Part::Plus, Button::Close, int(k)};
+    for (size_t k = 0; k < L.skillLess.size(); ++k) {  // 3.0.16-beta.31
+        if (L.skillLess[k].contains(x, y)) return Hit{Part::Less, Button::Close, int(k)};
+        if (L.skillMore[k].contains(x, y)) return Hit{Part::More, Button::Close, int(k)};
+    }
     if (!L.skillPlus.empty())
         for (size_t k = 0; k < L.skillRows.size(); ++k)
             if (L.skillRows[k].contains(x, y)) return Hit{Part::Skill, Button::Close, int(k)};
@@ -133,6 +145,10 @@ void paint(panel::Picture& out, const Layout& L, const Info& i, const Show& sh) 
         if (k < L.skillPlus.size() && i.skills[k].up && i.points > 0)
             panel::roundRect(out, L.skillPlus[k], 6 * s, kGold, sh.hoverPlus == int(k) ? 0.45f : 0.28f, kGold, 0.85f,
                              1.0f * s);
+        if (k < L.skillLess.size() && i.skills[k].level > 1) {  // 3.0.16-beta.31: the use level's ‹ ›
+            panel::roundRect(out, L.skillLess[k], 5 * s, kWhite, sh.hoverLess == int(k) ? 0.16f : 0.06f);
+            panel::roundRect(out, L.skillMore[k], 5 * s, kWhite, sh.hoverMore == int(k) ? 0.16f : 0.06f);
+        }
     }
     for (int k = 0; k < 2; ++k) {
         if (L.buttons[k].w <= 0) continue;
@@ -181,10 +197,20 @@ std::vector<Words> words(const Layout& L, const Info& i, const Show& sh, const T
             if (i.skills.empty()) out.push_back(Words{r, "\xE2\x80\x94", kMuted, 12 * s, false, Align::Left});  // —
             continue;
         }
-        out.push_back(Words{panel::Box{r.x + 6 * s, r.y, r.w * 0.6f, r.h}, i.skills[k].name, kText, 12 * s, false,
+        const float nameW = k < L.skillLess.size() ? L.skillLess[k].x - r.x - 10 * s : r.w * 0.6f;
+        out.push_back(Words{panel::Box{r.x + 6 * s, r.y, nameW, r.h}, i.skills[k].name, kText, 12 * s, false,
                             Align::Left});
-        out.push_back(Words{panel::Box{r.x, r.y, r.w - 30 * s, r.h}, settings::fmt(t.skillLevel, {std::to_string(
-                            i.skills[k].level)}), kMuted, 11.5f * s, false, Align::Right});
+        // 3.0.16-beta.31: «Рів. 3/5» while it is used below its level, ‹ › about it
+        const SkillRow& sk = i.skills[k];
+        const int use = companion::useOf(sk.use, sk.level);
+        const std::string lv = use < sk.level ? std::to_string(use) + "/" + std::to_string(sk.level)
+                                              : std::to_string(sk.level);
+        out.push_back(Words{k < L.skillLevel.size() ? L.skillLevel[k] : r, settings::fmt(t.skillLevel, {lv}),
+                            use < sk.level ? kGold2 : kMuted, 11.5f * s, false, Align::Center});
+        if (k < L.skillLess.size() && sk.level > 1) {
+            out.push_back(Words{L.skillLess[k], "\xE2\x80\xB9", kText, 12 * s, true, Align::Center});  // ‹
+            out.push_back(Words{L.skillMore[k], "\xE2\x80\xBA", kText, 12 * s, true, Align::Center});  // ›
+        }
         if (k < L.skillPlus.size() && i.skills[k].up && i.points > 0)
             out.push_back(Words{L.skillPlus[k], "+", kText, 13 * s, true, Align::Center});
     }

@@ -18,6 +18,8 @@ Kind kindOf(int cls);  // 6017-6026 archers, 6037-6046 spearmen, else swordsmen
 struct SkillRow {
     std::string name;  // UTF-8
     int level = 0;
+    int use = 0;          // 3.0.16-beta.31: the level it is used at (core/companion_skills useOf)
+    bool usable = false;  // 3.0.16-beta.31: in the game's own list (0x771444) - used, dragged onto the hotbar
 };
 struct Info {
     Kind kind = Kind::Swordsman;
@@ -40,6 +42,7 @@ struct Texts {
 struct Show {
     int hover = -1;  // a Button
     bool focus = false;  // the controller on «Навички»
+    int hoverSkill = -1, hoverLess = -1, hoverMore = -1;  // 3.0.16-beta.31
 };
 struct Layout {
     float s = 1;
@@ -48,12 +51,14 @@ struct Layout {
     panel::Box facts[4];
     panel::Box stats[8];
     std::vector<panel::Box> skillRows;  // 3.0.11-beta.218: under «Навички» (its heading `skills`), one at least
+    std::vector<panel::Box> skillLess, skillMore, skillLevel;  // 3.0.16-beta.31: the use level's ‹ › and its words
 };
 Layout layout(int targetW, int targetH, float scale, int skillCount = 0);
-enum class Part : uint8_t { None, Button };
+enum class Part : uint8_t { None, Button, Skill, Less, More };  // 3.0.16-beta.31: a skill's row, ‹ ›
 struct Hit {
     Part part = Part::None;
     Button button = Button::Close;
+    int index = -1;  // 3.0.16-beta.31: the skill's row
 };
 Hit hitTest(const Layout& L, float x, float y);
 

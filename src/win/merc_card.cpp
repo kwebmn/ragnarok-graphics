@@ -11,12 +11,14 @@
 #include <vector>
 
 #include "core/merc_block.hpp"
+#include "core/companion_skills.hpp"
 #include "core/merc_card.hpp"
 #include "core/merc_packet.hpp"
 #include "core/settings/strings.hpp"
 #include "core/ui_style.hpp"
 #include "pad/win/game_window.hpp"
 #include "win/code_page.hpp"
+#include "win/companion_skills.hpp"
 #include "win/char_block.hpp"
 #include "win/game_camera.hpp"
 #include "win/log.hpp"
@@ -66,6 +68,12 @@ struct State {
     int texW = 0, texH = 0;
     bool upload = false;
     int told = 0;
+    // 3.0.16-beta.31: its skills as the game keeps them (win/companion_skills: the rows when it has them - used,
+    // their use level chosen, dragged onto the hotbar); a press on a skill's row (as win/homun_card)
+    std::vector<companionwin::GameSkill> game;
+    int pressRow = -1;
+    float pressX = 0, pressY = 0;
+    bool dragging = false;
 };
 
 State& state() {
@@ -188,6 +196,57 @@ void block(const State& s, HWND game) {
 void hide(State& s) {
     if (s.shown) uapad::gamewindow::setBlocked(Blocker::Merc, nullptr, nullptr, false);
     s.shown = false;
+    s.pressRow = -1;  // 3.0.16-beta.31
+    s.dragging = false;
+}
+
+// 3.0.16-beta.31: the rows from the game's own list when it has them (0x029d's as the game keeps them), each with
+// the level it is used at
+void readSkills(State& s) {
+    s.game = companionwin::read(companionwin::Who::Merc);
+    if (s.game.empty()) return;  // the packet's seen rows (not used, not dragged)
+    s.info.skills.clear();
+    for (const companionwin::GameSkill& k : s.game) {
+        const std::string name = mercpacket::skillName(k.id);
+        mc::SkillRow r{name.empty() ? "#" + std::to_string(k.id) : name, k.level};
+        r.use = companion::useOf(companionwin::storedUse(companionwin::Who::Merc, k.id), k.level);
+        r.usable = true;
+        s.info.skills.push_back(r);
+    }
+}
+
+void useSkill(State& s, int row) {
+    if (row < 0 || size_t(row) >= s.game.size() || size_t(row) >= s.info.skills.size()) return;
+    const int level = s.info.skills[size_t(row)].use;
+    const bool sent = companionwin::use(companionwin::Who::Merc, s.game[size_t(row)], level);
+    if (s.told++ < 30)
+        LOG_INFO("merc: its skill %d used at level %d %s", s.game[size_t(row)].id, level,
+                 sent ? "(0x7E, as the game's own skills window)" : "- not sent");
+}
+
+void changeUse(State& s, int row, int by) {
+    if (row < 0 || size_t(row) >= s.game.size() || size_t(row) >= s.info.skills.size()) return;
+    const mc::SkillRow& r = s.info.skills[size_t(row)];
+    const int to = companion::stepped(r.use, r.level, by);
+    if (to == r.use || !companionwin::setUse(companionwin::Who::Merc, s.game[size_t(row)].id, to)) return;
+    if (s.told++ < 30) LOG_INFO("merc: its skill %d used at level %d now", s.game[size_t(row)].id, to);
+    s.key.clear();
+}
+
+void endPress(State& s, float tx, float ty) {
+    const int row = s.pressRow;
+    s.pressRow = -1;
+    if (row < 0 || size_t(row) >= s.game.size() || size_t(row) >= s.info.skills.size()) return;
+    const bool off = !s.layout.glass.contains(tx - float(s.layout.x), ty - float(s.layout.y));
+    if (s.dragging) {
+        s.dragging = false;
+        if (!off) return;
+        const char* what = companionwin::drop(companionwin::Who::Merc, s.game[size_t(row)],
+                                              s.info.skills[size_t(row)].use);
+        if (s.told++ < 30) LOG_INFO("merc: its skill %d dragged off the card - %s", s.game[size_t(row)].id, what);
+        return;
+    }
+    useSkill(s, row);
 }
 
 void press(State& s, mc::Button b) {
@@ -226,13 +285,24 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     s.targetW = targetWidth;
     s.targetH = targetHeight;
     s.info = infoOf(s);
+    readSkills(s);  // 3.0.16-beta.31
     s.layout = mc::layout(targetWidth, targetHeight, s.scale, int(s.info.skills.size()));
-    s.show.hover = -1;
+    s.show.hover = s.show.hoverSkill = s.show.hoverLess = s.show.hoverMore = -1;
     int cx = 0, cy = 0;
     if (readGameCursor(cx, cy)) {
         const mc::Hit h = mc::hitTest(s.layout, float(cx) * float(k) - float(s.layout.x),
                                       float(cy) * float(k) - float(s.layout.y));
         if (h.part == mc::Part::Button) s.show.hover = int(h.button);
+        if (h.part == mc::Part::Skill) s.show.hoverSkill = h.index;  // 3.0.16-beta.31
+        if (h.part == mc::Part::Less) s.show.hoverLess = h.index;
+        if (h.part == mc::Part::More) s.show.hoverMore = h.index;
+        if (s.pressRow >= 0) {  // a press on a row moved far - a drag; its button up - its end
+            const float tx = float(cx) * float(k), ty = float(cy) * float(k);
+            if (!s.dragging && companion::dragged(s.pressX, s.pressY, tx, ty, s.scale)) s.dragging = true;
+            const int button = GetSystemMetrics(SM_SWAPBUTTON) ? VK_RBUTTON : VK_LBUTTON;
+            if (GetAsyncKeyState(button) >= 0) endPress(s, tx, ty);
+            if (s.dragging) s.show.hoverSkill = s.pressRow;
+        }
     }
     const mc::Info& i = s.info;
     std::string key = i.name + ';' + std::to_string(int(i.kind)) + ',' + std::to_string(i.level) + ',' +
@@ -242,7 +312,10 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
                       std::to_string(s.show.hover) + (s.show.focus ? "f" : "") + ';' + std::to_string(s.layout.x) +
                       ',' + std::to_string(s.layout.y) + '#' + std::to_string(uistyle::generation());
     for (int st : i.stats) key += ',' + std::to_string(st);
-    for (const mc::SkillRow& r : i.skills) key += ';' + r.name + std::to_string(r.level);
+    for (const mc::SkillRow& r : i.skills)
+        key += ';' + r.name + std::to_string(r.level) + '/' + std::to_string(r.use) + (r.usable ? "u" : "");
+    key += ';' + std::to_string(s.show.hoverSkill) + ',' + std::to_string(s.show.hoverLess) + ',' +
+           std::to_string(s.show.hoverMore);
     if (key != s.key) {
         s.key = key;
         render(s);
@@ -273,11 +346,21 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     float tx = 0, ty = 0;
     if (!pointerInTarget(game, m, lp, s.k, s.targetW, s.targetH, tx, ty, nullptr)) return false;
     const float lx = tx - float(s.layout.x), ly = ty - float(s.layout.y);
+    if (m == WM_LBUTTONUP && s.pressRow >= 0) endPress(s, tx, ty);  // 3.0.16-beta.31
     if (!s.layout.glass.contains(lx, ly)) return false;
     result = 0;
     if (m != WM_LBUTTONDOWN && m != WM_LBUTTONDBLCLK) return true;
     const mc::Hit h = mc::hitTest(s.layout, lx, ly);
     if (h.part == mc::Part::Button) press(s, h.button);
+    const bool usable = h.index >= 0 && size_t(h.index) < s.info.skills.size() && s.info.skills[size_t(h.index)].usable;
+    if (usable && h.part == mc::Part::Less) changeUse(s, h.index, -1);  // 3.0.16-beta.31
+    if (usable && h.part == mc::Part::More) changeUse(s, h.index, +1);
+    if (usable && h.part == mc::Part::Skill && m == WM_LBUTTONDOWN) {  // used at the button's up, or dragged
+        s.pressRow = h.index;
+        s.pressX = tx;
+        s.pressY = ty;
+        s.dragging = false;
+    }
     return true;
 }
 

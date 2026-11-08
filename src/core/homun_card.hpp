@@ -17,6 +17,7 @@ struct SkillRow {
     std::string name;  // UTF-8
     int level = 0;
     bool up = false;  // can rise (the server's flag) - a «+» with points left
+    int use = 0;      // 3.0.16-beta.31: the level it is used at (core/companion_skills useOf)
 };
 std::string skillName(int id);  // the homunculi's skills (8001-8016) as the server's skill_db names them; "" else
 struct Info {
@@ -44,6 +45,7 @@ struct Show {
     int hover = -1;  // a Button
     int focus = -1;  // the controller's (Feed or Skills)
     int hoverPlus = -1, hoverSkill = -1;  // 3.0.11-beta.221
+    int hoverLess = -1, hoverMore = -1;   // 3.0.16-beta.31
 };
 struct Layout {
     float s = 1;
@@ -54,9 +56,10 @@ struct Layout {
     panel::Box buttons[2];  // feed, skills (3.0.11-beta.221: w 0 - its skills listed below instead)
     panel::Box skillsHead;  // 3.0.11-beta.221
     std::vector<panel::Box> skillRows, skillPlus;
+    std::vector<panel::Box> skillLess, skillMore, skillLevel;  // 3.0.16-beta.31: the use level's ‹ › and its words
 };
 Layout layout(int targetW, int targetH, float scale, int skillCount = 0);
-enum class Part : uint8_t { None, Button, Plus, Skill };
+enum class Part : uint8_t { None, Button, Plus, Skill, Less, More };  // 3.0.16-beta.31: Less, More
 struct Hit {
     Part part = Part::None;
     Button button = Button::Close;

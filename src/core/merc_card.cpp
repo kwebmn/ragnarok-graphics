@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 
+#include "core/companion_skills.hpp"
 #include "core/ui_style.hpp"
 
 namespace uagfx::merccard {
@@ -66,6 +67,10 @@ Layout layout(int targetW, int targetH, float scale, int skillCount) {
     y += kLineH * s + 6 * s;
     for (int k = 0; k < std::max(1, skillCount); ++k) {
         L.skillRows.push_back(panel::Box{pad, y, inner, kLineH * s});
+        const companion::RowParts rp = companion::rowParts(L.skillRows.back(), s, false);  // 3.0.16-beta.31
+        L.skillLess.push_back(rp.less);
+        L.skillMore.push_back(rp.more);
+        L.skillLevel.push_back(rp.level);
         y += kLineH * s;
     }
     y += 10 * s;
@@ -82,6 +87,11 @@ Layout layout(int targetW, int targetH, float scale, int skillCount) {
 Hit hitTest(const Layout& L, float x, float y) {
     if (L.close.contains(x, y)) return Hit{Part::Button, Button::Close};
     if (L.dismiss.contains(x, y)) return Hit{Part::Button, Button::Dismiss};
+    for (size_t k = 0; k < L.skillRows.size(); ++k) {  // 3.0.16-beta.31
+        if (L.skillLess[k].contains(x, y)) return Hit{Part::Less, Button::Close, int(k)};
+        if (L.skillMore[k].contains(x, y)) return Hit{Part::More, Button::Close, int(k)};
+        if (L.skillRows[k].contains(x, y)) return Hit{Part::Skill, Button::Close, int(k)};
+    }
     return Hit{};
 }
 
@@ -99,6 +109,14 @@ void paint(panel::Picture& out, const Layout& L, const Info& i, const Show& sh) 
     bar(L.sp, i.sp, i.maxSp, kSp);
     panel::roundRect(out, panel::Box{L.skills.x, L.skills.y + L.skills.h - 1 * s, L.skills.w, 1 * s}, 0, kGold,
                      0.45f);  // 3.0.11-beta.218: the list's heading underlined
+    for (size_t k = 0; k < L.skillRows.size() && k < i.skills.size(); ++k) {  // 3.0.16-beta.31
+        if (!i.skills[k].usable) continue;
+        if (sh.hoverSkill == int(k)) panel::roundRect(out, L.skillRows[k], 6 * s, kWhite, 0.07f);
+        if (i.skills[k].level > 1) {
+            panel::roundRect(out, L.skillLess[k], 5 * s, kWhite, sh.hoverLess == int(k) ? 0.16f : 0.06f);
+            panel::roundRect(out, L.skillMore[k], 5 * s, kWhite, sh.hoverMore == int(k) ? 0.16f : 0.06f);
+        }
+    }
     if (sh.hover == int(Button::Dismiss)) panel::roundRect(out, L.dismiss, 6 * s, kDanger, 0.12f);
 }
 
@@ -134,11 +152,22 @@ std::vector<Words> words(const Layout& L, const Info& i, const Show& sh, const T
                                                       Align::Left});  // —
             continue;
         }
-        out.push_back(Words{L.skillRows[k], i.skills[k].name, kText, 12 * s, false, Align::Left});
+        const SkillRow& sk = i.skills[k];
+        const panel::Box& r = L.skillRows[k];
+        out.push_back(Words{panel::Box{r.x + 6 * s, r.y, L.skillLess[k].x - r.x - 10 * s, r.h}, sk.name, kText,
+                            12 * s, false, Align::Left});
+        // 3.0.16-beta.31: «Рів. 3/5» while it is used below its level, ‹ › about it (the game's own list's only)
+        const int use = sk.usable ? companion::useOf(sk.use, sk.level) : sk.level;
         std::string lv = t.skillLevel;
         if (const size_t p = lv.find("{1}"); p != std::string::npos)
-            lv.replace(p, 3, std::to_string(i.skills[k].level));
-        out.push_back(Words{L.skillRows[k], lv, kMuted, 11.5f * s, false, Align::Right});
+            lv.replace(p, 3, use < sk.level ? std::to_string(use) + "/" + std::to_string(sk.level)
+                                            : std::to_string(sk.level));
+        out.push_back(Words{L.skillLevel[k], lv, use < sk.level ? kGold2 : kMuted, 11.5f * s, false,
+                            Align::Center});
+        if (sk.usable && sk.level > 1) {
+            out.push_back(Words{L.skillLess[k], "\xE2\x80\xB9", kText, 12 * s, true, Align::Center});  // ‹
+            out.push_back(Words{L.skillMore[k], "\xE2\x80\xBA", kText, 12 * s, true, Align::Center});  // ›
+        }
     }
     out.push_back(Words{L.dismiss, t.dismiss, kDanger, 11 * s, false, Align::Center});
     return out;

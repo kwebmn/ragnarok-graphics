@@ -8,11 +8,13 @@
 #include <string>
 #include <vector>
 
+#include "core/companion_skills.hpp"
 #include "core/homun_card.hpp"
 #include "core/settings/strings.hpp"
 #include "core/ui_style.hpp"
 #include "pad/win/game_window.hpp"
 #include "win/code_page.hpp"
+#include "win/companion_skills.hpp"
 #include "win/game_camera.hpp"
 #include "win/log.hpp"
 #include "win/picture_draw.hpp"
@@ -40,9 +42,9 @@ constexpr int kButtonMsg = 6;
 // node's record at +8 - 1, the id, its kind, level, SP, can rise, range, its name), its skill points (0x022e's at 67);
 // the game mode's SendMsg - 0x4A raises a skill (0x0112), 0x7E uses one (a record, the level: as the game's own skills
 // window does for a homunculus' FUN_004bdd90)
-constexpr uint32_t kSkillList = 0x771438, kSkillPoints = 0x771FAC;
+constexpr uint32_t kSkillPoints = 0x771FAC;  // 3.0.16-beta.31: the list read by win/companion_skills
 constexpr uint32_t kModeNow = 0x74B57C, kModeMsgSlot = 0x14, kModeMsg = 0x5707D0;
-constexpr int kRaiseMsg = 0x4A, kUseMsg = 0x7E;
+constexpr int kRaiseMsg = 0x4A;
 constexpr size_t kMostSkills = 20;
 using ModeMsgFn = int(__attribute__((thiscall)) *)(uint32_t mode, int msg, int a, int b, int c);
 using SendMsgFn = int(__attribute__((thiscall)) *)(uint32_t self, uint32_t sender, int msg, int a, int b, int c);
@@ -65,6 +67,12 @@ struct State {
     int told = 0;
     std::vector<uint32_t> records;  // 3.0.11-beta.221: the game's records of its skills, the list's order
     std::vector<int> ids;
+    // 3.0.16-beta.31: its skills as the game keeps them (win/companion_skills); a press on a skill's row - a click
+    // uses it at its use level, a drag lets it go onto the hotbar (the target's pixels where it began)
+    std::vector<companionwin::GameSkill> game;
+    int pressRow = -1;
+    float pressX = 0, pressY = 0;
+    bool dragging = false;
 };
 
 State& state() {
@@ -130,17 +138,15 @@ void readSkills(State& s) {
     s.records.clear();
     s.ids.clear();
     s.info.skills.clear();
-    const uint32_t head = read32(kSkillList);
-    if (!head) return;
-    uint32_t node = read32(head);
-    for (size_t n = 0; node && node != head && n < kMostSkills; ++n, node = read32(node)) {
-        int32_t r[8] = {};
-        if (!readGame(node + 8, r, sizeof r)) break;
-        const std::string name = hc::skillName(r[1]);
-        s.records.push_back(node + 8);
-        s.ids.push_back(r[1]);
-        s.info.skills.push_back(
-            hc::SkillRow{name.empty() ? "#" + std::to_string(r[1]) : name, r[3], (r[5] & 0xFF) != 0});
+    s.game = companionwin::read(companionwin::Who::Homun);  // 3.0.16-beta.31
+    if (s.game.size() > kMostSkills) s.game.resize(kMostSkills);
+    for (const companionwin::GameSkill& k : s.game) {
+        const std::string name = hc::skillName(k.id);
+        s.records.push_back(k.node + 8);
+        s.ids.push_back(k.id);
+        hc::SkillRow row{name.empty() ? "#" + std::to_string(k.id) : name, k.level, k.up};
+        row.use = companion::useOf(companionwin::storedUse(companionwin::Who::Homun, k.id), k.level);
+        s.info.skills.push_back(row);
     }
 }
 
@@ -159,11 +165,39 @@ void raiseSkill(State& s, int row) {
 }
 
 void useSkill(State& s, int row) {
-    if (row < 0 || size_t(row) >= s.records.size() || s.info.skills[size_t(row)].level <= 0) return;
-    const bool sent = modeMsg(kUseMsg, int(s.records[size_t(row)]), s.info.skills[size_t(row)].level, 0);
+    if (row < 0 || size_t(row) >= s.game.size() || s.info.skills[size_t(row)].level <= 0) return;
+    const int level = s.info.skills[size_t(row)].use;  // 3.0.16-beta.31: at its use level
+    const bool sent = companionwin::use(companionwin::Who::Homun, s.game[size_t(row)], level);
     if (s.told++ < 30)
-        LOG_INFO("homun: its skill %d used at level %d %s", s.ids[size_t(row)], s.info.skills[size_t(row)].level,
+        LOG_INFO("homun: its skill %d used at level %d %s", s.ids[size_t(row)], level,
                  sent ? "(0x7E, as the game's own skills window)" : "- not sent");
+}
+
+// 3.0.16-beta.31: its use level one down or up (kept where the game's own window keeps it)
+void changeUse(State& s, int row, int by) {
+    if (row < 0 || size_t(row) >= s.game.size()) return;
+    const hc::SkillRow& r = s.info.skills[size_t(row)];
+    const int to = companion::stepped(r.use, r.level, by);
+    if (to == r.use || !companionwin::setUse(companionwin::Who::Homun, s.ids[size_t(row)], to)) return;
+    if (s.told++ < 30) LOG_INFO("homun: its skill %d used at level %d now", s.ids[size_t(row)], to);
+    s.key.clear();
+}
+
+// 3.0.16-beta.31: a press on a skill's row ended - let go onto the hotbar when dragged off the card, else used
+void endPress(State& s, float tx, float ty) {
+    const int row = s.pressRow;
+    s.pressRow = -1;
+    if (row < 0 || size_t(row) >= s.game.size()) return;
+    const bool off = !s.layout.glass.contains(tx - float(s.layout.x), ty - float(s.layout.y));
+    if (s.dragging) {
+        s.dragging = false;
+        if (!off) return;
+        const char* what = companionwin::drop(companionwin::Who::Homun, s.game[size_t(row)],
+                                              s.info.skills[size_t(row)].use);
+        if (s.told++ < 30) LOG_INFO("homun: its skill %d dragged off the card - %s", s.ids[size_t(row)], what);
+        return;
+    }
+    useSkill(s, row);
 }
 
 hc::Texts texts() {
@@ -218,6 +252,8 @@ void block(const State& s, HWND game) {
 void hide(State& s) {
     if (s.shown) uapad::gamewindow::setBlocked(Blocker::Homun, nullptr, nullptr, false);
     s.shown = false;
+    s.pressRow = -1;  // 3.0.16-beta.31
+    s.dragging = false;
 }
 
 void press(State& s, hc::Button b) {
@@ -259,7 +295,7 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     readSkills(s);
     s.layout = hc::layout(targetWidth, targetHeight, s.scale, int(s.info.skills.size()));
     s.show.hover = -1;
-    s.show.hoverPlus = s.show.hoverSkill = -1;
+    s.show.hoverPlus = s.show.hoverSkill = s.show.hoverLess = s.show.hoverMore = -1;
     int cx = 0, cy = 0;
     if (readGameCursor(cx, cy)) {
         const hc::Hit h = hc::hitTest(s.layout, float(cx) * float(k) - float(s.layout.x),
@@ -267,6 +303,15 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
         if (h.part == hc::Part::Button) s.show.hover = int(h.button);
         if (h.part == hc::Part::Plus) s.show.hoverPlus = h.index;
         if (h.part == hc::Part::Skill) s.show.hoverSkill = h.index;
+        if (h.part == hc::Part::Less) s.show.hoverLess = h.index;  // 3.0.16-beta.31
+        if (h.part == hc::Part::More) s.show.hoverMore = h.index;
+        if (s.pressRow >= 0) {  // 3.0.16-beta.31: a press on a row moved far - a drag; its button up - its end
+            const float tx = float(cx) * float(k), ty = float(cy) * float(k);
+            if (!s.dragging && companion::dragged(s.pressX, s.pressY, tx, ty, s.scale)) s.dragging = true;
+            const int button = GetSystemMetrics(SM_SWAPBUTTON) ? VK_RBUTTON : VK_LBUTTON;
+            if (GetAsyncKeyState(button) >= 0) endPress(s, tx, ty);
+            if (s.dragging) s.show.hoverSkill = s.pressRow;
+        }
     }
     const hc::Info& i = s.info;
     std::string key = i.name + ';' + std::to_string(i.level) + ',' + std::to_string(i.hp) + '/' +
@@ -278,7 +323,9 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     for (int st : i.stats) key += ',' + std::to_string(st);
     key += ";p" + std::to_string(i.points) + ',' + std::to_string(s.show.hoverPlus) + ',' +
            std::to_string(s.show.hoverSkill);
-    for (const hc::SkillRow& r : i.skills) key += ';' + r.name + std::to_string(r.level) + (r.up ? "+" : "");
+    for (const hc::SkillRow& r : i.skills)
+        key += ';' + r.name + std::to_string(r.level) + '/' + std::to_string(r.use) + (r.up ? "+" : "");
+    key += ';' + std::to_string(s.show.hoverLess) + ',' + std::to_string(s.show.hoverMore);
     if (key != s.key) {
         s.key = key;
         render(s);
@@ -309,13 +356,21 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     float tx = 0, ty = 0;
     if (!pointerInTarget(game, m, lp, s.k, s.targetW, s.targetH, tx, ty, nullptr)) return false;
     const float lx = tx - float(s.layout.x), ly = ty - float(s.layout.y);
+    if (m == WM_LBUTTONUP && s.pressRow >= 0) endPress(s, tx, ty);  // 3.0.16-beta.31
     if (!s.layout.glass.contains(lx, ly)) return false;
     result = 0;
     if (m != WM_LBUTTONDOWN && m != WM_LBUTTONDBLCLK) return true;
     const hc::Hit h = hc::hitTest(s.layout, lx, ly);
     if (h.part == hc::Part::Button) press(s, h.button);
     if (h.part == hc::Part::Plus) raiseSkill(s, h.index);  // 3.0.11-beta.221
-    if (h.part == hc::Part::Skill) useSkill(s, h.index);
+    if (h.part == hc::Part::Less) changeUse(s, h.index, -1);  // 3.0.16-beta.31
+    if (h.part == hc::Part::More) changeUse(s, h.index, +1);
+    if (h.part == hc::Part::Skill && m == WM_LBUTTONDOWN) {  // 3.0.16-beta.31: used at the button's up, or dragged
+        s.pressRow = h.index;
+        s.pressX = tx;
+        s.pressY = ty;
+        s.dragging = false;
+    }
     return true;
 }
 
