@@ -58,53 +58,26 @@ Text problemText(ScreenProblem p) {
 
 namespace {
 
-// 3.0.17-beta.13: this folder's client works with its own key (uaRO HD; the old uaRO keeps the shared one). The first
-// time, it takes everything the game kept in the shared key (the login, the bars, the windows). 3.0.17-beta.14 (the
-// owner: «каждый раз ... смотрели не сломан ли старый клиент и чинили его»): at every start the shared key's personal
-// copy gives its screen up when a setup.exe's is under it - the old client on dgVoodoo starts with that one - unless
-// the old client has uaRO Graphics of its own (it takes any screen; its app chose that one). The driver does the
-// same at the game's start (win/own_game_key).
-bool oldClientHasOurs(const std::wstring& dir) {
-    const auto lower = [](std::wstring s) {
-        for (wchar_t& c : s) c = wchar_t(std::towlower(c));
-        return s;
-    };
-    for (const AppsEntry& e : appsEntries())
-        if (e.name == wide(kOldAppsEntry) && !e.dir.empty() && lower(e.dir) != lower(dir) &&
-            fileExists(e.dir + L"\\ddraw.dll"))
-            return true;
-    return false;
-}
-
-void adoptGameKey(const std::wstring& dir) {
-    const std::string leaf = gameKeyLeaf(clientOf(dir).client);
-    // 3.0.17-beta.15: the key the game read at its last start (win/own_game_key) - the shared one when it could not
-    // read its own (its process not virtualised: the VirtualStore copy unseen); then nothing moves or is taken away
-    std::string used;
-    if (readFile(dir + L"\\" + wide(layout::kGameKeyUsed), used)) {
-        while (!used.empty() && (used.back() == '\n' || used.back() == '\r' || used.back() == ' ')) used.pop_back();
-        if (used == kSharedLeaf) {
-            useGameKey(kSharedLeaf);
-            return;
-        }
-    }
-    useGameKey(leaf);
-    if (leaf == kSharedLeaf) return;
-    if (!gameKeyExists(GameRegistry{readPersonal(), readCommon()})) {
-        const GameRegistry shared{readPersonalOf(kSharedLeaf), readCommonOf(kSharedLeaf)};
-        if (!gameKeyExists(shared)) return;
-        if (!replacePersonal(effectiveCopy(shared)).empty()) return;  // a part not written: the shared key stays
-    }
-    if (oldClientHasOurs(dir)) return;
-    const GameRegistry shared{readPersonalOf(kSharedLeaf), readCommonOf(kSharedLeaf)};
-    for (const RegWrite& w : sharedRepair(shared)) writePersonalValueOf(kSharedLeaf, w);
+// 3.0.17-beta.17 (the owner: uaRO HD stopped starting after beta.13 - the last good start beta.8, nothing but the key
+// switch ran before its log since): the game and this app keep the shared key, as before beta.13. When beta.13-.16
+// took uaRO HD's screen out of it (the old client's repair), it comes back from the copy they made of it.
+void restoreSharedScreen(const std::wstring& dir) {
+    const std::string own = gameKeyLeaf(clientOf(dir).client);
+    if (own == kSharedLeaf) return;
+    const RegCopy shared = readPersonalOf(kSharedLeaf);
+    for (const std::string& name : screenValueNames())
+        if (shared.find("", name)) return;  // a screen there: the player's, left as it is
+    const RegCopy copy = readPersonalOf(own);
+    for (const std::string& name : screenValueNames())
+        if (const RegValue* v = copy.find("", name))
+            writePersonalValueOf(kSharedLeaf, RegWrite{"", name, RegOp::Set, *v});
 }
 
 }  // namespace
 
 Model::Model() {
     paths_.dir = exeFolder();
-    adoptGameKey(paths_.dir);
+    restoreSharedScreen(paths_.dir);
     {
         AppDisk disk;  // 2.8: a 2.x install's files into uaro-graphics\ before anything reads them
         layout::migrate(utf8(paths_.dir), disk);

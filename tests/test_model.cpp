@@ -1005,82 +1005,35 @@ TEST(model_reads_the_card_verdict_of_a_direct3d_11_card) {
     CHECK_EQ(m.cardLevel(), 0);  // «Без ефектів», as the driver judged it
 }
 
-// 3.0.17-beta.13: uaRO HD moves to its own key with everything the game kept (the login, the bars); the shared one
-// gets its setup.exe's screen back (the old client «Cannot init d3d» on uaRO HD's 32 bits and size)
-TEST(model_a_client_of_its_own_moves_to_its_own_key) {
+// 3.0.17-beta.17: uaRO HD keeps the shared key again (beta.13-.16's own key stopped it starting); the screen the
+// old client's repair took out comes back from the own key's copy (in the fake: `shared` stands for a key not in use)
+TEST(model_uaro_hd_gets_its_screen_back_in_the_shared_key) {
     fake::Windows& w = fake::reset();
     w.files[fake::path(L"uaro-client.json")] =
         "{\"format\":1,\"client\":\"uaRO HD\",\"version\":\"2026.10.6\",\"files\":[]}";
-    w.shared.common.exists = true;
-    fake::gameKey(w.shared.common, 1024, 768, true);
-    w.shared.common.keys[""]["DEVICENAME"] = RegValue::sz("dgVoodoo HAL");
-    w.shared.personal.exists = true;
-    fake::gameKey(w.shared.personal, 2560, 1440, false);
-    w.shared.personal.keys[""]["ID"] = RegValue::sz("player");
-    w.shared.personal.keys["ShortCutList"]["0"] = RegValue::sz("/lv");
-    app::Model m;
-    CHECK_EQ(w.leaf, std::string("uaRO HD"));
-    CHECK(w.registry.personal.find("", "ID") && w.registry.personal.find("ShortCutList", "0"));
-    CHECK(effectiveDword("WIDTH") == 2560);  // its own screen came along
-    CHECK(!w.shared.personal.find("", "WIDTH") && !w.shared.personal.find("", "HEIGHT"));
-    CHECK(w.shared.personal.find("", "ID"));  // the old client keeps its login and the rest
-    CHECK(effectiveValue(w.shared, "", "WIDTH")->asDword() == 1024u);
-    // its own key there: nothing moves again - 3.0.17-beta.14 (the owner: «каждый раз ... смотрели не сломан ли старый
-    // клиент и чинили его»): the shared key's screen is put right at every start
-    w.shared.personal.keys[""]["WIDTH"] = RegValue::dword(800);
-    w.registry.personal.keys[""]["ID"] = RegValue::sz("other");
-    app::Model again;
-    CHECK(!w.shared.personal.find("", "WIDTH"));
-    CHECK(w.registry.personal.find("", "ID")->text == "other");
-    CHECK(effectiveDword("WIDTH") == 2560);
-}
-
-// 3.0.17-beta.14: the old client with uaRO Graphics of its own (its Apps entry, its ddraw.dll) takes any screen - the
-// one its own app chose stays
-TEST(model_the_old_clients_own_screen_stays_when_it_has_our_driver) {
-    fake::Windows& w = fake::reset();
-    w.files[fake::path(L"uaro-client.json")] =
-        "{\"format\":1,\"client\":\"uaRO HD\",\"version\":\"2026.10.6\",\"files\":[]}";
-    w.shared.common.exists = true;
-    fake::gameKey(w.shared.common, 1024, 768, true);
-    w.shared.common.keys[""]["DEVICENAME"] = RegValue::sz("dgVoodoo HAL");
-    fake::gameKey(w.shared.personal, 1920, 1080, false);
-    const std::wstring old = L"C:\\Games\\uaRO";
-    w.folders.insert(old);
-    w.files[old + L"\\ddraw.dll"] = "MZ";
-    w.apps[L"uaRO Graphics"] = {{L"InstallLocation", old}, {L"DisplayVersion", L"3.0.16"}};
-    app::Model m;
-    CHECK_EQ(w.leaf, std::string("uaRO HD"));
-    CHECK(w.shared.personal.find("", "WIDTH"));
-    w.files.erase(old + L"\\ddraw.dll");  // its uaRO Graphics removed by hand: dgVoodoo's again
-    app::Model again;
-    CHECK(!w.shared.personal.find("", "WIDTH"));
-}
-
-TEST(model_the_old_client_stays_on_the_shared_key) {
-    fake::Windows& w = fake::reset();
-    fake::gameKey(w.registry.personal, 1920, 1080, false);
     w.registry.personal.exists = true;
+    w.registry.personal.keys[""]["ID"] = RegValue::sz("player");
+    w.registry.common.exists = true;
+    fake::gameKey(w.registry.common, 1024, 768, true);
+    fake::gameKey(w.shared.personal, 2194, 1234, false);  // the copy beta.13 made in Gravity Soft\uaRO HD
+    w.shared.personal.keys[""]["DEVICENAME"] = RegValue::sz("Direct3D HAL");
     app::Model m;
     CHECK_EQ(w.leaf, std::string("Ragnarok"));
+    CHECK(effectiveDword("WIDTH") == 2194 && effectiveDword("HEIGHT") == 1234);
+    CHECK(w.registry.personal.find("", "DEVICENAME")->text == "Direct3D HAL");
+    CHECK(w.registry.personal.find("", "ID"));
+    // a screen there already: the player's, nothing written over it
+    w.registry.personal.keys[""]["WIDTH"] = RegValue::dword(1920);
+    app::Model again;
     CHECK(effectiveDword("WIDTH") == 1920);
 }
 
-// 3.0.17-beta.15: the game could not read its own key (its process not virtualised: the key the app wrote in the
-// VirtualStore unseen, none made) - the driver keeps the shared key and says so; the app works with that one too
-TEST(model_the_key_the_game_reads_is_the_apps) {
+TEST(model_the_old_client_takes_no_screen_from_elsewhere) {
     fake::Windows& w = fake::reset();
-    w.files[fake::path(L"uaro-client.json")] =
-        "{\"format\":1,\"client\":\"uaRO HD\",\"version\":\"2026.10.6\",\"files\":[]}";
-    w.files[fake::path(L"uaro-graphics\\game-key.txt")] = "Ragnarok\r\n";
-    fake::gameKey(w.registry.personal, 2560, 1440, false);
     w.registry.common.exists = true;
     fake::gameKey(w.registry.common, 1024, 768, true);
-    w.registry.common.keys[""]["DEVICENAME"] = RegValue::sz("dgVoodoo HAL");
+    fake::gameKey(w.shared.personal, 2194, 1234, false);
     app::Model m;
-    CHECK_EQ(w.leaf, std::string("Ragnarok"));
-    CHECK(effectiveDword("WIDTH") == 2560);  // nothing moved, nothing taken away
-    w.files[fake::path(L"uaro-graphics\\game-key.txt")] = "uaRO HD\n";
-    app::Model again;
-    CHECK_EQ(w.leaf, std::string("uaRO HD"));
+    CHECK(!w.registry.personal.find("", "WIDTH"));
+    CHECK(effectiveDword("WIDTH") == 1024);
 }

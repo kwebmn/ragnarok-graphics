@@ -55,9 +55,6 @@ constexpr const char* kSeenVersion = "uaro-graphics\\cache\\seen-version.txt";
 constexpr const char* kSceneRecord = "uaro-graphics\\scene-record.bin";
 // 3.0.17-beta.4: the console's rows pinned to «Швидко» (core/console_pins)
 constexpr const char* kConsolePins = "uaro-graphics\\cache\\console-pins.txt";
-// 3.0.17-beta.15: the registry key's last part the game reads (win/own_game_key writes it at its start; the settings
-// app works with the same one): "uaRO HD", or "Ragnarok" when its own key could not be read the game's way
-constexpr const char* kGameKeyUsed = "uaro-graphics\\game-key.txt";
 constexpr const char* kFailedStarts = "uaro-graphics\\cache\\failed-starts.txt";
 constexpr const char* kSafeModeNote = "uaro-graphics\\cache\\safe-mode.txt";
 // 3.0.11-beta.56 (the owner: «сделать» - how many installs there are): this install's random number for the site's
