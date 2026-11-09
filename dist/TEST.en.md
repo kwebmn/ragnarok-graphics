@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.16-beta.38 — what's new
+
+- **Fixed: a guild mate in your party on the minimap.** It no longer flips between the guild's pink triangle and the party's face circle: a party member shows only as the circle.
+
 # uaRO Graphics 3.0.16-beta.37 — what's new
 
 - **New: "Hallucination wave"** (Effects → Screen, off at first). While your character is under Hallucination, the picture of the world sways in slow waves, as in newer clients; the interface stays still. Our client shows nothing but the icon on its own.
