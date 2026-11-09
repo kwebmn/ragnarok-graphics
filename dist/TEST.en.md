@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.17-beta.25 — what's new
+
+- **Cyrillic on an English (or any non-Cyrillic) Windows:** the tip of the day, the chat, names and the game's other texts no longer turn into garbage - uaRO's texts are now always read as Windows-1251 unless the settings set another code page.
+
 # uaRO Graphics 3.0.17-beta.24 — what's new
 
 - **No silhouette on the character itself:** the light outline on the head (under Two-Hand Quicken and in other poses) was the body's silhouette, "hidden" by the character's own head. The character's parts no longer hide one another; the silhouette shows only behind a wall or a house.
