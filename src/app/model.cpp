@@ -16,12 +16,13 @@
 #include "app/registry.hpp"
 #include "app/text.hpp"
 #include "app/update_run.hpp"
+#include "core/client_patch.hpp"
 #include "core/layout.hpp"
 #include "core/settings/navigation.hpp"
 #include "core/card_speed.hpp"
 #include "core/effect_groups.hpp"
 #include "core/settings/compat_flags.hpp"
-#include "core/settings/game_key.hpp"
+#include "core/settings/game_screen.hpp"
 #include "core/settings/pad_files.hpp"
 #include "core/settings/ini_edit.hpp"
 #include "core/settings/recommended.hpp"
@@ -58,26 +59,29 @@ Text problemText(ScreenProblem p) {
 
 namespace {
 
-// 3.0.17-beta.17 (the owner: uaRO HD stopped starting after beta.13 - the last good start beta.8, nothing but the key
-// switch ran before its log since): the game and this app keep the shared key, as before beta.13. When beta.13-.16
-// took uaRO HD's screen out of it (the old client's repair), it comes back from the copy they made of it.
-void restoreSharedScreen(const std::wstring& dir) {
-    const std::string own = gameKeyLeaf(clientOf(dir).client);
-    if (own == kSharedLeaf) return;
-    const RegCopy shared = readPersonalOf(kSharedLeaf);
-    for (const std::string& name : screenValueNames())
-        if (shared.find("", name)) return;  // a screen there: the player's, left as it is
-    const RegCopy copy = readPersonalOf(own);
-    for (const std::string& name : screenValueNames())
-        if (const RegValue* v = copy.find("", name))
-            writePersonalValueOf(kSharedLeaf, RegWrite{"", name, RegOp::Set, *v});
+// 3.0.17-beta.18: the old client has uaRO Graphics of its own - its Apps entry in another folder, its ddraw.dll
+// there: it takes any screen, the one its app chose stays in the shared key
+bool oldClientHasOurs(const std::wstring& dir) {
+    const auto lower = [](std::wstring s) {
+        for (wchar_t& c : s) c = wchar_t(std::towlower(c));
+        return s;
+    };
+    for (const AppsEntry& e : appsEntries())
+        if (e.name == wide(kOldAppsEntry) && !e.dir.empty() && lower(e.dir) != lower(dir) &&
+            fileExists(e.dir + L"\\ddraw.dll"))
+            return true;
+    return false;
 }
 
 }  // namespace
 
 Model::Model() {
     paths_.dir = exeFolder();
-    restoreSharedScreen(paths_.dir);
+    {  // 3.0.17-beta.18: uaRO HD's screen in its own file (an unknown client: the old way)
+        const std::string client = clientOf(paths_.dir).client;
+        if (!client.empty() && !client_patch::sameClient(client, client_patch::kOldClient))
+            paths_.screen = paths_.dir + L"\\" + wide(layout::kGameScreen);
+    }
     {
         AppDisk disk;  // 2.8: a 2.x install's files into uaro-graphics\ before anything reads them
         layout::migrate(utf8(paths_.dir), disk);
@@ -95,8 +99,51 @@ Model::Model() {
         installer::removeOldPad(paths_.dir);      // 2.9: the pad is inside the driver
         installer::removeOldScripts(paths_.dir);  // 2.10: no .bat of ours any more (an old update.bat's too)
     }
+    ownScreenAtStart();
     system_ = probeSystem();
     load();
+}
+
+std::optional<GameScreen> Model::ownScreen() const {
+    std::string text;
+    if (paths_.screen.empty() || !readFile(paths_.screen, text)) return std::nullopt;
+    return parseGameScreen(text);
+}
+
+// 3.0.17-beta.18 (the owner: «функционал старого и нового не пересекались», «каждый раз ... смотрели не сломан ли
+// старый клиент и чинили его»): uaRO HD's screen goes into its own file the first time (as the game reads it now),
+// then at every start the shared key's personal copy gives its screen up when a setup.exe's is under it - unless the
+// old client has uaRO Graphics of its own. Never without the file: uaRO HD would lose its screen.
+void Model::ownScreenAtStart() {
+    if (paths_.screen.empty()) return;
+    const GameRegistry key{readPersonal(), readCommon()};
+    if (!ownScreen()) {
+        const auto now = screenOf(key);
+        if (!now || !writeFileAtomic(paths_.screen, gameScreenText(*now))) return;
+    }
+    if (oldClientHasOurs(paths_.dir)) return;
+    writeValues(sharedRepair(key));
+}
+
+bool Model::screenToFile(std::vector<RegWrite>& reg) {
+    if (paths_.screen.empty()) return true;
+    GameScreen s = ownScreen().value_or(screenOf(now_.registry).value_or(GameScreen{}));
+    std::vector<RegWrite> kept;
+    bool any = false;
+    for (const RegWrite& w : reg) {
+        if (w.subkey.empty() && w.op == RegOp::Set && takeScreenWrite(s, w.name, w.value))
+            any = true;
+        else if (w.subkey.empty() && w.op == RegOp::Delete && [&] {
+                     for (const std::string& n : screenValueNames())
+                         if (!NameLess{}(n, w.name) && !NameLess{}(w.name, n)) return true;
+                     return false;
+                 }())
+            continue;  // the shared key's screen is the old client's: nothing of it taken away here
+        else
+            kept.push_back(w);
+    }
+    reg = kept;
+    return !any || (s.width && s.height && writeFileAtomic(paths_.screen, gameScreenText(s)));
 }
 
 // 3.0.11-beta.303: the rows the player has had - read once a run, the list then made the schema's of now
@@ -123,6 +170,14 @@ void Model::load() {
     s.config = parseConfig(s.iniText);
     s.registry.personal = readPersonal();
     s.registry.common = readCommon();
+    // 3.0.17-beta.18: uaRO HD's screen as the driver gives it to the game - the pages show it (a key there only: none
+    // makes a first run, which writes the key as the game needs it)
+    if (gameKeyExists(s.registry))
+        if (const auto own = ownScreen())
+            for (const std::string& name : screenValueNames()) {
+                RegValue v;
+                if (screenValue(*own, name, v)) s.registry.personal.keys[""][name] = v;
+            }
     for (const wchar_t* name : {L"dinput.dll", L"dinput8.dll", L"dinput.dll.bak", L"dinput8.dll.bak"}) {
         std::string bytes;
         if (!readFile(paths_.dir + L"\\" + name, bytes)) continue;
@@ -427,6 +482,17 @@ std::wstring Model::apply(Lang l) {
     if (!ini.empty() || !reg.empty() || !roext.empty()) {
         std::wstring err = backupOnce(l);
         if (!err.empty()) return err;
+        // 3.0.17-beta.18: uaRO HD's screen into its own file (a first run's key keeps it too: the game needs one)
+        if (firstRun && !paths_.screen.empty()) {
+            RegCopy written;
+            applyWrites(written, reg);
+            if (const auto sc = screenOf(GameRegistry{written, RegCopy{}}))
+                writeFileAtomic(paths_.screen, gameScreenText(*sc));
+        }
+        if (!firstRun && !screenToFile(reg)) {
+            load();
+            return wtrf(l, Text::ErrWriteFile, {utf8(paths_.screen)});
+        }
         if (!reg.empty()) {
             const std::string failed = writeValues(reg);
             if (!failed.empty()) {

@@ -1005,35 +1005,68 @@ TEST(model_reads_the_card_verdict_of_a_direct3d_11_card) {
     CHECK_EQ(m.cardLevel(), 0);  // «Без ефектів», as the driver judged it
 }
 
-// 3.0.17-beta.17: uaRO HD keeps the shared key again (beta.13-.16's own key stopped it starting); the screen the
-// old client's repair took out comes back from the own key's copy (in the fake: `shared` stands for a key not in use)
-TEST(model_uaro_hd_gets_its_screen_back_in_the_shared_key) {
-    fake::Windows& w = fake::reset();
+// 3.0.17-beta.18: uaRO HD's screen in its own file (the driver gives it to the game); the shared key's screen goes
+// back to the old client's setup.exe one - at every start; uaRO HD's screen page writes the file, not the key
+namespace {
+const std::wstring kHdScreen = L"uaro-graphics\\game-screen.txt";
+void hdClient(fake::Windows& w) {
     w.files[fake::path(L"uaro-client.json")] =
         "{\"format\":1,\"client\":\"uaRO HD\",\"version\":\"2026.10.6\",\"files\":[]}";
-    w.registry.personal.exists = true;
-    w.registry.personal.keys[""]["ID"] = RegValue::sz("player");
     w.registry.common.exists = true;
     fake::gameKey(w.registry.common, 1024, 768, true);
-    fake::gameKey(w.shared.personal, 2194, 1234, false);  // the copy beta.13 made in Gravity Soft\uaRO HD
-    w.shared.personal.keys[""]["DEVICENAME"] = RegValue::sz("Direct3D HAL");
+    w.registry.common.keys[""]["DEVICENAME"] = RegValue::sz("dgVoodoo HAL");
+    fake::gameKey(w.registry.personal, 2194, 1234, true);
+    w.registry.personal.keys[""]["DEVICENAME"] = RegValue::sz("Direct3D HAL");
+    w.registry.personal.keys[""]["ID"] = RegValue::sz("player");
+}
+}  // namespace
+
+TEST(model_uaro_hd_keeps_its_screen_in_its_file) {
+    fake::Windows& w = fake::reset();
+    hdClient(w);
     app::Model m;
-    CHECK_EQ(w.leaf, std::string("Ragnarok"));
-    CHECK(effectiveDword("WIDTH") == 2194 && effectiveDword("HEIGHT") == 1234);
-    CHECK(w.registry.personal.find("", "DEVICENAME")->text == "Direct3D HAL");
+    CHECK_EQ(w.files[fake::path(kHdScreen)], std::string("fullscreen=1\r\nwidth=2194\r\nheight=1234\r\n"));
+    CHECK(!w.registry.personal.find("", "WIDTH") && !w.registry.personal.find("", "DEVICENAME"));
+    CHECK(effectiveDword("WIDTH") == 1024);  // the old client's setup.exe screen again
     CHECK(w.registry.personal.find("", "ID"));
-    // a screen there already: the player's, nothing written over it
-    w.registry.personal.keys[""]["WIDTH"] = RegValue::dword(1920);
+    CHECK(effectiveValue(m.now().registry, "", "WIDTH")->asDword() == 2194u);  // the pages show uaRO HD's
+    // the screen leaks into the key again (an old app, the game): the next start takes it out, the file stays
+    w.registry.personal.keys[""]["WIDTH"] = RegValue::dword(800);
     app::Model again;
-    CHECK(effectiveDword("WIDTH") == 1920);
+    CHECK(!w.registry.personal.find("", "WIDTH"));
+    CHECK(w.files[fake::path(kHdScreen)].find("width=2194") != std::string::npos);
 }
 
-TEST(model_the_old_client_takes_no_screen_from_elsewhere) {
+TEST(model_uaro_hd_screen_page_writes_its_file) {
     fake::Windows& w = fake::reset();
-    w.registry.common.exists = true;
-    fake::gameKey(w.registry.common, 1024, 768, true);
-    fake::gameKey(w.shared.personal, 2194, 1234, false);
+    hdClient(w);
     app::Model m;
-    CHECK(!w.registry.personal.find("", "WIDTH"));
-    CHECK(effectiveDword("WIDTH") == 1024);
+    ScreenChoice c = m.screenChoice();
+    c.ui = 200;
+    m.setScreen(c);
+    CHECK(m.apply(Lang::En).empty());
+    CHECK(!w.registry.personal.find("", "WIDTH") && !w.registry.personal.find("", "HEIGHT"));
+    CHECK(w.files[fake::path(kHdScreen)].find("width=2194") == std::string::npos);
+}
+
+TEST(model_the_old_clients_screen_stays_when_it_has_our_driver) {
+    fake::Windows& w = fake::reset();
+    hdClient(w);
+    const std::wstring old = L"C:\\Games\\uaRO";
+    w.folders.insert(old);
+    w.files[old + L"\\ddraw.dll"] = "MZ";
+    w.apps[L"uaRO Graphics"] = {{L"InstallLocation", old}, {L"DisplayVersion", L"3.0.16"}};
+    app::Model m;
+    CHECK(w.registry.personal.find("", "WIDTH"));
+    CHECK(w.files.count(fake::path(kHdScreen)));
+}
+
+TEST(model_the_old_client_has_no_screen_file) {
+    fake::Windows& w = fake::reset();
+    fake::gameKey(w.registry.common, 1024, 768, true);
+    w.registry.common.keys[""]["DEVICENAME"] = RegValue::sz("dgVoodoo HAL");
+    fake::gameKey(w.registry.personal, 1920, 1080, false);
+    app::Model m;
+    CHECK(effectiveDword("WIDTH") == 1920);
+    CHECK(!w.files.count(fake::path(kHdScreen)));
 }

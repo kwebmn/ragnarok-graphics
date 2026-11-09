@@ -55,6 +55,9 @@ constexpr const char* kSeenVersion = "uaro-graphics\\cache\\seen-version.txt";
 constexpr const char* kSceneRecord = "uaro-graphics\\scene-record.bin";
 // 3.0.17-beta.4: the console's rows pinned to «Швидко» (core/console_pins)
 constexpr const char* kConsolePins = "uaro-graphics\\cache\\console-pins.txt";
+// 3.0.17-beta.18: uaRO HD's screen (core/settings/game_screen) - the driver gives it to the game, the shared registry
+// key keeps the old client's
+constexpr const char* kGameScreen = "uaro-graphics\\game-screen.txt";
 constexpr const char* kFailedStarts = "uaro-graphics\\cache\\failed-starts.txt";
 constexpr const char* kSafeModeNote = "uaro-graphics\\cache\\safe-mode.txt";
 // 3.0.11-beta.56 (the owner: «сделать» - how many installs there are): this install's random number for the site's

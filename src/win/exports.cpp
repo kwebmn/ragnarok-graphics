@@ -5,6 +5,7 @@
 #include <string>
 
 #include "core/renderer_choice.hpp"
+#include "win/game_screen_hook.hpp"
 #include "win/sound_hook.hpp"
 #include "win/context.hpp"
 #include "win/dx7/ddraw7.hpp"
@@ -202,6 +203,7 @@ extern "C" HRESULT WINAPI Proxy_SetAppCompatData(DWORD a, DWORD b) {
 BOOL WINAPI DllMain(HINSTANCE inst, DWORD reason, LPVOID) {
     if (reason == DLL_PROCESS_ATTACH) {
         DisableThreadLibraryCalls(inst);
+        uagfx::win::installGameScreen();  // 3.0.17-beta.18: uaRO HD's screen from its file - two import slots only
         uagfx::win::installSoundHooks();  // 0.91: before the game opens its sound (its import slots only)
         uagfx::win::installPacketTap();   // 3.0.4-beta.3: the game's packets read (notifications)
         uagfx::win::mountPad();           // 2.9: uaRO Pad, before the game makes its DirectInput

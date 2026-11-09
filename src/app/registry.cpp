@@ -4,7 +4,6 @@
 
 #include "app/text.hpp"
 #include "core/settings/compat_flags.hpp"
-#include "core/settings/game_key.hpp"
 
 namespace uagfx::app {
 namespace {
@@ -74,23 +73,8 @@ RegCopy readCopy(HKEY root, const std::wstring& path, REGSAM view) {
     return copy;
 }
 
-std::string& leafNow() {
-    static std::string leaf = settings::kSharedLeaf;
-    return leaf;
-}
-
-GameKeyPaths pathsOf(const std::string& leaf) {
-    const bool w = wow64();
-    GameKeyPaths p;
-    p.personal = std::wstring(L"Software\\Classes\\VirtualStore\\MACHINE\\SOFTWARE\\") +
-                 (w ? L"WOW6432Node\\" : L"") + L"Gravity Soft\\" + wide(leaf);
-    p.personalRoot = "HKEY_CURRENT_USER\\" + utf8(p.personal);
-    p.commonRoot = std::string("HKEY_LOCAL_MACHINE\\SOFTWARE\\") + (w ? "WOW6432Node\\" : "") + "Gravity Soft\\" + leaf;
-    return p;
-}
-
-std::wstring keyOf(const std::string& leaf, const std::string& subkey) {
-    const std::wstring base = pathsOf(leaf).personal;
+std::wstring keyOf(const std::string& subkey) {
+    const std::wstring base = gameKeyPaths().personal;
     return subkey.empty() ? base : base + L"\\" + wide(subkey);
 }
 
@@ -108,31 +92,28 @@ std::string failure(const std::string& name, LONG r) { return name + " (error " 
 
 }  // namespace
 
-GameKeyPaths gameKeyPaths() { return pathsOf(leafNow()); }
-
-void useGameKey(const std::string& leaf) { leafNow() = leaf.empty() ? std::string(settings::kSharedLeaf) : leaf; }
-
-RegCopy readPersonalOf(const std::string& leaf) {
-    return readCopy(HKEY_CURRENT_USER, pathsOf(leaf).personal, KEY_WOW64_64KEY);
+GameKeyPaths gameKeyPaths() {
+    const bool w = wow64();
+    GameKeyPaths p;
+    p.personal = std::wstring(L"Software\\Classes\\VirtualStore\\MACHINE\\SOFTWARE\\") +
+                 (w ? L"WOW6432Node\\" : L"") + L"Gravity Soft\\Ragnarok";
+    p.personalRoot = "HKEY_CURRENT_USER\\" + utf8(p.personal);
+    p.commonRoot =
+        std::string("HKEY_LOCAL_MACHINE\\SOFTWARE\\") + (w ? "WOW6432Node\\" : "") + "Gravity Soft\\Ragnarok";
+    return p;
 }
+
+RegCopy readPersonal() { return readCopy(HKEY_CURRENT_USER, gameKeyPaths().personal, KEY_WOW64_64KEY); }
 
 // The game's own path: a 32-bit process opening HKLM\SOFTWARE gets WOW6432Node by itself.
-RegCopy readCommonOf(const std::string& leaf) {
-    return readCopy(HKEY_LOCAL_MACHINE, L"SOFTWARE\\Gravity Soft\\" + wide(leaf), KEY_WOW64_32KEY);
-}
+RegCopy readCommon() { return readCopy(HKEY_LOCAL_MACHINE, L"SOFTWARE\\Gravity Soft\\Ragnarok", KEY_WOW64_32KEY); }
 
-RegCopy readPersonal() { return readPersonalOf(leafNow()); }
-RegCopy readCommon() { return readCommonOf(leafNow()); }
-
-std::string writePersonalValue(const RegWrite& w) { return writePersonalValueOf(leafNow(), w); }
-
-std::string writePersonalValueOf(const std::string& leaf, const RegWrite& w) {
+std::string writePersonalValue(const RegWrite& w) {
     HKEY key = nullptr;
-    const std::wstring at = keyOf(leaf, w.subkey);
     LONG r = w.op == settings::RegOp::Set
-                 ? RegCreateKeyExW(HKEY_CURRENT_USER, at.c_str(), 0, nullptr, 0, KEY_SET_VALUE | KEY_WOW64_64KEY,
-                                   nullptr, &key, nullptr)
-                 : RegOpenKeyExW(HKEY_CURRENT_USER, at.c_str(), 0, KEY_SET_VALUE | KEY_WOW64_64KEY, &key);
+                 ? RegCreateKeyExW(HKEY_CURRENT_USER, keyOf(w.subkey).c_str(), 0, nullptr, 0,
+                                   KEY_SET_VALUE | KEY_WOW64_64KEY, nullptr, &key, nullptr)
+                 : RegOpenKeyExW(HKEY_CURRENT_USER, keyOf(w.subkey).c_str(), 0, KEY_SET_VALUE | KEY_WOW64_64KEY, &key);
     if (r == ERROR_FILE_NOT_FOUND && w.op == settings::RegOp::Delete) return "";  // nothing to delete
     if (r != ERROR_SUCCESS) return failure(w.name, r);
     r = w.op == settings::RegOp::Set ? setValue(key, w.name, w.value) : RegDeleteValueW(key, wide(w.name).c_str());
@@ -150,14 +131,14 @@ std::string replacePersonal(const RegCopy& copy) {
                       &parent) == ERROR_SUCCESS) {
         const LONG r = RegDeleteTreeW(parent, base.substr(slash + 1).c_str());
         RegCloseKey(parent);
-        if (r != ERROR_SUCCESS && r != ERROR_FILE_NOT_FOUND) return failure(leafNow(), r);
+        if (r != ERROR_SUCCESS && r != ERROR_FILE_NOT_FOUND) return failure("Ragnarok", r);
     }
     if (!copy.exists) return "";
     std::string failed;  // each key and value on its own (spec §4.5): the rest is written all the same
     const auto add = [&failed](const std::string& f) { failed += (failed.empty() ? "" : ", ") + f; };
     for (const auto& key : copy.keys) {
         HKEY k = nullptr;  // keys without values are made too
-        const LONG r = RegCreateKeyExW(HKEY_CURRENT_USER, keyOf(leafNow(), key.first).c_str(), 0, nullptr, 0,
+        const LONG r = RegCreateKeyExW(HKEY_CURRENT_USER, keyOf(key.first).c_str(), 0, nullptr, 0,
                                        KEY_SET_VALUE | KEY_WOW64_64KEY, nullptr, &k, nullptr);
         if (r != ERROR_SUCCESS) {
             add(failure(key.first.empty() ? "Ragnarok" : key.first, r));

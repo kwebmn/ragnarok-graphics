@@ -16,10 +16,7 @@ struct Windows {
     std::map<std::wstring, std::string> files;  // full path -> bytes
     std::set<std::wstring> folders;             // full paths
     std::set<std::wstring> locked;              // 2.8: held open - moving them fails (a pack being made)
-    uagfx::settings::GameRegistry registry;  // the key in use (app::useGameKey)
-    // 3.0.17-beta.13: the key's last part in use, and the shared «Ragnarok» key when another one is in use
-    std::string leaf = "Ragnarok";
-    uagfx::settings::GameRegistry shared;
+    uagfx::settings::GameRegistry registry;
     std::vector<uagfx::app::CompatEntry> compat;
     std::set<std::string> refused;  // value names the registry refuses to write (error 5)
     bool gameRunning = false;

@@ -18,6 +18,7 @@
 #include "core/settings/schema.hpp"
 #include "core/settings/screen.hpp"
 #include "core/settings/strings.hpp"
+#include "core/settings/game_screen.hpp"
 #include "core/settings/window_place.hpp"
 #include "core/update_check.hpp"
 
@@ -27,6 +28,7 @@ struct Paths {
     std::wstring dir;  // the client folder
     std::wstring ini, log, game, version, backups, report, ddraw;
     std::wstring pack;  // 2.8: the texture pack (core/layout: uaro-graphics\textures)
+    std::wstring screen;  // 3.0.17-beta.18: uaRO HD's screen (core/layout kGameScreen), "" for the old client
 };
 
 // A dinput DLL in the client folder (stage 2 spec §2.3).
@@ -211,6 +213,11 @@ private:
     // Each value on its own (spec §4.5): "" or the ones that failed, "NAME (error N), ..."; the others are written.
     std::string writeValues(const std::vector<settings::RegWrite>& writes);
     std::vector<settings::IniEdit> pendingIniEdits() const;
+    // 3.0.17-beta.18: uaRO HD - its screen into its own file, the shared key's screen back to the old client's
+    void ownScreenAtStart();
+    std::optional<settings::GameScreen> ownScreen() const;
+    // The screen's values of `reg` go into the file instead (false: it could not be written); the rest stays
+    bool screenToFile(std::vector<settings::RegWrite>& reg);
 
     Paths paths_;
     SystemInfo system_;
