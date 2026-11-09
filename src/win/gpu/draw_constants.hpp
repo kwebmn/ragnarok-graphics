@@ -54,6 +54,10 @@ inline bool ownSprite(const FrameRecord& rec, const DrawCmd& d, const DrawSetup&
                       bool spriteTexture) {
     if (hole[3] <= 0.0f || !spriteTexture || s.ui || !s.blend || d.fvf != d3d7::FVF_TL1 || d.vertexCount != 4)
         return false;
+    // 3.0.17-beta.21 (the owner: «этот же силует появляется на асумтио ... и на других еффектах»): a game effect's
+    // picture round the character (Assumptio's, a buff's) is not the character - its back half, behind the body, came
+    // out blue over the character; nor one added on as light
+    if (d.effect != 0 || d.effectId != 0 || s.dstBlend != d3d7::BLEND_INVSRCALPHA) return false;
     const std::vector<uint8_t>& v = rec.vertexBytes();
     const size_t stride = FrameRecord::stride(d.fvf);
     if (d.vertexOffset + 4 * stride > v.size()) return false;
