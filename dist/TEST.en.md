@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.17-beta.20 — what's new
+
+- **Battle mode: letters no longer slip into the chat.** The game turned chat typing on with every Enter — even one pressed in an NPC's, a Kafra's, a warp menu's or a message's window; then skills and items did not fire and the letters went into the chat. Now an Enter in another window leaves typing as it was, and a new map with an empty chat line gives the letters back to the skills.
+
 # uaRO Graphics 3.0.17-beta.19 — what's new
 
 - **A hung game no longer holds the update:** when the game runs without a window (it hung while starting), the service page offers a button to close the hung game - the app closes it (and this folder's setup.exe), and the update goes on.
