@@ -26,6 +26,10 @@ void putRound(panel::Picture& out, const panel::Picture& pic, const panel::Box& 
               bool square = false) {
     const float cx = box.x + box.w / 2, cy = box.y + box.h / 2, r = box.w / 2;
     const int ox = int(panel::roundOf(cx - float(pic.width) / 2)), oy = int(panel::roundOf(cy - float(pic.height) / 2));
+    if (out.scene) {  // 3.0.18-beta.12: recorded for uaUI
+        panel::recordImage(out, pic, float(ox), float(oy), opacity, square ? 0.0f : r);
+        return;
+    }
     for (int y = 0; y < pic.height; ++y)
         for (int x = 0; x < pic.width; ++x) {
             const int tx = ox + x, ty = oy + y;

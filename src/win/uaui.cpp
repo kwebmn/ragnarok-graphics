@@ -17,6 +17,8 @@
 #include "core/states.hpp"
 #include "core/ui_style.hpp"
 #include "core/uaui_mesh.hpp"
+#include "core/ui_icons.hpp"
+#include "core/ui_scene.hpp"
 #include "core/layout.hpp"
 #include "core/window_panel.hpp"
 #include "win/paths.hpp"
@@ -149,6 +151,34 @@ struct State {
     int bitsW = 0, bitsH = 0;
     Stats stats;
     int logged = 0;
+    // 3.0.18-beta.12: the recorded pictures' side (sceneReady, drawScene)
+    struct Cached {
+        int generation = 0, x = 0, y = 0, w = 0, h = 0, epoch = 0;
+        ULONGLONG used = 0;
+        float k = 0, opacity = -1;
+        bool residual = false;
+        std::vector<std::pair<uint32_t, std::vector<glint::Vertex>>> runs;  // by texture (0 none)
+    };
+    std::unordered_map<const void*, Cached> scenes;  // by the picture's scene
+    struct Tex {
+        uint32_t id = 0;
+        int w = 0, h = 0;
+        uint32_t sum = 0;
+        ULONGLONG used = 0;
+    };
+    std::unordered_map<std::string, Tex> icons;
+    std::unordered_map<uint32_t, Tex> images;  // by their pixels' sum
+    // the words' atlas: each word's GDI coverage as it is
+    struct Slot {
+        int x = 0, y = 0;
+    };
+    std::vector<uint32_t> wordsPx;
+    std::unordered_map<std::string, Slot> words;
+    int wordsX = 0, wordsY = 0, wordsRow = 0, wordsEpoch = 1;
+    uint32_t wordsId = 0;
+    bool wordsDirty = false;
+    int scenesDrawn = 0, sceneVertices = 0;
+    bool recordingTold = false;
 };
 
 State& state() {
@@ -638,6 +668,268 @@ Doc* docUnder(State& s) {
 
 }  // namespace
 
+namespace {
+
+// ---- 3.0.18-beta.12: the recorded pictures on the card ----
+
+constexpr int kWords = 2048;  // the words' atlas, one texture
+
+uint32_t premul(uint32_t rgb, float a) {
+    const float k = std::clamp(a, 0.0f, 1.0f);
+    const auto ch = [&](int sh) { return uint32_t(std::lround(float((rgb >> sh) & 0xFF) * k)); };
+    return uint32_t(std::lround(k * 255)) << 24 | ch(16) << 16 | ch(8) << 8 | ch(0);
+}
+
+
+// A word's slot in the atlas (its halo's beside it, grown by 2): false when it has no room even in an empty one
+bool wordSlot(State& s, const ::uagfx::uiscene::Prim& w, bool halo, State::Slot& out) {
+    const std::string key = halo ? w.key + "#h" : w.key;
+    const auto it = s.words.find(key);
+    if (it != s.words.end()) {
+        out = it->second;
+        return true;
+    }
+    const int cw = int(w.w), ch = int(w.h), pad = halo ? 2 : 0, sw = cw + 2 * pad + 1, sh = ch + 2 * pad + 1;
+    if (sw > kWords || sh > kWords || w.cover.size() < size_t(cw) * size_t(ch)) return false;
+    if (s.wordsPx.empty()) s.wordsPx.assign(size_t(kWords) * kWords, 0u);
+    if (s.wordsX + sw > kWords) s.wordsX = 0, s.wordsY += s.wordsRow, s.wordsRow = 0;
+    if (s.wordsY + sh > kWords) {  // full: all of it anew (the scenes' meshes made again by the epoch)
+        std::fill(s.wordsPx.begin(), s.wordsPx.end(), 0u);
+        s.words.clear();
+        s.wordsX = s.wordsY = s.wordsRow = 0;
+        ++s.wordsEpoch;
+    }
+    const State::Slot slot{s.wordsX, s.wordsY};
+    const auto cover = [&](int x, int y) -> int {
+        return x < 0 || y < 0 || x >= cw || y >= ch ? 0 : w.cover[size_t(y) * size_t(cw) + size_t(x)];
+    };
+    for (int y = 0; y < sh - 1; ++y)
+        for (int x = 0; x < sw - 1; ++x) {
+            int v = 0;
+            if (!halo) {
+                v = cover(x, y);
+            } else {  // as win/picture_draw: the coverage grown by 2 pixels (a disc of 5)
+                for (int dy = -2; dy <= 2 && v < 255; ++dy)
+                    for (int dx = -2; dx <= 2; ++dx)
+                        if (dx * dx + dy * dy <= 5) v = std::max(v, cover(x - pad + dx, y - pad + dy));
+            }
+            const uint32_t c = uint32_t(v);
+            s.wordsPx[size_t(slot.y + y) * kWords + size_t(slot.x + x)] = c << 24 | c << 16 | c << 8 | c;
+        }
+    s.wordsX += sw;
+    s.wordsRow = std::max(s.wordsRow, sh);
+    s.wordsDirty = true;
+    s.words.emplace(key, slot);
+    out = slot;
+    return true;
+}
+
+// An icon of uiicons drawn once at its size, colour and place's fraction - its texture
+const State::Tex* iconTex(State& s, gpu::Renderer& r, FrameRecord& record, const ::uagfx::uiscene::Prim& p,
+                          float& ox, float& oy) {
+    const float fx = std::floor(p.x), fy = std::floor(p.y);
+    const int qx = int(std::lround((p.x - fx) * 4)), qy = int(std::lround((p.y - fy) * 4));
+    char key[96];
+    std::snprintf(key, sizeof key, "%d|%.2f|%06x|%.2f|%d|%d", p.icon, double(p.w), unsigned(p.fill),
+                  double(p.stroke), qx, qy);
+    auto it = s.icons.find(key);
+    if (it == s.icons.end()) {
+        panel::Picture pic;  // painted, not recorded (its pixels its own)
+        pic.width = int(std::ceil(p.w)) + 3;
+        pic.height = pic.width;
+        pic.px.assign(size_t(pic.width) * size_t(pic.height), 0u);
+        uiicons::draw(pic, uiicons::Icon(p.icon), 1 + float(qx) / 4, 1 + float(qy) / 4, p.w, p.fill, 1.0f, p.stroke);
+        State::Tex t;
+        t.w = pic.width, t.h = pic.height;
+        t.id = r.createTexture(t.w, t.h, 1);
+        if (!t.id) return nullptr;
+        record.upload(t.id, 0, Rect{0, 0, t.w, t.h}, pic.px.data());
+        it = s.icons.emplace(key, t).first;
+    }
+    it->second.used = GetTickCount64();
+    ox = fx - 1, oy = fy - 1;
+    return &it->second;
+}
+
+// A recorded picture (an icon, a portrait) as a texture - one for each content (its pixels' sum)
+const State::Tex* imageTex(State& s, gpu::Renderer& r, FrameRecord& record, const ::uagfx::uiscene::Prim& p) {
+    if (!p.pixels || p.iw <= 0 || p.ih <= 0 || p.pixels->size() < size_t(p.iw) * size_t(p.ih)) return nullptr;
+    auto it = s.images.find(p.sum);
+    if (it == s.images.end()) {
+        State::Tex t;
+        t.w = p.iw, t.h = p.ih;
+        t.id = r.createTexture(t.w, t.h, 1);
+        if (!t.id) return nullptr;
+        record.upload(t.id, 0, Rect{0, 0, t.w, t.h}, p.pixels->data());
+        it = s.images.emplace(p.sum, t).first;
+    }
+    it->second.used = GetTickCount64();
+    return &it->second;
+}
+
+using ::uagfx::uaui::Point;
+
+void quad(std::vector<Point>& pts, std::vector<int>& ix, float x, float y, float w, float h, uint32_t c, float u0,
+          float v0, float u1, float v1) {
+    const int b = int(pts.size());
+    pts.push_back({x, y, c, u0, v0});
+    pts.push_back({x + w, y, c, u1, v0});
+    pts.push_back({x, y + h, c, u0, v1});
+    pts.push_back({x + w, y + h, c, u1, v1});
+    for (int q : {0, 1, 2, 1, 3, 2}) ix.push_back(b + q);
+}
+
+// A picture within the circle of radius r round its box's middle: a disc of its texture, its border a pixel smooth
+void disc(std::vector<Point>& pts, std::vector<int>& ix, float x, float y, float w, float h, float r, uint32_t c) {
+    const float cx = x + w / 2, cy = y + h / 2;
+    const int n = std::clamp(int(r), 16, 96);
+    const auto uv = [&](float px, float py, float a) {
+        return Point{px, py, a >= 1 ? c : premul(0, 0), (px - x) / w, (py - y) / h};
+    };
+    const int center = int(pts.size());
+    pts.push_back(uv(cx, cy, 1));
+    for (int i = 0; i < n; ++i) {
+        const float a = 6.2831853f * float(i) / float(n);
+        pts.push_back(uv(cx + (r - 0.5f) * std::cos(a), cy + (r - 0.5f) * std::sin(a), 1));
+        pts.push_back(uv(cx + (r + 0.5f) * std::cos(a), cy + (r + 0.5f) * std::sin(a), 0));
+    }
+    for (int i = 0; i < n; ++i) {
+        const int a0 = center + 1 + 2 * i, a1 = center + 1 + 2 * ((i + 1) % n);
+        for (int q : {center, a0, a1, a0, a0 + 1, a1, a1, a0 + 1, a1 + 1}) ix.push_back(q);
+    }
+}
+
+}  // namespace
+
+bool sceneReady() {
+    const State& s = state();
+    return s.started && s.on;
+}
+
+bool residual(const panel::Picture& pic) {
+    State& s = state();
+    if (!pic.scene) return true;
+    State::Cached& c = s.scenes[pic.scene];
+    if (c.generation != pic.scene->generation) {  // its pixels looked at once a generation
+        c.residual = std::any_of(pic.px.begin(), pic.px.end(), [](uint32_t v) { return (v >> 24) != 0; });
+        c.generation = pic.scene->generation;
+        c.opacity = -1;  // its meshes made again
+    }
+    return c.residual;
+}
+
+void drawScene(FrameRecord& record, gpu::Renderer& renderer, const panel::Picture& pic, int x, int y, int w, int h,
+               float k, float opacity, int stretch) {
+    State& s = state();
+    if (!pic.scene || pic.width <= 0 || pic.height <= 0 || k <= 0) return;
+    residual(pic);  // its generation noted
+    State::Cached& c = s.scenes[pic.scene];
+    c.used = GetTickCount64();
+    const float alpha = opacity * pic.scene->opacity;
+    if (c.opacity != alpha || c.x != x || c.y != y || c.w != w || c.h != h || c.k != k || c.epoch != s.wordsEpoch) {
+        c.x = x, c.y = y, c.w = w, c.h = h, c.k = k, c.opacity = alpha;
+        c.runs.clear();
+        const float sx = float(w) / float(pic.width), sy = float(h) / float(pic.height);
+        const float half = 0.5f / float(std::max(stretch, 1));
+        std::vector<Point> pts;
+        std::vector<int> ix;
+        std::vector<glint::Vertex> shape;
+        uint32_t runTex = 0;
+        bool haveRun = false;
+        const auto emit = [&](uint32_t tex, const ::uagfx::uiscene::Prim& p) {
+            if (!haveRun || tex != runTex) c.runs.emplace_back(tex, std::vector<glint::Vertex>()), runTex = tex;
+            haveRun = true;
+            for (Point& q : pts) q.x = q.x * sx, q.y = q.y * sy;
+            ::uagfx::uaui::ClipBox clip{float(p.cx0) * sx, float(p.cy0) * sy, float(p.cx1) * sx, float(p.cy1) * sy};
+            ::uagfx::uaui::triangles(pts, ix, float(x), float(y), nullptr, p.clipped ? &clip : nullptr, k, half,
+                                     c.runs.back().second);
+            pts.clear();
+            ix.clear();
+        };
+        for (const ::uagfx::uiscene::Prim& p : pic.scene->prims) {
+            switch (p.kind) {
+                case ::uagfx::uiscene::Kind::Rect: {
+                    shape.clear();
+                    ::uagfx::uiscene::mesh(p, 0, 0, 1.0f, 0.0f, alpha, shape);
+                    for (const glint::Vertex& v : shape) {
+                        ix.push_back(int(pts.size()));
+                        pts.push_back({v.x, v.y, v.diffuse, 0, 0});
+                    }
+                    emit(0, p);
+                    break;
+                }
+                case ::uagfx::uiscene::Kind::Icon: {
+                    float ox = 0, oy = 0;
+                    const State::Tex* t = iconTex(s, renderer, record, p, ox, oy);
+                    if (!t) break;
+                    const uint32_t col = premul(0xFFFFFF, p.opacity * alpha);
+                    quad(pts, ix, ox, oy, float(t->w), float(t->h), col, 0, 0, 1, 1);
+                    emit(t->id, p);
+                    break;
+                }
+                case ::uagfx::uiscene::Kind::Image: {
+                    const State::Tex* t = imageTex(s, renderer, record, p);
+                    if (!t) break;
+                    const uint32_t col = premul(0xFFFFFF, p.opacity * alpha);
+                    if (p.r > 0) disc(pts, ix, p.x, p.y, p.w, p.h, p.r, col);
+                    else quad(pts, ix, p.x, p.y, p.w, p.h, col, 0, 0, 1, 1);
+                    emit(t->id, p);
+                    break;
+                }
+                case ::uagfx::uiscene::Kind::Words: {
+                    State::Slot slot;
+                    const float inv = 1.0f / float(kWords);
+                    if (p.halo && wordSlot(s, p, true, slot))
+                        quad(pts, ix, p.x - 2, p.y - 2, p.w + 4, p.h + 4, premul(0x000000, 0.85f * alpha),
+                             float(slot.x) * inv, float(slot.y) * inv, float(slot.x + p.w + 4) * inv,
+                             float(slot.y + p.h + 4) * inv);
+                    if (wordSlot(s, p, false, slot))
+                        quad(pts, ix, p.x, p.y, p.w, p.h, premul(p.fill, alpha), float(slot.x) * inv,
+                             float(slot.y) * inv, float(slot.x + p.w) * inv, float(slot.y + p.h) * inv);
+                    if (!s.wordsId) s.wordsId = renderer.createTexture(kWords, kWords, 1);
+                    emit(s.wordsId, p);
+                    break;
+                }
+            }
+        }
+        c.epoch = s.wordsEpoch;
+    }
+    if (s.wordsDirty && s.wordsId) {  // the new words up before they are drawn
+        record.upload(s.wordsId, 0, Rect{0, 0, kWords, kWords}, s.wordsPx.data());
+        s.wordsDirty = false;
+    }
+    for (const auto& [tex, verts] : c.runs) {
+        if (verts.empty()) continue;
+        DrawSetup st;  // premultiplied over what is there, no depth (as win/picture_draw's)
+        st.ui = true;
+        st.blend = true;
+        st.srcBlend = d3d7::BLEND_ONE;
+        st.dstBlend = d3d7::BLEND_INVSRCALPHA;
+        if (tex) {
+            st.stage[0].colorOp = st.stage[0].alphaOp = d3d7::TOP_MODULATE;
+            st.stage[0].colorArg1 = st.stage[0].alphaArg1 = d3d7::TA_TEXTURE;
+            st.stage[0].colorArg2 = st.stage[0].alphaArg2 = d3d7::TA_DIFFUSE;
+            st.stage[0].addressU = st.stage[0].addressV = d3d7::TADDRESS_CLAMP;
+            const bool exact = w == pic.width && h == pic.height;  // a texel a pixel: sharp
+            st.stage[0].magFilter = exact ? d3d7::TFG_POINT : d3d7::TFG_LINEAR;
+            st.stage[0].minFilter = exact ? d3d7::TFN_POINT : d3d7::TFN_LINEAR;
+        } else {
+            st.stage[0].colorOp = st.stage[0].alphaOp = d3d7::TOP_SELECTARG1;
+            st.stage[0].colorArg1 = st.stage[0].alphaArg1 = d3d7::TA_DIFFUSE;
+        }
+        st.stage[1].colorOp = st.stage[1].alphaOp = d3d7::TOP_DISABLE;
+        DrawCmd cmd;
+        cmd.state = record.addState(st);
+        cmd.texture[0] = tex;
+        cmd.effect = uint8_t(effect_exe::Kind::Panel);
+        cmd.primitive = d3d7::PT_TRIANGLELIST;
+        cmd.fvf = d3d7::FVF_TL1;
+        record.draw(cmd, verts.data(), uint32_t(verts.size()), nullptr, 0);
+        s.sceneVertices += int(verts.size());
+    }
+    ++s.scenesDrawn;
+}
+
 bool ready() {
     const State& s = state();
     return s.started && s.on && s.inWorld;
@@ -719,15 +1011,24 @@ void begin(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     s.targetW = targetWidth;
     s.targetH = targetHeight;
     const bool world = inGameWorld() && k > 0 && targetWidth > 0 && targetHeight > 0;
-    if (on != s.on) LOG_INFO("uaui: [interface] uaui = %d", on ? 1 : 0);
+    if (on != s.on) {
+        LOG_INFO("uaui: [interface] uaui = %d", on ? 1 : 0);
+        uistyle::bump();  // 3.0.18-beta.12: every part paints again - recorded, or painted as before
+    }
     s.on = on;
     s.inWorld = world;
-    if (!on || !world) {
+    if (on && k > 0 && targetWidth > 0 && targetHeight > 0) start(s);
+    // 3.0.18-beta.12: the parts' pictures recorded for the card while on (in the world and out of it)
+    panel::setRecording(on && s.started);
+    if (on && s.started && !s.recordingTold) {
+        s.recordingTold = true;
+        LOG_INFO("uaui: the parts' pictures recorded and drawn on the card (their shapes, icons, pictures, words)");
+    }
+    if (!on || !world || !s.started) {
         for (Doc* d : s.docs) d->show(false);
         uapad::gamewindow::setBlocked(uapad::gamewindow::Blocker::Uaui, nullptr, nullptr, false);
         return;
     }
-    if (!start(s)) return;
     s.frameStart = clockNow();
     s.context->SetDimensions({targetWidth, targetHeight});
     s.context->SetDensityIndependentPixelRatio(uistyle::partScale(k));
@@ -858,6 +1159,22 @@ void draw(FrameRecord& record, gpu::Renderer& renderer) {
     st.worst = std::max(st.worst, spent);
     if (now - st.since >= 10.0 && st.frames > 0) {
         const double n = st.frames;
+        if (s.scenesDrawn)
+            LOG_INFO("uaui: in %.0f s %d pictures of the parts drawn by their scenes, %.0f vertices a frame; %zu words "
+                     "in the %dx%d atlas, %zu icons, %zu pictures", now - st.since, s.scenesDrawn,
+                     double(s.sceneVertices) / double(std::max(st.frames, 1)), s.words.size(), kWords, kWords,
+                     s.icons.size(), s.images.size());
+        s.scenesDrawn = s.sceneVertices = 0;
+        const ULONGLONG old = GetTickCount64() - 60000;  // unused for a minute: let go
+        for (auto it = s.images.begin(); it != s.images.end();)
+            if (it->second.used < old) renderer.releaseTexture(it->second.id), it = s.images.erase(it);
+            else ++it;
+        for (auto it = s.scenes.begin(); it != s.scenes.end();)  // the scenes of pictures gone
+            if (it->second.used < old) it = s.scenes.erase(it);
+            else ++it;
+        for (auto it = s.icons.begin(); it != s.icons.end();)
+            if (it->second.used < old) renderer.releaseTexture(it->second.id), it = s.icons.erase(it);
+            else ++it;
         LOG_INFO("uaui: in %.0f s %d frames - RmlUi's update %.3f ms, its render %.3f ms, ours into the bridge %.3f ms "
                  "(at most %.3f) a frame; %.1f draws, %.0f vertices a frame; %d letters in the %dx%d atlas%s, sent %d "
                  "times", now - st.since, st.frames, st.update * 1000 / n, st.render * 1000 / n, st.emit * 1000 / n,

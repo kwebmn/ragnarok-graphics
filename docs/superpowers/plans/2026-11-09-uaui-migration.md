@@ -17,9 +17,19 @@
 - Each uaUI document is a blocker (Blocker::Uaui rect = the top uaUI box under the cursor).
 - Texts stay in core/settings/strings.cpp (uk/ru/en); documents get them through the model, not typed in RML.
 
+## Ruling (2026-11-09, beta.12): the parts' painters recorded, not rewritten
+
+58 painters draw through panel::roundRect / circle, uiicons::draw, a picture's put/blit, and drawWords (each word's
+GDI coverage cached). With `Picture::scene` set those record primitives (core/ui_scene) instead of rasterizing; uaUI
+draws a part's scene inside its RmlUi document by the custom element `<ua-scene>` - rects and circles as meshes, icons
+and pictures as textures, words from their own GDI coverage in a words atlas (pixel for pixel today's). RmlUi keeps the
+documents (fade, scale, drag, blocker, z, theme); the content's colours themed by a palette in the theme file.
+Rewriting 73 parts in RML by hand: months; recording: the same look at once, the CPU's painting and the whole
+picture's upload gone. Cost if wrong: per-pixel glows (panel::over loops) land in a residual layer under the shapes.
+
 ## Stage 3 — runtime for parts (betas 11–12)
 
-- [ ] T1 `win/uaui.hpp` part API: `uaui::Doc` (load RML from memory, its model, show/hide with the fade, place
+- [x] T1 `win/uaui.hpp` part API: `uaui::Doc` (load RML from memory, its model, show/hide with the fade, place
       in px, box, top-most), data events → C++ (`BindEventCallback`), a doc's z among the driver's windows
       (window_stack order), blocker from the doc under the cursor, keys to a focused text field.
 - [ ] T2 `<img src="pic:…">` for the driver's pictures that change (portraits, minimap, sprites): a texture by the
@@ -59,3 +69,4 @@
 ## Ledger
 
 (one line per finished step: date, beta, what, commit)
+- 2026-11-09 beta.11: T1 runtime (begin/end, Doc, pic:, blocker), showcase part

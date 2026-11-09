@@ -46,6 +46,10 @@ std::string fill(std::string form, const std::vector<std::string>& values) {
 void blit(panel::Picture& out, const panel::Picture& pic, const panel::Box& box, float k) {
     const int ox = int(std::lround(box.x + (box.w - float(pic.width)) / 2));
     const int oy = int(std::lround(box.y + (box.h - float(pic.height)) / 2));
+    if (out.scene) {  // 3.0.18-beta.12: recorded for uaUI
+        panel::recordImage(out, pic, float(ox), float(oy), k);
+        return;
+    }
     for (int y = 0; y < pic.height; ++y)
         for (int x = 0; x < pic.width; ++x) {
             const int tx = ox + x, ty = oy + y;

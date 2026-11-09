@@ -596,6 +596,10 @@ const panel::Picture* iconOf(const Look& look, const refpages::Row& row) {
 // A premultiplied picture over the window's one (3.0.11-beta.25: inside its clip; 3.0.11-beta.26: the glass under
 // it keeps showing where the picture lets it)
 void blit(panel::Picture& out, const panel::Picture& pic, int ox, int oy) {
+    if (out.scene) {  // 3.0.18-beta.12: recorded for uaUI
+        panel::recordImage(out, pic, float(ox), float(oy), 1.0f);
+        return;
+    }
     const int top = std::max(0, out.clipY0), bottom = std::min(out.height, out.clipY1);
     const int left = std::max(0, out.clipX0), right = std::min(out.width, out.clipX1);
     for (int y = 0; y < pic.height; ++y) {
@@ -921,6 +925,10 @@ constexpr uint32_t kWay = 0xF2C14E, kJump = 0xFF7EB6, kPill = 0x2FA562, kDark = 
 
 // 3.0.11-beta.64: a premultiplied picture over another at (ox, oy), inside its clip (the dungeon box's minimaps)
 void putOver(panel::Picture& out, const panel::Picture& pic, int ox, int oy) {
+    if (out.scene) {  // 3.0.18-beta.12: recorded for uaUI
+        panel::recordImage(out, pic, float(ox), float(oy), 1.0f);
+        return;
+    }
     for (int y = 0; y < pic.height; ++y) {
         const int ty = oy + y;
         if (ty < std::max(0, out.clipY0) || ty >= std::min(out.height, out.clipY1)) continue;

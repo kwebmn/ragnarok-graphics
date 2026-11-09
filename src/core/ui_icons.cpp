@@ -18,6 +18,14 @@ struct Segment {
 }  // namespace
 
 void draw(panel::Picture& p, Icon icon, float x, float y, float size, uint32_t rgb, float a, float stroke) {
+    if (p.scene && icon < Icon::kCount && size > 0 && a > 0) {  // 3.0.18-beta.12: recorded for uaUI
+        uiscene::Prim prim;
+        prim.kind = uiscene::Kind::Icon;
+        prim.x = x, prim.y = y, prim.w = prim.h = size;
+        prim.icon = int(icon), prim.fill = rgb, prim.opacity = a, prim.stroke = stroke;
+        panel::record(p, std::move(prim));
+        return;
+    }
     if (icon >= Icon::kCount || size <= 0 || a <= 0 || p.px.size() != size_t(p.width) * size_t(p.height)) return;
     const float k = size / 24.0f, half = std::max(0.5f, stroke * k / 2);
     std::vector<Segment> segments;

@@ -15,6 +15,8 @@
 #include "win/code_page.hpp"
 #include "win/gpu/renderer.hpp"
 #include "win/ui_font.hpp"
+#include "win/uaui.hpp"
+#include "core/ui_scene.hpp"
 #include "win/ui_cost.hpp"
 
 namespace uagfx::win {
@@ -205,6 +207,21 @@ void drawWords(panel::Picture& pic, const std::vector<Words>& words, const Rect&
         }
         Coverage& c = it->second;
         c.used = g.clock;
+        if (pic.scene) {  // 3.0.18-beta.12: recorded for uaUI - its coverage as it is, drawn on the card
+            if (c.x1 > c.x0 && c.y1 > c.y0) {
+                uiscene::Prim prim;
+                prim.kind = uiscene::Kind::Words;
+                prim.x = float(left + c.x0), prim.y = float(top + c.y0);
+                prim.w = float(c.x1 - c.x0), prim.h = float(c.y1 - c.y0);
+                prim.fill = word.rgb, prim.halo = word.halo;
+                prim.key.assign(reinterpret_cast<const char*>(it->first.data()), it->first.size() * sizeof(wchar_t));
+                prim.cover = c.cover;
+                if (a.left > 0 || a.top > 0 || a.right < pic.width || a.bottom < pic.height)
+                    prim.clipped = true, prim.cx0 = a.left, prim.cy0 = a.top, prim.cx1 = a.right, prim.cy1 = a.bottom;
+                pic.scene->prims.push_back(std::move(prim));
+            }
+            continue;
+        }
         const int lit = c.x1 - c.x0;  // each coverage over the picture in the word's colour, inside the area
         if (word.halo && lit > 0) {  // 3.0.11-beta.231: under the letters, their coverage grown by 2 pixels in black
             const int rows = c.y1 - c.y0;
@@ -244,6 +261,16 @@ void drawQuad(FrameRecord& record, gpu::Renderer& renderer, const panel::Picture
               int& texH, bool& upload, int x, int y, int w, int h, bool smooth, float k, float opacity,
               int stretch = 1) {
     if (pic.width <= 0 || pic.height <= 0 || opacity <= 0 || w <= 0 || h <= 0) return;
+    // 3.0.18-beta.12 (uaUI): a recorded picture drawn by its shapes, words and pictures on the card - its own pixels
+    // only for what was painted by hand (none mostly)
+    bool residual = true;
+    if (pic.scene && uaui::sceneReady()) {
+        residual = uaui::residual(pic);
+        if (!residual) {
+            uaui::drawScene(record, renderer, pic, x, y, w, h, k, opacity, stretch);
+            return;
+        }
+    }
     if (!texture || texW != pic.width || texH != pic.height) {
         if (texture) renderer.releaseTexture(texture);
         texture = renderer.createTexture(pic.width, pic.height, 1);
@@ -287,6 +314,8 @@ void drawQuad(FrameRecord& record, gpu::Renderer& renderer, const panel::Picture
                                 {x0, y1, 0, 1, white, 0, 0, 1}, {x1, y0, 0, 1, white, 0, 1, 0},
                                 {x1, y1, 0, 1, white, 0, 1, 1}, {x0, y1, 0, 1, white, 0, 0, 1}};
     record.draw(cmd, v, 6, nullptr, 0);
+    if (pic.scene && residual && uaui::sceneReady())  // 3.0.18-beta.12: the hand-painted pixels under the shapes
+        uaui::drawScene(record, renderer, pic, x, y, w, h, k, opacity, stretch);
 }
 
 }  // namespace

@@ -55,8 +55,47 @@ void shape(Picture& p, const Box& around, const Distance& distance, uint32_t fil
 
 }  // namespace
 
+// 3.0.18-beta.12: a primitive into the picture's scene, with its clip
+void record(Picture& p, uiscene::Prim prim) {
+    if (p.clipX0 > 0 || p.clipY0 > 0 || p.clipX1 < (1 << 30) || p.clipY1 < (1 << 30)) {
+        prim.clipped = true;
+        prim.cx0 = std::max(0, p.clipX0), prim.cy0 = std::max(0, p.clipY0);
+        prim.cx1 = std::min(p.width, p.clipX1), prim.cy1 = std::min(p.height, p.clipY1);
+    }
+    p.scene->prims.push_back(std::move(prim));
+}
+
+void recordImage(Picture& p, const Picture& pic, float x, float y, float opacity, float disc, bool grey) {
+    if (!p.scene || pic.width <= 0 || pic.height <= 0 || pic.px.size() < size_t(pic.width) * size_t(pic.height))
+        return;
+    auto px = std::make_shared<std::vector<uint32_t>>(pic.px.begin(),
+                                                      pic.px.begin() + ptrdiff_t(size_t(pic.width) * pic.height));
+    uint32_t sum = uint32_t(pic.width) * 2654435761u ^ uint32_t(pic.height) ^ (grey ? 0x9E3779B9u : 0u);
+    for (uint32_t& c : *px) {
+        if (grey) {  // as the hotbar's greyed icons (core/hotbar_panel put): their brightness
+            const uint32_t v = (((c >> 16) & 0xFF) * 77 + ((c >> 8) & 0xFF) * 150 + (c & 0xFF) * 29) >> 8;
+            c = (c & 0xFF000000u) | v << 16 | v << 8 | v;
+        }
+        sum = (sum ^ c) * 16777619u;
+    }
+    uiscene::Prim prim;
+    prim.kind = uiscene::Kind::Image;
+    prim.x = x, prim.y = y, prim.w = float(pic.width), prim.h = float(pic.height);
+    prim.r = disc, prim.opacity = opacity;
+    prim.pixels = std::move(px), prim.iw = pic.width, prim.ih = pic.height, prim.sum = sum;
+    record(p, std::move(prim));
+}
+
 void roundRect(Picture& p, const Box& b, float r, uint32_t fill, float fillA, uint32_t edgeRgb, float edgeA,
                float edge) {
+    if (p.scene) {  // 3.0.18-beta.12: recorded for uaUI
+        uiscene::Prim prim;
+        prim.kind = uiscene::Kind::Rect;
+        prim.x = b.x, prim.y = b.y, prim.w = b.w, prim.h = b.h, prim.r = r;
+        prim.fill = fill, prim.fillA = fillA, prim.edge = edgeRgb, prim.edgeA = edgeA, prim.edgeW = edge;
+        record(p, std::move(prim));
+        return;
+    }
     // 3.0.11-beta.25 (R-77TCM7, «Довідник» painted in 290 ms at 4K): a row's inside - every pixel of it
     // filled whole and none of the ring, by the distance - is one run; the rule pixel by pixel is left for the rim, a
     // pixel more of it at each end of the run
@@ -111,6 +150,10 @@ void roundRect(Picture& p, const Box& b, float r, uint32_t fill, float fillA, ui
 }
 
 void circle(Picture& p, float cx, float cy, float r, uint32_t rgb, float a) {
+    if (p.scene) {  // 3.0.18-beta.12: a round box as wide as twice its radius
+        roundRect(p, Box{cx - r, cy - r, 2 * r, 2 * r}, r, rgb, a);
+        return;
+    }
     shape(p, Box{cx - r, cy - r, 2 * r, 2 * r},
           [&](float x, float y) { return length(x - cx, y - cy) - r; }, rgb, a, 0, 0, 0);
 }
@@ -479,11 +522,27 @@ bool menuPick(Config& c, MenuHit hit, MenuChange& change) {
     }
 }
 
+namespace {
+bool g_recording = false;
+}  // namespace
+
+void setRecording(bool on) { g_recording = on; }
+bool recording() { return g_recording; }
+
 bool blank(Picture& p, int w, int h) {
     p.width = std::max(0, w);
     p.height = std::max(0, h);
     p.clipX0 = p.clipY0 = 0;
     p.clipX1 = p.clipY1 = 1 << 30;
+    if (g_recording) {  // 3.0.18-beta.12: its shapes recorded for uaUI, its pixels for what is painted by hand
+        if (!p.recorded.s) p.recorded.s = std::make_unique<uiscene::Scene>();
+        static int serial = 0;  // every scene made another number: the meshes kept by it never taken for another's
+        p.recorded.s->clear();
+        p.recorded.s->generation = ++serial;
+        p.scene = p.recorded.s.get();
+    } else {
+        p.scene = nullptr;
+    }
     if (p.width == 0 || p.height == 0) {
         p.px.clear();
         return false;
@@ -493,6 +552,7 @@ bool blank(Picture& p, int w, int h) {
 }
 
 void fade(Picture& p, float opacity) {
+    if (p.scene) p.scene->opacity *= std::clamp(opacity, 0.0f, 1.0f);  // 3.0.18-beta.12: the scene on the whole
     if (opacity >= 1.0f) return;
     const float a = std::max(opacity, 0.0f);
     for (uint32_t& px : p.px) {

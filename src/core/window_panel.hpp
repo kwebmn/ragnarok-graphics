@@ -1,4 +1,5 @@
 #pragma once
+#include "core/ui_scene.hpp"
 #include <cmath>
 #include <cstdint>
 #include <string>
@@ -70,7 +71,35 @@ struct Picture {
     std::vector<uint32_t> px;  // premultiplied 0xAARRGGBB, rows top down
     // 3.0.11-beta.25: the pixels the shapes may change - [clipX0, clipX1) x [clipY0, clipY1); all of them by default
     int clipX0 = 0, clipY0 = 0, clipX1 = 1 << 30, clipY1 = 1 << 30;
+    // 3.0.18-beta.12 (uaUI, core/ui_scene): its shapes recorded here instead of painted, while set - blank() sets it
+    // to its own scene while recording() (else none); copied with the picture
+    uiscene::Scene* scene = nullptr;
+    uiscene::SceneBox recorded;
+    Picture() = default;
+    Picture(const Picture& o) : width(o.width), height(o.height), px(o.px), clipX0(o.clipX0), clipY0(o.clipY0),
+        clipX1(o.clipX1), clipY1(o.clipY1), recorded(o.recorded) { scene = o.scene ? recorded.s.get() : nullptr; }
+    Picture& operator=(const Picture& o) {
+        if (this == &o) return *this;
+        width = o.width, height = o.height, px = o.px;
+        clipX0 = o.clipX0, clipY0 = o.clipY0, clipX1 = o.clipX1, clipY1 = o.clipY1;
+        recorded = o.recorded;
+        scene = o.scene ? recorded.s.get() : nullptr;
+        return *this;
+    }
+    Picture(Picture&& o) noexcept { *this = std::move(o); }
+    Picture& operator=(Picture&& o) noexcept {
+        width = o.width, height = o.height, px = std::move(o.px);
+        clipX0 = o.clipX0, clipY0 = o.clipY0, clipX1 = o.clipX1, clipY1 = o.clipY1;
+        const bool had = o.scene != nullptr;
+        recorded = std::move(o.recorded);
+        scene = had ? recorded.s.get() : nullptr;
+        o.scene = nullptr;
+        return *this;
+    }
 };
+// 3.0.18-beta.12: uaUI's - while on, blank() gives each picture its own scene to record into (the game's thread)
+void setRecording(bool on);
+bool recording();
 // `hovered`: the top row's button under the cursor (Close, Layout); `layout`: the cards' now - the button shows the
 // other one
 void paint(Picture& out, const Geometry& g, const std::vector<Card>& cards, Part hovered, Layout layout);
@@ -168,6 +197,11 @@ inline float length(float x, float y) { return std::sqrt(x * x + y * y); }
 void roundRect(Picture& p, const Box& b, float r, uint32_t fill, float fillA, uint32_t edgeRgb = 0, float edgeA = 0,
                float edge = 0);
 void circle(Picture& p, float cx, float cy, float r, uint32_t rgb, float a);
+// 3.0.18-beta.12: a primitive into the picture's scene (p.scene set), with the picture's clip
+void record(Picture& p, uiscene::Prim prim);
+// 3.0.18-beta.12: a picture put at (x, y) at its own size into p's scene - its pixels copied (grey: by their
+// brightness, as the hotbar's), within the circle of radius `disc` round its middle when > 0
+void recordImage(Picture& p, const Picture& pic, float x, float y, float opacity, float disc = 0, bool grey = false);
 // 3.0.11-beta.35: words' width as GDI draws them at `px` (an estimate a little wide: boxes made from it hold the words)
 float wordsWidth(const std::string& utf8, float px, bool bold);
 // 3.0.11-beta.196: how far a smaller word's box drops to stand on a bigger word's line beside it, both drawn centred in

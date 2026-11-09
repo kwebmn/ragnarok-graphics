@@ -45,6 +45,10 @@ uint32_t premultiplied(uint32_t argb) {
 // A premultiplied picture over the panel's at (ox, oy), each pixel times a rounded box's share (`r` 0: none)
 void put(panel::Picture& out, const panel::Picture& pic, const panel::Box& at, float r) {
     const int ox = int(std::lround(at.x)), oy = int(std::lround(at.y));
+    if (out.scene) {  // 3.0.18-beta.12: recorded for uaUI
+        panel::recordImage(out, pic, float(ox), float(oy), 1.0f, r >= std::min(at.w, at.h) / 2 - 0.5f ? r : 0.0f);
+        return;
+    }
     for (int y = 0; y < pic.height; ++y)
         for (int x = 0; x < pic.width; ++x) {
             const int tx = ox + x, ty = oy + y;

@@ -36,6 +36,14 @@ void draw(FrameRecord& record, gpu::Renderer& renderer);
 bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result);
 
 bool ready();  // [interface] uaui on, in the world, started: the parts draw by uaUI this frame
+// 3.0.18-beta.12 (the ruling of docs/superpowers/plans/2026-11-09-uaui-migration.md): the parts' recorded pictures
+// (panel::Picture::scene, core/ui_scene) drawn on the card - [interface] uaui on and started (in the world or not)
+bool sceneReady();
+// Whether a recorded picture has pixels painted by hand as well (a glow, a mask) - kept by its scene's generation
+bool residual(const panel::Picture& pic);
+// Its shapes, icons, pictures and words at (x, y) w x h of the target (stretched from its own size), at `opacity`
+void drawScene(FrameRecord& record, gpu::Renderer& renderer, const panel::Picture& pic, int x, int y, int w, int h,
+               float k, float opacity, int stretch);
 float dp();    // the target's pixels a concept pixel (the theme's 1dp)
 std::string utf8(const std::string& gameText);  // the game's words (its code page) as UTF-8
 // A picture of the driver's as an <img> source - «pic:<address>:<generation>»; another generation is another texture
