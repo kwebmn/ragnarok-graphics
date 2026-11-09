@@ -3,6 +3,7 @@
 #include <cctype>
 #include <cstdlib>
 #include <map>
+#include <sstream>
 #include <vector>
 
 #include "core/settings/ini_edit.hpp"
@@ -144,6 +145,13 @@ bool parseManifest(const std::string& text, Manifest& out, std::string& error) {
         if (space == std::string::npos) break;
         at = space + 1;
     }
+    for (int n = 1; n <= kMostHistory; ++n) {  // 3.0.17-beta.1
+        std::istringstream line(value("history.v" + std::to_string(n)));
+        Archive a;
+        std::string size, why;
+        if (!(line >> a.version >> a.ref >> size >> a.sha256) || !isVersion(a.version)) continue;
+        if (archiveOf(a.ref, "release/uaro-graphics.zip", size, a.sha256, a, "history", why)) m.history.push_back(a);
+    }
     out = m;
     return true;
 }
@@ -155,6 +163,17 @@ std::string offer(const Manifest& m, const std::string& installed, const std::st
         if (w == mine) return latest;
     if (channel == Channel::Release && preRelease(mine) && !preRelease(latest)) return latest;
     return newer(latest, mine) ? latest : "";
+}
+
+std::vector<Archive> rollbackChoices(const Manifest& m, Channel channel, const std::string& installed) {
+    std::vector<Archive> out;
+    const std::string mine = bare(installed);
+    for (const Archive& a : m.history) {
+        if (int(out.size()) >= kMostRollback) break;
+        if ((channel == Channel::Release && preRelease(a.version)) || !newer(mine, a.version)) continue;
+        out.push_back(a);
+    }
+    return out;
 }
 
 bool backToRelease(Channel channel, const std::string& offered, const std::string& installed) {

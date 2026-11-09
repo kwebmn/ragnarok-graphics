@@ -204,3 +204,50 @@ TEST(setup_finds_the_package_appended_to_it) {
     CHECK(!update::payloadAt(tail, zip, offset, size));  // larger than the file
     CHECK(!update::payloadAt(tail, 10, offset, size));
 }
+
+// 3.0.17-beta.1 (the concept «простой старт»: a rollback to a recent version): [history] - the branch's last versions
+// before this one, each "<version> <ref> <size> <sha256>"; a broken line is left out, not an error
+TEST(update_manifest_history) {
+    const std::string text =
+        "[release]\r\nformat = 2\r\nversion = 3.0.16\r\n"
+        "[package]\r\nref = 0dfe661d7f5f3eb871c5defcd398a543196dbfd8\r\nfile = release/uaro-graphics.zip\r\n"
+        "size = 100\r\nsha256 = 1111111111111111111111111111111111111111111111111111111111111111\r\n"
+        "[history]\r\n"
+        "v1 = 3.0.15 9112e1c3cefdf6b99db75d806714cbc974232e28 15891864 "
+        "6a84aae40a8f917efb93fe7df017df79265c170585f0e5ca0a5adece8459126d\r\n"
+        "v2 = 3.0.14 9112e1c3cefdf6b99db75d806714cbc974232e28 12 not-a-sha\r\n"
+        "v3 = 3.0.13 28aa38a537beb4e8d29c6b6c8b17f5c94255ba48 777 "
+        "2222222222222222222222222222222222222222222222222222222222222222\r\n";
+    update::Manifest m;
+    std::string error;
+    CHECK(update::parseManifest(text, m, error));
+    CHECK_EQ(m.history.size(), size_t(2));
+    CHECK(m.history[0].version == "3.0.15");
+    CHECK(m.history[0].ref == "9112e1c3cefdf6b99db75d806714cbc974232e28");
+    CHECK_EQ(m.history[0].size, uint64_t(15891864));
+    CHECK(m.history[0].file == "release/uaro-graphics.zip");
+    CHECK(m.history[1].version == "3.0.13");
+    update::Manifest none;  // an older file: no history
+    CHECK(update::parseManifest(std::string(kSiteText), none, error));
+    CHECK(none.history.empty());
+}
+
+// 3.0.17-beta.1: what a rollback offers - the channel's versions older than the installed one, 5 at most
+TEST(update_rollback_choices_by_channel) {
+    update::Manifest m;
+    const char* const names[] = {"3.0.17-beta.2", "3.0.17-beta.1", "3.0.16", "3.0.16-beta.39", "3.0.15",
+                                 "3.0.14", "3.0.13", "3.0.12", "3.0.11"};
+    for (const char* v : names) {
+        update::Archive a;
+        a.version = v;
+        m.history.push_back(a);
+    }
+    const auto release = update::rollbackChoices(m, update::Channel::Release, "3.0.16 build 2026-11-09 12:00");
+    CHECK_EQ(release.size(), size_t(5));
+    CHECK(release.front().version == "3.0.15");  // no betas, not the installed one, the newest first
+    CHECK(release.back().version == "3.0.11");
+    const auto beta = update::rollbackChoices(m, update::Channel::Beta, "3.0.17-beta.3");
+    CHECK(beta.front().version == "3.0.17-beta.2");
+    CHECK_EQ(beta.size(), size_t(5));
+    CHECK(update::rollbackChoices(m, update::Channel::Release, "3.0.11").empty());
+}

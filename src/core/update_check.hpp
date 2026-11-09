@@ -38,14 +38,23 @@ std::string localName(const Archive& a);
 struct Manifest {
     Archive package, dlss, models;
     std::vector<std::string> withdrawn;  // releases taken back: who has one is offered package.version
+    // 3.0.17-beta.1 (the concept «простой старт»: a rollback to a recent version): [history] v1..v10 = "<version>
+    // <ref> <size> <sha256>" - the packages before this one (up to 5 releases and 5 betas: a release is made on the
+    // branch beta), the newest first; a broken line left out. Offered by the computer's channel (rollbackChoices)
+    std::vector<Archive> history;
 };
 // false and why (the field it names) for anything else - an error page, a cut file, another format (uaro.kiev.ua's
 // format 1). Sections it does not know (the settings app's [local]) are left alone.
+constexpr int kMostHistory = 10;  // 3.0.17-beta.1: [history]'s lines - 5 releases and 5 betas
 bool parseManifest(const std::string& text, Manifest& out, std::string& error);
 // The version to offer an installed `installed`: the branch's when it is newer, or when `installed` was withdrawn (even
 // an older one); "" none, or when it is `skip` (a version rolled back from). 3.0.5-beta.1 (the user: «я выбрал канал
 // релиз, и нажал играть. и у меня запустилась моя бета»): on «Реліз» a beta is offered the release, an older one too.
 std::string offer(const Manifest& m, const std::string& installed, const std::string& skip, Channel channel);
+// 3.0.17-beta.1: the versions a rollback offers - [history]'s older than `installed`, of the channel («Реліз»: no
+// betas), the newest first, at most kMostRollback
+constexpr int kMostRollback = 5;
+std::vector<Archive> rollbackChoices(const Manifest& m, Channel channel, const std::string& installed);
 // The offer takes a beta back to an older release - «Реліз» chosen over it: the texts say «Повернутися на реліз».
 bool backToRelease(Channel channel, const std::string& offered, const std::string& installed);
 // uaro-graphics\update.ini as the settings app keeps it: the branch's text, then "[local]" - skip (the version rolled

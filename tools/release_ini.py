@@ -18,6 +18,8 @@ import sys
 import tempfile
 from pathlib import Path
 
+MOST_EACH = 5  # 3.0.17-beta.1: [history] keeps 5 releases and 5 betas (the release is made on the branch beta)
+MOST_HISTORY = 2 * MOST_EACH  # its lines (src/core/update_check.hpp kMostHistory)
 FILES = {"package": "uaro-graphics.zip", "dlss": "uaro-graphics-dlss.zip", "models": "uaro-graphics-models.zip"}
 VERSION = r"\d+\.\d+\.\d+(-[0-9A-Za-z.]+)?"
 
@@ -66,6 +68,21 @@ def write(release, version, ref, dlss=None, models=None, withdraw=()):
              "[release]", "format = 2", "version = " + version]
     if withdrawn:
         lines.append("withdrawn = " + " ".join(withdrawn))
+    # 3.0.17-beta.1 (a rollback to a recent version): the old file's package first, then its history - the newest
+    # first, a version once, never the one written now
+    history = []
+    old_package, old_version = old.get("package", []), value(old.get("release", []), "version")
+    if old_version and value(old_package, "ref"):
+        history.append(" ".join([old_version, value(old_package, "ref"), value(old_package, "size"),
+                                 value(old_package, "sha256")]))
+    history += [value(old.get("history", []), "v%d" % n) for n in range(1, MOST_HISTORY + 1)]
+    kept, seen, counts = [], {version}, {True: 0, False: 0}
+    for line in history:
+        parts = line.split()
+        if len(parts) == 4 and parts[0] not in seen and counts["-" in parts[0]] < MOST_EACH:
+            seen.add(parts[0])
+            counts["-" in parts[0]] += 1
+            kept.append(line)
     for name, given in (("package", version), ("dlss", dlss), ("models", models)):
         if given is None:
             continue
@@ -77,6 +94,9 @@ def write(release, version, ref, dlss=None, models=None, withdraw=()):
             lines.append("version = " + given)
         lines += ["ref = " + ref, "file = release/" + FILES[name], "size = %d" % path.stat().st_size,
                   "sha256 = " + sha256(path)]
+    if kept:
+        lines.append("[history]")
+        lines += ["v%d = %s" % (n, line) for n, line in enumerate(kept[:MOST_HISTORY], 1)]
     text = "\r\n".join(lines) + "\r\n"
     fd, tmp = tempfile.mkstemp(dir=str(release), prefix="update.ini.")
     with os.fdopen(fd, "wb") as f:
@@ -103,6 +123,23 @@ def self_test():
             and value(package, "sha256") == hashlib.sha256(b"PK package").hexdigest() \
             and value(models, "version") == "models-2 1" \
             and value(models, "file") == "release/uaro-graphics-models.zip" and "dlss" not in s
+        # 3.0.17-beta.1: the history - the old package goes first; the same version again adds nothing
+        s2 = sections(write(release, "3.0.0-beta.3", ref))
+        hist = s2.get("history", [])
+        ok = ok and value(hist, "v1").split()[:2] == ["3.0.0-beta.2", ref] and len(hist) == 1
+        s3 = sections(write(release, "3.0.0-beta.3", ref))
+        ok = ok and [value(s3.get("history", []), "v1")] == [value(hist, "v1")] and len(s3.get("history", [])) == 1
+        for n in range(4, 12):
+            s4 = sections(write(release, "3.0.0-beta.%d" % n, ref))
+        ok = ok and len(s4.get("history", [])) == MOST_EACH \
+            and value(s4["history"], "v1").split()[0] == "3.0.0-beta.10"
+        # a release over those betas keeps them; the next betas keep the release
+        sections(write(release, "3.0.0", ref))
+        for n in range(1, 8):
+            s5 = sections(write(release, "3.0.1-beta.%d" % n, ref))
+        names = [value(s5["history"], "v%d" % n).split()[0] for n in range(1, MOST_HISTORY + 1)
+                 if value(s5["history"], "v%d" % n)]
+        ok = ok and "3.0.0" in names and sum("-" in v for v in names) == MOST_EACH
         for bad in (("3.0", ref), ("3.0.0", ref[:39]), ("3.0.0", ref.upper())):
             try:
                 write(release, bad[0], bad[1])
