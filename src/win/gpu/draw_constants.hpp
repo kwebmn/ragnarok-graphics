@@ -65,6 +65,10 @@ inline bool ownSprite(const FrameRecord& rec, const DrawCmd& d, const DrawSetup&
     for (uint32_t i = 0; i < 4; ++i) {
         float xyzw[4];
         std::memcpy(xyzw, v.data() + d.vertexOffset + i * stride, sizeof xyzw);
+        // 3.0.17-beta.23 (the owner: «под two hand quicken включается еффект и когда ходишь появляется силует»): a
+        // see-through copy of the body (a buff's trail behind the walking character) is not the character - its
+        // vertices' alpha under the body's 255
+        if (v[d.vertexOffset + i * stride + 19] < 0xF0) return false;
         x0 = std::min(x0, xyzw[0]);
         y0 = std::min(y0, xyzw[1]);
         x1 = std::max(x1, xyzw[0]);

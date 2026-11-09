@@ -199,10 +199,12 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
             float b[4], z = 0.0f;
             if (spriteBox(rec, d, b, z) && b[0] < hole[0] + hole[2] && b[2] > hole[0] - hole[2]) {
                 ++silhouetteTold;
-                LOG_INFO("silhouette: a sprite %.0f,%.0f-%.0f,%.0f depth %.1f (blend %d, %d/%d, effect %d #%d) by the "
-                         "character at %.0f,%.0f h %.0f depth %.1f - %s", b[0], b[1], b[2], b[3], z, int(s.blend),
-                         int(s.srcBlend), int(s.dstBlend), int(d.effect), int(d.effectId), hole[0], hole[1], hole[2],
-                         hole[3], mine ? "taken" : "not taken");
+                const std::vector<uint8_t>& vb = rec.vertexBytes();
+                const int alpha = d.vertexOffset + 20 <= vb.size() ? int(vb[d.vertexOffset + 19]) : -1;
+                LOG_INFO("silhouette: a sprite %.0f,%.0f-%.0f,%.0f depth %.1f (blend %d, %d/%d, alpha %d, effect %d "
+                         "#%d) by the character at %.0f,%.0f h %.0f depth %.1f - %s", b[0], b[1], b[2], b[3], z,
+                         int(s.blend), int(s.srcBlend), int(s.dstBlend), alpha, int(d.effect), int(d.effectId), hole[0],
+                         hole[1], hole[2], hole[3], mine ? "taken" : "not taken");
             }
         }
     }
