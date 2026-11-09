@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.18-beta.7 — what's new
+
+- **A check of the new interface library (RmlUi):** the Interface section has a new switch for a test card of the new library, off by default. When on, it shows a character card with HP and SP at the top in the middle: it fades in, lights up under the cursor and can be dragged with the mouse. Every 10 s the log records what it costs. The rest of the interface does not change.
+
 # uaRO Graphics 3.0.18-beta.6 — what's new
 
 - **The log tells the Taekwon stances:** a blue frame over the head in Roundhouse Stance. The log now records how the game draws these effects and how the graphics lays them. This is for finding the cause; the picture does not change.
