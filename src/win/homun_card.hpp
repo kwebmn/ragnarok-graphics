@@ -22,7 +22,8 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result);
 bool shown();
 bool close();  // Esc: its close
 void beforeGameDraw();
-enum class PadCommand : uint8_t { Left, Right, Press, Close };
+// 3.0.16-beta.39: Up / Down over feed and its skills' rows, Left / Right a row's use level, Press uses, Raise «+»
+enum class PadCommand : uint8_t { Left, Right, Press, Close, Up, Down, Raise };
 void padCommand(PadCommand c);
 bool box(int& x, int& y, int& w, int& h);
 

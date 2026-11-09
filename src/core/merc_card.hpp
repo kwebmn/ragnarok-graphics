@@ -43,6 +43,7 @@ struct Show {
     int hover = -1;  // a Button
     bool focus = false;  // the controller on «Навички»
     int hoverSkill = -1, hoverLess = -1, hoverMore = -1;  // 3.0.16-beta.31
+    int padRow = -1;  // 3.0.16-beta.39: the controller's skill row (a gold edge)
 };
 struct Layout {
     float s = 1;

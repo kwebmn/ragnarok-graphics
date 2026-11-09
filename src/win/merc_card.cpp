@@ -315,7 +315,7 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     for (const mc::SkillRow& r : i.skills)
         key += ';' + r.name + std::to_string(r.level) + '/' + std::to_string(r.use) + (r.usable ? "u" : "");
     key += ';' + std::to_string(s.show.hoverSkill) + ',' + std::to_string(s.show.hoverLess) + ',' +
-           std::to_string(s.show.hoverMore);
+           std::to_string(s.show.hoverMore) + ',' + std::to_string(s.show.padRow);
     if (key != s.key) {
         s.key = key;
         render(s);
@@ -383,6 +383,28 @@ void padCommand(PadCommand c) {
     if (!s.shown) return;
     s.show.focus = true;
     if (c == PadCommand::Close) press(s, mc::Button::Close);  // 3.0.11-beta.218: its skills listed in it, no button
+    // 3.0.16-beta.39: the usable rows (a gold edge) - Up / Down, Left / Right the use level, Press uses
+    const int rows = int(std::min({s.info.skills.size(), s.layout.skillRows.size(), s.game.size()}));
+    const auto usable = [&](int r) { return r >= 0 && r < rows && s.info.skills[size_t(r)].usable; };
+    int& row = s.show.padRow;
+    if (!usable(row)) {
+        row = -1;
+        for (int r = 0; r < rows && row < 0; ++r)
+            if (usable(r)) row = r;
+    }
+    const auto step = [&](int by) {
+        for (int r = row + by; r >= 0 && r < rows; r += by)
+            if (usable(r)) return r;
+        return row;
+    };
+    if (row >= 0) switch (c) {
+            case PadCommand::Up: row = step(-1); break;
+            case PadCommand::Down: row = step(+1); break;
+            case PadCommand::Left: changeUse(s, row, -1); break;
+            case PadCommand::Right: changeUse(s, row, +1); break;
+            case PadCommand::Press: useSkill(s, row); break;
+            default: break;
+        }
     s.key.clear();
 }
 

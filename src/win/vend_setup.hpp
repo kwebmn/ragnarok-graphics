@@ -27,5 +27,10 @@ bool shown();
 bool close();  // Esc: «Скасувати»
 void beforeGameDraw();
 bool box(int& x, int& y, int& w, int& h);
+// 3.0.16-beta.39 (the owner: «геймпад» - the new cards on the pad): the D-pad's left and right the cart's list or the
+// sale's, up and down a row (a gold edge); A puts the cart's thing up (on a sale: its price field takes the keys), X
+// takes a sale back, LB / RB its price a step down / up, Y «Відкрити лавку», B «Скасувати»
+enum class PadCommand : uint8_t { Up, Down, Left, Right, Put, Take, Less, More, Open, Cancel };
+void padCommand(PadCommand c);
 
 }  // namespace uagfx::win::vendsetupwin

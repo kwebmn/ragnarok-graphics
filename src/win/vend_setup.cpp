@@ -14,6 +14,7 @@
 #include "core/settings/strings.hpp"
 #include "core/ui_style.hpp"
 #include "core/vend_setup.hpp"
+#include "pad/core/config/bindings.hpp"
 #include "pad/win/game_window.hpp"
 #include "win/client_tables.hpp"
 #include "win/code_page.hpp"
@@ -46,6 +47,8 @@ using SendMsgFn = int(__attribute__((thiscall)) *)(uint32_t self, uint32_t sende
 using ModeMsgFn = int(__attribute__((thiscall)) *)(uint32_t mode, int msg, int a, int b, int c);
 using GetTextFn = const char*(__attribute__((thiscall)) *)(uint32_t edit);
 using SetFocusFn = void(__attribute__((thiscall)) *)(uint32_t manager, uint32_t edit);
+using SetTextFn = void(__attribute__((thiscall)) *)(uint32_t edit, const char* text);
+constexpr uint32_t kSetTextSlot = 0x98;  // an edit's SetText (win/ask_card)
 
 struct State {
     WindowShadow shadow;
@@ -65,6 +68,8 @@ struct State {
     int texW = 0, texH = 0;
     bool upload = false;
     int told = 0;
+    bool pad = false;          // 3.0.16-beta.39: the controller's row shown (a mouse press hides it)
+    int padColumn = 0, padAt = 0;  // 0 the cart's, 1 the sale's; the row in its list
 };
 
 State& state() {
@@ -186,7 +191,7 @@ void read(State& s, uint32_t window) {
         if (focus && focus == priceEdit(window, i)) s.show.focus = 1 + i;
 }
 
-vs::Texts texts() {
+vs::Texts texts(const State& s) {
     vs::Texts t;
     t.title = say(settings::Text::VendSetupTitle);
     t.sign = say(settings::Text::VendSetupSign);
@@ -197,6 +202,13 @@ vs::Texts texts() {
     t.cancel = say(settings::Text::VendSetupCancel);
     t.empty = say(settings::Text::VendSetupEmpty);
     t.priceHint = say(settings::Text::VendSetupHint);
+    if (s.pad) {  // 3.0.16-beta.39: the controller's buttons (A, B, X, Y, LB, RB as uaRO Pad's menu names them)
+        const auto b = [](size_t i) { return std::string(uapad::buttonLabel(i)); };
+        t.hint = b(0) + " " + say(settings::Text::VendSetupPadPut) + " \xC2\xB7 " + b(2) + " " +
+                 say(settings::Text::VendSetupPadTake) + " \xC2\xB7 " + b(4) + "/" + b(5) + " " +
+                 say(settings::Text::VendSetupPadPrice) + " \xC2\xB7 " + b(3) + " " + t.open + " \xC2\xB7 " + b(1) +
+                 " " + t.cancel;
+    }
     return t;
 }
 
@@ -215,7 +227,7 @@ void render(State& s) {
     const uicost::Paint cost("the shop's opening", s.layout.w, s.layout.h);
     if (!panel::blank(s.picture, s.layout.w, s.layout.h)) return;
     vs::paint(s.picture, s.layout, s.cart, s.sale, s.show);
-    drawWords(s.picture, gdiWords(vs::words(s.layout, s.cart, s.sale, s.sign, s.show, texts())));
+    drawWords(s.picture, gdiWords(vs::words(s.layout, s.cart, s.sale, s.sign, s.show, texts(s))));
     s.upload = true;
 }
 
@@ -297,10 +309,23 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     s.targetW = targetWidth;
     s.targetH = targetHeight;
     read(s, window);
-    s.layout = vs::layout(targetWidth, targetHeight, s.scale);
+    s.layout = vs::layout(targetWidth, targetHeight, s.scale, s.pad);
     s.show.cartScroll = std::clamp(s.show.cartScroll, 0, vs::mostScroll(s.layout, false, s.cart.size()));
     s.show.saleScroll = std::clamp(s.show.saleScroll, 0, vs::mostScroll(s.layout, true, s.sale.size()));
     s.show.hoverCart = s.show.hoverSale = s.show.hoverRemove = s.show.hoverButton = -1;
+    s.show.padCart = s.show.padSale = -1;
+    if (s.pad) {  // 3.0.16-beta.39: the controller's row kept in its list and in sight
+        const bool sale = s.padColumn == 1;
+        const int count = int(sale ? s.sale.size() : s.cart.size());
+        s.padAt = std::clamp(s.padAt, 0, std::max(0, count - 1));
+        const int rows = int(sale ? s.layout.saleRows.size() : s.layout.cartRows.size());
+        int& scroll = sale ? s.show.saleScroll : s.show.cartScroll;
+        if (rows > 0 && count > 0) {
+            if (s.padAt < scroll) scroll = s.padAt;
+            if (s.padAt >= scroll + rows) scroll = s.padAt - rows + 1;
+            (sale ? s.show.padSale : s.show.padCart) = s.padAt - scroll;
+        }
+    }
     s.show.caret = (GetTickCount64() / kBlinkMs) % 2 == 0;
     int cx = 0, cy = 0;
     if (readGameCursor(cx, cy)) {
@@ -317,7 +342,8 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
                       ',' + std::to_string(s.show.hoverCart) + ',' + std::to_string(s.show.hoverSale) + ',' +
                       std::to_string(s.show.hoverRemove) + ',' + std::to_string(s.show.hoverButton) + ',' +
                       std::to_string(s.show.focus) + (s.show.focus >= 0 && s.show.caret ? "|" : "") + ',' +
-                      std::to_string(s.show.most) + ';' + std::to_string(s.layout.x) + ',' +
+                      std::to_string(s.show.most) + ',' + std::to_string(s.show.padCart) + ',' +
+                      std::to_string(s.show.padSale) + ';' + std::to_string(s.layout.x) + ',' +
                       std::to_string(s.layout.y) + '#' + std::to_string(uistyle::generation());
     for (const vs::Row& r : s.cart) key += ";c" + r.name + ',' + std::to_string(r.count) + (r.icon ? "i" : "");
     for (const vs::Row& r : s.sale)
@@ -363,6 +389,7 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
         return true;
     }
     if (m != WM_LBUTTONDOWN && m != WM_LBUTTONDBLCLK) return true;
+    s.pad = false;  // 3.0.16-beta.39
     const vs::Hit h = vs::hitTest(s.layout, lx, ly);
     const uint32_t window = gameSale();
     switch (h.part) {
@@ -393,6 +420,48 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
 }
 
 bool shown() { return state().shown; }
+
+void padCommand(PadCommand c) {
+    State& s = state();
+    if (!s.shown) return;
+    if (!s.pad) {  // the first press only shows where it is
+        s.pad = true;
+        s.padColumn = s.cart.empty() && !s.sale.empty() ? 1 : 0;
+        s.padAt = 0;
+        s.key.clear();
+        if (c == PadCommand::Up || c == PadCommand::Down || c == PadCommand::Left || c == PadCommand::Right) return;
+    }
+    const bool sale = s.padColumn == 1;
+    const int count = int(sale ? s.sale.size() : s.cart.size());
+    const uint32_t window = gameSale();
+    switch (c) {
+        case PadCommand::Up: s.padAt = std::max(0, s.padAt - 1); break;
+        case PadCommand::Down: s.padAt = std::min(std::max(0, count - 1), s.padAt + 1); break;
+        case PadCommand::Left: s.padColumn = 0; break;
+        case PadCommand::Right: s.padColumn = 1; break;
+        case PadCommand::Put:  // the cart's thing up for sale; on a sale's row its price field gets the keys
+            if (!sale && s.padAt < int(s.cartPlaces.size()) && int(s.sale.size()) < s.show.most)
+                move(s, true, s.cartPlaces[size_t(s.padAt)]);
+            if (sale && s.padAt < int(s.sale.size())) focus(s, priceEdit(window, s.padAt), "a price");
+            break;
+        case PadCommand::Take:
+            if (sale && s.padAt < int(s.salePlaces.size())) move(s, false, s.salePlaces[size_t(s.padAt)]);
+            break;
+        case PadCommand::Less:
+        case PadCommand::More: {
+            if (!sale || s.padAt >= int(s.sale.size())) break;
+            const uint32_t edit = priceEdit(window, s.padAt);
+            if (!edit) break;
+            const std::string digits = vs::stepPrice(s.sale[size_t(s.padAt)].price, c == PadCommand::More ? 1 : -1);
+            reinterpret_cast<SetTextFn>(uintptr_t(read32(read32(edit) + kSetTextSlot)))(edit, digits.c_str());
+            if (s.told++ < 30) LOG_INFO("vend setup: the pad set a price to %s", digits.c_str());
+            break;
+        }
+        case PadCommand::Open: button(s, kOk); break;
+        case PadCommand::Cancel: button(s, kCancel); break;
+    }
+    s.key.clear();
+}
 
 bool close() {
     State& s = state();

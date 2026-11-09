@@ -142,6 +142,8 @@ void paint(panel::Picture& out, const Layout& L, const Info& i, const Show& sh) 
                      0, kGold, 0.45f);  // 3.0.11-beta.221: the skills' heading underlined
     for (size_t k = 0; k < L.skillRows.size() && k < i.skills.size(); ++k) {
         if (sh.hoverSkill == int(k)) panel::roundRect(out, L.skillRows[k], 6 * s, kWhite, 0.07f);
+        if (sh.padRow == int(k))  // 3.0.16-beta.39
+            panel::roundRect(out, L.skillRows[k], 6 * s, kWhite, 0.0f, kGold, 0.9f, 1.5f * s);
         if (k < L.skillPlus.size() && i.skills[k].up && i.points > 0)
             panel::roundRect(out, L.skillPlus[k], 6 * s, kGold, sh.hoverPlus == int(k) ? 0.45f : 0.28f, kGold, 0.85f,
                              1.0f * s);

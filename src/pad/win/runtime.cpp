@@ -62,6 +62,7 @@
 #include "win/guild_card.hpp"
 #include "win/homun_card.hpp"
 #include "win/merc_card.hpp"
+#include "win/vend_setup.hpp"
 #include "win/my_shop.hpp"
 #include "win/options_card.hpp"
 #include "win/server_card.hpp"
@@ -837,22 +838,45 @@ bool homunPad(const PadState& pad, DWORD now) {
     const uint16_t down = uint16_t((buttons & ~s.prevPadButtons) | stickSteps(pad, now));
     s.prevPadButtons = buttons;
     using uagfx::win::homuncardwin::PadCommand;
-    const std::pair<uint16_t, PadCommand> keys[] = {{kPadLeft, PadCommand::Left}, {kPadRight, PadCommand::Right},
-                                                    {kPadA, PadCommand::Press},   {kPadB, PadCommand::Close}};
+    const std::pair<uint16_t, PadCommand> keys[] = {
+        {kPadLeft, PadCommand::Left}, {kPadRight, PadCommand::Right}, {kPadA, PadCommand::Press},
+        {kPadB, PadCommand::Close},   {kPadUp, PadCommand::Up},       {kPadDown, PadCommand::Down},
+        {kPadX, PadCommand::Raise}};  // 3.0.16-beta.39: its skills' rows
     for (const auto& [button, command] : keys)
         if (down & button) uagfx::win::homuncardwin::padCommand(command);
     return true;
 }
 
-// 3.0.11-beta.161: the mercenary's card - A its skills, B closes
-bool mercPad(const PadState& pad) {
+// 3.0.16-beta.39: the shop's opening (vend_setup) - the D-pad over the cart's and the sale's rows, A puts up, X takes
+// back, LB / RB the price a step, Y opens the shop, B gives up
+bool vendSetupPad(const PadState& pad, DWORD now) {
     State& s = S();
     const uint16_t buttons = pad.connected ? pad.buttons : 0;
-    const uint16_t down = uint16_t(buttons & ~s.prevPadButtons);
+    const uint16_t down = uint16_t((buttons & ~s.prevPadButtons) | stickSteps(pad, now));
+    s.prevPadButtons = buttons;
+    using uagfx::win::vendsetupwin::PadCommand;
+    const std::pair<uint16_t, PadCommand> keys[] = {
+        {kPadUp, PadCommand::Up},     {kPadDown, PadCommand::Down}, {kPadLeft, PadCommand::Left},
+        {kPadRight, PadCommand::Right}, {kPadA, PadCommand::Put},   {kPadX, PadCommand::Take},
+        {kPadLB, PadCommand::Less},   {kPadRB, PadCommand::More},   {kPadY, PadCommand::Open},
+        {kPadB, PadCommand::Cancel}};
+    for (const auto& [button, command] : keys)
+        if (down & button) uagfx::win::vendsetupwin::padCommand(command);
+    return true;
+}
+
+// 3.0.11-beta.161: the mercenary's card - A its skills, B closes
+bool mercPad(const PadState& pad, DWORD now) {
+    State& s = S();
+    const uint16_t buttons = pad.connected ? pad.buttons : 0;
+    const uint16_t down = uint16_t((buttons & ~s.prevPadButtons) | stickSteps(pad, now));
     s.prevPadButtons = buttons;
     using uagfx::win::merccardwin::PadCommand;
-    if (down & kPadA) uagfx::win::merccardwin::padCommand(PadCommand::Press);
-    if (down & kPadB) uagfx::win::merccardwin::padCommand(PadCommand::Close);
+    const std::pair<uint16_t, PadCommand> keys[] = {
+        {kPadA, PadCommand::Press},   {kPadB, PadCommand::Close},     {kPadUp, PadCommand::Up},
+        {kPadDown, PadCommand::Down}, {kPadLeft, PadCommand::Left},   {kPadRight, PadCommand::Right}};
+    for (const auto& [button, command] : keys)  // 3.0.16-beta.39: its skills' rows
+        if (down & button) uagfx::win::merccardwin::padCommand(command);
     return true;
 }
 
@@ -1383,7 +1407,7 @@ void tick() {
                   : drive && *top == Win::PartySetup               ? partySetupPad(pad, now)  // .158
                   : drive && *top == Win::Pet                      ? petPad(pad, now)         // .159
                   : drive && *top == Win::Homun                    ? homunPad(pad, now)       // .160
-                  : drive && *top == Win::Merc                     ? mercPad(pad)             // .161
+                  : drive && *top == Win::Merc                     ? mercPad(pad, now)        // .161
                   : drive && *top == Win::Options                  ? optionsPad(pad, now)     // .162
                   : drive && *top == Win::Social                   ? socialPad(pad, now)      // .163
                   : drive && *top == Win::Servers                  ? serversPad(pad, now)     // .164
@@ -1391,6 +1415,7 @@ void tick() {
                   : drive && *top == Win::MyShop                   ? myShopPad(pad, now)      // .166
                   : drive && *top == Win::WhisperSetup             ? whisperSetupPad(pad, now)  // .168
                   : drive && *top == Win::Tip                      ? tipPad(pad, now)           // .204
+                  : drive && *top == Win::VendSetup                ? vendSetupPad(pad, now)     // 3.0.16-beta.39
                                                                    : runMenu(pad, view, now);
     if (s.npcSupported) view.dialog = clientnpc::read();
     double clientTurn = 0;

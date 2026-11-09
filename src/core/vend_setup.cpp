@@ -60,7 +60,19 @@ long long priceOf(const std::string& words) {
     return any ? v : 0;
 }
 
-Layout layout(int targetW, int targetH, float scale) {
+std::string stepPrice(const std::string& words, int dir) {
+    const long long v = std::min<long long>(priceOf(words), kMostPrice);
+    if (dir == 0) return std::to_string(v);
+    if (dir > 0 && v == 0) return "10";
+    const long long from = dir < 0 ? v - 1 : v;  // down from 10 000 steps by 100, not 1 000
+    long long step = 1;
+    while (step * 100 <= from) step *= 10;
+    long long next = dir > 0 ? (v / step + 1) * step : ((v + step - 1) / step - 1) * step;
+    next = std::clamp<long long>(next, 0, kMostPrice);
+    return std::to_string(next);
+}
+
+Layout layout(int targetW, int targetH, float scale, bool hint) {
     Layout L;
     const float s = scale > 0 ? scale : 1.0f;
     L.s = s;
@@ -90,7 +102,12 @@ Layout layout(int targetW, int targetH, float scale) {
     y += L.cartList.h + 12 * s;
     L.cancel = panel::Box{pad, y, col, kButtonH * s};
     L.open = panel::Box{right, y, col, kButtonH * s};
-    y += kButtonH * s + pad;
+    y += kButtonH * s;
+    if (hint) {  // 3.0.16-beta.39
+        L.hint = panel::Box{pad, y + 6 * s, inner, 18 * s};
+        y += 24 * s;
+    }
+    y += pad;
     L.glass = panel::Box{0, 0, w, y};
     L.w = int(std::ceil(w));
     L.h = int(std::ceil(y));
@@ -135,6 +152,8 @@ void paint(panel::Picture& out, const Layout& L, const std::vector<Row>& cart, c
         if (at >= cart.size()) break;
         const bool full = sh.most > 0 && int(sale.size()) >= sh.most;
         panel::roundRect(out, L.cartRows[i], 7 * s, kWhite, sh.hoverCart == int(i) && !full ? 0.10f : 0.035f);
+        if (sh.padCart == int(i))  // 3.0.16-beta.39: the controller's row
+            panel::roundRect(out, L.cartRows[i], 7 * s, kWhite, 0.0f, kGold, 0.9f, 1.5f * s);
         const panel::Box icon = iconBox(L.cartRows[i], s);
         panel::roundRect(out, icon, 6 * s, kBlack, 0.30f);
         if (cart[at].icon && cart[at].icon->width > 0) put(out, *cart[at].icon, icon);
@@ -143,6 +162,8 @@ void paint(panel::Picture& out, const Layout& L, const std::vector<Row>& cart, c
         const size_t at = i + size_t(std::max(0, sh.saleScroll));
         if (at >= sale.size()) break;
         panel::roundRect(out, L.saleRows[i], 7 * s, kWhite, sh.hoverSale == int(i) ? 0.07f : 0.035f);
+        if (sh.padSale == int(i))
+            panel::roundRect(out, L.saleRows[i], 7 * s, kWhite, 0.0f, kGold, 0.9f, 1.5f * s);
         const panel::Box icon = iconBox(L.saleRows[i], s);
         panel::roundRect(out, icon, 6 * s, kBlack, 0.30f);
         if (sale[at].icon && sale[at].icon->width > 0) put(out, *sale[at].icon, icon);
@@ -203,6 +224,7 @@ std::vector<Words> words(const Layout& L, const std::vector<Row>& cart, const st
     }
     out.push_back(Words{L.cancel, t.cancel, kText, 13.5f * s, true, Align::Center});
     out.push_back(Words{L.open, t.open, kText, 13.5f * s, true, Align::Center});
+    if (L.hint.h > 0 && !t.hint.empty()) out.push_back(Words{L.hint, t.hint, kMuted, 11.5f * s, false, Align::Center});
     return out;
 }
 

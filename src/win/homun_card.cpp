@@ -325,7 +325,8 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
            std::to_string(s.show.hoverSkill);
     for (const hc::SkillRow& r : i.skills)
         key += ';' + r.name + std::to_string(r.level) + '/' + std::to_string(r.use) + (r.up ? "+" : "");
-    key += ';' + std::to_string(s.show.hoverLess) + ',' + std::to_string(s.show.hoverMore);
+    key += ';' + std::to_string(s.show.hoverLess) + ',' + std::to_string(s.show.hoverMore) + ',' +
+           std::to_string(s.show.padRow);
     if (key != s.key) {
         s.key = key;
         render(s);
@@ -392,11 +393,33 @@ void padCommand(PadCommand c) {
     State& s = state();
     if (!s.shown) return;
     int& f = s.show.focus;  // feed or its skills
-    if (f != int(hc::Button::Feed) && f != int(hc::Button::Skills)) f = int(hc::Button::Feed);
+    int& row = s.show.padRow;  // 3.0.16-beta.39: or a skill's row of the card's list
+    const int rows = int(std::min(s.info.skills.size(), s.layout.skillRows.size()));
+    if (rows <= 0) row = -1;
+    if (row < 0 && f != int(hc::Button::Feed) && f != int(hc::Button::Skills)) f = int(hc::Button::Feed);
     switch (c) {
-        case PadCommand::Left: f = int(hc::Button::Feed); break;
-        case PadCommand::Right: f = int(hc::Button::Skills); break;
-        case PadCommand::Press: press(s, hc::Button(f)); break;
+        case PadCommand::Up:
+            if (row > 0) --row;
+            else if (row == 0) row = -1, f = int(hc::Button::Feed);
+            break;
+        case PadCommand::Down:
+            if (rows > 0) row = std::min(rows - 1, row + 1), f = -1;
+            break;
+        case PadCommand::Left:
+            if (row >= 0) changeUse(s, row, -1);
+            else f = int(hc::Button::Feed);
+            break;
+        case PadCommand::Right:
+            if (row >= 0) changeUse(s, row, +1);
+            else if (rows <= 0) f = int(hc::Button::Skills);
+            break;
+        case PadCommand::Press:
+            if (row >= 0) useSkill(s, row);
+            else press(s, hc::Button(f));
+            break;
+        case PadCommand::Raise:
+            if (row >= 0) raiseSkill(s, row);
+            break;
         case PadCommand::Close: press(s, hc::Button::Close); break;
     }
     s.key.clear();

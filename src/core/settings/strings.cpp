@@ -6555,6 +6555,9 @@ constexpr Entry kTexts[] = {
     {Text::VendSetupEmpty, "Nothing in the cart", "У візку нічого немає", "В тележке ничего нет"},
     {Text::VendSetupHint, "Click a thing in the cart to put it up", "Клацніть річ у візку, щоб виставити",
      "Нажмите вещь в тележке, чтобы выставить"},
+    {Text::VendSetupPadPut, "put up", "виставити", "выставить"},
+    {Text::VendSetupPadTake, "take back", "зняти", "снять"},
+    {Text::VendSetupPadPrice, "price", "ціна", "цена"},
     // 3.0.11-beta.168: the whisper's settings
     {Text::InterfaceWhisperSetup, "Whisper settings", "Налаштування шепоту", "Настройки шёпота"},
     {Text::InterfaceWhisperSetupHint,

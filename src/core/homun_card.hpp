@@ -46,6 +46,7 @@ struct Show {
     int focus = -1;  // the controller's (Feed or Skills)
     int hoverPlus = -1, hoverSkill = -1;  // 3.0.11-beta.221
     int hoverLess = -1, hoverMore = -1;   // 3.0.16-beta.31
+    int padRow = -1;  // 3.0.16-beta.39: the controller's skill row (a gold edge)
 };
 struct Layout {
     float s = 1;

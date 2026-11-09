@@ -21,9 +21,13 @@ struct Row {
 };
 // A price as the game takes it (FUN_0062a7b0 then the OK's checks): its digits, at most 99 990 000; 0 none
 long long priceOf(const std::string& words);
+// 3.0.16-beta.39 (the pad: LB / RB on a sale's row): the price one step down (dir < 0) or up - a step of about a
+// hundredth of it (1 under 100; up from 0 to 10), rounded to the step, 0 .. 99 990 000; its digits
+std::string stepPrice(const std::string& words, int dir);
 
 struct Texts {
-    std::string title, sign, signHint, cart, sale, open, cancel, empty, priceHint;  // sale: «На продаж {1} / {2}»
+    std::string title, sign, signHint, cart, sale, open, cancel, empty, priceHint;
+    std::string hint;  // 3.0.16-beta.39: the controller's buttons under the card's own, "" none  // sale: «На продаж {1} / {2}»
 };
 enum class Field : int8_t { None = -1, Sign = 0 };  // a price's field: 1 + its place
 struct Show {
@@ -32,14 +36,16 @@ struct Show {
     int focus = -1;     // Field: the sign 0, a price 1 + its place, -1 none
     bool caret = true;  // the blink's on half
     int most = 0;       // the places for sale (the skill's level + 2)
+    int padCart = -1, padSale = -1;  // 3.0.16-beta.39: the controller's row on screen (a gold edge), -1 none
 };
 struct Layout {
     float s = 1;
     int x = 0, y = 0, w = 0, h = 0;
     panel::Box glass, title, cross, signLabel, sign, cartHead, saleHead, cartList, saleList, open, cancel;
+    panel::Box hint;  // 3.0.16-beta.39: h 0 without it
     std::vector<panel::Box> cartRows, saleRows, prices, removes;  // shown
 };
-Layout layout(int targetW, int targetH, float scale);
+Layout layout(int targetW, int targetH, float scale, bool hint = false);
 int mostScroll(const Layout& L, bool sale, size_t count);
 enum class Part : uint8_t { None, Body, Cross, Open, Cancel, Sign, Cart, Sale, Price, Remove };
 struct Hit {
