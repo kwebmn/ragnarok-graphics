@@ -21,8 +21,8 @@ struct Row {
 };
 // A price as the game takes it (FUN_0062a7b0 then the OK's checks): its digits, at most 99 990 000; 0 none
 long long priceOf(const std::string& words);
-// 3.0.16-beta.39 (the pad: LB / RB on a sale's row): the price one step down (dir < 0) or up - a step of about a
-// hundredth of it (1 under 100; up from 0 to 10), rounded to the step, 0 .. 99 990 000; its digits
+// 3.0.16-beta.39 (the pad: LB / RB on a sale's row): the price one step down (dir < 0) or up - a power of ten, 1-10 % of
+// it (1 under 100; up from 0 to 10), rounded to the step, 0 .. 99 990 000; its digits
 std::string stepPrice(const std::string& words, int dir);
 
 struct Texts {

@@ -62,7 +62,7 @@ TEST(vend_setup_words) {
     CHECK(head && potion && price);
 }
 
-// 3.0.16-beta.39: the pad's price steps - about a hundredth, rounded, 10 from nothing, the game's most
+// 3.0.16-beta.39: the pad's price steps - a power of ten 1-10 % of it, rounded, 10 from nothing, the game's most
 TEST(vend_setup_price_steps) {
     CHECK(vendsetup::stepPrice("", 1) == "10");
     CHECK(vendsetup::stepPrice("", -1) == "0");
@@ -70,7 +70,7 @@ TEST(vend_setup_price_steps) {
     CHECK(vendsetup::stepPrice("1000", 1) == "1100");
     CHECK(vendsetup::stepPrice("1050", 1) == "1100");
     CHECK(vendsetup::stepPrice("10000", -1) == "9900");
-    CHECK(vendsetup::stepPrice("1 250 000", -1) == "1240000");
+    CHECK(vendsetup::stepPrice("1 250 000", -1) == "1200000");
     CHECK(vendsetup::stepPrice("99990000", 1) == "99990000");
     CHECK(vendsetup::stepPrice("1", -1) == "0");
 }
