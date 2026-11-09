@@ -194,8 +194,8 @@ void Console::build(Lang lang, const Config& config) {
                                   "frames.fps_counter", "interface.net_badge", "interface.mob_hp"})
                 if (!consolepins::pinned(pins_, k)) interfaceRow(k, 0);
             if (!fresh_.empty())  // 3.0.17-beta.12: the way to «Нове»
-                rows_.push_back(Row{Kind::Heading, fmt(tr(lang, Text::ConsoleNewCount), {std::to_string(fresh_.size())}),
-                                    0});
+                rows_.push_back(
+                    Row{Kind::Heading, fmt(tr(lang, Text::ConsoleNewCount), {std::to_string(fresh_.size())}), 0});
             if (!pins_.empty()) rows_.push_back(Row{Kind::Heading, tr(lang, Text::ConsolePinned), 0});
             for (const std::string& k : pins_) interfaceRow(k.c_str(), 0);
             rows_.push_back(Row{Kind::Heading, tr(lang, Text::ConsoleActions), 0});
