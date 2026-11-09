@@ -32,8 +32,9 @@ const Member kMembers[] = {
     {"round_light", Characters, 2, &E::roundLight},
     {"rim_light", Characters, 2, &E::rimLight},
     {"footprints", Characters, 1, &E::footprints},
-    {"hit_flash", Characters, 1, &E::hitFlash},
-    {"death_flash", Characters, 1, &E::deathFlash},  // 3.0.16-beta.7
+    // 3.0.17-beta.22 (the owner: «мне кажется это чтото лишнее»): the flashes the player's alone, in no set
+    {"hit_flash", Characters, 0, &E::hitFlash},
+    {"death_flash", Characters, 0, &E::deathFlash},  // 3.0.16-beta.7
     {"body_tints", Characters, 1, &E::bodyTints},
     {"body_stamp", Characters, 0, &E::bodyStamp},  // 3.0.16-beta.25: by hand only
     {"sharp_sprites", Characters, 0, &E::sharpSprites},  // 3.0.16-beta.29: by hand only

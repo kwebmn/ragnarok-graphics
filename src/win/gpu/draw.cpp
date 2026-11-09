@@ -230,8 +230,10 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     }
     // 1.25: not the level 99 aura - blurred into the glow it lay as white pools under the players (Prontera)
     // 2.7.39: nor a casting (the light round the caster's feet) - its halo lay as a white haze round the caster
+    // 3.0.17-beta.22 (the owner: «белый купол вокруг него» when hitting monsters): nor a hit's or a death's flash - the
+    // white shape blurred into a dome round the monster
     const bool toGlow = !s.ui && glowActive && d.effect != uint8_t(effect_exe::Kind::Aura) &&
-                        !effect_exe::isCasting(d.effectId);
+                        d.effect != uint8_t(effect_exe::Kind::HitFlash) && !effect_exe::isCasting(d.effectId);
     // 0.19, modern water: a cell of a map's water (core/water.hpp) is drawn by its own shader, from the picture and
     // the depth the frame had before its first water (copyScene); without them, as the game draws it.
     // 3.0.4-beta.20: and the own water past the far plane (ownWater 1, drawOwnWater)

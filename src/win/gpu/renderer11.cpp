@@ -1328,6 +1328,7 @@ void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
     if (!stampPass_ && !s.ui && s.blend && s.dstBlend == d3d7::BLEND_ONE && !glowActive_ && glowWanted())
         startGlow();
     const bool toGlow = !s.ui && glowActive_ && d.effect != uint8_t(effect_exe::Kind::Aura) &&  // 1.25
+                        d.effect != uint8_t(effect_exe::Kind::HitFlash) &&  // 3.0.17-beta.22: no white dome
                         !effect_exe::isCasting(d.effectId);                                          // 2.7.39
     // 2.5.2: a torch's layers - the glow and (torch_flame) the flame drawn anew once the world is (takeTorch)
     if (!seamPass_ && !stampPass_ && !s.ui && d.vertexCount == 4 && !objectTextures_.empty() && effects_.torch &&
