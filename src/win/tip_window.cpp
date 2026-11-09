@@ -95,6 +95,7 @@ std::vector<std::string> tipLines(uint32_t number, int& count) {
         const uint32_t words = read32(line + 4), length = std::min<uint32_t>(read32(line + 8), 1000);
         std::string t(length, '\0');
         if (words && length && !readGame(words, t.data(), t.size())) t.clear();
+        while (!t.empty() && (t.back() == '\r' || t.back() == '\0')) t.pop_back();  // 3.0.17-beta.26: \r\n files
         out.push_back(t);
     }
     return out;
@@ -205,6 +206,7 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
                 at = end + 1;
             }
             if (s.oursTold++ == 0) LOG_INFO("tips: uaRO's tips in the interface's language (the driver's words)");
+            count = std::min(count, tiptexts::kCount);  // 3.0.17-beta.26: not the \r\n file's empty one
         }
         s.card.paragraphs = tc::paragraphs(lines);
         s.card.number = number + 1;

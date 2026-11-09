@@ -375,7 +375,8 @@ const Tip kTips[kCount] = {
 }  // namespace
 
 bool isUaroList(int count, const std::string& firstTip) {
-    return count == kCount && firstTip.find("/savechat") != std::string::npos &&
+    // 3.0.17-beta.26 (R-VDZY6F): uaRO HD's file ends its lines with \r\n - the game counts an empty tip after the last
+    return (count == kCount || count == kCount + 1) && firstTip.find("/savechat") != std::string::npos &&
            firstTip.find("text file") == std::string::npos;
 }
 

@@ -13,6 +13,9 @@ TEST(tip_texts_ours_for_the_uaro_list) {
     CHECK(tiptexts::isUaroList(68, "* /savechat : сохраняет чат в текстовом файле."));
     CHECK(!tiptexts::isUaroList(63, "* /savechat : saves chat as text file."));
     CHECK(!tiptexts::isUaroList(68, "->Vous pouvez choisir"));
+    // 3.0.17-beta.26 (R-VDZY6F): uaRO HD's file has Windows' line ends - the game counts one empty tip more, 69
+    CHECK(tiptexts::isUaroList(69, "* /savechat : сохраняет чат в текстовом файле.\r"));
+    CHECK(!tiptexts::isUaroList(70, "* /savechat : сохраняет чат в текстовом файле."));
     CHECK_EQ(tiptexts::tip(33, settings::Lang::Uk), std::string("/where — назва місцевості та ваші координати."));
     CHECK(tiptexts::tip(33, settings::Lang::Ru).find("/where") == 0);
     CHECK(tiptexts::tip(33, settings::Lang::En).find("/where") == 0);
