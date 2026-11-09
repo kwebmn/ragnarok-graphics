@@ -51,7 +51,7 @@ ALLOWED = {
         "GetStartupInfoW", "GetSystemDirectoryA", "GetSystemDirectoryW", "GetUserDefaultUILanguage", "GlobalAlloc",
         "GlobalFree", "GlobalLock", "GlobalUnlock", "InitializeCriticalSection", "IsDBCSLeadByteEx",
         "IsWow64Process", "LeaveCriticalSection", "LoadLibraryA", "LoadLibraryW", "LoadResource", "LocalFree",
-        "LockResource", "MoveFileExW", "MulDiv", "MultiByteToWideChar", "OpenMutexW", "OpenProcess",
+        "LockResource", "MoveFileExW", "MulDiv", "MultiByteToWideChar", "OpenMutexW", "OpenProcess", "GetProcessTimes", "TerminateProcess",
         "Process32FirstW",
         "Process32NextW", "QueryFullProcessImageNameW", "ReadFile", "ReleaseSemaphore", "RemoveDirectoryW",
         "SetLastError", "SetUnhandledExceptionFilter", "SizeofResource", "Sleep", "TlsAlloc", "TlsFree",
@@ -112,6 +112,7 @@ ALLOWED = {
         "GetClassInfoExW", "GetCursorPos", "GetParent", "OffsetRect", "PtInRect",
         "CallWindowProcW", "CharUpperBuffW",  # 3.0.9-beta.6: the new report's cue words, its label (Windows NT)
         "IsWindowEnabled", "IsWindowVisible",  # 2.10: the progress window's Cancel, the status bar's Update
+        "EnumWindows", "GetWindowThreadProcessId",  # 3.0.17-beta.19: a game without a window (hung) found
         # 3.0.10-beta.2: «Звернення» reads a new answer only while it is in front (both since Windows NT)
         "GetForegroundWindow", "IsIconic",
         # 3.0.10-beta.3: the app's notification of a new answer - its icon, the taskbar button flashing (Windows 2000)
