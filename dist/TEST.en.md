@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.18-beta.3 — what's new
+
+- **"The game froze" - a report of its own:** when the game stood still for 15 seconds or more and had to be closed, the automatic report is now called so, not "ended abnormally"; in the reports list - "The game froze".
+
 # uaRO Graphics 3.0.18-beta.2 — what's new
 
 - **The hang watch:** when the game stands still for 15 seconds or more, the log tells at once where it is stuck and a memory snapshot of the game is saved beside it. If the game then had to be closed, the app sends a report with them by itself - a hang can now be read, not guessed.
