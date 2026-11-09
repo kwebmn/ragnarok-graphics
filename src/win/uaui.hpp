@@ -29,7 +29,8 @@ namespace uagfx::win::uaui {
 // migration.md): the runtime the parts draw by - [interface] uaui. Each frame: begin() before the parts' frames,
 // the parts fill their documents' models, end() lays out and renders; draw() puts it into the frame. On the game's
 // thread.
-void begin(HWND game, bool on, unsigned codePage, double k, int targetWidth, int targetHeight);
+void begin(HWND game, bool on, unsigned codePage, double k, int targetWidth, int targetHeight,
+           const std::string& theme);
 void end();
 void draw(FrameRecord& record, gpu::Renderer& renderer);
 // The mouse's buttons and wheel over a document of uaUI (and the end of a drag wherever it is): true taken
@@ -41,6 +42,9 @@ bool ready();  // [interface] uaui on, in the world, started: the parts draw by 
 bool sceneReady();
 // Whether a recorded picture has pixels painted by hand as well (a glow, a mask) - kept by its scene's generation
 bool residual(const panel::Picture& pic);
+// 3.0.18-beta.13: a picture drawn while recording but not recorded (a part painting without panel::blank) - in the
+// log every 10 s, by its size, to find the parts still painted
+void noteUnrecorded(int w, int h);
 // Its shapes, icons, pictures and words at (x, y) w x h of the target (stretched from its own size), at `opacity`
 void drawScene(FrameRecord& record, gpu::Renderer& renderer, const panel::Picture& pic, int x, int y, int w, int h,
                float k, float opacity, int stretch);

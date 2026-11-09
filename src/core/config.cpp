@@ -832,6 +832,8 @@ Config parseConfig(const std::string& text) {
             setBool(val, c.uaui);
         } else if (key == "interface.uaui_showcase") {  // 3.0.18-beta.11: uaUI's components' window
             setBool(val, c.uauiShowcase);
+        } else if (key == "interface.theme") {  // 3.0.18-beta.13: uaUI's theme
+            if (val == "standard" || val == "classic" || val == "contrast") c.uiTheme = val;
         } else if (key == "interface.size") {  // 3.0.11-beta.54: the new interface's size (auto or per cent)
             int n = 0;
             if (val == "auto") c.uiSize = 0;

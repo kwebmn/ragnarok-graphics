@@ -264,6 +264,7 @@ void drawQuad(FrameRecord& record, gpu::Renderer& renderer, const panel::Picture
     // 3.0.18-beta.12 (uaUI): a recorded picture drawn by its shapes, words and pictures on the card - its own pixels
     // only for what was painted by hand (none mostly)
     bool residual = true;
+    if (!pic.scene && uaui::sceneReady()) uaui::noteUnrecorded(pic.width, pic.height);  // 3.0.18-beta.13
     if (pic.scene && uaui::sceneReady()) {
         residual = uaui::residual(pic);
         if (!residual) {

@@ -8242,6 +8242,18 @@ constexpr Entry kTexts[] = {
      "увімкненою новою бібліотекою інтерфейсу.",
      "Окно с компонентами новой библиотеки: вкладки, предметы из сумки, список, кнопки, переключатели. Работает с "
      "включённой новой библиотекой интерфейса."},
+    // 3.0.18-beta.13: uaUI's themes
+    {Text::InterfaceTheme, "Interface theme", "Тема інтерфейсу", "Тема интерфейса"},
+    {Text::InterfaceThemeHint,
+     "The colours and corners of the new interface drawn by the new library: today's, the old game's warm browns, or "
+     "a sharper contrast. Your own colours: uaro-graphics\\ui\\palette.txt.",
+     "Кольори й кути нового інтерфейсу, який малює нова бібліотека: як зараз, теплі коричневі старої гри або чіткіший "
+     "контраст. Свої кольори: uaro-graphics\\ui\\palette.txt.",
+     "Цвета и углы нового интерфейса, который рисует новая библиотека: как сейчас, тёплые коричневые старой игры или "
+     "чёткий контраст. Свои цвета: uaro-graphics\\ui\\palette.txt."},
+    {Text::InterfaceThemeStandard, "Standard", "Стандартна", "Стандартная"},
+    {Text::InterfaceThemeClassic, "Classic RO", "Класична RO", "Классическая RO"},
+    {Text::InterfaceThemeContrast, "Contrast", "Контрастна", "Контрастная"},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

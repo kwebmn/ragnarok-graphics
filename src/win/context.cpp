@@ -1083,7 +1083,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     minimapShow.classic = config.minimapClassic;  // 3.0.11-beta.222
     minimapShow.scheme = config.minimapStyle == MapStyle::Scheme;  // 3.0.11-beta.120: the maps' picture
     minimapShow.netBadge = config.netBadge;                         // 3.0.11-beta.122: the round trip's badge
-    uaui::begin(window, config.uaui, gameCodePage(config), pk, pw, ph);  // 3.0.18-beta.11: uaUI's frame, its parts next
+    uaui::begin(window, config.uaui, gameCodePage(config), pk, pw, ph, config.uiTheme);  // 3.0.18-beta.11: uaUI's frame, its parts next
     netwatchwin::frame();  // 3.0.11-beta.122: the map server's connection read each second (the minimap's badge)
     netsmoothwin::setOn(config.smoothFixes);  // 3.0.11-beta.123: [interface] smooth_fixes
     netwatchwin::setQuickAcks(config.quickAcks);  // 3.0.11-beta.128: [debug] quick_acks

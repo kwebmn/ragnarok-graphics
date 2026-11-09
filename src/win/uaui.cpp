@@ -19,6 +19,9 @@
 #include "core/uaui_mesh.hpp"
 #include "core/ui_icons.hpp"
 #include "core/ui_scene.hpp"
+#include "core/ui_theme.hpp"
+#include "core/ui_motion.hpp"
+#include <map>
 #include "core/layout.hpp"
 #include "core/window_panel.hpp"
 #include "win/paths.hpp"
@@ -153,7 +156,8 @@ struct State {
     int logged = 0;
     // 3.0.18-beta.12: the recorded pictures' side (sceneReady, drawScene)
     struct Cached {
-        int generation = 0, x = 0, y = 0, w = 0, h = 0, epoch = 0;
+        int generation = 0, x = 0, y = 0, w = 0, h = 0, epoch = 0, theme = 0;
+        float grow = 1;
         ULONGLONG used = 0;
         float k = 0, opacity = -1;
         bool residual = false;
@@ -179,6 +183,18 @@ struct State {
     bool wordsDirty = false;
     int scenesDrawn = 0, sceneVertices = 0;
     bool recordingTold = false;
+    // 3.0.18-beta.13: the theme ([interface] theme, uaro-graphics\ui\palette.txt over it); its serial in the meshes
+    uitheme::Theme theme;
+    std::string themeName;
+    int themeSerial = 1;
+    FILETIME paletteStamp{};
+    bool paletteThere = false;
+    // 3.0.18-beta.13: a picture coming into sight (not drawn for a while) grows from 96 % and fades in, 120 ms
+    struct Seen {
+        ULONGLONG last = 0, since = 0;
+    };
+    std::unordered_map<const void*, Seen> seen;
+    std::map<std::pair<int, int>, int> unrecorded;
 };
 
 State& state() {
@@ -824,10 +840,24 @@ void drawScene(FrameRecord& record, gpu::Renderer& renderer, const panel::Pictur
     if (!pic.scene || pic.width <= 0 || pic.height <= 0 || k <= 0) return;
     residual(pic);  // its generation noted
     State::Cached& c = s.scenes[pic.scene];
-    c.used = GetTickCount64();
-    const float alpha = opacity * pic.scene->opacity;
-    if (c.opacity != alpha || c.x != x || c.y != y || c.w != w || c.h != h || c.k != k || c.epoch != s.wordsEpoch) {
-        c.x = x, c.y = y, c.w = w, c.h = h, c.k = k, c.opacity = alpha;
+    const ULONGLONG nowMs = GetTickCount64();
+    c.used = nowMs;
+    // 3.0.18-beta.13: a window or a card coming into sight - from 96 % of its size and nothing, 120 ms (the theme's
+    // motion; [interface] animations); the small and the screen-wide ones as they are
+    float grow = 1, fadeIn = 1;
+    State::Seen& seen = s.seen[&pic];
+    if (nowMs - seen.last > 250) seen.since = nowMs;
+    seen.last = nowMs;
+    if (motion::on() && pic.width >= 140 && pic.height >= 60 && w < s.targetW * 9 / 10) {
+        const float t = std::min(1.0f, float(nowMs - seen.since) / float(motion::kCardMs));
+        const float e = 1 - (1 - t) * (1 - t);  // eased out
+        grow = 0.96f + 0.04f * e;
+        fadeIn = e;
+    }
+    const float alpha = opacity * pic.scene->opacity * fadeIn;
+    if (c.opacity != alpha || c.x != x || c.y != y || c.w != w || c.h != h || c.k != k || c.epoch != s.wordsEpoch ||
+        c.theme != s.themeSerial || c.grow != grow) {
+        c.x = x, c.y = y, c.w = w, c.h = h, c.k = k, c.opacity = alpha, c.theme = s.themeSerial, c.grow = grow;
         c.runs.clear();
         const float sx = float(w) / float(pic.width), sy = float(h) / float(pic.height);
         const float half = 0.5f / float(std::max(stretch, 1));
@@ -839,7 +869,8 @@ void drawScene(FrameRecord& record, gpu::Renderer& renderer, const panel::Pictur
         const auto emit = [&](uint32_t tex, const ::uagfx::uiscene::Prim& p) {
             if (!haveRun || tex != runTex) c.runs.emplace_back(tex, std::vector<glint::Vertex>()), runTex = tex;
             haveRun = true;
-            for (Point& q : pts) q.x = q.x * sx, q.y = q.y * sy;
+            const float cx = float(w) / 2, cy = float(h) / 2;
+            for (Point& q : pts) q.x = (q.x * sx - cx) * grow + cx, q.y = (q.y * sy - cy) * grow + cy;
             ::uagfx::uaui::ClipBox clip{float(p.cx0) * sx, float(p.cy0) * sy, float(p.cx1) * sx, float(p.cy1) * sy};
             ::uagfx::uaui::triangles(pts, ix, float(x), float(y), nullptr, p.clipped ? &clip : nullptr, k, half,
                                      c.runs.back().second);
@@ -850,7 +881,12 @@ void drawScene(FrameRecord& record, gpu::Renderer& renderer, const panel::Pictur
             switch (p.kind) {
                 case ::uagfx::uiscene::Kind::Rect: {
                     shape.clear();
-                    ::uagfx::uiscene::mesh(p, 0, 0, 1.0f, 0.0f, alpha, shape);
+                    ::uagfx::uiscene::Prim themed = p;  // 3.0.18-beta.13: in the theme's colours and corners
+                    themed.fill = uitheme::colour(s.theme, p.fill);
+                    themed.edge = uitheme::colour(s.theme, p.edge);
+                    if (p.r < std::min(p.w, p.h) / 2 - 0.01f) themed.r = p.r * s.theme.radius;  // a circle stays one
+                    themed.edgeW = p.edgeW * s.theme.edge;
+                    ::uagfx::uiscene::mesh(themed, 0, 0, 1.0f, 0.0f, alpha, shape);
                     for (const glint::Vertex& v : shape) {
                         ix.push_back(int(pts.size()));
                         pts.push_back({v.x, v.y, v.diffuse, 0, 0});
@@ -860,7 +896,9 @@ void drawScene(FrameRecord& record, gpu::Renderer& renderer, const panel::Pictur
                 }
                 case ::uagfx::uiscene::Kind::Icon: {
                     float ox = 0, oy = 0;
-                    const State::Tex* t = iconTex(s, renderer, record, p, ox, oy);
+                    ::uagfx::uiscene::Prim themed = p;
+                    themed.fill = uitheme::colour(s.theme, p.fill);
+                    const State::Tex* t = iconTex(s, renderer, record, themed, ox, oy);
                     if (!t) break;
                     const uint32_t col = premul(0xFFFFFF, p.opacity * alpha);
                     quad(pts, ix, ox, oy, float(t->w), float(t->h), col, 0, 0, 1, 1);
@@ -884,7 +922,8 @@ void drawScene(FrameRecord& record, gpu::Renderer& renderer, const panel::Pictur
                              float(slot.x) * inv, float(slot.y) * inv, float(slot.x + p.w + 4) * inv,
                              float(slot.y + p.h + 4) * inv);
                     if (wordSlot(s, p, false, slot))
-                        quad(pts, ix, p.x, p.y, p.w, p.h, premul(p.fill, alpha), float(slot.x) * inv,
+                        quad(pts, ix, p.x, p.y, p.w, p.h, premul(uitheme::colour(s.theme, p.fill), alpha),
+                             float(slot.x) * inv,
                              float(slot.y) * inv, float(slot.x + p.w) * inv, float(slot.y + p.h) * inv);
                     if (!s.wordsId) s.wordsId = renderer.createTexture(kWords, kWords, 1);
                     emit(s.wordsId, p);
@@ -1003,7 +1042,50 @@ bool Doc::box(int& x, int& y, int& w, int& h) const {
     return w > 0 && h > 0;
 }
 
-void begin(HWND game, bool on, unsigned codePage, double k, int targetWidth, int targetHeight) {
+namespace {
+
+std::string paletteFile() { return layout::join(gameDir(), layout::kUiPalette); }
+
+// The theme chosen and the palette's file over it - made again when either changes (the file looked at each second)
+void themeFrame(State& s, const std::string& name, bool look) {
+    bool changed = name != s.themeName;
+    if (look) {
+        WIN32_FILE_ATTRIBUTE_DATA a{};
+        const bool there = GetFileAttributesExA(paletteFile().c_str(), GetFileExInfoStandard, &a) != 0;
+        const FILETIME t = there ? a.ftLastWriteTime : FILETIME{};
+        if (there != s.paletteThere || CompareFileTime(&t, &s.paletteStamp) != 0) changed = true;
+        s.paletteThere = there;
+        s.paletteStamp = t;
+    }
+    if (!changed) return;
+    s.themeName = name;
+    s.theme = uitheme::named(name);
+    std::string text, bad;
+    HANDLE h = CreateFileA(paletteFile().c_str(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr,
+                           OPEN_EXISTING, 0, nullptr);
+    if (h != INVALID_HANDLE_VALUE) {
+        LARGE_INTEGER size{};
+        if (GetFileSizeEx(h, &size) && size.QuadPart > 0 && size.QuadPart < (1 << 20)) {
+            text.resize(size_t(size.QuadPart));
+            DWORD got = 0;
+            if (!ReadFile(h, text.data(), DWORD(text.size()), &got, nullptr)) text.clear();
+            text.resize(got);
+        }
+        CloseHandle(h);
+    }
+    if (!text.empty()) uitheme::read(text, s.theme, bad);
+    ++s.themeSerial;
+    LOG_INFO("uaui: the theme «%s»%s%s%s", s.theme.name.c_str(), text.empty() ? "" : ", the palette's file over it",
+             bad.empty() ? "" : " - a line not understood: ", bad.c_str());
+}
+
+}  // namespace
+
+void noteUnrecorded(int w, int h) { ++state().unrecorded[{w, h}]; }
+
+
+void begin(HWND game, bool on, unsigned codePage, double k, int targetWidth, int targetHeight,
+           const std::string& theme) {
     State& s = state();
     s.game = game;
     s.codePage = codePage;
@@ -1018,6 +1100,12 @@ void begin(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     s.on = on;
     s.inWorld = world;
     if (on && k > 0 && targetWidth > 0 && targetHeight > 0) start(s);
+    if (on && s.started) {
+        static ULONGLONG lookedAt = 0;
+        const ULONGLONG t = GetTickCount64();
+        themeFrame(s, theme, t - lookedAt >= 1000);
+        if (t - lookedAt >= 1000) lookedAt = t;
+    }
     // 3.0.18-beta.12: the parts' pictures recorded for the card while on (in the world and out of it)
     panel::setRecording(on && s.started);
     if (on && s.started && !s.recordingTold) {
@@ -1165,6 +1253,19 @@ void draw(FrameRecord& record, gpu::Renderer& renderer) {
                      double(s.sceneVertices) / double(std::max(st.frames, 1)), s.words.size(), kWords, kWords,
                      s.icons.size(), s.images.size());
         s.scenesDrawn = s.sceneVertices = 0;
+        if (!s.unrecorded.empty()) {  // 3.0.18-beta.13: the parts still painted, by their pictures' sizes
+            std::string list;
+            for (const auto& [size, n] : s.unrecorded) {
+                if (list.size() > 300) break;
+                list += (list.empty() ? "" : ", ") + std::to_string(size.first) + "x" + std::to_string(size.second) +
+                        " ×" + std::to_string(n);
+            }
+            LOG_INFO("uaui: pictures drawn as painted, not recorded (no panel::blank): %s", list.c_str());
+            s.unrecorded.clear();
+        }
+        for (auto it = s.seen.begin(); it != s.seen.end();)
+            if (it->second.last + 60000 < GetTickCount64()) it = s.seen.erase(it);
+            else ++it;
         const ULONGLONG old = GetTickCount64() - 60000;  // unused for a minute: let go
         for (auto it = s.images.begin(); it != s.images.end();)
             if (it->second.used < old) renderer.releaseTexture(it->second.id), it = s.images.erase(it);

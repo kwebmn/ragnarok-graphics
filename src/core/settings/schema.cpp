@@ -407,6 +407,10 @@ const std::vector<IniSetting>& iniSettings() {
         // 3.0.18-beta.7: the RmlUi spike's card (win/uaui)
         {"interface", "uaui", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::InterfaceUaui,
          Text::InterfaceUauiHint, ""},
+        // 3.0.18-beta.13: uaUI's theme
+        {"interface", "theme", Page::Interface, Control::Choice, 0, 0, 0, {"standard", "classic", "contrast"},
+         {Text::InterfaceThemeStandard, Text::InterfaceThemeClassic, Text::InterfaceThemeContrast},
+         Text::InterfaceTheme, Text::InterfaceThemeHint, ""},
         // 3.0.18-beta.11: uaUI's components' window
         {"interface", "uaui_showcase", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {},
          Text::InterfaceUauiShowcase, Text::InterfaceUauiShowcaseHint, ""},
@@ -1408,6 +1412,7 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "interface.animations") return c.animations ? "1" : "0";  // 3.0.11-beta.46
     if (k == "interface.uaui") return c.uaui ? "1" : "0";  // 3.0.18-beta.7
     if (k == "interface.uaui_showcase") return c.uauiShowcase ? "1" : "0";  // 3.0.18-beta.11
+    if (k == "interface.theme") return c.uiTheme;  // 3.0.18-beta.13
     if (k == "interface.panel_opacity") return std::to_string(c.hudOpacity);  // 3.0.11-beta.47
     if (k == "interface.cast") return c.castLabel ? "1" : "0";                 // 3.0.11-beta.48
     if (k == "interface.dim_world") return c.dimWorld ? "1" : "0";             // 3.0.11-beta.49

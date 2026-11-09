@@ -936,6 +936,9 @@ struct Config {
     bool uaui = false;
     // 3.0.18-beta.11: [interface] uaui_showcase - uaUI's components in one window, for the developers (with uaui on)
     bool uauiShowcase = false;
+    // 3.0.18-beta.13: [interface] theme = standard | classic | contrast - uaUI's parts' colours and corners
+    // (core/ui_theme), uaro-graphics\ui\palette.txt over it
+    std::string uiTheme = "standard";
     // 3.0.11-beta.54: [interface] size - the new interface's size against the concept's: 0 auto (smaller on a small
     // game, core/ui_style autoSize), else 50-150 per cent
     int uiSize = 0;

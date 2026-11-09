@@ -60,6 +60,8 @@ constexpr const char* kConsolePins = "uaro-graphics\\cache\\console-pins.txt";
 constexpr const char* kGameScreen = "uaro-graphics\\game-screen.txt";
 // 3.0.18-beta.9: uaUI's theme (win/uaui) - when there, read in place of the built-in one and again when it changes
 constexpr const char* kUiTheme = "uaro-graphics\\ui\\theme.rcss";
+// 3.0.18-beta.13: uaUI's parts' colours over the theme chosen (core/ui_theme), read again when it changes
+constexpr const char* kUiPalette = "uaro-graphics\\ui\\palette.txt";
 constexpr const char* kFailedStarts = "uaro-graphics\\cache\\failed-starts.txt";
 constexpr const char* kSafeModeNote = "uaro-graphics\\cache\\safe-mode.txt";
 // 3.0.11-beta.56 (the owner: «сделать» - how many installs there are): this install's random number for the site's
