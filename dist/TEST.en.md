@@ -1,3 +1,28 @@
+# uaRO Graphics 3.0.17 — what's new
+
+A simple start: a welcome screen, three choices instead of hundreds of boxes, a pick by your graphics card, quick settings in the game, the new features in one list and going back to the previous version. And many fixes.
+
+## A simple start
+
+- **The welcome screen "Game":** play, another game window, report a problem, the news, a short summary of the game's look.
+- **The first start:** four cards "How do you want to play?" - one button sets the picture, the interface and the textures. After an update - a plate with what's new.
+- **Three choices** - picture, interface, textures - on the main page and in Alt+D, marked "changed N" when something was changed by hand.
+- **A pick by your graphics card** - without starting the game, by your card's level.
+- **Alt+D:** tabs (quick, new, picture, interface, textures, all); the quick one as tiles, four a row, Insert pins a row; at the foot - "what it gives" for the chosen row. On the first map - a hint in the chat.
+- **More settings** folded away; **the new features** and **only the changed ones** - one click on the game page.
+- **Going back:** the service page, another version (the last 5 releases and betas); after two failed starts the app offers the previous one itself.
+- **A hung game** with no window no longer holds the update - a button closes it.
+
+## Fixed
+
+- **uaRO HD and the old uaRO:** uaRO HD's screen no longer breaks the old client ("Cannot init d3d") - uaRO HD keeps its screen in its own file, and every start of uaRO HD gives the old client its setup.exe screen back.
+- **Battle mode:** an Enter in an NPC's, a Kafra's or a warp menu's window no longer turns chat typing on - letters no longer slip into the chat instead of skills.
+- **The character's silhouette behind walls** no longer lies over the character itself and over effects (Assumptio, Two-Hand Quicken).
+- **The white "dome" round monsters** from the hit flash is gone; the hit and death flashes come on only by hand.
+- **Cyrillic on an English Windows:** the tip of the day, the chat and names without garbage; uaRO HD's tips in the interface's language.
+- **Guild and party marks** on the minimap no longer doubled.
+- **The controller** in the shop, homunculus and mercenary cards.
+
 # uaRO Graphics 3.0.17-beta.27 — what's new
 
 - **Alt+D, the quick tab - tiles:** the often-used switches are now tiles, four a row, the ones on lit green. Left/right choose a tile, Space or Enter turns it on or off, Insert pins it; with the mouse - click a tile.
