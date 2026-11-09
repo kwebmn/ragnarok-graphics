@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.18-beta.2 — what's new
+
+- **The hang watch:** when the game stands still for 15 seconds or more, the log tells at once where it is stuck and a memory snapshot of the game is saved beside it. If the game then had to be closed, the app sends a report with them by itself - a hang can now be read, not guessed.
+
 # uaRO Graphics 3.0.18-beta.1 — what's new
 
 - **The cart look in the new style:** the Change Cart window is now a pick card - the carts your level has, chosen with the mouse, the keys or the controller, OK changes the cart.
