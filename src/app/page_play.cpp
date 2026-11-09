@@ -35,10 +35,10 @@ constexpr int kTestList = 2130;   // and the last test's table
 constexpr int kAutopilotChange = 2131;  // 3.0.11-beta.58: the automatic set's line - the Effects page
 constexpr int kAnotherWindow = 2133;  // 3.0.17-beta.3: the welcome screen's «Ще вікно гри»
 constexpr int kReportNew = 2134;      // «Повідомити про помилку»
-constexpr int kLookChange = 2135;
-constexpr int kNewFeatures = 2136;  // 3.0.17-beta.6: «★ Нові можливості (N)»
-constexpr int kChangedOnly = 2137;
-constexpr int kSuggest = 2138;  // 3.0.17-beta.9: «Підібрати під відеокарту»  // and «Лише змінені»     // «Як виглядає гра»: «Змінити ›» - «Головна»
+constexpr int kLookChange = 2135;     // «Як виглядає гра»: «Змінити ›» - «Головна»
+constexpr int kNewFeatures = 2136;    // 3.0.17-beta.6: «★ Нові можливості (N)»
+constexpr int kChangedOnly = 2137;    // and «Лише змінені»
+constexpr int kSuggest = 2138;        // 3.0.17-beta.9: «Підібрати під відеокарту»
 constexpr int kRollBack = 2132;  // 3.0.17-beta.1: «← Повернути 3.0.15»
 constexpr int kNewsFirst = 2110;  // + a news item's number: its "More"
 constexpr int kNewsMost = 10;
@@ -237,7 +237,8 @@ public:
         std::string judgedText;
         readFile(model.paths().dir + L"\\" + wide(layout::kCardLevel), judgedText);
         card_speed::Record judged;
-        const bool byGame = card_speed::parse(judgedText, judged) && judged.settled && judged.adapter == machine.adapter;
+        const bool byGame =
+            card_speed::parse(judgedText, judged) && judged.settled && judged.adapter == machine.adapter;
         suggestion_ = settings::presets::suggest(model.cardLevel(), machine.vramMb, machine.integrated);
         const bool fits =
             settings::presets::match(settings::presets::Choice::Picture, c).variant == suggestion_.picture &&
