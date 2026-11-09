@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.17-beta.21 — what's new
+
+- **The character's silhouette behind walls no longer lies over effects:** Assumptio and other effects round the character came out as a blue silhouette right on it, though nothing hid it. Now the silhouette is only the character itself, when a wall or a house hides it.
+
 # uaRO Graphics 3.0.17-beta.20 — what's new
 
 - **Battle mode: letters no longer slip into the chat.** The game turned chat typing on with every Enter — even one pressed in an NPC's, a Kafra's, a warp menu's or a message's window; then skills and items did not fire and the letters went into the chat. Now an Enter in another window leaves typing as it was, and a new map with an empty chat line gives the letters back to the skills.
