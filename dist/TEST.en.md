@@ -1,3 +1,8 @@
+# uaRO Graphics 3.0.18-beta.1 — what's new
+
+- **The cart look in the new style:** the Change Cart window is now a pick card - the carts your level has, chosen with the mouse, the keys or the controller, OK changes the cart.
+- **The log names the game's old windows** not redrawn in the new interface yet - one line a window, the first time it shows. The reports will say which of them players meet - those are redrawn next.
+
 # uaRO Graphics 3.0.17 — what's new
 
 A simple start: a welcome screen, three choices instead of hundreds of boxes, a pick by your graphics card, quick settings in the game, the new features in one list and going back to the previous version. And many fixes.
