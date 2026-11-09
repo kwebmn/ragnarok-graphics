@@ -3603,7 +3603,7 @@ constexpr Entry kTexts[] = {
     {Text::KindWeakPc, "A weak computer, but sharp", "Слабкий комп'ютер, але чітко", "Слабый компьютер, но чётко"},
     {Text::KindClassic, "As in 2004", "Як у 2004-му", "Как в 2004-м"},
     {Text::KindHead, "How do you want to play?", "Як ви хочете грати?", "Как вы хотите играть?"},
-    {Text::KindNote, "One press sets the picture, the interface and the textures; change them any time on «Головне».",
+    {Text::KindNote, "One press sets the picture, the interface and the textures; change them any time on «Main».",
      "Одне натискання ставить картинку, інтерфейс і текстури; змінити можна будь-коли на «Головне».",
      "Одно нажатие ставит картинку, интерфейс и текстуры; изменить можно когда угодно на «Главное»."},
     {Text::KindSkip, "Leave as it is", "Залишити як є", "Оставить как есть"},
