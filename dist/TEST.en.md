@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.17-beta.24 — what's new
+
+- **No silhouette on the character itself:** the light outline on the head (under Two-Hand Quicken and in other poses) was the body's silhouette, "hidden" by the character's own head. The character's parts no longer hide one another; the silhouette shows only behind a wall or a house.
+
 # uaRO Graphics 3.0.17-beta.23 — what's new
 
 - **No silhouette from a buff's trail:** under Two-Hand Quicken and similar buffs the game draws see-through copies of the character, and while walking they turned into a blue silhouette. The silhouette now takes the character alone.
