@@ -12,6 +12,7 @@
 #include "win/answer_card.hpp"
 #include "win/buff_column.hpp"
 #include "win/char_block.hpp"
+#include "win/uaui.hpp"
 #include "win/hunt_panel.hpp"
 #include "win/mvp_panel.hpp"
 #include "win/merc_card.hpp"
@@ -89,6 +90,7 @@ bool partsMouse(HWND w, UINT m, WPARAM wp, LPARAM lp, LRESULT& answer) {
            minimapproto::mouse(w, m, wp, lp, answer) ||  // 3.0.11-beta.1: the new minimap's
            buffcolumn::mouse(w, m, wp, lp, answer) ||    // 3.0.11-beta.35: the buffs' column's
            trackerwin::mouse(w, m, wp, lp, answer) ||    // 3.0.11-beta.70: the tracker's
+           uaui::mouse(w, m, wp, lp, answer) ||          // 3.0.18-beta.7: the RmlUi spike's card
            charpanel::mouse(w, m, wp, lp, answer) ||     // 3.0.11-beta.36: the character block's
            targetpanel::mouse(w, m, wp, lp, answer) ||   // 3.0.11-beta.38: the target's card's
            partywin::mouse(w, m, wp, lp, answer) ||      // 3.0.11-beta.39: the party's panel's

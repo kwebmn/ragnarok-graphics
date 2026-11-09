@@ -8223,6 +8223,16 @@ constexpr Entry kTexts[] = {
      "Опыт: Base +{1} · Job +{2}"},
     {Text::ChatSysNoSp, "Not enough SP", "Недостатньо SP", "Недостаточно SP"},  // 3.0.12-beta.3
     {Text::ChatMenuCopyLine, "Copy the line", "Копіювати рядок", "Копировать строку"},  // 3.0.11-beta.244
+    // 3.0.18-beta.7: the RmlUi spike
+    {Text::InterfaceUaui, "Test card of the new library (RmlUi)", "Пробна картка нової бібліотеки (RmlUi)",
+     "Пробная карточка новой библиотеки (RmlUi)"},
+    {Text::InterfaceUauiHint,
+     "A check of the interface library for the developers: a card with the character's HP and SP in the middle at the "
+     "top, drawn by RmlUi. Drag it with the mouse. Its cost goes to the log; nothing else changes.",
+     "Перевірка бібліотеки інтерфейсу для розробників: картка з HP і SP персонажа вгорі посередині, намальована RmlUi. "
+     "Її можна тягнути мишею. Її ціна йде в журнал; більше нічого не змінюється.",
+     "Проверка библиотеки интерфейса для разработчиков: карточка с HP и SP персонажа вверху посередине, нарисованная "
+     "RmlUi. Её можно тянуть мышью. Её цена идёт в журнал; больше ничего не меняется."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

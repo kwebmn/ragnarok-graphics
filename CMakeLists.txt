@@ -101,6 +101,13 @@ elseif(WIN32)
     file(GLOB UAGFX_PAD_WIN_SOURCES CONFIGURE_DEPENDS src/pad/win/*.cpp)
     # 3.0.11-beta.66: IBM Plex Sans (third_party/plex) as its resources - the new interface's words (win/ui_font)
     # 3.0.11-beta.178: the classes' portraits of the login screen's cards too (src/win/class_art.rc)
+    # 3.0.18-beta.7: RmlUi 6.3's core (third_party/rmlui, MIT; its FreeType font engine left out - ours is GDI's):
+    # the interface library's spike (win/uaui, Claude Doc «Концепция: единая библиотека интерфейса uaRO Graphics»)
+    file(GLOB_RECURSE UAGFX_RMLUI_SOURCES CONFIGURE_DEPENDS third_party/rmlui/Source/Core/*.cpp)
+    add_library(uagfx_rmlui STATIC ${UAGFX_RMLUI_SOURCES})
+    target_include_directories(uagfx_rmlui PUBLIC third_party/rmlui/Include)
+    target_compile_definitions(uagfx_rmlui PUBLIC RMLUI_STATIC_LIB PRIVATE RMLUI_VERSION="6.3")
+    target_compile_options(uagfx_rmlui PRIVATE -w -O2)
     add_library(ddraw SHARED ${UAGFX_WIN_SOURCES} ${UAGFX_PAD_WIN_SOURCES} src/win/ddraw.def src/win/ui_font.rc
                 src/win/class_art.rc)
     target_include_directories(ddraw PRIVATE third_party/plex third_party/class_art)  # the .rc's files
@@ -108,7 +115,7 @@ elseif(WIN32)
     target_compile_definitions(ddraw PRIVATE WIN32_LEAN_AND_MEAN NOMINMAX WIDL_EXPLICIT_AGGREGATE_RETURNS
                                DIRECTINPUT_VERSION=0x0700)
     target_compile_options(ddraw PRIVATE -Wall -Wextra)
-    target_link_libraries(ddraw PRIVATE uagfx_pad uagfx_core uuid)
+    target_link_libraries(ddraw PRIVATE uagfx_pad uagfx_core uagfx_rmlui uuid)
     # 2.5.5: its link map beside it - the profile's places in ddraw.dll (offsets) are found in it afterwards
     target_link_options(ddraw PRIVATE -static -static-libgcc -static-libstdc++ -s
                         "-Wl,-Map=${CMAKE_CURRENT_BINARY_DIR}/ddraw.map")

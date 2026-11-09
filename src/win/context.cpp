@@ -136,6 +136,7 @@
 #include "win/texture_hook.hpp"
 #include "win/log.hpp"
 #include "win/low_hp_edge.hpp"
+#include "win/uaui.hpp"
 #include "win/thread_time.hpp"
 #include "win/ui_cost.hpp"
 #include "win/paths.hpp"
@@ -736,7 +737,9 @@ void Context::endScene() {
         minimapproto::draw(record, *renderer);  // 3.0.11-beta.1: the new minimap (prototype)
         trackerwin::draw(record, *renderer);    // 3.0.11-beta.70: the tracker (under the buffs' tips)
         buffcolumn::draw(record, *renderer);    // 3.0.11-beta.35: the buffs' column under it
-        charpanel::draw(record, *renderer);     // 3.0.11-beta.36: the character block
+        charpanel::draw(record, *renderer);     // 3.0.11-beta.36
+        uaui::draw(record, *renderer);          // 3.0.18-beta.7: the character block
+        uaui::draw(record, *renderer);          // 3.0.18-beta.7: the RmlUi spike's card
         targetpanel::draw(record, *renderer);   // 3.0.11-beta.38: the target's card
         partywin::draw(record, *renderer);      // 3.0.11-beta.39: the party's panel
         merccardwin::blockDraw(record, *renderer);  // 3.0.11-beta.216: the mercenary's block
@@ -1127,6 +1130,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     worlddim::frame(config.dimWorld, pk, pw, ph);
     // 3.0.11-beta.50: [interface] low_hp_edge - the screen's edges red at low HP (0: none)
     lowhpedge::frame(config.lowHpEdge, pk, pw, ph);
+    uaui::frame(window, config.uaui, gameCodePage(config), pk, pw, ph);  // 3.0.18-beta.7: the RmlUi spike
     // 3.0.11-beta.48: [interface] cast - the character's cast over the hero, the game's own gauge hidden
     mobhpwin::setPercent(config.mobHpPercent);  // 3.0.11-beta.293
     mobhpwin::setBossBars(config.bossBars);     // 3.0.13-beta.3
