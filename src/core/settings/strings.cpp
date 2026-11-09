@@ -3473,6 +3473,15 @@ constexpr Entry kTexts[] = {
      "Поверхню композиції масштабовано разом із вікном гри, коли Windows його масштабує (125 %, 150 %).",
      "Поверхность композиции масштабируется вместе с окном игры, когда Windows его масштабирует (125 %, 150 %)."},
     {Text::DebugVariants, "A shader for each state", "Шейдер на кожен стан", "Шейдер на каждое состояние"},
+    {Text::DebugVariantsHint,
+     "Each state of the game's draws gets a shader made for it - Direct3D 11 since 2.5.16, Direct3D 12 since "
+     "3.0.5-beta.3; a weak card draws them several times faster. Off: one shader for every state. Takes effect at "
+     "the next start of the game.",
+     "Кожен стан малювання гри отримує свій шейдер — Direct3D 11 з 2.5.16, Direct3D 12 з 3.0.5-beta.3; слабка "
+     "відеокарта малює їх у кілька разів швидше. Вимкнено: один шейдер на все. Діє з наступного запуску гри.",
+     "Каждое состояние рисования игры получает свой шейдер — Direct3D 11 с 2.5.16, Direct3D 12 с 3.0.5-beta.3; "
+     "слабая видеокарта рисует их в несколько раз быстрее. Выключено: один шейдер на всё. Действует со следующего "
+     "запуска игры."},
     {Text::DebugRecordScene, "Record a scene", "Записати сцену", "Записать сцену"},
     {Text::DebugRecordSceneHint,
      "The game's pictures as the driver hands them to the renderer, from the start to 15 s after the first map, into "
@@ -3484,15 +3493,6 @@ constexpr Entry kTexts[] = {
      "Картинки игры так, как драйвер передаёт их рендеру, от запуска до 15 с после первой карты, в "
      "uaro-graphics\\scene-record.bin — проверка видеокарты без игры будет проигрывать такие сцены. Размер — в "
      "журнале. Действует со следующего запуска; потом выключите."},
-    {Text::DebugVariantsHint,
-     "Each state of the game's draws gets a shader made for it - Direct3D 11 since 2.5.16, Direct3D 12 since "
-     "3.0.5-beta.3; a weak card draws them several times faster. Off: one shader for every state. Takes effect at "
-     "the next start of the game.",
-     "Кожен стан малювання гри отримує свій шейдер — Direct3D 11 з 2.5.16, Direct3D 12 з 3.0.5-beta.3; слабка "
-     "відеокарта малює їх у кілька разів швидше. Вимкнено: один шейдер на все. Діє з наступного запуску гри.",
-     "Каждое состояние рисования игры получает свой шейдер — Direct3D 11 с 2.5.16, Direct3D 12 с 3.0.5-beta.3; "
-     "слабая видеокарта рисует их в несколько раз быстрее. Выключено: один шейдер на всё. Действует со следующего "
-     "запуска игры."},
     {Text::DebugStateCache,
      "Direct3D 11: only what changed", "Direct3D 11: лише те, що змінилося", "Direct3D 11: только то, что изменилось"},
     {Text::DebugStateCacheHint,
