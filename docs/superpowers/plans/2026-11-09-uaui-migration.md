@@ -32,38 +32,39 @@ picture's upload gone. Cost if wrong: per-pixel glows (panel::over loops) land i
 - [x] T1 `win/uaui.hpp` part API: `uaui::Doc` (load RML from memory, its model, show/hide with the fade, place
       in px, box, top-most), data events → C++ (`BindEventCallback`), a doc's z among the driver's windows
       (window_stack order), blocker from the doc under the cursor, keys to a focused text field.
-- [ ] T2 `<img src="pic:…">` for the driver's pictures that change (portraits, minimap, sprites): a texture by the
+- [x] T2 `<img src="pic:…">` for the driver's pictures that change (portraits, minimap, sprites): a texture by the
       picture's address and generation, uploaded again when the generation changes.
-- [ ] T3 theme = today's look: window frame, title, ×, tabs, slots, bars, tips, buttons — measured from the old
+- [x] T3 theme = today's look: window frame, title, ×, tabs, slots, bars, tips, buttons — measured from the old
       painters (core/window_panel, core/char_block, core/item_window).
-- [ ] T4 speed: reuse the frame's vertices when RmlUi rendered the same geometry; one draw per texture run.
+- [x] T4 speed: reuse the frame's vertices when RmlUi rendered the same geometry; one draw per texture run.
 
-## Stage 4 — HUD (one beta each)
+## Stage 4 — HUD (done by recording, betas 12–15)
 
-- [ ] character block (win/char_block + core/char_block)
-- [ ] target card (win/target_card)
-- [ ] party panel, mercenary/homunculus blocks
-- [ ] buffs column and its further lines
-- [ ] hotbar
-- [ ] experience bars, experience gain, item toast
-- [ ] hunt panel, MVP panel, tracker
-- [ ] minimap frame and its list (the map picture as `pic:`)
+- [x] character block (win/char_block + core/char_block)
+- [x] target card (win/target_card)
+- [x] party panel, mercenary/homunculus blocks
+- [x] buffs column and its further lines
+- [x] hotbar
+- [x] experience bars, experience gain, item toast
+- [x] hunt panel, MVP panel, tracker
+- [x] minimap frame and its list (the map picture as `pic:`)
 
-## Stage 5 — windows
+## Stage 5 — windows (done by recording, betas 12–15)
 
-- [ ] «Речі», storage, cart, trade
-- [ ] «Спорядження», «Характеристики», «Навички»
-- [ ] shop, vending, own shop
-- [ ] NPC talk, ask / message / pick / count cards, item and skill cards
-- [ ] chat, whispers, chat room, popup menu, emotions, commands
-- [ ] login, servers, character select and make
-- [ ] pet, homunculus, mercenary, options, friends, guild, whisper setup, macros, tip of the day, menu, OSK
-- [ ] «Довідник»
-- [ ] pad tiles / assign / hints, HUD edit
+- [x] «Речі», storage, cart, trade
+- [x] «Спорядження», «Характеристики», «Навички»
+- [x] shop, vending, own shop
+- [x] NPC talk, ask / message / pick / count cards, item and skill cards
+- [x] chat, whispers, chat room, popup menu, emotions, commands
+- [x] login, servers, character select and make
+- [x] pet, homunculus, mercenary, options, friends, guild, whisper setup, macros, tip of the day, menu, OSK
+- [x] «Довідник»
+- [x] pad tiles / assign / hints, HUD edit
 
 ## Stage 6 — themes and cleanup
 
-- [ ] a second and third theme (classic RO, contrast), the pick in the app and Alt+D, a theme through `updates`
+- [x] a second and third theme (classic RO, contrast), the pick in the app and Alt+D (beta.13); a theme through
+      `updates` not done (the palette file is the player's)
 - [ ] the old painters removed; `[interface] uaui` default on (owner's word)
 
 ## Ledger
