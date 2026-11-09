@@ -552,6 +552,8 @@ struct Renderer::Impl {
     ID3DBlob* portalDrawPs = nullptr;
     ID3DBlob* portalDrawGlowPs = nullptr;
     std::string warpsToldMap;  // the map they were last told for
+    std::string stanceToldMap;  // 3.0.18-beta.6: the Taekwon stances' effects told (R-TH7Q4C) - on this map
+    int stanceTold = 0;
     ID3DBlob* fireflyPs = nullptr;                      // 0.28: a firefly's dot and halo
     ID3D12PipelineState* fireflyPipelines[5] = {};     // as torchFirePipelines
     ID3DBlob* dustPs = nullptr;                         // 0.29: a cloud of the towers' dust

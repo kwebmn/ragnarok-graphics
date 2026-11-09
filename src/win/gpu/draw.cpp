@@ -236,6 +236,36 @@ void Renderer::Impl::draw(const FrameRecord& rec, const DrawCmd& d) {
     // white shape blurred into a dome round the monster
     const bool toGlow = !s.ui && glowActive && d.effect != uint8_t(effect_exe::Kind::Aura) &&
                         d.effect != uint8_t(effect_exe::Kind::HitFlash) && !effect_exe::isCasting(d.effectId);
+    // 3.0.18-beta.6 (R-TH7Q4C: a blue frame over the Taekwon's head in Roundhouse Stance): the stances' effects 429
+    // and 434 - thin added triangles on a white picture - how they come and how they are laid, 8 draws a map
+    if (!s.ui && (d.effectId == 429 || d.effectId == 434)) {
+        if (stanceToldMap != mapName) stanceToldMap = mapName, stanceTold = 0;
+        const std::vector<uint8_t>& vb = rec.vertexBytes();
+        const size_t stride = FrameRecord::stride(d.fvf);
+        if (stanceTold < 8 && d.vertexCount && d.vertexOffset + size_t(d.vertexCount) * stride <= vb.size()) {
+            ++stanceTold;
+            float b[4] = {FLT_MAX, FLT_MAX, -FLT_MAX, -FLT_MAX};
+            unsigned aLo = 255, aHi = 0;
+            uint32_t colour = 0;
+            for (uint32_t i = 0; i < d.vertexCount; ++i) {
+                const uint8_t* p = vb.data() + d.vertexOffset + size_t(i) * stride;
+                float xy[2];
+                std::memcpy(xy, p, sizeof xy);
+                std::memcpy(&colour, p + 16, sizeof colour);
+                b[0] = std::min(b[0], xy[0]), b[1] = std::min(b[1], xy[1]);
+                b[2] = std::max(b[2], xy[0]), b[3] = std::max(b[3], xy[1]);
+                aLo = std::min(aLo, unsigned(colour >> 24)), aHi = std::max(aHi, unsigned(colour >> 24));
+            }
+            const auto t = textures.find(d.texture[0]);
+            LOG_INFO("taekwon stance: effect %d - %u vertices, %u indices (primitive %u), box %.1f,%.1f-%.1f,%.1f (%.1f x "
+                     "%.1f game pixels), alpha %u-%u, colour %06X, picture %dx%d%s; blend %d/%d, laid %s, glow %s",
+                     int(d.effectId), d.vertexCount, d.indexCount, d.primitive, b[0], b[1], b[2], b[3], b[2] - b[0],
+                     b[3] - b[1], aLo, aHi, colour & 0xFFFFFFu, t != textures.end() ? t->second.width : 0,
+                     t != textures.end() ? t->second.height : 0,
+                     t != textures.end() && t->second.ai ? " (an AI picture for it)" : "", int(s.srcBlend),
+                     int(s.dstBlend), softAdd ? "softly" : "as the game", toGlow ? "on" : "off");
+        }
+    }
     // 0.19, modern water: a cell of a map's water (core/water.hpp) is drawn by its own shader, from the picture and
     // the depth the frame had before its first water (copyScene); without them, as the game draws it.
     // 3.0.4-beta.20: and the own water past the far plane (ownWater 1, drawOwnWater)
