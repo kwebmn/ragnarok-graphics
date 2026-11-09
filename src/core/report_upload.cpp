@@ -162,7 +162,9 @@ std::string reasonOfLog(const std::string& log) {
     // The game opens DirectDraw again as it changes modes: its last opening must have been closed.
     const size_t opened = log.rfind("(uaRO renderer)");
     if (opened == std::string::npos) return "";
-    return log.find("DirectDraw released, renderer closed", opened) == std::string::npos ? "crash" : "";
+    if (log.find("DirectDraw released, renderer closed", opened) != std::string::npos) return "";
+    // 3.0.18-beta.3: the hang watch (win/profiler) told of this opening's game standing still - it was ended so
+    return log.find("hang: the game's thread has not moved", opened) != std::string::npos ? "hang" : "crash";
 }
 
 std::string apiOfLog(const std::string& log) {

@@ -41,7 +41,8 @@ std::string tailOf(const std::string& text, size_t most);
 bool codeOf(const std::string& answer, std::string& code);
 
 // What went wrong in a game, from its uaro-graphics.log after it ended: "start-failed" (the uaRO renderer did not
-// start), "gpu-lost" (the graphics card was lost), "crash" (the renderer ran and the game ended without closing it),
+// start), "gpu-lost" (the graphics card was lost), "crash" (the renderer ran and the game ended without closing it;
+// 3.0.18-beta.3: "hang" when the hang watch told it standing still meanwhile),
 // "" when nothing did.
 std::string reasonOfLog(const std::string& log);
 // The graphics API the game's last start drew with, from its log: "d3d12", "d3d11", "system" (the system's

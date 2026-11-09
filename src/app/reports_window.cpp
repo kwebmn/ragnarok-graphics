@@ -1496,6 +1496,7 @@ std::wstring ReportsWindow::titleOfReason(const std::string& reason) const {
     if (reason == "crash") return t(Text::ReportTitleCrash);
     if (reason == "start-failed") return t(Text::ReportTitleStartFailed);
     if (reason == "gpu-lost") return t(Text::ReportTitleGpuLost);
+    if (reason == "hang") return t(Text::ReportTitleHang);  // 3.0.18-beta.3
     if (reason == "test") return t(Text::TestTitle);  // 3.0.5-beta.6
     return t(Text::ReportTitleNone);
 }

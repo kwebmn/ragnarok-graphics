@@ -93,6 +93,14 @@ TEST(report_upload_tells_what_went_wrong_from_the_log) {
     CHECK(reasonOfLog(ok + "ERROR crash: exception 0xc0000005 at uaRO.exe+0x1234 (thread 7)") == "crash");
     CHECK(reasonOfLog(ok + "ERROR Present: the GPU device was removed (0x887a0005") == "gpu-lost");
     CHECK(reasonOfLog(ok + "ERROR Direct3D 11: Present - the graphics card was lost (0x") == "gpu-lost");
+    // 3.0.18-beta.3: the hang watch's line and the game never closed - a hang; it moved again and closed - fine
+    const std::string opened = "x DirectDrawCreateEx = 0x00000000 (uaRO renderer)\n";
+    const std::string hang = "ERROR hang: the game's thread has not moved for 15 s\n";
+    CHECK(reasonOfLog(opened + hang) == "hang");
+    CHECK(reasonOfLog(opened + hang + "INFO  DirectDraw released, renderer closed\n").empty());
+    CHECK(reasonOfLog(hang + ok + opened).empty() == false);  // an old hang, the last opening not closed: a crash
+    CHECK(reasonOfLog(hang + ok + opened) == "crash");
+    CHECK(reasonOfLog(opened + hang + "ERROR crash: exception 0xc0000005 at x") == "crash");  // a crash wins
 }
 
 TEST(report_upload_tells_the_api_from_the_log) {
