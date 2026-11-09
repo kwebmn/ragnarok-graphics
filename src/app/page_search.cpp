@@ -45,6 +45,7 @@ public:
         : Page(host), query_(std::move(query)), rows_(makeSettingsPage(host, {})), effects_(makeEffectsPage(host)) {}
 
     void build(Panel& p) override {
+        if (buildList(p)) return;  // 3.0.17-beta.6
         hits_ = findSettings(query_, host_.lang(), host_.mode());
         const Machine machine = host_.model().machine();  // 2.15: what this computer cannot use is not found
         hits_.erase(std::remove_if(hits_.begin(), hits_.end(),
@@ -68,6 +69,34 @@ public:
                 p.note(tf(Text::SearchOtherMode, {utf8(t(modeName(h.level)))}), Tone::Normal);
             p.buttons({{kGoFirst + int(n), whereOf(h)}});
         }
+    }
+
+    // 3.0.17-beta.6 (the concept «простой старт»: «Нові можливості», «Лише змінені»): the rows new to the player, or
+    // those set otherwise than recommended - each changed in place, its page's button under it
+    bool buildList(Panel& p) {
+        const bool fresh = query_ == utf8(kNewQuery), changed = query_ == utf8(kChangedQuery);
+        if (!fresh && !changed) return false;
+        Model& m = host_.model();
+        hits_.clear();
+        const Machine machine = m.machine();
+        for (size_t i = 0; i < iniSettings().size(); ++i) {
+            const IniSetting& s = iniSettings()[i];
+            if (!fitsMachine(sectionKey(s), machine) || levelOf(s) == Mode::Developer) continue;
+            const std::string rec = changed ? m.recommended(s) : "";
+            if (fresh ? !m.isNew(sectionKey(s)) : rec.empty() || rec == m.token(s)) continue;
+            hits_.push_back(Hit{HitKind::Ini, i, placeOf(s), levelOf(s)});
+        }
+        const Text head = fresh ? Text::NewListHead : Text::ChangedListHead;
+        p.heading(hits_.empty() ? t(fresh ? Text::NewListNone : Text::ChangedListNone)
+                                : tf(head, {std::to_string(hits_.size())}));
+        if (!hits_.empty()) p.note(t(fresh ? Text::NewListNote : Text::ChangedListNote));
+        for (size_t n = 0; n < hits_.size(); ++n) {
+            const Hit& h = hits_[n];
+            p.gap(8);
+            if (!buildHit(p, h)) p.note(t(labelOf(h)), Tone::Normal);
+            p.buttons({{kGoFirst + int(n), whereOf(h)}});
+        }
+        return true;
     }
 
     void command(int id, int code) override {

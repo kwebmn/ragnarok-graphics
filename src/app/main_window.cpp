@@ -588,6 +588,15 @@ std::wstring MainWindow::searchText() const {
     return text;
 }
 
+// 3.0.17-beta.6: a list asked by a button - the search field shows it, its page now
+void MainWindow::search(const std::wstring& text) {
+    SetWindowTextW(search_, text.c_str());
+    KillTimer(hwnd_, kSearchTimer);
+    query_ = text;
+    scroll_ = 0;
+    buildPage();
+}
+
 // 2.6: the search's text gone - the view back (made by the caller)
 void MainWindow::clearSearch() {
     KillTimer(hwnd_, kSearchTimer);

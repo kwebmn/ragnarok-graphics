@@ -51,6 +51,8 @@ public:
     virtual void playTest() = 0;
     // 2.13: the window «Звернення» (app/reports_window), with the new report's form at once (fresh)
     virtual void openReports(bool fresh) = 0;
+    // 3.0.17-beta.6: the search's page for this text, as if typed (kNewQuery, kChangedQuery: the lists)
+    virtual void search(const std::wstring& text) = 0;
 };
 
 // One page of the list on the left (stage 2 spec §6.1). Its controls' ids start at 1000.
@@ -133,6 +135,10 @@ void updateAndReopen(PageHost& host, bool ask);
 void rollBackTo(PageHost& host, const std::string& to);
 // 2.6: the search's results - the rows changed in place, each with a button to its page.
 std::unique_ptr<Page> makeSearchPage(PageHost& host, const std::string& query);
+// 3.0.17-beta.6 (the concept «простой старт»): the search's two lists - the rows new to the player (★ «нове»), the
+// rows the player set otherwise than recommended
+constexpr const wchar_t* kNewQuery = L"\u2605";
+constexpr const wchar_t* kChangedQuery = L"\u2260";
 settings::Text effectGroupName(int g);  // the Effects page's name of a group
 
 // 1.6: the Texture pack page's "make again what another model made", ticked from the AI page.

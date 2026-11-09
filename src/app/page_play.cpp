@@ -34,7 +34,9 @@ constexpr int kTestList = 2130;   // and the last test's table
 constexpr int kAutopilotChange = 2131;  // 3.0.11-beta.58: the automatic set's line - the Effects page
 constexpr int kAnotherWindow = 2133;  // 3.0.17-beta.3: the welcome screen's «Ще вікно гри»
 constexpr int kReportNew = 2134;      // «Повідомити про помилку»
-constexpr int kLookChange = 2135;     // «Як виглядає гра»: «Змінити ›» - «Головна»
+constexpr int kLookChange = 2135;
+constexpr int kNewFeatures = 2136;  // 3.0.17-beta.6: «★ Нові можливості (N)»
+constexpr int kChangedOnly = 2137;  // and «Лише змінені»     // «Як виглядає гра»: «Змінити ›» - «Головна»
 constexpr int kRollBack = 2132;  // 3.0.17-beta.1: «← Повернути 3.0.15»
 constexpr int kNewsFirst = 2110;  // + a news item's number: its "More"
 constexpr int kNewsMost = 10;
@@ -226,7 +228,12 @@ public:
                 now.changed > 0 ? tf(Text::LookChanged, {name, std::to_string(now.changed)}) : wide(name);
             p.note(t(settings::presets::headOf(choice)) + L": " + value, Tone::Normal);
         }
-        p.buttons({{kLookChange, t(Text::PlayLookChange), true}});
+        int fresh = 0;  // 3.0.17-beta.6: the rows new to the player
+        for (const settings::IniSetting& s : settings::iniSettings())
+            fresh += host_.model().isNew(settings::sectionKey(s)) ? 1 : 0;
+        p.buttons({{kLookChange, t(Text::PlayLookChange), true},
+                   {kNewFeatures, tf(Text::PlayNewFeatures, {std::to_string(fresh)}), true, fresh > 0},
+                   {kChangedOnly, t(Text::PlayChangedOnly), true}});
     }
 
     std::string rollBack_;  // 3.0.17-beta.1: the version «← Повернути» goes back to, "" none
@@ -298,6 +305,8 @@ public:
             host_.openReports(true);
         } else if (id == kLookChange) {
             host_.showView(settings::View::Main, 0);
+        } else if (id == kNewFeatures || id == kChangedOnly) {  // 3.0.17-beta.6
+            host_.search(id == kNewFeatures ? kNewQuery : kChangedQuery);
         } else if (id == kRollBack && !rollBack_.empty()) {
             rollBackTo(host_, rollBack_);  // 3.0.17-beta.1
         } else if (id == kAutopilotChange) {

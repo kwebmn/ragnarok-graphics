@@ -33,6 +33,7 @@ public:
     std::wstring pickFolder(const std::wstring& title) override;
     void showPage(settings::Page which) override;
     void showView(settings::View view, int tab) override;
+    void search(const std::wstring& text) override;  // 3.0.17-beta.6
     settings::Mode mode() const override;
     void switchMode(settings::Mode m) override { setMode(m); }
     void showNotes(const std::wstring& text) override;
