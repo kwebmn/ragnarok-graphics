@@ -27,6 +27,11 @@ bool gameRunning(const std::wstring& gameExe);
 // 3.0.1: whether a program runs from this very file (the other client runs the same names from its own folder); one
 // whose path cannot be read (run as administrator) counts as this one.
 bool running(const std::wstring& exe);
+// 3.0.17-beta.19 (the owner: the update waited for a game that was not open): this folder's uaRO.exe running for 15 s
+// and more without a window of its own (it hung before making one - setup.exe's wait, say)
+bool gameHung(const std::wstring& gameExe);
+// Those closed, and setup.exe of the same folder; true when none of them runs any more
+bool closeHungGame(const std::wstring& gameExe);
 // 3.0.1-beta.7: whether Windows has XAudio2 2.9 (Windows 10 and later): our mss32.dll plays through it.
 bool hasXAudio2();
 // 2.10: a pause of the update's own thread while it waits for the game to close.

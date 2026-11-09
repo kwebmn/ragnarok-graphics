@@ -35,6 +35,7 @@ constexpr int kUninstall = 1444;
 constexpr int kSafeToggle = 1445;    // 2.12: the safe mode on or off
 constexpr int kSwitchToggle = 1446;  // uaRO Graphics off (api = system) or on
 constexpr int kChannel = 1447;  // 3.0.0-beta.2: «Реліз» or «Бета»
+constexpr int kCloseHung = 1448;  // 3.0.17-beta.19: a game without a window closed
 constexpr int kProfiles = 1450;  // 0.55
 constexpr int kProfileName = 1451;
 constexpr int kProfileSave = 1452;
@@ -167,7 +168,14 @@ public:
             p.note(tf(u.back ? Text::UpdateBackNote : Text::UpdateNewer, {u.offer, kVersion}), Tone::Warn);
         else if (u.kind == UpdateState::Done)
             p.note(tf(Text::UpdateLatest, {kVersion}), Tone::Good);
-        if (running && offered) p.note(t(Text::UpdateGameRunning), Tone::Warn);
+        if (running && offered) {
+            if (gameHung(m.paths().game)) {  // 3.0.17-beta.19: the update would wait for ever
+                p.note(t(Text::UpdateGameHung), Tone::Warn);
+                p.buttons({{kCloseHung, t(Text::UpdateCloseHung)}});
+            } else {
+                p.note(t(Text::UpdateGameRunning), Tone::Warn);
+            }
+        }
         p.note(t(Text::UpdateNote));
         std::vector<ButtonItem> more;
         if (installer::canRollBack(m.paths().dir))
@@ -289,6 +297,10 @@ public:
             startAndClose(Args::Mode::Rollback, tf(Text::RollbackAsk, {installer::previousVersion(m.paths().dir)}));
         } else if (id >= kRollTo && id < kRollTo + int(rollTo_.size())) {  // 3.0.17-beta.1
             rollBackTo(host_, rollTo_[size_t(id - kRollTo)]);
+        } else if (id == kCloseHung) {
+            if (!closeHungGame(m.paths().game)) host_.message(t(Text::UpdateCloseHungFailed), true);
+            m.refreshRunning();
+            host_.rebuild();
         } else if (id == kRepair) {
             startAndClose(Args::Mode::Repair, t(Text::RepairAsk));
         } else if (id == kUninstall) {

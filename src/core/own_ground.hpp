@@ -127,6 +127,7 @@ public:
     void fit();                             // the frame's fog line, once its vertices are in
     uint32_t specularAt(float zd) const;    // alpha by the line (none seen: 255), the game's colour
     bool fogged() const { return fogged_; }
+    uint32_t meanColour() const { return mean(); }  // 3.0.17-beta.19: the corners seen, for the log (none: white)
     // 3.0.4-beta.12: the corners given another colour since the last call (index j * (width + 1) + i, in the order
     // seen) - the renderer makes the colours round them again; mean: the mean the unseen ones take moved by more than
     // a little (all to make again)

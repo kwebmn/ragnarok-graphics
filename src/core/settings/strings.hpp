@@ -124,7 +124,7 @@ enum class Text : uint16_t {
     DiagD3D11Ok, DiagD3D11Failed, AiD3d11Note,
     AiCacheAskOld, AiCacheOldDeleted,
     ServiceUpdate, UpdateCheck, UpdateNow, UpdateChecking, UpdateNewer, UpdateLatest, UpdateFailed, UpdateAsk,
-    UpdateGameRunning, UpdateNote, UpdateError,
+    UpdateGameRunning, UpdateGameHung, UpdateCloseHung, UpdateCloseHungFailed, UpdateNote, UpdateError,
     // 0.50: the automatic setup
     AutoHeading, AutoButton, AutoNote, AutoFound, AutoTierNoDriver, AutoTierOld, AutoTierLow, AutoTierMiddle,
     AutoTierHigh, AutoAiAll, AutoAiSprites, AutoAiNoPack, AutoAiOff, AutoAsk, AutoPending,

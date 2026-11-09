@@ -613,6 +613,21 @@ bool Renderer::Impl::drawOwnGround() {
                  o.frames, o.most, o.slowest, double(o.cornersChanged) / double(o.frames),
                  double(o.chunksMade) / double(o.frames), 100.0 * double(o.reused) / double(o.frames),
                  blends ? "on" : "off");
+    // 3.0.17-beta.19 (R-7XY449: Prontera's ground white, its stones twice their colour - 242 for 120 - the rest of the
+    // picture as it is): what the ground's colour is made of, the first picture and ten seconds on
+    if (o.frames == 1 || o.frames == 600) {
+        float lo = 1.0f, hi = 1.0f;
+        if (!o.cornerLight.empty()) {
+            const auto mm = std::minmax_element(o.cornerLight.begin(), o.cornerLight.end());
+            lo = *mm.first, hi = *mm.second;
+        }
+        const StageSetup& s0 = o.like.stage[0];
+        const StageSetup& s1 = o.like.stage[1];
+        LOG_INFO("own ground: %s's colours - the game's corners' mean #%08X, its specular #%06X, stage 0 op %u (%u, "
+                 "%u), stage 1 op %u (%u, %u), the hills' light %s %.2f-%.2f", g->map.c_str(),
+                 o.shading.meanColour(), o.shading.specularAt(0.0f) & 0xFFFFFFu, s0.colorOp, s0.colorArg1,
+                 s0.colorArg2, s1.colorOp, s1.colorArg1, s1.colorArg2, o.lightOn ? "on" : "off", lo, hi);
+    }
     // 3.0.4-beta.27: a minute's worth - how much was drawn again as it was, and why it was made anew
     if (o.minuteFrames >= 3600) {
         LOG_INFO("own ground: %s - the last %u pictures: %.0f %% drawn again as they were; made anew for the camera "

@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <cstdint>
 #include <cstdio>
+#include <vector>
 
 #include "app/text.hpp"
 #include "core/settings/compat_flags.hpp"
@@ -182,6 +183,79 @@ SystemInfo probeSystem() {
 }
 
 bool gameRunning(const std::wstring& gameExe) { return running(gameExe); }
+
+namespace {
+
+struct WindowFind {
+    DWORD pid = 0;
+    bool found = false;
+};
+
+BOOL CALLBACK windowOf(HWND w, LPARAM data) {
+    auto* f = reinterpret_cast<WindowFind*>(data);
+    DWORD pid = 0;
+    GetWindowThreadProcessId(w, &pid);
+    if (pid == f->pid && IsWindowVisible(w)) {
+        f->found = true;
+        return FALSE;
+    }
+    return TRUE;
+}
+
+bool hasWindow(DWORD pid) {
+    WindowFind f;
+    f.pid = pid;
+    EnumWindows(windowOf, reinterpret_cast<LPARAM>(&f));
+    return f.found;
+}
+
+// The processes started from `exe` (full path, any case); `hungOnly`: those 15 s old and more without a visible window
+std::vector<DWORD> processesOf(const std::wstring& exe, bool hungOnly) {
+    std::vector<DWORD> out;
+    const std::wstring name = exe.substr(exe.find_last_of(L'\\') + 1);
+    HANDLE snap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+    if (snap == INVALID_HANDLE_VALUE) return out;
+    PROCESSENTRY32W e{};
+    e.dwSize = sizeof e;
+    for (BOOL more = Process32FirstW(snap, &e); more; more = Process32NextW(snap, &e)) {
+        if (lstrcmpiW(e.szExeFile, name.c_str()) != 0) continue;
+        HANDLE p = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, e.th32ProcessID);
+        if (!p) continue;
+        wchar_t path[MAX_PATH];
+        DWORD n = MAX_PATH;
+        bool ours = QueryFullProcessImageNameW(p, 0, path, &n) &&
+                    settings::samePath(utf8(std::wstring(path, n)), utf8(exe));
+        if (ours && hungOnly) {
+            FILETIME made{}, ended{}, kernel{}, user{}, now{};
+            GetSystemTimeAsFileTime(&now);
+            const auto ticks = [](const FILETIME& t) { return (uint64_t(t.dwHighDateTime) << 32) | t.dwLowDateTime; };
+            ours = GetProcessTimes(p, &made, &ended, &kernel, &user) &&
+                   ticks(now) > ticks(made) + uint64_t(15) * 10000000u && !hasWindow(e.th32ProcessID);
+        }
+        CloseHandle(p);
+        if (ours) out.push_back(e.th32ProcessID);
+    }
+    CloseHandle(snap);
+    return out;
+}
+
+}  // namespace
+
+bool gameHung(const std::wstring& gameExe) { return !processesOf(gameExe, true).empty(); }
+
+bool closeHungGame(const std::wstring& gameExe) {
+    const std::wstring setup = gameExe.substr(0, gameExe.find_last_of(L'\\') + 1) + L"setup.exe";
+    std::vector<DWORD> pids = processesOf(gameExe, true);
+    for (DWORD pid : processesOf(setup, false)) pids.push_back(pid);
+    for (DWORD pid : pids) {
+        HANDLE p = OpenProcess(PROCESS_TERMINATE | SYNCHRONIZE, FALSE, pid);
+        if (!p) continue;
+        TerminateProcess(p, 1);
+        WaitForSingleObject(p, 3000);
+        CloseHandle(p);
+    }
+    return processesOf(gameExe, true).empty() && processesOf(setup, false).empty();
+}
 
 bool running(const std::wstring& exe) {
     const std::wstring name = exe.substr(exe.find_last_of(L'\\') + 1);
