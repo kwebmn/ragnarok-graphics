@@ -1,3 +1,8 @@
+# uaRO Graphics 3.0.18-beta.8 — what's new
+
+- **The RmlUi test card no longer jumps left** when grabbed with the mouse: it now moves from where it stands.
+- **The card's numbers are grouped** like the rest of the interface: "5 157 / 15 137".
+
 # uaRO Graphics 3.0.18-beta.7 — what's new
 
 - **A check of the new interface library (RmlUi):** the Interface section has a new switch for a test card of the new library, off by default. When on, it shows a character card with HP and SP at the top in the middle: it fades in, lights up under the cursor and can be dragged with the mouse. Every 10 s the log records what it costs. The rest of the interface does not change.
