@@ -1,3 +1,8 @@
+# uaRO Graphics 3.0.18-beta.9 — what's new
+
+- **The new interface library, stage 2:** with the RmlUi test card switch on, a "uaUI · компоненти" window shows next to the card. It has tabs, the bag's items with their icons (open the items window so they come in), a list that scrolls with the wheel, buttons, switches and a bar. The window drags by its title and hides with its cross.
+- **The look is one theme file:** every colour, size and motion of these windows comes from `uaro-graphics\ui\theme.rcss`. Put the file there and the game picks it up within a second, no restart; without it the built-in theme applies.
+
 # uaRO Graphics 3.0.18-beta.8 — what's new
 
 - **The RmlUi test card no longer jumps left** when grabbed with the mouse: it now moves from where it stands.
