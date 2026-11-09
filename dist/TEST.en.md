@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.17-beta.15 — what's new
+
+- **Fixed: after 3.0.17-beta.13 uaRO HD could fail to start.** The game moves to its own registry place only when it can read it itself and a screen is there; otherwise it stays on the shared one, as before. The choice is written to the log (game key: lines), and the settings app works with the same place as the game.
+
 # uaRO Graphics 3.0.17-beta.14 — what's new
 
 - **uaRO HD repairs the old uaRO at every start:** when a foreign screen shows up again in the shared registry place and keeps the old client from starting ("Cannot init d3d"), uaRO HD removes it and gives the old client its setup.exe screen back — every time, not only the first. When the old client has uaRO Graphics of its own, its screen is left alone: any screen works there.
