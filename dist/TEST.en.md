@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.17-beta.12 — what's new
+
+- **Alt+D → «New» tab:** the switches that came since you last looked in the console — turn them on and see them in the game at once. «Quick» shows «★ New: N». The first start marks nothing; the list clears once seen.
+
 # uaRO Graphics 3.0.17-beta.11 — what's new
 
 - **A hint in the game:** once, 5 seconds into the first map, the chat shows «uaRO Graphics: Alt+D - quick settings (the picture, the interface, the textures)». It does not come again.
