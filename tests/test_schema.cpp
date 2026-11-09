@@ -102,7 +102,7 @@ TEST(schema_live_keys_are_the_specs) {
                                 k != "renderer.bridge_present" && k != "renderer.bridge_dpi_scale" &&
                                 k != "debug.state_cache" && k != "debug.fast_pick" && k != "debug.fast_ftol" &&
                                 k != "debug.fast_textures" && k != "debug.merge_draws" &&
-                                k != "debug.shader_variants" &&
+                                k != "debug.shader_variants" && k != "debug.record_scene" &&
                                 k != "debug.weak_card" &&  // 3.0.4-beta.35: the card's level is the start's
                                 k.compare(0, 3, "ai.") != 0 &&
                                 // [sound] at the game's start; 3.0.4-beta.1: the output device at once,
