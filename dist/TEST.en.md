@@ -1,3 +1,8 @@
+# uaRO Graphics 3.0.18-beta.4 — what's new
+
+- **No more old "Please wait..." showing through:** when the game showed a message and a "Please wait..." at once (it happens on a first login to an account), the wait stayed in its old look. Now it is hidden then too.
+- **The log names the game's old windows** left on screen without the new look - a line for each kind of window, to find the rest of such places.
+
 # uaRO Graphics 3.0.18-beta.3 — what's new
 
 - **"The game froze" - a report of its own:** when the game stood still for 15 seconds or more and had to be closed, the automatic report is now called so, not "ended abnormally"; in the reports list - "The game froze".
