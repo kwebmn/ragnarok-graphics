@@ -1,3 +1,36 @@
+# uaRO Graphics 3.0.16 — what's new
+
+Torch shadows, new hit and status effects, the shop opening card, the homunculus' and mercenary's skills in their cards, and many fixes. Everything new that changes the look is off by default — turn it on in the uaRO app.
+
+## Fixed
+
+- **Doubled letters** in input fields (NPC questions, counts, search) in battle mode after Enter.
+- **Your own pet after logging in** was sometimes treated as a plain monster with no right-click menu until the first teleport.
+- **The pet's accessory** is worn again by a double click in «Items»; the pet menu in Ukrainian and Russian.
+- **Minimap:** the ama_dun01 maze shows again; a guild mate in your party no longer flips between a triangle and a circle.
+- **Ctrl+F** opens the reference again when the chat field is empty.
+- **False «crash» reports** when the game was closed and started again at once.
+- **Fire Wall** is the game's soft fire again, brighter.
+
+## New effects (off — turn on in «Effects»)
+
+- **«Torch and lamp shadows»** — walls, pillars, trees, heroes and monsters cast shadows from fire; **«Light through leaves»** — green light through tree crowns. Direct3D 12 and 11.
+- **«Effects behind the hero»** — skill effects no longer hide behind the character.
+- **New hits, items, statuses, travel and monster effects** in the same crisp colours as the new skill effects; **«Soft look»** for all new effects.
+- **«Sharp hero pixels»** — sprites close up without blur.
+- **«Death flash»**, **«Body tint»** (Fury, Steel Body), **«Hallucination wave»**.
+- **Monk spheres and gunslinger coins** — glowing orbs with a halo.
+
+## Interface
+
+- **«Shop opening card»** — name, cart and prices in one card, the pad too.
+- **Homunculus and mercenary skills** in their cards: use level, click to use, drag to the hotbar.
+- **On the hotbar:** stones and spheres a skill lacks; Safety Wall, Pneuma, Sanctuary and trap timers (and a ring on the ground); the monk's combo window.
+- **In the character block:** broken gear, pet and homunculus hunger.
+- **Shop and chat room signs** in the new look, **the cell under the mouse**.
+- **«Stats» → map monsters:** hits by monster size and the Ghost element.
+- **«New report» from the game:** you choose its kind.
+
 # uaRO Graphics 3.0.16-beta.39 — what's new
 
 - **The pad on the shop opening card.** D-pad ← → — the cart or the sale, ↑ ↓ — a row (gold edge); A puts a thing up, X takes it back, LB / RB — the price a step down / up, Y — «Open the shop», B — «Cancel». The buttons' hint is at the card's bottom.
