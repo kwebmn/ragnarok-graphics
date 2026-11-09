@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.17-beta.2 — what's new
+
+- **«How the game looks»** now opens the «Main» page: three separate choices instead of hundreds of switches. **Picture:** Auto, As in the game, Improved, Remaster. **Interface:** New, New screen with the game's windows, Classic. **Textures:** HD, HD light, Original. Mix them any way, e.g. the new picture with the classic interface. If you changed something by hand, the choice shows «changed N».
+
 # uaRO Graphics 3.0.17-beta.1 — what's new
 
 - **Going back to the previous version is easy now.** On «Play», next to the update, a «← Back to 3.0.16» button. If the game did not start twice after an update, the app offers to go back itself.
