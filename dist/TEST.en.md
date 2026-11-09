@@ -1,3 +1,8 @@
+# uaRO Graphics 3.0.17-beta.27 — what's new
+
+- **Alt+D, the quick tab - tiles:** the often-used switches are now tiles, four a row, the ones on lit green. Left/right choose a tile, Space or Enter turns it on or off, Insert pins it; with the mouse - click a tile.
+- **"What it gives":** at the console's foot, one sentence about the chosen row or tile, so there is no guessing what you turn on.
+
 # uaRO Graphics 3.0.17-beta.26 — what's new
 
 - **The tip of the day in uaRO HD in the interface's language:** uaRO HD's tips file has Windows line ends, and the game counted 69 tips instead of 68 - so our translated tips never came on. uaRO HD now shows them in the app's language, the counter "of 68".
