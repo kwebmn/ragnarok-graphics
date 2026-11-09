@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.18-beta.10 — what's new
+
+- **The wheel over the new library's windows no longer zooms the world:** over the card and the "uaUI · компоненти" window it only scrolls the list and the camera stays. A click on the window no longer goes to the world either.
+
 # uaRO Graphics 3.0.18-beta.9 — what's new
 
 - **The new interface library, stage 2:** with the RmlUi test card switch on, a "uaUI · компоненти" window shows next to the card. It has tabs, the bag's items with their icons (open the items window so they come in), a list that scrolls with the wheel, buttons, switches and a bar. The window drags by its title and hides with its cross.
