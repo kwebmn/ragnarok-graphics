@@ -31,3 +31,18 @@ TEST(stall_watch_counts_from_the_first_look) {
     CHECK(w.look(40, 50999) == stallwatch::Event::None);
     CHECK(w.look(40, 51000) == stallwatch::Event::Began);
 }
+
+// 3.0.18-beta.2 (the owner: the hang watch - «1»): 15 s still is a hang, told once a stall; a beat starts it anew
+TEST(stall_watch_a_hang_once_a_stall) {
+    stallwatch::Watch w;
+    w.look(1, 0);
+    CHECK(w.look(1, 1500) == stallwatch::Event::Began);
+    CHECK(!w.hangDue(10000));
+    CHECK_EQ(w.stillFor(10000), uint64_t(10000));
+    CHECK(w.hangDue(15000));
+    CHECK(!w.hangDue(30000));  // told: not again in the same stall
+    CHECK(w.look(2, 31000) == stallwatch::Event::Ended);
+    CHECK_EQ(w.stillFor(31000), uint64_t(0));
+    w.look(2, 32500);
+    CHECK(w.hangDue(47000));  // another stall, another hang
+}

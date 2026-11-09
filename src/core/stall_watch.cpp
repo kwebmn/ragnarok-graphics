@@ -8,6 +8,7 @@ Event Watch::look(uint32_t beats, uint64_t nowMs) {
         if (ended) stillMs_ = nowMs - changedMs_;
         seen_ = true;
         still_ = false;
+        hangTold_ = false;
         beats_ = beats;
         changedMs_ = nowMs;
         return ended ? Event::Ended : Event::None;
@@ -15,6 +16,12 @@ Event Watch::look(uint32_t beats, uint64_t nowMs) {
     if (still_ || nowMs - changedMs_ < kStillMs) return Event::None;
     still_ = true;
     return Event::Began;
+}
+
+bool Watch::hangDue(uint64_t nowMs) {
+    if (!still_ || hangTold_ || nowMs - changedMs_ < kHangMs) return false;
+    hangTold_ = true;
+    return true;
 }
 
 }  // namespace uagfx::stallwatch

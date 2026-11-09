@@ -16,6 +16,7 @@
 #include "core/stall_watch.hpp"
 #include "win/game_camera.hpp"
 #include "win/log.hpp"
+#include "win/crash.hpp"
 #include "win/stall_watch.hpp"
 
 #ifndef CREATE_WAITABLE_TIMER_HIGH_RESOLUTION
@@ -334,7 +335,7 @@ void Profiler::sampleLoop() {
     stallwatch::Watch stall;
     std::string stillHow;  // the game at the stall's start
     int stallsTold = 0;
-    bool wasOn = false, windowLive = false, stillLive = false;
+    bool wasOn = false, windowLive = false, stillLive = false, hangTold = false;
     const bool steps = knownGameBuild();
     ULONGLONG since = GetTickCount64();
     uint32_t stack[kStackWords];
@@ -384,7 +385,11 @@ void Profiler::sampleLoop() {
                 still.setOwnFunctions(mods.ownFunctions());
                 stillHow = howTheGame(gameWindow_);
                 stillLive = true;
-            } else if (e == stallwatch::Event::Ended && stillLive) {
+            } else if (e == stallwatch::Event::Ended && hangTold) {  // 3.0.18-beta.2
+                hangTold = false;
+                LOG_INFO("hang: the game's thread beats again after %.1f s", double(stall.stillMs()) / 1000.0);
+            }
+            if (e == stallwatch::Event::Ended && stillLive) {
                 stillLive = false;
                 char head[200];
                 std::snprintf(head, sizeof head, "stood still %.1f s (%s); sampled %zu times",
@@ -393,6 +398,21 @@ void Profiler::sampleLoop() {
                 still.report(1.0);  // emptied for the next one
                 if (++stallsTold == kStallsTold) LOG_INFO("stall watch: %d stalls told - the rest not", kStallsTold);
             }
+        }
+        // 3.0.18-beta.2 (the hang watch): 15 s without a beat - where the thread stands now and a minidump, before
+        // the player ends the game (a log that never says where it froze was all a report had)
+        if (watching_ && stall.hangDue(GetTickCount64())) {
+            hangTold = true;
+            char head[200];
+            std::snprintf(head, sizeof head, "still %.0f s and on (%s); sampled %zu times",
+                          double(stall.stillFor(GetTickCount64())) / 1000.0, stillHow.c_str(), still.samples());
+            LOG_ERROR("hang: the game's thread has not moved for %.0f s%s",
+                      double(stall.stillFor(GetTickCount64())) / 1000.0, open ? " (a map loading)" : "");
+            if (stillLive)
+                for (const std::string& line : still.report("hang: the game's thread", head))
+                    LOG_INFO("%s", line.c_str());
+            LOG_INFO("hang: %s", writeHangDump() ? "a minidump of every thread is in uaro-graphics\\crash.dmp"
+                                                 : "no minidump (dbghelp.dll or the file)");
         }
         if (!on && !open && !stillLive) {
             WaitForSingleObject(wake_, watching_ ? 250 : 1000);

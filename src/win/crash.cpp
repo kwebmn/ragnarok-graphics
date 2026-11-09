@@ -60,6 +60,23 @@ LONG WINAPI onCrash(EXCEPTION_POINTERS* e) {
 
 }  // namespace
 
+bool writeHangDump() {
+    if (!g_dump[0]) return false;
+    using WriteFn = BOOL(WINAPI*)(HANDLE, DWORD, HANDLE, MINIDUMP_TYPE, PMINIDUMP_EXCEPTION_INFORMATION,
+                                  PMINIDUMP_USER_STREAM_INFORMATION, PMINIDUMP_CALLBACK_INFORMATION);
+    HMODULE help = LoadLibraryA("dbghelp.dll");
+    const auto write =
+        help ? reinterpret_cast<WriteFn>(reinterpret_cast<void*>(GetProcAddress(help, "MiniDumpWriteDump"))) : nullptr;
+    if (!write) return false;
+    HANDLE file = CreateFileA(g_dump, GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
+    if (file == INVALID_HANDLE_VALUE) return false;
+    const BOOL ok = write(GetCurrentProcess(), GetCurrentProcessId(), file,
+                          MINIDUMP_TYPE(MiniDumpNormal | MiniDumpWithThreadInfo), nullptr, nullptr, nullptr);
+    CloseHandle(file);
+    if (!ok) DeleteFileA(g_dump);
+    return ok != FALSE;
+}
+
 void installCrashHandler(const std::string& gameDir) {
     static bool installed = false;
     if (installed) return;
