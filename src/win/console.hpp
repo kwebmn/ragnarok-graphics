@@ -54,7 +54,8 @@ private:
     // 3.0.5-beta.6: Test - «Тест графіки» (core/graphics_test)
     // 3.0.17-beta.4 (the concept «простой старт»): Tabs - the tabs' row (Швидко, Картинка, Інтерфейс, Текстури,
     // Усе), Look - one of «Як виглядає гра»'s three choices (key: its number)
-    enum class Kind { Heading, Box, Check, Slider, Choice, Open, Here, Test, Layout, Tabs, Look };
+    // 3.0.17-beta.27: Tiles - up to four switches side by side (key: theirs joined by '|', core/console_tiles)
+    enum class Kind { Heading, Box, Check, Slider, Choice, Open, Here, Test, Layout, Tabs, Look, Tiles };
     struct Row {
         Kind kind = Kind::Heading;
         std::string key;  // "effects.grass"; a heading's: its text (UTF-8)
@@ -89,6 +90,9 @@ private:
     Key insert_;
     void readPins(const std::string& iniPath);
     bool rowPinnable(const Row& r) const;
+    int tileCol_ = 0;                  // 3.0.17-beta.27: the tile chosen in a Tiles row
+    int drawnTilesLeft_ = 0, drawnTilesWidth_ = 1;  // where a Tiles row's four places were drawn (the mouse's)
+    std::string chosenKey() const;     // the chosen row's setting - a Tiles row's: its chosen tile's
     static constexpr const char* kWindowsKey = "iface:windows";
     void interfaceRow(const char* key, int depth);
     std::string filter_;   // 2.6.22: the letters typed (UTF-8)

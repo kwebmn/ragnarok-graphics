@@ -11,6 +11,7 @@
 #include "core/console_box.hpp"
 #include "core/console_key.hpp"
 #include "core/console_pins.hpp"
+#include "core/console_tiles.hpp"
 #include "core/layout.hpp"
 #include "core/effect_costs.hpp"
 #include "core/effect_groups.hpp"
@@ -189,10 +190,18 @@ void Console::build(Lang lang, const Config& config) {
             rows_.push_back(Row{Kind::Heading, tr(lang, Text::LookHead), 0});
             for (int k = 0; k < presets::kChoices; ++k) rows_.push_back(Row{Kind::Look, std::to_string(k), 0});
             rows_.push_back(Row{Kind::Heading, tr(lang, Text::ConsoleOften), 0});
+            // 3.0.17-beta.27: the switches as tiles, four a row; a list or a slider as its row
+            std::vector<std::string> tiles;
             for (const char* k : {"effects.group_time", "effects.group_weather", "effects.grass",
                                   "effects.torch_shadows", "effects.mage_effects", "frames.keep_fps",
-                                  "frames.fps_counter", "interface.net_badge", "interface.mob_hp"})
-                if (!consolepins::pinned(pins_, k)) interfaceRow(k, 0);
+                                  "frames.fps_counter", "interface.net_badge", "interface.mob_hp"}) {
+                if (consolepins::pinned(pins_, k)) continue;
+                const IniSetting* st = settingOf(k);
+                if (st && st->control == Control::Check) tiles.push_back(k);
+                else interfaceRow(k, 0);
+            }
+            for (const auto& row : consoletiles::rows(tiles))
+                rows_.push_back(Row{Kind::Tiles, consoletiles::join(row), 0});
             if (!fresh_.empty())  // 3.0.17-beta.12: the way to «Нове»
                 rows_.push_back(
                     Row{Kind::Heading, fmt(tr(lang, Text::ConsoleNewCount), {std::to_string(fresh_.size())}), 0});
@@ -308,8 +317,17 @@ void Console::markKnown() {
 }
 
 bool Console::rowPinnable(const Row& r) const {
+    if (r.kind == Kind::Tiles) return true;  // 3.0.17-beta.27: its chosen tile
     return (r.kind == Kind::Box || r.kind == Kind::Check || r.kind == Kind::Slider || r.kind == Kind::Choice) &&
            settingOf(r.key);
+}
+
+std::string Console::chosenKey() const {
+    if (rows_.empty() || at_ < 0 || at_ >= int(rows_.size())) return "";
+    const Row& r = rows_[size_t(at_)];
+    if (r.kind != Kind::Tiles) return r.kind == Kind::Heading ? "" : r.key;
+    const std::vector<std::string> keys = consoletiles::split(r.key);
+    return keys.empty() ? "" : keys[size_t(consoletiles::move(tileCol_, 0, int(keys.size())))];
 }
 
 bool Console::here(const std::string& key, const Config& config) const {
@@ -373,13 +391,19 @@ bool Console::change(const std::string& iniPath, const Config& config, int step)
         LOG_INFO("console: «%s» - variant %d", r.key.c_str(), to);
         return true;
     }
+    if (r.kind == Kind::Tiles && step != 0) {  // 3.0.17-beta.27: left and right choose the tile
+        const int count = int(consoletiles::split(r.key).size());
+        tileCol_ = consoletiles::move(consoletiles::move(tileCol_, 0, count), step, count);
+        dirty_ = true;
+        return false;
+    }
     if (r.kind == Kind::Here) {  // 2.6.22: «Только на этой карте» - the console's own, not the file's
         thisMap_ = step == 0 ? !thisMap_ : step > 0;
         build(lang_, config);
         dirty_ = true;
         return false;
     }
-    const IniSetting* s = r.kind == Kind::Heading ? nullptr : settingOf(r.key);
+    const IniSetting* s = r.kind == Kind::Heading ? nullptr : settingOf(chosenKey());  // .27: a tile's
     if (!s) return false;
     const Config shown = shownConfig(config);
     const std::string now = tokenOf(*s, shown);
@@ -511,10 +535,10 @@ bool Console::present(HWND game, bool foreground, const std::string& iniPath, co
         changed = change(iniPath, config, 0);
     if (pressed(VK_LEFT, left_, true, now)) changed = change(iniPath, config, -1) || changed;
     if (pressed(VK_INSERT, insert_, false, now) && at_ < n && rowPinnable(rows_[size_t(at_)])) {  // 3.0.17-beta.4
-        pins_ = consolepins::toggle(pins_, rows_[size_t(at_)].key);
+        const std::string key = chosenKey();  // 3.0.17-beta.27: a tile's
+        pins_ = consolepins::toggle(pins_, key);
         if (!pinsPath_.empty()) writeFileAtomic(pinsPath_, consolepins::format(pins_));
-        LOG_INFO("console: %s %s «Швидко»", rows_[size_t(at_)].key.c_str(),
-                 consolepins::pinned(pins_, rows_[size_t(at_)].key) ? "pinned to" : "taken off");
+        LOG_INFO("console: %s %s «Швидко»", key.c_str(), consolepins::pinned(pins_, key) ? "pinned to" : "taken off");
         if (tab_ == kTabQuick) build(lang_, config);
         dirty_ = true;
     }
@@ -537,7 +561,10 @@ bool Console::present(HWND game, bool foreground, const std::string& iniPath, co
         if (rows_[size_t(row)].kind == Kind::Heading) continue;
         at_ = row;
         dirty_ = true;
-        const IniSetting* s = settingOf(rows_[size_t(row)].key);
+        if (rows_[size_t(row)].kind == Kind::Tiles)  // 3.0.17-beta.27: the tile under the mouse
+            tileCol_ = consoletiles::at(c.x, drawnTilesLeft_, drawnTilesWidth_,
+                                        int(consoletiles::split(rows_[size_t(row)].key).size()));
+        const IniSetting* s = settingOf(chosenKey());
         const bool stepped = s && (s->control == Control::Slider || s->control == Control::Choice);
         const int half = int(drawnBox_.right - drawnBox_.left) / 2;
         changed = change(iniPath, config, stepped ? (c.x >= half ? 1 : -1) : 0) || changed;
@@ -620,8 +647,13 @@ void Console::draw(HWND game, const Config& file, const GpuTiming* timing) {
     const bool mouseIn = drawnLine_ > 0 && PtInRect(&drawnBox_, mouseAt);
     if (mouseIn) state += "|m" + std::to_string(mouseAt.x) + "," + std::to_string(mouseAt.y);
     for (const Row& r : rows_)
-        if (r.kind != Kind::Heading)
+        if (r.kind == Kind::Tiles) {  // 3.0.17-beta.27
+            for (const std::string& k : consoletiles::split(r.key))
+                if (const IniSetting* s = settingOf(k)) state += tokenOf(*s, config) + ",";
+        } else if (r.kind != Kind::Heading) {
             if (const IniSetting* s = settingOf(r.key)) state += tokenOf(*s, config) + ",";
+        }
+    state += "|c" + std::to_string(tileCol_);
     state += "|t" + std::to_string(tab_) + "|" + consolepins::format(pins_);  // 3.0.17-beta.4
     for (int k = 0; k < presets::kChoices; ++k) {
         const presets::Match m = presets::match(presets::Choice(k), config);
@@ -653,7 +685,8 @@ void Console::draw(HWND game, const Config& file, const GpuTiming* timing) {
     DrawTextW(dc, keys.c_str(), int(keys.size()), &measured, DT_CALCRECT | DT_WORDBREAK | DT_LEFT | DT_NOPREFIX);
     SelectObject(dc, measuring);
     const int footH = std::max(line, int(measured.bottom - measured.top));
-    const int visible = consolebox::visibleRows(box, footH);  // the title, the foot's lines
+    // 3.0.17-beta.27 (Task 8): a line over the foot - the chosen row's «що це дає» (its hint's first sentence)
+    const int visible = consolebox::visibleRows(box, footH + line);  // the title, «що це дає», the foot's lines
     if (at_ < top_) top_ = at_;
     if (at_ >= top_ + visible) top_ = at_ - visible + 1;
     top_ = std::clamp(top_, 0, std::max(0, int(rows_.size()) - visible));
@@ -771,6 +804,32 @@ void Console::draw(HWND game, const Config& file, const GpuTiming* timing) {
                 textRight(w - fontH, y, L"\u2039 " + wide(value) + L" \u203a", RGB(240, 236, 226));
                 continue;
             }
+            if (r.kind == Kind::Tiles) {  // 3.0.17-beta.27: four places a row, each its switch - lit when on
+                const std::vector<std::string> keys = consoletiles::split(r.key);
+                const int left = fontH, width = w - 2 * fontH, gap = std::max(2, fontH / 3);
+                drawnTilesLeft_ = left;
+                drawnTilesWidth_ = width;
+                const int chosen = top_ + i == at_ ? consoletiles::move(tileCol_, 0, int(keys.size())) : -1;
+                for (int k = 0; k < int(keys.size()); ++k) {
+                    const IniSetting* ts = settingOf(keys[size_t(k)]);
+                    if (!ts) continue;
+                    const bool on = tokenOf(*ts, config) == ts->tokens[1];
+                    const int x0 = left + k * width / consoletiles::kPerRow, x1 = left + (k + 1) * width /
+                                                                                    consoletiles::kPerRow - gap;
+                    const uint32_t fill = k == chosen ? 0x004A5A6Au : on ? 0x00243C2Cu : 0x0024282Eu;
+                    for (int yy = std::max(0, y - line / 8); yy < std::min(h, y + line - line / 8); ++yy)
+                        std::fill(px + size_t(yy) * size_t(w) + size_t(x0), px + size_t(yy) * size_t(w) + size_t(x1),
+                                  fill);
+                    text(x0 + gap, y, on ? L"■" : L"□", on ? RGB(143, 194, 122) : RGB(150, 150, 150));
+                    std::wstring label = wide(tr(lang_, ts->label));
+                    RECT place{x0 + gap + fontH * 3 / 2, y, x1 - gap, y + line};
+                    SelectObject(dc, font);
+                    SetTextColor(dc, on ? RGB(240, 236, 226) : RGB(170, 170, 170));
+                    DrawTextW(dc, label.c_str(), int(label.size()), &place,
+                              DT_SINGLELINE | DT_LEFT | DT_NOPREFIX | DT_END_ELLIPSIS);
+                }
+                continue;
+            }
             if (r.kind == Kind::Here) {  // 2.6.22: «Только на этой карте» and the map
                 const int x = fontH + r.depth * fontH * 2;
                 text(x, y, thisMap_ ? L"■" : L"□", thisMap_ ? RGB(143, 194, 122) : RGB(150, 150, 150));
@@ -833,6 +892,14 @@ void Console::draw(HWND game, const Config& file, const GpuTiming* timing) {
                 text(x, y, wide(tr(lang_, s->label)), RGB(200, 200, 190));
                 textRight(w - fontH, y, L"◂ " + wide(choice) + L" ▸", RGB(240, 236, 226));
             }
+        }
+        if (const IniSetting* cs = settingOf(chosenKey())) {  // 3.0.17-beta.27: «що це дає»
+            const std::wstring gives = wide(consoletiles::gist(tr(lang_, cs->hint), 110));
+            RECT place{fontH, h - footH - line / 4 - line, w - fontH, h - footH - line / 4};
+            SelectObject(dc, font);
+            SetTextColor(dc, RGB(150, 190, 205));
+            DrawTextW(dc, gives.c_str(), int(gives.size()), &place,
+                      DT_SINGLELINE | DT_LEFT | DT_NOPREFIX | DT_END_ELLIPSIS);
         }
         RECT foot{fontH, h - footH - line / 4, w - fontH, h};  // 2.2.1: wrapped (3.0.11-beta.209: as many lines)
         SelectObject(dc, font);
