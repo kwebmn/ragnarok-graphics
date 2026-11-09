@@ -21,6 +21,7 @@
 #include "core/log_files.hpp"
 #include "core/reports.hpp"
 #include "core/settings/log_digest.hpp"
+#include "core/start_failures.hpp"
 #include "core/usage.hpp"
 #include "core/version.hpp"
 
@@ -330,7 +331,6 @@ int watchGame(unsigned long pid, int logSlot) {
         }
     }
     CloseHandle(game);
-    if (!config.reportAuto && !config.statsSend && !firstPending) return 0;
     Sleep(2000);  // the log closed and flushed
     std::string log, part, prev;  // 3.0.3-beta.1: that game window's
     bool logRead = readFile(wide(logPath), log);
@@ -341,6 +341,15 @@ int watchGame(unsigned long pid, int logSlot) {
         case logfiles::Which::Previous: log = prev; logRead = true; break;
         case logfiles::Which::None: logRead = false; break;
     }
+    {  // 3.0.17-beta.1: a failed start of this version counted - the rollback offered after two
+        const std::wstring failuresPath = ourPlace(exeFolder(), layout::kStartFailures);
+        std::string failures;
+        readFile(failuresPath, failures);
+        const bool bad = logRead && startfail::failed(report::reasonOfLog(log), firstgame::minutesOfLog(log));
+        const std::string next = startfail::note(failures, installedVersion(exeFolder()), bad);
+        if (next != failures) writeFileAtomic(failuresPath, next);
+    }
+    if (!config.reportAuto && !config.statsSend && !firstPending) return 0;
     if (firstPending) {  // 3.0.11-beta.61: how it ended and how long - sent at once with the install's mark
         if (readFile(firstPath, firstText)) firstgame::parse(firstText, first);  // its first minute on the maps
         first.end = logRead ? firstgame::endOfLog(log) : "";

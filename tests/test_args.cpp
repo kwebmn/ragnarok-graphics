@@ -117,3 +117,12 @@ TEST(args_answer_round_trip) {
     CHECK(app::parseArgs(L"--answer \"R-7BDUE3 --x\"").answer.empty());
     CHECK(app::parseArgs(L"--answer").answer.empty());
 }
+
+// 3.0.17-beta.1 (a rollback to a recent version): --update --to 3.0.15 - that version of the branch's [history]
+TEST(args_update_to_a_version) {
+    const Args a = app::parseArgs(L"--update --to 3.0.15 --then-app");
+    CHECK(a.mode == Args::Mode::Update && a.to == "3.0.15" && a.then == Args::Then::App);
+    const Args b = app::parseArgs(app::argsLine(a));
+    CHECK(b.to == "3.0.15" && b.mode == Args::Mode::Update);
+    CHECK(app::parseArgs(L"--update --to ../x").to.empty());  // a version or nothing
+}

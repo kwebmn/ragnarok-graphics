@@ -3,12 +3,16 @@
 
 #include "app/client_patch.hpp"
 #include "app/files.hpp"
+#include "app/installer.hpp"
+#include "app/update_run.hpp"
 #include "app/launcher.hpp"
 #include "app/page.hpp"
 #include "app/setting_ids.hpp"
 #include "app/status_info.hpp"
 #include "app/update.hpp"
 #include "core/graphics_test.hpp"
+#include "core/layout.hpp"
+#include "core/start_failures.hpp"
 #include "core/version.hpp"
 
 namespace uagfx::app {
@@ -27,6 +31,7 @@ constexpr int kUpdateNow = 2108;    // 3.0.1-beta.4 (the user): «Оновити
 constexpr int kTestNow = 2109;    // 3.0.5-beta.7 (the user: «сделай»): «Запустити тест графіки»
 constexpr int kTestList = 2130;   // and the last test's table
 constexpr int kAutopilotChange = 2131;  // 3.0.11-beta.58: the automatic set's line - the Effects page
+constexpr int kRollBack = 2132;  // 3.0.17-beta.1: «← Повернути 3.0.15»
 constexpr int kNewsFirst = 2110;  // + a news item's number: its "More"
 constexpr int kNewsMost = 10;
 
@@ -116,6 +121,21 @@ public:
             const std::wstring now = u.back ? tf(Text::UpdateBackButton, {offer}) : t(Text::UpdateNow);
             updates.push_back({kUpdateNow, now, true, true});
         }
+        // 3.0.17-beta.1 (the concept «простой старт»): the way back in sight - the kept previous version, else the
+        // channel's newest older one; after two failed starts of this version a plate asks
+        rollBack_ = "";
+        const std::wstring dir = host_.model().paths().dir;
+        if (installer::canRollBack(dir)) {
+            rollBack_ = installer::previousVersion(dir);
+        } else if (u.kind == UpdateState::Done) {
+            const auto older = update::rollbackChoices(u.branch, host_.model().channel(), kVersion);
+            if (!older.empty()) rollBack_ = older.front().version;
+        }
+        std::string failures;
+        readFile(dir + L"\\" + wide(layout::kStartFailures), failures);
+        const bool failing = !rollBack_.empty() && startfail::offerRollback(failures, installedVersion(dir));
+        if (failing) p.note(tf(Text::RollbackFailedStarts, {installedVersion(dir), rollBack_}), Tone::Bad);
+        if (!rollBack_.empty()) updates.push_back({kRollBack, tf(Text::RollbackShort, {rollBack_}), true, failing});
         p.buttons(updates);
         if (patchNeeded) {
             p.note(tf(Text::PlayPatchLine, {std::to_string(patch.check.needed.size()), megabytes(patch.check.bytes)}),
@@ -181,6 +201,7 @@ public:
             p.note(tf(Text::PlayTestNotSent, {said.rfind("error: ", 0) == 0 ? said.substr(7) : said}), Tone::Warn);
     }
 
+    std::string rollBack_;  // 3.0.17-beta.1: the version «← Повернути» goes back to, "" none
     std::wstring testFile() const { return host_.model().paths().dir + L"\\uaro-graphics\\graphics-test.txt"; }
 
     // 2.12: this start's own setup, the safe mode, uaRO Graphics switched off - each with its one press
@@ -242,6 +263,8 @@ public:
             host_.rebuild();
         } else if (id == kUpdateNow) {
             updateAndReopen(host_, false);  // the button says it: no question
+        } else if (id == kRollBack && !rollBack_.empty()) {
+            rollBackTo(host_, rollBack_);  // 3.0.17-beta.1
         } else if (id == kAutopilotChange) {
             host_.showPage(settings::Page::Effects);
         } else if (id == kPicked && m.lastAutoSetup()) {

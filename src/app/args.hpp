@@ -28,6 +28,8 @@ struct Args {
     // 3.0.9-beta.4: --answer R-XXXXXX - the game's answer card («Відкрити»): «Звернення» on that conversation; only a
     // code of the site's (core/report_answers plainCode), else none
     std::wstring answer;
+    // 3.0.17-beta.1: --update --to <version> - that version of the branch's [history] (a rollback); "" the newest
+    std::string to;
 };
 
 Args parseArgs(const std::wstring& line);

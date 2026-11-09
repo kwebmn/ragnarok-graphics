@@ -382,7 +382,9 @@ enum class Text : uint16_t {
     PadEnabled, PadEnabledHint,  // 2.9
     UpdateOut, UpdateRestartNote, UpdatePlayWithout, UpdateDo, UpdatingTo, UpdateLoadedGame, UpdateLoadedApp,
     UpdateWaitGame, UpdateInstalling, UpdateLoadingDlss, UpdateLoadingModels, UpdateNothingChanged, ButtonCancel,
-    RollbackButton, RollbackAsk, RollingBack, RepairButton, RepairAsk, Repairing, UninstallButton, UninstallAsk,
+    RollbackButton, RollbackAsk,
+    RollbackShort, RollbackFailedStarts, RollbackOtherHead, RollbackOtherNote, RollbackToButton, RollbackToAsk,  // .17
+    RollingBack, RepairButton, RepairAsk, Repairing, UninstallButton, UninstallAsk,
     UninstallKeep, UninstallDo, Uninstalling, UninstallDone, UninstallKept, InstallDone, DlssDownload,  // 2.10
     UninstallFailed, SetupTitle, SetupChoose, SetupNoGame, SetupDamaged,  // 2.10
     ViewPlay, LauncherDirect, LauncherDirectHint,  // 2.11

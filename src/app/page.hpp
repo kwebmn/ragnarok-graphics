@@ -127,6 +127,10 @@ UpdateState channelUpdate(const Model& m);
 // «Оновити зараз»: uaRO Graphics updated in a window of its own and this app opened again after it - not the game
 // (3.0.1-beta.4, the user: «Гра»'s besides «Оновити й грати»); `ask`: the question first (UpdateAsk)
 void updateAndReopen(PageHost& host, bool ask);
+// 3.0.17-beta.1 (the concept «простой старт»): back to `to` - the kept previous version (uaro-graphics\previous\,
+// --rollback) when it is that one, else that version of the branch's [history] (--update --to); asked first, then
+// the app closes and opens again
+void rollBackTo(PageHost& host, const std::string& to);
 // 2.6: the search's results - the rows changed in place, each with a button to its page.
 std::unique_ptr<Page> makeSearchPage(PageHost& host, const std::string& query);
 settings::Text effectGroupName(int g);  // the Effects page's name of a group

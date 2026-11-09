@@ -3884,6 +3884,25 @@ constexpr Entry kTexts[] = {
      "вийде наступна.",
      "Вернуть uaRO Graphics {1}? Утилита закроется и откроется снова; более новую версию не будет предлагать, пока не "
      "выйдет следующая."},
+    // 3.0.17-beta.1 (the concept «простой старт»: the rollback in sight, a recent version to choose)
+    {Text::RollbackShort, "\xE2\x86\x90 Back to {1}", "\xE2\x86\x90 Повернути {1}", "\xE2\x86\x90 Вернуть {1}"},
+    {Text::RollbackFailedStarts,
+     "The game did not start twice since the update to {1}. Go back to {2}? The settings stay.",
+     "Гра двічі не запустилася після оновлення до {1}. Повернути {2}? Налаштування лишаться.",
+     "Игра дважды не запустилась после обновления до {1}. Вернуть {2}? Настройки останутся."},
+    {Text::RollbackOtherHead, "Another version", "Інша версія", "Другая версия"},
+    {Text::RollbackOtherNote,
+     "The channel's recent versions, if a newer one does not work for you. The settings stay.",
+     "Останні версії вашого каналу — якщо новіша у вас не працює. Налаштування лишаться.",
+     "Последние версии вашего канала — если новая у вас не работает. Настройки останутся."},
+    {Text::RollbackToButton, "Install {1}", "Встановити {1}", "Установить {1}"},
+    {Text::RollbackToAsk,
+     "Install uaRO Graphics {1} in place of {2}? The settings stay; {2} is not offered again until a newer version "
+     "is out.",
+     "Встановити uaRO Graphics {1} замість {2}? Налаштування лишаться; {2} більше не пропонуватиме, доки не вийде "
+     "новіша.",
+     "Установить uaRO Graphics {1} вместо {2}? Настройки останутся; {2} больше не будет предлагать, пока не выйдет "
+     "более новая."},
     {Text::RollingBack, "Going back to {1}",
      "Повертаємо {1}",
      "Возвращаем {1}"},

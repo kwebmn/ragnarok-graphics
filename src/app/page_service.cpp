@@ -39,6 +39,7 @@ constexpr int kProfileName = 1451;
 constexpr int kProfileSave = 1452;
 constexpr int kProfileLoad = 1453;
 constexpr int kProfileDelete = 1454;
+constexpr int kRollTo = 1470;  // 3.0.17-beta.1: + n, «Встановити 3.0.15» (update::kMostRollback)
 constexpr int kPalettesFile = 1460;  // 2.5.19
 constexpr int kPalettesFolder = 1461;
 
@@ -173,6 +174,19 @@ public:
         more.push_back({kRepair, t(Text::RepairButton)});
         more.push_back({kUninstall, t(Text::UninstallButton)});
         p.buttons(more);
+        // 3.0.17-beta.1: a recent version of the channel (update.ini's [history])
+        rollTo_.clear();
+        if (u.kind == UpdateState::Done)
+            for (const update::Archive& a : update::rollbackChoices(u.branch, m.channel(), kVersion))
+                rollTo_.push_back(a.version);
+        if (!rollTo_.empty()) {
+            p.heading(t(Text::RollbackOtherHead));
+            p.note(t(Text::RollbackOtherNote));
+            std::vector<ButtonItem> versions;
+            for (size_t i = 0; i < rollTo_.size(); ++i)
+                versions.push_back({kRollTo + int(i), tf(Text::RollbackToButton, {rollTo_[i]})});
+            p.buttons(versions);
+        }
         // 3.0.1-beta.5: our own libraries in place of the game's old ones, each switchable (core/client_libs.hpp)
         if (host_.mode() != settings::Mode::Simple) {
             p.gap();
@@ -272,6 +286,8 @@ public:
             updateAndReopen(host_, true);
         } else if (id == kRollback) {
             startAndClose(Args::Mode::Rollback, tf(Text::RollbackAsk, {installer::previousVersion(m.paths().dir)}));
+        } else if (id >= kRollTo && id < kRollTo + int(rollTo_.size())) {  // 3.0.17-beta.1
+            rollBackTo(host_, rollTo_[size_t(id - kRollTo)]);
         } else if (id == kRepair) {
             startAndClose(Args::Mode::Repair, t(Text::RepairAsk));
         } else if (id == kUninstall) {
@@ -339,6 +355,7 @@ private:
         PostMessageW(GetAncestor(host_.window(), GA_ROOT), WM_CLOSE, 0, 0);
     }
 
+    std::vector<std::string> rollTo_;  // 3.0.17-beta.1: the versions of «Інша версія», by kRollTo + n
     std::unique_ptr<Page> rows_;  // 3.0.1-beta.5: the schema's rows (the libraries' switches)
     HWND list_ = nullptr;
     HWND profiles_ = nullptr;
@@ -368,6 +385,24 @@ bool channelCommand(PageHost& host, int id, int code, int channelId) {
     }
     if (code == CBN_CLOSEUP || !SendMessageW(ctl, CB_GETDROPPEDSTATE, 0, 0)) host.rebuild();
     return true;
+}
+
+void rollBackTo(PageHost& host, const std::string& to) {
+    const std::wstring dir = host.model().paths().dir;
+    const bool kept = installer::canRollBack(dir) && installer::previousVersion(dir) == to;
+    if (!host.ask(kept ? wtrf(host.lang(), settings::Text::RollbackAsk, {to})
+                       : wtrf(host.lang(), settings::Text::RollbackToAsk, {to, installedVersion(dir)})))
+        return;
+    Args a;
+    a.mode = kept ? Args::Mode::Rollback : Args::Mode::Update;
+    if (!kept) a.to = to;
+    a.then = Args::Then::App;
+    const std::string err = startMode(a);
+    if (!err.empty()) {
+        host.message(wtrf(host.lang(), settings::Text::UpdateError, {err}), true);
+        return;
+    }
+    PostMessageW(GetAncestor(host.window(), GA_ROOT), WM_CLOSE, 0, 0);
 }
 
 void updateAndReopen(PageHost& host, bool ask) {

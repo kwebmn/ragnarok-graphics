@@ -89,18 +89,33 @@ int install(const std::wstring& dir, const Args& a, settings::Lang l) {
 int update(const std::wstring& dir, const Args& a, settings::Lang l) {
     waitFor(a.pid);
     const bool repair = a.mode == Args::Mode::Repair;
-    const CheckResult c = checkNow(dir);
+    CheckResult c = checkNow(dir);
     std::wstring error = wide(c.error);
     bool ok = false;
+    const std::string from = installedVersion(dir);
+    bool back = c.back;
+    if (c.ok && !a.to.empty()) {  // 3.0.17-beta.1: a version of [history] - the rollback to a recent one
+        bool found = false;
+        for (const update::Archive& h : c.branch.history)
+            if (h.version == a.to) {
+                c.branch.package = h;
+                found = back = true;
+            }
+        if (!found) {
+            c.ok = false;
+            error = L"version " + wide(a.to) + L" is not in the update's history";
+        }
+    }
     if (c.ok) {
         const std::wstring title = repair ? wtr(l, Text::Repairing)
-                                   : c.back ? wtrf(l, Text::RollingBack, {c.branch.package.version})  // 3.0.5-beta.1
-                                            : wtrf(l, Text::UpdatingTo, {c.branch.package.version});
+                                   : back ? wtrf(l, Text::RollingBack, {c.branch.package.version})  // 3.0.5-beta.1
+                                          : wtrf(l, Text::UpdatingTo, {c.branch.package.version});
         ok = runWithProgress(nullptr, title, l, a.then == Args::Then::Game,
                              [&](const Report& report, std::wstring& e) {
                                  return runUpdate(dir, c.branch, repair, report, e);
                              },
                              error);
+        if (ok && !a.to.empty()) setSkipped(dir, update::bare(from));  // not offered again: it went wrong
     }
     if (!ok) failed(l, Text::UpdateNothingChanged, error);
     then(dir, a);

@@ -1,6 +1,8 @@
 #include "app/args.hpp"
 
+#include <cctype>
 #include <cwchar>
+#include <cwctype>
 #include <string>
 #include <vector>
 
@@ -63,6 +65,15 @@ Args parseArgs(const std::wstring& line) {
             a.mode = Args::Mode::Install;
         } else if (k == L"--update") {
             a.mode = Args::Mode::Update;
+        } else if (k == L"--to") {  // 3.0.17-beta.1: digits, dots, letters and '-' only
+            std::string v;
+            bool fine = !next.empty() && next.size() <= 40;
+            for (wchar_t c : next) {
+                fine = fine && (std::iswalnum(c) || c == L'.' || c == L'-') && c < 128;
+                v += char(c);
+            }
+            if (fine && std::isdigit(static_cast<unsigned char>(v[0]))) a.to = v;
+            ++i;
         } else if (k == L"--rollback") {
             a.mode = Args::Mode::Rollback;
         } else if (k == L"--repair") {
@@ -141,6 +152,7 @@ std::wstring argsLine(const Args& a) {
     if (!a.reportMap.empty()) s += L" --map " + a.reportMap;
     if (a.logSlot > 1) s += L" --log-slot " + std::to_wstring(a.logSlot);
     if (!a.answer.empty()) s += L" --answer " + a.answer;
+    if (!a.to.empty()) s += L" --to " + std::wstring(a.to.begin(), a.to.end());  // 3.0.17-beta.1
     if (a.then == Args::Then::Game || !a.gameArgs.empty()) s += L" -- " + a.gameArgs;
     return s;
 }
