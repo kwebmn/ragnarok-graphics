@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.17-beta.17 — what's new
+
+- **Fixed: uaRO HD starts again.** uaRO HD's own registry place (betas 13–16) is gone: the game and the app work with the shared one again, as before 3.0.17-beta.13. When those betas took uaRO HD's screen out of it, the app brings it back from their copy.
+
 # uaRO Graphics 3.0.17-beta.16 — what's new
 
 - **Fixed: after 3.0.17-beta.13 uaRO HD did not start (the game hung with no window).** Moving the settings to their own registry place no longer runs while the driver loads but at the game's first registry call. When the game cannot read its own place, it stays on the shared one, as before.
