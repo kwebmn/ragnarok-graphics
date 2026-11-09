@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.17-beta.23 — what's new
+
+- **No silhouette from a buff's trail:** under Two-Hand Quicken and similar buffs the game draws see-through copies of the character, and while walking they turned into a blue silhouette. The silhouette now takes the character alone.
+
 # uaRO Graphics 3.0.17-beta.22 — what's new
 
 - **No white "dome" round monsters:** the flash of a hit and of a death no longer blurs through the halo into a bright dome round the monster - only a short flash on the monster itself stays.
