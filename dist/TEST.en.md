@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.17-beta.14 — what's new
+
+- **uaRO HD repairs the old uaRO at every start:** when a foreign screen shows up again in the shared registry place and keeps the old client from starting ("Cannot init d3d"), uaRO HD removes it and gives the old client its setup.exe screen back — every time, not only the first. When the old client has uaRO Graphics of its own, its screen is left alone: any screen works there.
+
 # uaRO Graphics 3.0.17-beta.13 — what's new
 
 - **uaRO HD and the old uaRO no longer get in each other's way:** both clients kept the game's settings in one place of the Windows registry, and the screen chosen for uaRO HD (32 bits, its size) broke the old client — "Cannot init d3d OR grf file has problem". uaRO HD now has a place of its own: the first start moves everything there (login, bars, windows, bookmarks), and the old client gets the screen from its setup.exe back. The old client loses nothing.
