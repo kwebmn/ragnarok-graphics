@@ -146,6 +146,11 @@ void Remote::recordMessage(Msg type, const std::vector<uint8_t>& payload) {
         LOG_INFO("scene record: %.1f MB, %d messages, %d frames - uaro-graphics\\scene-record.bin (%s)",
                  double(record_.bytes()) / (1024.0 * 1024.0), record_.messages(), record_.frames(),
                  record_.mapSeen() ? "15 s after the first map" : "its ceiling reached before a map");
+        const auto mb = [](uint64_t b) { return double(b) / (1024.0 * 1024.0); };
+        const scenerecord::Recorder::Parts &a = record_.before(), &b = record_.after();
+        LOG_INFO("scene record: before the map - textures %.1f MB, pixels written %.1f MB, vertices %.1f MB; after it "
+                 "- textures %.1f MB, pixels written %.1f MB, vertices %.1f MB",
+                 mb(a.uploads), mb(a.writes), mb(a.vertices), mb(b.uploads), mb(b.writes), mb(b.vertices));
         return;
     }
     uint8_t head[scenerecord::kEntryHead];
@@ -555,6 +560,13 @@ void Remote::execute(const FrameRecord& record) {
     buffer_.clear();
     WireWriter w(buffer_);
     bridge::writeRecord(w, record);
+    if (recordFile_ != INVALID_HANDLE_VALUE) {  // 3.0.17-beta.8: what the recorded frame carries
+        uint64_t uploads = 0, writes = 0;
+        for (const UploadCmd& u : record.uploads()) uploads += uint64_t(u.rect.width()) * uint64_t(u.rect.height()) * 4;
+        for (const WriteTargetCmd& t : record.writes())
+            writes += uint64_t(t.rect.width()) * uint64_t(t.rect.height()) * 4;
+        record_.noteFrame(uploads, writes, record.vertexBytes().size());
+    }
     send(Msg::Execute, buffer_);
     QueryPerformanceCounter(&b);
     sendTicks_ += b.QuadPart - a.QuadPart;  // 2.1.1

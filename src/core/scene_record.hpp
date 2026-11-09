@@ -27,11 +27,20 @@ public:
     int frames() const { return frames_; }
     uint64_t bytes() const { return bytes_; }
     bool mapSeen() const { return mapAt_ != 0 || mapSeen_; }
+    // 3.0.17-beta.8 (R-MANK7P: 1192 MB in 24 s): what the recorded frames carry - texture pixels (Upload), pixels the
+    // game wrote into the picture (WriteTarget), the draws' vertices - before the first map and after it
+    struct Parts {
+        uint64_t uploads = 0, writes = 0, vertices = 0;
+    };
+    void noteFrame(uint64_t uploads, uint64_t writes, uint64_t vertices);
+    const Parts& before() const { return before_; }
+    const Parts& after() const { return after_; }
 
 private:
     bool done_ = false, mapSeen_ = false;
     uint64_t mapAt_ = 0, bytes_ = 0;
     int messages_ = 0, frames_ = 0;
+    Parts before_, after_;
 };
 
 }  // namespace uagfx::scenerecord

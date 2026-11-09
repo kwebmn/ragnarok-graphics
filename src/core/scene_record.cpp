@@ -9,6 +9,13 @@ void entryHead(uint32_t type, uint32_t size, uint8_t out[kEntryHead]) {
     std::memcpy(out + 4, &size, 4);
 }
 
+void Recorder::noteFrame(uint64_t uploads, uint64_t writes, uint64_t vertices) {
+    Parts& p = mapSeen_ ? after_ : before_;
+    p.uploads += uploads;
+    p.writes += writes;
+    p.vertices += vertices;
+}
+
 bool Recorder::take(uint32_t type, size_t size, bool mapShown, uint64_t nowMs) {
     if (done_) return false;
     if (mapSeen_ && nowMs > mapAt_ + kAfterMapMs) {

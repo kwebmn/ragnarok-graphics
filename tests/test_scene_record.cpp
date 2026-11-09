@@ -37,3 +37,15 @@ TEST(scene_record_entry_head) {
     CHECK_EQ(size, 0x01020304u);
     CHECK(std::memcmp(scenerecord::kMagic, "UAROSCN1", 8) == 0);
 }
+
+// 3.0.17-beta.8: the parts counted before the first map and after it
+TEST(scene_record_parts_by_the_map) {
+    scenerecord::Recorder r;
+    r.noteFrame(100, 10, 1);
+    CHECK(r.take(8, 1, false, 0));
+    CHECK(r.take(14, 9, true, 5));
+    r.noteFrame(200, 20, 2);
+    CHECK_EQ(r.before().uploads, uint64_t(100));
+    CHECK_EQ(r.after().writes, uint64_t(20));
+    CHECK_EQ(r.after().vertices, uint64_t(2));
+}
