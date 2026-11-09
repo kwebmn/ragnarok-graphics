@@ -68,8 +68,8 @@ Args parseArgs(const std::wstring& line) {
             std::string v;
             bool fine = !next.empty() && next.size() <= 40;
             for (wchar_t c : next) {
-                fine = fine && ((c >= L'0' && c <= L'9') || (c >= L'a' && c <= L'z') || (c >= L'A' && c <= L'Z') || c == L'.' ||
-                                 c == L'-');
+                const bool letter = (c >= L'a' && c <= L'z') || (c >= L'A' && c <= L'Z');
+                fine = fine && (letter || (c >= L'0' && c <= L'9') || c == L'.' || c == L'-');
                 v += char(c);
             }
             if (fine && std::isdigit(static_cast<unsigned char>(v[0]))) a.to = v;
