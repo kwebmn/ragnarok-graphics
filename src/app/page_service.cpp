@@ -8,6 +8,7 @@
 #include "app/palettes.hpp"
 #include "app/setting_ids.hpp"
 #include "app/update.hpp"
+#include "app/update_run.hpp"
 #include "core/settings/presets.hpp"
 #include "core/updates.hpp"
 #include "core/update_check.hpp"
