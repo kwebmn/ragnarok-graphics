@@ -1,3 +1,8 @@
+# uaRO Graphics 3.0.17-beta.9 — what's new
+
+- **«Choose for my card»** on «Play», in «How the game looks». The app looks at your video card and sets «Picture» and «Textures» at once: after the first game by how the card actually drew it, before that by its memory. The interface stays as it is.
+- The old scene record (`uaro-graphics\scene-record.bin`, over 1 GB) is removed by itself when «Record a scene» is off.
+
 # uaRO Graphics 3.0.17-beta.8 — what's new
 
 - **For developers: «Record a scene»** now logs what the record is made of — textures, pictures the game draws itself, vertices — before the first map and after it.
