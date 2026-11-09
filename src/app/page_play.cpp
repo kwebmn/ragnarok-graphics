@@ -11,6 +11,7 @@
 #include "app/status_info.hpp"
 #include "app/update.hpp"
 #include "core/graphics_test.hpp"
+#include "core/settings/choice_presets.hpp"
 #include "core/layout.hpp"
 #include "core/start_failures.hpp"
 #include "core/version.hpp"
@@ -31,6 +32,9 @@ constexpr int kUpdateNow = 2108;    // 3.0.1-beta.4 (the user): «Оновити
 constexpr int kTestNow = 2109;    // 3.0.5-beta.7 (the user: «сделай»): «Запустити тест графіки»
 constexpr int kTestList = 2130;   // and the last test's table
 constexpr int kAutopilotChange = 2131;  // 3.0.11-beta.58: the automatic set's line - the Effects page
+constexpr int kAnotherWindow = 2133;  // 3.0.17-beta.3: the welcome screen's «Ще вікно гри»
+constexpr int kReportNew = 2134;      // «Повідомити про помилку»
+constexpr int kLookChange = 2135;     // «Як виглядає гра»: «Змінити ›» - «Головна»
 constexpr int kRollBack = 2132;  // 3.0.17-beta.1: «← Повернути 3.0.15»
 constexpr int kNewsFirst = 2110;  // + a news item's number: its "More"
 constexpr int kNewsMost = 10;
@@ -78,33 +82,15 @@ public:
         const std::string offer = u.kind == UpdateState::Done ? u.offer : "";
         const bool patchNeeded = patch.kind == PatchState::Done && !patch.check.needed.empty();
         buildCards(p);
-        p.heading(t(Text::PlayNews));
-        p.buttons({{kWhatsNew, tf(Text::MainWhatsNew, {kVersion})}});
-        urls_.clear();
-        if (asking_ || s.kind == LauncherState::Idle)
-            p.note(t(Text::PlayAsking));
-        else if (s.kind == LauncherState::Failed)
-            p.note(tf(Text::PlayNoSite, {utf8(t(Text::PlayButton))}), Tone::Warn);
-        else if (s.info.news.empty())
-            p.note(t(Text::PlayNoNews));
-        for (const launcher::News& n : s.info.news) {
-            p.note(n.pinned ? tf(Text::PlayPinned, {n.date}) : wide(n.date), n.pinned ? Tone::Accent : Tone::Muted);
-            p.note(wide(n.title), Tone::Normal);
-            if (!n.excerpt.empty()) p.note(wide(n.excerpt));
-            if (!n.url.empty() && urls_.size() < kNewsMost) {
-                p.buttons({{kNewsFirst + int(urls_.size()), t(Text::PlayMore)}});
-                urls_.push_back(n.url);
-            }
-            p.gap(8);
-        }
-        p.gap();
-        p.heading(t(Text::PlayServer));
-        if (s.kind == LauncherState::Done && s.info.online >= 0)
-            p.note(tf(Text::PlayOnline, {std::to_string(s.info.online)}), Tone::Good);
-        else if (s.kind == LauncherState::Failed)
-            p.note(tf(Text::UpdateFailed, {s.error}), Tone::Muted);  // why, for a report
-        else
-            p.note(t(Text::PlayAsking), Tone::Muted);
+        // 3.0.17-beta.3 (the concept «простой старт»): the welcome screen - «Грати» and the update first, then the
+        // other window, the report, how the game looks; the news beside them
+        const bool two = p.split();
+        Text play = offer.empty() && !patchNeeded ? Text::PlayButton : Text::PlayUpdateButton;
+        if (!offer.empty() && u.back) play = Text::PlayBackButton;  // 3.0.5-beta.1: the release back, then the game
+        p.buttons({{kPlayNow, t(play), true, true}});  // 3.0.2: blue
+        p.buttons({{kAnotherWindow, t(Text::PlayAnotherWindow), true}, {kReportNew, t(Text::PlayReport), true}});
+        p.note(t(Text::PlayKeysLine));  // 3.0.2-beta.4: the game's keys, all of them on «Головне»
+        rows_->buildRow(p, "launcher.direct_start");
         p.gap();
         p.heading(t(Text::ServiceUpdate));
         buildChannel(p, host_, kChannel);  // 3.0.1-beta.2 (the user): the channel and the check here, in every mode
@@ -143,13 +129,40 @@ public:
             p.note(t(Text::PlayPatchNote));
         }
         p.gap();
-        Text play = offer.empty() && !patchNeeded ? Text::PlayButton : Text::PlayUpdateButton;
-        if (!offer.empty() && u.back) play = Text::PlayBackButton;  // 3.0.5-beta.1: the release back, then the game
-        p.buttons({{kPlayNow, t(play), true, true}});  // 3.0.2: blue
-        p.note(t(Text::PlayKeysLine));  // 3.0.2-beta.4: the game's keys, all of them on «Головне»
-        rows_->buildRow(p, "launcher.direct_start");
+        buildLook(p);
         p.gap();
         buildTest(p);
+        if (two)
+            p.nextColumn();
+        else
+            p.gap(16);
+        p.heading(t(Text::PlayNews));
+        p.buttons({{kWhatsNew, tf(Text::MainWhatsNew, {kVersion})}});
+        urls_.clear();
+        if (asking_ || s.kind == LauncherState::Idle)
+            p.note(t(Text::PlayAsking));
+        else if (s.kind == LauncherState::Failed)
+            p.note(tf(Text::PlayNoSite, {utf8(t(Text::PlayButton))}), Tone::Warn);
+        else if (s.info.news.empty())
+            p.note(t(Text::PlayNoNews));
+        for (const launcher::News& n : s.info.news) {
+            p.note(n.pinned ? tf(Text::PlayPinned, {n.date}) : wide(n.date), n.pinned ? Tone::Accent : Tone::Muted);
+            p.note(wide(n.title), Tone::Normal);
+            if (!n.excerpt.empty()) p.note(wide(n.excerpt));
+            if (!n.url.empty() && urls_.size() < kNewsMost) {
+                p.buttons({{kNewsFirst + int(urls_.size()), t(Text::PlayMore)}});
+                urls_.push_back(n.url);
+            }
+            p.gap(8);
+        }
+        p.gap();
+        p.heading(t(Text::PlayServer));
+        if (s.kind == LauncherState::Done && s.info.online >= 0)
+            p.note(tf(Text::PlayOnline, {std::to_string(s.info.online)}), Tone::Good);
+        else if (s.kind == LauncherState::Failed)
+            p.note(tf(Text::UpdateFailed, {s.error}), Tone::Muted);  // why, for a report
+        else
+            p.note(t(Text::PlayAsking), Tone::Muted);
     }
 
     // 3.0.5-beta.7 (the user: «сделай»): «Тест графіки» - the game started for it alone (its first map runs the test,
@@ -199,6 +212,21 @@ public:
             p.note(tf(Text::PlayTestSent, {said}), Tone::Good);
         else if (!said.empty())
             p.note(tf(Text::PlayTestNotSent, {said.rfind("error: ", 0) == 0 ? said.substr(7) : said}), Tone::Warn);
+    }
+
+    // 3.0.17-beta.3: the three choices in a line each, «Змінити ›» opens «Головна» where they are chosen
+    void buildLook(Panel& p) {
+        const Config c = host_.model().pendingConfig();
+        p.heading(t(Text::LookHead));
+        for (int k = 0; k < settings::presets::kChoices; ++k) {
+            const auto choice = settings::presets::Choice(k);
+            const auto now = settings::presets::match(choice, c);
+            const std::string name = utf8(t(settings::presets::nameOf(choice, now.variant)));
+            const std::wstring value =
+                now.changed > 0 ? tf(Text::LookChanged, {name, std::to_string(now.changed)}) : wide(name);
+            p.note(t(settings::presets::headOf(choice)) + L": " + value, Tone::Normal);
+        }
+        p.buttons({{kLookChange, t(Text::PlayLookChange), true}});
     }
 
     std::string rollBack_;  // 3.0.17-beta.1: the version «← Повернути» goes back to, "" none
@@ -263,6 +291,13 @@ public:
             host_.rebuild();
         } else if (id == kUpdateNow) {
             updateAndReopen(host_, false);  // the button says it: no question
+        } else if (id == kAnotherWindow) {  // 3.0.17-beta.3
+            const std::wstring err = m.launchGame(host_.lang());
+            if (!err.empty()) host_.message(err, true);
+        } else if (id == kReportNew) {
+            host_.openReports(true);
+        } else if (id == kLookChange) {
+            host_.showView(settings::View::Main, 0);
         } else if (id == kRollBack && !rollBack_.empty()) {
             rollBackTo(host_, rollBack_);  // 3.0.17-beta.1
         } else if (id == kAutopilotChange) {

@@ -28,6 +28,18 @@ Keys interfaceKeys(Ui u) {
 
 }  // namespace
 
+Text headOf(Choice c) {
+    return c == Choice::Picture ? Text::LookPicture : c == Choice::Interface ? Text::LookUi : Text::LookTextures;
+}
+
+Text nameOf(Choice c, int variant) {
+    static const Text picture[] = {Text::LookAuto, Text::LookGame, Text::LookBetter, Text::LookRemaster};
+    static const Text ui[] = {Text::LookUiNew, Text::LookUiScreen, Text::LookUiClassic};
+    static const Text textures[] = {Text::LookTexHd, Text::LookTexLight, Text::LookTexOriginal};
+    if (variant < 0 || variant >= variants(c)) return Text::LookAuto;
+    return c == Choice::Picture ? picture[variant] : c == Choice::Interface ? ui[variant] : textures[variant];
+}
+
 int variants(Choice c) { return c == Choice::Picture ? 4 : 3; }
 
 std::vector<std::pair<std::string, std::string>> keysOf(Choice c, int variant) {

@@ -56,3 +56,9 @@ TEST(choice_presets_apply_writes_only_its_keys) {
     CHECK(out.find("grass = 0") != std::string::npos);  // the other choices' keys stay
     CHECK_EQ(presets::match(presets::Choice::Interface, c).changed, 0);
 }
+
+TEST(choice_presets_names) {
+    CHECK(presets::headOf(presets::Choice::Interface) == Text::LookUi);
+    CHECK(presets::nameOf(presets::Choice::Picture, int(presets::Picture::Remaster)) == Text::LookRemaster);
+    CHECK(presets::nameOf(presets::Choice::Textures, int(presets::Textures::Original)) == Text::LookTexOriginal);
+}

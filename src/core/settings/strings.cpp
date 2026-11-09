@@ -3567,6 +3567,9 @@ constexpr Entry kTexts[] = {
      "«Скасувати»).",
      "Выбор пишет только свои настройки; изменённое в них вручную будет заменено (до «Применить» его возвращает "
      "«Отменить»)."},
+    {Text::PlayAnotherWindow, "One more game window", "Ще вікно гри", "Ещё окно игры"},
+    {Text::PlayReport, "Report a problem", "Повідомити про помилку", "Сообщить об ошибке"},
+    {Text::PlayLookChange, "Change \xE2\x80\xBA", "Змінити \xE2\x80\xBA", "Изменить \xE2\x80\xBA"},
     {Text::MainIntro,
      "What a game needs. Everything else is in the Detailed mode.", "Головне для гри. Усе інше - у докладному режимі.",
      "Главное для игры. Всё остальное - в подробном режиме."},

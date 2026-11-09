@@ -141,19 +141,16 @@ private:
         const Config c = host_.model().pendingConfig();
         p.heading(t(Text::LookHead));
         p.note(t(Text::LookNote));
-        const Text heads[presets::kChoices] = {Text::LookPicture, Text::LookUi, Text::LookTextures};
-        const std::vector<Text> names[presets::kChoices] = {
-            {Text::LookAuto, Text::LookGame, Text::LookBetter, Text::LookRemaster},
-            {Text::LookUiNew, Text::LookUiScreen, Text::LookUiClassic},
-            {Text::LookTexHd, Text::LookTexLight, Text::LookTexOriginal}};
         for (int k = 0; k < presets::kChoices; ++k) {
-            const presets::Match now = presets::match(presets::Choice(k), c);
+            const presets::Choice choice = presets::Choice(k);
+            const presets::Match now = presets::match(choice, c);
             std::vector<std::wstring> items;
-            for (size_t v = 0; v < names[k].size(); ++v)
-                items.push_back(int(v) == now.variant && now.changed > 0
-                                    ? tf(Text::LookChanged, {utf8(t(names[k][v])), std::to_string(now.changed)})
-                                    : t(names[k][v]));
-            p.choice(kLookFirst + k, t(heads[k]), items, now.variant, t(Text::LookHint));
+            for (int v = 0; v < presets::variants(choice); ++v)
+                items.push_back(v == now.variant && now.changed > 0
+                                    ? tf(Text::LookChanged, {utf8(t(presets::nameOf(choice, v))),
+                                                             std::to_string(now.changed)})
+                                    : t(presets::nameOf(choice, v)));
+            p.choice(kLookFirst + k, t(presets::headOf(choice)), items, now.variant, t(Text::LookHint));
         }
         p.gap();
     }

@@ -350,6 +350,7 @@ enum class Text : uint16_t {
     // 3.0.17-beta.2 (the concept «простой старт»): the three choices
     LookHead, LookNote, LookPicture, LookAuto, LookGame, LookBetter, LookRemaster, LookUi, LookUiNew, LookUiScreen,
     LookUiClassic, LookTextures, LookTexHd, LookTexLight, LookTexOriginal, LookChanged, LookHint,
+    PlayAnotherWindow, PlayReport, PlayLookChange,  // 3.0.17-beta.3: the welcome screen
     MainIntro, MainPicture, MainQualityLow, MainQualityMedium, MainQualityHigh, MainQualitySuperLight, MainQualityOwn,
     MainQualityHint, MainOther, MainRecommended, MainWhatsNew, MainState, MainDriver,
     MainUpdateNone, MainUpdateNew, MainNoD3d, MainDlss, MainNoDlss, MainHd, MainPack, MainNoPack, MainMakePack,

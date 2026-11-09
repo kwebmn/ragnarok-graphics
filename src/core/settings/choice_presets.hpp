@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "core/config.hpp"
+#include "core/settings/strings.hpp"
 
 namespace uagfx::settings::presets {
 
@@ -28,6 +29,9 @@ struct Match {
     int changed = 0;  // how many of its keys the settings have otherwise
 };
 Match match(Choice c, const Config& config);
+
+Text headOf(Choice c);             // «Картинка», «Інтерфейс», «Текстури»
+Text nameOf(Choice c, int variant);  // the variant's words
 
 // uaro-graphics.ini's text with the variant's keys written (every other byte as it was)
 std::string apply(const std::string& ini, Choice c, int variant);
