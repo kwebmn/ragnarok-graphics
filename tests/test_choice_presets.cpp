@@ -62,3 +62,20 @@ TEST(choice_presets_names) {
     CHECK(presets::nameOf(presets::Choice::Picture, int(presets::Picture::Remaster)) == Text::LookRemaster);
     CHECK(presets::nameOf(presets::Choice::Textures, int(presets::Textures::Original)) == Text::LookTexOriginal);
 }
+
+// 3.0.17-beta.9 (the owner: the card checked «без этого всего» - no recorded scenes): the picture and the textures
+// by the card's level (as the game judged its drawing, else by its memory) and its memory
+TEST(choice_presets_suggest_by_the_card) {
+    const presets::Suggestion strong = presets::suggest(3, 12288, false);
+    CHECK_EQ(strong.picture, int(presets::Picture::Remaster));
+    CHECK_EQ(strong.textures, int(presets::Textures::Hd));
+    const presets::Suggestion middle = presets::suggest(2, 6144, false);
+    CHECK_EQ(middle.picture, int(presets::Picture::Better));
+    CHECK_EQ(middle.textures, int(presets::Textures::Hd));
+    const presets::Suggestion weak = presets::suggest(1, 2048, false);  // a GTX 1050 class card
+    CHECK_EQ(weak.picture, int(presets::Picture::Auto));
+    CHECK_EQ(weak.textures, int(presets::Textures::HdLight));
+    const presets::Suggestion laptop = presets::suggest(1, 512, true);  // integrated: its memory is the computer's
+    CHECK_EQ(laptop.textures, int(presets::Textures::HdLight));
+    CHECK_EQ(presets::suggest(1, 1024, false).textures, int(presets::Textures::Original));
+}

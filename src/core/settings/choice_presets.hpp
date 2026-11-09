@@ -30,6 +30,15 @@ struct Match {
 };
 Match match(Choice c, const Config& config);
 
+// 3.0.17-beta.9 (the owner: «тест видеокарты ... просто запустил оно посмотрело видеокарту и выбрало», then «без
+// этого всего» - no recorded scenes): «Картинка» and «Текстури» for the card - its level 1-3 (as the game judged
+// its drawing, card_speed, else by its memory, effect_groups::cardLevel) and its own memory (integrated: the
+// computer's, HD light)
+struct Suggestion {
+    int picture = 0, textures = 0;
+};
+Suggestion suggest(int cardLevel, unsigned long long vramMb, bool integrated);
+
 Text headOf(Choice c);             // «Картинка», «Інтерфейс», «Текстури»
 Text nameOf(Choice c, int variant);  // the variant's words
 

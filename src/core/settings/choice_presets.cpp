@@ -28,6 +28,15 @@ Keys interfaceKeys(Ui u) {
 
 }  // namespace
 
+Suggestion suggest(int cardLevel, unsigned long long vramMb, bool integrated) {
+    Suggestion s;
+    s.picture = int(cardLevel >= 3 ? Picture::Remaster : cardLevel == 2 ? Picture::Better : Picture::Auto);
+    s.textures = int(integrated || (vramMb >= 2048 && vramMb < 4096) ? Textures::HdLight
+                     : vramMb >= 4096                                 ? Textures::Hd
+                                                                      : Textures::Original);
+    return s;
+}
+
 Text headOf(Choice c) {
     return c == Choice::Picture ? Text::LookPicture : c == Choice::Interface ? Text::LookUi : Text::LookTextures;
 }

@@ -10,6 +10,7 @@
 #include "app/setting_ids.hpp"
 #include "app/status_info.hpp"
 #include "app/update.hpp"
+#include "core/card_speed.hpp"
 #include "core/graphics_test.hpp"
 #include "core/settings/choice_presets.hpp"
 #include "core/layout.hpp"
@@ -36,7 +37,8 @@ constexpr int kAnotherWindow = 2133;  // 3.0.17-beta.3: the welcome screen's «�
 constexpr int kReportNew = 2134;      // «Повідомити про помилку»
 constexpr int kLookChange = 2135;
 constexpr int kNewFeatures = 2136;  // 3.0.17-beta.6: «★ Нові можливості (N)»
-constexpr int kChangedOnly = 2137;  // and «Лише змінені»     // «Як виглядає гра»: «Змінити ›» - «Головна»
+constexpr int kChangedOnly = 2137;
+constexpr int kSuggest = 2138;  // 3.0.17-beta.9: «Підібрати під відеокарту»  // and «Лише змінені»     // «Як виглядає гра»: «Змінити ›» - «Головна»
 constexpr int kRollBack = 2132;  // 3.0.17-beta.1: «← Повернути 3.0.15»
 constexpr int kNewsFirst = 2110;  // + a news item's number: its "More"
 constexpr int kNewsMost = 10;
@@ -228,6 +230,30 @@ public:
                 now.changed > 0 ? tf(Text::LookChanged, {name, std::to_string(now.changed)}) : wide(name);
             p.note(t(settings::presets::headOf(choice)) + L": " + value, Tone::Normal);
         }
+        // 3.0.17-beta.9 (the owner: the card looked at, the set chosen - no game, no recorded scenes): what fits the
+        // card - its level as the game judged its drawing (card-level.txt), else by its memory
+        Model& model = host_.model();
+        const settings::Machine machine = model.machine();
+        std::string judgedText;
+        readFile(model.paths().dir + L"\\" + wide(layout::kCardLevel), judgedText);
+        card_speed::Record judged;
+        const bool byGame = card_speed::parse(judgedText, judged) && judged.settled && judged.adapter == machine.adapter;
+        suggestion_ = settings::presets::suggest(model.cardLevel(), machine.vramMb, machine.integrated);
+        const bool fits =
+            settings::presets::match(settings::presets::Choice::Picture, c).variant == suggestion_.picture &&
+            settings::presets::match(settings::presets::Choice::Textures, c).variant == suggestion_.textures;
+        if (!machine.adapter.empty()) {
+            const std::string gb = std::to_string((machine.vramMb + 512) / 1024);
+            const std::string memory = utf8(machine.integrated ? t(Text::CardIntegrated) : tf(Text::CardMemory, {gb}));
+            p.note(tf(Text::CardSuggest, {machine.adapter, memory,
+                                          utf8(t(settings::presets::nameOf(settings::presets::Choice::Picture,
+                                                                           suggestion_.picture))),
+                                          utf8(t(settings::presets::nameOf(settings::presets::Choice::Textures,
+                                                                           suggestion_.textures)))}),
+                   fits ? Tone::Good : Tone::Accent);
+            p.note(t(byGame ? Text::CardByGame : Text::CardByMemory));
+            p.buttons({{kSuggest, t(fits ? Text::CardFits : Text::CardApply), !fits, !fits}});
+        }
         int fresh = 0;  // 3.0.17-beta.6: the rows new to the player
         for (const settings::IniSetting& s : settings::iniSettings())
             fresh += host_.model().isNew(settings::sectionKey(s)) ? 1 : 0;
@@ -236,6 +262,7 @@ public:
                    {kChangedOnly, t(Text::PlayChangedOnly), true}});
     }
 
+    settings::presets::Suggestion suggestion_;  // 3.0.17-beta.9
     std::string rollBack_;  // 3.0.17-beta.1: the version «← Повернути» goes back to, "" none
     std::wstring testFile() const { return host_.model().paths().dir + L"\\uaro-graphics\\graphics-test.txt"; }
 
@@ -305,6 +332,14 @@ public:
             host_.openReports(true);
         } else if (id == kLookChange) {
             host_.showView(settings::View::Main, 0);
+        } else if (id == kSuggest) {  // 3.0.17-beta.9: the picture and the textures for the card
+            for (const auto& [choice, variant] :
+                 {std::pair{settings::presets::Choice::Picture, suggestion_.picture},
+                  std::pair{settings::presets::Choice::Textures, suggestion_.textures}})
+                for (const auto& [key, token] : settings::presets::keysOf(choice, variant))
+                    if (const settings::IniSetting* s = settings::findSetting(key)) m.setToken(*s, token);
+            host_.changed();
+            host_.rebuild();
         } else if (id == kNewFeatures || id == kChangedOnly) {  // 3.0.17-beta.6
             host_.search(id == kNewFeatures ? kNewQuery : kChangedQuery);
         } else if (id == kRollBack && !rollBack_.empty()) {
