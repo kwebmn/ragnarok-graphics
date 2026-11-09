@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.17-beta.4 — what's new
+
+- **Alt+D in the game has tabs now:** «Quick», «Picture», «Interface», «Textures», «All». ← → on the top row switch them. **«Quick»** opens first: the three «How the game looks» choices, what is switched most (night, weather, grass, torch shadows, new effects, 60 fps, frame counter, ping, monster HP) and your pinned rows. **Insert** on any row pins it ★ to «Quick» (again: takes it off). «All» is the full list as before; typing letters searches everything.
+
 # uaRO Graphics 3.0.17-beta.3 — what's new
 
 - **«Play» became the welcome screen.** A big «Play» at the top, «One more game window» and «Report a problem» beside it. Below: the update (and «← Back» when needed), «How the game looks» with its three choices and «Change ›», the graphics test. News and the server on the right.
