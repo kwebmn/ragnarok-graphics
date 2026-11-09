@@ -351,6 +351,7 @@ enum class Text : uint16_t {
     LookHead, LookNote, LookPicture, LookAuto, LookGame, LookBetter, LookRemaster, LookUi, LookUiNew, LookUiScreen,
     LookUiClassic, LookTextures, LookTexHd, LookTexLight, LookTexOriginal, LookChanged, LookHint,
     PlayAnotherWindow, PlayReport, PlayLookChange,  // 3.0.17-beta.3: the welcome screen
+    MoreRowsShow, MoreRowsHide,  // 3.0.17-beta.5: a part's detailed rows folded
     ConsoleTabQuick, ConsoleTabAll, ConsoleOften, ConsolePinned, ConsoleActions,  // 3.0.17-beta.4: Alt+D's tabs
     MainIntro, MainPicture, MainQualityLow, MainQualityMedium, MainQualityHigh, MainQualitySuperLight, MainQualityOwn,
     MainQualityHint, MainOther, MainRecommended, MainWhatsNew, MainState, MainDriver,

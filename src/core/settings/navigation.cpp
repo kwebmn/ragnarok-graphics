@@ -74,9 +74,10 @@ Text viewName(View v) {
 }
 
 std::vector<View> viewsOf(Mode m) {
-    if (m == Mode::Simple) return {View::Play, View::Main, View::Effects, View::Interface, View::Pad, View::Help};
-    std::vector<View> list{View::Play,     View::Graphics,  View::Screen,  View::Effects, View::Ai, View::Sound,
-                           View::Pad,      View::GameChat,  View::Interface, View::Service, View::Help};
+    // 3.0.17-beta.5 (the concept «простой старт»): every page in the simple mode too - its detailed rows folded
+    // behind «Ще N налаштувань ›» (page_settings), not hidden with their pages
+    std::vector<View> list{View::Play,    View::Main,     View::Graphics,  View::Screen,  View::Effects, View::Ai,
+                           View::Sound,   View::Pad,      View::GameChat,  View::Interface, View::Service, View::Help};
     if (m == Mode::Developer) list.push_back(View::Debug);
     return list;
 }

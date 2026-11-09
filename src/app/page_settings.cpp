@@ -3,6 +3,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <set>
 #include <utility>
 
 #include "app/page.hpp"
@@ -174,6 +175,12 @@ public:
 
     void command(int id, int code) override {
         Model& m = host_.model();
+        if (id >= kMoreRows && id < kMoreRows + settings::kPageCount && code == BN_CLICKED) {  // 3.0.17-beta.5
+            std::set<int>& open = expanded();
+            if (!open.erase(id - kMoreRows)) open.insert(id - kMoreRows);
+            host_.rebuild();
+            return;
+        }
         if (id >= kRows && (id - kRows) % 4 == 3 && code == STN_CLICKED) {  // 3.0.11-beta.303: a dot - recommended
             const size_t i = size_t(id - kRows) / 4;
             if (i < iniSettings().size()) {
@@ -537,8 +544,26 @@ private:
     // A row of the part being built that the mode shows (2.6) and its values call for.
     // 2.15: and this computer can use (fitsMachine: DLSS on NVIDIA, HDR with an HDR screen)
     bool listed(const IniSetting& s) const {
-        return s.page == which_ && levelOf(s) <= host_.mode() && shown(s) &&
-               fitsMachine(sectionKey(s), host_.model().machine());
+        return s.page == which_ && (levelOf(s) <= host_.mode() || (folds(s) && expanded().count(int(which_)))) &&
+               shown(s) && fitsMachine(sectionKey(s), host_.model().machine());
+    }
+
+    // 3.0.17-beta.5 (the concept «простой старт»: the deep settings «не прятать, но не сразу на виду»): in the
+    // simple mode a part's detailed rows are behind its «Ще N налаштувань ›», opened for the app's run
+    bool folds(const IniSetting& s) const {
+        return host_.mode() == settings::Mode::Simple && levelOf(s) == settings::Mode::Detailed;
+    }
+    static std::set<int>& expanded() {
+        static std::set<int> parts;
+        return parts;
+    }
+    int foldedCount(const char* section) const {
+        int n = 0;
+        for (const IniSetting& s : iniSettings())
+            if (s.page == which_ && folds(s) && shown(s) && fitsMachine(sectionKey(s), host_.model().machine()) &&
+                (!section || std::strcmp(s.section, section) == 0))
+                ++n;
+        return n;
     }
 
     // 2.4.2: DLSS's own size shows under Own size, its model with DLSS on
@@ -675,6 +700,11 @@ private:
             while (next < all.size() && !mine(all[next])) ++next;
             if (!appliesNow(sectionKey(s)) && (next == all.size() || appliesNow(sectionKey(all[next]))))
                 p.note(t(Text::AfterRestart));
+        }
+        if (const int folded = foldedCount(section); folded > 0) {  // 3.0.17-beta.5
+            const bool open = expanded().count(int(which_)) != 0;
+            p.buttons({{kMoreRows + int(which_),
+                        open ? t(Text::MoreRowsHide) : tf(Text::MoreRowsShow, {std::to_string(folded)})}});
         }
         if (!liveNote) return;
         p.gap();
