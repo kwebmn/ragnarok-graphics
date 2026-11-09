@@ -1,3 +1,8 @@
+# uaRO Graphics 3.0.17-beta.19 — what's new
+
+- **A hung game no longer holds the update:** when the game runs without a window (it hung while starting), the service page offers a button to close the hung game - the app closes it (and this folder's setup.exe), and the update goes on.
+- **White ground (R-7XY449):** the log now writes what the ground's colour is made of on each map - the next report with white ground shows the cause.
+
 # uaRO Graphics 3.0.17-beta.18 — what's new
 
 - **uaRO HD no longer breaks the old uaRO:** uaRO HD's screen (size, full screen) now lives in its own file, and the driver gives it to the game itself. The shared registry place stays the old client's: every start of uaRO HD's app gives the old client its setup.exe screen back ("Cannot init d3d" should not show again). The login, bars and the rest of the game's settings stay as they were. When the old client has uaRO Graphics of its own, its screen is left alone.
