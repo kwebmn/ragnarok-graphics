@@ -139,6 +139,7 @@ private:
     bool scaledUpscale_ = false;  // and whether DLSS draws the world (part 3)
     bool cameraKnown_ = false;    // the game's camera was read last frame (part 3, for the log)
     std::string map_;  // the map the game showed at the last present (AI textures)
+    ULONGLONG mapLightAt_ = 0;  // 3.0.18-beta.5: when to log the light the game holds for the map (0: done)
     // 3.0.2-beta.12: a map's loading measured (watchMapLoad) - the frames over it, the bridge's times and cps.dll's
     // count at its start; 3.0.2-beta.13: its loading pictures and the game's frames apart, the ones shown, the picks
     map_load::Watch mapLoad_;

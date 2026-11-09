@@ -123,6 +123,7 @@ bool Renderer::Impl::prepareOwnGround() {
         o.serial = g->serial;
         o.shading.reset(g->width, g->height, g->zoom);
         o.wallCheck.reset(g->width, g->height, g->zoom);  // 3.0.7-beta.3
+        o.wallApartDraw.clear();
         o.wallsTold = false;
         o.colours[0].assign(g->mesh.vertices.size(), 0);  // 3.0.4-beta.12: the colours made as the chunks show
         o.colours[1].assign(g->distant.vertices.size(), 0);
@@ -247,14 +248,28 @@ void Renderer::Impl::noteOwnGround(const FrameRecord& rec, const DrawCmd& d) {
         // it (terrain::wallLight) - in the log once kWallsChecked walls of the map's are seen
         const OwnGround* g = o.wallsTold ? nullptr : mapWorld.ownGround();
         if (g && g->serial == o.serial) {
-            o.wallCheck.note(lo, hi, v[0].diffuse, g->wallLight);
+            // 3.0.18-beta.5 (the owner: «засветление стен»): all its corners, and the first apart's stages
+            uint32_t corners[4] = {};
+            const int count = int(std::min(d.vertexCount, 4u));
+            for (int i = 0; i < count; ++i) corners[i] = v[i].diffuse;
+            const bool apartBefore = !o.wallCheck.firstApart().empty();
+            o.wallCheck.note(lo, hi, v[0].diffuse, g->wallLight, corners, count);
+            if (!apartBefore && !o.wallCheck.firstApart().empty()) {
+                const DrawSetup& w = rec.states()[d.state];
+                char text[160];
+                std::snprintf(text, sizeof text, "; its draw: stage 0 op %u (%u, %u), stage 1 op %u (%u, %u), "
+                              "%u vertices, blend %d %d/%d", w.stage[0].colorOp, w.stage[0].colorArg1,
+                              w.stage[0].colorArg2, w.stage[1].colorOp, w.stage[1].colorArg1, w.stage[1].colorArg2,
+                              d.vertexCount, int(w.blend), int(w.srcBlend), int(w.dstBlend));
+                o.wallApartDraw = text;
+            }
             if (o.wallCheck.seen() >= kWallsChecked) {
                 o.wallsTold = true;
                 const std::string& apart = o.wallCheck.firstApart();
                 LOG_INFO("own ground: %s's walls - %u of the game's seen, %u lit as ours (a channel 2 apart at "
-                         "most)%s%s",
+                         "most)%s%s%s",
                          g->map.c_str(), o.wallCheck.seen(), o.wallCheck.alike(),
-                         apart.empty() ? "" : "; first apart: ", apart.c_str());
+                         apart.empty() ? "" : "; first apart: ", apart.c_str(), o.wallApartDraw.c_str());
             }
         }
         return;

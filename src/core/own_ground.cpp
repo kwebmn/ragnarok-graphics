@@ -304,7 +304,8 @@ void WallCheck::reset(int width, int height, float zoom) {
     firstApart_.clear();
 }
 
-void WallCheck::note(const float lo[2], const float hi[2], uint32_t diffuse, const std::vector<uint32_t>& light) {
+void WallCheck::note(const float lo[2], const float hi[2], uint32_t diffuse, const std::vector<uint32_t>& light,
+                     const uint32_t* corners, int count) {
     if (light.size() != checked_.size()) return;
     const bool right = hi[0] - lo[0] < 1.0f;  // upright along z: a right side, its x a cell's edge
     const float mx = (lo[0] + hi[0]) * 0.5f / zoom_ + float(width_) / 2.0f;
@@ -327,6 +328,13 @@ void WallCheck::note(const float lo[2], const float hi[2], uint32_t diffuse, con
         std::snprintf(text, sizeof text, "%d,%d %s: the game's %08x, ours %08x", x, y,
                       right ? "right side" : "far side", diffuse, ours);
         firstApart_ = text;
+        if (corners && count > 0) {
+            firstApart_ += "; its corners";
+            for (int i = 0; i < std::min(count, 4); ++i) {
+                std::snprintf(text, sizeof text, " %08x", corners[i]);
+                firstApart_ += text;
+            }
+        }
     }
 }
 

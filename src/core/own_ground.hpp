@@ -158,7 +158,9 @@ class WallCheck {
 public:
     void reset(int width, int height, float zoom);
     // its box (x, z), its colour; light: 2 a cell, row by row - its right side's, its far side's (0 none)
-    void note(const float lo[2], const float hi[2], uint32_t diffuse, const std::vector<uint32_t>& light);
+    // 3.0.18-beta.5: corners (count of them) - the draw's colours, told for the first wall apart
+    void note(const float lo[2], const float hi[2], uint32_t diffuse, const std::vector<uint32_t>& light,
+              const uint32_t* corners = nullptr, int count = 0);
     unsigned seen() const { return seen_; }
     unsigned alike() const { return alike_; }
     const std::string& firstApart() const { return firstApart_; }  // "x,y right side: the game's …, ours …"

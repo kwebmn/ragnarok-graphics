@@ -1237,6 +1237,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
             map_ = map;
             renderer->setMap(map);
             if (!map.empty()) LOG_INFO("map: %s", map.c_str());
+            mapLightAt_ = map.empty() ? 0 : GetTickCount64() + 3000;  // 3.0.18-beta.5: the light the game holds
             // 3.0.17-beta.20 (a player: «поки я сам не хочу щось написати щоб він був сплячим»): a new map with the
             // chat's field empty - the battle mode's letters are the skills' again
             uint32_t battle = 0, typing = 0;
@@ -1246,6 +1247,24 @@ void Context::present(const Rect& source, bool waitForVblank) {
                 LOG_INFO("chat: the battle mode's typing off on the new map (its field empty)");
             }
         }
+    }
+    // 3.0.18-beta.5 (the owner: «засветление стен» - the game's walls on in_sphinx1, moc_pryd05 half of the map's
+    // light): the light uaRO.exe holds for the map (its way 0x74A858, diffuse 0x74A868, all round 0x74A828, as
+    // FUN_004e4190 lights the ground by them), its environment at 0x7710B8 (the dark byte, the factors after it) and
+    // the lightmaps' flag 0x6E4BE8 - 3 s into a map, once
+    if (mapLightAt_ && GetTickCount64() >= mapLightAt_ && knownGameBuild()) {
+        mapLightAt_ = 0;
+        float way[3] = {}, diffuse[3] = {}, round[3] = {}, env[10] = {};
+        uint8_t dark[2] = {};
+        uint32_t lightmaps = 0;
+        if (readGame(0x74A858, way, sizeof way) && readGame(0x74A868, diffuse, sizeof diffuse) &&
+            readGame(0x74A828, round, sizeof round) && readGame(0x7710B8, dark, sizeof dark) &&
+            readGame(0x7710C0, env, sizeof env) && readGame(0x6E4BE8, &lightmaps, sizeof lightmaps))
+            LOG_INFO("map light: %s as the game holds it - way %.3f %.3f %.3f, diffuse %.3f %.3f %.3f, all round %.3f "
+                     "%.3f %.3f; its environment: dark %u %u, %.3f %.3f %.3f | %.3f %.3f %.3f | %.3f %.3f %.3f | "
+                     "%.3f; lightmaps %u", map_.c_str(), way[0], way[1], way[2], diffuse[0], diffuse[1], diffuse[2],
+                     round[0], round[1], round[2], dark[0], dark[1], env[0], env[1], env[2], env[3], env[4], env[5],
+                     env[6], env[7], env[8], env[9], lightmaps);
     }
     if (knownGameBuild()) {  // 3.0.2-beta.12: the world by the game's camera, read for it alone without DLSS
         float seen[12];

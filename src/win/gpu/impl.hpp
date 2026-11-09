@@ -1297,6 +1297,7 @@ struct Renderer::Impl {
         // 3.0.7-beta.3 (R-YXZM7Y): the game's walls against the light the own ground gives them, once in the log
         own_ground::WallCheck wallCheck;
         bool wallsTold = false;
+        std::string wallApartDraw;  // 3.0.18-beta.5: the first wall apart's draw, for the log
         FrameRecord rec, uploads;
         struct Pending {  // a texture's vertices of the chunks in view, one draw (16-bit indices)
             std::vector<own_ground::Tl2> verts;

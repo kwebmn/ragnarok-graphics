@@ -377,3 +377,17 @@ TEST(own_ground_checks_the_game_s_walls_against_its_own) {
     w.reset(4, 2, 10.0f);
     CHECK(w.seen() == 0 && w.alike() == 0 && w.firstApart().empty());
 }
+
+// 3.0.18-beta.5 (the owner: «меня интересует именно засветление стен» - in_sphinx1, moc_pryd05 walls twice as bright):
+// the first wall apart tells all its corners as the game gave them, not the first alone
+TEST(own_ground_wall_check_tells_the_corners_of_the_first_wall_apart) {
+    std::vector<uint32_t> light(4 * 2 * 2, 0u);
+    light[(0 * 4 + 2) * 2 + 1] = 0xFF334C4Cu;
+    own_ground::WallCheck w;
+    w.reset(4, 2, 10.0f);
+    const float farLo[2] = {0.0f, -0.01f}, farHi[2] = {10.0f, 0.02f};
+    const uint32_t corners[4] = {0xFF162626u, 0xFF162626u, 0xFF334C4Cu, 0xFF000000u};
+    w.note(farLo, farHi, corners[0], light, corners, 4);
+    CHECK_EQ(w.firstApart(), std::string("2,0 far side: the game's ff162626, ours ff334c4c; its corners ff162626 "
+                                         "ff162626 ff334c4c ff000000"));
+}
