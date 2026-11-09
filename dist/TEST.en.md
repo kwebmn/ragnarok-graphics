@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.17-beta.11 — what's new
+
+- **A hint in the game:** once, 5 seconds into the first map, the chat shows «uaRO Graphics: Alt+D - quick settings (the picture, the interface, the textures)». It does not come again.
+
 # uaRO Graphics 3.0.17-beta.10 — what's new
 
 - **First start:** «Play» asks «How do you want to play?» with four buttons: «I want everything new», «New picture, the old interface», «A weak computer, but sharp», «As in 2004». One press sets the picture, the interface and the textures (the new picture fitted to your card).
