@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.17-beta.26 — what's new
+
+- **The tip of the day in uaRO HD in the interface's language:** uaRO HD's tips file has Windows line ends, and the game counted 69 tips instead of 68 - so our translated tips never came on. uaRO HD now shows them in the app's language, the counter "of 68".
+
 # uaRO Graphics 3.0.17-beta.25 — what's new
 
 - **Cyrillic on an English (or any non-Cyrillic) Windows:** the tip of the day, the chat, names and the game's other texts no longer turn into garbage - uaRO's texts are now always read as Windows-1251 unless the settings set another code page.
