@@ -52,6 +52,11 @@ bool Remote::start(const BridgeOptions& o, std::string& error) {
         "Local\\uaro-render-" + std::to_string(GetCurrentProcessId()) + "-" + std::to_string(GetTickCount64());
     if (!channel_.create(name, kToHostBytes, kToClientBytes, error)) return false;
     channel_.setWhileWaiting([](void* self) { static_cast<Remote*>(self)->drain(); }, this);
+    if (!o.recordScene && !o.gameDir.empty()) {  // 3.0.17-beta.9: an old record (over 1 GB) goes when it is off
+        const std::string old = o.gameDir + "\\" + layout::kSceneRecord;
+        if (GetFileAttributesA(old.c_str()) != INVALID_FILE_ATTRIBUTES && DeleteFileA(old.c_str()))
+            LOG_INFO("scene record: off - the old uaro-graphics\\scene-record.bin removed");
+    }
     if (o.recordScene) {  // 3.0.17-beta.7: [debug] record_scene
         const std::string path = o.gameDir + "\\" + layout::kSceneRecord;
         recordFile_ = CreateFileA(path.c_str(), GENERIC_WRITE, FILE_SHARE_READ, nullptr, CREATE_ALWAYS,
