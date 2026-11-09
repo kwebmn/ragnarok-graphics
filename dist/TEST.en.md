@@ -1,3 +1,8 @@
+# uaRO Graphics 3.0.18-beta.11 — what's new
+
+- **The new interface library is ready to take parts:** its switch in the Interface section is now the new interface library switch. The parts moved to it are drawn by it, the rest stay as they are; the first moved parts come in the next betas.
+- **The components showcase has its own switch** for developers. The test card is gone: the real character block replaces it.
+
 # uaRO Graphics 3.0.18-beta.10 — what's new
 
 - **The wheel over the new library's windows no longer zooms the world:** over the card and the "uaUI · компоненти" window it only scrolls the list and the camera stays. A click on the window no longer goes to the world either.
