@@ -117,9 +117,7 @@ void render(State& s, const std::vector<Slot>& slots, const std::vector<std::str
     const float k = s.k;
     s.x = int(std::lround(float(x0) * k));
     s.y = int(std::lround(float(y0) * k));
-    s.picture.width = int(std::ceil(float(x1 - x0) * k));
-    s.picture.height = int(std::ceil(float(y1 - y0) * k));
-    s.picture.px.assign(size_t(s.picture.width) * size_t(s.picture.height), 0u);
+    panel::blank(s.picture, int(std::ceil(float(x1 - x0) * k)), int(std::ceil(float(y1 - y0) * k)));  // .18-beta.14
     std::vector<Words> words;
     for (size_t i = 0; i < slots.size(); ++i) {
         if (labels[i].empty()) continue;

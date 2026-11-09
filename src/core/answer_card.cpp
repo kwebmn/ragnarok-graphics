@@ -82,9 +82,7 @@ uint32_t statusColour(reports::Status s) {
 }
 
 void paint(panel::Picture& out, const Geometry& g, reports::Status st, Part hover) {
-    out.width = g.width;
-    out.height = g.height;
-    out.px.assign(size_t(std::max(out.width, 0)) * size_t(std::max(out.height, 0)), 0u);
+    panel::blank(out, g.width, g.height);  // 3.0.18-beta.14: recorded for uaUI while it is on
     const float s = g.scale, edge = std::max(1.0f, s);
     const uint32_t c = statusColour(st);
     panel::roundRect(out, Box{0, 0, float(g.width), float(g.height)}, g.radius, kGround, 0.90f, kWhite, 0.12f, edge);

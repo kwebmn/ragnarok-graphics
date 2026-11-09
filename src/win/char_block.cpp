@@ -328,10 +328,7 @@ void renderWarning(State& s) {
     if (key == s.warning.key) return;
     s.warning.key = key;
     panel::Picture& p = s.warning.picture;
-    p = panel::Picture{};
-    p.width = s.layout.w;
-    p.height = s.layout.h;
-    p.px.assign(size_t(p.width) * size_t(p.height), 0u);
+    panel::blank(p, s.layout.w, s.layout.h);  // 3.0.18-beta.14: recorded for uaUI while it is on
     cb::paintWarning(p, s.layout, s.data, t);
     drawWords(p, gdiWords(cb::warningWords(s.layout, s.data, t)));
     s.warning.upload = true;
@@ -344,10 +341,7 @@ void renderFlare(State& s) {
     if (key == s.flare.key) return;
     s.flare.key = key;
     panel::Picture& p = s.flare.picture;
-    p = panel::Picture{};
-    p.width = s.layout.w;
-    p.height = s.layout.h;
-    p.px.assign(size_t(p.width) * size_t(p.height), 0u);
+    panel::blank(p, s.layout.w, s.layout.h);  // 3.0.18-beta.14
     cb::paintFlare(p, s.layout);
     s.flare.upload = true;
 }

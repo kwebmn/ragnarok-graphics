@@ -68,6 +68,17 @@ void record(Picture& p, uiscene::Prim prim) {
 void recordImage(Picture& p, const Picture& pic, float x, float y, float opacity, float disc, bool grey) {
     if (!p.scene || pic.width <= 0 || pic.height <= 0 || pic.px.size() < size_t(pic.width) * size_t(pic.height))
         return;
+    if (pic.scene && !grey && disc <= 0) {  // a recorded picture put into another: its primitives moved there
+        for (uiscene::Prim prim : pic.scene->prims) {
+            prim.x += x, prim.y += y;
+            prim.opacity *= opacity * pic.scene->opacity;
+            if (prim.kind == uiscene::Kind::Rect) prim.fillA *= opacity * pic.scene->opacity,
+                                                   prim.edgeA *= opacity * pic.scene->opacity;
+            if (prim.clipped) prim.cx0 += int(x), prim.cy0 += int(y), prim.cx1 += int(x), prim.cy1 += int(y);
+            record(p, std::move(prim));
+        }
+        if (std::none_of(pic.px.begin(), pic.px.end(), [](uint32_t v) { return (v >> 24) != 0; })) return;
+    }
     auto px = std::make_shared<std::vector<uint32_t>>(pic.px.begin(),
                                                       pic.px.begin() + ptrdiff_t(size_t(pic.width) * pic.height));
     uint32_t sum = uint32_t(pic.width) * 2654435761u ^ uint32_t(pic.height) ^ (grey ? 0x9E3779B9u : 0u);

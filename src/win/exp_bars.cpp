@@ -72,9 +72,7 @@ void frame(bool on, double k, int targetWidth, int targetHeight) {
                             std::to_string(d.baseNext) + ',' + std::to_string(d.jobNext);
     if (key != s.key) {
         s.key = key;
-        s.strip.width = targetWidth;
-        s.strip.height = h;
-        s.strip.px.assign(size_t(targetWidth) * size_t(h), 0u);
+        panel::blank(s.strip, targetWidth, h);  // 3.0.18-beta.14
         cb::paintStrip(s.strip, d, scale);
         s.stripUpload = true;
     }
@@ -92,9 +90,7 @@ void frame(bool on, double k, int targetWidth, int targetHeight) {
                 const float px = 13 * scale;
                 const int w = wordsWidth(wide, px, true) + int(std::lround(12 * scale));
                 const int hh = int(std::lround(20 * scale));
-                s.gain.width = w;
-                s.gain.height = hh;
-                s.gain.px.assign(size_t(w) * size_t(hh), 0u);
+                panel::blank(s.gain, w, hh);  // 3.0.18-beta.14
                 drawWords(s.gain, {Words{panel::Box{0, 0, float(w), float(hh)}, wide, 0xF3D27A, px, true, DT_CENTER,
                                          false, true}});
                 s.gainUpload = true;
@@ -121,9 +117,7 @@ void frame(bool on, double k, int targetWidth, int targetHeight) {
     for (const std::string& l : lines) tipKey += ';' + l;
     if (tipKey != s.tipKey) {
         s.tipKey = tipKey;
-        s.tip.width = tw;
-        s.tip.height = th;
-        s.tip.px.assign(size_t(tw) * size_t(th), 0u);
+        panel::blank(s.tip, tw, th);  // 3.0.18-beta.14
         panel::roundRect(s.tip, panel::Box{0, 0, float(tw), float(th)}, 8 * scale, kCard, 0.94f, kWhite, 0.12f,
                          1.0f * scale);
         std::vector<Words> words;

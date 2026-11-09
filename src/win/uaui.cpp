@@ -918,11 +918,11 @@ void drawScene(FrameRecord& record, gpu::Renderer& renderer, const panel::Pictur
                     State::Slot slot;
                     const float inv = 1.0f / float(kWords);
                     if (p.halo && wordSlot(s, p, true, slot))
-                        quad(pts, ix, p.x - 2, p.y - 2, p.w + 4, p.h + 4, premul(0x000000, 0.85f * alpha),
+                        quad(pts, ix, p.x - 2, p.y - 2, p.w + 4, p.h + 4, premul(0x000000, 0.85f * alpha * p.opacity),
                              float(slot.x) * inv, float(slot.y) * inv, float(slot.x + p.w + 4) * inv,
                              float(slot.y + p.h + 4) * inv);
                     if (wordSlot(s, p, false, slot))
-                        quad(pts, ix, p.x, p.y, p.w, p.h, premul(uitheme::colour(s.theme, p.fill), alpha),
+                        quad(pts, ix, p.x, p.y, p.w, p.h, premul(uitheme::colour(s.theme, p.fill), alpha * p.opacity),
                              float(slot.x) * inv,
                              float(slot.y) * inv, float(slot.x + p.w) * inv, float(slot.y + p.h) * inv);
                     if (!s.wordsId) s.wordsId = renderer.createTexture(kWords, kWords, 1);

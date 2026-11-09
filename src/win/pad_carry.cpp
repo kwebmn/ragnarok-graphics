@@ -114,10 +114,7 @@ void paintRing(State& s, const pc::Place& p) {
     const std::string key = std::to_string(w) + 'x' + std::to_string(h);
     if (key == s.ring.key) return;
     s.ring.key = key;
-    s.ring.picture = panel::Picture{};
-    s.ring.picture.width = w;
-    s.ring.picture.height = h;
-    s.ring.picture.px.assign(size_t(w) * size_t(h), 0u);
+    panel::blank(s.ring.picture, w, h);  // 3.0.18-beta.14
     panel::roundRect(s.ring.picture, panel::Box{t / 2, t / 2, float(w) - t, float(h) - t}, 9 * s.scale, kGold, 0.10f,
                      kGold, 0.95f, t);
     s.ring.upload = true;
@@ -137,10 +134,7 @@ void paintHint(State& s, bool nowhere) {
     const std::string key = all + '|' + std::to_string(w) + 'x' + std::to_string(h);
     if (key == s.hint.key) return;
     s.hint.key = key;
-    s.hint.picture = panel::Picture{};
-    s.hint.picture.width = w;
-    s.hint.picture.height = h;
-    s.hint.picture.px.assign(size_t(w) * size_t(h), 0u);
+    panel::blank(s.hint.picture, w, h);  // 3.0.18-beta.14
     panel::roundRect(s.hint.picture, panel::Box{0, 0, float(w), float(h)}, float(h) / 2, kCard, 0.94f, kGold, 0.6f,
                      std::max(1.0f, s.scale));
     std::vector<Words> words;

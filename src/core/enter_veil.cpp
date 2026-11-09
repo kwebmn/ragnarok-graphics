@@ -29,9 +29,7 @@ Layout layout(int targetW, int targetH, float scale) {
 }
 
 void paint(panel::Picture& out, const Layout& L, int phase) {
-    out.width = L.w;
-    out.height = L.h;
-    out.px.assign(size_t(L.w) * size_t(L.h), 0u);
+    panel::blank(out, L.w, L.h);  // 3.0.18-beta.14: recorded for uaUI while it is on
     const float s = L.s;
     panel::roundRect(out, L.card, 14 * s, kCard, 0.97f, kWhite, 0.14f, std::max(1.0f, s));
     for (int i = 0; i < 3; ++i)

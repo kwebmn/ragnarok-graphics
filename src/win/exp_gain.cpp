@@ -97,9 +97,7 @@ void frame(bool on, double k, int targetWidth, int targetHeight) {
             const float px = 15 * scale;
             const int w = wordsWidth(wide, px, true) + int(std::lround(12 * scale));
             const int h = int(std::lround(22 * scale));
-            sh.picture.width = w;
-            sh.picture.height = h;
-            sh.picture.px.assign(size_t(w) * size_t(h), 0u);
+            panel::blank(sh.picture, w, h);  // 3.0.18-beta.14
             drawWords(sh.picture, {Words{panel::Box{0, 0, float(w), float(h)}, wide, kGold, px, true, DT_CENTER,
                                          false, true}});
             sh.upload = true;

@@ -1498,17 +1498,14 @@ Rect pixelsOf(const Layout& L, const panel::Box& b) {
 
 void paint(panel::Picture& out, const Layout& L, const refpages::Page& p, const std::vector<Placed>& rows, int scroll,
            int total, const Look& look) {
-    out.width = L.w;
-    out.height = L.h;
-    out.px.assign(size_t(L.w) * size_t(L.h), 0u);  // 3.0.11-beta.26: the glass's rounded corners see through
-    out.clipX0 = out.clipY0 = 0;
-    out.clipX1 = out.clipY1 = kAnywhere;
+    panel::blank(out, L.w, L.h);  // 3.0.11-beta.26: the glass's rounded corners see through; .18-beta.14 recorded
     shapes(out, L, p, rows, scroll, total, look);
 }
 
 void repaint(panel::Picture& out, const Layout& L, const refpages::Page& p, const std::vector<Placed>& rows,
              int scroll, int total, const Look& look, const Rect& area) {
-    if (out.width != L.w || out.height != L.h || out.px.size() != size_t(L.w) * size_t(L.h)) {
+    // 3.0.18-beta.14: a recorded picture made whole again (its areas are a painter's, not a scene's)
+    if (out.scene || out.width != L.w || out.height != L.h || out.px.size() != size_t(L.w) * size_t(L.h)) {
         paint(out, L, p, rows, scroll, total, look);
         return;
     }

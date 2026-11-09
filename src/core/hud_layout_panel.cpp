@@ -55,9 +55,7 @@ std::vector<Words> barWords(const Bar& b, const BarTexts& t) {
 }
 
 void paintFrame(panel::Picture& out, int w, int h, float scale, Look look, float tagWidth) {
-    out.width = std::max(0, w);
-    out.height = std::max(0, h);
-    out.px.assign(size_t(out.width) * size_t(out.height), 0u);
+    panel::blank(out, w, h);  // 3.0.18-beta.14: recorded for uaUI while it is on
     if (w <= 0 || h <= 0) return;
     const float s = std::max(0.5f, scale), edge = std::max(2.0f, 2 * s);
     const float fill = look == Look::Dragged ? 0.22f : look == Look::Hover ? 0.16f : 0.08f;
@@ -71,8 +69,7 @@ void paintFrame(panel::Picture& out, int w, int h, float scale, Look look, float
 }
 
 void paintGrip(panel::Picture& out, int side, float scale, bool hover) {
-    out.width = out.height = std::max(0, side);
-    out.px.assign(size_t(out.width) * size_t(out.height), 0u);
+    panel::blank(out, side, side);  // 3.0.18-beta.14
     if (side <= 0) return;
     const float s = std::max(0.5f, scale), f = float(side);
     panel::roundRect(out, panel::Box{0, 0, f, f}, f / 4, kCard, hover ? 0.95f : 0.8f, kAccent2, hover ? 1.0f : 0.7f,

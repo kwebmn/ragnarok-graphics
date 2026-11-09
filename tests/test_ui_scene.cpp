@@ -86,3 +86,22 @@ TEST(ui_scene_meshes_a_circle_and_moves_it) {
     CHECK(std::fabs(minX - (100 - 0.5f - 0.5f) / 2) < 0.05f);  // its fringe half a pixel out
     CHECK(std::fabs(coveredArea(out) * 4 - 3.14159265f * 100) < 0.05f * 3.14159265f * 100);
 }
+
+// A recorded picture put into another (a part's canvas into its window): its primitives moved there, not its empty
+// pixels
+TEST(ui_scene_moves_a_recorded_pictures_shapes_into_another) {
+    panel::setRecording(true);
+    panel::Picture inner, outer;
+    panel::blank(inner, 40, 20);
+    panel::roundRect(inner, panel::Box{2, 2, 10, 10}, 3, 0xFF0000, 1.0f);
+    panel::blank(outer, 200, 100);
+    panel::setRecording(false);
+    CHECK(inner.scene && outer.scene);
+    panel::recordImage(outer, inner, 50, 60, 0.5f);
+    CHECK_EQ(outer.scene->prims.size(), size_t(1));
+    const uiscene::Prim& r = outer.scene->prims[0];
+    CHECK(r.kind == uiscene::Kind::Rect && r.x == 52 && r.y == 62 && r.fillA == 0.5f);
+    // a copy keeps a scene of its own
+    panel::Picture copy = outer;
+    CHECK(copy.scene && copy.scene != outer.scene && copy.scene->prims.size() == 1);
+}

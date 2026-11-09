@@ -193,9 +193,7 @@ panel::Picture fitted(const std::vector<uint32_t>& argb, int width, int height, 
     panel::Picture out;
     if (width <= 0 || height <= 0 || w <= 0 || h <= 0 || argb.size() != size_t(width) * size_t(height)) return out;
     const float k = std::min(float(w) / float(width), float(h) / float(height));
-    out.width = std::max(1, int(std::lround(float(width) * k)));
-    out.height = std::max(1, int(std::lround(float(height) * k)));
-    out.px.assign(size_t(out.width) * size_t(out.height), 0u);
+    panel::blank(out, std::max(1, int(std::lround(float(width) * k))), std::max(1, int(std::lround(float(height) * k))));
     for (int y = 0; y < out.height; ++y)
         for (int x = 0; x < out.width; ++x) {  // bilinear from its own pixels, premultiplied as it goes
             const float sx = std::clamp((float(x) + 0.5f) / k - 0.5f, 0.0f, float(width - 1));
