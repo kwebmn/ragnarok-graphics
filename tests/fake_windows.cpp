@@ -186,19 +186,34 @@ std::string defaultIni() {
 
 GameKeyPaths gameKeyPaths() {
     GameKeyPaths p;
-    p.personal = L"Software\\Classes\\VirtualStore\\MACHINE\\SOFTWARE\\WOW6432Node\\Gravity Soft\\Ragnarok";
+    p.personal = L"Software\\Classes\\VirtualStore\\MACHINE\\SOFTWARE\\WOW6432Node\\Gravity Soft\\" +
+                 std::wstring(windows().leaf.begin(), windows().leaf.end());
     p.personalRoot = "HKEY_CURRENT_USER\\" + utf8(p.personal);
-    p.commonRoot = "HKEY_LOCAL_MACHINE\\SOFTWARE\\WOW6432Node\\Gravity Soft\\Ragnarok";
+    p.commonRoot = "HKEY_LOCAL_MACHINE\\SOFTWARE\\WOW6432Node\\Gravity Soft\\" + windows().leaf;
     return p;
 }
+
+void useGameKey(const std::string& leaf) { windows().leaf = leaf.empty() ? "Ragnarok" : leaf; }
+
+namespace {
+settings::GameRegistry& keyOf(const std::string& leaf) {
+    return leaf == windows().leaf ? windows().registry : windows().shared;
+}
+}  // namespace
 
 settings::RegCopy readPersonal() { return windows().registry.personal; }
 
 settings::RegCopy readCommon() { return windows().registry.common; }
 
-std::string writePersonalValue(const settings::RegWrite& w) {
+settings::RegCopy readPersonalOf(const std::string& leaf) { return keyOf(leaf).personal; }
+
+settings::RegCopy readCommonOf(const std::string& leaf) { return keyOf(leaf).common; }
+
+std::string writePersonalValue(const settings::RegWrite& w) { return writePersonalValueOf(windows().leaf, w); }
+
+std::string writePersonalValueOf(const std::string& leaf, const settings::RegWrite& w) {
     if (windows().refused.count(w.name)) return w.name + " (error 5)";
-    settings::applyWrites(windows().registry.personal, {w});
+    settings::applyWrites(keyOf(leaf).personal, {w});
     return "";
 }
 

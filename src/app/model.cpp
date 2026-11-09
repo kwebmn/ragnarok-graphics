@@ -9,6 +9,7 @@
 #include <set>
 
 #include "app/app_disk.hpp"
+#include "app/client_patch.hpp"
 #include "app/files.hpp"
 #include "app/installer.hpp"
 #include "app/text.hpp"
@@ -18,6 +19,7 @@
 #include "core/card_speed.hpp"
 #include "core/effect_groups.hpp"
 #include "core/settings/compat_flags.hpp"
+#include "core/settings/game_key.hpp"
 #include "core/settings/pad_files.hpp"
 #include "core/settings/ini_edit.hpp"
 #include "core/settings/recommended.hpp"
@@ -54,10 +56,26 @@ Text problemText(ScreenProblem p) {
 
 namespace {
 
+// 3.0.17-beta.13: this folder's client works with its own key (uaRO HD; the old uaRO keeps the shared one). The first
+// time, it takes everything the game kept in the shared key (the login, the bars, the windows) and the shared key's
+// personal copy gives its screen up when a setup.exe's is under it - the old client starts with that one again. The
+// driver does the same at the game's start (win/own_game_key), whichever comes first.
+void adoptGameKey(const std::wstring& dir) {
+    const std::string leaf = gameKeyLeaf(clientOf(dir).client);
+    useGameKey(leaf);
+    if (leaf == kSharedLeaf) return;
+    if (gameKeyExists(GameRegistry{readPersonal(), readCommon()})) return;
+    const GameRegistry shared{readPersonalOf(kSharedLeaf), readCommonOf(kSharedLeaf)};
+    if (!gameKeyExists(shared)) return;
+    if (!replacePersonal(effectiveCopy(shared)).empty()) return;  // a part not written: the shared key stays as it is
+    for (const RegWrite& w : sharedRepair(shared)) writePersonalValueOf(kSharedLeaf, w);
+}
+
 }  // namespace
 
 Model::Model() {
     paths_.dir = exeFolder();
+    adoptGameKey(paths_.dir);
     {
         AppDisk disk;  // 2.8: a 2.x install's files into uaro-graphics\ before anything reads them
         layout::migrate(utf8(paths_.dir), disk);
@@ -688,7 +706,9 @@ std::wstring Model::loadGameSettings(const std::wstring& file, Lang l) {
     if (now_.gameRunning) return wtr(l, Text::ErrGameRunning);  // the game writes most of it at exit
     std::string bytes;
     RegCopy copy;
-    if (!readFile(file, bytes) || !fromRegFileAny(regFileToUtf8(bytes), gameKeyRoots(), copy))
+    std::vector<std::string> roots{gameKeyPaths().personalRoot, gameKeyPaths().commonRoot};  // 3.0.17-beta.13: own
+    roots.insert(roots.end(), gameKeyRoots().begin(), gameKeyRoots().end());
+    if (!readFile(file, bytes) || !fromRegFileAny(regFileToUtf8(bytes), roots, copy))
         return wtrf(l, Text::ErrReadFile, {utf8(file)});
     // Only the whole key replaces the personal copy: one folder of it - regedit's export of the chat macros, say -
     // would take the hotbars and the windows away (0.6.2 review I2).

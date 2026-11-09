@@ -13,12 +13,18 @@ struct GameKeyPaths {
     std::string personalRoot; // the same as a .reg path: HKEY_CURRENT_USER\...
     std::string commonRoot;   // HKEY_LOCAL_MACHINE\SOFTWARE\[WOW6432Node\]Gravity Soft\Ragnarok
 };
-GameKeyPaths gameKeyPaths();
+GameKeyPaths gameKeyPaths();  // of the key in use (useGameKey)
 
+// 3.0.17-beta.13: the key's last part the app works with - "Ragnarok" (shared by every client) until told; uaRO HD's
+// own (settings/game_key.hpp). The ...Of ones read and write a key by its last part (the shared one, when moving).
+void useGameKey(const std::string& leaf);
 settings::RegCopy readPersonal();
 settings::RegCopy readCommon();
+settings::RegCopy readPersonalOf(const std::string& leaf);
+settings::RegCopy readCommonOf(const std::string& leaf);
 // One change of the personal copy; "" or "NAME (error N)".
 std::string writePersonalValue(const settings::RegWrite& w);
+std::string writePersonalValueOf(const std::string& leaf, const settings::RegWrite& w);
 // The personal copy becomes `copy` (a restored backup): its whole tree goes, then every key and value is written, each
 // on its own (spec §4.5); "" or the ones that failed, "NAME (error N), ...".
 std::string replacePersonal(const settings::RegCopy& copy);

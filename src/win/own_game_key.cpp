@@ -1,0 +1,210 @@
+#include "win/own_game_key.hpp"
+
+#include <windows.h>
+
+#include <cstring>
+#include <string>
+#include <vector>
+
+#include "core/client_patch.hpp"
+#include "core/layout.hpp"
+#include "core/settings/game_key.hpp"
+#include "win/log.hpp"
+#include "win/paths.hpp"
+
+namespace uagfx::win {
+namespace {
+
+using settings::kSharedLeaf;
+
+// The driver imports no advapi32 (verify4's list): kernelbase's (Windows 8+, set up before any DLL of the game's), else
+// the game's advapi32 (uaRO.exe imports RegOpenKeyExA)
+struct Reg {
+    decltype(&RegOpenKeyExA) open = nullptr;
+    decltype(&RegCreateKeyExA) create = nullptr;
+    decltype(&RegCloseKey) close = nullptr;
+    decltype(&RegQueryValueExA) query = nullptr;
+    decltype(&RegSetValueExA) set = nullptr;
+    decltype(&RegDeleteValueA) erase = nullptr;
+    decltype(&RegEnumValueA) value = nullptr;
+    decltype(&RegEnumKeyExA) subkey = nullptr;
+    bool ready() const { return open && create && close && query && set && erase && value && subkey; }
+};
+
+template <typename F>
+void take(HMODULE first, HMODULE then, const char* name, F& out) {
+    FARPROC f = first ? GetProcAddress(first, name) : nullptr;
+    if (!f && then) f = GetProcAddress(then, name);
+    out = reinterpret_cast<F>(reinterpret_cast<void*>(f));
+}
+
+const Reg& reg() {
+    static Reg r = [] {
+        Reg out;
+        const HMODULE k = GetModuleHandleA("kernelbase.dll"), m = GetModuleHandleA("advapi32.dll");
+        take(k, m, "RegOpenKeyExA", out.open);
+        take(k, m, "RegCreateKeyExA", out.create);
+        take(k, m, "RegCloseKey", out.close);
+        take(k, m, "RegQueryValueExA", out.query);
+        take(k, m, "RegSetValueExA", out.set);
+        take(k, m, "RegDeleteValueA", out.erase);
+        take(k, m, "RegEnumValueA", out.value);
+        take(k, m, "RegEnumKeyExA", out.subkey);
+        return out;
+    }();
+    return r;
+}
+
+std::string ourClient() {
+    std::string text, error;
+    client_patch::Manifest m;
+    if (!readTextFile(layout::join(gameDir(), client_patch::kClientFile), text) || !client_patch::parse(text, m, error))
+        return client_patch::kOldClient;
+    return client_patch::clientName(m.client);
+}
+
+bool readValue(HKEY key, const char* name, DWORD& type, std::vector<BYTE>& data) {
+    DWORD size = 0;
+    if (reg().query(key, name, nullptr, &type, nullptr, &size) != ERROR_SUCCESS) return false;
+    data.resize(size);
+    return reg().query(key, name, nullptr, &type, data.empty() ? nullptr : data.data(), &size) == ERROR_SUCCESS;
+}
+
+// Every value and subkey, as the game sees them (its own process: the personal copy over the common one)
+int copyTree(HKEY from, HKEY to, int depth) {
+    int values = 0;
+    std::vector<char> name(16384);
+    std::vector<BYTE> data;
+    for (DWORD i = 0;; ++i) {
+        DWORD nameLen = DWORD(name.size()), type = 0, size = 0;
+        LONG r = reg().value(from, i, name.data(), &nameLen, nullptr, &type, nullptr, &size);
+        if (r == ERROR_NO_MORE_ITEMS) break;
+        if (r != ERROR_SUCCESS && r != ERROR_MORE_DATA) break;
+        data.resize(size);
+        nameLen = DWORD(name.size());
+        r = reg().value(from, i, name.data(), &nameLen, nullptr, &type, data.empty() ? nullptr : data.data(), &size);
+        if (r != ERROR_SUCCESS) continue;
+        if (reg().set(to, name.data(), 0, type, data.empty() ? nullptr : data.data(), size) == ERROR_SUCCESS)
+            ++values;
+    }
+    if (depth >= 8) return values;
+    for (DWORD i = 0;; ++i) {
+        char sub[256];
+        DWORD subLen = sizeof sub;
+        if (reg().subkey(from, i, sub, &subLen, nullptr, nullptr, nullptr, nullptr) != ERROR_SUCCESS) break;
+        HKEY a = nullptr, b = nullptr;
+        if (reg().open(from, sub, 0, KEY_READ, &a) != ERROR_SUCCESS) continue;
+        if (reg().create(to, sub, 0, nullptr, 0, KEY_READ | KEY_WRITE, nullptr, &b, nullptr) == ERROR_SUCCESS) {
+            values += copyTree(a, b, depth + 1);
+            reg().close(b);
+        }
+        reg().close(a);
+    }
+    return values;
+}
+
+// The shared key's personal copy (the player's VirtualStore; HKCU is never virtualised): its screen values go; when
+// what the game reads then is no setup.exe's screen (WIDTH, HEIGHT, DEVICENAME), they come back as they were
+void repairShared() {
+    BOOL wow = FALSE;
+    IsWow64Process(GetCurrentProcess(), &wow);
+    const std::string path = std::string("Software\\Classes\\VirtualStore\\MACHINE\\SOFTWARE\\") +
+                             (wow ? "WOW6432Node\\" : "") + settings::gameKeyPath(kSharedLeaf).substr(9);
+    HKEY personal = nullptr;
+    if (reg().open(HKEY_CURRENT_USER, path.c_str(), 0, KEY_QUERY_VALUE | KEY_SET_VALUE | KEY_WOW64_64KEY,
+                      &personal) != ERROR_SUCCESS)
+        return;
+    struct Saved {
+        std::string name;
+        DWORD type = 0;
+        std::vector<BYTE> data;
+    };
+    std::vector<Saved> saved;
+    for (const std::string& name : settings::screenValueNames()) {
+        Saved s{name, 0, {}};
+        if (!readValue(personal, name.c_str(), s.type, s.data)) continue;
+        if (reg().erase(personal, name.c_str()) == ERROR_SUCCESS) saved.push_back(std::move(s));
+    }
+    if (saved.empty()) {
+        reg().close(personal);
+        return;
+    }
+    bool setup = false;
+    HKEY seen = nullptr;  // the game's view: with the personal values gone, the common copy's
+    if (reg().open(HKEY_LOCAL_MACHINE, settings::gameKeyPath(kSharedLeaf).c_str(), 0, KEY_QUERY_VALUE, &seen) ==
+        ERROR_SUCCESS) {
+        DWORD type = 0;
+        std::vector<BYTE> data;
+        setup = readValue(seen, "WIDTH", type, data) && readValue(seen, "HEIGHT", type, data) &&
+                readValue(seen, "DEVICENAME", type, data);
+        reg().close(seen);
+    }
+    if (!setup)
+        for (const Saved& s : saved)
+            reg().set(personal, s.name.c_str(), 0, s.type, s.data.empty() ? nullptr : s.data.data(),
+                           DWORD(s.data.size()));
+    reg().close(personal);
+    LOG_INFO(setup ? "game key: the shared key's screen is its setup.exe's again (%zu values of uaRO HD's gone)"
+                   : "game key: the shared key keeps its screen (no setup.exe screen under it, %zu values)",
+             saved.size());
+}
+
+}  // namespace
+
+void installOwnGameKey() {
+    const std::string client = ourClient();
+    const std::string leaf = settings::gameKeyLeaf(client);
+    if (leaf == kSharedLeaf) return;
+    const std::string shared = settings::gameKeyPath(kSharedLeaf);
+    const std::string own = settings::gameKeyPath(leaf);
+    if (!reg().ready()) {  // the key could not be copied: the shared one stays
+        LOG_INFO("game key: the shared one (the registry's functions not found)");
+        return;
+    }
+    auto* at = reinterpret_cast<char*>(uintptr_t(settings::kGameKeyAt));
+    char now[settings::kGameKeyRoom + 1] = {};
+    SIZE_T got = 0;
+    if (!ReadProcessMemory(GetCurrentProcess(), at, now, sizeof now, &got) || got != sizeof now ||
+        std::memcmp(now, shared.c_str(), shared.size() + 1) != 0) {
+        LOG_INFO("game key: the shared one (this build of uaRO.exe has no \"%s\" where it is looked for)",
+                 shared.c_str());
+        return;
+    }
+    DWORD old = 0;
+    if (!VirtualProtect(at, sizeof now, PAGE_READWRITE, &old)) {
+        LOG_INFO("game key: the shared one (the game's string cannot be changed, error %lu)", GetLastError());
+        return;
+    }
+    std::memset(at, 0, sizeof now);
+    std::memcpy(at, own.c_str(), own.size());
+    DWORD unused = 0;
+    VirtualProtect(at, sizeof now, old, &unused);
+
+
+    HKEY key = nullptr;
+    if (reg().open(HKEY_LOCAL_MACHINE, own.c_str(), 0, KEY_READ, &key) == ERROR_SUCCESS) {
+        reg().close(key);
+        LOG_INFO("game key: %s's own, %s", client.c_str(), own.c_str());
+        return;
+    }
+    HKEY from = nullptr;
+    if (reg().open(HKEY_LOCAL_MACHINE, shared.c_str(), 0, KEY_READ, &from) != ERROR_SUCCESS) {
+        LOG_INFO("game key: %s's own, %s (new: nothing in the shared key)", client.c_str(), own.c_str());
+        return;
+    }
+    const LONG r = reg().create(HKEY_LOCAL_MACHINE, own.c_str(), 0, nullptr, 0, KEY_READ | KEY_WRITE, nullptr, &key,
+                                   nullptr);
+    if (r != ERROR_SUCCESS) {
+        reg().close(from);
+        LOG_INFO("game key: %s's own, %s (not made, error %ld - the shared key is not copied)", client.c_str(),
+                 own.c_str(), long(r));
+        return;
+    }
+    const int values = copyTree(from, key, 0);
+    reg().close(key);
+    reg().close(from);
+    LOG_INFO("game key: %s's own, %s - %d values of the shared key copied", client.c_str(), own.c_str(), values);
+    repairShared();
+}
+
+}  // namespace uagfx::win

@@ -1004,3 +1004,40 @@ TEST(model_reads_the_card_verdict_of_a_direct3d_11_card) {
     CHECK_EQ(m.memoryLevel(), 1);
     CHECK_EQ(m.cardLevel(), 0);  // «Без ефектів», as the driver judged it
 }
+
+// 3.0.17-beta.13: uaRO HD moves to its own key with everything the game kept (the login, the bars); the shared one
+// gets its setup.exe's screen back (the old client «Cannot init d3d» on uaRO HD's 32 bits and size)
+TEST(model_a_client_of_its_own_moves_to_its_own_key) {
+    fake::Windows& w = fake::reset();
+    w.files[fake::path(L"uaro-client.json")] =
+        "{\"format\":1,\"client\":\"uaRO HD\",\"version\":\"2026.10.6\",\"files\":[]}";
+    w.shared.common.exists = true;
+    fake::gameKey(w.shared.common, 1024, 768, true);
+    w.shared.common.keys[""]["DEVICENAME"] = RegValue::sz("dgVoodoo HAL");
+    w.shared.personal.exists = true;
+    fake::gameKey(w.shared.personal, 2560, 1440, false);
+    w.shared.personal.keys[""]["ID"] = RegValue::sz("player");
+    w.shared.personal.keys["ShortCutList"]["0"] = RegValue::sz("/lv");
+    app::Model m;
+    CHECK_EQ(w.leaf, std::string("uaRO HD"));
+    CHECK(w.registry.personal.find("", "ID") && w.registry.personal.find("ShortCutList", "0"));
+    CHECK(effectiveDword("WIDTH") == 2560);  // its own screen came along
+    CHECK(!w.shared.personal.find("", "WIDTH") && !w.shared.personal.find("", "HEIGHT"));
+    CHECK(w.shared.personal.find("", "ID"));  // the old client keeps its login and the rest
+    CHECK(effectiveValue(w.shared, "", "WIDTH")->asDword() == 1024u);
+    // its own key there: nothing moves again, the shared one is left alone
+    w.shared.personal.keys[""]["WIDTH"] = RegValue::dword(800);
+    w.registry.personal.keys[""]["ID"] = RegValue::sz("other");
+    app::Model again;
+    CHECK(w.shared.personal.find("", "WIDTH"));
+    CHECK(w.registry.personal.find("", "ID")->text == "other");
+}
+
+TEST(model_the_old_client_stays_on_the_shared_key) {
+    fake::Windows& w = fake::reset();
+    fake::gameKey(w.registry.personal, 1920, 1080, false);
+    w.registry.personal.exists = true;
+    app::Model m;
+    CHECK_EQ(w.leaf, std::string("Ragnarok"));
+    CHECK(effectiveDword("WIDTH") == 1920);
+}
