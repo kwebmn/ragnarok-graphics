@@ -87,8 +87,11 @@ inline bool ownSprite(const FrameRecord& rec, const DrawCmd& d, const DrawSetup&
 // .33 (the owner: «иногда там где шея у персонажа не видно ничего» - a wall's top right before the character hid it,
 // less than 8 nearer): the margin at the feet only (a vertex within a fifth of the body over them), kSilhouetteUp above
 constexpr float kSilhouetteMargin = 8.0f, kSilhouetteUp = 2.0f;
+// 3.0.17-beta.24 (R-BY7DGC: a light outline on the character's own head - its body's silhouette, the head 7.6 nearer
+// than the body hid it): `nearestW` the character's nearest sprite this picture - none drawn farther than that less
+// kSilhouetteUp, so no layer of the character hides another; 0: none known
 inline void silhouetteVertices(const uint8_t* src, uint32_t count, size_t stride, const float hole[8],
-                               std::vector<uint8_t>& out) {
+                               std::vector<uint8_t>& out, float nearestW = 0.0f) {
     out.assign(src, src + size_t(count) * stride);
     const auto depthOf = [](float w) {
         return camera::kFar / (camera::kFar - camera::kNear) * (1.0f - camera::kNear / w);
@@ -98,10 +101,38 @@ inline void silhouetteVertices(const uint8_t* src, uint32_t count, size_t stride
         std::memcpy(xyzw, out.data() + i * stride, sizeof xyzw);
         if (!(xyzw[3] > 0.0f)) continue;
         const float margin = xyzw[1] >= hole[1] - 0.25f * hole[2] ? kSilhouetteMargin : kSilhouetteUp;
-        const float w = 1.0f / xyzw[3], nearer = std::max(w - margin, camera::kNear + 1.0f);
+        const float w = 1.0f / xyzw[3];
+        const float own = nearestW > 0.0f ? std::min(w - margin, nearestW - kSilhouetteUp) : w - margin;
+        const float nearer = std::max(own, camera::kNear + 1.0f);
         xyzw[2] = std::max(0.0f, xyzw[2] - (depthOf(w) - depthOf(nearer)));
         xyzw[3] = 1.0f / nearer;
         std::memcpy(out.data() + i * stride, xyzw, sizeof xyzw);
+    }
+}
+// 3.0.17-beta.24: the character's sprites noted this picture (their own vertices) made into the silhouette's draws
+inline void buildSilhouettes(const FrameRecord& raw, const float hole[8], FrameRecord& out) {
+    const std::vector<uint8_t>& v = raw.vertexBytes();
+    float nearest = FLT_MAX;
+    for (const DrawCmd& d : raw.draws()) {
+        const size_t stride = FrameRecord::stride(d.fvf);
+        for (uint32_t i = 0; i < d.vertexCount && d.vertexOffset + (i + 1) * stride <= v.size(); ++i) {
+            float rhw = 0.0f;
+            std::memcpy(&rhw, v.data() + d.vertexOffset + i * stride + 12, sizeof rhw);
+            if (rhw > 0.0f) nearest = std::min(nearest, 1.0f / rhw);
+        }
+    }
+    if (nearest == FLT_MAX) nearest = 0.0f;
+    std::vector<uint8_t> moved;
+    for (const DrawCmd& d : raw.draws()) {
+        const size_t stride = FrameRecord::stride(d.fvf);
+        if (d.vertexOffset + size_t(d.vertexCount) * stride > v.size() || d.state >= raw.states().size() ||
+            size_t(d.firstIndex) + d.indexCount > raw.indices().size())
+            continue;
+        silhouetteVertices(v.data() + d.vertexOffset, d.vertexCount, stride, hole, moved, nearest);
+        DrawCmd c = d;
+        c.state = out.addState(raw.states()[d.state]);
+        out.draw(c, moved.data(), d.vertexCount, d.indexCount ? raw.indices().data() + d.firstIndex : nullptr,
+                 d.indexCount);
     }
 }
 // a quad's box (x0, y0, x1, y1, game pixels) and mean depth - for the log

@@ -409,6 +409,7 @@ private:
     bool darknessPass_ = false, darknessLaid_ = false;
     // 3.0.13-beta.30: [effects] silhouette - the character's sprites drawn again where something hides them
     FrameRecord silhouetteRec_;
+    FrameRecord silhouetteRaw_;  // 3.0.17-beta.24: the character's sprites as the game drew them, this picture
     bool silhouettePass_ = false, silhouetteLaid_ = false;
     void noteSilhouette(const FrameRecord& rec, const DrawCmd& d, const DrawSetup& s);
     void applySilhouette();

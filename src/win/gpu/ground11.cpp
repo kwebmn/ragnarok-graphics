@@ -529,22 +529,24 @@ void Renderer11::applyDarkness() {
 void Renderer11::noteSilhouette(const FrameRecord& rec, const DrawCmd& d, const DrawSetup& s) {
     const std::vector<uint8_t>& v = rec.vertexBytes();
     const std::vector<uint16_t>& ix = rec.indices();
-    if (silhouetteRec_.draws().size() >= 32 ||
+    if (silhouetteRaw_.draws().size() >= 32 ||
         d.vertexOffset + size_t(d.vertexCount) * FrameRecord::stride(d.fvf) > v.size() ||
         size_t(d.firstIndex) + d.indexCount > ix.size())
         return;
     DrawCmd cmd = d;
-    cmd.state = silhouetteRec_.addState(silhouetteSetup(s));
-    std::vector<uint8_t> nearer;  // .32: kSilhouetteMargin nearer
-    silhouetteVertices(v.data() + d.vertexOffset, d.vertexCount, FrameRecord::stride(d.fvf), hole_, nearer);
-    silhouetteRec_.draw(cmd, nearer.data(), d.vertexCount, d.indexCount ? ix.data() + d.firstIndex : nullptr,
-                d.indexCount);
+    cmd.state = silhouetteRaw_.addState(silhouetteSetup(s));
+    // 3.0.17-beta.24: as drawn - moved nearer once all the character's sprites are in (buildSilhouettes)
+    silhouetteRaw_.draw(cmd, v.data() + d.vertexOffset, d.vertexCount,
+                        d.indexCount ? ix.data() + d.firstIndex : nullptr, d.indexCount);
 }
 
 // 3.0.13-beta.30: the character's sprites again, only where something nearer hides them (applyDarkness' way)
 void Renderer11::applySilhouette() {
     silhouetteLaid_ = true;
-    if (silhouetteRec_.draws().empty()) return;
+    if (silhouetteRaw_.draws().empty()) return;
+    silhouetteRec_.reset();
+    buildSilhouettes(silhouetteRaw_, hole_, silhouetteRec_);
+    silhouetteRaw_.reset();
     flushBatch();
     const std::vector<uint8_t>& v = silhouetteRec_.vertexBytes();
     const std::vector<uint16_t>& ix = silhouetteRec_.indices();

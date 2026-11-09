@@ -1107,6 +1107,7 @@ struct Renderer::Impl {
         darknessRec.reset();  // 2.6.18
         darknessLaid = false;
         silhouetteRec.reset();  // 3.0.13-beta.30
+        silhouetteRaw.reset();  // 3.0.17-beta.24
         stampRec.reset();       // 3.0.16-beta.25
         aoDone = groundDrawn = gradeDone = torchDone = false;  // 0.20-0.23
         nightDone = false;  // 0.63
@@ -1231,6 +1232,7 @@ struct Renderer::Impl {
     bool darknessPass = false, darknessLaid = false;
     // 3.0.13-beta.30: [effects] silhouette - the character's sprites, drawn again where something hides them
     FrameRecord silhouetteRec;
+    FrameRecord silhouetteRaw;  // 3.0.17-beta.24: the character's sprites as the game drew them, this picture
     // 3.0.16-beta.25: [effects] body_stamp - the characters' sprites' shapes for the depth, gathered as the game draws
     // them, put down once a draw of something else comes (body_stamp.cpp)
     FrameRecord stampRec;

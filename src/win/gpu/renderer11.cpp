@@ -2443,6 +2443,7 @@ void Renderer11::present(HWND window, int outputWidth, int outputHeight, const R
     darknessRec_.reset();  // 2.6.18
     darknessLaid_ = false;
     silhouetteRec_.reset();  // 3.0.13-beta.30
+    silhouetteRaw_.reset();  // 3.0.17-beta.24
     silhouetteLaid_ = false;
     shaftsDone_ = false;  // 2.5.5
     shaftLights_ = 0;

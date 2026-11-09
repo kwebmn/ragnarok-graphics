@@ -829,20 +829,22 @@ void Renderer::Impl::noteDarkness(const FrameRecord& rec, const DrawCmd& d, cons
 void Renderer::Impl::noteSilhouette(const FrameRecord& rec, const DrawCmd& d, const DrawSetup& s) {
     const std::vector<uint8_t>& v = rec.vertexBytes();
     const std::vector<uint16_t>& ix = rec.indices();
-    if (silhouetteRec.draws().size() >= 32 ||
+    if (silhouetteRaw.draws().size() >= 32 ||
         d.vertexOffset + size_t(d.vertexCount) * FrameRecord::stride(d.fvf) > v.size() ||
         size_t(d.firstIndex) + d.indexCount > ix.size())
         return;
     DrawCmd cmd = d;
-    cmd.state = silhouetteRec.addState(silhouetteSetup(s));
-    std::vector<uint8_t> nearer;  // .32: kSilhouetteMargin nearer
-    silhouetteVertices(v.data() + d.vertexOffset, d.vertexCount, FrameRecord::stride(d.fvf), hole, nearer);
-    silhouetteRec.draw(cmd, nearer.data(), d.vertexCount, d.indexCount ? ix.data() + d.firstIndex : nullptr,
-               d.indexCount);
+    cmd.state = silhouetteRaw.addState(silhouetteSetup(s));
+    // 3.0.17-beta.24: as drawn - moved nearer once all the character's sprites are in (buildSilhouettes)
+    silhouetteRaw.draw(cmd, v.data() + d.vertexOffset, d.vertexCount, d.indexCount ? ix.data() + d.firstIndex : nullptr,
+                       d.indexCount);
 }
 
 bool Renderer::Impl::applySilhouette() {
-    if (silhouetteRec.draws().empty()) return true;
+    if (silhouetteRaw.draws().empty()) return true;
+    silhouetteRec.reset();
+    buildSilhouettes(silhouetteRaw, hole, silhouetteRec);
+    silhouetteRaw.reset();
     crumb("the character's silhouette");
     flushDraws();
     prepareGeometry(silhouetteRec);
