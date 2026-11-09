@@ -341,7 +341,8 @@ enum class Text : uint16_t {
     // 2.6: the Debug page's test switches
     DebugDlssJitter, DebugDlssJitterHint, DebugDlssMotion, DebugDlssMotionHint, DebugPresent, DebugPresentHint,
     DebugPresentAuto, DebugPresentWindow, DebugPresentComposition, DebugDpiScale, DebugDpiScaleHint, DebugVariants,
-    DebugVariantsHint, DebugRecordScene, DebugRecordSceneHint, DebugStateCache, DebugStateCacheHint, DebugMergeDraws, DebugMergeDrawsHint, DebugFastPick,
+    DebugVariantsHint, DebugRecordScene, DebugRecordSceneHint, DebugStateCache, DebugStateCacheHint, DebugMergeDraws,
+    DebugMergeDrawsHint, DebugFastPick,
     DebugFastPickHint, DebugFastFtol, DebugFastFtolHint, DebugFastTextures, DebugFastTexturesHint,
     DebugQuickAcks, DebugQuickAcksHint,  // 3.0.11-beta.128
     DeveloperOnly, // 2.6: the list's heading, the header's button
