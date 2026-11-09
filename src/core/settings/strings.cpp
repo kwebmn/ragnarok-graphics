@@ -3561,11 +3561,11 @@ constexpr Entry kTexts[] = {
     {Text::LookChanged, "{1} · changed {2}", "{1} · змінено {2}", "{1} · изменено {2}"},
     {Text::LookHint,
      "Choosing writes only this choice's settings; what you changed in them by hand is replaced (until you apply, "
-     "«Скасувати» brings it back).",
+     "«Undo» brings it back).",
      "Вибір пише лише свої налаштування; змінене в них вручну буде замінено (до «Застосувати» його повертає "
      "«Скасувати»).",
      "Выбор пишет только свои настройки; изменённое в них вручную будет заменено (до «Применить» его возвращает "
-     "«Отмена»)."},
+     "«Отменить»)."},
     {Text::MainIntro,
      "What a game needs. Everything else is in the Detailed mode.", "Головне для гри. Усе інше - у докладному режимі.",
      "Главное для игры. Всё остальное - в подробном режиме."},
