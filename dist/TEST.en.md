@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.18-beta.15 — what's new
+
+- **The minimap and the big map are on the new library too:** with it on, their marks, frames and labels are drawn by the graphics card, and the map itself stays the same picture under them.
+
 # uaRO Graphics 3.0.18-beta.14 — what's new
 
 - **More of the new interface on the graphics card:** with the new interface library on, the in-game reference, the answer and info cards, the layout editor, the low HP warning, the experience strip and gain, and the controller hints are drawn this way too.
