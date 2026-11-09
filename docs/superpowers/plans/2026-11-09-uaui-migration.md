@@ -73,3 +73,4 @@ picture's upload gone. Cost if wrong: per-pixel glows (panel::over loops) land i
 - 2026-11-09 beta.12: ruling - parts recorded (core/ui_scene) and drawn by uaui::drawScene; all blank()+drawPart parts on the card with [interface] uaui
 - 2026-11-09 beta.13: themes (core/ui_theme: standard/classic/contrast, [interface] theme, ui\palette.txt), windows grow+fade in 120 ms, log of pictures not recorded
 - 2026-11-09 beta.14: manual pictures -> blank (answer/info cards, HUD layout, «Довідник» (full repaint when recorded), char block warning/flare, buff overlay, exp strip/gain/tip, exp gain, pad carry, enter veil); nested recorded pictures move their prims; minimap still painted (map blits)
+- 2026-11-09 beta.15: minimap + big map recorded (map pixels residual under marks; big map's picture an image over its card)

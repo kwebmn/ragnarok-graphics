@@ -923,9 +923,9 @@ int lineAt(const Layout& L, float y) {
 }
 
 void paint(panel::Picture& out, const Layout& L, const Scene& sc, const Texts& t) {
-    out.width = L.w;
-    out.height = L.h;
-    out.px.assign(size_t(out.width) * size_t(out.height), 0u);  // see-through between the parts
+    // see-through between the parts; 3.0.18-beta.14 recorded for uaUI while it is on - the map's own pixels a texture
+    // under its marks and edges
+    panel::blank(out, L.w, L.h);
     const float s = L.s, edge = std::max(1.0f, s);
     const View v = view(sc.map, sc.player, sc.cells, int(L.map.w));
     mapPixels(out, L.map, sc, v);
@@ -1224,14 +1224,14 @@ void paintBigMap(panel::Picture& out, const Big& b, const Scene& sc) {
 }
 
 void paintBig(panel::Picture& out, const panel::Picture& map, const Big& b, const Scene& sc) {
-    out.width = b.w;
-    out.height = b.h;
-    out.px.assign(size_t(out.width) * size_t(out.height), 0u);
+    panel::blank(out, b.w, b.h);  // 3.0.18-beta.14: recorded for uaUI while it is on (the map a texture under)
     const float s = b.s, edge = std::max(1.0f, s);
     panel::roundRect(out, panel::Box{0, 0, float(b.w), float(b.h)}, 12 * s, kCard, 0.96f, kWhite, 0.14f, edge);
     panel::roundRect(out, panel::Box{0, b.header.h - edge, float(b.w), edge}, 0, kWhite, 0.10f);
     if (sc.bigHover == BigPart::Close) panel::roundRect(out, b.close, 9 * s, kWhite, 0.10f);  // the cross hovered
-    if (map.width == int(b.map.w) && map.height == int(b.map.h))  // the map's picture, made once
+    if (out.scene && map.width == int(b.map.w) && map.height == int(b.map.h))  // 3.0.18-beta.14: over the card
+        panel::recordImage(out, map, b.map.x, b.map.y, 1.0f);
+    else if (map.width == int(b.map.w) && map.height == int(b.map.h))  // the map's picture, made once
         for (int y = 0; y < map.height; ++y)
             std::copy_n(map.px.begin() + std::ptrdiff_t(size_t(y) * size_t(map.width)), map.width,
                         out.px.begin() + std::ptrdiff_t(size_t(int(b.map.y) + y) * size_t(out.width) +
