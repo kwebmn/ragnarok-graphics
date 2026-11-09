@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.17-beta.13 — what's new
+
+- **uaRO HD and the old uaRO no longer get in each other's way:** both clients kept the game's settings in one place of the Windows registry, and the screen chosen for uaRO HD (32 bits, its size) broke the old client — "Cannot init d3d OR grf file has problem". uaRO HD now has a place of its own: the first start moves everything there (login, bars, windows, bookmarks), and the old client gets the screen from its setup.exe back. The old client loses nothing.
+
 # uaRO Graphics 3.0.17-beta.12 — what's new
 
 - **Alt+D → «New» tab:** the switches that came since you last looked in the console — turn them on and see them in the game at once. «Quick» shows «★ New: N». The first start marks nothing; the list clears once seen.
