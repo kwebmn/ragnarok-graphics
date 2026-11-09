@@ -76,7 +76,12 @@ private:
     bool groupOpen_[kEffectGroups] = {};  // 2.2.1: the groups opened to their effects
     bool windowsOpen_ = false;             // 3.0.11-beta.302: the new look's windows shown
     // 3.0.17-beta.4: the tab shown (kTabQuick first) and the rows pinned to «Швидко» (Insert; core/console_pins)
-    static constexpr int kTabQuick = 0, kTabPicture = 1, kTabInterface = 2, kTabTextures = 3, kTabAll = 4, kTabs = 5;
+    // 3.0.17-beta.12: «Нове» - the rows new since the console last showed them (cache\console-known.txt)
+    static constexpr int kTabQuick = 0, kTabNew = 1, kTabPicture = 2, kTabInterface = 3, kTabTextures = 4,
+                         kTabAll = 5, kTabs = 6;
+    std::vector<std::string> fresh_;  // the rows new to the console, read with the pins
+    std::string knownPath_;
+    void markKnown();
     int tab_ = kTabQuick;
     std::vector<std::string> pins_;
     std::string pinsPath_;

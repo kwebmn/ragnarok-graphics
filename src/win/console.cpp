@@ -193,11 +193,19 @@ void Console::build(Lang lang, const Config& config) {
                                   "effects.torch_shadows", "effects.mage_effects", "frames.keep_fps",
                                   "frames.fps_counter", "interface.net_badge", "interface.mob_hp"})
                 if (!consolepins::pinned(pins_, k)) interfaceRow(k, 0);
+            if (!fresh_.empty())  // 3.0.17-beta.12: the way to «Нове»
+                rows_.push_back(Row{Kind::Heading, fmt(tr(lang, Text::ConsoleNewCount), {std::to_string(fresh_.size())}),
+                                    0});
             if (!pins_.empty()) rows_.push_back(Row{Kind::Heading, tr(lang, Text::ConsolePinned), 0});
             for (const std::string& k : pins_) interfaceRow(k.c_str(), 0);
             rows_.push_back(Row{Kind::Heading, tr(lang, Text::ConsoleActions), 0});
             rows_.push_back(Row{Kind::Layout, "", 0});
             rows_.push_back(Row{Kind::Test, "", 0});
+        }
+        if (tab_ == kTabNew) {  // 3.0.17-beta.12: the rows new since the console showed them last
+            rows_.push_back(Row{Kind::Heading, fresh_.empty() ? tr(lang, Text::ConsoleNewNone)
+                                                              : tr(lang, Text::ConsoleNewNote), 0});
+            for (const std::string& k : fresh_) interfaceRow(k.c_str(), 0);
         }
         if (all) rows_.push_back(Row{Kind::Box, "frames.fps_counter", 0});  // the frame counter (Ctrl+Shift+F11)
         // 3.0.5-beta.6: «Тест графіки» - not the first row, where the console opens: a Space there starts nothing
@@ -279,6 +287,24 @@ void Console::readPins(const std::string& iniPath) {
     pinsPath_ = (slash == std::string::npos ? std::string() : iniPath.substr(0, slash + 1)) + layout::kConsolePins;
     std::string text;
     if (readTextFile(pinsPath_, text)) pins_ = consolepins::parse(text);
+    // 3.0.17-beta.12: the rows the console has not shown yet (none at its first start: nothing marked)
+    knownPath_ = (slash == std::string::npos ? std::string() : iniPath.substr(0, slash + 1)) + layout::kConsoleKnown;
+    std::vector<std::string> keys;
+    for (const IniSetting& s : iniSettings())
+        if (levelOf(s) != Mode::Developer) keys.push_back(sectionKey(s));
+    std::string known;
+    const bool had = readTextFile(knownPath_, known);
+    fresh_ = newRows(known, keys);
+    if (!had) writeFileAtomic(knownPath_, knownRowsText(keys));
+}
+
+// 3.0.17-beta.12: «Нове» seen - every row known from now on
+void Console::markKnown() {
+    if (fresh_.empty() || knownPath_.empty()) return;
+    std::vector<std::string> keys;
+    for (const IniSetting& s : iniSettings())
+        if (levelOf(s) != Mode::Developer) keys.push_back(sectionKey(s));
+    writeFileAtomic(knownPath_, knownRowsText(keys));
 }
 
 bool Console::rowPinnable(const Row& r) const {
@@ -324,6 +350,7 @@ bool Console::change(const std::string& iniPath, const Config& config, int step)
         return false;
     }
     if (r.kind == Kind::Tabs) {  // 3.0.17-beta.4: Space or right the next tab, left the one before
+        if (tab_ == kTabNew) markKnown();  // 3.0.17-beta.12: «Нове» left - seen
         tab_ = ((tab_ + (step < 0 ? -1 : 1)) % kTabs + kTabs) % kTabs;
         build(lang_, config);
         at_ = top_ = 0;
@@ -576,6 +603,7 @@ bool Console::mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
 }
 
 void Console::hide() {
+    if (tab_ == kTabNew) markKnown();  // 3.0.17-beta.12: closed on «Нове» - seen
     if (window_ && IsWindowVisible(window_)) ShowWindow(window_, SW_HIDE);
     shownText_.clear();
 }
@@ -719,8 +747,8 @@ void Console::draw(HWND game, const Config& file, const GpuTiming* timing) {
                 continue;
             }
             if (r.kind == Kind::Tabs) {  // 3.0.17-beta.4: the tabs, the shown one bright between ‹ ›
-                const Text names[kTabs] = {Text::ConsoleTabQuick, Text::LookPicture, Text::LookUi, Text::LookTextures,
-                                           Text::ConsoleTabAll};
+                const Text names[kTabs] = {Text::ConsoleTabQuick, Text::ConsoleTabNew, Text::LookPicture,
+                                           Text::LookUi,           Text::LookTextures,    Text::ConsoleTabAll};
                 int x = fontH;
                 for (int k = 0; k < kTabs; ++k) {
                     const std::wstring word = k == tab_ ? L"\u2039 " + wide(tr(lang_, names[k])) + L" \u203a"

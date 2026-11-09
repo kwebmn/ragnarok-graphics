@@ -358,7 +358,8 @@ enum class Text : uint16_t {
     SeenHead, SeenNote, SeenClose, PlayNewFeaturesShort, ConsoleHintLine,
     CardSuggest, CardMemory, CardIntegrated, CardByGame, CardByMemory, CardApply, CardFits,  // 3.0.17-beta.9
     MoreRowsShow, MoreRowsHide,  // 3.0.17-beta.5: a part's detailed rows folded
-    ConsoleTabQuick, ConsoleTabAll, ConsoleOften, ConsolePinned, ConsoleActions,  // 3.0.17-beta.4: Alt+D's tabs
+    ConsoleTabQuick, ConsoleTabAll, ConsoleOften, ConsolePinned, ConsoleActions, ConsoleTabNew, ConsoleNewCount,
+    ConsoleNewNone, ConsoleNewNote,  // 3.0.17-beta.4: Alt+D's tabs
     MainIntro, MainPicture, MainQualityLow, MainQualityMedium, MainQualityHigh, MainQualitySuperLight, MainQualityOwn,
     MainQualityHint, MainOther, MainRecommended, MainWhatsNew, MainState, MainDriver,
     MainUpdateNone, MainUpdateNew, MainNoD3d, MainDlss, MainNoDlss, MainHd, MainPack, MainNoPack, MainMakePack,
