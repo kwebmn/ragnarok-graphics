@@ -21,6 +21,7 @@
 #include "core/window_panel.hpp"
 #include "win/item_window.hpp"
 #include "win/paths.hpp"
+#include "pad/win/game_window.hpp"
 #include "win/game_camera.hpp"
 #include "win/gpu/renderer.hpp"
 #include "win/log.hpp"
@@ -744,6 +745,7 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     s.targetH = targetHeight;
     const bool want = on && inGameWorld() && k > 0 && targetWidth > 0 && targetHeight > 0;
     if (!want) {
+        if (s.shown) uapad::gamewindow::setBlocked(uapad::gamewindow::Blocker::Uaui, nullptr, nullptr, false);
         if (s.shown && s.doc) {
             s.doc->Hide();
             if (s.card) s.card->SetClass("away", true);
@@ -755,7 +757,6 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
         return;
     }
     if (!start(s)) return;
-    (void)game;
     const double t0 = clockNow();
     s.context->SetDimensions({targetWidth, targetHeight});
     s.context->SetDensityIndependentPixelRatio(uistyle::partScale(k));
@@ -820,6 +821,28 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     int cx = 0, cy = 0;
     if (readGameCursor(cx, cy)) s.context->ProcessMouseMove(int(float(cx) * float(k)), int(float(cy) * float(k)), 0);
     s.context->Update();
+    // 3.0.18-beta.10 (the owner: «когда мышкой колесиком скролю мир увеличивается и уменьшается»): the window under
+    // the game's cursor is a window for the game (win/world_mouse) - its wheel, clicks and the world's hover stay ours
+    {
+        Rml::Element* hover = s.context->GetHoverElement();
+        Rml::ElementDocument* owner = hover ? hover->GetOwnerDocument() : nullptr;
+        Rml::Element* box = !hover                                    ? nullptr
+                            : owner == s.doc && hover != s.doc        ? s.card
+                            : s.demo && owner == s.demo               ? static_cast<Rml::Element*>(s.demo)
+                                                                      : nullptr;
+        RECT client{};
+        if (box && GetClientRect(game, &client)) {
+            const Rml::Vector2f at = box->GetAbsoluteOffset(Rml::BoxArea::Border);
+            const Rml::Vector2f size = box->GetBox().GetSize(Rml::BoxArea::Border);
+            const RECT r{LONG(int64_t(at.x) * client.right / targetWidth),
+                         LONG(int64_t(at.y) * client.bottom / targetHeight),
+                         LONG(int64_t(at.x + size.x) * client.right / targetWidth + 1),
+                         LONG(int64_t(at.y + size.y) * client.bottom / targetHeight + 1)};
+            uapad::gamewindow::setBlocked(uapad::gamewindow::Blocker::Uaui, game, &r, false);
+        } else {
+            uapad::gamewindow::setBlocked(uapad::gamewindow::Blocker::Uaui, nullptr, nullptr, false);
+        }
+    }
     const double t1 = clockNow();
     s.batches.clear();
     s.context->Render();
