@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.18-beta.5 — what's new
+
+- **The log tells the walls' light:** in dungeons (the pyramid, the sphinx) the walls come out brighter than in the game itself. The log now records the light the game holds for the map and all corners of the first wall that differs. This is for finding the cause; the picture does not change.
+
 # uaRO Graphics 3.0.18-beta.4 — what's new
 
 - **No more old "Please wait..." showing through:** when the game showed a message and a "Please wait..." at once (it happens on a first login to an account), the wait stayed in its old look. Now it is hidden then too.
