@@ -656,6 +656,7 @@ enum class Text : uint16_t {
     InterfacePicks, InterfacePicksHint, PickIdentifyTitle, PickIdentifyHint, PickIdentifyOk, PickCompoundTitle,
     PickCompoundHint, PickCompoundOk, PickEmpty, PickMenuTitle, PickMenuHint, PickMenuOk,  // .261
     PickRepairTitle, PickUpgradeTitle, PickProduceTitle, PickArrowsTitle, PickCookTitle, PickEggsTitle,  // .263
+    PickCartTitle, PickCartRow,  // 3.0.18-beta.1
     // 3.0.11-beta.158: the party's settings
     InterfacePartySetup, InterfacePartySetupHint, PartySetupTitle, PartyExp, PartyPickup, PartyShare, PartyEach,
     PartyEven, PartyShared, PartyLeaderOnly, PartyThingsFixed,

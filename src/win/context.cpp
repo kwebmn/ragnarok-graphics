@@ -95,6 +95,7 @@
 #include "win/social_card.hpp"
 #include "win/pet_card.hpp"
 #include "win/pick_card.hpp"
+#include "win/old_windows.hpp"
 #include "win/vend_shop.hpp"
 #include "win/whisper_setup.hpp"
 #include "win/login_card.hpp"
@@ -1169,6 +1170,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     cartwin::frame(window, config.cartWindow, gameCodePage(config), pk, pw, ph);              // 3.0.11-beta.154
     vendshopwin::frame(window, config.vendWindow, gameCodePage(config), pk, pw, ph);          // 3.0.11-beta.156
     pickcardwin::frame(window, config.pickWindows, gameCodePage(config), pk, pw, ph);         // 3.0.11-beta.157
+    oldwindows::frame();  // 3.0.18-beta.1: the game's windows not redrawn, told as they first show
     partysetupwin::frame(window, config.partySetupWindow, gameCodePage(config), pk, pw, ph);  // 3.0.11-beta.158
     petcardwin::frame(window, config.petWindow, gameCodePage(config), pk, pw, ph);            // 3.0.11-beta.159
     homuncardwin::frame(window, config.homunWindow, gameCodePage(config), pk, pw, ph);        // 3.0.11-beta.160

@@ -6480,6 +6480,9 @@ constexpr Entry kTexts[] = {
     {Text::PickArrowsTitle, "Arrow Crafting", "Виготовлення стріл", "Изготовление стрел"},
     {Text::PickCookTitle, "Cooking", "Готування", "Готовка"},
     {Text::PickEggsTitle, "Pet incubator", "Інкубатор улюбленця", "Инкубатор питомца"},
+    // 3.0.18-beta.1 (the owner: the interface's deferred windows - «делай»): Change Cart's window (UI window 0x5F)
+    {Text::PickCartTitle, "Cart look", "Вигляд візка", "Вид тележки"},
+    {Text::PickCartRow, "Cart {1}", "Візок {1}", "Тележка {1}"},
     // 3.0.11-beta.158: the party's settings
     {Text::InterfacePartySetup, "Party settings", "Налаштування групи", "Настройки группы"},
     {Text::InterfacePartySetupHint,

@@ -46,7 +46,11 @@ using uapad::gamewindow::Blocker;
 // 3.0.11-beta.295 (the owner: «Меню Auto Spell — надо сделать»): Auto Spell's (0x01CD, UI window 0x63 at the
 // manager's +0x1C8, class 0x699FF8, SendMsg 0x48A7B0): its skills' numbers a vector (+0x9C first, +0xA0 past the last,
 // message 0x1F adds one), the chosen row +0x68; OK 0x76 sends mode message 0xB1 with the chosen skill, 0x77 closes
-enum class Kind : uint8_t { Identify, Compound, Menu, Repair, Upgrade, Produce, Arrows, Eggs, AutoSpell };
+// 3.0.18-beta.1 (the owner: «отложенные окна ... делай»): Change Cart's (UI window 0x5F at the manager's +0x1C4,
+// class 0x699F60, SendMsg 0x48A0B0) - a button a cart, each sending the game mode's message 0xA7 with its number
+// (packet 0x01AF); the carts by the base level as the game's window offers them (FUN_00489470: 1 to 40 one, 41-65
+// two, 66-80 three, 81-90 four, 91 on five). No chosen place of its own: the card keeps the choice
+enum class Kind : uint8_t { Identify, Compound, Menu, Repair, Upgrade, Produce, Arrows, Eggs, AutoSpell, Cart };
 bool boxed(Kind k) { return k == Kind::Menu || k == Kind::Repair || k == Kind::Upgrade || k == Kind::Produce; }
 const char* nameOf(Kind k) {
     switch (k) {
@@ -59,6 +63,7 @@ const char* nameOf(Kind k) {
         case Kind::Arrows: return "arrows' or cooking's";
         case Kind::Eggs: return "incubator's";
         case Kind::AutoSpell: return "Auto Spell's";
+        case Kind::Cart: return "cart change's";
     }
     return "";
 }
@@ -78,7 +83,14 @@ constexpr GamePick kPicks[] = {{Kind::Identify, kWindowMgr + 0xAC, 0x699118, 0x4
                                {Kind::Produce, kWindowMgr + 0x19C, 0x69BE18, 0x4C5EB0},
                                {Kind::Arrows, kWindowMgr + 0x1C0, 0x699E30, 0x488E00},
                                {Kind::Eggs, kWindowMgr + 0x1B8, 0x699D98, 0x4888E0},
-                               {Kind::AutoSpell, kWindowMgr + 0x1C8, 0x699FF8, 0x48A7B0}};
+                               {Kind::AutoSpell, kWindowMgr + 0x1C8, 0x699FF8, 0x48A7B0},
+                               {Kind::Cart, kWindowMgr + 0x1C4, 0x699F60, 0x48A0B0}};
+constexpr uint32_t kBaseLevel = 0x771F94, kModeNow = 0x74B57C, kModeMsgSlot = 0x14, kModeMsg = 0x5707D0;
+constexpr int kCartMsg = 0xA7, kCartWindow = 0x5F;
+constexpr uint32_t kDeleteWindow = 0x4D1E60;
+using ModeMsgFn = int(__attribute__((thiscall)) *)(uint32_t mode, int msg, int a, int b, int c);
+using DeleteFn = bool(__attribute__((thiscall)) *)(uint32_t manager, int id);
+int g_cartChosen = -1;  // the card's choice in the cart's window (it has none of its own)
 constexpr uint32_t kBoxFirst = 0x58, kBoxPast = 0x5C, kArrowsWhat = 0x98;
 constexpr uint32_t kSpellsFirst = 0x9C, kSpellsPast = 0xA0;  // .295: Auto Spell's skills
 constexpr uint32_t kSkillNames = 0x74B9AC;  // the game's AEGIS names by skill number (win/skill_window)
@@ -134,12 +146,14 @@ uint32_t rd32(const uint8_t* p, size_t at) {
 
 // Where the game keeps the chosen row (0: nowhere)
 uint32_t chosenAt(uint32_t window, Kind kind) {
+    if (kind == Kind::Cart) return 0;
     if (!boxed(kind)) return window + kChosen;
     const uint32_t box = read32(window + kMenuBox);
     return box ? box + kMenuBoxChosen : 0;
 }
 
 int32_t chosenOf(uint32_t window, Kind kind) {
+    if (kind == Kind::Cart) return g_cartChosen;
     const uint32_t at = chosenAt(window, kind);
     return at ? int32_t(read32(at)) : -1;
 }
@@ -219,8 +233,22 @@ std::vector<pc::Entry> readSpells(const State& s, uint32_t window) {
     return out;
 }
 
+// 3.0.18-beta.1: the carts the base level has, as the game's window counts them
+std::vector<pc::Entry> readCarts() {
+    const uint32_t level = read32(kBaseLevel);
+    const int count = level >= 91 ? 5 : level >= 81 ? 4 : level >= 66 ? 3 : level >= 41 ? 2 : 1;
+    std::vector<pc::Entry> out;
+    for (int k = 1; k <= count; ++k) {
+        pc::Entry e;
+        e.name = settings::fmt(say(settings::Text::PickCartRow), {std::to_string(k)});
+        out.push_back(std::move(e));
+    }
+    return out;
+}
+
 std::vector<pc::Entry> readList(const State& s, uint32_t window) {
     if (s.kind == Kind::AutoSpell) return readSpells(s, window);
+    if (s.kind == Kind::Cart) return readCarts();
     if (boxed(s.kind)) return readMenu(window, s.codePage, s.kind != Kind::Menu);
     std::vector<pc::Entry> out;
     const auto& names = clienttables::itemNames();
@@ -282,6 +310,7 @@ pc::Texts texts(const State& s) {
             break;
         case Kind::Eggs: t.title = say(settings::Text::PickEggsTitle); break;
         case Kind::AutoSpell: t.title = "Auto Spell"; break;  // .295: as players call it (the server: «Hindsight»)
+        case Kind::Cart: t.title = say(settings::Text::PickCartTitle); break;
         default: break;
     }
     t.cancel = say(settings::Text::MsgCancel);
@@ -329,6 +358,12 @@ void hide(State& s) {
 
 void choose(State& s, int row) {
     if (!s.window || row < 0 || row >= int(s.entries.size())) return;
+    if (s.kind == Kind::Cart) {  // 3.0.18-beta.1: the card's own choice
+        g_cartChosen = row;
+        s.show.selected = row;
+        s.key.clear();
+        return;
+    }
     const uint32_t at = chosenAt(s.window, s.kind);
     if (!at) return;
     write32(at, uint32_t(row));
@@ -341,6 +376,18 @@ void press(State& s, int id) {
     const uint32_t window = gamePick(kind);
     if (!window) return;
     if (id == pc::kOkButton && chosenOf(window, kind) < 0) return;  // nothing chosen: the game's ignores it
+    if (kind == Kind::Cart) {  // 3.0.18-beta.1: the chosen cart as its button sends it, then the window closed
+        const uint32_t mode = read32(kModeNow);
+        const bool modeOk = mode && read32(read32(mode) + kModeMsgSlot) == kModeMsg;
+        if (id == pc::kOkButton && modeOk) {
+            reinterpret_cast<ModeMsgFn>(uintptr_t(kModeMsg))(mode, kCartMsg, g_cartChosen + 1, 0, 0);
+            LOG_INFO("picks: cart %d chosen - the game mode's 0x%X", g_cartChosen + 1, unsigned(kCartMsg));
+        }
+        reinterpret_cast<DeleteFn>(uintptr_t(kDeleteWindow))(kWindowMgr, kCartWindow);
+        g_cartChosen = -1;
+        s.key.clear();
+        return;
+    }
     if (s.told++ < 30)
         LOG_INFO("picks: %s - the game's %s window's 0x%X", id == pc::kOkButton ? "OK" : "cancel",
                  nameOf(kind), unsigned(id));
@@ -372,6 +419,7 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     }
     if (!s.shown || window != s.window) {
         s.show = pc::Show{};
+        if (window != s.window) g_cartChosen = -1;  // 3.0.18-beta.1
         LOG_INFO("picks: the game's %s window - the new card shows it",
                  nameOf(kind));
     }
