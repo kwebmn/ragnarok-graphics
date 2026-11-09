@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.17-beta.16 — what's new
+
+- **Fixed: after 3.0.17-beta.13 uaRO HD did not start (the game hung with no window).** Moving the settings to their own registry place no longer runs while the driver loads but at the game's first registry call. When the game cannot read its own place, it stays on the shared one, as before.
+
 # uaRO Graphics 3.0.17-beta.15 — what's new
 
 - **Fixed: after 3.0.17-beta.13 uaRO HD could fail to start.** The game moves to its own registry place only when it can read it itself and a screen is there; otherwise it stays on the shared one, as before. The choice is written to the log (game key: lines), and the settings app works with the same place as the game.
