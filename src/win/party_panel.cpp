@@ -654,6 +654,11 @@ std::vector<uint32_t> hereIds() {
     return out;
 }
 
+bool inParty(uint32_t account) {
+    State& s = state();
+    return s.on && account && s.seats.count(account) != 0;
+}
+
 std::vector<OnMap> onMap(int faceSide) {
     State& s = state();
     std::vector<OnMap> out;

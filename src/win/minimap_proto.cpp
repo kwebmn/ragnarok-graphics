@@ -1123,6 +1123,10 @@ void frame(HWND game, const Show& show, double k, int targetWidth, int targetHei
                 it = s.mates.erase(it);
                 continue;
             }
+            if (partywin::inParty(it->first)) {  // 3.0.16-beta.38 (R-GF8Z5A): the party's face is its mark
+                ++it;
+                continue;
+            }
             const std::string name = guildcardwin::mateName(it->first);  // 3.0.11-beta.219: its name
             others.push_back(minimap::Mark{minimap::Cell{it->second.x, it->second.y}, 0, minimap::Glyph::Guild,
                                            name.empty() ? say(settings::Text::MinimapGuildMate) : name});

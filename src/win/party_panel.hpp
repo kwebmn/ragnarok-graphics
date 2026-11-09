@@ -38,6 +38,9 @@ std::vector<OnMap> onMap(int faceSide);
 // 3.0.11-beta.85: the members online on the character's map and not dead, in the panel's order - whom the pad's
 // support skill may go on (uapad::Controller::setFriends)
 std::vector<uint32_t> hereIds();
+// 3.0.16-beta.38 (R-GF8Z5A): this account is in the character's party - the minimap shows a guild mate who is so
+// only as the party's member (one mark, not a triangle and a face by turns)
+bool inParty(uint32_t account);
 // 3.0.11-beta.216: its box in the target while it shows (the mercenary's block stands under it); false: not shown
 bool panelBox(int& x, int& y, int& w, int& h);
 // 3.0.11-beta.235 (the character block's party line): the party's members in the game and all, the character with
