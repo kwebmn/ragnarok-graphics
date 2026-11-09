@@ -1,3 +1,8 @@
+# uaRO Graphics 3.0.17-beta.6 — what's new
+
+- **«★ New features (N)»** on «Play»: everything the update brought in one list. Switch each row right there; the button under it opens its page.
+- **«Changed only»**: everything set otherwise than recommended — handy to find something turned off once and forgotten. The dot beside a row puts the recommended value back.
+
 # uaRO Graphics 3.0.17-beta.5 — what's new
 
 - **Every page of the app shows in any mode**, «Main» second, right after «Play». In the simple mode each page shows the main settings first and the rest behind «N more settings ›». Nothing is hidden for good.
