@@ -1035,4 +1035,6 @@ void moveTo(int x, int y, bool keep) {  // 3.0.11-beta.109: question 4 - beside 
 
 bool moving() { return state().shown && state().moving; }  // 3.0.11-beta.111
 
+const std::vector<iw::Item>& lastBag() { return state().items; }
+
 }  // namespace uagfx::win::itemswin

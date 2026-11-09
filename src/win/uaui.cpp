@@ -3,6 +3,7 @@
 #include <RmlUi/Core.h>
 
 #include <algorithm>
+#include <cstdlib>
 #include <cmath>
 #include <string>
 #include <unordered_map>
@@ -16,6 +17,10 @@
 #include "core/states.hpp"
 #include "core/ui_style.hpp"
 #include "core/uaui_mesh.hpp"
+#include "core/layout.hpp"
+#include "core/window_panel.hpp"
+#include "win/item_window.hpp"
+#include "win/paths.hpp"
 #include "win/game_camera.hpp"
 #include "win/gpu/renderer.hpp"
 #include "win/log.hpp"
@@ -111,8 +116,24 @@ struct Geometry {
     std::vector<int> indices;
 };
 
+// 3.0.18-beta.9: an item in the showcase - its icon (a texture by its picture, «icon:<address>») and its count
+struct ItemView {
+    Rml::String icon;
+    int count = 0;
+};
+
 struct State {
     bool started = false, failed = false, on = false, shown = false, dragging = false;
+    // 3.0.18-beta.9 (stage 2): the components' showcase - a window of the theme's template with tabs
+    Rml::ElementDocument* demo = nullptr;
+    Rml::DataModelHandle demoModel;
+    std::vector<ItemView> items;
+    std::vector<Rml::String> lines;
+    float demoHp = 0;
+    bool demoClosed = false;
+    ULONGLONG itemsAt = 0, themeAt = 0;
+    FILETIME themeStamp{};
+    bool themeFile = false;
     Rml::Context* context = nullptr;
     Rml::ElementDocument* doc = nullptr;
     Rml::Element* card = nullptr;
@@ -156,6 +177,14 @@ State& state() {
 class System final : public Rml::SystemInterface {
 public:
     double GetElapsedTime() override { return clockNow(); }
+    // our own names as they are: «uaui:» the built-in files (Files), «icon:» a picture of the driver's
+    void JoinPath(Rml::String& out, const Rml::String& document, const Rml::String& path) override {
+        if (path.rfind("uaui:", 0) == 0 || path.rfind("icon:", 0) == 0) {
+            out = path;
+            return;
+        }
+        Rml::SystemInterface::JoinPath(out, document, path);
+    }
     bool LogMessage(Rml::Log::Type type, const Rml::String& message) override {
         State& s = state();
         if (type <= Rml::Log::LT_WARNING && s.logged < 20) {
@@ -198,6 +227,20 @@ public:
     void ReleaseGeometry(Rml::CompiledGeometryHandle geometry) override { state().geometries.erase(uintptr_t(geometry)); }
     Rml::TextureHandle LoadTexture(Rml::Vector2i& dimensions, const Rml::String& source) override {
         State& s = state();
+        if (source.rfind("icon:", 0) == 0) {  // 3.0.18-beta.9: an icon the driver keeps (client_tables), as it is
+            const auto* pic =
+                reinterpret_cast<const panel::Picture*>(uintptr_t(std::strtoull(source.c_str() + 5, nullptr, 16)));
+            if (pic && pic->width > 0 && pic->height > 0 && pic->px.size() >= size_t(pic->width) * pic->height) {
+                Texture t;
+                t.w = pic->width;
+                t.h = pic->height;
+                t.px.assign(pic->px.begin(), pic->px.begin() + ptrdiff_t(size_t(t.w) * t.h));
+                dimensions = {t.w, t.h};
+                const uintptr_t h = s.nextTexture++;
+                s.textures.emplace(h, std::move(t));
+                return Rml::TextureHandle(h);
+            }
+        }
         if (s.logged < 20) {
             ++s.logged;
             LOG_INFO("uaui: a picture asked by name (%s) - not in the spike", source.c_str());
@@ -426,29 +469,187 @@ public:
 };
 Drag g_drag;
 
-const char* kCard = R"(<rml><head><style>
-body { width: 100%; height: 100%; font-family: Plex; font-size: 14dp; color: #e9edf2; }
-#card { position: absolute; left: 50%; top: 96dp; margin-left: -160dp; width: 320dp; padding: 12dp 14dp;
-        border-radius: 8dp; border: 1dp #ffffff22; background-color: #161b22e0; drag: drag; cursor: move;
-        transition: opacity transform background-color border-color 0.16s quadratic-out; }
-#card.away { opacity: 0; transform: scale(0.96); }
-#card:hover { background-color: #1e2633f0; border-color: #3d7fd8aa; }
-.name { font-weight: bold; font-size: 15dp; }
-.sub { color: #9aa4b2; font-size: 12dp; margin-left: 8dp; }
-.row { display: block; margin-top: 8dp; }
-.num { font-size: 12dp; color: #c9d1d9; }
-.bar { display: block; height: 8dp; border-radius: 4dp; background-color: #2a313c; margin-top: 4dp; }
-.fill { display: block; height: 8dp; border-radius: 4dp; }
-.hp { background-color: #3fb950; }
-.sp { background-color: #388bfd; }
-.tag { display: block; margin-top: 10dp; font-size: 11dp; color: #7d8590; }
-</style></head><body data-model="uaui">
-<div id="card" class="away">
-<div><span class="name">{{name}}</span><span class="sub">Base {{base}} · Job {{job}}</span></div>
-<div class="row"><span class="num">HP {{hp | num}} / {{hp_most | num}}</span><div class="bar"><div class="fill hp" data-style-width="hp_pct + '%'"></div></div></div>
-<div class="row"><span class="num">SP {{sp | num}} / {{sp_most | num}}</span><div class="bar"><div class="fill sp" data-style-width="sp_pct + '%'"></div></div></div>
-<span class="tag">uaUI · RmlUi 6.3</span>
+// ---- the theme and the components (stage 2): every colour, size and motion in one style sheet ----
+
+// The built-in theme: the new interface's look (the concept's colours, 8dp corners, 0.12-0.16 s eased out).
+// uaro-graphics\ui\theme.rcss in its place when there - read again within a second of a change.
+const char* kTheme = R"(
+body { font-family: Plex; font-size: 14dp; color: #e9edf2; }
+.ua-screen { width: 100%; height: 100%; }
+.ua-card { position: absolute; left: 50%; top: 96dp; margin-left: -160dp; width: 320dp; padding: 12dp 14dp;
+           border-radius: 8dp; border: 1dp #ffffff22; background-color: #161b22e0; drag: drag; cursor: move;
+           transition: opacity transform background-color border-color 0.16s quadratic-out; }
+.ua-card.away { opacity: 0; transform: scale(0.96); }
+.ua-card:hover { background-color: #1e2633f0; border-color: #3d7fd8aa; }
+.ua-name { font-weight: bold; font-size: 15dp; }
+.ua-sub { color: #9aa4b2; font-size: 12dp; margin-left: 8dp; }
+.ua-row { display: block; margin-top: 8dp; }
+.ua-num { font-size: 12dp; color: #c9d1d9; }
+.ua-bar { display: block; height: 8dp; border-radius: 4dp; background-color: #2a313c; margin-top: 4dp; }
+.ua-fill { display: block; height: 8dp; border-radius: 4dp; background-color: #3fb950; }
+.ua-fill.sp { background-color: #388bfd; }
+.ua-tag { display: block; margin-top: 10dp; font-size: 11dp; color: #7d8590; }
+.ua-window { position: absolute; width: 440dp; border-radius: 8dp; border: 1dp #ffffff22;
+             background-color: #161b22eb; transition: opacity transform 0.12s quadratic-out; }
+.ua-window.away { opacity: 0; transform: scale(0.96); }
+.ua-title { display: block; height: 40dp; padding-left: 16dp; border-bottom: 1dp #ffffff14; cursor: move; }
+.ua-title-name { font-size: 15dp; font-weight: bold; line-height: 40dp; }
+.ua-close { position: absolute; right: 8dp; top: 6dp; width: 28dp; height: 28dp; line-height: 28dp;
+            text-align: center; border-radius: 6dp; color: #8b949e; transition: background-color color 0.1s; }
+.ua-close:hover { background-color: #ffffff18; color: #e9edf2; }
+.ua-content { display: block; padding: 12dp 16dp; }
+.ua-hint { display: block; padding: 8dp 16dp 10dp 16dp; border-top: 1dp #ffffff14; font-size: 11dp; color: #8b949e; }
+tabset { display: block; }
+tabset tabs { display: block; margin-bottom: 12dp; }
+tab { display: inline-block; margin-right: 18dp; padding-bottom: 4dp; color: #8b949e; border-bottom: 2dp #00000000;
+      transition: color border-color 0.12s; cursor: pointer; }
+tab:hover { color: #c9d1d9; }
+tab:selected { color: #e9edf2; font-weight: bold; border-bottom-color: #3d7fd8; }
+panels { display: block; }
+.ua-grid { display: block; }
+.ua-slot { display: inline-block; position: relative; width: 52dp; height: 52dp; margin: 0 6dp 6dp 0;
+           border-radius: 8dp; border: 1dp #ffffff1a; background-color: #ffffff06;
+           transition: background-color border-color 0.1s; }
+.ua-slot:hover { background-color: #ffffff14; border-color: #3d7fd8aa; }
+.ua-slot img { position: absolute; left: 6dp; top: 6dp; width: 40dp; height: 40dp; }
+.ua-count { position: absolute; right: 4dp; bottom: 2dp; font-size: 11dp; font-weight: bold; }
+.ua-list { display: block; height: 220dp; overflow-y: auto; }
+.ua-list p { display: block; padding: 3dp 6dp; border-radius: 4dp; }
+.ua-list p:hover { background-color: #ffffff0e; }
+.ua-label { display: block; color: #8b949e; font-size: 12dp; margin: 10dp 0 6dp 0; }
+.ua-button { display: inline-block; padding: 6dp 14dp; margin: 0 8dp 8dp 0; border-radius: 6dp;
+             background-color: #2a313c; transition: background-color 0.1s; cursor: pointer; }
+.ua-button:hover { background-color: #34404f; }
+.ua-button:active { background-color: #3d7fd8; }
+input.checkbox { display: inline-block; width: 16dp; height: 16dp; margin-right: 8dp; border-radius: 4dp;
+                 border: 1dp #ffffff50; vertical-align: middle; transition: background-color border-color 0.1s; }
+input.checkbox:checked { background-color: #3d7fd8; border-color: #3d7fd8; }
+scrollbarvertical { width: 8dp; margin-left: 4dp; }
+scrollbarvertical slidertrack { background-color: #ffffff0c; border-radius: 4dp; }
+scrollbarvertical sliderbar { background-color: #ffffff40; border-radius: 4dp; min-height: 24dp; }
+scrollbarvertical sliderbar:hover { background-color: #ffffff70; }
+scrollbarvertical sliderarrowdec, scrollbarvertical sliderarrowinc { width: 0; height: 0; }
+)";
+
+// The window: its title (dragged by RmlUi's handle), a close button, the content, the controls' hint line
+const char* kWindowTemplate = R"(<template name="ua-window" content="content">
+<head><link type="text/rcss" href="uaui:theme.rcss"/></head>
+<body class="ua-window away">
+<handle move_target="#document" class="ua-title"><span class="ua-title-name" id="ua-title"></span></handle>
+<div class="ua-close" id="ua-close">×</div>
+<div class="ua-content" id="content"></div>
+<div class="ua-hint" id="ua-hint"></div>
+</body></template>)";
+
+const char* kCard = R"(<rml><head><link type="text/rcss" href="uaui:theme.rcss"/></head>
+<body class="ua-screen" data-model="uaui">
+<div id="card" class="ua-card away">
+<div><span class="ua-name">{{name}}</span><span class="ua-sub">Base {{base}} · Job {{job}}</span></div>
+<div class="ua-row"><span class="ua-num">HP {{hp | num}} / {{hp_most | num}}</span><div class="ua-bar"><div class="ua-fill" data-style-width="hp_pct + '%'"></div></div></div>
+<div class="ua-row"><span class="ua-num">SP {{sp | num}} / {{sp_most | num}}</span><div class="ua-bar"><div class="ua-fill sp" data-style-width="sp_pct + '%'"></div></div></div>
+<span class="ua-tag">uaUI · RmlUi 6.3</span>
 </div></body></rml>)";
+
+// The showcase: the theme's window with tabs - the bag's items (their icons), a list that scrolls, buttons, switches
+const char* kDemo = R"(<rml><head><link type="text/template" href="uaui:window.rml"/><title>uaUI · компоненти</title></head>
+<body template="ua-window" data-model="demo" style="left: 120dp; top: 200dp;">
+<tabset>
+<tab>Речі</tab><panel>
+<div class="ua-grid" data-if="items.size > 0"><div class="ua-slot" data-for="it : items"><img data-attr-src="it.icon"/><span class="ua-count" data-if="it.count > 1">{{it.count | num}}</span></div></div>
+<span class="ua-label" data-if="items.size == 0">Відкрийте «Речі» (Alt+E) — тут з'являться предмети.</span>
+</panel>
+<tab>Список</tab><panel><div class="ua-list"><p data-for="line : lines">{{line}}</p></div></panel>
+<tab>Кнопки</tab><panel>
+<span class="ua-label">Кнопки</span><span class="ua-button">Звичайна</span><span class="ua-button">Ще одна</span>
+<span class="ua-label">Перемикачі</span>
+<div><input type="checkbox" checked="checked"/>Увімкнено</div>
+<div><input type="checkbox"/>Вимкнено</div>
+<span class="ua-label">Смуга (HP персонажа)</span><div class="ua-bar"><div class="ua-fill" data-style-width="hp_pct + '%'"></div></div>
+</panel>
+</tabset>
+</body></rml>)";
+
+std::string themeFile() { return layout::join(gameDir(), layout::kUiTheme); }
+
+// RmlUi's files: «uaui:» ours from memory (the theme from its file when there), else none
+class Files final : public Rml::FileInterface {
+public:
+    Rml::FileHandle Open(const Rml::String& path) override {
+        auto* f = new Open_;
+        if (path == "uaui:theme.rcss") {
+            f->data = kTheme;
+            State& s = state();
+            s.themeFile = false;
+            HANDLE h = CreateFileA(themeFile().c_str(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr,
+                                   OPEN_EXISTING, 0, nullptr);
+            if (h != INVALID_HANDLE_VALUE) {
+                LARGE_INTEGER size{};
+                if (GetFileSizeEx(h, &size) && size.QuadPart > 0 && size.QuadPart < (1 << 20)) {
+                    std::string text(size_t(size.QuadPart), '\0');
+                    DWORD got = 0;
+                    if (ReadFile(h, text.data(), DWORD(text.size()), &got, nullptr) && got == text.size()) {
+                        f->data = std::move(text);
+                        s.themeFile = true;
+                    }
+                }
+                CloseHandle(h);
+            }
+        } else if (path == "uaui:window.rml") {
+            f->data = kWindowTemplate;
+        } else {
+            delete f;
+            return 0;
+        }
+        return Rml::FileHandle(f);
+    }
+    void Close(Rml::FileHandle file) override { delete reinterpret_cast<Open_*>(file); }
+    size_t Read(void* buffer, size_t size, Rml::FileHandle file) override {
+        auto* f = reinterpret_cast<Open_*>(file);
+        const size_t n = std::min(size, f->data.size() - f->at);
+        std::copy(f->data.data() + f->at, f->data.data() + f->at + n, static_cast<char*>(buffer));
+        f->at += n;
+        return n;
+    }
+    bool Seek(Rml::FileHandle file, long offset, int origin) override {
+        auto* f = reinterpret_cast<Open_*>(file);
+        const long base = origin == SEEK_SET ? 0 : origin == SEEK_CUR ? long(f->at) : long(f->data.size());
+        const long at = base + offset;
+        if (at < 0 || size_t(at) > f->data.size()) return false;
+        f->at = size_t(at);
+        return true;
+    }
+    size_t Tell(Rml::FileHandle file) override { return reinterpret_cast<Open_*>(file)->at; }
+
+private:
+    struct Open_ {
+        std::string data;
+        size_t at = 0;
+    };
+};
+Files g_files;
+
+// The window's close button: the window hidden until the switch is turned again
+class Close final : public Rml::EventListener {
+public:
+    void ProcessEvent(Rml::Event& e) override {
+        State& s = state();
+        if (Rml::ElementDocument* d = e.GetCurrentElement()->GetOwnerDocument()) {
+            d->Hide();
+            if (d == s.demo) s.demoClosed = true;
+            LOG_INFO("uaui: the showcase closed by its ×");
+        }
+    }
+};
+Close g_close;
+
+bool themeChanged(State& s) {
+    WIN32_FILE_ATTRIBUTE_DATA a{};
+    const bool there = GetFileAttributesExA(themeFile().c_str(), GetFileExInfoStandard, &a) != 0;
+    const FILETIME t = there ? a.ftLastWriteTime : FILETIME{};
+    const bool changed = there != s.themeFile || CompareFileTime(&t, &s.themeStamp) != 0;
+    s.themeStamp = t;
+    return changed;
+}
 
 bool start(State& s) {
     if (s.started) return true;
@@ -464,6 +665,7 @@ bool start(State& s) {
     static Fonts fonts;
     g_fonts = &fonts;
     Rml::SetFontEngineInterface(g_fonts);
+    Rml::SetFileInterface(&g_files);  // 3.0.18-beta.9: the theme and the window's template
     if (!Rml::Initialise()) {
         s.failed = true;
         LOG_ERROR("uaui: RmlUi did not start - the card stays off");
@@ -496,6 +698,30 @@ bool start(State& s) {
         LOG_ERROR("uaui: the card's document did not load - the card stays off");
         return false;
     }
+    // 3.0.18-beta.9 (stage 2): the components' showcase
+    Rml::DataModelConstructor d = s.context->CreateDataModel("demo");
+    if (auto item = d.RegisterStruct<ItemView>()) {
+        item.RegisterMember("icon", &ItemView::icon);
+        item.RegisterMember("count", &ItemView::count);
+    }
+    d.RegisterArray<std::vector<ItemView>>();
+    d.RegisterArray<std::vector<Rml::String>>();
+    d.Bind("items", &s.items);
+    d.Bind("lines", &s.lines);
+    d.Bind("hp_pct", &s.demoHp);
+    s.demoModel = d.GetModelHandle();
+    for (int i = 1; i <= 60; ++i)
+        s.lines.push_back("Рядок " + std::to_string(i) + " — коліщатко миші гортає список, смуга праворуч тягнеться");
+    s.demo = s.context->LoadDocumentFromMemory(kDemo);
+    if (s.demo) {
+        if (Rml::Element* t = s.demo->GetElementById("ua-title")) t->SetInnerRML(s.demo->GetTitle());
+        if (Rml::Element* h = s.demo->GetElementById("ua-hint"))
+            h->SetInnerRML("Заголовок тягне вікно · × ховає · вигляд — uaro-graphics\\ui\\theme.rcss");
+        if (Rml::Element* c = s.demo->GetElementById("ua-close")) c->AddEventListener(Rml::EventId::Click, &g_close);
+    } else {
+        LOG_INFO("uaui: the showcase's document did not load");
+    }
+    themeChanged(s);  // its stamp now: read again only when it changes
     s.card = s.doc->GetElementById("card");
     if (s.card) {
         s.card->AddEventListener(Rml::EventId::Dragstart, &g_drag);
@@ -503,8 +729,9 @@ bool start(State& s) {
         s.card->AddEventListener(Rml::EventId::Dragend, &g_drag);
     }
     s.started = true;
-    LOG_INFO("uaui: RmlUi %s started - its context %dx%d, %.2f target pixels a concept pixel", Rml::GetVersion().c_str(),
-             s.targetW, s.targetH, double(uistyle::partScale(s.k)));
+    LOG_INFO("uaui: RmlUi %s started - its context %dx%d, %.2f target pixels a concept pixel; the theme %s",
+             Rml::GetVersion().c_str(), s.targetW, s.targetH, double(uistyle::partScale(s.k)),
+             s.themeFile ? themeFile().c_str() : "built in");
     return true;
 }
 
@@ -520,8 +747,10 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
         if (s.shown && s.doc) {
             s.doc->Hide();
             if (s.card) s.card->SetClass("away", true);
+            if (s.demo) s.demo->Hide(), s.demo->SetClass("away", true);
             LOG_INFO("uaui: the card hidden");
         }
+        if (!on) s.demoClosed = false;  // the switch turned again: the showcase back
         s.shown = false;
         return;
     }
@@ -532,12 +761,41 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     s.context->SetDensityIndependentPixelRatio(uistyle::partScale(k));
     if (!s.shown) {
         s.doc->Show(Rml::ModalFlag::None, Rml::FocusFlag::None);
+        if (s.demo && !s.demoClosed) s.demo->Show(Rml::ModalFlag::None, Rml::FocusFlag::None);
         s.shown = true;
         s.fadeAsked = false;
         LOG_INFO("uaui: the card shown");
     } else if (!s.fadeAsked && s.card) {  // a frame after showing: the fade in runs (RCSS transition)
         s.card->SetClass("away", false);
+        if (s.demo) s.demo->SetClass("away", false);
         s.fadeAsked = true;
+    }
+    const ULONGLONG nowMs = GetTickCount64();
+    // 3.0.18-beta.9: the theme's file read again within a second of a change - every document's style sheets anew
+    if (nowMs - s.themeAt >= 1000) {
+        s.themeAt = nowMs;
+        if (themeChanged(s)) {
+            Rml::Factory::ClearStyleSheetCache();
+            Rml::Factory::ClearTemplateCache();
+            s.doc->ReloadStyleSheet();
+            if (s.demo) s.demo->ReloadStyleSheet();
+            LOG_INFO("uaui: the theme read again - %s", s.themeFile ? themeFile().c_str() : "built in");
+        }
+    }
+    // 3.0.18-beta.9: the bag as «Речі» last read it, its icons as textures - twice a second
+    if (s.demo && nowMs - s.itemsAt >= 500) {
+        s.itemsAt = nowMs;
+        std::vector<ItemView> now;
+        for (const auto& it : itemswin::lastBag()) {
+            if (now.size() >= 60) break;
+            char src[32];
+            std::snprintf(src, sizeof src, "icon:%llx", (unsigned long long)uintptr_t(it.icon));
+            now.push_back({it.icon ? src : "", it.count});
+        }
+        bool same = now.size() == s.items.size();
+        for (size_t i = 0; same && i < now.size(); ++i)
+            same = now[i].icon == s.items[i].icon && now[i].count == s.items[i].count;
+        if (!same) s.items = std::move(now), s.demoModel.DirtyVariable("items");
     }
     // the character's numbers: only what changed is laid out again
     charstatus::Status st;
@@ -554,6 +812,7 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
         const float hp = st.hpMost > 0 ? 100.0f * float(st.hp) / float(st.hpMost) : 0.0f;
         const float sp = st.spMost > 0 ? 100.0f * float(st.sp) / float(st.spMost) : 0.0f;
         if (hp != s.hpPct) s.hpPct = hp, s.model.DirtyVariable("hp_pct");
+        if (hp != s.demoHp) s.demoHp = hp, s.demoModel.DirtyVariable("hp_pct");
         if (sp != s.spPct) s.spPct = sp, s.model.DirtyVariable("sp_pct");
     }
     const std::string name = utf8From(readOwnName(), codePage);
@@ -665,18 +924,21 @@ void draw(FrameRecord& record, gpu::Renderer& renderer) {
     }
 }
 
-bool mouse(HWND game, UINT m, WPARAM, LPARAM lp, LRESULT& result) {
+bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     State& s = state();
     if (!s.shown || !s.context) return false;
-    const bool down = m == WM_LBUTTONDOWN, up = m == WM_LBUTTONUP;
-    if (!down && !up) return false;
+    const bool down = m == WM_LBUTTONDOWN, up = m == WM_LBUTTONUP, wheel = m == WM_MOUSEWHEEL;
+    if (!down && !up && !wheel) return false;
     float tx = 0, ty = 0;
     if (!pointerInTarget(game, m, lp, s.k, s.targetW, s.targetH, tx, ty)) return false;
     s.context->ProcessMouseMove(int(tx), int(ty), 0);
     Rml::Element* hover = s.context->GetHoverElement();
-    const bool over = hover && hover != s.doc && hover->GetOwnerDocument() == s.doc;
-    if (!over && !(up && s.dragging)) return false;
-    if (down) s.context->ProcessMouseButtonDown(0, 0);
+    // over the card (its screen-wide page itself is not), or anywhere on the showcase's window
+    const Rml::ElementDocument* owner = hover ? hover->GetOwnerDocument() : nullptr;
+    const bool over = hover && ((owner == s.doc && hover != s.doc) || (s.demo && owner == s.demo));
+    if (!over && !(up && s.dragging) && !(up && s.context->IsMouseInteracting())) return false;
+    if (wheel) s.context->ProcessMouseWheel(-float(GET_WHEEL_DELTA_WPARAM(wp)) / float(WHEEL_DELTA), 0);
+    else if (down) s.context->ProcessMouseButtonDown(0, 0);
     else s.context->ProcessMouseButtonUp(0, 0);
     result = 0;
     return true;

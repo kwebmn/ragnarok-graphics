@@ -4,9 +4,11 @@
 #include <cstdint>
 #include <set>
 #include <string>
+#include <vector>
 
 #include "core/frame.hpp"
 #include "core/game_packets.hpp"
+#include "core/item_window.hpp"
 #include "core/pad_carry.hpp"
 #include "core/window_panel.hpp"
 
@@ -63,6 +65,8 @@ void toggleStar(int id);
 // The game's «Речі» window made (as the character block's button does) when it is not open: «Склад» opens it beside
 // itself; false: not made
 bool open();
+// 3.0.18-beta.9: the bag as «Речі» last read it (while the game's items window was open) - uaUI's showcase (win/uaui)
+const std::vector<uagfx::itemwin::Item>& lastBag();
 // A drag of the game's (a storage thing's, type 6) given to the game's «Речі» window's drop, the window made first:
 // the thing into the bag (the game's count window for a stack); false: no window
 bool giveDrag(uint32_t drag);
