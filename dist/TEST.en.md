@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.17-beta.5 — what's new
+
+- **Every page of the app shows in any mode**, «Main» second, right after «Play». In the simple mode each page shows the main settings first and the rest behind «N more settings ›». Nothing is hidden for good.
+
 # uaRO Graphics 3.0.17-beta.4 — what's new
 
 - **Alt+D in the game has tabs now:** «Quick», «Picture», «Interface», «Textures», «All». ← → on the top row switch them. **«Quick»** opens first: the three «How the game looks» choices, what is switched most (night, weather, grass, torch shadows, new effects, 60 fps, frame counter, ping, monster HP) and your pinned rows. **Insert** on any row pins it ★ to «Quick» (again: takes it off). «All» is the full list as before; typing letters searches everything.
