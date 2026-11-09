@@ -39,6 +39,15 @@ struct Suggestion {
 };
 Suggestion suggest(int cardLevel, unsigned long long vramMb, bool integrated);
 
+// 3.0.17-beta.10 (the concept: the first start's cards, one press for the three choices): the kinds of players
+enum class Kind : int { AllNew, NewLookOldUi, WeakPc, Classic };
+constexpr int kKinds = 4;
+struct Persona {
+    int picture = 0, ui = 0, textures = 0;
+};
+Persona persona(Kind k, const Suggestion& card);  // the new look takes the card's picture and textures
+Text kindName(Kind k);  // «Хочу все нове», ...
+
 Text headOf(Choice c);             // «Картинка», «Інтерфейс», «Текстури»
 Text nameOf(Choice c, int variant);  // the variant's words
 

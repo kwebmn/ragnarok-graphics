@@ -38,6 +38,9 @@ constexpr int kReportNew = 2134;      // «Повідомити про поми�
 constexpr int kLookChange = 2135;     // «Як виглядає гра»: «Змінити ›» - «Головна»
 constexpr int kNewFeatures = 2136;    // 3.0.17-beta.6: «★ Нові можливості (N)»
 constexpr int kChangedOnly = 2137;    // and «Лише змінені»
+constexpr int kKindFirst = 2140;      // 3.0.17-beta.10: + presets::Kind - the first start's cards
+constexpr int kKindSkip = 2144;       // «Залишити як є»
+constexpr int kSeenClose = 2145;      // «Оновлено до»'s «Зрозуміло»
 constexpr int kSuggest = 2138;        // 3.0.17-beta.9: «Підібрати під відеокарту»
 constexpr int kRollBack = 2132;  // 3.0.17-beta.1: «← Повернути 3.0.15»
 constexpr int kNewsFirst = 2110;  // + a news item's number: its "More"
@@ -86,6 +89,7 @@ public:
         const std::string offer = u.kind == UpdateState::Done ? u.offer : "";
         const bool patchNeeded = patch.kind == PatchState::Done && !patch.check.needed.empty();
         buildCards(p);
+        buildFirst(p);  // 3.0.17-beta.10
         // 3.0.17-beta.3 (the concept «простой старт»): the welcome screen - «Грати» and the update first, then the
         // other window, the report, how the game looks; the news beside them
         const bool two = p.split();
@@ -263,6 +267,50 @@ public:
                    {kChangedOnly, t(Text::PlayChangedOnly), true}});
     }
 
+    // 3.0.17-beta.10 (the concept: the first start, the update): no version seen and no game played here - four
+    // cards set the three choices at once; another version seen - «Оновлено до X» once, with «Що нового»
+    std::wstring seenFile() const { return host_.model().paths().dir + L"\\" + wide(layout::kSeenVersion); }
+    void markSeen() { writeFileAtomic(seenFile(), std::string(kVersion)); }
+
+    void buildFirst(Panel& p) {
+        Model& m = host_.model();
+        std::string seen;
+        const bool known = readFile(seenFile(), seen);
+        while (!seen.empty() && (seen.back() == '\n' || seen.back() == '\r' || seen.back() == ' ')) seen.pop_back();
+        if (!known && !m.playedHere()) {
+            p.heading(t(Text::KindHead));
+            p.note(t(Text::KindNote));
+            std::vector<ButtonItem> kinds;
+            for (int k = 0; k < settings::presets::kKinds; ++k)
+                kinds.push_back({kKindFirst + k, t(settings::presets::kindName(settings::presets::Kind(k))), true,
+                                 k == 0});
+            p.buttons(kinds);
+            p.buttons({{kKindSkip, t(Text::KindSkip), true}});
+            p.gap();
+        } else if (seen != kVersion) {
+            p.note(tf(Text::SeenHead, {kVersion}), Tone::Accent);
+            p.note(t(Text::SeenNote));
+            p.buttons({{kWhatsNew, tf(Text::MainWhatsNew, {kVersion}), true},
+                       {kNewFeatures, t(Text::PlayNewFeaturesShort), true},
+                       {kSeenClose, t(Text::SeenClose), true}});
+            p.gap();
+        }
+    }
+
+    void applyKind(settings::presets::Kind k) {
+        Model& m = host_.model();
+        const settings::Machine machine = m.machine();
+        const auto card = settings::presets::suggest(m.cardLevel(), machine.vramMb, machine.integrated);
+        const settings::presets::Persona per = settings::presets::persona(k, card);
+        const std::pair<settings::presets::Choice, int> picks[] = {{settings::presets::Choice::Picture, per.picture},
+                                                                   {settings::presets::Choice::Interface, per.ui},
+                                                                   {settings::presets::Choice::Textures, per.textures}};
+        for (const auto& [choice, variant] : picks)
+            for (const auto& [key, token] : settings::presets::keysOf(choice, variant))
+                if (const settings::IniSetting* s = settings::findSetting(key)) m.setToken(*s, token);
+        host_.changed();
+    }
+
     settings::presets::Suggestion suggestion_;  // 3.0.17-beta.9
     std::string rollBack_;  // 3.0.17-beta.1: the version «← Повернути» goes back to, "" none
     std::wstring testFile() const { return host_.model().paths().dir + L"\\uaro-graphics\\graphics-test.txt"; }
@@ -333,6 +381,13 @@ public:
             host_.openReports(true);
         } else if (id == kLookChange) {
             host_.showView(settings::View::Main, 0);
+        } else if (id >= kKindFirst && id < kKindFirst + settings::presets::kKinds) {  // 3.0.17-beta.10
+            applyKind(settings::presets::Kind(id - kKindFirst));
+            markSeen();
+            host_.rebuild();
+        } else if (id == kKindSkip || id == kSeenClose) {
+            markSeen();
+            host_.rebuild();
         } else if (id == kSuggest) {  // 3.0.17-beta.9: the picture and the textures for the card
             for (const auto& [choice, variant] :
                  {std::pair{settings::presets::Choice::Picture, suggestion_.picture},
@@ -342,6 +397,7 @@ public:
             host_.changed();
             host_.rebuild();
         } else if (id == kNewFeatures || id == kChangedOnly) {  // 3.0.17-beta.6
+            if (id == kNewFeatures) markSeen();  // 3.0.17-beta.10
             host_.search(id == kNewFeatures ? kNewQuery : kChangedQuery);
         } else if (id == kRollBack && !rollBack_.empty()) {
             rollBackTo(host_, rollBack_);  // 3.0.17-beta.1
@@ -355,6 +411,7 @@ public:
             if (!err.empty()) host_.message(err, true);
             host_.reload();
         } else if (id == kWhatsNew) {
+            markSeen();  // 3.0.17-beta.10
             const std::wstring notes = notesText(host_.model().paths().dir, host_.lang());
             if (notes.empty())
                 host_.message(tf(Text::NotesNone, {kVersion}), false);

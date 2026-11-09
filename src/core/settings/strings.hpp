@@ -354,6 +354,8 @@ enum class Text : uint16_t {
     PlayAnotherWindow, PlayReport, PlayLookChange,  // 3.0.17-beta.3: the welcome screen
     NewListHead, NewListNone, NewListNote, ChangedListHead, ChangedListNone, ChangedListNote, PlayNewFeatures,
     PlayChangedOnly,  // 3.0.17-beta.6
+    KindAllNew, KindNewLookOldUi, KindWeakPc, KindClassic, KindHead, KindNote, KindSkip,  // 3.0.17-beta.10
+    SeenHead, SeenNote, SeenClose, PlayNewFeaturesShort,
     CardSuggest, CardMemory, CardIntegrated, CardByGame, CardByMemory, CardApply, CardFits,  // 3.0.17-beta.9
     MoreRowsShow, MoreRowsHide,  // 3.0.17-beta.5: a part's detailed rows folded
     ConsoleTabQuick, ConsoleTabAll, ConsoleOften, ConsolePinned, ConsoleActions,  // 3.0.17-beta.4: Alt+D's tabs

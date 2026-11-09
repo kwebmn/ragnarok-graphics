@@ -79,3 +79,19 @@ TEST(choice_presets_suggest_by_the_card) {
     CHECK_EQ(laptop.textures, int(presets::Textures::HdLight));
     CHECK_EQ(presets::suggest(1, 1024, false).textures, int(presets::Textures::Original));
 }
+
+// 3.0.17-beta.10 (the concept: the first start's cards): a kind of player - the three choices at once; the new look
+// takes the card's picture and textures (suggest), the old ones their own
+TEST(choice_presets_personas) {
+    const presets::Suggestion card{int(presets::Picture::Better), int(presets::Textures::Hd)};
+    const presets::Persona all = presets::persona(presets::Kind::AllNew, card);
+    CHECK(all.picture == card.picture && all.ui == int(presets::Ui::New) && all.textures == card.textures);
+    const presets::Persona oldUi = presets::persona(presets::Kind::NewLookOldUi, card);
+    CHECK(oldUi.ui == int(presets::Ui::Classic) && oldUi.picture == card.picture);
+    const presets::Persona weak = presets::persona(presets::Kind::WeakPc, card);
+    CHECK(weak.picture == int(presets::Picture::Auto) && weak.ui == int(presets::Ui::NewScreen) &&
+          weak.textures == int(presets::Textures::HdLight));
+    const presets::Persona classic = presets::persona(presets::Kind::Classic, card);
+    CHECK(classic.picture == int(presets::Picture::Game) && classic.ui == int(presets::Ui::Classic) &&
+          classic.textures == int(presets::Textures::Original));
+}

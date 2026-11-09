@@ -37,6 +37,21 @@ Suggestion suggest(int cardLevel, unsigned long long vramMb, bool integrated) {
     return s;
 }
 
+Persona persona(Kind k, const Suggestion& card) {
+    switch (k) {
+        case Kind::AllNew: return {card.picture, int(Ui::New), card.textures};
+        case Kind::NewLookOldUi: return {card.picture, int(Ui::Classic), card.textures};
+        case Kind::WeakPc: return {int(Picture::Auto), int(Ui::NewScreen), int(Textures::HdLight)};
+        case Kind::Classic: return {int(Picture::Game), int(Ui::Classic), int(Textures::Original)};
+    }
+    return {};
+}
+
+Text kindName(Kind k) {
+    static const Text names[kKinds] = {Text::KindAllNew, Text::KindNewLookOldUi, Text::KindWeakPc, Text::KindClassic};
+    return names[int(k)];
+}
+
 Text headOf(Choice c) {
     return c == Choice::Picture ? Text::LookPicture : c == Choice::Interface ? Text::LookUi : Text::LookTextures;
 }
