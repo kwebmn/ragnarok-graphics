@@ -1,3 +1,8 @@
+# uaRO Graphics 3.0.17-beta.22 — what's new
+
+- **No white "dome" round monsters:** the flash of a hit and of a death no longer blurs through the halo into a bright dome round the monster - only a short flash on the monster itself stays.
+- The hit and death flashes no longer come on with the effects' sets - only when turned on by hand (the effects page, the characters and monsters group).
+
 # uaRO Graphics 3.0.17-beta.21 — what's new
 
 - **The character's silhouette behind walls no longer lies over effects:** Assumptio and other effects round the character came out as a blue silhouette right on it, though nothing hid it. Now the silhouette is only the character itself, when a wall or a house hides it.
