@@ -6,6 +6,7 @@
 #include "app/status_info.hpp"
 #include "app/update.hpp"
 #include "core/settings/game_settings.hpp"
+#include "core/settings/choice_presets.hpp"
 #include "core/settings/presets.hpp"
 #include "core/update_check.hpp"
 #include "core/version.hpp"
@@ -16,6 +17,7 @@ namespace {
 using namespace settings;
 
 constexpr int kQuality = 2001;
+constexpr int kLookFirst = 2040;  // 3.0.17-beta.2: + presets::Choice - «Як виглядає гра»'s three choices
 constexpr int kRecommended = 2003;
 constexpr int kWhatsNew = 2004;
 constexpr int kUpdateCheck = 2005;
@@ -39,6 +41,7 @@ public:
         Model& m = host_.model();
         p.heading(t(Text::ViewMain));
         p.note(t(Text::MainIntro), Tone::Normal);
+        buildLook(p);
         const bool two = p.split();
         p.heading(t(Text::MainPicture));
         const auto quality = mainQualityOf(m.pendingConfig());
@@ -87,6 +90,13 @@ public:
         }
         Model& m = host_.model();
         HWND ctl = GetDlgItem(host_.window(), id);
+        if (id >= kLookFirst && id < kLookFirst + presets::kChoices && (code == CBN_SELCHANGE || code == CBN_CLOSEUP)) {
+            const LRESULT sel = SendMessageW(ctl, CB_GETCURSEL, 0, 0);
+            const presets::Choice c = presets::Choice(id - kLookFirst);
+            if (code == CBN_SELCHANGE && sel >= 0 && sel < presets::variants(c)) setLook(c, int(sel));
+            if (code == CBN_CLOSEUP || !SendMessageW(ctl, CB_GETDROPPEDSTATE, 0, 0)) host_.rebuild();
+            return;
+        }
         if (id == kQuality && (code == CBN_SELCHANGE || code == CBN_CLOSEUP)) {
             const LRESULT sel = SendMessageW(ctl, CB_GETCURSEL, 0, 0);
             if (code == CBN_SELCHANGE && sel >= 0 && sel < kMainQualityCount) setQuality(MainQuality(sel));
@@ -125,6 +135,36 @@ public:
 
 private:
     // The presets' values (or the super-light mode) as the player's changes; the game's own quality with a preset.
+    // 3.0.17-beta.2 (the concept «простой старт»): «Як виглядає гра» - the picture, the interface, the textures
+    // (core/settings/choice_presets), each its nearest variant and «змінено N»
+    void buildLook(Panel& p) {
+        const Config c = host_.model().pendingConfig();
+        p.heading(t(Text::LookHead));
+        p.note(t(Text::LookNote));
+        const Text heads[presets::kChoices] = {Text::LookPicture, Text::LookUi, Text::LookTextures};
+        const std::vector<Text> names[presets::kChoices] = {
+            {Text::LookAuto, Text::LookGame, Text::LookBetter, Text::LookRemaster},
+            {Text::LookUiNew, Text::LookUiScreen, Text::LookUiClassic},
+            {Text::LookTexHd, Text::LookTexLight, Text::LookTexOriginal}};
+        for (int k = 0; k < presets::kChoices; ++k) {
+            const presets::Match now = presets::match(presets::Choice(k), c);
+            std::vector<std::wstring> items;
+            for (size_t v = 0; v < names[k].size(); ++v)
+                items.push_back(int(v) == now.variant && now.changed > 0
+                                    ? tf(Text::LookChanged, {utf8(t(names[k][v])), std::to_string(now.changed)})
+                                    : t(names[k][v]));
+            p.choice(kLookFirst + k, t(heads[k]), items, now.variant, t(Text::LookHint));
+        }
+        p.gap();
+    }
+
+    void setLook(presets::Choice c, int variant) {
+        Model& m = host_.model();
+        for (const auto& [key, token] : presets::keysOf(c, variant))
+            if (const IniSetting* s = findSetting(key)) m.setToken(*s, token);
+        host_.changed();
+    }
+
     void setQuality(MainQuality q) {
         Model& m = host_.model();
         for (const IniEdit& e : mainQualityEdits(q))

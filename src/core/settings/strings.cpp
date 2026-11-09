@@ -3540,6 +3540,32 @@ constexpr Entry kTexts[] = {
      "Ctrl+Shift+F9 - рентген; Ctrl+Shift+F8 - текстура под курсором в uaRO Studio, Ctrl+Shift+F7 - её картинка "
      "выкл./вкл."},
     // 2.6: the Main page
+    {Text::LookHead, "How the game looks", "Як виглядає гра", "Как выглядит игра"},
+    {Text::LookNote,
+     "Three choices, each on its own: the picture, the interface, the textures. Every setting stays on its page.",
+     "Три окремі вибори: картинка, інтерфейс, текстури. Кожне налаштування й далі на своїй сторінці.",
+     "Три отдельных выбора: картинка, интерфейс, текстуры. Каждая настройка по-прежнему на своей странице."},
+    {Text::LookPicture, "Picture", "Картинка", "Картинка"},
+    {Text::LookAuto, "Auto (by the card's speed)", "Авто (за швидкістю відеокарти)", "Авто (по скорости видеокарты)"},
+    {Text::LookGame, "As in the game", "Як у грі", "Как в игре"},
+    {Text::LookBetter, "Improved", "Покращена", "Улучшенная"},
+    {Text::LookRemaster, "Remaster", "Ремастер", "Ремастер"},
+    {Text::LookUi, "Interface", "Інтерфейс", "Интерфейс"},
+    {Text::LookUiNew, "New", "Новий", "Новый"},
+    {Text::LookUiScreen, "New screen, the game's windows", "Новий екран, вікна гри", "Новый экран, окна игры"},
+    {Text::LookUiClassic, "Classic", "Класичний", "Классический"},
+    {Text::LookTextures, "Textures", "Текстури", "Текстуры"},
+    {Text::LookTexHd, "HD", "HD", "HD"},
+    {Text::LookTexLight, "HD, light (weak cards)", "HD економно (слабкі відеокарти)", "HD экономно (слабые видеокарты)"},
+    {Text::LookTexOriginal, "Original", "Оригінальні", "Оригинальные"},
+    {Text::LookChanged, "{1} · changed {2}", "{1} · змінено {2}", "{1} · изменено {2}"},
+    {Text::LookHint,
+     "Choosing writes only this choice's settings; what you changed in them by hand is replaced (until you apply, "
+     "«Скасувати» brings it back).",
+     "Вибір пише лише свої налаштування; змінене в них вручну буде замінено (до «Застосувати» його повертає "
+     "«Скасувати»).",
+     "Выбор пишет только свои настройки; изменённое в них вручную будет заменено (до «Применить» его возвращает "
+     "«Отмена»)."},
     {Text::MainIntro,
      "What a game needs. Everything else is in the Detailed mode.", "Головне для гри. Усе інше - у докладному режимі.",
      "Главное для игры. Всё остальное - в подробном режиме."},

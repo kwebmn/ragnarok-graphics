@@ -347,6 +347,9 @@ enum class Text : uint16_t {
     DeveloperOnly, // 2.6: the list's heading, the header's button
     DebugTools, DebugStudio, DebugCompact, DebugPalettes, DebugPreview, DebugKeys,  // 2.6: the Debug page's tools
     // 2.6: the Main page
+    // 3.0.17-beta.2 (the concept «простой старт»): the three choices
+    LookHead, LookNote, LookPicture, LookAuto, LookGame, LookBetter, LookRemaster, LookUi, LookUiNew, LookUiScreen,
+    LookUiClassic, LookTextures, LookTexHd, LookTexLight, LookTexOriginal, LookChanged, LookHint,
     MainIntro, MainPicture, MainQualityLow, MainQualityMedium, MainQualityHigh, MainQualitySuperLight, MainQualityOwn,
     MainQualityHint, MainOther, MainRecommended, MainWhatsNew, MainState, MainDriver,
     MainUpdateNone, MainUpdateNew, MainNoD3d, MainDlss, MainNoDlss, MainHd, MainPack, MainNoPack, MainMakePack,
