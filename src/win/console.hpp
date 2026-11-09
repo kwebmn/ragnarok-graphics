@@ -52,7 +52,9 @@ public:
 private:
     // 2.2.1: Open - a group's effects shown or not; 2.6.22: Here - «Только на этой карте» (the console's own);
     // 3.0.5-beta.6: Test - «Тест графіки» (core/graphics_test)
-    enum class Kind { Heading, Box, Check, Slider, Choice, Open, Here, Test, Layout };
+    // 3.0.17-beta.4 (the concept «простой старт»): Tabs - the tabs' row (Швидко, Картинка, Інтерфейс, Текстури,
+    // Усе), Look - one of «Як виглядає гра»'s three choices (key: its number)
+    enum class Kind { Heading, Box, Check, Slider, Choice, Open, Here, Test, Layout, Tabs, Look };
     struct Row {
         Kind kind = Kind::Heading;
         std::string key;  // "effects.grass"; a heading's: its text (UTF-8)
@@ -73,6 +75,15 @@ private:
     bool open_ = false;
     bool groupOpen_[kEffectGroups] = {};  // 2.2.1: the groups opened to their effects
     bool windowsOpen_ = false;             // 3.0.11-beta.302: the new look's windows shown
+    // 3.0.17-beta.4: the tab shown (kTabQuick first) and the rows pinned to «Швидко» (Insert; core/console_pins)
+    static constexpr int kTabQuick = 0, kTabPicture = 1, kTabInterface = 2, kTabTextures = 3, kTabAll = 4, kTabs = 5;
+    int tab_ = kTabQuick;
+    std::vector<std::string> pins_;
+    std::string pinsPath_;
+    bool pinsRead_ = false;
+    Key insert_;
+    void readPins(const std::string& iniPath);
+    bool rowPinnable(const Row& r) const;
     static constexpr const char* kWindowsKey = "iface:windows";
     void interfaceRow(const char* key, int depth);
     std::string filter_;   // 2.6.22: the letters typed (UTF-8)

@@ -2653,12 +2653,13 @@ constexpr Entry kTexts[] = {
      "uaRO Graphics — ефекти",
      "uaRO Graphics — эффекты"},
     {Text::ConsoleKeys,
-     "Up/Down choose · Space on/off, a group's effects · Left/Right value · letters search · hold Tab to compare · "
-     "Ctrl+Shift+F11 frame counter · ↻ at the game's next start · ~ or Esc close",
-     "↑↓ вибір · Пробіл увімк/вимк, ефекти групи · ←→ значення · літери — пошук · затисніть Tab — порівняти · "
-     "Ctrl+Shift+F11 — лічильник кадрів · ↻ — після перезапуску гри · ~ або Esc — закрити",
-     "↑↓ выбор · Пробел вкл/выкл, эффекты группы · ←→ значение · буквы — поиск · зажмите Tab — сравнить · "
-     "Ctrl+Shift+F11 — счётчик кадров · ↻ — после перезапуска игры · ~ или Esc — закрыть"},
+     "Up/Down choose · Space on/off, a group's effects · Left/Right value, the tab · letters search · hold Tab to "
+     "compare · Insert ★ to «Quick» · Ctrl+Shift+F11 frame counter · ↻ at the game's next start · ~ or Esc close",
+     "↑↓ вибір · Пробіл увімк/вимк, ефекти групи · ←→ значення, вкладка · літери — пошук · затисніть Tab — "
+     "порівняти · Insert — ★ у «Швидко» · Ctrl+Shift+F11 — лічильник кадрів · ↻ — після перезапуску гри · ~ або Esc "
+     "— закрити",
+     "↑↓ выбор · Пробел вкл/выкл, эффекты группы · ←→ значение, вкладка · буквы — поиск · зажмите Tab — сравнить · "
+     "Insert — ★ в «Быстро» · Ctrl+Shift+F11 — счётчик кадров · ↻ — после перезапуска игры · ~ или Esc — закрыть"},
     {Text::FxSmoothHills, "Hills without steps of light", "Пагорби без сходинок світла", "Холмы без ступенек света"},
     {Text::FxSmoothHillsHint,
      "The game lights its ground cell by cell, and a hill shows as steps of light. The ground is lit by the sun over "
@@ -3570,6 +3571,11 @@ constexpr Entry kTexts[] = {
     {Text::PlayAnotherWindow, "One more game window", "Ще вікно гри", "Ещё окно игры"},
     {Text::PlayReport, "Report a problem", "Повідомити про помилку", "Сообщить об ошибке"},
     {Text::PlayLookChange, "Change \xE2\x80\xBA", "Змінити \xE2\x80\xBA", "Изменить \xE2\x80\xBA"},
+    {Text::ConsoleTabQuick, "Quick", "Швидко", "Быстро"},
+    {Text::ConsoleTabAll, "All", "Усе", "Всё"},
+    {Text::ConsoleOften, "Switched most", "Часто перемикають", "Часто переключают"},
+    {Text::ConsolePinned, "\xE2\x98\x85 Pinned by you", "\xE2\x98\x85 Закріплені вами", "\xE2\x98\x85 Закреплённые вами"},
+    {Text::ConsoleActions, "Actions", "Дії", "Действия"},
     {Text::MainIntro,
      "What a game needs. Everything else is in the Detailed mode.", "Головне для гри. Усе інше - у докладному режимі.",
      "Главное для игры. Всё остальное - в подробном режиме."},

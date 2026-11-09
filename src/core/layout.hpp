@@ -45,6 +45,8 @@ constexpr const char* kKnownRows = "uaro-graphics\\cache\\known-rows.txt";
 constexpr const char* kFirstGameSent = "uaro-graphics\\cache\\first-game.sent";
 // 3.0.17-beta.1: the installed version's failed starts (core/start_failures) - the rollback offered after two
 constexpr const char* kStartFailures = "uaro-graphics\\cache\\start-failures.txt";
+// 3.0.17-beta.4: the console's rows pinned to «Швидко» (core/console_pins)
+constexpr const char* kConsolePins = "uaro-graphics\\cache\\console-pins.txt";
 constexpr const char* kFailedStarts = "uaro-graphics\\cache\\failed-starts.txt";
 constexpr const char* kSafeModeNote = "uaro-graphics\\cache\\safe-mode.txt";
 // 3.0.11-beta.56 (the owner: «сделать» - how many installs there are): this install's random number for the site's
