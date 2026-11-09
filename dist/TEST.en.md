@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.18-beta.12 — what's new
+
+- **The new interface is drawn by the graphics card:** with the new interface library switch on, the character block, panels, windows and cards are no longer repainted by the processor as a whole picture on every change. Their frames, bars, icons and words are drawn on the card, the words in the same font as now. The look should stay the same; if something looks different, please send a report.
+
 # uaRO Graphics 3.0.18-beta.11 — what's new
 
 - **The new interface library is ready to take parts:** its switch in the Interface section is now the new interface library switch. The parts moved to it are drawn by it, the rest stay as they are; the first moved parts come in the next betas.
