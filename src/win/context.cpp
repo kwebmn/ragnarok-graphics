@@ -64,6 +64,7 @@
 #include "win/mob_card.hpp"
 #include "win/mvp_panel.hpp"
 #include "win/chat_window.hpp"
+#include "win/console_hint.hpp"
 #include "win/item_window.hpp"
 #include "win/stat_window.hpp"
 #include "win/window_stack.hpp"
@@ -1142,6 +1143,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     upkeepwatch::setOn(config.brokenGear, config.petHunger);
     hotbarwin::frame(window, config.hotbar, config.hotbarPerCharacter, config.padHints, config.hotbarAmmo,
                      config.groundCounts, gameCodePage(config), pk, pw, ph);  // .125 the ammo's pill, .143 the walls
+    consolehint::frame(gameCodePage(config));  // 3.0.17-beta.11: «Alt+D» once, on the first map
     ammosound::frame(config.ammoSound);  // 3.0.11-beta.129: [interface] ammo_sound - the chime at 10 left and at none
     // 3.0.11-beta.42: [interface] items and status - «Речі» and «Характеристики» while the game's own are open
     itemswin::frame(window, config.itemsWindow, gameCodePage(config), pk, pw, ph, config.itemToast);
