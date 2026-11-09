@@ -902,6 +902,7 @@ enum class Text : uint16_t {
     ChatSysNoSp,  // 3.0.12-beta.3
     ChatMenuCopyLine,  // 3.0.11-beta.244
     InterfaceUaui, InterfaceUauiHint,  // 3.0.18-beta.7: the RmlUi spike
+    InterfaceUauiShowcase, InterfaceUauiShowcaseHint,  // 3.0.18-beta.11
     Count
 };
 

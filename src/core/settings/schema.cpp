@@ -407,6 +407,9 @@ const std::vector<IniSetting>& iniSettings() {
         // 3.0.18-beta.7: the RmlUi spike's card (win/uaui)
         {"interface", "uaui", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::InterfaceUaui,
          Text::InterfaceUauiHint, ""},
+        // 3.0.18-beta.11: uaUI's components' window
+        {"interface", "uaui_showcase", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {},
+         Text::InterfaceUauiShowcase, Text::InterfaceUauiShowcaseHint, ""},
         // 3.0.11-beta.41: the chat
         {"interface", "chat", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::InterfaceChat,
          Text::InterfaceChatHint, ""},
@@ -1404,6 +1407,7 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "interface.ground_counts") return c.groundCounts ? "1" : "0";  // 3.0.11-beta.143
     if (k == "interface.animations") return c.animations ? "1" : "0";  // 3.0.11-beta.46
     if (k == "interface.uaui") return c.uaui ? "1" : "0";  // 3.0.18-beta.7
+    if (k == "interface.uaui_showcase") return c.uauiShowcase ? "1" : "0";  // 3.0.18-beta.11
     if (k == "interface.panel_opacity") return std::to_string(c.hudOpacity);  // 3.0.11-beta.47
     if (k == "interface.cast") return c.castLabel ? "1" : "0";                 // 3.0.11-beta.48
     if (k == "interface.dim_world") return c.dimWorld ? "1" : "0";             // 3.0.11-beta.49

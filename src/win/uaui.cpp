@@ -19,7 +19,6 @@
 #include "core/uaui_mesh.hpp"
 #include "core/layout.hpp"
 #include "core/window_panel.hpp"
-#include "win/item_window.hpp"
 #include "win/paths.hpp"
 #include "pad/win/game_window.hpp"
 #include "win/game_camera.hpp"
@@ -117,35 +116,19 @@ struct Geometry {
     std::vector<int> indices;
 };
 
-// 3.0.18-beta.9: an item in the showcase - its icon (a texture by its picture, «icon:<address>») and its count
-struct ItemView {
-    Rml::String icon;
-    int count = 0;
-};
 
 struct State {
-    bool started = false, failed = false, on = false, shown = false, dragging = false;
-    // 3.0.18-beta.9 (stage 2): the components' showcase - a window of the theme's template with tabs
-    Rml::ElementDocument* demo = nullptr;
-    Rml::DataModelHandle demoModel;
-    std::vector<ItemView> items;
-    std::vector<Rml::String> lines;
-    float demoHp = 0;
-    bool demoClosed = false;
-    ULONGLONG itemsAt = 0, themeAt = 0;
-    FILETIME themeStamp{};
-    bool themeFile = false;
+    bool started = false, failed = false, on = false, inWorld = false, dragging = false;
     Rml::Context* context = nullptr;
-    Rml::ElementDocument* doc = nullptr;
-    Rml::Element* card = nullptr;
-    Rml::DataModelHandle model;
-    Rml::String name;
-    int base = 0, job = 0, hp = 0, hpMost = 0, sp = 0, spMost = 0;
-    float hpPct = 0, spPct = 0;
+    HWND game = nullptr;
+    unsigned codePage = 1251;
     double k = 1;
     int targetW = 0, targetH = 0;
-    float dragX = 0, dragY = 0;
-    bool fadeAsked = false;
+    std::vector<Doc*> docs;  // every part's, made in turn
+    ULONGLONG themeAt = 0;
+    FILETIME themeStamp{};
+    bool themeFile = false;
+    double frameStart = 0;
     // the renderer's side
     std::unordered_map<uintptr_t, Geometry> geometries;
     uintptr_t nextGeometry = 1, nextTexture = 16;
@@ -175,12 +158,14 @@ State& state() {
 
 // ---- RmlUi's interfaces ----
 
+// ---- RmlUi's interfaces ----
+
 class System final : public Rml::SystemInterface {
 public:
     double GetElapsedTime() override { return clockNow(); }
     // our own names as they are: «uaui:» the built-in files (Files), «icon:» a picture of the driver's
     void JoinPath(Rml::String& out, const Rml::String& document, const Rml::String& path) override {
-        if (path.rfind("uaui:", 0) == 0 || path.rfind("icon:", 0) == 0) {
+        if (path.rfind("uaui:", 0) == 0 || path.rfind("icon:", 0) == 0 || path.rfind("pic:", 0) == 0) {
             out = path;
             return;
         }
@@ -228,9 +213,11 @@ public:
     void ReleaseGeometry(Rml::CompiledGeometryHandle geometry) override { state().geometries.erase(uintptr_t(geometry)); }
     Rml::TextureHandle LoadTexture(Rml::Vector2i& dimensions, const Rml::String& source) override {
         State& s = state();
-        if (source.rfind("icon:", 0) == 0) {  // 3.0.18-beta.9: an icon the driver keeps (client_tables), as it is
-            const auto* pic =
-                reinterpret_cast<const panel::Picture*>(uintptr_t(std::strtoull(source.c_str() + 5, nullptr, 16)));
+        // 3.0.18-beta.9: a picture the driver keeps (an icon of client_tables, a portrait), as it is -
+        // «pic:<address>:<generation>» (uaui::picture), «icon:<address>»
+        if (source.rfind("icon:", 0) == 0 || source.rfind("pic:", 0) == 0) {
+            const char* at = source.c_str() + (source[0] == 'i' ? 5 : 4);
+            const auto* pic = reinterpret_cast<const panel::Picture*>(uintptr_t(std::strtoull(at, nullptr, 16)));
             if (pic && pic->width > 0 && pic->height > 0 && pic->px.size() >= size_t(pic->width) * pic->height) {
                 Texture t;
                 t.w = pic->width;
@@ -442,33 +429,7 @@ System g_system;
 Render g_render;
 Fonts* g_fonts = nullptr;  // made at the start (its texture source needs RmlUi's types alive)
 
-// The card: dragged by the mouse
-class Drag final : public Rml::EventListener {
-public:
-    void ProcessEvent(Rml::Event& e) override {
-        State& s = state();
-        Rml::Element* card = e.GetCurrentElement();
-        const float mx = e.GetParameter<float>("mouse_x", 0), my = e.GetParameter<float>("mouse_y", 0);
-        if (e.GetId() == Rml::EventId::Dragstart) {
-            // 3.0.18-beta.8 (the owner: «плашка кудато прыгает влево и потом уже нормально двигается»): the card
-            // placed by its own pixels before it moves - its centring (left 50 %, margin-left -160dp) left the margin
-            // under the dragged left, a jump of 160dp (365 pixels at 4K)
-            const Rml::Vector2f at = card->GetAbsoluteOffset(Rml::BoxArea::Border);
-            card->SetProperty("margin-left", "0px");
-            card->SetProperty("left", std::to_string(int(at.x)) + "px");
-            card->SetProperty("top", std::to_string(int(at.y)) + "px");
-            s.dragX = mx - at.x;
-            s.dragY = my - at.y;
-            s.dragging = true;
-        } else if (e.GetId() == Rml::EventId::Drag) {
-            card->SetProperty("left", std::to_string(int(mx - s.dragX)) + "px");
-            card->SetProperty("top", std::to_string(int(my - s.dragY)) + "px");
-        } else if (e.GetId() == Rml::EventId::Dragend) {
-            s.dragging = false;
-        }
-    }
-};
-Drag g_drag;
+// ---- the theme and the components: every colour, size and motion in one style sheet ----
 
 // ---- the theme and the components (stage 2): every colour, size and motion in one style sheet ----
 
@@ -542,33 +503,6 @@ const char* kWindowTemplate = R"(<template name="ua-window" content="content">
 <div class="ua-hint" id="ua-hint"></div>
 </body></template>)";
 
-const char* kCard = R"(<rml><head><link type="text/rcss" href="uaui:theme.rcss"/></head>
-<body class="ua-screen" data-model="uaui">
-<div id="card" class="ua-card away">
-<div><span class="ua-name">{{name}}</span><span class="ua-sub">Base {{base}} · Job {{job}}</span></div>
-<div class="ua-row"><span class="ua-num">HP {{hp | num}} / {{hp_most | num}}</span><div class="ua-bar"><div class="ua-fill" data-style-width="hp_pct + '%'"></div></div></div>
-<div class="ua-row"><span class="ua-num">SP {{sp | num}} / {{sp_most | num}}</span><div class="ua-bar"><div class="ua-fill sp" data-style-width="sp_pct + '%'"></div></div></div>
-<span class="ua-tag">uaUI · RmlUi 6.3</span>
-</div></body></rml>)";
-
-// The showcase: the theme's window with tabs - the bag's items (their icons), a list that scrolls, buttons, switches
-const char* kDemo = R"(<rml><head><link type="text/template" href="uaui:window.rml"/><title>uaUI · компоненти</title></head>
-<body template="ua-window" data-model="demo" style="left: 120dp; top: 200dp;">
-<tabset>
-<tab>Речі</tab><panel>
-<div class="ua-grid" data-if="items.size > 0"><div class="ua-slot" data-for="it : items"><img data-attr-src="it.icon"/><span class="ua-count" data-if="it.count > 1">{{it.count | num}}</span></div></div>
-<span class="ua-label" data-if="items.size == 0">Відкрийте «Речі» (Alt+E) — тут з'являться предмети.</span>
-</panel>
-<tab>Список</tab><panel><div class="ua-list"><p data-for="line : lines">{{line}}</p></div></panel>
-<tab>Кнопки</tab><panel>
-<span class="ua-label">Кнопки</span><span class="ua-button">Звичайна</span><span class="ua-button">Ще одна</span>
-<span class="ua-label">Перемикачі</span>
-<div><input type="checkbox" checked="checked"/>Увімкнено</div>
-<div><input type="checkbox"/>Вимкнено</div>
-<span class="ua-label">Смуга (HP персонажа)</span><div class="ua-bar"><div class="ua-fill" data-style-width="hp_pct + '%'"></div></div>
-</panel>
-</tabset>
-</body></rml>)";
 
 std::string themeFile() { return layout::join(gameDir(), layout::kUiTheme); }
 
@@ -629,16 +563,16 @@ private:
 };
 Files g_files;
 
-// The window's close button: the window hidden until the switch is turned again
+// The window template's ×: its document hidden, the part told
 class Close final : public Rml::EventListener {
 public:
     void ProcessEvent(Rml::Event& e) override {
-        State& s = state();
-        if (Rml::ElementDocument* d = e.GetCurrentElement()->GetOwnerDocument()) {
-            d->Hide();
-            if (d == s.demo) s.demoClosed = true;
-            LOG_INFO("uaui: the showcase closed by its ×");
-        }
+        Rml::ElementDocument* d = e.GetCurrentElement()->GetOwnerDocument();
+        for (Doc* doc : state().docs)
+            if (doc->doc() == d) {
+                doc->show(false);
+                if (doc->onClose) doc->onClose();
+            }
     }
 };
 Close g_close;
@@ -658,7 +592,7 @@ bool start(State& s) {
     s.dc = CreateCompatibleDC(nullptr);
     if (!s.dc || !ensureBits(s, 64, 64)) {
         s.failed = true;
-        LOG_ERROR("uaui: no drawing context for the words - the card stays off");
+        LOG_ERROR("uaui: no drawing context for the words - uaUI stays off");
         return false;
     }
     Rml::SetSystemInterface(&g_system);
@@ -666,69 +600,24 @@ bool start(State& s) {
     static Fonts fonts;
     g_fonts = &fonts;
     Rml::SetFontEngineInterface(g_fonts);
-    Rml::SetFileInterface(&g_files);  // 3.0.18-beta.9: the theme and the window's template
+    Rml::SetFileInterface(&g_files);
     if (!Rml::Initialise()) {
         s.failed = true;
-        LOG_ERROR("uaui: RmlUi did not start - the card stays off");
+        LOG_ERROR("uaui: RmlUi did not start - uaUI stays off");
         return false;
     }
     s.context = Rml::CreateContext("uaui", {std::max(s.targetW, 1), std::max(s.targetH, 1)});
     if (!s.context) {
         s.failed = true;
-        LOG_ERROR("uaui: RmlUi made no context - the card stays off");
+        LOG_ERROR("uaui: RmlUi made no context - uaUI stays off");
         return false;
     }
-    Rml::DataModelConstructor m = s.context->CreateDataModel("uaui");
-    // 3.0.18-beta.8: the numbers as the interface writes them - «5 157» (core/char_block grouped)
+    // the numbers as the interface writes them - «5 157» (core/char_block grouped); for every model of the context
+    Rml::DataModelConstructor m = s.context->CreateDataModel("ua");
     m.RegisterTransformFunc("num", [](const Rml::VariantList& a) -> Rml::Variant {
         return a.empty() ? Rml::Variant() : Rml::Variant(charblock::grouped(a[0].Get<int64_t>()));
     });
-    m.Bind("name", &s.name);
-    m.Bind("base", &s.base);
-    m.Bind("job", &s.job);
-    m.Bind("hp", &s.hp);
-    m.Bind("hp_most", &s.hpMost);
-    m.Bind("sp", &s.sp);
-    m.Bind("sp_most", &s.spMost);
-    m.Bind("hp_pct", &s.hpPct);
-    m.Bind("sp_pct", &s.spPct);
-    s.model = m.GetModelHandle();
-    s.doc = s.context->LoadDocumentFromMemory(kCard);
-    if (!s.doc) {
-        s.failed = true;
-        LOG_ERROR("uaui: the card's document did not load - the card stays off");
-        return false;
-    }
-    // 3.0.18-beta.9 (stage 2): the components' showcase
-    Rml::DataModelConstructor d = s.context->CreateDataModel("demo");
-    if (auto item = d.RegisterStruct<ItemView>()) {
-        item.RegisterMember("icon", &ItemView::icon);
-        item.RegisterMember("count", &ItemView::count);
-    }
-    d.RegisterArray<std::vector<ItemView>>();
-    d.RegisterArray<std::vector<Rml::String>>();
-    d.Bind("items", &s.items);
-    d.Bind("lines", &s.lines);
-    d.Bind("hp_pct", &s.demoHp);
-    s.demoModel = d.GetModelHandle();
-    for (int i = 1; i <= 60; ++i)
-        s.lines.push_back("Рядок " + std::to_string(i) + " — коліщатко миші гортає список, смуга праворуч тягнеться");
-    s.demo = s.context->LoadDocumentFromMemory(kDemo);
-    if (s.demo) {
-        if (Rml::Element* t = s.demo->GetElementById("ua-title")) t->SetInnerRML(s.demo->GetTitle());
-        if (Rml::Element* h = s.demo->GetElementById("ua-hint"))
-            h->SetInnerRML("Заголовок тягне вікно · × ховає · вигляд — uaro-graphics\\ui\\theme.rcss");
-        if (Rml::Element* c = s.demo->GetElementById("ua-close")) c->AddEventListener(Rml::EventId::Click, &g_close);
-    } else {
-        LOG_INFO("uaui: the showcase's document did not load");
-    }
     themeChanged(s);  // its stamp now: read again only when it changes
-    s.card = s.doc->GetElementById("card");
-    if (s.card) {
-        s.card->AddEventListener(Rml::EventId::Dragstart, &g_drag);
-        s.card->AddEventListener(Rml::EventId::Drag, &g_drag);
-        s.card->AddEventListener(Rml::EventId::Dragend, &g_drag);
-    }
     s.started = true;
     LOG_INFO("uaui: RmlUi %s started - its context %dx%d, %.2f target pixels a concept pixel; the theme %s",
              Rml::GetVersion().c_str(), s.targetW, s.targetH, double(uistyle::partScale(s.k)),
@@ -736,118 +625,150 @@ bool start(State& s) {
     return true;
 }
 
+// The document of ours under the game's cursor, its box: the parts' blocker (win/world_mouse) - the wheel, the clicks
+// and the world's hover stay the window's
+Doc* docUnder(State& s) {
+    Rml::Element* hover = s.context ? s.context->GetHoverElement() : nullptr;
+    const Rml::ElementDocument* owner = hover ? hover->GetOwnerDocument() : nullptr;
+    if (!owner) return nullptr;
+    for (Doc* d : s.docs)
+        if (d->shown() && d->doc() == owner) return d;
+    return nullptr;
+}
+
 }  // namespace
 
-void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int targetHeight) {
+bool ready() {
+    const State& s = state();
+    return s.started && s.on && s.inWorld;
+}
+
+float dp() { return uistyle::partScale(state().k); }
+
+std::string utf8(const std::string& gameText) { return utf8From(gameText, state().codePage); }
+
+std::string picture(const panel::Picture* p, int generation, std::string& previous) {
+    if (!p) {
+        if (!previous.empty()) Rml::ReleaseTexture(previous), previous.clear();
+        return {};
+    }
+    char src[48];
+    std::snprintf(src, sizeof src, "pic:%llx:%d", (unsigned long long)uintptr_t(p), generation);
+    if (previous != src) {
+        if (!previous.empty()) Rml::ReleaseTexture(previous);
+        previous = src;
+    }
+    return previous;
+}
+
+bool Doc::make(const char* name, const char* rml, const std::function<void(Rml::DataModelConstructor&)>& bind) {
     State& s = state();
+    if (doc_ || !s.started || !s.context) return doc_ != nullptr;
+    Rml::DataModelConstructor m = s.context->CreateDataModel(name);
+    if (!m) {
+        LOG_ERROR("uaui: no model «%s»", name);
+        return false;
+    }
+    if (bind) bind(m);
+    model_ = m.GetModelHandle();
+    doc_ = s.context->LoadDocumentFromMemory(rml, std::string("uaui:") + name);
+    if (!doc_) {
+        LOG_ERROR("uaui: the document «%s» did not load", name);
+        return false;
+    }
+    if (Rml::Element* t = doc_->GetElementById("ua-title")) t->SetInnerRML(doc_->GetTitle());
+    if (Rml::Element* c = doc_->GetElementById("ua-close")) c->AddEventListener(Rml::EventId::Click, &g_close);
+    s.docs.push_back(this);
+    LOG_INFO("uaui: «%s» made", name);
+    return true;
+}
+
+void Doc::show(bool on) {
+    if (!doc_ || on == shown_) return;
+    shown_ = on;
+    if (on) {
+        doc_->SetClass("away", true);
+        doc_->Show(Rml::ModalFlag::None, Rml::FocusFlag::None);
+        fadePending = true;
+    } else {
+        doc_->Hide();
+        doc_->SetClass("away", true);
+        fadePending = false;
+    }
+}
+
+void Doc::place(int x, int y) {
+    if (!doc_) return;
+    doc_->SetProperty("left", std::to_string(x) + "px");
+    doc_->SetProperty("top", std::to_string(y) + "px");
+}
+
+bool Doc::box(int& x, int& y, int& w, int& h) const {
+    if (!doc_ || !shown_) return false;
+    const Rml::Vector2f at = doc_->GetAbsoluteOffset(Rml::BoxArea::Border);
+    const Rml::Vector2f size = doc_->GetBox().GetSize(Rml::BoxArea::Border);
+    x = int(at.x), y = int(at.y), w = int(size.x), h = int(size.y);
+    return w > 0 && h > 0;
+}
+
+void begin(HWND game, bool on, unsigned codePage, double k, int targetWidth, int targetHeight) {
+    State& s = state();
+    s.game = game;
+    s.codePage = codePage;
     s.k = k;
     s.targetW = targetWidth;
     s.targetH = targetHeight;
-    const bool want = on && inGameWorld() && k > 0 && targetWidth > 0 && targetHeight > 0;
-    if (!want) {
-        if (s.shown) uapad::gamewindow::setBlocked(uapad::gamewindow::Blocker::Uaui, nullptr, nullptr, false);
-        if (s.shown && s.doc) {
-            s.doc->Hide();
-            if (s.card) s.card->SetClass("away", true);
-            if (s.demo) s.demo->Hide(), s.demo->SetClass("away", true);
-            LOG_INFO("uaui: the card hidden");
-        }
-        if (!on) s.demoClosed = false;  // the switch turned again: the showcase back
-        s.shown = false;
+    const bool world = inGameWorld() && k > 0 && targetWidth > 0 && targetHeight > 0;
+    if (on != s.on) LOG_INFO("uaui: [interface] uaui = %d", on ? 1 : 0);
+    s.on = on;
+    s.inWorld = world;
+    if (!on || !world) {
+        for (Doc* d : s.docs) d->show(false);
+        uapad::gamewindow::setBlocked(uapad::gamewindow::Blocker::Uaui, nullptr, nullptr, false);
         return;
     }
     if (!start(s)) return;
-    const double t0 = clockNow();
+    s.frameStart = clockNow();
     s.context->SetDimensions({targetWidth, targetHeight});
     s.context->SetDensityIndependentPixelRatio(uistyle::partScale(k));
-    if (!s.shown) {
-        s.doc->Show(Rml::ModalFlag::None, Rml::FocusFlag::None);
-        if (s.demo && !s.demoClosed) s.demo->Show(Rml::ModalFlag::None, Rml::FocusFlag::None);
-        s.shown = true;
-        s.fadeAsked = false;
-        LOG_INFO("uaui: the card shown");
-    } else if (!s.fadeAsked && s.card) {  // a frame after showing: the fade in runs (RCSS transition)
-        s.card->SetClass("away", false);
-        if (s.demo) s.demo->SetClass("away", false);
-        s.fadeAsked = true;
-    }
     const ULONGLONG nowMs = GetTickCount64();
-    // 3.0.18-beta.9: the theme's file read again within a second of a change - every document's style sheets anew
-    if (nowMs - s.themeAt >= 1000) {
+    if (nowMs - s.themeAt >= 1000) {  // the theme's file read again within a second of a change
         s.themeAt = nowMs;
         if (themeChanged(s)) {
             Rml::Factory::ClearStyleSheetCache();
             Rml::Factory::ClearTemplateCache();
-            s.doc->ReloadStyleSheet();
-            if (s.demo) s.demo->ReloadStyleSheet();
+            for (Doc* d : s.docs) d->doc()->ReloadStyleSheet();
             LOG_INFO("uaui: the theme read again - %s", s.themeFile ? themeFile().c_str() : "built in");
         }
     }
-    // 3.0.18-beta.9: the bag as «Речі» last read it, its icons as textures - twice a second
-    if (s.demo && nowMs - s.itemsAt >= 500) {
-        s.itemsAt = nowMs;
-        std::vector<ItemView> now;
-        for (const auto& it : itemswin::lastBag()) {
-            if (now.size() >= 60) break;
-            char src[32];
-            std::snprintf(src, sizeof src, "icon:%llx", (unsigned long long)uintptr_t(it.icon));
-            now.push_back({it.icon ? src : "", it.count});
-        }
-        bool same = now.size() == s.items.size();
-        for (size_t i = 0; same && i < now.size(); ++i)
-            same = now[i].icon == s.items[i].icon && now[i].count == s.items[i].count;
-        if (!same) s.items = std::move(now), s.demoModel.DirtyVariable("items");
-    }
-    // the character's numbers: only what changed is laid out again
-    charstatus::Status st;
-    if (readOwnStatus(st)) {
-        const auto set = [&](int& field, int value, const char* name) {
-            if (field != value) field = value, s.model.DirtyVariable(name);
-        };
-        set(s.base, st.baseLevel, "base");
-        set(s.job, st.jobLevel, "job");
-        set(s.hp, st.hp, "hp");
-        set(s.hpMost, st.hpMost, "hp_most");
-        set(s.sp, st.sp, "sp");
-        set(s.spMost, st.spMost, "sp_most");
-        const float hp = st.hpMost > 0 ? 100.0f * float(st.hp) / float(st.hpMost) : 0.0f;
-        const float sp = st.spMost > 0 ? 100.0f * float(st.sp) / float(st.spMost) : 0.0f;
-        if (hp != s.hpPct) s.hpPct = hp, s.model.DirtyVariable("hp_pct");
-        if (hp != s.demoHp) s.demoHp = hp, s.demoModel.DirtyVariable("hp_pct");
-        if (sp != s.spPct) s.spPct = sp, s.model.DirtyVariable("sp_pct");
-    }
-    const std::string name = utf8From(readOwnName(), codePage);
-    if (name != s.name) s.name = name, s.model.DirtyVariable("name");
     int cx = 0, cy = 0;
     if (readGameCursor(cx, cy)) s.context->ProcessMouseMove(int(float(cx) * float(k)), int(float(cy) * float(k)), 0);
+}
+
+void end() {
+    State& s = state();
+    if (!ready()) return;
+    for (Doc* d : s.docs)  // a frame after showing: the fade in runs (the theme's transition)
+        if (d->fadePending && d->shown()) d->doc()->SetClass("away", false), d->fadePending = false;
     s.context->Update();
-    // 3.0.18-beta.10 (the owner: «когда мышкой колесиком скролю мир увеличивается и уменьшается»): the window under
-    // the game's cursor is a window for the game (win/world_mouse) - its wheel, clicks and the world's hover stay ours
-    {
-        Rml::Element* hover = s.context->GetHoverElement();
-        Rml::ElementDocument* owner = hover ? hover->GetOwnerDocument() : nullptr;
-        Rml::Element* box = !hover                                    ? nullptr
-                            : owner == s.doc && hover != s.doc        ? s.card
-                            : s.demo && owner == s.demo               ? static_cast<Rml::Element*>(s.demo)
-                                                                      : nullptr;
-        RECT client{};
-        if (box && GetClientRect(game, &client)) {
-            const Rml::Vector2f at = box->GetAbsoluteOffset(Rml::BoxArea::Border);
-            const Rml::Vector2f size = box->GetBox().GetSize(Rml::BoxArea::Border);
-            const RECT r{LONG(int64_t(at.x) * client.right / targetWidth),
-                         LONG(int64_t(at.y) * client.bottom / targetHeight),
-                         LONG(int64_t(at.x + size.x) * client.right / targetWidth + 1),
-                         LONG(int64_t(at.y + size.y) * client.bottom / targetHeight + 1)};
-            uapad::gamewindow::setBlocked(uapad::gamewindow::Blocker::Uaui, game, &r, false);
-        } else {
-            uapad::gamewindow::setBlocked(uapad::gamewindow::Blocker::Uaui, nullptr, nullptr, false);
-        }
+    // 3.0.18-beta.10 (the owner: «когда мышкой колесиком скролю мир увеличивается и уменьшается»): the document under
+    // the game's cursor a window for the game (win/world_mouse)
+    RECT client{};
+    int x = 0, y = 0, w = 0, h = 0;
+    Doc* under = docUnder(s);
+    if (under && under->box(x, y, w, h) && GetClientRect(s.game, &client)) {
+        const RECT r{LONG(int64_t(x) * client.right / s.targetW), LONG(int64_t(y) * client.bottom / s.targetH),
+                     LONG(int64_t(x + w) * client.right / s.targetW + 1),
+                     LONG(int64_t(y + h) * client.bottom / s.targetH + 1)};
+        uapad::gamewindow::setBlocked(uapad::gamewindow::Blocker::Uaui, s.game, &r, false);
+    } else {
+        uapad::gamewindow::setBlocked(uapad::gamewindow::Blocker::Uaui, nullptr, nullptr, false);
     }
     const double t1 = clockNow();
     s.batches.clear();
     s.context->Render();
     const double t2 = clockNow();
-    s.stats.update += t1 - t0;
+    s.stats.update += t1 - s.frameStart;
     s.stats.render += t2 - t1;
 }
 
@@ -855,7 +776,7 @@ void draw(FrameRecord& record, gpu::Renderer& renderer) {
     State& s = state();
     for (uint32_t id : s.released) renderer.releaseTexture(id);
     s.released.clear();
-    if (!s.shown || s.batches.empty()) return;
+    if (!ready() || s.batches.empty()) return;
     const double t0 = clockNow();
     // the glyphs' atlas, once made and again when new letters came
     if (!s.atlasId) s.atlasId = renderer.createTexture(kAtlas, kAtlas, 1), s.atlas.dirty = true;
@@ -947,22 +868,23 @@ void draw(FrameRecord& record, gpu::Renderer& renderer) {
     }
 }
 
+
 bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     State& s = state();
-    if (!s.shown || !s.context) return false;
+    if (!ready() || !s.context) return false;
     const bool down = m == WM_LBUTTONDOWN, up = m == WM_LBUTTONUP, wheel = m == WM_MOUSEWHEEL;
-    if (!down && !up && !wheel) return false;
+    const bool right = m == WM_RBUTTONDOWN || m == WM_RBUTTONUP;
+    if (!down && !up && !wheel && !right) return false;
     float tx = 0, ty = 0;
     if (!pointerInTarget(game, m, lp, s.k, s.targetW, s.targetH, tx, ty)) return false;
     s.context->ProcessMouseMove(int(tx), int(ty), 0);
-    Rml::Element* hover = s.context->GetHoverElement();
-    // over the card (its screen-wide page itself is not), or anywhere on the showcase's window
-    const Rml::ElementDocument* owner = hover ? hover->GetOwnerDocument() : nullptr;
-    const bool over = hover && ((owner == s.doc && hover != s.doc) || (s.demo && owner == s.demo));
-    if (!over && !(up && s.dragging) && !(up && s.context->IsMouseInteracting())) return false;
+    const bool over = docUnder(s) != nullptr;
+    if (!over && !(up && s.context->IsMouseInteracting())) return false;
     if (wheel) s.context->ProcessMouseWheel(-float(GET_WHEEL_DELTA_WPARAM(wp)) / float(WHEEL_DELTA), 0);
     else if (down) s.context->ProcessMouseButtonDown(0, 0);
-    else s.context->ProcessMouseButtonUp(0, 0);
+    else if (up) s.context->ProcessMouseButtonUp(0, 0);
+    else if (m == WM_RBUTTONDOWN) s.context->ProcessMouseButtonDown(1, 0);
+    else s.context->ProcessMouseButtonUp(1, 0);
     result = 0;
     return true;
 }

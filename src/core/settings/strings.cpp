@@ -8224,15 +8224,24 @@ constexpr Entry kTexts[] = {
     {Text::ChatSysNoSp, "Not enough SP", "Недостатньо SP", "Недостаточно SP"},  // 3.0.12-beta.3
     {Text::ChatMenuCopyLine, "Copy the line", "Копіювати рядок", "Копировать строку"},  // 3.0.11-beta.244
     // 3.0.18-beta.7: the RmlUi spike
-    {Text::InterfaceUaui, "Test card of the new library (RmlUi)", "Пробна картка нової бібліотеки (RmlUi)",
-     "Пробная карточка новой библиотеки (RmlUi)"},
+    {Text::InterfaceUaui, "New interface library (RmlUi)", "Нова бібліотека інтерфейсу (RmlUi)",
+     "Новая библиотека интерфейса (RmlUi)"},
     {Text::InterfaceUauiHint,
-     "A check of the interface library for the developers: a card with the character's HP and SP in the middle at the "
-     "top, drawn by RmlUi. Drag it with the mouse. Its cost goes to the log; nothing else changes.",
-     "Перевірка бібліотеки інтерфейсу для розробників: картка з HP і SP персонажа вгорі посередині, намальована RmlUi. "
-     "Її можна тягнути мишею. Її ціна йде в журнал; більше нічого не змінюється.",
-     "Проверка библиотеки интерфейса для разработчиков: карточка с HP и SP персонажа вверху посередине, нарисованная "
-     "RmlUi. Её можно тянуть мышью. Её цена идёт в журнал; больше ничего не меняется."},
+     "The parts of the new interface already moved to the new library are drawn by it: one theme, smooth motion, "
+     "less work for the processor. The rest stay as they are. For testing.",
+     "Частини нового інтерфейсу, які вже перенесено на нову бібліотеку, малює вона: одна тема, плавний рух, менше "
+     "роботи процесору. Решта лишаються як є. Для перевірки.",
+     "Части нового интерфейса, уже перенесённые на новую библиотеку, рисует она: одна тема, плавное движение, меньше "
+     "работы процессору. Остальные остаются как есть. Для проверки."},
+    {Text::InterfaceUauiShowcase, "Components showcase (for developers)", "Вітрина компонентів (для розробників)",
+     "Витрина компонентов (для разработчиков)"},
+    {Text::InterfaceUauiShowcaseHint,
+     "A window with the new library's components: tabs, the bag's items, a list, buttons, switches. Works with the "
+     "new interface library on.",
+     "Вікно з компонентами нової бібліотеки: вкладки, предмети з сумки, список, кнопки, перемикачі. Працює з "
+     "увімкненою новою бібліотекою інтерфейсу.",
+     "Окно с компонентами новой библиотеки: вкладки, предметы из сумки, список, кнопки, переключатели. Работает с "
+     "включённой новой библиотекой интерфейса."},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "a text for every Text");
 

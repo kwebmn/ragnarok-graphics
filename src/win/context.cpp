@@ -137,6 +137,7 @@
 #include "win/log.hpp"
 #include "win/low_hp_edge.hpp"
 #include "win/uaui.hpp"
+#include "win/uaui_showcase.hpp"
 #include "win/thread_time.hpp"
 #include "win/ui_cost.hpp"
 #include "win/paths.hpp"
@@ -1082,6 +1083,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
     minimapShow.classic = config.minimapClassic;  // 3.0.11-beta.222
     minimapShow.scheme = config.minimapStyle == MapStyle::Scheme;  // 3.0.11-beta.120: the maps' picture
     minimapShow.netBadge = config.netBadge;                         // 3.0.11-beta.122: the round trip's badge
+    uaui::begin(window, config.uaui, gameCodePage(config), pk, pw, ph);  // 3.0.18-beta.11: uaUI's frame, its parts next
     netwatchwin::frame();  // 3.0.11-beta.122: the map server's connection read each second (the minimap's badge)
     netsmoothwin::setOn(config.smoothFixes);  // 3.0.11-beta.123: [interface] smooth_fixes
     netwatchwin::setQuickAcks(config.quickAcks);  // 3.0.11-beta.128: [debug] quick_acks
@@ -1130,7 +1132,6 @@ void Context::present(const Rect& source, bool waitForVblank) {
     worlddim::frame(config.dimWorld, pk, pw, ph);
     // 3.0.11-beta.50: [interface] low_hp_edge - the screen's edges red at low HP (0: none)
     lowhpedge::frame(config.lowHpEdge, pk, pw, ph);
-    uaui::frame(window, config.uaui, gameCodePage(config), pk, pw, ph);  // 3.0.18-beta.7: the RmlUi spike
     // 3.0.11-beta.48: [interface] cast - the character's cast over the hero, the game's own gauge hidden
     mobhpwin::setPercent(config.mobHpPercent);  // 3.0.11-beta.293
     mobhpwin::setBossBars(config.bossBars);     // 3.0.13-beta.3
@@ -1202,6 +1203,8 @@ void Context::present(const Rect& source, bool waitForVblank) {
     // 3.0.11-beta.7: [interface] reference - «Довідник» (Ctrl+F)
     referencewin::frame(window, config.referenceWindow, pk, pw, ph);
     padcarrywin::frame(window, pk, pw, ph);  // 3.0.11-beta.121: a thing the controller carries - its places now
+    uaui_showcase::frame(config.uauiShowcase);  // 3.0.18-beta.11: uaUI's components for the developers
+    uaui::end();  // 3.0.18-beta.11: uaUI laid out and rendered after its parts' frames
     windowstack::frame(pw, ph, pk);  // 3.0.11-beta.108: who of them is shown - their stack's order (the last opened on
                                      // top); 3.0.11-beta.109: one opening where another stands goes beside it
     // 3.0.11-beta.75: «Розміщення інтерфейсу» (Ctrl+Shift+L, the console) - over the parts placed this frame

@@ -830,6 +830,8 @@ Config parseConfig(const std::string& text) {
             setBool(val, c.animations);
         } else if (key == "interface.uaui") {  // 3.0.18-beta.7: the RmlUi spike's card
             setBool(val, c.uaui);
+        } else if (key == "interface.uaui_showcase") {  // 3.0.18-beta.11: uaUI's components' window
+            setBool(val, c.uauiShowcase);
         } else if (key == "interface.size") {  // 3.0.11-beta.54: the new interface's size (auto or per cent)
             int n = 0;
             if (val == "auto") c.uiSize = 0;

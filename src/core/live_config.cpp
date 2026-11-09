@@ -664,6 +664,10 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
             change("window_opacity", std::to_string(running.windowOpacity), std::to_string(file.windowOpacity)));
         n.windowOpacity = file.windowOpacity;
     }
+    if (file.uauiShowcase != running.uauiShowcase) {  // 3.0.18-beta.11
+        u.applied.push_back(change("uaui_showcase", flag(running.uauiShowcase), flag(file.uauiShowcase)));
+        n.uauiShowcase = file.uauiShowcase;
+    }
     if (file.uaui != running.uaui) {  // 3.0.18-beta.7: the RmlUi spike's card, at once
         u.applied.push_back(change("uaui", flag(running.uaui), flag(file.uaui)));
         n.uaui = file.uaui;

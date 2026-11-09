@@ -197,7 +197,7 @@ const std::vector<InterfaceSection>& interfaceSections() {
           "interface.panel_opacity",
           "interface.window_opacity", "interface.animations", "interface.cursor", "interface.lock_layout",
           "interface.layout_per_char", "interface.pack_icons", "interface.dim_world", "interface.low_hp_edge",
-          "interface.reference", "interface.uaui"}},
+          "interface.reference", "interface.uaui", "interface.uaui_showcase"}},
         {Text::InterfaceSecPanels,
          {"interface.character", "interface.target", "interface.party", "interface.buffs", "interface.buffs_overflow",
           "interface.hotbar", "interface.hotbar_per_character", "interface.hotbar_ammo", "interface.hotbar_supplies",

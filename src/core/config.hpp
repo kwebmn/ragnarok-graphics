@@ -930,9 +930,12 @@ struct Config {
     bool dimWorld = false;
     // 3.0.11-beta.50: [interface] low_hp_edge 0-100 - the screen's edges red at low HP, its strength (0: none)
     int lowHpEdge = 0;
-    // 3.0.18-beta.7: [interface] uaui - the RmlUi spike (Claude Doc «Концепция: единая библиотека интерфейса»): a test
-    // card of the character drawn by RmlUi (win/uaui), its cost in the log; off unless asked for
+    // 3.0.18-beta.7: [interface] uaui - the RmlUi spike (Claude Doc «Концепция: единая библиотека интерфейса»); since
+    // 3.0.18-beta.11 the new interface's parts moved to uaUI drawn by it (win/uaui), its cost in the log; off unless
+    // asked for
     bool uaui = false;
+    // 3.0.18-beta.11: [interface] uaui_showcase - uaUI's components in one window, for the developers (with uaui on)
+    bool uauiShowcase = false;
     // 3.0.11-beta.54: [interface] size - the new interface's size against the concept's: 0 auto (smaller on a small
     // game, core/ui_style autoSize), else 50-150 per cent
     int uiSize = 0;
