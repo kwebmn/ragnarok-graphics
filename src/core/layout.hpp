@@ -45,6 +45,8 @@ constexpr const char* kKnownRows = "uaro-graphics\\cache\\known-rows.txt";
 constexpr const char* kFirstGameSent = "uaro-graphics\\cache\\first-game.sent";
 // 3.0.17-beta.1: the installed version's failed starts (core/start_failures) - the rollback offered after two
 constexpr const char* kStartFailures = "uaro-graphics\\cache\\start-failures.txt";
+// 3.0.17-beta.7: [debug] record_scene's file (core/scene_record)
+constexpr const char* kSceneRecord = "uaro-graphics\\scene-record.bin";
 // 3.0.17-beta.4: the console's rows pinned to «Швидко» (core/console_pins)
 constexpr const char* kConsolePins = "uaro-graphics\\cache\\console-pins.txt";
 constexpr const char* kFailedStarts = "uaro-graphics\\cache\\failed-starts.txt";

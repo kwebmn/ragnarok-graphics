@@ -1065,6 +1065,8 @@ struct Config {
     // 2.5.16: [debug] shader_variants - Direct3D 11 draws each state of the game's draws with a shader made for it
     // (core/shader_variants.hpp); 0 draws all with the one shader for every state, as before
     bool shaderVariants = true;
+    // 3.0.17-beta.7: [debug] record_scene - the driver's messages to the renderer recorded (core/scene_record.hpp)
+    bool recordScene = false;
     SoundSettings sound;  // 0.91
 };
 

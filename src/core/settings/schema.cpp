@@ -1214,6 +1214,8 @@ const std::vector<IniSetting>& iniSettings() {
          Text::DebugDpiScaleHint, ""},
         {"debug", "shader_variants", Page::Debug, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::DebugVariants,
          Text::DebugVariantsHint, ""},
+        {"debug", "record_scene", Page::Debug, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::DebugRecordScene,
+         Text::DebugRecordSceneHint, ""},  // 3.0.17-beta.7
         {"debug", "state_cache", Page::Debug, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::DebugStateCache,
          Text::DebugStateCacheHint, ""},
         {"debug", "merge_draws", Page::Debug, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::DebugMergeDraws,
@@ -1534,6 +1536,7 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "renderer.bridge_present") return c.bridgePresent;
     if (k == "renderer.bridge_dpi_scale") return c.bridgeDpiScale ? "1" : "0";
     if (k == "debug.shader_variants") return c.shaderVariants ? "1" : "0";
+    if (k == "debug.record_scene") return c.recordScene ? "1" : "0";
     if (k == "debug.state_cache") return c.stateCache ? "1" : "0";
     if (k == "debug.merge_draws") return c.mergeDraws ? "1" : "0";
     if (k == "debug.fast_pick") return c.fastPick ? "1" : "0";

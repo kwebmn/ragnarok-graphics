@@ -1093,6 +1093,8 @@ Config parseConfig(const std::string& text) {
             setBool(val, c.mergeDraws);
         } else if (key == "debug.shader_variants") {  // 2.5.16
             setBool(val, c.shaderVariants);
+        } else if (key == "debug.record_scene") {  // 3.0.17-beta.7
+            setBool(val, c.recordScene);
         } else if (key == "debug.profile") {
             setBool(val, c.profile);
         } else if (key == "debug.xray") {  // 2.3

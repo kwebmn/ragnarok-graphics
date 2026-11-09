@@ -7,6 +7,7 @@
 
 #include "core/frame.hpp"
 #include "core/image.hpp"
+#include "core/scene_record.hpp"
 #include "win/bridge/channel.hpp"
 #include "win/bridge/composition.hpp"
 #include "win/gpu/renderer.hpp"
@@ -105,6 +106,10 @@ private:
     Renderer::StartSink startSink_ = nullptr;  // 0.40: what the renderer's start does (Msg::StartProgress)
     void* startContext_ = nullptr;
     std::vector<uint8_t> buffer_;  // a message being written; kept to keep its memory
+    // 3.0.17-beta.7: [debug] record_scene - what send() sends, into uaro-graphics\scene-record.bin
+    scenerecord::Recorder record_;
+    HANDLE recordFile_ = INVALID_HANDLE_VALUE;
+    void recordMessage(bridge::Msg type, const std::vector<uint8_t>& payload);
 };
 
 }  // namespace uagfx::gpu

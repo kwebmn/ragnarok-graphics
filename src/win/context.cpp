@@ -348,6 +348,7 @@ bool Context::open(std::string& error) {
             o.stateCache = config.stateCache;
             o.mergeDraws = config.mergeDraws;
             o.shaderVariants = config.shaderVariants;  // 2.5.16
+            o.recordScene = config.recordScene;        // 3.0.17-beta.7
             o.logLevel = int(config.logLevel);
             made = r->createRemote(o, why);
             if (made)
@@ -407,6 +408,7 @@ bool Context::open(std::string& error) {
         o.frameGeneration = config.dlss != "off" ? config.frameGeneration : 0;  // it uses DLSS's depth and motion
         o.reflex = config.reflex;  // 2.5.26
         o.shaderVariants = config.shaderVariants;  // 3.0.5-beta.3: Direct3D 12's states' own draw shaders
+        o.recordScene = config.recordScene;        // 3.0.17-beta.7: [debug] record_scene
         o.ai = config.ai;
         o.gpu = config.gpu;
         std::string why;

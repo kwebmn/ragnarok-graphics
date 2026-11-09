@@ -4,6 +4,7 @@
 #include <cstring>
 
 #include "core/bridge_wire.hpp"
+#include "core/layout.hpp"
 #include "win/gpu/local_host.hpp"
 #include "win/log.hpp"
 
@@ -41,6 +42,7 @@ Remote::~Remote() {
     }
     composition_.release();
     channel_.close();
+    if (recordFile_ != INVALID_HANDLE_VALUE) CloseHandle(recordFile_);  // 3.0.17-beta.7: the game closed first
 }
 
 bool Remote::start(const BridgeOptions& o, std::string& error) {
@@ -50,6 +52,15 @@ bool Remote::start(const BridgeOptions& o, std::string& error) {
         "Local\\uaro-render-" + std::to_string(GetCurrentProcessId()) + "-" + std::to_string(GetTickCount64());
     if (!channel_.create(name, kToHostBytes, kToClientBytes, error)) return false;
     channel_.setWhileWaiting([](void* self) { static_cast<Remote*>(self)->drain(); }, this);
+    if (o.recordScene) {  // 3.0.17-beta.7: [debug] record_scene
+        const std::string path = o.gameDir + "\\" + layout::kSceneRecord;
+        recordFile_ = CreateFileA(path.c_str(), GENERIC_WRITE, FILE_SHARE_READ, nullptr, CREATE_ALWAYS,
+                                  FILE_ATTRIBUTE_NORMAL, nullptr);
+        DWORD wrote = 0;
+        if (recordFile_ != INVALID_HANDLE_VALUE) WriteFile(recordFile_, scenerecord::kMagic, 8, &wrote, nullptr);
+        LOG_INFO("scene record: %s", recordFile_ != INVALID_HANDLE_VALUE ? "on, to 15 s after the first map"
+                                                                          : "the file could not be made");
+    }
     if (o.thread) return startThread(name, error);
     std::string cmd = "\"" + o.hostExe + "\" --channel " + name + " --parent " +
                       std::to_string(GetCurrentProcessId()) + " --dir \"" + o.gameDir + "\" --log " +
@@ -125,8 +136,28 @@ bool Remote::startThread(const std::string& name, std::string& error) {
     return true;
 }
 
+// 3.0.17-beta.7: a message into the scene's record while it lasts; at its end the file closed and its size logged
+void Remote::recordMessage(Msg type, const std::vector<uint8_t>& payload) {
+    if (recordFile_ == INVALID_HANDLE_VALUE) return;
+    const bool map = type == Msg::Map && payload.size() > 4;  // a map's name, not "" (WireWriter::str: u32 + bytes)
+    if (!record_.take(uint32_t(type), payload.size(), map, GetTickCount64())) {
+        CloseHandle(recordFile_);
+        recordFile_ = INVALID_HANDLE_VALUE;
+        LOG_INFO("scene record: %.1f MB, %d messages, %d frames - uaro-graphics\\scene-record.bin (%s)",
+                 double(record_.bytes()) / (1024.0 * 1024.0), record_.messages(), record_.frames(),
+                 record_.mapSeen() ? "15 s after the first map" : "its ceiling reached before a map");
+        return;
+    }
+    uint8_t head[scenerecord::kEntryHead];
+    scenerecord::entryHead(uint32_t(type), uint32_t(payload.size()), head);
+    DWORD wrote = 0;
+    WriteFile(recordFile_, head, sizeof head, &wrote, nullptr);
+    if (!payload.empty()) WriteFile(recordFile_, payload.data(), DWORD(payload.size()), &wrote, nullptr);
+}
+
 bool Remote::send(Msg type, const std::vector<uint8_t>& payload) {
     if (lost_) return false;
+    recordMessage(type, payload);
     if (!channel_.send(type, payload)) {
         setLost(who_ + " is gone");
         return false;

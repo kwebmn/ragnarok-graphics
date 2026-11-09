@@ -3473,6 +3473,17 @@ constexpr Entry kTexts[] = {
      "Поверхню композиції масштабовано разом із вікном гри, коли Windows його масштабує (125 %, 150 %).",
      "Поверхность композиции масштабируется вместе с окном игры, когда Windows его масштабирует (125 %, 150 %)."},
     {Text::DebugVariants, "A shader for each state", "Шейдер на кожен стан", "Шейдер на каждое состояние"},
+    {Text::DebugRecordScene, "Record a scene", "Записати сцену", "Записать сцену"},
+    {Text::DebugRecordSceneHint,
+     "The game's pictures as the driver hands them to the renderer, from the start to 15 s after the first map, into "
+     "uaro-graphics\\scene-record.bin - the video card check without the game will play such scenes. The log tells "
+     "its size. Takes effect at the next start; turn it off after.",
+     "Картинки гри так, як драйвер передає їх рендеру, від запуску до 15 с після першої карти, у "
+     "uaro-graphics\\scene-record.bin — перевірка відеокарти без гри програватиме такі сцени. Розмір — у журналі. "
+     "Діє з наступного запуску; потім вимкніть.",
+     "Картинки игры так, как драйвер передаёт их рендеру, от запуска до 15 с после первой карты, в "
+     "uaro-graphics\\scene-record.bin — проверка видеокарты без игры будет проигрывать такие сцены. Размер — в "
+     "журнале. Действует со следующего запуска; потом выключите."},
     {Text::DebugVariantsHint,
      "Each state of the game's draws gets a shader made for it - Direct3D 11 since 2.5.16, Direct3D 12 since "
      "3.0.5-beta.3; a weak card draws them several times faster. Off: one shader for every state. Takes effect at "

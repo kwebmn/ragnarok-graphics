@@ -48,6 +48,7 @@ struct BridgeOptions {
     bool stateCache = true;   // [debug] state_cache, merge_draws
     bool mergeDraws = true;
     bool shaderVariants = true;  // 2.5.16: [debug] shader_variants
+    bool recordScene = false;    // 3.0.17-beta.7: [debug] record_scene (core/scene_record.hpp)
 };
 
 struct PresentOptions {
