@@ -1,3 +1,8 @@
+# uaRO Graphics 3.0.17-beta.1 — what's new
+
+- **Going back to the previous version is easy now.** On «Play», next to the update, a «← Back to 3.0.16» button. If the game did not start twice after an update, the app offers to go back itself.
+- **«Service» → «Another version»:** your channel's last 5 versions, each installed with one button. The settings stay.
+
 # uaRO Graphics 3.0.16 — what's new
 
 Torch shadows, new hit and status effects, the shop opening card, the homunculus' and mercenary's skills in their cards, and many fixes. Everything new that changes the look is off by default — turn it on in the uaRO app.
