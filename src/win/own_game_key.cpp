@@ -2,6 +2,7 @@
 
 #include <windows.h>
 
+#include <cstdio>
 #include <cstring>
 #include <string>
 #include <vector>
@@ -16,6 +17,21 @@ namespace uagfx::win {
 namespace {
 
 using settings::kSharedLeaf;
+
+// 3.0.17-beta.15: DllMain runs before the log opens (real_ddraw decide): the lines wait for tellOwnGameKey
+std::vector<std::string>& notes() {
+    static std::vector<std::string> n;
+    return n;
+}
+
+template <typename... A>
+void note(const char* fmt, A... a) {
+    char text[512];
+    std::snprintf(text, sizeof text, fmt, a...);
+    notes().push_back(text);
+}
+
+void note(const char* text) { notes().push_back(text); }
 
 // The driver imports no advapi32 (verify4's list): kernelbase's (Windows 8+, set up before any DLL of the game's), else
 // the game's advapi32 (uaRO.exe imports RegOpenKeyExA)
@@ -150,9 +166,9 @@ void repairShared() {
             reg().set(personal, s.name.c_str(), 0, s.type, s.data.empty() ? nullptr : s.data.data(),
                            DWORD(s.data.size()));
     reg().close(personal);
-    LOG_INFO(setup ? "game key: the shared key's screen is its setup.exe's again (%zu values of uaRO HD's gone)"
-                   : "game key: the shared key keeps its screen (no setup.exe screen under it, %zu values)",
-             saved.size());
+    note(setup ? "game key: the shared key's screen is its setup.exe's again (%zu values of uaRO HD's gone)"
+               : "game key: the shared key keeps its screen (no setup.exe screen under it, %zu values)",
+         saved.size());
 }
 
 // 3.0.17-beta.14: the old client has uaRO Graphics of its own - its Apps entry (app/registry writeAppsEntry, HKCU)
@@ -182,10 +198,27 @@ bool oldClientHasOurs() {
 // 3.0.17-beta.14 (the owner: «каждый раз ... смотрели не сломан ли старый клиент и чинили его»): at every start
 void checkOldClient() {
     if (oldClientHasOurs()) {
-        LOG_INFO("game key: the old client has uaRO Graphics of its own - the shared key's screen stays");
+        note("game key: the old client has uaRO Graphics of its own - the shared key's screen stays");
         return;
     }
     repairShared();
+}
+
+
+// The game's own key as the game opens it (HKLM, KEY_QUERY_VALUE: its process's view - the VirtualStore when
+// Windows virtualises it), with a screen in it (WIDTH): else the game would run setup.exe and wait for it
+bool ownReady(const std::string& own) {
+    HKEY key = nullptr;
+    if (reg().open(HKEY_LOCAL_MACHINE, own.c_str(), 0, KEY_QUERY_VALUE, &key) != ERROR_SUCCESS) return false;
+    DWORD type = 0;
+    std::vector<BYTE> data;
+    const bool screen = readValue(key, "WIDTH", type, data);
+    reg().close(key);
+    return screen;
+}
+
+void remember(const std::string& leaf) {
+    writeFileAtomic(layout::join(gameDir(), layout::kGameKeyUsed), leaf + "\r\n");
 }
 
 }  // namespace
@@ -194,57 +227,61 @@ void installOwnGameKey() {
     const std::string client = ourClient();
     const std::string leaf = settings::gameKeyLeaf(client);
     if (leaf == kSharedLeaf) return;
-    const std::string shared = settings::gameKeyPath(kSharedLeaf);
-    const std::string own = settings::gameKeyPath(leaf);
-    if (!reg().ready()) {  // the key could not be copied: the shared one stays
-        LOG_INFO("game key: the shared one (the registry's functions not found)");
+    if (!reg().ready()) {
+        note("game key: the shared one (the registry's functions not found)");
         return;
     }
+    const std::string shared = settings::gameKeyPath(kSharedLeaf);
+    const std::string own = settings::gameKeyPath(leaf);
     auto* at = reinterpret_cast<char*>(uintptr_t(settings::kGameKeyAt));
     char now[settings::kGameKeyRoom + 1] = {};
     SIZE_T got = 0;
     if (!ReadProcessMemory(GetCurrentProcess(), at, now, sizeof now, &got) || got != sizeof now ||
         std::memcmp(now, shared.c_str(), shared.size() + 1) != 0) {
-        LOG_INFO("game key: the shared one (this build of uaRO.exe has no \"%s\" where it is looked for)",
-                 shared.c_str());
+        note("game key: the shared one (this build of uaRO.exe has no \"%s\" where it is looked for)", shared.c_str());
+        return;
+    }
+    // 3.0.17-beta.15: the game is pointed at its own key only when it can read it there - never worse than before
+    bool copied = false;
+    if (!ownReady(own)) {
+        HKEY from = nullptr, key = nullptr;
+        if (reg().open(HKEY_LOCAL_MACHINE, shared.c_str(), 0, KEY_READ, &from) == ERROR_SUCCESS) {
+            const LONG r = reg().create(HKEY_LOCAL_MACHINE, own.c_str(), 0, nullptr, 0, KEY_READ | KEY_WRITE, nullptr,
+                                        &key, nullptr);
+            if (r == ERROR_SUCCESS) {
+                note("game key: %d values of the shared key copied into %s", copyTree(from, key, 0), own.c_str());
+                reg().close(key);
+                copied = true;
+            } else {
+                note("game key: %s not made (error %ld)", own.c_str(), long(r));
+            }
+            reg().close(from);
+        }
+    }
+    if (!ownReady(own)) {
+        note("game key: %s stays on the shared key - its own %s cannot be read the game's way (no screen there)",
+             client.c_str(), own.c_str());
+        remember(kSharedLeaf);
         return;
     }
     DWORD old = 0;
     if (!VirtualProtect(at, sizeof now, PAGE_READWRITE, &old)) {
-        LOG_INFO("game key: the shared one (the game's string cannot be changed, error %lu)", GetLastError());
+        note("game key: the shared one (the game's string cannot be changed, error %lu)", GetLastError());
+        remember(kSharedLeaf);
         return;
     }
     std::memset(at, 0, sizeof now);
     std::memcpy(at, own.c_str(), own.size());
     DWORD unused = 0;
     VirtualProtect(at, sizeof now, old, &unused);
-
-
-    HKEY key = nullptr;
-    if (reg().open(HKEY_LOCAL_MACHINE, own.c_str(), 0, KEY_READ, &key) == ERROR_SUCCESS) {
-        reg().close(key);
-        LOG_INFO("game key: %s's own, %s", client.c_str(), own.c_str());
-        checkOldClient();
-        return;
-    }
-    HKEY from = nullptr;
-    if (reg().open(HKEY_LOCAL_MACHINE, shared.c_str(), 0, KEY_READ, &from) != ERROR_SUCCESS) {
-        LOG_INFO("game key: %s's own, %s (new: nothing in the shared key)", client.c_str(), own.c_str());
-        return;
-    }
-    const LONG r = reg().create(HKEY_LOCAL_MACHINE, own.c_str(), 0, nullptr, 0, KEY_READ | KEY_WRITE, nullptr, &key,
-                                nullptr);
-    if (r != ERROR_SUCCESS) {
-        reg().close(from);
-        LOG_INFO("game key: %s's own, %s (not made, error %ld - the shared key is not copied)", client.c_str(),
-                 own.c_str(), long(r));
-        return;
-    }
-    const int values = copyTree(from, key, 0);
-    reg().close(key);
-    reg().close(from);
-    LOG_INFO("game key: %s's own, %s - %d values of the shared key copied", client.c_str(), own.c_str(), values);
+    remember(leaf);
+    note("game key: %s's own, %s%s", client.c_str(), own.c_str(), copied ? " (new)" : "");
     checkOldClient();
+}
+
+void tellOwnGameKey() {
+    for (const std::string& line : notes()) LOG_INFO("%s", line.c_str());
+    notes().clear();
 }
 
 }  // namespace uagfx::win

@@ -28,6 +28,7 @@
 #include "win/crash.hpp"
 #include "win/gpu/adapters.hpp"
 #include "win/log.hpp"
+#include "win/own_game_key.hpp"
 #include "win/paths.hpp"
 #include "win/system_probe.hpp"
 #include "win/window_mode.hpp"
@@ -292,6 +293,7 @@ Startup decide() {
     const int slot = wlog::open(layout::join(dir, layout::now(layout::File::DriverLog)), s.config.logLevel);
     installCrashHandler(dir);  // 0.52: where a crash happened, and a minidump
     LOG_INFO("uaRO Graphics %s in %s", kVersion, modulePath(GetModuleHandleA(nullptr)).c_str());
+    tellOwnGameKey();  // 3.0.17-beta.15: what DllMain did with the game's registry key
     if (slot > 1)  // 3.0.3-beta.1: the logs of a game started while another runs
         LOG_INFO("log: game window %d - another game runs beside it; its logs end in -%d (uaro-render64-%d.log, "
                  "uaro-pad-%d.log)", slot, slot, slot, slot);

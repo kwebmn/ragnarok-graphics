@@ -1065,3 +1065,22 @@ TEST(model_the_old_client_stays_on_the_shared_key) {
     CHECK_EQ(w.leaf, std::string("Ragnarok"));
     CHECK(effectiveDword("WIDTH") == 1920);
 }
+
+// 3.0.17-beta.15: the game could not read its own key (its process not virtualised: the key the app wrote in the
+// VirtualStore unseen, none made) - the driver keeps the shared key and says so; the app works with that one too
+TEST(model_the_key_the_game_reads_is_the_apps) {
+    fake::Windows& w = fake::reset();
+    w.files[fake::path(L"uaro-client.json")] =
+        "{\"format\":1,\"client\":\"uaRO HD\",\"version\":\"2026.10.6\",\"files\":[]}";
+    w.files[fake::path(L"uaro-graphics\\game-key.txt")] = "Ragnarok\r\n";
+    fake::gameKey(w.registry.personal, 2560, 1440, false);
+    w.registry.common.exists = true;
+    fake::gameKey(w.registry.common, 1024, 768, true);
+    w.registry.common.keys[""]["DEVICENAME"] = RegValue::sz("dgVoodoo HAL");
+    app::Model m;
+    CHECK_EQ(w.leaf, std::string("Ragnarok"));
+    CHECK(effectiveDword("WIDTH") == 2560);  // nothing moved, nothing taken away
+    w.files[fake::path(L"uaro-graphics\\game-key.txt")] = "uaRO HD\n";
+    app::Model again;
+    CHECK_EQ(w.leaf, std::string("uaRO HD"));
+}

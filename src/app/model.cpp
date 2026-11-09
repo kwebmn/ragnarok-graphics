@@ -78,6 +78,16 @@ bool oldClientHasOurs(const std::wstring& dir) {
 
 void adoptGameKey(const std::wstring& dir) {
     const std::string leaf = gameKeyLeaf(clientOf(dir).client);
+    // 3.0.17-beta.15: the key the game read at its last start (win/own_game_key) - the shared one when it could not
+    // read its own (its process not virtualised: the VirtualStore copy unseen); then nothing moves or is taken away
+    std::string used;
+    if (readFile(dir + L"\\" + wide(layout::kGameKeyUsed), used)) {
+        while (!used.empty() && (used.back() == '\n' || used.back() == '\r' || used.back() == ' ')) used.pop_back();
+        if (used == kSharedLeaf) {
+            useGameKey(kSharedLeaf);
+            return;
+        }
+    }
     useGameKey(leaf);
     if (leaf == kSharedLeaf) return;
     if (!gameKeyExists(GameRegistry{readPersonal(), readCommon()})) {
