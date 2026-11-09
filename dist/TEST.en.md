@@ -1,3 +1,8 @@
+# uaRO Graphics 3.0.17-beta.10 — what's new
+
+- **First start:** «Play» asks «How do you want to play?» with four buttons: «I want everything new», «New picture, the old interface», «A weak computer, but sharp», «As in 2004». One press sets the picture, the interface and the textures (the new picture fitted to your card).
+- **After an update** «Updated to …» shows once, with «What's new» and «★ New features».
+
 # uaRO Graphics 3.0.17-beta.9 — what's new
 
 - **«Choose for my card»** on «Play», in «How the game looks». The app looks at your video card and sets «Picture» and «Textures» at once: after the first game by how the card actually drew it, before that by its memory. The interface stays as it is.
