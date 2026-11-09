@@ -1,3 +1,8 @@
+# uaRO Graphics 3.0.16-beta.39 — what's new
+
+- **The pad on the shop opening card.** D-pad ← → — the cart or the sale, ↑ ↓ — a row (gold edge); A puts a thing up, X takes it back, LB / RB — the price a step down / up, Y — «Open the shop», B — «Cancel». The buttons' hint is at the card's bottom.
+- **The pad on the homunculus' and the mercenary's skills.** ↑ ↓ over the skill rows, ← → the use level, A uses, X raises a homunculus skill.
+
 # uaRO Graphics 3.0.16-beta.38 — what's new
 
 - **Fixed: a guild mate in your party on the minimap.** It no longer flips between the guild's pink triangle and the party's face circle: a party member shows only as the circle.
