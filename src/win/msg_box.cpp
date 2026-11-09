@@ -66,6 +66,7 @@ uintptr_t g_error = 0, g_wait = 0;  // the copies of their first instructions, t
 struct State {
     WindowShadow shadow;
     bool on = false, shown = false, hid = false, padNow = false;
+    uint32_t waitHidden = 0;  // 3.0.18-beta.4: a «Please wait...» held hidden while the card shows another box
     unsigned codePage = 0;
     float k = 0, scale = 1;
     int targetW = 0, targetH = 0;
@@ -308,6 +309,18 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     }
     bool wait = false;
     uint32_t box = g_error || g_wait ? gameBox(wait) : 0;
+    // 3.0.18-beta.4 (the tester: «все ще трапляються старі «Please wait...», на аккаунтах на які раніше не заходив»):
+    // a box of the manager's and the list's «Please wait...» at once - the card takes the box, the wait stood in its
+    // old look. Held hidden too, given back when the card is off.
+    const uint32_t waiting = box ? pleaseWait() : 0;
+    if (waiting && on && read32(waiting + kShown) && write32(waiting + kShown, 0)) {
+        if (s.waitHidden != waiting && s.told++ < 30)
+            LOG_INFO("messages: the game's «Please wait» behind another box - hidden as well");
+        s.waitHidden = waiting;
+    } else if (s.waitHidden && (!on || s.waitHidden != waiting)) {
+        if (!on && s.waitHidden == pleaseWait()) write32(s.waitHidden + kShown, 1);
+        s.waitHidden = 0;
+    }
     if (!box && (box = pleaseWait()) != 0) {  // 3.0.11-beta.196: no box of the manager's - its «Please wait...»
         wait = true;
         s.text = copied(reinterpret_cast<MsgStringFn>(kMsgString)(kPleaseWaitLine));
