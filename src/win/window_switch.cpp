@@ -166,6 +166,31 @@ BattleTyping holdBattleTyping(UINT m) {
     return b;
 }
 
+// 3.0.17-beta.20 (a player: «він вийшов с телепорта він активувався я хотів нажати індіфікатор а воно написали в чат
+// У», GvG): the game's Enter (its windows' manager FUN_004d96e0, case 0xD) turns the battle mode's typing round on
+// every Enter - one for an NPC's «Next», a Kafra's or a warp's menu, a message's OK too; the chat then took the next
+// letters for the skills'. An Enter while another field has the keys leaves the typing as it was.
+struct BattleEnter {
+    bool held = false;
+    uint32_t typing = 0;
+};
+BattleEnter holdBattleEnter(UINT m, WPARAM wp) {
+    constexpr uint32_t kBattle = 0x772D54, kTyping = 0x772D58;
+    constexpr uint32_t kWindowMgr = 0x727ED8, kFocus = kWindowMgr + 0x6C, kChat = kWindowMgr + 0x84;
+    BattleEnter b;
+    if (m != WM_KEYDOWN || wp != VK_RETURN) return b;
+    uint32_t battle = 0, focus = 0, chat = 0, chatWords = 0, chatOther = 0;
+    if (!readGame(kBattle, &battle, 4) || !battle || !readGame(kFocus, &focus, 4) || !focus) return b;
+    if (readGame(kChat, &chat, 4) && chat) {
+        readGame(chat + 0x68, &chatWords, 4);
+        readGame(chat + 0x6C, &chatOther, 4);
+    }
+    if (focus == chatWords || focus == chatOther) return b;  // the chat's own Enter: its typing on or off
+    if (!readGame(kTyping, &b.typing, 4)) return b;
+    b.held = true;
+    return b;
+}
+
 LRESULT CALLBACK gameProc(HWND w, UINT m, WPARAM wp, LPARAM lp) {
     watchInput(m, wp, lp);  // 3.0.16-beta.4
     if (g_switch) {
@@ -242,8 +267,19 @@ LRESULT CALLBACK gameProc(HWND w, UINT m, WPARAM wp, LPARAM lp) {
     else if (m == WM_LBUTTONDOWN && !(wp & MK_SHIFT) && cursorOverWorld()) uapad::runtime::stopFollow("a click");
     else if (m == WM_KEYDOWN && wp == VK_ESCAPE) uapad::runtime::stopFollow("Esc");
     const BattleTyping typing = holdBattleTyping(m);
+    const BattleEnter enter = holdBattleEnter(m, wp);
     const LRESULT r = CallWindowProcA(g_original, w, m, wp, lp);
     if (typing.held) *reinterpret_cast<volatile uint32_t*>(uintptr_t(0x772D58)) = 1;
+    if (enter.held) {
+        volatile uint32_t* now = reinterpret_cast<volatile uint32_t*>(uintptr_t(0x772D58));
+        if (*now != enter.typing) {
+            static int told = 0;
+            if (told++ < 3)
+                LOG_INFO("input: an Enter for another window - the battle mode's typing kept %s",
+                         enter.typing ? "on" : "off");
+            *now = enter.typing;
+        }
+    }
     return r;
 }
 

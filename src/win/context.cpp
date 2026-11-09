@@ -1235,6 +1235,14 @@ void Context::present(const Rect& source, bool waitForVblank) {
             map_ = map;
             renderer->setMap(map);
             if (!map.empty()) LOG_INFO("map: %s", map.c_str());
+            // 3.0.17-beta.20 (a player: «поки я сам не хочу щось написати щоб він був сплячим»): a new map with the
+            // chat's field empty - the battle mode's letters are the skills' again
+            uint32_t battle = 0, typing = 0;
+            if (!map.empty() && readGame(0x772D54, &battle, 4) && battle && readGame(0x772D58, &typing, 4) && typing &&
+                chatwin::inputEmpty()) {
+                *reinterpret_cast<volatile uint32_t*>(uintptr_t(0x772D58)) = 0;
+                LOG_INFO("chat: the battle mode's typing off on the new map (its field empty)");
+            }
         }
     }
     if (knownGameBuild()) {  // 3.0.2-beta.12: the world by the game's camera, read for it alone without DLSS
