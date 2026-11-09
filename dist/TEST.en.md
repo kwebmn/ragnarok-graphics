@@ -1,3 +1,8 @@
+# uaRO Graphics 3.0.18-beta.13 — what's new
+
+- **Interface themes:** a new choice in the Interface section - standard (as now), classic RO (the old game's warm browns and cream, nearly square corners) and contrast (darker grounds, brighter words, sharper frames). Works with the new interface library. Your own colours go into `uaro-graphics\ui\palette.txt`; the game picks it up within a second.
+- **Windows and cards appear smoothly:** they grow from 96 % and fade in over 120 ms (off together with the rest of the interface animation).
+
 # uaRO Graphics 3.0.18-beta.12 — what's new
 
 - **The new interface is drawn by the graphics card:** with the new interface library switch on, the character block, panels, windows and cards are no longer repainted by the processor as a whole picture on every change. Their frames, bars, icons and words are drawn on the card, the words in the same font as now. The look should stay the same; if something looks different, please send a report.
