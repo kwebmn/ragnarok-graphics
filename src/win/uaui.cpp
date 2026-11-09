@@ -8,6 +8,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include "core/char_block.hpp"
 #include "core/char_status.hpp"
 #include "core/d3d7.hpp"
 #include "core/effect_exe.hpp"
@@ -405,7 +406,13 @@ public:
         Rml::Element* card = e.GetCurrentElement();
         const float mx = e.GetParameter<float>("mouse_x", 0), my = e.GetParameter<float>("mouse_y", 0);
         if (e.GetId() == Rml::EventId::Dragstart) {
+            // 3.0.18-beta.8 (the owner: «плашка кудато прыгает влево и потом уже нормально двигается»): the card
+            // placed by its own pixels before it moves - its centring (left 50 %, margin-left -160dp) left the margin
+            // under the dragged left, a jump of 160dp (365 pixels at 4K)
             const Rml::Vector2f at = card->GetAbsoluteOffset(Rml::BoxArea::Border);
+            card->SetProperty("margin-left", "0px");
+            card->SetProperty("left", std::to_string(int(at.x)) + "px");
+            card->SetProperty("top", std::to_string(int(at.y)) + "px");
             s.dragX = mx - at.x;
             s.dragY = my - at.y;
             s.dragging = true;
@@ -438,8 +445,8 @@ body { width: 100%; height: 100%; font-family: Plex; font-size: 14dp; color: #e9
 </style></head><body data-model="uaui">
 <div id="card" class="away">
 <div><span class="name">{{name}}</span><span class="sub">Base {{base}} · Job {{job}}</span></div>
-<div class="row"><span class="num">HP {{hp}} / {{hp_most}}</span><div class="bar"><div class="fill hp" data-style-width="hp_pct + '%'"></div></div></div>
-<div class="row"><span class="num">SP {{sp}} / {{sp_most}}</span><div class="bar"><div class="fill sp" data-style-width="sp_pct + '%'"></div></div></div>
+<div class="row"><span class="num">HP {{hp | num}} / {{hp_most | num}}</span><div class="bar"><div class="fill hp" data-style-width="hp_pct + '%'"></div></div></div>
+<div class="row"><span class="num">SP {{sp | num}} / {{sp_most | num}}</span><div class="bar"><div class="fill sp" data-style-width="sp_pct + '%'"></div></div></div>
 <span class="tag">uaUI · RmlUi 6.3</span>
 </div></body></rml>)";
 
@@ -469,6 +476,10 @@ bool start(State& s) {
         return false;
     }
     Rml::DataModelConstructor m = s.context->CreateDataModel("uaui");
+    // 3.0.18-beta.8: the numbers as the interface writes them - «5 157» (core/char_block grouped)
+    m.RegisterTransformFunc("num", [](const Rml::VariantList& a) -> Rml::Variant {
+        return a.empty() ? Rml::Variant() : Rml::Variant(charblock::grouped(a[0].Get<int64_t>()));
+    });
     m.Bind("name", &s.name);
     m.Bind("base", &s.base);
     m.Bind("job", &s.job);
