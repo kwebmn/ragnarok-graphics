@@ -28,7 +28,11 @@ struct Reg {
     decltype(&RegDeleteValueA) erase = nullptr;
     decltype(&RegEnumValueA) value = nullptr;
     decltype(&RegEnumKeyExA) subkey = nullptr;
-    bool ready() const { return open && create && close && query && set && erase && value && subkey; }
+    decltype(&RegOpenKeyExW) openW = nullptr;
+    decltype(&RegQueryValueExW) queryW = nullptr;
+    bool ready() const {
+        return open && create && close && query && set && erase && value && subkey && openW && queryW;
+    }
 };
 
 template <typename F>
@@ -50,6 +54,8 @@ const Reg& reg() {
         take(k, m, "RegDeleteValueA", out.erase);
         take(k, m, "RegEnumValueA", out.value);
         take(k, m, "RegEnumKeyExA", out.subkey);
+        take(k, m, "RegOpenKeyExW", out.openW);
+        take(k, m, "RegQueryValueExW", out.queryW);
         return out;
     }();
     return r;
@@ -149,6 +155,39 @@ void repairShared() {
              saved.size());
 }
 
+// 3.0.17-beta.14: the old client has uaRO Graphics of its own - its Apps entry (app/registry writeAppsEntry, HKCU)
+// in another folder, with its ddraw.dll there: it takes any screen, the one its app chose stays
+bool oldClientHasOurs() {
+    const std::wstring path = std::wstring(L"Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\") +
+                              std::wstring(settings::kOldAppsEntry, settings::kOldAppsEntry +
+                                                                        std::strlen(settings::kOldAppsEntry));
+    HKEY key = nullptr;
+    if (reg().openW(HKEY_CURRENT_USER, path.c_str(), 0, KEY_QUERY_VALUE | KEY_WOW64_64KEY, &key) != ERROR_SUCCESS)
+        return false;
+    wchar_t dir[MAX_PATH + 1] = {};
+    DWORD type = 0, size = sizeof dir - sizeof(wchar_t);
+    const bool read = reg().queryW(key, L"InstallLocation", nullptr, &type, reinterpret_cast<BYTE*>(dir), &size) ==
+                          ERROR_SUCCESS &&
+                      type == REG_SZ;
+    reg().close(key);
+    if (!read || !dir[0]) return false;
+    wchar_t ours[MAX_PATH + 1] = {};
+    const std::string game = gameDir();
+    MultiByteToWideChar(CP_ACP, 0, game.c_str(), -1, ours, MAX_PATH);
+    if (lstrcmpiW(dir, ours) == 0) return false;
+    const std::wstring dll = std::wstring(dir) + L"\\ddraw.dll";
+    return GetFileAttributesW(dll.c_str()) != INVALID_FILE_ATTRIBUTES;
+}
+
+// 3.0.17-beta.14 (the owner: «каждый раз ... смотрели не сломан ли старый клиент и чинили его»): at every start
+void checkOldClient() {
+    if (oldClientHasOurs()) {
+        LOG_INFO("game key: the old client has uaRO Graphics of its own - the shared key's screen stays");
+        return;
+    }
+    repairShared();
+}
+
 }  // namespace
 
 void installOwnGameKey() {
@@ -185,6 +224,7 @@ void installOwnGameKey() {
     if (reg().open(HKEY_LOCAL_MACHINE, own.c_str(), 0, KEY_READ, &key) == ERROR_SUCCESS) {
         reg().close(key);
         LOG_INFO("game key: %s's own, %s", client.c_str(), own.c_str());
+        checkOldClient();
         return;
     }
     HKEY from = nullptr;
@@ -193,7 +233,7 @@ void installOwnGameKey() {
         return;
     }
     const LONG r = reg().create(HKEY_LOCAL_MACHINE, own.c_str(), 0, nullptr, 0, KEY_READ | KEY_WRITE, nullptr, &key,
-                                   nullptr);
+                                nullptr);
     if (r != ERROR_SUCCESS) {
         reg().close(from);
         LOG_INFO("game key: %s's own, %s (not made, error %ld - the shared key is not copied)", client.c_str(),
@@ -204,7 +244,7 @@ void installOwnGameKey() {
     reg().close(key);
     reg().close(from);
     LOG_INFO("game key: %s's own, %s - %d values of the shared key copied", client.c_str(), own.c_str(), values);
-    repairShared();
+    checkOldClient();
 }
 
 }  // namespace uagfx::win

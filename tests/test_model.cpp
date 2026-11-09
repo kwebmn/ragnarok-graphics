@@ -1025,12 +1025,36 @@ TEST(model_a_client_of_its_own_moves_to_its_own_key) {
     CHECK(!w.shared.personal.find("", "WIDTH") && !w.shared.personal.find("", "HEIGHT"));
     CHECK(w.shared.personal.find("", "ID"));  // the old client keeps its login and the rest
     CHECK(effectiveValue(w.shared, "", "WIDTH")->asDword() == 1024u);
-    // its own key there: nothing moves again, the shared one is left alone
+    // its own key there: nothing moves again - 3.0.17-beta.14 (the owner: «каждый раз ... смотрели не сломан ли старый
+    // клиент и чинили его»): the shared key's screen is put right at every start
     w.shared.personal.keys[""]["WIDTH"] = RegValue::dword(800);
     w.registry.personal.keys[""]["ID"] = RegValue::sz("other");
     app::Model again;
-    CHECK(w.shared.personal.find("", "WIDTH"));
+    CHECK(!w.shared.personal.find("", "WIDTH"));
     CHECK(w.registry.personal.find("", "ID")->text == "other");
+    CHECK(effectiveDword("WIDTH") == 2560);
+}
+
+// 3.0.17-beta.14: the old client with uaRO Graphics of its own (its Apps entry, its ddraw.dll) takes any screen - the
+// one its own app chose stays
+TEST(model_the_old_clients_own_screen_stays_when_it_has_our_driver) {
+    fake::Windows& w = fake::reset();
+    w.files[fake::path(L"uaro-client.json")] =
+        "{\"format\":1,\"client\":\"uaRO HD\",\"version\":\"2026.10.6\",\"files\":[]}";
+    w.shared.common.exists = true;
+    fake::gameKey(w.shared.common, 1024, 768, true);
+    w.shared.common.keys[""]["DEVICENAME"] = RegValue::sz("dgVoodoo HAL");
+    fake::gameKey(w.shared.personal, 1920, 1080, false);
+    const std::wstring old = L"C:\\Games\\uaRO";
+    w.folders.insert(old);
+    w.files[old + L"\\ddraw.dll"] = "MZ";
+    w.apps[L"uaRO Graphics"] = {{L"InstallLocation", old}, {L"DisplayVersion", L"3.0.16"}};
+    app::Model m;
+    CHECK_EQ(w.leaf, std::string("uaRO HD"));
+    CHECK(w.shared.personal.find("", "WIDTH"));
+    w.files.erase(old + L"\\ddraw.dll");  // its uaRO Graphics removed by hand: dgVoodoo's again
+    app::Model again;
+    CHECK(!w.shared.personal.find("", "WIDTH"));
 }
 
 TEST(model_the_old_client_stays_on_the_shared_key) {

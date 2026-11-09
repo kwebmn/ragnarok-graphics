@@ -14,6 +14,8 @@ namespace uagfx::settings {
 // own: the driver writes its name over the game's string (uaRO.exe 0x6BD7A8, 32 bytes to the next one).
 constexpr const char* kSharedLeaf = "Ragnarok";
 constexpr size_t kGameKeyRoom = 31;  // characters the game's string holds, its NUL after them
+// 3.0.17-beta.14: the old client's Apps entry (app/installer namesOf): uaRO Graphics there - its own screen stays
+constexpr const char* kOldAppsEntry = "uaRO Graphics";
 constexpr uint32_t kGameKeyAt = 0x6BD7A8;  // uaRO.exe's "Software\\Gravity Soft\\Ragnarok" (.data)
 
 // The key's last part for a client: "Ragnarok" for the old uaRO (and an unknown one); its name when it fits the
