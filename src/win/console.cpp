@@ -239,7 +239,8 @@ void Console::build(Lang lang, const Config& config) {
         if (picture) rows_.push_back(Row{Kind::Heading, tr(lang, Text::FxPreset), 0});
         if (picture) rows_.push_back(Row{Kind::Choice, "effects.preset", 0});
         if (picture) rows_.push_back(Row{Kind::Choice, "effects.tier", 0});
-        if (picture && settingOf("effects.clock")) {  // 2.6.19: the time of day for all the effects, by the set and the mode
+        // 2.6.19: the time of day for all the effects, by the set and the mode
+        if (picture && settingOf("effects.clock")) {
             rows_.push_back(Row{Kind::Choice, "effects.clock", 0});
             rows_.push_back(Row{Kind::Slider, "effects.night_strength", 1});
             if (settingOf("effects.season")) rows_.push_back(Row{Kind::Choice, "effects.season", 0});  // 2.6.22
