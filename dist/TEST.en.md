@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.17-beta.8 — what's new
+
+- **For developers: «Record a scene»** now logs what the record is made of — textures, pictures the game draws itself, vertices — before the first map and after it.
+
 # uaRO Graphics 3.0.17-beta.7 — what's new
 
 - **For developers: «Record a scene»** ([debug] record_scene, «Developer» page). Records the game's picture from the start to 15 s after the first map into `uaro-graphics\scene-record.bin` and logs its size. The first step of the video card check without the game; turn it off after recording.
