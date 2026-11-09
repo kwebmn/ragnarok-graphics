@@ -2,7 +2,6 @@
 
 #include <cctype>
 #include <cwchar>
-#include <cwctype>
 #include <string>
 #include <vector>
 
@@ -69,7 +68,8 @@ Args parseArgs(const std::wstring& line) {
             std::string v;
             bool fine = !next.empty() && next.size() <= 40;
             for (wchar_t c : next) {
-                fine = fine && (std::iswalnum(c) || c == L'.' || c == L'-') && c < 128;
+                fine = fine && ((c >= L'0' && c <= L'9') || (c >= L'a' && c <= L'z') || (c >= L'A' && c <= L'Z') || c == L'.' ||
+                                 c == L'-');
                 v += char(c);
             }
             if (fine && std::isdigit(static_cast<unsigned char>(v[0]))) a.to = v;
