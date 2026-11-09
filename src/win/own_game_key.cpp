@@ -10,6 +10,7 @@
 #include "core/client_patch.hpp"
 #include "core/layout.hpp"
 #include "core/settings/game_key.hpp"
+#include "win/iat.hpp"
 #include "win/log.hpp"
 #include "win/paths.hpp"
 
@@ -223,12 +224,17 @@ void remember(const std::string& leaf) {
 
 }  // namespace
 
-void installOwnGameKey() {
+namespace {
+
+// 3.0.17-beta.16: the work at the game's first registry call, not in DllMain (beta.13-.15 stopped the game before
+// its log on the owner's PC: registry work under the loader's lock) - the string is changed before that call goes on
+void setUp() {
     const std::string client = ourClient();
     const std::string leaf = settings::gameKeyLeaf(client);
     if (leaf == kSharedLeaf) return;
     if (!reg().ready()) {
         note("game key: the shared one (the registry's functions not found)");
+        remember(kSharedLeaf);
         return;
     }
     const std::string shared = settings::gameKeyPath(kSharedLeaf);
@@ -239,6 +245,7 @@ void installOwnGameKey() {
     if (!ReadProcessMemory(GetCurrentProcess(), at, now, sizeof now, &got) || got != sizeof now ||
         std::memcmp(now, shared.c_str(), shared.size() + 1) != 0) {
         note("game key: the shared one (this build of uaRO.exe has no \"%s\" where it is looked for)", shared.c_str());
+        remember(kSharedLeaf);
         return;
     }
     // 3.0.17-beta.15: the game is pointed at its own key only when it can read it there - never worse than before
@@ -277,6 +284,43 @@ void installOwnGameKey() {
     remember(leaf);
     note("game key: %s's own, %s%s", client.c_str(), own.c_str(), copied ? " (new)" : "");
     checkOldClient();
+}
+
+// The game's own registry imports: the first call of any of them sets the key up, then each goes on as it was
+decltype(&RegOpenKeyExA) g_open = nullptr;
+decltype(&RegCreateKeyExA) g_create = nullptr;
+decltype(&RegDeleteKeyA) g_delete = nullptr;
+LONG g_done = 0;
+
+void once() {
+    if (InterlockedCompareExchange(&g_done, 1, 0) == 0) setUp();
+}
+
+LONG WINAPI openHook(HKEY root, LPCSTR sub, DWORD options, REGSAM sam, PHKEY out) {
+    once();
+    return g_open(root, sub, options, sam, out);
+}
+
+LONG WINAPI createHook(HKEY root, LPCSTR sub, DWORD reserved, LPSTR cls, DWORD options, REGSAM sam,
+                       const LPSECURITY_ATTRIBUTES security, PHKEY out, LPDWORD disposition) {
+    once();
+    return g_create(root, sub, reserved, cls, options, sam, security, out, disposition);
+}
+
+LONG WINAPI deleteHook(HKEY root, LPCSTR sub) {
+    once();
+    return g_delete(root, sub);
+}
+
+}  // namespace
+
+void installOwnGameKey() {
+    // DllMain: only the game's three import slots - nothing read, nothing of the registry touched here
+    bool any = false;
+    any = hookImport("advapi32.dll", "RegOpenKeyExA", &openHook, g_open) || any;
+    any = hookImport("advapi32.dll", "RegCreateKeyExA", &createHook, g_create) || any;
+    any = hookImport("advapi32.dll", "RegDeleteKeyA", &deleteHook, g_delete) || any;
+    if (!any) note("game key: the shared one (uaRO.exe's registry imports not found)");
 }
 
 void tellOwnGameKey() {

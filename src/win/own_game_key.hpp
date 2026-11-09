@@ -7,6 +7,8 @@ namespace uagfx::win {
 // everything the game kept in the shared key is copied into it, and the shared key's personal copy gives its screen
 // up when a setup.exe's is under it - the old client on dgVoodoo starts again; 3.0.17-beta.14: that check at every
 // start, unless the old client has uaRO Graphics of its own. The old uaRO: nothing changes.
+// 3.0.17-beta.16: DllMain only hooks the game's RegOpenKeyExA/RegCreateKeyExA/RegDeleteKeyA; all of it runs at the
+// game's first registry call (the loader's lock let go by then).
 void installOwnGameKey();
 // 3.0.17-beta.15: its lines into the log once it is open (DllMain runs before it); the key the game reads is in
 // uaro-graphics\game-key.txt for the settings app - the shared one when the game could not read its own
