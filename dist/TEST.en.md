@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.17-beta.7 — what's new
+
+- **For developers: «Record a scene»** ([debug] record_scene, «Developer» page). Records the game's picture from the start to 15 s after the first map into `uaro-graphics\scene-record.bin` and logs its size. The first step of the video card check without the game; turn it off after recording.
+
 # uaRO Graphics 3.0.17-beta.6 — what's new
 
 - **«★ New features (N)»** on «Play»: everything the update brought in one list. Switch each row right there; the button under it opens its page.
