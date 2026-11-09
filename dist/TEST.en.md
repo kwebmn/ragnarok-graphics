@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.17-beta.18 — what's new
+
+- **uaRO HD no longer breaks the old uaRO:** uaRO HD's screen (size, full screen) now lives in its own file, and the driver gives it to the game itself. The shared registry place stays the old client's: every start of uaRO HD's app gives the old client its setup.exe screen back ("Cannot init d3d" should not show again). The login, bars and the rest of the game's settings stay as they were. When the old client has uaRO Graphics of its own, its screen is left alone.
+
 # uaRO Graphics 3.0.17-beta.17 — what's new
 
 - **Fixed: uaRO HD starts again.** uaRO HD's own registry place (betas 13–16) is gone: the game and the app work with the shared one again, as before 3.0.17-beta.13. When those betas took uaRO HD's screen out of it, the app brings it back from their copy.
