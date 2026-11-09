@@ -4,8 +4,12 @@
 
 namespace uagfx::win {
 
+// 3.0.17-beta.25 (R-VDZY6F: «в «Совете дня» русский текст отображается кракозябрами» on an English Windows, its code
+// page 1252): uaRO's words are Windows-1251 - the tips' file, the players' chat, the names. [roext] code_page set:
+// that one; else Windows' own when it is 1251, 1251 otherwise
 unsigned gameCodePage(const Config& config) {
-    return config.clientRoext && config.roext.codePage > 0 ? unsigned(config.roext.codePage) : CP_ACP;
+    if (config.clientRoext && config.roext.codePage > 0) return unsigned(config.roext.codePage);
+    return GetACP() == 1251 ? CP_ACP : 1251u;
 }
 
 std::wstring widened(const std::string& text, unsigned codePage) {

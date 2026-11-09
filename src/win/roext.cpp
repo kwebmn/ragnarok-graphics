@@ -212,6 +212,10 @@ void installRoext() {
             return;
         }
     g_s = c.roext;
+    // 3.0.17-beta.25 (R-VDZY6F): Windows' own code page and it is not 1251 (an English Windows) - the game's words are
+    // 1251 all the same: converted as such (win/code_page gameCodePage)
+    const bool cyrillic = g_s.codePage == -1 && GetACP() != 1251;
+    if (cyrillic) g_s.codePage = 1251;
     bool ok = hookImport("user32.dll", "CreateWindowExA", &createWindow, g_create);
     ok = hookImport("user32.dll", "PeekMessageA", &peekMessage, g_peek) && ok;
     if (g_s.codePage != -1) {
@@ -229,7 +233,7 @@ void installRoext() {
                   g_s.windowLock ? "locked" : "framed", g_s.windowOnTop ? " on top" : "",
                   g_s.mouseButtons ? "F24-F22" : "as they are", g_s.altF4 ? "as F4" : "closes",
                   g_s.minimizeKey ? "minimizes" : "as it is", g_s.freeCpu, g_s.codePage,
-                  ok ? "" : " - not every import found");
+                  ok ? (cyrillic ? " (Windows' own is not 1251: uaRO's words are)" : "") : " - not every import found");
     g_lines.insert(g_lines.begin(), line);
 }
 
