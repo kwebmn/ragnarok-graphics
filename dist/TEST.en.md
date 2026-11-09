@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.18-beta.14 — what's new
+
+- **More of the new interface on the graphics card:** with the new interface library on, the in-game reference, the answer and info cards, the layout editor, the low HP warning, the experience strip and gain, and the controller hints are drawn this way too.
+
 # uaRO Graphics 3.0.18-beta.13 — what's new
 
 - **Interface themes:** a new choice in the Interface section - standard (as now), classic RO (the old game's warm browns and cream, nearly square corners) and contrast (darker grounds, brighter words, sharper frames). Works with the new interface library. Your own colours go into `uaro-graphics\ui\palette.txt`; the game picks it up within a second.
