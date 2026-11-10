@@ -1,3 +1,6 @@
+- "Навички" (skills) is now laid out by the new interface library: the top buttons, tabs, list rows, the side panel and the footer; the tree stays a diagram in its places. Presses on "+", the arrows and dragging skills land where you see them.
+- Fixed (since 3.0.18-beta.94): the footer of the items, storage and cart windows was spread across the whole width and the gold ring of a used thing did not show; the equipment slot names had extra margins.
+
 - "Спорядження" (equipment) is now laid out by the new interface library: five slots each side, the portrait and numbers (or the controller's list) in the middle, the ammo below. Clicks and dragging things land in the slot you see.
 
 - "Обмін" (trade) is now laid out by the new interface library: two sides of five cells a row, the zeny row, the warning and the buttons. Clicks and dragging things land where the cell is seen.
