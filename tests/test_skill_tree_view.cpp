@@ -2,6 +2,7 @@
 // columns by the depth of the requirements on the tab, the earlier jobs' requirements as chips on the left, links
 // with the levels they need; what the path to a closed skill costs; the window's view buttons and its scrolling
 #include <algorithm>
+#include <cmath>
 #include <string>
 #include <vector>
 
@@ -365,4 +366,24 @@ TEST(skill_window_scroll_bars_by_the_mouse) {
     CHECK(M.scroll.w > 0 && skillwin::hitTest(M, M.scroll.x + 1, M.scroll.y + 5).part == skillwin::Part::BarV);
     skillwin::barTo(ls, M, many, false, M.scroll.x, M.scroll.y + M.scroll.h);
     CHECK(ls.scroll == 20 - skillwin::kRows);
+}
+
+// 3.0.18-beta.29 (docs/superpowers/plans/2026-11-09-uaui-migration.md, stage 5): uaUI's «Дерево» - its links,
+// nodes, icons and «+» as paintTree() draws them, in the window's pixels (the view's scroll counted)
+TEST(skill_tree_view_parts_for_uaui) {
+    const skillwin::Data d = knight();
+    const skillwin::Texts t = texts();
+    skillwin::Show sh;
+    sh.tab = 1;
+    sh.tree = true;
+    sh.hoverRow = 2;
+    const skillwin::Layout L = skillwin::layout(0, 0, 1.0f, d, sh, t, measure);
+    const skillwin::TreeView v = skillwin::treeView(L, d, sh);
+    CHECK(v.nodes.size() == L.plan.nodes.size() && !v.links.empty());
+    const skillwin::TreeNode& pierce = v.nodes[1];
+    CHECK(std::fabs(pierce.box.x - L.rows[1].x) < 0.6f && std::fabs(pierce.box.y - L.rows[1].y) < 0.6f);
+    CHECK(pierce.plus.w > 0 && v.nodes[2].plus.w == 0);  // Spear Stab is closed
+    bool gold = false;  // the path to the skill pointed at in gold
+    for (const skillwin::TreeLink& l : v.links) gold = gold || (l.rgb == 0xF3C653u && l.alpha > 0.9f);
+    CHECK(gold);
 }

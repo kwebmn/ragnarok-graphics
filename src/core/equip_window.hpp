@@ -98,4 +98,20 @@ struct Words {
 };
 std::vector<Words> words(const Layout& L, const Data& d, const Show& sh, const Texts& t, const Measure& m);
 
+// 3.0.18-beta.29 (uaUI's «Спорядження»): the card dots (gold where a card sits) and the controller's glyphs
+struct Dot {
+    int slot = 0;
+    float cx = 0, cy = 0, r = 0;
+    bool card = false;
+};
+struct Glyph {
+    int button = 0;  // padglyph::Button
+    panel::Box box;
+};
+struct View {
+    std::vector<Dot> dots;
+    std::vector<Glyph> glyphs;
+};
+View view(const Layout& L, const Data& d, const Show& sh);
+
 }  // namespace uagfx::equipwin

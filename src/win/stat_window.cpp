@@ -27,6 +27,8 @@
 #include "win/reference_load.hpp"
 #include "win/ui_cost.hpp"
 #include "win/window_shadow.hpp"
+#include "win/uaui.hpp"
+#include "win/ui_sheet.hpp"
 #include "win/window_stack.hpp"
 
 namespace uagfx::win::statswin {
@@ -48,6 +50,9 @@ using SendMsgFn = int(__attribute__((thiscall)) *)(uint32_t self, uint32_t sende
 using ModeMsgFn = int(__attribute__((thiscall)) *)(uint32_t mode, int msg, int a, int b, int c);
 
 struct State {
+    uisheet::Sheet sheet;  // 3.0.18-beta.29: the window drawn by uaUI
+    int sheetGen = 0;
+    bool sheetShown = false;
     WindowShadow shadow;  // 3.0.11-beta.49
     WindowEdge edge;  // 3.0.11-beta.108: the top of two or more windows (win/window_stack)
     bool on = false, shown = false, hid = false, stateRead = false;
@@ -369,6 +374,10 @@ std::vector<Words> gdiWords(const std::vector<sw::Words>& in) {
 }
 
 void render(State& s) {
+    if (uaui::ready()) {  // 3.0.18-beta.29: uaUI's window says it all again, no picture
+        ++s.sheetGen;
+        return;
+    }
     const uicost::Paint cost("«Характеристики»", s.layout.w, s.layout.h);  // 3.0.11-beta.55
     if (!panel::blank(s.picture, s.layout.w, s.layout.h)) return;  // 3.0.11-beta.57: in the memory it had
     sw::paint(s.picture, s.layout, s.data, s.show);
@@ -408,7 +417,7 @@ void closeGameWindow() {
 
 }  // namespace
 
-void frame(HWND game, bool on, double k, int targetWidth, int targetHeight) {
+static void frameInner(HWND game, bool on, double k, int targetWidth, int targetHeight) {
     State& s = state();
     if (on != s.on) {
         s.on = on;
@@ -517,7 +526,8 @@ void frame(HWND game, bool on, double k, int targetWidth, int targetHeight) {
     const int battle[] = {d.atk, d.atk2, d.matkMin, d.matkMax, d.hit, d.crit, d.def, d.def2, d.mdef, d.mdef2, d.flee,
                           d.flee2, d.aspd};
     for (int v : battle) key += std::to_string(v) + ',';
-    if (const std::string drawn = key + '#' + std::to_string(uistyle::generation()); drawn != s.key) {  // its grounds
+    if (const std::string drawn = key + '#' + std::to_string(uistyle::generation()) + (uaui::ready() ? "u" : "");
+        drawn != s.key) {  // 3.0.18-beta.29: uaUI's or the picture  // its grounds
         s.key = drawn;
         render(s);
     }
@@ -525,18 +535,98 @@ void frame(HWND game, bool on, double k, int targetWidth, int targetHeight) {
     block(s, game);
 }
 
+// 3.0.18-beta.29 (docs/superpowers/plans/2026-11-09-uaui-migration.md, stage 5 - by hand): «Характеристики» in
+// RmlUi's markup, line by line as core statwin paints it - its glass, ×, the free points' chip, the tabs; «Персонаж»:
+// the table's header line, the rows (the lit one, their lines, «+» by whether it can be raised), the battle row lit
+// or pinned, the formulas' ground; «Планування»: ∓ by each stat, the level's and the goal's ‹ ›, «Скинути», the buffs'
+// chips (the counted ones gold), the sections' lines; «Довідка»: ‹ › and its tables' lines. The words where core
+// statwin places them
+static void fillSheet(State& s, uisheet::Content& c) {
+    const sw::Layout& L = s.layout;
+    const sw::Data& d = s.data;
+    const sw::Show& sh = s.show;
+    const float sc = L.s;
+    constexpr uint32_t kWhite = 0xFFFFFF, kGold = 0xF3C653, kGold2 = 0xC9A55B, kGreen = 0x5FD08A;
+    constexpr float kSide = 18, kHeaderH = 30;  // core statwin's
+    auto& u = c.under;
+    c.w = float(L.w), c.h = float(L.h);
+    c.glass = uisheet::Box{L.glass.x, L.glass.y, L.glass.w, L.glass.h, 12 * sc, 1.0f * sc, 1, "glass"};
+    c.ground = uisheet::Sheet::ground(0x10141C, uistyle::window());
+    if (sh.hoverClose) c.rect(u, L.close, 7 * sc, kWhite, 0.12f);
+    if (d.free > 0) c.rect(u, L.freeChip, 6 * sc, kGold, 0.18f, kGold, 0.5f, 1.0f * sc);
+    for (int i = 0; i < sw::kTabs; ++i)
+        c.rect(u, L.tabs[i], 13 * sc, kWhite, i == L.tab ? 0.14f : sh.hoverTab == i ? 0.08f : 0.0f,
+               i == L.tab ? kGold2 : kWhite, i == L.tab ? 0.7f : 0.1f, 1.0f * sc);
+    if (L.tab == sw::kPlanTab) {
+        const auto lit = [&](sw::Part part, int i) { return sh.hoverPlan == int(part) && sh.hoverPlanIndex == i; };
+        for (int i = 0; i < sw::kStats && i < int(L.planMinus.size()); ++i) {
+            c.rect(u, L.planMinus[size_t(i)], 6 * sc, kWhite, lit(sw::Part::PlanMinus, i) ? 0.2f : 0.07f, kWhite,
+                   0.15f, 1.0f * sc);
+            c.rect(u, L.planPlus[size_t(i)], 6 * sc, kWhite, lit(sw::Part::PlanPlus, i) ? 0.2f : 0.07f, kGreen, 0.6f,
+                   1.0f * sc);
+        }
+        for (int i = 0; i < 2; ++i)
+            c.rect(u, i ? L.levelNext : L.levelPrev, 6 * sc, kWhite, lit(sw::Part::PlanLevel, i) ? 0.2f : 0.08f);
+        c.rect(u, L.planReset, 8 * sc, kWhite, lit(sw::Part::PlanReset, -1) ? 0.16f : 0.07f, kWhite, 0.2f, 1.0f * sc);
+        for (int i = 0; i < sw::kPlanBuffs; ++i) {
+            if (L.buffChips[i].w <= 0) continue;
+            const bool on = sh.buffOn[i];
+            c.rect(u, L.buffChips[i], 12 * sc, on ? kGold : kWhite,
+                   lit(sw::Part::PlanBuff, i) ? 0.22f : on ? 0.16f : 0.05f, on ? kGold2 : kWhite, on ? 0.7f : 0.15f,
+                   1.0f * sc);
+        }
+        for (int i = 0; i < 2; ++i)
+            c.rect(u, i ? L.goalNext : L.goalPrev, 6 * sc, kWhite, lit(sw::Part::Goal, i) ? 0.2f : 0.08f);
+        c.rect(u, panel::Box{L.goals.x, L.goals.y - 8 * sc, L.goals.w, 1 * sc}, 0, kWhite, 0.08f);
+        c.rect(u, panel::Box{L.mobs.x, L.mobs.y - 6 * sc, L.mobs.w, 1 * sc}, 0, kWhite, 0.08f);
+        c.rect(u, panel::Box{L.planResults.x, L.planResults.y + kHeaderH * sc - 1 * sc, L.planResults.w, 1 * sc}, 0,
+               kWhite, 0.1f);
+    } else if (L.tab == sw::kRefTab) {
+        for (int i = 0; i < 2; ++i) c.rect(u, i ? L.next : L.prev, 6 * sc, kWhite, sh.hoverArrow == i ? 0.2f : 0.08f);
+        for (const panel::Box* b : {&L.aspd, &L.cost, &L.bonus})
+            c.rect(u, panel::Box{b->x, b->y + 26 * sc - 1 * sc, b->w, 1 * sc}, 0, kWhite, 0.1f);
+    } else {
+        c.rect(u, panel::Box{L.header.x, L.header.y + L.header.h - 1 * sc, L.header.w, 1 * sc}, 0, kWhite, 0.08f);
+        const int lit = sh.hoverRow >= 0 ? sh.hoverRow : sh.hoverPlus >= 0 ? sh.hoverPlus : sh.selected;
+        for (int i = 0; i < sw::kStats; ++i) {
+            const panel::Box& r = L.rows[size_t(i)];
+            if (i == lit) c.rect(u, r, 6 * sc, kWhite, 0.06f);
+            if (i < sw::kStats - 1) c.rect(u, panel::Box{r.x, r.y + r.h - 1 * sc, r.w, 1 * sc}, 0, kWhite, 0.05f);
+            if (d.base[i] >= 99) continue;
+            const bool can = sw::canRaise(d, i);
+            c.rect(u, L.pluses[size_t(i)], 6 * sc, kWhite, can ? (i == sh.hoverPlus ? 0.22f : 0.12f) : 0.03f,
+                   can ? kGold2 : kWhite, can ? 0.7f : 0.06f, 1.0f * sc);
+        }
+        const int lit2 = sh.hoverBattle >= 0 ? sh.hoverBattle : sh.pinnedBattle;
+        if (lit2 >= 0 && lit2 < int(L.battleRows.size()))
+            c.rect(u, L.battleRows[size_t(lit2)], 6 * sc, kWhite, sh.pinnedBattle == lit2 ? 0.09f : 0.06f);
+        c.rect(u, panel::Box{kSide * sc / 2, L.line.y + 4 * sc, L.glass.w - kSide * sc, L.line.h - 10 * sc}, 8 * sc,
+               kWhite, 0.04f, kWhite, 0.08f, 1.0f * sc);
+    }
+    c.say(sw::words(L, d, sh, texts(), measure));
+}
+
+void frame(HWND game, bool on, double k, int targetWidth, int targetHeight) {
+    frameInner(game, on, k, targetWidth, targetHeight);
+    State& s = state();
+    s.sheetShown = s.sheet.frame("stats", s.shown, true, s.layout.x, s.layout.y, s.sheetGen,
+                                 [&](uisheet::Content& c) { fillSheet(s, c); });
+}
+
 void draw(FrameRecord& record, gpu::Renderer& renderer) {
     State& s = state();
-    if (!s.shown || s.k <= 0 || s.picture.width <= 0 || s.picture.height <= 0) return;
+    if (!s.shown || s.k <= 0 || ((s.picture.width <= 0 || s.picture.height <= 0) && !s.sheetShown)) return;
     int cursor = -1, cx = 0, cy = 0;  // under the game's own cursor, as the minimap
     if (readGameCursor(cx, cy)) cursor = panel::cursorDraw(record, float(cx), float(cy));
     const panel::Box& g = s.layout.glass;  // 3.0.11-beta.49: its shadow under it
-    s.shadow.draw(record, renderer, s.layout.x + int(g.x), s.layout.y + int(g.y), int(g.w), int(g.h), 12 * s.scale,
-                  s.scale, s.k);
-    drawPart(record, renderer, s.picture, s.texture, s.texW, s.texH, s.upload, s.layout.x, s.layout.y, s.k);
-    if (windowstack::marked(winstack::Win::Stats))  // 3.0.11-beta.108: its gold edge, the top of two or more
-        s.edge.draw(record, renderer, s.layout.x + int(g.x), s.layout.y + int(g.y), int(g.w), int(g.h), 12 * s.scale,
-                    s.scale, s.k);
+    if (!s.sheetShown) {  // 3.0.18-beta.29: uaUI draws the window (with the windows' layer)
+        s.shadow.draw(record, renderer, s.layout.x + int(g.x), s.layout.y + int(g.y), int(g.w), int(g.h),
+                      12 * s.scale, s.scale, s.k);
+        drawPart(record, renderer, s.picture, s.texture, s.texW, s.texH, s.upload, s.layout.x, s.layout.y, s.k);
+        if (windowstack::marked(winstack::Win::Stats))
+            s.edge.draw(record, renderer, s.layout.x + int(g.x), s.layout.y + int(g.y), int(g.w), int(g.h),
+                        12 * s.scale, s.scale, s.k);
+    }
     if (cursor >= 0) record.moveLastBefore(record.commands().size() - size_t(cursor) - 1, size_t(cursor));
 }
 

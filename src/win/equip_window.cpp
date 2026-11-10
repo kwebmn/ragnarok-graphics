@@ -13,6 +13,7 @@
 #include "core/char_block.hpp"
 #include "core/char_status.hpp"
 #include "core/equip_window.hpp"
+#include "core/pad_glyphs.hpp"
 #include "core/hotbar_panel.hpp"
 #include "core/layout.hpp"
 #include "core/settings/strings.hpp"
@@ -31,6 +32,8 @@
 #include "win/reference_load.hpp"
 #include "win/ui_cost.hpp"
 #include "win/window_shadow.hpp"
+#include "win/uaui.hpp"
+#include "win/ui_sheet.hpp"
 #include "win/window_stack.hpp"
 
 namespace uagfx::win::equipwin {
@@ -81,6 +84,9 @@ struct Thing {  // a thing of the bag as the game keeps it
 };
 
 struct State {
+    uisheet::Sheet sheet;  // 3.0.18-beta.29: the window drawn by uaUI
+    int sheetGen = 0;
+    bool sheetShown = false;
     WindowShadow shadow;
     WindowEdge edge;  // 3.0.11-beta.108: the top of two or more windows (win/window_stack)
     // 3.0.11-beta.110 (the concept «Концепция окон и инвентаря», stage 2): the game's drag of a worn thing begun at
@@ -368,6 +374,10 @@ std::vector<Words> gdiWords(const std::vector<ew::Words>& in) {
 }
 
 void render(State& s) {
+    if (uaui::ready()) {  // 3.0.18-beta.29: uaUI's window says it all again, no picture
+        ++s.sheetGen;
+        return;
+    }
     const uicost::Paint cost("«Спорядження»", s.layout.w, s.layout.h);
     if (!panel::blank(s.picture, s.layout.w, s.layout.h)) return;
     ew::paint(s.picture, s.layout, s.data, s.show);
@@ -493,7 +503,8 @@ int stepFrom(int slot, PadCommand c) {
 
 }  // namespace
 
-void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int targetHeight) {
+static void frameInner(HWND game, bool on, unsigned codePage, double k, int targetWidth,
+                       int targetHeight) {
     State& s = state();
     if (on != s.on) {
         s.on = on;
@@ -556,7 +567,8 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
                std::to_string(w.cards[3]) + (w.icon ? "i" : "") + ',';
     for (const auto& [name, value] : s.data.stats) key += value + ',';
     for (const ew::Pick& p : s.data.picks) key += std::to_string(p.index) + (p.icon ? "i" : "") + ',';
-    if (const std::string drawn = key + '#' + std::to_string(uistyle::generation()); drawn != s.key) {
+    if (const std::string drawn = key + '#' + std::to_string(uistyle::generation()) + (uaui::ready() ? "u" : "");
+        drawn != s.key) {  // 3.0.18-beta.29: uaUI's or the picture
         s.key = drawn;
         render(s);
     }
@@ -570,19 +582,86 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     block(s, game);
 }
 
+// 3.0.18-beta.29 (docs/superpowers/plans/2026-11-09-uaui-migration.md, stage 5 - by hand): «Спорядження» in RmlUi's
+// markup - its glass, ×, each slot (pointed at, the controller's, lit gold where a dragged thing fits), its tile and
+// icon (dimmed where a two-handed weapon spills), the card dots, the portrait's circle or the controller's pick list,
+// the footer's line and glyphs; the words where core equipwin places them
+static void fillSheet(State& s, uisheet::Content& c) {
+    const ew::Layout& L = s.layout;
+    const float sc = L.s;
+    const ew::View v = ew::view(L, s.data, s.show);
+    const auto centred = [&](const panel::Picture* p, const panel::Box& b, float op) {
+        if (p && p->width > 0)
+            c.icons.push_back(uisheet::Icon{std::round(b.x + (b.w - float(p->width)) / 2),
+                                            std::round(b.y + (b.h - float(p->height)) / 2), float(p->width),
+                                            float(p->height), op, s.sheet.icon(p)});
+    };
+    c.w = float(L.w), c.h = float(L.h);
+    c.glass = uisheet::Box{L.glass.x, L.glass.y, L.glass.w, L.glass.h, 12 * sc, 1.0f * sc, 1, "glass"};
+    c.ground = uisheet::Sheet::ground(0x10141C, uistyle::window());
+    if (s.show.hoverClose) c.add(c.under, L.close, 7 * sc, "hot");
+    for (int i = 0; i < ew::kSlots; ++i) {
+        const panel::Box& b = L.slots[i];
+        if (b.w <= 0) continue;
+        if (i == s.show.hoverSlot && !s.show.picking) c.add(c.under, b, 8 * sc, "slothot");
+        if (s.show.pad && i == s.show.focus) c.add(c.under, b, 8 * sc, "focus", 1.5f * sc);
+        if ((s.show.dropFits >> i) & 1u) c.add(c.under, b, 8 * sc, "fits", 2.0f * sc);
+        c.add(c.under, L.icons[i], 8 * sc, "tile", 1.0f * sc);
+        const ew::Worn& wi = s.data.slots[i];
+        if (wi.index > 0) centred(wi.icon, L.icons[i], wi.spill ? 0.4f : 1.0f);
+    }
+    for (const ew::Dot& d : v.dots)
+        c.add(c.under, panel::Box{d.cx - d.r, d.cy - d.r, 2 * d.r, 2 * d.r}, d.r, d.card ? "dot card" : "dot");
+    if (s.show.picking) {  // the controller's list of what fits, over the middle
+        c.add(c.under, L.pickList, 10 * sc, "picks", 1.0f * sc);
+        for (size_t i = 0; i < L.picks.size(); ++i) {
+            if (int(i) == s.show.hoverPick) c.add(c.under, L.picks[i], 6 * sc, "pickhot");
+            if (int(i) == s.show.pickFocus) c.add(c.under, L.picks[i], 6 * sc, "focus", 1.5f * sc);
+            if (i < s.data.picks.size())
+                centred(s.data.picks[i].icon, panel::Box{L.picks[i].x + 2 * sc, L.picks[i].y, 30 * sc, L.picks[i].h},
+                        1.0f);
+        }
+    } else {
+        const panel::Box& r = L.portrait;
+        c.add(c.under, r, r.w / 2, "tile round");
+        centred(s.data.portrait, r, 1.0f);
+    }
+    c.add(c.under, panel::Box{0, L.footer.y, L.glass.w, 1 * sc}, 0, "rule");
+    const padglyph::Family f = s.show.sony ? padglyph::Family::Sony : padglyph::Family::Xbox;
+    for (const ew::Glyph& g : v.glyphs) {
+        const int w = std::max(1, int(std::ceil(g.box.w))), h = std::max(1, int(std::ceil(g.box.h)));
+        const std::string key = "pad" + std::to_string(g.button) + (s.show.sony ? "s" : "x") + std::to_string(w) +
+                                'x' + std::to_string(h);
+        c.icons.push_back(uisheet::Icon{g.box.x, g.box.y, float(w), float(h), 1,
+                                        s.sheet.made(key, w, h, [&](panel::Picture& p) {
+                                            padglyph::paint(p, padglyph::Button(g.button), f, 0, 0, g.box.h);
+                                        })});
+    }
+    c.say(ew::words(L, s.data, s.show, texts(), measure));
+}
+
+void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int targetHeight) {
+    frameInner(game, on, codePage, k, targetWidth, targetHeight);
+    State& s = state();
+    s.sheetShown = s.sheet.frame("equip", s.shown, true, s.layout.x, s.layout.y, s.sheetGen,
+                                 [&](uisheet::Content& c) { fillSheet(s, c); });
+}
+
 void draw(FrameRecord& record, gpu::Renderer& renderer) {
     State& s = state();
-    if (!s.shown || s.k <= 0 || s.picture.width <= 0 || s.picture.height <= 0) return;
+    if (!s.shown || s.k <= 0 || ((s.picture.width <= 0 || s.picture.height <= 0) && !s.sheetShown)) return;
     int cursor = -1, cx = 0, cy = 0;
     const bool known = readGameCursor(cx, cy);
     if (known) cursor = panel::cursorDraw(record, float(cx), float(cy));
     const panel::Box& g = s.layout.glass;
-    s.shadow.draw(record, renderer, s.layout.x + int(g.x), s.layout.y + int(g.y), int(g.w), int(g.h), 12 * s.scale,
-                  s.scale, s.k);
-    drawPart(record, renderer, s.picture, s.texture, s.texW, s.texH, s.upload, s.layout.x, s.layout.y, s.k);
-    if (windowstack::marked(winstack::Win::Equip))  // 3.0.11-beta.108: its gold edge, the top of two or more
-        s.edge.draw(record, renderer, s.layout.x + int(g.x), s.layout.y + int(g.y), int(g.w), int(g.h), 12 * s.scale,
-                    s.scale, s.k);
+    if (!s.sheetShown) {  // 3.0.18-beta.29: uaUI draws the window (with the windows' layer)
+        s.shadow.draw(record, renderer, s.layout.x + int(g.x), s.layout.y + int(g.y), int(g.w), int(g.h),
+                      12 * s.scale, s.scale, s.k);
+        drawPart(record, renderer, s.picture, s.texture, s.texW, s.texH, s.upload, s.layout.x, s.layout.y, s.k);
+        if (windowstack::marked(winstack::Win::Equip))
+            s.edge.draw(record, renderer, s.layout.x + int(g.x), s.layout.y + int(g.y), int(g.w), int(g.h),
+                        12 * s.scale, s.scale, s.k);
+    }
     const int dragged = s.press.dragging ? s.press.index : -1;  // 3.0.11-beta.110: its icon under the cursor
     const panel::Picture* icon = dragged >= 0 && dragged < ew::kSlots ? s.data.slots[dragged].icon : nullptr;
     if (icon && icon->width > 0 && known) {

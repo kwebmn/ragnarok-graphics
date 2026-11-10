@@ -170,4 +170,23 @@ struct Words {
 };
 std::vector<Words> words(const Layout& L, const Data& d, const Show& sh, const Texts& t, const Measure& m);
 
+// 3.0.18-beta.29 (uaUI's «Дерево»): the tree's parts as paintTree() draws them - in the window's pixels (the view's
+// scroll counted; cut at L.view by the drawer)
+struct TreeLink {
+    panel::Box box;  // a straight piece of a link
+    uint32_t rgb = 0;
+    float alpha = 0;
+};
+struct TreeNode {
+    panel::Box box, icon, plus, minus;  // plus / minus: w 0 none
+    uint32_t fill = 0, edge = 0, plusRgb = 0;
+    float fillA = 0, edgeA = 0, edgeW = 0, iconOpacity = 1, plusA = 0, minusA = 0;
+    const panel::Picture* picture = nullptr;  // the skill's icon
+};
+struct TreeView {
+    std::vector<TreeLink> links;
+    std::vector<TreeNode> nodes;
+};
+TreeView treeView(const Layout& L, const Data& d, const Show& sh);
+
 }  // namespace uagfx::skillwin

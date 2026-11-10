@@ -810,6 +810,8 @@ input.checkbox:checked { background-color: #3d7fd8; border-color: #3d7fd8; }
 .ig { position: absolute; font-family: Plex; }
 .sh { position: absolute; font-family: Plex; }
 .sh div, .sh span, .sh .a { position: absolute; }
+.sh .a { left: 0; top: 0; }
+.sh .clip { overflow: hidden; }
 .sh .glass { border-color: #ffffff17; }
 .sh .hot { background-color: #ffffff1f; }
 .sh .rule { background-color: #ffffff14; }
@@ -830,6 +832,15 @@ input.checkbox:checked { background-color: #3d7fd8; border-color: #3d7fd8; }
 .sh .btn.main.hot { background-color: #f3c653f2; }
 .sh .thumb { background-color: #ffffff40; }
 .sh .tip { background-color: #10141cf5; border-color: #ffffff24; }
+.sh .slothot { background-color: #ffffff0f; }
+.sh .focus { background-color: #c9a55b14; border-color: #f3c653e6; }
+.sh .fits { background-color: #c9a55b1f; border-color: #f3c653f2; }
+.sh .tile { background-color: #1b1d24e6; border-color: #ffffff14; }
+.sh .tile.round { background-color: #1b1d24; }
+.sh .dot { background-color: #ffffff29; }
+.sh .dot.card { background-color: #f3c653; }
+.sh .picks { background-color: #1b1d24f2; border-color: #c9a55b80; }
+.sh .pickhot { background-color: #ffffff12; }
 .sh .word { white-space: nowrap; overflow: hidden; }
 .sh .word.bold { font-weight: bold; }
 .sh .word.right { text-align: right; }

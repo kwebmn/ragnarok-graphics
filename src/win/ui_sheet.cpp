@@ -11,14 +11,35 @@ const char* kDoc = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss
 <div class="glass" data-if="glass.w > 0" data-style-left="glass.x + 'px'" data-style-top="glass.y + 'px'"
   data-style-width="glass.w + 'px'" data-style-height="glass.h + 'px'" data-style-border-radius="glass.r + 'px'"
   data-style-border-width="glass.e + 'px'" data-style-background-color="ground"></div>
-<div data-for="b : under" data-attr-class="b.cls" data-style-left="b.x + 'px'" data-style-top="b.y + 'px'"
-  data-style-width="b.w + 'px'" data-style-height="b.h + 'px'" data-style-border-radius="b.r + 'px'"
-  data-style-border-width="b.e + 'px'" data-style-opacity="b.op"></div>
+<div class="a" data-for="b : under">
+ <div data-if="!b.paint" data-attr-class="b.cls" data-style-left="b.x + 'px'" data-style-top="b.y + 'px'"
+   data-style-width="b.w + 'px'" data-style-height="b.h + 'px'" data-style-border-radius="b.r + 'px'"
+   data-style-border-width="b.e + 'px'" data-style-opacity="b.op"></div>
+ <div data-if="b.paint" class="paint" data-style-left="b.x + 'px'" data-style-top="b.y + 'px'"
+   data-style-width="b.w + 'px'" data-style-height="b.h + 'px'" data-style-border-radius="b.r + 'px'"
+   data-style-border-width="b.e + 'px'" data-style-background-color="b.bg" data-style-border-color="b.bd"></div>
+</div>
+<div class="clip" data-if="clip.w > 0" data-style-left="clip.x + 'px'" data-style-top="clip.y + 'px'"
+  data-style-width="clip.w + 'px'" data-style-height="clip.h + 'px'">
+ <div class="a" data-for="b : clipped">
+  <div class="paint" data-style-left="b.x - clip.x + 'px'" data-style-top="b.y - clip.y + 'px'"
+    data-style-width="b.w + 'px'" data-style-height="b.h + 'px'" data-style-border-radius="b.r + 'px'"
+    data-style-border-width="b.e + 'px'" data-style-background-color="b.bg" data-style-border-color="b.bd"></div>
+ </div>
+ <img class="a" data-for="i : clipped_icons" data-attr-src="i.src" data-style-left="i.x - clip.x + 'px'"
+   data-style-top="i.y - clip.y + 'px'" data-style-width="i.w + 'px'" data-style-height="i.h + 'px'"
+   data-style-opacity="i.op"/>
+</div>
 <img class="a" data-for="i : icons" data-attr-src="i.src" data-style-left="i.x + 'px'" data-style-top="i.y + 'px'"
   data-style-width="i.w + 'px'" data-style-height="i.h + 'px'" data-style-opacity="i.op"/>
-<div data-for="b : over" data-attr-class="b.cls" data-style-left="b.x + 'px'" data-style-top="b.y + 'px'"
-  data-style-width="b.w + 'px'" data-style-height="b.h + 'px'" data-style-border-radius="b.r + 'px'"
-  data-style-border-width="b.e + 'px'" data-style-opacity="b.op"></div>
+<div class="a" data-for="b : over">
+ <div data-if="!b.paint" data-attr-class="b.cls" data-style-left="b.x + 'px'" data-style-top="b.y + 'px'"
+   data-style-width="b.w + 'px'" data-style-height="b.h + 'px'" data-style-border-radius="b.r + 'px'"
+   data-style-border-width="b.e + 'px'" data-style-opacity="b.op"></div>
+ <div data-if="b.paint" class="paint" data-style-left="b.x + 'px'" data-style-top="b.y + 'px'"
+   data-style-width="b.w + 'px'" data-style-height="b.h + 'px'" data-style-border-radius="b.r + 'px'"
+   data-style-border-width="b.e + 'px'" data-style-background-color="b.bg" data-style-border-color="b.bd"></div>
+</div>
 <span data-for="t : words" data-attr-class="t.cls" data-style-left="t.x + 'px'" data-style-top="t.y + 'px'"
   data-style-width="t.w + 'px'" data-style-height="t.h + 'px'" data-style-line-height="t.h + 'px'"
   data-style-font-size="t.px + 'px'" data-style-color="t.colour">{{t.text}}</span>
@@ -69,6 +90,9 @@ bool Sheet::frame(const char* name, bool on, bool window, int x, int y, int gen,
                     b.RegisterMember("e", &Box::e);
                     b.RegisterMember("op", &Box::op);
                     b.RegisterMember("cls", &Box::cls);
+                    b.RegisterMember("paint", &Box::paint);
+                    b.RegisterMember("bg", &Box::bg);
+                    b.RegisterMember("bd", &Box::bd);
                 }
                 if (auto i = m.RegisterStruct<Icon>()) {
                     i.RegisterMember("x", &Icon::x);
@@ -99,6 +123,9 @@ bool Sheet::frame(const char* name, bool on, bool window, int x, int y, int gen,
                 m.Bind("icons", &c_.icons);
                 m.Bind("over", &c_.over);
                 m.Bind("words", &c_.words);
+                m.Bind("clip", &c_.clip);
+                m.Bind("clipped", &c_.clipped);
+                m.Bind("clipped_icons", &c_.clippedIcons);
             }))
             return false;
     }

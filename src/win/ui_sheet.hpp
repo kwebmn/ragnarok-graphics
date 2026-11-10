@@ -18,6 +18,9 @@ namespace uagfx::win::uisheet {
 struct Box {
     float x = 0, y = 0, w = 0, h = 0, r = 0, e = 0, op = 1;
     Rml::String cls;
+    // 3.0.18-beta.29: a box by its own colours (rect()) instead of a class - never empty (the hidden one's evaluated)
+    bool paint = false;
+    Rml::String bg = "#00000000", bd = "#00000000";
 };
 struct Icon {
     float x = 0, y = 0, w = 0, h = 0, op = 1;
@@ -34,10 +37,31 @@ struct Content {
     std::vector<Box> under, over;
     std::vector<Icon> icons;
     std::vector<Word> words;
+    // 3.0.18-beta.29: a scrolled view (the skills' tree) - its boxes and icons in the window's pixels, cut at `clip`;
+    // drawn after `under`, before `icons`
+    Box clip;
+    std::vector<Box> clipped;
+    std::vector<Icon> clippedIcons;
 
     // a box by the theme's class (none when it has no size)
     void add(std::vector<Box>& to, const panel::Box& b, float r, const char* cls, float edge = 0, float op = 1) {
         if (b.w > 0 && b.h > 0) to.push_back(Box{b.x, b.y, b.w, b.h, r, edge, op, cls});
+    }
+    // a box by its colours, as panel::roundRect(fill, fillA, edge, edgeA, width)
+    void rect(std::vector<Box>& to, const panel::Box& b, float r, uint32_t fill, float fillA, uint32_t edge = 0,
+              float edgeA = 0, float width = 0) {
+        if (b.w <= 0 || b.h <= 0) return;
+        Box x{b.x, b.y, b.w, b.h, r, edgeA > 0 ? width : 0, 1, "paint"};
+        x.paint = true;
+        x.bg = rgba(fill, fillA);
+        x.bd = rgba(edge, edgeA);
+        to.push_back(x);
+    }
+    static Rml::String rgba(uint32_t rgb, float a) {
+        char b[16];
+        const int alpha = a <= 0 ? 0 : a >= 1 ? 255 : int(a * 255 + 0.5f);
+        std::snprintf(b, sizeof b, "#%06x%02x", unsigned(rgb & 0xFFFFFF), alpha);
+        return b;
     }
     // the words of a window's core (any of its Words: box, text, rgb, px, bold, align)
     template <typename W>

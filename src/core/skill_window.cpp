@@ -766,4 +766,57 @@ void barTo(Show& sh, const Layout& L, const Data& d, bool horizontal, float x, f
     sh.scroll = int(std::lround(part * (count - float(kRows))));
 }
 
+TreeView treeView(const Layout& L, const Data& d, const Show& sh) {
+    TreeView v;
+    const float s = L.s;
+    const Tab* tab = tabOf(d, L.tab);
+    if (!L.tree || !tab || L.plan.w <= 0 || L.plan.h <= 0) return v;
+    const float ox = L.view.x - L.scrollX, oy = L.view.y - L.scrollY;  // the content's corner in the window
+    const auto moved = [&](const panel::Box& b) { return panel::Box{b.x + ox, b.y + oy, b.w, b.h}; };
+    const int lit = litIndex(sh);
+    const bool litOk = lit >= 0 && lit < int(tab->skills.size());
+    std::set<int> chain = litOk ? skilltreeview::chain(d, tab->skills[size_t(lit)].id) : std::set<int>{};
+    if (litOk) chain.insert(tab->skills[size_t(lit)].id);
+    for (const skilltreeview::Link& l : L.plan.links) {
+        const skilltreeview::Route r = skilltreeview::route(L.plan, l, s);
+        const bool on = chain.count(tab->skills[size_t(l.to)].id) && chain.count(tab->skills[size_t(l.from)].id);
+        const uint32_t rgb = on ? kGold : l.met ? kGold2 : kWhite;
+        const float a = on ? 0.95f : litOk ? 0.12f : l.met ? 0.45f : 0.2f, t = (on ? 2.0f : 1.3f) * s;
+        for (int k = 0; k + 1 < r.n; ++k) {
+            const float x0 = std::min(r.x[k], r.x[k + 1]), x1 = std::max(r.x[k], r.x[k + 1]);
+            const float y0 = std::min(r.y[k], r.y[k + 1]), y1 = std::max(r.y[k], r.y[k + 1]);
+            v.links.push_back(TreeLink{moved(panel::Box{x0 - t / 2, y0 - t / 2, x1 - x0 + t, y1 - y0 + t}), rgb, a});
+        }
+    }
+    for (const skilltreeview::Node& n : L.plan.nodes) {
+        const Skill& k = tab->skills[size_t(n.index)];
+        TreeNode x;
+        const bool closed = k.lock != Lock::None, learned = k.level > 0;
+        x.fillA = closed ? 0.05f : learned ? 0.10f : 0.07f;
+        if (n.index == sh.hoverRow || n.index == sh.hoverPlus) x.fillA += 0.06f;
+        x.fill = learned ? kGold2 : kWhite;
+        x.edge = learned ? kGold : kWhite;
+        x.edgeA = closed ? 0.18f : learned ? 0.6f : 0.3f, x.edgeW = 1.0f * s;
+        if (chain.count(k.id)) x.edge = kGold, x.edgeA = 0.95f;
+        if (skillplan::extra(k) > 0 && !chain.count(k.id)) x.edge = kPlanBlue, x.edgeA = 0.85f;
+        if (n.index == sh.focus) x.edge = kGold, x.edgeA = 1.0f, x.edgeW = 1.8f * s;
+        x.box = moved(n.box);
+        x.icon = moved(panel::Box{n.box.x + 6 * s, n.box.y + (n.box.h - 26 * s) / 2, 26 * s, 26 * s});
+        x.picture = k.icon && k.icon->width > 0 ? k.icon : nullptr;
+        x.iconOpacity = closed ? 0.45f : learned ? 1.0f : 0.6f;
+        const float px = n.box.x + n.box.w - skilltreeview::kPlus * s * 0.65f, ps = skilltreeview::kPlus * s;
+        if (plusOn(d, k, sh.plan)) {
+            x.plus = moved(panel::Box{px, n.box.y - 5 * s, ps, ps});
+            x.plusRgb = sh.plan ? kPlanBlue : kGold;
+            x.plusA = n.index == sh.hoverPlus ? 1.0f : 0.85f;
+        }
+        if (sh.plan && skillplan::extra(k) > 0) {
+            x.minus = moved(panel::Box{px - ps - 3 * s, n.box.y - 5 * s, ps, ps});
+            x.minusA = n.index == sh.hoverMinus ? 1.0f : 0.7f;
+        }
+        v.nodes.push_back(x);
+    }
+    return v;
+}
+
 }  // namespace uagfx::skillwin

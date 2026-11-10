@@ -16,6 +16,7 @@
 #include "core/settings/strings.hpp"
 #include "core/skill_info.hpp"
 #include "core/skill_costs.hpp"
+#include "core/pad_glyphs.hpp"
 #include "core/skill_plan.hpp"
 #include "core/skill_tree.hpp"
 #include "core/skill_window.hpp"
@@ -33,6 +34,8 @@
 #include "win/real_ddraw.hpp"
 #include "win/ui_cost.hpp"
 #include "win/window_shadow.hpp"
+#include "win/uaui.hpp"
+#include "win/ui_sheet.hpp"
 #include "win/window_stack.hpp"
 
 namespace uagfx::win::skillswin {
@@ -75,6 +78,9 @@ struct Raw {  // a skill as the session keeps it
 };
 
 struct State {
+    uisheet::Sheet sheet;  // 3.0.18-beta.29: the window drawn by uaUI
+    int sheetGen = 0;
+    bool sheetShown = false;
     WindowShadow shadow;
     WindowEdge edge;  // 3.0.11-beta.108: the top of two or more windows (win/window_stack)
     bool on = false, shown = false, hid = false, stateRead = false, namesChecked = false, namesKnown = false;
@@ -522,6 +528,10 @@ std::vector<Words> gdiWords(const std::vector<kw::Words>& in) {
 }
 
 void render(State& s) {
+    if (uaui::ready()) {  // 3.0.18-beta.29: uaUI's window says it all again, no picture
+        ++s.sheetGen;
+        return;
+    }
     const uicost::Paint cost("«Навички»", s.layout.w, s.layout.h);
     if (!panel::blank(s.picture, s.layout.w, s.layout.h)) return;
     kw::paint(s.picture, s.layout, s.data, s.show);
@@ -708,7 +718,8 @@ void applyStep(State& s, ULONGLONG now) {
     s.key.clear();
 }
 
-void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int targetHeight) {
+static void frameInner(HWND game, bool on, unsigned codePage, double k, int targetWidth,
+                       int targetHeight) {
     State& s = state();
     if (on != s.on) {
         s.on = on;
@@ -793,7 +804,8 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
             key += std::to_string(sk.id) + ':' + std::to_string(sk.level) + '>' + std::to_string(sk.target) + '/' +
                    std::to_string(sk.use) +
                    (sk.up ? "u" : "") + (sk.icon ? "i" : "") + ',';
-    if (const std::string drawn = key + '#' + std::to_string(uistyle::generation()); drawn != s.key) {
+    if (const std::string drawn = key + '#' + std::to_string(uistyle::generation()) + (uaui::ready() ? "u" : "");
+        drawn != s.key) {  // 3.0.18-beta.29: uaUI's or the picture
         s.key = drawn;
         render(s);
     }
@@ -808,19 +820,170 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     block(s, game);
 }
 
+// 3.0.18-beta.29 (docs/superpowers/plans/2026-11-09-uaui-migration.md, stage 5 - by hand): «Навички» in RmlUi's
+// markup, line by line as core skillwin paints it - its glass, ×, «План» (blue while on), «Застосувати»/«Скинути»,
+// «−», «Список» | «Дерево», the tabs (the shown one's gold line), the notice, «Наступна»'s jobs; «Список»: the rows
+// (pointed at, the controller's frame, their lines, the icons dimmed when closed or not learned, the gold line over
+// the first closed one, the level dots - gold learned, blue planned -, «+», ‹ ›), the scroll; «Дерево»: its links,
+// nodes, icons, «+»/«−» cut at its view (core skillwin::treeView), its scroll bars; the side panel, the footer's line
+// and the controller's glyphs. The words where core skillwin places them
+static void fillSheet(State& s, uisheet::Content& c) {
+    const kw::Layout& L = s.layout;
+    const kw::Data& d = s.data;
+    const kw::Show& sh = s.show;
+    const float sc = L.s;
+    constexpr uint32_t kCard = 0x10141C, kWhite = 0xFFFFFF, kGold = 0xF3C653, kGold2 = 0xC9A55B, kBlue = 0x6EA3FF;
+    constexpr float kDot = 7, kDotStep = 10, kGlyph = 17;  // core skillwin's
+    auto& u = c.under;
+    const auto centred = [&](std::vector<uisheet::Icon>& to, const panel::Picture* p, const panel::Box& b, float op) {
+        if (p && p->width > 0)
+            to.push_back(uisheet::Icon{std::round(b.x + (b.w - float(p->width)) / 2),
+                                       std::round(b.y + (b.h - float(p->height)) / 2), float(p->width),
+                                       float(p->height), op, s.sheet.icon(p)});
+    };
+    c.w = float(L.w), c.h = float(L.h);
+    c.glass = uisheet::Box{L.glass.x, L.glass.y, L.glass.w, L.glass.h, 12 * sc, 1.0f * sc, 1, "glass"};
+    c.ground = uisheet::Sheet::ground(kCard, uistyle::window());
+    if (sh.hoverClose) c.rect(u, L.close, 7 * sc, kWhite, 0.12f);
+    if (L.planButton.w > 0)
+        c.rect(u, L.planButton, 7 * sc, sh.plan ? kBlue : kWhite,
+               (sh.plan ? 0.24f : 0.03f) + (sh.hoverPlan ? 0.07f : 0), sh.plan ? kBlue : kWhite,
+               sh.plan ? 0.8f : 0.16f, 1.0f * sc);
+    if (L.apply.w > 0) {
+        const bool any = skillplan::cost(d) > 0 && !sh.applying;
+        c.rect(u, L.apply, 7 * sc, kBlue, (any ? 0.32f : 0.08f) + (sh.hoverApply && any ? 0.1f : 0.0f), kBlue,
+               any ? 0.9f : 0.3f, 1.0f * sc);
+        c.rect(u, L.reset, 7 * sc, kWhite, sh.hoverReset ? 0.12f : 0.05f, kWhite, 0.18f, 1.0f * sc);
+    }
+    for (size_t i = 0; i < L.minuses.size(); ++i)
+        if (L.minuses[i].w > 0 && !L.tree)
+            c.rect(u, L.minuses[i], 6 * sc, kWhite, int(i) + L.first == sh.hoverMinus ? 0.22f : 0.10f, kBlue, 0.7f,
+                   1.0f * sc);
+    if (L.viewList.w > 0) {
+        const panel::Box both{L.viewList.x, L.viewList.y, L.viewTree.x + L.viewTree.w - L.viewList.x, L.viewList.h};
+        c.rect(u, both, 7 * sc, kWhite, 0.03f, kWhite, 0.16f, 1.0f * sc);
+        c.rect(u, L.tree ? L.viewTree : L.viewList, 7 * sc, kWhite, 0.14f);
+        if (L.tree ? sh.hoverList : sh.hoverTree) c.rect(u, L.tree ? L.viewList : L.viewTree, 7 * sc, kWhite, 0.07f);
+    }
+    for (size_t i = 0; i < L.tabs.size(); ++i) {
+        const panel::Box& b = L.tabs[i];
+        if (int(i) == sh.hoverTab && int(i) != L.tab) c.rect(u, b, 6 * sc, kWhite, 0.05f);
+        if (int(i) == L.tab)
+            c.rect(u, panel::Box{b.x + 6 * sc, b.y + b.h - 3 * sc, b.w - 12 * sc, 2 * sc}, 1 * sc, kGold, 1.0f);
+    }
+    c.rect(u, panel::Box{L.tabsRow.x, L.tabsRow.y + L.tabsRow.h, L.tabsRow.w, 1 * sc}, 0, kWhite, 0.08f);
+    if (L.notice.w > 0) c.rect(u, L.notice, 7 * sc, kGold2, 0.12f, kGold2, 0.45f, 1.0f * sc);
+    const kw::Tab* tab =  // as core skillwin's tabOf
+        d.tabs.empty() ? nullptr : &d.tabs[size_t(std::clamp(L.tab, 0, int(d.tabs.size()) - 1))];
+    if (tab)
+        for (size_t i = 0; i < L.choices.size(); ++i) {
+            const bool on = int(i) == tab->chosen;
+            c.rect(u, L.choices[i], 7 * sc, on ? kGold2 : kWhite,
+                   (on ? 0.22f : 0.04f) + (int(i) == sh.hoverChoice ? 0.07f : 0.0f), on ? kGold : kWhite,
+                   on ? 0.8f : 0.16f, 1.0f * sc);
+        }
+    if (L.tree) {  // the tree in its view
+        c.clip = uisheet::Box{L.view.x, L.view.y, L.view.w, L.view.h, 0, 0, 1, "clip"};
+        const kw::TreeView v = kw::treeView(L, d, sh);
+        for (const kw::TreeLink& l : v.links) c.rect(c.clipped, l.box, 0, l.rgb, l.alpha);
+        for (const kw::TreeNode& n : v.nodes)
+            c.rect(c.clipped, n.box, 8 * sc, n.fill, n.fillA, n.edge, n.edgeA, n.edgeW);
+        for (const kw::TreeNode& n : v.nodes) {
+            centred(c.clippedIcons, n.picture, n.icon, n.iconOpacity);
+            c.rect(c.clipped, n.plus, 5 * sc, n.plusRgb, n.plusA);
+            c.rect(c.clipped, n.minus, 5 * sc, kCard, 1.0f, kBlue, n.minusA, 1.0f * sc);
+        }
+        if (L.scroll.w > 0) {
+            c.rect(u, L.scroll, L.scroll.w / 2, kWhite, 0.05f);
+            const float h = std::max(L.scroll.h * L.view.h / L.plan.h, 16 * sc);
+            const float y = L.scroll.y + (L.scroll.h - h) * (L.maxY > 0 ? L.scrollY / L.maxY : 0);
+            c.rect(u, panel::Box{L.scroll.x, y, L.scroll.w, h}, L.scroll.w / 2, kWhite, 0.28f);
+        }
+        if (L.scrollH.w > 0) {
+            c.rect(u, L.scrollH, L.scrollH.h / 2, kWhite, 0.05f);
+            const float w = std::max(L.scrollH.w * L.view.w / L.plan.w, 16 * sc);
+            const float x = L.scrollH.x + (L.scrollH.w - w) * (L.maxX > 0 ? L.scrollX / L.maxX : 0);
+            c.rect(u, panel::Box{x, L.scrollH.y, w, L.scrollH.h}, L.scrollH.h / 2, kWhite, 0.28f);
+        }
+    }
+    if (L.side.w > 0) c.rect(c.over, L.side, 9 * sc, kWhite, 0.035f, kWhite, 0.09f, 1.0f * sc);
+    for (size_t i = 0; i < L.rows.size() && tab && !L.tree; ++i) {
+        const int index = L.first + int(i);
+        const kw::Skill& k = tab->skills[size_t(index)];
+        const panel::Box& r = L.rows[i];
+        if (index == sh.hoverRow) c.rect(u, r, 6 * sc, kWhite, 0.06f);
+        if (sh.pad && index == sh.focus) c.rect(u, r, 7 * sc, kGold2, 0.08f, kGold, 0.9f, 1.5f * sc);
+        if (i + 1 < L.rows.size())
+            c.rect(u, panel::Box{r.x + 8 * sc, r.y + r.h - 1 * sc, r.w - 16 * sc, 1 * sc}, 0, kWhite, 0.05f);
+        centred(c.icons, k.icon, L.icons[i], k.lock != kw::Lock::None ? 0.3f : k.level > 0 ? 1.0f : 0.45f);
+        if (k.lock != kw::Lock::None && (index == 0 || tab->skills[size_t(index) - 1].lock == kw::Lock::None))
+            c.rect(u, panel::Box{r.x + 4 * sc, r.y, r.w - 8 * sc, 1 * sc}, 0, kGold2, 0.55f);
+        const panel::Box& dots = L.dots[i];
+        if (dots.w > 0)
+            for (int n = 0; n < k.most; ++n) {
+                const float cx = dots.x + (float(n) * kDotStep + kDot / 2) * sc, cy = dots.y + dots.h / 2;
+                const float rr = kDot / 2 * sc;
+                const panel::Box dot{cx - rr, cy - rr, 2 * rr, 2 * rr};
+                if (n < k.level) c.rect(u, dot, rr, kGold, 1.0f);
+                else if (n < k.target) c.rect(u, dot, rr, kBlue, 1.0f);
+                else c.rect(u, dot, rr, kWhite, 0.14f);
+            }
+        if (L.pluses[i].w > 0)
+            c.rect(u, L.pluses[i], 6 * sc, kWhite, index == sh.hoverPlus ? 0.22f : 0.12f, sh.plan ? kBlue : kGold2,
+                   0.7f, 1.0f * sc);
+        if (L.less[i].w > 0) {
+            c.rect(u, L.less[i], 5 * sc, kWhite, index == sh.hoverLess ? 0.16f : 0.06f);
+            c.rect(u, L.more[i], 5 * sc, kWhite, index == sh.hoverMore ? 0.16f : 0.06f);
+        }
+    }
+    if (L.scroll.w > 0 && tab && !L.tree) {
+        c.rect(u, L.scroll, L.scroll.w / 2, kWhite, 0.05f);
+        const float count = float(tab->skills.size());
+        const float h = std::max(L.scroll.h * float(kw::kRows) / count, 16 * sc);
+        const float y = L.scroll.y + (L.scroll.h - h) * float(L.first) / std::max(1.0f, count - float(kw::kRows));
+        c.rect(u, panel::Box{L.scroll.x, y, L.scroll.w, h}, L.scroll.w / 2, kWhite, 0.28f);
+    }
+    c.rect(u, panel::Box{0, L.footer.y, L.glass.w, 1 * sc}, 0, kWhite, 0.08f);
+    if (sh.pad) {
+        const padglyph::Family f = sh.sony ? padglyph::Family::Sony : padglyph::Family::Xbox;
+        const padglyph::Button b[4] = {padglyph::Button::A, padglyph::Button::Y, padglyph::Button::X,
+                                       padglyph::Button::B};
+        for (size_t i = 0; i < L.padGlyphs.size() && i < 4; ++i) {
+            const panel::Box& g = L.padGlyphs[i];
+            const int w = std::max(1, int(std::ceil(padglyph::widthOf(b[i], kGlyph * sc)))),
+                      h = std::max(1, int(std::ceil(kGlyph * sc)));
+            const std::string key = "pad" + std::to_string(int(b[i])) + (sh.sony ? "s" : "x") + std::to_string(h);
+            const std::string src = s.sheet.made(key, w, h, [&](panel::Picture& p) {
+                padglyph::paint(p, b[i], f, 0, 0, kGlyph * sc);
+            });
+            c.icons.push_back(uisheet::Icon{g.x, g.y, float(w), float(h), 1, src});
+        }
+    }
+    c.say(kw::words(L, d, sh, texts(), measure));
+}
+
+void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int targetHeight) {
+    frameInner(game, on, codePage, k, targetWidth, targetHeight);
+    State& s = state();
+    s.sheetShown = s.sheet.frame("skills", s.shown, true, s.layout.x, s.layout.y, s.sheetGen,
+                                 [&](uisheet::Content& c) { fillSheet(s, c); });
+}
+
 void draw(FrameRecord& record, gpu::Renderer& renderer) {
     State& s = state();
-    if (!s.shown || s.k <= 0 || s.picture.width <= 0 || s.picture.height <= 0) return;
+    if (!s.shown || s.k <= 0 || ((s.picture.width <= 0 || s.picture.height <= 0) && !s.sheetShown)) return;
     int cursor = -1, cx = 0, cy = 0;  // under the game's own cursor, as the minimap
     const bool known = readGameCursor(cx, cy);
     if (known) cursor = panel::cursorDraw(record, float(cx), float(cy));
     const panel::Box& g = s.layout.glass;
-    s.shadow.draw(record, renderer, s.layout.x + int(g.x), s.layout.y + int(g.y), int(g.w), int(g.h), 12 * s.scale,
-                  s.scale, s.k);
-    drawPart(record, renderer, s.picture, s.texture, s.texW, s.texH, s.upload, s.layout.x, s.layout.y, s.k);
-    if (windowstack::marked(winstack::Win::Skills))  // 3.0.11-beta.108: its gold edge, the top of two or more
-        s.edge.draw(record, renderer, s.layout.x + int(g.x), s.layout.y + int(g.y), int(g.w), int(g.h), 12 * s.scale,
-                    s.scale, s.k);
+    if (!s.sheetShown) {  // 3.0.18-beta.29: uaUI draws the window (with the windows' layer)
+        s.shadow.draw(record, renderer, s.layout.x + int(g.x), s.layout.y + int(g.y), int(g.w), int(g.h),
+                      12 * s.scale, s.scale, s.k);
+        drawPart(record, renderer, s.picture, s.texture, s.texW, s.texH, s.upload, s.layout.x, s.layout.y, s.k);
+        if (windowstack::marked(winstack::Win::Skills))
+            s.edge.draw(record, renderer, s.layout.x + int(g.x), s.layout.y + int(g.y), int(g.w), int(g.h),
+                        12 * s.scale, s.scale, s.k);
+    }
     const kw::Skill* dragged = s.press.dragging ? skillAt(s, s.press.index) : nullptr;
     const panel::Picture* icon = dragged ? dragged->icon : nullptr;
     if (icon && icon->width > 0 && known) {  // 3.0.11-beta.106: the dragged skill's icon under the cursor
