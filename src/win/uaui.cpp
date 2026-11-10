@@ -1300,6 +1300,43 @@ select selectbox option:checked { color: #e6cb8a; }
 .fx.cb .hp, .fx.cb .sp, .fx.tc .hpfill, .fx.xb .fill, .fx.ig .fill, .fx .ua-fill {
     decorator: linear-gradient(180deg, #ffffff38 0%, #ffffff00 55%, #00000026 100%); }
 .fx.sh .btn, .fx.ig .tab { decorator: linear-gradient(180deg, #ffffff14 0%, #ffffff00 100%); }
+/* 3.0.18-beta.73: live windows (input through RmlUi; layout by flexbox) - .lw the frame, then each window's own */
+.lw { position: absolute; font-family: Plex; color: #eceff5; padding: 14dp 16dp 12dp 16dp; border-radius: 12dp;
+      border: 1dp #ffffff17; }
+.lw.marked { border-color: #e6cb8ad9; }
+.lw .head { display: block; height: 26dp; padding-right: 30dp; }
+.lw .title { font-size: 15dp; font-weight: bold; }
+.lw .x { position: absolute; right: 10dp; top: 10dp; width: 24dp; height: 24dp; line-height: 24dp; text-align: center;
+         border-radius: 6dp; color: #969eae; font-size: 13dp; }
+.lw .x:hover { background-color: #ffffff24; color: #ffffff; }
+.lw .hint { display: block; margin-top: 6dp; font-size: 11.5dp; color: #9aa3b5; }
+.lw .ring { position: absolute; display: none; border: 2dp #e6cb8a; border-radius: 8dp; background-color: #e6cb8a14; }
+.lw .row { display: block; padding: 5dp 10dp; border-radius: 6dp; }
+.lw .row:hover { background-color: #c9a55b33; }
+.lw .tabs { display: flex; margin-bottom: 8dp; }
+.lw .tab { display: block; margin-right: 14dp; padding-bottom: 3dp; color: #9aa3b5; border-bottom: 2dp #00000000; }
+.lw .tab:hover { color: #eceff5; }
+.lw .tab.on { color: #e6cb8a; font-weight: bold; border-bottom-color: #c9a55b; }
+.ew { width: 424dp; }
+.ew .grid { display: flex; flex-wrap: wrap; }
+.ew .cell { display: block; width: 52dp; height: 62dp; margin: 0 4dp 4dp 0; border-radius: 8dp;
+            background-color: #ffffff0a; border: 1dp #ffffff14; text-align: center; }
+.ew .cell:hover { background-color: #c9a55b33; border-color: #c9a55bcc; }
+.ew .cell img { display: block; margin: 3dp auto 0 auto; width: 40dp; height: 40dp; }
+.ew .cell span { display: block; font-size: 10.5dp; color: #9aa3b5; white-space: nowrap; overflow: hidden; }
+.cw { width: 520dp; }
+.cw .grid { display: flex; flex-wrap: wrap; }
+.cw .row { position: relative; width: 236dp; height: 24dp; line-height: 14dp; margin: 0 4dp 2dp 0;
+           white-space: nowrap; overflow: hidden; }
+.cw .key { color: #e6cb8a; font-weight: bold; font-size: 12dp; margin-right: 8dp; }
+.cw .name { font-size: 12.5dp; }
+.cw .state { position: absolute; right: 8dp; top: 5dp; font-size: 11dp; color: #9aa3b5; }
+.cw .state.on { color: #eceff5; font-weight: bold; }
+.pw { padding: 6dp; border-radius: 10dp; min-width: 150dp; }
+.pw .row { font-size: 12.5dp; white-space: nowrap; }
+.pw .sep { display: block; height: 1dp; margin: 4dp 6dp; background-color: #ffffff1f; }
+.motion .lw .cell, .motion .lw .row, .motion .lw .x { transition: background-color border-color color 0.12s cubic-out; }
+.glassy.lw { decorator: ua-glass(1); }
 /* 3.0.18-beta.69: the screen's edges red at low HP (win/low_hp_edge) - the concept's .vign */
 .lh { position: absolute; }
 .lh .vign { position: absolute; left: 0; top: 0; width: 100%; height: 100%;
@@ -2250,6 +2287,43 @@ void Doc::prop(const std::string& name, const std::string& value) {
     if (it != props_.end() && it->second == value) return;
     props_[name] = value;
     doc_->SetProperty(name, value);
+}
+
+bool Doc::pointer(HWND game, UINT m, WPARAM wp, LPARAM lp, bool& onControl) {
+    State& s = state();
+    onControl = false;
+    if (!doc_ || !shown_ || !s.context || !readyAnywhere()) return false;
+    const bool down = m == WM_LBUTTONDOWN || m == WM_LBUTTONDBLCLK, up = m == WM_LBUTTONUP,
+               wheel = m == WM_MOUSEWHEEL, right = m == WM_RBUTTONDOWN || m == WM_RBUTTONUP;
+    if (!down && !up && !wheel && !right) return false;
+    float tx = 0, ty = 0;
+    if (!pointerInTarget(game, m, lp, s.k, s.targetW, s.targetH, tx, ty)) return false;
+    s.context->ProcessMouseMove(int(tx), int(ty), 0);
+    Rml::Element* hover = s.context->GetHoverElement();
+    if (!hover || hover->GetOwnerDocument() != doc_) return false;
+    for (Rml::Element* e = hover; e && e != doc_; e = e->GetParentNode())
+        if (e->IsClassSet("ctl")) onControl = true;
+    if (wheel) s.context->ProcessMouseWheel(-float(GET_WHEEL_DELTA_WPARAM(wp)) / float(WHEEL_DELTA), 0);
+    else if (down) s.context->ProcessMouseButtonDown(0, 0);
+    else if (up) s.context->ProcessMouseButtonUp(0, 0);
+    else if (m == WM_RBUTTONDOWN) s.context->ProcessMouseButtonDown(1, 0);
+    else s.context->ProcessMouseButtonUp(1, 0);
+    return true;
+}
+
+std::vector<panel::Box> Doc::boxesOf(const char* selector) const {
+    std::vector<panel::Box> out;
+    if (!doc_) return out;
+    Rml::ElementList found;
+    doc_->QuerySelectorAll(found, selector);
+    const Rml::Vector2f origin = doc_->GetAbsoluteOffset(Rml::BoxArea::Border);
+    for (Rml::Element* e : found) {
+        if (!e->IsVisible()) continue;
+        const Rml::Vector2f at = e->GetAbsoluteOffset(Rml::BoxArea::Border) - origin;
+        const Rml::Vector2f size = e->GetBox().GetSize(Rml::BoxArea::Border);
+        out.push_back(panel::Box{at.x, at.y, size.x, size.y});
+    }
+    return out;
 }
 
 bool Doc::box(int& x, int& y, int& w, int& h) const {

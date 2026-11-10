@@ -122,6 +122,18 @@ struct Content {
 // 3.0.18-beta.31: the words a part builds for GDI (win/picture_draw's: wide, DT_ alignment, broken lines, the halo)
 void sayGdi(Content& c, const std::vector<Words>& in);
 
+// 3.0.18-beta.60, .73: a window's clickable boxes the pad walks (a sheet's, or a live uaUI window's): `set` each frame
+// with its place; `shown` whether it is up, `ring` draws the gold ring on one (null: none)
+class NavSet {
+public:
+    void set(int kind, std::vector<panel::Box> targets, int x, int y);
+    void showRing();
+    std::function<bool()> shown;
+    std::function<void(const panel::Box*)> ring;
+    std::vector<panel::Box> targets_;
+    int focus_ = -1, x_ = 0, y_ = 0;
+};
+
 class Sheet;
 // 3.0.18-beta.36: a core part's markup data (core/ui_sheet_model) into the sheet - its layers, its pictures and icons
 // (made once by the sheet), its words
@@ -155,10 +167,9 @@ public:
     bool top = false;       // 3.0.18-beta.69: set before the first frame - over everything (Layer::Top)
 
     // the runtime's
-    std::vector<panel::Box> targets_;
-    int focus_ = -1, x_ = 0, y_ = 0;
+    int x_ = 0, y_ = 0;
     Box pf_;  // the pad's ring (w 0: none)
-    void showFocus();
+    NavSet navSet_;
     uaui::Doc& doc() { return doc_; }
 
 private:

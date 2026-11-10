@@ -32,3 +32,8 @@ Order (safest first; the cleanup last, once nothing needs the old code):
   «Довідник» (they took Latin letters only via letterOf); RmlUi's fields get the Windows clipboard.
   Ruling: the chat's line stays the game's own edit (its sending, its IME, the battle-typing guard already in place)
   - cost if wrong: the chat keeps the game's field.
+- F beta.73: Doc::pointer (a mouse message into RmlUi over this document; «ctl» elements are controls, the rest its
+  ground), Doc::boxesOf (pad targets by selector), uisheet::NavSet (pad walk for sheets and live windows alike),
+  win/ui_live (live window helper: make/frame/draw/mouse/box). Live: emotes (flex grid, click puts, dblclick sends,
+  drag by its ground), commands (tabs + two-column rows), the popup menu (rows, separators; a press elsewhere closes).
+  The other windows stay sheets for now.

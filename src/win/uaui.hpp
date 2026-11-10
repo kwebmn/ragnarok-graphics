@@ -1,6 +1,7 @@
 #pragma once
 #include <climits>
 #include <map>
+#include <vector>
 #include <windows.h>
 
 // windowsx.h's macros under RmlUi's names (Element::GetNextSibling ...), where a file has it before this
@@ -101,6 +102,12 @@ public:
     void raise(int z);  // 3.0.18-beta.43: its z-index (a window's: 10 + its place in the stack)
     void mark(bool on);  // 3.0.18-beta.44: its body's class «marked» (the theme's gold edge)
     bool box(int& x, int& y, int& w, int& h) const;  // false while not shown
+    // 3.0.18-beta.73 (the big six, F: input through the library): a window's mouse message given to RmlUi when the
+    // pointer is over this document - false otherwise (another's then). `onControl`: over an element of class «ctl»
+    // (a button, a cell: its own events) - else over its ground (the part drags the window by it)
+    bool pointer(HWND game, UINT m, WPARAM wp, LPARAM lp, bool& onControl);
+    // The boxes of its elements matching `selector` (CSS), in its own pixels - the pad's targets
+    std::vector<panel::Box> boxesOf(const char* selector) const;
     Rml::ElementDocument* doc() const { return doc_; }
     Rml::Element* byId(const char* id) const { return doc_ ? doc_->GetElementById(id) : nullptr; }
     std::function<void()> onClose;  // its × (the window template's), besides hiding it

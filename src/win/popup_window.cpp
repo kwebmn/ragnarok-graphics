@@ -20,6 +20,7 @@
 #include "win/ui_cost.hpp"
 #include "win/window_shadow.hpp"
 #include "win/uaui.hpp"
+#include "win/ui_live.hpp"
 #include "win/ui_sheet.hpp"
 
 namespace uagfx::win::popupwin {
@@ -41,7 +42,23 @@ using DeleteFn = char(__attribute__((thiscall)) *)(uint32_t manager, int id);
 using SendMsgFn = int(__attribute__((thiscall)) *)(uint32_t self, uint32_t sender, int msg, int a, int b, int c);
 using ModeMsgFn = int(__attribute__((thiscall)) *)(uint32_t mode, int msg, int a, int b, int c);
 
+// 3.0.18-beta.73 (the big six, F): the menu a live document - its rows one under another, RmlUi's clicks
+const char* kLive = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss"/></head>
+<body class="lw pw" data-style-background-color="ground">
+<div data-for="e, i : items"><div class="sep" data-if="e.sep"></div><div class="row ctl" data-if="!e.sep"
+  data-event-click="pick_row(i)">{{e.text}}</div></div>
+<div id="ring" class="ring"></div>
+</body></rml>)RML";
+
+struct ItemView {
+    Rml::String text;
+    bool sep = false;
+};
+
 struct State {
+    uilive::Window live;  // 3.0.18-beta.73
+    std::vector<ItemView> views;
+    Rml::String ground = "#10141cf0";
     uisheet::Sheet sheet;  // 3.0.18-beta.32: the window drawn by uaUI
     int sheetGen = 0;
     bool sheetShown = false;
@@ -124,8 +141,10 @@ void render(State& s) {
 void block(const State& s, HWND game) {
     RECT client{};
     if (s.targetW <= 0 || s.targetH <= 0 || !GetClientRect(game, &client)) return;
-    const panel::Box& b = s.layout.glass;
-    const float x0 = float(s.layout.x) + b.x, y0 = float(s.layout.y) + b.y;
+    panel::Box b = s.layout.glass;
+    float x0 = float(s.layout.x) + b.x, y0 = float(s.layout.y) + b.y;
+    int lx = 0, ly = 0, lw = 0, lh = 0;  // 3.0.18-beta.73: the live menu's own box
+    if (s.live.box(lx, ly, lw, lh)) x0 = float(lx), y0 = float(ly), b.w = float(lw), b.h = float(lh);
     const RECT r{LONG(int64_t(x0) * client.right / s.targetW), LONG(int64_t(y0) * client.bottom / s.targetH),
                  LONG(int64_t(x0 + b.w) * client.right / s.targetW + 1),
                  LONG(int64_t(y0 + b.h) * client.bottom / s.targetH + 1)};
@@ -232,9 +251,43 @@ static void fillSheet(State& s, uisheet::Content& c) {
     c.say(pc::words(L, s.items, s.hover));
 }
 
+// 3.0.18-beta.73: the live menu's model and place
+static void liveFrame(State& s) {
+    s.live.make("popup", kLive, [&](Rml::DataModelConstructor& m) {
+        if (auto v = m.RegisterStruct<ItemView>()) {
+            v.RegisterMember("text", &ItemView::text);
+            v.RegisterMember("sep", &ItemView::sep);
+        }
+        m.RegisterArray<std::vector<ItemView>>();
+        m.Bind("items", &s.views);
+        m.Bind("ground", &s.ground);
+        m.BindEventCallback("pick_row", [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList& a) {
+            if (!a.empty()) pick(state(), a[0].Get<int>());
+        });
+    });
+    if (!s.live.made()) return;
+    std::vector<ItemView> views;
+    for (const pc::Item& it : s.items) views.push_back(ItemView{it.text, it.separator});
+    const bool same = views.size() == s.views.size() &&
+                      std::equal(views.begin(), views.end(), s.views.begin(), [](const ItemView& a, const ItemView& b) {
+                          return a.text == b.text && a.sep == b.sep;
+                      });
+    if (!same) s.views = std::move(views), s.live.doc.dirty("items");
+    const Rml::String ground = uisheet::Sheet::ground(0x10141C, uistyle::window());
+    if (ground != s.ground) s.ground = ground, s.live.doc.dirty("ground");
+    s.live.frame(s.shown, s.layout.x, s.layout.y, int(winstack::Win::Popup), ".row");
+}
+
 void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int targetHeight) {
     frameInner(game, on, codePage, k, targetWidth, targetHeight);
     State& s = state();
+    if (uaui::ready()) {  // 3.0.18-beta.73: the live menu in place of the sheet
+        s.sheet.frame("popup", false, true, 0, 0, 0, [](uisheet::Content&) {});
+        s.sheetShown = false;
+        liveFrame(s);
+        return;
+    }
+    s.live.frame(false, 0, 0, 0, nullptr);
     s.sheetShown = s.sheet.frame("popup", s.shown, true, s.layout.x, s.layout.y, s.sheetGen,
                                  [&](uisheet::Content& c) { fillSheet(s, c); });
     if (s.sheetShown) {  // 3.0.18-beta.60: the pad walks its boxes (A clicks one)
@@ -248,6 +301,10 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
 void draw(FrameRecord& record, gpu::Renderer& renderer) {
     State& s = state();
     s.sheet.raise();  // 3.0.18-beta.43: at its place in the windows' stack
+    if (s.live.shown) {  // 3.0.18-beta.73
+        s.live.draw(s.shadow, record, renderer, s.scale, s.k);
+        return;
+    }
     if (!s.shown || s.k <= 0 || ((s.picture.width <= 0 || s.picture.height <= 0) && !s.sheetShown)) return;
     int cursor = -1, cx = 0, cy = 0;
     if (readGameCursor(cx, cy)) cursor = panel::cursorDraw(record, float(cx), float(cy));
@@ -263,11 +320,18 @@ void draw(FrameRecord& record, gpu::Renderer& renderer) {
 
 bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     State& s = state();
-    (void)wp;
     if (!s.shown) return false;
     const bool button = m == WM_LBUTTONDOWN || m == WM_LBUTTONUP || m == WM_LBUTTONDBLCLK || m == WM_RBUTTONDOWN ||
                         m == WM_RBUTTONUP || m == WM_RBUTTONDBLCLK || m == WM_MBUTTONDOWN || m == WM_MBUTTONUP;
     if (!button && m != WM_MOUSEWHEEL) return false;
+    if (s.live.shown) {  // 3.0.18-beta.73: RmlUi's; a press elsewhere closes it, the press going on
+        if (!s.live.mouse(game, m, wp, lp)) {
+            if (m == WM_LBUTTONDOWN || m == WM_RBUTTONDOWN || m == WM_MBUTTONDOWN) close();
+            return false;
+        }
+        result = 0;
+        return true;
+    }
     float tx = 0, ty = 0;
     if (!pointerInTarget(game, m, lp, s.k, s.targetW, s.targetH, tx, ty, nullptr)) return false;
     const float lx = tx - float(s.layout.x), ly = ty - float(s.layout.y);
@@ -300,6 +364,7 @@ void beforeGameDraw() {
 bool box(int& x, int& y, int& w, int& h) {
     const State& s = state();
     if (!s.shown) return false;
+    if (s.live.box(x, y, w, h)) return true;  // 3.0.18-beta.73
     x = s.layout.x;
     y = s.layout.y;
     w = s.layout.w;

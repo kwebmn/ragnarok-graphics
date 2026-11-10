@@ -332,47 +332,59 @@ bool Sheet::frame(const char* name, bool on, bool window, int x, int y, int gen,
 }
 
 namespace {
-std::map<int, Sheet*>& navs() {
-    static std::map<int, Sheet*> m;
+std::map<int, NavSet*>& navs() {
+    static std::map<int, NavSet*> m;
     return m;
 }
 }  // namespace
 
-void Sheet::nav(int kind, std::vector<panel::Box> targets) {
+void NavSet::set(int kind, std::vector<panel::Box> targets, int x, int y) {
     navs()[kind] = this;
+    x_ = x, y_ = y;
     if (targets.size() != targets_.size()) focus_ = -1;  // another set: the ring comes back on the next press
     targets_.clear();
     for (const panel::Box& b : targets)
         if (b.w > 0 && b.h > 0) targets_.push_back(b);
     if (focus_ >= int(targets_.size())) focus_ = -1;
-    showFocus();
+    showRing();
 }
 
-void Sheet::showFocus() {
-    Box f;
-    if (focus_ >= 0 && focus_ < int(targets_.size())) {
-        const panel::Box& b = targets_[size_t(focus_)];
-        const float d = 3 * uaui::dp();
-        f = Box{b.x - d, b.y - d, b.w + 2 * d, b.h + 2 * d, 6 * uaui::dp(), 2 * uaui::dp(), 1, "padfocus"};
+void NavSet::showRing() {
+    if (!ring) return;
+    if (focus_ >= 0 && focus_ < int(targets_.size())) ring(&targets_[size_t(focus_)]);
+    else ring(nullptr);
+}
+
+void Sheet::nav(int kind, std::vector<panel::Box> targets) {
+    if (!navSet_.shown) {
+        navSet_.shown = [this] { return doc_.shown(); };
+        navSet_.ring = [this](const panel::Box* b) {
+            Box f;
+            if (b) {
+                const float d = 3 * uaui::dp();
+                f = Box{b->x - d, b->y - d, b->w + 2 * d, b->h + 2 * d, 6 * uaui::dp(), 2 * uaui::dp(), 1, "padfocus"};
+            }
+            if (f.x != pf_.x || f.y != pf_.y || f.w != pf_.w || f.h != pf_.h) {
+                pf_ = f;
+                doc_.dirty("pf");
+            }
+        };
     }
-    if (f.x != pf_.x || f.y != pf_.y || f.w != pf_.w || f.h != pf_.h) {
-        pf_ = f;
-        doc_.dirty("pf");
-    }
+    navSet_.set(kind, std::move(targets), x_, y_);
 }
 
 bool hasNav(int kind) {
     const auto it = navs().find(kind);
-    return it != navs().end() && it->second->doc().shown() && !it->second->targets_.empty();
+    return it != navs().end() && it->second->shown && it->second->shown() && !it->second->targets_.empty();
 }
 
 bool padNav(int kind, NavCommand c) {
     if (!hasNav(kind)) return false;
-    Sheet& s = *navs()[kind];
+    NavSet& s = *navs()[kind];
     if (c == NavCommand::Press) {
         if (s.focus_ < 0) {
             s.focus_ = padnav::first(s.targets_);
-            s.showFocus();
+            s.showRing();
             return true;
         }
         const panel::Box& b = s.targets_[size_t(s.focus_)];
@@ -392,7 +404,7 @@ bool padNav(int kind, NavCommand c) {
                           : c == NavCommand::Left ? padnav::Dir::Left
                                                   : padnav::Dir::Right;
     s.focus_ = padnav::next(s.targets_, s.focus_, d);
-    s.showFocus();
+    s.showRing();
     return true;
 }
 
