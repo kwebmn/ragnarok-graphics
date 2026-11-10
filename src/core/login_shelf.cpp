@@ -544,4 +544,145 @@ std::vector<Words> menuWords(const MenuLayout& M, const std::vector<MenuItem>& i
     return out;
 }
 
+// 3.0.18-beta.41 (docs/superpowers/plans/2026-11-09-uaui-migration.md, stage 5 - by hand): «Полиця» as the markup's
+// data (core/ui_sheet_model) - paint()'s, paintCharacters()' and paintMenu()'s lines, each the same box, icon and
+// portrait into the model (the cards cut at the row while they glide)
+namespace {
+
+void glyphTo(sheet::Layer& to, uiicons::Icon icon, float x, float y, float side, uint32_t rgb, float a,
+             float stroke = 2.0f) {
+    to.glyphs.push_back(sheet::Glyph{icon, x, y, side, rgb, a, stroke});
+}
+
+void centreTo(sheet::Layer& to, const panel::Box& b, const panel::Picture* pic) {
+    if (pic && pic->width > 0)
+        to.images.push_back(sheet::Image{pic, std::round(b.x + (b.w - float(pic->width)) / 2),
+                                         std::round(b.y + (b.h - float(pic->height)) / 2), 1.0f});
+}
+
+}  // namespace
+
+void sheetOf(sheet::Model& m, const Layout& L, const std::vector<Card>& cards, const Show& sh, const Texts& t) {
+    sheet::Layer* to = &m.under;
+    const float s = L.s;
+    const float tw = panel::wordsWidth(t.title, 17 * s, true) + 8 * s + panel::wordsWidth(t.titleHint, 14 * s, false);
+    const float pw = tw + 36 * s;
+    sheet::rect(*to, panel::Box{(float(L.w) - pw) / 2, L.title.y, pw, L.title.h}, L.title.h / 2, kPill, 0.72f,
+                     kWhite, 0.10f, 1.0f * s);
+    if (L.search.w > 0) {  // 3.0.11-beta.189: the search's field, gold edged with words in it
+        const bool typed = !sh.search.empty(), hot = sh.hoverPart == Part::Search || sh.hoverPart == Part::SearchClear;
+        sheet::rect(*to, L.search, L.search.h / 2, kPill, 0.80f, typed ? kGold : kWhite,
+                         typed ? 0.75f : hot ? 0.30f : 0.14f, 1.0f * s);
+        const float icon = 15 * s;
+        glyphTo(*to, uiicons::Icon::Search, L.search.x + 12 * s, L.search.y + (L.search.h - icon) / 2, icon,
+                      typed ? kGold2 : kMuted, 0.95f);
+    }
+    // 3.0.11-beta.189: the cards within the row alone - one half in sight while it glides
+    m.clip = panel::Box{std::floor(L.row.x), 0, std::ceil(L.row.x + L.row.w) - std::floor(L.row.x), float(L.h)};
+    to = &m.clipped;
+    for (size_t i = 0; i < L.cards.size(); ++i) {
+        const int index = L.first + int(i);
+        if (index >= int(cards.size())) break;
+        const Card& c = cards[size_t(index)];
+        const panel::Box& b = L.cards[i];
+        const bool focus = sh.focus == index, hot = sh.hover == index;
+        sheet::rect(*to, b, 14 * s, kCard, std::max(0.94f, uistyle::window()), focus ? kGold : kWhite,
+                         focus ? 0.95f : hot ? 0.30f : 0.12f, (focus ? 2.0f : 1.0f) * s);
+        // its picture: the class's portrait (3.0.11-beta.178), else the character's head on a gold-dark ground
+        const panel::Box pic{b.x + 1 * s, b.y + 1 * s, b.w - 2 * s, kPicH * s};
+        if (c.art) {
+            to->arts.push_back(sheet::Art{c.art, pic, 13 * s, uint8_t(classart::kTopCorners)});
+        } else {
+            sheet::rect(*to, pic, 13 * s, 0x2A2416, 0.9f);
+            sheet::rect(*to, panel::Box{pic.x, pic.y + pic.h - 14 * s, pic.w, 14 * s}, 0, 0x2A2416, 0.9f);
+            if (c.head) centreTo(*to, pic, c.head);
+        }
+        if (!c.label.empty() || sh.editing == index) {
+            const std::string& label = sh.editing == index ? sh.editText : c.label;
+            const float lw = panel::wordsWidth(label, 12 * s, true) + 16 * s + (sh.editing == index ? 6 * s : 0);
+            sheet::rect(*to, panel::Box{b.x + 12 * s, b.y + 12 * s, std::max(lw, 40 * s), 22 * s}, 6 * s, kPill,
+                             0.78f, kGold, sh.editing == index ? 0.9f : 0.0f, 1.0f * s);
+        }
+        if (focus || hot) sheet::rect(*to, menuButton(L, int(i)), 6 * s, kPill, 0.78f);
+        const panel::Box play{b.x + kPlayIn * s, b.y + b.h - (kPlayIn + kPlayH) * s, b.w - 2 * kPlayIn * s, kPlayH * s};
+        if (focus || hot)
+            sheet::rect(*to, play, 9 * s, kGold, hot ? 0.34f : 0.26f, kGold, 0.9f, 1.0f * s);
+        else
+            sheet::rect(*to, play, 9 * s, kWhite, 0.06f, kWhite, 0.16f, 1.0f * s);
+    }
+    if (L.add.w > 0) {
+        const bool hot = sh.hoverPart == Part::Add;
+        sheet::rect(*to, L.add, 14 * s, kCard, 0.70f, kWhite, hot ? 0.45f : 0.28f, 1.5f * s);
+        const panel::Box plus{L.add.x + L.add.w / 2 - 28 * s, L.add.y + L.add.h / 2 - 62 * s, 56 * s, 56 * s};
+        sheet::rect(*to, plus, 28 * s, kCard, 0.0f, kWhite, 0.35f, 1.5f * s);
+    }
+    to = &m.under;
+    if (L.bar.w > 0) {  // 3.0.11-beta.189: the bar - the part of the row in sight
+        sheet::rect(*to, L.bar, L.bar.h / 2, kWhite, 0.10f);
+        sheet::rect(*to, L.thumb, L.thumb.h / 2, sh.hoverPart == Part::Bar ? kGold : kWhite,
+                         sh.hoverPart == Part::Bar ? 0.85f : 0.45f);
+    }
+    const auto arrow = [&](const panel::Box& a, Part p) {
+        if (a.w > 0) sheet::rect(*to, a, 10 * s, kPill, sh.hoverPart == p ? 0.9f : 0.72f, kWhite, 0.14f, 1.0f * s);
+    };
+    arrow(L.left, Part::Left);
+    arrow(L.right, Part::Right);
+    // 3.0.11-beta.183 (R-BFQFDU): the buttons and the site's links on the dark plates of the title and the arrows - a
+    // faint white ghost under white words was lost over a bright wallpaper
+    const auto button = [&](const panel::Box& b, Part p) {
+        const bool hot = sh.hoverPart == p;
+        sheet::rect(*to, b, 9 * s, kPill, hot ? 0.92f : 0.78f, kWhite, hot ? 0.40f : 0.22f, 1.0f * s);
+    };
+    button(L.other, Part::Other);
+    button(L.create, Part::Create);
+    button(L.exit, Part::Exit);
+    // 3.0.11-beta.196 (the tester: «ці кнопочки сині і фон синій + напівпрозорість = візуально зливаються з фоном»):
+    // the links' plates nearly opaque, a clearer edge (their words light: words())
+    const auto link = [&](const panel::Box& b, const std::string& words, float size, bool right, Part p) {
+        if (b.w <= 0 || words.empty()) return;
+        const float pw = std::min(b.w, panel::wordsWidth(words, size * s, false) + 2 * kLinkPad * s);
+        const bool hot = sh.hoverPart == p;
+        sheet::rect(*to, panel::Box{right ? b.x + b.w - pw : b.x, b.y, pw, b.h}, b.h / 2, kPill,
+                         hot ? 0.94f : 0.88f, kWhite, hot ? 0.36f : 0.22f, 1.0f * s);
+    };
+    link(L.chars, t.chars, 13.5f, true, Part::Chars);
+    link(L.newLogin, t.newLogin, 13, true, Part::NewLogin);
+    link(L.linkLogin, t.linkLogin, 13, false, Part::LinkLogin);
+}
+
+void sheetOfCharacters(sheet::Model& m, const CharLayout& L, const std::vector<CharLogin>& logins,
+                     const CharShow& sh) {
+    sheet::Layer* to = &m.under;
+    const float s = L.s;
+    for (size_t i = 0; i < L.rows.size(); ++i) {
+        const int login = L.first + int(i);
+        const CharRow& r = L.rows[i];
+        for (size_t c = 0; c < r.cards.size(); ++c) {
+            const panel::Box& b = r.cards[c];
+            const bool hot = sh.hoverRow == login && sh.hoverCard == int(c);
+            sheet::rect(*to, b, 12 * s, kCard, 0.94f, hot ? kGold : kWhite, hot ? 0.9f : 0.12f, 1.0f * s);
+            const panel::Picture* art = size_t(login) < logins.size() && c < logins[size_t(login)].art.size()
+                                            ? logins[size_t(login)].art[c]
+                                            : nullptr;
+            const panel::Box pic{b.x + 1 * s, b.y + 1 * s, b.h - 2 * s, b.h - 2 * s};  // a square at its left
+            if (art)
+                to->arts.push_back(sheet::Art{art, pic, 11 * s, uint8_t(classart::kLeftCorners)});
+            else
+                sheet::rect(*to, pic, 11 * s, 0x2A2416, 0.9f);
+        }
+        const bool hot = sh.hoverRow == login && sh.hoverCard < 0;
+        sheet::rect(*to, r.newChar, 12 * s, kCard, 0.70f, kWhite, hot ? 0.45f : 0.28f, 1.5f * s);
+    }
+    for (const panel::Box* a : {&L.up, &L.down})
+        if (a->w > 0) sheet::rect(*to, *a, 8 * s, kPill, 0.72f, kWhite, 0.14f, 1.0f * s);
+}
+
+void sheetOfMenu(sheet::Model& m, const Layout& L, const MenuLayout& M, const MenuShow& sh) {
+    sheet::Layer* to = &m.over;
+    const float s = L.s;
+    sheet::rect(*to, panel::Box{M.x, M.y, M.w, M.h}, 10 * s, kPill, 0.97f, kWhite, 0.16f, 1.0f * s);
+    if (sh.hover >= 0 && sh.hover < int(M.rows.size()))
+        sheet::rect(*to, M.rows[size_t(sh.hover)], 7 * s, kWhite, 0.08f);
+}
+
 }  // namespace uagfx::loginshelf

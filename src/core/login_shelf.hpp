@@ -1,4 +1,5 @@
 #pragma once
+#include "core/ui_sheet_model.hpp"
 #include <cstddef>
 #include <cstdint>
 #include <string>
@@ -161,5 +162,12 @@ struct MenuShow {
 void paintMenu(panel::Picture& out, const Layout& L, const MenuLayout& M, const MenuShow& sh);
 std::vector<Words> menuWords(const MenuLayout& M, const std::vector<MenuItem>& items, const MenuShow& sh,
                              const MenuTexts& t, float scale);
+
+// 3.0.18-beta.41 (uaUI's «Полиця»): what paint(), paintCharacters() and paintMenu() draw, as the markup's data
+// (core/ui_sheet_model) into `m` (the caller sets its size and words)
+void sheetOf(sheet::Model& m, const Layout& L, const std::vector<Card>& cards, const Show& sh, const Texts& t);
+void sheetOfCharacters(sheet::Model& m, const CharLayout& L, const std::vector<CharLogin>& logins,
+                     const CharShow& sh);
+void sheetOfMenu(sheet::Model& m, const Layout& L, const MenuLayout& M, const MenuShow& sh);
 
 }  // namespace uagfx::loginshelf

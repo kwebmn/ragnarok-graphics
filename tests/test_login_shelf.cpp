@@ -7,6 +7,8 @@
 #include <vector>
 
 #include "core/login_shelf.hpp"
+#include "core/class_art.hpp"
+#include "core/ui_sheet_model.hpp"
 #include "test.hpp"
 
 using namespace uagfx;
@@ -327,4 +329,23 @@ TEST(login_shelf_site_menu) {
     CHECK(both.size() == 8 && both.back() == M::GamePassword);
     c.localRow = false;
     CHECK((loginshelf::menu(c) == std::vector<M>{M::Edit, M::GamePassword}));
+}
+
+// 3.0.18-beta.41 (docs/superpowers/plans/2026-11-09-uaui-migration.md, stage 5): uaUI's «Полиця» - what paint()
+// draws as the markup's data: the cards cut at the row, the buttons' plates outside it, a portrait for an art
+TEST(login_shelf_sheet_holds_what_it_paints) {
+    const loginshelf::Layout L = loginshelf::layout(1920, 1080, 1.0f, 2, 0, true);
+    panel::Picture art;
+    art.width = art.height = 64;
+    art.px.assign(64 * 64, 0xFF336699u);
+    loginshelf::Card a, b;
+    a.art = &art;
+    sheet::Model m;
+    loginshelf::sheetOf(m, L, {a, b}, loginshelf::Show{}, texts());
+    CHECK(m.clip.w > 0 && m.clipped.boxes.size() >= 2 && m.clipped.arts.size() == 1);
+    CHECK(m.clipped.arts[0].art == &art && m.clipped.arts[0].corners == uint8_t(classart::kTopCorners));
+    bool other = false;  // «Інший акаунт»'s plate, not cut
+    for (const sheet::Box& x : m.under.boxes)
+        other = other || (x.box.x == L.other.x && x.box.y == L.other.y && x.fillA >= 0.7f);
+    CHECK(other);
 }

@@ -20,6 +20,8 @@
 #include "win/real_ddraw.hpp"
 #include "win/site_accounts.hpp"
 #include "win/site_key.hpp"
+#include "win/uaui.hpp"
+#include "win/ui_sheet.hpp"
 
 namespace uagfx::win::loginshelfwin {
 namespace {
@@ -28,6 +30,10 @@ namespace ls = loginshelf;
 constexpr size_t kLabelMost = 24;  // a label's letters at most (the search's too)
 
 struct State {
+    uisheet::Sheet sheet;  // 3.0.18-beta.41: «Полиця» drawn by uaUI (before the world)
+    int sheetGen = 0;
+    bool sheetShown = false;
+    sheet::Model model;
     bool classic = false;
     float k = 0, scale = 1;
     int targetW = 0, targetH = 0;
@@ -256,7 +262,51 @@ ls::Card cardOf(const State& s, const shelfmerge::Row& r, const accounts::Shelf&
     return c;
 }
 
+template <typename W>
+sheet::Text textOf(const W& w) {
+    return sheet::Text{w.box, w.text, w.rgb, w.px, w.bold, false,
+                       w.align == ls::Align::Right    ? sheet::Align::Right
+                       : w.align == ls::Align::Center ? sheet::Align::Center
+                                                      : sheet::Align::Left};
+}
+
+// 3.0.18-beta.41 (docs/superpowers/plans/2026-11-09-uaui-migration.md, stage 5 - by hand): «Полиця» and «Персонажі»
+// as the markup's data - core loginshelf's sheetOf (the cards cut at the row), the menu over them, the words (the
+// cards' within the row)
+void model(State& s) {
+    sheet::Model& m = s.model;
+    m = sheet::Model{};
+    if (s.charsView) {
+        const ls::CharLayout& L = s.charLayout;
+        m.w = float(L.w), m.h = float(L.h);
+        ls::CharTexts t;
+        t.title = say(settings::Text::ShelfCharsTitle);
+        t.back = say(settings::Text::ShelfCharsBack);
+        t.newChar = say(settings::Text::ShelfNewChar);
+        t.noPassword = say(settings::Text::ShelfNoPasswordShort);
+        ls::sheetOfCharacters(m, L, s.charLogins, s.charShow);
+        for (const auto& w : ls::characterWords(L, s.charLogins, s.charShow, t)) m.words.push_back(textOf(w));
+        return;
+    }
+    const ls::Layout& L = s.layout;
+    m.w = float(L.w), m.h = float(L.h);
+    const ls::Texts t = texts();
+    ls::sheetOf(m, L, s.cards, s.show, t);
+    for (const ls::Words& w : ls::words(L, s.cards, s.show, t)) (w.row ? m.clippedWords : m.words).push_back(textOf(w));
+    if (s.menuFor >= 0 && s.menuFor < int(s.cards.size())) {
+        const std::vector<ls::MenuItem> items = ls::menu(s.cards[size_t(s.menuFor)]);
+        ls::sheetOfMenu(m, L, s.menuLayout, s.menuShow);
+        for (const auto& w : ls::menuWords(s.menuLayout, items, s.menuShow, menuTexts(), L.s))
+            m.words.push_back(textOf(w));
+    }
+}
+
 void render(State& s) {
+    if (uaui::readyAnywhere()) {  // 3.0.18-beta.41: uaUI's - the data, no picture
+        model(s);
+        ++s.sheetGen;
+        return;
+    }
     if (s.charsView) {  // 3.0.11-beta.181: «Персонажі»
         const ls::CharLayout& L = s.charLayout;
         if (!panel::blank(s.picture, L.w, L.h)) return;
@@ -329,6 +379,7 @@ void charsFrame(State& s, int targetWidth, int targetHeight) {
         key += ';' + g.login + (g.hasPassword ? "p" : "");
         for (const siteapi::SiteChar& c : g.chars) key += ',' + c.name + std::to_string(c.level) + c.map;
     }
+    if (uaui::readyAnywhere()) key += 'u';  // 3.0.18-beta.41
     if (key != s.key) {
         s.key = key;
         render(s);
@@ -354,7 +405,7 @@ const shelfmerge::Row* row(int index) {
     return index >= 0 && index < int(s.rows.size()) ? &s.rows[size_t(index)] : nullptr;
 }
 
-void frame(double k, int targetWidth, int targetHeight, unsigned codePage) {
+static void frameInner(double k, int targetWidth, int targetHeight, unsigned codePage) {
     State& s = state();
     s.k = float(k);
     s.scale = uistyle::readingScale(k);
@@ -450,15 +501,24 @@ void frame(double k, int targetWidth, int targetHeight, unsigned codePage) {
         key += ';' + c.label + ',' + c.name + ',' + c.login + ',' + std::to_string(c.level) + c.map +
                (c.refused ? "r" : "") + (c.art ? "a" : c.head ? "h" : "") + std::to_string(c.busyWindow) +
                (c.hasPassword ? "p" : "") + (c.fromSite ? "s" : "");
+    if (uaui::readyAnywhere()) key += 'u';  // 3.0.18-beta.41
     if (key != s.key) {
         s.key = key;
         render(s);
     }
 }
 
+void frame(double k, int targetWidth, int targetHeight, unsigned codePage) {
+    frameInner(k, targetWidth, targetHeight, codePage);
+    State& s = state();
+    s.sheet.anywhere = true;
+    s.sheetShown = s.sheet.frame("shelf", uaui::readyAnywhere() && s.k > 0 && s.sheetGen > 0, true, s.picX, s.picY,
+                                 s.sheetGen, [&](uisheet::Content& c) { uisheet::fromModel(c, s.model, s.sheet); });
+}
+
 void draw(FrameRecord& record, gpu::Renderer& renderer) {
     State& s = state();
-    if (s.k <= 0 || s.picture.width <= 0) return;
+    if (s.k <= 0 || s.sheetShown || s.picture.width <= 0) return;
     drawPart(record, renderer, s.picture, s.texture, s.texW, s.texH, s.upload, s.picX, s.picY, s.k);
 }
 

@@ -37,10 +37,18 @@ struct Text {
     bool bold = false, wrap = false;
     Align align = Align::Left;
 };
+// 3.0.18-beta.41: a class's portrait covering a box, its corners round (core/class_art's cover: `corners` its mask)
+struct Art {
+    const panel::Picture* art = nullptr;
+    panel::Box box;
+    float r = 0;
+    uint8_t corners = 0;
+};
 struct Layer {
     std::vector<Box> boxes;
     std::vector<Image> images;
     std::vector<Glyph> glyphs;
+    std::vector<Art> arts;
 };
 struct Model {
     float w = 0, h = 0;
@@ -48,6 +56,7 @@ struct Model {
     panel::Box clip;
     panel::Box world;  // 3.0.18-beta.36: the reference's world map (a picture the window paints), w 0 none
     std::vector<Text> words;
+    std::vector<Text> clippedWords;  // 3.0.18-beta.41: cut at `clip` too (the shelf's gliding cards)
 };
 
 void rect(Layer& to, const panel::Box& b, float r, uint32_t fill, float fillA, uint32_t edge = 0, float edgeA = 0,

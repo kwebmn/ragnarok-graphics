@@ -4,6 +4,7 @@
 #include <cmath>
 
 #include "core/pad_glyphs.hpp"
+#include "core/class_art.hpp"
 #include "win/code_page.hpp"
 
 namespace uagfx::win::uisheet {
@@ -37,6 +38,10 @@ const char* kDoc = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss
  <img class="a" data-for="i : clipped_icons" data-attr-src="i.src" data-style-left="i.x - clip.x + 'px'"
    data-style-top="i.y - clip.y + 'px'" data-style-width="i.w + 'px'" data-style-height="i.h + 'px'"
    data-style-opacity="i.op"/>
+ <span data-for="t : clipped_words" data-attr-class="t.cls" data-style-left="t.x - clip.x + 'px'"
+   data-style-top="t.y - clip.y + 'px'" data-style-width="t.w + 'px'" data-style-height="t.h + 'px'"
+   data-style-font-size="t.px + 'px'" data-style-color="t.colour" data-style-line-height="t.lh + 'px'"
+   >{{t.text}}</span>
 </div>
 <img class="a" data-for="i : icons" data-attr-src="i.src" data-style-left="i.x + 'px'" data-style-top="i.y + 'px'"
   data-style-width="i.w + 'px'" data-style-height="i.h + 'px'" data-style-opacity="i.op"/>
@@ -103,6 +108,17 @@ void fromModel(Content& c, const sheet::Model& m, Sheet& sheet) {
         for (const sheet::Box& b : in) c.rect(to, b.box, b.r, b.fill, b.fillA, b.edge, b.edgeA, b.edgeW);
     };
     const auto icons = [&](std::vector<Icon>& to, const sheet::Layer& in) {
+        for (const sheet::Art& a : in.arts) {  // 3.0.18-beta.41: a portrait covering its box, made once a size
+            if (!a.art || a.art->width <= 0) continue;
+            const int w = std::max(1, int(std::ceil(a.box.w))), h = std::max(1, int(std::ceil(a.box.h)));
+            const std::string key = "art" + std::to_string(uintptr_t(a.art)) + ':' + std::to_string(w) + 'x' +
+                                    std::to_string(h) + ':' + std::to_string(a.corners) + ':' +
+                                    std::to_string(int(a.r * 10));
+            to.push_back(Icon{a.box.x, a.box.y, float(w), float(h), 1, sheet.made(key, w, h, [&](panel::Picture& p) {
+                                  classart::cover(p, panel::Box{0, 0, float(w), float(h)}, a.art->px, a.art->width,
+                                                  a.art->height, a.r, a.corners);
+                              })});
+        }
         for (const sheet::Image& i : in.images)
             to.push_back(Icon{i.x, i.y, float(i.picture->width), float(i.picture->height), i.opacity,
                               sheet.icon(i.picture)});
@@ -124,6 +140,18 @@ void fromModel(Content& c, const sheet::Model& m, Sheet& sheet) {
     boxes(c.over, m.over.boxes);
     icons(c.top, m.over);
     char colour[16];
+    const auto say = [&](std::vector<Word>& to, const std::vector<sheet::Text>& in) {
+        for (const sheet::Text& t : in) {
+            std::snprintf(colour, sizeof colour, "#%06x", unsigned(t.rgb & 0xFFFFFF));
+            std::string cls = t.bold ? "word bold" : "word";
+            if (t.align == sheet::Align::Right) cls += " right";
+            else if (t.align == sheet::Align::Center) cls += " centre";
+            if (t.wrap) cls += " wrap";
+            to.push_back(Word{t.box.x, t.box.y, t.box.w, t.box.h, t.px, t.wrap ? std::round(t.px * 1.3f) : t.box.h,
+                              t.text, colour, cls});
+        }
+    };
+    say(c.clippedWords, m.clippedWords);
     for (const sheet::Text& t : m.words) {
         std::snprintf(colour, sizeof colour, "#%06x", unsigned(t.rgb & 0xFFFFFF));
         std::string cls = t.bold ? "word bold" : "word";
@@ -217,6 +245,7 @@ bool Sheet::frame(const char* name, bool on, bool window, int x, int y, int gen,
                 m.Bind("clip", &c_.clip);
                 m.Bind("clipped", &c_.clipped);
                 m.Bind("clipped_icons", &c_.clippedIcons);
+                m.Bind("clipped_words", &c_.clippedWords);
             }))
             return false;
     }

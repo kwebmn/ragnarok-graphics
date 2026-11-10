@@ -56,6 +56,7 @@ struct Content {
     Box clip;
     std::vector<Box> clipped;
     std::vector<Icon> clippedIcons;
+    std::vector<Word> clippedWords;  // 3.0.18-beta.41
 
     // a box by the theme's class (none when it has no size)
     void add(std::vector<Box>& to, const panel::Box& b, float r, const char* cls, float edge = 0, float op = 1) {
