@@ -364,6 +364,7 @@ void frame(HWND game, MobHp mode, double k, int targetWidth, int targetHeight) {
 }
 
 void draw(FrameRecord& record, gpu::Renderer& renderer) {
+    (void)renderer;  // 3.0.18-beta.75: its pictures uaUI's now
     State& s = state();
     if (s.bars.empty() || s.k <= 0) return;
     // 3.0.11-beta.99: where the world ends - under the game's own windows, its names and its cursor, as the world is

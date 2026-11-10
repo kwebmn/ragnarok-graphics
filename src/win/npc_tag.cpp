@@ -185,6 +185,7 @@ void frame(HWND game, unsigned codePage, double k, int targetWidth, int targetHe
 }
 
 void draw(FrameRecord& record, gpu::Renderer& renderer) {
+    (void)renderer;  // 3.0.18-beta.75: its pictures uaUI's now
     State& s = state();
     if (s.k <= 0 || (!s.shown && s.dots.empty())) return;
     const size_t world = record.firstInterface(), before = record.commands().size();

@@ -875,6 +875,11 @@ void render(State& s) {
     sc.cache = &s.mapCache;  // 3.0.13-beta.2: the map's pixels made once round the view
     const int madeBefore = s.mapCache.made;
     minimap::paintMapSquare(s.square, s.layout, sc);
+    if (s.mapCache.made != madeBefore && s.cacheTold < 5) {
+        ++s.cacheTold;
+        LOG_INFO("minimap: the map's pixels made round the view (%dx%d) - the steps copy them out", s.mapCache.w,
+                 s.mapCache.h);
+    }
     drawWords(s.square, gdiWords(minimap::mapWords(s.layout, sc)));
     ++s.squareGen;
     s.uiWords = minimap::frameWords(s.layout, sc, t);
