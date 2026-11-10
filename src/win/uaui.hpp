@@ -1,4 +1,6 @@
 #pragma once
+#include <climits>
+#include <map>
 #include <windows.h>
 
 // windowsx.h's macros under RmlUi's names (Element::GetNextSibling ...), where a file has it before this
@@ -93,7 +95,9 @@ public:
     bool shown() const { return shown_; }
     void dirty(const char* variable) { model_.DirtyVariable(variable); }
     void dirtyAll() { model_.DirtyAllVariables(); }
-    void place(int x, int y);  // its box's top left in the target's pixels
+    void place(int x, int y);  // its box's top left in the target's pixels (3.0.18-beta.70: set only when it moves)
+    // 3.0.18-beta.70 (the big six, C): a property of its body set only when its value changes
+    void prop(const std::string& name, const std::string& value);
     void raise(int z);  // 3.0.18-beta.43: its z-index (a window's: 10 + its place in the stack)
     void mark(bool on);  // 3.0.18-beta.44: its body's class «marked» (the theme's gold edge)
     bool box(int& x, int& y, int& w, int& h) const;  // false while not shown
@@ -119,6 +123,8 @@ private:
     bool shown_ = false;
     int z_ = -1;
     int marked_ = -1;
+    int px_ = INT_MIN, py_ = INT_MIN;  // 3.0.18-beta.70: where it was placed
+    std::map<std::string, std::string> props_;
     // 3.0.18-beta.59: its markup - the built-in one, its model's name; the player's file's time (0 none)
     std::string builtin_, model_name_;
     unsigned long long fileStamp_ = 0;

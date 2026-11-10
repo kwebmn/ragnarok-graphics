@@ -42,6 +42,23 @@ struct Ring {
     Rml::String fill = "#00000000", track = "#00000000";
 };
 
+// 3.0.18-beta.70 (the big six, C): what a sheet says compared - only what changed is evaluated again
+inline bool operator==(const Box& a, const Box& b) {
+    return a.x == b.x && a.y == b.y && a.w == b.w && a.h == b.h && a.r == b.r && a.e == b.e && a.op == b.op &&
+           a.cls == b.cls && a.paint == b.paint && a.bg == b.bg && a.bd == b.bd;
+}
+inline bool operator==(const Icon& a, const Icon& b) {
+    return a.x == b.x && a.y == b.y && a.w == b.w && a.h == b.h && a.op == b.op && a.src == b.src;
+}
+inline bool operator==(const Word& a, const Word& b) {
+    return a.x == b.x && a.y == b.y && a.w == b.w && a.h == b.h && a.px == b.px && a.lh == b.lh && a.text == b.text &&
+           a.colour == b.colour && a.cls == b.cls;
+}
+inline bool operator==(const Ring& a, const Ring& b) {
+    return a.x == b.x && a.y == b.y && a.size == b.size && a.value == b.value && a.start == b.start &&
+           a.width == b.width && a.sector == b.sector && a.fill == b.fill && a.track == b.track;
+}
+
 struct Content {
     float w = 0, h = 0, op = 1;  // op: the whole one's opacity (3.0.18-beta.32: the quiet chat)
     Box glass;  // w 0: none

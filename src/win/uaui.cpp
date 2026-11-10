@@ -105,6 +105,7 @@ struct Atlas {
 
 struct Stats {
     int frames = 0, draws = 0, vertices = 0;
+    long remeshed = 0;  // 3.0.18-beta.70: geometries meshed anew (the rest reused)
     double update = 0, render = 0, emit = 0, worst = 0;
     double since = 0;
 };
@@ -148,6 +149,16 @@ struct State {
     double frameStart = 0;
     // the renderer's side
     std::unordered_map<uintptr_t, Geometry> geometries;
+    // 3.0.18-beta.70 (the big six, C): a geometry's triangles in the game's pixels as last made - made again only
+    // when it moved, its clip or transform changed, or the scale did
+    struct Meshed {
+        float dx = 0, dy = 0, k = 0, half = 0;
+        bool clipped = false, transformed = false;
+        ::uagfx::uaui::ClipBox clip{};
+        float m[16] = {};
+        std::vector<glint::Vertex> v;
+    };
+    std::unordered_map<uintptr_t, Meshed> meshed;
     uintptr_t nextGeometry = 1, nextTexture = 16;
     std::unordered_map<uintptr_t, Texture> textures;
     std::vector<uint32_t> released;
@@ -309,9 +320,15 @@ public:
     void ReleaseGeometry(Rml::CompiledGeometryHandle geometry) override {
         State& s = state();
         s.geometries.erase(uintptr_t(geometry));
+        s.meshed.erase(uintptr_t(geometry));
         for (auto it = s.shaded.begin(); it != s.shaded.end();)  // 3.0.18-beta.61: its shaded copies with it
-            if (it->first.second == uintptr_t(geometry)) s.geometries.erase(it->second), it = s.shaded.erase(it);
-            else ++it;
+            if (it->first.second == uintptr_t(geometry)) {
+                s.geometries.erase(it->second);
+                s.meshed.erase(it->second);
+                it = s.shaded.erase(it);
+            } else {
+                ++it;
+            }
     }
     // 3.0.18-beta.61 (the possibilities' item 13): a linear gradient as the vertices' colours (core/uaui_mesh
     // shade); the others (radial, conic) not drawn - told once
@@ -362,8 +379,13 @@ public:
         State& s = state();
         s.shaders.erase(uintptr_t(shader));
         for (auto it = s.shaded.begin(); it != s.shaded.end();)
-            if (it->first.first == uintptr_t(shader)) s.geometries.erase(it->second), it = s.shaded.erase(it);
-            else ++it;
+            if (it->first.first == uintptr_t(shader)) {
+                s.geometries.erase(it->second);
+                s.meshed.erase(it->second);
+                it = s.shaded.erase(it);
+            } else {
+                ++it;
+            }
     }
     // 3.0.18-beta.61 (item 16): a rounded clip - the mask's convex outline (set or intersected: the last one;
     // an inverted one not kept)
@@ -2128,6 +2150,8 @@ bool Doc::load(const std::string& rml) {
     }
     Rml::ElementDocument* was = doc_;
     doc_ = d;
+    px_ = py_ = INT_MIN;  // 3.0.18-beta.70: a new body - placed and set again
+    props_.clear();
     // 3.0.18-beta.27: drawn with the windows; .38 the world's under the parts (theirs 3, between the markers)
     doc_->SetProperty("z-index", z_ >= 0       ? std::to_string(z_)
                                  : cursor    ? "9001"  // 3.0.18-beta.69
@@ -2189,9 +2213,18 @@ void Doc::show(bool on) {
 }
 
 void Doc::place(int x, int y) {
-    if (!doc_) return;
+    if (!doc_ || (x == px_ && y == py_)) return;
+    px_ = x, py_ = y;
     doc_->SetProperty("left", std::to_string(x) + "px");
     doc_->SetProperty("top", std::to_string(y) + "px");
+}
+
+void Doc::prop(const std::string& name, const std::string& value) {
+    if (!doc_) return;
+    auto it = props_.find(name);
+    if (it != props_.end() && it->second == value) return;
+    props_[name] = value;
+    doc_->SetProperty(name, value);
 }
 
 bool Doc::box(int& x, int& y, int& w, int& h) const {
@@ -2471,8 +2504,22 @@ void draw(FrameRecord& record, gpu::Renderer& renderer, Layer layer) {
             runSmooth = smooth;
             runGlass = b.glass;
         }
-        ::uagfx::uaui::triangles(g->second.points, g->second.indices, b.dx, b.dy, b.transformed ? b.m : nullptr,
-                                 b.clipped ? &b.clip : nullptr, k, half, verts);
+        State::Meshed& c = s.meshed[b.geometry];
+        const bool same = !c.v.empty() && c.dx == b.dx && c.dy == b.dy && c.k == k && c.half == half &&
+                          c.clipped == b.clipped && c.transformed == b.transformed &&
+                          (!b.clipped || (c.clip.x0 == b.clip.x0 && c.clip.y0 == b.clip.y0 && c.clip.x1 == b.clip.x1 &&
+                                          c.clip.y1 == b.clip.y1 && c.clip.hull == b.clip.hull)) &&
+                          (!b.transformed || std::equal(b.m, b.m + 16, c.m));
+        if (!same) {
+            c.v.clear();
+            ::uagfx::uaui::triangles(g->second.points, g->second.indices, b.dx, b.dy, b.transformed ? b.m : nullptr,
+                                     b.clipped ? &b.clip : nullptr, k, half, c.v);
+            c.dx = b.dx, c.dy = b.dy, c.k = k, c.half = half, c.clipped = b.clipped, c.transformed = b.transformed;
+            c.clip = b.clip;
+            std::copy(b.m, b.m + 16, c.m);
+            ++s.stats.remeshed;
+        }
+        verts.insert(verts.end(), c.v.begin(), c.v.end());
     }
     flush();
     const double spent = clockNow() - t0;
@@ -2534,10 +2581,11 @@ void draw(FrameRecord& record, gpu::Renderer& renderer, Layer layer) {
             if (it->second.used < old) renderer.releaseTexture(it->second.id), it = s.icons.erase(it);
             else ++it;
         LOG_INFO("uaui: in %.0f s %d frames - RmlUi's update %.3f ms, its render %.3f ms, ours into the bridge %.3f ms "
-                 "(at most %.3f) a frame; %.1f draws, %.0f vertices a frame; %d letters in the %dx%d atlas%s, sent %d "
-                 "times", now - st.since, st.frames, st.update * 1000 / n, st.render * 1000 / n, st.emit * 1000 / n,
-                 st.worst * 1000, st.draws / n, st.vertices / n, s.atlas.glyphs, kAtlas, kAtlas,
-                 s.atlas.full ? " (full)" : "", s.atlas.uploads);
+                 "(at most %.3f) a frame; %.1f draws, %.0f vertices a frame (%.1f geometries meshed anew); %d letters in "
+                 "the %dx%d atlas%s, sent %d times", now - st.since, st.frames, st.update * 1000 / n,
+                 st.render * 1000 / n, st.emit * 1000 / n, st.worst * 1000, st.draws / n, st.vertices / n,
+                 double(st.remeshed) / n, s.atlas.glyphs, kAtlas, kAtlas, s.atlas.full ? " (full)" : "",
+                 s.atlas.uploads);
         st = Stats{};
         st.since = now;
     }

@@ -738,9 +738,14 @@ bool uiFrame(State& s, const cb::View view, const cb::Look look, const std::stri
         const int a = int(std::lround(uistyle::panel() * 255));  // [interface] panel_opacity
         char ground[32];
         std::snprintf(ground, sizeof ground, "#%06x%02x", unsigned(uaui::themed(0x10141C)), a);
+        static Rml::Element* groundOn = nullptr;  // 3.0.18-beta.70: set when it changes (or the body is new)
+        static std::string groundWas;
         if (Rml::Element* card = d->GetFirstChild())
-            if (card->IsClassSet("card")) card->SetProperty("background-color", ground);
-        d->SetProperty("transform", size != 1.0f ? "scale(" + std::to_string(size) + ")" : "none");
+            if (card->IsClassSet("card") && (card != groundOn || groundWas != ground)) {
+                groundOn = card, groundWas = ground;
+                card->SetProperty("background-color", ground);
+            }
+        u.doc.prop("transform", size != 1.0f ? "scale(" + std::to_string(size) + ")" : "none");  // .70: on change
     }
     u.doc.place(s.layout.x, s.layout.y);
     u.doc.show(true);

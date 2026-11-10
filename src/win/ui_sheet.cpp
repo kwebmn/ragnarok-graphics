@@ -293,13 +293,37 @@ bool Sheet::frame(const char* name, bool on, bool window, int x, int y, int gen,
     }
     if (gen != gen_) {
         gen_ = gen;
-        c_ = Content{};
-        c_.ground = "#10141cff";
-        fill(c_);
-        fitWords(c_.words);
-        fitWords(c_.clippedWords);
-        fitWords(c_.topWords);
-        doc_.dirtyAll();
+        Content next;
+        next.ground = "#10141cff";
+        fill(next);
+        fitWords(next.words);
+        fitWords(next.clippedWords);
+        fitWords(next.topWords);
+        // 3.0.18-beta.70 (the big six, C): only the lists that changed evaluated again (a sheet said anew each
+        // frame - the monsters' bars, the carried thing - mostly says the same)
+        const auto changed = [&](const char* name, auto& was, auto& now) {
+            if (was == now) return;
+            was = std::move(now);
+            doc_.dirty(name);
+        };
+        changed("w", c_.w, next.w);
+        changed("h", c_.h, next.h);
+        changed("op", c_.op, next.op);
+        changed("glass", c_.glass, next.glass);
+        changed("ground", c_.ground, next.ground);
+        changed("under", c_.under, next.under);
+        changed("icons", c_.icons, next.icons);
+        changed("over", c_.over, next.over);
+        changed("words", c_.words, next.words);
+        changed("rings", c_.rings, next.rings);
+        changed("top", c_.top, next.top);
+        changed("top_boxes", c_.topBoxes, next.topBoxes);
+        changed("top_words", c_.topWords, next.topWords);
+        changed("clip", c_.clip, next.clip);
+        changed("clipped", c_.clipped, next.clipped);
+        changed("clipped_icons", c_.clippedIcons, next.clippedIcons);
+        changed("clipped_words", c_.clippedWords, next.clippedWords);
+        c_.opacity = next.opacity;
     }
     x_ = x, y_ = y;
     doc_.place(x, y);

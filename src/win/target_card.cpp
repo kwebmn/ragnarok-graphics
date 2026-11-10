@@ -406,9 +406,9 @@ bool uiFrame(State& s) {
         u.padR = uaui::picture(&u.glyph[1], u.gen, u.glyphSrc[1]);
         u.doc.dirtyAll();
     }
-    if (Rml::ElementDocument* d = u.doc.doc()) {
+    if (u.doc.doc()) {
         const float size = hudedit::sizeOf(hudlayout::Part::Target);
-        d->SetProperty("transform", size != 1.0f ? "scale(" + std::to_string(size) + ")" : "none");
+        u.doc.prop("transform", size != 1.0f ? "scale(" + std::to_string(size) + ")" : "none");  // .70: on change
     }
     u.doc.place(s.layout.x, s.layout.y);
     u.doc.show(true);

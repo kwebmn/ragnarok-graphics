@@ -624,12 +624,17 @@ bool uiFrame(State& s) {
     }
     if (Rml::ElementDocument* d = u.doc.doc()) {
         const float size = hudedit::sizeOf(hudlayout::Part::Party);
-        d->SetProperty("transform", size != 1.0f ? "scale(" + std::to_string(size) + ")" : "none");
+        u.doc.prop("transform", size != 1.0f ? "scale(" + std::to_string(size) + ")" : "none");  // .70: on change
         if (Rml::Element* g = d->GetFirstChild()) {
             char ground[32];
             std::snprintf(ground, sizeof ground, "#%06x%02x", unsigned(uaui::themed(0x10141C)),
                           int(std::lround(uistyle::panel() * 255)));
-            g->SetProperty("background-color", ground);
+            static Rml::Element* groundOn = nullptr;  // 3.0.18-beta.70: set when it changes (or the body is new)
+            static std::string groundWas;
+            if (g != groundOn || groundWas != ground) {
+                groundOn = g, groundWas = ground;
+                g->SetProperty("background-color", ground);
+            }
         }
     }
     u.doc.place(s.layout.x, s.layout.y);

@@ -25,3 +25,4 @@ Order (safest first; the cleanup last, once nothing needs the old code):
   (z 9000) drawn after the game's windows; pad overlays + HUD editor moved to Top (they had dropped under the game's
   windows with the sheets); the cursor = a uaUI document in the Cursor layer (drawn where the game's cursor faces were
   dropped). The recording code goes with G.
+- C beta.70: sheets dirty only the lists that changed (Content compared), Doc::place/prop set on change (transform, grounds), per-geometry mesh cache (remeshed count in the cost log line)
