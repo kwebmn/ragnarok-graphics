@@ -37,6 +37,8 @@
 #include "win/updates_hook.hpp"
 #include "win/window_shadow.hpp"
 #include "win/window_stack.hpp"
+#include "win/uaui.hpp"
+#include "win/ui_sheet.hpp"
 
 namespace uagfx::win::referencewin {
 namespace {
@@ -56,6 +58,13 @@ struct Entry {  // a page left for another: what «Назад» brings back
 };
 
 struct State {
+    // 3.0.18-beta.36: «Довідник» drawn by uaUI - core refwin's markup data, the world map's own picture, the words
+    uisheet::Sheet sheet;
+    int sheetGen = 0;
+    bool sheetShown = false;
+    sheet::Model model;
+    panel::Picture worldSheet;
+    std::vector<Words> sheetWords;
     WindowShadow shadow;  // 3.0.11-beta.49
     WindowEdge edge;  // 3.0.11-beta.108: the top of two or more windows (win/window_stack)
     bool enabled = false, open = false, shown = false, dirty = true, upload = true, wantPage = true;
@@ -698,6 +707,16 @@ void render(State& s) {
     const uicost::Paint cost("«Довідник»", s.layout.w, s.layout.h);  // 3.0.11-beta.55
     s.chrome = refwin::chrome(s.layout, s.page, textsOf(s));  // 3.0.11-beta.26
     const refwin::Look look = lookOf(s);
+    if (uaui::ready()) {  // 3.0.18-beta.36: uaUI's window - its data, no picture
+        refwin::sheetOf(s.model, s.layout, s.page, s.rows, s.scroll, s.total, look);
+        if (s.model.world.w > 0) refwin::paintWorldPicture(s.worldSheet, s.layout, s.model.world, look.world);
+        s.sheetWords = wordsOf(s, look);
+        ++s.sheetGen;
+        s.dirty = false;
+        s.hot.clear();
+        s.parts.clear();
+        return;
+    }
     refwin::paint(s.picture, s.layout, s.page, s.rows, s.scroll, s.total, look);
     drawWords(s.picture, wordsOf(s, look));
     s.dirty = false;
@@ -759,7 +778,7 @@ char letterOf(WPARAM vk, bool shift) {
 
 }  // namespace
 
-void frame(HWND game, bool enabled, double k, int targetWidth, int targetHeight) {
+static void frameInner(HWND game, bool enabled, double k, int targetWidth, int targetHeight) {
     State& s = state();
     s.enabled = enabled;
     if (s.open && !enabled) {
@@ -877,7 +896,8 @@ void frame(HWND game, bool enabled, double k, int targetWidth, int targetHeight)
         s.pictures.clear();
         s.dirty = true;
     }
-    if (s.dirty)
+    if (uaui::ready() != (s.sheetGen > 0 && s.sheetShown)) s.dirty = true;  // 3.0.18-beta.36: drawn the other way
+    if (s.dirty || (uaui::ready() && !s.hot.empty()))  // uaUI's: said again whole
         render(s);
     else if (!s.hot.empty())
         renderHot(s);
@@ -885,9 +905,28 @@ void frame(HWND game, bool enabled, double k, int targetWidth, int targetHeight)
     block(s, game);
 }
 
+// 3.0.18-beta.36 (docs/superpowers/plans/2026-11-09-uaui-migration.md, stage 5 - by hand): «Довідник» in RmlUi's
+// markup - core refwin's data of it (sheetOf: its glass, header, rail, the body's rows cut at the body, the scroll's
+// thumb, the rail's tip), the world map's picture in its place, the words as the window lays them out
+static void fillSheet(State& s, uisheet::Content& c) {
+    uisheet::fromModel(c, s.model, s.sheet);
+    if (s.model.world.w > 0 && s.worldSheet.width > 0)
+        c.clippedIcons.insert(c.clippedIcons.begin(),
+                              uisheet::Icon{s.model.world.x, s.model.world.y, float(s.worldSheet.width),
+                                            float(s.worldSheet.height), 1, s.sheet.icon(&s.worldSheet)});
+    uisheet::sayGdi(c, s.sheetWords);
+}
+
+void frame(HWND game, bool enabled, double k, int targetWidth, int targetHeight) {
+    frameInner(game, enabled, k, targetWidth, targetHeight);
+    State& s = state();
+    s.sheetShown = s.sheet.frame("reference", s.shown && s.open, true, s.layout.x, s.layout.y, s.sheetGen,
+                                 [&](uisheet::Content& c) { fillSheet(s, c); });
+}
+
 void draw(FrameRecord& record, gpu::Renderer& renderer) {
     State& s = state();
-    if (!s.shown || s.picture.width <= 0 || s.k <= 0) return;
+    if (!s.shown || s.sheetShown || s.picture.width <= 0 || s.k <= 0) return;
     int cursor = -1, cx = 0, cy = 0;  // under the game's own cursor
     if (readGameCursor(cx, cy)) cursor = panel::cursorDraw(record, float(cx), float(cy));
     // 3.0.11-beta.25 (R-77TCM7): the areas painted again since the last frame - only they go to the card (all of the

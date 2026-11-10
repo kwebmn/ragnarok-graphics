@@ -1,4 +1,5 @@
 #pragma once
+#include "core/ui_sheet_model.hpp"
 #include <cstdint>
 #include <map>
 #include <string>
@@ -173,5 +174,12 @@ std::vector<Words> words(const Layout& L, const refpages::Page& p, const std::ve
 // The concept's style A colours (its kit: --text, --muted, --faint, --accent, --accent2)
 constexpr uint32_t kText = 0xECEFF5, kMuted = 0x9AA3B5, kFaint = 0x7D8597, kAccent = 0xC9A55B, kAccent2 = 0xE6CB8A;
 constexpr uint32_t kGold = kAccent2, kLink = kText;  // a boss and a link's words
+
+// 3.0.18-beta.36 (uaUI's «Довідник»): what paint() draws, as the markup's data (core/ui_sheet_model) - the words
+// apart (words()), the world map's place in m.world (its picture by paintWorldPicture)
+void sheetOf(sheet::Model& m, const Layout& L, const refpages::Page& p, const std::vector<Placed>& rows, int scroll,
+             int total, const Look& look);
+// the world map's picture alone, b's size (paint()'s world map moved to the picture's corner)
+void paintWorldPicture(panel::Picture& out, const Layout& L, const panel::Box& b, const WorldLook& w);
 
 }  // namespace uagfx::refwin

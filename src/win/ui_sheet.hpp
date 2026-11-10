@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "core/pad_glyphs.hpp"
+#include "core/ui_sheet_model.hpp"
 #include "core/ui_icons.hpp"
 #include "core/window_panel.hpp"
 #include "win/picture_draw.hpp"
@@ -95,6 +96,11 @@ struct Content {
 
 // 3.0.18-beta.31: the words a part builds for GDI (win/picture_draw's: wide, DT_ alignment, broken lines, the halo)
 void sayGdi(Content& c, const std::vector<Words>& in);
+
+class Sheet;
+// 3.0.18-beta.36: a core part's markup data (core/ui_sheet_model) into the sheet - its layers, its pictures and icons
+// (made once by the sheet), its words
+void fromModel(Content& c, const sheet::Model& m, Sheet& sheet);
 
 class Sheet {
 public:

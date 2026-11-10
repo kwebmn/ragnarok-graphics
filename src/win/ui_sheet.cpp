@@ -97,6 +97,44 @@ void sayGdi(Content& c, const std::vector<Words>& in) {
     }
 }
 
+void fromModel(Content& c, const sheet::Model& m, Sheet& sheet) {
+    c.w = m.w, c.h = m.h;
+    const auto boxes = [&](std::vector<Box>& to, const std::vector<sheet::Box>& in) {
+        for (const sheet::Box& b : in) c.rect(to, b.box, b.r, b.fill, b.fillA, b.edge, b.edgeA, b.edgeW);
+    };
+    const auto icons = [&](std::vector<Icon>& to, const sheet::Layer& in) {
+        for (const sheet::Image& i : in.images)
+            to.push_back(Icon{i.x, i.y, float(i.picture->width), float(i.picture->height), i.opacity,
+                              sheet.icon(i.picture)});
+        for (const sheet::Glyph& g : in.glyphs) {
+            const int px = std::max(4, int(std::ceil(g.side)));
+            const std::string key = "g" + std::to_string(int(g.icon)) + ':' + std::to_string(px) + ':' +
+                                    std::to_string(g.rgb) + ':' + std::to_string(int(g.alpha * 100)) + ':' +
+                                    std::to_string(int(g.stroke * 10));
+            to.push_back(Icon{g.x, g.y, float(px), float(px), 1, sheet.made(key, px, px, [&](panel::Picture& p) {
+                                  uiicons::draw(p, g.icon, 0, 0, float(px), g.rgb, g.alpha, g.stroke);
+                              })});
+        }
+    };
+    boxes(c.under, m.under.boxes);
+    icons(c.icons, m.under);
+    c.clip = Box{m.clip.x, m.clip.y, m.clip.w, m.clip.h, 0, 0, 1, "clip"};
+    boxes(c.clipped, m.clipped.boxes);
+    icons(c.clippedIcons, m.clipped);
+    boxes(c.over, m.over.boxes);
+    icons(c.top, m.over);
+    char colour[16];
+    for (const sheet::Text& t : m.words) {
+        std::snprintf(colour, sizeof colour, "#%06x", unsigned(t.rgb & 0xFFFFFF));
+        std::string cls = t.bold ? "word bold" : "word";
+        if (t.align == sheet::Align::Right) cls += " right";
+        else if (t.align == sheet::Align::Center) cls += " centre";
+        if (t.wrap) cls += " wrap";
+        c.words.push_back(Word{t.box.x, t.box.y, t.box.w, t.box.h, t.px, t.wrap ? std::round(t.px * 1.3f) : t.box.h,
+                               t.text, colour, cls});
+    }
+}
+
 void Sheet::glyph(Content& c, int button, bool sony, float x, float y, float h) {
     const padglyph::Button b = padglyph::Button(button);
     const padglyph::Family f = sony ? padglyph::Family::Sony : padglyph::Family::Xbox;

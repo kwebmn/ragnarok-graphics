@@ -1894,4 +1894,340 @@ std::vector<Words> words(const Layout& L, const refpages::Page& p, const std::ve
     return out;
 }
 
+// 3.0.18-beta.36 (docs/superpowers/plans/2026-11-09-uaui-migration.md, stage 5 - by hand): «Довідник» as the markup's
+// data (core/ui_sheet_model) - shapes()' and chromeShapes()' lines, each the same box, icon and picture into the
+// model's layers (the body's rows cut at the body, the world map's place left to the window's picture)
+namespace {
+
+void glyph(sheet::Layer& to, uiicons::Icon icon, float x, float y, float side, uint32_t rgb, float a, float stroke) {
+    to.glyphs.push_back(sheet::Glyph{icon, x, y, side, rgb, a, stroke});
+}
+
+void image(sheet::Layer& to, const panel::Picture* pic, int ox, int oy) {
+    if (pic && pic->width > 0) to.images.push_back(sheet::Image{pic, float(ox), float(oy), 1.0f});
+}
+
+void markedModel(sheet::Layer& layer, const Layout& L, const std::string& text, const refpages::Marks& marks,
+                 const panel::Box& box, float size, bool bold) {
+    const float s = L.s, middle = box.y + box.h / 2;
+    for (const auto& [from, to] : marks) {
+        if (from >= to || to > text.size()) continue;
+        const float x0 = box.x + (from ? L.measure(text.substr(0, from), size, bold) : 0) - 1 * s;
+        const float x1 = std::min(box.x + box.w, box.x + L.measure(text.substr(0, to), size, bold) + 1 * s);
+        if (x1 > x0) sheet::rect(layer, panel::Box{x0, middle - size * 0.62f, x1 - x0, size * 1.24f}, 3 * s, kMark,
+                                 kMarkA);
+    }
+}
+
+void chromeModel(sheet::Model& m, const Layout& L, const Look& look) {
+    sheet::Layer* to = &m.under;
+    const float s = L.s, edge = std::max(1.0f, s);
+    const Chrome& c = look.chrome;
+    const Part hover = look.hover.part;
+    sheet::rect(*to, panel::Box{0, float(L.header) - edge, float(L.w), edge}, 0, kWhite, kLineA);
+    sheet::rect(*to, panel::Box{0, float(L.h - L.footer), float(L.w), edge}, 0, kWhite, kLineA);
+    if (c.home.w > 0) {  // 3.0.11-beta.30: «Головна»
+        sheet::rect(*to, c.home, 9 * s, kWhite, hover == Part::Home ? 0.12f : kCellA);
+        glyph(*to, uiicons::Icon::Home, c.home.x + (c.home.w - 17 * s) / 2, c.home.y + (c.home.h - 17 * s) / 2,
+                      17 * s, kText, 1.0f, 2.2f);
+    }
+    if (c.back.w > 0) {
+        sheet::rect(*to, c.back, 9 * s, kWhite, hover == Part::Back ? 0.12f : kCellA);
+        glyph(*to, uiicons::Icon::Back, c.back.x + 8 * s, c.back.y + (c.back.h - 16 * s) / 2, 16 * s, kText,
+                      1.0f, 2.4f);
+    }
+    if (c.search.w > 0) {
+        sheet::rect(*to, c.search, 9 * s, kBlack, 0.35f, kWhite, hover == Part::Search ? 0.30f : kLine2A, edge);
+        glyph(*to, uiicons::Icon::Search, c.search.x + 12 * s, c.search.y + (c.search.h - 16 * s) / 2,
+                      16 * s, kMuted, 1.0f, 2.2f);
+        sheet::rect(*to, c.kbd, 5 * s, kWhite, kCellA);
+    }
+    if (c.star.w > 0) sheet::rect(*to, c.star, 9 * s, kWhite, hover == Part::Star ? 0.12f : kCellA);
+    if (hover == Part::Close) sheet::rect(*to, c.close, 9 * s, kWhite, kCellA);
+    for (size_t k = 0; k < c.chips.size(); ++k) {
+        const panel::Box& b = c.chips[k];
+        if (b.w <= 0) continue;
+        const bool over = hover == Part::Chip && look.hover.row == int(k);  // 3.0.11-beta.69: a click opens their page
+        sheet::rect(*to, b, b.h / 2, kWhite, over ? 0.14f : kCellA);
+        const uint32_t dot = k == 0              ? kPackDot
+                             : c.live == Live::Fresh ? kLiveDot
+                             : c.live == Live::Stale ? kStaleDot
+                                                     : kOffDot;
+        sheet::circle(*to, b.x + 12.5f * s, b.y + b.h / 2, 3.5f * s, dot, 1.0f);
+    }
+}
+
+}  // namespace
+
+void sheetOf(sheet::Model& m, const Layout& L, const refpages::Page& p, const std::vector<Placed>& rows, int scroll,
+            int total, const Look& look) {
+    m = sheet::Model{};
+    m.w = float(L.w), m.h = float(L.h);
+    m.clip = panel::Box{0, float(L.bodyY), float(L.w), float(L.bodyH)};
+    sheet::Layer* to = &m.under;
+    const float s = L.s, edge = std::max(1.0f, s);
+    const Chrome& c = look.chrome;
+    // 3.0.11-beta.26: the concept's dark glass, its line around
+    const panel::Box ground{0, 0, float(L.w), float(L.h)};
+    sheet::rect(*to, ground, kRadius * s, kCard, uistyle::window(), kWhite, kLineA, edge);
+    chromeModel(m, L, look);
+    if (!c.rail.empty()) {  // the rail: its line at its right, its sections (the page's lit), «Усе»'s line
+        sheet::rect(*to, panel::Box{c.railW - edge, float(L.bodyY), edge, float(L.bodyH)}, 0, kWhite, kLineA);
+        for (size_t i = 0; i < c.rail.size() && i < p.rail.size(); ++i) {
+            const panel::Box& b = c.rail[i];
+            const bool on = int(i) == c.railOn, over = look.hover.part == Part::Rail && look.hover.row == int(i);
+            if (on) {
+                sheet::rect(*to, b, 9 * s, kAccent, kSelA);
+                sheet::rect(*to, panel::Box{b.x, b.y, 3 * s, b.h}, 0, kAccent, 1.0f);
+            } else if (over) {
+                sheet::rect(*to, b, 9 * s, kWhite, 0.05f);
+            }
+            uiicons::Icon icon = uiicons::Icon::Search;
+            if (iconNamed(p.rail[i].icon, icon))
+                glyph(*to, icon, c.narrow ? b.x + (b.w - 19 * s) / 2 : b.x + 10 * s,
+                              b.y + (b.h - 19 * s) / 2, 19 * s, on || over ? kText : kMuted, 1.0f, 2.0f);
+            if (i == 0)
+                sheet::rect(*to, panel::Box{b.x + 4 * s, b.y + b.h + 9 * s, b.w - 8 * s, edge}, 0, kWhite, kLineA);
+        }
+    }
+    to = &m.clipped;  // the body's rows: cut at the body
+    // the frames under their rows (3.0.11-beta.26): a block's, a section's - clipped to the body when scrolled in part
+    for (size_t i = 0; i < rows.size() && i < p.rows.size(); ++i) {
+        const Placed& r = rows[i];
+        const refpages::Row& row = p.rows[i];
+        if (!framed(row)) continue;
+        const float top = float(L.bodyY + r.y - scroll), h = float(r.boxH > 0 ? r.boxH : r.h);
+        if (top + h <= float(L.bodyY) || top >= float(L.bodyY + L.bodyH)) continue;
+        const panel::Box b{float(r.x), top, float(r.w), h};
+        if (folds(row)) {
+            const bool open = !row.closed && r.boxH > r.h;
+            sheet::rect(*to, b, 12 * s, kWhite, open ? 0.03f : 0.0f, kWhite, kLineA, edge);
+            if (hot(look, i)) sheet::rect(*to, panel::Box{b.x, b.y, b.w, float(r.h)}, 12 * s, kWhite, 0.04f);
+            if (open) sheet::rect(*to, panel::Box{b.x, b.y + float(r.h) - edge, b.w, edge}, 0, kWhite, kLineA);
+        } else {
+            sheet::rect(*to, b, 12 * s, kWhite, kBlockA, kWhite, kLineA, edge);
+        }
+    }
+    for (size_t i = 0; i < rows.size() && i < p.rows.size(); ++i) {
+        const Placed& r = rows[i];
+        if (!shown(L, r, scroll)) continue;
+        const panel::Box b{float(r.x), float(L.bodyY + r.y - scroll), float(r.w), float(r.h)};
+        const refpages::Row& row = p.rows[i];
+        const bool on = hot(look, i);
+        uiicons::Icon icon = uiicons::Icon::Search;
+        if (framed(row)) continue;  // drawn above
+        switch (row.style) {
+            case refpages::Style::Search: {  // the concept's big field: gold edged, its icon, its caret, its key
+                sheet::rect(*to, b, 12 * s, kBlack, 0.38f, kAccent, 1.0f, 1.5f * s);
+                glyph(*to, uiicons::Icon::Search, b.x + 18 * s, b.y + (b.h - 20 * s) / 2, 20 * s, kMuted, 1.0f,
+                              2.2f);
+                sheet::rect(*to, panel::Box{b.x + c.caret, b.y + (b.h - 24 * s) / 2, 2 * s, 24 * s}, 0, kAccent2, 1.0f);
+                if (!row.right.empty()) sheet::rect(*to, searchKey(L, b, row.right), 5 * s, kWhite, kCellA);
+                continue;
+            }
+            case refpages::Style::Tile:
+                if (on)
+                    sheet::rect(*to, b, 12 * s, kAccent, kSelA, kAccent, kRingA, edge);
+                else
+                    sheet::rect(*to, b, 12 * s, kWhite, kTileA, kWhite, kLineA, edge);
+                if (iconNamed(row.icon, icon))
+                    glyph(*to, icon, b.x + 16 * s, b.y + 14 * s + 1.5f * s, 21 * s, kAccent2, 1.0f, 2.0f);
+                continue;
+            case refpages::Style::Chip:
+                if (row.dot) {  // 3.0.11-beta.26: an element's - green more, red heals, its dot
+                    sheet::rect(*to, b, 7 * s, row.tone > 0 ? 0x5BD36C : row.tone < 0 ? 0xFF5A4E : kWhite,
+                                     row.tone != 0 ? 0.13f : 0.08f);
+                    sheet::circle(*to, b.x + 12.5f * s, b.y + b.h / 2, 4.5f * s, row.dot, 1.0f);
+                    continue;
+                }
+                if (on)
+                    sheet::rect(*to, b, 9 * s, kAccent, kSelA, kAccent, kRingA, edge);
+                else
+                    sheet::rect(*to, b, 9 * s, kWhite, kCellA);
+                if (iconNamed(row.icon, icon)) {
+                    glyph(*to, icon, b.x + 6 * s + 3 * s, b.y + (b.h - 20 * s) / 2, 20 * s, kMuted, 1.0f, 2.0f);
+                } else if (const panel::Picture* pic = iconOf(look, row)) {
+                    const float side = kChipPic * s;
+                    image(*to, pic, int(b.x + 6 * s + (side - float(pic->width)) / 2),
+                         int(b.y + (b.h - float(pic->height)) / 2));
+                }
+                continue;
+            case refpages::Style::World:
+                m.world = b;
+                continue;
+            case refpages::Style::Result: {  // 3.0.11-beta.28: picked - gold, its bar; under the pointer - lighter
+                if (look.selected == int(i)) {
+                    sheet::rect(*to, b, 9 * s, kAccent, kSelA);
+                    sheet::rect(*to, panel::Box{b.x, b.y + 5 * s, 3 * s, b.h - 10 * s}, 1.5f * s, kAccent, 1.0f);
+                } else if (on) {
+                    sheet::rect(*to, b, 9 * s, kWhite, 0.05f);
+                }
+                const ResultBoxes parts = resultBoxes(L, row, b);
+                if (iconNamed(row.icon, icon)) {
+                    glyph(*to, icon, parts.icon.x + 4 * s, parts.icon.y + 4 * s, 20 * s,
+                                  row.dot ? row.dot : kMuted, 1.0f, 2.0f);
+                } else if (const panel::Picture* pic = iconOf(look, row)) {
+                    image(*to, pic, int(parts.icon.x + (parts.icon.w - float(pic->width)) / 2),
+                         int(parts.icon.y + (parts.icon.h - float(pic->height)) / 2));
+                }
+                markedModel(*to, L, row.left, row.marks, parts.name, 14.5f * s, true);
+                if (!row.sub.empty()) markedModel(*to, L, row.sub, row.subMarks, parts.sub, 12.5f * s, false);
+                continue;
+            }
+            case refpages::Style::More:  // 3.0.11-beta.28: «ще N ›»
+                if (look.selected == int(i)) {
+                    sheet::rect(*to, b, 9 * s, kAccent, kSelA);
+                    sheet::rect(*to, panel::Box{b.x, b.y + 5 * s, 3 * s, b.h - 10 * s}, 1.5f * s, kAccent, 1.0f);
+                } else if (on) {
+                    sheet::rect(*to, b, 9 * s, kWhite, 0.05f);
+                }
+                continue;
+            case refpages::Style::Empty:  // 3.0.11-beta.28: nothing found - the search's sign over the words
+                glyph(*to, uiicons::Icon::Search, b.x + (b.w - 34 * s) / 2, b.y + 18 * s, 34 * s, kMuted, 1.0f,
+                              1.8f);
+                continue;
+            case refpages::Style::Group:
+                continue;
+            case refpages::Style::Tab:  // 3.0.11-beta.29: the world map's tab (the page's gold) or its green chip
+                if (row.link.go == refpages::Go::None) {
+                    sheet::rect(*to, b, b.h / 2, kLiveDot, 0.12f);
+                    sheet::circle(*to, b.x + 16 * s, b.y + b.h / 2, 4 * s, row.dot ? row.dot : kLiveDot, 1.0f);
+                    continue;
+                }
+                if (row.gold)
+                    sheet::rect(*to, b, 9 * s, kAccent, kSelA, kAccent, kRingA, edge);
+                else
+                    sheet::rect(*to, b, 9 * s, kWhite, on ? 0.10f : kCellA);
+                if (iconNamed(row.icon, icon))
+                    glyph(*to, icon, b.x + 14 * s, b.y + (b.h - 16 * s) / 2, 16 * s,
+                                  row.gold ? kAccent2 : kMuted, 1.0f, 2.0f);
+                continue;
+            case refpages::Style::Tool:  // its zoom's
+                sheet::rect(*to, b, 8 * s, kWhite, on ? 0.12f : kCellA);
+                if (iconNamed(row.icon, icon))
+                    glyph(*to, icon, b.x + (b.w - 16 * s) / 2, b.y + (b.h - 16 * s) / 2, 16 * s, kText, 1.0f,
+                                  2.2f);
+                continue;
+            case refpages::Style::Caption:
+                continue;
+            case refpages::Style::Warn:
+                sheet::rect(*to, b, 9 * s, kWarn, 0.10f, kWarn, 0.35f, edge);
+                glyph(*to, uiicons::Icon::Warn, b.x + 11 * s, b.y + 11 * s, 16 * s, kWarn, 1.0f, 2.0f);
+                continue;
+            case refpages::Style::Step: {  // its number in a circle (a paid move's pink), a line under it
+                if (on) sheet::rect(*to, b, 8 * s, kWhite, 0.05f);
+                const float cx = b.x + 14 * s, cy = b.y + b.h / 2;
+                sheet::circle(*to, cx, cy, 11 * s, row.tone > 0 ? kJump : kWhite, row.tone > 0 ? 0.9f : 0.10f);
+                sheet::rect(*to, panel::Box{b.x + 36 * s, b.y + b.h - edge, b.w - 36 * s, edge}, 0, kWhite, kLineA);
+                continue;
+            }
+            case refpages::Style::Legend: {  // the mark it tells of
+                const float y = b.y + b.h / 2, x0 = b.x + 2 * s, x1 = b.x + 26 * s;
+                if (row.icon == "mark:route") {
+                    sheet::line(*to, x0, y, x1, y, 6.5f * s, kBlack, 0.55f);
+                    sheet::line(*to, x0, y, x1, y, 4 * s, kWay, 1.0f);
+                } else if (row.icon == "mark:jump") {
+                    sheet::line(*to, x0, y, x0 + 9 * s, y, 3 * s, kJump, 1.0f);
+                    sheet::line(*to, x0 + 15 * s, y, x1, y, 3 * s, kJump, 1.0f);
+                } else if (row.icon == "mark:players") {
+                    sheet::rect(*to, panel::Box{x0, y - 8.5f * s, 24 * s, 17 * s}, 8.5f * s, kPill, 0.94f);
+                    glyph(*to, uiicons::Icon::Npc, x0 + 6.5f * s, y - 5.5f * s, 11 * s, kWhite, 1.0f, 2.4f);
+                } else if (row.icon == "mark:here") {
+                    sheet::circle(*to, x0 + 12 * s, y, 5 * s + 1.5f, kBlack, 0.85f);
+                    sheet::circle(*to, x0 + 12 * s, y, 5 * s, kWhite, 1.0f);
+                }
+                continue;
+            }
+            case refpages::Style::Button:
+                if (row.gold)
+                    sheet::rect(*to, b, 9 * s, kAccent, on ? 0.18f : 0.10f, kAccent2, 0.85f, 1.5f * s);
+                else
+                    sheet::rect(*to, b, 9 * s, kWhite, on ? 0.12f : kCellA);
+                continue;
+            case refpages::Style::Grid:  // 3.0.11-beta.32: the cells' tints; the columns' names on none
+                if (!row.gold)
+                    for (size_t k = 0; k < row.tags.size(); ++k) {
+                        uint32_t ground = 0, words = 0;
+                        float a = 0;
+                        gridTint(std::atoi(row.tags[k].c_str()), ground, a, words);
+                        sheet::rect(*to, gridCell(b, k, row.tags.size(), s), 4 * s, ground, a);
+                    }
+                continue;
+            case refpages::Style::Hint:
+                if (closing(p, i)) sheet::rect(*to, panel::Box{b.x, b.y, b.w, edge}, 0, kWhite, kLineA);
+                continue;
+            case refpages::Style::Portrait: {  // 3.0.11-beta.26: a card's head - its picture, its tags
+                const float side = 112 * s;
+                if (!row.picture.empty()) {
+                    sheet::rect(*to, panel::Box{b.x, b.y, side, side}, 14 * s, kBlack, 0.32f);
+                    if (const panel::Picture* pic = pictureOf(look, row))
+                        image(*to, pic, int(b.x + (side - float(pic->width)) / 2),
+                             int(b.y + (side - float(pic->height)) / 2));
+                }
+                const float tx = b.x + (row.picture.empty() ? 0 : side + 18 * s);
+                const std::vector<panel::Box> tags = tagBoxes(L, row, tx, b.y + 50 * s, b.x + b.w);
+                for (size_t k = 0; k < tags.size(); ++k) {
+                    const std::string& tag = row.tags[k];
+                    uint32_t tint = kWhite;
+                    float a = 0.08f;
+                    if (tag.rfind("gold:", 0) == 0) {
+                        tint = kAccent;
+                        a = kSelA;
+                    } else if (tag.size() > 4 && tag.rfind("el", 0) == 0 && tag[3] == ':') {
+                        tint = refpages::elementColour(tag[2] - '0');
+                        a = 0.15f;
+                    }
+                    sheet::rect(*to, tags[k], 7 * s, tint, a);
+                }
+                continue;
+            }
+            default:
+                break;
+        }
+        if (r.in) {  // 3.0.11-beta.26: a row inside a frame - the concept's picked, its icon, a link's underline
+            if (on) {
+                sheet::rect(*to, panel::Box{b.x - 8 * s, b.y, b.w + 16 * s, b.h}, 6 * s, kAccent, kSelA);
+                sheet::rect(*to, panel::Box{b.x - 8 * s, b.y, 3 * s, b.h}, 0, kAccent, 1.0f);
+            }
+            const float indent = !row.icon.empty() ? 34 * s : row.dot ? 16 * s : 0;
+            if (row.dot) {
+                const float middle = row.right.empty() || !row.icon.empty() ? b.h / 2 : 11 * s;
+                sheet::circle(*to, b.x + 6 * s, b.y + middle, 4 * s, row.dot, 1.0f);
+            }
+            if (const panel::Picture* pic = iconOf(look, row))
+                image(*to, pic, int(b.x + (24 * s - float(pic->width)) / 2), int(b.y + (b.h - float(pic->height)) / 2));
+            if (row.style == refpages::Style::Row && row.link.go != refpages::Go::None &&
+                (!row.icon.empty() || !row.right.empty())) {
+                const float middle = row.icon.empty() ? b.y + 11 * s : b.y + b.h / 2;
+                const float wide = std::min(L.measure(row.left, 14 * s, false), b.w - indent);
+                sheet::rect(*to, panel::Box{b.x + indent, middle + 7.5f * s, wide, edge}, 0, kAccent2, 0.55f);
+            }
+            continue;
+        }
+        if (on) {  // the concept's picked row: gold-tinted, its gold edge at the left
+            sheet::rect(*to, panel::Box{b.x - 6 * s, b.y, b.w + 12 * s, b.h}, 4 * s, kAccent, kSelA);
+            sheet::rect(*to, panel::Box{b.x - 6 * s, b.y, 3 * s, b.h}, 0, kAccent, 1.0f);
+        }
+        if (row.style == refpages::Style::Heading)
+            sheet::rect(*to, panel::Box{b.x, b.y + b.h - edge, b.w, edge}, 0, kWhite, kLineA);
+        if (row.dot) sheet::circle(*to, b.x + 6 * s, b.y + b.h / 2, 4 * s, row.dot, 1.0f);
+        if (const panel::Picture* pic = iconOf(look, row))  // 3.0.11-beta.15: an item's icon
+            image(*to, pic, int(b.x), int(b.y + (b.h - float(pic->height)) / 2));
+    }
+    to = &m.over;
+    if (total > L.bodyH && L.bodyH > 0) {  // the scroll bar: the concept's thumb
+        const float trackY = float(L.bodyY) + 10 * s, trackH = float(L.bodyH) - 20 * s;
+        const float thumbH = std::max(24 * s, trackH * float(L.bodyH) / float(total));
+        const float at = trackY + (trackH - thumbH) * float(scroll) / float(std::max(1, total - L.bodyH));
+        sheet::rect(*to, panel::Box{float(L.w) - 12 * s, at, 6 * s, thumbH}, 3 * s, kWhite, 0.22f);
+    }
+    if (const panel::Box tip = railTip(L, p, look); tip.w > 0)  // 3.0.11-beta.67: over all of it
+        sheet::rect(*to, tip, 8 * s, kCard, 0.97f, kWhite, kLine2A, edge);
+}
+
+void paintWorldPicture(panel::Picture& out, const Layout& L, const panel::Box& b, const WorldLook& w) {
+    panel::blank(out, int(b.w), int(b.h));
+    paintWorld(out, L, panel::Box{0, 0, b.w, b.h}, w);
+}
+
 }  // namespace uagfx::refwin

@@ -9,6 +9,7 @@
 #include "core/reference_pages.hpp"
 #include "core/reference_route.hpp"
 #include "core/reference_window.hpp"
+#include "core/ui_sheet_model.hpp"
 #include "test.hpp"
 
 using namespace uagfx;
@@ -262,6 +263,23 @@ TEST(reference_window_lays_itself_out) {
     CHECK(refwin::under(L, poring, rows, 0, card, card.search.x + 30, 30).part == refwin::Part::Search);
     CHECK_EQ(refwin::clampScroll(-40, total, L.bodyH), 0);
     CHECK_EQ(refwin::clampScroll(100000, 2000, 500), 1500);
+}
+
+// 3.0.18-beta.36 (docs/superpowers/plans/2026-11-09-uaui-migration.md, stage 5): uaUI's «Довідник» - what paint()
+// draws as the markup's data: the glass first, the body's rows cut at the body, every box inside the window
+TEST(reference_window_sheet_holds_what_it_paints) {
+    const refindex::Index ix = index();
+    const refwin::Layout L = refwin::layout(1920, 1080, 1.0f);
+    const refpages::Page p = refpages::mob(ix, Lang::Uk, 1002, ctx("prt_fild08"));
+    int total = 0;
+    const std::vector<refwin::Placed> rows = refwin::place(L, p, total);
+    sheet::Model m;
+    refwin::sheetOf(m, L, p, rows, 0, total, refwin::Look{});
+    CHECK(m.w == float(L.w) && m.h == float(L.h) && !m.under.boxes.empty() && !m.clipped.boxes.empty());
+    CHECK(m.under.boxes[0].box.w == float(L.w) && m.under.boxes[0].fillA > 0.5f);  // the glass
+    CHECK(m.clip.y == float(L.bodyY) && m.clip.h == float(L.bodyH));
+    for (const sheet::Box& b : m.clipped.boxes) CHECK(b.box.x >= -1 && b.box.x + b.box.w <= float(L.w) + 1);
+    CHECK(m.world.w == 0);  // no world map on a monster's card
 }
 
 TEST(reference_window_paints_and_words_its_rows) {
