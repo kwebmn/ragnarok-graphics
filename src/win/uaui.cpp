@@ -1360,6 +1360,9 @@ select selectbox option:checked { color: #e6cb8a; }
 .lw .grid4 { display: flex; flex-wrap: wrap; margin-top: 12dp; }
 .lw .grid4 .btn { width: 46%; margin: 0 4% 6dp 0; text-align: center; }
 .lw .btn.off { color: #9aa3b5; background-color: #ffffff08; }
+.ow { width: 380dp; }
+.ow .orow { display: flex; align-items: center; justify-content: space-between; margin: 4dp 0; min-height: 24dp; }
+.ow .orow input.range { width: 150dp; }
 .tw { width: 460dp; }
 .tw .count { margin-left: 10dp; font-size: 11.5dp; color: #9aa3b5; }
 .tw .msg { display: block; margin: 2dp 0 12dp 0; font-size: 13dp; line-height: 19dp; }
@@ -2338,9 +2341,13 @@ bool Doc::pointer(HWND game, UINT m, WPARAM wp, LPARAM lp, bool& onControl) {
     if (!pointerInTarget(game, m, lp, s.k, s.targetW, s.targetH, tx, ty)) return false;
     s.context->ProcessMouseMove(int(tx), int(ty), 0);
     Rml::Element* hover = s.context->GetHoverElement();
-    if (!hover || hover->GetOwnerDocument() != doc_) return false;
+    // 3.0.18-beta.82: a press taken here is let go here wherever the button comes up (a slider dragged off it)
+    const bool release = up && pressedIn_;
+    if ((!hover || hover->GetOwnerDocument() != doc_) && !release) return false;
     for (Rml::Element* e = hover; e && e != doc_; e = e->GetParentNode())
         if (e->IsClassSet("ctl")) onControl = true;
+    if (down) pressedIn_ = true;
+    if (up) pressedIn_ = false;
     if (wheel) s.context->ProcessMouseWheel(-float(GET_WHEEL_DELTA_WPARAM(wp)) / float(WHEEL_DELTA), 0);
     else if (down) s.context->ProcessMouseButtonDown(0, 0);
     else if (up) s.context->ProcessMouseButtonUp(0, 0);

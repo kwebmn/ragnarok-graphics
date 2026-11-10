@@ -131,6 +131,7 @@ private:
     int z_ = -1;
     int marked_ = -1;
     int px_ = INT_MIN, py_ = INT_MIN;  // 3.0.18-beta.70: where it was placed
+    bool pressedIn_ = false;           // 3.0.18-beta.82: its left button's press taken (its release is its own)
     std::map<std::string, std::string> props_;
     // 3.0.18-beta.59: its markup - the built-in one, its model's name; the player's file's time (0 none)
     std::string builtin_, model_name_;
