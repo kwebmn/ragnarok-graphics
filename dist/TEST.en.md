@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.18-beta.32 — what's new
+
+- **The chat, the chat wheel, whisper windows, the chat room and its making, the popup menu, emotions, the command list and the whisper settings now use "Нова бібліотека інтерфейсу (RmlUi)":** tabs with counters, the input with its channel and caret, filters, the name menu, scrolling, the wheel's ring with sectors are drawn by the new library. Keys, clicks, dragging and resizing the chat work as before.
+
 # uaRO Graphics 3.0.18-beta.31 — what's new
 
 - **NPC talk, requests ("Скільки?", invitations), the item choice, the support answer card, item and skill cards now use "Нова бібліотека інтерфейсу (RmlUi)":** the windows, numbered menu options, buttons, fields, lists with icons and scrolling, card slots are drawn by the new library. Clicks, keys and the controller work as before.
