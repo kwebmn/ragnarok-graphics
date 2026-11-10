@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.18-beta.35 — what's new
+
+- **The controller tiles, button assignment, the controller hint line and "Розміщення інтерфейсу" now use "Нова бібліотека інтерфейсу (RmlUi)":** tiles with icons, rows with buttons, the interface parts' frames with labels, the guides while dragging, the resize grip and the bar with "Скинути" and "Готово" are drawn by the new library. Controls work as before.
+
 # uaRO Graphics 3.0.18-beta.34 — what's new
 
 - **The pet, homunculus, mercenary, game "Налаштування", friends and party, guild, macros, tip of the day, menu (and the death screen) windows and the on-screen keyboard now use "Нова бібліотека інтерфейсу (RmlUi)":** bars, switches, volume sliders, lists, buttons and fields are drawn by the new library. Clicks, keys and the controller work as before.
