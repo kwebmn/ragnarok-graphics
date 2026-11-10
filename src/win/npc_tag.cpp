@@ -191,8 +191,6 @@ void draw(FrameRecord& record, gpu::Renderer& renderer) {
     const float r = std::max(2.0f, 2.5f * s.scale);  // the target's pixels, as the dots are
     if (!s.dotsShown)  // 3.0.18-beta.69: else on their sheet
         for (const State::Dot& d : s.dots) drawFill(record, d.x - r, d.y - r, 2 * r, 2 * r, s.k, kDot);
-    if (s.shown && !s.sheetShown && s.picture.width > 0)
-        drawPart(record, renderer, s.picture, s.texture, s.texW, s.texH, s.upload, s.layout.x, s.layout.y, s.k);
     const size_t added = record.commands().size() - before;  // under the game's own windows, as the world is
     if (added) record.moveLastBefore(added, world);
 }

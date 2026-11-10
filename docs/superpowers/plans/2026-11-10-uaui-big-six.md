@@ -38,3 +38,11 @@ Order (safest first; the cleanup last, once nothing needs the old code):
   drag by its ground), commands (tabs + two-column rows), the popup menu (rows, separators; a press elsewhere closes).
   The other windows stay sheets for now.
 - F beta.74: the message box live (message wrapped by RmlUi, buttons a flex row with their keys, centred by its own size)
+- G beta.75: [interface] uaui gone from the app (read and dropped), uaui::begin always on; the old picture paths out of
+  the windows and panels (scripts in the scratchpad g6/: strip.py - `if (uaui::ready[Anywhere]()) {..; return;}` render
+  bodies cut to their uaUI part, `if (!xShown) drawPart(...)` gone; renders.py - render*/paint* painters with blank+paint
+  and their calls; unused.py - helpers left unused): -1208 lines. Kept on purpose: world_signs' plate painter (it sizes
+  the signs), buff_overlay (no uaUI twin), the drag icons under the cursor, the parts' «byUaui» painters (pad tiles,
+  assign, carry, merc block - their words kept for the sheets).
+  Ruling: the core painters stay (51 of them, only the tests call them now) - removing them took 75 tests that also
+  check layouts, words and clicks; cost if wrong: ~10k lines of dead core code until those tests are rewritten.

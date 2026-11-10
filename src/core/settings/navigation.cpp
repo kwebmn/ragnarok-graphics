@@ -197,7 +197,7 @@ const std::vector<InterfaceSection>& interfaceSections() {
           "interface.panel_opacity",
           "interface.window_opacity", "interface.animations", "interface.cursor", "interface.lock_layout",
           "interface.layout_per_char", "interface.pack_icons", "interface.low_hp_edge",
-          "interface.reference", "interface.uaui", "interface.theme", "interface.uaui_showcase",
+          "interface.reference", "interface.theme", "interface.uaui_showcase",
           "interface.uaui_motion",
           "interface.uaui_effects",
           "interface.uaui_glass"}},

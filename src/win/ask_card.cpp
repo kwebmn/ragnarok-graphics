@@ -279,28 +279,8 @@ ac::Texts texts(const State& s) {
     return t;
 }
 
-std::vector<Words> gdiWords(const std::vector<ac::Words>& in) {
-    std::vector<Words> out;
-    for (const ac::Words& w : in)
-        out.push_back(Words{w.box, utf8Wide(w.text), w.rgb, w.px, w.bold,
-                            UINT(w.align == ac::Align::Right    ? DT_RIGHT
-                                 : w.align == ac::Align::Center ? DT_CENTER
-                                                                : DT_LEFT),
-                            false});
-    return out;
-}
-
 void render(State& s) {
-    if (uaui::ready()) {  // 3.0.18-beta.31: uaUI's window says it all again, no picture
-        ++s.sheetGen;
-        return;
-    }
-    const uicost::Paint cost("a request", s.layout.w, s.layout.h);
-    if (!panel::blank(s.picture, s.layout.w, s.layout.h)) return;
-    const ac::Texts t = texts(s);
-    ac::paint(s.picture, s.layout, s.card, s.show);
-    drawWords(s.picture, gdiWords(ac::words(s.layout, s.card, s.show, t)));
-    s.upload = true;
+    ++s.sheetGen;
 }
 
 void block(const State& s, HWND game) {
@@ -494,9 +474,6 @@ void draw(FrameRecord& record, gpu::Renderer& renderer) {
     // 3.0.18-beta.43: the shadow the driver's, under uaUI's window too
     s.shadow.draw(record, renderer, s.layout.x + int(g.x), s.layout.y + int(g.y), int(g.w), int(g.h),
                   12 * s.scale, s.scale, s.k);
-    if (!s.sheetShown) {  // 3.0.18-beta.31: uaUI draws the window (with the windows' layer)
-        drawPart(record, renderer, s.picture, s.texture, s.texW, s.texH, s.upload, s.layout.x, s.layout.y, s.k);
-    }
     if (cursor >= 0) record.moveLastBefore(record.commands().size() - size_t(cursor) - 1, size_t(cursor));
 }
 

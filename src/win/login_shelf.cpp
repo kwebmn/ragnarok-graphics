@@ -302,40 +302,8 @@ void model(State& s) {
 }
 
 void render(State& s) {
-    if (uaui::readyAnywhere()) {  // 3.0.18-beta.41: uaUI's - the data, no picture
-        model(s);
-        ++s.sheetGen;
-        return;
-    }
-    if (s.charsView) {  // 3.0.11-beta.181: «Персонажі»
-        const ls::CharLayout& L = s.charLayout;
-        if (!panel::blank(s.picture, L.w, L.h)) return;
-        ls::CharTexts t;
-        t.title = say(settings::Text::ShelfCharsTitle);
-        t.back = say(settings::Text::ShelfCharsBack);
-        t.newChar = say(settings::Text::ShelfNewChar);
-        t.noPassword = say(settings::Text::ShelfNoPasswordShort);
-        ls::paintCharacters(s.picture, L, s.charLogins, s.charShow);
-        drawWords(s.picture, gdi(ls::characterWords(L, s.charLogins, s.charShow, t)));
-        s.upload = true;
-        return;
-    }
-    const ls::Layout& L = s.layout;
-    if (!panel::blank(s.picture, L.w, L.h)) return;
-    const ls::Texts t = texts();
-    ls::paint(s.picture, L, s.cards, s.show, t);
-    // 3.0.11-beta.189: the cards' words within the row alone (one half in sight while it glides), the rest over all
-    std::vector<ls::Words> rowWords, others;
-    for (ls::Words& w : ls::words(L, s.cards, s.show, t)) (w.row ? rowWords : others).push_back(std::move(w));
-    const Rect row{int(std::floor(L.row.x)), 0, int(std::ceil(L.row.x + L.row.w)), L.h};
-    if (!rowWords.empty()) drawWords(s.picture, gdi(rowWords), row);
-    drawWords(s.picture, gdi(others));
-    if (s.menuFor >= 0 && s.menuFor < int(s.cards.size())) {
-        const std::vector<ls::MenuItem> items = ls::menu(s.cards[size_t(s.menuFor)]);
-        ls::paintMenu(s.picture, L, s.menuLayout, s.menuShow);
-        drawWords(s.picture, gdi(ls::menuWords(s.menuLayout, items, s.menuShow, menuTexts(), L.s)));
-    }
-    s.upload = true;
+    model(s);
+    ++s.sheetGen;
 }
 
 // 3.0.11-beta.181: «Персонажі»'s frame - the site's logins with characters (and their rows' places)

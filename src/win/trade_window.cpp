@@ -257,28 +257,8 @@ float measure(const std::string& utf8Text, float px, bool bold) {
     return float(wordsWidth(utf8Wide(utf8Text), px, bold));
 }
 
-std::vector<Words> gdiWords(const std::vector<iw::Words>& in) {
-    std::vector<Words> out;
-    for (const iw::Words& w : in)
-        out.push_back(Words{w.box, utf8Wide(w.text), w.rgb, w.px, w.bold,
-                            UINT(w.align == iw::Align::Right    ? DT_RIGHT
-                                 : w.align == iw::Align::Center ? DT_CENTER
-                                                                : DT_LEFT),
-                            false});
-    return out;
-}
-
 void render(State& s) {
-    if (uaui::ready()) {  // 3.0.18-beta.28: uaUI's window says it all again, no picture
-        ++s.sheetGen;
-        return;
-    }
-    const uicost::Paint cost("«Обмін»", s.layout.w, s.layout.h);
-    if (!panel::blank(s.picture, s.layout.w, s.layout.h)) return;
-    const tw::Texts t = texts(s.padNow);
-    tw::paint(s.picture, s.layout, s.me, s.them, s.show, t, measure);
-    drawWords(s.picture, gdiWords(tw::words(s.layout, s.me, s.them, s.show, t, measure)));
-    s.upload = true;
+    ++s.sheetGen;
 }
 
 void block(const State& s, HWND game) {

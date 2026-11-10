@@ -378,17 +378,6 @@ float measure(const std::string& utf8Text, float px, bool bold) {
     return float(wordsWidth(utf8Wide(utf8Text), px, bold));
 }
 
-std::vector<Words> gdiWords(const std::vector<iw::Words>& in) {
-    std::vector<Words> out;
-    for (const iw::Words& w : in)
-        out.push_back(Words{w.box, utf8Wide(w.text), w.rgb, w.px, w.bold,
-                            UINT(w.align == iw::Align::Right    ? DT_RIGHT
-                                 : w.align == iw::Align::Center ? DT_CENTER
-                                                                : DT_LEFT),
-                            false});
-    return out;
-}
-
 int freshSum(const State& s) {  // 3.0.11-beta.112: which ones are new (for the picture's key)
     int sum = 0;
     for (const int f : s.fresh) sum += f;
@@ -396,16 +385,7 @@ int freshSum(const State& s) {  // 3.0.11-beta.112: which ones are new (for the 
 }
 
 void render(State& s) {
-    if (uaui::ready()) {  // 3.0.18-beta.27: uaUI's window says it all again, no picture
-        ++s.gridGen;
-        return;
-    }
-    const uicost::Paint cost("«Речі»", s.layout.w, s.layout.h);  // 3.0.11-beta.55
-    if (!panel::blank(s.picture, s.layout.w, s.layout.h)) return;  // 3.0.11-beta.57: in the memory it had
-    const iw::Texts t = texts(s.padNow);
-    iw::paint(s.picture, s.layout, s.items, s.shownItems, s.show, t, measure);
-    drawWords(s.picture, gdiWords(iw::words(s.layout, s.items, s.shownItems, s.show, t, measure)));
-    s.upload = true;
+    ++s.gridGen;
 }
 
 void block(const State& s, HWND game) {  // the mouse's clicks over it are its own, not the world's
@@ -741,12 +721,6 @@ void draw(FrameRecord& record, gpu::Renderer& renderer) {
     // 3.0.18-beta.43: the shadow the driver's, under uaUI's window too
     s.shadow.draw(record, renderer, s.layout.x + int(g.x), s.layout.y + int(g.y), int(g.w), int(g.h),
                   12 * s.scale, s.scale, s.k);
-    if (!s.gridShown) {  // 3.0.18-beta.27: uaUI draws the window (with the windows' layer)
-        drawPart(record, renderer, s.picture, s.texture, s.texW, s.texH, s.upload, s.layout.x, s.layout.y, s.k);
-        if (windowstack::marked(winstack::Win::Items))  // 3.0.11-beta.108: its gold edge, the top of two or more
-            s.edge.draw(record, renderer, s.layout.x + int(g.x), s.layout.y + int(g.y), int(g.w), int(g.h),
-                        12 * s.scale, s.scale, s.k);
-    }
     const panel::Picture* icon = s.dragging && s.press >= 0 && size_t(s.press) < s.items.size()
                                      ? s.items[size_t(s.press)].icon
                                      : nullptr;

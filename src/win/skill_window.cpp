@@ -516,27 +516,8 @@ float measure(const std::string& utf8Text, float px, bool bold) {
     return float(wordsWidth(utf8Wide(utf8Text), px, bold));
 }
 
-std::vector<Words> gdiWords(const std::vector<kw::Words>& in) {
-    std::vector<Words> out;
-    for (const kw::Words& w : in)
-        out.push_back(Words{w.box, utf8Wide(w.text), w.rgb, w.px, w.bold,
-                            UINT(w.align == kw::Align::Right    ? DT_RIGHT
-                                 : w.align == kw::Align::Center ? DT_CENTER
-                                                                : DT_LEFT),
-                            false});
-    return out;
-}
-
 void render(State& s) {
-    if (uaui::ready()) {  // 3.0.18-beta.29: uaUI's window says it all again, no picture
-        ++s.sheetGen;
-        return;
-    }
-    const uicost::Paint cost("«Навички»", s.layout.w, s.layout.h);
-    if (!panel::blank(s.picture, s.layout.w, s.layout.h)) return;
-    kw::paint(s.picture, s.layout, s.data, s.show);
-    drawWords(s.picture, gdiWords(kw::words(s.layout, s.data, s.show, texts(), measure)));
-    s.upload = true;
+    ++s.sheetGen;
 }
 
 void block(const State& s, HWND game) {  // the mouse's clicks over it are its own, not the world's
@@ -980,12 +961,6 @@ void draw(FrameRecord& record, gpu::Renderer& renderer) {
     // 3.0.18-beta.43: the shadow the driver's, under uaUI's window too
     s.shadow.draw(record, renderer, s.layout.x + int(g.x), s.layout.y + int(g.y), int(g.w), int(g.h),
                   12 * s.scale, s.scale, s.k);
-    if (!s.sheetShown) {  // 3.0.18-beta.29: uaUI draws the window (with the windows' layer)
-        drawPart(record, renderer, s.picture, s.texture, s.texW, s.texH, s.upload, s.layout.x, s.layout.y, s.k);
-        if (windowstack::marked(winstack::Win::Skills))
-            s.edge.draw(record, renderer, s.layout.x + int(g.x), s.layout.y + int(g.y), int(g.w), int(g.h),
-                        12 * s.scale, s.scale, s.k);
-    }
     const kw::Skill* dragged = s.press.dragging ? skillAt(s, s.press.index) : nullptr;
     const panel::Picture* icon = dragged ? dragged->icon : nullptr;
     if (icon && icon->width > 0 && known) {  // 3.0.11-beta.106: the dragged skill's icon under the cursor

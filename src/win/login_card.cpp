@@ -303,15 +303,7 @@ std::vector<Words> gdiWords(const std::vector<lc::Words>& in) {
 }
 
 void render(State& s) {
-    if (uaui::readyAnywhere()) {  // 3.0.18-beta.33: uaUI's card says it all again, no picture
-        ++s.sheetGen;
-        return;
-    }
-    const uicost::Paint cost("the login", s.layout.w, s.layout.h);
-    if (!panel::blank(s.picture, s.layout.w, s.layout.h)) return;
-    lc::paint(s.picture, s.layout, s.fields, s.show);
-    drawWords(s.picture, gdiWords(lc::words(s.layout, s.fields, s.show, texts(s.view))));
-    s.upload = true;
+    ++s.sheetGen;
 }
 
 void block(const State& s, HWND game) {
@@ -1224,16 +1216,7 @@ void draw(FrameRecord& record, gpu::Renderer& renderer) {
         const panel::Box& g = s.layout.glass;
         s.shadow.draw(record, renderer, s.layout.x + int(g.x), s.layout.y + int(g.y), int(g.w), int(g.h),
                       14 * s.scale, s.scale, s.k);  // 3.0.18-beta.43: under uaUI's card too
-        if (!s.sheetShown) {  // 3.0.18-beta.33: uaUI draws the card (with the windows' layer); ▾'s list stays here
-            drawPart(record, renderer, s.picture, s.texture, s.texW, s.texH, s.upload, s.layout.x, s.layout.y, s.k);
-        }
-        if (!s.sheetShown && s.dropOpen && s.dropPicture.width > 0)  // 3.0.11-beta.177: ▾'s list over the card
-            drawPart(record, renderer, s.dropPicture, s.dropTexture, s.dropTexW, s.dropTexH, s.dropUpload,
-                     s.layout.x + int(s.drop.x), s.layout.y + int(s.drop.y), s.k);
     }
-    if (!s.chromeShown && s.chrome.w > 0 && s.chromePicture.width > 0)  // 3.0.11-beta.173: the strip at the foot
-        drawPart(record, renderer, s.chromePicture, s.chromeTexture, s.chromeTexW, s.chromeTexH, s.chromeUpload,
-                 s.chrome.x, s.chrome.y, s.k);
     if (cursor >= 0) record.moveLastBefore(record.commands().size() - size_t(cursor) - 1, size_t(cursor));
 }
 

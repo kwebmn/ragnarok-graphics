@@ -179,27 +179,8 @@ wc::Texts texts() {
     return t;
 }
 
-std::vector<Words> gdiWords(const std::vector<wc::Words>& in) {
-    std::vector<Words> out;
-    for (const wc::Words& w : in)
-        out.push_back(Words{w.box, utf8Wide(w.text), w.rgb, w.px, w.bold,
-                            UINT(w.align == wc::Align::Right    ? DT_RIGHT
-                                 : w.align == wc::Align::Center ? DT_CENTER
-                                                                : DT_LEFT),
-                            false});
-    return out;
-}
-
 void render(One& o) {
-    if (uaui::ready()) {  // 3.0.18-beta.32: uaUI's card says it all again, no picture
-        ++o.sheetGen;
-        return;
-    }
-    const uicost::Paint cost("a whisper", o.layout.w, o.layout.h);
-    if (!panel::blank(o.picture, o.layout.w, o.layout.h)) return;
-    wc::paint(o.picture, o.layout, o.card, o.hover);
-    drawWords(o.picture, gdiWords(wc::words(o.layout, o.card, o.hover, texts())));
-    o.upload = true;
+    ++o.sheetGen;
 }
 
 // The cards' boxes as the game's mouse sees them (the topmost one's: the part takes the world's clicks under it)

@@ -636,29 +636,8 @@ void experience(State& s, uint16_t type, uint32_t value) {
     add(s, std::move(l));
 }
 
-std::vector<Words> gdiWords(const std::vector<cp::Words>& in) {
-    std::vector<Words> out;
-    for (const cp::Words& w : in)
-        out.push_back(Words{w.box, utf8Wide(w.text), w.rgb, w.px, w.bold,
-                            UINT(w.align == cp::Align::Right    ? DT_RIGHT
-                                 : w.align == cp::Align::Center ? DT_CENTER
-                                                                : DT_LEFT),
-                            false});
-    return out;
-}
-
 void render(State& s) {
-    if (uaui::ready()) {  // 3.0.18-beta.32: uaUI's chat says it all again, no picture
-        ++s.sheetGen;
-        return;
-    }
-    const uicost::Paint cost("chat", s.layout.w, s.layout.h);  // 3.0.11-beta.55
-    if (!panel::blank(s.picture, s.layout.w, s.layout.h)) return;  // 3.0.11-beta.57: in the memory it had
-    const cp::Texts t = texts();
-    cp::paint(s.picture, s.layout, s.rows, s.input, s.show, t, measure);
-    drawWords(s.picture, gdiWords(cp::words(s.layout, s.rows, s.input, s.show, t, measure)));
-    if (s.layout.quiet) panel::fade(s.picture, 0.72f);
-    s.upload = true;
+    ++s.sheetGen;
 }
 
 // The tab's lines as rows, made again when a line came or changed, the tab or the width changed

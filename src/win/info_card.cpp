@@ -355,27 +355,8 @@ ic::Texts texts() {
     return t;
 }
 
-std::vector<Words> gdiWords(const std::vector<ic::Words>& in) {
-    std::vector<Words> out;
-    for (const ic::Words& w : in)
-        out.push_back(Words{w.box, utf8Wide(w.text), w.rgb, w.px, w.bold,
-                            UINT(w.align == ic::Align::Right    ? DT_RIGHT
-                                 : w.align == ic::Align::Center ? DT_CENTER
-                                                                : DT_LEFT),
-                            false});
-    return out;
-}
-
 void render(One& o) {
-    if (uaui::ready()) {  // 3.0.18-beta.31: uaUI's card says it all again, no picture
-        ++o.sheetGen;
-        return;
-    }
-    const uicost::Paint cost("a card", o.layout.w, o.layout.h);
-    if (!panel::blank(o.picture, o.layout.w, o.layout.h)) return;
-    ic::paint(o.picture, o.layout, o.card, o.show);
-    drawWords(o.picture, gdiWords(ic::words(o.layout, o.card, o.show, texts())));
-    o.upload = true;
+    ++o.sheetGen;
 }
 
 Blocker blockerOf(Kind k) { return k == Kind::Item ? Blocker::ItemCard : Blocker::SkillCard; }

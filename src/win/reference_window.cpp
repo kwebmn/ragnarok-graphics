@@ -709,20 +709,11 @@ void render(State& s) {
     const uicost::Paint cost("«Довідник»", s.layout.w, s.layout.h);  // 3.0.11-beta.55
     s.chrome = refwin::chrome(s.layout, s.page, textsOf(s));  // 3.0.11-beta.26
     const refwin::Look look = lookOf(s);
-    if (uaui::ready()) {  // 3.0.18-beta.36: uaUI's window - its data, no picture
-        refwin::sheetOf(s.model, s.layout, s.page, s.rows, s.scroll, s.total, look);
-        if (s.model.world.w > 0) refwin::paintWorldPicture(s.worldSheet, s.layout, s.model.world, look.world);
-        s.sheetWords = wordsOf(s, look);
-        ++s.sheetGen;
-        s.dirty = false;
-        s.hot.clear();
-        s.parts.clear();
-        return;
-    }
-    refwin::paint(s.picture, s.layout, s.page, s.rows, s.scroll, s.total, look);
-    drawWords(s.picture, wordsOf(s, look));
+    refwin::sheetOf(s.model, s.layout, s.page, s.rows, s.scroll, s.total, look);
+    if (s.model.world.w > 0) refwin::paintWorldPicture(s.worldSheet, s.layout, s.model.world, look.world);
+    s.sheetWords = wordsOf(s, look);
+    ++s.sheetGen;
     s.dirty = false;
-    s.upload = true;
     s.hot.clear();
     s.parts.clear();
 }

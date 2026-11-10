@@ -92,28 +92,6 @@ void keepState(const State& s) {
     if (!writeFileAtomic(path, text)) LOG_INFO("tracker: %s cannot be written", path.c_str());
 }
 
-std::vector<Words> gdiWords(const std::vector<tk::Words>& in) {
-    std::vector<Words> out;
-    for (const tk::Words& w : in)
-        out.push_back(Words{w.box, utf8Wide(w.text), w.rgb, w.px, w.bold,
-                            UINT(w.align == tk::Align::Right    ? DT_RIGHT
-                                 : w.align == tk::Align::Center ? DT_CENTER
-                                                                : DT_LEFT),
-                            false});
-    return out;
-}
-
-void render(State& s) {
-    const uicost::Paint cost("tracker", s.layout.w, s.layout.h);
-    if (!panel::blank(s.picture, s.layout.w, s.layout.h)) return;
-    tk::paint(s.picture, s.layout, s.entries, s.hover);
-    drawWords(s.picture, gdiWords(tk::words(s.layout, s.entries,
-                                            tk::Texts{say(settings::Text::TrackerTitle),
-                                                      say(settings::Text::TrackerMore)},
-                                            s.folded)));
-    s.upload = true;
-}
-
 void block(const State& s, HWND game) {  // the mouse's clicks over it are its own
     RECT client{};
     if (s.targetW <= 0 || s.targetH <= 0 || !GetClientRect(game, &client)) return;
@@ -359,7 +337,6 @@ void frame(HWND game, bool on, double k, int targetWidth, int targetHeight) {
     s.viewKey = key;
     if (key != s.key && !uaui::ready()) {  // 3.0.18-beta.25: uaUI's panel needs no picture
         s.key = key;
-        render(s);
     }
     s.shown = true;
     s.uiShown = uiFrame(s);

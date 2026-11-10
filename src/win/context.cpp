@@ -1090,7 +1090,8 @@ void Context::present(const Rect& source, bool waitForVblank) {
     uaui::setEffects(config.uauiEffects);  // 3.0.18-beta.61
     uaui::setGlass(config.uauiGlass && startup().choice.renderer == Renderer::Uaro &&
                    startup().choice.api != Api::D3d11);  // 3.0.18-beta.64: the renderer's Backdrop is Direct3D 12's
-    uaui::begin(window, config.uaui, gameCodePage(config), pk, pw, ph, config.uiTheme);  // 3.0.18-beta.11: uaUI's frame, its parts next
+    // 3.0.18-beta.75 (stage 6): uaUI always - the old painters are gone ([interface] uaui read and dropped)
+    uaui::begin(window, true, gameCodePage(config), pk, pw, ph, config.uiTheme);  // 3.0.18-beta.11: uaUI's frame, its parts next
     netwatchwin::frame();  // 3.0.11-beta.122: the map server's connection read each second (the minimap's badge)
     netsmoothwin::setOn(config.smoothFixes);  // 3.0.11-beta.123: [interface] smooth_fixes
     netwatchwin::setQuickAcks(config.quickAcks);  // 3.0.11-beta.128: [debug] quick_acks

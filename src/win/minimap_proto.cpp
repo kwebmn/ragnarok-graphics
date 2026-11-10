@@ -874,26 +874,13 @@ void render(State& s) {
     minimap::Scene sc = sceneOf(s);
     sc.cache = &s.mapCache;  // 3.0.13-beta.2: the map's pixels made once round the view
     const int madeBefore = s.mapCache.made;
-    if (uaui::ready()) {  // 3.0.18-beta.26: the map's square alone a picture, the rest uaUI's
-        minimap::paintMapSquare(s.square, s.layout, sc);
-        drawWords(s.square, gdiWords(minimap::mapWords(s.layout, sc)));
-        ++s.squareGen;
-        s.uiWords = minimap::frameWords(s.layout, sc, t);
-        s.uiBars = minimap::netBars(s.layout, sc);
-        ++s.uiGen;
-        s.dirty = false;
-        return;
-    }
-    minimap::paint(s.picture, s.layout, sc, t);
-    if (s.mapCache.made != madeBefore && s.cacheTold < 5) {
-        ++s.cacheTold;
-        LOG_INFO("minimap: the map's pixels made round the view (%dx%d) - the steps copy them out", s.mapCache.w,
-                 s.mapCache.h);
-    }
-    drawWords(s.picture, gdiWords(minimap::words(s.layout, sc, t)));
-    if (s.look == minimap::Look::Faded) panel::fade(s.picture, minimap::opacity(s.look));  // Ctrl+Tab's see-through
+    minimap::paintMapSquare(s.square, s.layout, sc);
+    drawWords(s.square, gdiWords(minimap::mapWords(s.layout, sc)));
+    ++s.squareGen;
+    s.uiWords = minimap::frameWords(s.layout, sc, t);
+    s.uiBars = minimap::netBars(s.layout, sc);
+    ++s.uiGen;
     s.dirty = false;
-    s.upload = true;
 }
 
 void renderBig(State& s) {
@@ -921,19 +908,11 @@ void renderBig(State& s) {
         minimap::paintBigMap(s.bigMap, s.bigLayout, sc);
     }
     const std::string cell = s.cellKnown ? std::to_string(s.cell.x) + ", " + std::to_string(s.cell.y) : "";
-    if (uaui::ready()) {  // 3.0.18-beta.42: the square a picture, the rest uaUI's
-        minimap::paintBigSquare(s.bigSquare, s.bigMap, s.bigLayout, sc);
-        s.bigUiWords = minimap::bigWords(s.bigLayout, sc, shortTitle(s, s.map) + " \xC2\xB7 " + s.map, cell, names,
-                                         styleName);
-        ++s.bigGen;
-        s.bigDirty = false;
-        return;
-    }
-    minimap::paintBig(s.bigPicture, s.bigMap, s.bigLayout, sc);
-    drawWords(s.bigPicture, gdiWords(minimap::bigWords(s.bigLayout, sc, shortTitle(s, s.map) + " \xC2\xB7 " + s.map,
-                                                       cell, names, styleName)));
+    minimap::paintBigSquare(s.bigSquare, s.bigMap, s.bigLayout, sc);
+    s.bigUiWords = minimap::bigWords(s.bigLayout, sc, shortTitle(s, s.map) + " \xC2\xB7 " + s.map, cell, names,
+                                     styleName);
+    ++s.bigGen;
     s.bigDirty = false;
-    s.bigUpload = true;
 }
 
 bool toTarget(const State& s, HWND game, int x, int y, float& tx, float& ty) {

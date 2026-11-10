@@ -230,28 +230,6 @@ void take(State& s, uint32_t account, const std::string& name, const std::string
     seat.online = online;
 }
 
-std::vector<Words> gdiWords(const std::vector<pp::Words>& in) {
-    std::vector<Words> out;
-    for (const pp::Words& w : in)
-        out.push_back(Words{w.box, utf8Wide(w.text), w.rgb, w.px, w.bold,
-                            UINT(w.align == pp::Align::Right    ? DT_RIGHT
-                                 : w.align == pp::Align::Center ? DT_CENTER
-                                                                : DT_LEFT),
-                            false});
-    return out;
-}
-
-void render(State& s) {
-    const uicost::Paint cost("party", s.layout.w, s.layout.h);  // 3.0.11-beta.55
-    if (!panel::blank(s.picture, s.layout.w, s.layout.h)) return;  // 3.0.11-beta.57: in the memory it had
-    pp::paint(s.picture, s.layout, s.members, kLow);
-    const settings::Lang lang = language();
-    drawWords(s.picture, gdiWords(pp::words(s.layout, s.members, kLow, settings::tr(lang, settings::Text::PartyOffline),
-                                            settings::tr(lang, settings::Text::PartyTitle),
-                                            settings::tr(lang, settings::Text::PartyDead))));
-    s.upload = true;
-}
-
 void uiRect(float& x, float& y, float& w, float& h);
 
 void block(const State& s, HWND game) {  // the mouse's clicks over it are its own
@@ -884,7 +862,6 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     if (const std::string drawn = key + '#' + std::to_string(uistyle::generation()); drawn != s.key) {  // its grounds
         s.key = drawn;
         s.uiShown = uiFrame(s);  // 3.0.18-beta.19: by uaUI while [interface] uaui is on
-        if (!s.uiShown) render(s);
     } else {
         s.uiShown = uiFrame(s);
     }

@@ -380,10 +380,6 @@ void draw(FrameRecord& record, gpu::Renderer& renderer) {
         const float done = b.w * float(std::clamp(b.hp, 0, 100)) / 100.0f;
         drawFill(record, b.x, b.y, done, b.h, s.k, mobhp::fillColour(b.hp, b.rank));
     }
-    if (s.text && !s.sheetShown)
-        drawPart(record, renderer, s.picture, s.texture, s.texW, s.texH, s.upload, s.textX, s.textY, s.k);
-    if (!s.sheetShown && s.countShown > 0 && s.countPic.width > 0)  // 3.0.13-beta.13: «⚔ N» over the character
-        drawPart(record, renderer, s.countPic, s.countTex, s.countW, s.countH, s.countUpload, s.countX, s.countY, s.k);
     const size_t added = record.commands().size() - before;  // the per cent's upload too, when it went now
     if (added) record.moveLastBefore(added, world);
 }

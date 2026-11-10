@@ -2004,6 +2004,6 @@ TEST(config_interface_vend_setup) {
 TEST(config_has_the_new_interface_library_on_by_default) {
     CHECK(noUi("").uaui);
     CHECK(!noUi("uaui = 0\n").uaui);
-    const settings::IniSetting* s = settings::findSetting("interface.uaui");
-    CHECK(s != nullptr);
+    // 3.0.18-beta.75 (stage 6): no switch in the app - uaUI draws the new interface always
+    CHECK(settings::findSetting("interface.uaui") == nullptr);
 }

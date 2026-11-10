@@ -120,17 +120,6 @@ ss::Texts texts() {
     return t;
 }
 
-std::vector<Words> gdi(const std::vector<ss::Words>& in) {
-    std::vector<Words> out;
-    for (const ss::Words& w : in)
-        out.push_back(Words{w.box, utf8Wide(w.text), w.rgb, w.px, w.bold,
-                            UINT(w.align == ss::Align::Center  ? DT_CENTER
-                                 : w.align == ss::Align::Right ? DT_RIGHT
-                                                               : DT_LEFT),
-                            false});
-    return out;
-}
-
 std::string* fieldText(State& s, ss::Field f) {
     switch (f) {
         case ss::Field::Email: return &s.email;
@@ -405,17 +394,7 @@ void paste(State& s) {
     wipe(add);
 }
 
-void render(State& s) {
-    const ss::Layout& L = s.layout;
-    if (uaui::readyAnywhere()) {  // 3.0.18-beta.40: uaUI's card said again, no picture
-        ++s.sheetGen;
-        return;
-    }
-    if (!panel::blank(s.picture, L.w, L.h)) return;
-    ss::paint(s.picture, L, s.show);
-    drawWords(s.picture, gdi(ss::words(L, s.show, texts())));
-    s.upload = true;
-}
+void render(State& s) { ++s.sheetGen; }
 
 }  // namespace
 

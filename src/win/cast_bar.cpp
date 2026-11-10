@@ -110,27 +110,8 @@ void hide(State& s, uint32_t live) {
     s.shown = false;
 }
 
-std::vector<Words> gdiWords(const std::vector<cb::Words>& in) {
-    std::vector<Words> out;
-    for (const cb::Words& w : in)
-        out.push_back(Words{w.box, utf8Wide(w.text), w.rgb, w.px, w.bold,
-                            UINT(w.align == cb::Align::Right    ? DT_RIGHT
-                                 : w.align == cb::Align::Center ? DT_CENTER
-                                                                : DT_LEFT),
-                            false});
-    return out;
-}
-
 void render(State& s) {
-    if (uaui::ready()) {  // 3.0.18-beta.38: uaUI's cast said again, no picture
-        ++s.sheetGen;
-        return;
-    }
-    const uicost::Paint cost("cast", s.layout.w, s.layout.h);  // 3.0.11-beta.55
-    if (!panel::blank(s.picture, s.layout.w, s.layout.h)) return;  // 3.0.11-beta.57: in the memory it had
-    cb::paint(s.picture, s.layout, s.data);
-    drawWords(s.picture, gdiWords(cb::words(s.layout, s.data)));
-    s.upload = true;
+    ++s.sheetGen;
 }
 
 }  // namespace

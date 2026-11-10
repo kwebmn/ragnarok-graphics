@@ -162,29 +162,8 @@ cw::Texts texts() {
     return t;
 }
 
-std::vector<Words> gdiWords(const std::vector<cw::Words>& in) {
-    std::vector<Words> out;
-    for (const cw::Words& w : in)
-        out.push_back(Words{w.box, utf8Wide(w.text), w.rgb, w.px, w.bold,
-                            UINT(w.align == cw::Align::Right    ? DT_RIGHT
-                                 : w.align == cw::Align::Center ? DT_CENTER
-                                                                : DT_LEFT),
-                            w.wrap});
-    return out;
-}
-
 void render(State& s) {
-    if (uaui::ready()) {  // 3.0.18-beta.32: uaUI's wheel says it all again, no picture
-        ++s.sheetGen;
-        return;
-    }
-    const uicost::Paint cost("the chat wheel", s.layout.w, s.layout.h);
-    if (!panel::blank(s.picture, s.layout.w, s.layout.h)) return;
-    const std::vector<std::string>& list = items(s);
-    cw::paint(s.picture, s.layout, int(list.size()), s.hover, s.page, s.channel,
-              s.page == cw::Page::Emotes ? &s.icons : nullptr);
-    drawWords(s.picture, gdiWords(cw::words(s.layout, list, s.hover, s.page, s.channel, texts())));
-    s.upload = true;
+    ++s.sheetGen;
 }
 
 // The emotions' pictures for this page's commands (the game's list's, by their number in it)

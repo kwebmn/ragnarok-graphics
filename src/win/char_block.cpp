@@ -311,33 +311,6 @@ cb::Texts texts() {
     return t;
 }
 
-std::vector<Words> gdiWords(const std::vector<cb::Words>& in) {
-    std::vector<Words> out;
-    for (const cb::Words& w : in)
-        out.push_back(Words{w.box, utf8Wide(w.text), w.rgb, w.px, w.bold,
-                            UINT(w.align == cb::Align::Right    ? DT_RIGHT
-                                 : w.align == cb::Align::Center ? DT_CENTER
-                                                                : DT_LEFT),
-                            false});
-    return out;
-}
-
-// The warning's picture and the flare's: the block's size, its place (made again when what they show changes)
-void renderWarning(State& s) {
-    const uicost::Paint cost("character block's warning", s.layout.w, s.layout.h);  // 3.0.11-beta.55
-    const cb::Texts t = texts();
-    const std::string key = std::to_string(s.layout.w) + 'x' + std::to_string(s.layout.h) + ';' +
-                            std::to_string(int(s.layout.view)) + ';' + std::to_string(s.data.hp) + '/' +
-                            std::to_string(s.data.hpMost);
-    if (key == s.warning.key) return;
-    s.warning.key = key;
-    panel::Picture& p = s.warning.picture;
-    panel::blank(p, s.layout.w, s.layout.h);  // 3.0.18-beta.14: recorded for uaUI while it is on
-    cb::paintWarning(p, s.layout, s.data, t);
-    drawWords(p, gdiWords(cb::warningWords(s.layout, s.data, t)));
-    s.warning.upload = true;
-}
-
 void renderFlare(State& s) {
     const uicost::Paint cost("character block's flare", s.layout.w, s.layout.h);  // 3.0.11-beta.55
     const std::string key = std::to_string(s.layout.w) + 'x' + std::to_string(s.layout.h) + ';' +
@@ -348,15 +321,6 @@ void renderFlare(State& s) {
     panel::blank(p, s.layout.w, s.layout.h);  // 3.0.18-beta.14
     cb::paintFlare(p, s.layout);
     s.flare.upload = true;
-}
-
-void render(State& s) {
-    const uicost::Paint cost("character block", s.layout.w, s.layout.h);  // 3.0.11-beta.55
-    if (!panel::blank(s.picture, s.layout.w, s.layout.h)) return;  // 3.0.11-beta.57: in the memory it had
-    const cb::Texts t = texts();
-    cb::paint(s.picture, s.layout, s.data, t, s.show);
-    drawWords(s.picture, gdiWords(cb::words(s.layout, s.data, t, s.show)));
-    s.upload = true;
 }
 
 void uiRect(float& x, float& y, float& w, float& h);
@@ -1014,9 +978,7 @@ void frame(HWND game, CharacterLook look, unsigned codePage, double k, int targe
     }
     if (const std::string drawn = key + '#' + std::to_string(uistyle::generation()); drawn != s.key) {  // its grounds
         s.key = drawn;
-        render(s);
     }
-    if (show.warning) renderWarning(s);
     if (now - s.levelAt < motion::kLevelMs) renderFlare(s);
     s.shown = true;
     block(s, game);

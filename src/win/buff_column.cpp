@@ -303,28 +303,6 @@ bp::Texts texts() {
                      say(settings::Text::BuffsUnstar)};
 }
 
-std::vector<Words> gdiWords(const std::vector<bp::Words>& in) {
-    std::vector<Words> out;
-    for (const bp::Words& w : in)
-        out.push_back(Words{w.box, utf8Wide(w.text), w.rgb, w.px, w.bold,
-                            UINT(w.align == bp::Align::Right    ? DT_RIGHT
-                                 : w.align == bp::Align::Center ? DT_CENTER
-                                                                : DT_LEFT),
-                            false, w.halo});
-    return out;
-}
-
-void render(State& s) {
-    const uicost::Paint cost("buffs", s.layout.w, s.layout.h);  // 3.0.11-beta.55
-    if (!panel::blank(s.picture, s.layout.w, s.layout.h)) return;  // 3.0.11-beta.57: in the memory it had
-    const bp::Texts t = texts();
-    bp::paint(s.picture, s.layout, s.entries, s.hover);
-    bp::paintTip(s.picture, s.layout, s.entries, s.tip, t);
-    drawWords(s.picture, gdiWords(bp::words(s.layout, s.entries, s.tip, t)));
-    s.upload = true;
-    s.paintedAt = GetTickCount64();
-}
-
 void block(const State& s, HWND game) {  // the mouse's clicks over it are its own, not the game's
     RECT client{};
     if (s.targetW <= 0 || s.targetH <= 0 || !GetClientRect(game, &client)) return;
@@ -698,7 +676,6 @@ void frame(HWND game, BuffsLook look, BuffsOverflow overflow, double k, int targ
     if (shape != s.shape || (fill != s.fill && now - s.paintedAt >= kRepaintMs)) {
         s.shape = shape;
         s.fill = fill;
-        if (!uaui::ready()) render(s);  // 3.0.18-beta.20: uaUI's column needs no picture
         s.paintedAt = now;
     }
     s.uiShown = uiFrame(s);

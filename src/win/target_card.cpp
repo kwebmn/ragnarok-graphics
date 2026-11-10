@@ -141,26 +141,6 @@ tc::Texts texts() {
                      settings::tr(l, settings::Text::TargetPadAttack), settings::tr(l, settings::Text::TargetPadNext)};
 }
 
-std::vector<Words> gdiWords(const std::vector<tc::Words>& in) {
-    std::vector<Words> out;
-    for (const tc::Words& w : in)
-        out.push_back(Words{w.box, utf8Wide(w.text), w.rgb, w.px, w.bold,
-                            UINT(w.align == tc::Align::Right    ? DT_RIGHT
-                                 : w.align == tc::Align::Center ? DT_CENTER
-                                                                : DT_LEFT),
-                            false});
-    return out;
-}
-
-void render(State& s) {
-    const uicost::Paint cost("target's card", s.layout.w, s.layout.h);  // 3.0.11-beta.55
-    if (!panel::blank(s.picture, s.layout.w, s.layout.h)) return;  // 3.0.11-beta.57: in the memory it had
-    const tc::Texts t = texts();
-    tc::paint(s.picture, s.layout, s.data, s.hoverBook);
-    drawWords(s.picture, gdiWords(tc::words(s.layout, s.data, t, s.hoverBook)));
-    s.upload = true;
-}
-
 bool toTarget(const State& s, HWND game, int x, int y, float& tx, float& ty) {
     RECT client{};
     if (!GetClientRect(game, &client) || client.right <= 0 || client.bottom <= 0) return false;
@@ -533,7 +513,6 @@ void frame(HWND game, bool on, bool padHints, double k, int targetWidth, int tar
     if (!s.uiShown) {
         if (const std::string drawn = key + '#' + std::to_string(uistyle::generation()); drawn != s.key) {
             s.key = drawn;  // its grounds
-            render(s);
         }
     }
     if (!s.shown) s.shownAt = now;

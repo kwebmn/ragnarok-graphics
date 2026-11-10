@@ -403,8 +403,6 @@ const std::vector<IniSetting>& iniSettings() {
         {"interface", "animations", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::InterfaceAnimations,
          Text::InterfaceAnimationsHint, ""},
         // 3.0.18-beta.7: the RmlUi spike's card (win/uaui)
-        {"interface", "uaui", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::InterfaceUaui,
-         Text::InterfaceUauiHint, ""},
         // 3.0.18-beta.13: uaUI's theme
         {"interface", "theme", Page::Interface, Control::Choice, 0, 0, 0, {"standard", "classic", "contrast"},
          {Text::InterfaceThemeStandard, Text::InterfaceThemeClassic, Text::InterfaceThemeContrast},
@@ -1417,7 +1415,6 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "interface.signs") return c.worldSigns ? "1" : "0";        // 3.0.16-beta.7
     if (k == "interface.ground_counts") return c.groundCounts ? "1" : "0";  // 3.0.11-beta.143
     if (k == "interface.animations") return c.animations ? "1" : "0";  // 3.0.11-beta.46
-    if (k == "interface.uaui") return c.uaui ? "1" : "0";  // 3.0.18-beta.7
     if (k == "interface.uaui_motion") return c.uauiMotion ? "1" : "0";  // 3.0.18-beta.58
     if (k == "interface.uaui_effects") return c.uauiEffects ? "1" : "0";  // 3.0.18-beta.61
     if (k == "interface.uaui_glass") return c.uauiGlass ? "1" : "0";  // 3.0.18-beta.64

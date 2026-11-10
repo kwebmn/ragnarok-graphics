@@ -857,17 +857,6 @@ hb::Texts texts() {
     return t;
 }
 
-std::vector<Words> gdiWords(const std::vector<hb::Words>& in) {
-    std::vector<Words> out;
-    for (const hb::Words& w : in)
-        out.push_back(Words{w.box, utf8Wide(w.text), w.rgb, w.px, w.bold,
-                            UINT(w.align == hb::Align::Right    ? DT_RIGHT
-                                 : w.align == hb::Align::Center ? DT_CENTER
-                                                                : DT_LEFT),
-                            false});
-    return out;
-}
-
 // ---- 3.0.18-beta.21 (the owner: «Переписывать 73 части в разметку RmlUi вручную»): the bar as an RmlUi document while
 // [interface] uaui is on - every part core hotbar's view() places and says (the cells' states, plates, bars, the
 // delay's sweep, the badges, the pills, the tips); drawn only (passive): its clicks, drags, wheel and keys stay this
@@ -1248,15 +1237,6 @@ bool uiFrame(State& s, const hb::Show& show) {
     u.doc.place(s.layout.x, s.layout.y);
     u.doc.show(true);
     return true;
-}
-
-void render(State& s, const hb::Show& show) {
-    const uicost::Paint cost("hotbar", s.layout.w, s.layout.h);  // 3.0.11-beta.55
-    if (!panel::blank(s.picture, s.layout.w, s.layout.h)) return;  // 3.0.11-beta.57: in the memory it had
-    const hb::Texts t = texts();
-    hb::paint(s.picture, s.layout, s.cells, show, t);
-    drawWords(s.picture, gdiWords(hb::words(s.layout, s.cells, s.row, show, t)));
-    s.upload = true;
 }
 
 // The states' changes in the log: the game waiting a target (the first ones), the cells the map forbids
@@ -1647,7 +1627,6 @@ void frame(HWND game, bool on, bool ownBars, bool padHints, bool ammo, bool coun
     }
     if (const std::string drawn = key + '#' + std::to_string(uistyle::generation()); drawn != s.key) {  // its grounds
         s.key = drawn;
-        if (!uaui::ready()) render(s, show);  // 3.0.18-beta.21: uaUI's bar needs no picture
     }
     s.uiShown = uiFrame(s, show);
     s.shown = true;

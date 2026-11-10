@@ -8213,16 +8213,6 @@ constexpr Entry kTexts[] = {
      "Опыт: Base +{1} · Job +{2}"},
     {Text::ChatSysNoSp, "Not enough SP", "Недостатньо SP", "Недостаточно SP"},  // 3.0.12-beta.3
     {Text::ChatMenuCopyLine, "Copy the line", "Копіювати рядок", "Копировать строку"},  // 3.0.11-beta.244
-    // 3.0.18-beta.7: the RmlUi spike
-    {Text::InterfaceUaui, "New interface library (RmlUi)", "Нова бібліотека інтерфейсу (RmlUi)",
-     "Новая библиотека интерфейса (RmlUi)"},
-    {Text::InterfaceUauiHint,
-     "The parts of the new interface already moved to the new library are drawn by it: one theme, smooth motion, "
-     "less work for the processor. The rest stay as they are. For testing.",
-     "Частини нового інтерфейсу, які вже перенесено на нову бібліотеку, малює вона: одна тема, плавний рух, менше "
-     "роботи процесору. Решта лишаються як є. Для перевірки.",
-     "Части нового интерфейса, уже перенесённые на новую библиотеку, рисует она: одна тема, плавное движение, меньше "
-     "работы процессору. Остальные остаются как есть. Для проверки."},
     {Text::InterfaceUauiShowcase, "Components showcase (for developers)", "Вітрина компонентів (для розробників)",
      "Витрина компонентов (для разработчиков)"},
     {Text::InterfaceUauiShowcaseHint,
