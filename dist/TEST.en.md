@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.18-beta.39 — what's new
+
+- **Carrying items with the controller (the gold frame, the item and the hint) and the mercenary's block under the party panel now use "Нова бібліотека інтерфейсу (RmlUi)".**
+
 # uaRO Graphics 3.0.18-beta.38 — what's new
 
 - **The controller's NPC plate, item names on the ground, shop and chat room signs over players and the cast bar now use "Нова бібліотека інтерфейсу (RmlUi)".** The ones over the world still lie under the game's own windows.
