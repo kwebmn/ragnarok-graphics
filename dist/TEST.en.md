@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.18-beta.52 — what's new
+
+- **Fixed with "Нова бібліотека інтерфейсу (RmlUi)": the icons on the minimap's buttons now sit in the buttons' middles.** The buttons' edge was drawn outside them, shifting the button against its icon — the edge is inside again, as it was. The same alignment is fixed in the new library's other windows, cells and panels.
+
 # uaRO Graphics 3.0.18-beta.51 — what's new
 
 - **An enlarged minimap: its buttons (+, −, layers) and the marks on the map now grow more than the map itself** — at 160 % they are twice their usual size, not just 1.6 times.
