@@ -1,3 +1,5 @@
+- Fixed: when dragging an item, a skill or a skill bar cell inside a window ("Речі", "Склад", "Візок", "Спорядження", "Навички"), its icon now follows the cursor there too - the window itself hid it before, it showed only outside it.
+
 - New interface (uaUI): one's own open shop and its setup are live windows of the new library: the cart and the wares for sale side by side, the sign and prices the game's fields, a click on a cart item puts it up for sale, ✕ takes it down.
 
 - New interface (uaUI): another player's shop is a live window of the new library: wares with − / +, the sum and your zeny, "Купити" lit only when you can afford it.
