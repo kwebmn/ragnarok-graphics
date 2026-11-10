@@ -259,7 +259,9 @@ struct Line {
 struct Ui {
     uaui::Doc doc;
     float w = 0;
-    Rml::String name, level, element, ecol, eedge, ebg, pic, picSrc, book, bookLit, padA, padR, attack, next;
+    Rml::String name, level, element, pic, picSrc, book, bookLit, padA, padR, attack, next;
+    // 3.0.18-beta.62 (R-BK5SWP «border-color: ;»): never an empty style value, even before the first fill
+    Rml::String ecol = "#00000000", eedge = "#00000000", ebg = "#00000000";
     int hp = -1;
     float hpBar = 0;  // 3.0.18-beta.58: the bar's shown share (gliding with [interface] uaui_motion)
     uiglide::Glide hpGlide;
