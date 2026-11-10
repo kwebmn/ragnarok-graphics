@@ -1,3 +1,9 @@
+# uaRO Graphics 3.0.18-beta.27 — what's new
+
+- **"Речі", "Склад" and the cart now use "Нова бібліотека інтерфейсу (RmlUi)":** the window glass, tabs, search, cells with icons, counts, refine and "нове", the scroll, weight, use flashes and the tip are drawn by the new library. Dragging windows and items, clicks, the wheel and keys work as before.
+- **The new library's windows are drawn over the panels,** the chat and the hotbar — where the other windows are.
+- **Fixed:** with the new library on, everything it draws was drawn twice a frame — semi-transparent parts looked denser than intended.
+
 # uaRO Graphics 3.0.18-beta.26 — what's new
 
 - **The minimap now uses "Нова бібліотека інтерфейсу (RmlUi)":** the frame with gold corners, the +/−/big map buttons, the layer buttons and "Схема", the map name bar, the search and ping plates with the graph, the route bar and the monster list are drawn by the new library; the map with its marks is as before. Clicks, the wheel and Ctrl+Tab work as before. The big map is still the old one. Without this switch nothing changes.
