@@ -1,3 +1,4 @@
+#include "win/card_drag.hpp"
 #include "win/whisper_window.hpp"
 
 #include <windowsx.h>
@@ -48,6 +49,7 @@ struct One {
     int slot = 0;  // its place in the cascade, kept while it lives
     int oldX = 0;
     bool moved = false;
+    CardDrag move;  // 3.0.18-beta.92 (the owner: «не все окна перетаскиваются»): by its empty part
     wc::Card card;
     wc::Layout layout;
     wc::Part hover = wc::Part::None;
@@ -246,6 +248,7 @@ static void frameInner(HWND game, bool on, unsigned codePage, double k, int targ
         One& o = s.cards[i];
         readCard(s, o);
         o.layout = wc::layout(o.slot, targetWidth, targetHeight, s.scale);
+        o.move.apply(o.layout.x, o.layout.y, o.layout.w, o.layout.h, targetWidth, targetHeight, k, 48 * s.scale);
         o.hover = wc::Part::None;
         if (cursor && !covered) {
             o.hover = wc::hitTest(o.layout, float(cx) * float(k) - float(o.layout.x),
@@ -327,6 +330,8 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     State& s = state();
     (void)wp;
     if (s.cards.empty()) return false;
+    if (m == WM_LBUTTONUP)
+        for (One& o : s.cards) o.move.end();  // 3.0.18-beta.92
     const bool button = m == WM_LBUTTONDOWN || m == WM_LBUTTONUP || m == WM_LBUTTONDBLCLK || m == WM_RBUTTONDOWN ||
                         m == WM_RBUTTONUP || m == WM_RBUTTONDBLCLK || m == WM_MBUTTONDOWN || m == WM_MBUTTONUP;
     if (!button && m != WM_MOUSEWHEEL) return false;
@@ -339,7 +344,9 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
         result = 0;
         if (m == WM_LBUTTONDOWN) {
             const uint32_t window = o.window;
-            act(s, o, wc::hitTest(o.layout, lx, ly));
+            const wc::Part h = wc::hitTest(o.layout, lx, ly);
+            if (h == wc::Part::Body || h == wc::Part::None) o.move.begin(tx, ty);  // 3.0.18-beta.92
+            act(s, o, h);
             // the clicked one on top (its place in the cascade kept)
             const auto at =
                 std::find_if(s.cards.begin(), s.cards.end(), [&](const One& c) { return c.window == window; });

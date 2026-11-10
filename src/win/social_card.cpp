@@ -384,6 +384,7 @@ static void fillSheet(State& s, uisheet::Content& ui) {
 
 // 3.0.18-beta.81: the live window's model and place
 static void liveFrame(State& s) {
+    s.live.ownDrag = true;  // 3.0.18-beta.92: its own drag
     s.live.make("social", kLive, [&](Rml::DataModelConstructor& m) {
         if (auto v = m.RegisterStruct<SocialEntryView>()) {
             v.RegisterMember("name", &SocialEntryView::name);

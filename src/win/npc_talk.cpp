@@ -439,6 +439,7 @@ static void fillSheet(State& s, uisheet::Content& c) {
 
 // 3.0.18-beta.88: the live talk's model and place
 static void liveFrame(State& s) {
+    s.live.ownDrag = true;  // 3.0.18-beta.92: its own drag
     s.live.make("npc", kLive, [&](Rml::DataModelConstructor& m) {
         if (auto v = m.RegisterStruct<NpcRunView>()) {
             v.RegisterMember("text", &NpcRunView::text);

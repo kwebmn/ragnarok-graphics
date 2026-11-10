@@ -1,3 +1,4 @@
+#include "win/card_drag.hpp"
 #include "win/guild_card.hpp"
 
 #include <windowsx.h>
@@ -52,6 +53,7 @@ using ModeMsgFn = int(__attribute__((thiscall)) *)(uint32_t mode, int msg, int a
 using SendMsgFn = int(__attribute__((thiscall)) *)(uint32_t self, uint32_t sender, int msg, int a, int b, int c);
 
 struct State {
+    CardDrag move;  // 3.0.18-beta.92: moved by its empty part
     uisheet::Sheet sheet;  // 3.0.18-beta.34: the window drawn by uaUI
     int sheetGen = 0;
     bool sheetShown = false;
@@ -362,6 +364,8 @@ static void frameInner(HWND game, bool on, unsigned codePage, double k, int targ
     const size_t rows = s.show.tab == gc::Tab::Members ? s.members.size() : s.more.lines.size();
     if (s.show.editing && s.show.tab != gc::Tab::Notice) s.show.editing = false;  // .271: another tab - let go
     s.layout = gc::layout(targetWidth, targetHeight, s.scale, s.show.tab, rows, s.show.editing);
+    // 3.0.18-beta.92 (the owner: «не все окна перетаскиваются»): moved by a press on its empty part
+    s.move.apply(s.layout.x, s.layout.y, s.layout.w, s.layout.h, targetWidth, targetHeight, k, 48 * s.scale);
     s.show.caret = (GetTickCount64() / 500) % 2 == 0;
     s.show.scroll = std::clamp(s.show.scroll, 0, gc::mostScroll(s.layout, rows));
     s.show.canEdit = gc::allowed(tab, s.show.rights);
@@ -514,6 +518,7 @@ void draw(FrameRecord& record, gpu::Renderer& renderer) {
 
 bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     State& s = state();
+    if (m == WM_LBUTTONUP) s.move.end();  // 3.0.18-beta.92
     if (!s.shown) return false;
     const bool button = m == WM_LBUTTONDOWN || m == WM_LBUTTONUP || m == WM_LBUTTONDBLCLK || m == WM_RBUTTONDOWN ||
                         m == WM_RBUTTONUP || m == WM_RBUTTONDBLCLK || m == WM_MBUTTONDOWN || m == WM_MBUTTONUP;
@@ -532,6 +537,7 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     }
     if (m != WM_LBUTTONDOWN && m != WM_LBUTTONDBLCLK) return true;
     const gc::Hit h = gc::hitTest(s.layout, lx, ly);
+    if (h.part == gc::Part::None && m == WM_LBUTTONDOWN) s.move.begin(tx, ty);  // 3.0.18-beta.92
     if (h.part == gc::Part::Tab) {
         s.show.scroll = 0;
         switchTab(s, h.index);  // 3.0.11-beta.210: the game's own tab with it (the card follows it)

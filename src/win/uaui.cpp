@@ -2166,6 +2166,7 @@ void setEffects(bool on) {
 }
 HWND gameWindow() { return state().game; }
 double targetScale() { return state().k; }
+void targetSize(int& w, int& h) { w = state().targetW, h = state().targetH; }
 
 // 3.0.18-beta.59 (the possibilities' item 9): the keys while a field of uaUI's has the focus - its letters, its
 // arrows, Backspace, Delete, Home, End, Ctrl+A/C/V/X; Esc or Enter lets it go

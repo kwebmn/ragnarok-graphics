@@ -3,6 +3,7 @@
 
 #include <functional>
 
+#include "win/card_drag.hpp"
 #include "win/uaui.hpp"
 #include "win/ui_sheet.hpp"
 #include "win/window_shadow.hpp"
@@ -29,6 +30,10 @@ public:
 
     uaui::Doc doc;
     uisheet::NavSet nav;
+    // 3.0.18-beta.92 (the owner: «не все окна перетаскиваются»): every live window moved by a press on its ground -
+    // its shift from the place its part gives (kept while the game runs); a part with a drag of its own sets `ownDrag`
+    CardDrag drag;
+    bool ownDrag = false;
     bool shown = false;
     bool anywhere = false;  // 3.0.18-beta.78: set before make() - shown outside the world too (the login's boxes)
 };

@@ -2,6 +2,8 @@
 
 #include <string>
 
+#include "win/game_camera.hpp"
+
 namespace uagfx::win::uilive {
 
 bool Window::make(const char* name, const char* rml, const std::function<void(Rml::DataModelConstructor&)>& bind) {
@@ -28,6 +30,12 @@ bool Window::make(const char* name, const char* rml, const std::function<void(Rm
 void Window::frame(bool on, int x, int y, int kind, const char* targets) {
     shown = on && doc.made() && (anywhere ? uaui::readyAnywhere() : uaui::ready());
     if (!doc.made()) return;
+    if (!ownDrag) {  // 3.0.18-beta.92: its own shift by the drag, inside the screen
+        int bx = 0, by = 0, bw = 0, bh = 0, tw = 0, th = 0;
+        uaui::targetSize(tw, th);
+        if (!doc.box(bx, by, bw, bh)) bw = bh = 0;
+        drag.apply(x, y, bw, bh, tw, th, uaui::targetScale(), 48 * uaui::dp());
+    }
     doc.place(x, y);
     doc.show(shown);
     if (shown && targets) nav.set(kind, doc.boxesOf(targets), x, y);
@@ -43,9 +51,19 @@ void Window::draw(WindowShadow& shadow, FrameRecord& record, gpu::Renderer& rend
 
 int Window::mouse(HWND game, UINT m, WPARAM wp, LPARAM lp) {
     if (!shown) return 0;
+    if (m == WM_LBUTTONUP) drag.end();
     bool control = false;
     if (!doc.pointer(game, m, wp, lp, control)) return 0;
-    return m == WM_LBUTTONDOWN && !control ? 2 : 1;
+    if (m == WM_LBUTTONDOWN && !control) {
+        if (!ownDrag) {  // 3.0.18-beta.92: its ground pressed - the window follows the cursor
+            int tw = 0, th = 0;
+            uaui::targetSize(tw, th);
+            float tx = 0, ty = 0;
+            if (pointerInTarget(game, m, lp, uaui::targetScale(), tw, th, tx, ty, nullptr)) drag.begin(tx, ty);
+        }
+        return 2;
+    }
+    return 1;
 }
 
 }  // namespace uagfx::win::uilive

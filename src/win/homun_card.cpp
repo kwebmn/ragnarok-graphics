@@ -1,3 +1,4 @@
+#include "win/card_drag.hpp"
 #include "win/homun_card.hpp"
 
 #include <windowsx.h>
@@ -52,6 +53,7 @@ using ModeMsgFn = int(__attribute__((thiscall)) *)(uint32_t mode, int msg, int a
 using SendMsgFn = int(__attribute__((thiscall)) *)(uint32_t self, uint32_t sender, int msg, int a, int b, int c);
 
 struct State {
+    CardDrag move;  // 3.0.18-beta.92: moved by its empty part
     uisheet::Sheet sheet;  // 3.0.18-beta.34: the window drawn by uaUI
     int sheetGen = 0;
     bool sheetShown = false;
@@ -285,6 +287,8 @@ static void frameInner(HWND game, bool on, unsigned codePage, double k, int targ
     s.info = infoOf(s);
     readSkills(s);
     s.layout = hc::layout(targetWidth, targetHeight, s.scale, int(s.info.skills.size()));
+    // 3.0.18-beta.92 (the owner: «не все окна перетаскиваются»): moved by a press on its empty part
+    s.move.apply(s.layout.x, s.layout.y, s.layout.w, s.layout.h, targetWidth, targetHeight, k, 48 * s.scale);
     s.show.hover = -1;
     s.show.hoverPlus = s.show.hoverSkill = s.show.hoverLess = s.show.hoverMore = -1;
     int cx = 0, cy = 0;
@@ -438,6 +442,7 @@ void draw(FrameRecord& record, gpu::Renderer& renderer) {
 
 bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     State& s = state();
+    if (m == WM_LBUTTONUP) s.move.end();  // 3.0.18-beta.92
     (void)wp;
     if (!s.shown) return false;
     const bool button = m == WM_LBUTTONDOWN || m == WM_LBUTTONUP || m == WM_LBUTTONDBLCLK || m == WM_RBUTTONDOWN ||
@@ -451,6 +456,7 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     result = 0;
     if (m != WM_LBUTTONDOWN && m != WM_LBUTTONDBLCLK) return true;
     const hc::Hit h = hc::hitTest(s.layout, lx, ly);
+    if (h.part == hc::Part::None && m == WM_LBUTTONDOWN) s.move.begin(tx, ty);  // 3.0.18-beta.92
     if (h.part == hc::Part::Button) press(s, h.button);
     if (h.part == hc::Part::Plus) raiseSkill(s, h.index);  // 3.0.11-beta.221
     if (h.part == hc::Part::Less) changeUse(s, h.index, -1);  // 3.0.16-beta.31
