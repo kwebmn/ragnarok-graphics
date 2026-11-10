@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.18-beta.25 — what's new
+
+- **The hunt, MVP and tracker panels now use "Нова бібліотека інтерфейсу (RmlUi)":** their cards, lines, hover highlights and buttons are drawn by the new library; clicks work as before. Without this switch nothing changes.
+
 # uaRO Graphics 3.0.18-beta.24 — what's new
 
 - **Experience over monsters and the "+N ..." item note now use "Нова бібліотека інтерфейсу (RmlUi)":** the gold labels rising over a killed monster and the pill about an item that came into the bag are drawn by the new library. Without this switch nothing changes.
