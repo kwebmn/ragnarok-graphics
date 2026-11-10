@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdio>
 #include <string>
 #include <variant>
 #include <vector>
@@ -23,6 +24,7 @@
 #include "win/real_ddraw.hpp"
 #include "win/reference_load.hpp"
 #include "win/target_card.hpp"
+#include "win/uaui.hpp"
 #include "win/ui_cost.hpp"
 
 namespace uagfx::win::mvpwin {
@@ -46,6 +48,10 @@ struct State {
     uint32_t texture = 0;
     int texW = 0, texH = 0;
     int told = 0;
+    bool uiShown = false;  // 3.0.18-beta.25: drawn by uaUI
+    std::string viewKey;
+    std::vector<std::pair<std::string, std::string>> lines;
+    std::vector<bool> back;
 };
 
 State& state() {
@@ -81,6 +87,88 @@ std::string mobName(int mob) {
     if (!index) return "#" + std::to_string(mob);
     const auto m = index->mobs.find(mob);
     return m == index->mobs.end() ? "#" + std::to_string(mob) : m->second.name;
+}
+
+// 3.0.18-beta.25 (docs/superpowers/plans/2026-11-09-uaui-migration.md, stage 4 - by hand): the MVP panel in RmlUi's
+// markup - its card, the title, each MVP's name · map and its time left (green when back), the row pointed at lit;
+// drawn only (passive): the clicks and the blocker stay this part's; sizes by its own scale
+const char* kDoc = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss"/></head>
+<body class="mp" data-model="mvp" data-style-width="w + 'px'" data-style-height="h + 'px'"
+  data-style-border-radius="10 * s + 'px'" data-style-border-width="s + 'px'" data-style-background-color="ground">
+<span class="title" data-style-left="9 * s + 'px'" data-style-top="9 * s + 'px'" data-style-width="w - 18 * s + 'px'"
+  data-style-height="18 * s + 'px'" data-style-line-height="18 * s + 'px'" data-style-font-size="13 * s + 'px'"
+  >{{title}}</span>
+<div data-for="r, i : rows">
+ <div class="lit" data-if="i == hover" data-style-left="4 * s + 'px'" data-style-top="(31 + 19 * i) * s + 'px'"
+   data-style-width="w - 8 * s + 'px'" data-style-height="19 * s + 'px'" data-style-border-radius="5 * s + 'px'"></div>
+ <span data-attr-class="i == hover ? 'name hot' : 'name'" data-style-left="9 * s + 'px'"
+   data-style-top="(31 + 19 * i) * s + 'px'" data-style-width="w - 82 * s + 'px'" data-style-height="19 * s + 'px'"
+   data-style-line-height="19 * s + 'px'" data-style-font-size="12 * s + 'px'">{{r.name}}</span>
+ <span data-attr-class="r.back ? 'left back' : 'left'" data-style-left="w - 73 * s + 'px'"
+   data-style-top="(31 + 19 * i) * s + 'px'" data-style-width="64 * s + 'px'" data-style-height="19 * s + 'px'"
+   data-style-line-height="19 * s + 'px'" data-style-font-size="12 * s + 'px'">{{r.left}}</span>
+</div>
+</body></rml>)RML";
+
+struct RowV {
+    Rml::String name, left;
+    bool back = false;
+};
+
+struct Ui {
+    uaui::Doc doc;
+    float w = 0, h = 0, s = 1;
+    int hover = -1;
+    Rml::String title, ground;
+    std::vector<RowV> rows;
+    std::string key;
+};
+
+Ui& ui() {
+    static Ui u;
+    return u;
+}
+
+bool uiFrame(State& s) {
+    Ui& u = ui();
+    if (!uaui::ready() || !s.shown || s.lines.empty()) {
+        u.doc.show(false);
+        return false;
+    }
+    if (!u.doc.made()) {
+        u.doc.passive = true;
+        if (!u.doc.make("mvp", kDoc, [&](Rml::DataModelConstructor& m) {
+                if (auto r = m.RegisterStruct<RowV>()) {
+                    r.RegisterMember("name", &RowV::name);
+                    r.RegisterMember("left", &RowV::left);
+                    r.RegisterMember("back", &RowV::back);
+                }
+                m.RegisterArray<std::vector<RowV>>();
+                m.Bind("w", &u.w);
+                m.Bind("h", &u.h);
+                m.Bind("s", &u.s);
+                m.Bind("hover", &u.hover);
+                m.Bind("title", &u.title);
+                m.Bind("ground", &u.ground);
+                m.Bind("rows", &u.rows);
+            }))
+            return false;
+    }
+    if (s.viewKey != u.key) {
+        u.key = s.viewKey;
+        u.w = float(s.w), u.h = float(s.h), u.s = s.scale, u.hover = s.hover;
+        char g[16];
+        std::snprintf(g, sizeof g, "#10141c%02x", int(std::lround(uistyle::panel() * 255)) & 0xFF);
+        u.ground = g;
+        u.title = say(settings::Text::MvpTitle);
+        u.rows.clear();
+        for (size_t i = 0; i < s.lines.size(); ++i)
+            u.rows.push_back(RowV{s.lines[i].first, s.lines[i].second, i < s.back.size() && s.back[i]});
+        u.doc.dirtyAll();
+    }
+    u.doc.place(s.x, s.y);
+    u.doc.show(true);
+    return true;
 }
 
 }  // namespace
@@ -120,6 +208,7 @@ void frame(HWND game, bool on, double k, int targetWidth, int targetHeight) {
     const auto hide = [&] {
         if (s.shown) uapad::gamewindow::setBlocked(Blocker::Mvp, nullptr, nullptr, false);
         s.shown = false;
+        s.uiShown = uiFrame(s);
     };
     if (!on || !game || k <= 0 || targetWidth <= 0 || targetHeight <= 0 || !inGameWorld()) return hide();
     load(s);
@@ -154,7 +243,11 @@ void frame(HWND game, bool on, double k, int targetWidth, int targetHeight) {
         lines.emplace_back(mobName(t.mob) + " \xC2\xB7 " + t.map, mvptimers::left(t.back(), now));
         key += '|' + lines.back().first + lines.back().second;
     }
-    if (key != s.key) {
+    s.lines = lines;
+    s.back.clear();
+    for (const mvptimers::Timer& t : s.rows) s.back.push_back(t.back() <= now);
+    s.viewKey = key;
+    if (key != s.key && !uaui::ready()) {  // 3.0.18-beta.25: uaUI's panel needs no picture
         s.key = key;
         const uicost::Paint cost("the MVP panel", s.w, s.h);
         if (panel::blank(s.picture, s.w, s.h)) {
@@ -181,6 +274,7 @@ void frame(HWND game, bool on, double k, int targetWidth, int targetHeight) {
         }
     }
     s.shown = true;
+    s.uiShown = uiFrame(s);
     RECT client{};
     if (!GetClientRect(game, &client)) return;
     const RECT r{LONG(int64_t(s.x) * client.right / targetWidth), LONG(int64_t(s.y) * client.bottom / targetHeight),
@@ -191,7 +285,7 @@ void frame(HWND game, bool on, double k, int targetWidth, int targetHeight) {
 
 void draw(FrameRecord& record, gpu::Renderer& renderer) {
     State& s = state();
-    if (!s.shown || s.k <= 0 || s.picture.width <= 0 || s.picture.height <= 0) return;
+    if (!s.shown || s.uiShown || s.k <= 0 || s.picture.width <= 0 || s.picture.height <= 0) return;
     int cursor = -1, cx = 0, cy = 0;
     if (readGameCursor(cx, cy)) cursor = panel::cursorDraw(record, float(cx), float(cy));
     drawPart(record, renderer, s.picture, s.texture, s.texW, s.texH, s.upload, s.x, s.y, s.k);

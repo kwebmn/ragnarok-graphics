@@ -798,6 +798,33 @@ input.checkbox:checked { background-color: #3d7fd8; border-color: #3d7fd8; }
 .xb { position: absolute; font-family: Plex; color: #eceff5; }
 .xg { position: absolute; font-family: Plex; }
 .it { position: absolute; font-family: Plex; }
+.hp { position: absolute; font-family: Plex; border-color: #ffffff17; }
+.mp { position: absolute; font-family: Plex; border-color: #ffffff17; }
+.tr { position: absolute; font-family: Plex; }
+.tr div, .tr span { position: absolute; }
+.tr .glass { border-color: #ffffff17; }
+.tr .rule { background-color: #ffffff14; }
+.tr .hot { background-color: #ffffff1f; }
+.tr .entry { background-color: #ffffff0a; }
+.tr .entry.over { background-color: #ffffff13; }
+.tr .more { background-color: #ffffff0f; }
+.tr .word { white-space: nowrap; overflow: hidden; }
+.tr .word.bold { font-weight: bold; }
+.tr .word.right { text-align: right; }
+.tr .word.centre { text-align: center; }
+.mp .title, .mp .name, .mp .left, .mp .lit { position: absolute; white-space: nowrap; }
+.mp .title { font-weight: bold; color: #e6cb8a; }
+.mp .lit { background-color: #ffffff14; }
+.mp .name { color: #9aa3b5; }
+.mp .name.hot { color: #eef2f8; }
+.mp .left { text-align: right; font-weight: bold; color: #eef2f8; }
+.mp .left.back { color: #8fd19e; }
+.hp .title, .hp .line, .hp .reset { position: absolute; white-space: nowrap; }
+.hp .title { font-weight: bold; color: #e6cb8a; }
+.hp .line { color: #9aa3b5; }
+.hp .line.first { font-weight: bold; color: #eef2f8; }
+.hp .reset { text-align: center; font-weight: bold; color: #eef2f8; background-color: #ffffff0f; }
+.hp .reset.hot { background-color: #ffffff29; }
 .it .toast { position: absolute; box-sizing: border-box; text-align: center; font-weight: bold; color: #f3c653;
              white-space: nowrap; background-color: #10141ceb; border-color: #f3c653b3; }
 .xg .gain { position: absolute; width: 600dp; height: 22dp; line-height: 22dp; text-align: center; font-size: 15dp;

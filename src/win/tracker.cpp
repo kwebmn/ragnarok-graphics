@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdio>
 #include <cstdlib>
 #include <memory>
 #include <string>
@@ -25,6 +26,7 @@
 #include "win/real_ddraw.hpp"
 #include "win/reference_load.hpp"
 #include "win/reference_window.hpp"
+#include "win/uaui.hpp"
 #include "win/ui_cost.hpp"
 
 namespace uagfx::win::trackerwin {
@@ -51,6 +53,8 @@ struct State {
     int texW = 0, texH = 0;
     bool upload = false;
     int clicksLogged = 0;
+    bool uiShown = false;  // 3.0.18-beta.25: drawn by uaUI
+    std::string viewKey;
 };
 
 State& state() {
@@ -124,6 +128,7 @@ void hide(State& s) {
     if (s.shown) uapad::gamewindow::setBlocked(uapad::gamewindow::Blocker::Tracker, nullptr, nullptr, false);
     s.shown = false;
     s.hover = tk::Hit{};
+    s.uiShown = false;
 }
 
 // Its entries: the pinned quests, the way the minimap leads, the pinned items
@@ -182,6 +187,129 @@ void placeOf(const State& s, int& right, int& top) {
     top = int(std::lround(150 * s.k));
 }
 
+// 3.0.18-beta.25 (docs/superpowers/plans/2026-11-09-uaui-migration.md, stage 4 - by hand): the tracker in RmlUi's
+// markup - its glass, the header's line, the entries' plates (the one pointed at lighter), ▾/✕ lit when pointed at,
+// «ще N», the words where core tracker places them; drawn only (passive): its clicks and blocker stay this part's
+const char* kDoc = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss"/></head>
+<body class="tr" data-model="tracker" data-style-width="w + 'px'" data-style-height="h + 'px'">
+<div class="glass" data-style-left="g.x + 'px'" data-style-top="g.y + 'px'" data-style-width="g.w + 'px'"
+  data-style-height="g.h + 'px'" data-style-border-radius="g.r + 'px'" data-style-border-width="g.e + 'px'"
+  data-style-background-color="ground"></div>
+<div data-for="b : boxes" data-attr-class="b.cls" data-style-left="b.x + 'px'" data-style-top="b.y + 'px'"
+  data-style-width="b.w + 'px'" data-style-height="b.h + 'px'" data-style-border-radius="b.r + 'px'"
+  data-style-border-width="b.e + 'px'"></div>
+<span data-for="t : words" data-attr-class="t.cls" data-style-left="t.x + 'px'" data-style-top="t.y + 'px'"
+  data-style-width="t.w + 'px'" data-style-height="t.h + 'px'" data-style-line-height="t.h + 'px'"
+  data-style-font-size="t.px + 'px'" data-style-color="t.colour">{{t.text}}</span>
+</body></rml>)RML";
+
+struct BoxV {
+    float x = 0, y = 0, w = 0, h = 0, r = 0, e = 0;
+    Rml::String cls;
+};
+struct WordV {
+    float x = 0, y = 0, w = 0, h = 0, px = 12;
+    Rml::String text, colour, cls;
+};
+
+struct Ui {
+    uaui::Doc doc;
+    float w = 0, h = 0;
+    BoxV g;
+    Rml::String ground;
+    std::vector<BoxV> boxes;
+    std::vector<WordV> words;
+    std::string key;
+};
+
+Ui& ui() {
+    static Ui u;
+    return u;
+}
+
+bool uiFrame(State& s) {
+    Ui& u = ui();
+    if (!uaui::ready() || !s.shown) {
+        u.doc.show(false);
+        return false;
+    }
+    if (!u.doc.made()) {
+        u.doc.passive = true;
+        if (!u.doc.make("tracker", kDoc, [&](Rml::DataModelConstructor& m) {
+                if (auto b = m.RegisterStruct<BoxV>()) {
+                    b.RegisterMember("x", &BoxV::x);
+                    b.RegisterMember("y", &BoxV::y);
+                    b.RegisterMember("w", &BoxV::w);
+                    b.RegisterMember("h", &BoxV::h);
+                    b.RegisterMember("r", &BoxV::r);
+                    b.RegisterMember("e", &BoxV::e);
+                    b.RegisterMember("cls", &BoxV::cls);
+                }
+                if (auto t = m.RegisterStruct<WordV>()) {
+                    t.RegisterMember("x", &WordV::x);
+                    t.RegisterMember("y", &WordV::y);
+                    t.RegisterMember("w", &WordV::w);
+                    t.RegisterMember("h", &WordV::h);
+                    t.RegisterMember("px", &WordV::px);
+                    t.RegisterMember("text", &WordV::text);
+                    t.RegisterMember("colour", &WordV::colour);
+                    t.RegisterMember("cls", &WordV::cls);
+                }
+                m.RegisterArray<std::vector<BoxV>>();
+                m.RegisterArray<std::vector<WordV>>();
+                m.Bind("w", &u.w);
+                m.Bind("h", &u.h);
+                m.Bind("g", &u.g);
+                m.Bind("ground", &u.ground);
+                m.Bind("boxes", &u.boxes);
+                m.Bind("words", &u.words);
+            }))
+            return false;
+    }
+    if (s.viewKey != u.key) {
+        u.key = s.viewKey;
+        const tk::Layout& L = s.layout;
+        const float sc = L.s;
+        u.w = float(L.w), u.h = float(L.h);
+        u.boxes.clear();
+        const auto box = [&](const panel::Box& b, float r, const char* cls, float edge = 0) {
+            u.boxes.push_back(BoxV{b.x, b.y, b.w, b.h, r, edge, cls});
+        };
+        u.g = BoxV{L.glass.x, L.glass.y, L.glass.w, L.glass.h, 10 * sc, 1.0f * sc, "glass"};
+        char ground[16];
+        std::snprintf(ground, sizeof ground, "#10141c%02x", int(std::lround(uistyle::panel() * 255)) & 0xFF);
+        u.ground = ground;
+        box(panel::Box{0, 34 * sc - 1.0f * sc, float(L.w), 1.0f * sc}, 0, "rule");  // under the header
+        if (s.hover.part == tk::Part::Fold) box(L.fold, 6 * sc, "hot");
+        if (s.hover.part == tk::Part::Hide) box(L.hide, 6 * sc, "hot");
+        for (size_t i = 0; i < L.entries.size(); ++i) {
+            const tk::Placed& p = L.entries[i];
+            const bool over = s.hover.entry == int(i) &&
+                              (s.hover.part == tk::Part::Head || s.hover.part == tk::Part::Close);
+            box(p.box, 8 * sc, over ? "entry over" : "entry");
+            if (s.hover.part == tk::Part::Close && s.hover.entry == int(i)) box(p.close, 6 * sc, "hot");
+        }
+        if (L.more.w > 0) box(L.more, 7 * sc, "more");
+        u.words.clear();
+        char colour[16];
+        for (const tk::Words& w : tk::words(L, s.entries,
+                                            tk::Texts{say(settings::Text::TrackerTitle),
+                                                      say(settings::Text::TrackerMore)},
+                                            s.folded)) {
+            std::snprintf(colour, sizeof colour, "#%06x", unsigned(w.rgb & 0xFFFFFF));
+            const char* align = w.align == tk::Align::Right    ? " right"
+                                : w.align == tk::Align::Center ? " centre"
+                                                               : "";
+            u.words.push_back(WordV{w.box.x, w.box.y, w.box.w, w.box.h, w.px, w.text, colour,
+                                    std::string(w.bold ? "word bold" : "word") + align});
+        }
+        u.doc.dirtyAll();
+    }
+    u.doc.place(s.layout.x, s.layout.y);
+    u.doc.show(true);
+    return true;
+}
+
 }  // namespace
 
 void frame(HWND game, bool on, double k, int targetWidth, int targetHeight) {
@@ -193,6 +321,7 @@ void frame(HWND game, bool on, double k, int targetWidth, int targetHeight) {
     readState(s);
     if (!on || s.hidden || !game || k <= 0 || targetWidth <= 0 || targetHeight <= 0 || !inGameWorld()) {
         hide(s);
+        uiFrame(s);
         return;
     }
     s.k = float(k);
@@ -202,6 +331,7 @@ void frame(HWND game, bool on, double k, int targetWidth, int targetHeight) {
     build(s);
     if (s.entries.empty()) {  // nothing pinned: no panel
         hide(s);
+        uiFrame(s);
         return;
     }
     int right = 0, top = 0;
@@ -225,17 +355,19 @@ void frame(HWND game, bool on, double k, int targetWidth, int targetHeight) {
         key += e.title + '|' + e.tag + '|';
         for (const tk::Line& ln : e.lines) key += ln.text + '/' + ln.right + '|';
     }
-    if (key != s.key) {
+    s.viewKey = key;
+    if (key != s.key && !uaui::ready()) {  // 3.0.18-beta.25: uaUI's panel needs no picture
         s.key = key;
         render(s);
     }
     s.shown = true;
+    s.uiShown = uiFrame(s);
     block(s, game);
 }
 
 void draw(FrameRecord& record, gpu::Renderer& renderer) {
     State& s = state();
-    if (!s.shown || s.k <= 0 || s.picture.width <= 0 || s.picture.height <= 0) return;
+    if (!s.shown || s.uiShown || s.k <= 0 || s.picture.width <= 0 || s.picture.height <= 0) return;
     int cursor = -1, cx = 0, cy = 0;  // under the game's own cursor, as the minimap
     if (readGameCursor(cx, cy)) cursor = panel::cursorDraw(record, float(cx), float(cy));
     drawPart(record, renderer, s.picture, s.texture, s.texW, s.texH, s.upload, s.layout.x, s.layout.y, s.k);

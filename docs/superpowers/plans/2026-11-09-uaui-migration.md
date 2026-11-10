@@ -52,7 +52,7 @@ picture's upload gone. Cost if wrong: per-pixel glows (panel::over loops) land i
 - [x] buffs column and its further lines — beta.20 by hand (core layout boxes in px)
 - [x] hotbar — beta.21 by hand (passive doc: its own input; core hotbar::view)
 - [x] experience bars, experience gain, item toast — beta.23-.24 by hand (the shelf toast with its undo goes with the login stage)
-- [ ] hunt panel, MVP panel, tracker
+- [x] hunt panel, MVP panel, tracker — beta.25 by hand (passive docs; sizes by each part's own scale)
 - [ ] minimap frame and its list (the map picture as `pic:`)
 
 ## Stage 5 — windows (by hand in RML)
@@ -90,3 +90,4 @@ picture's upload gone. Cost if wrong: per-pixel glows (panel::over loops) land i
 - 2026-11-10 beta.22: uaui::mouse takes a release only after its own press (owner: windows did not drag)
 - 2026-11-10 beta.23: experience strip by hand in RML (band, bars with ticks by data-for, gain label with outline, tip; core charblock::stripBars shared with the picture)
 - 2026-11-10 beta.24: experience gains over the monsters and the item toast by hand in RML (passive full-screen docs)
+- 2026-11-10 beta.25: hunt panel, MVP panel and tracker by hand in RML (passive: clicks/blockers stay the parts'; font sizes by the part's scale incl. the HUD editor's size)

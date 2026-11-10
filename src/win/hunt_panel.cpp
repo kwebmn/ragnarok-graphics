@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdio>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -22,6 +23,7 @@
 #include "win/picture_draw.hpp"
 #include "win/real_ddraw.hpp"
 #include "win/reference_load.hpp"
+#include "win/uaui.hpp"
 #include "win/ui_cost.hpp"
 
 namespace uagfx::win::huntwin {
@@ -47,6 +49,9 @@ struct State {
     uint32_t texture = 0;
     int texW = 0, texH = 0;
     int told = 0;
+    bool uiShown = false;  // 3.0.18-beta.25: drawn by uaUI
+    std::vector<std::string> lines;
+    std::string viewKey;
 };
 
 State& state() {
@@ -69,6 +74,72 @@ std::string monsterName(uint32_t id) {
     if (!index) return "";
     const auto m = index->mobs.find(int(cls));
     return m == index->mobs.end() ? std::string() : m->second.name;
+}
+
+// 3.0.18-beta.25 (docs/superpowers/plans/2026-11-09-uaui-migration.md, stage 4 - by hand): the hunt's panel in
+// RmlUi's markup - its card, the title, the lines (the first bright), «↺»; drawn only (passive): «↺» and the
+// blocker stay this part's; sizes by its own scale (the interface editor's size too), not dp
+const char* kDoc = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss"/></head>
+<body class="hp" data-model="hunt" data-style-width="w + 'px'" data-style-height="h + 'px'"
+  data-style-border-radius="10 * s + 'px'" data-style-border-width="s + 'px'" data-style-background-color="ground">
+<span class="title" data-style-left="10 * s + 'px'" data-style-top="10 * s + 'px'" data-style-width="w - 46 * s + 'px'"
+  data-style-height="20 * s + 'px'" data-style-line-height="20 * s + 'px'" data-style-font-size="13 * s + 'px'"
+  >{{title}}</span>
+<span data-for="l, i : lines" data-attr-class="i == 0 ? 'line first' : 'line'" data-style-left="10 * s + 'px'"
+  data-style-top="(34 + 19 * i) * s + 'px'" data-style-width="w - 20 * s + 'px'" data-style-height="19 * s + 'px'"
+  data-style-line-height="19 * s + 'px'" data-style-font-size="12 * s + 'px'">{{l}}</span>
+<span data-attr-class="hot ? 'reset hot' : 'reset'" data-style-left="w - 32 * s + 'px'" data-style-top="10 * s + 'px'"
+  data-style-width="22 * s + 'px'" data-style-height="20 * s + 'px'" data-style-line-height="20 * s + 'px'"
+  data-style-border-radius="6 * s + 'px'" data-style-font-size="13 * s + 'px'">↺</span>
+</body></rml>)RML";
+
+struct Ui {
+    uaui::Doc doc;
+    float w = 0, h = 0, s = 1;
+    bool hot = false;
+    Rml::String title, ground;
+    std::vector<Rml::String> lines;
+    std::string key;
+};
+
+Ui& ui() {
+    static Ui u;
+    return u;
+}
+
+bool uiFrame(State& s) {
+    Ui& u = ui();
+    if (!uaui::ready() || !s.shown || s.lines.empty()) {
+        u.doc.show(false);
+        return false;
+    }
+    if (!u.doc.made()) {
+        u.doc.passive = true;
+        if (!u.doc.make("hunt", kDoc, [&](Rml::DataModelConstructor& m) {
+                m.RegisterArray<std::vector<Rml::String>>();
+                m.Bind("w", &u.w);
+                m.Bind("h", &u.h);
+                m.Bind("s", &u.s);
+                m.Bind("hot", &u.hot);
+                m.Bind("title", &u.title);
+                m.Bind("ground", &u.ground);
+                m.Bind("lines", &u.lines);
+            }))
+            return false;
+    }
+    if (s.viewKey != u.key) {
+        u.key = s.viewKey;
+        u.w = float(s.w), u.h = float(s.h), u.s = s.scale, u.hot = s.hoverReset;
+        char g[16];
+        std::snprintf(g, sizeof g, "#10141c%02x", int(std::lround(uistyle::panel() * 255)) & 0xFF);
+        u.ground = g;
+        u.title = s.lines[0];
+        u.lines.assign(s.lines.begin() + 1, s.lines.end());
+        u.doc.dirtyAll();
+    }
+    u.doc.place(s.x, s.y);
+    u.doc.show(true);
+    return true;
 }
 
 }  // namespace
@@ -122,6 +193,7 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     const auto hide = [&] {
         if (s.shown) uapad::gamewindow::setBlocked(Blocker::Hunt, nullptr, nullptr, false);
         s.shown = false;
+        s.uiShown = uiFrame(s);
     };
     if (!on || !game || k <= 0 || targetWidth <= 0 || targetHeight <= 0 || !inGameWorld()) return hide();
     const uint64_t now = GetTickCount64();
@@ -156,7 +228,8 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     std::string key = std::to_string(s.w) + 'x' + std::to_string(s.h) + (s.hoverReset ? "r" : "") + '#' +
                       std::to_string(uistyle::generation());
     for (const std::string& l : lines) key += '|' + l;
-    if (key != s.key) {
+    s.lines = lines;
+    if (key != s.key && !uaui::ready()) {  // 3.0.18-beta.25: uaUI's panel needs no picture
         s.key = key;
         const uicost::Paint cost("the hunt's panel", s.w, s.h);
         if (panel::blank(s.picture, s.w, s.h)) {
@@ -177,7 +250,9 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
             s.upload = true;
         }
     }
+    s.viewKey = key;
     s.shown = true;
+    s.uiShown = uiFrame(s);
     RECT client{};
     if (!GetClientRect(game, &client)) return;
     const RECT r{LONG(int64_t(s.x) * client.right / targetWidth), LONG(int64_t(s.y) * client.bottom / targetHeight),
@@ -188,7 +263,7 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
 
 void draw(FrameRecord& record, gpu::Renderer& renderer) {
     State& s = state();
-    if (!s.shown || s.k <= 0 || s.picture.width <= 0 || s.picture.height <= 0) return;
+    if (!s.shown || s.uiShown || s.k <= 0 || s.picture.width <= 0 || s.picture.height <= 0) return;
     int cursor = -1, cx = 0, cy = 0;
     if (readGameCursor(cx, cy)) cursor = panel::cursorDraw(record, float(cx), float(cy));
     drawPart(record, renderer, s.picture, s.texture, s.texW, s.texH, s.upload, s.x, s.y, s.k);
