@@ -1,3 +1,5 @@
+- The world no longer dims under windows: the switch "Приглушувати світ під вікнами" is gone, the world behind "Речі", "Характеристики" and "Довідник" stays as it is.
+
 - Settings: "Приглушувати світ під вікнами" is now off by default in the app too (the game has had it off since 3.0.11-beta.55); "Типово" no longer turns it on.
 
 - New interface (uaUI): "Скляні вікна" with DLSS - windows were a flat grey instead of the blurred world; the glass now works with DLSS too. Small style errors in the log at start removed.
