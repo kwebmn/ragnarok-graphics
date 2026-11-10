@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.18-beta.16 — what's new
+
+- **Fixed the game closing with the new interface library on:** it could vanish when the in-game reference was opened. The interface parts are drawn as before again; they will move to the new library one by one in the next betas.
+
 # uaRO Graphics 3.0.18-beta.15 — what's new
 
 - **The minimap and the big map are on the new library too:** with it on, their marks, frames and labels are drawn by the graphics card, and the map itself stays the same picture under them.
