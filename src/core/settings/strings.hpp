@@ -904,6 +904,7 @@ enum class Text : uint16_t {
     InterfaceUaui, InterfaceUauiHint,  // 3.0.18-beta.7: the RmlUi spike
     InterfaceUauiShowcase, InterfaceUauiShowcaseHint,  // 3.0.18-beta.11
     InterfaceUauiMotion, InterfaceUauiMotionHint,  // 3.0.18-beta.58
+    InterfaceUauiEffects, InterfaceUauiEffectsHint,  // 3.0.18-beta.61
     InterfaceTheme, InterfaceThemeHint, InterfaceThemeStandard, InterfaceThemeClassic, InterfaceThemeContrast,  // .13
     Count
 };

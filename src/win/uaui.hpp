@@ -54,6 +54,7 @@ int windowRank();
 bool windowMarked();
 void setMotion(bool on);  // 3.0.18-beta.58: [interface] uaui_motion - the theme's soft motion (body class «motion»)
 bool motion();
+void setEffects(bool on);  // 3.0.18-beta.61: [interface] uaui_effects (body class «fx»)
 HWND gameWindow();  // 3.0.18-beta.60
 double targetScale();  // the target's pixels a game pixel
 bool key(UINT m, WPARAM wp, LPARAM lp);  // 3.0.18-beta.59: true - a field of uaUI's took it  // the one drawn now has the stack's gold edge (the top of two or more)

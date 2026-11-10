@@ -72,3 +72,64 @@ TEST(uaui_mesh_reads_utf8) {
     CHECK_EQ(s.size(), size_t(5));
     CHECK(s[0] == U'A' && s[1] == 0x406 && s[2] == 0x2014 && s[3] == 0x1F642 && s[4] == 0xFFFD);
 }
+
+// 3.0.18-beta.61 (docs/superpowers/plans/2026-11-10-uaui-possibilities.md, stage 5): a linear gradient as the
+// vertices' colours - the box cut along each stop between its ends, so three stops are exact
+TEST(uaui_mesh_shades_a_linear_gradient_with_its_stops) {
+    std::vector<uaui::Point> pts = {{0, 0, 0xFFFFFFFF}, {100, 0, 0xFFFFFFFF}, {100, 10, 0xFFFFFFFF},
+                                    {0, 10, 0xFFFFFFFF}};
+    std::vector<int> ix = {0, 1, 2, 0, 2, 3};
+    uaui::Gradient g;
+    g.x0 = 0, g.y0 = 0, g.x1 = 100, g.y1 = 0;  // left to right
+    g.stops = {{0, 0xFFFF0000}, {0.5f, 0xFF00FF00}, {1, 0xFF0000FF}};
+    uaui::shade(pts, ix, g);
+    CHECK(ix.size() % 3 == 0 && ix.size() > 6);  // cut at the middle stop
+    bool middle = false;
+    for (const uaui::Point& p : pts) {
+        if (p.x == 0) CHECK_EQ(p.argb, 0xFFFF0000u);
+        if (p.x == 100) CHECK_EQ(p.argb, 0xFF0000FFu);
+        if (std::fabs(p.x - 50) < 0.01f) {
+            middle = true;
+            CHECK_EQ(p.argb, 0xFF00FF00u);
+        }
+    }
+    CHECK(middle);
+    // the vertex's own colour multiplies (the element's opacity)
+    std::vector<uaui::Point> half = {{0, 0, 0x80808080}, {100, 0, 0x80808080}, {0, 10, 0x80808080}};
+    std::vector<int> one = {0, 1, 2};
+    g.stops = {{0, 0xFFFFFFFF}, {1, 0xFFFFFFFF}};
+    uaui::shade(half, one, g);
+    CHECK_EQ(half[0].argb, 0x80808080u);
+}
+
+// 3.0.18-beta.61: a rounded clip (overflow hidden + border-radius) - the mask's convex outline cuts the triangles
+TEST(uaui_mesh_cuts_by_a_convex_mask) {
+    std::vector<uaui::Point> mask = {{0, 0}, {10, 0}, {10, 10}, {0, 10}, {5, 5}};  // a square, a point inside
+    uaui::ClipBox c{-100, -100, 100, 100};
+    c.hull = uaui::hull(mask, 0, 0, nullptr);
+    CHECK_EQ(c.hull.size(), size_t(8));  // its four corners only
+    std::vector<uaui::Point> tri = {{-5, -5, 0xFFFFFFFF}, {15, -5, 0xFFFFFFFF}, {-5, 15, 0xFFFFFFFF}};
+    std::vector<glint::Vertex> out;
+    uaui::triangles(tri, {0, 1, 2}, 0, 0, nullptr, &c, 1, 0, out);
+    float area = 0;
+    for (size_t i = 0; i + 2 < out.size(); i += 3)
+        area += std::fabs((out[i + 1].x - out[i].x) * (out[i + 2].y - out[i].y) -
+                          (out[i + 2].x - out[i].x) * (out[i + 1].y - out[i].y)) / 2;
+    CHECK(std::fabs(area - 50.0f) < 0.01f);  // the square under the triangle's long side (x + y = 10): its half
+    for (const glint::Vertex& v : out) CHECK(v.x >= -0.01f && v.x <= 10.01f && v.y >= -0.01f && v.y <= 10.01f);
+}
+
+// 3.0.18-beta.61: a soft shadow or glow - a ring round a rounded box, its colour at the edge fading to nothing
+TEST(uaui_mesh_makes_a_soft_ring_round_a_box) {
+    std::vector<uaui::Point> pts;
+    std::vector<int> ix;
+    uaui::softRing(0, 0, 100, 40, 8, 12, 0x80000000, pts, ix);
+    CHECK(!pts.empty() && ix.size() % 3 == 0);
+    float minX = 1e9f, maxX = -1e9f;
+    for (const uaui::Point& p : pts) {
+        minX = std::min(minX, p.x), maxX = std::max(maxX, p.x);
+        CHECK(p.argb == 0x80000000u || p.argb == 0u);
+        if (p.argb == 0x80000000u) CHECK(p.x >= -0.01f && p.x <= 100.01f);  // the inner edge on the box's
+    }
+    CHECK(std::fabs(minX + 12) < 0.01f && std::fabs(maxX - 112) < 0.01f);
+}

@@ -50,3 +50,9 @@ Facts (RmlUi 6.3 source):
   Bind); the showcase's «Форма» shows two-way binding instead - cost if wrong: a helper later, nothing lost.
 - Stage 3: keys go to a focused uaUI field (uaui::key) - the game may still see them through DirectInput (only the
   showcase has fields yet).
+- Stage 3 shipped beta.59 (fe0287cf). Stage 4 shipped beta.60 (8cd0ff94): emotes, commands, chat room setup, chat
+  room, popup, macros walked by the pad; whispers (pooled sheets) not yet.
+- Stage 5: Ruling: the blurred glass (item 15) NOT built this round - it needs a copy of the frame blurred in both
+  renderers (D3D12 and D3D11), FXC-safe shaders and a weak-card check; a separate piece of work - cost if wrong: one
+  look missing, nothing broken. Built: linear gradients (radial/conic told once, not drawn), ua-shadow decorator
+  (soft shadow / glow ring), rounded clip masks - all behind [interface] uaui_effects (off).

@@ -164,6 +164,14 @@ struct State {
     Rml::ElementDocument* worldMarker = nullptr;
     bool clipOn = false;
     ::uagfx::uaui::ClipBox clip{};
+    // 3.0.18-beta.61 ([interface] uaui_effects): the rounded clip's outline (overflow hidden + border-radius), the
+    // gradients RmlUi compiled, the geometries shaded by them (the gradient's, its geometry's) - made once
+    bool maskOn = false;
+    std::vector<float> mask;
+    std::unordered_map<uintptr_t, ::uagfx::uaui::Gradient> shaders;
+    uintptr_t nextShader = 1;
+    std::map<std::pair<uintptr_t, uintptr_t>, uintptr_t> shaded;
+    bool effects = false;
     bool transformOn = false;
     float transform[16] = {};
     // the words
@@ -281,11 +289,79 @@ public:
         b.texture = uintptr_t(texture);
         b.clipped = s.clipOn;
         b.clip = s.clip;
+        if (s.maskOn && s.effects && s.mask.size() >= 6) {  // 3.0.18-beta.61: cut by the rounded outline too
+            if (!b.clipped) b.clip = {-1e6f, -1e6f, 1e6f, 1e6f};
+            b.clipped = true;
+            b.clip.hull = s.mask;
+        }
         b.transformed = s.transformOn;
         if (s.transformOn) std::copy(s.transform, s.transform + 16, b.m);
         s.batches.push_back(b);
     }
-    void ReleaseGeometry(Rml::CompiledGeometryHandle geometry) override { state().geometries.erase(uintptr_t(geometry)); }
+    void ReleaseGeometry(Rml::CompiledGeometryHandle geometry) override {
+        State& s = state();
+        s.geometries.erase(uintptr_t(geometry));
+        for (auto it = s.shaded.begin(); it != s.shaded.end();)  // 3.0.18-beta.61: its shaded copies with it
+            if (it->first.second == uintptr_t(geometry)) s.geometries.erase(it->second), it = s.shaded.erase(it);
+            else ++it;
+    }
+    // 3.0.18-beta.61 (the possibilities' item 13): a linear gradient as the vertices' colours (core/uaui_mesh
+    // shade); the others (radial, conic) not drawn - told once
+    Rml::CompiledShaderHandle CompileShader(const Rml::String& name, const Rml::Dictionary& p) override {
+        State& s = state();
+        if (name != "linear-gradient" || !s.effects) {
+            static std::set<std::string> told;
+            if (told.insert(name).second) LOG_INFO("uaui: no «%s» drawn (only linear-gradient, with uaui_effects)",
+                                                   name.c_str());
+            return 0;
+        }
+        ::uagfx::uaui::Gradient g;
+        const Rml::Vector2f p0 = Rml::Get(p, "p0", Rml::Vector2f(0, 0)), p1 = Rml::Get(p, "p1", Rml::Vector2f(0, 1));
+        g.x0 = p0.x, g.y0 = p0.y, g.x1 = p1.x, g.y1 = p1.y;
+        g.repeating = Rml::Get(p, "repeating", false);
+        const auto it = p.find("color_stop_list");
+        if (it != p.end() && it->second.GetType() == Rml::Variant::COLORSTOPLIST)
+            for (const Rml::ColorStop& c : it->second.GetReference<Rml::ColorStopList>())
+                g.stops.push_back({c.position.number, uint32_t(c.color.alpha) << 24 | uint32_t(c.color.red) << 16 |
+                                                          uint32_t(c.color.green) << 8 | uint32_t(c.color.blue)});
+        const uintptr_t h = s.nextShader++;
+        s.shaders.emplace(h, std::move(g));
+        return Rml::CompiledShaderHandle(h);
+    }
+    void RenderShader(Rml::CompiledShaderHandle shader, Rml::CompiledGeometryHandle geometry, Rml::Vector2f t,
+                      Rml::TextureHandle texture) override {
+        State& s = state();
+        const auto sh = s.shaders.find(uintptr_t(shader));
+        const auto g = s.geometries.find(uintptr_t(geometry));
+        if (sh == s.shaders.end() || g == s.geometries.end()) return;
+        const std::pair<uintptr_t, uintptr_t> key{uintptr_t(shader), uintptr_t(geometry)};
+        auto it = s.shaded.find(key);
+        if (it == s.shaded.end()) {
+            Geometry copy = g->second;
+            ::uagfx::uaui::shade(copy.points, copy.indices, sh->second);
+            const uintptr_t h = s.nextGeometry++;
+            s.geometries.emplace(h, std::move(copy));
+            it = s.shaded.emplace(key, h).first;
+        }
+        RenderGeometry(Rml::CompiledGeometryHandle(it->second), t, texture);
+    }
+    void ReleaseShader(Rml::CompiledShaderHandle shader) override {
+        State& s = state();
+        s.shaders.erase(uintptr_t(shader));
+        for (auto it = s.shaded.begin(); it != s.shaded.end();)
+            if (it->first.first == uintptr_t(shader)) s.geometries.erase(it->second), it = s.shaded.erase(it);
+            else ++it;
+    }
+    // 3.0.18-beta.61 (item 16): a rounded clip - the mask's convex outline (set or intersected: the last one;
+    // an inverted one not kept)
+    void EnableClipMask(bool enable) override { state().maskOn = enable; }
+    void RenderToClipMask(Rml::ClipMaskOperation op, Rml::CompiledGeometryHandle geometry, Rml::Vector2f t) override {
+        State& s = state();
+        if (op == Rml::ClipMaskOperation::SetInverse) return;
+        const auto g = s.geometries.find(uintptr_t(geometry));
+        if (g == s.geometries.end()) return;
+        s.mask = ::uagfx::uaui::hull(g->second.points, t.x, t.y, s.transformOn ? s.transform : nullptr);
+    }
     Rml::TextureHandle LoadTexture(Rml::Vector2i& dimensions, const Rml::String& source) override {
         State& s = state();
         // 3.0.18-beta.9: a picture the driver keeps (an icon of client_tables, a portrait), as it is -
@@ -449,6 +525,67 @@ const Glyph& haloOf(State& s, Face& f, char32_t c) {
     }
     return f.halos.emplace(c, h).first->second;
 }
+
+// 3.0.18-beta.61 (the possibilities' item 14): decorator: ua-shadow(<blur> <colour>) - a soft shadow or glow round
+// the element's border box (its top left corner's radius), the colour at its edge fading to nothing `blur` out;
+// with [interface] uaui_effects only
+class Shadow final : public Rml::Decorator {
+public:
+    float blur = 8;
+    Rml::Colourb colour{0, 0, 0, 96};
+    Rml::NumericValue blurValue{8, Rml::Unit::DP};
+    struct Data {
+        Rml::Geometry geometry;
+    };
+    Rml::DecoratorDataHandle GenerateElementData(Rml::Element* e, Rml::BoxArea) const override {
+        auto* d = new Data;
+        const Rml::Vector2f size = e->GetBox().GetSize(Rml::BoxArea::Border);
+        const float b = e->ResolveLength(blurValue);
+        const float r = e->GetComputedValues().border_top_left_radius();
+        const Rml::ColourbPremultiplied c = colour.ToPremultiplied(e->GetComputedValues().opacity());
+        const uint32_t argb = uint32_t(c.alpha) << 24 | uint32_t(c.red) << 16 | uint32_t(c.green) << 8 | c.blue;
+        std::vector<::uagfx::uaui::Point> pts;
+        std::vector<int> ix;
+        ::uagfx::uaui::softRing(0, 0, size.x, size.y, r, b, argb, pts, ix);
+        Rml::Mesh mesh;
+        for (const auto& p : pts) {
+            Rml::Vertex v;
+            v.position = {p.x, p.y};
+            v.colour = Rml::ColourbPremultiplied(Rml::byte(p.argb >> 16), Rml::byte(p.argb >> 8), Rml::byte(p.argb),
+                                                 Rml::byte(p.argb >> 24));
+            v.tex_coord = {0, 0};
+            mesh.vertices.push_back(v);
+        }
+        mesh.indices = ix;
+        if (Rml::Context* ctx = e->GetContext()) d->geometry = ctx->GetRenderManager().MakeGeometry(std::move(mesh));
+        return reinterpret_cast<Rml::DecoratorDataHandle>(d);
+    }
+    void ReleaseElementData(Rml::DecoratorDataHandle h) const override { delete reinterpret_cast<Data*>(h); }
+    void RenderElement(Rml::Element* e, Rml::DecoratorDataHandle h) const override {
+        auto* d = reinterpret_cast<Data*>(h);
+        if (d && state().effects) d->geometry.Render(e->GetAbsoluteOffset(Rml::BoxArea::Border));
+    }
+};
+
+class ShadowInstancer final : public Rml::DecoratorInstancer {
+public:
+    ShadowInstancer() {
+        blur_ = RegisterProperty("blur", "8dp").AddParser("length").GetId();
+        colour_ = RegisterProperty("color", "#00000060").AddParser("color").GetId();
+        RegisterShorthand("decorator", "blur, color", Rml::ShorthandType::FallThrough);
+    }
+    Rml::SharedPtr<Rml::Decorator> InstanceDecorator(const Rml::String&, const Rml::PropertyDictionary& p,
+                                                     const Rml::DecoratorInstancerInterface&) override {
+        auto d = Rml::MakeShared<Shadow>();
+        if (const Rml::Property* b = p.GetProperty(blur_)) d->blurValue = b->GetNumericValue();
+        if (const Rml::Property* c = p.GetProperty(colour_)) d->colour = c->Get<Rml::Colourb>();
+        return d;
+    }
+
+private:
+    Rml::PropertyId blur_{}, colour_{};
+};
+ShadowInstancer* g_shadow = nullptr;
 
 class Fonts final : public Rml::FontEngineInterface {
 public:
@@ -1046,6 +1183,14 @@ select selectbox option:checked { color: #e6cb8a; }
 .hb .tipline.first { font-size: 13rem; font-weight: bold; }
 .hb .ttip { position: absolute; border: 1rem #ffffff1f; background-color: #10141cf0; text-align: center;
             font-size: 12rem; white-space: nowrap; }
+/* 3.0.18-beta.61: [interface] uaui_effects - gradients, soft shadows, glows (the body's class «fx»); off: none */
+.fx.sh .glass, .fx.ig .glass, .fx.hb .glass, .fx .ua-window { decorator: ua-shadow(16dp #00000059); }
+.fx.sh .padfocus { decorator: ua-shadow(8dp #e6cb8a59); }
+.fx.hb .cell.ready { decorator: ua-shadow(6dp #4da3ff59); }
+.fx.hb .cell.lit, .fx.hb .cell.combo { decorator: ua-shadow(6dp #e6cb8a4d); }
+.fx.cb .hp, .fx.cb .sp, .fx.tc .hpfill, .fx.xb .fill, .fx.ig .fill, .fx .ua-fill {
+    decorator: linear-gradient(180deg, #ffffff38 0%, #ffffff00 55%, #00000026 100%); }
+.fx.sh .btn, .fx.ig .tab { decorator: linear-gradient(180deg, #ffffff14 0%, #ffffff00 100%); }
 /* 3.0.18-beta.58: [interface] uaui_motion - the soft motion (the body's class «motion»); off: none of it */
 .motion.win { transition: transform 0.16s cubic-out; }
 .motion.win.away { transform: translateY(8dp); }
@@ -1348,6 +1493,9 @@ bool start(State& s) {
         return false;
     }
     Rml::Factory::RegisterElementInstancer("ua-ring", &g_ringInstancer);  // 3.0.18-beta.17
+    static ShadowInstancer shadow;  // 3.0.18-beta.61
+    g_shadow = &shadow;
+    Rml::Factory::RegisterDecoratorInstancer("ua-shadow", g_shadow);
     Rml::Factory::RegisterElementInstancer("ua-split", &g_splitInstancer);  // 3.0.18-beta.27
     // the numbers as the interface writes them - «5 157» (core/char_block grouped); for every model of the context
     Rml::DataModelConstructor m = s.context->CreateDataModel("ua");
@@ -1693,6 +1841,17 @@ void setMotion(bool on) {
         if (d->doc()) d->doc()->SetClass("motion", on);
 }
 bool motion() { return g_motion; }
+
+// 3.0.18-beta.61 ([interface] uaui_effects): gradients, soft shadows and glows, rounded clips - the theme's under the
+// body class «fx»
+void setEffects(bool on) {
+    State& s = state();
+    if (on == s.effects) return;
+    s.effects = on;
+    LOG_INFO("uaui: [interface] uaui_effects = %d", on ? 1 : 0);
+    for (Doc* d : s.docs)
+        if (d->doc()) d->doc()->SetClass("fx", on);
+}
 HWND gameWindow() { return state().game; }
 double targetScale() { return state().k; }
 
@@ -1861,6 +2020,7 @@ bool Doc::load(const std::string& rml) {
     if (Rml::Element* c = doc_->GetElementById("ua-close")) c->AddEventListener(Rml::EventId::Click, &g_close);
     doc_->SetClass("win", window);  // 3.0.18-beta.58: the theme's motion slides windows only
     doc_->SetClass("motion", g_motion);
+    doc_->SetClass("fx", s.effects);  // 3.0.18-beta.61
     if (marked_ > 0) doc_->SetClass("marked", true);
     if (was) {
         if (shown_) doc_->Show(Rml::ModalFlag::None, Rml::FocusFlag::None);

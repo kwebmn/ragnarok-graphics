@@ -87,11 +87,155 @@ void triangles(const std::vector<Point>& points, const std::vector<int>& indices
                 if (poly.size() < 3) continue;
             }
         }
+        if (clip && clip->hull.size() >= 6) {  // 3.0.18-beta.61: the mask's outline, counter-clockwise (hull())
+            const std::vector<float>& h = clip->hull;
+            const size_t n = h.size() / 2;
+            for (size_t e = 0; e < n && poly.size() >= 3; ++e) {
+                const float ax = h[2 * e], ay = h[2 * e + 1], bx = h[2 * ((e + 1) % n)], by = h[2 * ((e + 1) % n) + 1];
+                cutBy(poly, [&](const P& p) { return (bx - ax) * (p.y - ay) - (by - ay) * (p.x - ax); });
+            }
+            if (poly.size() < 3) continue;
+        }
         for (size_t i = 1; i + 1 < poly.size(); ++i) {  // a fan
             out.push_back(toGame(poly[0], k, half));
             out.push_back(toGame(poly[i], k, half));
             out.push_back(toGame(poly[i + 1], k, half));
         }
+    }
+}
+
+std::vector<float> hull(const std::vector<Point>& points, float dx, float dy, const float* m) {
+    std::vector<std::pair<float, float>> v;
+    v.reserve(points.size());
+    for (const Point& p : points) {
+        const P q = toP(p, dx, dy, m);
+        v.emplace_back(q.x, q.y);
+    }
+    std::sort(v.begin(), v.end());
+    v.erase(std::unique(v.begin(), v.end()), v.end());
+    if (v.size() < 3) return {};
+    const auto cross = [](const std::pair<float, float>& o, const std::pair<float, float>& a,
+                          const std::pair<float, float>& b) {
+        return (a.first - o.first) * (b.second - o.second) - (a.second - o.second) * (b.first - o.first);
+    };
+    std::vector<std::pair<float, float>> h(2 * v.size());
+    size_t k = 0;
+    for (size_t i = 0; i < v.size(); ++i) {  // Andrew's chain: the lower side, then the upper
+        while (k >= 2 && cross(h[k - 2], h[k - 1], v[i]) <= 1e-6f) --k;
+        h[k++] = v[i];
+    }
+    for (size_t i = v.size() - 1, low = k + 1; i-- > 0;) {
+        while (k >= low && cross(h[k - 2], h[k - 1], v[i]) <= 1e-6f) --k;
+        h[k++] = v[i];
+    }
+    h.resize(k - 1);
+    std::vector<float> out;
+    for (const auto& [x, y] : h) out.push_back(x), out.push_back(y);
+    return out;
+}
+
+namespace {
+
+float placeOf(const Gradient& g, float x, float y) {
+    const float dx = g.x1 - g.x0, dy = g.y1 - g.y0, l2 = dx * dx + dy * dy;
+    return l2 > 0 ? ((x - g.x0) * dx + (y - g.y0) * dy) / l2 : 0;
+}
+
+void colourAt(const Gradient& g, float t, float c[4]) {  // premultiplied a r g b
+    const auto ch = [](uint32_t argb, int i) { return float((argb >> (24 - 8 * i)) & 0xFFu); };
+    if (g.stops.empty()) {
+        for (int i = 0; i < 4; ++i) c[i] = 0;
+        return;
+    }
+    if (g.repeating && g.stops.size() > 1) {
+        const float a = g.stops.front().t, b = g.stops.back().t;
+        if (b > a) t = a + std::fmod(std::fmod(t - a, b - a) + (b - a), b - a);
+    }
+    if (t <= g.stops.front().t) {
+        for (int i = 0; i < 4; ++i) c[i] = ch(g.stops.front().argb, i);
+        return;
+    }
+    for (size_t s = 1; s < g.stops.size(); ++s) {
+        const Gradient::Stop &a = g.stops[s - 1], &b = g.stops[s];
+        if (t <= b.t) {
+            const float f = b.t > a.t ? (t - a.t) / (b.t - a.t) : 1;
+            for (int i = 0; i < 4; ++i) c[i] = ch(a.argb, i) + (ch(b.argb, i) - ch(a.argb, i)) * f;
+            return;
+        }
+    }
+    for (int i = 0; i < 4; ++i) c[i] = ch(g.stops.back().argb, i);
+}
+
+}  // namespace
+
+void shade(std::vector<Point>& points, std::vector<int>& indices, const Gradient& g) {
+    std::vector<Point> outPts;
+    std::vector<int> outIx;
+    std::vector<std::vector<P>> polys, next;
+    const int n = int(points.size());
+    for (size_t tr = 0; tr + 2 < indices.size(); tr += 3) {
+        const int i0 = indices[tr], i1 = indices[tr + 1], i2 = indices[tr + 2];
+        if (i0 < 0 || i1 < 0 || i2 < 0 || i0 >= n || i1 >= n || i2 >= n) continue;
+        polys = {{toP(points[size_t(i0)], 0, 0, nullptr), toP(points[size_t(i1)], 0, 0, nullptr),
+                  toP(points[size_t(i2)], 0, 0, nullptr)}};
+        if (!g.repeating)
+            for (const Gradient::Stop& st : g.stops) {  // cut where a stop's line crosses it
+                next.clear();
+                for (const std::vector<P>& poly : polys) {
+                    float lo = 1e30f, hi = -1e30f;
+                    for (const P& p : poly) {
+                        const float t = placeOf(g, p.x, p.y);
+                        lo = std::min(lo, t), hi = std::max(hi, t);
+                    }
+                    if (st.t <= lo + 1e-5f || st.t >= hi - 1e-5f) {
+                        next.push_back(poly);
+                        continue;
+                    }
+                    std::vector<P> below = poly, above = poly;
+                    cutBy(below, [&](const P& p) { return st.t - placeOf(g, p.x, p.y); });
+                    cutBy(above, [&](const P& p) { return placeOf(g, p.x, p.y) - st.t; });
+                    if (below.size() >= 3) next.push_back(std::move(below));
+                    if (above.size() >= 3) next.push_back(std::move(above));
+                }
+                polys.swap(next);
+            }
+        for (const std::vector<P>& poly : polys) {
+            const int base = int(outPts.size());
+            for (const P& p : poly) {
+                float c[4];
+                colourAt(g, placeOf(g, p.x, p.y), c);
+                uint32_t argb = 0;
+                for (int i = 0; i < 4; ++i)
+                    argb |= uint32_t(std::clamp(std::lround(c[i] * p.c[i] / 255.0f), 0L, 255L)) << (24 - 8 * i);
+                outPts.push_back(Point{p.x, p.y, argb, p.u, p.v});
+            }
+            for (size_t i = 1; i + 1 < poly.size(); ++i)
+                outIx.insert(outIx.end(), {base, base + int(i), base + int(i) + 1});
+        }
+    }
+    points.swap(outPts);
+    indices.swap(outIx);
+}
+
+void softRing(float x, float y, float w, float h, float r, float blur, uint32_t argb, std::vector<Point>& points,
+              std::vector<int>& indices) {
+    points.clear();
+    indices.clear();
+    if (w <= 0 || h <= 0 || blur <= 0) return;
+    r = std::clamp(r, 0.0f, std::min(w, h) / 2);
+    constexpr int kSteps = 8;  // a corner's
+    const float cx[4] = {x + w - r, x + w - r, x + r, x + r}, cy[4] = {y + r, y + h - r, y + h - r, y + r};
+    const float start[4] = {-1.5707963f, 0, 1.5707963f, 3.1415927f};  // top right, bottom right, ... clockwise
+    for (int c = 0; c < 4; ++c)
+        for (int i = 0; i <= kSteps; ++i) {
+            const float a = start[c] + 1.5707963f * float(i) / kSteps, ca = std::cos(a), sa = std::sin(a);
+            points.push_back(Point{cx[c] + ca * r, cy[c] + sa * r, argb});
+            points.push_back(Point{cx[c] + ca * (r + blur), cy[c] + sa * (r + blur), 0});
+        }
+    const int m = int(points.size()) / 2;
+    for (int i = 0; i < m; ++i) {
+        const int j = (i + 1) % m;
+        indices.insert(indices.end(), {2 * i, 2 * i + 1, 2 * j + 1, 2 * i, 2 * j + 1, 2 * j});
     }
 }
 

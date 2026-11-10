@@ -832,6 +832,8 @@ Config parseConfig(const std::string& text) {
             setBool(val, c.uaui);
         } else if (key == "interface.uaui_motion") {  // 3.0.18-beta.58
             setBool(val, c.uauiMotion);
+        } else if (key == "interface.uaui_effects") {  // 3.0.18-beta.61
+            setBool(val, c.uauiEffects);
         } else if (key == "interface.uaui_showcase") {  // 3.0.18-beta.11: uaUI's components' window
             setBool(val, c.uauiShowcase);
         } else if (key == "interface.theme") {  // 3.0.18-beta.13: uaUI's theme
