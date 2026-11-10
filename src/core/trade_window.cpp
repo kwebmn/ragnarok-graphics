@@ -26,7 +26,7 @@ const Thing* thingAt(const Side& me, const Side& them, int cell) {
     return x.count > 0 ? &x : nullptr;
 }
 
-std::string tipFirst(const Thing& x) {
+std::string tipFirstOf(const Thing& x) {
     std::string s = x.refine > 0 ? "+" + std::to_string(x.refine) + " " + x.name : x.name;
     if (x.count > 1) s += " \xC3\x97" + itemwin::grouped(x.count);
     return s;
@@ -35,7 +35,7 @@ std::string tipFirst(const Thing& x) {
 // The pointed cell's tip: under its row (over it on the lower row), inside the glass
 panel::Box tipBox(const Layout& L, const Thing& x, int cell, const Texts& t, const itemwin::Measure& m) {
     const float s = L.s;
-    const float wide = std::max(m(tipFirst(x), 13 * s, true), m(t.info, 11.5f * s, false)) + 22 * s;
+    const float wide = std::max(m(tipFirstOf(x), 13 * s, true), m(t.info, 11.5f * s, false)) + 22 * s;
     const float h = 44 * s;
     const panel::Box& c = L.cells[cell];
     const float x0 = std::clamp(c.x + c.w / 2 - wide / 2, L.glass.x + 6 * s, L.glass.x + L.glass.w - wide - 6 * s);
@@ -45,6 +45,8 @@ panel::Box tipBox(const Layout& L, const Thing& x, int cell, const Texts& t, con
 }
 
 }  // namespace
+
+std::string tipFirst(const Thing& x) { return tipFirstOf(x); }
 
 bool Late::any() const { return zeny || std::any_of(std::begin(slots), std::end(slots), [](bool b) { return b; }); }
 
@@ -172,7 +174,7 @@ std::vector<Words> words(const Layout& L, const Side& me, const Side& them, cons
     }
     if (!me.ready) out.push_back(Words{L.hint, t.hint, kFaint, 11.5f * s, false, Align::Center});
     if (pointed && tip.w > 0) {
-        out.push_back(Words{panel::Box{tip.x + 11 * s, tip.y + 4 * s, tip.w - 22 * s, 18 * s}, tipFirst(*pointed),
+        out.push_back(Words{panel::Box{tip.x + 11 * s, tip.y + 4 * s, tip.w - 22 * s, 18 * s}, tipFirstOf(*pointed),
                             kText, 13 * s, true, Align::Left});
         out.push_back(Words{panel::Box{tip.x + 11 * s, tip.y + 23 * s, tip.w - 22 * s, 16 * s}, t.info, kMuted,
                             11.5f * s, false, Align::Left});

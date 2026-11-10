@@ -36,6 +36,7 @@ struct Late {
     bool any() const;
 };
 Late watchLate(const Side& before, const Side& now, bool meReady, Late was);
+std::string tipFirst(const Thing& x);  // 3.0.18-beta.95: a pointed thing's tip, its first line
 bool canReady(const Side& me);                                  // not pressed yet
 bool canTrade(const Side& me, const Side& them, bool traded);  // both ready, «Обмін» not pressed yet
 
