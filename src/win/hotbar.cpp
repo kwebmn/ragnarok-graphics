@@ -874,7 +874,8 @@ std::vector<Words> gdiWords(const std::vector<hb::Words>& in) {
 // part's own; its picture not painted then ----
 
 const char* kDoc = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss"/></head>
-<body class="hb" data-model="hotbar" data-style-width="w + 'px'" data-style-height="h + 'px'">
+<body class="hb" data-model="hotbar" data-style-font-size="s + 'px'"
+ data-style-width="w + 'px'" data-style-height="h + 'px'">
 <div class="glass" data-style-left="glass.x + 'px'" data-style-top="glass.y + 'px'"
   data-style-width="glass.w + 'px'" data-style-height="glass.h + 'px'" data-style-border-radius="10 * s + 'px'"
   data-style-background-color="ground"></div>

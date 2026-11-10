@@ -795,34 +795,34 @@ input.checkbox:checked { background-color: #3d7fd8; border-color: #3d7fd8; }
 .pp .cell .bar { left: 23dp; right: 3dp; top: 20dp; height: 4dp; }
 .pp .cell .bar .fill { height: 4dp; }
 /* 3.0.18-beta.20: the buffs' column (win/buff_column) - the concept's v19_vbuffs_ab; places in the target's pixels */
-.bc { position: absolute; font-family: Plex; color: #eceff5; }
+.bc { position: absolute; font-family: Plex; color: #eceff5; font-size: 1px; }
 .bc .slot { position: absolute; cursor: pointer; }
 .bc .shadow { position: absolute; background-color: #00000038; }
 .bc .outline { position: absolute; background-color: #000000b3; }
 .bc .icon { position: absolute; background-color: #1b1d24; }
 .bc .icon img { width: 100%; height: 100%; }
-.bc .bad { position: absolute; border: 1.6dp #ff5a4ef2; }
-.bc .hover { position: absolute; border: 1.5dp #ffffffd9; }
-.bc .time { position: absolute; text-align: center; font-size: 11.5dp; font-weight: bold;
+.bc .bad { position: absolute; border: 1.6rem #ff5a4ef2; }
+.bc .hover { position: absolute; border: 1.5rem #ffffffd9; }
+.bc .time { position: absolute; text-align: center; font-size: 11.5rem; font-weight: bold;
             font-effect: outline(2px #000000d9); }
 .bc .time.warn { color: #f0a050; }
 .bc .time.bad { color: #ff9a8f; }
-.bc .name { position: absolute; text-align: right; font-size: 13dp; font-weight: bold; white-space: nowrap;
+.bc .name { position: absolute; text-align: right; font-size: 13rem; font-weight: bold; white-space: nowrap;
             font-effect: outline(2px #000000d9); }
 .bc .name.bad { color: #ff9a8f; }
-.bc .more { position: absolute; text-align: center; font-size: 12dp; font-weight: bold; cursor: pointer;
+.bc .more { position: absolute; text-align: center; font-size: 12rem; font-weight: bold; cursor: pointer;
             font-effect: outline(2px #000000d9); }
-.bc .toggle { position: absolute; background-color: #00000073; border: 1dp #ffffff47; cursor: pointer;
+.bc .toggle { position: absolute; background-color: #00000073; border: 1rem #ffffff47; cursor: pointer;
               transition: background-color 0.1s; }
 .bc .toggle:hover { background-color: #0000009e; }
 .bc .toggle.on { border-color: #e6cb8ad9; }
-.bc .toggle .ln { position: absolute; left: 50%; margin-left: -5dp; width: 10dp; height: 1.5dp; border-radius: 1dp;
+.bc .toggle .ln { position: absolute; left: 50%; margin-left: -5rem; width: 10rem; height: 1.5rem; border-radius: 1rem;
                   background-color: #ffffffe6; }
 .bc .toggle.on .ln { background-color: #e6cb8ae6; }
-.bc .tip { position: absolute; padding: 4dp 10dp 0 10dp; border-radius: 8dp; border: 1dp #ffffff1f;
+.bc .tip { position: absolute; padding: 4rem 10rem 0 10rem; border-radius: 8rem; border: 1rem #ffffff1f;
            background-color: #10141cf0; white-space: nowrap; }
-.bc .tip .a { display: block; font-size: 13dp; font-weight: bold; height: 18dp; line-height: 18dp; }
-.bc .tip .b { display: block; font-size: 11.5dp; color: #9aa3b5; height: 15dp; line-height: 15dp; }
+.bc .tip .a { display: block; font-size: 13rem; font-weight: bold; height: 18rem; line-height: 18rem; }
+.bc .tip .b { display: block; font-size: 11.5rem; color: #9aa3b5; height: 15rem; line-height: 15rem; }
 /* 3.0.18-beta.21: the hotbar (win/hotbar) - the concept's cells; places in the target's pixels */
 .xb { position: absolute; font-family: Plex; color: #eceff5; }
 .xg { position: absolute; font-family: Plex; }
@@ -961,46 +961,46 @@ input.checkbox:checked { background-color: #3d7fd8; border-color: #3d7fd8; }
 .xb .tip .line { display: block; height: 17dp; line-height: 17dp; font-size: 13dp; font-weight: bold; color: #9aa3b5;
                  white-space: nowrap; }
 .xb .tip .line:first-child { color: #eceff5; }
-.hb { position: absolute; font-family: Plex; color: #eceff5; }
+.hb { position: absolute; font-family: Plex; color: #eceff5; font-size: 1px; }
 .hb .a { position: absolute; }
-.hb .glass { position: absolute; border: 1dp #ffffff17; background-color: #10141ccc; }
-.hb .cell { position: absolute; background-color: #ffffff0d; border: 1dp #ffffff1a; }
+.hb .glass { position: absolute; border: 1rem #ffffff17; background-color: #10141ccc; }
+.hb .cell { position: absolute; background-color: #ffffff0d; border: 1rem #ffffff1a; }
 .hb .cell.hot { background-color: #ffffff1a; border-color: #ffffff33; }
 .hb .cell.down { background-color: #0000004d; }
-.hb .cell.lit { border-color: #c9a55bd9; border-width: 2dp; }
-.hb .cell.chosen, .hb .cell.under { border-color: #c9a55b; border-width: 2dp; }
-.hb .cell.combo { background-color: #e6cb8a1f; border-color: #c9a55b; border-width: 2dp; }
-.hb .cell.ready { background-color: #4da3ff24; border-color: #4da3fff2; border-width: 2dp; }
-.hb .flash { position: absolute; border: 2dp #f0a050; }
+.hb .cell.lit { border-color: #c9a55bd9; border-width: 2rem; }
+.hb .cell.chosen, .hb .cell.under { border-color: #c9a55b; border-width: 2rem; }
+.hb .cell.combo { background-color: #e6cb8a1f; border-color: #c9a55b; border-width: 2rem; }
+.hb .cell.ready { background-color: #4da3ff24; border-color: #4da3fff2; border-width: 2rem; }
+.hb .flash { position: absolute; border: 2rem #f0a050; }
 .hb .shade { position: absolute; background-color: #00000080; }
-.hb .plate { position: absolute; background-color: #0000009e; text-align: center; font-size: 11dp; font-weight: bold;
+.hb .plate { position: absolute; background-color: #0000009e; text-align: center; font-size: 11rem; font-weight: bold;
              white-space: nowrap; }
 .hb .plate.sp { background-color: #3d7eebf2; color: #ffffff; }
 .hb .plate.lack { background-color: #c8443af2; color: #ffffff; }
-.hb .plate.timer { background-color: #000000b8; font-size: 12dp; color: #c9a55b; }
-.hb .bar { position: absolute; height: 3dp; }
+.hb .plate.timer { background-color: #000000b8; font-size: 12rem; color: #c9a55b; }
+.hb .bar { position: absolute; height: 3rem; }
 .hb .bar.combo { background-color: #e6cb8a; }
 .hb .bar.timer { background-color: #c9a55b; }
-.hb .chip { position: absolute; background-color: #c0392be6; text-align: center; font-size: 12dp; font-weight: bold; }
-.hb .hint { position: absolute; font-size: 11.5dp; color: #9aa3b5; white-space: nowrap; }
+.hb .chip { position: absolute; background-color: #c0392be6; text-align: center; font-size: 12rem; font-weight: bold; }
+.hb .hint { position: absolute; font-size: 11.5rem; color: #9aa3b5; white-space: nowrap; }
 .hb .rowbox { position: absolute; background-color: #ffffff0a; }
-.hb .rownum { position: absolute; text-align: center; font-size: 15dp; font-weight: bold; }
-.hb .f12 { position: absolute; text-align: center; font-size: 10.5dp; color: #9aa3b5; }
-.hb .label { position: absolute; text-align: center; font-size: 13dp; font-weight: bold; }
-.hb .toggle { position: absolute; background-color: #ffffff0f; border: 1dp #c9a55b00; }
+.hb .rownum { position: absolute; text-align: center; font-size: 15rem; font-weight: bold; }
+.hb .f12 { position: absolute; text-align: center; font-size: 10.5rem; color: #9aa3b5; }
+.hb .label { position: absolute; text-align: center; font-size: 13rem; font-weight: bold; }
+.hb .toggle { position: absolute; background-color: #ffffff0f; border: 1rem #c9a55b00; }
 .hb .toggle.hot { background-color: #ffffff24; border-color: #c9a55bcc; }
 .hb .toggle.battle { background-color: #c0392be6; }
 .hb .toggle.battle.hot { background-color: #c0392b; }
-.hb .profile { position: absolute; text-align: center; font-size: 10dp; font-weight: bold; color: #e6cb8a; }
-.hb .pill { position: absolute; background-color: #10141cd9; border: 1dp #ffffff1f; }
-.hb .pilltext { position: absolute; font-size: 12.5dp; font-weight: bold; white-space: nowrap; }
-.hb .dot { position: absolute; background-color: #ffffff14; border: 1dp #ffffff4d; }
+.hb .profile { position: absolute; text-align: center; font-size: 10rem; font-weight: bold; color: #e6cb8a; }
+.hb .pill { position: absolute; background-color: #10141cd9; border: 1rem #ffffff1f; }
+.hb .pilltext { position: absolute; font-size: 12.5rem; font-weight: bold; white-space: nowrap; }
+.hb .dot { position: absolute; background-color: #ffffff14; border: 1rem #ffffff4d; }
 .hb .dot.on { background-color: #e6cb8a; border-width: 0; }
-.hb .tip { position: absolute; border: 1dp #ffffff1f; background-color: #10141cf0; }
-.hb .tipline { position: absolute; font-size: 11.5dp; white-space: nowrap; }
-.hb .tipline.first { font-size: 13dp; font-weight: bold; }
-.hb .ttip { position: absolute; border: 1dp #ffffff1f; background-color: #10141cf0; text-align: center;
-            font-size: 12dp; white-space: nowrap; }
+.hb .tip { position: absolute; border: 1rem #ffffff1f; background-color: #10141cf0; }
+.hb .tipline { position: absolute; font-size: 11.5rem; white-space: nowrap; }
+.hb .tipline.first { font-size: 13rem; font-weight: bold; }
+.hb .ttip { position: absolute; border: 1rem #ffffff1f; background-color: #10141cf0; text-align: center;
+            font-size: 12rem; white-space: nowrap; }
 scrollbarvertical { width: 8dp; margin-left: 4dp; }
 scrollbarvertical slidertrack { background-color: #ffffff0c; border-radius: 4dp; }
 scrollbarvertical sliderbar { background-color: #ffffff40; border-radius: 4dp; min-height: 24dp; }

@@ -389,7 +389,8 @@ void pressPart(State& s, const bp::Hit& h) {
 // over the whole icon; the clicks into pressPart(); its picture not painted then ----
 
 const char* kDoc = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss"/></head>
-<body class="bc" data-model="buffs" data-style-width="w + 'px'" data-style-height="h + 'px'">
+<body class="bc" data-model="buffs" data-style-font-size="dp + 'px'"
+ data-style-width="w + 'px'" data-style-height="h + 'px'">
 <div class="toggle" data-if="toggle.w > 0" data-class-on="names" data-event-click="toggle()"
      data-style-left="toggle.x + 'px'" data-style-top="toggle.y + 'px'" data-style-width="toggle.w + 'px'"
      data-style-height="toggle.h + 'px'" data-style-border-radius="toggle.h / 2 + 'px'">
