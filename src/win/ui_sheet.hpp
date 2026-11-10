@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 
+#include "core/ui_icons.hpp"
 #include "core/window_panel.hpp"
 #include "win/picture_draw.hpp"
 #include "win/uaui.hpp"

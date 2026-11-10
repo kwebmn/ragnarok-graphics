@@ -155,4 +155,6 @@ std::vector<Words> words(const Layout& L, const std::vector<Entry>& entries, con
     return out;
 }
 
+const Entry* chosenEntry(const std::vector<Entry>& entries, const Show& sh) { return chosenOf(entries, sh); }
+
 }  // namespace uagfx::socialcard

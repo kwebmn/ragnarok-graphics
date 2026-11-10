@@ -67,4 +67,7 @@ struct Words {
 };
 std::vector<Words> words(const Layout& L, const std::vector<Entry>& entries, const Show& sh, const Texts& t);
 
+// 3.0.18-beta.34 (uaUI's friends and party): the entry chosen in the shown list (none: nullptr)
+const Entry* chosenEntry(const std::vector<Entry>& entries, const Show& sh);
+
 }  // namespace uagfx::socialcard

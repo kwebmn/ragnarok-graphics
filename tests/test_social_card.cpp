@@ -95,3 +95,13 @@ TEST(social_card_words_and_picture) {
     socialcard::paint(p, L, e, sh);
     CHECK((p.px[size_t(L.h / 2) * size_t(L.w) + size_t(L.w / 2)] >> 24) > 0x80);
 }
+
+// 3.0.18-beta.34: uaUI's friends - the entry chosen, none when nothing is
+TEST(social_card_chosen_entry) {
+    std::vector<socialcard::Entry> entries(2);
+    socialcard::Show sh;
+    sh.selected = -1;
+    CHECK(socialcard::chosenEntry(entries, sh) == nullptr);
+    sh.selected = 1;
+    CHECK(socialcard::chosenEntry(entries, sh) == &entries[1]);
+}

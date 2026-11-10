@@ -63,7 +63,7 @@ picture's upload gone. Cost if wrong: per-pixel glows (panel::over loops) land i
 - [x] NPC talk, ask / message / pick / count cards, item and skill cards — beta.31 by hand on the sheet (+ answer card; sayGdi for GDI words)
 - [x] chat, whispers, chat room, popup menu, emotions, commands — beta.32 by hand on the sheet (chat a HUD part; the wheel's ring as <ua-ring>s; core chatpanel::view)
 - [x] login, servers, character select and make — beta.33 by hand on the sheet (uaui::readyAnywhere + Doc::anywhere: before the world; the login's ▾ list still its picture in the sheet's top layer; shelf/continue/site cards next)
-- [ ] pet, homunculus, mercenary, options, friends, guild, whisper setup, macros, tip of the day, menu, OSK
+- [x] pet, homunculus, mercenary, options, friends, guild, whisper setup, macros, tip of the day, menu, OSK — beta.32/.34 by hand on the sheet (the mercenary's HUD block still its picture)
 - [ ] «Довідник»
 - [ ] pad tiles / assign / hints, HUD edit
 
@@ -99,3 +99,4 @@ picture's upload gone. Cost if wrong: per-pixel glows (panel::over loops) land i
 - 2026-11-10 beta.31: NPC talk, ask/count, pick, answer, item and skill cards by hand on the sheet (Sheet::glyph, sayGdi, line heights)
 - 2026-11-10 beta.32: chat, chat wheel, whispers, chat room and its making, popup menu, emotions, commands, whisper setup on the sheet (+ Content::op, rings). Note: uaui::Doc has no destructor - sheets are pooled, never destroyed
 - 2026-11-10 beta.33: login card, servers, characters, character make on the sheet; uaUI runs before the world for Doc::anywhere documents (others hidden there)
+- 2026-11-10 beta.34: pet, homunculus, mercenary, options, friends, guild, macros, tip of the day, menu, keyboard on the sheet - their paint() translated line by line (tools: $S/conv.py)

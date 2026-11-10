@@ -27,6 +27,8 @@
 #include "win/real_ddraw.hpp"
 #include "win/ui_cost.hpp"
 #include "win/window_shadow.hpp"
+#include "win/uaui.hpp"
+#include "win/ui_sheet.hpp"
 
 namespace uagfx::win::merccardwin {
 namespace {
@@ -53,6 +55,9 @@ using MakeFn = uint32_t(__attribute__((thiscall)) *)(uint32_t manager, int id);
 using SendMsgFn = int(__attribute__((thiscall)) *)(uint32_t self, uint32_t sender, int msg, int a, int b, int c);
 
 struct State {
+    uisheet::Sheet sheet;  // 3.0.18-beta.34: the window drawn by uaUI
+    int sheetGen = 0;
+    bool sheetShown = false;
     WindowShadow shadow;
     bool on = false, shown = false;
     uint32_t hidden = 0;
@@ -175,6 +180,10 @@ std::vector<Words> gdiWords(const std::vector<mc::Words>& in) {
 }
 
 void render(State& s) {
+    if (uaui::ready()) {  // 3.0.18-beta.34: uaUI's window says it all again, no picture
+        ++s.sheetGen;
+        return;
+    }
     const uicost::Paint cost("the mercenary", s.layout.w, s.layout.h);
     if (!panel::blank(s.picture, s.layout.w, s.layout.h)) return;
     mc::paint(s.picture, s.layout, s.info, s.show);
@@ -260,7 +269,8 @@ void press(State& s, mc::Button b) {
 
 }  // namespace
 
-void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int targetHeight) {
+static void frameInner(HWND game, bool on, unsigned codePage, double k, int targetWidth,
+                       int targetHeight) {
     State& s = state();
     s.codePage = codePage;
     if (on != s.on) {
@@ -316,23 +326,105 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
         key += ';' + r.name + std::to_string(r.level) + '/' + std::to_string(r.use) + (r.usable ? "u" : "");
     key += ';' + std::to_string(s.show.hoverSkill) + ',' + std::to_string(s.show.hoverLess) + ',' +
            std::to_string(s.show.hoverMore) + ',' + std::to_string(s.show.padRow);
-    if (key != s.key) {
-        s.key = key;
+    if (const std::string drawn = key + (uaui::ready() ? "u" : ""); drawn != s.key) {  // 3.0.18-beta.34
+        s.key = drawn;
         render(s);
     }
     s.shown = true;
     block(s, game);
 }
 
+// 3.0.18-beta.34 (docs/superpowers/plans/2026-11-09-uaui-migration.md, stage 5 - by hand): this window in RmlUi's
+// markup, line by line as core merccard paints it (its boxes, icons, circles); the words where it places them
+static void fillSheet(State& s, uisheet::Content& ui) {
+    using namespace uagfx::merccard;
+    const auto& L = s.layout;
+    const auto& i = s.info;
+    const auto& sh = s.show;
+    [[maybe_unused]] constexpr uint32_t kCard = 0x10141C;
+    [[maybe_unused]] constexpr uint32_t kWhite = 0xFFFFFF;
+    [[maybe_unused]] constexpr uint32_t kGold = 0xC9A55B;
+    [[maybe_unused]] constexpr uint32_t kGold2 = 0xE6CB8A;
+    [[maybe_unused]] constexpr uint32_t kText = 0xEEF2F8;
+    [[maybe_unused]] constexpr uint32_t kMuted = 0x9AA3B5;
+    [[maybe_unused]] constexpr uint32_t kHp = 0x4CC777;
+    [[maybe_unused]] constexpr uint32_t kSp = 0x3D7EEB;
+    [[maybe_unused]] constexpr uint32_t kDanger = 0xE0675C;
+    [[maybe_unused]] constexpr float kW = 320;
+    [[maybe_unused]] constexpr float kPad = 16;
+    [[maybe_unused]] constexpr float kTitleH = 30;
+    [[maybe_unused]] constexpr float kNameH = 24;
+    [[maybe_unused]] constexpr float kRowH = 16;
+    [[maybe_unused]] constexpr float kBarH = 7;
+    [[maybe_unused]] constexpr float kLineH = 18;
+    [[maybe_unused]] constexpr float kGap = 8;
+    ui.w = float(L.w), ui.h = float(L.h);
+    const auto put = [&](const panel::Picture& p, const panel::Box& box, float k = 1.0f) {
+        if (p.width > 0)
+            ui.icons.push_back(uisheet::Icon{std::round(box.x + (box.w - float(p.width)) / 2),
+                                            std::round(box.y + (box.h - float(p.height)) / 2), float(p.width),
+                                            float(p.height), k, s.sheet.icon(&p)});
+    };
+    [[maybe_unused]] const auto circle = [&](float cx, float cy, float r, uint32_t rgb, float a) {
+        ui.rect(ui.under, panel::Box{cx - r, cy - r, 2 * r, 2 * r}, r, rgb, a);
+    };
+    [[maybe_unused]] const auto icon = [&](uiicons::Icon which, float x, float y, float side, uint32_t rgb, float a,
+                                           float stroke) {
+        const int px = std::max(4, int(std::ceil(side)));
+        const std::string key = "u" + std::to_string(int(which)) + ':' + std::to_string(px) + ':' +
+                                std::to_string(rgb) + ':' + std::to_string(int(a * 100));
+        const std::string src = s.sheet.made(key, px, px, [&](panel::Picture& p) {
+            uiicons::draw(p, which, 0, 0, float(px), rgb, a, stroke);
+        });
+        ui.icons.push_back(uisheet::Icon{x, y, float(px), float(px), 1, src});
+    };
+    (void)put;
+
+    const float sc = L.s;
+    ui.rect(ui.under, L.glass, 12 * sc, kCard, uistyle::window(), kWhite, 0.12f, 1.0f * sc);
+    ui.rect(ui.under, L.close, 6 * sc, kWhite, sh.hover == int(Button::Close) ? 0.14f : 0.06f);
+    const auto bar = [&](const panel::Box& b, int now, int most, uint32_t rgb) {
+        ui.rect(ui.under, b, b.h / 2, kWhite, 0.08f);
+        if (most > 0 && now > 0)
+            ui.rect(ui.under, panel::Box{b.x, b.y, b.w * std::min(1.0f, float(now) / float(most)), b.h}, b.h / 2,
+                    rgb, 0.9f);
+    };
+    bar(L.hp, i.hp, i.maxHp, kHp);
+    bar(L.sp, i.sp, i.maxSp, kSp);
+    ui.rect(ui.under, panel::Box{L.skills.x, L.skills.y + L.skills.h - 1 * sc, L.skills.w, 1 * sc}, 0, kGold,
+            0.45f);  // 3.0.11-beta.218: the list's heading underlined
+    for (size_t k = 0; k < L.skillRows.size() && k < i.skills.size(); ++k) {  // 3.0.16-beta.31
+        if (!i.skills[k].usable) continue;
+        if (sh.hoverSkill == int(k)) ui.rect(ui.under, L.skillRows[k], 6 * sc, kWhite, 0.07f);
+        if (sh.padRow == int(k))  // 3.0.16-beta.39
+            ui.rect(ui.under, L.skillRows[k], 6 * sc, kWhite, 0.0f, kGold, 0.9f, 1.5f * sc);
+        if (i.skills[k].level > 1) {
+            ui.rect(ui.under, L.skillLess[k], 5 * sc, kWhite, sh.hoverLess == int(k) ? 0.16f : 0.06f);
+            ui.rect(ui.under, L.skillMore[k], 5 * sc, kWhite, sh.hoverMore == int(k) ? 0.16f : 0.06f);
+        }
+    }
+    if (sh.hover == int(Button::Dismiss)) ui.rect(ui.under, L.dismiss, 6 * sc, kDanger, 0.12f);
+    ui.say(uagfx::merccard::words(s.layout, s.info, s.show, texts()));
+}
+
+void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int targetHeight) {
+    frameInner(game, on, codePage, k, targetWidth, targetHeight);
+    State& s = state();
+    s.sheetShown = s.sheet.frame("merc", s.shown, true, s.layout.x, s.layout.y, s.sheetGen,
+                                 [&](uisheet::Content& c) { fillSheet(s, c); });
+}
+
 void draw(FrameRecord& record, gpu::Renderer& renderer) {
     State& s = state();
-    if (!s.shown || s.k <= 0 || s.picture.width <= 0 || s.picture.height <= 0) return;
+    if (!s.shown || s.k <= 0 || ((s.picture.width <= 0 || s.picture.height <= 0) && !s.sheetShown)) return;
     int cursor = -1, cx = 0, cy = 0;
     if (readGameCursor(cx, cy)) cursor = panel::cursorDraw(record, float(cx), float(cy));
     const panel::Box& g = s.layout.glass;
-    s.shadow.draw(record, renderer, s.layout.x + int(g.x), s.layout.y + int(g.y), int(g.w), int(g.h), 12 * s.scale,
-                  s.scale, s.k);
-    drawPart(record, renderer, s.picture, s.texture, s.texW, s.texH, s.upload, s.layout.x, s.layout.y, s.k);
+    if (!s.sheetShown) {  // 3.0.18-beta.34: uaUI draws the window (with the windows' layer)
+        s.shadow.draw(record, renderer, s.layout.x + int(g.x), s.layout.y + int(g.y), int(g.w), int(g.h),
+                      12 * s.scale, s.scale, s.k);
+        drawPart(record, renderer, s.picture, s.texture, s.texW, s.texH, s.upload, s.layout.x, s.layout.y, s.k);
+    }
     if (cursor >= 0) record.moveLastBefore(record.commands().size() - size_t(cursor) - 1, size_t(cursor));
 }
 

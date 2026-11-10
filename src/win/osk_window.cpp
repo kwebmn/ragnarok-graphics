@@ -16,6 +16,8 @@
 #include "win/picture_draw.hpp"
 #include "win/real_ddraw.hpp"
 #include "win/ui_cost.hpp"
+#include "win/uaui.hpp"
+#include "win/ui_sheet.hpp"
 
 namespace uagfx::win::oskwin {
 namespace {
@@ -36,6 +38,11 @@ using SetTextFn = void(__attribute__((thiscall)) *)(uint32_t edit, const char* t
 using SetFocusFn = void(__attribute__((thiscall)) *)(uint32_t manager, uint32_t control);
 
 struct State {
+    uisheet::Sheet sheet;  // 3.0.18-beta.34: the keyboard drawn by uaUI
+    int sheetGen = 0;
+    bool sheetShown = false;
+    osk::Grid sheetGrid;
+    bool sheetCaret = false;
     bool open = false, shift = false;
     osk::Lang lang = osk::Lang::Uk;
     osk::Focus focus{1, 0};
@@ -236,7 +243,7 @@ void command(Command c) {
     s.key.clear();
 }
 
-void frame(HWND game, unsigned codePage, double k, int targetWidth, int targetHeight) {
+static void frameInner(HWND game, unsigned codePage, double k, int targetWidth, int targetHeight) {
     State& s = state();
     s.codePage = codePage;
     if (!s.open || !game || k <= 0 || targetWidth <= 0 || targetHeight <= 0) return;
@@ -253,8 +260,13 @@ void frame(HWND game, unsigned codePage, double k, int targetWidth, int targetHe
     const std::string key = s.line + (caret ? "|" : "") + ';' + std::to_string(int(s.lang)) + (s.shift ? "S" : "") +
                             ';' + std::to_string(s.focus.row) + ',' + std::to_string(s.focus.col) + ';' +
                             std::to_string(s.layout.x) + ',' + std::to_string(s.layout.y) + '#' +
-                            std::to_string(uistyle::generation());
-    if (key != s.key) {
+                            std::to_string(uistyle::generation()) + (uaui::ready() ? "u" : "");
+    if (key != s.key && uaui::ready()) {  // 3.0.18-beta.34: uaUI's keyboard
+        s.key = key;
+        ++s.sheetGen;
+        s.sheetGrid = g;
+        s.sheetCaret = caret;
+    } else if (key != s.key) {
         s.key = key;
         const uicost::Paint cost("the keyboard", s.layout.w, s.layout.h);
         if (panel::blank(s.picture, s.layout.w, s.layout.h)) {
@@ -265,9 +277,38 @@ void frame(HWND game, unsigned codePage, double k, int targetWidth, int targetHe
     }
 }
 
+// 3.0.18-beta.34 (docs/superpowers/plans/2026-11-09-uaui-migration.md, stage 5 - by hand): the keyboard in RmlUi's
+// markup, line by line as core osk paints it - its glass, the line's field, the keys (the focused gold, «Надіслати»
+// and a held Shift lit); the words where core osk places them
+static void fillSheet(State& s, uisheet::Content& c) {
+    const osk::Layout& L = s.layout;
+    const osk::Grid& g = s.sheetGrid;
+    const float sc = L.s;
+    constexpr uint32_t kCard = 0x10141C, kWhite = 0xFFFFFF, kGold = 0xC9A55B, kBlack = 0x000000;
+    c.w = float(L.w), c.h = float(L.h);
+    c.rect(c.under, L.glass, 12 * sc, kCard, uistyle::window(), kWhite, 0.12f, 1.0f * sc);
+    c.rect(c.under, L.line, 8 * sc, kBlack, 0.35f, kGold, 0.6f, 1.0f * sc);
+    for (size_t r = 0; r < L.keys.size() && r < g.size(); ++r)
+        for (size_t k = 0; k < L.keys[r].size() && k < g[r].size(); ++k) {
+            const osk::Key& key = g[r][k];
+            const bool on = int(r) == s.focus.row && int(k) == s.focus.col;
+            const bool lit = key.special == osk::Special::Send || (key.special == osk::Special::Shift && s.shift);
+            c.rect(c.under, L.keys[r][k], 8 * sc, on ? kGold : lit ? kGold : kWhite, on ? 0.34f : lit ? 0.16f : 0.06f,
+                   on ? kGold : kWhite, on ? 0.9f : 0.14f, 1.0f * sc);
+        }
+    c.say(osk::words(L, g, s.focus, s.line, s.sheetCaret, texts(s)));
+}
+
+void frame(HWND game, unsigned codePage, double k, int targetWidth, int targetHeight) {
+    frameInner(game, codePage, k, targetWidth, targetHeight);
+    State& s = state();
+    s.sheetShown = s.sheet.frame("keyboard", s.open && s.k > 0, true, s.layout.x, s.layout.y, s.sheetGen,
+                                 [&](uisheet::Content& c) { fillSheet(s, c); });
+}
+
 void draw(FrameRecord& record, gpu::Renderer& renderer) {
     State& s = state();
-    if (!s.open || s.k <= 0 || s.picture.width <= 0 || s.picture.height <= 0) return;
+    if (!s.open || s.sheetShown || s.k <= 0 || s.picture.width <= 0 || s.picture.height <= 0) return;
     drawPart(record, renderer, s.picture, s.texture, s.texW, s.texH, s.upload, s.layout.x, s.layout.y, s.k);
 }
 
