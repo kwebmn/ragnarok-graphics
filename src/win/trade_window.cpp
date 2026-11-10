@@ -30,6 +30,8 @@
 #include "win/real_ddraw.hpp"
 #include "win/ui_cost.hpp"
 #include "win/window_shadow.hpp"
+#include "win/uaui.hpp"
+#include "win/ui_sheet.hpp"
 #include "win/window_stack.hpp"
 
 namespace uagfx::win::tradewin {
@@ -71,6 +73,9 @@ using DropFn = void(__attribute__((thiscall)) *)(uint32_t self, int x, int y, ui
 using SetTextFn = void(__attribute__((thiscall)) *)(uint32_t edit, const char* text);
 
 struct State {
+    uisheet::Sheet sheet;  // 3.0.18-beta.28: the window drawn by uaUI
+    int sheetGen = 0;
+    bool sheetShown = false;
     WindowShadow shadow;
     WindowEdge edge;
     int tipOf = -1;
@@ -264,6 +269,10 @@ std::vector<Words> gdiWords(const std::vector<iw::Words>& in) {
 }
 
 void render(State& s) {
+    if (uaui::ready()) {  // 3.0.18-beta.28: uaUI's window says it all again, no picture
+        ++s.sheetGen;
+        return;
+    }
     const uicost::Paint cost("«Обмін»", s.layout.w, s.layout.h);
     if (!panel::blank(s.picture, s.layout.w, s.layout.h)) return;
     const tw::Texts t = texts(s.padNow);
@@ -344,7 +353,8 @@ bool card(int cell) {
 
 }  // namespace
 
-void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int targetHeight) {
+static void frameInner(HWND game, bool on, unsigned codePage, double k, int targetWidth,
+                       int targetHeight) {
     State& s = state();
     s.codePage = codePage;
     if (on != s.on) {
@@ -419,7 +429,8 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
             key += std::to_string(x.id) + 'x' + std::to_string(x.count) + '+' + std::to_string(x.refine) +
                    (x.icon ? "i" : "") + ',';
     for (const bool late : s.late.slots) key += late ? '1' : '0';
-    if (const std::string drawn = key + '#' + std::to_string(uistyle::generation()); drawn != s.key) {
+    if (const std::string drawn = key + '#' + std::to_string(uistyle::generation()) + (uaui::ready() ? "u" : "");
+        drawn != s.key) {  // 3.0.18-beta.28: uaUI's or the picture
         s.key = drawn;
         render(s);
     }
@@ -427,9 +438,53 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     block(s, game);
 }
 
+// 3.0.18-beta.28 (docs/superpowers/plans/2026-11-09-uaui-migration.md, stage 5 - by hand): «Обмін» in RmlUi's
+// markup - its glass, ×, the sides' divider, a ready side's green pill, the drop's light over your side, the cells
+// (the partner's changed after your «Готово» red), their icons and count plates, the zeny field and its caret, the
+// warning, the buttons by the trade's state (the next step gold), the tip; the words where core tradewin places them
+static void fillSheet(State& s, uisheet::Content& c) {
+    const tw::Layout& L = s.layout;
+    const float sc = L.s;
+    const tw::Texts t = texts(s.padNow);
+    const tw::View v = tw::view(L, s.me, s.them, s.show, t, measure);
+    c.w = float(L.w), c.h = float(L.h);
+    c.glass = uisheet::Box{L.glass.x, L.glass.y, L.glass.w, L.glass.h, 12 * sc, 1.0f * sc, 1, "glass"};
+    c.ground = uisheet::Sheet::ground(0x10141C, uistyle::window());
+    if (s.show.hoverClose) c.add(c.under, L.close, 7 * sc, "hot");
+    c.add(c.under, v.divider, 0, "rule");
+    for (const panel::Box& r : v.ready) c.add(c.under, r, 8 * sc, "ready", 1.0f * sc);
+    c.add(c.under, v.dropping, 8 * sc, "dropping", 2.0f * sc);
+    for (const tw::CellView& x : v.cells)
+        c.add(c.under, x.box, 7 * sc, x.late ? "cell late" : x.hot ? "cell hot" : "cell",
+              (x.late || x.hot ? 1.5f : 1) * sc);
+    c.add(c.under, L.zenyField, 7 * sc, s.show.typing ? "field typing" : "field", 1.0f * sc);
+    c.add(c.under, v.caret, 0, "caret");
+    if (v.late) c.add(c.under, L.warn, 6 * sc, "warn", 1.0f * sc);
+    for (int i = 0; i < 3; ++i) {
+        const tw::ButtonView& b = v.buttons[i];
+        const std::string cls = std::string("btn") + (b.main ? " main" : "") + (b.hot ? " hot" : "") +
+                                (b.on ? "" : " off");
+        c.add(c.under, L.buttons[i], 8 * sc, cls.c_str(), 1.0f * sc);
+    }
+    for (const tw::CellView& x : v.cells)
+        if (x.icon)
+            c.icons.push_back(uisheet::Icon{x.iconX, x.iconY, float(x.icon->width), float(x.icon->height),
+                                            x.iconOpacity, s.sheet.icon(x.icon)});
+    for (const tw::CellView& x : v.cells) c.add(c.over, x.count, 3 * sc, "plate");
+    c.add(c.over, v.tip, 8 * sc, "tip", 1.0f * sc);
+    c.say(tw::words(L, s.me, s.them, s.show, t, measure));
+}
+
+void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int targetHeight) {
+    frameInner(game, on, codePage, k, targetWidth, targetHeight);
+    State& s = state();
+    s.sheetShown = s.sheet.frame("trade", s.shown, true, s.layout.x, s.layout.y, s.sheetGen,
+                                 [&](uisheet::Content& c) { fillSheet(s, c); });
+}
+
 void draw(FrameRecord& record, gpu::Renderer& renderer) {
     State& s = state();
-    if (!s.shown || s.k <= 0 || s.picture.width <= 0 || s.picture.height <= 0) return;
+    if (!s.shown || s.k <= 0 || s.sheetShown || s.picture.width <= 0 || s.picture.height <= 0) return;
     int cursor = -1, cx = 0, cy = 0;
     if (readGameCursor(cx, cy)) cursor = panel::cursorDraw(record, float(cx), float(cy));
     const panel::Box& g = s.layout.glass;

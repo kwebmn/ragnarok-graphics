@@ -808,6 +808,32 @@ input.checkbox:checked { background-color: #3d7fd8; border-color: #3d7fd8; }
 .tr { position: absolute; font-family: Plex; }
 .mm { position: absolute; font-family: Plex; }
 .ig { position: absolute; font-family: Plex; }
+.sh { position: absolute; font-family: Plex; }
+.sh div, .sh span, .sh .a { position: absolute; }
+.sh .glass { border-color: #ffffff17; }
+.sh .hot { background-color: #ffffff1f; }
+.sh .rule { background-color: #ffffff14; }
+.sh .cell { background-color: #00000059; border-color: #ffffff14; }
+.sh .cell.hot { border-color: #c9a55bf2; }
+.sh .cell.late { border-color: #ff7d6ef2; }
+.sh .plate { background-color: #000000b3; }
+.sh .field { background-color: #00000059; border-color: #ffffff1a; }
+.sh .field.typing { border-color: #c9a55b99; }
+.sh .caret { background-color: #eef2f8f2; }
+.sh .warn { background-color: #ff7d6e24; border-color: #ff7d6e80; }
+.sh .ready { background-color: #5fd08a38; border-color: #5fd08ab3; }
+.sh .dropping { background-color: #c9a55b0f; border-color: #f3c653e6; }
+.sh .btn { background-color: #ffffff14; border-color: #ffffff24; }
+.sh .btn.hot { background-color: #ffffff29; }
+.sh .btn.off { border-color: #ffffff0d; }
+.sh .btn.main { background-color: #f3c653d9; }
+.sh .btn.main.hot { background-color: #f3c653f2; }
+.sh .thumb { background-color: #ffffff40; }
+.sh .tip { background-color: #10141cf5; border-color: #ffffff24; }
+.sh .word { white-space: nowrap; overflow: hidden; }
+.sh .word.bold { font-weight: bold; }
+.sh .word.right { text-align: right; }
+.sh .word.centre { text-align: center; }
 .ig div, .ig span, .ig .a { position: absolute; }
 .ig .glass { border-color: #ffffff17; }
 .ig .hot { background-color: #ffffff1f; }

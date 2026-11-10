@@ -57,7 +57,7 @@ picture's upload gone. Cost if wrong: per-pixel glows (panel::over loops) land i
 
 ## Stage 5 — windows (by hand in RML)
 
-- [ ] «Речі», storage, cart, trade — beta.27: the three grids by hand (win/item_grid_ui, core itemwin::view), windows' layer; trade next
+- [ ] «Речі», storage, cart, trade — beta.27: the three grids by hand (win/item_grid_ui, core itemwin::view), windows' layer; beta.28 trade (win/ui_sheet: the shared passive sheet - glass, boxes by the theme's .sh classes, icons, words; core tradewin::view)
 - [ ] «Спорядження», «Характеристики», «Навички»
 - [ ] shop, vending, own shop
 - [ ] NPC talk, ask / message / pick / count cards, item and skill cards
@@ -93,3 +93,4 @@ picture's upload gone. Cost if wrong: per-pixel glows (panel::over loops) land i
 - 2026-11-10 beta.25: hunt panel, MVP panel and tracker by hand in RML (passive: clicks/blockers stay the parts'; font sizes by the part's scale incl. the HUD editor's size)
 - 2026-11-10 beta.26: minimap frame by hand in RML (core paintMapSquare/mapWords/frameWords/netBars/paintLayerSign; the square a pic:, signs and icons made once)
 - 2026-11-10 beta.27: uaUI windows' layer (Doc::window z-index 10, the ua-split marker at 5 splits the batches; uaui::draw(Layer::Windows) after windowstack::draw); uaui::draw was called twice a frame since beta.7 - once now; «Речі»/«Склад»/«Візок» grids by hand
+- 2026-11-10 beta.28: win/ui_sheet (shared passive window sheet filled by hand per window) + «Обмін» on it (core tradewin::view)

@@ -81,5 +81,23 @@ void paint(panel::Picture& out, const Layout& L, const Side& me, const Side& the
            const itemwin::Measure& m);
 std::vector<itemwin::Words> words(const Layout& L, const Side& me, const Side& them, const Show& sh, const Texts& t,
                                   const itemwin::Measure& m);
+// 3.0.18-beta.28 (uaUI's trade): the parts paint() draws, placed - the window's pixels; w 0: not there
+struct CellView {
+    panel::Box box, count;  // the cell, the count's plate
+    bool thing = false, hot = false, late = false;
+    const panel::Picture* icon = nullptr;
+    float iconX = 0, iconY = 0, iconOpacity = 1;
+};
+struct ButtonView {
+    bool on = false, main = false, hot = false;  // pressable, the next step (gold), pointed at
+};
+struct View {
+    panel::Box ready[2], dropping, divider, caret, tip;
+    CellView cells[2 * kSlots];
+    ButtonView buttons[3];
+    bool late = false;  // the warning's plate
+};
+View view(const Layout& L, const Side& me, const Side& them, const Show& sh, const Texts& t,
+          const itemwin::Measure& m);
 
 }  // namespace uagfx::tradewin

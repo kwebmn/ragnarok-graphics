@@ -112,3 +112,26 @@ TEST(trade_window_words) {
     tradewin::paint(p, L, me, them, sh, t, m);
     CHECK((p.px[size_t(L.h / 2) * size_t(L.w) + 4] >> 24) > 0xC0);  // the glass
 }
+
+// 3.0.18-beta.28 (docs/superpowers/plans/2026-11-09-uaui-migration.md, stage 5): uaUI's trade - the parts paint()
+// draws, placed: the ready pill, the cells (late in red), the count plates, the buttons by the trade's state, the tip
+TEST(trade_window_view_places_the_pictures_parts) {
+    const tradewin::Layout L = tradewin::layout(0, 0, 1.0f);
+    const tradewin::Texts t = tradeTexts();
+    tradewin::Side me, them;
+    me.slots[0] = thing(501, 38, "Red Potion");
+    them.slots[0] = thing(1101, 1, "Sword");
+    them.ready = true;
+    tradewin::Show sh;
+    sh.hover = 10;
+    sh.late.slots[0] = true;
+    const itemwin::Measure m(panel::wordsWidth);
+    const tradewin::View v = tradewin::view(L, me, them, sh, t, m);
+    CHECK(v.ready[0].w == 0 && v.ready[1].w > 0 && v.ready[1].x + v.ready[1].w <= L.theirHead.x + L.theirHead.w);
+    CHECK(v.cells[0].count.w > 0 && v.cells[10].count.w == 0 && v.cells[1].thing == false);
+    CHECK(v.cells[10].late && v.cells[10].hot && !v.cells[0].late);
+    CHECK(v.buttons[0].on && v.buttons[0].main && !v.buttons[1].on && v.buttons[2].on && !v.buttons[2].main);
+    CHECK(v.tip.w > 0 && v.dropping.w == 0);
+    sh.dropping = true;
+    CHECK(tradewin::view(L, me, them, sh, t, m).dropping.w > 0);
+}
