@@ -1,3 +1,8 @@
+# uaRO Graphics 3.0.18-beta.44 — what's new
+
+- **The top one of several new library windows has its gold edge again**, as the other windows do.
+- **The login screen's bottom strip (server status, the site's news, language and view) now uses "Нова бібліотека інтерфейсу (RmlUi)".**
+
 # uaRO Graphics 3.0.18-beta.43 — what's new
 
 - **The new library's windows have their shadow again** — as the other windows do.
