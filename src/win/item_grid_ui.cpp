@@ -28,6 +28,7 @@ const char* kDoc = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss
 <span data-for="t : words" data-attr-class="t.cls" data-style-left="t.x + 'px'" data-style-top="t.y + 'px'"
   data-style-width="t.w + 'px'" data-style-height="t.h + 'px'" data-style-line-height="t.h + 'px'"
   data-style-font-size="t.px + 'px'" data-style-color="t.colour">{{t.text}}</span>
+<div class="mark"></div>
 </body></rml>)RML";
 
 std::string hexOf(uint32_t rgb, int alpha = -1) {

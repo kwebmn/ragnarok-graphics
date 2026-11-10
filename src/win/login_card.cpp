@@ -91,6 +91,9 @@ struct Veil {
 
 struct State {
     uisheet::Sheet sheet;  // 3.0.18-beta.33: the card drawn by uaUI
+    uisheet::Sheet chromeSheet;  // 3.0.18-beta.44: the strip at the screen's foot
+    int chromeGen = 0;
+    bool chromeShown = false;
     int sheetGen = 0;
     bool sheetShown = false;
     Veil veil;  // 3.0.11-beta.203
@@ -462,8 +465,10 @@ void chromeFrame(State& s, int targetWidth, int targetHeight) {
                             std::to_string(targetHeight) + '#' + std::to_string(uistyle::generation()) + ';' +
                             std::to_string(s.chromeShow.lang) + ';' + std::to_string(s.chromeShow.hover) + '!' +
                             c.news + '%' + std::to_string(s.chromeShow.view) + c.viewNames[0];
-    if (key == s.chromeKey) return;
-    s.chromeKey = key;
+    if (key + (uaui::readyAnywhere() ? "u" : "") == s.chromeKey) return;
+    s.chromeKey = key + (uaui::readyAnywhere() ? "u" : "");
+    ++s.chromeGen;  // 3.0.18-beta.44: uaUI's strip said again (no picture then)
+    if (uaui::readyAnywhere()) return;
     if (!panel::blank(s.chromePicture, s.chrome.w, s.chrome.h)) return;
     loginchrome::paint(s.chromePicture, s.chrome, s.chromeShow);
     std::vector<Words> words;
@@ -1035,6 +1040,37 @@ static void frameInner(HWND game, bool on, bool status, bool news, loginview::Vi
     blockBar(s, game);
 }
 
+// 3.0.18-beta.44 (docs/superpowers/plans/2026-11-09-uaui-migration.md, stage 5 - by hand): the strip at the login's
+// foot in RmlUi's markup, line by line as core loginchrome paints it - the server's status pill and its dot, the site's
+// news pill (gold edged), the languages' and the views' segmented pills (the chosen gold); the words where core
+// loginchrome places them
+static void chromeSheet(State& s, uisheet::Content& c) {
+    const loginchrome::Layout& L = s.chrome;
+    const loginchrome::Show& sh = s.chromeShow;
+    const float sc = L.s;
+    constexpr float kPillH = 32, kDot = 9, kNewsH = 30;  // core loginchrome's
+    constexpr uint32_t kPill = 0x0A0C12, kWhite = 0xFFFFFF, kGold = 0xC9A55B;
+    c.w = float(L.w), c.h = float(L.h);
+    if (L.status.w > 0) {
+        c.rect(c.under, L.status, kPillH * sc / 2, kPill, 0.72f, kWhite, 0.10f, 1.0f * sc);
+        c.rect(c.under, L.statusDot, kDot * sc / 2, sh.statusRgb, 1.0f);
+    }
+    if (L.news.w > 0)
+        c.rect(c.under, L.news, kNewsH * sc / 2, kPill, 0.62f, kGold,
+               sh.hover == int(loginchrome::Part::News) ? 0.55f : 0.30f, 1.0f * sc);
+    const auto segments = [&](const panel::Box* seg, int chosen, int firstPart) {
+        const panel::Box all{seg[0].x, seg[0].y, seg[2].x + seg[2].w - seg[0].x, seg[0].h};
+        c.rect(c.under, all, kPillH * sc / 2, kPill, 0.72f, kWhite, 0.10f, 1.0f * sc);
+        for (int i = 0; i < 3; ++i) {
+            if (i == chosen) c.rect(c.under, seg[i], kPillH * sc / 2, kGold, 0.26f);
+            else if (sh.hover == firstPart + i) c.rect(c.under, seg[i], kPillH * sc / 2, kWhite, 0.08f);
+        }
+    };
+    segments(L.langSeg, sh.lang, int(loginchrome::Part::Lang0));
+    if (sh.views) segments(L.viewSeg, sh.view, int(loginchrome::Part::View0));
+    c.say(loginchrome::words(L, sh));
+}
+
 // 3.0.18-beta.33 (docs/superpowers/plans/2026-11-09-uaui-migration.md, stage 5 - by hand): the login in RmlUi's
 // markup, line by line as core logincard paints it - its glass, the account's and the password's fields (gold
 // focused, red refused), the ticks, ▾ of the shelf and the eye (core logincard's shapes as pictures), «Увійти»,
@@ -1098,6 +1134,9 @@ void frame(HWND game, bool on, bool status, bool news, loginview::View view, uns
            int targetWidth, int targetHeight) {
     frameInner(game, on, status, news, view, codePage, k, targetWidth, targetHeight);
     State& s = state();
+    s.chromeSheet.anywhere = true;  // 3.0.18-beta.44
+    s.chromeShown = s.chromeSheet.frame("login strip", s.shown && s.chrome.w > 0 && s.chromeGen > 0, true, s.chrome.x,
+                                        s.chrome.y, s.chromeGen, [&](uisheet::Content& c) { chromeSheet(s, c); });
     s.sheet.anywhere = true;  // before the world
     const int gen = s.sheetGen ^ (s.dropOpen ? int(uaui::stamp(&s.dropPicture)) | 1 : 0);  // ▾'s list too
     s.sheetShown = s.sheet.frame("login", s.shown && s.mode == State::Mode::Card, true, s.layout.x, s.layout.y, gen,
@@ -1127,7 +1166,7 @@ void draw(FrameRecord& record, gpu::Renderer& renderer) {
             drawPart(record, renderer, s.dropPicture, s.dropTexture, s.dropTexW, s.dropTexH, s.dropUpload,
                      s.layout.x + int(s.drop.x), s.layout.y + int(s.drop.y), s.k);
     }
-    if (s.chrome.w > 0 && s.chromePicture.width > 0)  // 3.0.11-beta.173: the strip at the screen's foot
+    if (!s.chromeShown && s.chrome.w > 0 && s.chromePicture.width > 0)  // 3.0.11-beta.173: the strip at the foot
         drawPart(record, renderer, s.chromePicture, s.chromeTexture, s.chromeTexW, s.chromeTexH, s.chromeUpload,
                  s.chrome.x, s.chrome.y, s.k);
     if (cursor >= 0) record.moveLastBefore(record.commands().size() - size_t(cursor) - 1, size_t(cursor));

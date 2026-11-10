@@ -500,7 +500,7 @@ void frame(int targetWidth, int targetHeight, double k) {
 void draw(FrameRecord& record, gpu::Renderer& renderer) {
     int rank = 0;  // 3.0.18-beta.43: uaUI's windows raised to their places too
     for (const Win w : state().stack.bottomUp()) {
-        uaui::setWindowRank(rank++);
+        uaui::setWindowRank(rank++, marked(w));
         drawOne(w, record, renderer);
     }
     uaui::setWindowRank(90);  // the windows outside the stack (the controller's tiles, the cards) over them

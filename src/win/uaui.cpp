@@ -819,6 +819,8 @@ input.checkbox:checked { background-color: #3d7fd8; border-color: #3d7fd8; }
 .sh .a { left: 0; top: 0; }
 .sh .clip { overflow: hidden; }
 .sh .glass { border-color: #ffffff17; }
+.sh .mark { display: none; left: 0; top: 0; width: 100%; height: 100%; border: 1.5dp #e6cb8ad9; border-radius: 12dp; }
+.sh.marked .mark { display: block; }
 .sh .hot { background-color: #ffffff1f; }
 .sh .rule { background-color: #ffffff14; }
 .sh .cell { background-color: #00000059; border-color: #ffffff14; }
@@ -855,6 +857,9 @@ input.checkbox:checked { background-color: #3d7fd8; border-color: #3d7fd8; }
 .sh .word.halo { font-effect: outline(2px #000000d9); }
 .ig div, .ig span, .ig .a { position: absolute; }
 .ig .glass { border-color: #ffffff17; }
+.ig .mark { display: none; position: absolute; left: 0; top: 0; width: 100%; height: 100%; border: 1.5dp #e6cb8ad9;
+            border-radius: 12dp; }
+.ig.marked .mark { display: block; }
 .ig .hot { background-color: #ffffff1f; }
 .ig .rule { background-color: #ffffff14; }
 .ig .tab { background-color: #f3c653f2; }
@@ -1540,9 +1545,17 @@ bool ready() {
 
 namespace {
 int g_windowRank = 0;
+bool g_windowMarked = false;
 }
-void setWindowRank(int rank) { g_windowRank = rank; }
+void setWindowRank(int rank, bool marked) { g_windowRank = rank, g_windowMarked = marked; }
 int windowRank() { return g_windowRank; }
+bool windowMarked() { return g_windowMarked; }
+
+void Doc::mark(bool on) {
+    if (!doc_ || int(on) == marked_) return;
+    marked_ = int(on);
+    doc_->SetClass("marked", on);
+}
 
 void Doc::raise(int z) {
     if (!doc_ || z == z_) return;

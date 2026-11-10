@@ -58,6 +58,7 @@ const char* kDoc = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss
   data-style-width="t.w + 'px'" data-style-height="t.h + 'px'"
   data-style-font-size="t.px + 'px'" data-style-color="t.colour" data-style-line-height="t.lh + 'px'"
   >{{t.text}}</span>
+<div class="mark"></div>
 <img class="a" data-for="i : top" data-attr-src="i.src" data-style-left="i.x + 'px'" data-style-top="i.y + 'px'"
   data-style-width="i.w + 'px'" data-style-height="i.h + 'px'" data-style-opacity="i.op"/>
 </body></rml>)RML";

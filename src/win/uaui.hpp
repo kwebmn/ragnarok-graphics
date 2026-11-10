@@ -45,8 +45,9 @@ bool ready();  // [interface] uaui on, in the world, started: the parts draw by 
 bool readyAnywhere();
 // 3.0.18-beta.43: the windows' stack drawing its windows bottom up - the place of the one being drawn now (its
 // document raised to it: the last opened or clicked on top, as the driver's windows)
-void setWindowRank(int rank);
+void setWindowRank(int rank, bool marked = false);
 int windowRank();
+bool windowMarked();  // the one drawn now has the stack's gold edge (the top of two or more)
 // 3.0.18-beta.12 (the ruling of docs/superpowers/plans/2026-11-09-uaui-migration.md): the parts' recorded pictures
 // (panel::Picture::scene, core/ui_scene) drawn on the card - [interface] uaui on and started (in the world or not)
 bool sceneReady();
@@ -79,6 +80,7 @@ public:
     void dirtyAll() { model_.DirtyAllVariables(); }
     void place(int x, int y);  // its box's top left in the target's pixels
     void raise(int z);  // 3.0.18-beta.43: its z-index (a window's: 10 + its place in the stack)
+    void mark(bool on);  // 3.0.18-beta.44: its body's class «marked» (the theme's gold edge)
     bool box(int& x, int& y, int& w, int& h) const;  // false while not shown
     Rml::ElementDocument* doc() const { return doc_; }
     Rml::Element* byId(const char* id) const { return doc_ ? doc_->GetElementById(id) : nullptr; }
@@ -98,6 +100,7 @@ private:
     Rml::DataModelHandle model_;
     bool shown_ = false;
     int z_ = -1;
+    int marked_ = -1;
 };
 
 }  // namespace uagfx::win::uaui

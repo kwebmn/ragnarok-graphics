@@ -109,3 +109,4 @@ picture's upload gone. Cost if wrong: per-pixel glows (panel::over loops) land i
 - 2026-11-10 beta.41: «Полиця» and «Персонажі» by hand as core loginshelf::sheetOf data (+ model portraits sheet::Art, words cut at the clip)
 - 2026-11-10 beta.42: the big map on a sheet (core paintBigSquare: the map's square a picture; card, chips and signs in markup)
 - 2026-11-10 beta.43: the windows' shadows drawn under uaUI's windows too; uaUI's windows ordered by the windows' stack (Doc::raise z = 10 + place, set while the stack draws)
+- 2026-11-10 beta.44: the stack's gold edge on uaUI's windows (Doc::mark, body class «marked»); the login's foot strip on a sheet. Left as pictures on purpose: the way-in veil (over its screen shade, after the windows' layer), the shelf's toast (its undo hover read while drawn), the ▾ lists (in the sheets' top layer), the cursor
