@@ -39,6 +39,8 @@
 #include "win/real_ddraw.hpp"
 #include "win/ui_cost.hpp"
 #include "win/updates_hook.hpp"
+#include "win/uaui.hpp"
+#include "core/ui_icons.hpp"
 
 namespace uagfx::win::charpanel {
 namespace {
@@ -129,6 +131,7 @@ struct State {
     ULONGLONG paceAt = 0;
     double basePerHour = -1, jobPerHour = -1;
     int keysLogged = 0;
+    bool uiShown = false;  // 3.0.18-beta.17: drawn by uaUI this frame
 };
 
 State& state() {
@@ -376,6 +379,344 @@ float share(int value, int next, int level) {
     return level > 0 ? 1.0f : -1.0f;  // next 0: the last level
 }
 
+
+// ---- 3.0.18-beta.17 (the owner: «Переписывать 73 части в разметку RmlUi вручную»): the block as an RmlUi document
+// while [interface] uaui is on - the same words (core/char_block model), its places the layout's (concept px = dp),
+// the clicks through RmlUi's events into press() and changeView(); its picture not painted then ----
+
+const char* kDoc = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss"/></head>
+<body class="cb" data-model="charblock" data-style-width="w + 'dp'" data-style-height="h + 'dp'">
+<div class="card" data-style-width="w + 'dp'" data-style-height="h + 'dp'" data-if="view != 2 && !(view == 1 && look == 1)"></div>
+<div class="zone" style="left: 0; top: 0;" data-style-width="w + 'dp'" data-style-height="h + 'dp'"
+     data-event-mouseover="hover(3, 0)" data-event-mouseout="unhover()"></div>
+<div data-if="view == 0">
+ <div class="portrait" style="left: 12dp; top: 12dp; width: 54dp; height: 54dp;" data-event-click="portrait()"
+      data-event-mouseover="hover(4, 0)" data-event-mouseout="unhover()">
+  <img data-if="portrait != ''" data-attr-src="portrait"/>
+  <span class="letter" style="font-size: 22dp; line-height: 54dp;" data-if="portrait == ''">{{letter}}</span></div>
+ <div class="line" style="left: 78dp; top: 14dp; height: 20dp;"><span class="name">{{name}}</span><span class="job">{{job}}</span></div>
+ <span class="levels">{{levels}}</span>
+ <div data-if="weight_shown">
+  <span class="line muted" style="left: 78dp; top: 36dp;">{{weight_label}}</span>
+  <div class="track" style="left: 118dp; top: 42dp; width: 60dp; height: 5dp;"><div class="fill weightfill" data-style-width="weight_w + '%'"></div></div>
+  <span class="line" style="left: 184dp; top: 36dp; font-weight: bold;" data-attr-class="'line ' + weight_tone">{{weight_pct}}</span>
+ </div>
+ <span class="line" style="left: 234dp; top: 36dp; font-weight: bold;" data-if="zeny_shown">{{zeny}} <span class="muted" style="font-weight: normal;">z</span></span>
+ <div class="line" style="left: 78dp; top: 54dp;"><span class="chip" data-for="c : social" data-attr-class="'chip ' + c.tone">{{c.text}}</span></div>
+ <div class="line" style="left: 78dp; top: 71dp;"><span class="chip" data-for="c : points" data-attr-class="'chip ' + c.tone">{{c.text}}</span></div>
+ <span class="label" style="left: 12dp; top: 94dp;">HP</span>
+ <div class="track" style="left: 48dp; top: 97dp; width: 180dp; height: 10dp;"><div class="fill hp" data-class-low="low" data-style-width="hp_w + '%'"></div></div>
+ <span class="num" style="left: 236dp; top: 94dp; width: 124dp;" data-class-low="low" data-if="hp_shown">{{hp}}</span>
+ <span class="small" style="left: 48dp; top: 109dp;" data-attr-class="'small ' + hp_regen.tone">{{hp_regen.text}}</span>
+ <span class="small" style="right: 12dp; top: 109dp;" data-attr-class="'small ' + hp_regen_right.tone">{{hp_regen_right.text}}</span>
+ <span class="label" style="left: 12dp; top: 126dp;">SP</span>
+ <div class="track" style="left: 48dp; top: 129dp; width: 180dp; height: 10dp;"><div class="fill sp" data-style-width="sp_w + '%'"></div></div>
+ <span class="num" style="left: 236dp; top: 126dp; width: 124dp;" data-if="sp_shown">{{sp}}</span>
+ <span class="small" style="left: 48dp; top: 141dp;" data-attr-class="'small ' + sp_regen.tone">{{sp_regen.text}}</span>
+ <span class="small" style="right: 12dp; top: 141dp;" data-attr-class="'small ' + sp_regen_right.tone">{{sp_regen_right.text}}</span>
+ <div class="cell" style="top: 160dp; width: 82dp; height: 32dp;" data-for="c, i : battle" data-style-left="12 + i * 88.5 + 'dp'"
+      data-event-mouseover="hover(0, 6 + i)" data-event-mouseout="unhover()" data-event-click="zone(6 + i)">
+  <span class="k">{{c.key}}</span><span class="v" data-attr-class="'v ' + c.tone">{{c.value}}</span></div>
+ <div data-if="!session_shown">
+  <div data-if="base.shown" data-event-mouseover="hover(1, 0)" data-event-mouseout="unhover()">
+   <span class="label" style="left: 12dp; top: 200dp;">{{base.label}}</span>
+   <div class="track" style="left: 48dp; top: 205dp; width: 180dp; height: 6dp;"><div class="fill base" data-style-width="base.w + '%'"></div></div>
+   <span class="num muted" style="left: 236dp; top: 200dp; width: 124dp; font-size: 12dp;">{{base.pct}}</span>
+   <span class="small muted" style="left: 48dp; top: 216dp;">{{base.numbers}}</span>
+   <span class="small" style="right: 12dp; top: 216dp;" data-attr-class="'small ' + base.right_tone">{{base.right}}</span>
+  </div>
+  <div data-if="job.shown" data-event-mouseover="hover(1, 1)" data-event-mouseout="unhover()">
+   <span class="label" style="left: 12dp; top: 234dp;">{{job.label}}</span>
+   <div class="track" style="left: 48dp; top: 239dp; width: 180dp; height: 6dp;"><div class="fill jobx" data-style-width="job.w + '%'"></div></div>
+   <span class="num muted" style="left: 236dp; top: 234dp; width: 124dp; font-size: 12dp;">{{job.pct}}</span>
+   <span class="small muted" style="left: 48dp; top: 250dp;">{{job.numbers}}</span>
+   <span class="small" style="right: 12dp; top: 250dp;" data-attr-class="'small ' + job.right_tone">{{job.right}}</span>
+  </div>
+ </div>
+ <div data-if="session_shown">
+  <span class="small muted" style="left: 12dp; top: 200dp; font-weight: bold; font-size: 10.5dp;"
+        data-event-mouseover="hover(0, 10)" data-event-mouseout="unhover()">{{session_head}}</span>
+  <div class="cell" style="top: 218dp; width: 112dp; height: 32dp;" data-for="c, i : session"
+       data-style-left="12 + i * 118 + 'dp'" data-event-mouseover="hover(0, 11 + i)" data-event-mouseout="unhover()">
+   <span class="k">{{c.key}}</span><span class="v" data-attr-class="'v ' + c.tone">{{c.value}}</span></div>
+ </div>
+ <div class="zone" style="left: 78dp; top: 36dp; width: 150dp; height: 17dp;" data-event-mouseover="hover(0, 0)" data-event-mouseout="unhover()"></div>
+ <div class="zone" style="left: 234dp; top: 36dp; width: 126dp; height: 17dp;" data-event-mouseover="hover(0, 1)" data-event-mouseout="unhover()"></div>
+ <div class="zone" style="left: 78dp; top: 54dp; width: 282dp; height: 16dp;" data-event-mouseover="hover(0, 2)" data-event-mouseout="unhover()"></div>
+ <div class="zone" style="left: 78dp; top: 71dp; width: 282dp; height: 16dp;" data-event-mouseover="hover(0, 3)" data-event-mouseout="unhover()" data-event-click="zone(3)"></div>
+ <div class="zone" style="left: 48dp; top: 109dp; width: 312dp; height: 13dp;" data-event-mouseover="hover(0, 4)" data-event-mouseout="unhover()"></div>
+ <div class="zone" style="left: 48dp; top: 141dp; width: 312dp; height: 13dp;" data-event-mouseover="hover(0, 5)" data-event-mouseout="unhover()"></div>
+ <div class="button" style="width: 32dp; height: 26dp;" data-for="b, i : buttons" data-style-left="12 + i * 38 + 'dp'"
+      data-style-top="h - 38 + 'dp'" data-event-click="press(i)" data-event-mouseover="hover(2, i)" data-event-mouseout="unhover()">
+  <img data-attr-src="b"/></div>
+</div>
+<div data-if="view == 1 && look == 0">
+ <div class="portrait" style="left: 10dp; top: 10dp; width: 46dp; height: 46dp;" data-event-click="portrait()"
+      data-event-mouseover="hover(4, 0)" data-event-mouseout="unhover()">
+  <img data-if="portrait != ''" data-attr-src="portrait"/>
+  <span class="letter" style="font-size: 19dp; line-height: 46dp;" data-if="portrait == ''">{{letter}}</span></div>
+ <div class="track" style="left: 66dp; top: 14dp; width: 222dp; height: 10dp;"><div class="fill hp" data-class-low="low" data-style-width="hp_w + '%'"></div></div>
+ <div class="track" style="left: 66dp; top: 29dp; width: 222dp; height: 8dp;"><div class="fill sp" data-style-width="sp_w + '%'"></div></div>
+ <span class="num" style="left: 66dp; top: 42dp; text-align: left;" data-class-low="low">{{hp_compact}}</span>
+ <span class="num" style="left: 158dp; top: 42dp; width: 130dp;">{{sp_compact}}</span>
+ <div class="track" style="left: 10dp; top: 62dp; width: 280dp; height: 3dp;"><div class="fill base" data-style-width="base.w + '%'"></div></div>
+ <div class="track" style="left: 10dp; top: 67dp; width: 280dp; height: 3dp;"><div class="fill jobx" data-style-width="job.w + '%'"></div></div>
+</div>
+<div data-if="view == 2 || (view == 1 && look == 1)">
+ <div class="abs" style="left: 0; top: 0; border-radius: 50%; background-color: #00000080;"
+      data-style-width="ring_d + 'dp'" data-style-height="ring_d + 'dp'"></div>
+ <ua-ring class="abs" style="left: 0; top: 0;" data-style-width="ring_d + 'dp'" data-style-height="ring_d + 'dp'"
+          data-attr-width="ring_hp_w" data-attr-value="hp_w / 100" data-attr-fill="low ? '#ff5a4e' : '#5bd36c'" track="#ffffff1f"></ua-ring>
+ <ua-ring class="abs" data-style-left="ring_gap + 'dp'" data-style-top="ring_gap + 'dp'"
+          data-style-width="ring_d - 2 * ring_gap + 'dp'" data-style-height="ring_d - 2 * ring_gap + 'dp'"
+          data-attr-width="ring_sp_w" data-attr-value="sp_w / 100" fill="#4f8bff" track="#ffffff14"></ua-ring>
+ <div class="portrait" data-style-left="ring_d / 2 - ring_pic + 'dp'" data-style-top="ring_d / 2 - ring_pic + 'dp'"
+      data-style-width="2 * ring_pic + 'dp'" data-style-height="2 * ring_pic + 'dp'" data-event-click="portrait()"
+      data-event-mouseover="hover(3, 0)" data-event-mouseout="unhover()">
+  <img data-if="portrait != ''" data-attr-src="portrait"/>
+  <span class="letter" data-if="portrait == ''" data-style-line-height="2 * ring_pic + 'dp'">{{letter}}</span></div>
+ <span class="badge" data-style-left="ring_d / 2 - ring_badge_w / 2 + 'dp'" data-style-top="ring_d - ring_badge_h * 0.6 - ring_gap + 'dp'"
+       data-style-width="ring_badge_w + 'dp'" data-style-height="ring_badge_h + 'dp'" data-style-line-height="ring_badge_h + 'dp'">{{badge}}</span>
+</div>
+<span class="warning away" id="warning" data-style-top="h + 8 + 'dp'" style="left: 0;">{{low_text}}</span>
+<div class="tip" data-if="tip.size > 0" data-style-left="tip_left + 'dp'" data-style-top="tip_top + 'dp'">
+ <p data-for="l, i : tip" data-class-first="i == 0">{{l}}</p></div>
+</body></rml>)RML";
+
+struct Ui {
+    uaui::Doc doc;
+    cb::Model m;
+    int view = 0, look = 0;
+    float w = 372, h = 312, hpW = 0, spW = 0, weightW = 0;
+    struct Exp {
+        bool shown = false;
+        Rml::String label, pct, numbers, right, rightTone;
+        float w = 0;
+    } base, job;
+    std::vector<Rml::String> buttons, tip;
+    Rml::String portrait, portraitSrc;
+    float tipLeft = 0, tipTop = 0;
+    float ringD = 98, ringGap = 7, ringPic = 31, ringBadgeW = 32, ringBadgeH = 18, ringHpW = 5, ringSpW = 4;
+    std::string key;
+    int portraitGen = 0;
+    std::string portraitKey;
+    panel::Picture icons[cb::kButtons];
+    float iconsScale = 0;
+    int iconsGen = 0;
+    std::string iconSrc[cb::kButtons];
+    bool warningShown = false;
+    int hoverKind = -1, hoverIndex = -1;
+};
+
+Ui& ui() {
+    static Ui u;
+    return u;
+}
+
+void tipFor(int kind, int index) {  // the tip of what the mouse is over (kind: 0 zone, 1 exp row, 2 button, 3 body,
+    Ui& u = ui();                    // 4 portrait)
+    u.hoverKind = kind, u.hoverIndex = index;
+    std::vector<std::string> lines;
+    if (kind == 0 && index >= 0 && index < cb::kZones) lines = u.m.zoneTips[index];
+    else if (kind == 1) lines = index == 0 ? u.m.baseExp.tip : u.m.jobExp.tip;
+    else if (kind == 2 && index >= 0 && index < cb::kButtons) lines = {texts().buttons[index]};
+    else if (kind == 3 && u.view != 0) lines = u.m.bodyTip;
+    else if (kind == 4 && !u.m.portraitTip.empty()) lines = {u.m.portraitTip};
+    u.tip.assign(lines.begin(), lines.end());
+    u.tipLeft = kind == 2 ? 12 + float(index) * 38 : 0;
+    u.tipTop = u.h + 6 + (u.warningShown ? 36 : 0);
+    u.doc.dirty("tip");
+    u.doc.dirty("tip_left");
+    u.doc.dirty("tip_top");
+}
+
+bool uiMake() {
+    Ui& u = ui();
+    if (u.doc.made()) return true;
+    return u.doc.make("charblock", kDoc, [&](Rml::DataModelConstructor& m) {
+        if (auto c = m.RegisterStruct<cb::Chip>()) {
+            c.RegisterMember("text", &cb::Chip::text);
+            c.RegisterMember("tone", &cb::Chip::tone);
+        }
+        if (auto c = m.RegisterStruct<cb::Cell>()) {
+            c.RegisterMember("key", &cb::Cell::key);
+            c.RegisterMember("value", &cb::Cell::value);
+            c.RegisterMember("tone", &cb::Cell::tone);
+        }
+        if (auto e = m.RegisterStruct<Ui::Exp>()) {
+            e.RegisterMember("shown", &Ui::Exp::shown);
+            e.RegisterMember("label", &Ui::Exp::label);
+            e.RegisterMember("pct", &Ui::Exp::pct);
+            e.RegisterMember("numbers", &Ui::Exp::numbers);
+            e.RegisterMember("right", &Ui::Exp::right);
+            e.RegisterMember("right_tone", &Ui::Exp::rightTone);
+            e.RegisterMember("w", &Ui::Exp::w);
+        }
+        m.RegisterArray<std::vector<cb::Chip>>();
+        m.RegisterArray<std::vector<cb::Cell>>();
+        m.RegisterArray<std::vector<Rml::String>>();
+        m.Bind("view", &u.view);
+        m.Bind("look", &u.look);
+        m.Bind("w", &u.w);
+        m.Bind("h", &u.h);
+        m.Bind("name", &u.m.name);
+        m.Bind("job", &u.m.job);
+        m.Bind("levels", &u.m.levels);
+        m.Bind("letter", &u.m.letter);
+        m.Bind("badge", &u.m.badge);
+        m.Bind("portrait", &u.portrait);
+        m.Bind("low", &u.m.low);
+        m.Bind("low_text", &u.m.lowText);
+        m.Bind("weight_shown", &u.m.weightShown);
+        m.Bind("weight_label", &u.m.weightLabel);
+        m.Bind("weight_pct", &u.m.weightPct);
+        m.Bind("weight_tone", &u.m.weightTone);
+        m.Bind("weight_w", &u.weightW);
+        m.Bind("zeny_shown", &u.m.zenyShown);
+        m.Bind("zeny", &u.m.zeny);
+        m.Bind("social", &u.m.social);
+        m.Bind("points", &u.m.points);
+        m.Bind("hp_shown", &u.m.hpShown);
+        m.Bind("sp_shown", &u.m.spShown);
+        m.Bind("hp", &u.m.hp);
+        m.Bind("sp", &u.m.sp);
+        m.Bind("hp_compact", &u.m.hpCompact);
+        m.Bind("sp_compact", &u.m.spCompact);
+        m.Bind("hp_w", &u.hpW);
+        m.Bind("sp_w", &u.spW);
+        m.Bind("hp_regen", &u.m.hpRegen);
+        m.Bind("hp_regen_right", &u.m.hpRegenRight);
+        m.Bind("sp_regen", &u.m.spRegen);
+        m.Bind("sp_regen_right", &u.m.spRegenRight);
+        m.Bind("battle", &u.m.battle);
+        m.Bind("session", &u.m.session);
+        m.Bind("session_shown", &u.m.sessionShown);
+        m.Bind("session_head", &u.m.sessionHead);
+        m.Bind("base", &u.base);
+        m.Bind("job", &u.job);
+        m.Bind("buttons", &u.buttons);
+        m.Bind("tip", &u.tip);
+        m.Bind("tip_left", &u.tipLeft);
+        m.Bind("tip_top", &u.tipTop);
+        m.Bind("ring_d", &u.ringD);
+        m.Bind("ring_gap", &u.ringGap);
+        m.Bind("ring_pic", &u.ringPic);
+        m.Bind("ring_badge_w", &u.ringBadgeW);
+        m.Bind("ring_badge_h", &u.ringBadgeH);
+        m.Bind("ring_hp_w", &u.ringHpW);
+        m.Bind("ring_sp_w", &u.ringSpW);
+        m.BindEventCallback("portrait", [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList&) {
+            State& s = state();
+            changeView(s, cb::nextView(s.view));
+            LOG_INFO("character: the block %s (uaUI)", s.view == cb::View::Full      ? "full"
+                                                       : s.view == cb::View::Compact ? "compact"
+                                                                                     : "folded to its icon");
+        });
+        m.BindEventCallback("press", [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList& a) {
+            const int i = a.empty() ? -1 : a[0].Get<int>();
+            if (i < 0 || i >= cb::kButtons) return;
+            const bool sent = press(cb::kButton[i].command);
+            State& s = state();
+            if (s.clicksLogged++ < 10)
+                LOG_INFO("character: the Basic Info window's button 0x%X %s (uaUI)", cb::kButton[i].command,
+                         sent ? "pressed through the window" : "not pressed - the window is not where this build has it");
+        });
+        m.BindEventCallback("zone", [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList& a) {
+            const int z = a.empty() ? -1 : a[0].Get<int>();
+            if (z >= 0 && z < cb::kZones && (cb::opensStats(cb::Zone(z)) || z == int(cb::Zone::Points)))
+                press(cb::kButton[0].command);
+        });
+        m.BindEventCallback("hover", [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList& a) {
+            if (a.size() >= 2) tipFor(a[0].Get<int>(), a[1].Get<int>());
+        });
+        m.BindEventCallback("unhover", [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList&) {
+            Ui& u = ui();
+            u.hoverKind = u.hoverIndex = -1;
+            if (!u.tip.empty()) u.tip.clear(), u.doc.dirty("tip");
+        });
+    });
+}
+
+// The block by uaUI this frame: true when it is shown so (the picture not painted)
+bool uiFrame(State& s, const cb::View view, const cb::Look look, const std::string& key) {
+    Ui& u = ui();
+    if (!uaui::ready() || !uiMake()) {
+        u.doc.show(false);
+        return false;
+    }
+    const float dp = uaui::dp();
+    const float size = hudedit::sizeOf(hudlayout::Part::Character);  // its size in «Розміщення інтерфейсу»
+    if (key != u.key) {  // the words and shares anew, all dirty (a second's change at most, as the picture's)
+        u.key = key;
+        u.m = cb::model(s.data, texts(), view, look, cb::lastLevels(s.data));
+        u.view = int(view);
+        u.look = int(look);
+        const bool session = u.m.sessionShown;
+        u.w = view == cb::View::Full ? 372 : view == cb::View::Compact && look == cb::Look::Bars ? 300 : 0;
+        u.h = view == cb::View::Full ? (session ? 250.0f : 264.0f) + 10 + 26 + 12
+              : view == cb::View::Compact && look == cb::Look::Bars ? 74
+                                                                    : 0;
+        const bool icon = view == cb::View::Icon;
+        const float hpR = icon ? 28 : 46;
+        u.ringD = 2 * (hpR + 3);
+        u.ringGap = 3 + (hpR - (icon ? 23.0f : 39.0f));
+        u.ringPic = icon ? 18 : 31;
+        u.ringBadgeW = icon ? 26 : 32;
+        u.ringBadgeH = icon ? 15 : 18;
+        u.ringHpW = icon ? 4 : 5;
+        u.ringSpW = icon ? 3 : 4;
+        if (u.w == 0) u.w = u.ringD, u.h = u.ringD - u.ringGap + u.ringBadgeH * 0.4f + 3;
+        u.hpW = u.m.hpShare * 100, u.spW = u.m.spShare * 100, u.weightW = u.m.weightShare * 100;
+        const auto exp = [](const cb::ExpRow& r, Ui::Exp& e) {
+            e.shown = r.shown, e.label = r.label, e.pct = r.pct, e.numbers = r.numbers, e.right = r.right;
+            e.rightTone = r.rightTone, e.w = r.share * 100;
+        };
+        exp(u.m.baseExp, u.base);
+        exp(u.m.jobExp, u.job);
+        if (u.hoverKind >= 0) tipFor(u.hoverKind, u.hoverIndex);
+        u.doc.dirtyAll();
+    }
+    // the portrait and the buttons' icons as pictures of the driver's
+    const std::string pkey = s.portraitKey + (s.data.portrait ? "p" : "");
+    if (pkey != u.portraitKey) u.portraitKey = pkey, ++u.portraitGen;
+    const Rml::String portrait = uaui::picture(s.data.portrait, u.portraitGen, u.portraitSrc);
+    if (portrait != u.portrait) u.portrait = portrait, u.doc.dirty("portrait");
+    const float iconPx = 18 * dp * size;
+    if (iconPx != u.iconsScale) {
+        u.iconsScale = iconPx;
+        ++u.iconsGen;
+        u.buttons.clear();
+        for (int i = 0; i < cb::kButtons; ++i) {
+            panel::Picture& p = u.icons[i];
+            const int side = std::max(8, int(std::ceil(iconPx)));
+            p.width = p.height = side;
+            p.px.assign(size_t(side) * size_t(side), 0u);
+            uiicons::draw(p, cb::kButton[i].icon, 0, 0, float(side), 0xECEFF5, 0.9f);
+            u.buttons.push_back(uaui::picture(&p, u.iconsGen, u.iconSrc[i]));
+        }
+        u.doc.dirty("buttons");
+    }
+    // the low HP warning slides in and out by the theme
+    const bool warn = s.show.warning && u.m.low;
+    if (warn != u.warningShown) {
+        u.warningShown = warn;
+        if (Rml::Element* w = u.doc.byId("warning")) w->SetClass("away", !warn);
+    }
+    if (Rml::ElementDocument* d = u.doc.doc()) {
+        const ULONGLONG now = GetTickCount64();
+        d->SetClass("flare", now - s.levelAt < motion::kLevelMs);  // a new level: its edge gold a moment
+        const int a = int(std::lround(uistyle::panel() * 255));  // [interface] panel_opacity
+        char ground[32];
+        std::snprintf(ground, sizeof ground, "#10141c%02x", a);
+        if (Rml::Element* card = d->GetFirstChild())
+            if (card->IsClassSet("card")) card->SetProperty("background-color", ground);
+        d->SetProperty("transform", size != 1.0f ? "scale(" + std::to_string(size) + ")" : "none");
+    }
+    u.doc.place(s.layout.x, s.layout.y);
+    u.doc.show(true);
+    return true;
+}
+
 }  // namespace
 
 void frame(HWND game, CharacterLook look, unsigned codePage, double k, int targetWidth, int targetHeight) {
@@ -390,6 +731,7 @@ void frame(HWND game, CharacterLook look, unsigned codePage, double k, int targe
     if (world) holdGameWindow(s, on);
     if (!on || !world || !game || k <= 0 || targetWidth <= 0 || targetHeight <= 0) {
         hide(s);
+        ui().doc.show(false);  // 3.0.18-beta.17
         s.lastBase = s.lastJob = 0;  // another character next: no flare for its levels
         return;
     }
@@ -626,6 +968,12 @@ void frame(HWND game, CharacterLook look, unsigned codePage, double k, int targe
         std::to_string(d.spSitSkill) + ',' + std::to_string(int(d.hpCost * 1000)) + ',' +
         std::to_string(int(d.spCost * 1000)) + ',' + std::to_string(int(d.costShown * 20)) + ';' +
         std::to_string(d.gainBase) + ',' + std::to_string(d.gainJob) + ',' + std::to_string(int(d.gainShown * 20));
+    s.uiShown = uiFrame(s, view, panelLook, key);  // 3.0.18-beta.17: by uaUI while [interface] uaui is on
+    if (s.uiShown) {
+        s.shown = true;
+        block(s, game);
+        return;
+    }
     if (const std::string drawn = key + '#' + std::to_string(uistyle::generation()); drawn != s.key) {  // its grounds
         s.key = drawn;
         render(s);
@@ -648,6 +996,7 @@ bool panelBox(int& x, int& y, int& w, int& h) {
 
 void draw(FrameRecord& record, gpu::Renderer& renderer) {
     State& s = state();
+    if (s.uiShown) return;  // 3.0.18-beta.17: uaUI draws it
     if (!s.shown || s.k <= 0 || s.picture.width <= 0 || s.picture.height <= 0) return;
     int cursor = -1, cx = 0, cy = 0;  // under the game's own cursor, as the minimap
     if (readGameCursor(cx, cy)) cursor = panel::cursorDraw(record, float(cx), float(cy));
@@ -677,7 +1026,7 @@ void draw(FrameRecord& record, gpu::Renderer& renderer) {
 
 bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     State& s = state();
-    if (!s.shown) return false;
+    if (!s.shown || s.uiShown) return false;  // 3.0.18-beta.17: uaUI's events take its clicks
     const bool button = m == WM_LBUTTONDOWN || m == WM_LBUTTONUP || m == WM_LBUTTONDBLCLK || m == WM_RBUTTONDOWN ||
                         m == WM_RBUTTONUP || m == WM_RBUTTONDBLCLK || m == WM_MBUTTONDOWN || m == WM_MBUTTONUP;
     if (!button && m != WM_MOUSEWHEEL) return false;

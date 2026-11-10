@@ -913,6 +913,132 @@ std::vector<Words> words(const Layout& L, const Data& d, const Texts& t, const S
     return out;
 }
 
+Model model(const Data& d, const Texts& t, View view, Look look, bool sessionRows) {
+    Model m;
+    const Layout L = layout(view, look, 0, 0, 1.0f, sessionRows);
+    const bool low = lowHp(d);
+    m.name = d.name;
+    m.job = d.job;
+    m.levels = levels(d);
+    m.badge = std::to_string(d.baseLevel);
+    if (!d.portrait || d.portrait->width <= 0) {
+        const bool wide = !d.name.empty() && (static_cast<unsigned char>(d.name[0]) & 0xE0) == 0xC0;
+        m.letter = d.name.empty() ? "?" : d.name.substr(0, wide ? 2 : 1);
+    }
+    m.low = low;
+    if (low) m.lowText = "! " + replaced(t.lowHp, std::to_string(lowPercent(d)));
+    if (d.weight >= 0) {
+        const int over = overweightOf(d);
+        m.weightShown = true;
+        m.weightLabel = t.weight;
+        m.weightPct = std::to_string(d.weight) + "\xC2\xA0%";
+        m.weightTone = over == 2 ? "bad" : over == 1 ? "warn" : "";
+        m.weightShare = std::clamp(float(d.weight) / 100.0f, 0.0f, 1.0f);
+    }
+    if (d.zeny >= 0) m.zenyShown = true, m.zeny = grouped(d.zeny);
+    if (!d.guild.empty()) m.social.push_back({replaced(t.guild, d.guild), "muted"});
+    if (!d.party.empty())
+        m.social.push_back({replaced(t.party, d.party) +
+                                (d.partyTotal > 0 ? " \xC2\xB7 " + std::to_string(d.partyOnline) + "/" +
+                                                        std::to_string(d.partyTotal)
+                                                  : std::string()),
+                            "muted"});
+    if (d.statusPoints > 0) m.points.push_back({counted(t.points, d.statusPoints), "gold"});
+    if (d.skillPoints > 0 && !t.skillPoints.empty()) m.points.push_back({counted(t.skillPoints, d.skillPoints), "gold"});
+    if (d.ammo >= 0 && d.ammo < kAmmoLow && !t.ammo.empty())
+        m.points.push_back({t.ammo + " " + std::to_string(d.ammo), d.ammo <= kAmmoVeryLow ? "bad" : "warn"});
+    if (!d.broken.empty() && !t.broken.empty()) m.points.push_back({replaced(t.broken, d.broken), "bad"});
+    const auto fed = [&](const std::string& who, int full) {
+        if (full < 0 || who.empty()) return;
+        m.points.push_back({who + " " + std::to_string(full) + "\xC2\xA0%", full <= 10 ? "bad" : full <= 25 ? "warn" : ""});
+    };
+    fed(t.pet, d.pet);
+    fed(t.homun, d.homun);
+    m.hpShown = d.hpMost > 0;
+    m.spShown = d.spMost > 0;
+    if (m.hpShown) m.hp = pair(d.hp, d.hpMost), m.hpCompact = "HP " + grouped(d.hp);
+    if (m.spShown) m.sp = pair(d.sp, d.spMost), m.spCompact = "SP " + grouped(d.sp);
+    m.hpShare = d.hpMost > 0 ? std::clamp(float(d.hp) / float(d.hpMost), 0.0f, 1.0f) : 0;
+    m.spShare = d.spMost > 0 ? std::clamp(float(d.sp) / float(d.spMost), 0.0f, 1.0f) : 0;
+    if (d.costShown > 0) m.hpCost = std::max(0.0f, d.hpCost), m.spCost = std::max(0.0f, d.spCost);
+    const auto regen = [&](Chip& left, Chip& right, int per, int every, int skill, int sitSkill, int now, int most,
+                           float cost) {
+        if (per < 0) return;
+        if (overweightOf(d) >= 1) {
+            left = {t.regenNone, "warn"};
+            return;
+        }
+        const long long minute = perMinute(per, every, skill, sitSkill, d.sitting);
+        left = {t.regenPerMin.empty()
+                    ? replaced2(replaced(t.regen, std::to_string(per)), std::to_string(every))
+                    : replaced2(replaced(t.regenPerMin, grouped(minute)), d.sitting ? t.sitting : t.standing),
+                d.sitting ? "" : "muted"};
+        if (cost > 0 && d.costShown > 0 && !t.fightCost.empty()) {
+            right = {replaced(t.fightCost, percent(cost, t.decimal)), "fight"};
+            return;
+        }
+        if (most <= 0) return;
+        if (now >= most) right = {t.regenFull, "muted"};
+        else if (minute > 0)
+            right = {replaced(t.regenToFull, duration(((long long)(most - now) + minute - 1) / minute, t.hour, t.minute)),
+                     "muted"};
+    };
+    regen(m.hpRegen, m.hpRegenRight, d.hpRegen, d.hpEverySec, d.hpSkill, d.hpSitSkill, d.hp, d.hpMost, d.hpCost);
+    regen(m.spRegen, m.spRegenRight, d.spRegen, d.spEverySec, d.spSkill, d.spSitSkill, d.sp, d.spMost, d.spCost);
+    if (d.atk >= 0) {
+        m.battle = {{"ATK", std::to_string(d.atk) + "+" + std::to_string(d.atk2), ""},
+                    {"DEF", std::to_string(d.def) + "+" + std::to_string(d.def2), ""},
+                    {"FLEE", std::to_string(d.flee) + "+" + std::to_string(d.flee2), ""},
+                    {"ASPD", std::to_string(d.aspd), ""}};
+    }
+    if (L.sessionShown && d.sessionMinutes >= 0) {
+        m.sessionShown = true;
+        m.sessionHead = replaced(t.sessionHead, duration(d.sessionMinutes, t.hour, t.minute));
+        const long long perHour = d.sessionMinutes > 0 ? d.zenyGain * 60 / d.sessionMinutes : 0;
+        m.session = {{(perHour >= 0 ? "+" : "") + grouped(perHour) + " z/" + t.hour,
+                      (d.zenyGain >= 0 ? "+" : "") + grouped(d.zenyGain) + " z", d.zenyGain >= 0 ? "gold" : "bad"},
+                     {t.killed, std::to_string(d.kills), ""},
+                     {t.deaths, std::to_string(d.deaths), d.deaths > 0 ? "warn" : ""}};
+    }
+    const auto experience = [&](const Exp& e, ExpRow& row, int which) {
+        if (!known(e)) return;
+        row.shown = true;
+        row.label = e.name;
+        row.pct = e.next == 0 ? t.expMax : percent(std::max(e.share, 0.0f), t.decimal);
+        row.share = std::clamp(e.share, 0.0f, 1.0f);
+        Show sh;
+        sh.hoverExp = which;
+        const Layout full = layout(View::Full, look, 0, 0, 1.0f, sessionRows);
+        row.tip = tipLines(full, d, t, sh);
+        if (!numbers(e)) return;
+        row.numbers = grouped(e.now) + " / " + grouped(e.next);
+        const long long gain = which == 0 ? d.gainBase : d.gainJob;
+        if (gain > 0 && d.gainShown > 0 && e.next > 0) {
+            char buf[32];
+            const double p = double(gain) / double(e.next) * 100;
+            std::snprintf(buf, sizeof buf, p >= 10 ? " (%.1f\xC2\xA0%%)" : " (%.2f\xC2\xA0%%)", p);
+            std::string g = "+" + grouped(gain) + buf;
+            for (char& c : g)
+                if (c == '.') c = t.decimal;
+            row.right = g, row.rightTone = "fight";
+            return;
+        }
+        row.right = pace(e, t, true), row.rightTone = "muted";
+    };
+    experience(baseOf(d), m.baseExp, 0);
+    experience(jobOf(d), m.jobExp, 1);
+    for (int z = 0; z < kZones; ++z) {
+        Show sh;
+        sh.hoverZone = z;
+        m.zoneTips[z] = tipLines(L, d, t, sh);
+    }
+    Show body;
+    body.hoverBlock = true;
+    m.bodyTip = tipLines(L, d, t, body);
+    m.portraitTip = view == View::Full ? t.fold : t.unfold;
+    return m;
+}
+
 std::vector<Words> warningWords(const Layout& L, const Data& d, const Texts& t) {
     Show show;
     show.warning = true;

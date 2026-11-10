@@ -191,6 +191,45 @@ struct Words {
     Align align = Align::Left;
 };
 std::vector<Words> words(const Layout& L, const Data& d, const Texts& t, const Show& show);
+
+// 3.0.18-beta.17 (the owner: «Переписывать 73 части в разметку RmlUi вручную»; win/char_block_ui): what the block
+// shows, as words and shares for its RML document - the same words as words() writes, none of the places. A tone
+// is a class of the theme: "" the text's, "muted", "gold", "warn", "bad", "fight"
+struct Chip {
+    std::string text, tone;
+};
+struct Cell {
+    std::string key, value, tone;
+};
+struct ExpRow {
+    bool shown = false;
+    std::string label, pct, numbers, right, rightTone;
+    float share = 0;
+    std::vector<std::string> tip;
+};
+struct Model {
+    std::string name, job, levels, letter, badge;  // letter: the portrait's when there is none
+    bool low = false;
+    std::string lowText;  // «! Мало HP · 18 %»
+    bool weightShown = false;
+    std::string weightLabel, weightPct, weightTone;
+    float weightShare = 0;
+    bool zenyShown = false;
+    std::string zeny;
+    std::vector<Chip> social, points;
+    bool hpShown = false, spShown = false;
+    std::string hp, sp, hpCompact, spCompact;  // «8 742 / 8 742», «HP 8 742»
+    float hpShare = 0, spShare = 0, hpCost = 0, spCost = 0;
+    Chip hpRegen, hpRegenRight, spRegen, spRegenRight;
+    std::vector<Cell> battle, session;
+    bool sessionShown = false;
+    std::string sessionHead;
+    ExpRow baseExp, jobExp;
+    std::vector<std::string> zoneTips[kZones];  // each zone's tip
+    std::vector<std::string> bodyTip;            // the compact block's and the rings' body
+    std::string portraitTip;
+};
+Model model(const Data& d, const Texts& t, View view, Look look, bool sessionRows);
 std::vector<Words> warningWords(const Layout& L, const Data& d, const Texts& t);  // paintWarning's
 
 // 3.0.11-beta.236 (the concept «Блок персонажа»: «внизу экрана показывать опыт бейз/джоб полосками» - «включить»): the

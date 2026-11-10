@@ -46,7 +46,7 @@ picture's upload gone. Cost if wrong: per-pixel glows (panel::over loops) land i
 
 ## Stage 4 — HUD (by hand in RML, one beta each)
 
-- [ ] character block (win/char_block + core/char_block)
+- [x] character block (win/char_block + core/char_block) — beta.17 by hand: core charblock::model, RML kDoc, <ua-ring>
 - [ ] target card (win/target_card)
 - [ ] party panel, mercenary/homunculus blocks
 - [ ] buffs column and its further lines
@@ -82,3 +82,4 @@ picture's upload gone. Cost if wrong: per-pixel glows (panel::over loops) land i
 - 2026-11-09 beta.14: manual pictures -> blank (answer/info cards, HUD layout, «Довідник» (full repaint when recorded), char block warning/flare, buff overlay, exp strip/gain/tip, exp gain, pad carry, enter veil); nested recorded pictures move their prims; minimap still painted (map blits)
 - 2026-11-09 beta.15: minimap + big map recorded (map pixels residual under marks; big map's picture an image over its card)
 - 2026-11-10 beta.16: recording off (owner: rewrite by hand; R-ZK9ZK9 crash)
+- 2026-11-10 beta.17: character block by hand in RML (full, compact bars, rings, icon; tips; warning; flare; buttons); <ua-ring> element; theme file adds to the built-in theme

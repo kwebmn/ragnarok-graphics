@@ -532,6 +532,56 @@ panels { display: block; }
 input.checkbox { display: inline-block; width: 16dp; height: 16dp; margin-right: 8dp; border-radius: 4dp;
                  border: 1dp #ffffff50; vertical-align: middle; transition: background-color border-color 0.1s; }
 input.checkbox:checked { background-color: #3d7fd8; border-color: #3d7fd8; }
+/* 3.0.18-beta.17: the character block (win/char_block) - the concept's v17_char, in concept pixels (dp) */
+.cb { position: absolute; font-family: Plex; color: #eceff5; transform-origin: 0 0; }
+.cb .card { position: absolute; left: 0; top: 0; border-radius: 10dp; border: 1dp #ffffff17;
+            background-color: #10141ccc; transition: border-color 0.3s quadratic-out; }
+.cb.flare .card { border-color: #e6cb8a; }
+.cb .abs { position: absolute; }
+.cb .portrait { position: absolute; border-radius: 50%; background-color: #1b1d24; overflow: hidden; cursor: pointer; }
+.cb .portrait img { position: absolute; left: 7%; top: 7%; width: 86%; height: 86%; }
+.cb .letter { display: block; width: 100%; text-align: center; font-weight: bold; color: #eceff5; }
+.cb .name { font-size: 16dp; font-weight: bold; }
+.cb .job { font-size: 13dp; color: #9aa3b5; margin-left: 8dp; }
+.cb .levels { position: absolute; right: 12dp; top: 14dp; font-size: 13dp; font-weight: bold; color: #e6cb8a; }
+.cb .line { position: absolute; height: 17dp; font-size: 12.5dp; white-space: nowrap; }
+.cb .muted { color: #9aa3b5; }
+.cb .gold { color: #e6cb8a; }
+.cb .warn { color: #f0a050; }
+.cb .bad { color: #ff5a4e; }
+.cb .fight { color: #f3d27a; font-weight: bold; }
+.cb .chip { margin-right: 12dp; }
+.cb .label { position: absolute; font-size: 11dp; font-weight: bold; color: #9aa3b5; }
+.cb .track { position: absolute; border-radius: 5dp; background-color: #00000073; }
+.cb .fill { position: absolute; left: 0; top: 0; height: 100%; border-radius: 5dp; }
+.cb .hp { background-color: #5bd36c; }
+.cb .hp.low { background-color: #ff5a4e; }
+.cb .sp { background-color: #4f8bff; }
+.cb .base { background-color: #b7a6ff; }
+.cb .jobx { background-color: #7fd3c3; }
+.cb .weightfill { background-color: #c9a55b; }
+.cb .num { position: absolute; font-size: 13dp; font-weight: bold; text-align: right; }
+.cb .num.low { color: #ff9a8f; }
+.cb .small { position: absolute; font-size: 11dp; white-space: nowrap; }
+.cb .cell { position: absolute; border-radius: 6dp; background-color: #1b1d24b3; }
+.cb .cell .k { position: absolute; left: 7dp; top: 2dp; font-size: 9.5dp; font-weight: bold; color: #9aa3b5; }
+.cb .cell .v { position: absolute; left: 7dp; top: 14dp; font-size: 12.5dp; font-weight: bold; }
+.cb .button { position: absolute; border-radius: 7dp; background-color: #1b1d24b3; cursor: pointer;
+              transition: background-color 0.1s; }
+.cb .button:hover { background-color: #2a2f3a; }
+.cb .button:active { background-color: #3a3f4c; }
+.cb .button img { position: absolute; left: 7dp; top: 4dp; width: 18dp; height: 18dp; }
+.cb .badge { position: absolute; border-radius: 9dp; background-color: #10141c; border: 1dp #c9a55b;
+             text-align: center; font-weight: bold; font-size: 12dp; }
+.cb .zone { position: absolute; }
+.cb .tip { position: absolute; padding: 4dp 10dp 4dp 10dp; border-radius: 8dp; background-color: #10141cee;
+           border: 1dp #ffffff17; white-space: nowrap; font-size: 13dp; }
+.cb .tip p { display: block; color: #9aa3b5; line-height: 17dp; }
+.cb .tip p.first { color: #eceff5; font-weight: bold; }
+.cb .warning { position: absolute; padding: 0 12dp; height: 30dp; line-height: 30dp; border-radius: 8dp;
+               background-color: #3a1414; font-size: 13dp; font-weight: bold; white-space: nowrap;
+               transition: opacity transform 0.18s quadratic-out; }
+.cb .warning.away { opacity: 0; transform: translateY(-8dp); }
 scrollbarvertical { width: 8dp; margin-left: 4dp; }
 scrollbarvertical slidertrack { background-color: #ffffff0c; border-radius: 4dp; }
 scrollbarvertical sliderbar { background-color: #ffffff40; border-radius: 4dp; min-height: 24dp; }
@@ -557,7 +607,7 @@ class Files final : public Rml::FileInterface {
 public:
     Rml::FileHandle Open(const Rml::String& path) override {
         auto* f = new Open_;
-        if (path == "uaui:theme.rcss") {
+        if (path == "uaui:theme.rcss") {  // 3.0.18-beta.17: the file's rules after the built-in ones (over them)
             f->data = kTheme;
             State& s = state();
             s.themeFile = false;
@@ -569,7 +619,7 @@ public:
                     std::string text(size_t(size.QuadPart), '\0');
                     DWORD got = 0;
                     if (ReadFile(h, text.data(), DWORD(text.size()), &got, nullptr) && got == text.size()) {
-                        f->data = std::move(text);
+                        f->data += "\n" + text;
                         s.themeFile = true;
                     }
                 }
@@ -608,6 +658,89 @@ private:
     };
 };
 Files g_files;
+
+// 3.0.18-beta.17: <ua-ring value="0.7" width="5" fill="#5bd36cff" track="#ffffff1f" start="-90"> - an arc round the
+// middle of the element's box, `width` dp wide at its edge, `value` of the circle from `start` degrees clockwise
+// (with the track's colour for the rest); sector="1" a pie to the middle (a cooldown's sweep). Its colours at the
+// element's opacity. The rings of the character block, the hotbar's and the buffs' sweeps.
+bool hexColour(const Rml::String& s, Rml::Colourb& out) {
+    if (s.size() != 7 && s.size() != 9) return false;
+    if (s[0] != '#') return false;
+    char* end = nullptr;
+    const unsigned long v = std::strtoul(s.c_str() + 1, &end, 16);
+    if (!end || *end) return false;
+    if (s.size() == 7) out = Rml::Colourb(Rml::byte(v >> 16), Rml::byte(v >> 8), Rml::byte(v), 255);
+    else out = Rml::Colourb(Rml::byte(v >> 24), Rml::byte(v >> 16), Rml::byte(v >> 8), Rml::byte(v));
+    return true;
+}
+
+class ElementRing final : public Rml::Element {
+public:
+    explicit ElementRing(const Rml::String& tag) : Rml::Element(tag) {}
+
+protected:
+    void OnAttributeChange(const Rml::ElementAttributes& changed) override {
+        Rml::Element::OnAttributeChange(changed);
+        dirty_ = true;
+    }
+    void OnResize() override { dirty_ = true; }
+    void OnRender() override {
+        const float opacity = GetComputedValues().opacity();
+        if (dirty_ || opacity != opacity_) build(opacity);
+        geometry_.Render(GetAbsoluteOffset(Rml::BoxArea::Border));
+    }
+
+private:
+    void build(float opacity) {
+        dirty_ = false;
+        opacity_ = opacity;
+        Rml::RenderManager* rm = GetRenderManager();
+        if (!rm) return;
+        const Rml::Vector2f size = GetBox().GetSize(Rml::BoxArea::Border);
+        const float r = std::min(size.x, size.y) / 2;
+        if (r <= 1) {
+            geometry_ = {};
+            return;
+        }
+        const float dpr = GetContext() ? GetContext()->GetDensityIndependentPixelRatio() : 1.0f;
+        const bool sector = GetAttribute<int>("sector", 0) != 0;
+        const float w = sector ? r : std::min(r, GetAttribute<float>("width", 4.0f) * dpr);
+        const float value = std::clamp(GetAttribute<float>("value", 1.0f), 0.0f, 1.0f);
+        const float start = GetAttribute<float>("start", -90.0f) * 3.14159265f / 180;
+        Rml::Colourb fill(255, 255, 255, 255), track(0, 0, 0, 0);
+        hexColour(GetAttribute<Rml::String>("fill", ""), fill);
+        hexColour(GetAttribute<Rml::String>("track", ""), track);
+        Rml::Mesh mesh;
+        const Rml::Vector2f c(size.x / 2, size.y / 2);
+        const auto arc = [&](float from, float to, Rml::Colourb col) {
+            if (to <= from || col.alpha == 0) return;
+            const Rml::ColourbPremultiplied in = col.ToPremultiplied(opacity), out = col.ToPremultiplied(0.0f);
+            const int n = std::max(2, int(std::ceil((to - from) / (2 * 3.14159265f) * std::clamp(r, 24.0f, 160.0f))));
+            const float ro = r - 0.5f, ri = std::max(0.0f, r - w + 0.5f);
+            for (int i = 0; i <= n; ++i) {
+                const float a = from + (to - from) * float(i) / float(n), ca = std::cos(a), sa = std::sin(a);
+                const int b = int(mesh.vertices.size());
+                // the fringe out, the band, the fringe in (none for a pie)
+                mesh.vertices.push_back({{c.x + (ro + 1) * ca, c.y + (ro + 1) * sa}, out, {0, 0}});
+                mesh.vertices.push_back({{c.x + ro * ca, c.y + ro * sa}, in, {0, 0}});
+                mesh.vertices.push_back({{c.x + ri * ca, c.y + ri * sa}, in, {0, 0}});
+                mesh.vertices.push_back({{c.x + std::max(0.0f, ri - 1) * ca, c.y + std::max(0.0f, ri - 1) * sa},
+                                         sector ? in : out, {0, 0}});
+                if (i == 0) continue;
+                for (int k = 0; k < 3; ++k)
+                    for (int q : {b - 4 + k, b + k, b - 3 + k, b - 3 + k, b + k, b + 1 + k}) mesh.indices.push_back(q);
+            }
+        };
+        const float turn = 2 * 3.14159265f;
+        arc(start + turn * value, start + turn, track);
+        arc(start, start + turn * value, fill);
+        geometry_ = rm->MakeGeometry(std::move(mesh));
+    }
+    Rml::Geometry geometry_;
+    bool dirty_ = true;
+    float opacity_ = -1;
+};
+Rml::ElementInstancerGeneric<ElementRing> g_ringInstancer;
 
 // The window template's ×: its document hidden, the part told
 class Close final : public Rml::EventListener {
@@ -658,6 +791,7 @@ bool start(State& s) {
         LOG_ERROR("uaui: RmlUi made no context - uaUI stays off");
         return false;
     }
+    Rml::Factory::RegisterElementInstancer("ua-ring", &g_ringInstancer);  // 3.0.18-beta.17
     // the numbers as the interface writes them - «5 157» (core/char_block grouped); for every model of the context
     Rml::DataModelConstructor m = s.context->CreateDataModel("ua");
     m.RegisterTransformFunc("num", [](const Rml::VariantList& a) -> Rml::Variant {

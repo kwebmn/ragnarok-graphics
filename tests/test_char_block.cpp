@@ -711,3 +711,25 @@ TEST(char_block_the_last_gain_on_the_experience_rows) {
     d.gainShown = 0;
     CHECK(!hasText(charblock::words(L, d, texts(), charblock::Show{}), "+26\xC2\xA0" "660 (1,00\xC2\xA0%)"));
 }
+
+// 3.0.18-beta.17 (the owner: «Переписывать ... в разметку RmlUi вручную»): the RML block's words are the picture's
+TEST(char_block_model_says_what_the_words_say) {
+    const charblock::Data d = soraInNumbers();
+    const charblock::Texts t = texts();
+    const charblock::Layout L = charblock::layout(charblock::View::Full, charblock::Look::Bars, 0, 0, 1.0f);
+    const std::vector<charblock::Words> w = charblock::words(L, d, t, charblock::Show{});
+    const charblock::Model m = charblock::model(d, t, charblock::View::Full, charblock::Look::Bars, false);
+    CHECK(hasText(w, m.levels) && hasText(w, m.hp) && hasText(w, m.sp) && hasText(w, m.zeny));
+    CHECK(hasText(w, m.weightPct) && m.weightTone.empty() && m.weightShare == 0.38f);
+    CHECK(m.points.size() == 2 && m.points[0].tone == "gold" && hasText(w, m.points[0].text));
+    CHECK(m.baseExp.shown && hasText(w, m.baseExp.pct) && hasText(w, m.baseExp.numbers));
+    CHECK(m.jobExp.shown && hasText(w, m.jobExp.pct));
+    CHECK(!m.low && m.letter == "S" && m.badge == "72");
+    CHECK(m.hpShare > 0.82f && m.hpShare < 0.83f);
+    CHECK(!m.baseExp.tip.empty());
+    // low HP: the warning's words
+    charblock::Data low = d;
+    low.hp = 400;
+    const charblock::Model ml = charblock::model(low, t, charblock::View::Full, charblock::Look::Bars, false);
+    CHECK(ml.low && ml.lowText == "! Мало HP \xC2\xB7 10 %");  // 400 of 4 120 rounded
+}
