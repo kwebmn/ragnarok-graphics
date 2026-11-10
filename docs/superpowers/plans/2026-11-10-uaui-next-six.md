@@ -21,3 +21,11 @@ Owner 2026-11-10: «делай без остановки 2,3,4,5,6,7». Betas on
 - Group 3 beta.88: the NPC talk live (colour runs per line, options two columns by flexbox, its button, keys/server foot; drag by its ground)
 - Group 3 beta.89: another player's shop live (wares with − / +, sums, buy when affordable); $S/rmlwrap.py wraps long RML lines
 - Group 3 beta.90: one's own open shop and the shop setup live (cart | sale columns, the game's sign and price fields)
+- Stop at beta.90. Ruling: the windows left are not converted blind -
+  (a) drag and drop between windows («Речі», «Склад», «Візок», обмін, снаряжение, навыки, гомункул, наёмник): each finds
+  the drop place by its core layout; a flexbox-laid live window would draw cells where the drops do not land - they
+  need a drop protocol through RmlUi's element boxes first (one shared piece, then the windows);
+  (b) the big ones without drag (NPC shop 1170 lines with its keys/search/cart, stats with its planner - 15 parts,
+  the guild's six tabs) and the login screens (shelf's sliding cards, characters' sprites, the game's edit fields)
+  are each a day's careful work that cannot be checked off Windows;
+  cost if wrong: they stay drawn by uaUI as sheets (as now), only their hover/clicks are not RmlUi's yet.
