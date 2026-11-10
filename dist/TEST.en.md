@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.18-beta.18 — what's new
+
+- **The target card is on the new library:** with it on, the card is built anew - the monster's picture, name, level, element in its colour, HP bar, the book and the controller buttons; the details open under the cursor and a click opens its card in the in-game reference. The look is the same.
+
 # uaRO Graphics 3.0.18-beta.17 — what's new
 
 - **The character block is the first part rewritten on the new library:** with the new interface library on it is built anew - full, compact, rings and the icon, tips for every part, the low HP warning, the gold edge on a new level, the window buttons. The look and the words are the same; turn the switch off for the old block.
