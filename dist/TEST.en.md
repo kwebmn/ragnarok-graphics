@@ -1,3 +1,6 @@
+- Fixed: the stats and guild windows stretched over the whole screen.
+- Opening a shop: the price field is wide and easy to see, "For sale" shows the places used of all, and each thing shows the price for the whole stack and the site market price.
+
 - Opening your own shop (choosing things and prices) now uses the new look: the "vend_setup" switch was not part of the "Новий інтерфейс" choice, so the game's old window opened. It now follows "Своя лавка" (my shop).
 
 - The guild card is now laid out by the new interface library: its top and six tabs (two rows of three); the tabs' content keeps its places, and the "+", "Змінити", "Скасувати" buttons and the notice fields became library elements.
