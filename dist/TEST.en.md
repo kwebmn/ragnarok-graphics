@@ -1,3 +1,5 @@
+- The login screens in the new interface library: the server select, the character make (face, hair and colour, name, stat pairs) and the character select (buttons below; the cards and carousel keep their places).
+
 - Opening a shop: Tab moves to the next field (name, then the prices, round; Shift+Tab back), Enter to the next thing's price.
 - Chat: a magnifier in the tabs row - a click opens the search through the lines (type the words; Esc or another click closes it).
 
