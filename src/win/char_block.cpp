@@ -514,6 +514,15 @@ Ui& ui() {
     return u;
 }
 
+// 3.0.18-beta.49: the size uaUI draws it at last frame (its document times its size in «Розміщення інтерфейсу») - the
+// editor's frame round what is seen; untouched while uaUI does not draw it
+void uiSize(int& w, int& h) {
+    int x = 0, y = 0, dw = 0, dh = 0;
+    if (!uaui::ready() || !ui().doc.box(x, y, dw, dh)) return;
+    const float size = hudedit::sizeOf(hudlayout::Part::Character);
+    w = int(std::lround(float(dw) * size)), h = int(std::lround(float(dh) * size));
+}
+
 void tipFor(int kind, int index) {  // the tip of what the mouse is over (kind: 0 zone, 1 exp row, 2 button, 3 body,
     Ui& u = ui();                    // 4 portrait)
     u.hoverKind = kind, u.hoverIndex = index;
@@ -766,8 +775,11 @@ void frame(HWND game, CharacterLook look, unsigned codePage, double k, int targe
     // 3.0.11-beta.235: the session's rows at the last levels (as the last frame's numbers had them)
     s.layout = cb::layout(view, panelLook, int(std::lround(10 * scale)), int(std::lround(10 * scale)), scale,
                           cb::lastLevels(s.data));
-    hudedit::place(hudlayout::Part::Character, float(k), targetWidth, targetHeight, s.layout.w, s.layout.h, s.layout.x,
-                   s.layout.y);  // 3.0.11-beta.75: where the player put it
+    {  // 3.0.18-beta.49 (R-786CGH: the editor's frame narrower than the panel): uaUI's document's own size
+        int w = s.layout.w, h = s.layout.h;
+        uiSize(w, h);
+        hudedit::place(hudlayout::Part::Character, float(k), targetWidth, targetHeight, w, h, s.layout.x, s.layout.y);
+    }
     makePortrait(s, int(std::lround(s.layout.portrait.w * 0.86f)));
     cb::Data& d = s.data;
     const std::string own = readOwnName();  // 3.0.11-beta.117: the game's code page's letters, as UTF-8

@@ -425,6 +425,15 @@ Ui& ui() {
     return u;
 }
 
+// 3.0.18-beta.49: the size uaUI draws it at last frame (its document times its size in «Розміщення інтерфейсу») - the
+// editor's frame round what is seen; untouched while uaUI does not draw it
+void uiSize(int& w, int& h) {
+    int x = 0, y = 0, dw = 0, dh = 0;
+    if (!uaui::ready() || !ui().doc.box(x, y, dw, dh)) return;
+    const float size = hudedit::sizeOf(hudlayout::Part::Party);
+    w = int(std::lround(float(dw) * size)), h = int(std::lround(float(dh) * size));
+}
+
 std::string sourceOf(Ui& u, const panel::Picture* p) {
     if (!p || p->width <= 0) return {};
     return uaui::picture(p, uaui::stamp(p), u.sources[p]);
@@ -817,8 +826,11 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
                           s.compact);
     uint32_t mode = 0;
     s.layout.targeting = waitingState(mode) != 0 || chosen != 0;  // 3.0.11-beta.82: a click on a member casts it there
-    hudedit::place(hudlayout::Part::Party, float(k), targetWidth, targetHeight, s.layout.w, s.layout.h, s.layout.x,
-                   s.layout.y);  // 3.0.11-beta.75: where the player put it
+    {  // 3.0.18-beta.49 (R-786CGH: the editor's frame narrower than the panel): uaUI's document's own size
+        int w = s.layout.w, h = s.layout.h;
+        uiSize(w, h);
+        hudedit::place(hudlayout::Part::Party, float(k), targetWidth, targetHeight, w, h, s.layout.x, s.layout.y);
+    }
     std::string key = std::to_string(s.layout.w) + 'x' + std::to_string(s.layout.h) + ';' + std::to_string(scale) +
                       (s.folded ? ";f;" : ";;");
     for (const pp::Member& m : s.members)
