@@ -53,6 +53,9 @@ std::string utf8(const std::string& gameText);  // the game's words (its code pa
 // A picture of the driver's as an <img> source - «pic:<address>:<generation>»; another generation is another texture
 // (the one of `previous` let go when it changes)
 std::string picture(const panel::Picture* p, int generation, std::string& previous);
+// 3.0.18-beta.19: a picture's content, roughly (its size and every 97th pixel) - a generation for picture() when its
+// maker draws it again in place
+int stamp(const panel::Picture* p);
 
 // One document of a part: its body the part's box, its model (named as the document) bound by the part
 class Doc {

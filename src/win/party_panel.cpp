@@ -40,6 +40,8 @@
 #include "win/real_ddraw.hpp"
 #include "win/reference_window.hpp"
 #include "win/ui_cost.hpp"
+#include "win/uaui.hpp"
+#include "core/ui_icons.hpp"
 
 namespace uagfx::win::partywin {
 namespace {
@@ -123,6 +125,7 @@ struct State {
     // 3.0.11-beta.79 (the owner: «плашка с пати её надо иметь возможность сворачивать»): folded to its header, kept
     bool folded = false, stateRead = false;
     bool compact = false;  // 3.0.11-beta.84 (the owner's 8): two columns of small cells, kept
+    bool uiShown = false;  // 3.0.18-beta.19: drawn by uaUI
 };
 
 State& state() {
@@ -316,6 +319,283 @@ bool castOn(uint32_t account, const Seat& seat, std::string& said) {
         said = "skill " + std::to_string(skill) + " Lv" + std::to_string(level) + " on it";
     }
     msg(player, 0, kUseLevel, level, 0, 0);
+    return true;
+}
+
+
+// ▾ / ▸ fold it to its header and open it (3.0.11-beta.79); ▦ / ▤ compact or a list (3.0.11-beta.84); a member's
+// row clicked (3.0.11-beta.82) - the old picture's clicks and uaUI's events alike
+void toggleFold(State& s) {
+    s.folded = !s.folded;
+    keepState(s);
+    LOG_INFO("party: its panel %s", s.folded ? "folded" : "opened");
+}
+
+void toggleView(State& s) {
+    s.compact = !s.compact;
+    keepState(s);
+    LOG_INFO("party: its panel %s", s.compact ? "compact" : "a list");
+}
+
+void rowClicked(State& s, int row) {
+    if (row < 0 || size_t(row) >= s.rowsOf.size()) return;
+    // 3.0.11-beta.82 (the owner's 2 and 4): a member clicked - the skill waited for cast on it; else elsewhere its
+    // map's way followed, here a way to its cell
+    const uint32_t account = s.rowsOf[size_t(row)];
+    const auto it = s.seats.find(account);
+    const std::string name = size_t(row) < s.members.size() ? s.members[size_t(row)].name : "?";
+    if (it != s.seats.end()) {
+        const Seat& seat = it->second;
+        const std::string here = readGameMap();
+        std::string said;
+        if (castOn(account, seat, said)) {
+            LOG_INFO("party: %s - %s", name.c_str(), said.c_str());
+        } else if (seat.online && !seat.map.empty() && seat.map != here) {
+            if (minimapproto::canFollow()) minimapproto::follow(seat.map, true);
+            else referencewin::openMap(seat.map);
+            LOG_INFO("party: %s is on %s - %s", name.c_str(), seat.map.c_str(),
+                     minimapproto::canFollow() ? "the way there followed" : "its card opened");
+        } else if (seat.x >= 0 && GetTickCount64() - seat.posAt < kPosMs && minimapproto::plotTo(seat.x, seat.y)) {
+            LOG_INFO("party: a way to %s at %d, %d", name.c_str(), seat.x, seat.y);
+        }
+    }
+}
+
+
+// ---- 3.0.18-beta.19 (the owner: «Переписывать 73 части в разметку RmlUi вручную»): the panel as an RmlUi document
+// while [interface] uaui is on - its rows from the members (core partypanel's words and states), the header's fold
+// and view, a row's click (castOn, the way); its picture not painted then ----
+
+const char* kDoc = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss"/></head>
+<body class="pp" data-model="party">
+<div class="glass">
+ <div class="head" data-class-folded="folded"><span class="title">{{title}}</span><span class="count">{{count}}</span>
+  <span class="hbtn viewb" data-event-click="view()">{{view_sign}}</span><span class="hbtn foldb" data-event-click="fold()">{{fold_sign}}</span></div>
+ <div data-if="!folded && !compact">
+  <div class="row" data-for="r, i : rows" data-class-buffs="r.buffs.size > 0" data-class-low="r.low"
+       data-class-target="r.target" data-class-chosen="r.chosen" data-class-dead="r.dead"
+       data-class-alarm="r.alarm != ''" data-event-click="row(i)">
+   <div class="face" data-class-away="r.away"><img data-if="r.face != ''" data-attr-src="r.face"/><span class="letter" data-if="r.face == ''">{{r.letter}}</span></div>
+   <span class="name" data-class-bad="r.bad" data-class-away="r.faint">{{r.name}}<img class="crown" data-if="r.leader" data-attr-src="crown"/><span
+     class="after" data-class-cast="r.casting" data-if="r.after != ''">{{r.after}}</span></span>
+   <span class="value" data-attr-class="'value ' + r.tone"><img data-if="r.route" data-attr-src="route"/>{{r.value}}</span>
+   <div class="bar" data-if="r.bar"><span class="fill" data-class-bad="r.low" data-style-width="r.pct + '%'"></span></div>
+   <div class="castline" data-if="r.cast >= 0"><span class="fill" data-style-width="r.cast + '%'"></span></div>
+   <div class="where" data-if="r.arrow"><img data-attr-src="arrow" data-style-transform="'rotate(' + r.deg + 'deg)'"/>{{r.cells}}</div>
+   <div class="bufrow" data-if="r.buffs.size > 0"><span class="buf" data-for="b : r.buffs" data-class-glow="b.glow != ''">
+    <img data-attr-src="b.icon"/><span class="time" data-if="b.left >= 0"><span class="fill" data-class-end="b.left < 10"
+     data-style-width="b.left + '%'"></span></span></span></div>
+  </div>
+ </div>
+ <div class="cells" data-if="!folded && compact"><div class="cell" data-for="r, i : rows" data-event-click="row(i)">
+   <div class="face" data-class-away="r.away"><img data-if="r.face != ''" data-attr-src="r.face"/><span class="letter" data-if="r.face == ''">{{r.letter}}</span></div>
+   <span class="name" data-class-bad="r.bad" data-class-away="r.faint">{{r.name}}</span>
+   <div class="bar" data-if="r.bar"><span class="fill" data-class-bad="r.low" data-style-width="r.pct + '%'"></span></div>
+ </div></div>
+</div>
+</body></rml>)RML";
+
+struct BuffView {
+    Rml::String icon, glow;
+    float left = -1;
+};
+struct RowView {
+    Rml::String name, letter, face, after, value, tone, cells, alarm;
+    bool leader = false, low = false, bad = false, faint = false, away = false, target = false, chosen = false,
+         dead = false, casting = false, route = false, bar = false, arrow = false;
+    float pct = 0, cast = -1, deg = 0;
+    std::vector<BuffView> buffs;
+};
+
+struct Ui {
+    uaui::Doc doc;
+    Rml::String title, count, viewSign, foldSign, crown, route, arrow;
+    bool folded = false, compact = false;
+    std::vector<RowView> rows;
+    std::string key;
+    std::map<const panel::Picture*, std::string> sources;  // the faces' and icons' <img> sources, by their pictures
+    panel::Picture crownPic, routePic, arrowPic;
+    std::string crownSrc, routeSrc, arrowSrc;
+    float iconsPx = 0;
+    int gen = 0;
+};
+
+Ui& ui() {
+    static Ui u;
+    return u;
+}
+
+std::string sourceOf(Ui& u, const panel::Picture* p) {
+    if (!p || p->width <= 0) return {};
+    return uaui::picture(p, uaui::stamp(p), u.sources[p]);
+}
+
+bool uiFrame(State& s) {
+    Ui& u = ui();
+    if (!uaui::ready()) {
+        u.doc.show(false);
+        return false;
+    }
+    if (!u.doc.made() && !u.doc.make("party", kDoc, [&](Rml::DataModelConstructor& m) {
+            if (auto b = m.RegisterStruct<BuffView>()) {
+                b.RegisterMember("icon", &BuffView::icon);
+                b.RegisterMember("glow", &BuffView::glow);
+                b.RegisterMember("left", &BuffView::left);
+            }
+            m.RegisterArray<std::vector<BuffView>>();
+            if (auto r = m.RegisterStruct<RowView>()) {
+                r.RegisterMember("name", &RowView::name);
+                r.RegisterMember("letter", &RowView::letter);
+                r.RegisterMember("face", &RowView::face);
+                r.RegisterMember("after", &RowView::after);
+                r.RegisterMember("value", &RowView::value);
+                r.RegisterMember("tone", &RowView::tone);
+                r.RegisterMember("cells", &RowView::cells);
+                r.RegisterMember("alarm", &RowView::alarm);
+                r.RegisterMember("leader", &RowView::leader);
+                r.RegisterMember("low", &RowView::low);
+                r.RegisterMember("bad", &RowView::bad);
+                r.RegisterMember("faint", &RowView::faint);
+                r.RegisterMember("away", &RowView::away);
+                r.RegisterMember("target", &RowView::target);
+                r.RegisterMember("chosen", &RowView::chosen);
+                r.RegisterMember("dead", &RowView::dead);
+                r.RegisterMember("casting", &RowView::casting);
+                r.RegisterMember("route", &RowView::route);
+                r.RegisterMember("bar", &RowView::bar);
+                r.RegisterMember("arrow", &RowView::arrow);
+                r.RegisterMember("pct", &RowView::pct);
+                r.RegisterMember("cast", &RowView::cast);
+                r.RegisterMember("deg", &RowView::deg);
+                r.RegisterMember("buffs", &RowView::buffs);
+            }
+            m.RegisterArray<std::vector<RowView>>();
+            m.Bind("title", &u.title);
+            m.Bind("count", &u.count);
+            m.Bind("view_sign", &u.viewSign);
+            m.Bind("fold_sign", &u.foldSign);
+            m.Bind("folded", &u.folded);
+            m.Bind("compact", &u.compact);
+            m.Bind("rows", &u.rows);
+            m.Bind("crown", &u.crown);
+            m.Bind("route", &u.route);
+            m.Bind("arrow", &u.arrow);
+            m.BindEventCallback("fold", [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList&) {
+                toggleFold(state());
+            });
+            m.BindEventCallback("view", [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList&) {
+                toggleView(state());
+            });
+            m.BindEventCallback("row", [](Rml::DataModelHandle, Rml::Event& e, const Rml::VariantList& a) {
+                if (!a.empty()) rowClicked(state(), a[0].Get<int>());
+                e.StopPropagation();
+            });
+        }))
+        return false;
+    const float dp = uaui::dp() * hudedit::sizeOf(hudlayout::Part::Party);
+    const float px = 13 * dp;
+    if (px != u.iconsPx) {  // the crown, the route mark and the way's arrow (a gold triangle up, turned per member)
+        u.iconsPx = px;
+        ++u.gen;
+        const auto icon = [&](panel::Picture& p, uiicons::Icon i, float stroke) {
+            const int side = std::max(8, int(std::ceil(px)));
+            p.width = p.height = side;
+            p.px.assign(size_t(side) * size_t(side), 0u);
+            uiicons::draw(p, i, 0, 0, float(side), 0xC9A55B, 1.0f, stroke);
+        };
+        icon(u.crownPic, uiicons::Icon::Mvp, 2.2f);
+        icon(u.routePic, uiicons::Icon::Route, 2.2f);
+        const int side = std::max(8, int(std::ceil(14 * dp)));
+        panel::Picture& a = u.arrowPic;
+        a.width = a.height = side;
+        a.px.assign(size_t(side) * size_t(side), 0u);
+        const float c = float(side) / 2, len = float(side) * 0.45f;
+        for (int y = 0; y < side; ++y)
+            for (int x = 0; x < side; ++x) {
+                const float along = c - (float(y) + 0.5f), across = std::fabs(float(x) + 0.5f - c);
+                if (along < -len * 0.8f || along > len || across > (len - along) * 0.6f) continue;
+                panel::over(a.px[size_t(y) * size_t(side) + size_t(x)], 0xC9A55B, 0.95f);
+            }
+        u.crown = uaui::picture(&u.crownPic, u.gen, u.crownSrc);
+        u.route = uaui::picture(&u.routePic, u.gen, u.routeSrc);
+        u.arrow = uaui::picture(&u.arrowPic, u.gen, u.arrowSrc);
+        u.doc.dirtyAll();
+    }
+    const settings::Lang lang = language();
+    const std::string offline = settings::tr(lang, settings::Text::PartyOffline);
+    const std::string dead = settings::tr(lang, settings::Text::PartyDead);
+    int online = 0;
+    for (const pp::Member& m : s.members) online += m.online;
+    std::vector<RowView> rows;
+    for (const pp::Member& m : s.members) {
+        RowView r;
+        const bool here = m.online && m.where.empty();
+        r.low = pp::low(m, kLow);
+        r.bad = r.low || m.dead;
+        r.faint = !here && !r.bad;
+        r.away = !here || m.dead;
+        r.name = r.low ? "! " + m.name : m.name;
+        const bool wide = !m.name.empty() && (static_cast<unsigned char>(m.name[0]) & 0xE0) == 0xC0;
+        r.letter = m.name.empty() ? "?" : m.name.substr(0, wide ? 2 : 1);
+        r.face = sourceOf(u, m.face);
+        r.leader = m.leader;
+        r.casting = !m.casting.empty() && m.castPart >= 0;
+        r.after = r.casting ? m.casting : m.job;
+        if (m.dead && m.online && !dead.empty()) r.value = dead, r.tone = "bad";
+        else if (!m.online) r.value = offline, r.tone = "muted";
+        else if (!m.where.empty()) r.value = m.where, r.tone = "muted", r.route = true;
+        else if (m.percent >= 0) r.value = std::to_string(m.percent) + " %", r.tone = r.low ? "bad" : "";
+        r.target = s.layout.targeting && here;
+        r.chosen = m.chosen;
+        r.dead = m.dead;
+        if (m.alarm > 0 && !m.dead && !m.chosen) {  // the healer's alarm: its row pulsing red
+            char b[16];
+            std::snprintf(b, sizeof b, "#e5534b%02x", int(std::lround((0.10f + 0.30f * m.alarm) * 255)));
+            r.alarm = b;
+        }
+        r.bar = here && !m.dead;
+        r.pct = float(std::clamp(m.percent, 0, 100));
+        r.cast = m.castPart >= 0 && here ? std::clamp(m.castPart, 0.0f, 1.0f) * 100 : -1;
+        r.arrow = m.cells >= 0 && here && (m.dirX != 0 || m.dirY != 0);
+        r.cells = m.cells >= 0 ? std::to_string(m.cells) : "";
+        r.deg = float(std::atan2(m.dirX, -m.dirY) * 180.0 / 3.14159265);  // up the screen 0, clockwise
+        for (const pp::Buff& b : m.buffs) {
+            BuffView v;
+            v.icon = sourceOf(u, b.icon);
+            v.left = b.left >= 0 ? std::clamp(b.left, 0.0f, 1.0f) * 100 : -1;
+            if (b.glow > 0) {
+                char g[48];
+                std::snprintf(g, sizeof g, "#c9a55b%02x 0 0 0 2dp", int(std::lround(std::min(1.0f, b.glow) * 255)));
+                v.glow = g;
+            }
+            r.buffs.push_back(v);
+        }
+        rows.push_back(std::move(r));
+    }
+    const std::string key = std::to_string(s.members.size()) + (s.folded ? "f" : "") + (s.compact ? "c" : "") +
+                            std::to_string(online) + s.key;  // the picture's key: the members' states, the times
+    if (key != u.key) {
+        u.key = key;
+        u.title = settings::tr(lang, settings::Text::PartyTitle);
+        u.count = std::to_string(online) + "/" + std::to_string(s.members.size());
+        u.viewSign = s.compact ? "\xE2\x96\xA4" : "\xE2\x96\xA6";
+        u.foldSign = s.folded ? "\xE2\x96\xB8" : "\xE2\x96\xBE";
+        u.folded = s.folded;
+        u.compact = s.compact;
+        u.rows = std::move(rows);
+        u.doc.dirtyAll();
+    }
+    if (Rml::ElementDocument* d = u.doc.doc()) {
+        const float size = hudedit::sizeOf(hudlayout::Part::Party);
+        d->SetProperty("transform", size != 1.0f ? "scale(" + std::to_string(size) + ")" : "none");
+        if (Rml::Element* g = d->GetFirstChild()) {
+            char ground[32];
+            std::snprintf(ground, sizeof ground, "#10141c%02x", int(std::lround(uistyle::panel() * 255)));
+            g->SetProperty("background-color", ground);
+        }
+    }
+    u.doc.place(s.layout.x, s.layout.y);
+    u.doc.show(true);
     return true;
 }
 
@@ -557,7 +837,10 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     key += s.compact ? "C" : "";
     if (const std::string drawn = key + '#' + std::to_string(uistyle::generation()); drawn != s.key) {  // its grounds
         s.key = drawn;
-        render(s);
+        s.uiShown = uiFrame(s);  // 3.0.18-beta.19: by uaUI while [interface] uaui is on
+        if (!s.uiShown) render(s);
+    } else {
+        s.uiShown = uiFrame(s);
     }
     s.shown = true;
     block(s, game);
@@ -565,6 +848,8 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
 
 void draw(FrameRecord& record, gpu::Renderer& renderer) {
     State& s = state();
+    if (!s.shown) ui().doc.show(false);  // 3.0.18-beta.19
+    if (s.uiShown && s.shown) return;  // uaUI draws it
     if (!s.shown || s.k <= 0 || s.picture.width <= 0 || s.picture.height <= 0) return;
     int cursor = -1, cx = 0, cy = 0;  // under the game's own cursor, as the minimap
     if (readGameCursor(cx, cy)) cursor = panel::cursorDraw(record, float(cx), float(cy));
@@ -593,7 +878,7 @@ bool panelBox(int& x, int& y, int& w, int& h) {
 
 bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     State& s = state();
-    if (!s.shown) return false;
+    if (!s.shown || s.uiShown) return false;  // 3.0.18-beta.19: uaUI's events take its clicks
     const bool button = m == WM_LBUTTONDOWN || m == WM_LBUTTONUP || m == WM_LBUTTONDBLCLK || m == WM_RBUTTONDOWN ||
                         m == WM_RBUTTONUP || m == WM_RBUTTONDBLCLK || m == WM_MBUTTONDOWN || m == WM_MBUTTONUP;
     if (!button && m != WM_MOUSEWHEEL) return false;
@@ -608,34 +893,11 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     result = 0;  // the click is not the world's
     const pp::Hit hit = pp::hitTest(s.layout, tx, ty);
     if ((m == WM_LBUTTONDOWN || m == WM_LBUTTONDBLCLK) && hit.part == pp::Part::Fold) {
-        s.folded = !s.folded;  // 3.0.11-beta.79: ▾ folds it to its header, ▸ opens it
-        keepState(s);
-        LOG_INFO("party: its panel %s", s.folded ? "folded" : "opened");
+        toggleFold(s);
     } else if ((m == WM_LBUTTONDOWN || m == WM_LBUTTONDBLCLK) && hit.part == pp::Part::View) {
-        s.compact = !s.compact;  // 3.0.11-beta.84: ▦ two columns of small cells, ▤ the list
-        keepState(s);
-        LOG_INFO("party: its panel %s", s.compact ? "compact" : "a list");
-    } else if (m == WM_LBUTTONDOWN && hit.part == pp::Part::Row && size_t(hit.row) < s.rowsOf.size()) {
-        // 3.0.11-beta.82 (the owner's 2 and 4): a member clicked - the skill waited for cast on it; else elsewhere its
-        // map's way followed, here a way to its cell
-        const uint32_t account = s.rowsOf[size_t(hit.row)];
-        const auto it = s.seats.find(account);
-        const std::string name = size_t(hit.row) < s.members.size() ? s.members[size_t(hit.row)].name : "?";
-        if (it != s.seats.end()) {
-            const Seat& seat = it->second;
-            const std::string here = readGameMap();
-            std::string said;
-            if (castOn(account, seat, said)) {
-                LOG_INFO("party: %s - %s", name.c_str(), said.c_str());
-            } else if (seat.online && !seat.map.empty() && seat.map != here) {
-                if (minimapproto::canFollow()) minimapproto::follow(seat.map, true);
-                else referencewin::openMap(seat.map);
-                LOG_INFO("party: %s is on %s - %s", name.c_str(), seat.map.c_str(),
-                         minimapproto::canFollow() ? "the way there followed" : "its card opened");
-            } else if (seat.x >= 0 && GetTickCount64() - seat.posAt < kPosMs && minimapproto::plotTo(seat.x, seat.y)) {
-                LOG_INFO("party: a way to %s at %d, %d", name.c_str(), seat.x, seat.y);
-            }
-        }
+        toggleView(s);
+    } else if (m == WM_LBUTTONDOWN && hit.part == pp::Part::Row) {
+        rowClicked(s, hit.row);
     }
     return true;
 }

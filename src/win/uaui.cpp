@@ -626,6 +626,69 @@ input.checkbox:checked { background-color: #3d7fd8; border-color: #3d7fd8; }
 .tc:hover .details { display: inline-block; }
 .tc .details p { display: block; height: 18dp; line-height: 18dp; font-size: 13dp; }
 .tc .details p.first { font-weight: bold; }
+/* 3.0.18-beta.19: the party's panel (win/party_panel) - the concept's v19_cave */
+.pp { position: absolute; font-family: Plex; color: #eceff5; transform-origin: 0 0; }
+.pp .glass { display: block; width: 260dp; padding: 0 8dp 8dp 8dp; border-radius: 10dp; border: 1dp #ffffff17;
+             background-color: #10141ccc; }
+.pp .head { display: block; position: relative; height: 26dp; line-height: 26dp; border-bottom: 1dp #ffffff1a;
+            font-size: 12dp; color: #9aa3b5; }
+.pp .head.folded { border-bottom-width: 0; }
+.pp .title { position: absolute; left: 4dp; font-weight: bold; }
+.pp .count { position: absolute; right: 56dp; }
+.pp .hbtn { position: absolute; top: 3dp; width: 22dp; height: 20dp; line-height: 20dp; text-align: center;
+            border-radius: 5dp; color: #eceff5; cursor: pointer; }
+.pp .hbtn:hover { background-color: #ffffff18; }
+.pp .viewb { right: 26dp; }
+.pp .foldb { right: 2dp; }
+.pp .row { display: block; position: relative; height: 40dp; border-radius: 7dp; border: 1dp #00000000; cursor: pointer; }
+.pp .row.buffs { height: 58dp; }
+.pp .row.low { background-color: #e5534b1a; border-color: #e5534bd9; }
+.pp .row.target { background-color: #c9a55b14; border-color: #c9a55be6; }
+.pp .row.chosen { background-color: #c9a55b38; border-color: #c9a55b; border-width: 2dp; }
+.pp .row.dead { background-color: #3a14148c; border-color: #e5534b99; }
+.pp .row.alarm { background-color: #e5534b4d; border-color: #e5534b; border-width: 2dp; }
+.pp .buf.glow { border: 1.5dp #c9a55b; }
+.pp .face { position: absolute; left: 2dp; top: 6dp; width: 28dp; height: 28dp; border-radius: 14dp; background-color: #1b1d24; }
+.pp .face img { width: 28dp; height: 28dp; }
+.pp .face.away img { opacity: 0.45; }
+.pp .letter { display: block; text-align: center; line-height: 28dp; font-size: 10.5dp; font-weight: bold; color: #9aa3b5; }
+.pp .name { position: absolute; left: 38dp; top: 5dp; height: 18dp; line-height: 18dp; font-size: 13dp;
+            font-weight: bold; white-space: nowrap; }
+.pp .name.bad { color: #ff9a8f; }
+.pp .name.away { color: #9aa3b5; }
+.pp .after { font-size: 11.5dp; font-weight: normal; color: #9aa3b5; margin-left: 6dp; }
+.pp .after.cast { color: #7fc4ff; }
+.pp .crown { width: 13dp; height: 13dp; margin-left: 4dp; vertical-align: middle; }
+.pp .value { position: absolute; right: 4dp; top: 5dp; height: 18dp; line-height: 18dp; font-size: 13dp;
+             font-weight: bold; white-space: nowrap; }
+.pp .value.muted { color: #9aa3b5; font-size: 12dp; font-weight: normal; }
+.pp .value.bad { color: #ff9a8f; }
+.pp .value img { width: 12dp; height: 12dp; margin-right: 4dp; vertical-align: middle; }
+.pp .bar { position: absolute; left: 38dp; top: 27dp; right: 48dp; height: 5dp; border-radius: 3dp;
+           background-color: #00000073; }
+.pp .bar .fill { display: block; height: 5dp; border-radius: 3dp; background-color: #5bd36c; }
+.pp .bar .fill.bad { background-color: #e5534b; }
+.pp .castline { position: absolute; left: 38dp; top: 33.5dp; right: 48dp; height: 2.5dp; border-radius: 1dp;
+                background-color: #00000073; }
+.pp .castline .fill { display: block; height: 2.5dp; background-color: #7fc4ff; }
+.pp .where { position: absolute; right: 4dp; top: 22dp; width: 40dp; height: 14dp; font-size: 11dp; color: #9aa3b5;
+             text-align: right; }
+.pp .where img { position: absolute; left: 0; top: 0; width: 14dp; height: 14dp; }
+.pp .bufrow { position: absolute; left: 38dp; top: 37dp; white-space: nowrap; }
+.pp .buf { display: inline-block; position: relative; width: 16dp; height: 16dp; margin-right: 3dp;
+           border-radius: 3dp; }
+.pp .buf img { width: 16dp; height: 16dp; }
+.pp .buf .time { position: absolute; left: 0; top: 17dp; width: 16dp; height: 2dp; background-color: #00000080; }
+.pp .buf .time .fill { display: block; height: 2dp; background-color: #c9a55b; }
+.pp .buf .time .fill.end { background-color: #e5534b; }
+.pp .cells { display: block; }
+.pp .cell { display: inline-block; position: relative; width: 125dp; height: 30dp; margin-right: 6dp; }
+.pp .cell .face { left: 2dp; top: 6dp; width: 16dp; height: 16dp; border-radius: 8dp; }
+.pp .cell .face img { width: 16dp; height: 16dp; }
+.pp .cell .letter { line-height: 16dp; font-size: 9dp; }
+.pp .cell .name { left: 23dp; top: 3dp; height: 15dp; line-height: 15dp; font-size: 11.5dp; }
+.pp .cell .bar { left: 23dp; right: 3dp; top: 20dp; height: 4dp; }
+.pp .cell .bar .fill { height: 4dp; }
 scrollbarvertical { width: 8dp; margin-left: 4dp; }
 scrollbarvertical slidertrack { background-color: #ffffff0c; border-radius: 4dp; }
 scrollbarvertical sliderbar { background-color: #ffffff40; border-radius: 4dp; min-height: 24dp; }
@@ -1168,6 +1231,13 @@ std::string picture(const panel::Picture* p, int generation, std::string& previo
         previous = src;
     }
     return previous;
+}
+
+int stamp(const panel::Picture* p) {
+    if (!p) return 0;
+    uint32_t h = uint32_t(p->width) * 2654435761u ^ uint32_t(p->height);
+    for (size_t i = 0; i < p->px.size(); i += 97) h = (h ^ p->px[i]) * 16777619u;
+    return int(h & 0x7FFFFFFF);
 }
 
 bool Doc::make(const char* name, const char* rml, const std::function<void(Rml::DataModelConstructor&)>& bind) {
