@@ -50,7 +50,13 @@ void put(panel::Picture& out, const panel::Picture& pic, const panel::Box& box, 
         }
 }
 
-bool left(int slot) { return slot >= HeadMid && slot <= AccL; }
+bool left(int slot) { return std::find(std::begin(kLeftColumn), std::end(kLeftColumn), slot) != std::end(kLeftColumn); }
+
+int rowOf(int slot) {  // its place down its column (the original's)
+    for (int r = 0; r < 5; ++r)
+        if (kLeftColumn[r] == slot || kRightColumn[r] == slot) return r;
+    return 0;
+}
 
 std::string named(const Worn& w) { return w.refine > 0 ? "+" + std::to_string(w.refine) + " " + w.name : w.name; }
 
@@ -70,6 +76,17 @@ std::vector<PadItem> padItems(const Data& d, const Show& sh, const Texts& t) {
 }  // namespace
 
 const uint32_t kBits[kSlots] = {0x200, 0x001, 0x010, 0x004, 0x008, 0x100, 0x002, 0x020, 0x040, 0x080, 0x8000};
+
+int padStep(int slot, int dx, int dy) {
+    if (slot == Ammo) return dy < 0 ? AccR : slot;
+    const bool l = left(slot);
+    const int row = rowOf(slot);
+    if (dy > 0) return row < 4 ? (l ? kLeftColumn : kRightColumn)[row + 1] : Ammo;
+    if (dy < 0) return row > 0 ? (l ? kLeftColumn : kRightColumn)[row - 1] : slot;
+    if (dx > 0) return l ? kRightColumn[row] : slot;
+    if (dx < 0) return l ? slot : kLeftColumn[row];
+    return slot;
+}
 
 int bitIndex(uint32_t bit) {
     if (bit == 0x8000) return 15;
@@ -102,7 +119,7 @@ Layout layout(int x, int y, float scale, const Data& d, const Show& sh, const Te
     const float rightX = w - side - kColumnW * s;
     for (int i = 0; i < 10; ++i) {
         const bool l = left(i);
-        const float sy = top + float(l ? i : i - 5) * kSlotStep * s;
+        const float sy = top + float(rowOf(i)) * kSlotStep * s;  // 3.0.18-beta.110: the original's rows
         L.slots[i] = panel::Box{l ? side : rightX, sy, kColumnW * s, kSlotH * s};
         const float ix = l ? side + kColumnW * s - 8 * s - kIcon * s : rightX + 8 * s;
         L.icons[i] = panel::Box{ix, sy + (kSlotH - kIcon) / 2 * s, kIcon * s, kIcon * s};
@@ -115,7 +132,8 @@ Layout layout(int x, int y, float scale, const Data& d, const Show& sh, const Te
     }
     L.centre = panel::Box{(w - kCentreW * s) / 2, top, kCentreW * s, columnH};
     L.portrait = panel::Box{L.centre.x + (L.centre.w - kPortrait * s) / 2, top + 4 * s, kPortrait * s, kPortrait * s};
-    L.slots[Ammo] = panel::Box{L.centre.x + 6 * s, top + columnH - 50 * s, L.centre.w - 12 * s, 48 * s};
+    // 3.0.18-beta.110: the ammo in the strip under both columns, as the original window's foot
+    L.slots[Ammo] = panel::Box{side, top + columnH + 8 * s, kColumnW * s, 48 * s};
     L.icons[Ammo] = panel::Box{L.slots[Ammo].x + 4 * s, L.slots[Ammo].y + 2 * s, kIcon * s, kIcon * s};
     if (sh.picking) {
         L.pickList = L.centre;
@@ -124,7 +142,7 @@ Layout layout(int x, int y, float scale, const Data& d, const Show& sh, const Te
             L.picks.push_back(panel::Box{L.pickList.x + 6 * s, L.pickList.y + 30 * s + float(i) * kPickH * s,
                                          L.pickList.w - 12 * s, (kPickH - 2) * s});
     }
-    L.footer = panel::Box{0, top + columnH + 12 * s, w, kFooterH * s};
+    L.footer = panel::Box{0, L.slots[Ammo].y + L.slots[Ammo].h + 6 * s, w, kFooterH * s};
     if (sh.pad) {  // the controller's buttons in the footer, from its right
         const std::vector<PadItem> items = padItems(d, sh, t);
         float right = w - side;
@@ -249,28 +267,7 @@ std::vector<Words> words(const Layout& L, const Data& d, const Show& sh, const T
             out.push_back(Words{panel::Box{L.picks[i].x + 36 * s, L.picks[i].y, L.picks[i].w - 40 * s, L.picks[i].h},
                                 text, kText, 12.5f * s, false, Align::Left});
         }
-    } else {
-        const float cx = L.centre.x, cw = L.centre.w;
-        float y = L.portrait.y + L.portrait.h + 6 * s;
-        out.push_back(Words{panel::Box{cx, y, cw, 20 * s}, d.who, kText, 14 * s, true, Align::Center});
-        y += 20 * s;
-        if (!d.job.empty())
-            out.push_back(Words{panel::Box{cx, y, cw, 16 * s}, d.job, kBlue, 12 * s, false, Align::Center});
-        y += 16 * s;
-        if (d.baseLevel > 0)
-            out.push_back(Words{panel::Box{cx, y, cw, 16 * s},
-                                fill(t.level, {std::to_string(d.baseLevel), std::to_string(d.jobLevel)}), kMuted,
-                                11.5f * s, false, Align::Center});
-        y += 22 * s;
-        for (size_t i = 0; i < d.stats.size() && y + 16 * s <= L.slots[Ammo].y; ++i) {  // two to a line
-            const float half = (cw - 16 * s) / 2, sx = cx + 8 * s + float(i % 2) * half;
-            out.push_back(Words{panel::Box{sx, y, half * 0.42f, 16 * s}, d.stats[i].first, kFaint, 11 * s, false,
-                                Align::Left});
-            out.push_back(Words{panel::Box{sx + half * 0.42f, y, half * 0.58f - 4 * s, 16 * s}, d.stats[i].second,
-                                kText, 11.5f * s, true, Align::Right});
-            if (i % 2) y += 16 * s;
-        }
-    }
+    }  // 3.0.18-beta.110 (the owner: «можно убрать»): the character's numbers left to «Характеристики»
     out.push_back(Words{panel::Box{side, L.footer.y, m(t.cards, 11.5f * s, false) + 4, L.footer.h}, t.cards, kFaint,
                         11.5f * s, false, Align::Left});
     if (!sh.pad) {

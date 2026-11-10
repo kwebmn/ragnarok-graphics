@@ -54,7 +54,7 @@ TEST(uikit_equip_refit_finds_every_slot_and_the_picks) {
     static el::Model m;
     el::fill(m, d, sh, texts(), 1, none, glyph);
     CHECK_EQ(m.level, std::string("Lv 50 / 30"));
-    CHECK_EQ(m.right[1].dots.size(), size_t(3));
+    CHECK_EQ(m.left[2].dots.size(), size_t(3));  // 3.0.18-beta.110: the weapon third in the left column
     std::string error;
     Rml::ElementDocument* doc =
         rmlhost::load(el::rml(), [&](Rml::DataModelConstructor& c) { el::bind(c, m); }, 100, 80, &error);
@@ -71,13 +71,12 @@ TEST(uikit_equip_refit_finds_every_slot_and_the_picks) {
         CHECK(h.part == ew::Part::Slot);
         CHECK_EQ(h.index, i);
     }
-    CHECK(L.slots[ew::HeadMid].x < L.centre.x);           // the left column
-    CHECK(L.slots[ew::HeadTop].x >= L.centre.x + L.centre.w);  // the right
-    CHECK(std::abs(L.slots[ew::HeadLow].y - L.slots[ew::HeadMid].y - 64) < 0.5f);
-    CHECK(L.slots[ew::Ammo].x >= L.centre.x);  // the ammo in the middle, at its foot
-    CHECK(L.slots[ew::Ammo].y > L.portrait.y + L.portrait.h);
-    CHECK(L.icons[ew::HeadMid].x > L.slots[ew::HeadMid].x + L.slots[ew::HeadMid].w / 2);  // left: the icon inside
-    CHECK(L.icons[ew::HeadTop].x < L.slots[ew::HeadTop].x + L.slots[ew::HeadTop].w / 2);
+    CHECK(L.slots[ew::HeadTop].x < L.centre.x);              // 3.0.18-beta.110: the original's left column
+    CHECK(L.slots[ew::HeadMid].x >= L.centre.x + L.centre.w);  // and its right
+    CHECK(std::abs(L.slots[ew::HeadLow].y - L.slots[ew::HeadTop].y - 64) < 0.5f);
+    CHECK(L.slots[ew::Ammo].y > L.slots[ew::AccR].y + L.slots[ew::AccR].h);  // the ammo in the strip under
+    CHECK(L.icons[ew::HeadTop].x < L.slots[ew::HeadTop].x + L.slots[ew::HeadTop].w / 2);  // the outer edges
+    CHECK(L.icons[ew::HeadMid].x > L.slots[ew::HeadMid].x + L.slots[ew::HeadMid].w / 2);
     panel::Box p = mid(L.close);
     CHECK(ew::hitTest(L, p.x, p.y).part == ew::Part::Close);
     const int height = L.h;

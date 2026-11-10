@@ -167,6 +167,12 @@ void pictureRoom(float scale, int& w, int& h) {
     h = int(std::lround(kPictureH * s));
 }
 
+void artRoom(float scale, int& w, int& h) {
+    const float s = scale > 0 ? scale : 1.0f;
+    w = int(std::lround(180 * s));
+    h = int(std::lround(240 * s));
+}
+
 panel::Picture fitted(const std::vector<uint32_t>& argb, int width, int height, int w, int h) {
     panel::Picture out;
     if (width <= 0 || height <= 0 || w <= 0 || h <= 0 || argb.size() != size_t(width) * size_t(height)) return out;
@@ -212,7 +218,13 @@ Layout layout(const Card& c, int x, int y, int targetW, int targetH, float scale
     if (!c.note.empty()) L.note = panel::Box{tx, 25 * s, tw, 16 * s};
     const float bodyY = titleH + 6 * s;
     float pw = 0, ph = 0;
-    if (c.picture && c.picture->width > 0) {
+    float wordsY = bodyY;
+    if (c.picture && c.picture->width > 0 && c.art) {  // 3.0.18-beta.110: a card's illustration over its words
+        int rw = 0, rh = 0;
+        artRoom(s, rw, rh);
+        L.picture = panel::Box{(w - float(rw)) / 2, bodyY, float(rw), float(rh)};
+        wordsY = bodyY + float(rh) + 10 * s;
+    } else if (c.picture && c.picture->width > 0) {
         int rw = 0, rh = 0;
         pictureRoom(s, rw, rh);
         pw = float(rw);
@@ -228,13 +240,13 @@ Layout layout(const Card& c, int x, int y, int targetW, int targetH, float scale
     for (size_t r = 0; r < rows.size(); ++r)
         for (npctalk::Placed p : rows[r]) {
             p.box.x += textX;
-            p.box.y = bodyY + float(r) * L.lineH;
+            p.box.y = wordsY + float(r) * L.lineH;
             p.box.h = L.lineH;
             L.lines.push_back(p);
         }
     const float bodyH = std::max(float(L.shownRows) * L.lineH, ph);
-    L.body = panel::Box{textX, bodyY, textW, bodyH};
-    float bottom = bodyY + bodyH;
+    L.body = panel::Box{textX, wordsY, textW, bodyH};
+    float bottom = wordsY + bodyH;
     if (!c.cards.empty()) {  // the slots: a label, then the cards in a row (four to a row)
         bottom += 10 * s;
         L.slotsLabel = panel::Box{side, bottom, w - 2 * side, 16 * s};
@@ -258,7 +270,9 @@ Layout layout(const Card& c, int x, int y, int targetW, int targetH, float scale
 
 Part hitTest(const Layout& L, float x, float y) {
     if (L.close.contains(x, y)) return Part::Close;
-    if (y < L.body.y && L.glass.contains(x, y)) return Part::Title;
+    // 3.0.18-beta.110: the head's band (a card's illustration under it is the body's)
+    const float head = std::max(L.title.y + L.title.h, L.note.y + L.note.h) + 6 * L.s;
+    if (y < head && L.glass.contains(x, y)) return Part::Title;
     return L.glass.contains(x, y) ? Part::Body : Part::None;
 }
 

@@ -49,11 +49,15 @@ struct Card {
     std::vector<std::string> cards;  // an item's slots: a card's name, "" an empty slot
     // 3.0.18-beta.109: each slot's card picture (its item icon; null none), by the slot
     std::vector<const panel::Picture*> cardIcons;
+    // 3.0.18-beta.110 (the owner: «окно карты как в оригинале»): the picture a card's illustration - big, in the
+    // middle, over the words (the game's card window)
+    bool art = false;
     const panel::Picture* icon = nullptr;     // at iconSide(scale), premultiplied
     const panel::Picture* picture = nullptr;  // the big picture, fitted into pictureRoom (premultiplied)
 };
 int iconSide(float scale);
 void pictureRoom(float scale, int& w, int& h);
+void artRoom(float scale, int& w, int& h);  // 3.0.18-beta.110: a card's illustration's room
 // An image (straight alpha) fitted into w x h with its sides in proportion, premultiplied; none: an empty picture
 panel::Picture fitted(const std::vector<uint32_t>& argb, int width, int height, int w, int h);
 

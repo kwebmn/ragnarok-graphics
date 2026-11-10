@@ -1326,6 +1326,26 @@ scrollbarvertical sliderarrowdec, scrollbarvertical sliderarrowinc { width: 0; h
 .lgl .so { display: block; width: 5.8333rem; text-align: right; color: #8cb8ff; }
 .lgl .so.hot { color: #e6cb8a; }
 .lgl .lay { position: absolute; left: 0; top: 0; z-index: 5; }
+/* 3.0.18-beta.110 (the owner: «максимально похожем на оригинальный вариант»): the original window's places - the
+   character in the middle (no numbers), the cards' dots after a thing's name, the ammo in the strip under */
+.eql .stage { display: flex; flex-direction: column; justify-content: flex-end; align-items: center; position: relative;
+              height: 26rem; padding-bottom: 2.8333rem; box-sizing: border-box; }
+.eql .stage img { display: block; }
+.eql .turn { position: absolute; left: 0.5rem; right: 0.5rem; bottom: 0.1667rem; display: flex;
+    justify-content: space-between; }
+.eql .tb { display: block; width: 2.3333rem; height: 2.3333rem; line-height: 2.3333rem; text-align: center;
+    border-radius: 0.6667rem;
+           border: 0.0833rem #ffffff22; background-color: #ffffff0d; font-size: 1rem; }
+.eql .tb:hover { background-color: #ffffff24; }
+.eql .nm .dot { display: inline-block; width: 0.5833rem; height: 0.5833rem; margin: 0 0 0.0833rem 0.3333rem;
+    vertical-align: middle; }
+.eql .right .nm .dot { margin: 0 0.3333rem 0.0833rem 0; }
+.eql .ammorow { display: block; margin: 0.6667rem 1.3333rem 0 1.3333rem; width: 26.1667rem; }
+.eql .ammorow .slot.ammo { position: static; height: 4rem; margin: 0; padding: 0 0.5rem; }
+.eql .left .slot { flex-direction: row; }
+.eql .right .slot { flex-direction: row-reverse; }
+.eql .left .txt { text-align: left; }
+.eql .right .txt { text-align: right; }
 )";
 
 }  // namespace

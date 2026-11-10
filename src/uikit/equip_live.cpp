@@ -22,34 +22,31 @@ const char* kRml = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss
   data-class-hot="sl.hot" data-class-focus="sl.focus" data-class-fits="sl.fits"><div class="tile" data-hit="tile"
   data-attr-data-index="sl.index"><img data-if="sl.icon != ''" data-attr-src="sl.icon"
   data-style-width="sl.iconW + 'px'" data-style-height="sl.iconH + 'px'" data-style-opacity="sl.op"/></div><div
-  class="txt"><div
-  class="lbl">{{sl.label}}</div><div class="nm" data-class-worn="sl.worn" data-class-spill="sl.spill">{{sl.name}}</div>
-<div class="dots"><span class="dot" data-for="d : sl.dots" data-class-card="d > 0"></span></div></div></div></div>
-<div class="centre" data-hit="centre"><div class="me" data-if="!picking"><div class="face" data-hit="portrait"><img
-  data-if="portrait != ''" data-attr-src="portrait" data-style-width="portraitW + 'px'"
-  data-style-height="portraitH + 'px'"/></div><div class="who">{{who}}</div><div class="job"
-  data-class-hide="job == ''">{{job}}</div><div class="lv" data-class-hide="level == ''">{{level}}</div><div
-  class="stats"><div class="st" data-for="st : stats"><span class="sn">{{st.name}}</span><span
-  class="sv">{{st.value}}</span></div></div></div>
+  class="txt"><div class="lbl">{{sl.label}}</div><div class="nm" data-class-worn="sl.worn"
+  data-class-spill="sl.spill"><span>{{sl.name}}</span><span class="dot" data-for="d : sl.dots"
+  data-class-card="d > 0"></span></div></div></div></div>
+<div class="centre" data-hit="centre"><div class="stage"><img data-if="hero != ''" data-attr-src="hero"
+  data-style-width="heroW + 'px'" data-style-height="heroH + 'px'"/><div class="turn" data-if="turns"><span
+  class="tb" data-hit="turnleft">&#x25C0;</span><span class="tb" data-hit="turnright">&#x25B6;</span></div></div>
 <div class="picks" data-if="picking" data-hit="picklist"><div class="ptitle">{{pickTitle}}</div><div class="pnone"
   data-if="picks.size == 0">{{pickNone}}</div><div class="pick" data-for="p : picks" data-hit="pick"
   data-attr-data-index="p.index" data-class-hot="p.hot" data-class-focus="p.focus"><div class="pic"><img
   data-if="p.icon != ''" data-attr-src="p.icon" data-style-width="p.iconW + 'px'"
-  data-style-height="p.iconH + 'px'"/></div><span class="pn">{{p.name}}</span></div></div>
-<div class="slot ammo" data-hit="slot" data-attr-data-index="ammo.index" data-class-hot="ammo.hot"
+  data-style-height="p.iconH + 'px'"/></div><span class="pn">{{p.name}}</span></div></div></div>
+<div class="col right"><div class="slot" data-for="sl : right" data-hit="slot" data-attr-data-index="sl.index"
+  data-class-hot="sl.hot" data-class-focus="sl.focus" data-class-fits="sl.fits"><div class="tile" data-hit="tile"
+  data-attr-data-index="sl.index"><img data-if="sl.icon != ''" data-attr-src="sl.icon"
+  data-style-width="sl.iconW + 'px'" data-style-height="sl.iconH + 'px'" data-style-opacity="sl.op"/></div><div
+  class="txt"><div class="lbl">{{sl.label}}</div><div class="nm" data-class-worn="sl.worn"
+  data-class-spill="sl.spill"><span class="dot" data-for="d : sl.dots" data-class-card="d > 0"></span><span
+  >{{sl.name}}</span></div></div></div></div>
+</div>
+<div class="ammorow"><div class="slot ammo" data-hit="slot" data-attr-data-index="ammo.index" data-class-hot="ammo.hot"
   data-class-focus="ammo.focus" data-class-fits="ammo.fits"><div class="tile" data-hit="tile"
   data-attr-data-index="ammo.index"><img data-if="ammo.icon != ''" data-attr-src="ammo.icon"
   data-style-width="ammo.iconW + 'px'" data-style-height="ammo.iconH + 'px'" data-style-opacity="ammo.op"/></div><div
   class="txt"><div class="lbl">{{ammo.label}}</div><div class="nm" data-class-worn="ammo.worn">{{ammo.name}}</div>
 </div></div></div>
-<div class="col right"><div class="slot" data-for="sl : right" data-hit="slot" data-attr-data-index="sl.index"
-  data-class-hot="sl.hot" data-class-focus="sl.focus" data-class-fits="sl.fits"><div class="tile" data-hit="tile"
-  data-attr-data-index="sl.index"><img data-if="sl.icon != ''" data-attr-src="sl.icon"
-  data-style-width="sl.iconW + 'px'" data-style-height="sl.iconH + 'px'" data-style-opacity="sl.op"/></div><div
-  class="txt"><div
-  class="lbl">{{sl.label}}</div><div class="nm" data-class-worn="sl.worn" data-class-spill="sl.spill">{{sl.name}}</div>
-<div class="dots"><span class="dot" data-for="d : sl.dots" data-class-card="d > 0"></span></div></div></div></div>
-</div>
 <div class="foot" data-hit="footer"><span class="cards">{{cards}}</span><span class="drag"
   data-if="!pad">{{drag}}</span><div class="pads" data-if="pad"><div class="pad" data-for="p : padItems"><img
   data-attr-src="p.glyph" data-style-width="p.w + 'px'" data-style-height="p.h + 'px'"/><span>{{p.words}}</span></div>
@@ -122,7 +119,8 @@ void bind(Rml::DataModelConstructor& c, Model& m) {
     c.Bind("who", &m.who);
     c.Bind("job", &m.job);
     c.Bind("level", &m.level);
-    c.Bind("portrait", &m.portrait);
+    c.Bind("hero", &m.hero);
+    c.Bind("turns", &m.turns);
     c.Bind("cards", &m.cards);
     c.Bind("drag", &m.drag);
     c.Bind("pickTitle", &m.pickTitle);
@@ -130,8 +128,8 @@ void bind(Rml::DataModelConstructor& c, Model& m) {
     c.Bind("closeHot", &m.closeHot);
     c.Bind("picking", &m.picking);
     c.Bind("pad", &m.pad);
-    c.Bind("portraitW", &m.portraitW);
-    c.Bind("portraitH", &m.portraitH);
+    c.Bind("heroW", &m.heroW);
+    c.Bind("heroH", &m.heroH);
     c.Bind("left", &m.left);
     c.Bind("right", &m.right);
     c.Bind("ammo", &m.ammo);
@@ -173,14 +171,20 @@ void fill(Model& m, const ew::Data& d, const ew::Show& sh, const ew::Texts& t, f
     };
     m.left.clear();
     m.right.clear();
-    for (int i = 0; i < 10; ++i) (i <= ew::AccL ? m.left : m.right).push_back(slot(i));
+    for (int r = 0; r < 5; ++r) {  // 3.0.18-beta.110: the original window's columns
+        m.left.push_back(slot(ew::kLeftColumn[r]));
+        m.right.push_back(slot(ew::kRightColumn[r]));
+    }
     m.ammo = slot(ew::Ammo);
     m.who = d.who;
     m.job = d.job;
     m.level = d.baseLevel > 0 ? filled(t.level, {std::to_string(d.baseLevel), std::to_string(d.jobLevel)}) : "";
-    m.portrait = d.portrait && d.portrait->width > 0 ? src(d.portrait) : "";
-    m.portraitW = d.portrait ? float(d.portrait->width) : 0;
-    m.portraitH = d.portrait ? float(d.portrait->height) : 0;
+    // the character in the middle (3.0.18-beta.110: its portrait until its own sprites are drawn)
+    if (!m.turns) {
+        m.hero = d.portrait && d.portrait->width > 0 ? src(d.portrait) : "";
+        m.heroW = d.portrait ? float(d.portrait->width) : 0;
+        m.heroH = d.portrait ? float(d.portrait->height) : 0;
+    }
     m.stats.clear();
     for (const auto& s : d.stats) m.stats.push_back(StatV{s.first, s.second});
     m.pickTitle = filled(t.pickTitle, {sh.pickSlot >= 0 && sh.pickSlot < ew::kSlots ? t.labels[sh.pickSlot] : ""});
@@ -238,7 +242,6 @@ bool refit(Rml::ElementDocument* doc, ew::Layout& L) {
     L.title = panel::Box{0, 0, size.x, L.title.y + L.title.h};
     one("close", L.close);
     one("centre", L.centre);
-    one("portrait", L.portrait);
     one("picklist", L.pickList);
     one("footer", L.footer);
     for (int i = 0; i < ew::kSlots; ++i) L.slots[i] = L.icons[i] = L.dots[i] = panel::Box{};

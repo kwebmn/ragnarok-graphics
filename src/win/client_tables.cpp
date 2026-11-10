@@ -83,12 +83,15 @@ bool iconPixels(const std::string& file, std::vector<uint32_t>& argb, int& width
     return true;
 }
 
-bool collectionPixels(const std::string& file, std::vector<uint32_t>& argb, int& width, int& height) {
+namespace {
+// A picture of the game's interface folder (data\texture\유저인터페이스\<folder>\<file>.bmp), its magenta clear
+bool uiPixels(const char* folder, const std::string& file, std::vector<uint32_t>& argb, int& width, int& height) {
     static const std::string kUi = "\xC0\xAF\xC0\xFA\xC0\xCE\xC5\xCD\xC6\xE4\xC0\xCC\xBD\xBA";  // 유저인터페이스
     argb.clear();
     width = height = 0;
     std::string bytes;
-    if (file.empty() || !readClientFile("data\\texture\\" + kUi + "\\collection\\" + file + ".bmp", bytes))
+    if (file.empty() ||
+        !readClientFile("data\\texture\\" + kUi + "\\" + folder + "\\" + file + ".bmp", bytes))
         return false;
     if (!pack::decodeBmp(reinterpret_cast<const uint8_t*>(bytes.data()), bytes.size(), argb, width, height)) {
         argb.clear();
@@ -99,6 +102,15 @@ bool collectionPixels(const std::string& file, std::vector<uint32_t>& argb, int&
         c = r > 0xF0 && g < 0x10 && b > 0xF0 ? 0u : (c | 0xFF000000u);
     }
     return true;
+}
+}  // namespace
+
+bool collectionPixels(const std::string& file, std::vector<uint32_t>& argb, int& width, int& height) {
+    return uiPixels("collection", file, argb, width, height);
+}
+
+bool cardArtPixels(const std::string& file, std::vector<uint32_t>& argb, int& width, int& height) {
+    return uiPixels("cardbmp", file, argb, width, height);
 }
 
 const panel::Picture* icon(const std::string& file, int side, float radius) {

@@ -193,3 +193,25 @@ TEST(info_card_lines_for_the_job) {
     CHECK(mage[2] == "#8: ^777777Skill Requirements : Heal 2^000000");
     CHECK(infocard::forJob({"2^ff0000", "12 monsters"}, 2, name).size() == 2);  // «12 monsters»: no colour after it
 }
+
+// 3.0.18-beta.110 (the owner: «окно карты как в оригинале»): a card opened from a slot - its illustration big over its
+// words, in the middle; the words under it the card's whole width
+TEST(info_card_a_cards_art_over_its_words) {
+    infocard::Card c;
+    c.title = "Hydra Card";
+    c.lines = {"Damage against Demi-Human monsters +20%."};
+    c.art = true;
+    panel::Picture art;
+    int rw = 0, rh = 0;
+    infocard::artRoom(1.0f, rw, rh);
+    CHECK(rw >= 150 && rh >= 200);
+    art.width = rw;
+    art.height = rh;
+    art.px.assign(size_t(rw) * size_t(rh), 0xFF808080u);
+    c.picture = &art;
+    infocard::Show sh;
+    const infocard::Layout L = infocard::layout(c, 100, 100, 1920, 1080, 1.0f, sh, texts(), measure);
+    CHECK(std::abs(L.picture.x + L.picture.w / 2 - L.glass.w / 2) < 1.5f);  // in the middle
+    CHECK(!L.lines.empty() && L.lines.front().box.y >= L.picture.y + L.picture.h);  // the words under it
+    CHECK(L.lines.front().box.x < L.picture.x);
+}

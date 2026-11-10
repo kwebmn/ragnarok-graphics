@@ -20,6 +20,11 @@ constexpr int kSlots = 11;
 enum Slot : int { HeadMid, HeadLow, Armor, Garment, AccL, HeadTop, Weapon, Shield, Shoes, AccR, Ammo };
 extern const uint32_t kBits[kSlots];  // each slot's worn-location bit (the game's: 0x200 the middle head ...)
 
+// 3.0.18-beta.110 (the owner: «максимально похожем на оригинальный вариант»): the game's own window's columns, top down
+constexpr int kLeftColumn[5] = {HeadTop, HeadLow, Weapon, Garment, AccR};
+constexpr int kRightColumn[5] = {HeadMid, Armor, Shield, Shoes, AccL};
+// The controller's step from a slot (dx, dy: -1, 0, 1) - down a column, across to its row's twin, the ammo under both
+int padStep(int slot, int dx, int dy);
 int bitIndex(uint32_t bit);  // the slot number the game's take-off asks with (FUN_00628bd0): 0..9, 15 the ammo
 std::vector<int> slotsOf(uint32_t location);  // the slots a thing worn there fills, the one showing it first
 bool fits(uint32_t location, int slot);       // a thing of the bag that goes there

@@ -2,6 +2,7 @@
 // «Снаряжение»): «Спорядження» redrawn (core/equip_window) - the slots round the character (heads, armour, garment,
 // accessories on the left; the top head, weapon, shield, shoes, accessory on the right; the ammo under it), a worn
 // thing's card dots, the controller's list of what fits a slot
+#include <cmath>
 #include <algorithm>
 #include <string>
 #include <vector>
@@ -80,9 +81,18 @@ TEST(equip_window_layout_round_the_character) {
     const equipwin::Data d = wizard();
     equipwin::Show sh;
     const equipwin::Layout L = equipwin::layout(0, 0, 1.0f, d, sh, texts(), measure);
-    CHECK(L.slots[equipwin::HeadMid].x < L.centre.x && L.slots[equipwin::HeadTop].x > L.centre.x);  // two columns
-    CHECK(L.slots[equipwin::AccL].y > L.slots[equipwin::Garment].y);  // down the column in the concept's order
-    CHECK(L.slots[equipwin::Ammo].y > L.portrait.y + L.portrait.h);   // the ammo under the character
+    // 3.0.18-beta.110 (the owner: «максимально похожем на оригинальный вариант»): the game's own window's places -
+    // left the top and low heads, the right hand, the robe, the right accessory; right the middle head, the body, the
+    // left hand, the shoes, the left accessory; the ammo in the strip under both columns
+    CHECK(L.slots[equipwin::HeadTop].x < L.centre.x && L.slots[equipwin::HeadMid].x > L.centre.x);
+    CHECK(L.slots[equipwin::Weapon].x < L.centre.x && L.slots[equipwin::Shield].x > L.centre.x);
+    CHECK(L.slots[equipwin::AccR].x < L.centre.x && L.slots[equipwin::AccL].x > L.centre.x);
+    CHECK(L.slots[equipwin::HeadLow].y > L.slots[equipwin::HeadTop].y);
+    CHECK(L.slots[equipwin::Weapon].y > L.slots[equipwin::HeadLow].y);
+    CHECK(L.slots[equipwin::Garment].y > L.slots[equipwin::Weapon].y);
+    CHECK(L.slots[equipwin::AccR].y > L.slots[equipwin::Garment].y);
+    CHECK(std::abs(L.slots[equipwin::Armor].y - L.slots[equipwin::HeadLow].y) < 0.5f);  // body beside the low head
+    CHECK(L.slots[equipwin::Ammo].y > L.slots[equipwin::AccR].y + L.slots[equipwin::AccR].h);
     const auto at = [&](const panel::Box& b) { return equipwin::hitTest(L, b.x + b.w / 2, b.y + b.h / 2); };
     CHECK(at(L.slots[equipwin::Weapon]).part == equipwin::Part::Slot && at(L.slots[equipwin::Weapon]).index == 6);
     CHECK(at(L.close).part == equipwin::Part::Close);
@@ -90,8 +100,9 @@ TEST(equip_window_layout_round_the_character) {
     const auto has = [&](const std::string& text) {
         return std::any_of(w.begin(), w.end(), [&](const equipwin::Words& x) { return x.text == text; });
     };
-    CHECK(has("Спорядження") && has("Knife") && has("+4 Cotton Shirt") && has("Зброя") && has("Sora") &&
-          has("Lv 72 / 40") && has("Кружечки — слоти карток"));
+    CHECK(has("Спорядження") && has("Knife") && has("+4 Cotton Shirt") && has("Зброя") &&
+          has("Кружечки — слоти карток"));
+    CHECK(!has("Lv 72 / 40"));  // 3.0.18-beta.110: the character's numbers left to «Характеристики»
     panel::Picture p;
     p.width = L.w;
     p.height = L.h;
@@ -124,6 +135,21 @@ TEST(equip_window_the_controllers_pick_list) {
 
 // 3.0.11-beta.110 (the concept «Концепция окон и инвентаря», stage 2): a thing of the bag dragged - the slots it fits
 // lit in gold, the rest as they are
+// 3.0.18-beta.110: the controller's steps in the original's columns - down the left one, across to its row's twin
+TEST(equip_window_pad_steps_in_the_originals_columns) {
+    using namespace equipwin;
+    CHECK_EQ(padStep(HeadTop, 0, 1), int(HeadLow));
+    CHECK_EQ(padStep(HeadLow, 0, 1), int(Weapon));
+    CHECK_EQ(padStep(Weapon, 1, 0), int(Shield));
+    CHECK_EQ(padStep(Shield, -1, 0), int(Weapon));
+    CHECK_EQ(padStep(AccR, 0, 1), int(Ammo));
+    CHECK_EQ(padStep(AccL, 0, 1), int(Ammo));
+    CHECK_EQ(padStep(Ammo, 0, -1), int(AccR));
+    CHECK_EQ(padStep(HeadTop, 0, -1), int(HeadTop));
+    CHECK_EQ(padStep(HeadTop, -1, 0), int(HeadTop));
+    CHECK_EQ(padStep(HeadMid, 1, 0), int(HeadMid));
+}
+
 TEST(equip_window_lights_the_slots_a_dragged_thing_fits) {
     const equipwin::Data d = wizard();
     equipwin::Show sh;

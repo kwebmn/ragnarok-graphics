@@ -467,23 +467,11 @@ void openPicks(State& s, int slot) {
     if (s.told++ < 20) LOG_INFO("equip: what fits the slot %d - %zu thing(s) of the bag", slot, s.data.picks.size());
 }
 
-// The controller's steps round the slots: up and down a column, across at the same row, the ammo under the last row
+// The controller's steps round the slots - 3.0.18-beta.110: the original window's columns (core equipwin padStep)
 int stepFrom(int slot, PadCommand c) {
-    if (slot == ew::Ammo) {
-        if (c == PadCommand::Up) return ew::AccL;
-        if (c == PadCommand::Left) return ew::AccL;
-        if (c == PadCommand::Right) return ew::AccR;
-        return slot;
-    }
-    const bool l = slot <= ew::AccL;
-    const int row = l ? slot : slot - 5;
-    switch (c) {
-        case PadCommand::Up: return row > 0 ? slot - 1 : slot;
-        case PadCommand::Down: return row < 4 ? slot + 1 : ew::Ammo;
-        case PadCommand::Left: return l ? slot : slot - 5;
-        case PadCommand::Right: return l ? slot + 5 : slot;
-        default: return slot;
-    }
+    const int dx = c == PadCommand::Left ? -1 : c == PadCommand::Right ? 1 : 0;
+    const int dy = c == PadCommand::Up ? -1 : c == PadCommand::Down ? 1 : 0;
+    return ew::padStep(slot, dx, dy);
 }
 
 }  // namespace

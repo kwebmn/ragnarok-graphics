@@ -64,6 +64,7 @@ struct Tables {
     std::map<std::string, std::vector<std::string>> items, unknown, skills;
     std::map<int, int> slots;
     std::map<std::string, std::string> unknownFiles;  // an unidentified item's picture's file
+    std::map<std::string, std::string> cardArt;  // 3.0.18-beta.110: a card's illustration's file
 };
 
 struct One {
@@ -175,6 +176,9 @@ void readTables(State& s) {
                                       c));
     t.slots = ic::slotCounts(first({folder + "itemslotcounttable.txt", "data\\itemslotcounttable.txt"}, d));
     t.unknownFiles = hotbar::nameTable(first({"data\\num2itemresnametable.txt"}, e));
+    std::string f;  // 3.0.18-beta.110: the cards' illustrations
+    t.cardArt = hotbar::nameTable(first({"data\\num2cardillustnametable.txt"}, f));
+    LOG_INFO("cards: the cards' illustrations %zu (%s)", t.cardArt.size(), f.c_str());
     LOG_INFO("cards: the game's tables - item descriptions %zu (%s), unidentified %zu (%s), skills %zu (%s), slots "
              "%zu (%s), unidentified pictures %zu",
              t.items.size(), a.c_str(), t.unknown.size(), b.c_str(), t.skills.size(), c.c_str(), t.slots.size(),
@@ -196,6 +200,20 @@ std::vector<std::string> utf8Lines(const State& s, const std::vector<std::string
 }
 
 // An item's big picture fitted into the card's room, kept while its file and the scale are the same
+// 3.0.18-beta.110: a card's illustration fitted into its room (the card's own window, as the original)
+const panel::Picture* cardArt(State& s, One& o, const std::string& file) {
+    int rw = 0, rh = 0;
+    ic::artRoom(s.scale, rw, rh);
+    const std::string key = "art:" + file + '@' + std::to_string(rw) + 'x' + std::to_string(rh);
+    if (key != o.bigOf) {
+        o.bigOf = key;
+        std::vector<uint32_t> argb;
+        int w = 0, h = 0;
+        o.big = clienttables::cardArtPixels(file, argb, w, h) ? ic::fitted(argb, w, h, rw, rh) : panel::Picture{};
+    }
+    return o.big.width > 0 ? &o.big : nullptr;
+}
+
 const panel::Picture* bigPicture(State& s, One& o, const std::string& file) {
     int rw = 0, rh = 0;
     ic::pictureRoom(s.scale, rw, rh);
@@ -274,10 +292,13 @@ void itemCard(State& s, One& o, uint32_t window) {
         const auto cd = s.tables.items.find(card);
         if (cd != s.tables.items.end()) v.lines = utf8Lines(s, cd->second);
         const auto cf = clienttables::itemFiles().find(card);
-        if (cf != clienttables::itemFiles().end()) {
+        if (cf != clienttables::itemFiles().end())
             v.icon = clienttables::icon(cf->second, ic::iconSide(s.scale), 4 * s.scale);
-            v.picture = bigPicture(s, o, cf->second);
-        }
+        // 3.0.18-beta.110 (the owner: «окно карты как в оригинале»): its illustration big over its words
+        const auto art = s.tables.cardArt.find(card);
+        if (art != s.tables.cardArt.end()) v.picture = cardArt(s, o, art->second);
+        v.art = v.picture != nullptr;
+        if (!v.picture && cf != clienttables::itemFiles().end()) v.picture = bigPicture(s, o, cf->second);
         c = v;
     }
     o.card = c;

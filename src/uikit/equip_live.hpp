@@ -42,9 +42,12 @@ struct Model {
     // 3.0.18-beta.100: the window's scale in pixels as 12 of its own (its sizes in rem: the text size and «Речі»'s
     // size settings as before the live layout)
     float base = 12;
-    Rml::String ground = "#00000000", title, hotkey, who, job, level, portrait, cards, drag, pickTitle, pickNone;
+    Rml::String ground = "#00000000", title, hotkey, who, job, level, cards, drag, pickTitle, pickNone;
+    // 3.0.18-beta.110: the character in the middle - its picture (set before fill: the sprites'; else the portrait)
+    Rml::String hero;
+    float heroW = 0, heroH = 0;
+    bool turns = false;  // ◀ ▶ shown (the sprites' character turns)
     bool closeHot = false, picking = false, pad = false;
-    float portraitW = 0, portraitH = 0;
     std::vector<SlotV> left, right;
     SlotV ammo;
     std::vector<StatV> stats;
