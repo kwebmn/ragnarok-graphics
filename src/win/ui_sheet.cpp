@@ -59,6 +59,14 @@ const char* kDoc = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss
   data-style-font-size="t.px + 'px'" data-style-color="t.colour" data-style-line-height="t.lh + 'px'"
   >{{t.text}}</span>
 <div class="mark"></div>
+<div class="a" data-for="b : top_boxes">
+ <div class="paint" data-style-left="b.x + 'px'" data-style-top="b.y + 'px'" data-style-width="b.w + 'px'"
+   data-style-height="b.h + 'px'" data-style-border-radius="b.r + 'px'" data-style-border-width="b.e + 'px'"
+   data-style-background-color="b.bg" data-style-border-color="b.bd" data-style-opacity="b.op"></div>
+</div>
+<span data-for="t : top_words" data-attr-class="t.cls" data-style-left="t.x + 'px'" data-style-top="t.y + 'px'"
+  data-style-width="t.w + 'px'" data-style-height="t.h + 'px'" data-style-font-size="t.px + 'px'"
+  data-style-color="t.colour" data-style-line-height="t.lh + 'px'">{{t.text}}</span>
 <img class="a" data-for="i : top" data-attr-src="i.src" data-style-left="i.x + 'px'" data-style-top="i.y + 'px'"
   data-style-width="i.w + 'px'" data-style-height="i.h + 'px'" data-style-opacity="i.op"/>
 </body></rml>)RML";
@@ -243,6 +251,8 @@ bool Sheet::frame(const char* name, bool on, bool window, int x, int y, int gen,
                 m.Bind("words", &c_.words);
                 m.Bind("rings", &c_.rings);
                 m.Bind("top", &c_.top);
+                m.Bind("top_boxes", &c_.topBoxes);
+                m.Bind("top_words", &c_.topWords);
                 m.Bind("clip", &c_.clip);
                 m.Bind("clipped", &c_.clipped);
                 m.Bind("clipped_icons", &c_.clippedIcons);

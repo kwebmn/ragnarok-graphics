@@ -51,6 +51,8 @@ struct Content {
     std::vector<Word> words;
     std::vector<Ring> rings;  // drawn after `under`, before the clipped view and `icons`
     std::vector<Icon> top;    // 3.0.18-beta.33: pictures over everything (the login's ▾ list)
+    std::vector<Box> topBoxes;    // 3.0.18-beta.45: boxes and words over everything (▾'s list over the card's words)
+    std::vector<Word> topWords;
     // 3.0.18-beta.29: a scrolled view (the skills' tree) - its boxes and icons in the window's pixels, cut at `clip`;
     // drawn after `under`, before `icons`
     Box clip;
@@ -82,6 +84,10 @@ struct Content {
     // the words of a window's core (any of its Words: box, text, rgb, px, bold, align)
     template <typename W>
     void say(const std::vector<W>& in, float dx = 0, float dy = 0) {  // dx, dy: the words' boxes moved
+        sayInto(words, in, dx, dy);
+    }
+    template <typename W>
+    void sayInto(std::vector<Word>& to, const std::vector<W>& in, float dx = 0, float dy = 0) {
         char colour[16];
         for (W x : in) {
             x.box.x += dx, x.box.y += dy;
@@ -89,8 +95,8 @@ struct Content {
             const char* align = x.align == decltype(x.align)::Right    ? " right"
                                 : x.align == decltype(x.align)::Center ? " centre"
                                                                        : "";
-            words.push_back(Word{x.box.x, x.box.y, x.box.w, x.box.h, x.px, x.box.h, x.text, colour,
-                                 std::string(x.bold ? "word bold" : "word") + align});
+            to.push_back(Word{x.box.x, x.box.y, x.box.w, x.box.h, x.px, x.box.h, x.text, colour,
+                              std::string(x.bold ? "word bold" : "word") + align});
         }
     }
 };

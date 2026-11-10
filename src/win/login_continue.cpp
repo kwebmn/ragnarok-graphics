@@ -230,17 +230,24 @@ static void fillSheet(State& s, uisheet::Content& c) {
                                         float(side), float(side), 1, src});
     }
     uisheet::sayGdi(c, s.words);
-    if (s.dropOpen && s.dropPicture.width > 0)  // ▾'s list (the window's own pixels)
-        c.top.push_back(uisheet::Icon{s.drop.x - float(s.layout.x), s.drop.y - float(s.layout.y),
-                                      float(s.dropPicture.width), float(s.dropPicture.height), 1,
-                                      s.sheet.icon(&s.dropPicture)});
+    if (s.dropOpen && s.drop.w > 0) {  // 3.0.18-beta.45: ▾'s list over it, as core logincard paints it
+        const float x = s.drop.x - float(s.layout.x), y = s.drop.y - float(s.layout.y);
+        c.rect(c.topBoxes, panel::Box{x, y, s.drop.w, s.drop.h}, 10 * sc, 0x161B26, 0.98f, kWhite, 0.14f, 1.0f * sc);
+        if (s.dropHover >= 0 && s.dropHover < int(s.drop.rows.size())) {
+            const panel::Box& r = s.drop.rows[size_t(s.dropHover)];
+            c.rect(c.topBoxes, panel::Box{x + r.x - s.drop.x, y + r.y - s.drop.y, r.w, r.h}, 7 * sc, kGold, 0.16f);
+        }
+        c.sayInto(c.topWords,
+                  logincard::dropWords(s.drop, s.rows, s.dropHover, say(settings::Text::LoginOtherLogin), s.scale), x,
+                  y);
+    }
 }
 
 void frame(double k, int targetWidth, int targetHeight, unsigned codePage) {
     frameInner(k, targetWidth, targetHeight, codePage);
     State& s = state();
     s.sheet.anywhere = true;
-    const int gen = s.sheetGen ^ (s.dropOpen ? int(uaui::stamp(&s.dropPicture)) | 1 : 0);
+    const int gen = s.sheetGen ^ (s.dropOpen ? (s.dropHover + 2) * 7919 : 0);  // ▾'s list and its row lit too
     s.sheetShown = s.sheet.frame("login continue", uaui::readyAnywhere() && s.k > 0 && s.sheetGen > 0, true,
                                  s.layout.x, s.layout.y, gen, [&](uisheet::Content& c) { fillSheet(s, c); });
 }

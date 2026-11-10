@@ -1125,9 +1125,16 @@ static void fillSheet(State& s, uisheet::Content& c) {
     c.rect(u, L.enter, 9 * sc, kGold, sh.hover == int(lc::Part::Enter) ? 0.36f : 0.24f, kGold, 0.85f, 1.0f * sc);
     c.rect(u, L.exit, 9 * sc, kWhite, sh.hover == int(lc::Part::Exit) ? 0.12f : 0.06f, kWhite, 0.16f, 1.0f * sc);
     c.say(lc::words(L, f, sh, texts(s.view)));
-    if (s.dropOpen && s.dropPicture.width > 0)  // ▾'s list over the card
-        c.top.push_back(uisheet::Icon{s.drop.x, s.drop.y, float(s.dropPicture.width), float(s.dropPicture.height), 1,
-                                      s.sheet.icon(&s.dropPicture)});
+    if (s.dropOpen && s.drop.w > 0) {  // 3.0.18-beta.45: ▾'s list over the card, as core logincard paints it
+        const float x = s.drop.x, y = s.drop.y;
+        c.rect(c.topBoxes, panel::Box{x, y, s.drop.w, s.drop.h}, 10 * sc, 0x161B26, 0.98f, 0xFFFFFF, 0.14f, 1.0f * sc);
+        if (s.dropHover >= 0 && s.dropHover < int(s.drop.rows.size())) {
+            const panel::Box& r = s.drop.rows[size_t(s.dropHover)];
+            c.rect(c.topBoxes, panel::Box{x + r.x - s.drop.x, y + r.y - s.drop.y, r.w, r.h}, 7 * sc, kGold, 0.16f);
+        }
+        c.sayInto(c.topWords,
+                  lc::dropWords(s.drop, s.dropRows, s.dropHover, say(settings::Text::LoginOtherLogin), s.scale), x, y);
+    }
 }
 
 void frame(HWND game, bool on, bool status, bool news, loginview::View view, unsigned codePage, double k,
@@ -1138,7 +1145,7 @@ void frame(HWND game, bool on, bool status, bool news, loginview::View view, uns
     s.chromeShown = s.chromeSheet.frame("login strip", s.shown && s.chrome.w > 0 && s.chromeGen > 0, true, s.chrome.x,
                                         s.chrome.y, s.chromeGen, [&](uisheet::Content& c) { chromeSheet(s, c); });
     s.sheet.anywhere = true;  // before the world
-    const int gen = s.sheetGen ^ (s.dropOpen ? int(uaui::stamp(&s.dropPicture)) | 1 : 0);  // ▾'s list too
+    const int gen = s.sheetGen ^ (s.dropOpen ? (s.dropHover + 2) * 7919 : 0);  // ▾'s list and its row lit too
     s.sheetShown = s.sheet.frame("login", s.shown && s.mode == State::Mode::Card, true, s.layout.x, s.layout.y, gen,
                                  [&](uisheet::Content& c) { fillSheet(s, c); });
 }
