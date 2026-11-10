@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.18-beta.23 — what's new
+
+- **The experience bars at the bottom of the screen now use "Нова бібліотека інтерфейсу (RmlUi)":** the Base and Job bars with 10 % ticks, the last gain's label and the hover tip are drawn by the new library. Without this switch nothing changes.
+
 # uaRO Graphics 3.0.18-beta.22 — what's new
 
 - **Windows drag again with the new interface library on:** the new library took the mouse button's release for itself, and dragging other windows broke off.
