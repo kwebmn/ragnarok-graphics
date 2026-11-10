@@ -147,6 +147,11 @@ struct State {
     size_t split = 0;
     bool splitSeen = false;
     Rml::ElementDocument* marker = nullptr;
+    // 3.0.18-beta.38: the world's documents (z-index 1: the bars over the monsters, the plates) before the parts'
+    // (3) - the batches up to `worldSplit` (the marker's at z-index 2) drawn where the world's overlays are
+    size_t worldSplit = 0;
+    bool worldSeen = false;
+    Rml::ElementDocument* worldMarker = nullptr;
     bool clipOn = false;
     ::uagfx::uaui::ClipBox clip{};
     bool transformOn = false;
@@ -1146,6 +1151,11 @@ protected:
 Rml::ElementInstancerGeneric<ElementSplit> g_splitInstancer;
 void ElementSplit::OnRender() {
     State& s = state();
+    if (GetAttribute<int>("at", 2) == 1) {  // 3.0.18-beta.38: the world's end
+        s.worldSplit = s.batches.size();
+        s.worldSeen = true;
+        return;
+    }
     s.split = s.batches.size();
     s.splitSeen = true;
 }
@@ -1212,6 +1222,11 @@ bool start(State& s) {
         "<ua-split style=\"display: block; width: 1px; height: 1px;\"/></body></rml>",
         "uaui:split");
     if (s.marker) s.marker->Show(Rml::ModalFlag::None, Rml::FocusFlag::None);
+    s.worldMarker = s.context->LoadDocumentFromMemory(
+        "<rml><body style=\"position: absolute; left: 0; top: 0; width: 1px; height: 1px; z-index: 2;\">"
+        "<ua-split at=\"1\" style=\"display: block; width: 1px; height: 1px;\"/></body></rml>",
+        "uaui:split-world");
+    if (s.worldMarker) s.worldMarker->Show(Rml::ModalFlag::None, Rml::FocusFlag::None);
     s.started = true;
     LOG_INFO("uaui: RmlUi %s started - its context %dx%d, %.2f target pixels a concept pixel; the theme %s",
              Rml::GetVersion().c_str(), s.targetW, s.targetH, double(uistyle::partScale(s.k)),
@@ -1567,7 +1582,8 @@ bool Doc::make(const char* name, const char* rml, const std::function<void(Rml::
         LOG_ERROR("uaui: the document «%s» did not load", name);
         return false;
     }
-    if (window) doc_->SetProperty("z-index", "10");  // 3.0.18-beta.27: drawn with the windows
+    // 3.0.18-beta.27: drawn with the windows; .38 the world's under the parts (theirs 3, between the markers)
+    doc_->SetProperty("z-index", window ? "10" : world ? "1" : "3");
     if (Rml::Element* t = doc_->GetElementById("ua-title")) t->SetInnerRML(doc_->GetTitle());
     if (Rml::Element* c = doc_->GetElementById("ua-close")) c->AddEventListener(Rml::EventId::Click, &g_close);
     s.docs.push_back(this);
@@ -1716,8 +1732,9 @@ void end() {
     }
     const double t1 = clockNow();
     s.batches.clear();
-    s.splitSeen = false;
+    s.splitSeen = s.worldSeen = false;
     s.context->Render();
+    if (!s.worldSeen) s.worldSplit = 0;
     if (!s.splitSeen) s.split = s.batches.size();
     const double t2 = clockNow();
     s.stats.update += t1 - s.frameStart;
@@ -1726,11 +1743,24 @@ void end() {
 
 void draw(FrameRecord& record, gpu::Renderer& renderer, Layer layer) {
     State& s = state();
+    // 3.0.18-beta.38: the world's layer where the world ends - under the game's own windows, names and cursor (as
+    // the monsters' bars), its uploads too
+    const size_t worldEnd = record.firstInterface(), commandsBefore = record.commands().size();
+    struct UnderGame {
+        FrameRecord& r;
+        size_t at, before;
+        bool on;
+        ~UnderGame() {
+            const size_t added = r.commands().size() - before;
+            if (on && added) r.moveLastBefore(added, at);
+        }
+    } underGame{record, worldEnd, commandsBefore, layer == Layer::World};
     for (uint32_t id : s.released) renderer.releaseTexture(id);
     s.released.clear();
     if (!readyAnywhere() || s.batches.empty()) return;
-    const size_t from = layer == Layer::Windows ? std::min(s.split, s.batches.size()) : 0;
-    const size_t to = layer == Layer::Windows ? s.batches.size() : std::min(s.split, s.batches.size());
+    const size_t n = s.batches.size(), world = std::min(s.worldSplit, n), split = std::max(world, std::min(s.split, n));
+    const size_t from = layer == Layer::Windows ? split : layer == Layer::Hud ? world : 0;
+    const size_t to = layer == Layer::Windows ? n : layer == Layer::Hud ? split : world;
     if (from >= to) return;
     const double t0 = clockNow();
     // the glyphs' atlas, once made and again when new letters came

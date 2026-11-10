@@ -1,6 +1,7 @@
 #include "win/world_signs.hpp"
 
 #include <algorithm>
+#include <cstdio>
 #include <cmath>
 #include <string>
 #include <unordered_map>
@@ -14,6 +15,8 @@
 #include "win/gpu/renderer.hpp"
 #include "win/log.hpp"
 #include "win/picture_draw.hpp"
+#include "win/uaui.hpp"
+#include "win/ui_sheet.hpp"
 
 namespace uagfx::win::worldsigns {
 namespace ws = uagfx::worldsigns;
@@ -46,9 +49,18 @@ struct Plate {
 struct Shown {
     std::string key;
     int x = 0, y = 0;
+    // 3.0.18-beta.38: uaUI's plate - its kind, words and size
+    ws::Kind kind = ws::Kind::Shop;
+    std::string title, places;
+    int w = 0, h = 0;
 };
 
 struct State {
+    uisheet::Sheet sheet;  // 3.0.18-beta.38: the plates drawn by uaUI (the world's layer), said again each frame
+    int sheetGen = 0;
+    bool sheetShown = false;
+    float scale = 1;
+    int targetW = 0, targetH = 0;
     bool on = false;
     bool told = false;
     unsigned codePage = 0;
@@ -71,12 +83,26 @@ uint32_t read32(uint32_t at) {
     return readGame(at, &v, 4) ? v : 0;
 }
 
+// A plate's measures (3.0.18-beta.38: uaUI's too): its size, the title's and the places' widths
+struct Measures {
+    float px = 0, pad = 0, dot = 0, gap = 0;
+    int titleW = 0, placesW = 0, w = 0, h = 0;
+};
+Measures measures(const std::wstring& title, const std::wstring& places, float scale) {
+    Measures m;
+    m.px = 12.5f * scale, m.pad = 9 * scale, m.dot = 7 * scale, m.gap = 6 * scale;
+    m.titleW = wordsWidth(title, m.px, true), m.placesW = places.empty() ? 0 : wordsWidth(places, m.px, true);
+    m.h = int(std::lround(22 * scale));
+    m.w = int(std::lround(m.pad + m.dot + m.gap + float(m.titleW) + (m.placesW ? m.gap + float(m.placesW) : 0) +
+                          m.pad));
+    return m;
+}
+
 // A plate painted: a dark rounded plate with a thin edge and a dot in its kind's colour, the title, a room's places
 void paint(Plate& p, ws::Kind kind, const std::wstring& title, const std::wstring& places, float scale) {
-    const float px = 12.5f * scale, pad = 9 * scale, dot = 7 * scale, gap = 6 * scale;
-    const int titleW = wordsWidth(title, px, true), placesW = places.empty() ? 0 : wordsWidth(places, px, true);
-    const int h = int(std::lround(22 * scale));
-    const int w = int(std::lround(pad + dot + gap + float(titleW) + (placesW ? gap + float(placesW) : 0) + pad));
+    const Measures m = measures(title, places, scale);
+    const float px = m.px, pad = m.pad, dot = m.dot, gap = m.gap;
+    const int titleW = m.titleW, placesW = m.placesW, h = m.h, w = m.w;
     if (!panel::blank(p.picture, w, h)) return;
     const uint32_t accent = ws::accent(kind);
     panel::roundRect(p.picture, panel::Box{0, 0, float(w), float(h)}, 6 * scale, 0x15181F, 0.86f, accent, 0.55f,
@@ -121,7 +147,7 @@ bool take(uint32_t window) {
     return true;
 }
 
-void frame(bool on, unsigned codePage, double k, int targetWidth, int targetHeight) {
+static void frameInner(bool on, unsigned codePage, double k, int targetWidth, int targetHeight) {
     State& s = state();
     if (on != s.on || !s.told) {
         s.on = on;
@@ -136,6 +162,7 @@ void frame(bool on, unsigned codePage, double k, int targetWidth, int targetHeig
     if (!on || k <= 0 || targetWidth <= 0 || targetHeight <= 0 || !inGameWorld()) return;
     s.k = float(k);
     const float scale = uistyle::partScale(k);
+    s.scale = scale, s.targetW = targetWidth, s.targetH = targetHeight;
     for (const Seen& n : seen) {
         std::string title, places;
         ws::Kind kind = ws::Kind::Shop;
@@ -159,13 +186,19 @@ void frame(bool on, unsigned codePage, double k, int targetWidth, int targetHeig
         }
         const std::string text = ws::shortTitle(utf8Of(widened(title, s.codePage)), kTitleLetters);
         const std::string key = std::to_string(int(kind)) + '|' + text + '|' + places + '|' + std::to_string(scale);
+        const float cx = (float(n.x) + float(n.w) / 2) * s.k, cy = (float(n.y) + float(n.h) / 2) * s.k;
+        if (uaui::ready()) {  // 3.0.18-beta.38: uaUI's plate - no picture
+            const Measures m = measures(utf8Wide(text), utf8Wide(places), scale);
+            s.shown.push_back(Shown{key, int(std::lround(cx - float(m.w) / 2)), int(std::lround(cy - float(m.h) / 2)),
+                                    kind, text, places, m.w, m.h});
+            continue;
+        }
         Plate& p = s.plates[key];
         p.idle = 0;
         if (p.picture.width == 0) paint(p, kind, utf8Wide(text), utf8Wide(places), scale);
         if (p.picture.width == 0) continue;
-        const float cx = (float(n.x) + float(n.w) / 2) * s.k, cy = (float(n.y) + float(n.h) / 2) * s.k;
         s.shown.push_back(Shown{key, int(std::lround(cx - float(p.picture.width) / 2)),
-                                int(std::lround(cy - float(p.picture.height) / 2))});
+                                int(std::lround(cy - float(p.picture.height) / 2)), kind, {}, {}, 0, 0});
         int& told = n.shop ? s.shopsTold : s.roomsTold;
         if (told < 3) {
             ++told;
@@ -174,6 +207,40 @@ void frame(bool on, unsigned codePage, double k, int targetWidth, int targetHeig
                      p.picture.width, p.picture.height);
         }
     }
+}
+
+// 3.0.18-beta.38 (docs/superpowers/plans/2026-11-09-uaui-migration.md, stage 5 - by hand): the shops' and the chat
+// rooms' signs in RmlUi's markup, as paint() makes them - a dark plate edged and dotted in its kind's colour, the
+// title, a room's places; over the world and under the game's own windows (uaUI's world layer)
+static void fillSheet(State& s, uisheet::Content& c) {
+    c.w = float(s.targetW), c.h = float(s.targetH);
+    const float scale = s.scale;
+    char colour[16];
+    for (const Shown& sh : s.shown) {
+        if (sh.w <= 0) continue;
+        const Measures m = measures(utf8Wide(sh.title), utf8Wide(sh.places), scale);
+        const uint32_t accent = ws::accent(sh.kind);
+        const float x = float(sh.x), y = float(sh.y);
+        c.rect(c.under, panel::Box{x, y, float(sh.w), float(sh.h)}, 6 * scale, 0x15181F, 0.86f, accent, 0.55f,
+               std::max(1.0f, scale));
+        c.rect(c.under, panel::Box{x + m.pad, y + (float(sh.h) - m.dot) / 2, m.dot, m.dot}, m.dot / 2, accent, 1.0f);
+        const float tx = x + m.pad + m.dot + m.gap;
+        c.words.push_back(uisheet::Word{tx, y, float(m.titleW) + 2, float(sh.h), m.px, float(sh.h), sh.title,
+                                        "#eceff5", "word bold"});
+        if (m.placesW) {
+            std::snprintf(colour, sizeof colour, "#%06x", unsigned(accent & 0xFFFFFF));
+            c.words.push_back(uisheet::Word{tx + float(m.titleW) + m.gap, y, float(m.placesW) + 2, float(sh.h), m.px,
+                                            float(sh.h), sh.places, colour, "word bold"});
+        }
+    }
+}
+
+void frame(bool on, unsigned codePage, double k, int targetWidth, int targetHeight) {
+    frameInner(on, codePage, k, targetWidth, targetHeight);
+    State& s = state();
+    s.sheet.world = true;
+    s.sheetShown = s.sheet.frame("signs", uaui::ready() && !s.shown.empty() && s.k > 0, false, 0, 0, ++s.sheetGen,
+                                 [&](uisheet::Content& c) { fillSheet(s, c); });
 }
 
 void draw(FrameRecord& record, gpu::Renderer& renderer) {
@@ -186,7 +253,7 @@ void draw(FrameRecord& record, gpu::Renderer& renderer) {
             ++it;
         }
     }
-    if (s.shown.empty() || s.k <= 0) return;
+    if (s.shown.empty() || s.k <= 0 || s.sheetShown) return;
     // where the world ends - under the game's own windows, as its signs were
     const size_t world = record.firstInterface(), before = record.commands().size();
     for (const Shown& sh : s.shown) {

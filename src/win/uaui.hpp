@@ -34,7 +34,7 @@ void begin(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
 void end();
 // 3.0.18-beta.27: the parts' documents (Hud) where the parts are drawn, the windows' (Doc::window) where the windows
 // are - over the panels, the chat and the hotbar
-enum class Layer : uint8_t { Hud, Windows };
+enum class Layer : uint8_t { Hud, Windows, World };  // .38: World - under the parts, over the world
 void draw(FrameRecord& record, gpu::Renderer& renderer, Layer layer = Layer::Hud);
 // The mouse's buttons and wheel over a document of uaUI (and the end of a drag wherever it is): true taken
 bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result);
@@ -82,6 +82,7 @@ public:
     bool passive = false;
     bool window = false;  // 3.0.18-beta.27: set before make() - drawn with the windows (uaui::Layer::Windows)
     bool anywhere = false;  // 3.0.18-beta.33: shown outside the world too (the login's windows)
+    bool world = false;     // 3.0.18-beta.38: set before make() - drawn with the world's overlays (uaui::Layer::World)
 
     // the runtime's
     bool fadePending = false;

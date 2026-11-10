@@ -103,3 +103,4 @@ picture's upload gone. Cost if wrong: per-pixel glows (panel::over loops) land i
 - 2026-11-10 beta.35: pad tiles, pad assignment, pad hint line, «Розміщення інтерфейсу» on the sheet (+ say offsets, painted boxes' opacity)
 - 2026-11-10 beta.36: core/ui_sheet_model (a part's markup as plain data, filled in core) + «Довідник» on it
 - 2026-11-10 beta.37: the parts left past the plan's list - message box, party setup, monster card on the sheet
+- 2026-11-10 beta.38: uaUI's world layer (Doc::world z-index 1, a marker at 2; drawn where the world's overlays are, moved under the game's own interface); the NPC plate, the ground items' names, the shops'/rooms' signs on it; the cast on the sheet. The monsters' HP bars stay the driver's fills (no pictures)

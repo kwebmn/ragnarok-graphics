@@ -729,6 +729,7 @@ void Context::endScene() {
         }
         worlddim::draw(record);                 // 3.0.11-beta.49: the world dimmed under the windows (where it ends)
         lowhpedge::draw(record, *renderer);     // 3.0.11-beta.50: the low HP edge, there too
+        uaui::draw(record, *renderer, uaui::Layer::World);  // 3.0.18-beta.38: uaUI's over the world
         groundwin::draw(record, *renderer);  // 3.0.11-beta.283: the items on the ground named, under the bars
         worldsigns::draw(record, *renderer);  // 3.0.16-beta.7: the shops' and the rooms' signs
         mobhpwin::draw(record, *renderer);      // 3.0.11-beta.95: the monsters' HP bars, under the cast
@@ -805,6 +806,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
         hidePadCursor(record, config.padWalk);  // 3.0.11-beta.102
         worlddim::draw(record);                 // 3.0.11-beta.49
         lowhpedge::draw(record, *renderer);     // 3.0.11-beta.50
+        uaui::draw(record, *renderer, uaui::Layer::World);  // 3.0.18-beta.38: uaUI's over the world
         groundwin::draw(record, *renderer);  // 3.0.11-beta.283
         worldsigns::draw(record, *renderer);  // 3.0.16-beta.7
         mobhpwin::draw(record, *renderer);      // 3.0.11-beta.95

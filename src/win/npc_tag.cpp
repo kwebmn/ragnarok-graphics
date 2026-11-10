@@ -18,6 +18,8 @@
 #include "win/npc_talk.hpp"
 #include "win/picture_draw.hpp"
 #include "win/real_ddraw.hpp"
+#include "win/uaui.hpp"
+#include "win/ui_sheet.hpp"
 
 namespace uagfx::win::npctagwin {
 namespace {
@@ -33,6 +35,9 @@ constexpr DWORD kAskAgainMs = 5000;
 constexpr uint32_t kDot = 0x99E8C36Au;  // a faint gold dot over the others
 
 struct State {
+    uisheet::Sheet sheet;  // 3.0.18-beta.38: the plate drawn by uaUI (the world's layer)
+    int sheetGen = 0;
+    bool sheetShown = false, sheetSony = false;
     std::map<uint32_t, std::string> names;  // the game's code page
     std::map<uint32_t, DWORD> askedAt;
     std::vector<uint32_t> toAsk;
@@ -91,7 +96,7 @@ void packet(const packets::Event& e) {
     }
 }
 
-void frame(HWND game, unsigned codePage, double k, int targetWidth, int targetHeight) {
+static void frameInner(HWND game, unsigned codePage, double k, int targetWidth, int targetHeight) {
     State& s = state();
     s.shown = false;
     s.dots.clear();
@@ -127,10 +132,12 @@ void frame(HWND game, unsigned codePage, double k, int targetWidth, int targetHe
     s.layout = ph::layout(s.parts, centre, bottom, scale);
     std::string key = std::to_string(s.layout.w) + (look.sony ? "S" : "X") + name + '|' +
                       std::to_string(part.buttons.empty() ? -1 : part.buttons[0]) + '#' +
-                      std::to_string(uistyle::generation());
+                      std::to_string(uistyle::generation()) + (uaui::ready() ? "u" : "");
     if (key != s.key) {
         s.key = key;
-        if (panel::blank(s.picture, s.layout.w, s.layout.h)) {
+        s.sheetSony = look.sony;
+        ++s.sheetGen;  // 3.0.18-beta.38: uaUI's plate said again (no picture then)
+        if (!uaui::ready() && panel::blank(s.picture, s.layout.w, s.layout.h)) {
             ph::paint(s.picture, s.layout, s.parts, look.sony);
             drawWords(s.picture, gdiWords(ph::words(s.layout, s.parts, look.sony)));
             s.upload = true;
@@ -139,13 +146,37 @@ void frame(HWND game, unsigned codePage, double k, int targetWidth, int targetHe
     s.shown = true;
 }
 
+// 3.0.18-beta.38 (docs/superpowers/plans/2026-11-09-uaui-migration.md, stage 5 - by hand): the controller's NPC
+// plate in RmlUi's markup, as core padhint paints it - its pill and its button; its words where core padhint places
+// them. Over the world, under the game's own windows (uaUI's world layer); the others' dots stay the driver's
+static void fillSheet(State& s, uisheet::Content& c) {
+    const ph::Layout& L = s.layout;
+    const float sc = L.s;
+    c.w = float(L.w), c.h = float(L.h);
+    c.rect(c.under, L.glass, L.glass.h / 2, 0x10141C, std::max(0.88f, uistyle::panel()), 0xFFFFFF, 0.10f, 1.0f * sc);
+    for (size_t i = 0; i < L.parts.size() && i < s.parts.size(); ++i)
+        for (size_t g = 0; g < L.parts[i].glyphs.size() && g < s.parts[i].buttons.size(); ++g) {
+            const panel::Box& b = L.parts[i].glyphs[g];
+            s.sheet.glyph(c, s.parts[i].buttons[g], s.sheetSony, b.x, b.y, b.h);
+        }
+    c.say(ph::words(L, s.parts, s.sheetSony));
+}
+
+void frame(HWND game, unsigned codePage, double k, int targetWidth, int targetHeight) {
+    frameInner(game, codePage, k, targetWidth, targetHeight);
+    State& s = state();
+    s.sheet.world = true;
+    s.sheetShown = s.sheet.frame("npc tag", s.shown, false, s.layout.x, s.layout.y, s.sheetGen,
+                                 [&](uisheet::Content& c) { fillSheet(s, c); });
+}
+
 void draw(FrameRecord& record, gpu::Renderer& renderer) {
     State& s = state();
     if (s.k <= 0 || (!s.shown && s.dots.empty())) return;
     const size_t world = record.firstInterface(), before = record.commands().size();
     const float r = std::max(2.0f, 2.5f * s.scale);  // the target's pixels, as the dots are
     for (const State::Dot& d : s.dots) drawFill(record, d.x - r, d.y - r, 2 * r, 2 * r, s.k, kDot);
-    if (s.shown && s.picture.width > 0)
+    if (s.shown && !s.sheetShown && s.picture.width > 0)
         drawPart(record, renderer, s.picture, s.texture, s.texW, s.texH, s.upload, s.layout.x, s.layout.y, s.k);
     const size_t added = record.commands().size() - before;  // under the game's own windows, as the world is
     if (added) record.moveLastBefore(added, world);

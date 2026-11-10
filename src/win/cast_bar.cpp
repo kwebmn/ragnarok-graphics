@@ -18,6 +18,8 @@
 #include "win/picture_draw.hpp"
 #include "win/real_ddraw.hpp"
 #include "win/ui_cost.hpp"
+#include "win/uaui.hpp"
+#include "win/ui_sheet.hpp"
 
 namespace uagfx::win::castwin {
 namespace {
@@ -35,6 +37,9 @@ constexpr int kMostSkill = 0x3FD;
 using TimeFn = DWORD(WINAPI*)();
 
 struct State {
+    uisheet::Sheet sheet;  // 3.0.18-beta.38: the cast drawn by uaUI
+    int sheetGen = 0;
+    bool sheetShown = false;
     bool on = false, shown = false, namesChecked = false, namesKnown = false;
     float k = 0, scale = 1;
     uint32_t hidGauge = 0;  // the game's gauge this one hides
@@ -117,6 +122,10 @@ std::vector<Words> gdiWords(const std::vector<cb::Words>& in) {
 }
 
 void render(State& s) {
+    if (uaui::ready()) {  // 3.0.18-beta.38: uaUI's cast said again, no picture
+        ++s.sheetGen;
+        return;
+    }
     const uicost::Paint cost("cast", s.layout.w, s.layout.h);  // 3.0.11-beta.55
     if (!panel::blank(s.picture, s.layout.w, s.layout.h)) return;  // 3.0.11-beta.57: in the memory it had
     cb::paint(s.picture, s.layout, s.data);
@@ -138,7 +147,8 @@ void packet(const packets::Event& e) {
     }
 }
 
-void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int targetHeight) {
+static void frameInner(HWND game, bool on, unsigned codePage, double k, int targetWidth,
+                       int targetHeight) {
     State& s = state();
     if (on != s.on) {
         s.on = on;
@@ -189,7 +199,7 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     s.layout = cb::layout(d, centre, top, scale);
     const std::string key = d.name + ';' + d.left + ';' + std::to_string(int(d.done * s.layout.bar.w)) + ';' +
                             std::to_string(s.layout.x) + ',' + std::to_string(s.layout.y) + ';' +
-                            std::to_string(scale) + (d.icon ? "i" : "");
+                            std::to_string(scale) + (d.icon ? "i" : "") + (uaui::ready() ? "u" : "");
     if (key != s.key) {
         s.key = key;
         render(s);
@@ -197,9 +207,45 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     s.shown = true;
 }
 
+// 3.0.18-beta.38 (docs/superpowers/plans/2026-11-09-uaui-migration.md, stage 5 - by hand): the cast over the hero in
+// RmlUi's markup, line by line as core castbar paints it - its pill, the skill's icon on its dark square, the bar,
+// its gold fill with the glow and the lighter upper half; the words where core castbar places them
+static void fillSheet(State& s, uisheet::Content& c) {
+    const cb::Layout& L = s.layout;
+    const cb::Data& d = s.data;
+    const float sc = L.s;
+    constexpr uint32_t kCard = 0x10141C, kWhite = 0xFFFFFF, kBlack = 0x000000, kGold = 0xC9A55B, kGold2 = 0xE6CB8A;
+    auto& u = c.under;
+    c.w = float(L.w), c.h = float(L.h);
+    c.rect(u, L.pill, 8 * sc, kCard, 0.86f, kWhite, 0.10f, 1.0f * sc);
+    if (d.icon && d.icon->width > 0 && L.icon.w > 0) {
+        c.rect(u, L.icon, 4 * sc, kBlack, 0.5f);
+        c.icons.push_back(uisheet::Icon{std::round(L.icon.x + (L.icon.w - float(d.icon->width)) / 2),
+                                        std::round(L.icon.y + (L.icon.h - float(d.icon->height)) / 2),
+                                        float(d.icon->width), float(d.icon->height), 1, s.sheet.icon(d.icon)});
+    }
+    c.rect(c.over, L.bar, L.bar.h / 2, kBlack, 0.6f, kWhite, 0.08f, 1.0f * sc);
+    const float done = std::clamp(d.done, 0.0f, 1.0f);
+    if (done > 0) {
+        const panel::Box fill{L.bar.x, L.bar.y, std::max(L.bar.h, L.bar.w * done), L.bar.h};
+        const panel::Box glow{fill.x - 1.5f * sc, fill.y - 1.5f * sc, fill.w + 3 * sc, fill.h + 3 * sc};
+        c.rect(c.over, glow, glow.h / 2, kGold2, 0.22f);
+        c.rect(c.over, fill, fill.h / 2, kGold, 1.0f);
+        c.rect(c.over, panel::Box{fill.x, fill.y, fill.w, fill.h * 0.5f}, fill.h * 0.25f, kGold2, 0.8f);
+    }
+    c.say(cb::words(L, d));
+}
+
+void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int targetHeight) {
+    frameInner(game, on, codePage, k, targetWidth, targetHeight);
+    State& s = state();
+    s.sheetShown = s.sheet.frame("cast", s.shown, false, s.layout.x, s.layout.y, s.sheetGen,
+                                 [&](uisheet::Content& c) { fillSheet(s, c); });
+}
+
 void draw(FrameRecord& record, gpu::Renderer& renderer) {
     State& s = state();
-    if (!s.shown || s.k <= 0 || s.picture.width <= 0 || s.picture.height <= 0) return;
+    if (!s.shown || s.sheetShown || s.k <= 0 || s.picture.width <= 0 || s.picture.height <= 0) return;
     int cursor = -1, cx = 0, cy = 0;  // under the game's own cursor, as the panels
     if (readGameCursor(cx, cy)) cursor = panel::cursorDraw(record, float(cx), float(cy));
     drawPart(record, renderer, s.picture, s.texture, s.texW, s.texH, s.upload, s.layout.x, s.layout.y, s.k);

@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdio>
 #include <string>
 #include <vector>
 
@@ -16,6 +17,8 @@
 #include "win/log.hpp"
 #include "win/picture_draw.hpp"
 #include "win/reference_load.hpp"
+#include "win/uaui.hpp"
+#include "win/ui_sheet.hpp"
 
 namespace uagfx::win::groundwin {
 namespace {
@@ -25,6 +28,10 @@ constexpr uint32_t kGround = 0x0B0F16, kText = 0xEEF2F8, kCardRgb = 0xD3A6FF, kG
 constexpr size_t kMost = 48;  // labels at most at once
 
 struct Label {
+    std::string text;  // 3.0.18-beta.38: uaUI\'s - its words, colour, plain or framed, size
+    uint32_t rgb = 0;
+    bool plain = true;
+    int w = 0, h = 0;
     std::string key;
     panel::Picture picture;
     uint32_t texture = 0;
@@ -34,6 +41,11 @@ struct Label {
 };
 
 struct State {
+    uisheet::Sheet sheet;  // 3.0.18-beta.38: the names drawn by uaUI (the world's layer), said again each frame
+    int sheetGen = 0;
+    bool sheetShown = false;
+    float scale = 1;
+    int targetW = 0, targetH = 0;
     gi::Ground ground;
     std::string map;
     std::vector<Label> pool;
@@ -71,7 +83,8 @@ void packet(uint16_t id, const uint8_t* packet) {
     if (id == 0x009d || id == 0x009e || id == 0x00a1) state().ground.packet(id, packet);
 }
 
-void frame(HWND game, bool names, bool highlight, unsigned codePage, double k, int targetWidth, int targetHeight) {
+static void frameInner(HWND game, bool names, bool highlight, unsigned codePage, double k, int targetWidth,
+                       int targetHeight) {
     State& s = state();
     s.used = 0;
     if ((!names && !highlight) || !game || k <= 0 || targetWidth <= 0 || targetHeight <= 0 || !inGameWorld()) return;
@@ -95,6 +108,7 @@ void frame(HWND game, bool names, bool highlight, unsigned codePage, double k, i
     const auto index = reference::index();
     const float scale = uistyle::readingScale(k);
     s.k = float(k);
+    s.scale = scale, s.targetW = targetWidth, s.targetH = targetHeight;
     for (const auto& [id, it] : s.ground.items()) {
         if (s.used >= kMost) break;
         int type = -1, price = 0;
@@ -116,13 +130,15 @@ void frame(HWND game, bool names, bool highlight, unsigned codePage, double k, i
         const std::string text = gi::label(nameOf(it.item, it.identified, codePage, index.get()), it.amount);
         if (s.used >= s.pool.size()) s.pool.emplace_back();
         Label& l = s.pool[s.used++];
-        const std::string key = text + '#' + std::to_string(int(worth)) + '#' + std::to_string(scale);
+        const std::string key = text + '#' + std::to_string(int(worth)) + '#' + std::to_string(scale) +
+                                (uaui::ready() ? "u" : "");  // 3.0.18-beta.38
         if (key != l.key) {
             l.key = key;
             const float px = 11 * scale;
             const int lw = int(std::ceil(panel::wordsWidth(text, px, true) + 12 * scale));
             const int lh = int(std::ceil(17 * scale));
-            if (panel::blank(l.picture, lw, lh)) {
+            l.text = text, l.rgb = rgbOf(worth), l.plain = worth == gi::Worth::Plain, l.w = lw, l.h = lh;
+            if (!uaui::ready() && panel::blank(l.picture, lw, lh)) {
                 panel::roundRect(l.picture, panel::Box{0, 0, float(lw), float(lh)}, 5 * scale, kGround, 0.72f,
                                  rgbOf(worth), worth == gi::Worth::Plain ? 0.0f : 0.9f, 1.0f * scale);
                 drawWords(l.picture, {Words{panel::Box{0, 0, float(lw), float(lh)}, utf8Wide(text), rgbOf(worth), px,
@@ -130,8 +146,8 @@ void frame(HWND game, bool names, bool highlight, unsigned codePage, double k, i
                 l.upload = true;
             }
         }
-        l.x = int(sx * float(k)) - l.picture.width / 2;
-        l.y = int(sy * float(k)) - l.picture.height - int(4 * scale);
+        l.x = int(sx * float(k)) - l.w / 2;
+        l.y = int(sy * float(k)) - l.h - int(4 * scale);
     }
     if (s.used && s.told < 5) {
         ++s.told;
@@ -139,9 +155,33 @@ void frame(HWND game, bool names, bool highlight, unsigned codePage, double k, i
     }
 }
 
+// 3.0.18-beta.38 (docs/superpowers/plans/2026-11-09-uaui-migration.md, stage 5 - by hand): the things on the ground
+// named in RmlUi's markup - each a plate (framed in its worth's colour) with its name, over the world and under the
+// game's own windows (uaUI's world layer)
+static void fillSheet(State& s, uisheet::Content& c) {
+    c.w = float(s.targetW), c.h = float(s.targetH);
+    const float sc = s.scale;
+    for (size_t i = 0; i < s.used; ++i) {
+        const Label& l = s.pool[i];
+        const panel::Box b{float(l.x), float(l.y), float(l.w), float(l.h)};
+        c.rect(c.under, b, 5 * sc, kGround, 0.72f, l.rgb, l.plain ? 0.0f : 0.9f, 1.0f * sc);
+        char colour[16];
+        std::snprintf(colour, sizeof colour, "#%06x", unsigned(l.rgb & 0xFFFFFF));
+        c.words.push_back(uisheet::Word{b.x, b.y, b.w, b.h, 11 * sc, b.h, l.text, colour, "word bold centre"});
+    }
+}
+
+void frame(HWND game, bool names, bool highlight, unsigned codePage, double k, int targetWidth, int targetHeight) {
+    frameInner(game, names, highlight, codePage, k, targetWidth, targetHeight);
+    State& s = state();
+    s.sheet.world = true;
+    s.sheetShown = s.sheet.frame("ground items", s.used > 0 && s.k > 0, false, 0, 0, ++s.sheetGen,
+                                 [&](uisheet::Content& c) { fillSheet(s, c); });
+}
+
 void draw(FrameRecord& record, gpu::Renderer& renderer) {
     State& s = state();
-    if (!s.used || s.k <= 0) return;
+    if (!s.used || s.k <= 0 || s.sheetShown) return;
     const size_t world = record.firstInterface(), before = record.commands().size();
     for (size_t i = 0; i < s.used; ++i) {
         Label& l = s.pool[i];

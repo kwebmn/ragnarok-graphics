@@ -154,6 +154,7 @@ bool Sheet::frame(const char* name, bool on, bool window, int x, int y, int gen,
         doc_.passive = true;
         doc_.window = window;
         doc_.anywhere = anywhere;
+        doc_.world = world;
         if (!doc_.make(name, kDoc, [&](Rml::DataModelConstructor& m) {
                 if (auto b = m.RegisterStruct<Box>()) {
                     b.RegisterMember("x", &Box::x);

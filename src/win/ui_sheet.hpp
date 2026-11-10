@@ -117,6 +117,7 @@ public:
     // The glass's ground: the window's colour at the windows' opacity
     static std::string ground(uint32_t rgb, float opacity);
     bool anywhere = false;  // 3.0.18-beta.33: set before the first frame - shown outside the world too (the login's)
+    bool world = false;     // 3.0.18-beta.38: set before the first frame - with the world's overlays, under the parts
 
 private:
     uaui::Doc doc_;
