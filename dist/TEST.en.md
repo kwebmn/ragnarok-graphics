@@ -1,3 +1,5 @@
+- New interface (uaUI): the game's message box (OK, Yes/No, "Please wait…") is now a live window of the new library - its text wraps by itself, the buttons stand in a row under it, the window centres by its own size.
+
 - New interface (uaUI): the "Емоції" and "Список команд" windows and the player menu (right click) are now live windows of the new library - it lays them out itself (flexbox), its own hover and clicks. Emotes: a click puts it into the chat, a double click sends it, drag by the window's ground. The gamepad walks them as before.
 
 - The searches in "Речі", "Склад", "Візок", the shop and "Довідник" now take any language (only Latin letters before), Backspace removes a whole letter, Ctrl+A, Ctrl+C, Ctrl+X and Ctrl+V work. While a field types, no key reaches the game.
