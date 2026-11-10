@@ -125,6 +125,7 @@ struct Geometry {
 
 struct State {
     bool started = false, failed = false, on = false, inWorld = false, dragging = false;
+    bool leftDown = false, rightDown = false;  // 3.0.18-beta.22: a press taken by uaUI, its release ours too
     Rml::Context* context = nullptr;
     HWND game = nullptr;
     unsigned codePage = 1251;
@@ -1692,7 +1693,14 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     if (!pointerInTarget(game, m, lp, s.k, s.targetW, s.targetH, tx, ty)) return false;
     s.context->ProcessMouseMove(int(tx), int(ty), 0);
     const bool over = docUnder(s) != nullptr;
-    if (!over && !(up && s.context->IsMouseInteracting())) return false;
+    // 3.0.18-beta.22 (the owner: «окна не перетаскиваются»): a button let go is ours only when its press was - a drag
+    // of the driver's other windows ends where they are, its release theirs
+    const bool ours = (up && s.leftDown) || (m == WM_RBUTTONUP && s.rightDown);
+    if (!over && !ours) return false;
+    if (down) s.leftDown = true;
+    if (up) s.leftDown = false;
+    if (m == WM_RBUTTONDOWN) s.rightDown = true;
+    if (m == WM_RBUTTONUP) s.rightDown = false;
     if (wheel) s.context->ProcessMouseWheel(-float(GET_WHEEL_DELTA_WPARAM(wp)) / float(WHEEL_DELTA), 0);
     else if (down) s.context->ProcessMouseButtonDown(0, 0);
     else if (up) s.context->ProcessMouseButtonUp(0, 0);

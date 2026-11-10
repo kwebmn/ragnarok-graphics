@@ -87,3 +87,4 @@ picture's upload gone. Cost if wrong: per-pixel glows (panel::over loops) land i
 - 2026-11-10 beta.19: party panel by hand in RML (rows, faces, crown, states, HP bar, cast line, way arrow rotated, buffs with times, compact cells, fold/view); click actions shared (toggleFold/toggleView/rowClicked); uaui::stamp()
 - 2026-11-10 beta.20: buffs column by hand in RML (core layout's boxes in px, sweep as <ua-ring sector square>, times/names/«ще N» with font-effect outline, names toggle, tip); font engine: outline effect (halo glyphs); ua-ring square sector
 - 2026-11-10 beta.21: hotbar by hand in RML (core hotbar::view: every part placed and said; passive uaui::Doc - drag/wheel/keys stay the part's), grey icons/blocked/pad badges/battle icon made once
+- 2026-11-10 beta.22: uaui::mouse takes a release only after its own press (owner: windows did not drag)
