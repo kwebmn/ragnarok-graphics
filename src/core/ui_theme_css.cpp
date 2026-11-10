@@ -1192,6 +1192,22 @@ scrollbarvertical sliderarrowdec, scrollbarvertical sliderarrowinc { width: 0; h
     line-height: 2.1667rem;
           text-align: center; border-radius: 0.5833rem; color: #9aa3b5; font-size: 1.0833rem; }
 .stl .x.hot { background-color: #ffffff24; color: #ffffff; }
+/* 3.0.18-beta.102: the guild's card live (uikit/guild_live) - its head and tabs by flexbox, the body layered */
+.lw.gdl { padding: 0; font-size: 1rem; box-sizing: border-box; }
+.gdl .head { display: block; height: 2.3333rem; line-height: 2.3333rem; margin: 1.3333rem 3.6667rem 0 1.3333rem; }
+.gdl .head .title { font-size: 1.25rem; font-weight: bold; color: #eef2f8; }
+.gdl .x { position: absolute; right: 1.3333rem; top: 1.5rem; width: 2rem; height: 2rem; line-height: 2rem;
+          text-align: center; border-radius: 0.5rem; color: #eef2f8; font-size: 1rem; background-color: #ffffff0f; }
+.gdl .x.hot { background-color: #ffffff24; }
+.gdl .gtabs { display: flex; flex-wrap: wrap; justify-content: space-between; margin: 0.3333rem 1.3333rem 0 1.3333rem; }
+.gdl .gtab { display: block; width: 9.3333rem; height: 2.5rem; line-height: 2.3333rem; margin-bottom: 0.5rem;
+    text-align: center;
+             border-radius: 0.6667rem; border: 0.0833rem #ffffff1f; background-color: #ffffff0a; font-size: 1rem;
+             color: #eef2f8; box-sizing: border-box; }
+.gdl .gtab.hot { background-color: #ffffff1a; }
+.gdl .gtab.on { border-color: #c9a55bcc; background-color: #c9a55b3d; font-weight: bold; }
+.gdl .gtab.off { color: #5e6575; }
+.gdl .lay { margin-top: 0.1667rem; }
 )";
 
 }  // namespace

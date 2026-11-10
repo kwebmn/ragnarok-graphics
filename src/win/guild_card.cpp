@@ -23,6 +23,8 @@
 #include "win/ui_cost.hpp"
 #include "win/window_shadow.hpp"
 #include "win/uaui.hpp"
+#include "uikit/guild_live.hpp"
+#include "win/live_part.hpp"
 #include "win/ui_sheet.hpp"
 
 namespace uagfx::win::guildcardwin {
@@ -54,7 +56,9 @@ using SendMsgFn = int(__attribute__((thiscall)) *)(uint32_t self, uint32_t sende
 
 struct State {
     CardDrag move;  // 3.0.18-beta.92: moved by its empty part
-    uisheet::Sheet sheet;  // 3.0.18-beta.34: the window drawn by uaUI
+    // 3.0.18-beta.102 (docs/superpowers/plans/2026-11-10-uaui-live-drag.md): live - its head and tabs by RmlUi, its
+    // body layered
+    LivePart<uikit::guild::Model> live;
     int sheetGen = 0;
     bool sheetShown = false;
     WindowShadow shadow;
@@ -364,6 +368,7 @@ static void frameInner(HWND game, bool on, unsigned codePage, double k, int targ
     const size_t rows = s.show.tab == gc::Tab::Members ? s.members.size() : s.more.lines.size();
     if (s.show.editing && s.show.tab != gc::Tab::Notice) s.show.editing = false;  // .271: another tab - let go
     s.layout = gc::layout(targetWidth, targetHeight, s.scale, s.show.tab, rows, s.show.editing);
+    if (s.live.shown()) uikit::guild::refit(s.live.doc.doc(), s.layout);  // 3.0.18-beta.102: its drawn boxes
     // 3.0.18-beta.92 (the owner: «не все окна перетаскиваются»): moved by a press on its empty part
     s.move.apply(s.layout.x, s.layout.y, s.layout.w, s.layout.h, targetWidth, targetHeight, k, 48 * s.scale);
     s.show.caret = (GetTickCount64() / 500) % 2 == 0;
@@ -410,102 +415,20 @@ static void frameInner(HWND game, bool on, unsigned codePage, double k, int targ
     block(s, game);
 }
 
-// 3.0.18-beta.34 (docs/superpowers/plans/2026-11-09-uaui-migration.md, stage 5 - by hand): this window in RmlUi's
-// markup, line by line as core guildcard paints it (its boxes, icons, circles); the words where it places them
-static void fillSheet(State& s, uisheet::Content& ui) {
-    using namespace uagfx::guildcard;
-    const auto& L = s.layout;
-    const auto& members = s.members;
-    const auto& more = s.more;
-    const auto& sh = s.show;
-    [[maybe_unused]] constexpr uint32_t kCard = 0x10141C;
-    [[maybe_unused]] constexpr uint32_t kWhite = 0xFFFFFF;
-    [[maybe_unused]] constexpr uint32_t kGold = 0xC9A55B;
-    [[maybe_unused]] constexpr uint32_t kGold2 = 0xE6CB8A;
-    [[maybe_unused]] constexpr uint32_t kText = 0xEEF2F8;
-    [[maybe_unused]] constexpr uint32_t kMuted = 0x9AA3B5;
-    [[maybe_unused]] constexpr uint32_t kOnline = 0x4CC777;
-    [[maybe_unused]] constexpr uint32_t kOffline = 0x5C6370;
-    [[maybe_unused]] constexpr uint32_t kDim = 0x5E6575;
-    [[maybe_unused]] constexpr float kW = 380;
-    [[maybe_unused]] constexpr float kPad = 16;
-    [[maybe_unused]] constexpr float kTitleH = 28;
-    [[maybe_unused]] constexpr float kTabH = 30;
-    [[maybe_unused]] constexpr float kFactH = 22;
-    [[maybe_unused]] constexpr float kRowH = 26;
-    [[maybe_unused]] constexpr float kGap = 6;
-    ui.w = float(L.w), ui.h = float(L.h);
-    const auto put = [&](const panel::Picture& p, const panel::Box& box, float k = 1.0f) {
-        if (p.width > 0)
-            ui.icons.push_back(uisheet::Icon{std::round(box.x + (box.w - float(p.width)) / 2),
-                                            std::round(box.y + (box.h - float(p.height)) / 2), float(p.width),
-                                            float(p.height), k, s.sheet.icon(&p)});
-    };
-    [[maybe_unused]] const auto circle = [&](float cx, float cy, float r, uint32_t rgb, float a) {
-        ui.rect(ui.under, panel::Box{cx - r, cy - r, 2 * r, 2 * r}, r, rgb, a);
-    };
-    [[maybe_unused]] const auto icon = [&](uiicons::Icon which, float x, float y, float side, uint32_t rgb, float a,
-                                           float stroke) {
-        const int px = std::max(4, int(std::ceil(side)));
-        const std::string key = "u" + std::to_string(int(which)) + ':' + std::to_string(px) + ':' +
-                                std::to_string(rgb) + ':' + std::to_string(int(a * 100));
-        const std::string src = s.sheet.made(key, px, px, [&](panel::Picture& p) {
-            uiicons::draw(p, which, 0, 0, float(px), rgb, a, stroke);
-        });
-        ui.icons.push_back(uisheet::Icon{x, y, float(px), float(px), 1, src});
-    };
-    (void)put;
-
-    [&] {
-        const float sc = L.s;
-        ui.rect(ui.under, L.glass, 12 * sc, kCard, uistyle::window(), kWhite, 0.12f, 1.0f * sc);
-        ui.rect(ui.under, L.close, 6 * sc, kWhite, sh.hoverClose ? 0.14f : 0.06f);
-        for (int i = 0; i < kTabs; ++i) {
-            const bool on = int(sh.tab) == i, hot = sh.hoverTab == i && allowed(i, sh.rights);
-            ui.rect(ui.under, L.tabs[i], 8 * sc, on ? kGold : kWhite, on ? 0.24f : hot ? 0.10f : 0.04f,
-                    on ? kGold : kWhite, on ? 0.8f : 0.12f, 1.0f * sc);
-        }
-        ui.rect(ui.under, L.list, 8 * sc, 0x000000, 0.16f);
-        if (L.edit.w > 0 && sh.canEdit)
-            ui.rect(ui.under, L.edit, 8 * sc, kGold, sh.hoverEdit ? 0.34f : 0.22f, kGold, 0.8f, 1.0f * sc);
-        if (sh.editing && sh.tab == Tab::Notice) {  // .271: the fields, the one typed into in gold; «Скасувати»
-            for (int i = 0; i < 2; ++i)
-                if (L.fields[i].w > 0)
-                    ui.rect(ui.under, L.fields[i], 6 * sc, kWhite, sh.hoverField == i ? 0.10f : 0.06f,
-                            sh.field == i ? kGold : kWhite, sh.field == i ? 0.8f : 0.16f, 1.0f * sc);
-            if (L.cancel.w > 0)
-                ui.rect(ui.under, L.cancel, 8 * sc, kWhite, sh.hoverCancel ? 0.14f : 0.06f, kWhite, 0.18f, 1.0f * sc);
-        }
-        if (sh.tab != Tab::Members) {  // 3.0.11-beta.220: tabs 2-5 - a skill's «+» where it can rise
-            for (size_t i = 0; i < L.plus.size(); ++i) {
-                const size_t at = i + size_t(std::max(0, sh.scroll));
-                if (at < more.lines.size() && more.lines[at].plus)
-                    ui.rect(ui.under, L.plus[i], 6 * sc, kGold, sh.hoverPlus == int(i) ? 0.45f : 0.28f, kGold, 0.85f,
-                            1.0f * sc);
-            }
-            return;
-        }
-        for (size_t i = 0; i < L.rows.size(); ++i) {
-            const size_t at = i + size_t(std::max(0, sh.scroll));
-            if (at >= members.size()) break;
-            const float d = 8 * sc;
-            ui.rect(ui.under, panel::Box{L.rows[i].x + 8 * sc, L.rows[i].y + (L.rows[i].h - d) / 2, d, d}, d / 2,
-                    members[at].online ? kOnline : kOffline, 0.95f);
-        }
-    }();
-    ui.say(uagfx::guildcard::words(s.layout, s.info, s.members, s.more, s.show, texts()));
-}
-
 void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int targetHeight) {
     frameInner(game, on, codePage, k, targetWidth, targetHeight);
     State& s = state();
-    s.sheetShown = s.sheet.frame("guild", s.shown, true, s.layout.x, s.layout.y, s.sheetGen,
-                                 [&](uisheet::Content& c) { fillSheet(s, c); });
+    namespace gl = uikit::guild;
+    s.sheetShown = s.live.frame("guild", s.shown, s.layout.x, s.layout.y, s.sheetGen, gl::rml(), gl::bind,
+                                [&](gl::Model& m) {
+                                    m.ground = s.live.ground();
+                                    gl::fill(m, s.layout, s.info, s.members, s.more, s.show, texts());
+                                });
 }
 
 void draw(FrameRecord& record, gpu::Renderer& renderer) {
     State& s = state();
-    s.sheet.raise();  // 3.0.18-beta.43: at its place in the windows' stack
+    s.live.raise();  // 3.0.18-beta.43: at its place in the windows' stack
     if (!s.shown || s.k <= 0 || ((s.picture.width <= 0 || s.picture.height <= 0) && !s.sheetShown)) return;
     int cursor = -1, cx = 0, cy = 0;
     if (readGameCursor(cx, cy)) cursor = panel::cursorDraw(record, float(cx), float(cy));
@@ -537,7 +460,8 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     }
     if (m != WM_LBUTTONDOWN && m != WM_LBUTTONDBLCLK) return true;
     const gc::Hit h = gc::hitTest(s.layout, lx, ly);
-    if (h.part == gc::Part::None && m == WM_LBUTTONDOWN) s.move.begin(tx, ty);  // 3.0.18-beta.92
+    // 3.0.18-beta.92; .102: its body (nothing pressable there) - the hit test never says None inside the card
+    if ((h.part == gc::Part::None || h.part == gc::Part::Body) && m == WM_LBUTTONDOWN) s.move.begin(tx, ty);
     if (h.part == gc::Part::Tab) {
         s.show.scroll = 0;
         switchTab(s, h.index);  // 3.0.11-beta.210: the game's own tab with it (the card follows it)
