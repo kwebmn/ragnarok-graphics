@@ -11,6 +11,7 @@
 #include <variant>
 #include <vector>
 
+#include "core/window_stack.hpp"
 #include "core/layout.hpp"
 #include "core/npc_talk.hpp"
 #include "core/pad_glyphs.hpp"
@@ -31,6 +32,7 @@
 #include "win/window_shadow.hpp"
 #include "win/window_stack.hpp"
 #include "win/uaui.hpp"
+#include "win/ui_live.hpp"
 #include "win/ui_sheet.hpp"
 
 namespace uagfx::win::npcwin {
@@ -48,7 +50,37 @@ constexpr uint32_t kShown = 0x38, kDefaultButton = 0x58, kNewPage = 0x88;
 constexpr uint32_t kRowsBegin = 0x68, kRowsEnd = 0x6C, kList = 0x74, kListChosen = 0x64;
 constexpr int kBtnNext = 0x98, kBtnClose = 0x87;
 
+// 3.0.18-beta.88 (live windows, group 3): the NPC's talk a live window - its lines' colour runs, its options in two
+// columns by flexbox, its button; RmlUi's clicks, the drag by its ground kept
+const char* kLive = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss"/></head>
+<body class="lw npw" data-style-background-color="ground">
+<div class="head"><span class="title">{{name}}</span><span class="count">{{place}}</span></div>
+<span class="x ctl" data-event-click="np_close()">&#x2715;</span>
+<div class="talk"><div class="tline" data-for="l : lines"><span data-for="r : l.runs" data-style-color="r.colour">{{r.text}}</span></div></div>
+<div class="opts"><div class="opt ctl" data-for="o, i : options" data-class-on="i == selected" data-event-click="np_choose(i)"><span
+  class="num">{{i + 1}}</span><span class="otext">{{o.text}}</span><span class="last" data-if="o.last">{{last_time}}</span></div></div>
+<div class="btns" data-if="button != ''"><div class="btn main ctl" data-event-click="np_button()">{{button}}</div></div>
+<div class="foot"><span class="hint">{{keys}}</span><span class="hint">{{server}}</span></div>
+<div id="ring" class="ring"></div>
+</body></rml>)RML";
+
+struct NpcRunView {
+    Rml::String text, colour;
+};
+struct NpcLineView {
+    std::vector<NpcRunView> runs;
+};
+struct NpcOptionView {
+    Rml::String text;
+    bool last = false;
+};
+
 struct State {
+    uilive::Window live;  // 3.0.18-beta.88
+    std::vector<NpcLineView> lineViews;
+    std::vector<NpcOptionView> optionViews;
+    Rml::String name, place, buttonWord, keys, server, lastTime, ground = "#10141cf0";
+    int selectedNo = -1;
     uisheet::Sheet sheet;  // 3.0.18-beta.31: the window drawn by uaUI
     int sheetGen = 0;
     bool sheetShown = false;
@@ -146,8 +178,10 @@ void render(State& s) {
 void block(const State& s, HWND game) {
     RECT client{};
     if (s.targetW <= 0 || s.targetH <= 0 || !GetClientRect(game, &client)) return;
-    const panel::Box& b = s.layout.glass;
-    const float x0 = float(s.layout.x) + b.x, y0 = float(s.layout.y) + b.y;
+    panel::Box b = s.layout.glass;
+    float x0 = float(s.layout.x) + b.x, y0 = float(s.layout.y) + b.y;
+    int lx = 0, ly = 0, lw = 0, lh = 0;  // 3.0.18-beta.88: the live talk's own box
+    if (s.live.box(lx, ly, lw, lh)) x0 = float(lx), y0 = float(ly), b.w = float(lw), b.h = float(lh);
     const RECT r{LONG(int64_t(x0) * client.right / s.targetW), LONG(int64_t(y0) * client.bottom / s.targetH),
                  LONG(int64_t(x0 + b.w) * client.right / s.targetW + 1),
                  LONG(int64_t(y0 + b.h) * client.bottom / s.targetH + 1)};
@@ -400,9 +434,94 @@ static void fillSheet(State& s, uisheet::Content& c) {
     c.say(nt::words(L, t, sh, texts(), measure));
 }
 
+// 3.0.18-beta.88: the live talk's model and place
+static void liveFrame(State& s) {
+    s.live.make("npc", kLive, [&](Rml::DataModelConstructor& m) {
+        if (auto v = m.RegisterStruct<NpcRunView>()) {
+            v.RegisterMember("text", &NpcRunView::text);
+            v.RegisterMember("colour", &NpcRunView::colour);
+        }
+        m.RegisterArray<std::vector<NpcRunView>>();
+        if (auto v = m.RegisterStruct<NpcLineView>()) v.RegisterMember("runs", &NpcLineView::runs);
+        if (auto v = m.RegisterStruct<NpcOptionView>()) {
+            v.RegisterMember("text", &NpcOptionView::text);
+            v.RegisterMember("last", &NpcOptionView::last);
+        }
+        m.RegisterArray<std::vector<NpcLineView>>();
+        m.RegisterArray<std::vector<NpcOptionView>>();
+        m.Bind("lines", &s.lineViews);
+        m.Bind("options", &s.optionViews);
+        m.Bind("name", &s.name);
+        m.Bind("place", &s.place);
+        m.Bind("button", &s.buttonWord);
+        m.Bind("keys", &s.keys);
+        m.Bind("server", &s.server);
+        m.Bind("last_time", &s.lastTime);
+        m.Bind("selected", &s.selectedNo);
+        m.Bind("ground", &s.ground);
+        m.BindEventCallback("np_choose", [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList& a) {
+            if (!a.empty()) choose(state(), a[0].Get<int>(), "a click");
+        });
+        m.BindEventCallback("np_button", [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList&) {
+            State& st = state();
+            press(st, st.talk.button == nt::Button::Next ? uapad::DialogCommand::Next : uapad::DialogCommand::Close,
+                  "its button");
+        });
+        m.BindEventCallback("np_close", [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList&) {
+            closeOrCancel(state(), "its close");
+        });
+    });
+    if (!s.live.made()) return;
+    const nt::Texts tx = texts();
+    const nt::Talk& t = s.talk;
+    std::vector<NpcLineView> lines;
+    for (const std::string& l : t.lines) {
+        NpcLineView v;
+        for (const nt::Run& r : nt::colours(l, 0xEEF2F8)) {
+            char col[16];
+            std::snprintf(col, sizeof col, "#%06x", unsigned(uaui::themed(r.rgb) & 0xFFFFFF));
+            v.runs.push_back(NpcRunView{r.text, col});
+        }
+        lines.push_back(std::move(v));
+    }
+    std::vector<NpcOptionView> options;
+    for (size_t i = 0; i < t.options.size(); ++i)
+        options.push_back(NpcOptionView{t.options[i], int(i) == s.show.remembered});
+    const Rml::String button = t.button == nt::Button::Next ? tx.next : t.button == nt::Button::Close ? tx.close : "";
+    const Rml::String ground = uisheet::Sheet::ground(0x10141C, uistyle::window());
+    bool sameLines = lines.size() == s.lineViews.size();
+    for (size_t i = 0; sameLines && i < lines.size(); ++i) {
+        sameLines = lines[i].runs.size() == s.lineViews[i].runs.size();
+        for (size_t j = 0; sameLines && j < lines[i].runs.size(); ++j)
+            sameLines = lines[i].runs[j].text == s.lineViews[i].runs[j].text &&
+                        lines[i].runs[j].colour == s.lineViews[i].runs[j].colour;
+    }
+    if (!sameLines) s.lineViews = std::move(lines), s.live.doc.dirty("lines");
+    const bool sameOptions = options.size() == s.optionViews.size() &&
+                             std::equal(options.begin(), options.end(), s.optionViews.begin(),
+                                        [](const NpcOptionView& a, const NpcOptionView& b) {
+                                            return a.text == b.text && a.last == b.last;
+                                        });
+    if (!sameOptions) s.optionViews = std::move(options), s.live.doc.dirty("options");
+    if (t.name != s.name || t.place != s.place || button != s.buttonWord || tx.keys != s.keys ||
+        tx.server != s.server || tx.lastTime != s.lastTime || t.selected != s.selectedNo || ground != s.ground) {
+        s.name = t.name, s.place = t.place, s.buttonWord = button, s.keys = tx.keys, s.server = tx.server;
+        s.lastTime = tx.lastTime, s.selectedNo = t.selected, s.ground = ground;
+        s.live.doc.dirtyAll();
+    }
+    s.live.frame(s.shown, s.layout.x, s.layout.y, int(winstack::Win::Npc), ".opt, .btn, .x");
+}
+
 void frame(HWND game, bool on, bool remember, unsigned codePage, double k, int targetWidth, int targetHeight) {
     frameInner(game, on, remember, codePage, k, targetWidth, targetHeight);
     State& s = state();
+    if (uaui::readyAnywhere()) {  // 3.0.18-beta.88: the live talk in place of the sheet
+        s.sheet.frame("npc", false, true, 0, 0, 0, [](uisheet::Content&) {});
+        s.sheetShown = false;
+        liveFrame(s);
+        return;
+    }
+    s.live.frame(false, 0, 0, 0, nullptr);
     s.sheetShown = s.sheet.frame("npc", s.shown, true, s.layout.x, s.layout.y, s.sheetGen,
                                  [&](uisheet::Content& c) { fillSheet(s, c); });
 }
@@ -410,6 +529,10 @@ void frame(HWND game, bool on, bool remember, unsigned codePage, double k, int t
 void draw(FrameRecord& record, gpu::Renderer& renderer) {
     State& s = state();
     s.sheet.raise();  // 3.0.18-beta.43: at its place in the windows' stack
+    if (s.live.shown) {  // 3.0.18-beta.88
+        s.live.draw(s.shadow, record, renderer, s.scale, s.k);
+        return;
+    }
     if (!s.shown || s.k <= 0 || ((s.picture.width <= 0 || s.picture.height <= 0) && !s.sheetShown)) return;
     int cursor = -1, cx = 0, cy = 0;
     if (readGameCursor(cx, cy)) cursor = panel::cursorDraw(record, float(cx), float(cy));
@@ -466,12 +589,20 @@ bool padCommand(uapad::DialogCommand c) {
 bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     State& s = state();
     if (!s.shown) return false;
-    (void)wp;
     const bool button = m == WM_LBUTTONDOWN || m == WM_LBUTTONUP || m == WM_LBUTTONDBLCLK || m == WM_RBUTTONDOWN ||
                         m == WM_RBUTTONUP || m == WM_RBUTTONDBLCLK || m == WM_MBUTTONDOWN || m == WM_MBUTTONUP;
     if (!button && m != WM_MOUSEWHEEL && m != WM_MOUSEMOVE) return false;
     float tx = 0, ty = 0;
     if (!pointerInTarget(game, m, lp, s.k, s.targetW, s.targetH, tx, ty, nullptr)) return false;
+    if (s.live.shown) {  // 3.0.18-beta.88: RmlUi's - a press on its ground drags it
+        if (m == WM_LBUTTONUP) s.drag.end();
+        if (m == WM_MOUSEMOVE) return false;
+        const int r = s.live.mouse(game, m, wp, lp);
+        if (!r) return false;
+        if (r == 2) s.drag.begin(tx, ty);
+        result = 0;
+        return true;
+    }
     const nt::Hit h = nt::hitTest(s.layout, tx - float(s.layout.x), ty - float(s.layout.y));
     if (h.part == nt::Part::None || m == WM_MOUSEMOVE) return false;
     result = 0;
@@ -565,6 +696,7 @@ void beforeGameDraw() {
 bool box(int& x, int& y, int& w, int& h) {  // 3.0.11-beta.109
     const State& s = state();
     if (!s.shown) return false;
+    if (s.live.box(x, y, w, h)) return true;  // 3.0.18-beta.88
     x = s.layout.x;
     y = s.layout.y;
     w = s.layout.w;

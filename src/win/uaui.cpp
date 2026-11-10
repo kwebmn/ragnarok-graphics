@@ -1396,6 +1396,20 @@ select selectbox option:checked { color: #e6cb8a; }
 .pkw .list { display: block; height: 280dp; overflow-y: auto; margin: 4dp 0 8dp 0; }
 .pkw .row { display: flex; align-items: center; font-size: 12.5dp; min-height: 30dp; }
 .pkw .row img { width: 26dp; height: 26dp; margin-right: 8dp; }
+.npw { width: 560dp; }
+.npw .count { margin-left: 10dp; font-size: 11.5dp; color: #9aa3b5; }
+.npw .talk { display: block; margin: 4dp 0 10dp 0; }
+.npw .tline { display: block; font-size: 13.5dp; line-height: 20dp; }
+.npw .opts { display: flex; flex-wrap: wrap; }
+.npw .opt { display: flex; align-items: center; width: 48%; margin: 0 2% 5dp 0; padding: 4dp 8dp; border-radius: 8dp;
+            background-color: #ffffff0d; border: 1dp #ffffff0f; font-size: 12.5dp; }
+.npw .opt:hover { background-color: #ffffff1a; }
+.npw .opt.on { background-color: #c9a55b29; border-color: #f3c653d9; }
+.npw .num { display: block; width: 22dp; height: 22dp; line-height: 22dp; margin-right: 8dp; text-align: center;
+            border-radius: 6dp; background-color: #1b1d24f2; color: #e6cb8a; font-weight: bold; font-size: 11.5dp; }
+.npw .otext { flex: 1; }
+.npw .last { font-size: 10.5dp; color: #9aa3b5; margin-left: 6dp; }
+.npw .foot { margin-top: 10dp; padding-top: 6dp; border-top: 1dp #ffffff12; }
 .ow { width: 380dp; }
 .ow .orow { display: flex; align-items: center; justify-content: space-between; margin: 4dp 0; min-height: 24dp; }
 .ow .orow input.range { width: 150dp; }
