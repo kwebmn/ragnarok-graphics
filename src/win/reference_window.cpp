@@ -63,6 +63,9 @@ struct State {
     // 3.0.18-beta.36: «Довідник» drawn by uaUI - core refwin's markup data, the world map's own picture, the words
     uisheet::Sheet sheet;
     int sheetGen = 0;
+    std::string worldKey;  // 3.0.18-beta.83: what the world map's picture last showed
+    int worldPainted = 0;
+    std::string worldSrc;  // 3.0.18-beta.83: its texture by the times painted (every change, not a sample of it)
     bool sheetShown = false;
     sheet::Model model;
     panel::Picture worldSheet;
@@ -710,7 +713,26 @@ void render(State& s) {
     s.chrome = refwin::chrome(s.layout, s.page, textsOf(s));  // 3.0.11-beta.26
     const refwin::Look look = lookOf(s);
     refwin::sheetOf(s.model, s.layout, s.page, s.rows, s.scroll, s.total, look);
-    if (s.model.world.w > 0) refwin::paintWorldPicture(s.worldSheet, s.layout, s.model.world, look.world);
+    if (s.model.world.w > 0) {  // 3.0.18-beta.83: painted again only when what it shows changed (not each hover)
+        const refwin::WorldLook& w = look.world;
+        char head[160];
+        std::snprintf(head, sizeof head, "%p %p %.1f %.1f %.3f %.3f %.3f %.1f %.1f %.2f|", (const void*)w.picture,
+                      (const void*)w.sheet, double(w.hereX), double(w.hereY), double(w.zoom), double(w.cx),
+                      double(w.cy), double(s.model.world.w), double(s.model.world.h), double(s.layout.s));
+        std::string key = head + w.here + '|' + w.target + '|' + w.hover + '|';
+        for (const auto& h : w.hops) key += h.from + '>' + h.to + (h.jump ? "j" : "") + h.label + ';';
+        if (w.players)
+            for (const auto& [m, n] : *w.players) key += m + '=' + std::to_string(n) + ',';
+        for (const auto& [m, n] : w.marks) key += m + '#' + std::to_string(n) + ',';
+        for (const auto& [a, b] : w.labels) key += a + ':' + b + ',';
+        for (const std::string& l : w.tip) key += l + '\n';
+        key += std::to_string(uistyle::generation());
+        if (key != s.worldKey) {
+            s.worldKey = std::move(key);
+            refwin::paintWorldPicture(s.worldSheet, s.layout, s.model.world, w);
+            ++s.worldPainted;
+        }
+    }
     s.sheetWords = wordsOf(s, look);
     ++s.sheetGen;
     s.dirty = false;
@@ -893,7 +915,8 @@ static void fillSheet(State& s, uisheet::Content& c) {
     if (s.model.world.w > 0 && s.worldSheet.width > 0)
         c.clippedIcons.insert(c.clippedIcons.begin(),
                               uisheet::Icon{s.model.world.x, s.model.world.y, float(s.worldSheet.width),
-                                            float(s.worldSheet.height), 1, s.sheet.icon(&s.worldSheet)});
+                                            float(s.worldSheet.height), 1,
+                                            uaui::picture(&s.worldSheet, s.worldPainted, s.worldSrc)});
     uisheet::sayGdi(c, s.sheetWords);
 }
 
