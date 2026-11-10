@@ -7,6 +7,7 @@
 #include <string>
 #include <vector>
 
+#include "core/window_stack.hpp"
 #include "core/ask_card.hpp"
 #include "core/settings/strings.hpp"
 #include "core/ui_style.hpp"
@@ -21,6 +22,7 @@
 #include "win/ui_cost.hpp"
 #include "win/window_shadow.hpp"
 #include "win/uaui.hpp"
+#include "win/ui_live.hpp"
 #include "win/ui_sheet.hpp"
 
 namespace uagfx::win::askcardwin {
@@ -65,7 +67,28 @@ struct Named {
     ULONGLONG at = 0;
 };
 
+// 3.0.18-beta.81 (item 4): the request or input card a live window - its message wrapped, its buttons a flex row
+const char* kLive = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss"/></head>
+<body class="lw mw" data-style-background-color="ground">
+<div class="head"><span class="title">{{title}}</span></div>
+<div class="msg" data-if="message != ''">{{message}}</div>
+<div class="field" data-if="input">{{field}}<span class="caret" data-if="caret"></span></div>
+<div class="quick" data-if="quick.size > 0"><div class="btn ctl" data-for="q, i : quick" data-event-click="ask_quick(i)">{{q}}</div></div>
+<div class="btns"><div class="btn ctl" data-for="b, i : buttons" data-class-main="b.main" data-event-click="ask_press(i)">
+  {{b.label}}<span class="key" data-if="b.key != ''">{{b.key}}</span></div></div>
+<div id="ring" class="ring"></div>
+</body></rml>)RML";
+struct AskButtonView {
+    Rml::String label, key;
+    bool main = false;
+};
+
 struct State {
+    uilive::Window live;  // 3.0.18-beta.81
+    std::vector<AskButtonView> buttonViews;
+    std::vector<Rml::String> quickViews;
+    Rml::String title, message, field, ground = "#10141cf0";
+    bool input = false, caret = false;
     uisheet::Sheet sheet;  // 3.0.18-beta.31: the window drawn by uaUI
     int sheetGen = 0;
     bool sheetShown = false;
@@ -286,8 +309,10 @@ void render(State& s) {
 void block(const State& s, HWND game) {
     RECT client{};
     if (s.targetW <= 0 || s.targetH <= 0 || !GetClientRect(game, &client)) return;
-    const panel::Box& b = s.layout.glass;
-    const float x0 = float(s.layout.x) + b.x, y0 = float(s.layout.y) + b.y;
+    panel::Box b = s.layout.glass;
+    float x0 = float(s.layout.x) + b.x, y0 = float(s.layout.y) + b.y;
+    int lx = 0, ly = 0, lw = 0, lh = 0;  // 3.0.18-beta.81: the live window's own box
+    if (s.live.box(lx, ly, lw, lh)) x0 = float(lx), y0 = float(ly), b.w = float(lw), b.h = float(lh);
     const RECT r{LONG(int64_t(x0) * client.right / s.targetW), LONG(int64_t(y0) * client.bottom / s.targetH),
                  LONG(int64_t(x0 + b.w) * client.right / s.targetW + 1),
                  LONG(int64_t(y0 + b.h) * client.bottom / s.targetH + 1)};
@@ -457,9 +482,79 @@ static void fillSheet(State& s, uisheet::Content& c) {
     c.say(ac::words(L, s.card, sh, texts(s)));
 }
 
+// 3.0.18-beta.81: the live window's model and place
+static void liveFrame(State& s) {
+    s.live.make("ask", kLive, [&](Rml::DataModelConstructor& m) {
+        if (auto v = m.RegisterStruct<AskButtonView>()) {
+            v.RegisterMember("label", &AskButtonView::label);
+            v.RegisterMember("key", &AskButtonView::key);
+            v.RegisterMember("main", &AskButtonView::main);
+        }
+        m.RegisterArray<std::vector<AskButtonView>>();
+        m.RegisterArray<std::vector<Rml::String>>();
+        m.Bind("buttons", &s.buttonViews);
+        m.Bind("quick", &s.quickViews);
+        m.Bind("title", &s.title);
+        m.Bind("message", &s.message);
+        m.Bind("field", &s.field);
+        m.Bind("input", &s.input);
+        m.Bind("caret", &s.caret);
+        m.Bind("ground", &s.ground);
+        m.BindEventCallback("ask_press", [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList& a) {
+            State& st = state();
+            const std::vector<ac::Button> bs = ac::buttons(st.kind);
+            if (!a.empty() && a[0].Get<int>() >= 0 && a[0].Get<int>() < int(bs.size()))
+                press(st, bs[size_t(a[0].Get<int>())]);
+        });
+        m.BindEventCallback("ask_quick", [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList& a) {
+            State& st = state();
+            if (!a.empty() && st.kind == ac::Kind::Count)
+                quick(st, ac::quickValue(ac::Quick(std::clamp(a[0].Get<int>(), 0, 2)), st.card.most));
+        });
+    });
+    if (!s.live.made()) return;
+    const ac::Texts t = texts(s);
+    std::vector<AskButtonView> views;
+    for (const ac::Button b : ac::buttons(s.kind)) {
+        AskButtonView v;
+        v.label = b == ac::Button::Accept    ? t.accept
+                  : b == ac::Button::Decline ? t.decline
+                  : b == ac::Button::Cancel  ? t.cancel
+                                             : t.ok;
+        v.main = b != ac::Button::Decline && b != ac::Button::Cancel;
+        v.key = b == ac::Button::Accept ? t.acceptKey : v.main ? t.okKey : t.declineKey;
+        views.push_back(v);
+    }
+    std::vector<Rml::String> quick;
+    if (s.kind == ac::Kind::Count) quick = {t.quick[0], t.quick[1], t.quick[2]};
+    const Rml::String ground = uisheet::Sheet::ground(0x10141C, uistyle::window());
+    const bool sameButtons = views.size() == s.buttonViews.size() &&
+                             std::equal(views.begin(), views.end(), s.buttonViews.begin(),
+                                        [](const AskButtonView& a, const AskButtonView& b) {
+                                            return a.label == b.label && a.key == b.key && a.main == b.main;
+                                        });
+    const bool input = ac::input(s.kind);
+    if (!sameButtons || quick != s.quickViews || s.card.title != s.title || s.card.message != s.message ||
+        s.card.field != s.field || input != s.input || s.card.caret != s.caret || ground != s.ground) {
+        s.buttonViews = std::move(views), s.quickViews = quick, s.title = s.card.title, s.message = s.card.message;
+        s.field = s.card.field, s.input = input, s.caret = s.card.caret, s.ground = ground;
+        s.live.doc.dirtyAll();
+    }
+    int x = s.layout.x, y = s.layout.y, bx = 0, by = 0, bw = 0, bh = 0;
+    if (s.live.box(bx, by, bw, bh)) x = (s.targetW - bw) / 2, y = std::max(0, s.targetH / 3 - bh / 2);
+    s.live.frame(s.shown, x, y, int(winstack::Win::Ask), ".btn");
+}
+
 void frame(HWND game, bool on, bool counts, unsigned codePage, double k, int targetWidth, int targetHeight) {
     frameInner(game, on, counts, codePage, k, targetWidth, targetHeight);
     State& s = state();
+    if (uaui::readyAnywhere()) {  // 3.0.18-beta.81: the live window in place of the sheet
+        s.sheet.frame("ask", false, true, 0, 0, 0, [](uisheet::Content&) {});
+        s.sheetShown = false;
+        liveFrame(s);
+        return;
+    }
+    s.live.frame(false, 0, 0, 0, nullptr);
     s.sheetShown = s.sheet.frame("ask", s.shown, true, s.layout.x, s.layout.y, s.sheetGen,
                                  [&](uisheet::Content& c) { fillSheet(s, c); });
 }
@@ -467,6 +562,10 @@ void frame(HWND game, bool on, bool counts, unsigned codePage, double k, int tar
 void draw(FrameRecord& record, gpu::Renderer& renderer) {
     State& s = state();
     s.sheet.raise();  // 3.0.18-beta.43: at its place in the windows' stack
+    if (s.live.shown) {  // 3.0.18-beta.81
+        s.live.draw(s.shadow, record, renderer, s.scale, s.k);
+        return;
+    }
     if (!s.shown || s.k <= 0 || ((s.picture.width <= 0 || s.picture.height <= 0) && !s.sheetShown)) return;
     int cursor = -1, cx = 0, cy = 0;
     if (readGameCursor(cx, cy)) cursor = panel::cursorDraw(record, float(cx), float(cy));
@@ -479,7 +578,11 @@ void draw(FrameRecord& record, gpu::Renderer& renderer) {
 
 bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     State& s = state();
-    (void)wp;
+    if (s.live.shown) {  // 3.0.18-beta.81: RmlUi's
+        if (!s.live.mouse(game, m, wp, lp)) return false;
+        result = 0;
+        return true;
+    }
     if (!s.shown) return false;
     const bool button = m == WM_LBUTTONDOWN || m == WM_LBUTTONUP || m == WM_LBUTTONDBLCLK || m == WM_RBUTTONDOWN ||
                         m == WM_RBUTTONUP || m == WM_RBUTTONDBLCLK || m == WM_MBUTTONDOWN || m == WM_MBUTTONUP;
@@ -537,6 +640,7 @@ void padCommand(PadCommand c) {
 bool box(int& x, int& y, int& w, int& h) {
     const State& s = state();
     if (!s.shown) return false;
+    if (s.live.box(x, y, w, h)) return true;  // 3.0.18-beta.81
     x = s.layout.x;
     y = s.layout.y;
     w = s.layout.w;

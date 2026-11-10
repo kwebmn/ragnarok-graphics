@@ -7,6 +7,7 @@
 #include <string>
 #include <vector>
 
+#include "core/window_stack.hpp"
 #include "core/settings/strings.hpp"
 #include "core/tip_card.hpp"
 #include "core/tip_texts.hpp"
@@ -23,6 +24,7 @@
 #include "win/ui_cost.hpp"
 #include "win/window_shadow.hpp"
 #include "win/uaui.hpp"
+#include "win/ui_live.hpp"
 #include "win/ui_sheet.hpp"
 
 namespace uagfx::win::tipwin {
@@ -40,7 +42,23 @@ constexpr uint32_t kTips = 0x74B9F8;
 constexpr int kButtonMsg = 6, kMostTips = 5000, kMostLines = 40;
 using SendMsgFn = int(__attribute__((thiscall)) *)(uint32_t self, uint32_t sender, int msg, int a, int b, int c);
 
+// 3.0.18-beta.81 (the big six round 2, item 4): the tip a live window - its paragraphs wrapped by RmlUi, its buttons a flex row
+const char* kLive = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss"/></head>
+<body class="lw tw" data-style-background-color="ground">
+<div class="head"><span class="title">{{title}}</span><span class="count">{{counter}}</span></div>
+<span class="x ctl" data-event-click="tip_press(3)">&#x2715;</span>
+<div class="msg"><p data-for="p : paragraphs">{{p}}</p></div>
+<div class="foot"><span class="tick ctl" data-class-on="startup" data-event-click="tip_press(4)"><span class="box"></span>{{startup_word}}</span>
+<div class="btns"><div class="btn ctl" data-event-click="tip_press(1)">{{back}}<span class="key">{{back_key}}</span></div>
+<div class="btn main ctl" data-event-click="tip_press(2)">{{next}}<span class="key">{{next_key}}</span></div></div></div>
+<div id="ring" class="ring"></div>
+</body></rml>)RML";
+
 struct State {
+    uilive::Window live;  // 3.0.18-beta.81
+    std::vector<Rml::String> paragraphViews;
+    Rml::String title, counterText, back, next, startupWord, backKey, nextKey, ground = "#10141cf0";
+    bool startupOn = false;
     uisheet::Sheet sheet;  // 3.0.18-beta.34: the window drawn by uaUI
     int sheetGen = 0;
     bool sheetShown = false;
@@ -126,8 +144,10 @@ void render(State& s) {
 void block(const State& s, HWND game) {
     RECT client{};
     if (s.targetW <= 0 || s.targetH <= 0 || !GetClientRect(game, &client)) return;
-    const panel::Box& b = s.layout.glass;
-    const float x0 = float(s.layout.x) + b.x, y0 = float(s.layout.y) + b.y;
+    panel::Box b = s.layout.glass;
+    float x0 = float(s.layout.x) + b.x, y0 = float(s.layout.y) + b.y;
+    int lx = 0, ly = 0, lw = 0, lh = 0;  // 3.0.18-beta.81: the live window's own box
+    if (s.live.box(lx, ly, lw, lh)) x0 = float(lx), y0 = float(ly), b.w = float(lw), b.h = float(lh);
     const RECT r{LONG(int64_t(x0) * client.right / s.targetW), LONG(int64_t(y0) * client.bottom / s.targetH),
                  LONG(int64_t(x0 + b.w) * client.right / s.targetW + 1),
                  LONG(int64_t(y0 + b.h) * client.bottom / s.targetH + 1)};
@@ -291,9 +311,56 @@ static void fillSheet(State& s, uisheet::Content& ui) {
     ui.say(tc::words(s.layout, s.card, s.show, texts(s)));
 }
 
+// 3.0.18-beta.81: the live window's model and place
+static void liveFrame(State& s) {
+    s.live.anywhere = true;
+    s.live.make("tip", kLive, [&](Rml::DataModelConstructor& m) {
+        m.RegisterArray<std::vector<Rml::String>>();
+        m.Bind("paragraphs", &s.paragraphViews);
+        m.Bind("title", &s.title);
+        m.Bind("counter", &s.counterText);
+        m.Bind("back", &s.back);
+        m.Bind("next", &s.next);
+        m.Bind("startup_word", &s.startupWord);
+        m.Bind("back_key", &s.backKey);
+        m.Bind("next_key", &s.nextKey);
+        m.Bind("startup", &s.startupOn);
+        m.Bind("ground", &s.ground);
+        m.BindEventCallback("tip_press", [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList& a) {
+            if (a.empty()) return;
+            const int p = a[0].Get<int>();
+            press(state(), p == 1 ? tc::Part::Back : p == 2 ? tc::Part::Next : p == 3 ? tc::Part::Close
+                                                                               : tc::Part::Startup, "a click");
+        });
+    });
+    if (!s.live.made()) return;
+    const tc::Texts t = texts(s);
+    const std::vector<Rml::String> paragraphs(s.card.paragraphs.begin(), s.card.paragraphs.end());
+    const Rml::String counter = tc::counter(s.card.number, s.card.count);
+    const Rml::String ground = uisheet::Sheet::ground(0x10141C, uistyle::window());
+    if (paragraphs != s.paragraphViews || counter != s.counterText || t.title != s.title || t.back != s.back ||
+        t.next != s.next || t.startup != s.startupWord || t.backKey != s.backKey || t.nextKey != s.nextKey ||
+        s.card.startup != s.startupOn || ground != s.ground) {
+        s.paragraphViews = paragraphs, s.counterText = counter, s.title = t.title, s.back = t.back, s.next = t.next;
+        s.startupWord = t.startup, s.backKey = t.backKey, s.nextKey = t.nextKey, s.startupOn = s.card.startup;
+        s.ground = ground;
+        s.live.doc.dirtyAll();
+    }
+    int x = s.layout.x, y = s.layout.y, bx = 0, by = 0, bw = 0, bh = 0;
+    if (s.live.box(bx, by, bw, bh)) x = (s.targetW - bw) / 2, y = std::max(0, s.targetH / 3 - bh / 2);
+    s.live.frame(s.shown, x, y, int(winstack::Win::Tip), ".btn, .tick, .x");
+}
+
 void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int targetHeight) {
     frameInner(game, on, codePage, k, targetWidth, targetHeight);
     State& s = state();
+    if (uaui::readyAnywhere()) {  // 3.0.18-beta.81: the live window in place of the sheet
+        s.sheet.frame("tip", false, true, 0, 0, 0, [](uisheet::Content&) {});
+        s.sheetShown = false;
+        liveFrame(s);
+        return;
+    }
+    s.live.frame(false, 0, 0, 0, nullptr);
     s.sheetShown = s.sheet.frame("tip", s.shown, true, s.layout.x, s.layout.y, s.sheetGen,
                                  [&](uisheet::Content& c) { fillSheet(s, c); });
 }
@@ -301,6 +368,10 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
 void draw(FrameRecord& record, gpu::Renderer& renderer) {
     State& s = state();
     s.sheet.raise();  // 3.0.18-beta.43: at its place in the windows' stack
+    if (s.live.shown) {  // 3.0.18-beta.81
+        s.live.draw(s.shadow, record, renderer, s.scale, s.k);
+        return;
+    }
     if (!s.shown || s.k <= 0 || ((s.picture.width <= 0 || s.picture.height <= 0) && !s.sheetShown)) return;
     int cursor = -1, cx = 0, cy = 0;
     if (readGameCursor(cx, cy)) cursor = panel::cursorDraw(record, float(cx), float(cy));
@@ -313,7 +384,11 @@ void draw(FrameRecord& record, gpu::Renderer& renderer) {
 
 bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     State& s = state();
-    (void)wp;
+    if (s.live.shown) {  // 3.0.18-beta.81: RmlUi's
+        if (!s.live.mouse(game, m, wp, lp)) return false;
+        result = 0;
+        return true;
+    }
     if (!s.shown) return false;
     const bool button = m == WM_LBUTTONDOWN || m == WM_LBUTTONUP || m == WM_LBUTTONDBLCLK || m == WM_RBUTTONDOWN ||
                         m == WM_RBUTTONUP || m == WM_RBUTTONDBLCLK || m == WM_MBUTTONDOWN || m == WM_MBUTTONUP;
@@ -367,6 +442,7 @@ void padCommand(PadCommand c) {
 bool box(int& x, int& y, int& w, int& h) {
     const State& s = state();
     if (!s.shown) return false;
+    if (s.live.box(x, y, w, h)) return true;  // 3.0.18-beta.81
     x = s.layout.x;
     y = s.layout.y;
     w = s.layout.w;

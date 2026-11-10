@@ -1341,6 +1341,35 @@ select selectbox option:checked { color: #e6cb8a; }
 .lw .btn.main { background-color: #f3c65338; border-color: #f3c653cc; font-weight: bold; }
 .lw .btn.main:hover { background-color: #f3c65357; }
 .lw .btn .key { margin-left: 8dp; font-size: 10.5dp; color: #9aa3b5; font-weight: normal; }
+.mw .field { display: block; height: 30dp; line-height: 18dp; padding: 6dp 10dp; margin-bottom: 8dp;
+             border-radius: 7dp; background-color: #00000059; border: 1dp #f3c6538c; font-size: 13dp; }
+.mw .caret { display: inline-block; width: 1.5dp; height: 15dp; margin-left: 1dp; background-color: #eef2f8;
+             vertical-align: middle; }
+.mw .quick { display: flex; margin-bottom: 10dp; }
+.mw .quick .btn { margin-left: 0; margin-right: 6dp; }
+.petw { width: 340dp; }
+.lw .namerow { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8dp; }
+.lw .name { font-size: 15dp; font-weight: bold; color: #e6cb8a; }
+.lw .lv { font-size: 12.5dp; color: #9aa3b5; }
+.lw .stat { display: flex; justify-content: space-between; font-size: 12dp; margin-top: 6dp; }
+.lw .stat .lbl { color: #9aa3b5; }
+.lw .stat .val { font-weight: bold; }
+.lw .gauge { display: block; height: 7dp; margin-top: 4dp; border-radius: 4dp; background-color: #ffffff1a; }
+.lw .gauge .fill { display: block; height: 7dp; border-radius: 4dp; background-color: #5fd08a; }
+.lw .gauge .fill.love { background-color: #f07aa8; }
+.lw .grid4 { display: flex; flex-wrap: wrap; margin-top: 12dp; }
+.lw .grid4 .btn { width: 46%; margin: 0 4% 6dp 0; text-align: center; }
+.lw .btn.off { color: #9aa3b5; background-color: #ffffff08; }
+.tw { width: 460dp; }
+.tw .count { margin-left: 10dp; font-size: 11.5dp; color: #9aa3b5; }
+.tw .msg { display: block; margin: 2dp 0 12dp 0; font-size: 13dp; line-height: 19dp; }
+.tw .msg p { display: block; margin-bottom: 6dp; }
+.lw .foot { display: flex; justify-content: space-between; align-items: center; }
+.lw .tick { display: block; font-size: 12dp; color: #9aa3b5; }
+.lw .tick .box { display: inline-block; width: 13dp; height: 13dp; margin-right: 6dp; border-radius: 3dp;
+                 border: 1dp #ffffff40; vertical-align: middle; }
+.lw .tick.on .box { background-color: #c9a55b; border-color: #e6cb8a; }
+.lw .foot .btns { display: flex; }
 .pw { padding: 6dp; border-radius: 10dp; min-width: 150dp; }
 .pw .row { font-size: 12.5dp; white-space: nowrap; }
 .pw .sep { display: block; height: 1dp; margin: 4dp 6dp; background-color: #ffffff1f; }
