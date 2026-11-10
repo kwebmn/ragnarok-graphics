@@ -16,7 +16,7 @@ namespace {
 namespace kw = uagfx::skillwin;
 
 const char* kRml = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss"/></head>
-<body class="lw skl" data-class-treeon="tree" data-style-background-color="ground">
+<body class="lw skl" data-style-font-size="base + 'px'" data-class-treeon="tree" data-style-background-color="ground">
 <div class="head" data-hit="title"><span class="title">{{title}}</span><span class="hk">{{hotkey}}</span>
 <span class="gap"></span><div class="hbt plan" data-if="planButton" data-hit="planbtn" data-class-on="plan"
   data-class-hot="planHot">{{planWord}}</div><div class="hbt v l" data-if="views" data-hit="viewlist"
@@ -183,6 +183,7 @@ void bind(Rml::DataModelConstructor& c, Model& m) {
     c.RegisterArray<std::vector<RowV>>();
     c.RegisterArray<std::vector<PadV>>();
     c.Bind("ground", &m.ground);
+    c.Bind("base", &m.base);
     c.Bind("title", &m.title);
     c.Bind("hotkey", &m.hotkey);
     c.Bind("planWord", &m.planWord);
@@ -226,6 +227,7 @@ void bind(Rml::DataModelConstructor& c, Model& m) {
 void fill(Model& m, const kw::Layout& L, const kw::Data& d, const kw::Show& sh, const kw::Texts& t,
           const kw::Measure& measure, const Source& src, const Glyph& glyph) {
     const float s = L.s > 0 ? L.s : 1;
+    m.base = 12 * s;
     m.title = t.title;
     m.hotkey = t.hotkey;
     m.closeHot = sh.hoverClose;

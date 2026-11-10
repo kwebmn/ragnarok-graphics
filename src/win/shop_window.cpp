@@ -712,7 +712,7 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
                                     m.ground = s.live.ground();
                                     const padglyph::Family f = s.show.sony ? padglyph::Family::Sony
                                                                            : padglyph::Family::Xbox;
-                                    const int side = std::max(8, int(std::lround(15 * uaui::dp())));
+                                    const int side = std::max(8, int(std::lround(15 * s.layout.s)));
                                     m.searchIcon = s.live.made("search" + std::to_string(side), side, side,
                                                                [&](panel::Picture& p) {
                                                                    uiicons::draw(p, uiicons::Icon::Search, 0, 0,

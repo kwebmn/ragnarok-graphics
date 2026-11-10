@@ -14,7 +14,7 @@ namespace {
 namespace ew = uagfx::equipwin;
 
 const char* kRml = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss"/></head>
-<body class="lw eql" data-style-background-color="ground">
+<body class="lw eql" data-style-font-size="base + 'px'" data-style-background-color="ground">
 <div class="head" data-hit="title"><span class="title">{{title}}</span><span class="hk">{{hotkey}}</span></div>
 <div class="x" data-hit="close" data-class-hot="closeHot">&#x2715;</div>
 <div class="cols">
@@ -116,6 +116,7 @@ void bind(Rml::DataModelConstructor& c, Model& m) {
     c.RegisterArray<std::vector<PickV>>();
     c.RegisterArray<std::vector<PadV>>();
     c.Bind("ground", &m.ground);
+    c.Bind("base", &m.base);
     c.Bind("title", &m.title);
     c.Bind("hotkey", &m.hotkey);
     c.Bind("who", &m.who);
@@ -141,6 +142,7 @@ void bind(Rml::DataModelConstructor& c, Model& m) {
 
 void fill(Model& m, const ew::Data& d, const ew::Show& sh, const ew::Texts& t, float scale, const Source& src,
           const Glyph& glyph) {
+    m.base = 12 * (scale > 0 ? scale : 1);
     m.title = t.title;
     m.hotkey = t.hotkey;
     m.closeHot = sh.hoverClose;

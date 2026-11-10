@@ -34,6 +34,9 @@ struct SkillV {
     bool lessHot = false, moreHot = false, plusHot = false, dash = false;
 };
 struct Model {
+    // 3.0.18-beta.100: the window's scale in pixels as 12 of its own (its sizes in rem: the text size and «Речі»'s
+    // size settings as before the live layout)
+    float base = 12;
     Rml::String ground = "#00000000", title, name, level, feed, skillsHead, remove;
     bool closeHot = false, feedHot = false, feedFocus = false, removeHot = false, raise = false, headFocus = false;
     std::vector<BarV> bars;
@@ -44,8 +47,9 @@ struct Model {
 
 const char* rml();
 void bind(Rml::DataModelConstructor& c, Model& m);
-void fillHomun(Model& m, const homuncard::Info& i, const homuncard::Show& sh, const homuncard::Texts& t);
-void fillMerc(Model& m, const merccard::Info& i, const merccard::Show& sh, const merccard::Texts& t);
+void fillHomun(Model& m, const homuncard::Info& i, const homuncard::Show& sh, const homuncard::Texts& t,
+               float scale);
+void fillMerc(Model& m, const merccard::Info& i, const merccard::Show& sh, const merccard::Texts& t, float scale);
 bool refitHomun(Rml::ElementDocument* doc, homuncard::Layout& L);
 bool refitMerc(Rml::ElementDocument* doc, merccard::Layout& L);
 

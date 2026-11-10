@@ -18,7 +18,7 @@ namespace sw = uagfx::shopwin;
 using charblock::grouped;
 
 const char* kRml = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss"/></head>
-<body class="lw shl" data-style-background-color="ground">
+<body class="lw shl" data-style-font-size="base + 'px'" data-style-background-color="ground">
 <div class="head" data-hit="title"><span class="title">{{title}}</span><span class="pl">{{place}}</span></div>
 <div class="x" data-hit="close" data-class-hot="closeHot">&#x2715;</div>
 <div class="tabs"><img class="tg" data-if="pad" data-attr-src="lbGlyph" data-style-width="lbW + 'px'"
@@ -155,6 +155,7 @@ void bind(Rml::DataModelConstructor& c, Model& m) {
     for (auto [name, v] : std::initializer_list<std::pair<const char*, float*>>{
              {"glyphW", &m.glyphW}, {"glyphH", &m.glyphH}, {"lbW", &m.lbW}, {"rbW", &m.rbW}})
         c.Bind(name, v);
+    c.Bind("base", &m.base);
     c.Bind("wares", &m.wares);
     c.Bind("lines", &m.lines);
     c.Bind("totals", &m.totals);
@@ -164,6 +165,7 @@ void bind(Rml::DataModelConstructor& c, Model& m) {
 void fill(Model& m, const sw::Data& d, const std::vector<int>& shown, const sw::Show& sh, const sw::Texts& t,
           float scale, const Source& src, const Glyph& glyph) {
     using B = padglyph::Button;
+    m.base = 12 * (scale > 0 ? scale : 1);
     m.title = d.name.empty() ? t.title : d.name;
     m.place = d.place;
     m.closeHot = sh.hoverClose;

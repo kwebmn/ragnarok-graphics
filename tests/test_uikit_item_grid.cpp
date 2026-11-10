@@ -136,3 +136,24 @@ TEST(uikit_item_grid_tip_beside_the_pointed_cell) {
     CHECK(g.m.tipX >= 0);
     rmlhost::close(g.doc);
 }
+
+// 3.0.18-beta.100: the window's own scale (the text size and «Речі»'s size settings) - its sizes in rem of a base
+// the model gives: at 1.25 the cells 60 px every 70
+TEST(uikit_item_grid_takes_the_windows_own_scale) {
+    std::vector<iw::Item> items(3);
+    std::vector<int> shown{0, 1, 2};
+    iw::Show sh;
+    iw::Layout L = iw::layout(0, 0, 1.25f, texts(), measure);
+    static ig::Model m;
+    ig::fill(m, L, items, shown, sh, texts(), [](const panel::Picture*) { return std::string(); });
+    CHECK(std::abs(m.base - 15) < 0.01f);
+    std::string error;
+    Rml::ElementDocument* d =
+        rmlhost::load(ig::rml(), [&](Rml::DataModelConstructor& c) { ig::bind(c, m); }, 0, 0, &error);
+    CHECK_EQ(error, std::string());
+    CHECK(ig::refit(d, L));
+    CHECK(std::abs(L.cells[0].w - 60) < 0.5f);
+    CHECK(std::abs(L.cells[1].x - L.cells[0].x - 70) < 0.5f);
+    CHECK(std::abs(float(L.w) - 625) < 2.5f);
+    rmlhost::close(d);
+}

@@ -39,7 +39,7 @@ TEST(uikit_trade_refit_finds_cells_field_and_buttons) {
     me.zeny = 1500;
     tw::Show sh;
     static tl::Model m;
-    tl::fill(m, me, them, sh, texts(), [](const panel::Picture*) { return std::string(); });
+    tl::fill(m, me, them, sh, texts(), 1, [](const panel::Picture*) { return std::string(); });
     std::string error;
     Rml::ElementDocument* d =
         rmlhost::load(tl::rml(), [&](Rml::DataModelConstructor& c) { tl::bind(c, m); }, 300, 200, &error);
@@ -72,7 +72,7 @@ TEST(uikit_trade_refit_finds_cells_field_and_buttons) {
     CHECK(tw::hitTest(L, 40, 20).part == tw::Part::Title);
     const int height = L.h;
     sh.late.zeny = true;  // the warning shown: the same height (its row kept, unseen before)
-    tl::fill(m, me, them, sh, texts(), [](const panel::Picture*) { return std::string(); });
+    tl::fill(m, me, them, sh, texts(), 1, [](const panel::Picture*) { return std::string(); });
     rmlhost::update();
     CHECK(tl::refit(d, L));
     CHECK_EQ(L.h, height);

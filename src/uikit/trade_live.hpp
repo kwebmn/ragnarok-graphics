@@ -33,6 +33,9 @@ struct ButtonV {
     bool on = false, main = false, hot = false;
 };
 struct Model {
+    // 3.0.18-beta.100: the window's scale in pixels as 12 of its own (its sizes in rem: the text size and «Речі»'s
+    // size settings as before the live layout)
+    float base = 12;
     Rml::String ground = "#00000000", title, readyWord, zenyWord, warn, hint, tip1, tip2;
     bool closeHot = false, typing = false, caret = false, tip = false;
     float tipX = 0, tipY = 0;
@@ -44,7 +47,7 @@ const char* rml();
 void bind(Rml::DataModelConstructor& c, Model& m);
 using Source = std::function<std::string(const panel::Picture*)>;
 void fill(Model& m, const tradewin::Side& me, const tradewin::Side& them, const tradewin::Show& sh,
-          const tradewin::Texts& t, const Source& src);
+          const tradewin::Texts& t, float scale, const Source& src);
 bool refit(Rml::ElementDocument* doc, tradewin::Layout& L);
 void placeTip(Rml::ElementDocument* doc, Model& m, const tradewin::Layout& L, int cell);
 

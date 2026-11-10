@@ -426,7 +426,7 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     s.sheetShown = s.live.frame("trade", s.shown, s.layout.x, s.layout.y, s.sheetGen, tl::rml(), tl::bind,
                                 [&](tl::Model& m) {
                                     m.ground = s.live.ground();
-                                    tl::fill(m, s.me, s.them, s.show, t,
+                                    tl::fill(m, s.me, s.them, s.show, t, s.layout.s,
                                              [&](const panel::Picture* p) { return s.live.icon(p); });
                                 });
     if (s.sheetShown && s.live.model.tip) {  // beside the pointed cell, by the tip's own size as laid out last

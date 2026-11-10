@@ -31,6 +31,9 @@ struct CellV {
     float op = 1, iconW = 0, iconH = 0, flash = 0, ring = 0, rise = 0;
 };
 struct Model {
+    // 3.0.18-beta.100: the window's scale in pixels as 12 of its own (its sizes in rem: the text size and «Речі»'s
+    // size settings as before the live layout)
+    float base = 12;
     Rml::String ground = "#00000000", title, hotkey, query, hint, also, weightWord, weightText, zeny, tone = "green";
     bool closeHot = false, typing = false, caret = false, bar = true, dropping = false, scrollable = false, tip = false;
     float fill = 0, thumbTop = 0, thumbH = 0, tipX = 0, tipY = 0;

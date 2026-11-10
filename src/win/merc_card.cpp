@@ -330,7 +330,7 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     s.sheetShown = s.live.frame("merc", s.shown, s.layout.x, s.layout.y, s.sheetGen, cl::rml(), cl::bind,
                                 [&](cl::Model& m) {
                                     m.ground = s.live.ground();
-                                    cl::fillMerc(m, s.info, s.show, texts());
+                                    cl::fillMerc(m, s.info, s.show, texts(), s.layout.s);
                                 });
 }
 

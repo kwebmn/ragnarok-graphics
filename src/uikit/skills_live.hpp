@@ -51,6 +51,9 @@ struct PadV {
     float w = 0, h = 0;
 };
 struct Model {
+    // 3.0.18-beta.100: the window's scale in pixels as 12 of its own (its sizes in rem: the text size and «Речі»'s
+    // size settings as before the live layout)
+    float base = 12;
     Rml::String ground = "#00000000", title, hotkey, planWord, listWord, treeWord, notice, points, pointsCls = "pts";
     Rml::String drag, applyWord, resetWord;
     bool closeHot = false, planButton = false, plan = false, planHot = false, views = false, tree = false;

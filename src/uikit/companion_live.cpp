@@ -16,7 +16,7 @@ namespace hc = uagfx::homuncard;
 namespace mc = uagfx::merccard;
 
 const char* kRml = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss"/></head>
-<body class="lw cmp" data-style-background-color="ground">
+<body class="lw cmp" data-style-font-size="base + 'px'" data-style-background-color="ground">
 <div class="head" data-hit="title"><span class="title">{{title}}</span></div>
 <div class="x" data-hit="close" data-class-hot="closeHot">&#x2715;</div>
 <div class="nrow"><span class="cn">{{name}}</span><span class="clv">{{level}}</span></div>
@@ -114,6 +114,7 @@ void bind(Rml::DataModelConstructor& c, Model& m) {
     c.RegisterArray<std::vector<StatV>>();
     c.RegisterArray<std::vector<SkillV>>();
     c.Bind("ground", &m.ground);
+    c.Bind("base", &m.base);
     c.Bind("title", &m.title);
     c.Bind("name", &m.name);
     c.Bind("level", &m.level);
@@ -132,7 +133,8 @@ void bind(Rml::DataModelConstructor& c, Model& m) {
     c.Bind("skills", &m.skills);
 }
 
-void fillHomun(Model& m, const hc::Info& i, const hc::Show& sh, const hc::Texts& t) {
+void fillHomun(Model& m, const hc::Info& i, const hc::Show& sh, const hc::Texts& t, float scale) {
+    m.base = 12 * (scale > 0 ? scale : 1);
     m.title = t.title;
     common(m, i.name, i.level, t.level);
     m.closeHot = sh.hover == int(hc::Button::Close);
@@ -176,7 +178,8 @@ void fillHomun(Model& m, const hc::Info& i, const hc::Show& sh, const hc::Texts&
     m.removeHot = sh.hover == int(hc::Button::Delete);
 }
 
-void fillMerc(Model& m, const mc::Info& i, const mc::Show& sh, const mc::Texts& t) {
+void fillMerc(Model& m, const mc::Info& i, const mc::Show& sh, const mc::Texts& t, float scale) {
+    m.base = 12 * (scale > 0 ? scale : 1);
     m.title = t.kinds[int(i.kind)];
     common(m, i.name, i.level, t.level);
     m.closeHot = sh.hover == int(mc::Button::Close);

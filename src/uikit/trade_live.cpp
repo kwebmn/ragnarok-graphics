@@ -14,7 +14,7 @@ namespace {
 namespace tw = uagfx::tradewin;
 
 const char* kRml = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss"/></head>
-<body class="lw trl" data-style-background-color="ground">
+<body class="lw trl" data-style-font-size="base + 'px'" data-style-background-color="ground">
 <div class="head" data-hit="title"><span class="title">{{title}}</span></div>
 <div class="x" data-hit="close" data-class-hot="closeHot">&#x2715;</div>
 <div class="sides"><div class="side" data-for="sd : sides" data-class-them="sd.them"><div class="shead"
@@ -79,6 +79,7 @@ void bind(Rml::DataModelConstructor& c, Model& m) {
     c.RegisterArray<std::vector<SideV>>();
     c.RegisterArray<std::vector<ButtonV>>();
     c.Bind("ground", &m.ground);
+    c.Bind("base", &m.base);
     c.Bind("title", &m.title);
     c.Bind("readyWord", &m.readyWord);
     c.Bind("zenyWord", &m.zenyWord);
@@ -96,8 +97,9 @@ void bind(Rml::DataModelConstructor& c, Model& m) {
     c.Bind("buttons", &m.buttons);
 }
 
-void fill(Model& m, const tw::Side& me, const tw::Side& them, const tw::Show& sh, const tw::Texts& t,
+void fill(Model& m, const tw::Side& me, const tw::Side& them, const tw::Show& sh, const tw::Texts& t, float scale,
           const Source& src) {
+    m.base = 12 * (scale > 0 ? scale : 1);
     m.title = t.title;
     m.readyWord = t.ready;
     m.zenyWord = t.zeny;

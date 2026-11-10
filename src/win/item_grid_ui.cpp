@@ -42,7 +42,7 @@ bool Ui::frame(const char* name, bool on, int x, int y, int generation, const iw
     if (generation != gen) {
         gen = generation;
         model.ground = hexOf(0x10141C, int(std::lround(uistyle::window() * 255)));
-        const int side = std::max(8, int(std::lround(15 * uaui::dp())));
+        const int side = std::max(8, int(std::lround(15 * L.s)));
         auto it = made.find("search" + std::to_string(side));
         if (it == made.end()) {
             panel::Picture p;

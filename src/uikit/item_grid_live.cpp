@@ -14,7 +14,7 @@ namespace {
 namespace iw = uagfx::itemwin;
 
 const char* kRml = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss"/></head>
-<body class="lw igl" data-style-background-color="ground">
+<body class="lw igl" data-style-font-size="base + 'px'" data-style-background-color="ground">
 <div class="head" data-hit="title"><span class="title">{{title}}</span><span class="hk">{{hotkey}}</span></div>
 <div class="x" data-hit="close" data-class-hot="closeHot">&#x2715;</div>
 <div class="tabs" data-hit="tabsrow"><div class="tab" data-for="t, i : tabs" data-hit="tab" data-attr-data-index="i"
@@ -32,7 +32,7 @@ const char* kRml = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss
   data-if="c.fresh != ''">{{c.fresh}}</span><span class="star" data-if="c.star != ''"
   data-class-on="c.starOn">{{c.star}}</span><div class="ring" data-if="c.ring > 0"
   data-style-opacity="c.ring"></div><span class="rise" data-if="c.rising != ''" data-style-color="c.risingColour"
-  data-style-margin-top="(-4 - c.rise) + 'dp'">{{c.rising}}</span></div></div>
+  data-style-margin-top="((-4 - c.rise) / 12) + 'rem'">{{c.rising}}</span></div></div>
 <div class="thumb" data-if="scrollable" data-style-top="thumbTop + '%'" data-style-height="thumbH + '%'"></div>
 <div class="drop" data-if="dropping"></div></div>
 <div class="foot" data-hit="footer"><span class="also" data-if="also != ''">{{also}}</span><span class="w"
@@ -95,6 +95,7 @@ void bind(Rml::DataModelConstructor& c, Model& m) {
     c.RegisterArray<std::vector<TabV>>();
     c.RegisterArray<std::vector<CellV>>();
     c.Bind("ground", &m.ground);
+    c.Bind("base", &m.base);
     c.Bind("title", &m.title);
     c.Bind("hotkey", &m.hotkey);
     c.Bind("query", &m.query);
@@ -127,6 +128,7 @@ void bind(Rml::DataModelConstructor& c, Model& m) {
 
 void fill(Model& m, const iw::Layout& L, const std::vector<iw::Item>& items, const std::vector<int>& shown,
           const iw::Show& sh, const iw::Texts& t, const Source& src) {
+    m.base = 12 * (L.s > 0 ? L.s : 1);
     m.title = t.title;
     m.hotkey = t.hotkey;
     int fresh[iw::kTabs] = {};

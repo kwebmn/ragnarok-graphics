@@ -341,7 +341,7 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     s.sheetShown = s.live.frame("homun", s.shown, s.layout.x, s.layout.y, s.sheetGen, cl::rml(), cl::bind,
                                 [&](cl::Model& m) {
                                     m.ground = s.live.ground();
-                                    cl::fillHomun(m, s.info, s.show, texts());
+                                    cl::fillHomun(m, s.info, s.show, texts(), s.layout.s);
                                 });
 }
 

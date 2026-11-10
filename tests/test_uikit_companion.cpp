@@ -32,7 +32,7 @@ TEST(uikit_homun_card_refit_finds_its_buttons_and_skills) {
     t.skillLevel = "Рів. {1}";
     hc::Show sh;
     static cl::Model m;
-    cl::fillHomun(m, i, sh, t);
+    cl::fillHomun(m, i, sh, t, 1);
     std::string error;
     Rml::ElementDocument* d =
         rmlhost::load(cl::rml(), [&](Rml::DataModelConstructor& c) { cl::bind(c, m); }, 600, 100, &error);
@@ -83,7 +83,7 @@ TEST(uikit_merc_card_refit_finds_dismiss_and_skills) {
     t.skillLevel = "Рів. {1}";
     mc::Show sh;
     static cl::Model m;
-    cl::fillMerc(m, i, sh, t);
+    cl::fillMerc(m, i, sh, t, 1);
     CHECK_EQ(m.facts.size(), size_t(4));
     std::string error;
     Rml::ElementDocument* d =

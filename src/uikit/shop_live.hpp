@@ -40,6 +40,9 @@ struct KeyV {
     float w = 0, h = 0;
 };
 struct Model {
+    // 3.0.18-beta.100: the window's scale in pixels as 12 of its own (its sizes in rem: the text size and «Речі»'s
+    // size settings as before the live layout)
+    float base = 12;
     Rml::String ground = "#00000000", title, place, buy, sell, query, hint, searchIcon, wareWord, priceWord;
     Rml::String weightWord, cartWord, amountWord, sumWord, empty, waiting, confirm, confirmKey, confirmGlyph, clear;
     Rml::String note, lbGlyph, rbGlyph;
