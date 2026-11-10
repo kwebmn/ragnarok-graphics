@@ -1,3 +1,5 @@
+- Fixed (since 3.0.18-beta.75): on the login screens the game's "Please wait…", "Failed to Connect to Server." and other login errors were not shown - only the background stayed. The developer's answer and the gamepad hint show before entering the game again too.
+
 - New interface (uaUI): the red edges at low HP are lighter still - the clear middle of the screen is no longer cut into small triangles. The FPS drop when they appeared (R-6XYRXP) is gone together with 3.0.18-beta.76.
 
 - New interface (uaUI): the red edges at low HP no longer slow things down at 4K (over 100 thousand vertices a frame, now a few thousand). Style errors in the log at start removed.
