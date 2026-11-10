@@ -1,3 +1,4 @@
+#include "win/ui_field.hpp"
 #include "win/chat_window.hpp"
 
 #include <windowsx.h>
@@ -105,6 +106,8 @@ struct State {
     bool sheetShown = false;
     bool on = false, shown = false, moved = false, forced = false, oldTold = false, folded = false;
     bool inputTold = false, swallowTab = false;
+    unsigned swallowChar = 0;
+    int pasteTold = 0;  // 3.0.18-beta.84: Ctrl+V/C/X's control character, not into the game's field
     bool searching = false;  // 3.0.11-beta.284 (the owner's feature 17): Ctrl+F in the field - its words the search's
     std::string search;      // UTF-8
     WPARAM skipChar = 0;     // the character a key the search took makes next
@@ -1229,6 +1232,35 @@ bool key(UINT m, WPARAM wp, LPARAM lp) {
     if (m == WM_CHAR && wp == '\t' && s.swallowTab) {  // the Tab the channel took: not into the game's field
         s.swallowTab = false;
         return true;
+    }
+    if (m == WM_CHAR && s.swallowChar && wp == s.swallowChar) {
+        s.swallowChar = 0;
+        return true;
+    }
+    // 3.0.18-beta.84 (the owner's «свой ввод текста» for the chat's line): the game's field keeps the line (its
+    // sending, its IME, the battle mode's guard) with the new interface's fields' clipboard - Ctrl+V pastes one line at
+    // the end (in the game's code page, as much as the field takes), Ctrl+C copies the line, Ctrl+X cuts it
+    if (m == WM_KEYDOWN && GetKeyState(VK_CONTROL) < 0 && GetKeyState(VK_MENU) >= 0 &&
+        (wp == 'V' || wp == 'C' || wp == 'X') && s.on && inGameWorld()) {
+        const uint32_t words = wordsEdit();
+        if (words && read32(kFocus) == words && setTextOf(words)) {
+            const std::string now = editText(words);
+            if (wp == 'V') {
+                const std::string paste =
+                    narrowed(widened(textfield::oneLine(uifield::clipboardText()), CP_UTF8), s.codePage);
+                const size_t most = std::max<size_t>(1, read32(words + kEditMost));
+                std::string line = now + paste;
+                if (line.size() > most) line.resize(most);
+                reinterpret_cast<SetTextFn>(uintptr_t(setTextOf(words)))(words, line.c_str());
+                if (s.pasteTold++ < 10)
+                    LOG_INFO("chat: Ctrl+V - %zu letters pasted into the line", line.size() - now.size());
+            } else if (!now.empty()) {
+                uifield::setClipboard(utf8(s, now));
+                if (wp == 'X') reinterpret_cast<SetTextFn>(uintptr_t(setTextOf(words)))(words, "");
+            }
+            s.swallowChar = wp == 'V' ? 0x16 : wp == 'C' ? 0x03 : 0x18;
+            return true;
+        }
     }
     if (!s.on || !inGameWorld()) return false;
     const bool down = m == WM_KEYDOWN || m == WM_SYSKEYDOWN;
