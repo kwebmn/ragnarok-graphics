@@ -32,6 +32,8 @@
 #include "win/real_ddraw.hpp"
 #include "win/ui_cost.hpp"
 #include "win/window_shadow.hpp"
+#include "win/item_grid_ui.hpp"
+#include "win/uaui.hpp"
 #include "win/window_stack.hpp"
 
 namespace uagfx::win::cartwin {
@@ -65,6 +67,9 @@ using MakeFn = uint32_t(__attribute__((thiscall)) *)(uint32_t manager, int id);
 using DropFn = void(__attribute__((thiscall)) *)(uint32_t self, int x, int y, uint32_t drag);
 
 struct State {
+    itemgridui::Ui grid;  // 3.0.18-beta.27: the window drawn by uaUI
+    int gridGen = 0;
+    bool gridShown = false;
     WindowShadow shadow;
     WindowEdge edge;  // the top of two or more windows (win/window_stack)
     int tipOf = -1;   // the cell pointed at since tipSince
@@ -283,6 +288,10 @@ std::vector<Words> gdiWords(const std::vector<iw::Words>& in) {
 }
 
 void render(State& s) {
+    if (uaui::ready()) {  // 3.0.18-beta.27: uaUI's window says it all again, no picture
+        ++s.gridGen;
+        return;
+    }
     const uicost::Paint cost("«Візок»", s.layout.w, s.layout.h);
     if (!panel::blank(s.picture, s.layout.w, s.layout.h)) return;
     const iw::Texts t = texts(s, s.padNow);
@@ -381,7 +390,8 @@ char letterOf(WPARAM vk, bool shift) {
 
 }  // namespace
 
-void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int targetHeight) {
+static void frameInner(HWND game, bool on, unsigned codePage, double k, int targetWidth,
+                       int targetHeight) {
     State& s = state();
     s.codePage = codePage;
     if (on != s.on) {
@@ -456,7 +466,8 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
         key += std::to_string(it.index) + ':' + std::to_string(it.id) + 'x' + std::to_string(it.count) + '+' +
                std::to_string(it.refine) + (it.identified ? "" : "?") + (it.icon ? "i" : "") +
                (it.starred ? "*" : "") + ',';
-    if (const std::string drawn = key + '#' + std::to_string(uistyle::generation()); drawn != s.key) {
+    if (const std::string drawn = key + '#' + std::to_string(uistyle::generation()) + (uaui::ready() ? "u" : "");
+        drawn != s.key) {  // 3.0.18-beta.27: uaUI's or the picture
         s.key = drawn;
         render(s);
     }
@@ -464,19 +475,28 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     block(s, game);
 }
 
+void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int targetHeight) {
+    frameInner(game, on, codePage, k, targetWidth, targetHeight);
+    State& s = state();
+    s.gridShown = s.grid.frame("cart", s.shown, s.layout.x, s.layout.y, s.gridGen, s.layout, s.items, s.shownItems,
+                               s.show, texts(s, s.padNow), measure);
+}
+
 void draw(FrameRecord& record, gpu::Renderer& renderer) {
     State& s = state();
-    if (!s.shown || s.k <= 0 || s.picture.width <= 0 || s.picture.height <= 0) return;
+    if (!s.shown || s.k <= 0 || ((s.picture.width <= 0 || s.picture.height <= 0) && !s.gridShown)) return;
     int cursor = -1, cx = 0, cy = 0;  // under the game's own cursor, as the minimap
     const bool known = readGameCursor(cx, cy);
     if (known) cursor = panel::cursorDraw(record, float(cx), float(cy));
     const panel::Box& g = s.layout.glass;
-    s.shadow.draw(record, renderer, s.layout.x + int(g.x), s.layout.y + int(g.y), int(g.w), int(g.h), 12 * s.scale,
-                  s.scale, s.k);
-    drawPart(record, renderer, s.picture, s.texture, s.texW, s.texH, s.upload, s.layout.x, s.layout.y, s.k);
-    if (windowstack::marked(winstack::Win::Cart))  // its gold edge, the top of two or more
-        s.edge.draw(record, renderer, s.layout.x + int(g.x), s.layout.y + int(g.y), int(g.w), int(g.h), 12 * s.scale,
-                    s.scale, s.k);
+    if (!s.gridShown) {  // 3.0.18-beta.27: uaUI draws the window (with the windows' layer)
+        s.shadow.draw(record, renderer, s.layout.x + int(g.x), s.layout.y + int(g.y), int(g.w), int(g.h),
+                      12 * s.scale, s.scale, s.k);
+        drawPart(record, renderer, s.picture, s.texture, s.texW, s.texH, s.upload, s.layout.x, s.layout.y, s.k);
+        if (windowstack::marked(winstack::Win::Cart))  // its gold edge, the top of two or more
+            s.edge.draw(record, renderer, s.layout.x + int(g.x), s.layout.y + int(g.y), int(g.w), int(g.h),
+                        12 * s.scale, s.scale, s.k);
+    }
     const panel::Picture* icon = s.dragging && s.press >= 0 && size_t(s.press) < s.items.size()
                                      ? s.items[size_t(s.press)].icon
                                      : nullptr;

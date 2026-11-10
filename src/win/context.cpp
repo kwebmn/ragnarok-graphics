@@ -739,8 +739,7 @@ void Context::endScene() {
         trackerwin::draw(record, *renderer);    // 3.0.11-beta.70: the tracker (under the buffs' tips)
         buffcolumn::draw(record, *renderer);    // 3.0.11-beta.35: the buffs' column under it
         charpanel::draw(record, *renderer);     // 3.0.11-beta.36
-        uaui::draw(record, *renderer);          // 3.0.18-beta.7: the character block
-        uaui::draw(record, *renderer);          // 3.0.18-beta.7: the RmlUi spike's card
+        uaui::draw(record, *renderer);          // 3.0.18-beta.7: uaUI's parts (beta.27: once - it was twice)
         targetpanel::draw(record, *renderer);   // 3.0.11-beta.38: the target's card
         partywin::draw(record, *renderer);      // 3.0.11-beta.39: the party's panel
         merccardwin::blockDraw(record, *renderer);  // 3.0.11-beta.216: the mercenary's block
@@ -754,6 +753,7 @@ void Context::endScene() {
         // 3.0.11-beta.108: «Речі», «Характеристики», «Навички», «Спорядження», the NPC talk, the shop and «Довідник»
         // in their stack's order - the last opened or clicked in on top (they were each in a place of its own)
         windowstack::draw(record, *renderer);
+        uaui::draw(record, *renderer, uaui::Layer::Windows);  // 3.0.18-beta.27: uaUI's windows over the panels
         minimapproto::drawBig(record, *renderer, true);  // 3.0.11-beta.260: or over them, raised by a press
         itemswin::drawToast(record, *renderer);   // 3.0.11-beta.112: «+N …» of a thing come into the bag
         loginwin::drawToast(record, *renderer);   // 3.0.11-beta.175: «… додано на полицю»
@@ -815,6 +815,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
         trackerwin::draw(record, *renderer);    // 3.0.11-beta.70
         buffcolumn::draw(record, *renderer);    // 3.0.11-beta.35
         charpanel::draw(record, *renderer);     // 3.0.11-beta.36
+        uaui::draw(record, *renderer);          // 3.0.18-beta.27: uaUI's parts here too
         targetpanel::draw(record, *renderer);   // 3.0.11-beta.38
         partywin::draw(record, *renderer);      // 3.0.11-beta.39
         merccardwin::blockDraw(record, *renderer);  // 3.0.11-beta.216
@@ -826,6 +827,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
         expbars::draw(record, *renderer);       // 3.0.11-beta.236
         minimapproto::drawBig(record, *renderer);  // 3.0.11-beta.201
         windowstack::draw(record, *renderer);  // 3.0.11-beta.108
+        uaui::draw(record, *renderer, uaui::Layer::Windows);  // 3.0.18-beta.27
         minimapproto::drawBig(record, *renderer, true);  // 3.0.11-beta.260
         itemswin::drawToast(record, *renderer);  // 3.0.11-beta.112
         loginwin::drawToast(record, *renderer);  // 3.0.11-beta.175

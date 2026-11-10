@@ -31,6 +31,7 @@
 #include "win/game_camera.hpp"
 #include "win/log.hpp"
 #include "win/paths.hpp"
+#include "win/item_grid_ui.hpp"
 #include "win/uaui.hpp"
 #include "win/picture_draw.hpp"
 #include "win/real_ddraw.hpp"
@@ -105,6 +106,9 @@ struct State {
     int toastW = 0, toastH = 0;  // the target's
     panel::Picture toastPicture;
     bool toastUi = false;  // 3.0.18-beta.24: drawn by uaUI
+    itemgridui::Ui grid;  // 3.0.18-beta.27: the window drawn by uaUI
+    int gridGen = 0;
+    bool gridShown = false;
     uint32_t toastTexture = 0;
     int toastTexW = 0, toastTexH = 0;
     bool toastUpload = false;
@@ -390,6 +394,10 @@ int freshSum(const State& s) {  // 3.0.11-beta.112: which ones are new (for the 
 }
 
 void render(State& s) {
+    if (uaui::ready()) {  // 3.0.18-beta.27: uaUI's window says it all again, no picture
+        ++s.gridGen;
+        return;
+    }
     const uicost::Paint cost("«Речі»", s.layout.w, s.layout.h);  // 3.0.11-beta.55
     if (!panel::blank(s.picture, s.layout.w, s.layout.h)) return;  // 3.0.11-beta.57: in the memory it had
     const iw::Texts t = texts(s.padNow);
@@ -608,6 +616,8 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     frameInner(game, on, codePage, k, targetWidth, targetHeight, toast);
     State& s = state();
     s.toastUi = toastFrame(s);
+    s.gridShown = s.grid.frame("items", s.shown, s.layout.x, s.layout.y, s.gridGen, s.layout, s.items, s.shownItems,
+                               s.show, texts(s.padNow), measure);
 }
 
 namespace {
@@ -719,7 +729,8 @@ void frameInner(HWND game, bool on, unsigned codePage, double k, int targetWidth
         key += std::to_string(it.index) + ':' + std::to_string(it.id) + 'x' + std::to_string(it.count) + '+' +
                std::to_string(it.refine) + (it.identified ? "" : "?") + (it.icon ? "i" : "") + (it.worn ? "E" : "") +
                ',';
-    if (const std::string drawn = key + '#' + std::to_string(uistyle::generation()); drawn != s.key) {  // its grounds
+    if (const std::string drawn = key + '#' + std::to_string(uistyle::generation()) + (uaui::ready() ? "u" : "");
+        drawn != s.key) {  // its grounds (3.0.18-beta.27: uaUI's or the picture)
         s.key = drawn;
         render(s);
     }
@@ -731,17 +742,19 @@ void frameInner(HWND game, bool on, unsigned codePage, double k, int targetWidth
 
 void draw(FrameRecord& record, gpu::Renderer& renderer) {
     State& s = state();
-    if (!s.shown || s.k <= 0 || s.picture.width <= 0 || s.picture.height <= 0) return;
+    if (!s.shown || s.k <= 0 || ((s.picture.width <= 0 || s.picture.height <= 0) && !s.gridShown)) return;
     int cursor = -1, cx = 0, cy = 0;  // under the game's own cursor, as the minimap
     const bool known = readGameCursor(cx, cy);
     if (known) cursor = panel::cursorDraw(record, float(cx), float(cy));
     const panel::Box& g = s.layout.glass;  // 3.0.11-beta.49: its shadow under it
-    s.shadow.draw(record, renderer, s.layout.x + int(g.x), s.layout.y + int(g.y), int(g.w), int(g.h), 12 * s.scale,
-                  s.scale, s.k);
-    drawPart(record, renderer, s.picture, s.texture, s.texW, s.texH, s.upload, s.layout.x, s.layout.y, s.k);
-    if (windowstack::marked(winstack::Win::Items))  // 3.0.11-beta.108: its gold edge, the top of two or more
-        s.edge.draw(record, renderer, s.layout.x + int(g.x), s.layout.y + int(g.y), int(g.w), int(g.h), 12 * s.scale,
-                    s.scale, s.k);
+    if (!s.gridShown) {  // 3.0.18-beta.27: uaUI draws the window (with the windows' layer)
+        s.shadow.draw(record, renderer, s.layout.x + int(g.x), s.layout.y + int(g.y), int(g.w), int(g.h),
+                      12 * s.scale, s.scale, s.k);
+        drawPart(record, renderer, s.picture, s.texture, s.texW, s.texH, s.upload, s.layout.x, s.layout.y, s.k);
+        if (windowstack::marked(winstack::Win::Items))  // 3.0.11-beta.108: its gold edge, the top of two or more
+            s.edge.draw(record, renderer, s.layout.x + int(g.x), s.layout.y + int(g.y), int(g.w), int(g.h),
+                        12 * s.scale, s.scale, s.k);
+    }
     const panel::Picture* icon = s.dragging && s.press >= 0 && size_t(s.press) < s.items.size()
                                      ? s.items[size_t(s.press)].icon
                                      : nullptr;

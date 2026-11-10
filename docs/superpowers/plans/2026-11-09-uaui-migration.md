@@ -48,7 +48,7 @@ picture's upload gone. Cost if wrong: per-pixel glows (panel::over loops) land i
 
 - [x] character block (win/char_block + core/char_block) — beta.17 by hand: core charblock::model, RML kDoc, <ua-ring>
 - [x] target card (win/target_card) — beta.18 by hand
-- [ ] party panel (beta.19 by hand), mercenary/homunculus blocks
+- [x] party panel (beta.19 by hand); the mercenary/homunculus are windows (stage 5)
 - [x] buffs column and its further lines — beta.20 by hand (core layout boxes in px)
 - [x] hotbar — beta.21 by hand (passive doc: its own input; core hotbar::view)
 - [x] experience bars, experience gain, item toast — beta.23-.24 by hand (the shelf toast with its undo goes with the login stage)
@@ -57,7 +57,7 @@ picture's upload gone. Cost if wrong: per-pixel glows (panel::over loops) land i
 
 ## Stage 5 — windows (by hand in RML)
 
-- [ ] «Речі», storage, cart, trade
+- [ ] «Речі», storage, cart, trade — beta.27: the three grids by hand (win/item_grid_ui, core itemwin::view), windows' layer; trade next
 - [ ] «Спорядження», «Характеристики», «Навички»
 - [ ] shop, vending, own shop
 - [ ] NPC talk, ask / message / pick / count cards, item and skill cards
@@ -92,3 +92,4 @@ picture's upload gone. Cost if wrong: per-pixel glows (panel::over loops) land i
 - 2026-11-10 beta.24: experience gains over the monsters and the item toast by hand in RML (passive full-screen docs)
 - 2026-11-10 beta.25: hunt panel, MVP panel and tracker by hand in RML (passive: clicks/blockers stay the parts'; font sizes by the part's scale incl. the HUD editor's size)
 - 2026-11-10 beta.26: minimap frame by hand in RML (core paintMapSquare/mapWords/frameWords/netBars/paintLayerSign; the square a pic:, signs and icons made once)
+- 2026-11-10 beta.27: uaUI windows' layer (Doc::window z-index 10, the ua-split marker at 5 splits the batches; uaui::draw(Layer::Windows) after windowstack::draw); uaui::draw was called twice a frame since beta.7 - once now; «Речі»/«Склад»/«Візок» grids by hand

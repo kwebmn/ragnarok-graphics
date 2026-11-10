@@ -32,7 +32,10 @@ namespace uagfx::win::uaui {
 void begin(HWND game, bool on, unsigned codePage, double k, int targetWidth, int targetHeight,
            const std::string& theme);
 void end();
-void draw(FrameRecord& record, gpu::Renderer& renderer);
+// 3.0.18-beta.27: the parts' documents (Hud) where the parts are drawn, the windows' (Doc::window) where the windows
+// are - over the panels, the chat and the hotbar
+enum class Layer : uint8_t { Hud, Windows };
+void draw(FrameRecord& record, gpu::Renderer& renderer, Layer layer = Layer::Hud);
 // The mouse's buttons and wheel over a document of uaUI (and the end of a drag wherever it is): true taken
 bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result);
 
@@ -74,6 +77,7 @@ public:
     std::function<void()> onClose;  // its × (the window template's), besides hiding it
     // 3.0.18-beta.21: drawn only - its part keeps its own mouse, keys and blocker (the hotbar's drag and wheel)
     bool passive = false;
+    bool window = false;  // 3.0.18-beta.27: set before make() - drawn with the windows (uaui::Layer::Windows)
 
     // the runtime's
     bool fadePending = false;

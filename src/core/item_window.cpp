@@ -475,6 +475,81 @@ std::vector<Words> words(const Layout& L, const std::vector<Item>& items, const 
     return out;
 }
 
+View view(const Layout& L, const std::vector<Item>& items, const std::vector<int>& shown, const Show& sh,
+          const Texts& t, const Measure& m) {
+    View v;
+    const float s = L.s;
+    if (int(sh.tab) < int(L.tabs.size())) {
+        const panel::Box& b = L.tabs[size_t(sh.tab)];
+        v.tabLine = panel::Box{b.x, b.y + b.h - 2.5f * s, b.w, 2 * s};
+    }
+    const float icon = 15 * s;
+    v.searchIcon = panel::Box{L.search.x + 10 * s, L.search.y + (L.search.h - icon) / 2, icon, icon};
+    if (sh.typing && sh.caretOn)
+        v.caret = panel::Box{L.search.x + 32 * s + m(sh.search, 12.5f * s, false) + 1 * s, L.search.y + 9 * s,
+                             1.5f * s, L.search.h - 18 * s};
+    for (size_t i = 0; i < L.cells.size(); ++i) {
+        CellView c;
+        c.box = L.cells[i];
+        const int at = int(i) + sh.scroll * L.columns;
+        c.hot = at == sh.hover;
+        if (at < int(shown.size())) {
+            c.item = shown[size_t(at)];
+            const Item& it = items[size_t(c.item)];
+            if (it.icon && it.icon->width > 0) {
+                c.icon = it.icon;
+                c.iconX = std::round(c.box.x + (c.box.w - float(it.icon->width)) / 2);
+                c.iconY = std::round(c.box.y + (c.box.h - float(it.icon->height)) / 2);
+                c.iconOpacity = it.identified ? 1.0f : 0.45f;
+            }
+            const panel::Box& b = c.box;
+            if (it.count > 1) {
+                const float w = m(grouped(it.count), 10.5f * s, true) + 6 * s;
+                c.count = panel::Box{b.x + b.w - w - 2 * s, b.y + b.h - 14 * s, w, 12 * s};
+            }
+            if (it.refine > 0)
+                c.refine = panel::Box{b.x + 2 * s, b.y + 2 * s, m("+" + std::to_string(it.refine), 10.5f * s, true) +
+                                                                    6 * s, 12 * s};
+            if (it.fresh && !t.fresh.empty()) c.fresh = freshPill(b, t, s, m);
+        }
+        v.cells.push_back(c);
+    }
+    const size_t total = (shown.size() + size_t(L.columns) - 1) / size_t(L.columns);
+    if (total > size_t(L.rows)) {
+        const float h = L.grid.h * float(L.rows) / float(total);
+        const float y = L.grid.y + (L.grid.h - h) * float(sh.scroll) / float(total - size_t(L.rows));
+        v.scroll = panel::Box{L.grid.x + L.grid.w + 4 * s, y, 3 * s, h};
+    }
+    v.bar = sh.also.empty();
+    const float share = sh.weightMost > 0 ? std::clamp(float(sh.weight) / float(sh.weightMost), 0.0f, 1.0f) : 0.0f;
+    if (share > 0 && v.bar) {
+        v.fill = panel::Box{L.bar.x, L.bar.y, L.bar.w * share, L.bar.h};
+        v.fillTone = (sh.overweight >= 0 ? sh.overweight == 2 : share >= 0.9f)   ? Tone::Red
+                     : (sh.overweight >= 0 ? sh.overweight == 1 : share >= 0.5f) ? Tone::Gold
+                                                                                 : Tone::Green;
+    }
+    for (const Flash& f : sh.flashes) {
+        FlashView x;
+        const float k = std::clamp(f.t, 0.0f, 1.0f), fade = 1 - k;
+        bool empty = true;
+        for (size_t i = 0; i < L.cells.size(); ++i) {
+            const panel::Box& b = L.cells[i];
+            if (std::fabs(b.x - f.cell.x) < 1 && std::fabs(b.y - f.cell.y) < 1)
+                empty = int(i) + sh.scroll * L.columns >= int(shown.size());
+        }
+        x.cell = f.cell;
+        if (empty && f.icon && f.icon->width > 0) x.icon = f.icon, x.iconAlpha = fade * fade;
+        x.fill = 0.30f * fade;
+        const float grow = 9 * s * k;
+        x.ring = panel::Box{f.cell.x - grow, f.cell.y - grow, f.cell.w + 2 * grow, f.cell.h + 2 * grow};
+        x.ringAlpha = 0.95f * fade;
+        v.flashes.push_back(x);
+    }
+    if (sh.tip && sh.hover >= 0 && sh.hover < int(shown.size()))
+        v.tip = tipBox(L, items[size_t(shown[size_t(sh.hover)])], sh.hover - sh.scroll * L.columns, t, m);
+    return v;
+}
+
 std::string nameOf(const Item& it) {
     return it.refine > 0 ? "+" + std::to_string(it.refine) + " " + it.name : it.name;
 }

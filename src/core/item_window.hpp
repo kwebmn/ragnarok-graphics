@@ -141,6 +141,31 @@ struct Words {
 };
 std::vector<Words> words(const Layout& L, const std::vector<Item>& items, const std::vector<int>& shown,
                          const Show& sh, const Texts& t, const Measure& m);
+// 3.0.18-beta.27 (uaUI's grid, docs/superpowers/plans/2026-11-09-uaui-migration.md stage 5): every part paint()
+// draws, placed - the window's pixels; w 0: not there
+enum class Tone : uint8_t { Green, Gold, Red };
+struct CellView {
+    panel::Box box;
+    int item = -1;  // its thing (items' index); -1 an empty cell
+    bool hot = false;
+    const panel::Picture* icon = nullptr;
+    float iconX = 0, iconY = 0, iconOpacity = 1;  // the icon's top left (centred in the cell)
+    panel::Box count, refine, fresh;  // the plates under the words
+};
+struct FlashView {
+    panel::Box cell, ring;
+    float fill = 0, ringAlpha = 0, iconAlpha = 0;  // the gold over the cell, its ring, its icon (an empty cell's)
+    const panel::Picture* icon = nullptr;
+};
+struct View {
+    std::vector<CellView> cells;
+    std::vector<FlashView> flashes;
+    panel::Box tabLine, caret, scroll, fill, tip, searchIcon;
+    Tone fillTone = Tone::Green;
+    bool bar = true;  // the weight's bar (not while «Ще» shows)
+};
+View view(const Layout& L, const std::vector<Item>& items, const std::vector<int>& shown, const Show& sh,
+          const Texts& t, const Measure& m);
 std::string nameOf(const Item& it);  // «+7 Sword», its count after a stack's: «Red Potion ×38»
 std::string grouped(long long n);
 

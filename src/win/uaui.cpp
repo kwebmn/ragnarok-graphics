@@ -142,6 +142,11 @@ struct State {
     std::unordered_map<uintptr_t, Texture> textures;
     std::vector<uint32_t> released;
     std::vector<Batch> batches;
+    // 3.0.18-beta.27: the windows' documents (z-index 10) after the parts' (auto) - the batches from `split` on
+    // (the marker's, z-index 5) drawn where the windows are drawn
+    size_t split = 0;
+    bool splitSeen = false;
+    Rml::ElementDocument* marker = nullptr;
     bool clipOn = false;
     ::uagfx::uaui::ClipBox clip{};
     bool transformOn = false;
@@ -802,6 +807,32 @@ input.checkbox:checked { background-color: #3d7fd8; border-color: #3d7fd8; }
 .mp { position: absolute; font-family: Plex; border-color: #ffffff17; }
 .tr { position: absolute; font-family: Plex; }
 .mm { position: absolute; font-family: Plex; }
+.ig { position: absolute; font-family: Plex; }
+.ig div, .ig span, .ig .a { position: absolute; }
+.ig .glass { border-color: #ffffff17; }
+.ig .hot { background-color: #ffffff1f; }
+.ig .rule { background-color: #ffffff14; }
+.ig .tab { background-color: #f3c653f2; }
+.ig .field { background-color: #00000059; border-color: #ffffff1a; }
+.ig .field.typing { border-color: #c9a55b99; }
+.ig .caret { background-color: #eef2f8f2; }
+.ig .cell { background-color: #00000059; border-color: #ffffff14; }
+.ig .cell.hot { border-color: #c9a55bf2; }
+.ig .plate { background-color: #000000b3; }
+.ig .thumb { background-color: #ffffff40; }
+.ig .bar { background-color: #ffffff1a; }
+.ig .fill.green { background-color: #5fd08af2; }
+.ig .fill.gold { background-color: #f3c653f2; }
+.ig .fill.red { background-color: #ff7d6ef2; }
+.ig .fresh { background-color: #f3c653f2; }
+.ig .dropping { background-color: #c9a55b0f; border-color: #f3c653e6; }
+.ig .flash { background-color: #f3c6534d; }
+.ig .ring { border-color: #f3c653f2; }
+.ig .tip { background-color: #10141cf5; border-color: #ffffff24; }
+.ig .word { white-space: nowrap; overflow: hidden; }
+.ig .word.bold { font-weight: bold; }
+.ig .word.right { text-align: right; }
+.ig .word.centre { text-align: center; }
 .mm div, .mm span, .mm .a { position: absolute; }
 .mm .edge { border-color: #ffffff29; }
 .mm .gold { background-color: #e6cb8af2; }
@@ -1065,6 +1096,21 @@ private:
 };
 Rml::ElementInstancerGeneric<ElementRing> g_ringInstancer;
 
+// 3.0.18-beta.27: where the windows' documents begin - the batches rendered so far are the parts'
+class ElementSplit final : public Rml::Element {
+public:
+    explicit ElementSplit(const Rml::String& tag) : Rml::Element(tag) {}
+
+protected:
+    void OnRender() override;
+};
+Rml::ElementInstancerGeneric<ElementSplit> g_splitInstancer;
+void ElementSplit::OnRender() {
+    State& s = state();
+    s.split = s.batches.size();
+    s.splitSeen = true;
+}
+
 // The window template's ×: its document hidden, the part told
 class Close final : public Rml::EventListener {
 public:
@@ -1115,12 +1161,18 @@ bool start(State& s) {
         return false;
     }
     Rml::Factory::RegisterElementInstancer("ua-ring", &g_ringInstancer);  // 3.0.18-beta.17
+    Rml::Factory::RegisterElementInstancer("ua-split", &g_splitInstancer);  // 3.0.18-beta.27
     // the numbers as the interface writes them - «5 157» (core/char_block grouped); for every model of the context
     Rml::DataModelConstructor m = s.context->CreateDataModel("ua");
     m.RegisterTransformFunc("num", [](const Rml::VariantList& a) -> Rml::Variant {
         return a.empty() ? Rml::Variant() : Rml::Variant(charblock::grouped(a[0].Get<int64_t>()));
     });
     themeChanged(s);  // its stamp now: read again only when it changes
+    s.marker = s.context->LoadDocumentFromMemory(
+        "<rml><body style=\"position: absolute; left: 0; top: 0; width: 1px; height: 1px; z-index: 5;\">"
+        "<ua-split style=\"display: block; width: 1px; height: 1px;\"/></body></rml>",
+        "uaui:split");
+    if (s.marker) s.marker->Show(Rml::ModalFlag::None, Rml::FocusFlag::None);
     s.started = true;
     LOG_INFO("uaui: RmlUi %s started - its context %dx%d, %.2f target pixels a concept pixel; the theme %s",
              Rml::GetVersion().c_str(), s.targetW, s.targetH, double(uistyle::partScale(s.k)),
@@ -1471,6 +1523,7 @@ bool Doc::make(const char* name, const char* rml, const std::function<void(Rml::
         LOG_ERROR("uaui: the document «%s» did not load", name);
         return false;
     }
+    if (window) doc_->SetProperty("z-index", "10");  // 3.0.18-beta.27: drawn with the windows
     if (Rml::Element* t = doc_->GetElementById("ua-title")) t->SetInnerRML(doc_->GetTitle());
     if (Rml::Element* c = doc_->GetElementById("ua-close")) c->AddEventListener(Rml::EventId::Click, &g_close);
     s.docs.push_back(this);
@@ -1616,17 +1669,22 @@ void end() {
     }
     const double t1 = clockNow();
     s.batches.clear();
+    s.splitSeen = false;
     s.context->Render();
+    if (!s.splitSeen) s.split = s.batches.size();
     const double t2 = clockNow();
     s.stats.update += t1 - s.frameStart;
     s.stats.render += t2 - t1;
 }
 
-void draw(FrameRecord& record, gpu::Renderer& renderer) {
+void draw(FrameRecord& record, gpu::Renderer& renderer, Layer layer) {
     State& s = state();
     for (uint32_t id : s.released) renderer.releaseTexture(id);
     s.released.clear();
     if (!ready() || s.batches.empty()) return;
+    const size_t from = layer == Layer::Windows ? std::min(s.split, s.batches.size()) : 0;
+    const size_t to = layer == Layer::Windows ? s.batches.size() : std::min(s.split, s.batches.size());
+    if (from >= to) return;
     const double t0 = clockNow();
     // the glyphs' atlas, once made and again when new letters came
     if (!s.atlasId) s.atlasId = renderer.createTexture(kAtlas, kAtlas, 1), s.atlas.dirty = true;
@@ -1670,7 +1728,8 @@ void draw(FrameRecord& record, gpu::Renderer& renderer) {
         vertices += int(verts.size());
         verts.clear();
     };
-    for (const Batch& b : s.batches) {
+    for (size_t bi = from; bi < to; ++bi) {
+        const Batch& b = s.batches[bi];
         const auto g = s.geometries.find(b.geometry);
         if (g == s.geometries.end()) continue;
         uint32_t texture = 0;
