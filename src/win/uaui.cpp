@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <cstdlib>
 #include <cmath>
+#include <cctype>
 #include <set>
 #include <string>
 #include <unordered_map>
@@ -1601,15 +1602,36 @@ int stamp(const panel::Picture* p) {
 bool Doc::make(const char* name, const char* rml, const std::function<void(Rml::DataModelConstructor&)>& bind) {
     State& s = state();
     if (doc_ || !s.started || !s.context) return doc_ != nullptr;
-    Rml::DataModelConstructor m = s.context->CreateDataModel(name);
+    // 3.0.18-beta.47 (R-27NCJE: the sheets 0x0, the experience strip «Could not locate data model 'expbars'»): the
+    // model's name made here - letters and digits, one of its own (the whispers' sheets share a part's name) - and put
+    // on the document's body in place of any the markup has
+    static int made = 0;
+    std::string model;
+    for (const char* c = name; *c; ++c) model += std::isalnum(static_cast<unsigned char>(*c)) ? *c : '_';
+    model += "_" + std::to_string(++made);
+    std::string text = rml;
+    const size_t body = text.find("<body");
+    if (body == std::string::npos) {
+        LOG_ERROR("uaui: «%s» has no body", name);
+        return false;
+    }
+    const size_t bodyEnd = text.find('>', body);
+    const size_t had = text.find("data-model=\"", body);
+    if (had != std::string::npos && had < bodyEnd) {
+        const size_t from = had + 12, to = text.find('"', from);
+        text.replace(from, to - from, model);
+    } else {
+        text.insert(body + 5, " data-model=\"" + model + "\"");
+    }
+    Rml::DataModelConstructor m = s.context->CreateDataModel(model);
     if (!m) {
-        LOG_ERROR("uaui: no model «%s»", name);
+        LOG_ERROR("uaui: no model «%s»", model.c_str());
         return false;
     }
     if (bind) bind(m);
     model_ = m.GetModelHandle();
     this->name = name;
-    doc_ = s.context->LoadDocumentFromMemory(rml, std::string("uaui://") + name);
+    doc_ = s.context->LoadDocumentFromMemory(text, std::string("uaui://") + model);
     if (!doc_) {
         LOG_ERROR("uaui: the document «%s» did not load", name);
         return false;

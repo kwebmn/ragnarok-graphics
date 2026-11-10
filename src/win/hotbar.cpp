@@ -875,46 +875,107 @@ std::vector<Words> gdiWords(const std::vector<hb::Words>& in) {
 
 const char* kDoc = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss"/></head>
 <body class="hb" data-model="hotbar" data-style-width="w + 'px'" data-style-height="h + 'px'">
-<div class="glass" data-style-left="glass.x + 'px'" data-style-top="glass.y + 'px'" data-style-width="glass.w + 'px'" data-style-height="glass.h + 'px' data-style-border-radius="10 * s + 'px'" data-style-background-color="ground"></div>
-<span class="chip" data-if="chip.on" data-style-left="chip.b.x + 'px'" data-style-top="chip.b.y + 'px'" data-style-width="chip.b.w + 'px'" data-style-height="chip.b.h + 'px' data-style-line-height="chip.b.h + 'px'" data-style-border-radius="chip.b.h / 2 + 'px'">{{chip.text}}</span>
-<span class="hint" data-if="hint.on" data-style-left="hint.b.x + 'px'" data-style-top="hint.b.y + 'px'" data-style-width="hint.b.w + 'px'" data-style-height="hint.b.h + 'px' data-style-line-height="hint.b.h + 'px'">{{hint.text}}</span>
-<div class="rowbox" data-if="rowbox.w > 0" data-style-left="rowbox.x + 'px'" data-style-top="rowbox.y + 'px'" data-style-width="rowbox.w + 'px'" data-style-height="rowbox.h + 'px' data-style-border-radius="7 * s + 'px'"></div>
-<span class="rownum" data-if="rownum.on" data-style-left="rownum.b.x + 'px'" data-style-top="rownum.b.y + 'px'" data-style-width="rownum.b.w + 'px'" data-style-height="rownum.b.h + 'px'>{{rownum.text}}</span>
-<span class="f12" data-if="f12.on" data-style-left="f12.b.x + 'px'" data-style-top="f12.b.y + 'px'" data-style-width="f12.b.w + 'px'" data-style-height="f12.b.h + 'px'>{{f12.text}}</span>
-<span class="label" data-for="l : labels" data-style-left="l.b.x + 'px'" data-style-top="l.b.y + 'px'" data-style-width="l.b.w + 'px'" data-style-height="l.b.h + 'px' data-style-line-height="l.b.h + 'px'">{{l.text}}</span>
+<div class="glass" data-style-left="glass.x + 'px'" data-style-top="glass.y + 'px'"
+  data-style-width="glass.w + 'px'" data-style-height="glass.h + 'px'" data-style-border-radius="10 * s + 'px'"
+  data-style-background-color="ground"></div>
+<span class="chip" data-if="chip.on" data-style-left="chip.b.x + 'px'" data-style-top="chip.b.y + 'px'"
+  data-style-width="chip.b.w + 'px'" data-style-height="chip.b.h + 'px'"
+  data-style-line-height="chip.b.h + 'px'" data-style-border-radius="chip.b.h / 2 + 'px'">{{chip.text}}</span>
+<span class="hint" data-if="hint.on" data-style-left="hint.b.x + 'px'" data-style-top="hint.b.y + 'px'"
+  data-style-width="hint.b.w + 'px'" data-style-height="hint.b.h + 'px'"
+  data-style-line-height="hint.b.h + 'px'">{{hint.text}}</span>
+<div class="rowbox" data-if="rowbox.w > 0" data-style-left="rowbox.x + 'px'" data-style-top="rowbox.y + 'px'"
+  data-style-width="rowbox.w + 'px'" data-style-height="rowbox.h + 'px'" data-style-border-radius="7 * s + 'px'"></div>
+<span class="rownum" data-if="rownum.on" data-style-left="rownum.b.x + 'px'" data-style-top="rownum.b.y + 'px'"
+  data-style-width="rownum.b.w + 'px'" data-style-height="rownum.b.h + 'px'">{{rownum.text}}</span>
+<span class="f12" data-if="f12.on" data-style-left="f12.b.x + 'px'" data-style-top="f12.b.y + 'px'"
+  data-style-width="f12.b.w + 'px'" data-style-height="f12.b.h + 'px'">{{f12.text}}</span>
+<span class="label" data-for="l : labels" data-style-left="l.b.x + 'px'" data-style-top="l.b.y + 'px'"
+  data-style-width="l.b.w + 'px'" data-style-height="l.b.h + 'px'"
+  data-style-line-height="l.b.h + 'px'">{{l.text}}</span>
 <div class="a" data-for="c : cells">
- <div data-attr-class="'cell ' + c.cls" data-style-left="c.b.x + 'px'" data-style-top="c.b.y + 'px'" data-style-width="c.b.w + 'px'" data-style-height="c.b.h + 'px' data-style-border-radius="7 * s + 'px'"></div>
- <img class="a" data-if="c.icon != ''" data-attr-src="c.icon" data-style-left="c.ib.x + 'px'" data-style-top="c.ib.y + 'px'" data-style-width="c.ib.w + 'px'" data-style-height="c.ib.h + 'px' data-style-opacity="c.op"/>
- <ua-ring class="a" data-if="c.delay > 0" sector="1" square="1" fill="#00000000" track="#0000008c" style="position: absolute;"
-   data-style-left="c.b.x + 'px'" data-style-top="c.b.y + 'px'" data-style-width="c.b.w + 'px'" data-style-height="c.b.h + 'px' data-attr-value="1 - c.delay"></ua-ring>
- <img class="a" data-if="c.blocked != ''" data-attr-src="c.blocked" data-style-left="c.bb.x + 'px'" data-style-top="c.bb.y + 'px'" data-style-width="c.bb.w + 'px'" data-style-height="c.bb.h + 'px'/>
- <span class="plate " data-if="c.key.on" data-style-left="c.key.b.x + 'px'" data-style-top="c.key.b.y + 'px'" data-style-width="c.key.b.w + 'px'" data-style-height="c.key.b.h + 'px' data-style-line-height="c.key.b.h + 'px'" data-style-color="c.key.colour" data-style-border-radius="3 * s + 'px'">{{c.key.text}}</span>
- <span class="plate " data-if="c.level.on" data-style-left="c.level.b.x + 'px'" data-style-top="c.level.b.y + 'px'" data-style-width="c.level.b.w + 'px'" data-style-height="c.level.b.h + 'px' data-style-line-height="c.level.b.h + 'px'" data-style-color="c.level.colour" data-style-border-radius="3 * s + 'px'">{{c.level.text}}</span>
- <span class="plate " data-if="c.count.on" data-style-left="c.count.b.x + 'px'" data-style-top="c.count.b.y + 'px'" data-style-width="c.count.b.w + 'px'" data-style-height="c.count.b.h + 'px' data-style-line-height="c.count.b.h + 'px'" data-style-color="c.count.colour" data-style-border-radius="3 * s + 'px'">{{c.count.text}}</span>
- <span class="plate " data-if="c.standing.on" data-style-left="c.standing.b.x + 'px'" data-style-top="c.standing.b.y + 'px'" data-style-width="c.standing.b.w + 'px'" data-style-height="c.standing.b.h + 'px' data-style-line-height="c.standing.b.h + 'px'" data-style-color="c.standing.colour" data-style-border-radius="3 * s + 'px'">{{c.standing.text}}</span>
- <div class="flash" data-if="c.flash > 0" data-style-left="c.b.x + 'px'" data-style-top="c.b.y + 'px'" data-style-width="c.b.w + 'px'" data-style-height="c.b.h + 'px' data-style-opacity="c.flash" data-style-border-radius="7 * s + 'px'"></div>
- <span class="plate sp" data-if="c.sp.on" data-style-left="c.sp.b.x + 'px'" data-style-top="c.sp.b.y + 'px'" data-style-width="c.sp.b.w + 'px'" data-style-height="c.sp.b.h + 'px' data-style-line-height="c.sp.b.h + 'px'" data-style-color="c.sp.colour" data-style-border-radius="3 * s + 'px'">{{c.sp.text}}</span>
- <span class="plate lack" data-if="c.lack.on" data-style-left="c.lack.b.x + 'px'" data-style-top="c.lack.b.y + 'px'" data-style-width="c.lack.b.w + 'px'" data-style-height="c.lack.b.h + 'px' data-style-line-height="c.lack.b.h + 'px'" data-style-color="c.lack.colour" data-style-border-radius="3 * s + 'px'">{{c.lack.text}}</span>
- <div class="bar combo" data-if="c.combo" data-style-left="c.b.x + 4 * s + 'px'" data-style-top="c.b.y + c.b.h - 6 * s + 'px'"
+ <div data-attr-class="'cell ' + c.cls" data-style-left="c.b.x + 'px'" data-style-top="c.b.y + 'px'"
+  data-style-width="c.b.w + 'px'" data-style-height="c.b.h + 'px'" data-style-border-radius="7 * s + 'px'"></div>
+ <img class="a" data-if="c.icon != ''" data-attr-src="c.icon" data-style-left="c.ib.x + 'px'"
+  data-style-top="c.ib.y + 'px'" data-style-width="c.ib.w + 'px'" data-style-height="c.ib.h + 'px'"
+  data-style-opacity="c.op"/>
+ <ua-ring class="a"
+  data-if="c.delay > 0" sector="1" square="1" fill="#00000000" track="#0000008c" style="position: absolute;"
+   data-style-left="c.b.x + 'px'" data-style-top="c.b.y + 'px'" data-style-width="c.b.w + 'px'"
+  data-style-height="c.b.h + 'px'" data-attr-value="1 - c.delay"></ua-ring>
+ <img class="a" data-if="c.blocked != ''" data-attr-src="c.blocked" data-style-left="c.bb.x + 'px'"
+  data-style-top="c.bb.y + 'px'" data-style-width="c.bb.w + 'px'" data-style-height="c.bb.h + 'px'"/>
+ <span class="plate " data-if="c.key.on" data-style-left="c.key.b.x + 'px'" data-style-top="c.key.b.y + 'px'"
+  data-style-width="c.key.b.w + 'px'" data-style-height="c.key.b.h + 'px'"
+  data-style-line-height="c.key.b.h + 'px'" data-style-color="c.key.colour"
+  data-style-border-radius="3 * s + 'px'">{{c.key.text}}</span>
+ <span class="plate " data-if="c.level.on" data-style-left="c.level.b.x + 'px'"
+  data-style-top="c.level.b.y + 'px'" data-style-width="c.level.b.w + 'px'"
+  data-style-height="c.level.b.h + 'px'" data-style-line-height="c.level.b.h + 'px'"
+  data-style-color="c.level.colour" data-style-border-radius="3 * s + 'px'">{{c.level.text}}</span>
+ <span class="plate " data-if="c.count.on" data-style-left="c.count.b.x + 'px'"
+  data-style-top="c.count.b.y + 'px'" data-style-width="c.count.b.w + 'px'"
+  data-style-height="c.count.b.h + 'px'" data-style-line-height="c.count.b.h + 'px'"
+  data-style-color="c.count.colour" data-style-border-radius="3 * s + 'px'">{{c.count.text}}</span>
+ <span class="plate " data-if="c.standing.on" data-style-left="c.standing.b.x + 'px'"
+  data-style-top="c.standing.b.y + 'px'" data-style-width="c.standing.b.w + 'px'"
+  data-style-height="c.standing.b.h + 'px'" data-style-line-height="c.standing.b.h + 'px'"
+  data-style-color="c.standing.colour" data-style-border-radius="3 * s + 'px'">{{c.standing.text}}</span>
+ <div class="flash" data-if="c.flash > 0" data-style-left="c.b.x + 'px'" data-style-top="c.b.y + 'px'"
+  data-style-width="c.b.w + 'px'" data-style-height="c.b.h + 'px'" data-style-opacity="c.flash"
+  data-style-border-radius="7 * s + 'px'"></div>
+ <span class="plate sp" data-if="c.sp.on" data-style-left="c.sp.b.x + 'px'" data-style-top="c.sp.b.y + 'px'"
+  data-style-width="c.sp.b.w + 'px'" data-style-height="c.sp.b.h + 'px'"
+  data-style-line-height="c.sp.b.h + 'px'" data-style-color="c.sp.colour"
+  data-style-border-radius="3 * s + 'px'">{{c.sp.text}}</span>
+ <span class="plate lack" data-if="c.lack.on" data-style-left="c.lack.b.x + 'px'"
+  data-style-top="c.lack.b.y + 'px'" data-style-width="c.lack.b.w + 'px'" data-style-height="c.lack.b.h + 'px'"
+  data-style-line-height="c.lack.b.h + 'px'" data-style-color="c.lack.colour"
+  data-style-border-radius="3 * s + 'px'">{{c.lack.text}}</span>
+ <div class="bar combo" data-if="c.combo" data-style-left="c.b.x + 4 * s + 'px'"
+  data-style-top="c.b.y + c.b.h - 6 * s + 'px'"
    data-style-width="c.comboW + 'px'" data-style-border-radius="1.5 * s + 'px'"></div>
- <div class="bar timer" data-if="c.timer.on" data-style-left="c.b.x + 4 * s + 'px'" data-style-top="c.b.y + 3 * s + 'px'"
+ <div class="bar timer" data-if="c.timer.on" data-style-left="c.b.x + 4 * s + 'px'"
+  data-style-top="c.b.y + 3 * s + 'px'"
    data-style-width="c.timerW + 'px'" data-style-border-radius="1.5 * s + 'px'"></div>
- <span class="plate timer" data-if="c.timer.on" data-style-left="c.timer.b.x + 'px'" data-style-top="c.timer.b.y + 'px'" data-style-width="c.timer.b.w + 'px'" data-style-height="c.timer.b.h + 'px' data-style-line-height="c.timer.b.h + 'px'" data-style-border-radius="4 * s + 'px'">{{c.timer.text}}</span>
- <div class="shade" data-if="c.padless" data-style-left="c.b.x + 'px'" data-style-top="c.b.y + 'px'" data-style-width="c.b.w + 'px'" data-style-height="c.b.h + 'px' data-style-border-radius="7 * s + 'px'"></div>
- <img class="a" data-if="c.pad != ''" data-attr-src="c.pad" data-style-left="c.pb.x + 'px'" data-style-top="c.pb.y + 'px'" data-style-width="c.pb.w + 'px'" data-style-height="c.pb.h + 'px'/>
+ <span class="plate timer" data-if="c.timer.on" data-style-left="c.timer.b.x + 'px'"
+  data-style-top="c.timer.b.y + 'px'" data-style-width="c.timer.b.w + 'px'"
+  data-style-height="c.timer.b.h + 'px'" data-style-line-height="c.timer.b.h + 'px'"
+  data-style-border-radius="4 * s + 'px'">{{c.timer.text}}</span>
+ <div class="shade" data-if="c.padless" data-style-left="c.b.x + 'px'" data-style-top="c.b.y + 'px'"
+  data-style-width="c.b.w + 'px'" data-style-height="c.b.h + 'px'" data-style-border-radius="7 * s + 'px'"></div>
+ <img class="a" data-if="c.pad != ''" data-attr-src="c.pad" data-style-left="c.pb.x + 'px'"
+  data-style-top="c.pb.y + 'px'" data-style-width="c.pb.w + 'px'" data-style-height="c.pb.h + 'px'"/>
 </div>
-<div data-attr-class="toggle_cls" data-style-left="toggle.x + 'px'" data-style-top="toggle.y + 'px'" data-style-width="toggle.w + 'px'" data-style-height="toggle.h + 'px' data-style-border-radius="7 * s + 'px'"><img class="a" data-attr-src="toggle_icon"
-  data-style-left="toggle.w / 2 - 8 * s + 'px'" data-style-top="toggle.h / 2 - 8 * s + 'px'" data-style-width="16 * s + 'px'" data-style-height="16 * s + 'px'"/></div>
-<span class="profile" data-if="profile.on" data-style-left="profile.b.x + 'px'" data-style-top="profile.b.y + 'px'" data-style-width="profile.b.w + 'px'" data-style-height="profile.b.h + 'px'>{{profile.text}}</span>
+<div data-attr-class="toggle_cls" data-style-left="toggle.x + 'px'" data-style-top="toggle.y + 'px'"
+  data-style-width="toggle.w + 'px'" data-style-height="toggle.h + 'px'"
+  data-style-border-radius="7 * s + 'px'"><img class="a" data-attr-src="toggle_icon"
+  data-style-left="toggle.w / 2 - 8 * s + 'px'" data-style-top="toggle.h / 2 - 8 * s + 'px'"
+  data-style-width="16 * s + 'px'" data-style-height="16 * s + 'px'"/></div>
+<span class="profile" data-if="profile.on" data-style-left="profile.b.x + 'px'"
+  data-style-top="profile.b.y + 'px'" data-style-width="profile.b.w + 'px'"
+  data-style-height="profile.b.h + 'px'">{{profile.text}}</span>
 <div class="a" data-for="p : pills">
- <div class="pill" data-style-left="p.b.x + 'px'" data-style-top="p.b.y + 'px'" data-style-width="p.b.w + 'px'" data-style-height="p.b.h + 'px' data-style-border-radius="p.b.h / 2 + 'px'" data-style-border-color="p.edge" data-style-border-width="p.ew + 'px'"></div>
- <img class="a" data-if="p.icon != ''" data-attr-src="p.icon" data-style-left="p.ib.x + 'px'" data-style-top="p.ib.y + 'px'" data-style-width="p.ib.w + 'px'" data-style-height="p.ib.h + 'px'/>
- <span class="pilltext" data-if="p.text.on" data-style-left="p.text.b.x + 'px'" data-style-top="p.text.b.y + 'px'" data-style-width="p.text.b.w + 'px'" data-style-height="p.text.b.h + 'px' data-style-line-height="p.text.b.h + 'px'" data-style-color="p.text.colour">{{p.text.text}}</span>
- <div class="dot" data-for="d : p.dots" data-class-on="d.on" data-style-left="d.b.x + 'px'" data-style-top="d.b.y + 'px'" data-style-width="d.b.w + 'px'" data-style-height="d.b.h + 'px' data-style-border-radius="d.b.h / 2 + 'px'"></div>
+ <div class="pill" data-style-left="p.b.x + 'px'" data-style-top="p.b.y + 'px'" data-style-width="p.b.w + 'px'"
+  data-style-height="p.b.h + 'px'" data-style-border-radius="p.b.h / 2 + 'px'" data-style-border-color="p.edge"
+  data-style-border-width="p.ew + 'px'"></div>
+ <img class="a" data-if="p.icon != ''" data-attr-src="p.icon" data-style-left="p.ib.x + 'px'"
+  data-style-top="p.ib.y + 'px'" data-style-width="p.ib.w + 'px'" data-style-height="p.ib.h + 'px'"/>
+ <span class="pilltext" data-if="p.text.on" data-style-left="p.text.b.x + 'px'"
+  data-style-top="p.text.b.y + 'px'" data-style-width="p.text.b.w + 'px'" data-style-height="p.text.b.h + 'px'"
+  data-style-line-height="p.text.b.h + 'px'" data-style-color="p.text.colour">{{p.text.text}}</span>
+ <div class="dot" data-for="d : p.dots" data-class-on="d.on" data-style-left="d.b.x + 'px'"
+  data-style-top="d.b.y + 'px'" data-style-width="d.b.w + 'px'" data-style-height="d.b.h + 'px'"
+  data-style-border-radius="d.b.h / 2 + 'px'"></div>
 </div>
-<div class="tip" data-if="tip.w > 0" data-style-left="tip.x + 'px'" data-style-top="tip.y + 'px'" data-style-width="tip.w + 'px'" data-style-height="tip.h + 'px' data-style-border-radius="8 * s + 'px'"></div>
-<span class="tipline" data-for="l, i : tiplines" data-class-first="i == 0" data-style-left="l.b.x + 'px'" data-style-top="l.b.y + 'px'" data-style-width="l.b.w + 'px'" data-style-height="l.b.h + 'px' data-style-color="l.colour">{{l.text}}</span>
-<span class="ttip" data-if="ttip.on" data-style-left="ttip.b.x + 'px'" data-style-top="ttip.b.y + 'px'" data-style-width="ttip.b.w + 'px'" data-style-height="ttip.b.h + 'px' data-style-line-height="ttip.b.h + 'px'" data-style-border-radius="8 * s + 'px'">{{ttip.text}}</span>
+<div class="tip" data-if="tip.w > 0" data-style-left="tip.x + 'px'" data-style-top="tip.y + 'px'"
+  data-style-width="tip.w + 'px'" data-style-height="tip.h + 'px'" data-style-border-radius="8 * s + 'px'"></div>
+<span class="tipline" data-for="l, i : tiplines" data-class-first="i == 0" data-style-left="l.b.x + 'px'"
+  data-style-top="l.b.y + 'px'" data-style-width="l.b.w + 'px'" data-style-height="l.b.h + 'px'"
+  data-style-color="l.colour">{{l.text}}</span>
+<span class="ttip" data-if="ttip.on" data-style-left="ttip.b.x + 'px'" data-style-top="ttip.b.y + 'px'"
+  data-style-width="ttip.b.w + 'px'" data-style-height="ttip.b.h + 'px'"
+  data-style-line-height="ttip.b.h + 'px'" data-style-border-radius="8 * s + 'px'">{{ttip.text}}</span>
 </body></rml>)RML";
 
 struct BoxV {
