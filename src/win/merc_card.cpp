@@ -516,6 +516,10 @@ namespace {
 namespace mb = uagfx::mercblock;
 
 struct BlockState {
+    uisheet::Sheet sheet;  // 3.0.18-beta.39: the block drawn by uaUI
+    int sheetGen = 0;
+    bool sheetShown = false;
+    std::vector<Words> words;
     bool on = false, shown = false;
     unsigned codePage = 0;
     float k = 0, scale = 1;
@@ -554,8 +558,9 @@ mb::Info blockInfo(unsigned codePage) {
 
 void blockRender(BlockState& s) {
     const uicost::Paint cost("the mercenary's block", s.layout.w, s.layout.h);
-    if (!panel::blank(s.picture, s.layout.w, s.layout.h)) return;
-    mb::paint(s.picture, s.layout, s.info, s.show);
+    const bool byUaui = uaui::ready();  // 3.0.18-beta.39: uaUI's block - the words kept, no picture
+    if (!byUaui && !panel::blank(s.picture, s.layout.w, s.layout.h)) return;
+    if (!byUaui) mb::paint(s.picture, s.layout, s.info, s.show);
     mb::Texts t;
     t.kinds[0] = say(settings::Text::MercArcher);
     t.kinds[1] = say(settings::Text::MercSpearman);
@@ -571,6 +576,11 @@ void blockRender(BlockState& s) {
                                  : w.align == mb::Align::Center ? DT_CENTER
                                                                 : DT_LEFT),
                             false});
+    if (byUaui) {
+        s.words = std::move(out);
+        ++s.sheetGen;
+        return;
+    }
     drawWords(s.picture, out);
     s.upload = true;
 }
@@ -626,7 +636,8 @@ bool toggleCard() {
     return made != 0;
 }
 
-void blockFrame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int targetHeight) {
+static void blockFrameInner(HWND game, bool on, unsigned codePage, double k, int targetWidth,
+                            int targetHeight) {
     BlockState& s = blockState();
     s.on = on;
     s.codePage = codePage;
@@ -656,7 +667,7 @@ void blockFrame(HWND game, bool on, unsigned codePage, double k, int targetWidth
                             std::to_string(i.maxSp) + ',' + std::to_string(i.loyalty) + ',' +
                             std::to_string((i.secondsLeft + 59) / 60) + (mb::ending(i.secondsLeft) ? "e" : "") +
                             (s.show.open ? "o" : "") + (s.show.hover ? "h" : "") + ';' + std::to_string(s.layout.w) +
-                            '#' + std::to_string(uistyle::generation());
+                            '#' + std::to_string(uistyle::generation()) + (uaui::ready() ? "u" : "");
     if (key != s.key) {
         s.key = key;
         blockRender(s);
@@ -671,9 +682,46 @@ void blockFrame(HWND game, bool on, unsigned codePage, double k, int targetWidth
     uapad::gamewindow::setBlocked(Blocker::MercBlock, game, &r, false);
 }
 
+// 3.0.18-beta.39 (docs/superpowers/plans/2026-11-09-uaui-migration.md, stage 5 - by hand): the mercenary's block in
+// RmlUi's markup, line by line as core mercblock paints it - its glass (gold while its window is open), the icon, the
+// HP and SP bars; the words where core mercblock places them
+static void blockSheet(BlockState& s, uisheet::Content& c) {
+    const mb::Layout& L = s.layout;
+    const float sc = L.s;
+    constexpr uint32_t kCard = 0x10141C, kWhite = 0xFFFFFF, kGold = 0xC9A55B, kGold2 = 0xE6CB8A, kHp = 0x5BC07A;
+    constexpr uint32_t kSp = 0x5B8CE0;
+    c.w = float(L.w), c.h = float(L.h);
+    c.rect(c.under, L.glass, 12 * sc, kCard, std::max(0.85f, uistyle::panel()), s.show.open ? kGold2 : kWhite,
+           s.show.open ? 0.9f : s.show.hover ? 0.22f : 0.10f, (s.show.open ? 1.6f : 1.0f) * sc);
+    const uint32_t rgb = s.show.open || s.show.hover ? kGold2 : kGold;
+    const int px = std::max(4, int(std::ceil(L.icon.w)));
+    const std::string src = s.sheet.made("battle" + std::to_string(px) + ':' + std::to_string(rgb), px, px,
+                                         [&](panel::Picture& p) {
+                                             uiicons::draw(p, uiicons::Icon::Battle, 0, 0, float(px), rgb, 1.0f, 1.8f);
+                                         });
+    c.icons.push_back(uisheet::Icon{L.icon.x, L.icon.y, float(px), float(px), 1, src});
+    const auto share = [](int now, int most) {
+        return most > 0 ? std::clamp(float(now) / float(most), 0.0f, 1.0f) : 0.0f;
+    };
+    const auto bar = [&](const panel::Box& b, float part, uint32_t colour) {
+        c.rect(c.under, b, b.h / 2, kWhite, 0.08f);
+        if (part > 0) c.rect(c.under, panel::Box{b.x, b.y, std::max(b.h, b.w * part), b.h}, b.h / 2, colour, 0.92f);
+    };
+    bar(L.hp, share(s.info.hp, s.info.maxHp), kHp);
+    bar(L.sp, share(s.info.sp, s.info.maxSp), kSp);
+    uisheet::sayGdi(c, s.words);
+}
+
+void blockFrame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int targetHeight) {
+    blockFrameInner(game, on, codePage, k, targetWidth, targetHeight);
+    BlockState& s = blockState();
+    s.sheetShown = s.sheet.frame("merc block", s.shown, false, s.layout.x, s.layout.y, s.sheetGen,
+                                 [&](uisheet::Content& c) { blockSheet(s, c); });
+}
+
 void blockDraw(FrameRecord& record, gpu::Renderer& renderer) {
     BlockState& s = blockState();
-    if (!s.shown || s.k <= 0 || s.picture.width <= 0 || s.picture.height <= 0) return;
+    if (!s.shown || s.sheetShown || s.k <= 0 || s.picture.width <= 0 || s.picture.height <= 0) return;
     int cursor = -1, cx = 0, cy = 0;
     if (readGameCursor(cx, cy)) cursor = panel::cursorDraw(record, float(cx), float(cy));
     drawPart(record, renderer, s.picture, s.texture, s.texW, s.texH, s.upload, s.layout.x, s.layout.y, s.k);

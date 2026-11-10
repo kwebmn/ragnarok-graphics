@@ -17,6 +17,8 @@
 #include "win/real_ddraw.hpp"
 #include "win/storage_window.hpp"
 #include "win/trade_window.hpp"
+#include "win/uaui.hpp"
+#include "win/ui_sheet.hpp"
 
 namespace uagfx::win::padcarrywin {
 namespace {
@@ -34,6 +36,11 @@ struct Layer {  // a picture of its own, its texture
 };
 
 struct State {
+    uisheet::Sheet sheet;  // 3.0.18-beta.39: the carry drawn by uaUI, said again each frame
+    int sheetGen = 0;
+    bool sheetShown = false;
+    std::vector<Words> hintWords;  // the hint's, its own pixels
+    int hintW = 0, hintH = 0;
     bool active = false, shown = false;
     pc::Thing thing;
     std::string name;
@@ -131,12 +138,16 @@ void paintHint(State& s, bool nowhere) {
     const float px = 12.5f * s.scale;
     const int w = int(std::ceil(float(wordsWidth(utf8Wide(all), px, true)) + 28 * s.scale));
     const int h = int(std::ceil(28 * s.scale));
-    const std::string key = all + '|' + std::to_string(w) + 'x' + std::to_string(h);
+    const std::string key = all + '|' + std::to_string(w) + 'x' + std::to_string(h) + (uaui::ready() ? "u" : "");
     if (key == s.hint.key) return;
     s.hint.key = key;
-    panel::blank(s.hint.picture, w, h);  // 3.0.18-beta.14
-    panel::roundRect(s.hint.picture, panel::Box{0, 0, float(w), float(h)}, float(h) / 2, kCard, 0.94f, kGold, 0.6f,
-                     std::max(1.0f, s.scale));
+    s.hintW = w, s.hintH = h;
+    const bool byUaui = uaui::ready();  // 3.0.18-beta.39: uaUI's - the words kept, no picture
+    if (!byUaui) {
+        panel::blank(s.hint.picture, w, h);  // 3.0.18-beta.14
+        panel::roundRect(s.hint.picture, panel::Box{0, 0, float(w), float(h)}, float(h) / 2, kCard, 0.94f, kGold,
+                         0.6f, std::max(1.0f, s.scale));
+    }
     std::vector<Words> words;
     float x = 14 * s.scale;
     if (!s.name.empty()) {
@@ -147,6 +158,10 @@ void paintHint(State& s, bool nowhere) {
     }
     words.push_back(Words{panel::Box{x, 0, float(w) - x, float(h)}, utf8Wide(text), nowhere ? kMuted : kText, px, true,
                           DT_LEFT, false});
+    if (byUaui) {
+        s.hintWords = std::move(words);
+        return;
+    }
     drawWords(s.hint.picture, words);
     s.hint.upload = true;
 }
@@ -205,7 +220,7 @@ void command(Command c) {
     s.focusIndex = s.places[size_t(s.focus)].index;
 }
 
-void frame(HWND game, double k, int targetWidth, int targetHeight) {
+static void frameInner(HWND game, double k, int targetWidth, int targetHeight) {
     State& s = state();
     (void)game;
     if (!s.active || k <= 0 || targetWidth <= 0 || targetHeight <= 0) {
@@ -230,9 +245,47 @@ void frame(HWND game, double k, int targetWidth, int targetHeight) {
     s.shown = true;
 }
 
+// 3.0.18-beta.39 (docs/superpowers/plans/2026-11-09-uaui-migration.md, stage 5 - by hand): the controller's carry in
+// RmlUi's markup - the gold ring round the place focused, the thing over its top right corner, the hint's pill (under
+// the place, or over it with no room) with its words
+static void fillSheet(State& s, uisheet::Content& c) {
+    c.w = float(s.targetW), c.h = float(s.targetH);
+    float hx = s.fromX, hy = s.fromY;
+    if (s.focus >= 0 && s.focus < int(s.places.size())) {
+        const pc::Place& p = s.places[size_t(s.focus)];
+        const float m = std::round(4 * s.scale), t = std::max(2.0f, std::round(2 * s.scale));
+        const float rx = std::round(p.x - m), ry = std::round(p.y - m);
+        const float w = std::ceil(p.w + 2 * m), h = std::ceil(p.h + 2 * m);
+        c.rect(c.under, panel::Box{rx + t / 2, ry + t / 2, w - t, h - t}, 9 * s.scale, kGold, 0.10f, kGold, 0.95f, t);
+        if (s.iconOf && s.icon.picture.width > 0)
+            c.icons.push_back(uisheet::Icon{std::round(p.x + p.w - float(s.icon.picture.width) * 0.55f),
+                                            std::round(p.y - float(s.icon.picture.height) * 0.45f),
+                                            float(s.icon.picture.width), float(s.icon.picture.height), 1,
+                                            s.sheet.icon(&s.icon.picture)});
+        hx = p.x + p.w / 2;
+        hy = p.y + p.h + 10 * s.scale;
+        if (hy + float(s.hintH) > float(s.targetH) - 4) hy = p.y - 10 * s.scale - float(s.hintH);
+    }
+    const int w = s.hintW, h = s.hintH;
+    const float x = float(std::clamp(int(std::lround(hx - float(w) / 2)), 0, std::max(0, s.targetW - w)));
+    const float y = float(std::clamp(int(std::lround(hy)), 0, std::max(0, s.targetH - h)));
+    c.rect(c.over, panel::Box{x, y, float(w), float(h)}, float(h) / 2, kCard, 0.94f, kGold, 0.6f,
+           std::max(1.0f, s.scale));
+    std::vector<Words> words = s.hintWords;
+    for (Words& word : words) word.box.x += x, word.box.y += y;
+    uisheet::sayGdi(c, words);
+}
+
+void frame(HWND game, double k, int targetWidth, int targetHeight) {
+    frameInner(game, k, targetWidth, targetHeight);
+    State& s = state();
+    s.sheetShown = s.sheet.frame("pad carry", s.shown && s.k > 0, true, 0, 0, ++s.sheetGen,
+                                 [&](uisheet::Content& c) { fillSheet(s, c); });
+}
+
 void draw(FrameRecord& record, gpu::Renderer& renderer) {
     State& s = state();
-    if (!s.shown || s.k <= 0) return;
+    if (!s.shown || s.k <= 0 || s.sheetShown) return;
     float hx = s.fromX, hy = s.fromY;  // the hint under the focused place (or where it was taken)
     if (s.focus >= 0 && s.focus < int(s.places.size())) {
         const pc::Place& p = s.places[size_t(s.focus)];
