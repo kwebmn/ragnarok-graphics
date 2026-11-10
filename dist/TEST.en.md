@@ -1,3 +1,5 @@
+- Fixed (since 3.0.18-beta.94): the items, storage, cart, trade, equipment, skills, homunculus, mercenary and NPC shop windows follow the text size and item window size settings again.
+
 - The NPC shop is now laid out by the new interface library: the wares, the cart with − amount + and ×, the totals, the buttons and the keys below. Presses land where they are seen.
 - Fixed (since 3.0.18-beta.94): the search hint in the items, storage and cart windows sat below its field.
 
