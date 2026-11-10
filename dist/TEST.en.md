@@ -1,3 +1,5 @@
+- New interface (uaUI): the last parts still drawn as pictures are now drawn by the new library - monsters' HP bars, gold dots over NPCs, the red edges at low HP, the "Вхід у гру…" veil, the shelf's "… додано" note, the interface cursor. The gamepad's window tile, "Призначити", the chat wheel, the on-screen keyboard and the "Розміщення інтерфейсу" frames are over the game's own windows again.
+
 - The new interface library (uaUI) is now on by default: it draws every part of the new interface. It can be turned off under "Інтерфейс".
 
 - The world no longer dims under windows: the switch "Приглушувати світ під вікнами" is gone, the world behind "Речі", "Характеристики" and "Довідник" stays as it is.
