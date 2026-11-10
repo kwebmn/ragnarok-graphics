@@ -1,3 +1,9 @@
+# uaRO Graphics 3.0.18-beta.46 — what's new
+
+- **Fixed with "Нова бібліотека інтерфейсу (RmlUi)": the character block, the party and other parts drag and click again** — transparent screen-wide parts (the experience strip, the layout editor) took the mouse.
+- **Fixed: icons in the new library's windows** (a markup error kept them away).
+- To find why the chat and the hotbar are not seen, the log now records every shown part of the new library — please send one more report.
+
 # uaRO Graphics 3.0.18-beta.45 — what's new
 
 - **The "▾" lists of saved logins on the login screen and in "Продовжити" now use "Нова бібліотека інтерфейсу (RmlUi)"** — over the card, the row under the mouse lit.
