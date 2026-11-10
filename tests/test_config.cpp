@@ -1267,17 +1267,11 @@ TEST(config_reads_the_cast_label) {
     CHECK(liveUpdate(noUi(""), noUi("cast = 1\n")).next.castLabel);
 }
 
-// 3.0.11-beta.49 (the concept's open windows): [interface] dim_world; 3.0.11-beta.55 (the owner: «надо убрать
-// затемнение интерфейса... мешает») off unless the file asks for it, the new minimap or not
-TEST(config_reads_the_world_dim) {
-    CHECK(!noUi("").dimWorld && noUi("dim_world = 1\n").dimWorld);
-    CHECK(!noUi("minimap = 1\n").dimWorld);
-    CHECK(noUi("minimap = 1\ndim_world = 1\n").dimWorld);
-    const settings::IniSetting* s = settings::findSetting("interface.dim_world");
-    CHECK(s != nullptr);
-    if (!s) return;
-    CHECK(s->page == settings::Page::Interface && s->control == settings::Control::Check);
-    CHECK(appliesNow("interface.dim_world"));
+// 3.0.18-beta.67 (the owner: «вообще в этой игре оно не надо»): the world's dimming under the windows gone - an old
+// file's dim_world read and dropped, no switch in the app
+TEST(config_drops_the_world_dim) {
+    CHECK(settings::findSetting("interface.dim_world") == nullptr);
+    CHECK(noUi("dim_world = 1\n").uaui == noUi("").uaui);  // read, nothing kept
 }
 
 // 3.0.11-beta.50 (the concept's low HP): [interface] low_hp_edge 0-100 - none unless asked for

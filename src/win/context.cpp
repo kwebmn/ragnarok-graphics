@@ -148,7 +148,6 @@
 #include "win/weight_rules.hpp"
 #include "win/window_guard.hpp"
 #include "win/windows_draw.hpp"
-#include "win/world_dim.hpp"
 
 namespace uagfx::win {
 namespace {
@@ -727,7 +726,6 @@ void Context::endScene() {
                      "list (the bars under the characters) under it",
                      game.size(), gameWindowsFaces_, sorted);
         }
-        worlddim::draw(record);                 // 3.0.11-beta.49: the world dimmed under the windows (where it ends)
         lowhpedge::draw(record, *renderer);     // 3.0.11-beta.50: the low HP edge, there too
         uaui::draw(record, *renderer, uaui::Layer::World);  // 3.0.18-beta.38: uaUI's over the world
         groundwin::draw(record, *renderer);  // 3.0.11-beta.283: the items on the ground named, under the bars
@@ -804,7 +802,6 @@ void Context::present(const Rect& source, bool waitForVblank) {
     drawSparkles();  // 2.7.14: a frame with no interface draw
     if (panelSlot_.present(drawnAnew) && renderer && !photoNow()) {
         hidePadCursor(record, config.padWalk);  // 3.0.11-beta.102
-        worlddim::draw(record);                 // 3.0.11-beta.49
         lowhpedge::draw(record, *renderer);     // 3.0.11-beta.50
         uaui::draw(record, *renderer, uaui::Layer::World);  // 3.0.18-beta.38: uaUI's over the world
         groundwin::draw(record, *renderer);  // 3.0.11-beta.283
@@ -1136,8 +1133,6 @@ void Context::present(const Rect& source, bool waitForVblank) {
     chatwin::setLongLines(config.longChat);  // 3.0.13-beta.12
     chatwin::setColours(config.chatParty, config.chatGuild, config.chatOwn, config.chatOthers);  // 3.0.13-beta.3
     chatwin::frame(window, config.chat, gameCodePage(config), pk, pw, ph);
-    // 3.0.11-beta.49: [interface] dim_world - the world dimmed while the new windows are open
-    worlddim::frame(config.dimWorld, pk, pw, ph);
     // 3.0.11-beta.50: [interface] low_hp_edge - the screen's edges red at low HP (0: none)
     lowhpedge::frame(config.lowHpEdge, pk, pw, ph);
     // 3.0.11-beta.48: [interface] cast - the character's cast over the hero, the game's own gauge hidden

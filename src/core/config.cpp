@@ -821,8 +821,7 @@ Config parseConfig(const std::string& text) {
             setBool(val, c.worldSigns);
         } else if (key == "interface.ground_counts") {  // 3.0.11-beta.143: walls standing, traps left on the bar
             setBool(val, c.groundCounts);
-        } else if (key == "interface.dim_world") {  // 3.0.11-beta.49: the world dimmed under the windows (off: .55)
-            setBool(val, c.dimWorld);
+        } else if (key == "interface.dim_world") {  // 3.0.18-beta.67: the world's dimming gone (owner: «не надо»)
         } else if (key == "interface.cast") {  // 3.0.11-beta.48: the cast's label over the hero
             castSet = val == "0" || val == "1" || val == "on" || val == "off" || val == "true" || val == "false";
             setBool(val, c.castLabel);

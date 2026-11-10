@@ -196,7 +196,7 @@ const std::vector<InterfaceSection>& interfaceSections() {
          {"interface.minimap", "interface.size", "interface.text_size", "interface.item_windows",
           "interface.panel_opacity",
           "interface.window_opacity", "interface.animations", "interface.cursor", "interface.lock_layout",
-          "interface.layout_per_char", "interface.pack_icons", "interface.dim_world", "interface.low_hp_edge",
+          "interface.layout_per_char", "interface.pack_icons", "interface.low_hp_edge",
           "interface.reference", "interface.uaui", "interface.theme", "interface.uaui_showcase",
           "interface.uaui_motion",
           "interface.uaui_effects",

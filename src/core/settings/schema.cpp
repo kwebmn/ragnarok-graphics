@@ -391,8 +391,6 @@ const std::vector<IniSetting>& iniSettings() {
         {"interface", "low_hp_edge", Page::Interface, Control::Slider, 0, 100, 10, {}, {}, Text::InterfaceLowHpEdge,
          Text::InterfaceLowHpEdgeHint, " %"},
         // 3.0.11-beta.49: the world dimmed under the windows
-        {"interface", "dim_world", Page::Interface, Control::Check, 0, 1, 0, {"0", "1"}, {}, Text::InterfaceDimWorld,
-         Text::InterfaceDimWorldHint, ""},
         // 3.0.11-beta.48: the cast's label over the hero
         {"interface", "cast", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {}, Text::InterfaceCast,
          Text::InterfaceCastHint, ""},
@@ -1427,7 +1425,6 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "interface.theme") return c.uiTheme;  // 3.0.18-beta.13
     if (k == "interface.panel_opacity") return std::to_string(c.hudOpacity);  // 3.0.11-beta.47
     if (k == "interface.cast") return c.castLabel ? "1" : "0";                 // 3.0.11-beta.48
-    if (k == "interface.dim_world") return c.dimWorld ? "1" : "0";             // 3.0.11-beta.49
     if (k == "interface.low_hp_edge") return std::to_string(c.lowHpEdge);      // 3.0.11-beta.50
     if (k == "interface.size") return c.uiSize > 0 ? std::to_string(c.uiSize) : "auto";  // 3.0.11-beta.54
     if (k == "interface.text_size") return std::to_string(c.textSize);  // 3.0.11-beta.67

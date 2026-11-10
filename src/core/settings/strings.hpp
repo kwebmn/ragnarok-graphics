@@ -759,7 +759,6 @@ enum class Text : uint16_t {
     // 3.0.11-beta.48: the cast's label over the hero
     InterfaceCast, InterfaceCastHint, CastSeconds,
     // 3.0.11-beta.49: the world dimmed under the windows
-    InterfaceDimWorld, InterfaceDimWorldHint,
     // 3.0.11-beta.50: the screen's edges red at low HP
     InterfaceLowHpEdge, InterfaceLowHpEdgeHint,
     // 3.0.11-beta.54: the new interface's size

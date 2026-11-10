@@ -646,10 +646,6 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
             change("low_hp_edge", std::to_string(running.lowHpEdge), std::to_string(file.lowHpEdge)));
         n.lowHpEdge = file.lowHpEdge;
     }
-    if (file.dimWorld != running.dimWorld) {  // 3.0.11-beta.49: the world dimmed under the windows, at once
-        u.applied.push_back(change("dim_world", flag(running.dimWorld), flag(file.dimWorld)));
-        n.dimWorld = file.dimWorld;
-    }
     if (file.castLabel != running.castLabel) {  // 3.0.11-beta.48: the cast's label, at once
         u.applied.push_back(change("cast", flag(running.castLabel), flag(file.castLabel)));
         n.castLabel = file.castLabel;
