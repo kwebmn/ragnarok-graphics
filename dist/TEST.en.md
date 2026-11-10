@@ -1,3 +1,5 @@
+- New interface (uaUI): the theme, the palette and parts' markup can now reach every player through the updates: data\uaro-graphics\ui\theme.rcss, palette.txt and <part>.rml in a GRF in the client's updates folder. The player's own files in uaro-graphics\ui stay on top.
+
 - New interface (uaUI): faster - a window re-evaluates only the parts of it that changed, and still elements are not rebuilt every frame. The log line "uaui: in N s …" now also tells how many elements were rebuilt a frame.
 
 - New interface (uaUI): the last parts still drawn as pictures are now drawn by the new library - monsters' HP bars, gold dots over NPCs, the red edges at low HP, the "Вхід у гру…" veil, the shelf's "… додано" note, the interface cursor. The gamepad's window tile, "Призначити", the chat wheel, the on-screen keyboard and the "Розміщення інтерфейсу" frames are over the game's own windows again.
