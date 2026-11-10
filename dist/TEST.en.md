@@ -1,3 +1,5 @@
+- New interface (uaUI): the last style warning in the log removed (an empty ground colour as the shelf appeared).
+
 - Internal: the old code painting windows as pictures removed (40 painters and their helpers) - nothing looks different, the driver is smaller.
 
 - Chat: the chat line takes Ctrl+V (paste one line at the end, as much as the field holds), Ctrl+C (copy the line) and Ctrl+X (cut it). The field itself stays the game's - sending, typing in other languages and the battle mode as they were.
