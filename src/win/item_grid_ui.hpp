@@ -39,7 +39,7 @@ struct Ui {
     }
     uaui::Doc doc;
     float w = 0, h = 0;
-    Rml::String ground;
+    Rml::String ground = "#00000000";  // 3.0.18-beta.65: never an empty style value
     BoxV glass;
     std::vector<BoxV> under, over;
     std::vector<IconV> icons;

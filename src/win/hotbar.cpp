@@ -1011,7 +1011,7 @@ struct Ui {
     uaui::Doc doc;
     float w = 0, h = 0, s = 1;
     BoxV glass, rowbox, toggle, tip;
-    Rml::String ground, toggleCls, toggleIcon;
+    Rml::String ground = "#00000000", toggleCls, toggleIcon;  // 3.0.18-beta.65: never an empty style value
     PlateV chip, hint, rownum, f12, profile, ttip;
     std::vector<PlateV> labels, tiplines;
     std::vector<CellV> cells;

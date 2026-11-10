@@ -508,7 +508,8 @@ ID3D12PipelineState* Renderer::Impl::pipelineFor(const DrawSetup& s, uint32_t fv
     k.glow = toGlow && !toLayer;
     k.water = water && !toLayer;
     k.mask = mask && !toLayer;
-    k.shader = toLayer ? DrawShader::Game : shader;
+    // 3.0.18-beta.65 (R-BVR6RZ: the glass a flat grey under DLSS): the layer takes the glass's shader too
+    k.shader = toLayer && shader != DrawShader::Backdrop ? DrawShader::Game : shader;
     k.behind = behindGround(s, fvf, groundDrawn) && !toLayer;  // 2.6.3: a model, a step behind the ground
     const uint64_t key = packPipelineKey(k);
     if (keyOut) *keyOut = key;  // 3.0.5-beta.3: the state's own draw shader is chosen by it
