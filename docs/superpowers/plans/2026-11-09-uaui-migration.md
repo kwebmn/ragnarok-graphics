@@ -102,3 +102,4 @@ picture's upload gone. Cost if wrong: per-pixel glows (panel::over loops) land i
 - 2026-11-10 beta.34: pet, homunculus, mercenary, options, friends, guild, macros, tip of the day, menu, keyboard on the sheet - their paint() translated line by line (tools: $S/conv.py)
 - 2026-11-10 beta.35: pad tiles, pad assignment, pad hint line, «Розміщення інтерфейсу» on the sheet (+ say offsets, painted boxes' opacity)
 - 2026-11-10 beta.36: core/ui_sheet_model (a part's markup as plain data, filled in core) + «Довідник» on it
+- 2026-11-10 beta.37: the parts left past the plan's list - message box, party setup, monster card on the sheet

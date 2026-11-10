@@ -27,6 +27,8 @@
 #include "win/real_ddraw.hpp"
 #include "win/ui_cost.hpp"
 #include "win/window_shadow.hpp"
+#include "win/uaui.hpp"
+#include "win/ui_sheet.hpp"
 
 namespace uagfx::win::msgboxwin {
 namespace {
@@ -64,6 +66,9 @@ using SendMsgFn = int(__attribute__((thiscall)) *)(uint32_t self, uint32_t sende
 uintptr_t g_error = 0, g_wait = 0;  // the copies of their first instructions, then on to the rest
 
 struct State {
+    uisheet::Sheet sheet;  // 3.0.18-beta.37: the window drawn by uaUI
+    int sheetGen = 0;
+    bool sheetShown = false;
     WindowShadow shadow;
     bool on = false, shown = false, hid = false, padNow = false;
     uint32_t waitHidden = 0;  // 3.0.18-beta.4: a «Please wait...» held hidden while the card shows another box
@@ -222,6 +227,10 @@ std::vector<Words> gdiWords(const std::vector<ac::Words>& in) {
 }
 
 void render(State& s) {
+    if (uaui::ready()) {  // 3.0.18-beta.37: uaUI's window says it all again, no picture
+        ++s.sheetGen;
+        return;
+    }
     const uicost::Paint cost("a message", s.layout.w, s.layout.h);
     if (!panel::blank(s.picture, s.layout.w, s.layout.h)) return;
     ac::paint(s.picture, s.layout, s.card, s.show);
@@ -299,7 +308,8 @@ void install() {
              g_error ? "caught" : "not caught (another build)", g_wait ? "caught" : "not caught (another build)");
 }
 
-void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int targetHeight) {
+static void frameInner(HWND game, bool on, unsigned codePage, double k, int targetWidth,
+                       int targetHeight) {
     State& s = state();
     s.codePage = codePage;
     if (on != s.on) {
@@ -364,23 +374,58 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
                             std::to_string(s.layout.x) + ',' + std::to_string(s.layout.y) + ';' +
                             std::to_string(s.show.hover) + (s.padNow ? "P" : "") + '#' +
                             std::to_string(uistyle::generation());
-    if (key != s.key) {
-        s.key = key;
+    if (const std::string drawn = key + (uaui::ready() ? "u" : ""); drawn != s.key) {  // 3.0.18-beta.37
+        s.key = drawn;
         render(s);
     }
     s.shown = true;
     block(s, game);
 }
 
+// 3.0.18-beta.31 (docs/superpowers/plans/2026-11-09-uaui-migration.md, stage 5 - by hand): a request («Обмін?»,
+// «Скільки?», a party's or a guild's ask) in RmlUi's markup, line by line as core askcard paints it - its glass, the
+// field, a count's quick choices, the buttons (the yes ones gold); the words where core askcard places them
+static void fillSheet(State& s, uisheet::Content& c) {
+    const ac::Layout& L = s.layout;
+    const ac::Show& sh = s.show;
+    const float sc = L.s;
+    constexpr uint32_t kCard = 0x10141C, kWhite = 0xFFFFFF, kBlack = 0x000000, kGold = 0xF3C653;
+    auto& u = c.under;
+    c.w = float(L.w), c.h = float(L.h);
+    c.glass = uisheet::Box{L.glass.x, L.glass.y, L.glass.w, L.glass.h, 12 * sc, 1.0f * sc, 1, "glass"};
+    c.ground = uisheet::Sheet::ground(kCard, uistyle::window());
+    if (L.field.w > 0) c.rect(u, L.field, 7 * sc, kBlack, 0.35f, kGold, 0.55f, 1.0f * sc);
+    for (size_t i = 0; i < L.quick.size(); ++i)
+        c.rect(u, L.quick[i], 7 * sc, kWhite, int(i) == sh.quickHover ? 0.14f : 0.06f, kWhite, 0.16f, 1.0f * sc);
+    const std::vector<ac::Button> bs = ac::buttons(s.card.kind);
+    for (size_t i = 0; i < L.buttons.size() && i < bs.size(); ++i) {
+        const bool primary = bs[i] != ac::Button::Decline && bs[i] != ac::Button::No && bs[i] != ac::Button::Cancel;
+        const bool hot = int(i) == sh.hover;
+        const float fill = primary ? (hot ? 0.34f : 0.22f) : (hot ? 0.12f : 0.06f);
+        c.rect(u, L.buttons[i], 8 * sc, primary ? kGold : kWhite, fill, primary ? kGold : kWhite,
+               primary ? 0.8f : 0.16f, 1.0f * sc);
+    }
+    c.say(ac::words(L, s.card, sh, texts(s)));
+}
+
+void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int targetHeight) {
+    frameInner(game, on, codePage, k, targetWidth, targetHeight);
+    State& s = state();
+    s.sheetShown = s.sheet.frame("msg", s.shown, true, s.layout.x, s.layout.y, s.sheetGen,
+                                 [&](uisheet::Content& c) { fillSheet(s, c); });
+}
+
 void draw(FrameRecord& record, gpu::Renderer& renderer) {
     State& s = state();
-    if (!s.shown || s.k <= 0 || s.picture.width <= 0 || s.picture.height <= 0) return;
+    if (!s.shown || s.k <= 0 || ((s.picture.width <= 0 || s.picture.height <= 0) && !s.sheetShown)) return;
     int cursor = -1, cx = 0, cy = 0;
     if (readGameCursor(cx, cy)) cursor = panel::cursorDraw(record, float(cx), float(cy));
     const panel::Box& g = s.layout.glass;
-    s.shadow.draw(record, renderer, s.layout.x + int(g.x), s.layout.y + int(g.y), int(g.w), int(g.h), 12 * s.scale,
-                  s.scale, s.k);
-    drawPart(record, renderer, s.picture, s.texture, s.texW, s.texH, s.upload, s.layout.x, s.layout.y, s.k);
+    if (!s.sheetShown) {  // 3.0.18-beta.37: uaUI draws the window (with the windows' layer)
+        s.shadow.draw(record, renderer, s.layout.x + int(g.x), s.layout.y + int(g.y), int(g.w), int(g.h),
+                      12 * s.scale, s.scale, s.k);
+        drawPart(record, renderer, s.picture, s.texture, s.texW, s.texH, s.upload, s.layout.x, s.layout.y, s.k);
+    }
     if (cursor >= 0) record.moveLastBefore(record.commands().size() - size_t(cursor) - 1, size_t(cursor));
 }
 

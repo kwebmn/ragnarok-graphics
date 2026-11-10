@@ -20,6 +20,8 @@
 #include "win/target_card.hpp"
 #include "win/ui_cost.hpp"
 #include "win/world_mouse.hpp"
+#include "win/uaui.hpp"
+#include "win/ui_sheet.hpp"
 
 namespace uagfx::win::mobcardwin {
 namespace {
@@ -30,6 +32,11 @@ constexpr float kW = 270, kLineH = 18, kPad = 9, kTitleH = 21;
 constexpr uint64_t kShowAfter = 200;
 
 struct State {
+    uisheet::Sheet sheet;  // 3.0.18-beta.37: the card drawn by uaUI
+    int sheetGen = 0;
+    bool sheetShown = false;
+    std::vector<Words> words;
+    float scale = 1;
     bool on = false, shown = false, upload = false;
     uint32_t id = 0;
     uint64_t since = 0;
@@ -51,7 +58,7 @@ std::string say(settings::Text t) { return settings::tr(language(), t); }
 
 }  // namespace
 
-void frame(HWND game, bool on, double k, int targetWidth, int targetHeight) {
+static void frameInner(HWND game, bool on, double k, int targetWidth, int targetHeight) {
     State& s = state();
     if (on != s.on) {
         s.on = on;
@@ -118,13 +125,17 @@ void frame(HWND game, bool on, double k, int targetWidth, int targetHeight) {
     if (s.y + s.h > targetHeight) s.y = std::max(0, targetHeight - s.h);
     std::string key = std::to_string(s.w) + 'x' + std::to_string(s.h) + '#' + std::to_string(uistyle::generation());
     for (const std::string& line : lines) key += '|' + line;
+    if (uaui::ready()) key += 'u';  // 3.0.18-beta.37
+    s.scale = scale;
     if (key != s.key) {
         s.key = key;
         const uicost::Paint cost("the monster's card", s.w, s.h);
-        if (panel::blank(s.picture, s.w, s.h)) {
+        const bool byUaui = uaui::ready();
+        if (byUaui || panel::blank(s.picture, s.w, s.h)) {
             const float sc = scale;
-            panel::roundRect(s.picture, panel::Box{0, 0, float(s.w), float(s.h)}, 8 * sc, kCard, uistyle::panel(),
-                             kWhite, 0.09f, 1.0f * sc);
+            if (!byUaui)
+                panel::roundRect(s.picture, panel::Box{0, 0, float(s.w), float(s.h)}, 8 * sc, kCard, uistyle::panel(),
+                                 kWhite, 0.09f, 1.0f * sc);
             std::vector<Words> out;
             for (size_t i = 0; i < lines.size(); ++i) {
                 const float y = i == 0 ? kPad * sc : (kPad + kTitleH + float(i - 1) * kLineH) * sc;
@@ -133,17 +144,39 @@ void frame(HWND game, bool on, double k, int targetWidth, int targetHeight) {
                 out.push_back(Words{panel::Box{kPad * sc, y, float(s.w) - 2 * kPad * sc, (i ? kLineH : kTitleH) * sc},
                                     utf8Wide(lines[i]), colour, (i == 0 ? 13 : 12) * sc, i == 0, DT_LEFT, false});
             }
-            drawWords(s.picture, out);
-            s.upload = true;
+            if (byUaui) {  // 3.0.18-beta.37: uaUI's card - its words kept, no picture
+                s.words = std::move(out);
+                ++s.sheetGen;
+            } else {
+                drawWords(s.picture, out);
+                s.upload = true;
+            }
         }
         if (s.told++ < 10) LOG_INFO("mob card: %s - %s", lines[0].c_str(), lines.size() > 2 ? lines[2].c_str() : "");
     }
     s.shown = true;
 }
 
+// 3.0.18-beta.37 (docs/superpowers/plans/2026-11-09-uaui-migration.md, stage 5 - by hand): the monster's card in
+// RmlUi's markup - its ground and the lines as the card lays them out
+static void fillSheet(State& s, uisheet::Content& c) {
+    const float sc = s.scale;
+    c.w = float(s.w), c.h = float(s.h);
+    c.rect(c.under, panel::Box{0, 0, float(s.w), float(s.h)}, 8 * sc, kCard, uistyle::panel(), kWhite, 0.09f,
+           1.0f * sc);
+    uisheet::sayGdi(c, s.words);
+}
+
+void frame(HWND game, bool on, double k, int targetWidth, int targetHeight) {
+    frameInner(game, on, k, targetWidth, targetHeight);
+    State& s = state();
+    s.sheetShown = s.sheet.frame("mob card", s.shown, true, s.x, s.y, s.sheetGen,
+                                 [&](uisheet::Content& c) { fillSheet(s, c); });
+}
+
 void draw(FrameRecord& record, gpu::Renderer& renderer) {
     State& s = state();
-    if (!s.shown || s.k <= 0 || s.picture.width <= 0 || s.picture.height <= 0) return;
+    if (!s.shown || s.sheetShown || s.k <= 0 || s.picture.width <= 0 || s.picture.height <= 0) return;
     int cursor = -1, cx = 0, cy = 0;
     if (readGameCursor(cx, cy)) cursor = panel::cursorDraw(record, float(cx), float(cy));
     drawPart(record, renderer, s.picture, s.texture, s.texW, s.texH, s.upload, s.x, s.y, s.k);
