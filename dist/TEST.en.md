@@ -1,3 +1,5 @@
+- Every window of the new interface can now be dragged: press its empty part and pull. Added for all live windows (messages, requests, "Опції", the pet, macros, chat rooms, shops, the NPC talk and others), the guild, the homunculus, the mercenary and each whisper card.
+
 - Fixed: when dragging an item, a skill or a skill bar cell inside a window ("Речі", "Склад", "Візок", "Спорядження", "Навички"), its icon now follows the cursor there too - the window itself hid it before, it showed only outside it.
 
 - New interface (uaUI): one's own open shop and its setup are live windows of the new library: the cart and the wares for sale side by side, the sign and prices the game's fields, a click on a cart item puts it up for sale, ✕ takes it down.
