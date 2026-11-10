@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.18-beta.36 — what's new
+
+- **"Довідник" now uses "Нова бібліотека інтерфейсу (RmlUi)":** the header with search and buttons, the section rail, cards, blocks, tiles, chips, search results with highlighted matches, route steps, the legend, buttons, scrolling and tips are drawn by the new library; the world map stays its own picture. Clicks, the wheel and keys work as before.
+
 # uaRO Graphics 3.0.18-beta.35 — what's new
 
 - **The controller tiles, button assignment, the controller hint line and "Розміщення інтерфейсу" now use "Нова бібліотека інтерфейсу (RmlUi)":** tiles with icons, rows with buttons, the interface parts' frames with labels, the guides while dragging, the resize grip and the bar with "Скинути" and "Готово" are drawn by the new library. Controls work as before.
