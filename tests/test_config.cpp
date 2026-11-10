@@ -1999,3 +1999,11 @@ TEST(config_interface_vend_setup) {
     CHECK(appliesNow("interface.vend_setup"));
     CHECK(liveUpdate(noUi(""), noUi("vend_setup = 1\n")).next.vendSetupWindow);
 }
+
+// 3.0.18-beta.68 (stage 6, the owner's word): the new interface library on unless the file turns it off
+TEST(config_has_the_new_interface_library_on_by_default) {
+    CHECK(noUi("").uaui);
+    CHECK(!noUi("uaui = 0\n").uaui);
+    const settings::IniSetting* s = settings::findSetting("interface.uaui");
+    CHECK(s != nullptr);
+}

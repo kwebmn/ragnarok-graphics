@@ -929,8 +929,8 @@ struct Config {
     int lowHpEdge = 0;
     // 3.0.18-beta.7: [interface] uaui - the RmlUi spike (Claude Doc «Концепция: единая библиотека интерфейса»); since
     // 3.0.18-beta.11 the new interface's parts moved to uaUI drawn by it (win/uaui), its cost in the log; off unless
-    // asked for
-    bool uaui = false;
+    // asked for; 3.0.18-beta.68 (the owner's stage 6: «сделай 1,2,3,4,5,6») on by default
+    bool uaui = true;
     // 3.0.18-beta.11: [interface] uaui_showcase - uaUI's components in one window, for the developers (with uaui on)
     bool uauiShowcase = false;
     // 3.0.18-beta.64: [interface] uaui_glass (uaUI)
