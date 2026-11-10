@@ -1,3 +1,5 @@
+- New interface (uaUI): the switch "Скляні вікна (нова бібліотека)" under "Інтерфейс" (off by default). With it windows of the new library show the world behind them softly blurred, like frosted glass, with the window's colour laid over. Direct3D 12 only (with DLSS too); on Direct3D 11 the switch changes nothing.
+
 - New interface (uaUI): with "Плавний рух (нова бібліотека)" the HP bars in the party panel glide to their new value too.
 - New interface (uaUI): the gamepad in the whisper window - the D-pad moves the frame over the input field, "Надіслати" and ×, A presses, B closes (the top whisper window).
 - New interface (uaUI): with "Ефекти (нова бібліотека)" radial gradients are drawn too (for your own themes and markup).
