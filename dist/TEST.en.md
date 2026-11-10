@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.18-beta.42 — what's new
+
+- **The big map now uses "Нова бібліотека інтерфейсу (RmlUi)":** the card, its header, the cross, the layer buttons and "Схема" are drawn by the new library; the map with its marks stays its own picture. Clicks, the wheel and dragging work as before.
+
 # uaRO Graphics 3.0.18-beta.41 — what's new
 
 - **The accounts "Полиця" and "Персонажі" now use "Нова бібліотека інтерфейсу (RmlUi)":** cards with class portraits gliding in their row, search, arrows, buttons, the site links and the card menu are drawn by the new library.
