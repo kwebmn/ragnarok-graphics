@@ -1,3 +1,5 @@
+- New interface (uaUI): the "Порада дня" tip, the requests (trade, party, guild, friend, a number or text to type, a count) and the pet window are now live windows of the new library - laid out by flexbox, their text wraps by itself, the library's own hover and clicks.
+
 - Gamepad: with the character dead and the death window closed, the hint line at the bottom says "B: back to the save point".
 - New interface (uaUI): the log no longer fills with "Could not get value from data variable words[…]" warnings.
 
