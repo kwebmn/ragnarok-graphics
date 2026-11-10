@@ -47,3 +47,4 @@ Order (safest first; the cleanup last, once nothing needs the old code):
   Ruling: the core painters stay (51 of them, only the tests call them now) - removing them took 75 tests that also
   check layouts, words and clicks; cost if wrong: ~10k lines of dead core code until those tests are rewritten.
 - beta.76 (R-5AJCUY, beta.75 on 4K: RmlUi update 0.4-0.6 ms; bridge 1.2-3 ms from the low HP edge's radial cut to 8 px = 105-135k vertices): radial cut by radius/12; empty colours given starting values
+- beta.77 (R-6XYRXP «фпс сильно проседает», beta.75: frames 4100-5200 -> 1509 a 10 s with the low HP edge's 135k vertices): a radial gradient's clear middle (inside its first stop) left whole - ~5.4k triangles at 4K

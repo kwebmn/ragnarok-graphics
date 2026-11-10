@@ -183,6 +183,6 @@ TEST(uaui_mesh_cuts_a_big_radial_gradient_by_its_radius) {
     g.x0 = 1920, g.y0 = 1080, g.x1 = 2203, g.y1 = 1239;  // farthest corner
     g.stops = {{0.62f, 0x00000000}, {1, 0x66FF2D23}};
     uaui::shade(pts, ix, g);
-    CHECK(ix.size() / 3 <= 8192);  // a few thousand triangles at most, not 131 thousand
+    CHECK(ix.size() / 3 <= 6000);  // a few thousand triangles at most, not 131 thousand (its clear middle whole)
     CHECK(ix.size() / 3 > 100);
 }

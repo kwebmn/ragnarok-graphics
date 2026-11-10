@@ -192,7 +192,11 @@ void shade(std::vector<Point>& points, std::vector<int>& indices, const Gradient
                                                                                      const P& c, int depth) {
                 const float ab = std::hypot(a.x - b.x, a.y - b.y), bc = std::hypot(b.x - c.x, b.y - c.y),
                             ca = std::hypot(c.x - a.x, c.y - a.y);
-                if (depth >= 8 || std::max({ab, bc, ca}) <= most) {
+                // 3.0.18-beta.77: wholly inside the first stop (the ellipse is convex) - one colour, no cut
+                const float first = g.stops.empty() || g.repeating ? -1.0f : g.stops.front().t;
+                const bool inside = placeOf(g, a.x, a.y) <= first && placeOf(g, b.x, b.y) <= first &&
+                                    placeOf(g, c.x, c.y) <= first;
+                if (inside || depth >= 8 || std::max({ab, bc, ca}) <= most) {
                     small.push_back({a, b, c});
                     return;
                 }
