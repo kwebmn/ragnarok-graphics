@@ -14,7 +14,7 @@ namespace {
 // At scale 1: the card 330 wide, 14 in; its title 48 high (the icon 32); the words 12.5 px a row of 17, at most 16 rows
 // shown; the big picture's room 75 x 100 (the game's collection pictures); an item's slots 24 high, 6 apart
 constexpr float kW = 330, kSide = 14, kTitleH = 48, kIcon = 32, kTextPx = 12.5f, kLineH = 17, kClose = 24;
-constexpr int kMostRows = 16, kWheelRows = 3;
+constexpr int kMostRows = 20, kWheelRows = 3;  // 3.0.18-beta.108: 20 (the cards' words under the thing's)
 constexpr float kPictureW = 75, kPictureH = 100, kSlotH = 24, kSlotGap = 6;
 constexpr uint32_t kCard = 0x10141C, kWhite = 0xFFFFFF, kGold = 0xC9A55B, kText = 0xEEF2F8, kMuted = 0x9AA3B5;
 constexpr uint32_t kSpacer = 0xFFFFFF;  // the game's white words: on its white window unseen (spacers)

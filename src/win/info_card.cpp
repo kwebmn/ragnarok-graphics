@@ -241,6 +241,19 @@ void itemCard(State& s, One& o, uint32_t window) {
     if (known && !special)
         for (int i = 0; i < std::max(slotCount, 0); ++i)
             c.cards.push_back(cards[i] > 0 ? itemName(s, std::to_string(cards[i]), true) : "");
+    // 3.0.18-beta.108 (the owner: «описание товара ... как выглядят вещи с картами», «сделай как-то универсальнее»):
+    // each card in it after the thing's own words - its name in gold, then its description from the same table as it
+    // is (any card, nothing read out of the words); the card scrolls when long
+    if (known && !special)
+        for (int i = 0; i < std::max(slotCount, 0); ++i) {
+            if (cards[i] <= 0) continue;
+            const std::string card = std::to_string(cards[i]);
+            c.lines.push_back("");
+            c.lines.push_back("^E6CB8A\xE2\x97\x86 " + itemName(s, card, true));  // ◆ Hydra Card
+            const auto cd = s.tables.items.find(card);
+            if (cd != s.tables.items.end())
+                for (const std::string& l : utf8Lines(s, cd->second)) c.lines.push_back(l);
+        }
     const auto& files = known ? clienttables::itemFiles() : s.tables.unknownFiles;
     const auto f = files.find(number);
     if (f != files.end()) {
