@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.18-beta.37 — what's new
+
+- **The game's messages, the party settings and the monster card under the cursor now use "Нова бібліотека інтерфейсу (RmlUi)".** Clicks and keys work as before.
+
 # uaRO Graphics 3.0.18-beta.36 — what's new
 
 - **"Довідник" now uses "Нова бібліотека інтерфейсу (RmlUi)":** the header with search and buttons, the section rail, cards, blocks, tiles, chips, search results with highlighted matches, route steps, the legend, buttons, scrolling and tips are drawn by the new library; the world map stays its own picture. Clicks, the wheel and keys work as before.
