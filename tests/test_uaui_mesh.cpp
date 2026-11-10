@@ -171,3 +171,18 @@ TEST(uaui_mesh_fills_a_rounded_box) {
     const float want = 40 * 20 - (4 - 3.14159265f) * 36;
     CHECK(std::fabs(area - want) < 0.01f * want);
 }
+
+// 3.0.18-beta.76 (R-5AJCUY: the low HP edge 105-135 thousand vertices a frame at 4K): a big radial gradient cut by its
+// radius (a twelfth of it at most), not by 8 px
+TEST(uaui_mesh_cuts_a_big_radial_gradient_by_its_radius) {
+    std::vector<uaui::Point> pts = {{0, 0, 0xFFFFFFFF}, {3840, 0, 0xFFFFFFFF}, {3840, 2160, 0xFFFFFFFF},
+                                    {0, 2160, 0xFFFFFFFF}};
+    std::vector<int> ix = {0, 1, 2, 0, 2, 3};
+    uaui::Gradient g;
+    g.radial = true;
+    g.x0 = 1920, g.y0 = 1080, g.x1 = 2203, g.y1 = 1239;  // farthest corner
+    g.stops = {{0.62f, 0x00000000}, {1, 0x66FF2D23}};
+    uaui::shade(pts, ix, g);
+    CHECK(ix.size() / 3 <= 8192);  // a few thousand triangles at most, not 131 thousand
+    CHECK(ix.size() / 3 > 100);
+}

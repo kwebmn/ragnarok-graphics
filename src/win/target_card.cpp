@@ -233,7 +233,7 @@ const char* kDoc = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss
 </body></rml>)RML";
 
 struct Line {
-    Rml::String text, colour;
+    Rml::String text, colour = "#eceff5";
 };
 
 struct Ui {

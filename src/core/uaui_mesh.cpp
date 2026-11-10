@@ -184,12 +184,15 @@ void shade(std::vector<Point>& points, std::vector<int>& indices, const Gradient
         polys = {{toP(points[size_t(i0)], 0, 0, nullptr), toP(points[size_t(i1)], 0, 0, nullptr),
                   toP(points[size_t(i2)], 0, 0, nullptr)}};
         if (g.radial) {  // 3.0.18-beta.63: small triangles, each corner coloured by its distance
+            // 3.0.18-beta.76 (R-5AJCUY): as small as a twelfth of its radius (8 px at least) - a screen-wide one
+            // was cut into a quarter of a million at 4K
+            const float most = std::max(8.0f, std::min(g.x1, g.y1) / 12.0f);
             std::vector<std::vector<P>> small;
             const std::function<void(const P&, const P&, const P&, int)> split = [&](const P& a, const P& b,
                                                                                      const P& c, int depth) {
                 const float ab = std::hypot(a.x - b.x, a.y - b.y), bc = std::hypot(b.x - c.x, b.y - c.y),
                             ca = std::hypot(c.x - a.x, c.y - a.y);
-                if (depth >= 8 || std::max({ab, bc, ca}) <= 8) {
+                if (depth >= 8 || std::max({ab, bc, ca}) <= most) {
                     small.push_back({a, b, c});
                     return;
                 }

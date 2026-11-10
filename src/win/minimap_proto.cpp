@@ -1292,13 +1292,13 @@ struct IconV {
 };
 struct WordV {
     float x = 0, y = 0, w = 0, h = 0, px = 12;
-    Rml::String text, colour, cls;
+    Rml::String text, colour = "#eceff5", cls;
 };
 
 struct Ui {
     uaui::Doc doc;
     float w = 0, h = 0, side = 0, op = 1;
-    Rml::String square, ground;
+    Rml::String square, ground = "#00000000";  // 3.0.18-beta.76: never an empty style value
     std::vector<BoxV> cards, boxes, bars;
     std::vector<IconV> icons;
     std::vector<WordV> words;

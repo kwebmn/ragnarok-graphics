@@ -119,7 +119,7 @@ struct Ui {
     uaui::Doc doc;
     float w = 0, h = 0, s = 1;
     int hover = -1;
-    Rml::String title, ground;
+    Rml::String title, ground = "#00000000";  // 3.0.18-beta.76: never an empty style value
     std::vector<RowV> rows;
     std::string key;
 };

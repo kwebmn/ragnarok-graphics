@@ -46,3 +46,4 @@ Order (safest first; the cleanup last, once nothing needs the old code):
   assign, carry, merc block - their words kept for the sheets).
   Ruling: the core painters stay (51 of them, only the tests call them now) - removing them took 75 tests that also
   check layouts, words and clicks; cost if wrong: ~10k lines of dead core code until those tests are rewritten.
+- beta.76 (R-5AJCUY, beta.75 on 4K: RmlUi update 0.4-0.6 ms; bridge 1.2-3 ms from the low HP edge's radial cut to 8 px = 105-135k vertices): radial cut by radius/12; empty colours given starting values

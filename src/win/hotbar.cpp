@@ -974,7 +974,7 @@ struct BoxV {
 };
 struct PlateV {
     BoxV b;
-    Rml::String text, colour;
+    Rml::String text, colour = "#eceff5";
     bool on = false;
 };
 struct CellV {

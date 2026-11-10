@@ -187,7 +187,7 @@ struct BoxV {
 };
 struct WordV {
     float x = 0, y = 0, w = 0, h = 0, px = 12;
-    Rml::String text, colour, cls;
+    Rml::String text, colour = "#eceff5", cls;
 };
 
 struct Ui {
