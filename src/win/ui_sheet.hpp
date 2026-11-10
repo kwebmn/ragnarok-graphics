@@ -62,7 +62,7 @@ inline bool operator==(const Ring& a, const Ring& b) {
 struct Content {
     float w = 0, h = 0, op = 1;  // op: the whole one's opacity (3.0.18-beta.32: the quiet chat)
     Box glass;  // w 0: none
-    Rml::String ground;
+    Rml::String ground = "#00000000";  // 3.0.18-beta.86: never an empty style value, even before the first fill
     std::vector<Box> under, over;
     std::vector<Icon> icons;
     std::vector<Word> words;
