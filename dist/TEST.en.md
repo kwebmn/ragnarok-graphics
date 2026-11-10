@@ -1,3 +1,5 @@
+- The new interface library (uaUI) is now on by default: it draws every part of the new interface. It can be turned off under "Інтерфейс".
+
 - The world no longer dims under windows: the switch "Приглушувати світ під вікнами" is gone, the world behind "Речі", "Характеристики" and "Довідник" stays as it is.
 
 - Settings: "Приглушувати світ під вікнами" is now off by default in the app too (the game has had it off since 3.0.11-beta.55); "Типово" no longer turns it on.
