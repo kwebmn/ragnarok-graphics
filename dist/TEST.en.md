@@ -1,3 +1,5 @@
+- New interface (uaUI): another player's shop is a live window of the new library: wares with − / +, the sum and your zeny, "Купити" lit only when you can afford it.
+
 - New interface (uaUI): the NPC talk is a live window of the new library: the NPC's coloured words, the answers in two columns, the "Далі" / "Закрити" button; the text wraps by itself, the window drags by its ground.
 
 - New interface (uaUI): the whisper setup, macros, making a chat room, the chat room, friends / party and the pick list are now live windows of the new library - laid out by flexbox, their text wraps by itself, the library's own hover and clicks; the gamepad walks them as before.
