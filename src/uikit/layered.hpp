@@ -31,11 +31,16 @@ struct HitV {
     int index = -1;
     Rml::String part;
 };
+struct IconV {  // 3.0.18-beta.106: a picture (a character's face)
+    float x = 0, y = 0, w = 0, h = 0;
+    Rml::String src;
+};
 struct Layer {
     float w = 0, h = 0;
     std::vector<BoxV> boxes;
     std::vector<HitV> hits;
     std::vector<WordV> words;
+    std::vector<IconV> icons;
 };
 
 // The body's markup: a div of class «lay» (data-hit «body») holding the boxes, the places and the words
@@ -47,13 +52,14 @@ enum class Align : uint8_t { Left, Right, Center };
 struct Builder {
     Layer& layer;
     panel::Box origin;
-    size_t hadBoxes = 0, hadHits = 0, hadWords = 0;
+    size_t hadBoxes = 0, hadHits = 0, hadWords = 0, hadIcons = 0;
     explicit Builder(Layer& l, const panel::Box& o);
     ~Builder();  // the lists never shorter than before (RmlUi reads them while they change)
     void box(const panel::Box& b, float radius, uint32_t fill, float fillA, uint32_t edge = 0, float edgeA = 0,
              float edgeW = 0);
     void hit(const char* part, int index, const panel::Box& b);
     void word(const panel::Box& b, const std::string& text, uint32_t rgb, float px, bool bold, Align a);
+    void icon(const panel::Box& b, const std::string& src);
 };
 // 3.0.18-beta.104 (R-WH87QX: «на весь екран растянулась»): the layer's height from what it holds (its lowest box,
 // place or word, `pad` under it) - never from the window as laid out (its edge's pixel made it grow each frame)

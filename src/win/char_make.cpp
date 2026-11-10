@@ -9,6 +9,7 @@
 #include <tuple>
 #include <vector>
 
+#include "core/window_stack.hpp"
 #include "core/char_make.hpp"
 #include "core/settings/strings.hpp"
 #include "core/ui_style.hpp"
@@ -22,6 +23,7 @@
 #include "win/ui_cost.hpp"
 #include "win/window_shadow.hpp"
 #include "win/uaui.hpp"
+#include "win/ui_live.hpp"
 #include "win/ui_sheet.hpp"
 
 namespace uagfx::win::charmakewin {
@@ -45,7 +47,47 @@ using SendMsgFn = int(__attribute__((thiscall)) *)(uint32_t self, uint32_t sende
 using GetTextFn = const char*(__attribute__((thiscall)) *)(uint32_t edit);
 using SetFocusFn = void(__attribute__((thiscall)) *)(uint32_t manager, uint32_t control);
 
+// 3.0.18-beta.106 (the owner: «делай 1-3», the login screens): the character make live - the face, the hair's and
+// the colour's ‹ ›, the name's field (the game's own, focused by a click), the three pairs' + with their bars,
+// «Створити», «Скасувати» RmlUi's; each press the window's own act() (the game's buttons)
+const char* kLive = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss"/></head>
+<body class="lw ckw" data-style-background-color="ground">
+<div class="head"><span class="title">{{title}}</span></div>
+<div class="cols"><div class="lc"><div class="face"><img data-if="face != ''" data-attr-src="face"
+  data-style-width="faceW + 'px'" data-style-height="faceH + 'px'"/></div>
+<div class="lbl">{{hairWord}}</div><div class="chooser" data-class-focus="focusRow == 0"><span class="ar ctl"
+  data-event-click="cm_act(2, -1)">&#x2039;</span><span class="val">{{hair}}</span><span class="ar ctl"
+  data-event-click="cm_act(3, -1)">&#x203A;</span></div>
+<div class="lbl">{{colourWord}}</div><div class="chooser" data-class-focus="focusRow == 1"><span class="ar ctl"
+  data-event-click="cm_act(4, -1)">&#x2039;</span><span class="val">{{colour}}</span><span class="ar ctl"
+  data-event-click="cm_act(5, -1)">&#x203A;</span></div></div>
+<div class="rc"><div class="lbl">{{nameWord}}</div><div class="field ctl" data-class-typing="nameFocus"
+  data-event-click="cm_act(1, -1)"><span data-if="name != ''">{{name}}</span><span class="caret"
+  data-if="caret"></span><span class="ph" data-if="name == '' && !nameFocus">{{nameHint}}</span></div>
+<div class="pair" data-for="p, i : pairs" data-class-focus="focusRow == i + 2"><span class="pt ctl"
+  data-class-off="!p.canLeft" data-event-click="cm_act(6, i)">+</span><span class="sl">{{p.left}}</span><div
+  class="bar"><div class="fill" data-style-width="p.share + '%'"></div></div><span class="sr">{{p.right}}</span><span
+  class="pt ctl" data-class-off="!p.canRight" data-event-click="cm_act(7, i)">+</span></div>
+<div class="hint">{{pairsHint}}</div></div></div>
+<div class="btns"><div class="btn ctl" data-event-click="cm_act(9, -1)">{{cancel}}</div>
+<div class="btn main ctl" data-event-click="cm_act(8, -1)">{{make}}</div></div>
+<div id="ring" class="ring"></div>
+</body></rml>)RML";
+struct MakePairView {
+    Rml::String left, right;
+    float share = 50;
+    bool canLeft = false, canRight = false;
+};
+
 struct State {
+    uilive::Window live;  // 3.0.18-beta.81
+    std::vector<MakePairView> pairViews;  // 3.0.18-beta.106: the live window's
+    Rml::String title, hairWord, colourWord, nameWord, nameHint, pairsHint, make, cancel, name, face, hair, colour;
+    Rml::String ground = "#00000000", facePrev;
+    float faceW = 0, faceH = 0;
+    bool nameFocus = false, caretOn = false;
+    int focusNo = -1;
+    std::string liveKey;
     uisheet::Sheet sheet;  // 3.0.18-beta.33: the window drawn by uaUI
     int sheetGen = 0;
     bool sheetShown = false;
@@ -173,8 +215,10 @@ void render(State& s) {
 void block(const State& s, HWND game) {
     RECT client{};
     if (s.targetW <= 0 || s.targetH <= 0 || !GetClientRect(game, &client)) return;
-    const panel::Box& b = s.layout.glass;
-    const float x0 = float(s.layout.x) + b.x, y0 = float(s.layout.y) + b.y;
+    panel::Box b = s.layout.glass;
+    float x0 = float(s.layout.x) + b.x, y0 = float(s.layout.y) + b.y;
+    int lx = 0, ly = 0, lw = 0, lh = 0;  // 3.0.18-beta.81: the live window's own box
+    if (s.live.box(lx, ly, lw, lh)) x0 = float(lx), y0 = float(ly), b.w = float(lw), b.h = float(lh);
     const RECT r{LONG(int64_t(x0) * client.right / s.targetW), LONG(int64_t(y0) * client.bottom / s.targetH),
                  LONG(int64_t(x0 + b.w) * client.right / s.targetW + 1),
                  LONG(int64_t(y0 + b.h) * client.bottom / s.targetH + 1)};
@@ -330,9 +374,81 @@ static void fillSheet(State& s, uisheet::Content& c) {
     c.say(cm::words(L, f, sh, texts()));
 }
 
+// 3.0.18-beta.81: the live window's model and place
+static void liveFrame(State& s) {
+    s.live.anywhere = true;  // before the world
+    s.live.make("charmake", kLive, [&](Rml::DataModelConstructor& m) {
+        if (auto v = m.RegisterStruct<MakePairView>()) {
+            v.RegisterMember("left", &MakePairView::left);
+            v.RegisterMember("right", &MakePairView::right);
+            v.RegisterMember("share", &MakePairView::share);
+            v.RegisterMember("canLeft", &MakePairView::canLeft);
+            v.RegisterMember("canRight", &MakePairView::canRight);
+        }
+        m.RegisterArray<std::vector<MakePairView>>();
+        m.Bind("pairs", &s.pairViews);
+        for (auto [n, v] : std::initializer_list<std::pair<const char*, Rml::String*>>{
+                 {"title", &s.title}, {"hairWord", &s.hairWord}, {"colourWord", &s.colourWord},
+                 {"nameWord", &s.nameWord}, {"nameHint", &s.nameHint}, {"pairsHint", &s.pairsHint},
+                 {"make", &s.make}, {"cancel", &s.cancel}, {"name", &s.name}, {"face", &s.face},
+                 {"hair", &s.hair}, {"colour", &s.colour}, {"ground", &s.ground}})
+            m.Bind(n, v);
+        m.Bind("faceW", &s.faceW);
+        m.Bind("faceH", &s.faceH);
+        m.Bind("nameFocus", &s.nameFocus);
+        m.Bind("caret", &s.caretOn);
+        m.Bind("focusRow", &s.focusNo);
+        // a part of core charmake's (its Part's number) and its index - the window's own act()
+        m.BindEventCallback("cm_act", [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList& a) {
+            if (a.size() < 2) return;
+            State& st = state();
+            st.show.focusRow = -1;  // the mouse leads now
+            act(st, cm::Part(a[0].Get<int>()), a[1].Get<int>());
+        });
+    });
+    if (!s.live.made()) return;
+    const cm::Texts t = texts();
+    const cm::Fields& f = s.fields;
+    std::string key = f.name + (f.focus ? "f" : "") + (f.focus && f.caret ? "|" : "") + ';' + std::to_string(f.hair) +
+                      ',' + std::to_string(f.colour) + ',' + std::to_string(uintptr_t(f.face)) + ';' +
+                      std::to_string(s.show.focusRow) + ';' + t.title + t.make;
+    for (int st : f.stats) key += ',' + std::to_string(st);
+    if (key != s.liveKey) {
+        s.liveKey = key;
+        s.title = t.title, s.hairWord = t.hair, s.colourWord = t.colour, s.nameWord = t.name;
+        s.nameHint = t.nameHint, s.pairsHint = t.pairsHint, s.make = t.make, s.cancel = t.cancel;
+        s.name = f.name, s.nameFocus = f.focus, s.caretOn = f.focus && f.caret;
+        s.hair = std::to_string(f.hair), s.colour = std::to_string(f.colour), s.focusNo = s.show.focusRow;
+        s.face = f.face && f.face->width > 0 ? uaui::picture(f.face, uaui::stamp(f.face), s.facePrev) : "";
+        s.faceW = f.face ? float(f.face->width) : 0, s.faceH = f.face ? float(f.face->height) : 0;
+        s.pairViews.resize(3);
+        for (int i = 0; i < 3; ++i) {
+            const int a = cm::kPairs[i].left, b = cm::kPairs[i].right;
+            MakePairView& v = s.pairViews[size_t(i)];
+            v.left = t.stats[a] + " " + std::to_string(f.stats[a]);
+            v.right = std::to_string(f.stats[b]) + " " + t.stats[b];
+            v.share = f.stats[a] + f.stats[b] > 0 ? 100.0f * float(f.stats[a]) / float(f.stats[a] + f.stats[b]) : 50;
+            v.canLeft = cm::canMove(f, i, true);
+            v.canRight = cm::canMove(f, i, false);
+        }
+        s.ground = uisheet::Sheet::ground(0x10141C, std::max(0.94f, uistyle::window()));
+        s.live.doc.dirtyAll();
+    }
+    int x = s.layout.x, y = s.layout.y, bx = 0, by = 0, bw = 0, bh = 0;
+    if (s.live.box(bx, by, bw, bh)) x = (s.targetW - bw) / 2, y = (s.targetH - bh) / 2;
+    s.live.frame(s.shown, x, y, int(winstack::Win::CharMake), ".ar, .field, .pt, .btn");
+}
+
 void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int targetHeight) {
     frameInner(game, on, codePage, k, targetWidth, targetHeight);
     State& s = state();
+    if (uaui::readyAnywhere()) {  // 3.0.18-beta.81: the live window in place of the sheet
+        s.sheet.frame("charmake", false, true, 0, 0, 0, [](uisheet::Content&) {});
+        s.sheetShown = false;
+        liveFrame(s);
+        return;
+    }
+    s.live.frame(false, 0, 0, 0, nullptr);
     s.sheet.anywhere = true;  // 3.0.18-beta.33: before the world
     s.sheetShown = s.sheet.frame("charmake", s.shown, true, s.layout.x, s.layout.y, s.sheetGen,
                                  [&](uisheet::Content& c) { fillSheet(s, c); });
@@ -341,6 +457,10 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
 void draw(FrameRecord& record, gpu::Renderer& renderer) {
     State& s = state();
     s.sheet.raise();  // 3.0.18-beta.43: at its place in the windows' stack
+    if (s.live.shown) {  // 3.0.18-beta.81
+        s.live.draw(s.shadow, record, renderer, s.scale, s.k);
+        return;
+    }
     if (!s.shown || s.k <= 0 || ((s.picture.width <= 0 || s.picture.height <= 0) && !s.sheetShown)) return;
     int cursor = -1, cx = 0, cy = 0;
     if (readGameCursor(cx, cy)) cursor = panel::cursorDraw(record, float(cx), float(cy));
@@ -353,7 +473,11 @@ void draw(FrameRecord& record, gpu::Renderer& renderer) {
 
 bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     State& s = state();
-    (void)wp;
+    if (s.live.shown) {  // 3.0.18-beta.81: RmlUi's
+        if (!s.live.mouse(game, m, wp, lp)) return false;
+        result = 0;
+        return true;
+    }
     if (!s.shown) return false;
     const bool button = m == WM_LBUTTONDOWN || m == WM_LBUTTONUP || m == WM_LBUTTONDBLCLK || m == WM_RBUTTONDOWN ||
                         m == WM_RBUTTONUP || m == WM_RBUTTONDBLCLK || m == WM_MBUTTONDOWN || m == WM_MBUTTONUP;
@@ -403,6 +527,7 @@ void padCommand(PadCommand c) {
 bool box(int& x, int& y, int& w, int& h) {
     const State& s = state();
     if (!s.shown) return false;
+    if (s.live.box(x, y, w, h)) return true;  // 3.0.18-beta.81
     x = s.layout.x;
     y = s.layout.y;
     w = s.layout.w;

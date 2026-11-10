@@ -7,6 +7,7 @@
 #include <string>
 #include <vector>
 
+#include "core/window_stack.hpp"
 #include "core/pick_card.hpp"
 #include "core/settings/strings.hpp"
 #include "core/ui_style.hpp"
@@ -19,6 +20,7 @@
 #include "win/ui_cost.hpp"
 #include "win/window_shadow.hpp"
 #include "win/uaui.hpp"
+#include "win/ui_live.hpp"
 #include "win/ui_sheet.hpp"
 
 namespace uagfx::win::servercardwin {
@@ -36,7 +38,25 @@ constexpr int kButtonMsg = 6, kAway = -4000;
 constexpr size_t kMostWindows = 128, kMostServers = 32;
 using SendMsgFn = int(__attribute__((thiscall)) *)(uint32_t self, uint32_t sender, int msg, int a, int b, int c);
 
+// 3.0.18-beta.106 (the owner: «делай 1-3», the login screens): the server select live - its rows clicked (a double
+// click goes on), «Далі» and «Назад» RmlUi's; the game's list behind it as before
+const char* kLive = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss"/></head>
+<body class="lw pkw svw" data-style-background-color="ground">
+<div class="head"><span class="title">{{title}}</span></div>
+<div class="msg" data-if="message != ''">{{message}}</div>
+<div class="list"><div class="row ctl" data-for="e, i : entries" data-class-on="i == selected"
+  data-event-click="sv_choose(i)" data-event-dblclick="sv_ok()"><span class="name">{{e}}</span></div>
+<div class="hint" data-if="entries.size == 0">{{empty}}</div></div>
+<div class="btns"><div class="btn ctl" data-event-click="sv_cancel()">{{cancel}}</div>
+<div class="btn main ctl" data-class-off="selected == -1" data-event-click="sv_ok()">{{ok}}</div></div>
+<div id="ring" class="ring"></div>
+</body></rml>)RML";
+
 struct State {
+    uilive::Window live;  // 3.0.18-beta.81
+    std::vector<Rml::String> entryViews;  // 3.0.18-beta.106: the live window's
+    Rml::String title, message, ok, cancel, empty, ground = "#00000000";
+    int selected = -1;
     uisheet::Sheet sheet;  // 3.0.18-beta.33: the window drawn by uaUI
     int sheetGen = 0;
     bool sheetShown = false;
@@ -138,8 +158,10 @@ void render(State& s) {
 void block(const State& s, HWND game) {
     RECT client{};
     if (s.targetW <= 0 || s.targetH <= 0 || !GetClientRect(game, &client)) return;
-    const panel::Box& b = s.layout.glass;
-    const float x0 = float(s.layout.x) + b.x, y0 = float(s.layout.y) + b.y;
+    panel::Box b = s.layout.glass;
+    float x0 = float(s.layout.x) + b.x, y0 = float(s.layout.y) + b.y;
+    int lx = 0, ly = 0, lw = 0, lh = 0;  // 3.0.18-beta.81: the live window's own box
+    if (s.live.box(lx, ly, lw, lh)) x0 = float(lx), y0 = float(ly), b.w = float(lw), b.h = float(lh);
     const RECT r{LONG(int64_t(x0) * client.right / s.targetW), LONG(int64_t(y0) * client.bottom / s.targetH),
                  LONG(int64_t(x0 + b.w) * client.right / s.targetW + 1),
                  LONG(int64_t(y0 + b.h) * client.bottom / s.targetH + 1)};
@@ -275,9 +297,56 @@ static void fillSheet(State& s, uisheet::Content& c) {  // the server select: th
     c.say(pc::words(L, s.entries, sh, texts()));
 }
 
+// 3.0.18-beta.81: the live window's model and place
+static void liveFrame(State& s) {
+    s.live.anywhere = true;  // before the world
+    s.live.make("server", kLive, [&](Rml::DataModelConstructor& m) {
+        m.RegisterArray<std::vector<Rml::String>>();
+        m.Bind("entries", &s.entryViews);
+        m.Bind("title", &s.title);
+        m.Bind("message", &s.message);
+        m.Bind("ok", &s.ok);
+        m.Bind("cancel", &s.cancel);
+        m.Bind("empty", &s.empty);
+        m.Bind("selected", &s.selected);
+        m.Bind("ground", &s.ground);
+        m.BindEventCallback("sv_choose", [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList& a) {
+            if (!a.empty()) choose(state(), a[0].Get<int>());
+        });
+        m.BindEventCallback("sv_ok", [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList&) {
+            press(state(), pc::kOkButton);
+        });
+        m.BindEventCallback("sv_cancel", [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList&) {
+            press(state(), pc::kCancelButton);
+        });
+    });
+    if (!s.live.made()) return;
+    const pc::Texts t = texts();
+    std::vector<Rml::String> entries;
+    for (const pc::Entry& e : s.entries) entries.push_back(e.name);
+    if (entries != s.entryViews) s.entryViews = std::move(entries), s.live.doc.dirty("entries");
+    const Rml::String ground = uisheet::Sheet::ground(0x10141C, uistyle::window());
+    if (t.title != s.title || t.message != s.message || t.ok != s.ok || t.cancel != s.cancel || t.empty != s.empty ||
+        s.show.selected != s.selected || ground != s.ground) {
+        s.title = t.title, s.message = t.message, s.ok = t.ok, s.cancel = t.cancel, s.empty = t.empty;
+        s.selected = s.show.selected, s.ground = ground;
+        s.live.doc.dirtyAll();
+    }
+    int x = s.layout.x, y = s.layout.y, bx = 0, by = 0, bw = 0, bh = 0;
+    if (s.live.box(bx, by, bw, bh)) x = (s.targetW - bw) / 2, y = std::max(0, s.targetH / 3 - bh / 2);
+    s.live.frame(s.shown, x, y, int(winstack::Win::Servers), ".row, .btn");
+}
+
 void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int targetHeight) {
     frameInner(game, on, codePage, k, targetWidth, targetHeight);
     State& s = state();
+    if (uaui::readyAnywhere()) {  // 3.0.18-beta.81: the live window in place of the sheet
+        s.sheet.frame("server", false, true, 0, 0, 0, [](uisheet::Content&) {});
+        s.sheetShown = false;
+        liveFrame(s);
+        return;
+    }
+    s.live.frame(false, 0, 0, 0, nullptr);
     s.sheet.anywhere = true;  // 3.0.18-beta.33: before the world
     s.sheetShown = s.sheet.frame("server", s.shown, true, s.layout.x, s.layout.y, s.sheetGen,
                                  [&](uisheet::Content& c) { fillSheet(s, c); });
@@ -286,6 +355,10 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
 void draw(FrameRecord& record, gpu::Renderer& renderer) {
     State& s = state();
     s.sheet.raise();  // 3.0.18-beta.43: at its place in the windows' stack
+    if (s.live.shown) {  // 3.0.18-beta.81
+        s.live.draw(s.shadow, record, renderer, s.scale, s.k);
+        return;
+    }
     if (!s.shown || s.k <= 0 || ((s.picture.width <= 0 || s.picture.height <= 0) && !s.sheetShown)) return;
     int cursor = -1, cx = 0, cy = 0;
     if (readGameCursor(cx, cy)) cursor = panel::cursorDraw(record, float(cx), float(cy));
@@ -298,6 +371,11 @@ void draw(FrameRecord& record, gpu::Renderer& renderer) {
 
 bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     State& s = state();
+    if (s.live.shown) {  // 3.0.18-beta.81: RmlUi's
+        if (!s.live.mouse(game, m, wp, lp)) return false;
+        result = 0;
+        return true;
+    }
     if (!s.shown) return false;
     const bool button = m == WM_LBUTTONDOWN || m == WM_LBUTTONUP || m == WM_LBUTTONDBLCLK || m == WM_RBUTTONDOWN ||
                         m == WM_RBUTTONUP || m == WM_RBUTTONDBLCLK || m == WM_MBUTTONDOWN || m == WM_MBUTTONUP;
@@ -349,6 +427,7 @@ void padCommand(PadCommand c) {
 bool box(int& x, int& y, int& w, int& h) {
     const State& s = state();
     if (!s.shown) return false;
+    if (s.live.box(x, y, w, h)) return true;  // 3.0.18-beta.81
     x = s.layout.x;
     y = s.layout.y;
     w = s.layout.w;

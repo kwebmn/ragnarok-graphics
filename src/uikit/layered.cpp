@@ -20,7 +20,9 @@ const char* kRml = R"RML(<div class="lay" data-hit="body" data-style-width="laye
   data-style-width="h.w + 'px'" data-style-height="h.h + 'px'"></div><span data-for="x : layer.words"
   data-attr-class="x.cls" data-style-left="x.x + 'px'" data-style-top="x.y + 'px'" data-style-width="x.w + 'px'"
   data-style-height="x.h + 'px'" data-style-line-height="x.h + 'px'" data-style-font-size="x.px + 'px'"
-  data-style-color="x.colour">{{x.text}}</span></div>)RML";
+  data-style-color="x.colour">{{x.text}}</span><div class="li" data-for="i : layer.icons"><img data-if="i.src != ''"
+  data-attr-src="i.src" data-style-left="i.x + 'px'" data-style-top="i.y + 'px'" data-style-width="i.w + 'px'"
+  data-style-height="i.h + 'px'"/></div></div>)RML";
 
 }  // namespace
 
@@ -55,6 +57,14 @@ void bind(Rml::DataModelConstructor& c, Layer& l) {
         e.RegisterMember("index", &HitV::index);
         e.RegisterMember("part", &HitV::part);
     }
+    if (auto e = c.RegisterStruct<IconV>()) {
+        e.RegisterMember("x", &IconV::x);
+        e.RegisterMember("y", &IconV::y);
+        e.RegisterMember("w", &IconV::w);
+        e.RegisterMember("h", &IconV::h);
+        e.RegisterMember("src", &IconV::src);
+    }
+    c.RegisterArray<std::vector<IconV>>();
     c.RegisterArray<std::vector<WordV>>();
     c.RegisterArray<std::vector<BoxV>>();
     c.RegisterArray<std::vector<HitV>>();
@@ -64,6 +74,7 @@ void bind(Rml::DataModelConstructor& c, Layer& l) {
         e.RegisterMember("boxes", &Layer::boxes);
         e.RegisterMember("hits", &Layer::hits);
         e.RegisterMember("words", &Layer::words);
+        e.RegisterMember("icons", &Layer::icons);
     }
     c.Bind("layer", &l);
 }
@@ -76,7 +87,9 @@ std::string hexa(uint32_t rgb, float alpha) {
 }
 
 Builder::Builder(Layer& l, const panel::Box& o)
-    : layer(l), origin(o), hadBoxes(l.boxes.size()), hadHits(l.hits.size()), hadWords(l.words.size()) {
+    : layer(l), origin(o), hadBoxes(l.boxes.size()), hadHits(l.hits.size()), hadWords(l.words.size()),
+      hadIcons(l.icons.size()) {
+    l.icons.clear();
     l.boxes.clear();
     l.hits.clear();
     l.words.clear();
@@ -86,6 +99,7 @@ Builder::~Builder() {
     if (layer.boxes.size() < hadBoxes) layer.boxes.resize(hadBoxes);
     if (layer.hits.size() < hadHits) layer.hits.resize(hadHits, HitV{0, 0, 0, 0, -1, "none"});
     if (layer.words.size() < hadWords) layer.words.resize(hadWords);
+    if (layer.icons.size() < hadIcons) layer.icons.resize(hadIcons);
 }
 
 void Builder::box(const panel::Box& b, float radius, uint32_t fill, float fillA, uint32_t edge, float edgeA,
@@ -111,9 +125,15 @@ float contentHeight(const Layer& l, float pad) {
     float most = 0;
     for (const BoxV& b : l.boxes) most = std::max(most, b.y + b.h);
     for (const HitV& h : l.hits) most = std::max(most, h.y + h.h);
+    for (const IconV& i : l.icons) most = std::max(most, i.y + i.h);
     for (const WordV& w : l.words)
         if (!w.text.empty()) most = std::max(most, w.y + w.h);
     return std::ceil(most + pad);
+}
+
+void Builder::icon(const panel::Box& b, const std::string& src) {
+    if (src.empty() || b.w <= 0 || b.h <= 0) return;
+    layer.icons.push_back(IconV{b.x - origin.x, b.y - origin.y, b.w, b.h, src});
 }
 
 bool bodyShift(Rml::ElementDocument* doc, const panel::Box& coreOrigin, float& dx, float& dy) {

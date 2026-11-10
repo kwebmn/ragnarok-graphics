@@ -20,7 +20,8 @@ struct LivePart {
     bool frame(const char* name, bool on, int x, int y, int generation, const char* rml,
                const std::function<void(Rml::DataModelConstructor&, Model&)>& bind,
                const std::function<void(Model&)>& fill) {
-        if (!uaui::ready() || !on) {
+        // 3.0.18-beta.106: a login screen's (doc.anywhere set before) is drawn outside the world too
+        if (!(doc.anywhere ? uaui::readyAnywhere() : uaui::ready()) || !on) {
             doc.show(false);
             return false;
         }

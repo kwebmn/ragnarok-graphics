@@ -1173,6 +1173,7 @@ scrollbarvertical sliderarrowdec, scrollbarvertical sliderarrowinc { width: 0; h
 .lay { display: block; position: relative; }
 .lay .lb { position: absolute; box-sizing: border-box; }
 .lay .lh { position: absolute; }
+.lay .li img { position: absolute; }
 .lay .w { position: absolute; white-space: nowrap; overflow: hidden; }
 .lay .w.bold { font-weight: bold; }
 .lay .w.right { text-align: right; }
@@ -1212,6 +1213,60 @@ scrollbarvertical sliderarrowdec, scrollbarvertical sliderarrowinc { width: 0; h
 .gdl .gtab.on { border-color: #c9a55bcc; background-color: #c9a55b3d; font-weight: bold; }
 .gdl .gtab.off { color: #5e6575; }
 .gdl .lay { margin-top: 0.1667rem; }
+/* 3.0.18-beta.106: the login screens live - the character make (win/char_make) */
+.ckw { width: 620dp; padding: 22dp 22dp 18dp 22dp; }
+.ckw .head .title { font-size: 18dp; }
+.ckw .head { height: 40dp; }
+.ckw .cols { display: flex; margin-top: 10dp; }
+.ckw .lc { display: block; width: 200dp; }
+.ckw .rc { display: block; flex: 1; margin-left: 20dp; }
+.ckw .face { display: flex; justify-content: center; align-items: center; width: 128dp; height: 128dp;
+             margin: 0 auto 14dp auto; border-radius: 64dp; background-color: #0000004d; border: 1dp #ffffff1f; }
+.ckw .face img { display: block; }
+.ckw .lc .lbl { text-align: center; margin: 4dp 0 2dp 0; }
+.ckw .chooser { display: flex; justify-content: center; align-items: center; height: 34dp; border-radius: 9dp;
+                border: 1.5dp #00000000; }
+.ckw .chooser.focus { border-color: #c9a55bcc; }
+.ckw .ar { display: block; width: 28dp; height: 28dp; line-height: 28dp; text-align: center; border-radius: 7dp;
+           font-size: 16dp; font-weight: bold; background-color: #ffffff0f; }
+.ckw .ar:hover { background-color: #ffffff24; }
+.ckw .val { display: block; width: 60dp; text-align: center; font-size: 15dp; font-weight: bold; }
+.ckw .field { height: 38dp; line-height: 26dp; font-size: 15dp; font-weight: bold; margin-bottom: 12dp; }
+.ckw .field .ph { font-weight: normal; font-size: 14dp; color: #9aa3b5; }
+.ckw .pair { display: flex; align-items: center; height: 34dp; margin-bottom: 6dp; padding: 0 4dp; border-radius: 9dp;
+             border: 1.5dp #00000000; }
+.ckw .pair.focus { border-color: #c9a55bcc; }
+.ckw .pt { display: block; width: 28dp; height: 28dp; line-height: 28dp; text-align: center; border-radius: 7dp;
+           font-size: 16dp; font-weight: bold; background-color: #ffffff0f; }
+.ckw .pt:hover { background-color: #ffffff24; }
+.ckw .pt.off { color: #9aa3b5; background-color: #ffffff05; }
+.ckw .sl { display: block; width: 72dp; margin-left: 8dp; font-size: 13dp; font-weight: bold; color: #e6cb8a; }
+.ckw .sr { display: block; width: 72dp; margin-right: 8dp; text-align: right; font-size: 13dp; font-weight: bold; }
+.ckw .bar { display: block; flex: 1; height: 8dp; border-radius: 4dp; background-color: #3d7eebbf; }
+.ckw .bar .fill { display: block; height: 8dp; border-radius: 4dp; background-color: #c9a55be6; }
+.ckw .btns { margin-top: 14dp; }
+.ckw .btn { padding: 10dp 22dp; font-size: 14dp; }
+/* 3.0.18-beta.106: the character select live (uikit/charselect_live) - its head and buttons by flexbox */
+.lw.csl { padding: 0; font-size: 1rem; box-sizing: border-box; }
+.csl .head { display: flex; align-items: center; height: 3.3333rem; margin: 1.8333rem 1.8333rem 0 1.8333rem; }
+.csl .head .title { font-size: 1.5rem; font-weight: bold; color: #eef2f8; }
+.csl .gap { display: block; flex: 1; }
+.csl .pa { display: block; width: 2.3333rem; height: 2.3333rem; line-height: 2.3333rem; text-align: center;
+    border-radius: 0.5833rem;
+           font-size: 1.3333rem; font-weight: bold; background-color: #ffffff0f; }
+.csl .pg { display: block; width: 5.3333rem; text-align: center; font-size: 1.0417rem; color: #9aa3b5; }
+.csl .lay { margin-top: 0.6667rem; }
+.csl .cbtns { display: flex; justify-content: space-between; margin: 0 1.8333rem 1.8333rem 1.8333rem; }
+.csl .csb { display: block; flex: 1; height: 3.5rem; line-height: 3.3333rem; margin-right: 1.1667rem;
+    text-align: center;
+           border-radius: 0.75rem; border: 0.0833rem #ffffff29; background-color: #ffffff0f; font-size: 1.1667rem;
+           color: #eef2f8;
+           box-sizing: border-box; }
+.csl .csb:last-child { margin-right: 0; }
+.csl .csb.hot { background-color: #ffffff1f; }
+.csl .csb.main { border-color: #c9a55bd9; background-color: #c9a55b3d; font-weight: bold; }
+.csl .csb.main.hot { background-color: #c9a55b5c; }
+.csl .csb.off { color: #9aa3b5; background-color: #ffffff05; border-color: #ffffff14; }
 )";
 
 }  // namespace
