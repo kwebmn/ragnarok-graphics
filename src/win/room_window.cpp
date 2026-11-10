@@ -50,18 +50,26 @@ using SetFocusFn = void(__attribute__((thiscall)) *)(uint32_t manager, uint32_t 
 using MakeFn = uint32_t(__attribute__((thiscall)) *)(uint32_t manager, int id);
 using FriendFn = void(__attribute__((thiscall)) *)(uint32_t manager, const char* name);
 
-// 3.0.18-beta.87 (live windows, group 2): the chat room a live window - its lines and members in flex columns, the game's line typed
+// 3.0.18-beta.87 (live windows, group 2): the chat room a live window - its lines and members in flex columns,
+// the game's line typed
 const char* kLive = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss"/></head>
 <body class="lw roomw" data-style-background-color="ground">
 <div class="head"><span class="title">{{title}}</span><span class="count">{{count}} · {{state}}</span></div>
 <span class="x ctl" data-event-click="rm_act(8, 0)">&#x2715;</span>
-<div class="cols"><div class="left"><div class="lines"><div class="line" data-for="l : lines" data-style-color="l.colour">{{l.text}}</div></div>
-<div class="field ctl" data-class-typing="focus" data-event-click="rm_act(2, 0)">{{input}}<span class="caret" data-if="focus && caret"></span></div></div>
+<div class="cols"><div class="left"><div class="lines"><div class="line" data-for="l : lines"
+  data-style-color="l.colour">{{l.text}}</div></div>
+<div class="field ctl" data-class-typing="focus" data-event-click="rm_act(2, 0)">{{input}}<span
+  class="caret" data-if="focus && caret"></span></div></div>
 <div class="right"><div class="lbl">{{members_word}}</div>
-<div class="row ctl" data-for="m, i : members" data-class-on="i == chosen" data-event-click="rm_act(1, i)">{{m.name}}<span class="crown" data-if="m.owner"> ★</span></div>
-<div class="acts" data-if="chosen >= 0 && mine"><span class="chip ctl" data-event-click="rm_act(5, 0)">{{kick}}</span><span class="chip ctl" data-event-click="rm_act(6, 0)">{{owner}}</span></div>
-<div class="acts" data-if="chosen >= 0"><span class="chip ctl" data-event-click="rm_act(7, 0)">{{friend_add}}</span></div>
-<div class="btns"><div class="btn ctl" data-if="mine" data-event-click="rm_act(3, 0)">{{setup}}</div><div class="btn ctl" data-event-click="rm_act(4, 0)">{{leave}}</div></div></div></div>
+<div class="row ctl" data-for="m, i : members" data-class-on="i == chosen"
+  data-event-click="rm_act(1, i)">{{m.name}}<span class="crown" data-if="m.owner"> ★</span></div>
+<div class="acts" data-if="chosen >= 0 && mine"><span class="chip ctl"
+  data-event-click="rm_act(5, 0)">{{kick}}</span><span class="chip ctl"
+  data-event-click="rm_act(6, 0)">{{owner}}</span></div>
+<div class="acts" data-if="chosen >= 0"><span class="chip ctl"
+  data-event-click="rm_act(7, 0)">{{friend_add}}</span></div>
+<div class="btns"><div class="btn ctl" data-if="mine" data-event-click="rm_act(3, 0)">{{setup}}</div><div
+  class="btn ctl" data-event-click="rm_act(4, 0)">{{leave}}</div></div></div></div>
 <div id="ring" class="ring"></div>
 </body></rml>)RML";
 struct RoomLineView {

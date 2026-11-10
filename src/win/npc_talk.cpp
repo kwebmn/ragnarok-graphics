@@ -56,9 +56,12 @@ const char* kLive = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcs
 <body class="lw npw" data-style-background-color="ground">
 <div class="head"><span class="title">{{name}}</span><span class="count">{{place}}</span></div>
 <span class="x ctl" data-event-click="np_close()">&#x2715;</span>
-<div class="talk"><div class="tline" data-for="l : lines"><span data-for="r : l.runs" data-style-color="r.colour">{{r.text}}</span></div></div>
-<div class="opts"><div class="opt ctl" data-for="o, i : options" data-class-on="i == selected" data-event-click="np_choose(i)"><span
-  class="num">{{i + 1}}</span><span class="otext">{{o.text}}</span><span class="last" data-if="o.last">{{last_time}}</span></div></div>
+<div class="talk"><div class="tline" data-for="l : lines"><span data-for="r : l.runs"
+  data-style-color="r.colour">{{r.text}}</span></div></div>
+<div class="opts"><div class="opt ctl" data-for="o, i : options" data-class-on="i == selected"
+  data-event-click="np_choose(i)"><span
+  class="num">{{i + 1}}</span><span class="otext">{{o.text}}</span><span class="last"
+  data-if="o.last">{{last_time}}</span></div></div>
 <div class="btns" data-if="button != ''"><div class="btn main ctl" data-event-click="np_button()">{{button}}</div></div>
 <div class="foot"><span class="hint">{{keys}}</span><span class="hint">{{server}}</span></div>
 <div id="ring" class="ring"></div>

@@ -1410,6 +1410,24 @@ select selectbox option:checked { color: #e6cb8a; }
 .npw .otext { flex: 1; }
 .npw .last { font-size: 10.5dp; color: #9aa3b5; margin-left: 6dp; }
 .npw .foot { margin-top: 10dp; padding-top: 6dp; border-top: 1dp #ffffff12; }
+.vsw { width: 480dp; }
+.lw .list { display: block; max-height: 320dp; overflow-y: auto; margin: 4dp 0 8dp 0; }
+.lw .ware { display: flex; align-items: center; padding: 4dp 6dp; border-radius: 6dp; margin-bottom: 2dp; }
+.lw .ware.on { background-color: #c9a55b1f; }
+.lw .ware img { width: 28dp; height: 28dp; margin-right: 8dp; }
+.lw .wname { display: block; flex: 1; }
+.lw .wname .name { display: block; font-size: 12.5dp; }
+.lw .wname .stock { display: block; font-size: 10.5dp; color: #9aa3b5; }
+.lw .price { font-size: 12dp; color: #e6cb8a; margin-right: 10dp; }
+.lw .pm { display: block; width: 22dp; height: 22dp; line-height: 22dp; text-align: center; border-radius: 6dp;
+          background-color: #ffffff14; font-weight: bold; }
+.lw .pm:hover { background-color: #ffffff29; }
+.lw .ware .n { display: block; width: 30dp; text-align: center; font-size: 12.5dp; font-weight: bold; }
+.lw .sums { display: block; margin: 6dp 0; }
+.lw .srow { display: flex; justify-content: space-between; font-size: 12.5dp; margin-bottom: 2dp; }
+.lw .srow .lbl { color: #9aa3b5; }
+.lw .srow .val { font-weight: bold; }
+.lw .srow .val.bad { color: #ff7d6e; }
 .ow { width: 380dp; }
 .ow .orow { display: flex; align-items: center; justify-content: space-between; margin: 4dp 0; min-height: 24dp; }
 .ow .orow input.range { width: 150dp; }

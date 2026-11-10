@@ -106,13 +106,16 @@ constexpr int kButtonMsg = 6;
 constexpr size_t kInfoSize = 0x48, kMostNodes = 200;
 using SendMsgFn = int(__attribute__((thiscall)) *)(uint32_t self, uint32_t sender, int msg, int a, int b, int c);
 
-// 3.0.18-beta.87 (live windows, group 2): a list to pick from a live window - rows with their icons, a click picks, twice OKs
+// 3.0.18-beta.87 (live windows, group 2): a list to pick from a live window - rows with their icons, a click
+// picks, twice OKs
 const char* kLive = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss"/></head>
 <body class="lw pkw" data-style-background-color="ground">
 <div class="head"><span class="title">{{title}}</span></div>
 <div class="msg" data-if="message != ''">{{message}}</div>
-<div class="list"><div class="row ctl" data-for="e, i : entries" data-class-on="i == selected" data-event-click="pk_choose(i)"
-  data-event-dblclick="pk_ok()"><img data-if="e.icon != ''" data-attr-src="e.icon"/><span class="name">{{e.name}}</span></div>
+<div class="list"><div class="row ctl" data-for="e, i : entries" data-class-on="i == selected"
+  data-event-click="pk_choose(i)"
+  data-event-dblclick="pk_ok()"><img data-if="e.icon != ''" data-attr-src="e.icon"/><span
+  class="name">{{e.name}}</span></div>
 <div class="hint" data-if="entries.size == 0">{{empty}}</div></div>
 <div class="hint" data-if="hint != ''">{{hint}}</div>
 <div class="btns"><div class="btn ctl" data-event-click="pk_cancel()">{{cancel}}</div>

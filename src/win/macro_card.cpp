@@ -46,7 +46,8 @@ const char* kLive = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcs
 <div class="head"><span class="title">{{title}}</span></div>
 <span class="x ctl" data-event-click="mac_close()">&#x2715;</span>
 <div class="hint" data-if="hint != ''">{{hint}}</div>
-<div class="mrow" data-for="r, i : rows"><span class="key">{{r.key}}</span><div class="field ctl" data-class-typing="r.focus"
+<div class="mrow" data-for="r, i : rows"><span class="key">{{r.key}}</span><div class="field ctl"
+  data-class-typing="r.focus"
   data-event-click="mac_field(i)">{{r.text}}<span class="caret" data-if="r.focus && caret"></span></div></div>
 <div class="btns"><div class="btn main ctl" data-event-click="mac_save()">{{save}}</div></div>
 <div id="ring" class="ring"></div>

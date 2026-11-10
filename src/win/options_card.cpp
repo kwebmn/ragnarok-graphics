@@ -39,7 +39,8 @@ constexpr uint32_t kVolumes[2] = {0x74, 0x70};
 constexpr int kButtonMsg = 6, kRefresh = 0x3C, kPadStep = 8;
 using SendMsgFn = int(__attribute__((thiscall)) *)(uint32_t self, uint32_t sender, int msg, int a, int b, int c);
 
-// 3.0.18-beta.82 (item 4): the game's options a live window - its volumes the library's sliders, its switches ticks
+// 3.0.18-beta.82 (item 4): the game's options a live window - its volumes the library's sliders, its switches
+// ticks
 const char* kLive = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss"/></head>
 <body class="lw ow" data-style-background-color="ground">
 <div class="head"><span class="title">{{title}}</span></div>

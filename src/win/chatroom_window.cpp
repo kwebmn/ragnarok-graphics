@@ -46,7 +46,8 @@ using GetTextFn = const char*(__attribute__((thiscall)) *)(uint32_t edit);
 using GetLengthFn = int(__attribute__((thiscall)) *)(uint32_t edit);
 using SetFocusFn = void(__attribute__((thiscall)) *)(uint32_t manager, uint32_t control);
 
-// 3.0.18-beta.87 (live windows, group 2): a chat room's setup a live window - its fields the game's, its chips and ticks RmlUi's clicks
+// 3.0.18-beta.87 (live windows, group 2): a chat room's setup a live window - its fields the game's, its chips
+// and ticks RmlUi's clicks
 const char* kLive = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss"/></head>
 <body class="lw crw" data-style-background-color="ground">
 <div class="head"><span class="title">{{heading}}</span></div>
@@ -55,11 +56,15 @@ const char* kLive = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcs
 <div class="field ctl" data-class-typing="focus == 1" data-event-click="cr_pick(1, 0)">{{title}}<span class="caret"
   data-if="focus == 1 && caret"></span></div>
 <div class="lbl">{{limit_label}}</div>
-<div class="chips"><span class="chip ctl" data-for="l, i : limits" data-class-on="l == limit" data-event-click="cr_pick(2, i)">{{l}}</span></div>
-<div class="chips"><span class="tick ctl" data-class-on="!closed" data-event-click="cr_pick(3, 0)"><span class="box"></span>{{open_word}}</span>
-<span class="tick ctl" data-class-on="closed" data-event-click="cr_pick(4, 0)"><span class="box"></span>{{closed_word}}</span></div>
+<div class="chips"><span class="chip ctl" data-for="l, i : limits" data-class-on="l == limit"
+  data-event-click="cr_pick(2, i)">{{l}}</span></div>
+<div class="chips"><span class="tick ctl" data-class-on="!closed" data-event-click="cr_pick(3, 0)"><span
+  class="box"></span>{{open_word}}</span>
+<span class="tick ctl" data-class-on="closed" data-event-click="cr_pick(4, 0)"><span
+  class="box"></span>{{closed_word}}</span></div>
 <div class="lbl" data-if="closed">{{password_label}}</div>
-<div class="field ctl" data-if="closed" data-class-typing="focus == 2" data-event-click="cr_pick(5, 0)">{{stars}}<span class="caret"
+<div class="field ctl" data-if="closed" data-class-typing="focus == 2"
+  data-event-click="cr_pick(5, 0)">{{stars}}<span class="caret"
   data-if="focus == 2 && caret"></span></div>
 <div class="btns"><div class="btn ctl" data-event-click="cr_pick(7, 0)">{{cancel}}</div>
 <div class="btn main ctl" data-event-click="cr_pick(6, 0)">{{create}}</div></div>

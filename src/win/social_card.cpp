@@ -41,14 +41,18 @@ constexpr int kButtonMsg = 6, kMostFriends = 40;
 constexpr size_t kMostNodes = 100;
 using SendMsgFn = int(__attribute__((thiscall)) *)(uint32_t self, uint32_t sender, int msg, int a, int b, int c);
 
-// 3.0.18-beta.87 (live windows, group 2): friends and the party a live window - tabs, rows and buttons by flexbox, RmlUi's clicks
+// 3.0.18-beta.87 (live windows, group 2): friends and the party a live window - tabs, rows and buttons by
+// flexbox, RmlUi's clicks
 const char* kLive = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss"/></head>
 <body class="lw socw" data-style-background-color="ground">
-<div class="tabs"><span class="tab ctl" data-for="t, i : tabs" data-class-on="i == tab" data-event-click="so_tab(i)">{{t}}</span></div>
+<div class="tabs"><span class="tab ctl" data-for="t, i : tabs" data-class-on="i == tab"
+  data-event-click="so_tab(i)">{{t}}</span></div>
 <span class="x ctl" data-event-click="so_close()">&#x2715;</span>
 <div class="lbl">{{header}}</div>
-<div class="list"><div class="row ctl" data-for="e, i : entries" data-class-on="i == selected" data-class-off="!e.online"
-  data-event-click="so_choose(i)" data-event-dblclick="so_act(0)"><span class="name">{{e.name}}</span><span class="crown"
+<div class="list"><div class="row ctl" data-for="e, i : entries" data-class-on="i == selected"
+  data-class-off="!e.online"
+  data-event-click="so_choose(i)" data-event-dblclick="so_act(0)"><span class="name">{{e.name}}</span><span
+  class="crown"
   data-if="e.leader"> ★</span><span class="where">{{e.online ? e.map : offline}}</span></div>
 <div class="hint" data-if="entries.size == 0">{{empty}}</div></div>
 <div class="btns grid4"><div class="btn ctl" data-for="a, i : actions" data-event-click="so_act(i)">{{a}}</div></div>

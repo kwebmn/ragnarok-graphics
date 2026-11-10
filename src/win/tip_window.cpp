@@ -42,7 +42,8 @@ constexpr uint32_t kTips = 0x74B9F8;
 constexpr int kButtonMsg = 6, kMostTips = 5000, kMostLines = 40;
 using SendMsgFn = int(__attribute__((thiscall)) *)(uint32_t self, uint32_t sender, int msg, int a, int b, int c);
 
-// 3.0.18-beta.81 (the big six round 2, item 4): the tip a live window - its paragraphs wrapped by RmlUi, its buttons a flex row
+// 3.0.18-beta.81 (the big six round 2, item 4): the tip a live window - its paragraphs wrapped by RmlUi, its
+// buttons a flex row
 const char* kLive = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss"/></head>
 <body class="lw tw" data-style-background-color="ground">
 <div class="head"><span class="title">{{title}}</span><span class="count">{{counter}}</span></div>

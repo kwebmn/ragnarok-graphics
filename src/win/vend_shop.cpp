@@ -10,6 +10,7 @@
 #include <string>
 #include <vector>
 
+#include "core/window_stack.hpp"
 #include "core/hotbar_panel.hpp"
 #include "core/item_window.hpp"
 #include "core/settings/strings.hpp"
@@ -27,6 +28,7 @@
 #include "win/ui_cost.hpp"
 #include "win/window_shadow.hpp"
 #include "win/uaui.hpp"
+#include "win/ui_live.hpp"
 #include "win/ui_sheet.hpp"
 
 namespace uagfx::win::vendshopwin {
@@ -62,7 +64,37 @@ struct Thing {
     std::string digits;            // the item's number as the game keeps it (the purchase matched by it)
 };
 
+// 3.0.18-beta.89 (live windows, group 3): another player's shop a live window - its wares by flexbox with − /
+// +, the sum, RmlUi's clicks
+const char* kLive = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss"/></head>
+<body class="lw vsw" data-style-background-color="ground">
+<div class="head"><span class="title">{{title}}</span></div>
+<span class="x ctl" data-event-click="vs_cancel()">&#x2715;</span>
+<div class="list"><div class="ware" data-for="r, i : rows" data-class-on="r.chosen > 0"><img
+  data-if="r.icon != ''" data-attr-src="r.icon"/>
+<div class="wname"><span class="name">{{r.name}}</span><span class="stock">{{r.stock}}</span></div>
+<span class="price">{{r.price}}</span><span class="pm ctl" data-event-click="vs_less(i)">−</span><span
+  class="n">{{r.chosen}}</span><span
+  class="pm ctl" data-event-click="vs_more(i)">+</span></div></div>
+<div class="sums"><div class="srow"><span class="lbl">{{total_word}}</span><span class="val"
+  data-class-bad="short">{{total}}</span></div>
+<div class="srow"><span class="lbl">{{zeny_word}}</span><span class="val">{{zeny}}</span></div></div>
+<div class="hint" data-if="hint != ''">{{hint}}</div>
+<div class="btns"><div class="btn ctl" data-event-click="vs_cancel()">{{cancel}}</div>
+<div class="btn main ctl" data-class-off="!can_buy" data-event-click="vs_buy()">{{buy}}</div></div>
+<div id="ring" class="ring"></div>
+</body></rml>)RML";
+struct VendRowView {
+    Rml::String name, stock, price, icon;
+    int chosen = 0;
+};
+
 struct State {
+    uilive::Window live;  // 3.0.18-beta.81
+    std::vector<VendRowView> rowViews;
+    std::map<const panel::Picture*, std::string> iconPrev;
+    Rml::String title, totalWord, total, zenyWord, zeny, buy, cancel, hint, ground = "#10141cf0";
+    bool canBuy = false, shortOf = false;
     uisheet::Sheet sheet;  // 3.0.18-beta.30: the window drawn by uaUI
     int sheetGen = 0;
     bool sheetShown = false;
@@ -237,8 +269,10 @@ void render(State& s, uint32_t account) {
 void block(const State& s, HWND game) {
     RECT client{};
     if (s.targetW <= 0 || s.targetH <= 0 || !GetClientRect(game, &client)) return;
-    const panel::Box& b = s.layout.glass;
-    const float x0 = float(s.layout.x) + b.x, y0 = float(s.layout.y) + b.y;
+    panel::Box b = s.layout.glass;
+    float x0 = float(s.layout.x) + b.x, y0 = float(s.layout.y) + b.y;
+    int lx = 0, ly = 0, lw = 0, lh = 0;  // 3.0.18-beta.81: the live window's own box
+    if (s.live.box(lx, ly, lw, lh)) x0 = float(lx), y0 = float(ly), b.w = float(lw), b.h = float(lh);
     const RECT r{LONG(int64_t(x0) * client.right / s.targetW), LONG(int64_t(y0) * client.bottom / s.targetH),
                  LONG(int64_t(x0 + b.w) * client.right / s.targetW + 1),
                  LONG(int64_t(y0 + b.h) * client.bottom / s.targetH + 1)};
@@ -423,9 +457,89 @@ static void fillSheet(State& s, uisheet::Content& c) {
     c.say(vs::words(L, s.rows, sh, texts(s, s.uiAccount)));
 }
 
+// 3.0.18-beta.81: the live window's model and place
+static void liveFrame(State& s) {
+    s.live.make("vend shop", kLive, [&](Rml::DataModelConstructor& m) {
+        if (auto v = m.RegisterStruct<VendRowView>()) {
+            v.RegisterMember("name", &VendRowView::name);
+            v.RegisterMember("stock", &VendRowView::stock);
+            v.RegisterMember("price", &VendRowView::price);
+            v.RegisterMember("icon", &VendRowView::icon);
+            v.RegisterMember("chosen", &VendRowView::chosen);
+        }
+        m.RegisterArray<std::vector<VendRowView>>();
+        m.Bind("rows", &s.rowViews);
+        m.Bind("title", &s.title);
+        m.Bind("total_word", &s.totalWord);
+        m.Bind("total", &s.total);
+        m.Bind("zeny_word", &s.zenyWord);
+        m.Bind("zeny", &s.zeny);
+        m.Bind("buy", &s.buy);
+        m.Bind("cancel", &s.cancel);
+        m.Bind("hint", &s.hint);
+        m.Bind("can_buy", &s.canBuy);
+        m.Bind("short", &s.shortOf);
+        m.Bind("ground", &s.ground);
+        const auto many = [] { return (GetKeyState(VK_SHIFT) & 0x8000) ? kShiftMany : 1; };
+        m.BindEventCallback("vs_more", [many](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList& a) {
+            if (!a.empty()) more(state(), a[0].Get<int>(), many());
+        });
+        m.BindEventCallback("vs_less", [many](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList& a) {
+            if (!a.empty()) less(state(), a[0].Get<int>(), many());
+        });
+        m.BindEventCallback("vs_buy", [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList&) {
+            State& st = state();
+            if (vs::total(st.rows) > 0 && vs::total(st.rows) <= st.show.zeny) press(st, kBuyButton);
+        });
+        m.BindEventCallback("vs_cancel", [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList&) {
+            press(state(), kCancelButton);
+        });
+    });
+    if (!s.live.made()) return;
+    const vs::Texts t = texts(s, s.uiAccount);
+    std::vector<VendRowView> rows;
+    for (const vs::Row& r : s.rows) {
+        VendRowView v;
+        v.name = r.refine > 0 ? "+" + std::to_string(r.refine) + " " + r.name : r.name;
+        std::string stock = t.stock;
+        if (const size_t p = stock.find("{1}"); p != std::string::npos) stock.replace(p, 3, std::to_string(r.stock));
+        v.stock = stock;
+        v.price = vs::money(r.price) + " z";
+        v.chosen = r.chosen;
+        if (r.icon && r.icon->width > 0) v.icon = uaui::picture(r.icon, uaui::stamp(r.icon), s.iconPrev[r.icon]);
+        rows.push_back(v);
+    }
+    const long long sum = vs::total(s.rows);
+    const Rml::String total = vs::money(sum) + " z", zeny = vs::money(s.show.zeny) + " z";
+    const bool canBuy = sum > 0 && sum <= s.show.zeny, shortOf = sum > s.show.zeny;
+    const Rml::String ground = uisheet::Sheet::ground(0x10141C, uistyle::window());
+    const bool same = rows.size() == s.rowViews.size() &&
+                      std::equal(rows.begin(), rows.end(), s.rowViews.begin(),
+                                 [](const VendRowView& a, const VendRowView& b) {
+                                     return a.name == b.name && a.stock == b.stock && a.price == b.price &&
+                                            a.icon == b.icon && a.chosen == b.chosen;
+                                 });
+    if (!same) s.rowViews = std::move(rows), s.live.doc.dirty("rows");
+    if (t.title != s.title || t.total != s.totalWord || total != s.total || t.zeny != s.zenyWord || zeny != s.zeny ||
+        t.buy != s.buy || t.cancel != s.cancel || t.hint != s.hint || canBuy != s.canBuy || shortOf != s.shortOf ||
+        ground != s.ground) {
+        s.title = t.title, s.totalWord = t.total, s.total = total, s.zenyWord = t.zeny, s.zeny = zeny;
+        s.buy = t.buy, s.cancel = t.cancel, s.hint = t.hint, s.canBuy = canBuy, s.shortOf = shortOf, s.ground = ground;
+        s.live.doc.dirtyAll();
+    }
+    s.live.frame(s.shown, s.layout.x, s.layout.y, int(winstack::Win::Vending), ".pm, .btn, .x");
+}
+
 void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int targetHeight) {
     frameInner(game, on, codePage, k, targetWidth, targetHeight);
     State& s = state();
+    if (uaui::readyAnywhere()) {  // 3.0.18-beta.81: the live window in place of the sheet
+        s.sheet.frame("vend shop", false, true, 0, 0, 0, [](uisheet::Content&) {});
+        s.sheetShown = false;
+        liveFrame(s);
+        return;
+    }
+    s.live.frame(false, 0, 0, 0, nullptr);
     s.sheetShown = s.sheet.frame("vend_shop", s.shown, true, s.layout.x, s.layout.y, s.sheetGen,
                                  [&](uisheet::Content& c) { fillSheet(s, c); });
 }
@@ -433,6 +547,10 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
 void draw(FrameRecord& record, gpu::Renderer& renderer) {
     State& s = state();
     s.sheet.raise();  // 3.0.18-beta.43: at its place in the windows' stack
+    if (s.live.shown) {  // 3.0.18-beta.81
+        s.live.draw(s.shadow, record, renderer, s.scale, s.k);
+        return;
+    }
     if (!s.shown || s.k <= 0 || ((s.picture.width <= 0 || s.picture.height <= 0) && !s.sheetShown)) return;
     int cursor = -1, cx = 0, cy = 0;
     if (readGameCursor(cx, cy)) cursor = panel::cursorDraw(record, float(cx), float(cy));
@@ -445,6 +563,11 @@ void draw(FrameRecord& record, gpu::Renderer& renderer) {
 
 bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     State& s = state();
+    if (s.live.shown) {  // 3.0.18-beta.81: RmlUi's
+        if (!s.live.mouse(game, m, wp, lp)) return false;
+        result = 0;
+        return true;
+    }
     if (!s.shown) return false;
     const bool button = m == WM_LBUTTONDOWN || m == WM_LBUTTONUP || m == WM_LBUTTONDBLCLK || m == WM_RBUTTONDOWN ||
                         m == WM_RBUTTONUP || m == WM_RBUTTONDBLCLK || m == WM_MBUTTONDOWN || m == WM_MBUTTONUP;
@@ -513,6 +636,7 @@ void padCommand(PadCommand c) {
 bool box(int& x, int& y, int& w, int& h) {
     const State& s = state();
     if (!s.shown) return false;
+    if (s.live.box(x, y, w, h)) return true;  // 3.0.18-beta.81
     x = s.layout.x;
     y = s.layout.y;
     w = s.layout.w;
