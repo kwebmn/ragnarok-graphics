@@ -17,7 +17,13 @@
 - Each uaUI document is a blocker (Blocker::Uaui rect = the top uaUI box under the cursor).
 - Texts stay in core/settings/strings.cpp (uk/ru/en); documents get them through the model, not typed in RML.
 
-## Ruling (2026-11-09, beta.12): the parts' painters recorded, not rewritten
+## Owner 2026-11-10: the ruling below REVERSED - «надо вообщето Переписывать 73 части в разметку RmlUi вручную»
+
+beta.16 turns the recording off (R-ZK9ZK9: the game gone right after «Довідник» opened recorded; likely the bridge
+over-filled by the meshes - not proved, no dump). Every part is rewritten in RML + its data model by hand, one a beta,
+its old picture kept behind [interface] uaui = 0. Stages 4-5 below are open again.
+
+## (reversed) Ruling (2026-11-09, beta.12): the parts' painters recorded, not rewritten
 
 58 painters draw through panel::roundRect / circle, uiicons::draw, a picture's put/blit, and drawWords (each word's
 GDI coverage cached). With `Picture::scene` set those record primitives (core/ui_scene) instead of rasterizing; uaUI
@@ -38,28 +44,28 @@ picture's upload gone. Cost if wrong: per-pixel glows (panel::over loops) land i
       painters (core/window_panel, core/char_block, core/item_window).
 - [x] T4 speed: reuse the frame's vertices when RmlUi rendered the same geometry; one draw per texture run.
 
-## Stage 4 — HUD (done by recording, betas 12–15)
+## Stage 4 — HUD (by hand in RML, one beta each)
 
-- [x] character block (win/char_block + core/char_block)
-- [x] target card (win/target_card)
-- [x] party panel, mercenary/homunculus blocks
-- [x] buffs column and its further lines
-- [x] hotbar
-- [x] experience bars, experience gain, item toast
-- [x] hunt panel, MVP panel, tracker
-- [x] minimap frame and its list (the map picture as `pic:`)
+- [ ] character block (win/char_block + core/char_block)
+- [ ] target card (win/target_card)
+- [ ] party panel, mercenary/homunculus blocks
+- [ ] buffs column and its further lines
+- [ ] hotbar
+- [ ] experience bars, experience gain, item toast
+- [ ] hunt panel, MVP panel, tracker
+- [ ] minimap frame and its list (the map picture as `pic:`)
 
-## Stage 5 — windows (done by recording, betas 12–15)
+## Stage 5 — windows (by hand in RML)
 
-- [x] «Речі», storage, cart, trade
-- [x] «Спорядження», «Характеристики», «Навички»
-- [x] shop, vending, own shop
-- [x] NPC talk, ask / message / pick / count cards, item and skill cards
-- [x] chat, whispers, chat room, popup menu, emotions, commands
-- [x] login, servers, character select and make
-- [x] pet, homunculus, mercenary, options, friends, guild, whisper setup, macros, tip of the day, menu, OSK
-- [x] «Довідник»
-- [x] pad tiles / assign / hints, HUD edit
+- [ ] «Речі», storage, cart, trade
+- [ ] «Спорядження», «Характеристики», «Навички»
+- [ ] shop, vending, own shop
+- [ ] NPC talk, ask / message / pick / count cards, item and skill cards
+- [ ] chat, whispers, chat room, popup menu, emotions, commands
+- [ ] login, servers, character select and make
+- [ ] pet, homunculus, mercenary, options, friends, guild, whisper setup, macros, tip of the day, menu, OSK
+- [ ] «Довідник»
+- [ ] pad tiles / assign / hints, HUD edit
 
 ## Stage 6 — themes and cleanup
 
@@ -75,3 +81,4 @@ picture's upload gone. Cost if wrong: per-pixel glows (panel::over loops) land i
 - 2026-11-09 beta.13: themes (core/ui_theme: standard/classic/contrast, [interface] theme, ui\palette.txt), windows grow+fade in 120 ms, log of pictures not recorded
 - 2026-11-09 beta.14: manual pictures -> blank (answer/info cards, HUD layout, «Довідник» (full repaint when recorded), char block warning/flare, buff overlay, exp strip/gain/tip, exp gain, pad carry, enter veil); nested recorded pictures move their prims; minimap still painted (map blits)
 - 2026-11-09 beta.15: minimap + big map recorded (map pixels residual under marks; big map's picture an image over its card)
+- 2026-11-10 beta.16: recording off (owner: rewrite by hand; R-ZK9ZK9 crash)

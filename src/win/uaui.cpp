@@ -1106,12 +1106,9 @@ void begin(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
         themeFrame(s, theme, t - lookedAt >= 1000);
         if (t - lookedAt >= 1000) lookedAt = t;
     }
-    // 3.0.18-beta.12: the parts' pictures recorded for the card while on (in the world and out of it)
-    panel::setRecording(on && s.started);
-    if (on && s.started && !s.recordingTold) {
-        s.recordingTold = true;
-        LOG_INFO("uaui: the parts' pictures recorded and drawn on the card (their shapes, icons, pictures, words)");
-    }
+    // 3.0.18-beta.16 (the owner: «надо вообщето Переписывать 73 части в разметку RmlUi вручную»; R-ZK9ZK9, the game
+    // gone after «Довідник» recorded): the parts' pictures no longer recorded - each part moves to RmlUi by hand
+    panel::setRecording(false);
     if (!on || !world || !s.started) {
         for (Doc* d : s.docs) d->show(false);
         uapad::gamewindow::setBlocked(uapad::gamewindow::Blocker::Uaui, nullptr, nullptr, false);
