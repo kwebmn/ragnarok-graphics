@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.18-beta.54 — what's new
+
+- **Themes work in "Нова бібліотека інтерфейсу (RmlUi)":** the interface theme (standard; classic — warm brown and cream tones, less round corners; contrast — darker grounds, brighter words, thicker edges) and your own `uaro-graphics\ui\palette.txt` now change all of the new library's windows and panels. It switches on the fly.
+
 # uaRO Graphics 3.0.18-beta.53 — what's new
 
 - **With "Нова бібліотека інтерфейсу (RmlUi)": the target card's frame in "Розміщення інтерфейсу" and a click on its edge fit the card exactly.**
