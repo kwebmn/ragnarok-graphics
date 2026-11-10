@@ -1,3 +1,7 @@
+- New interface (uaUI): with "Плавний рух (нова бібліотека)" the HP bars in the party panel glide to their new value too.
+- New interface (uaUI): the gamepad in the whisper window - the D-pad moves the frame over the input field, "Надіслати" and ×, A presses, B closes (the top whisper window).
+- New interface (uaUI): with "Ефекти (нова бібліотека)" radial gradients are drawn too (for your own themes and markup).
+
 - New interface (uaUI): the target card no longer logs a style error (an empty element frame colour) the moment it appears.
 
 - New interface (uaUI): the switch "Ефекти (нова бібліотека)" under "Інтерфейс" (off by default). With it windows and panels cast soft shadows, the button chosen by the gamepad and the ready or lit skill bar cells glow, the HP, SP and experience bars and the buttons get a light sheen on top, and round corners inside windows are cut cleanly.
