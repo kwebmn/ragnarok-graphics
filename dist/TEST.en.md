@@ -1,3 +1,5 @@
+- New interface (uaUI): the red edges at low HP no longer slow things down at 4K (over 100 thousand vertices a frame, now a few thousand). Style errors in the log at start removed.
+
 - The new interface is now drawn by the new library (uaUI) alone: the "new interface library" switch under "Інтерфейс" is gone, the old way of painting windows and panels as pictures has been removed.
 
 - New interface (uaUI): the game's message box (OK, Yes/No, "Please wait…") is now a live window of the new library - its text wraps by itself, the buttons stand in a row under it, the window centres by its own size.
