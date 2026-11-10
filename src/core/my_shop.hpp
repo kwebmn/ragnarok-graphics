@@ -54,4 +54,7 @@ struct Words {
 };
 std::vector<Words> words(const Layout& L, const std::vector<Row>& rows, const Show& sh, const Texts& t);
 
+// 3.0.18-beta.30 (uaUI's own shop): a row's icon square
+panel::Box iconOf(const panel::Box& row, float s);
+
 }  // namespace uagfx::myshop

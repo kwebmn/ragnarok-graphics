@@ -65,3 +65,10 @@ TEST(my_shop_words_and_picture) {
     myshop::paint(p, L, r, myshop::Show{});
     CHECK((p.px[size_t(L.h / 2) * size_t(L.w) + size_t(L.w / 2)] >> 24) > 0x80);
 }
+
+// 3.0.18-beta.30: uaUI's own shop - a row's icon square inside its row
+TEST(my_shop_icon_inside_its_row) {
+    const panel::Box row{10, 20, 300, 40};
+    const panel::Box b = myshop::iconOf(row, 1.0f);
+    CHECK(b.w > 0 && b.x > row.x && b.y >= row.y && b.y + b.h <= row.y + row.h);
+}

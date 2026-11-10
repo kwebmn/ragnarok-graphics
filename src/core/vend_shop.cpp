@@ -192,4 +192,9 @@ std::vector<Words> words(const Layout& L, const std::vector<Row>& rows, const Sh
     return out;
 }
 
+panel::Box iconAt(const Layout& L, size_t line) {
+    return line < L.lines.size() && line < L.minus.size() ? cells(L.lines[line], L.minus[line], L.s).icon
+                                                          : panel::Box{};
+}
+
 }  // namespace uagfx::vendshop

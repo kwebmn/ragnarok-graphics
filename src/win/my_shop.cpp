@@ -23,6 +23,8 @@
 #include "win/real_ddraw.hpp"
 #include "win/ui_cost.hpp"
 #include "win/window_shadow.hpp"
+#include "win/uaui.hpp"
+#include "win/ui_sheet.hpp"
 
 namespace uagfx::win::myshopwin {
 namespace {
@@ -42,6 +44,9 @@ constexpr size_t kInfoSize = 0x48, kMostNodes = 100;
 using SendMsgFn = int(__attribute__((thiscall)) *)(uint32_t self, uint32_t sender, int msg, int a, int b, int c);
 
 struct State {
+    uisheet::Sheet sheet;  // 3.0.18-beta.30: the window drawn by uaUI
+    int sheetGen = 0;
+    bool sheetShown = false;
     WindowShadow shadow;
     bool on = false, shown = false;
     uint32_t hidden = 0;
@@ -165,6 +170,10 @@ std::vector<Words> gdiWords(const std::vector<ms::Words>& in) {
 }
 
 void render(State& s) {
+    if (uaui::ready()) {  // 3.0.18-beta.30: uaUI's window says it all again, no picture
+        ++s.sheetGen;
+        return;
+    }
     const uicost::Paint cost("one's own shop", s.layout.w, s.layout.h);
     if (!panel::blank(s.picture, s.layout.w, s.layout.h)) return;
     ms::paint(s.picture, s.layout, s.rows, s.show);
@@ -198,7 +207,8 @@ void closeShop(State& s) {
 
 }  // namespace
 
-void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int targetHeight) {
+static void frameInner(HWND game, bool on, unsigned codePage, double k, int targetWidth,
+                       int targetHeight) {
     State& s = state();
     s.codePage = codePage;
     if (on != s.on) {
@@ -232,23 +242,62 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
                       std::to_string(uistyle::generation());
     for (const ms::Row& r : s.rows)
         key += ';' + r.name + ',' + std::to_string(r.left) + ',' + std::to_string(r.price) + (r.icon ? "i" : "");
-    if (key != s.key) {
-        s.key = key;
+    if (const std::string drawn = key + (uaui::ready() ? "u" : ""); drawn != s.key) {  // 3.0.18-beta.30
+        s.key = drawn;
         render(s);
     }
     s.shown = true;
     block(s, game);
 }
 
+// 3.0.18-beta.30 (docs/superpowers/plans/2026-11-09-uaui-migration.md, stage 5 - by hand): one's own shop in RmlUi's
+// markup, line by line as core myshop paints it - its glass, ✕, the empty list's ground, the rows with their icons,
+// «Закрити лавку»; the words where core myshop places them
+static void fillSheet(State& s, uisheet::Content& c) {
+    const ms::Layout& L = s.layout;
+    const ms::Show& sh = s.show;
+    const float sc = L.s;
+    constexpr uint32_t kCard = 0x10141C, kWhite = 0xFFFFFF, kBlack = 0x000000, kGold = 0xF3C653;
+    auto& u = c.under;
+    c.w = float(L.w), c.h = float(L.h);
+    c.glass = uisheet::Box{L.glass.x, L.glass.y, L.glass.w, L.glass.h, 12 * sc, 1.0f * sc, 1, "glass"};
+    c.ground = uisheet::Sheet::ground(kCard, uistyle::window());
+    c.rect(u, L.cross, 6 * sc, kWhite, sh.hoverClose ? 0.14f : 0.06f);
+    if (L.rows.empty()) c.rect(u, L.list, 8 * sc, kBlack, 0.16f);
+    for (size_t i = 0; i < L.rows.size(); ++i) {
+        const size_t at = i + size_t(std::max(0, sh.scroll));
+        if (at >= s.rows.size()) break;
+        c.rect(u, L.rows[i], 8 * sc, kWhite, 0.035f);
+        const panel::Box b = ms::iconOf(L.rows[i], sc);
+        c.rect(u, b, 6 * sc, kBlack, 0.30f);
+        const panel::Picture* p = s.rows[at].icon;
+        if (p && p->width > 0)
+            c.icons.push_back(uisheet::Icon{std::round(b.x + (b.w - float(p->width)) / 2),
+                                            std::round(b.y + (b.h - float(p->height)) / 2), float(p->width),
+                                            float(p->height), 1, s.sheet.icon(p)});
+    }
+    c.rect(u, L.close, 8 * sc, kWhite, sh.hoverClose ? 0.14f : 0.07f, kGold, 0.6f, 1.0f * sc);
+    c.say(ms::words(L, s.rows, sh, texts(s)));
+}
+
+void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int targetHeight) {
+    frameInner(game, on, codePage, k, targetWidth, targetHeight);
+    State& s = state();
+    s.sheetShown = s.sheet.frame("my_shop", s.shown, true, s.layout.x, s.layout.y, s.sheetGen,
+                                 [&](uisheet::Content& c) { fillSheet(s, c); });
+}
+
 void draw(FrameRecord& record, gpu::Renderer& renderer) {
     State& s = state();
-    if (!s.shown || s.k <= 0 || s.picture.width <= 0 || s.picture.height <= 0) return;
+    if (!s.shown || s.k <= 0 || ((s.picture.width <= 0 || s.picture.height <= 0) && !s.sheetShown)) return;
     int cursor = -1, cx = 0, cy = 0;
     if (readGameCursor(cx, cy)) cursor = panel::cursorDraw(record, float(cx), float(cy));
     const panel::Box& g = s.layout.glass;
-    s.shadow.draw(record, renderer, s.layout.x + int(g.x), s.layout.y + int(g.y), int(g.w), int(g.h), 12 * s.scale,
-                  s.scale, s.k);
-    drawPart(record, renderer, s.picture, s.texture, s.texW, s.texH, s.upload, s.layout.x, s.layout.y, s.k);
+    if (!s.sheetShown) {  // 3.0.18-beta.30: uaUI draws the window (with the windows' layer)
+        s.shadow.draw(record, renderer, s.layout.x + int(g.x), s.layout.y + int(g.y), int(g.w), int(g.h),
+                      12 * s.scale, s.scale, s.k);
+        drawPart(record, renderer, s.picture, s.texture, s.texW, s.texH, s.upload, s.layout.x, s.layout.y, s.k);
+    }
     if (cursor >= 0) record.moveLastBefore(record.commands().size() - size_t(cursor) - 1, size_t(cursor));
 }
 

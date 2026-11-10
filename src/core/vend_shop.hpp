@@ -68,4 +68,7 @@ struct Words {
 };
 std::vector<Words> words(const Layout& L, const std::vector<Row>& rows, const Show& sh, const Texts& t);
 
+// 3.0.18-beta.30 (uaUI's «Лавка»): a line's icon square
+panel::Box iconAt(const Layout& L, size_t line);
+
 }  // namespace uagfx::vendshop

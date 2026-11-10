@@ -110,3 +110,11 @@ TEST(vend_shop_words_and_picture) {
     vendshop::paint(p, L, r, sh);
     CHECK((p.px[size_t(L.h / 2) * size_t(L.w) + size_t(L.w / 2)] >> 24) > 0x80);
 }
+
+// 3.0.18-beta.30: uaUI's «Лавка» - a line's icon square inside its line
+TEST(vend_shop_icon_inside_its_line) {
+    const vendshop::Layout L = vendshop::layout(1920, 1080, 1.0f, 3);
+    const panel::Box b = vendshop::iconAt(L, 1);
+    CHECK(b.w > 0 && b.x > L.lines[1].x && b.y >= L.lines[1].y && b.y + b.h <= L.lines[1].y + L.lines[1].h);
+    CHECK(vendshop::iconAt(L, 9).w == 0);
+}

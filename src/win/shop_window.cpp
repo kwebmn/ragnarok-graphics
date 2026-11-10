@@ -17,7 +17,9 @@
 #include "core/layout.hpp"
 #include "core/reference_index.hpp"
 #include "core/settings/strings.hpp"
+#include "core/pad_glyphs.hpp"
 #include "core/shop_window.hpp"
+#include "core/ui_icons.hpp"
 #include "core/ui_style.hpp"
 #include "pad/win/game_window.hpp"
 #include "pad/win/runtime.hpp"
@@ -32,6 +34,8 @@
 #include "win/reference_load.hpp"
 #include "win/ui_cost.hpp"
 #include "win/window_shadow.hpp"
+#include "win/uaui.hpp"
+#include "win/ui_sheet.hpp"
 #include "win/window_stack.hpp"
 
 namespace uagfx::win::shopwin {
@@ -90,6 +94,9 @@ struct Deal {  // the game's deal windows now (0: none)
 };
 
 struct State {
+    uisheet::Sheet sheet;  // 3.0.18-beta.30: the window drawn by uaUI
+    int sheetGen = 0;
+    bool sheetShown = false;
     WindowShadow shadow;
     WindowEdge edge;  // 3.0.11-beta.108: the top of two or more windows (win/window_stack)
     bool on = false, shown = false, hid = false, stateRead = false;
@@ -355,6 +362,10 @@ std::vector<Words> gdiWords(const std::vector<sw::Words>& in) {
 }
 
 void render(State& s) {
+    if (uaui::ready()) {  // 3.0.18-beta.30: uaUI's window says it all again, no picture
+        ++s.sheetGen;
+        return;
+    }
     const uicost::Paint cost("the shop", s.layout.w, s.layout.h);
     if (!panel::blank(s.picture, s.layout.w, s.layout.h)) return;
     sw::paint(s.picture, s.layout, s.data, s.shownList, s.show, measure);
@@ -581,7 +592,8 @@ char letterOf(WPARAM vk, bool shift) {
 
 }  // namespace
 
-void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int targetHeight) {
+static void frameInner(HWND game, bool on, unsigned codePage, double k, int targetWidth,
+                       int targetHeight) {
     State& s = state();
     if (on != s.on) {
         s.on = on;
@@ -702,7 +714,8 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     for (const sw::Ware& w : s.data.wares) key += w.icon ? "i" : "-";
     key += ';';
     for (const sw::Line& l : s.data.cart) key += std::to_string(l.ware) + 'x' + std::to_string(l.amount) + ',';
-    if (const std::string drawn = key + '#' + std::to_string(uistyle::generation()); drawn != s.key) {
+    if (const std::string drawn = key + '#' + std::to_string(uistyle::generation()) + (uaui::ready() ? "u" : "");
+        drawn != s.key) {  // 3.0.18-beta.30: uaUI's or the picture
         s.key = drawn;
         render(s);
     }
@@ -716,18 +729,134 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     block(s, game);
 }
 
+// 3.0.18-beta.30 (docs/superpowers/plans/2026-11-09-uaui-migration.md, stage 5 - by hand): the shop in RmlUi's
+// markup, line by line as core shopwin paints it - its glass, ×, the tabs' line and the shown one's gold, the search
+// (its icon, the caret), the list (its head's line, the rows pointed at and framed, the cart's gold mark, their lines,
+// the icons), the cart (the rows, − the amount + and ✕, the typed amount's field and caret), «Купити»/«Продати» gold
+// when it can, its key, «Очистити», the footer's line, the keys' caps or the controller's glyphs; the words where
+// core shopwin places them
+static void fillSheet(State& s, uisheet::Content& c) {
+    const sw::Layout& L = s.layout;
+    const sw::Data& d = s.data;
+    const sw::Show& sh = s.show;
+    const float sc = L.s;
+    constexpr uint32_t kCard = 0x10141C, kWhite = 0xFFFFFF, kBlack = 0x000000, kGold = 0xF3C653, kGold2 = 0xC9A55B;
+    constexpr uint32_t kText = 0xEEF2F8, kInk = 0x1A1408, kRed = 0xFF8A80;
+    constexpr float kGlyph = 17;  // core shopwin's
+    const sw::View v = sw::view(L, d, s.shownList, sh, measure);
+    auto& u = c.under;
+    auto& o = c.over;
+    const auto icon = [&](uiicons::Icon which, const panel::Box& box, float side, uint32_t rgb, float stroke) {
+        const int px = std::max(4, int(std::ceil(side)));
+        const std::string key = "u" + std::to_string(int(which)) + ':' + std::to_string(px) + ':' +
+                                std::to_string(rgb);
+        c.icons.push_back(uisheet::Icon{std::round(box.x + (box.w - float(px)) / 2),
+                                        std::round(box.y + (box.h - float(px)) / 2), float(px), float(px), 1,
+                                        s.sheet.made(key, px, px, [&](panel::Picture& p) {
+                                            uiicons::draw(p, which, 0, 0, float(px), rgb, 0.9f, stroke);
+                                        })});
+    };
+    c.w = float(L.w), c.h = float(L.h);
+    c.glass = uisheet::Box{L.glass.x, L.glass.y, L.glass.w, L.glass.h, 12 * sc, 1.0f * sc, 1, "glass"};
+    c.ground = uisheet::Sheet::ground(kCard, uistyle::window());
+    if (sh.hoverClose) c.rect(u, L.close, 7 * sc, kWhite, 0.12f);
+    c.rect(u, panel::Box{L.tabsRow.x, L.tabsRow.y + L.tabsRow.h - 1 * sc, L.tabsRow.w, 1 * sc}, 0, kWhite, 0.08f);
+    const int on = d.tab == sw::Tab::Buy ? 0 : 1;
+    if (on < int(L.tabs.size())) {
+        const panel::Box& b = L.tabs[size_t(on)];
+        c.rect(u, panel::Box{b.x, b.y + b.h - 2.5f * sc, b.w, 2 * sc}, 1 * sc, kGold, 0.95f);
+    }
+    c.rect(u, L.searchBox, 8 * sc, kBlack, 0.35f, sh.typing ? kGold2 : kWhite,
+           sh.typing ? 0.6f : sh.hoverSearch ? 0.18f : 0.10f, 1.0f * sc);
+    const float search = 15 * sc;
+    icon(uiicons::Icon::Search, panel::Box{L.searchBox.x + 10 * sc, L.searchBox.y + (L.searchBox.h - search) / 2,
+                                           search, search}, search, 0x9AA3B5, 2.2f);
+    if (sh.typing && sh.caretOn) {
+        const float x = L.searchBox.x + 32 * sc + measure(sh.search, 12.5f * sc, false) + 1 * sc;
+        c.rect(u, panel::Box{x, L.searchBox.y + 9 * sc, 1.5f * sc, L.searchBox.h - 18 * sc}, 0, kText, 0.95f);
+    }
+    const bool framed = sh.framed || sh.pad;
+    c.rect(u, panel::Box{L.listHead.x, L.listHead.y + L.listHead.h - 1 * sc, L.listHead.w, 1 * sc}, 0, kWhite, 0.08f);
+    for (size_t i = 0; i < L.wares.size(); ++i) {
+        const panel::Box& b = L.wares[i];
+        const int at = L.firstWare + int(i);
+        if (at == sh.hoverWare) c.rect(u, b, 6 * sc, kWhite, 0.06f);
+        if (framed && !sh.cartFocus && at == sh.ware) c.rect(u, b, 6 * sc, kGold2, 0.08f, kGold, 0.9f, 1.5f * sc);
+        if (i < v.inCart.size() && v.inCart[i])
+            c.rect(u, panel::Box{b.x + 1 * sc, b.y + 8 * sc, 2.5f * sc, b.h - 16 * sc}, 1 * sc, kGold, 0.9f);
+        c.rect(u, panel::Box{b.x, b.y + b.h - 1 * sc, b.w, 1 * sc}, 0, kWhite, 0.05f);
+    }
+    c.rect(u, panel::Box{L.cartHead.x, L.cartHead.y + L.cartHead.h - 1 * sc, L.cartHead.w, 1 * sc}, 0, kWhite, 0.08f);
+    for (size_t i = 0; i < L.lines.size(); ++i) {
+        const panel::Box& b = L.lines[i];
+        const int at = L.firstLine + int(i);
+        const sw::Line& line = d.cart[size_t(at)];
+        if (at == sh.hoverLine) c.rect(u, b, 6 * sc, kWhite, 0.06f);
+        if (framed && sh.cartFocus && at == sh.line) c.rect(u, b, 6 * sc, kGold2, 0.08f, kGold, 0.9f, 1.5f * sc);
+        c.rect(u, panel::Box{b.x, b.y + b.h - 1 * sc, b.w, 1 * sc}, 0, kWhite, 0.05f);
+        if (sh.edit.ware == line.ware) {
+            c.rect(u, L.amounts[i], 5 * sc, kBlack, 0.45f, kGold, 0.95f, 1.5f * sc);
+            if (sh.caretOn) {
+                const float cx = L.amounts[i].x + L.amounts[i].w / 2 + measure(sh.edit.digits, 12.5f * sc, true) / 2 +
+                                 2 * sc;
+                c.rect(u, panel::Box{cx, L.amounts[i].y + 4 * sc, 1.5f * sc, L.amounts[i].h - 8 * sc}, 0, kText,
+                       0.95f);
+            }
+        } else if (at == sh.hoverAmount) {
+            c.rect(u, L.amounts[i], 5 * sc, kWhite, 0.10f);
+        }
+        c.rect(u, L.less[i], 5 * sc, kWhite, at == sh.hoverLess ? 0.16f : 0.07f);
+        c.rect(u, L.more[i], 5 * sc, kWhite, at == sh.hoverMore ? 0.16f : 0.07f);
+        icon(uiicons::Icon::Minus, L.less[i], 12 * sc, kText, 2.4f);
+        icon(uiicons::Icon::Plus, L.more[i], 12 * sc, kText, 2.4f);
+        if (at == sh.hoverTakeBack) c.rect(u, L.drops[i], 5 * sc, kRed, 0.18f);
+    }
+    for (const sw::IconView& x : v.icons)
+        c.icons.push_back(uisheet::Icon{std::round(x.box.x + (x.box.w - float(x.picture->width)) / 2),
+                                        std::round(x.box.y + (x.box.h - float(x.picture->height)) / 2),
+                                        float(x.picture->width), float(x.picture->height), x.opacity,
+                                        s.sheet.icon(x.picture)});
+    if (v.ok) c.rect(u, L.confirm, 8 * sc, sh.hoverConfirm ? 0xF8D57A : kGold, 1.0f);
+    else c.rect(u, L.confirm, 8 * sc, kWhite, 0.07f, kWhite, 0.10f, 1.0f * sc);
+    if (!sh.pad) c.rect(o, L.confirmKey, 4 * sc, v.ok ? kInk : kWhite, v.ok ? 0.16f : 0.10f);
+    c.rect(u, L.clear, 8 * sc, kWhite, sh.hoverClear ? 0.14f : 0.07f);
+    c.rect(u, panel::Box{0, L.footer.y, L.glass.w, 1 * sc}, 0, kWhite, 0.08f);
+    for (const panel::Box& cap : L.keyCaps) c.rect(u, cap, 4 * sc, kWhite, 0.12f, kWhite, 0.18f, 1.0f * sc);
+    const padglyph::Family f = sh.sony ? padglyph::Family::Sony : padglyph::Family::Xbox;
+    for (const sw::GlyphView& g : v.glyphs) {
+        const padglyph::Button b = padglyph::Button(g.button);
+        const int w = std::max(1, int(std::ceil(padglyph::widthOf(b, kGlyph * sc)))),
+                  h = std::max(1, int(std::ceil(kGlyph * sc)));
+        const std::string key = "pad" + std::to_string(g.button) + (sh.sony ? "s" : "x") + std::to_string(h);
+        const std::string src = s.sheet.made(key, w, h, [&](panel::Picture& p) {
+            padglyph::paint(p, b, f, 0, 0, kGlyph * sc);
+        });
+        c.icons.push_back(uisheet::Icon{g.x, g.y, float(w), float(h), 1, src});
+    }
+    c.say(sw::words(L, d, s.shownList, sh, texts(), measure));
+}
+
+void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int targetHeight) {
+    frameInner(game, on, codePage, k, targetWidth, targetHeight);
+    State& s = state();
+    s.sheetShown = s.sheet.frame("shop", s.shown, true, s.layout.x, s.layout.y, s.sheetGen,
+                                 [&](uisheet::Content& c) { fillSheet(s, c); });
+}
+
 void draw(FrameRecord& record, gpu::Renderer& renderer) {
     State& s = state();
-    if (!s.shown || s.k <= 0 || s.picture.width <= 0 || s.picture.height <= 0) return;
+    if (!s.shown || s.k <= 0 || ((s.picture.width <= 0 || s.picture.height <= 0) && !s.sheetShown)) return;
     int cursor = -1, cx = 0, cy = 0;
     if (readGameCursor(cx, cy)) cursor = panel::cursorDraw(record, float(cx), float(cy));
     const panel::Box& g = s.layout.glass;
-    s.shadow.draw(record, renderer, s.layout.x + int(g.x), s.layout.y + int(g.y), int(g.w), int(g.h), 12 * s.scale,
-                  s.scale, s.k);
-    drawPart(record, renderer, s.picture, s.texture, s.texW, s.texH, s.upload, s.layout.x, s.layout.y, s.k);
-    if (windowstack::marked(winstack::Win::Shop))  // 3.0.11-beta.108: its gold edge, the top of two or more
-        s.edge.draw(record, renderer, s.layout.x + int(g.x), s.layout.y + int(g.y), int(g.w), int(g.h), 12 * s.scale,
-                    s.scale, s.k);
+    if (!s.sheetShown) {  // 3.0.18-beta.30: uaUI draws the window (with the windows' layer)
+        s.shadow.draw(record, renderer, s.layout.x + int(g.x), s.layout.y + int(g.y), int(g.w), int(g.h),
+                      12 * s.scale, s.scale, s.k);
+        drawPart(record, renderer, s.picture, s.texture, s.texW, s.texH, s.upload, s.layout.x, s.layout.y, s.k);
+        if (windowstack::marked(winstack::Win::Shop))
+            s.edge.draw(record, renderer, s.layout.x + int(g.x), s.layout.y + int(g.y), int(g.w), int(g.h),
+                        12 * s.scale, s.scale, s.k);
+    }
     if (cursor >= 0) record.moveLastBefore(record.commands().size() - size_t(cursor) - 1, size_t(cursor));
 }
 

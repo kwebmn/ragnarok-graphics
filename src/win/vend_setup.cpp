@@ -24,6 +24,8 @@
 #include "win/real_ddraw.hpp"
 #include "win/ui_cost.hpp"
 #include "win/window_shadow.hpp"
+#include "win/uaui.hpp"
+#include "win/ui_sheet.hpp"
 
 namespace uagfx::win::vendsetupwin {
 namespace {
@@ -51,6 +53,9 @@ using SetTextFn = void(__attribute__((thiscall)) *)(uint32_t edit, const char* t
 constexpr uint32_t kSetTextSlot = 0x98;  // an edit's SetText (win/ask_card)
 
 struct State {
+    uisheet::Sheet sheet;  // 3.0.18-beta.30: the window drawn by uaUI
+    int sheetGen = 0;
+    bool sheetShown = false;
     WindowShadow shadow;
     bool on = false, shown = false;
     uint32_t hiddenSale = 0, hiddenCart = 0;
@@ -224,6 +229,10 @@ std::vector<Words> gdiWords(const std::vector<vs::Words>& in) {
 }
 
 void render(State& s) {
+    if (uaui::ready()) {  // 3.0.18-beta.30: uaUI's window says it all again, no picture
+        ++s.sheetGen;
+        return;
+    }
     const uicost::Paint cost("the shop's opening", s.layout.w, s.layout.h);
     if (!panel::blank(s.picture, s.layout.w, s.layout.h)) return;
     vs::paint(s.picture, s.layout, s.cart, s.sale, s.show);
@@ -285,7 +294,8 @@ void focus(State& s, uint32_t edit, const char* what) {
 
 }  // namespace
 
-void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int targetHeight) {
+static void frameInner(HWND game, bool on, unsigned codePage, double k, int targetWidth,
+                       int targetHeight) {
     State& s = state();
     s.codePage = codePage;
     if (on != s.on) {
@@ -348,23 +358,86 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     for (const vs::Row& r : s.cart) key += ";c" + r.name + ',' + std::to_string(r.count) + (r.icon ? "i" : "");
     for (const vs::Row& r : s.sale)
         key += ";s" + r.name + ',' + std::to_string(r.count) + ',' + r.price + (r.icon ? "i" : "");
-    if (key != s.key) {
-        s.key = key;
+    if (const std::string drawn = key + (uaui::ready() ? "u" : ""); drawn != s.key) {  // 3.0.18-beta.30
+        s.key = drawn;
         render(s);
     }
     s.shown = true;
     block(s, game);
 }
 
+// 3.0.18-beta.30 (docs/superpowers/plans/2026-11-09-uaui-migration.md, stage 5 - by hand): the shop's opening in
+// RmlUi's markup, line by line as core vendsetup paints it - its glass, ✕, the sign's field, the lists' gold head
+// lines and grounds, the cart's rows (the controller's frame), the sale's rows with their price fields (red without a
+// price) and ✕, «Скасувати», «Відкрити»; the words where core vendsetup places them
+static void fillSheet(State& s, uisheet::Content& c) {
+    const vs::Layout& L = s.layout;
+    const vs::Show& sh = s.show;
+    const float sc = L.s;
+    constexpr uint32_t kCard = 0x10141C, kWhite = 0xFFFFFF, kBlack = 0x000000, kGold = 0xF3C653, kDanger = 0xE0675C;
+    auto& u = c.under;
+    const auto icon = [&](const panel::Picture* p, const panel::Box& b) {
+        if (p && p->width > 0)
+            c.icons.push_back(uisheet::Icon{std::round(b.x + (b.w - float(p->width)) / 2),
+                                            std::round(b.y + (b.h - float(p->height)) / 2), float(p->width),
+                                            float(p->height), 1, s.sheet.icon(p)});
+    };
+    c.w = float(L.w), c.h = float(L.h);
+    c.glass = uisheet::Box{L.glass.x, L.glass.y, L.glass.w, L.glass.h, 12 * sc, 1.0f * sc, 1, "glass"};
+    c.ground = uisheet::Sheet::ground(kCard, uistyle::window());
+    c.rect(u, L.cross, 6 * sc, kWhite, sh.hoverButton == 2 ? 0.14f : 0.06f);
+    c.rect(u, L.sign, 7 * sc, kBlack, 0.30f, sh.focus == 0 ? kGold : kWhite, sh.focus == 0 ? 0.9f : 0.18f, 1.0f * sc);
+    for (const panel::Box* head : {&L.cartHead, &L.saleHead})
+        c.rect(u, panel::Box{head->x, head->y + head->h - 1 * sc, head->w, 1 * sc}, 0, kGold, 0.45f);
+    c.rect(u, L.cartList, 8 * sc, kBlack, 0.14f);
+    c.rect(u, L.saleList, 8 * sc, kBlack, 0.14f);
+    for (size_t i = 0; i < L.cartRows.size(); ++i) {
+        const size_t at = i + size_t(std::max(0, sh.cartScroll));
+        if (at >= s.cart.size()) break;
+        const bool full = sh.most > 0 && int(s.sale.size()) >= sh.most;
+        c.rect(u, L.cartRows[i], 7 * sc, kWhite, sh.hoverCart == int(i) && !full ? 0.10f : 0.035f);
+        if (sh.padCart == int(i)) c.rect(u, L.cartRows[i], 7 * sc, kWhite, 0.0f, kGold, 0.9f, 1.5f * sc);
+        const panel::Box b = vs::iconOf(L.cartRows[i], sc);
+        c.rect(u, b, 6 * sc, kBlack, 0.30f);
+        icon(s.cart[at].icon, b);
+    }
+    for (size_t i = 0; i < L.saleRows.size(); ++i) {
+        const size_t at = i + size_t(std::max(0, sh.saleScroll));
+        if (at >= s.sale.size()) break;
+        c.rect(u, L.saleRows[i], 7 * sc, kWhite, sh.hoverSale == int(i) ? 0.07f : 0.035f);
+        if (sh.padSale == int(i)) c.rect(u, L.saleRows[i], 7 * sc, kWhite, 0.0f, kGold, 0.9f, 1.5f * sc);
+        const panel::Box b = vs::iconOf(L.saleRows[i], sc);
+        c.rect(u, b, 6 * sc, kBlack, 0.30f);
+        icon(s.sale[at].icon, b);
+        const bool focused = sh.focus == 1 + int(at);
+        const bool none = vs::priceOf(s.sale[at].price) <= 0;
+        c.rect(u, L.prices[i], 6 * sc, kBlack, 0.35f, focused ? kGold : none ? kDanger : kWhite,
+               focused ? 0.9f : none ? 0.55f : 0.18f, 1.0f * sc);
+        c.rect(u, L.removes[i], 6 * sc, kDanger, sh.hoverRemove == int(i) ? 0.30f : 0.10f);
+    }
+    c.rect(u, L.cancel, 8 * sc, kWhite, sh.hoverButton == 1 ? 0.14f : 0.07f);
+    c.rect(u, L.open, 8 * sc, kGold, sh.hoverButton == 0 ? 0.40f : 0.26f, kGold, 0.85f, 1.0f * sc);
+    c.say(vs::words(L, s.cart, s.sale, s.sign, sh, texts(s)));
+}
+
+void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int targetHeight) {
+    frameInner(game, on, codePage, k, targetWidth, targetHeight);
+    State& s = state();
+    s.sheetShown = s.sheet.frame("vend_setup", s.shown, true, s.layout.x, s.layout.y, s.sheetGen,
+                                 [&](uisheet::Content& c) { fillSheet(s, c); });
+}
+
 void draw(FrameRecord& record, gpu::Renderer& renderer) {
     State& s = state();
-    if (!s.shown || s.k <= 0 || s.picture.width <= 0 || s.picture.height <= 0) return;
+    if (!s.shown || s.k <= 0 || ((s.picture.width <= 0 || s.picture.height <= 0) && !s.sheetShown)) return;
     int cursor = -1, cx = 0, cy = 0;
     if (readGameCursor(cx, cy)) cursor = panel::cursorDraw(record, float(cx), float(cy));
     const panel::Box& g = s.layout.glass;
-    s.shadow.draw(record, renderer, s.layout.x + int(g.x), s.layout.y + int(g.y), int(g.w), int(g.h), 12 * s.scale,
-                  s.scale, s.k);
-    drawPart(record, renderer, s.picture, s.texture, s.texW, s.texH, s.upload, s.layout.x, s.layout.y, s.k);
+    if (!s.sheetShown) {  // 3.0.18-beta.30: uaUI draws the window (with the windows' layer)
+        s.shadow.draw(record, renderer, s.layout.x + int(g.x), s.layout.y + int(g.y), int(g.w), int(g.h),
+                      12 * s.scale, s.scale, s.k);
+        drawPart(record, renderer, s.picture, s.texture, s.texW, s.texH, s.upload, s.layout.x, s.layout.y, s.k);
+    }
     if (cursor >= 0) record.moveLastBefore(record.commands().size() - size_t(cursor) - 1, size_t(cursor));
 }
 

@@ -173,4 +173,23 @@ struct Words {
 std::vector<Words> words(const Layout& L, const Data& d, const std::vector<int>& shown, const Show& sh,
                          const Texts& t, const Measure& m);
 
+// 3.0.18-beta.30 (uaUI's shop): what paint() decides beyond the layout - each list row's thing in the cart, the
+// rows' and the cart's icons, the confirm pressable, the controller's glyphs (the footer's, Start, LB, RB)
+struct IconView {
+    const panel::Picture* picture = nullptr;
+    panel::Box box;  // the icon's square (the picture centred in it)
+    float opacity = 1;
+};
+struct GlyphView {
+    int button = 0;  // padglyph::Button
+    float x = 0, y = 0;
+};
+struct View {
+    std::vector<bool> inCart;  // L.wares'
+    std::vector<IconView> icons;
+    std::vector<GlyphView> glyphs;
+    bool ok = false;
+};
+View view(const Layout& L, const Data& d, const std::vector<int>& shown, const Show& sh, const Measure& m);
+
 }  // namespace uagfx::shopwin

@@ -635,4 +635,37 @@ std::vector<Words> words(const Layout& L, const Data& d, const std::vector<int>&
     return out;
 }
 
+View view(const Layout& L, const Data& d, const std::vector<int>& shown, const Show& sh, const Measure& m) {
+    (void)m;
+    View v;
+    const float s = L.s;
+    for (size_t i = 0; i < L.wares.size(); ++i) {
+        const panel::Box& b = L.wares[i];
+        const int at = L.firstWare + int(i);
+        v.inCart.push_back(at < int(shown.size()) && amountOf(d.cart, shown[size_t(at)]) > 0);
+        const Ware* w = at < int(shown.size()) ? wareAt(d, shown[size_t(at)]) : nullptr;
+        if (w && w->icon && w->icon->width > 0)
+            v.icons.push_back(IconView{w->icon, panel::Box{b.x + 6 * s, b.y + (b.h - kIcon * s) / 2, kIcon * s,
+                                                           kIcon * s}, w->identified ? 1.0f : 0.45f});
+    }
+    for (size_t i = 0; i < L.lines.size(); ++i) {
+        const panel::Box& b = L.lines[i];
+        const Ware* w = wareAt(d, d.cart[size_t(L.firstLine + int(i))].ware);
+        if (w && w->icon && w->icon->width > 0)
+            v.icons.push_back(IconView{w->icon, panel::Box{b.x + 4 * s, b.y + (b.h - kIcon * s) / 2, kIcon * s,
+                                                           kIcon * s}, 1.0f});
+    }
+    v.ok = sums(d.tab, d.cart, d.wares, d.zeny, d.weight, d.weightMost).ok;
+    if (sh.pad) {
+        Texts none;
+        const std::vector<PadItem> items = padItems(none);
+        for (size_t i = 0; i < items.size() && i < L.padGlyphs.size(); ++i)
+            v.glyphs.push_back(GlyphView{int(items[i].button), L.padGlyphs[i].x, L.padGlyphs[i].y});
+        v.glyphs.push_back(GlyphView{int(padglyph::Button::Start), L.confirmKey.x, L.confirmKey.y});
+        v.glyphs.push_back(GlyphView{int(padglyph::Button::LB), L.tabGlyphs[0].x, L.tabGlyphs[0].y});
+        v.glyphs.push_back(GlyphView{int(padglyph::Button::RB), L.tabGlyphs[1].x, L.tabGlyphs[1].y});
+    }
+    return v;
+}
+
 }  // namespace uagfx::shopwin

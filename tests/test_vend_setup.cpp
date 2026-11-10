@@ -74,3 +74,10 @@ TEST(vend_setup_price_steps) {
     CHECK(vendsetup::stepPrice("99990000", 1) == "99990000");
     CHECK(vendsetup::stepPrice("1", -1) == "0");
 }
+
+// 3.0.18-beta.30: uaUI's shop opening - a row's icon square inside its row
+TEST(vend_setup_icon_inside_its_row) {
+    const panel::Box row{10, 20, 300, 40};
+    const panel::Box b = vendsetup::iconOf(row, 1.0f);
+    CHECK(b.w > 0 && b.x > row.x && b.y >= row.y && b.y + b.h <= row.y + row.h);
+}

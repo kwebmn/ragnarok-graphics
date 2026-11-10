@@ -126,4 +126,6 @@ std::vector<Words> words(const Layout& L, const std::vector<Row>& rows, const Sh
     return out;
 }
 
+panel::Box iconOf(const panel::Box& row, float s) { return iconBox(row, s); }
+
 }  // namespace uagfx::myshop
