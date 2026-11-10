@@ -79,6 +79,11 @@ struct One {
     ic::Layout layout;
     int atX = 0, atY = 0;  // its place in the target, where the cursor was when it opened
     CardDrag move;  // 3.0.18-beta.93 (the owner: «описание вещи ... не двигается»): moved by its title or body
+    // 3.0.18-beta.109 (the owner: «как было в оригинале»): a slot's card opened in its place (its slot; -1 the thing),
+    // the slots' cards' numbers
+    int viewing = -1;
+    int cardIds[4] = {};
+    std::string thing;  // the thing the card shows (its viewing aside)
     std::string key;
     panel::Picture picture;
     uint32_t texture = 0;
@@ -222,10 +227,13 @@ void itemCard(State& s, One& o, uint32_t window) {
                        std::to_string(count);
     for (const int c : cards) what += '|' + std::to_string(c);
     what += '@' + std::to_string(s.scale);
+    if (what != o.thing) o.viewing = -1, o.thing = what;  // another thing: its own words again
+    what += '#' + std::to_string(o.viewing);
     if (what == o.what) return;
     const bool fresh = o.what.rfind(number + '|', 0) != 0;
     o.what = what;
     if (fresh) o.show.scroll = 0;
+    for (int i = 0; i < 4; ++i) o.cardIds[i] = cards[i];
     ic::Card c;
     const int id = std::atoi(number.c_str());
     const auto slots = s.tables.slots.find(id);
@@ -241,24 +249,36 @@ void itemCard(State& s, One& o, uint32_t window) {
     if (known && !special)
         for (int i = 0; i < std::max(slotCount, 0); ++i)
             c.cards.push_back(cards[i] > 0 ? itemName(s, std::to_string(cards[i]), true) : "");
-    // 3.0.18-beta.108 (the owner: «описание товара ... как выглядят вещи с картами», «сделай как-то универсальнее»):
-    // each card in it after the thing's own words - its name in gold, then its description from the same table as it
-    // is (any card, nothing read out of the words); the card scrolls when long
-    if (known && !special)
-        for (int i = 0; i < std::max(slotCount, 0); ++i) {
-            if (cards[i] <= 0) continue;
-            const std::string card = std::to_string(cards[i]);
-            c.lines.push_back("");
-            c.lines.push_back("^E6CB8A\xE2\x97\x86 " + itemName(s, card, true));  // ◆ Hydra Card
-            const auto cd = s.tables.items.find(card);
-            if (cd != s.tables.items.end())
-                for (const std::string& l : utf8Lines(s, cd->second)) c.lines.push_back(l);
-        }
     const auto& files = known ? clienttables::itemFiles() : s.tables.unknownFiles;
     const auto f = files.find(number);
     if (f != files.end()) {
         c.icon = clienttables::icon(f->second, ic::iconSide(s.scale), 4 * s.scale);
         if (known) c.picture = bigPicture(s, o, f->second);
+    }
+    // 3.0.18-beta.109: each slot's card picture (its item icon)
+    const int cardSide = int(std::lround(26 * s.scale));
+    for (size_t i = 0; i < c.cards.size(); ++i) {
+        const panel::Picture* pic = nullptr;
+        if (cards[i] > 0) {
+            const auto cf = clienttables::itemFiles().find(std::to_string(cards[i]));
+            if (cf != clienttables::itemFiles().end()) pic = clienttables::icon(cf->second, cardSide, 2 * s.scale);
+        }
+        c.cardIcons.push_back(pic);
+    }
+    // 3.0.18-beta.109: a slot's card opened - its own name, words and pictures; the thing's name under it to go back
+    if (o.viewing >= 0 && o.viewing < 4 && cards[o.viewing] > 0) {
+        const std::string card = std::to_string(cards[o.viewing]);
+        ic::Card v;
+        v.title = itemName(s, card, true);
+        v.note = "\xE2\x80\xB9 " + c.title;  // ‹ +7 Blade [4]
+        const auto cd = s.tables.items.find(card);
+        if (cd != s.tables.items.end()) v.lines = utf8Lines(s, cd->second);
+        const auto cf = clienttables::itemFiles().find(card);
+        if (cf != clienttables::itemFiles().end()) {
+            v.icon = clienttables::icon(cf->second, ic::iconSide(s.scale), 4 * s.scale);
+            v.picture = bigPicture(s, o, cf->second);
+        }
+        c = v;
     }
     o.card = c;
     if (s.told++ < 40)
@@ -489,6 +509,9 @@ static void fillSheet(One& o, uisheet::Content& c) {
                                                                    cross, 1.0f, 2.0f);
                                                  })});
     centred(d.picture, L.picture);
+    for (size_t i = 0; i < L.slots.size() && i < d.cardIcons.size(); ++i)  // 3.0.18-beta.109: each card's picture
+        if (const panel::Picture* p = d.cardIcons[i]; p && p->width > 0)
+            centred(p, panel::Box{L.slots[i].x + 3 * sc, L.slots[i].y, 28 * sc, L.slots[i].h});
     for (size_t i = 0; i < L.slots.size(); ++i) {
         const bool filled = i < d.cards.size() && !d.cards[i].empty();
         c.rect(u, L.slots[i], 6 * sc, filled ? kGold : kWhite, filled ? 0.10f : 0.04f, filled ? kGold : kWhite,
@@ -544,6 +567,17 @@ bool mouse(Kind kind, HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) 
         o.key.clear();
     } else if ((m == WM_LBUTTONDOWN || m == WM_LBUTTONDBLCLK) && part == ic::Part::Close) {
         close(kind);
+    } else if (const int slot = ic::slotAt(o.layout, tx - float(o.layout.x), ty - float(o.layout.y));
+               m == WM_LBUTTONDOWN && kind == Kind::Item && o.viewing < 0 && slot >= 0 && slot < 4 &&
+               o.cardIds[slot] > 0) {  // 3.0.18-beta.109: a slot's card - its own words in the card
+        o.viewing = slot;
+        o.what.clear();
+        o.show.scroll = 0;
+        if (s.told++ < 40) LOG_INFO("cards: the card in slot %d opened (#%d)", slot + 1, o.cardIds[slot]);
+    } else if (m == WM_LBUTTONDOWN && o.viewing >= 0 && part == ic::Part::Title) {  // ‹ the thing again
+        o.viewing = -1;
+        o.what.clear();
+        o.show.scroll = 0;
     } else if (m == WM_LBUTTONDOWN) {  // 3.0.18-beta.93: the title or the body - the card follows the cursor
         o.move.begin(tx, ty);
     }

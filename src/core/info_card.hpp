@@ -47,6 +47,8 @@ struct Card {
     std::string note;                // under it: «×38», «Lv 10», «Не опізнано»; "" none
     std::vector<std::string> lines;  // the description, UTF-8 with the game's ^RRGGBB
     std::vector<std::string> cards;  // an item's slots: a card's name, "" an empty slot
+    // 3.0.18-beta.109: each slot's card picture (its item icon; null none), by the slot
+    std::vector<const panel::Picture*> cardIcons;
     const panel::Picture* icon = nullptr;     // at iconSide(scale), premultiplied
     const panel::Picture* picture = nullptr;  // the big picture, fitted into pictureRoom (premultiplied)
 };
@@ -77,6 +79,9 @@ Layout layout(const Card& c, int x, int y, int targetW, int targetH, float scale
               const npctalk::Measure& m);
 enum class Part : uint8_t { None, Close, Body, Title };
 Part hitTest(const Layout& L, float x, float y);  // the picture's pixels
+// 3.0.18-beta.109 (the owner: «как было в оригинале»): the slot under (x, y), -1 none - a card there opens its own
+// description (the game's item window opens a card's window from its slot)
+int slotAt(const Layout& L, float x, float y);
 int scrolled(const Layout& L, int scroll, int notches);  // the wheel's: three rows a notch (down positive), kept within
 
 

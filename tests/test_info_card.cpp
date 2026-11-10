@@ -83,10 +83,30 @@ TEST(info_card_places) {
     p.picture = &big;
     const infocard::Layout withPicture = infocard::layout(p, 100, 100, 1920, 1080, 1.0f, sh, texts(), measure);
     CHECK(withPicture.picture.w >= 75 && withPicture.picture.h >= 100);
-    float widest = 0, widestPlain = 0;
+    // 3.0.18-beta.109 (the owner: «приближенно как было в оригинале»): the big picture on the left, the words right of
+    // it, as the game's own item window
+    float leftmost = 1e9f;
+    for (const auto& r : withPicture.lines) leftmost = std::min(leftmost, r.box.x);
+    CHECK(withPicture.picture.x < 40);
+    CHECK(leftmost >= withPicture.picture.x + withPicture.picture.w - 0.5f);
+    float widest = 0;
     for (const auto& r : withPicture.lines) widest = std::max(widest, r.box.x + r.box.w);
-    for (const auto& r : L.lines) widestPlain = std::max(widestPlain, r.box.x + r.box.w);
-    CHECK(widest <= withPicture.picture.x + 0.5f && widestPlain > withPicture.picture.x);
+    CHECK(widest <= withPicture.glass.w);
+}
+
+// 3.0.18-beta.109: the slots a row of card pictures under the words - each its own place (a click opens that card)
+TEST(info_card_slots_are_pressable) {
+    infocard::Card c;
+    c.title = "+7 Blade [4]";
+    c.lines = {"A short blade."};
+    c.cards = {"Hydra Card", "Skeleton Worker Card", "", ""};
+    infocard::Show sh;
+    const infocard::Layout L = infocard::layout(c, 100, 100, 1920, 1080, 1.0f, sh, texts(), measure);
+    CHECK_EQ(L.slots.size(), size_t(4));
+    CHECK(L.slots[0].h >= 30);  // room for a card's picture
+    CHECK_EQ(infocard::slotAt(L, L.slots[1].x + 4, L.slots[1].y + 4), 1);
+    CHECK_EQ(infocard::slotAt(L, L.body.x + 2, L.body.y + 2), -1);
+    CHECK(L.slots[3].x > L.slots[0].x);  // a row
 }
 
 // Its words: the title bold, the note under it; the description's runs - black the card's own words, a dark colour

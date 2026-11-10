@@ -15,7 +15,7 @@ namespace {
 // shown; the big picture's room 75 x 100 (the game's collection pictures); an item's slots 24 high, 6 apart
 constexpr float kW = 330, kSide = 14, kTitleH = 48, kIcon = 32, kTextPx = 12.5f, kLineH = 17, kClose = 24;
 constexpr int kMostRows = 20, kWheelRows = 3;  // 3.0.18-beta.108: 20 (the cards' words under the thing's)
-constexpr float kPictureW = 75, kPictureH = 100, kSlotH = 24, kSlotGap = 6;
+constexpr float kPictureW = 75, kPictureH = 100, kSlotH = 34, kSlotGap = 6;  // .109: 34 (a card's picture)
 constexpr uint32_t kCard = 0x10141C, kWhite = 0xFFFFFF, kGold = 0xC9A55B, kText = 0xEEF2F8, kMuted = 0x9AA3B5;
 constexpr uint32_t kSpacer = 0xFFFFFF;  // the game's white words: on its white window unseen (spacers)
 
@@ -217,28 +217,29 @@ Layout layout(const Card& c, int x, int y, int targetW, int targetH, float scale
         pictureRoom(s, rw, rh);
         pw = float(rw);
         ph = float(rh);
-        L.picture = panel::Box{w - side - pw, bodyY, pw, ph};
+        L.picture = panel::Box{side, bodyY, pw, ph};  // 3.0.18-beta.109: on the left, as the game's own window
     }
-    const float textW = w - 2 * side - (pw > 0 ? pw + 10 * s : 0.0f);
+    const float textX = side + (pw > 0 ? pw + 10 * s : 0.0f);
+    const float textW = w - side - textX;
     L.lineH = kLineH * s;
     const auto rows = wrapped(c.lines, textW, kTextPx * s, m);
     L.rows = int(rows.size());
     L.shownRows = std::min(L.rows, kMostRows);
     for (size_t r = 0; r < rows.size(); ++r)
         for (npctalk::Placed p : rows[r]) {
-            p.box.x += side;
+            p.box.x += textX;
             p.box.y = bodyY + float(r) * L.lineH;
             p.box.h = L.lineH;
             L.lines.push_back(p);
         }
     const float bodyH = std::max(float(L.shownRows) * L.lineH, ph);
-    L.body = panel::Box{side, bodyY, textW, bodyH};
+    L.body = panel::Box{textX, bodyY, textW, bodyH};
     float bottom = bodyY + bodyH;
     if (!c.cards.empty()) {  // the slots: a label, then the cards in a row (four to a row)
         bottom += 10 * s;
         L.slotsLabel = panel::Box{side, bottom, w - 2 * side, 16 * s};
         bottom += 18 * s;
-        const int across = 4;
+        const int across = 2;  // 3.0.18-beta.109: two a row - a card's picture and its name
         const float cw = (w - 2 * side - float(across - 1) * kSlotGap * s) / float(across);
         for (size_t i = 0; i < c.cards.size(); ++i) {
             const float sx = side + float(i % across) * (cw + kSlotGap * s);
@@ -261,6 +262,12 @@ Part hitTest(const Layout& L, float x, float y) {
     return L.glass.contains(x, y) ? Part::Body : Part::None;
 }
 
+int slotAt(const Layout& L, float x, float y) {
+    for (size_t i = 0; i < L.slots.size(); ++i)
+        if (L.slots[i].contains(x, y)) return int(i);
+    return -1;
+}
+
 int scrolled(const Layout& L, int scroll, int notches) {
     return std::clamp(scroll + notches * kWheelRows, 0, std::max(0, L.rows - L.shownRows));
 }
@@ -281,8 +288,12 @@ std::vector<Words> words(const Layout& L, const Card& c, const Show& sh, const T
     if (!L.slots.empty()) out.push_back(Words{L.slotsLabel, t.slots, kMuted, 11.5f * s, true, Align::Left});
     for (size_t i = 0; i < L.slots.size() && i < c.cards.size(); ++i) {
         const bool filled = !c.cards[i].empty();
-        out.push_back(Words{L.slots[i], filled ? c.cards[i] : t.empty, filled ? kText : kMuted, 11 * s, filled,
-                            Align::Center});
+        // 3.0.18-beta.109: a card's picture at the slot's left (win/info_card), its name beside it
+        const bool pic = filled && i < c.cardIcons.size() && c.cardIcons[i];
+        const panel::Box b = pic ? panel::Box{L.slots[i].x + 32 * s, L.slots[i].y, L.slots[i].w - 34 * s, L.slots[i].h}
+                                 : L.slots[i];
+        out.push_back(Words{b, filled ? c.cards[i] : t.empty, filled ? kText : kMuted, 10.5f * s, filled,
+                            pic ? Align::Left : Align::Center});
     }
     return out;
 }
