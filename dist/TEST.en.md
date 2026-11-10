@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.18-beta.48 — what's new
+
+- **Fixed with "Нова бібліотека інтерфейсу (RmlUi)": letters went missing in "Довідник" and other windows** on big screens (4K) — the letters' store ran out of room. It is twice as big now, and when it fills up the letters are laid out again.
+
 # uaRO Graphics 3.0.18-beta.47 — what's new
 
 - **Fixed with "Нова бібліотека інтерфейсу (RmlUi)": the chat, the windows ("Речі", "Довідник" and others), the experience strip, the experience labels and the hotbar are drawn again.** Their data did not reach the markup, and the hotbar's markup had an error.
