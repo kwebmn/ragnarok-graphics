@@ -768,6 +768,7 @@ void Context::endScene() {
         oskwin::draw(record, *renderer);        // 3.0.11-beta.214: the on-screen keyboard
         padhintwin::draw(record, *renderer);    // 3.0.11-beta.92: the controller's hint line
         hudedit::draw(record, *renderer);       // 3.0.11-beta.75: the parts' frames while they are placed
+        uaui::draw(record, *renderer, uaui::Layer::Top);  // 3.0.18-beta.69: over everything of ours (the veil)
         cursorlook::draw(record, *renderer);    // 3.0.11-beta.198: the interface's cursor over all of it
         record.takeWork();  // the driver's own draws are not the game's
     }
@@ -839,6 +840,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
         oskwin::draw(record, *renderer);        // 3.0.11-beta.214
         padhintwin::draw(record, *renderer);    // 3.0.11-beta.92
         hudedit::draw(record, *renderer);       // 3.0.11-beta.75
+        uaui::draw(record, *renderer, uaui::Layer::Top);  // 3.0.18-beta.69
         cursorlook::draw(record, *renderer);    // 3.0.11-beta.198
     }
     record.takeWork();  // the driver's own draws are not the game's
@@ -1207,6 +1209,8 @@ void Context::present(const Rect& source, bool waitForVblank) {
     referencewin::frame(window, config.referenceWindow, pk, pw, ph);
     padcarrywin::frame(window, pk, pw, ph);  // 3.0.11-beta.121: a thing the controller carries - its places now
     uaui_showcase::frame(config.uauiShowcase);  // 3.0.18-beta.11: uaUI's components for the developers
+    // 3.0.11-beta.198: [interface] cursor (3.0.18-beta.69: before uaUI's end - its document shown this frame)
+    cursorlook::frame(config.cursorLook, pk);
     uaui::end();  // 3.0.18-beta.11: uaUI laid out and rendered after its parts' frames
     windowstack::frame(pw, ph, pk);  // 3.0.11-beta.108: who of them is shown - their stack's order (the last opened on
                                      // top); 3.0.11-beta.109: one opening where another stands goes beside it
@@ -1220,7 +1224,6 @@ void Context::present(const Rect& source, bool waitForVblank) {
         homunaifiles::apply(config.homunAi, ai);
     }
     hudedit::frame(window, pk, pw, ph);
-    cursorlook::frame(config.cursorLook, pk);  // 3.0.11-beta.198: [interface] cursor
     // 2.5.16: [quality] world_scale - Direct3D 11 draws the world smaller and makes it larger before the interface;
     // Pause draws it whole (the game's own picture to compare with)
     renderer->setWorldScale(enhanced_ ? std::min(config.worldScale, light_.worldScaleMax) / 100.0 : 1.0);

@@ -38,6 +38,10 @@ struct State {
     uisheet::Sheet sheet;  // 3.0.18-beta.38: the plate drawn by uaUI (the world's layer)
     int sheetGen = 0;
     bool sheetShown = false, sheetSony = false;
+    uisheet::Sheet dotSheet;  // 3.0.18-beta.69: the gold dots over the other NPCs, screen-wide
+    int dotGen = 0;
+    bool dotsShown = false;
+    int targetW = 0, targetH = 0;
     std::map<uint32_t, std::string> names;  // the game's code page
     std::map<uint32_t, DWORD> askedAt;
     std::vector<uint32_t> toAsk;
@@ -168,6 +172,16 @@ void frame(HWND game, unsigned codePage, double k, int targetWidth, int targetHe
     s.sheet.world = true;
     s.sheetShown = s.sheet.frame("npc tag", s.shown, false, s.layout.x, s.layout.y, s.sheetGen,
                                  [&](uisheet::Content& c) { fillSheet(s, c); });
+    s.targetW = targetWidth, s.targetH = targetHeight;
+    s.dotSheet.world = true;
+    s.dotsShown = s.dotSheet.frame("npc dots", !s.dots.empty() && k > 0, false, 0, 0, ++s.dotGen,
+                                   [&](uisheet::Content& c) {
+                                       c.w = float(s.targetW), c.h = float(s.targetH);
+                                       const float r = std::max(2.0f, 2.5f * s.scale);
+                                       for (const State::Dot& d : s.dots)
+                                           c.rect(c.under, panel::Box{d.x - r, d.y - r, 2 * r, 2 * r}, r,
+                                                  kDot & 0xFFFFFF, float(kDot >> 24) / 255);
+                                   });
 }
 
 void draw(FrameRecord& record, gpu::Renderer& renderer) {
@@ -175,7 +189,8 @@ void draw(FrameRecord& record, gpu::Renderer& renderer) {
     if (s.k <= 0 || (!s.shown && s.dots.empty())) return;
     const size_t world = record.firstInterface(), before = record.commands().size();
     const float r = std::max(2.0f, 2.5f * s.scale);  // the target's pixels, as the dots are
-    for (const State::Dot& d : s.dots) drawFill(record, d.x - r, d.y - r, 2 * r, 2 * r, s.k, kDot);
+    if (!s.dotsShown)  // 3.0.18-beta.69: else on their sheet
+        for (const State::Dot& d : s.dots) drawFill(record, d.x - r, d.y - r, 2 * r, 2 * r, s.k, kDot);
     if (s.shown && !s.sheetShown && s.picture.width > 0)
         drawPart(record, renderer, s.picture, s.texture, s.texW, s.texH, s.upload, s.layout.x, s.layout.y, s.k);
     const size_t added = record.commands().size() - before;  // under the game's own windows, as the world is

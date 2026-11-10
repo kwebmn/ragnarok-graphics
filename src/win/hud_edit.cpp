@@ -580,6 +580,7 @@ void frame(HWND game, double k, int targetW, int targetH) {
     frameInner(game, k, targetW, targetH);
     State& s = state();
     const bool busy = s.on || s.hover >= 0 || s.gripPart >= 0 || s.drag >= 0 || s.sizing >= 0;  // .46: else none
+    s.sheet.top = true;  // 3.0.18-beta.69: over the game's own windows, as its picture was
     s.sheetShown = s.sheet.frame("hud edit", s.shown && s.k > 0 && busy, true, 0, 0, ++s.sheetGen,
                                  [&](uisheet::Content& c) { fillSheet(s, c); });
 }

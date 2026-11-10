@@ -20,3 +20,8 @@ Order (safest first; the cleanup last, once nothing needs the old code):
 
 ## Ledger
 - A beta.68: [interface] uaui on by default (config true; schema was already 1)
+- B beta.69: monsters' HP bars + NPC dots on world sheets; low HP edge = uaUI doc with a radial gradient (gradients no
+  longer need uaui_effects); the way-in veil and the shelf's note on sheets; new layers Top (z 1000 marker) and Cursor
+  (z 9000) drawn after the game's windows; pad overlays + HUD editor moved to Top (they had dropped under the game's
+  windows with the sheets); the cursor = a uaUI document in the Cursor layer (drawn where the game's cursor faces were
+  dropped). The recording code goes with G.

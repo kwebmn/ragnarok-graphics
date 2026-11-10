@@ -118,6 +118,7 @@ static void fillSheet(State& s, uisheet::Content& c) {
 void frame(HWND game, bool on, double k, int targetWidth, int targetHeight) {
     frameInner(game, on, k, targetWidth, targetHeight);
     State& s = state();
+    s.sheet.top = true;  // 3.0.18-beta.69: over the game's own windows, as its picture was
     s.sheetShown = s.sheet.frame("pad hint", s.shown, false, s.layout.x, s.layout.y, s.sheetGen,
                                  [&](uisheet::Content& c) { fillSheet(s, c); });
 }

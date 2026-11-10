@@ -224,6 +224,7 @@ static void fillSheet(State& s, uisheet::Content& c) {
 void frame(HWND game, double k, int targetWidth, int targetHeight) {
     frameInner(game, k, targetWidth, targetHeight);
     State& s = state();
+    s.sheet.top = true;  // 3.0.18-beta.69: over the game's own windows, as its picture was
     s.sheetShown = s.sheet.frame("pad tiles", s.shown, true, s.layout.x, s.layout.y, s.sheetGen,
                                  [&](uisheet::Content& c) { fillSheet(s, c); });
 }

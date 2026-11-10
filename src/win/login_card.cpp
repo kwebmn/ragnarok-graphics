@@ -90,6 +90,10 @@ struct Veil {
 };
 
 struct State {
+    // 3.0.18-beta.69 (the big six, B): the veil and the shelf's note drawn by uaUI over its windows
+    uisheet::Sheet veilSheet, toastSheet;
+    bool veilShown = false, toastShown = false;
+    int veilGen = 0, toastGen = 0;
     uisheet::Sheet sheet;  // 3.0.18-beta.33: the card drawn by uaUI
     uisheet::Sheet chromeSheet;  // 3.0.18-beta.44: the strip at the screen's foot
     int chromeGen = 0;
@@ -841,6 +845,60 @@ void shelfFrame(State& s, HWND game, double k, int targetWidth, int targetHeight
         uapad::gamewindow::setBlocked(Blocker::ShelfToast, nullptr, nullptr, false);
         s.toastBlocked = false;
     }
+    // 3.0.18-beta.69 (the big six, B): the veil - the screen shaded, its card with the dots lit by the phase - and
+    // the shelf's note, on sheets of uaUI's over its windows
+    s.veilSheet.anywhere = s.toastSheet.anywhere = true;
+    s.veilSheet.top = s.toastSheet.top = true;
+    const Veil& v = s.veil;
+    const int phase = v.on ? int((GetTickCount64() - v.since) / 350 % 3) : 0;
+    s.veilShown = s.veilSheet.frame("enter veil", v.on && k > 0 && targetWidth > 0, true, 0, 0,
+                                    phase * 131 + targetWidth * 7 + targetHeight + (v.on ? 1 : 0),
+                                    [&](uisheet::Content& c) {
+                                        c.w = float(targetWidth), c.h = float(targetHeight);
+                                        c.rect(c.under, panel::Box{0, 0, c.w, c.h}, 0, 0x000000, 0.94f);
+                                        const enterveil::Layout L =
+                                            enterveil::layout(targetWidth, targetHeight, uistyle::readingScale(k));
+                                        const float sc = L.s, x = float(L.x), y = float(L.y);
+                                        panel::Box card = L.card;
+                                        card.x += x, card.y += y;
+                                        c.rect(c.over, card, 14 * sc, 0x10141C, 0.97f, 0xFFFFFF, 0.14f,
+                                               std::max(1.0f, sc));
+                                        for (int i = 0; i < 3; ++i) {
+                                            const float cx = x + L.dots.x + (7 + 15 * float(i)) * sc,
+                                                        cy = y + L.dots.y + L.dots.h / 2, r = 3.2f * sc;
+                                            c.rect(c.over, panel::Box{cx - r, cy - r, 2 * r, 2 * r}, r, 0xE6CB8A,
+                                                   i <= phase ? 0.95f : 0.25f);
+                                        }
+                                        for (const enterveil::Words& w : enterveil::words(L, v.texts))
+                                            c.words.push_back(uisheet::Word{
+                                                x + w.box.x, y + w.box.y, w.box.w, w.box.h, w.px, w.box.h, w.text,
+                                                uisheet::Content::rgba(w.rgb, 1),
+                                                std::string(w.bold ? "word bold" : "word") +
+                                                    (w.align == enterveil::Align::Left    ? ""
+                                                     : w.align == enterveil::Align::Right ? " right"
+                                                                                          : " centre")});
+                                    });
+    const ULONGLONG now = GetTickCount64();
+    const bool toastOn = !s.toast.empty() && now < s.toastUntil && k > 0 && s.toastLayout.w > 0;
+    if (toastOn) {
+        int cx = 0, cy = 0;
+        const shelftoast::Layout& L = s.toastLayout;
+        s.toastHot = readGameCursor(cx, cy) &&
+                     shelftoast::overUndo(L, float(cx) * float(k) - float(L.x), float(cy) * float(k) - float(L.y));
+    }
+    const float fade = std::clamp(float(s.toastUntil > now ? s.toastUntil - now : 0) / 400.0f, 0.0f, 1.0f);
+    s.toastShown = s.toastSheet.frame(
+        "shelf toast", toastOn, true, s.toastLayout.x, s.toastLayout.y,
+        int(std::hash<std::string>()(s.toast)) ^ (s.toastHot ? 1 : 0) ^ int(fade * 20) * 977 ^ s.toastLayout.w,
+        [&](uisheet::Content& c) {
+            const shelftoast::Layout& L = s.toastLayout;
+            c.w = float(L.w), c.h = float(L.h), c.op = fade;
+            c.rect(c.under, L.pill, L.pill.h / 2, 0x10141C, 0.94f, 0xC9A55B, s.toastHot ? 0.75f : 0.55f, L.s);
+            for (const shelftoast::Words& w : shelftoast::words(L, s.toast, say(settings::Text::ShelfUndo), s.toastHot))
+                c.words.push_back(uisheet::Word{w.box.x, w.box.y, w.box.w, w.box.h, w.px, w.box.h, w.text,
+                                                uisheet::Content::rgba(w.rgb, 1), w.bold ? "word bold" : "word"});
+        });
+
 }
 
 }  // namespace
@@ -1249,7 +1307,7 @@ bool shown() { return state().shown; }
 
 void drawVeil(FrameRecord& record, gpu::Renderer& renderer) {  // 3.0.11-beta.203
     Veil& v = state().veil;
-    if (!v.on || v.k <= 0 || v.w <= 0 || v.h <= 0) return;
+    if (state().veilShown || !v.on || v.k <= 0 || v.w <= 0 || v.h <= 0) return;  // 3.0.18-beta.69: or by uaUI
     drawShade(record, 0, 0, v.w, v.h, v.k, 0.94f);
     const float scale = uistyle::readingScale(v.k);
     const int phase = int((GetTickCount64() - v.since) / 350 % 3);
@@ -1274,7 +1332,7 @@ void drawVeil(FrameRecord& record, gpu::Renderer& renderer) {  // 3.0.11-beta.20
 void drawToast(FrameRecord& record, gpu::Renderer& renderer) {
     State& s = state();
     const ULONGLONG now = GetTickCount64();
-    if (s.toast.empty() || now >= s.toastUntil || s.toastK <= 0 || s.toastLayout.w <= 0) return;
+    if (s.toastShown || s.toast.empty() || now >= s.toastUntil || s.toastK <= 0 || s.toastLayout.w <= 0) return;
     const shelftoast::Layout& L = s.toastLayout;
     int cx = 0, cy = 0;
     s.toastHot = readGameCursor(cx, cy) &&

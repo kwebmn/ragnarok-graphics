@@ -328,6 +328,19 @@ static void frameInner(HWND game, MobHp mode, double k, int targetWidth, int tar
 static void fillSheet(State& s, uisheet::Content& c) {
     c.w = float(s.uiTargetW), c.h = float(s.uiTargetH);
     const float sc = s.uiScale;
+    // 3.0.18-beta.69 (the big six, B): the bars too - a dark frame, the fill by its share, a red frame on one hitting us
+    const float edge = std::max(1.0f, s.k * 0.75f);
+    for (const Bar& b : s.bars) {
+        if (b.hitting) {
+            const float red = 2.0f * edge;
+            c.rect(c.under, panel::Box{b.x - red - edge, b.y - red - edge, b.w + 2 * (red + edge), b.h + 2 * (red + edge)},
+                   0, 0xFF4D4D, 240.0f / 255);
+        }
+        c.rect(c.under, panel::Box{b.x - edge, b.y - edge, b.w + 2 * edge, b.h + 2 * edge}, 0, 0x000000, 180.0f / 255);
+        const uint32_t fill = mobhp::fillColour(b.hp, b.rank);
+        c.rect(c.under, panel::Box{b.x, b.y, b.w * float(std::clamp(b.hp, 0, 100)) / 100.0f, b.h}, 0, fill & 0xFFFFFF,
+               float(fill >> 24) / 255);
+    }
     if (s.text && s.pctW > 0) {
         const panel::Box b{float(s.textX), float(s.textY), float(s.pctW), float(s.pctH)};
         c.rect(c.under, b, b.h / 2, 0x000000, 0.5f);
@@ -345,7 +358,8 @@ void frame(HWND game, MobHp mode, double k, int targetWidth, int targetHeight) {
     State& s = state();
     s.uiTargetW = targetWidth, s.uiTargetH = targetHeight, s.uiScale = uistyle::partScale(k);
     s.sheet.world = true;
-    s.sheetShown = s.sheet.frame("mob hp", (s.text || s.countShown > 0) && k > 0, false, 0, 0, ++s.sheetGen,
+    s.sheetShown = s.sheet.frame("mob hp", (s.text || s.countShown > 0 || !s.bars.empty()) && k > 0, false, 0, 0,
+                                 ++s.sheetGen,
                                  [&](uisheet::Content& c) { fillSheet(s, c); });
 }
 
@@ -356,6 +370,7 @@ void draw(FrameRecord& record, gpu::Renderer& renderer) {
     const size_t world = record.firstInterface(), before = record.commands().size();
     const float edge = std::max(1.0f, s.k * 0.75f);
     for (const Bar& b : s.bars) {
+        if (s.sheetShown) break;  // 3.0.18-beta.69: on the sheet
         if (b.hitting) {  // 3.0.13-beta.13: it hits us - a red frame round its bar
             const float red = 2.0f * edge;
             drawFill(record, b.x - red - edge, b.y - red - edge, b.w + 2 * (red + edge), b.h + 2 * (red + edge), s.k,

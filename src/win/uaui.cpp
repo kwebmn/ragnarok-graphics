@@ -156,6 +156,11 @@ struct State {
     // (the marker's, z-index 5) drawn where the windows are drawn
     size_t split = 0;
     bool splitSeen = false;
+    // 3.0.18-beta.69: the top layer (z 1000: the veil, the notes) and the cursor's (z 9000) - drawn last
+    size_t topSplit = 0, cursorSplit = 0;
+    bool topSeen = false, cursorSeen = false;
+    Rml::ElementDocument* topMarker = nullptr;
+    Rml::ElementDocument* cursorMarker = nullptr;
     Rml::ElementDocument* marker = nullptr;
     // 3.0.18-beta.38: the world's documents (z-index 1: the bars over the monsters, the plates) before the parts'
     // (3) - the batches up to `worldSplit` (the marker's at z-index 2) drawn where the world's overlays are
@@ -313,10 +318,10 @@ public:
     Rml::CompiledShaderHandle CompileShader(const Rml::String& name, const Rml::Dictionary& p) override {
         State& s = state();
         const bool radial = name == "radial-gradient";  // 3.0.18-beta.63
-        if ((name != "linear-gradient" && !radial) || !s.effects) {
+        if (name != "linear-gradient" && !radial) {  // 3.0.18-beta.69: drawn whatever uaui_effects says
             static std::set<std::string> told;
             if (told.insert(name).second)
-                LOG_INFO("uaui: no «%s» drawn (linear and radial gradients, with uaui_effects)", name.c_str());
+                LOG_INFO("uaui: no «%s» drawn (linear and radial gradients only)", name.c_str());
             return 0;
         }
         ::uagfx::uaui::Gradient g;
@@ -1268,6 +1273,10 @@ select selectbox option:checked { color: #e6cb8a; }
 .fx.cb .hp, .fx.cb .sp, .fx.tc .hpfill, .fx.xb .fill, .fx.ig .fill, .fx .ua-fill {
     decorator: linear-gradient(180deg, #ffffff38 0%, #ffffff00 55%, #00000026 100%); }
 .fx.sh .btn, .fx.ig .tab { decorator: linear-gradient(180deg, #ffffff14 0%, #ffffff00 100%); }
+/* 3.0.18-beta.69: the screen's edges red at low HP (win/low_hp_edge) - the concept's .vign */
+.lh { position: absolute; }
+.lh .vign { position: absolute; left: 0; top: 0; width: 100%; height: 100%;
+            decorator: radial-gradient(#ff2d2300 62%, #ff2d2366 100%); }
 /* 3.0.18-beta.64: [interface] uaui_glass - the windows' frosted glass (the body's class «glassy», Direct3D 12) */
 .glassy.win.sh .glass, .glassy.win.ig .glass, .glassy .ua-window { decorator: ua-glass(1); }
 .fx.glassy.win.sh .glass, .fx.glassy.win.ig .glass, .fx.glassy .ua-window {
@@ -1515,9 +1524,15 @@ protected:
 Rml::ElementInstancerGeneric<ElementSplit> g_splitInstancer;
 void ElementSplit::OnRender() {
     State& s = state();
-    if (GetAttribute<int>("at", 2) == 1) {  // 3.0.18-beta.38: the world's end
+    const int at = GetAttribute<int>("at", 2);
+    if (at == 1) {  // 3.0.18-beta.38: the world's end
         s.worldSplit = s.batches.size();
         s.worldSeen = true;
+        return;
+    }
+    if (at == 3 || at == 4) {  // 3.0.18-beta.69: the top layer's start, the cursor's
+        (at == 3 ? s.topSplit : s.cursorSplit) = s.batches.size();
+        (at == 3 ? s.topSeen : s.cursorSeen) = true;
         return;
     }
     s.split = s.batches.size();
@@ -1596,6 +1611,15 @@ bool start(State& s) {
         "<ua-split at=\"1\" style=\"display: block; width: 1px; height: 1px;\"/></body></rml>",
         "uaui://split-world");
     if (s.worldMarker) s.worldMarker->Show(Rml::ModalFlag::None, Rml::FocusFlag::None);
+    for (const int at : {3, 4}) {  // 3.0.18-beta.69
+        Rml::ElementDocument* d = s.context->LoadDocumentFromMemory(
+            std::string("<rml><body style=\"position: absolute; left: 0; top: 0; width: 1px; height: 1px; z-index: ") +
+                (at == 3 ? "1000" : "9000") + ";\"><ua-split at=\"" + std::to_string(at) +
+                "\" style=\"display: block; width: 1px; height: 1px;\"/></body></rml>",
+            at == 3 ? "uaui://split-top" : "uaui://split-cursor");
+        if (d) d->Show(Rml::ModalFlag::None, Rml::FocusFlag::None);
+        (at == 3 ? s.topMarker : s.cursorMarker) = d;
+    }
     s.started = true;
     LOG_INFO("uaui: RmlUi %s started - its context %dx%d, %.2f target pixels a concept pixel; the theme %s",
              Rml::GetVersion().c_str(), s.targetW, s.targetH, double(uistyle::partScale(s.k)),
@@ -2105,7 +2129,12 @@ bool Doc::load(const std::string& rml) {
     Rml::ElementDocument* was = doc_;
     doc_ = d;
     // 3.0.18-beta.27: drawn with the windows; .38 the world's under the parts (theirs 3, between the markers)
-    doc_->SetProperty("z-index", z_ >= 0 ? std::to_string(z_) : window ? "10" : world ? "1" : "3");
+    doc_->SetProperty("z-index", z_ >= 0       ? std::to_string(z_)
+                                 : cursor    ? "9001"  // 3.0.18-beta.69
+                                 : top       ? "1001"
+                                 : window    ? "10"
+                                 : world     ? "1"
+                                             : "3");
     // 3.0.18-beta.46 (R-4YDWHF: nothing dragged): a document drawn only never takes the pointer - a screen-wide one
     // (the experience strip, the interface editor) held the hover over the windows of uaUI under it
     if (passive) doc_->SetProperty("pointer-events", "none");
@@ -2326,10 +2355,12 @@ void end() {
     }
     const double t1 = clockNow();
     s.batches.clear();
-    s.splitSeen = s.worldSeen = false;
+    s.splitSeen = s.worldSeen = s.topSeen = s.cursorSeen = false;
     s.context->Render();
     if (!s.worldSeen) s.worldSplit = 0;
     if (!s.splitSeen) s.split = s.batches.size();
+    if (!s.topSeen) s.topSplit = s.batches.size();
+    if (!s.cursorSeen) s.cursorSplit = s.batches.size();
     const double t2 = clockNow();
     s.stats.update += t1 - s.frameStart;
     s.stats.render += t2 - t1;
@@ -2353,8 +2384,17 @@ void draw(FrameRecord& record, gpu::Renderer& renderer, Layer layer) {
     s.released.clear();
     if (!readyAnywhere() || s.batches.empty()) return;
     const size_t n = s.batches.size(), world = std::min(s.worldSplit, n), split = std::max(world, std::min(s.split, n));
-    const size_t from = layer == Layer::Windows ? split : layer == Layer::Hud ? world : 0;
-    const size_t to = layer == Layer::Windows ? n : layer == Layer::Hud ? split : world;
+    const size_t top = std::max(split, std::min(s.topSplit, n)), cur = std::max(top, std::min(s.cursorSplit, n));
+    const size_t from = layer == Layer::Cursor  ? cur
+                        : layer == Layer::Top   ? top
+                        : layer == Layer::Windows ? split
+                        : layer == Layer::Hud     ? world
+                                                  : 0;
+    const size_t to = layer == Layer::Cursor    ? n
+                      : layer == Layer::Top     ? cur
+                      : layer == Layer::Windows ? top
+                      : layer == Layer::Hud     ? split
+                                                : world;
     if (from >= to) return;
     const double t0 = clockNow();
     // the glyphs' atlas, once made and again when new letters came

@@ -1,3 +1,4 @@
+#include "win/uaui.hpp"
 #include "win/low_hp_edge.hpp"
 
 #include <windows.h>
@@ -26,6 +27,9 @@ struct State {
     int targetW = 0, targetH = 0;
     ULONGLONG changedAt = 0;
     panel::Picture picture;
+    uaui::Doc doc;  // 3.0.18-beta.69 (the big six, B): drawn by uaUI (its world layer)
+    bool docShown = false;
+    float w = 0, h = 0, op = 0;
     uint32_t texture = 0;
     int texW = 0, texH = 0;
     bool upload = false;
@@ -64,7 +68,30 @@ void frame(int strength, double k, int targetWidth, int targetHeight) {
     const float fade = low ? motion::fadeIn(now, s.changedAt, motion::kToastInMs)
                            : motion::fadeOut(now, s.changedAt, motion::kToastOutMs);
     s.opacity = float(strength) / 100.0f * fade;
-    if (s.opacity > 0 && s.picture.width == 0) {
+    // 3.0.18-beta.69: a radial gradient of uaUI's over the world, under the game's windows
+    s.docShown = false;
+    if (uaui::ready()) {
+        if (!s.doc.made()) {
+            s.doc.passive = true;
+            s.doc.world = true;
+            s.doc.make("low hp edge", R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss"/></head>
+<body class="lh" data-style-width="w + 'px'" data-style-height="h + 'px'" data-style-opacity="op">
+<div class="vign"></div></body></rml>)RML",
+                       [&](Rml::DataModelConstructor& m) {
+                           m.Bind("w", &s.w);
+                           m.Bind("h", &s.h);
+                           m.Bind("op", &s.op);
+                       });
+        }
+        if (s.doc.made()) {
+            const float w = float(targetWidth), h = float(targetHeight), op = s.opacity;
+            if (w != s.w || h != s.h || op != s.op) s.w = w, s.h = h, s.op = op, s.doc.dirtyAll();
+            s.doc.place(0, 0);
+            s.doc.show(s.opacity > 0);
+            s.docShown = s.opacity > 0;
+        }
+    }
+    if (s.opacity > 0 && s.picture.width == 0 && !uaui::ready()) {
         s.picture = uistyle::vignette(kW, kH, kRed, kAlpha, kDepth);
         s.upload = true;
     }
@@ -72,7 +99,7 @@ void frame(int strength, double k, int targetWidth, int targetHeight) {
 
 void draw(FrameRecord& record, gpu::Renderer& renderer) {
     State& s = state();
-    if (s.opacity <= 0 || s.k <= 0 || s.targetW <= 0 || s.targetH <= 0 || s.picture.width <= 0) return;
+    if (s.docShown || s.opacity <= 0 || s.k <= 0 || s.targetW <= 0 || s.targetH <= 0 || s.picture.width <= 0) return;
     const size_t world = record.firstInterface();  // where the world ends: the edge goes there
     const size_t before = record.commands().size();
     drawPartStretched(record, renderer, s.picture, s.texture, s.texW, s.texH, s.upload, 0, 0, s.targetW, s.targetH, s.k,

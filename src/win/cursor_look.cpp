@@ -1,3 +1,4 @@
+#include "win/uaui.hpp"
 #include "win/cursor_look.hpp"
 
 #include <algorithm>
@@ -35,6 +36,11 @@ struct Slot {
 struct State {
     CursorLook look = CursorLook::Game;
     float k = 0, size = 0;
+    // 3.0.18-beta.69 (the big six, B): drawn by uaUI (its cursor layer, the last of all)
+    uaui::Doc doc;
+    bool docShown = false;
+    Rml::String src, srcPrev;
+    float w = 0, h = 0;
     Slot slots[int(ca::Shape::kCount)];
     int told = 0;
 };
@@ -91,6 +97,45 @@ void frame(CursorLook look, double k) {
         for (Slot& slot : s.slots) slot.made = false;  // made again at their next showing
     }
     s.k = float(k);
+    s.docShown = false;
+    if (s.look == CursorLook::Game || !uaui::readyAnywhere() || s.size <= 0) {
+        s.doc.show(false);
+        return;
+    }
+    int cx = 0, cy = 0;
+    if (!readGameCursor(cx, cy)) {
+        s.doc.show(false);
+        return;
+    }
+    const uint32_t mode = read32(kModeNow);
+    const ca::Shape shape = ca::shapeOf(mode ? int(read32(mode + kCursorAction)) : 0);
+    Slot& slot = s.slots[int(shape)];
+    if (!slot.made) {
+        slot.art = ca::make(shape, s.look, s.size);
+        slot.made = slot.upload = true;
+    }
+    if (slot.art.picture.width <= 0) return;
+    if (!s.doc.made()) {
+        s.doc.passive = true;
+        s.doc.cursor = true;
+        s.doc.anywhere = true;
+        s.doc.make("cursor", R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss"/></head>
+<body style="position: absolute;" data-style-width="w + 'px'" data-style-height="h + 'px'">
+<img data-attr-src="src" style="position: absolute; left: 0; top: 0;" data-style-width="w + 'px'"
+ data-style-height="h + 'px'"/></body></rml>)RML",
+                   [&](Rml::DataModelConstructor& m) {
+                       m.Bind("src", &s.src);
+                       m.Bind("w", &s.w);
+                       m.Bind("h", &s.h);
+                   });
+    }
+    if (!s.doc.made()) return;
+    const Rml::String src = uaui::picture(&slot.art.picture, int(shape) * 1000 + int(s.size), s.srcPrev);
+    const float w = float(slot.art.picture.width), h = float(slot.art.picture.height);
+    if (src != s.src || w != s.w || h != s.h) s.src = src, s.w = w, s.h = h, s.doc.dirtyAll();
+    s.doc.place(int(std::lround(float(cx) * s.k - slot.art.hotX)), int(std::lround(float(cy) * s.k - slot.art.hotY)));
+    s.doc.show(true);
+    s.docShown = true;
 }
 
 void draw(FrameRecord& record, gpu::Renderer& renderer) {
@@ -101,6 +146,10 @@ void draw(FrameRecord& record, gpu::Renderer& renderer) {
     const std::vector<size_t> faces = cursorFaces(record, float(cx), float(cy));
     if (faces.empty()) return;  // the game drew none: none of ours either
     for (const size_t c : faces) record.dropCommand(c);
+    if (s.docShown) {  // 3.0.18-beta.69: uaUI's cursor layer in their place
+        uaui::draw(record, renderer, uaui::Layer::Cursor);
+        return;
+    }
     const uint32_t mode = read32(kModeNow);
     const int action = mode ? int(read32(mode + kCursorAction)) : 0;
     const ca::Shape shape = ca::shapeOf(action);
