@@ -893,3 +893,34 @@ TEST(minimap_proto_map_pixels_cached_round_the_view) {
     minimap::paint(cached, L, sc, minimap::Texts{});
     CHECK(cache.made == 3);  // another zoom
 }
+
+// 3.0.18-beta.26 (docs/superpowers/plans/2026-11-09-uaui-migration.md, stage 4): uaUI's minimap - the map's square a
+// picture of its own (its pixels, marks and the Kafras' «K»), the frame's words apart, the round trip's bars as boxes
+TEST(minimap_proto_parts_for_uaui) {
+    const minimap::Layout L = minimap::layout(1920, 1080, 1.0f, false, 0, true);
+    const minimap::MapSize map{100, 100};
+    const std::vector<uint32_t> argb{0xFF00FF00, 0xFF00FF00, 0xFF00FF00, 0xFF00FF00};
+    minimap::Scene sc;
+    sc.argb = &argb;
+    sc.imgW = sc.imgH = 2;
+    sc.map = map;
+    sc.player = minimap::Cell{50, 50};
+    panel::Picture square;
+    minimap::paintMapSquare(square, L, sc);
+    CHECK(square.width == int(L.map.w) && square.height == int(L.map.h));
+    const uint32_t green = square.px[size_t(square.height) * 3 / 4 * size_t(square.width) + size_t(square.width) / 4];
+    CHECK((green & 0x00FF00) > 0x00A000 && (green >> 24) == 0xFF);
+    CHECK((square.px[0] >> 24) < 0x80);  // its rounded corner see-through, no gold corners in it
+    minimap::Texts t;
+    t.name = "Prontera";
+    t.net = "50 ms";
+    const std::vector<minimap::Words> all = minimap::words(L, sc, t), frame = minimap::frameWords(L, sc, t);
+    const std::vector<minimap::Words> marks = minimap::mapWords(L, sc);
+    CHECK(all.size() == frame.size() + marks.size());
+    const std::vector<int> graph{50, 300, -1};
+    sc.netGraph = &graph;
+    const std::vector<minimap::NetBar> bars = minimap::netBars(L, sc);
+    const panel::Box g = minimap::netGraphBox(L);
+    CHECK(bars.size() == 3 && bars[2].box.x + bars[2].box.w == g.x + g.w && bars[2].box.h == g.h);
+    CHECK(bars[0].rgb == 0x5FD08Au && bars[0].box.h < g.h && bars[1].box.h == g.h);
+}

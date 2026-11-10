@@ -22,6 +22,7 @@
 #include "core/reference_pages.hpp"
 #include "core/route_follow.hpp"
 #include "core/settings/strings.hpp"
+#include "core/ui_icons.hpp"
 #include "core/ui_style.hpp"
 #include "core/walk_grid.hpp"
 #include "core/walk_path.hpp"
@@ -43,6 +44,7 @@
 #include "win/reference_window.hpp"
 #include "win/window_stack.hpp"
 #include "win/ui_cost.hpp"
+#include "win/uaui.hpp"
 
 namespace uagfx::win::minimapproto {
 namespace {
@@ -99,6 +101,13 @@ struct State {
     int remade = 0;  // 3.0.11-beta.4: the game made its own again on this map after we hid it (a Ctrl+Tab it saw)
     minimap::Layout layout;
     panel::Picture picture;
+    // 3.0.18-beta.26: uaUI's minimap - the map's square apart, the frame's words and the graph's bars
+    panel::Picture square;
+    int squareGen = 0, uiGen = 0;
+    bool uiShown = false;
+    std::vector<minimap::Words> uiWords;
+    std::vector<minimap::NetBar> uiBars;
+    bool paintedByUi = false;
     uint32_t texture = 0;
     int texW = 0, texH = 0, targetW = 0, targetH = 0;
     float k = 0, scale = 1;
@@ -855,6 +864,16 @@ void render(State& s) {
     minimap::Scene sc = sceneOf(s);
     sc.cache = &s.mapCache;  // 3.0.13-beta.2: the map's pixels made once round the view
     const int madeBefore = s.mapCache.made;
+    if (uaui::ready()) {  // 3.0.18-beta.26: the map's square alone a picture, the rest uaUI's
+        minimap::paintMapSquare(s.square, s.layout, sc);
+        drawWords(s.square, gdiWords(minimap::mapWords(s.layout, sc)));
+        ++s.squareGen;
+        s.uiWords = minimap::frameWords(s.layout, sc, t);
+        s.uiBars = minimap::netBars(s.layout, sc);
+        ++s.uiGen;
+        s.dirty = false;
+        return;
+    }
     minimap::paint(s.picture, s.layout, sc, t);
     if (s.mapCache.made != madeBefore && s.cacheTold < 5) {
         ++s.cacheTold;
@@ -953,7 +972,7 @@ void setZoom(State& s, int by) {
 
 }  // namespace
 
-void frame(HWND game, const Show& show, double k, int targetWidth, int targetHeight) {
+static void frameInner(HWND game, const Show& show, double k, int targetWidth, int targetHeight) {
     State& s = state();
     const bool on = show.on;
     win::groundway::look(show.way);  // 3.0.11-beta.33: footprints, the strip or none
@@ -1219,14 +1238,256 @@ void frame(HWND game, const Show& show, double k, int targetWidth, int targetHei
         s.style = uistyle::generation();
         s.dirty = true;
     }
+    if (uaui::ready() != s.paintedByUi) {  // 3.0.18-beta.26: painted for the other way - again, at once
+        s.paintedByUi = uaui::ready();
+        s.dirty = true;
+        s.paintedAt = 0;
+    }
     // 3.0.11-beta.57: at most each kPaintEveryMs (the first at once)
-    if (s.dirty && (s.picture.width <= 0 || now - s.paintedAt >= kPaintEveryMs)) render(s);
+    if (s.dirty && (s.paintedAt == 0 || s.picture.width <= 0 || now - s.paintedAt >= kPaintEveryMs)) render(s);
     else  // 3.0.11-beta.75: known to «Розміщення інтерфейсу» each frame (painted or not)
         hudedit::place(hudlayout::Part::Minimap, s.k, s.targetW, s.targetH, s.layout.w, s.layout.h, s.layout.x,
                        s.layout.y);
     if (s.big && s.bigDirty && (s.bigPicture.width <= 0 || now - s.bigPaintedAt >= kPaintEveryMs)) renderBig(s);
     s.shown = true;
     block(s, game);
+}
+
+namespace {
+
+// 3.0.18-beta.26 (docs/superpowers/plans/2026-11-09-uaui-migration.md, stage 4 - by hand): the minimap's frame in
+// RmlUi's markup - the map's square a picture of the driver's (pic:), its edge and the concept's gold corners, the
+// buttons (+, −, the big map), the layers' round ones and «Схема», the bar (name, cell, ▾), the search's and the round
+// trip's plates (the graph's bars), the way's bar, the monsters' list, their words where core minimap places them;
+// drawn only (passive): its clicks, wheel, drag and blocker stay this part's
+const char* kDoc = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss"/></head>
+<body class="mm" data-model="minimap" data-style-width="w + 'px'" data-style-height="h + 'px'" data-style-opacity="op">
+<img class="a" data-attr-src="square" data-style-left="0px" data-style-top="0px" data-style-width="side + 'px'"
+  data-style-height="side + 'px'"/>
+<div data-for="b : cards" data-attr-class="'card ' + b.cls" data-style-left="b.x + 'px'" data-style-top="b.y + 'px'"
+  data-style-width="b.w + 'px'" data-style-height="b.h + 'px'" data-style-border-radius="b.r + 'px'"
+  data-style-border-width="b.e + 'px'" data-style-background-color="ground"></div>
+<div data-for="b : boxes" data-attr-class="b.cls" data-style-left="b.x + 'px'" data-style-top="b.y + 'px'"
+  data-style-width="b.w + 'px'" data-style-height="b.h + 'px'" data-style-border-radius="b.r + 'px'"
+  data-style-border-width="b.e + 'px'"></div>
+<div class="a" data-for="b : bars" data-style-left="b.x + 'px'" data-style-top="b.y + 'px'"
+  data-style-width="b.w + 'px'" data-style-height="b.h + 'px'" data-style-background-color="b.cls"></div>
+<img class="a" data-for="i : icons" data-attr-src="i.src" data-style-left="i.x + 'px'" data-style-top="i.y + 'px'"
+  data-style-width="i.w + 'px'" data-style-height="i.h + 'px'"/>
+<span data-for="t : words" data-attr-class="t.cls" data-style-left="t.x + 'px'" data-style-top="t.y + 'px'"
+  data-style-width="t.w + 'px'" data-style-height="t.h + 'px'" data-style-line-height="t.h + 'px'"
+  data-style-font-size="t.px + 'px'" data-style-color="t.colour">{{t.text}}</span>
+</body></rml>)RML";
+
+struct BoxV {
+    float x = 0, y = 0, w = 0, h = 0, r = 0, e = 0;
+    Rml::String cls;  // a bar's: its colour
+};
+struct IconV {
+    float x = 0, y = 0, w = 0, h = 0;
+    Rml::String src;
+};
+struct WordV {
+    float x = 0, y = 0, w = 0, h = 0, px = 12;
+    Rml::String text, colour, cls;
+};
+
+struct Ui {
+    uaui::Doc doc;
+    float w = 0, h = 0, side = 0, op = 1;
+    Rml::String square, ground;
+    std::vector<BoxV> cards, boxes, bars;
+    std::vector<IconV> icons;
+    std::vector<WordV> words;
+    int gen = -1;
+    std::map<std::string, panel::Picture> made;
+    std::map<std::string, std::string> sources;
+    std::string squareSrc;
+};
+
+Ui& ui() {
+    static Ui u;
+    return u;
+}
+
+std::string hexOf(uint32_t rgb) {
+    char b[16];
+    std::snprintf(b, sizeof b, "#%06x", unsigned(rgb & 0xFFFFFF));
+    return b;
+}
+
+template <typename F>
+std::string madeOnce(Ui& u, const std::string& key, int w, int h, F paint) {
+    auto it = u.made.find(key);
+    if (it == u.made.end()) {
+        panel::Picture p;
+        p.width = std::max(1, w), p.height = std::max(1, h);
+        p.px.assign(size_t(p.width) * size_t(p.height), 0u);
+        paint(p);
+        it = u.made.emplace(key, std::move(p)).first;
+    }
+    return uaui::picture(&it->second, uaui::stamp(&it->second), u.sources[key]);
+}
+
+bool uiFrame(State& s) {
+    Ui& u = ui();
+    if (!uaui::ready() || !s.shown || s.look == minimap::Look::Hidden || s.square.width <= 0 || s.layout.w <= 0) {
+        u.doc.show(false);
+        return false;
+    }
+    if (!u.doc.made()) {
+        u.doc.passive = true;
+        if (!u.doc.make("minimap", kDoc, [&](Rml::DataModelConstructor& m) {
+                if (auto b = m.RegisterStruct<BoxV>()) {
+                    b.RegisterMember("x", &BoxV::x);
+                    b.RegisterMember("y", &BoxV::y);
+                    b.RegisterMember("w", &BoxV::w);
+                    b.RegisterMember("h", &BoxV::h);
+                    b.RegisterMember("r", &BoxV::r);
+                    b.RegisterMember("e", &BoxV::e);
+                    b.RegisterMember("cls", &BoxV::cls);
+                }
+                if (auto i = m.RegisterStruct<IconV>()) {
+                    i.RegisterMember("x", &IconV::x);
+                    i.RegisterMember("y", &IconV::y);
+                    i.RegisterMember("w", &IconV::w);
+                    i.RegisterMember("h", &IconV::h);
+                    i.RegisterMember("src", &IconV::src);
+                }
+                if (auto t = m.RegisterStruct<WordV>()) {
+                    t.RegisterMember("x", &WordV::x);
+                    t.RegisterMember("y", &WordV::y);
+                    t.RegisterMember("w", &WordV::w);
+                    t.RegisterMember("h", &WordV::h);
+                    t.RegisterMember("px", &WordV::px);
+                    t.RegisterMember("text", &WordV::text);
+                    t.RegisterMember("colour", &WordV::colour);
+                    t.RegisterMember("cls", &WordV::cls);
+                }
+                m.RegisterArray<std::vector<BoxV>>();
+                m.RegisterArray<std::vector<IconV>>();
+                m.RegisterArray<std::vector<WordV>>();
+                m.Bind("w", &u.w);
+                m.Bind("h", &u.h);
+                m.Bind("side", &u.side);
+                m.Bind("op", &u.op);
+                m.Bind("square", &u.square);
+                m.Bind("ground", &u.ground);
+                m.Bind("cards", &u.cards);
+                m.Bind("boxes", &u.boxes);
+                m.Bind("bars", &u.bars);
+                m.Bind("icons", &u.icons);
+                m.Bind("words", &u.words);
+            }))
+            return false;
+    }
+    const float op = s.look == minimap::Look::Faded ? minimap::opacity(s.look) : 1.0f;  // Ctrl+Tab's see-through
+    if (s.uiGen != u.gen || op != u.op) {
+        u.gen = s.uiGen;
+        const minimap::Layout& L = s.layout;
+        const float sc = L.s, edge = std::max(1.0f, sc);
+        u.w = float(L.w), u.h = float(L.h), u.side = L.map.w, u.op = op;
+        u.square = uaui::picture(&s.square, s.squareGen, u.squareSrc);
+        u.ground = hexOf(0x10141C) + [] {
+            char a[4];
+            std::snprintf(a, sizeof a, "%02x", int(std::lround(uistyle::panel() * 255)) & 0xFF);
+            return std::string(a);
+        }();
+        const minimap::Part hover = s.part;
+        u.cards.clear(), u.boxes.clear(), u.bars.clear(), u.icons.clear();
+        const auto box = [&](std::vector<BoxV>& to, const panel::Box& b, float r, const std::string& cls, float e = 0) {
+            to.push_back(BoxV{b.x, b.y, b.w, b.h, r, e, cls});
+        };
+        box(u.boxes, L.map, 10 * sc, "edge", edge);
+        const float arm = 15 * sc, thick = std::max(1.5f, 2 * sc);  // the concept's gold corners
+        for (int c = 0; c < 4; ++c) {
+            const float cx = c & 1 ? L.map.w : 0, cy = c & 2 ? L.map.h : 0;
+            const bool right = c & 1, bottom = c & 2;
+            box(u.boxes, panel::Box{right ? cx - arm : cx, bottom ? cy - thick : cy, arm, thick}, 0, "gold");
+            box(u.boxes, panel::Box{right ? cx - thick : cx, bottom ? cy - arm : cy, thick, arm}, 0, "gold");
+        }
+        const int icon = std::max(8, int(std::ceil(14 * sc)));
+        const std::pair<const panel::Box*, uiicons::Icon> buttons[] = {{&L.zoomIn, uiicons::Icon::Plus},
+                                                                      {&L.zoomOut, uiicons::Icon::Minus},
+                                                                      {&L.expand, uiicons::Icon::Expand}};
+        const minimap::Part parts[] = {minimap::Part::ZoomIn, minimap::Part::ZoomOut, minimap::Part::Expand};
+        for (int i = 0; i < 3; ++i) {
+            const panel::Box& b = *buttons[i].first;
+            box(u.boxes, b, 6 * sc, hover == parts[i] ? "btn hot" : "btn", edge);
+            const std::string src = madeOnce(u, "i" + std::to_string(i) + ':' + std::to_string(icon), icon, icon,
+                                             [&](panel::Picture& p) {
+                                                 uiicons::draw(p, buttons[i].second, 0, 0, float(icon), 0xFFFFFF,
+                                                               1.0f, 2.6f);
+                                             });
+            u.icons.push_back(IconV{std::round(b.x + (b.w - float(icon)) / 2),
+                                    std::round(b.y + (b.h - float(icon)) / 2), float(icon), float(icon), src});
+        }
+        const minimap::Layers layers = layersOf(s.show);
+        const panel::Picture* face = s.kafraFace.width > 0 ? &s.kafraFace : nullptr;
+        for (int i = 0; i < minimap::kLayers; ++i) {  // the layers' round buttons, each its marks' sign
+            const panel::Box& b = L.layers[i];
+            if (b.w <= 0) continue;
+            const bool over = hover == minimap::Part::Layer && s.hoverLayer == i;
+            box(u.boxes, b, b.w / 2, over ? "btn hot" : "btn", edge);
+            const int side = int(std::ceil(b.w));
+            const bool on = layers.on[i];
+            const std::string key = "l" + std::to_string(i) + (on ? "+" : "-") + std::to_string(side) +
+                                    (i == int(minimap::Layer::Kafra) && face ? ":" + std::to_string(uaui::stamp(face))
+                                                                             : std::string());
+            const std::string src = madeOnce(u, key, side, side, [&](panel::Picture& p) {
+                minimap::paintLayerSign(p, minimap::Layer(i), on, face, sc);
+            });
+            u.icons.push_back(IconV{b.x, b.y, float(side), float(side), src});
+        }
+        if (L.style.w > 0) {  // «Схема»: lit gold while it shows
+            const panel::Box& b = L.style;
+            const bool scheme = s.show.scheme && !s.scheme.levels.empty(), over = hover == minimap::Part::Style;
+            box(u.boxes, b, b.w / 2, scheme ? "btn scheme" : over ? "btn hot" : "btn", edge);
+            const int side = int(std::ceil(b.w));
+            u.icons.push_back(IconV{b.x, b.y, float(side), float(side),
+                                    madeOnce(u, "scheme" + std::to_string(side), side, side,
+                                             [&](panel::Picture& p) { minimap::paintSchemeSign(p); })});
+        }
+        box(u.cards, L.caption, 8 * sc, "bar", edge);  // the bar: name, cell, ▾
+        if (hover == minimap::Part::Fold) box(u.boxes, L.fold, 6 * sc, "hot");
+        if (L.found.w > 0) {  // a search's plate
+            box(u.cards, L.found, L.found.h / 2, "bar", edge);
+            box(u.boxes, L.foundClear, L.foundClear.h / 2, "clear");
+        }
+        if (L.net.w > 0) {  // the round trip's plate: its ground, the graph's baseline and bars
+            box(u.cards, L.net, L.net.h / 2, "bar", edge);
+            const panel::Box g = minimap::netGraphBox(L);
+            const float line = std::max(1.0f, std::round(sc));
+            box(u.boxes, panel::Box{g.x, g.y + g.h - line, g.w, line}, 0, "base");
+            for (const minimap::NetBar& b : s.uiBars) box(u.bars, b.box, 0, hexOf(b.rgb) + "f2");
+        }
+        if (L.route.w > 0) {  // the way's bar: gold-tinted, its ×
+            box(u.cards, L.route, 8 * sc, "route");
+            box(u.boxes, L.route, 8 * sc, "route", edge);
+            if (hover == minimap::Part::Stop) box(u.boxes, L.stop, 5 * sc, "hot");
+        }
+        if (L.list.w > 0) box(u.cards, L.list, 8 * sc, "list", edge);
+        u.words.clear();
+        for (const minimap::Words& w : s.uiWords) {
+            const char* align = w.align == minimap::Align::Right    ? " right"
+                                : w.align == minimap::Align::Center ? " centre"
+                                                                    : "";
+            u.words.push_back(WordV{w.box.x, w.box.y, w.box.w, w.box.h, w.px, w.text, hexOf(w.rgb),
+                                    std::string(w.bold ? "word bold" : "word") + align});
+        }
+        u.doc.dirtyAll();
+    }
+    u.doc.place(s.layout.x, s.layout.y);
+    u.doc.show(true);
+    return true;
+}
+
+}  // namespace
+
+void frame(HWND game, const Show& show, double k, int targetWidth, int targetHeight) {
+    frameInner(game, show, k, targetWidth, targetHeight);
+    State& s = state();
+    s.uiShown = uiFrame(s);
 }
 
 bool key(unsigned vk) {
@@ -1250,7 +1511,7 @@ void draw(FrameRecord& record, gpu::Renderer& renderer) {
     int cursor = -1, cx = 0, cy = 0;  // under the game's own cursor, as the answer card
     if (readGameCursor(cx, cy)) cursor = panel::cursorDraw(record, float(cx), float(cy));
     size_t mine = 0;
-    if (s.look != minimap::Look::Hidden && s.picture.width > 0 && s.picture.height > 0) {
+    if (!s.uiShown && s.look != minimap::Look::Hidden && s.picture.width > 0 && s.picture.height > 0) {
         drawPart(record, renderer, s.picture, s.texture, s.texW, s.texH, s.upload, s.layout.x, s.layout.y, s.k);
         ++mine;
     }

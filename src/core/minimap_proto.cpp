@@ -978,20 +978,7 @@ void paint(panel::Picture& out, const Layout& L, const Scene& sc, const Texts& t
         panel::roundRect(out, panel::Box{g.x, g.y + g.h - std::max(1.0f, std::round(s)), g.w,
                                          std::max(1.0f, std::round(s))},
                          0, kWhite, 0.10f);
-        if (sc.netGraph && !sc.netGraph->empty()) {
-            const std::vector<int>& v = *sc.netGraph;
-            int top = 150;  // ms at the graph's top: 150 or the highest
-            for (int ms : v) top = std::max(top, ms);
-            const float bar = g.w / kNetGraphW;
-            const size_t n = std::min(v.size(), size_t(kNetGraphW));
-            for (size_t i = 0; i < n; ++i) {
-                const int ms = v[v.size() - n + i];
-                const float x = g.x + g.w - float(n - i) * bar;
-                const float h = ms < 0 ? g.h : std::max(std::max(1.0f, std::round(s)), g.h * float(ms) / float(top));
-                const uint32_t rgb = ms < 0 ? kNetStall : ms < 120 ? kNetGood : ms < 250 ? kNetFair : kNetBad;
-                panel::roundRect(out, panel::Box{x, g.y + g.h - h, bar, h}, 0, rgb, 0.95f);
-            }
-        }
+        for (const NetBar& b : netBars(L, sc)) panel::roundRect(out, b.box, 0, b.rgb, 0.95f);
     }
     if (L.route.w > 0) {  // the way's bar: gold-tinted, its ×
         panel::roundRect(out, L.route, 8 * s, kCard, uistyle::panel());
@@ -1004,6 +991,13 @@ void paint(panel::Picture& out, const Layout& L, const Scene& sc, const Texts& t
 }
 
 std::vector<Words> words(const Layout& L, const Scene& sc, const Texts& t) {
+    std::vector<Words> out = mapWords(L, sc);
+    const std::vector<Words> rest = frameWords(L, sc, t);
+    out.insert(out.end(), rest.begin(), rest.end());
+    return out;
+}
+
+std::vector<Words> mapWords(const Layout& L, const Scene& sc) {
     std::vector<Words> out;
     const float s = L.s;
     const View v = view(sc.map, sc.player, sc.cells, int(L.map.w));
@@ -1015,6 +1009,12 @@ std::vector<Words> words(const Layout& L, const Scene& sc, const Texts& t) {
         if (x - r < 0 || y - r < 0 || x + r > L.map.w || y + r > L.map.h) continue;
         out.push_back(Words{panel::Box{x - r, y - r, 2 * r, 2 * r}, "K", kWhite, 9 * s, true, Align::Center});
     }
+    return out;
+}
+
+std::vector<Words> frameWords(const Layout& L, const Scene& sc, const Texts& t) {
+    std::vector<Words> out;
+    const float s = L.s;
     const panel::Box& kafra = L.layers[int(Layer::Kafra)];  // 3.0.11-beta.119: the Kafras' button's «K»
     if (kafra.w > 0 && !sc.kafraFace)  // 3.0.11-beta.201: not over the face
         out.push_back(Words{kafra, "K", sc.layers.on[int(Layer::Kafra)] ? kWhite : kMuted, 8 * s, true,
@@ -1334,6 +1334,45 @@ float opacity(Look l) {
         case Look::Hidden: break;
     }
     return 0.0f;
+}
+
+
+void paintMapSquare(panel::Picture& out, const Layout& L, const Scene& sc) {
+    const int w = int(L.map.w), h = int(L.map.h);
+    panel::blank(out, w, h);
+    const panel::Box box{0, 0, float(w), float(h)};
+    const View v = view(sc.map, sc.player, sc.cells, w);
+    mapPixels(out, box, sc, v);
+    overMap(out, box, sc, v, L.s, 1.0f, markScale(sc.cells, sc.map, L.s));
+    roundCorners(out, box, kRadius * L.s);
+}
+
+std::vector<NetBar> netBars(const Layout& L, const Scene& sc) {
+    std::vector<NetBar> out;
+    const panel::Box g = netGraphBox(L);
+    if (g.w <= 0 || !sc.netGraph || sc.netGraph->empty()) return out;
+    const float s = L.s;
+    const std::vector<int>& v = *sc.netGraph;
+    int top = 150;  // ms at the graph's top: 150 or the highest
+    for (int ms : v) top = std::max(top, ms);
+    const float bar = g.w / kNetGraphW;
+    const size_t n = std::min(v.size(), size_t(kNetGraphW));
+    for (size_t i = 0; i < n; ++i) {
+        const int ms = v[v.size() - n + i];
+        const float x = g.x + g.w - float(n - i) * bar;
+        const float h = ms < 0 ? g.h : std::max(std::max(1.0f, std::round(s)), g.h * float(ms) / float(top));
+        const uint32_t rgb = ms < 0 ? kNetStall : ms < 120 ? kNetGood : ms < 250 ? kNetFair : kNetBad;
+        out.push_back(NetBar{panel::Box{x, g.y + g.h - h, bar, h}, rgb});
+    }
+    return out;
+}
+
+void paintLayerSign(panel::Picture& out, Layer l, bool on, const panel::Picture* kafraFace, float s) {
+    layerSign(out, l, float(out.width) / 2, float(out.height) / 2, 5.5f * s, s, on, kafraFace);
+}
+
+void paintSchemeSign(panel::Picture& out) {
+    schemeSign(out, float(out.width) / 2, float(out.height) / 2, 5.5f * float(out.width) / 22, true);
 }
 
 }  // namespace uagfx::minimap

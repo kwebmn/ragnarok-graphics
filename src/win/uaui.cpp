@@ -801,6 +801,24 @@ input.checkbox:checked { background-color: #3d7fd8; border-color: #3d7fd8; }
 .hp { position: absolute; font-family: Plex; border-color: #ffffff17; }
 .mp { position: absolute; font-family: Plex; border-color: #ffffff17; }
 .tr { position: absolute; font-family: Plex; }
+.mm { position: absolute; font-family: Plex; }
+.mm div, .mm span, .mm .a { position: absolute; }
+.mm .edge { border-color: #ffffff29; }
+.mm .gold { background-color: #e6cb8af2; }
+.mm .btn { background-color: #0b0e14b8; border-color: #ffffff2e; }
+.mm .btn.hot { background-color: #c9a55b8c; }
+.mm .btn.scheme { background-color: #c9a55bbf; border-color: #e6cb8acc; }
+.mm .card { border-color: #ffffff1f; }
+.mm .card.list { border-color: #ffffff1a; }
+.mm .card.route { border-width: 0; }
+.mm .route { background-color: #c9a55b29; border-color: #c9a55b8c; }
+.mm .hot { background-color: #ffffff1a; }
+.mm .clear { background-color: #ffffff14; }
+.mm .base { background-color: #ffffff1a; }
+.mm .word { white-space: nowrap; overflow: hidden; }
+.mm .word.bold { font-weight: bold; }
+.mm .word.right { text-align: right; }
+.mm .word.centre { text-align: center; }
 .tr div, .tr span { position: absolute; }
 .tr .glass { border-color: #ffffff17; }
 .tr .rule { background-color: #ffffff14; }

@@ -221,6 +221,20 @@ constexpr uint32_t kFoundRgb = 0xFF8A3D;  // 3.0.11-beta.213: a search's marks a
 // The panel's picture (premultiplied: see-through round its parts), the words over it
 void paint(panel::Picture& out, const Layout& L, const Scene& sc, const Texts& t);
 std::vector<Words> words(const Layout& L, const Scene& sc, const Texts& t);
+// 3.0.18-beta.26 (uaUI's minimap): the map's square alone in `out` (L.map's size: its pixels, the marks, the rounded
+// corners); words() split - the Kafras' «K» on the map (the square's pixels) and the rest (the panel's)
+void paintMapSquare(panel::Picture& out, const Layout& L, const Scene& sc);
+std::vector<Words> mapWords(const Layout& L, const Scene& sc);
+std::vector<Words> frameWords(const Layout& L, const Scene& sc, const Texts& t);
+// the round trip's graph: a bar a reading (the newest at the right end), its colour by the time
+struct NetBar {
+    panel::Box box;
+    uint32_t rgb = 0;
+};
+std::vector<NetBar> netBars(const Layout& L, const Scene& sc);
+// a layer's button sign and the scheme's, centred in `out` (its size the button's)
+void paintLayerSign(panel::Picture& out, Layer l, bool on, const panel::Picture* kafraFace, float s);
+void paintSchemeSign(panel::Picture& out);
 // The mark under a point of the panel (its pixels, the map's square): the nearest within its reach, -1 none
 int markAt(const Layout& L, const Scene& sc, float x, float y);
 
