@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.18-beta.47 — what's new
+
+- **Fixed with "Нова бібліотека інтерфейсу (RmlUi)": the chat, the windows ("Речі", "Довідник" and others), the experience strip, the experience labels and the hotbar are drawn again.** Their data did not reach the markup, and the hotbar's markup had an error.
+
 # uaRO Graphics 3.0.18-beta.46 — what's new
 
 - **Fixed with "Нова бібліотека інтерфейсу (RmlUi)": the character block, the party and other parts drag and click again** — transparent screen-wide parts (the experience strip, the layout editor) took the mouse.
