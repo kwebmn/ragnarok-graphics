@@ -1,3 +1,8 @@
+# uaRO Graphics 3.0.18-beta.40 — what's new
+
+- **The "Продовжити" and site sign-in cards now use "Нова бібліотека інтерфейсу (RmlUi)":** the class portrait, buttons, fields, sign-in ways and ticks are drawn by the new library.
+- **More reliable:** a part of the new library that stopped showing (for example the login card after entering the game) now always leaves the screen.
+
 # uaRO Graphics 3.0.18-beta.39 — what's new
 
 - **Carrying items with the controller (the gold frame, the item and the hint) and the mercenary's block under the party panel now use "Нова бібліотека інтерфейсу (RmlUi)".**
