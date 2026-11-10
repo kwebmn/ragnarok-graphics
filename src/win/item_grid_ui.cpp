@@ -21,7 +21,7 @@ const char* kDoc = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss
   data-style-width="b.w + 'px'" data-style-height="b.h + 'px'" data-style-border-radius="b.r + 'px'"
   data-style-border-width="b.e + 'px'" data-style-opacity="b.op"></div>
 <div class="a" data-for="i : icons">
- <img class="a" data-attr-src="i.src" data-style-left="i.x + 'px'" data-style-top="i.y + 'px'"
+ <img class="a" data-if="i.src != ''" data-attr-src="i.src" data-style-left="i.x + 'px'" data-style-top="i.y + 'px'"
   data-style-width="i.w + 'px'" data-style-height="i.h + 'px'" data-style-opacity="i.op"/></div>
 <div data-for="b : over" data-attr-class="b.cls" data-style-left="b.x + 'px'" data-style-top="b.y + 'px'"
   data-style-width="b.w + 'px'" data-style-height="b.h + 'px'" data-style-border-radius="b.r + 'px'"
@@ -107,6 +107,8 @@ bool Ui::frame(const char* name, bool on, int x, int y, int generation, const iw
         w = float(L.w), h = float(L.h);
         ground = hexOf(0x10141C, int(std::lround(uistyle::window() * 255)));
         glass = BoxV{L.glass.x, L.glass.y, L.glass.w, L.glass.h, 12 * s, 1.0f * s, 1, "glass"};
+        // 3.0.18-beta.80: a list never gets shorter (RmlUi read the rows gone for a frame) - the rest empty, unseen
+        const size_t hadUnder = under.size(), hadOver = over.size(), hadIcons = icons.size(), hadWords = words.size();
         under.clear(), over.clear(), icons.clear(), words.clear();
         const auto box = [](std::vector<BoxV>& to, const panel::Box& b, float r, const char* cls, float e = 0,
                             float op = 1) {
@@ -163,6 +165,10 @@ bool Ui::frame(const char* name, bool on, int x, int y, int generation, const iw
             words.push_back(WordV{x.box.x, x.box.y, x.box.w, x.box.h, x.px, x.text, hexOf(x.rgb),
                                   std::string(x.bold ? "word bold" : "word") + align});
         }
+        if (under.size() < hadUnder) under.resize(hadUnder);
+        if (over.size() < hadOver) over.resize(hadOver);
+        if (icons.size() < hadIcons) icons.resize(hadIcons);
+        if (words.size() < hadWords) words.resize(hadWords, WordV{0, 0, 0, 0, 12, "", "#00000000", "word"});
         doc.dirtyAll();
     }
     doc.place(x, y);

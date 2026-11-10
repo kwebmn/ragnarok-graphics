@@ -17,6 +17,7 @@ std::string choiceHint(uint16_t key, Lang lang);
 
 // 3.0.11-beta.93: the line while a window B closes is open (the big map, the game's equipment, skills, options, party)
 std::string windowHint(Lang lang);
+std::string deadHint(Lang lang);  // 3.0.18-beta.80: dead with the death window closed
 // 3.0.11-beta.145: the line while a ground skill is aimed; `key`: its own button (let go: cast)
 std::string aimHint(uint16_t key, Lang lang);
 
@@ -32,6 +33,7 @@ std::vector<HintPart> hintParts(const std::string& line, uint16_t key = 0);  // 
 std::vector<HintPart> npcHintParts(NpcDialog d, Lang lang, int digit = 1);
 std::vector<HintPart> choiceHintParts(uint16_t key, Lang lang);
 std::vector<HintPart> windowHintParts(Lang lang);
+std::vector<HintPart> deadHintParts(Lang lang);  // 3.0.18-beta.80
 std::vector<HintPart> aimHintParts(uint16_t key, Lang lang);
 
 // 3.0.11-beta.179 (the login concept: the pad on the login screen): which of the login screen's lines

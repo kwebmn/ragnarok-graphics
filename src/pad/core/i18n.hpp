@@ -68,6 +68,7 @@ enum class Text : uint16_t {
     // 3.0.11-beta.179: the login screen - «Полиця», its card's menu, the card (with «‹ Полиця» back), «Продовжити»,
     // the question before leaving the game
     HintLoginShelf, HintLoginMenu, HintLoginCard, HintLoginCardBack, HintLoginContinue, HintLoginExit,
+    HintDead,  // 3.0.18-beta.80: dead, the death window closed - {B} opens it again
     Count
 };
 

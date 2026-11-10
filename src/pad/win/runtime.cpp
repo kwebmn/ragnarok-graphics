@@ -1235,6 +1235,10 @@ void answerNpc(const TickOutput& out, const ViewInfo& view, const PadState& pad)
     // 3.0.11-beta.93: a window B closes open while the player plays with the pad
     const bool closing = s.windows.last() >= 0 && s.mode.padShown(GetTickCount64());
     const int place = s.session->controller().numberPlace();  // 3.0.11-beta.258
+    // 3.0.18-beta.80: dead with the death window closed - the line says B opens it again
+    uagfx::charstatus::Status dead;
+    const bool deadClosed = !uagfx::win::menuwin::shown() && uagfx::win::inGameWorld() &&
+                            uagfx::win::readOwnStatus(dead) && dead.hpMost > 0 && dead.hp == 0;
     // 3.0.11-beta.179: the login screen's own line (its window takes the pad: the game paused for it)
     const LoginHint login = pad.connected && view.focused && s.padTop && *s.padTop == uagfx::winstack::Win::Login
                                 ? uagfx::win::loginwin::padHint()
@@ -1244,6 +1248,7 @@ void answerNpc(const TickOutput& out, const ViewInfo& view, const PadState& pad)
                              : aimKey != 0     ? aimHint(aimKey, s.cfg.lang)
                              : choiceKey != 0  ? choiceHint(choiceKey, s.cfg.lang)
                              : s.cfg.npcHint && answering ? npcHint(view.dialog, s.cfg.lang, place)
+                             : deadClosed && view.dialog == NpcDialog::None ? deadHint(s.cfg.lang)  // .18-beta.80
                              : closing && view.dialog == NpcDialog::None ? windowHint(s.cfg.lang)
                                                           : std::string();
     s.hintParts = text.empty()     ? std::vector<HintPart>{}  // 3.0.11-beta.92: for the interface's own line
@@ -1251,6 +1256,7 @@ void answerNpc(const TickOutput& out, const ViewInfo& view, const PadState& pad)
                   : aimKey != 0    ? aimHintParts(aimKey, s.cfg.lang)
                   : choiceKey != 0 ? choiceHintParts(choiceKey, s.cfg.lang)
                   : s.cfg.npcHint && answering ? npcHintParts(view.dialog, s.cfg.lang, place)
+                  : deadClosed && view.dialog == NpcDialog::None ? deadHintParts(s.cfg.lang)
                                                : windowHintParts(s.cfg.lang);
     if (s.ownHints) {  // drawn by the interface: the pad's own window away
         if (!s.shownHint.empty()) hint::hide();

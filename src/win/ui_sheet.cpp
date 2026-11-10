@@ -40,7 +40,7 @@ const char* kDoc = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss
     data-style-border-width="b.e + 'px'" data-style-background-color="b.bg" data-style-border-color="b.bd"></div>
  </div>
  <div class="a" data-for="i : clipped_icons">
- <img class="a" data-attr-src="i.src" data-style-left="i.x - clip.x + 'px'"
+ <img class="a" data-if="i.src != ''" data-attr-src="i.src" data-style-left="i.x - clip.x + 'px'"
    data-style-top="i.y - clip.y + 'px'" data-style-width="i.w + 'px'" data-style-height="i.h + 'px'"
    data-style-opacity="i.op"/></div>
  <span data-for="t : clipped_words" data-attr-class="t.cls" data-style-left="t.x - clip.x + 'px'"
@@ -49,7 +49,7 @@ const char* kDoc = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss
    >{{t.text}}</span>
 </div>
 <div class="a" data-for="i : icons">
- <img class="a" data-attr-src="i.src" data-style-left="i.x + 'px'" data-style-top="i.y + 'px'"
+ <img class="a" data-if="i.src != ''" data-attr-src="i.src" data-style-left="i.x + 'px'" data-style-top="i.y + 'px'"
   data-style-width="i.w + 'px'" data-style-height="i.h + 'px'" data-style-opacity="i.op"/></div>
 <div class="a" data-for="b : over">
  <div data-if="!b.paint" data-attr-class="b.cls" data-style-left="b.x + 'px'" data-style-top="b.y + 'px'"
@@ -74,7 +74,7 @@ const char* kDoc = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss
   data-style-width="t.w + 'px'" data-style-height="t.h + 'px'" data-style-font-size="t.px + 'px'"
   data-style-color="t.colour" data-style-line-height="t.lh + 'px'">{{t.text}}</span>
 <div class="a" data-for="i : top">
- <img class="a" data-attr-src="i.src" data-style-left="i.x + 'px'" data-style-top="i.y + 'px'"
+ <img class="a" data-if="i.src != ''" data-attr-src="i.src" data-style-left="i.x + 'px'" data-style-top="i.y + 'px'"
   data-style-width="i.w + 'px'" data-style-height="i.h + 'px'" data-style-opacity="i.op"/></div>
 <div class="padfocus" data-if="pf.w > 0" data-style-left="pf.x + 'px'" data-style-top="pf.y + 'px'"
   data-style-width="pf.w + 'px'" data-style-height="pf.h + 'px'" data-style-border-radius="pf.r + 'px'"
@@ -299,6 +299,26 @@ bool Sheet::frame(const char* name, bool on, bool window, int x, int y, int gen,
         fitWords(next.words);
         fitWords(next.clippedWords);
         fitWords(next.topWords);
+        // 3.0.18-beta.80 (the warnings «Could not get value from data variable 'words[N]...'»): a list never gets
+        // shorter - RmlUi read the rows gone for a frame; the rows past the new end stay, empty and unseen
+        const auto keep = [](auto& now, const auto& was, auto blank) {
+            if (now.size() < was.size()) now.resize(was.size(), blank);
+        };
+        uisheet::Word noWord;
+        noWord.colour = "#00000000", noWord.cls = "word";
+        uisheet::Box noBox;
+        noBox.paint = true;
+        keep(next.under, c_.under, noBox);
+        keep(next.over, c_.over, noBox);
+        keep(next.clipped, c_.clipped, noBox);
+        keep(next.topBoxes, c_.topBoxes, noBox);
+        keep(next.icons, c_.icons, uisheet::Icon{});
+        keep(next.clippedIcons, c_.clippedIcons, uisheet::Icon{});
+        keep(next.top, c_.top, uisheet::Icon{});
+        keep(next.rings, c_.rings, uisheet::Ring{});
+        keep(next.words, c_.words, noWord);
+        keep(next.clippedWords, c_.clippedWords, noWord);
+        keep(next.topWords, c_.topWords, noWord);
         // 3.0.18-beta.70 (the big six, C): only the lists that changed evaluated again (a sheet said anew each
         // frame - the monsters' bars, the carried thing - mostly says the same)
         const auto changed = [&](const char* name, auto& was, auto& now) {

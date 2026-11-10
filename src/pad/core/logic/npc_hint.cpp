@@ -128,6 +128,14 @@ std::vector<HintPart> aimHintParts(uint16_t key, Lang lang) { return hintParts(t
 
 std::vector<HintPart> windowHintParts(Lang lang) { return hintParts(tr(lang, Text::HintWindow)); }
 
+std::string deadHint(Lang lang) {
+    std::string s = tr(lang, Text::HintDead);
+    put(s, "{B}", label(kPadB));
+    return s;
+}
+
+std::vector<HintPart> deadHintParts(Lang lang) { return hintParts(tr(lang, Text::HintDead)); }
+
 namespace {
 Text loginText(LoginHint h) {
     switch (h) {

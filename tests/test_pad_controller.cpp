@@ -2156,3 +2156,10 @@ TEST(ctl_npc_b_closes_a_waiting_window_and_a_number) {
     o = c.tick(pad(kPadB), w, dialogView(NpcDialog::Number), 1200);
     CHECK(o.dialog.size() == 1 && o.dialog[0] == DialogCommand::Close);
 }
+
+// 3.0.18-beta.80: dead with the death window closed - the line names B
+TEST(ctl_dead_hint_names_b) {
+    CHECK(deadHint(Lang::Uk) == "B: повернутися на точку збереження");
+    const std::vector<HintPart> p = deadHintParts(Lang::En);
+    CHECK(p.size() == 1 && p[0].buttons == std::vector<uint16_t>({kPadB}));
+}

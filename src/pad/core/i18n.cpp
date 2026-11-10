@@ -86,6 +86,7 @@ const Entry kTexts[] = {
      "{A}: играть  ·  {X}: другой персонаж  ·  {Y}: другой аккаунт  ·  {B}: выйти"},
     {"{B}: leave the game  ·  {A}: stay", "{B}: вийти з гри  ·  {A}: залишитися",
      "{B}: выйти из игры  ·  {A}: остаться"},
+    {"{B}: back to the save point", "{B}: повернутися на точку збереження", "{B}: вернуться на точку сохранения"},
 };
 static_assert(sizeof(kTexts) / sizeof(kTexts[0]) == size_t(Text::Count), "every Text needs its translations");
 
