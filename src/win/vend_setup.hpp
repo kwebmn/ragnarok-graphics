@@ -25,6 +25,9 @@ void draw(FrameRecord& record, gpu::Renderer& renderer);
 bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result);
 bool shown();
 bool close();  // Esc: «Скасувати»
+// 3.0.18-beta.105 (the owner: «Tab/Enter к следующей цене»): while the name or a price has the keys - Tab the next
+// field (Shift+Tab the one before, round), Enter the next price (stays on the last); their WM_CHAR swallowed
+bool key(UINT m, WPARAM wp, LPARAM lp);
 void beforeGameDraw();
 bool box(int& x, int& y, int& w, int& h);
 // 3.0.16-beta.39 (the owner: «геймпад» - the new cards on the pad): the D-pad's left and right the cart's list or the

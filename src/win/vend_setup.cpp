@@ -685,6 +685,25 @@ bool close() {
     return true;
 }
 
+bool key(UINT m, WPARAM wp, LPARAM) {
+    State& s = state();
+    if (!s.shown || s.show.focus < 0) return false;
+    const bool tab = wp == VK_TAB, enter = wp == VK_RETURN;
+    if (m == WM_CHAR) return wp == '\t' || wp == '\r';  // the field's Tab and Enter ours (not typed into it)
+    if (m != WM_KEYDOWN || (!tab && !enter)) return false;
+    const uint32_t window = gameSale();
+    const int fields = 1 + int(s.sale.size());  // the sign, then a price a thing for sale
+    const bool back = tab && GetKeyState(VK_SHIFT) < 0;
+    int next = s.show.focus + (back ? -1 : 1);
+    if (enter && s.show.focus == 0 && s.sale.empty()) return true;  // nothing to price yet
+    if (next >= fields) next = enter ? fields - 1 : 0;              // Enter stops at the last price, Tab goes round
+    if (next < 0) next = fields - 1;
+    if (next == s.show.focus) return true;
+    if (next == 0) focus(s, read32(window + kSignEdit), "the shop's name (Tab)");
+    else focus(s, priceEdit(window, next - 1), enter ? "the next price (Enter)" : "the next price (Tab)");
+    return true;
+}
+
 void beforeGameDraw() {
     State& s = state();
     if (s.on && inGameWorld()) hold(s, true);

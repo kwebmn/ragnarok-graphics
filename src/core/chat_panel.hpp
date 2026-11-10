@@ -156,6 +156,7 @@ struct Show {
     // 3.0.11-beta.243: «Усі»'s filters (kHide*), their menu open, pointed at; the line pointed at (its time), the clock
     int hide = 0;
     bool filtersOpen = false, hoverFilters = false;
+    bool hoverSearch = false;  // 3.0.18-beta.105
     int hoverFilter = -1, hoverRowLine = -1;
     uint64_t nowMs = 0;
     int clockSec = -1;  // the day's seconds now; < 0 no times
@@ -175,6 +176,7 @@ struct Layout {
     panel::Box peopleRow, menu;
     std::vector<panel::Box> people, items;
     panel::Box filtersButton, filtersMenu;  // 3.0.11-beta.243
+    panel::Box searchButton;  // 3.0.18-beta.105: the tabs' row's magnifier, left of the gear (every tab)
     panel::Box bar;  // 3.0.11-beta.245 (the owner: «в чате нету скрола»): the history's scroll bar's track
     std::vector<panel::Box> filters;
     std::vector<panel::Box> tabs;
@@ -188,7 +190,8 @@ Layout layout(int left, int bottom, float scale, int rows, bool quiet, const Sho
 void sizeTo(const Layout& L, float x, float y, int& width, int& rows);
 
 enum class Part : uint8_t {
-    None, Tab, Name, Lines, Mode, Clear, Field, Newer, Body, Grip, Person, Item, Filters, Filter, Link, Bar
+    None, Tab, Name, Lines, Mode, Clear, Field, Newer, Body, Grip, Person, Item, Filters, Filter, Link, Bar,
+    Search  // 3.0.18-beta.105: the magnifier - the search opened or closed
 };
 // 3.0.11-beta.245: the scroll bar - its thumb for `total` rows (w 0: all of them shown), the scroll (rows up from the
 // newest) the cursor's y on its track gives (the thumb's middle there)

@@ -453,3 +453,23 @@ TEST(chat_long_line_cut_between_words) {
     const std::vector<std::string> word = pieces(std::string(150, 'x'), kChatPiece);
     CHECK(word.size() == 3 && word[0].size() == kChatPiece && word[2].size() == 150 - 2 * kChatPiece);
 }
+
+// 3.0.18-beta.105 (the owner: «поиск в чате» - Ctrl+F only with words typed was hard to find): a magnifier in the
+// tabs' row on every tab, left of «Усі»'s gear; its own part
+TEST(chat_search_button_in_the_tabs_row) {
+    const Texts t = texts();
+    Show sh;
+    Input in;
+    Layout L = layout(10, 1070, 1.0f, 7, false, sh, in, t, estimate);
+    CHECK(L.searchButton.w > 0);
+    CHECK(L.searchButton.x + L.searchButton.w <= L.filtersButton.x + 0.5f);  // left of the gear
+    CHECK(hitTest(L, {}, sh, L.searchButton.x + 4, L.searchButton.y + 4).part == Part::Search);
+    sh.tab = Tab::Party;  // no gear there: the magnifier where the gear stands on «Усі»
+    L = layout(10, 1070, 1.0f, 7, false, sh, in, t, estimate);
+    CHECK(L.searchButton.w > 0 && L.filtersButton.w <= 0);
+    CHECK(L.searchButton.x + L.searchButton.w <= L.grip.x + 0.5f);
+    CHECK(L.tabs.back().x + L.tabs.back().w <= L.searchButton.x);  // after the tabs
+    sh.tab = Tab::All;  // the narrowest chat: never over the tabs (none when no room)
+    L = layout(10, 1070, 1.0f, 7, false, sh, in, t, estimate, kLeastWidth);
+    CHECK(L.searchButton.w <= 0 || L.tabs.back().x + L.tabs.back().w <= L.searchButton.x);
+}

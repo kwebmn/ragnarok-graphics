@@ -290,6 +290,7 @@ bool keyOne(Win w, UINT m, WPARAM wp, LPARAM lp) {  // the windows with keys of 
         case Win::Cart: return cartwin::key(m, wp, lp);       // 3.0.11-beta.154: its search's
         case Win::Tip: return tipwin::key(m, wp, lp);         // 3.0.11-beta.204: ← →
         case Win::Guild: return guildcardwin::key(m, wp, lp);  // 3.0.11-beta.271: the notice's fields
+        case Win::VendSetup: return vendsetupwin::key(m, wp, lp);  // 3.0.18-beta.105: Tab / Enter between fields
         default: return false;
     }
 }

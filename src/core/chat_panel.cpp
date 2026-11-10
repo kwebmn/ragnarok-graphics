@@ -432,6 +432,8 @@ Layout layout(int left, int bottom, float scale, int rows, bool quiet, const Sho
             L.items.push_back(panel::Box{mx + 4 * s, my + (4 + 22 * float(i)) * s, mw - 8 * s, 22 * s});
     }
     L.grip = panel::Box{w - 18 * s, 0, 18 * s, 18 * s};  // 3.0.11-beta.241
+    // 3.0.18-beta.105: the search's magnifier, left of «Усі»'s gear (where the gear stands on the other tabs)
+    L.searchButton = panel::Box{w - (sh.tab == Tab::All ? 72 : 46) * s, 5 * s, 22 * s, 22 * s};
     if (sh.tab == Tab::All) {  // 3.0.11-beta.243: «Усі»'s filters - a gear left of the grip, its menu under it
         L.filtersButton = panel::Box{w - 46 * s, 5 * s, 22 * s, 22 * s};
         if (sh.filtersOpen) {
@@ -455,6 +457,8 @@ Layout layout(int left, int bottom, float scale, int rows, bool quiet, const Sho
             L.tabs.push_back(panel::Box{x, 4 * s, tw, tabsH - 4 * s});
             x += tw + 2 * s;
         }
+        // 3.0.18-beta.105: a chat too narrow for the tabs and the magnifier - none (Ctrl+F in the field still opens it)
+        if (x > L.searchButton.x) L.searchButton = panel::Box{};
         L.input = panel::Box{8 * s, h - 8 * s - inputH, w - 16 * s, inputH};
         const bool whisper = !in.whisper.empty() || in.whisperFocus;
         const float chipW = m(chipText(in, t), 12 * s, true) + (whisper ? 18 : 30) * s;
@@ -497,6 +501,7 @@ Hit hitTest(const Layout& L, const std::vector<Row>& rows, const Show& sh, float
         if (L.filters[i].contains(x, y)) return Hit{Part::Filter, int(i)};
     if (L.filtersMenu.w > 0 && L.filtersMenu.contains(x, y)) return Hit{Part::Body, -1};
     if (L.filtersButton.w > 0 && L.filtersButton.contains(x, y)) return Hit{Part::Filters, -1};
+    if (L.searchButton.w > 0 && L.searchButton.contains(x, y)) return Hit{Part::Search, -1};  // 3.0.18-beta.105
     if (L.menu.w > 0 && L.menu.contains(x, y)) return Hit{Part::Body, -1};
     if (L.grip.w > 0 && L.grip.contains(x, y)) return Hit{Part::Grip, -1};  // 3.0.11-beta.241
     for (size_t i = 0; i < L.people.size(); ++i)  // 3.0.11-beta.242: index 0 «Усі», then the ones whispered with

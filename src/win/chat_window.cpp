@@ -818,6 +818,7 @@ static void frameInner(HWND game, bool on, unsigned codePage, double k, int targ
     s.show.hoverLink = hit.part == cp::Part::Link ? hit.index : 0;  // 3.0.11-beta.244
     s.show.hoverBar = hit.part == cp::Part::Bar || s.barDrag;      // 3.0.11-beta.245
     s.show.hoverFilters = hit.part == cp::Part::Filters;  // 3.0.11-beta.243
+    s.show.hoverSearch = hit.part == cp::Part::Search;    // 3.0.18-beta.105
     s.show.hoverFilter = hit.part == cp::Part::Filter ? hit.index : -1;
     s.show.hoverRowLine = hit.part == cp::Part::Lines || hit.part == cp::Part::Name ? hit.index : -1;
     {
@@ -850,7 +851,8 @@ static void frameInner(HWND game, bool on, unsigned codePage, double k, int targ
     for (int u : s.show.unread) key += std::to_string(u) + ',';
     key += std::to_string(s.show.hoverRowLine) +
            (s.show.hoverRowLine >= 0 ? std::to_string(s.show.clockSec / 60) : std::string()) +
-           (s.show.filtersOpen ? "F" : "") + (s.show.hoverFilters ? "f" : "") + std::to_string(s.show.hoverFilter) +
+           (s.show.filtersOpen ? "F" : "") + (s.show.hoverFilters ? "f" : "") + (s.show.hoverSearch ? "q" : "") +
+           std::to_string(s.show.hoverFilter) +
            ';';  // 3.0.11-beta.243
     // 3.0.11-beta.242: the whispers' row, the one chosen, a name's menu; 3.0.11-beta.241: the grip pointed at
     key += ';' + s.show.person + '|' + std::to_string(s.show.hoverPerson) + ',' + std::to_string(s.show.menuLine) +
@@ -945,6 +947,13 @@ static void fillSheet(State& s, uisheet::Content& c) {
         const float side = 14 * sc;
         icon(uiicons::Icon::Gear, panel::Box{b.x + (b.w - side) / 2, b.y + (b.h - side) / 2, side, side},
              sh.hide ? kGold : kMuted, 1.0f, 2.0f);
+    }
+    if (L.searchButton.w > 0) {  // 3.0.18-beta.105: the search's magnifier (gold while it searches)
+        const panel::Box& b = L.searchButton;
+        if (sh.hoverSearch || s.searching) c.rect(u, b, 6 * sc, kWhite, s.searching ? 0.14f : 0.10f);
+        const float side = 13 * sc;
+        icon(uiicons::Icon::Search, panel::Box{b.x + (b.w - side) / 2, b.y + (b.h - side) / 2, side, side},
+             s.searching ? kGold : kMuted, 1.0f, 2.0f);
     }
     auto& o = c.over;
     if (L.filtersMenu.w > 0) {
@@ -1050,6 +1059,12 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
             else if (h.index < 0)
                 referencewin::openMob(-h.index);
             did = "a link to «Довідник»";
+            break;
+        case cp::Part::Search:  // 3.0.18-beta.105: the magnifier - the search opened (its words typed) or closed
+            s.searching = !s.searching;
+            s.search.clear();
+            s.key.clear();
+            LOG_INFO("chat: the search %s (its magnifier)", s.searching ? "opened" : "closed");
             break;
         case cp::Part::Filters:  // 3.0.11-beta.243: «Усі»'s filters' menu
             s.show.filtersOpen = !s.show.filtersOpen;
