@@ -160,7 +160,7 @@ void render(State& s) {
     std::vector<std::string> lines = card::fitLines(a.text.empty() ? reporttexts::hint(lang, a) : a.text, 2, fits);
     if (lines.empty()) lines.push_back(reporttexts::hint(lang, a));
     g = card::geometry(sc, s.targetW, int(lines.size()), w);
-    const bool byUaui = uaui::ready();  // 3.0.18-beta.31: uaUI's card - no picture
+    const bool byUaui = uaui::readyAnywhere();  // 3.0.18-beta.31: uaUI's card - no picture
     if (!byUaui) card::paint(s.picture, g, a.status, s.hover);
     std::vector<Words> words;
     const float titleW = std::min(float(wordsWidth(title, titlePx, true) + 2), g.title.w);
@@ -287,8 +287,9 @@ void behind(HWND game) {
 void frame(HWND game, double k, int targetWidth, int targetHeight) {
     frameInner(game, k, targetWidth, targetHeight);
     State& s = state();
-    if (uaui::ready() && s.shown && s.words.empty()) s.dirty = true;  // painted for the picture before: again
-    if (uaui::ready() && s.dirty && s.shown) render(s);
+    if (uaui::readyAnywhere() && s.shown && s.words.empty()) s.dirty = true;  // painted for the picture before: again
+    if (uaui::readyAnywhere() && s.dirty && s.shown) render(s);
+    s.sheet.anywhere = true;  // 3.0.18-beta.78: the developer's answer on the login's screens too
     s.sheetShown = s.sheet.frame("answer", s.shown, true, s.x, s.y, s.sheetGen,
                                  [&](uisheet::Content& c) { fillSheet(s, c); });
 }

@@ -30,6 +30,7 @@ public:
     uaui::Doc doc;
     uisheet::NavSet nav;
     bool shown = false;
+    bool anywhere = false;  // 3.0.18-beta.78: set before make() - shown outside the world too (the login's boxes)
 };
 
 }  // namespace uagfx::win::uilive

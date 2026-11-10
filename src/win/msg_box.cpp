@@ -378,7 +378,7 @@ static void frameInner(HWND game, bool on, unsigned codePage, double k, int targ
                             std::to_string(s.layout.x) + ',' + std::to_string(s.layout.y) + ';' +
                             std::to_string(s.show.hover) + (s.padNow ? "P" : "") + '#' +
                             std::to_string(uistyle::generation());
-    if (const std::string drawn = key + (uaui::ready() ? "u" : ""); drawn != s.key) {  // 3.0.18-beta.37
+    if (const std::string drawn = key + (uaui::readyAnywhere() ? "u" : ""); drawn != s.key) {  // 3.0.18-beta.37
         s.key = drawn;
         render(s);
     }
@@ -466,7 +466,11 @@ static void liveFrame(State& s) {
 void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int targetHeight) {
     frameInner(game, on, codePage, k, targetWidth, targetHeight);
     State& s = state();
-    if (uaui::ready()) {  // 3.0.18-beta.74: the live box in place of the sheet
+    // 3.0.18-beta.78 (R-8WH7KM: «Please wait…» and the login's errors not seen - the box drawn by uaUI in the world
+    // alone, its picture outside it gone with beta.75): anywhere, the login's screens too
+    s.live.anywhere = true;
+    s.sheet.anywhere = true;
+    if (uaui::readyAnywhere()) {  // 3.0.18-beta.74: the live box in place of the sheet
         s.sheet.frame("msg", false, true, 0, 0, 0, [](uisheet::Content&) {});
         s.sheetShown = false;
         liveFrame(s);

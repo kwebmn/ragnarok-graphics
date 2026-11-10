@@ -84,12 +84,12 @@ static void frameInner(HWND game, bool on, double k, int targetWidth, int target
         key += p.before + '|' + p.words + '|';
         for (int b : p.buttons) key += std::to_string(b) + ',';
     }
-    key += '#' + std::to_string(uistyle::generation()) + (uaui::ready() ? "u" : "");
+    key += '#' + std::to_string(uistyle::generation()) + (uaui::readyAnywhere() ? "u" : "");
     if (key != s.key) {
         s.key = key;
         s.sheetSony = sony;
         ++s.sheetGen;  // 3.0.18-beta.35: uaUI's line says it all again (no picture then)
-        if (!uaui::ready() && panel::blank(s.picture, s.layout.w, s.layout.h)) {
+        if (!uaui::readyAnywhere() && panel::blank(s.picture, s.layout.w, s.layout.h)) {
             ph::paint(s.picture, s.layout, s.parts, sony);
             drawWords(s.picture, gdiWords(ph::words(s.layout, s.parts, sony)));
             s.upload = true;
@@ -119,6 +119,7 @@ void frame(HWND game, bool on, double k, int targetWidth, int targetHeight) {
     frameInner(game, on, k, targetWidth, targetHeight);
     State& s = state();
     s.sheet.top = true;  // 3.0.18-beta.69: over the game's own windows, as its picture was
+    s.sheet.anywhere = true;  // 3.0.18-beta.78: the controller's hint on the login's screens too
     s.sheetShown = s.sheet.frame("pad hint", s.shown, false, s.layout.x, s.layout.y, s.sheetGen,
                                  [&](uisheet::Content& c) { fillSheet(s, c); });
 }

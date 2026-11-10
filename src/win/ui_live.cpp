@@ -6,8 +6,9 @@ namespace uagfx::win::uilive {
 
 bool Window::make(const char* name, const char* rml, const std::function<void(Rml::DataModelConstructor&)>& bind) {
     if (doc.made()) return true;
-    if (!uaui::ready()) return false;
+    if (!(anywhere ? uaui::readyAnywhere() : uaui::ready())) return false;
     doc.window = true;
+    doc.anywhere = anywhere;
     if (!doc.make(name, rml, bind)) return false;
     nav.shown = [this] { return shown; };
     nav.ring = [this](const panel::Box* b) {
@@ -25,7 +26,7 @@ bool Window::make(const char* name, const char* rml, const std::function<void(Rm
 }
 
 void Window::frame(bool on, int x, int y, int kind, const char* targets) {
-    shown = on && doc.made() && uaui::ready();
+    shown = on && doc.made() && (anywhere ? uaui::readyAnywhere() : uaui::ready());
     if (!doc.made()) return;
     doc.place(x, y);
     doc.show(shown);
