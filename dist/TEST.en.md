@@ -1,3 +1,6 @@
+- "Спорядження" (equipment) like the game's original window: left the top and low head, right hand, robe, right accessory; right the middle head, body, left hand, shoes, left accessory; the ammo in the strip below. The place over each item name, the slot dots after it (gold with a card). The character numbers left the window (they are in "Характеристики"); the middle shows the portrait for now - the character from sprites is the next step.
+- A card opened from a slot in the item card shows its big illustration over its description, like the original card window.
+
 - The item card closer to the original: the big item picture on the left, the description on the right, the slots below - a card's picture and name, two a row. A click on a card opens its description in the same card; a click on the title ("‹ item name") goes back. The card texts inside the item text (from beta.108) are gone.
 
 - The item card: under the item's description, each inserted card's name in gold and its own description from the game's table (as it is, for any card). The card shows up to 20 rows; a longer one scrolls with the wheel.
