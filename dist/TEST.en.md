@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.18-beta.45 — what's new
+
+- **The "▾" lists of saved logins on the login screen and in "Продовжити" now use "Нова бібліотека інтерфейсу (RmlUi)"** — over the card, the row under the mouse lit.
+
 # uaRO Graphics 3.0.18-beta.44 — what's new
 
 - **The top one of several new library windows has its gold edge again**, as the other windows do.
