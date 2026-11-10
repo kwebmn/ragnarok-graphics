@@ -202,6 +202,8 @@ std::vector<Words> words(const Layout& L, const Data& d, const Texts& t, bool ho
     return out;
 }
 
+std::vector<std::pair<std::string, uint32_t>> detailLines(const Data& d, const Texts& t) { return lines(d, t); }
+
 Weakness weakness(int element, int level, size_t most) {
     Weakness w;
     for (int a = 0; a < 10; ++a) {

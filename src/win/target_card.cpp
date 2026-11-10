@@ -30,6 +30,9 @@
 #include "win/reference_load.hpp"
 #include "win/reference_window.hpp"
 #include "win/ui_cost.hpp"
+#include "win/uaui.hpp"
+#include "core/pad_glyphs.hpp"
+#include "core/ui_icons.hpp"
 
 namespace uagfx::win::targetpanel {
 namespace {
@@ -65,6 +68,7 @@ struct State {
     bool upload = false;
     int told = 0;
     ULONGLONG shownAt = 0, goneAt = 0;  // 3.0.11-beta.46: the concept's motion - it fades in and out, 4 px
+    bool uiShown = false;  // 3.0.18-beta.18: drawn by uaUI this frame
 };
 
 State& state() {
@@ -176,6 +180,7 @@ void block(const State& s, HWND game) {  // the mouse's clicks on the card are i
 }
 
 void hide(State& s) {
+    s.uiShown = false;
     if (s.shown) {
         uapad::gamewindow::setBlocked(uapad::gamewindow::Blocker::Target, nullptr, nullptr, false);
         s.goneAt = GetTickCount64();  // its last picture fades out
@@ -218,6 +223,165 @@ void describe(tc::Data& d, const refindex::Mob& m, int id) {
     d.heals = joined(heals);
     // 3.0.11-beta.68 (the concept's «карточка цели со строкой «Ваша панель»»): the hotbar's skills on it
     d.bar = barhint::line(barhint::against(hotbarwin::barSkills(), m.element, m.elementLv), l, 3);
+}
+
+
+// ---- 3.0.18-beta.18 (the owner: «Переписывать 73 части в разметку RmlUi вручную»): the card as an RmlUi document
+// while [interface] uaui is on - its words and colours core targetcard's, its details shown while pointed at (the
+// theme's :hover), a click opens its card in «Довідник»; its picture not painted then ----
+
+const char* kDoc = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss"/></head>
+<body class="tc away" data-model="target" data-style-width="w + 'px'">
+<div class="card" data-event-click="open()">
+ <div class="corner tl"></div><div class="corner tr"></div><div class="corner bl"></div><div class="corner br"></div>
+ <div class="round"><img data-if="pic != ''" data-attr-src="pic"/></div>
+ <div class="mid">
+  <div class="top" data-class-withhp="hp >= 0"><span class="name">{{name}}</span><span class="lv">{{level}}</span><span
+   class="chip" data-if="element != ''" data-style-color="ecol" data-style-border-color="eedge"
+   data-style-background-color="ebg">{{element}}</span></div>
+  <div class="hpline" data-if="hp >= 0"><span class="hptrack"><span class="hpfill" data-class-low="hp < 25"
+   data-style-width="hp + '%'"></span></span><span class="pct">{{hp}}%</span></div>
+ </div>
+ <div class="book"><img class="dim" data-attr-src="book"/><img class="lit" data-attr-src="book_lit"/></div>
+ <div class="hints" data-if="pad"><div><img data-attr-src="pad_a"/>{{attack}}</div><div><img data-attr-src="pad_r"/>{{next}}</div></div>
+</div><br/>
+<div class="details"><p data-for="l, i : lines" data-style-color="l.colour" data-class-first="i == 0">{{l.text}}</p></div>
+</body></rml>)RML";
+
+struct Line {
+    Rml::String text, colour;
+};
+
+struct Ui {
+    uaui::Doc doc;
+    float w = 0;
+    Rml::String name, level, element, ecol, eedge, ebg, pic, picSrc, book, bookLit, padA, padR, attack, next;
+    int hp = -1;
+    bool pad = false;
+    std::vector<Line> lines;
+    std::string key;
+    panel::Picture bookPic[2], glyph[2];
+    std::string bookSrc[2], glyphSrc[2];
+    float iconsPx = 0;
+    bool sony = false;
+    int gen = 0;
+    bool shown = false;
+};
+
+Ui& ui() {
+    static Ui u;
+    return u;
+}
+
+std::string colourOf(uint32_t rgb, int alpha = -1) {
+    char b[16];
+    if (alpha < 0) std::snprintf(b, sizeof b, "#%06x", unsigned(rgb & 0xFFFFFF));
+    else std::snprintf(b, sizeof b, "#%06x%02x", unsigned(rgb & 0xFFFFFF), alpha & 0xFF);
+    return b;
+}
+
+bool uiFrame(State& s) {
+    Ui& u = ui();
+    if (!uaui::ready()) {
+        u.doc.show(false);
+        return false;
+    }
+    if (!u.doc.made() && !u.doc.make("target", kDoc, [&](Rml::DataModelConstructor& m) {
+            if (auto l = m.RegisterStruct<Line>()) {
+                l.RegisterMember("text", &Line::text);
+                l.RegisterMember("colour", &Line::colour);
+            }
+            m.RegisterArray<std::vector<Line>>();
+            m.Bind("w", &u.w);
+            m.Bind("name", &u.name);
+            m.Bind("level", &u.level);
+            m.Bind("element", &u.element);
+            m.Bind("ecol", &u.ecol);
+            m.Bind("eedge", &u.eedge);
+            m.Bind("ebg", &u.ebg);
+            m.Bind("hp", &u.hp);
+            m.Bind("pic", &u.pic);
+            m.Bind("book", &u.book);
+            m.Bind("book_lit", &u.bookLit);
+            m.Bind("pad", &u.pad);
+            m.Bind("pad_a", &u.padA);
+            m.Bind("pad_r", &u.padR);
+            m.Bind("attack", &u.attack);
+            m.Bind("next", &u.next);
+            m.Bind("lines", &u.lines);
+            m.BindEventCallback("open", [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList&) {
+                State& s = state();
+                if (s.mob <= 0) return;
+                referencewin::openMob(s.mob);  // its card in «Довідник» (when it is on)
+                if (s.told < 40) {
+                    ++s.told;
+                    LOG_INFO("target: %s's card asked for from the target's card (uaUI)", s.data.name.c_str());
+                }
+            });
+        }))
+        return false;
+    const tc::Texts t = texts();
+    const float dp = uaui::dp() * hudedit::sizeOf(hudlayout::Part::Target);
+    const std::string key = std::to_string(s.mob) + ';' + std::to_string(s.data.hp) + ';' +
+                            (s.data.picture ? "p" : "") + (s.data.pad ? (s.data.padSony ? "S" : "X") : "") + ';' +
+                            std::to_string(s.layout.w) + '#' + std::to_string(uistyle::generation());
+    if (key != u.key) {
+        u.key = key;
+        const tc::Data& d = s.data;
+        u.w = float(s.layout.w);
+        u.name = d.name;
+        u.level = "Lv " + std::to_string(d.level);
+        u.element = d.element;
+        u.ecol = colourOf(d.elementRgb);
+        u.eedge = colourOf(d.elementRgb, 153);  // its edge 0.6, its ground 0.22, as the picture's
+        u.ebg = colourOf(d.elementRgb, 56);
+        u.hp = d.hp;
+        u.pad = d.pad && !t.attack.empty();
+        u.attack = t.attack;
+        u.next = t.next;
+        u.lines.clear();
+        for (const auto& [text, rgb] : tc::detailLines(d, t)) u.lines.push_back({text, colourOf(rgb)});
+        u.doc.dirtyAll();
+    }
+    // the monster's picture, the book's icon (dim and lit), the controller's buttons - pictures of the driver's
+    const Rml::String pic = uaui::picture(s.data.picture, s.mob, u.picSrc);
+    if (pic != u.pic) u.pic = pic, u.doc.dirty("pic");
+    const float px = 18 * dp;
+    if (px != u.iconsPx || u.sony != s.data.padSony) {
+        u.iconsPx = px;
+        u.sony = s.data.padSony;
+        ++u.gen;
+        for (int i = 0; i < 2; ++i) {
+            panel::Picture& b = u.bookPic[i];
+            const int side = std::max(8, int(std::ceil(px)));
+            b.width = b.height = side;
+            b.px.assign(size_t(side) * size_t(side), 0u);
+            uiicons::draw(b, uiicons::Icon::Quest, 0, 0, float(side), i ? 0xECEFF5 : 0x9AA3B5, 1.0f, 2.0f);
+            const float gpx = 17 * dp;
+            panel::Picture& g = u.glyph[i];
+            const int gs = std::max(8, int(std::ceil(gpx)));
+            g.width = g.height = gs;
+            g.px.assign(size_t(gs) * size_t(gs), 0u);
+            const padglyph::Family f = u.sony ? padglyph::Family::Sony : padglyph::Family::Xbox;
+            const padglyph::Button button = i ? padglyph::Button::R3 : padglyph::Button::A;
+            padglyph::paint(g, button, f, 0, 0, float(gs));
+            const padglyph::Letter l = padglyph::letter(button, f, 0, 0, float(gs));
+            if (!l.text.empty())
+                drawWords(g, {Words{l.box, utf8Wide(l.text), l.rgb, l.px, true, DT_CENTER, false}});
+        }
+        u.book = uaui::picture(&u.bookPic[0], u.gen, u.bookSrc[0]);
+        u.bookLit = uaui::picture(&u.bookPic[1], u.gen, u.bookSrc[1]);
+        u.padA = uaui::picture(&u.glyph[0], u.gen, u.glyphSrc[0]);
+        u.padR = uaui::picture(&u.glyph[1], u.gen, u.glyphSrc[1]);
+        u.doc.dirtyAll();
+    }
+    if (Rml::ElementDocument* d = u.doc.doc()) {
+        const float size = hudedit::sizeOf(hudlayout::Part::Target);
+        d->SetProperty("transform", size != 1.0f ? "scale(" + std::to_string(size) + ")" : "none");
+    }
+    u.doc.place(s.layout.x, s.layout.y);
+    u.doc.show(true);
+    return true;
 }
 
 }  // namespace
@@ -330,9 +494,12 @@ void frame(HWND game, bool on, bool padHints, double k, int targetWidth, int tar
                             ';' + std::to_string(scale) + ';' + (hover ? "h" : "") + (hoverBook ? "b" : "") +
                             (s.data.picture ? "p" : "") + (s.data.pad ? (s.data.padSony ? "S" : "X") : "") + ';' +
                             std::to_string(s.data.hp);
-    if (const std::string drawn = key + '#' + std::to_string(uistyle::generation()); drawn != s.key) {  // its grounds
-        s.key = drawn;
-        render(s);
+    s.uiShown = uiFrame(s);  // 3.0.18-beta.18: by uaUI while [interface] uaui is on
+    if (!s.uiShown) {
+        if (const std::string drawn = key + '#' + std::to_string(uistyle::generation()); drawn != s.key) {
+            s.key = drawn;  // its grounds
+            render(s);
+        }
     }
     if (!s.shown) s.shownAt = now;
     s.shown = true;
@@ -341,6 +508,8 @@ void frame(HWND game, bool on, bool padHints, double k, int targetWidth, int tar
 
 void draw(FrameRecord& record, gpu::Renderer& renderer) {
     State& s = state();
+    if (!s.shown) ui().doc.show(false);  // 3.0.18-beta.18: gone - its document fades out by the theme
+    if (s.uiShown) return;  // uaUI draws it
     if (s.k <= 0 || s.picture.width <= 0 || s.picture.height <= 0) return;
     // 3.0.11-beta.46: coming, from 4 px over its place; going, 4 px up out of sight ([interface] animations)
     const ULONGLONG now = GetTickCount64();
@@ -359,7 +528,7 @@ int actorClass(uint32_t id) { return classOf(id); }
 
 bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     State& s = state();
-    if (!s.shown) return false;
+    if (!s.shown || s.uiShown) return false;  // 3.0.18-beta.18: uaUI's events take its clicks
     const bool button = m == WM_LBUTTONDOWN || m == WM_LBUTTONUP || m == WM_LBUTTONDBLCLK || m == WM_RBUTTONDOWN ||
                         m == WM_RBUTTONUP || m == WM_RBUTTONDBLCLK || m == WM_MBUTTONDOWN || m == WM_MBUTTONUP;
     if (!button && m != WM_MOUSEWHEEL) return false;

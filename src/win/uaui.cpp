@@ -582,6 +582,50 @@ input.checkbox:checked { background-color: #3d7fd8; border-color: #3d7fd8; }
                background-color: #3a1414; font-size: 13dp; font-weight: bold; white-space: nowrap;
                transition: opacity transform 0.18s quadratic-out; }
 .cb .warning.away { opacity: 0; transform: translateY(-8dp); }
+/* 3.0.18-beta.18: the target's card (win/target_card) - the concept's target16 */
+.tc { position: absolute; font-family: Plex; color: #eceff5; text-align: center; transform-origin: 50% 0;
+      transition: opacity transform 0.12s quadratic-out; }
+.tc.away { opacity: 0; transform: translateY(-4dp); }
+.tc .card { display: inline-block; position: relative; height: 48dp; padding: 0 8dp; border-radius: 10dp;
+            border: 1dp #ffffff17; background-color: #10141ccc; text-align: left; white-space: nowrap; cursor: pointer; }
+.tc .corner { position: absolute; width: 11dp; height: 11dp; border-color: #c9a55b; }
+.tc .tl { left: 0; top: 0; border-left-width: 2dp; border-top-width: 2dp; }
+.tc .tr { right: 0; top: 0; border-right-width: 2dp; border-top-width: 2dp; }
+.tc .bl { left: 0; bottom: 0; border-left-width: 2dp; border-bottom-width: 2dp; }
+.tc .br { right: 0; bottom: 0; border-right-width: 2dp; border-bottom-width: 2dp; }
+.tc .round { display: inline-block; vertical-align: top; margin-top: 8dp; width: 32dp; height: 32dp;
+             border-radius: 16dp; background-color: #1b1d24; }
+.tc .round img { width: 32dp; height: 32dp; }
+.tc .mid { display: inline-block; vertical-align: top; margin-left: 10dp; }
+.tc .name { font-size: 16dp; font-weight: bold; }
+.tc .lv { font-size: 13dp; color: #9aa3b5; margin-left: 6dp; }
+.tc .chip { display: inline-block; margin-left: 8dp; padding: 0 8dp; height: 22dp; line-height: 22dp;
+            border-radius: 6dp; border-width: 1dp; font-size: 12.5dp; font-weight: bold; }
+.tc .top { display: block; height: 22dp; line-height: 22dp; margin-top: 13dp; }
+.tc .top.withhp { margin-top: 4dp; }
+.tc .hpline { display: block; height: 16dp; }
+.tc .hptrack { display: inline-block; vertical-align: middle; width: 80dp; height: 5dp; border-radius: 3dp;
+               background-color: #0000008c; }
+.tc .hpfill { display: block; height: 5dp; border-radius: 3dp; background-color: #5bd36c; }
+.tc .hpfill.low { background-color: #e5534b; }
+.tc .pct { margin-left: 6dp; font-size: 12dp; font-weight: bold; }
+.tc .book { display: inline-block; vertical-align: top; margin: 9dp 0 0 12dp; width: 30dp; height: 30dp;
+            border-radius: 7dp; background-color: #ffffff0f; border: 1dp #c9a55b00;
+            transition: background-color border-color 0.1s; }
+.tc .book:hover { background-color: #ffffff24; border-color: #c9a55bcc; }
+.tc .book img { margin: 5dp 0 0 5dp; width: 18dp; height: 18dp; }
+.tc .book .lit { display: none; }
+.tc .book:hover .lit { display: inline-block; }
+.tc .book:hover .dim { display: none; }
+.tc .hints { display: inline-block; vertical-align: top; margin: 6dp 0 0 13dp; padding-left: 7dp;
+             border-left: 1dp #ffffff1a; font-size: 13dp; }
+.tc .hints div { display: block; height: 19dp; }
+.tc .hints img { width: 17dp; height: 17dp; margin-right: 7dp; vertical-align: middle; }
+.tc .details { display: none; margin-top: 6dp; padding: 5dp 12dp 5dp 12dp; border-radius: 8dp;
+               border: 1dp #ffffff1f; background-color: #10141cf0; text-align: left; white-space: nowrap; }
+.tc:hover .details { display: inline-block; }
+.tc .details p { display: block; height: 18dp; line-height: 18dp; font-size: 13dp; }
+.tc .details p.first { font-weight: bold; }
 scrollbarvertical { width: 8dp; margin-left: 4dp; }
 scrollbarvertical slidertrack { background-color: #ffffff0c; border-radius: 4dp; }
 scrollbarvertical sliderbar { background-color: #ffffff40; border-radius: 4dp; min-height: 24dp; }

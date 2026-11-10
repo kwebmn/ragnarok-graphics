@@ -68,6 +68,8 @@ struct Words {
     Align align = Align::Left;
 };
 std::vector<Words> words(const Layout& L, const Data& d, const Texts& t, bool hoverBook);
+// 3.0.18-beta.18 (the RML card, win/target_card): the details' lines and their colours (0xRRGGBB), the first bold
+std::vector<std::pair<std::string, uint32_t>> detailLines(const Data& d, const Texts& t);
 
 // The elements hurting a monster of `element` at `level` most (from 150 %, the most first, at most `most`) and those
 // healing it, by the server's table (refpages::elementDamage): their numbers 0-9
