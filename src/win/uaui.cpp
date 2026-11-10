@@ -150,6 +150,7 @@ struct State {
     // 3.0.18-beta.38: the world's documents (z-index 1: the bars over the monsters, the plates) before the parts'
     // (3) - the batches up to `worldSplit` (the marker's at z-index 2) drawn where the world's overlays are
     size_t worldSplit = 0;
+    unsigned frameNo = 1;  // 3.0.18-beta.40: begin()'s count - a document not asked to show in one hidden at its end
     bool worldSeen = false;
     Rml::ElementDocument* worldMarker = nullptr;
     bool clipOn = false;
@@ -1592,6 +1593,7 @@ bool Doc::make(const char* name, const char* rml, const std::function<void(Rml::
 }
 
 void Doc::show(bool on) {
+    if (on) wantedAt = state().frameNo;  // 3.0.18-beta.40: asked for this frame
     if (!doc_ || on == shown_) return;
     shown_ = on;
     if (on) {
@@ -1713,6 +1715,11 @@ void begin(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
 
 void end() {
     State& s = state();
+    // 3.0.18-beta.40: a document its part did not ask to show this frame (the part no longer runs: «Продовжити» after
+    // the way in, a window's part gone quiet) - hidden, never left on the screen
+    for (Doc* d : s.docs)
+        if (d->shown() && d->wantedAt != s.frameNo) d->show(false);
+    ++s.frameNo;
     if (!readyAnywhere()) return;
     for (Doc* d : s.docs)  // a frame after showing: the fade in runs (the theme's transition)
         if (d->fadePending && d->shown()) d->doc()->SetClass("away", false), d->fadePending = false;

@@ -86,6 +86,7 @@ public:
 
     // the runtime's
     bool fadePending = false;
+    unsigned wantedAt = 0;  // 3.0.18-beta.40: the frame show(true) was last asked in
 
 private:
     Rml::ElementDocument* doc_ = nullptr;

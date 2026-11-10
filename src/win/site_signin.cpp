@@ -20,6 +20,8 @@
 #include "win/site_accounts.hpp"
 #include "win/site_http.hpp"
 #include "win/site_key.hpp"
+#include "win/uaui.hpp"
+#include "win/ui_sheet.hpp"
 
 namespace uagfx::win::sitesigninwin {
 namespace {
@@ -29,6 +31,9 @@ constexpr ULONGLONG kProbeAgainMs = 10 * 60 * 1000;
 constexpr size_t kFieldMost = 120;  // a field's bytes at most
 
 struct State {
+    uisheet::Sheet sheet;  // 3.0.18-beta.40: the card drawn by uaUI (before the world)
+    int sheetGen = 0;
+    bool sheetShown = false;
     bool open = false;
     ss::Way way = ss::Way::Password;
     ss::Field focus = ss::Field::Email;
@@ -402,6 +407,10 @@ void paste(State& s) {
 
 void render(State& s) {
     const ss::Layout& L = s.layout;
+    if (uaui::readyAnywhere()) {  // 3.0.18-beta.40: uaUI's card said again, no picture
+        ++s.sheetGen;
+        return;
+    }
     if (!panel::blank(s.picture, L.w, L.h)) return;
     ss::paint(s.picture, L, s.show);
     drawWords(s.picture, gdi(ss::words(L, s.show, texts())));
@@ -488,7 +497,7 @@ void probe() {
 
 bool siteReady() { return state().ready == 1; }
 
-void frame(double k, int targetWidth, int targetHeight) {
+static void frameInner(double k, int targetWidth, int targetHeight) {
     State& s = state();
     if (!s.open) return;
     s.k = float(k);
@@ -536,16 +545,114 @@ void frame(double k, int targetWidth, int targetHeight) {
                             (sh.busy ? "b" : "") + std::to_string(sh.hover) + (s.twofa ? "t" : "") + sh.login +
                             '\x01' + std::to_string(sh.gamePassLength) + ',' + std::to_string(sh.newPassLength) +
                             sh.sex + (sh.agree ? "A" : "") + std::to_string(sh.loginFree) + '#' +
-                            std::to_string(uistyle::generation());
+                            std::to_string(uistyle::generation()) + (uaui::readyAnywhere() ? "u" : "");
     if (key != s.picKey) {
         s.picKey = key;
         render(s);
     }
 }
 
+// 3.0.18-beta.40 (docs/superpowers/plans/2026-11-09-uaui-migration.md, stage 5 - by hand): this window in RmlUi's
+// markup, line by line as core sitesignin paints it (its boxes, icons, circles); the words where it places them
+static void fillSheet(State& s, uisheet::Content& ui) {
+    using namespace uagfx::sitesignin;
+    const auto& L = s.layout;
+    const auto& sh = s.show;
+    [[maybe_unused]] constexpr uint32_t kCard = 0x10141C;
+    [[maybe_unused]] constexpr uint32_t kWhite = 0xFFFFFF;
+    [[maybe_unused]] constexpr uint32_t kGold = 0xC9A55B;
+    [[maybe_unused]] constexpr uint32_t kGold2 = 0xE6CB8A;
+    [[maybe_unused]] constexpr uint32_t kText = 0xEEF2F8;
+    [[maybe_unused]] constexpr uint32_t kMuted = 0x9AA3B5;
+    [[maybe_unused]] constexpr uint32_t kBlack = 0x000000;
+    [[maybe_unused]] constexpr uint32_t kLink = 0x8CB8FF;
+    [[maybe_unused]] constexpr uint32_t kRed = 0xFF5A4E;
+    [[maybe_unused]] constexpr uint32_t kChosen = 0xF5E6BE;
+    [[maybe_unused]] constexpr float kW = 380;
+    [[maybe_unused]] constexpr float kPad = 24;
+    [[maybe_unused]] constexpr float kTitleH = 30;
+    [[maybe_unused]] constexpr float kSubH = 20;
+    [[maybe_unused]] constexpr float kWaysH = 32;
+    [[maybe_unused]] constexpr float kLabelH = 18;
+    [[maybe_unused]] constexpr float kFieldH = 38;
+    [[maybe_unused]] constexpr float kGap = 12;
+    [[maybe_unused]] constexpr float kButtonH = 42;
+    [[maybe_unused]] constexpr float kErrorH = 18;
+    [[maybe_unused]] constexpr float kBackH = 20;
+    [[maybe_unused]] constexpr float kCodeH = 52;
+    [[maybe_unused]] constexpr float kWaitH = 20;
+    ui.w = float(L.w), ui.h = float(L.h);
+    const auto put = [&](const panel::Picture& p, const panel::Box& box, float k = 1.0f) {
+        if (p.width > 0)
+            ui.icons.push_back(uisheet::Icon{std::round(box.x + (box.w - float(p.width)) / 2),
+                                            std::round(box.y + (box.h - float(p.height)) / 2), float(p.width),
+                                            float(p.height), k, s.sheet.icon(&p)});
+    };
+    [[maybe_unused]] const auto circle = [&](float cx, float cy, float r, uint32_t rgb, float a) {
+        ui.rect(ui.under, panel::Box{cx - r, cy - r, 2 * r, 2 * r}, r, rgb, a);
+    };
+    [[maybe_unused]] const auto icon = [&](uiicons::Icon which, float x, float y, float side, uint32_t rgb, float a,
+                                           float stroke) {
+        const int px = std::max(4, int(std::ceil(side)));
+        const std::string key = "u" + std::to_string(int(which)) + ':' + std::to_string(px) + ':' +
+                                std::to_string(rgb) + ':' + std::to_string(int(a * 100));
+        const std::string src = s.sheet.made(key, px, px, [&](panel::Picture& p) {
+            uiicons::draw(p, which, 0, 0, float(px), rgb, a, stroke);
+        });
+        ui.icons.push_back(uisheet::Icon{x, y, float(px), float(px), 1, src});
+    };
+    (void)put;
+
+    [&] {
+        const float sc = L.s;
+        ui.rect(ui.under, L.glass, 14 * sc, kCard, std::max(0.94f, uistyle::window()), kWhite, 0.12f, 1.0f * sc);
+        if (L.ways[0].w > 0) {
+            const panel::Box all{L.ways[0].x, L.ways[0].y, L.ways[2].x + L.ways[2].w - L.ways[0].x, L.ways[0].h};
+            ui.rect(ui.under, all, all.h / 2, kBlack, 0.30f, kWhite, 0.12f, 1.0f * sc);
+            ui.rect(ui.under, L.ways[int(sh.way)], L.ways[0].h / 2, kGold, 0.26f);
+        }
+        if (L.sex[0].w > 0) {  // 3.0.11-beta.181: the new login's sex
+            const panel::Box both{L.sex[0].x, L.sex[0].y, L.sex[1].x + L.sex[1].w - L.sex[0].x, L.sex[0].h};
+            ui.rect(ui.under, both, both.h / 2, kBlack, 0.30f, kWhite, 0.12f, 1.0f * sc);
+            if (sh.sex == 'M' || sh.sex == 'F')
+                ui.rect(ui.under, L.sex[sh.sex == 'F' ? 1 : 0], L.sex[0].h / 2, kGold, 0.26f);
+        }
+        const auto field = [&](const panel::Box& b, Field f, Part p) {
+            if (b.h <= 0) return;
+            const bool focused = sh.focus == f, hot = sh.hover == int(p);
+            ui.rect(ui.under, b, 8 * sc, kBlack, 0.35f, focused ? kGold : kWhite, focused ? 0.85f : hot ? 0.30f : 0.16f,
+                    (focused ? 1.5f : 1.0f) * sc);
+        };
+        field(L.email, Field::Email, Part::Email);
+        field(L.password, Field::Password, Part::Password);
+        field(L.code, Field::Code, Part::Code);
+        field(L.key, Field::Key, Part::Key);
+        field(L.login, Field::Login, Part::Login);
+        field(L.gamePass, Field::GamePass, Part::GamePass);
+        field(L.newPass, Field::NewPass, Part::NewPass);
+        if (L.codeBig.h > 0 && !sh.userCode.empty())
+            ui.rect(ui.under, L.codeBig, 10 * sc, kBlack, 0.35f, kGold, 0.55f, 1.0f * sc);
+        if (L.agree.h > 0)  // 3.0.11-beta.181: the rules' tick
+            ui.rect(ui.under, L.agreeTick, 4 * sc, sh.agree ? kGold : kWhite, sh.agree ? 0.85f : 0.06f,
+                    sh.agree ? kGold : kWhite, sh.agree ? 1.0f : 0.35f, 1.0f * sc);
+        const bool hot = sh.hover == int(Part::Button);
+        ui.rect(ui.under, L.button, 9 * sc, kGold, sh.busy ? 0.10f : hot ? 0.36f : 0.24f, kGold, sh.busy ? 0.4f : 0.85f,
+                1.0f * sc);
+    }();
+    ui.say(uagfx::sitesignin::words(L, s.show, texts()));
+}
+
+void frame(double k, int targetWidth, int targetHeight) {
+    frameInner(k, targetWidth, targetHeight);
+    State& s = state();
+    s.sheet.anywhere = true;
+    s.sheetShown = s.sheet.frame("site sign-in", uaui::readyAnywhere() && s.open && s.k > 0 && s.sheetGen > 0, true,
+                                 s.layout.x, s.layout.y, s.sheetGen, [&](uisheet::Content& c) { fillSheet(s, c); });
+}
+
 void draw(FrameRecord& record, gpu::Renderer& renderer) {
     State& s = state();
-    if (!s.open || s.k <= 0 || s.picture.width <= 0) return;
+    if (!s.open || s.sheetShown || s.k <= 0 || s.picture.width <= 0) return;
     drawPart(record, renderer, s.picture, s.texture, s.texW, s.texH, s.upload, s.layout.x, s.layout.y, s.k);
 }
 

@@ -17,6 +17,9 @@
 #include "win/log.hpp"
 #include "win/picture_draw.hpp"
 #include "win/real_ddraw.hpp"
+#include "core/class_art.hpp"
+#include "win/uaui.hpp"
+#include "win/ui_sheet.hpp"
 
 namespace uagfx::win::logincontinuewin {
 namespace {
@@ -24,6 +27,10 @@ namespace {
 namespace lco = logincontinue;
 
 struct State {
+    uisheet::Sheet sheet;  // 3.0.18-beta.40: the card drawn by uaUI (before the world)
+    int sheetGen = 0;
+    bool sheetShown = false;
+    std::vector<Words> words;
     float k = 0, scale = 1;
     int targetW = 0, targetH = 0;
     unsigned codePage = 0;
@@ -124,7 +131,7 @@ void dropFrame(State& s, const accounts::Shelf& shelf) {
 
 }  // namespace
 
-void frame(double k, int targetWidth, int targetHeight, unsigned codePage) {
+static void frameInner(double k, int targetWidth, int targetHeight, unsigned codePage) {
     State& s = state();
     s.k = float(k);
     s.scale = uistyle::readingScale(k);
@@ -164,10 +171,13 @@ void frame(double k, int targetWidth, int targetHeight, unsigned codePage) {
                             std::to_string(a.level) + (a.refused ? "r" : "") + (a.art ? "a" : a.head ? "h" : "") +
                             std::to_string(a.busyWindow) +
                             '#' +
-                            std::to_string(uistyle::generation());
+                            std::to_string(uistyle::generation()) + (uaui::readyAnywhere() ? "u" : "");
     if (key != s.key) {
         s.key = key;
-        if (panel::blank(s.picture, s.layout.w, s.layout.h)) {
+        if (uaui::readyAnywhere()) {  // 3.0.18-beta.40: uaUI's card - its words kept, no picture
+            s.words = gdi(lco::words(s.layout, a, s.show, t));
+            ++s.sheetGen;
+        } else if (panel::blank(s.picture, s.layout.w, s.layout.h)) {
             lco::paint(s.picture, s.layout, a, s.show);
             drawWords(s.picture, gdi(lco::words(s.layout, a, s.show, t)));
             s.upload = true;
@@ -176,9 +186,70 @@ void frame(double k, int targetWidth, int targetHeight, unsigned codePage) {
     if (s.dropOpen) dropFrame(s, shelf);
 }
 
+// 3.0.18-beta.40 (docs/superpowers/plans/2026-11-09-uaui-migration.md, stage 5 - by hand): «Продовжити» in RmlUi's
+// markup, line by line as core logincontinue paints it - its glass, the class's portrait (or the head on its dark
+// gold ground), «Грати», ▾ after «Змінити акаунт»; the words where core logincontinue places them; ▾'s list over it
+static void fillSheet(State& s, uisheet::Content& c) {
+    const lco::Layout& L = s.layout;
+    const lco::Account& a = s.account;
+    const float sc = L.s;
+    constexpr uint32_t kCard = 0x10141C, kWhite = 0xFFFFFF, kGold = 0xC9A55B, kGold2 = 0xE6CB8A, kLink = 0x8CB8FF;
+    constexpr float kTriangle = 16;  // core logincontinue's
+    c.w = float(L.w), c.h = float(L.h);
+    c.rect(c.under, panel::Box{0, 0, float(L.w), float(L.h)}, 14 * sc, kCard, std::max(0.94f, uistyle::window()),
+           kWhite, 0.12f, 1.0f * sc);
+    const panel::Box pic{1 * sc, 1 * sc, L.art.w - 1 * sc, L.art.h - 2 * sc};
+    const int pw = std::max(1, int(std::ceil(pic.w))), ph = std::max(1, int(std::ceil(pic.h)));
+    if (a.art) {  // the class's portrait, its left corners round
+        const std::string key = "art" + std::to_string(uintptr_t(a.art)) + ':' + std::to_string(pw) + 'x' +
+                                std::to_string(ph);
+        const std::string src = s.sheet.made(key, pw, ph, [&](panel::Picture& p) {
+            classart::cover(p, panel::Box{0, 0, float(pw), float(ph)}, a.art->px, a.art->width, a.art->height,
+                            13 * sc, classart::kLeftCorners);
+        });
+        c.icons.push_back(uisheet::Icon{pic.x, pic.y, float(pw), float(ph), 1, src});
+    } else {
+        c.rect(c.under, pic, 13 * sc, 0x2A2416, 0.9f);
+        c.rect(c.under, panel::Box{pic.x + pic.w - 14 * sc, pic.y, 14 * sc, pic.h}, 0, 0x2A2416, 0.9f);
+        if (a.head && a.head->width > 0)
+            c.icons.push_back(uisheet::Icon{std::round(pic.x + (pic.w - float(a.head->width)) / 2),
+                                            std::round(pic.y + (pic.h - float(a.head->height)) / 2),
+                                            float(a.head->width), float(a.head->height), 1, s.sheet.icon(a.head)});
+    }
+    c.rect(c.under, L.play, 9 * sc, kGold, s.show.hover == lco::Part::Play ? 0.36f : 0.26f, kGold, 0.9f, 1.0f * sc);
+    {  // ▾ after «Змінити акаунт»'s words
+        const uint32_t rgb = s.show.hover == lco::Part::Change || s.show.changeOpen ? kGold2 : kLink;
+        const int side = std::max(4, int(std::ceil(11 * sc)));
+        const std::string src = s.sheet.made("tri" + std::to_string(side) + ':' + std::to_string(rgb), side, side,
+                                             [&](panel::Picture& p) {
+                                                 logincard::paintTriangle(p, float(side) / 2, float(side) / 2, 9 * sc,
+                                                                          rgb, 0.95f);
+                                             });
+        c.icons.push_back(uisheet::Icon{std::round(L.change.x + L.change.w - kTriangle * sc / 2 - float(side) / 2),
+                                        std::round(L.change.y + L.change.h / 2 + 1 * sc - float(side) / 2),
+                                        float(side), float(side), 1, src});
+    }
+    uisheet::sayGdi(c, s.words);
+    if (s.dropOpen && s.dropPicture.width > 0)  // ▾'s list (the window's own pixels)
+        c.top.push_back(uisheet::Icon{s.drop.x - float(s.layout.x), s.drop.y - float(s.layout.y),
+                                      float(s.dropPicture.width), float(s.dropPicture.height), 1,
+                                      s.sheet.icon(&s.dropPicture)});
+}
+
+void frame(double k, int targetWidth, int targetHeight, unsigned codePage) {
+    frameInner(k, targetWidth, targetHeight, codePage);
+    State& s = state();
+    s.sheet.anywhere = true;
+    const int gen = s.sheetGen ^ (s.dropOpen ? int(uaui::stamp(&s.dropPicture)) | 1 : 0);
+    s.sheetShown = s.sheet.frame("login continue", uaui::readyAnywhere() && s.k > 0 && s.sheetGen > 0, true,
+                                 s.layout.x, s.layout.y, gen, [&](uisheet::Content& c) { fillSheet(s, c); });
+}
+
+void hideSheet() { state().sheet.frame("login continue", false, true, 0, 0, 0, [](uisheet::Content&) {}); }
+
 void draw(FrameRecord& record, gpu::Renderer& renderer) {
     State& s = state();
-    if (s.k <= 0 || s.picture.width <= 0) return;
+    if (s.k <= 0 || s.sheetShown || s.picture.width <= 0) return;
     drawPart(record, renderer, s.picture, s.texture, s.texW, s.texH, s.upload, s.layout.x, s.layout.y, s.k);
     if (s.dropOpen && s.dropPicture.width > 0)
         drawPart(record, renderer, s.dropPicture, s.dropTexture, s.dropTexW, s.dropTexH, s.dropUpload, int(s.drop.x),
