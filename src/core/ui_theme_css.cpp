@@ -939,6 +939,65 @@ scrollbarvertical sliderarrowdec, scrollbarvertical sliderarrowinc { width: 0; h
 .skl .fb.hot { background-color: #ffffff1f; }
 .skl .fb.go { border-color: #6ea3ff4d; background-color: #6ea3ff14; color: #7e889a; font-weight: bold; }
 .skl .fb.go.on { border-color: #6ea3ffe6; background-color: #6ea3ff52; color: #eef2f8; }
+/* 3.0.18-beta.98: the homunculus' and the mercenary's cards live (uikit/companion_live) - 320dp */
+.lw.cmp { width: 320dp; padding: 16dp 16dp 8dp 16dp; font-size: 12dp; box-sizing: border-box; }
+.cmp .head { display: block; height: 30dp; line-height: 30dp; padding-right: 28dp; }
+.cmp .head .title { font-size: 15dp; font-weight: bold; color: #eef2f8; }
+.cmp .x { position: absolute; right: 16dp; top: 19dp; width: 24dp; height: 24dp; line-height: 24dp;
+          text-align: center; border-radius: 6dp; color: #eef2f8; font-size: 12dp; background-color: #ffffff0f; }
+.cmp .x.hot { background-color: #ffffff24; }
+.cmp .nrow { display: flex; justify-content: space-between; align-items: center; height: 24dp; margin: 2dp 0 6dp 0; }
+.cmp .cn { font-size: 15dp; font-weight: bold; color: #e6cb8a; }
+.cmp .clv { font-size: 12.5dp; color: #9aa3b5; }
+.cmp .b { display: block; margin-bottom: 7dp; }
+.cmp .bl { display: flex; justify-content: space-between; height: 16dp; line-height: 16dp; margin-bottom: 1dp;
+           font-size: 11.5dp; }
+.cmp .k { color: #9aa3b5; }
+.cmp .v { color: #eef2f8; }
+.cmp .track { display: block; height: 7dp; border-radius: 3.5dp; background-color: #ffffff14; }
+.cmp .track .fill { display: block; height: 7dp; border-radius: 3.5dp; }
+.cmp .fill.bhp { background-color: #4cc777e6; }
+.cmp .fill.bsp { background-color: #3d7eebe6; }
+.cmp .fill.bexp { background-color: #c9a55be6; }
+.cmp .fill.bfull { background-color: #8bc34ae6; }
+.cmp .facts { display: block; margin-bottom: 8dp; }
+.cmp .f { display: flex; justify-content: space-between; height: 18dp; line-height: 18dp; font-size: 11.5dp; }
+.cmp .fv { font-size: 12dp; color: #eef2f8; }
+.cmp .fv.love { font-weight: bold; color: #f06b8b; }
+.cmp .fv.gold { font-weight: bold; color: #e6cb8a; }
+.cmp .cstats { display: flex; flex-wrap: wrap; justify-content: space-between; margin-bottom: 10dp; }
+.cmp .cst { display: flex; justify-content: space-between; width: 140dp; height: 18dp; line-height: 18dp;
+            font-size: 11.5dp; }
+.cmp .cst .v { font-size: 12dp; font-weight: bold; }
+.cmp .feed { display: block; height: 34dp; line-height: 32dp; margin-bottom: 10dp; text-align: center;
+             border-radius: 8dp; border: 1dp #c9a55b80; background-color: #c9a55b38; font-size: 12.5dp;
+             font-weight: bold; color: #eef2f8; box-sizing: border-box; }
+.cmp .feed.hot { background-color: #c9a55b57; }
+.cmp .feed.focus { border: 1.5dp #c9a55bf2; }
+.cmp .shd { display: block; height: 20dp; line-height: 18dp; margin-bottom: 4dp; font-size: 12dp; font-weight: bold;
+            color: #e6cb8a; border-bottom: 1dp #c9a55b73; box-sizing: border-box; }
+.cmp .shd.focus { color: #f3c653; }
+.cmp .sks { display: block; }
+.cmp .sk { display: flex; align-items: center; height: 20dp; margin-bottom: 2dp; padding: 0 4dp 0 6dp;
+           border-radius: 6dp; border: 1.5dp #00000000; box-sizing: border-box; }
+.cmp .sk.hot { background-color: #ffffff12; }
+.cmp .sk.pad { border-color: #c9a55be6; }
+.cmp .skn { display: block; flex: 1; font-size: 12dp; color: #eef2f8; white-space: nowrap; overflow: hidden; }
+.cmp .skn.dash { color: #9aa3b5; }
+.cmp .ar { display: block; width: 16dp; height: 16dp; line-height: 16dp; text-align: center; border-radius: 5dp;
+           font-size: 12dp; font-weight: bold; color: #eef2f8; background-color: #ffffff0f; }
+.cmp .ar.hot { background-color: #ffffff29; }
+.cmp .ar.off { visibility: hidden; }
+.cmp .slv { display: block; width: 58dp; text-align: center; font-size: 11.5dp; color: #9aa3b5; }
+.cmp .slv.gold { color: #e6cb8a; }
+.cmp .plus { display: block; width: 22dp; height: 18dp; line-height: 16dp; margin-left: 4dp; text-align: center;
+             border-radius: 6dp; border: 1dp #c9a55bd9; background-color: #c9a55b47; font-size: 13dp;
+             font-weight: bold; box-sizing: border-box; }
+.cmp .plus.hot { background-color: #c9a55b73; }
+.cmp .plus.off { visibility: hidden; }
+.cmp .rm { display: block; width: 100dp; height: 18dp; line-height: 18dp; margin: 16dp auto 0 auto; text-align: center;
+           border-radius: 6dp; font-size: 11dp; color: #e0675c; }
+.cmp .rm.hot { background-color: #e0675c1f; }
 )";
 
 }  // namespace
