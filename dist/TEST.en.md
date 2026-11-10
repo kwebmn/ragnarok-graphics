@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.18-beta.51 — what's new
+
+- **An enlarged minimap: its buttons (+, −, layers) and the marks on the map now grow more than the map itself** — at 160 % they are twice their usual size, not just 1.6 times.
+
 # uaRO Graphics 3.0.18-beta.50 — what's new
 
 - **Fixed with "Нова бібліотека інтерфейсу (RmlUi)": the party's and the character block's frame in "Розміщення інтерфейсу" now fits them exactly**, and a click on their edge no longer goes to the game world.
