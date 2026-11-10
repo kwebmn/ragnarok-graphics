@@ -72,6 +72,8 @@ public:
     Rml::ElementDocument* doc() const { return doc_; }
     Rml::Element* byId(const char* id) const { return doc_ ? doc_->GetElementById(id) : nullptr; }
     std::function<void()> onClose;  // its × (the window template's), besides hiding it
+    // 3.0.18-beta.21: drawn only - its part keeps its own mouse, keys and blocker (the hotbar's drag and wheel)
+    bool passive = false;
 
     // the runtime's
     bool fadePending = false;

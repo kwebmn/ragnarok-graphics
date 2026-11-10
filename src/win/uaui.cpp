@@ -793,6 +793,47 @@ input.checkbox:checked { background-color: #3d7fd8; border-color: #3d7fd8; }
            background-color: #10141cf0; white-space: nowrap; }
 .bc .tip .a { display: block; font-size: 13dp; font-weight: bold; height: 18dp; line-height: 18dp; }
 .bc .tip .b { display: block; font-size: 11.5dp; color: #9aa3b5; height: 15dp; line-height: 15dp; }
+/* 3.0.18-beta.21: the hotbar (win/hotbar) - the concept's cells; places in the target's pixels */
+.hb { position: absolute; font-family: Plex; color: #eceff5; }
+.hb .a { position: absolute; }
+.hb .glass { position: absolute; border: 1dp #ffffff17; background-color: #10141ccc; }
+.hb .cell { position: absolute; background-color: #ffffff0d; border: 1dp #ffffff1a; }
+.hb .cell.hot { background-color: #ffffff1a; border-color: #ffffff33; }
+.hb .cell.down { background-color: #0000004d; }
+.hb .cell.lit { border-color: #c9a55bd9; border-width: 2dp; }
+.hb .cell.chosen, .hb .cell.under { border-color: #c9a55b; border-width: 2dp; }
+.hb .cell.combo { background-color: #e6cb8a1f; border-color: #c9a55b; border-width: 2dp; }
+.hb .cell.ready { background-color: #4da3ff24; border-color: #4da3fff2; border-width: 2dp; }
+.hb .flash { position: absolute; border: 2dp #f0a050; }
+.hb .shade { position: absolute; background-color: #00000080; }
+.hb .plate { position: absolute; background-color: #0000009e; text-align: center; font-size: 11dp; font-weight: bold;
+             white-space: nowrap; }
+.hb .plate.sp { background-color: #3d7eebf2; color: #ffffff; }
+.hb .plate.lack { background-color: #c8443af2; color: #ffffff; }
+.hb .plate.timer { background-color: #000000b8; font-size: 12dp; color: #c9a55b; }
+.hb .bar { position: absolute; height: 3dp; }
+.hb .bar.combo { background-color: #e6cb8a; }
+.hb .bar.timer { background-color: #c9a55b; }
+.hb .chip { position: absolute; background-color: #c0392be6; text-align: center; font-size: 12dp; font-weight: bold; }
+.hb .hint { position: absolute; font-size: 11.5dp; color: #9aa3b5; white-space: nowrap; }
+.hb .rowbox { position: absolute; background-color: #ffffff0a; }
+.hb .rownum { position: absolute; text-align: center; font-size: 15dp; font-weight: bold; }
+.hb .f12 { position: absolute; text-align: center; font-size: 10.5dp; color: #9aa3b5; }
+.hb .label { position: absolute; text-align: center; font-size: 13dp; font-weight: bold; }
+.hb .toggle { position: absolute; background-color: #ffffff0f; border: 1dp #c9a55b00; }
+.hb .toggle.hot { background-color: #ffffff24; border-color: #c9a55bcc; }
+.hb .toggle.battle { background-color: #c0392be6; }
+.hb .toggle.battle.hot { background-color: #c0392b; }
+.hb .profile { position: absolute; text-align: center; font-size: 10dp; font-weight: bold; color: #e6cb8a; }
+.hb .pill { position: absolute; background-color: #10141cd9; border: 1dp #ffffff1f; }
+.hb .pilltext { position: absolute; font-size: 12.5dp; font-weight: bold; white-space: nowrap; }
+.hb .dot { position: absolute; background-color: #ffffff14; border: 1dp #ffffff4d; }
+.hb .dot.on { background-color: #e6cb8a; border-width: 0; }
+.hb .tip { position: absolute; border: 1dp #ffffff1f; background-color: #10141cf0; }
+.hb .tipline { position: absolute; font-size: 11.5dp; white-space: nowrap; }
+.hb .tipline.first { font-size: 13dp; font-weight: bold; }
+.hb .ttip { position: absolute; border: 1dp #ffffff1f; background-color: #10141cf0; text-align: center;
+            font-size: 12dp; white-space: nowrap; }
 scrollbarvertical { width: 8dp; margin-left: 4dp; }
 scrollbarvertical slidertrack { background-color: #ffffff0c; border-radius: 4dp; }
 scrollbarvertical sliderbar { background-color: #ffffff40; border-radius: 4dp; min-height: 24dp; }
@@ -1028,7 +1069,7 @@ Doc* docUnder(State& s) {
     const Rml::ElementDocument* owner = hover ? hover->GetOwnerDocument() : nullptr;
     if (!owner) return nullptr;
     for (Doc* d : s.docs)
-        if (d->shown() && d->doc() == owner) return d;
+        if (d->shown() && !d->passive && d->doc() == owner) return d;
     return nullptr;
 }
 

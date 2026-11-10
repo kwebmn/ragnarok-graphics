@@ -639,3 +639,36 @@ TEST(hotbar_flipped_puts_the_ammo_and_tips_under_the_bar) {
     hotbar::flip(L);  // twice: no further
     CHECK(L.glass.y == 0 && L.below);
 }
+
+// 3.0.18-beta.21 (the RML bar): the view says what the words say, where they say it
+TEST(hotbar_view_places_the_words_parts) {
+    using namespace uagfx::hotbar;
+    const Layout L = layout(Mode::Normal, 600, 700, 1.0f);
+    std::vector<Cell> cells(9);
+    cells[0].key = "F1";
+    cells[0].name = "Heal";
+    cells[0].level = 10;
+    cells[1].key = "F2";
+    cells[1].name = "Red Potion";
+    cells[1].count = 7;
+    cells[2].key = "F3";
+    cells[2].name = "Fire Wall";
+    cells[2].level = 10;
+    cells[2].spNeed = 40;
+    cells[2].spHave = 10;
+    Show show;
+    Texts t;
+    const View v = view(L, cells, 0, show, t);
+    const std::vector<Words> w = words(L, cells, 0, show, t);
+    const auto has = [&](const Plate& p) {
+        for (const Words& x : w)
+            if (x.text == p.text && std::fabs(x.box.x - p.box.x) < 0.01f && std::fabs(x.box.y - p.box.y) < 0.01f)
+                return true;
+        return false;
+    };
+    CHECK_EQ(v.cells.size(), size_t(9));
+    CHECK(has(v.cells[0].key) && has(v.cells[0].level) && has(v.cells[1].count) && has(v.cells[2].sp));
+    CHECK(v.cells[2].dry && v.cells[2].grey && v.cells[2].iconOpacity == 0.5f);
+    CHECK(has(v.row) && has(v.f12));
+    CHECK(v.cells[8].empty);
+}

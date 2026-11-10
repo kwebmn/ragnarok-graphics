@@ -182,6 +182,45 @@ struct Words {
 // `row`: the game's row shown in the normal mode (0-2)
 std::vector<Words> words(const Layout& L, const std::vector<Cell>& cells, int row, const Show& show, const Texts& t);
 
+// 3.0.18-beta.21 (the owner: «Переписывать 73 части в разметку RmlUi вручную»; win/hotbar's RML bar): every part the
+// picture shows, placed (the picture's pixels) and said as paint() and words() do - for the document to stand them
+struct Plate {
+    panel::Box box;  // w 0: none
+    std::string text;
+    uint32_t rgb = 0xECEFF5;
+};
+struct CellView {
+    panel::Box box;
+    bool hot = false, down = false, chosen = false, lit = false, under = false, barred = false, dry = false;
+    bool grey = false, combo = false, ready = false, padless = false, empty = true;
+    float iconOpacity = 1, delay = 0, flash = 0, comboW = 0, timerW = 0;
+    const panel::Picture* icon = nullptr;
+    Plate key, level, count, standing, sp, lack, timer;
+    int pad = -1;
+    panel::Box padBox;  // its button's badge (18 s at its top left)
+};
+struct PillView {
+    panel::Box box;
+    bool low = false;
+    uint32_t edge = 0xFFFFFF;
+    const panel::Picture* icon = nullptr;
+    panel::Box iconBox;
+    Plate text;
+    int dots = 0, lit = 0;
+    float dot = 7, dotGap = 3;
+};
+struct View {
+    std::vector<CellView> cells;
+    Plate row, f12, chip, hint;
+    std::vector<Plate> rowLabels;
+    bool battle = false;
+    std::vector<PillView> pills;  // the ammo's first, then the supplies'
+    panel::Box tip;
+    std::vector<Plate> tipLines;  // their boxes in the picture
+    Plate toggleTip, profile;
+};
+View view(const Layout& L, const std::vector<Cell>& cells, int row, const Show& show, const Texts& t);
+
 // The game's tables of a key and its words a line (data\skillnametable.txt "AC_DOUBLE#Double_Strafe#",
 // data\idnum2itemdisplaynametable.txt and idnum2itemresnametable.txt "501#Red_Potion#"); the "//" lines skipped
 std::map<std::string, std::string> nameTable(const std::string& text);

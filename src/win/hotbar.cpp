@@ -46,6 +46,9 @@
 #include "win/real_ddraw.hpp"
 #include "win/reference_load.hpp"
 #include "win/ui_cost.hpp"
+#include "win/uaui.hpp"
+#include "core/pad_glyphs.hpp"
+#include "core/ui_icons.hpp"
 
 namespace uagfx::win::hotbarwin {
 namespace {
@@ -133,6 +136,7 @@ struct Learned {
 };
 
 struct State {
+    bool uiShown = false;  // 3.0.18-beta.21: drawn by uaUI
     bool delayRing = true;  // 3.0.11-beta.276: [interface] delay_ring
     bool potionWarn = true;  // 3.0.11-beta.281: [interface] potion_warn
     potionwarn::Watch potions;
@@ -864,6 +868,325 @@ std::vector<Words> gdiWords(const std::vector<hb::Words>& in) {
     return out;
 }
 
+// ---- 3.0.18-beta.21 (the owner: «Переписывать 73 части в разметку RmlUi вручную»): the bar as an RmlUi document while
+// [interface] uaui is on - every part core hotbar's view() places and says (the cells' states, plates, bars, the
+// delay's sweep, the badges, the pills, the tips); drawn only (passive): its clicks, drags, wheel and keys stay this
+// part's own; its picture not painted then ----
+
+const char* kDoc = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss"/></head>
+<body class="hb" data-model="hotbar" data-style-width="w + 'px'" data-style-height="h + 'px'">
+<div class="glass" data-style-left="glass.x + 'px'" data-style-top="glass.y + 'px'" data-style-width="glass.w + 'px'" data-style-height="glass.h + 'px' data-style-border-radius="10 * s + 'px'" data-style-background-color="ground"></div>
+<span class="chip" data-if="chip.on" data-style-left="chip.b.x + 'px'" data-style-top="chip.b.y + 'px'" data-style-width="chip.b.w + 'px'" data-style-height="chip.b.h + 'px' data-style-line-height="chip.b.h + 'px'" data-style-border-radius="chip.b.h / 2 + 'px'">{{chip.text}}</span>
+<span class="hint" data-if="hint.on" data-style-left="hint.b.x + 'px'" data-style-top="hint.b.y + 'px'" data-style-width="hint.b.w + 'px'" data-style-height="hint.b.h + 'px' data-style-line-height="hint.b.h + 'px'">{{hint.text}}</span>
+<div class="rowbox" data-if="rowbox.w > 0" data-style-left="rowbox.x + 'px'" data-style-top="rowbox.y + 'px'" data-style-width="rowbox.w + 'px'" data-style-height="rowbox.h + 'px' data-style-border-radius="7 * s + 'px'"></div>
+<span class="rownum" data-if="rownum.on" data-style-left="rownum.b.x + 'px'" data-style-top="rownum.b.y + 'px'" data-style-width="rownum.b.w + 'px'" data-style-height="rownum.b.h + 'px'>{{rownum.text}}</span>
+<span class="f12" data-if="f12.on" data-style-left="f12.b.x + 'px'" data-style-top="f12.b.y + 'px'" data-style-width="f12.b.w + 'px'" data-style-height="f12.b.h + 'px'>{{f12.text}}</span>
+<span class="label" data-for="l : labels" data-style-left="l.b.x + 'px'" data-style-top="l.b.y + 'px'" data-style-width="l.b.w + 'px'" data-style-height="l.b.h + 'px' data-style-line-height="l.b.h + 'px'">{{l.text}}</span>
+<div class="a" data-for="c : cells">
+ <div data-attr-class="'cell ' + c.cls" data-style-left="c.b.x + 'px'" data-style-top="c.b.y + 'px'" data-style-width="c.b.w + 'px'" data-style-height="c.b.h + 'px' data-style-border-radius="7 * s + 'px'"></div>
+ <img class="a" data-if="c.icon != ''" data-attr-src="c.icon" data-style-left="c.ib.x + 'px'" data-style-top="c.ib.y + 'px'" data-style-width="c.ib.w + 'px'" data-style-height="c.ib.h + 'px' data-style-opacity="c.op"/>
+ <ua-ring class="a" data-if="c.delay > 0" sector="1" square="1" fill="#00000000" track="#0000008c" style="position: absolute;"
+   data-style-left="c.b.x + 'px'" data-style-top="c.b.y + 'px'" data-style-width="c.b.w + 'px'" data-style-height="c.b.h + 'px' data-attr-value="1 - c.delay"></ua-ring>
+ <img class="a" data-if="c.blocked != ''" data-attr-src="c.blocked" data-style-left="c.bb.x + 'px'" data-style-top="c.bb.y + 'px'" data-style-width="c.bb.w + 'px'" data-style-height="c.bb.h + 'px'/>
+ <span class="plate " data-if="c.key.on" data-style-left="c.key.b.x + 'px'" data-style-top="c.key.b.y + 'px'" data-style-width="c.key.b.w + 'px'" data-style-height="c.key.b.h + 'px' data-style-line-height="c.key.b.h + 'px'" data-style-color="c.key.colour" data-style-border-radius="3 * s + 'px'">{{c.key.text}}</span>
+ <span class="plate " data-if="c.level.on" data-style-left="c.level.b.x + 'px'" data-style-top="c.level.b.y + 'px'" data-style-width="c.level.b.w + 'px'" data-style-height="c.level.b.h + 'px' data-style-line-height="c.level.b.h + 'px'" data-style-color="c.level.colour" data-style-border-radius="3 * s + 'px'">{{c.level.text}}</span>
+ <span class="plate " data-if="c.count.on" data-style-left="c.count.b.x + 'px'" data-style-top="c.count.b.y + 'px'" data-style-width="c.count.b.w + 'px'" data-style-height="c.count.b.h + 'px' data-style-line-height="c.count.b.h + 'px'" data-style-color="c.count.colour" data-style-border-radius="3 * s + 'px'">{{c.count.text}}</span>
+ <span class="plate " data-if="c.standing.on" data-style-left="c.standing.b.x + 'px'" data-style-top="c.standing.b.y + 'px'" data-style-width="c.standing.b.w + 'px'" data-style-height="c.standing.b.h + 'px' data-style-line-height="c.standing.b.h + 'px'" data-style-color="c.standing.colour" data-style-border-radius="3 * s + 'px'">{{c.standing.text}}</span>
+ <div class="flash" data-if="c.flash > 0" data-style-left="c.b.x + 'px'" data-style-top="c.b.y + 'px'" data-style-width="c.b.w + 'px'" data-style-height="c.b.h + 'px' data-style-opacity="c.flash" data-style-border-radius="7 * s + 'px'"></div>
+ <span class="plate sp" data-if="c.sp.on" data-style-left="c.sp.b.x + 'px'" data-style-top="c.sp.b.y + 'px'" data-style-width="c.sp.b.w + 'px'" data-style-height="c.sp.b.h + 'px' data-style-line-height="c.sp.b.h + 'px'" data-style-color="c.sp.colour" data-style-border-radius="3 * s + 'px'">{{c.sp.text}}</span>
+ <span class="plate lack" data-if="c.lack.on" data-style-left="c.lack.b.x + 'px'" data-style-top="c.lack.b.y + 'px'" data-style-width="c.lack.b.w + 'px'" data-style-height="c.lack.b.h + 'px' data-style-line-height="c.lack.b.h + 'px'" data-style-color="c.lack.colour" data-style-border-radius="3 * s + 'px'">{{c.lack.text}}</span>
+ <div class="bar combo" data-if="c.combo" data-style-left="c.b.x + 4 * s + 'px'" data-style-top="c.b.y + c.b.h - 6 * s + 'px'"
+   data-style-width="c.comboW + 'px'" data-style-border-radius="1.5 * s + 'px'"></div>
+ <div class="bar timer" data-if="c.timer.on" data-style-left="c.b.x + 4 * s + 'px'" data-style-top="c.b.y + 3 * s + 'px'"
+   data-style-width="c.timerW + 'px'" data-style-border-radius="1.5 * s + 'px'"></div>
+ <span class="plate timer" data-if="c.timer.on" data-style-left="c.timer.b.x + 'px'" data-style-top="c.timer.b.y + 'px'" data-style-width="c.timer.b.w + 'px'" data-style-height="c.timer.b.h + 'px' data-style-line-height="c.timer.b.h + 'px'" data-style-border-radius="4 * s + 'px'">{{c.timer.text}}</span>
+ <div class="shade" data-if="c.padless" data-style-left="c.b.x + 'px'" data-style-top="c.b.y + 'px'" data-style-width="c.b.w + 'px'" data-style-height="c.b.h + 'px' data-style-border-radius="7 * s + 'px'"></div>
+ <img class="a" data-if="c.pad != ''" data-attr-src="c.pad" data-style-left="c.pb.x + 'px'" data-style-top="c.pb.y + 'px'" data-style-width="c.pb.w + 'px'" data-style-height="c.pb.h + 'px'/>
+</div>
+<div data-attr-class="toggle_cls" data-style-left="toggle.x + 'px'" data-style-top="toggle.y + 'px'" data-style-width="toggle.w + 'px'" data-style-height="toggle.h + 'px' data-style-border-radius="7 * s + 'px'"><img class="a" data-attr-src="toggle_icon"
+  data-style-left="toggle.w / 2 - 8 * s + 'px'" data-style-top="toggle.h / 2 - 8 * s + 'px'" data-style-width="16 * s + 'px'" data-style-height="16 * s + 'px'"/></div>
+<span class="profile" data-if="profile.on" data-style-left="profile.b.x + 'px'" data-style-top="profile.b.y + 'px'" data-style-width="profile.b.w + 'px'" data-style-height="profile.b.h + 'px'>{{profile.text}}</span>
+<div class="a" data-for="p : pills">
+ <div class="pill" data-style-left="p.b.x + 'px'" data-style-top="p.b.y + 'px'" data-style-width="p.b.w + 'px'" data-style-height="p.b.h + 'px' data-style-border-radius="p.b.h / 2 + 'px'" data-style-border-color="p.edge" data-style-border-width="p.ew + 'px'"></div>
+ <img class="a" data-if="p.icon != ''" data-attr-src="p.icon" data-style-left="p.ib.x + 'px'" data-style-top="p.ib.y + 'px'" data-style-width="p.ib.w + 'px'" data-style-height="p.ib.h + 'px'/>
+ <span class="pilltext" data-if="p.text.on" data-style-left="p.text.b.x + 'px'" data-style-top="p.text.b.y + 'px'" data-style-width="p.text.b.w + 'px'" data-style-height="p.text.b.h + 'px' data-style-line-height="p.text.b.h + 'px'" data-style-color="p.text.colour">{{p.text.text}}</span>
+ <div class="dot" data-for="d : p.dots" data-class-on="d.on" data-style-left="d.b.x + 'px'" data-style-top="d.b.y + 'px'" data-style-width="d.b.w + 'px'" data-style-height="d.b.h + 'px' data-style-border-radius="d.b.h / 2 + 'px'"></div>
+</div>
+<div class="tip" data-if="tip.w > 0" data-style-left="tip.x + 'px'" data-style-top="tip.y + 'px'" data-style-width="tip.w + 'px'" data-style-height="tip.h + 'px' data-style-border-radius="8 * s + 'px'"></div>
+<span class="tipline" data-for="l, i : tiplines" data-class-first="i == 0" data-style-left="l.b.x + 'px'" data-style-top="l.b.y + 'px'" data-style-width="l.b.w + 'px'" data-style-height="l.b.h + 'px' data-style-color="l.colour">{{l.text}}</span>
+<span class="ttip" data-if="ttip.on" data-style-left="ttip.b.x + 'px'" data-style-top="ttip.b.y + 'px'" data-style-width="ttip.b.w + 'px'" data-style-height="ttip.b.h + 'px' data-style-line-height="ttip.b.h + 'px'" data-style-border-radius="8 * s + 'px'">{{ttip.text}}</span>
+</body></rml>)RML";
+
+struct BoxV {
+    float x = 0, y = 0, w = 0, h = 0;
+};
+struct PlateV {
+    BoxV b;
+    Rml::String text, colour;
+    bool on = false;
+};
+struct CellV {
+    BoxV b, ib, bb, pb;
+    Rml::String cls, icon, blocked, pad;
+    float op = 1, delay = 0, flash = 0, comboW = 0, timerW = 0;
+    bool combo = false, padless = false;
+    PlateV key, level, count, standing, sp, lack, timer;
+};
+struct DotV {
+    BoxV b;
+    bool on = false;
+};
+struct PillV {
+    BoxV b, ib;
+    Rml::String edge, icon;
+    float ew = 1;
+    PlateV text;
+    std::vector<DotV> dots;
+};
+
+struct Ui {
+    uaui::Doc doc;
+    float w = 0, h = 0, s = 1;
+    BoxV glass, rowbox, toggle, tip;
+    Rml::String ground, toggleCls, toggleIcon;
+    PlateV chip, hint, rownum, f12, profile, ttip;
+    std::vector<PlateV> labels, tiplines;
+    std::vector<CellV> cells;
+    std::vector<PillV> pills;
+    std::string key;
+    std::map<std::string, panel::Picture> made;  // icons drawn once: grey copies, the crossed circle, badges
+    std::map<std::string, std::string> sources;
+};
+
+Ui& ui() {
+    static Ui u;
+    return u;
+}
+
+BoxV bv(const panel::Box& b) { return BoxV{b.x, b.y, b.w, b.h}; }
+
+std::string hex(uint32_t rgb, int alpha = -1) {
+    char b[16];
+    if (alpha < 0) std::snprintf(b, sizeof b, "#%06x", unsigned(rgb & 0xFFFFFF));
+    else std::snprintf(b, sizeof b, "#%06x%02x", unsigned(rgb & 0xFFFFFF), alpha & 0xFF);
+    return b;
+}
+
+PlateV pv(const hb::Plate& p) { return PlateV{bv(p.box), p.text, hex(p.rgb), p.box.w > 0 && !p.text.empty()}; }
+
+std::string source(Ui& u, const std::string& key, const panel::Picture* p) {
+    if (!p || p->width <= 0) return {};
+    return uaui::picture(p, uaui::stamp(p), u.sources[key]);
+}
+
+// A picture of the driver's made once by its key (and drawn by `paint` into a side x side picture)
+template <typename F>
+std::string madeOnce(Ui& u, const std::string& key, int w, int h, F paint) {
+    auto it = u.made.find(key);
+    if (it == u.made.end()) {
+        panel::Picture p;
+        p.width = std::max(1, w), p.height = std::max(1, h);
+        p.px.assign(size_t(p.width) * size_t(p.height), 0u);
+        paint(p);
+        it = u.made.emplace(key, std::move(p)).first;
+    }
+    return source(u, "m:" + key, &it->second);
+}
+
+std::string greyOf(Ui& u, const panel::Picture* icon) {  // as the old picture's dimmed icons: by brightness
+    if (!icon) return {};
+    char key[40];
+    std::snprintf(key, sizeof key, "grey:%llx:%d", (unsigned long long)uintptr_t(icon), uaui::stamp(icon));
+    return madeOnce(u, key, icon->width, icon->height, [&](panel::Picture& p) {
+        for (size_t i = 0; i < p.px.size() && i < icon->px.size(); ++i) {
+            const uint32_t c = icon->px[i];
+            const uint32_t v = (((c >> 16) & 0xFF) * 77 + ((c >> 8) & 0xFF) * 150 + (c & 0xFF) * 29) >> 8;
+            p.px[i] = (c & 0xFF000000u) | v << 16 | v << 8 | v;
+        }
+    });
+}
+
+bool uiFrame(State& s, const hb::Show& show) {
+    Ui& u = ui();
+    if (!uaui::ready()) {
+        u.doc.show(false);
+        return false;
+    }
+    if (!u.doc.made()) {
+        u.doc.passive = true;
+        if (!u.doc.make("hotbar", kDoc, [&](Rml::DataModelConstructor& m) {
+                if (auto b = m.RegisterStruct<BoxV>()) {
+                    b.RegisterMember("x", &BoxV::x);
+                    b.RegisterMember("y", &BoxV::y);
+                    b.RegisterMember("w", &BoxV::w);
+                    b.RegisterMember("h", &BoxV::h);
+                }
+                if (auto p = m.RegisterStruct<PlateV>()) {
+                    p.RegisterMember("b", &PlateV::b);
+                    p.RegisterMember("text", &PlateV::text);
+                    p.RegisterMember("colour", &PlateV::colour);
+                    p.RegisterMember("on", &PlateV::on);
+                }
+                if (auto c = m.RegisterStruct<CellV>()) {
+                    c.RegisterMember("b", &CellV::b);
+                    c.RegisterMember("ib", &CellV::ib);
+                    c.RegisterMember("bb", &CellV::bb);
+                    c.RegisterMember("pb", &CellV::pb);
+                    c.RegisterMember("cls", &CellV::cls);
+                    c.RegisterMember("icon", &CellV::icon);
+                    c.RegisterMember("blocked", &CellV::blocked);
+                    c.RegisterMember("pad", &CellV::pad);
+                    c.RegisterMember("op", &CellV::op);
+                    c.RegisterMember("delay", &CellV::delay);
+                    c.RegisterMember("flash", &CellV::flash);
+                    c.RegisterMember("comboW", &CellV::comboW);
+                    c.RegisterMember("timerW", &CellV::timerW);
+                    c.RegisterMember("combo", &CellV::combo);
+                    c.RegisterMember("padless", &CellV::padless);
+                    c.RegisterMember("key", &CellV::key);
+                    c.RegisterMember("level", &CellV::level);
+                    c.RegisterMember("count", &CellV::count);
+                    c.RegisterMember("standing", &CellV::standing);
+                    c.RegisterMember("sp", &CellV::sp);
+                    c.RegisterMember("lack", &CellV::lack);
+                    c.RegisterMember("timer", &CellV::timer);
+                }
+                if (auto d = m.RegisterStruct<DotV>()) {
+                    d.RegisterMember("b", &DotV::b);
+                    d.RegisterMember("on", &DotV::on);
+                }
+                m.RegisterArray<std::vector<DotV>>();
+                if (auto p = m.RegisterStruct<PillV>()) {
+                    p.RegisterMember("b", &PillV::b);
+                    p.RegisterMember("ib", &PillV::ib);
+                    p.RegisterMember("edge", &PillV::edge);
+                    p.RegisterMember("ew", &PillV::ew);
+                    p.RegisterMember("icon", &PillV::icon);
+                    p.RegisterMember("text", &PillV::text);
+                    p.RegisterMember("dots", &PillV::dots);
+                }
+                m.RegisterArray<std::vector<PlateV>>();
+                m.RegisterArray<std::vector<CellV>>();
+                m.RegisterArray<std::vector<PillV>>();
+                m.Bind("w", &u.w);
+                m.Bind("h", &u.h);
+                m.Bind("s", &u.s);
+                m.Bind("glass", &u.glass);
+                m.Bind("ground", &u.ground);
+                m.Bind("rowbox", &u.rowbox);
+                m.Bind("toggle", &u.toggle);
+                m.Bind("toggle_cls", &u.toggleCls);
+                m.Bind("toggle_icon", &u.toggleIcon);
+                m.Bind("tip", &u.tip);
+                m.Bind("chip", &u.chip);
+                m.Bind("hint", &u.hint);
+                m.Bind("rownum", &u.rownum);
+                m.Bind("f12", &u.f12);
+                m.Bind("profile", &u.profile);
+                m.Bind("ttip", &u.ttip);
+                m.Bind("labels", &u.labels);
+                m.Bind("tiplines", &u.tiplines);
+                m.Bind("cells", &u.cells);
+                m.Bind("pills", &u.pills);
+            }))
+            return false;
+    }
+    const std::string key = s.key;  // the picture's key: everything it shows
+    if (key != u.key) {
+        u.key = key;
+        const hb::Layout& L = s.layout;
+        const hb::Texts t = texts();
+        const hb::View v = hb::view(L, s.cells, s.row, show, t);
+        const float sc = L.s;
+        u.w = float(L.w), u.h = float(L.h), u.s = sc;
+        u.glass = bv(L.glass);
+        u.ground = hex(0x10141C, int(std::lround(uistyle::panel() * 255)));
+        u.rowbox = bv(L.row);
+        u.chip = pv(v.chip), u.hint = pv(v.hint), u.rownum = pv(v.row), u.f12 = pv(v.f12);
+        u.profile = pv(v.profile), u.ttip = pv(v.toggleTip);
+        u.labels.clear();
+        for (const hb::Plate& p : v.rowLabels) u.labels.push_back(pv(p));
+        u.tip = bv(v.tip);
+        u.tiplines.clear();
+        for (const hb::Plate& p : v.tipLines) u.tiplines.push_back(pv(p));
+        const bool battle = L.mode == hb::Mode::Battle;
+        u.toggle = bv(L.toggle);
+        u.toggleCls = std::string("toggle") + (battle ? " battle" : "") + (show.hoverToggle ? " hot" : "");
+        const int icon16 = std::max(8, int(std::ceil(16 * sc)));
+        const uint32_t ti = battle ? 0xFFFFFF : show.hoverToggle ? 0xE6CB8A : 0x9AA3B5;
+        u.toggleIcon = madeOnce(u, "battle:" + std::to_string(icon16) + hex(ti), icon16, icon16, [&](panel::Picture& p) {
+            uiicons::draw(p, uiicons::Icon::Battle, 0, 0, float(icon16), ti, 1.0f, 2.0f);
+        });
+        u.cells.clear();
+        for (const hb::CellView& c : v.cells) {
+            CellV x;
+            x.b = bv(c.box);
+            x.cls = std::string(c.hot ? " hot" : "") + (c.down ? " down" : "") + (c.lit ? " lit" : "") +
+                    (c.chosen ? " chosen" : "") + (c.under ? " under" : "") + (c.combo ? " combo" : "") +
+                    (c.ready ? " ready" : "");
+            if (c.icon) {
+                x.icon = c.grey ? greyOf(u, c.icon) : source(u, "i:" + std::to_string(uintptr_t(c.icon)), c.icon);
+                // the icon centred in its cell at its own size, as the picture's put()
+                x.ib = BoxV{std::round(c.box.x + (c.box.w - float(c.icon->width)) / 2),
+                            std::round(c.box.y + (c.box.h - float(c.icon->height)) / 2), float(c.icon->width),
+                            float(c.icon->height)};
+            }
+            x.op = c.iconOpacity;
+            x.delay = c.delay;
+            if (c.barred) {
+                const float side = std::min(c.box.w, c.box.h) * 0.7f;
+                const int ps = std::max(8, int(std::ceil(side)));
+                x.blocked = madeOnce(u, "blocked:" + std::to_string(ps), ps, ps, [&](panel::Picture& p) {
+                    uiicons::draw(p, uiicons::Icon::Blocked, 0, 0, float(ps), 0xECEFF5, 0.9f, 2.0f);
+                });
+                x.bb = BoxV{c.box.x + (c.box.w - side) / 2, c.box.y + (c.box.h - side) / 2, side, side};
+            }
+            x.key = pv(c.key), x.level = pv(c.level), x.count = pv(c.count), x.standing = pv(c.standing);
+            x.sp = pv(c.sp), x.lack = pv(c.lack), x.timer = pv(c.timer);
+            x.flash = std::min(1.0f, c.flash);
+            x.combo = c.combo, x.comboW = c.comboW, x.timerW = c.timerW, x.padless = c.padless;
+            if (c.pad >= 0) {  // its button's badge with its letter
+                const int ps = std::max(8, int(std::ceil(c.padBox.w)));
+                const padglyph::Family f = show.sony ? padglyph::Family::Sony : padglyph::Family::Xbox;
+                x.pad = madeOnce(u, "pad:" + std::to_string(c.pad) + (show.sony ? "s" : "x") + std::to_string(ps), ps,
+                                 ps, [&](panel::Picture& p) {
+                                     padglyph::paint(p, padglyph::Button(c.pad), f, 0, 0, float(ps));
+                                     const padglyph::Letter l = padglyph::letter(padglyph::Button(c.pad), f, 0, 0,
+                                                                                 float(ps));
+                                     if (!l.text.empty())
+                                         drawWords(p, {Words{l.box, utf8Wide(l.text), l.rgb, l.px, true, DT_CENTER,
+                                                             false}});
+                                 });
+                x.pb = bv(c.padBox);
+            }
+            u.cells.push_back(std::move(x));
+        }
+        u.pills.clear();
+        for (const hb::PillView& p : v.pills) {
+            PillV x;
+            x.b = bv(p.box);
+            x.edge = p.low ? hex(p.edge, 230) : hex(0xFFFFFF, 31);
+            x.ew = (p.low ? 1.5f : 1.0f) * sc;
+            if (p.icon) {
+                x.icon = source(u, "i:" + std::to_string(uintptr_t(p.icon)), p.icon);
+                x.ib = BoxV{std::round(p.iconBox.x + (p.iconBox.w - float(p.icon->width)) / 2),
+                            std::round(p.iconBox.y + (p.iconBox.h - float(p.icon->height)) / 2),
+                            float(p.icon->width), float(p.icon->height)};
+            }
+            x.text = pv(p.text);
+            for (int d = 0; d < p.dots; ++d)
+                x.dots.push_back(DotV{BoxV{p.box.x + 10 * sc + float(d) * (p.dot + p.dotGap),
+                                           p.box.y + (p.box.h - p.dot) / 2, p.dot, p.dot},
+                                      d < p.lit});
+            u.pills.push_back(std::move(x));
+        }
+        u.doc.dirtyAll();
+    }
+    u.doc.place(s.layout.x, s.layout.y);
+    u.doc.show(true);
+    return true;
+}
+
 void render(State& s, const hb::Show& show) {
     const uicost::Paint cost("hotbar", s.layout.w, s.layout.h);  // 3.0.11-beta.55
     if (!panel::blank(s.picture, s.layout.w, s.layout.h)) return;  // 3.0.11-beta.57: in the memory it had
@@ -1261,8 +1584,9 @@ void frame(HWND game, bool on, bool ownBars, bool padHints, bool ammo, bool coun
     }
     if (const std::string drawn = key + '#' + std::to_string(uistyle::generation()); drawn != s.key) {  // its grounds
         s.key = drawn;
-        render(s, show);
+        if (!uaui::ready()) render(s, show);  // 3.0.18-beta.21: uaUI's bar needs no picture
     }
+    s.uiShown = uiFrame(s, show);
     s.shown = true;
     block(s, game);
 }
@@ -1322,10 +1646,13 @@ bool drop(int x, int y, uint32_t drag) {
 
 void draw(FrameRecord& record, gpu::Renderer& renderer) {
     State& s = state();
-    if (!s.shown || s.k <= 0 || s.picture.width <= 0 || s.picture.height <= 0) return;
+    if (!s.shown) ui().doc.show(false);  // 3.0.18-beta.21
+    const bool byUaui = s.uiShown && s.shown;  // uaUI draws the bar; the lifted icon stays this part's
+    if (!s.shown || s.k <= 0 || (!byUaui && (s.picture.width <= 0 || s.picture.height <= 0))) return;
     int cursor = -1, cx = 0, cy = 0;  // under the game's own cursor, as the minimap
     if (readGameCursor(cx, cy)) cursor = panel::cursorDraw(record, float(cx), float(cy));
-    drawPart(record, renderer, s.picture, s.texture, s.texW, s.texH, s.upload, s.layout.x, s.layout.y, s.k);
+    if (!byUaui)
+        drawPart(record, renderer, s.picture, s.texture, s.texW, s.texH, s.upload, s.layout.x, s.layout.y, s.k);
     if (s.lift.dragging && s.liftPicture.width > 0) {  // 3.0.11-beta.147: the lifted icon, its middle at the pointer
         const int x = s.layout.x + int(std::lround(s.liftX)) - s.liftPicture.width / 2;
         const int y = s.layout.y + int(std::lround(s.liftY)) - s.liftPicture.height / 2;

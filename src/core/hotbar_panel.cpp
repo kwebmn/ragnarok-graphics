@@ -507,6 +507,118 @@ std::vector<Words> words(const Layout& L, const std::vector<Cell>& cells, int ro
     return out;
 }
 
+View view(const Layout& L, const std::vector<Cell>& cells, int row, const Show& show, const Texts& t) {
+    View v;
+    const float s = L.s;
+    v.battle = L.mode == Mode::Battle;
+    if (L.row.w > 0) {
+        v.row = {panel::Box{L.row.x, L.row.y + 6 * s, L.row.w, 18 * s}, std::to_string(row + 1), kText};
+        v.f12 = {panel::Box{L.row.x, L.row.y + L.row.h - 20 * s, L.row.w, 14 * s}, "F12", kMuted};
+    }
+    if (L.header.w > 0) {
+        const float chipW = panel::wordsWidth(t.battle, 12 * s, true) + 18 * s;
+        v.chip = {panel::Box{L.header.x, L.header.y, chipW, L.header.h}, t.battle, kText};
+        v.hint = {panel::Box{L.header.x + chipW + 8 * s, L.header.y, L.header.w - chipW - 8 * s, L.header.h},
+                  t.battleHint, kMuted};
+    }
+    for (size_t r = 0; r < L.rowLabels.size(); ++r)
+        v.rowLabels.push_back({L.rowLabels[r], std::to_string(gameRow(int(r)) + 1), kText});
+    for (size_t i = 0; i < L.cells.size(); ++i) {
+        CellView cv;
+        const panel::Box b = shown(L, i, show);
+        cv.box = b;
+        const Cell* c = i < cells.size() ? &cells[i] : nullptr;
+        cv.hot = int(i) == show.hover;
+        cv.down = int(i) == show.pressed;
+        cv.chosen = c && c->selected;
+        cv.lit = show.dropping;
+        cv.under = int(i) == show.over && show.over != show.lifted;
+        if (!c) {
+            v.cells.push_back(cv);
+            continue;
+        }
+        cv.empty = c->name.empty();
+        cv.barred = c->notHere != NotHere::No || c->unlearned;
+        cv.dry = !cv.barred && (noSp(*c) || !c->lack.empty());
+        cv.icon = c->icon && c->icon->width > 0 ? c->icon : nullptr;
+        cv.grey = cv.barred || cv.dry;
+        cv.iconOpacity = (cv.barred ? 0.45f : cv.dry ? 0.5f : c->count == 0 ? 0.3f : 1.0f) *
+                         (int(i) == show.lifted ? 0.3f : 1.0f);
+        if (c->count < 0 && !c->name.empty() && show.delay > 0) cv.delay = show.delay;
+        if (!c->key.empty() && !show.pad)
+            cv.key = {panel::Box{b.x + 2 * s, b.y + 2 * s, panel::wordsWidth(c->key, 11 * s, true) + 6 * s, 13 * s},
+                      c->key, kGold2};
+        if (c->level > 0) cv.level = {levelBox(b, c->level, s), std::to_string(c->level), kText};
+        if (c->count >= 0) {
+            const std::string n = std::to_string(c->count);
+            const float w = panel::wordsWidth(n, 11 * s, true) + 6 * s;
+            cv.count = {panel::Box{b.x + b.w - w - 2 * s, b.y + b.h - 15 * s, w, 13 * s}, n,
+                        c->count == 0 ? kMuted : c->low ? kAmmoOut : kText};
+        }
+        if (c->count < 0 && !c->standing.empty())
+            cv.standing = {standingBox(b, c->standing, s), c->standing, c->standingOut ? kAmmoOut : kText};
+        cv.flash = c->flash;
+        if (cv.dry && noSp(*c)) cv.sp = {spBox(b, s), "SP", kWhite};
+        else if (cv.dry) cv.lack = {lackBox(b, c->lack, s), c->lack, kWhite};
+        cv.combo = !cv.barred && c->combo > 0 && !cv.chosen;
+        cv.comboW = (b.w - 8 * s) * std::min(1.0f, c->combo);
+        cv.ready = !cv.barred && !cv.combo && c->ready && !cv.chosen;
+        if (c->timer > 0 && !c->timerText.empty()) {
+            cv.timerW = (b.w - 8 * s) * std::min(1.0f, c->timer);
+            cv.timer = {timerPlate(b, c->timerText, s), c->timerText, kGold};
+        }
+        cv.padless = show.pad && c->pad < 0;
+        if (show.pad && c->pad >= 0) {
+            cv.pad = c->pad;
+            cv.padBox = panel::Box{b.x - 4 * s, b.y - 5 * s, 18 * s, 18 * s};
+        }
+        v.cells.push_back(cv);
+    }
+    const std::vector<TipLine> lines = show.tip && show.hover >= 0 && show.hover < int(cells.size())
+                                           ? tipLines(cells[size_t(show.hover)], t)
+                                           : std::vector<TipLine>{};
+    v.tip = tipBox(L, show.hover, lines);
+    for (size_t i = 0; v.tip.w > 0 && i < lines.size(); ++i)
+        v.tipLines.push_back({panel::Box{v.tip.x + 10 * s, v.tip.y + (4 + 18 * float(i)) * s, v.tip.w - 20 * s, 17 * s},
+                              lines[i].text, lines[i].rgb});
+    if (const panel::Box ammo = ammoShown(L, show, v.tip, t); ammo.w > 0) {
+        PillView p;
+        p.box = ammo;
+        p.low = show.ammo.count < kAmmoLow;
+        p.edge = ammoRgb(show.ammo.count);
+        p.icon = show.ammo.icon && show.ammo.icon->width > 0 ? show.ammo.icon : nullptr;
+        p.iconBox = panel::Box{ammo.x + 8 * s, ammo.y, kAmmoIcon * s, ammo.h};
+        p.text = {panel::Box{ammo.x + (8 + kAmmoIcon + 6) * s, ammo.y, ammo.w - (8 + kAmmoIcon + 6 + 4) * s, ammo.h},
+                  ammoText(show.ammo), ammoRgb(show.ammo.count)};
+        v.pills.push_back(p);
+    }
+    const std::vector<panel::Box> places = supplyPlaces(L, show);
+    for (size_t i = 0; i < places.size() && i < show.supplies.size(); ++i) {
+        const panel::Box& b = places[i];
+        const Supply& sp = show.supplies[i];
+        if (overlap(b, v.tip) || (show.hoverToggle && overlap(b, toggleTip(L, t)))) continue;
+        PillView p;
+        p.box = b;
+        p.low = sp.dots == 0 && sp.count <= kAmmoVeryLow;
+        p.edge = supplyRgb(sp);
+        p.dots = sp.dots;
+        p.lit = sp.count;
+        p.dot = kDot * s;
+        p.dotGap = kDotGap * s;
+        p.icon = sp.dots == 0 && sp.icon && sp.icon->width > 0 ? sp.icon : nullptr;
+        p.iconBox = panel::Box{b.x + 8 * s, b.y, kAmmoIcon * s, b.h};
+        if (sp.dots == 0)
+            p.text = {panel::Box{b.x + (8 + kAmmoIcon + 6) * s, b.y, b.w - (8 + kAmmoIcon + 6 + 4) * s, b.h},
+                      supplyText(sp), supplyRgb(sp)};
+        v.pills.push_back(p);
+    }
+    if (show.hoverToggle) v.toggleTip = {toggleTip(L, t), toggleText(L, t), kText};
+    if (show.profile > 1)
+        v.profile = {panel::Box{L.toggle.x + L.toggle.w - 6 * s, L.toggle.y - 7 * s, 12 * s, 12 * s},
+                     std::to_string(show.profile), kGold2};
+    return v;
+}
+
 std::map<std::string, std::string> nameTable(const std::string& text) {
     std::map<std::string, std::string> out;
     size_t at = 0;
