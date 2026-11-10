@@ -34,7 +34,6 @@ struct Layout {
 Layout layout(int n, int targetW, int targetH, float scale);
 Part hitTest(const Layout& L, float x, float y);  // the picture's pixels
 
-void paint(panel::Picture& out, const Layout& L, const Card& c, Part hover);
 
 enum class Align : uint8_t { Left, Right, Center };
 struct Words {

@@ -222,8 +222,6 @@ struct Texts {
     std::string found;            // 3.0.11-beta.213: the search's plate («Poring · 12»); "" none
 };
 constexpr uint32_t kFoundRgb = 0xFF8A3D;  // 3.0.11-beta.213: a search's marks and its plate's words
-// The panel's picture (premultiplied: see-through round its parts), the words over it
-void paint(panel::Picture& out, const Layout& L, const Scene& sc, const Texts& t);
 std::vector<Words> words(const Layout& L, const Scene& sc, const Texts& t);
 // 3.0.18-beta.26 (uaUI's minimap): the map's square alone in `out` (L.map's size: its pixels, the marks, the rounded
 // corners); words() split - the Kafras' «K» on the map (the square's pixels) and the rest (the panel's)
@@ -258,7 +256,6 @@ BigPart bigPartAt(const Big& b, float x, float y);
 int bigLayerAt(const Big& b, float x, float y);  // 3.0.11-beta.119: the layer's chip there, -1 none
 // The map's picture alone at the big map's size (made once a map and a size) and the rest over a copy of it
 void paintBigMap(panel::Picture& out, const Big& b, const Scene& sc);
-void paintBig(panel::Picture& out, const panel::Picture& map, const Big& b, const Scene& sc);
 // 3.0.18-beta.42 (uaUI's big map): the map's square alone in `out` (b.map's size: the map's picture, the marks, the
 // labels' grounds - paintBig()'s there)
 void paintBigSquare(panel::Picture& out, const panel::Picture& map, const Big& b, const Scene& sc);

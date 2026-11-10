@@ -204,8 +204,6 @@ struct Hit {
 void shown(const Layout& L, const std::vector<Row>& rows, int scroll, size_t& first, size_t& count);
 Hit hitTest(const Layout& L, const std::vector<Row>& rows, const Show& sh, float x, float y);
 
-void paint(panel::Picture& out, const Layout& L, const std::vector<Row>& rows, const Input& in, const Show& sh,
-           const Texts& t, const Measure& m);
 
 enum class Align : uint8_t { Left, Right, Center };
 struct Words {

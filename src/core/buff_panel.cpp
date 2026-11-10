@@ -42,51 +42,6 @@ uint32_t premultiplied(uint32_t argb) {
     return a << 24 | ch(16) << 16 | ch(8) << 8 | ch(0);
 }
 
-// A premultiplied picture over the panel's at (ox, oy), each pixel times a rounded box's share (`r` 0: none)
-void put(panel::Picture& out, const panel::Picture& pic, const panel::Box& at, float r) {
-    const int ox = int(std::lround(at.x)), oy = int(std::lround(at.y));
-    if (out.scene) {  // 3.0.18-beta.12: recorded for uaUI
-        panel::recordImage(out, pic, float(ox), float(oy), 1.0f, r >= std::min(at.w, at.h) / 2 - 0.5f ? r : 0.0f);
-        return;
-    }
-    for (int y = 0; y < pic.height; ++y)
-        for (int x = 0; x < pic.width; ++x) {
-            const int tx = ox + x, ty = oy + y;
-            if (tx < 0 || ty < 0 || tx >= out.width || ty >= out.height) continue;
-            uint32_t c = pic.px[size_t(y) * size_t(pic.width) + size_t(x)];
-            if (r > 0) {
-                const float k = cover(roundBox(float(tx) + 0.5f, float(ty) + 0.5f, at, r));
-                if (k < 1) {
-                    const auto ch = [&](int sh) { return uint32_t(float((c >> sh) & 0xFF) * k + 0.5f); };
-                    c = ch(24) << 24 | ch(16) << 16 | ch(8) << 8 | ch(0);
-                }
-            }
-            if (!(c >> 24)) continue;
-            uint32_t& d = out.px[size_t(ty) * size_t(out.width) + size_t(tx)];
-            const uint32_t keep = 255 - (c >> 24);
-            const auto ch = [&](int sh) {
-                return std::min<uint32_t>(255, ((c >> sh) & 0xFF) + ((d >> sh) & 0xFF) * keep / 255);
-            };
-            d = ch(24) << 24 | ch(16) << 16 | ch(8) << 8 | ch(0);
-        }
-}
-
-// 3.0.11-beta.231 (variant C): the time gone dark over the icon - from twelve o'clock clockwise, past `left` of the
-// circle (its share left), as a cooldown's sweep; the edge between them smoothed
-void sweep(panel::Picture& p, const panel::Box& b, float r, float left) {
-    const float cx = b.x + b.w / 2, cy = b.y + b.h / 2;
-    for (int y = std::max(0, int(b.y)); y < std::min(p.height, int(std::ceil(b.y + b.h))); ++y)
-        for (int x = std::max(0, int(b.x)); x < std::min(p.width, int(std::ceil(b.x + b.w))); ++x) {
-            const float px = float(x) + 0.5f, py = float(y) + 0.5f, k = cover(roundBox(px, py, b, r));
-            if (k <= 0) continue;
-            float turn = std::atan2(px - cx, cy - py) / 6.2831853f;  // clockwise from twelve o'clock
-            if (turn < 0) turn += 1;
-            const float dist = panel::length(px - cx, py - cy);
-            const float gone = std::clamp((turn - left) * 6.2831853f * std::max(dist, 1.0f) + 0.5f, 0.0f, 1.0f);
-            if (gone > 0) panel::over(p.px[size_t(y) * size_t(p.width) + size_t(x)], 0x000000, 0.6f * k * gone);
-        }
-}
-
 // A column's (the row's) entries: its favourites, the rest, its debuffs; whether «ще N» stands in it
 struct Line {
     std::vector<int> fav, rest, deb;
@@ -174,8 +129,6 @@ std::string fmtCount(const std::string& text, int n) {
     if (at != std::string::npos) out.replace(at, 3, std::to_string(n));
     return out;
 }
-
-panel::Box grow(const panel::Box& b, float by) { return panel::Box{b.x - by, b.y - by, b.w + 2 * by, b.h + 2 * by}; }
 
 }  // namespace
 
@@ -395,36 +348,6 @@ panel::Box tipBox(const Layout& L, int slot, float width) {
     return panel::Box{x, s.frame.y + s.frame.h / 2 - h / 2, right - x, h};
 }
 
-void paint(panel::Picture& out, const Layout& L, const std::vector<Entry>& entries, int hover) {
-    const float s = L.s;
-    if (L.toggle.w > 0) {  // 3.0.11-beta.231: the names' round button - three lines, gold while the names show
-        const bool on = L.look == Look::Names;
-        panel::roundRect(out, L.toggle, L.toggle.h / 2, kBlack, hover == kToggleTip ? 0.62f : 0.45f,
-                         on ? kGold : kWhite, on ? 0.85f : 0.28f, 1.0f * s);
-        const float lw = 10 * s, lx = L.toggle.x + (L.toggle.w - lw) / 2, cy = L.toggle.y + L.toggle.h / 2;
-        for (int k = -1; k <= 1; ++k)
-            panel::roundRect(out, panel::Box{lx, cy + float(k) * 4 * s - 0.75f * s, lw, 1.5f * s}, 0.75f * s,
-                             on ? kGold : kWhite, 0.9f);
-    }
-    for (size_t i = 0; i < L.slots.size(); ++i) {
-        const Slot& slot = L.slots[i];
-        const Entry& e = entries[size_t(slot.entry)];
-        const bool bad = e.kind == Kind::Debuff;
-        panel::roundRect(out, grow(slot.frame, 2.5f * s), (kIconRadius + 2.5f) * s, kBlack, 0.22f);  // its shadow
-        panel::roundRect(out, grow(slot.frame, 1.0f * s), (kIconRadius + 1) * s, kBlack, 0.7f);      // its outline
-        if (e.picture && e.picture->width > 0)
-            put(out, *e.picture, slot.icon, kIconRadius * s);
-        else
-            panel::roundRect(out, slot.icon, kIconRadius * s, kTile, 1.0f);
-        if (e.left >= 0) sweep(out, slot.icon, kIconRadius * s, std::clamp(e.left, 0.0f, 1.0f));
-        if (bad)
-            panel::roundRect(out, grow(slot.frame, 1.0f * s), (kIconRadius + 1) * s, 0, 0, kRed, 0.95f, 1.6f * s);
-        if (int(i) == hover)
-            panel::roundRect(out, grow(slot.frame, 1.5f * s), (kIconRadius + 1.5f) * s, 0, 0, kWhite, 0.85f,
-                             1.5f * s);
-    }
-}
-
 namespace {
 
 // The tip's two lines and its box: the name and the time; a favourite's click off, the rest's on; a debuff none
@@ -483,11 +406,6 @@ panel::Box tipText(const Layout& L, const std::vector<Entry>& entries, int hover
 panel::Box tipOf(const Layout& L, const std::vector<Entry>& entries, int hover, const Texts& t) {
     std::string first, second;
     return tipLines(L, entries, hover, t, first, second);
-}
-
-void paintTip(panel::Picture& out, const Layout& L, const std::vector<Entry>& entries, int hover, const Texts& t) {
-    const panel::Box b = tipOf(L, entries, hover, t);
-    if (b.w > 0) panel::roundRect(out, b, 8 * L.s, kCard, 0.94f, kWhite, 0.12f, 1.0f * L.s);
 }
 
 panel::Picture iconPicture(const std::vector<uint32_t>& argb, int width, int height, bool alpha, int side,

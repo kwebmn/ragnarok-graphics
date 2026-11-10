@@ -55,7 +55,6 @@ std::vector<Line> lastLines(const std::vector<Line>& lines, int rows);
 Layout layout(const Card& c, int targetW, int targetH, float scale);
 Hit hitTest(const Layout& L, float x, float y);  // the picture's pixels
 
-void paint(panel::Picture& out, const Layout& L, const Card& c, const Show& sh);
 
 enum class Align : uint8_t { Left, Right, Center };
 struct Words {

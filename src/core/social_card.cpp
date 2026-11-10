@@ -95,37 +95,6 @@ Hit hitTest(const Layout& L, int scroll, size_t count, float x, float y) {
     return Hit{};
 }
 
-void paint(panel::Picture& out, const Layout& L, const std::vector<Entry>& entries, const Show& sh) {
-    const float s = L.s;
-    panel::roundRect(out, L.glass, 12 * s, kCard, uistyle::window(), kWhite, 0.12f, 1.0f * s);
-    panel::roundRect(out, L.close, 6 * s, kWhite, sh.hoverClose ? 0.14f : 0.06f);
-    for (int i = 0; i < 2; ++i) {
-        const bool on = int(sh.tab) == i, hot = sh.hoverTab == i;
-        panel::roundRect(out, L.tabs[i], 8 * s, on ? kGold : kWhite, on ? 0.24f : hot ? 0.10f : 0.04f,
-                         on ? kGold : kWhite, on ? 0.8f : 0.12f, 1.0f * s);
-    }
-    if (L.rows.empty()) panel::roundRect(out, L.list, 8 * s, 0x000000, 0.18f);
-    for (size_t i = 0; i < L.rows.size(); ++i) {
-        const size_t at = i + size_t(std::max(0, sh.scroll));
-        if (at >= entries.size()) break;
-        const Entry& e = entries[at];
-        const bool chosen = int(at) == sh.selected, hot = int(at) == sh.hoverRow;
-        panel::roundRect(out, L.rows[i], 7 * s, chosen ? kGold : kWhite, chosen ? 0.16f : hot ? 0.06f : 0.025f,
-                         chosen ? kGold : kWhite, chosen ? 0.8f : 0.0f, 1.0f * s);
-        const float d = 8 * s;
-        panel::roundRect(out, panel::Box{L.rows[i].x + 8 * s, L.rows[i].y + (L.rows[i].h - d) / 2, d, d}, d / 2,
-                         e.online ? kOnline : kOffline, 0.95f);
-    }
-    const std::vector<Action> acts = actions(sh.tab);
-    const Entry* chosen = chosenOf(entries, sh);
-    for (size_t i = 0; i < L.buttons.size() && i < acts.size(); ++i) {
-        const bool can = allowed(sh.tab, acts[i], chosen), hot = sh.hoverButton == int(i) || sh.focus == int(i);
-        panel::roundRect(out, L.buttons[i], 7 * s, kWhite, !can ? 0.02f : hot ? 0.13f : 0.06f,
-                         sh.focus == int(i) ? kGold : kWhite, sh.focus == int(i) ? 0.95f : 0.14f,
-                         (sh.focus == int(i) ? 1.5f : 1.0f) * s);
-    }
-}
-
 std::vector<Words> words(const Layout& L, const std::vector<Entry>& entries, const Show& sh, const Texts& t) {
     std::vector<Words> out;
     const float s = L.s;

@@ -95,16 +95,7 @@ TEST(char_select_words_and_picture) {
     CHECK(has(w, "Tester") && has(w, "Wizard") && has(w, "Lv 99 / 50") && has(w, "Вільне місце"));
     CHECK(has(w, "HP 4200 / 5000") && has(w, "SP 900 / 1200") && has(w, "INT 99") && has(w, "1 / 3"));
     CHECK(has(w, "Увійти") && has(w, "Створити") && has(w, "Видалити") && has(w, "Назад"));
-    panel::Picture p;
-    p.width = L.w;
-    p.height = L.h;
-    p.px.assign(size_t(L.w) * size_t(L.h), 0u);
-    charselect::paint(p, L, slots, sh);
-    const auto edge = [&](const panel::Box& b) {
-        return p.px[size_t(int(b.y + b.h / 2)) * size_t(p.width) + size_t(int(b.x))];
-    };
-    const uint32_t gold = edge(L.slots[0]), plain = edge(L.slots[1]);
-    CHECK(((gold >> 16) & 0xFF) > ((plain >> 16) & 0xFF) + 40);
+    ;
 }
 
 // 3.0.18-beta.33: uaUI's characters - a card's face and its bars inside the card

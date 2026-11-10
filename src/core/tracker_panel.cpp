@@ -91,23 +91,6 @@ Hit hitTest(const Layout& L, float x, float y) {
     return Hit{Part::Panel, -1};
 }
 
-void paint(panel::Picture& out, const Layout& L, const std::vector<Entry>& entries, const Hit& hover) {
-    (void)entries;
-    const float s = L.s;
-    panel::roundRect(out, L.glass, 10 * s, kCard, uistyle::panel(), kWhite, 0.09f, 1.0f * s);
-    panel::roundRect(out, panel::Box{0, kHeader * s - 1.0f * s, float(L.w), 1.0f * s}, 0, kWhite, 0.08f);
-    for (const panel::Box* b : {&L.fold, &L.hide})
-        if ((b == &L.fold && hover.part == Part::Fold) || (b == &L.hide && hover.part == Part::Hide))
-            panel::roundRect(out, *b, 6 * s, kWhite, 0.12f);
-    for (size_t i = 0; i < L.entries.size(); ++i) {
-        const Placed& p = L.entries[i];
-        const bool over = hover.entry == int(i) && (hover.part == Part::Head || hover.part == Part::Close);
-        panel::roundRect(out, p.box, 8 * s, kWhite, over ? 0.075f : 0.04f);
-        if (hover.part == Part::Close && hover.entry == int(i)) panel::roundRect(out, p.close, 6 * s, kWhite, 0.12f);
-    }
-    if (L.more.w > 0) panel::roundRect(out, L.more, 7 * s, kWhite, 0.06f);
-}
-
 std::vector<Words> words(const Layout& L, const std::vector<Entry>& entries, const Texts& t, bool folded) {
     std::vector<Words> out;
     const float s = L.s;

@@ -51,7 +51,6 @@ struct Hit {
 };
 Hit hitTest(const Layout& L, float x, float y);
 
-void paint(panel::Picture& out, const Layout& L, const Values& v, const Show& sh);
 
 enum class Align : uint8_t { Left, Right, Center };
 struct Words {

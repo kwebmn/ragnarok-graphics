@@ -68,26 +68,6 @@ Hit hitTest(const Layout& L, float x, float y) {
     return Hit{};
 }
 
-void paint(panel::Picture& out, const Layout& L, const Info& i, const Show& sh) {
-    const float s = L.s;
-    panel::roundRect(out, L.glass, 12 * s, kCard, uistyle::window(), kWhite, 0.12f, 1.0f * s);
-    panel::roundRect(out, L.close, 6 * s, kWhite, sh.hoverClose ? 0.14f : 0.06f);
-    const auto bar = [&](const panel::Box& b, float share, uint32_t rgb) {
-        panel::roundRect(out, b, b.h / 2, kWhite, 0.08f);
-        if (share > 0)
-            panel::roundRect(out, panel::Box{b.x, b.y, b.w * std::min(1.0f, share), b.h}, b.h / 2, rgb, 0.9f);
-    };
-    bar(L.hungerBar, float(std::clamp(i.hunger, 0, 100)) / 100.0f, kFull);
-    bar(L.intimacyBar, float(std::clamp(i.intimacy, 0, 1000)) / 1000.0f, kLove);
-    for (int k = 0; k < 4; ++k) {
-        const bool can = allowed(i, Command(k)), hot = sh.hover == k || sh.focus == k;
-        panel::roundRect(out, L.buttons[k], 8 * s, k == 0 ? kGold : kWhite,
-                         !can ? 0.02f : k == 0 ? (hot ? 0.34f : 0.22f) : (hot ? 0.12f : 0.06f),
-                         sh.focus == k ? kGold : k == 0 ? kGold : kWhite,
-                         sh.focus == k ? 0.95f : k == 0 ? 0.8f : 0.16f, (sh.focus == k ? 1.5f : 1.0f) * s);
-    }
-}
-
 std::vector<Words> words(const Layout& L, const Info& i, const Show& sh, const Texts& t) {
     (void)sh;
     std::vector<Words> out;

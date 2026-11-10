@@ -66,15 +66,12 @@ TEST(options_card_words_and_picture) {
     const std::vector<optionscard::Words> w = optionscard::words(L, v, optionscard::Show{}, t);
     const auto has = [&](const std::string& s) {
         return std::any_of(w.begin(), w.end(), [&](const optionscard::Words& x) { return x.text == s; });
-    };
+    }
+    ;
     CHECK(has("Налаштування гри") && has("Музика") && has("Прилипання: речі") && has("Непрозорі вікна"));
-    CHECK(has("50%") && has("100%"));  // the volumes as shares
-    panel::Picture p;
-    p.width = L.w;
-    p.height = L.h;
-    p.px.assign(size_t(L.w) * size_t(L.h), 0u);
-    optionscard::paint(p, L, v, optionscard::Show{});
-    CHECK((p.px[size_t(L.h / 2) * size_t(L.w) + size_t(L.w / 2)] >> 24) > 0x80);
+    CHECK(has("50%") && has("100%"));
+    // the volumes as shares
+
 }
 
 // 3.0.11-beta.200 (the tester: «непрозорі вікна - тогл не працює, робить непрозорі але не повертає прозорі»): uaRO.exe

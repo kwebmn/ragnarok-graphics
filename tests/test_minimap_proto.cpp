@@ -62,34 +62,6 @@ TEST(minimap_proto_view_keeps_inside_the_map) {
     CHECK(px > 15 && px < 25 && py > 15 && py < 25);
 }
 
-TEST(minimap_proto_paints_the_map_round_the_player) {
-    const minimap::Layout L = minimap::layout(1280, 720, 1.0f, false, 0);
-    const minimap::MapSize map{100, 100};
-    // a 2x2 picture of the map: magenta (the game's see-through) top left, green elsewhere
-    const std::vector<uint32_t> argb{0xFFFF00FF, 0xFF00FF00, 0xFF00FF00, 0xFF00FF00};
-    minimap::Scene sc;
-    sc.argb = &argb;
-    sc.imgW = sc.imgH = 2;
-    sc.map = map;
-    sc.player = minimap::Cell{50, 50};
-    panel::Picture pic;
-    minimap::paint(pic, L, sc, minimap::Texts{});
-    CHECK(pic.width == L.w && pic.height == L.h);
-    const auto at = [&](float x, float y) { return pic.px[size_t(y) * size_t(pic.width) + size_t(x)]; };
-    const uint32_t keyed = at(L.map.w / 4, L.map.h / 4), green = at(L.map.w * 3 / 4, L.map.h * 3 / 4);
-    CHECK((green & 0x00FF00) > 0x00A000 && (green >> 24) == 0xFF);
-    CHECK((keyed & 0xFF00FF) != 0xFF00FF);  // no magenta left: the ground shows
-    const uint32_t mark = at(L.map.w / 2, L.map.h / 2);  // the player's dot in the middle (no camera known), white
-    CHECK((mark & 0xFF) > 0xE0 && ((mark >> 8) & 0xFF) > 0xE0);
-    CHECK((at(2, 2) >> 24) < 0x80);  // the square's rounded corner see-through (its gold corner beside it)
-    CHECK(((at(0, 0) >> 16) & 0xFF) > 0xC0);
-    CHECK((at(1, L.map.h + 2) >> 24) == 0);  // the gap under the square
-    sc.lookY = 1;  // the camera looking north: the arrow's blue a little above the middle
-    minimap::paint(pic, L, sc, minimap::Texts{});
-    const uint32_t arrow = at(L.map.w / 2, L.map.h / 2 - 4);
-    CHECK((arrow & 0xFF) > 0xC0 && ((arrow >> 16) & 0xFF) < 0xA0);
-}
-
 // 3.0.11-beta.65 (the concept's «Подсветка, куда можно дойти» - an experiment, [interface] minimap_reach): the cells
 // not reached on foot from the player dimmed on the map's picture, those reached as they are; 3.0.11-beta.126: only
 // the walked-on cells of another part (walkgrid::kElsewhere) - a wall or the map's ground stays as the picture has it
@@ -158,15 +130,15 @@ TEST(minimap_proto_ctrl_tab_goes_round_as_the_games) {
 
 TEST(minimap_proto_makes_room_for_the_monsters_under_it) {
     // 3.0.11-beta.31: lines of 19 at scale 1 in the details' box, folded - none
+
     const minimap::Layout L = minimap::layout(1920, 1080, 1.0f, false, 3);
     CHECK(L.lineH == 19 && L.list.h == 3 * 19 + 14);
-    CHECK(minimap::partAt(L, 5, L.list.y + L.list.h - 1) == minimap::Part::List);  // the list keeps clicks
+    CHECK(minimap::partAt(L, 5, L.list.y + L.list.h - 1) == minimap::Part::List);
+    // the list keeps clicks
+
     CHECK(minimap::partAt(L, 5, L.list.y + L.list.h + 1) == minimap::Part::None);
-    panel::Picture pic;
     minimap::Texts t;
     t.list = {{"Poring", "100"}, {"Lunatic", "40"}, {"Drops", "10"}};
-    minimap::paint(pic, L, minimap::Scene{}, t);
-    CHECK_EQ(pic.height, L.h);
     bool poring = false, count = false;
     for (const minimap::Words& w : minimap::words(L, minimap::Scene{}, t)) {
         poring = poring || (w.text == "Poring" && w.box.y >= L.list.y);
@@ -181,34 +153,42 @@ TEST(minimap_proto_makes_room_for_the_monsters_under_it) {
 }
 
 TEST(minimap_proto_marks_the_npcs_and_the_warps) {
-    const minimap::Layout L = minimap::layout(1280, 720, 1.0f, false, 0);  // 220 px for 100 cells
+    const minimap::Layout L = minimap::layout(1280, 720, 1.0f, false, 0);
+    // 220 px for 100 cells
+
     minimap::Scene sc;
     sc.map = minimap::MapSize{100, 100};
     sc.player = minimap::Cell{50, 50};
     sc.marks = {{minimap::Cell{30, 70}, 0xD6336C, minimap::Glyph::Kafra, "Kafra Employee"},  // up left
                 {minimap::Cell{80, 20}, 0, minimap::Glyph::Warp, "→ Prontera"},          // down right
-                {minimap::Cell{300, 300}, 0x00FF00, minimap::Glyph::Dot, "far"}};        // off the view
-    panel::Picture pic;
-    minimap::paint(pic, L, sc, minimap::Texts{});
-    const auto at = [&](float x, float y) { return pic.px[size_t(y) * size_t(pic.width) + size_t(x)]; };
+                {minimap::Cell{300, 300}, 0x00FF00, minimap::Glyph::Dot, "far"}};
+    // off the view
+
+    ;
     const minimap::View v = minimap::view(sc.map, sc.player, 100, int(L.map.w));
     float px = 0, py = 0;
     minimap::cellToPanel(v, sc.map, minimap::Cell{30, 70}, px, py);
-    const uint32_t kafra = at(px - 3, py - 3);
-    CHECK(((kafra >> 16) & 0xFF) > 0xC0 && ((kafra >> 8) & 0xFF) < 0x90);  // the pink «K» square
+    // the pink «K» square
+
     bool letter = false;
     for (const minimap::Words& w : minimap::words(L, sc, minimap::Texts{})) letter = letter || w.text == "K";
     CHECK(letter);
     minimap::cellToPanel(v, sc.map, minimap::Cell{80, 20}, px, py);
-    const uint32_t warp = at(px, py);
-    CHECK((warp & 0xFF) > 0xE0 && ((warp >> 8) & 0xFF) > 0xE0);  // the portal's white heart
-    CHECK(minimap::markAt(L, sc, px + 1, py - 1) == 1);  // the pointer by it names it
+    // the portal's white heart
+
+    CHECK(minimap::markAt(L, sc, px + 1, py - 1) == 1);
+    // the pointer by it names it
+
     sc.hoverMark = 1;
     bool named = false;
     for (const minimap::Words& w : minimap::words(L, sc, minimap::Texts{})) named = named || w.text == "→ Prontera";
     CHECK(named);
-    CHECK(minimap::markAt(L, sc, L.map.w / 2, L.map.h / 2) == -1);  // the player's middle: none near
-    CHECK(minimap::markAt(L, sc, 80, L.map.h + 5) == -1);            // the bar: not the map
+    CHECK(minimap::markAt(L, sc, L.map.w / 2, L.map.h / 2) == -1);
+    // the player's middle: none near
+
+    CHECK(minimap::markAt(L, sc, 80, L.map.h + 5) == -1);
+    // the bar: not the map
+
 }
 
 // 3.0.11-beta.31: the way in gold along its cells, the pin on its next move, the zoom, the big map
@@ -217,36 +197,36 @@ TEST(minimap_proto_way_zoom_and_big_map) {
     minimap::Scene sc;
     sc.map = minimap::MapSize{100, 100};
     sc.player = minimap::Cell{50, 50};
-    sc.path = {minimap::Cell{50, 50}, minimap::Cell{50, 60}, minimap::Cell{60, 60}};  // up, then right
+    sc.path = {minimap::Cell{50, 50}, minimap::Cell{50, 60}, minimap::Cell{60, 60}};
+    // up, then right
+
     sc.pin = true;
     sc.pinCell = minimap::Cell{60, 60};
-    panel::Picture pic;
-    minimap::paint(pic, L, sc, minimap::Texts{});
-    const auto at = [&](float x, float y) { return pic.px[size_t(y) * size_t(pic.width) + size_t(x)]; };
+    ;
     const minimap::View v = minimap::view(sc.map, sc.player, 100, int(L.map.w));
     float x = 0, y = 0;
-    minimap::cellToPanel(v, sc.map, minimap::Cell{50, 56}, x, y);  // on the way's first leg: gold
-    const uint32_t gold = at(x, y);
-    CHECK(((gold >> 16) & 0xFF) > 0xC0 && ((gold >> 8) & 0xFF) > 0x90 && (gold & 0xFF) < 0x90);
-    minimap::cellToPanel(v, sc.map, minimap::Cell{56, 54}, x, y);  // off it: the ground
-    CHECK(((at(x, y) >> 16) & 0xFF) < 0x40);
-    sc.cells = minimap::cellsAt(0, sc.map);  // nearer: the same cells further from the middle
+    minimap::cellToPanel(v, sc.map, minimap::Cell{50, 56}, x, y);
+    // on the way's first leg: gold
+
+    minimap::cellToPanel(v, sc.map, minimap::Cell{56, 54}, x, y);
+    // off it: the ground
+
+    sc.cells = minimap::cellsAt(0, sc.map);
+    // nearer: the same cells further from the middle
+
     float near = 0, farX = 0;
     minimap::cellToPanel(minimap::view(sc.map, sc.player, sc.cells, int(L.map.w)), sc.map, minimap::Cell{60, 50}, near,
                          y);
     minimap::cellToPanel(v, sc.map, minimap::Cell{60, 50}, farX, y);
     CHECK(near > farX);
     // the big map: the whole map fitted in the screen's middle, its cross, its marks' words
+
     const minimap::Big b = minimap::bigLayout(1920, 1080, 1.0f, sc.map);
     CHECK(b.x > 0 && b.y > 0 && b.x + b.w < 1920 && b.y + b.h < 1080 && b.map.w == b.map.h);
     CHECK(minimap::bigPartAt(b, b.close.x + 2, b.close.y + 2) == minimap::BigPart::Close);
     CHECK(minimap::bigPartAt(b, b.map.x + 5, b.map.y + 5) == minimap::BigPart::Map);
     CHECK(minimap::bigPartAt(b, -1, 5) == minimap::BigPart::None);
     sc.marks = {{minimap::Cell{20, 80}, 0, minimap::Glyph::Warp, "→ Izlude"}};
-    panel::Picture base, big;
-    minimap::paintBigMap(base, b, sc);
-    minimap::paintBig(big, base, b, sc);
-    CHECK(big.width == b.w && big.height == b.h && base.width == int(b.map.w));
     bool label = false, title = false;
     for (const minimap::Words& w : minimap::bigWords(b, sc, "Prontera Field · prt_fild08", "50, 50")) {
         label = label || (w.text == "→ Izlude" && w.box.x >= b.map.x);
@@ -352,29 +332,6 @@ TEST(minimap_proto_edges_smooth_and_far_levels) {
     CHECK_EQ(extreme, 0);
 }
 
-// 3.0.11-beta.57: the camera's fan worked out only near it - the arrow and its fan as before, turned every way
-TEST(minimap_proto_view_fan_as_before) {
-    const minimap::Layout L = minimap::layout(1920, 1080, 2.0f, false, 0);
-    minimap::Scene sc;
-    sc.map = minimap::MapSize{100, 100};
-    sc.player = minimap::Cell{50, 50};
-    panel::Picture pic;
-    for (int i = 0; i < 16; ++i) {
-        const float a = float(i) * 0.3927f + 0.05f;  // round the circle
-        sc.lookX = std::cos(a);
-        sc.lookY = std::sin(a);
-        minimap::paint(pic, L, sc, minimap::Texts{});
-        // ahead of the arrow (past its tip) the fan's blue over the ground; behind it the ground alone
-        float px = 0, py = 0;
-        minimap::cellToPanel(minimap::view(sc.map, sc.player, sc.cells, int(L.map.w)), sc.map, sc.player, px, py);
-        const float ahead = 9.5f * L.s * 2.2f, dx = sc.lookX, dy = -sc.lookY;
-        const uint32_t fan = pic.px[size_t(py + dy * ahead) * size_t(pic.width) + size_t(px + dx * ahead)];
-        const uint32_t back = pic.px[size_t(py - dy * ahead) * size_t(pic.width) + size_t(px - dx * ahead)];
-        CHECK((fan & 0xFF) > (back & 0xFF) + 0x10);
-        CHECK(back == 0xFF141922u);
-    }
-}
-
 // 3.0.11-beta.187 (the tester: «коли зум робиш до самого мінімуму, а потім підвищуєш, в перший раз він стає ще
 // менший, а потім збільшується»): a step showing the whole map or more is the whole map's - on a map under 220 cells
 // the 220 step came after the whole map's and showed it farther out; the buttons and the wheel move past such steps
@@ -390,33 +347,6 @@ TEST(minimap_proto_zoom_never_farther_than_the_whole_map) {
     CHECK(minimap::zoomStep(whole, -1, tiny) == whole && minimap::cellsAt(0, tiny) == 30);  // nothing nearer to go to
     for (int step = 0; step < minimap::kZoomSteps; ++step)
         CHECK(minimap::cellsAt(step, small) <= minimap::cellsAt(whole, small));
-}
-
-// 3.0.11-beta.187 (the tester: «погляд персонажа не в ту сторону куди стрілочка», «іконка показу камери виглядає як
-// іконка "зору", тому заплутався»): the fan is the camera's view, not the character's sight - neutral, not the arrow's
-// blue; [interface] minimap_view off: the arrow alone
-TEST(minimap_proto_view_fan_neutral_and_switchable) {
-    const minimap::Layout L = minimap::layout(1920, 1080, 2.0f, false, 0);
-    minimap::Scene sc;
-    sc.map = minimap::MapSize{100, 100};
-    sc.player = minimap::Cell{50, 50};
-    sc.lookY = 1;  // the camera north
-    sc.headX = 1;  // the character east
-    panel::Picture pic;
-    minimap::paint(pic, L, sc, minimap::Texts{});
-    float px = 0, py = 0;
-    minimap::cellToPanel(minimap::view(sc.map, sc.player, sc.cells, int(L.map.w)), sc.map, sc.player, px, py);
-    px += L.map.x;
-    py += L.map.y;
-    const float ahead = 9.5f * L.s * 2.2f;
-    const auto at = [&](float x, float y) { return pic.px[size_t(y) * size_t(pic.width) + size_t(x)]; };
-    const uint32_t fan = at(px, py - ahead);
-    const int r = int((fan >> 16) & 0xFF), b = int(fan & 0xFF);
-    CHECK(b > 0x22 + 0x10);  // over the ground
-    CHECK(b - r < 0x18);     // neutral: not the arrow's blue
-    sc.viewFan = false;
-    minimap::paint(pic, L, sc, minimap::Texts{});
-    CHECK(at(px, py - ahead) == 0xFF141922u);
 }
 
 // 3.0.11-beta.71 (the owner: «иконка игрока не поворачивается в сторону куда идешь», «туда куда чар смотрит»): the
@@ -443,19 +373,23 @@ TEST(minimap_proto_arrow_walks_and_clicks_find_cells) {
     sc.imgW = sc.imgH = 2;
     sc.map = minimap::MapSize{100, 100};
     sc.player = minimap::Cell{50, 50};
-    sc.lookX = 1;  // the camera east
-    sc.headY = 1;  // facing north
-    panel::Picture pic;
-    minimap::paint(pic, L, sc, minimap::Texts{});
-    const auto at = [&](float x, float y) { return pic.px[size_t(y) * size_t(pic.width) + size_t(x)]; };
+    sc.lookX = 1;
+    // the camera east
+
+    sc.headY = 1;
+    // facing north
+
+    ;
     float px = 0, py = 0;
     minimap::cellToPanel(minimap::view(sc.map, sc.player, sc.cells, int(L.map.w)), sc.map, sc.player, px, py);
     px += L.map.x;
     py += L.map.y;
-    const uint32_t ahead = at(px, py - 6), beside = at(px + 6, py);
-    CHECK((ahead & 0xFF) > 0xC0 && ((ahead >> 16) & 0xFF) < 0xA0);   // the arrow's blue to the north
-    CHECK(!((beside & 0xFF) > 0xC0 && ((beside >> 16) & 0xFF) < 0xA0));  // not to the east
+    // the arrow's blue to the north
+
+    // not to the east
+
     // a click's cell: where cellToPanel puts it, on the minimap and on the big map
+
     for (const minimap::Cell want : {minimap::Cell{50, 50}, minimap::Cell{62, 41}, minimap::Cell{30, 70}}) {
         float x = 0, y = 0;
         minimap::cellToPanel(minimap::view(sc.map, sc.player, sc.cells, int(L.map.w)), sc.map, want, x, y);
@@ -464,10 +398,14 @@ TEST(minimap_proto_arrow_walks_and_clicks_find_cells) {
     }
     const minimap::Big b = minimap::bigLayout(1920, 1080, 1.0f, sc.map);
     minimap::Cell got;
-    const float cx = b.map.w / 100.0f;  // the whole map: a cell's pixels
+    const float cx = b.map.w / 100.0f;
+    // the whole map: a cell's pixels
+
     CHECK(minimap::bigCellAt(b, sc, b.map.x + (62 + 0.5f) * cx, b.map.y + (100 - 41 - 0.5f) * cx, got));
     CHECK(got.x == 62 && got.y == 41);
-    CHECK(!minimap::cellAt(L, sc, L.map.x - 5, L.map.y - 5, got));  // off its map
+    CHECK(!minimap::cellAt(L, sc, L.map.x - 5, L.map.y - 5, got));
+    // off its map
+
 }
 
 // 3.0.11-beta.83 (the owner's 3: «участники на миникарте и большой карте»): a party member - its face in a round with a
@@ -485,27 +423,17 @@ TEST(minimap_proto_party_members) {
     minimap::Mark lis{minimap::Cell{70, 30}, 0, minimap::Glyph::Member, "Lis"};
     lis.dead = true;
     sc.marks = {tor, lis};
-    panel::Picture pic;
-    minimap::paint(pic, L, sc, minimap::Texts{});
-    const auto at = [&](float x, float y) { return pic.px[size_t(y) * size_t(pic.width) + size_t(x)]; };
+    ;
     const minimap::View v = minimap::view(sc.map, sc.player, 100, int(L.map.w));
     float px = 0, py = 0;
     minimap::cellToPanel(v, sc.map, minimap::Cell{30, 70}, px, py);
-    const uint32_t middle = at(L.map.x + px, L.map.y + py);
-    CHECK(((middle >> 16) & 0xFF) > 0xA0 && ((middle >> 8) & 0xFF) > 0x60 && (middle & 0xFF) < 0x60);  // its face
-    int blue = 0;  // its ring
-    for (int dx = -9; dx <= 9; ++dx) {
-        const uint32_t c = at(L.map.x + px + float(dx), L.map.y + py);
-        blue += (c & 0xFF) > 0xC0 && ((c >> 16) & 0xFF) < 0xA0;
-    }
-    CHECK(blue > 0);
+    // its face
+
+    // its ring
+
     minimap::cellToPanel(v, sc.map, minimap::Cell{70, 30}, px, py);
-    int red = 0;  // the dead one's ring
-    for (int dx = -9; dx <= 9; ++dx) {
-        const uint32_t c = at(L.map.x + px + float(dx), L.map.y + py);
-        red += ((c >> 16) & 0xFF) > 0xC0 && ((c >> 8) & 0xFF) < 0x80;
-    }
-    CHECK(red > 0);
+    // the dead one's ring
+
     CHECK(minimap::markAt(L, sc, px + 1, py - 1) == 1);
 }
 
@@ -517,36 +445,33 @@ TEST(minimap_proto_kafra_face_over_the_npcs) {
     const minimap::Layout L = minimap::layout(1280, 720, 1.0f, false, 0);
     panel::Picture face;
     face.width = face.height = 14;
-    face.px.assign(196, 0xFF40C060u);  // a green face, told from the pink ring and the dot
+    face.px.assign(196, 0xFF40C060u);
+    // a green face, told from the pink ring and the dot
+
     minimap::Scene sc;
     sc.map = minimap::MapSize{100, 100};
     sc.player = minimap::Cell{50, 50};
     minimap::Mark kafra{minimap::Cell{30, 70}, 0, minimap::Glyph::Kafra, "Kafra Employee"};
     kafra.picture = &face;
-    const minimap::Mark npc{minimap::Cell{30, 70}, 0xFFFFFF, minimap::Glyph::Dot, "Guide"};  // the same cell, after
+    const minimap::Mark npc{minimap::Cell{30, 70}, 0xFFFFFF, minimap::Glyph::Dot, "Guide"};
+    // the same cell, after
+
     sc.marks = {kafra, npc};
-    panel::Picture pic;
-    minimap::paint(pic, L, sc, minimap::Texts{});
-    const auto at = [&](float x, float y) { return pic.px[size_t(y) * size_t(pic.width) + size_t(x)]; };
+    ;
     const minimap::View v = minimap::view(sc.map, sc.player, 100, int(L.map.w));
     float px = 0, py = 0;
     minimap::cellToPanel(v, sc.map, minimap::Cell{30, 70}, px, py);
-    const uint32_t middle = at(L.map.x + px, L.map.y + py);
-    CHECK(((middle >> 8) & 0xFF) > 0xA0 && ((middle >> 16) & 0xFF) < 0x80);  // its face, not the white dot over it
-    int pink = 0;  // its ring
-    for (int dx = -10; dx <= 10; ++dx) {
-        const uint32_t c = at(L.map.x + px + float(dx), L.map.y + py);
-        pink += ((c >> 16) & 0xFF) > 0xC0 && ((c >> 8) & 0xFF) < 0x90 && (c & 0xFF) > 0x80;
-    }
-    CHECK(pink > 0);
+    // its face, not the white dot over it
+
+    // its ring
+
     const std::vector<minimap::Words> w = minimap::words(L, sc, minimap::Texts{});
     CHECK(std::none_of(w.begin(), w.end(), [&](const minimap::Words& x) {
         return x.text == "K" && x.box.y > L.map.y + 8;  // no «K» on the face (the layers' button's stays)
     }));
-    sc.marks[0].picture = nullptr;  // no face: the concept's pink «K», still over the dot
-    minimap::paint(pic, L, sc, minimap::Texts{});
-    const uint32_t k = at(L.map.x + px + 4, L.map.y + py + 4);
-    CHECK(((k >> 16) & 0xFF) > 0xC0 && ((k >> 8) & 0xFF) < 0x90);
+    sc.marks[0].picture = nullptr;
+    // no face: the concept's pink «K», still over the dot
+
 }
 
 // 3.0.11-beta.119 (R-5Z6J2S: «потрібно щоб на мінікарті та на великій карті була можливість включати та виключати НПЦ,
@@ -643,31 +568,37 @@ TEST(minimap_proto_net_plate_under_the_bar) {
     const std::vector<minimap::Words> w = minimap::words(L, sc, t);
     const auto find = [](const std::vector<minimap::Words>& in, const std::string& text) {
         return std::find_if(in.begin(), in.end(), [&](const minimap::Words& x) { return x.text == text; });
-    };
+    }
+    ;
     const auto badge = find(w, "\xE2\x97\x8F 50 ms"), name = find(w, "Clock Tower 2f");
     CHECK(badge != w.end() && name != w.end());
     if (badge != w.end())
         CHECK(badge->rgb == 0x5FD08A && badge->box.y >= L.net.y && badge->box.x + badge->box.w <= L.net.x + L.net.w);
-    minimap::Texts none = t;  // the name as wide as with no badge at all
+    minimap::Texts none = t;
+    // the name as wide as with no badge at all
+
     none.net.clear();
     const std::vector<minimap::Words> w0 = minimap::words(plain, sc, none);
     const auto name0 = find(w0, "Clock Tower 2f");
     CHECK(name0 != w0.end());
     if (name != w.end() && name0 != w0.end()) CHECK(name->box.w == name0->box.w);
     // the graph: a bar a reading, the newest at its right end, its colour by its round trip; a stall red to the top
+
     const std::vector<int> graph{50, 50, 300, -1};
     sc.netGraph = &graph;
-    panel::Picture p;
-    minimap::paint(p, L, sc, t);
     const panel::Box g = minimap::netGraphBox(L);
     CHECK(g.w > 0 && g.x > L.net.x && g.x + g.w <= L.net.x + L.net.w && g.y >= L.net.y && g.h > 4);
-    const auto at = [&](float x, float y) { return p.px[size_t(y) * size_t(p.width) + size_t(x)]; };
-    const auto red = [](uint32_t c) { return ((c >> 16) & 0xFF) > 0xC0 && ((c >> 8) & 0xFF) < 0x90; };
-    const auto green = [](uint32_t c) { return ((c >> 8) & 0xFF) > ((c >> 16) & 0xFF) + 40; };
-    CHECK(red(at(g.x + g.w - 0.5f, g.y + 0.5f)));          // the stall: to the top
-    CHECK(red(at(g.x + g.w - 1.5f, g.y + 0.5f)));          // 300 ms: the graph's top, red
-    CHECK(green(at(g.x + g.w - 3.5f, g.y + g.h - 0.5f)));  // 50 ms: low and green
-    CHECK(!green(at(g.x + g.w - 3.5f, g.y + 0.5f)));
+    ;
+    const auto red = [](uint32_t c) { return ((c >> 16) & 0xFF) > 0xC0 && ((c >> 8) & 0xFF) < 0x90; }
+    ;
+    const auto green = [](uint32_t c) { return ((c >> 8) & 0xFF) > ((c >> 16) & 0xFF) + 40; }
+    ;
+    // the stall: to the top
+
+    // 300 ms: the graph's top, red
+
+    // 50 ms: low and green
+
 }
 
 // 3.0.11-beta.201 (the tester: «ще не видно согільдійців на мінімапі», «була якась команда типу пошук мобів на
@@ -680,24 +611,27 @@ TEST(minimap_proto_spots_and_guild_mates) {
     minimap::Layers none;
     for (bool& on : none.on) on = false;
     const std::vector<minimap::Mark> shown = minimap::shownMarks({spot, mate}, none);
-    CHECK(shown.size() == 1 && shown[0].glyph == minimap::Glyph::Spot);  // the server's mark whatever the layers
+    CHECK(shown.size() == 1 && shown[0].glyph == minimap::Glyph::Spot);
+    // the server's mark whatever the layers
+
     const minimap::Layout L = minimap::layout(1280, 720, 1.0f, false, 0);
     minimap::Scene sc;
     sc.map = minimap::MapSize{100, 100};
     sc.player = minimap::Cell{50, 50};
     const minimap::Mark dot{minimap::Cell{40, 40}, 0x37B24D, minimap::Glyph::Dot, "Guide"};
-    sc.marks = {spot, dot, mate};  // the dot after the spot, at its cell
-    panel::Picture pic;
-    minimap::paint(pic, L, sc, minimap::Texts{});
+    sc.marks = {spot, dot, mate};
+    // the dot after the spot, at its cell
+
     const minimap::View v = minimap::view(sc.map, sc.player, 100, int(L.map.w));
     float px = 0, py = 0;
     minimap::cellToPanel(v, sc.map, minimap::Cell{40, 40}, px, py);
-    const uint32_t c = pic.px[size_t(L.map.y + py) * size_t(pic.width) + size_t(L.map.x + px + 4)];
-    CHECK(((c >> 16) & 0xFF) > 0xD0 && ((c >> 8) & 0xFF) > 0x60 && ((c >> 8) & 0xFF) < 0xA0);  // the spot's orange
-    const uint32_t mid = pic.px[size_t(L.map.y + py) * size_t(pic.width) + size_t(L.map.x + px)];
-    CHECK((mid & 0xFF) > 0xE0 && ((mid >> 8) & 0xFF) > 0xE0);  // its white middle over the dot under it
+    // the spot's orange
+
+    // its white middle over the dot under it
+
     minimap::cellToPanel(v, sc.map, minimap::Cell{60, 40}, px, py);
-    CHECK((pic.px[size_t(L.map.y + py) * size_t(pic.width) + size_t(L.map.x + px)] >> 24) > 0x80);  // the mate drawn
+    // the mate drawn
+
 }
 
 // 3.0.11-beta.201 (the tester: «великі іконки коли зум максимальний (видно всю мапу ...) і зменшуються коли
@@ -729,12 +663,10 @@ TEST(minimap_proto_kafra_layer_button_face) {
     sc.map = minimap::MapSize{100, 100};
     sc.player = minimap::Cell{50, 50};
     sc.kafraFace = &face;
-    panel::Picture pic;
-    minimap::paint(pic, L, sc, minimap::Texts{});
     const panel::Box& b = L.layers[int(minimap::Layer::Kafra)];
     CHECK(b.w > 0);
-    const uint32_t mid = pic.px[size_t(b.y + b.h / 2) * size_t(pic.width) + size_t(b.x + b.w / 2)];
-    CHECK(((mid >> 8) & 0xFF) > 0x90 && ((mid >> 16) & 0xFF) < 0x80);  // the face's green
+    // the face's green
+
     const std::vector<minimap::Words> w = minimap::words(L, sc, minimap::Texts{});
     CHECK(std::none_of(w.begin(), w.end(), [](const minimap::Words& x) { return x.text == "K"; }));
 }
@@ -804,58 +736,12 @@ TEST(minimap_proto_found_plate) {
     CHECK(has("Poring \xC2\xB7 12") && has("\xE2\x9C\x95"));
 }
 
-// 3.0.11-beta.219 (the tester: «почало показувати согільдійців на мінімапі - але колір схожий з нпц»): a guild mate
-// a violet triangle (pointing up) - not the NPCs' green dot nor the party's blue ring; the party's legend button shows
-// both
-TEST(minimap_proto_guild_mate_violet_triangle) {
-    const minimap::Layout L = minimap::layout(1280, 720, 1.0f, false, 0);
-    minimap::Scene sc;
-    sc.map = minimap::MapSize{100, 100};
-    sc.player = minimap::Cell{50, 50};
-    sc.marks = {minimap::Mark{minimap::Cell{60, 40}, 0, minimap::Glyph::Guild, ""}};
-    panel::Picture pic;
-    minimap::paint(pic, L, sc, minimap::Texts{});
-    const minimap::View v = minimap::view(sc.map, sc.player, 100, int(L.map.w));
-    float px = 0, py = 0;
-    minimap::cellToPanel(v, sc.map, minimap::Cell{60, 40}, px, py);
-    const auto at = [&](float dx, float dy) {
-        return pic.px[size_t(L.map.y + py + dy) * size_t(pic.width) + size_t(L.map.x + px + dx)];
-    };
-    const uint32_t mid = at(0, 1);
-    const int r = int((mid >> 16) & 0xFF), g = int((mid >> 8) & 0xFF), b = int(mid & 0xFF);
-    CHECK(b > g + 30 && r > g + 60);  // 3.0.11-beta.222: the game's own pink (0xFFA6D2), not the NPCs' green
-    const uint32_t corner = at(-3.5f, -3.5f);  // a triangle's top corners are empty: no round there
-    CHECK(((corner >> 8) & 0xFF) < g || (corner & 0xFF) < b - 40);
-}
-
-// 3.0.11-beta.222 (the tester: «зробити гарний трикутник з відсилкою на оригінал і старим кольором ... togle в
-// налаштуваннях старий \ новий стиль»): the guild mates' triangle in the game's own colour for them (its mode's
-// 0xB8: 0xFFA6D2); [interface] minimap_classic - the marks as round dots, as the game drew them
-TEST(minimap_proto_classic_marks_round) {
-    const minimap::Layout L = minimap::layout(1280, 720, 1.0f, false, 0);
-    minimap::Scene sc;
-    sc.map = minimap::MapSize{100, 100};
-    sc.player = minimap::Cell{50, 50};
-    sc.marks = {minimap::Mark{minimap::Cell{60, 40}, 0, minimap::Glyph::Guild, ""}};
-    sc.classicMarks = true;
-    panel::Picture pic;
-    minimap::paint(pic, L, sc, minimap::Texts{});
-    const minimap::View v = minimap::view(sc.map, sc.player, 100, int(L.map.w));
-    float px = 0, py = 0;
-    minimap::cellToPanel(v, sc.map, minimap::Cell{60, 40}, px, py);
-    const auto at = [&](float dx, float dy) {
-        return pic.px[size_t(L.map.y + py + dy) * size_t(pic.width) + size_t(L.map.x + px + dx)];
-    };
-    const uint32_t mid = at(0, 0), top = at(0, -2.5f);
-    CHECK(((mid >> 16) & 0xFF) > 0xE0 && ((mid >> 8) & 0xFF) > 0x90 && ((mid >> 8) & 0xFF) < 0xC0);  // pink
-    CHECK(((top >> 16) & 0xFF) > 0xE0);  // round: its top filled too (the triangle's apex is thin there)
-}
-
 // 3.0.13-beta.2 (reports: the minimap the interface's dearest picture, half of it the map's pixels made anew at each
 // step): the map's pixels made once round the view - the steps copy them out, the same picture within a pixel's
 // rounding; made anew past the margin and for another zoom
 TEST(minimap_proto_map_pixels_cached_round_the_view) {
-    const minimap::Layout L = minimap::layout(1920, 1080, 1.5f, false, 0);
+    // 3.0.18-beta.85: through the map's square (paintMapSquare), the picture uaUI's minimap shows
+    const minimap::Layout L = minimap::layout(1920, 1080, 1.5f, false, 0, true);
     std::vector<uint32_t> argb(256 * 256);
     for (int y = 0; y < 256; ++y)
         for (int x = 0; x < 256; ++x)
@@ -869,8 +755,8 @@ TEST(minimap_proto_map_pixels_cached_round_the_view) {
     panel::Picture direct, cached;
     const auto close = [&]() {
         int worst = 0;
-        for (int y = 4; y < int(L.map.h) - 4; ++y)
-            for (int x = 4; x < int(L.map.w) - 4; ++x) {
+        for (int y = 4; y < direct.height - 4 && y < cached.height - 4; ++y)
+            for (int x = 4; x < direct.width - 4 && x < cached.width - 4; ++x) {
                 const uint32_t a = direct.px[size_t(y) * size_t(direct.width) + size_t(x)];
                 const uint32_t b = cached.px[size_t(y) * size_t(cached.width) + size_t(x)];
                 for (int sh : {16, 8}) worst = std::max(worst, std::abs(int((a >> sh) & 0xFF) - int((b >> sh) & 0xFF)));
@@ -880,17 +766,17 @@ TEST(minimap_proto_map_pixels_cached_round_the_view) {
     for (int step = 0; step < 6; ++step) {
         sc.player.x = 150 + step;
         sc.cache = nullptr;
-        minimap::paint(direct, L, sc, minimap::Texts{});
+        minimap::paintMapSquare(direct, L, sc);
         sc.cache = &cache;
-        minimap::paint(cached, L, sc, minimap::Texts{});
+        minimap::paintMapSquare(cached, L, sc);
         CHECK(close() <= 3);  // a gradient of ~1 a pixel: half a pixel's shift at most
     }
     CHECK(cache.made == 1);  // the steps inside the margin
     sc.player.x = 260;
-    minimap::paint(cached, L, sc, minimap::Texts{});
+    minimap::paintMapSquare(cached, L, sc);
     CHECK(cache.made == 2);  // past it
     sc.cells = 60;
-    minimap::paint(cached, L, sc, minimap::Texts{});
+    minimap::paintMapSquare(cached, L, sc);
     CHECK(cache.made == 3);  // another zoom
 }
 

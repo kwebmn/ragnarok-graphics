@@ -132,43 +132,6 @@ Part hitTest(const Layout& L, float x, float y) {
     return Part::None;
 }
 
-void paint(panel::Picture& out, const Layout& L, const Show& sh) {
-    const float s = L.s;
-    panel::roundRect(out, L.glass, 14 * s, kCard, std::max(0.94f, uistyle::window()), kWhite, 0.12f, 1.0f * s);
-    if (L.ways[0].w > 0) {
-        const panel::Box all{L.ways[0].x, L.ways[0].y, L.ways[2].x + L.ways[2].w - L.ways[0].x, L.ways[0].h};
-        panel::roundRect(out, all, all.h / 2, kBlack, 0.30f, kWhite, 0.12f, 1.0f * s);
-        panel::roundRect(out, L.ways[int(sh.way)], L.ways[0].h / 2, kGold, 0.26f);
-    }
-    if (L.sex[0].w > 0) {  // 3.0.11-beta.181: the new login's sex
-        const panel::Box both{L.sex[0].x, L.sex[0].y, L.sex[1].x + L.sex[1].w - L.sex[0].x, L.sex[0].h};
-        panel::roundRect(out, both, both.h / 2, kBlack, 0.30f, kWhite, 0.12f, 1.0f * s);
-        if (sh.sex == 'M' || sh.sex == 'F')
-            panel::roundRect(out, L.sex[sh.sex == 'F' ? 1 : 0], L.sex[0].h / 2, kGold, 0.26f);
-    }
-    const auto field = [&](const panel::Box& b, Field f, Part p) {
-        if (b.h <= 0) return;
-        const bool focused = sh.focus == f, hot = sh.hover == int(p);
-        panel::roundRect(out, b, 8 * s, kBlack, 0.35f, focused ? kGold : kWhite, focused ? 0.85f : hot ? 0.30f : 0.16f,
-                         (focused ? 1.5f : 1.0f) * s);
-    };
-    field(L.email, Field::Email, Part::Email);
-    field(L.password, Field::Password, Part::Password);
-    field(L.code, Field::Code, Part::Code);
-    field(L.key, Field::Key, Part::Key);
-    field(L.login, Field::Login, Part::Login);
-    field(L.gamePass, Field::GamePass, Part::GamePass);
-    field(L.newPass, Field::NewPass, Part::NewPass);
-    if (L.codeBig.h > 0 && !sh.userCode.empty())
-        panel::roundRect(out, L.codeBig, 10 * s, kBlack, 0.35f, kGold, 0.55f, 1.0f * s);
-    if (L.agree.h > 0)  // 3.0.11-beta.181: the rules' tick
-        panel::roundRect(out, L.agreeTick, 4 * s, sh.agree ? kGold : kWhite, sh.agree ? 0.85f : 0.06f,
-                         sh.agree ? kGold : kWhite, sh.agree ? 1.0f : 0.35f, 1.0f * s);
-    const bool hot = sh.hover == int(Part::Button);
-    panel::roundRect(out, L.button, 9 * s, kGold, sh.busy ? 0.10f : hot ? 0.36f : 0.24f, kGold, sh.busy ? 0.4f : 0.85f,
-                     1.0f * s);
-}
-
 std::vector<Words> words(const Layout& L, const Show& sh, const Texts& t) {
     std::vector<Words> out;
     const float s = L.s;

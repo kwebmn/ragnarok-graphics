@@ -15,28 +15,6 @@ constexpr float kBarW = 4, kBarGap = 8;  // 3.0.11-beta.187: the scroll's bar an
 constexpr uint32_t kCard = 0x10141C, kWhite = 0xFFFFFF, kGold = 0xC9A55B, kText = 0xEEF2F8, kMuted = 0x9AA3B5;
 constexpr uint32_t kBlack = 0x000000;
 
-void put(panel::Picture& out, const panel::Picture& pic, const panel::Box& box) {
-    const int ox = int(std::lround(box.x + (box.w - float(pic.width)) / 2));
-    const int oy = int(std::lround(box.y + (box.h - float(pic.height)) / 2));
-    if (out.scene) {  // 3.0.18-beta.12: recorded for uaUI
-        panel::recordImage(out, pic, float(ox), float(oy), 1.0f);
-        return;
-    }
-    for (int y = 0; y < pic.height; ++y)
-        for (int x = 0; x < pic.width; ++x) {
-            const int tx = ox + x, ty = oy + y;
-            if (tx < 0 || ty < 0 || tx >= out.width || ty >= out.height) continue;
-            const uint32_t c = pic.px[size_t(y) * size_t(pic.width) + size_t(x)];
-            if (!(c >> 24)) continue;
-            uint32_t& d = out.px[size_t(ty) * size_t(out.width) + size_t(tx)];
-            const uint32_t keep = 255 - (c >> 24);
-            const auto ch = [&](int sh) {
-                return std::min<uint32_t>(255, ((c >> sh) & 0xFF) + ((d >> sh) & 0xFF) * keep / 255);
-            };
-            d = ch(24) << 24 | ch(16) << 16 | ch(8) << 8 | ch(0);
-        }
-}
-
 panel::Box iconBox(const panel::Box& row, float s) {
     return panel::Box{row.x + 6 * s, row.y + (row.h - kIcon * s) / 2, kIcon * s, kIcon * s};
 }
@@ -99,34 +77,6 @@ Hit hitTest(const Layout& L, int scroll, size_t count, float x, float y) {
     if (L.ok.contains(x, y)) return Hit{Part::Ok, -1};
     if (L.cancel.contains(x, y)) return Hit{Part::Cancel, -1};
     return Hit{};
-}
-
-void paint(panel::Picture& out, const Layout& L, const std::vector<Entry>& entries, const Show& sh) {
-    const float s = L.s;
-    panel::roundRect(out, L.glass, 12 * s, kCard, uistyle::window(), kWhite, 0.12f, 1.0f * s);
-    if (L.rows.empty()) panel::roundRect(out, L.list, 9 * s, kBlack, 0.20f);
-    for (size_t i = 0; i < L.rows.size(); ++i) {
-        const size_t at = i + size_t(std::max(0, sh.scroll));
-        if (at >= entries.size()) break;
-        const bool chosen = int(at) == sh.selected, hot = int(at) == sh.hover;
-        panel::roundRect(out, L.rows[i], 8 * s, chosen ? kGold : kWhite,
-                         chosen ? 0.16f : hot ? 0.07f : 0.035f, chosen ? kGold : kWhite, chosen ? 0.9f : 0.08f,
-                         (chosen ? 1.5f : 1.0f) * s);
-        if (!hasIcon(entries[at])) continue;
-        const panel::Box icon = iconBox(L.rows[i], s);
-        panel::roundRect(out, icon, 6 * s, kBlack, 0.30f);
-        put(out, *entries[at].icon, icon);
-    }
-    if (L.bar.w > 0) {  // 3.0.11-beta.187: the scroll's bar and its thumb
-        panel::roundRect(out, L.bar, L.bar.w / 2, kWhite, 0.06f);
-        const panel::Box t = thumb(L, sh.scroll, entries.size());
-        if (t.h > 0) panel::roundRect(out, t, L.bar.w / 2, kWhite, 0.40f);
-    }
-    const bool can = sh.selected >= 0 && sh.selected < int(entries.size());
-    panel::roundRect(out, L.ok, 8 * s, kGold, !can ? 0.05f : sh.hoverPart == int(Part::Ok) ? 0.34f : 0.22f, kGold,
-                     can ? 0.8f : 0.25f, 1.0f * s);
-    panel::roundRect(out, L.cancel, 8 * s, kWhite, sh.hoverPart == int(Part::Cancel) ? 0.12f : 0.06f, kWhite, 0.16f,
-                     1.0f * s);
 }
 
 std::vector<Words> words(const Layout& L, const std::vector<Entry>& entries, const Show& sh, const Texts& t) {

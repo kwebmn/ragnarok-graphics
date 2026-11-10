@@ -65,7 +65,6 @@ int gameButton(Button b);    // the game's window's own: 0x76 enter, 0x89 make, 
 int pageButton(bool right);  // 0x96 the page after (the game: its page + 1), 0x97 the one before
 bool allowed(const Slot& s, Button b);
 
-void paint(panel::Picture& out, const Layout& L, const std::vector<Slot>& slots, const Show& sh);
 
 enum class Align : uint8_t { Left, Right, Center };
 struct Words {

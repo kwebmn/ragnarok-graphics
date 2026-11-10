@@ -33,7 +33,6 @@ struct Layout {
 Layout layout(const std::vector<Item>& items, int atX, int atY, int targetW, int targetH, float scale, float widest);
 int rowAt(const Layout& L, const std::vector<Item>& items, float x, float y);  // an item's row (not a separator); -1
 
-void paint(panel::Picture& out, const Layout& L, const std::vector<Item>& items, int hover);
 
 enum class Align : uint8_t { Left, Right, Center };
 struct Words {

@@ -65,30 +65,6 @@ Hit hitTest(const Layout& L, float x, float y) {
     return Hit{};
 }
 
-void paint(panel::Picture& out, const Layout& L, const Values& v, const Show& sh) {
-    const float s = L.s;
-    panel::roundRect(out, L.glass, 12 * s, kCard, uistyle::window(), kWhite, 0.12f, 1.0f * s);
-    panel::roundRect(out, L.close, 6 * s, kWhite, sh.hoverClose ? 0.14f : 0.06f);
-    for (int i = 0; i < 6; ++i) {
-        const panel::Box& b = L.toggles[i];
-        const bool on = v.on[i], hot = sh.hoverToggle == i, focus = sh.focus == i;
-        panel::roundRect(out, b, b.h / 2, on ? kGold : kWhite, on ? (hot ? 0.75f : 0.6f) : (hot ? 0.16f : 0.1f),
-                         focus ? kGold : kWhite, focus ? 0.95f : 0.15f, (focus ? 1.5f : 1.0f) * s);
-        const float knob = b.h - 6 * s, kx = on ? b.x + b.w - knob - 3 * s : b.x + 3 * s;
-        panel::roundRect(out, panel::Box{kx, b.y + 3 * s, knob, knob}, knob / 2, kWhite, on ? 0.95f : 0.55f);
-    }
-    for (int i = 0; i < 2; ++i) {
-        const panel::Box& b = L.sliders[i];
-        const float share = float(std::clamp(v.volume[i], 0, kVolumeMost)) / float(kVolumeMost);
-        panel::roundRect(out, b, b.h / 2, kWhite, 0.10f);
-        if (share > 0)
-            panel::roundRect(out, panel::Box{b.x, b.y, b.w * share, b.h}, b.h / 2, kGold, v.on[i] ? 0.9f : 0.4f);
-        const float knob = 14 * s;
-        panel::roundRect(out, panel::Box{b.x + b.w * share - knob / 2, b.y + b.h / 2 - knob / 2, knob, knob},
-                         knob / 2, kWhite, sh.hoverSlider == i ? 1.0f : 0.85f);
-    }
-}
-
 std::vector<Words> words(const Layout& L, const Values& v, const Show& sh, const Texts& t) {
     (void)sh;
     std::vector<Words> out;

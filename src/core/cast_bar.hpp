@@ -26,7 +26,6 @@ struct Layout {
 };
 // Centred at centreX, its bar's top at barTop (the target's pixels)
 Layout layout(const Data& d, int centreX, int barTop, float scale);
-void paint(panel::Picture& out, const Layout& L, const Data& d);
 
 enum class Align : uint8_t { Left, Right, Center };
 struct Words {

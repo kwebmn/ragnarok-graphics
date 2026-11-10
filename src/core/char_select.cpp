@@ -13,28 +13,6 @@ constexpr float kSlotW = 230, kSlotH = 330, kGap = 14, kPad = 22, kTitleH = 40, 
 constexpr uint32_t kCard = 0x10141C, kWhite = 0xFFFFFF, kGold = 0xC9A55B, kGold2 = 0xE6CB8A, kText = 0xEEF2F8;
 constexpr uint32_t kMuted = 0x9AA3B5, kHp = 0x4CC777, kSp = 0x3D7EEB, kBlack = 0x000000;
 
-void put(panel::Picture& out, const panel::Picture& pic, const panel::Box& box) {
-    const int ox = int(std::lround(box.x + (box.w - float(pic.width)) / 2));
-    const int oy = int(std::lround(box.y + (box.h - float(pic.height)) / 2));
-    if (out.scene) {  // 3.0.18-beta.12: recorded for uaUI
-        panel::recordImage(out, pic, float(ox), float(oy), 1.0f);
-        return;
-    }
-    for (int y = 0; y < pic.height; ++y)
-        for (int x = 0; x < pic.width; ++x) {
-            const int tx = ox + x, ty = oy + y;
-            if (tx < 0 || ty < 0 || tx >= out.width || ty >= out.height) continue;
-            const uint32_t c = pic.px[size_t(y) * size_t(pic.width) + size_t(x)];
-            if (!(c >> 24)) continue;
-            uint32_t& d = out.px[size_t(ty) * size_t(out.width) + size_t(tx)];
-            const uint32_t keep = 255 - (c >> 24);
-            const auto ch = [&](int sh) {
-                return std::min<uint32_t>(255, ((c >> sh) & 0xFF) + ((d >> sh) & 0xFF) * keep / 255);
-            };
-            d = ch(24) << 24 | ch(16) << 16 | ch(8) << 8 | ch(0);
-        }
-}
-
 // A place's inner parts (its own pixels): the face's box, its name's row, ...
 struct Inner {
     panel::Box face, name, job, level, hp, hpBar, sp, spBar;
@@ -165,48 +143,6 @@ bool allowed(const Slot& s, Button b) {
         case Button::Back: break;
     }
     return true;
-}
-
-void paint(panel::Picture& out, const Layout& L, const std::vector<Slot>& slots, const Show& sh) {
-    const float s = L.s;
-    panel::roundRect(out, L.glass, 14 * s, kCard, std::max(0.94f, uistyle::window()), kWhite, 0.12f, 1.0f * s);
-    for (const panel::Box* b : {&L.pageLeft, &L.pageRight}) panel::roundRect(out, *b, 7 * s, kWhite, 0.06f);
-    const std::vector<size_t> order =
-        L.carousel ? std::vector<size_t>{0, 4, 1, 3, 2} : std::vector<size_t>{0, 1, 2};  // .275: far ones first
-    for (const size_t i : order) {
-        if (i >= L.slots.size()) continue;
-        const panel::Box& b = L.slots[i];
-        const bool chosen = int(i) == sh.selected, hot = int(i) == sh.hover;
-        const Slot* sl = i < slots.size() ? &slots[i] : nullptr;
-        if (sl && sl->none) continue;
-        const float f = L.carousel ? L.scales[i] : 1.0f;
-        // .275: a carousel's card opaque under its neighbours, the farther ones fainter
-        panel::roundRect(out, b, 12 * s * f, L.carousel ? kCard : kWhite,
-                         L.carousel ? (f < 0.8f ? 0.82f : 0.92f) : hot ? 0.07f : 0.04f, chosen ? kGold : kWhite,
-                         chosen ? 1.0f : hot ? 0.24f : 0.12f, (chosen ? 2.0f : 1.0f) * s);
-        if (!sl || !sl->used) continue;
-        const Inner in = inner(b, s * f);
-        panel::roundRect(out, in.face, in.face.w / 2, kBlack, 0.30f);
-        if (sl->face && sl->face->width > 0) put(out, *sl->face, in.face);
-        const auto bar = [&](const panel::Box& bb, int now, int most, uint32_t rgb) {
-            panel::roundRect(out, bb, bb.h / 2, kWhite, 0.08f);
-            if (most > 0 && now > 0)
-                panel::roundRect(out, panel::Box{bb.x, bb.y, bb.w * std::min(1.0f, float(now) / float(most)), bb.h},
-                                 bb.h / 2, rgb, 0.9f);
-        };
-        bar(in.hpBar, sl->hp, sl->maxHp, kHp);
-        bar(in.spBar, sl->sp, sl->maxSp, kSp);
-    }
-    const Slot* chosen = sh.selected >= 0 && sh.selected < int(slots.size()) ? &slots[size_t(sh.selected)] : nullptr;
-    for (size_t i = 0; i < L.buttons.size(); ++i) {
-        const Button b = Button(i);
-        const bool can = chosen ? allowed(*chosen, b) : b == Button::Back;
-        const bool primary = b == Button::Enter || (b == Button::Make && chosen && !chosen->used);
-        const bool hot = int(i) == sh.hoverButton;
-        panel::roundRect(out, L.buttons[i], 9 * s, primary ? kGold : kWhite,
-                         !can ? 0.02f : primary ? (hot ? 0.36f : 0.24f) : (hot ? 0.12f : 0.06f),
-                         primary && can ? kGold : kWhite, primary && can ? 0.85f : 0.16f, 1.0f * s);
-    }
 }
 
 std::vector<Words> words(const Layout& L, const std::vector<Slot>& slots, const Show& sh, const Texts& t) {

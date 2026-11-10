@@ -19,28 +19,6 @@ constexpr uint32_t kCard = 0x10141C, kWhite = 0xFFFFFF, kGold = 0xC9A55B, kGold2
 constexpr uint32_t kMuted = 0x9AA3B5, kBlack = 0x000000, kDanger = 0xE0675C;
 constexpr long long kMostPrice = 99990000;  // the game's OK asks past it (msgstringtable 0x398)
 
-void put(panel::Picture& out, const panel::Picture& pic, const panel::Box& box) {
-    const int ox = int(std::lround(box.x + (box.w - float(pic.width)) / 2));
-    const int oy = int(std::lround(box.y + (box.h - float(pic.height)) / 2));
-    if (out.scene) {  // 3.0.18-beta.12: recorded for uaUI
-        panel::recordImage(out, pic, float(ox), float(oy), 1.0f);
-        return;
-    }
-    for (int y = 0; y < pic.height; ++y)
-        for (int x = 0; x < pic.width; ++x) {
-            const int tx = ox + x, ty = oy + y;
-            if (tx < 0 || ty < 0 || tx >= out.width || ty >= out.height) continue;
-            const uint32_t c = pic.px[size_t(y) * size_t(pic.width) + size_t(x)];
-            if (!(c >> 24)) continue;
-            uint32_t& d = out.px[size_t(ty) * size_t(out.width) + size_t(tx)];
-            const uint32_t keep = 255 - (c >> 24);
-            const auto ch = [&](int sh) {
-                return std::min<uint32_t>(255, ((c >> sh) & 0xFF) + ((d >> sh) & 0xFF) * keep / 255);
-            };
-            d = ch(24) << 24 | ch(16) << 16 | ch(8) << 8 | ch(0);
-        }
-}
-
 panel::Box iconBox(const panel::Box& row, float s) {
     return panel::Box{row.x + 5 * s, row.y + (row.h - kIcon * s) / 2, kIcon * s, kIcon * s};
 }
@@ -138,47 +116,6 @@ Hit hitTest(const Layout& L, float x, float y) {
     }
     if (L.glass.contains(x, y)) return Hit{Part::Body};
     return Hit{};
-}
-
-void paint(panel::Picture& out, const Layout& L, const std::vector<Row>& cart, const std::vector<Row>& sale,
-           const Show& sh) {
-    const float s = L.s;
-    panel::roundRect(out, L.glass, 12 * s, kCard, uistyle::window(), kWhite, 0.12f, 1.0f * s);
-    panel::roundRect(out, L.cross, 6 * s, kWhite, sh.hoverButton == 2 ? 0.14f : 0.06f);
-    panel::roundRect(out, L.sign, 7 * s, kBlack, 0.30f, sh.focus == 0 ? kGold : kWhite, sh.focus == 0 ? 0.9f : 0.18f,
-                     1.0f * s);
-    for (const panel::Box* head : {&L.cartHead, &L.saleHead})
-        panel::roundRect(out, panel::Box{head->x, head->y + head->h - 1 * s, head->w, 1 * s}, 0, kGold, 0.45f);
-    panel::roundRect(out, L.cartList, 8 * s, kBlack, 0.14f);
-    panel::roundRect(out, L.saleList, 8 * s, kBlack, 0.14f);
-    for (size_t i = 0; i < L.cartRows.size(); ++i) {
-        const size_t at = i + size_t(std::max(0, sh.cartScroll));
-        if (at >= cart.size()) break;
-        const bool full = sh.most > 0 && int(sale.size()) >= sh.most;
-        panel::roundRect(out, L.cartRows[i], 7 * s, kWhite, sh.hoverCart == int(i) && !full ? 0.10f : 0.035f);
-        if (sh.padCart == int(i))  // 3.0.16-beta.39: the controller's row
-            panel::roundRect(out, L.cartRows[i], 7 * s, kWhite, 0.0f, kGold, 0.9f, 1.5f * s);
-        const panel::Box icon = iconBox(L.cartRows[i], s);
-        panel::roundRect(out, icon, 6 * s, kBlack, 0.30f);
-        if (cart[at].icon && cart[at].icon->width > 0) put(out, *cart[at].icon, icon);
-    }
-    for (size_t i = 0; i < L.saleRows.size(); ++i) {
-        const size_t at = i + size_t(std::max(0, sh.saleScroll));
-        if (at >= sale.size()) break;
-        panel::roundRect(out, L.saleRows[i], 7 * s, kWhite, sh.hoverSale == int(i) ? 0.07f : 0.035f);
-        if (sh.padSale == int(i))
-            panel::roundRect(out, L.saleRows[i], 7 * s, kWhite, 0.0f, kGold, 0.9f, 1.5f * s);
-        const panel::Box icon = iconBox(L.saleRows[i], s);
-        panel::roundRect(out, icon, 6 * s, kBlack, 0.30f);
-        if (sale[at].icon && sale[at].icon->width > 0) put(out, *sale[at].icon, icon);
-        const bool focused = sh.focus == 1 + int(at);
-        const bool none = priceOf(sale[at].price) <= 0;
-        panel::roundRect(out, L.prices[i], 6 * s, kBlack, 0.35f, focused ? kGold : none ? kDanger : kWhite,
-                         focused ? 0.9f : none ? 0.55f : 0.18f, 1.0f * s);
-        panel::roundRect(out, L.removes[i], 6 * s, kDanger, sh.hoverRemove == int(i) ? 0.30f : 0.10f);
-    }
-    panel::roundRect(out, L.cancel, 8 * s, kWhite, sh.hoverButton == 1 ? 0.14f : 0.07f);
-    panel::roundRect(out, L.open, 8 * s, kGold, sh.hoverButton == 0 ? 0.40f : 0.26f, kGold, 0.85f, 1.0f * s);
 }
 
 std::vector<Words> words(const Layout& L, const std::vector<Row>& cart, const std::vector<Row>& sale,

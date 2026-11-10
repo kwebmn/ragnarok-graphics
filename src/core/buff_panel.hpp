@@ -90,7 +90,6 @@ panel::Box tipBox(const Layout& L, int slot, float width);
 // The words' width as drawn at `px` (an estimate a little wide: the boxes made from it hold the GDI's words)
 float wordsWidth(const std::string& utf8, float px, bool bold);
 
-void paint(panel::Picture& out, const Layout& L, const std::vector<Entry>& entries, int hover);
 
 enum class Align : uint8_t { Left, Right, Center };
 struct Words {
@@ -111,7 +110,6 @@ std::vector<Words> words(const Layout& L, const std::vector<Entry>& entries, int
 // The hovered one's tip (the column and the row): its name and time, a favourite's or the rest's click; its ground
 // here, its words in words(); w 0: none
 panel::Box tipOf(const Layout& L, const std::vector<Entry>& entries, int hover, const Texts& t);
-void paintTip(panel::Picture& out, const Layout& L, const std::vector<Entry>& entries, int hover, const Texts& t);
 // 3.0.18-beta.20 (the RML column, win/buff_column): the tip's box and its two lines
 panel::Box tipText(const Layout& L, const std::vector<Entry>& entries, int hover, const Texts& t, std::string& first,
                    std::string& second);

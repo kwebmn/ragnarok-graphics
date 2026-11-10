@@ -66,29 +66,6 @@ Hit hitTest(const Layout& L, float x, float y) {
     return Hit{};
 }
 
-void paint(panel::Picture& out, const Layout& L, const std::vector<Entry>& entries, const Show& sh) {
-    const float s = L.s;
-    panel::roundRect(out, L.glass, 12 * s, kCard, uistyle::window(), kWhite, 0.12f, 1.0f * s);
-    panel::roundRect(out, L.close, 6 * s, kWhite, sh.hoverClose ? 0.14f : 0.0f, kWhite, sh.hoverClose ? 0.3f : 0.0f,
-                     1.0f * s);
-    for (size_t i = 0; i < L.tabs.size(); ++i) {
-        const bool on = int(i) == int(sh.tab), hot = int(i) == sh.hoverTab;
-        panel::roundRect(out, L.tabs[i], 8 * s, on ? kGold : kWhite, on ? 0.24f : (hot ? 0.10f : 0.04f),
-                         on ? kGold : kWhite, on ? 0.8f : 0.12f, 1.0f * s);
-    }
-    for (size_t i = 0; i < L.rows.size() && i < entries.size(); ++i) {
-        const bool hot = int(i) == sh.hover;
-        panel::roundRect(out, L.rows[i], 7 * s, hot ? kGold : kWhite, hot ? 0.18f : 0.04f, hot ? kGold : kWhite,
-                         hot ? 0.7f : 0.08f, 1.0f * s);
-        if (entries[i].state < 0) continue;
-        const panel::Box& r = L.rows[i];  // a switch's state: a pill at its right
-        const panel::Box pill{r.x + r.w - 58 * s, r.y + 5 * s, 50 * s, r.h - 10 * s};
-        const bool on = entries[i].state > 0;
-        panel::roundRect(out, pill, pill.h / 2, on ? kGreen : kWhite, on ? 0.30f : 0.06f, on ? kGreen : kWhite,
-                         on ? 0.8f : 0.2f, 1.0f * s);
-    }
-}
-
 std::vector<Words> words(const Layout& L, const std::vector<Entry>& entries, const Show& sh, const Texts& t) {
     std::vector<Words> out;
     const float s = L.s;

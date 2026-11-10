@@ -80,15 +80,10 @@ TEST(homun_card_words_and_picture) {
     const std::vector<homuncard::Words> w = homuncard::words(L, i, homuncard::Show{}, t);
     const auto has = [&](const std::string& s) {
         return std::any_of(w.begin(), w.end(), [&](const homuncard::Words& x) { return x.text == s; });
-    };
+    }
+    ;
     CHECK(has("Lif") && has("Рівень 30") && has("900 / 1200") && has("40 / 80") && has("70 / 100"));
     CHECK(has("s6") && has("ATK") && has("210") && has("ASPD") && has("50") && has("Видалити"));
-    panel::Picture p;
-    p.width = L.w;
-    p.height = L.h;
-    p.px.assign(size_t(L.w) * size_t(L.h), 0u);
-    homuncard::paint(p, L, i, homuncard::Show{});
-    CHECK((p.px[size_t(L.h / 2) * size_t(L.w) + size_t(L.w / 2)] >> 24) > 0x80);
 }
 
 // 3.0.11-beta.221 (the owner «1-3 делай»: the homunculus' skills - the game's window named none: its skills 8001 on

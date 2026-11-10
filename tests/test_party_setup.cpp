@@ -63,19 +63,14 @@ TEST(party_setup_words_and_picture) {
     const std::vector<partysetup::Words> w = partysetup::words(L, sh, t);
     const auto has = [&](const std::string& s) {
         return std::any_of(w.begin(), w.end(), [&](const partysetup::Words& x) { return x.text == s; });
-    };
+    }
+    ;
     CHECK(has("Налаштування групи") && has("Досвід") && has("Порівну") && has("Спільно") && has("Готово"));
     CHECK(has("Змінює лише лідер групи"));
     sh.canChange = true;
     const std::vector<partysetup::Words> w2 = partysetup::words(L, sh, t);
     CHECK(std::none_of(w2.begin(), w2.end(),
                        [](const partysetup::Words& x) { return x.text == "Змінює лише лідер групи"; }));
-    panel::Picture p;
-    p.width = L.w;
-    p.height = L.h;
-    p.px.assign(size_t(L.w) * size_t(L.h), 0u);
-    partysetup::paint(p, L, sh);
-    CHECK((p.px[size_t(L.h / 2) * size_t(L.w) + size_t(L.w / 2)] >> 24) > 0x80);
 }
 
 // 3.0.11-beta.200 (the tester: «виставлення шари в паті не працює ... судячи з шари луту справді не вносить зміни»):

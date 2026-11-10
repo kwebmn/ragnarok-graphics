@@ -77,8 +77,6 @@ struct Hit {
 };
 Hit hitTest(const Layout& L, float x, float y);
 
-void paint(panel::Picture& out, const Layout& L, const Side& me, const Side& them, const Show& sh, const Texts& t,
-           const itemwin::Measure& m);
 std::vector<itemwin::Words> words(const Layout& L, const Side& me, const Side& them, const Show& sh, const Texts& t,
                                   const itemwin::Measure& m);
 // 3.0.18-beta.28 (uaUI's trade): the parts paint() draws, placed - the window's pixels; w 0: not there

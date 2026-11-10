@@ -924,76 +924,6 @@ int lineAt(const Layout& L, float y) {
     return float(i) * L.lineH + top < L.list.y + L.list.h ? i : -1;
 }
 
-void paint(panel::Picture& out, const Layout& L, const Scene& sc, const Texts& t) {
-    // see-through between the parts; 3.0.18-beta.14 recorded for uaUI while it is on - the map's own pixels a texture
-    // under its marks and edges
-    panel::blank(out, L.w, L.h);
-    const float s = L.s, edge = std::max(1.0f, s);
-    const View v = view(sc.map, sc.player, sc.cells, int(L.map.w));
-    mapPixels(out, L.map, sc, v);
-    overMap(out, L.map, sc, v, s, 1.0f, markScale(sc.cells, sc.map, L.s) * L.grow);
-    roundCorners(out, L.map, kRadius * s);
-    panel::roundRect(out, L.map, kRadius * s, kWhite, 0.0f, kWhite, 0.16f, edge);
-    const float arm = 15 * s, thick = std::max(1.5f, 2 * s);  // the concept's gold corners
-    for (const auto& [cx, cy, sx, sy] : {std::array<float, 4>{0, 0, 1, 1}, std::array<float, 4>{L.map.w, 0, -1, 1},
-                                         std::array<float, 4>{0, L.map.h, 1, -1},
-                                         std::array<float, 4>{L.map.w, L.map.h, -1, -1}}) {
-        panel::roundRect(out, panel::Box{sx > 0 ? cx : cx - arm, sy > 0 ? cy : cy - thick, arm, thick}, 0, kAccent2,
-                         0.95f);
-        panel::roundRect(out, panel::Box{sx > 0 ? cx : cx - thick, sy > 0 ? cy : cy - arm, thick, arm}, 0, kAccent2,
-                         0.95f);
-    }
-    const std::pair<const panel::Box*, uiicons::Icon> buttons[] = {{&L.zoomIn, uiicons::Icon::Plus},
-                                                                  {&L.zoomOut, uiicons::Icon::Minus},
-                                                                  {&L.expand, uiicons::Icon::Expand}};
-    const Part parts[] = {Part::ZoomIn, Part::ZoomOut, Part::Expand};
-    for (int i = 0; i < 3; ++i) {
-        const panel::Box& b = *buttons[i].first;
-        const bool over = sc.hover == parts[i];
-        panel::roundRect(out, b, 6 * s, over ? kAccent : kDark, over ? 0.55f : 0.72f, kWhite, 0.18f, edge);
-        const float ic = 14 * s * L.grow;  // 3.0.18-beta.51
-        uiicons::draw(out, buttons[i].second, b.x + (b.w - ic) / 2, b.y + (b.h - ic) / 2, ic, kWhite,
-                      1.0f, 2.6f);
-    }
-    for (int i = 0; i < kLayers; ++i) {  // 3.0.11-beta.119: the layers' buttons, each its marks' sign
-        const panel::Box& b = L.layers[i];
-        if (b.w <= 0) continue;
-        const bool over = sc.hover == Part::Layer && sc.hoverLayer == i;
-        panel::roundRect(out, b, b.w / 2, over ? kAccent : kDark, over ? 0.55f : 0.72f, kWhite, 0.18f, edge);
-        layerSign(out, Layer(i), b.x + b.w / 2, b.y + b.h / 2, 5.5f * s * L.grow, s * L.grow, sc.layers.on[i],
-                  sc.kafraFace);
-    }
-    if (L.style.w > 0) {  // 3.0.11-beta.120: the picture's switch - lit gold while «Схема» shows
-        const panel::Box& b = L.style;
-        const bool over = sc.hover == Part::Style;
-        panel::roundRect(out, b, b.w / 2, sc.scheme || over ? kAccent : kDark, sc.scheme ? 0.75f : over ? 0.55f : 0.72f,
-                         sc.scheme ? kAccent2 : kWhite, sc.scheme ? 0.8f : 0.18f, edge);
-        schemeSign(out, b.x + b.w / 2, b.y + b.h / 2, 5.5f * s * L.grow, true);
-    }
-    panel::roundRect(out, L.caption, 8 * s, kCard, uistyle::panel(), kWhite, 0.12f, edge);  // the bar: name, cell, ▾
-    if (sc.hover == Part::Fold) panel::roundRect(out, L.fold, 6 * s, kWhite, 0.10f);
-    if (L.found.w > 0) {  // 3.0.11-beta.213: a search's plate
-        panel::roundRect(out, L.found, L.found.h / 2, kCard, uistyle::panel(), kWhite, 0.12f, edge);
-        panel::roundRect(out, L.foundClear, L.foundClear.h / 2, kWhite, 0.08f);
-    }
-    if (L.net.w > 0) {  // 3.0.11-beta.127: the round trip's plate - its ground, the graph's baseline and bars
-        panel::roundRect(out, L.net, L.net.h / 2, kCard, uistyle::panel(), kWhite, 0.12f, edge);
-        const panel::Box g = netGraphBox(L);
-        panel::roundRect(out, panel::Box{g.x, g.y + g.h - std::max(1.0f, std::round(s)), g.w,
-                                         std::max(1.0f, std::round(s))},
-                         0, kWhite, 0.10f);
-        for (const NetBar& b : netBars(L, sc)) panel::roundRect(out, b.box, 0, b.rgb, 0.95f);
-    }
-    if (L.route.w > 0) {  // the way's bar: gold-tinted, its ×
-        panel::roundRect(out, L.route, 8 * s, kCard, uistyle::panel());
-        panel::roundRect(out, L.route, 8 * s, kAccent, 0.16f, kAccent, 0.55f, edge);
-        if (sc.hover == Part::Stop) panel::roundRect(out, L.stop, 5 * s, kWhite, 0.12f);
-    }
-    if (L.list.w > 0) panel::roundRect(out, L.list, 8 * s, kCard, uistyle::panel(), kWhite, 0.10f, edge);
-    (void)t;
-    if (sc.opacity < 1) panel::fade(out, sc.opacity);  // Ctrl+Tab's see-through
-}
-
 std::vector<Words> words(const Layout& L, const Scene& sc, const Texts& t) {
     std::vector<Words> out = mapWords(L, sc);
     const std::vector<Words> rest = frameWords(L, sc, t);
@@ -1226,42 +1156,6 @@ void paintBigMap(panel::Picture& out, const Big& b, const Scene& sc) {
     out.height = int(b.map.h);
     out.px.assign(size_t(out.width) * size_t(out.height), kGround);
     mapPixels(out, panel::Box{0, 0, b.map.w, b.map.h}, sc, bigView(b, sc));
-}
-
-void paintBig(panel::Picture& out, const panel::Picture& map, const Big& b, const Scene& sc) {
-    panel::blank(out, b.w, b.h);  // 3.0.18-beta.14: recorded for uaUI while it is on (the map a texture under)
-    const float s = b.s, edge = std::max(1.0f, s);
-    panel::roundRect(out, panel::Box{0, 0, float(b.w), float(b.h)}, 12 * s, kCard, 0.96f, kWhite, 0.14f, edge);
-    panel::roundRect(out, panel::Box{0, b.header.h - edge, float(b.w), edge}, 0, kWhite, 0.10f);
-    if (sc.bigHover == BigPart::Close) panel::roundRect(out, b.close, 9 * s, kWhite, 0.10f);  // the cross hovered
-    if (out.scene && map.width == int(b.map.w) && map.height == int(b.map.h))  // 3.0.18-beta.14: over the card
-        panel::recordImage(out, map, b.map.x, b.map.y, 1.0f);
-    else if (map.width == int(b.map.w) && map.height == int(b.map.h))  // the map's picture, made once
-        for (int y = 0; y < map.height; ++y)
-            std::copy_n(map.px.begin() + std::ptrdiff_t(size_t(y) * size_t(map.width)), map.width,
-                        out.px.begin() + std::ptrdiff_t(size_t(int(b.map.y) + y) * size_t(out.width) +
-                                                        size_t(b.map.x)));
-    const View v = bigView(b, sc);
-    overMap(out, b.map, sc, v, s, 1.5f);
-    for (const Label& l : bigLabels(b, sc))  // the words' grounds
-        panel::roundRect(out, l.box, 6 * s, kDark, 0.84f);
-    for (int i = 0; i < kLayers; ++i) {  // 3.0.11-beta.119: the layers' chips - its sign, its words (by GDI)
-        const panel::Box& c = b.chips[i];
-        if (c.w <= 0) continue;
-        const bool on = sc.layers.on[i], over = sc.bigHover == BigPart::Layer && sc.hoverLayer == i;
-        panel::roundRect(out, c, c.h / 2, on ? kAccent : kDark, on ? (over ? 0.32f : 0.22f) : (over ? 0.9f : 0.7f),
-                         on ? kAccent : kWhite, on ? 0.7f : 0.16f, edge);
-        layerSign(out, Layer(i), c.x + c.h / 2, c.y + c.h / 2, 6 * s, s, on, sc.kafraFace);
-    }
-    if (b.styleChip.w > 0) {  // 3.0.11-beta.120: «Схема» - lit gold while it shows
-        const panel::Box& c = b.styleChip;
-        const bool over = sc.bigHover == BigPart::Style;
-        panel::roundRect(out, c, c.h / 2, sc.scheme ? kAccent : kDark,
-                         sc.scheme ? (over ? 0.42f : 0.32f) : (over ? 0.9f : 0.7f), sc.scheme ? kAccent : kWhite,
-                         sc.scheme ? 0.8f : 0.16f, edge);
-        schemeSign(out, c.x + c.h / 2, c.y + c.h / 2, 6 * s, true);
-    }
-    if (sc.opacity < 1) panel::fade(out, sc.opacity);
 }
 
 std::vector<Words> bigWords(const Big& b, const Scene& sc, const std::string& title, const std::string& cell,

@@ -40,12 +40,7 @@ TEST(switch_card_words_and_picture) {
     const std::vector<switchcard::Words> w = switchcard::words(L, on, switchcard::Show{}, t);
     const auto has = [&](const std::string& s) {
         return std::any_of(w.begin(), w.end(), [&](const switchcard::Words& x) { return x.text == s; });
-    };
+    }
+    ;
     CHECK(has("Налаштування шепоту") && has("Окреме вікно для незнайомих") && has("Звук нового шепоту"));
-    panel::Picture p;
-    p.width = L.w;
-    p.height = L.h;
-    p.px.assign(size_t(L.w) * size_t(L.h), 0u);
-    switchcard::paint(p, L, on, switchcard::Show{});
-    CHECK((p.px[size_t(L.h / 2) * size_t(L.w) + size_t(L.w / 2)] >> 24) > 0x80);
 }

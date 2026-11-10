@@ -89,7 +89,6 @@ struct FieldPlaces {
 };
 FieldPlaces fieldPlaces(uint32_t first, uint32_t firstMask, uint32_t second, uint32_t secondMask);
 
-void paint(panel::Picture& out, const Layout& L, const Fields& f, const Show& sh);
 
 enum class Align : uint8_t { Left, Right, Center };
 struct Words {

@@ -55,30 +55,6 @@ Hit hitTest(const Layout& L, float x, float y) {
     return Hit{};
 }
 
-void paint(panel::Picture& out, const Layout& L, const Show& sh) {
-    const float s = L.s;
-    panel::roundRect(out, L.glass, 12 * s, kCard, uistyle::window(), kWhite, 0.12f, 1.0f * s);
-    for (int r = 0; r < 3; ++r) {
-        if (!sh.present[r] || L.choices[r][0].w <= 0) continue;
-        if (sh.focus == r)
-            panel::roundRect(out,
-                             panel::Box{L.choices[r][0].x - 4 * s, L.choices[r][0].y - 3 * s,
-                                        L.choices[r][1].x + L.choices[r][1].w - L.choices[r][0].x + 8 * s,
-                                        L.choices[r][0].h + 6 * s},
-                             10 * s, kGold, 0.0f, kGold, 0.7f, 1.5f * s);
-        for (int c = 0; c < 2; ++c) {
-            const bool can = changeable(sh, r);
-            const bool on = sh.values[r] == c, hot = sh.hoverRow == r && sh.hoverChoice == c && can;
-            panel::roundRect(out, L.choices[r][c], 8 * s, on ? kGold : kWhite,
-                             on ? (can ? 0.26f : 0.14f) : hot ? 0.10f : 0.04f, on ? kGold : kWhite,
-                             on ? (can ? 0.85f : 0.45f) : 0.14f, 1.0f * s);
-        }
-    }
-    panel::roundRect(out, L.ok, 8 * s, kGold, sh.hoverPart == int(Part::Ok) ? 0.34f : 0.22f, kGold, 0.8f, 1.0f * s);
-    panel::roundRect(out, L.cancel, 8 * s, kWhite, sh.hoverPart == int(Part::Cancel) ? 0.12f : 0.06f, kWhite, 0.16f,
-                     1.0f * s);
-}
-
 bool changeable(const Show& sh, int row) { return sh.canChange && (row == 0 || !sh.thingsFixed); }
 
 std::vector<Words> words(const Layout& L, const Show& sh, const Texts& t) {

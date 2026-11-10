@@ -19,28 +19,6 @@ constexpr float kPictureW = 75, kPictureH = 100, kSlotH = 24, kSlotGap = 6;
 constexpr uint32_t kCard = 0x10141C, kWhite = 0xFFFFFF, kGold = 0xC9A55B, kText = 0xEEF2F8, kMuted = 0x9AA3B5;
 constexpr uint32_t kSpacer = 0xFFFFFF;  // the game's white words: on its white window unseen (spacers)
 
-void put(panel::Picture& out, const panel::Picture& pic, const panel::Box& box) {
-    const int ox = int(std::lround(box.x + (box.w - float(pic.width)) / 2));
-    const int oy = int(std::lround(box.y + (box.h - float(pic.height)) / 2));
-    if (out.scene) {  // 3.0.18-beta.12: recorded for uaUI
-        panel::recordImage(out, pic, float(ox), float(oy), 1.0f);
-        return;
-    }
-    for (int y = 0; y < pic.height; ++y)
-        for (int x = 0; x < pic.width; ++x) {
-            const int tx = ox + x, ty = oy + y;
-            if (tx < 0 || ty < 0 || tx >= out.width || ty >= out.height) continue;
-            const uint32_t c = pic.px[size_t(y) * size_t(pic.width) + size_t(x)];
-            if (!(c >> 24)) continue;
-            uint32_t& d = out.px[size_t(ty) * size_t(out.width) + size_t(tx)];
-            const uint32_t keep = 255 - (c >> 24);
-            const auto ch = [&](int sh) {
-                return std::min<uint32_t>(255, ((c >> sh) & 0xFF) + ((d >> sh) & 0xFF) * keep / 255);
-            };
-            d = ch(24) << 24 | ch(16) << 16 | ch(8) << 8 | ch(0);
-        }
-}
-
 std::string trimmed(std::string s) {
     while (!s.empty() && (s.back() == '\r' || s.back() == '\n')) s.pop_back();
     return s;
@@ -285,23 +263,6 @@ Part hitTest(const Layout& L, float x, float y) {
 
 int scrolled(const Layout& L, int scroll, int notches) {
     return std::clamp(scroll + notches * kWheelRows, 0, std::max(0, L.rows - L.shownRows));
-}
-
-void paint(panel::Picture& out, const Layout& L, const Card& c, const Show& sh) {
-    const float s = L.s;
-    panel::roundRect(out, L.glass, 12 * s, kCard, uistyle::window(), kWhite, 0.12f, 1.0f * s);
-    panel::roundRect(out, panel::Box{L.glass.x + 1 * s, L.glass.y + 1 * s, L.glass.w - 2 * s, L.body.y - 6 * s},
-                     11 * s, kWhite, 0.035f);  // the title's band
-    if (c.icon && c.icon->width > 0) put(out, *c.icon, L.icon);
-    if (sh.hoverClose) panel::roundRect(out, L.close, 6 * s, kWhite, 0.10f);
-    uiicons::draw(out, uiicons::Icon::PadCross, L.close.x, L.close.y, L.close.w, sh.hoverClose ? kGold : kMuted, 1.0f,
-                  2.0f);  // the close button's cross
-    if (c.picture && c.picture->width > 0 && L.picture.w > 0) put(out, *c.picture, L.picture);
-    for (size_t i = 0; i < L.slots.size(); ++i) {
-        const bool filled = i < c.cards.size() && !c.cards[i].empty();
-        panel::roundRect(out, L.slots[i], 6 * s, filled ? kGold : kWhite, filled ? 0.10f : 0.04f,
-                         filled ? kGold : kWhite, filled ? 0.55f : 0.12f, 1.0f * s);
-    }
 }
 
 std::vector<Words> words(const Layout& L, const Card& c, const Show& sh, const Texts& t) {

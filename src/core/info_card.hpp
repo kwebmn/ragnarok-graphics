@@ -79,7 +79,6 @@ enum class Part : uint8_t { None, Close, Body, Title };
 Part hitTest(const Layout& L, float x, float y);  // the picture's pixels
 int scrolled(const Layout& L, int scroll, int notches);  // the wheel's: three rows a notch (down positive), kept within
 
-void paint(panel::Picture& out, const Layout& L, const Card& c, const Show& sh);
 
 enum class Align : uint8_t { Left, Right, Center };
 struct Words {

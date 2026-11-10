@@ -60,7 +60,6 @@ enum class Quick : uint8_t { One, Half, All };
 int quickAt(const Layout& L, float x, float y);  // the picture's pixels; -1 none
 int quickValue(Quick q, int most);
 
-void paint(panel::Picture& out, const Layout& L, const Card& c, const Show& sh);
 
 enum class Align : uint8_t { Left, Right, Center };
 struct Words {

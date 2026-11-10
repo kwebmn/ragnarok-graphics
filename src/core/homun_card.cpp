@@ -124,46 +124,6 @@ Hit hitTest(const Layout& L, float x, float y) {
     return Hit{};
 }
 
-void paint(panel::Picture& out, const Layout& L, const Info& i, const Show& sh) {
-    const float s = L.s;
-    panel::roundRect(out, L.glass, 12 * s, kCard, uistyle::window(), kWhite, 0.12f, 1.0f * s);
-    panel::roundRect(out, L.close, 6 * s, kWhite, sh.hover == int(Button::Close) ? 0.14f : 0.06f);
-    const auto bar = [&](const panel::Box& b, long long now, long long most, uint32_t rgb) {
-        panel::roundRect(out, b, b.h / 2, kWhite, 0.08f);
-        if (most > 0 && now > 0)
-            panel::roundRect(out, panel::Box{b.x, b.y, b.w * std::min(1.0f, float(now) / float(most)), b.h}, b.h / 2,
-                             rgb, 0.9f);
-    };
-    bar(L.hp, i.hp, i.maxHp, kHp);
-    bar(L.sp, i.sp, i.maxSp, kSp);
-    bar(L.exp, i.exp, i.maxExp, kExp);
-    bar(L.hunger, i.hunger, 100, kFull);
-    panel::roundRect(out, panel::Box{L.skillsHead.x, L.skillsHead.y + L.skillsHead.h - 1 * s, L.skillsHead.w, 1 * s},
-                     0, kGold, 0.45f);  // 3.0.11-beta.221: the skills' heading underlined
-    for (size_t k = 0; k < L.skillRows.size() && k < i.skills.size(); ++k) {
-        if (sh.hoverSkill == int(k)) panel::roundRect(out, L.skillRows[k], 6 * s, kWhite, 0.07f);
-        if (sh.padRow == int(k))  // 3.0.16-beta.39
-            panel::roundRect(out, L.skillRows[k], 6 * s, kWhite, 0.0f, kGold, 0.9f, 1.5f * s);
-        if (k < L.skillPlus.size() && i.skills[k].up && i.points > 0)
-            panel::roundRect(out, L.skillPlus[k], 6 * s, kGold, sh.hoverPlus == int(k) ? 0.45f : 0.28f, kGold, 0.85f,
-                             1.0f * s);
-        if (k < L.skillLess.size() && i.skills[k].level > 1) {  // 3.0.16-beta.31: the use level's ‹ ›
-            panel::roundRect(out, L.skillLess[k], 5 * s, kWhite, sh.hoverLess == int(k) ? 0.16f : 0.06f);
-            panel::roundRect(out, L.skillMore[k], 5 * s, kWhite, sh.hoverMore == int(k) ? 0.16f : 0.06f);
-        }
-    }
-    for (int k = 0; k < 2; ++k) {
-        if (L.buttons[k].w <= 0) continue;
-        const Button b = k == 0 ? Button::Feed : Button::Skills;
-        const bool hot = sh.hover == int(b) || sh.focus == int(b);
-        panel::roundRect(out, L.buttons[k], 8 * s, k == 0 ? kGold : kWhite,
-                         k == 0 ? (hot ? 0.34f : 0.22f) : (hot ? 0.12f : 0.06f),
-                         sh.focus == int(b) ? kGold : k == 0 ? kGold : kWhite, sh.focus == int(b) ? 0.95f : 0.5f,
-                         (sh.focus == int(b) ? 1.5f : 1.0f) * s);
-    }
-    if (sh.hover == int(Button::Delete)) panel::roundRect(out, L.remove, 6 * s, kDanger, 0.12f);
-}
-
 std::vector<Words> words(const Layout& L, const Info& i, const Show& sh, const Texts& t) {
     (void)sh;
     std::vector<Words> out;

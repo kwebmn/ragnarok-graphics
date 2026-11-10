@@ -208,7 +208,6 @@ struct Hit {
 Hit hitTest(const Layout& L, float x, float y);
 int explainedItem(const Show& sh);  // .266: the stat or battle row the panel tells of
 
-void paint(panel::Picture& out, const Layout& L, const Data& d, const Show& sh);
 
 enum class Align : uint8_t { Left, Right, Center };
 struct Words {

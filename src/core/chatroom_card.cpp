@@ -75,31 +75,6 @@ Hit hitTest(const Layout& L, float x, float y) {
     return Hit{};
 }
 
-void paint(panel::Picture& out, const Layout& L, const Card& c, const Show& sh) {
-    const float s = L.s;
-    panel::roundRect(out, L.glass, 12 * s, kCard, uistyle::window(), kWhite, 0.12f, 1.0f * s);
-    const bool closeHot = sh.hover.part == Part::Close;
-    panel::roundRect(out, L.close, 6 * s, kWhite, closeHot ? 0.14f : 0.0f, kWhite, closeHot ? 0.3f : 0.0f, 1.0f * s);
-    const auto field = [&](const panel::Box& b, bool focused, bool dim) {
-        panel::roundRect(out, b, 8 * s, kBlack, dim ? 0.15f : 0.35f, focused ? kGold : kWhite,
-                         focused ? 0.8f : (dim ? 0.08f : 0.18f), 1.0f * s);
-    };
-    field(L.title, c.focus == Field::Title, false);
-    field(L.password, c.focus == Field::Password, !c.closed);
-    const auto chip = [&](const panel::Box& b, bool on, bool hot) {
-        panel::roundRect(out, b, 7 * s, on ? kGold : kWhite, on ? 0.26f : (hot ? 0.12f : 0.05f), on ? kGold : kWhite,
-                         on ? 0.8f : 0.14f, 1.0f * s);
-    };
-    for (size_t i = 0; i < L.limits.size(); ++i)
-        chip(L.limits[i], i < c.limits.size() && c.limits[i] == c.limit,
-             sh.hover.part == Part::Limit && sh.hover.index == int(i));
-    chip(L.open, !c.closed, sh.hover.part == Part::Open);
-    chip(L.closed, c.closed, sh.hover.part == Part::Closed);
-    const bool createHot = sh.hover.part == Part::Create, cancelHot = sh.hover.part == Part::Cancel;
-    panel::roundRect(out, L.create, 8 * s, kGold, createHot ? 0.34f : 0.22f, kGold, 0.8f, 1.0f * s);
-    panel::roundRect(out, L.cancel, 8 * s, kWhite, cancelHot ? 0.12f : 0.06f, kWhite, 0.16f, 1.0f * s);
-}
-
 std::vector<Words> words(const Layout& L, const Card& c, const Show& sh, const Texts& t) {
     std::vector<Words> out;
     const float s = L.s;

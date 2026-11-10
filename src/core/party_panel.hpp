@@ -74,7 +74,6 @@ struct Hit {
 };
 Hit hitTest(const Layout& L, float x, float y);  // the picture's pixels
 
-void paint(panel::Picture& out, const Layout& L, const std::vector<Member>& members, int threshold);
 
 enum class Align : uint8_t { Left, Right, Center };
 struct Words {

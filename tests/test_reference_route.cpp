@@ -224,26 +224,6 @@ TEST(route_follow_made_again_wherever_the_player_goes) {
     CHECK(!routefollow::update(off, *ix, "town", 1, 1));  // not followed: nothing made
 }
 
-TEST(minimap_goal_line_and_its_end) {
-    // 3.0.11-beta.31: the way's line (its cells, core/walk_path) ends at the square's edge when its next move is past
-    // it; nothing of it west of the player
-    const minimap::Layout L = minimap::layout(1920, 1080, 1.0f, false, 0);
-    minimap::Scene sc;
-    sc.map = minimap::MapSize{400, 400};
-    sc.player = minimap::Cell{200, 200};
-    sc.path = {minimap::Cell{200, 200}, minimap::Cell{390, 200}};  // east, out of the view
-    minimap::Scene bare = sc;
-    bare.path.clear();
-    panel::Picture with, without;
-    minimap::paint(with, L, sc, minimap::Texts{});
-    minimap::paint(without, L, bare, minimap::Texts{});
-    const int row = int(L.map.h / 2);
-    const auto px = [](const panel::Picture& p, int x, int y) { return p.px[size_t(y) * size_t(p.width) + size_t(x)]; };
-    CHECK(px(with, int(L.map.w) - 4, row) != px(without, int(L.map.w) - 4, row));  // to the edge
-    CHECK(px(with, int(L.map.w / 4), row) == px(without, int(L.map.w / 4), row));  // not behind the player
-    CHECK(px(with, 4, int(L.map.h) + 4) == px(without, 4, int(L.map.h) + 4));      // nothing past the square
-}
-
 TEST(reference_pages_route_rows_follow_the_way) {
     const auto ix = index();
     refpages::Follow f;

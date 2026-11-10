@@ -98,17 +98,12 @@ TEST(vend_shop_words_and_picture) {
     const std::vector<vendshop::Words> w = vendshop::words(L, r, sh, t);
     const auto find = [&](const std::string& s) {
         return std::find_if(w.begin(), w.end(), [&](const vendshop::Words& x) { return x.text == s; });
-    };
+    }
+    ;
     CHECK(find("Лавка") != w.end() && find("Red Potion") != w.end() && find("+7 Knife") != w.end());
     CHECK(find("1 500 000 z") != w.end() && find("є 100") != w.end() && find("10") != w.end());
     CHECK(find("18 500 z") != w.end() && find("100 z") != w.end());
     CHECK(find("18 500 z") != w.end() && find("18 500 z")->rgb == vendshop::kShort);
-    panel::Picture p;
-    p.width = L.w;
-    p.height = L.h;
-    p.px.assign(size_t(L.w) * size_t(L.h), 0u);
-    vendshop::paint(p, L, r, sh);
-    CHECK((p.px[size_t(L.h / 2) * size_t(L.w) + size_t(L.w / 2)] >> 24) > 0x80);
 }
 
 // 3.0.18-beta.30: uaUI's «Лавка» - a line's icon square inside its line

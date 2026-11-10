@@ -150,35 +150,6 @@ int gameButton(Part p) {
     }
 }
 
-void paint(panel::Picture& out, const Layout& L, const Fields& f, const Show& sh) {
-    const float s = L.s;
-    panel::roundRect(out, L.glass, 14 * s, kCard, std::max(0.94f, uistyle::window()), kWhite, 0.12f, 1.0f * s);
-    const auto field = [&](const panel::Box& b, bool focused, bool hot, bool refused) {
-        const float edge = refused ? 0.9f : focused ? 0.85f : hot ? 0.30f : 0.16f;
-        panel::roundRect(out, b, 8 * s, kBlack, 0.35f, refused ? kRed : focused ? kGold : kWhite, edge,
-                         (focused || refused ? 1.5f : 1.0f) * s);
-    };
-    const bool bad = !f.error.empty();
-    field(L.account, f.focus == Focus::Account, sh.hover == int(Part::Account),
-          bad && f.errorField == loginerr::Field::Account);
-    field(L.password, f.focus == Focus::Password, sh.hover == int(Part::Password),
-          bad && f.errorField == loginerr::Field::Password);
-    const auto box = [&](const panel::Box& b, bool on) {
-        panel::roundRect(out, b, 4 * s, on ? kGold : kWhite, on ? 0.85f : 0.06f, on ? kGold : kWhite,
-                         on ? 1.0f : 0.35f, 1.0f * s);
-    };
-    box(L.tick, f.remember);
-    box(L.addTick, f.addShelf);  // 3.0.11-beta.175
-    if (L.drop.w > 0)  // 3.0.11-beta.177: ▾ and the eye
-        paintTriangle(out, L.drop.x + L.drop.w / 2 - 2 * s, L.drop.y + L.drop.h / 2, 10 * s, kGold2,
-                      sh.hover == int(Part::Drop) || f.dropOpen ? 1.0f : 0.8f);
-    paintEye(out, panel::Box{L.eye.x + 8 * s, L.eye.y + L.eye.h / 2 - 7 * s, 20 * s, 14 * s}, kMuted,
-             !f.passwordShown.empty() ? 1.0f : sh.hover == int(Part::Eye) ? 0.9f : 0.6f, s);
-    const bool hotEnter = sh.hover == int(Part::Enter), hotExit = sh.hover == int(Part::Exit);
-    panel::roundRect(out, L.enter, 9 * s, kGold, hotEnter ? 0.36f : 0.24f, kGold, 0.85f, 1.0f * s);
-    panel::roundRect(out, L.exit, 9 * s, kWhite, hotExit ? 0.12f : 0.06f, kWhite, 0.16f, 1.0f * s);
-}
-
 std::vector<Words> words(const Layout& L, const Fields& f, const Show& sh, const Texts& t) {
     std::vector<Words> out;
     const float s = L.s;

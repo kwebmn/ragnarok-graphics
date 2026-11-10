@@ -50,18 +50,6 @@ Hit hitTest(const Layout& L, float x, float y) {
     return Hit{};
 }
 
-void paint(panel::Picture& out, const Layout& L, const Show& sh) {
-    const float s = L.s;
-    panel::roundRect(out, L.glass, 12 * s, kCard, uistyle::window(), kWhite, 0.12f, 1.0f * s);
-    panel::roundRect(out, L.close, 6 * s, kWhite, sh.hoverClose ? 0.14f : 0.06f);
-    for (size_t i = 0; i < L.fields.size(); ++i) {
-        const bool focus = sh.focus == int(i), hot = sh.hover == int(i);
-        panel::roundRect(out, L.fields[i], 7 * s, kBlack, focus ? 0.42f : hot ? 0.34f : 0.28f, focus ? kGold : kWhite,
-                         focus ? 0.85f : 0.12f, 1.0f * s);
-    }
-    panel::roundRect(out, L.save, 8 * s, kGold, sh.hoverSave ? 0.34f : 0.22f, kGold, 0.8f, 1.0f * s);
-}
-
 std::vector<Words> words(const Layout& L, const std::vector<std::string>& texts, const Show& sh, const Texts& t) {
     std::vector<Words> out;
     const float s = L.s;

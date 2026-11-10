@@ -148,13 +148,6 @@ TEST(chat_picture_and_words) {
     const Line a = fromGame(Source::Whisper, "( From Nova ) : hey", 0xFFFF, t, 0);
     const std::vector<const Line*> lines{&a};
     const std::vector<Row> rows = wrap(lines, L.lines.w, L.px, estimate);
-    panel::Picture p;
-    p.width = L.w;
-    p.height = L.h;
-    p.px.assign(size_t(L.w) * size_t(L.h), 0u);
-    paint(p, L, rows, in, sh, t, estimate);
-    const uint32_t mid = p.px[size_t(L.h / 2) * size_t(L.w) + size_t(L.w / 2)];
-    CHECK((mid >> 24) > 0xC0);  // the glass
     const std::vector<Words> w = words(L, rows, in, sh, t, estimate);
     const auto has = [&](const std::string& s) {
         for (const Words& x : w)

@@ -87,67 +87,6 @@ Layout layout(int count, int targetW, int targetH, float scale) {
     return L;
 }
 
-void paint(panel::Picture& out, const Layout& L, int count, int hover, Page page, Channel channel,
-           const std::vector<panel::Picture>* icons) {
-    const float s = L.s;
-    const float step = count > 0 ? 2 * kPi / float(count) : 1.0f;
-    const int x0 = std::max(0, int(L.cx - L.outer - 2)), x1 = std::min(out.width, int(L.cx + L.outer + 2));
-    const int y0 = std::max(0, int(L.cy - L.outer - 2)), y1 = std::min(out.height, int(L.cy + L.outer + 2));
-    for (int py = y0; py < y1; ++py)
-        for (int px = x0; px < x1; ++px) {
-            const float dx = float(px) + 0.5f - L.cx, dy = float(py) + 0.5f - L.cy;
-            const float d = std::sqrt(dx * dx + dy * dy);
-            if (d > L.outer + 1) continue;
-            uint32_t& p = out.px[size_t(py) * size_t(out.width) + size_t(px)];
-            const float edgeOut = std::clamp(L.outer - d + 0.5f, 0.0f, 1.0f);
-            if (d < L.inner - 6 * s) {  // the middle: its own disc
-                panel::over(p, kCard, uistyle::window() * std::clamp(L.inner - 6 * s - d + 0.5f,
-                                                                                         0.0f, 1.0f));
-                continue;
-            }
-            const float edgeIn = std::clamp(d - L.inner + 0.5f, 0.0f, 1.0f);
-            const float cover = std::min(edgeOut, edgeIn);
-            if (cover <= 0) continue;
-            panel::over(p, kCard, 0.90f * cover);
-            float a = std::atan2(dx, -dy);
-            if (a < 0) a += 2 * kPi;
-            const int sector = count > 0 ? int(std::floor((a + step / 2) / step)) % count : -1;
-            if (sector == hover) panel::over(p, kGold, 0.30f * cover);
-            const float toEdge = std::fabs(std::remainder(a + step / 2, step)) * d;  // its distance to a border
-            if (count > 1 && toEdge < 1.0f * s) panel::over(p, kWhite, 0.14f * cover);
-            if (std::fabs(d - L.outer + 1.0f * s) < 0.75f * s) panel::over(p, kWhite, 0.14f * cover);
-        }
-    const auto chip = [&](const panel::Box& b, bool on) {
-        panel::roundRect(out, b, b.h / 2, on ? kGold : kCard, on ? 0.34f : 0.88f, on ? kGold : kWhite,
-                         on ? 0.85f : 0.16f, 1.0f * s);
-    };
-    for (int i = 0; i < 2; ++i) chip(L.pages[i], int(page) == i);
-    for (int i = 0; i < kChannels; ++i) chip(L.channels[i], int(channel) == i && page == Page::Phrases);
-    chip(L.keyboard, false);
-    chip(L.voice, false);
-    if (icons)
-        for (size_t i = 0; i < L.labels.size() && i < icons->size(); ++i) {
-            const panel::Picture& ic = (*icons)[i];
-            if (ic.width <= 0 || ic.height <= 0) continue;
-            const panel::Box& b = L.labels[i];
-            const int ox = int(std::lround(b.x + (b.w - float(ic.width)) / 2));
-            const int oy = int(std::lround(b.y + b.h * 0.5f - float(ic.height)));
-            for (int yy = 0; yy < ic.height; ++yy)
-                for (int xx = 0; xx < ic.width; ++xx) {
-                    const int tx = ox + xx, ty = oy + yy;
-                    if (tx < 0 || ty < 0 || tx >= out.width || ty >= out.height) continue;
-                    const uint32_t c = ic.px[size_t(yy) * size_t(ic.width) + size_t(xx)];
-                    if (!(c >> 24)) continue;
-                    uint32_t& d = out.px[size_t(ty) * size_t(out.width) + size_t(tx)];
-                    const uint32_t keep = 255 - (c >> 24);
-                    const auto ch = [&](int sh) {
-                        return std::min<uint32_t>(255, ((c >> sh) & 0xFF) + ((d >> sh) & 0xFF) * keep / 255);
-                    };
-                    d = ch(24) << 24 | ch(16) << 16 | ch(8) << 8 | ch(0);
-                }
-        }
-}
-
 std::vector<Words> words(const Layout& L, const std::vector<std::string>& items, int hover, Page page,
                          Channel channel, const Texts& t) {
     std::vector<Words> out;

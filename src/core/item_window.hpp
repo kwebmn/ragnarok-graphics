@@ -127,8 +127,6 @@ Hit hitTest(const Layout& L, size_t shownCount, int scroll, float x, float y);
 // 3.0.11-beta.196: the cell a hit points at - on its star too (its ☆ stays to be pressed); -1 none
 inline int pointedCell(const Hit& h) { return h.part == Part::Cell || h.part == Part::Star ? h.index : -1; }
 
-void paint(panel::Picture& out, const Layout& L, const std::vector<Item>& items, const std::vector<int>& shown,
-           const Show& sh, const Texts& t, const Measure& m);
 
 enum class Align : uint8_t { Left, Right, Center };
 struct Words {

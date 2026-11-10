@@ -66,7 +66,6 @@ bool isForm(Way w);  // a form of the signed-in site account (no ways' tabs)
 // none: the site's words kept
 std::optional<settings::Text> errorText(Way way, const std::string& field);
 Part hitTest(const Layout& L, float x, float y);
-void paint(panel::Picture& out, const Layout& L, const Show& sh);
 enum class Align : uint8_t { Left, Right, Center };
 struct Words {
     panel::Box box;

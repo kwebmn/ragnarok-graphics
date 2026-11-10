@@ -47,7 +47,6 @@ int rows(const std::string& text, float width, const std::function<float(const s
 Part partAt(const Layout& L, float x, float y);  // the picture's pixels
 int gameButton(Part p);  // the game's window's own: 0xB4 back, 0x98 next, 0x87 close, 0x93 the box; 0 none
 
-void paint(panel::Picture& out, const Layout& L, const Card& c, const Show& sh);
 
 enum class Align : uint8_t { Left, Right, Center };
 struct Words {

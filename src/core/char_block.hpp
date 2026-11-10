@@ -175,10 +175,6 @@ struct Show {
     int hoverZone = -1;         // 3.0.11-beta.235: the Zone pointed at (its tip)
     bool hoverPortrait = false;  // 3.0.11-beta.141: the portrait pointed at (its tip tells Alt+V)
 };
-void paint(panel::Picture& out, const Layout& L, const Data& d, const Texts& t, const Show& show);
-// 3.0.11-beta.46 (the concept's motion): the low HP warning alone - its own picture of the block's size, so that it
-// slides in from above and fades (win/char_block); nothing when the HP is not low
-void paintWarning(panel::Picture& out, const Layout& L, const Data& d, const Texts& t);
 // A new level: the block's edge in gold (the rings: a gold ring round them), drawn over the block flaring once
 void paintFlare(panel::Picture& out, const Layout& L);
 

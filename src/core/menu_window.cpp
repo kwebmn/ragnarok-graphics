@@ -86,23 +86,6 @@ int buttonAt(const Layout& L, float x, float y) {
     return -1;
 }
 
-void paint(panel::Picture& out, const Layout& L, Kind k, const Show& sh, const Texts& t) {
-    (void)t;
-    const float s = L.s;
-    panel::roundRect(out, L.glass, 12 * s, kCard, uistyle::window(), kWhite, 0.12f, 1.0f * s);
-    if (L.recap.h > 0) panel::roundRect(out, L.recap, 8 * s, 0x000000, 0.25f);  // .277
-    for (size_t i = 0; i < L.buttons.size(); ++i) {
-        const panel::Box& b = L.buttons[i];
-        const bool lit = int(i) == sh.hover || int(i) == sh.focus;
-        if (primary(k, i))
-            panel::roundRect(out, b, 8 * s, kGold, lit ? 0.26f : 0.16f, kGold2, lit ? 0.9f : 0.55f,
-                             (lit ? 2.0f : 1.0f) * s);
-        else
-            panel::roundRect(out, b, 8 * s, kWhite, lit ? 0.12f : 0.05f, lit ? kGold2 : kWhite, lit ? 0.8f : 0.10f,
-                             (lit ? 2.0f : 1.0f) * s);
-    }
-}
-
 std::vector<Words> words(const Layout& L, Kind k, const Show& sh, const Texts& t, const Measure& m) {
     std::vector<Words> out;
     const float s = L.s;

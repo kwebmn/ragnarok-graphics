@@ -40,9 +40,6 @@ struct Layout {
 };
 Layout layout(int count, int targetW, int targetH, float scale);
 
-// The ring (the sector pointed at lit), the chips; `icons` (an emotion's picture a sector) over the labels' tops
-void paint(panel::Picture& out, const Layout& L, int count, int hover, Page page, Channel channel,
-           const std::vector<panel::Picture>* icons = nullptr);
 
 enum class Align : uint8_t { Left, Right, Center };
 struct Words {

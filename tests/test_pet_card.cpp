@@ -75,12 +75,7 @@ TEST(pet_card_words_and_picture) {
     const std::vector<petcard::Words> w = petcard::words(L, i, petcard::Show{}, t);
     const auto has = [&](const std::string& s) {
         return std::any_of(w.begin(), w.end(), [&](const petcard::Words& x) { return x.text == s; });
-    };
+    }
+    ;
     CHECK(has("Poring") && has("Рівень 12") && has("Ситий") && has("Відданий") && has("У яйце"));
-    panel::Picture p;
-    p.width = L.w;
-    p.height = L.h;
-    p.px.assign(size_t(L.w) * size_t(L.h), 0u);
-    petcard::paint(p, L, i, petcard::Show{});
-    CHECK((p.px[size_t(L.h / 2) * size_t(L.w) + size_t(L.w / 2)] >> 24) > 0x80);
 }

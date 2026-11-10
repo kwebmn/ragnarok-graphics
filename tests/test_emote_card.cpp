@@ -82,21 +82,3 @@ TEST(emote_card_words) {
     CHECK(has(few, "/?") && !has(few, "/e5"));
 }
 
-// The game's pictures in their cells: a picture's middle there, a cell with none left plain
-TEST(emote_card_icons_painted) {
-    const emotecard::Layout L = emotecard::layout(1920, 1080, 1.0f);
-    panel::Picture icon;
-    icon.width = icon.height = 10;
-    icon.px.assign(100, 0xFFFF0000);
-    std::vector<panel::Picture> icons(size_t(emotecard::kEmotions));
-    icons[5] = icon;
-    panel::Picture out;
-    CHECK(panel::blank(out, L.w, L.h));
-    emotecard::paint(out, L, emotecard::Show{}, icons);
-    const panel::Box& c = L.icons[5];
-    const uint32_t mid = out.px[size_t(int(c.y + c.h / 2)) * size_t(out.width) + size_t(int(c.x + c.w / 2))];
-    CHECK_EQ(mid, 0xFFFF0000u);
-    const panel::Box& d = L.icons[6];
-    const uint32_t other = out.px[size_t(int(d.y + d.h / 2)) * size_t(out.width) + size_t(int(d.x + d.w / 2))];
-    CHECK(other != 0xFFFF0000u);
-}

@@ -34,8 +34,6 @@ Layout layout(int targetW, int targetH, float scale);
 int cellAt(const Layout& L, float x, float y);  // the picture's pixels; -1 none
 bool closeAt(const Layout& L, float x, float y);
 
-// The card, the hovered cell, each picture centred in its room (`icons` by the list's order; an empty one skipped)
-void paint(panel::Picture& out, const Layout& L, const Show& sh, const std::vector<panel::Picture>& icons);
 
 enum class Align : uint8_t { Left, Right, Center };
 struct Words {

@@ -44,7 +44,6 @@ int buttonAt(const Layout& L, float x, float y);  // the picture's pixels; -1 no
 
 using Words = itemwin::Words;
 using Measure = itemwin::Measure;
-void paint(panel::Picture& out, const Layout& L, Kind k, const Show& sh, const Texts& t);
 std::vector<Words> words(const Layout& L, Kind k, const Show& sh, const Texts& t, const Measure& m);
 
 }  // namespace uagfx::menuwin

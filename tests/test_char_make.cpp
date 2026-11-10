@@ -91,18 +91,15 @@ TEST(char_make_words_and_picture) {
     const charmake::Texts t = texts();
     const auto has = [](const std::vector<charmake::Words>& w, const std::string& s) {
         return std::any_of(w.begin(), w.end(), [&](const charmake::Words& x) { return x.text == s; });
-    };
+    }
+    ;
     std::vector<charmake::Words> w = charmake::words(L, f, charmake::Show{}, t);
-    CHECK(has(w, "Новий персонаж") && has(w, "4–23 літери"));  // nothing typed: the hint
+    CHECK(has(w, "Новий персонаж") && has(w, "4–23 літери"));
+    // nothing typed: the hint
+
     CHECK(has(w, "STR 7") && has(w, "3 INT") && has(w, "AGI 5") && has(w, "5 LUK"));
     CHECK(has(w, "12") && has(w, "4") && has(w, "Створити") && has(w, "Скасувати"));
     f.name = "Ліра";
     w = charmake::words(L, f, charmake::Show{}, t);
     CHECK(has(w, "Ліра") && !has(w, "4–23 літери"));
-    panel::Picture p;
-    p.width = L.w;
-    p.height = L.h;
-    p.px.assign(size_t(L.w) * size_t(L.h), 0u);
-    charmake::paint(p, L, f, charmake::Show{});
-    CHECK((p.px[size_t(L.h / 2) * size_t(L.w) + size_t(L.w / 2)] >> 24) > 0x80);
 }

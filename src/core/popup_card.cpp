@@ -77,20 +77,6 @@ int rowAt(const Layout& L, const std::vector<Item>& items, float x, float y) {
     return -1;
 }
 
-void paint(panel::Picture& out, const Layout& L, const std::vector<Item>& items, int hover) {
-    const float s = L.s;
-    panel::roundRect(out, L.glass, 10 * s, kCard, uistyle::window(), kWhite, 0.14f, 1.0f * s);
-    for (size_t i = 0; i < L.rows.size() && i < items.size(); ++i) {
-        const panel::Box& r = L.rows[i];
-        if (items[i].separator) {
-            panel::roundRect(out, panel::Box{r.x + 8 * s, r.y + r.h / 2 - 0.5f * s, r.w - 16 * s, 1.0f * s}, 0,
-                             kWhite, 0.14f);
-        } else if (int(i) == hover) {
-            panel::roundRect(out, r, 6 * s, kGold, 0.22f, kGold, 0.6f, 1.0f * s);
-        }
-    }
-}
-
 std::vector<Words> words(const Layout& L, const std::vector<Item>& items, int hover) {
     std::vector<Words> out;
     const float s = L.s;

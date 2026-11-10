@@ -51,13 +51,8 @@ TEST(macro_card_words_and_picture) {
     const std::vector<macrocard::Words> w = macrocard::words(L, texts, sh, t);
     const auto has = [&](const std::string& s) {
         return std::any_of(w.begin(), w.end(), [&](const macrocard::Words& x) { return x.text == s; });
-    };
+    }
+    ;
     CHECK(has("Макроси чату") && has("Alt+1") && has("Alt+0") && has("/!") && has("Heal please|"));
     CHECK(has("Зберегти"));
-    panel::Picture p;
-    p.width = L.w;
-    p.height = L.h;
-    p.px.assign(size_t(L.w) * size_t(L.h), 0u);
-    macrocard::paint(p, L, sh);
-    CHECK((p.px[size_t(L.h / 2) * size_t(L.w) + size_t(L.w / 2)] >> 24) > 0x80);
 }

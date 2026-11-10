@@ -54,16 +54,6 @@ Part hitTest(const Layout& L, float x, float y) {
     return Part::None;
 }
 
-void paint(panel::Picture& out, const Layout& L, const Card& c, Part hover) {
-    const float s = L.s;
-    panel::roundRect(out, L.glass, 12 * s, kCard, uistyle::window(), kWhite, 0.12f, 1.0f * s);
-    panel::roundRect(out, L.close, 6 * s, kWhite, hover == Part::Close ? 0.14f : 0.0f, kWhite,
-                     hover == Part::Close ? 0.3f : 0.0f, 1.0f * s);
-    panel::roundRect(out, L.lines, 8 * s, kBlack, 0.25f, kWhite, 0.06f, 1.0f * s);
-    panel::roundRect(out, L.input, 8 * s, kBlack, 0.35f, c.focus ? kGold : kWhite, c.focus ? 0.8f : 0.18f, 1.0f * s);
-    panel::roundRect(out, L.send, 8 * s, kGold, hover == Part::Send ? 0.34f : 0.22f, kGold, 0.8f, 1.0f * s);
-}
-
 std::vector<Words> words(const Layout& L, const Card& c, Part hover, const Texts& t) {
     std::vector<Words> out;
     const float s = L.s;

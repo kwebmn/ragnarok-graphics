@@ -45,7 +45,6 @@ std::string masked(size_t n);  // the password's dots
 Layout layout(size_t limits, int targetW, int targetH, float scale);
 Hit hitTest(const Layout& L, float x, float y);  // the picture's pixels
 
-void paint(panel::Picture& out, const Layout& L, const Card& c, const Show& sh);
 
 enum class Align : uint8_t { Left, Right, Center };
 struct Words {

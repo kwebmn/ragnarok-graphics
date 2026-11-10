@@ -14,28 +14,6 @@ constexpr size_t kMostRows = 8;
 constexpr uint32_t kCard = 0x10141C, kWhite = 0xFFFFFF, kGold = 0xC9A55B, kGold2 = 0xE6CB8A, kText = 0xEEF2F8;
 constexpr uint32_t kMuted = 0x9AA3B5, kBlack = 0x000000;
 
-void put(panel::Picture& out, const panel::Picture& pic, const panel::Box& box) {
-    const int ox = int(std::lround(box.x + (box.w - float(pic.width)) / 2));
-    const int oy = int(std::lround(box.y + (box.h - float(pic.height)) / 2));
-    if (out.scene) {  // 3.0.18-beta.12: recorded for uaUI
-        panel::recordImage(out, pic, float(ox), float(oy), 1.0f);
-        return;
-    }
-    for (int y = 0; y < pic.height; ++y)
-        for (int x = 0; x < pic.width; ++x) {
-            const int tx = ox + x, ty = oy + y;
-            if (tx < 0 || ty < 0 || tx >= out.width || ty >= out.height) continue;
-            const uint32_t c = pic.px[size_t(y) * size_t(pic.width) + size_t(x)];
-            if (!(c >> 24)) continue;
-            uint32_t& d = out.px[size_t(ty) * size_t(out.width) + size_t(tx)];
-            const uint32_t keep = 255 - (c >> 24);
-            const auto ch = [&](int sh) {
-                return std::min<uint32_t>(255, ((c >> sh) & 0xFF) + ((d >> sh) & 0xFF) * keep / 255);
-            };
-            d = ch(24) << 24 | ch(16) << 16 | ch(8) << 8 | ch(0);
-        }
-}
-
 struct Cells {  // a row's inner parts
     panel::Box icon, name, stock, price;
 };
@@ -127,37 +105,6 @@ Hit hitTest(const Layout& L, int scroll, size_t rows, float x, float y) {
     if (L.close.contains(x, y)) return Hit{Part::Close, -1};
     if (L.title.contains(x, y)) return Hit{Part::Title, -1};
     return Hit{};
-}
-
-void paint(panel::Picture& out, const Layout& L, const std::vector<Row>& rows, const Show& sh) {
-    const float s = L.s;
-    panel::roundRect(out, L.glass, 14 * s, kCard, uistyle::window(), kWhite, 0.12f, 1.0f * s);
-    panel::roundRect(out, L.close, 7 * s, kWhite, sh.hoverPart == int(Part::Close) ? 0.14f : 0.06f);
-    const long long sum = total(rows);
-    for (size_t i = 0; i < L.lines.size(); ++i) {
-        const size_t at = i + size_t(std::max(0, sh.scroll));
-        if (at >= rows.size()) break;
-        const Row& r = rows[at];
-        const bool hot = sh.hoverRow == int(at), focus = sh.focus == int(at);
-        panel::roundRect(out, L.lines[i], 9 * s, r.chosen > 0 ? kGold : kWhite,
-                         r.chosen > 0 ? (hot ? 0.16f : 0.10f) : (hot ? 0.07f : 0.035f), focus ? kGold : kWhite,
-                         focus ? 0.9f : 0.08f, (focus ? 1.5f : 1.0f) * s);
-        const Cells c = cells(L.lines[i], L.minus[i], s);
-        panel::roundRect(out, c.icon, 6 * s, kBlack, 0.30f);
-        if (r.icon && r.icon->width > 0) put(out, *r.icon, c.icon);
-        const bool canPlus = canAdd(r, sum, sh.zeny), canMinus = canRemove(r);
-        const bool hotPlus = hot && sh.hoverPart == int(Part::Plus), hotMinus = hot && sh.hoverPart == int(Part::Minus);
-        panel::roundRect(out, L.plus[i], 7 * s, kGold, !canPlus ? 0.04f : hotPlus ? 0.40f : 0.24f, kGold,
-                         canPlus ? 0.7f : 0.2f, 1.0f * s);
-        panel::roundRect(out, L.minus[i], 7 * s, kWhite, !canMinus ? 0.02f : hotMinus ? 0.16f : 0.07f, kWhite,
-                         canMinus ? 0.25f : 0.08f, 1.0f * s);
-    }
-    panel::roundRect(out, L.sums, 9 * s, kBlack, 0.25f, kWhite, 0.08f, 1.0f * s);
-    const bool can = sum > 0 && sum <= sh.zeny;
-    panel::roundRect(out, L.buy, 9 * s, kGold, !can ? 0.05f : sh.hoverPart == int(Part::Buy) ? 0.36f : 0.24f, kGold,
-                     can ? 0.85f : 0.25f, 1.0f * s);
-    panel::roundRect(out, L.cancel, 9 * s, kWhite, sh.hoverPart == int(Part::Cancel) ? 0.12f : 0.06f, kWhite, 0.16f,
-                     1.0f * s);
 }
 
 std::vector<Words> words(const Layout& L, const std::vector<Row>& rows, const Show& sh, const Texts& t) {

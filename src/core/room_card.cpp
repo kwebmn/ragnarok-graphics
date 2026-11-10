@@ -89,33 +89,6 @@ Hit hitTest(const Layout& L, float x, float y) {
     return Hit{};
 }
 
-void paint(panel::Picture& out, const Layout& L, const Card& c, const Show& sh) {
-    const float s = L.s;
-    panel::roundRect(out, L.glass, 12 * s, kCard, uistyle::window(), kWhite, 0.12f, 1.0f * s);
-    const bool closeHot = sh.hover.part == Part::Close;
-    panel::roundRect(out, L.close, 6 * s, kWhite, closeHot ? 0.14f : 0.0f, kWhite, closeHot ? 0.3f : 0.0f, 1.0f * s);
-    panel::roundRect(out, L.badge, L.badge.h / 2, c.open ? kGreen : kGold, 0.22f, c.open ? kGreen : kGold, 0.7f,
-                     1.0f * s);
-    panel::roundRect(out, L.lines, 8 * s, kBlack, 0.25f, kWhite, 0.06f, 1.0f * s);
-    for (size_t i = 0; i < L.memberRows.size(); ++i) {
-        const bool chosen = int(i) == c.chosen, hot = sh.hover.part == Part::Member && sh.hover.index == int(i);
-        if (chosen || hot)
-            panel::roundRect(out, L.memberRows[i], 6 * s, kGold, chosen ? 0.22f : 0.10f, kGold, chosen ? 0.6f : 0.0f,
-                             1.0f * s);
-    }
-    panel::roundRect(out, L.input, 8 * s, kBlack, 0.35f, c.focus ? kGold : kWhite, c.focus ? 0.8f : 0.18f, 1.0f * s);
-    const auto button = [&](const panel::Box& b, Part p, uint32_t rgb, float a) {
-        if (b.w <= 0) return;
-        const bool hot = sh.hover.part == p;
-        panel::roundRect(out, b, 7 * s, rgb, hot ? a + 0.10f : a, rgb, 0.5f, 1.0f * s);
-    };
-    button(L.setup, Part::Setup, kGold, 0.16f);
-    button(L.leave, Part::Leave, kWhite, 0.06f);
-    button(L.kick, Part::Kick, kRed, 0.16f);
-    button(L.owner, Part::Owner, kGold, 0.14f);
-    button(L.friendAdd, Part::Friend, kWhite, 0.06f);
-}
-
 std::vector<Words> words(const Layout& L, const Card& c, const Show& sh, const Texts& t) {
     std::vector<Words> out;
     const float s = L.s;

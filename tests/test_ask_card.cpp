@@ -88,12 +88,6 @@ TEST(ask_card_words_and_picture) {
     CHECK(has(wn, "prontera|") && has(wn, "Готово") && !has(wn, "Відмовити"));
     n.caret = false;
     CHECK(has(askcard::words(N, n, sh, texts()), "prontera"));
-    panel::Picture p;
-    p.width = L.w;
-    p.height = L.h;
-    p.px.assign(size_t(L.w) * size_t(L.h), 0u);
-    askcard::paint(p, L, c, sh);
-    CHECK((p.px[size_t(L.h / 2) * size_t(L.w) + size_t(L.w / 2)] >> 24) > 0x80);
 }
 
 // 3.0.11-beta.151 (task 3 of the remaining windows, the login's part): the game's messages (UIWindowMgr::ErrorMsg -

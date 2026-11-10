@@ -55,15 +55,10 @@ TEST(my_shop_words_and_picture) {
     const std::vector<myshop::Words> w = myshop::words(L, r, myshop::Show{}, t);
     const auto has = [&](const std::string& s) {
         return std::any_of(w.begin(), w.end(), [&](const myshop::Words& x) { return x.text == s; });
-    };
+    }
+    ;
     CHECK(has("Моя лавка: Cheap pots") && has("Red Potion") && has("1 500 z") && has("лишилось 12"));
     CHECK(has("18 000 z") && has("Закрити лавку"));
-    panel::Picture p;
-    p.width = L.w;
-    p.height = L.h;
-    p.px.assign(size_t(L.w) * size_t(L.h), 0u);
-    myshop::paint(p, L, r, myshop::Show{});
-    CHECK((p.px[size_t(L.h / 2) * size_t(L.w) + size_t(L.w / 2)] >> 24) > 0x80);
 }
 
 // 3.0.18-beta.30: uaUI's own shop - a row's icon square inside its row

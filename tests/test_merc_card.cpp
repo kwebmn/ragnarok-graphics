@@ -75,16 +75,11 @@ TEST(merc_card_words_and_picture) {
     const std::vector<merccard::Words> w = merccard::words(L, i, merccard::Show{}, t);
     const auto has = [&](const std::string& s) {
         return std::any_of(w.begin(), w.end(), [&](const merccard::Words& x) { return x.text == s; });
-    };
+    }
+    ;
     CHECK(has("Найманець-лучник") && has("Mina") && has("Рівень 40") && has("3000 / 3500") && has("90 / 120"));
     CHECK(has("03.11 21:40") && has("250") && has("12") && has("340") && has("HIT") && has("180") && has("60"));
     CHECK(has("Звільнити") && has("Навички"));
-    panel::Picture p;
-    p.width = L.w;
-    p.height = L.h;
-    p.px.assign(size_t(L.w) * size_t(L.h), 0u);
-    merccard::paint(p, L, i, merccard::Show{});
-    CHECK((p.px[size_t(L.h / 2) * size_t(L.w) + size_t(L.w / 2)] >> 24) > 0x80);
 }
 
 // 3.0.11-beta.218 (R-S8BERR: «блок со скилами наемника пустой»): its skills listed in the card - a row each, the name

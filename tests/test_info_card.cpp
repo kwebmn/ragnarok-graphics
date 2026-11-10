@@ -103,14 +103,17 @@ TEST(info_card_words_and_colours) {
     const std::vector<infocard::Words> w = infocard::words(L, c, sh, texts());
     const auto find = [&](const std::string& t) {
         return std::find_if(w.begin(), w.end(), [&](const infocard::Words& x) { return x.text == t; });
-    };
+    }
+    ;
     CHECK(find("Fire Wall") != w.end() && find("Fire Wall")->bold && find("Lv 10") != w.end());
     CHECK(find("Property: ") != w.end() && find("Fire") != w.end());
     if (find("Fire") != w.end() && find("Property: ") != w.end()) {
         CHECK(((find("Fire")->rgb >> 16) & 0xFF) > 0xC0);  // the red lit
         CHECK(find("Property: ")->rgb != 0x000000);        // black: the card's words
     }
-    CHECK(find("_") == w.end());  // the white spacer
+    CHECK(find("_") == w.end());
+    // the white spacer
+
     CHECK(find("Hydra Card") != w.end() && find("порожньо") != w.end());
     infocard::Card longer = c;
     for (int i = 0; i < 60; ++i) longer.lines.push_back("Row " + std::to_string(i));
@@ -121,12 +124,8 @@ TEST(info_card_words_and_colours) {
     const bool first = std::any_of(w2.begin(), w2.end(), [](const infocard::Words& x) { return x.text == "Fire"; });
     const bool last = std::any_of(w2.begin(), w2.end(), [](const infocard::Words& x) { return x.text == "Row 59"; });
     CHECK(!first && last);
-    panel::Picture out;
-    out.width = L.w;
-    out.height = L.h;
-    out.px.assign(size_t(L.w) * size_t(L.h), 0u);
-    infocard::paint(out, L, c, sh);
-    CHECK((out.px[size_t(L.h / 2) * size_t(L.w) + size_t(L.w / 2)] >> 24) > 0x80);  // the card's glass
+    // the card's glass
+
 }
 
 // A picture fitted into a room, its sides in proportion, premultiplied

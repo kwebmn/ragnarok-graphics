@@ -25,33 +25,6 @@ size_t utf8Next(const std::string& s, size_t i) {
     return std::min(s.size(), i + n);
 }
 
-// A premultiplied picture centred in a box, its alpha times `k`
-void put(panel::Picture& out, const panel::Picture& pic, const panel::Box& box, float k) {
-    const int ox = int(std::lround(box.x + (box.w - float(pic.width)) / 2));
-    const int oy = int(std::lround(box.y + (box.h - float(pic.height)) / 2));
-    if (out.scene) {  // 3.0.18-beta.12: recorded for uaUI
-        panel::recordImage(out, pic, float(ox), float(oy), k);
-        return;
-    }
-    for (int y = 0; y < pic.height; ++y)
-        for (int x = 0; x < pic.width; ++x) {
-            const int tx = ox + x, ty = oy + y;
-            if (tx < 0 || ty < 0 || tx >= out.width || ty >= out.height) continue;
-            uint32_t c = pic.px[size_t(y) * size_t(pic.width) + size_t(x)];
-            if (k < 1) {
-                const auto ch = [&](int sh) { return uint32_t(float((c >> sh) & 0xFF) * k + 0.5f); };
-                c = ch(24) << 24 | ch(16) << 16 | ch(8) << 8 | ch(0);
-            }
-            if (!(c >> 24)) continue;
-            uint32_t& d = out.px[size_t(ty) * size_t(out.width) + size_t(tx)];
-            const uint32_t keep = 255 - (c >> 24);
-            const auto ch = [&](int sh) {
-                return std::min<uint32_t>(255, ((c >> sh) & 0xFF) + ((d >> sh) & 0xFF) * keep / 255);
-            };
-            d = ch(24) << 24 | ch(16) << 16 | ch(8) << 8 | ch(0);
-        }
-}
-
 std::string tipFirst(const Item& it) {
     std::string s = nameOf(it);
     if (it.count > 1) s += " \xC3\x97" + grouped(it.count);
@@ -274,90 +247,6 @@ Hit hitTest(const Layout& L, size_t shownCount, int scroll, float x, float y) {
     if (L.grid.contains(x, y)) return Hit{Part::Grid, -1};
     if (y < L.title.y + L.title.h) return Hit{Part::Title, -1};
     return Hit{Part::Body, -1};
-}
-
-void paint(panel::Picture& out, const Layout& L, const std::vector<Item>& items, const std::vector<int>& shown,
-           const Show& sh, const Texts& t, const Measure& m) {
-    const float s = L.s;
-    panel::roundRect(out, L.glass, 12 * s, kCard, uistyle::window(), kWhite, 0.09f, 1.0f * s);
-    if (sh.hoverClose) panel::roundRect(out, L.close, 7 * s, kWhite, 0.12f);
-    panel::roundRect(out, panel::Box{L.tabsRow.x, L.tabsRow.y + L.tabsRow.h - 1 * s, L.tabsRow.w, 1 * s}, 0, kWhite,
-                     0.08f);
-    for (size_t i = 0; i < L.tabs.size(); ++i)
-        if (int(i) == int(sh.tab)) {
-            const panel::Box& b = L.tabs[i];
-            panel::roundRect(out, panel::Box{b.x, b.y + b.h - 2.5f * s, b.w, 2 * s}, 1 * s, kGold, 0.95f);
-        }
-    panel::roundRect(out, L.search, 8 * s, kBlack, 0.35f, sh.typing ? kGold2 : kWhite, sh.typing ? 0.6f : 0.10f,
-                     1.0f * s);
-    const float icon = 15 * s;
-    uiicons::draw(out, uiicons::Icon::Search, L.search.x + 10 * s, L.search.y + (L.search.h - icon) / 2, icon, kMuted,
-                  0.9f, 2.2f);
-    if (sh.typing && sh.caretOn) {
-        const float x = L.search.x + 32 * s + m(sh.search, 12.5f * s, false) + 1 * s;
-        panel::roundRect(out, panel::Box{x, L.search.y + 9 * s, 1.5f * s, L.search.h - 18 * s}, 0, kText, 0.95f);
-    }
-    for (size_t i = 0; i < L.cells.size(); ++i) {
-        const panel::Box& b = L.cells[i];
-        const int at = int(i) + sh.scroll * L.columns;
-        const bool hot = at == sh.hover;
-        panel::roundRect(out, b, 8 * s, kBlack, 0.35f, hot ? kGold2 : kWhite, hot ? 0.95f : 0.08f,
-                         (hot ? 1.5f : 1) * s);
-        if (at >= int(shown.size())) continue;
-        const Item& it = items[size_t(shown[size_t(at)])];
-        if (it.icon && it.icon->width > 0) put(out, *it.icon, b, it.identified ? 1.0f : 0.45f);
-        if (it.count > 1) {
-            const float w = m(grouped(it.count), 10.5f * s, true) + 6 * s;
-            panel::roundRect(out, panel::Box{b.x + b.w - w - 2 * s, b.y + b.h - 14 * s, w, 12 * s}, 3 * s, kBlack,
-                             0.7f);
-        }
-        if (it.refine > 0) {
-            const float w = m("+" + std::to_string(it.refine), 10.5f * s, true) + 6 * s;
-            panel::roundRect(out, panel::Box{b.x + 2 * s, b.y + 2 * s, w, 12 * s}, 3 * s, kBlack, 0.7f);
-        }
-    }
-    const size_t total = (shown.size() + size_t(L.columns) - 1) / size_t(L.columns);
-    if (total > size_t(L.rows)) {  // the scroll's place beside the grid
-        const float h = L.grid.h * float(L.rows) / float(total);
-        const float y = L.grid.y + (L.grid.h - h) * float(sh.scroll) / float(total - size_t(L.rows));
-        panel::roundRect(out, panel::Box{L.grid.x + L.grid.w + 4 * s, y, 3 * s, h}, 1.5f * s, kWhite, 0.25f);
-    }
-    panel::roundRect(out, panel::Box{0, L.footer.y, L.glass.w, 1 * s}, 0, kWhite, 0.08f);
-    const float share = sh.weightMost > 0 ? std::clamp(float(sh.weight) / float(sh.weightMost), 0.0f, 1.0f) : 0.0f;
-    if (sh.also.empty()) panel::roundRect(out, L.bar, 3 * s, kWhite, 0.10f);  // 3.0.11-beta.286: else the «Ще» line
-    if (share > 0 && sh.also.empty())
-        panel::roundRect(out, panel::Box{L.bar.x, L.bar.y, L.bar.w * share, L.bar.h}, 3 * s,
-                         (sh.overweight >= 0 ? sh.overweight == 2 : share >= 0.9f)   ? kRed
-                         : (sh.overweight >= 0 ? sh.overweight == 1 : share >= 0.5f) ? kGold
-                                                                                     : kGreen,
-                         0.95f);
-    for (size_t i = 0; i < L.cells.size(); ++i) {  // 3.0.11-beta.112: the new things' pills
-        const int at = int(i) + sh.scroll * L.columns;
-        if (at >= int(shown.size()) || t.fresh.empty() || !items[size_t(shown[size_t(at)])].fresh) continue;
-        const panel::Box pill = freshPill(L.cells[i], t, s, m);
-        panel::roundRect(out, pill, pill.h / 2, kGold, 0.95f);
-    }
-    if (sh.dropping)  // 3.0.11-beta.110: a worn thing dragged - the grid takes it off
-        panel::roundRect(out, L.grid, 8 * s, kGold2, 0.06f, kGold, 0.9f, 2.0f * s);
-    for (const Flash& f : sh.flashes) {  // 3.0.11-beta.44: a use answered in its cell
-        const float t = std::clamp(f.t, 0.0f, 1.0f), fade = 1 - t;
-        bool empty = true;  // its cell now: nothing shown there (the last one gone)
-        for (size_t i = 0; i < L.cells.size(); ++i) {
-            const panel::Box& b = L.cells[i];
-            if (std::fabs(b.x - f.cell.x) < 1 && std::fabs(b.y - f.cell.y) < 1)
-                empty = int(i) + sh.scroll * L.columns >= int(shown.size());
-        }
-        if (empty && f.icon && f.icon->width > 0) put(out, *f.icon, f.cell, fade * fade);
-        panel::roundRect(out, f.cell, 8 * s, kGold, 0.30f * fade);
-        const float grow = 9 * s * t;
-        const panel::Box ring{f.cell.x - grow, f.cell.y - grow, f.cell.w + 2 * grow, f.cell.h + 2 * grow};
-        panel::roundRect(out, ring, 8 * s + grow, kGold, 0.0f, kGold, 0.95f * fade, 2.0f * s);
-    }
-    if (sh.tip && sh.hover >= 0 && sh.hover < int(shown.size())) {
-        const Item& it = items[size_t(shown[size_t(sh.hover)])];
-        const panel::Box tip = tipBox(L, it, sh.hover - sh.scroll * L.columns, t, m);
-        if (tip.w > 0) panel::roundRect(out, tip, 8 * s, kCard, 0.96f, kWhite, 0.14f, 1.0f * s);
-    }
 }
 
 std::vector<Words> words(const Layout& L, const std::vector<Item>& items, const std::vector<int>& shown,

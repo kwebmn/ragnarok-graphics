@@ -107,23 +107,6 @@ int quickValue(Quick q, int most) {
     return m;
 }
 
-void paint(panel::Picture& out, const Layout& L, const Card& c, const Show& sh) {
-    const float s = L.s;
-    panel::roundRect(out, L.glass, 12 * s, kCard, uistyle::window(), kWhite, 0.12f, 1.0f * s);
-    if (L.field.w > 0) panel::roundRect(out, L.field, 7 * s, kBlack, 0.35f, kGold, 0.55f, 1.0f * s);
-    for (size_t i = 0; i < L.quick.size(); ++i)  // 3.0.11-beta.155: a count's quick choices
-        panel::roundRect(out, L.quick[i], 7 * s, kWhite, int(i) == sh.quickHover ? 0.14f : 0.06f, kWhite, 0.16f,
-                         1.0f * s);
-    const std::vector<Button> bs = buttons(c.kind);
-    for (size_t i = 0; i < L.buttons.size() && i < bs.size(); ++i) {
-        const bool primary = bs[i] != Button::Decline && bs[i] != Button::No && bs[i] != Button::Cancel;
-        const bool hot = int(i) == sh.hover;
-        panel::roundRect(out, L.buttons[i], 8 * s, primary ? kGold : kWhite,
-                         primary ? (hot ? 0.34f : 0.22f) : (hot ? 0.12f : 0.06f), primary ? kGold : kWhite,
-                         primary ? 0.8f : 0.16f, 1.0f * s);
-    }
-}
-
 std::vector<Words> words(const Layout& L, const Card& c, const Show& sh, const Texts& t) {
     (void)sh;
     std::vector<Words> out;

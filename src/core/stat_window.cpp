@@ -725,35 +725,6 @@ Hit hitTest(const Layout& L, float x, float y) {
 
 namespace {
 
-// 3.0.11-beta.268 (stage 4): «Планування»'s grounds - the − and + of each stat, the level's ‹ ›, «Скинути»
-void paintPlan(panel::Picture& out, const Layout& L, const Show& sh) {
-    const float s = L.s;
-    const auto lit = [&](Part part, int i) { return sh.hoverPlan == int(part) && sh.hoverPlanIndex == i; };
-    for (int i = 0; i < kStats && i < int(L.planMinus.size()); ++i) {
-        panel::roundRect(out, L.planMinus[size_t(i)], 6 * s, kWhite, lit(Part::PlanMinus, i) ? 0.2f : 0.07f, kWhite,
-                         0.15f, 1.0f * s);
-        panel::roundRect(out, L.planPlus[size_t(i)], 6 * s, kWhite, lit(Part::PlanPlus, i) ? 0.2f : 0.07f, kGreen,
-                         0.6f, 1.0f * s);
-    }
-    for (int i = 0; i < 2; ++i)
-        panel::roundRect(out, i ? L.levelNext : L.levelPrev, 6 * s, kWhite, lit(Part::PlanLevel, i) ? 0.2f : 0.08f);
-    panel::roundRect(out, L.planReset, 8 * s, kWhite, lit(Part::PlanReset, -1) ? 0.16f : 0.07f, kWhite, 0.2f,
-                     1.0f * s);
-    for (int i = 0; i < kPlanBuffs; ++i) {  // .297: the buffs' chips, the counted ones gold
-        if (L.buffChips[i].w <= 0) continue;
-        const bool on = sh.buffOn[i];
-        panel::roundRect(out, L.buffChips[i], 12 * s, on ? kGold : kWhite,
-                         lit(Part::PlanBuff, i) ? 0.22f : on ? 0.16f : 0.05f, on ? kGold2 : kWhite, on ? 0.7f : 0.15f,
-                         1.0f * s);
-    }
-    for (int i = 0; i < 2; ++i)  // .269: the ASPD aimed at, ‹ ›
-        panel::roundRect(out, i ? L.goalNext : L.goalPrev, 6 * s, kWhite, lit(Part::Goal, i) ? 0.2f : 0.08f);
-    panel::roundRect(out, panel::Box{L.goals.x, L.goals.y - 8 * s, L.goals.w, 1 * s}, 0, kWhite, 0.08f);
-    panel::roundRect(out, panel::Box{L.mobs.x, L.mobs.y - 6 * s, L.mobs.w, 1 * s}, 0, kWhite, 0.08f);  // .296
-    panel::roundRect(out, panel::Box{L.planResults.x, L.planResults.y + kHeaderH * s - 1 * s, L.planResults.w, 1 * s},
-                     0, kWhite, 0.1f);
-}
-
 void planWords(std::vector<Words>& out, const Layout& L, const Data& d, const Show& sh, const Texts& t) {
     namespace sm = uagfx::statmath;
     const float s = L.s;
@@ -928,47 +899,6 @@ void referenceWords(std::vector<Words>& out, const Layout& L, const Data& d, con
 }
 
 }  // namespace
-
-void paint(panel::Picture& out, const Layout& L, const Data& d, const Show& sh) {
-    const float s = L.s;
-    panel::roundRect(out, L.glass, 12 * s, kCard, uistyle::window(), kWhite, 0.09f, 1.0f * s);
-    if (sh.hoverClose) panel::roundRect(out, L.close, 7 * s, kWhite, 0.12f);
-    if (d.free > 0) panel::roundRect(out, L.freeChip, 6 * s, kGold, 0.18f, kGold, 0.5f, 1.0f * s);
-    for (int i = 0; i < kTabs; ++i)  // 3.0.11-beta.267: the tabs, the shown one lit
-        panel::roundRect(out, L.tabs[i], 13 * s, kWhite, i == L.tab ? 0.14f : sh.hoverTab == i ? 0.08f : 0.0f,
-                         i == L.tab ? kGold2 : kWhite, i == L.tab ? 0.7f : 0.1f, 1.0f * s);
-    if (L.tab == kPlanTab) {
-        paintPlan(out, L, sh);
-        return;
-    }
-    if (L.tab == kRefTab) {
-        for (int i = 0; i < 2; ++i)
-            panel::roundRect(out, i ? L.next : L.prev, 6 * s, kWhite, sh.hoverArrow == i ? 0.2f : 0.08f);
-        for (const panel::Box* b : {&L.aspd, &L.cost, &L.bonus})
-            panel::roundRect(out, panel::Box{b->x, b->y + 26 * s - 1 * s, b->w, 1 * s}, 0, kWhite, 0.1f);
-        return;
-    }
-    panel::roundRect(out, panel::Box{L.header.x, L.header.y + L.header.h - 1 * s, L.header.w, 1 * s}, 0, kWhite,
-                     0.08f);
-    const int lit = sh.hoverRow >= 0 ? sh.hoverRow : sh.hoverPlus >= 0 ? sh.hoverPlus : sh.selected;
-    for (int i = 0; i < kStats; ++i) {
-        const panel::Box& r = L.rows[size_t(i)];
-        if (i == lit) panel::roundRect(out, r, 6 * s, kWhite, 0.06f);
-        if (i < kStats - 1)
-            panel::roundRect(out, panel::Box{r.x, r.y + r.h - 1 * s, r.w, 1 * s}, 0, kWhite, 0.05f);
-        if (d.base[i] >= 99) continue;
-        const bool can = canRaise(d, i);
-        const panel::Box& p = L.pluses[size_t(i)];
-        panel::roundRect(out, p, 6 * s, can ? kWhite : kWhite, can ? (i == sh.hoverPlus ? 0.22f : 0.12f) : 0.03f,
-                         can ? kGold2 : kWhite, can ? 0.7f : 0.06f, 1.0f * s);
-    }
-    const int lit2 = sh.hoverBattle >= 0 ? sh.hoverBattle : sh.pinnedBattle;  // 3.0.11-beta.266
-    if (lit2 >= 0 && lit2 < int(L.battleRows.size()))
-        panel::roundRect(out, L.battleRows[size_t(lit2)], 6 * s, kWhite, sh.pinnedBattle == lit2 ? 0.09f : 0.06f);
-    // the panel «Як рахується»: a tinted ground under the formulas
-    const panel::Box ground{kSide * s / 2, L.line.y + 4 * s, L.glass.w - kSide * s, L.line.h - 10 * s};
-    panel::roundRect(out, ground, 8 * s, kWhite, 0.04f, kWhite, 0.08f, 1.0f * s);
-}
 
 std::vector<Words> words(const Layout& L, const Data& d, const Show& sh, const Texts& t, const Measure& m) {
     std::vector<Words> out;
