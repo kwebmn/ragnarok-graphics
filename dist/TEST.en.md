@@ -1,3 +1,6 @@
+- The NPC shop is now laid out by the new interface library: the wares, the cart with − amount + and ×, the totals, the buttons and the keys below. Presses land where they are seen.
+- Fixed (since 3.0.18-beta.94): the search hint in the items, storage and cart windows sat below its field.
+
 - The homunculus and mercenary cards are now laid out by the new interface library: bars, stats, "Нагодувати" (feed), skills with the level arrows and "+", "Видалити" / "Звільнити". Presses land where the button is seen.
 
 - "Навички" (skills) is now laid out by the new interface library: the top buttons, tabs, list rows, the side panel and the footer; the tree stays a diagram in its places. Presses on "+", the arrows and dragging skills land where you see them.
