@@ -31,6 +31,7 @@
 #include "win/picture_draw.hpp"
 #include "win/real_ddraw.hpp"
 #include "win/ui_cost.hpp"
+#include "win/uaui.hpp"
 #include "win/updates_hook.hpp"
 
 namespace uagfx::win::buffcolumn {
@@ -119,6 +120,7 @@ struct State {
     int targetW = 0, targetH = 0;
     bool stateRead = false, names = false;
     std::set<uint16_t> favourites;
+    bool uiShown = false;  // 3.0.18-beta.20: drawn by uaUI
     std::map<std::string, Icon> icons;  // by file
     std::unique_ptr<gamefiles::Reader> files;
     std::vector<GameIcon> game;
@@ -360,6 +362,189 @@ void setHide(bool hideThem) {
              again ? "laid out again at once" : "at the game's next look at them: no character's icons now");
 }
 
+
+// The names' button, «ще N» and an icon pressed (3.0.11-beta.186, .231: a favourite, first and larger) - the old
+// picture's clicks and uaUI's events alike
+void pressPart(State& s, const bp::Hit& h) {
+    if (h.part == bp::Part::Toggle || (h.part == bp::Part::More && s.look == BuffsLook::Column)) {
+        s.names = h.part == bp::Part::More ? true : !s.names;  // «ще N»: the names list holds more
+        keepState(s);
+        LOG_INFO("buffs: the names %s", s.names ? "shown" : "hidden");
+    } else if (h.part == bp::Part::Icon && h.slot >= 0 && size_t(h.slot) < s.layout.slots.size()) {
+        const bp::Entry& e = s.entries[size_t(s.layout.slots[size_t(h.slot)].entry)];
+        if (e.kind != bp::Kind::Debuff) {  // a favourite: first and larger (debuffs stand last, always)
+            const bool star = s.favourites.insert(e.icon).second;
+            if (!star) s.favourites.erase(e.icon);
+            keepState(s);
+            if (s.clicksLogged++ < 10)
+                LOG_INFO("buffs: %s (icon %u) %s the favourites", e.name.c_str(), e.icon, star ? "among" : "off");
+        }
+    }
+    s.shape.clear();  // laid out and painted again
+}
+
+// ---- 3.0.18-beta.20 (the owner: «Переписывать 73 части в разметку RmlUi вручную»): the column as an RmlUi document
+// while [interface] uaui is on - its icons, times, names, «ще N», the names' button and the tip at core buffpanel's
+// places (the target's pixels: what fits and where the others go stays its layout's), its time's sweep a <ua-ring>
+// over the whole icon; the clicks into pressPart(); its picture not painted then ----
+
+const char* kDoc = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss"/></head>
+<body class="bc" data-model="buffs" data-style-width="w + 'px'" data-style-height="h + 'px'">
+<div class="toggle" data-if="toggle.w > 0" data-class-on="names" data-event-click="toggle()"
+     data-style-left="toggle.x + 'px'" data-style-top="toggle.y + 'px'" data-style-width="toggle.w + 'px'"
+     data-style-height="toggle.h + 'px'" data-style-border-radius="toggle.h / 2 + 'px'">
+ <span class="ln" data-style-top="toggle.h / 2 - 4 * dp - 0.75 * dp + 'px'"></span>
+ <span class="ln" data-style-top="toggle.h / 2 - 0.75 * dp + 'px'"></span>
+ <span class="ln" data-style-top="toggle.h / 2 + 4 * dp - 0.75 * dp + 'px'"></span></div>
+<div class="slot" data-for="b, i : slots" data-event-click="press(i)">
+ <div class="shadow" data-style-left="b.fx - 2.5 * dp + 'px'" data-style-top="b.fy - 2.5 * dp + 'px'"
+      data-style-width="b.fw + 5 * dp + 'px'" data-style-height="b.fh + 5 * dp + 'px'" data-style-border-radius="7.5 * dp + 'px'"></div>
+ <div class="outline" data-style-left="b.fx - dp + 'px'" data-style-top="b.fy - dp + 'px'"
+      data-style-width="b.fw + 2 * dp + 'px'" data-style-height="b.fh + 2 * dp + 'px'" data-style-border-radius="6 * dp + 'px'"></div>
+ <div class="icon" data-style-left="b.x + 'px'" data-style-top="b.y + 'px'" data-style-width="b.w + 'px'"
+      data-style-height="b.h + 'px'" data-style-border-radius="5 * dp + 'px'"><img data-if="b.pic != ''" data-attr-src="b.pic"/></div>
+ <ua-ring class="abs" sector="1" square="1" fill="#00000000" track="#00000099" data-if="b.left >= 0"
+      data-style-left="b.x + 'px'" data-style-top="b.y + 'px'" data-style-width="b.w + 'px'" data-style-height="b.h + 'px'"
+      data-attr-value="b.left" style="position: absolute;"></ua-ring>
+ <div class="bad" data-if="b.debuff" data-style-left="b.fx - dp + 'px'" data-style-top="b.fy - dp + 'px'"
+      data-style-width="b.fw + 2 * dp + 'px'" data-style-height="b.fh + 2 * dp + 'px'" data-style-border-radius="6 * dp + 'px'"></div>
+ <div class="hover" data-if="i == hover" data-style-left="b.fx - 1.5 * dp + 'px'" data-style-top="b.fy - 1.5 * dp + 'px'"
+      data-style-width="b.fw + 3 * dp + 'px'" data-style-height="b.fh + 3 * dp + 'px'" data-style-border-radius="6.5 * dp + 'px'"></div>
+ <span class="time" data-if="b.time != ''" data-class-warn="b.warn" data-class-bad="b.debuff"
+       data-style-left="b.tx + 'px'" data-style-top="b.ty + 'px'" data-style-width="b.tw + 'px'"
+       data-style-height="b.th + 'px'" data-style-line-height="b.th + 'px'">{{b.time}}</span>
+ <span class="name" data-if="names" data-class-bad="b.debuff" data-style-left="b.nx + 'px'" data-style-top="b.ny + 'px'"
+       data-style-width="b.nw + 'px'" data-style-height="b.nh + 'px'" data-style-line-height="b.nh + 'px'">{{b.name}}</span>
+</div>
+<span class="more" data-if="more.w > 0" data-event-click="more()" data-style-left="more.x + 'px'"
+      data-style-top="more.y + 'px'" data-style-width="more.w + 'px'" data-style-height="more.h + 'px'"
+      data-style-line-height="more.h + 'px'">{{more_text}}</span>
+<div class="tip" data-if="tip.w > 0" data-style-left="tip.x + 'px'" data-style-top="tip.y + 'px'"
+     data-style-width="tip.w - 20 * dp + 'px'" data-style-height="tip.h - 4 * dp + 'px'">
+ <span class="a">{{tip_a}}</span><span class="b" data-if="tip_b != ''">{{tip_b}}</span></div>
+</body></rml>)RML";
+
+struct BoxView {
+    float x = 0, y = 0, w = 0, h = 0;
+};
+struct SlotView {
+    float x = 0, y = 0, w = 0, h = 0, fx = 0, fy = 0, fw = 0, fh = 0, tx = 0, ty = 0, tw = 0, th = 0, nx = 0, ny = 0,
+          nw = 0, nh = 0, left = -1;
+    Rml::String pic, time, name;
+    bool warn = false, debuff = false;
+};
+
+struct Ui {
+    uaui::Doc doc;
+    float w = 0, h = 0, dp = 1;
+    bool names = false;
+    int hover = -1;
+    BoxView toggle, more, tip;
+    Rml::String moreText, tipA, tipB;
+    std::vector<SlotView> slots;
+    std::map<const panel::Picture*, std::string> sources;
+    std::string key;
+};
+
+Ui& ui() {
+    static Ui u;
+    return u;
+}
+
+BoxView boxOf(const panel::Box& b) { return BoxView{b.x, b.y, b.w, b.h}; }
+
+bool uiFrame(State& s) {
+    Ui& u = ui();
+    if (!uaui::ready()) {
+        u.doc.show(false);
+        return false;
+    }
+    if (!u.doc.made() && !u.doc.make("buffs", kDoc, [&](Rml::DataModelConstructor& m) {
+            if (auto b = m.RegisterStruct<BoxView>()) {
+                b.RegisterMember("x", &BoxView::x);
+                b.RegisterMember("y", &BoxView::y);
+                b.RegisterMember("w", &BoxView::w);
+                b.RegisterMember("h", &BoxView::h);
+            }
+            if (auto v = m.RegisterStruct<SlotView>()) {
+                for (const auto& [name, field] : std::initializer_list<std::pair<const char*, float SlotView::*>>{
+                         {"x", &SlotView::x},   {"y", &SlotView::y},   {"w", &SlotView::w},   {"h", &SlotView::h},
+                         {"fx", &SlotView::fx}, {"fy", &SlotView::fy}, {"fw", &SlotView::fw}, {"fh", &SlotView::fh},
+                         {"tx", &SlotView::tx}, {"ty", &SlotView::ty}, {"tw", &SlotView::tw}, {"th", &SlotView::th},
+                         {"nx", &SlotView::nx}, {"ny", &SlotView::ny}, {"nw", &SlotView::nw}, {"nh", &SlotView::nh},
+                         {"left", &SlotView::left}})
+                    v.RegisterMember(name, field);
+                v.RegisterMember("pic", &SlotView::pic);
+                v.RegisterMember("time", &SlotView::time);
+                v.RegisterMember("name", &SlotView::name);
+                v.RegisterMember("warn", &SlotView::warn);
+                v.RegisterMember("debuff", &SlotView::debuff);
+            }
+            m.RegisterArray<std::vector<SlotView>>();
+            m.Bind("w", &u.w);
+            m.Bind("h", &u.h);
+            m.Bind("dp", &u.dp);
+            m.Bind("names", &u.names);
+            m.Bind("hover", &u.hover);
+            m.Bind("toggle", &u.toggle);
+            m.Bind("more", &u.more);
+            m.Bind("tip", &u.tip);
+            m.Bind("more_text", &u.moreText);
+            m.Bind("tip_a", &u.tipA);
+            m.Bind("tip_b", &u.tipB);
+            m.Bind("slots", &u.slots);
+            m.BindEventCallback("toggle", [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList&) {
+                pressPart(state(), bp::Hit{bp::Part::Toggle, -1});
+            });
+            m.BindEventCallback("more", [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList&) {
+                pressPart(state(), bp::Hit{bp::Part::More, -1});
+            });
+            m.BindEventCallback("press", [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList& a) {
+                if (!a.empty()) pressPart(state(), bp::Hit{bp::Part::Icon, a[0].Get<int>()});
+            });
+        }))
+        return false;
+    const std::string key = s.shape + '|' + s.fill + '|' + std::to_string(s.tip);
+    if (key != u.key) {
+        u.key = key;
+        const bp::Layout& L = s.layout;
+        const bp::Texts t = texts();
+        u.w = float(L.w), u.h = float(L.h), u.dp = L.s;
+        u.names = L.look == bp::Look::Names;
+        u.hover = s.hover;
+        u.toggle = boxOf(L.toggle);
+        u.more = boxOf(L.more);
+        u.moreText.clear();
+        if (L.more.w > 0) {
+            u.moreText = t.more;
+            const size_t at = u.moreText.find("{1}");
+            if (at != std::string::npos) u.moreText.replace(at, 3, std::to_string(L.hidden));
+        }
+        std::string first, second;
+        u.tip = boxOf(bp::tipText(L, s.entries, s.tip, t, first, second));
+        u.tipA = first, u.tipB = second;
+        u.slots.clear();
+        for (const bp::Slot& slot : L.slots) {
+            const bp::Entry& e = s.entries[size_t(slot.entry)];
+            SlotView v;
+            v.x = slot.icon.x, v.y = slot.icon.y, v.w = slot.icon.w, v.h = slot.icon.h;
+            v.fx = slot.frame.x, v.fy = slot.frame.y, v.fw = slot.frame.w, v.fh = slot.frame.h;
+            v.tx = slot.time.x, v.ty = slot.time.y, v.tw = slot.time.w, v.th = slot.time.h;
+            v.nx = slot.name.x, v.ny = slot.name.y, v.nw = slot.name.w, v.nh = slot.name.h;
+            v.left = e.left >= 0 ? std::clamp(e.left, 0.0f, 1.0f) : -1;
+            v.pic = e.picture ? uaui::picture(e.picture, uaui::stamp(e.picture), u.sources[e.picture]) : "";
+            v.time = e.time;
+            v.name = e.name;
+            v.warn = e.warn;
+            v.debuff = e.kind == bp::Kind::Debuff;
+            u.slots.push_back(v);
+        }
+        u.doc.dirtyAll();
+    }
+    u.doc.place(s.layout.x, s.layout.y);
+    u.doc.show(true);
+    return true;
+}
 }  // namespace
 
 bool installBuffIcons() {
@@ -512,8 +697,10 @@ void frame(HWND game, BuffsLook look, BuffsOverflow overflow, double k, int targ
     if (shape != s.shape || (fill != s.fill && now - s.paintedAt >= kRepaintMs)) {
         s.shape = shape;
         s.fill = fill;
-        render(s);
+        if (!uaui::ready()) render(s);  // 3.0.18-beta.20: uaUI's column needs no picture
+        s.paintedAt = now;
     }
+    s.uiShown = uiFrame(s);
     if (!s.wantedTold) {
         s.wantedTold = true;
         LOG_INFO("buffs: the column shows %zu of the character's icons at %d,%d (%dx%d, %s)", s.layout.slots.size(),
@@ -525,6 +712,8 @@ void frame(HWND game, BuffsLook look, BuffsOverflow overflow, double k, int targ
 
 void draw(FrameRecord& record, gpu::Renderer& renderer) {
     State& s = state();
+    if (!s.shown) ui().doc.show(false);  // 3.0.18-beta.20
+    if (s.uiShown && s.shown) return;  // uaUI draws it
     if (!s.shown || s.k <= 0 || s.picture.width <= 0 || s.picture.height <= 0) return;
     int cursor = -1, cx = 0, cy = 0;  // under the game's own cursor, as the minimap
     if (readGameCursor(cx, cy)) cursor = panel::cursorDraw(record, float(cx), float(cy));
@@ -534,7 +723,7 @@ void draw(FrameRecord& record, gpu::Renderer& renderer) {
 
 bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     State& s = state();
-    if (!s.shown) return false;
+    if (!s.shown || s.uiShown) return false;  // 3.0.18-beta.20: uaUI's events take its clicks
     const bool button = m == WM_LBUTTONDOWN || m == WM_LBUTTONUP || m == WM_LBUTTONDBLCLK || m == WM_RBUTTONDOWN ||
                         m == WM_RBUTTONUP || m == WM_RBUTTONDBLCLK || m == WM_MBUTTONDOWN || m == WM_MBUTTONUP;
     if (!button && m != WM_MOUSEWHEEL) return false;
@@ -552,20 +741,7 @@ bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
         const bp::Hit h = bp::hitTest(s.layout, px, py);
         if (s.pressesLogged++ < 12)
             LOG_INFO("buffs: a press at the column's (%.0f, %.0f) - part %d", px, py, int(h.part));
-        if (h.part == bp::Part::Toggle || (h.part == bp::Part::More && s.look == BuffsLook::Column)) {
-            s.names = h.part == bp::Part::More ? true : !s.names;  // «ще N»: the names list holds more
-            keepState(s);
-            LOG_INFO("buffs: the names %s", s.names ? "shown" : "hidden");
-        } else if (h.part == bp::Part::Icon && h.slot >= 0 && size_t(h.slot) < s.layout.slots.size()) {
-            const bp::Entry& e = s.entries[size_t(s.layout.slots[size_t(h.slot)].entry)];
-            if (e.kind != bp::Kind::Debuff) {  // a favourite: first and larger (debuffs stand last, always)
-                const bool star = s.favourites.insert(e.icon).second;
-                if (!star) s.favourites.erase(e.icon);
-                keepState(s);
-                if (s.clicksLogged++ < 10)
-                    LOG_INFO("buffs: %s (icon %u) %s the favourites", e.name.c_str(), e.icon, star ? "among" : "off");
-            }
-        }
+        pressPart(s, h);
         s.shape.clear();  // painted again
     }
     result = 0;

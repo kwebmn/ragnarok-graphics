@@ -49,7 +49,7 @@ picture's upload gone. Cost if wrong: per-pixel glows (panel::over loops) land i
 - [x] character block (win/char_block + core/char_block) — beta.17 by hand: core charblock::model, RML kDoc, <ua-ring>
 - [x] target card (win/target_card) — beta.18 by hand
 - [ ] party panel (beta.19 by hand), mercenary/homunculus blocks
-- [ ] buffs column and its further lines
+- [x] buffs column and its further lines — beta.20 by hand (core layout boxes in px)
 - [ ] hotbar
 - [ ] experience bars, experience gain, item toast
 - [ ] hunt panel, MVP panel, tracker
@@ -85,3 +85,4 @@ picture's upload gone. Cost if wrong: per-pixel glows (panel::over loops) land i
 - 2026-11-10 beta.17: character block by hand in RML (full, compact bars, rings, icon; tips; warning; flare; buttons); <ua-ring> element; theme file adds to the built-in theme
 - 2026-11-10 beta.18: target card by hand in RML (round picture, name, level, element chip in its colour, HP bar, book, pad hints, details on :hover, click opens «Довідник»)
 - 2026-11-10 beta.19: party panel by hand in RML (rows, faces, crown, states, HP bar, cast line, way arrow rotated, buffs with times, compact cells, fold/view); click actions shared (toggleFold/toggleView/rowClicked); uaui::stamp()
+- 2026-11-10 beta.20: buffs column by hand in RML (core layout's boxes in px, sweep as <ua-ring sector square>, times/names/«ще N» with font-effect outline, names toggle, tip); font engine: outline effect (halo glyphs); ua-ring square sector

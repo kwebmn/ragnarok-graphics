@@ -475,6 +475,11 @@ std::vector<Words> words(const Layout& L, const std::vector<Entry>& entries, int
     return out;
 }
 
+panel::Box tipText(const Layout& L, const std::vector<Entry>& entries, int hover, const Texts& t, std::string& first,
+                   std::string& second) {
+    return tipLines(L, entries, hover, t, first, second);
+}
+
 panel::Box tipOf(const Layout& L, const std::vector<Entry>& entries, int hover, const Texts& t) {
     std::string first, second;
     return tipLines(L, entries, hover, t, first, second);

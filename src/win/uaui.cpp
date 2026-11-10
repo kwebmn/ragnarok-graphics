@@ -84,6 +84,7 @@ struct Face {
     Rml::FontMetrics metrics{};
     int ascent = 0, height = 0;
     std::unordered_map<char32_t, Glyph> glyphs;
+    std::unordered_map<char32_t, Glyph> halos;  // 3.0.18-beta.20: each glyph's outline, grown by 2 pixels
 };
 
 struct Atlas {
@@ -384,6 +385,43 @@ const Glyph& glyphOf(State& s, Face& f, char32_t c) {
     return f.glyphs.emplace(c, g).first->second;
 }
 
+// 3.0.18-beta.20: a glyph's outline (its coverage grown by 2 pixels, a disc of 5 - win/picture_draw's halo) in the
+// atlas beside it, white; drawn under the letters in the effect's colour
+const Glyph& haloOf(State& s, Face& f, char32_t c) {
+    const auto it = f.halos.find(c);
+    if (it != f.halos.end()) return it->second;
+    const Glyph g = glyphOf(s, f, c);
+    Glyph h;
+    h.advance = g.advance;
+    Atlas& a = s.atlas;
+    if (g.w > 0 && g.h > 0) {
+        h.w = g.w + 4, h.h = g.h + 4;
+        if (a.shelfX + h.w > kAtlas) a.shelfX = 0, a.shelfY += a.shelfH, a.shelfH = 0;
+        if (a.shelfY + h.h > kAtlas) {
+            a.full = true;
+            h.w = h.h = 0;
+        } else {
+            h.x = a.shelfX, h.y = a.shelfY;
+            const auto cover = [&](int x, int y) -> uint32_t {
+                return x < 0 || y < 0 || x >= g.w || y >= g.h ? 0u
+                                                                : a.px[size_t(g.y + y) * kAtlas + size_t(g.x + x)] >> 24;
+            };
+            for (int y = 0; y < h.h; ++y)
+                for (int x = 0; x < h.w; ++x) {
+                    uint32_t v = 0;
+                    for (int dy = -2; dy <= 2 && v < 255; ++dy)
+                        for (int dx = -2; dx <= 2; ++dx)
+                            if (dx * dx + dy * dy <= 5) v = std::max(v, cover(x - 2 + dx, y - 2 + dy));
+                    a.px[size_t(h.y + y) * kAtlas + size_t(h.x + x)] = v << 24 | v << 16 | v << 8 | v;
+                }
+            a.shelfX += h.w;
+            a.shelfH = std::max(a.shelfH, h.h);
+            a.dirty = true;
+        }
+    }
+    return f.halos.emplace(c, h).first->second;
+}
+
 class Fonts final : public Rml::FontEngineInterface {
 public:
     Rml::FontFaceHandle GetFontFaceHandle(const Rml::String&, Rml::Style::FontStyle style, Rml::Style::FontWeight weight,
@@ -419,6 +457,16 @@ public:
         return Rml::FontFaceHandle(key);
     }
     const Rml::FontMetrics& GetFontMetrics(Rml::FontFaceHandle h) override { return faceOf(h).metrics; }
+    // 3.0.18-beta.20: an effect behind the letters (font-effect: outline(2dp #000000)) - their outline in its colour
+    Rml::FontEffectsHandle PrepareFontEffects(Rml::FontFaceHandle, const Rml::FontEffectList& effects) override {
+        for (const auto& e : effects)
+            if (e && e->GetLayer() == Rml::FontEffect::Layer::Back) {
+                const Rml::Colourb c = e->GetColour();
+                return Rml::FontEffectsHandle(1 + (uint32_t(c.alpha) << 24 | uint32_t(c.red) << 16 |
+                                                   uint32_t(c.green) << 8 | uint32_t(c.blue)));
+            }
+        return 0;
+    }
     int GetStringWidth(Rml::FontFaceHandle h, Rml::StringView text, const Rml::TextShapingContext&,
                        Rml::Character) override {
         State& s = state();
@@ -428,11 +476,38 @@ public:
             w += glyphOf(s, f, c).advance;
         return w;
     }
-    int GenerateString(Rml::RenderManager& rm, Rml::FontFaceHandle h, Rml::FontEffectsHandle, Rml::StringView text,
-                       Rml::Vector2f at, Rml::ColourbPremultiplied colour, float, const Rml::TextShapingContext&,
+    int GenerateString(Rml::RenderManager& rm, Rml::FontFaceHandle h, Rml::FontEffectsHandle fx, Rml::StringView text,
+                       Rml::Vector2f at, Rml::ColourbPremultiplied colour, float opacity, const Rml::TextShapingContext&,
                        Rml::TexturedMeshList& list) override {
         State& s = state();
         Face& f = faceOf(h);
+        if (fx) {  // 3.0.18-beta.20: the outline first, under the letters
+            const uint32_t c = uint32_t(uintptr_t(fx) - 1);
+            const Rml::ColourbPremultiplied hc = Rml::Colourb(Rml::byte(c >> 16), Rml::byte(c >> 8), Rml::byte(c),
+                                                              Rml::byte(c >> 24))
+                                                     .ToPremultiplied(opacity);
+            Rml::Mesh halo;
+            float pen = 0;
+            const float inv = 1.0f / float(kAtlas);
+            for (char32_t ch : ::uagfx::uaui::codepoints(std::string_view(text.begin(), text.size()))) {
+                const Glyph& g = haloOf(s, f, ch);
+                if (g.w > 0 && g.h > 0) {
+                    const float x0 = std::round(at.x + pen) - kGlyphPad - 2,
+                                y0 = std::round(at.y) - float(f.ascent) - kGlyphPad - 2;
+                    const int base = int(halo.vertices.size());
+                    for (int q = 0; q < 4; ++q) {
+                        Rml::Vertex v;
+                        v.position = {x0 + float((q & 1) * g.w), y0 + float((q >> 1) * g.h)};
+                        v.colour = hc;
+                        v.tex_coord = {float(g.x + (q & 1) * g.w) * inv, float(g.y + (q >> 1) * g.h) * inv};
+                        halo.vertices.push_back(v);
+                    }
+                    for (int q : {0, 1, 2, 1, 3, 2}) halo.indices.push_back(base + q);
+                }
+                pen += float(g.advance);
+            }
+            if (!halo.vertices.empty()) list.push_back({std::move(halo), atlasSource_.GetTexture(rm)});
+        }
         Rml::Mesh mesh;
         float pen = 0;
         const float inv = 1.0f / float(kAtlas);
@@ -689,6 +764,35 @@ input.checkbox:checked { background-color: #3d7fd8; border-color: #3d7fd8; }
 .pp .cell .name { left: 23dp; top: 3dp; height: 15dp; line-height: 15dp; font-size: 11.5dp; }
 .pp .cell .bar { left: 23dp; right: 3dp; top: 20dp; height: 4dp; }
 .pp .cell .bar .fill { height: 4dp; }
+/* 3.0.18-beta.20: the buffs' column (win/buff_column) - the concept's v19_vbuffs_ab; places in the target's pixels */
+.bc { position: absolute; font-family: Plex; color: #eceff5; }
+.bc .slot { position: absolute; cursor: pointer; }
+.bc .shadow { position: absolute; background-color: #00000038; }
+.bc .outline { position: absolute; background-color: #000000b3; }
+.bc .icon { position: absolute; background-color: #1b1d24; }
+.bc .icon img { width: 100%; height: 100%; }
+.bc .bad { position: absolute; border: 1.6dp #ff5a4ef2; }
+.bc .hover { position: absolute; border: 1.5dp #ffffffd9; }
+.bc .time { position: absolute; text-align: center; font-size: 11.5dp; font-weight: bold;
+            font-effect: outline(2px #000000d9); }
+.bc .time.warn { color: #f0a050; }
+.bc .time.bad { color: #ff9a8f; }
+.bc .name { position: absolute; text-align: right; font-size: 13dp; font-weight: bold; white-space: nowrap;
+            font-effect: outline(2px #000000d9); }
+.bc .name.bad { color: #ff9a8f; }
+.bc .more { position: absolute; text-align: center; font-size: 12dp; font-weight: bold; cursor: pointer;
+            font-effect: outline(2px #000000d9); }
+.bc .toggle { position: absolute; background-color: #00000073; border: 1dp #ffffff47; cursor: pointer;
+              transition: background-color 0.1s; }
+.bc .toggle:hover { background-color: #0000009e; }
+.bc .toggle.on { border-color: #e6cb8ad9; }
+.bc .toggle .ln { position: absolute; left: 50%; margin-left: -5dp; width: 10dp; height: 1.5dp; border-radius: 1dp;
+                  background-color: #ffffffe6; }
+.bc .toggle.on .ln { background-color: #e6cb8ae6; }
+.bc .tip { position: absolute; padding: 4dp 10dp 0 10dp; border-radius: 8dp; border: 1dp #ffffff1f;
+           background-color: #10141cf0; white-space: nowrap; }
+.bc .tip .a { display: block; font-size: 13dp; font-weight: bold; height: 18dp; line-height: 18dp; }
+.bc .tip .b { display: block; font-size: 11.5dp; color: #9aa3b5; height: 15dp; line-height: 15dp; }
 scrollbarvertical { width: 8dp; margin-left: 4dp; }
 scrollbarvertical slidertrack { background-color: #ffffff0c; border-radius: 4dp; }
 scrollbarvertical sliderbar { background-color: #ffffff40; border-radius: 4dp; min-height: 24dp; }
@@ -811,6 +915,7 @@ private:
         }
         const float dpr = GetContext() ? GetContext()->GetDensityIndependentPixelRatio() : 1.0f;
         const bool sector = GetAttribute<int>("sector", 0) != 0;
+        const bool square = sector && GetAttribute<int>("square", 0) != 0;  // 3.0.18-beta.20: a pie over the whole box
         const float w = sector ? r : std::min(r, GetAttribute<float>("width", 4.0f) * dpr);
         const float value = std::clamp(GetAttribute<float>("value", 1.0f), 0.0f, 1.0f);
         const float start = GetAttribute<float>("start", -90.0f) * 3.14159265f / 180;
@@ -823,9 +928,13 @@ private:
             if (to <= from || col.alpha == 0) return;
             const Rml::ColourbPremultiplied in = col.ToPremultiplied(opacity), out = col.ToPremultiplied(0.0f);
             const int n = std::max(2, int(std::ceil((to - from) / (2 * 3.14159265f) * std::clamp(r, 24.0f, 160.0f))));
-            const float ro = r - 0.5f, ri = std::max(0.0f, r - w + 0.5f);
+            float ro = r - 0.5f;
+            const float ri = std::max(0.0f, r - w + 0.5f);
             for (int i = 0; i <= n; ++i) {
                 const float a = from + (to - from) * float(i) / float(n), ca = std::cos(a), sa = std::sin(a);
+                if (square)  // as far as the box's edge that way
+                    ro = std::min(std::fabs(ca) > 1e-4f ? size.x / 2 / std::fabs(ca) : 1e9f,
+                                  std::fabs(sa) > 1e-4f ? size.y / 2 / std::fabs(sa) : 1e9f) - 1;
                 const int b = int(mesh.vertices.size());
                 // the fringe out, the band, the fringe in (none for a pie)
                 mesh.vertices.push_back({{c.x + (ro + 1) * ca, c.y + (ro + 1) * sa}, out, {0, 0}});

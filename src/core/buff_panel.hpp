@@ -112,6 +112,9 @@ std::vector<Words> words(const Layout& L, const std::vector<Entry>& entries, int
 // here, its words in words(); w 0: none
 panel::Box tipOf(const Layout& L, const std::vector<Entry>& entries, int hover, const Texts& t);
 void paintTip(panel::Picture& out, const Layout& L, const std::vector<Entry>& entries, int hover, const Texts& t);
+// 3.0.18-beta.20 (the RML column, win/buff_column): the tip's box and its two lines
+panel::Box tipText(const Layout& L, const std::vector<Entry>& entries, int hover, const Texts& t, std::string& first,
+                   std::string& second);
 
 // An icon's picture at `side` x `side` (premultiplied, its corners rounded) from the game's .tga pixels (ARGB; a
 // picture without alpha keys out its magenta, as the game's effects do)
