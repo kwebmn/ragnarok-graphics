@@ -1091,7 +1091,8 @@ int markAt(const Layout& L, const Scene& sc, float x, float y) {
     for (size_t i = 0; i < sc.marks.size(); ++i) {
         float px = 0, py = 0;
         cellToPanel(v, sc.map, sc.marks[i].cell, px, py);
-        const float reach = radiusOf(sc.marks[i], L.s) * markScale(sc.cells, sc.map, L.s) * L.grow + 4 * L.s;  // a hand more
+        const float reach =  // a hand more
+            radiusOf(sc.marks[i], L.s) * markScale(sc.cells, sc.map, L.s) * L.grow + 4 * L.s;
         const float d = (px - x) * (px - x) + (py - y) * (py - y);
         if (d <= reach * reach && (best < 0 || d < bestD)) {
             best = int(i);
