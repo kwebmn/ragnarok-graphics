@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.18-beta.21 — what's new
+
+- **The hotbar is on the new library:** with it on, the bar is built anew - cells with all their states (chosen, short of SP or an item, not allowed here, combo, ready), levels and counts, wall and trap timers, the delay after a skill, controller buttons, battle mode, the ammo and supplies pills, tips. Dragging, the level wheel and the keys work as before.
+
 # uaRO Graphics 3.0.18-beta.20 — what's new
 
 - **The buffs column is on the new library:** with it on, the column is built anew - icons, their times outlined in dark, the spent time darkened, names, the "more" count, the names button and the tip; debuffs in a red frame. What fits and where the rest go stays as before.
