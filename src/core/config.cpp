@@ -830,6 +830,8 @@ Config parseConfig(const std::string& text) {
             setBool(val, c.animations);
         } else if (key == "interface.uaui") {  // 3.0.18-beta.7: the RmlUi spike's card
             setBool(val, c.uaui);
+        } else if (key == "interface.uaui_motion") {  // 3.0.18-beta.58
+            setBool(val, c.uauiMotion);
         } else if (key == "interface.uaui_showcase") {  // 3.0.18-beta.11: uaUI's components' window
             setBool(val, c.uauiShowcase);
         } else if (key == "interface.theme") {  // 3.0.18-beta.13: uaUI's theme

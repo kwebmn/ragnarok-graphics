@@ -1018,6 +1018,20 @@ input.checkbox:checked { background-color: #3d7fd8; border-color: #3d7fd8; }
 .hb .tipline.first { font-size: 13rem; font-weight: bold; }
 .hb .ttip { position: absolute; border: 1rem #ffffff1f; background-color: #10141cf0; text-align: center;
             font-size: 12rem; white-space: nowrap; }
+/* 3.0.18-beta.58: [interface] uaui_motion - the soft motion (the body's class «motion»); off: none of it */
+.motion.win { transition: transform 0.16s cubic-out; }
+.motion.win.away { transform: translateY(8dp); }
+.motion.it { transition: opacity transform 0.2s cubic-out; }
+.motion.it.away { opacity: 0; transform: translateY(-10dp); }
+.motion.hb .cell, .motion.ig .cell, .motion.ig .hot, .motion.sh .cell, .motion.sh .btn, .motion.sh .tile,
+.motion.sh .hot { transition: background-color border-color 0.12s cubic-out; }
+.motion.hb .a { transition: transform 0.09s cubic-out; }
+.motion.hb .a.hot { transform: scale(1.05); }
+.motion.hb .a.down { transform: scale(0.92); }
+@keyframes ua-pulse { from { opacity: 1; } to { opacity: 0.55; } }
+.motion.cb .hp.low, .motion.tc .hpfill.low { animation: 0.7s sine-in-out infinite alternate ua-pulse; }
+@keyframes ua-rise { from { opacity: 0; transform: translateY(10dp); } to { opacity: 1; transform: translateY(0dp); } }
+.motion.xg .gain, .motion.xb .gain { animation: 0.35s cubic-out ua-rise; }
 scrollbarvertical { width: 8dp; margin-left: 4dp; }
 scrollbarvertical slidertrack { background-color: #ffffff0c; border-radius: 4dp; }
 scrollbarvertical sliderbar { background-color: #ffffff40; border-radius: 4dp; min-height: 24dp; }
@@ -1585,8 +1599,19 @@ int g_windowRank = 0;
 bool g_windowMarked = false;
 }
 void setWindowRank(int rank, bool marked) { g_windowRank = rank, g_windowMarked = marked; }
+bool g_motion = false;
 int windowRank() { return g_windowRank; }
 bool windowMarked() { return g_windowMarked; }
+
+// 3.0.18-beta.58 ([interface] uaui_motion): every document's body class «motion» - the theme's soft motion under it
+void setMotion(bool on) {
+    if (on == g_motion) return;
+    g_motion = on;
+    LOG_INFO("uaui: [interface] uaui_motion = %d", on ? 1 : 0);
+    for (Doc* d : state().docs)
+        if (d->doc()) d->doc()->SetClass("motion", on);
+}
+bool motion() { return g_motion; }
 
 void Doc::mark(bool on) {
     if (!doc_ || int(on) == marked_) return;
@@ -1678,6 +1703,8 @@ bool Doc::make(const char* name, const char* rml, const std::function<void(Rml::
     if (passive) doc_->SetProperty("pointer-events", "none");
     if (Rml::Element* t = doc_->GetElementById("ua-title")) t->SetInnerRML(doc_->GetTitle());
     if (Rml::Element* c = doc_->GetElementById("ua-close")) c->AddEventListener(Rml::EventId::Click, &g_close);
+    doc_->SetClass("win", window);  // 3.0.18-beta.58: the theme's motion slides windows only
+    doc_->SetClass("motion", g_motion);
     s.docs.push_back(this);
     LOG_INFO("uaui: «%s» made", name);
     return true;

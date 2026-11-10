@@ -894,7 +894,8 @@ const char* kDoc = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss
 <span class="label" data-for="l : labels" data-style-left="l.b.x + 'px'" data-style-top="l.b.y + 'px'"
   data-style-width="l.b.w + 'px'" data-style-height="l.b.h + 'px'"
   data-style-line-height="l.b.h + 'px'">{{l.text}}</span>
-<div class="a" data-for="c : cells">
+<div data-for="c : cells" data-attr-class="'a ' + c.cls"
+  data-style-transform-origin="(c.b.x + c.b.w / 2) + 'px ' + (c.b.y + c.b.h / 2) + 'px'">
  <div data-attr-class="'cell ' + c.cls" data-style-left="c.b.x + 'px'" data-style-top="c.b.y + 'px'"
   data-style-width="c.b.w + 'px'" data-style-height="c.b.h + 'px'" data-style-border-radius="7 * s + 'px'"></div>
  <img class="a" data-if="c.icon != ''" data-attr-src="c.icon" data-style-left="c.ib.x + 'px'"

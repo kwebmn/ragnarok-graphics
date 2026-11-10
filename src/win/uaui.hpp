@@ -51,7 +51,9 @@ float themeEdge();
 // document raised to it: the last opened or clicked on top, as the driver's windows)
 void setWindowRank(int rank, bool marked = false);
 int windowRank();
-bool windowMarked();  // the one drawn now has the stack's gold edge (the top of two or more)
+bool windowMarked();
+void setMotion(bool on);  // 3.0.18-beta.58: [interface] uaui_motion - the theme's soft motion (body class «motion»)
+bool motion();  // the one drawn now has the stack's gold edge (the top of two or more)
 // 3.0.18-beta.12 (the ruling of docs/superpowers/plans/2026-11-09-uaui-migration.md): the parts' recorded pictures
 // (panel::Picture::scene, core/ui_scene) drawn on the card - [interface] uaui on and started (in the world or not)
 bool sceneReady();

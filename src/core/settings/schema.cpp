@@ -411,6 +411,9 @@ const std::vector<IniSetting>& iniSettings() {
         {"interface", "theme", Page::Interface, Control::Choice, 0, 0, 0, {"standard", "classic", "contrast"},
          {Text::InterfaceThemeStandard, Text::InterfaceThemeClassic, Text::InterfaceThemeContrast},
          Text::InterfaceTheme, Text::InterfaceThemeHint, ""},
+        // 3.0.18-beta.58
+        {"interface", "uaui_motion", Page::Interface, Control::Check, 0, 1, 0, {"0", "1"}, {},
+         Text::InterfaceUauiMotion, Text::InterfaceUauiMotionHint, ""},
         // 3.0.18-beta.11: uaUI's components' window
         {"interface", "uaui_showcase", Page::Interface, Control::Check, 0, 1, 1, {"0", "1"}, {},
          Text::InterfaceUauiShowcase, Text::InterfaceUauiShowcaseHint, ""},
@@ -1411,6 +1414,7 @@ std::string tokenOf(const IniSetting& s, const Config& c) {
     if (k == "interface.ground_counts") return c.groundCounts ? "1" : "0";  // 3.0.11-beta.143
     if (k == "interface.animations") return c.animations ? "1" : "0";  // 3.0.11-beta.46
     if (k == "interface.uaui") return c.uaui ? "1" : "0";  // 3.0.18-beta.7
+    if (k == "interface.uaui_motion") return c.uauiMotion ? "1" : "0";  // 3.0.18-beta.58
     if (k == "interface.uaui_showcase") return c.uauiShowcase ? "1" : "0";  // 3.0.18-beta.11
     if (k == "interface.theme") return c.uiTheme;  // 3.0.18-beta.13
     if (k == "interface.panel_opacity") return std::to_string(c.hudOpacity);  // 3.0.11-beta.47

@@ -21,6 +21,7 @@
 #include "core/layout.hpp"
 #include "core/settings/strings.hpp"
 #include "core/sprite_file.hpp"
+#include "core/ui_glide.hpp"
 #include "core/ui_motion.hpp"
 #include "core/ui_style.hpp"
 #include "pad/win/game_window.hpp"
@@ -492,6 +493,7 @@ struct Ui {
     cb::Model m;
     int view = 0, look = 0;
     float w = 372, h = 312, hpW = 0, spW = 0, weightW = 0;
+    uiglide::Glide hpGlide, spGlide;
     struct Exp {
         bool shown = false;
         Rml::String label, pct, numbers, right, rightTone;
@@ -696,6 +698,13 @@ bool uiFrame(State& s, const cb::View view, const cb::Look look, const std::stri
         exp(u.m.jobExp, u.job);
         if (u.hoverKind >= 0) tipFor(u.hoverKind, u.hoverIndex);
         u.doc.dirtyAll();
+    }
+    {  // 3.0.18-beta.58: HP and SP glide to their shares with [interface] uaui_motion (at once without it)
+        const uint64_t now = GetTickCount64();
+        const float hp = u.hpGlide.step(u.m.hpShare * 100, now, uaui::motion());
+        const float sp = u.spGlide.step(u.m.spShare * 100, now, uaui::motion());
+        if (hp != u.hpW) u.hpW = hp, u.doc.dirty("hp_w");
+        if (sp != u.spW) u.spW = sp, u.doc.dirty("sp_w");
     }
     // the portrait and the buttons' icons as pictures of the driver's
     const std::string pkey = s.portraitKey + (s.data.portrait ? "p" : "");

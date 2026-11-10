@@ -10,6 +10,7 @@
 #include <variant>
 #include <vector>
 
+#include "core/ui_glide.hpp"
 #include "core/bar_hint.hpp"
 #include "core/reference_pages.hpp"
 #include "core/settings/strings.hpp"
@@ -243,7 +244,7 @@ const char* kDoc = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss
    class="chip" data-if="element != ''" data-style-color="ecol" data-style-border-color="eedge"
    data-style-background-color="ebg">{{element}}</span></div>
   <div class="hpline" data-if="hp >= 0"><span class="hptrack"><span class="hpfill" data-class-low="hp < 25"
-   data-style-width="hp + '%'"></span></span><span class="pct">{{hp}}%</span></div>
+   data-style-width="hp_bar + '%'"></span></span><span class="pct">{{hp}}%</span></div>
  </div>
  <div class="book"><img class="dim" data-attr-src="book"/><img class="lit" data-attr-src="book_lit"/></div>
  <div class="hints" data-if="pad"><div><img data-attr-src="pad_a"/>{{attack}}</div><div><img data-attr-src="pad_r"/>{{next}}</div></div>
@@ -260,6 +261,9 @@ struct Ui {
     float w = 0;
     Rml::String name, level, element, ecol, eedge, ebg, pic, picSrc, book, bookLit, padA, padR, attack, next;
     int hp = -1;
+    float hpBar = 0;  // 3.0.18-beta.58: the bar's shown share (gliding with [interface] uaui_motion)
+    uiglide::Glide hpGlide;
+    Rml::String glidFor;
     bool pad = false;
     std::vector<Line> lines;
     std::string key;
@@ -321,6 +325,7 @@ bool uiFrame(State& s) {
             m.Bind("eedge", &u.eedge);
             m.Bind("ebg", &u.ebg);
             m.Bind("hp", &u.hp);
+            m.Bind("hp_bar", &u.hpBar);
             m.Bind("pic", &u.pic);
             m.Bind("book", &u.book);
             m.Bind("book_lit", &u.bookLit);
@@ -367,6 +372,9 @@ bool uiFrame(State& s) {
     // the monster's picture, the book's icon (dim and lit), the controller's buttons - pictures of the driver's
     const Rml::String pic = uaui::picture(s.data.picture, s.mob, u.picSrc);
     if (pic != u.pic) u.pic = pic, u.doc.dirty("pic");
+    if (u.glidFor != u.name) u.glidFor = u.name, u.hpGlide.started = false;  // another one: its bar at once
+    const float bar = u.hpGlide.step(float(std::max(u.hp, 0)), GetTickCount64(), uaui::motion());
+    if (bar != u.hpBar) u.hpBar = bar, u.doc.dirty("hp_bar");
     const float px = 18 * dp;
     if (px != u.iconsPx || u.sony != s.data.padSony) {
         u.iconsPx = px;
