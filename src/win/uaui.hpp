@@ -63,6 +63,8 @@ void noteUnrecorded(int w, int h);
 // Its shapes, icons, pictures and words at (x, y) w x h of the target (stretched from its own size), at `opacity`
 void drawScene(FrameRecord& record, gpu::Renderer& renderer, const panel::Picture& pic, int x, int y, int w, int h,
                float k, float opacity, int stretch);
+// 3.0.18-beta.57: the words' width as uaUI draws them at `px` (< 0: not started)
+float textWidth(const std::string& utf8, float px, bool bold);
 float dp();    // the target's pixels a concept pixel (the theme's 1dp)
 std::string utf8(const std::string& gameText);  // the game's words (its code page) as UTF-8
 // A picture of the driver's as an <img> source - «pic:<address>:<generation>»; another generation is another texture

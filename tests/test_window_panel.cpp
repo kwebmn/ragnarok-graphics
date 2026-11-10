@@ -615,3 +615,15 @@ TEST(window_panel_rounds_as_lround) {
     CHECK_EQ(differ, 0);
     CHECK(std::fabs(panel::length(3, 4) - 5.0f) < 1e-6f && panel::length(0, 0) == 0.0f);
 }
+
+// 3.0.18-beta.57 (docs/superpowers/plans/2026-11-10-uaui-possibilities.md, stage 1): while uaUI draws, the words'
+// width is the drawing engine's own (a pixel over), so the plates made from it hold the letters it draws
+TEST(window_panel_words_width_asks_the_drawing_engine_when_one_is_set) {
+    const float table = panel::wordsWidth("123 / 456", 12.5f, true);
+    panel::setMeasure([](const std::string& t, float px, bool bold) { return t == "?" ? -1.0f : px * (bold ? 8 : 7); });
+    CHECK(panel::wordsWidth("123 / 456", 12.5f, true) == 12.5f * 8 + 1);
+    CHECK(panel::wordsWidth("?", 12.5f, false) == panel::wordsWidth("?", 12.5f, false));  // not known: the table's
+    CHECK(panel::wordsWidth("", 12.5f, true) == 0.0f);
+    panel::setMeasure(nullptr);
+    CHECK(panel::wordsWidth("123 / 456", 12.5f, true) == table);
+}

@@ -653,7 +653,15 @@ constexpr Advance kPlex[] = {
 
 }  // namespace
 
+Measure g_measure = nullptr;
+
+void setMeasure(Measure m) { g_measure = m; }
+
 float wordsWidth(const std::string& utf8, float px, bool bold) {
+    if (g_measure && !utf8.empty()) {
+        const float w = g_measure(utf8, px, bold);
+        if (w >= 0) return w + 1;
+    }
     // 3.0.11-beta.66 (the concept: «встроенный IBM Plex Sans»): the new interface's words are Plex's (win/ui_font) -
     // its own advances (its SemiBold the bold), 3 % and half a pixel over (GDI's whole pixels); a letter it has not
     // is drawn in Segoe UI (★, ●): 0.9 of the size

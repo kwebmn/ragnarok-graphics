@@ -578,6 +578,23 @@ System g_system;
 Render g_render;
 Fonts* g_fonts = nullptr;  // made at the start (its texture source needs RmlUi's types alive)
 
+}  // namespace
+
+// 3.0.18-beta.57 (docs/superpowers/plans/2026-11-10-uaui-possibilities.md, stage 1): the words' width as this engine
+// draws them - its GDI face at the size RmlUi asks for (truncated to whole pixels); < 0 before the start
+float textWidth(const std::string& utf8, float px, bool bold) {
+    State& s = state();
+    const int size = int(px);
+    if (!g_fonts || !s.started || size <= 0) return -1;
+    const Rml::FontFaceHandle h =
+        g_fonts->GetFontFaceHandle("", Rml::Style::FontStyle::Normal,
+                                   bold ? Rml::Style::FontWeight::Bold : Rml::Style::FontWeight::Normal, size);
+    const Rml::String language;
+    return float(g_fonts->GetStringWidth(h, utf8, Rml::TextShapingContext{language}, Rml::Character::Null));
+}
+
+namespace {
+
 // ---- the theme and the components: every colour, size and motion in one style sheet ----
 
 // ---- the theme and the components (stage 2): every colour, size and motion in one style sheet ----
@@ -1764,6 +1781,14 @@ void begin(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
         const ULONGLONG t = GetTickCount64();
         themeFrame(s, theme, t - lookedAt >= 1000);
         if (t - lookedAt >= 1000) lookedAt = t;
+    }
+    // 3.0.18-beta.57: the parts' plates measured by the letters drawn - every part lays out again when that changes
+    const panel::Measure measure = on && s.started ? panel::Measure(textWidth) : nullptr;
+    static panel::Measure measuring = nullptr;
+    if (measure != measuring) {
+        measuring = measure;
+        panel::setMeasure(measure);
+        uistyle::bump();
     }
     // 3.0.18-beta.16 (the owner: «надо вообщето Переписывать 73 части в разметку RmlUi вручную»; R-ZK9ZK9, the game
     // gone after «Довідник» recorded): the parts' pictures no longer recorded - each part moves to RmlUi by hand

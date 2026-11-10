@@ -2,10 +2,12 @@
 
 #include <algorithm>
 #include <cmath>
+#include <set>
 
 #include "core/pad_glyphs.hpp"
 #include "core/class_art.hpp"
 #include "win/code_page.hpp"
+#include "win/log.hpp"
 
 namespace uagfx::win::uisheet {
 namespace {
@@ -184,6 +186,25 @@ void Sheet::glyph(Content& c, int button, bool sony, float x, float y, float h) 
                            made(key, pw, ph, [&](panel::Picture& p) { padglyph::paint(p, b, f, 0, 0, h); })});
 }
 
+// 3.0.18-beta.57 (docs/superpowers/plans/2026-11-10-uaui-possibilities.md, stage 1: «текст всегда влезает»): a line
+// wider than its box as uaUI draws it shrinks to fit, down to 3/4 of its size (told once a text)
+static void fitWords(std::vector<Word>& words) {
+    static std::set<std::string> told;
+    for (Word& t : words) {
+        if (t.w <= 0 || t.text.empty() || t.cls.find("wrap") != std::string::npos ||
+            t.text.find('\n') != std::string::npos)
+            continue;
+        const bool bold = t.cls.find("bold") != std::string::npos;
+        const float wide = uaui::textWidth(t.text, t.px, bold);
+        if (wide <= t.w) continue;
+        const float px = std::max(t.px * 0.75f, t.px * t.w / wide);
+        if (told.size() < 200 && told.insert(t.text).second)
+            LOG_INFO("uaui: \"%s\" %.0f px wide in a %.0f px box - drawn at %.1f px, not %.1f", t.text.c_str(),
+                     double(wide), double(t.w), double(px), double(t.px));
+        t.px = px;
+    }
+}
+
 bool Sheet::frame(const char* name, bool on, bool window, int x, int y, int gen,
                   const std::function<void(Content&)>& fill) {
     if (!(anywhere ? uaui::readyAnywhere() : uaui::ready()) || !on) {
@@ -268,6 +289,9 @@ bool Sheet::frame(const char* name, bool on, bool window, int x, int y, int gen,
         c_ = Content{};
         c_.ground = "#10141cff";
         fill(c_);
+        fitWords(c_.words);
+        fitWords(c_.clippedWords);
+        fitWords(c_.topWords);
         doc_.dirtyAll();
     }
     doc_.place(x, y);
