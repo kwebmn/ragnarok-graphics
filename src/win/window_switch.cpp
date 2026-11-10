@@ -198,7 +198,8 @@ LRESULT CALLBACK gameProc(HWND w, UINT m, WPARAM wp, LPARAM lp) {
     if (g_switch) {
         if (m == WM_KEYDOWN || m == WM_SYSKEYDOWN || m == WM_LBUTTONDOWN || m == WM_RBUTTONDOWN)
             uapad::runtime::noteKeysOrMouse(m != WM_KEYDOWN && m != WM_SYSKEYDOWN);  // 3.0.11-beta.86: keys' names back
-        if (hudedit::key(m, wp, lp)) return 0;  // 3.0.11-beta.75: Ctrl+Shift+L - «Розміщення інтерфейсу», its Esc
+        if (hudedit::key(m, wp, lp)) return 0;
+        if (uaui::key(m, wp, lp)) return 0;  // 3.0.18-beta.59: a field of uaUI's has the focus  // 3.0.11-beta.75: Ctrl+Shift+L - «Розміщення інтерфейсу», its Esc
         // 3.0.11-beta.108: the windows' keys, the top one's first (Ctrl+F «Довідник», «Речі»'s search, the shop's
         // and the NPC talk's keys); Esc closes the top one
         if (hotbarwin::profileKeyPress(m, wp, lp)) return 0;  // 3.0.11-beta.288: Ctrl+Shift+1..3, the bar's profiles

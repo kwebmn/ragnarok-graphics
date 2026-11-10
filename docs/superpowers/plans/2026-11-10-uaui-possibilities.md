@@ -45,3 +45,8 @@ Facts (RmlUi 6.3 source):
 - Stage 1: Ruling: windows keep their core layouts (they answer the mouse and pad); fit by the drawing engine's
   measure + shrink-to-fit instead of flexbox in windows - a flex window would draw buttons where clicks miss them -
   cost if wrong: flex later for text-only parts only.
+- Stage 1 shipped beta.57 (6796e64c). Stage 2 shipped beta.58 (cd67201d): party bars not glided (rows list) - later.
+- Stage 3: Ruling: no separate uaui::Panel class - the data binding is already a few lines per window (Doc::make +
+  Bind); the showcase's «Форма» shows two-way binding instead - cost if wrong: a helper later, nothing lost.
+- Stage 3: keys go to a focused uaUI field (uaui::key) - the game may still see them through DirectInput (only the
+  showcase has fields yet).

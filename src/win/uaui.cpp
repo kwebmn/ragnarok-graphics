@@ -30,6 +30,7 @@
 #include "pad/win/game_window.hpp"
 #include "win/game_camera.hpp"
 #include "win/gpu/renderer.hpp"
+#include "win/code_page.hpp"
 #include "win/log.hpp"
 #include "win/picture_draw.hpp"
 #include "win/ui_font.hpp"
@@ -652,6 +653,31 @@ panels { display: block; }
 input.checkbox { display: inline-block; width: 16dp; height: 16dp; margin-right: 8dp; border-radius: 4dp;
                  border: 1dp #ffffff50; vertical-align: middle; transition: background-color border-color 0.1s; }
 input.checkbox:checked { background-color: #3d7fd8; border-color: #3d7fd8; }
+/* 3.0.18-beta.59 (the possibilities' item 9): the form's parts in the game's look */
+input.radio { display: inline-block; width: 16dp; height: 16dp; margin-right: 8dp; border-radius: 8dp;
+              background-color: #0000004d; border: 1dp #ffffff40; vertical-align: middle; }
+input.radio:checked { background-color: #c9a55b; border-color: #e6cb8a; }
+input.text, input.password, textarea { display: inline-block; box-sizing: border-box; width: 100%; height: 30dp;
+    padding: 6dp 10dp; border-radius: 6dp; background-color: #00000059; border: 1dp #ffffff1a; color: #eceff5;
+    cursor: text; }
+input.text:focus, input.password:focus, textarea:focus { border-color: #c9a55b99; }
+textarea { height: 80dp; }
+input.range { display: inline-block; width: 100%; height: 18dp; }
+input.range slidertrack { margin-top: 7dp; height: 4dp; border-radius: 2dp; background-color: #ffffff1f; }
+input.range sliderbar { width: 16dp; height: 16dp; margin-top: 1dp; border-radius: 8dp; background-color: #e6cb8a;
+                        border: 1dp #00000066; }
+input.range sliderbar:hover { background-color: #f3d998; }
+input.range sliderarrowdec, input.range sliderarrowinc { width: 0; height: 0; }
+select { display: inline-block; box-sizing: border-box; width: 100%; height: 30dp; border-radius: 6dp;
+         background-color: #00000059; border: 1dp #ffffff1a; color: #eceff5; }
+select selectvalue { margin: 6dp 30dp 0 10dp; height: 18dp; }
+select selectarrow { width: 24dp; height: 28dp; }
+select selectbox { margin-top: 2dp; padding: 4dp 0; border-radius: 6dp; background-color: #10141cf5;
+                   border: 1dp #ffffff24; }
+select selectbox option { display: block; padding: 4dp 10dp; }
+select selectbox option:hover { background-color: #ffffff14; }
+select selectbox option:checked { color: #e6cb8a; }
+.ua-row2 { display: block; margin-bottom: 10dp; }
 /* 3.0.18-beta.17: the character block (win/char_block) - the concept's v17_char, in concept pixels (dp) */
 .cb { position: absolute; font-family: Plex; color: #eceff5; transform-origin: 0 0; }
 .cb .card { position: absolute; left: 0; top: 0; border-radius: 10dp; border: 1dp #ffffff17;
@@ -1051,6 +1077,59 @@ const char* kWindowTemplate = R"(<template name="ua-window" content="content">
 
 
 std::string themeFile() { return layout::join(gameDir(), layout::kUiTheme); }
+
+// 3.0.18-beta.59: what ui\builtin is for (UTF-8, as the samples)
+const char* kSamplesReadme =
+    "uaRO Graphics - the new interface's markup (uaUI, RmlUi)\r\n\r\n"
+    "UK: Тут лежить вбудована розмітка кожної частини нового інтерфейсу (<частина>.rml) і його стиль (theme.rcss).\r\n"
+    "Щоб змінити частину, скопіюйте її файл на рівень вище (uaro-graphics\\ui\\<частина>.rml) і правте копію - гра\r\n"
+    "підхопить зміни за секунду. Видаліть копію - повернеться вбудована. Свої правила стилю пишіть у\r\n"
+    "uaro-graphics\\ui\\theme.rcss (вони йдуть поверх вбудованих). Файли тут переписуються з кожною версією.\r\n\r\n"
+    "RU: Здесь встроенная разметка каждой части нового интерфейса (<часть>.rml) и его стиль (theme.rcss).\r\n"
+    "Чтобы изменить часть, скопируйте её файл уровнем выше (uaro-graphics\\ui\\<часть>.rml) и правьте копию - игра\r\n"
+    "подхватит изменения за секунду. Удалите копию - вернётся встроенная. Свои правила стиля пишите в\r\n"
+    "uaro-graphics\\ui\\theme.rcss (они идут поверх встроенных). Файлы здесь переписываются с каждой версией.\r\n\r\n"
+    "EN: The built-in markup of every new interface part (<part>.rml) and its style (theme.rcss). To change a part,\r\n"
+    "copy its file one level up (uaro-graphics\\ui\\<part>.rml) and edit the copy - the game picks it up within a\r\n"
+    "second; delete the copy for the built-in one. Your own style rules go to uaro-graphics\\ui\\theme.rcss.\r\n";
+
+// 3.0.18-beta.59: a small text file whole ("" none or over 1 MB); `there` whether it is
+std::string readSmall(const std::string& path, bool* there = nullptr) {
+    std::string text;
+    if (there) *there = false;
+    HANDLE h = CreateFileA(path.c_str(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr, OPEN_EXISTING, 0,
+                           nullptr);
+    if (h == INVALID_HANDLE_VALUE) return text;
+    LARGE_INTEGER size{};
+    if (GetFileSizeEx(h, &size) && size.QuadPart >= 0 && size.QuadPart < (1 << 20)) {
+        text.assign(size_t(size.QuadPart), '\0');
+        DWORD got = 0;
+        if (!ReadFile(h, text.data(), DWORD(text.size()), &got, nullptr) || got != text.size()) text.clear();
+        else if (there) *there = true;
+    }
+    CloseHandle(h);
+    return text;
+}
+// 3.0.18-beta.59 (the possibilities' item 12): uaro-graphics\ui - a part's own markup over the built-in one
+std::string uiDir() { return layout::join(gameDir(), "uaro-graphics\\ui"); }
+std::string safeName(const std::string& name) {
+    std::string out;
+    for (char c : name) out += std::isalnum(static_cast<unsigned char>(c)) || c == '-' ? c : '_';
+    return out;
+}
+// The built-in markup as a sample next to it (ui\builtin\<part>.rml), written when missing or other
+void writeSample(const std::string& file, const std::string& text) {
+    CreateDirectoryA(uiDir().c_str(), nullptr);
+    const std::string dir = layout::join(uiDir(), "builtin");
+    CreateDirectoryA(dir.c_str(), nullptr);
+    const std::string path = layout::join(dir, file);
+    if (readSmall(path) == text) return;
+    HANDLE h = CreateFileA(path.c_str(), GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS, 0, nullptr);
+    if (h == INVALID_HANDLE_VALUE) return;
+    DWORD put = 0;
+    WriteFile(h, text.data(), DWORD(text.size()), &put, nullptr);
+    CloseHandle(h);
+}
 
 // RmlUi's files: «uaui:» ours from memory (the theme from its file when there), else none
 class Files final : public Rml::FileInterface {
@@ -1613,6 +1692,52 @@ void setMotion(bool on) {
 }
 bool motion() { return g_motion; }
 
+// 3.0.18-beta.59 (the possibilities' item 9): the keys while a field of uaUI's has the focus - its letters, its
+// arrows, Backspace, Delete, Home, End, Ctrl+A/C/V/X; Esc or Enter lets it go
+bool key(UINT m, WPARAM wp, LPARAM) {
+    State& s = state();
+    if (!s.started || !s.context || !s.on) return false;
+    Rml::Element* f = s.context->GetFocusElement();
+    if (!f) return false;
+    const Rml::String tag = f->GetTagName();
+    const Rml::String type = f->GetAttribute<Rml::String>("type", "text");
+    if (!(tag == "textarea" || (tag == "input" && (type == "text" || type == "password")))) return false;
+    if (m == WM_CHAR) {
+        if (wp >= 32 && wp != 127) s.context->ProcessTextInput(typedUtf8(unsigned(wp)));
+        return true;
+    }
+    if (m != WM_KEYDOWN && m != WM_KEYUP) return false;
+    using K = Rml::Input::KeyIdentifier;
+    K k = K::KI_UNKNOWN;
+    switch (wp) {
+        case VK_BACK: k = K::KI_BACK; break;
+        case VK_DELETE: k = K::KI_DELETE; break;
+        case VK_LEFT: k = K::KI_LEFT; break;
+        case VK_RIGHT: k = K::KI_RIGHT; break;
+        case VK_UP: k = K::KI_UP; break;
+        case VK_DOWN: k = K::KI_DOWN; break;
+        case VK_HOME: k = K::KI_HOME; break;
+        case VK_END: k = K::KI_END; break;
+        case 'A': k = K::KI_A; break;
+        case 'C': k = K::KI_C; break;
+        case 'V': k = K::KI_V; break;
+        case 'X': k = K::KI_X; break;
+        case VK_RETURN:
+        case VK_ESCAPE:
+            if (m == WM_KEYDOWN) f->Blur();
+            return true;
+        default: break;
+    }
+    int mods = 0;
+    if (GetKeyState(VK_CONTROL) & 0x8000) mods |= Rml::Input::KM_CTRL;
+    if (GetKeyState(VK_SHIFT) & 0x8000) mods |= Rml::Input::KM_SHIFT;
+    if (k != K::KI_UNKNOWN) {
+        if (m == WM_KEYDOWN) s.context->ProcessKeyDown(k, mods);
+        else s.context->ProcessKeyUp(k, mods);
+    }
+    return true;  // the game types nothing while the field has it
+}
+
 void Doc::mark(bool on) {
     if (!doc_ || int(on) == marked_) return;
     marked_ = int(on);
@@ -1669,20 +1794,6 @@ bool Doc::make(const char* name, const char* rml, const std::function<void(Rml::
     std::string model;
     for (const char* c = name; *c; ++c) model += std::isalnum(static_cast<unsigned char>(*c)) ? *c : '_';
     model += "_" + std::to_string(++made);
-    std::string text = rml;
-    const size_t body = text.find("<body");
-    if (body == std::string::npos) {
-        LOG_ERROR("uaui: «%s» has no body", name);
-        return false;
-    }
-    const size_t bodyEnd = text.find('>', body);
-    const size_t had = text.find("data-model=\"", body);
-    if (had != std::string::npos && had < bodyEnd) {
-        const size_t from = had + 12, to = text.find('"', from);
-        text.replace(from, to - from, model);
-    } else {
-        text.insert(body + 5, " data-model=\"" + model + "\"");
-    }
     Rml::DataModelConstructor m = s.context->CreateDataModel(model);
     if (!m) {
         LOG_ERROR("uaui: no model «%s»", model.c_str());
@@ -1690,14 +1801,55 @@ bool Doc::make(const char* name, const char* rml, const std::function<void(Rml::
     }
     if (bind) bind(m);
     model_ = m.GetModelHandle();
+    model_name_ = model;
+    builtin_ = rml;
     this->name = name;
-    doc_ = s.context->LoadDocumentFromMemory(text, std::string("uaui://") + model);
-    if (!doc_) {
-        LOG_ERROR("uaui: the document «%s» did not load", name);
+    // 3.0.18-beta.59 (the possibilities' item 12): the built-in markup as a sample (ui\builtin\<part>.rml); the
+    // player's ui\<part>.rml in its place when there
+    static std::set<std::string> written;
+    const std::string file = safeName(name) + ".rml";
+    if (written.insert(file).second) writeSample(file, builtin_);
+    bool there = false;
+    const std::string own = readSmall(layout::join(uiDir(), file), &there);
+    if (there && load(own)) {
+        WIN32_FILE_ATTRIBUTE_DATA a{};
+        if (GetFileAttributesExA(layout::join(uiDir(), file).c_str(), GetFileExInfoStandard, &a))
+            fileStamp_ = (unsigned long long)a.ftLastWriteTime.dwHighDateTime << 32 | a.ftLastWriteTime.dwLowDateTime;
+        LOG_INFO("uaui: «%s» from ui\\%s", name, file.c_str());
+    } else if (!load(builtin_)) {
         return false;
     }
+    s.docs.push_back(this);
+    LOG_INFO("uaui: «%s» made", name);
+    return true;
+}
+
+// Its markup (the model's name put on its body) loaded in place of the one shown: false - kept as it was
+bool Doc::load(const std::string& rml) {
+    State& s = state();
+    std::string text = rml;
+    const size_t body = text.find("<body");
+    if (body == std::string::npos) {
+        LOG_ERROR("uaui: «%s» has no body", name.c_str());
+        return false;
+    }
+    const size_t bodyEnd = text.find('>', body);
+    const size_t had = text.find("data-model=\"", body);
+    if (had != std::string::npos && had < bodyEnd) {
+        const size_t from = had + 12, to = text.find('"', from);
+        text.replace(from, to - from, model_name_);
+    } else {
+        text.insert(body + 5, " data-model=\"" + model_name_ + "\"");
+    }
+    Rml::ElementDocument* d = s.context->LoadDocumentFromMemory(text, std::string("uaui://") + model_name_);
+    if (!d) {
+        LOG_ERROR("uaui: the document «%s» did not load", name.c_str());
+        return false;
+    }
+    Rml::ElementDocument* was = doc_;
+    doc_ = d;
     // 3.0.18-beta.27: drawn with the windows; .38 the world's under the parts (theirs 3, between the markers)
-    doc_->SetProperty("z-index", window ? "10" : world ? "1" : "3");
+    doc_->SetProperty("z-index", z_ >= 0 ? std::to_string(z_) : window ? "10" : world ? "1" : "3");
     // 3.0.18-beta.46 (R-4YDWHF: nothing dragged): a document drawn only never takes the pointer - a screen-wide one
     // (the experience strip, the interface editor) held the hover over the windows of uaUI under it
     if (passive) doc_->SetProperty("pointer-events", "none");
@@ -1705,9 +1857,33 @@ bool Doc::make(const char* name, const char* rml, const std::function<void(Rml::
     if (Rml::Element* c = doc_->GetElementById("ua-close")) c->AddEventListener(Rml::EventId::Click, &g_close);
     doc_->SetClass("win", window);  // 3.0.18-beta.58: the theme's motion slides windows only
     doc_->SetClass("motion", g_motion);
-    s.docs.push_back(this);
-    LOG_INFO("uaui: «%s» made", name);
+    if (marked_ > 0) doc_->SetClass("marked", true);
+    if (was) {
+        if (shown_) doc_->Show(Rml::ModalFlag::None, Rml::FocusFlag::None);
+        was->Close();
+        model_.DirtyAllVariables();
+    }
     return true;
+}
+
+void Doc::lookAtFile() {
+    if (!doc_) return;
+    const std::string path = layout::join(uiDir(), safeName(name) + ".rml");
+    WIN32_FILE_ATTRIBUTE_DATA a{};
+    const unsigned long long stamp =
+        GetFileAttributesExA(path.c_str(), GetFileExInfoStandard, &a)
+            ? (unsigned long long)a.ftLastWriteTime.dwHighDateTime << 32 | a.ftLastWriteTime.dwLowDateTime
+            : 0;
+    if (stamp == fileStamp_) return;
+    fileStamp_ = stamp;
+    if (stamp == 0) {
+        LOG_INFO("uaui: «%s» - ui\\%s.rml gone, the built-in markup again", name.c_str(), safeName(name).c_str());
+        load(builtin_);
+        return;
+    }
+    bool there = false;
+    const std::string own = readSmall(path, &there);
+    if (there && load(own)) LOG_INFO("uaui: «%s» - ui\\%s.rml loaded again", name.c_str(), safeName(name).c_str());
 }
 
 void Doc::show(bool on) {
@@ -1807,7 +1983,16 @@ void begin(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
         static ULONGLONG lookedAt = 0;
         const ULONGLONG t = GetTickCount64();
         themeFrame(s, theme, t - lookedAt >= 1000);
-        if (t - lookedAt >= 1000) lookedAt = t;
+        if (t - lookedAt >= 1000) {
+            lookedAt = t;
+            for (Doc* d : s.docs) d->lookAtFile();  // 3.0.18-beta.59: a part's own markup changed
+            static bool sampled = false;
+            if (!sampled) {
+                sampled = true;
+                writeSample("theme.rcss", kTheme);
+                writeSample("README.txt", kSamplesReadme);
+            }
+        }
     }
     // 3.0.18-beta.57: the parts' plates measured by the letters drawn - every part lays out again when that changes
     const panel::Measure measure = on && s.started ? panel::Measure(textWidth) : nullptr;

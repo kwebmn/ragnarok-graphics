@@ -53,7 +53,8 @@ void setWindowRank(int rank, bool marked = false);
 int windowRank();
 bool windowMarked();
 void setMotion(bool on);  // 3.0.18-beta.58: [interface] uaui_motion - the theme's soft motion (body class «motion»)
-bool motion();  // the one drawn now has the stack's gold edge (the top of two or more)
+bool motion();
+bool key(UINT m, WPARAM wp, LPARAM lp);  // 3.0.18-beta.59: true - a field of uaUI's took it  // the one drawn now has the stack's gold edge (the top of two or more)
 // 3.0.18-beta.12 (the ruling of docs/superpowers/plans/2026-11-09-uaui-migration.md): the parts' recorded pictures
 // (panel::Picture::scene, core/ui_scene) drawn on the card - [interface] uaui on and started (in the world or not)
 bool sceneReady();
@@ -100,6 +101,7 @@ public:
     bool world = false;     // 3.0.18-beta.38: set before make() - drawn with the world's overlays (uaui::Layer::World)
 
     // the runtime's
+    void lookAtFile();  // 3.0.18-beta.59: uaro-graphics\ui\<name>.rml changed - loaded over the built-in markup
     bool fadePending = false;
     unsigned wantedAt = 0;  // 3.0.18-beta.40: the frame show(true) was last asked in
 
@@ -109,6 +111,10 @@ private:
     bool shown_ = false;
     int z_ = -1;
     int marked_ = -1;
+    // 3.0.18-beta.59: its markup - the built-in one, its model's name; the player's file's time (0 none)
+    std::string builtin_, model_name_;
+    unsigned long long fileStamp_ = 0;
+    bool load(const std::string& rml);
 public:
     std::string name;  // 3.0.18-beta.46: its part's (the log's)
 };

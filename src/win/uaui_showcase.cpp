@@ -32,6 +32,20 @@ const char* kDemo = R"(<rml><head><link type="text/template" href="uaui:window.r
 <div><input type="checkbox"/>Вимкнено</div>
 <span class="ua-label">Смуга (HP персонажа)</span><div class="ua-bar"><div class="ua-fill" data-style-width="hp_pct + '%'"></div></div>
 </panel>
+<tab>Форма</tab><panel>
+<span class="ua-label">Поле (пишіть - рядок нижче змінюється сам)</span>
+<div class="ua-row2"><input type="text" data-value="name" maxlength="24"/></div>
+<span class="ua-label">Повзунок</span>
+<div class="ua-row2"><input type="range" min="0" max="100" step="1" data-value="volume"/></div>
+<span class="ua-label">Список</span>
+<div class="ua-row2"><select data-value="pick"><option value="standard">Стандарт</option>
+<option value="classic">Класика</option><option value="contrast">Контраст</option></select></div>
+<span class="ua-label">Вибір одного</span>
+<div><input type="radio" name="size" value="small" data-checked="size"/>Малий</div>
+<div><input type="radio" name="size" value="big" data-checked="size"/>Великий</div>
+<span class="ua-label">Те, що вибрано (прив'язка даних в обидва боки)</span>
+<span class="ua-row2">{{name == '' ? '(порожньо)' : name}} · {{volume}} % · {{pick}} · {{size}}</span>
+</panel>
 </tabset>
 </body></rml>)";
 
@@ -41,6 +55,8 @@ struct State {
     std::vector<ItemView> items;
     std::vector<Rml::String> lines;
     float hp = 0;
+    Rml::String name, pick = "standard", size = "small";  // 3.0.18-beta.59: «Форма»
+    int volume = 60;
     bool closed = false, was = false;
     ULONGLONG itemsAt = 0;
 };
@@ -72,11 +88,15 @@ void frame(bool on) {
             m.Bind("items", &s.items);
             m.Bind("lines", &s.lines);
             m.Bind("hp_pct", &s.hp);
+            m.Bind("name", &s.name);
+            m.Bind("volume", &s.volume);
+            m.Bind("pick", &s.pick);
+            m.Bind("size", &s.size);
         });
         if (!made) return;
         s.doc.onClose = [] { state().closed = true; };
         if (Rml::Element* h = s.doc.byId("ua-hint"))
-            h->SetInnerRML("Заголовок тягне вікно · × ховає · вигляд — uaro-graphics\\ui\\theme.rcss");
+            h->SetInnerRML("Заголовок тягне вікно · × ховає · своя розмітка — uaro-graphics\\ui\\showcase.rml");
     }
     s.doc.show(!s.closed);
     if (s.closed) return;
