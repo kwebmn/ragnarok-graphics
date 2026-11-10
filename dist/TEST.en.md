@@ -1,3 +1,5 @@
+- Opening your own shop (choosing things and prices) now uses the new look: the "vend_setup" switch was not part of the "Новий інтерфейс" choice, so the game's old window opened. It now follows "Своя лавка" (my shop).
+
 - The guild card is now laid out by the new interface library: its top and six tabs (two rows of three); the tabs' content keeps its places, and the "+", "Змінити", "Скасувати" buttons and the notice fields became library elements.
 - Fixed (since 3.0.18-beta.92): the guild card could not be dragged - it now moves by its empty part.
 
