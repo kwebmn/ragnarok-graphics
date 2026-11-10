@@ -1,3 +1,5 @@
+- "Характеристики" (stats, Alt+A): the top of the window (title, tabs, free points, ✕) is now laid out by the new interface library; the tables, formulas and planning keep their places, and their buttons became library elements.
+
 - Fixed (since 3.0.18-beta.94): the items, storage, cart, trade, equipment, skills, homunculus, mercenary and NPC shop windows follow the text size and item window size settings again.
 
 - The NPC shop is now laid out by the new interface library: the wares, the cart with − amount + and ×, the totals, the buttons and the keys below. Presses land where they are seen.
