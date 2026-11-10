@@ -20,6 +20,7 @@
 #include "win/ui_cost.hpp"
 #include "win/window_shadow.hpp"
 #include "win/uaui.hpp"
+#include "win/ui_live.hpp"
 #include "win/ui_sheet.hpp"
 
 namespace uagfx::win::macrocardwin {
@@ -39,7 +40,27 @@ using SendMsgFn = int(__attribute__((thiscall)) *)(uint32_t self, uint32_t sende
 using GetTextFn = const char*(__attribute__((thiscall)) *)(uint32_t edit);
 using SetFocusFn = void(__attribute__((thiscall)) *)(uint32_t manager, uint32_t control);
 
+// 3.0.18-beta.87 (live windows, group 2): the macros a live window - ten fields by flexbox, the game's own fields typed
+const char* kLive = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss"/></head>
+<body class="lw macw" data-style-background-color="ground">
+<div class="head"><span class="title">{{title}}</span></div>
+<span class="x ctl" data-event-click="mac_close()">&#x2715;</span>
+<div class="hint" data-if="hint != ''">{{hint}}</div>
+<div class="mrow" data-for="r, i : rows"><span class="key">{{r.key}}</span><div class="field ctl" data-class-typing="r.focus"
+  data-event-click="mac_field(i)">{{r.text}}<span class="caret" data-if="r.focus && caret"></span></div></div>
+<div class="btns"><div class="btn main ctl" data-event-click="mac_save()">{{save}}</div></div>
+<div id="ring" class="ring"></div>
+</body></rml>)RML";
+struct MacroRowView {
+    Rml::String key, text;
+    bool focus = false;
+};
+
 struct State {
+    uilive::Window live;  // 3.0.18-beta.81
+    std::vector<MacroRowView> rowViews;
+    Rml::String title, hint, saveWord, ground = "#10141cf0";
+    bool caretOn = false;
     uisheet::Sheet sheet;  // 3.0.18-beta.34: the window drawn by uaUI
     int sheetGen = 0;
     bool sheetShown = false;
@@ -133,8 +154,10 @@ void render(State& s) {
 void block(const State& s, HWND game) {
     RECT client{};
     if (s.targetW <= 0 || s.targetH <= 0 || !GetClientRect(game, &client)) return;
-    const panel::Box& b = s.layout.glass;
-    const float x0 = float(s.layout.x) + b.x, y0 = float(s.layout.y) + b.y;
+    panel::Box b = s.layout.glass;
+    float x0 = float(s.layout.x) + b.x, y0 = float(s.layout.y) + b.y;
+    int lx = 0, ly = 0, lw = 0, lh = 0;  // 3.0.18-beta.81: the live window's own box
+    if (s.live.box(lx, ly, lw, lh)) x0 = float(lx), y0 = float(ly), b.w = float(lw), b.h = float(lh);
     const RECT r{LONG(int64_t(x0) * client.right / s.targetW), LONG(int64_t(y0) * client.bottom / s.targetH),
                  LONG(int64_t(x0 + b.w) * client.right / s.targetW + 1),
                  LONG(int64_t(y0 + b.h) * client.bottom / s.targetH + 1)};
@@ -263,9 +286,61 @@ static void fillSheet(State& s, uisheet::Content& ui) {
     ui.say(mc::words(s.layout, s.texts, s.show, texts()));
 }
 
+// 3.0.18-beta.81: the live window's model and place
+static void liveFrame(State& s) {
+    s.live.make("macro", kLive, [&](Rml::DataModelConstructor& m) {
+        if (auto v = m.RegisterStruct<MacroRowView>()) {
+            v.RegisterMember("key", &MacroRowView::key);
+            v.RegisterMember("text", &MacroRowView::text);
+            v.RegisterMember("focus", &MacroRowView::focus);
+        }
+        m.RegisterArray<std::vector<MacroRowView>>();
+        m.Bind("rows", &s.rowViews);
+        m.Bind("title", &s.title);
+        m.Bind("hint", &s.hint);
+        m.Bind("save", &s.saveWord);
+        m.Bind("caret", &s.caretOn);
+        m.Bind("ground", &s.ground);
+        m.BindEventCallback("mac_field", [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList& a) {
+            if (!a.empty()) focusField(state(), a[0].Get<int>());
+        });
+        m.BindEventCallback("mac_save", [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList&) {
+            send(state(), mc::kSaveMsg, 0, "«Зберегти» - the window's Enter (it writes the macros)");
+        });
+        m.BindEventCallback("mac_close", [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList&) {
+            send(state(), kButtonMsg, mc::kCloseButton, "closed (the window's 0x87)");
+        });
+    });
+    if (!s.live.made()) return;
+    const mc::Texts t = texts();
+    std::vector<MacroRowView> rows;
+    for (int i = 0; i < mc::kFields && i < int(s.texts.size()); ++i)
+        rows.push_back(MacroRowView{mc::keyName(i), s.texts[size_t(i)], s.show.focus == i});
+    const Rml::String ground = uisheet::Sheet::ground(0x10141C, uistyle::window());
+    const bool same = rows.size() == s.rowViews.size() &&
+                      std::equal(rows.begin(), rows.end(), s.rowViews.begin(),
+                                 [](const MacroRowView& a, const MacroRowView& b) {
+                                     return a.key == b.key && a.text == b.text && a.focus == b.focus;
+                                 });
+    if (!same) s.rowViews = std::move(rows), s.live.doc.dirty("rows");
+    if (s.show.caret != s.caretOn) s.caretOn = s.show.caret, s.live.doc.dirty("caret");
+    if (t.title != s.title || t.hint != s.hint || t.save != s.saveWord || ground != s.ground) {
+        s.title = t.title, s.hint = t.hint, s.saveWord = t.save, s.ground = ground;
+        s.live.doc.dirtyAll();
+    }
+    s.live.frame(s.shown, s.layout.x, s.layout.y, int(winstack::Win::Macros), ".field, .btn, .x");
+}
+
 void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int targetHeight) {
     frameInner(game, on, codePage, k, targetWidth, targetHeight);
     State& s = state();
+    if (uaui::readyAnywhere()) {  // 3.0.18-beta.81: the live window in place of the sheet
+        s.sheet.frame("macro", false, true, 0, 0, 0, [](uisheet::Content&) {});
+        s.sheetShown = false;
+        liveFrame(s);
+        return;
+    }
+    s.live.frame(false, 0, 0, 0, nullptr);
     s.sheetShown = s.sheet.frame("macro", s.shown, true, s.layout.x, s.layout.y, s.sheetGen,
                                  [&](uisheet::Content& c) { fillSheet(s, c); });
     if (s.sheetShown) {  // 3.0.18-beta.60: the pad walks its boxes (A clicks one)
@@ -279,6 +354,10 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
 void draw(FrameRecord& record, gpu::Renderer& renderer) {
     State& s = state();
     s.sheet.raise();  // 3.0.18-beta.43: at its place in the windows' stack
+    if (s.live.shown) {  // 3.0.18-beta.81
+        s.live.draw(s.shadow, record, renderer, s.scale, s.k);
+        return;
+    }
     if (!s.shown || s.k <= 0 || ((s.picture.width <= 0 || s.picture.height <= 0) && !s.sheetShown)) return;
     int cursor = -1, cx = 0, cy = 0;
     if (readGameCursor(cx, cy)) cursor = panel::cursorDraw(record, float(cx), float(cy));
@@ -291,7 +370,11 @@ void draw(FrameRecord& record, gpu::Renderer& renderer) {
 
 bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     State& s = state();
-    (void)wp;
+    if (s.live.shown) {  // 3.0.18-beta.81: RmlUi's
+        if (!s.live.mouse(game, m, wp, lp)) return false;
+        result = 0;
+        return true;
+    }
     if (!s.shown) return false;
     const bool button = m == WM_LBUTTONDOWN || m == WM_LBUTTONUP || m == WM_LBUTTONDBLCLK || m == WM_RBUTTONDOWN ||
                         m == WM_RBUTTONUP || m == WM_RBUTTONDBLCLK || m == WM_MBUTTONDOWN || m == WM_MBUTTONUP;
@@ -329,6 +412,7 @@ void beforeGameDraw() {
 bool box(int& x, int& y, int& w, int& h) {
     const State& s = state();
     if (!s.shown) return false;
+    if (s.live.box(x, y, w, h)) return true;  // 3.0.18-beta.81
     x = s.layout.x;
     y = s.layout.y;
     w = s.layout.w;

@@ -20,6 +20,7 @@
 #include "win/ui_cost.hpp"
 #include "win/window_shadow.hpp"
 #include "win/uaui.hpp"
+#include "win/ui_live.hpp"
 #include "win/ui_sheet.hpp"
 
 namespace uagfx::win::roomwin {
@@ -49,7 +50,36 @@ using SetFocusFn = void(__attribute__((thiscall)) *)(uint32_t manager, uint32_t 
 using MakeFn = uint32_t(__attribute__((thiscall)) *)(uint32_t manager, int id);
 using FriendFn = void(__attribute__((thiscall)) *)(uint32_t manager, const char* name);
 
+// 3.0.18-beta.87 (live windows, group 2): the chat room a live window - its lines and members in flex columns, the game's line typed
+const char* kLive = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss"/></head>
+<body class="lw roomw" data-style-background-color="ground">
+<div class="head"><span class="title">{{title}}</span><span class="count">{{count}} · {{state}}</span></div>
+<span class="x ctl" data-event-click="rm_act(8, 0)">&#x2715;</span>
+<div class="cols"><div class="left"><div class="lines"><div class="line" data-for="l : lines" data-style-color="l.colour">{{l.text}}</div></div>
+<div class="field ctl" data-class-typing="focus" data-event-click="rm_act(2, 0)">{{input}}<span class="caret" data-if="focus && caret"></span></div></div>
+<div class="right"><div class="lbl">{{members_word}}</div>
+<div class="row ctl" data-for="m, i : members" data-class-on="i == chosen" data-event-click="rm_act(1, i)">{{m.name}}<span class="crown" data-if="m.owner"> ★</span></div>
+<div class="acts" data-if="chosen >= 0 && mine"><span class="chip ctl" data-event-click="rm_act(5, 0)">{{kick}}</span><span class="chip ctl" data-event-click="rm_act(6, 0)">{{owner}}</span></div>
+<div class="acts" data-if="chosen >= 0"><span class="chip ctl" data-event-click="rm_act(7, 0)">{{friend_add}}</span></div>
+<div class="btns"><div class="btn ctl" data-if="mine" data-event-click="rm_act(3, 0)">{{setup}}</div><div class="btn ctl" data-event-click="rm_act(4, 0)">{{leave}}</div></div></div></div>
+<div id="ring" class="ring"></div>
+</body></rml>)RML";
+struct RoomLineView {
+    Rml::String text, colour;
+};
+struct RoomMemberView {
+    Rml::String name;
+    bool owner = false;
+};
+
 struct State {
+    uilive::Window live;  // 3.0.18-beta.81
+    std::vector<RoomLineView> lineViews;
+    std::vector<RoomMemberView> memberViews;
+    Rml::String title, countText, stateText, input, membersWord, kick, owner, friendAdd, setup, leave;
+    Rml::String ground = "#10141cf0";
+    bool focusOn = false, caretOn = false, mineOn = false;
+    int chosen = -1;
     uisheet::Sheet sheet;  // 3.0.18-beta.32: the window drawn by uaUI
     int sheetGen = 0;
     bool sheetShown = false;
@@ -189,8 +219,10 @@ void render(State& s) {
 void block(const State& s, HWND game) {
     RECT client{};
     if (s.targetW <= 0 || s.targetH <= 0 || !GetClientRect(game, &client)) return;
-    const panel::Box& b = s.layout.glass;
-    const float x0 = float(s.layout.x) + b.x, y0 = float(s.layout.y) + b.y;
+    panel::Box b = s.layout.glass;
+    float x0 = float(s.layout.x) + b.x, y0 = float(s.layout.y) + b.y;
+    int lx = 0, ly = 0, lw = 0, lh = 0;  // 3.0.18-beta.81: the live window's own box
+    if (s.live.box(lx, ly, lw, lh)) x0 = float(lx), y0 = float(ly), b.w = float(lw), b.h = float(lh);
     const RECT r{LONG(int64_t(x0) * client.right / s.targetW), LONG(int64_t(y0) * client.bottom / s.targetH),
                  LONG(int64_t(x0 + b.w) * client.right / s.targetW + 1),
                  LONG(int64_t(y0 + b.h) * client.bottom / s.targetH + 1)};
@@ -340,9 +372,93 @@ static void fillSheet(State& s, uisheet::Content& c) {
     c.say(rc::words(L, d, sh, texts()));
 }
 
+// 3.0.18-beta.81: the live window's model and place
+static void liveFrame(State& s) {
+    s.live.make("room", kLive, [&](Rml::DataModelConstructor& m) {
+        if (auto v = m.RegisterStruct<RoomLineView>()) {
+            v.RegisterMember("text", &RoomLineView::text);
+            v.RegisterMember("colour", &RoomLineView::colour);
+        }
+        if (auto v = m.RegisterStruct<RoomMemberView>()) {
+            v.RegisterMember("name", &RoomMemberView::name);
+            v.RegisterMember("owner", &RoomMemberView::owner);
+        }
+        m.RegisterArray<std::vector<RoomLineView>>();
+        m.RegisterArray<std::vector<RoomMemberView>>();
+        m.Bind("lines", &s.lineViews);
+        m.Bind("members", &s.memberViews);
+        m.Bind("title", &s.title);
+        m.Bind("count", &s.countText);
+        m.Bind("state", &s.stateText);
+        m.Bind("input", &s.input);
+        m.Bind("members_word", &s.membersWord);
+        m.Bind("kick", &s.kick);
+        m.Bind("owner", &s.owner);
+        m.Bind("friend_add", &s.friendAdd);
+        m.Bind("setup", &s.setup);
+        m.Bind("leave", &s.leave);
+        m.Bind("focus", &s.focusOn);
+        m.Bind("caret", &s.caretOn);
+        m.Bind("mine", &s.mineOn);
+        m.Bind("chosen", &s.chosen);
+        m.Bind("ground", &s.ground);
+        m.BindEventCallback("rm_act", [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList& a) {
+            if (a.size() < 2) return;
+            rc::Hit h;
+            h.part = rc::Part(std::clamp(a[0].Get<int>(), 0, int(rc::Part::Close)));
+            h.index = a[1].Get<int>();
+            act(state(), h);
+        });
+    });
+    if (!s.live.made()) return;
+    const rc::Texts t = texts();
+    const rc::Card& c = s.card;
+    std::vector<RoomLineView> lines;
+    const size_t from = c.lines.size() > 14 ? c.lines.size() - 14 : 0;
+    for (size_t i = from; i < c.lines.size(); ++i) {
+        char col[16];
+        std::snprintf(col, sizeof col, "#%06x", unsigned(uaui::themed(c.lines[i].rgb ? c.lines[i].rgb : 0xEEF2F8)));
+        lines.push_back(RoomLineView{c.lines[i].text, col});
+    }
+    std::vector<RoomMemberView> members;
+    for (const rc::Member& mb : c.members) members.push_back(RoomMemberView{mb.name, mb.owner});
+    const Rml::String ground = uisheet::Sheet::ground(0x10141C, uistyle::window());
+    const Rml::String count = std::to_string(c.count) + " / " + std::to_string(c.limit);
+    const Rml::String state = c.open ? t.open : t.locked;
+    const bool sameLines = lines.size() == s.lineViews.size() &&
+                           std::equal(lines.begin(), lines.end(), s.lineViews.begin(),
+                                      [](const RoomLineView& a, const RoomLineView& b) {
+                                          return a.text == b.text && a.colour == b.colour;
+                                      });
+    if (!sameLines) s.lineViews = std::move(lines), s.live.doc.dirty("lines");
+    const bool sameMembers = members.size() == s.memberViews.size() &&
+                             std::equal(members.begin(), members.end(), s.memberViews.begin(),
+                                        [](const RoomMemberView& a, const RoomMemberView& b) {
+                                            return a.name == b.name && a.owner == b.owner;
+                                        });
+    if (!sameMembers) s.memberViews = std::move(members), s.live.doc.dirty("members");
+    if (c.title != s.title || count != s.countText || state != s.stateText || c.input != s.input ||
+        t.members != s.membersWord || t.kick != s.kick || t.owner != s.owner || t.friendAdd != s.friendAdd ||
+        t.setup != s.setup || t.leave != s.leave || c.focus != s.focusOn || c.caret != s.caretOn ||
+        c.mine != s.mineOn || c.chosen != s.chosen || ground != s.ground) {
+        s.title = c.title, s.countText = count, s.stateText = state, s.input = c.input, s.membersWord = t.members;
+        s.kick = t.kick, s.owner = t.owner, s.friendAdd = t.friendAdd, s.setup = t.setup, s.leave = t.leave;
+        s.focusOn = c.focus, s.caretOn = c.caret, s.mineOn = c.mine, s.chosen = c.chosen, s.ground = ground;
+        s.live.doc.dirtyAll();
+    }
+    s.live.frame(s.shown, s.layout.x, s.layout.y, int(winstack::Win::Room), ".row, .chip, .btn, .field, .x");
+}
+
 void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int targetHeight) {
     frameInner(game, on, codePage, k, targetWidth, targetHeight);
     State& s = state();
+    if (uaui::readyAnywhere()) {  // 3.0.18-beta.81: the live window in place of the sheet
+        s.sheet.frame("room", false, true, 0, 0, 0, [](uisheet::Content&) {});
+        s.sheetShown = false;
+        liveFrame(s);
+        return;
+    }
+    s.live.frame(false, 0, 0, 0, nullptr);
     s.sheetShown = s.sheet.frame("room", s.shown, true, s.layout.x, s.layout.y, s.sheetGen,
                                  [&](uisheet::Content& c) { fillSheet(s, c); });
     if (s.sheetShown) {  // 3.0.18-beta.60: the pad walks its boxes (A clicks one)
@@ -356,6 +472,10 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
 void draw(FrameRecord& record, gpu::Renderer& renderer) {
     State& s = state();
     s.sheet.raise();  // 3.0.18-beta.43: at its place in the windows' stack
+    if (s.live.shown) {  // 3.0.18-beta.81
+        s.live.draw(s.shadow, record, renderer, s.scale, s.k);
+        return;
+    }
     if (!s.shown || s.k <= 0 || ((s.picture.width <= 0 || s.picture.height <= 0) && !s.sheetShown)) return;
     int cursor = -1, cx = 0, cy = 0;
     if (readGameCursor(cx, cy)) cursor = panel::cursorDraw(record, float(cx), float(cy));
@@ -368,7 +488,11 @@ void draw(FrameRecord& record, gpu::Renderer& renderer) {
 
 bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     State& s = state();
-    (void)wp;
+    if (s.live.shown) {  // 3.0.18-beta.81: RmlUi's
+        if (!s.live.mouse(game, m, wp, lp)) return false;
+        result = 0;
+        return true;
+    }
     if (!s.shown) return false;
     const bool button = m == WM_LBUTTONDOWN || m == WM_LBUTTONUP || m == WM_LBUTTONDBLCLK || m == WM_RBUTTONDOWN ||
                         m == WM_RBUTTONUP || m == WM_RBUTTONDBLCLK || m == WM_MBUTTONDOWN || m == WM_MBUTTONUP;
@@ -392,6 +516,7 @@ void beforeGameDraw() {
 bool box(int& x, int& y, int& w, int& h) {
     const State& s = state();
     if (!s.shown) return false;
+    if (s.live.box(x, y, w, h)) return true;  // 3.0.18-beta.81
     x = s.layout.x;
     y = s.layout.y;
     w = s.layout.w;

@@ -8,6 +8,7 @@
 #include <string>
 #include <vector>
 
+#include "core/window_stack.hpp"
 #include "core/settings/strings.hpp"
 #include "core/social_card.hpp"
 #include "core/ui_style.hpp"
@@ -21,6 +22,7 @@
 #include "win/ui_cost.hpp"
 #include "win/window_shadow.hpp"
 #include "win/uaui.hpp"
+#include "win/ui_live.hpp"
 #include "win/ui_sheet.hpp"
 
 namespace uagfx::win::socialcardwin {
@@ -39,7 +41,30 @@ constexpr int kButtonMsg = 6, kMostFriends = 40;
 constexpr size_t kMostNodes = 100;
 using SendMsgFn = int(__attribute__((thiscall)) *)(uint32_t self, uint32_t sender, int msg, int a, int b, int c);
 
+// 3.0.18-beta.87 (live windows, group 2): friends and the party a live window - tabs, rows and buttons by flexbox, RmlUi's clicks
+const char* kLive = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss"/></head>
+<body class="lw socw" data-style-background-color="ground">
+<div class="tabs"><span class="tab ctl" data-for="t, i : tabs" data-class-on="i == tab" data-event-click="so_tab(i)">{{t}}</span></div>
+<span class="x ctl" data-event-click="so_close()">&#x2715;</span>
+<div class="lbl">{{header}}</div>
+<div class="list"><div class="row ctl" data-for="e, i : entries" data-class-on="i == selected" data-class-off="!e.online"
+  data-event-click="so_choose(i)" data-event-dblclick="so_act(0)"><span class="name">{{e.name}}</span><span class="crown"
+  data-if="e.leader"> ★</span><span class="where">{{e.online ? e.map : offline}}</span></div>
+<div class="hint" data-if="entries.size == 0">{{empty}}</div></div>
+<div class="btns grid4"><div class="btn ctl" data-for="a, i : actions" data-event-click="so_act(i)">{{a}}</div></div>
+<div id="ring" class="ring"></div>
+</body></rml>)RML";
+struct SocialEntryView {
+    Rml::String name, map;
+    bool online = false, leader = false;
+};
+
 struct State {
+    uilive::Window live;  // 3.0.18-beta.81
+    std::vector<SocialEntryView> entryViews;
+    std::vector<Rml::String> tabViews, actionViews;
+    Rml::String header, offline, empty, ground = "#10141cf0";
+    int tabNo = 0, selected = -1;
     uisheet::Sheet sheet;  // 3.0.18-beta.34: the window drawn by uaUI
     int sheetGen = 0;
     bool sheetShown = false;
@@ -160,8 +185,10 @@ void render(State& s) {
 void block(const State& s, HWND game) {
     RECT client{};
     if (s.targetW <= 0 || s.targetH <= 0 || !GetClientRect(game, &client)) return;
-    const panel::Box& b = s.layout.glass;
-    const float x0 = float(s.layout.x) + b.x, y0 = float(s.layout.y) + b.y;
+    panel::Box b = s.layout.glass;
+    float x0 = float(s.layout.x) + b.x, y0 = float(s.layout.y) + b.y;
+    int lx = 0, ly = 0, lw = 0, lh = 0;  // 3.0.18-beta.81: the live window's own box
+    if (s.live.box(lx, ly, lw, lh)) x0 = float(lx), y0 = float(ly), b.w = float(lw), b.h = float(lh);
     const RECT r{LONG(int64_t(x0) * client.right / s.targetW), LONG(int64_t(y0) * client.bottom / s.targetH),
                  LONG(int64_t(x0 + b.w) * client.right / s.targetW + 1),
                  LONG(int64_t(y0 + b.h) * client.bottom / s.targetH + 1)};
@@ -351,9 +378,73 @@ static void fillSheet(State& s, uisheet::Content& ui) {
     ui.say(uagfx::socialcard::words(s.layout, s.entries, s.show, texts(s)));
 }
 
+// 3.0.18-beta.81: the live window's model and place
+static void liveFrame(State& s) {
+    s.live.make("social", kLive, [&](Rml::DataModelConstructor& m) {
+        if (auto v = m.RegisterStruct<SocialEntryView>()) {
+            v.RegisterMember("name", &SocialEntryView::name);
+            v.RegisterMember("map", &SocialEntryView::map);
+            v.RegisterMember("online", &SocialEntryView::online);
+            v.RegisterMember("leader", &SocialEntryView::leader);
+        }
+        m.RegisterArray<std::vector<SocialEntryView>>();
+        m.RegisterArray<std::vector<Rml::String>>();
+        m.Bind("entries", &s.entryViews);
+        m.Bind("tabs", &s.tabViews);
+        m.Bind("actions", &s.actionViews);
+        m.Bind("header", &s.header);
+        m.Bind("offline", &s.offline);
+        m.Bind("empty", &s.empty);
+        m.Bind("tab", &s.tabNo);
+        m.Bind("selected", &s.selected);
+        m.Bind("ground", &s.ground);
+        m.BindEventCallback("so_tab", [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList& a) {
+            if (!a.empty()) showTab(state(), sc::Tab(std::clamp(a[0].Get<int>(), 0, 1)));
+        });
+        m.BindEventCallback("so_choose", [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList& a) {
+            if (!a.empty()) choose(state(), a[0].Get<int>());
+        });
+        m.BindEventCallback("so_act", [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList& a) {
+            if (!a.empty()) act(state(), a[0].Get<int>());
+        });
+        m.BindEventCallback("so_close", [](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList&) {
+            send(state(), sc::gameButton(sc::Action::Close), 0, "close");
+        });
+    });
+    if (!s.live.made()) return;
+    const sc::Texts t = texts(s);
+    std::vector<SocialEntryView> entries;
+    for (const sc::Entry& e : s.entries) entries.push_back(SocialEntryView{e.name, e.map, e.online, e.leader});
+    std::vector<Rml::String> actions;
+    for (size_t i = 0; i < sc::actions(s.show.tab).size() && i < 4; ++i) actions.push_back(t.actions[i]);
+    const std::vector<Rml::String> tabs{t.tabs[0], t.tabs[1]};
+    const Rml::String ground = uisheet::Sheet::ground(0x10141C, uistyle::window());
+    const bool same = entries.size() == s.entryViews.size() &&
+                      std::equal(entries.begin(), entries.end(), s.entryViews.begin(),
+                                 [](const SocialEntryView& a, const SocialEntryView& b) {
+                                     return a.name == b.name && a.map == b.map && a.online == b.online &&
+                                            a.leader == b.leader;
+                                 });
+    if (!same) s.entryViews = std::move(entries), s.live.doc.dirty("entries");
+    if (tabs != s.tabViews || actions != s.actionViews || t.header != s.header || t.offline != s.offline ||
+        t.empty != s.empty || int(s.show.tab) != s.tabNo || s.show.selected != s.selected || ground != s.ground) {
+        s.tabViews = tabs, s.actionViews = actions, s.header = t.header, s.offline = t.offline, s.empty = t.empty;
+        s.tabNo = int(s.show.tab), s.selected = s.show.selected, s.ground = ground;
+        s.live.doc.dirtyAll();
+    }
+    s.live.frame(s.shown, s.layout.x, s.layout.y, int(winstack::Win::Social), ".tab, .row, .btn, .x");
+}
+
 void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int targetHeight) {
     frameInner(game, on, codePage, k, targetWidth, targetHeight);
     State& s = state();
+    if (uaui::readyAnywhere()) {  // 3.0.18-beta.81: the live window in place of the sheet
+        s.sheet.frame("social", false, true, 0, 0, 0, [](uisheet::Content&) {});
+        s.sheetShown = false;
+        liveFrame(s);
+        return;
+    }
+    s.live.frame(false, 0, 0, 0, nullptr);
     s.sheetShown = s.sheet.frame("social", s.shown, true, s.layout.x, s.layout.y, s.sheetGen,
                                  [&](uisheet::Content& c) { fillSheet(s, c); });
 }
@@ -361,6 +452,10 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
 void draw(FrameRecord& record, gpu::Renderer& renderer) {
     State& s = state();
     s.sheet.raise();  // 3.0.18-beta.43: at its place in the windows' stack
+    if (s.live.shown) {  // 3.0.18-beta.81
+        s.live.draw(s.shadow, record, renderer, s.scale, s.k);
+        return;
+    }
     if (!s.shown || s.k <= 0 || ((s.picture.width <= 0 || s.picture.height <= 0) && !s.sheetShown)) return;
     int cursor = -1, cx = 0, cy = 0;
     if (readGameCursor(cx, cy)) cursor = panel::cursorDraw(record, float(cx), float(cy));
@@ -373,6 +468,15 @@ void draw(FrameRecord& record, gpu::Renderer& renderer) {
 
 bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {
     State& s = state();
+    if (s.live.shown) {  // 3.0.18-beta.87: RmlUi's - a press on its ground drags it, as before
+        if (m == WM_LBUTTONUP) s.drag.end();
+        const int r = s.live.mouse(game, m, wp, lp);
+        if (!r) return false;
+        float tx = 0, ty = 0;
+        if (r == 2 && pointerInTarget(game, m, lp, s.k, s.targetW, s.targetH, tx, ty, nullptr)) s.drag.begin(tx, ty);
+        result = 0;
+        return true;
+    }
     if (!s.shown) return false;
     const bool button = m == WM_LBUTTONDOWN || m == WM_LBUTTONUP || m == WM_LBUTTONDBLCLK || m == WM_RBUTTONDOWN ||
                         m == WM_RBUTTONUP || m == WM_RBUTTONDBLCLK || m == WM_MBUTTONDOWN || m == WM_MBUTTONUP;
@@ -448,6 +552,7 @@ void padCommand(PadCommand c) {
 bool box(int& x, int& y, int& w, int& h) {
     const State& s = state();
     if (!s.shown) return false;
+    if (s.live.box(x, y, w, h)) return true;  // 3.0.18-beta.81
     x = s.layout.x;
     y = s.layout.y;
     w = s.layout.w;
