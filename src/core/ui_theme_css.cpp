@@ -1165,6 +1165,33 @@ scrollbarvertical sliderarrowdec, scrollbarvertical sliderarrowinc { width: 0; h
 .shl .key .cap { margin-right: 0.5rem; color: #eef2f8; }
 .shl .kw { font-size: 1rem; color: #9aa3b5; }
 .shl .foot.pad .kw { color: #eef2f8; }
+/* 3.0.18-beta.101: a layered body (uikit/layered) - words, highlights and pressable places at their window's places */
+.lay { display: block; position: relative; }
+.lay .lb { position: absolute; box-sizing: border-box; }
+.lay .lh { position: absolute; }
+.lay .w { position: absolute; white-space: nowrap; overflow: hidden; }
+.lay .w.bold { font-weight: bold; }
+.lay .w.right { text-align: right; }
+.lay .w.centre { text-align: center; }
+/* «Характеристики» live (uikit/stats_live): the head by flexbox, the body layered */
+.lw.stl { padding: 0; font-size: 1rem; box-sizing: border-box; }
+.stl .head { display: flex; align-items: center; height: 3.8333rem; padding: 0 4.3333rem 0 1.5rem; }
+.stl .head .title { font-size: 1.25rem; font-weight: bold; color: #eef2f8; }
+.stl .hk { margin: 0 1.8333rem 0 0.6667rem; font-size: 0.9167rem; color: #7e889a; }
+.stl .tab { display: block; height: 2.1667rem; line-height: 2rem; margin: 0 0.5rem 0 0; padding: 0 1rem;
+    border-radius: 1.0833rem;
+            border: 0.0833rem #ffffff1a; font-size: 1rem; color: #9aa3b5; box-sizing: border-box; }
+.stl .tab.hot { background-color: #ffffff14; }
+.stl .tab.on { background-color: #ffffff24; border-color: #c9a55bb3; color: #f3c653; font-weight: bold; }
+.stl .gap { display: block; flex: 1; }
+.stl .chip { display: block; height: 1.8333rem; line-height: 1.6667rem; padding: 0 0.75rem; border-radius: 0.5rem;
+             border: 0.0833rem #00000000; font-size: 0.9583rem; font-weight: bold; color: #7e889a;
+             box-sizing: border-box; }
+.stl .chip.on { border-color: #f3c65380; background-color: #f3c6532e; color: #f3c653; }
+.stl .x { position: absolute; right: 1.5rem; top: 0.8333rem; width: 2.1667rem; height: 2.1667rem;
+    line-height: 2.1667rem;
+          text-align: center; border-radius: 0.5833rem; color: #9aa3b5; font-size: 1.0833rem; }
+.stl .x.hot { background-color: #ffffff24; color: #ffffff; }
 )";
 
 }  // namespace
