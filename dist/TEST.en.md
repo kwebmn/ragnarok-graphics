@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.18-beta.29 — what's new
+
+- **"Спорядження", "Характеристики" and "Навички" now use "Нова бібліотека інтерфейсу (RmlUi)":** gear slots with icons and card dots, the portrait, the controller's pick list; the stats table, "Планування" and "Довідка"; the skills list with levels and "+", "План", and "Дерево" with its lines, nodes and scrolling are drawn by the new library. Dragging, clicks, the wheel and keys work as before.
+
 # uaRO Graphics 3.0.18-beta.28 — what's new
 
 - **"Обмін" (trade) now uses "Нова бібліотека інтерфейсу (RmlUi)":** both sides with their cells, the green "Готово" mark, the partner's changes after your "Готово" in red, the zeny field, the warning, the buttons and the tip are drawn by the new library. Dragging items, clicks and keys work as before.
