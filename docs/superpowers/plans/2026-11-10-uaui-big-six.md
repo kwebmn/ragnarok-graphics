@@ -37,3 +37,4 @@ Order (safest first; the cleanup last, once nothing needs the old code):
   win/ui_live (live window helper: make/frame/draw/mouse/box). Live: emotes (flex grid, click puts, dblclick sends,
   drag by its ground), commands (tabs + two-column rows), the popup menu (rows, separators; a press elsewhere closes).
   The other windows stay sheets for now.
+- F beta.74: the message box live (message wrapped by RmlUi, buttons a flex row with their keys, centred by its own size)

@@ -1332,6 +1332,15 @@ select selectbox option:checked { color: #e6cb8a; }
 .cw .name { font-size: 12.5dp; }
 .cw .state { position: absolute; right: 8dp; top: 5dp; font-size: 11dp; color: #9aa3b5; }
 .cw .state.on { color: #eceff5; font-weight: bold; }
+.mw { width: 420dp; }
+.mw .msg { display: block; font-size: 13dp; line-height: 19dp; margin: 2dp 0 12dp 0; white-space: pre-line; }
+.mw .btns { display: flex; justify-content: flex-end; }
+.lw .btn { display: block; margin-left: 8dp; padding: 6dp 14dp; border-radius: 8dp; font-size: 12.5dp;
+           background-color: #ffffff0f; border: 1dp #ffffff29; }
+.lw .btn:hover { background-color: #ffffff1f; }
+.lw .btn.main { background-color: #f3c65338; border-color: #f3c653cc; font-weight: bold; }
+.lw .btn.main:hover { background-color: #f3c65357; }
+.lw .btn .key { margin-left: 8dp; font-size: 10.5dp; color: #9aa3b5; font-weight: normal; }
 .pw { padding: 6dp; border-radius: 10dp; min-width: 150dp; }
 .pw .row { font-size: 12.5dp; white-space: nowrap; }
 .pw .sep { display: block; height: 1dp; margin: 4dp 6dp; background-color: #ffffff1f; }
