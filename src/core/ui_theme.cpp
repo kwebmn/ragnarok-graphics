@@ -2,7 +2,9 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdio>
 #include <cstdlib>
+#include <regex>
 #include <sstream>
 
 namespace uagfx::uitheme {
@@ -91,6 +93,43 @@ void read(const std::string& text, Theme& t, std::string& bad) {
             bad = line;
         }
     }
+}
+
+std::string themedCss(const Theme& t, const std::string& css) {
+    if (t.greys == Greys::Keep && t.exact.empty() && t.radius == 1 && t.edge == 1) return css;
+    std::string out;
+    out.reserve(css.size());
+    const std::regex hexes("#([0-9a-fA-F]{6})([0-9a-fA-F]{2})?\\b");
+    auto at = css.cbegin();
+    for (std::sregex_iterator it(css.begin(), css.end(), hexes), end; it != end; ++it) {
+        const std::smatch& m = *it;
+        out.append(at, m[0].first);
+        const uint32_t rgb = uint32_t(std::strtoul(m[1].str().c_str(), nullptr, 16));
+        char b[16];
+        std::snprintf(b, sizeof b, "#%06x", unsigned(colour(t, rgb)));
+        out += b;
+        out += m[2].str();
+        at = m[0].second;
+    }
+    out.append(at, css.cend());
+    const auto scaled = [](const std::string& text, const std::regex& re, float k) {
+        if (k == 1) return text;
+        std::string r;
+        auto from = text.cbegin();
+        for (std::sregex_iterator it(text.begin(), text.end(), re), end; it != end; ++it) {
+            const std::smatch& m = *it;
+            r.append(from, m[2].first);
+            char b[24];
+            std::snprintf(b, sizeof b, "%g", double(std::strtof(m[2].str().c_str(), nullptr) * k));
+            r += b;
+            from = m[2].second;
+        }
+        r.append(from, text.cend());
+        return r;
+    };
+    out = scaled(out, std::regex("(border-radius:\\s*)([0-9.]+)"), t.radius);
+    out = scaled(out, std::regex("(border(?:-width)?:\\s*)([0-9.]+)"), t.edge);
+    return out;
 }
 
 }  // namespace uagfx::uitheme

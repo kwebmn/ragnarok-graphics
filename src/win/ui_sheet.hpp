@@ -69,7 +69,8 @@ struct Content {
     void rect(std::vector<Box>& to, const panel::Box& b, float r, uint32_t fill, float fillA, uint32_t edge = 0,
               float edgeA = 0, float width = 0) {
         if (b.w <= 0 || b.h <= 0) return;
-        Box x{b.x, b.y, b.w, b.h, r, edgeA > 0 ? width : 0, opacity, "paint"};
+        // 3.0.18-beta.54: in the theme - its colours, corners and edges
+        Box x{b.x, b.y, b.w, b.h, r * uaui::themeRadius(), edgeA > 0 ? width * uaui::themeEdge() : 0, opacity, "paint"};
         x.paint = true;
         x.bg = rgba(fill, fillA);
         x.bd = rgba(edge, edgeA);
@@ -78,7 +79,7 @@ struct Content {
     static Rml::String rgba(uint32_t rgb, float a) {
         char b[16];
         const int alpha = a <= 0 ? 0 : a >= 1 ? 255 : int(a * 255 + 0.5f);
-        std::snprintf(b, sizeof b, "#%06x%02x", unsigned(rgb & 0xFFFFFF), alpha);
+        std::snprintf(b, sizeof b, "#%06x%02x", unsigned(uaui::themed(rgb) & 0xFFFFFF), alpha);
         return b;
     }
     // the words of a window's core (any of its Words: box, text, rgb, px, bold, align)
@@ -91,7 +92,7 @@ struct Content {
         char colour[16];
         for (W x : in) {
             x.box.x += dx, x.box.y += dy;
-            std::snprintf(colour, sizeof colour, "#%06x", unsigned(x.rgb & 0xFFFFFF));
+            std::snprintf(colour, sizeof colour, "#%06x", unsigned(uaui::themed(x.rgb) & 0xFFFFFF));
             const char* align = x.align == decltype(x.align)::Right    ? " right"
                                 : x.align == decltype(x.align)::Center ? " centre"
                                                                        : "";

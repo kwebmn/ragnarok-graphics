@@ -1026,7 +1026,7 @@ public:
     Rml::FileHandle Open(const Rml::String& path) override {
         auto* f = new Open_;
         if (path == "uaui:theme.rcss") {  // 3.0.18-beta.17: the file's rules after the built-in ones (over them)
-            f->data = kTheme;
+            f->data = uitheme::themedCss(state().theme, kTheme);  // 3.0.18-beta.54: in the theme chosen
             State& s = state();
             s.themeFile = false;
             HANDLE h = CreateFileA(themeFile().c_str(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr,
@@ -1582,6 +1582,10 @@ void Doc::raise(int z) {
     doc_->SetProperty("z-index", std::to_string(z));
 }
 
+uint32_t themed(uint32_t rgb) { return uitheme::colour(state().theme, rgb); }
+float themeRadius() { return state().theme.radius; }
+float themeEdge() { return state().theme.edge; }
+
 bool readyAnywhere() {
     const State& s = state();
     return s.started && s.on && s.k > 0 && s.targetW > 0 && s.targetH > 0;
@@ -1723,6 +1727,12 @@ void themeFrame(State& s, const std::string& name, bool look) {
     }
     if (!text.empty()) uitheme::read(text, s.theme, bad);
     ++s.themeSerial;
+    if (s.started) {  // 3.0.18-beta.54: the documents' style sheets again, the parts' own colours said again
+        Rml::Factory::ClearStyleSheetCache();
+        for (Doc* d : s.docs)
+            if (d->doc()) d->doc()->ReloadStyleSheet();
+        uistyle::bump();
+    }
     LOG_INFO("uaui: the theme «%s»%s%s%s", s.theme.name.c_str(), text.empty() ? "" : ", the palette's file over it",
              bad.empty() ? "" : " - a line not understood: ", bad.c_str());
 }

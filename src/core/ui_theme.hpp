@@ -21,5 +21,8 @@ Theme named(const std::string& name);  // an unknown name: standard
 uint32_t colour(const Theme& t, uint32_t rgb);  // 0xRRGGBB
 // The palette's lines over `t`; the first line not understood in `bad` ("" none)
 void read(const std::string& text, Theme& t, std::string& bad);
+// 3.0.18-beta.54: a style sheet (RCSS) in the theme - each #rrggbb(aa) through colour() (its alpha kept), each
+// «border-radius: N» times the radius, each «border: N» / «border-width: N» times the edge
+std::string themedCss(const Theme& t, const std::string& css);
 
 }  // namespace uagfx::uitheme

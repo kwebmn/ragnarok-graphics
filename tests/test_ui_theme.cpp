@@ -45,3 +45,17 @@ TEST(ui_theme_reads_a_palette_over_the_theme) {
     CHECK(t.radius == 0.5f && t.edge == 2.0f);
     CHECK_EQ(bad, std::string("nonsense"));
 }
+
+// 3.0.18-beta.54 (the owner: «делай все»; the themes in uaUI's markup): a style sheet's colours through the theme,
+// their alpha kept; its corners by the theme's radius, its edges by its edge
+TEST(ui_theme_rewrites_a_style_sheet) {
+    const std::string css = ".a { background-color: #10141ccc; color: #5bd36c; border: 1dp #ffffff17; "
+                            "border-radius: 10dp; }";
+    CHECK(uitheme::themedCss(uitheme::named("standard"), css) == css);
+    const std::string classic = uitheme::themedCss(uitheme::named("classic"), css);
+    CHECK(classic.find("#5bd36c") != std::string::npos);  // a colour that means something stays
+    CHECK(classic.find("#10141ccc") == std::string::npos && classic.find("cc;") != std::string::npos);
+    CHECK(classic.find("border-radius: 3dp") != std::string::npos);  // 10 x 0.3
+    const std::string contrast = uitheme::themedCss(uitheme::named("contrast"), css);
+    CHECK(contrast.find("border: 1.6dp") != std::string::npos);
+}

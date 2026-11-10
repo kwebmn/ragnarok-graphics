@@ -43,6 +43,10 @@ bool ready();  // [interface] uaui on, in the world, started: the parts draw by 
 // 3.0.18-beta.33: on and started, in the world or not - the login's, the servers' and the characters' windows
 // (their documents Doc::anywhere; the rest hidden outside the world)
 bool readyAnywhere();
+// 3.0.18-beta.54: the theme ([interface] theme, ui\palette.txt) for the colours and corners the parts give in code
+uint32_t themed(uint32_t rgb);  // 0xRRGGBB
+float themeRadius();
+float themeEdge();
 // 3.0.18-beta.43: the windows' stack drawing its windows bottom up - the place of the one being drawn now (its
 // document raised to it: the last opened or clicked on top, as the driver's windows)
 void setWindowRank(int rank, bool marked = false);

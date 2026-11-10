@@ -1028,8 +1028,8 @@ BoxV bv(const panel::Box& b) { return BoxV{b.x, b.y, b.w, b.h}; }
 
 std::string hex(uint32_t rgb, int alpha = -1) {
     char b[16];
-    if (alpha < 0) std::snprintf(b, sizeof b, "#%06x", unsigned(rgb & 0xFFFFFF));
-    else std::snprintf(b, sizeof b, "#%06x%02x", unsigned(rgb & 0xFFFFFF), alpha & 0xFF);
+    if (alpha < 0) std::snprintf(b, sizeof b, "#%06x", unsigned(uaui::themed(rgb) & 0xFFFFFF));
+    else std::snprintf(b, sizeof b, "#%06x%02x", unsigned(uaui::themed(rgb) & 0xFFFFFF), alpha & 0xFF);
     return b;
 }
 

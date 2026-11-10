@@ -34,6 +34,7 @@ const char* kDoc = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss
 
 std::string hexOf(uint32_t rgb, int alpha = -1) {
     char b[16];
+    rgb = uaui::themed(rgb);  // 3.0.18-beta.54: in the theme
     if (alpha < 0) std::snprintf(b, sizeof b, "#%06x", unsigned(rgb & 0xFFFFFF));
     else std::snprintf(b, sizeof b, "#%06x%02x", unsigned(rgb & 0xFFFFFF), alpha & 0xFF);
     return b;

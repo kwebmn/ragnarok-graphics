@@ -728,7 +728,7 @@ bool uiFrame(State& s, const cb::View view, const cb::Look look, const std::stri
         d->SetClass("flare", now - s.levelAt < motion::kLevelMs);  // a new level: its edge gold a moment
         const int a = int(std::lround(uistyle::panel() * 255));  // [interface] panel_opacity
         char ground[32];
-        std::snprintf(ground, sizeof ground, "#10141c%02x", a);
+        std::snprintf(ground, sizeof ground, "#%06x%02x", unsigned(uaui::themed(0x10141C)), a);
         if (Rml::Element* card = d->GetFirstChild())
             if (card->IsClassSet("card")) card->SetProperty("background-color", ground);
         d->SetProperty("transform", size != 1.0f ? "scale(" + std::to_string(size) + ")" : "none");

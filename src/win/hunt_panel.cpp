@@ -131,7 +131,8 @@ bool uiFrame(State& s) {
         u.key = s.viewKey;
         u.w = float(s.w), u.h = float(s.h), u.s = s.scale, u.hot = s.hoverReset;
         char g[16];
-        std::snprintf(g, sizeof g, "#10141c%02x", int(std::lround(uistyle::panel() * 255)) & 0xFF);
+        std::snprintf(g, sizeof g, "#%06x%02x", unsigned(uaui::themed(0x10141C)),
+                      int(std::lround(uistyle::panel() * 255)) & 0xFF);
         u.ground = g;
         u.title = s.lines[0];
         u.lines.assign(s.lines.begin() + 1, s.lines.end());

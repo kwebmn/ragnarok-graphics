@@ -1331,7 +1331,7 @@ Ui& ui() {
 
 std::string hexOf(uint32_t rgb) {
     char b[16];
-    std::snprintf(b, sizeof b, "#%06x", unsigned(rgb & 0xFFFFFF));
+    std::snprintf(b, sizeof b, "#%06x", unsigned(uaui::themed(rgb) & 0xFFFFFF));
     return b;
 }
 

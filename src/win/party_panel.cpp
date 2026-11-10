@@ -610,7 +610,8 @@ bool uiFrame(State& s) {
         d->SetProperty("transform", size != 1.0f ? "scale(" + std::to_string(size) + ")" : "none");
         if (Rml::Element* g = d->GetFirstChild()) {
             char ground[32];
-            std::snprintf(ground, sizeof ground, "#10141c%02x", int(std::lround(uistyle::panel() * 255)));
+            std::snprintf(ground, sizeof ground, "#%06x%02x", unsigned(uaui::themed(0x10141C)),
+                          int(std::lround(uistyle::panel() * 255)));
             g->SetProperty("background-color", ground);
         }
     }
