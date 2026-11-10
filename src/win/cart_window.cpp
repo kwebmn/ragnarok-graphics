@@ -305,6 +305,7 @@ void hide(State& s) {
 void place(State& s) {
     const iw::Texts t = texts(s, false);
     s.layout = iw::layout(0, 0, s.scale, t, measure);
+    s.grid.refit(s.layout);  // 3.0.18-beta.94: the live grid's boxes - the clicks and drops where it draws
     const int roomX = std::max(0, s.targetW - s.layout.w), roomY = std::max(0, s.targetH - s.layout.h);
     s.layout.x = int(std::lround(s.fx * float(roomX)));
     s.layout.y = int(std::lround(s.fy * float(roomY)));

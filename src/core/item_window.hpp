@@ -164,6 +164,9 @@ struct View {
 };
 View view(const Layout& L, const std::vector<Item>& items, const std::vector<int>& shown, const Show& sh,
           const Texts& t, const Measure& m);
+// 3.0.18-beta.94: a pointed thing's tip, its two first lines (its name and count; what the clicks do)
+std::string tipFirst(const Item& it);
+std::string tipSecond(const Item& it, const Texts& t);
 std::string nameOf(const Item& it);  // «+7 Sword», its count after a stack's: «Red Potion ×38»
 std::string grouped(long long n);
 

@@ -25,13 +25,13 @@ size_t utf8Next(const std::string& s, size_t i) {
     return std::min(s.size(), i + n);
 }
 
-std::string tipFirst(const Item& it) {
+std::string tipFirstOf(const Item& it) {
     std::string s = nameOf(it);
     if (it.count > 1) s += " \xC3\x97" + grouped(it.count);
     return s;
 }
 
-std::string tipSecond(const Item& it, const Texts& t) {
+std::string tipSecondOf(const Item& it, const Texts& t) {
     const Use u = useOf(it);
     std::string s = !t.all.empty()                      ? t.all  // 3.0.11-beta.115: «Склад»'s
                     : u == Use::Use || u == Use::Confirm ? t.use
@@ -47,7 +47,7 @@ std::string tipSecond(const Item& it, const Texts& t) {
 panel::Box tipBox(const Layout& L, const Item& it, int cell, const Texts& t, const Measure& m) {
     if (cell < 0 || cell >= int(L.cells.size())) return panel::Box{};
     const float s = L.s;
-    const float w = std::max({m(tipFirst(it), 13 * s, true), m(tipSecond(it, t), 11.5f * s, false),
+    const float w = std::max({m(tipFirstOf(it), 13 * s, true), m(tipSecondOf(it, t), 11.5f * s, false),
                               it.compare.empty() ? 0.0f : m(it.compare, 11.5f * s, true),
                               it.market.empty() ? 0.0f : m(it.market, 11.5f * s, false)}) +
                     22 * s;
@@ -346,10 +346,10 @@ std::vector<Words> words(const Layout& L, const std::vector<Item>& items, const 
     if (sh.hover >= 0 && sh.hover < int(shown.size())) {
         const Item& it = items[size_t(shown[size_t(sh.hover)])];
         if (tip.w > 0) {
-            out.push_back(Words{panel::Box{tip.x + 11 * s, tip.y + 4 * s, tip.w - 22 * s, 18 * s}, tipFirst(it), kText,
-                                13 * s, true, Align::Left});
+            out.push_back(Words{panel::Box{tip.x + 11 * s, tip.y + 4 * s, tip.w - 22 * s, 18 * s}, tipFirstOf(it),
+                                kText, 13 * s, true, Align::Left});
             out.push_back(Words{panel::Box{tip.x + 11 * s, tip.y + 23 * s, tip.w - 22 * s, 16 * s},
-                                tipSecond(it, t), kMuted, 11.5f * s, false, Align::Left});
+                                tipSecondOf(it, t), kMuted, 11.5f * s, false, Align::Left});
             float y = tip.y + 40 * s;
             if (!it.compare.empty()) {  // 3.0.11-beta.285
                 out.push_back(Words{panel::Box{tip.x + 11 * s, y, tip.w - 22 * s, 16 * s}, it.compare, kCompare,
@@ -438,6 +438,9 @@ View view(const Layout& L, const std::vector<Item>& items, const std::vector<int
         v.tip = tipBox(L, items[size_t(shown[size_t(sh.hover)])], sh.hover - sh.scroll * L.columns, t, m);
     return v;
 }
+
+std::string tipFirst(const Item& it) { return tipFirstOf(it); }
+std::string tipSecond(const Item& it, const Texts& t) { return tipSecondOf(it, t); }
 
 std::string nameOf(const Item& it) {
     return it.refine > 0 ? "+" + std::to_string(it.refine) + " " + it.name : it.name;
