@@ -1,3 +1,6 @@
+- The guild card is now laid out by the new interface library: its top and six tabs (two rows of three); the tabs' content keeps its places, and the "+", "Змінити", "Скасувати" buttons and the notice fields became library elements.
+- Fixed (since 3.0.18-beta.92): the guild card could not be dragged - it now moves by its empty part.
+
 - "Характеристики" (stats, Alt+A): the top of the window (title, tabs, free points, ✕) is now laid out by the new interface library; the tables, formulas and planning keep their places, and their buttons became library elements.
 
 - Fixed (since 3.0.18-beta.94): the items, storage, cart, trade, equipment, skills, homunculus, mercenary and NPC shop windows follow the text size and item window size settings again.
