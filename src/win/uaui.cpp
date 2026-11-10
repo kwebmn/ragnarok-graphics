@@ -37,7 +37,7 @@
 namespace uagfx::win::uaui {
 namespace {
 
-constexpr int kAtlas = 1024;               // the glyphs' atlas, one texture
+constexpr int kAtlas = 2048;  // the glyphs' atlas, one texture (3.0.18-beta.48: 1024 filled up at 4K, R-QTH95E)
 constexpr uintptr_t kAtlasHandle = 1;      // its RmlUi texture handle
 constexpr int kGlyphPad = 1;               // clear pixels round a glyph in the atlas
 
@@ -94,6 +94,12 @@ struct Atlas {
     int shelfX = 0, shelfY = 0, shelfH = 0;
     bool dirty = false, full = false;
     int glyphs = 0, uploads = 0;
+    int dirtyY0 = 0, dirtyY1 = kAtlas;  // 3.0.18-beta.48: the rows changed since the last upload (sent alone)
+    void touch(int y0, int y1) {
+        if (!dirty) dirtyY0 = y0, dirtyY1 = y1;
+        else dirtyY0 = std::min(dirtyY0, y0), dirtyY1 = std::max(dirtyY1, y1);
+        dirty = true;
+    }
 };
 
 struct Stats {
@@ -161,6 +167,7 @@ struct State {
     float transform[16] = {};
     // the words
     std::unordered_map<int, Face> faces;
+    int fontVersion = 1;  // 3.0.18-beta.48: a new one each time the atlas starts again - RmlUi makes its words anew
     Atlas atlas;
     uint32_t atlasId = 0;
     HDC dc = nullptr;
@@ -393,7 +400,7 @@ const Glyph& glyphOf(State& s, Face& f, char32_t c) {
                 }
             a.shelfX += g.w;
             a.shelfH = std::max(a.shelfH, g.h);
-            a.dirty = true;
+            a.touch(g.y, g.y + g.h);
             ++a.glyphs;
         }
     } else {
@@ -433,7 +440,7 @@ const Glyph& haloOf(State& s, Face& f, char32_t c) {
                 }
             a.shelfX += h.w;
             a.shelfH = std::max(a.shelfH, h.h);
-            a.dirty = true;
+            a.touch(h.y, h.y + h.h);
         }
     }
     return f.halos.emplace(c, h).first->second;
@@ -474,6 +481,7 @@ public:
         return Rml::FontFaceHandle(key);
     }
     const Rml::FontMetrics& GetFontMetrics(Rml::FontFaceHandle h) override { return faceOf(h).metrics; }
+    int GetVersion(Rml::FontFaceHandle) override { return state().fontVersion; }
     // 3.0.18-beta.20: an effect behind the letters (font-effect: outline(2dp #000000)) - their outline in its colour
     Rml::FontEffectsHandle PrepareFontEffects(Rml::FontFaceHandle, const Rml::FontEffectList& effects) override {
         for (const auto& e : effects)
@@ -1777,6 +1785,18 @@ void end() {
         if (d->shown() && d->wantedAt != s.frameNo) d->show(false);
     ++s.frameNo;
     if (!readyAnywhere()) return;
+    // 3.0.18-beta.48 (R-QTH95E: «Довідник» with letters missing - the atlas full at 4K): a full atlas starts again -
+    // every face's letters let go, the words made anew with the letters in sight now
+    if (s.atlas.full) {
+        LOG_INFO("uaui: the letters' atlas full (%d letters) - started again", s.atlas.glyphs);
+        std::fill(s.atlas.px.begin(), s.atlas.px.end(), 0u);
+        s.atlas.shelfX = s.atlas.shelfY = s.atlas.shelfH = 0;
+        s.atlas.full = false;
+        s.atlas.glyphs = 0;
+        s.atlas.touch(0, kAtlas);
+        for (auto& [key, face] : s.faces) face.glyphs.clear(), face.halos.clear();
+        ++s.fontVersion;
+    }
     for (Doc* d : s.docs)  // a frame after showing: the fade in runs (the theme's transition)
         if (d->fadePending && d->shown()) d->doc()->SetClass("away", false), d->fadePending = false;
     s.context->Update();
@@ -1827,9 +1847,10 @@ void draw(FrameRecord& record, gpu::Renderer& renderer, Layer layer) {
     if (from >= to) return;
     const double t0 = clockNow();
     // the glyphs' atlas, once made and again when new letters came
-    if (!s.atlasId) s.atlasId = renderer.createTexture(kAtlas, kAtlas, 1), s.atlas.dirty = true;
-    if (s.atlasId && s.atlas.dirty) {
-        record.upload(s.atlasId, 0, Rect{0, 0, kAtlas, kAtlas}, s.atlas.px.data());
+    if (!s.atlasId) s.atlasId = renderer.createTexture(kAtlas, kAtlas, 1), s.atlas.touch(0, kAtlas);
+    if (s.atlasId && s.atlas.dirty) {  // 3.0.18-beta.48: the rows changed alone
+        const int y0 = std::clamp(s.atlas.dirtyY0, 0, kAtlas), y1 = std::clamp(s.atlas.dirtyY1, y0 + 1, kAtlas);
+        record.upload(s.atlasId, 0, Rect{0, y0, kAtlas, y1}, s.atlas.px.data() + size_t(y0) * kAtlas);
         s.atlas.dirty = false;
         ++s.atlas.uploads;
     }
