@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.18-beta.38 — what's new
+
+- **The controller's NPC plate, item names on the ground, shop and chat room signs over players and the cast bar now use "Нова бібліотека інтерфейсу (RmlUi)".** The ones over the world still lie under the game's own windows.
+
 # uaRO Graphics 3.0.18-beta.37 — what's new
 
 - **The game's messages, the party settings and the monster card under the cursor now use "Нова бібліотека інтерфейсу (RmlUi)".** Clicks and keys work as before.
