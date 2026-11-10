@@ -13,7 +13,7 @@ Rml::Context* context(int w = 1920, int h = 1080);
 // Loaded and shown at (x, y); its layout done. Null (and the log's error in `error`) when RmlUi refused it
 Rml::ElementDocument* load(const std::string& rml, const std::function<void(Rml::DataModelConstructor&)>& bind,
                            float x = 0, float y = 0, std::string* error = nullptr);
-void update();  // the models' changes into the layout
+void update();  // the models' changes into the layout (every model dirtied whole)
 void close(Rml::ElementDocument* doc);
 const std::string& log();  // RmlUi's warnings and errors since the start
 

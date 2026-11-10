@@ -4,6 +4,7 @@
 #include <cctype>
 #include <cstdio>
 #include <map>
+#include <vector>
 #include <cstring>
 
 #include "core/ui_theme_css.hpp"
@@ -121,6 +122,7 @@ Files g_files;
 Fonts g_fonts;
 Rml::Context* g_context = nullptr;
 int g_models = 0;
+std::vector<Rml::DataModelHandle> g_handles;  // dirtied whole by update(), as win/uaui's parts do
 
 }  // namespace
 
@@ -143,6 +145,7 @@ Rml::ElementDocument* load(const std::string& rml, const std::function<void(Rml:
     const std::string model = "m" + std::to_string(++g_models);
     Rml::DataModelConstructor m = c->CreateDataModel(model);
     if (bind) bind(m);
+    g_handles.push_back(m.GetModelHandle());
     std::string text = rml;
     const size_t body = text.find("<body");
     if (body == std::string::npos) return nullptr;
@@ -163,6 +166,7 @@ Rml::ElementDocument* load(const std::string& rml, const std::function<void(Rml:
 }
 
 void update() {
+    for (Rml::DataModelHandle& h : g_handles) h.DirtyAllVariables();
     context()->Update();
     context()->Update();
 }

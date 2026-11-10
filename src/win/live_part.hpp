@@ -1,4 +1,5 @@
 #pragma once
+#include <algorithm>
 #include <functional>
 #include <map>
 #include <string>
@@ -46,12 +47,25 @@ struct LivePart {
         if (!p || p->width <= 0) return {};
         return uaui::picture(p, uaui::stamp(p), sources["i:" + std::to_string(uintptr_t(p))]);
     }
+    // A picture of the driver's own (a controller's glyph) made once by `paint`, as uisheet::Sheet::made
+    std::string made(const std::string& key, int w, int h, const std::function<void(panel::Picture&)>& paint) {
+        auto it = pictures.find(key);
+        if (it == pictures.end()) {
+            panel::Picture p;
+            p.width = std::max(1, w), p.height = std::max(1, h);
+            p.px.assign(size_t(p.width) * size_t(p.height), 0u);
+            paint(p);
+            it = pictures.emplace(key, std::move(p)).first;
+        }
+        return uaui::picture(&it->second, uaui::stamp(&it->second), sources["m:" + key]);
+    }
     static std::string ground() { return uisheet::Sheet::ground(0x10141C, uistyle::window()); }
 
     uaui::Doc doc;
     Model model;
     int gen = -1;
     std::map<std::string, std::string> sources;
+    std::map<std::string, panel::Picture> pictures;
 };
 
 }  // namespace uagfx::win
