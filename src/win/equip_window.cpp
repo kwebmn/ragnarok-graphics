@@ -649,14 +649,16 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
 
 void draw(FrameRecord& record, gpu::Renderer& renderer) {
     State& s = state();
+    s.sheet.raise();  // 3.0.18-beta.43: at its place in the windows' stack
     if (!s.shown || s.k <= 0 || ((s.picture.width <= 0 || s.picture.height <= 0) && !s.sheetShown)) return;
     int cursor = -1, cx = 0, cy = 0;
     const bool known = readGameCursor(cx, cy);
     if (known) cursor = panel::cursorDraw(record, float(cx), float(cy));
     const panel::Box& g = s.layout.glass;
+    // 3.0.18-beta.43: the shadow the driver's, under uaUI's window too
+    s.shadow.draw(record, renderer, s.layout.x + int(g.x), s.layout.y + int(g.y), int(g.w), int(g.h),
+                  12 * s.scale, s.scale, s.k);
     if (!s.sheetShown) {  // 3.0.18-beta.29: uaUI draws the window (with the windows' layer)
-        s.shadow.draw(record, renderer, s.layout.x + int(g.x), s.layout.y + int(g.y), int(g.w), int(g.h),
-                      12 * s.scale, s.scale, s.k);
         drawPart(record, renderer, s.picture, s.texture, s.texW, s.texH, s.upload, s.layout.x, s.layout.y, s.k);
         if (windowstack::marked(winstack::Win::Equip))
             s.edge.draw(record, renderer, s.layout.x + int(g.x), s.layout.y + int(g.y), int(g.w), int(g.h),

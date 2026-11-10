@@ -926,7 +926,13 @@ void frame(HWND game, bool enabled, double k, int targetWidth, int targetHeight)
 
 void draw(FrameRecord& record, gpu::Renderer& renderer) {
     State& s = state();
-    if (!s.shown || s.sheetShown || s.picture.width <= 0 || s.k <= 0) return;
+    s.sheet.raise();  // 3.0.18-beta.43: at its place in the windows' stack
+    if (s.shown && s.sheetShown && s.k > 0) {  // 3.0.18-beta.43: the shadow the driver's, under uaUI's window too
+        const float sc = s.layout.s;
+        s.shadow.draw(record, renderer, s.layout.x, s.layout.y, s.layout.w, s.layout.h, 10 * sc, sc, s.k);
+        return;
+    }
+    if (!s.shown || s.picture.width <= 0 || s.k <= 0) return;
     int cursor = -1, cx = 0, cy = 0;  // under the game's own cursor
     if (readGameCursor(cx, cy)) cursor = panel::cursorDraw(record, float(cx), float(cy));
     // 3.0.11-beta.25 (R-77TCM7): the areas painted again since the last frame - only they go to the card (all of the

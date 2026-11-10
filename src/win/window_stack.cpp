@@ -1,4 +1,5 @@
 #include "win/window_stack.hpp"
+#include "win/uaui.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -497,7 +498,12 @@ void frame(int targetWidth, int targetHeight, double k) {
 }
 
 void draw(FrameRecord& record, gpu::Renderer& renderer) {
-    for (const Win w : state().stack.bottomUp()) drawOne(w, record, renderer);
+    int rank = 0;  // 3.0.18-beta.43: uaUI's windows raised to their places too
+    for (const Win w : state().stack.bottomUp()) {
+        uaui::setWindowRank(rank++);
+        drawOne(w, record, renderer);
+    }
+    uaui::setWindowRank(90);  // the windows outside the stack (the controller's tiles, the cards) over them
 }
 
 bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) {

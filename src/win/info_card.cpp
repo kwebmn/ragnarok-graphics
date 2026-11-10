@@ -512,12 +512,18 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
 void draw(Kind kind, FrameRecord& record, gpu::Renderer& renderer) {
     State& s = state();
     One& o = one(kind);
-    if (!o.shown || o.sheetShown || s.k <= 0 || o.picture.width <= 0 || o.picture.height <= 0) return;
+    o.sheet.raise();  // 3.0.18-beta.43: at its place in the windows' stack
+    if (!o.shown || s.k <= 0 || ((o.picture.width <= 0 || o.picture.height <= 0) && !o.sheetShown)) return;
     int cursor = -1, cx = 0, cy = 0;
     if (readGameCursor(cx, cy)) cursor = panel::cursorDraw(record, float(cx), float(cy));
     const panel::Box& g = o.layout.glass;
+    // 3.0.18-beta.43: the shadow the driver's, under uaUI's card too
     o.shadow.draw(record, renderer, o.layout.x + int(g.x), o.layout.y + int(g.y), int(g.w), int(g.h), 12 * s.scale,
                   s.scale, s.k);
+    if (o.sheetShown) {
+        if (cursor >= 0) record.moveLastBefore(record.commands().size() - size_t(cursor) - 1, size_t(cursor));
+        return;
+    }
     drawPart(record, renderer, o.picture, o.texture, o.texW, o.texH, o.upload, o.layout.x, o.layout.y, s.k);
     if (cursor >= 0) record.moveLastBefore(record.commands().size() - size_t(cursor) - 1, size_t(cursor));
 }

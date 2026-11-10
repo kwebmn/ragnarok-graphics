@@ -33,6 +33,7 @@ struct Ui {
         float x = 0, y = 0, w = 0, h = 0, px = 12;
         Rml::String text, colour, cls;
     };
+    void raise() { doc.raise(10 + uaui::windowRank()); }  // 3.0.18-beta.43: as uisheet::Sheet's
     uaui::Doc doc;
     float w = 0, h = 0;
     Rml::String ground;

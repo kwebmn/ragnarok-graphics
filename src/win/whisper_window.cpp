@@ -325,14 +325,15 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
 
 void draw(FrameRecord& record, gpu::Renderer& renderer) {
     State& s = state();
-    if (s.cards.empty() || s.k <= 0 || s.sheetsShown) return;
+    if (s.cards.empty() || s.k <= 0) return;
     int cursor = -1, cx = 0, cy = 0;
     if (readGameCursor(cx, cy)) cursor = panel::cursorDraw(record, float(cx), float(cy));
     for (One& o : s.cards) {
-        if (o.picture.width <= 0 || o.picture.height <= 0) continue;
+        if ((o.picture.width <= 0 || o.picture.height <= 0) && !s.sheetsShown) continue;
         const panel::Box& g = o.layout.glass;
         o.shadow.draw(record, renderer, o.layout.x + int(g.x), o.layout.y + int(g.y), int(g.w), int(g.h),
                       12 * s.scale, s.scale, s.k);
+        if (s.sheetsShown) continue;  // 3.0.18-beta.43: the shadow the driver's, under uaUI's cards too
         drawPart(record, renderer, o.picture, o.texture, o.texW, o.texH, o.upload, o.layout.x, o.layout.y, s.k);
     }
     if (cursor >= 0) record.moveLastBefore(record.commands().size() - size_t(cursor) - 1, size_t(cursor));

@@ -1106,6 +1106,7 @@ void frame(HWND game, bool on, bool status, bool news, loginview::View view, uns
 
 void draw(FrameRecord& record, gpu::Renderer& renderer) {
     State& s = state();
+    s.sheet.raise();  // 3.0.18-beta.43: at its place in the windows' stack
     if (!s.shown || s.k <= 0) return;
     int cursor = -1, cx = 0, cy = 0;
     if (readGameCursor(cx, cy)) cursor = panel::cursorDraw(record, float(cx), float(cy));
@@ -1117,9 +1118,9 @@ void draw(FrameRecord& record, gpu::Renderer& renderer) {
         sitesigninwin::draw(record, renderer);
     } else if (s.sheetShown || (s.picture.width > 0 && s.picture.height > 0)) {
         const panel::Box& g = s.layout.glass;
+        s.shadow.draw(record, renderer, s.layout.x + int(g.x), s.layout.y + int(g.y), int(g.w), int(g.h),
+                      14 * s.scale, s.scale, s.k);  // 3.0.18-beta.43: under uaUI's card too
         if (!s.sheetShown) {  // 3.0.18-beta.33: uaUI draws the card (with the windows' layer); ▾'s list stays here
-            s.shadow.draw(record, renderer, s.layout.x + int(g.x), s.layout.y + int(g.y), int(g.w), int(g.h),
-                          14 * s.scale, s.scale, s.k);
             drawPart(record, renderer, s.picture, s.texture, s.texW, s.texH, s.upload, s.layout.x, s.layout.y, s.k);
         }
         if (!s.sheetShown && s.dropOpen && s.dropPicture.width > 0)  // 3.0.11-beta.177: ▾'s list over the card

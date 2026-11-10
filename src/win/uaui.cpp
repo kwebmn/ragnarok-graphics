@@ -1538,6 +1538,18 @@ bool ready() {
     return s.started && s.on && s.inWorld;
 }
 
+namespace {
+int g_windowRank = 0;
+}
+void setWindowRank(int rank) { g_windowRank = rank; }
+int windowRank() { return g_windowRank; }
+
+void Doc::raise(int z) {
+    if (!doc_ || z == z_) return;
+    z_ = z;
+    doc_->SetProperty("z-index", std::to_string(z));
+}
+
 bool readyAnywhere() {
     const State& s = state();
     return s.started && s.on && s.k > 0 && s.targetW > 0 && s.targetH > 0;

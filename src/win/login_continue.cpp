@@ -249,6 +249,7 @@ void hideSheet() { state().sheet.frame("login continue", false, true, 0, 0, 0, [
 
 void draw(FrameRecord& record, gpu::Renderer& renderer) {
     State& s = state();
+    s.sheet.raise();  // 3.0.18-beta.43: at its place in the windows' stack
     if (s.k <= 0 || s.sheetShown || s.picture.width <= 0) return;
     drawPart(record, renderer, s.picture, s.texture, s.texW, s.texH, s.upload, s.layout.x, s.layout.y, s.k);
     if (s.dropOpen && s.dropPicture.width > 0)

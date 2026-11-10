@@ -108,3 +108,4 @@ picture's upload gone. Cost if wrong: per-pixel glows (panel::over loops) land i
 - 2026-11-10 beta.40: «Продовжити» and the site sign-in card on the sheet (before the world); uaui::end hides any document not asked to show that frame (a part gone quiet never leaves its document on the screen)
 - 2026-11-10 beta.41: «Полиця» and «Персонажі» by hand as core loginshelf::sheetOf data (+ model portraits sheet::Art, words cut at the clip)
 - 2026-11-10 beta.42: the big map on a sheet (core paintBigSquare: the map's square a picture; card, chips and signs in markup)
+- 2026-11-10 beta.43: the windows' shadows drawn under uaUI's windows too; uaUI's windows ordered by the windows' stack (Doc::raise z = 10 + place, set while the stack draws)

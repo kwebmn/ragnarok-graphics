@@ -518,6 +518,7 @@ void frame(double k, int targetWidth, int targetHeight, unsigned codePage) {
 
 void draw(FrameRecord& record, gpu::Renderer& renderer) {
     State& s = state();
+    s.sheet.raise();  // 3.0.18-beta.43: at its place in the windows' stack
     if (s.k <= 0 || s.sheetShown || s.picture.width <= 0) return;
     drawPart(record, renderer, s.picture, s.texture, s.texW, s.texH, s.upload, s.picX, s.picY, s.k);
 }

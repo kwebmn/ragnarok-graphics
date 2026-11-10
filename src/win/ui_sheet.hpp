@@ -117,6 +117,8 @@ public:
     void glyph(Content& c, int button, bool sony, float x, float y, float h);
     // The glass's ground: the window's colour at the windows' opacity
     static std::string ground(uint32_t rgb, float opacity);
+    // 3.0.18-beta.43: called from a window's draw (the stack's order): its document at its place in the stack
+    void raise() { doc_.raise(10 + uaui::windowRank()); }
     bool anywhere = false;  // 3.0.18-beta.33: set before the first frame - shown outside the world too (the login's)
     bool world = false;     // 3.0.18-beta.38: set before the first frame - with the world's overlays, under the parts
 
