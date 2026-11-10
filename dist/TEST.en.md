@@ -1,3 +1,6 @@
+- Opening a shop: Tab moves to the next field (name, then the prices, round; Shift+Tab back), Enter to the next thing's price.
+- Chat: a magnifier in the tabs row - a click opens the search through the lines (type the words; Esc or another click closes it).
+
 - Fixed: the stats and guild windows stretched over the whole screen.
 - Opening a shop: the price field is wide and easy to see, "For sale" shows the places used of all, and each thing shows the price for the whole stack and the site market price.
 
