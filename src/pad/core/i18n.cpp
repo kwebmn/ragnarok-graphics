@@ -57,16 +57,15 @@ const Entry kTexts[] = {
     {"sleep (zzz)", "сон (zzz)", "сон (zzz)"},
     {"silence", "мовчання", "молчание"},
     {"Talk to NPC · hold: chat", "Говорити з NPC · утримати: чат", "Говорить с NPC · удержать: чат"},  // .214
-    {"{A}: next", "{A}: далі", "{A}: далее"},
+    {"{A}: next  ·  {B}: close", "{A}: далі  ·  {B}: закрити", "{A}: далее  ·  {B}: закрыть"},  // 3.0.18-beta.79
     {"{A} / {B}: close", "{A} / {B}: закрити", "{A} / {B}: закрыть"},
-    {"the NPC is talking  ·  hold {B}: close", "NPC говорить  ·  утримати {B}: закрити",
-     "NPC говорит  ·  удерживать {B}: закрыть"},
+    {"the NPC is talking  ·  {B}: close", "NPC говорить  ·  {B}: закрити", "NPC говорит  ·  {B}: закрыть"},
     {"↑ ↓: choose  ·  {A}: OK  ·  {B}: cancel", "↑ ↓: вибір  ·  {A}: OK  ·  {B}: скасувати",
      "↑ ↓: выбор  ·  {A}: OK  ·  {B}: отмена"},
     // 3.0.11-beta.258 (the NPC concept, stage 4): the number by its digits - {DIGIT} the place's value
-    {"← →: digit  ·  ↑ ↓: ±{DIGIT}  ·  {LB}: 0  ·  {RB}: last  ·  {A}: OK",
-     "← →: розряд  ·  ↑ ↓: ±{DIGIT}  ·  {LB}: 0  ·  {RB}: минуле  ·  {A}: OK",
-     "← →: разряд  ·  ↑ ↓: ±{DIGIT}  ·  {LB}: 0  ·  {RB}: прошлое  ·  {A}: OK"},
+    {"← →: digit  ·  ↑ ↓: ±{DIGIT}  ·  {LB}: 0  ·  {RB}: last  ·  {A}: OK  ·  {B}: close",
+     "← →: розряд  ·  ↑ ↓: ±{DIGIT}  ·  {LB}: 0  ·  {RB}: минуле  ·  {A}: OK  ·  {B}: закрити",
+     "← →: разряд  ·  ↑ ↓: ±{DIGIT}  ·  {LB}: 0  ·  {RB}: прошлое  ·  {A}: OK  ·  {B}: закрыть"},
     {"Reference (uaRO Graphics)", "Довідник (uaRO Graphics)", "Справочник (uaRO Graphics)"},
     {"↑ ↓: whom  ·  {A}: cast  ·  {KEY}: on yourself  ·  {B}: cancel",
      "↑ ↓: кому  ·  {A}: застосувати  ·  {KEY}: на себе  ·  {B}: скасувати",

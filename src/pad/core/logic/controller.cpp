@@ -734,7 +734,9 @@ void Controller::answerDialog(NpcDialog d, uint16_t held, uint16_t down, uint32_
         case NpcDialog::None:
             break;
         case NpcDialog::Next:
-            if (a) {
+            if (b) {  // 3.0.18-beta.79 (the owner): B closes the talk, as Esc does
+                out.dialog.push_back(DialogCommand::Close);
+            } else if (a) {
                 out.dialog.push_back(DialogCommand::Next);
             } else if (aHeldSinceMs_ && now - *aHeldSinceMs_ >= kPageOnAfterMs && now - aPagedMs_ >= kPageOnMs) {
                 aPagedMs_ = now;  // 3.0.11-beta.259: held - the next page
@@ -745,7 +747,10 @@ void Controller::answerDialog(NpcDialog d, uint16_t held, uint16_t down, uint32_
             if (a || b) out.dialog.push_back(DialogCommand::Close);
             break;
         case NpcDialog::Waiting:  // the NPC is still talking, or left the window without a button
-            if (bHeldSinceMs_ && now - *bHeldSinceMs_ >= kDialogForceCloseMs) {
+            if (b) {  // 3.0.18-beta.79 (the owner): B at once, as Esc
+                bHeldSinceMs_.reset();
+                out.dialog.push_back(DialogCommand::Close);
+            } else if (bHeldSinceMs_ && now - *bHeldSinceMs_ >= kDialogForceCloseMs) {
                 bHeldSinceMs_.reset();
                 out.dialog.push_back(DialogCommand::Close);
                 out.notes.push_back("NPC window without a button: closed with B held");
@@ -779,6 +784,7 @@ void Controller::answerDialog(NpcDialog d, uint16_t held, uint16_t down, uint32_
                 lastNumber_ = number_;
                 out.dialog.push_back(DialogCommand::NumberOk);
             }
+            if (b) out.dialog.push_back(DialogCommand::Close);  // 3.0.18-beta.79: B lets it go, as Esc
             break;
         }
     }

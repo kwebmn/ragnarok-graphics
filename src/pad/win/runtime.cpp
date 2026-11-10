@@ -1296,6 +1296,18 @@ void backCloses(PadState& pad, const ViewInfo& view) {
             s.backHeld = false;
         return;
     }
+    // 3.0.18-beta.79 (the owner: «когда убили не знаю как вызвать диалог в котором можно вернутся на карту»): dead with
+    // the death window closed - B opens it again, as the game's Esc does
+    uagfx::charstatus::Status st;
+    if (down && view.focused && !view.paused && view.dialog == NpcDialog::None && !uagfx::win::menuwin::shown() &&
+        uagfx::win::inGameWorld() && uagfx::win::readOwnStatus(st) && st.hpMost > 0 && st.hp == 0) {
+        PostMessageW(s.hwnd, WM_KEYDOWN, VK_ESCAPE, 0x00010001);
+        PostMessageW(s.hwnd, WM_KEYUP, VK_ESCAPE, LPARAM(0xC0010001));
+        LOG_INFO("B: dead - the death window asked for again (the game's Esc)");
+        s.backHeld = true;
+        pad.buttons = uint16_t(pad.buttons & ~kPadB);
+        return;
+    }
     const int last = s.windows.last();
     if (!down || view.paused || last < 0 || !view.focused || view.dialog != NpcDialog::None ||
         s.session->controller().choosing() != 0)

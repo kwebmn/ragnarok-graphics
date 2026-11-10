@@ -1675,8 +1675,9 @@ TEST(ctl_npc_window_takes_the_buttons) {
     TickOutput o = c.tick(p, w, dialogView(NpcDialog::Next), 1000);
     CHECK(!o.mouse.active && o.packets.empty() && !c.attacking());
     CHECK(o.dialog.size() == 1 && o.dialog[0] == DialogCommand::Next);
-    o = c.tick(pad(kPadB), w, dialogView(NpcDialog::Next), 1100);  // B does not end the NPC's talk
-    CHECK(o.dialog.empty());
+    // 3.0.18-beta.79 (the owner: «на геймпаде в диалогах не работает B, чтобы закрывать диалог»): B closes it, as Esc
+    o = c.tick(pad(kPadB), w, dialogView(NpcDialog::Next), 1100);
+    CHECK(o.dialog.size() == 1 && o.dialog[0] == DialogCommand::Close);
     o = c.tick(pad(kPadA), w, dialogView(NpcDialog::Close), 1200);
     CHECK(o.dialog.size() == 1 && o.dialog[0] == DialogCommand::Close);
     o = c.tick(pad(kPadA), w, view(), 1300);  // closed, A still held: no attack until pressed again
@@ -1728,14 +1729,15 @@ TEST(ctl_npc_number_by_its_digits) {  // 3.0.11-beta.258 (was by 1 / 10 / 100)
     CHECK(c.tick(pad(kPadLB), w, num, 2000).number == std::optional<int>(0));    // LB: 0
 }
 
+// 3.0.18-beta.79 (the owner): a press closes it now (it took B held 1 s) - held on, it closes once
 TEST(ctl_npc_window_without_a_button_closes_with_b_held) {
     Controller c(Config{});
     WorldState w = npcWorld();
     const ViewInfo waiting = dialogView(NpcDialog::Waiting);
-    CHECK(c.tick(pad(kPadB), w, waiting, 1000).dialog.empty());
-    CHECK(c.tick(pad(kPadB), w, waiting, 1500).dialog.empty());
-    TickOutput o = c.tick(pad(kPadB), w, waiting, 2000);
+    TickOutput o = c.tick(pad(kPadB), w, waiting, 1000);
     CHECK(o.dialog.size() == 1 && o.dialog[0] == DialogCommand::Close);
+    CHECK(c.tick(pad(kPadB), w, waiting, 1500).dialog.empty());
+    CHECK(c.tick(pad(kPadB), w, waiting, 2000).dialog.empty());
     CHECK(c.tick(pad(kPadB), w, waiting, 3100).dialog.empty());  // once
 }
 
@@ -1762,9 +1764,10 @@ TEST(ctl_hint_parts) {
     CHECK(p[2].buttons == std::vector<uint16_t>({kPadB}) && p[2].words == "скасувати");
     p = npcHintParts(NpcDialog::Waiting, Lang::Uk);
     CHECK(p.size() == 2 && p[0].buttons.empty() && p[0].words == "NPC говорить");
-    CHECK(p[1].before == "утримати" && p[1].buttons == std::vector<uint16_t>({kPadB}) && p[1].words == "закрити");
+    CHECK(p[1].buttons == std::vector<uint16_t>({kPadB}) && p[1].words == "закрити");  // 3.0.18-beta.79: a press
     p = npcHintParts(NpcDialog::Number, Lang::En, 100);  // 3.0.11-beta.258: by the digits
-    CHECK(p.size() == 5 && p[0].buttons == std::vector<uint16_t>({kPadLeft, kPadRight}) && p[0].words == "digit");
+    CHECK(p.size() == 6 && p[0].buttons == std::vector<uint16_t>({kPadLeft, kPadRight}) && p[0].words == "digit");
+    CHECK(p[5].buttons == std::vector<uint16_t>({kPadB}) && p[5].words == "close");  // 3.0.18-beta.79
     CHECK(p[1].buttons == std::vector<uint16_t>({kPadUp, kPadDown}) && p[1].words == "±100");
     CHECK(p[3].buttons == std::vector<uint16_t>({kPadRB}) && p[3].words == "last");
     p = choiceHintParts(kPadY, Lang::Uk);
@@ -1793,7 +1796,7 @@ TEST(ctl_login_hint_parts) {
 
 TEST(ctl_npc_hint_names_the_buttons) {
     CHECK(npcHint(NpcDialog::None, Lang::En).empty());
-    CHECK(npcHint(NpcDialog::Next, Lang::En) == "A: next");
+    CHECK(npcHint(NpcDialog::Next, Lang::En) == "A: next  ·  B: close");  // 3.0.18-beta.79
     CHECK(npcHint(NpcDialog::Menu, Lang::Ru) == "↑ ↓: выбор  ·  A: OK  ·  B: отмена");
     useSonyLabels(true);
     CHECK(npcHint(NpcDialog::Close, Lang::Uk) == "Cross / Circle: закрити");
@@ -2141,4 +2144,15 @@ TEST(ctl_follows_a_player_for_good) {
     c.stopFollow();
     CHECK(!c.following());
     CHECK(c.tick(none, w, behind, 5000).packets.empty());
+}
+
+// 3.0.18-beta.79: B closes an NPC window with no button and its number's field at once, as Esc does
+TEST(ctl_npc_b_closes_a_waiting_window_and_a_number) {
+    Controller c(Config{});
+    WorldState w = npcWorld();
+    TickOutput o = c.tick(pad(kPadB), w, dialogView(NpcDialog::Waiting), 1000);
+    CHECK(o.dialog.size() == 1 && o.dialog[0] == DialogCommand::Close);
+    c.tick(pad(), w, dialogView(NpcDialog::Number), 1100);
+    o = c.tick(pad(kPadB), w, dialogView(NpcDialog::Number), 1200);
+    CHECK(o.dialog.size() == 1 && o.dialog[0] == DialogCommand::Close);
 }

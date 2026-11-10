@@ -361,7 +361,7 @@ const char* kDoc = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss
    <span class="name" data-class-bad="r.bad" data-class-away="r.faint">{{r.name}}<img class="crown" data-if="r.leader" data-attr-src="crown"/><span
      class="after" data-class-cast="r.casting" data-if="r.after != ''">{{r.after}}</span></span>
    <span class="value" data-attr-class="'value ' + r.tone"><img data-if="r.route" data-attr-src="route"/>{{r.value}}</span>
-   <div class="bar" data-if="r.bar"><span class="fill" data-class-bad="r.low" data-style-width="r.pct + '%'"></span></div>
+   <div class="bar" data-if="r.bar"><span class="fill" data-class-bad="r.low" data-style-width="bars[i] + '%'"></span></div>
    <div class="castline" data-if="r.cast >= 0"><span class="fill" data-style-width="r.cast + '%'"></span></div>
    <div class="where" data-if="r.arrow"><img data-attr-src="arrow" data-style-transform="'rotate(' + r.deg + 'deg)'"/>{{r.cells}}</div>
    <div class="bufrow" data-if="r.buffs.size > 0"><span class="buf" data-for="b : r.buffs" data-class-glow="b.glow != ''">
@@ -372,7 +372,7 @@ const char* kDoc = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss
  <div class="cells" data-if="!folded && compact"><div class="cell" data-for="r, i : rows" data-event-click="row(i)">
    <div class="face" data-class-away="r.away"><img data-if="r.face != ''" data-attr-src="r.face"/><span class="letter" data-if="r.face == ''">{{r.letter}}</span></div>
    <span class="name" data-class-bad="r.bad" data-class-away="r.faint">{{r.name}}</span>
-   <div class="bar" data-if="r.bar"><span class="fill" data-class-bad="r.low" data-style-width="r.pct + '%'"></span></div>
+   <div class="bar" data-if="r.bar"><span class="fill" data-class-bad="r.low" data-style-width="bars[i] + '%'"></span></div>
  </div></div>
 </div>
 </body></rml>)RML";
@@ -392,6 +392,8 @@ struct RowView {
 
 struct Ui {
     std::map<Rml::String, uiglide::Glide> glides;  // 3.0.18-beta.63
+    // 3.0.18-beta.79: the bars' shown shares apart from the rows - while they glide only they are evaluated again
+    std::vector<float> bars;
     uaui::Doc doc;
     Rml::String title, count, viewSign, foldSign, crown, route, arrow;
     bool folded = false, compact = false;
@@ -478,6 +480,8 @@ bool uiFrame(State& s) {
             m.Bind("folded", &u.folded);
             m.Bind("compact", &u.compact);
             m.Bind("rows", &u.rows);
+            m.RegisterArray<std::vector<float>>();
+            m.Bind("bars", &u.bars);
             m.Bind("crown", &u.crown);
             m.Bind("route", &u.route);
             m.Bind("arrow", &u.arrow);
@@ -592,13 +596,14 @@ bool uiFrame(State& s) {
     }
     {  // 3.0.18-beta.63: each member's HP bar glides to its share (by name; a new one at once)
         const uint64_t now = GetTickCount64();
-        bool moved = false;
         for (RowView& r : u.rows) {
             const float v = u.glides[r.name].step(r.aim, now, uaui::motion());
-            if (v != r.pct) r.pct = v, moved = true;
+            r.pct = v;
         }
         if (u.glides.size() > 64) u.glides.clear();
-        if (moved) u.doc.dirty("rows");
+        std::vector<float> bars(u.rows.size());
+        for (size_t i = 0; i < u.rows.size(); ++i) bars[i] = u.rows[i].pct;
+        if (bars != u.bars) u.bars = std::move(bars), u.doc.dirty("bars");
     }
     if (Rml::ElementDocument* d = u.doc.doc()) {
         const float size = hudedit::sizeOf(hudlayout::Part::Party);
