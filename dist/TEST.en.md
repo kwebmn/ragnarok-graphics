@@ -1,3 +1,5 @@
+- New interface (uaUI): the switch "Ефекти (нова бібліотека)" under "Інтерфейс" (off by default). With it windows and panels cast soft shadows, the button chosen by the gamepad and the ready or lit skill bar cells glow, the HP, SP and experience bars and the buttons get a light sheen on top, and round corners inside windows are cut cleanly.
+
 - New interface (uaUI): the gamepad in windows that did not hear it before - emotes, commands, making a chat room, the chat room, the popup list, macros. The D-pad (or the left stick) moves a gold frame over the buttons and cells, A presses the chosen one just as the mouse does, B closes the window.
 
 - New interface (uaUI): your own look for any part. The game puts every part's built-in markup into uaro-graphics\ui\builtin\ (with a README.txt). Copy a part's file to uaro-graphics\ui\ and edit the copy - changes show within a second, no restart; delete the copy to get the built-in one back.
