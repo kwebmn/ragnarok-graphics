@@ -292,7 +292,7 @@ public:
         b.clipped = s.clipOn;
         b.clip = s.clip;
         if (s.maskOn && s.effects && s.mask.size() >= 6) {  // 3.0.18-beta.61: cut by the rounded outline too
-            if (!b.clipped) b.clip = {-1e6f, -1e6f, 1e6f, 1e6f};
+            if (!b.clipped) b.clip = {-1e6f, -1e6f, 1e6f, 1e6f, {}};
             b.clipped = true;
             b.clip.hull = s.mask;
         }
@@ -419,7 +419,7 @@ public:
     void EnableScissorRegion(bool enable) override { state().clipOn = enable; }
     void SetScissorRegion(Rml::Rectanglei r) override {
         State& s = state();
-        s.clip = {float(r.Left()), float(r.Top()), float(r.Right()), float(r.Bottom())};
+        s.clip = {float(r.Left()), float(r.Top()), float(r.Right()), float(r.Bottom()), {}};
     }
     void SetTransform(const Rml::Matrix4f* m) override {
         State& s = state();
@@ -1803,7 +1803,7 @@ void drawScene(FrameRecord& record, gpu::Renderer& renderer, const panel::Pictur
             haveRun = true;
             const float cx = float(w) / 2, cy = float(h) / 2;
             for (Point& q : pts) q.x = (q.x * sx - cx) * grow + cx, q.y = (q.y * sy - cy) * grow + cy;
-            ::uagfx::uaui::ClipBox clip{float(p.cx0) * sx, float(p.cy0) * sy, float(p.cx1) * sx, float(p.cy1) * sy};
+            ::uagfx::uaui::ClipBox clip{float(p.cx0) * sx, float(p.cy0) * sy, float(p.cx1) * sx, float(p.cy1) * sy, {}};
             ::uagfx::uaui::triangles(pts, ix, float(x), float(y), nullptr, p.clipped ? &clip : nullptr, k, half,
                                      c.runs.back().second);
             pts.clear();
