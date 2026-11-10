@@ -96,6 +96,7 @@ TEST(uikit_item_grid_refit_puts_the_drawn_cells_into_the_hit_test) {
     CHECK(iw::hitTest(g.L, g.shown.size(), 0, p.x, p.y).part == iw::Part::Close);
     CHECK(iw::hitTest(g.L, g.shown.size(), 0, 30, 20).part == iw::Part::Title);
     CHECK(g.L.bar.w > 100);
+    CHECK(g.L.bar.x < 150);  // the weight's bar right after «Вага» (not spread along the footer)
     rmlhost::close(g.doc);
 }
 

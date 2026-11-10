@@ -159,16 +159,14 @@ Rml::ElementDocument* load(const std::string& rml, const std::function<void(Rml:
     d->SetProperty(Rml::PropertyId::Left, Rml::Property(x, Rml::Unit::PX));
     d->SetProperty(Rml::PropertyId::Top, Rml::Property(y, Rml::Unit::PX));
     d->Show(Rml::ModalFlag::None, Rml::FocusFlag::None);
-    c->Update();
-    c->Update();
+    for (int i = 0; i < 4; ++i) c->Update();  // the data views, then the layout of what they showed
     if (error) *error = g_log.substr(before);
     return d;
 }
 
 void update() {
     for (Rml::DataModelHandle& h : g_handles) h.DirtyAllVariables();
-    context()->Update();
-    context()->Update();
+    for (int i = 0; i < 4; ++i) context()->Update();
 }
 
 void close(Rml::ElementDocument* doc) {
