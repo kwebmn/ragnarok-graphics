@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.18-beta.33 — what's new
+
+- **Login, server select, character select and make now use "Нова бібліотека інтерфейсу (RmlUi)":** the login fields with their errors, ticks, buttons, character cards with HP/SP bars, the character make with stat pairs are drawn by the new library. The new library now also runs before entering the game world (for these windows only). Clicks, keys and the controller work as before.
+
 # uaRO Graphics 3.0.18-beta.32 — what's new
 
 - **The chat, the chat wheel, whisper windows, the chat room and its making, the popup menu, emotions, the command list and the whisper settings now use "Нова бібліотека інтерфейсу (RmlUi)":** tabs with counters, the input with its channel and caret, filters, the name menu, scrolling, the wheel's ring with sectors are drawn by the new library. Keys, clicks, dragging and resizing the chat work as before.
