@@ -1,3 +1,5 @@
+- "Спорядження" (equipment): the middle now shows the real character from the game's sprites - the class body (on the Peco when riding), the head in its hair colour, three headgears; the hunter's falcon on the shoulder and the merchant's cart behind. The ◀ ▶ buttons turn it all eight ways. The weapon and shield in hand are not drawn yet.
+
 - "Спорядження" (equipment) like the game's original window: left the top and low head, right hand, robe, right accessory; right the middle head, body, left hand, shoes, left accessory; the ammo in the strip below. The place over each item name, the slot dots after it (gold with a card). The character numbers left the window (they are in "Характеристики"); the middle shows the portrait for now - the character from sprites is the next step.
 - A card opened from a slot in the item card shows its big illustration over its description, like the original card window.
 
