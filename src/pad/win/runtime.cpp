@@ -42,6 +42,7 @@
 #include "pad/win/log.hpp"
 #include "pad/win/overlay.hpp"
 #include "pad/win/pads.hpp"
+#include "win/ui_sheet.hpp"
 #include "win/disk.hpp"
 #include "win/paths.hpp"
 #include "core/walk_path.hpp"
@@ -895,6 +896,24 @@ bool tipPad(const PadState& pad, DWORD now) {
     return true;
 }
 
+// 3.0.18-beta.60 (docs/superpowers/plans/2026-11-10-uaui-possibilities.md, stage 4): a window with no commands of
+// its own (emotes, commands, the chat rooms, the popup list, macros) - the D-pad walks the boxes its uaUI sheet gave
+// (a gold ring), A clicks the one ringed, B closes the window
+bool walkPad(int kind, const PadState& pad, DWORD now) {
+    State& s = S();
+    const uint16_t buttons = pad.connected ? pad.buttons : 0;
+    const uint16_t down = uint16_t((buttons & ~s.prevPadButtons) | stickSteps(pad, now));
+    s.prevPadButtons = buttons;
+    using uagfx::win::uisheet::NavCommand;
+    const std::pair<uint16_t, NavCommand> keys[] = {{kPadUp, NavCommand::Up},     {kPadDown, NavCommand::Down},
+                                                    {kPadLeft, NavCommand::Left}, {kPadRight, NavCommand::Right},
+                                                    {kPadA, NavCommand::Press}};
+    for (const auto& [button, command] : keys)
+        if (down & button) uagfx::win::uisheet::padNav(kind, command);
+    if (down & kPadB) uagfx::win::windowstack::key(WM_KEYDOWN, VK_ESCAPE, 0);
+    return true;
+}
+
 // 3.0.11-beta.162: the game's options - up and down a row, left and right a volume (a switch flips), A flips, B closes
 bool optionsPad(const PadState& pad, DWORD now) {
     State& s = S();
@@ -1416,6 +1435,7 @@ void tick() {
                   : drive && *top == Win::WhisperSetup             ? whisperSetupPad(pad, now)  // .168
                   : drive && *top == Win::Tip                      ? tipPad(pad, now)           // .204
                   : drive && *top == Win::VendSetup                ? vendSetupPad(pad, now)     // 3.0.16-beta.39
+                  : drive && uagfx::win::uisheet::hasNav(int(*top)) ? walkPad(int(*top), pad, now)  // .18-beta.60
                                                                    : runMenu(pad, view, now);
     if (s.npcSupported) view.dialog = clientnpc::read();
     double clientTurn = 0;

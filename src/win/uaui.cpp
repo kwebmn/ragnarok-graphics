@@ -913,6 +913,8 @@ select selectbox option:checked { color: #e6cb8a; }
 .sh .picks { background-color: #1b1d24f2; border-color: #c9a55b80; }
 .sh .pickhot { background-color: #ffffff12; }
 .sh .word { white-space: nowrap; overflow: hidden; }
+.sh .padfocus { position: absolute; border-color: #e6cb8a; background-color: #e6cb8a14; }  /* 3.0.18-beta.60 */
+.motion.sh .padfocus { transition: left top width height 0.1s cubic-out; }
 .sh .word.bold { font-weight: bold; }
 .sh .word.right { text-align: right; }
 .sh .word.centre { text-align: center; }
@@ -1691,6 +1693,8 @@ void setMotion(bool on) {
         if (d->doc()) d->doc()->SetClass("motion", on);
 }
 bool motion() { return g_motion; }
+HWND gameWindow() { return state().game; }
+double targetScale() { return state().k; }
 
 // 3.0.18-beta.59 (the possibilities' item 9): the keys while a field of uaUI's has the focus - its letters, its
 // arrows, Backspace, Delete, Home, End, Ctrl+A/C/V/X; Esc or Enter lets it go

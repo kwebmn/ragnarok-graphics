@@ -10,6 +10,7 @@
 #include <string>
 #include <vector>
 
+#include "core/window_stack.hpp"
 #include "core/emote_card.hpp"
 #include "core/settings/strings.hpp"
 #include "core/sprite_file.hpp"
@@ -326,6 +327,12 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     State& s = state();
     s.sheetShown = s.sheet.frame("emote", s.shown, true, s.layout.x, s.layout.y, s.sheetGen,
                                  [&](uisheet::Content& c) { fillSheet(s, c); });
+    if (s.sheetShown) {  // 3.0.18-beta.60: the pad walks its boxes (A clicks one)
+        std::vector<panel::Box> targets;
+        for (const auto& part : std::initializer_list<std::vector<panel::Box>>{s.layout.cells})
+            targets.insert(targets.end(), part.begin(), part.end());
+        s.sheet.nav(int(winstack::Win::Emotes), std::move(targets));
+    }
 }
 
 void draw(FrameRecord& record, gpu::Renderer& renderer) {

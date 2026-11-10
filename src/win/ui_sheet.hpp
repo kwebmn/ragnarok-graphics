@@ -129,8 +129,18 @@ public:
         doc_.raise(10 + uaui::windowRank());
         doc_.mark(uaui::windowMarked());  // 3.0.18-beta.44: the stack's gold edge
     }
+    // 3.0.18-beta.60 (the possibilities' stage 4): the window's clickable boxes (its own pixels) for the pad's walk -
+    // `kind` its winstack::Win; called each frame after frame()
+    void nav(int kind, std::vector<panel::Box> targets);
     bool anywhere = false;  // 3.0.18-beta.33: set before the first frame - shown outside the world too (the login's)
     bool world = false;     // 3.0.18-beta.38: set before the first frame - with the world's overlays, under the parts
+
+    // the runtime's
+    std::vector<panel::Box> targets_;
+    int focus_ = -1, x_ = 0, y_ = 0;
+    Box pf_;  // the pad's ring (w 0: none)
+    void showFocus();
+    uaui::Doc& doc() { return doc_; }
 
 private:
     uaui::Doc doc_;
@@ -139,5 +149,11 @@ private:
     std::map<std::string, panel::Picture> made_;
     std::map<std::string, std::string> sources_;
 };
+
+// 3.0.18-beta.60: the pad on a window that has no commands of its own - the D-pad walks the boxes its sheet gave
+// (a gold ring on the one chosen), A clicks it as the mouse would; false: no sheet walks that window
+enum class NavCommand { Up, Down, Left, Right, Press };
+bool padNav(int kind, NavCommand c);
+bool hasNav(int kind);
 
 }  // namespace uagfx::win::uisheet

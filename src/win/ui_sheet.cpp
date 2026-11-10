@@ -8,6 +8,8 @@
 #include "core/class_art.hpp"
 #include "win/code_page.hpp"
 #include "win/log.hpp"
+#include "win/window_stack.hpp"
+#include "core/pad_nav.hpp"
 
 namespace uagfx::win::uisheet {
 namespace {
@@ -74,6 +76,9 @@ const char* kDoc = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss
 <div class="a" data-for="i : top">
  <img class="a" data-attr-src="i.src" data-style-left="i.x + 'px'" data-style-top="i.y + 'px'"
   data-style-width="i.w + 'px'" data-style-height="i.h + 'px'" data-style-opacity="i.op"/></div>
+<div class="padfocus" data-if="pf.w > 0" data-style-left="pf.x + 'px'" data-style-top="pf.y + 'px'"
+  data-style-width="pf.w + 'px'" data-style-height="pf.h + 'px'" data-style-border-radius="pf.r + 'px'"
+  data-style-border-width="pf.e + 'px'"></div>
 </body></rml>)RML";
 
 }  // namespace
@@ -281,6 +286,7 @@ bool Sheet::frame(const char* name, bool on, bool window, int x, int y, int gen,
                 m.Bind("clipped", &c_.clipped);
                 m.Bind("clipped_icons", &c_.clippedIcons);
                 m.Bind("clipped_words", &c_.clippedWords);
+                m.Bind("pf", &pf_);  // 3.0.18-beta.60: the pad's ring
             }))
             return false;
     }
@@ -294,8 +300,74 @@ bool Sheet::frame(const char* name, bool on, bool window, int x, int y, int gen,
         fitWords(c_.topWords);
         doc_.dirtyAll();
     }
+    x_ = x, y_ = y;
     doc_.place(x, y);
     doc_.show(true);
+    return true;
+}
+
+namespace {
+std::map<int, Sheet*>& navs() {
+    static std::map<int, Sheet*> m;
+    return m;
+}
+}  // namespace
+
+void Sheet::nav(int kind, std::vector<panel::Box> targets) {
+    navs()[kind] = this;
+    if (targets.size() != targets_.size()) focus_ = -1;  // another set: the ring comes back on the next press
+    targets_.clear();
+    for (const panel::Box& b : targets)
+        if (b.w > 0 && b.h > 0) targets_.push_back(b);
+    if (focus_ >= int(targets_.size())) focus_ = -1;
+    showFocus();
+}
+
+void Sheet::showFocus() {
+    Box f;
+    if (focus_ >= 0 && focus_ < int(targets_.size())) {
+        const panel::Box& b = targets_[size_t(focus_)];
+        const float d = 3 * uaui::dp();
+        f = Box{b.x - d, b.y - d, b.w + 2 * d, b.h + 2 * d, 6 * uaui::dp(), 2 * uaui::dp(), 1, "padfocus"};
+    }
+    if (f.x != pf_.x || f.y != pf_.y || f.w != pf_.w || f.h != pf_.h) {
+        pf_ = f;
+        doc_.dirty("pf");
+    }
+}
+
+bool hasNav(int kind) {
+    const auto it = navs().find(kind);
+    return it != navs().end() && it->second->doc().shown() && !it->second->targets_.empty();
+}
+
+bool padNav(int kind, NavCommand c) {
+    if (!hasNav(kind)) return false;
+    Sheet& s = *navs()[kind];
+    if (c == NavCommand::Press) {
+        if (s.focus_ < 0) {
+            s.focus_ = padnav::first(s.targets_);
+            s.showFocus();
+            return true;
+        }
+        const panel::Box& b = s.targets_[size_t(s.focus_)];
+        const double k = uaui::targetScale() > 0 ? uaui::targetScale() : 1;
+        const int gx = int((s.x_ + b.x + b.w / 2) / k), gy = int((s.y_ + b.y + b.h / 2) / k);
+        const LPARAM lp = MAKELPARAM(gx, gy);
+        LRESULT r = 0;
+        HWND game = uaui::gameWindow();
+        windowstack::mouse(game, WM_MOUSEMOVE, 0, lp, r);
+        windowstack::mouse(game, WM_LBUTTONDOWN, MK_LBUTTON, lp, r);
+        windowstack::mouse(game, WM_LBUTTONUP, 0, lp, r);
+        LOG_INFO("pad: A on box %d of window %d at %d, %d", s.focus_, kind, gx, gy);
+        return true;
+    }
+    const padnav::Dir d = c == NavCommand::Up     ? padnav::Dir::Up
+                          : c == NavCommand::Down ? padnav::Dir::Down
+                          : c == NavCommand::Left ? padnav::Dir::Left
+                                                  : padnav::Dir::Right;
+    s.focus_ = padnav::next(s.targets_, s.focus_, d);
+    s.showFocus();
     return true;
 }
 
