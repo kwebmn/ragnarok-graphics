@@ -260,4 +260,9 @@ std::vector<Words> words(const Layout& L, const std::vector<Slot>& slots, const 
     return out;
 }
 
+CardParts cardParts(const panel::Box& card, float s) {
+    const Inner in = inner(card, s);
+    return CardParts{in.face, in.hpBar, in.spBar};
+}
+
 }  // namespace uagfx::charselect

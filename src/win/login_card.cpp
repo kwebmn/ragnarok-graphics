@@ -43,6 +43,8 @@
 #include "win/real_ddraw.hpp"
 #include "win/ui_cost.hpp"
 #include "win/window_shadow.hpp"
+#include "win/uaui.hpp"
+#include "win/ui_sheet.hpp"
 
 namespace uagfx::win::loginwin {
 namespace {
@@ -88,6 +90,9 @@ struct Veil {
 };
 
 struct State {
+    uisheet::Sheet sheet;  // 3.0.18-beta.33: the card drawn by uaUI
+    int sheetGen = 0;
+    bool sheetShown = false;
     Veil veil;  // 3.0.11-beta.203
     WindowShadow shadow;
     bool on = false, shown = false, moved = false;
@@ -291,6 +296,10 @@ std::vector<Words> gdiWords(const std::vector<lc::Words>& in) {
 }
 
 void render(State& s) {
+    if (uaui::readyAnywhere()) {  // 3.0.18-beta.33: uaUI's card says it all again, no picture
+        ++s.sheetGen;
+        return;
+    }
     const uicost::Paint cost("the login", s.layout.w, s.layout.h);
     if (!panel::blank(s.picture, s.layout.w, s.layout.h)) return;
     lc::paint(s.picture, s.layout, s.fields, s.show);
@@ -831,7 +840,7 @@ void shelfFrame(State& s, HWND game, double k, int targetWidth, int targetHeight
 
 }  // namespace
 
-void frame(HWND game, bool on, bool status, bool news, loginview::View view, unsigned codePage, double k,
+static void frameInner(HWND game, bool on, bool status, bool news, loginview::View view, unsigned codePage, double k,
            int targetWidth, int targetHeight) {
     State& s = state();
     if (s.viewPicked && *s.viewPicked == view) s.viewPicked.reset();  // the settings say the same now
@@ -1015,8 +1024,8 @@ void frame(HWND game, bool on, bool status, bool news, loginview::View view, uns
                             std::to_string(s.layout.x) + ',' +
                             std::to_string(s.layout.y) + ';' + std::to_string(s.show.hover) + '#' +
                             std::to_string(uistyle::generation()) + '!' + s.error + '?' + s.fields.hint;
-    if (key != s.key) {
-        s.key = key;
+    if (const std::string drawn = key + (uaui::readyAnywhere() ? "u" : ""); drawn != s.key) {  // 3.0.18-beta.33
+        s.key = drawn;
         render(s);
     }
     if (s.dropOpen) dropFrame(s);  // 3.0.11-beta.177
@@ -1024,6 +1033,75 @@ void frame(HWND game, bool on, bool status, bool news, loginview::View view, uns
     s.shown = true;
     block(s, game);
     blockBar(s, game);
+}
+
+// 3.0.18-beta.33 (docs/superpowers/plans/2026-11-09-uaui-migration.md, stage 5 - by hand): the login in RmlUi's
+// markup, line by line as core logincard paints it - its glass, the account's and the password's fields (gold
+// focused, red refused), the ticks, ▾ of the shelf and the eye (core logincard's shapes as pictures), «Увійти»,
+// «Вийти»; the words where core logincard places them
+static void fillSheet(State& s, uisheet::Content& c) {
+    const lc::Layout& L = s.layout;
+    const lc::Fields& f = s.fields;
+    const lc::Show& sh = s.show;
+    const float sc = L.s;
+    constexpr uint32_t kCard = 0x10141C, kWhite = 0xFFFFFF, kGold = 0xC9A55B, kGold2 = 0xE6CB8A, kMuted = 0x9AA3B5;
+    constexpr uint32_t kBlack = 0x000000, kRed = 0xFF5A4E;
+    auto& u = c.under;
+    c.w = float(L.w), c.h = float(L.h);
+    c.rect(u, L.glass, 14 * sc, kCard, std::max(0.94f, uistyle::window()), kWhite, 0.12f, 1.0f * sc);
+    const auto field = [&](const panel::Box& b, bool focused, bool hot, bool refused) {
+        const float edge = refused ? 0.9f : focused ? 0.85f : hot ? 0.30f : 0.16f;
+        c.rect(u, b, 8 * sc, kBlack, 0.35f, refused ? kRed : focused ? kGold : kWhite, edge,
+               (focused || refused ? 1.5f : 1.0f) * sc);
+    };
+    const bool bad = !f.error.empty();
+    field(L.account, f.focus == lc::Focus::Account, sh.hover == int(lc::Part::Account),
+          bad && f.errorField == loginerr::Field::Account);
+    field(L.password, f.focus == lc::Focus::Password, sh.hover == int(lc::Part::Password),
+          bad && f.errorField == loginerr::Field::Password);
+    const auto box = [&](const panel::Box& b, bool on) {
+        c.rect(u, b, 4 * sc, on ? kGold : kWhite, on ? 0.85f : 0.06f, on ? kGold : kWhite, on ? 1.0f : 0.35f,
+               1.0f * sc);
+    };
+    box(L.tick, f.remember);
+    box(L.addTick, f.addShelf);
+    if (L.drop.w > 0) {  // ▾: core logincard's triangle in a picture of its own
+        const float a = sh.hover == int(lc::Part::Drop) || f.dropOpen ? 1.0f : 0.8f;
+        const int side = std::max(4, int(std::ceil(12 * sc)));
+        const std::string key = "drop" + std::to_string(side) + (a >= 1 ? "+" : "-");
+        const std::string src = s.sheet.made(key, side, side, [&](panel::Picture& p) {
+            lc::paintTriangle(p, float(side) / 2, float(side) / 2, 10 * sc, kGold2, a);
+        });
+        c.icons.push_back(uisheet::Icon{std::round(L.drop.x + L.drop.w / 2 - 2 * sc - float(side) / 2),
+                                        std::round(L.drop.y + L.drop.h / 2 - float(side) / 2), float(side),
+                                        float(side), 1, src});
+    }
+    {  // the eye
+        const float a = !f.passwordShown.empty() ? 1.0f : sh.hover == int(lc::Part::Eye) ? 0.9f : 0.6f;
+        const int w = std::max(4, int(std::ceil(20 * sc))), h = std::max(4, int(std::ceil(14 * sc)));
+        const std::string key = "eye" + std::to_string(w) + ':' + std::to_string(int(a * 10));
+        const std::string src = s.sheet.made(key, w, h, [&](panel::Picture& p) {
+            lc::paintEye(p, panel::Box{0, 0, float(w), float(h)}, kMuted, a, sc);
+        });
+        c.icons.push_back(uisheet::Icon{std::round(L.eye.x + 8 * sc), std::round(L.eye.y + L.eye.h / 2 - 7 * sc),
+                                        float(w), float(h), 1, src});
+    }
+    c.rect(u, L.enter, 9 * sc, kGold, sh.hover == int(lc::Part::Enter) ? 0.36f : 0.24f, kGold, 0.85f, 1.0f * sc);
+    c.rect(u, L.exit, 9 * sc, kWhite, sh.hover == int(lc::Part::Exit) ? 0.12f : 0.06f, kWhite, 0.16f, 1.0f * sc);
+    c.say(lc::words(L, f, sh, texts(s.view)));
+    if (s.dropOpen && s.dropPicture.width > 0)  // ▾'s list over the card
+        c.top.push_back(uisheet::Icon{s.drop.x, s.drop.y, float(s.dropPicture.width), float(s.dropPicture.height), 1,
+                                      s.sheet.icon(&s.dropPicture)});
+}
+
+void frame(HWND game, bool on, bool status, bool news, loginview::View view, unsigned codePage, double k,
+           int targetWidth, int targetHeight) {
+    frameInner(game, on, status, news, view, codePage, k, targetWidth, targetHeight);
+    State& s = state();
+    s.sheet.anywhere = true;  // before the world
+    const int gen = s.sheetGen ^ (s.dropOpen ? int(uaui::stamp(&s.dropPicture)) | 1 : 0);  // ▾'s list too
+    s.sheetShown = s.sheet.frame("login", s.shown && s.mode == State::Mode::Card, true, s.layout.x, s.layout.y, gen,
+                                 [&](uisheet::Content& c) { fillSheet(s, c); });
 }
 
 void draw(FrameRecord& record, gpu::Renderer& renderer) {
@@ -1037,12 +1115,14 @@ void draw(FrameRecord& record, gpu::Renderer& renderer) {
         logincontinuewin::draw(record, renderer);
     } else if (s.mode == State::Mode::Site) {  // 3.0.11-beta.180: the site sign-in card
         sitesigninwin::draw(record, renderer);
-    } else if (s.picture.width > 0 && s.picture.height > 0) {
+    } else if (s.sheetShown || (s.picture.width > 0 && s.picture.height > 0)) {
         const panel::Box& g = s.layout.glass;
-        s.shadow.draw(record, renderer, s.layout.x + int(g.x), s.layout.y + int(g.y), int(g.w), int(g.h),
-                      14 * s.scale, s.scale, s.k);
-        drawPart(record, renderer, s.picture, s.texture, s.texW, s.texH, s.upload, s.layout.x, s.layout.y, s.k);
-        if (s.dropOpen && s.dropPicture.width > 0)  // 3.0.11-beta.177: ▾'s list over the card
+        if (!s.sheetShown) {  // 3.0.18-beta.33: uaUI draws the card (with the windows' layer); ▾'s list stays here
+            s.shadow.draw(record, renderer, s.layout.x + int(g.x), s.layout.y + int(g.y), int(g.w), int(g.h),
+                          14 * s.scale, s.scale, s.k);
+            drawPart(record, renderer, s.picture, s.texture, s.texW, s.texH, s.upload, s.layout.x, s.layout.y, s.k);
+        }
+        if (!s.sheetShown && s.dropOpen && s.dropPicture.width > 0)  // 3.0.11-beta.177: ▾'s list over the card
             drawPart(record, renderer, s.dropPicture, s.dropTexture, s.dropTexW, s.dropTexH, s.dropUpload,
                      s.layout.x + int(s.drop.x), s.layout.y + int(s.drop.y), s.k);
     }

@@ -40,6 +40,9 @@ void draw(FrameRecord& record, gpu::Renderer& renderer, Layer layer = Layer::Hud
 bool mouse(HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result);
 
 bool ready();  // [interface] uaui on, in the world, started: the parts draw by uaUI this frame
+// 3.0.18-beta.33: on and started, in the world or not - the login's, the servers' and the characters' windows
+// (their documents Doc::anywhere; the rest hidden outside the world)
+bool readyAnywhere();
 // 3.0.18-beta.12 (the ruling of docs/superpowers/plans/2026-11-09-uaui-migration.md): the parts' recorded pictures
 // (panel::Picture::scene, core/ui_scene) drawn on the card - [interface] uaui on and started (in the world or not)
 bool sceneReady();
@@ -78,6 +81,7 @@ public:
     // 3.0.18-beta.21: drawn only - its part keeps its own mouse, keys and blocker (the hotbar's drag and wheel)
     bool passive = false;
     bool window = false;  // 3.0.18-beta.27: set before make() - drawn with the windows (uaui::Layer::Windows)
+    bool anywhere = false;  // 3.0.18-beta.33: shown outside the world too (the login's windows)
 
     // the runtime's
     bool fadePending = false;

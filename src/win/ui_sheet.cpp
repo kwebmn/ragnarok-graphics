@@ -51,6 +51,8 @@ const char* kDoc = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss
   data-style-width="t.w + 'px'" data-style-height="t.h + 'px'"
   data-style-font-size="t.px + 'px'" data-style-color="t.colour" data-style-line-height="t.lh + 'px'"
   >{{t.text}}</span>
+<img class="a" data-for="i : top" data-attr-src="i.src" data-style-left="i.x + 'px'" data-style-top="i.y + 'px'"
+  data-style-width="i.w + 'px'" data-style-height="i.h + 'px'" data-style-opacity="i.op"/>
 </body></rml>)RML";
 
 }  // namespace
@@ -104,13 +106,14 @@ void Sheet::glyph(Content& c, int button, bool sony, float x, float y, float h) 
 
 bool Sheet::frame(const char* name, bool on, bool window, int x, int y, int gen,
                   const std::function<void(Content&)>& fill) {
-    if (!uaui::ready() || !on) {
+    if (!(anywhere ? uaui::readyAnywhere() : uaui::ready()) || !on) {
         doc_.show(false);
         return false;
     }
     if (!doc_.made()) {
         doc_.passive = true;
         doc_.window = window;
+        doc_.anywhere = anywhere;
         if (!doc_.make(name, kDoc, [&](Rml::DataModelConstructor& m) {
                 if (auto b = m.RegisterStruct<Box>()) {
                     b.RegisterMember("x", &Box::x);
@@ -169,6 +172,7 @@ bool Sheet::frame(const char* name, bool on, bool window, int x, int y, int gen,
                 m.Bind("over", &c_.over);
                 m.Bind("words", &c_.words);
                 m.Bind("rings", &c_.rings);
+                m.Bind("top", &c_.top);
                 m.Bind("clip", &c_.clip);
                 m.Bind("clipped", &c_.clipped);
                 m.Bind("clipped_icons", &c_.clippedIcons);

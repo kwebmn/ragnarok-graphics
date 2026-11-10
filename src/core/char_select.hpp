@@ -78,4 +78,10 @@ struct Words {
 };
 std::vector<Words> words(const Layout& L, const std::vector<Slot>& slots, const Show& sh, const Texts& t);
 
+// 3.0.18-beta.33 (uaUI's characters): a used card's face circle and its HP / SP bars in the card's box
+struct CardParts {
+    panel::Box face, hpBar, spBar;
+};
+CardParts cardParts(const panel::Box& card, float s);
+
 }  // namespace uagfx::charselect

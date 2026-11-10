@@ -1522,6 +1522,11 @@ bool ready() {
     return s.started && s.on && s.inWorld;
 }
 
+bool readyAnywhere() {
+    const State& s = state();
+    return s.started && s.on && s.k > 0 && s.targetW > 0 && s.targetH > 0;
+}
+
 float dp() { return uistyle::partScale(state().k); }
 
 std::string utf8(const std::string& gameText) { return utf8From(gameText, state().codePage); }
@@ -1665,11 +1670,14 @@ void begin(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     // 3.0.18-beta.16 (the owner: «надо вообщето Переписывать 73 части в разметку RmlUi вручную»; R-ZK9ZK9, the game
     // gone after «Довідник» recorded): the parts' pictures no longer recorded - each part moves to RmlUi by hand
     panel::setRecording(false);
-    if (!on || !world || !s.started) {
+    if (!on || !s.started || !readyAnywhere()) {
         for (Doc* d : s.docs) d->show(false);
         uapad::gamewindow::setBlocked(uapad::gamewindow::Blocker::Uaui, nullptr, nullptr, false);
         return;
     }
+    if (!world)  // 3.0.18-beta.33: outside the world only the login's windows
+        for (Doc* d : s.docs)
+            if (!d->anywhere) d->show(false);
     s.frameStart = clockNow();
     s.context->SetDimensions({targetWidth, targetHeight});
     s.context->SetDensityIndependentPixelRatio(uistyle::partScale(k));
@@ -1689,7 +1697,7 @@ void begin(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
 
 void end() {
     State& s = state();
-    if (!ready()) return;
+    if (!readyAnywhere()) return;
     for (Doc* d : s.docs)  // a frame after showing: the fade in runs (the theme's transition)
         if (d->fadePending && d->shown()) d->doc()->SetClass("away", false), d->fadePending = false;
     s.context->Update();
@@ -1720,7 +1728,7 @@ void draw(FrameRecord& record, gpu::Renderer& renderer, Layer layer) {
     State& s = state();
     for (uint32_t id : s.released) renderer.releaseTexture(id);
     s.released.clear();
-    if (!ready() || s.batches.empty()) return;
+    if (!readyAnywhere() || s.batches.empty()) return;
     const size_t from = layer == Layer::Windows ? std::min(s.split, s.batches.size()) : 0;
     const size_t to = layer == Layer::Windows ? s.batches.size() : std::min(s.split, s.batches.size());
     if (from >= to) return;

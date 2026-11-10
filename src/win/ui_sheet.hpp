@@ -47,6 +47,7 @@ struct Content {
     std::vector<Icon> icons;
     std::vector<Word> words;
     std::vector<Ring> rings;  // drawn after `under`, before the clipped view and `icons`
+    std::vector<Icon> top;    // 3.0.18-beta.33: pictures over everything (the login's ▾ list)
     // 3.0.18-beta.29: a scrolled view (the skills' tree) - its boxes and icons in the window's pixels, cut at `clip`;
     // drawn after `under`, before `icons`
     Box clip;
@@ -105,6 +106,7 @@ public:
     void glyph(Content& c, int button, bool sony, float x, float y, float h);
     // The glass's ground: the window's colour at the windows' opacity
     static std::string ground(uint32_t rgb, float opacity);
+    bool anywhere = false;  // 3.0.18-beta.33: set before the first frame - shown outside the world too (the login's)
 
 private:
     uaui::Doc doc_;

@@ -27,6 +27,8 @@
 #include "win/real_ddraw.hpp"
 #include "win/ui_cost.hpp"
 #include "win/window_shadow.hpp"
+#include "win/uaui.hpp"
+#include "win/ui_sheet.hpp"
 
 namespace uagfx::win::charselectwin {
 namespace {
@@ -49,6 +51,9 @@ using SendMsgFn = int(__attribute__((thiscall)) *)(uint32_t self, uint32_t sende
 using ModeMsgFn = uint32_t(__attribute__((thiscall)) *)(uint32_t mode, int msg, int a, int b, int c);
 
 struct State {
+    uisheet::Sheet sheet;  // 3.0.18-beta.33: the window drawn by uaUI
+    int sheetGen = 0;
+    bool sheetShown = false;
     WindowShadow shadow;
     bool on = false, shown = false, moved = false;
     unsigned codePage = 0;
@@ -198,6 +203,10 @@ std::vector<Words> gdiWords(const std::vector<cs::Words>& in) {
 }
 
 void render(State& s) {
+    if (uaui::readyAnywhere()) {  // 3.0.18-beta.33: uaUI's window says it all again, no picture
+        ++s.sheetGen;
+        return;
+    }
     const uicost::Paint cost("the characters", s.layout.w, s.layout.h);
     if (!panel::blank(s.picture, s.layout.w, s.layout.h)) return;
     cs::paint(s.picture, s.layout, s.slots, s.show);
@@ -350,7 +359,8 @@ void setCarousel(bool on) {  // 3.0.11-beta.275
     s.key.clear();
 }
 
-void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int targetHeight) {
+static void frameInner(HWND game, bool on, unsigned codePage, double k, int targetWidth,
+                       int targetHeight) {
     State& s = state();
     s.codePage = codePage;
     if (on != s.on) {
@@ -420,23 +430,89 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
                       std::to_string(uistyle::generation());
     for (const cs::Slot& sl : s.slots)
         key += ';' + sl.name + ',' + std::to_string(sl.level) + ',' + std::to_string(sl.hp) + (sl.face ? "f" : "");
-    if (key != s.key) {
-        s.key = key;
+    if (const std::string drawn = key + (uaui::readyAnywhere() ? "u" : ""); drawn != s.key) {  // 3.0.18-beta.33
+        s.key = drawn;
         render(s);
     }
     s.shown = true;
     block(s, game);
 }
 
+// 3.0.18-beta.33 (docs/superpowers/plans/2026-11-09-uaui-migration.md, stage 5 - by hand): the characters in
+// RmlUi's markup, line by line as core charselect paints it - its glass, the pages' arrows, the cards (the carousel's
+// far ones first and fainter, the chosen gold), a used one's face and HP / SP bars, the buttons by what the chosen
+// one allows; the words where core charselect places them
+static void fillSheet(State& s, uisheet::Content& c) {
+    const cs::Layout& L = s.layout;
+    const cs::Show& sh = s.show;
+    const float sc = L.s;
+    constexpr uint32_t kCard = 0x10141C, kWhite = 0xFFFFFF, kGold = 0xC9A55B, kHp = 0x4CC777, kSp = 0x3D7EEB;
+    constexpr uint32_t kBlack = 0x000000;
+    auto& u = c.under;
+    c.w = float(L.w), c.h = float(L.h);
+    c.rect(u, L.glass, 14 * sc, kCard, std::max(0.94f, uistyle::window()), kWhite, 0.12f, 1.0f * sc);
+    for (const panel::Box* b : {&L.pageLeft, &L.pageRight}) c.rect(u, *b, 7 * sc, kWhite, 0.06f);
+    const std::vector<size_t> order = L.carousel ? std::vector<size_t>{0, 4, 1, 3, 2} : std::vector<size_t>{0, 1, 2};
+    for (const size_t i : order) {
+        if (i >= L.slots.size()) continue;
+        const panel::Box& b = L.slots[i];
+        const bool chosen = int(i) == sh.selected, hot = int(i) == sh.hover;
+        const cs::Slot* sl = i < s.slots.size() ? &s.slots[i] : nullptr;
+        if (sl && sl->none) continue;
+        const float f = L.carousel ? L.scales[i] : 1.0f;
+        c.rect(u, b, 12 * sc * f, L.carousel ? kCard : kWhite,
+               L.carousel ? (f < 0.8f ? 0.82f : 0.92f) : hot ? 0.07f : 0.04f, chosen ? kGold : kWhite,
+               chosen ? 1.0f : hot ? 0.24f : 0.12f, (chosen ? 2.0f : 1.0f) * sc);
+        if (!sl || !sl->used) continue;
+        const cs::CardParts in = cs::cardParts(b, sc * f);
+        c.rect(u, in.face, in.face.w / 2, kBlack, 0.30f);
+        if (sl->face && sl->face->width > 0)
+            c.icons.push_back(uisheet::Icon{std::round(in.face.x + (in.face.w - float(sl->face->width)) / 2),
+                                            std::round(in.face.y + (in.face.h - float(sl->face->height)) / 2),
+                                            float(sl->face->width), float(sl->face->height), 1,
+                                            s.sheet.icon(sl->face)});
+        const auto bar = [&](const panel::Box& bb, int now, int most, uint32_t rgb) {
+            c.rect(u, bb, bb.h / 2, kWhite, 0.08f);
+            if (most > 0 && now > 0)
+                c.rect(u, panel::Box{bb.x, bb.y, bb.w * std::min(1.0f, float(now) / float(most)), bb.h}, bb.h / 2, rgb,
+                       0.9f);
+        };
+        bar(in.hpBar, sl->hp, sl->maxHp, kHp);
+        bar(in.spBar, sl->sp, sl->maxSp, kSp);
+    }
+    const cs::Slot* chosen =
+        sh.selected >= 0 && sh.selected < int(s.slots.size()) ? &s.slots[size_t(sh.selected)] : nullptr;
+    for (size_t i = 0; i < L.buttons.size(); ++i) {
+        const cs::Button b = cs::Button(i);
+        const bool can = chosen ? cs::allowed(*chosen, b) : b == cs::Button::Back;
+        const bool primary = b == cs::Button::Enter || (b == cs::Button::Make && chosen && !chosen->used);
+        const bool hot = int(i) == sh.hoverButton;
+        c.rect(u, L.buttons[i], 9 * sc, primary ? kGold : kWhite,
+               !can ? 0.02f : primary ? (hot ? 0.36f : 0.24f) : (hot ? 0.12f : 0.06f), primary && can ? kGold : kWhite,
+               primary && can ? 0.85f : 0.16f, 1.0f * sc);
+    }
+    c.say(cs::words(L, s.slots, sh, texts()));
+}
+
+void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int targetHeight) {
+    frameInner(game, on, codePage, k, targetWidth, targetHeight);
+    State& s = state();
+    s.sheet.anywhere = true;  // 3.0.18-beta.33: before the world
+    s.sheetShown = s.sheet.frame("charselect", s.shown, true, s.layout.x, s.layout.y, s.sheetGen,
+                                 [&](uisheet::Content& c) { fillSheet(s, c); });
+}
+
 void draw(FrameRecord& record, gpu::Renderer& renderer) {
     State& s = state();
-    if (!s.shown || s.k <= 0 || s.picture.width <= 0 || s.picture.height <= 0) return;
+    if (!s.shown || s.k <= 0 || ((s.picture.width <= 0 || s.picture.height <= 0) && !s.sheetShown)) return;
     int cursor = -1, cx = 0, cy = 0;
     if (readGameCursor(cx, cy)) cursor = panel::cursorDraw(record, float(cx), float(cy));
     const panel::Box& g = s.layout.glass;
-    s.shadow.draw(record, renderer, s.layout.x + int(g.x), s.layout.y + int(g.y), int(g.w), int(g.h), 14 * s.scale,
-                  s.scale, s.k);
-    drawPart(record, renderer, s.picture, s.texture, s.texW, s.texH, s.upload, s.layout.x, s.layout.y, s.k);
+    if (!s.sheetShown) {  // 3.0.18-beta.33: uaUI draws the window (with the windows' layer)
+        s.shadow.draw(record, renderer, s.layout.x + int(g.x), s.layout.y + int(g.y), int(g.w), int(g.h),
+                      14 * s.scale, s.scale, s.k);
+        drawPart(record, renderer, s.picture, s.texture, s.texW, s.texH, s.upload, s.layout.x, s.layout.y, s.k);
+    }
     if (cursor >= 0) record.moveLastBefore(record.commands().size() - size_t(cursor) - 1, size_t(cursor));
 }
 

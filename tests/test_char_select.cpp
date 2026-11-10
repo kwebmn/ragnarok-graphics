@@ -106,3 +106,13 @@ TEST(char_select_words_and_picture) {
     const uint32_t gold = edge(L.slots[0]), plain = edge(L.slots[1]);
     CHECK(((gold >> 16) & 0xFF) > ((plain >> 16) & 0xFF) + 40);
 }
+
+// 3.0.18-beta.33: uaUI's characters - a card's face and its bars inside the card
+TEST(char_select_card_parts_inside_the_card) {
+    const panel::Box card{100, 50, 220, 320};
+    const charselect::CardParts p = charselect::cardParts(card, 1.0f);
+    for (const panel::Box* b : {&p.face, &p.hpBar, &p.spBar})
+        CHECK(b->w > 0 && b->x >= card.x && b->x + b->w <= card.x + card.w && b->y >= card.y &&
+              b->y + b->h <= card.y + card.h);
+    CHECK(p.hpBar.y < p.spBar.y);
+}
