@@ -31,6 +31,7 @@
 #include "win/game_camera.hpp"
 #include "win/log.hpp"
 #include "win/paths.hpp"
+#include "win/uaui.hpp"
 #include "win/picture_draw.hpp"
 #include "win/real_ddraw.hpp"
 #include "win/storage_window.hpp"
@@ -103,6 +104,7 @@ struct State {
     float toastK = 0, toastScale = 1;
     int toastW = 0, toastH = 0;  // the target's
     panel::Picture toastPicture;
+    bool toastUi = false;  // 3.0.18-beta.24: drawn by uaUI
     uint32_t toastTexture = 0;
     int toastTexW = 0, toastTexH = 0;
     bool toastUpload = false;
@@ -525,7 +527,92 @@ char letterOf(WPARAM vk, bool shift) {
 
 }  // namespace
 
+namespace {
+
+// 3.0.18-beta.24 (docs/superpowers/plans/2026-11-09-uaui-migration.md, stage 4 - by hand): «+N …» of a thing come
+// into the bag in RmlUi's markup - a gold pill over the bag's right end (the bag closed: the screen's lower middle),
+// its last 0.4 s fading; drawn only
+const char* kToastDoc = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss"/></head>
+<body class="it" data-model="itemtoast" data-style-width="w + 'px'" data-style-height="h + 'px'">
+<span class="toast" data-style-left="x + 'px'" data-style-top="y + 'px'" data-style-width="tw + 'px'"
+  data-style-height="th + 'px'" data-style-line-height="th + 'px'" data-style-border-radius="th / 2 + 'px'"
+  data-style-border-width="s + 'px'" data-style-font-size="13 * s + 'px'" data-style-opacity="op">{{text}}</span>
+</body></rml>)RML";
+
+struct ToastUi {
+    uaui::Doc doc;
+    float w = 0, h = 0, s = 1, x = 0, y = 0, tw = 0, th = 0, op = 1;
+    Rml::String text;
+};
+
+ToastUi& toastUi() {
+    static ToastUi u;
+    return u;
+}
+
+// Its box (x, y, w, h) in the target's pixels and its opacity now; false when not shown
+bool toastPlace(const State& s, ULONGLONG now, int& x, int& y, int& w, int& h, float& fade) {
+    if (!s.on || !s.toastOn || s.toast.empty() || now >= s.toastUntil || s.toastK <= 0) return false;
+    const float sc = s.toastScale;
+    w = int(std::ceil(measure(s.toast, 13 * sc, true) + 24 * sc));
+    h = int(std::ceil(26 * sc));
+    x = s.toastW / 2 - w / 2, y = int(float(s.toastH) * 0.78f);  // the bag closed: the screen's lower middle
+    if (s.shown) {  // over the bag's right end
+        x = s.layout.x + s.layout.w - w;
+        y = s.layout.y - h - int(6 * sc);
+    }
+    x = std::clamp(x, 0, std::max(0, s.toastW - w));
+    y = std::clamp(y, 0, std::max(0, s.toastH - h));
+    fade = std::clamp(float(s.toastUntil - now) / 400.0f, 0.0f, 1.0f);  // its last 0.4 s fading
+    return true;
+}
+
+bool toastFrame(State& s) {
+    ToastUi& u = toastUi();
+    int x = 0, y = 0, w = 0, h = 0;
+    float fade = 0;
+    const bool shown = toastPlace(s, GetTickCount64(), x, y, w, h, fade);
+    if (!uaui::ready() || !shown) {
+        u.doc.show(false);
+        return uaui::ready();
+    }
+    if (!u.doc.made()) {
+        u.doc.passive = true;
+        if (!u.doc.make("item toast", kToastDoc, [&](Rml::DataModelConstructor& m) {
+                m.Bind("w", &u.w);
+                m.Bind("h", &u.h);
+                m.Bind("s", &u.s);
+                m.Bind("x", &u.x);
+                m.Bind("y", &u.y);
+                m.Bind("tw", &u.tw);
+                m.Bind("th", &u.th);
+                m.Bind("op", &u.op);
+                m.Bind("text", &u.text);
+            }))
+            return false;
+    }
+    u.w = float(s.toastW), u.h = float(s.toastH), u.s = s.toastScale;
+    u.x = float(x), u.y = float(y), u.tw = float(w), u.th = float(h), u.op = fade;
+    u.text = s.toast;
+    u.doc.dirtyAll();
+    u.doc.place(0, 0);
+    u.doc.show(true);
+    return true;
+}
+
+void frameInner(HWND game, bool on, unsigned codePage, double k, int targetWidth, int targetHeight, bool toast);
+
+}  // namespace
+
 void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int targetHeight, bool toast) {
+    frameInner(game, on, codePage, k, targetWidth, targetHeight, toast);
+    State& s = state();
+    s.toastUi = toastFrame(s);
+}
+
+namespace {
+
+void frameInner(HWND game, bool on, unsigned codePage, double k, int targetWidth, int targetHeight, bool toast) {
     State& s = state();
     s.codePage = codePage;
     s.toastOn = toast;
@@ -639,6 +726,8 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
     s.shown = true;
     block(s, game);
 }
+
+}  // namespace
 
 void draw(FrameRecord& record, gpu::Renderer& renderer) {
     State& s = state();
@@ -901,7 +990,10 @@ bool giveDrag(uint32_t drag) {  // 3.0.11-beta.115
 void drawToast(FrameRecord& record, gpu::Renderer& renderer) {
     State& s = state();
     const ULONGLONG now = GetTickCount64();
-    if (!s.on || !s.toastOn || s.toast.empty() || now >= s.toastUntil || s.toastK <= 0) return;
+    if (s.toastUi) return;  // 3.0.18-beta.24: drawn by uaUI
+    int x = 0, y = 0, w = 0, h = 0;
+    float fade = 0;
+    if (!toastPlace(s, now, x, y, w, h, fade)) return;
     const float sc = s.toastScale;
     if (s.toast != s.toastPainted) {
         s.toastPainted = s.toast;
@@ -914,15 +1006,6 @@ void drawToast(FrameRecord& record, gpu::Renderer& renderer) {
         drawWords(p, {Words{all, utf8Wide(s.toast), 0xF3C653, 13 * sc, true, UINT(DT_CENTER), false}});
         s.toastUpload = true;
     }
-    const int w = s.toastPicture.width, h = s.toastPicture.height;
-    int x = s.toastW / 2 - w / 2, y = int(float(s.toastH) * 0.78f);  // the bag closed: the screen's lower middle
-    if (s.shown) {  // over the bag's right end
-        x = s.layout.x + s.layout.w - w;
-        y = s.layout.y - h - int(6 * sc);
-    }
-    x = std::clamp(x, 0, std::max(0, s.toastW - w));
-    y = std::clamp(y, 0, std::max(0, s.toastH - h));
-    const float fade = std::clamp(float(s.toastUntil - now) / 400.0f, 0.0f, 1.0f);  // its last 0.4 s fading
     drawPicture(record, renderer, s.toastPicture, s.toastTexture, s.toastTexW, s.toastTexH, s.toastUpload, x, y,
                 s.toastK, fade);
 }

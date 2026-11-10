@@ -51,8 +51,7 @@ picture's upload gone. Cost if wrong: per-pixel glows (panel::over loops) land i
 - [ ] party panel (beta.19 by hand), mercenary/homunculus blocks
 - [x] buffs column and its further lines — beta.20 by hand (core layout boxes in px)
 - [x] hotbar — beta.21 by hand (passive doc: its own input; core hotbar::view)
-- [x] experience strip — beta.23 by hand (passive doc; core charblock::stripBars)
-- [ ] experience bars, experience gain, item toast
+- [x] experience bars, experience gain, item toast — beta.23-.24 by hand (the shelf toast with its undo goes with the login stage)
 - [ ] hunt panel, MVP panel, tracker
 - [ ] minimap frame and its list (the map picture as `pic:`)
 
@@ -90,3 +89,4 @@ picture's upload gone. Cost if wrong: per-pixel glows (panel::over loops) land i
 - 2026-11-10 beta.21: hotbar by hand in RML (core hotbar::view: every part placed and said; passive uaui::Doc - drag/wheel/keys stay the part's), grey icons/blocked/pad badges/battle icon made once
 - 2026-11-10 beta.22: uaui::mouse takes a release only after its own press (owner: windows did not drag)
 - 2026-11-10 beta.23: experience strip by hand in RML (band, bars with ticks by data-for, gain label with outline, tip; core charblock::stripBars shared with the picture)
+- 2026-11-10 beta.24: experience gains over the monsters and the item toast by hand in RML (passive full-screen docs)

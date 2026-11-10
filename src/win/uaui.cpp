@@ -796,6 +796,12 @@ input.checkbox:checked { background-color: #3d7fd8; border-color: #3d7fd8; }
 .bc .tip .b { display: block; font-size: 11.5dp; color: #9aa3b5; height: 15dp; line-height: 15dp; }
 /* 3.0.18-beta.21: the hotbar (win/hotbar) - the concept's cells; places in the target's pixels */
 .xb { position: absolute; font-family: Plex; color: #eceff5; }
+.xg { position: absolute; font-family: Plex; }
+.it { position: absolute; font-family: Plex; }
+.it .toast { position: absolute; box-sizing: border-box; text-align: center; font-weight: bold; color: #f3c653;
+             white-space: nowrap; background-color: #10141ceb; border-color: #f3c653b3; }
+.xg .gain { position: absolute; width: 600dp; height: 22dp; line-height: 22dp; text-align: center; font-size: 15dp;
+            font-weight: bold; color: #f3d27a; white-space: nowrap; font-effect: outline(2px #000000d9); }
 .xb .band { position: absolute; left: 0; width: 100%; background-color: #0000008c; }
 .xb .row { position: absolute; left: 0; width: 100%; }
 .xb .fill { position: absolute; left: 0; top: 0; height: 100%; }
