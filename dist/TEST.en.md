@@ -1,3 +1,5 @@
+- The item card closer to the original: the big item picture on the left, the description on the right, the slots below - a card's picture and name, two a row. A click on a card opens its description in the same card; a click on the title ("‹ item name") goes back. The card texts inside the item text (from beta.108) are gone.
+
 - The item card: under the item's description, each inserted card's name in gold and its own description from the game's table (as it is, for any card). The card shows up to 20 rows; a longer one scrolls with the wheel.
 
 - The login card (login, password, ▾ of saved logins, the eye, ticks, "Увійти" / "Вийти", links, the site line) is now laid out by the new interface library. The login and password fields are matched by name; the presses are the same.
