@@ -827,6 +827,8 @@ input.checkbox:checked { background-color: #3d7fd8; border-color: #3d7fd8; }
 .mp { position: absolute; font-family: Plex; border-color: #ffffff17; }
 .tr { position: absolute; font-family: Plex; }
 .mm { position: absolute; font-family: Plex; }
+/* 3.0.18-beta.52 (R-W9WZ4G: the signs off the round buttons' middles): an edge inside the box, as roundRect's */
+.mm div, .sh div, .ig div, .tr div, .hb div, .hp, .mp { box-sizing: border-box; }
 .ig { position: absolute; font-family: Plex; }
 .sh { position: absolute; font-family: Plex; }
 .sh div, .sh span, .sh .a { position: absolute; }
