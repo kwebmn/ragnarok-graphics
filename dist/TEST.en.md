@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.18-beta.19 — what's new
+
+- **The party panel is on the new library:** with it on, the panel is built anew - faces, the leader's crown, class or cast, HP per cent or the map, the HP bar, the cast line, the arrow to the member, buffs with their times, red and gold rows, the compact view, folding. A click on a member does the same as before.
+
 # uaRO Graphics 3.0.18-beta.18 — what's new
 
 - **The target card is on the new library:** with it on, the card is built anew - the monster's picture, name, level, element in its colour, HP bar, the book and the controller buttons; the details open under the cursor and a click opens its card in the in-game reference. The look is the same.
