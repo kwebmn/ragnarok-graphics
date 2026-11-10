@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.18-beta.24 — what's new
+
+- **Experience over monsters and the "+N ..." item note now use "Нова бібліотека інтерфейсу (RmlUi)":** the gold labels rising over a killed monster and the pill about an item that came into the bag are drawn by the new library. Without this switch nothing changes.
+
 # uaRO Graphics 3.0.18-beta.23 — what's new
 
 - **The experience bars at the bottom of the screen now use "Нова бібліотека інтерфейсу (RmlUi)":** the Base and Job bars with 10 % ticks, the last gain's label and the hover tip are drawn by the new library. Without this switch nothing changes.
