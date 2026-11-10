@@ -836,20 +836,22 @@ std::vector<Mark> shownMarks(const std::vector<Mark>& marks, const Layers& layer
     return out;
 }
 
-Layout layout(int targetW, int targetH, float scale, bool route, int listLines, bool net, bool found) {
+Layout layout(int targetW, int targetH, float scale, bool route, int listLines, bool net, bool found, float grow) {
     Layout L;
     const float s = std::max(0.5f, scale);
     L.s = s;
-    const float side = std::round(kSide * s), gap = std::round(kGap * s), b = std::round(kButton * s);
+    L.grow = std::clamp(grow, 1.0f, 3.0f);
+    const float sb = s * L.grow;  // the buttons' scale
+    const float side = std::round(kSide * s), gap = std::round(kGap * s), b = std::round(kButton * sb);
     L.w = int(side);
     L.map = panel::Box{0, 0, side, side};
-    const float inset = std::round(6 * s), bx = inset;  // the buttons: a column in the square's bottom left corner
+    const float inset = std::round(6 * sb), bx = inset;  // the buttons: a column in the square's bottom left corner
     L.expand = panel::Box{bx, side - inset - b, b, b};
-    L.zoomOut = panel::Box{bx, L.expand.y - std::round(kButtonGap * s) - b, b, b};
-    L.zoomIn = panel::Box{bx, L.zoomOut.y - std::round(kButtonGap * s) - b, b, b};
+    L.zoomOut = panel::Box{bx, L.expand.y - std::round(kButtonGap * sb) - b, b, b};
+    L.zoomIn = panel::Box{bx, L.zoomOut.y - std::round(kButtonGap * sb) - b, b, b};
     for (int i = 0; i < kLayers; ++i)  // 3.0.11-beta.119: the layers' row in the top left corner
-        L.layers[i] = panel::Box{bx + float(i) * (b + std::round(kButtonGap * s)), inset, b, b};
-    L.style = panel::Box{bx + float(kLayers) * (b + std::round(kButtonGap * s)) + std::round(4 * s), inset, b, b};
+        L.layers[i] = panel::Box{bx + float(i) * (b + std::round(kButtonGap * sb)), inset, b, b};
+    L.style = panel::Box{bx + float(kLayers) * (b + std::round(kButtonGap * sb)) + std::round(4 * sb), inset, b, b};
     float y = side + gap;
     const float bar = std::round(kBarH * s);
     L.caption = panel::Box{0, y, side, bar};
@@ -929,7 +931,7 @@ void paint(panel::Picture& out, const Layout& L, const Scene& sc, const Texts& t
     const float s = L.s, edge = std::max(1.0f, s);
     const View v = view(sc.map, sc.player, sc.cells, int(L.map.w));
     mapPixels(out, L.map, sc, v);
-    overMap(out, L.map, sc, v, s, 1.0f, markScale(sc.cells, sc.map, L.s));
+    overMap(out, L.map, sc, v, s, 1.0f, markScale(sc.cells, sc.map, L.s) * L.grow);
     roundCorners(out, L.map, kRadius * s);
     panel::roundRect(out, L.map, kRadius * s, kWhite, 0.0f, kWhite, 0.16f, edge);
     const float arm = 15 * s, thick = std::max(1.5f, 2 * s);  // the concept's gold corners
@@ -949,7 +951,8 @@ void paint(panel::Picture& out, const Layout& L, const Scene& sc, const Texts& t
         const panel::Box& b = *buttons[i].first;
         const bool over = sc.hover == parts[i];
         panel::roundRect(out, b, 6 * s, over ? kAccent : kDark, over ? 0.55f : 0.72f, kWhite, 0.18f, edge);
-        uiicons::draw(out, buttons[i].second, b.x + (b.w - 14 * s) / 2, b.y + (b.h - 14 * s) / 2, 14 * s, kWhite,
+        const float ic = 14 * s * L.grow;  // 3.0.18-beta.51
+        uiicons::draw(out, buttons[i].second, b.x + (b.w - ic) / 2, b.y + (b.h - ic) / 2, ic, kWhite,
                       1.0f, 2.6f);
     }
     for (int i = 0; i < kLayers; ++i) {  // 3.0.11-beta.119: the layers' buttons, each its marks' sign
@@ -957,14 +960,15 @@ void paint(panel::Picture& out, const Layout& L, const Scene& sc, const Texts& t
         if (b.w <= 0) continue;
         const bool over = sc.hover == Part::Layer && sc.hoverLayer == i;
         panel::roundRect(out, b, b.w / 2, over ? kAccent : kDark, over ? 0.55f : 0.72f, kWhite, 0.18f, edge);
-        layerSign(out, Layer(i), b.x + b.w / 2, b.y + b.h / 2, 5.5f * s, s, sc.layers.on[i], sc.kafraFace);
+        layerSign(out, Layer(i), b.x + b.w / 2, b.y + b.h / 2, 5.5f * s * L.grow, s * L.grow, sc.layers.on[i],
+                  sc.kafraFace);
     }
     if (L.style.w > 0) {  // 3.0.11-beta.120: the picture's switch - lit gold while «Схема» shows
         const panel::Box& b = L.style;
         const bool over = sc.hover == Part::Style;
         panel::roundRect(out, b, b.w / 2, sc.scheme || over ? kAccent : kDark, sc.scheme ? 0.75f : over ? 0.55f : 0.72f,
                          sc.scheme ? kAccent2 : kWhite, sc.scheme ? 0.8f : 0.18f, edge);
-        schemeSign(out, b.x + b.w / 2, b.y + b.h / 2, 5.5f * s, true);
+        schemeSign(out, b.x + b.w / 2, b.y + b.h / 2, 5.5f * s * L.grow, true);
     }
     panel::roundRect(out, L.caption, 8 * s, kCard, uistyle::panel(), kWhite, 0.12f, edge);  // the bar: name, cell, ▾
     if (sc.hover == Part::Fold) panel::roundRect(out, L.fold, 6 * s, kWhite, 0.10f);
@@ -1005,9 +1009,9 @@ std::vector<Words> mapWords(const Layout& L, const Scene& sc) {
         if (m.glyph != Glyph::Kafra || m.picture) continue;
         float x = 0, y = 0;
         cellToPanel(v, sc.map, m.cell, x, y);
-        const float r = markRadius(m.glyph, s);
+        const float r = markRadius(m.glyph, s) * L.grow;  // 3.0.18-beta.51: as its mark
         if (x - r < 0 || y - r < 0 || x + r > L.map.w || y + r > L.map.h) continue;
-        out.push_back(Words{panel::Box{x - r, y - r, 2 * r, 2 * r}, "K", kWhite, 9 * s, true, Align::Center});
+        out.push_back(Words{panel::Box{x - r, y - r, 2 * r, 2 * r}, "K", kWhite, 9 * s * L.grow, true, Align::Center});
     }
     return out;
 }
@@ -1087,7 +1091,7 @@ int markAt(const Layout& L, const Scene& sc, float x, float y) {
     for (size_t i = 0; i < sc.marks.size(); ++i) {
         float px = 0, py = 0;
         cellToPanel(v, sc.map, sc.marks[i].cell, px, py);
-        const float reach = radiusOf(sc.marks[i], L.s) * markScale(sc.cells, sc.map, L.s) + 4 * L.s;  // a hand more
+        const float reach = radiusOf(sc.marks[i], L.s) * markScale(sc.cells, sc.map, L.s) * L.grow + 4 * L.s;  // a hand more
         const float d = (px - x) * (px - x) + (py - y) * (py - y);
         if (d <= reach * reach && (best < 0 || d < bestD)) {
             best = int(i);
@@ -1343,7 +1347,7 @@ void paintMapSquare(panel::Picture& out, const Layout& L, const Scene& sc) {
     const panel::Box box{0, 0, float(w), float(h)};
     const View v = view(sc.map, sc.player, sc.cells, w);
     mapPixels(out, box, sc, v);
-    overMap(out, box, sc, v, L.s, 1.0f, markScale(sc.cells, sc.map, L.s));
+    overMap(out, box, sc, v, L.s, 1.0f, markScale(sc.cells, sc.map, L.s) * L.grow);
     roundCorners(out, box, kRadius * L.s);
 }
 

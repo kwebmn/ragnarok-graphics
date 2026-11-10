@@ -862,8 +862,11 @@ void render(State& s) {
     for (const Line& l : s.lines)
         t.list.push_back(minimap::Line{l.left, l.right, l.boss ? kBossText : 0u,
                                        l.timer ? minimap::kRouteRgb : 0u, l.boss});
+    // 3.0.18-beta.51 (the owner: «увеличил карту, а там иконки маленькие»): an enlarged minimap's buttons and marks
+    // bigger still - by its size's root
+    const float grow = std::sqrt(std::max(1.0f, hudedit::sizeOf(hudlayout::Part::Minimap)));
     s.layout = minimap::layout(s.targetW, s.targetH, s.scale, !t.route.empty(), s.folded ? 0 : int(t.list.size()),
-                               !t.net.empty(), !t.found.empty());  // .127: the round trip's plate; .213 a search's
+                               !t.net.empty(), !t.found.empty(), grow);  // .127: the round trip's plate; .213 search
     hudedit::place(hudlayout::Part::Minimap, s.k, s.targetW, s.targetH, s.layout.w, s.layout.h, s.layout.x,
                    s.layout.y);  // 3.0.11-beta.75: where the player put it
     const uicost::Paint cost("minimap", s.layout.w, s.layout.h);  // 3.0.11-beta.55 (beta.57: its size known)
@@ -1422,7 +1425,7 @@ bool uiFrame(State& s) {
             box(u.boxes, panel::Box{right ? cx - arm : cx, bottom ? cy - thick : cy, arm, thick}, 0, "gold");
             box(u.boxes, panel::Box{right ? cx - thick : cx, bottom ? cy - arm : cy, thick, arm}, 0, "gold");
         }
-        const int icon = std::max(8, int(std::ceil(14 * sc)));
+        const int icon = std::max(8, int(std::ceil(14 * sc * L.grow)));  // .51: grown with the buttons
         const std::pair<const panel::Box*, uiicons::Icon> buttons[] = {{&L.zoomIn, uiicons::Icon::Plus},
                                                                       {&L.zoomOut, uiicons::Icon::Minus},
                                                                       {&L.expand, uiicons::Icon::Expand}};
@@ -1451,7 +1454,7 @@ bool uiFrame(State& s) {
                                     (i == int(minimap::Layer::Kafra) && face ? ":" + std::to_string(uaui::stamp(face))
                                                                              : std::string());
             const std::string src = madeOnce(u, key, side, side, [&](panel::Picture& p) {
-                minimap::paintLayerSign(p, minimap::Layer(i), on, face, sc);
+                minimap::paintLayerSign(p, minimap::Layer(i), on, face, sc * L.grow);
             });
             u.icons.push_back(IconV{b.x, b.y, float(side), float(side), src});
         }

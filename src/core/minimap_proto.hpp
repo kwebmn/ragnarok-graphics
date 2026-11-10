@@ -76,8 +76,12 @@ struct Layout {
     // убрать»): a search's plate under the bar while its marks show - its words, ✕ that clears them
     panel::Box found, foundClear;
     float lineH = 0;
+    // 3.0.18-beta.51 (the owner: «увеличил карту, а там иконки маленькие»): the buttons and the marks this much bigger
+    // still (an enlarged minimap: its size's root)
+    float grow = 1;
 };
-Layout layout(int targetW, int targetH, float scale, bool route, int listLines, bool net = false, bool found = false);
+Layout layout(int targetW, int targetH, float scale, bool route, int listLines, bool net = false, bool found = false,
+              float grow = 1.0f);
 panel::Box netGraphBox(const Layout& L);  // 3.0.11-beta.127: the plate's graph (w 0 none)
 enum class Part : uint8_t {
     None, Map, ZoomIn, ZoomOut, Expand, Caption, Fold, Route, Stop, List, Layer, Style,

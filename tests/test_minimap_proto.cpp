@@ -938,3 +938,14 @@ TEST(minimap_proto_big_square_for_uaui) {
     minimap::paintBigSquare(square, picture, b, sc);
     CHECK(square.width == int(b.map.w) && square.height == int(b.map.h));
 }
+
+// 3.0.18-beta.51 (the owner: «увеличил карту, а там иконки маленькие» - the marks and the buttons): `grow` - the
+// buttons and the marks bigger than the map itself grew (an enlarged minimap)
+TEST(minimap_proto_buttons_and_marks_grow) {
+    const minimap::Layout plain = minimap::layout(1920, 1080, 1.6f, false, 0);
+    const minimap::Layout big = minimap::layout(1920, 1080, 1.6f, false, 0, false, false, 1.5f);
+    CHECK(big.grow == 1.5f && plain.grow == 1.0f);
+    CHECK(big.map.w == plain.map.w);  // the map as big
+    CHECK(std::fabs(big.zoomIn.w - plain.zoomIn.w * 1.5f) <= 1.0f && big.layers[0].w > plain.layers[0].w);
+    CHECK(big.expand.y + big.expand.h <= big.map.h && big.style.x + big.style.w <= big.map.w);  // still on the map
+}

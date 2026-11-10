@@ -116,3 +116,4 @@ picture's upload gone. Cost if wrong: per-pixel glows (panel::over loops) land i
 - 2026-11-10 beta.48 (R-QTH95E: «Довідник» with letters missing): the glyphs' atlas 2048 (1024 full at 4K), started again when full (Fonts::GetVersion bumped - RmlUi makes the words anew), only the changed rows uploaded
 - 2026-11-10 beta.49 (R-786CGH: «Група» at 90 %, the editor's gold frame narrower than the panel): the party, the character block and the target card tell «Розміщення інтерфейсу» their uaUI documents' size (times the part's size), not the old picture's
 - 2026-11-10 beta.50 (R-VMGJE8: the frame still narrower): the editor's frame is the part's blocked rectangle - the party's and the character block's now from their uaUI documents (their clicks there too)
+- 2026-11-10 beta.51 (owner: an enlarged minimap's icons small): minimap::Layout::grow = the size's root - its buttons, layer signs and marks bigger than the map grew
