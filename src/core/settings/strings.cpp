@@ -6694,6 +6694,8 @@ constexpr Entry kTexts[] = {
     {Text::VendSetupEmpty, "Nothing in the cart", "У візку нічого немає", "В тележке ничего нет"},
     {Text::VendSetupHint, "Click a thing in the cart to put it up", "Клацніть річ у візку, щоб виставити",
      "Нажмите вещь в тележке, чтобы выставить"},
+    // 3.0.18-beta.104 (R-K5QG6Z): a thing for sale - its whole stack's price
+    {Text::VendSetupTotal, "{1} z for all", "{1} z за все", "{1} z за все"},
     {Text::VendSetupPadPut, "put up", "виставити", "выставить"},
     {Text::VendSetupPadTake, "take back", "зняти", "снять"},
     {Text::VendSetupPadPrice, "price", "ціна", "цена"},

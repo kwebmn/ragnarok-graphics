@@ -69,48 +69,50 @@ void fill(Model& m, const gc::Layout& L, const gc::Info& g, const std::vector<gc
                                  !gc::allowed(i, sh.rights)};
     const float top = bodyTop(L);
     m.layer.w = float(L.w);
-    m.layer.h = std::max(0.0f, L.glass.h - top);
-    ly::Builder b(m.layer, panel::Box{0, top, 0, 0});
-    b.box(L.list, 8 * sc, 0x000000, 0.16f);
-    if (L.edit.w > 0 && sh.canEdit) {
-        b.box(L.edit, 8 * sc, kGold, sh.hoverEdit ? 0.34f : 0.22f, kGold, 0.8f, 1.0f * sc);
-        b.hit("edit", -1, L.edit);
-    }
-    if (sh.editing && sh.tab == gc::Tab::Notice) {  // the notice's fields, the one typed into in gold; «Скасувати»
-        for (int i = 0; i < 2; ++i)
-            if (L.fields[i].w > 0) {
-                b.box(L.fields[i], 6 * sc, kWhite, sh.hoverField == i ? 0.10f : 0.06f, sh.field == i ? kGold : kWhite,
-                      sh.field == i ? 0.8f : 0.16f, 1.0f * sc);
-                b.hit("field", i, L.fields[i]);
+    {
+        ly::Builder b(m.layer, panel::Box{0, top, 0, 0});
+        b.box(L.list, 8 * sc, 0x000000, 0.16f);
+        if (L.edit.w > 0 && sh.canEdit) {
+            b.box(L.edit, 8 * sc, kGold, sh.hoverEdit ? 0.34f : 0.22f, kGold, 0.8f, 1.0f * sc);
+            b.hit("edit", -1, L.edit);
+        }
+        if (sh.editing && sh.tab == gc::Tab::Notice) {  // the notice's fields, the one typed into in gold; «Скасувати»
+            for (int i = 0; i < 2; ++i)
+                if (L.fields[i].w > 0) {
+                    b.box(L.fields[i], 6 * sc, kWhite, sh.hoverField == i ? 0.10f : 0.06f,
+                          sh.field == i ? kGold : kWhite, sh.field == i ? 0.8f : 0.16f, 1.0f * sc);
+                    b.hit("field", i, L.fields[i]);
+                }
+            if (L.cancel.w > 0) {
+                b.box(L.cancel, 8 * sc, kWhite, sh.hoverCancel ? 0.14f : 0.06f, kWhite, 0.18f, 1.0f * sc);
+                b.hit("cancel", -1, L.cancel);
             }
-        if (L.cancel.w > 0) {
-            b.box(L.cancel, 8 * sc, kWhite, sh.hoverCancel ? 0.14f : 0.06f, kWhite, 0.18f, 1.0f * sc);
-            b.hit("cancel", -1, L.cancel);
+        }
+        if (sh.tab != gc::Tab::Members) {  // a skill's «+» where it can rise
+            for (size_t i = 0; i < L.plus.size(); ++i) {
+                const size_t at = i + size_t(std::max(0, sh.scroll));
+                if (at < more.lines.size() && more.lines[at].plus)
+                    b.box(L.plus[i], 6 * sc, kGold, sh.hoverPlus == int(i) ? 0.45f : 0.28f, kGold, 0.85f, 1.0f * sc);
+                b.hit("plus", int(i), L.plus[i]);
+            }
+        } else {
+            for (size_t i = 0; i < L.rows.size(); ++i) {  // each member's dot: in the game or not
+                const size_t at = i + size_t(std::max(0, sh.scroll));
+                if (at >= members.size()) break;
+                const float d = 8 * sc;
+                b.box(panel::Box{L.rows[i].x + 8 * sc, L.rows[i].y + (L.rows[i].h - d) / 2, d, d}, d / 2,
+                      members[at].online ? kOnline : kOffline, 0.95f);
+            }
+        }
+        for (const gc::Words& x : gc::words(L, g, members, more, sh, t)) {  // the body's words (the head's its own)
+            if (x.box.y + x.box.h / 2 < top) continue;
+            b.word(x.box, x.text, x.rgb, x.px, x.bold,
+                   x.align == gc::Align::Right    ? ly::Align::Right
+                   : x.align == gc::Align::Center ? ly::Align::Center
+                                                  : ly::Align::Left);
         }
     }
-    if (sh.tab != gc::Tab::Members) {  // a skill's «+» where it can rise
-        for (size_t i = 0; i < L.plus.size(); ++i) {
-            const size_t at = i + size_t(std::max(0, sh.scroll));
-            if (at < more.lines.size() && more.lines[at].plus)
-                b.box(L.plus[i], 6 * sc, kGold, sh.hoverPlus == int(i) ? 0.45f : 0.28f, kGold, 0.85f, 1.0f * sc);
-            b.hit("plus", int(i), L.plus[i]);
-        }
-    } else {
-        for (size_t i = 0; i < L.rows.size(); ++i) {  // each member's dot: in the game or not
-            const size_t at = i + size_t(std::max(0, sh.scroll));
-            if (at >= members.size()) break;
-            const float d = 8 * sc;
-            b.box(panel::Box{L.rows[i].x + 8 * sc, L.rows[i].y + (L.rows[i].h - d) / 2, d, d}, d / 2,
-                  members[at].online ? kOnline : kOffline, 0.95f);
-        }
-    }
-    for (const gc::Words& x : gc::words(L, g, members, more, sh, t)) {  // the body's words (the head's its own)
-        if (x.box.y + x.box.h / 2 < top) continue;
-        b.word(x.box, x.text, x.rgb, x.px, x.bold,
-               x.align == gc::Align::Right    ? ly::Align::Right
-               : x.align == gc::Align::Center ? ly::Align::Center
-                                              : ly::Align::Left);
-    }
+    m.layer.h = ly::contentHeight(m.layer, 8 * sc);  // 3.0.18-beta.104: from what it holds
 }
 
 bool refit(Rml::ElementDocument* doc, gc::Layout& L) {

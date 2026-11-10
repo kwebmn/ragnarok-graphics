@@ -107,6 +107,15 @@ void Builder::word(const panel::Box& b, const std::string& text, uint32_t rgb, f
                                 std::string(bold ? "w bold" : "w") + align});
 }
 
+float contentHeight(const Layer& l, float pad) {
+    float most = 0;
+    for (const BoxV& b : l.boxes) most = std::max(most, b.y + b.h);
+    for (const HitV& h : l.hits) most = std::max(most, h.y + h.h);
+    for (const WordV& w : l.words)
+        if (!w.text.empty()) most = std::max(most, w.y + w.h);
+    return std::ceil(most + pad);
+}
+
 bool bodyShift(Rml::ElementDocument* doc, const panel::Box& coreOrigin, float& dx, float& dy) {
     const std::vector<Placed> body = placesOf(doc, "body");
     if (body.empty()) return false;

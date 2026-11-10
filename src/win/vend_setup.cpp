@@ -22,6 +22,7 @@
 #include "win/code_page.hpp"
 #include "win/game_camera.hpp"
 #include "win/log.hpp"
+#include "win/stash_watch.hpp"
 #include "win/picture_draw.hpp"
 #include "win/real_ddraw.hpp"
 #include "win/ui_cost.hpp"
@@ -67,11 +68,12 @@ const char* kLive = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcs
 <div class="cols"><div class="col"><div class="lbl">{{cart_word}}</div><div class="list">
 <div class="ware ctl" data-for="r, i : cart" data-event-click="vt_cart(i)"><img data-if="r.icon != ''"
   data-attr-src="r.icon"/><div class="wname"><span class="name">{{r.name}}</span><span
-  class="stock">{{r.count}}</span></div></div>
+  class="stock">{{r.count}}</span><span class="mkt" data-if="r.market != ''">{{r.market}}</span></div></div>
 <div class="hint" data-if="cart.size == 0">{{empty}}</div></div></div>
 <div class="col"><div class="lbl">{{sale_word}}</div><div class="list">
 <div class="ware" data-for="r, i : sale"><img data-if="r.icon != ''" data-attr-src="r.icon"/><div class="wname"><span
-  class="name">{{r.name}}</span><span class="stock">{{r.count}}</span></div><div class="field price ctl"
+  class="name">{{r.name}}</span><span class="stock">{{r.count}}</span><span class="mkt"
+  data-if="r.market != ''">{{r.market}}</span></div><div class="field price ctl"
   data-class-typing="focus == i + 1" data-event-click="vt_price(i)">{{r.price}}<span class="caret"
   data-if="focus == i + 1 && caret"></span></div><span class="pm ctl"
   data-event-click="vt_remove(i)">&#x2715;</span></div>
@@ -83,6 +85,7 @@ const char* kLive = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcs
 </body></rml>)RML";
 struct SetupWareView {
     Rml::String name, count, price, icon;
+    Rml::String market;  // 3.0.18-beta.104: the site's market line ("" none)
 };
 
 struct State {
@@ -213,6 +216,7 @@ void readList(const State& s, uint32_t listAt, std::vector<vs::Row>& rows, std::
         }
         r.name = words.empty() ? "#" + id : utf8Of(widened(hotbar::spaced(words), s.codePage));
         r.count = int(rd32(raw, 0x10));
+        r.id = std::atoi(id.c_str());
         const int refine = int(rd32(raw, 0x40));
         r.refine = refine > 0 && refine <= 20 ? refine : 0;
         const auto f = files.find(id);
@@ -451,6 +455,7 @@ static void liveFrame(State& s) {
             v.RegisterMember("count", &SetupWareView::count);
             v.RegisterMember("price", &SetupWareView::price);
             v.RegisterMember("icon", &SetupWareView::icon);
+            v.RegisterMember("market", &SetupWareView::market);
         }
         m.RegisterArray<std::vector<SetupWareView>>();
         m.Bind("cart", &s.cartViews);
@@ -497,12 +502,24 @@ static void liveFrame(State& s) {
         });
     });
     if (!s.live.made()) return;
-    const vs::Texts t = texts(s);
+    vs::Texts t = texts(s);
+    // 3.0.18-beta.104 (R-K5QG6Z: «For sale {1} / {2}» shown as it is): the places used and the most
+    t.sale = settings::fmt(t.sale, {std::to_string(s.sale.size()), std::to_string(s.show.most)});
     const auto viewOf = [&](const vs::Row& r, bool sale) {
         SetupWareView v;
         v.name = r.refine > 0 ? "+" + std::to_string(r.refine) + " " + r.name : r.name;
         v.count = "\xC3\x97" + std::to_string(r.count);
-        v.price = sale ? (r.price.empty() ? "0" : r.price) + " z" : "";
+        // 3.0.18-beta.104 (R-K5QG6Z «окно с ценой маленькое»): the price grouped, the stack's sum beside the count, the
+        // site's market under it
+        const long long price = vs::priceOf(r.price);
+        v.price = sale ? iw::grouped(price) + " z" : "";
+        if (sale && price > 0 && r.count > 1)
+            v.count += " \xC2\xB7 " + settings::fmt(say(settings::Text::VendSetupTotal),
+                                                    {iw::grouped(price * r.count)});
+        std::vector<iw::Item> one(1);
+        one[0].id = r.id;
+        stashwatch::prices(one);
+        v.market = one[0].market;
         if (r.icon && r.icon->width > 0) v.icon = uaui::picture(r.icon, uaui::stamp(r.icon), s.iconPrev[r.icon]);
         return v;
     };
@@ -511,7 +528,8 @@ static void liveFrame(State& s) {
     for (const vs::Row& r : s.sale) sale.push_back(viewOf(r, true));
     const auto same = [](const std::vector<SetupWareView>& a, const std::vector<SetupWareView>& b) {
         return a.size() == b.size() && std::equal(a.begin(), a.end(), b.begin(), [](const auto& x, const auto& y) {
-                   return x.name == y.name && x.count == y.count && x.price == y.price && x.icon == y.icon;
+                   return x.name == y.name && x.count == y.count && x.price == y.price && x.icon == y.icon &&
+                          x.market == y.market;
                });
     };
     if (!same(cart, s.cartViews)) s.cartViews = std::move(cart), s.live.doc.dirty("cart");

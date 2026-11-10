@@ -16,6 +16,7 @@ namespace uagfx::vendsetup {
 struct Row {
     std::string name;  // UTF-8
     int count = 0, refine = 0;
+    int id = 0;  // 3.0.18-beta.104: the item's number (its market line)
     const panel::Picture* icon = nullptr;
     std::string price;  // the sale's: its field's words (digits)
 };

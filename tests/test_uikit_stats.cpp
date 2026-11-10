@@ -74,3 +74,25 @@ TEST(uikit_stats_plan_tab_parts_hit) {
     CHECK(sw::hitTest(L, mid(L.planReset).x, mid(L.planReset).y).part == sw::Part::PlanReset);
     rmlhost::close(doc);
 }
+
+// 3.0.18-beta.104 (R-WH87QX: «на весь екран растянулась»): laid out again and again, the window keeps its height - the
+// body's from what it holds, not from the window as laid out (its edge's pixel grew it each frame)
+TEST(uikit_stats_height_stays_frame_after_frame) {
+    sw::Data d;
+    sw::Show sh;
+    static sl::Model m;
+    sw::Layout L = sw::layout(0, 0, 1, d, texts(), measure, 0);
+    sl::fill(m, L, d, sh, texts(), measure);
+    Rml::ElementDocument* doc = rmlhost::load(sl::rml(), [&](Rml::DataModelConstructor& c) { sl::bind(c, m); });
+    int first = 0;
+    for (int frame = 0; frame < 6; ++frame) {
+        L = sw::layout(0, 0, 1, d, texts(), measure, 0);
+        CHECK(sl::refit(doc, L));
+        if (frame == 0) first = L.h;
+        sl::fill(m, L, d, sh, texts(), measure);
+        rmlhost::update();
+    }
+    CHECK(std::abs(L.h - first) <= 1);
+    CHECK(L.h < 700);
+    rmlhost::close(doc);
+}

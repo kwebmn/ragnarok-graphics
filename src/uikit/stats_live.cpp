@@ -74,76 +74,78 @@ void fill(Model& m, const sw::Layout& L, const sw::Data& d, const sw::Show& sh, 
         m.tabs[size_t(i)] = TabV{t.tabs[i], i == L.tab, i == sh.hoverTab && i != L.tab};
     const float top = L.title.y + L.title.h;  // the body under the head
     m.layer.w = float(L.w);
-    m.layer.h = std::max(0.0f, L.glass.h - top);
-    ly::Builder b(m.layer, panel::Box{0, top, 0, 0});
-    // the highlights as the sheet drew them (core statwin's paint)
-    if (L.tab == sw::kPlanTab) {
-        const auto lit = [&](sw::Part part, int i) { return sh.hoverPlan == int(part) && sh.hoverPlanIndex == i; };
-        for (int i = 0; i < sw::kStats && i < int(L.planMinus.size()); ++i) {
-            b.box(L.planMinus[size_t(i)], 6 * sc, kWhite, lit(sw::Part::PlanMinus, i) ? 0.2f : 0.07f, kWhite, 0.15f,
-                  1.0f * sc);
-            b.box(L.planPlus[size_t(i)], 6 * sc, kWhite, lit(sw::Part::PlanPlus, i) ? 0.2f : 0.07f, kGreen, 0.6f,
-                  1.0f * sc);
-            b.hit("planminus", i, L.planMinus[size_t(i)]);
-            b.hit("planplus", i, L.planPlus[size_t(i)]);
+    {
+        ly::Builder b(m.layer, panel::Box{0, top, 0, 0});
+        // the highlights as the sheet drew them (core statwin's paint)
+        if (L.tab == sw::kPlanTab) {
+            const auto lit = [&](sw::Part part, int i) { return sh.hoverPlan == int(part) && sh.hoverPlanIndex == i; };
+            for (int i = 0; i < sw::kStats && i < int(L.planMinus.size()); ++i) {
+                b.box(L.planMinus[size_t(i)], 6 * sc, kWhite, lit(sw::Part::PlanMinus, i) ? 0.2f : 0.07f, kWhite, 0.15f,
+                      1.0f * sc);
+                b.box(L.planPlus[size_t(i)], 6 * sc, kWhite, lit(sw::Part::PlanPlus, i) ? 0.2f : 0.07f, kGreen, 0.6f,
+                      1.0f * sc);
+                b.hit("planminus", i, L.planMinus[size_t(i)]);
+                b.hit("planplus", i, L.planPlus[size_t(i)]);
+            }
+            for (int i = 0; i < 2; ++i) {
+                b.box(i ? L.levelNext : L.levelPrev, 6 * sc, kWhite, lit(sw::Part::PlanLevel, i) ? 0.2f : 0.08f);
+                b.hit("level", i, i ? L.levelNext : L.levelPrev);
+            }
+            b.box(L.planReset, 8 * sc, kWhite, lit(sw::Part::PlanReset, -1) ? 0.16f : 0.07f, kWhite, 0.2f, 1.0f * sc);
+            b.hit("reset", -1, L.planReset);
+            for (int i = 0; i < sw::kPlanBuffs; ++i) {
+                if (L.buffChips[i].w <= 0) continue;
+                const bool on = sh.buffOn[i];
+                b.box(L.buffChips[i], 12 * sc, on ? kGold : kWhite,
+                      lit(sw::Part::PlanBuff, i) ? 0.22f : on ? 0.16f : 0.05f, on ? kGold2 : kWhite, on ? 0.7f : 0.15f,
+                      1.0f * sc);
+                b.hit("buff", i, L.buffChips[i]);
+            }
+            for (int i = 0; i < 2; ++i) {
+                b.box(i ? L.goalNext : L.goalPrev, 6 * sc, kWhite, lit(sw::Part::Goal, i) ? 0.2f : 0.08f);
+                b.hit("goal", i, i ? L.goalNext : L.goalPrev);
+            }
+            b.box(panel::Box{L.goals.x, L.goals.y - 8 * sc, L.goals.w, 1 * sc}, 0, kWhite, 0.08f);
+            b.box(panel::Box{L.mobs.x, L.mobs.y - 6 * sc, L.mobs.w, 1 * sc}, 0, kWhite, 0.08f);
+            b.box(panel::Box{L.planResults.x, L.planResults.y + kHeaderH * sc - 1 * sc, L.planResults.w, 1 * sc}, 0,
+                  kWhite, 0.1f);
+        } else if (L.tab == sw::kRefTab) {
+            for (int i = 0; i < 2; ++i) {
+                b.box(i ? L.next : L.prev, 6 * sc, kWhite, sh.hoverArrow == i ? 0.2f : 0.08f);
+                b.hit("arrow", i, i ? L.next : L.prev);
+            }
+            for (const panel::Box* x : {&L.aspd, &L.cost, &L.bonus})
+                b.box(panel::Box{x->x, x->y + 26 * sc - 1 * sc, x->w, 1 * sc}, 0, kWhite, 0.1f);
+        } else {
+            b.box(panel::Box{L.header.x, L.header.y + L.header.h - 1 * sc, L.header.w, 1 * sc}, 0, kWhite, 0.08f);
+            const int lit = sh.hoverRow >= 0 ? sh.hoverRow : sh.hoverPlus >= 0 ? sh.hoverPlus : sh.selected;
+            for (int i = 0; i < sw::kStats && i < int(L.rows.size()); ++i) {
+                const panel::Box& r = L.rows[size_t(i)];
+                if (i == lit) b.box(r, 6 * sc, kWhite, 0.06f);
+                if (i < sw::kStats - 1) b.box(panel::Box{r.x, r.y + r.h - 1 * sc, r.w, 1 * sc}, 0, kWhite, 0.05f);
+                b.hit("row", i, r);
+                if (d.base[i] >= 99) continue;
+                const bool can = sw::canRaise(d, i);
+                b.box(L.pluses[size_t(i)], 6 * sc, kWhite, can ? (i == sh.hoverPlus ? 0.22f : 0.12f) : 0.03f,
+                      can ? kGold2 : kWhite, can ? 0.7f : 0.06f, 1.0f * sc);
+                b.hit("plus", i, L.pluses[size_t(i)]);
+            }
+            const int lit2 = sh.hoverBattle >= 0 ? sh.hoverBattle : sh.pinnedBattle;
+            if (lit2 >= 0 && lit2 < int(L.battleRows.size()))
+                b.box(L.battleRows[size_t(lit2)], 6 * sc, kWhite, sh.pinnedBattle == lit2 ? 0.09f : 0.06f);
+            for (size_t i = 0; i < L.battleRows.size(); ++i) b.hit("battle", int(i), L.battleRows[i]);
+            b.box(panel::Box{kSide * sc / 2, L.line.y + 4 * sc, L.glass.w - kSide * sc, L.line.h - 10 * sc}, 8 * sc,
+                  kWhite, 0.04f, kWhite, 0.08f, 1.0f * sc);
         }
-        for (int i = 0; i < 2; ++i) {
-            b.box(i ? L.levelNext : L.levelPrev, 6 * sc, kWhite, lit(sw::Part::PlanLevel, i) ? 0.2f : 0.08f);
-            b.hit("level", i, i ? L.levelNext : L.levelPrev);
+        for (const sw::Words& x : sw::words(L, d, sh, t, measure)) {  // the body's words (the head's are its own)
+            if (x.box.y + x.box.h / 2 < top) continue;
+            b.word(x.box, x.text, x.rgb, x.px, x.bold,
+                   x.align == sw::Align::Right    ? ly::Align::Right
+                   : x.align == sw::Align::Center ? ly::Align::Center
+                                                  : ly::Align::Left);
         }
-        b.box(L.planReset, 8 * sc, kWhite, lit(sw::Part::PlanReset, -1) ? 0.16f : 0.07f, kWhite, 0.2f, 1.0f * sc);
-        b.hit("reset", -1, L.planReset);
-        for (int i = 0; i < sw::kPlanBuffs; ++i) {
-            if (L.buffChips[i].w <= 0) continue;
-            const bool on = sh.buffOn[i];
-            b.box(L.buffChips[i], 12 * sc, on ? kGold : kWhite,
-                  lit(sw::Part::PlanBuff, i) ? 0.22f : on ? 0.16f : 0.05f, on ? kGold2 : kWhite, on ? 0.7f : 0.15f,
-                  1.0f * sc);
-            b.hit("buff", i, L.buffChips[i]);
-        }
-        for (int i = 0; i < 2; ++i) {
-            b.box(i ? L.goalNext : L.goalPrev, 6 * sc, kWhite, lit(sw::Part::Goal, i) ? 0.2f : 0.08f);
-            b.hit("goal", i, i ? L.goalNext : L.goalPrev);
-        }
-        b.box(panel::Box{L.goals.x, L.goals.y - 8 * sc, L.goals.w, 1 * sc}, 0, kWhite, 0.08f);
-        b.box(panel::Box{L.mobs.x, L.mobs.y - 6 * sc, L.mobs.w, 1 * sc}, 0, kWhite, 0.08f);
-        b.box(panel::Box{L.planResults.x, L.planResults.y + kHeaderH * sc - 1 * sc, L.planResults.w, 1 * sc}, 0,
-              kWhite, 0.1f);
-    } else if (L.tab == sw::kRefTab) {
-        for (int i = 0; i < 2; ++i) {
-            b.box(i ? L.next : L.prev, 6 * sc, kWhite, sh.hoverArrow == i ? 0.2f : 0.08f);
-            b.hit("arrow", i, i ? L.next : L.prev);
-        }
-        for (const panel::Box* x : {&L.aspd, &L.cost, &L.bonus})
-            b.box(panel::Box{x->x, x->y + 26 * sc - 1 * sc, x->w, 1 * sc}, 0, kWhite, 0.1f);
-    } else {
-        b.box(panel::Box{L.header.x, L.header.y + L.header.h - 1 * sc, L.header.w, 1 * sc}, 0, kWhite, 0.08f);
-        const int lit = sh.hoverRow >= 0 ? sh.hoverRow : sh.hoverPlus >= 0 ? sh.hoverPlus : sh.selected;
-        for (int i = 0; i < sw::kStats && i < int(L.rows.size()); ++i) {
-            const panel::Box& r = L.rows[size_t(i)];
-            if (i == lit) b.box(r, 6 * sc, kWhite, 0.06f);
-            if (i < sw::kStats - 1) b.box(panel::Box{r.x, r.y + r.h - 1 * sc, r.w, 1 * sc}, 0, kWhite, 0.05f);
-            b.hit("row", i, r);
-            if (d.base[i] >= 99) continue;
-            const bool can = sw::canRaise(d, i);
-            b.box(L.pluses[size_t(i)], 6 * sc, kWhite, can ? (i == sh.hoverPlus ? 0.22f : 0.12f) : 0.03f,
-                  can ? kGold2 : kWhite, can ? 0.7f : 0.06f, 1.0f * sc);
-            b.hit("plus", i, L.pluses[size_t(i)]);
-        }
-        const int lit2 = sh.hoverBattle >= 0 ? sh.hoverBattle : sh.pinnedBattle;
-        if (lit2 >= 0 && lit2 < int(L.battleRows.size()))
-            b.box(L.battleRows[size_t(lit2)], 6 * sc, kWhite, sh.pinnedBattle == lit2 ? 0.09f : 0.06f);
-        for (size_t i = 0; i < L.battleRows.size(); ++i) b.hit("battle", int(i), L.battleRows[i]);
-        b.box(panel::Box{kSide * sc / 2, L.line.y + 4 * sc, L.glass.w - kSide * sc, L.line.h - 10 * sc}, 8 * sc,
-              kWhite, 0.04f, kWhite, 0.08f, 1.0f * sc);
     }
-    for (const sw::Words& x : sw::words(L, d, sh, t, measure)) {  // the body's words (the head's are its own)
-        if (x.box.y + x.box.h / 2 < top) continue;
-        b.word(x.box, x.text, x.rgb, x.px, x.bold,
-               x.align == sw::Align::Right    ? ly::Align::Right
-               : x.align == sw::Align::Center ? ly::Align::Center
-                                              : ly::Align::Left);
-    }
+    m.layer.h = ly::contentHeight(m.layer, 10 * sc);  // 3.0.18-beta.104: from what it holds
 }
 
 bool refit(Rml::ElementDocument* doc, sw::Layout& L) {

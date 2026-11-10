@@ -593,7 +593,11 @@ select selectbox option:checked { color: #e6cb8a; }
 .vstw .cols { display: flex; }
 .vstw .col { display: block; flex: 1; margin-right: 10dp; }
 .vstw .list { height: 260dp; }
-.vstw .field.price { flex: 0; width: 110dp; margin: 0 6dp; text-align: right; }
+/* 3.0.18-beta.104 (R-K5QG6Z «окно с ценой маленькое»): flex 0 had made the price field 0 wide (its basis 0) */
+.vstw .field.price { flex: none; width: 140dp; height: 30dp; line-height: 18dp; margin: 0 8dp; text-align: right;
+                     font-size: 14dp; font-weight: bold; color: #f3c653; }
+.vstw .field.price.typing { background-color: #00000080; border-color: #f3c653e6; }
+.vstw .wname .mkt { display: block; font-size: 10.5dp; color: #9fe07c; }
 .ow { width: 380dp; }
 .ow .orow { display: flex; align-items: center; justify-content: space-between; margin: 4dp 0; min-height: 24dp; }
 .ow .orow input.range { width: 150dp; }

@@ -55,6 +55,9 @@ struct Builder {
     void hit(const char* part, int index, const panel::Box& b);
     void word(const panel::Box& b, const std::string& text, uint32_t rgb, float px, bool bold, Align a);
 };
+// 3.0.18-beta.104 (R-WH87QX: «на весь екран растянулась»): the layer's height from what it holds (its lowest box,
+// place or word, `pad` under it) - never from the window as laid out (its edge's pixel made it grow each frame)
+float contentHeight(const Layer& l, float pad);
 // The body's place against the window's: (dx, dy) to add to the core boxes of the body; false - not laid out
 bool bodyShift(Rml::ElementDocument* doc, const panel::Box& coreOrigin, float& dx, float& dy);
 

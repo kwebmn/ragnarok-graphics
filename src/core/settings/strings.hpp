@@ -687,7 +687,7 @@ enum class Text : uint16_t {
     InterfaceMyShop, InterfaceMyShopHint, MyShopTitle, MyShopSign, MyShopLeft, MyShopWorth, MyShopClose, MyShopSold,
     // 3.0.16-beta.33: the shop's opening
     InterfaceVendSetup, InterfaceVendSetupHint, VendSetupTitle, VendSetupSign, VendSetupSignHint, VendSetupCart,
-    VendSetupSale, VendSetupOpen, VendSetupCancel, VendSetupEmpty, VendSetupHint,
+    VendSetupSale, VendSetupOpen, VendSetupCancel, VendSetupEmpty, VendSetupHint, VendSetupTotal,
     VendSetupPadPut, VendSetupPadTake, VendSetupPadPrice,  // 3.0.16-beta.39: the pad's hint
     // 3.0.11-beta.168: the whisper's settings
     InterfaceWhisperSetup, InterfaceWhisperSetupHint, WhisperTitle, WhisperHint, WhisperStrangers, WhisperFriends,
