@@ -1,3 +1,8 @@
+# uaRO Graphics 3.0.18-beta.43 — what's new
+
+- **The new library's windows have their shadow again** — as the other windows do.
+- **The new library's windows overlap as before:** the last opened or clicked one on top.
+
 # uaRO Graphics 3.0.18-beta.42 — what's new
 
 - **The big map now uses "Нова бібліотека інтерфейсу (RmlUi)":** the card, its header, the cross, the layer buttons and "Схема" are drawn by the new library; the map with its marks stays its own picture. Clicks, the wheel and dragging work as before.
