@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.18-beta.49 — what's new
+
+- **Fixed with "Нова бібліотека інтерфейсу (RmlUi)": in "Розміщення інтерфейсу" the gold frame of the party, the character block and the target card now fits the part itself** — it was narrower before, taken from the old size.
+
 # uaRO Graphics 3.0.18-beta.48 — what's new
 
 - **Fixed with "Нова бібліотека інтерфейсу (RmlUi)": letters went missing in "Довідник" and other windows** on big screens (4K) — the letters' store ran out of room. It is twice as big now, and when it fills up the letters are laid out again.
