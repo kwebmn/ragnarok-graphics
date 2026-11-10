@@ -137,6 +137,7 @@
 #include "win/log.hpp"
 #include "win/low_hp_edge.hpp"
 #include "win/uaui.hpp"
+#include "win/carry_icon.hpp"
 #include "win/uaui_showcase.hpp"
 #include "win/thread_time.hpp"
 #include "win/ui_cost.hpp"
@@ -769,6 +770,7 @@ void Context::endScene() {
         padhintwin::draw(record, *renderer);    // 3.0.11-beta.92: the controller's hint line
         hudedit::draw(record, *renderer);       // 3.0.11-beta.75: the parts' frames while they are placed
         uaui::draw(record, *renderer, uaui::Layer::Top);  // 3.0.18-beta.69: over everything of ours (the veil)
+        carryicon::draw(record, *renderer);  // 3.0.18-beta.91: a dragged thing's icon over the windows
         cursorlook::draw(record, *renderer);    // 3.0.11-beta.198: the interface's cursor over all of it
         record.takeWork();  // the driver's own draws are not the game's
     }
@@ -841,6 +843,7 @@ void Context::present(const Rect& source, bool waitForVblank) {
         padhintwin::draw(record, *renderer);    // 3.0.11-beta.92
         hudedit::draw(record, *renderer);       // 3.0.11-beta.75
         uaui::draw(record, *renderer, uaui::Layer::Top);  // 3.0.18-beta.69
+        carryicon::draw(record, *renderer);  // 3.0.18-beta.91: a dragged thing's icon over the windows
         cursorlook::draw(record, *renderer);    // 3.0.11-beta.198
     }
     record.takeWork();  // the driver's own draws are not the game's

@@ -1,3 +1,4 @@
+#include "win/carry_icon.hpp"
 #include "win/hotbar.hpp"
 
 #include <windowsx.h>
@@ -1698,7 +1699,7 @@ void draw(FrameRecord& record, gpu::Renderer& renderer) {
     if (s.lift.dragging && s.liftPicture.width > 0) {  // 3.0.11-beta.147: the lifted icon, its middle at the pointer
         const int x = s.layout.x + int(std::lround(s.liftX)) - s.liftPicture.width / 2;
         const int y = s.layout.y + int(std::lround(s.liftY)) - s.liftPicture.height / 2;
-        drawPart(record, renderer, s.liftPicture, s.liftTexture, s.liftTexW, s.liftTexH, s.liftUpload, x, y, s.k);
+        carryicon::put(s.liftPicture, s.liftTexture, s.liftTexW, s.liftTexH, s.liftUpload, x, y, s.k);  // .91
     }
     if (cursor >= 0) record.moveLastBefore(record.commands().size() - size_t(cursor) - 1, size_t(cursor));
 }

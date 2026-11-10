@@ -1,3 +1,4 @@
+#include "win/carry_icon.hpp"
 #include "win/skill_window.hpp"
 
 #include <windowsx.h>
@@ -971,7 +972,8 @@ void draw(FrameRecord& record, gpu::Renderer& renderer) {
         }
         const int x = int(std::lround(float(cx) * s.k)) - icon->width / 2;
         const int y = int(std::lround(float(cy) * s.k)) - icon->height / 2;
-        drawPart(record, renderer, s.dragIcon, s.dragTexture, s.dragW, s.dragH, s.dragUpload, x, y, s.k);
+        // 3.0.18-beta.91: drawn over the windows (uaUI's layer of them comes after the stack)
+        carryicon::put(s.dragIcon, s.dragTexture, s.dragW, s.dragH, s.dragUpload, x, y, s.k);
     }
     if (cursor >= 0) record.moveLastBefore(record.commands().size() - size_t(cursor) - 1, size_t(cursor));
 }
