@@ -26,3 +26,4 @@ Order (safest first; the cleanup last, once nothing needs the old code):
   windows with the sheets); the cursor = a uaUI document in the Cursor layer (drawn where the game's cursor faces were
   dropped). The recording code goes with G.
 - C beta.70: sheets dirty only the lists that changed (Content compared), Doc::place/prop set on change (transform, grounds), per-geometry mesh cache (remeshed count in the cost log line)
+- D beta.71: gamefiles::Reader(dir, updatesOnly); uaui shipped(name) reads data\uaro-graphics\ui\<name> from the data folder or the update GRFs: theme.rcss after the built-in rules, palette.txt before the player's, <part>.rml when the player has none; README tells admins

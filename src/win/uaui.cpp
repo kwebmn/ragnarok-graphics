@@ -31,6 +31,7 @@
 #include "win/game_camera.hpp"
 #include "win/gpu/renderer.hpp"
 #include "win/code_page.hpp"
+#include "win/game_files.hpp"
 #include "win/log.hpp"
 #include "win/picture_draw.hpp"
 #include "win/ui_font.hpp"
@@ -1336,6 +1337,7 @@ const char* kWindowTemplate = R"(<template name="ua-window" content="content">
 
 
 std::string themeFile() { return layout::join(gameDir(), layout::kUiTheme); }
+std::string shipped(const std::string& name);  // 3.0.18-beta.71
 
 // 3.0.18-beta.59: what ui\builtin is for (UTF-8, as the samples)
 const char* kSamplesReadme =
@@ -1350,7 +1352,9 @@ const char* kSamplesReadme =
     "uaro-graphics\\ui\\theme.rcss (они идут поверх встроенных). Файлы здесь переписываются с каждой версией.\r\n\r\n"
     "EN: The built-in markup of every new interface part (<part>.rml) and its style (theme.rcss). To change a part,\r\n"
     "copy its file one level up (uaro-graphics\\ui\\<part>.rml) and edit the copy - the game picks it up within a\r\n"
-    "second; delete the copy for the built-in one. Your own style rules go to uaro-graphics\\ui\\theme.rcss.\r\n";
+    "second; delete the copy for the built-in one. Your own style rules go to uaro-graphics\\ui\\theme.rcss.\r\n\r\n"
+    "Server admins (3.0.18-beta.71): the same files packed into a GRF in the client's updates folder as\r\n"
+    "data\\uaro-graphics\\ui\\theme.rcss, palette.txt and <part>.rml reach every player - under the player's own.\r\n";
 
 // 3.0.18-beta.59: a small text file whole ("" none or over 1 MB); `there` whether it is
 std::string readSmall(const std::string& path, bool* there = nullptr) {
@@ -1369,6 +1373,17 @@ std::string readSmall(const std::string& path, bool* there = nullptr) {
     CloseHandle(h);
     return text;
 }
+// 3.0.18-beta.71 (the big six, D: themes through «оновлення»): data\uaro-graphics\ui\<name> from the data folder
+// or the admin's update GRFs ("" none) - under the player's own files, over the built-in ones
+std::string shipped(const std::string& name) {
+    static gamefiles::Reader reader(gameDir(), true);
+    std::vector<uint8_t> bytes;
+    if (!reader.read("data\\uaro-graphics\\ui\\" + name, bytes)) return {};
+    static std::set<std::string> told;
+    if (told.insert(name).second) LOG_INFO("uaui: %s from the updates (%zu bytes)", name.c_str(), bytes.size());
+    return std::string(bytes.begin(), bytes.end());
+}
+
 // 3.0.18-beta.59 (the possibilities' item 12): uaro-graphics\ui - a part's own markup over the built-in one
 std::string uiDir() { return layout::join(gameDir(), "uaro-graphics\\ui"); }
 std::string safeName(const std::string& name) {
@@ -1397,6 +1412,9 @@ public:
         auto* f = new Open_;
         if (path == "uaui:theme.rcss") {  // 3.0.18-beta.17: the file's rules after the built-in ones (over them)
             f->data = uitheme::themedCss(state().theme, kTheme);  // 3.0.18-beta.54: in the theme chosen
+            // 3.0.18-beta.71: the admin's rules from the updates over the built-in ones, the player's over both
+            const std::string admin = shipped("theme.rcss");
+            if (!admin.empty()) f->data += "\n" + uitheme::themedCss(state().theme, admin);
             State& s = state();
             s.themeFile = false;
             HANDLE h = CreateFileA(themeFile().c_str(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr,
@@ -2118,6 +2136,8 @@ bool Doc::make(const char* name, const char* rml, const std::function<void(Rml::
         if (GetFileAttributesExA(layout::join(uiDir(), file).c_str(), GetFileExInfoStandard, &a))
             fileStamp_ = (unsigned long long)a.ftLastWriteTime.dwHighDateTime << 32 | a.ftLastWriteTime.dwLowDateTime;
         LOG_INFO("uaui: «%s» from ui\\%s", name, file.c_str());
+    } else if (const std::string sh = shipped(file); !sh.empty() && load(sh)) {  // 3.0.18-beta.71: the admin's
+        shipped_ = sh;
     } else if (!load(builtin_)) {
         return false;
     }
@@ -2188,8 +2208,9 @@ void Doc::lookAtFile() {
     if (stamp == fileStamp_) return;
     fileStamp_ = stamp;
     if (stamp == 0) {
-        LOG_INFO("uaui: «%s» - ui\\%s.rml gone, the built-in markup again", name.c_str(), safeName(name).c_str());
-        load(builtin_);
+        LOG_INFO("uaui: «%s» - ui\\%s.rml gone, the %s markup again", name.c_str(), safeName(name).c_str(),
+                 shipped_.empty() ? "built-in" : "updates'");
+        load(shipped_.empty() ? builtin_ : shipped_);
         return;
     }
     bool there = false;
@@ -2265,6 +2286,10 @@ void themeFrame(State& s, const std::string& name, bool look) {
             text.resize(got);
         }
         CloseHandle(h);
+    }
+    if (const std::string admin = shipped("palette.txt"); !admin.empty()) {  // 3.0.18-beta.71: the admin's first
+        std::string wrong;
+        uitheme::read(admin, s.theme, wrong);
     }
     if (!text.empty()) uitheme::read(text, s.theme, bad);
     ++s.themeSerial;

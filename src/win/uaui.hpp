@@ -127,6 +127,7 @@ private:
     std::map<std::string, std::string> props_;
     // 3.0.18-beta.59: its markup - the built-in one, its model's name; the player's file's time (0 none)
     std::string builtin_, model_name_;
+    std::string shipped_;  // 3.0.18-beta.71: the admin's markup from the updates ("" none)
     unsigned long long fileStamp_ = 0;
     bool load(const std::string& rml);
 public:

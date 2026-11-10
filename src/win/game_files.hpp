@@ -17,6 +17,8 @@ std::vector<std::string> archives(const std::string& gameDir);       // as the g
 class Reader {
 public:
     explicit Reader(std::string gameDir);
+    // 3.0.18-beta.71: the data folder and updates\'s GRFs alone (the admin's, not the game's big archives)
+    Reader(std::string gameDir, bool updatesOnly);
     ~Reader();
     bool read(const std::string& entry, std::vector<uint8_t>& out, std::string* from = nullptr);
 
@@ -25,6 +27,7 @@ private:
     std::string dir_;
     std::vector<std::unique_ptr<Archive>> archives_;
     bool listed_ = false;
+    bool updatesOnly_ = false;
 };
 
 }  // namespace uagfx::win::gamefiles

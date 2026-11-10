@@ -106,6 +106,7 @@ struct Reader::Archive {
 };
 
 Reader::Reader(std::string gameDir) : dir_(std::move(gameDir)) {}
+Reader::Reader(std::string gameDir, bool updatesOnly) : dir_(std::move(gameDir)), updatesOnly_(updatesOnly) {}
 Reader::~Reader() = default;
 
 bool Reader::read(const std::string& entry, std::vector<uint8_t>& out, std::string* from) {
@@ -115,7 +116,7 @@ bool Reader::read(const std::string& entry, std::vector<uint8_t>& out, std::stri
     }
     if (!listed_) {
         listed_ = true;
-        for (const std::string& file : archives(dir_)) {
+        for (const std::string& file : updatesOnly_ ? updateFiles(dir_) : archives(dir_)) {
             auto a = std::make_unique<Archive>();
             a->path = file.find(':') != std::string::npos ? file : dir_ + "\\" + file;
             const std::string ext = lower(file.size() > 4 ? file.substr(file.size() - 4) : "");
