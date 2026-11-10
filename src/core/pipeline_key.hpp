@@ -9,7 +9,8 @@ namespace uagfx {
 
 // 0.24, 0.30: a world draw by a shader of its own instead of the game's: a puff of the chimneys' smoke, a beam of the
 // forest's light, (0.31) lava, (2.7.54) a draw of the map warp (core/portal.hpp partOf).
-enum class DrawShader : uint8_t { Game, Smoke, Ray, Lava, Portal };
+// 3.0.18-beta.64: Backdrop - the new interface's frosted glass (the picture's copy read blurred)
+enum class DrawShader : uint8_t { Game, Smoke, Ray, Lava, Portal, Backdrop };
 
 // The pipeline state a draw needs; packed, it is the key the renderer caches pipelines by. The keys met in a session
 // are saved and their pipelines built at the next start, so an effect does not stutter the first time it is drawn

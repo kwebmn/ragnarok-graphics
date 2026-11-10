@@ -936,6 +936,8 @@ struct Config {
     bool uaui = false;
     // 3.0.18-beta.11: [interface] uaui_showcase - uaUI's components in one window, for the developers (with uaui on)
     bool uauiShowcase = false;
+    // 3.0.18-beta.64: [interface] uaui_glass (uaUI)
+    bool uauiGlass = false;
     // 3.0.18-beta.61: [interface] uaui_effects (uaUI)
     bool uauiEffects = false;
     // 3.0.18-beta.58: [interface] uaui_motion (uaUI)

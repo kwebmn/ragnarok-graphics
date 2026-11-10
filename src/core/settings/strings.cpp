@@ -8266,6 +8266,15 @@ constexpr Entry kTexts[] = {
      "Части, которые рисует новая библиотека, получают мягкие тени под окнами и панелями, свечение на "
      "выбранных и готовых клетках, лёгкий блик на полосках и кнопках, чисто обрезанные круглые углы. "
      "Работает с включённой новой библиотекой интерфейса."},
+    {Text::InterfaceUauiGlass, "Frosted glass windows (new library)", "Скляні вікна (нова бібліотека)",
+     "Стеклянные окна (новая библиотека)"},
+    {Text::InterfaceUauiGlassHint,
+     "Windows of the new library show the world behind them softly blurred, like frosted glass. Direct3D "
+     "12 only; costs some video card time. Works with the new interface library on.",
+     "Вікна нової бібліотеки показують світ за собою м'яко розмитим, як матове скло. Лише Direct3D 12; "
+     "трохи навантажує відеокарту. Працює з увімкненою новою бібліотекою інтерфейсу.",
+     "Окна новой библиотеки показывают мир за собой мягко размытым, как матовое стекло. Только Direct3D "
+     "12; немного нагружает видеокарту. Работает с включённой новой библиотекой интерфейса."},
     // 3.0.18-beta.13: uaUI's themes
     {Text::InterfaceTheme, "Interface theme", "Тема інтерфейсу", "Тема интерфейса"},
     {Text::InterfaceThemeHint,

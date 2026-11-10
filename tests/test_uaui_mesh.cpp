@@ -157,3 +157,17 @@ TEST(uaui_mesh_shades_a_radial_gradient) {
     }
     CHECK(middle);
 }
+
+// 3.0.18-beta.64: a rounded box filled (the glass's shape) - its area the box's less the corners' cut
+TEST(uaui_mesh_fills_a_rounded_box) {
+    std::vector<uaui::Point> pts;
+    std::vector<int> ix;
+    uaui::roundedBox(0, 0, 40, 20, 6, 0xFFFFFFFF, pts, ix);
+    float area = 0;
+    for (size_t i = 0; i + 2 < ix.size(); i += 3) {
+        const uaui::Point &a = pts[size_t(ix[i])], &b = pts[size_t(ix[i + 1])], &c = pts[size_t(ix[i + 2])];
+        area += std::fabs((b.x - a.x) * (c.y - a.y) - (c.x - a.x) * (b.y - a.y)) / 2;
+    }
+    const float want = 40 * 20 - (4 - 3.14159265f) * 36;
+    CHECK(std::fabs(area - want) < 0.01f * want);
+}

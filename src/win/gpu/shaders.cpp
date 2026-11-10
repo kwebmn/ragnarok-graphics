@@ -1931,6 +1931,29 @@ float4 warpShade(PsIn i) {
 
 float4 portal_draw_ps(PsIn i) : SV_Target { return warpShade(i); }
 
+// 3.0.18-beta.64 ([interface] uaui_glass): frosted glass under a window of the new interface - the picture's copy
+// (t2: the world, and with no DLSS the interface drawn before) read round the pixel on two rings, about 1 % of the
+// target's height out; the vertex colour's alpha its share, premultiplied as the interface draws
+float4 backdrop_ps(PsIn i) : SV_Target {
+    float2 texel = 1.0 / targetSize;
+    float2 uv = i.pos.xy * texel;
+    float reach = max(targetSize.y / 90.0, 4.0);
+    float3 sum = sceneColor.SampleLevel(samp0, uv, 0).rgb;
+    float weight = 1.0;
+    [unroll] for (int ringNo = 1; ringNo <= 2; ++ringNo) {
+        float ringR = reach * 0.5 * ringNo;
+        [unroll] for (int tap = 0; tap < 10; ++tap) {
+            float ang = tap * 0.6283185 + ringNo * 0.31;
+            float2 at = uv + float2(cos(ang), sin(ang)) * ringR * texel;
+            float wt = ringNo == 1 ? 1.0 : 0.6;
+            sum += sceneColor.SampleLevel(samp0, at, 0).rgb * wt;
+            weight += wt;
+        }
+    }
+    float a = i.diffuse.a;
+    return float4(sum / weight * a, a);
+}
+
 GlowOut portal_draw_glow_ps(PsIn i) {  // the rings' light into the glow; the floor hides what it covers
     GlowOut o;
     o.c = warpShade(i);

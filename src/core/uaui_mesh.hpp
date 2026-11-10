@@ -49,6 +49,10 @@ void softRing(float x, float y, float w, float h, float r, float blur, uint32_t 
 void triangles(const std::vector<Point>& points, const std::vector<int>& indices, float dx, float dy, const float* m,
                const ClipBox* clip, float k, float half, std::vector<glint::Vertex>& out);
 
+// 3.0.18-beta.64: the rounded box filled with `argb` (the glass's shape)
+void roundedBox(float x, float y, float w, float h, float r, uint32_t argb, std::vector<Point>& points,
+                std::vector<int>& indices);
+
 // UTF-8 (RmlUi's strings) as code points; a byte that starts no character is U+FFFD
 std::u32string codepoints(std::string_view text);
 

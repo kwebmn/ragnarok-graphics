@@ -100,9 +100,10 @@ std::vector<uint64_t> parsePipelineKeys(const std::string& text) {
 
 bool validPipelineKey(uint64_t v) {
     const PipelineKey k = unpackPipelineKey(v);
-    if (packPipelineKey(k) != v || k.cull < d3d7::CULL_NONE || k.shader > DrawShader::Portal) return false;
+    if (packPipelineKey(k) != v || k.cull < d3d7::CULL_NONE || k.shader > DrawShader::Backdrop) return false;
     if (k.alphaToCoverage && (k.samples < 2 || k.blend)) return false;
-    if (k.layer && (k.samples != 1 || k.zEnable || k.glow || k.water || k.mask || k.shader != DrawShader::Game))
+    if (k.layer && (k.samples != 1 || k.zEnable || k.glow || k.water || k.mask ||
+                    (k.shader != DrawShader::Game && k.shader != DrawShader::Backdrop)))  // .18-beta.64
         return false;
     if (k.lean && (k.water || k.shader != DrawShader::Game)) return false;  // 2.5: the game's shader alone
     if (k.behind && (!k.zEnable || !k.zWrite || k.blend || k.twoUv || k.layer)) return false;  // 2.6.3

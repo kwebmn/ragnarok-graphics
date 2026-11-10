@@ -1710,6 +1710,7 @@ void Renderer::Impl::destroy() {
     for (ID3D12PipelineState*& p : torchLightPipelines) releaseCom(p);  // 0.23
     for (ID3D12PipelineState*& p : torchFirePipelines) releaseCom(p);
     releaseCom(portalDrawPs);  // 2.7.54
+    releaseCom(backdropPs);  // 3.0.18-beta.64
     releaseCom(portalDrawGlowPs);
     for (ID3D12PipelineState*& p : fireflyPipelines) releaseCom(p);  // 0.28
     for (ID3D12PipelineState*& p : dustPipelines) releaseCom(p);      // 0.29

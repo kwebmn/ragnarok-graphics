@@ -61,3 +61,8 @@ Facts (RmlUi 6.3 source):
   by the pad, radial gradients (tessellated to 8 px). Ruling: blurred glass still not built - it needs a new pass in
   the D3D12 and D3D11 renderers (DLSS world vs target sizes, MSAA resolve) that cannot be checked off Windows; a
   blind change risks every player's picture - cost if wrong: one look later.
+- beta.64 (owner «сделай все остальное и потом будем проверять»): the blurred glass after all - [interface]
+  uaui_glass (off, Direct3D 12 with our renderer only): decorator ua-glass marks the window's glass shape, uaUI
+  draws it with effect_exe::Kind::Backdrop, the D3D12 renderer copies the picture once a frame at the first glass
+  (ensureScene + copySceneColor; DLSS: the world) and draws DrawShader::Backdrop (backdrop_ps: 21 taps on two rings,
+  ~1 % of the height); the window's ground laid over at 3/4 alpha. D3D11 skips those draws. Untested on Windows.

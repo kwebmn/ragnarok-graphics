@@ -124,6 +124,7 @@ struct Batch {
     ::uagfx::uaui::ClipBox clip{};
     bool transformed = false;
     float m[16] = {};
+    bool glass = false;  // 3.0.18-beta.64: the frosted glass's shape (drawn by the renderer's Backdrop shader)
 };
 
 struct Geometry {
@@ -172,6 +173,7 @@ struct State {
     uintptr_t nextShader = 1;
     std::map<std::pair<uintptr_t, uintptr_t>, uintptr_t> shaded;
     bool effects = false;
+    bool glassOn = false, glassNext = false;  // 3.0.18-beta.64: [interface] uaui_glass (Direct3D 12); a glass draw
     bool transformOn = false;
     float transform[16] = {};
     // the words
@@ -295,6 +297,7 @@ public:
             b.clip.hull = s.mask;
         }
         b.transformed = s.transformOn;
+        b.glass = s.glassNext;
         if (s.transformOn) std::copy(s.transform, s.transform + 16, b.m);
         s.batches.push_back(b);
     }
@@ -591,6 +594,75 @@ private:
     Rml::PropertyId blur_{}, colour_{};
 };
 ShadowInstancer* g_shadow = nullptr;
+
+// 3.0.18-beta.64 (the possibilities' item 15): decorator: ua-glass(<share>) - the world under the element blurred
+// (the renderer's Backdrop draw, Direct3D 12), its own ground laid over it at 3/4 of its alpha; with
+// [interface] uaui_glass only
+class Glass final : public Rml::Decorator {
+public:
+    float share = 1;
+    struct Data {
+        Rml::Geometry shape, tint;
+    };
+    static Rml::Geometry box(Rml::Element* e, Rml::Vector2f size, float r, uint32_t argb) {
+        std::vector<::uagfx::uaui::Point> pts;
+        std::vector<int> ix;
+        ::uagfx::uaui::roundedBox(0, 0, size.x, size.y, r, argb, pts, ix);
+        Rml::Mesh mesh;
+        for (const auto& p : pts) {
+            Rml::Vertex v;
+            v.position = {p.x, p.y};
+            v.colour = Rml::ColourbPremultiplied(Rml::byte(p.argb >> 16), Rml::byte(p.argb >> 8), Rml::byte(p.argb),
+                                                 Rml::byte(p.argb >> 24));
+            v.tex_coord = {0, 0};
+            mesh.vertices.push_back(v);
+        }
+        mesh.indices = ix;
+        Rml::Context* ctx = e->GetContext();
+        return ctx ? ctx->GetRenderManager().MakeGeometry(std::move(mesh)) : Rml::Geometry();
+    }
+    Rml::DecoratorDataHandle GenerateElementData(Rml::Element* e, Rml::BoxArea) const override {
+        auto* d = new Data;
+        const Rml::ComputedValues& cv = e->GetComputedValues();
+        const Rml::Vector2f size = e->GetBox().GetSize(Rml::BoxArea::Border);
+        const float r = cv.border_top_left_radius(), op = cv.opacity();
+        const uint32_t a = uint32_t(std::lround(std::clamp(share * op, 0.0f, 1.0f) * 255));
+        d->shape = box(e, size, r, a << 24 | 0xFFFFFFu);
+        Rml::Colourb bg = cv.background_color();
+        bg.alpha = Rml::byte(std::lround(bg.alpha * 0.75f));
+        const Rml::ColourbPremultiplied t = bg.ToPremultiplied(op);
+        d->tint = box(e, size, r, uint32_t(t.alpha) << 24 | uint32_t(t.red) << 16 | uint32_t(t.green) << 8 | t.blue);
+        return reinterpret_cast<Rml::DecoratorDataHandle>(d);
+    }
+    void ReleaseElementData(Rml::DecoratorDataHandle h) const override { delete reinterpret_cast<Data*>(h); }
+    void RenderElement(Rml::Element* e, Rml::DecoratorDataHandle h) const override {
+        auto* d = reinterpret_cast<Data*>(h);
+        State& s = state();
+        if (!d || !s.glassOn) return;
+        const Rml::Vector2f at = e->GetAbsoluteOffset(Rml::BoxArea::Border);
+        s.glassNext = true;
+        d->shape.Render(at);
+        s.glassNext = false;
+        d->tint.Render(at);
+    }
+};
+
+class GlassInstancer final : public Rml::DecoratorInstancer {
+public:
+    GlassInstancer() {
+        share_ = RegisterProperty("share", "1").AddParser("number").GetId();
+        RegisterShorthand("decorator", "share", Rml::ShorthandType::FallThrough);
+    }
+    Rml::SharedPtr<Rml::Decorator> InstanceDecorator(const Rml::String&, const Rml::PropertyDictionary& p,
+                                                     const Rml::DecoratorInstancerInterface&) override {
+        auto d = Rml::MakeShared<Glass>();
+        if (const Rml::Property* v = p.GetProperty(share_)) d->share = v->Get<float>();
+        return d;
+    }
+
+private:
+    Rml::PropertyId share_{};
+};
 
 class Fonts final : public Rml::FontEngineInterface {
 public:
@@ -1196,6 +1268,10 @@ select selectbox option:checked { color: #e6cb8a; }
 .fx.cb .hp, .fx.cb .sp, .fx.tc .hpfill, .fx.xb .fill, .fx.ig .fill, .fx .ua-fill {
     decorator: linear-gradient(180deg, #ffffff38 0%, #ffffff00 55%, #00000026 100%); }
 .fx.sh .btn, .fx.ig .tab { decorator: linear-gradient(180deg, #ffffff14 0%, #ffffff00 100%); }
+/* 3.0.18-beta.64: [interface] uaui_glass - the windows' frosted glass (the body's class «glassy», Direct3D 12) */
+.glassy.win.sh .glass, .glassy.win.ig .glass, .glassy .ua-window { decorator: ua-glass(1); }
+.fx.glassy.win.sh .glass, .fx.glassy.win.ig .glass, .fx.glassy .ua-window {
+    decorator: ua-shadow(16dp #00000059), ua-glass(1); }
 /* 3.0.18-beta.58: [interface] uaui_motion - the soft motion (the body's class «motion»); off: none of it */
 .motion.win { transition: transform 0.16s cubic-out; }
 .motion.win.away { transform: translateY(8dp); }
@@ -1501,6 +1577,8 @@ bool start(State& s) {
     static ShadowInstancer shadow;  // 3.0.18-beta.61
     g_shadow = &shadow;
     Rml::Factory::RegisterDecoratorInstancer("ua-shadow", g_shadow);
+    static GlassInstancer glass;  // 3.0.18-beta.64
+    Rml::Factory::RegisterDecoratorInstancer("ua-glass", &glass);
     Rml::Factory::RegisterElementInstancer("ua-split", &g_splitInstancer);  // 3.0.18-beta.27
     // the numbers as the interface writes them - «5 157» (core/char_block grouped); for every model of the context
     Rml::DataModelConstructor m = s.context->CreateDataModel("ua");
@@ -1847,6 +1925,16 @@ void setMotion(bool on) {
 }
 bool motion() { return g_motion; }
 
+// 3.0.18-beta.64 ([interface] uaui_glass, Direct3D 12 only): the windows' frosted glass - the body class «glassy»
+void setGlass(bool on) {
+    State& s = state();
+    if (on == s.glassOn) return;
+    s.glassOn = on;
+    LOG_INFO("uaui: frosted glass %s", on ? "on" : "off");
+    for (Doc* d : s.docs)
+        if (d->doc()) d->doc()->SetClass("glassy", on);
+}
+
 // 3.0.18-beta.61 ([interface] uaui_effects): gradients, soft shadows and glows, rounded clips - the theme's under the
 // body class «fx»
 void setEffects(bool on) {
@@ -2026,6 +2114,7 @@ bool Doc::load(const std::string& rml) {
     doc_->SetClass("win", window);  // 3.0.18-beta.58: the theme's motion slides windows only
     doc_->SetClass("motion", g_motion);
     doc_->SetClass("fx", s.effects);  // 3.0.18-beta.61
+    doc_->SetClass("glassy", s.glassOn);  // 3.0.18-beta.64
     if (marked_ > 0) doc_->SetClass("marked", true);
     if (was) {
         if (shown_) doc_->Show(Rml::ModalFlag::None, Rml::FocusFlag::None);
@@ -2279,7 +2368,7 @@ void draw(FrameRecord& record, gpu::Renderer& renderer, Layer layer) {
     const float k = float(s.k), half = 0.5f / float(partStretch());
     std::vector<glint::Vertex> verts;
     uint32_t runTexture = 0;
-    bool runSmooth = false;
+    bool runSmooth = false, runGlass = false;
     int draws = 0, vertices = 0;
     const auto flush = [&]() {
         if (verts.empty()) return;
@@ -2288,7 +2377,13 @@ void draw(FrameRecord& record, gpu::Renderer& renderer, Layer layer) {
         st.blend = true;
         st.srcBlend = d3d7::BLEND_ONE;
         st.dstBlend = d3d7::BLEND_INVSRCALPHA;
-        if (runTexture) {
+        if (runGlass) {  // 3.0.18-beta.64: the picture's copy read smoothly, its edges clamped
+            st.stage[0].colorOp = st.stage[0].alphaOp = d3d7::TOP_SELECTARG1;
+            st.stage[0].colorArg1 = st.stage[0].alphaArg1 = d3d7::TA_DIFFUSE;
+            st.stage[0].addressU = st.stage[0].addressV = d3d7::TADDRESS_CLAMP;
+            st.stage[0].magFilter = d3d7::TFG_LINEAR;
+            st.stage[0].minFilter = d3d7::TFN_LINEAR;
+        } else if (runTexture) {
             st.stage[0].colorOp = st.stage[0].alphaOp = d3d7::TOP_MODULATE;
             st.stage[0].colorArg1 = st.stage[0].alphaArg1 = d3d7::TA_TEXTURE;
             st.stage[0].colorArg2 = st.stage[0].alphaArg2 = d3d7::TA_DIFFUSE;
@@ -2303,7 +2398,7 @@ void draw(FrameRecord& record, gpu::Renderer& renderer, Layer layer) {
         DrawCmd cmd;
         cmd.state = record.addState(st);
         cmd.texture[0] = runTexture;
-        cmd.effect = uint8_t(effect_exe::Kind::Panel);
+        cmd.effect = uint8_t(runGlass ? effect_exe::Kind::Backdrop : effect_exe::Kind::Panel);
         cmd.primitive = d3d7::PT_TRIANGLELIST;
         cmd.fvf = d3d7::FVF_TL1;
         record.draw(cmd, verts.data(), uint32_t(verts.size()), nullptr, 0);
@@ -2330,10 +2425,11 @@ void draw(FrameRecord& record, gpu::Renderer& renderer, Layer layer) {
             }
         }
         const bool smooth = b.transformed || (b.texture && b.texture != kAtlasHandle);
-        if (texture != runTexture || smooth != runSmooth) {
+        if (texture != runTexture || smooth != runSmooth || b.glass != runGlass) {
             flush();
             runTexture = texture;
             runSmooth = smooth;
+            runGlass = b.glass;
         }
         ::uagfx::uaui::triangles(g->second.points, g->second.indices, b.dx, b.dy, b.transformed ? b.m : nullptr,
                                  b.clipped ? &b.clip : nullptr, k, half, verts);

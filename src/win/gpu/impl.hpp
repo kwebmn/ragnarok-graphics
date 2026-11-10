@@ -458,6 +458,7 @@ struct Renderer::Impl {
     bool waterCopied = false;  // this frame's copy is made, or could not be
     bool waterReady = false;   // ... and the water is drawn from it
     int softCopied = 0;        // 0.67: the soft effects' depth: 1 copied this picture, -1 could not be
+    int backdropCopied = 0;    // 3.0.18-beta.64: the glass's copy of the picture - as softCopied
     float viewToWorld[12] = {};  // the camera backwards: the view's x, y and z axes in the world, then its place
     bool viewToWorldValid = false;
     ID3DBlob* waterVs = nullptr;
@@ -550,6 +551,7 @@ struct Renderer::Impl {
     ID3D12PipelineState* torchFirePipelines[5] = {};   // the same, and the world under DLSS (its alpha the mask)
     // 2.7.54: the map warps' own draws shaded anew (draw.cpp, core/portal.hpp partOf), with the glow's second target
     ID3DBlob* portalDrawPs = nullptr;
+    ID3DBlob* backdropPs = nullptr;  // 3.0.18-beta.64: the new interface's frosted glass
     ID3DBlob* portalDrawGlowPs = nullptr;
     std::string warpsToldMap;  // the map they were last told for
     std::string stanceToldMap;  // 3.0.18-beta.6: the Taekwon stances' effects told (R-TH7Q4C) - on this map
@@ -1115,6 +1117,7 @@ struct Renderer::Impl {
         nightDone = false;  // 0.63
         dayKept = dayWanted = false;  // 2.7.47, 3.0.5-beta.20
         softCopied = 0;     // 0.67
+        backdropCopied = 0;  // 3.0.18-beta.64
         waterfallsDone = false;  // 0.65
         torchFlames.clear();
         fireSparks.clear();

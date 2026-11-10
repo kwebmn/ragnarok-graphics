@@ -262,6 +262,25 @@ void softRing(float x, float y, float w, float h, float r, float blur, uint32_t 
     }
 }
 
+void roundedBox(float x, float y, float w, float h, float r, uint32_t argb, std::vector<Point>& points,
+                std::vector<int>& indices) {
+    points.clear();
+    indices.clear();
+    if (w <= 0 || h <= 0) return;
+    r = std::clamp(r, 0.0f, std::min(w, h) / 2);
+    constexpr int kSteps = 8;
+    const float cx[4] = {x + w - r, x + w - r, x + r, x + r}, cy[4] = {y + r, y + h - r, y + h - r, y + r};
+    const float start[4] = {-1.5707963f, 0, 1.5707963f, 3.1415927f};
+    points.push_back(Point{x + w / 2, y + h / 2, argb});
+    for (int c = 0; c < 4; ++c)
+        for (int i = 0; i <= kSteps; ++i) {
+            const float a = start[c] + 1.5707963f * float(i) / kSteps;
+            points.push_back(Point{cx[c] + std::cos(a) * r, cy[c] + std::sin(a) * r, argb});
+        }
+    const int n = int(points.size()) - 1;
+    for (int i = 0; i < n; ++i) indices.insert(indices.end(), {0, 1 + i, 1 + (i + 1) % n});
+}
+
 std::u32string codepoints(std::string_view text) {
     std::u32string out;
     const auto* s = reinterpret_cast<const unsigned char*>(text.data());

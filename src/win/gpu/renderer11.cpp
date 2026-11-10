@@ -1269,6 +1269,7 @@ void Renderer11::writeTarget(const FrameRecord& rec, const WriteTargetCmd& w) {
 }
 
 void Renderer11::draw(const FrameRecord& rec, const DrawCmd& d) {
+    if (d.effect == uint8_t(effect_exe::Kind::Backdrop)) return;  // 3.0.18-beta.64: the glass is Direct3D 12's
     if (d.vertexCount == 0 || !geometry_) return;
     if (d.primitive != d3d7::PT_TRIANGLELIST && d.primitive != d3d7::PT_TRIANGLESTRIP) {
         static bool logged = false;  // the client only draws lists and strips (states.md §4)

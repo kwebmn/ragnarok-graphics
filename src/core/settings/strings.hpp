@@ -905,6 +905,7 @@ enum class Text : uint16_t {
     InterfaceUauiShowcase, InterfaceUauiShowcaseHint,  // 3.0.18-beta.11
     InterfaceUauiMotion, InterfaceUauiMotionHint,  // 3.0.18-beta.58
     InterfaceUauiEffects, InterfaceUauiEffectsHint,  // 3.0.18-beta.61
+    InterfaceUauiGlass, InterfaceUauiGlassHint,  // 3.0.18-beta.64
     InterfaceTheme, InterfaceThemeHint, InterfaceThemeStandard, InterfaceThemeClassic, InterfaceThemeContrast,  // .13
     Count
 };

@@ -676,6 +676,10 @@ LiveUpdate liveUpdate(const Config& running, const Config& file) {
         u.applied.push_back(change("uaui_effects", flag(running.uauiEffects), flag(file.uauiEffects)));
         n.uauiEffects = file.uauiEffects;
     }
+    if (file.uauiGlass != running.uauiGlass) {  // 3.0.18-beta.64
+        u.applied.push_back(change("uaui_glass", flag(running.uauiGlass), flag(file.uauiGlass)));
+        n.uauiGlass = file.uauiGlass;
+    }
     if (file.uauiShowcase != running.uauiShowcase) {  // 3.0.18-beta.11
         u.applied.push_back(change("uaui_showcase", flag(running.uauiShowcase), flag(file.uauiShowcase)));
         n.uauiShowcase = file.uauiShowcase;

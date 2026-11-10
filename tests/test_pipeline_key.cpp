@@ -297,8 +297,9 @@ TEST(pipeline_key_warp_shader_takes_a_third_bit) {
     k.mask = true;
     CHECK(validPipelineKey(packPipelineKey(k)));
     CHECK(unpackPipelineKey(packPipelineKey(k)) == k);
-    for (const uint64_t other : {uint64_t(1) << 25, uint64_t(2) << 25, uint64_t(3) << 25})  // no shader of 5-7
+    for (const uint64_t other : {uint64_t(2) << 25, uint64_t(3) << 25})  // no shader of 6-7
         CHECK(!validPipelineKey(game | uint64_t(1) << 29 | other));
+    CHECK(validPipelineKey(game | uint64_t(1) << 29 | uint64_t(1) << 25));  // 3.0.18-beta.64: 5, the glass
     k.lean = true;  // 2.5: the lean one is the game's shader only
     CHECK(!validPipelineKey(packPipelineKey(k)));
     k.lean = false;
@@ -347,4 +348,18 @@ TEST(pipeline_key_models_lie_a_step_behind_the_ground) {
     PipelineKey ground = pipelineKey(model, FVF_TL2);
     ground.behind = true;
     CHECK(!validPipelineKey(packPipelineKey(ground)));
+}
+
+// 3.0.18-beta.64: the new interface's glass - an interface draw in the DLSS layer too
+TEST(pipeline_key_glass_is_an_interface_draw_in_the_layer) {
+    PipelineKey k;
+    k.cull = d3d7::CULL_NONE;
+    k.zFunc = d3d7::CMP_ALWAYS;
+    k.blend = true;
+    k.srcBlend = d3d7::BLEND_ONE;
+    k.dstBlend = d3d7::BLEND_INVSRCALPHA;
+    k.layer = true;
+    k.shader = DrawShader::Backdrop;
+    CHECK(validPipelineKey(packPipelineKey(k)));
+    CHECK(unpackPipelineKey(packPipelineKey(k)) == k);
 }
