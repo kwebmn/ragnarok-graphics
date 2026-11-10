@@ -736,7 +736,7 @@ bool key(UINT m, WPARAM wp) {
             paste(s);
         } else if (wp >= 0x20 && wp != 0x7F) {
             if (std::string* t = fieldText(s, s.focus))
-                if (t->size() < kFieldMost) *t += utf8Of(std::wstring(1, wchar_t(wp)));
+                if (t->size() < kFieldMost) *t += typedUtf8(unsigned(wp));
         }
         return true;
     }

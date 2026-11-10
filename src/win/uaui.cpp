@@ -679,7 +679,8 @@ input.checkbox:checked { background-color: #3d7fd8; border-color: #3d7fd8; }
              text-align: center; font-weight: bold; font-size: 12dp; }
 .cb .zone { position: absolute; }
 .cb .tip { position: absolute; padding: 4dp 10dp 4dp 10dp; border-radius: 8dp; background-color: #10141cee;
-           border: 1dp #ffffff17; white-space: nowrap; font-size: 13dp; }
+           border: 1dp #ffffff17; white-space: nowrap; font-size: 13dp;
+           margin-right: -2000dp; }  /* 3.0.18-beta.55 (R-PWJXJ3): as wide as its longest line, past the block */
 .cb .tip p { display: block; color: #9aa3b5; line-height: 17dp; }
 .cb .tip p.first { color: #eceff5; font-weight: bold; }
 .cb .warning { position: absolute; padding: 0 12dp; height: 30dp; line-height: 30dp; border-radius: 8dp;

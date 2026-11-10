@@ -623,7 +623,7 @@ Asked key(UINT m, WPARAM wp, bool& took) {
             if (!t.empty()) t.pop_back();
         }
         if (m == WM_CHAR && wp >= 0x20 && wp != 0x7F) {
-            const std::string add = utf8Of(std::wstring(1, wchar_t(wp)));
+            const std::string add = typedUtf8(unsigned(wp));
             size_t letters = 0;
             for (const char c : s.show.editText) letters += (uint8_t(c) & 0xC0) != 0x80;
             if (letters < kLabelMost) s.show.editText += add;
@@ -685,7 +685,7 @@ Asked key(UINT m, WPARAM wp, bool& took) {
             size_t letters = 0;
             for (const char c : s.search) letters += (uint8_t(c) & 0xC0) != 0x80;
             if (letters < kLabelMost && !(wp == ' ' && s.search.empty()))
-                s.search += utf8Of(std::wstring(1, wchar_t(wp)));
+                s.search += typedUtf8(unsigned(wp));
             s.show.focus = 0;  // the first card it leaves
             s.first = 0;
             s.followFocus = true;

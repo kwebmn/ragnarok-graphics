@@ -12,5 +12,8 @@ std::wstring widened(const std::string& text, unsigned codePage);
 std::string utf8Of(const std::wstring& text);
 // 3.0.11-beta.41: Unicode as a text of the code page (the chat's whisper's name into the game's field)
 std::string narrowed(const std::wstring& text, unsigned codePage);
+// 3.0.18-beta.55 (R-T6JUJB: «ïòðîðîìîòï» in «Полиця»'s search): a letter of WM_CHAR to the game's (ANSI) window - a
+// byte of the game's code page - as UTF-8
+std::string typedUtf8(unsigned wp);
 
 }  // namespace uagfx::win
