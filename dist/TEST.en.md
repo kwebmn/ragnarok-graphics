@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.18-beta.41 — what's new
+
+- **The accounts "Полиця" and "Персонажі" now use "Нова бібліотека інтерфейсу (RmlUi)":** cards with class portraits gliding in their row, search, arrows, buttons, the site links and the card menu are drawn by the new library.
+
 # uaRO Graphics 3.0.18-beta.40 — what's new
 
 - **The "Продовжити" and site sign-in cards now use "Нова бібліотека інтерфейсу (RmlUi)":** the class portrait, buttons, fields, sign-in ways and ticks are drawn by the new library.
