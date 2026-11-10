@@ -1,3 +1,6 @@
+- Gamepad: with the character dead and the death window closed, the hint line at the bottom says "B: back to the save point".
+- New interface (uaUI): the log no longer fills with "Could not get value from data variable words[…]" warnings.
+
 - Gamepad: B now closes an NPC talk just as Esc does - on a "Далі" page, in a window with no buttons (it needed holding for a second) and in a number field. The hint line shows it.
 - Gamepad: with the character dead and the death window closed, B opens it again - to go back to the save point.
 - New interface (uaUI): the party panel re-evaluates only the bars while the HP bars glide, not every row.
