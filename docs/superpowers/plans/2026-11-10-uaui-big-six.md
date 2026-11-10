@@ -27,3 +27,8 @@ Order (safest first; the cleanup last, once nothing needs the old code):
   dropped). The recording code goes with G.
 - C beta.70: sheets dirty only the lists that changed (Content compared), Doc::place/prop set on change (transform, grounds), per-geometry mesh cache (remeshed count in the cost log line)
 - D beta.71: gamefiles::Reader(dir, updatesOnly); uaui shipped(name) reads data\uaro-graphics\ui\<name> from the data folder or the update GRFs: theme.rcss after the built-in rules, palette.txt before the player's, <part>.rml when the player has none; README tells admins
+- E beta.72: core/text_field (UTF-8 typing, whole-letter Backspace, Ctrl+A selection, one-line paste) + win/ui_field
+  (keys -> field, clipboard; every key but Alt's eaten) for the searches of «Речі», «Склад», «Візок», the shop and
+  «Довідник» (they took Latin letters only via letterOf); RmlUi's fields get the Windows clipboard.
+  Ruling: the chat's line stays the game's own edit (its sending, its IME, the battle-typing guard already in place)
+  - cost if wrong: the chat keeps the game's field.

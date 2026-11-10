@@ -32,6 +32,7 @@
 #include "win/gpu/renderer.hpp"
 #include "win/code_page.hpp"
 #include "win/game_files.hpp"
+#include "win/ui_field.hpp"
 #include "win/log.hpp"
 #include "win/picture_draw.hpp"
 #include "win/ui_font.hpp"
@@ -259,6 +260,9 @@ State& state() {
 class System final : public Rml::SystemInterface {
 public:
     double GetElapsedTime() override { return clockNow(); }
+    // 3.0.18-beta.72: Ctrl+C/X/V in a field of uaUI's - the Windows clipboard
+    void SetClipboardText(const Rml::String& text) override { uifield::setClipboard(text); }
+    void GetClipboardText(Rml::String& text) override { text = uifield::clipboardText(); }
     // our own names as they are: «uaui:» the built-in files (Files), «icon:» a picture of the driver's
     void JoinPath(Rml::String& out, const Rml::String& document, const Rml::String& path) override {
         if (path.rfind("uaui:", 0) == 0 || path.rfind("icon:", 0) == 0 || path.rfind("pic:", 0) == 0) {

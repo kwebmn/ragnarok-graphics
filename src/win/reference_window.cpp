@@ -1,3 +1,5 @@
+#include "win/ui_field.hpp"
+#include "win/code_page.hpp"
 #include "win/reference_window.hpp"
 
 #include <windowsx.h>
@@ -45,7 +47,7 @@ namespace {
 
 using settings::Text;
 
-constexpr size_t kMostTyped = 40;
+constexpr size_t kMostTyped = 120;  // bytes (3.0.18-beta.72: UTF-8 - 40 letters of any language)
 constexpr size_t kMostRecent = 8, kMostKept = 40;  // 3.0.11-beta.18: «Нещодавні», «Обране» at most
 constexpr size_t kMostPictures = 2000;             // 3.0.11-beta.22: the cards' pictures and icons kept at most
 
@@ -762,19 +764,6 @@ void block(const State& s, HWND game) {
 
 // A key's own character for the search (the names are English): letters, digits, the space and a few signs by the
 // key's place, whatever the layout types
-char letterOf(WPARAM vk, bool shift) {
-    if (vk >= 'A' && vk <= 'Z') return char(shift ? vk : vk - 'A' + 'a');
-    if (vk >= '0' && vk <= '9' && !shift) return char(vk);
-    if (vk >= VK_NUMPAD0 && vk <= VK_NUMPAD9) return char('0' + (vk - VK_NUMPAD0));
-    switch (vk) {
-        case VK_SPACE: return ' ';
-        case VK_OEM_MINUS: return shift ? '_' : '-';
-        case VK_OEM_7: return '\'';
-        case VK_OEM_PERIOD: return '.';
-        case VK_OEM_COMMA: return ',';
-        default: return 0;
-    }
-}
 
 }  // namespace
 
@@ -962,7 +951,7 @@ void draw(FrameRecord& record, gpu::Renderer& renderer) {
 bool key(UINT m, WPARAM wp, LPARAM) {
     State& s = state();
     if (!s.enabled) return false;
-    const bool ctrl = GetKeyState(VK_CONTROL) < 0, alt = GetKeyState(VK_MENU) < 0, shift = GetKeyState(VK_SHIFT) < 0;
+    const bool ctrl = GetKeyState(VK_CONTROL) < 0, alt = GetKeyState(VK_MENU) < 0;
     if ((m == WM_CHAR || m == WM_SYSCHAR) && s.skipChar && wp == s.skipChar) {  // Ctrl+F's or Esc's own character
         s.skipChar = 0;
         return true;
@@ -1004,7 +993,9 @@ bool key(UINT m, WPARAM wp, LPARAM) {
                 return true;
             case VK_BACK:
                 if (!s.query.empty()) {
-                    s.query.pop_back();
+                    textfield::Field f{s.query, false};  // 3.0.18-beta.72: a whole letter
+                    textfield::backspace(f);
+                    s.query = f.text;
                     typed(s);
                 } else if (s.at.go != refpages::Go::None || !s.back.empty()) {
                     goBack(s);
@@ -1029,12 +1020,20 @@ bool key(UINT m, WPARAM wp, LPARAM) {
             case VK_END: scrollBy(s, s.total); return true;
             default: break;
         }
-        const char c = ctrl || alt ? 0 : letterOf(wp, shift);
-        if (c && s.query.size() < kMostTyped && !(c == ' ' && (s.query.empty() || s.query.back() == ' '))) {
-            s.query += c;
-            typed(s);
+        if (ctrl && !alt && (wp == 'V' || wp == 'C' || wp == 'X')) {  // 3.0.18-beta.72: the clipboard
+            textfield::Field f{s.query, false};
+            uifield::Result r = uifield::Result::None;
+            uifield::key(f, m, wp, kMostTyped, r);
+            if (r == uifield::Result::Changed) s.query = f.text, typed(s);
         }
         return true;  // every key: the window's while it is open
+    }
+    if (m == WM_CHAR && !ctrl && !alt && wp >= 32 && wp != 127) {  // 3.0.18-beta.72: any language's letters
+        const std::string add = typedUtf8(unsigned(wp));
+        textfield::Field f{s.query, false};
+        if (!(add == " " && (s.query.empty() || s.query.back() == ' ')) && textfield::type(f, add, kMostTyped))
+            s.query = f.text, typed(s);
+        return true;
     }
     return m == WM_KEYUP || m == WM_SYSKEYUP || m == WM_CHAR || m == WM_SYSCHAR || m == WM_DEADCHAR ||
            m == WM_SYSDEADCHAR;

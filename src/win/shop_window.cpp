@@ -1,3 +1,4 @@
+#include "win/ui_field.hpp"
 #include "win/shop_window.hpp"
 
 #include <windowsx.h>
@@ -73,7 +74,7 @@ const uint8_t kAddSaleCode[] = {0x55, 0x8B, 0xEC, 0x6A, 0xFF, 0x68, 0x48, 0x24, 
 constexpr uint32_t kModeNow = 0x74B57C, kModeMsgSlot = 0x14, kModeMsg = 0x5707D0;
 constexpr int kAskSell = 0x28, kAskBuy = 0x29;
 constexpr ULONGLONG kReadMs = 200, kWaitMs = 3000;
-constexpr size_t kMostTyped = 24;
+constexpr size_t kMostTyped = 72;  // bytes (3.0.18-beta.72: UTF-8 - 24 letters of any language)
 // 3.0.11-beta.101 (the owner: «и чтобы описание вещи можно было посмотреть»): the game's item card (UI window 0xC at
 // the manager's +0xC8, made by MakeWindow, its message 0x18 an ITEM_INFO - as its own shop shows one on a right
 // click; gone with the deal's end, the game mode's 0x2B), moved beside the shop (a window's vtable +0x18: x, y; its
@@ -577,18 +578,6 @@ void toggleCard(State& s, int ware, const char* by) {
                  s.data.wares[size_t(ware)].id, r[2], r[3], moved ? " beside the shop" : "");
 }
 
-char letterOf(WPARAM vk, bool shift) {
-    if (vk >= 'A' && vk <= 'Z') return char(shift ? vk : vk - 'A' + 'a');
-    if (vk >= '0' && vk <= '9' && !shift) return char(vk);
-    if (vk >= VK_NUMPAD0 && vk <= VK_NUMPAD9) return char('0' + (vk - VK_NUMPAD0));
-    switch (vk) {
-        case VK_SPACE: return ' ';
-        case VK_OEM_MINUS: return shift ? '_' : '-';
-        case VK_OEM_7: return '\'';
-        case VK_OEM_PERIOD: return '.';
-        default: return 0;
-    }
-}
 
 }  // namespace
 
@@ -998,11 +987,14 @@ bool key(UINT m, WPARAM wp, LPARAM lp) {
                     s.skipChar = wp == VK_ESCAPE ? 27 : 13;
                     s.key.clear();
                     return true;
-                case VK_BACK:
-                    if (!s.show.search.empty()) s.show.search.pop_back();
+                case VK_BACK: {
+                    textfield::Field f{s.show.search, false};  // 3.0.18-beta.72: a whole letter
+                    textfield::backspace(f);
+                    s.show.search = f.text;
                     s.show.scroll = 0;
                     s.skipChar = 8;
                     return true;
+                }
                 case VK_DELETE:
                     s.show.search.clear();
                     s.show.scroll = 0;
@@ -1019,13 +1011,19 @@ bool key(UINT m, WPARAM wp, LPARAM lp) {
                     return true;
                 default: break;
             }
-            const char c = ctrl ? 0 : letterOf(wp, GetKeyState(VK_SHIFT) < 0);
-            if (c && s.show.search.size() < kMostTyped) {
-                s.show.search += c;
-                s.show.scroll = 0;
-                s.show.ware = 0;
+            if (ctrl && (wp == 'V' || wp == 'C' || wp == 'X')) {  // 3.0.18-beta.72: the clipboard
+                textfield::Field f{s.show.search, false};
+                uifield::Result r = uifield::Result::None;
+                uifield::key(f, m, wp, kMostTyped, r);
+                if (r == uifield::Result::Changed) s.show.search = f.text, s.show.scroll = 0, s.show.ware = 0;
             }
             return true;  // every key the search's while it types
+        }
+        if (m == WM_CHAR && wp >= 32 && wp != 127 && GetKeyState(VK_CONTROL) >= 0) {  // .18-beta.72: any language
+            textfield::Field f{s.show.search, false};
+            if (textfield::type(f, typedUtf8(unsigned(wp)), kMostTyped))
+                s.show.search = f.text, s.show.scroll = 0, s.show.ware = 0;
+            return true;
         }
         return m == WM_KEYUP || m == WM_CHAR || m == WM_DEADCHAR;
     }

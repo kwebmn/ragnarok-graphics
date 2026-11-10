@@ -1,3 +1,4 @@
+#include "win/ui_field.hpp"
 #include "win/stash_watch.hpp"
 #include "win/storage_window.hpp"
 
@@ -59,7 +60,7 @@ constexpr int kStorageDragMsg = 0x3C, kBagDragMsg = 0x11, kDropMsg = 0x12, kEndD
 constexpr uint32_t kSession = 0x771148, kStorage = kSession + 0xF40, kStorageCount = kSession + 0xF44, kInfo = 8;
 constexpr size_t kInfoSize = 0x48, kMostNodes = 1000;
 constexpr ULONGLONG kReadMs = 500, kBlinkMs = 530, kTipMs = 400;
-constexpr size_t kMostTyped = 24;
+constexpr size_t kMostTyped = 72;  // bytes (3.0.18-beta.72: UTF-8 - 24 letters of any language)
 
 using SendMsgFn = int(__attribute__((thiscall)) *)(uint32_t self, uint32_t sender, int msg, int a, int b, int c);
 using ModeMsgFn = int(__attribute__((thiscall)) *)(uint32_t mode, int msg, int a, int b, int c);
@@ -67,6 +68,7 @@ using MakeFn = uint32_t(__attribute__((thiscall)) *)(uint32_t manager, int id);
 using DropFn = void(__attribute__((thiscall)) *)(uint32_t self, int x, int y, uint32_t drag);
 
 struct State {
+    bool searchAll = false;  // 3.0.18-beta.72: Ctrl+A in the search
     itemgridui::Ui grid;  // 3.0.18-beta.27: the window drawn by uaUI
     int gridGen = 0;
     bool gridShown = false;
@@ -372,18 +374,6 @@ void takeCell(State& s, int shownIndex, const char* how) {
     if (s.told++ < 30) LOG_INFO("storage: %s on #%d x%d - %s", how, it.id, it.count, did);
 }
 
-char letterOf(WPARAM vk, bool shift) {
-    if (vk >= 'A' && vk <= 'Z') return char(shift ? vk : vk - 'A' + 'a');
-    if (vk >= '0' && vk <= '9' && !shift) return char(vk);
-    if (vk >= VK_NUMPAD0 && vk <= VK_NUMPAD9) return char('0' + (vk - VK_NUMPAD0));
-    switch (vk) {
-        case VK_SPACE: return ' ';
-        case VK_OEM_MINUS: return shift ? '_' : '-';
-        case VK_OEM_7: return '\'';
-        case VK_OEM_PERIOD: return '.';
-        default: return 0;
-    }
-}
 
 }  // namespace
 
@@ -706,32 +696,15 @@ bool key(UINT m, WPARAM wp, LPARAM lp) {
     State& s = state();
     (void)lp;
     if (!s.shown || !s.show.typing) return false;
-    if (m == WM_KEYDOWN || m == WM_SYSKEYDOWN) {
-        const bool ctrl = GetKeyState(VK_CONTROL) < 0, alt = GetKeyState(VK_MENU) < 0;
-        if (alt) return false;  // Alt+E and the rest: the game's
-        switch (wp) {
-            case VK_ESCAPE:
-            case VK_RETURN:
-                s.show.typing = false;
-                return true;
-            case VK_BACK:
-                if (!s.show.search.empty()) s.show.search.pop_back();
-                s.show.scroll = 0;
-                return true;
-            case VK_DELETE:
-                s.show.search.clear();
-                return true;
-            default:
-                break;
-        }
-        const char c = ctrl ? 0 : letterOf(wp, GetKeyState(VK_SHIFT) < 0);
-        if (c && s.show.search.size() < kMostTyped) {
-            s.show.search += c;
-            s.show.scroll = 0;
-        }
-        return true;  // every key the search's while it types
-    }
-    return m == WM_KEYUP || m == WM_CHAR || m == WM_DEADCHAR;
+    // 3.0.18-beta.72 (the big six, E): the new interface's field - any language, the clipboard, every key its own
+    textfield::Field field{s.show.search, s.searchAll};
+    uifield::Result r = uifield::Result::None;
+    const bool took = uifield::key(field, m, wp, kMostTyped, r);
+    s.show.search = field.text;
+    s.searchAll = field.all;
+    if (r == uifield::Result::Done) s.show.typing = false;
+    if (r == uifield::Result::Changed) s.show.scroll = 0;
+    return took;
 }
 
 bool shown() { return state().shown; }
