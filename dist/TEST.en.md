@@ -1,3 +1,8 @@
+# uaRO Graphics 3.0.18-beta.55 — what's new
+
+- **Fixed: "Полиця"'s search typed Cyrillic as garbage** ("ïòðîðîìîòï" for "пророк") — letters are read in the game's code page now. The same is fixed in the site sign-in fields and the shelf card's name.
+- **Fixed with "Нова бібліотека інтерфейсу (RmlUi)": the character block's tip in the icon view** — its dark plate now spans the whole text.
+
 # uaRO Graphics 3.0.18-beta.54 — what's new
 
 - **Themes work in "Нова бібліотека інтерфейсу (RmlUi)":** the interface theme (standard; classic — warm brown and cream tones, less round corners; contrast — darker grounds, brighter words, thicker edges) and your own `uaro-graphics\ui\palette.txt` now change all of the new library's windows and panels. It switches on the fly.
