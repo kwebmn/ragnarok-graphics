@@ -795,6 +795,20 @@ input.checkbox:checked { background-color: #3d7fd8; border-color: #3d7fd8; }
 .bc .tip .a { display: block; font-size: 13dp; font-weight: bold; height: 18dp; line-height: 18dp; }
 .bc .tip .b { display: block; font-size: 11.5dp; color: #9aa3b5; height: 15dp; line-height: 15dp; }
 /* 3.0.18-beta.21: the hotbar (win/hotbar) - the concept's cells; places in the target's pixels */
+.xb { position: absolute; font-family: Plex; color: #eceff5; }
+.xb .band { position: absolute; left: 0; width: 100%; background-color: #0000008c; }
+.xb .row { position: absolute; left: 0; width: 100%; }
+.xb .fill { position: absolute; left: 0; top: 0; height: 100%; }
+.xb .fill.base { background-color: #b7a6ff; }
+.xb .fill.job { background-color: #7fd3c3; }
+.xb .tick { position: absolute; top: 0; width: 1dp; height: 100%; background-color: #00000099; }
+.xb .gain { position: absolute; padding: 0 6dp; height: 20dp; line-height: 20dp; font-size: 13dp; font-weight: bold;
+            color: #f3d27a; white-space: nowrap; font-effect: outline(2px #000000d9); }
+.xb .tip { position: absolute; box-sizing: border-box; padding: 4dp 10dp; background-color: #10141cf0;
+           border: 1dp #ffffff1f; border-radius: 8dp; }
+.xb .tip .line { display: block; height: 17dp; line-height: 17dp; font-size: 13dp; font-weight: bold; color: #9aa3b5;
+                 white-space: nowrap; }
+.xb .tip .line:first-child { color: #eceff5; }
 .hb { position: absolute; font-family: Plex; color: #eceff5; }
 .hb .a { position: absolute; }
 .hb .glass { position: absolute; border: 1dp #ffffff17; background-color: #10141ccc; }

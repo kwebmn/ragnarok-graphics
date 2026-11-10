@@ -1,4 +1,5 @@
 #pragma once
+#include <array>
 #include <cstdint>
 #include <string>
 #include <vector>
@@ -238,6 +239,12 @@ std::vector<Words> warningWords(const Layout& L, const Data& d, const Texts& t);
 // its pace and the time to the level)
 int stripHeight(float scale);
 void paintStrip(panel::Picture& out, const Data& d, float scale);
+// 3.0.18-beta.23: the strip's two bars (the base's, the job's): each one's lit share, colour and opacity
+struct StripBar {
+    float fill = 0, alpha = 1;
+    uint32_t rgb = 0;
+};
+std::array<StripBar, 2> stripBars(const Data& d);
 std::vector<std::string> stripTip(const Data& d, const Texts& t);
 
 }  // namespace uagfx::charblock

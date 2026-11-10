@@ -1054,14 +1054,21 @@ void paintStrip(panel::Picture& out, const Data& d, float scale) {
     const float s = scale > 0 ? scale : 1.0f, w = float(out.width), h = float(out.height);
     panel::roundRect(out, panel::Box{0, 0, w, h}, 0, kBlack, 0.55f);
     const float barH = (h - 3 * s) / 2;
-    const auto one = [&](float y, const Exp& e, uint32_t rgb) {
-        const float f = e.next == 0 ? 1.0f : std::clamp(e.share, 0.0f, 1.0f);
-        if (f > 0) panel::roundRect(out, panel::Box{0, y, w * f, barH}, 0, rgb, e.next == 0 ? 0.45f : 1.0f);
+    const std::array<StripBar, 2> bars = stripBars(d);
+    for (int b = 0; b < 2; ++b) {
+        const float y = b == 0 ? 1 * s : 2 * s + barH;
+        if (bars[b].fill > 0)
+            panel::roundRect(out, panel::Box{0, y, w * bars[b].fill, barH}, 0, bars[b].rgb, bars[b].alpha);
         for (int i = 1; i < 10; ++i)  // a tick each 10 %
             panel::roundRect(out, panel::Box{w * float(i) / 10, y, 1.0f * s, barH}, 0, kBlack, 0.6f);
+    }
+}
+
+std::array<StripBar, 2> stripBars(const Data& d) {
+    const auto one = [](const Exp& e, uint32_t rgb) {
+        return StripBar{e.next == 0 ? 1.0f : std::clamp(e.share, 0.0f, 1.0f), e.next == 0 ? 0.45f : 1.0f, rgb};
     };
-    one(1 * s, baseOf(d), kBaseExp);
-    one(2 * s + barH, jobOf(d), kJobExp);
+    return {one(baseOf(d), kBaseExp), one(jobOf(d), kJobExp)};
 }
 
 std::vector<std::string> stripTip(const Data& d, const Texts& t) {

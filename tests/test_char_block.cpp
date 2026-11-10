@@ -1,3 +1,4 @@
+#include <array>
 // 3.0.11-beta.36: the character's block (core/char_block) - its words, its three views and two looks, the mouse over
 // it, its picture (the bars, the rings, low HP)
 #include <algorithm>
@@ -644,6 +645,13 @@ TEST(char_block_ring_dots_and_the_bottom_strip) {
     CHECK(red(pixel(p, 250, 2)) > 0x90 && red(pixel(p, 650, 2)) < 0x30);  // off the 10 % ticks
     const std::vector<std::string> tip = charblock::stripTip(d, t);
     CHECK(tip.size() == 2 && tip[0].rfind("Base 46,3", 0) == 0 && tip[1].rfind("Job", 0) == 0);
+    // 3.0.18-beta.23: uaUI's strip - the same bars as the picture's (each its fill, colour and opacity)
+    const std::array<charblock::StripBar, 2> bars = charblock::stripBars(d);
+    CHECK(std::fabs(bars[0].fill - 0.463f) < 0.001f && bars[0].alpha == 1.0f && bars[0].rgb == 0xB7A6FFu);
+    CHECK(bars[1].rgb == 0x7FD3C3u);
+    charblock::Data last = d;
+    last.jobNext = 0;  // the job's last level: full, faint
+    CHECK(charblock::stripBars(last)[1].fill == 1.0f && charblock::stripBars(last)[1].alpha == 0.45f);
 }
 
 // 3.0.11-beta.238 (the owner: «когда сидишь, реген совсем другой»; «желтеньким сколько примерно % заняло убийство
