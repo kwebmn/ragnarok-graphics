@@ -22,7 +22,7 @@ const char* kRml = R"RML(<rml><head><link type="text/rcss" href="uaui:theme.rcss
 </div></div>
 <div class="search" data-hit="search" data-class-typing="typing"><img data-if="searchIcon != ''"
   data-attr-src="searchIcon"/><span class="q" data-if="query != ''">{{query}}</span><span class="caret"
-  data-if="caret"></span><span class="q hint" data-if="hint != ''">{{hint}}</span></div>
+  data-if="caret"></span><span class="q qh" data-if="hint != ''">{{hint}}</span></div>
 <div class="gridbox" data-hit="grid"><div class="grid"><div class="cell" data-for="c : cells" data-hit="cellbox"
   data-attr-data-index="c.index" data-class-hot="c.hot" data-class-thing="c.hit == 'cell'"><div class="flash"
   data-if="c.flash > 0" data-style-opacity="c.flash"></div><img data-if="c.icon != ''" data-attr-src="c.icon"
