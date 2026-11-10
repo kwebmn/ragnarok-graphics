@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.18-beta.50 — what's new
+
+- **Fixed with "Нова бібліотека інтерфейсу (RmlUi)": the party's and the character block's frame in "Розміщення інтерфейсу" now fits them exactly**, and a click on their edge no longer goes to the game world.
+
 # uaRO Graphics 3.0.18-beta.49 — what's new
 
 - **Fixed with "Нова бібліотека інтерфейсу (RmlUi)": in "Розміщення інтерфейсу" the gold frame of the party, the character block and the target card now fits the part itself** — it was narrower before, taken from the old size.
