@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.18-beta.34 — what's new
+
+- **The pet, homunculus, mercenary, game "Налаштування", friends and party, guild, macros, tip of the day, menu (and the death screen) windows and the on-screen keyboard now use "Нова бібліотека інтерфейсу (RmlUi)":** bars, switches, volume sliders, lists, buttons and fields are drawn by the new library. Clicks, keys and the controller work as before.
+
 # uaRO Graphics 3.0.18-beta.33 — what's new
 
 - **Login, server select, character select and make now use "Нова бібліотека інтерфейсу (RmlUi)":** the login fields with their errors, ticks, buttons, character cards with HP/SP bars, the character make with stat pairs are drawn by the new library. The new library now also runs before entering the game world (for these windows only). Clicks, keys and the controller work as before.
