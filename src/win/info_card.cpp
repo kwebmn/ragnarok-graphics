@@ -18,6 +18,7 @@
 #include "core/settings/strings.hpp"
 #include "core/skill_costs.hpp"
 #include "core/skill_info.hpp"
+#include "win/card_drag.hpp"
 #include "core/skill_tree.hpp"
 #include "core/ui_style.hpp"
 #include "pad/win/game_window.hpp"
@@ -77,6 +78,7 @@ struct One {
     ic::Show show;
     ic::Layout layout;
     int atX = 0, atY = 0;  // its place in the target, where the cursor was when it opened
+    CardDrag move;  // 3.0.18-beta.93 (the owner: «описание вещи ... не двигается»): moved by its title or body
     std::string key;
     panel::Picture picture;
     uint32_t texture = 0;
@@ -417,12 +419,14 @@ static void frameInner(HWND game, bool on, unsigned codePage, double k, int targ
                 o.atY = targetHeight / 4;
             }
             o.what.clear();
+            o.move = CardDrag{};  // a new card opens beside the cursor again
             LOG_INFO("cards: %s opened - the new one shows it", nameOf(kind));
         }
         o.window = window;
         if (kind == Kind::Item) itemCard(s, o, window);
         else skillCard(s, o, window);
         o.layout = ic::layout(o.card, o.atX, o.atY, targetWidth, targetHeight, s.scale, o.show, texts(), measure);
+        o.move.apply(o.layout.x, o.layout.y, o.layout.w, o.layout.h, targetWidth, targetHeight, k, 48 * s.scale);
         o.show.scroll = std::clamp(o.show.scroll, 0, std::max(0, o.layout.rows - o.layout.shownRows));
         o.show.hoverClose = false;
         int cx = 0, cy = 0;
@@ -513,6 +517,7 @@ bool mouse(Kind kind, HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) 
     State& s = state();
     One& o = one(kind);
     if (!o.shown) return false;
+    if (m == WM_LBUTTONUP) o.move.end();  // 3.0.18-beta.93
     const bool button = m == WM_LBUTTONDOWN || m == WM_LBUTTONUP || m == WM_LBUTTONDBLCLK || m == WM_RBUTTONDOWN ||
                         m == WM_RBUTTONUP || m == WM_RBUTTONDBLCLK || m == WM_MBUTTONDOWN || m == WM_MBUTTONUP;
     if (!button && m != WM_MOUSEWHEEL) return false;
@@ -526,6 +531,8 @@ bool mouse(Kind kind, HWND game, UINT m, WPARAM wp, LPARAM lp, LRESULT& result) 
         o.key.clear();
     } else if ((m == WM_LBUTTONDOWN || m == WM_LBUTTONDBLCLK) && part == ic::Part::Close) {
         close(kind);
+    } else if (m == WM_LBUTTONDOWN) {  // 3.0.18-beta.93: the title or the body - the card follows the cursor
+        o.move.begin(tx, ty);
     }
     return true;
 }
