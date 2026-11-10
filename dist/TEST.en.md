@@ -1,3 +1,7 @@
+# uaRO Graphics 3.0.18-beta.28 — what's new
+
+- **"Обмін" (trade) now uses "Нова бібліотека інтерфейсу (RmlUi)":** both sides with their cells, the green "Готово" mark, the partner's changes after your "Готово" in red, the zeny field, the warning, the buttons and the tip are drawn by the new library. Dragging items, clicks and keys work as before.
+
 # uaRO Graphics 3.0.18-beta.27 — what's new
 
 - **"Речі", "Склад" and the cart now use "Нова бібліотека інтерфейсу (RmlUi)":** the window glass, tabs, search, cells with icons, counts, refine and "нове", the scroll, weight, use flashes and the tip are drawn by the new library. Dragging windows and items, clicks, the wheel and keys work as before.
