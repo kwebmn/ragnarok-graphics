@@ -118,3 +118,4 @@ picture's upload gone. Cost if wrong: per-pixel glows (panel::over loops) land i
 - 2026-11-10 beta.50 (R-VMGJE8: the frame still narrower): the editor's frame is the part's blocked rectangle - the party's and the character block's now from their uaUI documents (their clicks there too)
 - 2026-11-10 beta.51 (owner: an enlarged minimap's icons small): minimap::Layout::grow = the size's root - its buttons, layer signs and marks bigger than the map grew
 - 2026-11-10 beta.52 (R-W9WZ4G: the signs off the buttons' middles): box-sizing border-box for the boxes of the sheet-like parts (.mm .sh .ig .tr .hb .hp .mp) - RmlUi put the edge outside the size, roundRect inside
+- 2026-11-10 beta.53: the target card's blocked rectangle from its uaUI box (grown from its top middle); the target's per cent and «⚔ N» plates on the world layer; RmlUi warnings of one kind (digits aside) logged once. The level flare was already in the block's markup (.cb.flare)

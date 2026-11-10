@@ -168,11 +168,14 @@ bool toTarget(const State& s, HWND game, int x, int y, float& tx, float& ty) {
     return true;
 }
 
+void uiRect(float& x, float& y, float& w, float& h);
+
 void block(const State& s, HWND game) {  // the mouse's clicks on the card are its own
     RECT client{};
     if (s.targetW <= 0 || s.targetH <= 0 || !GetClientRect(game, &client)) return;
-    const panel::Box& b = s.layout.card;
-    const float x0 = float(s.layout.x) + b.x, y0 = float(s.layout.y) + b.y;
+    panel::Box b = s.layout.card;
+    float x0 = float(s.layout.x) + b.x, y0 = float(s.layout.y) + b.y;
+    uiRect(x0, y0, b.w, b.h);  // 3.0.18-beta.53: as uaUI draws it - its clicks and the editor's frame
     const RECT r{LONG(int64_t(x0) * client.right / s.targetW), LONG(int64_t(y0) * client.bottom / s.targetH),
                  LONG(int64_t(x0 + b.w) * client.right / s.targetW + 1),
                  LONG(int64_t(y0 + b.h) * client.bottom / s.targetH + 1)};
@@ -280,6 +283,15 @@ void uiSize(int& w, int& h) {
     if (!uaui::ready() || !ui().doc.box(x, y, dw, dh)) return;
     const float size = hudedit::sizeOf(hudlayout::Part::Target);
     w = int(std::lround(float(dw) * size)), h = int(std::lround(float(dh) * size));
+}
+
+// The place and size uaUI draws it at last frame (grown from its top middle), in the target's pixels; untouched while
+// uaUI does not draw it
+void uiRect(float& x, float& y, float& w, float& h) {
+    int dx = 0, dy = 0, dw = 0, dh = 0;
+    if (!uaui::ready() || !ui().doc.box(dx, dy, dw, dh)) return;
+    const float size = hudedit::sizeOf(hudlayout::Part::Target);
+    x = float(dx) + float(dw) * (1 - size) / 2, y = float(dy), w = float(dw) * size, h = float(dh) * size;
 }
 
 std::string colourOf(uint32_t rgb, int alpha = -1) {

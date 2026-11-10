@@ -244,7 +244,10 @@ public:
         // 3.0.18-beta.46 (R-4YDWHF: the 20 first ones were the documents' addresses - the chat's never told): each
         // message once, 300 of them
         static std::set<std::string> told;
-        if (type <= Rml::Log::LT_WARNING && s.logged < 300 && told.insert(message.substr(0, 200)).second) {
+        std::string kind = message.substr(0, 200);  // 3.0.18-beta.53: «words[13]» and «words[14]» one kind
+        for (char& c : kind)
+            if (c >= '0' && c <= '9') c = '#';
+        if (type <= Rml::Log::LT_WARNING && s.logged < 300 && told.insert(kind).second) {
             ++s.logged;
             LOG_INFO("uaui: RmlUi %s: %s", type == Rml::Log::LT_WARNING ? "warns" : "says an error", message.c_str());
         }

@@ -21,6 +21,8 @@
 #include "win/reference_load.hpp"
 #include "win/target_card.hpp"
 #include "win/world_mouse.hpp"
+#include "win/uaui.hpp"
+#include "win/ui_sheet.hpp"
 
 namespace uagfx::win::mobhpwin {
 namespace {
@@ -36,6 +38,13 @@ struct Bar {
 };
 
 struct State {
+    // 3.0.18-beta.53: the per cent's and «⚔ N»'s plates drawn by uaUI (the world's layer), said each frame
+    uisheet::Sheet sheet;
+    int sheetGen = 0;
+    bool sheetShown = false;
+    std::string pctText, countText;
+    int pctW = 0, pctH = 0, countWide = 0, countHigh = 0, uiTargetW = 0, uiTargetH = 0;
+    float uiScale = 1;
     MobHp mode = MobHp::All;
     bool modeTold = false;
     bool percent = false;  // 3.0.11-beta.293: [interface] mob_hp_percent
@@ -168,7 +177,7 @@ mobhp::Rank rankOf(State& s, int cls) {
 }
 }  // namespace
 
-void frame(HWND game, MobHp mode, double k, int targetWidth, int targetHeight) {
+static void frameInner(HWND game, MobHp mode, double k, int targetWidth, int targetHeight) {
     State& s = state();
     if (mode != s.mode || !s.modeTold) {
         s.mode = mode;
@@ -197,7 +206,8 @@ void frame(HWND game, MobHp mode, double k, int targetWidth, int targetHeight) {
             const std::wstring wide = utf8Wide(text);
             const float px = 13 * scale;
             const int w = wordsWidth(wide, px, true) + int(std::lround(12 * scale)), h = int(std::lround(18 * scale));
-            if (panel::blank(s.countPic, w, h)) {
+            s.countText = text, s.countWide = w, s.countHigh = h;  // 3.0.18-beta.53
+            if (!uaui::ready() && panel::blank(s.countPic, w, h)) {
                 panel::roundRect(s.countPic, panel::Box{0, 0, float(w), float(h)}, float(h) / 2, 0xC62828, 0.85f);
                 drawWords(s.countPic,
                           {Words{panel::Box{0, 0, float(w), float(h)}, wide, 0xFFFFFF, px, true, DT_CENTER}});
@@ -275,23 +285,30 @@ void frame(HWND game, MobHp mode, double k, int targetWidth, int targetHeight) {
         if (!s.percent) continue;  // 3.0.11-beta.293: the plate off
         const float scale = uistyle::partScale(k);
         const std::string text = mobhp::percentText(m.hp);
-        const std::string key = text + ';' + std::to_string(scale);
+        const std::string key = text + ';' + std::to_string(scale) + (uaui::ready() ? "u" : "");
+        {  // 3.0.18-beta.53: uaUI's plate - its words and size
+            const float px = 12 * scale;
+            s.pctText = text;
+            s.pctW = wordsWidth(utf8Wide(text), px, true) + int(std::lround(8 * scale));
+            s.pctH = int(std::lround(16 * scale));
+        }
         if (key != s.key) {
             s.key = key;
             const std::wstring wide = utf8Wide(text);
             const float px = 12 * scale;
             const int w = wordsWidth(wide, px, true) + int(std::lround(8 * scale));
             const int h = int(std::lround(16 * scale));
-            if (panel::blank(s.picture, w, h)) {
+            if (!uaui::ready() && panel::blank(s.picture, w, h)) {
                 panel::roundRect(s.picture, panel::Box{0, 0, float(w), float(h)}, float(h) / 2, 0x000000, 0.5f);
                 drawWords(s.picture, {Words{panel::Box{0, 0, float(w), float(h)}, wide, 0xECEFF5, px, true,
                                             DT_CENTER}});
                 s.upload = true;
             }
         }
+        const int plateH = uaui::ready() ? s.pctH : s.picture.height;
         s.textX = int(std::lround((b.x + b.w) * kk + 4 * scale));
-        s.textY = int(std::lround((b.y + b.h / 2) * kk - float(s.picture.height) / 2));
-        s.text = s.picture.width > 0;
+        s.textY = int(std::lround((b.y + b.h / 2) * kk - float(plateH) / 2));
+        s.text = uaui::ready() ? s.pctW > 0 : s.picture.width > 0;
     }
     if (!s.bars.empty() && s.told < 10) {
         ++s.told;
@@ -303,6 +320,33 @@ void frame(HWND game, MobHp mode, double k, int targetWidth, int targetHeight) {
         LOG_INFO("mob hp: %zu of %zu bars over their sprites' boxes - %s", s.bars.size() - size_t(steady),
                  s.bars.size(), camera ? "their places in the world not read" : "the game's camera not read");
     }
+}
+
+// 3.0.18-beta.53 (docs/superpowers/plans/2026-11-09-uaui-migration.md - by hand): the target's per cent and «⚔ N» in
+// RmlUi's markup - a dark pill with its words by the target's bar, a red one over the character; over the world, under
+// the game's own windows (uaUI's world layer). The bars stay the driver's fills
+static void fillSheet(State& s, uisheet::Content& c) {
+    c.w = float(s.uiTargetW), c.h = float(s.uiTargetH);
+    const float sc = s.uiScale;
+    if (s.text && s.pctW > 0) {
+        const panel::Box b{float(s.textX), float(s.textY), float(s.pctW), float(s.pctH)};
+        c.rect(c.under, b, b.h / 2, 0x000000, 0.5f);
+        c.words.push_back(uisheet::Word{b.x, b.y, b.w, b.h, 12 * sc, b.h, s.pctText, "#eceff5", "word bold centre"});
+    }
+    if (s.countShown > 0 && s.countWide > 0) {
+        const panel::Box b{float(s.countX), float(s.countY), float(s.countWide), float(s.countHigh)};
+        c.rect(c.under, b, b.h / 2, 0xC62828, 0.85f);
+        c.words.push_back(uisheet::Word{b.x, b.y, b.w, b.h, 13 * sc, b.h, s.countText, "#ffffff", "word bold centre"});
+    }
+}
+
+void frame(HWND game, MobHp mode, double k, int targetWidth, int targetHeight) {
+    frameInner(game, mode, k, targetWidth, targetHeight);
+    State& s = state();
+    s.uiTargetW = targetWidth, s.uiTargetH = targetHeight, s.uiScale = uistyle::partScale(k);
+    s.sheet.world = true;
+    s.sheetShown = s.sheet.frame("mob hp", (s.text || s.countShown > 0) && k > 0, false, 0, 0, ++s.sheetGen,
+                                 [&](uisheet::Content& c) { fillSheet(s, c); });
 }
 
 void draw(FrameRecord& record, gpu::Renderer& renderer) {
@@ -321,9 +365,9 @@ void draw(FrameRecord& record, gpu::Renderer& renderer) {
         const float done = b.w * float(std::clamp(b.hp, 0, 100)) / 100.0f;
         drawFill(record, b.x, b.y, done, b.h, s.k, mobhp::fillColour(b.hp, b.rank));
     }
-    if (s.text)
+    if (s.text && !s.sheetShown)
         drawPart(record, renderer, s.picture, s.texture, s.texW, s.texH, s.upload, s.textX, s.textY, s.k);
-    if (s.countShown > 0 && s.countPic.width > 0)  // 3.0.13-beta.13: «⚔ N» over the character
+    if (!s.sheetShown && s.countShown > 0 && s.countPic.width > 0)  // 3.0.13-beta.13: «⚔ N» over the character
         drawPart(record, renderer, s.countPic, s.countTex, s.countW, s.countH, s.countUpload, s.countX, s.countY, s.k);
     const size_t added = record.commands().size() - before;  // the per cent's upload too, when it went now
     if (added) record.moveLastBefore(added, world);
