@@ -1,3 +1,5 @@
+- The searches in "Речі", "Склад", "Візок", the shop and "Довідник" now take any language (only Latin letters before), Backspace removes a whole letter, Ctrl+A, Ctrl+C, Ctrl+X and Ctrl+V work. While a field types, no key reaches the game.
+
 - New interface (uaUI): the theme, the palette and parts' markup can now reach every player through the updates: data\uaro-graphics\ui\theme.rcss, palette.txt and <part>.rml in a GRF in the client's updates folder. The player's own files in uaro-graphics\ui stay on top.
 
 - New interface (uaUI): faster - a window re-evaluates only the parts of it that changed, and still elements are not rebuilt every frame. The log line "uaui: in N s …" now also tells how many elements were rebuilt a frame.
