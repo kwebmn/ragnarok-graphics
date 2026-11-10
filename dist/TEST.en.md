@@ -1,3 +1,5 @@
+- New interface (uaUI): labels are now measured by the same engine that draws them - plates, buttons and tags fit the letters exactly. A line that still does not fit its field shrinks a little (by a quarter at most) instead of spilling out.
+
 - New interface (uaUI): on the skill bar and the effects column the letters now grow with the part's size in "Розміщення інтерфейсу" - the arrow count and other labels no longer spill out of their plates.
 
 # uaRO Graphics 3.0.18-beta.55 — what's new
