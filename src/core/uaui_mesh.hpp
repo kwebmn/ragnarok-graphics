@@ -33,6 +33,8 @@ struct Gradient {
     };
     std::vector<Stop> stops;
     bool repeating = false;
+    // 3.0.18-beta.63: radial - (x0, y0) its middle, (x1, y1) its radii; stops along the distance over them
+    bool radial = false;
 };
 // The geometry cut along the stops between its ends and each vertex coloured by its place (its own colour times it)
 void shade(std::vector<Point>& points, std::vector<int>& indices, const Gradient& g);

@@ -12,6 +12,7 @@
 #include <variant>
 #include <vector>
 
+#include "core/ui_glide.hpp"
 #include "core/party_alarm.hpp"
 #include "core/ui_chime.hpp"
 #include "core/buff_timers.hpp"
@@ -407,10 +408,12 @@ struct RowView {
     bool leader = false, low = false, bad = false, faint = false, away = false, target = false, chosen = false,
          dead = false, casting = false, route = false, bar = false, arrow = false;
     float pct = 0, cast = -1, deg = 0;
+    float aim = 0;  // 3.0.18-beta.63: the real share (pct glides to it with [interface] uaui_motion)
     std::vector<BuffView> buffs;
 };
 
 struct Ui {
+    std::map<Rml::String, uiglide::Glide> glides;  // 3.0.18-beta.63
     uaui::Doc doc;
     Rml::String title, count, viewSign, foldSign, crown, route, arrow;
     bool folded = false, compact = false;
@@ -574,7 +577,7 @@ bool uiFrame(State& s) {
             r.alarm = b;
         }
         r.bar = here && !m.dead;
-        r.pct = float(std::clamp(m.percent, 0, 100));
+        r.pct = r.aim = float(std::clamp(m.percent, 0, 100));
         r.cast = m.castPart >= 0 && here ? std::clamp(m.castPart, 0.0f, 1.0f) * 100 : -1;
         r.arrow = m.cells >= 0 && here && (m.dirX != 0 || m.dirY != 0);
         r.cells = m.cells >= 0 ? std::to_string(m.cells) : "";
@@ -603,7 +606,21 @@ bool uiFrame(State& s) {
         u.folded = s.folded;
         u.compact = s.compact;
         u.rows = std::move(rows);
+        for (RowView& r : u.rows) {  // 3.0.18-beta.63: from where its bar was
+            const auto g = u.glides.find(r.name);
+            if (g != u.glides.end() && g->second.started) r.pct = g->second.shown;
+        }
         u.doc.dirtyAll();
+    }
+    {  // 3.0.18-beta.63: each member's HP bar glides to its share (by name; a new one at once)
+        const uint64_t now = GetTickCount64();
+        bool moved = false;
+        for (RowView& r : u.rows) {
+            const float v = u.glides[r.name].step(r.aim, now, uaui::motion());
+            if (v != r.pct) r.pct = v, moved = true;
+        }
+        if (u.glides.size() > 64) u.glides.clear();
+        if (moved) u.doc.dirty("rows");
     }
     if (Rml::ElementDocument* d = u.doc.doc()) {
         const float size = hudedit::sizeOf(hudlayout::Part::Party);

@@ -309,14 +309,19 @@ public:
     // shade); the others (radial, conic) not drawn - told once
     Rml::CompiledShaderHandle CompileShader(const Rml::String& name, const Rml::Dictionary& p) override {
         State& s = state();
-        if (name != "linear-gradient" || !s.effects) {
+        const bool radial = name == "radial-gradient";  // 3.0.18-beta.63
+        if ((name != "linear-gradient" && !radial) || !s.effects) {
             static std::set<std::string> told;
-            if (told.insert(name).second) LOG_INFO("uaui: no «%s» drawn (only linear-gradient, with uaui_effects)",
-                                                   name.c_str());
+            if (told.insert(name).second)
+                LOG_INFO("uaui: no «%s» drawn (linear and radial gradients, with uaui_effects)", name.c_str());
             return 0;
         }
         ::uagfx::uaui::Gradient g;
-        const Rml::Vector2f p0 = Rml::Get(p, "p0", Rml::Vector2f(0, 0)), p1 = Rml::Get(p, "p1", Rml::Vector2f(0, 1));
+        const Rml::Vector2f p0 = radial ? Rml::Get(p, "center", Rml::Vector2f(0, 0))
+                                        : Rml::Get(p, "p0", Rml::Vector2f(0, 0));
+        const Rml::Vector2f p1 = radial ? Rml::Get(p, "radius", Rml::Vector2f(1, 1))
+                                        : Rml::Get(p, "p1", Rml::Vector2f(0, 1));
+        g.radial = radial;
         g.x0 = p0.x, g.y0 = p0.y, g.x1 = p1.x, g.y1 = p1.y;
         g.repeating = Rml::Get(p, "repeating", false);
         const auto it = p.find("color_stop_list");

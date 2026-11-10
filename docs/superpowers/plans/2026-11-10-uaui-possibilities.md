@@ -56,3 +56,8 @@ Facts (RmlUi 6.3 source):
   renderers (D3D12 and D3D11), FXC-safe shaders and a weak-card check; a separate piece of work - cost if wrong: one
   look missing, nothing broken. Built: linear gradients (radial/conic told once, not drawn), ua-shadow decorator
   (soft shadow / glow ring), rounded clip masks - all behind [interface] uaui_effects (off).
+- Stage 5 shipped beta.61 (4c110bb1); beta.62 target chip colours never empty (R-BK5SWP, owner «работает»).
+- beta.63 (owner «запускай работу дальше», «сделай по максимуму»): party HP bars glide, the top whisper card walked
+  by the pad, radial gradients (tessellated to 8 px). Ruling: blurred glass still not built - it needs a new pass in
+  the D3D12 and D3D11 renderers (DLSS world vs target sizes, MSAA resolve) that cannot be checked off Windows; a
+  blind change risks every player's picture - cost if wrong: one look later.

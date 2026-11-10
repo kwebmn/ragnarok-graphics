@@ -8,6 +8,7 @@
 #include <string>
 #include <vector>
 
+#include "core/window_stack.hpp"
 #include "core/settings/strings.hpp"
 #include "core/ui_style.hpp"
 #include "core/whisper_card.hpp"
@@ -320,6 +321,8 @@ void frame(HWND game, bool on, unsigned codePage, double k, int targetWidth, int
         const bool shown = sheet->frame("whisper", s.k > 0, true, o.layout.x, o.layout.y, gen,
                                         [&](uisheet::Content& c) { fillSheet(o, c); });
         s.sheetsShown = s.sheetsShown || shown;
+        if (shown && &o == &s.cards.back())  // 3.0.18-beta.63: the top card walked by the pad (A clicks)
+            sheet->nav(int(winstack::Win::Whispers), {o.layout.input, o.layout.send, o.layout.close});
     }
 }
 

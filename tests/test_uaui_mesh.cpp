@@ -133,3 +133,27 @@ TEST(uaui_mesh_makes_a_soft_ring_round_a_box) {
     }
     CHECK(std::fabs(minX + 12) < 0.01f && std::fabs(maxX - 112) < 0.01f);
 }
+
+// 3.0.18-beta.63: a radial gradient - the geometry cut into small triangles (8 px at most a side) and each vertex
+// coloured by its distance from the middle over the radius
+TEST(uaui_mesh_shades_a_radial_gradient) {
+    std::vector<uaui::Point> pts = {{0, 0, 0xFFFFFFFF}, {40, 0, 0xFFFFFFFF}, {40, 40, 0xFFFFFFFF},
+                                    {0, 40, 0xFFFFFFFF}};
+    std::vector<int> ix = {0, 1, 2, 0, 2, 3};
+    uaui::Gradient g;
+    g.radial = true;
+    g.x0 = 20, g.y0 = 20, g.x1 = 20, g.y1 = 20;  // the middle, the radii
+    g.stops = {{0, 0xFFFFFFFF}, {1, 0x00000000}};
+    uaui::shade(pts, ix, g);
+    bool middle = false;
+    for (const uaui::Point& p : pts) {
+        CHECK(std::fabs(p.x - 0) < 0.01f || std::fabs(p.x - 40) < 0.01f || p.x > 0);
+        if (std::fabs(p.x - 20) < 0.01f && std::fabs(p.y - 20) < 0.01f) middle = true, void();
+        if (p.x == 0 && p.y == 0) CHECK_EQ(p.argb, 0u);  // beyond the radius
+    }
+    for (size_t i = 0; i + 2 < ix.size(); i += 3) {
+        const uaui::Point &a = pts[size_t(ix[i])], &b = pts[size_t(ix[i + 1])];
+        CHECK(std::hypot(a.x - b.x, a.y - b.y) <= 8.01f);
+    }
+    CHECK(middle);
+}
