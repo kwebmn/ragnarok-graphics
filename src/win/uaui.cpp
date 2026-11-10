@@ -1428,6 +1428,11 @@ select selectbox option:checked { color: #e6cb8a; }
 .lw .srow .lbl { color: #9aa3b5; }
 .lw .srow .val { font-weight: bold; }
 .lw .srow .val.bad { color: #ff7d6e; }
+.vstw { width: 720dp; }
+.vstw .cols { display: flex; }
+.vstw .col { display: block; flex: 1; margin-right: 10dp; }
+.vstw .list { height: 260dp; }
+.vstw .field.price { flex: 0; width: 110dp; margin: 0 6dp; text-align: right; }
 .ow { width: 380dp; }
 .ow .orow { display: flex; align-items: center; justify-content: space-between; margin: 4dp 0; min-height: 24dp; }
 .ow .orow input.range { width: 150dp; }

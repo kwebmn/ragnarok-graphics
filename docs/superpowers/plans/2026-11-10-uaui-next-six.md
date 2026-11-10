@@ -20,3 +20,4 @@ Owner 2026-11-10: «делай без остановки 2,3,4,5,6,7». Betas on
   fields, skill raise).
 - Group 3 beta.88: the NPC talk live (colour runs per line, options two columns by flexbox, its button, keys/server foot; drag by its ground)
 - Group 3 beta.89: another player's shop live (wares with − / +, sums, buy when affordable); $S/rmlwrap.py wraps long RML lines
+- Group 3 beta.90: one's own open shop and the shop setup live (cart | sale columns, the game's sign and price fields)
