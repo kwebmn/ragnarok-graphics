@@ -1,3 +1,5 @@
+- "Спорядження" (equipment) is now laid out by the new interface library: five slots each side, the portrait and numbers (or the controller's list) in the middle, the ammo below. Clicks and dragging things land in the slot you see.
+
 - "Обмін" (trade) is now laid out by the new interface library: two sides of five cells a row, the zeny row, the warning and the buttons. Clicks and dragging things land where the cell is seen.
 
 - "Речі" (items), "Склад" (storage) and "Візок" (cart) are now laid out by the new interface library: the tabs, the search, the cells eight a row and the footer. Clicks, dragging things into other windows, the tip and the controller take the cells' places from that layout, so they land where the cell is seen.
