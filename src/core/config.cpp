@@ -417,6 +417,7 @@ Config parseConfig(const std::string& text) {
     bool serverSet = false;                       // 3.0.11-beta.164
     bool guildSet = false;                        // 3.0.11-beta.165
     bool myShopSet = false;                       // 3.0.11-beta.166
+    bool vendSetupSet = false;                    // 3.0.18-beta.103
     bool whisperSetupSet = false;                 // 3.0.11-beta.168
     bool macroSet = false;                        // 3.0.11-beta.169
     bool tipSet = false;                          // 3.0.11-beta.204
@@ -781,6 +782,7 @@ Config parseConfig(const std::string& text) {
             guildSet = val == "0" || val == "1" || val == "on" || val == "off" || val == "true" || val == "false";
             setBool(val, c.guildWindow);
         } else if (key == "interface.vend_setup") {  // 3.0.16-beta.33: opening one's shop
+            vendSetupSet = val == "0" || val == "1" || val == "on" || val == "off" || val == "true" || val == "false";
             setBool(val, c.vendSetupWindow);
         } else if (key == "interface.my_shop") {  // 3.0.11-beta.166: one's own open shop
             myShopSet = val == "0" || val == "1" || val == "on" || val == "off" || val == "true" || val == "false";
@@ -1162,6 +1164,8 @@ Config parseConfig(const std::string& text) {
     if (c.newMinimap && !serverSet) c.serverWindow = true;          // 3.0.11-beta.164
     if (c.newMinimap && !guildSet) c.guildWindow = true;            // 3.0.11-beta.165
     if (c.newMinimap && !myShopSet) c.myShopWindow = true;          // 3.0.11-beta.166
+    // 3.0.18-beta.103 (R-S377Y8): opening one's shop as one's open shop when the file says nothing of it
+    if (!vendSetupSet) c.vendSetupWindow = c.myShopWindow;
     if (c.newMinimap && !whisperSetupSet) c.whisperSetupWindow = true;  // 3.0.11-beta.168
     if (c.newMinimap && !macroSet) c.macroWindow = true;            // 3.0.11-beta.169
     if (c.newMinimap && !tipSet) c.tipWindow = true;                // 3.0.11-beta.204
